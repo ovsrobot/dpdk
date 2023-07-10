@@ -24,6 +24,7 @@ extern "C" {
 
 #include <pthread.h>
 
+#ifndef RTE_TOOLCHAIN_MSVC
 /**
  * Macro to define a per lcore variable "var" of type "type", don't
  * use keywords like "static" or "volatile" in type, just prefix the
@@ -37,6 +38,13 @@ extern "C" {
  */
 #define RTE_DECLARE_PER_LCORE(type, name)			\
 	extern __thread __typeof__(type) per_lcore_##name
+#else
+#define RTE_DEFINE_PER_LCORE(type, name)			\
+	__declspec(thread) typeof(type) per_lcore_##name
+
+#define RTE_DECLARE_PER_LCORE(type, name)			\
+	extern __declspec(thread) typeof(type) per_lcore_##name
+#endif
 
 /**
  * Read/write the per-lcore variable value
