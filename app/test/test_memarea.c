@@ -320,6 +320,45 @@ test_memarea_alloc_free(void)
 
 	TEST_ASSERT(rte_errno == 0, "Expected Zero");
 
+	fprintf(stderr, "There should have no allocated object.\n");
+	rte_memarea_dump(ma, stderr, true);
+
+	rte_memarea_destroy(ma);
+
+	return 0;
+}
+
+static int
+test_memarea_dump(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	int ret;
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Expected Non-NULL");
+
+	/* test for invalid parameters */
+	ret = rte_memarea_dump(NULL, stderr, false);
+	TEST_ASSERT(ret == -1, "Expected -1");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+	ret = rte_memarea_dump(ma, NULL, false);
+	TEST_ASSERT(ret == -1, "Expected -1");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	/* test for dump */
+	(void)rte_memarea_alloc(ma, 1);
+	(void)rte_memarea_alloc(ma, 1);
+	(void)rte_memarea_alloc(ma, 1);
+	(void)rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE);
+	(void)rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE);
+	fprintf(stderr, "There should have three allocated object.\n");
+	ret = rte_memarea_dump(ma, stderr, true);
+	TEST_ASSERT(ret == 0, "Expected ZERO");
+
 	rte_memarea_destroy(ma);
 
 	return 0;
@@ -337,6 +376,7 @@ static struct unit_test_suite memarea_test_suite  = {
 		TEST_CASE(test_memarea_alloc_fail),
 		TEST_CASE(test_memarea_free_fail),
 		TEST_CASE(test_memarea_alloc_free),
+		TEST_CASE(test_memarea_dump),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
