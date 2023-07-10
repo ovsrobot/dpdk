@@ -15,6 +15,7 @@
 #include <rte_hash.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
+#include <rte_hash_xor.h>
 
 #include "test.h"
 
@@ -22,33 +23,46 @@
  * Hash values calculated for key sizes from array "hashtest_key_lens"
  * and for initial values from array "hashtest_initvals.
  * Each key will be formed by increasing each byte by 1:
- * e.g.: key size = 4, key = 0x03020100
- *       key size = 8, key = 0x0706050403020100
+ * e.g.: key size = 4, key = 0x00010203
+ *       key size = 8, key = 0x0001020304050607
  */
-static uint32_t hash_values_jhash[2][12] = {{
-	0x8ba9414b, 0xdf0d39c9,
+static uint32_t hash_values_jhash[2][14] = {{
+	0x8ba9414b, 0xdf0d39c9, 0x6b12f277, 0x589511d8,
 	0xe4cf1d42, 0xd4ccb93c, 0x5e84eafc, 0x21362cfe,
 	0x2f4775ab, 0x9ff036cc, 0xeca51474, 0xbc9d6816,
 	0x12926a31, 0x1c9fa888
 },
 {
-	0x5c62c303, 0x1b8cf784,
+	0x5c62c303, 0x1b8cf784, 0x455e19f7, 0x785de928,
 	0x8270ac65, 0x05fa6668, 0x762df861, 0xda088f2f,
 	0x59614cd4, 0x7a94f690, 0xdc1e4993, 0x30825494,
 	0x91d0e462, 0x768087fc
 }
 };
-static uint32_t hash_values_crc[2][12] = {{
-	0x00000000, 0xf26b8303,
+static uint32_t hash_values_crc[2][14] = {{
+	0x00000000, 0xf26b8303, 0xf299e880, 0x18678721,
 	0x91545164, 0x06040eb1, 0x9bb99201, 0xcc4c4fe4,
 	0x14a90993, 0xf8a5dd8c, 0xcaa1ad0b, 0x7ac1e03e,
 	0x43f44466, 0x4a11475e
 },
 {
-	0xbdfd3980, 0x70204542,
+	0xbdfd3980, 0x70204542, 0x410b3df9, 0xe3f8b2f1,
 	0x98cd4c70, 0xd52c702f, 0x41fc0e1c, 0x3905f65c,
 	0x94bff47f, 0x1bab102d, 0xf4a2c645, 0xbf441539,
 	0x789c104f, 0x53028d3e
+}
+};
+static uint32_t hash_values_xor32[2][14] = {{
+	0x00000000, 0x00010000, 0x00010200, 0x4040403,
+	0x00010203, 0x04040404, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x0c040404, 0x000d0e0f,
+	0x04212223, 0x04040404
+},
+{
+	0xdeadbeef, 0xdeacbeef, 0xdeacbcef, 0xdaa9baec,
+	0xdeacbcec, 0xdaa9baeb, 0xdeadbeef, 0xdeadbeef,
+	0xdeadbeef, 0xdeadbeef, 0xd2a9baeb, 0xdea0b0e0,
+	0xda8c9ccc, 0xdaa9baeb
 }
 };
 
@@ -61,10 +75,10 @@ static uint32_t hash_values_crc[2][12] = {{
  */
 #define HASHTEST_ITERATIONS 1000000
 #define MAX_KEYSIZE 64
-static rte_hash_function hashtest_funcs[] = {rte_jhash, rte_hash_crc};
+static rte_hash_function hashtest_funcs[] = {rte_jhash, rte_hash_crc, rte_hash_xor32};
 static uint32_t hashtest_initvals[] = {0, 0xdeadbeef};
 static uint32_t hashtest_key_lens[] = {
-	1, 2,                 /* Unusual key sizes */
+	1, 2, 3, 7,           /* Unusual key sizes */
 	4, 8, 16, 32, 48, 64, /* standard key sizes */
 	9,                    /* IPv4 SRC + DST + protocol, unpadded */
 	13,                   /* IPv4 5-tuple, unpadded */
@@ -84,6 +98,9 @@ get_hash_name(rte_hash_function f)
 
 	if (f == rte_hash_crc)
 		return "rte_hash_crc";
+
+	if (f == rte_hash_xor32)
+		return "rte_hash_xor32";
 
 	return "UnknownHash";
 }
@@ -171,6 +188,16 @@ verify_precalculated_hash_func_tests(void)
 				       "Expected 0x%x, but got 0x%x\n",
 				       hashtest_key_lens[i], hashtest_initvals[j],
 				       hash_values_crc[j][i], hash);
+				return -1;
+			}
+
+			hash = rte_hash_xor32(key, hashtest_key_lens[i],
+					hashtest_initvals[j]);
+			if (hash != hash_values_xor32[j][i]) {
+				printf("XOR32 for %u bytes with initial value 0x%x."
+				       " Expected 0x%x, but got 0x%x\n",
+				       hashtest_key_lens[i], hashtest_initvals[j],
+				       hash_values_xor32[j][i], hash);
 				return -1;
 			}
 		}
