@@ -97,6 +97,8 @@ malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 	malloc_elem_insert(elem);
 
 	elem = malloc_elem_join_adjacent_free(elem);
+	if (elem == NULL)
+		return NULL;
 
 	malloc_elem_free_list_insert(elem);
 
@@ -321,6 +323,8 @@ alloc_pages_on_heap(struct malloc_heap *heap, uint64_t pg_sz, size_t elt_size,
 
 	map_addr = ms[0]->addr;
 	msl = rte_mem_virt2memseg_list(map_addr);
+	if (msl == NULL)
+		return NULL;
 
 	/* check if we wanted contiguous memory but didn't get it */
 	if (contig && !eal_memalloc_is_contig(msl, map_addr, alloc_sz)) {
@@ -897,6 +901,9 @@ malloc_heap_free(struct malloc_elem *elem)
 	/* anything after this is a bonus */
 	ret = 0;
 
+	if (elem == NULL)
+		goto free_unlock;
+
 	/* ...of which we can't avail if we are in legacy mode, or if this is an
 	 * externally allocated segment.
 	 */
@@ -935,7 +942,7 @@ malloc_heap_free(struct malloc_elem *elem)
 		const struct rte_memseg *tmp =
 				rte_mem_virt2memseg(aligned_start, msl);
 
-		if (tmp->flags & RTE_MEMSEG_FLAG_DO_NOT_FREE) {
+		if ((tmp != NULL) && (tmp->flags & RTE_MEMSEG_FLAG_DO_NOT_FREE)) {
 			/* this is an unfreeable segment, so move start */
 			aligned_start = RTE_PTR_ADD(tmp->addr, tmp->len);
 		}

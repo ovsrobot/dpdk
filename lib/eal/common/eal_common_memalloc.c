@@ -126,6 +126,9 @@ eal_memalloc_is_contig(const struct rte_memseg_list *msl, void *start,
 
 		/* skip first iteration */
 		ms = rte_fbarray_get(&msl->memseg_arr, start_seg);
+		if (ms == NULL)
+			return false;
+
 		cur = ms->iova;
 		expected = cur + pgsz;
 
@@ -137,7 +140,7 @@ eal_memalloc_is_contig(const struct rte_memseg_list *msl, void *start,
 				cur_seg++, expected += pgsz) {
 			ms = rte_fbarray_get(&msl->memseg_arr, cur_seg);
 
-			if (ms->iova != expected)
+			if ((ms != NULL) && (ms->iova != expected))
 				return false;
 		}
 	}
