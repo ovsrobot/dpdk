@@ -40,6 +40,7 @@ class Node(object):
     lcores: list[LogicalCore]
     _logger: DTSLOG
     _other_sessions: list[OSSession]
+    _execution_config: ExecutionConfiguration
 
     def __init__(self, node_config: NodeConfiguration):
         self.config = node_config
@@ -64,6 +65,7 @@ class Node(object):
         """
         self._setup_hugepages()
         self._set_up_execution(execution_config)
+        self._execution_config = execution_config
 
     def _set_up_execution(self, execution_config: ExecutionConfiguration) -> None:
         """

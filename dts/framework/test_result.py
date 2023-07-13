@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2023 PANTHEON.tech s.r.o.
+# Copyright(c) 2023 University of New Hampshire
 
 """
 Generic result container and reporters
@@ -13,9 +14,11 @@ from .config import (
     OS,
     Architecture,
     BuildTargetConfiguration,
+    BuildTargetInfo,
     Compiler,
     CPUType,
     NodeConfiguration,
+    NodeInfo,
 )
 from .exception import DTSError, ErrorSeverity
 from .logger import DTSLOG
@@ -67,12 +70,14 @@ class Statistics(dict):
     Using a dict provides a convenient way to format the data.
     """
 
-    def __init__(self, dpdk_version):
+    def __init__(self, output_info: dict[str, str] | None):
         super(Statistics, self).__init__()
         for result in Result:
             self[result.name] = 0
         self["PASS RATE"] = 0.0
-        self["DPDK VERSION"] = dpdk_version
+        if output_info:
+            for info_key, info_val in output_info.items():
+                self[info_key] = info_val
 
     def __iadd__(self, other: Result) -> "Statistics":
         """
@@ -206,6 +211,8 @@ class BuildTargetResult(BaseResult):
     os: OS
     cpu: CPUType
     compiler: Compiler
+    compiler_version: str | None
+    dpdk_version: str | None
 
     def __init__(self, build_target: BuildTargetConfiguration):
         super(BuildTargetResult, self).__init__()
@@ -213,6 +220,12 @@ class BuildTargetResult(BaseResult):
         self.os = build_target.os
         self.cpu = build_target.cpu
         self.compiler = build_target.compiler
+        self.compiler_version = None
+        self.dpdk_version = None
+
+    def add_build_target_versions(self, versions: BuildTargetInfo) -> None:
+        self.compiler_version = versions.compiler_version
+        self.dpdk_version = versions.dpdk_version
 
     def add_test_suite(self, test_suite_name: str) -> TestSuiteResult:
         test_suite_result = TestSuiteResult(test_suite_name)
@@ -228,10 +241,17 @@ class ExecutionResult(BaseResult):
     """
 
     sut_node: NodeConfiguration
+    sut_os_name: str
+    sut_os_version: str
+    sut_kernel_version: str
 
-    def __init__(self, sut_node: NodeConfiguration):
+    def __init__(self, sut_node: NodeConfiguration, sut_version_info: NodeInfo):
         super(ExecutionResult, self).__init__()
         self.sut_node = sut_node
+        self.sut_version_info = sut_version_info
+        self.sut_os_name = sut_version_info.os_name
+        self.sut_os_version = sut_version_info.os_version
+        self.sut_kernel_version = sut_version_info.kernel_version
 
     def add_build_target(
         self, build_target: BuildTargetConfiguration
@@ -258,6 +278,7 @@ class DTSResult(BaseResult):
     """
 
     dpdk_version: str | None
+    output: dict | None
     _logger: DTSLOG
     _errors: list[Exception]
     _return_code: ErrorSeverity
@@ -267,14 +288,17 @@ class DTSResult(BaseResult):
     def __init__(self, logger: DTSLOG):
         super(DTSResult, self).__init__()
         self.dpdk_version = None
+        self.output = None
         self._logger = logger
         self._errors = []
         self._return_code = ErrorSeverity.NO_ERR
         self._stats_result = None
         self._stats_filename = os.path.join(SETTINGS.output_dir, "statistics.txt")
 
-    def add_execution(self, sut_node: NodeConfiguration) -> ExecutionResult:
-        execution_result = ExecutionResult(sut_node)
+    def add_execution(
+        self, sut_node: NodeConfiguration, sut_version_info: NodeInfo
+    ) -> ExecutionResult:
+        execution_result = ExecutionResult(sut_node, sut_version_info)
         self._inner_results.append(execution_result)
         return execution_result
 
@@ -296,7 +320,8 @@ class DTSResult(BaseResult):
             for error in self._errors:
                 self._logger.debug(repr(error))
 
-        self._stats_result = Statistics(self.dpdk_version)
+        self._stats_result = Statistics(self.output)
+        # add information gathered from the smoke tests to the statistics
         self.add_stats(self._stats_result)
         with open(self._stats_filename, "w+") as stats_file:
             stats_file.write(str(self._stats_result))
