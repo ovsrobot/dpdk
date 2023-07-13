@@ -11,7 +11,7 @@
 
 #ifdef VHOST_HAS_VDUSE
 
-int vduse_device_create(const char *path);
+int vduse_device_create(const char *path, bool compliant_ol_flags);
 int vduse_device_destroy(const char *path);
 
 #else
