@@ -20,6 +20,7 @@ extern cmdline_parse_ctx_t main_ctx[];
 #endif
 
 #include <rte_memory.h>
+#include <rte_ethdev.h>
 #include <rte_eal.h>
 #include <rte_cycles.h>
 #include <rte_log.h>
@@ -111,6 +112,9 @@ main(int argc, char **argv)
 	char *tests[argc]; /* store an array of tests to run */
 	int test_count = 0;
 	int i;
+	uint16_t count;
+	uint16_t port_id;
+	uint16_t nb_ports;
 #endif
 	char *extra_args;
 	int ret;
@@ -156,6 +160,20 @@ main(int argc, char **argv)
 	argc -= ret;
 
 	prgname = argv[0];
+
+	count = 0;
+	RTE_ETH_FOREACH_DEV(port_id) {
+		count++;
+	}
+	nb_ports = count;
+	if (nb_ports == 0) {
+		if (rte_errno == EBUSY)
+			printf("Requested device cannot be used: %d\n", rte_errno);
+		else
+			printf("No probed ethernet devices: %d\n", rte_errno);
+		ret = 0;
+		goto out;
+	}
 
 #ifdef RTE_LIB_TIMER
 	ret = rte_timer_subsystem_init();
