@@ -932,7 +932,10 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	vsocket->async_copy = flags & RTE_VHOST_USER_ASYNC_COPY;
 	vsocket->net_compliant_ol_flags = flags & RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS;
 	vsocket->stats_enabled = flags & RTE_VHOST_USER_NET_STATS_ENABLE;
-	vsocket->iommu_support = flags & RTE_VHOST_USER_IOMMU_SUPPORT;
+	if (vsocket->is_vduse)
+		vsocket->iommu_support = true;
+	else
+		vsocket->iommu_support = flags & RTE_VHOST_USER_IOMMU_SUPPORT;
 
 	if (vsocket->async_copy &&
 		(flags & (RTE_VHOST_USER_IOMMU_SUPPORT |
@@ -986,7 +989,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 		vsocket->features &= ~seg_offload_features;
 	}
 
-	if (!(flags & RTE_VHOST_USER_IOMMU_SUPPORT)) {
+	if (!vsocket->iommu_support) {
 		vsocket->supported_features &= ~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
 		vsocket->features &= ~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
 	}
