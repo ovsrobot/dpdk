@@ -193,9 +193,18 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
  *   -EINVAL if conf is NULL or slave id is invalid (not a slave of given
  *       bonded device or is not inactive).
  */
+__rte_experimental
 int
-rte_eth_bond_8023ad_slave_info(uint16_t port_id, uint16_t slave_id,
+rte_eth_bond_8023ad_member_info(uint16_t port_id, uint16_t member_id,
 		struct rte_eth_bond_8023ad_member_info *conf);
+
+__rte_deprecated
+static inline int
+rte_eth_bond_8023ad_slave_info(uint16_t port_id, uint16_t slave_id,
+		struct rte_eth_bond_8023ad_member_info *conf)
+{
+	return rte_eth_bond_8023ad_member_info(port_id, slave_id, conf);
+}
 
 #ifdef __cplusplus
 }

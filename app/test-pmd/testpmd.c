@@ -612,7 +612,7 @@ change_bonding_slave_port_status(portid_t bond_pid, bool is_stop)
 	portid_t slave_pid;
 	int i;
 
-	num_slaves = rte_eth_bond_slaves_get(bond_pid, slave_pids,
+	num_slaves = rte_eth_bond_members_get(bond_pid, slave_pids,
 						RTE_MAX_ETHPORTS);
 	if (num_slaves < 0) {
 		fprintf(stderr, "Failed to get slave list for port = %u\n",
@@ -3519,7 +3519,7 @@ close_port(portid_t pid)
 			flush_port_owned_resources(pi);
 #ifdef RTE_NET_BOND
 			if (port->bond_flag == 1)
-				num_slaves = rte_eth_bond_slaves_get(pi,
+				num_slaves = rte_eth_bond_members_get(pi,
 						slave_pids, RTE_MAX_ETHPORTS);
 #endif
 			rte_eth_dev_close(pi);

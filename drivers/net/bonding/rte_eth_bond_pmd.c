@@ -2203,7 +2203,7 @@ bond_ethdev_cfg_cleanup(struct rte_eth_dev *dev, bool remove)
 			continue;
 		}
 
-		if (rte_eth_bond_slave_remove(bond_port_id, port_id) != 0) {
+		if (rte_eth_bond_member_remove(bond_port_id, port_id) != 0) {
 			RTE_BOND_LOG(ERR,
 				     "Failed to remove port %d from bonded device %s",
 				     port_id, dev->device->name);
@@ -3528,7 +3528,7 @@ dump_lacp(uint16_t port_id, FILE *f)
 
 	fprintf(f, "  - Lacp info:\n");
 
-	num_active_slaves = rte_eth_bond_active_slaves_get(port_id, slaves,
+	num_active_slaves = rte_eth_bond_active_members_get(port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	if (num_active_slaves < 0) {
 		fprintf(f, "\tFailed to get active slave list for port %u\n",
@@ -3546,7 +3546,7 @@ dump_lacp(uint16_t port_id, FILE *f)
 	dump_lacp_conf(&port_conf, f);
 
 	for (i = 0; i < num_active_slaves; i++) {
-		ret = rte_eth_bond_8023ad_slave_info(port_id, slaves[i],
+		ret = rte_eth_bond_8023ad_member_info(port_id, slaves[i],
 				&slave_info);
 		if (ret) {
 			fprintf(f, "\tGet slave device %u 8023ad info failed\n",
@@ -4075,7 +4075,7 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 		}
 
 		for (i = 0; i < slave_ports.slave_count; i++) {
-			if (rte_eth_bond_slave_add(port_id, slave_ports.slaves[i]) != 0) {
+			if (rte_eth_bond_member_add(port_id, slave_ports.slaves[i]) != 0) {
 				RTE_BOND_LOG(ERR,
 					     "Failed to add port %d as slave to bonded device %s",
 					     slave_ports.slaves[i], name);

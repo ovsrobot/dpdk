@@ -253,7 +253,7 @@ bond_port_init(struct rte_mempool *mbuf_pool)
 				"failed (res=%d)\n", BOND_PORT, retval);
 
 	for (i = 0; i < slaves_count; i++) {
-		if (rte_eth_bond_slave_add(BOND_PORT, slaves[i]) == -1)
+		if (rte_eth_bond_member_add(BOND_PORT, slaves[i]) == -1)
 			rte_exit(-1, "Oooops! adding slave (%u) to bond (%u) failed!\n",
 					slaves[i], BOND_PORT);
 
@@ -286,7 +286,7 @@ bond_port_init(struct rte_mempool *mbuf_pool)
 	printf("Waiting for slaves to become active...");
 	while (wait_counter) {
 		uint16_t act_slaves[16] = {0};
-		if (rte_eth_bond_active_slaves_get(BOND_PORT, act_slaves, 16) ==
+		if (rte_eth_bond_active_members_get(BOND_PORT, act_slaves, 16) ==
 				slaves_count) {
 			printf("\n");
 			break;
@@ -765,7 +765,7 @@ static void cmd_show_parsed(__rte_unused void *parsed_result,
 	cmdline_printf(cl,
 			"Active_slaves:%d "
 			"packets received:Tot:%d Arp:%d IPv4:%d\n",
-			rte_eth_bond_active_slaves_get(BOND_PORT, slaves, len),
+			rte_eth_bond_active_members_get(BOND_PORT, slaves, len),
 			global_flag_stru_p->port_packets[0],
 			global_flag_stru_p->port_packets[1],
 			global_flag_stru_p->port_packets[2]);

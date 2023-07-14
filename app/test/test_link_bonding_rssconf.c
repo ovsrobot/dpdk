@@ -162,7 +162,7 @@ remove_slaves(void)
 	FOR_EACH_PORT(n, port) {
 		port = &test_params.slave_ports[n];
 		if (port->is_slave) {
-			TEST_ASSERT_SUCCESS(rte_eth_bond_slave_remove(
+			TEST_ASSERT_SUCCESS(rte_eth_bond_member_remove(
 					test_params.bond_port_id, port->port_id),
 					"Cannot remove slave %d from bonding", port->port_id);
 			port->is_slave = 0;
@@ -193,7 +193,7 @@ bond_slaves(void)
 	FOR_EACH_PORT(n, port) {
 		port = &test_params.slave_ports[n];
 		if (!port->is_slave) {
-			TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(test_params.bond_port_id,
+			TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(test_params.bond_port_id,
 					port->port_id), "Cannot attach slave %d to the bonding",
 					port->port_id);
 			port->is_slave = 1;
@@ -289,7 +289,7 @@ slave_remove_and_add(void)
 	struct slave_conf *port = &(test_params.slave_ports[0]);
 
 	/* 1. Remove first slave from bonding */
-	TEST_ASSERT_SUCCESS(rte_eth_bond_slave_remove(test_params.bond_port_id,
+	TEST_ASSERT_SUCCESS(rte_eth_bond_member_remove(test_params.bond_port_id,
 			port->port_id), "Cannot remove slave #d from bonding");
 
 	/* 2. Change removed (ex-)slave and bonding configuration to different
@@ -305,7 +305,7 @@ slave_remove_and_add(void)
 			"Removed slave didn't should be synchronized with bonding port");
 
 	/* 3. Add (ex-)slave and check if configuration changed*/
-	TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(test_params.bond_port_id,
+	TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(test_params.bond_port_id,
 			port->port_id), "Cannot add slave");
 
 	bond_reta_fetch();

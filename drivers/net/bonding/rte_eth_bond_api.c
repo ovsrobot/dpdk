@@ -624,7 +624,7 @@ __eth_bond_slave_add_lock_free(uint16_t bonded_port_id, uint16_t slave_port_id)
 }
 
 int
-rte_eth_bond_slave_add(uint16_t bonded_port_id, uint16_t slave_port_id)
+rte_eth_bond_member_add(uint16_t bonded_port_id, uint16_t slave_port_id)
 {
 	struct rte_eth_dev *bonded_eth_dev;
 	struct bond_dev_private *internals;
@@ -760,7 +760,7 @@ __eth_bond_slave_remove_lock_free(uint16_t bonded_port_id,
 }
 
 int
-rte_eth_bond_slave_remove(uint16_t bonded_port_id, uint16_t slave_port_id)
+rte_eth_bond_member_remove(uint16_t bonded_port_id, uint16_t slave_port_id)
 {
 	struct rte_eth_dev *bonded_eth_dev;
 	struct bond_dev_private *internals;
@@ -849,7 +849,7 @@ rte_eth_bond_primary_get(uint16_t bonded_port_id)
 }
 
 int
-rte_eth_bond_slaves_get(uint16_t bonded_port_id, uint16_t slaves[],
+rte_eth_bond_members_get(uint16_t bonded_port_id, uint16_t slaves[],
 			uint16_t len)
 {
 	struct bond_dev_private *internals;
@@ -873,7 +873,7 @@ rte_eth_bond_slaves_get(uint16_t bonded_port_id, uint16_t slaves[],
 }
 
 int
-rte_eth_bond_active_slaves_get(uint16_t bonded_port_id, uint16_t slaves[],
+rte_eth_bond_active_members_get(uint16_t bonded_port_id, uint16_t slaves[],
 		uint16_t len)
 {
 	struct bond_dev_private *internals;

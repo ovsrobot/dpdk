@@ -121,8 +121,16 @@ rte_eth_bond_free(const char *name);
  * @return
  *	0 on success, negative value otherwise
  */
+__rte_experimental
 int
-rte_eth_bond_slave_add(uint16_t bonded_port_id, uint16_t slave_port_id);
+rte_eth_bond_member_add(uint16_t bonded_port_id, uint16_t member_port_id);
+
+__rte_deprecated
+static inline int
+rte_eth_bond_slave_add(uint16_t bonded_port_id, uint16_t slave_port_id)
+{
+	return rte_eth_bond_member_add(bonded_port_id, slave_port_id);
+}
 
 /**
  * Remove a slave rte_eth_dev device from the bonded device
@@ -133,8 +141,16 @@ rte_eth_bond_slave_add(uint16_t bonded_port_id, uint16_t slave_port_id);
  * @return
  *	0 on success, negative value otherwise
  */
+__rte_experimental
 int
-rte_eth_bond_slave_remove(uint16_t bonded_port_id, uint16_t slave_port_id);
+rte_eth_bond_member_remove(uint16_t bonded_port_id, uint16_t member_port_id);
+
+__rte_deprecated
+static inline int
+rte_eth_bond_slave_remove(uint16_t bonded_port_id, uint16_t slave_port_id)
+{
+	return rte_eth_bond_member_remove(bonded_port_id, slave_port_id);
+}
 
 /**
  * Set link bonding mode of bonded device
@@ -193,9 +209,18 @@ rte_eth_bond_primary_get(uint16_t bonded_port_id);
  *	Number of slaves associated with bonded device on success,
  *	negative value otherwise
  */
+__rte_experimental
 int
+rte_eth_bond_members_get(uint16_t bonded_port_id, uint16_t members[],
+		uint16_t len);
+
+__rte_deprecated
+static inline int
 rte_eth_bond_slaves_get(uint16_t bonded_port_id, uint16_t slaves[],
-			uint16_t len);
+		uint16_t len)
+{
+	return rte_eth_bond_members_get(bonded_port_id, slaves, len);
+}
 
 /**
  * Populate an array with list of the active slaves port id's of the bonded
@@ -209,9 +234,18 @@ rte_eth_bond_slaves_get(uint16_t bonded_port_id, uint16_t slaves[],
  *	Number of active slaves associated with bonded device on success,
  *	negative value otherwise
  */
+__rte_experimental
 int
+rte_eth_bond_active_members_get(uint16_t bonded_port_id, uint16_t members[],
+		uint16_t len);
+
+__rte_deprecated
+static inline int
 rte_eth_bond_active_slaves_get(uint16_t bonded_port_id, uint16_t slaves[],
-				uint16_t len);
+		uint16_t len)
+{
+	return rte_eth_bond_active_members_get(bonded_port_id, slaves, len);
+}
 
 /**
  * Set explicit MAC address to use on bonded device and it's slaves.

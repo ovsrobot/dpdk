@@ -281,14 +281,14 @@ test_create_bonded_device(void)
 			test_params->bonding_mode), "Failed to set ethdev %d to mode %d",
 			test_params->bonded_port_id, test_params->bonding_mode);
 
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 
 	TEST_ASSERT_EQUAL(current_slave_count, 0,
 			"Number of slaves %d is great than expected %d.",
 			current_slave_count, 0);
 
-	current_slave_count = rte_eth_bond_active_slaves_get(
+	current_slave_count = rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS);
 
 	TEST_ASSERT_EQUAL(current_slave_count, 0,
@@ -335,19 +335,19 @@ test_add_slave_to_bonded_device(void)
 
 	uint16_t slaves[RTE_MAX_ETHPORTS];
 
-	TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(test_params->bonded_port_id,
+	TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(test_params->bonded_port_id,
 			test_params->slave_port_ids[test_params->bonded_slave_count]),
 			"Failed to add slave (%d) to bonded port (%d).",
 			test_params->slave_port_ids[test_params->bonded_slave_count],
 			test_params->bonded_port_id);
 
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, test_params->bonded_slave_count + 1,
 			"Number of slaves (%d) is greater than expected (%d).",
 			current_slave_count, test_params->bonded_slave_count + 1);
 
-	current_slave_count = rte_eth_bond_active_slaves_get(
+	current_slave_count = rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, 0,
 					"Number of active slaves (%d) is not as expected (%d).\n",
@@ -362,12 +362,12 @@ static int
 test_add_slave_to_invalid_bonded_device(void)
 {
 	/* Invalid port ID */
-	TEST_ASSERT_FAIL(rte_eth_bond_slave_add(test_params->bonded_port_id + 5,
+	TEST_ASSERT_FAIL(rte_eth_bond_member_add(test_params->bonded_port_id + 5,
 			test_params->slave_port_ids[test_params->bonded_slave_count]),
 			"Expected call to failed as invalid port specified.");
 
 	/* Non bonded device */
-	TEST_ASSERT_FAIL(rte_eth_bond_slave_add(test_params->slave_port_ids[0],
+	TEST_ASSERT_FAIL(rte_eth_bond_member_add(test_params->slave_port_ids[0],
 			test_params->slave_port_ids[test_params->bonded_slave_count]),
 			"Expected call to failed as invalid port specified.");
 
@@ -382,14 +382,14 @@ test_remove_slave_from_bonded_device(void)
 	struct rte_ether_addr read_mac_addr, *mac_addr;
 	uint16_t slaves[RTE_MAX_ETHPORTS];
 
-	TEST_ASSERT_SUCCESS(rte_eth_bond_slave_remove(test_params->bonded_port_id,
+	TEST_ASSERT_SUCCESS(rte_eth_bond_member_remove(test_params->bonded_port_id,
 			test_params->slave_port_ids[test_params->bonded_slave_count-1]),
 			"Failed to remove slave %d from bonded port (%d).",
 			test_params->slave_port_ids[test_params->bonded_slave_count-1],
 			test_params->bonded_port_id);
 
 
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 
 	TEST_ASSERT_EQUAL(current_slave_count, test_params->bonded_slave_count - 1,
@@ -424,13 +424,13 @@ static int
 test_remove_slave_from_invalid_bonded_device(void)
 {
 	/* Invalid port ID */
-	TEST_ASSERT_FAIL(rte_eth_bond_slave_remove(
+	TEST_ASSERT_FAIL(rte_eth_bond_member_remove(
 			test_params->bonded_port_id + 5,
 			test_params->slave_port_ids[test_params->bonded_slave_count - 1]),
 			"Expected call to failed as invalid port specified.");
 
 	/* Non bonded device */
-	TEST_ASSERT_FAIL(rte_eth_bond_slave_remove(
+	TEST_ASSERT_FAIL(rte_eth_bond_member_remove(
 			test_params->slave_port_ids[0],
 			test_params->slave_port_ids[test_params->bonded_slave_count - 1]),
 			"Expected call to failed as invalid port specified.");
@@ -449,7 +449,7 @@ test_add_already_bonded_slave_to_bonded_device(void)
 
 	test_add_slave_to_bonded_device();
 
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, 1,
 			"Number of slaves (%d) is not that expected (%d).",
@@ -461,7 +461,7 @@ test_add_already_bonded_slave_to_bonded_device(void)
 			rte_socket_id());
 	TEST_ASSERT(port_id >= 0, "Failed to create bonded device.");
 
-	TEST_ASSERT(rte_eth_bond_slave_add(port_id,
+	TEST_ASSERT(rte_eth_bond_member_add(port_id,
 			test_params->slave_port_ids[test_params->bonded_slave_count - 1])
 			< 0,
 			"Added slave (%d) to bonded port (%d) unexpectedly.",
@@ -482,34 +482,34 @@ test_get_slaves_from_bonded_device(void)
 			"Failed to add slave to bonded device");
 
 	/* Invalid port id */
-	current_slave_count = rte_eth_bond_slaves_get(INVALID_PORT_ID, slaves,
+	current_slave_count = rte_eth_bond_members_get(INVALID_PORT_ID, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT(current_slave_count < 0,
 			"Invalid port id unexpectedly succeeded");
 
-	current_slave_count = rte_eth_bond_active_slaves_get(INVALID_PORT_ID,
+	current_slave_count = rte_eth_bond_active_members_get(INVALID_PORT_ID,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT(current_slave_count < 0,
 			"Invalid port id unexpectedly succeeded");
 
 	/* Invalid slaves pointer */
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			NULL, RTE_MAX_ETHPORTS);
 	TEST_ASSERT(current_slave_count < 0,
 			"Invalid slave array unexpectedly succeeded");
 
-	current_slave_count = rte_eth_bond_active_slaves_get(
+	current_slave_count = rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, NULL, RTE_MAX_ETHPORTS);
 	TEST_ASSERT(current_slave_count < 0,
 			"Invalid slave array unexpectedly succeeded");
 
 	/* non bonded device*/
-	current_slave_count = rte_eth_bond_slaves_get(
+	current_slave_count = rte_eth_bond_members_get(
 			test_params->slave_port_ids[0], NULL, RTE_MAX_ETHPORTS);
 	TEST_ASSERT(current_slave_count < 0,
 			"Invalid port id unexpectedly succeeded");
 
-	current_slave_count = rte_eth_bond_active_slaves_get(
+	current_slave_count = rte_eth_bond_active_members_get(
 			test_params->slave_port_ids[0],	NULL, RTE_MAX_ETHPORTS);
 	TEST_ASSERT(current_slave_count < 0,
 			"Invalid port id unexpectedly succeeded");
@@ -573,13 +573,13 @@ test_start_bonded_device(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[test_params->bonded_slave_count-1], 1);
 
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, test_params->bonded_slave_count,
 			"Number of slaves (%d) is not expected value (%d).",
 			current_slave_count, test_params->bonded_slave_count);
 
-	current_slave_count = rte_eth_bond_active_slaves_get(
+	current_slave_count = rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, test_params->bonded_slave_count,
 			"Number of active slaves (%d) is not expected value (%d).",
@@ -627,13 +627,13 @@ test_stop_bonded_device(void)
 			"Bonded port (%d) status (%d) is not expected value (%d).",
 			test_params->bonded_port_id, link_status.link_status, 0);
 
-	current_slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id,
+	current_slave_count = rte_eth_bond_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, test_params->bonded_slave_count,
 			"Number of slaves (%d) is not expected value (%d).",
 			current_slave_count, test_params->bonded_slave_count);
 
-	current_slave_count = rte_eth_bond_active_slaves_get(
+	current_slave_count = rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(current_slave_count, 0,
 			"Number of active slaves (%d) is not expected value (%d).",
@@ -956,13 +956,13 @@ test_set_bonded_port_initialization_mac_assignment(void)
 	 * 2. Add slave ethdevs to bonded device
 	 */
 	for (i = 0; i < BONDED_INIT_MAC_ASSIGNMENT_SLAVE_COUNT; i++) {
-		TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(bonded_port_id,
+		TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(bonded_port_id,
 				slave_port_ids[i]),
 				"Failed to add slave (%d) to bonded port (%d).",
 				slave_port_ids[i], bonded_port_id);
 	}
 
-	slave_count = rte_eth_bond_slaves_get(bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(BONDED_INIT_MAC_ASSIGNMENT_SLAVE_COUNT, slave_count,
 			"Number of slaves (%d) is not as expected (%d)",
@@ -1080,13 +1080,13 @@ test_set_bonded_port_initialization_mac_assignment(void)
 			bonded_port_id);
 
 	for (i = 0; i < BONDED_INIT_MAC_ASSIGNMENT_SLAVE_COUNT; i++) {
-		TEST_ASSERT_SUCCESS(rte_eth_bond_slave_remove(bonded_port_id,
+		TEST_ASSERT_SUCCESS(rte_eth_bond_member_remove(bonded_port_id,
 				slave_port_ids[i]),
 				"Failed to remove slave %d from bonded port (%d).",
 				slave_port_ids[i], bonded_port_id);
 	}
 
-	slave_count = rte_eth_bond_slaves_get(bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 
 	TEST_ASSERT_EQUAL(slave_count, 0,
@@ -1169,7 +1169,7 @@ test_adding_slave_after_bonded_device_started(void)
 				test_params->slave_port_ids[i], 1);
 	}
 
-	TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(test_params->bonded_port_id,
+	TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(test_params->bonded_port_id,
 			test_params->slave_port_ids[test_params->bonded_slave_count]),
 			"Failed to add slave to bonded port.\n");
 
@@ -1253,7 +1253,7 @@ test_status_interrupt(void)
 			RTE_ETH_EVENT_INTR_LSC, test_bonding_lsc_event_callback,
 			&test_params->bonded_port_id);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 
 	TEST_ASSERT_EQUAL(slave_count, TEST_STATUS_INTERRUPT_SLAVE_COUNT,
@@ -1281,7 +1281,7 @@ test_status_interrupt(void)
 	TEST_ASSERT(test_lsc_interrupt_count > 0,
 			"Did not receive link status change interrupt");
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 
 	TEST_ASSERT_EQUAL(slave_count, 0,
@@ -1909,13 +1909,13 @@ test_roundrobin_verify_slave_link_status_change_behaviour(void)
 			"Failed to initialize bonded device with slaves");
 
 	/* Verify Current Slaves Count /Active Slave Count is */
-	slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(test_params->bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, TEST_RR_LINK_STATUS_SLAVE_COUNT,
 			"Number of slaves (%d) is not as expected (%d).",
 			slave_count, TEST_RR_LINK_STATUS_SLAVE_COUNT);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, TEST_RR_LINK_STATUS_SLAVE_COUNT,
 			"Number of active slaves (%d) is not as expected (%d).",
@@ -1927,7 +1927,7 @@ test_roundrobin_verify_slave_link_status_change_behaviour(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[3], 0);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count,
 			TEST_RR_LINK_STATUS_EXPECTED_ACTIVE_SLAVE_COUNT,
@@ -2053,7 +2053,7 @@ test_roundrobin_verfiy_polling_slave_link_status_change(void)
 		}
 
 		/* Add slave to bonded device */
-		TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(test_params->bonded_port_id,
+		TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(test_params->bonded_port_id,
 				polling_test_slaves[i]),
 				"Failed to add slave %s(%d) to bonded device %d",
 				slave_name, polling_test_slaves[i],
@@ -2104,7 +2104,7 @@ test_roundrobin_verfiy_polling_slave_link_status_change(void)
 	for (i = 0; i < TEST_RR_POLLING_LINK_STATUS_SLAVE_COUNT; i++) {
 
 		TEST_ASSERT_SUCCESS(
-				rte_eth_bond_slave_remove(test_params->bonded_port_id,
+				rte_eth_bond_member_remove(test_params->bonded_port_id,
 						polling_test_slaves[i]),
 				"Failed to remove slave %d from bonded port (%d)",
 				polling_test_slaves[i], test_params->bonded_port_id);
@@ -2509,13 +2509,13 @@ test_activebackup_verify_slave_link_status_change_failover(void)
 			"Failed to initialize bonded device with slaves");
 
 	/* Verify Current Slaves Count /Active Slave Count is */
-	slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(test_params->bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, 4,
 			"Number of slaves (%d) is not as expected (%d).",
 			slave_count, 4);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, 4,
 			"Number of active slaves (%d) is not as expected (%d).",
@@ -2531,7 +2531,7 @@ test_activebackup_verify_slave_link_status_change_failover(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[3], 0);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_active_slaves_get(
+	TEST_ASSERT_EQUAL(rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS), 2,
 			"Number of active slaves (%d) is not as expected (%d).",
 			slave_count, 2);
@@ -2547,7 +2547,7 @@ test_activebackup_verify_slave_link_status_change_failover(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[0], 0);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_active_slaves_get(
+	TEST_ASSERT_EQUAL(rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS),
 			3,
 			"Number of active slaves (%d) is not as expected (%d).",
@@ -3441,13 +3441,13 @@ test_balance_verify_slave_link_status_change_behaviour(void)
 
 
 	/* Verify Current Slaves Count /Active Slave Count is */
-	slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(test_params->bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, TEST_BALANCE_LINK_STATUS_SLAVE_COUNT,
 			"Number of slaves (%d) is not as expected (%d).",
 			slave_count, TEST_BALANCE_LINK_STATUS_SLAVE_COUNT);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, TEST_BALANCE_LINK_STATUS_SLAVE_COUNT,
 			"Number of active slaves (%d) is not as expected (%d).",
@@ -3459,7 +3459,7 @@ test_balance_verify_slave_link_status_change_behaviour(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[3], 0);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_active_slaves_get(
+	TEST_ASSERT_EQUAL(rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS), 2,
 			"Number of active slaves (%d) is not as expected (%d).",
 			slave_count, 2);
@@ -3508,7 +3508,7 @@ test_balance_verify_slave_link_status_change_behaviour(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[2], 0);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_active_slaves_get(
+	TEST_ASSERT_EQUAL(rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS), 1,
 			"Number of active slaves (%d) is not as expected (%d).",
 			slave_count, 1);
@@ -4023,13 +4023,13 @@ test_broadcast_verify_slave_link_status_change_behaviour(void)
 				1), "Failed to initialise bonded device");
 
 	/* Verify Current Slaves Count /Active Slave Count is */
-	slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(test_params->bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, 4,
 			"Number of slaves (%d) is not as expected (%d).",
 			slave_count, 4);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, 4,
 			"Number of active slaves (%d) is not as expected (%d).",
@@ -4041,7 +4041,7 @@ test_broadcast_verify_slave_link_status_change_behaviour(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[3], 0);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, 2,
 			"Number of active slaves (%d) is not as expected (%d).",
@@ -4581,13 +4581,13 @@ test_tlb_verify_slave_link_status_change_failover(void)
 			"Failed to initialize bonded device with slaves");
 
 	/* Verify Current Slaves Count /Active Slave Count is */
-	slave_count = rte_eth_bond_slaves_get(test_params->bonded_port_id, slaves,
+	slave_count = rte_eth_bond_members_get(test_params->bonded_port_id, slaves,
 			RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, 4,
 			"Number of slaves (%d) is not as expected (%d).\n",
 			slave_count, 4);
 
-	slave_count = rte_eth_bond_active_slaves_get(test_params->bonded_port_id,
+	slave_count = rte_eth_bond_active_members_get(test_params->bonded_port_id,
 			slaves, RTE_MAX_ETHPORTS);
 	TEST_ASSERT_EQUAL(slave_count, (int)4,
 			"Number of slaves (%d) is not as expected (%d).\n",
@@ -4603,7 +4603,7 @@ test_tlb_verify_slave_link_status_change_failover(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[3], 0);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_active_slaves_get(
+	TEST_ASSERT_EQUAL(rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS), 2,
 			"Number of active slaves (%d) is not as expected (%d).",
 			slave_count, 2);
@@ -4619,7 +4619,7 @@ test_tlb_verify_slave_link_status_change_failover(void)
 	virtual_ethdev_simulate_link_status_interrupt(
 			test_params->slave_port_ids[0], 0);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_active_slaves_get(
+	TEST_ASSERT_EQUAL(rte_eth_bond_active_members_get(
 			test_params->bonded_port_id, slaves, RTE_MAX_ETHPORTS), 3,
 			"Number of active slaves (%d) is not as expected (%d).",
 			slave_count, 3);

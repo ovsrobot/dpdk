@@ -238,7 +238,7 @@ add_slave(struct slave_conf *slave, uint8_t start)
 	TEST_ASSERT_SUCCESS(rte_eth_dev_mac_addr_add(slave->port_id, &addr, 0),
 		"Failed to set slave MAC address");
 
-	TEST_ASSERT_SUCCESS(rte_eth_bond_slave_add(test_params.bonded_port_id,
+	TEST_ASSERT_SUCCESS(rte_eth_bond_member_add(test_params.bonded_port_id,
 		slave->port_id),
 			"Failed to add slave (idx=%u, id=%u) to bonding (id=%u)",
 			(uint8_t)(slave - test_params.slave_ports), slave->port_id,
@@ -279,7 +279,7 @@ remove_slave(struct slave_conf *slave)
 		"Slave %u tx queue not empty while removing from bonding.",
 		slave->port_id);
 
-	TEST_ASSERT_EQUAL(rte_eth_bond_slave_remove(test_params.bonded_port_id,
+	TEST_ASSERT_EQUAL(rte_eth_bond_member_remove(test_params.bonded_port_id,
 			slave->port_id), 0,
 			"Failed to remove slave (idx=%u, id=%u) from bonding (id=%u)",
 			(uint8_t)slave_idx, slave->port_id,
@@ -359,7 +359,7 @@ remove_slaves_and_stop_bonded_device(void)
 	FOR_EACH_SLAVE(i, slave)
 		remove_slave(slave);
 
-	retval = rte_eth_bond_slaves_get(test_params.bonded_port_id, slaves,
+	retval = rte_eth_bond_members_get(test_params.bonded_port_id, slaves,
 		RTE_DIM(slaves));
 
 	TEST_ASSERT_EQUAL(retval, 0,
@@ -1540,7 +1540,7 @@ check_environment(void)
 			break;
 	}
 
-	slaves_count = rte_eth_bond_slaves_get(test_params.bonded_port_id,
+	slaves_count = rte_eth_bond_members_get(test_params.bonded_port_id,
 			slaves, RTE_DIM(slaves));
 
 	if (slaves_count != 0)

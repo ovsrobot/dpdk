@@ -1517,7 +1517,7 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
 
 
 int
-rte_eth_bond_8023ad_slave_info(uint16_t port_id, uint16_t slave_id,
+rte_eth_bond_8023ad_member_info(uint16_t port_id, uint16_t slave_id,
 		struct rte_eth_bond_8023ad_member_info *info)
 {
 	struct rte_eth_dev *bond_dev;
