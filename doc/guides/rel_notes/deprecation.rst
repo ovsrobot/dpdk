@@ -161,3 +161,7 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* bonding: The macro ``RTE_ETH_DEV_BONDED_SLAVE`` will be deprecated in
+  DPDK 23.07, and removed in DPDK 23.11. The relevant code can be updated using
+  ``RTE_ETH_DEV_BONDING_MEMBER``.
