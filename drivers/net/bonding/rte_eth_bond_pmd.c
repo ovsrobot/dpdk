@@ -3471,7 +3471,7 @@ dump_lacp_port_param(const struct port_params *params, FILE *f)
 }
 
 static void
-dump_lacp_slave(const struct rte_eth_bond_8023ad_slave_info *info, FILE *f)
+dump_lacp_slave(const struct rte_eth_bond_8023ad_member_info *info, FILE *f)
 {
 	char a_state[256] = { 0 };
 	char p_state[256] = { 0 };
@@ -3520,7 +3520,7 @@ dump_lacp_slave(const struct rte_eth_bond_8023ad_slave_info *info, FILE *f)
 static void
 dump_lacp(uint16_t port_id, FILE *f)
 {
-	struct rte_eth_bond_8023ad_slave_info slave_info;
+	struct rte_eth_bond_8023ad_member_info slave_info;
 	struct rte_eth_bond_8023ad_conf port_conf;
 	uint16_t slaves[RTE_MAX_ETHPORTS];
 	int num_active_slaves;

@@ -141,7 +141,7 @@ struct rte_eth_bond_8023ad_conf {
 	enum rte_bond_8023ad_agg_selection agg_selection;
 };
 
-struct rte_eth_bond_8023ad_slave_info {
+struct rte_eth_bond_8023ad_member_info {
 	enum rte_bond_8023ad_selection selected;
 	uint8_t actor_state;
 	struct port_params actor;
@@ -195,7 +195,7 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
  */
 int
 rte_eth_bond_8023ad_slave_info(uint16_t port_id, uint16_t slave_id,
-		struct rte_eth_bond_8023ad_slave_info *conf);
+		struct rte_eth_bond_8023ad_member_info *conf);
 
 #ifdef __cplusplus
 }

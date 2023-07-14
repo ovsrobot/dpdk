@@ -165,3 +165,6 @@ Deprecation Notices
 * bonding: The macro ``RTE_ETH_DEV_BONDED_SLAVE`` will be deprecated in
   DPDK 23.07, and removed in DPDK 23.11. The relevant code can be updated using
   ``RTE_ETH_DEV_BONDING_MEMBER``.
+  The data structure ``struct rte_eth_bond_8023ad_slave_info`` will be
+  deprecated in DPDK 23.07, and removed in DPDK 23.11. The relevant code can be
+  updated using ``struct rte_eth_bond_8023ad_member_info``.
