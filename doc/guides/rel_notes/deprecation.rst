@@ -130,6 +130,13 @@ Deprecation Notices
   ``rte_cryptodev_get_auth_algo_string``, ``rte_cryptodev_get_aead_algo_string`` and
   ``rte_cryptodev_asym_get_xform_string`` respectively.
 
+* eventdev: The struct rte_event_fp_ops will be updated with a new element
+  rte_eventdev_port_data to support optional callbacks in DPDK 23.11.
+  rte_eventdev_port_data is used to hold callbacks registered optionally
+  per event device port and associated callback data. By adding rte_eventdev_port_data
+  to rte_event_fp_ops, allows to fetch this data for fastpath eventdev inline functions
+  in advance. This changes the size of rte_event_fp_ops and result in ABI change.
+
 * security: Hide structures ``rte_security_ops`` and ``rte_security_ctx``
   as these are internal to DPDK library and drivers.
 
