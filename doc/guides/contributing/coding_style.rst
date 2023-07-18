@@ -794,6 +794,8 @@ Control Statements
                  /* NOTREACHED */
          }
 
+.. _dynamic_logging:
+
 Dynamic Logging
 ---------------
 
