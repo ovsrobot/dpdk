@@ -472,6 +472,36 @@ append_eal_args(int argc, char **argv, const char *eal_args, char **new_argv)
 	return new_argc;
 }
 
+/*
+ * Parse command line options.
+ */
+static void
+parse_opts(struct test_options *options, int argc, char **argv)
+{
+	static const struct option long_options[] = {
+		{ "config", required_argument, NULL, 0},
+		{ "result", required_argument, NULL, 1},
+		{ NULL },
+	};
+
+	int opt_idx;
+	int opt;
+
+	while ((opt = getopt_long(argc, argv, "", long_options, &opt_idx))
+			!= EOF) {
+		switch (opt) {
+		case 0:
+			options->cfg_path_ptr = optarg;
+			break;
+		case 1:
+			options->rst_path_ptr = optarg;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -482,39 +512,35 @@ main(int argc, char *argv[])
 	int wstatus;
 	char args[MAX_EAL_PARAM_NB][MAX_EAL_PARAM_LEN];
 	char *pargs[MAX_EAL_PARAM_NB];
-	char *cfg_path_ptr = NULL;
-	char *rst_path_ptr = NULL;
 	char rst_path[PATH_MAX];
 	int new_argc;
+	struct test_options opt;
 
 	memset(args, 0, sizeof(args));
+	memset(&opt, 0, sizeof(opt));
 
 	for (i = 0; i < RTE_DIM(pargs); i++)
 		pargs[i] = args[i];
 
-	for (i = 0; i < (uint32_t)argc; i++) {
-		if (strncmp(argv[i], CMDLINE_CONFIG_ARG, MAX_LONG_OPT_SZ) == 0)
-			cfg_path_ptr = argv[i + 1];
-		if (strncmp(argv[i], CMDLINE_RESULT_ARG, MAX_LONG_OPT_SZ) == 0)
-			rst_path_ptr = argv[i + 1];
-	}
-	if (cfg_path_ptr == NULL) {
+	parse_opts(&opt, argc, argv);
+
+	if (opt.cfg_path_ptr == NULL) {
 		printf("Config file not assigned.\n");
 		return -1;
 	}
-	if (rst_path_ptr == NULL) {
-		strlcpy(rst_path, cfg_path_ptr, PATH_MAX);
+	if (opt.rst_path_ptr == NULL) {
+		strlcpy(rst_path, opt.cfg_path_ptr, PATH_MAX);
 		char *token = strtok(basename(rst_path), ".");
 		if (token == NULL) {
 			printf("Config file error.\n");
 			return -1;
 		}
 		strcat(token, "_result.csv");
-		rst_path_ptr = rst_path;
+		opt.rst_path_ptr = rst_path;
 	}
 
-	case_nb = load_configs(cfg_path_ptr);
-	fd = fopen(rst_path_ptr, "w");
+	case_nb = load_configs(opt.cfg_path_ptr);
+	fd = fopen(opt.rst_path_ptr, "w");
 	if (fd == NULL) {
 		printf("Open output CSV file error.\n");
 		return -1;
@@ -527,7 +553,7 @@ main(int argc, char *argv[])
 			printf("Invalid test case %d.\n\n", i + 1);
 			snprintf(output_str[0], MAX_OUTPUT_STR_LEN, "Invalid case %d\n", i + 1);
 
-			fd = fopen(rst_path_ptr, "a");
+			fd = fopen(opt.rst_path_ptr, "a");
 			if (!fd) {
 				printf("Open output CSV file error.\n");
 				return 0;
@@ -541,7 +567,7 @@ main(int argc, char *argv[])
 			printf("No valid test type in test case %d.\n\n", i + 1);
 			snprintf(output_str[0], MAX_OUTPUT_STR_LEN, "Invalid case %d\n", i + 1);
 
-			fd = fopen(rst_path_ptr, "a");
+			fd = fopen(opt.rst_path_ptr, "a");
 			if (!fd) {
 				printf("Open output CSV file error.\n");
 				return 0;
@@ -569,7 +595,7 @@ main(int argc, char *argv[])
 				rte_exit(EXIT_FAILURE,
 					"There should be at least 2 worker lcores.\n");
 
-			fd = fopen(rst_path_ptr, "a");
+			fd = fopen(opt.rst_path_ptr, "a");
 			if (!fd) {
 				printf("Open output CSV file error.\n");
 				return 0;

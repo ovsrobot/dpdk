@@ -18,6 +18,10 @@
 
 extern char output_str[MAX_WORKER_NB + 1][MAX_OUTPUT_STR_LEN];
 
+struct test_options {
+	char *cfg_path_ptr;
+	char *rst_path_ptr;
+};
 typedef enum {
 	OP_NONE = 0,
 	OP_ADD,
