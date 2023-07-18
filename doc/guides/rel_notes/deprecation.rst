@@ -164,3 +164,6 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* bonding: The data structure ``struct rte_eth_bond_8023ad_slave_info`` will be
+  renamed in DPDK 23.11.
