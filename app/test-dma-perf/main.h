@@ -10,11 +10,12 @@
 #include <rte_cycles.h>
 #include <rte_dev.h>
 
-#define MAX_WORKER_NB 128
+#define MAX_WORKER_NB 256
 #define MAX_OUTPUT_STR_LEN 512
 
 #define MAX_DMA_NB 128
-#define MAX_LCORE_NB 256
+/* Note that MAX_LCORE_NB <= MAX_WORKER_NB */
+#define MAX_LCORE_NB MAX_WORKER_NB
 
 extern char output_str[MAX_WORKER_NB + 1][MAX_OUTPUT_STR_LEN];
 
