@@ -222,6 +222,12 @@ New Features
 
   See the :doc:`../tools/dmaperf` for more details.
 
+* **Added memarea library.**
+
+  The memarea library is an allocator of variable-size objects, it is oriented
+  towards the application layer, providing 'region-based memory management'
+  function.
+
 
 Removed Items
 -------------
