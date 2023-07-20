@@ -353,6 +353,57 @@ test_memarea_alloc_free(void)
 
 	TEST_ASSERT(rte_errno == 0, "Expected Zero");
 
+	fprintf(stderr, "There should have no allocated object.\n");
+	rte_memarea_dump(ma, stderr, true);
+
+	rte_memarea_destroy(ma);
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_memarea_dump(void)
+{
+	struct rte_memarea_param init;
+	uint32_t alloced_num = 0;
+	struct rte_memarea *ma;
+	void *ptr;
+	int ret;
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+
+	/* test for invalid parameters */
+	rte_errno = 0;
+	ret = rte_memarea_dump(NULL, stderr, false);
+	TEST_ASSERT(ret == -1, "Expected -1");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+	rte_errno = 0;
+	ret = rte_memarea_dump(ma, NULL, false);
+	TEST_ASSERT(ret == -1, "Expected -1");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	/* test for dump */
+	ptr = rte_memarea_alloc(ma, 1);
+	TEST_ASSERT(ptr != NULL, "Memarea allocation failed");
+	alloced_num++;
+	ptr = rte_memarea_alloc(ma, 1);
+	TEST_ASSERT(ptr != NULL, "Memarea allocation failed");
+	alloced_num++;
+	ptr = rte_memarea_alloc(ma, 1);
+	TEST_ASSERT(ptr != NULL, "Memarea allocation failed");
+	alloced_num++;
+	ptr = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE);
+	TEST_ASSERT(ptr == NULL, "Memarea allocation expect fail");
+	ptr = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE);
+	TEST_ASSERT(ptr == NULL, "Memarea allocation expect fail");
+	fprintf(stderr, "There should have %u allocated object.\n", alloced_num);
+	ret = rte_memarea_dump(ma, stderr, true);
+	TEST_ASSERT(ret == 0, "Memarea dump failed");
+
 	rte_memarea_destroy(ma);
 
 	return TEST_SUCCESS;
@@ -370,6 +421,7 @@ static struct unit_test_suite memarea_test_suite  = {
 		TEST_CASE(test_memarea_alloc_fail),
 		TEST_CASE(test_memarea_free_fail),
 		TEST_CASE(test_memarea_alloc_free),
+		TEST_CASE(test_memarea_dump),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
