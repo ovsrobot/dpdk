@@ -38,6 +38,12 @@ test_memarea_init_param(struct rte_memarea_param *init)
 	init->mt_safe = 1;
 }
 
+static void
+test_memarea_fill_region(void *ptr, size_t size)
+{
+	memset(ptr, 0xff, size);
+}
+
 static int
 test_memarea_create_bad_param(void)
 {
@@ -120,7 +126,7 @@ test_memarea_create_bad_param(void)
 static int
 test_memarea_create_destroy(void)
 {
-	struct rte_memarea *ma;
+	struct rte_memarea *ma, *src_ma;
 	struct rte_memarea_param init;
 
 	rte_errno = 0;
@@ -140,6 +146,215 @@ test_memarea_create_destroy(void)
 	TEST_ASSERT(ma != NULL, "Memarea creation failed");
 	rte_memarea_destroy(ma);
 
+	/* test for create with another memarea */
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	src_ma = rte_memarea_create(&init);
+	TEST_ASSERT(src_ma != NULL, "Memarea creation failed");
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_MEMAREA;
+	init.total_sz = init.total_sz >> 1;
+	init.ma.src = src_ma;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+	rte_memarea_destroy(ma);
+	rte_memarea_destroy(src_ma);
+
+	TEST_ASSERT(rte_errno == 0, "Expected ZERO");
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_memarea_alloc_bad_param(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	size_t size;
+	void *ptr;
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+
+	/* test for invalid ma */
+	rte_errno = 0;
+	ptr = rte_memarea_alloc(NULL, 1);
+	TEST_ASSERT(ptr == NULL, "Memarea allocation expect fail");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	/* test for invalid size (size = 0) */
+	rte_errno = 0;
+	ptr = rte_memarea_alloc(ma, 0);
+	TEST_ASSERT(ptr == NULL, "Memarea allocation expect fail");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	/* test for invalid size (size rewind) */
+	rte_errno = 0;
+	memset(&size, 0xff, sizeof(size));
+	ptr = rte_memarea_alloc(ma, size);
+	TEST_ASSERT(ptr == NULL, "Memarea allocation expect fail");
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	rte_memarea_destroy(ma);
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_memarea_free_bad_param(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	void *ptr;
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+	ptr = rte_memarea_alloc(ma, 1);
+	TEST_ASSERT(ptr != NULL, "Memarea allocation failed");
+	test_memarea_fill_region(ptr, 1);
+
+	/* test for invalid ma */
+	rte_errno = 0;
+	rte_memarea_free(NULL, ptr);
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	/* test for invalid ptr */
+	rte_errno = 0;
+	rte_memarea_free(ma, NULL);
+	TEST_ASSERT(rte_errno == EINVAL, "Expected EINVAL");
+
+	rte_memarea_destroy(ma);
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_memarea_alloc_fail(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	void *ptr[2];
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+
+	/* test alloc fail with big size */
+	rte_errno = 0;
+	ptr[0] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE);
+	TEST_ASSERT(ptr[0] == NULL, "Memarea allocation expect fail");
+	TEST_ASSERT(rte_errno == ENOMEM, "Expected ENOMEM");
+
+	/* test alloc fail because no memory */
+	ptr[0] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	TEST_ASSERT(ptr[0] != NULL, "Memarea allocation failed");
+	test_memarea_fill_region(ptr[0], MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_errno = 0;
+	ptr[1] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	TEST_ASSERT(ptr[1] == NULL, "Memarea allocation expect fail");
+	TEST_ASSERT(rte_errno == ENOMEM, "Expected ENOMEM");
+	rte_memarea_free(ma, ptr[0]);
+
+	/* test alloc fail when second fail */
+	ptr[0] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	TEST_ASSERT(ptr[0] != NULL, "Memarea allocation failed");
+	test_memarea_fill_region(ptr[0], MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_errno = 0;
+	ptr[1] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	TEST_ASSERT(ptr[1] == NULL, "Memarea allocation expect fail");
+	TEST_ASSERT(rte_errno == ENOMEM, "Expected ENOMEM");
+	rte_memarea_free(ma, ptr[0]);
+	ptr[1] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	TEST_ASSERT(ptr[1] != NULL, "Memarea allocation failed");
+	test_memarea_fill_region(ptr[1], MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_memarea_free(ma, ptr[1]);
+
+	rte_memarea_destroy(ma);
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_memarea_free_fail(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	void *ptr;
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+
+	/* test repeat free */
+	rte_errno = 0;
+	ptr = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	TEST_ASSERT(ptr != NULL, "Memarea allocation failed");
+	test_memarea_fill_region(ptr, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_memarea_free(ma, ptr);
+	TEST_ASSERT(rte_errno == 0, "Expected Zero");
+	rte_memarea_free(ma, ptr);
+	TEST_ASSERT(rte_errno == EFAULT, "Expected EFAULT");
+
+	rte_memarea_destroy(ma);
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_memarea_alloc_free(void)
+{
+#define ALLOC_MAX_NUM	8
+	struct rte_memarea_param init;
+	void *ptr[ALLOC_MAX_NUM];
+	struct rte_memarea *ma;
+	int i;
+
+	test_memarea_init_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_LIBC;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	TEST_ASSERT(ma != NULL, "Memarea creation failed");
+	memset(ptr, 0, sizeof(ptr));
+
+	rte_errno = 0;
+
+	/* test random alloc and free */
+	for (i = 0; i < ALLOC_MAX_NUM; i++) {
+		ptr[i] = rte_memarea_alloc(ma, 1);
+		TEST_ASSERT(ptr[i] != NULL, "Memarea allocation failed");
+		test_memarea_fill_region(ptr[i], 1);
+	}
+
+	/* test merge left */
+	rte_memarea_free(ma, ptr[0]);
+	rte_memarea_free(ma, ptr[1]);
+
+	/* test merge right */
+	rte_memarea_free(ma, ptr[7]);
+	rte_memarea_free(ma, ptr[6]);
+
+	/* test merge left and right */
+	rte_memarea_free(ma, ptr[3]);
+	rte_memarea_free(ma, ptr[2]);
+
+	/* test merge remains */
+	rte_memarea_free(ma, ptr[4]);
+	rte_memarea_free(ma, ptr[5]);
+
+	TEST_ASSERT(rte_errno == 0, "Expected Zero");
+
+	rte_memarea_destroy(ma);
+
 	return TEST_SUCCESS;
 }
 
@@ -150,6 +365,11 @@ static struct unit_test_suite memarea_test_suite  = {
 	.unit_test_cases = {
 		TEST_CASE(test_memarea_create_bad_param),
 		TEST_CASE(test_memarea_create_destroy),
+		TEST_CASE(test_memarea_alloc_bad_param),
+		TEST_CASE(test_memarea_free_bad_param),
+		TEST_CASE(test_memarea_alloc_fail),
+		TEST_CASE(test_memarea_free_fail),
+		TEST_CASE(test_memarea_alloc_free),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
