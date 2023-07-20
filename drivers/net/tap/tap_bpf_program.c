@@ -1,5 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
  * Copyright 2017 Mellanox Technologies, Ltd
+ *
+ * This file is not built as part of normal DPDK build.
+ * It is used to generate the eBPF code for TAP RSS.
+ *
+ * To build it use:
+ *  clang -O2 -emit-llvm -c tap_bpf_program.c -o - | \
+ *   llc -march=bpf -filetype=obj -o tap_bpf_program.o
  */
 
 #include <stdint.h>
@@ -14,8 +21,9 @@
 #include <linux/ipv6.h>
 #include <linux/if_tunnel.h>
 #include <linux/filter.h>
-#include <linux/bpf.h>
 
+#include "bpf_api.h"
+#include "bpf_elf.h"
 #include "tap_rss.h"
 
 /** Create IPv4 address */
@@ -75,14 +83,14 @@ struct ipv4_l3_l4_tuple {
 	__u32    dst_addr;
 	__u16    dport;
 	__u16    sport;
-} __rte_packed;
+} __attribute__((packed));
 
 struct ipv6_l3_l4_tuple {
 	__u8        src_addr[16];
 	__u8        dst_addr[16];
 	__u16       dport;
 	__u16       sport;
-} __rte_packed;
+} __attribute__((packed));
 
 static const __u8 def_rss_key[TAP_RSS_HASH_KEY_SIZE] = {
 	0xd1, 0x81, 0xc6, 0x2c,
