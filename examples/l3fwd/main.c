@@ -1233,8 +1233,12 @@ l3fwd_poll_resource_setup(void)
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &=
 			dev_info.flow_type_rss_offloads;
 
-		if (dev_info.max_rx_queues == 1)
+		/* relax the rx rss requirement */
+		if (dev_info.max_rx_queues == 1 || !local_port_conf.rx_adv_conf.rss_conf.rss_hf) {
+			printf("warning: modified the rx mq_mode to RTE_ETH_MQ_RX_NONE base on"
+				" device capability\n");
 			local_port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_NONE;
+		}
 
 		if (local_port_conf.rx_adv_conf.rss_conf.rss_hf !=
 				port_conf.rx_adv_conf.rss_conf.rss_hf) {
@@ -1243,6 +1247,19 @@ l3fwd_poll_resource_setup(void)
 				portid,
 				port_conf.rx_adv_conf.rss_conf.rss_hf,
 				local_port_conf.rx_adv_conf.rss_conf.rss_hf);
+		}
+
+		/* relax the rx offload requirement */
+		if ((local_port_conf.rxmode.offloads & dev_info.rx_offload_capa) !=
+			local_port_conf.rxmode.offloads) {
+			printf("Port %u requested Rx offloads 0x%"PRIx64" does not"
+				" match Rx offloads capabilities 0x%"PRIx64"\n",
+				portid, local_port_conf.rxmode.offloads,
+				dev_info.rx_offload_capa);
+			local_port_conf.rxmode.offloads &= dev_info.rx_offload_capa;
+			port_conf.rxmode.offloads = local_port_conf.rxmode.offloads;
+			printf("warning: modified the rx offload to 0x%"PRIx64" based on device"
+				" capability\n", local_port_conf.rxmode.offloads);
 		}
 
 		ret = rte_eth_dev_configure(portid, nb_rx_queue,
