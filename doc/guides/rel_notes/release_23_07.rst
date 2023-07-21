@@ -57,20 +57,20 @@ New Features
 
 * **Added AMD CDX bus support.**
 
-  CDX bus driver has been added to support AMD CDX bus,
+  CDX bus driver has been added to support the AMD CDX bus
   which operates on FPGA based CDX devices.
-  The CDX devices are memory mapped on system bus for embedded CPUs.
+  The CDX devices are memory mapped on system buses for embedded CPUs.
 
 * **Added MMIO read and write API to PCI bus.**
 
-  Introduced ``rte_pci_mmio_read()`` and ``rte_pci_mmio_write()`` API
+  Introduced ``rte_pci_mmio_read()`` and ``rte_pci_mmio_write()`` APIs
   to PCI bus so that PCI drivers can access PCI memory resources
-  when they are not mapped to process address space.
+  when they are not mapped to process address spaces.
 
 * **Added ethdev Rx/Tx queue ID check API.**
 
   Added ethdev Rx/Tx queue ID check API.
-  If the queue has been setup, it is considered valid.
+  If the queue has been set up it is considered valid.
 
 * **Added LLRS FEC mode in ethdev.**
 
@@ -89,7 +89,7 @@ New Features
 
   Added ``RTE_FLOW_ACTION_TYPE_IPV6_EXT_PUSH`` and ``RTE_FLOW_ACTION_TYPE_IPV6_EXT_PUSH``
   to push or remove the specific IPv6 extension into or from the packets.
-  Push always put the new extension as the last one due to the next header awareness.
+  Push always puts the new extension as the last one due to the next header awareness.
 
 * **Added indirect list flow action.**
 
@@ -97,33 +97,34 @@ New Features
 
 * **Added flow rule update.**
 
-  * Added API for updating the action list in the already existing rule.
+  * Added API for updating the action list in an already existing rule.
     Introduced both ``rte_flow_actions_update()`` and
     ``rte_flow_async_actions_update()`` functions.
 
 * **Added vhost callback API for interrupt handling.**
 
-  A new callback, ``guest_notify``, is introduced that can be used to handle
+  Introduced a new callback, ``guest_notify`` that can be used to handle
   the interrupt kick outside of the datapath fast path.
   In addition, a new API, ``rte_vhost_notify_guest()``,
-  is added to raise the interrupt outside of the fast path.
-
-* **Added vhost API to set maximum queue pairs supported.**
-
-  Introduced ``rte_vhost_driver_set_max_queue_num()`` to be able to limit
-  the maximum number of supported queue pairs, required for VDUSE support.
+  was added to raise the interrupt outside of the fast path.
 
 * **Added VDUSE support into vhost library.**
 
   VDUSE aims at implementing vDPA devices in userspace.
   It can be used as an alternative to Vhost-user when using Vhost-vDPA,
-  but also enable providing a virtio-net netdev to the host
+  but it also enables providing a virtio-net netdev to the host
   when using Virtio-vDPA driver.
+
   A limitation in this release is the lack of reconnection support.
-  While VDUSE support is already available in upstream kernel,
-  a couple of patches are required to support network device type,
+  While VDUSE support is already available in the upstream kernel,
+  a couple of patches are required to support network device types,
   which are being upstreamed:
   https://lore.kernel.org/all/20230419134329.346825-1-maxime.coquelin@redhat.com/
+
+* **Added vhost API to set maximum queue pairs supported.**
+
+  Introduced ``rte_vhost_driver_set_max_queue_num()`` to be able to limit
+  the maximum number of supported queue pairs, required for VDUSE support.
 
 * **Updated Google GVE net driver.**
 
@@ -149,9 +150,9 @@ New Features
 
   * Added support for configuring FEC mode, querying FEC capabilities and
     current FEC mode from a device.
-  * Added partial support for transfer flow actions SET_IPV4_DST, SET_TP_DST,
-    SET_IPV4_SRC and SET_TP_SRC on SN1000 SmartNICs.
-  * Added support for transfer flow action INDIRECT with subtype COUNT,
+  * Added partial support for transfer flow actions ``SET_IPV4_DST``, ``SET_TP_DST``,
+    ``SET_IPV4_SRC`` and ``SET_TP_SRC`` on SN1000 SmartNICs.
+  * Added support for transfer flow action ``INDIRECT`` with subtype ``COUNT``,
     for aggregated statistics.
   * Added support for keeping CRC.
   * Added VLAN stripping support on SN1000 SmartNICs.
@@ -159,7 +160,7 @@ New Features
 * **Added vmxnet3 version 7 support.**
 
   Added support for vmxnet3 version 7 which includes support
-  for uniform passthrough(UPT). The patches also add support
+  for uniform passthrough (UPT). The patches also add support
   for new capability registers, large passthrough BAR and some
   performance enhancements for UPT.
 
@@ -171,7 +172,7 @@ New Features
 
 * **Updated Intel QuickAssist Technology (QAT) crypto driver.**
 
-  * Added support for combined Cipher-CRC offload for DOCSIS for QAT GENs 2,3 and 4.
+  * Added support for combined Cipher-CRC offload for DOCSIS for QAT GENs 2, 3 and 4.
   * Added support for SM3-HMAC algorithm for QAT GENs 3 and 4.
 
 * **Updated Marvell cnxk crypto driver.**
@@ -211,7 +212,7 @@ New Features
 * **Added mcore dispatch model in graph library.**
 
   * Added set, get and validate model APIs to enhance graph framework
-    to choose different walk models.
+    to allow choice of different walk models.
   * Added mcore dispatch model to support cross-core dispatching mechanism.
   * Added a command option ``--model`` in l3fwd-graph example
     to choose RTC or mcore dispatch model.
@@ -253,7 +254,7 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* ethdev: Ensured all entries in MAC address list are uniques.
+* ethdev: Ensured all entries in MAC address list are unique.
   When setting a default MAC address with the function
   ``rte_eth_dev_default_mac_addr_set``,
   the default one needs to be removed by the user
