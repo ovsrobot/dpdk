@@ -222,6 +222,13 @@ New Features
 
   See the :doc:`../tools/dmaperf` for more details.
 
+* **Updated Intel idpf PMD.**
+
+  Added support for Intel IPU E2100 VF whose device id is 0x145c.
+
+* **Updated Intel cpfl PMD.**
+
+  Added support for hairpin queue.
 
 Removed Items
 -------------
