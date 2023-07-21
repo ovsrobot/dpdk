@@ -74,7 +74,7 @@ my_obj_init(struct rte_mempool *mp, __rte_unused void *arg,
 
 /* basic tests (done on one core) */
 static int
-test_mempool_basic(struct rte_mempool *mp, int use_external_cache)
+test_mempool_basic(struct rte_mempool *mp, int use_external_cache, int use_zc_api)
 {
 	uint32_t *objnum;
 	void **objtable;
@@ -84,6 +84,7 @@ test_mempool_basic(struct rte_mempool *mp, int use_external_cache)
 	unsigned i, j;
 	int offset;
 	struct rte_mempool_cache *cache;
+	void **cache_objs;
 
 	if (use_external_cache) {
 		/* Create a user-owned mempool cache. */
@@ -100,8 +101,13 @@ test_mempool_basic(struct rte_mempool *mp, int use_external_cache)
 	rte_mempool_dump(stdout, mp);
 
 	printf("get an object\n");
-	if (rte_mempool_generic_get(mp, &obj, 1, cache) < 0)
-		GOTO_ERR(ret, out);
+	if (use_zc_api) {
+		cache_objs = rte_mempool_cache_zc_get_bulk(cache, mp, 1);
+		obj = *cache_objs;
+	} else {
+		if (rte_mempool_generic_get(mp, &obj, 1, cache) < 0)
+			GOTO_ERR(ret, out);
+	}
 	rte_mempool_dump(stdout, mp);
 
 	/* tests that improve coverage */
@@ -123,21 +129,41 @@ test_mempool_basic(struct rte_mempool *mp, int use_external_cache)
 #endif
 
 	printf("put the object back\n");
-	rte_mempool_generic_put(mp, &obj, 1, cache);
+	if (use_zc_api) {
+		cache_objs = rte_mempool_cache_zc_put_bulk(cache, mp, 1);
+		rte_memcpy(cache_objs, &obj, sizeof(void *));
+	} else {
+		rte_mempool_generic_put(mp, &obj, 1, cache);
+	}
 	rte_mempool_dump(stdout, mp);
 
 	printf("get 2 objects\n");
-	if (rte_mempool_generic_get(mp, &obj, 1, cache) < 0)
-		GOTO_ERR(ret, out);
-	if (rte_mempool_generic_get(mp, &obj2, 1, cache) < 0) {
-		rte_mempool_generic_put(mp, &obj, 1, cache);
-		GOTO_ERR(ret, out);
+	if (use_zc_api) {
+		cache_objs = rte_mempool_cache_zc_get_bulk(cache, mp, 1);
+		obj = *cache_objs;
+		cache_objs = rte_mempool_cache_zc_get_bulk(cache, mp, 1);
+		obj2 = *cache_objs;
+	} else {
+		if (rte_mempool_generic_get(mp, &obj, 1, cache) < 0)
+			GOTO_ERR(ret, out);
+		if (rte_mempool_generic_get(mp, &obj2, 1, cache) < 0) {
+			rte_mempool_generic_put(mp, &obj, 1, cache);
+			GOTO_ERR(ret, out);
+		}
 	}
 	rte_mempool_dump(stdout, mp);
 
 	printf("put the objects back\n");
-	rte_mempool_generic_put(mp, &obj, 1, cache);
-	rte_mempool_generic_put(mp, &obj2, 1, cache);
+	if (use_zc_api) {
+		cache_objs = rte_mempool_cache_zc_put_bulk(cache, mp, 1);
+		rte_memcpy(cache_objs, &obj, sizeof(void *));
+		cache_objs = rte_mempool_cache_zc_put_bulk(cache, mp, 1);
+		rte_memcpy(cache_objs, &obj2, sizeof(void *));
+
+	} else {
+		rte_mempool_generic_put(mp, &obj, 1, cache);
+		rte_mempool_generic_put(mp, &obj2, 1, cache);
+	}
 	rte_mempool_dump(stdout, mp);
 
 	/*
@@ -149,8 +175,13 @@ test_mempool_basic(struct rte_mempool *mp, int use_external_cache)
 		GOTO_ERR(ret, out);
 
 	for (i = 0; i < MEMPOOL_SIZE; i++) {
-		if (rte_mempool_generic_get(mp, &objtable[i], 1, cache) < 0)
-			break;
+		if (use_zc_api) {
+			cache_objs = rte_mempool_cache_zc_get_bulk(cache, mp, 1);
+			objtable[i] = *cache_objs;
+		} else {
+			if (rte_mempool_generic_get(mp, &objtable[i], 1, cache) < 0)
+				break;
+		}
 	}
 
 	/*
@@ -170,8 +201,12 @@ test_mempool_basic(struct rte_mempool *mp, int use_external_cache)
 			if (obj_data[j] != 0)
 				ret = -1;
 		}
-
-		rte_mempool_generic_put(mp, &objtable[i], 1, cache);
+		if (use_zc_api) {
+			cache_objs = rte_mempool_cache_zc_put_bulk(cache, mp, 1);
+			rte_memcpy(cache_objs, &objtable[i], sizeof(void *));
+		} else {
+			rte_mempool_generic_put(mp, &objtable[i], 1, cache);
+		}
 	}
 
 	free(objtable);
@@ -979,15 +1014,19 @@ test_mempool(void)
 	rte_mempool_list_dump(stdout);
 
 	/* basic tests without cache */
-	if (test_mempool_basic(mp_nocache, 0) < 0)
+	if (test_mempool_basic(mp_nocache, 0, 0) < 0)
 		GOTO_ERR(ret, err);
 
-	/* basic tests with cache */
-	if (test_mempool_basic(mp_cache, 0) < 0)
+	/* basic tests with zero-copy API's */
+	if (test_mempool_basic(mp_cache, 0, 1) < 0)
+		GOTO_ERR(ret, err);
+
+	/* basic tests with user-owned cache and zero-copy API's */
+	if (test_mempool_basic(mp_nocache, 1, 1) < 0)
 		GOTO_ERR(ret, err);
 
 	/* basic tests with user-owned cache */
-	if (test_mempool_basic(mp_nocache, 1) < 0)
+	if (test_mempool_basic(mp_nocache, 1, 0) < 0)
 		GOTO_ERR(ret, err);
 
 	/* more basic tests without cache */
@@ -1008,10 +1047,10 @@ test_mempool(void)
 		GOTO_ERR(ret, err);
 
 	/* test the stack handler */
-	if (test_mempool_basic(mp_stack, 1) < 0)
+	if (test_mempool_basic(mp_stack, 1, 0) < 0)
 		GOTO_ERR(ret, err);
 
-	if (test_mempool_basic(default_pool, 1) < 0)
+	if (test_mempool_basic(default_pool, 1, 0) < 0)
 		GOTO_ERR(ret, err);
 
 	/* test mempool event callbacks */
