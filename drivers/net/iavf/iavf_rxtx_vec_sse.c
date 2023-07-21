@@ -479,7 +479,12 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	int pos;
 	uint64_t var;
 	__m128i shuf_msk;
-	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
+	const uint32_t *ptype_tbl;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
+	ptype_tbl = rxq->vsi->adapter->ptype_tbl;
 
 	__m128i crc_adjust = _mm_set_epi16(
 				0, 0, 0,    /* ignore non-length fields */
@@ -1198,6 +1203,11 @@ uint16_t
 iavf_recv_pkts_vec_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 			    uint16_t nb_pkts)
 {
+	struct iavf_rx_queue *rxq = rx_queue;
+
+	if (!rxq->vsi)
+		return 0;
+
 	return _recv_raw_pkts_vec_flex_rxd(rx_queue, rx_pkts, nb_pkts, NULL);
 }
 
@@ -1214,6 +1224,9 @@ iavf_recv_scattered_burst_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 	struct iavf_rx_queue *rxq = rx_queue;
 	uint8_t split_flags[IAVF_VPMD_RX_MAX_BURST] = {0};
 	unsigned int i = 0;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
 
 	/* get some new buffers */
 	uint16_t nb_bufs = _recv_raw_pkts_vec(rxq, rx_pkts, nb_pkts,
@@ -1283,6 +1296,9 @@ iavf_recv_scattered_burst_vec_flex_rxd(void *rx_queue,
 	struct iavf_rx_queue *rxq = rx_queue;
 	uint8_t split_flags[IAVF_VPMD_RX_MAX_BURST] = {0};
 	unsigned int i = 0;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
 
 	/* get some new buffers */
 	uint16_t nb_bufs = _recv_raw_pkts_vec_flex_rxd(rxq, rx_pkts, nb_pkts,
@@ -1436,6 +1452,9 @@ iavf_xmit_pkts_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 {
 	uint16_t nb_tx = 0;
 	struct iavf_tx_queue *txq = (struct iavf_tx_queue *)tx_queue;
+
+	if (!txq->vsi || txq->vsi->adapter->no_poll)
+		return 0;
 
 	while (nb_pkts) {
 		uint16_t ret, num;
