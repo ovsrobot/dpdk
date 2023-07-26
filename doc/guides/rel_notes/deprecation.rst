@@ -161,3 +161,8 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* eventdev: The structures ``rte_event_dev_info``, ``rte_event_fp_ops`` will be
+  modified to add new elements to support link profiles.A new field
+  ``max_profiles_per_port`` will be added to ``rte_event_dev_info`` and
+  ``switch_profile`` will be added to ``rte_event_fp_ops``.
