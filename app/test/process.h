@@ -15,9 +15,12 @@
 #include <string.h> /* strerror */
 #include <unistd.h> /* readlink */
 #include <dirent.h>
+#include "../../drivers/bus/pci/private.h"
 
 #include <rte_string_fns.h> /* strlcpy */
 
+#define MAX_EXTRA_ARGS 32
+#define PCI_PRI_FMT "%.4" PRIx32 ":%.2" PRIx8 ":%.2" PRIx8 ".%" PRIx8
 #ifdef RTE_EXEC_ENV_FREEBSD
 #define self "curproc"
 #define exe "file"
@@ -33,7 +36,6 @@ extern void *send_pkts(void *empty);
 extern uint16_t flag_for_send_pkts;
 #endif
 #endif
-
 /*
  * launches a second copy of the test process using the given argv parameters,
  * which should include argv[0] as the process name. To identify in the
@@ -44,9 +46,13 @@ static inline int
 process_dup(const char *const argv[], int numargs, const char *env_value)
 {
 	int num;
-	char *argv_cpy[numargs + 1];
-	int i, status;
+	char *argv_cpy[MAX_EXTRA_ARGS];
+	int i, status, s;
 	char path[32];
+	struct rte_pci_device *dev = NULL;
+	char type[MAX_EXTRA_ARGS];
+	char *argv_str[MAX_EXTRA_ARGS];
+	char str_1[] = "-a";
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
 	pthread_t thread;
@@ -113,10 +119,23 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 			closedir(dir);
 		}
 #endif
+		s = -1;
+		argv_str[0] = strdup(str_1);
+		FOREACH_DEVICE_ON_PCIBUS(dev) {
+			s = s + 2;
+			sprintf(type, PCI_PRI_FMT, dev->addr.domain,
+			dev->addr.bus, dev->addr.devid, dev->addr.function);
+			argv_str[s - 1] = strdup(str_1);
+			argv_str[s] = strdup(type);
+		}
+		for (i = 0; i < s + 1; i++)
+			argv_cpy[num + i] = strdup(argv_str[i]);
+
 		printf("Running binary with argv[]:");
-		for (i = 0; i < num; i++)
+		for (i = 0; i < num + s + 1; i++)
 			printf("'%s' ", argv_cpy[i]);
 		printf("\n");
+		argv_cpy[numargs + s + 1] = NULL;
 		fflush(stdout);
 
 		/* set the environment variable */
