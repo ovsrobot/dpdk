@@ -58,6 +58,8 @@ elif host_machine.cpu_family().startswith('loongarch')
     arch_subdir = 'loongarch'
 elif host_machine.cpu_family().startswith('ppc')
     arch_subdir = 'ppc'
+elif host_machine.cpu_family().startswith('s390x')
+    arch_subdir = 's390x'
 elif host_machine.cpu_family().startswith('riscv')
     arch_subdir = 'riscv'
 endif
