@@ -6029,11 +6029,11 @@ ixgbe_config_rss_filter(struct rte_eth_dev *dev,
 	return 0;
 }
 
-/* Stubs needed for linkage when RTE_ARCH_PPC_64, RTE_ARCH_RISCV or
- * RTE_ARCH_LOONGARCH is set.
+/* Stubs needed for linkage when RTE_ARCH_PPC_64, RTE_ARCH_RISCV,
+ * RTE_ARCH_LOONGARCH or RTE_ARCH_S390X is set.
  */
-#if defined(RTE_ARCH_PPC_64) || defined(RTE_ARCH_RISCV) || \
-	defined(RTE_ARCH_LOONGARCH)
+#if defined(RTE_ARCH_PPC_64)     || defined(RTE_ARCH_S390X) \
+	defined(RTE_ARCH_LOONGARCH)  || defined(RTE_ARCH_RISCV)
 int
 ixgbe_rx_vec_dev_conf_condition_check(struct rte_eth_dev __rte_unused *dev)
 {
