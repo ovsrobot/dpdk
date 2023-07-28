@@ -183,3 +183,7 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* cmdline: The function ``cmdline_poll`` does not work correctly on either
+  Linux or Windows and is unused by any part of DPDK.
+  This function is now deprecated and will be removed in DPDK 23.11.
