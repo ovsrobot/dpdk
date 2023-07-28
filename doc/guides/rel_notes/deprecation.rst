@@ -4,9 +4,14 @@
 ABI and API Deprecation
 =======================
 
-See the guidelines document for details of the :doc:`ABI policy
-<../contributing/abi_policy>`. API and ABI deprecation notices are to be posted
-here.
+See the guidelines document for details
+of the :doc:`ABI policy <../contributing/abi_policy>`.
+
+With DPDK 23.11, there will be a new major ABI version: 24.
+It means that during the development of 23.11, it will be allowed
+to add new items in a struct or enum involving ABI compatibility breakage.
+
+Other API and ABI deprecation notices are to be posted here.
 
 Deprecation Notices
 -------------------
