@@ -505,7 +505,7 @@ process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
 		udp_hdr = (struct rte_udp_hdr *)((char *)l3_hdr + info->l3_len);
 		/* do not recalculate udp cksum if it was 0 */
 		if (udp_hdr->dgram_cksum != 0) {
-			if (tso_segsz)
+			if (tso_segsz && (tx_offloads & RTE_ETH_TX_OFFLOAD_UDP_TSO))
 				ol_flags |= RTE_MBUF_F_TX_UDP_SEG;
 			else if (tx_offloads & RTE_ETH_TX_OFFLOAD_UDP_CKSUM) {
 				ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
@@ -528,7 +528,7 @@ process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
 #endif
 	} else if (info->l4_proto == IPPROTO_TCP) {
 		tcp_hdr = (struct rte_tcp_hdr *)((char *)l3_hdr + info->l3_len);
-		if (tso_segsz)
+		if (tso_segsz && (tx_offloads & RTE_ETH_TX_OFFLOAD_TCP_TSO))
 			ol_flags |= RTE_MBUF_F_TX_TCP_SEG;
 		else if (tx_offloads & RTE_ETH_TX_OFFLOAD_TCP_CKSUM) {
 			ol_flags |= RTE_MBUF_F_TX_TCP_CKSUM;
