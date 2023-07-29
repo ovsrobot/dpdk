@@ -39,7 +39,6 @@ libraries = [
         'gso',
         'ip_frag',
         'jobstats',
-        'kni',
         'latencystats',
         'lpm',
         'member',
@@ -75,7 +74,6 @@ optional_libs = [
         'graph',
         'gro',
         'gso',
-        'kni',
         'jobstats',
         'latencystats',
         'metrics',
@@ -90,7 +88,6 @@ optional_libs = [
 
 dpdk_libs_deprecated += [
         'flow_classify',
-        'kni',
 ]
 
 disabled_libs = []
