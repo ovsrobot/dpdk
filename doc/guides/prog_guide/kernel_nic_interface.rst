@@ -18,7 +18,8 @@ Kernel NIC Interface
 .. note::
 
    KNI is disabled by default in the DPDK build.
-   To re-enable the library, remove 'kni' from the "disable_libs" meson option when configuring a build.
+   To re-enable the library, tell meson to enable 'kni' as part of the
+   deprecated libraries meson option ``-Denable_deprecated_libs=kni``.
 
 The DPDK Kernel NIC Interface (KNI) allows userspace applications access to the Linux* control plane.
 

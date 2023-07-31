@@ -10,8 +10,9 @@ Flow Classification Library
    See :doc:`../rel_notes/deprecation`.
 
    It is disabled by default in the DPDK build.
-   To re-enable the library, remove 'flow_classify' from the "disable_libs"
-   meson option when configuring a build.
+   To re-enable the library, tell meson to enable 'flow_classify' as part of
+   the deprecated libraries meson option
+   ``-Denable_deprecated_libs=flow_classify``.
 
 DPDK provides a Flow Classification library that provides the ability
 to classify an input packet by matching it against a set of Flow rules.
