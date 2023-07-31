@@ -58,6 +58,9 @@ New Features
 * build: Enabling deprecated libraries (``flow_classify``, ``kni``) is now done
   using the new ``enable_deprecated_libraries`` build option.
 
+* build: Optional libraries can now be selected with the new ``enable_libs``
+  build option similarly to the existing ``enable_drivers`` build option.
+
 
 Removed Items
 -------------
