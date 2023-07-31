@@ -31,7 +31,6 @@ extern "C" {
 #include <rte_config.h>
 #include <rte_memory.h>
 #include <rte_lcore.h>
-#include <rte_atomic.h>
 #include <rte_branch_prediction.h>
 #include <rte_memzone.h>
 #include <rte_pause.h>
@@ -66,8 +65,8 @@ enum rte_ring_sync_type {
  * but offset for *sync_type* and *tail* values should remain the same.
  */
 struct rte_ring_headtail {
-	volatile uint32_t head;      /**< prod/consumer head. */
-	volatile uint32_t tail;      /**< prod/consumer tail. */
+	volatile uint32_t _Atomic head;      /**< prod/consumer head. */
+	volatile uint32_t _Atomic tail;      /**< prod/consumer tail. */
 	RTE_STD_C11
 	union {
 		/** sync type of prod/cons */

@@ -385,9 +385,10 @@ nicvf_fill_rbdr(struct nicvf_rxq *rxq, int to_fill)
 		ltail++;
 	}
 
-	rte_wait_until_equal_32(&rbdr->tail, next_tail, __ATOMIC_RELAXED);
+	rte_wait_until_equal_32(&rbdr->tail, next_tail,
+		memory_order_relaxed);
 
-	__atomic_store_n(&rbdr->tail, ltail, __ATOMIC_RELEASE);
+	atomic_store_explicit(&rbdr->tail, ltail, memory_order_release);
 	nicvf_addr_write(door, to_fill);
 	return to_fill;
 }

@@ -9,8 +9,6 @@
 extern "C" {
 #endif
 
-#include "rte_atomic.h"
-
 #include "generic/rte_pause.h"
 
 static inline void rte_pause(void)

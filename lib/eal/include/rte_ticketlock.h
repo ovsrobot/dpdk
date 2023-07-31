@@ -31,7 +31,7 @@ extern "C" {
 typedef union {
 	uint32_t tickets;
 	struct {
-		uint16_t current;
+		uint16_t _Atomic current;
 		uint16_t next;
 	} s;
 } rte_ticketlock_t;
@@ -63,7 +63,7 @@ static inline void
 rte_ticketlock_lock(rte_ticketlock_t *tl)
 {
 	uint16_t me = __atomic_fetch_add(&tl->s.next, 1, __ATOMIC_RELAXED);
-	rte_wait_until_equal_16(&tl->s.current, me, __ATOMIC_ACQUIRE);
+	rte_wait_until_equal_16(&tl->s.current, me, memory_order_acquire);
 }
 
 /**
@@ -75,8 +75,8 @@ rte_ticketlock_lock(rte_ticketlock_t *tl)
 static inline void
 rte_ticketlock_unlock(rte_ticketlock_t *tl)
 {
-	uint16_t i = __atomic_load_n(&tl->s.current, __ATOMIC_RELAXED);
-	__atomic_store_n(&tl->s.current, i + 1, __ATOMIC_RELEASE);
+	uint16_t i = atomic_load_explicit(&tl->s.current, memory_order_relaxed);
+	atomic_store_explicit(&tl->s.current, i + 1, memory_order_release);
 }
 
 /**

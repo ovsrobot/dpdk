@@ -33,7 +33,7 @@ extern "C" {
  */
 typedef struct rte_mcslock {
 	struct rte_mcslock *next;
-	int locked; /* 1 if the queue locked, 0 otherwise */
+	uint32_t _Atomic locked; /* 1 if the queue locked, 0 otherwise */
 } rte_mcslock_t;
 
 /**
@@ -53,7 +53,7 @@ rte_mcslock_lock(rte_mcslock_t **msl, rte_mcslock_t *me)
 	rte_mcslock_t *prev;
 
 	/* Init me node */
-	__atomic_store_n(&me->locked, 1, __ATOMIC_RELAXED);
+	atomic_store_explicit(&me->locked, 1, memory_order_relaxed);
 	__atomic_store_n(&me->next, NULL, __ATOMIC_RELAXED);
 
 	/* If the queue is empty, the exchange operation is enough to acquire
@@ -88,7 +88,7 @@ rte_mcslock_lock(rte_mcslock_t **msl, rte_mcslock_t *me)
 	 * to spin on me->locked until the previous lock holder resets
 	 * the me->locked using mcslock_unlock().
 	 */
-	rte_wait_until_equal_32((uint32_t *)&me->locked, 0, __ATOMIC_ACQUIRE);
+	rte_wait_until_equal_32(&me->locked, 0, memory_order_acquire);
 }
 
 /**
@@ -120,14 +120,14 @@ rte_mcslock_unlock(rte_mcslock_t **msl, rte_mcslock_t *me)
 		/* More nodes added to the queue by other CPUs.
 		 * Wait until the next pointer is set.
 		 */
-		uintptr_t *next;
-		next = (uintptr_t *)&me->next;
+		uintptr_t _Atomic *next;
+		next = (uintptr_t _Atomic *)&me->next;
 		RTE_WAIT_UNTIL_MASKED(next, UINTPTR_MAX, !=, 0,
 			__ATOMIC_RELAXED);
 	}
 
 	/* Pass lock to next waiter. */
-	__atomic_store_n(&me->next->locked, 0, __ATOMIC_RELEASE);
+	atomic_store_explicit(&me->next->locked, 0, memory_order_release);
 }
 
 /**
