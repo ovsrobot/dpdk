@@ -68,6 +68,9 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* flow_classify: library has been removed as planned.
+  The library was experimental there was no maintainer or user interest.
+
 
 API Changes
 -----------
