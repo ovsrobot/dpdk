@@ -70,6 +70,17 @@ foreach subpath:subdirs
     else
         class = subpath
         subdir(class)
+        skip_class = false
+        foreach d:std_deps
+            if not is_variable('shared_rte_' + d)
+                skip_class = true
+                message('Disabling all @1@ drivers: missing internal dependency "@0@"'
+                        .format(d, class))
+            endif
+        endforeach
+        if skip_class
+            continue
+        endif
     endif
 
     # save class name on first occurrence
