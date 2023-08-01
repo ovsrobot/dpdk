@@ -66,8 +66,8 @@ enum rte_ring_sync_type {
  * but offset for *sync_type* and *tail* values should remain the same.
  */
 struct rte_ring_headtail {
-	volatile uint32_t head;      /**< prod/consumer head. */
-	volatile uint32_t tail;      /**< prod/consumer tail. */
+	uint32_t _Atomic head;      /**< prod/consumer head. */
+	uint32_t _Atomic tail;      /**< prod/consumer tail. */
 	RTE_STD_C11
 	union {
 		/** sync type of prod/cons */

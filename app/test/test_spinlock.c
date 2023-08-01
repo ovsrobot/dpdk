@@ -48,7 +48,7 @@ static rte_spinlock_t sl_tab[RTE_MAX_LCORE];
 static rte_spinlock_recursive_t slr;
 static unsigned count = 0;
 
-static uint32_t synchro;
+static uint32_t _Atomic synchro;
 
 static int
 test_spinlock_per_core(__rte_unused void *arg)
@@ -110,7 +110,7 @@ load_loop_fn(void *func_param)
 
 	/* wait synchro for workers */
 	if (lcore != rte_get_main_lcore())
-		rte_wait_until_equal_32(&synchro, 1, __ATOMIC_RELAXED);
+		rte_wait_until_equal_32(&synchro, 1, memory_order_relaxed);
 
 	begin = rte_get_timer_cycles();
 	while (lcount < MAX_LOOP) {
@@ -149,11 +149,11 @@ test_spinlock_perf(void)
 	printf("\nTest with lock on %u cores...\n", rte_lcore_count());
 
 	/* Clear synchro and start workers */
-	__atomic_store_n(&synchro, 0, __ATOMIC_RELAXED);
+	atomic_store_explicit(&synchro, 0, memory_order_relaxed);
 	rte_eal_mp_remote_launch(load_loop_fn, &lock, SKIP_MAIN);
 
 	/* start synchro and launch test on main */
-	__atomic_store_n(&synchro, 1, __ATOMIC_RELAXED);
+	atomic_store_explicit(&synchro, 1, memory_order_relaxed);
 	load_loop_fn(&lock);
 
 	rte_eal_mp_wait_lcore();

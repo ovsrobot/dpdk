@@ -25,7 +25,7 @@
 
 struct bpf_eth_cbi {
 	/* used by both data & control path */
-	uint32_t use;    /*usage counter */
+	uint32_t _Atomic use;    /*usage counter */
 	const struct rte_eth_rxtx_callback *cb;  /* callback handle */
 	struct rte_bpf *bpf;
 	struct rte_bpf_jit jit;
@@ -110,7 +110,7 @@ bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 
 	/* in use, busy wait till current RX/TX iteration is finished */
 	if ((puse & BPF_ETH_CBI_INUSE) != 0) {
-		RTE_WAIT_UNTIL_MASKED((uint32_t *)(uintptr_t)&cbi->use,
+		RTE_WAIT_UNTIL_MASKED(&cbi->use,
 			UINT32_MAX, !=, puse, __ATOMIC_RELAXED);
 	}
 }

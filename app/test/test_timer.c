@@ -202,7 +202,7 @@ timer_stress_main_loop(__rte_unused void *arg)
 
 /* Need to synchronize worker lcores through multiple steps. */
 enum { WORKER_WAITING = 1, WORKER_RUN_SIGNAL, WORKER_RUNNING, WORKER_FINISHED };
-static uint16_t lcore_state[RTE_MAX_LCORE];
+static uint16_t _Atomic lcore_state[RTE_MAX_LCORE];
 
 static void
 main_init_workers(void)
@@ -210,7 +210,7 @@ main_init_workers(void)
 	unsigned i;
 
 	RTE_LCORE_FOREACH_WORKER(i) {
-		__atomic_store_n(&lcore_state[i], WORKER_WAITING, __ATOMIC_RELAXED);
+		atomic_store_explicit(&lcore_state[i], WORKER_WAITING, memory_order_relaxed);
 	}
 }
 
@@ -220,10 +220,10 @@ main_start_workers(void)
 	unsigned i;
 
 	RTE_LCORE_FOREACH_WORKER(i) {
-		__atomic_store_n(&lcore_state[i], WORKER_RUN_SIGNAL, __ATOMIC_RELEASE);
+		atomic_store_explicit(&lcore_state[i], WORKER_RUN_SIGNAL, memory_order_release);
 	}
 	RTE_LCORE_FOREACH_WORKER(i) {
-		rte_wait_until_equal_16(&lcore_state[i], WORKER_RUNNING, __ATOMIC_ACQUIRE);
+		rte_wait_until_equal_16(&lcore_state[i], WORKER_RUNNING, memory_order_acquire);
 	}
 }
 
@@ -233,7 +233,7 @@ main_wait_for_workers(void)
 	unsigned i;
 
 	RTE_LCORE_FOREACH_WORKER(i) {
-		rte_wait_until_equal_16(&lcore_state[i], WORKER_FINISHED, __ATOMIC_ACQUIRE);
+		rte_wait_until_equal_16(&lcore_state[i], WORKER_FINISHED, memory_order_acquire);
 	}
 }
 
@@ -242,8 +242,8 @@ worker_wait_to_start(void)
 {
 	unsigned lcore_id = rte_lcore_id();
 
-	rte_wait_until_equal_16(&lcore_state[lcore_id], WORKER_RUN_SIGNAL, __ATOMIC_ACQUIRE);
-	__atomic_store_n(&lcore_state[lcore_id], WORKER_RUNNING, __ATOMIC_RELEASE);
+	rte_wait_until_equal_16(&lcore_state[lcore_id], WORKER_RUN_SIGNAL, memory_order_acquire);
+	atomic_store_explicit(&lcore_state[lcore_id], WORKER_RUNNING, memory_order_release);
 }
 
 static void
@@ -251,7 +251,7 @@ worker_finish(void)
 {
 	unsigned lcore_id = rte_lcore_id();
 
-	__atomic_store_n(&lcore_state[lcore_id], WORKER_FINISHED, __ATOMIC_RELEASE);
+	atomic_store_explicit(&lcore_state[lcore_id], WORKER_FINISHED, memory_order_release);
 }
 
 

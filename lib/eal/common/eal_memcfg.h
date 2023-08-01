@@ -18,7 +18,7 @@
  * Memory configuration shared across multiple processes.
  */
 struct rte_mem_config {
-	volatile uint32_t magic;   /**< Magic number - sanity check. */
+	uint32_t _Atomic magic;   /**< Magic number - sanity check. */
 	uint32_t version;
 	/**< Prevent secondary processes using different DPDK versions. */
 

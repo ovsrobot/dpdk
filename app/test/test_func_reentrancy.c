@@ -54,11 +54,11 @@ typedef void (*case_clean_t)(unsigned lcore_id);
 #define MAX_LCORES	(rte_memzone_max_get() / (MAX_ITER_MULTI * 4U))
 
 static uint32_t obj_count;
-static uint32_t synchro;
+static uint32_t _Atomic synchro;
 
 #define WAIT_SYNCHRO_FOR_WORKERS()   do { \
 	if (lcore_self != rte_get_main_lcore())                  \
-		rte_wait_until_equal_32(&synchro, 1, __ATOMIC_RELAXED); \
+		rte_wait_until_equal_32(&synchro, 1, memory_order_relaxed); \
 } while(0)
 
 /*
@@ -438,7 +438,7 @@ launch_test(struct test_case *pt_case)
 		return -1;
 
 	__atomic_store_n(&obj_count, 0, __ATOMIC_RELAXED);
-	__atomic_store_n(&synchro, 0, __ATOMIC_RELAXED);
+	atomic_store_explicit(&synchro, 0, memory_order_relaxed);
 
 	cores = RTE_MIN(rte_lcore_count(), MAX_LCORES);
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
@@ -448,7 +448,7 @@ launch_test(struct test_case *pt_case)
 		rte_eal_remote_launch(pt_case->func, pt_case->arg, lcore_id);
 	}
 
-	__atomic_store_n(&synchro, 1, __ATOMIC_RELAXED);
+	atomic_store_explicit(&synchro, 1, memory_order_relaxed);
 
 	if (pt_case->func(pt_case->arg) < 0)
 		ret = -1;

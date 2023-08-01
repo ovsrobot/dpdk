@@ -59,7 +59,7 @@ __rte_ring_st_set_head_tail(struct rte_ring_headtail *ht, uint32_t tail,
 
 	pos = tail + num;
 	ht->head = pos;
-	__atomic_store_n(&ht->tail, pos, __ATOMIC_RELEASE);
+	atomic_store_explicit(&ht->tail, pos, memory_order_release);
 }
 
 /**
