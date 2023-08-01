@@ -35,7 +35,7 @@ Deprecation Notices
     which also added support for standard atomics
     (Ref: https://releases.llvm.org/3.6.0/tools/clang/docs/ReleaseNotes.html)
 
-* build: Enabling deprecated libraries (``flow_classify``, ``kni``)
+* build: Enabling deprecated libraries (``kni``)
   won't be possible anymore through the use of the ``disable_libs`` build option.
   A new build option for deprecated libraries will be introduced instead.
 
@@ -199,12 +199,6 @@ Deprecation Notices
   the size of the public ``rte_event_fp_ops`` struct, breaking the ABI.
   Since these functions are not called directly by the application,
   the API remains unaffected.
-
-* flow_classify: The flow_classify library and example have no maintainer.
-  The library is experimental and, as such, it could be removed from DPDK.
-  Its removal has been postponed to let potential users report interest
-  in maintaining it.
-  In the absence of such interest, this library will be removed in DPDK 23.11.
 
 * pipeline: The pipeline library legacy API (functions rte_pipeline_*)
   will be deprecated and subsequently removed in DPDK 24.11 release.
