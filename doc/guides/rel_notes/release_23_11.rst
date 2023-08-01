@@ -68,6 +68,7 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* cmdline: Removed broken and unused function ``cmdline_poll``.
 
 API Changes
 -----------
