@@ -95,6 +95,24 @@
 
 #define IAVF_L2TPV2_FLAGS_LEN	0x4000
 
+#ifndef DIV_ROUND_UP
+#define DIV_ROUND_UP(n, d) (	\
+{								\
+	const typeof(d) __d = d;	\
+	(((n) + (__d) - 1) / (__d));\
+}								\
+)
+#endif
+#ifndef DELAY
+#define DELAY(x) rte_delay_us(x)
+#endif
+#ifndef msleep
+#define msleep(x) DELAY(1000 * (x))
+#endif
+#ifndef usleep_range
+#define usleep_range(min, max) msleep(DIV_ROUND_UP(min, 1000))
+#endif
+
 struct iavf_adapter;
 struct iavf_rx_queue;
 struct iavf_tx_queue;
@@ -305,6 +323,7 @@ struct iavf_devargs {
 	uint8_t proto_xtr[IAVF_MAX_QUEUE_NUM];
 	uint16_t quanta_size;
 	uint32_t watchdog_period;
+	uint8_t  enable_auto_reset;
 };
 
 struct iavf_security_ctx;
@@ -424,6 +443,14 @@ _atomic_set_async_response_cmd(struct iavf_info *vf, enum virtchnl_ops ops)
 
 	return !ret;
 }
+
+static inline bool
+iavf_is_reset(struct iavf_hw *hw)
+{
+	return !(IAVF_READ_REG(hw, IAVF_VF_ARQLEN1) &
+		 IAVF_VF_ARQLEN1_ARQENABLE_MASK);
+}
+
 int iavf_check_api_version(struct iavf_adapter *adapter);
 int iavf_get_vf_resource(struct iavf_adapter *adapter);
 void iavf_dev_event_handler_fini(void);
@@ -501,4 +528,5 @@ int iavf_flow_sub_check(struct iavf_adapter *adapter,
 			struct iavf_fsub_conf *filter);
 void iavf_dev_watchdog_enable(struct iavf_adapter *adapter);
 void iavf_dev_watchdog_disable(struct iavf_adapter *adapter);
+int iavf_handle_hw_reset(struct rte_eth_dev *dev);
 #endif /* _IAVF_ETHDEV_H_ */

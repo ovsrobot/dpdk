@@ -1095,6 +1095,31 @@ iavf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 }
 
 void
+iavf_reset_queues(struct rte_eth_dev *dev)
+{
+	struct iavf_rx_queue *rxq;
+	struct iavf_tx_queue *txq;
+	int i;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (!txq)
+			continue;
+		iavf_txq_release_mbufs_ops[txq->rel_mbufs_type].release_mbufs(txq);
+		reset_tx_queue(txq);
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (!rxq)
+			continue;
+		iavf_rxq_release_mbufs_ops[rxq->rel_mbufs_type].release_mbufs(rxq);
+		reset_rx_queue(rxq);
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+}
+
+void
 iavf_stop_queues(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *adapter =

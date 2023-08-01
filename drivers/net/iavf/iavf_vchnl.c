@@ -80,6 +80,14 @@ iavf_dev_event_handle(void *param __rte_unused)
 		TAILQ_FOREACH_SAFE(pos, &pending, next, save_next) {
 			TAILQ_REMOVE(&pending, pos, next);
 			rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
+
+			switch (pos->event) {
+			case RTE_ETH_EVENT_INTR_RESET:
+				iavf_handle_hw_reset(pos->dev);
+				break;
+			default:
+				break;
+			}
 			rte_free(pos);
 		}
 	}
