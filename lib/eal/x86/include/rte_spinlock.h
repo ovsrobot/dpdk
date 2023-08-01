@@ -78,7 +78,7 @@ static inline int rte_tm_supported(void)
 }
 
 static inline int
-rte_try_tm(volatile int *lock)
+rte_try_tm(int _Atomic *lock)
 {
 	int i, retries;
 
