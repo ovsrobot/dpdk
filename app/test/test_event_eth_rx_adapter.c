@@ -401,7 +401,7 @@ adapter_create(void)
 	rx_p_conf.dequeue_depth = dev_info.max_event_port_dequeue_depth;
 	rx_p_conf.enqueue_depth = dev_info.max_event_port_enqueue_depth;
 	err = rte_event_eth_rx_adapter_create(TEST_INST_ID, TEST_DEV_ID,
-					&rx_p_conf);
+					&rx_p_conf, NULL);
 	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
 
 	return err;
@@ -427,17 +427,17 @@ adapter_create_with_params(void)
 	rxa_params.use_queue_event_buf = false;
 	rxa_params.event_buf_size = 0;
 
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, &rx_p_conf, &rxa_params);
 	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
 
 	rxa_params.use_queue_event_buf = true;
 
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, &rx_p_conf, &rxa_params);
 	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
 
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, &rx_p_conf, &rxa_params);
 	TEST_ASSERT(err == -EEXIST, "Expected -EEXIST got %d", err);
 
@@ -567,15 +567,15 @@ adapter_create_free(void)
 	};
 
 	err = rte_event_eth_rx_adapter_create(TEST_INST_ID, TEST_DEV_ID,
-					NULL);
+					NULL, NULL);
 	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
 
 	err = rte_event_eth_rx_adapter_create(TEST_INST_ID, TEST_DEV_ID,
-					&rx_p_conf);
+					&rx_p_conf, NULL);
 	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
 
 	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
-					TEST_DEV_ID, &rx_p_conf);
+					TEST_DEV_ID, &rx_p_conf, NULL);
 	TEST_ASSERT(err == -EEXIST, "Expected -EEXIST %d got %d", -EEXIST, err);
 
 	err = rte_event_eth_rx_adapter_free(TEST_INST_ID);
@@ -605,20 +605,20 @@ adapter_create_free_with_params(void)
 			.event_buf_size = 1024
 	};
 
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, NULL, NULL);
 	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
 
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, &rx_p_conf, &rxa_params);
 	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
 
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, &rx_p_conf, &rxa_params);
 	TEST_ASSERT(err == -EEXIST, "Expected -EEXIST %d got %d", -EEXIST, err);
 
 	rxa_params.event_buf_size = 0;
-	err = rte_event_eth_rx_adapter_create_with_params(TEST_INST_ID,
+	err = rte_event_eth_rx_adapter_create(TEST_INST_ID,
 				TEST_DEV_ID, &rx_p_conf, &rxa_params);
 	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
 

@@ -436,7 +436,7 @@ init_adapters(uint16_t nb_ports)
 	init_ports(nb_ports);
 	/* Create one adapter for all the ethernet ports. */
 	ret = rte_event_eth_rx_adapter_create(cdata.rx_adapter_id, evdev_id,
-			&adptr_p_conf);
+			&adptr_p_conf, NULL);
 	if (ret)
 		rte_exit(EXIT_FAILURE, "failed to create rx adapter[%d]",
 				cdata.rx_adapter_id);

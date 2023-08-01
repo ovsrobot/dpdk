@@ -253,7 +253,7 @@ l2fwd_rx_tx_adapter_setup_internal_port(struct l2fwd_resources *rsrc)
 		}
 
 		ret = rte_event_eth_rx_adapter_create(adapter_id, event_d_id,
-						&evt_rsrc->def_p_conf);
+						&evt_rsrc->def_p_conf, NULL);
 		if (ret)
 			rte_panic("Failed to create rx adapter[%d]\n",
 				  adapter_id);

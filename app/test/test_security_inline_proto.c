@@ -1872,7 +1872,7 @@ event_inline_ipsec_testsuite_setup(void)
 
 	/* Create Rx adapter */
 	ret = rte_event_eth_rx_adapter_create(rx_adapter_id, eventdev_id,
-			&ev_port_conf);
+			&ev_port_conf, NULL);
 	if (ret < 0) {
 		printf("Failed to create rx adapter %d\n", ret);
 		return ret;

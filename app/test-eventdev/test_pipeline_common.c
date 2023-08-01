@@ -571,7 +571,7 @@ pipeline_event_rx_adapter_setup(struct evt_options *opt, uint8_t stride,
 		}
 		queue_conf.ev.queue_id = prod * stride;
 		ret = rte_event_eth_rx_adapter_create(prod, opt->dev_id,
-				&prod_conf);
+				&prod_conf, NULL);
 		if (ret) {
 			evt_err("failed to create rx adapter[%d]", prod);
 			return ret;

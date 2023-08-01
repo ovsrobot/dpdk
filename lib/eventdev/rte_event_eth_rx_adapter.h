@@ -26,7 +26,6 @@
  * The ethernet Rx event adapter's functions are:
  *  - rte_event_eth_rx_adapter_create_ext()
  *  - rte_event_eth_rx_adapter_create()
- *  - rte_event_eth_rx_adapter_create_with_params()
  *  - rte_event_eth_rx_adapter_free()
  *  - rte_event_eth_rx_adapter_queue_add()
  *  - rte_event_eth_rx_adapter_queue_del()
@@ -45,7 +44,7 @@
  *
  * The application creates an ethernet to event adapter using
  * rte_event_eth_rx_adapter_create_ext() or rte_event_eth_rx_adapter_create()
- * or rte_event_eth_rx_adapter_create_with_params() functions.
+ * functions.
  *
  * The adapter needs to know which ethernet rx queues to poll for mbufs as well
  * as event device parameters such as the event queue identifier, event
@@ -394,13 +393,18 @@ typedef uint16_t (*rte_event_eth_rx_adapter_cb_fn)(uint16_t eth_dev_id,
  * @param conf_arg
  *  Argument that is passed to the conf_cb function.
  *
+ * @param rxa_params
+ *  Pointer to struct rte_event_eth_rx_adapter_params.
+ *  In case of NULL, default values are used.
+ *
  * @return
  *   - 0: Success
  *   - <0: Error code on failure
  */
 int rte_event_eth_rx_adapter_create_ext(uint8_t id, uint8_t dev_id,
-				rte_event_eth_rx_adapter_conf_cb conf_cb,
-				void *conf_arg);
+			rte_event_eth_rx_adapter_conf_cb conf_cb,
+			void *conf_arg,
+			struct rte_event_eth_rx_adapter_params *rxa_params);
 
 /**
  * Create a new ethernet Rx event adapter with the specified identifier.
@@ -435,27 +439,6 @@ int rte_event_eth_rx_adapter_create_ext(uint8_t id, uint8_t dev_id,
  *  Argument of type *rte_event_port_conf* that is passed to the conf_cb
  *  function.
  *
- * @return
- *   - 0: Success
- *   - <0: Error code on failure
- */
-int rte_event_eth_rx_adapter_create(uint8_t id, uint8_t dev_id,
-				struct rte_event_port_conf *port_config);
-
-/**
- * This is a variant of rte_event_eth_rx_adapter_create() with additional
- * adapter params specified in ``struct rte_event_eth_rx_adapter_params``.
- *
- * @param id
- *  The identifier of the ethernet Rx event adapter.
- *
- * @param dev_id
- *  The identifier of the event device to configure.
- *
- * @param port_config
- *  Argument of type *rte_event_port_conf* that is passed to the conf_cb
- *  function.
- *
  * @param rxa_params
  *  Pointer to struct rte_event_eth_rx_adapter_params.
  *  In case of NULL, default values are used.
@@ -464,8 +447,7 @@ int rte_event_eth_rx_adapter_create(uint8_t id, uint8_t dev_id,
  *   - 0: Success
  *   - <0: Error code on failure
  */
-__rte_experimental
-int rte_event_eth_rx_adapter_create_with_params(uint8_t id, uint8_t dev_id,
+int rte_event_eth_rx_adapter_create(uint8_t id, uint8_t dev_id,
 			struct rte_event_port_conf *port_config,
 			struct rte_event_eth_rx_adapter_params *rxa_params);
 

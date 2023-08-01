@@ -793,7 +793,7 @@ init_adapters(uint16_t nb_ports)
 		uint32_t service_id;
 
 		ret = rte_event_eth_rx_adapter_create(i, evdev_id,
-				&adptr_p_conf);
+				&adptr_p_conf, NULL);
 		if (ret)
 			rte_exit(EXIT_FAILURE,
 					"failed to create rx adapter[%d]", i);

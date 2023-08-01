@@ -217,7 +217,7 @@ l3fwd_rx_tx_adapter_setup_generic(void)
 	}
 
 	ret = rte_event_eth_rx_adapter_create(rx_adptr_id, event_d_id,
-					      &evt_rsrc->def_p_conf);
+					      &evt_rsrc->def_p_conf, NULL);
 	if (ret)
 		rte_panic("Failed to create rx adapter\n");
 

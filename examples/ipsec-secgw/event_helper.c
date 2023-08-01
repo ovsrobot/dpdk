@@ -1035,7 +1035,7 @@ eh_rx_adapter_configure(struct eventmode_conf *em_conf,
 
 	/* Create Rx adapter */
 	ret = rte_event_eth_rx_adapter_create(adapter->adapter_id,
-			adapter->eventdev_id, &port_conf);
+			adapter->eventdev_id, &port_conf, NULL);
 	if (ret < 0) {
 		EH_LOG_ERR("Failed to create rx adapter %d", ret);
 		return ret;
