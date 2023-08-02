@@ -12,6 +12,7 @@
  * CPU pause operation.
  */
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <assert.h>
 #include <rte_common.h>
@@ -35,13 +36,13 @@ static inline void rte_pause(void);
  *  A 16-bit expected value to be in the memory location.
  * @param memorder
  *  Two different memory orders that can be specified:
- *  __ATOMIC_ACQUIRE and __ATOMIC_RELAXED. These map to
+ *  memory_order_acquire and memory_order_relaxed. These map to
  *  C++11 memory orders with the same names, see the C++11 standard or
  *  the GCC wiki on atomic synchronization for detailed definition.
  */
 static __rte_always_inline void
-rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
-		int memorder);
+rte_wait_until_equal_16(volatile uint16_t _Atomic *addr, uint16_t expected,
+		memory_order memorder);
 
 /**
  * Wait for *addr to be updated with a 32-bit expected value, with a relaxed
@@ -53,13 +54,13 @@ rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
  *  A 32-bit expected value to be in the memory location.
  * @param memorder
  *  Two different memory orders that can be specified:
- *  __ATOMIC_ACQUIRE and __ATOMIC_RELAXED. These map to
+ *  memory_order_acquire and memory_order_relaxed. These map to
  *  C++11 memory orders with the same names, see the C++11 standard or
  *  the GCC wiki on atomic synchronization for detailed definition.
  */
 static __rte_always_inline void
-rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
-		int memorder);
+rte_wait_until_equal_32(volatile uint32_t _Atomic *addr, uint32_t expected,
+		memory_order memorder);
 
 /**
  * Wait for *addr to be updated with a 64-bit expected value, with a relaxed
@@ -71,42 +72,42 @@ rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
  *  A 64-bit expected value to be in the memory location.
  * @param memorder
  *  Two different memory orders that can be specified:
- *  __ATOMIC_ACQUIRE and __ATOMIC_RELAXED. These map to
+ *  memory_order_acquire and memory_order_relaxed. These map to
  *  C++11 memory orders with the same names, see the C++11 standard or
  *  the GCC wiki on atomic synchronization for detailed definition.
  */
 static __rte_always_inline void
-rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
-		int memorder);
+rte_wait_until_equal_64(volatile uint64_t _Atomic *addr, uint64_t expected,
+		memory_order memorder);
 
 #ifndef RTE_WAIT_UNTIL_EQUAL_ARCH_DEFINED
 static __rte_always_inline void
-rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
-		int memorder)
+rte_wait_until_equal_16(volatile uint16_t _Atomic *addr, uint16_t expected,
+		memory_order memorder)
 {
-	assert(memorder == __ATOMIC_ACQUIRE || memorder == __ATOMIC_RELAXED);
+	assert(memorder == memory_order_acquire || memorder == memory_order_relaxed);
 
-	while (__atomic_load_n(addr, memorder) != expected)
+	while (atomic_load_explicit(addr, memorder) != expected)
 		rte_pause();
 }
 
 static __rte_always_inline void
-rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
-		int memorder)
+rte_wait_until_equal_32(volatile uint32_t _Atomic *addr, uint32_t expected,
+		memory_order memorder)
 {
-	assert(memorder == __ATOMIC_ACQUIRE || memorder == __ATOMIC_RELAXED);
+	assert(memorder == memory_order_acquire || memorder == memory_order_relaxed);
 
-	while (__atomic_load_n(addr, memorder) != expected)
+	while (atomic_load_explicit(addr, memorder) != expected)
 		rte_pause();
 }
 
 static __rte_always_inline void
-rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
-		int memorder)
+rte_wait_until_equal_64(volatile uint64_t _Atomic *addr, uint64_t expected,
+		memory_order memorder)
 {
-	assert(memorder == __ATOMIC_ACQUIRE || memorder == __ATOMIC_RELAXED);
+	assert(memorder == memory_order_acquire || memorder == memory_order_relaxed);
 
-	while (__atomic_load_n(addr, memorder) != expected)
+	while (atomic_load_explicit(addr, memorder) != expected)
 		rte_pause();
 }
 
@@ -124,16 +125,16 @@ rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
  *  An expected value to be in the memory location.
  * @param memorder
  *  Two different memory orders that can be specified:
- *  __ATOMIC_ACQUIRE and __ATOMIC_RELAXED. These map to
+ *  memory_order_acquire and memory_order_relaxed. These map to
  *  C++11 memory orders with the same names, see the C++11 standard or
  *  the GCC wiki on atomic synchronization for detailed definition.
  */
 #define RTE_WAIT_UNTIL_MASKED(addr, mask, cond, expected, memorder) do { \
 	RTE_BUILD_BUG_ON(!__builtin_constant_p(memorder));               \
-	RTE_BUILD_BUG_ON(memorder != __ATOMIC_ACQUIRE &&                 \
-		memorder != __ATOMIC_RELAXED);                           \
+	RTE_BUILD_BUG_ON(memorder != memory_order_acquire &&             \
+		memorder != memory_order_relaxed);                       \
 	typeof(*(addr)) expected_value = (expected);                     \
-	while (!((__atomic_load_n((addr), (memorder)) & (mask)) cond     \
+	while (!((atomic_load_explicit((addr), (memorder)) & (mask)) cond \
 			expected_value))                                 \
 		rte_pause();                                             \
 } while (0)

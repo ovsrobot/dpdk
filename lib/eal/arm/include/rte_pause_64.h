@@ -148,13 +148,13 @@ static inline void rte_pause(void)
 }
 
 static __rte_always_inline void
-rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
-		int memorder)
+rte_wait_until_equal_16(volatile uint16_t _Atomic *addr, uint16_t expected,
+		memory_order memorder)
 {
 	uint16_t value;
 
-	RTE_BUILD_BUG_ON(memorder != __ATOMIC_ACQUIRE &&
-		memorder != __ATOMIC_RELAXED);
+	RTE_BUILD_BUG_ON(memorder != memory_order_acquire &&
+		memorder != memory_order_relaxed);
 
 	__RTE_ARM_LOAD_EXC_16(addr, value, memorder)
 	if (value != expected) {
@@ -167,13 +167,13 @@ rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
 }
 
 static __rte_always_inline void
-rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
-		int memorder)
+rte_wait_until_equal_32(volatile uint32_t _Atomic *addr, uint32_t expected,
+		memory_order memorder)
 {
 	uint32_t value;
 
-	RTE_BUILD_BUG_ON(memorder != __ATOMIC_ACQUIRE &&
-		memorder != __ATOMIC_RELAXED);
+	RTE_BUILD_BUG_ON(memorder != memory_order_acquire &&
+		memorder != memory_order_relaxed);
 
 	__RTE_ARM_LOAD_EXC_32(addr, value, memorder)
 	if (value != expected) {
@@ -186,13 +186,13 @@ rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
 }
 
 static __rte_always_inline void
-rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
-		int memorder)
+rte_wait_until_equal_64(volatile uint64_t _Atomic *addr, uint64_t expected,
+		memory_order memorder)
 {
 	uint64_t value;
 
-	RTE_BUILD_BUG_ON(memorder != __ATOMIC_ACQUIRE &&
-		memorder != __ATOMIC_RELAXED);
+	RTE_BUILD_BUG_ON(memorder != memory_order_acquire &&
+		memorder != memory_order_relaxed);
 
 	__RTE_ARM_LOAD_EXC_64(addr, value, memorder)
 	if (value != expected) {
@@ -206,8 +206,8 @@ rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
 
 #define RTE_WAIT_UNTIL_MASKED(addr, mask, cond, expected, memorder) do {  \
 	RTE_BUILD_BUG_ON(!__builtin_constant_p(memorder));                \
-	RTE_BUILD_BUG_ON(memorder != __ATOMIC_ACQUIRE &&                  \
-		memorder != __ATOMIC_RELAXED);                            \
+	RTE_BUILD_BUG_ON(memorder != memory_order_acquire &&              \
+		memorder != memory_order_relaxed);                        \
 	const uint32_t size = sizeof(*(addr)) << 3;                       \
 	typeof(*(addr)) expected_value = (expected);                      \
 	typeof(*(addr)) value;                                            \
