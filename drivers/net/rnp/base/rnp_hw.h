@@ -8,6 +8,9 @@
 #include <ethdev_driver.h>
 
 #include "rnp_osdep.h"
+#include "rnp_dma_regs.h"
+#include "rnp_eth_regs.h"
+#include "rnp_cfg.h"
 
 static inline unsigned int rnp_rd_reg(volatile void *addr)
 {
@@ -24,6 +27,9 @@ static inline void rnp_wr_reg(volatile void *reg, int val)
 #define mbx_rd32(hw, reg)	rnp_rd_reg((hw)->iobar4 + (reg))
 #define mbx_wr32(hw, reg, val)	rnp_wr_reg((hw)->iobar4 + (reg), (val))
 
+#define rnp_eth_rd(hw, off)	rnp_rd_reg((char *)(hw)->eth_base + (off))
+#define rnp_eth_wr(hw, off, val) \
+	rnp_wr_reg((char *)(hw)->eth_base + (off), val)
 struct rnp_hw;
 /* Mbx Operate info */
 enum MBX_ID {
@@ -93,6 +99,17 @@ struct rnp_mbx_info {
 	rte_atomic16_t state;
 } __rte_cache_aligned;
 
+struct rnp_mac_api {
+	int32_t (*init_hw)(struct rnp_hw *hw);
+	int32_t (*reset_hw)(struct rnp_hw *hw);
+};
+
+struct rnp_mac_info {
+	uint8_t assign_addr[RTE_ETHER_ADDR_LEN];
+	uint8_t set_addr[RTE_ETHER_ADDR_LEN];
+	struct rnp_mac_api ops;
+} __rte_cache_aligned;
+
 #define RNP_MAX_HW_PORT_PERR_PF (4)
 struct rnp_hw {
 	void *back;
@@ -105,8 +122,10 @@ struct rnp_hw {
 	char *eth_base;
 	char *veb_base;
 	char *mac_base[RNP_MAX_HW_PORT_PERR_PF];
+	char *comm_reg_base;
 	char *msix_base;
 	/* === dma == */
+	char *dev_version;
 	char *dma_axi_en;
 	char *dma_axi_st;
 
@@ -114,10 +133,37 @@ struct rnp_hw {
 	uint16_t vendor_id;
 	uint16_t function;
 	uint16_t pf_vf_num;
+	int pfvfnum;
 	uint16_t max_vfs;
+
+	bool ncsi_en;
+	uint8_t ncsi_rar_entries;
+
+	int sgmii_phy_id;
+	int is_sgmii;
+	u16 phy_type;
+	uint8_t force_10g_1g_speed_ablity;
+	uint8_t force_speed_stat;
+#define FORCE_SPEED_STAT_DISABLED       (0)
+#define FORCE_SPEED_STAT_1G             (1)
+#define FORCE_SPEED_STAT_10G            (2)
+	uint32_t speed;
+	unsigned int axi_mhz;
+
+	int fw_version;  /* Primary FW Version */
+	uint32_t fw_uid; /* Subclass Fw Version */
+
+	int nic_mode;
+	unsigned char lane_mask;
+	int lane_of_port[4];
+	char phy_port_ids[4]; /* port id: for lane0~3: value: 0 ~ 7 */
+	uint8_t max_port_num; /* Max Port Num This PF Have */
+
 	void *cookie_pool;
 	char cookie_p_name[RTE_MEMZONE_NAMESIZE];
 
+	struct rnp_mac_info mac;
 	struct rnp_mbx_info mbx;
+	rte_spinlock_t fw_lock;
 } __rte_cache_aligned;
 #endif /* __RNP_H__*/
