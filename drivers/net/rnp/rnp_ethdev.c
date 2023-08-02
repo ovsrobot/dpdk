@@ -8,6 +8,7 @@
 #include <ethdev_driver.h>
 
 #include "rnp.h"
+#include "rnp_mbx.h"
 #include "rnp_logs.h"
 
 static int
@@ -89,6 +90,58 @@ fail_calloc:
 	return NULL;
 }
 
+static void rnp_get_nic_attr(struct rnp_eth_adapter *adapter)
+{
+	RTE_SET_USED(adapter);
+}
+
+static int
+rnp_process_resource_init(struct rte_eth_dev *eth_dev)
+{
+	struct rnp_share_ops *share_priv;
+
+	/* allocate process_private memory this must can't
+	 * belone to the dpdk mem resource manager
+	 * such as from rte_malloc or rte_dma_zone..
+	 */
+	/* use the process_prive point to resolve secondary process
+	 * use point-func. This point is per process will be safe to cover.
+	 * This will cause secondary process core-dump because of IPC
+	 * Secondary will call primary process point func virt-address
+	 * secondary process don't alloc user/pmd to alloc or free
+	 * the memory of dpdk-mem resource it will cause hugepage
+	 * mem exception
+	 * be careful for secondary Process to use the share-mem of
+	 * point correlation
+	 */
+	share_priv = calloc(1, sizeof(*share_priv));
+	if (!share_priv) {
+		PMD_DRV_LOG(ERR, "calloc share_priv failed");
+		return -ENOMEM;
+	}
+	memset(share_priv, 0, sizeof(*share_priv));
+	eth_dev->process_private = share_priv;
+
+	return 0;
+}
+
+static void
+rnp_common_ops_init(struct rnp_eth_adapter *adapter)
+{
+	struct rnp_share_ops *share_priv;
+
+	share_priv = adapter->share_priv;
+	share_priv->mbx_api = &rnp_mbx_pf_ops;
+}
+
+static int
+rnp_special_ops_init(struct rte_eth_dev *eth_dev)
+{
+	RTE_SET_USED(eth_dev);
+
+	return 0;
+}
+
 static int
 rnp_eth_dev_init(struct rte_eth_dev *dev)
 {
@@ -124,6 +177,20 @@ rnp_eth_dev_init(struct rte_eth_dev *dev)
 	hw->device_id = pci_dev->id.device_id;
 	hw->vendor_id = pci_dev->id.vendor_id;
 	hw->device_id = pci_dev->id.device_id;
+	adapter->max_vfs = pci_dev->max_vfs;
+	ret = rnp_process_resource_init(dev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "share prive resource init failed");
+		return ret;
+	}
+	adapter->share_priv = dev->process_private;
+	rnp_common_ops_init(adapter);
+	rnp_get_nic_attr(adapter);
+	/* We need Use Device Id To Change The Resource Mode */
+	rnp_special_ops_init(dev);
+	port->adapt = adapter;
+	port->hw = hw;
+	rnp_init_mbx_ops_pf(hw);
 	for (p_id = 0; p_id < adapter->num_ports; p_id++) {
 		/* port 0 resource has been alloced When Probe */
 		if (!p_id) {
@@ -158,11 +225,10 @@ eth_alloc_error:
 			continue;
 		if (port->eth_dev) {
 			rnp_dev_close(port->eth_dev);
-			rte_eth_dev_release_port(port->eth_dev);
 			if (port->eth_dev->process_private)
 				free(port->eth_dev->process_private);
+			rte_eth_dev_release_port(port->eth_dev);
 		}
-		rte_free(port);
 	}
 	rte_free(adapter);
 

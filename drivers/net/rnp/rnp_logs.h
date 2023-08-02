@@ -13,6 +13,15 @@ extern int rnp_drv_logtype;
 #define RNP_PMD_DRV_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_##level, rnp_drv_logtype, \
 		"%s() " fmt, __func__, ##args)
+#define PMD_DRV_LOG_RAW(level, fmt, args...) \
+	rte_log(RTE_LOG_ ## level, rnp_drv_logtype, "%s(): " fmt, \
+			__func__, ## args)
+#define PMD_DRV_LOG(level, fmt, args...) \
+	PMD_DRV_LOG_RAW(level, fmt "\n", ## args)
+
+#define RNP_PMD_LOG(level, fmt, args...) \
+	rte_log(RTE_LOG_##level, rnp_drv_logtype, \
+			"rnp_net: (%d) " fmt, __LINE__, ##args)
 #ifdef RTE_LIBRTE_RNP_DEBUG_RX
 extern int rnp_rx_logtype;
 #define RNP_PMD_RX_LOG(level, fmt, args...) \
