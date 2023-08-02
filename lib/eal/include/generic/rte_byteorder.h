@@ -234,6 +234,7 @@ static uint64_t rte_be_to_cpu_64(rte_be64_t x);
 #endif /* __DOXYGEN__ */
 
 #ifdef RTE_FORCE_INTRINSICS
+#ifndef RTE_TOOLCHAIN_MSVC
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
 #define rte_bswap16(x) __builtin_bswap16(x)
 #endif
@@ -241,6 +242,16 @@ static uint64_t rte_be_to_cpu_64(rte_be64_t x);
 #define rte_bswap32(x) __builtin_bswap32(x)
 
 #define rte_bswap64(x) __builtin_bswap64(x)
+#else
+/*
+ * note: we may want to #pragma intrsinsic(_byteswap_u{short,long,uint64})
+ */
+#define rte_bswap16(x) _byteswap_ushort(x)
+
+#define rte_bswap32(x) _byteswap_ulong(x)
+
+#define rte_bswap64(x) _byteswap_uint64(x)
+#endif
 
 #endif
 
