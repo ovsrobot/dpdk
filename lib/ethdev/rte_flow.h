@@ -688,6 +688,15 @@ enum rte_flow_item_type {
 	 * @see struct rte_flow_item_ib_bth.
 	 */
 	RTE_FLOW_ITEM_TYPE_IB_BTH,
+
+	/**
+	 * Matches a custom protocol header or metadata field represented
+	 * as a byte string of a given length, whose meaning is typically
+	 * defined by the data plane program.
+	 *
+	 * @see struct rte_flow_item_generic.
+	 */
+	RTE_FLOW_ITEM_TYPE_GENERIC,
 };
 
 /**
@@ -2312,6 +2321,32 @@ static const struct rte_flow_item_tx_queue rte_flow_item_tx_queue_mask = {
 #endif
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_GENERIC
+ *
+ * Matches a custom protocol header or metadata field represented as a byte
+ * array of a given length, whose meaning is typically defined by the data
+ * plane program.
+ *
+ * The field length must be non-zero. The field value must be non-NULL, with the
+ * value bytes specified in network byte order.
+ */
+struct rte_flow_item_generic {
+	uint32_t length; /**< Field length. */
+	const uint8_t *value; /**< Field value. */
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_GENERIC. */
+#ifndef __cplusplus
+static const struct rte_flow_item_generic rte_flow_item_generic_mask = {
+	.length = 0xffffffff,
+	.value = NULL,
+};
+#endif
+
+/**
  * Action types.
  *
  * Each possible action is represented by a type.
@@ -2989,6 +3024,14 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_action_indirect_list
 	 */
 	RTE_FLOW_ACTION_TYPE_INDIRECT_LIST,
+
+	/**
+	 * Custom action whose processing is typically defined by the data plane
+	 * program.
+	 *
+	 * @see struct rte_flow_action_generic.
+	 */
+	RTE_FLOW_ACTION_TYPE_GENERIC,
 };
 
 /**
@@ -4062,6 +4105,45 @@ struct rte_flow_update_meter_mark {
 struct rte_flow_indirect_update_flow_meter_mark {
 	/** Updated init color applied to packet */
 	enum rte_color init_color;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice.
+ *
+ * Generic action argument configuration parameters.
+ *
+ * The action argument field length must be non-zero. The action argument field
+ * value must be non-NULL, with the value bytes specified in network byte order.
+ *
+ * @see struct rte_flow_action_generic
+ */
+struct rte_flow_action_generic_argument {
+	/** Argument field length. */
+	uint32_t length;
+	/** Argument field value. */
+	const uint8_t *value;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice.
+ *
+ * RTE_FLOW_ACTION_TYPE_GENERIC
+ *
+ * Generic action configuration parameters.
+ *
+ * Each action can have zero or more arguments.
+ *
+ * @see RTE_FLOW_ACTION_TYPE_GENERIC
+ */
+struct rte_flow_action_generic {
+	/** Action ID. */
+	uint32_t action_id;
+	/** Number of action arguments. */
+	uint32_t action_args_num;
+	/** Action arguments array. */
+	const struct rte_flow_action_generic_argument *action_args;
 };
 
 /* Mbuf dynamic field offset for metadata. */
