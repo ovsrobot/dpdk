@@ -224,7 +224,7 @@ add_slave(struct slave_conf *slave, uint8_t start)
 	struct rte_ether_addr addr, addr_check;
 	int retval;
 
-	/* Some sanity check */
+	/* Some basic tests. */
 	RTE_VERIFY(test_params.slave_ports <= slave &&
 		slave - test_params.slave_ports < (int)RTE_DIM(test_params.slave_ports));
 	RTE_VERIFY(slave->bonded == 0);
