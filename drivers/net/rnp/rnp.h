@@ -107,6 +107,8 @@ struct rnp_eth_port {
 	void *adapt;
 	uint8_t mac_addr[RTE_ETHER_ADDR_LEN];
 	struct rnp_hw *hw;
+	uint8_t rx_func_sec; /* force set io rx_func */
+	uint8_t tx_func_sec; /* force set io tx func */
 	struct rte_eth_dev *eth_dev;
 	struct rnp_port_attr attr;
 	/* Recvice Mac Address Record Table */
@@ -122,6 +124,13 @@ struct rnp_share_ops {
 	const struct rnp_mac_api *mac_api;
 } __rte_cache_aligned;
 
+enum {
+	RNP_IO_FUNC_USE_NONE = 0,
+	RNP_IO_FUNC_USE_VEC,
+	RNP_IO_FUNC_USE_SIMPLE,
+	RNP_IO_FUNC_USE_COMMON,
+};
+
 struct rnp_eth_adapter {
 	enum rnp_work_mode mode;
 	enum rnp_resource_share_m s_mode; /* Port Resource Share Policy */
@@ -135,6 +144,19 @@ struct rnp_eth_adapter {
 	int max_link_speed;
 	uint8_t num_ports; /* Cur Pf Has physical Port Num */
 	uint8_t lane_mask;
+
+	uint8_t rx_func_sec; /* force set io rx_func */
+	uint8_t tx_func_sec; /* force set io tx func*/
+	/*fw-update*/
+	bool  do_fw_update;
+	char *fw_path;
+
+	bool loopback_en;
+	bool fw_sfp_10g_1g_auto_det;
+	int fw_force_speed_1g;
+#define FOCE_SPEED_1G_NOT_SET	(-1)
+#define FOCE_SPEED_1G_DISABLED	(0)
+#define FOCE_SPEED_1G_ENABLED	(1)
 } __rte_cache_aligned;
 
 #define RNP_DEV_TO_PORT(eth_dev) \

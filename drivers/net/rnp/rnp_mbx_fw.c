@@ -106,6 +106,27 @@ quit:
 	return err;
 }
 
+static int
+rnp_mbx_write_posted_locked(struct rte_eth_dev *dev, struct mbx_fw_cmd_req *req)
+{
+	const struct rnp_mbx_api *ops = RNP_DEV_TO_MBX_OPS(dev);
+	struct rnp_hw *hw = RNP_DEV_TO_HW(dev);
+	int err = 0;
+
+	rte_spinlock_lock(&hw->fw_lock);
+
+	err = ops->write_posted(dev, (u32 *)req,
+			(req->datalen + MBX_REQ_HDR_LEN) / 4, MBX_FW);
+	if (err) {
+		RNP_PMD_LOG(ERR, "%s failed!\n", __func__);
+		goto quit;
+	}
+
+quit:
+	rte_spinlock_unlock(&hw->fw_lock);
+	return err;
+}
+
 static int rnp_fw_get_capablity(struct rte_eth_dev *dev,
 				struct phy_abilities *abil)
 {
@@ -381,4 +402,147 @@ int rnp_mbx_get_lane_stat(struct rte_eth_dev *dev)
 	return 0;
 quit:
 	return err;
+}
+
+static int rnp_maintain_req(struct rte_eth_dev *dev,
+		int cmd,
+		int arg0,
+		int req_data_bytes,
+		int reply_bytes,
+		phys_addr_t dma_phy_addr)
+{
+	struct rnp_hw *hw = RNP_DEV_TO_HW(dev);
+	struct mbx_req_cookie *cookie = NULL;
+	struct mbx_fw_cmd_req req;
+	int err;
+
+	if (!hw->mbx.irq_enabled)
+		return -EIO;
+	cookie = rnp_memzone_reserve(hw->cookie_p_name, 0);
+	if (!cookie)
+		return -ENOMEM;
+	memset(&req, 0, sizeof(req));
+	cookie->timeout_ms = 60 * 1000; /* 60s */
+
+	build_maintain_req(&req,
+			cookie,
+			cmd,
+			arg0,
+			req_data_bytes,
+			reply_bytes,
+			dma_phy_addr & 0xffffffff,
+			(dma_phy_addr >> 32) & 0xffffffff);
+
+	err = rnp_mbx_fw_post_req(dev, &req, cookie);
+
+	return (err) ? -EIO : 0;
+}
+
+int rnp_fw_update(struct rnp_eth_adapter *adapter)
+{
+	const struct rte_memzone *rz = NULL;
+	struct maintain_req *mt;
+	FILE *file;
+	int fsz;
+#define MAX_FW_BIN_SZ (552 * 1024)
+#define FW_256KB          (256 * 1024)
+
+	RNP_PMD_LOG(INFO, "%s: %s\n", __func__, adapter->fw_path);
+
+	file = fopen(adapter->fw_path, "rb");
+	if (!file) {
+		RNP_PMD_LOG(ERR,
+				"RNP: [%s] %s can't open for read\n",
+				__func__,
+				adapter->fw_path);
+		return -ENOENT;
+	}
+	/* get dma */
+	rz = rte_memzone_reserve("fw_update", MAX_FW_BIN_SZ, SOCKET_ID_ANY, 4);
+	if (rz == NULL) {
+		RNP_PMD_LOG(ERR, "RNP: [%s] not memory:%d\n", __func__,
+				MAX_FW_BIN_SZ);
+		return -EFBIG;
+	}
+	memset(rz->addr, 0xff, rz->len);
+	mt = (struct maintain_req *)rz->addr;
+
+	/* read data */
+	fsz = fread(mt->data, 1, rz->len, file);
+	if (fsz <= 0) {
+		RNP_PMD_LOG(INFO, "RNP: [%s] read failed! err:%d\n",
+				__func__, fsz);
+		return -EIO;
+	}
+	fclose(file);
+
+	if (fsz > ((256 + 4) * 1024)) {
+		printf("fw length:%d is two big. not supported!\n", fsz);
+		return -EINVAL;
+	}
+	RNP_PMD_LOG(NOTICE, "RNP: fw update ...\n");
+	fflush(stdout);
+
+	/* ==== update fw */
+	mt->magic       = MAINTAIN_MAGIC;
+	mt->cmd         = MT_WRITE_FLASH;
+	mt->arg0        = 1;
+	mt->req_data_bytes = (fsz > FW_256KB) ? FW_256KB : fsz;
+	mt->reply_bytes = 0;
+
+	if (rnp_maintain_req(adapter->eth_dev, mt->cmd, mt->arg0,
+				mt->req_data_bytes, mt->reply_bytes, rz->iova))
+		RNP_PMD_LOG(ERR, "maintain request failed!\n");
+	else
+		RNP_PMD_LOG(INFO, "maintail request done!\n");
+
+	/* ==== update cfg */
+	if (fsz > FW_256KB) {
+		mt->magic       = MAINTAIN_MAGIC;
+		mt->cmd         = MT_WRITE_FLASH;
+		mt->arg0        = 2;
+		mt->req_data_bytes = 4096;
+		mt->reply_bytes    = 0;
+		memcpy(mt->data, mt->data + FW_256KB, mt->req_data_bytes);
+
+		if (rnp_maintain_req(adapter->eth_dev,
+					mt->cmd, mt->arg0, mt->req_data_bytes,
+					mt->reply_bytes, rz->iova))
+			RNP_PMD_LOG(ERR, "maintain request failed!\n");
+		else
+			RNP_PMD_LOG(INFO, "maintail request done!\n");
+	}
+
+	RNP_PMD_LOG(NOTICE, "done\n");
+	fflush(stdout);
+
+	rte_memzone_free(rz);
+
+	exit(0);
+
+	return 0;
+}
+
+static int rnp_mbx_set_dump(struct rte_eth_dev *dev, int flag)
+{
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	struct mbx_fw_cmd_req req;
+	int err;
+
+	memset(&req, 0, sizeof(req));
+	build_set_dump(&req, port->attr.nr_lane, flag);
+
+	err = rnp_mbx_write_posted_locked(dev, &req);
+
+	return err;
+}
+
+int rnp_hw_set_fw_10g_1g_auto_detch(struct rte_eth_dev *dev, int enable)
+{
+	return rnp_mbx_set_dump(dev, 0x01140000 | (enable & 1));
+}
+
+int rnp_hw_set_fw_force_speed_1g(struct rte_eth_dev *dev, int enable)
+{
+	return rnp_mbx_set_dump(dev, 0x01150000 | (enable & 1));
 }
