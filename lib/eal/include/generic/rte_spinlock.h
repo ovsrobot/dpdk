@@ -17,6 +17,8 @@
  * All locks must be initialised before use, and only initialised once.
  */
 
+#include <stdatomic.h>
+
 #include <rte_lcore.h>
 #ifdef RTE_FORCE_INTRINSICS
 #include <rte_common.h>
@@ -28,7 +30,7 @@
  * The rte_spinlock_t type.
  */
 typedef struct __rte_lockable {
-	volatile int locked; /**< lock status 0 = unlocked, 1 = locked */
+	int _Atomic locked; /**< lock status 0 = unlocked, 1 = locked */
 } rte_spinlock_t;
 
 /**
@@ -65,10 +67,10 @@ rte_spinlock_lock(rte_spinlock_t *sl)
 {
 	int exp = 0;
 
-	while (!__atomic_compare_exchange_n(&sl->locked, &exp, 1, 0,
-				__ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-		rte_wait_until_equal_32((volatile uint32_t *)&sl->locked,
-			       0, __ATOMIC_RELAXED);
+	while (!atomic_compare_exchange_strong_explicit(&sl->locked, &exp, 1,
+				memory_order_acquire, memory_order_relaxed)) {
+		rte_wait_until_equal_32((uint32_t _Atomic *)&sl->locked,
+			       0, memory_order_relaxed);
 		exp = 0;
 	}
 }
@@ -89,7 +91,7 @@ static inline void
 rte_spinlock_unlock(rte_spinlock_t *sl)
 	__rte_no_thread_safety_analysis
 {
-	__atomic_store_n(&sl->locked, 0, __ATOMIC_RELEASE);
+	atomic_store_explicit(&sl->locked, 0, memory_order_release);
 }
 #endif
 
@@ -112,9 +114,8 @@ rte_spinlock_trylock(rte_spinlock_t *sl)
 	__rte_no_thread_safety_analysis
 {
 	int exp = 0;
-	return __atomic_compare_exchange_n(&sl->locked, &exp, 1,
-				0, /* disallow spurious failure */
-				__ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+	return atomic_compare_exchange_strong_explicit(&sl->locked, &exp, 1,
+				memory_order_acquire, memory_order_relaxed);
 }
 #endif
 
@@ -128,7 +129,7 @@ rte_spinlock_trylock(rte_spinlock_t *sl)
  */
 static inline int rte_spinlock_is_locked (rte_spinlock_t *sl)
 {
-	return __atomic_load_n(&sl->locked, __ATOMIC_ACQUIRE);
+	return atomic_load_explicit(&sl->locked, memory_order_acquire);
 }
 
 /**
