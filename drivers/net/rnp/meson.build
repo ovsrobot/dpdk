@@ -10,3 +10,4 @@ endif
 sources = files(
 		'rnp_ethdev.c',
 )
+includes += include_directories('base')
