@@ -546,3 +546,236 @@ int rnp_hw_set_fw_force_speed_1g(struct rte_eth_dev *dev, int enable)
 {
 	return rnp_mbx_set_dump(dev, 0x01150000 | (enable & 1));
 }
+
+static inline int
+rnp_mbx_fw_reply_handler(struct rnp_eth_adapter *adapter __rte_unused,
+			 struct mbx_fw_cmd_reply *reply)
+{
+	struct mbx_req_cookie *cookie;
+	/* dbg_here; */
+	cookie = reply->cookie;
+	if (!cookie || cookie->magic != COOKIE_MAGIC) {
+		RNP_PMD_LOG(ERR,
+				"[%s] invalid cookie:%p opcode: "
+				"0x%x v0:0x%x\n",
+				__func__,
+				cookie,
+				reply->opcode,
+				*((int *)reply));
+		return -EIO;
+	}
+
+	if (cookie->priv_len > 0)
+		memcpy(cookie->priv, reply->data, cookie->priv_len);
+
+	cookie->done = 1;
+
+	if (reply->flags & FLAGS_ERR)
+		cookie->errcode = reply->error_code;
+	else
+		cookie->errcode = 0;
+
+	return 0;
+}
+
+void rnp_link_stat_mark(struct rnp_hw *hw, int nr_lane, int up)
+{
+	u32 v;
+
+	rte_spinlock_lock(&hw->fw_lock);
+	v = rnp_rd_reg(hw->link_sync);
+	v &= ~(0xffff0000);
+	v |= 0xa5a40000;
+	if (up)
+		v |= BIT(nr_lane);
+	else
+		v &= ~BIT(nr_lane);
+	rnp_wr_reg(hw->link_sync, v);
+
+	rte_spinlock_unlock(&hw->fw_lock);
+}
+
+void rnp_link_report(struct rte_eth_dev *dev, bool link_en)
+{
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	struct rnp_hw *hw = RNP_DEV_TO_HW(dev);
+	struct rte_eth_link link;
+
+	link.link_duplex = link_en ? port->attr.phy_meta.link_duplex :
+		RTE_ETH_LINK_FULL_DUPLEX;
+	link.link_status = link_en ? RTE_ETH_LINK_UP : RTE_ETH_LINK_DOWN;
+	link.link_speed = link_en ? port->attr.speed :
+		RTE_ETH_SPEED_NUM_UNKNOWN;
+	RNP_PMD_LOG(INFO,
+			"\nPF[%d]link changed: changed_lane:0x%x, "
+			"status:0x%x\n",
+			hw->pf_vf_num & RNP_PF_NB_MASK ? 1 : 0,
+			port->attr.nr_port,
+			link_en);
+	link.link_autoneg = port->attr.phy_meta.link_autoneg
+		? RTE_ETH_LINK_SPEED_AUTONEG
+		: RTE_ETH_LINK_SPEED_FIXED;
+	/* Report Link Info To Upper Firmwork */
+	rte_eth_linkstatus_set(dev, &link);
+	/* Notice Event Process Link Status Change */
+	rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+	/* Notce Firmware LSC Event SW Received */
+	rnp_link_stat_mark(hw, port->attr.nr_port, link_en);
+}
+
+static void rnp_dev_alarm_link_handler(void *param)
+{
+	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	uint32_t status;
+
+	status = port->attr.link_ready;
+	rnp_link_report(dev, status);
+}
+
+static void rnp_link_event(struct rnp_eth_adapter *adapter,
+			   struct mbx_fw_cmd_req *req)
+{
+	struct rnp_hw *hw = &adapter->hw;
+	struct rnp_eth_port *port;
+	bool link_change = false;
+	uint32_t lane_bit;
+	uint32_t sync_bit;
+	uint32_t link_en;
+	uint32_t ctrl;
+	int i;
+
+	for (i = 0; i < adapter->num_ports; i++) {
+		port = adapter->ports[i];
+		if (port == NULL)
+			continue;
+		link_change = false;
+		lane_bit = port->attr.nr_port;
+		if (__atomic_load_n(&port->state, __ATOMIC_RELAXED)
+				!= RNP_PORT_STATE_FINISH)
+			continue;
+		if (!(BIT(lane_bit) & req->link_stat.changed_lanes))
+			continue;
+		link_en = BIT(lane_bit) & req->link_stat.lane_status;
+		sync_bit = BIT(lane_bit) & rnp_rd_reg(hw->link_sync);
+
+		if (link_en) {
+			/* Port Link Change To Up */
+			if (!port->attr.link_ready) {
+				link_change = true;
+				port->attr.link_ready = true;
+			}
+			if (req->link_stat.port_st_magic == SPEED_VALID_MAGIC) {
+				port->attr.speed = req->link_stat.st[lane_bit].speed;
+				port->attr.phy_meta.link_duplex =
+					req->link_stat.st[lane_bit].duplex;
+				port->attr.phy_meta.link_autoneg =
+					req->link_stat.st[lane_bit].autoneg;
+				RNP_PMD_INIT_LOG(INFO,
+						"phy_id %d speed %d duplex "
+						"%d issgmii %d PortID %d\n",
+						req->link_stat.st[lane_bit].phy_addr,
+						req->link_stat.st[lane_bit].speed,
+						req->link_stat.st[lane_bit].duplex,
+						req->link_stat.st[lane_bit].is_sgmii,
+						port->attr.rte_pid);
+			}
+		} else {
+			/* Port Link to Down */
+			if (port->attr.link_ready) {
+				link_change = true;
+				port->attr.link_ready = false;
+			}
+		}
+		if (link_change || sync_bit != link_en) {
+			/* WorkAround For Hardware When Link Down
+			 * Eth Module Tx-side Can't Drop In some condition
+			 * So back The Packet To Rx Side To Drop Packet
+			 */
+			/* To Protect Conflict Hw Resource */
+			rte_spinlock_lock(&port->rx_mac_lock);
+			ctrl = rnp_mac_rd(hw, lane_bit, RNP_MAC_RX_CFG);
+			if (port->attr.link_ready) {
+				ctrl &= ~RNP_MAC_LM;
+				rnp_eth_wr(hw,
+					RNP_RX_FIFO_FULL_THRETH(lane_bit),
+					RNP_RX_DEFAULT_VAL);
+			} else {
+				rnp_eth_wr(hw,
+					RNP_RX_FIFO_FULL_THRETH(lane_bit),
+					RNP_RX_WORKAROUND_VAL);
+				ctrl |= RNP_MAC_LM;
+			}
+			rnp_mac_wr(hw, lane_bit, RNP_MAC_RX_CFG, ctrl);
+			rte_spinlock_unlock(&port->rx_mac_lock);
+			rte_eal_alarm_set(RNP_ALARM_INTERVAL,
+					rnp_dev_alarm_link_handler,
+					(void *)port->eth_dev);
+		}
+	}
+}
+
+static inline int
+rnp_mbx_fw_req_handler(struct rnp_eth_adapter *adapter,
+		       struct mbx_fw_cmd_req *req)
+{
+	switch (req->opcode) {
+	case LINK_STATUS_EVENT:
+		rnp_link_event(adapter, req);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static inline int rnp_rcv_msg_from_fw(struct rnp_eth_adapter *adapter)
+{
+	const struct rnp_mbx_api *ops = RNP_DEV_TO_MBX_OPS(adapter->eth_dev);
+	struct rnp_hw *hw = &adapter->hw;
+	u32 msgbuf[RNP_FW_MAILBOX_SIZE];
+	uint16_t check_state;
+	int retval;
+
+	retval = ops->read(hw, msgbuf, RNP_FW_MAILBOX_SIZE, MBX_FW);
+	if (retval) {
+		PMD_DRV_LOG(ERR, "Error receiving message from FW\n");
+		return retval;
+	}
+#define RNP_MBX_SYNC_MASK GENMASK(15, 0)
+
+	check_state = msgbuf[0] & RNP_MBX_SYNC_MASK;
+	/* this is a message we already processed, do nothing */
+	if (check_state & FLAGS_DD)
+		return rnp_mbx_fw_reply_handler(adapter,
+				(struct mbx_fw_cmd_reply *)msgbuf);
+	else
+		return rnp_mbx_fw_req_handler(adapter,
+				(struct mbx_fw_cmd_req *)msgbuf);
+
+	return 0;
+}
+
+static void rnp_rcv_ack_from_fw(struct rnp_eth_adapter *adapter)
+{
+	struct rnp_hw *hw __rte_unused = &adapter->hw;
+	u32 msg __rte_unused = RNP_VT_MSGTYPE_NACK;
+	/* do-nothing */
+}
+
+int rnp_fw_msg_handler(struct rnp_eth_adapter *adapter)
+{
+	const struct rnp_mbx_api *ops = RNP_DEV_TO_MBX_OPS(adapter->eth_dev);
+	struct rnp_hw *hw = &adapter->hw;
+
+	/* == check cpureq */
+	if (!ops->check_for_msg(hw, MBX_FW))
+		rnp_rcv_msg_from_fw(adapter);
+
+	/* process any acks */
+	if (!ops->check_for_ack(hw, MBX_FW))
+		rnp_rcv_ack_from_fw(adapter);
+
+	return 0;
+}

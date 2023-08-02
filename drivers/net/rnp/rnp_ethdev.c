@@ -599,10 +599,23 @@ static int rnp_post_handle(struct rnp_eth_adapter *adapter)
 	return 0;
 }
 
+static void rnp_dev_interrupt_handler(void *param)
+{
+	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	struct rnp_eth_adapter *adapter = RNP_DEV_TO_ADAPTER(dev);
+
+	rte_intr_disable(intr_handle);
+	rnp_fw_msg_handler(adapter);
+	rte_intr_enable(intr_handle);
+}
+
 static int
 rnp_eth_dev_init(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
 	struct rnp_eth_adapter *adapter = NULL;
 	char name[RTE_ETH_NAME_MAX_LEN] = " ";
@@ -678,6 +691,10 @@ rnp_eth_dev_init(struct rte_eth_dev *dev)
 		rnp_mac_rx_disable(eth_dev);
 		rnp_mac_tx_disable(eth_dev);
 	}
+	rte_intr_disable(intr_handle);
+	/* Enable Link Update Event Interrupt */
+	rte_intr_callback_register(intr_handle,
+			rnp_dev_interrupt_handler, dev);
 	ret = rnp_post_handle(adapter);
 	if (ret)
 		goto eth_alloc_error;
