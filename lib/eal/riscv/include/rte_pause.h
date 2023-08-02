@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "rte_atomic.h"
+#include "rte_pause.h"
 
 #include "generic/rte_pause.h"
 

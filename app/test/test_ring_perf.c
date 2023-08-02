@@ -320,7 +320,7 @@ run_on_core_pair(struct lcore_pair *cores, struct rte_ring *r, const int esize)
 	return 0;
 }
 
-static uint32_t synchro;
+static uint32_t _Atomic synchro;
 static uint64_t queue_count[RTE_MAX_LCORE];
 
 #define TIME_MS 100
@@ -342,7 +342,7 @@ load_loop_fn_helper(struct thread_params *p, const int esize)
 
 	/* wait synchro for workers */
 	if (lcore != rte_get_main_lcore())
-		rte_wait_until_equal_32(&synchro, 1, __ATOMIC_RELAXED);
+		rte_wait_until_equal_32(&synchro, 1, memory_order_relaxed);
 
 	begin = rte_get_timer_cycles();
 	while (time_diff < hz * TIME_MS / 1000) {
@@ -397,12 +397,12 @@ run_on_all_cores(struct rte_ring *r, const int esize)
 		param.r = r;
 
 		/* clear synchro and start workers */
-		__atomic_store_n(&synchro, 0, __ATOMIC_RELAXED);
+		atomic_store_explicit(&synchro, 0, memory_order_relaxed);
 		if (rte_eal_mp_remote_launch(lcore_f, &param, SKIP_MAIN) < 0)
 			return -1;
 
 		/* start synchro and launch test on main */
-		__atomic_store_n(&synchro, 1, __ATOMIC_RELAXED);
+		atomic_store_explicit(&synchro, 1, memory_order_relaxed);
 		lcore_f(&param);
 
 		rte_eal_mp_wait_lcore();

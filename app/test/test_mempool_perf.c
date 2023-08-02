@@ -88,7 +88,7 @@
 static int use_external_cache;
 static unsigned external_cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
 
-static uint32_t synchro;
+static uint32_t _Atomic synchro;
 
 /* number of objects in one bulk operation (get or put) */
 static unsigned n_get_bulk;
@@ -188,7 +188,7 @@ per_lcore_mempool_test(void *arg)
 
 	/* wait synchro for workers */
 	if (lcore_id != rte_get_main_lcore())
-		rte_wait_until_equal_32(&synchro, 1, __ATOMIC_RELAXED);
+		rte_wait_until_equal_32(&synchro, 1, memory_order_relaxed);
 
 	start_cycles = rte_get_timer_cycles();
 
@@ -233,7 +233,7 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 	int ret;
 	unsigned cores_save = cores;
 
-	__atomic_store_n(&synchro, 0, __ATOMIC_RELAXED);
+	atomic_store_explicit(&synchro, 0, memory_order_relaxed);
 
 	/* reset stats */
 	memset(stats, 0, sizeof(stats));
@@ -258,7 +258,7 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 	}
 
 	/* start synchro and launch test on main */
-	__atomic_store_n(&synchro, 1, __ATOMIC_RELAXED);
+	atomic_store_explicit(&synchro, 1, memory_order_relaxed);
 
 	ret = per_lcore_mempool_test(mp);
 

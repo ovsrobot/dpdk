@@ -52,7 +52,7 @@ struct shared_state {
 	uint32_t head;  /* Head sequence number (for multi thread operation) */
 	char _pad2[RTE_CACHE_LINE_SIZE * 3];
 	struct opdl_stage *stage;  /* back pointer */
-	uint32_t tail;  /* Tail sequence number */
+	uint32_t _Atomic tail;  /* Tail sequence number */
 	char _pad3[RTE_CACHE_LINE_SIZE * 2];
 } __rte_cache_aligned;
 
@@ -169,7 +169,7 @@ update_available_seq(struct opdl_stage *s)
 {
 	uint32_t i;
 	uint32_t this_tail = s->shared.tail;
-	uint32_t min_seq = __atomic_load_n(&s->deps[0]->tail, __ATOMIC_ACQUIRE);
+	uint32_t min_seq = atomic_load_explicit(&s->deps[0]->tail, memory_order_acquire);
 	/* Input stage sequence numbers are greater than the sequence numbers of
 	 * its dependencies so an offset of t->num_slots is needed when
 	 * calculating available slots and also the condition which is used to
@@ -180,16 +180,16 @@ update_available_seq(struct opdl_stage *s)
 	if (is_input_stage(s)) {
 		wrap = s->num_slots;
 		for (i = 1; i < s->num_deps; i++) {
-			uint32_t seq = __atomic_load_n(&s->deps[i]->tail,
-					__ATOMIC_ACQUIRE);
+			uint32_t seq = atomic_load_explicit(&s->deps[i]->tail,
+					memory_order_acquire);
 			if ((this_tail - seq) > (this_tail - min_seq))
 				min_seq = seq;
 		}
 	} else {
 		wrap = 0;
 		for (i = 1; i < s->num_deps; i++) {
-			uint32_t seq = __atomic_load_n(&s->deps[i]->tail,
-					__ATOMIC_ACQUIRE);
+			uint32_t seq = atomic_load_explicit(&s->deps[i]->tail,
+					memory_order_acquire);
 			if ((seq - this_tail) < (min_seq - this_tail))
 				min_seq = seq;
 		}
@@ -299,7 +299,8 @@ opdl_ring_input_singlethread(struct opdl_ring *t, const void *entries,
 	copy_entries_in(t, head, entries, num_entries);
 
 	s->head += num_entries;
-	__atomic_store_n(&s->shared.tail, s->head, __ATOMIC_RELEASE);
+	atomic_store_explicit(&s->shared.tail, s->head,
+		memory_order_release);
 
 	return num_entries;
 }
@@ -382,18 +383,18 @@ opdl_stage_disclaim_multithread_n(struct opdl_stage *s,
 		/* There should be no race condition here. If shared.tail
 		 * matches, no other core can update it until this one does.
 		 */
-		if (__atomic_load_n(&s->shared.tail, __ATOMIC_ACQUIRE) ==
-				tail) {
+		if (atomic_load_explicit(&s->shared.tail,
+			memory_order_acquire) == tail) {
 			if (num_entries >= (head - tail)) {
 				claim_mgr_remove(disclaims);
-				__atomic_store_n(&s->shared.tail, head,
-						__ATOMIC_RELEASE);
+				atomic_store_explicit(&s->shared.tail, head,
+						memory_order_release);
 				num_entries -= (head - tail);
 			} else {
 				claim_mgr_move_tail(disclaims, num_entries);
-				__atomic_store_n(&s->shared.tail,
+				atomic_store_explicit(&s->shared.tail,
 						num_entries + tail,
-						__ATOMIC_RELEASE);
+						memory_order_release);
 				num_entries = 0;
 			}
 		} else if (block == false)
@@ -473,10 +474,11 @@ opdl_ring_input_multithread(struct opdl_ring *t, const void *entries,
 	/* If another thread started inputting before this one, but hasn't
 	 * finished, we need to wait for it to complete to update the tail.
 	 */
-	rte_wait_until_equal_32(&s->shared.tail, old_head, __ATOMIC_ACQUIRE);
+	rte_wait_until_equal_32(&s->shared.tail, old_head,
+		memory_order_acquire);
 
-	__atomic_store_n(&s->shared.tail, old_head + num_entries,
-			__ATOMIC_RELEASE);
+	atomic_store_explicit(&s->shared.tail, old_head + num_entries,
+			memory_order_release);
 
 	return num_entries;
 }
@@ -628,8 +630,8 @@ opdl_stage_disclaim_singlethread_n(struct opdl_stage *s,
 				num_entries, s->head - old_tail);
 		num_entries = s->head - old_tail;
 	}
-	__atomic_store_n(&s->shared.tail, num_entries + old_tail,
-			__ATOMIC_RELEASE);
+	atomic_store_explicit(&s->shared.tail, num_entries + old_tail,
+			memory_order_release);
 }
 
 uint32_t
@@ -658,7 +660,8 @@ opdl_ring_copy_from_burst(struct opdl_ring *t, struct opdl_stage *s,
 	copy_entries_in(t, head, entries, num_entries);
 
 	s->head += num_entries;
-	__atomic_store_n(&s->shared.tail, s->head, __ATOMIC_RELEASE);
+	atomic_store_explicit(&s->shared.tail, s->head,
+		memory_order_release);
 
 	return num_entries;
 
@@ -677,7 +680,8 @@ opdl_ring_copy_to_burst(struct opdl_ring *t, struct opdl_stage *s,
 	copy_entries_out(t, head, entries, num_entries);
 
 	s->head += num_entries;
-	__atomic_store_n(&s->shared.tail, s->head, __ATOMIC_RELEASE);
+	atomic_store_explicit(&s->shared.tail, s->head,
+		memory_order_release);
 
 	return num_entries;
 }
@@ -756,7 +760,8 @@ opdl_stage_disclaim(struct opdl_stage *s, uint32_t num_entries, bool block)
 		return 0;
 	}
 	if (s->threadsafe == false) {
-		__atomic_store_n(&s->shared.tail, s->head, __ATOMIC_RELEASE);
+		atomic_store_explicit(&s->shared.tail, s->head,
+			memory_order_release);
 		s->seq += s->num_claimed;
 		s->shadow_head = s->head;
 		s->num_claimed = 0;
