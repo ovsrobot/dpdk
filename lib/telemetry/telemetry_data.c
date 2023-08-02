@@ -41,12 +41,13 @@ rte_tel_data_start_dict(struct rte_tel_data *d)
 int
 rte_tel_data_string(struct rte_tel_data *d, const char *str)
 {
+	const size_t len = strlcpy(d->data.str, str, sizeof(d->data.str));
 	d->type = TEL_STRING;
-	d->data_len = strlcpy(d->data.str, str, sizeof(d->data.str));
-	if (d->data_len >= RTE_TEL_MAX_SINGLE_STRING_LEN) {
+	if (len >= RTE_TEL_MAX_SINGLE_STRING_LEN) {
 		d->data_len = RTE_TEL_MAX_SINGLE_STRING_LEN - 1;
 		return E2BIG; /* not necessarily and error, just truncation */
 	}
+	d->data_len = (unsigned int)len;
 	return 0;
 }
 
