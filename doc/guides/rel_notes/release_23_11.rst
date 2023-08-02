@@ -84,6 +84,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mbuf: function ``rte_mbuf_sanity_check`` has been renamed to
+  ``rte_mbuf_verify``. The old function name is deprecated
+  and will be removed in DPDK 24.11.
+
 
 ABI Changes
 -----------
