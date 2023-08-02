@@ -87,7 +87,7 @@ typedef int clockid_t;
 static inline int
 rte_clock_gettime(clockid_t clock_id, struct timespec *tp)
 {
-	const int NS_PER_SEC = 1E9;
+	const int NS_PER_SEC = 1000000000;
 	LARGE_INTEGER pf, pc;
 	LONGLONG nsec;
 
@@ -102,7 +102,7 @@ rte_clock_gettime(clockid_t clock_id, struct timespec *tp)
 
 		nsec = pc.QuadPart * NS_PER_SEC / pf.QuadPart;
 		tp->tv_sec = nsec / NS_PER_SEC;
-		tp->tv_nsec = nsec - tp->tv_sec * NS_PER_SEC;
+		tp->tv_nsec = (long)(nsec - tp->tv_sec * NS_PER_SEC);
 		return 0;
 	default:
 		return -1;
