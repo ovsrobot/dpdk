@@ -32,10 +32,12 @@ extern "C" {
 
 #define RTE_PCI_VENDOR_ID	0x00	/* 16 bits */
 #define RTE_PCI_DEVICE_ID	0x02	/* 16 bits */
-#define RTE_PCI_COMMAND		0x04	/* 16 bits */
 
 /* PCI Command Register */
+#define RTE_PCI_COMMAND		0x04	/* 16 bits */
+#define RTE_PCI_COMMAND_MEMORY	0x2	/* Enable response in Memory space */
 #define RTE_PCI_COMMAND_MASTER	0x4	/* Bus Master Enable */
+#define RTE_PCI_COMMAND_INTX_DISABLE 0x400 /* INTx Emulation Disable */
 
 /* PCI Status Register */
 #define RTE_PCI_STATUS		0x06	/* 16 bits */
