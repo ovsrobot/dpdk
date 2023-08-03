@@ -107,84 +107,38 @@ pci_vfio_write_config(const struct rte_pci_device *dev,
 
 /* get PCI BAR number where MSI-X interrupts are */
 static int
-pci_vfio_get_msix_bar(const struct rte_pci_device *dev, int fd,
+pci_vfio_get_msix_bar(const struct rte_pci_device *dev,
 	struct pci_msix_table *msix_table)
 {
-	int ret;
-	uint32_t reg;
-	uint16_t flags;
-	uint8_t cap_id, cap_offset;
-	uint64_t size, offset;
+	off_t cap_offset;
 
-	if (pci_vfio_get_region(dev, VFIO_PCI_CONFIG_REGION_INDEX,
-		&size, &offset) != 0) {
-		RTE_LOG(ERR, EAL, "Cannot get offset of CONFIG region.\n");
+	cap_offset = rte_pci_find_capability(dev, PCI_CAP_ID_MSIX);
+	if (cap_offset < 0)
 		return -1;
-	}
 
-	/* read PCI capability pointer from config space */
-	ret = pread64(fd, &reg, sizeof(reg), offset + PCI_CAPABILITY_LIST);
-	if (ret != sizeof(reg)) {
-		RTE_LOG(ERR, EAL,
-			"Cannot read capability pointer from PCI config space!\n");
-		return -1;
-	}
+	if (cap_offset != 0) {
+		uint16_t flags;
+		uint32_t reg;
 
-	/* we need first byte */
-	cap_offset = reg & 0xFF;
-
-	while (cap_offset) {
-
-		/* read PCI capability ID */
-		ret = pread64(fd, &reg, sizeof(reg), offset + cap_offset);
-		if (ret != sizeof(reg)) {
+		/* table offset resides in the next 4 bytes */
+		if (rte_pci_read_config(dev, &reg, sizeof(reg), cap_offset + 4) < 0) {
 			RTE_LOG(ERR, EAL,
-				"Cannot read capability ID from PCI config space!\n");
+				"Cannot read MSIX table from PCI config space!\n");
 			return -1;
 		}
 
-		/* we need first byte */
-		cap_id = reg & 0xFF;
-
-		/* if we haven't reached MSI-X, check next capability */
-		if (cap_id != PCI_CAP_ID_MSIX) {
-			ret = pread64(fd, &reg, sizeof(reg), offset + cap_offset);
-			if (ret != sizeof(reg)) {
-				RTE_LOG(ERR, EAL,
-					"Cannot read capability pointer from PCI config space!\n");
-				return -1;
-			}
-
-			/* we need second byte */
-			cap_offset = (reg & 0xFF00) >> 8;
-
-			continue;
+		if (rte_pci_read_config(dev, &flags, sizeof(flags), cap_offset + 2) < 0) {
+			RTE_LOG(ERR, EAL,
+				"Cannot read MSIX flags from PCI config space!\n");
+			return -1;
 		}
-		/* else, read table offset */
-		else {
-			/* table offset resides in the next 4 bytes */
-			ret = pread64(fd, &reg, sizeof(reg), offset + cap_offset + 4);
-			if (ret != sizeof(reg)) {
-				RTE_LOG(ERR, EAL,
-					"Cannot read table offset from PCI config space!\n");
-				return -1;
-			}
 
-			ret = pread64(fd, &flags, sizeof(flags), offset + cap_offset + 2);
-			if (ret != sizeof(flags)) {
-				RTE_LOG(ERR, EAL,
-					"Cannot read table flags from PCI config space!\n");
-				return -1;
-			}
-
-			msix_table->bar_index = reg & RTE_PCI_MSIX_TABLE_BIR;
-			msix_table->offset = reg & RTE_PCI_MSIX_TABLE_OFFSET;
-			msix_table->size =
-				16 * (1 + (flags & RTE_PCI_MSIX_FLAGS_QSIZE));
-
-			return 0;
-		}
+		msix_table->bar_index = reg & PCI_MSIX_TABLE_BIR;
+		msix_table->offset = reg & PCI_MSIX_TABLE_OFFSET;
+		msix_table->size =
+			16 * (1 + (flags & PCI_MSIX_FLAGS_QSIZE));
 	}
+
 	return 0;
 }
 
@@ -869,7 +823,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 	/* get MSI-X BAR, if any (we have to know where it is because we can't
 	 * easily mmap it when using VFIO)
 	 */
-	ret = pci_vfio_get_msix_bar(dev, vfio_dev_fd, &vfio_res->msix_table);
+	ret = pci_vfio_get_msix_bar(dev, &vfio_res->msix_table);
 	if (ret < 0) {
 		RTE_LOG(ERR, EAL, "%s cannot get MSI-X BAR number!\n",
 				pci_addr);
