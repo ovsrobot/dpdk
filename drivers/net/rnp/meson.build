@@ -11,6 +11,7 @@ sources = files(
 		'rnp_ethdev.c',
 		'rnp_mbx.c',
 		'rnp_mbx_fw.c',
+		'rnp_rxtx.c',
 		'base/rnp_api.c',
 )
 

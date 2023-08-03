@@ -11,6 +11,7 @@
 #include "rnp_api.h"
 #include "rnp_mbx.h"
 #include "rnp_mbx_fw.h"
+#include "rnp_rxtx.h"
 #include "rnp_logs.h"
 
 static int
@@ -40,6 +41,62 @@ static int rnp_dev_close(struct rte_eth_dev *dev)
 static const struct eth_dev_ops rnp_eth_dev_ops = {
 };
 
+static void
+rnp_setup_port_attr(struct rnp_eth_port *port,
+		    struct rte_eth_dev *dev,
+		    uint8_t num_ports,
+		    uint8_t p_id)
+{
+	struct rnp_port_attr *attr = &port->attr;
+	struct rnp_hw *hw = RNP_DEV_TO_HW(dev);
+	uint32_t lane_bit;
+
+	if (port->s_mode == RNP_SHARE_INDEPEND) {
+		attr->max_mac_addrs = RNP_PORT_MAX_MACADDR;
+		attr->max_uc_mac_hash = RNP_PORT_MAX_UC_MAC_SIZE;
+		attr->uc_hash_tb_size = RNP_PORT_MAX_UC_HASH_TB;
+		attr->max_mc_mac_hash = RNP_PORT_MAX_MACADDR;
+		attr->max_vlan_hash = RNP_PORT_MAX_VLAN_HASH;
+		attr->hash_table_shift = 26 - (attr->max_uc_mac_hash >> 7);
+	} else {
+		attr->max_mac_addrs = RNP_MAX_MAC_ADDRS / num_ports;
+		attr->max_uc_mac_hash = RNP_MAX_UC_MAC_SIZE / num_ports;
+		attr->uc_hash_tb_size = RNP_MAX_UC_HASH_TB;
+		attr->max_mc_mac_hash = RNP_MAX_MC_MAC_SIZE / num_ports;
+		attr->mc_hash_tb_size = RNP_MAC_MC_HASH_TB;
+		attr->max_vlan_hash = RNP_MAX_VLAN_HASH_TB_SIZE / num_ports;
+		attr->hash_table_shift = RNP_UTA_BIT_SHIFT;
+	}
+	if (hw->ncsi_en)
+		attr->uc_hash_tb_size -= hw->ncsi_rar_entries;
+	if (hw->device_id == RNP_DEV_ID_N400L_X4) {
+		attr->max_rx_queues = RNP_N400_MAX_RX_QUEUE_NUM;
+		attr->max_tx_queues = RNP_N400_MAX_TX_QUEUE_NUM;
+	} else {
+		attr->max_rx_queues = RNP_MAX_RX_QUEUE_NUM / num_ports;
+		attr->max_tx_queues = RNP_MAX_TX_QUEUE_NUM / num_ports;
+	}
+
+	attr->rte_pid = dev->data->port_id;
+	lane_bit = hw->phy_port_ids[p_id] & (hw->max_port_num - 1);
+
+	attr->nr_port = lane_bit;
+	attr->port_offset = rnp_eth_rd(hw, RNP_TC_PORT_MAP_TB(attr->nr_port));
+
+	rnp_mbx_get_lane_stat(dev);
+
+	PMD_DRV_LOG(INFO, "PF[%d] SW-ETH-PORT[%d]<->PHY_LANE[%d]\n",
+			hw->function, p_id, lane_bit);
+}
+
+static void
+rnp_init_filter_setup(struct rnp_eth_port *port,
+		      uint8_t num_ports)
+{
+	RTE_SET_USED(port);
+	RTE_SET_USED(num_ports);
+}
+
 static int
 rnp_init_port_resource(struct rnp_eth_adapter *adapter,
 		       struct rte_eth_dev *dev,
@@ -47,11 +104,53 @@ rnp_init_port_resource(struct rnp_eth_adapter *adapter,
 		       uint8_t p_id)
 {
 	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	struct rte_pci_device *pci_dev = adapter->pdev;
+	struct rnp_hw *hw = &adapter->hw;
 
+	port->adapt = adapter;
+	port->s_mode = adapter->s_mode;
+	port->port_stopped = 1;
+	port->hw = hw;
 	port->eth_dev = dev;
-	adapter->ports[p_id] = port;
+
+	dev->device = &pci_dev->device;
+	rte_eth_copy_pci_info(dev, pci_dev);
 	dev->dev_ops = &rnp_eth_dev_ops;
-	RTE_SET_USED(name);
+	dev->rx_queue_count       = rnp_dev_rx_queue_count;
+	dev->rx_descriptor_status = rnp_dev_rx_descriptor_status;
+	dev->tx_descriptor_status = rnp_dev_tx_descriptor_status;
+	dev->rx_pkt_burst = rnp_recv_pkts;
+	dev->tx_pkt_burst = rnp_xmit_pkts;
+	dev->tx_pkt_prepare = rnp_prep_pkts;
+
+	rnp_setup_port_attr(port, dev, adapter->num_ports, p_id);
+	rnp_init_filter_setup(port, adapter->num_ports);
+	rnp_get_mac_addr(dev, port->mac_addr);
+	dev->data->mac_addrs = rte_zmalloc(name, sizeof(struct rte_ether_addr) *
+			port->attr.max_mac_addrs, 0);
+	if (!dev->data->mac_addrs) {
+		RNP_PMD_DRV_LOG(ERR, "Memory allocation "
+				"for MAC failed! Exiting.\n");
+		return -ENOMEM;
+	}
+	/* Allocate memory for storing hash filter MAC addresses */
+	dev->data->hash_mac_addrs = rte_zmalloc(name,
+			RTE_ETHER_ADDR_LEN * port->attr.max_uc_mac_hash, 0);
+	if (dev->data->hash_mac_addrs == NULL) {
+		RNP_PMD_INIT_LOG(ERR, "Failed to allocate %d bytes "
+				"needed to store MAC addresses",
+				RTE_ETHER_ADDR_LEN * port->attr.max_uc_mac_hash);
+		return -ENOMEM;
+	}
+
+	rnp_set_default_mac(dev, port->mac_addr);
+	rte_ether_addr_copy((const struct rte_ether_addr *)port->mac_addr,
+			dev->data->mac_addrs);
+	/* MTU */
+	dev->data->mtu = RTE_ETHER_MAX_LEN -
+		RTE_ETHER_HDR_LEN - RTE_ETHER_CRC_LEN;
+	adapter->ports[p_id] = port;
+	rte_eth_dev_probing_finish(dev);
 
 	return 0;
 }
@@ -211,9 +310,116 @@ static int32_t rnp_reset_hw_pf(struct rnp_hw *hw)
 	return 0;
 }
 
+static void
+rnp_mac_res_take_in(struct rnp_eth_port *port,
+		    uint8_t index)
+{
+	if (!port->mac_use_tb[index]) {
+		port->mac_use_tb[index] = true;
+		port->use_num_mac++;
+	}
+}
+
+static void
+rnp_mac_res_remove(struct rnp_eth_port *port,
+		   uint8_t index)
+{
+	if (port->mac_use_tb[index]) {
+		port->mac_use_tb[index] = false;
+		port->use_num_mac--;
+	}
+}
+
+static int32_t rnp_set_mac_addr_pf(struct rnp_eth_port *port,
+				   uint8_t *mac, uint8_t vm_pool,
+				   uint8_t index)
+{
+	struct rnp_hw *hw = RNP_PORT_TO_HW(port);
+	struct rnp_port_attr *attr = &port->attr;
+	uint8_t hw_idx;
+	uint32_t value;
+
+	if (port->use_num_mac > port->attr.max_mac_addrs ||
+			index > port->attr.max_mac_addrs)
+		return -ENOMEM;
+
+	if (vm_pool != UINT8_MAX)
+		hw_idx = (attr->nr_port * attr->max_mac_addrs) + vm_pool + index;
+	else
+		hw_idx = (attr->nr_port * attr->max_mac_addrs) + index;
+
+	rnp_mac_res_take_in(port, hw_idx);
+
+	value = (mac[0] << 8) | mac[1];
+	value |= RNP_MAC_FILTER_EN;
+	RNP_MACADDR_UPDATE_HI(hw, hw_idx, value);
+
+	value = (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5];
+	RNP_MACADDR_UPDATE_LO(hw, hw_idx, value);
+
+	return 0;
+}
+
+static void
+rnp_remove_mac_from_hw(struct rnp_eth_port *port,
+		       uint8_t vm_pool, uint8_t index)
+{
+	struct rnp_hw *hw = RNP_PORT_TO_HW(port);
+	struct rnp_port_attr *attr = &port->attr;
+	uint16_t hw_idx;
+
+	if (vm_pool != UINT8_MAX)
+		hw_idx = (attr->nr_port * attr->max_mac_addrs) + vm_pool + index;
+	else
+		hw_idx = (attr->nr_port * attr->max_mac_addrs) + index;
+
+	rnp_mac_res_remove(port, hw_idx);
+
+	rnp_eth_wr(hw, RNP_RAL_BASE_ADDR(hw_idx), 0);
+	rnp_eth_wr(hw, RNP_RAH_BASE_ADDR(hw_idx), 0);
+}
+
+static int32_t
+rnp_clear_mac_addr_pf(struct rnp_eth_port *port,
+		      uint8_t vm_pool, uint8_t index)
+{
+	rnp_remove_mac_from_hw(port, vm_pool, index);
+
+	return 0;
+}
+
+static int32_t rnp_get_mac_addr_pf(struct rnp_eth_port *port,
+				   uint8_t lane,
+				   uint8_t *macaddr)
+{
+	struct rnp_hw *hw = RNP_DEV_TO_HW(port->eth_dev);
+
+	return rnp_fw_get_macaddr(port->eth_dev, hw->pf_vf_num, macaddr, lane);
+}
+
+static int32_t
+rnp_set_default_mac_pf(struct rnp_eth_port *port,
+		       uint8_t *mac)
+{
+	struct rnp_eth_adapter *adap = RNP_PORT_TO_ADAPTER(port);
+	uint16_t max_vfs;
+
+	if (port->s_mode == RNP_SHARE_INDEPEND)
+		return rnp_set_rafb(port->eth_dev, (uint8_t *)mac,
+				UINT8_MAX, 0);
+
+	max_vfs = adap->max_vfs;
+
+	return rnp_set_rafb(port->eth_dev, mac, max_vfs, 0);
+}
+
 const struct rnp_mac_api rnp_mac_ops = {
 	.reset_hw	= rnp_reset_hw_pf,
-	.init_hw	= rnp_init_hw_pf
+	.init_hw	= rnp_init_hw_pf,
+	.get_mac_addr	= rnp_get_mac_addr_pf,
+	.set_default_mac = rnp_set_default_mac_pf,
+	.set_rafb	= rnp_set_mac_addr_pf,
+	.clear_rafb	= rnp_clear_mac_addr_pf
 };
 
 static void
@@ -228,7 +434,11 @@ rnp_common_ops_init(struct rnp_eth_adapter *adapter)
 static int
 rnp_special_ops_init(struct rte_eth_dev *eth_dev)
 {
-	RTE_SET_USED(eth_dev);
+	struct rnp_eth_adapter *adapter = RNP_DEV_TO_ADAPTER(eth_dev);
+	struct rnp_share_ops *share_priv;
+
+	share_priv = adapter->share_priv;
+	share_priv->mac_api = &rnp_mac_ops;
 
 	return 0;
 }
@@ -237,9 +447,9 @@ static int
 rnp_eth_dev_init(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
 	struct rnp_eth_adapter *adapter = NULL;
 	char name[RTE_ETH_NAME_MAX_LEN] = " ";
-	struct rnp_eth_port *port = NULL;
 	struct rte_eth_dev *eth_dev;
 	struct rnp_hw *hw = NULL;
 	int32_t p_id;
@@ -275,13 +485,13 @@ rnp_eth_dev_init(struct rte_eth_dev *dev)
 		return ret;
 	}
 	adapter->share_priv = dev->process_private;
+	port->adapt = adapter;
 	rnp_common_ops_init(adapter);
+	rnp_init_mbx_ops_pf(hw);
 	rnp_get_nic_attr(adapter);
 	/* We need Use Device Id To Change The Resource Mode */
 	rnp_special_ops_init(dev);
-	port->adapt = adapter;
 	port->hw = hw;
-	rnp_init_mbx_ops_pf(hw);
 	for (p_id = 0; p_id < adapter->num_ports; p_id++) {
 		/* port 0 resource has been alloced When Probe */
 		if (!p_id) {
