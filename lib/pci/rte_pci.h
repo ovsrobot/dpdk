@@ -73,7 +73,22 @@ extern "C" {
 #define RTE_PCI_MSIX_TABLE_OFFSET	0xfffffff8 /* Offset into specified BAR */
 
 /* PCI Express capability registers */
-#define RTE_PCI_EXP_DEVCTL	8	/* Device Control */
+#define RTE_PCI_EXP_TYPE_RC_EC		0xa	/* Root Complex Event Collector */
+#define RTE_PCI_EXP_DEVCTL		0x08	/* Device Control */
+#define RTE_PCI_EXP_DEVCTL_PAYLOAD	0x00e0	/* Max_Payload_Size */
+#define RTE_PCI_EXP_DEVCTL_READRQ	0x7000	/* Max_Read_Request_Size */
+#define RTE_PCI_EXP_DEVCTL_BCR_FLR	0x8000	/* Bridge Configuration Retry / FLR */
+#define RTE_PCI_EXP_DEVSTA		0x0a	/* Device Status */
+#define RTE_PCI_EXP_DEVSTA_TRPND	0x0020	/* Transactions Pending */
+#define RTE_PCI_EXP_LNKCTL		0x10	/* Link Control */
+#define RTE_PCI_EXP_LNKSTA		0x12	/* Link Status */
+#define RTE_PCI_EXP_LNKSTA_CLS		0x000f	/* Current Link Speed */
+#define RTE_PCI_EXP_LNKSTA_NLW		0x03f0	/* Negotiated Link Width */
+#define RTE_PCI_EXP_SLTCTL		0x18	/* Slot Control */
+#define RTE_PCI_EXP_RTCTL		0x1c	/* Root Control */
+#define RTE_PCI_EXP_DEVCTL2		0x28	/* Device Control 2 */
+#define RTE_PCI_EXP_LNKCTL2		0x30	/* Link Control 2 */
+#define RTE_PCI_EXP_SLTCTL2		0x38	/* Slot Control 2 */
 
 /* Extended Capabilities (PCI-X 2.0 and Express) */
 #define RTE_PCI_EXT_CAP_ID(header)	(header & 0x0000ffff)
