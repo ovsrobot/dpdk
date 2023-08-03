@@ -68,6 +68,8 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal: Removed deprecated ``RTE_FUNC_PTR_OR_*`` macros.
+
 
 API Changes
 -----------
