@@ -43,6 +43,10 @@ extern "C" {
 #define RTE_PCI_STATUS		0x06	/* 16 bits */
 #define RTE_PCI_STATUS_CAP_LIST	0x10	/* Support Capability List */
 
+/* Base addresses */
+#define RTE_PCI_BASE_ADDRESS_0		0x10	/* 32 bits */
+#define RTE_PCI_BASE_ADDRESS_SPACE_IO	0x01
+
 /* Capability registers */
 #define RTE_PCI_CAPABILITY_LIST	0x34	/* Offset of first capability list entry */
 #define RTE_PCI_CAP_ID_PM	0x01	/* Power Management */
