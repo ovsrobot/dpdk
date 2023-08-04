@@ -853,12 +853,14 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 	uint16_t nb_rx;
 	uint16_t nb_prep;
 	uint16_t i;
+	uint16_t pad_len;
 	uint64_t rx_ol_flags, tx_ol_flags;
 	uint64_t tx_offloads;
 	uint32_t rx_bad_ip_csum;
 	uint32_t rx_bad_l4_csum;
 	uint32_t rx_bad_outer_l4_csum;
 	uint32_t rx_bad_outer_ip_csum;
+	uint32_t l3_off;
 	struct testpmd_offload_info info;
 
 	/* receive a burst of packet */
@@ -978,6 +980,36 @@ tunnel_update:
 		if (info.is_tunnel) {
 			outer_l3_hdr = l3_hdr;
 			l3_hdr = (char *)l3_hdr + info.outer_l3_len + info.l2_len;
+		}
+
+		if (info.is_tunnel) {
+			l3_off = info.outer_l2_len +
+					info.outer_l3_len +
+					info.l2_len;
+		} else {
+			l3_off = info.l2_len;
+		}
+		switch (info.ethertype) {
+		case _htons(RTE_ETHER_TYPE_IPV4):
+			pad_len = rte_pktmbuf_data_len(m) -
+					(l3_off +
+					rte_be_to_cpu_16(
+					((struct rte_ipv4_hdr *)l3_hdr)->total_length));
+			break;
+		case _htons(RTE_ETHER_TYPE_IPV6):
+			pad_len = rte_pktmbuf_data_len(m) -
+					(l3_off +
+					rte_be_to_cpu_16(
+					((struct rte_ipv6_hdr *)l3_hdr)->payload_len));
+			break;
+		default:
+			pad_len = 0;
+			break;
+		}
+
+		if (pad_len) {
+			rte_pktmbuf_data_len(m) = rte_pktmbuf_data_len(m) - pad_len;
+			rte_pktmbuf_pkt_len(m) = rte_pktmbuf_data_len(m);
 		}
 
 		/* step 2: depending on user command line configuration,
