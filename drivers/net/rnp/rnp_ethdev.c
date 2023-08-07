@@ -8,7 +8,9 @@
 #include <ethdev_driver.h>
 
 #include "rnp.h"
+#include "rnp_api.h"
 #include "rnp_mbx.h"
+#include "rnp_mbx_fw.h"
 #include "rnp_logs.h"
 
 static int
@@ -92,7 +94,30 @@ fail_calloc:
 
 static void rnp_get_nic_attr(struct rnp_eth_adapter *adapter)
 {
-	RTE_SET_USED(adapter);
+	struct rnp_hw *hw = &adapter->hw;
+	int lane_mask = 0, err, mode = 0;
+
+	rnp_mbx_link_event_enable(adapter->eth_dev, false);
+
+	err = rnp_mbx_get_capability(adapter->eth_dev, &lane_mask, &mode);
+	if (err < 0 || !lane_mask) {
+		PMD_DRV_LOG(ERR, "%s: mbx_get_capability error! errcode=%d\n",
+				__func__, hw->speed);
+		return;
+	}
+
+	adapter->num_ports = __builtin_popcount(lane_mask);
+	adapter->max_link_speed = hw->speed;
+	adapter->lane_mask = lane_mask;
+	adapter->mode = hw->nic_mode;
+
+	PMD_DRV_LOG(INFO, "max link speed:%d lane_mask:0x%x nic-mode:0x%x\n",
+			(int)adapter->max_link_speed,
+			(int)adapter->num_ports, adapter->mode);
+	if (adapter->num_ports && adapter->num_ports == 1)
+		adapter->s_mode = RNP_SHARE_CORPORATE;
+	else
+		adapter->s_mode = RNP_SHARE_INDEPEND;
 }
 
 static int
@@ -124,6 +149,72 @@ rnp_process_resource_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 }
+
+static int32_t rnp_init_hw_pf(struct rnp_hw *hw)
+{
+	struct rnp_eth_adapter *adapter = RNP_HW_TO_ADAPTER(hw);
+	uint32_t version;
+	uint32_t reg;
+
+	PMD_INIT_FUNC_TRACE();
+	version = rnp_rd_reg(hw->dev_version);
+	PMD_DRV_LOG(INFO, "NIC HW Version:0x%.2x\n", version);
+
+	/* Disable Rx/Tx Dma */
+	rnp_wr_reg(hw->dma_axi_en, false);
+	/* Check Dma Chanle Status */
+	while (rnp_rd_reg(hw->dma_axi_st) == 0)
+		;
+
+	/* Reset Nic All Hardware */
+	if (rnp_reset_hw(adapter->eth_dev, hw))
+		return -EPERM;
+
+	/* Rx Proto Offload No-BYPASS */
+	rnp_eth_wr(hw, RNP_ETH_ENGINE_BYPASS, false);
+	/* Enable Flow Filter Engine */
+	rnp_eth_wr(hw, RNP_HOST_FILTER_EN, true);
+	/* Enable VXLAN Parse */
+	rnp_eth_wr(hw, RNP_EN_TUNNEL_VXLAN_PARSE, true);
+	/* Enabled REDIR ACTION */
+	rnp_eth_wr(hw, RNP_REDIR_CTRL, true);
+
+	/* Setup Scatter DMA Mem Size */
+	reg = ((RTE_ETHER_MAX_LEN / 16) << RNP_DMA_SCATTER_MEM_SHIFT);
+	rnp_dma_wr(hw,  RNP_DMA_CTRL, reg);
+#ifdef PHYTIUM_SUPPORT
+#define RNP_DMA_PADDING      (1 << 8)
+	reg = rnp_dma_rd(hw, RNP_DMA_CTRL);
+	reg |= RNP_DMA_PADDING;
+	rnp_dma_wr(hw, RNP_DMA_CTRL, reg);
+#endif
+	/* Enable Rx/Tx Dma */
+	rnp_wr_reg(hw->dma_axi_en, 0b1111);
+
+	rnp_top_wr(hw, RNP_TX_QINQ_WORKAROUND, 1);
+
+	return 0;
+}
+
+static int32_t rnp_reset_hw_pf(struct rnp_hw *hw)
+{
+	struct rnp_eth_adapter *adapter = hw->back;
+
+	rnp_top_wr(hw, RNP_NIC_RESET, 0);
+	rte_wmb();
+	rnp_top_wr(hw, RNP_NIC_RESET, 1);
+
+	rnp_mbx_fw_reset_phy(adapter->eth_dev);
+
+	PMD_DRV_LOG(INFO, "PF[%d] reset nic finish\n",
+			hw->function);
+	return 0;
+}
+
+const struct rnp_mac_api rnp_mac_ops = {
+	.reset_hw	= rnp_reset_hw_pf,
+	.init_hw	= rnp_init_hw_pf
+};
 
 static void
 rnp_common_ops_init(struct rnp_eth_adapter *adapter)
