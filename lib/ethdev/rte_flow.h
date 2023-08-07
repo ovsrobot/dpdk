@@ -3204,6 +3204,11 @@ enum rte_eth_hash_function {
 	 * src or dst address will xor with zero pair.
 	 */
 	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ,
+	/**
+	 * Symmetric Toeplitz: src, dst will be swapped
+	 * automatically by sorting.
+	 */
+	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ_SORT,
 	RTE_ETH_HASH_FUNCTION_MAX,
 };
 
