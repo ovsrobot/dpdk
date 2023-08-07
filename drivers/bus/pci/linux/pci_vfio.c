@@ -1306,12 +1306,33 @@ int
 pci_vfio_ioport_map(struct rte_pci_device *dev, int bar,
 		    struct rte_pci_ioport *p)
 {
+	struct vfio_device_info device_info = { .argsz = sizeof(device_info) };
+	char pci_addr[PATH_MAX] = {0};
+	int vfio_dev_fd;
+	struct rte_pci_addr *loc = &dev->addr;
+	int ret;
 	uint64_t size, offset;
 
 	if (bar < VFIO_PCI_BAR0_REGION_INDEX ||
 	    bar > VFIO_PCI_BAR5_REGION_INDEX) {
 		RTE_LOG(ERR, EAL, "invalid bar (%d)!\n", bar);
 		return -1;
+	}
+
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+		/* store PCI address string */
+		snprintf(pci_addr, sizeof(pci_addr), PCI_PRI_FMT,
+				loc->domain, loc->bus, loc->devid, loc->function);
+
+		ret = rte_vfio_setup_device(rte_pci_get_sysfs_path(), pci_addr,
+						&vfio_dev_fd, &device_info);
+		if (ret)
+			return -1;
+
+		ret = pci_vfio_fill_regions(dev, vfio_dev_fd, &device_info);
+		if (ret)
+			return -1;
+
 	}
 
 	if (pci_vfio_get_region(dev, bar, &size, &offset) != 0) {
