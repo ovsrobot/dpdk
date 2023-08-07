@@ -8,5 +8,6 @@ endif
 
 sources = files(
 		'rnp_ethdev.c',
+		'rnp_mbx.c',
 )
 includes += include_directories('base')
