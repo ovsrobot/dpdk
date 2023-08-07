@@ -32,6 +32,8 @@ enum GENERIC_CMD {
 	GET_PHY_ABALITY = 0x0601,
 	GET_MAC_ADDRES = 0x0602,
 	RESET_PHY = 0x0603,
+	GET_LINK_STATUS = 0x0607,
+	LINK_STATUS_EVENT = 0x0608,
 	GET_LANE_STATUS = 0x0610,
 	SET_EVENT_MASK = 0x0613,
 	 /* fw update */
@@ -97,6 +99,21 @@ struct phy_abilities {
 		} e;
 	};
 } __rte_packed __rte_aligned(4);
+
+struct port_stat {
+	u8 phy_addr;		/* Phy MDIO address */
+
+	u8 duplex          : 1; /* FIBRE is always 1,Twisted Pair 1 or 0 */
+	u8 autoneg         : 1; /* autoned state */
+	u8 fec             : 1;
+	u8 an_rev          : 1;
+	u8 link_traing     : 1;
+	u8 is_sgmii        : 1; /* avild fw >= 0.5.0.17 */
+	u16 speed;		/* cur port linked speed */
+
+	u16 pause : 4;
+	u16 rev   : 12;
+} __rte_packed;
 
 #define RNP_SPEED_CAP_UNKNOWN    (0)
 #define RNP_SPEED_CAP_10M_FULL   BIT(2)
@@ -186,8 +203,14 @@ struct mbx_fw_cmd_reply {
 		struct phy_abilities phy_abilities;
 	};
 } __rte_packed __rte_aligned(4);
+/* == flags == */
+#define FLAGS_DD	BIT(0) /* driver clear 0, FW must set 1 */
+#define FLAGS_CMP	BIT(1) /* driver clear 0, FW mucst set */
+/* driver clear 0, FW must set only if it reporting an error */
+#define FLAGS_ERR	BIT(2)
 
-#define MBX_REQ_HDR_LEN            24
+#define MBX_REQ_HDR_LEN		(24)
+#define RNP_ALARM_INTERVAL	(50000) /* unit us */
 /* driver -> firmware */
 struct mbx_fw_cmd_req {
 	unsigned short flags;     /* 0-1 */
@@ -240,6 +263,14 @@ struct mbx_fw_cmd_req {
 			int flag;
 			int nr_lane;
 		} set_dump;
+
+		struct {
+			unsigned short changed_lanes;
+			unsigned short lane_status;
+			unsigned int port_st_magic;
+#define SPEED_VALID_MAGIC 0xa4a6a8a9
+			struct port_stat st[4];
+		} link_stat; /* FW->RC */
 	};
 } __rte_packed __rte_aligned(4);
 
@@ -364,4 +395,7 @@ int rnp_mbx_get_lane_stat(struct rte_eth_dev *dev);
 int rnp_fw_update(struct rnp_eth_adapter *adapter);
 int rnp_hw_set_fw_10g_1g_auto_detch(struct rte_eth_dev *dev, int enable);
 int rnp_hw_set_fw_force_speed_1g(struct rte_eth_dev *dev, int enable);
+void rnp_link_stat_mark(struct rnp_hw *hw, int nr_lane, int up);
+void rnp_link_report(struct rte_eth_dev *dev, bool link_en);
+int rnp_fw_msg_handler(struct rnp_eth_adapter *adapter);
 #endif /* __RNP_MBX_FW_H__*/

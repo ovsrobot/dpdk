@@ -10,6 +10,7 @@
 #include "rnp_osdep.h"
 #include "rnp_dma_regs.h"
 #include "rnp_eth_regs.h"
+#include "rnp_mac_regs.h"
 #include "rnp_cfg.h"
 
 static inline unsigned int rnp_rd_reg(volatile void *addr)
@@ -48,6 +49,10 @@ static inline void rnp_wr_reg(volatile void *reg, int val)
 	rnp_eth_wr(hw, RNP_RAL_BASE_ADDR(hw_idx), val)
 #define RNP_MACADDR_UPDATE_HI(hw, hw_idx, val) \
 	rnp_eth_wr(hw, RNP_RAH_BASE_ADDR(hw_idx), val)
+#define rnp_mac_rd(hw, id, off) \
+	rnp_rd_reg((char *)(hw)->mac_base[id] + (off))
+#define rnp_mac_wr(hw, id, off, val) \
+	rnp_wr_reg((char *)(hw)->mac_base[id] + (off), val)
 struct rnp_hw;
 /* Mbx Operate info */
 enum MBX_ID {
