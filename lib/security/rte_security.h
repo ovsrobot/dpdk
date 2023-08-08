@@ -703,7 +703,6 @@ rte_security_session_create(struct rte_security_ctx *instance,
  *  - On success returns 0
  *  - On failure returns a negative errno value.
  */
-__rte_experimental
 int
 rte_security_session_update(struct rte_security_ctx *instance,
 			    void *sess,
@@ -739,9 +738,6 @@ int
 rte_security_session_destroy(struct rte_security_ctx *instance, void *sess);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Create MACsec security channel (SC).
  *
  * @param   instance	security instance
@@ -753,15 +749,11 @@ rte_security_session_destroy(struct rte_security_ctx *instance, void *sess);
  *  - -ENOMEM if PMD is not capable to create more SC.
  *  - other negative value for other errors.
  */
-__rte_experimental
 int
 rte_security_macsec_sc_create(struct rte_security_ctx *instance,
 			      struct rte_security_macsec_sc *conf);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Destroy MACsec security channel (SC).
  *
  * @param   instance	security instance
@@ -772,15 +764,11 @@ rte_security_macsec_sc_create(struct rte_security_ctx *instance,
  *  - -EINVAL if sc_id is invalid or instance is NULL.
  *  - -EBUSY if sc is being used by some session.
  */
-__rte_experimental
 int
 rte_security_macsec_sc_destroy(struct rte_security_ctx *instance, uint16_t sc_id,
 			       enum rte_security_macsec_direction dir);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Create MACsec security association (SA).
  *
  * @param   instance	security instance
@@ -792,15 +780,11 @@ rte_security_macsec_sc_destroy(struct rte_security_ctx *instance, uint16_t sc_id
  *  - -ENOMEM if PMD is not capable to create more SAs.
  *  - other negative value for other errors.
  */
-__rte_experimental
 int
 rte_security_macsec_sa_create(struct rte_security_ctx *instance,
 			      struct rte_security_macsec_sa *conf);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Destroy MACsec security association (SA).
  *
  * @param   instance	security instance
@@ -811,7 +795,6 @@ rte_security_macsec_sa_create(struct rte_security_ctx *instance,
  *  - -EINVAL if sa_id is invalid or instance is NULL.
  *  - -EBUSY if sa is being used by some session.
  */
-__rte_experimental
 int
 rte_security_macsec_sa_destroy(struct rte_security_ctx *instance, uint16_t sa_id,
 			       enum rte_security_macsec_direction dir);
@@ -822,9 +805,6 @@ typedef uint64_t rte_security_dynfield_t;
 extern int rte_security_dynfield_offset;
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Get pointer to mbuf field for device-specific metadata.
  *
  * For performance reason, no check is done,
@@ -834,7 +814,6 @@ extern int rte_security_dynfield_offset;
  * @param	mbuf	packet to access
  * @return pointer to mbuf field
  */
-__rte_experimental
 static inline rte_security_dynfield_t *
 rte_security_dynfield(struct rte_mbuf *mbuf)
 {
@@ -844,14 +823,10 @@ rte_security_dynfield(struct rte_mbuf *mbuf)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Check whether the dynamic field is registered.
  *
  * @return true if rte_security_dynfield_register() has been called.
  */
-__rte_experimental
 static inline bool rte_security_dynfield_is_registered(void)
 {
 	return rte_security_dynfield_offset >= 0;
@@ -900,7 +875,6 @@ rte_security_session_fast_mdata_set(void *sess, uint64_t fdata)
 }
 
 /** Function to call PMD specific function pointer set_pkt_metadata() */
-__rte_experimental
 int __rte_security_set_pkt_metadata(struct rte_security_ctx *instance,
 				    void *sess,
 				    struct rte_mbuf *m, void *params);
@@ -1072,16 +1046,12 @@ struct rte_security_stats {
  *  - On success, return 0
  *  - On failure, a negative value
  */
-__rte_experimental
 int
 rte_security_session_stats_get(struct rte_security_ctx *instance,
 			       void *sess,
 			       struct rte_security_stats *stats);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Get MACsec SA statistics.
  *
  * @param	instance	security instance
@@ -1092,16 +1062,12 @@ rte_security_session_stats_get(struct rte_security_ctx *instance,
  *  - On success, return 0.
  *  - On failure, a negative value.
  */
-__rte_experimental
 int
 rte_security_macsec_sa_stats_get(struct rte_security_ctx *instance,
 				 uint16_t sa_id, enum rte_security_macsec_direction dir,
 				 struct rte_security_macsec_sa_stats *stats);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Get MACsec SC statistics.
  *
  * @param	instance	security instance
@@ -1112,7 +1078,6 @@ rte_security_macsec_sa_stats_get(struct rte_security_ctx *instance,
  *  - On success, return 0.
  *  - On failure, a negative value.
  */
-__rte_experimental
 int
 rte_security_macsec_sc_stats_get(struct rte_security_ctx *instance,
 				 uint16_t sc_id, enum rte_security_macsec_direction dir,
