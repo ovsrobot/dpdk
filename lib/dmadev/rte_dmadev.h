@@ -158,9 +158,6 @@ extern "C" {
 #define RTE_DMADEV_DEFAULT_MAX 64
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Configure the maximum number of dmadevs.
  * @note This function can be invoked before the primary process rte_eal_init()
  * to change the maximum number of dmadevs. If not invoked, the maximum number
@@ -172,13 +169,9 @@ extern "C" {
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_dev_max(size_t dev_max);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get the device identifier for the named DMA device.
  *
  * @param name
@@ -188,13 +181,9 @@ int rte_dma_dev_max(size_t dev_max);
  *   Returns DMA device identifier on success.
  *   - <0: Failure to find named DMA device.
  */
-__rte_experimental
 int rte_dma_get_dev_id_by_name(const char *name);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Check whether the dev_id is valid.
  *
  * @param dev_id
@@ -203,20 +192,15 @@ int rte_dma_get_dev_id_by_name(const char *name);
  * @return
  *   - If the device index is valid (true) or not (false).
  */
-__rte_experimental
 bool rte_dma_is_valid(int16_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get the total number of DMA devices that have been successfully
  * initialised.
  *
  * @return
  *   The total number of usable DMA devices.
  */
-__rte_experimental
 uint16_t rte_dma_count_avail(void);
 
 /**
@@ -227,7 +211,6 @@ uint16_t rte_dma_count_avail(void);
  * @return
  *   Next valid dmadev, UINT16_MAX if there is none.
  */
-__rte_experimental
 int16_t rte_dma_next_dev(int16_t start_dev_id);
 
 /** Utility macro to iterate over all available dmadevs */
@@ -310,9 +293,6 @@ struct rte_dma_info {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Retrieve information of a DMA device.
  *
  * @param dev_id
@@ -324,7 +304,6 @@ struct rte_dma_info {
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_info_get(int16_t dev_id, struct rte_dma_info *dev_info);
 
 /**
@@ -349,9 +328,6 @@ struct rte_dma_conf {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Configure a DMA device.
  *
  * This function must be invoked first before any other function in the
@@ -367,13 +343,9 @@ struct rte_dma_conf {
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Start a DMA device.
  *
  * The device start step is the last one and consists of setting the DMA
@@ -385,13 +357,9 @@ int rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf);
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_start(int16_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Stop a DMA device.
  *
  * The device can be restarted with a call to rte_dma_start().
@@ -402,13 +370,9 @@ int rte_dma_start(int16_t dev_id);
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_stop(int16_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Close a DMA device.
  *
  * The device cannot be restarted after this call.
@@ -419,7 +383,6 @@ int rte_dma_stop(int16_t dev_id);
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_close(int16_t dev_id);
 
 /**
@@ -585,9 +548,6 @@ struct rte_dma_vchan_conf {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Allocate and set up a virtual DMA channel.
  *
  * @param dev_id
@@ -602,7 +562,6 @@ struct rte_dma_vchan_conf {
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_vchan_setup(int16_t dev_id, uint16_t vchan,
 			const struct rte_dma_vchan_conf *conf);
 
@@ -631,9 +590,6 @@ struct rte_dma_stats {
 #define RTE_DMA_ALL_VCHAN	0xFFFFu
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Retrieve basic statistics of a or all virtual DMA channel(s).
  *
  * @param dev_id
@@ -648,14 +604,10 @@ struct rte_dma_stats {
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_stats_get(int16_t dev_id, uint16_t vchan,
 		      struct rte_dma_stats *stats);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Reset basic statistics of a or all virtual DMA channel(s).
  *
  * @param dev_id
@@ -667,7 +619,6 @@ int rte_dma_stats_get(int16_t dev_id, uint16_t vchan,
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_stats_reset(int16_t dev_id, uint16_t vchan);
 
 /**
@@ -683,9 +634,6 @@ enum rte_dma_vchan_status {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Determine if all jobs have completed on a device channel.
  * This function is primarily designed for testing use, as it allows a process to check if
  * all jobs are completed, without actually gathering completions from those jobs.
@@ -700,14 +648,10 @@ enum rte_dma_vchan_status {
  *   0 - call completed successfully
  *   < 0 - error code indicating there was a problem calling the API
  */
-__rte_experimental
 int
 rte_dma_vchan_status(int16_t dev_id, uint16_t vchan, enum rte_dma_vchan_status *status);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dump DMA device info.
  *
  * @param dev_id
@@ -718,7 +662,6 @@ rte_dma_vchan_status(int16_t dev_id, uint16_t vchan, enum rte_dma_vchan_status *
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 int rte_dma_dump(int16_t dev_id, FILE *f);
 
 /**
@@ -822,9 +765,6 @@ struct rte_dma_sge {
 /**@}*/
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue a copy operation onto the virtual DMA channel.
  *
  * This queues up a copy operation to be performed by hardware, if the 'flags'
@@ -850,7 +790,6 @@ struct rte_dma_sge {
  *   - -ENOSPC: if no space left to enqueue.
  *   - other values < 0 on failure.
  */
-__rte_experimental
 static inline int
 rte_dma_copy(int16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
 	     uint32_t length, uint64_t flags)
@@ -868,9 +807,6 @@ rte_dma_copy(int16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue a scatter-gather list copy operation onto the virtual DMA channel.
  *
  * This queues up a scatter-gather list copy operation to be performed by
@@ -900,7 +836,6 @@ rte_dma_copy(int16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
  *   - -ENOSPC: if no space left to enqueue.
  *   - other values < 0 on failure.
  */
-__rte_experimental
 static inline int
 rte_dma_copy_sg(int16_t dev_id, uint16_t vchan, struct rte_dma_sge *src,
 		struct rte_dma_sge *dst, uint16_t nb_src, uint16_t nb_dst,
@@ -921,9 +856,6 @@ rte_dma_copy_sg(int16_t dev_id, uint16_t vchan, struct rte_dma_sge *src,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue a fill operation onto the virtual DMA channel.
  *
  * This queues up a fill operation to be performed by hardware, if the 'flags'
@@ -949,7 +881,6 @@ rte_dma_copy_sg(int16_t dev_id, uint16_t vchan, struct rte_dma_sge *src,
  *   - -ENOSPC: if no space left to enqueue.
  *   - other values < 0 on failure.
  */
-__rte_experimental
 static inline int
 rte_dma_fill(int16_t dev_id, uint16_t vchan, uint64_t pattern,
 	     rte_iova_t dst, uint32_t length, uint64_t flags)
@@ -968,9 +899,6 @@ rte_dma_fill(int16_t dev_id, uint16_t vchan, uint64_t pattern,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Trigger hardware to begin performing enqueued operations.
  *
  * Writes the "doorbell" to the hardware to trigger it
@@ -984,7 +912,6 @@ rte_dma_fill(int16_t dev_id, uint16_t vchan, uint64_t pattern,
  * @return
  *   0 on success. Otherwise negative value is returned.
  */
-__rte_experimental
 static inline int
 rte_dma_submit(int16_t dev_id, uint16_t vchan)
 {
@@ -1001,9 +928,6 @@ rte_dma_submit(int16_t dev_id, uint16_t vchan)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Return the number of operations that have been successfully completed.
  * Once an operation has been reported as completed, the results of that
  * operation will be visible to all cores on the system.
@@ -1025,7 +949,6 @@ rte_dma_submit(int16_t dev_id, uint16_t vchan)
  *   The number of operations that successfully completed. This return value
  *   must be less than or equal to the value of nb_cpls.
  */
-__rte_experimental
 static inline uint16_t
 rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
 		  uint16_t *last_idx, bool *has_error)
@@ -1060,9 +983,6 @@ rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Return the number of operations that have been completed, and the operations
  * result may succeed or fail.
  * Once an operation has been reported as completed successfully, the results of that
@@ -1088,7 +1008,6 @@ rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
  *   If this number is greater than zero (assuming n), then n values in the
  *   status array are also set.
  */
-__rte_experimental
 static inline uint16_t
 rte_dma_completed_status(int16_t dev_id, uint16_t vchan,
 			 const uint16_t nb_cpls, uint16_t *last_idx,
@@ -1112,9 +1031,6 @@ rte_dma_completed_status(int16_t dev_id, uint16_t vchan,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Check remaining capacity in descriptor ring for the current burst.
  *
  * @param dev_id
@@ -1126,7 +1042,6 @@ rte_dma_completed_status(int16_t dev_id, uint16_t vchan,
  *   - Remaining space in the descriptor ring for the current burst.
  *   - 0 on error
  */
-__rte_experimental
 static inline uint16_t
 rte_dma_burst_capacity(int16_t dev_id, uint16_t vchan)
 {
