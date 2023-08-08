@@ -14,10 +14,6 @@
  * This interface provides the ability to configure the traffic manager in a
  * generic way. It includes features such as: hierarchical scheduling,
  * traffic shaping, congestion management, packet marking, etc.
- *
- * @warning
- * @b EXPERIMENTAL:
- * All functions in this file may be changed or removed without prior notice.
  */
 
 #include <stdint.h>
@@ -1245,7 +1241,6 @@ struct rte_tm_error {
  * @return
  *   0 on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_tm_get_number_of_leaf_nodes(uint16_t port_id,
 	uint32_t *n_leaf_nodes,
@@ -1270,7 +1265,6 @@ rte_tm_get_number_of_leaf_nodes(uint16_t port_id,
  * @return
  *   0 on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_tm_node_type_get(uint16_t port_id,
 	uint32_t node_id,
@@ -1289,7 +1283,6 @@ rte_tm_node_type_get(uint16_t port_id,
  * @return
  *   0 on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_tm_capabilities_get(uint16_t port_id,
 	struct rte_tm_capabilities *cap,
@@ -1310,7 +1303,6 @@ rte_tm_capabilities_get(uint16_t port_id,
  * @return
  *   0 on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_tm_level_capabilities_get(uint16_t port_id,
 	uint32_t level_id,
@@ -1331,7 +1323,6 @@ rte_tm_level_capabilities_get(uint16_t port_id,
  * @return
  *   0 on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_tm_node_capabilities_get(uint16_t port_id,
 	uint32_t node_id,
@@ -1357,7 +1348,6 @@ rte_tm_node_capabilities_get(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::cman_wred_context_n_max
  */
-__rte_experimental
 int
 rte_tm_wred_profile_add(uint16_t port_id,
 	uint32_t wred_profile_id,
@@ -1381,7 +1371,6 @@ rte_tm_wred_profile_add(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::cman_wred_context_n_max
  */
-__rte_experimental
 int
 rte_tm_wred_profile_delete(uint16_t port_id,
 	uint32_t wred_profile_id,
@@ -1413,7 +1402,6 @@ rte_tm_wred_profile_delete(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::cman_wred_context_shared_n_max
  */
-__rte_experimental
 int
 rte_tm_shared_wred_context_add_update(uint16_t port_id,
 	uint32_t shared_wred_context_id,
@@ -1438,7 +1426,6 @@ rte_tm_shared_wred_context_add_update(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::cman_wred_context_shared_n_max
  */
-__rte_experimental
 int
 rte_tm_shared_wred_context_delete(uint16_t port_id,
 	uint32_t shared_wred_context_id,
@@ -1463,7 +1450,6 @@ rte_tm_shared_wred_context_delete(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::shaper_n_max
  */
-__rte_experimental
 int
 rte_tm_shaper_profile_add(uint16_t port_id,
 	uint32_t shaper_profile_id,
@@ -1487,7 +1473,6 @@ rte_tm_shaper_profile_add(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::shaper_n_max
  */
-__rte_experimental
 int
 rte_tm_shaper_profile_delete(uint16_t port_id,
 	uint32_t shaper_profile_id,
@@ -1517,7 +1502,6 @@ rte_tm_shaper_profile_delete(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::shaper_shared_n_max
  */
-__rte_experimental
 int
 rte_tm_shared_shaper_add_update(uint16_t port_id,
 	uint32_t shared_shaper_id,
@@ -1541,7 +1525,6 @@ rte_tm_shared_shaper_add_update(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::shaper_shared_n_max
  */
-__rte_experimental
 int
 rte_tm_shared_shaper_delete(uint16_t port_id,
 	uint32_t shared_shaper_id,
@@ -1610,7 +1593,6 @@ rte_tm_shared_shaper_delete(uint16_t port_id,
  * @see RTE_TM_NODE_LEVEL_ID_ANY
  * @see struct rte_tm_capabilities
  */
-__rte_experimental
 int
 rte_tm_node_add(uint16_t port_id,
 	uint32_t node_id,
@@ -1644,7 +1626,6 @@ rte_tm_node_add(uint16_t port_id,
  *
  * @see RTE_TM_UPDATE_NODE_ADD_DELETE
  */
-__rte_experimental
 int
 rte_tm_node_delete(uint16_t port_id,
 	uint32_t node_id,
@@ -1669,7 +1650,6 @@ rte_tm_node_delete(uint16_t port_id,
  * @see rte_tm_node_resume()
  * @see RTE_TM_UPDATE_NODE_SUSPEND_RESUME
  */
-__rte_experimental
 int
 rte_tm_node_suspend(uint16_t port_id,
 	uint32_t node_id,
@@ -1693,7 +1673,6 @@ rte_tm_node_suspend(uint16_t port_id,
  * @see rte_tm_node_suspend()
  * @see RTE_TM_UPDATE_NODE_SUSPEND_RESUME
  */
-__rte_experimental
 int
 rte_tm_node_resume(uint16_t port_id,
 	uint32_t node_id,
@@ -1735,7 +1714,6 @@ rte_tm_node_resume(uint16_t port_id,
  * @see rte_tm_node_add()
  * @see rte_tm_node_delete()
  */
-__rte_experimental
 int
 rte_tm_hierarchy_commit(uint16_t port_id,
 	int clear_on_fail,
@@ -1776,7 +1754,6 @@ rte_tm_hierarchy_commit(uint16_t port_id,
  * @see RTE_TM_UPDATE_NODE_PARENT_KEEP_LEVEL
  * @see RTE_TM_UPDATE_NODE_PARENT_CHANGE_LEVEL
  */
-__rte_experimental
 int
 rte_tm_node_parent_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1806,7 +1783,6 @@ rte_tm_node_parent_update(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::shaper_private_n_max
  */
-__rte_experimental
 int
 rte_tm_node_shaper_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1834,7 +1810,6 @@ rte_tm_node_shaper_update(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::shaper_shared_n_max
  */
-__rte_experimental
 int
 rte_tm_node_shared_shaper_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1862,7 +1837,6 @@ rte_tm_node_shared_shaper_update(uint16_t port_id,
  * @see enum rte_tm_stats_type
  * @see RTE_TM_UPDATE_NODE_STATS
  */
-__rte_experimental
 int
 rte_tm_node_stats_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1891,7 +1865,6 @@ rte_tm_node_stats_update(uint16_t port_id,
  * @see RTE_TM_UPDATE_NODE_WFQ_WEIGHT_MODE
  * @see RTE_TM_UPDATE_NODE_N_SP_PRIORITIES
  */
-__rte_experimental
 int
 rte_tm_node_wfq_weight_mode_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1915,7 +1888,6 @@ rte_tm_node_wfq_weight_mode_update(uint16_t port_id,
  *
  * @see RTE_TM_UPDATE_NODE_CMAN
  */
-__rte_experimental
 int
 rte_tm_node_cman_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1940,7 +1912,6 @@ rte_tm_node_cman_update(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::cman_wred_context_private_n_max
  */
-__rte_experimental
 int
 rte_tm_node_wred_context_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1966,7 +1937,6 @@ rte_tm_node_wred_context_update(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::cman_wred_context_shared_n_max
  */
-__rte_experimental
 int
 rte_tm_node_shared_wred_context_update(uint16_t port_id,
 	uint32_t node_id,
@@ -1999,7 +1969,6 @@ rte_tm_node_shared_wred_context_update(uint16_t port_id,
  *
  * @see enum rte_tm_stats_type
  */
-__rte_experimental
 int
 rte_tm_node_stats_read(uint16_t port_id,
 	uint32_t node_id,
@@ -2037,7 +2006,6 @@ rte_tm_node_stats_read(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::mark_vlan_dei_supported
  */
-__rte_experimental
 int
 rte_tm_mark_vlan_dei(uint16_t port_id,
 	int mark_green,
@@ -2088,7 +2056,6 @@ rte_tm_mark_vlan_dei(uint16_t port_id,
  * @see struct rte_tm_capabilities::mark_ip_ecn_tcp_supported
  * @see struct rte_tm_capabilities::mark_ip_ecn_sctp_supported
  */
-__rte_experimental
 int
 rte_tm_mark_ip_ecn(uint16_t port_id,
 	int mark_green,
@@ -2137,7 +2104,6 @@ rte_tm_mark_ip_ecn(uint16_t port_id,
  *
  * @see struct rte_tm_capabilities::mark_ip_dscp_supported
  */
-__rte_experimental
 int
 rte_tm_mark_ip_dscp(uint16_t port_id,
 	int mark_green,
