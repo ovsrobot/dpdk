@@ -223,23 +223,16 @@ rte_softrss_be(uint32_t *input_tuple, uint32_t input_len,
 /**
  * Indicates if GFNI implementations of the Toeplitz hash are supported.
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * @return
  *  1 if GFNI is supported
  *  0 otherwise
  */
-__rte_experimental
 int
 rte_thash_gfni_supported(void);
 
 /**
  * Converts Toeplitz hash key (RSS key) into matrixes required
  * for GFNI implementation
- *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * @param matrixes
  *  pointer to the memory where matrices will be written.
@@ -249,7 +242,6 @@ rte_thash_gfni_supported(void);
  * @param size
  *  Size of the rss_key in bytes.
  */
-__rte_experimental
 void
 rte_thash_complete_matrix(uint64_t *matrixes, const uint8_t *rss_key,
 	int size);
@@ -278,9 +270,6 @@ struct rte_thash_subtuple_helper;
 /**
  * Create a new thash context.
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * @param name
  *  Context name
  * @param key_len
@@ -300,16 +289,12 @@ struct rte_thash_subtuple_helper;
  *  A pointer to the created context on success
  *  NULL otherwise
  */
-__rte_experimental
 struct rte_thash_ctx *
 rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 	uint8_t *key, uint32_t flags);
 
 /**
  * Find an existing thash context and return a pointer to it.
- *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * @param name
  *  Name of the thash context
@@ -318,20 +303,15 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
  *  set appropriately. Possible rte_errno values include:
  *   - ENOENT - required entry not available to return.
  */
-__rte_experimental
 struct rte_thash_ctx *
 rte_thash_find_existing(const char *name);
 
 /**
  * Free a thash context object
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * @param ctx
  *  Thash context
  */
-__rte_experimental
 void
 rte_thash_free_ctx(struct rte_thash_ctx *ctx);
 
@@ -340,9 +320,6 @@ rte_thash_free_ctx(struct rte_thash_ctx *ctx);
  * Creates an internal helper struct which has a complementary table
  * to calculate toeplitz hash collisions.
  * This function is not multi-thread safe.
- *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * @param ctx
  *  Thash context
@@ -357,16 +334,12 @@ rte_thash_free_ctx(struct rte_thash_ctx *ctx);
  *  0 on success
  *  negative on error
  */
-__rte_experimental
 int
 rte_thash_add_helper(struct rte_thash_ctx *ctx, const char *name, uint32_t len,
 	uint32_t offset);
 
 /**
  * Find a helper in the context by the given name
- *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * @param ctx
  *  Thash context
@@ -375,7 +348,6 @@ rte_thash_add_helper(struct rte_thash_ctx *ctx, const char *name, uint32_t len,
  * @return
  *  Pointer to the thash helper or NULL if it was not found.
  */
-__rte_experimental
 struct rte_thash_subtuple_helper *
 rte_thash_get_helper(struct rte_thash_ctx *ctx, const char *name);
 
@@ -394,7 +366,6 @@ rte_thash_get_helper(struct rte_thash_ctx *ctx, const char *name);
  * @return
  *  A complementary value which must be xored with the corresponding subtuple
  */
-__rte_experimental
 uint32_t
 rte_thash_get_complement(struct rte_thash_subtuple_helper *h,
 	uint32_t hash, uint32_t desired_hash);
@@ -404,15 +375,11 @@ rte_thash_get_complement(struct rte_thash_subtuple_helper *h,
  * It changes after each addition of a helper. It should be installed to
  * the NIC.
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * @param ctx
  *  Thash context
  * @return
  *  A pointer to the toeplitz hash key
  */
-__rte_experimental
 const uint8_t *
 rte_thash_get_key(struct rte_thash_ctx *ctx);
 
@@ -422,16 +389,12 @@ rte_thash_get_key(struct rte_thash_ctx *ctx);
  * CPU supports GFNI.
  * Matrices changes after each addition of a helper.
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * @param ctx
  *  Thash context
  * @return
  *  A pointer to the toeplitz hash key matrices on success
  *  NULL if GFNI is not supported.
  */
-__rte_experimental
 const uint64_t *
 rte_thash_get_gfni_matrices(struct rte_thash_ctx *ctx);
 
@@ -440,9 +403,6 @@ rte_thash_get_gfni_matrices(struct rte_thash_ctx *ctx);
  * to check if adjusted tuple could be used.
  * Generally it is some kind of lookup function to check
  * if adjusted tuple is already in use.
- *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * @param userdata
  *  Pointer to the userdata. It could be a pointer to the
@@ -460,9 +420,6 @@ typedef int (*rte_thash_check_tuple_t)(void *userdata, uint8_t *tuple);
  * Adjusts tuple in the way to make Toeplitz hash has
  * desired least significant bits.
  * This function is multi-thread safe.
- *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * @param ctx
  *  Thash context
@@ -485,7 +442,6 @@ typedef int (*rte_thash_check_tuple_t)(void *userdata, uint8_t *tuple);
  *  0 on success
  *  negative otherwise
  */
-__rte_experimental
 int
 rte_thash_adjust_tuple(struct rte_thash_ctx *ctx,
 	struct rte_thash_subtuple_helper *h,
