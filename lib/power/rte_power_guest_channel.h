@@ -135,9 +135,6 @@ int rte_power_guest_channel_send_msg(struct rte_power_channel_packet *pkt,
 			unsigned int lcore_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Receive a message contained in pkt over the Virtio-Serial
  * from the host endpoint.
  *
@@ -155,7 +152,6 @@ int rte_power_guest_channel_send_msg(struct rte_power_channel_packet *pkt,
  *  - 0 on success.
  *  - Negative on error.
  */
-__rte_experimental
 int rte_power_guest_channel_receive_msg(void *pkt,
 		size_t pkt_len,
 		unsigned int lcore_id);

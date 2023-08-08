@@ -34,7 +34,6 @@ extern "C" {
  *  - 0 on success.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_init(unsigned int pkg, unsigned int die);
 
@@ -56,7 +55,6 @@ rte_power_uncore_init(unsigned int pkg, unsigned int die);
  *  - 0 on success.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_exit(unsigned int pkg, unsigned int die);
 
@@ -77,7 +75,6 @@ rte_power_uncore_exit(unsigned int pkg, unsigned int die);
  *  The current index of available frequencies.
  *  If error, it will return 'RTE_POWER_INVALID_FREQ_INDEX = (~0)'.
  */
-__rte_experimental
 uint32_t
 rte_power_get_uncore_freq(unsigned int pkg, unsigned int die);
 
@@ -102,7 +99,6 @@ rte_power_get_uncore_freq(unsigned int pkg, unsigned int die);
  *  - 0 on success without frequency changed.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_set_uncore_freq(unsigned int pkg, unsigned int die, uint32_t index);
 
@@ -125,7 +121,6 @@ rte_power_set_uncore_freq(unsigned int pkg, unsigned int die, uint32_t index);
  *  - 0 on success without frequency changed.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_freq_max(unsigned int pkg, unsigned int die);
 
@@ -148,7 +143,6 @@ rte_power_uncore_freq_max(unsigned int pkg, unsigned int die);
  *  - 0 on success without frequency changed.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_freq_min(unsigned int pkg, unsigned int die);
 
@@ -168,7 +162,6 @@ rte_power_uncore_freq_min(unsigned int pkg, unsigned int die);
  *  - The number of available index's in frequency array.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_get_num_freqs(unsigned int pkg, unsigned int die);
 
@@ -182,7 +175,6 @@ rte_power_uncore_get_num_freqs(unsigned int pkg, unsigned int die);
  *  - Zero on error.
  *  - Number of package on system on success.
  */
-__rte_experimental
 unsigned int
 rte_power_uncore_get_num_pkgs(void);
 
@@ -200,7 +192,6 @@ rte_power_uncore_get_num_pkgs(void);
  *  - Zero on error.
  *  - Number of dies for package on sucecss.
  */
-__rte_experimental
 unsigned int
 rte_power_uncore_get_num_dies(unsigned int pkg);
 
