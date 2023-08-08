@@ -4025,8 +4025,6 @@ struct rte_flow_action_meter_mark {
 	struct rte_flow_meter_policy *policy;
 	/** Metering mode: 0 - Color-Blind, 1 - Color-Aware. */
 	int color_mode;
-	/** Initial Color applied to packets in Color-Aware mode. */
-	enum rte_color init_color;
 	/** Metering state: 0 - Disabled, 1 - Enabled. */
 	int state;
 };
@@ -4045,12 +4043,10 @@ struct rte_flow_update_meter_mark {
 	uint32_t policy_valid:1;
 	/** The color mode will be updated. */
 	uint32_t color_mode_valid:1;
-	/** The initial color will be updated. */
-	uint32_t init_color_valid:1;
 	/** The meter state will be updated. */
 	uint32_t state_valid:1;
 	/** Reserved bits for the future usage. */
-	uint32_t reserved:27;
+	uint32_t reserved:28;
 };
 
 /**
