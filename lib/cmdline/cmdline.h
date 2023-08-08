@@ -39,7 +39,6 @@ void cmdline_printf(const struct cmdline *cl, const char *fmt, ...)
 int cmdline_in(struct cmdline *cl, const char *buf, int size);
 int cmdline_write_char(struct rdline *rdl, char c);
 
-__rte_experimental
 struct rdline *
 cmdline_get_rdline(struct cmdline *cl);
 
