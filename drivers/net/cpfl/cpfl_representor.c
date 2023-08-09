@@ -425,6 +425,58 @@ cpfl_repr_link_update(struct rte_eth_dev *ethdev,
 	return 0;
 }
 
+static int
+idpf_repr_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+{
+	struct cpfl_repr_tx_queue *txq;
+	struct cpfl_repr_rx_queue *rxq;
+	uint16_t i;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (!txq)
+			continue;
+		stats->opackets += __atomic_load_n(&txq->stats.packets, __ATOMIC_RELAXED);
+		stats->obytes += __atomic_load_n(&txq->stats.bytes, __ATOMIC_RELAXED);
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (!rxq)
+			continue;
+		stats->ipackets += __atomic_load_n(&rxq->stats.packets, __ATOMIC_RELAXED);
+		stats->ibytes += __atomic_load_n(&rxq->stats.bytes, __ATOMIC_RELAXED);
+		stats->ierrors += __atomic_load_n(&rxq->stats.errors, __ATOMIC_RELAXED);
+	}
+	stats->rx_nombuf = dev->data->rx_mbuf_alloc_failed;
+	return 0;
+}
+
+static int
+idpf_repr_stats_reset(struct rte_eth_dev *dev)
+{
+	struct cpfl_repr_tx_queue *txq;
+	struct cpfl_repr_rx_queue *rxq;
+	uint16_t i;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (!txq)
+			continue;
+		__atomic_store_n(&txq->stats.packets, 0, __ATOMIC_RELAXED);
+		__atomic_store_n(&txq->stats.bytes, 0, __ATOMIC_RELAXED);
+		__atomic_store_n(&txq->stats.errors, 0, __ATOMIC_RELAXED);
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (!rxq)
+			continue;
+		__atomic_store_n(&rxq->stats.packets, 0, __ATOMIC_RELAXED);
+		__atomic_store_n(&rxq->stats.bytes, 0, __ATOMIC_RELAXED);
+		__atomic_store_n(&rxq->stats.errors, 0, __ATOMIC_RELAXED);
+	}
+	return 0;
+}
+
 static const struct eth_dev_ops cpfl_repr_dev_ops = {
 	.dev_start		= cpfl_repr_dev_start,
 	.dev_stop		= cpfl_repr_dev_stop,
@@ -435,6 +487,8 @@ static const struct eth_dev_ops cpfl_repr_dev_ops = {
 	.rx_queue_setup		= cpfl_repr_rx_queue_setup,
 	.tx_queue_setup		= cpfl_repr_tx_queue_setup,
 	.link_update		= cpfl_repr_link_update,
+	.stats_get		= idpf_repr_stats_get,
+	.stats_reset		= idpf_repr_stats_reset,
 };
 
 static int
