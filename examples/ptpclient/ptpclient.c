@@ -382,21 +382,11 @@ parse_sync(struct ptpv2_data_slave_ordinary *ptp_data, uint16_t rx_tstamp_idx)
 static void
 parse_fup(struct ptpv2_data_slave_ordinary *ptp_data)
 {
-	struct rte_ether_hdr *eth_hdr;
-	struct rte_ether_addr eth_addr;
 	struct ptp_header *ptp_hdr;
-	struct clock_id *client_clkid;
 	struct ptp_message *ptp_msg;
-	struct delay_req_msg *req_msg;
-	struct rte_mbuf *created_pkt;
 	struct tstamp *origin_tstamp;
-	struct rte_ether_addr eth_multicast = ether_multicast;
-	size_t pkt_size;
-	int wait_us;
 	struct rte_mbuf *m = ptp_data->m;
-	int ret;
 
-	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	ptp_hdr = (struct ptp_header *)(rte_pktmbuf_mtod(m, char *)
 			+ sizeof(struct rte_ether_hdr));
 	if (memcmp(&ptp_data->master_clock_id,
@@ -413,6 +403,26 @@ parse_fup(struct ptpv2_data_slave_ordinary *ptp_data)
 	ptp_data->tstamp1.tv_sec =
 		((uint64_t)ntohl(origin_tstamp->sec_lsb)) |
 		(((uint64_t)ntohs(origin_tstamp->sec_msb)) << 32);
+}
+
+static void
+send_delay_request(struct ptpv2_data_slave_ordinary *ptp_data)
+{
+	struct rte_ether_hdr *eth_hdr;
+	struct rte_ether_addr eth_addr;
+	struct ptp_header *ptp_hdr;
+	struct clock_id *client_clkid;
+	struct delay_req_msg *req_msg;
+	struct rte_mbuf *created_pkt;
+	struct rte_ether_addr eth_multicast = ether_multicast;
+	size_t pkt_size;
+	int wait_us;
+	struct rte_mbuf *m = ptp_data->m;
+	int ret;
+
+	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+	ptp_hdr = (struct ptp_header *)(rte_pktmbuf_mtod(m, char *)
+			+ sizeof(struct rte_ether_hdr));
 
 	if (ptp_data->seqID_FOLLOWUP == ptp_data->seqID_SYNC) {
 		ret = rte_eth_macaddr_get(ptp_data->portid, &eth_addr);
@@ -550,12 +560,6 @@ parse_drsp(struct ptpv2_data_slave_ordinary *ptp_data)
 				((uint64_t)ntohl(rx_tstamp->sec_lsb)) |
 				(((uint64_t)ntohs(rx_tstamp->sec_msb)) << 32);
 
-			/* Evaluate the delta for adjustment. */
-			ptp_data->delta = delta_eval(ptp_data);
-
-			rte_eth_timesync_adjust_time(ptp_data->portid,
-						     ptp_data->delta);
-
 			ptp_data->current_ptp_port = ptp_data->portid;
 
 			/* Update kernel time if enabled in app parameters. */
@@ -566,6 +570,16 @@ parse_drsp(struct ptpv2_data_slave_ordinary *ptp_data)
 
 		}
 	}
+}
+
+static void
+ptp_adjust_time(struct ptpv2_data_slave_ordinary *ptp_data)
+{
+	/* Evaluate the delta for adjustment. */
+	ptp_data->delta = delta_eval(ptp_data);
+
+	rte_eth_timesync_adjust_time(ptp_data->portid,
+				     ptp_data->delta);
 }
 
 /* This function processes PTP packets, implementing slave PTP IEEE1588 L2
@@ -594,9 +608,11 @@ parse_ptp_frames(uint16_t portid, struct rte_mbuf *m) {
 			break;
 		case FOLLOW_UP:
 			parse_fup(&ptp_data);
+			send_delay_request(&ptp_data);
 			break;
 		case DELAY_RESP:
 			parse_drsp(&ptp_data);
+			ptp_adjust_time(&ptp_data);
 			print_clock_info(&ptp_data);
 			break;
 		default:
