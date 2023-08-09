@@ -129,6 +129,13 @@ static const struct rte_cpfl_xstats_name_off rte_cpfl_stats_strings[] = {
 
 #define CPFL_NB_XSTATS			RTE_DIM(rte_cpfl_stats_strings)
 
+static const struct rte_mbuf_dynfield cpfl_source_metadata_param = {
+	.name = "cpfl_source_metadata",
+	.size = sizeof(uint16_t),
+	.align = __alignof__(uint16_t),
+	.flags = 0,
+};
+
 static int
 cpfl_dev_link_update(struct rte_eth_dev *dev,
 		     __rte_unused int wait_to_complete)
@@ -2382,7 +2389,7 @@ static int
 cpfl_pci_probe_first(struct rte_pci_device *pci_dev)
 {
 	struct cpfl_adapter_ext *adapter;
-	int retval;
+	int retval, offset;
 	uint16_t port_id;
 
 	adapter = rte_zmalloc("cpfl_adapter_ext",
@@ -2432,7 +2439,22 @@ cpfl_pci_probe_first(struct rte_pci_device *pci_dev)
 			PMD_INIT_LOG(ERR, "Failed to create exceptional vport. ");
 			goto close_ethdev;
 		}
+
+		/* register dynfield to carry src_vsi
+		 * TODO: is this a waste to use dynfield? Can we redefine a recv func like
+		 * below to carry src vsi directly by src_vsi[]?
+		 * idpf_exceptioanl_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+		 * uint16_t src_vsi[], uint16_t nb_pkts)
+		 */
+		offset = rte_mbuf_dynfield_register(&cpfl_source_metadata_param);
+		if (unlikely(offset == -1)) {
+			retval = -rte_errno;
+			PMD_INIT_LOG(ERR, "source metadata is disabled in mbuf");
+			goto close_ethdev;
+		}
+		cpfl_dynfield_source_metadata_offset = offset;
 	}
+
 	retval = cpfl_repr_create(pci_dev, adapter);
 	if (retval != 0) {
 		PMD_INIT_LOG(ERR, "Failed to create representors ");
@@ -2458,7 +2480,7 @@ err:
 static int
 cpfl_pci_probe_again(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter)
 {
-	int ret;
+	int ret, offset;
 
 	ret = cpfl_parse_devargs(pci_dev, adapter, false);
 	if (ret != 0) {
@@ -2478,6 +2500,19 @@ cpfl_pci_probe_again(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *ad
 			PMD_INIT_LOG(ERR, "Failed to create exceptional vport. ");
 			return ret;
 		}
+
+		/* register dynfield to carry src_vsi
+		 * TODO: is this a waste to use dynfield? Can we redefine a recv func like
+		 * below to carry src vsi directly by src_vsi[]?
+		 * idpf_exceptioanl_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+		 * uint16_t src_vsi[], uint16_t nb_pkts)
+		 */
+		offset = rte_mbuf_dynfield_register(&cpfl_source_metadata_param);
+		if (unlikely(offset == -1)) {
+			PMD_INIT_LOG(ERR, "source metadata is disabled in mbuf");
+			return -rte_errno;
+		}
+		cpfl_dynfield_source_metadata_offset = offset;
 	}
 
 	ret = cpfl_repr_create(pci_dev, adapter);

@@ -227,6 +227,7 @@ int cpfl_cc_vport_info_get(struct cpfl_adapter_ext *adapter,
 			   struct cpchnl2_vport_id *vport_id,
 			   struct cpfl_vport_id *vi,
 			   struct cpchnl2_get_vport_info_response *response);
+int cpfl_packets_dispatch(void *arg);
 
 #define CPFL_DEV_TO_PCI(eth_dev)		\
 	RTE_DEV_TO_PCI((eth_dev)->device)

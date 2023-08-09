@@ -4,6 +4,7 @@
 
 #include "cpfl_representor.h"
 #include "cpfl_rxtx.h"
+#include "cpfl_ethdev.h"
 
 static int
 cpfl_repr_whitelist_update(struct cpfl_adapter_ext *adapter,
@@ -851,5 +852,84 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 	rte_spinlock_unlock(&adapter->repr_lock);
 	rte_free(vlist_resp);
 
+	return 0;
+}
+
+static struct cpfl_repr *
+cpfl_get_repr_by_vsi(struct cpfl_adapter_ext *adapter,
+		     uint16_t vsi_id)
+{
+	const struct cpfl_repr_id *repr_id;
+	struct rte_eth_dev *dev;
+	struct cpfl_repr *repr;
+	uint32_t iter = 0;
+
+	rte_spinlock_lock(&adapter->repr_lock);
+
+	while (rte_hash_iterate(adapter->repr_whitelist_hash,
+				(const void **)&repr_id, (void **)&dev, &iter) >= 0) {
+		if (dev == NULL)
+			continue;
+
+		repr = CPFL_DEV_TO_REPR(dev);
+		if (repr->vport_info->vport_info.vsi_id == vsi_id) {
+			rte_spinlock_unlock(&adapter->repr_lock);
+			return repr;
+		}
+	}
+
+	rte_spinlock_unlock(&adapter->repr_lock);
+	return NULL;
+}
+
+#define PKT_DISPATCH_BURST  32
+/* Function to dispath packets to representors' rx rings */
+int
+cpfl_packets_dispatch(void *arg)
+{
+	struct rte_eth_dev *dev = arg;
+	struct cpfl_vport *vport = dev->data->dev_private;
+	struct cpfl_adapter_ext *adapter = vport->itf.adapter;
+	struct cpfl_rx_queue **rxq =
+		(struct cpfl_rx_queue **)dev->data->rx_queues;
+	struct rte_mbuf *pkts_burst[PKT_DISPATCH_BURST];
+	struct cpfl_repr *repr;
+	struct rte_eth_dev_data *dev_data;
+	struct cpfl_repr_rx_queue *repr_rxq;
+	uint16_t src_vsi;
+	uint32_t nb_rx, nb_enq;
+	uint8_t i, j;
+
+	if (dev->data->dev_started == 0) {
+		/* skip if excpetional vport is not started*/
+		return 0;
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		nb_rx = cpfl_splitq_recv_pkts(rxq[i], pkts_burst, PKT_DISPATCH_BURST);
+		for (j = 0; j < nb_rx; j++) {
+			src_vsi = *CPFL_MBUF_SOURCE_METADATA(pkts_burst[j]);
+			/* Get the repr according to source vsi */
+			repr = cpfl_get_repr_by_vsi(adapter, src_vsi);
+			if (unlikely(!repr)) {
+				rte_pktmbuf_free(pkts_burst[j]);
+				continue;
+			}
+			dev_data = (struct rte_eth_dev_data *)repr->itf.data;
+			if (unlikely(!dev_data->dev_started || !dev_data->rx_queue_state[0])) {
+				rte_pktmbuf_free(pkts_burst[j]);
+				continue;
+			}
+			repr_rxq = (struct cpfl_repr_rx_queue *)
+				(((struct rte_eth_dev_data *)repr->itf.data)->rx_queues[0]);
+			if (unlikely(!repr_rxq || !repr_rxq->rx_ring)) {
+				rte_pktmbuf_free(pkts_burst[j]);
+				continue;
+			}
+			nb_enq = rte_ring_enqueue_bulk(repr_rxq->rx_ring,
+						       (void *)&pkts_burst[j], 1, NULL);
+			if (!nb_enq) /* enqueue fails, just free it */
+				rte_pktmbuf_free(pkts_burst[j]);
+		}
+	}
 	return 0;
 }

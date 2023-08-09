@@ -1412,6 +1412,137 @@ cpfl_stop_queues(struct rte_eth_dev *dev)
 	}
 }
 
+int cpfl_dynfield_source_metadata_offset = -1;
+
+uint16_t
+cpfl_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+		      uint16_t nb_pkts)
+{
+	volatile struct virtchnl2_rx_flex_desc_adv_nic_3 *rx_desc_ring;
+	volatile struct virtchnl2_rx_flex_desc_adv_nic_3 *rx_desc;
+	uint16_t pktlen_gen_bufq_id;
+	struct idpf_rx_queue *rxq;
+	const uint32_t *ptype_tbl;
+	uint8_t status_err0_qw1;
+	struct idpf_adapter *ad;
+	struct rte_mbuf *rxm;
+	uint16_t rx_id_bufq1;
+	uint16_t rx_id_bufq2;
+	uint64_t pkt_flags;
+	uint16_t pkt_len;
+	uint16_t bufq_id;
+	uint16_t gen_id;
+	uint16_t rx_id;
+	uint16_t nb_rx;
+	uint64_t ts_ns;
+
+	nb_rx = 0;
+	rxq = rx_queue;
+	ad = rxq->adapter;
+
+	if (unlikely(rxq == NULL) || unlikely(!rxq->q_started))
+		return nb_rx;
+
+	rx_id = rxq->rx_tail;
+	rx_id_bufq1 = rxq->bufq1->rx_next_avail;
+	rx_id_bufq2 = rxq->bufq2->rx_next_avail;
+	rx_desc_ring = rxq->rx_ring;
+	ptype_tbl = rxq->adapter->ptype_tbl;
+
+	if ((rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0)
+		rxq->hw_register_set = 1;
+
+	while (nb_rx < nb_pkts) {
+		rx_desc = &rx_desc_ring[rx_id];
+
+		pktlen_gen_bufq_id =
+			rte_le_to_cpu_16(rx_desc->pktlen_gen_bufq_id);
+		gen_id = (pktlen_gen_bufq_id &
+			  VIRTCHNL2_RX_FLEX_DESC_ADV_GEN_M) >>
+			VIRTCHNL2_RX_FLEX_DESC_ADV_GEN_S;
+		if (gen_id != rxq->expected_gen_id)
+			break;
+
+		pkt_len = (pktlen_gen_bufq_id &
+			   VIRTCHNL2_RX_FLEX_DESC_ADV_LEN_PBUF_M) >>
+			VIRTCHNL2_RX_FLEX_DESC_ADV_LEN_PBUF_S;
+		if (pkt_len == 0)
+			RX_LOG(ERR, "Packet length is 0");
+
+		rx_id++;
+		if (unlikely(rx_id == rxq->nb_rx_desc)) {
+			rx_id = 0;
+			rxq->expected_gen_id ^= 1;
+		}
+
+		bufq_id = (pktlen_gen_bufq_id &
+			   VIRTCHNL2_RX_FLEX_DESC_ADV_BUFQ_ID_M) >>
+			VIRTCHNL2_RX_FLEX_DESC_ADV_BUFQ_ID_S;
+		if (bufq_id == 0) {
+			rxm = rxq->bufq1->sw_ring[rx_id_bufq1];
+			rx_id_bufq1++;
+			if (unlikely(rx_id_bufq1 == rxq->bufq1->nb_rx_desc))
+				rx_id_bufq1 = 0;
+			rxq->bufq1->nb_rx_hold++;
+		} else {
+			rxm = rxq->bufq2->sw_ring[rx_id_bufq2];
+			rx_id_bufq2++;
+			if (unlikely(rx_id_bufq2 == rxq->bufq2->nb_rx_desc))
+				rx_id_bufq2 = 0;
+			rxq->bufq2->nb_rx_hold++;
+		}
+
+		rxm->pkt_len = pkt_len;
+		rxm->data_len = pkt_len;
+		rxm->data_off = RTE_PKTMBUF_HEADROOM;
+		rxm->next = NULL;
+		rxm->nb_segs = 1;
+		rxm->port = rxq->port_id;
+		rxm->ol_flags = 0;
+		rxm->packet_type =
+			ptype_tbl[(rte_le_to_cpu_16(rx_desc->ptype_err_fflags0) &
+				   VIRTCHNL2_RX_FLEX_DESC_ADV_PTYPE_M) >>
+				  VIRTCHNL2_RX_FLEX_DESC_ADV_PTYPE_S];
+
+		status_err0_qw1 = rx_desc->status_err0_qw1;
+		pkt_flags = idpf_splitq_rx_csum_offload(status_err0_qw1);
+		pkt_flags |= idpf_splitq_rx_rss_offload(rxm, rx_desc);
+		if (idpf_timestamp_dynflag > 0 &&
+		    (rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP)) {
+			/* timestamp */
+			ts_ns = idpf_tstamp_convert_32b_64b(ad,
+							    rxq->hw_register_set,
+							    rte_le_to_cpu_32(rx_desc->ts_high));
+			rxq->hw_register_set = 0;
+			*RTE_MBUF_DYNFIELD(rxm,
+					   idpf_timestamp_dynfield_offset,
+					   rte_mbuf_timestamp_t *) = ts_ns;
+			rxm->ol_flags |= idpf_timestamp_dynflag;
+		}
+
+		if (likely(cpfl_dynfield_source_metadata_offset != -1))
+			*CPFL_MBUF_SOURCE_METADATA(rxm) =
+				rte_le_to_cpu_16(rx_desc->fmd4);
+
+		rxm->ol_flags |= pkt_flags;
+
+		rx_pkts[nb_rx++] = rxm;
+	}
+
+	if (nb_rx > 0) {
+		rxq->rx_tail = rx_id;
+		if (rx_id_bufq1 != rxq->bufq1->rx_next_avail)
+			rxq->bufq1->rx_next_avail = rx_id_bufq1;
+		if (rx_id_bufq2 != rxq->bufq2->rx_next_avail)
+			rxq->bufq2->rx_next_avail = rx_id_bufq2;
+
+		idpf_split_rx_bufq_refill(rxq->bufq1);
+		idpf_split_rx_bufq_refill(rxq->bufq2);
+	}
+
+	return nb_rx;
+}
+
 static inline void
 cpfl_set_tx_switch_ctx(uint16_t vsi_id, bool is_vsi,
 		       volatile union idpf_flex_tx_ctx_desc *ctx_desc)

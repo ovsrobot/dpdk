@@ -81,6 +81,11 @@ cpfl_hw_qid_get(uint16_t start_qid, uint16_t offset)
 	return start_qid + offset;
 }
 
+extern int cpfl_dynfield_source_metadata_offset;
+
+#define CPFL_MBUF_SOURCE_METADATA(m)					\
+	RTE_MBUF_DYNFIELD((m), cpfl_dynfield_source_metadata_offset, uint16_t *)
+
 static inline uint64_t
 cpfl_hw_qtail_get(uint64_t tail_start, uint16_t offset, uint64_t tail_spacing)
 {
@@ -128,4 +133,7 @@ uint16_t cpfl_dummy_xmit_pkts(void *queue,
 uint16_t cpfl_xmit_pkts_to_vsi(struct cpfl_tx_queue *txq,
 			       struct rte_mbuf **tx_pkts,
 			       uint16_t nb_pkts, uint16_t vsi_id);
+uint16_t cpfl_splitq_recv_pkts(void *rx_queue,
+			       struct rte_mbuf **rx_pkts,
+			       uint16_t nb_pkts);
 #endif /* _CPFL_RXTX_H_ */
