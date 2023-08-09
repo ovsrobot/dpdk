@@ -368,6 +368,86 @@ match_repr_with_vport(const struct cpfl_repr_id *repr_id,
 	return false;
 }
 
+static int
+cpfl_repr_vport_list_query(struct cpfl_adapter_ext *adapter,
+			   const struct cpfl_repr_id *repr_id,
+			   struct cpchnl2_get_vport_list_response *response)
+{
+	struct cpfl_vport_id vi;
+	int ret;
+
+	if (repr_id->type == RTE_ETH_REPRESENTOR_PF) {
+		/* PF */
+		vi.func_type = CPCHNL2_FUNC_TYPE_PF;
+		vi.pf_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
+		vi.vf_id = 0;
+	} else {
+		/* VF */
+		vi.func_type = CPCHNL2_FUNC_TYPE_SRIOV;
+		vi.pf_id = HOST0_APF;
+		vi.vf_id = repr_id->vf_id;
+	}
+
+	ret = cpfl_cc_vport_list_get(adapter, &vi, response);
+
+	return ret;
+}
+
+static int
+cpfl_repr_vport_info_query(struct cpfl_adapter_ext *adapter,
+			   const struct cpfl_repr_id *repr_id,
+			   struct cpchnl2_vport_id *vport_id,
+			   struct cpchnl2_get_vport_info_response *response)
+{
+	struct cpfl_vport_id vi;
+	int ret;
+
+	if (repr_id->type == RTE_ETH_REPRESENTOR_PF) {
+		/* PF */
+		vi.func_type = CPCHNL2_FUNC_TYPE_PF;
+		vi.pf_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
+		vi.vf_id = 0;
+	} else {
+		/* VF */
+		vi.func_type = CPCHNL2_FUNC_TYPE_SRIOV;
+		vi.pf_id = HOST0_APF;
+		vi.vf_id = repr_id->vf_id;
+	}
+
+	ret = cpfl_cc_vport_info_get(adapter, vport_id, &vi, response);
+
+	return ret;
+}
+
+static int
+cpfl_repr_vport_map_update(struct cpfl_adapter_ext *adapter,
+			   const struct cpfl_repr_id *repr_id, uint32_t vport_id,
+			   struct cpchnl2_get_vport_info_response *response)
+{
+	struct cpfl_vport_id vi;
+	int ret;
+
+	vi.vport_id = vport_id;
+	if (repr_id->type == RTE_ETH_REPRESENTOR_PF) {
+		/* PF */
+		vi.func_type = CPCHNL2_FUNC_TYPE_PF;
+		vi.pf_id = cpfl_func_id_get(repr_id->host_id, repr_id->pf_id);
+	} else {
+		/* VF */
+		vi.func_type = CPCHNL2_FUNC_TYPE_SRIOV;
+		vi.pf_id = HOST0_APF;
+		vi.vf_id = repr_id->vf_id;
+	}
+
+	ret = cpfl_vport_info_create(adapter, &vi, &response->info);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Fail to update vport map hash for representor.");
+		return ret;
+	}
+
+	return 0;
+}
+
 int
 cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter)
 {
@@ -375,7 +455,13 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 	uint32_t iter = 0;
 	const struct cpfl_repr_id *repr_id;
 	const struct cpfl_vport_id *vp_id;
+	struct cpchnl2_get_vport_list_response *vlist_resp;
+	struct cpchnl2_get_vport_info_response vinfo_resp;
 	int ret;
+
+	vlist_resp = rte_zmalloc(NULL, IDPF_DFLT_MBX_BUF_SIZE, 0);
+	if (vlist_resp == NULL)
+		return -ENOMEM;
 
 	rte_spinlock_lock(&adapter->repr_lock);
 
@@ -385,6 +471,7 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 		char name[RTE_ETH_NAME_MAX_LEN];
 		uint32_t iter_iter = 0;
 		bool matched;
+		int i;
 
 		/* skip representor already be created */
 		if (dev != NULL)
@@ -401,6 +488,41 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 				 pci_dev->name,
 				 repr_id->host_id,
 				 repr_id->pf_id);
+
+		/* get vport list for the port representor */
+		ret = cpfl_repr_vport_list_query(adapter, repr_id, vlist_resp);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "Failed to get host%d pf%d vf%d's vport list",
+				     repr_id->host_id, repr_id->pf_id, repr_id->vf_id);
+			rte_spinlock_unlock(&adapter->repr_lock);
+			rte_free(vlist_resp);
+			return ret;
+		}
+
+		/* get all vport info for the port representor */
+		for (i = 0; i < vlist_resp->nof_vports; i++) {
+			ret = cpfl_repr_vport_info_query(adapter, repr_id,
+							 &vlist_resp->vports[i], &vinfo_resp);
+			if (ret != 0) {
+				PMD_INIT_LOG(ERR, "Failed to get host%d pf%d vf%d vport[%d]'s info",
+					     repr_id->host_id, repr_id->pf_id, repr_id->vf_id,
+					     vlist_resp->vports[i].vport_id);
+				rte_spinlock_unlock(&adapter->repr_lock);
+				rte_free(vlist_resp);
+				return ret;
+			}
+
+			ret = cpfl_repr_vport_map_update(adapter, repr_id,
+						 vlist_resp->vports[i].vport_id, &vinfo_resp);
+			if (ret != 0) {
+				PMD_INIT_LOG(ERR, "Failed to update  host%d pf%d vf%d vport[%d]'s info to vport_map_hash",
+					     repr_id->host_id, repr_id->pf_id, repr_id->vf_id,
+					     vlist_resp->vports[i].vport_id);
+				rte_spinlock_unlock(&adapter->repr_lock);
+				rte_free(vlist_resp);
+				return ret;
+			}
+		}
 
 		/* find a matched vport */
 		rte_spinlock_lock(&adapter->vport_map_lock);
@@ -428,6 +550,7 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 				PMD_INIT_LOG(ERR, "Failed to create representor %s", name);
 				rte_spinlock_unlock(&adapter->vport_map_lock);
 				rte_spinlock_unlock(&adapter->repr_lock);
+				rte_free(vlist_resp);
 				return ret;
 			}
 			break;
@@ -443,6 +566,7 @@ cpfl_repr_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapte
 	}
 
 	rte_spinlock_unlock(&adapter->repr_lock);
+	rte_free(vlist_resp);
 
 	return 0;
 }

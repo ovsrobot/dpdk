@@ -189,6 +189,9 @@ struct cpfl_adapter_ext {
 
 TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
 
+int cpfl_vport_info_create(struct cpfl_adapter_ext *adapter,
+			   struct cpfl_vport_id *vport_identity,
+			   struct cpchnl2_vport_info *vport_info);
 int cpfl_cc_vport_list_get(struct cpfl_adapter_ext *adapter,
 			   struct cpfl_vport_id *vi,
 			   struct cpchnl2_get_vport_list_response *response);
