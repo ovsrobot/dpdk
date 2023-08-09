@@ -250,6 +250,10 @@ DPDK_24 {
 	rte_mp_request_sync;
 	rte_mp_sendmsg;
 	rte_openlog_stream;
+	rte_power_monitor; # WINDOWS_NO_EXPORT
+	rte_power_monitor_wakeup; # WINDOWS_NO_EXPORT
+	rte_power_pause; # WINDOWS_NO_EXPORT
+	rte_power_monitor_multi; # WINDOWS_NO_EXPORT
 	rte_rand;
 	rte_rand_max;
 	rte_realloc;
@@ -400,15 +404,6 @@ EXPERIMENTAL {
 	rte_cpu_get_intrinsics_support; # WINDOWS_NO_EXPORT
 	rte_vect_get_max_simd_bitwidth;
 	rte_vect_set_max_simd_bitwidth;
-
-	# added in 21.02
-	rte_power_monitor; # WINDOWS_NO_EXPORT
-	rte_power_monitor_wakeup; # WINDOWS_NO_EXPORT
-	rte_power_pause; # WINDOWS_NO_EXPORT
-
-
-	# added in 21.08
-	rte_power_monitor_multi; # WINDOWS_NO_EXPORT
 
 	# added in 23.03
 	rte_lcore_register_usage_cb;
