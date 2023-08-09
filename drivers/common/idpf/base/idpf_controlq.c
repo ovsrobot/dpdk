@@ -426,11 +426,8 @@ static int __idpf_ctlq_clean_sq(struct idpf_ctlq_info *cq, u16 *clean_count,
 		if (!force && !(LE16_TO_CPU(desc->flags) & IDPF_CTLQ_FLAG_DD))
 			break;
 
-		desc_err = LE16_TO_CPU(desc->ret_val);
-		if (desc_err) {
-			/* strip off FW internal code */
-			desc_err &= 0xff;
-		}
+		/* strip off FW internal code */
+		desc_err = LE16_TO_CPU(desc->ret_val) & 0xff;
 
 		msg_status[i] = cq->bi.tx_msg[ntc];
 		if (!msg_status[i])
