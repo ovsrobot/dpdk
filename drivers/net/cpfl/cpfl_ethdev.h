@@ -21,6 +21,7 @@
 
 #include "cpfl_logs.h"
 #include "cpfl_cpchnl.h"
+#include "cpfl_representor.h"
 
 /* Currently, backend supports up to 8 vports */
 #define CPFL_MAX_VPORT_NUM	8
@@ -60,10 +61,31 @@
 #define IDPF_DEV_ID_CPF			0x1453
 #define VIRTCHNL2_QUEUE_GROUP_P2P	0x100
 
+#define CPFL_HOST_ID_NUM	2
+#define CPFL_PF_TYPE_NUM	2
 #define CPFL_HOST_ID_HOST	0
 #define CPFL_HOST_ID_ACC	1
 #define CPFL_PF_TYPE_APF	0
 #define CPFL_PF_TYPE_CPF	1
+
+/* Function IDs on IMC side */
+#define HOST0_APF	0
+#define HOST1_APF	1
+#define HOST2_APF	2
+#define HOST3_APF	3
+#define ACC_APF_ID	4
+#define IMC_APF_ID	5
+#define HOST0_NVME_ID	6
+#define ACC_NVME_ID	7
+#define HOST0_CPF_ID	8
+#define HOST1_CPF_ID	9
+#define HOST2_CPF_ID	10
+#define HOST3_CPF_ID	11
+#define ACC_CPF_ID	12
+#define IMC_IPF_ID	13
+#define ATE_CPF_ID	14
+#define ACC_LCE_ID	15
+#define IMC_MBX_EFD_ID	0
 
 struct cpfl_vport_param {
 	struct cpfl_adapter_ext *adapter;
@@ -136,6 +158,13 @@ struct cpfl_vport {
 	bool p2p_manual_bind;
 };
 
+struct cpfl_repr {
+	struct cpfl_itf itf;
+	struct cpfl_repr_id repr_id;
+	struct rte_ether_addr mac_addr;
+	struct cpfl_vport_info *vport_info;
+};
+
 struct cpfl_adapter_ext {
 	TAILQ_ENTRY(cpfl_adapter_ext) next;
 	struct idpf_adapter base;
@@ -153,6 +182,9 @@ struct cpfl_adapter_ext {
 
 	rte_spinlock_t vport_map_lock;
 	struct rte_hash *vport_map_hash;
+
+	rte_spinlock_t repr_lock;
+	struct rte_hash *repr_whitelist_hash;
 };
 
 TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
@@ -163,6 +195,8 @@ TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
 	container_of((p), struct cpfl_adapter_ext, base)
 #define CPFL_DEV_TO_VPORT(dev)					\
 	((struct cpfl_vport *)((dev)->data->dev_private))
+#define CPFL_DEV_TO_REPR(dev)					\
+	((struct cpfl_repr *)((dev)->data->dev_private))
 #define CPFL_DEV_TO_ITF(dev)				\
 	((struct cpfl_itf *)((dev)->data->dev_private))
 
