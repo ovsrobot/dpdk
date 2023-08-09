@@ -1023,8 +1023,13 @@ cpfl_dev_start(struct rte_eth_dev *dev)
 		goto err_startq;
 	}
 
-	cpfl_set_rx_function(dev);
-	cpfl_set_tx_function(dev);
+	if (cpfl_vport->exceptional) {
+		dev->rx_pkt_burst = cpfl_dummy_recv_pkts;
+		dev->tx_pkt_burst = cpfl_dummy_xmit_pkts;
+	} else {
+		cpfl_set_rx_function(dev);
+		cpfl_set_tx_function(dev);
+	}
 
 	ret = idpf_vc_vport_ena_dis(vport, true);
 	if (ret != 0) {
@@ -1098,13 +1103,15 @@ cpfl_dev_close(struct rte_eth_dev *dev)
 	if (!adapter->base.is_rx_singleq && !adapter->base.is_tx_singleq)
 		cpfl_p2p_queue_grps_del(vport);
 
+	if (!cpfl_vport->exceptional) {
+		adapter->cur_vports &= ~RTE_BIT32(vport->devarg_id);
+		adapter->cur_vport_nb--;
+		adapter->vports[vport->sw_idx] = NULL;
+	}
+
 	idpf_vport_deinit(vport);
 	rte_free(cpfl_vport->p2p_q_chunks_info);
-
-	adapter->cur_vports &= ~RTE_BIT32(vport->devarg_id);
-	adapter->cur_vport_nb--;
 	dev->data->dev_private = NULL;
-	adapter->vports[vport->sw_idx] = NULL;
 	rte_free(cpfl_vport);
 
 	return 0;
@@ -1620,6 +1627,11 @@ cpfl_handle_vchnl_event_msg(struct cpfl_adapter_ext *adapter, uint8_t *msg, uint
 		PMD_DRV_LOG(ERR, "Error event");
 		return;
 	}
+
+	/* ignore if it is exceptional vport */
+	if (adapter->exceptional_vport &&
+	    adapter->exceptional_vport->base.vport_id == vc_event->vport_id)
+		return;
 
 	vport = cpfl_find_vport(adapter, vc_event->vport_id);
 	if (!vport) {
@@ -2192,6 +2204,56 @@ err:
 	return ret;
 }
 
+static int
+cpfl_exceptional_vport_init(struct rte_eth_dev *dev, void *init_params)
+{
+	struct cpfl_vport *cpfl_vport = CPFL_DEV_TO_VPORT(dev);
+	struct idpf_vport *vport = &cpfl_vport->base;
+	struct cpfl_adapter_ext *adapter = init_params;
+	/* for sending create vport virtchnl msg prepare */
+	struct virtchnl2_create_vport create_vport_info;
+	int ret = 0;
+
+	dev->dev_ops = &cpfl_eth_dev_ops;
+	vport->adapter = &adapter->base;
+
+	memset(&create_vport_info, 0, sizeof(create_vport_info));
+	ret = idpf_vport_info_init(vport, &create_vport_info);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Failed to init exceptional vport req_info.");
+		goto err;
+	}
+
+	ret = idpf_vport_init(vport, &create_vport_info, dev->data);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Failed to init exceptional vport.");
+		goto err;
+	}
+
+	cpfl_vport->itf.adapter = adapter;
+	cpfl_vport->itf.data = dev->data;
+	cpfl_vport->exceptional = TRUE;
+
+	dev->data->mac_addrs = rte_zmalloc(NULL, RTE_ETHER_ADDR_LEN, 0);
+	if (dev->data->mac_addrs == NULL) {
+		PMD_INIT_LOG(ERR, "Cannot allocate mac_addr for exceptional vport.");
+		ret = -ENOMEM;
+		goto err_mac_addrs;
+	}
+
+	rte_ether_addr_copy((struct rte_ether_addr *)vport->default_mac_addr,
+			    &dev->data->mac_addrs[0]);
+
+	adapter->exceptional_vport = cpfl_vport;
+
+	return 0;
+
+err_mac_addrs:
+	idpf_vport_deinit(vport);
+err:
+	return ret;
+}
+
 static const struct rte_pci_id pci_id_cpfl_map[] = {
 	{ RTE_PCI_DEVICE(IDPF_INTEL_VENDOR_ID, IDPF_DEV_ID_CPF) },
 	{ .vendor_id = 0, /* sentinel */ },
@@ -2300,6 +2362,23 @@ cpfl_vport_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapt
 }
 
 static int
+cpfl_exceptional_vport_create(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter)
+{
+	char name[RTE_ETH_NAME_MAX_LEN];
+	int ret;
+
+	snprintf(name, sizeof(name), "cpfl_%s_exceptional_vport", pci_dev->name);
+	ret = rte_eth_dev_create(&pci_dev->device, name,
+				 sizeof(struct cpfl_vport),
+				 NULL, NULL, cpfl_exceptional_vport_init,
+				 adapter);
+	if (ret != 0)
+		PMD_DRV_LOG(ERR, "Failed to create exceptional vport");
+
+	return ret;
+}
+
+static int
 cpfl_pci_probe_first(struct rte_pci_device *pci_dev)
 {
 	struct cpfl_adapter_ext *adapter;
@@ -2347,12 +2426,18 @@ cpfl_pci_probe_first(struct rte_pci_device *pci_dev)
 		goto close_ethdev;
 	}
 
+	if (adapter->devargs.repr_args_num > 0) {
+		retval = cpfl_exceptional_vport_create(pci_dev, adapter);
+		if (retval != 0) {
+			PMD_INIT_LOG(ERR, "Failed to create exceptional vport. ");
+			goto close_ethdev;
+		}
+	}
 	retval = cpfl_repr_create(pci_dev, adapter);
 	if (retval != 0) {
 		PMD_INIT_LOG(ERR, "Failed to create representors ");
 		goto close_ethdev;
 	}
-
 
 	return 0;
 
@@ -2385,6 +2470,14 @@ cpfl_pci_probe_again(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *ad
 	if (ret != 0) {
 		PMD_INIT_LOG(ERR, "Failed to process reprenstor devargs");
 		return ret;
+	}
+
+	if (adapter->exceptional_vport == NULL && adapter->devargs.repr_args_num > 0) {
+		ret = cpfl_exceptional_vport_create(pci_dev, adapter);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "Failed to create exceptional vport. ");
+			return ret;
+		}
 	}
 
 	ret = cpfl_repr_create(pci_dev, adapter);

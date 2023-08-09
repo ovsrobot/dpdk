@@ -117,4 +117,11 @@ int cpfl_switch_hairpin_complq(struct cpfl_vport *cpfl_vport, bool on);
 int cpfl_switch_hairpin_bufq(struct cpfl_vport *cpfl_vport, bool on);
 int cpfl_switch_hairpin_rxtx_queue(struct cpfl_vport *cpfl_vport, uint16_t qid,
 				   bool rx, bool on);
+uint16_t cpfl_dummy_recv_pkts(void *queue,
+			      struct rte_mbuf **tx_pkts,
+			      uint16_t nb_pkts);
+
+uint16_t cpfl_dummy_xmit_pkts(void *queue,
+			      struct rte_mbuf **tx_pkts,
+			      uint16_t nb_pkts);
 #endif /* _CPFL_RXTX_H_ */

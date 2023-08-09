@@ -156,6 +156,11 @@ struct cpfl_vport {
 	struct idpf_rx_queue *p2p_rx_bufq;
 	struct idpf_tx_queue *p2p_tx_complq;
 	bool p2p_manual_bind;
+
+	/* exceptional vport */
+	bool exceptional;  /* this vport is for exceptional one */
+	uint32_t dispatch_service_id;
+	uint32_t dispatch_core_id;
 };
 
 struct cpfl_repr {
@@ -179,6 +184,9 @@ struct cpfl_adapter_ext {
 
 	uint16_t used_vecs_num;
 	struct cpfl_devargs devargs;
+
+	/* exceptional vport and exceptional queues */
+	struct cpfl_vport *exceptional_vport;
 
 	rte_spinlock_t vport_map_lock;
 	struct rte_hash *vport_map_hash;

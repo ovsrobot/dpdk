@@ -1409,6 +1409,22 @@ cpfl_stop_queues(struct rte_eth_dev *dev)
 	}
 }
 
+uint16_t
+cpfl_dummy_recv_pkts(__rte_unused void *queue,
+		     __rte_unused struct rte_mbuf **tx_pkts,
+		     __rte_unused uint16_t nb_pkts)
+{
+	return 0;
+}
+
+uint16_t
+cpfl_dummy_xmit_pkts(__rte_unused void *queue,
+		     __rte_unused struct rte_mbuf **tx_pkts,
+		     __rte_unused uint16_t nb_pkts)
+{
+	return 0;
+}
+
 void
 cpfl_set_rx_function(struct rte_eth_dev *dev)
 {
