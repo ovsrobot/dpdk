@@ -275,7 +275,6 @@ int32_t rte_service_lcore_stop(uint32_t lcore_id);
  * @retval 1 Service thread is in the service core polling loop.
  * @retval -EINVAL Invalid *lcore_id* provided.
  */
-__rte_experimental
 int32_t rte_service_lcore_may_be_active(uint32_t lcore_id);
 
 /**

@@ -58,6 +58,7 @@ DPDK_24 {
 	rte_devargs_parsef;
 	rte_devargs_remove;
 	rte_devargs_type_count;
+	rte_drand;
 	rte_driver_name;
 	rte_dump_physmem_layout;
 	rte_dump_stack;
@@ -265,6 +266,7 @@ DPDK_24 {
 	rte_service_lcore_count_services;
 	rte_service_lcore_del;
 	rte_service_lcore_list;
+	rte_service_lcore_may_be_active;
 	rte_service_lcore_reset_all;
 	rte_service_lcore_start;
 	rte_service_lcore_stop;
@@ -371,7 +373,6 @@ EXPERIMENTAL {
 	# added in 20.11
 	__rte_eal_trace_generic_size_t; # WINDOWS_NO_EXPORT
 	rte_cpu_get_intrinsics_support; # WINDOWS_NO_EXPORT
-	rte_service_lcore_may_be_active;
 	rte_vect_get_max_simd_bitwidth;
 	rte_vect_set_max_simd_bitwidth;
 
@@ -400,7 +401,6 @@ EXPERIMENTAL {
 	rte_intr_type_set;
 
 	# added in 22.07
-	rte_drand;
 	rte_thread_get_affinity_by_id;
 	rte_thread_get_priority;
 	rte_thread_self;
