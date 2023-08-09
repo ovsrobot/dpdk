@@ -170,6 +170,17 @@ struct cpfl_repr {
 	struct cpfl_vport_info *vport_info;
 };
 
+struct cpfl_repr_rx_queue {
+	struct cpfl_repr *repr;
+	struct rte_mempool *mb_pool;
+	struct rte_ring *rx_ring;
+};
+
+struct cpfl_repr_tx_queue {
+	struct cpfl_repr *repr;
+	struct cpfl_tx_queue *txq;
+};
+
 struct cpfl_adapter_ext {
 	TAILQ_ENTRY(cpfl_adapter_ext) next;
 	struct idpf_adapter base;

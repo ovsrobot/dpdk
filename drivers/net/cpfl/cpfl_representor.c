@@ -285,12 +285,138 @@ cpfl_repr_dev_stop(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+cpfl_repr_rx_queue_setup(struct rte_eth_dev *dev,
+			 uint16_t queue_id,
+			 uint16_t nb_desc,
+			 unsigned int socket_id,
+			 __rte_unused const struct rte_eth_rxconf *conf,
+			 struct rte_mempool *pool)
+{
+	struct cpfl_repr *repr = CPFL_DEV_TO_REPR(dev);
+	struct cpfl_repr_rx_queue *rxq;
+	char ring_name[RTE_RING_NAMESIZE];
+	struct rte_ring *rx_ring;
+
+	if (!(dev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)) {
+		PMD_INIT_LOG(ERR, "This ethdev is not representor.");
+		return -EINVAL;
+	}
+
+	if (!RTE_IS_POWER_OF_2(nb_desc) ||
+	    nb_desc > CPFL_MAX_RING_DESC ||
+	    nb_desc < CPFL_MIN_RING_DESC) {
+		PMD_INIT_LOG(ERR, "nb_desc should < %u, > %u and power of 2)",
+			     CPFL_MAX_RING_DESC, CPFL_MIN_RING_DESC);
+		return -EINVAL;
+	}
+
+	/* Free memory if needed */
+	rxq = dev->data->rx_queues[queue_id];
+	if (rxq) {
+		rte_ring_free(rxq->rx_ring);
+		rte_free(rxq);
+		dev->data->rx_queues[queue_id] = NULL;
+	}
+
+	/* Allocate rx queue data structure */
+	rxq = rte_zmalloc_socket("cpfl representor rx queue",
+				 sizeof(struct cpfl_repr_rx_queue),
+				 RTE_CACHE_LINE_SIZE,
+				 socket_id);
+	if (!rxq) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for representor rx queue");
+		return -ENOMEM;
+	}
+
+	/* use rte_ring as rx queue of representor */
+	if (repr->repr_id.type == RTE_ETH_REPRESENTOR_VF)
+		snprintf(ring_name, sizeof(ring_name), "cpfl_repr_c%dpf%dvf%d_rx",
+			 repr->repr_id.host_id, repr->repr_id.pf_id, repr->repr_id.vf_id);
+	else
+		snprintf(ring_name, sizeof(ring_name), "cpfl_repr_c%dpf%d_rx",
+			 repr->repr_id.host_id, repr->repr_id.pf_id);
+	rx_ring = rte_ring_lookup(ring_name);
+	if (rx_ring) {
+		PMD_INIT_LOG(ERR, "rte_ring %s is occuriped.", ring_name);
+		rte_free(rxq);
+		return -EEXIST;
+	}
+
+	rx_ring = rte_ring_create(ring_name, nb_desc, socket_id,
+				  RING_F_SP_ENQ | RING_F_SC_DEQ);
+	if (!rx_ring) {
+		PMD_INIT_LOG(ERR, "Failed to create ring %s.", ring_name);
+		rte_free(rxq);
+		return -EINVAL;
+	}
+
+	rxq->mb_pool = pool;
+	rxq->repr = repr;
+	rxq->rx_ring = rx_ring;
+	dev->data->rx_queues[queue_id] = rxq;
+
+	return 0;
+}
+
+static int
+cpfl_repr_tx_queue_setup(struct rte_eth_dev *dev,
+			 uint16_t queue_id,
+			 __rte_unused uint16_t nb_desc,
+			 unsigned int socket_id,
+			 __rte_unused const struct rte_eth_txconf *conf)
+{
+	struct cpfl_repr *repr = CPFL_DEV_TO_REPR(dev);
+	struct cpfl_adapter_ext *adapter = repr->itf.adapter;
+	struct cpfl_repr_tx_queue *txq;
+	struct cpfl_vport *vport;
+
+	if (!(dev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)) {
+		PMD_INIT_LOG(ERR, "This ethdev is not representor.");
+		return -EINVAL;
+	}
+
+	txq = dev->data->tx_queues[queue_id];
+	if (txq) {
+		rte_free(txq);
+		dev->data->rx_queues[queue_id] = NULL;
+	}
+	txq = rte_zmalloc_socket("cpfl representor tx queue",
+				 sizeof(struct cpfl_repr_tx_queue),
+				 RTE_CACHE_LINE_SIZE,
+				 socket_id);
+	if (!txq) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for representor tx queue");
+		return -ENOMEM;
+	}
+	/* use vport HW queue to transmit, no need to allocate
+	 * a ring for it
+	 */
+	txq->repr = repr;
+	dev->data->tx_queues[queue_id] = txq;
+
+	vport = adapter->exceptional_vport;
+	if (!vport) {
+		PMD_INIT_LOG(ERR, "No default vport is created for exceptianl path");
+		return -ENODEV;
+	}
+	/* TODO: need to select the hw txq when multi txqs are there.
+	 * Now just use the default queue 0
+	 */
+	txq->txq = ((struct rte_eth_dev_data *)vport->itf.data)->tx_queues[0];
+
+	return 0;
+}
+
 static const struct eth_dev_ops cpfl_repr_dev_ops = {
 	.dev_start		= cpfl_repr_dev_start,
 	.dev_stop		= cpfl_repr_dev_stop,
 	.dev_configure		= cpfl_repr_dev_configure,
 	.dev_close		= cpfl_repr_dev_close,
 	.dev_infos_get		= cpfl_repr_dev_info_get,
+
+	.rx_queue_setup		= cpfl_repr_rx_queue_setup,
+	.tx_queue_setup		= cpfl_repr_tx_queue_setup,
 };
 
 static int
