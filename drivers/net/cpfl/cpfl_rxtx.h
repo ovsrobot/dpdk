@@ -72,6 +72,7 @@ struct cpfl_txq_hairpin_info {
 struct cpfl_tx_queue {
 	struct idpf_tx_queue base;
 	struct cpfl_txq_hairpin_info hairpin_info;
+	rte_spinlock_t lock;
 };
 
 static inline uint16_t
@@ -124,4 +125,7 @@ uint16_t cpfl_dummy_recv_pkts(void *queue,
 uint16_t cpfl_dummy_xmit_pkts(void *queue,
 			      struct rte_mbuf **tx_pkts,
 			      uint16_t nb_pkts);
+uint16_t cpfl_xmit_pkts_to_vsi(struct cpfl_tx_queue *txq,
+			       struct rte_mbuf **tx_pkts,
+			       uint16_t nb_pkts, uint16_t vsi_id);
 #endif /* _CPFL_RXTX_H_ */

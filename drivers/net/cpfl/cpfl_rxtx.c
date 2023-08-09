@@ -616,6 +616,9 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	txq->ops = &def_txq_ops;
 	cpfl_vport->nb_data_txq++;
 	txq->q_set = true;
+
+	rte_spinlock_init(&cpfl_txq->lock);
+
 	dev->data->tx_queues[queue_idx] = cpfl_txq;
 
 	return 0;
@@ -1407,6 +1410,124 @@ cpfl_stop_queues(struct rte_eth_dev *dev)
 		if (cpfl_tx_queue_stop(dev, i) != 0)
 			PMD_DRV_LOG(WARNING, "Fail to stop Tx queue %d", i);
 	}
+}
+
+static inline void
+cpfl_set_tx_switch_ctx(uint16_t vsi_id, bool is_vsi,
+		       volatile union idpf_flex_tx_ctx_desc *ctx_desc)
+{
+	uint16_t cmd_dtype;
+
+	/* Use TX Native TSO Context Descriptor to carry VSI
+	 * so TSO is not supported
+	 */
+	if (is_vsi) {
+		cmd_dtype = IDPF_TX_DESC_DTYPE_FLEX_TSO_CTX |
+			IDPF_TX_FLEX_CTX_DESC_CMD_SWTCH_TARGETVSI;
+		ctx_desc->tso.qw0.mss_rt =
+			rte_cpu_to_le_16((uint16_t)vsi_id &
+				 IDPF_TXD_FLEX_CTX_MSS_RT_M);
+	} else {
+		cmd_dtype = IDPF_TX_DESC_DTYPE_FLEX_TSO_CTX |
+			IDPF_TX_FLEX_CTX_DESC_CMD_SWTCH_UPLNK;
+	}
+
+	ctx_desc->tso.qw1.cmd_dtype = rte_cpu_to_le_16(cmd_dtype);
+}
+
+/* Transmit pkts to destination VSI,
+ * much similar as idpf_splitq_xmit_pkts
+ */
+uint16_t
+cpfl_xmit_pkts_to_vsi(struct cpfl_tx_queue *cpfl_txq, struct rte_mbuf **tx_pkts,
+		      uint16_t nb_pkts, uint16_t vsi_id)
+{
+	volatile struct idpf_flex_tx_sched_desc *txr;
+	volatile struct idpf_flex_tx_sched_desc *txd;
+	volatile union idpf_flex_tx_ctx_desc *ctx_desc;
+	struct idpf_tx_entry *sw_ring;
+	struct idpf_tx_entry *txe, *txn;
+	uint16_t nb_used, tx_id, sw_id;
+	struct idpf_tx_queue *txq;
+	struct rte_mbuf *tx_pkt;
+	uint16_t nb_to_clean;
+	uint16_t nb_tx = 0;
+
+	if (unlikely(!cpfl_txq))
+		return nb_tx;
+
+	txq = &cpfl_txq->base;
+	if (unlikely(!txq) || unlikely(!txq->q_started))
+		return nb_tx;
+
+	txr = txq->desc_ring;
+	sw_ring = txq->sw_ring;
+	tx_id = txq->tx_tail;
+	sw_id = txq->sw_tail;
+	txe = &sw_ring[sw_id];
+
+	for (nb_tx = 0; nb_tx < nb_pkts; nb_tx++) {
+		tx_pkt = tx_pkts[nb_tx];
+
+		if (txq->nb_free <= txq->free_thresh) {
+			/* TODO: Need to refine, refer to idpf_splitq_xmit_pkts */
+			nb_to_clean = 2 * txq->rs_thresh;
+			while (nb_to_clean--)
+				idpf_split_tx_free(txq->complq);
+		}
+
+		if (txq->nb_free < tx_pkt->nb_segs + 1)
+			break;
+		/* need context desc carry target vsi, no TSO support. */
+		nb_used = tx_pkt->nb_segs + 1;
+
+		/* context descriptor prepare*/
+		ctx_desc = (volatile union idpf_flex_tx_ctx_desc *)&txr[tx_id];
+
+		cpfl_set_tx_switch_ctx(vsi_id, true, ctx_desc);
+		tx_id++;
+		if (tx_id == txq->nb_tx_desc)
+			tx_id = 0;
+
+		do {
+			txd = &txr[tx_id];
+			txn = &sw_ring[txe->next_id];
+			txe->mbuf = tx_pkt;
+
+			/* Setup TX descriptor */
+			txd->buf_addr =
+				rte_cpu_to_le_64(rte_mbuf_data_iova(tx_pkt));
+			txd->qw1.cmd_dtype = IDPF_TX_DESC_DTYPE_FLEX_FLOW_SCHE;
+			txd->qw1.rxr_bufsize = tx_pkt->data_len;
+			txd->qw1.compl_tag = sw_id;
+			tx_id++;
+			if (tx_id == txq->nb_tx_desc)
+				tx_id = 0;
+			sw_id = txe->next_id;
+			txe = txn;
+			tx_pkt = tx_pkt->next;
+		} while (tx_pkt);
+
+		/* fill the last descriptor with End of Packet (EOP) bit */
+		txd->qw1.cmd_dtype |= IDPF_TXD_FLEX_FLOW_CMD_EOP;
+
+		txq->nb_free = (uint16_t)(txq->nb_free - nb_used);
+		txq->nb_used = (uint16_t)(txq->nb_used + nb_used);
+
+		if (txq->nb_used >= 32) {
+			txd->qw1.cmd_dtype |= IDPF_TXD_FLEX_FLOW_CMD_RE;
+			/* Update txq RE bit counters */
+			txq->nb_used = 0;
+		}
+	}
+
+	/* update the tail pointer if any packets were processed */
+	if (likely(nb_tx)) {
+		IDPF_PCI_REG_WRITE(txq->qtx_tail, tx_id);
+		txq->tx_tail = tx_id;
+		txq->sw_tail = sw_id;
+	}
+	return nb_tx;
 }
 
 uint16_t

@@ -491,6 +491,87 @@ static const struct eth_dev_ops cpfl_repr_dev_ops = {
 	.stats_reset		= idpf_repr_stats_reset,
 };
 
+#define MAX_IDPF_REPRENSENTOR_BURST  128
+static uint16_t
+cpfl_repr_rx_burst(void *rxq,
+		   struct rte_mbuf **rx_pkts,
+		   uint16_t nb_pkts)
+{
+	struct cpfl_repr_rx_queue *rx_queue = rxq;
+	struct rte_ring *ring = rx_queue->rx_ring;
+	struct rte_mbuf *mbuf[MAX_IDPF_REPRENSENTOR_BURST] = {NULL};
+	unsigned int nb_recv;
+	uint16_t i;
+
+	if (unlikely(!ring))
+		return 0;
+
+	nb_recv = rte_ring_dequeue_burst(ring, (void **)mbuf,
+					 RTE_MIN(nb_pkts, MAX_IDPF_REPRENSENTOR_BURST), NULL);
+	for (i = 0; i < nb_recv; i++) {
+		if (mbuf[i]->pool != rx_queue->mb_pool) {
+			/* need copy if mpools used for vport and represntor queue are different */
+			rx_pkts[i] = rte_pktmbuf_copy(mbuf[i], rx_queue->mb_pool, 0, UINT32_MAX);
+			rte_pktmbuf_free(mbuf[i]);
+		} else {
+			rx_pkts[i] = mbuf[i];
+		}
+	}
+
+	__atomic_fetch_add(&rx_queue->stats.packets, nb_recv, __ATOMIC_RELAXED);
+	/* TODO: bytes stats */
+	return nb_recv;
+}
+
+static uint16_t
+cpfl_get_vsi_from_vf_representor(struct cpfl_repr *repr)
+{
+	return repr->vport_info->vport_info.vsi_id;
+}
+
+static uint16_t
+cpfl_repr_tx_burst(void *txq,
+		   struct rte_mbuf **tx_pkts,
+		   uint16_t nb_pkts)
+{
+	struct cpfl_repr_tx_queue *tx_queue = txq;
+	struct idpf_tx_queue *hw_txq = &tx_queue->txq->base;
+	struct cpfl_repr *repr;
+	uint16_t vsi_id;
+	uint16_t nb;
+
+	if (unlikely(!tx_queue->txq))
+		return 0;
+
+	repr = tx_queue->repr;
+
+	if (!hw_txq) {
+		PMD_INIT_LOG(ERR, "No Queue associated with representor host_id: %d, %s %d",
+			     repr->repr_id.host_id,
+			     (repr->repr_id.type == RTE_ETH_REPRESENTOR_VF) ? "vf" : "pf",
+			     (repr->repr_id.type == RTE_ETH_REPRESENTOR_VF) ? repr->repr_id.vf_id :
+			     repr->repr_id.pf_id);
+		return 0;
+	}
+
+	if (repr->repr_id.type == RTE_ETH_REPRESENTOR_VF) {
+		vsi_id = cpfl_get_vsi_from_vf_representor(repr);
+	} else {
+		/* TODO: RTE_ETH_REPRESENTOR_PF */
+		PMD_INIT_LOG(ERR, "Get vsi from pf representor is not supported.");
+		return 0;
+	}
+
+	rte_spinlock_lock(&tx_queue->txq->lock);
+	nb = cpfl_xmit_pkts_to_vsi(tx_queue->txq, tx_pkts, nb_pkts, vsi_id);
+	rte_spinlock_unlock(&tx_queue->txq->lock);
+
+	__atomic_fetch_add(&tx_queue->stats.packets, nb, __ATOMIC_RELAXED);
+	__atomic_fetch_add(&tx_queue->stats.errors, nb, __ATOMIC_RELAXED);
+	/* TODO: bytes stats */
+	return nb;
+}
+
 static int
 cpfl_repr_init(struct rte_eth_dev *eth_dev, void *init_param)
 {
@@ -507,6 +588,8 @@ cpfl_repr_init(struct rte_eth_dev *eth_dev, void *init_param)
 		repr->func_up = true;
 
 	eth_dev->dev_ops = &cpfl_repr_dev_ops;
+	eth_dev->rx_pkt_burst = cpfl_repr_rx_burst;
+	eth_dev->tx_pkt_burst = cpfl_repr_tx_burst;
 
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_REPRESENTOR;
 	/* bit[15:14] type
