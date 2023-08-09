@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <rte_alarm.h>
 #include <rte_hash_crc.h>
+#include <rte_service_component.h>
 
 #include "cpfl_ethdev.h"
 #include <ethdev_private.h>
@@ -135,6 +136,107 @@ static const struct rte_mbuf_dynfield cpfl_source_metadata_param = {
 	.align = __alignof__(uint16_t),
 	.flags = 0,
 };
+
+static int
+cpfl_dispatch_service_register(struct rte_eth_dev *dev)
+{
+	struct cpfl_vport *vport = dev->data->dev_private;
+	struct rte_service_spec service_params;
+	uint32_t service_core_list[RTE_MAX_LCORE];
+	uint32_t num_service_cores;
+	uint32_t service_core_id;
+	int ret;
+
+	num_service_cores = rte_service_lcore_count();
+	if (num_service_cores <= 0) {
+		PMD_DRV_LOG(ERR, "Fail to register dispatch service, no service core found.");
+		return -ENOTSUP;
+	}
+
+	ret = rte_service_lcore_list(service_core_list, num_service_cores);
+	if (ret <= 0) {
+		PMD_DRV_LOG(ERR, "Fail to get service core list");
+		return -ENOTSUP;
+	}
+	/* use the first lcore by default */
+	service_core_id = service_core_list[0];
+
+	memset(&service_params, 0, sizeof(struct rte_service_spec));
+	snprintf(service_params.name, sizeof(service_params.name), "Dispatch service");
+	service_params.callback = cpfl_packets_dispatch;
+	service_params.callback_userdata = dev;
+	service_params.capabilities = 0;
+	service_params.socket_id = rte_lcore_to_socket_id(service_core_id);
+
+	ret = rte_service_component_register(&service_params, &vport->dispatch_service_id);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Fail to register %s component", service_params.name);
+		return ret;
+	}
+
+	ret = rte_service_map_lcore_set(vport->dispatch_service_id, service_core_id, 1);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Fail to map service %s to lcore %d",
+			    service_params.name, service_core_id);
+		return ret;
+	}
+
+	vport->dispatch_core_id = service_core_id;
+
+	return 0;
+}
+
+static void
+cpfl_dispatch_service_unregister(struct rte_eth_dev *dev)
+{
+	struct cpfl_vport *vport = dev->data->dev_private;
+
+	PMD_DRV_LOG(DEBUG, "Unregister service %s",
+		    rte_service_get_name(vport->dispatch_service_id));
+	rte_service_map_lcore_set(vport->dispatch_service_id,
+				  vport->dispatch_core_id, 0);
+	rte_service_component_unregister(vport->dispatch_service_id);
+}
+
+static int
+cpfl_dispatch_service_start(struct rte_eth_dev *dev)
+{
+	struct cpfl_vport *vport = dev->data->dev_private;
+	int ret;
+
+	ret = rte_service_component_runstate_set(vport->dispatch_service_id, 1);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Fail to start %s component",
+			    rte_service_get_name(vport->dispatch_service_id));
+		return ret;
+	}
+	ret = rte_service_runstate_set(vport->dispatch_service_id, 1);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Fail to start service %s",
+			    rte_service_get_name(vport->dispatch_service_id));
+		return ret;
+	}
+	return 0;
+}
+
+static void
+cpfl_dispatch_service_stop(struct rte_eth_dev *dev)
+{
+	struct cpfl_vport *vport = dev->data->dev_private;
+	int ret;
+
+	/* Service core may be shared and don't stop it here*/
+
+	ret = rte_service_runstate_set(vport->dispatch_service_id, 0);
+	if (ret)
+		PMD_DRV_LOG(WARNING, "Fail to stop service %s",
+			    rte_service_get_name(vport->dispatch_service_id));
+
+	ret = rte_service_component_runstate_set(vport->dispatch_service_id, 0);
+	if (ret)
+		PMD_DRV_LOG(WARNING, "Fail to stop %s component",
+			    rte_service_get_name(vport->dispatch_service_id));
+}
 
 static int
 cpfl_dev_link_update(struct rte_eth_dev *dev,
@@ -1031,6 +1133,14 @@ cpfl_dev_start(struct rte_eth_dev *dev)
 	}
 
 	if (cpfl_vport->exceptional) {
+		/* No pkt_burst function setting on exceptional vport,
+		 * start dispatch service instead
+		 */
+		if (cpfl_dispatch_service_start(dev)) {
+			PMD_DRV_LOG(ERR, "Fail to start Dispatch service on %s",
+				    dev->device->name);
+			goto err_serv_start;
+		}
 		dev->rx_pkt_burst = cpfl_dummy_recv_pkts;
 		dev->tx_pkt_burst = cpfl_dummy_xmit_pkts;
 	} else {
@@ -1050,6 +1160,8 @@ cpfl_dev_start(struct rte_eth_dev *dev)
 	return 0;
 
 err_vport:
+	cpfl_dispatch_service_stop(dev);
+err_serv_start:
 	cpfl_stop_queues(dev);
 err_startq:
 	idpf_vport_irq_unmap_config(vport, dev->data->nb_rx_queues);
@@ -1069,6 +1181,10 @@ cpfl_dev_stop(struct rte_eth_dev *dev)
 		return 0;
 
 	idpf_vc_vport_ena_dis(vport, false);
+
+	if (cpfl_vport->exceptional)
+		/* Stop dispatch service when dev stop */
+		cpfl_dispatch_service_stop(dev);
 
 	cpfl_stop_queues(dev);
 
@@ -1114,6 +1230,10 @@ cpfl_dev_close(struct rte_eth_dev *dev)
 		adapter->cur_vports &= ~RTE_BIT32(vport->devarg_id);
 		adapter->cur_vport_nb--;
 		adapter->vports[vport->sw_idx] = NULL;
+	} else {
+		/* unregister idpf dispatch service on exceptional vport */
+		cpfl_dispatch_service_unregister(dev);
+		adapter->exceptional_vport = NULL;
 	}
 
 	idpf_vport_deinit(vport);
@@ -2253,8 +2373,17 @@ cpfl_exceptional_vport_init(struct rte_eth_dev *dev, void *init_params)
 
 	adapter->exceptional_vport = cpfl_vport;
 
+	/* register dispatch service on exceptional vport */
+	ret = cpfl_dispatch_service_register(dev);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to register dispatch service.");
+		goto err_serv_reg;
+	}
+
 	return 0;
 
+err_serv_reg:
+	rte_free(dev->data->mac_addrs);
 err_mac_addrs:
 	idpf_vport_deinit(vport);
 err:
