@@ -5146,6 +5146,44 @@ int rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 int rte_eth_timesync_adjust_time(uint16_t port_id, int64_t delta);
 
 /**
+ * Adjust the frequency of the PHC cycle counter by the indicated amount
+ * from the base frequency.
+ *
+ * This function is used to do hardware timestamp adjustment in fine
+ * granularity. It can be used in conjunction with rte_eth_timesync_adjust_time
+ * to do more precise time control.
+ *
+ * E.g, below is a simple usage:
+ * if master offset > master offset threshold
+ *	do rte_eth_timesync_adjust_time;
+ * else
+ *	do rte_eth_timesync_adjust_fine;
+ *
+ * The user can apply a control algorithm to leverage these two APIs, one
+ * example is in dpdk-ptpclient.
+ *
+ * This API is implemented with the below basic logic:
+ *   - Determine a base frequency value
+ *   - Multiply this by the abs() of the requested adjustment, then divide by
+ *     the appropriate divisor (65536 billion).
+ *   - Add or subtract this difference from the base frequency to calculate a
+ *     new adjustment.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param scaled_ppm
+ *  Desired frequency change in scaled parts per million. Scaled parts per
+ *  million is ppm with a 16-bit binary fractional field.
+ *
+ * @return
+ *   - 0: Success.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -EIO: if device is removed.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ */
+int rte_eth_timesync_adjust_fine(uint16_t port_id, int64_t scaled_ppm);
+
+/**
  * Read the time from the timesync clock on an Ethernet device.
  *
  * This is usually used in conjunction with other Ethdev timesync functions to

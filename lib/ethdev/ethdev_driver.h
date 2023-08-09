@@ -636,6 +636,9 @@ typedef int (*eth_timesync_read_tx_timestamp_t)(struct rte_eth_dev *dev,
 /** @internal Function used to adjust the device clock. */
 typedef int (*eth_timesync_adjust_time)(struct rte_eth_dev *dev, int64_t);
 
+/** @internal Function used to adjust the clock increment rate. */
+typedef int (*eth_timesync_adjust_fine)(struct rte_eth_dev *dev, int64_t);
+
 /** @internal Function used to get time from the device clock. */
 typedef int (*eth_timesync_read_time)(struct rte_eth_dev *dev,
 				      struct timespec *timestamp);
@@ -1347,6 +1350,8 @@ struct eth_dev_ops {
 	eth_timesync_read_tx_timestamp_t timesync_read_tx_timestamp;
 	/** Adjust the device clock */
 	eth_timesync_adjust_time   timesync_adjust_time;
+	/** Adjust the clock increment rate */
+	eth_timesync_adjust_fine   timesync_adjust_fine;
 	/** Get the device clock time */
 	eth_timesync_read_time     timesync_read_time;
 	/** Set the device clock time */

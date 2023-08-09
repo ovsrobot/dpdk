@@ -2175,6 +2175,15 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_int(ret);
 )
 
+/* Called in loop in examples/ptpclient */
+RTE_TRACE_POINT_FP(
+	rte_eth_trace_timesync_adjust_fine,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int64_t scaled_ppm, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_i64(scaled_ppm);
+	rte_trace_point_emit_int(ret);
+)
+
 /* Called in loop in app/test-flow-perf */
 RTE_TRACE_POINT_FP(
 	rte_flow_trace_create,

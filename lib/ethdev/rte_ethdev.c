@@ -6109,6 +6109,25 @@ rte_eth_timesync_adjust_time(uint16_t port_id, int64_t delta)
 }
 
 int
+rte_eth_timesync_adjust_fine(uint16_t port_id, int64_t scaled_ppm)
+{
+	struct rte_eth_dev *dev;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->timesync_adjust_fine == NULL)
+		return -ENOTSUP;
+	ret = eth_err(port_id, (*dev->dev_ops->timesync_adjust_fine)(dev,
+								scaled_ppm));
+
+	rte_eth_trace_timesync_adjust_fine(port_id, scaled_ppm, ret);
+
+	return ret;
+}
+
+int
 rte_eth_timesync_read_time(uint16_t port_id, struct timespec *timestamp)
 {
 	struct rte_eth_dev *dev;
