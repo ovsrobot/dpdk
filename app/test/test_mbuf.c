@@ -1033,12 +1033,17 @@ test_refcnt_iter(unsigned int lcore, unsigned int iter,
 		tref += ref;
 		if ((ref & 1) != 0) {
 			rte_pktmbuf_refcnt_update(m, ref);
-			while (ref-- != 0)
-				rte_ring_enqueue(refcnt_mbuf_ring, m);
+			while (ref-- != 0) {
+				/* retry in case of failure */
+				while (rte_ring_enqueue(refcnt_mbuf_ring, m) != 0)
+					;
+			}
 		} else {
 			while (ref-- != 0) {
 				rte_pktmbuf_refcnt_update(m, 1);
-				rte_ring_enqueue(refcnt_mbuf_ring, m);
+				/* retry in case of failure */
+				while (rte_ring_enqueue(refcnt_mbuf_ring, m) != 0)
+					;
 			}
 		}
 		rte_pktmbuf_free(m);
