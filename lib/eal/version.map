@@ -299,6 +299,12 @@ DPDK_24 {
 	rte_uuid_parse;
 	rte_uuid_unparse;
 	rte_version;
+	rte_version_minor;
+	rte_version_month;
+	rte_version_prefix;
+	rte_version_release;
+	rte_version_suffix;
+	rte_version_year;
 	rte_vfio_clear_group; # WINDOWS_NO_EXPORT
 	rte_vfio_container_create; # WINDOWS_NO_EXPORT
 	rte_vfio_container_destroy; # WINDOWS_NO_EXPORT
@@ -381,12 +387,6 @@ EXPERIMENTAL {
 	rte_thread_key_delete;
 	rte_thread_value_get;
 	rte_thread_value_set;
-	rte_version_minor;
-	rte_version_month;
-	rte_version_prefix;
-	rte_version_release;
-	rte_version_suffix;
-	rte_version_year;
 
 	# added in 21.08
 	rte_power_monitor_multi; # WINDOWS_NO_EXPORT
