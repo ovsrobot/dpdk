@@ -205,6 +205,6 @@ int idpf_ctlq_post_rx_buffs(struct idpf_hw *hw,
 			    struct idpf_dma_mem **buffs);
 
 /* Will destroy all q including the default mb */
-int idpf_ctlq_deinit(struct idpf_hw *hw);
+void idpf_ctlq_deinit(struct idpf_hw *hw);
 
 #endif /* _IDPF_CONTROLQ_API_H_ */
