@@ -40,9 +40,6 @@ extern "C" {
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Get the target bit from a 32-bit value without memory ordering.
  *
  * @param nr
@@ -52,7 +49,6 @@ extern "C" {
  * @return
  *   The target bit.
  */
-__rte_experimental
 static inline uint32_t
 rte_bit_relaxed_get32(unsigned int nr, volatile uint32_t *addr)
 {
@@ -63,9 +59,6 @@ rte_bit_relaxed_get32(unsigned int nr, volatile uint32_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Set the target bit in a 32-bit value to 1 without memory ordering.
  *
  * @param nr
@@ -73,7 +66,6 @@ rte_bit_relaxed_get32(unsigned int nr, volatile uint32_t *addr)
  * @param addr
  *   The address holding the bit.
  */
-__rte_experimental
 static inline void
 rte_bit_relaxed_set32(unsigned int nr, volatile uint32_t *addr)
 {
@@ -84,9 +76,6 @@ rte_bit_relaxed_set32(unsigned int nr, volatile uint32_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Clear the target bit in a 32-bit value to 0 without memory ordering.
  *
  * @param nr
@@ -94,7 +83,6 @@ rte_bit_relaxed_set32(unsigned int nr, volatile uint32_t *addr)
  * @param addr
  *   The address holding the bit.
  */
-__rte_experimental
 static inline void
 rte_bit_relaxed_clear32(unsigned int nr, volatile uint32_t *addr)
 {
@@ -105,9 +93,6 @@ rte_bit_relaxed_clear32(unsigned int nr, volatile uint32_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Return the original bit from a 32-bit value, then set it to 1 without
  * memory ordering.
  *
@@ -118,7 +103,6 @@ rte_bit_relaxed_clear32(unsigned int nr, volatile uint32_t *addr)
  * @return
  *   The original bit.
  */
-__rte_experimental
 static inline uint32_t
 rte_bit_relaxed_test_and_set32(unsigned int nr, volatile uint32_t *addr)
 {
@@ -131,9 +115,6 @@ rte_bit_relaxed_test_and_set32(unsigned int nr, volatile uint32_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Return the original bit from a 32-bit value, then clear it to 0 without
  * memory ordering.
  *
@@ -144,7 +125,6 @@ rte_bit_relaxed_test_and_set32(unsigned int nr, volatile uint32_t *addr)
  * @return
  *   The original bit.
  */
-__rte_experimental
 static inline uint32_t
 rte_bit_relaxed_test_and_clear32(unsigned int nr, volatile uint32_t *addr)
 {
@@ -159,9 +139,6 @@ rte_bit_relaxed_test_and_clear32(unsigned int nr, volatile uint32_t *addr)
 /*------------------------ 64-bit relaxed operations ------------------------*/
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Get the target bit from a 64-bit value without memory ordering.
  *
  * @param nr
@@ -171,7 +148,6 @@ rte_bit_relaxed_test_and_clear32(unsigned int nr, volatile uint32_t *addr)
  * @return
  *   The target bit.
  */
-__rte_experimental
 static inline uint64_t
 rte_bit_relaxed_get64(unsigned int nr, volatile uint64_t *addr)
 {
@@ -182,9 +158,6 @@ rte_bit_relaxed_get64(unsigned int nr, volatile uint64_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Set the target bit in a 64-bit value to 1 without memory ordering.
  *
  * @param nr
@@ -192,7 +165,6 @@ rte_bit_relaxed_get64(unsigned int nr, volatile uint64_t *addr)
  * @param addr
  *   The address holding the bit.
  */
-__rte_experimental
 static inline void
 rte_bit_relaxed_set64(unsigned int nr, volatile uint64_t *addr)
 {
@@ -203,9 +175,6 @@ rte_bit_relaxed_set64(unsigned int nr, volatile uint64_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Clear the target bit in a 64-bit value to 0 without memory ordering.
  *
  * @param nr
@@ -213,7 +182,6 @@ rte_bit_relaxed_set64(unsigned int nr, volatile uint64_t *addr)
  * @param addr
  *   The address holding the bit.
  */
-__rte_experimental
 static inline void
 rte_bit_relaxed_clear64(unsigned int nr, volatile uint64_t *addr)
 {
@@ -224,9 +192,6 @@ rte_bit_relaxed_clear64(unsigned int nr, volatile uint64_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Return the original bit from a 64-bit value, then set it to 1 without
  * memory ordering.
  *
@@ -237,7 +202,6 @@ rte_bit_relaxed_clear64(unsigned int nr, volatile uint64_t *addr)
  * @return
  *   The original bit.
  */
-__rte_experimental
 static inline uint64_t
 rte_bit_relaxed_test_and_set64(unsigned int nr, volatile uint64_t *addr)
 {
@@ -250,9 +214,6 @@ rte_bit_relaxed_test_and_set64(unsigned int nr, volatile uint64_t *addr)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
- *
  * Return the original bit from a 64-bit value, then clear it to 0 without
  * memory ordering.
  *
@@ -263,7 +224,6 @@ rte_bit_relaxed_test_and_set64(unsigned int nr, volatile uint64_t *addr)
  * @return
  *   The original bit.
  */
-__rte_experimental
 static inline uint64_t
 rte_bit_relaxed_test_and_clear64(unsigned int nr, volatile uint64_t *addr)
 {
