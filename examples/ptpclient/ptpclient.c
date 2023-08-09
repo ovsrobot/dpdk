@@ -43,6 +43,28 @@
 #define KERNEL_TIME_ADJUST_LIMIT  20000
 #define PTP_PROTOCOL             0x88F7
 
+#define KP 0.7
+#define KI 0.3
+
+enum servo_state {
+	SERVO_UNLOCKED,
+	SERVO_JUMP,
+	SERVO_LOCKED,
+};
+
+struct pi_servo {
+	double offset[2];
+	double local[2];
+	double drift;
+	int count;
+};
+
+enum controller_mode {
+	MODE_NONE,
+	MODE_PI,
+	MAX_ALL
+} mode;
+
 struct rte_mempool *mbuf_pool;
 uint32_t ptp_enabled_port_mask;
 uint8_t ptp_enabled_port_nb;
@@ -132,6 +154,9 @@ struct ptpv2_data_slave_ordinary {
 	uint8_t ptpset;
 	uint8_t kernel_time_set;
 	uint16_t current_ptp_port;
+	int64_t master_offset;
+	int64_t path_delay;
+	struct pi_servo *servo;
 };
 
 static struct ptpv2_data_slave_ordinary ptp_data;
@@ -290,36 +315,44 @@ print_clock_info(struct ptpv2_data_slave_ordinary *ptp_data)
 			ptp_data->tstamp3.tv_sec,
 			(ptp_data->tstamp3.tv_nsec));
 
-	printf("\nT4 - Master Clock.  %lds %ldns ",
+	printf("\nT4 - Master Clock.  %lds %ldns\n",
 			ptp_data->tstamp4.tv_sec,
 			(ptp_data->tstamp4.tv_nsec));
 
-	printf("\nDelta between master and slave clocks:%"PRId64"ns\n",
+	if (mode == MODE_NONE) {
+		printf("\nDelta between master and slave clocks:%"PRId64"ns\n",
 			ptp_data->delta);
 
-	clock_gettime(CLOCK_REALTIME, &sys_time);
-	rte_eth_timesync_read_time(ptp_data->current_ptp_port, &net_time);
+		clock_gettime(CLOCK_REALTIME, &sys_time);
+		rte_eth_timesync_read_time(ptp_data->current_ptp_port,
+					   &net_time);
 
-	time_t ts = net_time.tv_sec;
+		time_t ts = net_time.tv_sec;
 
-	printf("\n\nComparison between Linux kernel Time and PTP:");
+		printf("\n\nComparison between Linux kernel Time and PTP:");
 
-	printf("\nCurrent PTP Time: %.24s %.9ld ns",
+		printf("\nCurrent PTP Time: %.24s %.9ld ns",
 			ctime(&ts), net_time.tv_nsec);
 
-	nsec = (int64_t)timespec64_to_ns(&net_time) -
+		nsec = (int64_t)timespec64_to_ns(&net_time) -
 			(int64_t)timespec64_to_ns(&sys_time);
-	ptp_data->new_adj = ns_to_timeval(nsec);
+		ptp_data->new_adj = ns_to_timeval(nsec);
 
-	gettimeofday(&ptp_data->new_adj, NULL);
+		gettimeofday(&ptp_data->new_adj, NULL);
 
-	time_t tp = ptp_data->new_adj.tv_sec;
+		time_t tp = ptp_data->new_adj.tv_sec;
 
-	printf("\nCurrent SYS Time: %.24s %.6ld ns",
-				ctime(&tp), ptp_data->new_adj.tv_usec);
+		printf("\nCurrent SYS Time: %.24s %.6ld ns",
+			ctime(&tp), ptp_data->new_adj.tv_usec);
 
-	printf("\nDelta between PTP and Linux Kernel time:%"PRId64"ns\n",
-				nsec);
+		printf("\nDelta between PTP and Linux Kernel time:%"PRId64"ns\n",
+			nsec);
+	}
+
+	if (mode == MODE_PI) {
+		printf("path delay: %"PRId64"ns\n", ptp_data->path_delay);
+		printf("master offset: %"PRId64"ns\n", ptp_data->master_offset);
+	}
 
 	printf("[Ctrl+C to quit]\n");
 
@@ -403,6 +436,76 @@ parse_fup(struct ptpv2_data_slave_ordinary *ptp_data)
 	ptp_data->tstamp1.tv_sec =
 		((uint64_t)ntohl(origin_tstamp->sec_lsb)) |
 		(((uint64_t)ntohs(origin_tstamp->sec_msb)) << 32);
+}
+
+static double
+pi_sample(struct pi_servo *s, double offset, double local_ts,
+	  enum servo_state *state)
+{
+	double ppb = 0.0;
+
+	switch (s->count) {
+	case 0:
+		s->offset[0] = offset;
+		s->local[0] = local_ts;
+		*state = SERVO_UNLOCKED;
+		s->count = 1;
+		break;
+	case 1:
+		s->offset[1] = offset;
+		s->local[1] = local_ts;
+		*state = SERVO_UNLOCKED;
+		s->count = 2;
+		break;
+	case 2:
+		s->drift += (s->offset[1] - s->offset[0]) /
+			(s->local[1] - s->local[0]);
+		*state = SERVO_UNLOCKED;
+		s->count = 3;
+		break;
+	case 3:
+		*state = SERVO_JUMP;
+		s->count = 4;
+		break;
+	case 4:
+		s->drift += KI * offset;
+		ppb = KP * offset + s->drift;
+		*state = SERVO_LOCKED;
+		break;
+	}
+
+	return ppb;
+}
+
+static void
+ptp_adjust_freq(struct ptpv2_data_slave_ordinary *ptp_data)
+{
+	uint64_t t1_ns, t2_ns;
+	double adj_freq;
+	enum servo_state state = SERVO_UNLOCKED;
+
+	t1_ns = timespec64_to_ns(&ptp_data->tstamp1);
+	t2_ns = timespec64_to_ns(&ptp_data->tstamp2);
+	ptp_data->master_offset = t2_ns - t1_ns - ptp_data->path_delay;
+	if (!ptp_data->path_delay)
+		return;
+
+	adj_freq = pi_sample(ptp_data->servo, ptp_data->master_offset,
+			     t2_ns, &state);
+	switch (state) {
+	case SERVO_UNLOCKED:
+		break;
+	case SERVO_JUMP:
+		rte_eth_timesync_adjust_time(ptp_data->portid,
+					     -ptp_data->master_offset);
+		t1_ns = 0;
+		t2_ns = 0;
+		break;
+	case SERVO_LOCKED:
+		rte_eth_timesync_adjust_fine(ptp_data->portid,
+					     -(long)(adj_freq * 65.536));
+		break;
+	}
 }
 
 static void
@@ -536,6 +639,21 @@ update_kernel_time(void)
 
 }
 
+static void
+clock_path_delay(struct ptpv2_data_slave_ordinary *ptp_data)
+{
+	uint64_t t1_ns, t2_ns, t3_ns, t4_ns;
+	int64_t pd;
+
+	t1_ns = timespec64_to_ns(&ptp_data->tstamp1);
+	t2_ns = timespec64_to_ns(&ptp_data->tstamp2);
+	t3_ns = timespec64_to_ns(&ptp_data->tstamp3);
+	t4_ns = timespec64_to_ns(&ptp_data->tstamp4);
+
+	pd = (t2_ns - t3_ns) + (t4_ns - t1_ns);
+	ptp_data->path_delay = pd / 2;
+}
+
 /*
  * Parse the DELAY_RESP message.
  */
@@ -559,6 +677,9 @@ parse_drsp(struct ptpv2_data_slave_ordinary *ptp_data)
 			ptp_data->tstamp4.tv_sec =
 				((uint64_t)ntohl(rx_tstamp->sec_lsb)) |
 				(((uint64_t)ntohs(rx_tstamp->sec_msb)) << 32);
+
+			if (mode == MODE_PI)
+				clock_path_delay(ptp_data);
 
 			ptp_data->current_ptp_port = ptp_data->portid;
 
@@ -608,11 +729,14 @@ parse_ptp_frames(uint16_t portid, struct rte_mbuf *m) {
 			break;
 		case FOLLOW_UP:
 			parse_fup(&ptp_data);
+			if (mode == MODE_PI)
+				ptp_adjust_freq(&ptp_data);
 			send_delay_request(&ptp_data);
 			break;
 		case DELAY_RESP:
 			parse_drsp(&ptp_data);
-			ptp_adjust_time(&ptp_data);
+			if (mode == MODE_NONE)
+				ptp_adjust_time(&ptp_data);
 			print_clock_info(&ptp_data);
 			break;
 		default:
@@ -709,7 +833,10 @@ ptp_parse_args(int argc, char **argv)
 	char **argvopt;
 	int option_index;
 	char *prgname = argv[0];
-	static struct option lgopts[] = { {NULL, 0, 0, 0} };
+	static struct option lgopts[] = {
+		{"controller", 1, 0, 0},
+		{NULL, 0, 0, 0}
+	};
 
 	argvopt = argv;
 
@@ -736,6 +863,11 @@ ptp_parse_args(int argc, char **argv)
 			}
 
 			ptp_data.kernel_time_set = ret;
+			break;
+		case 0:
+			if (!strcmp(lgopts[option_index].name, "controller"))
+				if (!strcmp(optarg, "pi"))
+					mode = MODE_PI;
 			break;
 
 		default:
@@ -780,6 +912,15 @@ main(int argc, char *argv[])
 		rte_exit(EXIT_FAILURE, "Error with PTP initialization\n");
 	/* >8 End of parsing specific arguments. */
 
+	if (mode == MODE_PI) {
+		ptp_data.servo = malloc(sizeof(*(ptp_data.servo)));
+		if (!ptp_data.servo)
+			rte_exit(EXIT_FAILURE, "no memory for servo\n");
+
+		ptp_data.servo->drift = 0;
+		ptp_data.servo->count = 0;
+	}
+
 	/* Check that there is an even number of ports to send/receive on. */
 	nb_ports = rte_eth_dev_count_avail();
 
@@ -818,6 +959,9 @@ main(int argc, char *argv[])
 
 	/* Call lcore_main on the main core only. */
 	lcore_main();
+
+	if (mode == MODE_PI)
+		free(ptp_data.servo);
 
 	/* clean up the EAL */
 	rte_eal_cleanup();
