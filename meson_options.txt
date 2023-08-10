@@ -22,8 +22,8 @@ option('enable_drivers', type: 'string', value: '', description:
        'Comma-separated list of drivers to build. If unspecified, build all drivers.')
 option('enable_driver_sdk', type: 'boolean', value: false, description:
        'Install headers to build drivers.')
-option('enable_kmods', type: 'boolean', value: false, description:
-       'build kernel modules')
+option('enable_kmods', type: 'boolean', value: true, description:
+       '[Deprecated - will be removed in future release] build kernel modules')
 option('examples', type: 'string', value: '', description:
        'Comma-separated list of examples to build by default')
 option('ibverbs_link', type: 'combo', choices : ['static', 'shared', 'dlopen'], value: 'shared', description:

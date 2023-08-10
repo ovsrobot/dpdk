@@ -21,6 +21,13 @@ Deprecation Notices
   won't be possible anymore through the use of the ``disable_libs`` build option.
   A new build option for deprecated libraries will be introduced instead.
 
+* build: The ``enable_kmods`` option is deprecated and will be removed in a future release.
+  Setting/clearing the option has no impact on the build.
+  Instead, kernel modules will be always built for OS's where out-of-tree kernel modules
+  are required for DPDK operation.
+  Currently, this means that modules will only be build for FreeBSD.
+  No modules are shipped with DPDK for either Linux or Windows.
+
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
 
