@@ -388,6 +388,26 @@ rte_dma_get_dev_id_by_name(const char *name)
 	return dev->data->dev_id;
 }
 
+uint8_t
+rte_dma_get_dev_list_by_driver(const char *name, int16_t *devs, uint8_t nb_devs)
+{
+	uint8_t i, count = 0;
+
+	if (name == NULL)
+		return count;
+
+	for (i = 0; i < dma_devices_max && count < nb_devs; i++) {
+		if (rte_dma_devices[i].state == RTE_DMA_DEV_UNUSED)
+			continue;
+
+		if (strncmp(rte_dma_devices[i].device->driver->name,
+					name, strlen(name) + 1) == 0)
+			devs[count++] = i;
+	}
+
+	return count;
+}
+
 bool
 rte_dma_is_valid(int16_t dev_id)
 {

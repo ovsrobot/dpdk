@@ -195,6 +195,27 @@ int rte_dma_get_dev_id_by_name(const char *name);
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
+ * Get the list of device identifiers for the DMA driver.
+ *
+ * @param name
+ *   DMA driver name.
+ * @param devs
+ *   Output devices identifiers.
+ * @param nb_devs
+ *   Maximal number of devices.
+ *
+ * @return
+ *   Returns number of device identifiers.
+ */
+__rte_experimental
+uint8_t rte_dma_get_dev_list_by_driver(const char *name,
+				       int16_t *devs,
+				       uint8_t nb_devs);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
  * Check whether the dev_id is valid.
  *
  * @param dev_id

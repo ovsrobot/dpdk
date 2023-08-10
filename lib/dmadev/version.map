@@ -7,6 +7,7 @@ EXPERIMENTAL {
 	rte_dma_dev_max;
 	rte_dma_dump;
 	rte_dma_get_dev_id_by_name;
+	rte_dma_get_dev_list_by_driver;
 	rte_dma_info_get;
 	rte_dma_is_valid;
 	rte_dma_next_dev;
