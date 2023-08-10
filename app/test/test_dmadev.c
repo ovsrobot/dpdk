@@ -905,40 +905,83 @@ err:
 }
 
 static int
-test_apis(void)
+test_dma(const char *pmd)
 {
-	const char *pmd = "dma_skeleton";
-	int id;
-	int ret;
-
-	/* attempt to create skeleton instance - ignore errors due to one being already present */
-	rte_vdev_init(pmd, NULL);
-	id = rte_dma_get_dev_id_by_name(pmd);
-	if (id < 0)
-		return TEST_SKIPPED;
-	printf("\n### Test dmadev infrastructure using skeleton driver\n");
-	ret = test_dma_api(id);
-
-	return ret;
-}
-
-static int
-test_dma(void)
-{
+	int16_t devs[UINT8_MAX];
+	uint8_t nb_devs;
 	int i;
-
-	/* basic sanity on dmadev infrastructure */
-	if (test_apis() < 0)
-		ERR_RETURN("Error performing API tests\n");
 
 	if (rte_dma_count_avail() == 0)
 		return TEST_SKIPPED;
 
-	RTE_DMA_FOREACH_DEV(i)
-		if (test_dmadev_instance(i) < 0)
-			ERR_RETURN("Error, test failure for device %d\n", i);
+	nb_devs = rte_dma_get_dev_list_by_driver(pmd, devs, UINT8_MAX);
+	if (nb_devs == 0)
+		ERR_RETURN("Error, No device found for pmd %s\n", pmd);
+
+	printf("\n### Test dmadev infrastructure using %s driver\n", pmd);
+	if (test_dma_api(devs[0]) < 0)
+		ERR_RETURN("Error, test failure for %d device\n", devs[0]);
+
+	for (i = 0; i < nb_devs; i++)
+		if (test_dmadev_instance(devs[i]) < 0)
+			ERR_RETURN("Error, test failure for %d device\n", devs[i]);
 
 	return 0;
 }
 
-REGISTER_TEST_COMMAND(dmadev_autotest, test_dma);
+static int
+test_skeleton_dma(void)
+{
+	const char *pmd = "dma_skeleton";
+
+	/* Attempt to create skeleton instance - ignore errors due to one being already present */
+	rte_vdev_init(pmd, NULL);
+	return test_dma(pmd);
+}
+
+static int
+test_dpaa_dma(void)
+{
+	const char *pmd = "dpaa_qdma";
+
+	return test_dma(pmd);
+}
+
+static int
+test_dpaa2_dma(void)
+{
+	const char *pmd = "dpaa2_qdma";
+
+	return test_dma(pmd);
+}
+
+static int
+test_hisilicon_dma(void)
+{
+	const char *pmd = "dma_hisilicon";
+
+	return test_dma(pmd);
+}
+
+static int
+test_idxd_dma(void)
+{
+	const char *pmd = "dmadev_idxd_pci";
+
+	return test_dma(pmd);
+}
+
+static int
+test_ioat_dma(void)
+{
+	const char *pmd = "dmadev_ioat";
+
+	return test_dma(pmd);
+}
+
+REGISTER_TEST_COMMAND(dmadev_skeleton_autotest, test_skeleton_dma);
+REGISTER_TEST_COMMAND(dmadev_dpaa_autotest, test_dpaa_dma);
+REGISTER_TEST_COMMAND(dmadev_dpaa2_autotest, test_dpaa2_dma);
+REGISTER_TEST_COMMAND(dmadev_hisilicon_autotest, test_hisilicon_dma);
+REGISTER_TEST_COMMAND(dmadev_idxd_autotest, test_idxd_dma);
+REGISTER_TEST_COMMAND(dmadev_ioat_autotest, test_ioat_dma);

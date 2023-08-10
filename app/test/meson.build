@@ -319,7 +319,12 @@ driver_test_names = [
         'cryptodev_sw_snow3g_autotest',
         'cryptodev_sw_zuc_autotest',
         'cryptodev_uadk_autotest',
-        'dmadev_autotest',
+        'dmadev_dpaa_autotest',
+        'dmadev_dpaa2_autotest',
+        'dmadev_hisilicon_autotest',
+        'dmadev_idxd_autotest',
+        'dmadev_ioat_autotest',
+        'dmadev_skeleton_autotest',
 ]
 
 dump_test_names = []
