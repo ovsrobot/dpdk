@@ -979,9 +979,18 @@ test_ioat_dma(void)
 	return test_dma(pmd);
 }
 
+static int
+test_cnxk_dma(void)
+{
+	const char *pmd = "dma_cnxk";
+
+	return test_dma(pmd);
+}
+
 REGISTER_TEST_COMMAND(dmadev_skeleton_autotest, test_skeleton_dma);
 REGISTER_TEST_COMMAND(dmadev_dpaa_autotest, test_dpaa_dma);
 REGISTER_TEST_COMMAND(dmadev_dpaa2_autotest, test_dpaa2_dma);
 REGISTER_TEST_COMMAND(dmadev_hisilicon_autotest, test_hisilicon_dma);
 REGISTER_TEST_COMMAND(dmadev_idxd_autotest, test_idxd_dma);
 REGISTER_TEST_COMMAND(dmadev_ioat_autotest, test_ioat_dma);
+REGISTER_TEST_COMMAND(dmadev_cnxk_autotest, test_cnxk_dma);
