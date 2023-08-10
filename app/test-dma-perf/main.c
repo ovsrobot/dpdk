@@ -86,20 +86,24 @@ output_header(uint32_t case_id, struct test_configure *case_cfg)
 	output_csv(true);
 }
 
-static void
+static int
 run_test_case(struct test_configure *case_cfg)
 {
+	int ret = 0;
+
 	switch (case_cfg->test_type) {
 	case TEST_TYPE_DMA_MEM_COPY:
-		mem_copy_benchmark(case_cfg, true);
+		ret = mem_copy_benchmark(case_cfg, true);
 		break;
 	case TEST_TYPE_CPU_MEM_COPY:
-		mem_copy_benchmark(case_cfg, false);
+		ret = mem_copy_benchmark(case_cfg, false);
 		break;
 	default:
 		printf("Unknown test type. %s\n", case_cfg->test_type_str);
 		break;
 	}
+
+	return ret;
 }
 
 static void
@@ -144,8 +148,10 @@ run_test(uint32_t case_id, struct test_configure *case_cfg)
 		case_cfg->scenario_id++;
 		printf("\nRunning scenario %d\n", case_cfg->scenario_id);
 
-		run_test_case(case_cfg);
-		output_csv(false);
+		if (run_test_case(case_cfg) < 0)
+			printf("\nTest fails! skipping this scenario.\n");
+		else
+			output_csv(false);
 
 		if (var_entry->op == OP_ADD)
 			var_entry->cur += var_entry->incr;
