@@ -72,6 +72,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Solarflare network PMD.**
+
+  * Added support for transfer flow action INDIRECT with subtype VXLAN_ENCAP.
+
 
 Removed Items
 -------------
