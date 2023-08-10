@@ -9,6 +9,8 @@
 #include <rte_test.h>
 #include <rte_dmadev.h>
 
+#include "test.h"
+
 extern int test_dma_api(uint16_t dev_id);
 
 #define DMA_TEST_API_RUN(test) \
@@ -16,9 +18,6 @@ extern int test_dma_api(uint16_t dev_id);
 
 #define TEST_MEMCPY_SIZE	1024
 #define TEST_WAIT_US_VAL	50000
-
-#define TEST_SUCCESS 0
-#define TEST_FAILED  -1
 
 static int16_t test_dev_id;
 static int16_t invalid_dev_id;
@@ -29,6 +28,7 @@ static char *dst;
 static int total;
 static int passed;
 static int failed;
+static int skipped;
 
 static int
 testsuite_setup(int16_t dev_id)
@@ -49,6 +49,7 @@ testsuite_setup(int16_t dev_id)
 	total = 0;
 	passed = 0;
 	failed = 0;
+	skipped = 0;
 
 	/* Set dmadev log level to critical to suppress unnecessary output
 	 * during API tests.
@@ -78,12 +79,22 @@ testsuite_run_test(int (*test)(void), const char *name)
 
 	if (test) {
 		ret = test();
-		if (ret < 0) {
-			failed++;
-			printf("%s Failed\n", name);
-		} else {
+		switch (ret) {
+		case TEST_SUCCESS:
 			passed++;
 			printf("%s Passed\n", name);
+			break;
+		case TEST_FAILED:
+			failed++;
+			printf("%s Failed\n", name);
+			break;
+		case TEST_SKIPPED:
+			skipped++;
+			printf("%s Skipped\n", name);
+			break;
+		default:
+			printf("Invalid test status\n");
+			break;
 		}
 	}
 
@@ -566,6 +577,7 @@ test_dma_api(uint16_t dev_id)
 	printf("Total tests   : %d\n", total);
 	printf("Passed        : %d\n", passed);
 	printf("Failed        : %d\n", failed);
+	printf("Skipped       : %d\n", skipped);
 
 	if (failed)
 		return -1;
