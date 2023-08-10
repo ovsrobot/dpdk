@@ -12,6 +12,7 @@
 #include <rte_dmadev.h>
 #include <rte_malloc.h>
 #include <rte_lcore.h>
+#include <rte_random.h>
 
 #include "main.h"
 
@@ -306,7 +307,7 @@ setup_memory_env(struct test_configure *cfg, struct rte_mbuf ***srcs,
 			struct rte_mbuf ***dsts)
 {
 	unsigned int buf_size = cfg->buf_size.cur;
-	unsigned int nr_sockets;
+	unsigned int nr_sockets, i;
 	uint32_t nr_buf = cfg->nr_buf;
 
 	nr_sockets = rte_socket_count();
@@ -360,10 +361,15 @@ setup_memory_env(struct test_configure *cfg, struct rte_mbuf ***srcs,
 		return -1;
 	}
 
+	for (i = 0; i < nr_buf; i++) {
+		memset(rte_pktmbuf_mtod((*srcs)[i], void *), rte_rand(), buf_size);
+		memset(rte_pktmbuf_mtod((*dsts)[i], void *), 0, buf_size);
+	}
+
 	return 0;
 }
 
-void
+int
 mem_copy_benchmark(struct test_configure *cfg, bool is_dma)
 {
 	uint16_t i;
@@ -381,6 +387,7 @@ mem_copy_benchmark(struct test_configure *cfg, bool is_dma)
 	uint32_t avg_cycles_total;
 	float mops, mops_total;
 	float bandwidth, bandwidth_total;
+	int ret = 0;
 
 	if (setup_memory_env(cfg, &srcs, &dsts) < 0)
 		goto out;
@@ -454,6 +461,16 @@ mem_copy_benchmark(struct test_configure *cfg, bool is_dma)
 
 	rte_eal_mp_wait_lcore();
 
+	for (i = 0; i < cfg->nr_buf; i++) {
+		if (memcmp(rte_pktmbuf_mtod(srcs[i], void *),
+			   rte_pktmbuf_mtod(dsts[i], void *),
+			   cfg->buf_size.cur) != 0) {
+			printf("Copy validation fails for buffer number %d\n", i);
+			ret = -1;
+			goto out;
+		}
+	}
+
 	mops_total = 0;
 	bandwidth_total = 0;
 	avg_cycles_total = 0;
@@ -505,4 +522,6 @@ out:
 			rte_dma_stop(ldm->dma_ids[i]);
 		}
 	}
+
+	return ret;
 }
