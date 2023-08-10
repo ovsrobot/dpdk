@@ -59,6 +59,6 @@ struct test_configure {
 	uint8_t scenario_id;
 };
 
-void mem_copy_benchmark(struct test_configure *cfg, bool is_dma);
+int mem_copy_benchmark(struct test_configure *cfg, bool is_dma);
 
 #endif /* MAIN_H */
