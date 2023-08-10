@@ -18,7 +18,7 @@
 
 #define ERR_RETURN(...) do { print_err(__func__, __LINE__, __VA_ARGS__); return -1; } while (0)
 
-#define COPY_LEN 1024
+#define COPY_LEN 1032
 
 static struct rte_mempool *pool;
 static uint16_t id_count;
@@ -343,6 +343,120 @@ test_stop_start(int16_t dev_id, uint16_t vchan)
 	id_count = id;
 	if (test_single_copy(dev_id, vchan) < 0)
 		ERR_RETURN("Error performing copy after device restart\n");
+	return 0;
+}
+
+static int
+test_enqueue_sg_copies(int16_t dev_id, uint16_t vchan)
+{
+	unsigned int src_len, dst_len, n_sge, len, i, j, k;
+	char orig_src[COPY_LEN], orig_dst[COPY_LEN];
+	struct rte_dma_info info = { 0 };
+	enum rte_dma_status_code status;
+	uint16_t id, n_src, n_dst;
+
+	if (rte_dma_info_get(dev_id, &info) < 0)
+		ERR_RETURN("Failed to get dev info");
+
+	n_sge = RTE_MIN(info.max_sges, TEST_SG_MAX);
+	len = COPY_LEN;
+
+	for (n_src = 1; n_src <= n_sge; n_src++) {
+		src_len = len / n_src;
+		for (n_dst = 1; n_dst <= n_sge; n_dst++) {
+			dst_len = len / n_dst;
+
+			struct rte_dma_sge sg_src[n_sge], sg_dst[n_sge];
+			struct rte_mbuf *src[n_sge], *dst[n_sge];
+			char *src_data[n_sge], *dst_data[n_sge];
+
+			for (i = 0 ; i < COPY_LEN; i++)
+				orig_src[i] = rte_rand() & 0xFF;
+
+			memset(orig_dst, 0, COPY_LEN);
+
+			for (i = 0; i < n_src; i++) {
+				src[i] = rte_pktmbuf_alloc(pool);
+				RTE_ASSERT(src[i] != NULL);
+				sg_src[i].addr = rte_pktmbuf_iova(src[i]);
+				sg_src[i].length = src_len;
+				src_data[i] = rte_pktmbuf_mtod(src[i], char *);
+			}
+
+			for (k = 0; k < n_dst; k++) {
+				dst[k] = rte_pktmbuf_alloc(pool);
+				RTE_ASSERT(dst[k] != NULL);
+				sg_dst[k].addr = rte_pktmbuf_iova(dst[k]);
+				sg_dst[k].length = dst_len;
+				dst_data[k] = rte_pktmbuf_mtod(dst[k], char *);
+			}
+
+			for (i = 0; i < n_src; i++) {
+				for (j = 0; j < src_len; j++)
+					src_data[i][j] = orig_src[i * src_len + j];
+			}
+
+			for (k = 0; k < n_dst; k++)
+				memset(dst_data[k], 0, dst_len);
+
+			printf("\tsrc segs: %2d [seg len: %4d] - dst segs: %2d [seg len : %4d]\n",
+				n_src, src_len, n_dst, dst_len);
+
+			id = rte_dma_copy_sg(dev_id, vchan, sg_src, sg_dst, n_src, n_dst,
+					     RTE_DMA_OP_FLAG_SUBMIT);
+
+			if (id != id_count)
+				ERR_RETURN("Error with rte_dma_copy_sg, got %u, expected %u\n",
+					id, id_count);
+
+			/* Give time for copy to finish, then check it was done */
+			await_hw(dev_id, vchan);
+
+			for (k = 0; k < n_dst; k++)
+				memcpy((&orig_dst[0] + k * dst_len), dst_data[k], dst_len);
+
+			if (memcmp(orig_src, orig_dst, COPY_LEN))
+				ERR_RETURN("Data mismatch");
+
+			/* Verify completion */
+			id = ~id;
+			if (rte_dma_completed(dev_id, vchan, 1, &id, NULL) != 1)
+				ERR_RETURN("Error with rte_dma_completed\n");
+
+			/* Verify expected index(id_count) */
+			if (id != id_count)
+				ERR_RETURN("Error:incorrect job id received, %u [expected %u]\n",
+						id, id_count);
+
+			/* Check for completed and id when no job done */
+			id = ~id;
+			if (rte_dma_completed(dev_id, vchan, 1, &id, NULL) != 0)
+				ERR_RETURN("Error with rte_dma_completed when no job done\n");
+
+			if (id != id_count)
+				ERR_RETURN("Error:incorrect job id received when no job done, %u [expected %u]\n",
+					   id, id_count);
+
+			/* Check for completed_status and id when no job done */
+			id = ~id;
+			if (rte_dma_completed_status(dev_id, vchan, 1, &id, &status) != 0)
+				ERR_RETURN("Error with rte_dma_completed_status when no job done\n");
+			if (id != id_count)
+				ERR_RETURN("Error:incorrect job id received when no job done, %u [expected %u]\n",
+						id, 0);
+
+			for (i = 0; i < n_src; i++)
+				rte_pktmbuf_free(src[i]);
+			for (i = 0; i < n_dst; i++)
+				rte_pktmbuf_free(dst[i]);
+
+			/* Verify that completion returns nothing more */
+			if (rte_dma_completed(dev_id, 0, 1, NULL, NULL) != 0)
+				ERR_RETURN("Error with rte_dma_completed in empty check\n");
+
+			id_count++;
+		}
+	}
 	return 0;
 }
 
@@ -852,7 +966,7 @@ test_dmadev_instance(int16_t dev_id)
 			TEST_RINGSIZE * 2, /* n == num elements */
 			32,  /* cache size */
 			0,   /* priv size */
-			2048, /* data room size */
+			COPY_LEN + RTE_PKTMBUF_HEADROOM, /* data room size */
 			info.numa_node);
 	if (pool == NULL)
 		ERR_RETURN("Error with mempool creation\n");
@@ -863,6 +977,12 @@ test_dmadev_instance(int16_t dev_id)
 
 	/* run tests stopping/starting devices and check jobs still work after restart */
 	if (runtest("stop-start", test_stop_start, 1, dev_id, vchan, CHECK_ERRS) < 0)
+		goto err;
+
+	/* run SG test cases */
+	if ((info.dev_capa & RTE_DMA_CAPA_OPS_COPY_SG) == 0)
+		printf("DMA Dev %u: No SG support, skipping SG copy tests\n", dev_id);
+	else if (runtest("sg_copy", test_enqueue_sg_copies, 1, dev_id, vchan, CHECK_ERRS) < 0)
 		goto err;
 
 	/* run some burst capacity tests */
