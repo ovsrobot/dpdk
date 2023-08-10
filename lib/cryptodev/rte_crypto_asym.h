@@ -69,7 +69,8 @@ enum rte_crypto_curve_id {
 	RTE_CRYPTO_EC_GROUP_SECP224R1 = 21,
 	RTE_CRYPTO_EC_GROUP_SECP256R1 = 23,
 	RTE_CRYPTO_EC_GROUP_SECP384R1 = 24,
-	RTE_CRYPTO_EC_GROUP_SECP521R1 = 25
+	RTE_CRYPTO_EC_GROUP_SECP521R1 = 25,
+	RTE_CRYPTO_EC_GROUP_SM2       = 41,
 };
 
 /**
@@ -383,16 +384,6 @@ struct rte_crypto_ec_xform {
 };
 
 /**
- * Asymmetric SM2 transform data.
- *
- * Structure describing SM2 xform params.
- */
-struct rte_crypto_sm2_xform {
-	enum rte_crypto_auth_algorithm hash;
-	/**< Hash algorithm used in SM2 op. */
-};
-
-/**
  * Operations params for modular operations:
  * exponentiation and multiplicative inverse
  */
@@ -649,9 +640,6 @@ struct rte_crypto_asym_xform {
 		/**< EC xform parameters, used by elliptic curve based
 		 * operations.
 		 */
-
-		struct rte_crypto_sm2_xform sm2;
-		/**< SM2 xform parameters */
 	};
 };
 
