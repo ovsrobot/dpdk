@@ -1,4 +1,4 @@
-EXPERIMENTAL {
+DPDK_24 {
 	global:
 
 	__rte_graph_mcore_dispatch_sched_node_enqueue;
