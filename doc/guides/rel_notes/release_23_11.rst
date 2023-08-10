@@ -72,6 +72,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated CNXK crypto driver.**
+
+  * Added SM2 algorithm support in asymmetric crypto operations.
+
 
 Removed Items
 -------------
