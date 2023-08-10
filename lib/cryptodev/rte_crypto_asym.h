@@ -377,6 +377,9 @@ struct rte_crypto_dsa_xform {
 struct rte_crypto_ec_xform {
 	enum rte_crypto_curve_id curve_id;
 	/**< Pre-defined ec groups */
+
+	enum rte_crypto_auth_algorithm hash;
+	/**< Hash algorithm used in EC op. */
 };
 
 /**
