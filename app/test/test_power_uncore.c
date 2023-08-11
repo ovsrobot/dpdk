@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2022 Intel Corporation
+ * Copyright(c) 2023 AMD Corporation
  */
 
 #include "test.h"
@@ -7,14 +8,14 @@
 #ifndef RTE_LIB_POWER
 
 static int
-test_power_intel_uncore(void)
+test_power_uncore(void)
 {
 	printf("Power management library not supported, skipping test\n");
 	return TEST_SKIPPED;
 }
 
 #else
-#include <rte_power_intel_uncore.h>
+#include <rte_power_uncore.h>
 #include <power_common.h>
 
 #define MAX_UNCORE_FREQS 32
@@ -156,6 +157,32 @@ check_power_uncore_freq_min(void)
 }
 
 static int
+check_power_uncore_get_freqs(void)
+{
+	int ret;
+	uint32_t freqs[RTE_MAX_UNCORE_FREQS];
+
+	/* Successfully get uncore freq */
+	ret = rte_power_uncore_freqs(VALID_PKG, VALID_DIE, freqs, RTE_MAX_UNCORE_FREQS);
+	if (ret < 0) {
+		printf("Failed to get uncore frequencies for pkg %u die %u\n",
+							VALID_PKG, VALID_DIE);
+		return -1;
+	}
+
+	/* Unsuccessful Test */
+	ret = rte_power_uncore_freqs(INVALID_PKG, INVALID_DIE, freqs,
+							RTE_MAX_UNCORE_FREQS);
+	if (ret >= 0) {
+		printf("Unexpectedly got invalid frequencies for pkg %u die %u\n",
+							INVALID_PKG, INVALID_DIE);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
 check_power_uncore_get_num_freqs(void)
 {
 	int ret;
@@ -172,7 +199,7 @@ check_power_uncore_get_num_freqs(void)
 	ret = rte_power_uncore_get_num_freqs(INVALID_PKG, INVALID_DIE);
 	if (ret >= 0) {
 		printf("Unexpectedly got number of invalid frequencies for pkg %u die %u\n",
-							INVALID_PKG, INVALID_DIE);
+								INVALID_PKG, INVALID_DIE);
 		return -1;
 	}
 
@@ -242,7 +269,7 @@ check_power_uncore_exit(void)
 }
 
 static int
-test_power_intel_uncore(void)
+test_power_uncore(void)
 {
 	int ret;
 
@@ -274,7 +301,11 @@ test_power_intel_uncore(void)
 	if (ret < 0)
 		goto fail_all;
 
-	ret = check_power_uncore_get_num_freqs();
+	ret = check_power_uncore_get_freqs();
+	if (ret < 0)
+		goto fail_all;
+
+	ret = check_power_uncore_get_freqs();
 	if (ret < 0)
 		goto fail_all;
 
@@ -298,4 +329,4 @@ fail_all:
 }
 #endif
 
-REGISTER_TEST_COMMAND(power_intel_uncore_autotest, test_power_intel_uncore);
+REGISTER_TEST_COMMAND(power_uncore_autotest, test_power_uncore);

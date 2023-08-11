@@ -99,7 +99,7 @@ test_sources = files(
         'test_power.c',
         'test_power_cpufreq.c',
         'test_power_kvm_vm.c',
-        'test_power_intel_uncore.c',
+        'test_power_uncore.c',
         'test_prefetch.c',
         'test_rand_perf.c',
         'test_rawdev.c',
