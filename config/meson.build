@@ -27,6 +27,14 @@ dpdk_conf.set('RTE_EXEC_ENV_' + exec_env.to_upper(), 1)
 is_ms_compiler = is_windows and (cc.get_id() == 'msvc')
 is_ms_linker = is_windows and (cc.get_id() == 'clang' or is_ms_compiler)
 
+# MS compiler (except x86) does not support inline assembly
+if is_ms_compiler
+    dpdk_conf.set('_CRT_SECURE_NO_WARNINGS', 1)
+    dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
+    add_project_arguments('/experimental:c11atomics', language: 'c')
+    add_project_arguments('/d1experimental:typeof', language: 'c')
+endif
+
 # set the major version, which might be used by drivers and libraries
 # depending on the configuration options
 pver = meson.project_version().split('.')
