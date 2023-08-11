@@ -72,6 +72,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Cryptodev Scheduler PMD.**
+
+  Added support for security protocols through the ``rte_security`` API callbacks.
 
 Removed Items
 -------------
