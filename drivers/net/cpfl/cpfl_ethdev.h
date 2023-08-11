@@ -22,6 +22,7 @@
 #include "cpfl_logs.h"
 #include "cpfl_cpchnl.h"
 #include "cpfl_representor.h"
+#include "cpfl_controlq.h"
 
 /* Currently, backend supports up to 8 vports */
 #define CPFL_MAX_VPORT_NUM	8
@@ -88,6 +89,10 @@
 #define IMC_MBX_EFD_ID	0
 
 #define CPFL_FLOW_FILE_LEN 100
+
+#define CPFL_RX_CFGQ_NUM	4
+#define CPFL_TX_CFGQ_NUM	4
+#define CPFL_CFGQ_NUM		8
 
 struct cpfl_vport_param {
 	struct cpfl_adapter_ext *adapter;
@@ -216,10 +221,19 @@ struct cpfl_adapter_ext {
 
 	rte_spinlock_t repr_lock;
 	struct rte_hash *repr_whitelist_hash;
+
+	/* ctrl vport and ctrl queues. */
+	struct cpfl_vport ctrl_vport;
+	uint8_t ctrl_vport_recv_info[IDPF_DFLT_MBX_BUF_SIZE];
+	struct idpf_ctlq_info *ctlqp[CPFL_CFGQ_NUM];
+	struct cpfl_ctlq_create_info cfgq_info[CPFL_CFGQ_NUM];
 };
 
 TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
 
+int cpfl_vc_create_ctrl_vport(struct cpfl_adapter_ext *adapter);
+int cpfl_config_ctlq_rx(struct cpfl_adapter_ext *adapter);
+int cpfl_config_ctlq_tx(struct cpfl_adapter_ext *adapter);
 int cpfl_vport_info_create(struct cpfl_adapter_ext *adapter,
 			   struct cpfl_vport_id *vport_identity,
 			   struct cpchnl2_vport_info *vport_info);
