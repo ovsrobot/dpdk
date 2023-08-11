@@ -36,9 +36,9 @@
  *   lock multiple times.
  */
 
-rte_mcslock_t *p_ml;
-rte_mcslock_t *p_ml_try;
-rte_mcslock_t *p_ml_perf;
+rte_mcslock_t * __rte_atomic p_ml;
+rte_mcslock_t * __rte_atomic p_ml_try;
+rte_mcslock_t * __rte_atomic p_ml_perf;
 
 static unsigned int count;
 
