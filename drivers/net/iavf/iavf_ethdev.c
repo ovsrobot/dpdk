@@ -37,6 +37,7 @@
 #define IAVF_PROTO_XTR_ARG         "proto_xtr"
 #define IAVF_QUANTA_SIZE_ARG       "quanta_size"
 #define IAVF_RESET_WATCHDOG_ARG    "watchdog_period"
+#define IAVF_ENABLE_AUTO_RESET_ARG "enable_auto_reset"
 
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
@@ -45,6 +46,7 @@ static const char * const iavf_valid_args[] = {
 	IAVF_PROTO_XTR_ARG,
 	IAVF_QUANTA_SIZE_ARG,
 	IAVF_RESET_WATCHDOG_ARG,
+	IAVF_ENABLE_AUTO_RESET_ARG,
 	NULL
 };
 
@@ -305,8 +307,8 @@ iavf_dev_watchdog(void *cb_arg)
 			adapter->vf.vf_reset = true;
 			adapter->vf.link_up = false;
 
-			rte_eth_dev_callback_process(adapter->vf.eth_dev,
-				RTE_ETH_EVENT_INTR_RESET, NULL);
+			iavf_dev_event_post(adapter->vf.eth_dev, RTE_ETH_EVENT_INTR_RESET,
+				 NULL, 0);
 		}
 	}
 
@@ -2211,6 +2213,26 @@ parse_u16(__rte_unused const char *key, const char *value, void *args)
 }
 
 static int
+parse_bool(const char *key, const char *value, void *args)
+{
+	int *i = (int *)args;
+	char *end;
+	int num;
+
+	num = strtoul(value, &end, 10);
+
+	if (num != 0 && num != 1) {
+		PMD_DRV_LOG(WARNING, "invalid value:\"%s\" for key:\"%s\", "
+			"value must be 0 or 1",
+			value, key);
+		return -1;
+	}
+
+	*i = num;
+	return 0;
+}
+
+static int
 iavf_parse_watchdog_period(__rte_unused const char *key, const char *value, void *args)
 {
 	int *num = (int *)args;
@@ -2277,6 +2299,11 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 		ret = -EINVAL;
 		goto bail;
 	}
+
+	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_AUTO_RESET_ARG,
+				 &parse_bool, &ad->devargs.enable_auto_reset);
+	if (ret)
+		goto bail;
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -2877,6 +2904,152 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 		return ret;
 
 	return iavf_dev_init(dev);
+}
+
+static bool
+iavf_is_reset_detected(struct iavf_adapter *adapter)
+{
+	struct iavf_hw *hw = &adapter->hw;
+	int i;
+
+	/* poll until we see the reset actually happen */
+	for (i = 0; i < IAVF_RESET_WAIT_CNT; i++) {
+		if (iavf_is_reset(hw))
+			return true;
+		usleep_range(5000, 10000);
+	}
+
+	return false;
+}
+
+static int
+iavf_uninit_hw(struct rte_eth_dev *dev, struct iavf_hw *hw)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = dev->intr_handle;
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	struct iavf_adapter *adapter = dev->data->dev_private;
+
+	iavf_reset_queues(dev);
+
+	/* Disable the interrupt for Rx */
+	rte_intr_efd_disable(intr_handle);
+	/* Rx interrupt vector mapping free */
+	rte_intr_vec_list_free(intr_handle);
+
+	adapter->stopped = 1;
+	dev->data->dev_started = 0;
+
+	adapter->closed = true;
+
+	/* free iAVF security device context all related resources */
+	iavf_security_ctx_destroy(adapter);
+
+	iavf_flow_flush(dev, NULL);
+	iavf_flow_uninit(adapter);
+
+	if (vf->promisc_unicast_enabled || vf->promisc_multicast_enabled)
+		iavf_config_promisc(adapter, false, false);
+
+	iavf_shutdown_adminq(hw);
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_WB_ON_ITR) {
+		/* disable uio intr before callback unregister */
+		rte_intr_disable(intr_handle);
+
+		/* unregister callback func from eal lib */
+		rte_intr_callback_unregister(intr_handle,
+					     iavf_dev_interrupt_handler, dev);
+	}
+	iavf_disable_irq0(hw);
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_QOS)
+		iavf_tm_conf_uninit(dev);
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_RSS_PF) {
+		if (vf->rss_lut) {
+			rte_free(vf->rss_lut);
+			vf->rss_lut = NULL;
+		}
+		if (vf->rss_key) {
+			rte_free(vf->rss_key);
+			vf->rss_key = NULL;
+		}
+	}
+
+	rte_free(vf->vf_res);
+	vf->vsi_res = NULL;
+	vf->vf_res = NULL;
+
+	rte_free(vf->aq_resp);
+	vf->aq_resp = NULL;
+
+	if (vf->vf_reset && !rte_pci_set_bus_master(pci_dev, true))
+		vf->vf_reset = false;
+
+	/* disable watchdog */
+	iavf_dev_watchdog_disable(adapter);
+
+	return 0;
+}
+
+static int
+iavf_reset_hw(struct rte_eth_dev *dev, struct iavf_hw *hw)
+{
+	iavf_uninit_hw(dev, hw);
+
+	return iavf_dev_init(dev);
+}
+
+/*
+ * Handle hardware reset
+ */
+int
+iavf_handle_hw_reset(struct rte_eth_dev *dev)
+{
+	struct iavf_adapter *adapter = dev->data->dev_private;
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	int ret;
+
+	ret = iavf_is_reset_detected(adapter);
+	if (!ret) {
+		PMD_DRV_LOG(ERR, "Did not detect vf reset!\n");
+		return ret;
+	}
+
+	ret = iavf_check_vf_reset_done(hw);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Wait too long for reset done!\n");
+		return ret;
+	}
+
+	ret = iavf_reset_hw(dev, hw);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to reset vf!\n");
+		return ret;
+	}
+
+	/*
+	 * This may return a failure due to the vf may not able to get
+	 * a response from the pf.
+	 */
+	ret = iavf_dev_configure(dev);
+	if (ret)
+		PMD_DRV_LOG(ERR, "Failed to configure dev!");
+
+	iavf_dev_xstats_reset(dev);
+
+	/* start the device */
+	ret = iavf_dev_start(dev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to start dev!");
+		return ret;
+	}
+
+	dev->data->dev_started = 1;
+	vf->vf_reset = false;
+
+	return 0;
 }
 
 static int

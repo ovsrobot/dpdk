@@ -650,6 +650,7 @@ int iavf_dev_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 int iavf_dev_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 int iavf_dev_tx_done_cleanup(void *txq, uint32_t free_cnt);
 void iavf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
+void iavf_reset_queues(struct rte_eth_dev *dev);
 void iavf_stop_queues(struct rte_eth_dev *dev);
 uint16_t iavf_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		       uint16_t nb_pkts);

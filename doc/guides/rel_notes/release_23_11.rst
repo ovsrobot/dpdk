@@ -72,6 +72,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel iavf driver.**
+
+  Added support for iavf auto-reset.
 
 Removed Items
 -------------
