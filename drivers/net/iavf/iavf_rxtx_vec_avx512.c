@@ -45,13 +45,20 @@ _iavf_recv_raw_pkts_vec_avx512(struct iavf_rx_queue *rxq,
 			       bool offload)
 {
 #ifdef IAVF_RX_PTYPE_OFFLOAD
-	const uint32_t *type_table = rxq->vsi->adapter->ptype_tbl;
+	const uint32_t *type_table;
 #endif
 
 	const __m256i mbuf_init = _mm256_set_epi64x(0, 0, 0,
 						    rxq->mbuf_initializer);
 	struct rte_mbuf **sw_ring = &rxq->sw_ring[rxq->rx_tail];
 	volatile union iavf_rx_desc *rxdp = rxq->rx_ring + rxq->rx_tail;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
+#ifdef IAVF_RX_PTYPE_OFFLOAD
+	type_table = rxq->vsi->adapter->ptype_tbl;
+#endif
 
 	rte_prefetch0(rxdp);
 
@@ -588,12 +595,12 @@ _iavf_recv_raw_pkts_vec_avx512_flex_rxd(struct iavf_rx_queue *rxq,
 					uint8_t *split_packet,
 					bool offload)
 {
-	struct iavf_adapter *adapter = rxq->vsi->adapter;
+	struct iavf_adapter *adapter;
 #ifndef RTE_LIBRTE_IAVF_16BYTE_RX_DESC
-	uint64_t offloads = adapter->dev_data->dev_conf.rxmode.offloads;
+	uint64_t offloads;
 #endif
 #ifdef IAVF_RX_PTYPE_OFFLOAD
-	const uint32_t *type_table = adapter->ptype_tbl;
+	const uint32_t *type_table;
 #endif
 
 	const __m256i mbuf_init = _mm256_set_epi64x(0, 0, 0,
@@ -601,6 +608,17 @@ _iavf_recv_raw_pkts_vec_avx512_flex_rxd(struct iavf_rx_queue *rxq,
 	struct rte_mbuf **sw_ring = &rxq->sw_ring[rxq->rx_tail];
 	volatile union iavf_rx_flex_desc *rxdp =
 		(union iavf_rx_flex_desc *)rxq->rx_ring + rxq->rx_tail;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
+	adapter = rxq->vsi->adapter;
+#ifndef RTE_LIBRTE_IAVF_16BYTE_RX_DESC
+	offloads = adapter->dev_data->dev_conf.rxmode.offloads;
+#endif
+#ifdef IAVF_RX_PTYPE_OFFLOAD
+	type_table = adapter->ptype_tbl;
+#endif
 
 	rte_prefetch0(rxdp);
 
@@ -1700,6 +1718,10 @@ iavf_recv_scattered_pkts_vec_avx512_cmn(void *rx_queue, struct rte_mbuf **rx_pkt
 					uint16_t nb_pkts, bool offload)
 {
 	uint16_t retval = 0;
+	struct iavf_rx_queue *rxq = rx_queue;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
 
 	while (nb_pkts > IAVF_VPMD_RX_MAX_BURST) {
 		uint16_t burst = iavf_recv_scattered_burst_vec_avx512(rx_queue,
@@ -2303,6 +2325,9 @@ iavf_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 	uint64_t flags = IAVF_TX_DESC_CMD_EOP | IAVF_TX_DESC_CMD_ICRC;
 	uint64_t rs = IAVF_TX_DESC_CMD_RS | flags;
 
+	if (!txq->vsi || txq->vsi->adapter->no_poll)
+		return 0;
+
 	if (txq->nb_free < txq->free_thresh)
 		iavf_tx_free_bufs_avx512(txq);
 
@@ -2370,6 +2395,9 @@ iavf_xmit_fixed_burst_vec_avx512_ctx(void *tx_queue, struct rte_mbuf **tx_pkts,
 	uint64_t flags = IAVF_TX_DESC_CMD_EOP | IAVF_TX_DESC_CMD_ICRC;
 	uint64_t rs = IAVF_TX_DESC_CMD_RS | flags;
 
+	if (!txq->vsi || txq->vsi->adapter->no_poll)
+		return 0;
+
 	if (txq->nb_free < txq->free_thresh)
 		iavf_tx_free_bufs_avx512(txq);
 
@@ -2431,6 +2459,9 @@ iavf_xmit_pkts_vec_avx512_cmn(void *tx_queue, struct rte_mbuf **tx_pkts,
 {
 	uint16_t nb_tx = 0;
 	struct iavf_tx_queue *txq = (struct iavf_tx_queue *)tx_queue;
+
+	if (!txq->vsi || txq->vsi->adapter->no_poll)
+		return 0;
 
 	while (nb_pkts) {
 		uint16_t ret, num;
@@ -2497,6 +2528,9 @@ iavf_xmit_pkts_vec_avx512_ctx_cmn(void *tx_queue, struct rte_mbuf **tx_pkts,
 {
 	uint16_t nb_tx = 0;
 	struct iavf_tx_queue *txq = (struct iavf_tx_queue *)tx_queue;
+
+	if (!txq->vsi || txq->vsi->adapter->no_poll)
+		return 0;
 
 	while (nb_pkts) {
 		uint16_t ret, num;

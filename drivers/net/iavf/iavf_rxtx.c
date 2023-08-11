@@ -770,6 +770,7 @@ iavf_dev_tx_queue_setup(struct rte_eth_dev *dev,
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf =
 		IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	struct iavf_vsi *vsi = &vf->vsi;
 	struct iavf_tx_queue *txq;
 	const struct rte_memzone *mz;
 	uint32_t ring_size;
@@ -843,6 +844,7 @@ iavf_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	txq->port_id = dev->data->port_id;
 	txq->offloads = offloads;
 	txq->tx_deferred_start = tx_conf->tx_deferred_start;
+	txq->vsi = vsi;
 
 	if (iavf_ipsec_crypto_supported(adapter))
 		txq->ipsec_crypto_pkt_md_offset =
@@ -1406,9 +1408,12 @@ iavf_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 	uint64_t pkt_flags;
 	const uint32_t *ptype_tbl;
 
+	rxq = rx_queue;
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
 	nb_rx = 0;
 	nb_hold = 0;
-	rxq = rx_queue;
 	rx_id = rxq->rx_tail;
 	rx_ring = rxq->rx_ring;
 	ptype_tbl = rxq->vsi->adapter->ptype_tbl;
@@ -1515,9 +1520,12 @@ iavf_recv_pkts_flex_rxd(void *rx_queue,
 	const uint32_t *ptype_tbl;
 	uint64_t ts_ns;
 
+	rxq = rx_queue;
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
 	nb_rx = 0;
 	nb_hold = 0;
-	rxq = rx_queue;
 	rx_id = rxq->rx_tail;
 	rx_ring = rxq->rx_ring;
 	ptype_tbl = rxq->vsi->adapter->ptype_tbl;
@@ -1640,6 +1648,9 @@ iavf_recv_scattered_pkts_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 	volatile union iavf_rx_desc *rx_ring = rxq->rx_ring;
 	volatile union iavf_rx_flex_desc *rxdp;
 	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
 
 	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
 		uint64_t sw_cur_time = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
@@ -1818,6 +1829,9 @@ iavf_recv_scattered_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	volatile union iavf_rx_desc *rxdp;
 	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
 
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
 	while (nb_rx < nb_pkts) {
 		rxdp = &rx_ring[rx_id];
 		qword1 = rte_le_to_cpu_64(rxdp->wb.qword1.status_error_len);
@@ -1973,6 +1987,9 @@ iavf_rx_scan_hw_ring_flex_rxd(struct iavf_rx_queue *rxq,
 	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
 	uint64_t ts_ns;
 
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
+
 	rxdp = (volatile union iavf_rx_flex_desc *)&rxq->rx_ring[rxq->rx_tail];
 	rxep = &rxq->sw_ring[rxq->rx_tail];
 
@@ -2103,6 +2120,9 @@ iavf_rx_scan_hw_ring(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts, uint1
 	int32_t nb_staged = 0;
 	uint64_t pkt_flags;
 	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
 
 	rxdp = &rxq->rx_ring[rxq->rx_tail];
 	rxep = &rxq->sw_ring[rxq->rx_tail];
@@ -2280,6 +2300,9 @@ rx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 {
 	struct iavf_rx_queue *rxq = (struct iavf_rx_queue *)rx_queue;
 	uint16_t nb_rx = 0;
+
+	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
+		return 0;
 
 	if (!nb_pkts)
 		return 0;
@@ -2768,6 +2791,8 @@ iavf_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	uint16_t idx;
 	uint16_t slen;
 
+	if (!txq->vsi || txq->vsi->adapter->no_poll)
+		return 0;
 
 	/* Check if the descriptor ring needs to be cleaned. */
 	if (txq->nb_free < txq->free_thresh)

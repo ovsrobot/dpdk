@@ -101,6 +101,9 @@ For more detail on SR-IOV, please refer to the following documents:
     Set ``devargs`` parameter ``watchdog_period`` to adjust the watchdog period in microseconds, or set it to 0 to disable the watchdog,
     for example, ``-a 18:01.0,watchdog_period=5000`` or ``-a 18:01.0,watchdog_period=0``.
 
+    Enable vf no-poll-on-link-down by setting the ``devargs`` parameter like ``-a 18:01.0,no_poll_on_link_down=1`` when IAVF is backed
+    by an Intel® E810 device or an Intel® 700 Series Ethernet device.
+
 The PCIE host-interface of Intel Ethernet Switch FM10000 Series VF infrastructure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
