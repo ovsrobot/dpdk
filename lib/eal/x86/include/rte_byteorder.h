@@ -18,6 +18,7 @@ extern "C" {
 #define RTE_BYTE_ORDER RTE_LITTLE_ENDIAN
 #endif
 
+#ifndef RTE_TOOLCHAIN_MSVC
 /*
  * An architecture-optimized byte swap for a 16-bit value.
  *
@@ -69,6 +70,7 @@ static inline uint32_t rte_arch_bswap32(uint32_t _x)
 				   rte_arch_bswap16(x)))
 #endif
 #endif
+#endif
 
 #define rte_cpu_to_le_16(x) (x)
 #define rte_cpu_to_le_32(x) (x)
@@ -86,10 +88,12 @@ static inline uint32_t rte_arch_bswap32(uint32_t _x)
 #define rte_be_to_cpu_32(x) rte_bswap32(x)
 #define rte_be_to_cpu_64(x) rte_bswap64(x)
 
+#ifndef RTE_TOOLCHAIN_MSVC
 #ifdef RTE_ARCH_I686
 #include "rte_byteorder_32.h"
 #else
 #include "rte_byteorder_64.h"
+#endif
 #endif
 
 #ifdef __cplusplus
