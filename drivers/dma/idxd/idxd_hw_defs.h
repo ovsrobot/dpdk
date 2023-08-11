@@ -9,18 +9,24 @@
  * Defines used in the data path for interacting with IDXD hardware.
  */
 #define IDXD_CMD_OP_SHIFT 24
+#define IDXD_CMD_SRC_IDPTE_IDX_SHIFT 32
+#define IDXD_CMD_DST_IDPTE_IDX_SHIFT 48
 enum rte_idxd_ops {
 	idxd_op_nop = 0,
 	idxd_op_batch,
 	idxd_op_drain,
 	idxd_op_memmove,
-	idxd_op_fill
+	idxd_op_fill,
+	idxd_op_inter_dom = 0x20
 };
 
 #define IDXD_FLAG_FENCE                 (1 << 0)
 #define IDXD_FLAG_COMPLETION_ADDR_VALID (1 << 2)
 #define IDXD_FLAG_REQUEST_COMPLETION    (1 << 3)
+#define IDXD_INTERDOM_SUPPORT           (1 << 6)
 #define IDXD_FLAG_CACHE_CONTROL         (1 << 8)
+#define IDXD_FLAG_SRC_ALT_PASID         (1 << 16)
+#define IDXD_FLAG_DST_ALT_PASID         (1 << 17)
 
 /**
  * Hardware descriptor used by DSA hardware, for both bursts and
@@ -42,8 +48,10 @@ struct idxd_hw_desc {
 
 	uint16_t intr_handle; /* completion interrupt handle */
 
-	/* remaining 26 bytes are reserved */
-	uint16_t reserved[13];
+	/* next 22 bytes are reserved */
+	uint16_t reserved[11];
+	uint16_t src_pasid_hndl;  /* pasid handle for source */
+	uint16_t dest_pasid_hndl; /* pasid handle for destination */
 } __rte_aligned(64);
 
 #define IDXD_COMP_STATUS_INCOMPLETE        0

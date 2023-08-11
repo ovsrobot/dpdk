@@ -126,6 +126,10 @@ destination PASID to perform the operation. When `src_handle` value is set,
 Currently, source and destination handles are opaque values the user has to get
 from private API's of those DMA device drivers that support the operation.
 
+List of drivers supporting inter-domain operations:
+
+- Intel(R) IDXD driver
+
 
 Querying Device Statistics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

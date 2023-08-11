@@ -70,6 +70,7 @@ struct idxd_dmadev {
 	struct rte_dma_dev *dmadev;
 	struct rte_dma_vchan_conf qcfg;
 	uint8_t sva_support;
+	uint8_t	inter_dom_support;
 	uint8_t qid;
 
 	union {
@@ -92,8 +93,14 @@ int idxd_info_get(const struct rte_dma_dev *dev, struct rte_dma_info *dev_info,
 		uint32_t size);
 int idxd_enqueue_copy(void *dev_private, uint16_t qid, rte_iova_t src,
 		rte_iova_t dst, unsigned int length, uint64_t flags);
+int idxd_enqueue_copy_inter_dom(void *dev_private, uint16_t qid, rte_iova_t src,
+		rte_iova_t dst, unsigned int length,
+		uint16_t src_idpte_id, uint16_t dst_idpte_id, uint64_t flags);
 int idxd_enqueue_fill(void *dev_private, uint16_t qid, uint64_t pattern,
 		rte_iova_t dst, unsigned int length, uint64_t flags);
+int idxd_enqueue_fill_inter_dom(void *dev_private, uint16_t qid, uint64_t pattern,
+		rte_iova_t dst, unsigned int length, uint16_t dst_idpte_id,
+		uint64_t flags);
 int idxd_submit(void *dev_private, uint16_t qid);
 uint16_t idxd_completed(void *dev_private, uint16_t qid, uint16_t max_ops,
 		uint16_t *last_idx, bool *has_error);

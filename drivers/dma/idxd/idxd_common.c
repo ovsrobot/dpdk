@@ -41,7 +41,57 @@ __idxd_movdir64b(volatile void *dst, const struct idxd_hw_desc *src)
 
 __use_avx2
 static __rte_always_inline void
-__submit(struct idxd_dmadev *idxd)
+__idxd_enqcmd(volatile void *dst, const struct idxd_hw_desc *src)
+{
+	asm volatile (".byte 0xf2, 0x0f, 0x38, 0xf8, 0x02"
+			:
+			: "a" (dst), "d" (src)
+			: "memory");
+}
+
+static inline uint32_t
+__idxd_get_inter_dom_flags(const enum rte_idxd_ops op)
+{
+	switch (op) {
+	case idxd_op_memmove:
+		return IDXD_FLAG_SRC_ALT_PASID | IDXD_FLAG_DST_ALT_PASID;
+	case idxd_op_fill:
+		return IDXD_FLAG_DST_ALT_PASID;
+	default:
+		/* no flags needed */
+		return 0;
+	}
+}
+
+static inline uint32_t
+__idxd_get_op_flags(enum rte_idxd_ops op, uint64_t flags, bool inter_dom)
+{
+	uint32_t op_flags = op;
+	uint32_t flag_mask = IDXD_FLAG_FENCE;
+	if (inter_dom) {
+		flag_mask |=  __idxd_get_inter_dom_flags(op);
+		op_flags |= idxd_op_inter_dom;
+	}
+	op_flags = op_flags << IDXD_CMD_OP_SHIFT;
+	return op_flags | (flags & flag_mask) | IDXD_FLAG_CACHE_CONTROL;
+}
+
+static inline uint64_t
+__idxd_get_alt_pasid(uint64_t flags, uint64_t src_idpte_id,
+		uint64_t dst_idpte_id)
+{
+	/* hardware is intolerant to inactive fields being non-zero */
+	if (!(flags & RTE_DMA_OP_FLAG_SRC_HANDLE))
+		src_idpte_id = 0;
+	if (!(flags & RTE_DMA_OP_FLAG_DST_HANDLE))
+		dst_idpte_id = 0;
+	return (src_idpte_id << IDXD_CMD_DST_IDPTE_IDX_SHIFT) |
+			(dst_idpte_id << IDXD_CMD_DST_IDPTE_IDX_SHIFT);
+}
+
+__use_avx2
+static __rte_always_inline void
+__submit(struct idxd_dmadev *idxd, const bool use_enqcmd)
 {
 	rte_prefetch1(&idxd->batch_comp_ring[idxd->batch_idx_read]);
 
@@ -59,7 +109,10 @@ __submit(struct idxd_dmadev *idxd)
 		desc.completion = comp_addr;
 		desc.op_flags |= IDXD_FLAG_REQUEST_COMPLETION;
 		_mm_sfence(); /* fence before writing desc to device */
-		__idxd_movdir64b(idxd->portal, &desc);
+		if (use_enqcmd)
+			__idxd_enqcmd(idxd->portal, &desc);
+		else
+			__idxd_movdir64b(idxd->portal, &desc);
 	} else {
 		const struct idxd_hw_desc batch_desc = {
 				.op_flags = (idxd_op_batch << IDXD_CMD_OP_SHIFT) |
@@ -71,7 +124,10 @@ __submit(struct idxd_dmadev *idxd)
 				.size = idxd->batch_size,
 		};
 		_mm_sfence(); /* fence before writing desc to device */
-		__idxd_movdir64b(idxd->portal, &batch_desc);
+		if (use_enqcmd)
+			__idxd_enqcmd(idxd->portal, &batch_desc);
+		else
+			__idxd_movdir64b(idxd->portal, &batch_desc);
 	}
 
 	if (++idxd->batch_idx_write > idxd->max_batches)
@@ -93,7 +149,9 @@ __idxd_write_desc(struct idxd_dmadev *idxd,
 		const rte_iova_t src,
 		const rte_iova_t dst,
 		const uint32_t size,
-		const uint32_t flags)
+		const uint32_t flags,
+		const uint64_t alt_pasid,
+		const bool use_enqcmd)
 {
 	uint16_t mask = idxd->desc_ring_mask;
 	uint16_t job_id = idxd->batch_start + idxd->batch_size;
@@ -113,14 +171,14 @@ __idxd_write_desc(struct idxd_dmadev *idxd,
 	_mm256_store_si256((void *)&idxd->desc_ring[write_idx],
 			_mm256_set_epi64x(dst, src, comp_addr, op_flags64));
 	_mm256_store_si256((void *)&idxd->desc_ring[write_idx].size,
-			_mm256_set_epi64x(0, 0, 0, size));
+			_mm256_set_epi64x(alt_pasid, 0, 0, size));
 
 	idxd->batch_size++;
 
 	rte_prefetch0_write(&idxd->desc_ring[write_idx + 1]);
 
 	if (flags & RTE_DMA_OP_FLAG_SUBMIT)
-		__submit(idxd);
+		__submit(idxd, use_enqcmd);
 
 	return job_id;
 }
@@ -134,10 +192,26 @@ idxd_enqueue_copy(void *dev_private, uint16_t qid __rte_unused, rte_iova_t src,
 	 * but check it at compile time to be sure.
 	 */
 	RTE_BUILD_BUG_ON(RTE_DMA_OP_FLAG_FENCE != IDXD_FLAG_FENCE);
-	uint32_t memmove = (idxd_op_memmove << IDXD_CMD_OP_SHIFT) |
-			IDXD_FLAG_CACHE_CONTROL | (flags & IDXD_FLAG_FENCE);
-	return __idxd_write_desc(dev_private, memmove, src, dst, length,
-			flags);
+	uint32_t op_flags = __idxd_get_op_flags(idxd_op_memmove, flags, false);
+	return __idxd_write_desc(dev_private, op_flags, src, dst, length,
+			flags, 0, false);
+}
+
+__use_avx2
+int
+idxd_enqueue_copy_inter_dom(void *dev_private, uint16_t qid __rte_unused, rte_iova_t src,
+		rte_iova_t dst, unsigned int length,
+		uint16_t src_idpte_id, uint16_t dst_idpte_id, uint64_t flags)
+{
+	/* we can take advantage of the fact that the fence flag in dmadev and
+	 * DSA are the same, but check it at compile time to be sure.
+	 */
+	RTE_BUILD_BUG_ON(RTE_DMA_OP_FLAG_FENCE != IDXD_FLAG_FENCE);
+	uint32_t op_flags = __idxd_get_op_flags(idxd_op_memmove, flags, true);
+	uint64_t alt_pasid = __idxd_get_alt_pasid(flags, src_idpte_id, dst_idpte_id);
+	/* currently, we require inter-domain copies to use enqcmd */
+	return __idxd_write_desc(dev_private, op_flags, src, dst, length,
+			flags, alt_pasid, true);
 }
 
 __use_avx2
@@ -145,17 +219,28 @@ int
 idxd_enqueue_fill(void *dev_private, uint16_t qid __rte_unused, uint64_t pattern,
 		rte_iova_t dst, unsigned int length, uint64_t flags)
 {
-	uint32_t fill = (idxd_op_fill << IDXD_CMD_OP_SHIFT) |
-			IDXD_FLAG_CACHE_CONTROL | (flags & IDXD_FLAG_FENCE);
-	return __idxd_write_desc(dev_private, fill, pattern, dst, length,
-			flags);
+	uint32_t op_flags = __idxd_get_op_flags(idxd_op_fill, flags, false);
+	return __idxd_write_desc(dev_private, op_flags, pattern, dst, length,
+			flags, 0, false);
+}
+
+__use_avx2
+int
+idxd_enqueue_fill_inter_dom(void *dev_private, uint16_t qid __rte_unused,
+		uint64_t pattern, rte_iova_t dst, unsigned int length,
+		uint16_t dst_idpte_id, uint64_t flags)
+{
+	uint32_t op_flags = __idxd_get_op_flags(idxd_op_fill, flags, true);
+	uint64_t alt_pasid = __idxd_get_alt_pasid(flags, 0, dst_idpte_id);
+	return __idxd_write_desc(dev_private, op_flags, pattern, dst, length,
+			flags, alt_pasid, true);
 }
 
 __use_avx2
 int
 idxd_submit(void *dev_private, uint16_t qid __rte_unused)
 {
-	__submit(dev_private);
+	__submit(dev_private, false);
 	return 0;
 }
 
@@ -490,6 +575,12 @@ idxd_info_get(const struct rte_dma_dev *dev, struct rte_dma_info *info, uint32_t
 	};
 	if (idxd->sva_support)
 		info->dev_capa |= RTE_DMA_CAPA_SVA;
+
+	if (idxd->inter_dom_support) {
+		info->dev_capa |= RTE_DMA_CAPA_OPS_INTER_DOM;
+		info->controller_id = idxd->u.bus.dsa_id;
+	}
+
 	return 0;
 }
 
@@ -600,6 +691,8 @@ idxd_dmadev_create(const char *name, struct rte_device *dev,
 	dmadev->fp_obj->completed_status = idxd_completed_status;
 	dmadev->fp_obj->burst_capacity = idxd_burst_capacity;
 	dmadev->fp_obj->dev_private = dmadev->data->dev_private;
+	dmadev->fp_obj->copy_inter_dom = idxd_enqueue_copy_inter_dom;
+	dmadev->fp_obj->fill_inter_dom = idxd_enqueue_fill_inter_dom;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;

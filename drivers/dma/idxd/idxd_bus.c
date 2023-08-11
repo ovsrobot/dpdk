@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <libgen.h>
+#include <inttypes.h>
 
 #include <bus_driver.h>
 #include <dev_driver.h>
@@ -188,6 +189,31 @@ read_wq_int(struct rte_dsa_device *dev, const char *filename,
 }
 
 static int
+read_gen_cap(struct rte_dsa_device *dev, uint64_t *gen_cap)
+{
+	char sysfs_node[PATH_MAX];
+	FILE *f;
+
+	snprintf(sysfs_node, sizeof(sysfs_node), "%s/dsa%d/gen_cap",
+		dsa_get_sysfs_path(), dev->addr.device_id);
+	f = fopen(sysfs_node, "r");
+	if (f == NULL) {
+		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
+				__func__, sysfs_node, strerror(errno));
+		return -1;
+	}
+
+	if (fscanf(f, "%" PRIx64, gen_cap) != 1) {
+		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
+				__func__, sysfs_node, strerror(errno));
+		return -1;
+	}
+
+	fclose(f);
+	return 0;
+}
+
+static int
 read_device_int(struct rte_dsa_device *dev, const char *filename,
 		int *value)
 {
@@ -219,6 +245,7 @@ idxd_probe_dsa(struct rte_dsa_device *dev)
 {
 	struct idxd_dmadev idxd = {0};
 	int ret = 0;
+	uint64_t gen_cap;
 
 	IDXD_PMD_INFO("Probing device %s on numa node %d",
 			dev->wq_name, dev->device.numa_node);
@@ -231,6 +258,14 @@ idxd_probe_dsa(struct rte_dsa_device *dev)
 	idxd.qid = dev->addr.wq_id;
 	idxd.u.bus.dsa_id = dev->addr.device_id;
 	idxd.sva_support = 1;
+
+	ret = read_gen_cap(dev, &gen_cap);
+	if (ret) {
+		IDXD_PMD_ERR("Failed to read gen_cap for %s", dev->wq_name);
+		return ret;
+	}
+	if (gen_cap & IDXD_INTERDOM_SUPPORT)
+		idxd.inter_dom_support = 1;
 
 	idxd.portal = idxd_bus_mmap_wq(dev);
 	if (idxd.portal == NULL) {
