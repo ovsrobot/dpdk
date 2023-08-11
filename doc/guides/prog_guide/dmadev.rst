@@ -108,6 +108,24 @@ completed operations along with the status of each operation (filled into the
 completed operation's ``ring_idx`` which could help user track operations within
 their own application-defined rings.
 
+.. _dmadev_inter_dom:
+
+
+Inter-domain operations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+For some devices, inter-domain DMA operations may be supported (indicated by
+`RTE_DMA_CAPA_OPS_INTER_DOM` flag being set in DMA device capabilities flag). An
+inter-domain operation (such as `rte_dma_copy_inter_dom`) is similar to regular
+DMA device operation, except the user also needs to specify source and
+destination handles, which the hardware will then use to get source and/or
+destination PASID to perform the operation. When `src_handle` value is set,
+`RTE_DMA_OP_FLAG_SRC_HANDLE` op flag must also be set. Similarly, when
+`dst_handle` value is set, `RTE_DMA_OP_FLAG_DST_HANDLE` op flag must be set.
+
+Currently, source and destination handles are opaque values the user has to get
+from private API's of those DMA device drivers that support the operation.
+
 
 Querying Device Statistics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

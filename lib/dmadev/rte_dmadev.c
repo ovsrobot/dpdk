@@ -425,6 +425,8 @@ rte_dma_info_get(int16_t dev_id, struct rte_dma_info *dev_info)
 	if (*dev->dev_ops->dev_info_get == NULL)
 		return -ENOTSUP;
 	memset(dev_info, 0, sizeof(struct rte_dma_info));
+	/* set to -1 by default, as other drivers may not implement this */
+	dev_info->controller_id = -1;
 	ret = (*dev->dev_ops->dev_info_get)(dev, dev_info,
 					    sizeof(struct rte_dma_info));
 	if (ret != 0)

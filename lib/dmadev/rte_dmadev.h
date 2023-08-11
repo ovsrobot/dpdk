@@ -278,6 +278,8 @@ int16_t rte_dma_next_dev(int16_t start_dev_id);
 #define RTE_DMA_CAPA_OPS_COPY_SG	RTE_BIT64(33)
 /** Support fill operation. */
 #define RTE_DMA_CAPA_OPS_FILL		RTE_BIT64(34)
+/** Support inter-domain operation. */
+#define RTE_DMA_CAPA_OPS_INTER_DOM	RTE_BIT64(48)
 /**@}*/
 
 /**
@@ -307,6 +309,8 @@ struct rte_dma_info {
 	int16_t numa_node;
 	/** Number of virtual DMA channel configured. */
 	uint16_t nb_vchans;
+	/** Controller ID, -1 if unknown */
+	int16_t controller_id;
 };
 
 /**
@@ -819,6 +823,16 @@ struct rte_dma_sge {
  * capability bit for this, driver should not return error if this flag was set.
  */
 #define RTE_DMA_OP_FLAG_LLC     RTE_BIT64(2)
+/** Source handle is set.
+ * Used for inter-domain operations to indicate source handle value will be
+ * meaningful and can be used by hardware to learn source PASID.
+ */
+#define RTE_DMA_OP_FLAG_SRC_HANDLE RTE_BIT64(16)
+/** Destination handle is set.
+ * Used for inter-domain operations to indicate destination handle value will be
+ * meaningful and can be used by hardware to learn destination PASID.
+ */
+#define RTE_DMA_OP_FLAG_DST_HANDLE RTE_BIT64(17)
 /**@}*/
 
 /**
@@ -1140,6 +1154,125 @@ rte_dma_burst_capacity(int16_t dev_id, uint16_t vchan)
 #endif
 	return (*obj->burst_capacity)(obj->dev_private, vchan);
 }
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue an inter-domain copy operation.
+ *
+ * This queues up an inter-domain copy operation to be performed by hardware, if
+ * the 'flags' parameter contains RTE_DMA_OP_FLAG_SUBMIT then trigger doorbell
+ * to begin this operation, otherwise do not trigger doorbell.
+ *
+ * The source and destination handle parameters are arbitrary opaque values,
+ * currently meant to be provided by private device driver API's. If the source
+ * handle value is meaningful, RTE_DMA_OP_FLAG_SRC_HANDLE flag must be set.
+ * Similarly, if the destination handle value is meaningful,
+ * RTE_DMA_OP_FLAG_DST_HANDLE flag must be set. Source and destination handle
+ * values are meant to provide information to the hardware about source and/or
+ * destination PASID for the inter-domain copy operation.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param vchan
+ *   The identifier of virtual DMA channel.
+ * @param src
+ *   The address of the source buffer (if `src_handle` is set, source address
+ *   will be in address space of process referred to by source handle).
+ * @param dst
+ *   The address of the destination buffer (if `dst_handle` is set, destination
+ *   address will be in address space of process referred to by destination
+ *   handle).
+ * @param length
+ *   The length of the data to be copied.
+ * @param src_handle
+ *   Source handle value (if used, RTE_DMA_OP_FLAG_SRC_HANDLE flag must be set).
+ * @param dst_handle
+ *   Destination handle value (if used, RTE_DMA_OP_FLAG_DST_HANDLE flag must be
+ *   set).
+ * @param flags
+ *   Flags for this operation.
+ * @return
+ *   - 0..UINT16_MAX: index of enqueued job.
+ *   - -ENOSPC: if no space left to enqueue.
+ *   - other values < 0 on failure.
+ */
+__rte_experimental
+static inline int
+rte_dma_copy_inter_dom(int16_t dev_id, uint16_t vchan, rte_iova_t src,
+		rte_iova_t dst, uint32_t length, uint16_t src_handle,
+		uint16_t dst_handle, uint64_t flags)
+{
+	struct rte_dma_fp_object *obj = &rte_dma_fp_objs[dev_id];
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dma_is_valid(dev_id) || length == 0)
+		return -EINVAL;
+	if (*obj->copy_inter_dom == NULL)
+		return -ENOTSUP;
+#endif
+	return (*obj->copy_inter_dom)(obj->dev_private, vchan, src, dst, length,
+			src_handle, dst_handle, flags);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue an inter-domain fill operation.
+ *
+ * This queues up an inter-domain fill operation to be performed by hardware, if
+ * the 'flags' parameter contains RTE_DMA_OP_FLAG_SUBMIT then trigger doorbell
+ * to begin this operation, otherwise do not trigger doorbell.
+ *
+ * The source and destination handle parameters are arbitrary opaque values,
+ * currently meant to be provided by private device driver API's. If the source
+ * handle value is meaningful, RTE_DMA_OP_FLAG_SRC_HANDLE flag must be set.
+ * Similarly, if the destination handle value is meaningful,
+ * RTE_DMA_OP_FLAG_DST_HANDLE flag must be set. Source and destination handle
+ * values are meant to provide information to the hardware about source and/or
+ * destination PASID for the inter-domain fill operation.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param vchan
+ *   The identifier of virtual DMA channel.
+ * @param pattern
+ *   The pattern to populate the destination buffer with.
+ * @param dst
+ *   The address of the destination buffer.
+ * @param length
+ *   The length of the destination buffer.
+ * @param dst_handle
+ *   Destination handle value (if used, RTE_DMA_OP_FLAG_DST_HANDLE flag must be
+ *   set).
+ * @param flags
+ *   Flags for this operation.
+ * @return
+ *   - 0..UINT16_MAX: index of enqueued job.
+ *   - -ENOSPC: if no space left to enqueue.
+ *   - other values < 0 on failure.
+ */
+__rte_experimental
+static inline int
+rte_dma_fill_inter_dom(int16_t dev_id, uint16_t vchan, uint64_t pattern,
+		rte_iova_t dst, uint32_t length, uint16_t dst_handle,
+		uint64_t flags)
+{
+	struct rte_dma_fp_object *obj = &rte_dma_fp_objs[dev_id];
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dma_is_valid(dev_id) || length == 0)
+		return -EINVAL;
+	if (*obj->fill_inter_dom == NULL)
+		return -ENOTSUP;
+#endif
+
+	return (*obj->fill_inter_dom)(obj->dev_private, vchan, pattern, dst,
+			length, dst_handle, flags);
+}
+
 
 #ifdef __cplusplus
 }
