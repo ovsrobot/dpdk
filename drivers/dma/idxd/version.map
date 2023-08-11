@@ -1,0 +1,11 @@
+DPDK_23 {
+	local: *;
+};
+
+
+EXPERIMENTAL {
+	global:
+
+	rte_idxd_window_create;
+	rte_idxd_window_attach;
+};

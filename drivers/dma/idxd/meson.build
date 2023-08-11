@@ -22,5 +22,10 @@ sources = files(
 )
 
 if is_linux
-    sources += files('idxd_bus.c')
+    sources += files(
+    'idxd_bus.c',
+    'idxd_inter_dom.c',
+)
 endif
+
+headers = files('rte_idxd_inter_dom.h')

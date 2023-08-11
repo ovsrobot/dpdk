@@ -225,3 +225,55 @@ which operation failed and kick off the device to continue processing operations
    if (error){
       status_count = rte_dma_completed_status(dev_id, vchan, COMP_BURST_SZ, &idx, status);
    }
+
+Performing Inter-Domain operations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Refer to the :ref:`Enqueue / Dequeue APIs <dmadev_enqueue_dequeue>` section of the dmadev library
+documentation for details on operation enqueue, submission and completion API usage.
+
+Refer to the :ref:`Inter-domain operations <dmadev_inter_dom>` section of the dmadev library
+documentation for details on inter-domain operations.
+
+Intel(R) IDXD currently supports the following inter-domain operations:
+
+* Copy operation
+* Fill operation
+
+To use these operations with the IDXD driver, the following program flow should
+be adhered to:
+
+* Process A that wishes to share its memory with others, shall call
+  ``rte_idxd_window_create()``, which will return a file descriptor
+* Process A is to send above mentioned file descriptor to any recipient process
+  (usually over IPC) that wishes to attach to that window
+* Process B, after receiving above mentioned file descriptor from process A over
+  IPC, shall call ``rte_idxd_window_attach()`` and receive an inter-pasid handle
+* Process B shall use this handle as an argument for inter-domain operations
+  using DMA device API
+
+The controller ID parameter for create/attach functions in this case would be
+the controller ID of configured DSA2 devices (located under ``rte_dma_info``
+structure), but which can also be read from ``accel-config`` tool, or from the
+DSA2 work queue name (e.g. work queue ``wq0.3`` would have ``0`` as its
+controller ID).
+
+The ``rte_idxd_window_create()`` call will accept a ``flags`` argument, which
+can contain the following bits:
+
+* ``RTE_IDXD_WIN_FLAGS_PROT_READ`` - allow other process to read from memory
+  region to be shared
+  - In this case, the remote process will be using the resulting inter-pasid
+    handle as source handle for inter-domain DMA operations (and set the
+    ``RTE_DMA_OP_FLAG_SRC_HANDLE`` DMA operation flag)
+* ``RTE_IDXD_WIN_FLAGS_PROT_WRITE`` - allow other process to write into memory
+  region to be shared
+  - In this case, the remote process will be using the resulting inter-pasid
+    handle as destination handle for inter-domain DMA operations (and set the
+    ``RTE_DMA_OP_FLAG_DST_HANDLE`` DMA operation flag)
+* ``RTE_IDXD_WIN_FLAGS_WIN_CHECK`` - if this flag is not set, the remote process
+  will be allowed unrestricted access to entire memory space of the owner
+  process
+* ``RTE_IDXD_WIN_FLAGS_OFFSET_MODE`` - addresses for DMA operations will have to
+  be specified as offsets from base address of the memory region to be shared
+* ``RTE_IDXD_WIN_FLAGS_TYPE_SAMS`` - enable multi-submitter mode.
