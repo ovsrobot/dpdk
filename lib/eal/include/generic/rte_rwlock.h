@@ -32,6 +32,7 @@ extern "C" {
 #include <rte_common.h>
 #include <rte_lock_annotations.h>
 #include <rte_pause.h>
+#include <rte_stdatomic.h>
 
 /**
  * The rte_rwlock_t type.

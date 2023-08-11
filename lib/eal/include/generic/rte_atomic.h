@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <rte_compat.h>
 #include <rte_common.h>
+#include <rte_stdatomic.h>
 
 #ifdef __DOXYGEN__
 
