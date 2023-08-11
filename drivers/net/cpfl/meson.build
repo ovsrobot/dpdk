@@ -41,6 +41,9 @@ endif
 
 js_dep = dependency('json-c', required: false, method : 'pkg-config')
 if js_dep.found()
+    sources += files(
+        'cpfl_flow_parser.c',
+    )
     dpdk_conf.set('CPFL_FLOW_JSON_SUPPORT', true)
     ext_deps += js_dep
 endif
