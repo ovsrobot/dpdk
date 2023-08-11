@@ -139,8 +139,9 @@ rte_cpu_get_flag_enabled(enum rte_cpu_flag_t feature)
 {
 	const struct feature_entry *feat;
 	hwcap_registers_t regs = {0};
+	unsigned int num_flags = RTE_DIM(rte_cpu_feature_table);
 
-	if (feature >= RTE_CPUFLAG_NUMFLAGS)
+	if ((unsigned int)feature >= num_flags)
 		return -ENOENT;
 
 	feat = &rte_cpu_feature_table[feature];
@@ -154,7 +155,9 @@ rte_cpu_get_flag_enabled(enum rte_cpu_flag_t feature)
 const char *
 rte_cpu_get_flag_name(enum rte_cpu_flag_t feature)
 {
-	if (feature >= RTE_CPUFLAG_NUMFLAGS)
+	unsigned int num_flags = RTE_DIM(rte_cpu_feature_table);
+
+	if ((unsigned int)feature >= num_flags)
 		return NULL;
 	return rte_cpu_feature_table[feature].name;
 }
