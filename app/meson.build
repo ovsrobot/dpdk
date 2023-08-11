@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017-2019 Intel Corporation
 
+if is_ms_compiler
+    subdir_done()
+endif
+
 disable_apps = ',' + get_option('disable_apps')
 disable_apps = run_command(list_dir_globs, disable_apps, check: true).stdout().split()
 
@@ -37,8 +41,6 @@ default_ldflags = []
 if get_option('default_library') == 'static' and not is_windows
     default_ldflags += ['-Wl,--export-dynamic']
 endif
-
-enabled_apps = [] # used to print summary at the end
 
 foreach app:apps
     name = app
