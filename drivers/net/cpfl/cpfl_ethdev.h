@@ -87,6 +87,8 @@
 #define ACC_LCE_ID	15
 #define IMC_MBX_EFD_ID	0
 
+#define CPFL_FLOW_FILE_LEN 100
+
 struct cpfl_vport_param {
 	struct cpfl_adapter_ext *adapter;
 	uint16_t devarg_id; /* arg id from user */
@@ -100,6 +102,7 @@ struct cpfl_devargs {
 	uint16_t req_vport_nb;
 	uint8_t repr_args_num;
 	struct rte_eth_devargs repr_args[CPFL_REPR_ARG_NUM_MAX];
+	char flow_parser[CPFL_FLOW_FILE_LEN];
 };
 
 struct p2p_queue_chunks_info {

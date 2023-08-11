@@ -21,6 +21,7 @@
 #define CPFL_TX_SINGLE_Q	"tx_single"
 #define CPFL_RX_SINGLE_Q	"rx_single"
 #define CPFL_VPORT		"vport"
+#define CPFL_FLOW_PARSER	"flow_parser"
 
 rte_spinlock_t cpfl_adapter_lock;
 /* A list for all adapters, one adapter matches one PCI device */
@@ -32,6 +33,9 @@ static const char * const cpfl_valid_args_first[] = {
 	CPFL_TX_SINGLE_Q,
 	CPFL_RX_SINGLE_Q,
 	CPFL_VPORT,
+#ifdef CPFL_FLOW_JSON_SUPPORT
+	CPFL_FLOW_PARSER,
+#endif
 	NULL
 };
 
@@ -1671,6 +1675,19 @@ done:
 	return 0;
 }
 
+#ifdef CPFL_FLOW_JSON_SUPPORT
+static int
+parse_parser_file(const char *key, const char *value, void *args)
+{
+	char *name = args;
+
+	PMD_DRV_LOG(DEBUG, "value:\"%s\" for key:\"%s\"", value, key);
+	strlcpy(name, value, CPFL_FLOW_FILE_LEN);
+
+	return 0;
+}
+#endif
+
 static int
 cpfl_parse_devargs(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter, bool first)
 {
@@ -1719,7 +1736,18 @@ cpfl_parse_devargs(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adap
 				 &adapter->base.is_rx_singleq);
 	if (ret != 0)
 		goto fail;
-
+#ifdef CPFL_FLOW_JSON_SUPPORT
+	if (rte_kvargs_get(kvlist, CPFL_FLOW_PARSER)) {
+		ret = rte_kvargs_process(kvlist, CPFL_FLOW_PARSER,
+					 &parse_parser_file, cpfl_args->flow_parser);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to parser flow_parser, ret: %d", ret);
+			goto fail;
+		}
+	} else {
+		cpfl_args->flow_parser[0] = '\0';
+	}
+#endif
 fail:
 	rte_kvargs_free(kvlist);
 	return ret;
