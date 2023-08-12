@@ -29,6 +29,16 @@ for cpu in range(max_cpus + 1):
         core_map[key] = []
     core_map[key].append(cpu)
 
+
+print("")
+print(format("=" * (55 + len(base_path))))
+print(" for newer CPU, that supports sub Socket Numa & L3 Numa clustering, please use")
+print(format("=" * (55 + len(base_path))))
+print("  - lstopo-no-graphics  --no-io -.ascii (CPU Mapping)")
+print("  - lstopo-no-graphics  -.ascii --whole-io --no-caches (IO device Mapping)")
+print(format("=" * (55 + len(base_path))))
+print("")
+
 print(format("=" * (47 + len(base_path))))
 print("Core and Socket Information (as reported by '{}')".format(base_path))
 print("{}\n".format("=" * (47 + len(base_path))))
