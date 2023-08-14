@@ -1793,4 +1793,4 @@ test_lpm6(void)
 	return global_status;
 }
 
-REGISTER_TEST_COMMAND(lpm6_autotest, test_lpm6);
+REGISTER_FAST_TEST(lpm6_autotest, True, True, test_lpm6);

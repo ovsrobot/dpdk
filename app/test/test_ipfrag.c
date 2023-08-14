@@ -510,4 +510,4 @@ test_ipfrag(void)
 }
 
 
-REGISTER_TEST_COMMAND(ipfrag_autotest, test_ipfrag);
+REGISTER_FAST_TEST(ipfrag_autotest, False, True, test_ipfrag);
