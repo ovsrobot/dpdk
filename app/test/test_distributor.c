@@ -952,4 +952,4 @@ err:
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-REGISTER_TEST_COMMAND(distributor_autotest, test_distributor);
+REGISTER_FAST_TEST(distributor_autotest, False, True, test_distributor);

@@ -53,4 +53,4 @@ test_user_delay_us(void)
 	return 0;
 }
 
-REGISTER_TEST_COMMAND(user_delay_us, test_user_delay_us);
+REGISTER_FAST_TEST(user_delay_us, True, True, test_user_delay_us);

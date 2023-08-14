@@ -1644,15 +1644,15 @@ test_memory_flags(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-REGISTER_TEST_COMMAND(eal_flags_c_opt_autotest, test_missing_c_flag);
-REGISTER_TEST_COMMAND(eal_flags_main_opt_autotest, test_main_lcore_flag);
-REGISTER_TEST_COMMAND(eal_flags_n_opt_autotest, test_invalid_n_flag);
-REGISTER_TEST_COMMAND(eal_flags_hpet_autotest, test_no_hpet_flag);
-REGISTER_TEST_COMMAND(eal_flags_no_huge_autotest, test_no_huge_flag);
-REGISTER_TEST_COMMAND(eal_flags_a_opt_autotest, test_allow_flag);
-REGISTER_TEST_COMMAND(eal_flags_b_opt_autotest, test_invalid_b_flag);
-REGISTER_TEST_COMMAND(eal_flags_vdev_opt_autotest, test_invalid_vdev_flag);
-REGISTER_TEST_COMMAND(eal_flags_r_opt_autotest, test_invalid_r_flag);
-REGISTER_TEST_COMMAND(eal_flags_mem_autotest, test_memory_flags);
-REGISTER_TEST_COMMAND(eal_flags_file_prefix_autotest, test_file_prefix);
-REGISTER_TEST_COMMAND(eal_flags_misc_autotest, test_misc_flags);
+REGISTER_FAST_TEST(eal_flags_c_opt_autotest, False, False, test_missing_c_flag);
+REGISTER_FAST_TEST(eal_flags_main_opt_autotest, False, False, test_main_lcore_flag);
+REGISTER_FAST_TEST(eal_flags_n_opt_autotest, False, False, test_invalid_n_flag);
+REGISTER_FAST_TEST(eal_flags_hpet_autotest, False, False, test_no_hpet_flag);
+REGISTER_FAST_TEST(eal_flags_no_huge_autotest, False, False, test_no_huge_flag);
+REGISTER_FAST_TEST(eal_flags_a_opt_autotest, False, False, test_allow_flag);
+REGISTER_FAST_TEST(eal_flags_b_opt_autotest, False, False, test_invalid_b_flag);
+REGISTER_FAST_TEST(eal_flags_vdev_opt_autotest, False, False, test_invalid_vdev_flag);
+REGISTER_FAST_TEST(eal_flags_r_opt_autotest, False, False, test_invalid_r_flag);
+REGISTER_FAST_TEST(eal_flags_mem_autotest, False, False, test_memory_flags);
+REGISTER_FAST_TEST(eal_flags_file_prefix_autotest, False, False, test_file_prefix);
+REGISTER_FAST_TEST(eal_flags_misc_autotest, False, False, test_misc_flags);
