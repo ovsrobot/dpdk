@@ -1,0 +1,38 @@
+From 9f7c57d4fb2bb562b183f56e467853293c55a13e Mon Sep 17 00:00:00 2001
+From: Igor de Paula <igordptx@gmail.com>
+Date: Fri, 11 Aug 2023 16:18:38 +0300
+Subject: [PATCH] doc: add note about VMXNET3 on AMD with ESXI
+
+This patch notes the requirement for ESXI version 7.0.1 or higher when using IOVA as VA.
+Signed-off-by: Igor de Paula igordptx@gmail.com
+---
+ .mailmap                    | 1 +
+ doc/guides/nics/vmxnet3.rst | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/.mailmap b/.mailmap
+index 864d33ee46..d408f11a97 100644
+--- a/.mailmap
++++ b/.mailmap
+@@ -1638,3 +1638,4 @@ Ziye Yang <ziye.yang@intel.com>
+ Zoltan Kiss <zoltan.kiss@schaman.hu> <zoltan.kiss@linaro.org>
+ Zorik Machulsky <zorik@amazon.com>
+ Zyta Szpak <zyta@marvell.com> <zr@semihalf.com> <zyta.szpak@semihalf.com>
++Igor de Paula <igordptx@gmail.com>
+\ No newline at end of file
+diff --git a/doc/guides/nics/vmxnet3.rst b/doc/guides/nics/vmxnet3.rst
+index db242cd642..3f498b905d 100644
+--- a/doc/guides/nics/vmxnet3.rst
++++ b/doc/guides/nics/vmxnet3.rst
+@@ -100,6 +100,8 @@ There are several options available for filtering packets at VMXNET3 device leve
+ 
+     *   Multicast with Multicast Filter table is not supported.
+ 
++    *   IOVA as VA on AMD hosts is supported from ESXi 7.0 U1 onwards.
++
+ Prerequisites
+ -------------
+ 
+-- 
+2.34.1
+
