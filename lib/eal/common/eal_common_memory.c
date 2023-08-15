@@ -41,6 +41,7 @@
 
 static void *next_baseaddr;
 static uint64_t system_page_sz;
+static bool memory_initialized;
 
 #define MAX_MMAP_WITH_DEFINED_ADDR_TRIES 5
 void *
@@ -1084,6 +1085,9 @@ rte_eal_memory_init(void)
 		eal_get_internal_configuration();
 	int retval;
 
+	if (memory_initialized)
+		return 0;
+
 	RTE_LOG(DEBUG, EAL, "Setting up physically contiguous memory...\n");
 
 	if (rte_eal_memseg_init() < 0)
@@ -1101,6 +1105,7 @@ rte_eal_memory_init(void)
 	if (internal_conf->no_shconf == 0 && rte_eal_memdevice_init() < 0)
 		goto fail;
 
+	memory_initialized = true;
 	return 0;
 fail:
 	return -1;

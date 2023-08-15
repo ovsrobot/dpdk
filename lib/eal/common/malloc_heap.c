@@ -31,6 +31,8 @@
 #define CONST_MAX(a, b) (a > b ? a : b) /* RTE_MAX is not a constant */
 #define EXTERNAL_HEAP_MIN_SOCKET_ID (CONST_MAX((1 << 8), RTE_MAX_NUMA_NODES))
 
+static bool heap_initialized;
+
 static unsigned
 check_hugepage_sz(unsigned flags, uint64_t hugepage_sz)
 {
@@ -1410,6 +1412,9 @@ rte_eal_malloc_heap_init(void)
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
+	if (heap_initialized)
+		return 0;
+
 	if (internal_conf->match_allocations)
 		RTE_LOG(DEBUG, EAL, "Hugepages will be freed exactly as allocated.\n");
 
@@ -1448,6 +1453,8 @@ int rte_eal_malloc_heap_populate(void)
 	/* secondary process does not need to initialize anything */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	heap_initialized = true;
 
 	/* add all IOVA-contiguous areas to the heap */
 	return rte_memseg_contig_walk(malloc_add_seg, NULL);
