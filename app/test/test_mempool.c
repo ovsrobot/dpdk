@@ -1043,4 +1043,4 @@ err:
 	return ret;
 }
 
-REGISTER_TEST_COMMAND(mempool_autotest, test_mempool);
+REGISTER_FAST_TEST(mempool_autotest, False, True, test_mempool);
