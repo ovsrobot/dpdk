@@ -279,4 +279,4 @@ test_threads(void)
 	return unit_test_suite_runner(&threads_test_suite);
 }
 
-REGISTER_TEST_COMMAND(threads_autotest, test_threads);
+REGISTER_FAST_TEST(threads_autotest, True, True, test_threads);
