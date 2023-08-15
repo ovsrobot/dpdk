@@ -74,4 +74,25 @@ if [ -n "$empty_maps" ] ; then
     ret=1
 fi
 
+find_bad_format_maps ()
+{
+    for map in $@ ; do
+        cat $map | awk '
+            /^(DPDK_[0-9]*|EXPERIMENTAL|INTERNAL) {$/ { next; } # start of a section
+            /^};$/ { next; } # end of a section
+            /^$/ { next; } # empty line
+            /^\t(global:|local: \*;)$/ { next; } # qualifiers
+            /^\t[a-zA-Z_0-9]*;( # WINDOWS_NO_EXPORT)?$/ { next; } # symbols
+            /^\t# added in [0-9]*\.[0-9]*$/ { next; } # version comments
+            { print $0; }' || echo $map
+    done
+}
+
+bad_format_maps=$(find_bad_format_maps $@)
+if [ -n "$bad_format_maps" ] ; then
+    echo "Found badly formatted maps:"
+    echo "$bad_format_maps"
+    ret=1
+fi
+
 exit $ret
