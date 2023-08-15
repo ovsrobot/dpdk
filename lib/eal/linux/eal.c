@@ -79,6 +79,8 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 int rte_cycles_vmware_tsc_map;
 
 
+static uint32_t run_once;
+
 int
 eal_clean_runtime_dir(void)
 {
@@ -505,6 +507,7 @@ eal_parse_socket_arg(char *strval, volatile uint64_t *socket_arg)
 		socket_arg[i] = val;
 	}
 
+	__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 	return 0;
 }
 
@@ -967,7 +970,6 @@ int
 rte_eal_init(int argc, char **argv)
 {
 	int i, fctret, ret;
-	static uint32_t run_once;
 	uint32_t has_run = 0;
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_MAX_THREAD_NAME_LEN];

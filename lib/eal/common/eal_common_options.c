@@ -1981,6 +1981,13 @@ compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
 		memcpy(cpuset, &lcore_config[rte_get_main_lcore()].cpuset,
 			sizeof(*cpuset));
 	}
+
+	/* Reinitialize solib_list */
+	TAILQ_INIT(&solib_list);
+
+	main_lcore_parsed = 0;
+	mem_parsed = 0;
+	core_parsed = 0;
 }
 
 int
