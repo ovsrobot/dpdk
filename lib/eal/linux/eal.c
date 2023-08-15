@@ -80,6 +80,7 @@ int rte_cycles_vmware_tsc_map;
 
 
 static uint32_t run_once;
+static bool worker_initialized;
 
 int
 eal_clean_runtime_dir(void)
@@ -1235,41 +1236,44 @@ rte_eal_init(int argc, char **argv)
 		config->main_lcore, (uintptr_t)pthread_self(), cpuset,
 		ret == 0 ? "" : "...");
 
-	RTE_LCORE_FOREACH_WORKER(i) {
+	if (worker_initialized == false) {
+		RTE_LCORE_FOREACH_WORKER(i) {
 
 		/*
 		 * create communication pipes between main thread
 		 * and children
 		 */
-		if (pipe(lcore_config[i].pipe_main2worker) < 0)
-			rte_panic("Cannot create pipe\n");
-		if (pipe(lcore_config[i].pipe_worker2main) < 0)
-			rte_panic("Cannot create pipe\n");
+			if (pipe(lcore_config[i].pipe_main2worker) < 0)
+				rte_panic("Cannot create pipe\n");
+			if (pipe(lcore_config[i].pipe_worker2main) < 0)
+				rte_panic("Cannot create pipe\n");
 
-		lcore_config[i].state = WAIT;
+			lcore_config[i].state = WAIT;
 
-		/* create a thread for each lcore */
-		ret = eal_worker_thread_create(i);
-		if (ret != 0)
-			rte_panic("Cannot create thread\n");
+			/* create a thread for each lcore */
+			ret = eal_worker_thread_create(i);
+			if (ret != 0)
+				rte_panic("Cannot create thread\n");
 
-		/* Set thread_name for aid in debugging. */
-		snprintf(thread_name, sizeof(thread_name),
-			"rte-worker-%d", i);
-		rte_thread_set_name(lcore_config[i].thread_id, thread_name);
+			/* Set thread_name for aid in debugging. */
+			snprintf(thread_name, sizeof(thread_name),
+				"rte-worker-%d", i);
+			rte_thread_set_name(lcore_config[i].thread_id, thread_name);
 
-		ret = rte_thread_set_affinity_by_id(lcore_config[i].thread_id,
-			&lcore_config[i].cpuset);
-		if (ret != 0)
-			rte_panic("Cannot set affinity\n");
+			ret = rte_thread_set_affinity_by_id(lcore_config[i].thread_id,
+				&lcore_config[i].cpuset);
+			if (ret != 0)
+				rte_panic("Cannot set affinity\n");
+		}
+
+		/*
+		 * Launch a dummy function on all worker lcores, so that main lcore
+		 * knows they are all ready when this function returns.
+		 */
+		rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
+		rte_eal_mp_wait_lcore();
+		worker_initialized = true;
 	}
-
-	/*
-	 * Launch a dummy function on all worker lcores, so that main lcore
-	 * knows they are all ready when this function returns.
-	 */
-	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
-	rte_eal_mp_wait_lcore();
 
 	/* initialize services so vdevs register service during bus_probe. */
 	ret = rte_service_init();
