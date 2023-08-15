@@ -105,6 +105,7 @@ int eal_check_common_options(struct internal_config *internal_cfg);
 void eal_common_usage(void);
 enum rte_proc_type_t eal_proc_type_detect(void);
 int eal_plugins_init(void);
+void eal_plugins_cleanup(void);
 int eal_save_args(int argc, char **argv);
 int handle_eal_info_request(const char *cmd, const char *params __rte_unused,
 		struct rte_tel_data *d);

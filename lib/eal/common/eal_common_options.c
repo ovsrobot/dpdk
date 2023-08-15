@@ -244,6 +244,18 @@ eal_save_args(int argc, char **argv)
 }
 #endif
 
+void
+eal_plugins_cleanup(void)
+{
+	struct shared_driver *solib, *tmp;
+
+	RTE_TAILQ_FOREACH_SAFE(solib, &solib_list, next, tmp) {
+		if (solib->lib_handle)
+			dlclose(solib->lib_handle);
+		free(solib);
+	}
+}
+
 static int
 eal_option_device_add(enum rte_devtype type, const char *optarg)
 {
