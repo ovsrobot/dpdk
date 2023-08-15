@@ -91,6 +91,9 @@ static struct rte_intr_source_list intr_sources;
 /* interrupt handling thread */
 static pthread_t intr_thread;
 
+/* flag for initialization */
+static bool intr_initialized;
+
 /* VFIO interrupts */
 #ifdef VFIO_PRESENT
 
@@ -1175,6 +1178,9 @@ rte_eal_intr_init(void)
 {
 	int ret = 0;
 
+	if (intr_initialized)
+		return 0;
+
 	/* init the global interrupt source head */
 	TAILQ_INIT(&intr_sources);
 
@@ -1196,6 +1202,7 @@ rte_eal_intr_init(void)
 			"Failed to create thread for interrupt handling\n");
 	}
 
+	intr_initialized = true;
 	return ret;
 }
 
