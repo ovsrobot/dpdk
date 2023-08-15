@@ -57,6 +57,7 @@
  */
 
 static int phys_addrs_available = -1;
+static bool memseg_initialized;
 
 #define RANDOMIZE_VA_SPACE_FILE "/proc/sys/kernel/randomize_va_space"
 
@@ -1920,6 +1921,10 @@ rte_eal_memseg_init(void)
 {
 	/* increase rlimit to maximum */
 	struct rlimit lim;
+	int ret;
+
+	if (memseg_initialized)
+		return 0;
 
 #ifndef RTE_EAL_NUMA_AWARE_HUGEPAGES
 	const struct internal_config *internal_conf =
@@ -1948,11 +1953,16 @@ rte_eal_memseg_init(void)
 	}
 #endif
 
-	return rte_eal_process_type() == RTE_PROC_PRIMARY ?
+	ret = rte_eal_process_type() == RTE_PROC_PRIMARY ?
 #ifndef RTE_ARCH_64
 			memseg_primary_init_32() :
 #else
 			memseg_primary_init() :
 #endif
 			memseg_secondary_init();
+
+	if (!ret)
+		memseg_initialized = true;
+
+	return ret;
 }
