@@ -127,6 +127,7 @@ TAILQ_HEAD_INITIALIZER(solib_list);
 static const char *default_solib_dir = RTE_EAL_PMD_PATH;
 #endif
 
+
 /*
  * Stringified version of solib path used by dpdk-pmdinfo.py
  * Note: PLEASE DO NOT ALTER THIS without making a corresponding
@@ -254,6 +255,13 @@ eal_plugins_cleanup(void)
 			dlclose(solib->lib_handle);
 		free(solib);
 	}
+
+	/* Reinitialize solib_list */
+	TAILQ_INIT(&solib_list);
+
+	main_lcore_parsed = 0;
+	mem_parsed = 0;
+	core_parsed = 0;
 }
 
 static int
