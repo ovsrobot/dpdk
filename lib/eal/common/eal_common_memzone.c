@@ -22,6 +22,8 @@
 #include "eal_private.h"
 #include "eal_memcfg.h"
 
+static bool memzone_initialized;
+
 /* Default count used until rte_memzone_max_set() is called */
 #define DEFAULT_MAX_MEMZONE_COUNT 2560
 
@@ -426,6 +428,9 @@ rte_eal_memzone_init(void)
 	struct rte_mem_config *mcfg;
 	int ret = 0;
 
+	if (memzone_initialized)
+		return 0;
+
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
 
@@ -443,6 +448,8 @@ rte_eal_memzone_init(void)
 	}
 
 	rte_rwlock_write_unlock(&mcfg->mlock);
+
+	memzone_initialized = true;
 
 	return ret;
 }
