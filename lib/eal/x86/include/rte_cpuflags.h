@@ -133,7 +133,7 @@ enum rte_cpu_flag_t {
 	RTE_CPUFLAG_AVX512VP2INTERSECT,     /**< AVX512 Two Register Intersection */
 
 	RTE_CPUFLAG_WAITPKG,                /**< UMONITOR/UMWAIT/TPAUSE */
-
+	RTE_CPUFLAG_MONITORX,               /**< MONITORX */
 	/* The last item */
 };
 
