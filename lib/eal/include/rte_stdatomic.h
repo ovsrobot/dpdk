@@ -18,6 +18,7 @@ extern "C" {
 
 #include <stdatomic.h>
 
+#define RTE_ATOMIC(type) _Atomic(type)
 #define __rte_atomic _Atomic
 
 /* The memory order is an enumerated type in C11. */
@@ -110,6 +111,7 @@ static_assert(rte_memory_order_seq_cst == __ATOMIC_SEQ_CST,
 
 #else
 
+#define RTE_ATOMIC(type) type
 #define __rte_atomic
 
 /* The memory order is an integer type in GCC built-ins,
