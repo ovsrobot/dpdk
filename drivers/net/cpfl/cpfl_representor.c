@@ -286,6 +286,29 @@ cpfl_repr_dev_stop(struct rte_eth_dev *dev)
 }
 
 static int
+idpf_repr_rx_queue_setup(__rte_unused struct rte_eth_dev *dev,
+			 __rte_unused uint16_t queue_id,
+			 __rte_unused uint16_t nb_desc,
+			 __rte_unused unsigned int socket_id,
+			 __rte_unused const struct rte_eth_rxconf *conf,
+			 __rte_unused struct rte_mempool *pool)
+{
+	/* Dummy */
+	return 0;
+}
+
+static int
+idpf_repr_tx_queue_setup(__rte_unused struct rte_eth_dev *dev,
+			 __rte_unused uint16_t queue_id,
+			 __rte_unused uint16_t nb_desc,
+			 __rte_unused unsigned int socket_id,
+			 __rte_unused const struct rte_eth_txconf *conf)
+{
+	/* Dummy */
+	return 0;
+}
+
+static int
 cpfl_repr_link_update(struct rte_eth_dev *ethdev,
 		      __rte_unused int wait_to_complete)
 {
@@ -308,6 +331,9 @@ static const struct eth_dev_ops cpfl_repr_dev_ops = {
 	.dev_configure		= cpfl_repr_dev_configure,
 	.dev_close		= cpfl_repr_dev_close,
 	.dev_infos_get		= cpfl_repr_dev_info_get,
+
+	.rx_queue_setup		= idpf_repr_rx_queue_setup,
+	.tx_queue_setup		= idpf_repr_tx_queue_setup,
 
 	.link_update		= cpfl_repr_link_update,
 };
