@@ -279,6 +279,10 @@ do_cpu_mem_copy(void *p)
 	struct rte_mbuf **srcs = para->srcs;
 	struct rte_mbuf **dsts = para->dsts;
 	uint32_t i;
+	bool isAddrPaMode = false;
+
+	if (rte_eal_iova_mode() == RTE_IOVA_PA)
+		isAddrPaMode = true;
 
 	worker_info->stop_flag = false;
 	worker_info->ready_flag = true;
@@ -286,16 +290,33 @@ do_cpu_mem_copy(void *p)
 	while (!worker_info->start_flag)
 		;
 
-	while (1) {
-		for (i = 0; i < nr_buf; i++) {
-			/* copy buffer form src to dst */
-			rte_memcpy((void *)(uintptr_t)rte_mbuf_data_iova(dsts[i]),
-				(void *)(uintptr_t)rte_mbuf_data_iova(srcs[i]),
-				(size_t)buf_size);
-			worker_info->total_cpl++;
+	if (true == isAddrPaMode) {
+		while (1) {
+			for (i = 0; i < nr_buf; i++) {
+				void *src = rte_pktmbuf_mtod(dsts[i], void *);
+				void *dst = rte_pktmbuf_mtod(srcs[i], void *);
+
+				/* copy buffer form src to dst */
+				rte_memcpy(dst,
+					src,
+					(size_t)buf_size);
+				worker_info->total_cpl++;
+			}
+			if (worker_info->stop_flag)
+				break;
 		}
-		if (worker_info->stop_flag)
-			break;
+	} else {
+		while (1) {
+			for (i = 0; i < nr_buf; i++) {
+				/* copy buffer form src to dst */
+				rte_memcpy((void *)(uintptr_t)rte_mbuf_data_iova(dsts[i]),
+					(void *)(uintptr_t)rte_mbuf_data_iova(srcs[i]),
+					(size_t)buf_size);
+				worker_info->total_cpl++;
+			}
+			if (worker_info->stop_flag)
+				break;
+		}
 	}
 
 	return 0;
