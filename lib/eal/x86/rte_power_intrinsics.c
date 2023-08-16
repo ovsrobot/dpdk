@@ -17,6 +17,60 @@ static struct power_wait_status {
 	volatile void *monitor_addr; /**< NULL if not currently sleeping */
 } __rte_cache_aligned wait_status[RTE_MAX_LCORE];
 
+/**
+ * These functions uses UMONITOR/UMWAIT instructions and will enter C0.2 state.
+ * For more information about usage of these instructions, please refer to
+ * Intel(R) 64 and IA-32 Architectures Software Developer's Manual.
+ */
+static void intel_umonitor(volatile void *addr)
+{
+	/* UMONITOR */
+	asm volatile(".byte 0xf3, 0x0f, 0xae, 0xf7;"
+			:
+			: "D"(addr));
+}
+
+static void intel_umwait(const uint64_t timeout)
+{
+	const uint32_t tsc_l = (uint32_t)timeout;
+	const uint32_t tsc_h = (uint32_t)(timeout >> 32);
+	/* UMWAIT */
+	asm volatile(".byte 0xf2, 0x0f, 0xae, 0xf7;"
+			: /* ignore rflags */
+			: "D"(0), /* enter C0.2 */
+			"a"(tsc_l), "d"(tsc_h));
+}
+
+/**
+ * These functions uses MONITORX/MWAITX instructions and will enter C1 state.
+ * For more information about usage of these instructions, please refer to
+ * AMD64 Architecture Programmer's Manual.
+ */
+static void amd_monitorx(volatile void *addr)
+{
+	/* MONITORX */
+	asm volatile(".byte 0x0f, 0x01, 0xfa;"
+			:
+			: "a"(addr),
+			"c"(0),  /* no extensions */
+			"d"(0)); /* no hints */
+}
+
+static void amd_mwaitx(const uint64_t timeout)
+{
+	/* MWAITX */
+	asm volatile(".byte 0x0f, 0x01, 0xfb;"
+			: /* ignore rflags */
+			: "a"(0), /* enter C1 */
+			"c"(2), /* enable timer */
+			"b"(timeout));
+}
+
+static struct {
+	void (*mmonitor)(volatile void *addr);
+	void (*mwait)(const uint64_t timeout);
+} __rte_cache_aligned power_monitor_ops;
+
 static inline void
 __umwait_wakeup(volatile void *addr)
 {
@@ -75,8 +129,6 @@ int
 rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 		const uint64_t tsc_timestamp)
 {
-	const uint32_t tsc_l = (uint32_t)tsc_timestamp;
-	const uint32_t tsc_h = (uint32_t)(tsc_timestamp >> 32);
 	const unsigned int lcore_id = rte_lcore_id();
 	struct power_wait_status *s;
 	uint64_t cur_value;
@@ -109,10 +161,8 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	 * versions support this instruction natively.
 	 */
 
-	/* set address for UMONITOR */
-	asm volatile(".byte 0xf3, 0x0f, 0xae, 0xf7;"
-			:
-			: "D"(pmc->addr));
+	/* set address for mmonitor */
+	power_monitor_ops.mmonitor(pmc->addr);
 
 	/* now that we've put this address into monitor, we can unlock */
 	rte_spinlock_unlock(&s->lock);
@@ -123,11 +173,8 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	if (pmc->fn(cur_value, pmc->opaque) != 0)
 		goto end;
 
-	/* execute UMWAIT */
-	asm volatile(".byte 0xf2, 0x0f, 0xae, 0xf7;"
-			: /* ignore rflags */
-			: "D"(0), /* enter C0.2 */
-			  "a"(tsc_l), "d"(tsc_h));
+	/* execute mwait */
+	power_monitor_ops.mwait(tsc_timestamp);
 
 end:
 	/* erase sleep address */
@@ -173,6 +220,14 @@ RTE_INIT(rte_power_intrinsics_init) {
 		wait_multi_supported = 1;
 	if (i.power_monitor)
 		monitor_supported = 1;
+
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_MONITORX)) { /* AMD */
+		power_monitor_ops.mmonitor = &amd_monitorx;
+		power_monitor_ops.mwait = &amd_mwaitx;
+	} else { /* Intel */
+		power_monitor_ops.mmonitor = &intel_umonitor;
+		power_monitor_ops.mwait = &intel_umwait;
+	}
 }
 
 int
