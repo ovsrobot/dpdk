@@ -23,6 +23,38 @@ enum uncore_power_mgmt_env { UNCORE_PM_ENV_NOT_SET,
 		UNCORE_PM_ENV_INTEL_UNCORE, UNCORE_PM_ENV_AMD_HSMP};
 
 /**
+ * Set the default uncore power management implementation. If this is not called prior
+ * to rte_power_uncore_init(), then auto-detect of the environment will take place.
+ * It is thread safe. New env can be set only in uninitialized state
+ * (thus rte_power_unset_uncore_env must be called if different env was already set).
+ *
+ * @param env
+ *  env. The environment in which to initialise Uncore Power Management for.
+ *
+ * @return
+ *  - 0 on success.
+ *  - Negative on error.
+ */
+__rte_experimental
+int rte_power_set_uncore_env(enum uncore_power_mgmt_env env);
+
+/**
+ * Unset the global uncore environment configuration.
+ * This can only be called after all threads have completed.
+ */
+__rte_experimental
+void rte_power_unset_uncore_env(void);
+
+/**
+ * Get the default uncore power management implementation.
+ *
+ * @return
+ *  power_management_env The configured environment.
+ */
+__rte_experimental
+enum uncore_power_mgmt_env rte_power_get_uncore_env(void);
+
+/**
  * Initialize uncore frequency management for specific die on a package.
  * It will get the available frequencies and prepare to set new die frequencies.
  *
