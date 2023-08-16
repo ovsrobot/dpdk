@@ -1633,7 +1633,7 @@ cpfl_handle_event_msg(struct idpf_vport *vport, uint8_t *msg, uint16_t msglen)
 	}
 }
 
-static int
+int
 cpfl_vport_info_create(struct cpfl_adapter_ext *adapter,
 		       struct cpfl_vport_id *vport_identity,
 		       struct cpchnl2_vport_info *vport_info)
