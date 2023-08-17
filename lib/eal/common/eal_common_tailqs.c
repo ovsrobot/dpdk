@@ -73,9 +73,10 @@ rte_eal_tailq_create(const char *name)
 		strlcpy(head->name, name, sizeof(head->name) - 1);
 		TAILQ_INIT(&head->tailq_head);
 		rte_tailqs_count++;
+		return head;
 	}
 
-	return head;
+	return rte_eal_tailq_lookup(name);
 }
 
 /* local register, used to store "early" tailqs before rte_eal_init() and to
@@ -99,7 +100,9 @@ rte_eal_tailq_update(struct rte_tailq_elem *t)
 {
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		/* primary process is the only one that creates */
-		t->head = rte_eal_tailq_create(t->name);
+		t->head = rte_eal_tailq_lookup(t->name);
+		if (t->head == NULL)
+			t->head = rte_eal_tailq_create(t->name);
 	} else {
 		t->head = rte_eal_tailq_lookup(t->name);
 	}
@@ -108,15 +111,13 @@ rte_eal_tailq_update(struct rte_tailq_elem *t)
 int
 rte_eal_tailq_register(struct rte_tailq_elem *t)
 {
-	if (rte_eal_tailq_local_register(t) < 0) {
-		RTE_LOG(ERR, EAL,
-			"%s tailq is already registered\n", t->name);
-		goto error;
-	}
+	rte_eal_tailq_local_register(t);
 
 	/* if a register happens after rte_eal_tailqs_init(), then we can update
 	 * tailq head */
 	if (rte_tailqs_count >= 0) {
+		RTE_LOG(INFO, EAL,
+			"%s tailq is registered\n", t->name);
 		rte_eal_tailq_update(t);
 		if (t->head == NULL) {
 			RTE_LOG(ERR, EAL,
@@ -137,6 +138,11 @@ int
 rte_eal_tailqs_init(void)
 {
 	struct rte_tailq_elem *t;
+
+	if (rte_tailqs_count > 0) {
+		RTE_LOG(INFO, EAL, "tailq already initialized\n");
+		return 0;
+	}
 
 	rte_tailqs_count = 0;
 
