@@ -67,6 +67,11 @@ int rte_eal_iopl_init(void);
  * as possible in the application's main() function.
  * It puts the WORKER lcores in the WAIT state.
  *
+ * @warning
+ * It maybe possisble to call it again after rte_eal_cleanup().
+ * But this usage is dependent on libraries and drivers support which
+ * may not work. Use at your own risk.
+ *
  * @param argc
  *   A non-negative value.  If it is greater than 0, the array members
  *   for argv[0] through argv[argc] (non-inclusive) shall contain pointers
