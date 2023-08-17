@@ -30,6 +30,7 @@ extern "C" {
 #include <rte_per_lcore.h>
 #include <rte_string_fns.h>
 #include <rte_uuid.h>
+#include <rte_stdatomic.h>
 
 /** The tracepoint object. */
 typedef uint64_t rte_trace_point_t;
