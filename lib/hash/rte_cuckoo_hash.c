@@ -435,8 +435,11 @@ rte_hash_create(const struct rte_hash_parameters *params)
 		h->sig_cmp_fn = RTE_HASH_COMPARE_SSE;
 	else
 #elif defined(RTE_ARCH_ARM64)
-	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON))
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON)) {
 		h->sig_cmp_fn = RTE_HASH_COMPARE_NEON;
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_SVE))
+			h->sig_cmp_fn = RTE_HASH_COMPARE_SVE;
+	}
 	else
 #endif
 		h->sig_cmp_fn = RTE_HASH_COMPARE_SCALAR;
@@ -1892,6 +1895,38 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 		*sec_hash_matches = (uint32_t)(vaddvq_u16(x));
 		}
 		break;
+#if  defined(RTE_HAS_SVE_ACLE)
+	case RTE_HASH_COMPARE_SVE: {
+		svuint16_t vsign, shift, sv_prim_matches, sv_sec_matches;
+		svbool_t pred, p_match, s_match;
+		int i = 0;
+		uint64_t vl = svcnth();
+
+		vsign = svdup_u16(sig);
+		shift = svindex_u16(0, 2);
+		do {
+			pred = svwhilelt_b16(i, RTE_HASH_BUCKET_ENTRIES);
+			/* Compare all signatures in the primary bucket */
+			p_match  = svcmpeq_u16(pred, vsign, svld1_u16(pred,
+						&prim_bkt->sig_current[i]));
+			if (svptest_any(svptrue_b16(), p_match)) {
+				sv_prim_matches =  svdup_u16_z(p_match, 1);
+				sv_prim_matches = svlsl_u16_z(pred, sv_prim_matches, shift);
+				*prim_hash_matches |= svorv_u16(pred, sv_prim_matches);
+			}
+			/* Compare all signatures in the secondary bucket */
+			s_match  = svcmpeq_u16(pred, vsign, svld1_u16(pred,
+						&sec_bkt->sig_current[i]));
+			if (svptest_any(svptrue_b16(), s_match)) {
+				sv_sec_matches =  svdup_u16_z(s_match, 1);
+				sv_sec_matches = svlsl_u16_z(pred, sv_sec_matches, shift);
+				*sec_hash_matches |= svorv_u16(pred, sv_sec_matches);
+			}
+			i += vl;
+		} while (i < RTE_HASH_BUCKET_ENTRIES);
+	}
+	break;
+#endif
 #endif
 	default:
 		for (i = 0; i < RTE_HASH_BUCKET_ENTRIES; i++) {
