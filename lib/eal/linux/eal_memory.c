@@ -1920,6 +1920,11 @@ rte_eal_memseg_init(void)
 {
 	/* increase rlimit to maximum */
 	struct rlimit lim;
+	int ret;
+	static bool run_once;
+
+	if (run_once)
+		return 0;
 
 #ifndef RTE_EAL_NUMA_AWARE_HUGEPAGES
 	const struct internal_config *internal_conf =
@@ -1948,11 +1953,16 @@ rte_eal_memseg_init(void)
 	}
 #endif
 
-	return rte_eal_process_type() == RTE_PROC_PRIMARY ?
+	ret = rte_eal_process_type() == RTE_PROC_PRIMARY ?
 #ifndef RTE_ARCH_64
 			memseg_primary_init_32() :
 #else
 			memseg_primary_init() :
 #endif
 			memseg_secondary_init();
+
+	if (!ret)
+		run_once = true;
+
+	return ret;
 }
