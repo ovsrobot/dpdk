@@ -196,6 +196,11 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 
 	if (dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
 		port_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_TIMESTAMP;
+	else {
+		printf("port(%u) doesn't support PTP: %s\n", port,
+		       strerror(-retval));
+		return -ENOTSUP;
+	}
 
 	if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
 		port_conf.txmode.offloads |=
