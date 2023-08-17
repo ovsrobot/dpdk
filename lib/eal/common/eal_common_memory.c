@@ -1083,6 +1083,10 @@ rte_eal_memory_init(void)
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	int retval;
+	static bool run_once;
+
+	if (run_once)
+		return 0;
 
 	RTE_LOG(DEBUG, EAL, "Setting up physically contiguous memory...\n");
 
@@ -1100,6 +1104,8 @@ rte_eal_memory_init(void)
 
 	if (internal_conf->no_shconf == 0 && rte_eal_memdevice_init() < 0)
 		goto fail;
+
+	run_once = true;
 
 	return 0;
 fail:

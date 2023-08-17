@@ -31,6 +31,7 @@
 #define CONST_MAX(a, b) (a > b ? a : b) /* RTE_MAX is not a constant */
 #define EXTERNAL_HEAP_MIN_SOCKET_ID (CONST_MAX((1 << 8), RTE_MAX_NUMA_NODES))
 
+
 static unsigned
 check_hugepage_sz(unsigned flags, uint64_t hugepage_sz)
 {
@@ -1409,6 +1410,10 @@ rte_eal_malloc_heap_init(void)
 	unsigned int i;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+	static bool run_once;
+
+	if (run_once)
+		return 0;
 
 	if (internal_conf->match_allocations)
 		RTE_LOG(DEBUG, EAL, "Hugepages will be freed exactly as allocated.\n");
@@ -1434,6 +1439,8 @@ rte_eal_malloc_heap_init(void)
 		RTE_LOG(ERR, EAL, "Couldn't register malloc multiprocess actions\n");
 		return -1;
 	}
+
+	run_once = true;
 
 	return 0;
 }
