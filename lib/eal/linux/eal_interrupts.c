@@ -1174,6 +1174,10 @@ int
 rte_eal_intr_init(void)
 {
 	int ret = 0;
+	static bool run_once;
+
+	if (run_once)
+		return 0;
 
 	/* init the global interrupt source head */
 	TAILQ_INIT(&intr_sources);
@@ -1195,6 +1199,8 @@ rte_eal_intr_init(void)
 		RTE_LOG(ERR, EAL,
 			"Failed to create thread for interrupt handling\n");
 	}
+
+	run_once = true;
 
 	return ret;
 }
