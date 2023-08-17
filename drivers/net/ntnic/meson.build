@@ -26,6 +26,9 @@ includes = [
     include_directories('sensors/ntavr'),
 ]
 
+# deps
+deps += 'vhost'
+
 # all sources
 sources = files(
     'adapter/nt4ga_adapter.c',
@@ -112,6 +115,16 @@ sources = files(
     'nthw/nthw_stat.c',
     'nthw/supported/nthw_fpga_9563_055_024_0000.c',
     'ntlog/ntlog.c',
+    'ntnic_dbsconfig.c',
+    'ntnic_ethdev.c',
+    'ntnic_filter/ntnic_filter.c',
+    'ntnic_hshconfig.c',
+    'ntnic_meter.c',
+    'ntnic_vdpa.c',
+    'ntnic_vf.c',
+    'ntnic_vfio.c',
+    'ntnic_vf_vdpa.c',
+    'ntnic_xstats.c',
     'ntutil/nt_util.c',
     'sensors/avr_sensors/avr_sensors.c',
     'sensors/board_sensors/board_sensors.c',
