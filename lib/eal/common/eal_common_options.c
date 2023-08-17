@@ -256,6 +256,13 @@ eal_plugins_cleanup(void)
 		free(solib);
 	}
 #endif
+
+	/* Reinitialize solib_list */
+	TAILQ_INIT(&solib_list);
+
+	main_lcore_parsed = 0;
+	mem_parsed = 0;
+	core_parsed = 0;
 }
 
 static int
