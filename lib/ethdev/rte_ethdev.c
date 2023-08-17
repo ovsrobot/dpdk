@@ -5996,6 +5996,34 @@ rte_eth_dev_set_mc_addr_list(uint16_t port_id,
 	return ret;
 }
 
+static int
+rte_eth_timestamp_offload_valid(struct rte_eth_dev *dev)
+{
+	struct rte_eth_dev_info dev_info;
+	struct rte_eth_rxmode *rxmode;
+	int ret;
+
+	ret = rte_eth_dev_info_get(dev->data->port_id, &dev_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR, "Cannot get port (%u) device information.\n",
+			       dev->data->port_id);
+		return ret;
+	}
+
+	if ((dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TIMESTAMP) == 0) {
+		RTE_ETHDEV_LOG(ERR, "Driver does not support PTP.\n");
+		return -ENOTSUP;
+	}
+
+	rxmode = &dev->data->dev_conf.rxmode;
+	if ((rxmode->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) == 0) {
+		RTE_ETHDEV_LOG(ERR, "Please enable 'RTE_ETH_RX_OFFLOAD_TIMESTAMP' offload.\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int
 rte_eth_timesync_enable(uint16_t port_id)
 {
@@ -6004,6 +6032,10 @@ rte_eth_timesync_enable(uint16_t port_id)
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
+
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
 
 	if (*dev->dev_ops->timesync_enable == NULL)
 		return -ENOTSUP;
@@ -6022,6 +6054,10 @@ rte_eth_timesync_disable(uint16_t port_id)
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
+
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
 
 	if (*dev->dev_ops->timesync_disable == NULL)
 		return -ENOTSUP;
@@ -6048,6 +6084,10 @@ rte_eth_timesync_read_rx_timestamp(uint16_t port_id, struct timespec *timestamp,
 			port_id);
 		return -EINVAL;
 	}
+
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
 
 	if (*dev->dev_ops->timesync_read_rx_timestamp == NULL)
 		return -ENOTSUP;
@@ -6078,9 +6118,12 @@ rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 		return -EINVAL;
 	}
 
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
+
 	if (*dev->dev_ops->timesync_read_tx_timestamp == NULL)
 		return -ENOTSUP;
-
 	ret = eth_err(port_id, (*dev->dev_ops->timesync_read_tx_timestamp)
 			       (dev, timestamp));
 
@@ -6098,6 +6141,10 @@ rte_eth_timesync_adjust_time(uint16_t port_id, int64_t delta)
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
+
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
 
 	if (*dev->dev_ops->timesync_adjust_time == NULL)
 		return -ENOTSUP;
@@ -6124,6 +6171,10 @@ rte_eth_timesync_read_time(uint16_t port_id, struct timespec *timestamp)
 		return -EINVAL;
 	}
 
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
+
 	if (*dev->dev_ops->timesync_read_time == NULL)
 		return -ENOTSUP;
 	ret = eth_err(port_id, (*dev->dev_ops->timesync_read_time)(dev,
@@ -6149,6 +6200,10 @@ rte_eth_timesync_write_time(uint16_t port_id, const struct timespec *timestamp)
 			port_id);
 		return -EINVAL;
 	}
+
+	ret = rte_eth_timestamp_offload_valid(dev);
+	if (ret != 0)
+		return ret;
 
 	if (*dev->dev_ops->timesync_write_time == NULL)
 		return -ENOTSUP;
