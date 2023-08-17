@@ -72,6 +72,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell NITROX symmetric crypto PMD.**
+
+  * Added support for AES-CCM algorithm.
+
 
 Removed Items
 -------------
