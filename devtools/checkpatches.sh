@@ -107,15 +107,15 @@ check_forbidden_additions() { # <patch>
 	awk -v FOLDERS="lib drivers app examples" \
 		-v EXPRESSIONS="__atomic_thread_fence\\\(" \
 		-v RET_ON_FAIL=1 \
-		-v MESSAGE='Using __atomic_thread_fence' \
+		-v MESSAGE='Using __atomic_thread_fence built-in, prefer rte_atomic_thread_fence' \
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
-	# refrain from using compiler __atomic_{add,and,nand,or,sub,xor}_fetch()
+	# refrain from using compiler __atomic_xxx builtins
 	awk -v FOLDERS="lib drivers app examples" \
-		-v EXPRESSIONS="__atomic_(add|and|nand|or|sub|xor)_fetch\\\(" \
+		-v EXPRESSIONS="__atomic_.*\\\(" \
 		-v RET_ON_FAIL=1 \
-		-v MESSAGE='Using __atomic_op_fetch, prefer __atomic_fetch_op' \
+		-v MESSAGE='Using __atomic_xxx built-ins, prefer rte_atomic_xxx' \
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
