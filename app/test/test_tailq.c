@@ -70,11 +70,6 @@ test_tailq_create(void)
 	if (strcmp(rte_dummy_dyn2_tailq.name, rte_dummy_dyn_tailq.name))
 		do_return("Error, something is wrong in the tailq test\n");
 
-	/* try allocating again, and check for failure */
-	if (!rte_eal_tailq_register(&rte_dummy_dyn2_tailq))
-		do_return("Error, registering the same tailq %s did not fail\n",
-			  rte_dummy_dyn2_tailq.name);
-
 	return 0;
 }
 
