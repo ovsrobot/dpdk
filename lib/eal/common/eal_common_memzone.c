@@ -425,6 +425,10 @@ rte_eal_memzone_init(void)
 {
 	struct rte_mem_config *mcfg;
 	int ret = 0;
+	static bool run_once;
+
+	if (run_once)
+		return 0;
 
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
@@ -443,6 +447,8 @@ rte_eal_memzone_init(void)
 	}
 
 	rte_rwlock_write_unlock(&mcfg->mlock);
+
+	run_once = true;
 
 	return ret;
 }
