@@ -2384,7 +2384,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 	}
 	if (i != ns) {
 		DRV_LOG(ERR,
-			"probe of PCI device " PCI_PRI_FMT " aborted after"
+			"probe of PCI device " PCI_PRI_FMT " canceled after"
 			" encountering an error: %s",
 			owner_pci.domain, owner_pci.bus,
 			owner_pci.devid, owner_pci.function,
@@ -2484,7 +2484,7 @@ mlx5_os_pci_probe(struct mlx5_common_device *cdev,
 						   eth_da.ports[p], mkvlist);
 			if (ret) {
 				DRV_LOG(INFO, "Probe of PCI device " PCI_PRI_FMT " "
-					"aborted due to proding failure of PF %u",
+					"canceled due to proding failure of PF %u",
 					pci_dev->addr.domain, pci_dev->addr.bus,
 					pci_dev->addr.devid, pci_dev->addr.function,
 					eth_da.ports[p]);

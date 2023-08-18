@@ -15,7 +15,7 @@ mlx5dr_send_add_new_dep_wqe(struct mlx5dr_send_engine *queue)
 	return &send_sq->dep_wqe[idx];
 }
 
-void mlx5dr_send_abort_new_dep_wqe(struct mlx5dr_send_engine *queue)
+void mlx5dr_send_cancel_new_dep_wqe(struct mlx5dr_send_engine *queue)
 {
 	queue->send_ring->send_sq.head_dep_idx--;
 }

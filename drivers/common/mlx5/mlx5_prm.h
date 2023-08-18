@@ -192,7 +192,7 @@
 /* Tunnel packet bit in the CQE. */
 #define MLX5_CQE_RX_TUNNEL_PACKET (1u << 0)
 
-/* Mask for LRO push flag in the CQE lro_tcppsh_abort_dupack field. */
+/* Mask for LRO push flag in the CQE lro_tcppsh_dupack field. */
 #define MLX5_CQE_LRO_PUSH_MASK 0x40
 
 /* Mask for L4 type in the CQE hdr_type_etc field. */
@@ -423,7 +423,7 @@ struct mlx5_cqe {
 	uint8_t pkt_info;
 	uint8_t rsvd0;
 	uint16_t wqe_id;
-	uint8_t lro_tcppsh_abort_dupack;
+	uint8_t lro_tcppsh_dupack;
 	uint8_t lro_min_ttl;
 	uint16_t lro_tcp_win;
 	uint32_t lro_ack_seq_num;

@@ -1085,7 +1085,7 @@ mlx5_lro_update_tcp_hdr(struct rte_tcp_hdr *__rte_restrict tcp,
 		tcp->recv_ack = cqe->lro_ack_seq_num;
 		tcp->rx_win = cqe->lro_tcp_win;
 	}
-	if (cqe->lro_tcppsh_abort_dupack & MLX5_CQE_LRO_PUSH_MASK)
+	if (cqe->lro_tcppsh_dupack & MLX5_CQE_LRO_PUSH_MASK)
 		tcp->tcp_flags |= RTE_TCP_PSH_FLAG;
 	tcp->cksum = 0;
 	csum += rte_raw_cksum(tcp, (tcp->data_off >> 4) * 4);
