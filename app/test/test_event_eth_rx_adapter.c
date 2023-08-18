@@ -445,6 +445,91 @@ adapter_create_with_params(void)
 }
 
 static int
+test_port_conf_cb(uint8_t id, uint8_t event_dev_id,
+		  struct rte_event_eth_rx_adapter_conf *conf,
+		  void *conf_arg)
+{
+	struct rte_event_port_conf *port_conf, def_port_conf = {0};
+	uint32_t started;
+	static int port_allocated;
+	static uint8_t port_id;
+	int ret;
+
+	if (port_allocated) {
+		conf->event_port_id = port_id;
+		conf->max_nb_rx = 128;
+		return 0;
+	}
+
+	RTE_SET_USED(id);
+
+	ret = rte_event_dev_attr_get(event_dev_id, RTE_EVENT_DEV_ATTR_STARTED,
+				     &started);
+	if (ret < 0)
+		return ret;
+
+	if (started)
+		rte_event_dev_stop(event_dev_id);
+
+	port_id = 1;
+
+	if (conf_arg != NULL)
+		port_conf = conf_arg;
+	else {
+		port_conf = &def_port_conf;
+		ret = rte_event_port_default_conf_get(event_dev_id, port_id,
+						      port_conf);
+		if (ret < 0)
+			return ret;
+	}
+
+	ret = rte_event_port_setup(event_dev_id, port_id, port_conf);
+	if (ret < 0)
+		return ret;
+
+	conf->event_port_id = port_id;
+	conf->max_nb_rx = 128;
+
+	if (started)
+		rte_event_dev_start(event_dev_id);
+
+	/* Reuse this port number next time this is called */
+	port_allocated = 1;
+
+	return 0;
+}
+
+static int
+adapter_create_ext_with_params(void)
+{
+	int err;
+	struct rte_event_dev_info dev_info;
+	struct rte_event_eth_rx_adapter_params rxa_params;
+
+	err = rte_event_dev_info_get(TEST_DEV_ID, &dev_info);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	rxa_params.use_queue_event_buf = false;
+	rxa_params.event_buf_size = 0;
+
+	err = rte_event_eth_rx_adapter_create_ext_with_params(TEST_INST_ID,
+			TEST_DEV_ID, test_port_conf_cb, NULL, &rxa_params);
+	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
+
+	rxa_params.event_buf_size = 128;
+
+	err = rte_event_eth_rx_adapter_create_ext_with_params(TEST_INST_ID,
+			TEST_DEV_ID, test_port_conf_cb, NULL, &rxa_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_eth_rx_adapter_create_ext_with_params(TEST_INST_ID,
+			TEST_DEV_ID, test_port_conf_cb, NULL, &rxa_params);
+	TEST_ASSERT(err == -EEXIST, "Expected -EEXIST got %d", err);
+
+	return TEST_SUCCESS;
+}
+
+static int
 adapter_queue_event_buf_test(void)
 {
 	int err;
@@ -1337,6 +1422,8 @@ static struct unit_test_suite event_eth_rx_tests = {
 			     adapter_pollq_instance_get),
 		TEST_CASE_ST(adapter_create, adapter_free,
 			     adapter_get_set_params),
+		TEST_CASE_ST(adapter_create_ext_with_params, adapter_free,
+			     adapter_start_stop),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };

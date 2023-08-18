@@ -72,6 +72,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new Ethernet Rx Adapter create API.**
+
+  * Added new API ``rte_event_eth_rx_adapter_create_ext_with_params()``
+    for creating Rx adapter instance.
 
 Removed Items
 -------------
