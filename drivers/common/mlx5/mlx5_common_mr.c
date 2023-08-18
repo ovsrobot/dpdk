@@ -179,7 +179,7 @@ mr_btree_insert(struct mlx5_mr_btree *bt, struct mr_cache_entry *entry)
 	/* Find out the slot for insertion. */
 	if (mr_btree_lookup(bt, &idx, entry->start) != UINT32_MAX) {
 		DRV_LOG(DEBUG,
-			"abort insertion to B-tree(%p): already exist at"
+			"insertion to B-tree(%p): already exist at"
 			" idx=%u [0x%" PRIxPTR ", 0x%" PRIxPTR ") lkey=0x%x",
 			(void *)bt, idx, entry->start, entry->end, entry->lkey);
 		/* Already exist, return. */
@@ -824,7 +824,7 @@ alloc_resources:
 	rte_rwlock_write_lock(&share_cache->rwlock);
 	/*
 	 * Check the address is really missing. If other thread already created
-	 * one or it is not found due to overflow, abort and return.
+	 * one or it is not found due to overflow, cancel and return.
 	 */
 	if (mlx5_mr_lookup_cache(share_cache, entry, addr) != UINT32_MAX) {
 		/*
@@ -833,7 +833,7 @@ alloc_resources:
 		 * here again.
 		 */
 		mr_btree_insert(&share_cache->cache, entry);
-		DRV_LOG(DEBUG, "Found MR for %p on final lookup, abort",
+		DRV_LOG(DEBUG, "Found MR for %p on final lookup ",
 			(void *)addr);
 		rte_rwlock_write_unlock(&share_cache->rwlock);
 		rte_mcfg_mem_read_unlock();

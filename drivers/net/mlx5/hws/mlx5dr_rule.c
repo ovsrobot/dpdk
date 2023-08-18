@@ -391,7 +391,7 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 	mlx5dr_rule_create_init(rule, &ste_attr, &apply, is_update);
 
 	/* Allocate dependent match WQE since rule might have dependent writes.
-	 * The queued dependent WQE can be later aborted or kept as a dependency.
+	 * The queued dependent WQE can be later canceled or kept as a dependency.
 	 * dep_wqe buffers (ctrl, data) are also reused for all STE writes.
 	 */
 	dep_wqe = mlx5dr_send_add_new_dep_wqe(queue);
@@ -413,7 +413,7 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 		ret = mlx5dr_rule_alloc_action_ste(rule, attr);
 		if (ret) {
 			DR_LOG(ERR, "Failed to allocate action memory %d", ret);
-			mlx5dr_send_abort_new_dep_wqe(queue);
+			mlx5dr_send_cancel_new_dep_wqe(queue);
 			return ret;
 		}
 		/* Skip RX/TX based on the dep_wqe init */
@@ -445,8 +445,8 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 			if (action_stes || apply.require_dep)
 				break;
 
-			/* Rule has no dependencies, abort dep_wqe and send WQE now */
-			mlx5dr_send_abort_new_dep_wqe(queue);
+			/* Rule has no dependencies, cancel dep_wqe and send WQE now */
+			mlx5dr_send_cancel_new_dep_wqe(queue);
 			ste_attr.wqe_tag_is_jumbo = is_jumbo;
 			ste_attr.send_attr.notify_hw = !attr->burst;
 			ste_attr.send_attr.user_data = dep_wqe->user_data;
