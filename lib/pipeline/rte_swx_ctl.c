@@ -2063,7 +2063,7 @@ table_rollback(struct rte_swx_ctl_pipeline *ctl, uint32_t table_id)
  * failed commit operation to remove ALL the pending work for ALL the tables.
  */
 static void
-table_abort(struct rte_swx_ctl_pipeline *ctl, uint32_t table_id)
+table_cancel(struct rte_swx_ctl_pipeline *ctl, uint32_t table_id)
 {
 	struct table *table = &ctl->tables[table_id];
 
@@ -2366,7 +2366,7 @@ selector_rollback(struct rte_swx_ctl_pipeline *ctl, uint32_t selector_id)
 }
 
 static void
-selector_abort(struct rte_swx_ctl_pipeline *ctl, uint32_t selector_id)
+selector_cancel(struct rte_swx_ctl_pipeline *ctl, uint32_t selector_id)
 {
 	struct selector *s = &ctl->selectors[selector_id];
 	uint32_t group_id;
@@ -2545,7 +2545,7 @@ learner_rollfwd_finalize(struct rte_swx_ctl_pipeline *ctl, uint32_t learner_id)
 }
 
 static void
-learner_abort(struct rte_swx_ctl_pipeline *ctl, uint32_t learner_id)
+learner_cancel(struct rte_swx_ctl_pipeline *ctl, uint32_t learner_id)
 {
 	struct learner *l = &ctl->learners[learner_id];
 
@@ -2554,7 +2554,8 @@ learner_abort(struct rte_swx_ctl_pipeline *ctl, uint32_t learner_id)
 }
 
 int
-rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl, int abort_on_fail)
+rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl,
+			    int cancel_on_fail)
 {
 	struct rte_swx_table_state *ts;
 	int status = 0;
@@ -2622,25 +2623,25 @@ rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl, int abort_on_fail)
 rollback:
 	for (i = 0; i < ctl->info.n_tables; i++) {
 		table_rollback(ctl, i);
-		if (abort_on_fail)
-			table_abort(ctl, i);
+		if (cancel_on_fail)
+			table_cancel(ctl, i);
 	}
 
 	for (i = 0; i < ctl->info.n_selectors; i++) {
 		selector_rollback(ctl, i);
-		if (abort_on_fail)
-			selector_abort(ctl, i);
+		if (cancel_on_fail)
+			selector_cancel(ctl, i);
 	}
 
-	if (abort_on_fail)
+	if (cancel_on_fail)
 		for (i = 0; i < ctl->info.n_learners; i++)
-			learner_abort(ctl, i);
+			learner_cancel(ctl, i);
 
 	return status;
 }
 
 void
-rte_swx_ctl_pipeline_abort(struct rte_swx_ctl_pipeline *ctl)
+rte_swx_ctl_pipeline_cancel(struct rte_swx_ctl_pipeline *ctl)
 {
 	uint32_t i;
 
@@ -2648,13 +2649,13 @@ rte_swx_ctl_pipeline_abort(struct rte_swx_ctl_pipeline *ctl)
 		return;
 
 	for (i = 0; i < ctl->info.n_tables; i++)
-		table_abort(ctl, i);
+		table_cancel(ctl, i);
 
 	for (i = 0; i < ctl->info.n_selectors; i++)
-		selector_abort(ctl, i);
+		selector_cancel(ctl, i);
 
 	for (i = 0; i < ctl->info.n_learners; i++)
-		learner_abort(ctl, i);
+		learner_cancel(ctl, i);
 }
 
 static int
