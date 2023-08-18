@@ -565,9 +565,9 @@ vmxnet3_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 						dgram_cksum);
 				break;
 			default:
-				PMD_TX_LOG(WARNING, "requested cksum offload not supported %#llx",
-					   txm->ol_flags & RTE_MBUF_F_TX_L4_MASK);
-				abort();
+				/* should probably count as tx error and drop instead */
+				rte_panic("unsupported cksum offload: %"PRIx64"\n",
+					  txm->ol_flags);
 			}
 			deferred++;
 		} else {
