@@ -1030,14 +1030,14 @@ eth_ionic_dev_init(struct rte_eth_dev *eth_dev, void *init_params)
 
 	err = ionic_lif_alloc(lif);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot allocate LIFs: %d, aborting",
+		IONIC_PRINT(ERR, "Cannot allocate LIFs: %d",
 			err);
 		goto err;
 	}
 
 	err = ionic_lif_init(lif);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot init LIFs: %d, aborting", err);
+		IONIC_PRINT(ERR, "Cannot init LIFs: %d", err);
 		goto err_free_lif;
 	}
 
@@ -1144,48 +1144,48 @@ eth_ionic_dev_probe(void *bus_dev, struct rte_device *rte_dev,
 	/* Discover ionic dev resources */
 	err = ionic_setup(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot setup device: %d, aborting", err);
+		IONIC_PRINT(ERR, "Cannot setup device: %d", err);
 		goto err_free_adapter;
 	}
 
 	err = ionic_identify(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot identify device: %d, aborting",
+		IONIC_PRINT(ERR, "Cannot identify device: %d",
 			err);
 		goto err_free_adapter;
 	}
 
 	err = ionic_init(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot init device: %d, aborting", err);
+		IONIC_PRINT(ERR, "Cannot init device: %d", err);
 		goto err_free_adapter;
 	}
 
 	/* Configure the ports */
 	err = ionic_port_identify(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot identify port: %d, aborting",
+		IONIC_PRINT(ERR, "Cannot identify port: %d",
 			err);
 		goto err_free_adapter;
 	}
 
 	err = ionic_port_init(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot init port: %d, aborting", err);
+		IONIC_PRINT(ERR, "Cannot init port: %d", err);
 		goto err_free_adapter;
 	}
 
 	/* Configure LIFs */
 	err = ionic_lif_identify(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot identify lif: %d, aborting", err);
+		IONIC_PRINT(ERR, "Cannot identify lif: %d", err);
 		goto err_free_adapter;
 	}
 
 	/* Allocate and init LIFs */
 	err = ionic_lifs_size(adapter);
 	if (err) {
-		IONIC_PRINT(ERR, "Cannot size LIFs: %d, aborting", err);
+		IONIC_PRINT(ERR, "Cannot size LIFs: %d", err);
 		goto err_free_adapter;
 	}
 

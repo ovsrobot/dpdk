@@ -43,13 +43,13 @@ ionic_pci_setup(struct ionic_adapter *adapter)
 
 	/* BAR0: dev_cmd and interrupts */
 	if (num_bars < 1) {
-		IONIC_PRINT(ERR, "No bars found, aborting\n");
+		IONIC_PRINT(ERR, "No bars found\n");
 		return -EFAULT;
 	}
 
 	if (bar->len < IONIC_BAR0_SIZE) {
 		IONIC_PRINT(ERR,
-			"Resource bar size %lu too small, aborting\n",
+			"Resource bar size %lu too small\n",
 			bar->len);
 		return -EFAULT;
 	}
@@ -84,7 +84,7 @@ ionic_pci_setup(struct ionic_adapter *adapter)
 	/* BAR1: doorbells */
 	bar++;
 	if (num_bars < 2) {
-		IONIC_PRINT(ERR, "Doorbell bar missing, aborting\n");
+		IONIC_PRINT(ERR, "Doorbell bar missing\n");
 		return -EFAULT;
 	}
 
