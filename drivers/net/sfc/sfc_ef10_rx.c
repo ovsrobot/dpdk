@@ -265,7 +265,7 @@ sfc_ef10_rx_process_event(struct sfc_ef10_rxq *rxq, efx_qword_t rx_ev,
 		EFX_MASK32(ESF_DZ_RX_DSC_PTR_LBITS);
 
 	if (ready == 0) {
-		/* Rx abort - it was no enough descriptors for Rx packet */
+		/* Rx cancel - it was no enough descriptors for Rx packet */
 		rte_pktmbuf_free(rxq->scatter_pkt);
 		rxq->scatter_pkt = NULL;
 		return rx_pkts;

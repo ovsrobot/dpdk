@@ -76,7 +76,7 @@ sfc_efx_mcdi_poll(struct sfc_efx_mcdi *mcdi, boolean_t proxy)
 	efx_nic_t *enp;
 	unsigned int delay_total;
 	unsigned int delay_us;
-	boolean_t aborted __rte_unused;
+	boolean_t canceled __rte_unused;
 
 	delay_total = 0;
 	delay_us = SFC_EFX_MCDI_POLL_INTERVAL_MIN_US;
@@ -93,8 +93,8 @@ sfc_efx_mcdi_poll(struct sfc_efx_mcdi *mcdi, boolean_t proxy)
 
 		if (delay_total > SFC_EFX_MCDI_WATCHDOG_INTERVAL_US) {
 			if (!proxy) {
-				aborted = efx_mcdi_request_abort(enp);
-				SFC_EFX_ASSERT(aborted);
+				canceled = efx_mcdi_request_cancel(enp);
+				SFC_EFX_ASSERT(canceled);
 				sfc_efx_mcdi_timeout(mcdi);
 			}
 

@@ -104,13 +104,13 @@ sfc_ev_efx_rx(void *arg, __rte_unused uint32_t label, uint32_t id,
 	if (delta == 0) {
 		/*
 		 * Rx event with no new descriptors done and zero length
-		 * is used to abort scattered packet when there is no room
+		 * is used to cancel scattered packet when there is no room
 		 * for the tail.
 		 */
 		if (unlikely(size != 0)) {
 			evq->exception = B_TRUE;
 			sfc_err(evq->sa,
-				"EVQ %u RxQ %u invalid RX abort "
+				"EVQ %u RxQ %u invalid RX cancel "
 				"(id=%#x size=%u flags=%#x); needs restart",
 				evq->evq_index, rxq->dp.dpq.queue_id,
 				id, size, flags);

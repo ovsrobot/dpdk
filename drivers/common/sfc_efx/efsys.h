@@ -548,7 +548,7 @@ typedef struct efsys_bar_s {
  * (required by PIO hardware).
  *
  * Neither VFIO, nor UIO, nor NIC UIO (on FreeBSD) support
- * write-combined memory mapped to user-land, so just abort if used.
+ * write-combined memory mapped to user-land, so just cancel if used.
  */
 #define EFSYS_BAR_WC_WRITEQ(_esbp, _offset, _eqp)			\
 	do {								\
