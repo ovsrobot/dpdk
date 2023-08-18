@@ -3317,7 +3317,7 @@ static int
 dlb2_monitor_callback(const uint64_t val,
 		const uint64_t opaque[RTE_POWER_MONITOR_OPAQUE_SZ])
 {
-	/* abort if the value matches */
+	/* terminat if the value matches */
 	return (val & opaque[CLB_MASK_IDX]) == opaque[CLB_VAL_IDX] ? -1 : 0;
 }
 
