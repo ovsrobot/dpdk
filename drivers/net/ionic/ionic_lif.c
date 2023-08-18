@@ -1045,7 +1045,7 @@ ionic_lif_alloc(struct ionic_lif *lif)
 
 	lif->kern_dbpage = adapter->idev.db_pages;
 	if (!lif->kern_dbpage) {
-		IONIC_PRINT(ERR, "Cannot map dbpage, aborting");
+		IONIC_PRINT(ERR, "Cannot map dbpage");
 		return -ENOMEM;
 	}
 
