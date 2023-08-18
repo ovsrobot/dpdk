@@ -776,7 +776,7 @@ eth_monitor_callback(const uint64_t value,
 	const uint64_t v = opaque[CLB_VAL_IDX];
 	const uint64_t m = (uint32_t)~0;
 
-	/* if the value has changed, abort entering power optimized state */
+	/* if the value has changed, cancel entering power optimized state */
 	return (value & m) == v ? 0 : -1;
 }
 

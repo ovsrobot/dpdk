@@ -57,7 +57,7 @@ runtest(const char *printable, int (*test_fn)(int16_t dev_id, uint16_t vchan), i
 		if (stats.completed != stats.submitted)
 			ERR_RETURN("\nError, not all submitted jobs are reported as completed\n");
 		if (check_err_stats && stats.errors != 0)
-			ERR_RETURN("\nErrors reported during op processing, aborting tests\n");
+			ERR_RETURN("\nErrors reported during op processing, stopping tests\n");
 	}
 	printf("\n");
 	return 0;

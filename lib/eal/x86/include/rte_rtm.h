@@ -17,13 +17,13 @@ extern "C" {
 
 
 #define RTE_XBEGIN_STARTED		(~0u)
-#define RTE_XABORT_EXPLICIT		(1 << 0)
-#define RTE_XABORT_RETRY		(1 << 1)
-#define RTE_XABORT_CONFLICT		(1 << 2)
-#define RTE_XABORT_CAPACITY		(1 << 3)
-#define RTE_XABORT_DEBUG		(1 << 4)
-#define RTE_XABORT_NESTED		(1 << 5)
-#define RTE_XABORT_CODE(x)		(((x) >> 24) & 0xff)
+#define RTE_XCANCEL_EXPLICIT		(1 << 0)
+#define RTE_XCANCEL_RETRY		(1 << 1)
+#define RTE_XCANCEL_CONFLICT		(1 << 2)
+#define RTE_XCANCEL_CAPACITY		(1 << 3)
+#define RTE_XCANCEL_DEBUG		(1 << 4)
+#define RTE_XCANCEL_NESTED		(1 << 5)
+#define RTE_XCANCEL_CODE(x)		(((x) >> 24) & 0xff)
 
 static __rte_always_inline
 unsigned int rte_xbegin(void)
@@ -41,7 +41,7 @@ void rte_xend(void)
 }
 
 /* not an inline function to workaround a clang bug with -O0 */
-#define rte_xabort(status) do { \
+#define rte_xcancel(status) do { \
 	asm volatile(".byte 0xc6,0xf8,%P0" :: "i" (status) : "memory"); \
 } while (0)
 

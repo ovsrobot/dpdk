@@ -144,7 +144,7 @@ static inline int rte_tm_supported(void);
  * if it fails or not available take the spinlock.
  *
  * NOTE: An attempt to perform a HW I/O operation inside a hardware memory
- * transaction always aborts the transaction since the CPU is not able to
+ * transaction always cancels the transaction since the CPU is not able to
  * roll-back should the transaction fail. Therefore, hardware transactional
  * locks are not advised to be used around rte_eth_rx_burst() and
  * rte_eth_tx_burst() calls.
@@ -172,7 +172,7 @@ rte_spinlock_unlock_tm(rte_spinlock_t *sl)
  * if it fails or not available try to take the lock.
  *
  * NOTE: An attempt to perform a HW I/O operation inside a hardware memory
- * transaction always aborts the transaction since the CPU is not able to
+ * transaction always cancels the transaction since the CPU is not able to
  * roll-back should the transaction fail. Therefore, hardware transactional
  * locks are not advised to be used around rte_eth_rx_burst() and
  * rte_eth_tx_burst() calls.
@@ -277,7 +277,7 @@ static inline int rte_spinlock_recursive_trylock(rte_spinlock_recursive_t *slr)
  * if it fails or not available take the recursive spinlocks
  *
  * NOTE: An attempt to perform a HW I/O operation inside a hardware memory
- * transaction always aborts the transaction since the CPU is not able to
+ * transaction always cancels the transaction since the CPU is not able to
  * roll-back should the transaction fail. Therefore, hardware transactional
  * locks are not advised to be used around rte_eth_rx_burst() and
  * rte_eth_tx_burst() calls.
@@ -303,7 +303,7 @@ static inline void rte_spinlock_recursive_unlock_tm(
  * if it fails or not available try to take the recursive lock
  *
  * NOTE: An attempt to perform a HW I/O operation inside a hardware memory
- * transaction always aborts the transaction since the CPU is not able to
+ * transaction always cancels the transaction since the CPU is not able to
  * roll-back should the transaction fail. Therefore, hardware transactional
  * locks are not advised to be used around rte_eth_rx_burst() and
  * rte_eth_tx_burst() calls.

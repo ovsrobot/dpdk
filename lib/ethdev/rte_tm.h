@@ -1710,7 +1710,7 @@ rte_tm_node_resume(uint16_t port_id,
  *       the current port, with immediate effect once the port is started.
  *
  * This function fails when the currently configured hierarchy is not supported
- * by the Ethernet port, in which case the user can abort or try out another
+ * by the Ethernet port, in which case the user can retry out another
  * hierarchy configuration (e.g. a hierarchy with less leaf nodes), which can be
  * build from scratch (when *clear_on_fail* is enabled) or by modifying the
  * existing hierarchy configuration (when *clear_on_fail* is disabled).

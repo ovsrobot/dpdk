@@ -18,7 +18,7 @@ extern "C" {
 #include "rte_cycles.h"
 
 #define RTE_RTM_MAX_RETRIES (20)
-#define RTE_XABORT_LOCK_BUSY (0xff)
+#define RTE_XCANCEL_LOCK_BUSY (0xff)
 
 #ifndef RTE_FORCE_INTRINSICS
 static inline void
@@ -93,16 +93,16 @@ rte_try_tm(volatile int *lock)
 
 		if (likely(RTE_XBEGIN_STARTED == status)) {
 			if (unlikely(*lock))
-				rte_xabort(RTE_XABORT_LOCK_BUSY);
+				rte_xcancel(RTE_XCANCEL_LOCK_BUSY);
 			else
 				return 1;
 		}
 		while (*lock)
 			rte_pause();
 
-		if ((status & RTE_XABORT_CONFLICT) ||
-		   ((status & RTE_XABORT_EXPLICIT) &&
-		    (RTE_XABORT_CODE(status) == RTE_XABORT_LOCK_BUSY))) {
+		if ((status & RTE_XCANCEL_CONFLICT) ||
+		   ((status & RTE_XCANCEL_EXPLICIT) &&
+		    (RTE_XCANCEL_CODE(status) == RTE_XCANCEL_LOCK_BUSY))) {
 			/* add a small delay before retrying, basing the
 			 * delay on the number of times we've already tried,
 			 * to give a back-off type of behaviour. We
@@ -116,7 +116,7 @@ rte_try_tm(volatile int *lock)
 			continue;
 		}
 
-		if ((status & RTE_XABORT_RETRY) == 0) /* do not retry */
+		if ((status & RTE_XCANCEL_RETRY) == 0) /* do not retry */
 			break;
 	}
 	return 0;

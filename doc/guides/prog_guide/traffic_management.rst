@@ -214,7 +214,7 @@ typically performs the following steps:
   with immediate effect once the port is started.
 
 This function fails when the currently configured hierarchy is not supported by
-the Ethernet port, in which case the user can abort or try out another
+the Ethernet port, in which case the user can retry with another
 hierarchy configuration (e.g. a hierarchy with less leaf nodes), which can be
 built from scratch or by modifying the existing hierarchy configuration. Note
 that this function can still fail due to other causes (e.g. not enough memory
