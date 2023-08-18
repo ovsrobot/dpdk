@@ -7,6 +7,7 @@
 #include "nthw_drv.h"
 #include "nthw_fpga.h"
 #include "nt4ga_adapter.h"
+#include "flow_filter.h"
 
 #define NO_FLAGS 0
 
@@ -16,12 +17,13 @@ static inline uint64_t timestamp2ns(uint64_t ts)
 	return ((ts >> 32) * 1000000000) + (ts & 0xffffffff);
 }
 
-static int nt4ga_stat_collect_cap_v1_stats(nt4ga_stat_t *p_nt4ga_stat,
+static int nt4ga_stat_collect_cap_v1_stats(struct adapter_info_s *p_adapter_info,
+				   nt4ga_stat_t *p_nt4ga_stat,
 				   uint32_t *p_stat_dma_virtual);
 static int nt4ga_stat_collect_virt_v1_stats(nt4ga_stat_t *p_nt4ga_stat,
 				    uint32_t *p_stat_dma_virtual);
 
-int nt4ga_stat_collect(struct adapter_info_s *p_adapter_info _unused,
+int nt4ga_stat_collect(struct adapter_info_s *p_adapter_info,
 		      nt4ga_stat_t *p_nt4ga_stat)
 {
 	nthw_stat_t *p_nthw_stat = p_nt4ga_stat->mp_nthw_stat;
@@ -39,7 +41,7 @@ int nt4ga_stat_collect(struct adapter_info_s *p_adapter_info _unused,
 	} else {
 		p_nt4ga_stat->last_timestamp =
 			timestamp2ns(*p_nthw_stat->mp_timestamp);
-		nt4ga_stat_collect_cap_v1_stats(p_nt4ga_stat,
+		nt4ga_stat_collect_cap_v1_stats(p_adapter_info, p_nt4ga_stat,
 					       p_nt4ga_stat->p_stat_dma_virtual);
 	}
 	return 0;
@@ -198,7 +200,9 @@ int nt4ga_stat_setup(struct adapter_info_s *p_adapter_info)
 			return -1;
 		}
 
-		p_nt4ga_stat->flm_stat_ver = 0;
+		struct flow_nic_dev *ndev =
+				p_adapter_info->nt4ga_filter.mp_flow_device;
+		p_nt4ga_stat->flm_stat_ver = ndev->be.flm.ver;
 
 		p_nt4ga_stat->mp_stat_structs_flm =
 			calloc(1, sizeof(struct flm_counters_v1));
@@ -394,10 +398,12 @@ static int nt4ga_stat_collect_virt_v1_stats(nt4ga_stat_t *p_nt4ga_stat,
 }
 
 /* Called with stat mutex locked */
-static int nt4ga_stat_collect_cap_v1_stats(nt4ga_stat_t *p_nt4ga_stat,
+static int nt4ga_stat_collect_cap_v1_stats(struct adapter_info_s *p_adapter_info,
+					   nt4ga_stat_t *p_nt4ga_stat,
 					   uint32_t *p_stat_dma_virtual)
 {
 	nthw_stat_t *p_nthw_stat = p_nt4ga_stat->mp_nthw_stat;
+	struct flow_nic_dev *ndev = p_adapter_info->nt4ga_filter.mp_flow_device;
 
 	const int n_rx_ports = p_nt4ga_stat->mn_rx_ports;
 	const int n_tx_ports = p_nt4ga_stat->mn_tx_ports;
@@ -700,6 +706,10 @@ static int nt4ga_stat_collect_cap_v1_stats(nt4ga_stat_t *p_nt4ga_stat,
 		p_nt4ga_stat->a_port_tx_packets_total[p] += new_packets_sum;
 		p_nt4ga_stat->a_port_tx_drops_total[p] += new_drop_events_sum;
 	}
+
+	/* _update and get FLM stats */
+	flow_get_flm_stats(ndev, (uint64_t *)p_nt4ga_stat->mp_stat_structs_flm,
+			   sizeof(struct flm_counters_v1) / sizeof(uint64_t));
 
 	return 0;
 }

@@ -10,6 +10,8 @@
 #include "nt4ga_pci_ta_tg.h"
 #include "nt4ga_link_100g.h"
 
+#include "flow_filter.h"
+
 /* Sensors includes */
 #include "board_sensors.h"
 #include "avr_sensors.h"
@@ -305,6 +307,17 @@ int nt4ga_adapter_init(struct adapter_info_s *p_adapter_info)
 	assert(n_phy_ports >= 1);
 	n_nim_ports = fpga_info->n_nims;
 	assert(n_nim_ports >= 1);
+
+	/* Nt4ga Init Filter */
+	nt4ga_filter_t *p_filter = &p_adapter_info->nt4ga_filter;
+
+	res = flow_filter_init(p_fpga, &p_filter->mp_flow_device,
+			     p_adapter_info->adapter_no);
+	if (res != 0) {
+		NT_LOG(ERR, ETHDEV, "%s: Cannot initialize filter\n",
+		       p_adapter_id_str);
+		return res;
+	}
 
 	/*
 	 * HIF/PCI TA/TG
