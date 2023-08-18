@@ -62,7 +62,7 @@ EXPERIMENTAL {
 	# added in 20.11
 	rte_swx_ctl_action_arg_info_get;
 	rte_swx_ctl_action_info_get;
-	rte_swx_ctl_pipeline_abort;
+	rte_swx_ctl_pipeline_cancel;
 	rte_swx_ctl_pipeline_commit;
 	rte_swx_ctl_pipeline_create;
 	rte_swx_ctl_pipeline_free;

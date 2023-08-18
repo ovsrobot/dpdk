@@ -1045,7 +1045,7 @@ rte_swx_ctl_pipeline_learner_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
  *
  * @param[in] ctl
  *   Pipeline control handle.
- * @param[in] abort_on_fail
+ * @param[in] revert_on_fail
  *   When non-zero (false), all the scheduled work is discarded after a failed
  *   commit. Otherwise, the scheduled work is still kept pending for the next
  *   commit.
@@ -1056,10 +1056,10 @@ rte_swx_ctl_pipeline_learner_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
 __rte_experimental
 int
 rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl,
-			    int abort_on_fail);
+			    int revert_on_fail);
 
 /**
- * Pipeline abort
+ * Pipeline cancel
  *
  * Discard all the scheduled table work.
  *
@@ -1068,7 +1068,7 @@ rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl,
  */
 __rte_experimental
 void
-rte_swx_ctl_pipeline_abort(struct rte_swx_ctl_pipeline *ctl);
+rte_swx_ctl_pipeline_cancel(struct rte_swx_ctl_pipeline *ctl);
 
 /**
  * Pipeline table entry read

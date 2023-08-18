@@ -1778,14 +1778,14 @@ cmd_pipeline_commit(char **tokens,
 	status = rte_swx_ctl_pipeline_commit(ctl, 1);
 	if (status)
 		snprintf(out, out_size, "Commit failed. "
-			"Use \"commit\" to retry or \"abort\" to discard the pending work.\n");
+			"Use \"commit\" to retry or \"cancel\" to discard the pending work.\n");
 }
 
-static const char cmd_pipeline_abort_help[] =
-"pipeline <pipeline_name> abort\n";
+static const char cmd_pipeline_cancel_help[] =
+"pipeline <pipeline_name> cancel\n";
 
 static void
-cmd_pipeline_abort(char **tokens,
+cmd_pipeline_cancel(char **tokens,
 	uint32_t n_tokens,
 	char *out,
 	size_t out_size,
@@ -1806,7 +1806,7 @@ cmd_pipeline_abort(char **tokens,
 		return;
 	}
 
-	rte_swx_ctl_pipeline_abort(ctl);
+	rte_swx_ctl_pipeline_cancel(ctl);
 }
 
 static const char cmd_pipeline_regrd_help[] =
@@ -3474,8 +3474,8 @@ cmd_help(char **tokens,
 			"\tpipeline selector group member delete\n"
 			"\tpipeline selector show\n"
 			"\tpipeline learner default\n"
+			"\tpipeline cancel\n"
 			"\tpipeline commit\n"
-			"\tpipeline abort\n"
 			"\tpipeline regrd\n"
 			"\tpipeline regwr\n"
 			"\tpipeline meter profile add\n"
@@ -3648,9 +3648,9 @@ cmd_help(char **tokens,
 
 	if ((strcmp(tokens[0], "pipeline") == 0) &&
 		(n_tokens == 2) &&
-		(strcmp(tokens[1], "abort") == 0)) {
+		(strcmp(tokens[1], "cancel") == 0)) {
 		snprintf(out, out_size, "\n%s\n",
-			cmd_pipeline_abort_help);
+			cmd_pipeline_cancel_help);
 		return;
 	}
 
@@ -3934,8 +3934,8 @@ cli_process(char *in, char *out, size_t out_size, void *obj)
 		}
 
 		if ((n_tokens >= 3) &&
-			(strcmp(tokens[2], "abort") == 0)) {
-			cmd_pipeline_abort(tokens, n_tokens, out,
+			(strcmp(tokens[2], "cancel") == 0)) {
+			cmd_pipeline_cancel(tokens, n_tokens, out,
 				out_size, obj);
 			return;
 		}
