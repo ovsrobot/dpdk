@@ -1,6 +1,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2020-2023 Napatech A/S
 
+# config object
+ntnic_conf = configuration_data()
+
+# transfer options into config object
+ntnic_conf.set('NT_TOOLS', true)
+
+# check option 'debug' (boolean flag derived from meson buildtype)
+if get_option('debug')
+    cflags += '-DDEBUG'
+endif
+
+# check nt_tools build option
+if ntnic_conf.get('NT_TOOLS')
+    cflags += '-DNT_TOOLS'
+endif
+
 # includes
 includes = [
     include_directories('.'),
@@ -14,6 +30,7 @@ includes = [
     include_directories('nthw/supported'),
     include_directories('nthw/flow_api'),
     include_directories('nthw/flow_filter'),
+    include_directories('ntconnect/include'),
     include_directories('sensors'),
     include_directories('sensors/avr_sensors'),
     include_directories('sensors/board_sensors'),
@@ -35,6 +52,13 @@ sources = files(
     'nim/nt_link_speed.c',
     'nim/qsfp_sensors.c',
     'nim/sfp_sensors.c',
+    'ntconnect/ntconn_server.c',
+    'ntconnect/ntconnect.c',
+    'ntconnect_modules/ntconn_adapter.c',
+    'ntconnect_modules/ntconn_flow.c',
+    'ntconnect_modules/ntconn_meter.c',
+    'ntconnect_modules/ntconn_stat.c',
+    'ntconnect_modules/ntconn_test.c',
     'nthw/core/nthw_clock_profiles.c',
     'nthw/core/nthw_fpga.c',
     'nthw/core/nthw_fpga_nt200a0x.c',
