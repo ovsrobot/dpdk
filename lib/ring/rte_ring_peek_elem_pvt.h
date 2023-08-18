@@ -23,7 +23,7 @@
  * This function should be used only for single thread producer/consumer.
  * Check that user didn't request to move tail above the head.
  * In that situation:
- * - return zero, that will cause abort any pending changes and
+ * - return zero, that will result in canceling any pending changes and
  *   return head to its previous position.
  * - throw an assert in debug mode.
  */
@@ -67,7 +67,7 @@ __rte_ring_st_set_head_tail(struct rte_ring_headtail *ht, uint32_t tail,
  * This function should be used only for producer/consumer in MT_HTS mode.
  * Check that user didn't request to move tail above the head.
  * In that situation:
- * - return zero, that will cause abort any pending changes and
+ * - return zero, that will result in canceling any pending changes and
  *   return head to its previous position.
  * - throw an assert in debug mode.
  */

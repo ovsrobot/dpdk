@@ -24,7 +24,7 @@
 /**
  * Callback definition for monitoring conditions. Callbacks with this signature
  * will be used by `rte_power_monitor()` to check if the entering of power
- * optimized state should be aborted.
+ * optimized state should not continue.
  *
  * @param val
  *   The value read from memory.
@@ -33,7 +33,7 @@
  *
  * @return
  *   0 if entering of power optimized state should proceed
- *   -1 if entering of power optimized state should be aborted
+ *   -1 if entering of power optimized state should not continue
  */
 typedef int (*rte_power_monitor_clb_t)(const uint64_t val,
 		const uint64_t opaque[RTE_POWER_MONITOR_OPAQUE_SZ]);
@@ -47,7 +47,7 @@ struct rte_power_monitor_cond {
 	                  */
 	rte_power_monitor_clb_t fn; /**< Callback to be used to check if
 	                             *   entering power optimized state should
-	                             *   be aborted.
+	                             *   not happen.
 	                             */
 	uint64_t opaque[RTE_POWER_MONITOR_OPAQUE_SZ];
 	/**< Callback-specific data */
@@ -66,7 +66,7 @@ struct rte_power_monitor_cond {
  * size (`pmc->size`) are provided in the `pmc` power monitoring condition. If
  * the mask is non-zero, the current value pointed to by the `pmc->addr` pointer
  * will be read and compared against the expected value, and if they match, the
- * entering of optimized power state will be aborted. This is intended to
+ * entering of optimized power state will be canceled. This is intended to
  * prevent the CPU from entering optimized power state and waiting on a write
  * that has already happened by the time this API is called.
  *
@@ -141,7 +141,7 @@ int rte_power_pause(const uint64_t tsc_timestamp);
  * Additionally, `expected` 64-bit values and 64-bit masks are provided. If
  * mask is non-zero, the current value pointed to by the `p` pointer will be
  * checked against the expected value, and if they do not match, the entering of
- * optimized power state may be aborted.
+ * optimized power state may be canceled.
  *
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.

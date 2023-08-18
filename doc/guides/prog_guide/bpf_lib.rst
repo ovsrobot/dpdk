@@ -40,7 +40,7 @@ packet. Registers ``R1-R5`` are scratch registers
 and must not be used to store the data across these instructions.
 These instructions have implicit program exit condition as well. When
 eBPF program is trying to access the data beyond the packet boundary,
-the interpreter will abort the execution of the program. JIT compilers
+the interpreter will cancel the execution of the program. JIT compilers
 therefore must preserve this property. ``src_reg`` and ``imm32`` fields are
 explicit inputs to these instructions.
 For example, ``(BPF_IND | BPF_W | BPF_LD)`` means:

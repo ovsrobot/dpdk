@@ -118,7 +118,7 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 
 	cur_value = __get_umwait_val(pmc->addr, pmc->size);
 
-	/* check if callback indicates we should abort */
+	/* check if callback indicates we should not proceed */
 	if (pmc->fn(cur_value, pmc->opaque) != 0)
 		goto end;
 
@@ -242,7 +242,7 @@ rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 	/* start new transaction region */
 	rc = rte_xbegin();
 
-	/* transaction abort, possible write to one of wait addresses */
+	/* transaction canceled, possible write to one of wait addresses */
 	if (rc != RTE_XBEGIN_STARTED)
 		return 0;
 
@@ -251,7 +251,7 @@ rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 	 * the read set. This means that when we trigger a wakeup from another
 	 * thread, even if we don't have a defined wakeup address and thus don't
 	 * actually cause any writes, the act of locking our lock will itself
-	 * trigger the wakeup and abort the transaction.
+	 * trigger the wakeup and cancel the transaction.
 	 */
 	rte_spinlock_is_locked(&s->lock);
 
@@ -271,7 +271,7 @@ rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 
 		const uint64_t val = __get_umwait_val(c->addr, c->size);
 
-		/* abort if callback indicates that we need to stop */
+		/* cancel if callback indicates that we need to stop */
 		if (c->fn(val, c->opaque) != 0)
 			break;
 	}

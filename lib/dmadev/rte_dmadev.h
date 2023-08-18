@@ -728,13 +728,13 @@ int rte_dma_dump(int16_t dev_id, FILE *f);
 enum rte_dma_status_code {
 	/** The operation completed successfully. */
 	RTE_DMA_STATUS_SUCCESSFUL,
-	/** The operation failed to complete due abort by user.
+	/** The operation failed to complete due being cancel by user.
 	 * This is mainly used when processing dev_stop, user could modify the
-	 * descriptors (e.g. change one bit to tell hardware abort this job),
+	 * descriptors (e.g. change one bit to tell hardware to cancel this job),
 	 * it allows outstanding requests to be complete as much as possible,
 	 * so reduce the time to stop the device.
 	 */
-	RTE_DMA_STATUS_USER_ABORT,
+	RTE_DMA_STATUS_USER_CANCEL,
 	/** The operation failed to complete due to following scenarios:
 	 * The jobs in a particular batch are not attempted because they
 	 * appeared after a fence where a previous job failed. In some HW

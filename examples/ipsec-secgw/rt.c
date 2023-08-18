@@ -50,7 +50,7 @@ parse_rt_tokens(char **tokens, uint32_t n_tokens,
 		route_ipv4 = &rt_ip4[*n_rts];
 
 		APP_CHECK(*n_rts <= RT_IPV4_MAX_RULES - 1, status,
-			"too many rt rules, abort insertion\n");
+			"too many rt rules, cancel insertion\n");
 		if (status->status < 0)
 			return;
 
@@ -59,7 +59,7 @@ parse_rt_tokens(char **tokens, uint32_t n_tokens,
 		route_ipv6 = &rt_ip6[*n_rts];
 
 		APP_CHECK(*n_rts <= RT_IPV6_MAX_RULES - 1, status,
-			"too many rt rules, abort insertion\n");
+			"too many rt rules, cancel insertion\n");
 		if (status->status < 0)
 			return;
 	} else {

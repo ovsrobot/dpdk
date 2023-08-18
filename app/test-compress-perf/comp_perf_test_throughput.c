@@ -323,7 +323,7 @@ end:
 
 	if (test_data->perf_comp_force_stop) {
 		RTE_LOG(ERR, USER1,
-		      "lcore: %d Perf. test has been aborted by user\n",
+		      "lcore: %d Perf. test has been canceled by user\n",
 			mem->lcore_id);
 		res = -1;
 	}

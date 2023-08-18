@@ -60,7 +60,7 @@ extern "C" {
  *                 // Loads may be atomic or non-atomic, as in this example.
  *                 *param_x = config->param_x;
  *                 strcpy(param_y, config->param_y);
- *                 // An alternative to an immediate retry is to abort and
+ *                 // An alternative to an immediate retry is to quit and
  *                 // try again at some later time, assuming progress is
  *                 // possible without the data.
  *         } while (rte_seqlock_read_retry(&config->lock, sn));

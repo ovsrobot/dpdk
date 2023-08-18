@@ -124,7 +124,7 @@ const rte_hash_cmp_eq_t cmp_jump_table[NUM_KEY_CMP_CASES] = {
 
 #define RTE_HASH_BFS_QUEUE_MAX_LEN       1000
 
-#define RTE_XABORT_CUCKOO_PATH_INVALIDED 0x4
+#define RTE_CANCEL_CUCKOO_PATH_INVALIDED 0x4
 
 #define RTE_HASH_TSX_MAX_RETRY  10
 

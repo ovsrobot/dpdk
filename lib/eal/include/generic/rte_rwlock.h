@@ -258,7 +258,7 @@ rte_rwlock_write_is_locked(rte_rwlock_t *rwl)
  * fails or not available take a read lock
  *
  * NOTE: An attempt to perform a HW I/O operation inside a hardware memory
- * transaction always aborts the transaction since the CPU is not able to
+ * transaction always cancels the transaction since the CPU is not able to
  * roll-back should the transaction fail. Therefore, hardware transactional
  * locks are not advised to be used around rte_eth_rx_burst() and
  * rte_eth_tx_burst() calls.
@@ -285,7 +285,7 @@ rte_rwlock_read_unlock_tm(rte_rwlock_t *rwl)
  * fails or not available take a write lock
  *
  * NOTE: An attempt to perform a HW I/O operation inside a hardware memory
- * transaction always aborts the transaction since the CPU is not able to
+ * transaction always cancels the transaction since the CPU is not able to
  * roll-back should the transaction fail. Therefore, hardware transactional
  * locks are not advised to be used around rte_eth_rx_burst() and
  * rte_eth_tx_burst() calls.
