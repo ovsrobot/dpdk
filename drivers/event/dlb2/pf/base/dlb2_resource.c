@@ -5941,7 +5941,7 @@ int dlb2_hw_unmap_qid(struct dlb2_hw *hw,
 	st = DLB2_QUEUE_MAP_IN_PROG;
 	if (dlb2_port_find_slot_queue(port, st, queue, &i)) {
 		/*
-		 * Since the in-progress map was aborted, re-enable the QID's
+		 * Since the in-progress map was terminated, re-enable the QID's
 		 * inflights.
 		 */
 		if (queue->num_pending_additions == 0)
