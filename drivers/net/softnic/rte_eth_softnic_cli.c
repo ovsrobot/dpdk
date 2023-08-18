@@ -1389,14 +1389,14 @@ cmd_softnic_pipeline_commit(struct pmd_internals *softnic,
 	status = rte_swx_ctl_pipeline_commit(p->ctl, 1);
 	if (status)
 		snprintf(out, out_size, "Commit failed. "
-			"Use \"commit\" to retry or \"abort\" to discard the pending work.\n");
+			"Use \"commit\" to retry or \"cancel\" to discard the pending work.\n");
 }
 
 /**
- * pipeline <pipeline_name> abort
+ * pipeline <pipeline_name> cancel
  */
 static void
-cmd_softnic_pipeline_abort(struct pmd_internals *softnic,
+cmd_softnic_pipeline_cancel(struct pmd_internals *softnic,
 	char **tokens,
 	uint32_t n_tokens,
 	char *out,
@@ -1417,7 +1417,7 @@ cmd_softnic_pipeline_abort(struct pmd_internals *softnic,
 		return;
 	}
 
-	rte_swx_ctl_pipeline_abort(p->ctl);
+	rte_swx_ctl_pipeline_cancel(p->ctl);
 }
 
 /**
@@ -2428,8 +2428,8 @@ softnic_cli_process(char *in, char *out, size_t out_size, void *arg)
 			return;
 		}
 
-		if (n_tokens >= 3 && !strcmp(tokens[2], "abort")) {
-			cmd_softnic_pipeline_abort(softnic, tokens, n_tokens, out, out_size);
+		if (n_tokens >= 3 && !strcmp(tokens[2], "cancel")) {
+			cmd_softnic_pipeline_cancel(softnic, tokens, n_tokens, out, out_size);
 			return;
 		}
 
