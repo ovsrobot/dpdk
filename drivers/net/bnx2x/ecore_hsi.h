@@ -2693,11 +2693,11 @@ struct shmem2_region {
 	/* generic flags controlled by the driver */
 	uint32_t drv_flags;					/* 0x00bc */
 	#define DRV_FLAGS_DCB_CONFIGURED		0x0
-	#define DRV_FLAGS_DCB_CONFIGURATION_ABORTED	0x1
+	#define DRV_FLAGS_DCB_CONFIGURATION_CANCELED	0x1
 	#define DRV_FLAGS_DCB_MFW_CONFIGURED	0x2
 
     #define DRV_FLAGS_PORT_MASK	((1 << DRV_FLAGS_DCB_CONFIGURED) | \
-			(1 << DRV_FLAGS_DCB_CONFIGURATION_ABORTED) | \
+			(1 << DRV_FLAGS_DCB_CONFIGURATION_CANCELED) | \
 			(1 << DRV_FLAGS_DCB_MFW_CONFIGURED))
 	/* Port offset*/
 	#define DRV_FLAGS_P0_OFFSET		0
@@ -6368,7 +6368,7 @@ struct ustorm_per_queue_stats {
 	__le32 coalesced_pkts;
 	struct regpair coalesced_bytes;
 	__le32 coalesced_events;
-	__le32 coalesced_aborts;
+	__le32 coalesced_cancels;
 };
 
 /*

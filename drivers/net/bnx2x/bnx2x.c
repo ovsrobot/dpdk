@@ -2746,13 +2746,13 @@ static int bnx2x_nic_load_request(struct bnx2x_softc *sc, uint32_t * load_code)
 	(*load_code) = bnx2x_fw_command(sc, DRV_MSG_CODE_LOAD_REQ,
 				      DRV_MSG_CODE_LOAD_REQ_WITH_LFA);
 
-	/* if the MCP fails to respond we must abort */
+	/* if the MCP fails to respond we must exit */
 	if (!(*load_code)) {
 		PMD_DRV_LOG(NOTICE, sc, "MCP response failure!");
 		return -1;
 	}
 
-	/* if MCP refused then must abort */
+	/* if MCP refused then must exit */
 	if ((*load_code) == FW_MSG_CODE_DRV_LOAD_REFUSED) {
 		PMD_DRV_LOG(NOTICE, sc, "MCP refused load request");
 		return -1;
@@ -2784,7 +2784,7 @@ static int bnx2x_nic_load_analyze_req(struct bnx2x_softc *sc, uint32_t load_code
 		PMD_DRV_LOG(DEBUG, sc, "loaded FW 0x%08x / my FW 0x%08x",
 			    loaded_fw, my_fw);
 
-		/* abort nic load if version mismatch */
+		/* stop nic load if version mismatch */
 		if (my_fw != loaded_fw) {
 			PMD_DRV_LOG(NOTICE, sc,
 				    "FW 0x%08x already loaded (mine is 0x%08x)",
@@ -6324,7 +6324,7 @@ static int bnx2x_leader_reset(struct bnx2x_softc *sc)
 		load_code = bnx2x_fw_command(sc, DRV_MSG_CODE_LOAD_REQ,
 					   DRV_MSG_CODE_LOAD_REQ_WITH_LFA);
 		if (!load_code) {
-			PMD_DRV_LOG(NOTICE, sc, "MCP response failure, aborting");
+			PMD_DRV_LOG(NOTICE, sc, "MCP response failure");
 			rc = -1;
 			goto exit_leader_reset;
 		}
@@ -6332,14 +6332,14 @@ static int bnx2x_leader_reset(struct bnx2x_softc *sc)
 		if ((load_code != FW_MSG_CODE_DRV_LOAD_COMMON_CHIP) &&
 		    (load_code != FW_MSG_CODE_DRV_LOAD_COMMON)) {
 			PMD_DRV_LOG(NOTICE, sc,
-				    "MCP unexpected response, aborting");
+				    "MCP unexpected response");
 			rc = -1;
 			goto exit_leader_reset2;
 		}
 
 		load_code = bnx2x_fw_command(sc, DRV_MSG_CODE_LOAD_DONE, 0);
 		if (!load_code) {
-			PMD_DRV_LOG(NOTICE, sc, "MCP response failure, aborting");
+			PMD_DRV_LOG(NOTICE, sc, "MCP response failure");
 			rc = -1;
 			goto exit_leader_reset2;
 		}
@@ -7325,7 +7325,7 @@ int bnx2x_nic_load(struct bnx2x_softc *sc)
 			    bnx2x_fw_command(sc, DRV_MSG_CODE_LOAD_DONE, 0);
 			if (!load_code) {
 				PMD_DRV_LOG(NOTICE, sc,
-					    "MCP response failure, aborting");
+					    "MCP response failure");
 				sc->state = BNX2X_STATE_ERROR;
 				rc = -ENXIO;
 				goto bnx2x_nic_load_error3;
@@ -9091,7 +9091,7 @@ static int bnx2x_prev_mcp_done(struct bnx2x_softc *sc)
 	uint32_t rc = bnx2x_fw_command(sc, DRV_MSG_CODE_UNLOAD_DONE,
 				     DRV_MSG_CODE_UNLOAD_SKIP_LINK_RESET);
 	if (!rc) {
-		PMD_DRV_LOG(NOTICE, sc, "MCP response failure, aborting");
+		PMD_DRV_LOG(NOTICE, sc, "MCP response failure");
 		return -1;
 	}
 
@@ -9507,7 +9507,7 @@ static int bnx2x_prev_unload(struct bnx2x_softc *sc)
 		/* Lock MCP using an unload request */
 		fw = bnx2x_fw_command(sc, DRV_MSG_CODE_UNLOAD_REQ_WOL_DIS, 0);
 		if (!fw) {
-			PMD_DRV_LOG(NOTICE, sc, "MCP response failure, aborting");
+			PMD_DRV_LOG(NOTICE, sc, "MCP response failure");
 			rc = -1;
 			break;
 		}
