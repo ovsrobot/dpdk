@@ -6,7 +6,7 @@
 #include "axgbe_ethdev.h"
 #include "axgbe_common.h"
 
-#define AXGBE_ABORT_COUNT	500
+#define AXGBE_CANCEL_COUNT	500
 #define AXGBE_DISABLE_COUNT	1000
 
 #define AXGBE_STD_SPEED		1
@@ -23,18 +23,18 @@
 #define AXGBE_I2C_READ		BIT(8)
 #define AXGBE_I2C_STOP		BIT(9)
 
-static int axgbe_i2c_abort(struct axgbe_port *pdata)
+static int axgbe_i2c_cancel(struct axgbe_port *pdata)
 {
-	unsigned int wait = AXGBE_ABORT_COUNT;
+	unsigned int wait = AXGBE_CANCEL_COUNT;
 
-	/* Must be enabled to recognize the abort request */
+	/* Must be enabled to recognize the cancel request */
 	XI2C_IOWRITE_BITS(pdata, IC_ENABLE, EN, 1);
 
-	/* Issue the abort */
-	XI2C_IOWRITE_BITS(pdata, IC_ENABLE, ABORT, 1);
+	/* Issue the cancel */
+	XI2C_IOWRITE_BITS(pdata, IC_ENABLE, CANCEL, 1);
 
 	while (wait--) {
-		if (!XI2C_IOREAD_BITS(pdata, IC_ENABLE, ABORT))
+		if (!XI2C_IOREAD_BITS(pdata, IC_ENABLE, CANCEL))
 			return 0;
 		rte_delay_us(500);
 	}
@@ -64,8 +64,8 @@ static int axgbe_i2c_disable(struct axgbe_port *pdata)
 
 	ret = axgbe_i2c_set_enable(pdata, false);
 	if (ret) {
-		/* Disable failed, try an abort */
-		ret = axgbe_i2c_abort(pdata);
+		/* Disable failed, try an cancel */
+		ret = axgbe_i2c_cancel(pdata);
 		if (ret)
 			return ret;
 
@@ -147,7 +147,7 @@ static void axgbe_i2c_clear_isr_interrupts(struct axgbe_port *pdata,
 	struct axgbe_i2c_op_state *state = &pdata->i2c.op_state;
 
 	if (isr & AXGBE_INTR_TX_ABRT) {
-		state->tx_abort_source = XI2C_IOREAD(pdata, IC_TX_ABRT_SOURCE);
+		state->tx_cancel_source = XI2C_IOREAD(pdata, IC_TX_ABRT_SOURCE);
 		XI2C_IOREAD(pdata, IC_CLR_TX_ABRT);
 	}
 
@@ -169,7 +169,7 @@ static int axgbe_i2c_isr(struct axgbe_port *pdata)
 	if (isr & AXGBE_INTR_TX_ABRT) {
 		PMD_DRV_LOG(DEBUG,
 			    "I2C TX_ABRT received (%#010x) for target %#04x\n",
-			    state->tx_abort_source, state->op->target);
+			    state->tx_cancel_source, state->op->target);
 
 		axgbe_i2c_disable_interrupts(pdata);
 
@@ -277,9 +277,9 @@ static int axgbe_i2c_xfer(struct axgbe_port *pdata, struct axgbe_i2c_op *op)
 success:
 	ret = state->ret;
 	if (ret) {
-		if (state->tx_abort_source & IC_TX_ABRT_7B_ADDR_NOACK)
+		if (state->tx_cancel_source & IC_TX_ABRT_7B_ADDR_NOACK)
 			ret = -ENOTCONN;
-		else if (state->tx_abort_source & IC_TX_ABRT_ARB_LOST)
+		else if (state->tx_cancel_source & IC_TX_ABRT_ARB_LOST)
 			ret = -EAGAIN;
 	}
 
