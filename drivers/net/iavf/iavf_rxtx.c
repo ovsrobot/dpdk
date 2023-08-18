@@ -2652,6 +2652,9 @@ iavf_build_data_desc_cmd_offset_fields(volatile uint64_t *qw1,
 		offset |= (m->l2_len >> 1)
 			<< IAVF_TX_DESC_LENGTH_MACLEN_SHIFT;
 
+	if ((m->ol_flags & IAVF_TX_CKSUM_OFFLOAD_MASK) == 0)
+		goto skip_cksum;
+
 	/* Enable L3 checksum offloading inner */
 	if (m->ol_flags & RTE_MBUF_F_TX_IP_CKSUM) {
 		if (m->ol_flags & RTE_MBUF_F_TX_IPV4) {
@@ -2702,6 +2705,7 @@ iavf_build_data_desc_cmd_offset_fields(volatile uint64_t *qw1,
 		break;
 	}
 
+skip_cksum:
 	*qw1 = rte_cpu_to_le_64((((uint64_t)command <<
 		IAVF_TXD_DATA_QW1_CMD_SHIFT) & IAVF_TXD_DATA_QW1_CMD_MASK) |
 		(((uint64_t)offset << IAVF_TXD_DATA_QW1_OFFSET_SHIFT) &
