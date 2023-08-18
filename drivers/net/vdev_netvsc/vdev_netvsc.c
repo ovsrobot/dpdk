@@ -141,7 +141,7 @@ vdev_netvsc_iface_is_netvsc(const struct if_nameindex *iface)
  * the system.
  *
  * @param func
- *   Callback function pointer. List traversal is aborted when this function
+ *   Callback function pointer. List traversal is terminated when this function
  *   returns a nonzero value.
  * @param is_netvsc
  *   Indicates the device type to iterate - netvsc or non-netvsc.
@@ -151,7 +151,7 @@ vdev_netvsc_iface_is_netvsc(const struct if_nameindex *iface)
  * @return
  *   0 when the entire list is traversed successfully, a negative error code
  *   in case or failure, or the nonzero value returned by @p func when list
- *   traversal is aborted.
+ *   traversal is terminated.
  */
 static int
 vdev_netvsc_foreach_iface(int (*func)(const struct if_nameindex *iface,
