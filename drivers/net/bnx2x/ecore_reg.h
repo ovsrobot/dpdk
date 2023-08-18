@@ -2594,7 +2594,7 @@
 /* [R 13] Details of first request received with error. [2:0] - PFID. [3] -
  * VF_VALID. [9:4] - VFID. [11:10] - Error Code - 0 - Indicates Completion
  * Timeout of a User Tx non-posted request. 1 - unsupported request. 2 -
- * completer abort. 3 - Illegal value for this field. [12] valid - indicates
+ * completer cancel. 3 - Illegal value for this field. [12] valid - indicates
  * if there was a completion error since the last time this register was
  * cleared.
  */
@@ -2602,7 +2602,7 @@
 /* [R 18] Details of first ATS Translation Completion request received with
  * error. [2:0] - PFID. [3] - VF_VALID. [9:4] - VFID. [11:10] - Error Code -
  * 0 - Indicates Completion Timeout of a User Tx non-posted request. 1 -
- * unsupported request. 2 - completer abort. 3 - Illegal value for this
+ * unsupported request. 2 - completer cancel. 3 - Illegal value for this
  * field. [16:12] - ATC OTB EntryID. [17] valid - indicates if there was a
  * completion error since the last time this register was cleared.
  */
@@ -4786,7 +4786,7 @@
 #define PXPCS_TL_CONTROL_5_DL_ERR_ATTN	   (1 << 22)   /*RO*/
 #define PXPCS_TL_CONTROL_5_TTX_ERR_NP_TAG_IN_USE   (1 << 21)   /*WC*/
 #define PXPCS_TL_CONTROL_5_TRX_ERR_UNEXP_RTAG  (1 << 20)   /*WC*/
-#define PXPCS_TL_CONTROL_5_PRI_SIG_TARGET_ABORT1   (1 << 19)   /*WC*/
+#define PXPCS_TL_CONTROL_5_PRI_SIG_TARGET_CANCEL1   (1 << 19)   /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_UNSPPORT1   (1 << 18)   /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_ECRC1   (1 << 17)   /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_MALF_TLP1   (1 << 16)   /*WC*/
@@ -4796,7 +4796,7 @@
 #define PXPCS_TL_CONTROL_5_ERR_CPL_TIMEOUT1    (1 << 12)   /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_FC_PRTL1	   (1 << 11)   /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_PSND_TLP1   (1 << 10)   /*WC*/
-#define PXPCS_TL_CONTROL_5_PRI_SIG_TARGET_ABORT	   (1 << 9)    /*WC*/
+#define PXPCS_TL_CONTROL_5_PRI_SIG_TARGET_CANCEL	   (1 << 9)    /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_UNSPPORT	   (1 << 8)    /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_ECRC    (1 << 7)    /*WC*/
 #define PXPCS_TL_CONTROL_5_ERR_MALF_TLP	   (1 << 6)    /*WC*/
@@ -4809,7 +4809,7 @@
 
 
 #define PXPCS_TL_FUNC345_STAT	   0x854
-#define PXPCS_TL_FUNC345_STAT_PRI_SIG_TARGET_ABORT4    (1 << 29)   /* WC */
+#define PXPCS_TL_FUNC345_STAT_PRI_SIG_TARGET_CANCEL4    (1 << 29)   /* WC */
 #define PXPCS_TL_FUNC345_STAT_ERR_UNSPPORT4 \
 	(1 << 28) /* Unsupported Request Error Status in function4, if \
 	set, generate pcie_err_attn output when this error is seen. WC */
@@ -4840,7 +4840,7 @@
 #define PXPCS_TL_FUNC345_STAT_ERR_PSND_TLP4 \
 	(1 << 20) /* Poisoned Error Status Status in function 4, if set, \
 	generate pcie_err_attn output when this error is seen.. WC */
-#define PXPCS_TL_FUNC345_STAT_PRI_SIG_TARGET_ABORT3    (1 << 19)   /* WC */
+#define PXPCS_TL_FUNC345_STAT_PRI_SIG_TARGET_CANCEL3    (1 << 19)   /* WC */
 #define PXPCS_TL_FUNC345_STAT_ERR_UNSPPORT3 \
 	(1 << 18) /* Unsupported Request Error Status in function3, if \
 	set, generate pcie_err_attn output when this error is seen. WC */
@@ -4871,7 +4871,7 @@
 #define PXPCS_TL_FUNC345_STAT_ERR_PSND_TLP3 \
 	(1 << 10) /* Poisoned Error Status Status in function 3, if set, \
 	generate pcie_err_attn output when this error is seen.. WC */
-#define PXPCS_TL_FUNC345_STAT_PRI_SIG_TARGET_ABORT2    (1 << 9)    /* WC */
+#define PXPCS_TL_FUNC345_STAT_PRI_SIG_TARGET_CANCEL2    (1 << 9)    /* WC */
 #define PXPCS_TL_FUNC345_STAT_ERR_UNSPPORT2 \
 	(1 << 8) /* Unsupported Request Error Status for Function 2, if \
 	set, generate pcie_err_attn output when this error is seen. WC */
@@ -4905,7 +4905,7 @@
 
 
 #define PXPCS_TL_FUNC678_STAT  0x85C
-#define PXPCS_TL_FUNC678_STAT_PRI_SIG_TARGET_ABORT7    (1 << 29)   /*	 WC */
+#define PXPCS_TL_FUNC678_STAT_PRI_SIG_TARGET_CANCEL7    (1 << 29)   /*	 WC */
 #define PXPCS_TL_FUNC678_STAT_ERR_UNSPPORT7 \
 	(1 << 28) /* Unsupported Request Error Status in function7, if \
 	set, generate pcie_err_attn output when this error is seen. WC */
@@ -4936,7 +4936,7 @@
 #define PXPCS_TL_FUNC678_STAT_ERR_PSND_TLP7 \
 	(1 << 20) /* Poisoned Error Status Status in function 7, if set, \
 	generate pcie_err_attn output when this error is seen.. WC */
-#define PXPCS_TL_FUNC678_STAT_PRI_SIG_TARGET_ABORT6    (1 << 19)    /*	  WC */
+#define PXPCS_TL_FUNC678_STAT_PRI_SIG_TARGET_CANCEL6    (1 << 19)    /*	  WC */
 #define PXPCS_TL_FUNC678_STAT_ERR_UNSPPORT6 \
 	(1 << 18) /* Unsupported Request Error Status in function6, if \
 	set, generate pcie_err_attn output when this error is seen. WC */
@@ -4967,7 +4967,7 @@
 #define PXPCS_TL_FUNC678_STAT_ERR_PSND_TLP6 \
 	(1 << 10) /* Poisoned Error Status Status in function 6, if set, \
 	generate pcie_err_attn output when this error is seen.. WC */
-#define PXPCS_TL_FUNC678_STAT_PRI_SIG_TARGET_ABORT5    (1 << 9) /*    WC */
+#define PXPCS_TL_FUNC678_STAT_PRI_SIG_TARGET_CANCEL5    (1 << 9) /*    WC */
 #define PXPCS_TL_FUNC678_STAT_ERR_UNSPPORT5 \
 	(1 << 8) /* Unsupported Request Error Status for Function 5, if \
 	set, generate pcie_err_attn output when this error is seen. WC */

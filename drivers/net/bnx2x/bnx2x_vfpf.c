@@ -42,7 +42,7 @@ bnx2x_check_bull(struct bnx2x_softc *sc)
 			++tries;
 		}
 		if (tries == BNX2X_VF_BULLETIN_TRIES) {
-			PMD_DRV_LOG(ERR, sc, "pf to vf bulletin board crc was wrong %d consecutive times. Aborting",
+			PMD_DRV_LOG(ERR, sc, "pf to vf bulletin board crc was wrong %d consecutive times. Canceling",
 					tries);
 			return FALSE;
 		}
@@ -123,7 +123,7 @@ bnx2x_do_req4pf(struct bnx2x_softc *sc, rte_iova_t phys_addr)
 
 	bnx2x_check_bull(sc);
 	if (sc->old_bulletin.valid_bitmap & (1 << CHANNEL_DOWN)) {
-		PMD_DRV_LOG(ERR, sc, "channel is down. Aborting message sending");
+		PMD_DRV_LOG(ERR, sc, "channel is down. Canceling message sending");
 		return -EINVAL;
 	}
 
