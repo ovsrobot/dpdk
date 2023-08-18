@@ -271,7 +271,7 @@ struct axgbe_i2c_op_state {
 	unsigned int rx_len;
 	unsigned char *rx_buf;
 
-	unsigned int tx_abort_source;
+	unsigned int tx_cancel_source;
 
 	int ret;
 };
