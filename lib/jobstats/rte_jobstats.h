@@ -218,7 +218,14 @@ rte_jobstats_start(struct rte_jobstats_context *ctx, struct rte_jobstats *job);
  *  -EINVAL if job is NULL or job was not started (it have no context).
  */
 int
-rte_jobstats_abort(struct rte_jobstats *job);
+rte_jobstats_cancel(struct rte_jobstats *job);
+
+__rte_deprecated
+static inline int
+rte_jobstats_abort(struct rte_jobstats *job)
+{
+	return rte_jobstats_cancel(job);
+}
 
 /**
  * Mark that *job* finished its execution. Context in which it was executing

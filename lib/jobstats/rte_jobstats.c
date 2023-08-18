@@ -139,7 +139,7 @@ rte_jobstats_start(struct rte_jobstats_context *ctx, struct rte_jobstats *job)
 }
 
 int
-rte_jobstats_abort(struct rte_jobstats *job)
+rte_jobstats_cancel(struct rte_jobstats *job)
 {
 	struct rte_jobstats_context *ctx;
 	uint64_t now, exec_time;
