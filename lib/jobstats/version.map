@@ -1,7 +1,7 @@
 DPDK_24 {
 	global:
 
-	rte_jobstats_abort;
+	rte_jobstats_cancel;
 	rte_jobstats_context_finish;
 	rte_jobstats_context_init;
 	rte_jobstats_context_reset;

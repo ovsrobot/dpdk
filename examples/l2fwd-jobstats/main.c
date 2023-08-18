@@ -534,7 +534,7 @@ l2fwd_main_loop(void)
 			if (likely(repeats != 1))
 				rte_jobstats_finish(&qconf->idle_job, qconf->idle_job.target);
 			else
-				rte_jobstats_abort(&qconf->idle_job);
+				rte_jobstats_cancel(&qconf->idle_job);
 
 			rte_timer_manage();
 			rte_jobstats_context_finish(&qconf->jobs_context);
