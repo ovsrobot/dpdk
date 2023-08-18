@@ -161,7 +161,7 @@ mr_btree_insert(struct mlx4_mr_btree *bt, struct mlx4_mr_cache *entry)
 	lkp_tbl = *bt->table;
 	/* Find out the slot for insertion. */
 	if (mr_btree_lookup(bt, &idx, entry->start) != UINT32_MAX) {
-		DEBUG("abort insertion to B-tree(%p): already exist at"
+		DEBUG("insertion to B-tree(%p): already exist at"
 		      " idx=%u [0x%" PRIxPTR ", 0x%" PRIxPTR ") lkey=0x%x",
 		      (void *)bt, idx, entry->start, entry->end, entry->lkey);
 		/* Already exist, return. */
@@ -720,7 +720,7 @@ alloc_resources:
 	rte_rwlock_write_lock(&priv->mr.rwlock);
 	/*
 	 * Check the address is really missing. If other thread already created
-	 * one or it is not found due to overflow, abort and return.
+	 * one or it is not found due to overflow, cancel and  return.
 	 */
 	if (mr_lookup_dev(dev, entry, addr) != UINT32_MAX) {
 		/*
@@ -729,7 +729,7 @@ alloc_resources:
 		 * here again.
 		 */
 		mr_btree_insert(&priv->mr.cache, entry);
-		DEBUG("port %u found MR for %p on final lookup, abort",
+		DEBUG("port %u found MR for %p on final lookup",
 		      dev->data->port_id, (void *)addr);
 		rte_rwlock_write_unlock(&priv->mr.rwlock);
 		rte_mcfg_mem_read_unlock();
