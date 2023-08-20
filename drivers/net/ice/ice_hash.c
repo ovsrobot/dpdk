@@ -37,9 +37,6 @@
 #define ICE_GTPU_EH_DWNLINK	0
 #define ICE_GTPU_EH_UPLINK	1
 
-#define ICE_IPV4_PROT		BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_PROT)
-#define ICE_IPV6_PROT		BIT_ULL(ICE_FLOW_FIELD_IDX_IPV6_PROT)
-
 #define VALID_RSS_IPV4_L4	(RTE_ETH_RSS_NONFRAG_IPV4_UDP	| \
 				 RTE_ETH_RSS_NONFRAG_IPV4_TCP	| \
 				 RTE_ETH_RSS_NONFRAG_IPV4_SCTP)
@@ -122,7 +119,7 @@ struct ice_rss_hash_cfg ipv4_tmplt = {
 struct ice_rss_hash_cfg ipv4_udp_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV4 |
 	ICE_FLOW_SEG_HDR_IPV_OTHER | ICE_FLOW_SEG_HDR_UDP,
-	ICE_FLOW_HASH_ETH | ICE_HASH_UDP_IPV4 | ICE_IPV4_PROT,
+	ICE_FLOW_HASH_ETH | ICE_HASH_UDP_IPV4,
 	ICE_RSS_OUTER_HEADERS,
 	0
 };
@@ -130,7 +127,7 @@ struct ice_rss_hash_cfg ipv4_udp_tmplt = {
 struct ice_rss_hash_cfg ipv4_tcp_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV4 |
 	ICE_FLOW_SEG_HDR_IPV_OTHER | ICE_FLOW_SEG_HDR_TCP,
-	ICE_FLOW_HASH_ETH | ICE_HASH_TCP_IPV4 | ICE_IPV4_PROT,
+	ICE_FLOW_HASH_ETH | ICE_HASH_TCP_IPV4,
 	ICE_RSS_OUTER_HEADERS,
 	0
 };
@@ -138,7 +135,7 @@ struct ice_rss_hash_cfg ipv4_tcp_tmplt = {
 struct ice_rss_hash_cfg ipv4_sctp_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV4 |
 	ICE_FLOW_SEG_HDR_IPV_OTHER | ICE_FLOW_SEG_HDR_SCTP,
-	ICE_FLOW_HASH_ETH | ICE_HASH_SCTP_IPV4 | ICE_IPV4_PROT,
+	ICE_FLOW_HASH_ETH | ICE_HASH_SCTP_IPV4,
 	ICE_RSS_OUTER_HEADERS,
 	0
 };
@@ -162,7 +159,7 @@ struct ice_rss_hash_cfg ipv6_frag_tmplt = {
 struct ice_rss_hash_cfg ipv6_udp_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV6 |
 	ICE_FLOW_SEG_HDR_IPV_OTHER | ICE_FLOW_SEG_HDR_UDP,
-	ICE_FLOW_HASH_ETH | ICE_HASH_UDP_IPV6 | ICE_IPV6_PROT,
+	ICE_FLOW_HASH_ETH | ICE_HASH_UDP_IPV6,
 	ICE_RSS_OUTER_HEADERS,
 	0
 };
@@ -170,7 +167,7 @@ struct ice_rss_hash_cfg ipv6_udp_tmplt = {
 struct ice_rss_hash_cfg ipv6_tcp_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV6 |
 	ICE_FLOW_SEG_HDR_IPV_OTHER | ICE_FLOW_SEG_HDR_TCP,
-	ICE_FLOW_HASH_ETH | ICE_HASH_TCP_IPV6 | ICE_IPV6_PROT,
+	ICE_FLOW_HASH_ETH | ICE_HASH_TCP_IPV6,
 	ICE_RSS_OUTER_HEADERS,
 	0
 };
@@ -178,7 +175,7 @@ struct ice_rss_hash_cfg ipv6_tcp_tmplt = {
 struct ice_rss_hash_cfg ipv6_sctp_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV6 |
 	ICE_FLOW_SEG_HDR_IPV_OTHER | ICE_FLOW_SEG_HDR_SCTP,
-	ICE_FLOW_HASH_ETH | ICE_HASH_SCTP_IPV6 | ICE_IPV6_PROT,
+	ICE_FLOW_HASH_ETH | ICE_HASH_SCTP_IPV6,
 	ICE_RSS_OUTER_HEADERS,
 	0
 };
@@ -192,7 +189,7 @@ struct ice_rss_hash_cfg outer_ipv4_inner_ipv4_tmplt = {
 struct ice_rss_hash_cfg outer_ipv4_inner_ipv4_udp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV4 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_UDP,
-	ICE_HASH_UDP_IPV4 | ICE_IPV4_PROT,
+	ICE_HASH_UDP_IPV4,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV4,
 	0
 };
@@ -200,7 +197,7 @@ struct ice_rss_hash_cfg outer_ipv4_inner_ipv4_udp_tmplt = {
 struct ice_rss_hash_cfg outer_ipv4_inner_ipv4_tcp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV4 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_TCP,
-	ICE_HASH_TCP_IPV4 | ICE_IPV4_PROT,
+	ICE_HASH_TCP_IPV4,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV4,
 	0
 };
@@ -215,7 +212,7 @@ struct ice_rss_hash_cfg outer_ipv6_inner_ipv4_tmplt = {
 struct ice_rss_hash_cfg outer_ipv6_inner_ipv4_udp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV4 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_UDP,
-	ICE_HASH_UDP_IPV4 | ICE_IPV4_PROT,
+	ICE_HASH_UDP_IPV4,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV6,
 	0
 };
@@ -223,7 +220,7 @@ struct ice_rss_hash_cfg outer_ipv6_inner_ipv4_udp_tmplt = {
 struct ice_rss_hash_cfg outer_ipv6_inner_ipv4_tcp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV4 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_TCP,
-	ICE_HASH_TCP_IPV4 | ICE_IPV4_PROT,
+	ICE_HASH_TCP_IPV4,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV6,
 	0
 };
@@ -238,7 +235,7 @@ struct ice_rss_hash_cfg outer_ipv4_inner_ipv6_tmplt = {
 struct ice_rss_hash_cfg outer_ipv4_inner_ipv6_udp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV6 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_UDP,
-	ICE_HASH_UDP_IPV6 | ICE_IPV6_PROT,
+	ICE_HASH_UDP_IPV6,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV4,
 	0
 };
@@ -246,7 +243,7 @@ struct ice_rss_hash_cfg outer_ipv4_inner_ipv6_udp_tmplt = {
 struct ice_rss_hash_cfg outer_ipv4_inner_ipv6_tcp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV6 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_TCP,
-	ICE_HASH_TCP_IPV6 | ICE_IPV6_PROT,
+	ICE_HASH_TCP_IPV6,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV4,
 	0
 };
@@ -260,7 +257,7 @@ struct ice_rss_hash_cfg outer_ipv6_inner_ipv6_tmplt = {
 struct ice_rss_hash_cfg outer_ipv6_inner_ipv6_udp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV6 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_UDP,
-	ICE_HASH_UDP_IPV6 | ICE_IPV6_PROT,
+	ICE_HASH_UDP_IPV6,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV6,
 	0
 };
@@ -268,7 +265,7 @@ struct ice_rss_hash_cfg outer_ipv6_inner_ipv6_udp_tmplt = {
 struct ice_rss_hash_cfg outer_ipv6_inner_ipv6_tcp_tmplt = {
 	ICE_FLOW_SEG_HDR_IPV6 | ICE_FLOW_SEG_HDR_IPV_OTHER |
 	ICE_FLOW_SEG_HDR_TCP,
-	ICE_HASH_TCP_IPV6 | ICE_IPV6_PROT,
+	ICE_HASH_TCP_IPV6,
 	ICE_RSS_INNER_HEADERS_W_OUTER_IPV6,
 	0
 };
