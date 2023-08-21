@@ -10,6 +10,9 @@
 
 #include "rte_port_ethdev.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_ethdev_logtype, ethdev, INFO);
+#define RTE_LOGTYPE_PORT port_ethdev_logtype
+
 /*
  * Port ETHDEV Reader
  */

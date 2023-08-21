@@ -10,6 +10,9 @@
 
 #include "rte_port_fd.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_fd_logtype, fd, INFO);
+#define RTE_LOGTYPE_PORT port_fd_logtype
+
 /*
  * Port FD Reader
  */

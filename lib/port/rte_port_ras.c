@@ -9,6 +9,9 @@
 
 #include "rte_port_ras.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_ras_logtype, ras, INFO);
+#define RTE_LOGTYPE_PORT port_ras_logtype
+
 #ifndef RTE_PORT_RAS_N_BUCKETS
 #define RTE_PORT_RAS_N_BUCKETS                                 4094
 #endif
