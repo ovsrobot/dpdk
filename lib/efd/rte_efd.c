@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <sys/queue.h>
 
+#include <rte_cpuflags.h>
 #include <rte_string_fns.h>
 #include <rte_log.h>
 #include <rte_eal_memconfig.h>
@@ -27,6 +28,9 @@
 #elif defined(RTE_ARCH_ARM64)
 #include "rte_efd_arm64.h"
 #endif
+
+RTE_LOG_REGISTER_DEFAULT(efd_logtype, INFO);
+#define RTE_LOGTYPE_EFD	efd_logtype
 
 #define EFD_KEY(key_idx, table) (table->keys + ((key_idx) * table->key_len))
 /** Hash function used to determine chunk_id and bin_id for a group */
