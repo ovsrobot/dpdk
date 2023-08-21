@@ -318,7 +318,7 @@ rte_eth_call_tx_callbacks(uint16_t port_id, uint16_t queue_id,
 	return nb_pkts;
 }
 
-void
+void *
 eth_dev_shared_data_prepare(void)
 {
 	const unsigned int flags = 0;
@@ -332,8 +332,10 @@ eth_dev_shared_data_prepare(void)
 					rte_socket_id(), flags);
 		} else
 			mz = rte_memzone_lookup(MZ_RTE_ETH_DEV_DATA);
-		if (mz == NULL)
-			rte_panic("Cannot allocate ethdev shared data\n");
+		if (mz == NULL) {
+			RTE_ETHDEV_LOG(ERR, "Cannot allocate ethdev shared data\n");
+			goto out;
+		}
 
 		eth_dev_shared_data = mz->addr;
 		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
@@ -343,6 +345,8 @@ eth_dev_shared_data_prepare(void)
 			       sizeof(eth_dev_shared_data->data));
 		}
 	}
+out:
+	return eth_dev_shared_data;
 }
 
 void
