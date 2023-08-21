@@ -7,6 +7,7 @@ sources = files(
         'rte_swx_table_learner.c',
         'rte_swx_table_selector.c',
         'rte_swx_table_wm.c',
+        'rte_table.c',
         'rte_table_acl.c',
         'rte_table_array.c',
         'rte_table_hash_cuckoo.c',
