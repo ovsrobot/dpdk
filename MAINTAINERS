@@ -1053,6 +1053,13 @@ F: drivers/net/memif/
 F: doc/guides/nics/memif.rst
 F: doc/guides/nics/features/memif.ini
 
+NTNIC PMD
+M: Mykola Kostenok <mko-plv@napatech.com>
+M: Christiam Muf <ckm@napatech.com>
+F: drivers/net/ntnic/
+F: doc/guides/nics/ntnic.rst
+F: doc/guides/nics/features/ntnic.ini
+
 
 Crypto Drivers
 --------------
