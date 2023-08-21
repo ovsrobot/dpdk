@@ -72,6 +72,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for QAT 2.0c devices to Intel QuickAssist Technology PMD.**
+
+  * QAT 2.0c (4944) devices are now enabled for QAT.
+
 
 Removed Items
 -------------
