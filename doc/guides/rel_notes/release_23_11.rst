@@ -41,6 +41,11 @@ DPDK Release 23.11
 New Features
 ------------
 
+* **Updated Marvell cnxk eventdev driver.**
+
+  Added support to get the remaining ticks to expire for a
+  given event timer.
+
 .. This section should contain new features added in this release.
    Sample format:
 
