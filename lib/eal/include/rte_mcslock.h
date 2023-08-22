@@ -27,6 +27,7 @@ extern "C" {
 #include <rte_common.h>
 #include <rte_pause.h>
 #include <rte_branch_prediction.h>
+#include <rte_stdatomic.h>
 
 /**
  * The rte_mcslock_t type.

@@ -34,6 +34,7 @@ extern "C" {
 #include <rte_compat.h>
 #include <rte_common.h>
 #include <rte_pause.h>
+#include <rte_stdatomic.h>
 
 /**
  * The rte_pflock_t type.
