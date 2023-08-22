@@ -417,6 +417,8 @@ enum index {
 	ITEM_ICMP6_ND_OPT_TLA_ETH_TLA,
 	ITEM_META,
 	ITEM_META_DATA,
+	ITEM_RANDOM,
+	ITEM_RANDOM_VALUE,
 	ITEM_GRE_KEY,
 	ITEM_GRE_KEY_VALUE,
 	ITEM_GRE_OPTION,
@@ -936,7 +938,8 @@ static const char *const modify_field_ids[] = {
 	"ipv6_proto",
 	"flex_item",
 	"hash_result",
-	"geneve_opt_type", "geneve_opt_class", "geneve_opt_data", "mpls",
+	"geneve_opt_type", "geneve_opt_class", "geneve_opt_data",
+	"mpls", "random",
 	NULL
 };
 
@@ -1535,6 +1538,7 @@ static const enum index next_item[] = {
 	ITEM_ICMP6_ND_OPT_SLA_ETH,
 	ITEM_ICMP6_ND_OPT_TLA_ETH,
 	ITEM_META,
+	ITEM_RANDOM,
 	ITEM_GRE_KEY,
 	ITEM_GRE_OPTION,
 	ITEM_GTP_PSC,
@@ -1838,6 +1842,12 @@ static const enum index item_icmp6_nd_opt_tla_eth[] = {
 
 static const enum index item_meta[] = {
 	ITEM_META_DATA,
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_random[] = {
+	ITEM_RANDOM_VALUE,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -5062,6 +5072,21 @@ static const struct token token_list[] = {
 			     item_param),
 		.args = ARGS(ARGS_ENTRY_MASK(struct rte_flow_item_meta,
 					     data, "\xff\xff\xff\xff")),
+	},
+	[ITEM_RANDOM] = {
+		.name = "random",
+		.help = "match random value",
+		.priv = PRIV_ITEM(RANDOM, sizeof(struct rte_flow_item_random)),
+		.next = NEXT(item_random),
+		.call = parse_vc,
+	},
+	[ITEM_RANDOM_VALUE] = {
+		.name = "value",
+		.help = "random value",
+		.next = NEXT(item_random, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY_MASK(struct rte_flow_item_random,
+					     value, "\xff\xff")),
 	},
 	[ITEM_GRE_KEY] = {
 		.name = "gre_key",
@@ -12633,6 +12658,9 @@ flow_item_default_mask(const struct rte_flow_item *item)
 		break;
 	case RTE_FLOW_ITEM_TYPE_META:
 		mask = &rte_flow_item_meta_mask;
+		break;
+	case RTE_FLOW_ITEM_TYPE_RANDOM:
+		mask = &rte_flow_item_random_mask;
 		break;
 	case RTE_FLOW_ITEM_TYPE_FUZZY:
 		mask = &rte_flow_item_fuzzy_mask;
