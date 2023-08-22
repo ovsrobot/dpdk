@@ -72,6 +72,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added flow matching of Infiniband BTH.**
+
+  Added ``RTE_FLOW_ITEM_RANDOM`` to match random value.
+
 
 Removed Items
 -------------
