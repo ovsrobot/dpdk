@@ -33,22 +33,20 @@ __nfp_nsp_identify(struct nfp_nsp *nsp)
 	if (nfp_nsp_get_abi_ver_minor(nsp) < 15)
 		return NULL;
 
-	ni = malloc(sizeof(*ni));
+	ni = rte_zmalloc(NULL, sizeof(*ni), 0);
 	if (ni == NULL)
 		return NULL;
 
-	memset(ni, 0, sizeof(*ni));
 	ret = nfp_nsp_read_identify(nsp, ni, sizeof(*ni));
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "reading bsp version failed %d", ret);
 		goto exit_free;
 	}
 
-	nspi = malloc(sizeof(*nspi));
+	nspi = rte_zmalloc(NULL, sizeof(*nspi), 0);
 	if (nspi == NULL)
 		goto exit_free;
 
-	memset(nspi, 0, sizeof(*nspi));
 	memcpy(nspi->version, ni->version, sizeof(nspi->version));
 	nspi->version[sizeof(nspi->version) - 1] = '\0';
 	nspi->flags = ni->flags;
@@ -61,7 +59,7 @@ __nfp_nsp_identify(struct nfp_nsp *nsp)
 	nspi->sensor_mask = rte_le_to_cpu_64(ni->sensor_mask);
 
 exit_free:
-	free(ni);
+	rte_free(ni);
 	return nspi;
 }
 

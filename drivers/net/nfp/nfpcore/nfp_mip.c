@@ -104,14 +104,14 @@ nfp_mip_open(struct nfp_cpp *cpp)
 	int err;
 	struct nfp_mip *mip;
 
-	mip = malloc(sizeof(*mip));
+	mip = rte_zmalloc(NULL, sizeof(*mip), 0);
 	if (mip == NULL)
 		return NULL;
 
 	err = nfp_mip_read_resource(cpp, mip);
 	if (err != 0) {
 		PMD_DRV_LOG(ERR, "Failed to read MIP resource");
-		free(mip);
+		rte_free(mip);
 		return NULL;
 	}
 
@@ -123,7 +123,7 @@ nfp_mip_open(struct nfp_cpp *cpp)
 void
 nfp_mip_close(struct nfp_mip *mip)
 {
-	free(mip);
+	rte_free(mip);
 }
 
 const char *

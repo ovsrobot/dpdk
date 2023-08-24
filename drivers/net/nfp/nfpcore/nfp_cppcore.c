@@ -866,7 +866,7 @@ nfp_cpp_alloc(struct rte_pci_device *dev,
 	if (ops == NULL || ops->init == NULL)
 		return NULL;
 
-	cpp = calloc(1, sizeof(*cpp));
+	cpp = rte_zmalloc(NULL, sizeof(*cpp), 0);
 	if (cpp == NULL)
 		return NULL;
 
@@ -876,7 +876,7 @@ nfp_cpp_alloc(struct rte_pci_device *dev,
 	if (cpp->op->init) {
 		err = cpp->op->init(cpp, dev);
 		if (err < 0) {
-			free(cpp);
+			rte_free(cpp);
 			return NULL;
 		}
 	}
@@ -891,7 +891,7 @@ nfp_cpp_alloc(struct rte_pci_device *dev,
 			err = nfp_xpb_readl(cpp, xpbaddr,
 					(uint32_t *)&cpp->imb_cat_table[tgt]);
 			if (err < 0) {
-				free(cpp);
+				rte_free(cpp);
 				return NULL;
 			}
 		}
@@ -900,7 +900,7 @@ nfp_cpp_alloc(struct rte_pci_device *dev,
 	err = nfp_cpp_set_mu_locality_lsb(cpp);
 	if (err < 0) {
 		PMD_DRV_LOG(ERR, "Can't calculate MU locality bit offset");
-		free(cpp);
+		rte_free(cpp);
 		return NULL;
 	}
 
@@ -922,7 +922,7 @@ nfp_cpp_free(struct nfp_cpp *cpp)
 	if (cpp->serial_len != 0)
 		free(cpp->serial);
 
-	free(cpp);
+	rte_free(cpp);
 }
 
 /**

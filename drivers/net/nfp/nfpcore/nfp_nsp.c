@@ -128,12 +128,12 @@ nfp_nsp_open(struct nfp_cpp *cpp)
 		return NULL;
 	}
 
-	state = malloc(sizeof(*state));
+	state = rte_zmalloc(NULL, sizeof(*state), 0);
 	if (state == NULL) {
 		nfp_resource_release(res);
 		return NULL;
 	}
-	memset(state, 0, sizeof(*state));
+
 	state->cpp = cpp;
 	state->res = res;
 
@@ -157,7 +157,7 @@ void
 nfp_nsp_close(struct nfp_nsp *state)
 {
 	nfp_resource_release(state->res);
-	free(state);
+	rte_free(state);
 }
 
 uint16_t
