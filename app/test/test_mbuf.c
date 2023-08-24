@@ -1033,12 +1033,15 @@ test_refcnt_iter(unsigned int lcore, unsigned int iter,
 		tref += ref;
 		if ((ref & 1) != 0) {
 			rte_pktmbuf_refcnt_update(m, ref);
-			while (ref-- != 0)
-				rte_ring_enqueue(refcnt_mbuf_ring, m);
+			while (ref-- != 0) {
+				if (rte_ring_enqueue(refcnt_mbuf_ring, m) != 0)
+					goto fail_enqueue;
+			}
 		} else {
 			while (ref-- != 0) {
 				rte_pktmbuf_refcnt_update(m, 1);
-				rte_ring_enqueue(refcnt_mbuf_ring, m);
+				if (rte_ring_enqueue(refcnt_mbuf_ring, m) != 0)
+					goto fail_enqueue;
 			}
 		}
 		rte_pktmbuf_free(m);
@@ -1066,6 +1069,10 @@ test_refcnt_iter(unsigned int lcore, unsigned int iter,
 
 	rte_panic("(lcore=%u, iter=%u): after %us only "
 	          "%u of %u mbufs left free\n", lcore, iter, wn, i, n);
+
+fail_enqueue:
+	rte_panic("(lcore=%u, iter=%u): enqueue mbuf %u cannot "
+		"fail since ring is big enough\n", lcore, iter, i);
 }
 
 static int
