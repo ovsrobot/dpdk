@@ -9,9 +9,8 @@
  * @cq: pointer to the specific control queue
  * @q_create_info: structs containing info for each queue to be initialized
  */
-static void
-idpf_ctlq_setup_regs(struct idpf_ctlq_info *cq,
-		     struct idpf_ctlq_create_info *q_create_info)
+static void idpf_ctlq_setup_regs(struct idpf_ctlq_info *cq,
+				 struct idpf_ctlq_create_info *q_create_info)
 {
 	/* set control queue registers in our local struct */
 	cq->reg.head = q_create_info->reg.head;
