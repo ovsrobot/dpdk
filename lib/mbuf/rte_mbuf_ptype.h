@@ -294,10 +294,10 @@ extern "C" {
  *
  * Packet format:
  * <'ether type'=0x0800
- * | 'version'=4, 'protocol'!=[6|17|132|1], 'MF'=0, 'frag_offset'=0>
+ * | 'version'=4, 'protocol'!=[6|17|132|1|50], 'MF'=0, 'frag_offset'=0>
  * or,
  * <'ether type'=0x86DD
- * | 'version'=6, 'next header'!=[6|17|44|132|1]>
+ * | 'version'=6, 'next header'!=[6|17|44|132|1|50]>
  */
 #define RTE_PTYPE_L4_NONFRAG                0x00000600
 /**
@@ -308,6 +308,17 @@ extern "C" {
  * | 'version'=4, 'protocol'=2, 'MF'=0, 'frag_offset'=0>
  */
 #define RTE_PTYPE_L4_IGMP                   0x00000700
+/**
+ * ESP (IP Encapsulating Security Payload) transport packet type.
+ *
+ * Packet format:
+ * <'ether type'=0x0800
+ * | 'version'=4, 'protocol'=50, 'MF'=0, 'frag_offset'=0>
+ * or,
+ * <'ether type'=0x86DD
+ * | 'version'=6, 'next header'=50>
+ */
+#define RTE_PTYPE_L4_ESP                    0x00000800
 /**
  * Mask of layer 4 packet types.
  * It is used for outer packet for tunneling cases.
@@ -652,12 +663,24 @@ extern "C" {
  *
  * Packet format (inner only):
  * <'ether type'=0x0800
- * | 'version'=4, 'protocol'!=[6|17|132|1], 'MF'=0, 'frag_offset'=0>
+ * | 'version'=4, 'protocol'!=[6|17|132|1|50], 'MF'=0, 'frag_offset'=0>
  * or,
  * <'ether type'=0x86DD
- * | 'version'=6, 'next header'!=[6|17|44|132|1]>
+ * | 'version'=6, 'next header'!=[6|17|44|132|1|50]>
  */
 #define RTE_PTYPE_INNER_L4_NONFRAG          0x06000000
+/**
+ * ESP (IP Encapsulating Security Payload) transport packet type.
+ * It is used for inner packet only.
+ *
+ * Packet format (inner only):
+ * <'ether type'=0x0800
+ * | 'version'=4, 'protocol'=50, 'MF'=0, 'frag_offset'=0>
+ * or,
+ * <'ether type'=0x86DD
+ * | 'version'=6, 'next header'=50>
+ */
+#define RTE_PTYPE_INNER_L4_ESP              0x08000000
 /**
  * Mask of inner layer 4 packet types.
  */
