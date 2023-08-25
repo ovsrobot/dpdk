@@ -19,8 +19,14 @@ RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_setup,
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_link,
 	lib.eventdev.port.link)
 
+RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_link_with_profile,
+			 lib.eventdev.port.link_with_profile)
+
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_unlink,
 	lib.eventdev.port.unlink)
+
+RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_unlink_with_profile,
+			 lib.eventdev.port.unlink_with_profile)
 
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_start,
 	lib.eventdev.start)

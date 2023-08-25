@@ -78,6 +78,23 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Added eventdev support to link queues to port with profile.**
+
+  Introduced event link profiles that can be used to associated links between
+  event queues and an event port with a unique identifier termed as profile.
+  The profile can be used to switch between the associated links in fast-path
+  without the additional overhead of linking/unlinking and waiting for unlinking.
+
+  * Added ``rte_event_port_profile_links_set`` to link event queues to an event
+    port with a unique profile identifier.
+
+  * Added ``rte_event_port_profile_unlink`` to unlink event queues from an event
+    port associated with a profile.
+
+  * Added ``rte_event_port_profile_links_get`` to retrieve links associated to a
+    profile.
+
+  * Added ``rte_event_port_profile_switch`` to switch between profiles as needed.
 
 Removed Items
 -------------

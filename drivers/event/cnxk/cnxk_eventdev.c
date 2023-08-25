@@ -31,6 +31,7 @@ cnxk_sso_info_get(struct cnxk_sso_evdev *dev,
 				  RTE_EVENT_DEV_CAP_CARRY_FLOW_ID |
 				  RTE_EVENT_DEV_CAP_MAINTENANCE_FREE |
 				  RTE_EVENT_DEV_CAP_RUNTIME_QUEUE_ATTR;
+	dev_info->max_profiles_per_port = 1;
 }
 
 int
@@ -133,7 +134,7 @@ cnxk_sso_restore_links(const struct rte_eventdev *event_dev,
 	for (i = 0; i < dev->nb_event_ports; i++) {
 		uint16_t nb_hwgrp = 0;
 
-		links_map = event_dev->data->links_map;
+		links_map = event_dev->data->links_map[0];
 		/* Point links_map to this port specific area */
 		links_map += (i * RTE_EVENT_MAX_QUEUES_PER_DEV);
 
