@@ -96,6 +96,11 @@ New Features
 
   * Added ``rte_event_port_profile_switch`` to switch between profiles as needed.
 
+* **Added support for link profiles for Marvell CNXK event device driver.**
+
+  Marvell CNXK event device driver supports up to two link profiles per event
+  port. Added support to advertise link profile capabilities and supporting APIs.
+
 Removed Items
 -------------
 
