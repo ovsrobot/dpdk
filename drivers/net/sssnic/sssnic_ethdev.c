@@ -359,6 +359,8 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.rx_queue_release = sssnic_ethdev_rx_queue_release,
 	.tx_queue_setup = sssnic_ethdev_tx_queue_setup,
 	.tx_queue_release = sssnic_ethdev_tx_queue_release,
+	.rx_queue_start = sssnic_ethdev_rx_queue_start,
+	.rx_queue_stop = sssnic_ethdev_rx_queue_stop,
 };
 
 static int
