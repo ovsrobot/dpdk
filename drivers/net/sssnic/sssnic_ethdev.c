@@ -778,6 +778,8 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.reta_update = sssnic_ethdev_rss_reta_update,
 	.reta_query = sssnic_ethdev_rss_reta_query,
 	.mtu_set = sssnic_ethdev_mtu_set,
+	.rxq_info_get = sssnic_ethdev_rx_queue_info_get,
+	.txq_info_get = sssnic_ethdev_tx_queue_info_get,
 };
 
 static int
