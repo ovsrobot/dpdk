@@ -110,3 +110,101 @@ sssnic_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 out:
 	return rte_eth_linkstatus_set(ethdev, &link);
 }
+
+static void
+sssnic_ethdev_link_status_print(struct rte_eth_dev *ethdev,
+	struct rte_eth_link *link)
+{
+	if (link->link_status) {
+		PMD_DRV_LOG(INFO, "Port %u Link Up - speed %s - %s",
+			ethdev->data->port_id,
+			rte_eth_link_speed_to_str(link->link_speed),
+			link->link_duplex == RTE_ETH_LINK_FULL_DUPLEX ?
+				      "full-duplex" :
+				      "half-duplex");
+	} else {
+		PMD_DRV_LOG(INFO, "Port %u Link Down", ethdev->data->port_id);
+	}
+}
+
+static void
+sssnic_ethdev_link_event_cb(__rte_unused uint8_t port,
+	__rte_unused enum sssnic_link_status status, void *arg)
+{
+	struct rte_eth_dev *ethdev = (struct rte_eth_dev *)arg;
+	struct rte_eth_link link;
+	int ret;
+
+	memset(&link, 0, sizeof(link));
+	sssnic_ethdev_link_get(ethdev, &link);
+
+	ret = rte_eth_linkstatus_set(ethdev, &link);
+	if (ret == 0) {
+		sssnic_ethdev_link_status_print(ethdev, &link);
+		rte_eth_dev_callback_process(ethdev, RTE_ETH_EVENT_INTR_LSC,
+			NULL);
+	}
+}
+
+static void
+sssnic_ethdev_link_intr_callback(void *arg)
+{
+	struct rte_eth_dev *ethdev = (struct rte_eth_dev *)arg;
+	struct sssnic_hw *hw;
+
+	hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+
+	sssnic_link_intr_handle(hw);
+}
+
+void
+sssnic_ethdev_link_intr_enable(struct rte_eth_dev *ethdev)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	int ret;
+
+	sssnic_link_event_callback_register(hw, sssnic_ethdev_link_event_cb,
+		ethdev);
+
+	ret = rte_intr_callback_register(pci_dev->intr_handle,
+		sssnic_ethdev_link_intr_callback, ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to register port %u intr callback!",
+			ethdev->data->port_id);
+
+		sssnic_link_event_callback_unregister(hw);
+
+		return;
+	}
+
+	ret = rte_intr_enable(pci_dev->intr_handle);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to enable port %u interrupt!",
+			ethdev->data->port_id);
+
+		rte_intr_callback_unregister(pci_dev->intr_handle,
+			sssnic_ethdev_link_intr_callback, ethdev);
+		sssnic_link_event_callback_unregister(hw);
+
+		return;
+	}
+
+	sssnic_msix_state_set(hw, SSSNIC_LINK_INTR_MSIX_ID, SSSNIC_MSIX_ENABLE);
+}
+
+void
+sssnic_ethdev_link_intr_disable(struct rte_eth_dev *ethdev)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+
+	sssnic_msix_state_set(hw, SSSNIC_LINK_INTR_MSIX_ID,
+		SSSNIC_MSIX_DISABLE);
+
+	rte_intr_disable(pci_dev->intr_handle);
+	rte_intr_callback_unregister(pci_dev->intr_handle,
+		sssnic_ethdev_link_intr_callback, ethdev);
+
+	sssnic_link_event_callback_unregister(hw);
+}

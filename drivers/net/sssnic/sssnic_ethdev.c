@@ -335,6 +335,7 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 {
 	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
 
+	sssnic_ethdev_link_intr_disable(ethdev);
 	sssnic_ethdev_mac_addrs_clean(ethdev);
 	sssnic_hw_shutdown(hw);
 	rte_free(hw);
@@ -392,6 +393,9 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 
 	ethdev->dev_ops = &sssnic_ethdev_ops;
 
+	sssnic_ethdev_link_update(ethdev, 0);
+	sssnic_ethdev_link_intr_enable(ethdev);
+
 	return 0;
 
 mac_addrs_init_fail:
@@ -441,7 +445,7 @@ static const struct rte_pci_id sssnic_pci_id_map[] = {
 
 static struct rte_pci_driver sssnic_pmd = {
 	.id_table = sssnic_pci_id_map,
-	.drv_flags = RTE_PCI_DRV_NEED_MAPPING,
+	.drv_flags = RTE_PCI_DRV_NEED_MAPPING | RTE_PCI_DRV_INTR_LSC,
 	.probe = sssnic_pci_probe,
 	.remove = sssnic_pci_remove,
 };
