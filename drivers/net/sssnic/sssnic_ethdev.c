@@ -10,6 +10,7 @@
 #include "base/sssnic_hw.h"
 #include "base/sssnic_api.h"
 #include "sssnic_ethdev.h"
+#include "sssnic_ethdev_link.h"
 
 static int
 sssnic_ethdev_infos_get(struct rte_eth_dev *ethdev,
@@ -340,6 +341,9 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 }
 
 static const struct eth_dev_ops sssnic_ethdev_ops = {
+	.dev_set_link_up = sssnic_ethdev_set_link_up,
+	.dev_set_link_down = sssnic_ethdev_set_link_down,
+	.link_update = sssnic_ethdev_link_update,
 	.dev_configure = sssnic_ethdev_configure,
 	.dev_infos_get = sssnic_ethdev_infos_get,
 	.mac_addr_set = sssnic_ethdev_mac_addr_set,

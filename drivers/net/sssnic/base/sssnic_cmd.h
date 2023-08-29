@@ -27,6 +27,13 @@ enum sssnic_mac_addr_cmd_id {
 	SSSNIC_DEL_MAC_ADDR_CMD,
 	SSSNIC_UPDATE_MAC_ADDR_CMD,
 };
+enum sssnic_netif_cmd_id {
+	SSSNIC_SET_NETIF_ENABLE_CMD = 6,
+	SSSNIC_GET_NETIF_LINK_STATUS_CMD = 7,
+	SSSNIC_GET_NETIF_MAC_STATS_CMD = 151,
+	SSSNIC_CLEAR_NETIF_MAC_STATS_CMD = 152,
+	SSSNIC_GET_NETIF_LINK_INFO_CMD = 153,
+};
 
 struct sssnic_cmd_common {
 	uint8_t status;
@@ -150,4 +157,34 @@ struct sssnic_mac_addr_update_cmd {
 	uint16_t resvd1;
 	uint8_t new_addr[6];
 };
+struct sssnic_netif_link_status_get_cmd {
+	struct sssnic_cmd_common common;
+	uint8_t port;
+	uint8_t status;
+	uint16_t rsvd;
+};
+
+struct sssnic_netif_link_info_get_cmd {
+	struct sssnic_cmd_common common;
+	uint8_t port;
+	uint8_t resvd0[3];
+	uint8_t type;
+	uint8_t autoneg_capa;
+	uint8_t autoneg;
+	uint8_t duplex;
+	uint8_t speed;
+	uint8_t fec;
+	uint8_t resvd1[18];
+};
+
+#define SSSNIC_SET_NETIF_ENABLE_CMD_FLAG_TX_EN 0x1
+#define SSSNIC_SET_NETIF_ENABLE_CMD_FLAG_RX_EN 0x2
+struct sssnic_netif_enable_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd0;
+	uint8_t flag;
+	uint8_t resvd1[3];
+};
+
 #endif /* _SSSNIC_CMD_H_ */
