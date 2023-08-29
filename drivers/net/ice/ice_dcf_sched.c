@@ -51,6 +51,7 @@ ice_dcf_tm_conf_init(struct rte_eth_dev *dev)
 	hw->tm_conf.nb_tc_node = 0;
 	hw->tm_conf.nb_vsi_node = 0;
 	hw->tm_conf.committed = false;
+	hw->tm_conf.need_clear = false;
 }
 
 void
@@ -870,6 +871,8 @@ static int ice_dcf_hierarchy_commit(struct rte_eth_dev *dev,
 		   ICE_NONDMA_TO_NONDMA);
 
 	hw->tm_conf.committed = true;
+	hw->tm_conf.need_clear = true;
+
 	return ret_val;
 
 fail_clear:

@@ -877,7 +877,7 @@ ice_dcf_uninit_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	if (hw->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_QOS)
-		if (hw->tm_conf.committed) {
+		if (hw->tm_conf.need_clear) {
 			ice_dcf_clear_bw(hw);
 			ice_dcf_tm_conf_uninit(eth_dev);
 		}

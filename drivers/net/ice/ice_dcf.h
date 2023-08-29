@@ -78,6 +78,7 @@ struct ice_dcf_tm_conf {
 	uint32_t nb_tc_node;
 	uint32_t nb_vsi_node;
 	bool committed;
+	bool need_clear;
 };
 
 struct ice_dcf_eth_stats {
