@@ -734,6 +734,12 @@ sssnic_ethdev_promiscuous_disable(struct rte_eth_dev *ethdev)
 	return 0;
 }
 
+static int
+sssnic_ethdev_mtu_set(struct rte_eth_dev *ethdev, uint16_t mtu)
+{
+	return sssnic_ethdev_tx_max_size_set(ethdev, mtu);
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_start = sssnic_ethdev_start,
 	.dev_stop = sssnic_ethdev_stop,
@@ -771,6 +777,7 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.rss_hash_update = sssnic_ethdev_rss_hash_update,
 	.reta_update = sssnic_ethdev_rss_reta_update,
 	.reta_query = sssnic_ethdev_rss_reta_query,
+	.mtu_set = sssnic_ethdev_mtu_set,
 };
 
 static int
