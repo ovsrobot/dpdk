@@ -192,6 +192,18 @@ sssnic_ethdev_txq_ci_get(struct sssnic_ethdev_txq *txq)
 	return sssnic_workq_ci_get(txq->workq);
 }
 
+static inline int
+sssnic_ethdev_txq_pi_get(struct sssnic_ethdev_txq *txq)
+{
+	return sssnic_workq_pi_get(txq->workq);
+}
+
+static inline uint16_t
+sssnic_ethdev_txq_hw_ci_get(struct sssnic_ethdev_txq *txq)
+{
+	return *txq->hw_ci_addr & txq->idx_mask;
+}
+
 static inline void
 sssnic_ethdev_txq_consume(struct sssnic_ethdev_txq *txq, uint16_t num_entries)
 {
@@ -352,4 +364,147 @@ sssnic_ethdev_tx_queue_all_release(struct rte_eth_dev *ethdev)
 
 	for (qid = 0; qid < ethdev->data->nb_tx_queues; qid++)
 		sssnic_ethdev_tx_queue_release(ethdev, qid);
+}
+
+#define SSSNIC_ETHDEV_TX_FREE_BULK 64
+static inline int
+sssnic_ethdev_txq_pktmbufs_cleanup(struct sssnic_ethdev_txq *txq)
+{
+	struct sssnic_ethdev_tx_entry *txe;
+	struct rte_mbuf *free_pkts[SSSNIC_ETHDEV_TX_FREE_BULK];
+	uint16_t num_free_pkts = 0;
+	uint16_t hw_ci, ci, id_mask;
+	uint16_t count = 0;
+	int num_entries;
+
+	ci = sssnic_ethdev_txq_ci_get(txq);
+	hw_ci = sssnic_ethdev_txq_hw_ci_get(txq);
+	id_mask = txq->idx_mask;
+	num_entries = sssnic_ethdev_txq_num_used_entries(txq);
+
+	while (num_entries > 0) {
+		txe = &txq->txe[ci];
+
+		/* HW has not consumed enough entries of current packet */
+		if (((hw_ci - ci) & id_mask) < txe->num_workq_entries)
+			break;
+
+		num_entries -= txe->num_workq_entries;
+		count += txe->num_workq_entries;
+		ci = (ci + txe->num_workq_entries) & id_mask;
+
+		if (likely(txe->pktmbuf->nb_segs == 1)) {
+			struct rte_mbuf *pkt =
+				rte_pktmbuf_prefree_seg(txe->pktmbuf);
+			txe->pktmbuf = NULL;
+
+			if (unlikely(pkt == NULL))
+				continue;
+
+			free_pkts[num_free_pkts++] = pkt;
+			if (unlikely(pkt->pool != free_pkts[0]->pool ||
+				     num_free_pkts >=
+					     SSSNIC_ETHDEV_TX_FREE_BULK)) {
+				rte_mempool_put_bulk(free_pkts[0]->pool,
+					(void **)free_pkts, num_free_pkts - 1);
+				num_free_pkts = 0;
+				free_pkts[num_free_pkts++] = pkt;
+			}
+		} else {
+			rte_pktmbuf_free(txe->pktmbuf);
+			txe->pktmbuf = NULL;
+		}
+	}
+
+	if (num_free_pkts > 0)
+		rte_mempool_put_bulk(free_pkts[0]->pool, (void **)free_pkts,
+			num_free_pkts);
+
+	sssnic_ethdev_txq_consume(txq, count);
+
+	return count;
+}
+
+#define SSSNIC_ETHDEV_TXQ_FUSH_TIMEOUT 3000 /* 3 seconds */
+static int
+sssnic_ethdev_txq_flush(struct sssnic_ethdev_txq *txq)
+{
+	uint64_t timeout;
+	uint16_t used_entries;
+
+	timeout = rte_get_timer_cycles() +
+		  rte_get_timer_hz() * SSSNIC_ETHDEV_TXQ_FUSH_TIMEOUT / 1000;
+
+	do {
+		sssnic_ethdev_txq_pktmbufs_cleanup(txq);
+		used_entries = sssnic_ethdev_txq_num_used_entries(txq);
+		if (used_entries == 0)
+			return 0;
+
+		rte_delay_us_sleep(1000);
+	} while (((long)(rte_get_timer_cycles() - timeout)) < 0);
+
+	PMD_DRV_LOG(ERR, "Flush port:%u txq:%u timeout, used_txq_entries:%u",
+		txq->port, txq->qid, sssnic_ethdev_txq_num_used_entries(txq));
+
+	return -ETIMEDOUT;
+}
+
+int
+sssnic_ethdev_tx_queue_start(struct rte_eth_dev *ethdev, uint16_t queue_id)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+
+	ethdev->data->tx_queue_state[queue_id] = RTE_ETH_QUEUE_STATE_STARTED;
+	netdev->num_started_txqs++;
+
+	PMD_DRV_LOG(DEBUG, "port %u txq %u started", ethdev->data->port_id,
+		queue_id);
+
+	return 0;
+}
+
+int
+sssnic_ethdev_tx_queue_stop(struct rte_eth_dev *ethdev, uint16_t queue_id)
+{
+	int ret;
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_ethdev_txq *txq = ethdev->data->tx_queues[queue_id];
+
+	ret = sssnic_ethdev_txq_flush(txq);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to flush port %u txq %u",
+			ethdev->data->port_id, queue_id);
+		return ret;
+	}
+
+	ethdev->data->tx_queue_state[queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
+	netdev->num_started_txqs--;
+
+	PMD_DRV_LOG(DEBUG, "port %u txq %u stopped", ethdev->data->port_id,
+		queue_id);
+
+	return 0;
+}
+
+int
+sssnic_ethdev_tx_queue_all_start(struct rte_eth_dev *ethdev)
+{
+	uint16_t qid;
+	uint16_t numq = ethdev->data->nb_tx_queues;
+
+	for (qid = 0; qid < numq; qid++)
+		sssnic_ethdev_tx_queue_start(ethdev, qid);
+
+	return 0;
+}
+
+void
+sssnic_ethdev_tx_queue_all_stop(struct rte_eth_dev *ethdev)
+{
+	uint16_t qid;
+	uint16_t numq = ethdev->data->nb_tx_queues;
+
+	for (qid = 0; qid < numq; qid++)
+		sssnic_ethdev_tx_queue_stop(ethdev, qid);
 }
