@@ -17,6 +17,7 @@
 #include "sssnic_ethdev_rss.h"
 
 static int sssnic_ethdev_init(struct rte_eth_dev *ethdev);
+static void sssnic_ethdev_vlan_filter_clean(struct rte_eth_dev *ethdev);
 
 static int
 sssnic_ethdev_infos_get(struct rte_eth_dev *ethdev,
@@ -341,6 +342,7 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 {
 	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
 
+	sssnic_ethdev_vlan_filter_clean(ethdev);
 	sssnic_ethdev_link_intr_disable(ethdev);
 	sssnic_ethdev_tx_queue_all_release(ethdev);
 	sssnic_ethdev_rx_queue_all_release(ethdev);
@@ -822,6 +824,89 @@ sssnic_ethdev_flow_ctrl_get(struct rte_eth_dev *ethdev,
 	return 0;
 }
 
+static int
+sssnic_ethdev_vlan_offload_set(struct rte_eth_dev *ethdev, int mask)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct rte_eth_conf *dev_conf = &ethdev->data->dev_conf;
+	uint8_t vlan_strip_en;
+	uint32_t vlan_filter_en;
+	int ret;
+
+	if (mask & RTE_ETH_VLAN_STRIP_MASK) {
+		if (dev_conf->rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+			vlan_strip_en = 1;
+		else
+			vlan_strip_en = 0;
+
+		ret = sssnic_vlan_strip_enable_set(hw, vlan_strip_en);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Failed to %s vlan strip offload",
+				vlan_strip_en ? "enable" : "disable");
+			return ret;
+		}
+	}
+
+	if (mask & RTE_ETH_VLAN_FILTER_MASK) {
+		if (dev_conf->rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_FILTER)
+			vlan_filter_en = 1;
+		else
+			vlan_filter_en = 0;
+
+		ret = sssnic_vlan_filter_enable_set(hw, vlan_filter_en);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Failed to %s vlan filter offload",
+				vlan_filter_en ? "enable" : "disable");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_vlan_filter_get(struct rte_eth_dev *ethdev, uint16_t vlan_id)
+{
+	struct rte_vlan_filter_conf *vfc = &ethdev->data->vlan_filter_conf;
+	int vidx = vlan_id / 64;
+	int vbit = vlan_id % 64;
+
+	return !!(vfc->ids[vidx] & RTE_BIT64(vbit));
+}
+
+static int
+sssnic_ethdev_vlan_filter_set(struct rte_eth_dev *ethdev, uint16_t vlan_id,
+	int on)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	int ret;
+
+	if (sssnic_ethdev_vlan_filter_get(ethdev, vlan_id) == !!on)
+		return 0;
+
+	ret = sssnic_vlan_filter_set(hw, vlan_id, !!on);
+	if (ret) {
+		PMD_DRV_LOG(ERR,
+			"Failed to %s VLAN filter, vlan_id: %u, port: %u",
+			on ? "add" : "remove", vlan_id, ethdev->data->port_id);
+		return ret;
+	}
+
+	PMD_DRV_LOG(DEBUG, "%s VLAN %u filter to port %u",
+		on ? "Added" : "Removed", vlan_id, ethdev->data->port_id);
+
+	return 0;
+}
+
+static void
+sssnic_ethdev_vlan_filter_clean(struct rte_eth_dev *ethdev)
+{
+	uint16_t vlan_id;
+
+	for (vlan_id = 0; vlan_id <= RTE_ETHER_MAX_VLAN_ID; vlan_id++)
+		sssnic_ethdev_vlan_filter_set(ethdev, vlan_id, 0);
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_start = sssnic_ethdev_start,
 	.dev_stop = sssnic_ethdev_stop,
@@ -865,6 +950,8 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.fw_version_get = sssnic_ethdev_fw_version_get,
 	.flow_ctrl_set = sssnic_ethdev_flow_ctrl_set,
 	.flow_ctrl_get = sssnic_ethdev_flow_ctrl_get,
+	.vlan_offload_set = sssnic_ethdev_vlan_offload_set,
+	.vlan_filter_set = sssnic_ethdev_vlan_filter_set,
 };
 
 static int

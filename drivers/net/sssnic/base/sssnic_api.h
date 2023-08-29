@@ -469,5 +469,6 @@ int sssnic_flow_ctrl_set(struct sssnic_hw *hw, bool autoneg, bool rx_en,
 	bool tx_en);
 int sssnic_flow_ctrl_get(struct sssnic_hw *hw, bool *autoneg, bool *rx_en,
 	bool *tx_en);
+int sssnic_vlan_filter_set(struct sssnic_hw *hw, uint16_t vid, bool add);
 
 #endif /* _SSSNIC_API_H_ */
