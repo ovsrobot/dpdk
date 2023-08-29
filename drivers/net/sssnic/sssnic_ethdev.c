@@ -8,24 +8,61 @@
 
 #include "sssnic_log.h"
 #include "base/sssnic_hw.h"
+#include "sssnic_ethdev.h"
+
+static void
+sssnic_ethdev_release(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+
+	sssnic_hw_shutdown(hw);
+	rte_free(hw);
+}
 
 static int
 sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 {
-	RTE_SET_USED(ethdev);
+	int ret;
+	struct sssnic_hw *hw;
+	struct sssnic_netdev *netdev;
+	struct rte_pci_device *pci_dev;
+
 	PMD_INIT_FUNC_TRACE();
 
-	return -EINVAL;
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	pci_dev = RTE_ETH_DEV_TO_PCI(ethdev);
+	hw = rte_zmalloc("sssnic_hw", sizeof(struct sssnic_hw), 0);
+	if (hw == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc memory for hw");
+		return -ENOMEM;
+	}
+	netdev->hw = hw;
+	hw->pci_dev = pci_dev;
+	ret = sssnic_hw_init(hw);
+	if (ret != 0) {
+		rte_free(hw);
+		return ret;
+	}
+
+	return 0;
 }
 
 static int
 sssnic_ethdev_uninit(struct rte_eth_dev *ethdev)
 {
-	RTE_SET_USED(ethdev);
 	PMD_INIT_FUNC_TRACE();
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	/* ethdev port has been released */
+	if (ethdev->state == RTE_ETH_DEV_UNUSED)
+		return 0;
+
+	sssnic_ethdev_release(ethdev);
 
 	return -EINVAL;
 }
@@ -36,7 +73,8 @@ sssnic_pci_probe(struct rte_pci_driver *pci_drv, struct rte_pci_device *pci_dev)
 	RTE_SET_USED(pci_drv);
 	PMD_INIT_FUNC_TRACE();
 
-	return rte_eth_dev_pci_generic_probe(pci_dev, 0, sssnic_ethdev_init);
+	return rte_eth_dev_pci_generic_probe(pci_dev,
+		sizeof(struct sssnic_netdev), sssnic_ethdev_init);
 }
 
 static int
