@@ -345,7 +345,287 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 	rte_free(hw);
 }
 
+static int
+sssnic_ethdev_rxtx_max_size_init(struct rte_eth_dev *ethdev)
+{
+	int ret;
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+
+	netdev->max_rx_size = sssnic_ethdev_rx_max_size_determine(ethdev);
+
+	ret = sssnic_rxtx_max_size_init(hw, netdev->max_rx_size, 0x3fff);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize max rx and tx size");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_features_setup(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	uint64_t features;
+	int ret;
+
+	ret = sssnic_port_features_get(hw, &features);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to get features");
+		return ret;
+	}
+
+	features &= SSSNIC_ETHDEV_DEFAULT_FEATURES;
+
+	ret = sssnic_port_features_set(hw, features);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set features to %" PRIx64,
+			features);
+		return ret;
+	}
+
+	PMD_DRV_LOG(DEBUG, "Set features to %" PRIx64, features);
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_queues_ctx_setup(struct rte_eth_dev *ethdev)
+{
+	int ret;
+
+	ret = sssnic_ethdev_tx_queues_ctx_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize tx queues context");
+		return ret;
+	}
+
+	ret = sssnic_ethdev_rx_queues_ctx_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize rx queues context");
+		return ret;
+	}
+
+	ret = sssnic_ethdev_rx_offload_ctx_reset(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize rx offload context");
+		return ret;
+	}
+
+	ret = sssnic_ethdev_tx_offload_ctx_reset(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize tx offload context");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_rxtx_ctx_setup(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	uint16_t rxq_depth;
+	uint16_t txq_depth;
+	uint16_t rx_buf_idx;
+	int ret;
+
+	/* queue 0 as default depth */
+	rxq_depth = sssnic_ethdev_rx_queue_depth_get(ethdev, 0);
+	rxq_depth = rxq_depth << 1;
+	txq_depth = sssnic_ethdev_tx_queue_depth_get(ethdev, 0);
+
+	rx_buf_idx = sssnic_ethdev_rx_buf_size_index_get(netdev->max_rx_size);
+
+	ret = sssnic_rxtx_ctx_set(hw, true, rxq_depth, rx_buf_idx, txq_depth);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rxtx context");
+		return ret;
+	}
+
+	PMD_DRV_LOG(INFO,
+		"Setup rxq_depth: %u, max_rx_size: %u, rx_buf_idx: %u, txq_depth: %u",
+		rxq_depth >> 1, netdev->max_rx_size, rx_buf_idx, txq_depth);
+
+	return 0;
+}
+
+static void
+sssnic_ethdev_rxtx_ctx_clean(struct rte_eth_dev *ethdev)
+{
+	sssnic_rxtx_ctx_set(SSSNIC_ETHDEV_TO_HW(ethdev), 0, 0, 0, 0);
+}
+
+static int
+sssnic_ethdev_resource_clean(struct rte_eth_dev *ethdev)
+{
+	return sssnic_port_resource_clean(SSSNIC_ETHDEV_TO_HW(ethdev));
+}
+
+static int
+sssnic_ethdev_start(struct rte_eth_dev *ethdev)
+{
+	int ret;
+
+	/* disable link event */
+	sssnic_ethdev_link_intr_disable(ethdev);
+
+	/* Allocate rx intr vec */
+	ret = sssnic_ethdev_rx_intr_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize rx initr of port %u",
+			ethdev->data->port_id);
+		goto link_intr_enable;
+	}
+
+	/* Initialize rx and tx max size */
+	ret = sssnic_ethdev_rxtx_max_size_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR,
+			"Failed to initialize rxtx max size of port %u",
+			ethdev->data->port_id);
+		goto rx_intr_shutdown;
+	}
+
+	/* Setup default features for port */
+	ret = sssnic_ethdev_features_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup features");
+		goto rx_intr_shutdown;
+	}
+
+	/* Setup txqs and rxqs context */
+	ret = sssnic_ethdev_queues_ctx_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup queues context");
+		goto rx_intr_shutdown;
+	}
+
+	/* Setup tx and rx root context */
+	ret = sssnic_ethdev_rxtx_ctx_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup rxtx context");
+		goto rx_intr_shutdown;
+	}
+
+	/* Initialize tx ci attributes */
+	ret = sssnic_ethdev_tx_ci_attr_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize tx ci attributes");
+		goto rxtx_ctx_clean;
+	}
+
+	/* Set MTU */
+	ret = sssnic_ethdev_tx_max_size_set(ethdev, ethdev->data->mtu);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set tx max size to %u",
+			ethdev->data->mtu);
+		goto rxtx_ctx_clean;
+	}
+
+	/* init rx mode */
+	ret = sssnic_ethdev_rx_mode_set(ethdev, SSSNIC_ETHDEV_DEF_RX_MODE);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rx mode to %x",
+			SSSNIC_ETHDEV_DEF_RX_MODE);
+		goto rxtx_ctx_clean;
+	}
+
+	/* setup rx offload */
+	ret = sssnic_ethdev_rx_offload_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup rx offload");
+		goto rx_mode_reset;
+	}
+
+	/* start all rx queues */
+	ret = sssnic_ethdev_rx_queue_all_start(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to start all rx queues");
+		goto clean_port_res;
+	}
+
+	/* start all tx queues */
+	sssnic_ethdev_tx_queue_all_start(ethdev);
+
+	/* enable link event */
+	sssnic_ethdev_link_intr_enable(ethdev);
+
+	/* set port link up */
+	ret = sssnic_ethdev_set_link_up(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set port link up");
+		goto stop_queues;
+	}
+
+	PMD_DRV_LOG(INFO, "Port %u is started", ethdev->data->port_id);
+
+	return 0;
+
+stop_queues:
+	sssnic_ethdev_tx_queue_all_stop(ethdev);
+	sssnic_ethdev_rx_queue_all_stop(ethdev);
+clean_port_res:
+	sssnic_ethdev_resource_clean(ethdev);
+rx_mode_reset:
+	sssnic_ethdev_rx_mode_set(ethdev, SSSNIC_ETHDEV_RX_MODE_NONE);
+rxtx_ctx_clean:
+	sssnic_ethdev_rxtx_ctx_clean(ethdev);
+rx_intr_shutdown:
+	sssnic_ethdev_rx_intr_shutdown(ethdev);
+link_intr_enable:
+	sssnic_ethdev_link_intr_enable(ethdev);
+	return ret;
+}
+
+static int
+sssnic_ethdev_stop(struct rte_eth_dev *ethdev)
+{
+	struct rte_eth_link linkstatus = { 0 };
+	int ret;
+
+	/* disable link event */
+	sssnic_ethdev_link_intr_disable(ethdev);
+
+	/* set link down */
+	ret = sssnic_ethdev_set_link_down(ethdev);
+	if (ret != 0)
+		PMD_DRV_LOG(WARNING, "Failed to set port %u link down",
+			ethdev->data->port_id);
+
+	rte_eth_linkstatus_set(ethdev, &linkstatus);
+
+	/* wait for hw to stop rx and tx packet */
+	rte_delay_ms(100);
+
+	/* stop all tx queues */
+	sssnic_ethdev_tx_queue_all_stop(ethdev);
+
+	/* stop all rx queues */
+	sssnic_ethdev_rx_queue_all_stop(ethdev);
+
+	/* clean hardware resource */
+	sssnic_ethdev_resource_clean(ethdev);
+
+	/* shut down rx queue interrupt */
+	sssnic_ethdev_rx_intr_shutdown(ethdev);
+
+	/* clean rxtx context */
+	sssnic_ethdev_rxtx_ctx_clean(ethdev);
+
+	/* enable link event */
+	sssnic_ethdev_link_intr_enable(ethdev);
+
+	PMD_DRV_LOG(INFO, "Port %u is stopped", ethdev->data->port_id);
+
+	return 0;
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
+	.dev_start = sssnic_ethdev_start,
+	.dev_stop = sssnic_ethdev_stop,
 	.dev_set_link_up = sssnic_ethdev_set_link_up,
 	.dev_set_link_down = sssnic_ethdev_set_link_down,
 	.link_update = sssnic_ethdev_link_update,
@@ -428,6 +708,10 @@ sssnic_ethdev_uninit(struct rte_eth_dev *ethdev)
 	/* ethdev port has been released */
 	if (ethdev->state == RTE_ETH_DEV_UNUSED)
 		return 0;
+
+	/* stop ethdev first */
+	if (ethdev->data->dev_started)
+		sssnic_ethdev_stop(ethdev);
 
 	sssnic_ethdev_release(ethdev);
 

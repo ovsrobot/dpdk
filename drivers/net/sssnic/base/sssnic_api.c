@@ -13,6 +13,7 @@
 #include "sssnic_mbox.h"
 #include "sssnic_ctrlq.h"
 #include "sssnic_api.h"
+#include "sssnic_misc.h"
 
 int
 sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
@@ -492,6 +493,513 @@ sssnic_rxq_flush(struct sssnic_hw *hw, uint16_t qid)
 		PMD_DRV_LOG(ERR,
 			"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
 			"SSSNIC_FLUSH_RXQ_CMD", ret, cmd.result);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_rxtx_size_set(struct sssnic_hw *hw, uint16_t rx_size, uint16_t tx_size,
+	uint32_t flags)
+{
+	int ret;
+	struct sssnic_rxtx_size_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	if (hw == NULL)
+		return -EINVAL;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.rx_size = rx_size;
+	cmd.tx_size = tx_size;
+	cmd.flags = flags;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_PORT_RXTX_SIZE_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_PORT_RXTX_SIZE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_rxtx_max_size_init(struct sssnic_hw *hw, uint16_t rx_size,
+	uint16_t tx_size)
+{
+	return sssnic_rxtx_size_set(hw, rx_size, tx_size,
+		SSSNIC_CMD_INIT_RXTX_SIZE_FLAG | SSSNIC_CMD_SET_RX_SIZE_FLAG |
+			SSSNIC_CMD_SET_TX_SIZE_FLAG);
+}
+
+int
+sssnic_tx_max_size_set(struct sssnic_hw *hw, uint16_t tx_size)
+{
+	return sssnic_rxtx_size_set(hw, 0, tx_size,
+		SSSNIC_CMD_SET_TX_SIZE_FLAG);
+}
+
+int
+sssnic_port_features_get(struct sssnic_hw *hw, uint64_t *features)
+{
+	int ret;
+	struct sssnic_port_feature_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.opcode = SSSNIC_CMD_OPCODE_GET;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_PORT_FEATURE_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_PORT_FEATURE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	*features = cmd.features;
+
+	return 0;
+}
+
+int
+sssnic_port_features_set(struct sssnic_hw *hw, uint64_t features)
+{
+	int ret;
+	struct sssnic_port_feature_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.features = features;
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_PORT_FEATURE_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_PORT_FEATURE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+#define SSSNIC_MAX_NUM_RXTXQ_CTX_SET_IN_BULK                                   \
+	((SSSNIC_CTRLQ_MAX_CMD_DATA_LEN - SSSNIC_RXTXQ_CTX_CMD_INFO_LEN) /     \
+		SSSNIC_RXTXQ_CTX_SIZE)
+
+static int
+sssnic_rxtxq_ctx_set(struct sssnic_hw *hw, struct sssnic_rxtxq_ctx *q_ctx,
+	uint16_t q_start, enum sssnic_rxtxq_ctx_type type, uint16_t count)
+{
+	struct sssnic_ctrlq_cmd *cmd;
+	struct sssnic_rxtxq_ctx_cmd *data;
+	struct sssnic_rxtxq_ctx *ctx;
+	uint32_t num, i;
+	uint32_t max_num;
+	struct sssnic_rxtxq_ctx_cmd_info cmd_info;
+	int ret = 0;
+
+	cmd = sssnic_ctrlq_cmd_alloc(hw);
+	if (cmd == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc ctrlq command");
+		return -ENOMEM;
+	}
+
+	data = cmd->data;
+	ctx = (struct sssnic_rxtxq_ctx *)(data + 1);
+	max_num = SSSNIC_MAX_NUM_RXTXQ_CTX_SET_IN_BULK;
+
+	while (count > 0) {
+		num = RTE_MIN(count, max_num);
+
+		cmd_info.q_count = num;
+		cmd_info.q_type = type;
+		cmd_info.q_start = q_start;
+		cmd_info.resvd0 = 0;
+		sssnic_mem_cpu_to_be_32(&cmd_info, &data->info,
+			sizeof(struct sssnic_rxtxq_ctx_cmd_info));
+
+		for (i = 0; i < num; i++)
+			sssnic_mem_cpu_to_be_32(q_ctx + i, ctx + i,
+				SSSNIC_RXTXQ_CTX_SIZE);
+
+		cmd->data_len = sizeof(struct sssnic_rxtxq_ctx_cmd_info) +
+				(SSSNIC_RXTXQ_CTX_SIZE * num);
+		cmd->module = SSSNIC_LAN_MODULE;
+		cmd->cmd = SSSNIC_SET_RXTXQ_CTX_CMD;
+
+		rte_wmb();
+
+		ret = sssnic_ctrlq_cmd_exec(hw, cmd, 0);
+		if (ret != 0 || cmd->result != 0) {
+			PMD_DRV_LOG(ERR,
+				"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
+				"SSSNIC_SET_RXTXQ_CTX_CMD", ret, cmd->result);
+			ret = -EIO;
+			goto out;
+		}
+
+		count -= num;
+		q_ctx += num;
+		q_start += num;
+	}
+
+out:
+	sssnic_ctrlq_cmd_destroy(hw, cmd);
+	return ret;
+}
+
+int
+sssnic_txq_ctx_set(struct sssnic_hw *hw, struct sssnic_txq_ctx *ctx,
+	uint16_t qstart, uint16_t count)
+{
+	return sssnic_rxtxq_ctx_set(hw, (struct sssnic_rxtxq_ctx *)ctx, qstart,
+		SSSNIC_TXQ_CTX, count);
+}
+
+int
+sssnic_rxq_ctx_set(struct sssnic_hw *hw, struct sssnic_rxq_ctx *ctx,
+	uint16_t qstart, uint16_t count)
+{
+	return sssnic_rxtxq_ctx_set(hw, (struct sssnic_rxtxq_ctx *)ctx, qstart,
+		SSSNIC_RXQ_CTX, count);
+}
+
+static int
+sssnic_offload_ctx_reset(struct sssnic_hw *hw, uint16_t q_start,
+	enum sssnic_rxtxq_ctx_type q_type, uint16_t count)
+{
+	struct sssnic_ctrlq_cmd cmd;
+	struct sssnic_offload_ctx_reset_cmd data;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	memset(&data, 0, sizeof(data));
+
+	data.info.q_count = count;
+	data.info.q_start = q_start;
+	data.info.q_type = q_type;
+
+	cmd.data = &data;
+	cmd.module = SSSNIC_LAN_MODULE;
+	cmd.data_len = sizeof(data);
+	cmd.cmd = SSSNIC_RESET_OFFLOAD_CTX_CMD;
+
+	sssnic_mem_cpu_to_be_32(&data, &data, sizeof(data));
+
+	ret = sssnic_ctrlq_cmd_exec(hw, &cmd, 0);
+	if (ret != 0 || cmd.result != 0) {
+		PMD_DRV_LOG(ERR,
+			"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
+			"SSSNIC_RESET_OFFLOAD_CTX_CMD", ret, cmd.result);
+
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_rx_offload_ctx_reset(struct sssnic_hw *hw)
+{
+	return sssnic_offload_ctx_reset(hw, 0, SSSNIC_RXQ_CTX,
+		SSSNIC_MAX_NUM_RXQ(hw));
+}
+
+int
+sssnic_tx_offload_ctx_reset(struct sssnic_hw *hw)
+{
+	return sssnic_offload_ctx_reset(hw, 0, SSSNIC_TXQ_CTX,
+		SSSNIC_MAX_NUM_TXQ(hw));
+}
+
+int
+sssnic_rxtx_ctx_set(struct sssnic_hw *hw, bool lro_en, uint16_t rxq_depth,
+	uint16_t rx_buf, uint16_t txq_depth)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_root_ctx_cmd cmd;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.func_id = SSSNIC_FUNC_IDX(hw);
+	cmd.lro_enable = lro_en ? 1 : 0;
+	cmd.rx_buf = rx_buf;
+	cmd.rxq_depth = (uint16_t)rte_log2_u32(rxq_depth);
+	cmd.txq_depth = (uint16_t)rte_log2_u32(txq_depth);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_SET_ROOT_CTX_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_COMM_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SET_ROOT_CTX_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_port_tx_ci_attr_set(struct sssnic_hw *hw, uint16_t tx_qid,
+	uint8_t pending_limit, uint8_t coalescing_time, uint64_t dma_addr)
+{
+	int ret;
+	struct sssnic_port_tx_ci_attr_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.coalescing_time = coalescing_time;
+	cmd.pending_limit = pending_limit;
+	cmd.qid = tx_qid;
+	cmd.dma_addr = dma_addr >> 2;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_PORT_TX_CI_ATTR_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_PORT_TX_CI_ATTR_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_port_rx_mode_set(struct sssnic_hw *hw, uint32_t mode)
+{
+	int ret;
+	struct sssnic_port_rx_mode_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.mode = mode;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_PORT_RX_MODE_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_PORT_RX_MODE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_lro_enable_set(struct sssnic_hw *hw, bool ipv4_en, bool ipv6_en,
+	uint8_t nb_lro_bufs)
+{
+	int ret;
+	struct sssnic_lro_cfg_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.ipv4_en = ipv4_en ? 1 : 0;
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+	cmd.ipv6_en = ipv6_en ? 1 : 0;
+	cmd.nb_bufs = nb_lro_bufs;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_PORT_LRO_CFG_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_PORT_LRO_CFG_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_lro_timer_set(struct sssnic_hw *hw, uint32_t timer)
+{
+	int ret;
+	struct sssnic_lro_timer_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		return 0;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+	cmd.timer = timer;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_PORT_LRO_TIMER_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_PORT_LRO_TIMER_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_vlan_filter_enable_set(struct sssnic_hw *hw, bool state)
+{
+	int ret;
+	struct sssnic_vlan_filter_enable_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.state = state ? 1 : 0;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_ENABLE_PORT_VLAN_FILTER_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_ENABLE_PORT_VLAN_FILTER_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_vlan_strip_enable_set(struct sssnic_hw *hw, bool state)
+{
+	int ret;
+	struct sssnic_vlan_strip_enable_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.state = state ? 1 : 0;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_ENABLE_PORT_VLAN_STRIP_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_ENABLE_PORT_VLAN_STRIP_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_port_resource_clean(struct sssnic_hw *hw)
+{
+	int ret;
+	struct sssnic_port_resource_clean_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_CLEAN_PORT_RES_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_CLEAN_PORT_RES_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
 		return -EIO;
 	}
 

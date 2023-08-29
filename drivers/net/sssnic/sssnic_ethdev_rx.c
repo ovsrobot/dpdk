@@ -186,7 +186,7 @@ sssnic_ethdev_rxq_doorbell_ring(struct sssnic_ethdev_rxq *rxq, uint16_t pi)
 	db.qid = rxq->qid;
 	db.pi_hi = (hw_pi >> 8) & 0xff;
 
-	db_addr = (uint64_t *)(rxq->doorbell + (hw_pi & 0xff));
+	db_addr = ((uint64_t *)rxq->doorbell) + (hw_pi & 0xff);
 
 	rte_write64(db.u64, db_addr);
 }
@@ -885,4 +885,272 @@ sssnic_ethdev_rx_intr_shutdown(struct rte_eth_dev *ethdev)
 
 	rte_intr_efd_disable(intr_handle);
 	rte_intr_vec_list_free(intr_handle);
+}
+
+uint16_t
+sssnic_ethdev_rx_max_size_determine(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_ethdev_rxq *rxq;
+	uint16_t max_size = 0;
+	uint16_t i;
+
+	for (i = 0; i < ethdev->data->nb_rx_queues; i++) {
+		rxq = ethdev->data->rx_queues[i];
+		if (rxq->rx_buf_size > max_size)
+			max_size = rxq->rx_buf_size;
+	}
+
+	return max_size;
+}
+
+static void
+sssnic_ethdev_rxq_ctx_build(struct sssnic_ethdev_rxq *rxq,
+	struct sssnic_rxq_ctx *rxq_ctx)
+{
+	uint16_t hw_ci, hw_pi;
+	uint64_t pfn;
+
+	hw_ci = sssnic_ethdev_rxq_ci_get(rxq) << 1;
+	hw_pi = sssnic_ethdev_rxq_pi_get(rxq) << 1;
+
+	/* dw0 */
+	rxq_ctx->pi = hw_pi;
+	rxq_ctx->ci = hw_ci;
+
+	/* dw1 */
+	rxq_ctx->msix_id = rxq->intr.msix_id;
+	rxq_ctx->intr_dis = !rxq->intr.enable;
+
+	/* workq buf phyaddress PFN, size = 4K */
+	pfn = SSSNIC_WORKQ_BUF_PHYADDR(rxq->workq) >> 12;
+
+	/* dw2 */
+	rxq_ctx->wq_pfn_hi = SSSNIC_UPPER_32_BITS(pfn);
+	rxq_ctx->wqe_type = 2;
+	rxq_ctx->wq_owner = 1;
+
+	/* dw3 */
+	rxq_ctx->wq_pfn_lo = SSSNIC_LOWER_32_BITS(pfn);
+
+	/* dw4, dw5, dw6 are reserved */
+
+	/* dw7 */
+	rxq_ctx->rxd_len = 1;
+
+	/* dw8 */
+	rxq_ctx->pre_cache_thd = 256;
+	rxq_ctx->pre_cache_max = 6;
+	rxq_ctx->pre_cache_min = 1;
+
+	/* dw9 */
+	rxq_ctx->pre_ci_hi = (hw_ci >> 12) & 0xf;
+	rxq_ctx->pre_owner = 1;
+
+	/* dw10 */
+	rxq_ctx->pre_wq_pfn_hi = SSSNIC_UPPER_32_BITS(pfn);
+	rxq_ctx->pre_ci_lo = hw_ci & 0xfff;
+
+	/* dw11 */
+	rxq_ctx->pre_wq_pfn_lo = SSSNIC_LOWER_32_BITS(pfn);
+
+	/* dw12 */
+	rxq_ctx->pi_addr_hi = SSSNIC_UPPER_32_BITS(rxq->pi_mz->iova);
+
+	/* dw13 */
+	rxq_ctx->pi_addr_lo = SSSNIC_LOWER_32_BITS(rxq->pi_mz->iova);
+
+	/* workq buf block PFN, size = 512B */
+	pfn = SSSNIC_WORKQ_BUF_PHYADDR(rxq->workq) >> 9;
+
+	/* dw14 */
+	rxq_ctx->wq_blk_pfn_hi = SSSNIC_UPPER_32_BITS(pfn);
+
+	/* dw15 */
+	rxq_ctx->wq_blk_pfn_lo = SSSNIC_LOWER_32_BITS(pfn);
+}
+
+int
+sssnic_ethdev_rx_queues_ctx_init(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct sssnic_ethdev_rxq *rxq;
+	struct sssnic_rxq_ctx *qctx;
+	uint16_t qid, numq;
+	int ret;
+
+	numq = ethdev->data->nb_rx_queues;
+
+	qctx = rte_zmalloc(NULL, numq * sizeof(struct sssnic_rxq_ctx), 0);
+	if (qctx == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc memory for rxq ctx");
+		return -EINVAL;
+	}
+
+	for (qid = 0; qid < numq; qid++) {
+		rxq = ethdev->data->rx_queues[qid];
+
+		/* reset ci and pi */
+		sssnic_workq_reset(rxq->workq);
+
+		sssnic_ethdev_rxq_ctx_build(rxq, &qctx[qid]);
+	}
+
+	ret = sssnic_rxq_ctx_set(hw, qctx, 0, numq);
+	rte_free(qctx);
+
+	return ret;
+}
+
+int
+sssnic_ethdev_rx_offload_ctx_reset(struct rte_eth_dev *ethdev)
+{
+	return sssnic_rx_offload_ctx_reset(SSSNIC_ETHDEV_TO_HW(ethdev));
+}
+
+uint16_t
+sssnic_ethdev_rx_queue_depth_get(struct rte_eth_dev *ethdev, uint16_t qid)
+{
+	struct sssnic_ethdev_rxq *rxq;
+
+	if (qid >= ethdev->data->nb_rx_queues)
+		return 0;
+
+	rxq = ethdev->data->rx_queues[qid];
+
+	return rxq->depth;
+};
+
+uint32_t
+sssnic_ethdev_rx_buf_size_index_get(uint16_t rx_buf_size)
+{
+	uint32_t i;
+
+	for (i = 0; i < SSSNIC_ETHDEV_RX_BUF_SIZE_COUNT; i++) {
+		if (rx_buf_size == sssnic_ethdev_rx_buf_size_tbl[i])
+			return i;
+	}
+
+	return SSSNIC_ETHDEV_DEF_RX_BUF_SIZE_IDX;
+}
+
+int
+sssnic_ethdev_rx_mode_set(struct rte_eth_dev *ethdev, uint32_t mode)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	int ret;
+
+	ret = sssnic_port_rx_mode_set(SSSNIC_ETHDEV_TO_HW(ethdev), mode);
+	if (ret != 0)
+		return ret;
+
+	netdev->rx_mode = mode;
+
+	PMD_DRV_LOG(DEBUG, "Set rx_mode to %x", mode);
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_lro_setup(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct rte_eth_conf *dev_conf = &ethdev->data->dev_conf;
+	bool enable;
+	uint8_t num_lro_bufs;
+	uint32_t max_lro_pkt_size;
+	uint32_t timer = SSSNIC_ETHDEV_LRO_TIMER;
+	int ret;
+
+	if (dev_conf->rxmode.offloads & RTE_ETH_RX_OFFLOAD_TCP_LRO)
+		enable = true;
+	else
+		enable = false;
+
+	max_lro_pkt_size = dev_conf->rxmode.max_lro_pkt_size;
+	num_lro_bufs = max_lro_pkt_size / SSSNIC_ETHDEV_LRO_BUF_SIZE;
+
+	if (num_lro_bufs == 0)
+		num_lro_bufs = 1;
+
+	ret = sssnic_lro_enable_set(hw, enable, enable, num_lro_bufs);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to %s LRO",
+			enable ? "enable" : "disable");
+		return ret;
+	}
+
+	ret = sssnic_lro_timer_set(hw, timer);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set lro timer to %u", timer);
+		return ret;
+	}
+
+	PMD_DRV_LOG(INFO,
+		"%s LRO, max_lro_pkt_size: %u, num_lro_bufs: %u, lro_timer: %u",
+		enable ? "Enabled" : "Disabled", max_lro_pkt_size, num_lro_bufs,
+		timer);
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_rx_vlan_offload_setup(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct rte_eth_conf *dev_conf = &ethdev->data->dev_conf;
+	bool vlan_strip_en;
+	uint32_t vlan_filter_en;
+	int ret;
+
+	if (dev_conf->rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+		vlan_strip_en = true;
+	else
+		vlan_strip_en = false;
+
+	ret = sssnic_vlan_strip_enable_set(hw, vlan_strip_en);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to %s VLAN strip",
+			vlan_strip_en ? "enable" : "disable");
+		return ret;
+	}
+
+	PMD_DRV_LOG(INFO, "%s VLAN strip",
+		vlan_strip_en ? "Enabled" : "Disabled");
+
+	if (dev_conf->rxmode.offloads & RTE_ETH_RX_OFFLOAD_VLAN_FILTER)
+		vlan_filter_en = true;
+	else
+		vlan_filter_en = false;
+
+	ret = sssnic_vlan_filter_enable_set(hw, vlan_filter_en);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to %s VLAN filter",
+			vlan_filter_en ? "enable" : "disable");
+		return ret;
+	}
+
+	PMD_DRV_LOG(ERR, "%s VLAN filter",
+		vlan_filter_en ? "Enabled" : "Disabled");
+
+	return 0;
+}
+
+int
+sssnic_ethdev_rx_offload_setup(struct rte_eth_dev *ethdev)
+{
+	int ret;
+
+	ret = sssnic_ethdev_lro_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup LRO");
+		return ret;
+	}
+
+	ret = sssnic_ethdev_rx_vlan_offload_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup rx vlan offload");
+		return ret;
+	}
+
+	return 0;
 }
