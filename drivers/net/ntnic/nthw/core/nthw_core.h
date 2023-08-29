@@ -16,9 +16,11 @@
 #include "nthw_pci_ta.h"
 #include "nthw_iic.h"
 
+#include "nthw_gmf.h"
 #include "nthw_gpio_phy.h"
 #include "nthw_mac_pcs.h"
 #include "nthw_mac_pcs_xxv.h"
+#include "nthw_rmc.h"
 #include "nthw_sdc.h"
 
 #include "nthw_spim.h"
