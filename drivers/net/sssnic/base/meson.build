@@ -6,6 +6,7 @@ sources = [
         'sssnic_eventq.c',
         'sssnic_msg.c',
         'sssnic_mbox.c',
+        'sssnic_workq.c',
 ]
 
 c_args = cflags
