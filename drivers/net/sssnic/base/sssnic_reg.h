@@ -26,6 +26,12 @@
 #define SSSNIC_EVENTQ_PROD_IDX_REG 0x20c
 #define SSSNIC_EVENTQ_PAGE_ADDR_REG 0x240
 
+#define SSSNIC_MBOX_SEND_DATA_BASE_REG 0x80
+#define SSSNIC_MBOX_SEND_CTRL0_REG 0x100
+#define SSSNIC_MBOX_SEND_CTRL1_REG 0x104
+#define SSSNIC_MBOX_SEND_RESULT_ADDR_H_REG 0x108
+#define SSSNIC_MBOX_SEND_RESULT_ADDR_L_REG 0x10c
+
 /* registers of mgmt */
 #define SSSNIC_AF_ELECTION_REG 0x6000
 #define SSSNIC_MF_ELECTION_REG 0x6020
@@ -189,6 +195,47 @@ struct sssnic_eventq_ci_ctrl_reg {
 			uint32_t informed : 1;
 			uint32_t resvd_0 : 8;
 			uint32_t qid : 2;
+		};
+	};
+};
+
+#define SSSNIC_REG_MBOX_TX_DONE 0 /* Mailbox transmission is done */
+#define SSSNIC_REG_MBOX_TX_READY 1 /* Mailbox is ready to transmit */
+struct sssnic_mbox_send_ctrl0_reg {
+	union {
+		uint32_t u32;
+		struct {
+			/* enable to inform source eventq if tx done */
+			uint32_t src_eq_en : 1;
+			/* mailbox tx result, see SSSNIC_REG_MBOX_TX_XX */
+			uint32_t tx_status : 1;
+			uint32_t resvd0 : 14;
+			/* destination function where the mbox send to */
+			uint32_t func : 13;
+			uint32_t resvd1 : 3;
+		};
+	};
+};
+
+struct sssnic_mbox_send_ctrl1_reg {
+	union {
+		uint32_t u32;
+		struct {
+			uint32_t resvd0 : 10;
+			/* Destination eventq in the mgmt cpu */
+			uint32_t dst_eq : 2;
+			/* eventq that will be informed if tx done */
+			uint32_t src_eq : 2;
+			uint32_t dma_attr : 6;
+			/* mailbox message size include header and body
+			 * must 4byte align and unit is 4byte
+			 */
+			uint32_t tx_size : 5;
+			uint32_t ordering : 2;
+			uint32_t resvd1 : 1;
+			/*write result back to DMA address of sending result  */
+			uint32_t wb : 1;
+			uint32_t resvd2 : 3;
 		};
 	};
 };

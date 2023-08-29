@@ -53,12 +53,16 @@ struct sssnic_hw {
 	struct sssnic_hw_attr attr;
 	struct sssnic_eventq *eventqs;
 	struct sssnic_msg_inbox *msg_inbox;
+	struct sssnic_mbox *mbox;
 	uint8_t num_eventqs;
 	uint16_t eth_port_id;
 };
 
+#define SSSNIC_FUNC_IDX(hw) ((hw)->attr.func_idx)
 #define SSSNIC_ETH_PORT_ID(hw) ((hw)->eth_port_id)
 #define SSSNIC_MPU_FUNC_IDX 0x1fff
+#define SSSNIC_FUNC_TYPE(hw) ((hw)->attr.func_type)
+#define SSSNIC_AF_FUNC_IDX(hw) ((hw)->attr.af_idx)
 
 int sssnic_hw_init(struct sssnic_hw *hw);
 void sssnic_hw_shutdown(struct sssnic_hw *hw);
