@@ -1159,3 +1159,341 @@ sssnic_mac_stats_clear(struct sssnic_hw *hw)
 
 	return 0;
 }
+
+int
+sssnic_rss_enable_set(struct sssnic_hw *hw, bool state)
+{
+	int ret;
+	struct sssnic_rss_enable_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.state = state ? 1 : 0;
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_ENABLE_RSS_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_ENABLE_RSS_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_rss_profile_config(struct sssnic_hw *hw, bool new)
+{
+	int ret;
+	struct sssnic_rss_profile_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.opcode = new ? SSSNIC_RSS_PROFILE_CMD_OP_NEW :
+				 SSSNIC_RSS_PROFILE_CMD_OP_DEL;
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_RSS_PROFILE_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_RSS_PROFILE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_rss_profile_create(struct sssnic_hw *hw)
+{
+	return sssnic_rss_profile_config(hw, true);
+}
+
+int
+sssnic_rss_profile_destroy(struct sssnic_hw *hw)
+{
+	return sssnic_rss_profile_config(hw, false);
+}
+
+int
+sssnic_rss_hash_key_set(struct sssnic_hw *hw, uint8_t *key, uint16_t len)
+{
+	int ret;
+	struct sssnic_rss_hash_key_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	if (len > sizeof(cmd.key)) {
+		PMD_DRV_LOG(ERR, "Invalid rss hash key length: %u", len);
+		return -EINVAL;
+	}
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	rte_memcpy(cmd.key, key, len);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_RSS_HASH_KEY_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_RSS_PROFILE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_rss_type_set_by_mbox(struct sssnic_hw *hw, struct sssnic_rss_type *type)
+{
+	int ret;
+	struct sssnic_rss_type_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.mask = type->mask;
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_SET_RSS_TYPE_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd.common.status == 0xff)
+		return -EOPNOTSUPP;
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_RSS_TYPE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_rss_type_set_by_ctrlq(struct sssnic_hw *hw, struct sssnic_rss_type *type)
+{
+	struct sssnic_ctrlq_cmd cmd;
+	struct sssnic_rss_hash_type_ctrlq_cmd data;
+	int ret;
+
+	memset(&data, 0, sizeof(data));
+	data.mask = rte_cpu_to_be_32(type->mask);
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.data = &data;
+	cmd.module = SSSNIC_LAN_MODULE;
+	cmd.data_len = sizeof(data);
+	cmd.cmd = SSSNIC_SET_RSS_KEY_CTRLQ_CMD;
+
+	ret = sssnic_ctrlq_cmd_exec(hw, &cmd, 0);
+	if (ret || cmd.result) {
+		PMD_DRV_LOG(ERR,
+			"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
+			"SSSNIC_SET_RSS_KEY_CTRLQ_CMD", ret, cmd.result);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_rss_type_set(struct sssnic_hw *hw, struct sssnic_rss_type *type)
+{
+	int ret;
+
+	ret = sssnic_rss_type_set_by_mbox(hw, type);
+	if (ret == -EOPNOTSUPP)
+		ret = sssnic_rss_type_set_by_ctrlq(hw, type);
+
+	return ret;
+}
+
+int
+sssnic_rss_type_get(struct sssnic_hw *hw, struct sssnic_rss_type *type)
+{
+	int ret;
+	struct sssnic_rss_type_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_GET_RSS_TYPE_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_RSS_TYPE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	type->mask = cmd.mask;
+
+	return 0;
+}
+
+int
+sssnic_rss_hash_engine_set(struct sssnic_hw *hw,
+	enum sssnic_rss_hash_engine_type engine)
+{
+	int ret;
+	struct sssnic_rss_hash_engine_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.engine = engine;
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_RSS_HASH_ENGINE_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_RSS_HASH_ENGINE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_rss_indir_table_set(struct sssnic_hw *hw, const uint16_t *entry,
+	uint32_t num_entries)
+{
+	struct sssnic_ctrlq_cmd *cmd;
+	struct sssnic_rss_indir_table_cmd *data;
+	uint32_t i;
+	int ret;
+
+	cmd = sssnic_ctrlq_cmd_alloc(hw);
+	if (cmd == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc ctrlq command");
+		return -ENOMEM;
+	}
+
+	data = cmd->data;
+	memset(data, 0, sizeof(struct sssnic_rss_indir_table_cmd));
+	for (i = 0; i < num_entries; i++)
+		data->entry[i] = entry[i];
+
+	rte_wmb();
+
+	sssnic_mem_cpu_to_be_32(data->entry, data->entry, sizeof(data->entry));
+
+	cmd->data_len = sizeof(struct sssnic_rss_indir_table_cmd);
+	cmd->module = SSSNIC_LAN_MODULE;
+	cmd->cmd = SSSNIC_SET_RSS_INDIR_TABLE_CMD;
+
+	ret = sssnic_ctrlq_cmd_exec(hw, cmd, 0);
+	if (ret != 0 || cmd->result != 0) {
+		PMD_DRV_LOG(ERR,
+			"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
+			"SSSNIC_SET_RSS_INDIR_TABLE_CMD", ret, cmd->result);
+		ret = -EIO;
+	}
+
+	sssnic_ctrlq_cmd_destroy(hw, cmd);
+
+	return ret;
+}
+
+int
+sssnic_rss_indir_table_get(struct sssnic_hw *hw, uint16_t *entry,
+	uint32_t num_entries)
+{
+	struct sssnic_ctrlq_cmd *cmd;
+	struct sssnic_rss_indir_table_cmd *data;
+	uint32_t i;
+	int ret = 0;
+
+	cmd = sssnic_ctrlq_cmd_alloc(hw);
+	if (cmd == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc ctrlq command");
+		return -ENOMEM;
+	}
+
+	data = cmd->data;
+	memset(data, 0, sizeof(struct sssnic_rss_indir_table_cmd));
+	cmd->data_len = sizeof(struct sssnic_rss_indir_table_cmd);
+	cmd->module = SSSNIC_LAN_MODULE;
+	cmd->cmd = SSSNIC_GET_RSS_INDIR_TABLE_CMD;
+	cmd->response_len = sizeof(data->entry);
+	cmd->response_data = data->entry;
+
+	ret = sssnic_ctrlq_cmd_exec(hw, cmd, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR,
+			"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
+			"SSSNIC_GET_RSS_INDIR_TABLE_CMD", ret, cmd->result);
+		ret = -EIO;
+		goto out;
+	}
+
+	for (i = 0; i < num_entries; i++)
+		entry[i] = data->entry[i];
+
+out:
+	sssnic_ctrlq_cmd_destroy(hw, cmd);
+	return ret;
+}

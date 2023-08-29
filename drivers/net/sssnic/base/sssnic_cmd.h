@@ -66,6 +66,15 @@ enum sssnic_ctrlq_cmd_id {
 	SSSNIC_FLUSH_RXQ_CMD = 10,
 };
 
+enum sssnic_rss_cmd_id {
+	SSSNIC_ENABLE_RSS_CMD = 60,
+	SSSNIC_RSS_PROFILE_CMD = 61,
+	SSSNIC_GET_RSS_TYPE_CMD = 62,
+	SSSNIC_RSS_HASH_KEY_CMD = 63,
+	SSSNIC_RSS_HASH_ENGINE_CMD = 64,
+	SSSNIC_SET_RSS_TYPE_CMD = 65,
+};
+
 struct sssnic_cmd_common {
 	uint8_t status;
 	uint8_t version;
@@ -346,6 +355,55 @@ struct sssnic_mac_stats_cmd {
 	struct sssnic_cmd_common common;
 	uint8_t port;
 	uint8_t resvd[3];
+};
+
+struct sssnic_rss_enable_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t state;
+	uint8_t resvd[13];
+};
+
+#define SSSNIC_RSS_PROFILE_CMD_OP_NEW 1 /* Allocate RSS profile */
+#define SSSNIC_RSS_PROFILE_CMD_OP_DEL 2 /* Delete RSS profile */
+struct sssnic_rss_profile_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t opcode; /* see SSSNIC_RSS_PROFILE_CMD_OP_xx */
+	uint8_t profile;
+	uint32_t resvd[4];
+};
+
+struct sssnic_rss_hash_key_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t opcode;
+	uint8_t resvd;
+	uint8_t key[40];
+};
+
+struct sssnic_rss_type_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd0;
+	uint32_t mask; /* mask of types */
+};
+
+struct sssnic_rss_hash_type_ctrlq_cmd {
+	uint32_t resvd[4];
+	uint32_t mask;
+};
+struct sssnic_rss_hash_engine_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t opcode;
+	uint8_t engine;
+	uint8_t resvd[4];
+};
+
+struct sssnic_rss_indir_table_cmd {
+	uint32_t resvd[4];
+	uint16_t entry[256];
 };
 
 #endif /* _SSSNIC_CMD_H_ */

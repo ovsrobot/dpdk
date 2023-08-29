@@ -378,6 +378,30 @@ struct sssnic_mac_stats {
 	uint64_t rx_unfilter_pkts;
 };
 
+struct sssnic_rss_type {
+	union {
+		uint32_t mask;
+		struct {
+			uint32_t resvd : 23;
+			uint32_t valid : 1;
+			uint32_t ipv6_tcp_ex : 1;
+			uint32_t ipv6_ex : 1;
+			uint32_t ipv6_tcp : 1;
+			uint32_t ipv6 : 1;
+			uint32_t ipv4_tcp : 1;
+			uint32_t ipv4 : 1;
+			uint32_t ipv6_udp : 1;
+			uint32_t ipv4_udp : 1;
+		};
+	};
+};
+
+enum sssnic_rss_hash_engine_type {
+	SSSNIC_RSS_HASH_ENGINE_XOR,
+	SSSNIC_RSS_HASH_ENGINE_TOEP,
+	SSSNIC_RSS_HASH_ENGINE_COUNT,
+};
+
 int sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
 	struct sssnic_msix_attr *attr);
 int sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
@@ -420,5 +444,17 @@ int sssnic_port_stats_get(struct sssnic_hw *hw,
 int sssnic_port_stats_clear(struct sssnic_hw *hw);
 int sssnic_mac_stats_get(struct sssnic_hw *hw, struct sssnic_mac_stats *stats);
 int sssnic_mac_stats_clear(struct sssnic_hw *hw);
+int sssnic_rss_enable_set(struct sssnic_hw *hw, bool state);
+int sssnic_rss_profile_create(struct sssnic_hw *hw);
+int sssnic_rss_profile_destroy(struct sssnic_hw *hw);
+int sssnic_rss_hash_key_set(struct sssnic_hw *hw, uint8_t *key, uint16_t len);
+int sssnic_rss_type_set(struct sssnic_hw *hw, struct sssnic_rss_type *type);
+int sssnic_rss_type_get(struct sssnic_hw *hw, struct sssnic_rss_type *type);
+int sssnic_rss_hash_engine_set(struct sssnic_hw *hw,
+	enum sssnic_rss_hash_engine_type engine);
+int sssnic_rss_indir_table_set(struct sssnic_hw *hw, const uint16_t *entry,
+	uint32_t num_entries);
+int sssnic_rss_indir_table_get(struct sssnic_hw *hw, uint16_t *entry,
+	uint32_t num_entries);
 
 #endif /* _SSSNIC_API_H_ */

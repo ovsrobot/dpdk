@@ -11,6 +11,7 @@
 #include "sssnic_log.h"
 #include "sssnic_ethdev.h"
 #include "sssnic_ethdev_rx.h"
+#include "sssnic_ethdev_rss.h"
 #include "base/sssnic_hw.h"
 #include "base/sssnic_workq.h"
 #include "base/sssnic_api.h"
@@ -641,6 +642,10 @@ sssnic_ethdev_rx_queue_start(struct rte_eth_dev *ethdev, uint16_t queue_id)
 	netdev->num_started_rxqs++;
 	ethdev->data->rx_queue_state[queue_id] = RTE_ETH_QUEUE_STATE_STARTED;
 
+	ret = sssnic_ethdev_rss_reta_reset(ethdev);
+	if (ret)
+		PMD_DRV_LOG(WARNING, "Failed to reset RSS reta");
+
 	PMD_DRV_LOG(DEBUG, "port %u rxq %u started", ethdev->data->port_id,
 		queue_id);
 
@@ -674,6 +679,10 @@ sssnic_ethdev_rx_queue_stop(struct rte_eth_dev *ethdev, uint16_t queue_id)
 	netdev->num_started_rxqs--;
 	ethdev->data->rx_queue_state[queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
 
+	ret = sssnic_ethdev_rss_reta_reset(ethdev);
+	if (ret)
+		PMD_DRV_LOG(WARNING, "Failed to reset RSS reta");
+
 	PMD_DRV_LOG(DEBUG, "port %u rxq %u stopped", ethdev->data->port_id,
 		queue_id);
 
@@ -704,6 +713,10 @@ sssnic_ethdev_rx_queue_all_start(struct rte_eth_dev *ethdev)
 		PMD_DRV_LOG(DEBUG, "port %u rxq %u started",
 			ethdev->data->port_id, qid);
 	}
+
+	ret = sssnic_ethdev_rss_reta_reset(ethdev);
+	if (ret)
+		PMD_DRV_LOG(WARNING, "Failed to reset RSS reta");
 
 	ret = sssnic_port_enable_set(hw, true);
 	if (ret) {
