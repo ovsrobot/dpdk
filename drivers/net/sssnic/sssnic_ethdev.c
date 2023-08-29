@@ -759,6 +759,69 @@ sssnic_ethdev_fw_version_get(struct rte_eth_dev *ethdev, char *fw_version,
 	return 0;
 }
 
+static int
+sssnic_ethdev_flow_ctrl_set(struct rte_eth_dev *ethdev,
+	struct rte_eth_fc_conf *fc_conf)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	bool autoneg, rx_en, tx_en;
+	int ret;
+
+	if (fc_conf->autoneg != 0)
+		autoneg = true;
+	else
+		autoneg = false;
+
+	if (fc_conf->mode == RTE_ETH_FC_FULL ||
+		fc_conf->mode == RTE_ETH_FC_RX_PAUSE)
+		rx_en = true;
+	else
+		rx_en = false;
+
+	if (fc_conf->mode == RTE_ETH_FC_FULL ||
+		fc_conf->mode == RTE_ETH_FC_TX_PAUSE)
+		tx_en = true;
+	else
+		tx_en = false;
+
+	ret = sssnic_flow_ctrl_set(hw, autoneg, rx_en, tx_en);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to set flow conctrol");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_flow_ctrl_get(struct rte_eth_dev *ethdev,
+	struct rte_eth_fc_conf *fc_conf)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	bool autoneg, rx_en, tx_en;
+	int ret;
+
+	ret = sssnic_flow_ctrl_get(hw, &autoneg, &rx_en, &tx_en);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to get flow conctrol");
+		return ret;
+	}
+
+	if (autoneg)
+		fc_conf->autoneg = true;
+
+	if (rx_en && tx_en)
+		fc_conf->mode = RTE_ETH_FC_FULL;
+	else if (rx_en)
+		fc_conf->mode = RTE_ETH_FC_RX_PAUSE;
+	else if (tx_en)
+		fc_conf->mode = RTE_ETH_FC_TX_PAUSE;
+	else
+		fc_conf->mode = RTE_ETH_FC_NONE;
+
+	return 0;
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_start = sssnic_ethdev_start,
 	.dev_stop = sssnic_ethdev_stop,
@@ -800,6 +863,8 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.rxq_info_get = sssnic_ethdev_rx_queue_info_get,
 	.txq_info_get = sssnic_ethdev_tx_queue_info_get,
 	.fw_version_get = sssnic_ethdev_fw_version_get,
+	.flow_ctrl_set = sssnic_ethdev_flow_ctrl_set,
+	.flow_ctrl_get = sssnic_ethdev_flow_ctrl_get,
 };
 
 static int
