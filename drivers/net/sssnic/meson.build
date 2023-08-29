@@ -21,4 +21,5 @@ sources = files(
         'sssnic_ethdev_link.c',
         'sssnic_ethdev_rx.c',
         'sssnic_ethdev_tx.c',
+        'sssnic_ethdev_stats.c',
 )

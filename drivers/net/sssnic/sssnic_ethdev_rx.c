@@ -1154,3 +1154,33 @@ sssnic_ethdev_rx_offload_setup(struct rte_eth_dev *ethdev)
 
 	return 0;
 }
+
+int
+sssnic_ethdev_rx_queue_stats_get(struct rte_eth_dev *ethdev, uint16_t qid,
+	struct sssnic_ethdev_rxq_stats *stats)
+{
+	struct sssnic_ethdev_rxq *rxq;
+
+	if (qid >= ethdev->data->nb_rx_queues) {
+		PMD_DRV_LOG(ERR,
+			"Invalid qid, qid must less than nb_rx_queues(%u)",
+			ethdev->data->nb_rx_queues);
+		return -EINVAL;
+	}
+
+	rxq = ethdev->data->rx_queues[qid];
+	memcpy(stats, &rxq->stats, sizeof(rxq->stats));
+
+	return 0;
+}
+
+void
+sssnic_ethdev_rx_queue_stats_clear(struct rte_eth_dev *ethdev, uint16_t qid)
+{
+	struct sssnic_ethdev_rxq *rxq;
+
+	if (qid < ethdev->data->nb_rx_queues) {
+		rxq = ethdev->data->rx_queues[qid];
+		memset(&rxq->stats, 0, sizeof(rxq->stats));
+	}
+};
