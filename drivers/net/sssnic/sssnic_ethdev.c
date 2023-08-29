@@ -653,6 +653,74 @@ sssnic_ethdev_reset(struct rte_eth_dev *ethdev)
 	return 0;
 }
 
+static int
+sssnic_ethdev_allmulticast_enable(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	uint32_t rx_mode;
+	int ret;
+
+	rx_mode = netdev->rx_mode | SSSNIC_ETHDEV_RX_ALL_MCAST;
+	ret = sssnic_ethdev_rx_mode_set(ethdev, rx_mode);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rx_mode: %x", rx_mode);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_allmulticast_disable(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	uint32_t rx_mode;
+	int ret;
+
+	rx_mode = netdev->rx_mode & (~SSSNIC_ETHDEV_RX_ALL_MCAST);
+	ret = sssnic_ethdev_rx_mode_set(ethdev, rx_mode);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rx_mode: %x", rx_mode);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_promiscuous_enable(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	uint32_t rx_mode;
+	int ret;
+
+	rx_mode = netdev->rx_mode | SSSNIC_ETHDEV_RX_PROMISC;
+	ret = sssnic_ethdev_rx_mode_set(ethdev, rx_mode);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rx_mode: %x", rx_mode);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_promiscuous_disable(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	uint32_t rx_mode;
+	int ret;
+
+	rx_mode = netdev->rx_mode & (~SSSNIC_ETHDEV_RX_PROMISC);
+	ret = sssnic_ethdev_rx_mode_set(ethdev, rx_mode);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rx_mode: %x", rx_mode);
+		return ret;
+	}
+
+	return 0;
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_start = sssnic_ethdev_start,
 	.dev_stop = sssnic_ethdev_stop,
@@ -677,6 +745,10 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.tx_queue_stop = sssnic_ethdev_tx_queue_stop,
 	.rx_queue_intr_enable = sssnic_ethdev_rx_queue_intr_enable,
 	.rx_queue_intr_disable = sssnic_ethdev_rx_queue_intr_disable,
+	.allmulticast_enable = sssnic_ethdev_allmulticast_enable,
+	.allmulticast_disable = sssnic_ethdev_allmulticast_disable,
+	.promiscuous_enable = sssnic_ethdev_promiscuous_enable,
+	.promiscuous_disable = sssnic_ethdev_promiscuous_disable,
 };
 
 static int
