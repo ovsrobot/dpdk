@@ -56,12 +56,18 @@ struct sssnic_hw {
 	struct sssnic_mbox *mbox;
 	struct sssnic_ctrlq *ctrlq;
 	uint8_t num_eventqs;
+	uint8_t phy_port;
 	uint16_t eth_port_id;
+	uint16_t max_num_rxq;
+	uint16_t max_num_txq;
 };
 
 #define SSSNIC_FUNC_IDX(hw) ((hw)->attr.func_idx)
 #define SSSNIC_ETH_PORT_ID(hw) ((hw)->eth_port_id)
 #define SSSNIC_MPU_FUNC_IDX 0x1fff
+#define SSSNIC_MAX_NUM_RXQ(hw) ((hw)->max_num_rxq)
+#define SSSNIC_MAX_NUM_TXQ(hw) ((hw)->max_num_txq)
+#define SSSNIC_PHY_PORT(hw) ((hw)->phy_port)
 #define SSSNIC_FUNC_TYPE(hw) ((hw)->attr.func_type)
 #define SSSNIC_AF_FUNC_IDX(hw) ((hw)->attr.af_idx)
 
