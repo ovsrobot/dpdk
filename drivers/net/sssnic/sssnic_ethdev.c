@@ -740,6 +740,25 @@ sssnic_ethdev_mtu_set(struct rte_eth_dev *ethdev, uint16_t mtu)
 	return sssnic_ethdev_tx_max_size_set(ethdev, mtu);
 }
 
+static int
+sssnic_ethdev_fw_version_get(struct rte_eth_dev *ethdev, char *fw_version,
+	size_t fw_size)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct sssnic_fw_version version;
+	int ret;
+
+	ret = sssnic_fw_version_get(hw, &version);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to get firmware version");
+		return ret;
+	}
+
+	snprintf(fw_version, fw_size, "%s", version.version);
+
+	return 0;
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_start = sssnic_ethdev_start,
 	.dev_stop = sssnic_ethdev_stop,
@@ -780,6 +799,7 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.mtu_set = sssnic_ethdev_mtu_set,
 	.rxq_info_get = sssnic_ethdev_rx_queue_info_get,
 	.txq_info_get = sssnic_ethdev_tx_queue_info_get,
+	.fw_version_get = sssnic_ethdev_fw_version_get,
 };
 
 static int
