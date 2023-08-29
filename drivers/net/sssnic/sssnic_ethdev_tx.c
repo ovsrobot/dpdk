@@ -172,6 +172,17 @@ enum sssnic_ethdev_txq_entry_type {
 	SSSNIC_ETHDEV_TXQ_ENTRY_EXTEND = 1,
 };
 
+struct sssnic_ethdev_tx_info {
+	/* offload enable flag */
+	uint16_t offload_en;
+	/*l4 payload offset*/
+	uint16_t payload_off;
+	/* number of txq entries */
+	uint16_t nb_entries;
+	/* number of tx segs */
+	uint16_t nb_segs;
+};
+
 #define SSSNIC_ETHDEV_TXQ_ENTRY_SZ_BITS 4
 #define SSSNIC_ETHDEV_TXQ_ENTRY_SZ (RTE_BIT32(SSSNIC_ETHDEV_TXQ_ENTRY_SZ_BITS))
 
@@ -183,10 +194,42 @@ enum sssnic_ethdev_txq_entry_type {
 #define SSSNIC_ETHDEV_TX_CI_DEF_COALESCING_TIME 16
 #define SSSNIC_ETHDEV_TX_CI_DEF_PENDING_TIME 4
 
+#define SSSNIC_ETHDEV_TX_CSUM_OFFLOAD_MASK                                     \
+	(RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_TCP_CKSUM |                    \
+		RTE_MBUF_F_TX_UDP_CKSUM | RTE_MBUF_F_TX_SCTP_CKSUM |           \
+		RTE_MBUF_F_TX_OUTER_IP_CKSUM | RTE_MBUF_F_TX_TCP_SEG)
+
+#define SSSNIC_ETHDEV_TX_OFFLOAD_MASK                                          \
+	(RTE_MBUF_F_TX_VLAN | SSSNIC_ETHDEV_TX_CSUM_OFFLOAD_MASK)
+
+#define SSSNIC_ETHDEV_TX_MAX_NUM_SEGS 38
+#define SSSNIC_ETHDEV_TX_MAX_SEG_SIZE 65535
+#define SSSNIC_ETHDEV_TX_MAX_PAYLOAD_OFF 221
+#define SSSNIC_ETHDEV_TX_DEF_MSS 0x3e00
+#define SSSNIC_ETHDEV_TX_MIN_MSS 0x50
+#define SSSNIC_ETHDEV_TX_COMPACT_SEG_MAX_SIZE 0x3fff
+
+#define SSSNIC_ETHDEV_TXQ_DESC_ENTRY(txq, idx)                                 \
+	(SSSNIC_WORKQ_ENTRY_CAST((txq)->workq, idx,                            \
+		struct sssnic_ethdev_tx_desc))
+
+#define SSSNIC_ETHDEV_TXQ_OFFLOAD_ENTRY(txq, idx)                              \
+	SSSNIC_WORKQ_ENTRY_CAST((txq)->workq, idx,                             \
+		struct sssnic_ethdev_tx_offload)
+
+#define SSSNIC_ETHDEV_TXQ_SEG_ENTRY(txq, idx)                                  \
+	SSSNIC_WORKQ_ENTRY_CAST((txq)->workq, idx, struct sssnic_ethdev_tx_seg)
+
 static inline uint16_t
 sssnic_ethdev_txq_num_used_entries(struct sssnic_ethdev_txq *txq)
 {
 	return sssnic_workq_num_used_entries(txq->workq);
+}
+
+static inline uint16_t
+sssnic_ethdev_txq_num_idle_entries(struct sssnic_ethdev_txq *txq)
+{
+	return sssnic_workq_num_idle_entries(txq->workq);
 }
 
 static inline uint16_t
@@ -211,6 +254,12 @@ static inline void
 sssnic_ethdev_txq_consume(struct sssnic_ethdev_txq *txq, uint16_t num_entries)
 {
 	sssnic_workq_consume_fast(txq->workq, num_entries);
+}
+
+static inline void
+sssnic_ethdev_txq_produce(struct sssnic_ethdev_txq *txq, uint16_t num_entries)
+{
+	sssnic_workq_produce_fast(txq->workq, num_entries);
 }
 
 int
@@ -706,4 +755,359 @@ sssnic_ethdev_tx_queue_stats_clear(struct rte_eth_dev *ethdev, uint16_t qid)
 		for (i = 0; i < len; i++)
 			*(stat++) = 0;
 	}
+}
+
+static inline uint16_t
+sssnic_ethdev_tx_payload_calc(struct rte_mbuf *tx_mbuf)
+{
+	if ((tx_mbuf->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) != 0) {
+		uint64_t mask = RTE_MBUF_F_TX_OUTER_IPV6 |
+				RTE_MBUF_F_TX_OUTER_IP_CKSUM |
+				RTE_MBUF_F_TX_TCP_SEG;
+
+		if ((tx_mbuf->ol_flags & mask) != 0)
+			return tx_mbuf->outer_l2_len + tx_mbuf->outer_l3_len +
+			       tx_mbuf->l2_len + tx_mbuf->l3_len +
+			       tx_mbuf->l4_len;
+	}
+
+	return tx_mbuf->l2_len + tx_mbuf->l3_len + tx_mbuf->l4_len;
+}
+
+static inline int
+sssnic_ethdev_tx_offload_check(struct rte_mbuf *tx_mbuf,
+	struct sssnic_ethdev_tx_info *tx_info)
+{
+	uint64_t ol_flags = tx_mbuf->ol_flags;
+
+	if ((ol_flags & SSSNIC_ETHDEV_TX_OFFLOAD_MASK) == 0) {
+		tx_info->offload_en = 0;
+		return 0;
+	}
+
+#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+	if (rte_validate_tx_offload(tx_mbuf) != 0) {
+		SSSNIC_TX_LOG(ERR, "Bad tx mbuf offload flags: %x", ol_flags);
+		return -EINVAL;
+	}
+#endif
+
+	tx_info->offload_en = 1;
+
+	if (unlikely(((ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) != 0) &&
+		     ((ol_flags & RTE_MBUF_F_TX_TUNNEL_VXLAN) == 0))) {
+		SSSNIC_TX_LOG(ERR, "Only support VXLAN offload");
+		return -EINVAL;
+	}
+
+	if (unlikely((ol_flags & RTE_MBUF_F_TX_TCP_SEG) != 0)) {
+		uint16_t off = sssnic_ethdev_tx_payload_calc(tx_mbuf);
+		if (unlikely((off >> 1) > SSSNIC_ETHDEV_TX_MAX_PAYLOAD_OFF)) {
+			SSSNIC_TX_LOG(ERR, "Bad tx payload offset: %u", off);
+			return -EINVAL;
+		}
+		tx_info->payload_off = off;
+	}
+
+	return 0;
+}
+
+static inline int
+sssnic_ethdev_tx_num_segs_calc(struct rte_mbuf *tx_mbuf,
+	struct sssnic_ethdev_tx_info *tx_info)
+{
+	uint16_t nb_segs = tx_mbuf->nb_segs;
+
+	if (tx_info->offload_en == 0) {
+		/* offload not enabled, need no offload entry,
+		 * then txq entries equals tx_segs
+		 */
+		tx_info->nb_entries = nb_segs;
+	} else {
+		if (unlikely(nb_segs > SSSNIC_ETHDEV_TX_MAX_NUM_SEGS)) {
+			SSSNIC_TX_LOG(ERR, "Too many segment for tso");
+			return -EINVAL;
+		}
+
+		/*offload enabled, need offload entry,
+		 * then txq entries equals tx_segs + 1
+		 */
+		tx_info->nb_entries = nb_segs + 1;
+	}
+
+	tx_info->nb_segs = nb_segs;
+	;
+
+	return 0;
+}
+
+static inline int
+sssnic_ethdev_tx_info_init(struct sssnic_ethdev_txq *txq,
+	struct rte_mbuf *tx_mbuf, struct sssnic_ethdev_tx_info *tx_info)
+{
+	int ret;
+
+	/* check tx offload valid and enabled */
+	ret = sssnic_ethdev_tx_offload_check(tx_mbuf, tx_info);
+	if (unlikely(ret != 0)) {
+		txq->stats.offload_errors++;
+		return ret;
+	}
+
+	/* Calculate how many num tx segs and num of txq entries are required*/
+	ret = sssnic_ethdev_tx_num_segs_calc(tx_mbuf, tx_info);
+	if (unlikely(ret != 0)) {
+		txq->stats.too_many_segs++;
+		return ret;
+	}
+
+	return 0;
+}
+
+static inline void
+sssnic_ethdev_tx_offload_setup(struct sssnic_ethdev_txq *txq,
+	struct sssnic_ethdev_tx_desc *tx_desc, uint16_t pi,
+	struct rte_mbuf *tx_mbuf, struct sssnic_ethdev_tx_info *tx_info)
+{
+	struct sssnic_ethdev_tx_offload *offload;
+
+	/* reset offload settings */
+	offload = SSSNIC_ETHDEV_TXQ_OFFLOAD_ENTRY(txq, pi);
+	offload->dw0 = 0;
+	offload->dw1 = 0;
+	offload->dw2 = 0;
+	offload->dw3 = 0;
+
+	if (unlikely((tx_mbuf->ol_flags & RTE_MBUF_F_TX_VLAN) != 0)) {
+		offload->vlan_en = 1;
+		offload->vlan_tag = tx_mbuf->vlan_tci;
+	}
+
+	if ((tx_mbuf->ol_flags & SSSNIC_ETHDEV_TX_CSUM_OFFLOAD_MASK) == 0)
+		return;
+
+	if ((tx_mbuf->ol_flags & RTE_MBUF_F_TX_TCP_SEG) != 0) {
+		offload->inner_l3_csum_en = 1;
+		offload->inner_l4_csum_en = 1;
+
+		tx_desc->tso_en = 1;
+		tx_desc->payload_off = tx_info->payload_off >> 1;
+		tx_desc->mss = tx_mbuf->tso_segsz;
+	} else {
+		if ((tx_mbuf->ol_flags & RTE_MBUF_F_TX_IP_CKSUM) != 0)
+			offload->inner_l3_csum_en = 1;
+
+		if ((tx_mbuf->ol_flags & RTE_MBUF_F_TX_L4_MASK) != 0)
+			offload->inner_l4_csum_en = 1;
+	}
+
+	if (tx_mbuf->ol_flags & RTE_MBUF_F_TX_TUNNEL_VXLAN)
+		offload->tunnel_flag = 1;
+
+	if (tx_mbuf->ol_flags & RTE_MBUF_F_TX_OUTER_IP_CKSUM)
+		offload->l3_csum_en = 1;
+}
+
+static inline int
+sssnic_ethdev_tx_segs_setup(struct sssnic_ethdev_txq *txq,
+	struct sssnic_ethdev_tx_desc *tx_desc, uint16_t pi,
+	struct rte_mbuf *tx_mbuf, struct sssnic_ethdev_tx_info *tx_info)
+{
+	struct sssnic_ethdev_tx_seg *tx_seg;
+	uint16_t idx_mask = txq->idx_mask;
+	uint16_t nb_segs, i;
+	rte_iova_t seg_iova;
+
+	nb_segs = tx_info->nb_segs;
+
+	/* first segment info fill into tx desc entry*/
+	seg_iova = rte_mbuf_data_iova(tx_mbuf);
+	tx_desc->data_addr_hi = SSSNIC_UPPER_32_BITS(seg_iova);
+	tx_desc->data_addr_lo = SSSNIC_LOWER_32_BITS(seg_iova);
+	tx_desc->data_len = tx_mbuf->data_len;
+
+	/* next tx segment */
+	tx_mbuf = tx_mbuf->next;
+
+	for (i = 1; i < nb_segs; i++) {
+		if (unlikely(tx_mbuf == NULL)) {
+			txq->stats.null_segs++;
+			SSSNIC_TX_LOG(DEBUG, "Tx mbuf segment is NULL");
+			return -EINVAL;
+		}
+
+		if (unlikely(tx_mbuf->data_len == 0)) {
+			txq->stats.zero_len_segs++;
+			SSSNIC_TX_LOG(DEBUG,
+				"Length of tx mbuf segment is zero");
+			return -EINVAL;
+		}
+
+		seg_iova = rte_mbuf_data_iova(tx_mbuf);
+		tx_seg = SSSNIC_ETHDEV_TXQ_SEG_ENTRY(txq, pi);
+		tx_seg->buf_hi_addr = SSSNIC_UPPER_32_BITS(seg_iova);
+		tx_seg->buf_lo_addr = SSSNIC_LOWER_32_BITS(seg_iova);
+		tx_seg->len = tx_mbuf->data_len;
+		tx_seg->resvd = 0;
+
+		pi = (pi + 1) & idx_mask;
+		tx_mbuf = tx_mbuf->next;
+	}
+
+	return 0;
+}
+
+static inline int
+sssnic_ethdev_txq_entries_setup(struct sssnic_ethdev_txq *txq, uint16_t pi,
+	struct rte_mbuf *tx_mbuf, struct sssnic_ethdev_tx_info *tx_info)
+{
+	struct sssnic_ethdev_tx_desc *tx_desc;
+	uint16_t idx_mask = txq->idx_mask;
+
+	/* reset tx desc entry*/
+	tx_desc = SSSNIC_ETHDEV_TXQ_DESC_ENTRY(txq, pi);
+	tx_desc->dw0 = 0;
+	tx_desc->dw1 = 0;
+	tx_desc->dw2 = 0;
+	tx_desc->dw3 = 0;
+	tx_desc->owner = txq->owner;
+	tx_desc->uc = 1;
+
+	if (tx_info->offload_en != 0) {
+		/* next_pi points to tx offload entry */
+		pi = (pi + 1) & idx_mask;
+		sssnic_ethdev_tx_offload_setup(txq, tx_desc, pi, tx_mbuf,
+			tx_info);
+
+		tx_desc->entry_type = SSSNIC_ETHDEV_TXQ_ENTRY_EXTEND;
+		tx_desc->offload_en = 1;
+		tx_desc->num_segs = tx_info->nb_segs;
+
+		if (tx_desc->mss == 0)
+			tx_desc->mss = SSSNIC_ETHDEV_TX_DEF_MSS;
+		else if (tx_desc->mss < SSSNIC_ETHDEV_TX_MIN_MSS)
+			tx_desc->mss = SSSNIC_ETHDEV_TX_MIN_MSS;
+
+	} else {
+		/*
+		 * if offload disabled and nb_tx_seg > 0 use extend tx entry
+		 * else use default compact entry
+		 */
+		if (tx_info->nb_segs > 1) {
+			tx_desc->num_segs = tx_info->nb_segs;
+			tx_desc->entry_type = SSSNIC_ETHDEV_TXQ_ENTRY_EXTEND;
+		} else {
+			if (unlikely(tx_mbuf->data_len >
+				     SSSNIC_ETHDEV_TX_COMPACT_SEG_MAX_SIZE)) {
+				txq->stats.too_large_pkts++;
+				SSSNIC_TX_LOG(ERR,
+					"Too large pakcet (size=%u) for compact tx entry",
+					tx_mbuf->data_len);
+				return -EINVAL;
+			}
+		}
+	}
+
+	/* get next_pi that points to tx seg entry */
+	pi = (pi + 1) & idx_mask;
+
+	return sssnic_ethdev_tx_segs_setup(txq, tx_desc, pi, tx_mbuf, tx_info);
+}
+
+static inline void
+sssnic_ethdev_txq_doorbell_ring(struct sssnic_ethdev_txq *txq, uint16_t pi)
+{
+	uint64_t *db_addr;
+	struct sssnic_ethdev_txq_doorbell db;
+	static const struct sssnic_ethdev_txq_doorbell default_db = {
+		.cf = 0,
+		.service = 1,
+	};
+
+	db.u64 = default_db.u64;
+	db.qid = txq->qid;
+	db.cos = txq->cos;
+	db.pi_hi = (pi >> 8) & 0xff;
+
+	db_addr = ((uint64_t *)txq->doorbell) + (pi & 0xff);
+
+	rte_write64(db.u64, db_addr);
+}
+
+uint16_t
+sssnic_ethdev_tx_pkt_burst(void *tx_queue, struct rte_mbuf **tx_pkts,
+	uint16_t nb_pkts)
+{
+	struct sssnic_ethdev_txq *txq = (struct sssnic_ethdev_txq *)tx_queue;
+	struct sssnic_ethdev_tx_entry *txe;
+	struct rte_mbuf *txm;
+	struct sssnic_ethdev_tx_info tx_info;
+	uint64_t tx_bytes = 0;
+	uint16_t nb_tx = 0;
+	uint16_t idle_entries;
+	uint16_t pi;
+	int ret;
+
+	/* cleanup previous xmit if idle entries is less than tx_free_thresh*/
+	idle_entries = sssnic_ethdev_txq_num_idle_entries(txq) - 1;
+	if (unlikely(idle_entries < txq->tx_free_thresh))
+		sssnic_ethdev_txq_pktmbufs_cleanup(txq);
+
+	pi = sssnic_ethdev_txq_pi_get(txq);
+
+	while (nb_tx < nb_pkts) {
+		txm = tx_pkts[nb_tx];
+
+		ret = sssnic_ethdev_tx_info_init(txq, txm, &tx_info);
+		if (unlikely(ret != 0))
+			break;
+
+		idle_entries = sssnic_ethdev_txq_num_idle_entries(txq) - 1;
+
+		/* check if there are enough txq entries to xmit one packet */
+		if (unlikely(idle_entries < tx_info.nb_entries)) {
+			sssnic_ethdev_txq_pktmbufs_cleanup(txq);
+			idle_entries =
+				sssnic_ethdev_txq_num_idle_entries(txq) - 1;
+			if (idle_entries < tx_info.nb_entries) {
+				SSSNIC_TX_LOG(ERR,
+					"No tx entries, idle_entries: %u, expect %u",
+					idle_entries, tx_info.nb_entries);
+				txq->stats.nobuf++;
+				break;
+			}
+		}
+
+		/* setup txq entries, include tx_desc, offload, seg */
+		ret = sssnic_ethdev_txq_entries_setup(txq, pi, txm, &tx_info);
+		if (unlikely(ret != 0))
+			break;
+
+		txe = &txq->txe[pi];
+		txe->pktmbuf = txm;
+		txe->num_workq_entries = tx_info.nb_entries;
+
+		if (unlikely((pi + tx_info.nb_entries) >= txq->depth))
+			txq->owner = !txq->owner;
+
+		sssnic_ethdev_txq_produce(txq, tx_info.nb_entries);
+
+		pi = sssnic_ethdev_txq_pi_get(txq);
+		nb_tx++;
+		tx_bytes += txm->pkt_len;
+
+		SSSNIC_TX_LOG(DEBUG,
+			"Transmitted one packet on port %u, len=%u, nb_seg=%u, tso_segsz=%u, ol_flags=%x",
+			txq->port, txm->pkt_len, txm->nb_segs, txm->tso_segsz,
+			txm->ol_flags);
+	}
+
+	if (likely(nb_tx > 0)) {
+		sssnic_ethdev_txq_doorbell_ring(txq, pi);
+		txq->stats.packets += nb_tx;
+		txq->stats.bytes += tx_bytes;
+		txq->stats.burst = nb_tx;
+	}
+
+	return nb_tx;
 }
