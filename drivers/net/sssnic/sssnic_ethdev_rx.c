@@ -1184,3 +1184,170 @@ sssnic_ethdev_rx_queue_stats_clear(struct rte_eth_dev *ethdev, uint16_t qid)
 		memset(&rxq->stats, 0, sizeof(rxq->stats));
 	}
 };
+
+static inline void
+sssnic_ethdev_rx_csum_offload(struct sssnic_ethdev_rxq *rxq,
+	struct rte_mbuf *rxm, volatile struct sssnic_ethdev_rx_desc *rxd)
+{
+	/* no errors */
+	if (likely(rxd->status_err == 0)) {
+		rxm->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD |
+				 RTE_MBUF_F_RX_L4_CKSUM_GOOD;
+		return;
+	}
+
+	/* bypass hw crc error*/
+	if (unlikely(rxd->hw_crc_err)) {
+		rxm->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN;
+		return;
+	}
+
+	if (rxd->ip_csum_err) {
+		rxm->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_BAD;
+		rxq->stats.csum_errors++;
+	}
+
+	if (rxd->tcp_csum_err || rxd->udp_csum_err || rxd->sctp_crc_err) {
+		rxm->ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
+		rxq->stats.csum_errors++;
+	}
+
+	if (unlikely(rxd->other_err))
+		rxq->stats.other_errors++;
+}
+
+static inline void
+sssnic_ethdev_rx_vlan_offload(struct rte_mbuf *rxm,
+	volatile struct sssnic_ethdev_rx_desc *rxd)
+{
+	if (rxd->vlan_en == 0 || rxd->vlan == 0) {
+		rxm->vlan_tci = 0;
+		return;
+	}
+
+	rxm->vlan_tci = rxd->vlan;
+	rxm->ol_flags |= RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED;
+}
+
+static inline void
+sssnic_ethdev_rx_segments(struct sssnic_ethdev_rxq *rxq, struct rte_mbuf *head,
+	uint32_t remain_size)
+{
+	struct sssnic_ethdev_rx_entry *rxe;
+	struct rte_mbuf *curr, *prev = head;
+	uint16_t rx_buf_size = rxq->rx_buf_size;
+	uint16_t ci;
+	uint32_t rx_size;
+
+	while (remain_size > 0) {
+		ci = sssnic_ethdev_rxq_ci_get(rxq);
+		rxe = &rxq->rxe[ci];
+		curr = rxe->pktmbuf;
+
+		sssnic_ethdev_rxq_consume(rxq, 1);
+
+		rx_size = RTE_MIN(remain_size, rx_buf_size);
+		remain_size -= rx_size;
+
+		curr->data_len = rx_size;
+		curr->next = NULL;
+		prev->next = curr;
+		prev = curr;
+		head->nb_segs++;
+	}
+}
+
+uint16_t
+sssnic_ethdev_rx_pkt_burst(void *rx_queue, struct rte_mbuf **rx_pkts,
+	uint16_t nb_pkts)
+{
+	struct sssnic_ethdev_rxq *rxq = (struct sssnic_ethdev_rxq *)rx_queue;
+	struct sssnic_ethdev_rx_entry *rxe;
+	struct rte_mbuf *rxm;
+	struct sssnic_ethdev_rx_desc *rxd, rx_desc;
+	uint16_t ci, idle_entries;
+	uint16_t rx_buf_size;
+	uint32_t rx_size;
+	uint64_t nb_rx = 0;
+	uint64_t rx_bytes = 0;
+
+	ci = sssnic_ethdev_rxq_ci_get(rxq);
+	rx_buf_size = rxq->rx_buf_size;
+	rxd = &rx_desc;
+
+	while (nb_rx < nb_pkts) {
+		rxd->dword0 = __atomic_load_n(&rxq->desc[ci].dword0,
+			__ATOMIC_ACQUIRE);
+		/* check rx done */
+		if (!rxd->done)
+			break;
+
+		rxd->dword1 = rxq->desc[ci].dword1;
+		rxd->dword2 = rxq->desc[ci].dword2;
+		rxd->dword3 = rxq->desc[ci].dword3;
+
+		/* reset rx desc status */
+		rxq->desc[ci].dword0 = 0;
+
+		/* get current pktmbuf */
+		rxe = &rxq->rxe[ci];
+		rxm = rxe->pktmbuf;
+
+		/* prefetch next packet */
+		sssnic_ethdev_rxq_consume(rxq, 1);
+		ci = sssnic_ethdev_rxq_ci_get(rxq);
+		rte_prefetch0(rxq->rxe[ci].pktmbuf);
+
+		/* set pktmbuf len */
+		rx_size = rxd->len;
+		rxm->pkt_len = rx_size;
+		if (likely(rx_size <= rx_buf_size)) {
+			rxm->data_len = rx_size;
+		} else {
+			rxm->data_len = rx_buf_size;
+			sssnic_ethdev_rx_segments(rxq, rxm,
+				rx_size - rx_buf_size);
+		}
+		rxm->data_off = RTE_PKTMBUF_HEADROOM;
+		rxm->port = rxq->port;
+
+		/* process checksum offload*/
+		sssnic_ethdev_rx_csum_offload(rxq, rxm, rxd);
+
+		/* process vlan offload */
+		sssnic_ethdev_rx_vlan_offload(rxm, rxd);
+
+		/* process lro */
+		if (unlikely(rxd->lro_num != 0)) {
+			rxm->ol_flags |= RTE_MBUF_F_RX_LRO;
+			rxm->tso_segsz = rx_size / rxd->lro_num;
+		}
+
+		/* process RSS offload */
+		if (likely(rxd->rss_type != 0)) {
+			rxm->hash.rss = rxd->rss_hash;
+			rxm->ol_flags |= RTE_MBUF_F_RX_RSS_HASH;
+		}
+
+		rx_pkts[nb_rx++] = rxm;
+		rx_bytes += rx_size;
+
+		SSSNIC_RX_LOG(DEBUG,
+			"Received one packet on port %u, len=%u, nb_seg=%u, tso_segsz=%u, ol_flags=%x",
+			rxq->port, rxm->pkt_len, rxm->nb_segs, rxm->tso_segsz,
+			rxm->ol_flags);
+	}
+
+	if (nb_rx > 0) {
+		rxq->stats.packets += nb_rx;
+		rxq->stats.bytes += rx_bytes;
+		rxq->stats.burst = nb_rx;
+
+		/* refill packet mbuf */
+		idle_entries = sssnic_ethdev_rxq_num_idle_entries(rxq) - 1;
+		if (idle_entries >= rxq->rx_free_thresh)
+			sssnic_ethdev_rxq_pktmbufs_fill(rxq);
+	}
+
+	return nb_rx;
+}
