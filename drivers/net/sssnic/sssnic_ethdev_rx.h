@@ -24,5 +24,11 @@ int sssnic_ethdev_rx_queue_start(struct rte_eth_dev *ethdev, uint16_t queue_id);
 int sssnic_ethdev_rx_queue_stop(struct rte_eth_dev *ethdev, uint16_t queue_id);
 int sssnic_ethdev_rx_queue_all_start(struct rte_eth_dev *ethdev);
 int sssnic_ethdev_rx_queue_all_stop(struct rte_eth_dev *ethdev);
+int sssnic_ethdev_rx_queue_intr_enable(struct rte_eth_dev *ethdev,
+	uint16_t qid);
+int sssnic_ethdev_rx_queue_intr_disable(struct rte_eth_dev *ethdev,
+	uint16_t qid);
+int sssnic_ethdev_rx_intr_init(struct rte_eth_dev *ethdev);
+void sssnic_ethdev_rx_intr_shutdown(struct rte_eth_dev *ethdev);
 
 #endif

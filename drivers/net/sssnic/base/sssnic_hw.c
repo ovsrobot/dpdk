@@ -145,6 +145,20 @@ sssnic_msix_resend_disable(struct sssnic_hw *hw, uint16_t msix_id)
 	sssnic_cfg_reg_write(hw, SSSNIC_MSIX_CTRL_REG, reg.u32);
 }
 
+void
+sssnic_msix_auto_mask_set(struct sssnic_hw *hw, uint16_t msix_id, int state)
+{
+	struct sssnic_msix_ctrl_reg reg;
+
+	reg.u32 = 0;
+	if (state == SSSNIC_MSIX_ENABLE)
+		reg.auto_msk_set = 1;
+	else
+		reg.auto_msk_clr = 1;
+	reg.msxi_idx = msix_id;
+	sssnic_cfg_reg_write(hw, SSSNIC_MSIX_CTRL_REG, reg.u32);
+}
+
 static void
 sssnic_pf_status_set(struct sssnic_hw *hw, enum sssnic_pf_status status)
 {
