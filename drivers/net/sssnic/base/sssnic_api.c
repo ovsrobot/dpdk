@@ -1635,3 +1635,267 @@ sssnic_vlan_filter_set(struct sssnic_hw *hw, uint16_t vid, bool add)
 
 	return 0;
 }
+
+int
+sssnic_tcam_enable_set(struct sssnic_hw *hw, bool enabled)
+{
+	struct sssnic_tcam_enable_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.enabled = enabled ? 1 : 0;
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_TCAM_ENABLE_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED)
+			PMD_DRV_LOG(WARNING,
+				"SSSNIC_SET_TCAM_ENABLED_CMD is unsupported");
+		else
+			PMD_DRV_LOG(ERR,
+				"Bad response to SSSNIC_SET_TCAM_ENABLE_CMD, len=%u, status=%u",
+				cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_tcam_flush(struct sssnic_hw *hw)
+{
+	struct sssnic_tcam_flush_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_FLUSH_TCAM_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED)
+			PMD_DRV_LOG(WARNING,
+				"SSSNIC_FLUSH_TCAM_CMD is unsupported");
+		else
+			PMD_DRV_LOG(ERR,
+				"Bad response to SSSNIC_FLUSH_TCAM_CMD, len=%u, status=%u",
+				cmd_len, cmd.common.status);
+		return -EIO;
+	}
+	return 0;
+}
+
+int
+sssnic_tcam_disable_and_flush(struct sssnic_hw *hw)
+{
+	int ret;
+
+	ret = sssnic_tcam_enable_set(hw, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Could not disable TCAM");
+		return ret;
+	}
+
+	ret = sssnic_tcam_flush(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Could not flush TCAM");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_tcam_block_cfg(struct sssnic_hw *hw, uint8_t flag, uint16_t *block_idx)
+{
+	struct sssnic_tcam_block_cfg_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.flag = flag;
+	if (flag == SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_FREE)
+		cmd.idx = *block_idx;
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_TCAM_CFG_BLOCK_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED)
+			PMD_DRV_LOG(WARNING,
+				"SSSNIC_CFG_TCAM_BLOCK_CMD is unsupported");
+		else
+			PMD_DRV_LOG(ERR,
+				"Bad response to SSSNIC_CFG_TCAM_BLOCK_CMD, len=%u, status=%u",
+				cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	if (flag == SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_ALLOC)
+		*block_idx = cmd.idx;
+
+	return 0;
+}
+
+int
+sssnic_tcam_block_alloc(struct sssnic_hw *hw, uint16_t *block_idx)
+{
+	if (block_idx == NULL)
+		return -EINVAL;
+
+	return sssnic_tcam_block_cfg(hw, SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_ALLOC,
+		block_idx);
+}
+
+int
+sssnic_tcam_block_free(struct sssnic_hw *hw, uint16_t block_idx)
+{
+	return sssnic_tcam_block_cfg(hw, SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_FREE,
+		&block_idx);
+}
+
+int
+sssnic_tcam_packet_type_filter_set(struct sssnic_hw *hw, uint8_t ptype,
+	uint16_t qid, bool enabled)
+{
+	struct sssnic_tcam_ptype_filter_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.ptype = ptype;
+	cmd.qid = qid;
+	cmd.enable = enabled ? 1 : 0;
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_TCAM_SET_PTYPE_FILTER_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED)
+			PMD_DRV_LOG(WARNING,
+				"SSSNIC_TCAM_SET_PTYPE_FILTER_CMD is unsupported");
+		else
+			PMD_DRV_LOG(ERR,
+				"Bad response to SSSNIC_TCAM_SET_PTYPE_FILTER_CMD, len=%u, status=%u",
+				cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_tcam_entry_add(struct sssnic_hw *hw, struct sssnic_tcam_entry *entry)
+{
+	struct sssnic_tcam_entry_add_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	rte_memcpy(&cmd.data, entry, sizeof(cmd.data));
+
+	if (entry->index >= SSSNIC_TCAM_MAX_ENTRY_NUM) {
+		PMD_DRV_LOG(ERR, "Invalid TCAM entry index: %u", entry->index);
+		return -EINVAL;
+	}
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_ADD_TCAM_ENTRY_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED)
+			PMD_DRV_LOG(WARNING,
+				"SSSNIC_ADD_TCAM_ENTRY_CMD is unsupported");
+		else
+			PMD_DRV_LOG(ERR,
+				"Bad response to SSSNIC_ADD_TCAM_ENTRY_CMD, len=%u, status=%u",
+				cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_tcam_entry_del(struct sssnic_hw *hw, uint32_t entry_idx)
+{
+	struct sssnic_tcam_entry_del_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.start = entry_idx;
+	cmd.num = 1;
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_DEL_TCAM_ENTRY_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED)
+			PMD_DRV_LOG(WARNING,
+				"SSSNIC_ADD_TCAM_ENTRY_CMD is unsupported");
+		else
+			PMD_DRV_LOG(ERR,
+				"Bad response to SSSNIC_ADD_TCAM_ENTRY_CMD, len=%u, status=%u",
+				cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}

@@ -12,6 +12,7 @@
 #include "sssnic_ethdev.h"
 #include "sssnic_ethdev_rx.h"
 #include "sssnic_ethdev_rss.h"
+#include "sssnic_ethdev_fdir.h"
 #include "base/sssnic_hw.h"
 #include "base/sssnic_workq.h"
 #include "base/sssnic_api.h"
@@ -594,8 +595,17 @@ static int
 sssnic_ethdev_rxq_enable(struct rte_eth_dev *ethdev, uint16_t queue_id)
 {
 	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[queue_id];
+	int ret;
 
 	sssnic_ethdev_rxq_pktmbufs_fill(rxq);
+
+	pthread_mutex_lock(&ethdev->data->flow_ops_mutex);
+	ret = sssnic_ethdev_fdir_rules_enable_by_queue(ethdev, queue_id);
+	if (ret)
+		PMD_DRV_LOG(WARNING,
+			"Failed to enable fdir rules of rxq:%u, port:%u",
+			queue_id, ethdev->data->port_id);
+	pthread_mutex_unlock(&ethdev->data->flow_ops_mutex);
 
 	return 0;
 }
@@ -605,6 +615,14 @@ sssnic_ethdev_rxq_disable(struct rte_eth_dev *ethdev, uint16_t queue_id)
 {
 	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[queue_id];
 	int ret;
+
+	pthread_mutex_lock(&ethdev->data->flow_ops_mutex);
+	ret = sssnic_ethdev_fdir_rules_disable_by_queue(ethdev, queue_id);
+	if (ret != 0)
+		PMD_DRV_LOG(WARNING,
+			"Failed to disable fdir rules of rxq:%u, port:%u",
+			queue_id, ethdev->data->port_id);
+	pthread_mutex_unlock(&ethdev->data->flow_ops_mutex);
 
 	ret = sssnic_ethdev_rxq_flush(rxq);
 	if (ret != 0) {

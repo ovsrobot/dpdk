@@ -15,6 +15,8 @@
 #include "sssnic_ethdev_tx.h"
 #include "sssnic_ethdev_stats.h"
 #include "sssnic_ethdev_rss.h"
+#include "sssnic_ethdev_fdir.h"
+#include "sssnic_ethdev_flow.h"
 
 static int sssnic_ethdev_init(struct rte_eth_dev *ethdev);
 static void sssnic_ethdev_vlan_filter_clean(struct rte_eth_dev *ethdev);
@@ -346,6 +348,7 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 	sssnic_ethdev_link_intr_disable(ethdev);
 	sssnic_ethdev_tx_queue_all_release(ethdev);
 	sssnic_ethdev_rx_queue_all_release(ethdev);
+	sssnic_ethdev_fdir_shutdown(ethdev);
 	sssnic_ethdev_mac_addrs_clean(ethdev);
 	sssnic_hw_shutdown(hw);
 	rte_free(hw);
@@ -952,6 +955,7 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.flow_ctrl_get = sssnic_ethdev_flow_ctrl_get,
 	.vlan_offload_set = sssnic_ethdev_vlan_offload_set,
 	.vlan_filter_set = sssnic_ethdev_vlan_filter_set,
+	.flow_ops_get = sssnic_ethdev_flow_ops_get,
 };
 
 static int
@@ -992,6 +996,12 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 		goto mac_addrs_init_fail;
 	}
 
+	ret = sssnic_ethdev_fdir_init(ethdev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to initialize fdir info");
+		goto fdir_init_fail;
+	}
+
 	netdev->max_num_rxq = SSSNIC_MAX_NUM_RXQ(hw);
 	netdev->max_num_txq = SSSNIC_MAX_NUM_TXQ(hw);
 
@@ -1002,6 +1012,8 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 
 	return 0;
 
+fdir_init_fail:
+	sssnic_ethdev_mac_addrs_clean(ethdev);
 mac_addrs_init_fail:
 	sssnic_hw_shutdown(0);
 	return ret;
