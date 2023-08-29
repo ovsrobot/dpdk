@@ -27,5 +27,9 @@ int sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
 int sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
 	struct sssnic_msix_attr *attr);
 int sssnic_capability_get(struct sssnic_hw *hw, struct sssnic_capability *capa);
+int sssnic_mac_addr_get(struct sssnic_hw *hw, uint8_t *addr);
+int sssnic_mac_addr_update(struct sssnic_hw *hw, uint8_t *new, uint8_t *old);
+int sssnic_mac_addr_add(struct sssnic_hw *hw, uint8_t *addr);
+int sssnic_mac_addr_del(struct sssnic_hw *hw, uint8_t *addr);
 
 #endif /* _SSSNIC_API_H_ */
