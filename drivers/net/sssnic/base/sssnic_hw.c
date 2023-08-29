@@ -9,6 +9,7 @@
 #include "../sssnic_log.h"
 #include "sssnic_hw.h"
 #include "sssnic_reg.h"
+#include "sssnic_eventq.h"
 
 static int
 wait_for_sssnic_hw_ready(struct sssnic_hw *hw)
@@ -196,12 +197,18 @@ sssnic_hw_init(struct sssnic_hw *hw)
 		return ret;
 	}
 
+	ret = sssnic_eventq_all_init(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize event queues");
+		return ret;
+	}
+
 	return -EINVAL;
 }
 
 void
 sssnic_hw_shutdown(struct sssnic_hw *hw)
 {
-	RTE_SET_USED(hw);
 	PMD_INIT_FUNC_TRACE();
+	sssnic_eventq_all_shutdown(hw);
 }
