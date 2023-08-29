@@ -350,6 +350,8 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 	sssnic_ethdev_rx_queue_all_release(ethdev);
 	sssnic_ethdev_fdir_shutdown(ethdev);
 	sssnic_ethdev_mac_addrs_clean(ethdev);
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		sssnic_vf_port_unregister(hw);
 	sssnic_hw_shutdown(hw);
 	rte_free(hw);
 }
@@ -958,6 +960,47 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.flow_ops_get = sssnic_ethdev_flow_ops_get,
 };
 
+static const struct eth_dev_ops sssnic_vf_ethdev_ops = {
+	.dev_start = sssnic_ethdev_start,
+	.dev_stop = sssnic_ethdev_stop,
+	.dev_close = sssnic_ethdev_close,
+	.link_update = sssnic_ethdev_link_update,
+	.dev_configure = sssnic_ethdev_configure,
+	.dev_infos_get = sssnic_ethdev_infos_get,
+	.mtu_set = sssnic_ethdev_mtu_set,
+	.mac_addr_set = sssnic_ethdev_mac_addr_set,
+	.mac_addr_remove = sssnic_ethdev_mac_addr_remove,
+	.mac_addr_add = sssnic_ethdev_mac_addr_add,
+	.set_mc_addr_list = sssnic_ethdev_set_mc_addr_list,
+	.rx_queue_setup = sssnic_ethdev_rx_queue_setup,
+	.rx_queue_release = sssnic_ethdev_rx_queue_release,
+	.tx_queue_setup = sssnic_ethdev_tx_queue_setup,
+	.tx_queue_release = sssnic_ethdev_tx_queue_release,
+	.rx_queue_start = sssnic_ethdev_rx_queue_start,
+	.rx_queue_stop = sssnic_ethdev_rx_queue_stop,
+	.tx_queue_start = sssnic_ethdev_tx_queue_start,
+	.tx_queue_stop = sssnic_ethdev_tx_queue_stop,
+	.rx_queue_intr_enable = sssnic_ethdev_rx_queue_intr_enable,
+	.rx_queue_intr_disable = sssnic_ethdev_rx_queue_intr_disable,
+	.allmulticast_enable = sssnic_ethdev_allmulticast_enable,
+	.allmulticast_disable = sssnic_ethdev_allmulticast_disable,
+	.stats_get = sssnic_ethdev_stats_get,
+	.stats_reset = sssnic_ethdev_stats_reset,
+	.xstats_get_names = sssnic_ethdev_xstats_get_names,
+	.xstats_get = sssnic_ethdev_xstats_get,
+	.xstats_reset = sssnic_ethdev_xstats_reset,
+	.rss_hash_conf_get = sssnic_ethdev_rss_hash_config_get,
+	.rss_hash_update = sssnic_ethdev_rss_hash_update,
+	.reta_update = sssnic_ethdev_rss_reta_update,
+	.reta_query = sssnic_ethdev_rss_reta_query,
+	.rxq_info_get = sssnic_ethdev_rx_queue_info_get,
+	.txq_info_get = sssnic_ethdev_tx_queue_info_get,
+	.fw_version_get = sssnic_ethdev_fw_version_get,
+	.vlan_offload_set = sssnic_ethdev_vlan_offload_set,
+	.vlan_filter_set = sssnic_ethdev_vlan_filter_set,
+	.flow_ops_get = sssnic_ethdev_flow_ops_get,
+};
+
 static int
 sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 {
@@ -990,6 +1033,14 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 		return ret;
 	}
 
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF) {
+		ret = sssnic_vf_port_register(hw);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Failed to register VF device");
+			goto vf_register_fail;
+		}
+	}
+
 	ret = sssnic_ethdev_mac_addrs_init(ethdev);
 	if (ret != 0) {
 		PMD_DRV_LOG(ERR, "Failed to initialize MAC addresses");
@@ -1005,7 +1056,10 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 	netdev->max_num_rxq = SSSNIC_MAX_NUM_RXQ(hw);
 	netdev->max_num_txq = SSSNIC_MAX_NUM_TXQ(hw);
 
-	ethdev->dev_ops = &sssnic_ethdev_ops;
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		ethdev->dev_ops = &sssnic_vf_ethdev_ops;
+	else
+		ethdev->dev_ops = &sssnic_ethdev_ops;
 
 	sssnic_ethdev_link_update(ethdev, 0);
 	sssnic_ethdev_link_intr_enable(ethdev);
@@ -1015,6 +1069,9 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 fdir_init_fail:
 	sssnic_ethdev_mac_addrs_clean(ethdev);
 mac_addrs_init_fail:
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		sssnic_vf_port_unregister(hw);
+vf_register_fail:
 	sssnic_hw_shutdown(0);
 	return ret;
 }
@@ -1060,6 +1117,7 @@ sssnic_pci_remove(struct rte_pci_device *pci_dev)
 
 static const struct rte_pci_id sssnic_pci_id_map[] = {
 	{ RTE_PCI_DEVICE(SSSNIC_PCI_VENDOR_ID, SSSNIC_DEVICE_ID_STD) },
+	{ RTE_PCI_DEVICE(SSSNIC_PCI_VENDOR_ID, SSSNIC_VF_DEVICE_ID) },
 	{ .vendor_id = 0 },
 };
 
