@@ -163,7 +163,7 @@ nfp_cpp_mutex_alloc(struct nfp_cpp *cpp,
 	if (tmp != key)
 		return NULL;
 
-	mutex = calloc(sizeof(*mutex), 1);
+	mutex = rte_zmalloc(NULL, sizeof(*mutex), 0);
 	if (mutex == NULL)
 		return NULL;
 
@@ -209,7 +209,7 @@ nfp_cpp_mutex_free(struct nfp_cpp_mutex *mutex)
 	if (mutex->cpp && mutex == mutex->cpp->mutex_cache)
 		mutex->cpp->mutex_cache = mutex->next;
 
-	free(mutex);
+	rte_free(mutex);
 }
 
 /**

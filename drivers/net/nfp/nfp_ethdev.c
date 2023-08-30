@@ -47,7 +47,7 @@ nfp_net_pf_read_mac(struct nfp_app_fw_nic *app_fw_nic, int port)
 
 	rte_ether_addr_copy(&nfp_eth_table->ports[port].mac_addr, &hw->mac_addr);
 
-	free(nfp_eth_table);
+	rte_free(nfp_eth_table);
 	return 0;
 }
 
@@ -312,7 +312,7 @@ nfp_net_close(struct rte_eth_dev *dev)
 	PMD_INIT_LOG(INFO, "Freeing PF resources");
 	nfp_cpp_area_free(pf_dev->ctrl_area);
 	nfp_cpp_area_free(pf_dev->hwqueues_area);
-	free(pf_dev->hwinfo);
+	rte_free(pf_dev->hwinfo);
 	free(pf_dev->sym_tbl);
 	nfp_cpp_free(pf_dev->cpp);
 	rte_free(app_fw_nic);
@@ -1047,9 +1047,9 @@ pf_cleanup:
 sym_tbl_cleanup:
 	free(sym_tbl);
 eth_table_cleanup:
-	free(nfp_eth_table);
+	rte_free(nfp_eth_table);
 hwinfo_cleanup:
-	free(hwinfo);
+	rte_free(hwinfo);
 cpp_cleanup:
 	nfp_cpp_free(cpp);
 

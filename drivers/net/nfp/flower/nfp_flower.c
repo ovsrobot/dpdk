@@ -225,7 +225,7 @@ nfp_flower_pf_close(struct rte_eth_dev *dev)
 	PMD_DRV_LOG(INFO, "Freeing PF resources");
 	nfp_cpp_area_free(pf_dev->ctrl_area);
 	nfp_cpp_area_free(pf_dev->hwqueues_area);
-	free(pf_dev->hwinfo);
+	rte_free(pf_dev->hwinfo);
 	free(pf_dev->sym_tbl);
 	nfp_cpp_free(pf_dev->cpp);
 	rte_free(app_fw_flower);
