@@ -181,6 +181,9 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 		goto error;
 	}
 
+	/* Update model I/O data */
+	mvtvm_ml_model_io_info_update(model);
+
 	return 0;
 
 error:
