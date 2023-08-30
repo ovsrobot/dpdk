@@ -43,4 +43,7 @@ struct mvtvm_ml_model_data {
 	struct cnxk_ml_io_info info;
 };
 
+int mvtvm_ml_model_blob_parse(struct rte_ml_model_params *params,
+			      struct mvtvm_ml_model_object *object);
+
 #endif /* _MVTVM_ML_MODEL_H_ */
