@@ -86,7 +86,7 @@ ml_parse_models(struct ml_options *opt, const char *arg)
 		strlcpy(opt->filelist[opt->nb_filelist].model, token, PATH_MAX);
 		opt->nb_filelist++;
 
-		if (opt->nb_filelist >= ML_TEST_MAX_MODELS) {
+		if (opt->nb_filelist > ML_TEST_MAX_MODELS) {
 			ml_err("Exceeded model count, max = %d\n", ML_TEST_MAX_MODELS);
 			ret = -EINVAL;
 			break;
@@ -109,7 +109,7 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 	char filelist[PATH_MAX];
 	char *token;
 
-	if (opt->nb_filelist >= ML_TEST_MAX_MODELS) {
+	if (opt->nb_filelist > ML_TEST_MAX_MODELS) {
 		ml_err("Exceeded filelist count, max = %d\n", ML_TEST_MAX_MODELS);
 		return -1;
 	}
