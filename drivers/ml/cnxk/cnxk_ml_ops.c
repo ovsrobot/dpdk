@@ -1233,7 +1233,14 @@ cnxk_ml_model_start(struct rte_ml_dev *dev, uint16_t model_id)
 		return -EINVAL;
 	}
 
-	return cn10k_ml_model_start(cnxk_mldev, model);
+	if (model->type == ML_CNXK_MODEL_TYPE_GLOW)
+		return cn10k_ml_model_start(cnxk_mldev, model);
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	else
+		return mvtvm_ml_model_start(cnxk_mldev, model);
+#endif
+
+	return 0;
 }
 
 int
@@ -1253,7 +1260,14 @@ cnxk_ml_model_stop(struct rte_ml_dev *dev, uint16_t model_id)
 		return -EINVAL;
 	}
 
-	return cn10k_ml_model_stop(cnxk_mldev, model);
+	if (model->type == ML_CNXK_MODEL_TYPE_GLOW)
+		return cn10k_ml_model_stop(cnxk_mldev, model);
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	else
+		return mvtvm_ml_model_stop(cnxk_mldev, model);
+#endif
+
+	return 0;
 }
 
 static int

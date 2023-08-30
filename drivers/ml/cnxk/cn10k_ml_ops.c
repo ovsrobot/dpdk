@@ -798,7 +798,9 @@ cn10k_ml_layer_start(void *device, uint16_t model_id, const char *layer_name)
 	bool locked;
 	int ret = 0;
 
+#ifndef RTE_MLDEV_CNXK_ENABLE_MVTVM
 	PLT_SET_USED(layer_name);
+#endif
 
 	cnxk_mldev = (struct cnxk_ml_dev *)device;
 	if (cnxk_mldev == NULL) {
@@ -811,6 +813,25 @@ cn10k_ml_layer_start(void *device, uint16_t model_id, const char *layer_name)
 		plt_err("Invalid model_id = %u", model_id);
 		return -EINVAL;
 	}
+
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	if (model->type == ML_CNXK_MODEL_TYPE_TVM) {
+		for (layer_id = 0; layer_id < model->mvtvm.metadata.model.nb_layers; layer_id++) {
+			if (strcmp(model->layer[layer_id].name, layer_name) == 0)
+				break;
+		}
+
+		if (layer_id == model->mvtvm.metadata.model.nb_layers) {
+			plt_err("Invalid layer name: %s", layer_name);
+			return -EINVAL;
+		}
+
+		if (model->layer[layer_id].type != ML_CNXK_LAYER_TYPE_MRVL) {
+			plt_err("Invalid layer name / type: %s", layer_name);
+			return -EINVAL;
+		}
+	}
+#endif
 
 	layer = &model->layer[layer_id];
 	cn10k_mldev = &cnxk_mldev->cn10k_mldev;
@@ -981,7 +1002,9 @@ cn10k_ml_layer_stop(void *device, uint16_t model_id, const char *layer_name)
 	bool locked;
 	int ret = 0;
 
+#ifndef RTE_MLDEV_CNXK_ENABLE_MVTVM
 	PLT_SET_USED(layer_name);
+#endif
 
 	cnxk_mldev = (struct cnxk_ml_dev *)device;
 	if (cnxk_mldev == NULL) {
@@ -994,6 +1017,25 @@ cn10k_ml_layer_stop(void *device, uint16_t model_id, const char *layer_name)
 		plt_err("Invalid model_id = %u", model_id);
 		return -EINVAL;
 	}
+
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	if (model->type == ML_CNXK_MODEL_TYPE_TVM) {
+		for (layer_id = 0; layer_id < model->mvtvm.metadata.model.nb_layers; layer_id++) {
+			if (strcmp(model->layer[layer_id].name, layer_name) == 0)
+				break;
+		}
+
+		if (layer_id == model->mvtvm.metadata.model.nb_layers) {
+			plt_err("Invalid layer name: %s", layer_name);
+			return -EINVAL;
+		}
+
+		if (model->layer[layer_id].type != ML_CNXK_LAYER_TYPE_MRVL) {
+			plt_err("Invalid layer name / type: %s", layer_name);
+			return -EINVAL;
+		}
+	}
+#endif
 
 	layer = &model->layer[layer_id];
 	cn10k_mldev = &cnxk_mldev->cn10k_mldev;
