@@ -930,7 +930,7 @@ vhost_vring_inject_irq(struct virtio_net *dev, struct vhost_virtqueue *vq)
 		dev->notify_ops->guest_notified(dev->vid);
 }
 
-static __rte_always_inline void
+static __rte_always_inline int
 vhost_vring_call_split(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
 	/* Flush used->idx update before we read avail->flags. */
@@ -953,13 +953,17 @@ vhost_vring_call_split(struct virtio_net *dev, struct vhost_virtqueue *vq)
 				unlikely(!signalled_used_valid))
 			vhost_vring_inject_irq(dev, vq);
 	} else {
+		if (!vq->avail)
+			return -1;
+
 		/* Kick the guest if necessary. */
 		if (!(vq->avail->flags & VRING_AVAIL_F_NO_INTERRUPT))
 			vhost_vring_inject_irq(dev, vq);
 	}
+	return 0;
 }
 
-static __rte_always_inline void
+static __rte_always_inline int
 vhost_vring_call_packed(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
 	uint16_t old, new, off, off_wrap;
@@ -967,6 +971,9 @@ vhost_vring_call_packed(struct virtio_net *dev, struct vhost_virtqueue *vq)
 
 	/* Flush used desc update. */
 	rte_atomic_thread_fence(__ATOMIC_SEQ_CST);
+
+	if (!vq->driver_event)
+		return -1;
 
 	if (!(dev->features & (1ULL << VIRTIO_RING_F_EVENT_IDX))) {
 		if (vq->driver_event->flags !=
@@ -1030,6 +1037,7 @@ restore_mbuf(struct rte_mbuf *m)
 		rte_mbuf_iova_set(m, rte_mempool_virt2iova(m) + mbuf_size);
 		m = m->next;
 	}
+	return 0;
 }
 
 static __rte_always_inline bool
