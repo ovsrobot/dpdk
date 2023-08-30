@@ -11,6 +11,8 @@
 
 #include "cnxk_ml_io.h"
 
+struct cnxk_ml_model;
+
 /* Maximum number of objects per model */
 #define ML_MVTVM_MODEL_OBJECT_MAX 3
 
