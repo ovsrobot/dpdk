@@ -52,7 +52,7 @@ nffw_fwinfo_mip_mu_da_get(const struct nffw_fwinfo *fi)
 	return (fi->loaded__mu_da__mip_off_hi >> 8) & 1;
 }
 
-/* mip_offset = (loaded__mu_da__mip_off_hi<7:0> << 8) | mip_offset_lo */
+/* mip_offset = (loaded__mu_da__mip_off_hi<7:0> << 32) | mip_offset_lo */
 static uint64_t
 nffw_fwinfo_mip_offset_get(const struct nffw_fwinfo *fi)
 {
@@ -111,11 +111,14 @@ nffw_res_fwinfos(struct nfp_nffw_info_data *fwinf, struct nffw_fwinfo **arr)
 	}
 }
 
-/*
- * nfp_nffw_info_open() - Acquire the lock on the NFFW table
- * @cpp:	NFP CPP handle
+/**
+ * Acquire the lock on the NFFW table
  *
- * Return: nffw info pointer, or NULL on failure
+ * @param cpp
+ *   NFP CPP handle
+ *
+ * @return
+ *   NFFW info pointer, or NULL on failure
  */
 struct nfp_nffw_info *
 nfp_nffw_info_open(struct nfp_cpp *cpp)
@@ -167,11 +170,11 @@ err_free:
 	return NULL;
 }
 
-/*
- * nfp_nffw_info_close() - Release the lock on the NFFW table
- * @state:	NFP FW info state
+/**
+ * Release the lock on the NFFW table
  *
- * Return: void
+ * @param state
+ *   NFFW info pointer
  */
 void
 nfp_nffw_info_close(struct nfp_nffw_info *state)
@@ -180,11 +183,14 @@ nfp_nffw_info_close(struct nfp_nffw_info *state)
 	free(state);
 }
 
-/*
- * nfp_nffw_info_fwid_first() - Return the first firmware ID in the NFFW
- * @state:	NFP FW info state
+/**
+ * Return the first firmware ID in the NFFW
  *
- * Return: First NFFW firmware info, NULL on failure
+ * @param state
+ *   NFFW info pointer
+ *
+ * @return:
+ *   First NFFW firmware info, NULL on failure
  */
 static struct nffw_fwinfo *
 nfp_nffw_info_fwid_first(struct nfp_nffw_info *state)
@@ -204,13 +210,18 @@ nfp_nffw_info_fwid_first(struct nfp_nffw_info *state)
 	return NULL;
 }
 
-/*
- * nfp_nffw_info_mip_first() - Retrieve the location of the first FW's MIP
- * @state:	NFP FW info state
- * @cpp_id:	Pointer to the CPP ID of the MIP
- * @off:	Pointer to the CPP Address of the MIP
+/**
+ * Retrieve the location of the first FW's MIP
  *
- * Return: 0, or -ERRNO
+ * @param state
+ *   NFFW info pointer
+ * @param cpp_id
+ *   Pointer to the CPP ID of the MIP
+ * @param off
+ *   Pointer to the CPP Address of the MIP
+ *
+ * @return
+ *   0, or -ERRNO
  */
 int
 nfp_nffw_info_mip_first(struct nfp_nffw_info *state,
