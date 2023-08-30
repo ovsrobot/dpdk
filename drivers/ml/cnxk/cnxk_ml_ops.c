@@ -18,6 +18,7 @@
 #include "cnxk_ml_io.h"
 #include "cnxk_ml_model.h"
 #include "cnxk_ml_ops.h"
+#include "cnxk_ml_utils.h"
 
 /* ML model macros */
 #define CNXK_ML_MODEL_MEMZONE_NAME "ml_cnxk_model_mz"

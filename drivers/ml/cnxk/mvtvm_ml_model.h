@@ -13,6 +13,7 @@
 
 struct cnxk_ml_dev;
 struct cnxk_ml_model;
+struct cnxk_ml_layer;
 
 /* Maximum number of objects per model */
 #define ML_MVTVM_MODEL_OBJECT_MAX 3
@@ -50,5 +51,6 @@ int mvtvm_ml_model_blob_parse(struct rte_ml_model_params *params,
 			      struct mvtvm_ml_model_object *object);
 void mvtvm_ml_model_io_info_update(struct cnxk_ml_model *model);
 void mvtvm_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *model);
+void mvtvm_ml_layer_print(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_layer *layer, FILE *fp);
 
 #endif /* _MVTVM_ML_MODEL_H_ */
