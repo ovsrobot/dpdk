@@ -10,6 +10,7 @@
 #include "cn10k_ml_ops.h"
 
 #ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+#include "mvtvm_ml_model.h"
 #include "mvtvm_ml_ops.h"
 #endif
 
@@ -1087,6 +1088,7 @@ cnxk_ml_model_load(struct rte_ml_dev *dev, struct rte_ml_model_params *params, u
 {
 	struct rte_ml_dev_info dev_info;
 	struct cnxk_ml_dev *cnxk_mldev;
+	enum cnxk_ml_model_type type;
 	struct cnxk_ml_model *model;
 
 	char str[RTE_MEMZONE_NAMESIZE];
@@ -1101,6 +1103,12 @@ cnxk_ml_model_load(struct rte_ml_dev *dev, struct rte_ml_model_params *params, u
 		return -EINVAL;
 
 	cnxk_mldev = dev->data->dev_private;
+
+	type = cnxk_ml_model_get_type(params);
+	if (type == ML_CNXK_MODEL_TYPE_INVALID) {
+		plt_err("Invalid / unsupported model type");
+		return -EINVAL;
+	}
 
 	/* Find model ID */
 	found = false;
@@ -1135,6 +1143,7 @@ cnxk_ml_model_load(struct rte_ml_dev *dev, struct rte_ml_model_params *params, u
 
 	model = mz->addr;
 	model->cnxk_mldev = cnxk_mldev;
+	model->type = type;
 	model->model_id = lcl_model_id;
 	model->info = PLT_PTR_ADD(
 		model, PLT_ALIGN_CEIL(sizeof(struct cnxk_ml_model), dev_info.align_size));
