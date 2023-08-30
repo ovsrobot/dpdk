@@ -12,12 +12,21 @@
 
 #include "cn10k_ml_ops.h"
 
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+#include "mvtvm_ml_ops.h"
+#endif
+
 /* Request structure */
 struct cnxk_ml_req {
 	/* Device specific request */
 	union {
 		/* CN10K */
 		struct cn10k_ml_req cn10k_req;
+
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+		/* MVTVM */
+		struct mvtvm_ml_req mvtvm_req;
+#endif
 	};
 
 	/* Address of status field */
