@@ -1327,6 +1327,7 @@ rte_vhost_vring_call(int vid, uint16_t vring_idx)
 {
 	struct virtio_net *dev;
 	struct vhost_virtqueue *vq;
+	int ret = 0;
 
 	dev = get_device(vid);
 	if (!dev)
@@ -1342,13 +1343,13 @@ rte_vhost_vring_call(int vid, uint16_t vring_idx)
 	rte_rwlock_read_lock(&vq->access_lock);
 
 	if (vq_is_packed(dev))
-		vhost_vring_call_packed(dev, vq);
+		ret = vhost_vring_call_packed(dev, vq);
 	else
-		vhost_vring_call_split(dev, vq);
+		ret = vhost_vring_call_split(dev, vq);
 
 	rte_rwlock_read_unlock(&vq->access_lock);
 
-	return 0;
+	return ret;
 }
 
 int
