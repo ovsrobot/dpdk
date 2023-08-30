@@ -5,6 +5,8 @@
 #ifndef _MVTVM_ML_MODEL_H_
 #define _MVTVM_ML_MODEL_H_
 
+#include <dlpack/dlpack.h>
+
 #include <tvmdp.h>
 
 #include <rte_mldev.h>

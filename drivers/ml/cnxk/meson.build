@@ -19,6 +19,11 @@ if not jansson_dep.found()
         enable_mvtvm = false
 endif
 
+if not cc.check_header('dlpack/dlpack.h')
+        message('drivers/ml/cnxk: dlpack.h not found')
+        enable_mvtvm = false
+endif
+
 tvmrt_lib = cc.find_library('tvm_runtime', required: false)
 if tvmrt_lib.found()
         tvmrt_dep = declare_dependency(dependencies: tvmrt_lib)
