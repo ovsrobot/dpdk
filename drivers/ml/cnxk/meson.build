@@ -16,6 +16,7 @@ driver_sdk_headers = files(
         'cnxk_ml_io.h',
         'cnxk_ml_model.h',
         'cnxk_ml_ops.h',
+        'cnxk_ml_xstats.h',
 )
 
 sources = files(
