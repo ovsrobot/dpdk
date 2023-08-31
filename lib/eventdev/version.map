@@ -131,6 +131,12 @@ EXPERIMENTAL {
 	rte_event_eth_tx_adapter_runtime_params_init;
 	rte_event_eth_tx_adapter_runtime_params_set;
 	rte_event_timer_remaining_ticks_get;
+
+	# added in 23.11
+	rte_event_port_profile_links_set;
+	rte_event_port_profile_unlink;
+	rte_event_port_profile_links_get;
+	__rte_eventdev_trace_port_profile_switch;
 };
 
 INTERNAL {
