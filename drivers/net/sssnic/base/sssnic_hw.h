@@ -51,7 +51,12 @@ struct sssnic_hw {
 	uint8_t *db_base_addr;
 	uint8_t *db_mem_len;
 	struct sssnic_hw_attr attr;
+	struct sssnic_eventq *eventqs;
+	uint8_t num_eventqs;
+	uint16_t eth_port_id;
 };
+
+#define SSSNIC_ETH_PORT_ID(hw) ((hw)->eth_port_id)
 
 int sssnic_hw_init(struct sssnic_hw *hw);
 void sssnic_hw_shutdown(struct sssnic_hw *hw);

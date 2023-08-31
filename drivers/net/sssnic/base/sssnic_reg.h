@@ -18,6 +18,14 @@
 
 #define SSSNIC_MSIX_CTRL_REG 0x58
 
+#define SSSNIC_EVENTQ_CI_CTRL_REG 0x50
+#define SSSNIC_EVENTQ_IDX_SEL_REG 0x210
+#define SSSNIC_EVENTQ_CTRL0_REG 0x200
+#define SSSNIC_EVENTQ_CTRL1_REG 0x204
+#define SSSNIC_EVENTQ_CONS_IDX_REG 0x208
+#define SSSNIC_EVENTQ_PROD_IDX_REG 0x20c
+#define SSSNIC_EVENTQ_PAGE_ADDR_REG 0x240
+
 /* registers of mgmt */
 #define SSSNIC_AF_ELECTION_REG 0x6000
 #define SSSNIC_MF_ELECTION_REG 0x6020
@@ -138,6 +146,49 @@ struct sssnic_msix_ctrl_reg {
 			uint32_t auto_msk_clr : 1;
 			uint32_t resvd_0 : 17;
 			uint32_t msxi_idx : 10;
+		};
+	};
+};
+
+#define SSSNIC_REG_EVENTQ_INTR_MODE_0 0 /* armed mode */
+#define SSSNIC_REG_EVENTQ_INTR_MODE_1 1 /* allway mode */
+#define SSSNIC_REG_EVENTQ_DEF_DMA_ATTR 0
+struct sssnic_eventq_ctrl0_reg {
+	union {
+		uint32_t u32;
+		struct {
+			uint32_t intr_idx : 10;
+			uint32_t resvd_0 : 2;
+			uint32_t dma_attr : 6;
+			uint32_t resvd_1 : 2;
+			uint32_t pci_idx : 1;
+			uint32_t resvd_2 : 8;
+			uint32_t intr_mode : 1;
+		};
+	};
+};
+
+struct sssnic_eventq_ctrl1_reg {
+	union {
+		uint32_t u32;
+		struct {
+			uint32_t depth : 21;
+			uint32_t resvd_0 : 3;
+			uint32_t entry_size : 2;
+			uint32_t resvd_1 : 2;
+			uint32_t page_size : 4;
+		};
+	};
+};
+
+struct sssnic_eventq_ci_ctrl_reg {
+	union {
+		uint32_t u32;
+		struct {
+			uint32_t ci : 21;
+			uint32_t informed : 1;
+			uint32_t resvd_0 : 8;
+			uint32_t qid : 2;
 		};
 	};
 };
