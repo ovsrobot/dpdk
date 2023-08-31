@@ -1110,3 +1110,14 @@ sssnic_ethdev_tx_pkt_burst(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 	return nb_tx;
 }
+
+void
+sssnic_ethdev_tx_queue_info_get(struct rte_eth_dev *ethdev,
+	uint16_t tx_queue_id, struct rte_eth_txq_info *qinfo)
+{
+	struct sssnic_ethdev_txq *txq = ethdev->data->tx_queues[tx_queue_id];
+
+	qinfo->nb_desc = txq->depth;
+	qinfo->queue_state = ethdev->data->tx_queue_state[tx_queue_id];
+	qinfo->conf.tx_free_thresh = txq->tx_free_thresh;
+}

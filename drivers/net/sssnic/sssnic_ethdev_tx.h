@@ -39,5 +39,7 @@ void sssnic_ethdev_tx_queue_stats_clear(struct rte_eth_dev *ethdev,
 	uint16_t qid);
 uint16_t sssnic_ethdev_tx_pkt_burst(void *tx_queue, struct rte_mbuf **tx_pkts,
 	uint16_t nb_pkts);
+void sssnic_ethdev_tx_queue_info_get(struct rte_eth_dev *ethdev,
+	uint16_t tx_queue_id, struct rte_eth_txq_info *qinfo);
 
 #endif /* _SSSNIC_ETHDEV_TX_H_ */
