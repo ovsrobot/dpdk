@@ -136,6 +136,12 @@ static const uint16_t sssnic_ethdev_rx_buf_size_tbl[] = { 32, 64, 96, 128, 192,
 /* Doorbell offset 8192 */
 #define SSSNIC_ETHDEV_RXQ_DB_OFFSET 0x2000
 
+#define SSSNIC_ETHDEV_RX_MSIX_ID_START 1
+#define SSSNIC_ETHDEV_RX_MSIX_ID_INVAL 0
+#define SSSNIC_ETHDEV_RX_MSIX_PENDING_LIMIT 2
+#define SSSNIC_ETHDEV_RX_MSIX_COALESCING_TIMER 2
+#define SSSNIC_ETHDEV_RX_MSIX_RESNEDING_TIMER 7
+
 struct sssnic_ethdev_rxq_doorbell {
 	union {
 		uint64_t u64;
@@ -749,4 +755,133 @@ sssnic_ethdev_rx_queue_all_stop(struct rte_eth_dev *ethdev)
 	}
 
 	return 0;
+}
+
+static int
+sssinc_ethdev_rxq_intr_attr_init(struct sssnic_ethdev_rxq *rxq)
+{
+	int ret;
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(rxq->ethdev);
+	struct sssnic_msix_attr attr;
+
+	attr.lli_set = 0;
+	attr.coalescing_set = 1;
+	attr.pending_limit = SSSNIC_ETHDEV_RX_MSIX_PENDING_LIMIT;
+	attr.coalescing_timer = SSSNIC_ETHDEV_RX_MSIX_COALESCING_TIMER;
+	attr.resend_timer = SSSNIC_ETHDEV_RX_MSIX_RESNEDING_TIMER;
+
+	ret = sssnic_msix_attr_set(hw, rxq->intr.msix_id, &attr);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set msxi attributes");
+		return ret;
+	}
+
+	return 0;
+}
+
+int
+sssnic_ethdev_rx_queue_intr_enable(struct rte_eth_dev *ethdev, uint16_t qid)
+{
+	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[qid];
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+
+	if (rxq->intr.enable)
+		return 0;
+
+	sssnic_msix_auto_mask_set(hw, rxq->intr.msix_id, SSSNIC_MSIX_ENABLE);
+	sssnic_msix_state_set(hw, rxq->intr.msix_id, SSSNIC_MSIX_ENABLE);
+	rxq->intr.enable = 1;
+
+	return 0;
+}
+
+int
+sssnic_ethdev_rx_queue_intr_disable(struct rte_eth_dev *ethdev, uint16_t qid)
+{
+	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[qid];
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+
+	if (!rxq->intr.enable)
+		return 0;
+
+	sssnic_msix_auto_mask_set(hw, rxq->intr.msix_id, SSSNIC_MSIX_DISABLE);
+	sssnic_msix_state_set(hw, rxq->intr.msix_id, SSSNIC_MSIX_DISABLE);
+	sssnic_msix_resend_disable(hw, rxq->intr.msix_id);
+	rxq->intr.enable = 0;
+
+	return 0;
+}
+
+int
+sssnic_ethdev_rx_intr_init(struct rte_eth_dev *ethdev)
+{
+	struct rte_intr_handle *intr_handle;
+	struct sssnic_ethdev_rxq *rxq;
+	uint32_t nb_rxq, i;
+	int vec;
+	int ret;
+
+	if (!ethdev->data->dev_conf.intr_conf.rxq)
+		return 0;
+
+	intr_handle = ethdev->intr_handle;
+
+	if (!rte_intr_cap_multiple(intr_handle)) {
+		PMD_DRV_LOG(ERR,
+			"Rx interrupts require MSI-X interrupts (vfio-pci driver)\n");
+		return -ENOTSUP;
+	}
+
+	rte_intr_efd_disable(intr_handle);
+
+	nb_rxq = ethdev->data->nb_rx_queues;
+
+	ret = rte_intr_efd_enable(intr_handle, nb_rxq);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to enable intr efd");
+		return ret;
+	}
+
+	ret = rte_intr_vec_list_alloc(intr_handle, NULL, nb_rxq);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to allocate rx intr vec list");
+		rte_intr_efd_disable(intr_handle);
+		return ret;
+	}
+
+	for (i = 0; i < nb_rxq; i++) {
+		vec = (int)(i + SSSNIC_ETHDEV_RX_MSIX_ID_START);
+		rte_intr_vec_list_index_set(intr_handle, i, vec);
+		rxq = ethdev->data->rx_queues[i];
+		rxq->intr.msix_id = vec;
+
+		ret = sssinc_ethdev_rxq_intr_attr_init(rxq);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR,
+				"Failed to initialize rxq %u (port %u) msix attribute.",
+				rxq->qid, rxq->port);
+			goto intr_attr_init_fail;
+		}
+	}
+
+	return 0;
+
+intr_attr_init_fail:
+	rte_intr_vec_list_free(intr_handle);
+	rte_intr_efd_disable(intr_handle);
+
+	return ret;
+}
+
+void
+sssnic_ethdev_rx_intr_shutdown(struct rte_eth_dev *ethdev)
+{
+	struct rte_intr_handle *intr_handle = ethdev->intr_handle;
+	uint16_t i;
+
+	for (i = 0; i < ethdev->data->nb_rx_queues; i++)
+		sssnic_ethdev_rx_queue_intr_disable(ethdev, i);
+
+	rte_intr_efd_disable(intr_handle);
+	rte_intr_vec_list_free(intr_handle);
 }
