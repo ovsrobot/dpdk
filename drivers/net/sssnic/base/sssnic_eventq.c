@@ -14,6 +14,7 @@
 #include "../sssnic_log.h"
 #include "sssnic_hw.h"
 #include "sssnic_reg.h"
+#include "sssnic_msg.h"
 #include "sssnic_eventq.h"
 
 #define SSSNIC_EVENTQ_DEF_DEPTH 64
@@ -185,6 +186,32 @@ sssnic_eventq_ci_update(struct sssnic_eventq *eq, int informed)
 }
 
 static int
+sssnic_event_default_handler_func(struct sssnic_eventq *eq,
+	struct sssnic_event *ev, __rte_unused void *data)
+{
+	struct sssnic_hw *hw;
+	int ret;
+
+	hw = eq->hw;
+	ret = sssnic_msg_rx_handle(hw, (struct sssnic_msg_hdr *)(ev->data));
+	if (ret != SSSNIC_MSG_DONE)
+		return -1;
+
+	return SSSNIC_EVENT_DONE;
+}
+
+static void
+sssnic_eventq_handlers_init(struct sssnic_eventq *eq)
+{
+	int i;
+
+	for (i = SSSNIC_EVENT_CODE_MIN; i <= SSSNIC_EVENT_CODE_MAX; i++) {
+		eq->handlers[i].func = sssnic_event_default_handler_func;
+		eq->handlers[i].data = NULL;
+	}
+}
+
+static int
 sssnic_eventq_init(struct sssnic_hw *hw, struct sssnic_eventq *eq, uint16_t qid)
 {
 	int ret;
@@ -230,6 +257,8 @@ sssnic_eventq_init(struct sssnic_hw *hw, struct sssnic_eventq *eq, uint16_t qid)
 		PMD_DRV_LOG(ERR, "Failed to setup eventq pages!");
 		return ret;
 	}
+
+	sssnic_eventq_handlers_init(eq);
 	sssnic_eventq_ctrl_setup(eq);
 	sssnic_eventq_ci_update(eq, 1);
 	if (qid == 0)

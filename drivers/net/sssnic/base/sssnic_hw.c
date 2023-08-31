@@ -10,6 +10,7 @@
 #include "sssnic_hw.h"
 #include "sssnic_reg.h"
 #include "sssnic_eventq.h"
+#include "sssnic_msg.h"
 
 static int
 wait_for_sssnic_hw_ready(struct sssnic_hw *hw)
@@ -197,18 +198,30 @@ sssnic_hw_init(struct sssnic_hw *hw)
 		return ret;
 	}
 
-	ret = sssnic_eventq_all_init(hw);
-	if (ret != 0) {
-		PMD_DRV_LOG(ERR, "Failed to initialize event queues");
+	ret = sssnic_msg_inbox_init(hw);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to initialize message inbox.");
 		return ret;
 	}
 
+	ret = sssnic_eventq_all_init(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize event queues");
+		goto eventq_init_fail;
+	}
+
 	return -EINVAL;
+
+eventq_init_fail:
+	sssnic_msg_inbox_shutdown(hw);
+	return ret;
 }
 
 void
 sssnic_hw_shutdown(struct sssnic_hw *hw)
 {
 	PMD_INIT_FUNC_TRACE();
+
 	sssnic_eventq_all_shutdown(hw);
+	sssnic_msg_inbox_shutdown(hw);
 }
