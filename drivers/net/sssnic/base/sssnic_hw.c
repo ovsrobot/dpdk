@@ -15,6 +15,7 @@
 #include "sssnic_msg.h"
 #include "sssnic_mbox.h"
 #include "sssnic_ctrlq.h"
+#include "sssnic_exception.h"
 
 static int
 wait_for_sssnic_hw_ready(struct sssnic_hw *hw)
@@ -131,6 +132,17 @@ sssnic_msix_all_disable(struct sssnic_hw *hw)
 
 	for (i = 0; i < num_irqs; i++)
 		sssnic_msix_state_set(hw, i, SSSNIC_MSIX_DISABLE);
+}
+
+void
+sssnic_msix_resend_disable(struct sssnic_hw *hw, uint16_t msix_id)
+{
+	struct sssnic_msix_ctrl_reg reg;
+
+	reg.u32 = 0;
+	reg.resend_timer_clr = SSSNIC_MSIX_DISABLE;
+	reg.msxi_idx = msix_id;
+	sssnic_cfg_reg_write(hw, SSSNIC_MSIX_CTRL_REG, reg.u32);
 }
 
 static void
@@ -276,6 +288,38 @@ sssnic_capability_init(struct sssnic_hw *hw)
 	return 0;
 }
 
+int
+sssnic_link_event_callback_register(struct sssnic_hw *hw,
+	sssnic_link_event_cb_t *cb, void *priv)
+{
+	if (hw == NULL || cb == NULL)
+		return -EINVAL;
+
+	hw->link_event_handler.cb = cb;
+	hw->link_event_handler.priv = priv;
+
+	return 0;
+}
+
+void
+sssnic_link_event_callback_unregister(struct sssnic_hw *hw)
+{
+	if (hw != NULL) {
+		hw->link_event_handler.cb = NULL;
+		hw->link_event_handler.priv = NULL;
+	}
+}
+
+void
+sssnic_link_intr_handle(struct sssnic_hw *hw)
+{
+	PMD_DRV_LOG(DEBUG, "sssnic%u link interrupt triggered!",
+		SSSNIC_ETH_PORT_ID(hw));
+
+	sssnic_msix_resend_disable(hw, SSSNIC_LINK_INTR_MSIX_ID);
+	sssnic_eventq_flush(hw, SSSNIC_LINK_INTR_EVENTQ, 0);
+}
+
 static int
 sssnic_base_init(struct sssnic_hw *hw)
 {
@@ -388,6 +432,8 @@ sssnic_hw_init(struct sssnic_hw *hw)
 		PMD_DRV_LOG(ERR, "Failed to initialize capability");
 		goto capbility_init_fail;
 	}
+
+	sssnic_exception_process_init(hw);
 
 	sssnic_pf_status_set(hw, SSSNIC_PF_STATUS_ACTIVE);
 
