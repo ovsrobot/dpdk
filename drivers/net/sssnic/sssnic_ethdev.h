@@ -57,6 +57,7 @@
 #define SSSNIC_ETHDEV_MAX_NUM_MC_MAC 2048
 
 #define SSSNIC_ETHDEV_DEF_RX_FREE_THRESH 32
+#define SSSNIC_ETHDEV_DEF_TX_FREE_THRESH 32
 
 struct sssnic_netdev {
 	void *hw;
