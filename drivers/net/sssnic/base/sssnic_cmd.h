@@ -18,6 +18,8 @@ enum sssnic_mgmt_cmd_id {
 	SSSNIC_GET_FW_VERSION_CMD = 60,
 };
 
+#define SSSNIC_GET_CAPABILITY_CMD 0
+
 struct sssnic_cmd_common {
 	uint8_t status;
 	uint8_t version;
@@ -109,6 +111,18 @@ struct sssnic_msix_ctrl_cmd {
 	uint8_t lli_timer;
 	uint8_t lli_credit;
 	uint8_t resvd1[5];
+};
+
+struct sssnic_capability_get_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd0;
+	uint8_t resvd1[3];
+	uint8_t phy_port;
+	uint32_t resvd2[16];
+	uint16_t txq_max_id;
+	uint16_t rxq_max_id;
+	uint32_t resvd3[63];
 };
 
 #endif /* _SSSNIC_CMD_H_ */
