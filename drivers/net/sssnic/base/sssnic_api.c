@@ -11,6 +11,7 @@
 #include "sssnic_hw.h"
 #include "sssnic_cmd.h"
 #include "sssnic_mbox.h"
+#include "sssnic_ctrlq.h"
 #include "sssnic_api.h"
 
 int
@@ -429,6 +430,68 @@ sssnic_netif_enable_set(struct sssnic_hw *hw, uint8_t state)
 		PMD_DRV_LOG(ERR,
 			"Bad response to SSSNIC_SET_NETIF_ENABLE_CMD, len=%u, status=%u",
 			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_port_enable_set(struct sssnic_hw *hw, bool state)
+{
+	int ret;
+	struct sssnic_port_enable_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	if (hw == NULL)
+		return -EINVAL;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.state = state ? 1 : 0;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_PORT_ENABLE_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_PORT_ENABLE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_rxq_flush(struct sssnic_hw *hw, uint16_t qid)
+{
+	struct sssnic_ctrlq_cmd cmd;
+	struct sssnic_rxq_flush_cmd data;
+	int ret;
+
+	data.u32 = 0;
+	data.qid = qid;
+	data.u32 = rte_cpu_to_be_32(data.u32);
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.data = &data;
+	cmd.module = SSSNIC_LAN_MODULE;
+	cmd.data_len = sizeof(data);
+	cmd.cmd = SSSNIC_FLUSH_RXQ_CMD;
+
+	ret = sssnic_ctrlq_cmd_exec(hw, &cmd, 0);
+	if (ret != 0 || cmd.result != 0) {
+		PMD_DRV_LOG(ERR,
+			"Failed to execulte ctrlq command %s, ret=%d, result=%" PRIu64,
+			"SSSNIC_FLUSH_RXQ_CMD", ret, cmd.result);
 		return -EIO;
 	}
 

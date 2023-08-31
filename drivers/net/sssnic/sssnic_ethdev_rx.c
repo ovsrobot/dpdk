@@ -162,10 +162,38 @@ struct sssnic_ethdev_rxq_doorbell {
 	};
 };
 
+static inline void
+sssnic_ethdev_rxq_doorbell_ring(struct sssnic_ethdev_rxq *rxq, uint16_t pi)
+{
+	uint64_t *db_addr;
+	struct sssnic_ethdev_rxq_doorbell db;
+	uint16_t hw_pi;
+	static const struct sssnic_ethdev_rxq_doorbell default_db = {
+		.cf = 1,
+		.service = 1,
+	};
+
+	hw_pi = pi << 1;
+
+	db.u64 = default_db.u64;
+	db.qid = rxq->qid;
+	db.pi_hi = (hw_pi >> 8) & 0xff;
+
+	db_addr = (uint64_t *)(rxq->doorbell + (hw_pi & 0xff));
+
+	rte_write64(db.u64, db_addr);
+}
+
 static inline uint16_t
 sssnic_ethdev_rxq_num_used_entries(struct sssnic_ethdev_rxq *rxq)
 {
 	return sssnic_workq_num_used_entries(rxq->workq);
+}
+
+static inline uint16_t
+sssnic_ethdev_rxq_num_idle_entries(struct sssnic_ethdev_rxq *rxq)
+{
+	return rxq->workq->idle_entries;
 }
 
 static inline uint16_t
@@ -174,10 +202,22 @@ sssnic_ethdev_rxq_ci_get(struct sssnic_ethdev_rxq *rxq)
 	return sssnic_workq_ci_get(rxq->workq);
 }
 
+static inline uint16_t
+sssnic_ethdev_rxq_pi_get(struct sssnic_ethdev_rxq *rxq)
+{
+	return sssnic_workq_pi_get(rxq->workq);
+}
+
 static inline void
 sssnic_ethdev_rxq_consume(struct sssnic_ethdev_rxq *rxq, uint16_t num_entries)
 {
 	sssnic_workq_consume_fast(rxq->workq, num_entries);
+}
+
+static inline void
+sssnic_ethdev_rxq_produce(struct sssnic_ethdev_rxq *rxq, uint16_t num_entries)
+{
+	sssnic_workq_produce_fast(rxq->workq, num_entries);
 }
 
 static void
@@ -417,4 +457,296 @@ sssnic_ethdev_rx_queue_all_release(struct rte_eth_dev *ethdev)
 
 	for (qid = 0; qid < ethdev->data->nb_rx_queues; qid++)
 		sssnic_ethdev_rx_queue_release(ethdev, qid);
+}
+
+static void
+sssnic_ethdev_rxq_pktmbufs_fill(struct sssnic_ethdev_rxq *rxq)
+{
+	struct rte_mbuf **pktmbuf;
+	rte_iova_t buf_iova;
+	struct sssnic_ethdev_rxq_entry *rqe;
+	uint16_t idle_entries;
+	uint16_t bulk_entries;
+	uint16_t pi;
+	uint16_t i;
+	int ret;
+
+	idle_entries = sssnic_ethdev_rxq_num_idle_entries(rxq) - 1;
+	pi = sssnic_ethdev_rxq_pi_get(rxq);
+
+	while (idle_entries > 0) {
+		/* calculate number of continuous entries */
+		bulk_entries = rxq->depth - pi;
+		if (idle_entries < bulk_entries)
+			bulk_entries = idle_entries;
+
+		pktmbuf = (struct rte_mbuf **)(&rxq->rxe[pi]);
+
+		ret = rte_pktmbuf_alloc_bulk(rxq->mp, pktmbuf, bulk_entries);
+		if (ret != 0) {
+			rxq->stats.nombuf += idle_entries;
+			return;
+		}
+
+		for (i = 0; i < bulk_entries; i++) {
+			rqe = SSSNIC_ETHDEV_RXQ_ENTRY(rxq, pi);
+			buf_iova = rte_mbuf_data_iova(pktmbuf[i]);
+			rqe->buf_hi_addr = SSSNIC_UPPER_32_BITS(buf_iova);
+			rqe->buf_lo_addr = SSSNIC_LOWER_32_BITS(buf_iova);
+			sssnic_ethdev_rxq_produce(rxq, 1);
+			pi = sssnic_ethdev_rxq_pi_get(rxq);
+		}
+
+		idle_entries -= bulk_entries;
+		sssnic_ethdev_rxq_doorbell_ring(rxq, pi);
+	}
+}
+
+static uint16_t
+sssnic_ethdev_rxq_pktmbufs_cleanup(struct sssnic_ethdev_rxq *rxq)
+{
+	struct sssnic_ethdev_rx_entry *rxe;
+	volatile struct sssnic_ethdev_rx_desc *rxd;
+	uint16_t ci, count = 0;
+	uint32_t pktlen = 0;
+	uint32_t buflen = rxq->rx_buf_size;
+	uint16_t num_entries;
+
+	num_entries = sssnic_ethdev_rxq_num_used_entries(rxq);
+
+	ci = sssnic_ethdev_rxq_ci_get(rxq);
+	rxe = &rxq->rxe[ci];
+	rxd = &rxq->desc[ci];
+
+	while (num_entries > 0) {
+		if (pktlen > 0)
+			pktlen = pktlen > buflen ? (pktlen - buflen) : 0;
+		else if (rxd->flush != 0)
+			pktlen = 0;
+		else if (rxd->done != 0)
+			pktlen = rxd->len > buflen ? (rxd->len - buflen) : 0;
+		else
+			break;
+
+		rte_pktmbuf_free(rxe->pktmbuf);
+		rxe->pktmbuf = NULL;
+
+		count++;
+		num_entries--;
+
+		sssnic_ethdev_rxq_consume(rxq, 1);
+		ci = sssnic_ethdev_rxq_ci_get(rxq);
+		rxe = &rxq->rxe[ci];
+		rxd = &rxq->desc[ci];
+	}
+
+	PMD_DRV_LOG(DEBUG,
+		"%u rx packets cleanned up (Port:%u rxq:%u), ci=%u, pi=%u",
+		count, rxq->port, rxq->qid, ci, sssnic_ethdev_rxq_pi_get(rxq));
+
+	return count;
+}
+
+#define SSSNIC_ETHDEV_RXQ_FUSH_TIMEOUT 3000 /* 3000 ms */
+static int
+sssnic_ethdev_rxq_flush(struct sssnic_ethdev_rxq *rxq)
+{
+	struct sssnic_hw *hw;
+	uint64_t timeout;
+	uint16_t used_entries;
+	int ret;
+
+	hw = SSSNIC_ETHDEV_TO_HW(rxq->ethdev);
+
+	ret = sssnic_rxq_flush(hw, rxq->qid);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to flush rxq:%u, port:%u", rxq->qid,
+			rxq->port);
+		return ret;
+	}
+
+	timeout = rte_get_timer_cycles() +
+		  rte_get_timer_hz() * SSSNIC_ETHDEV_RXQ_FUSH_TIMEOUT / 1000;
+
+	do {
+		sssnic_ethdev_rxq_pktmbufs_cleanup(rxq);
+		used_entries = sssnic_ethdev_rxq_num_used_entries(rxq);
+		if (used_entries == 0)
+			return 0;
+		rte_delay_us_sleep(1000);
+	} while (((long)(rte_get_timer_cycles() - timeout)) < 0);
+
+	PMD_DRV_LOG(ERR, "Flush port:%u rxq:%u timeout, used_rxq_entries:%u",
+		rxq->port, rxq->qid, sssnic_ethdev_rxq_num_used_entries(rxq));
+
+	return -ETIMEDOUT;
+}
+
+static int
+sssnic_ethdev_rxq_enable(struct rte_eth_dev *ethdev, uint16_t queue_id)
+{
+	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[queue_id];
+
+	sssnic_ethdev_rxq_pktmbufs_fill(rxq);
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_rxq_disable(struct rte_eth_dev *ethdev, uint16_t queue_id)
+{
+	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[queue_id];
+	int ret;
+
+	ret = sssnic_ethdev_rxq_flush(rxq);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to flush rxq:%u, port:%u", queue_id,
+			ethdev->data->port_id);
+		return ret;
+	}
+
+	return 0;
+}
+int
+sssnic_ethdev_rx_queue_start(struct rte_eth_dev *ethdev, uint16_t queue_id)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	int ret;
+
+	ret = sssnic_ethdev_rxq_enable(ethdev, queue_id);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to start rxq:%u, port:%u", queue_id,
+			ethdev->data->port_id);
+		return ret;
+	}
+
+	if (netdev->num_started_rxqs == 0) {
+		ret = sssnic_port_enable_set(hw, true);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Failed to enable sssnic port:%u",
+				ethdev->data->port_id);
+			sssnic_ethdev_rxq_disable(ethdev, queue_id);
+			return ret;
+		}
+	}
+
+	netdev->num_started_rxqs++;
+	ethdev->data->rx_queue_state[queue_id] = RTE_ETH_QUEUE_STATE_STARTED;
+
+	PMD_DRV_LOG(DEBUG, "port %u rxq %u started", ethdev->data->port_id,
+		queue_id);
+
+	return 0;
+}
+
+int
+sssnic_ethdev_rx_queue_stop(struct rte_eth_dev *ethdev, uint16_t queue_id)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	int ret;
+
+	if (netdev->num_started_rxqs == 1) {
+		ret = sssnic_port_enable_set(hw, false);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Failed to disable sssnic port:%u",
+				ethdev->data->port_id);
+			return ret;
+		}
+	}
+
+	ret = sssnic_ethdev_rxq_disable(ethdev, queue_id);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to disable rxq:%u, port:%u", queue_id,
+			ethdev->data->port_id);
+		sssnic_port_enable_set(hw, true);
+		return ret;
+	}
+
+	netdev->num_started_rxqs--;
+	ethdev->data->rx_queue_state[queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
+
+	PMD_DRV_LOG(DEBUG, "port %u rxq %u stopped", ethdev->data->port_id,
+		queue_id);
+
+	return 0;
+}
+
+int
+sssnic_ethdev_rx_queue_all_start(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	uint16_t numq = ethdev->data->nb_rx_queues;
+	uint16_t qid;
+
+	int ret;
+
+	for (qid = 0; qid < numq; qid++) {
+		ret = sssnic_ethdev_rxq_enable(ethdev, qid);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Failed to enable rxq:%u, port:%u",
+				qid, ethdev->data->port_id);
+			goto fail_out;
+		}
+
+		ethdev->data->rx_queue_state[qid] = RTE_ETH_QUEUE_STATE_STARTED;
+		netdev->num_started_rxqs++;
+
+		PMD_DRV_LOG(DEBUG, "port %u rxq %u started",
+			ethdev->data->port_id, qid);
+	}
+
+	ret = sssnic_port_enable_set(hw, true);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to enable port:%u",
+			ethdev->data->port_id);
+		goto fail_out;
+	}
+
+	return 0;
+
+fail_out:
+	while (qid--) {
+		sssnic_ethdev_rxq_disable(ethdev, qid);
+		ethdev->data->rx_queue_state[qid] = RTE_ETH_QUEUE_STATE_STOPPED;
+		netdev->num_started_rxqs--;
+	}
+
+	return ret;
+}
+
+int
+sssnic_ethdev_rx_queue_all_stop(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_netdev *netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	uint16_t numq = ethdev->data->nb_rx_queues;
+	uint16_t qid;
+	int ret;
+
+	ret = sssnic_port_enable_set(hw, false);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to disable port:%u",
+			ethdev->data->port_id);
+		return ret;
+	}
+
+	for (qid = 0; qid < numq; qid++) {
+		ret = sssnic_ethdev_rxq_disable(ethdev, qid);
+		if (ret != 0) {
+			PMD_DRV_LOG(WARNING, "Failed to enable rxq:%u, port:%u",
+				qid, ethdev->data->port_id);
+			continue;
+		}
+
+		ethdev->data->rx_queue_state[qid] = RTE_ETH_QUEUE_STATE_STOPPED;
+		netdev->num_started_rxqs--;
+
+		PMD_DRV_LOG(DEBUG, "port %u rxq %u stopped",
+			ethdev->data->port_id, qid);
+	}
+
+	return 0;
 }

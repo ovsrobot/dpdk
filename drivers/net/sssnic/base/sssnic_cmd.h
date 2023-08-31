@@ -35,6 +35,37 @@ enum sssnic_netif_cmd_id {
 	SSSNIC_GET_NETIF_LINK_INFO_CMD = 153,
 };
 
+enum sssnic_port_cmd_id {
+	SSSNIC_REGISTER_VF_PORT_CMD = 0,
+	SSSNIC_SET_PORT_RXTX_SIZE_CMD = 5,
+	SSSNIC_SET_PORT_ENABLE_CMD = 6,
+	SSSNIC_SET_PORT_RX_MODE_CMD = 7,
+	SSSNIC_SET_PORT_TX_CI_ATTR_CMD = 8,
+	SSSNIC_GET_PORT_STATS_CMD = 9,
+	SSSNIC_CLEAR_PORT_STATS_CMD = 10,
+
+	SSSNIC_CLEAN_PORT_RES_CMD = 11,
+
+	SSSNIC_PORT_LRO_CFG_CMD = 13,
+	SSSNIC_PORT_LRO_TIMER_CMD = 14,
+	SSSNIC_PORT_FEATURE_CMD = 15,
+
+	SSSNIC_SET_PORT_VLAN_FILTER_CMD = 25,
+	SSSNIC_ENABLE_PORT_VLAN_FILTER_CMD = 26,
+	SSSNIC_ENABLE_PORT_VLAN_STRIP_CMD = 27,
+
+	SSSNIC_PORT_FLOW_CTRL_CMD = 101,
+};
+
+enum sssnic_ctrlq_cmd_id {
+	SSSNIC_SET_RXTXQ_CTX_CMD = 0,
+	SSSNIC_RESET_OFFLOAD_CTX_CMD = 1,
+	SSSNIC_SET_RSS_INDIR_TABLE_CMD = 4,
+	SSSNIC_SET_RSS_KEY_CTRLQ_CMD = 5,
+	SSSNIC_GET_RSS_INDIR_TABLE_CMD = 6,
+	SSSNIC_FLUSH_RXQ_CMD = 10,
+};
+
 struct sssnic_cmd_common {
 	uint8_t status;
 	uint8_t version;
@@ -185,6 +216,24 @@ struct sssnic_netif_enable_set_cmd {
 	uint16_t resvd0;
 	uint8_t flag;
 	uint8_t resvd1[3];
+};
+
+struct sssnic_port_enable_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd0;
+	uint8_t state;
+	uint8_t resvd1[3];
+};
+
+struct sssnic_rxq_flush_cmd {
+	union {
+		struct {
+			uint16_t resvd0;
+			uint16_t qid;
+		};
+		uint32_t u32;
+	};
 };
 
 #endif /* _SSSNIC_CMD_H_ */
