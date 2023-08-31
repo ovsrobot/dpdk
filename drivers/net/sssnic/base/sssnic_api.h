@@ -409,6 +409,18 @@ struct sssnic_fw_version {
 	char time[SSSNIC_FW_VERSION_LEN];
 };
 
+struct sssnic_tcam_entry {
+	uint32_t index;
+	struct {
+		uint32_t qid;
+		uint32_t resvd;
+	} result;
+	struct {
+		uint8_t data0[SSSNIC_TCAM_KEY_SIZE];
+		uint8_t data1[SSSNIC_TCAM_KEY_SIZE];
+	} key;
+};
+
 int sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
 	struct sssnic_msix_attr *attr);
 int sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
@@ -470,5 +482,15 @@ int sssnic_flow_ctrl_set(struct sssnic_hw *hw, bool autoneg, bool rx_en,
 int sssnic_flow_ctrl_get(struct sssnic_hw *hw, bool *autoneg, bool *rx_en,
 	bool *tx_en);
 int sssnic_vlan_filter_set(struct sssnic_hw *hw, uint16_t vid, bool add);
+int sssnic_tcam_enable_set(struct sssnic_hw *hw, bool enabled);
+int sssnic_tcam_flush(struct sssnic_hw *hw);
+int sssnic_tcam_disable_and_flush(struct sssnic_hw *hw);
+int sssnic_tcam_block_alloc(struct sssnic_hw *hw, uint16_t *block_idx);
+int sssnic_tcam_block_free(struct sssnic_hw *hw, uint16_t block_idx);
+int sssnic_tcam_packet_type_filter_set(struct sssnic_hw *hw, uint8_t ptype,
+	uint16_t qid, bool enabled);
+int sssnic_tcam_entry_add(struct sssnic_hw *hw,
+	struct sssnic_tcam_entry *entry);
+int sssnic_tcam_entry_del(struct sssnic_hw *hw, uint32_t entry_idx);
 
 #endif /* _SSSNIC_API_H_ */
