@@ -56,6 +56,8 @@
 #define SSSNIC_ETHDEV_MAX_NUM_UC_MAC 128
 #define SSSNIC_ETHDEV_MAX_NUM_MC_MAC 2048
 
+#define SSSNIC_ETHDEV_DEF_RX_FREE_THRESH 32
+
 struct sssnic_netdev {
 	void *hw;
 	struct rte_ether_addr *mcast_addrs;
