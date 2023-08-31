@@ -670,3 +670,39 @@ sssnic_ethdev_tx_max_size_set(struct rte_eth_dev *ethdev, uint16_t size)
 
 	return 0;
 };
+
+int
+sssnic_ethdev_tx_queue_stats_get(struct rte_eth_dev *ethdev, uint16_t qid,
+	struct sssnic_ethdev_txq_stats *stats)
+{
+	struct sssnic_ethdev_txq *txq;
+
+	if (qid >= ethdev->data->nb_tx_queues) {
+		PMD_DRV_LOG(ERR,
+			"Invalid qid, qid must less than nb_tx_queues(%u)",
+			ethdev->data->nb_tx_queues);
+		return -EINVAL;
+	}
+
+	txq = ethdev->data->tx_queues[qid];
+	memcpy(stats, &txq->stats, sizeof(txq->stats));
+
+	return 0;
+}
+
+void
+sssnic_ethdev_tx_queue_stats_clear(struct rte_eth_dev *ethdev, uint16_t qid)
+{
+	struct sssnic_ethdev_txq *txq;
+	uint64_t *stat;
+	int i, len;
+
+	len = sizeof(struct sssnic_ethdev_txq_stats) / sizeof(uint64_t);
+
+	if (qid < ethdev->data->nb_tx_queues) {
+		txq = ethdev->data->tx_queues[qid];
+		stat = (uint64_t *)&txq->stats;
+		for (i = 0; i < len; i++)
+			*(stat++) = 0;
+	}
+}
