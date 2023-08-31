@@ -360,10 +360,15 @@ __pull_port_lb(struct sw_evdev *sw, uint32_t port_id, int allow_reorder)
 
 	while (port->pp_buf_count) {
 		const struct rte_event *qe = &port->pp_buf[port->pp_buf_start];
-		struct sw_hist_list_entry *hist_entry = NULL;
 		uint8_t flags = qe->op;
 		const uint16_t eop = !(flags & QE_FLAG_NOT_EOP);
-		int needs_reorder = 0;
+
+		/* rob_entry being NULL or a value is used as the distinction
+		 * between reordering being required (mark ROB as ready) or
+		 * just an Atomic completion.
+		 */
+		struct reorder_buffer_entry *rob_ptr = NULL;
+
 		/* if no-reordering, having PARTIAL == NEW */
 		if (!allow_reorder && !eop)
 			flags = QE_FLAG_VALID;
@@ -386,6 +391,7 @@ __pull_port_lb(struct sw_evdev *sw, uint32_t port_id, int allow_reorder)
 			const uint32_t hist_tail = port->hist_tail &
 					(SW_PORT_HIST_LIST - 1);
 
+			struct sw_hist_list_entry *hist_entry;
 			hist_entry = &port->hist_list[hist_tail];
 			const uint32_t hist_qid = hist_entry->qid;
 			const uint32_t hist_fid = hist_entry->fid;
@@ -396,17 +402,24 @@ __pull_port_lb(struct sw_evdev *sw, uint32_t port_id, int allow_reorder)
 			if (fid->pcount == 0)
 				fid->cq = -1;
 
+			/* Assign current hist-list entry to the rob_entry, to
+			 * allow VALID code below re-use it for checks.
+			 */
+			rob_ptr = hist_entry->rob_entry;
+
+			/* Clear the rob entry in this COMPLETE flag phase, as
+			 * RELEASE events must clear hist-list, but MIGHT NOT
+			 * contain a VALID flag too.
+			 */
+			hist_entry->rob_entry = NULL;
+
 			if (allow_reorder) {
-				/* set reorder ready if an ordered QID */
-				uintptr_t rob_ptr =
-					(uintptr_t)hist_entry->rob_entry;
 				const uintptr_t valid = (rob_ptr != 0);
-				needs_reorder = valid;
-				rob_ptr |=
-					((valid - 1) & (uintptr_t)&dummy_rob);
+				uintptr_t tmp = (uintptr_t)rob_ptr;
+				tmp |= ((valid - 1) & (uintptr_t)&dummy_rob);
 				struct reorder_buffer_entry *tmp_rob_ptr =
-					(struct reorder_buffer_entry *)rob_ptr;
-				tmp_rob_ptr->ready = eop * needs_reorder;
+					(struct reorder_buffer_entry *)tmp;
+				tmp_rob_ptr->ready = eop * valid;
 			}
 
 			port->inflights -= eop;
@@ -415,22 +428,18 @@ __pull_port_lb(struct sw_evdev *sw, uint32_t port_id, int allow_reorder)
 		if (flags & QE_FLAG_VALID) {
 			port->stats.rx_pkts++;
 
-			if (allow_reorder && needs_reorder) {
-				struct reorder_buffer_entry *rob_entry =
-						hist_entry->rob_entry;
-
-				hist_entry->rob_entry = NULL;
+			if (allow_reorder && rob_ptr) {
 				/* Although fragmentation not currently
 				 * supported by eventdev API, we support it
 				 * here. Open: How do we alert the user that
 				 * they've exceeded max frags?
 				 */
-				int num_frag = rob_entry->num_fragments;
+				int num_frag = rob_ptr->num_fragments;
 				if (num_frag == SW_FRAGMENTS_MAX)
 					sw->stats.rx_dropped++;
 				else {
-					int idx = rob_entry->num_fragments++;
-					rob_entry->fragments[idx] = *qe;
+					int idx = rob_ptr->num_fragments++;
+					rob_ptr->fragments[idx] = *qe;
 				}
 				goto end_qe;
 			}
