@@ -9,9 +9,12 @@
 #include "../sssnic_log.h"
 #include "sssnic_hw.h"
 #include "sssnic_reg.h"
+#include "sssnic_cmd.h"
+#include "sssnic_api.h"
 #include "sssnic_eventq.h"
 #include "sssnic_msg.h"
 #include "sssnic_mbox.h"
+#include "sssnic_ctrlq.h"
 
 static int
 wait_for_sssnic_hw_ready(struct sssnic_hw *hw)
@@ -141,6 +144,116 @@ sssnic_pf_status_set(struct sssnic_hw *hw, enum sssnic_pf_status status)
 }
 
 static int
+sssnic_dma_attr_init(struct sssnic_hw *hw)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_dma_attr_set_cmd cmd;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.func_id = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_SET_DMA_ATTR_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_COMM_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SET_DMA_ATTR_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_func_reset(struct sssnic_hw *hw)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_func_reset_cmd cmd;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.func_id = SSSNIC_FUNC_IDX(hw);
+	cmd.res_mask = RTE_BIT64(0) | RTE_BIT64(1) | RTE_BIT64(2) |
+		       RTE_BIT64(10) | RTE_BIT64(12) | RTE_BIT64(13);
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_RESET_FUNC_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_COMM_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to RESET_FUNC_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int
+sssnic_pagesize_set(struct sssnic_hw *hw, uint32_t pagesize)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_pagesize_cmd cmd;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.func_id = SSSNIC_FUNC_IDX(hw);
+	cmd.pagesz = (uint8_t)rte_log2_u32(pagesize >> 12);
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_PAGESIZE_CFG_CMD,
+		SSSNIC_MPU_FUNC_IDX, SSSNIC_COMM_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to PAGESIZE_CFG_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+/* Only initialize msix 0 attributes */
+static int
+sssnic_msix_attr_init(struct sssnic_hw *hw)
+{
+	int ret;
+	struct sssnic_msix_attr attr;
+
+	attr.lli_set = 0;
+	attr.coalescing_set = 1;
+	attr.pending_limit = 0;
+	attr.coalescing_timer = 0xff;
+	attr.resend_timer = 0x7;
+
+	ret = sssnic_msix_attr_set(hw, 0, &attr);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set msix0 attributes.");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
 sssnic_base_init(struct sssnic_hw *hw)
 {
 	int ret;
@@ -217,8 +330,42 @@ sssnic_hw_init(struct sssnic_hw *hw)
 		goto mbox_init_fail;
 	}
 
+	ret = sssnic_func_reset(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to reset function resources");
+		goto mbox_init_fail;
+	}
+
+	ret = sssnic_dma_attr_init(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize DMA attributes");
+		goto mbox_init_fail;
+	}
+
+	ret = sssnic_msix_attr_init(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize msix attributes");
+		goto mbox_init_fail;
+	}
+
+	ret = sssnic_pagesize_set(hw, 0x100000);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set page size to 0x100000");
+		goto mbox_init_fail;
+	}
+
+	ret = sssnic_ctrlq_init(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize control queue");
+		goto ctrlq_init_fail;
+	}
+
+	sssnic_pf_status_set(hw, SSSNIC_PF_STATUS_ACTIVE);
+
 	return -EINVAL;
 
+ctrlq_init_fail:
+	sssnic_mbox_shutdown(hw);
 mbox_init_fail:
 	sssnic_eventq_all_shutdown(hw);
 eventq_init_fail:
@@ -231,6 +378,8 @@ sssnic_hw_shutdown(struct sssnic_hw *hw)
 {
 	PMD_INIT_FUNC_TRACE();
 
+	sssnic_pf_status_set(hw, SSSNIC_PF_STATUS_INIT);
+	sssnic_ctrlq_shutdown(hw);
 	sssnic_mbox_shutdown(hw);
 	sssnic_eventq_all_shutdown(hw);
 	sssnic_msg_inbox_shutdown(hw);
