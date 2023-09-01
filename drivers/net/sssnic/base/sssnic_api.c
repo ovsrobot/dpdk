@@ -100,3 +100,36 @@ sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
 
 	return 0;
 }
+
+int
+sssnic_capability_get(struct sssnic_hw *hw, struct sssnic_capability *capa)
+{
+	struct sssnic_capability_get_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	int ret;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_GET_CAPABILITY_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_CFG_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_CAPABILITY_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	capa->phy_port = cmd.phy_port;
+	capa->max_num_rxq = cmd.rxq_max_id + 1;
+	capa->max_num_txq = cmd.txq_max_id + 1;
+
+	return 0;
+}
