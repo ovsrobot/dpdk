@@ -30,5 +30,13 @@ int sssnic_ethdev_rx_queue_intr_disable(struct rte_eth_dev *ethdev,
 	uint16_t qid);
 int sssnic_ethdev_rx_intr_init(struct rte_eth_dev *ethdev);
 void sssnic_ethdev_rx_intr_shutdown(struct rte_eth_dev *ethdev);
+uint16_t sssnic_ethdev_rx_max_size_determine(struct rte_eth_dev *ethdev);
+int sssnic_ethdev_rx_queues_ctx_init(struct rte_eth_dev *ethdev);
+int sssnic_ethdev_rx_offload_ctx_reset(struct rte_eth_dev *ethdev);
+uint16_t sssnic_ethdev_rx_queue_depth_get(struct rte_eth_dev *ethdev,
+	uint16_t qid);
+uint32_t sssnic_ethdev_rx_buf_size_index_get(uint16_t rx_buf_size);
+int sssnic_ethdev_rx_mode_set(struct rte_eth_dev *ethdev, uint32_t mode);
+int sssnic_ethdev_rx_offload_setup(struct rte_eth_dev *ethdev);
 
 #endif

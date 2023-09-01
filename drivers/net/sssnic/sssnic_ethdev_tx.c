@@ -179,6 +179,9 @@ enum sssnic_ethdev_txq_entry_type {
 /* Doorbell offset 4096 */
 #define SSSNIC_ETHDEV_TXQ_DB_OFFSET 0x1000
 
+#define SSSNIC_ETHDEV_TX_CI_DEF_COALESCING_TIME 16
+#define SSSNIC_ETHDEV_TX_CI_DEF_PENDING_TIME 4
+
 static inline uint16_t
 sssnic_ethdev_txq_num_used_entries(struct sssnic_ethdev_txq *txq)
 {
@@ -507,3 +510,163 @@ sssnic_ethdev_tx_queue_all_stop(struct rte_eth_dev *ethdev)
 	for (qid = 0; qid < numq; qid++)
 		sssnic_ethdev_tx_queue_stop(ethdev, qid);
 }
+
+static void
+sssnic_ethdev_txq_ctx_build(struct sssnic_ethdev_txq *txq,
+	struct sssnic_txq_ctx *qctx)
+{
+	uint64_t pfn;
+
+	/* dw0 */
+	qctx->pi = sssnic_ethdev_txq_pi_get(txq);
+	qctx->ci = sssnic_ethdev_txq_ci_get(txq);
+
+	/* dw1 */
+	qctx->sp = 0;
+	qctx->drop = 0;
+
+	/* workq buf phyaddress PFN */
+	pfn = SSSNIC_WORKQ_BUF_PHYADDR(txq->workq) >> 12;
+
+	/* dw2 */
+	qctx->wq_pfn_hi = SSSNIC_UPPER_32_BITS(pfn);
+	qctx->wq_owner = 1;
+
+	/* dw3 */
+	qctx->wq_pfn_lo = SSSNIC_LOWER_32_BITS(pfn);
+
+	/* dw4 reserved */
+
+	/* dw5 */
+	qctx->drop_on_thd = 0xffff;
+	qctx->drop_off_thd = 0;
+
+	/* dw6 */
+	qctx->qid = txq->qid;
+
+	/* dw7 */
+	qctx->insert_mode = 1;
+
+	/* dw8 */
+	qctx->pre_cache_thd = 256;
+	qctx->pre_cache_max = 6;
+	qctx->pre_cache_min = 1;
+
+	/* dw9 */
+	qctx->pre_ci_hi = sssnic_ethdev_txq_ci_get(txq) >> 12;
+	qctx->pre_owner = 1;
+
+	/* dw10 */
+	qctx->pre_wq_pfn_hi = SSSNIC_UPPER_32_BITS(pfn);
+	qctx->pre_ci_lo = sssnic_ethdev_txq_ci_get(txq);
+
+	/* dw11 */
+	qctx->pre_wq_pfn_lo = SSSNIC_LOWER_32_BITS(pfn);
+
+	/* dw12,dw13 are reserved */
+
+	/* workq buf block PFN */
+	pfn = SSSNIC_WORKQ_BUF_PHYADDR(txq->workq) >> 9;
+
+	/* dw14 */
+	qctx->wq_blk_pfn_hi = SSSNIC_UPPER_32_BITS(pfn);
+
+	/* dw15 */
+	qctx->wq_blk_pfn_lo = SSSNIC_LOWER_32_BITS(pfn);
+}
+
+int
+sssnic_ethdev_tx_queues_ctx_init(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct sssnic_ethdev_txq *txq;
+	struct sssnic_txq_ctx *qctx;
+	uint16_t qid, numq;
+	int ret;
+
+	numq = ethdev->data->nb_tx_queues;
+
+	qctx = rte_zmalloc(NULL, numq * sizeof(struct sssnic_txq_ctx), 0);
+	if (qctx == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc memory for txq ctx");
+		return -EINVAL;
+	}
+
+	for (qid = 0; qid < numq; qid++) {
+		txq = ethdev->data->tx_queues[qid];
+
+		/* reset ci and pi */
+		sssnic_workq_reset(txq->workq);
+
+		*txq->hw_ci_addr = 0;
+		txq->owner = 1;
+
+		sssnic_ethdev_txq_ctx_build(txq, &qctx[qid]);
+	}
+
+	ret = sssnic_txq_ctx_set(hw, qctx, 0, numq);
+	rte_free(qctx);
+
+	return ret;
+}
+
+int
+sssnic_ethdev_tx_offload_ctx_reset(struct rte_eth_dev *ethdev)
+{
+	return sssnic_tx_offload_ctx_reset(SSSNIC_ETHDEV_TO_HW(ethdev));
+}
+
+uint16_t
+sssnic_ethdev_tx_queue_depth_get(struct rte_eth_dev *ethdev, uint16_t qid)
+{
+	struct sssnic_ethdev_txq *txq;
+
+	if (qid >= ethdev->data->nb_tx_queues)
+		return 0;
+
+	txq = ethdev->data->tx_queues[qid];
+
+	return txq->depth;
+}
+
+int
+sssnic_ethdev_tx_ci_attr_init(struct rte_eth_dev *ethdev)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	struct sssnic_ethdev_txq *txq;
+	uint16_t i;
+	int ret;
+
+	for (i = 0; i < ethdev->data->nb_tx_queues; i++) {
+		txq = ethdev->data->tx_queues[i];
+
+		ret = sssnic_port_tx_ci_attr_set(hw, i,
+			SSSNIC_ETHDEV_TX_CI_DEF_PENDING_TIME,
+			SSSNIC_ETHDEV_TX_CI_DEF_COALESCING_TIME,
+			txq->ci_mz->iova);
+
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR,
+				"Failed to initialize tx ci attributes of queue %u",
+				i);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+int
+sssnic_ethdev_tx_max_size_set(struct rte_eth_dev *ethdev, uint16_t size)
+{
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	int ret;
+
+	ret = sssnic_tx_max_size_set(hw, size);
+	if (ret != 0)
+		return ret;
+
+	PMD_DRV_LOG(INFO, "Set tx_max_size to %u", size);
+
+	return 0;
+};
