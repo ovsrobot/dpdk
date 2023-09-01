@@ -59,6 +59,7 @@ Network Interface Controller Drivers
     pcap_ring
     pfe
     qede
+    rnp
     sfc_efx
     softnic
     tap
