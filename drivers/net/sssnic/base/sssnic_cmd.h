@@ -236,4 +236,104 @@ struct sssnic_rxq_flush_cmd {
 	};
 };
 
+#define SSSNIC_CMD_INIT_RXTX_SIZE_FLAG (RTE_BIT32(0))
+#define SSSNIC_CMD_SET_RX_SIZE_FLAG (RTE_BIT32(1))
+#define SSSNIC_CMD_SET_TX_SIZE_FLAG (RTE_BIT32(2))
+
+struct sssnic_rxtx_size_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd0;
+	uint32_t flags;
+	uint16_t rx_size;
+	uint16_t tx_size;
+	uint32_t resvd1[9];
+};
+
+struct sssnic_port_feature_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t opcode;
+	uint8_t resvd0;
+	uint64_t features;
+	uint64_t resvd1[3];
+};
+
+struct sssnic_rxtxq_ctx_cmd_info {
+	uint16_t q_count;
+	uint16_t q_type;
+	uint16_t q_start;
+	uint16_t resvd0;
+};
+
+#define SSSNIC_RXTXQ_CTX_CMD_INFO_LEN (sizeof(struct sssnic_rxtxq_ctx_cmd_info))
+
+struct sssnic_rxtxq_ctx_cmd {
+	struct sssnic_rxtxq_ctx_cmd_info info;
+	uint32_t ctx[0];
+};
+
+struct sssnic_offload_ctx_reset_cmd {
+	struct sssnic_rxtxq_ctx_cmd_info info;
+	uint32_t resvd;
+};
+
+struct sssnic_port_tx_ci_attr_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t resvd0;
+	uint8_t pending_limit;
+	uint8_t coalescing_time;
+	uint8_t resvd1;
+	uint16_t resvd2;
+	uint16_t qid;
+	/* ci DMA address right shift 2 */
+	uint64_t dma_addr;
+};
+
+struct sssnic_port_rx_mode_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd;
+	uint32_t mode;
+};
+
+struct sssnic_lro_cfg_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t opcode;
+	uint8_t resvd0;
+	uint8_t ipv4_en;
+	uint8_t ipv6_en;
+	uint8_t nb_bufs;
+	uint8_t resvd1[13];
+};
+
+struct sssnic_lro_timer_cmd {
+	struct sssnic_cmd_common common;
+	uint8_t opcode;
+	uint8_t resvd[3];
+	uint32_t timer;
+};
+
+struct sssnic_vlan_filter_enable_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd;
+	uint32_t state; /* 0: disabled 1: enabled */
+};
+
+struct sssnic_vlan_strip_enable_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t state; /* 0: disabled 1: enabled */
+	uint8_t resvd[5];
+};
+
+struct sssnic_port_resource_clean_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd;
+};
+
 #endif /* _SSSNIC_CMD_H_ */
