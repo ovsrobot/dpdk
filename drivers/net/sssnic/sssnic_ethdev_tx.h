@@ -23,5 +23,9 @@ int sssnic_ethdev_tx_queue_setup(struct rte_eth_dev *ethdev,
 void sssnic_ethdev_tx_queue_release(struct rte_eth_dev *ethdev,
 	uint16_t queue_id);
 void sssnic_ethdev_tx_queue_all_release(struct rte_eth_dev *ethdev);
+int sssnic_ethdev_tx_queue_start(struct rte_eth_dev *ethdev, uint16_t queue_id);
+int sssnic_ethdev_tx_queue_stop(struct rte_eth_dev *ethdev, uint16_t queue_id);
+int sssnic_ethdev_tx_queue_all_start(struct rte_eth_dev *ethdev);
+void sssnic_ethdev_tx_queue_all_stop(struct rte_eth_dev *ethdev);
 
 #endif /* _SSSNIC_ETHDEV_TX_H_ */
