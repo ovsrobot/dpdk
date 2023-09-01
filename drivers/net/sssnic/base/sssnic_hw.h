@@ -44,6 +44,22 @@ struct sssnic_hw_attr {
 	uint16_t num_irq;
 };
 
+enum sssnic_link_status {
+	SSSNIC_LINK_STATUS_DOWN,
+	SSSNIC_LINK_STATUS_UP,
+};
+
+#define SSSNIC_LINK_INTR_MSIX_ID 0
+#define SSSNIC_LINK_INTR_EVENTQ 0
+
+typedef void sssnic_link_event_cb_t(uint8_t port,
+	enum sssnic_link_status status, void *priv);
+
+struct sssnic_link_event_handler {
+	sssnic_link_event_cb_t *cb;
+	void *priv;
+};
+
 struct sssnic_hw {
 	struct rte_pci_device *pci_dev;
 	uint8_t *cfg_base_addr;
@@ -55,6 +71,7 @@ struct sssnic_hw {
 	struct sssnic_msg_inbox *msg_inbox;
 	struct sssnic_mbox *mbox;
 	struct sssnic_ctrlq *ctrlq;
+	struct sssnic_link_event_handler link_event_handler;
 	uint8_t num_eventqs;
 	uint8_t phy_port;
 	uint16_t eth_port_id;
@@ -82,5 +99,10 @@ enum sssnic_module {
 int sssnic_hw_init(struct sssnic_hw *hw);
 void sssnic_hw_shutdown(struct sssnic_hw *hw);
 void sssnic_msix_state_set(struct sssnic_hw *hw, uint16_t msix_id, int state);
+void sssnic_msix_resend_disable(struct sssnic_hw *hw, uint16_t msix_id);
+int sssnic_link_event_callback_register(struct sssnic_hw *hw,
+	sssnic_link_event_cb_t *cb, void *priv);
+void sssnic_link_event_callback_unregister(struct sssnic_hw *hw);
+void sssnic_link_intr_handle(struct sssnic_hw *hw);
 
 #endif /* _SSSNIC_HW_H_ */
