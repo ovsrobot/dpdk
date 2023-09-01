@@ -12,6 +12,7 @@
 #include "sssnic_ethdev_link.h"
 #include "sssnic_ethdev_rx.h"
 #include "sssnic_ethdev_tx.h"
+#include "sssnic_ethdev_stats.h"
 
 static int sssnic_ethdev_init(struct rte_eth_dev *ethdev);
 
@@ -748,6 +749,11 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.allmulticast_disable = sssnic_ethdev_allmulticast_disable,
 	.promiscuous_enable = sssnic_ethdev_promiscuous_enable,
 	.promiscuous_disable = sssnic_ethdev_promiscuous_disable,
+	.stats_get = sssnic_ethdev_stats_get,
+	.stats_reset = sssnic_ethdev_stats_reset,
+	.xstats_get_names = sssnic_ethdev_xstats_get_names,
+	.xstats_get = sssnic_ethdev_xstats_get,
+	.xstats_reset = sssnic_ethdev_xstats_reset,
 };
 
 static int

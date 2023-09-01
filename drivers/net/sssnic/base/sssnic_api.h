@@ -267,6 +267,117 @@ struct sssnic_rxtxq_ctx {
 
 #define SSSNIC_RXTXQ_CTX_SIZE (sizeof(struct sssnic_rxtxq_ctx))
 
+struct sssnic_port_stats {
+	uint64_t tx_ucast_pkts;
+	uint64_t tx_ucast_bytes;
+	uint64_t tx_mcast_pkts;
+	uint64_t tx_mcast_bytes;
+	uint64_t tx_bcast_pkts;
+	uint64_t tx_bcast_bytes;
+
+	uint64_t rx_ucast_pkts;
+	uint64_t rx_ucast_bytes;
+	uint64_t rx_mcast_pkts;
+	uint64_t rx_mcast_bytes;
+	uint64_t rx_bcast_pkts;
+	uint64_t rx_bcast_bytes;
+
+	uint64_t tx_discards;
+	uint64_t rx_discards;
+	uint64_t tx_errors;
+	uint64_t rx_errors;
+};
+
+struct sssnic_mac_stats {
+	uint64_t tx_fragment_pkts;
+	uint64_t tx_undersize_pkts;
+	uint64_t tx_undermin_pkts;
+	uint64_t tx_64b_pkts;
+	uint64_t tx_65b_127b_pkt;
+	uint64_t tx_128b_255b_pkts;
+	uint64_t tx_256b_511b_pkts;
+	uint64_t tx_512b_1023b_pkts;
+	uint64_t tx_1024b_1518b_pkts;
+	uint64_t tx_1519b_2047b_pkts;
+	uint64_t tx_2048b_4095b_pkts;
+	uint64_t tx_4096b_8191b_pkts;
+	uint64_t tx_8192b_9216b_pkts;
+	uint64_t tx_9217b_12287b_pkts;
+	uint64_t tx_12288b_16383b_pkts;
+	uint64_t tx_1519b_bad_pkts;
+	uint64_t tx_1519b_good_pkts;
+	uint64_t tx_oversize_pkts;
+	uint64_t tx_jabber_pkts;
+	uint64_t tx_bad_pkts;
+	uint64_t tx_bad_bytes;
+	uint64_t tx_good_pkts;
+	uint64_t tx_good_bytes;
+	uint64_t tx_total_pkts;
+	uint64_t tx_total_bytes;
+	uint64_t tx_unicast_pkts;
+	uint64_t tx_multicast_bytes;
+	uint64_t tx_broadcast_pkts;
+	uint64_t tx_pause_pkts;
+	uint64_t tx_pfc_pkts;
+	uint64_t tx_pfc_pri0_pkts;
+	uint64_t tx_pfc_pri1_pkts;
+	uint64_t tx_pfc_pri2_pkts;
+	uint64_t tx_pfc_pri3_pkts;
+	uint64_t tx_pfc_pri4_pkts;
+	uint64_t tx_pfc_pri5_pkts;
+	uint64_t tx_pfc_pri6_pkts;
+	uint64_t tx_pfc_pri7_pkts;
+	uint64_t tx_control_pkts;
+	uint64_t tx_total_error_pkts;
+	uint64_t tx_debug_good_pkts;
+	uint64_t tx_debug_bad_pkts;
+
+	uint64_t rx_fragment_pkts;
+	uint64_t rx_undersize_pkts;
+	uint64_t rx_undermin_pkts;
+	uint64_t rx_64b_pkts;
+	uint64_t rx_65b_127b_pkt;
+	uint64_t rx_128b_255b_pkts;
+	uint64_t rx_256b_511b_pkts;
+	uint64_t rx_512b_1023b_pkts;
+	uint64_t rx_1024b_1518b_pkts;
+	uint64_t rx_1519b_2047b_pkts;
+	uint64_t rx_2048b_4095b_pkts;
+	uint64_t rx_4096b_8191b_pkts;
+	uint64_t rx_8192b_9216b_pkts;
+	uint64_t rx_9217b_12287b_pkts;
+	uint64_t rx_12288b_16383b_pkts;
+	uint64_t rx_1519b_bad_pkts;
+	uint64_t rx_1519b_good_pkts;
+	uint64_t rx_oversize_pkts;
+	uint64_t rx_jabber_pkts;
+	uint64_t rx_bad_pkts;
+	uint64_t rx_bad_bytes;
+	uint64_t rx_good_pkts;
+	uint64_t rx_good_bytes;
+	uint64_t rx_total_pkts;
+	uint64_t rx_total_bytes;
+	uint64_t rx_unicast_pkts;
+	uint64_t rx_multicast_bytes;
+	uint64_t rx_broadcast_pkts;
+	uint64_t rx_pause_pkts;
+	uint64_t rx_pfc_pkts;
+	uint64_t rx_pfc_pri0_pkts;
+	uint64_t rx_pfc_pri1_pkts;
+	uint64_t rx_pfc_pri2_pkts;
+	uint64_t rx_pfc_pri3_pkts;
+	uint64_t rx_pfc_pri4_pkts;
+	uint64_t rx_pfc_pri5_pkts;
+	uint64_t rx_pfc_pri6_pkts;
+	uint64_t rx_pfc_pri7_pkts;
+	uint64_t rx_control_pkts;
+	uint64_t rx_symbol_error_pkts;
+	uint64_t rx_fcs_error_pkts;
+	uint64_t rx_debug_good_pkts;
+	uint64_t rx_debug_bad_pkts;
+	uint64_t rx_unfilter_pkts;
+};
+
 int sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
 	struct sssnic_msix_attr *attr);
 int sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
@@ -304,5 +415,10 @@ int sssnic_lro_timer_set(struct sssnic_hw *hw, uint32_t timer);
 int sssnic_vlan_filter_enable_set(struct sssnic_hw *hw, bool state);
 int sssnic_vlan_strip_enable_set(struct sssnic_hw *hw, bool state);
 int sssnic_port_resource_clean(struct sssnic_hw *hw);
+int sssnic_port_stats_get(struct sssnic_hw *hw,
+	struct sssnic_port_stats *stats);
+int sssnic_port_stats_clear(struct sssnic_hw *hw);
+int sssnic_mac_stats_get(struct sssnic_hw *hw, struct sssnic_mac_stats *stats);
+int sssnic_mac_stats_clear(struct sssnic_hw *hw);
 
 #endif /* _SSSNIC_API_H_ */
