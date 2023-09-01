@@ -22,6 +22,16 @@ struct sssnic_capability {
 	uint8_t cos;
 };
 
+struct sssnic_netif_link_info {
+	uint8_t status;
+	uint8_t type;
+	uint8_t autoneg_capa;
+	uint8_t autoneg;
+	uint8_t duplex;
+	uint8_t speed;
+	uint8_t fec;
+};
+
 int sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
 	struct sssnic_msix_attr *attr);
 int sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
@@ -31,5 +41,9 @@ int sssnic_mac_addr_get(struct sssnic_hw *hw, uint8_t *addr);
 int sssnic_mac_addr_update(struct sssnic_hw *hw, uint8_t *new, uint8_t *old);
 int sssnic_mac_addr_add(struct sssnic_hw *hw, uint8_t *addr);
 int sssnic_mac_addr_del(struct sssnic_hw *hw, uint8_t *addr);
+int sssnic_netif_link_status_get(struct sssnic_hw *hw, uint8_t *status);
+int sssnic_netif_link_info_get(struct sssnic_hw *hw,
+	struct sssnic_netif_link_info *info);
+int sssnic_netif_enable_set(struct sssnic_hw *hw, uint8_t state);
 
 #endif /* _SSSNIC_API_H_ */
