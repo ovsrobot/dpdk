@@ -16,6 +16,17 @@ struct mbx_req_cookie {
 	int priv_len;
 	char priv[RNP_MAX_SHARE_MEM];
 };
+struct maintain_req {
+	int magic;
+#define MAINTAIN_MAGIC 0xa6a7a8a9
+
+	int      cmd;
+	int      arg0;
+	int      req_data_bytes;
+	int      reply_bytes;
+	char data[0];
+} __rte_packed;
+
 enum GENERIC_CMD {
 	/* link configuration admin commands */
 	GET_PHY_ABALITY = 0x0601,
@@ -23,6 +34,9 @@ enum GENERIC_CMD {
 	RESET_PHY = 0x0603,
 	GET_LANE_STATUS = 0x0610,
 	SET_EVENT_MASK = 0x0613,
+	 /* fw update */
+	FW_MAINTAIN = 0x0701,
+	SET_DUMP = 0x0a10,
 };
 
 enum link_event_mask {
@@ -211,6 +225,21 @@ struct mbx_fw_cmd_req {
 		struct {
 			int nr_lane;
 		} get_lane_st;
+
+		struct {
+			int cmd;
+#define MT_WRITE_FLASH 1
+			int arg0;
+			int req_bytes;
+			int reply_bytes;
+			int ddr_lo;
+			int ddr_hi;
+		} maintain;
+
+		struct {
+			int flag;
+			int nr_lane;
+		} set_dump;
 	};
 } __rte_packed __rte_aligned(4);
 
@@ -284,6 +313,43 @@ build_get_lane_status_req(struct mbx_fw_cmd_req *req,
 	req->get_lane_st.nr_lane = nr_lane;
 }
 
+static inline void
+build_maintain_req(struct mbx_fw_cmd_req *req,
+		   void *cookie,
+		   int cmd,
+		   int arg0,
+		   int req_bytes,
+		   int reply_bytes,
+		   u32 dma_phy_lo,
+		   u32 dma_phy_hi)
+{
+	req->flags = 0;
+	req->opcode = FW_MAINTAIN;
+	req->datalen = sizeof(req->maintain);
+	req->cookie = cookie;
+	req->reply_lo = 0;
+	req->reply_hi = 0;
+	req->maintain.cmd = cmd;
+	req->maintain.arg0 = arg0;
+	req->maintain.req_bytes = req_bytes;
+	req->maintain.reply_bytes = reply_bytes;
+	req->maintain.ddr_lo = dma_phy_lo;
+	req->maintain.ddr_hi = dma_phy_hi;
+}
+
+static inline void
+build_set_dump(struct mbx_fw_cmd_req *req, int nr_lane, int flag)
+{
+	req->flags = 0;
+	req->opcode = SET_DUMP;
+	req->datalen = sizeof(req->set_dump);
+	req->cookie = NULL;
+	req->reply_lo = 0;
+	req->reply_hi = 0;
+	req->set_dump.flag = flag;
+	req->set_dump.nr_lane = nr_lane;
+}
+
 int rnp_mbx_get_capability(struct rte_eth_dev *dev,
 			   int *lane_mask,
 			   int *nic_mode);
@@ -295,4 +361,7 @@ rnp_fw_get_macaddr(struct rte_eth_dev *dev,
 		   u8 *mac_addr,
 		   int nr_lane);
 int rnp_mbx_get_lane_stat(struct rte_eth_dev *dev);
+int rnp_fw_update(struct rnp_eth_adapter *adapter);
+int rnp_hw_set_fw_10g_1g_auto_detch(struct rte_eth_dev *dev, int enable);
+int rnp_hw_set_fw_force_speed_1g(struct rte_eth_dev *dev, int enable);
 #endif /* __RNP_MBX_FW_H__*/

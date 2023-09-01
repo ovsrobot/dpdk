@@ -6,6 +6,7 @@
 #include <rte_io.h>
 #include <rte_malloc.h>
 #include <ethdev_driver.h>
+#include <rte_kvargs.h>
 
 #include "rnp.h"
 #include "rnp_api.h"
@@ -13,6 +14,13 @@
 #include "rnp_mbx_fw.h"
 #include "rnp_rxtx.h"
 #include "rnp_logs.h"
+
+#define RNP_HW_MAC_LOOPBACK_ARG      "hw_loopback"
+#define RNP_FW_UPDATE                "fw_update"
+#define RNP_RX_FUNC_SELECT           "rx_func_sec"
+#define RNP_TX_FUNC_SELECT           "tx_func_sec"
+#define RNP_FW_4X10G_10G_1G_DET      "fw_4x10g_10g_1g_auto_det"
+#define RNP_FW_FORCE_SPEED_1G        "fw_force_1g_speed"
 
 static int
 rnp_mac_rx_disable(struct rte_eth_dev *dev)
@@ -108,6 +116,8 @@ rnp_init_port_resource(struct rnp_eth_adapter *adapter,
 	struct rnp_hw *hw = &adapter->hw;
 
 	port->adapt = adapter;
+	port->rx_func_sec = adapter->rx_func_sec;
+	port->tx_func_sec = adapter->tx_func_sec;
 	port->s_mode = adapter->s_mode;
 	port->port_stopped = 1;
 	port->hw = hw;
@@ -443,6 +453,154 @@ rnp_special_ops_init(struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
+static const char *const rnp_valid_arguments[] = {
+	RNP_HW_MAC_LOOPBACK_ARG,
+	RNP_FW_UPDATE,
+	RNP_RX_FUNC_SELECT,
+	RNP_TX_FUNC_SELECT,
+	RNP_FW_4X10G_10G_1G_DET,
+	RNP_FW_FORCE_SPEED_1G,
+	NULL
+};
+
+static int
+rnp_parse_handle_devarg(const char *key, const char *value,
+			void *extra_args)
+{
+	struct rnp_eth_adapter *adapter = NULL;
+
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
+
+	if (strcmp(key, RNP_HW_MAC_LOOPBACK_ARG) == 0) {
+		uint64_t *n = extra_args;
+		*n = (uint16_t)strtoul(value, NULL, 10);
+		if (*n > UINT16_MAX && errno == ERANGE) {
+			RNP_PMD_DRV_LOG(ERR, "invalid extra param value\n");
+			return -1;
+		}
+	} else if (strcmp(key, RNP_FW_UPDATE) == 0) {
+		adapter = (struct rnp_eth_adapter *)extra_args;
+		adapter->do_fw_update = true;
+		adapter->fw_path = strdup(value);
+	} else if (strcmp(key, RNP_FW_4X10G_10G_1G_DET) == 0) {
+		adapter = (struct rnp_eth_adapter *)extra_args;
+		if (adapter->num_ports == 2 && adapter->hw.speed == 10 * 1000) {
+			adapter->fw_sfp_10g_1g_auto_det =
+				(strcmp(value, "on") == 0) ? true : false;
+		} else {
+			adapter->fw_sfp_10g_1g_auto_det = false;
+		}
+	} else if (strcmp(key, RNP_FW_FORCE_SPEED_1G) == 0) {
+		adapter = (struct rnp_eth_adapter *)extra_args;
+		if (adapter->num_ports == 2) {
+			if (strcmp(value, "on") == 0)
+				adapter->fw_force_speed_1g = FOCE_SPEED_1G_ENABLED;
+			else if (strcmp(value, "off") == 0)
+				adapter->fw_force_speed_1g = FOCE_SPEED_1G_DISABLED;
+		}
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+rnp_parse_io_select_func(const char *key, const char *value, void *extra_args)
+{
+	uint8_t select = RNP_IO_FUNC_USE_NONE;
+
+	RTE_SET_USED(key);
+
+	if (strcmp(value, "vec") == 0)
+		select = RNP_IO_FUNC_USE_VEC;
+	else if (strcmp(value, "simple") == 0)
+		select = RNP_IO_FUNC_USE_SIMPLE;
+	else if (strcmp(value, "common") == 0)
+		select = RNP_IO_FUNC_USE_COMMON;
+
+	*(uint8_t *)extra_args = select;
+
+	return 0;
+}
+
+static int
+rnp_parse_devargs(struct rnp_eth_adapter *adapter,
+		  struct rte_devargs *devargs)
+{
+	uint8_t rx_io_func = RNP_IO_FUNC_USE_NONE;
+	uint8_t tx_io_func = RNP_IO_FUNC_USE_NONE;
+	struct rte_kvargs *kvlist;
+	bool loopback_en = false;
+	int ret = 0;
+
+	adapter->do_fw_update = false;
+	adapter->fw_sfp_10g_1g_auto_det = false;
+	adapter->fw_force_speed_1g = FOCE_SPEED_1G_NOT_SET;
+
+	if (!devargs)
+		goto def;
+
+	kvlist = rte_kvargs_parse(devargs->args, rnp_valid_arguments);
+	if (kvlist == NULL)
+		goto def;
+
+	if (rte_kvargs_count(kvlist, RNP_HW_MAC_LOOPBACK_ARG) == 1)
+		ret = rte_kvargs_process(kvlist, RNP_HW_MAC_LOOPBACK_ARG,
+				&rnp_parse_handle_devarg, &loopback_en);
+
+	if (rte_kvargs_count(kvlist, RNP_FW_4X10G_10G_1G_DET) == 1)
+		ret = rte_kvargs_process(kvlist,
+				RNP_FW_4X10G_10G_1G_DET,
+				&rnp_parse_handle_devarg,
+				adapter);
+
+	if (rte_kvargs_count(kvlist, RNP_FW_FORCE_SPEED_1G) == 1)
+		ret = rte_kvargs_process(kvlist,
+				RNP_FW_FORCE_SPEED_1G,
+				&rnp_parse_handle_devarg,
+				adapter);
+
+	if (rte_kvargs_count(kvlist, RNP_FW_UPDATE) == 1)
+		ret = rte_kvargs_process(kvlist, RNP_FW_UPDATE,
+				&rnp_parse_handle_devarg, adapter);
+	if (rte_kvargs_count(kvlist, RNP_RX_FUNC_SELECT) == 1)
+		ret = rte_kvargs_process(kvlist, RNP_RX_FUNC_SELECT,
+				&rnp_parse_io_select_func, &rx_io_func);
+	if (rte_kvargs_count(kvlist, RNP_TX_FUNC_SELECT) == 1)
+		ret = rte_kvargs_process(kvlist, RNP_TX_FUNC_SELECT,
+				&rnp_parse_io_select_func, &tx_io_func);
+	rte_kvargs_free(kvlist);
+def:
+	adapter->loopback_en = loopback_en;
+	adapter->rx_func_sec = rx_io_func;
+	adapter->tx_func_sec = tx_io_func;
+
+	return ret;
+}
+
+static int rnp_post_handle(struct rnp_eth_adapter *adapter)
+{
+	bool on = false;
+
+	if (!adapter->eth_dev)
+		return -ENOMEM;
+	if (adapter->do_fw_update && adapter->fw_path) {
+		rnp_fw_update(adapter);
+		adapter->do_fw_update = 0;
+	}
+
+	if (adapter->fw_sfp_10g_1g_auto_det)
+		return rnp_hw_set_fw_10g_1g_auto_detch(adapter->eth_dev, 1);
+
+	on = (adapter->fw_force_speed_1g == FOCE_SPEED_1G_ENABLED) ? 1 : 0;
+	if (adapter->fw_force_speed_1g != FOCE_SPEED_1G_NOT_SET)
+		return rnp_hw_set_fw_force_speed_1g(adapter->eth_dev, on);
+
+	return 0;
+}
+
 static int
 rnp_eth_dev_init(struct rte_eth_dev *dev)
 {
@@ -492,6 +650,11 @@ rnp_eth_dev_init(struct rte_eth_dev *dev)
 	/* We need Use Device Id To Change The Resource Mode */
 	rnp_special_ops_init(dev);
 	port->hw = hw;
+	ret = rnp_parse_devargs(adapter, pci_dev->device.devargs);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "parse_devargs failed");
+		return ret;
+	}
 	for (p_id = 0; p_id < adapter->num_ports; p_id++) {
 		/* port 0 resource has been allocated When Probe */
 		if (!p_id) {
@@ -517,6 +680,9 @@ rnp_eth_dev_init(struct rte_eth_dev *dev)
 		rnp_mac_rx_disable(eth_dev);
 		rnp_mac_tx_disable(eth_dev);
 	}
+	ret = rnp_post_handle(adapter);
+	if (ret)
+		goto eth_alloc_error;
 
 	return 0;
 eth_alloc_error:
