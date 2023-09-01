@@ -3,7 +3,8 @@
 
 sources = [
         'sssnic_hw.c',
-        'sssnic_eventq.c'
+        'sssnic_eventq.c',
+        'sssnic_msg.c',
 ]
 
 c_args = cflags
