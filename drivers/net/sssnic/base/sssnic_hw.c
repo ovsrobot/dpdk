@@ -254,6 +254,29 @@ sssnic_msix_attr_init(struct sssnic_hw *hw)
 }
 
 static int
+sssnic_capability_init(struct sssnic_hw *hw)
+{
+	struct sssnic_capability cap;
+	int ret;
+
+	ret = sssnic_capability_get(hw, &cap);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to get sssnic capability");
+		return ret;
+	}
+
+	PMD_DRV_LOG(INFO,
+		"Initialized capability, physic port:%u, max %u txqs, max %u rxqs",
+		cap.phy_port, cap.max_num_txq, cap.max_num_rxq);
+
+	hw->phy_port = cap.phy_port;
+	hw->max_num_rxq = cap.max_num_rxq;
+	hw->max_num_txq = cap.max_num_txq;
+
+	return 0;
+}
+
+static int
 sssnic_base_init(struct sssnic_hw *hw)
 {
 	int ret;
@@ -360,10 +383,18 @@ sssnic_hw_init(struct sssnic_hw *hw)
 		goto ctrlq_init_fail;
 	}
 
+	ret = sssnic_capability_init(hw);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize capability");
+		goto capbility_init_fail;
+	}
+
 	sssnic_pf_status_set(hw, SSSNIC_PF_STATUS_ACTIVE);
 
-	return -EINVAL;
+	return 0;
 
+capbility_init_fail:
+	sssnic_ctrlq_shutdown(hw);
 ctrlq_init_fail:
 	sssnic_mbox_shutdown(hw);
 mbox_init_fail:
