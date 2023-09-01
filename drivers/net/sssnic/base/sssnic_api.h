@@ -45,5 +45,7 @@ int sssnic_netif_link_status_get(struct sssnic_hw *hw, uint8_t *status);
 int sssnic_netif_link_info_get(struct sssnic_hw *hw,
 	struct sssnic_netif_link_info *info);
 int sssnic_netif_enable_set(struct sssnic_hw *hw, uint8_t state);
+int sssnic_port_enable_set(struct sssnic_hw *hw, bool state);
+int sssnic_rxq_flush(struct sssnic_hw *hw, uint16_t qid);
 
 #endif /* _SSSNIC_API_H_ */
