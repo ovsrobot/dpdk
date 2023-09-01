@@ -133,3 +133,177 @@ sssnic_capability_get(struct sssnic_hw *hw, struct sssnic_capability *capa)
 
 	return 0;
 }
+
+int
+sssnic_mac_addr_get(struct sssnic_hw *hw, uint8_t *addr)
+{
+	int ret;
+	struct sssnic_mac_addr_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	uint16_t func;
+
+	if (hw == NULL || addr == NULL)
+		return -EINVAL;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		func = SSSNIC_PF_FUNC_IDX(hw);
+	else
+		func = SSSNIC_MPU_FUNC_IDX;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_GET_MAC_ADDR_CMD,
+		func, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_DEF_MAC_ADDR_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	rte_memcpy(addr, cmd.addr, 6);
+
+	return 0;
+}
+
+int
+sssnic_mac_addr_update(struct sssnic_hw *hw, uint8_t *new, uint8_t *old)
+{
+	int ret;
+	struct sssnic_mac_addr_update_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	uint16_t func;
+
+	if (hw == NULL || new == NULL || old == NULL)
+		return -EINVAL;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		func = SSSNIC_PF_FUNC_IDX(hw);
+	else
+		func = SSSNIC_MPU_FUNC_IDX;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	rte_memcpy(cmd.new_addr, new, 6);
+	rte_memcpy(cmd.old_addr, old, 6);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_UPDATE_MAC_ADDR_CMD, func, SSSNIC_LAN_MODULE,
+		SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_MAC_ADDR_CMD_STATUS_IGNORED) {
+			PMD_DRV_LOG(WARNING,
+				"MAC address operation is ignored");
+			return 0;
+		}
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_UPDATE_MAC_ADDR_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_mac_addr_add(struct sssnic_hw *hw, uint8_t *addr)
+{
+	int ret;
+	struct sssnic_mac_addr_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	uint16_t func;
+
+	if (hw == NULL || addr == NULL)
+		return -EINVAL;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		func = SSSNIC_PF_FUNC_IDX(hw);
+	else
+		func = SSSNIC_MPU_FUNC_IDX;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	rte_memcpy(cmd.addr, addr, 6);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_ADD_MAC_ADDR_CMD,
+		func, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_MAC_ADDR_CMD_STATUS_IGNORED) {
+			PMD_DRV_LOG(WARNING,
+				"MAC address operation is ignored");
+			return 0;
+		}
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_ADD_MAC_ADDR_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_mac_addr_del(struct sssnic_hw *hw, uint8_t *addr)
+{
+	int ret;
+	struct sssnic_mac_addr_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	uint16_t func;
+
+	if (hw == NULL || addr == NULL)
+		return -EINVAL;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		func = SSSNIC_PF_FUNC_IDX(hw);
+	else
+		func = SSSNIC_MPU_FUNC_IDX;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd_len = sizeof(cmd);
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	rte_memcpy(cmd.addr, addr, 6);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len, SSSNIC_DEL_MAC_ADDR_CMD,
+		func, SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		if (cmd.common.status == SSSNIC_MAC_ADDR_CMD_STATUS_IGNORED) {
+			PMD_DRV_LOG(WARNING,
+				"MAC address operation is ignored");
+			return 0;
+		}
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_DEL_MAC_ADDR_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
