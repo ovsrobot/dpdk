@@ -75,6 +75,16 @@ enum sssnic_rss_cmd_id {
 	SSSNIC_SET_RSS_TYPE_CMD = 65,
 };
 
+#define SSSNIC_TCAM_CMD_STATUS_UNSUPPORTED 0xff
+enum sssnic_tcam_cmd_id {
+	SSSNIC_ADD_TCAM_ENTRY_CMD = 80,
+	SSSNIC_DEL_TCAM_ENTRY_CMD = 81,
+	SSSNIC_FLUSH_TCAM_CMD = 83,
+	SSSNIC_TCAM_CFG_BLOCK_CMD = 84,
+	SSSNIC_SET_TCAM_ENABLE_CMD = 85,
+	SSSNIC_TCAM_SET_PTYPE_FILTER_CMD = 91,
+};
+
 struct sssnic_cmd_common {
 	uint8_t status;
 	uint8_t version;
@@ -432,6 +442,67 @@ struct sssnic_vlan_filter_set_cmd {
 	uint8_t resvd0;
 	uint16_t vid;
 	uint16_t resvd1;
+};
+
+struct sssnic_tcam_enable_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t enabled;
+	uint8_t resvd[5];
+};
+
+struct sssnic_tcam_flush_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd;
+};
+
+#define SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_ALLOC 1
+#define SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_FREE 0
+struct sssnic_tcam_block_cfg_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t flag; /* SSSNIC_TCAM_BLOCK_CFG_CMD_FLAG_XX */
+	uint8_t type;
+	uint16_t idx;
+	uint16_t resvd;
+};
+
+struct sssnic_tcam_ptype_filter_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd0;
+	uint8_t enable;
+	uint8_t ptype;
+	uint8_t qid;
+	uint8_t resvd1;
+};
+
+struct sssnic_tcam_entry_add_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t type;
+	uint8_t resv;
+	struct {
+		uint32_t index;
+		struct {
+			uint32_t qid;
+			uint32_t resvd;
+		} result;
+		struct {
+			uint8_t d0[SSSNIC_TCAM_KEY_SIZE];
+			uint8_t d1[SSSNIC_TCAM_KEY_SIZE];
+		} key;
+	} data;
+};
+
+struct sssnic_tcam_entry_del_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t type;
+	uint8_t resv;
+	uint32_t start; /* start index of entry to be deleted */
+	uint32_t num; /* number of entries to be deleted */
 };
 
 #endif /* _SSSNIC_CMD_H_ */
