@@ -9,5 +9,8 @@ endif
 sources = files(
 		'rnp_ethdev.c',
 		'rnp_mbx.c',
+		'rnp_mbx_fw.c',
+		'base/rnp_api.c',
 )
+
 includes += include_directories('base')
