@@ -769,6 +769,8 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
+	ethdev->rx_pkt_burst = sssnic_ethdev_rx_pkt_burst;
+
 	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
 	pci_dev = RTE_ETH_DEV_TO_PCI(ethdev);
 	hw = rte_zmalloc("sssnic_hw", sizeof(struct sssnic_hw), 0);
