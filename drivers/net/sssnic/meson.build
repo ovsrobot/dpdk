@@ -13,6 +13,9 @@ if (arch_subdir != 'x86' and arch_subdir != 'arm') or (not dpdk_conf.get('RTE_AR
     subdir_done()
 endif
 
+subdir('base')
+objs = [base_objs]
+
 sources = files(
         'sssnic_ethdev.c',
 )
