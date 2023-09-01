@@ -82,6 +82,7 @@ struct sssnic_netdev {
 	void *hw;
 	struct rte_ether_addr *mcast_addrs;
 	struct rte_ether_addr default_addr;
+	struct sssnic_ethdev_fdir_info *fdir_info;
 	uint16_t max_num_txq;
 	uint16_t max_num_rxq;
 	uint16_t num_started_rxqs;

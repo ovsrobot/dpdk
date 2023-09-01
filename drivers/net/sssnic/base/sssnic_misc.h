@@ -42,4 +42,11 @@ sssnic_mem_be_to_cpu_32(void *in, void *out, int size)
 	}
 }
 
+static inline bool
+sssnic_is_zero_ipv6_addr(const void *ipv6_addr)
+{
+	const uint64_t *ddw = ipv6_addr;
+	return ddw[0] == 0 && ddw[1] == 0;
+}
+
 #endif /* _SSSNIC_MISC_H_ */
