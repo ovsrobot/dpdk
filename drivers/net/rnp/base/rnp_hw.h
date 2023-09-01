@@ -44,6 +44,10 @@ static inline void rnp_wr_reg(volatile void *reg, int val)
 	rnp_rd_reg((uint8_t *)((_hw)->comm_reg_base) + (_off))
 #define rnp_top_wr(_hw, _off, _val)	\
 	rnp_wr_reg((uint8_t *)((_hw)->comm_reg_base) + (_off), (_val))
+#define RNP_MACADDR_UPDATE_LO(hw, hw_idx, val) \
+	rnp_eth_wr(hw, RNP_RAL_BASE_ADDR(hw_idx), val)
+#define RNP_MACADDR_UPDATE_HI(hw, hw_idx, val) \
+	rnp_eth_wr(hw, RNP_RAH_BASE_ADDR(hw_idx), val)
 struct rnp_hw;
 /* Mbx Operate info */
 enum MBX_ID {
@@ -112,9 +116,23 @@ struct rnp_mbx_info {
 	rte_atomic16_t state;
 } __rte_cache_aligned;
 
+struct rnp_eth_port;
 struct rnp_mac_api {
 	int32_t (*init_hw)(struct rnp_hw *hw);
 	int32_t (*reset_hw)(struct rnp_hw *hw);
+	/* MAC Address */
+	int32_t (*get_mac_addr)(struct rnp_eth_port *port,
+				uint8_t lane,
+				uint8_t *macaddr);
+	int32_t (*set_default_mac)(struct rnp_eth_port *port, uint8_t *mac);
+	/* Receive Address Filter Table */
+	int32_t (*set_rafb)(struct rnp_eth_port *port,
+			    uint8_t *mac,
+			    uint8_t vm_pool,
+			    uint8_t index);
+	int32_t (*clear_rafb)(struct rnp_eth_port *port,
+			    uint8_t vm_pool,
+			    uint8_t index);
 };
 
 struct rnp_mac_info {

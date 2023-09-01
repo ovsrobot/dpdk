@@ -269,3 +269,115 @@ int rnp_mbx_fw_reset_phy(struct rte_eth_dev *dev)
 
 	return rnp_fw_send_cmd_wait(dev, &req, &reply);
 }
+
+int
+rnp_fw_get_macaddr(struct rte_eth_dev *dev,
+		   int pfvfnum,
+		   u8 *mac_addr,
+		   int nr_lane)
+{
+	struct rnp_hw *hw = RNP_DEV_TO_HW(dev);
+	struct mbx_req_cookie *cookie;
+	struct mbx_fw_cmd_reply reply;
+	struct mbx_fw_cmd_req req;
+	struct mac_addr *mac;
+	int err;
+
+	memset(&req, 0, sizeof(req));
+	memset(&reply, 0, sizeof(reply));
+
+	if (!mac_addr)
+		return -EINVAL;
+
+	if (hw->mbx.irq_enabled) {
+		cookie = rnp_memzone_reserve(hw->cookie_p_name, 0);
+		if (!cookie)
+			return -ENOMEM;
+		memset(cookie->priv, 0, cookie->priv_len);
+		mac = (struct mac_addr *)cookie->priv;
+		build_get_macaddress_req(&req, 1 << nr_lane, pfvfnum, cookie);
+		err = rnp_mbx_fw_post_req(dev, &req, cookie);
+		if (err)
+			goto quit;
+
+		if ((1 << nr_lane) & mac->lanes) {
+			memcpy(mac_addr, mac->addrs[nr_lane].mac, 6);
+			err = 0;
+		} else {
+			err = -EIO;
+		}
+quit:
+		return err;
+	}
+	build_get_macaddress_req(&req, 1 << nr_lane, pfvfnum, &req);
+	err = rnp_fw_send_cmd_wait(dev, &req, &reply);
+	if (err) {
+		RNP_PMD_LOG(ERR, "%s: failed. err:%d\n", __func__, err);
+		return err;
+	}
+
+	if ((1 << nr_lane) & reply.mac_addr.lanes) {
+		memcpy(mac_addr, reply.mac_addr.addrs[nr_lane].mac, 6);
+		return 0;
+	}
+
+	return -EIO;
+}
+
+int rnp_mbx_get_lane_stat(struct rte_eth_dev *dev)
+{
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	struct rnp_phy_meta *phy_meta = &port->attr.phy_meta;
+	struct rnp_hw *hw = RNP_DEV_TO_HW(dev);
+	struct lane_stat_data *lane_stat;
+	int nr_lane = port->attr.nr_lane;
+	struct mbx_req_cookie *cookie;
+	struct mbx_fw_cmd_reply reply;
+	struct mbx_fw_cmd_req req;
+	int err = 0;
+
+	memset(&req, 0, sizeof(req));
+
+	if (hw->mbx.irq_enabled) {
+		cookie = rnp_memzone_reserve(hw->cookie_p_name, 0);
+
+		if (!cookie)
+			return -ENOMEM;
+		memset(cookie->priv, 0, cookie->priv_len);
+		lane_stat = (struct lane_stat_data *)cookie->priv;
+		build_get_lane_status_req(&req, nr_lane, cookie);
+		err = rnp_mbx_fw_post_req(dev, &req, cookie);
+		if (err)
+			goto quit;
+	} else {
+		memset(&reply, 0, sizeof(reply));
+		build_get_lane_status_req(&req, nr_lane, &req);
+		err = rnp_fw_send_cmd_wait(dev, &req, &reply);
+		if (err)
+			goto quit;
+		lane_stat = (struct lane_stat_data *)reply.data;
+	}
+
+	phy_meta->supported_link = lane_stat->supported_link;
+	phy_meta->is_backplane = lane_stat->is_backplane;
+	phy_meta->phy_identifier = lane_stat->phy_addr;
+	phy_meta->link_autoneg = lane_stat->autoneg;
+	phy_meta->link_duplex = lane_stat->duplex;
+	phy_meta->phy_type = lane_stat->phy_type;
+	phy_meta->is_sgmii = lane_stat->is_sgmii;
+	phy_meta->fec = lane_stat->fec;
+
+	if (phy_meta->is_sgmii) {
+		phy_meta->media_type = RNP_MEDIA_TYPE_COPPER;
+		phy_meta->supported_link |=
+			RNP_SPEED_CAP_100M_HALF | RNP_SPEED_CAP_10M_HALF;
+	} else if (phy_meta->is_backplane) {
+		phy_meta->media_type = RNP_MEDIA_TYPE_BACKPLANE;
+	} else {
+		phy_meta->media_type = RNP_MEDIA_TYPE_FIBER;
+	}
+
+	return 0;
+quit:
+	return err;
+}

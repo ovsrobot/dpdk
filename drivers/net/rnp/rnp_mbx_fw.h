@@ -19,7 +19,9 @@ struct mbx_req_cookie {
 enum GENERIC_CMD {
 	/* link configuration admin commands */
 	GET_PHY_ABALITY = 0x0601,
+	GET_MAC_ADDRESS = 0x0602,
 	RESET_PHY = 0x0603,
+	GET_LANE_STATUS = 0x0610,
 	SET_EVENT_MASK = 0x0613,
 };
 
@@ -82,6 +84,61 @@ struct phy_abilities {
 	};
 } __rte_packed __rte_aligned(4);
 
+#define RNP_SPEED_CAP_UNKNOWN    (0)
+#define RNP_SPEED_CAP_10M_FULL   BIT(2)
+#define RNP_SPEED_CAP_100M_FULL  BIT(3)
+#define RNP_SPEED_CAP_1GB_FULL   BIT(4)
+#define RNP_SPEED_CAP_10GB_FULL  BIT(5)
+#define RNP_SPEED_CAP_40GB_FULL  BIT(6)
+#define RNP_SPEED_CAP_25GB_FULL  BIT(7)
+#define RNP_SPEED_CAP_50GB_FULL  BIT(8)
+#define RNP_SPEED_CAP_100GB_FULL BIT(9)
+#define RNP_SPEED_CAP_10M_HALF   BIT(10)
+#define RNP_SPEED_CAP_100M_HALF  BIT(11)
+#define RNP_SPEED_CAP_1GB_HALF   BIT(12)
+
+struct lane_stat_data {
+	u8 nr_lane;	     /* 0-3 cur port correspond with hw lane */
+	u8 pci_gen	: 4; /* nic cur pci speed genX: 1,2,3 */
+	u8 pci_lanes	: 4; /* nic cur pci x1 x2 x4 x8 x16 */
+	u8 pma_type;
+	u8 phy_type;         /* interface media type */
+
+	u16 linkup	: 1; /* cur port link state */
+	u16 duplex	: 1; /* duplex state only RJ45 valid */
+	u16 autoneg	: 1; /* autoneg state */
+	u16 fec		: 1; /* fec state */
+	u16 rev_an	: 1;
+	u16 link_traing     : 1; /* link-traing state */
+	u16 media_available : 1;
+	u16 is_sgmii        : 1; /* 1: Twisted Pair 0: FIBRE */
+	u16 link_fault      : 4;
+#define LINK_LINK_FAULT   BIT(0)
+#define LINK_TX_FAULT     BIT(1)
+#define LINK_RX_FAULT     BIT(2)
+#define LINK_REMOTE_FAULT BIT(3)
+	u16 is_backplane : 1; /* 1: Backplane Mode */
+	union {
+		u8 phy_addr; /* Phy MDIO address */
+		struct {
+			u8 mod_abs : 1;
+			u8 fault   : 1;
+			u8 tx_dis  : 1;
+			u8 los     : 1;
+		} sfp;
+	};
+	u8 sfp_connector;
+	u32 speed; /* Current Speed Value */
+
+	u32 si_main;
+	u32 si_pre;
+	u32 si_post;
+	u32 si_tx_boost;
+	u32 supported_link; /* Cur nic Support Link cap */
+	u32 phy_id;
+	u32 advertised_link; /* autoneg mode advertised cap */
+} __rte_packed __rte_aligned(4);
+
 /* firmware -> driver */
 struct mbx_fw_cmd_reply {
 	/* fw must set: DD, CMP, Error(if error), copy value */
@@ -99,6 +156,19 @@ struct mbx_fw_cmd_reply {
 	};
 	/* ===== data ==== [16-64] */
 	union {
+		char data[0];
+
+		struct mac_addr {
+			int lanes;
+			struct _addr {
+				/* for macaddr:01:02:03:04:05:06
+				 *  mac-hi=0x01020304 mac-lo=0x05060000
+				 */
+				unsigned char mac[8];
+			} addrs[4];
+		} mac_addr;
+
+		struct lane_stat_data lanestat;
 		struct phy_abilities phy_abilities;
 	};
 } __rte_packed __rte_aligned(4);
@@ -129,9 +199,18 @@ struct mbx_fw_cmd_req {
 		} get_phy_ablity;
 
 		struct {
+			int lane_mask;
+			int pfvf_num;
+		} get_mac_addr;
+
+		struct {
 			unsigned short enable_stat;
 			unsigned short event_mask; /* enum link_event_mask */
 		} stat_event_mask;
+
+		struct {
+			int nr_lane;
+		} get_lane_st;
 	};
 } __rte_packed __rte_aligned(4);
 
@@ -144,6 +223,23 @@ build_phy_abalities_req(struct mbx_fw_cmd_req *req, void *cookie)
 	req->reply_lo = 0;
 	req->reply_hi = 0;
 	req->cookie = cookie;
+}
+
+static inline void
+build_get_macaddress_req(struct mbx_fw_cmd_req *req,
+			 int lane_mask,
+			 int pfvfnum,
+			 void *cookie)
+{
+	req->flags = 0;
+	req->opcode = GET_MAC_ADDRESS;
+	req->datalen = sizeof(req->get_mac_addr);
+	req->cookie = cookie;
+	req->reply_lo = 0;
+	req->reply_hi = 0;
+
+	req->get_mac_addr.lane_mask = lane_mask;
+	req->get_mac_addr.pfvf_num = pfvfnum;
 }
 
 /* enum link_event_mask or */
@@ -175,9 +271,28 @@ build_reset_phy_req(struct mbx_fw_cmd_req *req,
 	req->cookie = cookie;
 }
 
+static inline void
+build_get_lane_status_req(struct mbx_fw_cmd_req *req,
+			  int nr_lane, void *cookie)
+{
+	req->flags = 0;
+	req->opcode = GET_LANE_STATUS;
+	req->datalen = sizeof(req->get_lane_st);
+	req->cookie = cookie;
+	req->reply_lo = 0;
+	req->reply_hi = 0;
+	req->get_lane_st.nr_lane = nr_lane;
+}
+
 int rnp_mbx_get_capability(struct rte_eth_dev *dev,
 			   int *lane_mask,
 			   int *nic_mode);
 int rnp_mbx_link_event_enable(struct rte_eth_dev *dev, int enable);
 int rnp_mbx_fw_reset_phy(struct rte_eth_dev *dev);
+int
+rnp_fw_get_macaddr(struct rte_eth_dev *dev,
+		   int pfvfnum,
+		   u8 *mac_addr,
+		   int nr_lane);
+int rnp_mbx_get_lane_stat(struct rte_eth_dev *dev);
 #endif /* __RNP_MBX_FW_H__*/
