@@ -100,6 +100,8 @@ int sssnic_hw_init(struct sssnic_hw *hw);
 void sssnic_hw_shutdown(struct sssnic_hw *hw);
 void sssnic_msix_state_set(struct sssnic_hw *hw, uint16_t msix_id, int state);
 void sssnic_msix_resend_disable(struct sssnic_hw *hw, uint16_t msix_id);
+void sssnic_msix_auto_mask_set(struct sssnic_hw *hw, uint16_t msix_id,
+	int state);
 int sssnic_link_event_callback_register(struct sssnic_hw *hw,
 	sssnic_link_event_cb_t *cb, void *priv);
 void sssnic_link_event_callback_unregister(struct sssnic_hw *hw);
