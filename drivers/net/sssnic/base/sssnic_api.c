@@ -307,3 +307,130 @@ sssnic_mac_addr_del(struct sssnic_hw *hw, uint8_t *addr)
 
 	return 0;
 }
+
+int
+sssnic_netif_link_status_get(struct sssnic_hw *hw, uint8_t *status)
+{
+	int ret;
+	struct sssnic_netif_link_status_get_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+	uint16_t func;
+
+	if (hw == NULL || status == NULL)
+		return -EINVAL;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		func = SSSNIC_PF_FUNC_IDX(hw);
+	else
+		func = SSSNIC_MPU_FUNC_IDX;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.port = SSSNIC_PHY_PORT(hw);
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_GET_NETIF_LINK_STATUS_CMD, func, SSSNIC_NETIF_MODULE,
+		SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_NETIF_LINK_STATUS_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	*status = cmd.status;
+
+	return 0;
+}
+
+int
+sssnic_netif_link_info_get(struct sssnic_hw *hw,
+	struct sssnic_netif_link_info *info)
+{
+	int ret;
+	struct sssnic_netif_link_info_get_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	if (hw == NULL || info == NULL)
+		return -EINVAL;
+
+	ret = sssnic_netif_link_status_get(hw, &info->status);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to get netif link state!");
+		return ret;
+	}
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.port = SSSNIC_PHY_PORT(hw);
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_GET_NETIF_LINK_INFO_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_NETIF_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_NETIF_LINK_INFO_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	info->speed = cmd.speed;
+	info->duplex = cmd.duplex;
+	info->fec = cmd.fec;
+	info->type = cmd.type;
+	info->autoneg_capa = cmd.autoneg_capa;
+	info->autoneg = cmd.autoneg;
+
+	return 0;
+}
+
+int
+sssnic_netif_enable_set(struct sssnic_hw *hw, uint8_t state)
+{
+	int ret;
+	struct sssnic_netif_enable_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	if (hw == NULL)
+		return -EINVAL;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		return 0;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	if (state != 0)
+		cmd.flag = SSSNIC_SET_NETIF_ENABLE_CMD_FLAG_RX_EN |
+			   SSSNIC_SET_NETIF_ENABLE_CMD_FLAG_TX_EN;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_NETIF_ENABLE_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_NETIF_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_NETIF_ENABLE_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
