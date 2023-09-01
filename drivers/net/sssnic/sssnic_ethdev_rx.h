@@ -44,5 +44,7 @@ void sssnic_ethdev_rx_queue_stats_clear(struct rte_eth_dev *ethdev,
 	uint16_t qid);
 uint16_t sssnic_ethdev_rx_pkt_burst(void *rx_queue, struct rte_mbuf **rx_pkts,
 	uint16_t nb_pkts);
+void sssnic_ethdev_rx_queue_info_get(struct rte_eth_dev *ethdev,
+	uint16_t rx_queue_id, struct rte_eth_rxq_info *qinfo);
 
 #endif

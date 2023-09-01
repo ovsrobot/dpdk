@@ -1363,3 +1363,16 @@ sssnic_ethdev_rx_pkt_burst(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 	return nb_rx;
 }
+
+void
+sssnic_ethdev_rx_queue_info_get(struct rte_eth_dev *ethdev,
+	uint16_t rx_queue_id, struct rte_eth_rxq_info *qinfo)
+{
+	struct sssnic_ethdev_rxq *rxq = ethdev->data->rx_queues[rx_queue_id];
+
+	qinfo->rx_buf_size = rxq->rx_buf_size;
+	qinfo->nb_desc = rxq->depth;
+	qinfo->queue_state = ethdev->data->rx_queue_state[rx_queue_id];
+	qinfo->mp = rxq->mp;
+	qinfo->conf.rx_free_thresh = rxq->rx_free_thresh;
+}
