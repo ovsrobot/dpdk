@@ -40,6 +40,7 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 	}
 	netdev->hw = hw;
 	hw->pci_dev = pci_dev;
+	hw->eth_port_id = ethdev->data->port_id;
 	ret = sssnic_hw_init(hw);
 	if (ret != 0) {
 		rte_free(hw);
