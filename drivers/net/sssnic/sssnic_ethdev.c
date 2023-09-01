@@ -11,6 +11,7 @@
 #include "sssnic_ethdev.h"
 #include "sssnic_ethdev_link.h"
 #include "sssnic_ethdev_rx.h"
+#include "sssnic_ethdev_tx.h"
 
 static int
 sssnic_ethdev_infos_get(struct rte_eth_dev *ethdev,
@@ -336,6 +337,7 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
 
 	sssnic_ethdev_link_intr_disable(ethdev);
+	sssnic_ethdev_tx_queue_all_release(ethdev);
 	sssnic_ethdev_rx_queue_all_release(ethdev);
 	sssnic_ethdev_mac_addrs_clean(ethdev);
 	sssnic_hw_shutdown(hw);
@@ -354,6 +356,8 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.set_mc_addr_list = sssnic_ethdev_set_mc_addr_list,
 	.rx_queue_setup = sssnic_ethdev_rx_queue_setup,
 	.rx_queue_release = sssnic_ethdev_rx_queue_release,
+	.tx_queue_setup = sssnic_ethdev_tx_queue_setup,
+	.tx_queue_release = sssnic_ethdev_tx_queue_release,
 };
 
 static int
