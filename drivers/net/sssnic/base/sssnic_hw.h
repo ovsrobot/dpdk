@@ -70,6 +70,7 @@ struct sssnic_hw {
 #define SSSNIC_PHY_PORT(hw) ((hw)->phy_port)
 #define SSSNIC_FUNC_TYPE(hw) ((hw)->attr.func_type)
 #define SSSNIC_AF_FUNC_IDX(hw) ((hw)->attr.af_idx)
+#define SSSNIC_PF_FUNC_IDX(hw) ((hw)->attr.pf_idx)
 
 enum sssnic_module {
 	SSSNIC_COMM_MODULE = 0,
