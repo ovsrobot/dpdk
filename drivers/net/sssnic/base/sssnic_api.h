@@ -402,6 +402,13 @@ enum sssnic_rss_hash_engine_type {
 	SSSNIC_RSS_HASH_ENGINE_COUNT,
 };
 
+#define SSSNIC_FW_VERSION_LEN 16
+#define SSSNIC_FW_TIME_LEN 20
+struct sssnic_fw_version {
+	char version[SSSNIC_FW_VERSION_LEN];
+	char time[SSSNIC_FW_VERSION_LEN];
+};
+
 int sssnic_msix_attr_get(struct sssnic_hw *hw, uint16_t msix_idx,
 	struct sssnic_msix_attr *attr);
 int sssnic_msix_attr_set(struct sssnic_hw *hw, uint16_t msix_idx,
@@ -456,5 +463,7 @@ int sssnic_rss_indir_table_set(struct sssnic_hw *hw, const uint16_t *entry,
 	uint32_t num_entries);
 int sssnic_rss_indir_table_get(struct sssnic_hw *hw, uint16_t *entry,
 	uint32_t num_entries);
+int sssnic_fw_version_get(struct sssnic_hw *hw,
+	struct sssnic_fw_version *version);
 
 #endif /* _SSSNIC_API_H_ */
