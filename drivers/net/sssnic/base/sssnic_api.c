@@ -1899,3 +1899,45 @@ sssnic_tcam_entry_del(struct sssnic_hw *hw, uint32_t entry_idx)
 
 	return 0;
 }
+
+static int
+sssnic_vf_port_register_op(struct sssnic_hw *hw, bool op)
+{
+	int ret;
+	struct sssnic_vf_port_register_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.op = op ? 1 : 0;
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_REGISTER_VF_PORT_CMD, SSSNIC_PF_FUNC_IDX(hw),
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_REGISTER_VF_PORT_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_vf_port_register(struct sssnic_hw *hw)
+{
+	return sssnic_vf_port_register_op(hw, true);
+}
+
+int
+sssnic_vf_port_unregister(struct sssnic_hw *hw)
+{
+	return sssnic_vf_port_register_op(hw, false);
+}

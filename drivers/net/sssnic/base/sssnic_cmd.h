@@ -505,4 +505,10 @@ struct sssnic_tcam_entry_del_cmd {
 	uint32_t num; /* number of entries to be deleted */
 };
 
+struct sssnic_vf_port_register_cmd {
+	struct sssnic_cmd_common common;
+	uint8_t op; /* 0: unregister, 1: register */
+	uint8_t resvd[39];
+};
+
 #endif /* _SSSNIC_CMD_H_ */
