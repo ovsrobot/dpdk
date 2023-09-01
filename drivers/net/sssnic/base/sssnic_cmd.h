@@ -414,4 +414,15 @@ struct sssnic_fw_version_get_cmd {
 	uint8_t time[20];
 };
 
+struct sssnic_flow_ctrl_cmd {
+	struct sssnic_cmd_common common;
+	uint8_t port;
+	uint8_t opcode;
+	uint16_t resvd0;
+	uint8_t auto_neg;
+	uint8_t rx_en;
+	uint8_t tx_en;
+	uint8_t resvd1[5];
+};
+
 #endif /* _SSSNIC_CMD_H_ */
