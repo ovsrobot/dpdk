@@ -425,4 +425,13 @@ struct sssnic_flow_ctrl_cmd {
 	uint8_t resvd1[5];
 };
 
+struct sssnic_vlan_filter_set_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint8_t add;
+	uint8_t resvd0;
+	uint16_t vid;
+	uint16_t resvd1;
+};
+
 #endif /* _SSSNIC_CMD_H_ */
