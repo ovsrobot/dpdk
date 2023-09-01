@@ -111,6 +111,8 @@ struct rnp_eth_port {
 	uint8_t tx_func_sec; /* force set io tx func */
 	struct rte_eth_dev *eth_dev;
 	struct rnp_port_attr attr;
+	uint64_t state;
+	rte_spinlock_t rx_mac_lock; /* Lock For Mac_cfg resource write */
 	/* Recvice Mac Address Record Table */
 	uint8_t mac_use_tb[RNP_MAX_MAC_ADDRS];
 	uint8_t use_num_mac;
@@ -129,6 +131,12 @@ enum {
 	RNP_IO_FUNC_USE_VEC,
 	RNP_IO_FUNC_USE_SIMPLE,
 	RNP_IO_FUNC_USE_COMMON,
+};
+
+enum rnp_port_state {
+	RNP_PORT_STATE_PAUSE = 0,
+	RNP_PORT_STATE_FINISH,
+	RNP_PORT_STATE_SETTING,
 };
 
 struct rnp_eth_adapter {
