@@ -13,6 +13,7 @@
 #include "sssnic_ethdev_rx.h"
 #include "sssnic_ethdev_tx.h"
 #include "sssnic_ethdev_stats.h"
+#include "sssnic_ethdev_rss.h"
 
 static int sssnic_ethdev_init(struct rte_eth_dev *ethdev);
 
@@ -542,6 +543,13 @@ sssnic_ethdev_start(struct rte_eth_dev *ethdev)
 		goto rx_mode_reset;
 	}
 
+	/* setup RSS */
+	ret = sssnic_ethdev_rss_setup(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to setup RSS");
+		goto rx_mode_reset;
+	}
+
 	/* start all rx queues */
 	ret = sssnic_ethdev_rx_queue_all_start(ethdev);
 	if (ret != 0) {
@@ -572,6 +580,7 @@ stop_queues:
 clean_port_res:
 	sssnic_ethdev_resource_clean(ethdev);
 rx_mode_reset:
+	sssnic_ethdev_rss_shutdown(ethdev);
 	sssnic_ethdev_rx_mode_set(ethdev, SSSNIC_ETHDEV_RX_MODE_NONE);
 rxtx_ctx_clean:
 	sssnic_ethdev_rxtx_ctx_clean(ethdev);
@@ -613,6 +622,9 @@ sssnic_ethdev_stop(struct rte_eth_dev *ethdev)
 
 	/* shut down rx queue interrupt */
 	sssnic_ethdev_rx_intr_shutdown(ethdev);
+
+	/* Disable RSS */
+	sssnic_ethdev_rss_shutdown(ethdev);
 
 	/* clean rxtx context */
 	sssnic_ethdev_rxtx_ctx_clean(ethdev);
@@ -754,6 +766,10 @@ static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.xstats_get_names = sssnic_ethdev_xstats_get_names,
 	.xstats_get = sssnic_ethdev_xstats_get,
 	.xstats_reset = sssnic_ethdev_xstats_reset,
+	.rss_hash_conf_get = sssnic_ethdev_rss_hash_config_get,
+	.rss_hash_update = sssnic_ethdev_rss_hash_update,
+	.reta_update = sssnic_ethdev_rss_reta_update,
+	.reta_query = sssnic_ethdev_rss_reta_query,
 };
 
 static int
