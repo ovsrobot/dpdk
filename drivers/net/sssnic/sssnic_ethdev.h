@@ -65,6 +65,8 @@ struct sssnic_netdev {
 	struct rte_ether_addr default_addr;
 	uint16_t max_num_txq;
 	uint16_t max_num_rxq;
+	uint16_t num_started_rxqs;
+	uint16_t num_started_txqs;
 };
 
 #define SSSNIC_ETHDEV_PRIVATE(eth_dev)                                         \
