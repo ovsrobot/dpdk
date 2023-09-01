@@ -9,6 +9,7 @@ sources = [
         'sssnic_workq.c',
         'sssnic_ctrlq.c',
         'sssnic_api.c',
+	'sssnic_exception.c',
 ]
 
 c_args = cflags
