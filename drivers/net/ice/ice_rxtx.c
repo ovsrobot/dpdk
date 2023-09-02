@@ -3640,8 +3640,7 @@ ice_set_tx_function_flag(struct rte_eth_dev *dev, struct ice_tx_queue *txq)
 
 	/* Use a simple Tx queue if possible (only fast free is allowed) */
 	ad->tx_simple_allowed =
-		(txq->offloads ==
-		(txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) &&
+		((txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) &&
 		txq->tx_rs_thresh >= ICE_TX_MAX_BURST);
 
 	if (ad->tx_simple_allowed)

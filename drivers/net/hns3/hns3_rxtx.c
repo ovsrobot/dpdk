@@ -4357,7 +4357,7 @@ hns3_tx_check_simple_support(struct rte_eth_dev *dev)
 {
 	uint64_t offloads = dev->data->dev_conf.txmode.offloads;
 
-	return (offloads == (offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE));
+	return !!(offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE);
 }
 
 static bool
