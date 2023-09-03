@@ -115,6 +115,8 @@ extern struct acl_algorithms acl_alg[];
 
 extern uint32_t max_pkt_len;
 
+extern struct rte_eth_conf port_conf;
+
 /* Send burst of packets on an output interface */
 static inline int
 send_burst(struct lcore_conf *qconf, uint16_t n, uint16_t port)
@@ -170,7 +172,15 @@ is_valid_ipv4_pkt(struct rte_ipv4_hdr *pkt, uint32_t link_len)
 		return -1;
 
 	/* 2. The IP checksum must be correct. */
-	/* this is checked in H/W */
+	/* if this is not checked in H/W, check it. */
+	if ((port_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_IPV4_CKSUM) == 0) {
+		uint16_t actual_cksum, expected_cksum;
+		actual_cksum = pkt->hdr_checksum;
+		pkt->hdr_checksum = 0;
+		expected_cksum = rte_ipv4_cksum(pkt);
+		if (actual_cksum != expected_cksum)
+			return -2;
+	}
 
 	/*
 	 * 3. The IP version number must be 4. If the version number is not 4
