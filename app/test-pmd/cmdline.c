@@ -2136,6 +2136,76 @@ static cmdline_parse_inst_t cmd_config_rss = {
 	},
 };
 
+/* *** configure rss hash algorithms *** */
+struct cmd_config_rss_hash_func {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t config;
+	portid_t port_id;
+	cmdline_fixed_string_t rss_hash_func;
+	cmdline_fixed_string_t func;
+};
+
+static void
+cmd_config_rss_hash_func_parsed(void *parsed_result,
+			       __rte_unused struct cmdline *cl,
+			       __rte_unused void *data)
+{
+	struct cmd_config_rss_hash_func *res = parsed_result;
+	struct rte_eth_rss_conf rss_conf = {0};
+	struct {
+		const char *name;
+		enum rte_eth_hash_function func;
+	} hash_func_map[] = {
+		{"default",		RTE_ETH_HASH_FUNCTION_DEFAULT},
+		{"toeplitz",		RTE_ETH_HASH_FUNCTION_TOEPLITZ},
+		{"simple_xor",		RTE_ETH_HASH_FUNCTION_SIMPLE_XOR},
+		{"symmetric_toeplitz",	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ},
+		{NULL,			RTE_ETH_HASH_FUNCTION_MAX},
+	};
+	int i = 0;
+
+	rss_conf.func = RTE_ETH_HASH_FUNCTION_MAX;
+	while (hash_func_map[i].name != NULL) {
+		if (!strcmp(hash_func_map[i].name, res->func)) {
+			rss_conf.func = hash_func_map[i].func;
+			break;
+		}
+		i++;
+	}
+
+	port_rss_hash_key_update(res->port_id, &rss_conf);
+}
+
+static cmdline_parse_token_string_t cmd_config_rss_hash_func_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_rss_hash_func, port, "port");
+static cmdline_parse_token_string_t cmd_config_rss_hash_func_config =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_rss_hash_func, config,
+				 "config");
+static cmdline_parse_token_num_t cmd_config_rss_hash_func_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_rss_hash_func, port_id,
+				 RTE_UINT16);
+static cmdline_parse_token_string_t cmd_config_rss_hash_func_rss_hash_func =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_rss_hash_func,
+				 rss_hash_func, "rss-hash-func");
+static cmdline_parse_token_string_t cmd_config_rss_hash_func_value =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_rss_hash_func, func,
+				"default#toeplitz#simple_xor#symmetric_toeplitz");
+
+static cmdline_parse_inst_t cmd_config_rss_hash_func = {
+	.f = cmd_config_rss_hash_func_parsed,
+	.data = NULL,
+	.help_str = "port config <port_id> rss-hash-func"
+		"default|toeplitz|simple_xor|symmetric_toeplitz",
+	.tokens = {
+		(void *)&cmd_config_rss_hash_func_port,
+		(void *)&cmd_config_rss_hash_func_config,
+		(void *)&cmd_config_rss_hash_func_port_id,
+		(void *)&cmd_config_rss_hash_func_rss_hash_func,
+		(void *)&cmd_config_rss_hash_func_value,
+		NULL,
+	},
+};
+
 /* *** configure rss hash key *** */
 struct cmd_config_rss_hash_key {
 	cmdline_fixed_string_t port;
@@ -2182,6 +2252,7 @@ cmd_config_rss_hash_key_parsed(void *parsed_result,
 	uint8_t xdgt0;
 	uint8_t xdgt1;
 	int i;
+	struct rte_eth_rss_conf rss_conf = {0};
 	struct rte_eth_dev_info dev_info;
 	uint8_t hash_key_size;
 	uint32_t key_len;
@@ -2217,8 +2288,10 @@ cmd_config_rss_hash_key_parsed(void *parsed_result,
 			return;
 		hash_key[i] = (uint8_t) ((xdgt0 * 16) + xdgt1);
 	}
-	port_rss_hash_key_update(res->port_id, res->rss_type, hash_key,
-			hash_key_size);
+	rss_conf.rss_key = hash_key;
+	rss_conf.rss_key_len = hash_key_size;
+	rss_conf.rss_hf = str_to_rsstypes(res->rss_type);
+	port_rss_hash_key_update(res->port_id, &rss_conf);
 }
 
 static cmdline_parse_token_string_t cmd_config_rss_hash_key_port =
@@ -12946,6 +13019,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_showport_rss_hash_func,
 	(cmdline_parse_inst_t *)&cmd_showport_rss_hash_all,
 	(cmdline_parse_inst_t *)&cmd_config_rss_hash_key,
+	(cmdline_parse_inst_t *)&cmd_config_rss_hash_func,
 	(cmdline_parse_inst_t *)&cmd_cleanup_txq_mbufs,
 	(cmdline_parse_inst_t *)&cmd_dump,
 	(cmdline_parse_inst_t *)&cmd_dump_one,

@@ -1147,8 +1147,7 @@ int set_rxq_avail_thresh(portid_t port_id, uint16_t queue_id,
 			 uint8_t avail_thresh);
 
 void port_rss_hash_conf_show(portid_t port_id, int show_rss_key, int show_rss_func);
-void port_rss_hash_key_update(portid_t port_id, char rss_type[],
-			      uint8_t *hash_key, uint8_t hash_key_len);
+void port_rss_hash_key_update(portid_t port_id, struct rte_eth_rss_conf *rss_conf);
 int rx_queue_id_is_invalid(queueid_t rxq_id);
 int tx_queue_id_is_invalid(queueid_t txq_id);
 #ifdef RTE_LIB_GRO
