@@ -492,5 +492,7 @@ int sssnic_tcam_packet_type_filter_set(struct sssnic_hw *hw, uint8_t ptype,
 int sssnic_tcam_entry_add(struct sssnic_hw *hw,
 	struct sssnic_tcam_entry *entry);
 int sssnic_tcam_entry_del(struct sssnic_hw *hw, uint32_t entry_idx);
+int sssnic_vf_port_register(struct sssnic_hw *hw);
+int sssnic_vf_port_unregister(struct sssnic_hw *hw);
 
 #endif /* _SSSNIC_API_H_ */

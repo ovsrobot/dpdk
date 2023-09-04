@@ -345,10 +345,16 @@ sssnic_base_init(struct sssnic_hw *hw)
 	pci_dev = hw->pci_dev;
 
 	/* get base addresses of hw registers */
-	hw->cfg_base_addr =
-		(uint8_t *)pci_dev->mem_resource[SSSNIC_PCI_BAR_CFG].addr;
-	hw->mgmt_base_addr =
-		(uint8_t *)pci_dev->mem_resource[SSSNIC_PCI_BAR_MGMT].addr;
+	if (pci_dev->id.device_id == SSSNIC_VF_DEVICE_ID) {
+		uint8_t *addr =
+			(uint8_t *)pci_dev->mem_resource[SSSNIC_VF_PCI_BAR_CFG].addr;
+		hw->cfg_base_addr = addr + SSSNIC_VF_CFG_ADDR_OFFSET;
+	} else {
+		hw->cfg_base_addr =
+			(uint8_t *)pci_dev->mem_resource[SSSNIC_PCI_BAR_CFG].addr;
+		hw->mgmt_base_addr =
+			(uint8_t *)pci_dev->mem_resource[SSSNIC_PCI_BAR_MGMT].addr;
+	}
 	hw->db_base_addr =
 		(uint8_t *)pci_dev->mem_resource[SSSNIC_PCI_BAR_DB].addr;
 	hw->db_mem_len =
@@ -365,7 +371,10 @@ sssnic_base_init(struct sssnic_hw *hw)
 		PMD_DRV_LOG(ERR, "Doorbell is not enabled!");
 		return -EBUSY;
 	}
-	sssnic_af_setup(hw);
+
+	if (SSSNIC_FUNC_TYPE(hw) != SSSNIC_FUNC_TYPE_VF)
+		sssnic_af_setup(hw);
+
 	sssnic_msix_all_disable(hw);
 	sssnic_pf_status_set(hw, SSSNIC_PF_STATUS_INIT);
 

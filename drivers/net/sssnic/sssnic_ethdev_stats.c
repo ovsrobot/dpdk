@@ -244,9 +244,19 @@ sssnic_ethdev_stats_reset(struct rte_eth_dev *ethdev)
 static uint32_t
 sssnic_ethdev_xstats_num_calc(struct rte_eth_dev *ethdev)
 {
-	return SSSNIC_ETHDEV_NB_PORT_XSTATS + SSSNIC_ETHDEV_NB_MAC_XSTATS +
-	       (SSSNIC_ETHDEV_NB_TXQ_XSTATS * ethdev->data->nb_tx_queues) +
-	       (SSSNIC_ETHDEV_NB_RXQ_XSTATS * ethdev->data->nb_rx_queues);
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
+	uint32_t num;
+
+	num = SSSNIC_ETHDEV_NB_PORT_XSTATS;
+	num += SSSNIC_ETHDEV_NB_TXQ_XSTATS * ethdev->data->nb_tx_queues;
+	num += SSSNIC_ETHDEV_NB_RXQ_XSTATS * ethdev->data->nb_rx_queues;
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		return num;
+
+	num += SSSNIC_ETHDEV_NB_MAC_XSTATS;
+
+	return num;
 }
 
 int
@@ -255,6 +265,7 @@ sssnic_ethdev_xstats_get_names(struct rte_eth_dev *ethdev,
 	__rte_unused unsigned int limit)
 {
 	uint16_t i, qid, count = 0;
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
 
 	if (xstats_names == NULL)
 		return sssnic_ethdev_xstats_num_calc(ethdev);
@@ -282,6 +293,9 @@ sssnic_ethdev_xstats_get_names(struct rte_eth_dev *ethdev,
 			"port_%s", port_stats_strings[i].name);
 		count++;
 	}
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		return count;
 
 	for (i = 0; i < SSSNIC_ETHDEV_NB_MAC_XSTATS; i++) {
 		snprintf(xstats_names[count].name, RTE_ETH_XSTATS_NAME_SIZE,
@@ -348,6 +362,11 @@ sssnic_ethdev_xstats_get(struct rte_eth_dev *ethdev,
 		count++;
 	}
 
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF) {
+		ret = count;
+		goto out;
+	}
+
 	ret = sssnic_mac_stats_get(hw, &stats->mac);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to get port %u mac stats",
@@ -372,6 +391,7 @@ int
 sssnic_ethdev_xstats_reset(struct rte_eth_dev *ethdev)
 {
 	int ret;
+	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
 
 	ret = sssnic_ethdev_stats_reset(ethdev);
 	if (ret) {
@@ -379,6 +399,9 @@ sssnic_ethdev_xstats_reset(struct rte_eth_dev *ethdev)
 			ethdev->data->port_id);
 		return ret;
 	}
+
+	if (SSSNIC_FUNC_TYPE(hw) == SSSNIC_FUNC_TYPE_VF)
+		return 0;
 
 	ret = sssnic_mac_stats_clear(SSSNIC_ETHDEV_TO_HW(ethdev));
 	if (ret) {
