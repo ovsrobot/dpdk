@@ -336,4 +336,16 @@ struct sssnic_port_resource_clean_cmd {
 	uint16_t resvd;
 };
 
+struct sssnic_port_stats_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t resvd;
+};
+
+struct sssnic_mac_stats_cmd {
+	struct sssnic_cmd_common common;
+	uint8_t port;
+	uint8_t resvd[3];
+};
+
 #endif /* _SSSNIC_CMD_H_ */

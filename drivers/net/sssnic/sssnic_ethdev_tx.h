@@ -33,5 +33,9 @@ uint16_t sssnic_ethdev_tx_queue_depth_get(struct rte_eth_dev *ethdev,
 	uint16_t qid);
 int sssnic_ethdev_tx_ci_attr_init(struct rte_eth_dev *ethdev);
 int sssnic_ethdev_tx_max_size_set(struct rte_eth_dev *ethdev, uint16_t size);
+int sssnic_ethdev_tx_queue_stats_get(struct rte_eth_dev *ethdev, uint16_t qid,
+	struct sssnic_ethdev_txq_stats *stats);
+void sssnic_ethdev_tx_queue_stats_clear(struct rte_eth_dev *ethdev,
+	uint16_t qid);
 
 #endif /* _SSSNIC_ETHDEV_TX_H_ */

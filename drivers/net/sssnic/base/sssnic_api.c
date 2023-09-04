@@ -1005,3 +1005,157 @@ sssnic_port_resource_clean(struct sssnic_hw *hw)
 
 	return 0;
 }
+
+int
+sssnic_port_stats_get(struct sssnic_hw *hw, struct sssnic_port_stats *stats)
+{
+	int ret;
+	struct sssnic_port_stats_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len, resp_len;
+	struct {
+		struct sssnic_cmd_common common;
+		uint32_t size;
+		uint32_t resvd0;
+		struct sssnic_port_stats stats;
+		uint64_t rsvd1[6];
+	} resp;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_GET_PORT_STATS_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	memset(&resp, 0, sizeof(resp));
+	resp_len = sizeof(resp);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&resp, &resp_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (resp_len == 0 || resp.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_PORT_STATS_CMD, len=%u, status=%u",
+			resp_len, resp.common.status);
+		return -EIO;
+	}
+
+	memcpy(stats, &resp.stats, sizeof(resp.stats));
+
+	return 0;
+}
+
+int
+sssnic_port_stats_clear(struct sssnic_hw *hw)
+{
+	int ret;
+	struct sssnic_port_stats_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd_len = sizeof(cmd);
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_CLEAR_PORT_STATS_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_CLEAN_PORT_RES_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_mac_stats_get(struct sssnic_hw *hw, struct sssnic_mac_stats *stats)
+{
+	int ret;
+	struct sssnic_msg msg;
+	uint32_t cmd_len, resp_len;
+	struct sssnic_mac_stats_cmd cmd;
+	struct {
+		struct sssnic_cmd_common common;
+		struct sssnic_mac_stats stats;
+		uint64_t resvd[15];
+	} *resp;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.port = SSSNIC_PHY_PORT(hw);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_GET_NETIF_MAC_STATS_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_NETIF_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	resp_len = sizeof(*resp);
+	resp = rte_zmalloc(NULL, resp_len, 0);
+	if (resp == NULL) {
+		PMD_DRV_LOG(ERR,
+			"Failed to alloc memory for mac stats response cmd");
+		return -ENOMEM;
+	}
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)resp, &resp_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		goto out;
+	}
+
+	if (resp_len == 0 || resp->common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_NETIF_MAC_STATS_CMD, len=%u, status=%u",
+			resp_len, resp->common.status);
+		ret = -EIO;
+		goto out;
+	}
+
+	memcpy(stats, &resp->stats, sizeof(resp->stats));
+
+out:
+	rte_free(resp);
+	return ret;
+}
+
+int
+sssnic_mac_stats_clear(struct sssnic_hw *hw)
+{
+	int ret;
+	struct sssnic_mac_stats_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.port = SSSNIC_PHY_PORT(hw);
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_CLEAR_NETIF_MAC_STATS_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_NETIF_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_CLEAR_NETIF_MAC_STATS_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}

@@ -38,5 +38,9 @@ uint16_t sssnic_ethdev_rx_queue_depth_get(struct rte_eth_dev *ethdev,
 uint32_t sssnic_ethdev_rx_buf_size_index_get(uint16_t rx_buf_size);
 int sssnic_ethdev_rx_mode_set(struct rte_eth_dev *ethdev, uint32_t mode);
 int sssnic_ethdev_rx_offload_setup(struct rte_eth_dev *ethdev);
+int sssnic_ethdev_rx_queue_stats_get(struct rte_eth_dev *ethdev, uint16_t qid,
+	struct sssnic_ethdev_rxq_stats *stats);
+void sssnic_ethdev_rx_queue_stats_clear(struct rte_eth_dev *ethdev,
+	uint16_t qid);
 
 #endif
