@@ -96,6 +96,9 @@ enum sssnic_module {
 	SSSNIC_NETIF_MODULE = 14,
 };
 
+#define SSSNIC_TCAM_KEY_SIZE 44
+#define SSSNIC_TCAM_MAX_ENTRY_NUM 4096
+
 int sssnic_hw_init(struct sssnic_hw *hw);
 void sssnic_hw_shutdown(struct sssnic_hw *hw);
 void sssnic_msix_state_set(struct sssnic_hw *hw, uint16_t msix_id, int state);
