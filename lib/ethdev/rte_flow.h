@@ -40,6 +40,8 @@
 #include <rte_macsec.h>
 #include <rte_ib.h>
 
+#include "rte_ethdev.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -3181,22 +3183,6 @@ struct rte_flow_query_count {
 	uint32_t reserved:29; /**< Reserved, must be zero [in, out]. */
 	uint64_t hits; /**< Number of hits for this rule [out]. */
 	uint64_t bytes; /**< Number of bytes through this rule [out]. */
-};
-
-/**
- * Hash function types.
- */
-enum rte_eth_hash_function {
-	RTE_ETH_HASH_FUNCTION_DEFAULT = 0,
-	RTE_ETH_HASH_FUNCTION_TOEPLITZ, /**< Toeplitz */
-	RTE_ETH_HASH_FUNCTION_SIMPLE_XOR, /**< Simple XOR */
-	/**
-	 * Symmetric Toeplitz: src, dst will be replaced by
-	 * xor(src, dst). For the case with src/dst only,
-	 * src or dst address will xor with zero pair.
-	 */
-	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ,
-	RTE_ETH_HASH_FUNCTION_MAX,
 };
 
 /**
