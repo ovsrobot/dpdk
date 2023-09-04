@@ -88,6 +88,8 @@ struct sssnic_netdev {
 	uint16_t num_started_txqs;
 	uint16_t max_rx_size;
 	uint32_t rx_mode;
+	uint32_t rss_enable;
+	uint8_t rss_hash_key[SSSNIC_ETHDEV_RSS_KEY_SZ];
 };
 
 #define SSSNIC_ETHDEV_PRIVATE(eth_dev)                                         \
