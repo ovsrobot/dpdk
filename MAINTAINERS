@@ -1731,6 +1731,7 @@ F: lib/node/
 Dispatcher - EXPERIMENTAL
 M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
 F: lib/dispatcher/
+F: app/test/test_dispatcher.c
 
 Test Applications
 -----------------
