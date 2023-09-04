@@ -11,6 +11,7 @@
 #include "sssnic_reg.h"
 #include "sssnic_eventq.h"
 #include "sssnic_msg.h"
+#include "sssnic_mbox.h"
 
 static int
 wait_for_sssnic_hw_ready(struct sssnic_hw *hw)
@@ -210,8 +211,16 @@ sssnic_hw_init(struct sssnic_hw *hw)
 		goto eventq_init_fail;
 	}
 
+	ret = sssnic_mbox_init(hw);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to initialize mailbox");
+		goto mbox_init_fail;
+	}
+
 	return -EINVAL;
 
+mbox_init_fail:
+	sssnic_eventq_all_shutdown(hw);
 eventq_init_fail:
 	sssnic_msg_inbox_shutdown(hw);
 	return ret;
@@ -222,6 +231,7 @@ sssnic_hw_shutdown(struct sssnic_hw *hw)
 {
 	PMD_INIT_FUNC_TRACE();
 
+	sssnic_mbox_shutdown(hw);
 	sssnic_eventq_all_shutdown(hw);
 	sssnic_msg_inbox_shutdown(hw);
 }
