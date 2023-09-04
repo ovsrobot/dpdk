@@ -59,6 +59,25 @@
 #define SSSNIC_ETHDEV_DEF_RX_FREE_THRESH 32
 #define SSSNIC_ETHDEV_DEF_TX_FREE_THRESH 32
 
+#define SSSNIC_ETHDEV_DEFAULT_FEATURES 0x3fff
+
+enum sssnic_ethdev_rx_mode {
+	SSSNIC_ETHDEV_RX_MODE_NONE = 0,
+	SSSNIC_ETHDEV_RX_UCAST = RTE_BIT32(0),
+	SSSNIC_ETHDEV_RX_MCAST = RTE_BIT32(1),
+	SSSNIC_ETHDEV_RX_BCAST = RTE_BIT32(2),
+	SSSNIC_ETHDEV_RX_ALL_MCAST = RTE_BIT32(3),
+	SSSNIC_ETHDEV_RX_PROMISC = RTE_BIT32(4),
+	SSSNIC_ETHDEV_RX_MODE_INVAL = RTE_BIT32(5),
+};
+
+#define SSSNIC_ETHDEV_DEF_RX_MODE                                              \
+	(SSSNIC_ETHDEV_RX_UCAST | SSSNIC_ETHDEV_RX_MCAST |                     \
+		SSSNIC_ETHDEV_RX_BCAST)
+
+#define SSSNIC_ETHDEV_LRO_BUF_SIZE 1024
+#define SSSNIC_ETHDEV_LRO_TIMER 16
+
 struct sssnic_netdev {
 	void *hw;
 	struct rte_ether_addr *mcast_addrs;
@@ -67,6 +86,8 @@ struct sssnic_netdev {
 	uint16_t max_num_rxq;
 	uint16_t num_started_rxqs;
 	uint16_t num_started_txqs;
+	uint16_t max_rx_size;
+	uint32_t rx_mode;
 };
 
 #define SSSNIC_ETHDEV_PRIVATE(eth_dev)                                         \
