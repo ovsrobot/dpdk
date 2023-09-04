@@ -465,5 +465,9 @@ int sssnic_rss_indir_table_get(struct sssnic_hw *hw, uint16_t *entry,
 	uint32_t num_entries);
 int sssnic_fw_version_get(struct sssnic_hw *hw,
 	struct sssnic_fw_version *version);
+int sssnic_flow_ctrl_set(struct sssnic_hw *hw, bool autoneg, bool rx_en,
+	bool tx_en);
+int sssnic_flow_ctrl_get(struct sssnic_hw *hw, bool *autoneg, bool *rx_en,
+	bool *tx_en);
 
 #endif /* _SSSNIC_API_H_ */

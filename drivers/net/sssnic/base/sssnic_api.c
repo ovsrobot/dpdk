@@ -1533,3 +1533,71 @@ sssnic_fw_version_get(struct sssnic_hw *hw, struct sssnic_fw_version *version)
 
 	return 0;
 }
+
+int
+sssnic_flow_ctrl_set(struct sssnic_hw *hw, bool autoneg, bool rx_en, bool tx_en)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_flow_ctrl_cmd cmd;
+	uint32_t cmdlen = sizeof(cmd);
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.auto_neg = autoneg ? 1 : 0;
+	cmd.rx_en = rx_en ? 1 : 0;
+	cmd.tx_en = tx_en ? 1 : 0;
+	cmd.opcode = SSSNIC_CMD_OPCODE_SET;
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmdlen,
+		SSSNIC_PORT_FLOW_CTRL_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmdlen, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmdlen == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_PORT_FLOW_CTRL_CMD, len=%u, status=%u",
+			cmdlen, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int
+sssnic_flow_ctrl_get(struct sssnic_hw *hw, bool *autoneg, bool *rx_en,
+	bool *tx_en)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_flow_ctrl_cmd cmd;
+	uint32_t cmdlen = sizeof(cmd);
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.opcode = SSSNIC_CMD_OPCODE_GET;
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmdlen,
+		SSSNIC_PORT_FLOW_CTRL_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmdlen, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmdlen == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_PORT_FLOW_CTRL_CMD, len=%u, status=%u",
+			cmdlen, cmd.common.status);
+		return -EIO;
+	}
+
+	*autoneg = cmd.auto_neg;
+	*rx_en = cmd.rx_en;
+	*tx_en = cmd.tx_en;
+
+	return 0;
+}
