@@ -1601,3 +1601,37 @@ sssnic_flow_ctrl_get(struct sssnic_hw *hw, bool *autoneg, bool *rx_en,
 
 	return 0;
 }
+
+int
+sssnic_vlan_filter_set(struct sssnic_hw *hw, uint16_t vid, bool add)
+{
+	int ret;
+	struct sssnic_vlan_filter_set_cmd cmd;
+	struct sssnic_msg msg;
+	uint32_t cmd_len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.function = SSSNIC_FUNC_IDX(hw);
+	cmd.add = add ? 1 : 0;
+	cmd.vid = vid;
+	cmd_len = sizeof(cmd);
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmd_len,
+		SSSNIC_SET_PORT_VLAN_FILTER_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_LAN_MODULE, SSSNIC_MSG_TYPE_REQ);
+
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmd_len, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmd_len == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_SET_PORT_VLAN_FILTER_CMD, len=%u, status=%u",
+			cmd_len, cmd.common.status);
+		return -EIO;
+	}
+
+	return 0;
+}
