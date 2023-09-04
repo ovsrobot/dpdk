@@ -13,6 +13,8 @@
 #include "sssnic_ethdev_rx.h"
 #include "sssnic_ethdev_tx.h"
 
+static int sssnic_ethdev_init(struct rte_eth_dev *ethdev);
+
 static int
 sssnic_ethdev_infos_get(struct rte_eth_dev *ethdev,
 	struct rte_eth_dev_info *devinfo)
@@ -622,9 +624,39 @@ sssnic_ethdev_stop(struct rte_eth_dev *ethdev)
 	return 0;
 }
 
+static int
+sssnic_ethdev_close(struct rte_eth_dev *ethdev)
+{
+	sssnic_ethdev_release(ethdev);
+
+	PMD_DRV_LOG(INFO, "Port %u is closed", ethdev->data->port_id);
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_reset(struct rte_eth_dev *ethdev)
+{
+	int ret;
+
+	sssnic_ethdev_release(ethdev);
+
+	ret = sssnic_ethdev_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize sssnic ethdev");
+		return ret;
+	}
+
+	PMD_DRV_LOG(INFO, "Port %u is reset", ethdev->data->port_id);
+
+	return 0;
+}
+
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_start = sssnic_ethdev_start,
 	.dev_stop = sssnic_ethdev_stop,
+	.dev_close = sssnic_ethdev_close,
+	.dev_reset = sssnic_ethdev_reset,
 	.dev_set_link_up = sssnic_ethdev_set_link_up,
 	.dev_set_link_down = sssnic_ethdev_set_link_down,
 	.link_update = sssnic_ethdev_link_update,
