@@ -406,4 +406,12 @@ struct sssnic_rss_indir_table_cmd {
 	uint16_t entry[256];
 };
 
+struct sssnic_fw_version_get_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t type;
+	uint16_t resvd;
+	uint8_t version[16];
+	uint8_t time[20];
+};
+
 #endif /* _SSSNIC_CMD_H_ */

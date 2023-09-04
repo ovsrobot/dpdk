@@ -1497,3 +1497,39 @@ out:
 	sssnic_ctrlq_cmd_destroy(hw, cmd);
 	return ret;
 }
+
+int
+sssnic_fw_version_get(struct sssnic_hw *hw, struct sssnic_fw_version *version)
+{
+	int ret;
+	struct sssnic_msg msg;
+	struct sssnic_fw_version_get_cmd cmd;
+	uint32_t cmdlen = sizeof(cmd);
+	int len;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.type = 1; /* get MPU firmware version */
+
+	sssnic_msg_init(&msg, (uint8_t *)&cmd, cmdlen,
+		SSSNIC_GET_FW_VERSION_CMD, SSSNIC_MPU_FUNC_IDX,
+		SSSNIC_COMM_MODULE, SSSNIC_MSG_TYPE_REQ);
+	ret = sssnic_mbox_send(hw, &msg, (uint8_t *)&cmd, &cmdlen, 0);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to send mbox message, ret=%d", ret);
+		return ret;
+	}
+
+	if (cmdlen == 0 || cmd.common.status != 0) {
+		PMD_DRV_LOG(ERR,
+			"Bad response to SSSNIC_GET_FW_VERSION_CMD, len=%u, status=%u",
+			cmdlen, cmd.common.status);
+		return -EIO;
+	}
+
+	len = RTE_MIN(sizeof(version->version), sizeof(cmd.version));
+	rte_memcpy(version->version, cmd.version, len);
+	len = RTE_MIN(sizeof(version->time), sizeof(cmd.time));
+	rte_memcpy(version->time, cmd.time, len);
+
+	return 0;
+}
