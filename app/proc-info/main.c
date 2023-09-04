@@ -996,6 +996,23 @@ show_offloads(uint64_t offloads,
 	}
 }
 
+static const char *
+rss_func_to_str(enum rte_eth_hash_function func)
+{
+	switch (func) {
+	case RTE_ETH_HASH_FUNCTION_SIMPLE_XOR:
+		return "simple_xor";
+	case RTE_ETH_HASH_FUNCTION_TOEPLITZ:
+		return "toeplitz";
+	case RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ:
+		return "symmetric_toeplitz";
+	case RTE_ETH_HASH_FUNCTION_DEFAULT:
+		return "default";
+	default:
+		return "unknown";
+	}
+}
+
 static void
 show_port(void)
 {
@@ -1188,6 +1205,8 @@ show_port(void)
 				printf("%02x", rss_conf.rss_key[k]);
 			printf("\n\t  -- hf : 0x%"PRIx64"\n",
 					rss_conf.rss_hf);
+			printf("\t  -- hash algorithm : %s\n",
+				rss_func_to_str(rss_conf.func));
 		}
 
 		free(rss_key);
