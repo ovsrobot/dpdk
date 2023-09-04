@@ -20,6 +20,14 @@ enum sssnic_mgmt_cmd_id {
 
 #define SSSNIC_GET_CAPABILITY_CMD 0
 
+#define SSSNIC_MAC_ADDR_CMD_STATUS_IGNORED 0x4
+enum sssnic_mac_addr_cmd_id {
+	SSSNIC_GET_MAC_ADDR_CMD = 20,
+	SSSNIC_ADD_MAC_ADDR_CMD,
+	SSSNIC_DEL_MAC_ADDR_CMD,
+	SSSNIC_UPDATE_MAC_ADDR_CMD,
+};
+
 struct sssnic_cmd_common {
 	uint8_t status;
 	uint8_t version;
@@ -125,4 +133,21 @@ struct sssnic_capability_get_cmd {
 	uint32_t resvd3[63];
 };
 
+struct sssnic_mac_addr_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t vlan;
+	uint16_t resvd;
+	uint8_t addr[6];
+};
+
+struct sssnic_mac_addr_update_cmd {
+	struct sssnic_cmd_common common;
+	uint16_t function;
+	uint16_t vlan;
+	uint16_t resvd0;
+	uint8_t old_addr[6];
+	uint16_t resvd1;
+	uint8_t new_addr[6];
+};
 #endif /* _SSSNIC_CMD_H_ */

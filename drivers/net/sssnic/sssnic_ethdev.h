@@ -58,6 +58,8 @@
 
 struct sssnic_netdev {
 	void *hw;
+	struct rte_ether_addr *mcast_addrs;
+	struct rte_ether_addr default_addr;
 	uint16_t max_num_txq;
 	uint16_t max_num_rxq;
 };

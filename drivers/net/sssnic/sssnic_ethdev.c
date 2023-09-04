@@ -7,6 +7,7 @@
 
 #include "sssnic_log.h"
 #include "base/sssnic_hw.h"
+#include "base/sssnic_api.h"
 #include "sssnic_ethdev.h"
 
 static int
@@ -64,6 +65,258 @@ sssnic_ethdev_infos_get(struct rte_eth_dev *ethdev,
 }
 
 static int
+sssnic_ethdev_mac_addr_set(struct rte_eth_dev *ethdev,
+	struct rte_ether_addr *mac_addr)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	char mac_str[RTE_ETHER_ADDR_FMT_SIZE];
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE, mac_addr);
+
+	ret = sssnic_mac_addr_update(hw, mac_addr->addr_bytes,
+		netdev->default_addr.addr_bytes);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to update default MAC address: %s",
+			mac_str);
+		return ret;
+	}
+	rte_ether_addr_copy(mac_addr, &netdev->default_addr);
+
+	PMD_DRV_LOG(INFO, "Updated default MAC address %s of port %u", mac_str,
+		ethdev->data->port_id);
+
+	return 0;
+}
+
+static void
+sssnic_ethdev_mac_addr_remove(struct rte_eth_dev *ethdev, uint32_t index)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	struct rte_ether_addr *mac;
+	char mac_str[RTE_ETHER_ADDR_FMT_SIZE];
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	mac = &ethdev->data->mac_addrs[index];
+	ret = sssnic_mac_addr_del(hw, mac->addr_bytes);
+	if (ret != 0) {
+		rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE, mac);
+		PMD_DRV_LOG(ERR, "Failed to delete MAC address %s", mac_str);
+	}
+}
+
+static int
+sssnic_ethdev_mac_addr_add(struct rte_eth_dev *ethdev,
+	struct rte_ether_addr *mac_addr, __rte_unused uint32_t index,
+	__rte_unused uint32_t vmdq)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	char mac_str[RTE_ETHER_ADDR_FMT_SIZE];
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	if (rte_is_multicast_ether_addr(mac_addr)) {
+		rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE,
+			mac_addr);
+		PMD_DRV_LOG(ERR,
+			"Invalid MAC address:%s, cannot be multicast address",
+			mac_str);
+	}
+
+	ret = sssnic_mac_addr_add(hw, mac_addr->addr_bytes);
+	if (ret != 0) {
+		rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE,
+			mac_addr);
+		PMD_DRV_LOG(ERR, "Failed to add MAC address %s", mac_str);
+		return ret;
+	}
+
+	return 0;
+}
+
+static void
+sssnic_ethdev_mcast_addrs_clean(struct rte_eth_dev *ethdev)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	int i;
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	for (i = 0; i < SSSNIC_ETHDEV_MAX_NUM_MC_MAC; i++) {
+		if (rte_is_zero_ether_addr(&netdev->mcast_addrs[i]))
+			break;
+
+		ret = sssnic_mac_addr_del(hw,
+			netdev->mcast_addrs[i].addr_bytes);
+		if (ret != 0)
+			PMD_DRV_LOG(WARNING, "Failed to delete MAC address");
+
+		memset(&netdev->mcast_addrs[i], 0,
+			sizeof(struct rte_ether_addr));
+	}
+}
+
+static int
+sssnic_ethdev_set_mc_addr_list(struct rte_eth_dev *ethdev,
+	struct rte_ether_addr *mc_addr_set, uint32_t nb_mc_addr)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	char mac_str[RTE_ETHER_ADDR_FMT_SIZE];
+	uint32_t i;
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	if (nb_mc_addr > SSSNIC_ETHDEV_MAX_NUM_MC_MAC) {
+		PMD_DRV_LOG(ERR,
+			"Failed to set mcast address list to port %u, excceds max number:%u",
+			ethdev->data->port_id, SSSNIC_ETHDEV_MAX_NUM_MC_MAC);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < nb_mc_addr; i++) {
+		if (!rte_is_multicast_ether_addr(&mc_addr_set[i])) {
+			rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE,
+				&mc_addr_set[i]);
+			PMD_DRV_LOG(ERR, "Invalid Multicast MAC address: %s",
+				mac_str);
+			return -EINVAL;
+		}
+	}
+
+	sssnic_ethdev_mcast_addrs_clean(ethdev);
+
+	for (i = 0; i < nb_mc_addr; i++) {
+		ret = sssnic_mac_addr_add(hw, mc_addr_set[i].addr_bytes);
+		if (ret != 0) {
+			sssnic_ethdev_mcast_addrs_clean(ethdev);
+			rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE,
+				&mc_addr_set[i]);
+			PMD_DRV_LOG(ERR,
+				"Failed to add Multicast MAC address: %s",
+				mac_str);
+			return ret;
+		}
+		rte_ether_addr_copy(&mc_addr_set[i], &netdev->mcast_addrs[i]);
+	}
+
+	return 0;
+}
+
+static int
+sssnic_ethdev_mac_addrs_init(struct rte_eth_dev *ethdev)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	struct rte_ether_addr default_addr;
+	char mac_str[RTE_ETHER_ADDR_FMT_SIZE];
+
+	PMD_INIT_FUNC_TRACE();
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	ethdev->data->mac_addrs = rte_zmalloc(NULL,
+		SSSNIC_ETHDEV_MAX_NUM_UC_MAC * sizeof(struct rte_ether_addr),
+		0);
+	if (ethdev->data->mac_addrs == NULL) {
+		PMD_DRV_LOG(ERR,
+			"Failed to allocate memory to store %u mac addresses",
+			SSSNIC_ETHDEV_MAX_NUM_UC_MAC);
+		return -ENOMEM;
+	}
+
+	netdev->mcast_addrs = rte_zmalloc(NULL,
+		SSSNIC_ETHDEV_MAX_NUM_MC_MAC * sizeof(struct rte_ether_addr),
+		0);
+	if (netdev->mcast_addrs == NULL) {
+		PMD_DRV_LOG(ERR,
+			"Failed to allocate memory to store %u mcast addresses",
+			SSSNIC_ETHDEV_MAX_NUM_MC_MAC);
+		ret = -ENOMEM;
+		goto alloc_mcast_addr_fail;
+	}
+
+	/* initialize default MAC address */
+	memset(&default_addr, 0, sizeof(default_addr));
+	ret = sssnic_mac_addr_get(hw, default_addr.addr_bytes);
+	if (ret != 0)
+		PMD_DRV_LOG(NOTICE,
+			"Could not get default MAC address, will use random address");
+
+	if (rte_is_zero_ether_addr(&default_addr))
+		rte_eth_random_addr(default_addr.addr_bytes);
+
+	rte_ether_format_addr(mac_str, RTE_ETHER_ADDR_FMT_SIZE, &default_addr);
+
+	ret = sssnic_mac_addr_add(hw, default_addr.addr_bytes);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to add default MAC address: %s",
+			mac_str);
+		goto add_ether_addr_fail;
+	}
+
+	rte_ether_addr_copy(&default_addr, &ethdev->data->mac_addrs[0]);
+	rte_ether_addr_copy(&default_addr, &netdev->default_addr);
+
+	PMD_DRV_LOG(INFO, "Port %u default MAC address: %s",
+		ethdev->data->port_id, mac_str);
+
+	return 0;
+
+add_ether_addr_fail:
+	rte_free(netdev->mcast_addrs);
+	netdev->mcast_addrs = NULL;
+alloc_mcast_addr_fail:
+	rte_free(ethdev->data->mac_addrs);
+	ethdev->data->mac_addrs = NULL;
+	return ret;
+}
+
+static void
+sssnic_ethdev_mac_addrs_clean(struct rte_eth_dev *ethdev)
+{
+	int ret;
+	struct sssnic_netdev *netdev;
+	struct sssnic_hw *hw;
+	int i;
+
+	netdev = SSSNIC_ETHDEV_PRIVATE(ethdev);
+	hw = SSSNIC_NETDEV_TO_HW(netdev);
+
+	for (i = 0; i < SSSNIC_ETHDEV_MAX_NUM_UC_MAC; i++) {
+		if (rte_is_zero_ether_addr(&ethdev->data->mac_addrs[i]))
+			continue;
+
+		ret = sssnic_mac_addr_del(hw,
+			ethdev->data->mac_addrs[i].addr_bytes);
+		if (ret != 0)
+			PMD_DRV_LOG(ERR,
+				"Failed to delete MAC address from port %u",
+				ethdev->data->port_id);
+	}
+
+	sssnic_ethdev_mcast_addrs_clean(ethdev);
+}
+
+static int
 sssnic_ethdev_configure(struct rte_eth_dev *ethdev)
 {
 	if (ethdev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)
@@ -80,6 +333,7 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 {
 	struct sssnic_hw *hw = SSSNIC_ETHDEV_TO_HW(ethdev);
 
+	sssnic_ethdev_mac_addrs_clean(ethdev);
 	sssnic_hw_shutdown(hw);
 	rte_free(hw);
 }
@@ -87,6 +341,10 @@ sssnic_ethdev_release(struct rte_eth_dev *ethdev)
 static const struct eth_dev_ops sssnic_ethdev_ops = {
 	.dev_configure = sssnic_ethdev_configure,
 	.dev_infos_get = sssnic_ethdev_infos_get,
+	.mac_addr_set = sssnic_ethdev_mac_addr_set,
+	.mac_addr_remove = sssnic_ethdev_mac_addr_remove,
+	.mac_addr_add = sssnic_ethdev_mac_addr_add,
+	.set_mc_addr_list = sssnic_ethdev_set_mc_addr_list,
 };
 
 static int
@@ -118,12 +376,22 @@ sssnic_ethdev_init(struct rte_eth_dev *ethdev)
 		return ret;
 	}
 
+	ret = sssnic_ethdev_mac_addrs_init(ethdev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to initialize MAC addresses");
+		goto mac_addrs_init_fail;
+	}
+
 	netdev->max_num_rxq = SSSNIC_MAX_NUM_RXQ(hw);
 	netdev->max_num_txq = SSSNIC_MAX_NUM_TXQ(hw);
 
 	ethdev->dev_ops = &sssnic_ethdev_ops;
 
 	return 0;
+
+mac_addrs_init_fail:
+	sssnic_hw_shutdown(0);
+	return ret;
 }
 
 static int
@@ -140,7 +408,7 @@ sssnic_ethdev_uninit(struct rte_eth_dev *ethdev)
 
 	sssnic_ethdev_release(ethdev);
 
-	return -EINVAL;
+	return 0;
 }
 
 static int
