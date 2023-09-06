@@ -1862,17 +1862,19 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 	/* For match mask the first bit of every two bits indicates the match */
 	switch (sig_cmp_fn) {
 #if defined(__SSE2__)
-	case RTE_HASH_COMPARE_SSE:
+	case RTE_HASH_COMPARE_SSE: {
 		/* Compare all signatures in the bucket */
-		*prim_hash_matches = _mm_movemask_epi8(_mm_cmpeq_epi16(
-				_mm_load_si128(
+		__m128i shift_mask = _mm_set1_epi16(0x0080);
+		__m128i prim_cmp = _mm_cmpeq_epi16(_mm_load_si128(
 					(__m128i const *)prim_bkt->sig_current),
-				_mm_set1_epi16(sig)));
+					_mm_set1_epi16(sig));
+		*prim_hash_matches = _mm_movemask_epi8(_mm_and_si128(prim_cmp, shift_mask));
 		/* Compare all signatures in the bucket */
-		*sec_hash_matches = _mm_movemask_epi8(_mm_cmpeq_epi16(
-				_mm_load_si128(
+		__m128i sec_cmp = _mm_cmpeq_epi16(_mm_load_si128(
 					(__m128i const *)sec_bkt->sig_current),
-				_mm_set1_epi16(sig)));
+					_mm_set1_epi16(sig));
+		*sec_hash_matches = _mm_movemask_epi8(_mm_and_si128(sec_cmp, shift_mask));
+		}
 		break;
 #elif defined(__ARM_NEON)
 	case RTE_HASH_COMPARE_NEON: {
