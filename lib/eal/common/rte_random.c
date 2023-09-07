@@ -11,6 +11,7 @@
 #include <rte_branch_prediction.h>
 #include <rte_cycles.h>
 #include <rte_lcore.h>
+#include <rte_spinlock.h>
 #include <rte_random.h>
 
 struct rte_rand_state {
@@ -20,6 +21,9 @@ struct rte_rand_state {
 	uint64_t z4;
 	uint64_t z5;
 } __rte_cache_aligned;
+
+/* Used for thread safety for non EAL threads. */
+static rte_spinlock_t rte_rand_lock = RTE_SPINLOCK_INITIALIZER;
 
 /* One instance each for every lcore id-equipped thread, and one
  * additional instance to be shared by all others threads (i.e., all
@@ -124,20 +128,32 @@ struct rte_rand_state *__rte_rand_get_state(void)
 	idx = rte_lcore_id();
 
 	/* last instance reserved for unregistered non-EAL threads */
-	if (unlikely(idx == LCORE_ID_ANY))
+	if (unlikely(idx == LCORE_ID_ANY)) {
 		idx = RTE_MAX_LCORE;
+		rte_spinlock_lock(&rte_rand_lock);
+	}
 
 	return &rand_states[idx];
+}
+
+static __rte_always_inline
+void __rte_rand_put_state(struct rte_rand_state *state)
+{
+	if (state == &rand_states[RTE_MAX_LCORE])
+		rte_spinlock_unlock(&rte_rand_lock);
 }
 
 uint64_t
 rte_rand(void)
 {
 	struct rte_rand_state *state;
+	uint64_t res;
 
 	state = __rte_rand_get_state();
+	res = __rte_rand_lfsr258(state);
+	__rte_rand_put_state(state);
 
-	return __rte_rand_lfsr258(state);
+	return res;
 }
 
 uint64_t
@@ -159,22 +175,24 @@ rte_rand_max(uint64_t upper_bound)
 	/* Handle power-of-2 upper_bound as a special case, since it
 	 * has no bias issues.
 	 */
-	if (unlikely(ones == 1))
-		return __rte_rand_lfsr258(state) & (upper_bound - 1);
+	if (unlikely(ones == 1)) {
+		res = __rte_rand_lfsr258(state) & (upper_bound - 1);
+	} else {
+		/* The approach to avoiding bias is to create a mask that
+		 * stretches beyond the request value range, and up to the
+		 * next power-of-2. In case the masked generated random value
+		 * is equal to or greater than the upper bound, just discard
+		 * the value and generate a new one.
+		 */
 
-	/* The approach to avoiding bias is to create a mask that
-	 * stretches beyond the request value range, and up to the
-	 * next power-of-2. In case the masked generated random value
-	 * is equal to or greater than the upper bound, just discard
-	 * the value and generate a new one.
-	 */
+		leading_zeros = rte_clz64(upper_bound);
+		mask >>= leading_zeros;
 
-	leading_zeros = rte_clz64(upper_bound);
-	mask >>= leading_zeros;
-
-	do {
-		res = __rte_rand_lfsr258(state) & mask;
-	} while (unlikely(res >= upper_bound));
+		do {
+			res = __rte_rand_lfsr258(state) & mask;
+		} while (unlikely(res >= upper_bound));
+	}
+	__rte_rand_put_state(state);
 
 	return res;
 }
