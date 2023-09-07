@@ -278,6 +278,13 @@ int16_t rte_dma_next_dev(int16_t start_dev_id);
 #define RTE_DMA_CAPA_OPS_COPY_SG	RTE_BIT64(33)
 /** Support fill operation. */
 #define RTE_DMA_CAPA_OPS_FILL		RTE_BIT64(34)
+/** Support for source buffer free for mem to dev transfer.
+ *
+ * @note Even though the DMA driver has this capability, it may not support all
+ * mempool drivers. If the mempool is not supported by the DMA driver,
+ * rte_dma_vchan_setup() will fail.
+ **/
+#define RTE_DMA_CAPA_MEM_TO_DEV_SOURCE_BUFFER_FREE	RTE_BIT64(35)
 /**@}*/
 
 /**
@@ -581,6 +588,19 @@ struct rte_dma_vchan_conf {
 	 * @see struct rte_dma_port_param
 	 */
 	struct rte_dma_port_param dst_port;
+	/** mempool from which source buffer is allocated. mempool info is used
+	 * for freeing source buffer by hardware when configured direction is
+	 * RTE_DMA_DIR_MEM_TO_DEV. To free the source buffer by hardware,
+	 * RTE_DMA_OP_FLAG_FREE_SBUF must be set while calling rte_dma_copy and
+	 * rte_dma_copy_sg().
+	 *
+	 * @note If the mempool is not supported by the DMA driver,
+	 * rte_dma_vchan_setup() will fail.
+	 *
+	 * @see RTE_DMA_OP_FLAG_FREE_SBUF
+	 */
+	struct rte_mempool *mem_to_dev_src_buf_pool;
+
 };
 
 /**
@@ -818,6 +838,13 @@ struct rte_dma_sge {
  * capability bit for this, driver should not return error if this flag was set.
  */
 #define RTE_DMA_OP_FLAG_LLC     RTE_BIT64(2)
+/** Mem to dev source buffer free flag.
+ * Used for freeing source DMA buffer by hardware when the transfer direction is
+ * configured as RTE_DMA_DIR_MEM_TO_DEV.
+ *
+ * @see struct rte_dma_vchan_conf::mem_to_dev_src_buf_pool
+ */
+#define RTE_DMA_OP_FLAG_FREE_SBUF	RTE_BIT64(3)
 /**@}*/
 
 /**
