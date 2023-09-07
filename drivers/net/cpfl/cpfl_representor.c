@@ -308,6 +308,23 @@ cpfl_repr_tx_queue_setup(__rte_unused struct rte_eth_dev *dev,
 	return 0;
 }
 
+static int
+cpfl_repr_link_update(struct rte_eth_dev *ethdev,
+		      __rte_unused int wait_to_complete)
+{
+	struct cpfl_repr *repr = CPFL_DEV_TO_REPR(ethdev);
+	struct rte_eth_link *dev_link = &ethdev->data->dev_link;
+
+	if (!(ethdev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)) {
+		PMD_INIT_LOG(ERR, "This ethdev is not representor.");
+		return -EINVAL;
+	}
+	dev_link->link_status = repr->func_up ?
+		RTE_ETH_LINK_UP : RTE_ETH_LINK_DOWN;
+
+	return 0;
+}
+
 static const struct eth_dev_ops cpfl_repr_dev_ops = {
 	.dev_start		= cpfl_repr_dev_start,
 	.dev_stop		= cpfl_repr_dev_stop,
@@ -317,6 +334,8 @@ static const struct eth_dev_ops cpfl_repr_dev_ops = {
 
 	.rx_queue_setup		= cpfl_repr_rx_queue_setup,
 	.tx_queue_setup		= cpfl_repr_tx_queue_setup,
+
+	.link_update		= cpfl_repr_link_update,
 };
 
 static int
@@ -331,6 +350,8 @@ cpfl_repr_init(struct rte_eth_dev *eth_dev, void *init_param)
 	repr->itf.type = CPFL_ITF_TYPE_REPRESENTOR;
 	repr->itf.adapter = adapter;
 	repr->itf.data = eth_dev->data;
+	if (repr->vport_info->vport_info.vport_status == CPCHNL2_VPORT_STATUS_ENABLED)
+		repr->func_up = true;
 
 	eth_dev->dev_ops = &cpfl_repr_dev_ops;
 
