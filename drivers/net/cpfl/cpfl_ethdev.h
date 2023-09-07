@@ -21,6 +21,7 @@
 
 #include "cpfl_logs.h"
 #include "cpfl_cpchnl.h"
+#include "cpfl_representor.h"
 
 /* Currently, backend supports up to 8 vports */
 #define CPFL_MAX_VPORT_NUM	8
@@ -60,10 +61,40 @@
 #define IDPF_DEV_ID_CPF			0x1453
 #define VIRTCHNL2_QUEUE_GROUP_P2P	0x100
 
-#define CPFL_HOST_ID_HOST	0
-#define CPFL_HOST_ID_ACC	1
-#define CPFL_PF_TYPE_APF	0
-#define CPFL_PF_TYPE_CPF	1
+#define CPFL_HOST_ID_NUM	2
+#define CPFL_PF_TYPE_NUM	2
+
+/* bit[15:14] type
+ * bit[13] xeon/acc
+ * bit[12] apf/cpf
+ * bit[11:0] vf
+ */
+#define CPFL_REPRESENTOR_ID(type, host_id, pf_id, vf_id)	\
+	((((type) & 0x3) << 14) + (((host_id) & 0x1) << 13) +	\
+	 (((pf_id) & 0x1) << 12) + ((vf_id) & 0xfff))
+
+enum cpfl_host_id {
+	CPFL_HOST_ID_HOST = 0,
+	CPFL_HOST_ID_ACC,
+};
+
+enum cpfl_pf_type {
+	CPFL_PF_TYPE_APF = 0,
+	CPFL_PF_TYPE_CPF,
+};
+
+/* Function IDs on IMC side */
+enum cpfl_func_id {
+	CPFL_HOST0_APF = 0,
+	CPFL_ACC_APF_ID = 4,
+	CPFL_HOST0_CPF_ID = 8,
+	CPFL_ACC_CPF_ID = 12,
+};
+
+enum cpfl_vport_func_type {
+	CPFL_VPORT_LAN_PF = 0,
+	CPFL_VPORT_LAN_VF,
+};
 
 struct cpfl_vport_param {
 	struct cpfl_adapter_ext *adapter;
@@ -136,6 +167,13 @@ struct cpfl_vport {
 	bool p2p_manual_bind;
 };
 
+struct cpfl_repr {
+	struct cpfl_itf itf;
+	struct cpfl_repr_id repr_id;
+	struct rte_ether_addr mac_addr;
+	struct cpfl_vport_info *vport_info;
+};
+
 struct cpfl_adapter_ext {
 	TAILQ_ENTRY(cpfl_adapter_ext) next;
 	struct idpf_adapter base;
@@ -153,6 +191,9 @@ struct cpfl_adapter_ext {
 
 	rte_spinlock_t vport_map_lock;
 	struct rte_hash *vport_map_hash;
+
+	rte_spinlock_t repr_lock;
+	struct rte_hash *repr_allowlist_hash;
 };
 
 TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
@@ -163,6 +204,8 @@ TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
 	container_of((p), struct cpfl_adapter_ext, base)
 #define CPFL_DEV_TO_VPORT(dev)					\
 	((struct cpfl_vport *)((dev)->data->dev_private))
+#define CPFL_DEV_TO_REPR(dev)					\
+	((struct cpfl_repr *)((dev)->data->dev_private))
 #define CPFL_DEV_TO_ITF(dev)				\
 	((struct cpfl_itf *)((dev)->data->dev_private))
 
