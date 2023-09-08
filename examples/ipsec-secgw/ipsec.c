@@ -327,9 +327,7 @@ create_lookaside_session(struct ipsec_ctx *ipsec_ctx_lcore[],
 		};
 
 		if (ips->type == RTE_SECURITY_ACTION_TYPE_LOOKASIDE_PROTOCOL) {
-			struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-							rte_cryptodev_get_sec_ctx(
-							cdev_id);
+			struct rte_security_ctx *ctx = rte_cryptodev_get_sec_ctx(cdev_id);
 
 			/* Set IPsec parameters in conf */
 			set_ipsec_conf(sa, &(sess_conf.ipsec));
