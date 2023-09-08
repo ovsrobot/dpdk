@@ -1432,7 +1432,9 @@ struct mlx5_dev_ctx_shared {
 	/* Direct Rules tables for FDB, NIC TX+RX */
 	void *dr_drop_action; /* Pointer to DR drop action, any domain. */
 	void *pop_vlan_action; /* Pointer to DR pop VLAN action. */
-	struct mlx5_send_to_kernel_action send_to_kernel_action;
+#if defined(HAVE_IBV_FLOW_DV_SUPPORT) || !defined(HAVE_INFINIBAND_VERBS_H)
+	struct mlx5_send_to_kernel_action send_to_kernel_action[MLX5DR_TABLE_TYPE_MAX];
+#endif
 	struct mlx5_hlist *encaps_decaps; /* Encap/decap action hash list. */
 	struct mlx5_hlist *modify_cmds;
 	struct mlx5_hlist *tag_table;
