@@ -153,6 +153,13 @@ static struct desc_param rx_desc_param;
 static struct desc_param tx_desc_param;
 
 #define RSS_HASH_KEY_SIZE 64
+static const char * const rss_hash_algos[] = {
+	[RTE_ETH_HASH_FUNCTION_SIMPLE_XOR] = "simple_xor",
+	[RTE_ETH_HASH_FUNCTION_TOEPLITZ] = "toeplitz",
+	[RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ] = "symmetric_toeplitz",
+	[RTE_ETH_HASH_FUNCTION_DEFAULT] = "default",
+	[RTE_ETH_HASH_FUNCTION_MAX] = "unknown"
+};
 
 /* display usage */
 static void
@@ -1186,6 +1193,8 @@ show_port(void)
 				printf("%02x", rss_conf.rss_key[k]);
 			printf("\n\t  -- hf : 0x%"PRIx64"\n",
 					rss_conf.rss_hf);
+			printf("\t  -- hash algorithm : %s\n",
+				rss_hash_algos[rss_conf.func]);
 		}
 
 #ifdef RTE_LIB_SECURITY
