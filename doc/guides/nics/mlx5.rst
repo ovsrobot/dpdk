@@ -165,6 +165,7 @@ Features
 - Sub-Function.
 - Matching on represented port.
 - Matching on aggregated affinity.
+- Send to kernel.
 
 
 Limitations
@@ -720,6 +721,12 @@ Limitations
   The flow engine of a process cannot move from active to standby mode
   if preceding active application rules are still present and vice versa.
 
+- Send to kernel action (``RTE_FLOW_ACTION_TYPE_SEND_TO_KERNEL``):
+
+  - Supports on non-root table.
+  - Supports on isolated mode.
+  - In HW steering (``dv_flow_en`` = 2):
+    - not supported on guest port.
 
 Statistics
 ----------
