@@ -647,6 +647,7 @@ create_ipsec_session(struct rte_mempool *sess_mp,
 	struct rte_crypto_sym_xform auth_xform = {0};
 	struct rte_crypto_sym_xform *crypto_xform;
 	struct rte_crypto_sym_xform xform = {0};
+	struct rte_security_ctx *ctx;
 
 	if (options->aead_algo != 0) {
 		/* Setup AEAD Parameters */
@@ -749,8 +750,7 @@ create_ipsec_session(struct rte_mempool *sess_mp,
 	else
 		sess_conf.ipsec.direction = RTE_SECURITY_IPSEC_SA_DIR_INGRESS;
 
-	struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-				rte_cryptodev_get_sec_ctx(dev_id);
+	ctx = rte_cryptodev_get_sec_ctx(dev_id);
 
 	/* Create security session */
 	return (void *)rte_security_session_create(ctx, &sess_conf, sess_mp);
@@ -766,6 +766,7 @@ cperf_create_session(struct rte_mempool *sess_mp,
 	struct rte_crypto_sym_xform cipher_xform;
 	struct rte_crypto_sym_xform auth_xform;
 	struct rte_crypto_sym_xform aead_xform;
+	struct rte_security_ctx *ctx;
 	void *sess = NULL;
 	void *asym_sess = NULL;
 	struct rte_crypto_asym_xform xform = {0};
@@ -853,8 +854,7 @@ cperf_create_session(struct rte_mempool *sess_mp,
 			.crypto_xform = &cipher_xform
 		};
 
-		struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-					rte_cryptodev_get_sec_ctx(dev_id);
+		ctx = rte_cryptodev_get_sec_ctx(dev_id);
 
 		/* Create security session */
 		return (void *)rte_security_session_create(ctx, &sess_conf, sess_mp);
@@ -901,8 +901,8 @@ cperf_create_session(struct rte_mempool *sess_mp,
 			} },
 			.crypto_xform = &cipher_xform
 		};
-		struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-					rte_cryptodev_get_sec_ctx(dev_id);
+
+		ctx = rte_cryptodev_get_sec_ctx(dev_id);
 
 		/* Create security session */
 		return (void *)rte_security_session_create(ctx, &sess_conf, sess_mp);

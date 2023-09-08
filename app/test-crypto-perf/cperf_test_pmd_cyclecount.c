@@ -67,9 +67,7 @@ cperf_pmd_cyclecount_test_free(struct cperf_pmd_cyclecount_ctx *ctx)
 #ifdef RTE_LIB_SECURITY
 		if (ctx->options->op_type == CPERF_PDCP ||
 				ctx->options->op_type == CPERF_DOCSIS) {
-			struct rte_security_ctx *sec_ctx =
-				(struct rte_security_ctx *)
-				rte_cryptodev_get_sec_ctx(ctx->dev_id);
+			struct rte_security_ctx *sec_ctx = rte_cryptodev_get_sec_ctx(ctx->dev_id);
 			rte_security_session_destroy(sec_ctx,
 				(void *)ctx->sess);
 		} else
