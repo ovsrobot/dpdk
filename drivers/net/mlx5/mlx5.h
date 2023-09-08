@@ -1858,7 +1858,7 @@ struct mlx5_priv {
 	/* HW steering global tag action. */
 	struct mlx5dr_action *hw_tag[2];
 	/* HW steering global send to kernel action. */
-	struct mlx5dr_action *hw_send_to_kernel;
+	struct mlx5dr_action *hw_send_to_kernel[MLX5DR_TABLE_TYPE_MAX];
 	/* HW steering create ongoing rte flow table list header. */
 	LIST_HEAD(flow_hw_tbl_ongo, rte_flow_template_table) flow_hw_tbl_ongo;
 	struct mlx5_indexed_pool *acts_ipool; /* Action data indexed pool. */
