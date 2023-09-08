@@ -446,6 +446,26 @@ struct rte_vlan_filter_conf {
 };
 
 /**
+ * Hash function types.
+ */
+enum rte_eth_hash_function {
+	/**
+	 * DEFAULT means that conformance to a specific hash algorithm is
+	 * uncared to the caller. The driver can pick the one it deems optimal.
+	 */
+	RTE_ETH_HASH_FUNCTION_DEFAULT = 0,
+	RTE_ETH_HASH_FUNCTION_TOEPLITZ, /**< Toeplitz */
+	RTE_ETH_HASH_FUNCTION_SIMPLE_XOR, /**< Simple XOR */
+	/**
+	 * Symmetric Toeplitz: src, dst will be replaced by
+	 * xor(src, dst). For the case with src/dst only,
+	 * src or dst address will xor with zero pair.
+	 */
+	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ,
+	RTE_ETH_HASH_FUNCTION_MAX,
+};
+
+/**
  * A structure used to configure the Receive Side Scaling (RSS) feature
  * of an Ethernet port.
  */
@@ -464,6 +484,7 @@ struct rte_eth_rss_conf {
 	 * Supplying an *rss_hf* equal to zero disables the RSS feature.
 	 */
 	uint64_t rss_hf;
+	enum rte_eth_hash_function func;	/**< Hash algorithm. */
 };
 
 /*
