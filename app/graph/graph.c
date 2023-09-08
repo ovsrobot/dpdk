@@ -1,0 +1,383 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2023 Marvell.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <rte_graph_worker.h>
+#include <rte_log.h>
+
+#include "graph_priv.h"
+#include "module_api.h"
+
+#define RTE_LOGTYPE_APP_GRAPH RTE_LOGTYPE_USER1
+
+static const char
+cmd_graph_help[] = "graph <usecases> bsz <size> tmo <ns> coremask <bitmask> "
+		   "model <rtc | mcd | default>";
+
+static const char * const supported_usecases[] = {"l3fwd"};
+struct graph_config graph_config;
+
+/* Check the link rc of all ports in up to 9s, and print them finally */
+static void
+check_all_ports_link_status(uint32_t port_mask)
+{
+#define CHECK_INTERVAL 100 /* 100ms */
+#define MAX_CHECK_TIME 90  /* 9s (90 * 100ms) in total */
+	char link_rc_text[RTE_ETH_LINK_MAX_STR_LEN];
+	uint8_t count, all_ports_up, print_flag = 0;
+	struct rte_eth_link link;
+	uint16_t portid;
+	int rc;
+
+	printf("\nChecking link rc");
+	fflush(stdout);
+	for (count = 0; count <= MAX_CHECK_TIME; count++) {
+		if (force_quit)
+			return;
+
+		all_ports_up = 1;
+		RTE_ETH_FOREACH_DEV(portid)
+		{
+			if (force_quit)
+				return;
+
+			if ((port_mask & (1 << portid)) == 0)
+				continue;
+
+			memset(&link, 0, sizeof(link));
+			rc = rte_eth_link_get_nowait(portid, &link);
+			if (rc < 0) {
+				all_ports_up = 0;
+				if (print_flag == 1)
+					printf("Port %u link get failed: %s\n",
+					       portid, rte_strerror(-rc));
+				continue;
+			}
+
+			/* Print link rc if flag set */
+			if (print_flag == 1) {
+				rte_eth_link_to_str(link_rc_text, sizeof(link_rc_text),
+					&link);
+				printf("Port %d %s\n", portid, link_rc_text);
+				continue;
+			}
+
+			/* Clear all_ports_up flag if any link down */
+			if (link.link_status == RTE_ETH_LINK_DOWN) {
+				all_ports_up = 0;
+				break;
+			}
+		}
+
+		/* After finally printing all link rc, get out */
+		if (print_flag == 1)
+			break;
+
+		if (all_ports_up == 0) {
+			printf(".");
+			fflush(stdout);
+			rte_delay_ms(CHECK_INTERVAL);
+		}
+
+		/* Set the print_flag if all ports up or timeout */
+		if (all_ports_up == 1 || count == (MAX_CHECK_TIME - 1)) {
+			print_flag = 1;
+			printf("Done\n");
+		}
+	}
+}
+
+static bool
+parser_usecases_read(char *usecases)
+{
+	bool valid = false;
+	uint32_t i, j = 0;
+	char *token;
+
+	token = strtok(usecases, ",");
+	while (token != NULL) {
+		for (i = 0; i < RTE_DIM(supported_usecases); i++) {
+			if (strcmp(supported_usecases[i], token) == 0) {
+				graph_config.usecases[j].enabled = true;
+				strcpy(graph_config.usecases[j].name, token);
+				valid = true;
+				j++;
+				break;
+			}
+		}
+		token = strtok(NULL, ",");
+	}
+
+	return valid;
+}
+
+static uint64_t
+graph_worker_count_get(void)
+{
+	uint64_t nb_worker = 0;
+	uint64_t coremask;
+
+	coremask = graph_config.params.coremask;
+	while (coremask) {
+		if (coremask & 0x1)
+			nb_worker++;
+
+		coremask = (coremask >> 1);
+	}
+
+	return nb_worker;
+}
+
+static struct rte_node_ethdev_config *
+graph_rxtx_node_config_get(uint32_t *num_conf, uint32_t *num_graphs)
+{
+	uint32_t n_tx_queue, nb_conf = 0, lcore_id;
+	uint16_t queueid, portid, nb_graphs = 0;
+	uint8_t nb_rx_queue, queue;
+	struct lcore_conf *qconf;
+
+	n_tx_queue = graph_worker_count_get();
+	if (n_tx_queue > RTE_MAX_ETHPORTS)
+		n_tx_queue = RTE_MAX_ETHPORTS;
+
+	RTE_ETH_FOREACH_DEV(portid) {
+		/* Skip ports that are not enabled */
+		if ((enabled_port_mask & (1 << portid)) == 0) {
+			printf("\nSkipping disabled port %d\n", portid);
+			continue;
+		}
+
+		nb_rx_queue = ethdev_rx_num_rx_queues_get(portid);
+
+		/* Setup ethdev node config */
+		ethdev_conf[nb_conf].port_id = portid;
+		ethdev_conf[nb_conf].num_rx_queues = nb_rx_queue;
+		ethdev_conf[nb_conf].num_tx_queues = n_tx_queue;
+		ethdev_conf[nb_conf].mp = ethdev_mempool_list_by_portid(portid);
+		ethdev_conf[nb_conf].mp_count = 1; /* Check with pools */
+
+		nb_conf++;
+	}
+
+	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+		if (rte_lcore_is_enabled(lcore_id) == 0)
+			continue;
+
+		qconf = &lcore_conf[lcore_id];
+		printf("\nInitializing rx queues on lcore %u ... ", lcore_id);
+		fflush(stdout);
+
+		/* Init RX queues */
+		for (queue = 0; queue < qconf->n_rx_queue; ++queue) {
+			portid = qconf->rx_queue_list[queue].port_id;
+			queueid = qconf->rx_queue_list[queue].queue_id;
+
+			/* Add this queue node to its graph */
+			snprintf(qconf->rx_queue_list[queue].node_name, RTE_NODE_NAMESIZE,
+				 "ethdev_rx-%u-%u", portid, queueid);
+		}
+		if (qconf->n_rx_queue)
+			nb_graphs++;
+	}
+
+	printf("\n");
+
+	ethdev_start();
+	check_all_ports_link_status(enabled_port_mask);
+
+	*num_conf = nb_conf;
+	*num_graphs = nb_graphs;
+	return ethdev_conf;
+}
+
+static int
+graph_start(void)
+{
+	struct rte_node_ethdev_config *conf;
+	uint32_t nb_graphs = 0, nb_conf, i;
+
+	conf = graph_rxtx_node_config_get(&nb_conf, &nb_graphs);
+	for (i = 0; i < MAX_GRAPH_USECASES; i++) {
+		if (!strcmp(graph_config.usecases[i].name, "l3fwd")) {
+			if (graph_config.usecases[i].enabled) {
+				usecase_l3fwd_configure(conf, nb_conf, nb_graphs);
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+static int
+graph_config_add(char *usecases, struct graph_config *config)
+{
+	if (!parser_usecases_read(usecases))
+		return -EINVAL;
+
+	graph_config.params.bsz = config->params.bsz;
+	graph_config.params.tmo = config->params.tmo;
+	graph_config.params.coremask = config->params.coremask;
+	graph_config.model = config->model;
+
+	return 0;
+}
+
+int
+graph_walk_start(void *conf)
+{
+	struct lcore_conf *qconf;
+	struct rte_graph *graph;
+	uint32_t lcore_id;
+
+	RTE_SET_USED(conf);
+
+	lcore_id = rte_lcore_id();
+	qconf = &lcore_conf[lcore_id];
+	graph = qconf->graph;
+
+	if (!graph) {
+		RTE_LOG(INFO, APP_GRAPH, "Lcore %u has nothing to do\n", lcore_id);
+		return 0;
+	}
+
+	RTE_LOG(INFO, APP_GRAPH, "Entering main loop on lcore %u, graph %s(%p)\n", lcore_id,
+		qconf->name, graph);
+
+	while (likely(!force_quit))
+		rte_graph_walk(graph);
+
+	return 0;
+}
+
+void
+graph_stats_print(void)
+{
+	const char topLeft[] = {27, '[', '1', ';', '1', 'H', '\0'};
+	const char clr[] = {27, '[', '2', 'J', '\0'};
+	struct rte_graph_cluster_stats_param s_param;
+	struct rte_graph_cluster_stats *stats;
+	const char *pattern = "worker_*";
+
+	/* Prepare stats object */
+	memset(&s_param, 0, sizeof(s_param));
+	s_param.f = stdout;
+	s_param.socket_id = SOCKET_ID_ANY;
+	s_param.graph_patterns = &pattern;
+	s_param.nb_graph_patterns = 1;
+
+	stats = rte_graph_cluster_stats_create(&s_param);
+	if (stats == NULL)
+		rte_exit(EXIT_FAILURE, "Unable to create stats object\n");
+
+	while (!force_quit) {
+		/* Clear screen and move to top left */
+		printf("%s%s", clr, topLeft);
+		rte_graph_cluster_stats_get(stats, 0);
+		rte_delay_ms(1E3);
+	}
+
+	rte_graph_cluster_stats_destroy(stats);
+}
+
+static void
+graph_config_process(char **tokens, uint32_t n_tokens, char *out, size_t out_size,
+		     void *obj __rte_unused)
+{
+	uint32_t bsz = 32, tmo = 0, coremask = 0xf;
+	struct graph_config config;
+	int idx = 2, rc;
+	uint8_t model;
+
+	if (n_tokens < 4) {
+		snprintf(out, out_size, MSG_ARG_MISMATCH, tokens[0]);
+		return;
+	}
+
+next_arg:
+	if (strcmp(tokens[idx], "model")) {
+		if (strcmp(tokens[idx], "bsz") == 0) {
+			if (parser_uint32_read(&bsz, tokens[idx + 1])) {
+				snprintf(out, out_size, MSG_ARG_INVALID, "bsz");
+				return;
+			}
+
+		} else if (strcmp(tokens[idx], "tmo") == 0) {
+			if (parser_uint32_read(&tmo, tokens[idx + 1])) {
+				snprintf(out, out_size, MSG_ARG_INVALID, "tmo");
+				return;
+			}
+		} else if (strcmp(tokens[idx], "coremask") == 0) {
+			coremask = strtol(tokens[idx + 1], NULL, 16);
+			if (coremask == 0) {
+				snprintf(out, out_size, MSG_ARG_INVALID, "tmo");
+				return;
+			}
+		} else {
+			snprintf(out, out_size, MSG_ARG_NOT_FOUND, "usecases params");
+			return;
+		}
+
+		idx += 2;
+		goto next_arg;
+	} else {
+		if (strcmp(tokens[idx + 1], "default") == 0) {
+			model = GRAPH_MODEL_RTC;
+		} else if (strcmp(tokens[idx + 1], "rtc") == 0) {
+			model = GRAPH_MODEL_RTC;
+		} else if (strcmp(tokens[idx + 1], "mcd") == 0) {
+			model = GRAPH_MODEL_MCD;
+		} else {
+			snprintf(out, out_size, MSG_ARG_NOT_FOUND, "model arguments");
+			return;
+		}
+	}
+
+	config.params.bsz = bsz;
+	config.params.tmo = tmo;
+	config.params.coremask = coremask;
+	config.model = model;
+	rc = graph_config_add(tokens[1], &config);
+	if (rc < 0)
+		snprintf(out, out_size, MSG_CMD_FAIL, tokens[0]);
+}
+
+static int
+cli_graph_help(char **tokens __rte_unused, uint32_t n_tokens __rte_unused, char *out,
+	       size_t out_size, void *obj __rte_unused)
+{
+	size_t len;
+
+	len = strlen(out);
+	snprintf(out + len, out_size, "\n%s\n",
+		 "----------------------------- graph command help -----------------------------");
+
+	len = strlen(out);
+	snprintf(out + len, out_size, "%s\n", cmd_graph_help);
+
+	len = strlen(out);
+	snprintf(out + len, out_size, "%s\n", "graph start");
+	return 0;
+}
+
+static int
+cli_graph(char **tokens, uint32_t n_tokens, char *out, size_t out_size, void *obj __rte_unused)
+{
+	if (strcmp(tokens[1], "start") == 0)
+		graph_start();
+	else
+		graph_config_process(tokens, n_tokens, out, out_size, obj);
+
+	return 0;
+}
+
+static struct cli_module graph = {
+	.cmd = "graph",
+	.process = cli_graph,
+	.usage = cli_graph_help,
+};
+
+CLI_REGISTER(graph);
