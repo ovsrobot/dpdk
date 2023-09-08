@@ -990,6 +990,7 @@ static int
 hn_dev_start(struct rte_eth_dev *dev)
 {
 	struct hn_data *hv = dev->data->dev_private;
+	uint16_t i;
 	int error;
 
 	PMD_INIT_FUNC_TRACE();
@@ -1017,6 +1018,11 @@ hn_dev_start(struct rte_eth_dev *dev)
 	if (error == 0)
 		hn_dev_link_update(dev, 0);
 
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+	for (i = 0; i < dev->data->nb_tx_queues; i++)
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+
 	return error;
 }
 
@@ -1024,9 +1030,15 @@ static int
 hn_dev_stop(struct rte_eth_dev *dev)
 {
 	struct hn_data *hv = dev->data->dev_private;
+	uint16_t i;
 
 	PMD_INIT_FUNC_TRACE();
 	dev->data->dev_started = 0;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	for (i = 0; i < dev->data->nb_tx_queues; i++)
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 
 	rte_dev_event_callback_unregister(NULL, netvsc_hotadd_callback, hv);
 	hn_rndis_set_rxfilter(hv, 0);
