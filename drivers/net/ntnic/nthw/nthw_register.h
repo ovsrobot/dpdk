@@ -10,6 +10,8 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
+#include "nthw_fpga_model.h"
+
 #include "fpga_model.h"
 
 #include "nthw_fpga_modules_defs.h"
