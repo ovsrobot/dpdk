@@ -2275,6 +2275,9 @@ static struct unit_test_suite sdap_test_cases  = {
 		TEST_CASE_NAMED_WITH_DATA("SDAP Known vector cases",
 			ut_setup_pdcp, ut_teardown_pdcp,
 			run_test_with_all_sdap_known_vec, test_attempt_single),
+		TEST_CASE_NAMED_WITH_DATA("SDAP combined mode",
+			ut_setup_pdcp, ut_teardown_pdcp,
+			run_test_with_all_sdap_known_vec, test_combined),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
