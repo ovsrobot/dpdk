@@ -3187,6 +3187,10 @@ struct rte_flow_query_count {
  * Hash function types.
  */
 enum rte_eth_hash_function {
+	/**
+	 * DEFAULT means that conformance to a specific hash algorithm is
+	 * uncared to the caller. The driver can pick the one it deems optimal.
+	 */
 	RTE_ETH_HASH_FUNCTION_DEFAULT = 0,
 	RTE_ETH_HASH_FUNCTION_TOEPLITZ, /**< Toeplitz */
 	RTE_ETH_HASH_FUNCTION_SIMPLE_XOR, /**< Simple XOR */
