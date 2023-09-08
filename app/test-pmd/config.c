@@ -1485,6 +1485,14 @@ rss_types_display(uint64_t rss_types, uint16_t char_num_per_line)
 	printf("\n");
 }
 
+static const char * const rss_hash_algos[] = {
+	[RTE_ETH_HASH_FUNCTION_SIMPLE_XOR] = "simple_xor",
+	[RTE_ETH_HASH_FUNCTION_TOEPLITZ] = "toeplitz",
+	[RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ] = "symmetric_toeplitz",
+	[RTE_ETH_HASH_FUNCTION_DEFAULT] = "default",
+	[RTE_ETH_HASH_FUNCTION_MAX] = "Unknown function"
+};
+
 static void
 rss_config_display(struct rte_flow_action_rss *rss_conf)
 {
@@ -1503,24 +1511,7 @@ rss_config_display(struct rte_flow_action_rss *rss_conf)
 		printf(" %d", rss_conf->queue[i]);
 	printf("\n");
 
-	printf(" function: ");
-	switch (rss_conf->func) {
-	case RTE_ETH_HASH_FUNCTION_DEFAULT:
-		printf("default\n");
-		break;
-	case RTE_ETH_HASH_FUNCTION_TOEPLITZ:
-		printf("toeplitz\n");
-		break;
-	case RTE_ETH_HASH_FUNCTION_SIMPLE_XOR:
-		printf("simple_xor\n");
-		break;
-	case RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ:
-		printf("symmetric_toeplitz\n");
-		break;
-	default:
-		printf("Unknown function\n");
-		return;
-	}
+	printf(" function: %s\n", rss_hash_algos[rss_conf->func]);
 
 	printf(" RSS key:\n");
 	if (rss_conf->key_len == 0) {
@@ -4406,7 +4397,7 @@ port_rss_reta_info(portid_t port_id,
  * key of the port.
  */
 void
-port_rss_hash_conf_show(portid_t port_id, int show_rss_key)
+port_rss_hash_conf_show(portid_t port_id, int show_rss_key, int show_rss_func)
 {
 	struct rte_eth_rss_conf rss_conf = {0};
 	uint8_t rss_key[RSS_HASH_KEY_LENGTH];
@@ -4456,8 +4447,15 @@ port_rss_hash_conf_show(portid_t port_id, int show_rss_key)
 		printf("RSS disabled\n");
 		return;
 	}
+
+	if (show_rss_func) {
+		printf("RSS algorithms:\n  %s\n", rss_hash_algos[rss_conf.func]);
+		return;
+	}
+
 	printf("RSS functions:\n");
 	rss_types_display(rss_hf, TESTPMD_RSS_TYPES_CHAR_NUM_PER_LINE);
+
 	if (!show_rss_key)
 		return;
 	printf("RSS key:\n");
