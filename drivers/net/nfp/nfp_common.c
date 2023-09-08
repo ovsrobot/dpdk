@@ -1927,6 +1927,7 @@ nfp_net_stop_rx_queue(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		this_rx_q = dev->data->rx_queues[i];
 		nfp_net_reset_rx_queue(this_rx_q);
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
 }
 
@@ -1952,6 +1953,7 @@ nfp_net_stop_tx_queue(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		this_tx_q = dev->data->tx_queues[i];
 		nfp_net_reset_tx_queue(this_tx_q);
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
 }
 
