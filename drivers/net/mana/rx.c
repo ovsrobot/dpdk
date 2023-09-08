@@ -190,6 +190,8 @@ mana_stop_rx_queues(struct rte_eth_dev *dev)
 
 		memset(&rxq->gdma_rq, 0, sizeof(rxq->gdma_rq));
 		memset(&rxq->gdma_cq, 0, sizeof(rxq->gdma_cq));
+
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
 	return 0;
 }
@@ -252,6 +254,7 @@ mana_start_rx_queues(struct rte_eth_dev *dev)
 		}
 
 		ind_tbl[i] = rxq->wq;
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
 	struct ibv_rwq_ind_table_init_attr ind_table_attr = {

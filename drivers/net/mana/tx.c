@@ -51,6 +51,8 @@ mana_stop_tx_queues(struct rte_eth_dev *dev)
 
 		memset(&txq->gdma_sq, 0, sizeof(txq->gdma_sq));
 		memset(&txq->gdma_cq, 0, sizeof(txq->gdma_cq));
+
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
 
 	return 0;
@@ -142,6 +144,8 @@ mana_start_tx_queues(struct rte_eth_dev *dev)
 			txq->gdma_cq.id, txq->gdma_cq.buffer,
 			txq->gdma_cq.count, txq->gdma_cq.size,
 			txq->gdma_cq.head);
+
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
 	return 0;
