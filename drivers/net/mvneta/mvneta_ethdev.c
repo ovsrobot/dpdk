@@ -376,6 +376,10 @@ mvneta_dev_start(struct rte_eth_dev *dev)
 		goto out;
 	}
 
+	/* start rx queues */
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+
 	/* start tx queues */
 	for (i = 0; i < dev->data->nb_tx_queues; i++)
 		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
@@ -411,6 +415,14 @@ mvneta_dev_stop(struct rte_eth_dev *dev)
 	neta_ppio_deinit(priv->ppio);
 
 	priv->ppio = NULL;
+
+	/* stop rx queues */
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+
+	/* stop tx queues */
+	for (i = 0; i < dev->data->nb_tx_queues; i++)
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 
 	return 0;
 }
