@@ -385,7 +385,7 @@ security_capabilities_from_dev_id(int dev_id, const void **caps)
 	if (rte_cryptodev_is_valid_dev(dev_id) == 0)
 		return -EINVAL;
 
-	sec_ctx = (struct rte_security_ctx *)rte_cryptodev_get_sec_ctx(dev_id);
+	sec_ctx = rte_cryptodev_get_sec_ctx(dev_id);
 	RTE_PTR_OR_ERR_RET(sec_ctx, -EINVAL);
 
 	capabilities = rte_security_capabilities_get(sec_ctx);
