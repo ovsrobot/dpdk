@@ -1566,6 +1566,17 @@ Matches an InfiniBand base transport header in RoCE packet.
 
 - ``hdr``: InfiniBand base transport header definition (``rte_ib.h``).
 
+Item: ``RANDOM``
+^^^^^^^^^^^^^^^^
+
+Matches a random value.
+
+This value is not based on the packet data/headers.
+Application shouldn't assume that this value is kept during the life time of
+the packet.
+
+- ``value``: Random value.
+
 Actions
 ~~~~~~~
 

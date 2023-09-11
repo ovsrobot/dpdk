@@ -688,6 +688,19 @@ enum rte_flow_item_type {
 	 * @see struct rte_flow_item_ib_bth.
 	 */
 	RTE_FLOW_ITEM_TYPE_IB_BTH,
+
+	/**
+	 * [META]
+	 *
+	 * Matches a random value.
+	 *
+	 * This value is not based on the packet data/headers.
+	 * Application shouldn't assume that this value is kept during the life
+	 * time of the packet.
+	 *
+	 * @see struct rte_flow_item_random.
+	 */
+	RTE_FLOW_ITEM_TYPE_RANDOM,
 };
 
 /**
@@ -2028,6 +2041,25 @@ static const struct rte_flow_item_ib_bth rte_flow_item_ib_bth_mask = {
 		.opcode = 0xff,
 		.dst_qp = "\xff\xff\xff",
 	},
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_RANDOM
+ *
+ * Matches a random value.
+ */
+struct rte_flow_item_random {
+	uint32_t value;
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_RANDOM. */
+#ifndef __cplusplus
+static const struct rte_flow_item_random rte_flow_item_random_mask = {
+	.value = UINT32_MAX,
 };
 #endif
 
@@ -3875,6 +3907,7 @@ enum rte_flow_field_id {
 	RTE_FLOW_FIELD_GENEVE_OPT_CLASS,/**< GENEVE option class. */
 	RTE_FLOW_FIELD_GENEVE_OPT_DATA,	/**< GENEVE option data. */
 	RTE_FLOW_FIELD_MPLS,		/**< MPLS header. */
+	RTE_FLOW_FIELD_RANDOM		/**< Random value. */
 };
 
 /**

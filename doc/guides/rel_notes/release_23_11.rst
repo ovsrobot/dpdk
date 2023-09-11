@@ -78,6 +78,10 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Added flow matching of random value.**
+
+  Added ``RTE_FLOW_ITEM_RANDOM`` to match random value.
+
 
 Removed Items
 -------------
