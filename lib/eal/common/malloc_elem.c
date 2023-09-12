@@ -492,7 +492,7 @@ malloc_elem_alloc(struct malloc_elem *elem, size_t size, unsigned align,
  * be contiguous in memory.
  */
 static inline void
-join_elem(struct malloc_elem *elem1, struct malloc_elem *elem2)
+join_elem(struct malloc_elem *elem1, struct malloc_elem *elem2, bool update_inner)
 {
 	struct malloc_elem *next = elem2->next;
 	elem1->size += elem2->size;
@@ -502,7 +502,7 @@ join_elem(struct malloc_elem *elem1, struct malloc_elem *elem2)
 		elem1->heap->last = elem1;
 	elem1->next = next;
 	elem1->dirty |= elem2->dirty;
-	if (elem1->pad) {
+	if (elem1->pad && update_inner) {
 		struct malloc_elem *inner = RTE_PTR_ADD(elem1, elem1->pad);
 		inner->size = elem1->size - elem1->pad;
 	}
@@ -526,7 +526,7 @@ malloc_elem_join_adjacent_free(struct malloc_elem *elem)
 
 		/* remove from free list, join to this one */
 		malloc_elem_free_list_remove(elem->next);
-		join_elem(elem, elem->next);
+		join_elem(elem, elem->next, false);
 
 		/* erase header, trailer and pad */
 		memset(erase, MALLOC_POISON, erase_len);
@@ -550,7 +550,7 @@ malloc_elem_join_adjacent_free(struct malloc_elem *elem)
 		malloc_elem_free_list_remove(elem->prev);
 
 		new_elem = elem->prev;
-		join_elem(new_elem, elem);
+		join_elem(new_elem, elem, false);
 
 		/* erase header, trailer and pad */
 		memset(erase, MALLOC_POISON, erase_len);
@@ -683,7 +683,7 @@ malloc_elem_resize(struct malloc_elem *elem, size_t size)
 	 * join the two
 	 */
 	malloc_elem_free_list_remove(elem->next);
-	join_elem(elem, elem->next);
+	join_elem(elem, elem->next, true);
 
 	if (elem->size - new_size >= MIN_DATA_SIZE + MALLOC_ELEM_OVERHEAD) {
 		/* now we have a big block together. Lets cut it down a bit, by splitting */
