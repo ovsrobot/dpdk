@@ -930,11 +930,14 @@ vhost_vring_inject_irq(struct virtio_net *dev, struct vhost_virtqueue *vq)
 		dev->notify_ops->guest_notified(dev->vid);
 }
 
-static __rte_always_inline void
+static __rte_always_inline int
 vhost_vring_call_split(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
 	/* Flush used->idx update before we read avail->flags. */
 	rte_atomic_thread_fence(__ATOMIC_SEQ_CST);
+
+	if (!vq->avail || !vq->used)
+		return -1;
 
 	/* Don't kick guest if we don't reach index specified by guest. */
 	if (dev->features & (1ULL << VIRTIO_RING_F_EVENT_IDX)) {
@@ -957,9 +960,10 @@ vhost_vring_call_split(struct virtio_net *dev, struct vhost_virtqueue *vq)
 		if (!(vq->avail->flags & VRING_AVAIL_F_NO_INTERRUPT))
 			vhost_vring_inject_irq(dev, vq);
 	}
+	return 0;
 }
 
-static __rte_always_inline void
+static __rte_always_inline int
 vhost_vring_call_packed(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
 	uint16_t old, new, off, off_wrap;
@@ -967,6 +971,9 @@ vhost_vring_call_packed(struct virtio_net *dev, struct vhost_virtqueue *vq)
 
 	/* Flush used desc update. */
 	rte_atomic_thread_fence(__ATOMIC_SEQ_CST);
+
+	if (!vq->driver_event)
+		return -1;
 
 	if (!(dev->features & (1ULL << VIRTIO_RING_F_EVENT_IDX))) {
 		if (vq->driver_event->flags !=
@@ -1008,6 +1015,7 @@ vhost_vring_call_packed(struct virtio_net *dev, struct vhost_virtqueue *vq)
 kick:
 	if (kick)
 		vhost_vring_inject_irq(dev, vq);
+	return 0;
 }
 
 static __rte_always_inline void
