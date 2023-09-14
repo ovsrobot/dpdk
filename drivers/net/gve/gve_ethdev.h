@@ -27,7 +27,7 @@
 #define PCI_MSIX_FLAGS		2	/* Message Control */
 #define PCI_MSIX_FLAGS_QSIZE	0x07FF	/* Table size */
 
-#define GVE_DEFAULT_RX_FREE_THRESH  512
+#define GVE_DEFAULT_RX_FREE_THRESH   64
 #define GVE_DEFAULT_TX_FREE_THRESH   32
 #define GVE_DEFAULT_TX_RS_THRESH     32
 #define GVE_TX_MAX_FREE_SZ          512
