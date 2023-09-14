@@ -8,6 +8,7 @@
 #include <rte_hexdump.h>
 #include <rte_cryptodev.h>
 #include <cryptodev_pmd.h>
+#include <rte_security_driver.h>
 #include <bus_vdev_driver.h>
 #include <rte_malloc.h>
 #include <rte_cpuflags.h>
@@ -233,6 +234,35 @@ cryptodev_scheduler_create(const char *name,
 		return -ENOMEM;
 	}
 
+	struct rte_security_ctx *security_instance;
+	security_instance = rte_zmalloc_socket(NULL,
+					sizeof(struct rte_security_ctx),
+					RTE_CACHE_LINE_SIZE, SOCKET_ID_ANY);
+	if (security_instance == NULL) {
+		CR_SCHED_LOG(ERR, "rte_security_ctx memory alloc failed");
+		return -ENOMEM;
+	}
+
+	security_instance->device = (void *)dev;
+	security_instance->ops = rte_crypto_scheduler_pmd_sec_ops;
+	security_instance->sess_cnt = 0;
+	dev->security_ctx = security_instance;
+
+	/*
+	 * Initialize security capabilities structure as an empty structure,
+	 * in case device information is requested when no workers are attached
+	 */
+	sched_ctx->sec_capabilities = rte_zmalloc_socket(NULL,
+					sizeof(struct rte_security_capability),
+					0, SOCKET_ID_ANY);
+
+	if (!sched_ctx->sec_capabilities) {
+		rte_free(security_instance);
+		CR_SCHED_LOG(ERR, "Not enough memory for security capability "
+				"information");
+		return -ENOMEM;
+	}
+
 	rte_cryptodev_pmd_probing_finish(dev);
 
 	return 0;
@@ -262,6 +292,9 @@ cryptodev_scheduler_remove(struct rte_vdev_device *vdev)
 			rte_cryptodev_scheduler_worker_detach(dev->data->dev_id,
 					sched_ctx->workers[i].dev_id);
 	}
+
+	rte_free(dev->security_ctx);
+	dev->security_ctx = NULL;
 
 	return rte_cryptodev_pmd_destroy(dev);
 }

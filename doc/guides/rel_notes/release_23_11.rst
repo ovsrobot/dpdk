@@ -78,6 +78,10 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Updated Cryptodev Scheduler PMD.**
+
+  Added support for DOCSIS security protocol through the ``rte_security`` API
+  callbacks.
 
 Removed Items
 -------------
