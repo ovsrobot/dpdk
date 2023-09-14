@@ -90,8 +90,10 @@ sw_schedule_atomic_to_cq(struct sw_evdev *sw, struct sw_qid * const qid,
 		sw->cq_ring_space[cq]--;
 
 		int head = (p->hist_head++ & (SW_PORT_HIST_LIST-1));
-		p->hist_list[head].fid = flow_id;
-		p->hist_list[head].qid = qid_id;
+		p->hist_list[head] = (struct sw_hist_list_entry) {
+			.qid = qid_id,
+			.fid = flow_id,
+		};
 
 		p->stats.tx_pkts++;
 		qid->stats.tx_pkts++;
@@ -162,8 +164,13 @@ sw_schedule_parallel_to_cq(struct sw_evdev *sw, struct sw_qid * const qid,
 		qid->stats.tx_pkts++;
 
 		const int head = (p->hist_head & (SW_PORT_HIST_LIST-1));
-		p->hist_list[head].fid = SW_HASH_FLOWID(qe->flow_id);
-		p->hist_list[head].qid = qid_id;
+		const uint32_t fid = SW_HASH_FLOWID(qe->flow_id);
+		p->hist_list[head] = (struct sw_hist_list_entry) {
+			.qid = qid_id,
+			.fid = fid,
+		};
+
+
 
 		if (keep_order)
 			rob_ring_dequeue(qid->reorder_buffer_freelist,
