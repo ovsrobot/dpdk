@@ -1203,47 +1203,47 @@ test_file_prefix(void)
 #endif
 
 	/* this should fail unless the test itself is run with "memtest" prefix */
-	const char *argv0[] = {prgname, mp_flag, "-m",
+	const char *argv0[] = {prgname, mp_flag, "--no-pci", "-m",
 			DEFAULT_MEM_SIZE, "--file-prefix=" memtest };
 
 	/* primary process with memtest1 and default mem mode */
-	const char *argv1[] = {prgname, "-m",
+	const char *argv1[] = {prgname, "--no-pci", "-m",
 			DEFAULT_MEM_SIZE, "--file-prefix=" memtest1 };
 
 	/* primary process with memtest1 and legacy mem mode */
-	const char *argv2[] = {prgname, "-m",
+	const char *argv2[] = {prgname, "--no-pci", "-m",
 			DEFAULT_MEM_SIZE, "--file-prefix=" memtest1,
 			"--legacy-mem" };
 
 	/* primary process with memtest2 and legacy mem mode */
-	const char *argv3[] = {prgname, "-m",
+	const char *argv3[] = {prgname, "--no-pci", "-m",
 			DEFAULT_MEM_SIZE, "--file-prefix=" memtest2,
 			"--legacy-mem" };
 
 	/* primary process with memtest2 and default mem mode */
-	const char *argv4[] = {prgname, "-m",
+	const char *argv4[] = {prgname, "--no-pci", "-m",
 			DEFAULT_MEM_SIZE, "--file-prefix=" memtest2 };
 
 	/* primary process with --in-memory mode */
-	const char * const argv5[] = {prgname, "-m",
+	const char * const argv5[] = {prgname, "--no-pci", "-m",
 		DEFAULT_MEM_SIZE, "--in-memory" };
 
 	/* primary process with memtest1 and --in-memory mode */
-	const char * const argv6[] = {prgname, "-m",
+	const char * const argv6[] = {prgname, "--no-pci", "-m",
 		DEFAULT_MEM_SIZE, "--in-memory",
 		"--file-prefix=" memtest1 };
 
 	/* primary process with parent file-prefix and --in-memory mode */
-	const char * const argv7[] = {prgname, "-m",
+	const char * const argv7[] = {prgname, "--no-pci", "-m",
 		DEFAULT_MEM_SIZE, "--in-memory", "--file-prefix", prefix };
 
 	/* primary process with memtest1 and --single-file-segments mode */
-	const char * const argv8[] = {prgname, "-m",
+	const char * const argv8[] = {prgname, "--no-pci", "-m",
 		DEFAULT_MEM_SIZE, "--single-file-segments",
 		"--file-prefix=" memtest1 };
 
 	/* primary process with memtest1 and --huge-unlink=never mode */
-	const char * const argv9[] = {prgname, "-m",
+	const char * const argv9[] = {prgname, "--no-pci", "-m",
 		DEFAULT_MEM_SIZE, "--huge-unlink=never",
 		"--file-prefix=" memtest1 };
 
