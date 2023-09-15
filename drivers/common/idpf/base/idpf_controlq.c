@@ -75,7 +75,7 @@ static void idpf_ctlq_init_rxq_bufs(struct idpf_ctlq_info *cq)
 		desc->flags =
 			CPU_TO_LE16(IDPF_CTLQ_FLAG_BUF | IDPF_CTLQ_FLAG_RD);
 		desc->opcode = 0;
-		desc->datalen = (__le16)CPU_TO_LE16(bi->size);
+		desc->datalen = CPU_TO_LE16(bi->size);
 		desc->ret_val = 0;
 		desc->cookie_high = 0;
 		desc->cookie_low = 0;
@@ -264,16 +264,13 @@ init_destroy_qs:
  * idpf_ctlq_deinit - destroy all control queues
  * @hw: pointer to hw struct
  */
-int idpf_ctlq_deinit(struct idpf_hw *hw)
+void idpf_ctlq_deinit(struct idpf_hw *hw)
 {
 	struct idpf_ctlq_info *cq = NULL, *tmp = NULL;
-	int ret_code = 0;
 
 	LIST_FOR_EACH_ENTRY_SAFE(cq, tmp, &hw->cq_list_head,
 				 idpf_ctlq_info, cq_list)
 		idpf_ctlq_remove(hw, cq);
-
-	return ret_code;
 }
 
 /**
