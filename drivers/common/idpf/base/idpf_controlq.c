@@ -13,7 +13,7 @@ static void
 idpf_ctlq_setup_regs(struct idpf_ctlq_info *cq,
 		     struct idpf_ctlq_create_info *q_create_info)
 {
-	/* set head and tail registers in our local struct */
+	/* set control queue registers in our local struct */
 	cq->reg.head = q_create_info->reg.head;
 	cq->reg.tail = q_create_info->reg.tail;
 	cq->reg.len = q_create_info->reg.len;

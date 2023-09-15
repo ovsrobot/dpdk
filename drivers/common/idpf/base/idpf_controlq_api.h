@@ -21,10 +21,7 @@ enum idpf_ctlq_type {
 	IDPF_CTLQ_TYPE_RDMA_COMPL	= 7
 };
 
-/*
- * Generic Control Queue Structures
- */
-
+/* Generic Control Queue Structures */
 struct idpf_ctlq_reg {
 	/* used for queue tracking */
 	u32 head;
@@ -157,10 +154,7 @@ enum idpf_mbx_opc {
 	idpf_mbq_opc_send_msg_to_peer_drv	= 0x0804,
 };
 
-/*
- * API supported for control queue management
- */
-
+/* API supported for control queue management */
 /* Will init all required q including default mb.  "q_info" is an array of
  * create_info structs equal to the number of control queues to be created.
  */
