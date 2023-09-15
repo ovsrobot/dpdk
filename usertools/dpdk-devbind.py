@@ -60,10 +60,8 @@ intel_ioat_icx = {'Class': '08', 'Vendor': '8086', 'Device': '0b00',
                   'SVendor': None, 'SDevice': None}
 intel_idxd_spr = {'Class': '08', 'Vendor': '8086', 'Device': '0b25',
                   'SVendor': None, 'SDevice': None}
-intel_ntb_skx = {'Class': '06', 'Vendor': '8086', 'Device': '201c',
-                 'SVendor': None, 'SDevice': None}
-intel_ntb_icx = {'Class': '06', 'Vendor': '8086', 'Device': '347e',
-                 'SVendor': None, 'SDevice': None}
+intel_ntb = {'Class': '06', 'Vendor': '8086', 'Device': '201c,347e,0db4',
+             'SVendor': None, 'SDevice': None}
 
 cnxk_sso = {'Class': '08', 'Vendor': '177d', 'Device': 'a0f9,a0fa',
                  'SVendor': None, 'SDevice': None}
@@ -89,7 +87,7 @@ compress_devices = [cavium_zip]
 regex_devices = [cn9k_ree]
 ml_devices = [cnxk_ml]
 misc_devices = [cnxk_bphy, cnxk_bphy_cgx, cnxk_inl_dev,
-                intel_ntb_skx, intel_ntb_icx,
+                intel_ntb,
                 virtio_blk]
 
 # global dict ethernet devices present. Dictionary indexed by PCI address.

@@ -153,6 +153,8 @@ Limitation
 
 This PMD is only supported on Intel Xeon Platforms:
 
-- 4th Generation Intel® Xeon® Scalable Processors.
-- 3rd Generation Intel® Xeon® Scalable Processors.
-- 2nd Generation Intel® Xeon® Scalable Processors.
+- 6th Generation Intel® Xeon® Scalable Processors. (NTB GEN5 device id: 0x0DB4)
+- 5th Generation Intel® Xeon® Scalable Processors. (NTB GEN4 device id: 0x347E)
+- 4th Generation Intel® Xeon® Scalable Processors. (NTB GEN4 device id: 0x347E)
+- 3rd Generation Intel® Xeon® Scalable Processors. (NTB GEN4 device id: 0x347E)
+- 2nd Generation Intel® Xeon® Scalable Processors. (NTB GEN3 device id: 0x201C)

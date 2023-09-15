@@ -24,8 +24,9 @@
 #include "ntb.h"
 
 static const struct rte_pci_id pci_id_ntb_map[] = {
-	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_SKX) },
-	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_ICX) },
+	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_GEN3) },
+	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_GEN4) },
+	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_GEN5) },
 	{ .vendor_id = 0, /* sentinel */ },
 };
 
@@ -1378,8 +1379,9 @@ ntb_init_hw(struct rte_rawdev *dev, struct rte_pci_device *pci_dev)
 	hw->link_width = NTB_WIDTH_NONE;
 
 	switch (pci_dev->id.device_id) {
-	case NTB_INTEL_DEV_ID_B2B_SKX:
-	case NTB_INTEL_DEV_ID_B2B_ICX:
+	case NTB_INTEL_DEV_ID_B2B_GEN3:
+	case NTB_INTEL_DEV_ID_B2B_GEN4:
+	case NTB_INTEL_DEV_ID_B2B_GEN5:
 		hw->ntb_ops = &intel_ntb_ops;
 		break;
 	default:

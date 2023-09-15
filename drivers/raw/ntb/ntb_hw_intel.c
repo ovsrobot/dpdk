@@ -25,25 +25,6 @@ static enum xeon_ntb_bar intel_ntb_bar[] = {
 	XEON_NTB_BAR45,
 };
 
-static inline int
-is_gen3_ntb(const struct ntb_hw *hw)
-{
-	if (hw->pci_dev->id.device_id == NTB_INTEL_DEV_ID_B2B_SKX)
-		return 1;
-
-	return 0;
-}
-
-static inline int
-is_gen4_ntb(const struct ntb_hw *hw)
-{
-	if (hw->pci_dev->id.device_id == NTB_INTEL_DEV_ID_B2B_ICX ||
-	    hw->pci_dev->id.device_id == NTB_INTEL_DEV_ID_B2B_SPR)
-		return 1;
-
-	return 0;
-}
-
 static int
 intel_ntb3_check_ppd(struct ntb_hw *hw)
 {
@@ -51,35 +32,36 @@ intel_ntb3_check_ppd(struct ntb_hw *hw)
 	int ret;
 
 	ret = rte_pci_read_config(hw->pci_dev, &reg_val,
-				  sizeof(reg_val), XEON_PPD_OFFSET);
+				  sizeof(reg_val), XEON_NTB3_PPD_OFFSET);
 	if (ret < 0) {
 		NTB_LOG(ERR, "Cannot get NTB PPD (PCIe port definition).");
 		return -EIO;
 	}
 
 	/* Check connection topo type. Only support B2B. */
-	switch (reg_val & XEON_PPD_CONN_MASK) {
-	case XEON_PPD_CONN_B2B:
+	switch (reg_val & XEON_NTB3_PPD_CONN_MASK) {
+	case XEON_NTB3_PPD_CONN_B2B:
 		NTB_LOG(INFO, "Topo B2B (back to back) is using.");
 		break;
-	case XEON_PPD_CONN_TRANSPARENT:
-	case XEON_PPD_CONN_RP:
 	default:
 		NTB_LOG(ERR, "Not supported conn topo. Please use B2B.");
 		return -EINVAL;
 	}
 
-	/* Check device type. */
-	if (reg_val & XEON_PPD_DEV_DSD) {
+	/* Check device config status. */
+	switch (reg_val & XEON_NTB3_PPD_DEV_MASK) {
+	case XEON_NTB3_PPD_DEV_DSD:
 		NTB_LOG(INFO, "DSD, Downstream Device.");
 		hw->topo = NTB_TOPO_B2B_DSD;
-	} else {
+		break;
+	case XEON_NTB3_PPD_DEV_USD:
 		NTB_LOG(INFO, "USD, Upstream device.");
 		hw->topo = NTB_TOPO_B2B_USD;
+		break;
 	}
 
 	/* Check if bar4 is split. Do not support split bar. */
-	if (reg_val & XEON_PPD_SPLIT_BAR_MASK) {
+	if (reg_val & XEON_NTB3_PPD_SPLIT_BAR_MASK) {
 		NTB_LOG(ERR, "Do not support split bar.");
 		return -EINVAL;
 	}
@@ -91,8 +73,8 @@ static int
 intel_ntb4_check_ppd_for_ICX(struct ntb_hw *hw, uint32_t reg_val)
 {
 	/* Check connection topo type. Only support B2B. */
-	switch (reg_val & XEON_GEN4_PPD_CONN_MASK) {
-	case XEON_GEN4_PPD_CONN_B2B:
+	switch (reg_val & XEON_GEN3_NTB4_PPD_CONN_MASK) {
+	case XEON_GEN3_NTB4_PPD_CONN_B2B:
 		NTB_LOG(INFO, "Topo B2B (back to back) is using.");
 		break;
 	default:
@@ -100,45 +82,23 @@ intel_ntb4_check_ppd_for_ICX(struct ntb_hw *hw, uint32_t reg_val)
 		return -EINVAL;
 	}
 
-	/* Check device type. */
-	if (reg_val & XEON_GEN4_PPD_DEV_DSD) {
+	/* Check device config status. */
+	switch (reg_val & XEON_GEN3_NTB4_PPD_DEV_MASK) {
+	case XEON_GEN3_NTB4_PPD_DEV_DSD:
 		NTB_LOG(INFO, "DSD, Downstream Device.");
 		hw->topo = NTB_TOPO_B2B_DSD;
-	} else {
-		NTB_LOG(INFO, "USD, Upstream device.");
-		hw->topo = NTB_TOPO_B2B_USD;
-	}
-
-	return 0;
-}
-
-static int
-intel_ntb4_check_ppd_for_SPR(struct ntb_hw *hw, uint32_t reg_val)
-{
-	/* Check connection topo type. Only support B2B. */
-	switch (reg_val & XEON_SPR_PPD_CONN_MASK) {
-	case XEON_SPR_PPD_CONN_B2B:
-		NTB_LOG(INFO, "Topo B2B (back to back) is using.");
 		break;
-	default:
-		NTB_LOG(ERR, "Not supported conn topo. Please use B2B.");
-		return -EINVAL;
-	}
-
-	/* Check device type. */
-	if (reg_val & XEON_SPR_PPD_DEV_DSD) {
-		NTB_LOG(INFO, "DSD, Downstream Device.");
-		hw->topo = NTB_TOPO_B2B_DSD;
-	} else {
+	case XEON_GEN3_NTB4_PPD_DEV_USD:
 		NTB_LOG(INFO, "USD, Upstream device.");
 		hw->topo = NTB_TOPO_B2B_USD;
+		break;
 	}
 
 	return 0;
 }
 
 static int
-intel_ntb4_check_ppd(struct ntb_hw *hw)
+intel_ntb4_5_check_ppd(struct ntb_hw *hw)
 {
 	uint8_t revision_id;
 	uint32_t reg_val;
@@ -152,19 +112,36 @@ intel_ntb4_check_ppd(struct ntb_hw *hw)
 		return -EIO;
 	}
 
-	reg_val = rte_read32(hw->hw_addr + XEON_GEN4_PPD1_OFFSET);
+	reg_val = rte_read32(hw->hw_addr + XEON_NTB4_5_PPD1_OFFSET);
 
-	/* Distinguish HW platform (ICX/SPR) via PCI Revision ID */
-	if (revision_id > NTB_PCI_DEV_REVISION_ICX_MAX)
-		ret = intel_ntb4_check_ppd_for_SPR(hw, reg_val);
-	else if (revision_id >= NTB_PCI_DEV_REVISION_ICX_MIN)
-		ret = intel_ntb4_check_ppd_for_ICX(hw, reg_val);
-	else {
-		NTB_LOG(ERR, "Invalid NTB PCI Device Revision ID.");
-		return -EIO;
+	/* Distinguish HW platform (3rd Gen Xeon) via PCI Revision ID */
+	if (revision_id <= NTB_PCI_DEV_REVISION_ICX_MAX &&
+	    is_gen4_ntb(hw->pci_dev))
+		return intel_ntb4_check_ppd_for_ICX(hw, reg_val);
+
+	/* Check connection topo type. Only support B2B. */
+	switch (reg_val & XEON_NTB4_5_PPD_CONN_MASK) {
+	case XEON_NTB4_5_PPD_CONN_B2B:
+		NTB_LOG(INFO, "Topo B2B (back to back) is using.");
+		break;
+	default:
+		NTB_LOG(ERR, "Not supported conn topo. Please use B2B.");
+		return -EINVAL;
 	}
 
-	return ret;
+	/* Check device config status. */
+	switch (reg_val & XEON_NTB4_5_PPD_DEV_MASK) {
+	case XEON_NTB4_5_PPD_DEV_DSD:
+		NTB_LOG(INFO, "DSD, Downstream Device.");
+		hw->topo = NTB_TOPO_B2B_DSD;
+		break;
+	case XEON_NTB4_5_PPD_DEV_USD:
+		NTB_LOG(INFO, "USD, Upstream device.");
+		hw->topo = NTB_TOPO_B2B_USD;
+		break;
+	}
+
+	return 0;
 }
 
 static int
@@ -181,11 +158,12 @@ intel_ntb_dev_init(const struct rte_rawdev *dev)
 
 	hw->hw_addr = (char *)hw->pci_dev->mem_resource[0].addr;
 
-	if (is_gen3_ntb(hw))
+	if (is_gen3_ntb(hw->pci_dev))
+		/* PPD is in config space for NTB Gen3 */
 		ret = intel_ntb3_check_ppd(hw);
-	else if (is_gen4_ntb(hw))
-		/* PPD is in MMIO but not config space for NTB Gen4 */
-		ret = intel_ntb4_check_ppd(hw);
+	else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev))
+		/* PPD is in MMIO for NTB Gen4/5 */
+		ret = intel_ntb4_5_check_ppd(hw);
 	else {
 		NTB_LOG(ERR, "Cannot init device for unsupported device.");
 		return -ENOTSUP;
@@ -275,7 +253,7 @@ intel_ntb_mw_set_trans(const struct rte_rawdev *dev, int mw_idx,
 	rte_write64(base, xlat_addr);
 	rte_write64(limit, limit_addr);
 
-	if (is_gen3_ntb(hw)) {
+	if (is_gen3_ntb(hw->pci_dev)) {
 		/* Setup the external point so that remote can access. */
 		xlat_off = XEON_EMBAR1_OFFSET + 8 * mw_idx;
 		xlat_addr = hw->hw_addr + xlat_off;
@@ -286,10 +264,10 @@ intel_ntb_mw_set_trans(const struct rte_rawdev *dev, int mw_idx,
 		base &= ~0xf;
 		limit = base + size;
 		rte_write64(limit, limit_addr);
-	} else if (is_gen4_ntb(hw)) {
+	} else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev)) {
 		/* Set translate base address index register */
-		xlat_off = XEON_GEN4_IM1XBASEIDX_OFFSET +
-			   mw_idx * XEON_GEN4_XBASEIDX_INTERVAL;
+		xlat_off = XEON_NTB4_5_IM1XBASEIDX_OFFSET +
+			   mw_idx * XEON_XBASEIDX_INTERVAL;
 		xlat_addr = hw->hw_addr + xlat_off;
 		rte_write16(rte_log2_u64(size), xlat_addr);
 	} else {
@@ -335,16 +313,16 @@ intel_ntb_get_link_status(const struct rte_rawdev *dev)
 		return -EINVAL;
 	}
 
-	if (is_gen3_ntb(hw)) {
-		reg_off = XEON_GEN3_LINK_STATUS_OFFSET;
+	if (is_gen3_ntb(hw->pci_dev)) {
+		reg_off = XEON_NTB3_LINK_STATUS_OFFSET;
 		ret = rte_pci_read_config(hw->pci_dev, &reg_val,
 					  sizeof(reg_val), reg_off);
 		if (ret < 0) {
 			NTB_LOG(ERR, "Unable to get link status.");
 			return -EIO;
 		}
-	} else if (is_gen4_ntb(hw)) {
-		reg_off = XEON_GEN4_LINK_STATUS_OFFSET;
+	} else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev)) {
+		reg_off = XEON_NTB4_5_LINK_STATUS_OFFSET;
 		reg_val = rte_read16(hw->hw_addr + reg_off);
 	} else {
 		NTB_LOG(ERR, "Cannot get link status for unsupported device.");
@@ -390,7 +368,7 @@ intel_ntb_gen3_set_link(const struct ntb_hw *hw, bool up)
 }
 
 static int
-intel_ntb_gen4_set_link(const struct ntb_hw *hw, bool up)
+intel_ntb_gen4_5_set_link(const struct ntb_hw *hw, bool up)
 {
 	uint32_t ntb_ctrl, ppd0;
 	uint16_t link_ctrl;
@@ -402,20 +380,20 @@ intel_ntb_gen4_set_link(const struct ntb_hw *hw, bool up)
 		ntb_ctrl |= NTB_CTL_P2S_BAR4_SNOOP | NTB_CTL_S2P_BAR4_SNOOP;
 		rte_write32(ntb_ctrl, reg_addr);
 
-		reg_addr = hw->hw_addr + XEON_GEN4_LINK_CTRL_OFFSET;
+		reg_addr = hw->hw_addr + XEON_NTB4_5_LINK_CTRL_OFFSET;
 		link_ctrl = rte_read16(reg_addr);
-		link_ctrl &= ~XEON_GEN4_LINK_CTRL_LINK_DIS;
+		link_ctrl &= ~XEON_NTB4_5_LINK_CTRL_LINK_DIS;
 		rte_write16(link_ctrl, reg_addr);
 
 		/* start link training */
-		reg_addr = hw->hw_addr + XEON_GEN4_PPD0_OFFSET;
+		reg_addr = hw->hw_addr + XEON_NTB4_5_PPD0_OFFSET;
 		ppd0 = rte_read32(reg_addr);
-		ppd0 |= XEON_GEN4_PPD_LINKTRN;
+		ppd0 |= XEON_NTB4_5_PPD_LINKTRN;
 		rte_write32(ppd0, reg_addr);
 
 		/* make sure link training has started */
 		ppd0 = rte_read32(reg_addr);
-		if (!(ppd0 & XEON_GEN4_PPD_LINKTRN)) {
+		if (!(ppd0 & XEON_NTB4_5_PPD_LINKTRN)) {
 			NTB_LOG(ERR, "Link is not training.");
 			return -EINVAL;
 		}
@@ -426,9 +404,9 @@ intel_ntb_gen4_set_link(const struct ntb_hw *hw, bool up)
 		ntb_ctrl &= ~(NTB_CTL_P2S_BAR4_SNOOP | NTB_CTL_S2P_BAR4_SNOOP);
 		rte_write32(ntb_ctrl, reg_addr);
 
-		reg_addr = hw->hw_addr + XEON_GEN4_LINK_CTRL_OFFSET;
+		reg_addr = hw->hw_addr + XEON_NTB4_5_LINK_CTRL_OFFSET;
 		link_ctrl = rte_read16(reg_addr);
-		link_ctrl |= XEON_GEN4_LINK_CTRL_LINK_DIS;
+		link_ctrl |= XEON_NTB4_5_LINK_CTRL_LINK_DIS;
 		rte_write16(link_ctrl, reg_addr);
 	}
 
@@ -441,10 +419,10 @@ intel_ntb_set_link(const struct rte_rawdev *dev, bool up)
 	struct ntb_hw *hw = dev->dev_private;
 	int ret = 0;
 
-	if (is_gen3_ntb(hw))
+	if (is_gen3_ntb(hw->pci_dev))
 		ret = intel_ntb_gen3_set_link(hw, up);
-	else if (is_gen4_ntb(hw))
-		ret = intel_ntb_gen4_set_link(hw, up);
+	else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev))
+		ret = intel_ntb_gen4_5_set_link(hw, up);
 	else {
 		NTB_LOG(ERR, "Cannot set link for unsupported device.");
 		ret = -ENOTSUP;
@@ -466,11 +444,11 @@ intel_ntb_spad_read(const struct rte_rawdev *dev, int spad, bool peer)
 	}
 
 	/* When peer is true, read peer spad reg */
-	if (is_gen3_ntb(hw))
-		reg_off = peer ? XEON_GEN3_B2B_SPAD_OFFSET :
+	if (is_gen3_ntb(hw->pci_dev))
+		reg_off = peer ? XEON_NTB3_B2B_SPAD_OFFSET :
 				XEON_IM_SPAD_OFFSET;
-	else if (is_gen4_ntb(hw))
-		reg_off = peer ? XEON_GEN4_B2B_SPAD_OFFSET :
+	else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev))
+		reg_off = peer ? XEON_NTB4_5_B2B_SPAD_OFFSET :
 				XEON_IM_SPAD_OFFSET;
 	else {
 		NTB_LOG(ERR, "Cannot read spad for unsupported device.");
@@ -496,11 +474,11 @@ intel_ntb_spad_write(const struct rte_rawdev *dev, int spad,
 	}
 
 	/* When peer is true, write peer spad reg */
-	if (is_gen3_ntb(hw))
-		reg_off = peer ? XEON_GEN3_B2B_SPAD_OFFSET :
+	if (is_gen3_ntb(hw->pci_dev))
+		reg_off = peer ? XEON_NTB3_B2B_SPAD_OFFSET :
 				XEON_IM_SPAD_OFFSET;
-	else if (is_gen4_ntb(hw))
-		reg_off = peer ? XEON_GEN4_B2B_SPAD_OFFSET :
+	else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev))
+		reg_off = peer ? XEON_NTB4_5_B2B_SPAD_OFFSET :
 				XEON_IM_SPAD_OFFSET;
 	else {
 		NTB_LOG(ERR, "Cannot write spad for unsupported device.");
@@ -538,9 +516,9 @@ intel_ntb_db_clear(const struct rte_rawdev *dev, uint64_t db_bits)
 	db_off = XEON_IM_INT_STATUS_OFFSET;
 	db_addr = hw->hw_addr + db_off;
 
-	if (is_gen4_ntb(hw))
-		rte_write16(XEON_GEN4_SLOTSTS_DLLSCS,
-			    hw->hw_addr + XEON_GEN4_SLOTSTS);
+	if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev))
+		rte_write16(XEON_NTB4_5_SLOTSTS_DLLSCS,
+			    hw->hw_addr + XEON_NTB4_5_SLOTSTS);
 	rte_write64(db_bits, db_addr);
 
 	return 0;
@@ -598,10 +576,10 @@ intel_ntb_vector_bind(const struct rte_rawdev *dev, uint8_t intr, uint8_t msix)
 	}
 
 	/* Bind intr source to msix vector */
-	if (is_gen3_ntb(hw))
-		reg_off = XEON_GEN3_INTVEC_OFFSET;
-	else if (is_gen4_ntb(hw))
-		reg_off = XEON_GEN4_INTVEC_OFFSET;
+	if (is_gen3_ntb(hw->pci_dev))
+		reg_off = XEON_NTB3_INTVEC_OFFSET;
+	else if (is_gen4_ntb(hw->pci_dev) || is_gen5_ntb(hw->pci_dev))
+		reg_off = XEON_NTB4_5_INTVEC_OFFSET;
 	else {
 		NTB_LOG(ERR, "Cannot bind vectors for unsupported device.");
 		return -ENOTSUP;

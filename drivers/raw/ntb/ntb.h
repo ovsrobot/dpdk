@@ -17,9 +17,9 @@ extern int ntb_logtype;
 #define NTB_INTEL_VENDOR_ID         0x8086
 
 /* Device IDs */
-#define NTB_INTEL_DEV_ID_B2B_SKX    0x201C
-#define NTB_INTEL_DEV_ID_B2B_ICX    0x347E
-#define NTB_INTEL_DEV_ID_B2B_SPR    0x347E
+#define NTB_INTEL_DEV_ID_B2B_GEN3   0x201C
+#define NTB_INTEL_DEV_ID_B2B_GEN4   0x347E
+#define NTB_INTEL_DEV_ID_B2B_GEN5   0x0DB4
 
 /* Reserved to app to use. */
 #define NTB_SPAD_USER               "spad_user_"
