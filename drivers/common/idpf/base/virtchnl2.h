@@ -294,6 +294,7 @@
 /* These messages are only sent to PF from CP */
 #define VIRTCHNL2_EVENT_START_RESET_ADI		2
 #define VIRTCHNL2_EVENT_FINISH_RESET_ADI	3
+#define VIRTCHNL2_EVENT_ADI_ACTIVE		4
 
 /* VIRTCHNL2_QUEUE_TYPE
  * Transmit and Receive queue types are valid in legacy as well as split queue
@@ -547,7 +548,8 @@ struct virtchnl2_get_capabilities {
 	u8 max_sg_bufs_per_tx_pkt;
 
 	u8 reserved1;
-	__le16 pad1;
+	/* upper bound of number of ADIs supported */
+	__le16 max_adis;
 
 	/* version of Control Plane that is running */
 	__le16 oem_cp_ver_major;
@@ -1076,10 +1078,12 @@ struct virtchnl2_create_adi {
 	__le16 mbx_id;
 	/* PF sends mailbox vector id to CP */
 	__le16 mbx_vec_id;
+	/* PF populates this ADI index */
+	__le16 adi_index;
 	/* CP populates ADI id */
 	__le16 adi_id;
 	u8 reserved[64];
-	u8 pad[6];
+	u8 pad[4];
 	/* CP populates queue chunks */
 	struct virtchnl2_queue_reg_chunks chunks;
 	/* PF sends vector chunks to CP */
