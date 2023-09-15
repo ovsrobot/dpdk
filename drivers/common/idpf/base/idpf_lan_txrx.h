@@ -226,11 +226,11 @@ enum idpf_tx_flex_desc_cmd_bits {
 struct idpf_flex_tx_desc {
 	__le64 buf_addr;	/* Packet buffer address */
 	struct {
-		__le16 cmd_dtype;
 #define IDPF_FLEX_TXD_QW1_DTYPE_S	0
 #define IDPF_FLEX_TXD_QW1_DTYPE_M	GENMASK(4, 0)
 #define IDPF_FLEX_TXD_QW1_CMD_S		5
 #define IDPF_FLEX_TXD_QW1_CMD_M		GENMASK(15, 5)
+		__le16 cmd_dtype;
 		union {
 			/* DTYPE = IDPF_TX_DESC_DTYPE_FLEX_DATA_(0x03) */
 			u8 raw[4];
@@ -247,7 +247,7 @@ struct idpf_flex_tx_desc {
 				__le16 l2tag1;
 				__le16 l2tag2;
 			} l2tags;
-		} flex;
+		};
 		__le16 buf_size;
 	} qw1;
 };
