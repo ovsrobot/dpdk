@@ -417,6 +417,8 @@ EXPERIMENTAL {
 	# added in 23.07
 	rte_memzone_max_get;
 	rte_memzone_max_set;
+
+	rte_malloc_heap_swap_socket;
 };
 
 INTERNAL {
