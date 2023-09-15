@@ -305,19 +305,10 @@ nfp_netvf_init(struct rte_eth_dev *eth_dev)
 	}
 
 	/* Work out where in the BAR the queues start. */
-	switch (pci_dev->id.device_id) {
-	case PCI_DEVICE_ID_NFP3800_VF_NIC:
-	case PCI_DEVICE_ID_NFP6000_VF_NIC:
-		start_q = nn_cfg_readl(hw, NFP_NET_CFG_START_TXQ);
-		tx_bar_off = nfp_pci_queue(pci_dev, start_q);
-		start_q = nn_cfg_readl(hw, NFP_NET_CFG_START_RXQ);
-		rx_bar_off = nfp_pci_queue(pci_dev, start_q);
-		break;
-	default:
-		PMD_DRV_LOG(ERR, "nfp_net: no device ID matching");
-		err = -ENODEV;
-		goto dev_err_ctrl_map;
-	}
+	start_q = nn_cfg_readl(hw, NFP_NET_CFG_START_TXQ);
+	tx_bar_off = nfp_qcp_queue_offset(hw->pf_dev->dev_info, start_q);
+	start_q = nn_cfg_readl(hw, NFP_NET_CFG_START_RXQ);
+	rx_bar_off = nfp_qcp_queue_offset(hw->pf_dev->dev_info, start_q);
 
 	PMD_INIT_LOG(DEBUG, "tx_bar_off: 0x%" PRIx64 "", tx_bar_off);
 	PMD_INIT_LOG(DEBUG, "rx_bar_off: 0x%" PRIx64 "", rx_bar_off);
