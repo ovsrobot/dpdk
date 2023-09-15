@@ -1321,6 +1321,24 @@ malloc_heap_add_external_memory(struct malloc_heap *heap,
 }
 
 int
+rte_malloc_heap_swap_socket(int socket1, int socket2)
+{
+	const int h1 = malloc_socket_to_heap_id(socket1);
+	if (h1 < 0 || h1 > RTE_MAX_HEAPS)
+		return -1;
+
+	const int h2 = malloc_socket_to_heap_id(socket2);
+	if (h2 < 0 || h2 > RTE_MAX_HEAPS)
+		return -1;
+
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	int tmp = mcfg->malloc_heaps[h1].socket_id;
+	mcfg->malloc_heaps[h1].socket_id = mcfg->malloc_heaps[h2].socket_id;
+	mcfg->malloc_heaps[h2].socket_id = tmp;
+	return 0;
+}
+
+int
 malloc_heap_remove_external_memory(struct malloc_heap *heap, void *va_addr,
 		size_t len)
 {
