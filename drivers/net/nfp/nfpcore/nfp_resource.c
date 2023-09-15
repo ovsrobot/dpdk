@@ -161,11 +161,9 @@ nfp_resource_acquire(struct nfp_cpp *cpp,
 	struct nfp_resource *res;
 	struct nfp_cpp_mutex *dev_mutex;
 
-	res = malloc(sizeof(*res));
+	res = rte_zmalloc(NULL, sizeof(*res), 0);
 	if (res == NULL)
 		return NULL;
-
-	memset(res, 0, sizeof(*res));
 
 	strncpy(res->name, name, NFP_RESOURCE_ENTRY_NAME_SZ);
 
@@ -173,7 +171,7 @@ nfp_resource_acquire(struct nfp_cpp *cpp,
 			NFP_RESOURCE_TBL_BASE, NFP_RESOURCE_TBL_KEY);
 	if (dev_mutex == NULL) {
 		PMD_DRV_LOG(ERR, "RESOURCE - CPP mutex alloc failed");
-		free(res);
+		rte_free(res);
 		return NULL;
 	}
 
@@ -204,7 +202,7 @@ nfp_resource_acquire(struct nfp_cpp *cpp,
 
 err_free:
 	nfp_cpp_mutex_free(dev_mutex);
-	free(res);
+	rte_free(res);
 	return NULL;
 }
 
@@ -221,7 +219,7 @@ nfp_resource_release(struct nfp_resource *res)
 {
 	nfp_cpp_mutex_unlock(res->mutex);
 	nfp_cpp_mutex_free(res->mutex);
-	free(res);
+	rte_free(res);
 }
 
 /**

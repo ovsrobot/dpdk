@@ -109,7 +109,7 @@ nfp_hwinfo_try_fetch(struct nfp_cpp *cpp,
 	if (*cpp_size < HWINFO_SIZE_MIN)
 		return NULL;
 
-	db = malloc(*cpp_size + 1);
+	db = rte_zmalloc(NULL, *cpp_size + 1, 0);
 	if (db == NULL)
 		return NULL;
 
@@ -134,7 +134,7 @@ nfp_hwinfo_try_fetch(struct nfp_cpp *cpp,
 
 	return (void *)db;
 exit_free:
-	free(db);
+	rte_free(db);
 	return NULL;
 }
 
@@ -175,7 +175,7 @@ nfp_hwinfo_read(struct nfp_cpp *cpp)
 
 	err = nfp_hwinfo_db_validate(db, hwdb_size);
 	if (err != 0) {
-		free(db);
+		rte_free(db);
 		return NULL;
 	}
 	return db;

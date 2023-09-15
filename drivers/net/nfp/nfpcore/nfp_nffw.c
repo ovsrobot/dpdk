@@ -129,11 +129,9 @@ nfp_nffw_info_open(struct nfp_cpp *cpp)
 	struct nfp_nffw_info *state;
 	struct nfp_nffw_info_data *fwinf;
 
-	state = malloc(sizeof(*state));
+	state = rte_zmalloc(NULL, sizeof(*state), 0);
 	if (state == NULL)
 		return NULL;
-
-	memset(state, 0, sizeof(*state));
 
 	state->res = nfp_resource_acquire(cpp, NFP_RESOURCE_NFP_NFFW);
 	if (state->res == NULL) {
@@ -167,7 +165,7 @@ nfp_nffw_info_open(struct nfp_cpp *cpp)
 err_release:
 	nfp_resource_release(state->res);
 err_free:
-	free(state);
+	rte_free(state);
 	return NULL;
 }
 
@@ -181,7 +179,7 @@ void
 nfp_nffw_info_close(struct nfp_nffw_info *state)
 {
 	nfp_resource_release(state->res);
-	free(state);
+	rte_free(state);
 }
 
 /**

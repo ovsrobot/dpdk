@@ -253,11 +253,10 @@ __nfp_eth_read_ports(struct nfp_nsp *nsp)
 	union eth_table_entry *entries;
 	const struct rte_ether_addr *mac;
 
-	entries = malloc(NSP_ETH_TABLE_SIZE);
+	entries = rte_zmalloc(NULL, NSP_ETH_TABLE_SIZE, 0);
 	if (entries == NULL)
 		return NULL;
 
-	memset(entries, 0, NSP_ETH_TABLE_SIZE);
 	ret = nfp_nsp_read_eth_table(nsp, entries, NSP_ETH_TABLE_SIZE);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Reading port table failed %d", ret);
@@ -287,11 +286,10 @@ __nfp_eth_read_ports(struct nfp_nsp *nsp)
 	}
 
 	table_sz = sizeof(*table) + sizeof(struct nfp_eth_table_port) * cnt;
-	table = malloc(table_sz);
+	table = rte_zmalloc(NULL, table_sz, 0);
 	if (table == NULL)
 		goto err;
 
-	memset(table, 0, table_sz);
 	table->count = cnt;
 	for (i = 0, j = 0; i < NSP_ETH_MAX_COUNT; i++) {
 		mac = (const struct rte_ether_addr *)entries[i].mac_addr;
@@ -305,12 +303,12 @@ __nfp_eth_read_ports(struct nfp_nsp *nsp)
 	for (i = 0; i < table->count; i++)
 		nfp_eth_calc_port_type(&table->ports[i]);
 
-	free(entries);
+	rte_free(entries);
 
 	return table;
 
 err:
-	free(entries);
+	rte_free(entries);
 	return NULL;
 }
 
@@ -349,14 +347,13 @@ nfp_eth_config_start(struct nfp_cpp *cpp,
 	struct nfp_nsp *nsp;
 	union eth_table_entry *entries;
 
-	entries = malloc(NSP_ETH_TABLE_SIZE);
+	entries = rte_zmalloc(NULL, NSP_ETH_TABLE_SIZE, 0);
 	if (entries == NULL)
 		return NULL;
 
-	memset(entries, 0, NSP_ETH_TABLE_SIZE);
 	nsp = nfp_nsp_open(cpp);
 	if (nsp == NULL) {
-		free(entries);
+		rte_free(entries);
 		return nsp;
 	}
 
@@ -376,7 +373,7 @@ nfp_eth_config_start(struct nfp_cpp *cpp,
 
 err:
 	nfp_nsp_close(nsp);
-	free(entries);
+	rte_free(entries);
 	return NULL;
 }
 
@@ -388,7 +385,7 @@ nfp_eth_config_cleanup_end(struct nfp_nsp *nsp)
 	nfp_nsp_config_set_modified(nsp, 0);
 	nfp_nsp_config_clear_state(nsp);
 	nfp_nsp_close(nsp);
-	free(entries);
+	rte_free(entries);
 }
 
 /**
