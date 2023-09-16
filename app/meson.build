@@ -11,7 +11,7 @@ disable_apps = run_command(list_dir_globs, disable_apps, check: true).stdout().s
 enable_apps = ',' + get_option('enable_apps')
 enable_apps = run_command(list_dir_globs, enable_apps, check: true).stdout().split()
 if enable_apps.length() == 0
-    enable_apps = run_command(list_dir_globs, '*', check: true).stdout().split()
+    enable_apps = run_command(list_dir_globs, '*/', check: true).stdout().split()
 endif
 
 apps = [
