@@ -12,6 +12,7 @@ environments:
 
 * The Clang-LLVM C compiler and Microsoft MSVC linker.
 * The MinGW-w64 toolchain (either native or cross).
+* MSYS2 with the MINGW64/UCRT64 environment.
 
 The Meson Build system is used to prepare the sources for compilation
 with the Ninja backend.
@@ -53,6 +54,39 @@ On Windows, obtain the latest version installer from
 Any thread model (POSIX or Win32) can be chosen, DPDK does not rely on it.
 Install to a folder without spaces in its name, like ``C:\MinGW``.
 This path is assumed for the rest of this guide.
+
+
+Option 3. MSYS2 with the MINGW64/UCRT64 Environment
+---------------------------------------------------
+
+Install MSYS2
+~~~~~~~~~~~~~
+
+Download and install MSYS2 from
+`MSYS2 website <https://www.msys2.org>`_.
+
+Follow the installation instructions provided on the MSYS2 website
+to set up the base system.
+Make sure to update the package database using the
+following commands in the MSYS2 terminal:
+
+.. code-block:: console
+
+    pacman -Syu
+
+Install Build Dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Open the MSYS2 MINGW64/UCRT64 terminal and use the package manager
+to install the required build tools and dependencies:
+
+.. code-block:: console
+
+    pacman -S git pactoys
+    pacboy -S meson:p gcc:p pkg-config:p
+
+Meson and Ninja are already installed via the package manager,
+so you can proceed with building the code.
 
 
 Install the Build System
@@ -98,6 +132,8 @@ When using MinGW-w64, it is sufficient to have toolchain executables in PATH:
 .. code-block:: console
 
     set PATH=C:\MinGW\mingw64\bin;%PATH%
+
+When using MSYS2, perform in the MSYS2 MINGW64/UCRT64 terminal.
 
 To compile the examples, the flag ``-Dexamples`` is required.
 
