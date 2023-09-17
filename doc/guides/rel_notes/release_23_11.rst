@@ -78,6 +78,9 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Updated Intel QuickAssist Technology (QAT) crypto driver.**
+
+  * Added support for SM2 ECDSA algorithm.
 
 Removed Items
 -------------
