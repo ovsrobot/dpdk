@@ -663,8 +663,7 @@ static const struct rte_driver compdev_qat_driver = {
 };
 
 int
-qat_comp_dev_create(struct qat_pci_device *qat_pci_dev,
-		struct qat_dev_cmd_param *qat_dev_cmd_param)
+qat_comp_dev_create(struct qat_pci_device *qat_pci_dev)
 {
 	int i = 0;
 	struct qat_device_info *qat_dev_instance =
@@ -759,11 +758,11 @@ qat_comp_dev_create(struct qat_pci_device *qat_pci_dev,
 	comp_dev->qat_dev_capabilities = comp_dev->capa_mz->addr;
 
 	while (1) {
-		if (qat_dev_cmd_param[i].name == NULL)
+		if (cmd_arg_strings[i] == NULL)
 			break;
-		if (!strcmp(qat_dev_cmd_param[i].name, COMP_ENQ_THRESHOLD_NAME))
+		if (!strcmp(cmd_arg_strings[i], COMP_ENQ_THRESHOLD_NAME))
 			comp_dev->min_enq_burst_threshold =
-					qat_dev_cmd_param[i].val;
+				qat_pci_dev->cmd_line_param[i].val;
 		i++;
 	}
 	qat_pci_dev->comp_dev = comp_dev;

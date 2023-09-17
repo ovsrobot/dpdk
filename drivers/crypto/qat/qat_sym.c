@@ -15,6 +15,8 @@
 #include "qat_crypto.h"
 #include "qat_qp.h"
 
+extern const char *cmd_arg_strings[];
+
 uint8_t qat_sym_driver_id;
 int qat_legacy_capa;
 
@@ -182,8 +184,7 @@ qat_sym_dequeue_burst(void *qp, struct rte_crypto_op **ops,
 }
 
 int
-qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
-		struct qat_dev_cmd_param *qat_dev_cmd_param)
+qat_sym_dev_create(struct qat_pci_device *qat_pci_dev)
 {
 	int i = 0, ret = 0;
 	uint16_t slice_map = 0;
@@ -277,18 +278,18 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 
 	internals->dev_id = cryptodev->data->dev_id;
 
-	while (qat_dev_cmd_param[i].name != NULL) {
-		if (!strcmp(qat_dev_cmd_param[i].name, SYM_ENQ_THRESHOLD_NAME))
+	while (cmd_arg_strings[i] != NULL) {
+		if (!strcmp(cmd_arg_strings[i], SYM_ENQ_THRESHOLD_NAME))
 			internals->min_enq_burst_threshold =
-					qat_dev_cmd_param[i].val;
-		if (!strcmp(qat_dev_cmd_param[i].name,
+				qat_pci_dev->cmd_line_param[i].val;
+		if (!strcmp(cmd_arg_strings[i],
 				SYM_CIPHER_CRC_ENABLE_NAME))
 			internals->cipher_crc_offload_enable =
-					qat_dev_cmd_param[i].val;
-		if (!strcmp(qat_dev_cmd_param[i].name, QAT_LEGACY_CAPA))
-			qat_legacy_capa = qat_dev_cmd_param[i].val;
-		if (!strcmp(qat_dev_cmd_param[i].name, QAT_CMD_SLICE_MAP))
-			slice_map = qat_dev_cmd_param[i].val;
+				qat_pci_dev->cmd_line_param[i].val;
+		if (!strcmp(cmd_arg_strings[i], QAT_LEGACY_CAPA_NAME))
+			qat_legacy_capa = qat_pci_dev->cmd_line_param[i].val;
+		if (!strcmp(cmd_arg_strings[i], QAT_CMD_SLICE_MAP_NAME))
+			slice_map = qat_pci_dev->cmd_line_param[i].val;
 		i++;
 	}
 

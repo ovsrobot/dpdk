@@ -22,6 +22,16 @@
 		}				\
 	} while (0)
 
+const char *cmd_arg_strings[] = {
+	[QAT_LEGACY_CAPA_POS]		= "qat_legacy_capa",
+	[SYM_ENQ_THRESHOLD_POS]		= "qat_sym_enq_threshold",
+	[ASYM_ENQ_THRESHOLD_POS]	= "qat_asym_enq_threshold",
+	[COMP_ENQ_THRESHOLD_POS]	= "qat_comp_enq_threshold",
+	[SYM_CIPHER_CRC_ENABLE_POS]	= "qat_sym_cipher_crc_enable",
+	[QAT_CMD_SLICE_MAP_POS]		= "qat_cmd_slice_disable",
+	[QAT_CMD_SLICE_MAP_POS + 1]	= NULL,
+};
+
 /* Hardware device information per generation */
 struct qat_gen_hw_data qat_gen_config[QAT_N_GENS];
 struct qat_dev_hw_spec_funcs *qat_dev_hw_spec[QAT_N_GENS];
@@ -117,7 +127,7 @@ qat_get_qat_dev_from_pci_dev(struct rte_pci_device *pci_dev)
 
 static void
 qat_dev_parse_cmd(const char *str, struct qat_dev_cmd_param
-		*qat_dev_cmd_param)
+		*cmd_line_param)
 {
 	int i = 0;
 	const char *param;
@@ -125,7 +135,7 @@ qat_dev_parse_cmd(const char *str, struct qat_dev_cmd_param
 	while (1) {
 		char value_str[4] = { };
 
-		param = qat_dev_cmd_param[i].name;
+		param = cmd_arg_strings[i];
 		if (param == NULL)
 			return;
 		long value = 0;
@@ -174,7 +184,7 @@ qat_dev_parse_cmd(const char *str, struct qat_dev_cmd_param
 						param, value);
 			}
 		}
-		qat_dev_cmd_param[i].val = value;
+		cmd_line_param[i].val = value;
 		i++;
 	}
 }
@@ -201,9 +211,8 @@ pick_gen(struct rte_pci_device *pci_dev)
 	}
 }
 
-struct qat_pci_device *
-qat_pci_device_allocate(struct rte_pci_device *pci_dev,
-		struct qat_dev_cmd_param *qat_dev_cmd_param)
+static struct qat_pci_device *
+qat_pci_device_allocate(struct rte_pci_device *pci_dev)
 {
 	struct qat_pci_device *qat_dev;
 	enum qat_device_gen qat_dev_gen;
@@ -291,7 +300,7 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 		qat_dev->misc_bar_io_addr = NULL;
 
 	if (devargs && devargs->drv_str)
-		qat_dev_parse_cmd(devargs->drv_str, qat_dev_cmd_param);
+		qat_dev_parse_cmd(devargs->drv_str, qat_dev->cmd_line_param);
 
 	if (qat_read_qp_config(qat_dev)) {
 		QAT_LOG(ERR,
@@ -311,7 +320,9 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 	NOT_NULL(ops_hw->qat_dev_get_slice_map, goto error,
 		"QAT internal error! Reset ring pairs function not set, gen : %d",
 		qat_dev_gen);
-	if (ops_hw->qat_dev_get_slice_map(&qat_dev->slice_map, pci_dev) < 0) {
+	if (ops_hw->qat_dev_get_slice_map(
+			&qat_dev->cmd_line_param[QAT_CMD_SLICE_MAP_POS].val,
+			pci_dev) < 0) {
 		RTE_LOG(ERR, EAL,
 			"Cannot read slice configuration\n");
 		goto error;
@@ -401,27 +412,17 @@ static int qat_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	int sym_ret = 0, asym_ret = 0, comp_ret = 0;
 	int num_pmds_created = 0;
 	struct qat_pci_device *qat_pci_dev;
-	struct qat_dev_cmd_param qat_dev_cmd_param[] = {
-			{ QAT_LEGACY_CAPA, 0 },
-			{ SYM_ENQ_THRESHOLD_NAME, 0 },
-			{ ASYM_ENQ_THRESHOLD_NAME, 0 },
-			{ COMP_ENQ_THRESHOLD_NAME, 0 },
-			{ SYM_CIPHER_CRC_ENABLE_NAME, 0 },
-			[QAT_CMD_SLICE_MAP_POS] = { QAT_CMD_SLICE_MAP, 0},
-			{ NULL, 0 },
-	};
 
 	QAT_LOG(DEBUG, "Found QAT device at %02x:%02x.%x",
 			pci_dev->addr.bus,
 			pci_dev->addr.devid,
 			pci_dev->addr.function);
 
-	qat_pci_dev = qat_pci_device_allocate(pci_dev, qat_dev_cmd_param);
+	qat_pci_dev = qat_pci_device_allocate(pci_dev);
 	if (qat_pci_dev == NULL)
 		return -ENODEV;
 
-	qat_dev_cmd_param[QAT_CMD_SLICE_MAP_POS].val = qat_pci_dev->slice_map;
-	sym_ret = qat_sym_dev_create(qat_pci_dev, qat_dev_cmd_param);
+	sym_ret = qat_sym_dev_create(qat_pci_dev);
 	if (sym_ret == 0) {
 		num_pmds_created++;
 	}
@@ -430,7 +431,7 @@ static int qat_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 				"Failed to create QAT SYM PMD on device %s",
 				qat_pci_dev->name);
 
-	comp_ret = qat_comp_dev_create(qat_pci_dev, qat_dev_cmd_param);
+	comp_ret = qat_comp_dev_create(qat_pci_dev);
 	if (comp_ret == 0)
 		num_pmds_created++;
 	else
@@ -438,7 +439,7 @@ static int qat_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 				"Failed to create QAT COMP PMD on device %s",
 				qat_pci_dev->name);
 
-	asym_ret = qat_asym_dev_create(qat_pci_dev, qat_dev_cmd_param);
+	asym_ret = qat_asym_dev_create(qat_pci_dev);
 	if (asym_ret == 0)
 		num_pmds_created++;
 	else
@@ -475,15 +476,13 @@ static struct rte_pci_driver rte_qat_pmd = {
 };
 
 __rte_weak int
-qat_sym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
-		struct qat_dev_cmd_param *qat_dev_cmd_param __rte_unused)
+qat_sym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused)
 {
 	return 0;
 }
 
 __rte_weak int
-qat_asym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
-		const struct qat_dev_cmd_param *qat_dev_cmd_param __rte_unused)
+qat_asym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused)
 {
 	return 0;
 }
@@ -501,8 +500,7 @@ qat_asym_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused)
 }
 
 __rte_weak int
-qat_comp_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
-		struct qat_dev_cmd_param *qat_dev_cmd_param __rte_unused)
+qat_comp_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused)
 {
 	return 0;
 }

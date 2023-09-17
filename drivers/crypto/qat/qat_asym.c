@@ -1415,8 +1415,7 @@ qat_asym_init_op_cookie(void *op_cookie)
 }
 
 int
-qat_asym_dev_create(struct qat_pci_device *qat_pci_dev,
-		const struct qat_dev_cmd_param *qat_dev_cmd_param)
+qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 {
 	struct qat_cryptodev_private *internals;
 	struct rte_cryptodev *cryptodev;
@@ -1490,13 +1489,13 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev,
 	internals->dev_id = cryptodev->data->dev_id;
 
 	while (1) {
-		if (qat_dev_cmd_param[i].name == NULL)
+		if (cmd_arg_strings[i] == NULL)
 			break;
-		if (!strcmp(qat_dev_cmd_param[i].name, ASYM_ENQ_THRESHOLD_NAME))
+		if (!strcmp(cmd_arg_strings[i], ASYM_ENQ_THRESHOLD_NAME))
 			internals->min_enq_burst_threshold =
-					qat_dev_cmd_param[i].val;
-		if (!strcmp(qat_dev_cmd_param[i].name, QAT_CMD_SLICE_MAP))
-			slice_map = qat_dev_cmd_param[i].val;
+				qat_pci_dev->cmd_line_param[i].val;
+		if (!strcmp(cmd_arg_strings[i], QAT_CMD_SLICE_MAP_NAME))
+			slice_map = qat_pci_dev->cmd_line_param[i].val;
 		i++;
 	}
 
