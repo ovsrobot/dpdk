@@ -6,6 +6,8 @@
 
 #include <cryptodev_pmd.h>
 
+#include "adf_transport_access_macros.h"
+#include "icp_qat_hw.h"
 #include "qat_device.h"
 #include "qat_logs.h"
 
@@ -16,6 +18,7 @@
 #include "qat_ec.h"
 
 #define RSA_MODULUS_2048_BITS 2048
+#define SERVICE_NAME "ASYM"
 
 uint8_t qat_asym_driver_id;
 
@@ -1414,7 +1417,7 @@ qat_asym_init_op_cookie(void *op_cookie)
 	}
 }
 
-int
+static int
 qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 {
 	struct qat_cryptodev_private *internals;
@@ -1432,6 +1435,7 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 	char capa_memz_name[RTE_CRYPTODEV_NAME_MAX_LEN];
 	int i = 0;
 	uint16_t slice_map = 0;
+	int sym_dev_pos = get_service_pos(SERVICE_NAME);
 
 	snprintf(name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s",
 			qat_pci_dev->name, "asym");
@@ -1519,31 +1523,33 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 		return -1;
 	}
 
-	qat_pci_dev->asym_dev = internals;
+	qat_pci_dev->pmd[sym_dev_pos] = internals;
 	internals->service_type = QAT_SERVICE_ASYMMETRIC;
 	QAT_LOG(DEBUG, "Created QAT ASYM device %s as cryptodev instance %d",
 			cryptodev->data->name, internals->dev_id);
 	return 0;
 }
 
-int
+static int
 qat_asym_dev_destroy(struct qat_pci_device *qat_pci_dev)
 {
 	struct rte_cryptodev *cryptodev;
+	int dev_pos = get_service_pos(SERVICE_NAME);
+	struct qat_cryptodev_private *dev =
+		qat_pci_dev->pmd[dev_pos];
 
 	if (qat_pci_dev == NULL)
 		return -ENODEV;
-	if (qat_pci_dev->asym_dev == NULL)
+	if (qat_pci_dev->pmd[dev_pos] == NULL)
 		return 0;
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
-		rte_memzone_free(qat_pci_dev->asym_dev->capa_mz);
+		rte_memzone_free(dev->capa_mz);
 
 	/* free crypto device */
-	cryptodev = rte_cryptodev_pmd_get_dev(
-			qat_pci_dev->asym_dev->dev_id);
+	cryptodev = rte_cryptodev_pmd_get_dev(dev->dev_id);
 	rte_cryptodev_pmd_destroy(cryptodev);
 	qat_pci_devs[qat_pci_dev->qat_dev_id].asym_rte_dev.name = NULL;
-	qat_pci_dev->asym_dev = NULL;
+	qat_pci_dev->pmd[dev_pos] = NULL;
 
 	return 0;
 }
@@ -1552,3 +1558,11 @@ static struct cryptodev_driver qat_crypto_drv;
 RTE_PMD_REGISTER_CRYPTO_DRIVER(qat_crypto_drv,
 		cryptodev_qat_asym_driver,
 		qat_asym_driver_id);
+
+RTE_INIT(qat_asym_dev_register)
+{
+	qat_dev_service[qat_dev_services_no].name = SERVICE_NAME;
+	qat_dev_service[qat_dev_services_no].dev_create = qat_asym_dev_create;
+	qat_dev_service[qat_dev_services_no].dev_destroy = qat_asym_dev_destroy;
+	qat_dev_services_no++;
+}

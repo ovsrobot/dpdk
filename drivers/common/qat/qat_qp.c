@@ -19,8 +19,6 @@
 #include "qat_device.h"
 #include "qat_qp.h"
 #include "qat_sym.h"
-#include "qat_asym.h"
-#include "qat_comp.h"
 
 #define QAT_CQ_MAX_DEQ_RETRIES 10
 

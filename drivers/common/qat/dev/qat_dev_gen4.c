@@ -7,6 +7,7 @@
 
 #include "qat_device.h"
 #include "qat_qp.h"
+#include "qat_logs.h"
 #include "adf_transport_access_macros_gen4vf.h"
 #include "adf_pf2vf_msg.h"
 #include "qat_pf2vf.h"

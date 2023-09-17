@@ -6,8 +6,10 @@
 
 #include "qat_comp.h"
 #include "qat_comp_pmd.h"
+#include "qat_logs.h"
 
 #define QAT_PMD_COMP_SGL_DEF_SEGMENTS 16
+#define SERVICE_NAME "COMP"
 
 struct qat_comp_gen_dev_ops qat_comp_gen_dev_ops[QAT_N_GENS];
 
@@ -629,22 +631,25 @@ qat_comp_pmd_dequeue_first_op_burst(void *qp, struct rte_comp_op **ops,
 {
 	uint16_t ret = qat_comp_dequeue_burst(qp, ops, nb_ops);
 	struct qat_qp *tmp_qp = (struct qat_qp *)qp;
+	int dev_pos = get_service_pos(SERVICE_NAME);
+	struct qat_comp_dev_private *dev =
+		tmp_qp->qat_dev->pmd[dev_pos];
 
 	if (ret) {
 		if ((*ops)->debug_status ==
 				(uint64_t)ERR_CODE_QAT_COMP_WRONG_FW) {
-			tmp_qp->qat_dev->comp_dev->compressdev->enqueue_burst =
+			dev->compressdev->enqueue_burst =
 					qat_comp_pmd_enq_deq_dummy_op_burst;
-			tmp_qp->qat_dev->comp_dev->compressdev->dequeue_burst =
+			dev->compressdev->dequeue_burst =
 					qat_comp_pmd_enq_deq_dummy_op_burst;
 
-			tmp_qp->qat_dev->comp_dev->compressdev->dev_ops =
+			dev->compressdev->dev_ops =
 					&compress_qat_dummy_ops;
 			QAT_LOG(ERR,
 					"This QAT hardware doesn't support compression operation");
 
 		} else {
-			tmp_qp->qat_dev->comp_dev->compressdev->dequeue_burst =
+			dev->compressdev->dequeue_burst =
 					qat_comp_dequeue_burst;
 		}
 	}
@@ -662,7 +667,7 @@ static const struct rte_driver compdev_qat_driver = {
 	.alias = qat_comp_drv_name
 };
 
-int
+static int
 qat_comp_dev_create(struct qat_pci_device *qat_pci_dev)
 {
 	int i = 0;
@@ -681,6 +686,7 @@ qat_comp_dev_create(struct qat_pci_device *qat_pci_dev)
 	const struct qat_comp_gen_dev_ops *qat_comp_gen_ops =
 			&qat_comp_gen_dev_ops[qat_pci_dev->qat_dev_gen];
 	uint64_t capa_size;
+	int dev_pos = get_service_pos(SERVICE_NAME);
 
 	snprintf(name, RTE_COMPRESSDEV_NAME_MAX_LEN, "%s_%s",
 			qat_pci_dev->name, "comp");
@@ -765,7 +771,7 @@ qat_comp_dev_create(struct qat_pci_device *qat_pci_dev)
 				qat_pci_dev->cmd_line_param[i].val;
 		i++;
 	}
-	qat_pci_dev->comp_dev = comp_dev;
+	qat_pci_dev->pmd[dev_pos] = comp_dev;
 
 	QAT_LOG(DEBUG,
 		    "Created QAT COMP device %s as compressdev instance %d",
@@ -773,26 +779,32 @@ qat_comp_dev_create(struct qat_pci_device *qat_pci_dev)
 	return 0;
 }
 
-int
+static int
 qat_comp_dev_destroy(struct qat_pci_device *qat_pci_dev)
 {
-	struct qat_comp_dev_private *comp_dev;
+	int dev_pos = get_service_pos(SERVICE_NAME);
+	struct qat_comp_dev_private *dev =
+		qat_pci_dev->pmd[dev_pos];
 
 	if (qat_pci_dev == NULL)
 		return -ENODEV;
 
-	comp_dev = qat_pci_dev->comp_dev;
-	if (comp_dev == NULL)
-		return 0;
-
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
-		rte_memzone_free(qat_pci_dev->comp_dev->capa_mz);
+		rte_memzone_free(dev->capa_mz);
 
 	/* clean up any resources used by the device */
-	qat_comp_dev_close(comp_dev->compressdev);
+	qat_comp_dev_close(dev->compressdev);
 
-	rte_compressdev_pmd_destroy(comp_dev->compressdev);
-	qat_pci_dev->comp_dev = NULL;
+	rte_compressdev_pmd_destroy(dev->compressdev);
+	qat_pci_dev->pmd[dev_pos] = NULL;
 
 	return 0;
+}
+
+RTE_INIT(qat_comp_dev_register)
+{
+	qat_dev_service[qat_dev_services_no].name = SERVICE_NAME;
+	qat_dev_service[qat_dev_services_no].dev_create = qat_comp_dev_create;
+	qat_dev_service[qat_dev_services_no].dev_destroy = qat_comp_dev_destroy;
+	qat_dev_services_no++;
 }

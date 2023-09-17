@@ -8,6 +8,7 @@
 #include "qat_comp_pmd.h"
 #include "qat_comp.h"
 #include "qat_comp_pmd_gens.h"
+#include "qat_logs.h"
 
 #define QAT_NUM_INTERM_BUFS_GEN1 12
 

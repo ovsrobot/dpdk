@@ -7,10 +7,7 @@
 #include <bus_pci_driver.h>
 
 #include "qat_common.h"
-#include "qat_logs.h"
 #include "qat_qp.h"
-#include "adf_transport_access_macros.h"
-#include "icp_qat_hw.h"
 
 #define QAT_DETACHED  (0)
 #define QAT_ATTACHED  (1)
@@ -63,6 +60,18 @@ struct qat_dev_cmd_param {
 	uint32_t val;
 };
 
+struct qat_dev_service {
+	const char *name;
+	int (*dev_create)(struct qat_pci_device *qat_pci_dev);
+	int (*dev_destroy)(struct qat_pci_device *qat_pci_dev);
+};
+
+extern int qat_dev_services_no;
+extern struct qat_dev_service qat_dev_service[];
+
+int
+get_service_pos(const char *name);
+
 struct qat_device_info {
 	const struct rte_memzone *mz;
 	/**< mz to store the qat_pci_device so it can be
@@ -90,9 +99,6 @@ struct qat_device_info {
 
 extern struct qat_device_info qat_pci_devs[];
 
-struct qat_cryptodev_private;
-struct qat_comp_dev_private;
-
 /*
  * This struct holds all the data about a QAT pci device
  * including data about all services it supports.
@@ -117,30 +123,17 @@ struct qat_pci_device {
 
 	struct qat_qp *qps_in_use[QAT_MAX_SERVICES][ADF_MAX_QPS_ON_ANY_SERVICE];
 	/**< links to qps set up for each service, index same as on API */
-
-	/* Data relating to symmetric crypto service */
-	struct qat_cryptodev_private *sym_dev;
-	/**< link back to cryptodev private data */
-
 	int qat_sym_driver_id;
 	/**< Symmetric driver id used by this device */
-
-	/* Data relating to asymmetric crypto service */
-	struct qat_cryptodev_private *asym_dev;
-	/**< link back to cryptodev private data */
-
 	int qat_asym_driver_id;
 	/**< Symmetric driver id used by this device */
-
-	/* Data relating to compression service */
-	struct qat_comp_dev_private *comp_dev;
-	/**< link back to compressdev private data */
 	void *misc_bar_io_addr;
 	/**< Address of misc bar */
 	void *dev_private;
 	/**< Per generation specific information */
 	struct qat_dev_cmd_param cmd_line_param[QAT_CMD_SLICE_MAP_POS + 1];
 	/**< Command line parameters values */
+	void *pmd[];
 };
 
 struct qat_gen_hw_data {
@@ -162,24 +155,5 @@ extern struct qat_gen_hw_data qat_gen_config[];
 
 struct qat_pci_device *
 qat_get_qat_dev_from_pci_dev(struct rte_pci_device *pci_dev);
-
-/* declaration needed for weak functions */
-int
-qat_sym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused);
-
-int
-qat_asym_dev_create(struct qat_pci_device *qat_pci_dev);
-
-int
-qat_sym_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
-
-int
-qat_asym_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
-
-int
-qat_comp_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused);
-
-int
-qat_comp_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
 
 #endif /* _QAT_DEVICE_H_ */

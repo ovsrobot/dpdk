@@ -4,8 +4,10 @@
 
 #include "qat_device.h"
 #include "qat_qp.h"
+#include "qat_logs.h"
 #include "adf_transport_access_macros.h"
 #include "qat_dev_gens.h"
+#include "icp_qat_hw.h"
 
 #include <stdint.h>
 

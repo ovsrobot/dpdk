@@ -7,6 +7,7 @@
 #include "qat_comp_pmd_gens.h"
 #include "icp_qat_hw_gen4_comp.h"
 #include "icp_qat_hw_gen4_comp_defs.h"
+#include "qat_logs.h"
 
 #define QAT_NUM_INTERM_BUFS_GEN4 0
 

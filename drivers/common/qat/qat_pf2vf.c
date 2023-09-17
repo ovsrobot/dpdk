@@ -4,6 +4,7 @@
 
 #include "qat_pf2vf.h"
 #include "adf_pf2vf_msg.h"
+#include "qat_logs.h"
 
 #include <rte_cycles.h>
 
