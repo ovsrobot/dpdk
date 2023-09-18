@@ -668,7 +668,7 @@ malloc_heap_alloc_on_heap_id(const char *type, size_t size,
 	 * we just need to request more memory first.
 	 */
 
-	socket_id = rte_socket_id_by_idx(heap_id);
+	socket_id = heap->is_external ? -1 : rte_socket_id_by_idx(heap_id);
 	/*
 	 * if socket ID is negative, we cannot find a socket ID for this heap -
 	 * which means it's an external heap. those can have unexpected page
@@ -1362,19 +1362,17 @@ malloc_heap_create(struct malloc_heap *heap, const char *heap_name)
 	}
 
 	/* initialize empty heap */
-	heap->alloc_count = 0;
-	heap->first = NULL;
-	heap->last = NULL;
+	*heap = (struct malloc_heap) {
+		.is_external = 1,
+		.socket_id = next_socket_id,
+		.lock = RTE_SPINLOCK_INITIALIZER,
+	};
 	LIST_INIT(heap->free_head);
-	rte_spinlock_init(&heap->lock);
-	heap->total_size = 0;
-	heap->socket_id = next_socket_id;
+	strlcpy(heap->name, heap_name, RTE_HEAP_NAME_MAX_LEN);
 
 	/* we hold a global mem hotplug writelock, so it's safe to increment */
 	mcfg->next_socket_id++;
 
-	/* set up name */
-	strlcpy(heap->name, heap_name, RTE_HEAP_NAME_MAX_LEN);
 	return 0;
 }
 
@@ -1425,8 +1423,12 @@ rte_eal_malloc_heap_init(void)
 
 			snprintf(heap_name, sizeof(heap_name),
 					"socket_%i", socket_id);
+
+			*heap = (struct malloc_heap){
+				.lock = RTE_SPINLOCK_INITIALIZER,
+				.socket_id = socket_id,
+			};
 			strlcpy(heap->name, heap_name, RTE_HEAP_NAME_MAX_LEN);
-			heap->socket_id = socket_id;
 		}
 	}
 

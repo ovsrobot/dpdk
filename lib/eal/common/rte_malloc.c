@@ -314,7 +314,7 @@ rte_malloc_heap_socket_is_external(int socket_id)
 
 		if ((int)tmp->socket_id == socket_id) {
 			/* external memory always has large socket ID's */
-			ret = tmp->socket_id >= RTE_MAX_NUMA_NODES;
+			ret = tmp->is_external;
 			break;
 		}
 	}
@@ -421,7 +421,7 @@ rte_malloc_heap_memory_add(const char *heap_name, void *va_addr, size_t len,
 		ret = -1;
 		goto unlock;
 	}
-	if (heap->socket_id < RTE_MAX_NUMA_NODES) {
+	if (heap->is_external == 0) {
 		/* cannot add memory to internal heaps */
 		rte_errno = EPERM;
 		ret = -1;
@@ -469,7 +469,7 @@ rte_malloc_heap_memory_remove(const char *heap_name, void *va_addr, size_t len)
 		ret = -1;
 		goto unlock;
 	}
-	if (heap->socket_id < RTE_MAX_NUMA_NODES) {
+	if (heap->is_external == 0) {
 		/* cannot remove memory from internal heaps */
 		rte_errno = EPERM;
 		ret = -1;
@@ -520,7 +520,7 @@ sync_memory(const char *heap_name, void *va_addr, size_t len, bool attach)
 		goto unlock;
 	}
 	/* we shouldn't be able to sync to internal heaps */
-	if (heap->socket_id < RTE_MAX_NUMA_NODES) {
+	if (heap->is_external == 0) {
 		rte_errno = EPERM;
 		ret = -1;
 		goto unlock;
@@ -648,8 +648,10 @@ rte_malloc_heap_destroy(const char *heap_name)
 		ret = -1;
 		goto unlock;
 	}
-	/* we shouldn't be able to destroy internal heaps */
-	if (heap->socket_id < RTE_MAX_NUMA_NODES) {
+	/* we shouldn't be able to destroy internal heaps, or external heaps
+	 * configured to have an internal numa socket id
+	 */
+	if (heap->socket_id < RTE_MAX_NUMA_NODES || heap->is_external == 0) {
 		rte_errno = EPERM;
 		ret = -1;
 		goto unlock;

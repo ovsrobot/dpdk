@@ -23,6 +23,7 @@ struct malloc_elem;
  */
 struct malloc_heap {
 	rte_spinlock_t lock;
+	uint32_t is_external:1;
 	LIST_HEAD(, malloc_elem) free_head[RTE_HEAP_NUM_FREELISTS];
 	struct malloc_elem *volatile first;
 	struct malloc_elem *volatile last;
