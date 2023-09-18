@@ -137,6 +137,7 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 		  struct idpf_ctlq_create_info *qinfo,
 		  struct idpf_ctlq_info **cq_out)
 {
+	struct idpf_ctlq_info *cq;
 	bool is_rxq = false;
 	int status = 0;
 
@@ -145,26 +146,26 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 	    qinfo->buf_size > IDPF_CTLQ_MAX_BUF_LEN)
 		return -EINVAL;
 
-	*cq_out = (struct idpf_ctlq_info *)
-		idpf_calloc(hw, 1, sizeof(struct idpf_ctlq_info));
-	if (!(*cq_out))
+	cq = (struct idpf_ctlq_info *)
+	     idpf_calloc(hw, 1, sizeof(struct idpf_ctlq_info));
+	if (!cq)
 		return -ENOMEM;
 
-	(*cq_out)->cq_type = qinfo->type;
-	(*cq_out)->q_id = qinfo->id;
-	(*cq_out)->buf_size = qinfo->buf_size;
-	(*cq_out)->ring_size = qinfo->len;
+	(cq)->cq_type = qinfo->type;
+	(cq)->q_id = qinfo->id;
+	(cq)->buf_size = qinfo->buf_size;
+	(cq)->ring_size = qinfo->len;
 
-	(*cq_out)->next_to_use = 0;
-	(*cq_out)->next_to_clean = 0;
-	(*cq_out)->next_to_post = (*cq_out)->ring_size - 1;
+	(cq)->next_to_use = 0;
+	(cq)->next_to_clean = 0;
+	(cq)->next_to_post = cq->ring_size - 1;
 
 	switch (qinfo->type) {
 	case IDPF_CTLQ_TYPE_MAILBOX_RX:
 		is_rxq = true;
 		/* fallthrough */
 	case IDPF_CTLQ_TYPE_MAILBOX_TX:
-		status = idpf_ctlq_alloc_ring_res(hw, *cq_out);
+		status = idpf_ctlq_alloc_ring_res(hw, cq);
 		break;
 	default:
 		status = -EINVAL;
@@ -175,33 +176,35 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 		goto init_free_q;
 
 	if (is_rxq) {
-		idpf_ctlq_init_rxq_bufs(*cq_out);
+		idpf_ctlq_init_rxq_bufs(cq);
 	} else {
 		/* Allocate the array of msg pointers for TX queues */
-		(*cq_out)->bi.tx_msg = (struct idpf_ctlq_msg **)
+		cq->bi.tx_msg = (struct idpf_ctlq_msg **)
 			idpf_calloc(hw, qinfo->len,
 				    sizeof(struct idpf_ctlq_msg *));
-		if (!(*cq_out)->bi.tx_msg) {
+		if (!cq->bi.tx_msg) {
 			status = -ENOMEM;
 			goto init_dealloc_q_mem;
 		}
 	}
 
-	idpf_ctlq_setup_regs(*cq_out, qinfo);
+	idpf_ctlq_setup_regs(cq, qinfo);
 
-	idpf_ctlq_init_regs(hw, *cq_out, is_rxq);
+	idpf_ctlq_init_regs(hw, cq, is_rxq);
 
-	idpf_init_lock(&(*cq_out)->cq_lock);
+	idpf_init_lock(&(cq->cq_lock));
 
-	LIST_INSERT_HEAD(&hw->cq_list_head, (*cq_out), cq_list);
+	LIST_INSERT_HEAD(&hw->cq_list_head, cq, cq_list);
 
+	*cq_out = cq;
 	return status;
 
 init_dealloc_q_mem:
 	/* free ring buffers and the ring itself */
-	idpf_ctlq_dealloc_ring_res(hw, *cq_out);
+	idpf_ctlq_dealloc_ring_res(hw, cq);
 init_free_q:
-	idpf_free(hw, *cq_out);
+	idpf_free(hw, cq);
+	cq = NULL;
 
 	return status;
 }
