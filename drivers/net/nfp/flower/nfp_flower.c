@@ -503,7 +503,8 @@ nfp_flower_init_ctrl_vnic(struct nfp_net_hw *hw)
 		 * resizing in later calls to the queue setup function.
 		 */
 		tz = rte_eth_dma_zone_reserve(eth_dev, "ctrl_rx_ring", i,
-				sizeof(struct nfp_net_rx_desc) * NFP_NET_MAX_RX_DESC,
+				sizeof(struct nfp_net_rx_desc) *
+				pf_dev->dev_info->max_qc_size,
 				NFP_MEMZONE_ALIGN, numa_node);
 		if (tz == NULL) {
 			PMD_DRV_LOG(ERR, "Error allocating rx dma");
@@ -558,7 +559,8 @@ nfp_flower_init_ctrl_vnic(struct nfp_net_hw *hw)
 		 * resizing in later calls to the queue setup function.
 		 */
 		tz = rte_eth_dma_zone_reserve(eth_dev, "ctrl_tx_ring", i,
-				sizeof(struct nfp_net_nfd3_tx_desc) * NFP_NET_MAX_TX_DESC,
+				sizeof(struct nfp_net_nfd3_tx_desc) *
+				pf_dev->dev_info->max_qc_size,
 				NFP_MEMZONE_ALIGN, numa_node);
 		if (tz == NULL) {
 			PMD_DRV_LOG(ERR, "Error allocating tx dma");
