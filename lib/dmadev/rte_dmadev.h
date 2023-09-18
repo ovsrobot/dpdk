@@ -794,6 +794,18 @@ struct rte_dma_sge {
 	uint32_t length; /**< The DMA operation length. */
 };
 
+/**
+ * A structure used to hold event based DMA operation request entry.
+ */
+struct rte_dma_op {
+	struct rte_dma_sge *src_seg;      /**< Source segments. */
+	struct rte_dma_sge *dst_seg;      /**< Destination segments. */
+	uint16_t nb_src;                  /**< Number of source segments. */
+	uint16_t nb_dst;                  /**< Number of destination segments. */
+	uint64_t flags;                   /**< Flags related to the operation. */
+	struct rte_mempool *op_mp;        /**< Mempool from which op is allocated. */
+};
+
 #include "rte_dmadev_core.h"
 
 /**@{@name DMA operation flag
