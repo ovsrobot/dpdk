@@ -2472,13 +2472,6 @@ rxa_create(uint8_t id, uint8_t dev_id,
 	if (conf_cb == rxa_default_conf_cb)
 		rx_adapter->default_cb_arg = 1;
 
-	if (rte_mbuf_dyn_rx_timestamp_register(
-			&event_eth_rx_timestamp_dynfield_offset,
-			&event_eth_rx_timestamp_dynflag) != 0) {
-		RTE_EDEV_LOG_ERR("Error registering timestamp field in mbuf\n");
-		return -rte_errno;
-	}
-
 	rte_eventdev_trace_eth_rx_adapter_create(id, dev_id, conf_cb,
 		conf_arg);
 	return 0;
@@ -2738,6 +2731,7 @@ rte_event_eth_rx_adapter_queue_add(uint8_t id,
 					1);
 		}
 	} else {
+		uint64_t dev_offloads;
 		rte_spinlock_lock(&rx_adapter->rx_lock);
 		dev_info->internal_event_port = 0;
 		ret = rxa_init_service(rx_adapter, id);
@@ -2749,6 +2743,17 @@ rte_event_eth_rx_adapter_queue_add(uint8_t id,
 				rxa_sw_adapter_queue_count(rx_adapter));
 		}
 		rte_spinlock_unlock(&rx_adapter->rx_lock);
+
+		dev_offloads = dev_info->dev->data->dev_conf.rxmode.offloads;
+		if (dev_offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
+			if (rte_mbuf_dyn_rx_timestamp_register(
+					&event_eth_rx_timestamp_dynfield_offset,
+					&event_eth_rx_timestamp_dynflag) != 0) {
+				RTE_EDEV_LOG_ERR("Error registering timestamp field in mbuf\n");
+				return -rte_errno;
+			}
+		}
+
 	}
 
 	rte_eventdev_trace_eth_rx_adapter_queue_add(id, eth_dev_id,
