@@ -491,6 +491,40 @@ int
 rte_malloc_heap_socket_is_external(int socket_id);
 
 /**
+ * Swap the heaps for the given socket ids
+ *
+ * This causes the heaps for the given socket ids to be swapped, allowing
+ * external memory registered as a malloc heap to become the new default memory
+ * for a standard numa node. For example, to have allocations on socket 0 come
+ * from external memory, the following sequence of API calls can be used:
+ * @code
+ *   rte_malloc_heap_create(<name>)
+ *   rte_malloc_heap_memory_add(<name>,....)
+ *   id = rte_malloc_heap_get_socket(<name>)
+ *   rte_malloc_heap_swap_socket(0, id)
+ * @endcode
+ *
+ * Following these calls, allocations for the old memory allocated on socket 0,
+ * can be made by passing "id" as the socket_id parameter.
+ *
+ * @note: It is recommended that this function be used only after EAL initialization,
+ *   before any temporary objects are created from the DPDK heaps.
+ * @note: Since any objects allocated using rte_malloc and similar functions, track
+ *   the heaps via pointers, any already-allocated objects will be returned to their
+ *   original heaps, even after a call to this function.
+ *
+ * @param socket1
+ *   The socket id of the first heap to swap
+ * @param socket2
+ *   The socket id of the second heap to swap
+ * @return
+ *   0 on success, -1 on error
+ */
+__rte_experimental
+int
+rte_malloc_heap_swap_socket(int socket1, int socket2);
+
+/**
  * Dump statistics.
  *
  * Dump for the specified type to a file. If the type argument is
