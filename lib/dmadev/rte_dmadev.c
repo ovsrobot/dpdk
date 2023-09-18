@@ -121,6 +121,15 @@ dma_find_by_name(const char *name)
 	return NULL;
 }
 
+struct rte_dma_dev*
+rte_dma_pmd_dev_get(uint8_t dev_id)
+{
+	if (rte_dma_devices == NULL)
+		return NULL;
+
+	return &rte_dma_devices[dev_id];
+}
+
 static void dma_fp_object_dummy(struct rte_dma_fp_object *obj);
 
 static int
