@@ -186,6 +186,7 @@ main(int argc, char **argv)
 	}
 
 	conn_free(conn);
+	ethdev_stop();
 	cli_exit();
 	rte_eal_cleanup();
 	return 0;
