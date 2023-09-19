@@ -12,6 +12,7 @@ sources = files(
         'cli.c',
         'conn.c',
         'ethdev.c',
+        'ip4_route.c',
         'main.c',
         'mempool.c',
         'utils.c',
