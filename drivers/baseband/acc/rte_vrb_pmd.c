@@ -37,6 +37,15 @@ vrb1_queue_offset(bool pf_device, uint8_t vf_id, uint8_t qgrp_id, uint16_t aq_id
 		return ((qgrp_id << 7) + (aq_id << 3) + VRB1_VfQmgrIngressAq);
 }
 
+static inline uint32_t
+vrb2_queue_offset(bool pf_device, uint8_t vf_id, uint8_t qgrp_id, uint16_t aq_id)
+{
+	if (pf_device)
+		return ((vf_id << 14) + (qgrp_id << 9) + (aq_id << 3) + VRB2_PfQmgrIngressAq);
+	else
+		return ((qgrp_id << 9) + (aq_id << 3) + VRB2_VfQmgrIngressAq);
+}
+
 enum {UL_4G = 0, UL_5G, DL_4G, DL_5G, FFT, MLD, NUM_ACC};
 
 /* Return the accelerator enum for a Queue Group Index. */
@@ -197,7 +206,7 @@ fetch_acc_config(struct rte_bbdev *dev)
 	struct acc_device *d = dev->data->dev_private;
 	struct rte_acc_conf *acc_conf = &d->acc_conf;
 	uint8_t acc, qg;
-	uint32_t reg_aq, reg_len0, reg_len1, reg0, reg1;
+	uint32_t reg_aq, reg_len0, reg_len1, reg_len2, reg_len3, reg0, reg1, reg2, reg3;
 	uint32_t reg_mode, idx;
 	struct rte_acc_queue_topology *q_top = NULL;
 	int qman_func_id[VRB_NUM_ACCS] = {ACC_ACCMAP_0, ACC_ACCMAP_1,
@@ -219,32 +228,81 @@ fetch_acc_config(struct rte_bbdev *dev)
 	acc_conf->num_vf_bundles = 1;
 	initQTop(acc_conf);
 
-	reg0 = acc_reg_read(d, d->reg_addr->qman_group_func);
-	reg1 = acc_reg_read(d, d->reg_addr->qman_group_func + 4);
-	for (qg = 0; qg < d->num_qgroups; qg++) {
-		reg_aq = acc_reg_read(d, d->queue_offset(d->pf_device, 0, qg, 0));
-		if (reg_aq & ACC_QUEUE_ENABLE) {
-			if (qg < ACC_NUM_QGRPS_PER_WORD)
-				idx = (reg0 >> (qg * 4)) & 0x7;
-			else
-				idx = (reg1 >> ((qg - ACC_NUM_QGRPS_PER_WORD) * 4)) & 0x7;
-			if (idx < VRB1_NUM_ACCS) {
-				acc = qman_func_id[idx];
-				updateQtop(acc, qg, acc_conf, d);
+	if (d->device_variant == VRB1_VARIANT) {
+		reg0 = acc_reg_read(d, d->reg_addr->qman_group_func);
+		reg1 = acc_reg_read(d, d->reg_addr->qman_group_func + 4);
+		for (qg = 0; qg < d->num_qgroups; qg++) {
+			reg_aq = acc_reg_read(d, d->queue_offset(d->pf_device, 0, qg, 0));
+			if (reg_aq & ACC_QUEUE_ENABLE) {
+				if (qg < ACC_NUM_QGRPS_PER_WORD)
+					idx = (reg0 >> (qg * 4)) & 0x7;
+				else
+					idx = (reg1 >> ((qg - ACC_NUM_QGRPS_PER_WORD) * 4)) & 0x7;
+				if (idx < VRB1_NUM_ACCS) {
+					acc = qman_func_id[idx];
+					updateQtop(acc, qg, acc_conf, d);
+				}
 			}
 		}
-	}
 
-	/* Check the depth of the AQs. */
-	reg_len0 = acc_reg_read(d, d->reg_addr->depth_log0_offset);
-	reg_len1 = acc_reg_read(d, d->reg_addr->depth_log1_offset);
-	for (acc = 0; acc < NUM_ACC; acc++) {
-		qtopFromAcc(&q_top, acc, acc_conf);
-		if (q_top->first_qgroup_index < ACC_NUM_QGRPS_PER_WORD)
-			q_top->aq_depth_log2 = (reg_len0 >> (q_top->first_qgroup_index * 4)) & 0xF;
-		else
-			q_top->aq_depth_log2 = (reg_len1 >> ((q_top->first_qgroup_index -
-					ACC_NUM_QGRPS_PER_WORD) * 4)) & 0xF;
+		/* Check the depth of the AQs. */
+		reg_len0 = acc_reg_read(d, d->reg_addr->depth_log0_offset);
+		reg_len1 = acc_reg_read(d, d->reg_addr->depth_log1_offset);
+		for (acc = 0; acc < NUM_ACC; acc++) {
+			qtopFromAcc(&q_top, acc, acc_conf);
+			if (q_top->first_qgroup_index < ACC_NUM_QGRPS_PER_WORD)
+				q_top->aq_depth_log2 =
+						(reg_len0 >> (q_top->first_qgroup_index * 4)) & 0xF;
+			else
+				q_top->aq_depth_log2 = (reg_len1 >> ((q_top->first_qgroup_index -
+						ACC_NUM_QGRPS_PER_WORD) * 4)) & 0xF;
+		}
+	} else {
+		reg0 = acc_reg_read(d, d->reg_addr->qman_group_func);
+		reg1 = acc_reg_read(d, d->reg_addr->qman_group_func + 4);
+		reg2 = acc_reg_read(d, d->reg_addr->qman_group_func + 8);
+		reg3 = acc_reg_read(d, d->reg_addr->qman_group_func + 12);
+		/* printf("Debug Function %08x %08x %08x %08x\n", reg0, reg1, reg2, reg3);*/
+		for (qg = 0; qg < VRB2_NUM_QGRPS; qg++) {
+			reg_aq = acc_reg_read(d, vrb2_queue_offset(d->pf_device, 0, qg, 0));
+			if (reg_aq & ACC_QUEUE_ENABLE) {
+				/* printf("Qg enabled %d %x\n", qg, reg_aq);*/
+				if (qg / ACC_NUM_QGRPS_PER_WORD == 0)
+					idx = (reg0 >> ((qg % ACC_NUM_QGRPS_PER_WORD) * 4)) & 0x7;
+				else if (qg / ACC_NUM_QGRPS_PER_WORD == 1)
+					idx = (reg1 >> ((qg % ACC_NUM_QGRPS_PER_WORD) * 4)) & 0x7;
+				else if (qg / ACC_NUM_QGRPS_PER_WORD == 2)
+					idx = (reg2 >> ((qg % ACC_NUM_QGRPS_PER_WORD) * 4)) & 0x7;
+				else
+					idx = (reg3 >> ((qg % ACC_NUM_QGRPS_PER_WORD) * 4)) & 0x7;
+				if (idx < VRB_NUM_ACCS) {
+					acc = qman_func_id[idx];
+					updateQtop(acc, qg, acc_conf, d);
+				}
+			}
+		}
+
+		/* Check the depth of the AQs. */
+		reg_len0 = acc_reg_read(d, d->reg_addr->depth_log0_offset);
+		reg_len1 = acc_reg_read(d, d->reg_addr->depth_log0_offset + 4);
+		reg_len2 = acc_reg_read(d, d->reg_addr->depth_log0_offset + 8);
+		reg_len3 = acc_reg_read(d, d->reg_addr->depth_log0_offset + 12);
+
+		for (acc = 0; acc < NUM_ACC; acc++) {
+			qtopFromAcc(&q_top, acc, acc_conf);
+			if (q_top->first_qgroup_index / ACC_NUM_QGRPS_PER_WORD == 0)
+				q_top->aq_depth_log2 = (reg_len0 >> ((q_top->first_qgroup_index %
+						ACC_NUM_QGRPS_PER_WORD) * 4)) & 0xF;
+			else if (q_top->first_qgroup_index / ACC_NUM_QGRPS_PER_WORD == 1)
+				q_top->aq_depth_log2 = (reg_len1 >> ((q_top->first_qgroup_index %
+						ACC_NUM_QGRPS_PER_WORD) * 4)) & 0xF;
+			else if (q_top->first_qgroup_index / ACC_NUM_QGRPS_PER_WORD == 2)
+				q_top->aq_depth_log2 = (reg_len2 >> ((q_top->first_qgroup_index %
+						ACC_NUM_QGRPS_PER_WORD) * 4)) & 0xF;
+			else
+				q_top->aq_depth_log2 = (reg_len3 >> ((q_top->first_qgroup_index %
+						ACC_NUM_QGRPS_PER_WORD) * 4)) & 0xF;
+		}
 	}
 
 	/* Read PF mode. */
@@ -341,17 +399,28 @@ vrb_check_ir(struct acc_device *acc_dev)
 	ring_data = acc_dev->info_ring + (acc_dev->info_ring_head & ACC_INFO_RING_MASK);
 
 	while (ring_data->valid) {
-		if ((ring_data->int_nb < ACC_PF_INT_DMA_DL_DESC_IRQ) || (
-				ring_data->int_nb > ACC_PF_INT_DMA_MLD_DESC_IRQ)) {
-			rte_bbdev_log(WARNING, "InfoRing: ITR:%d Info:0x%x",
-					ring_data->int_nb, ring_data->detailed_info);
-			/* Initialize Info Ring entry and move forward. */
-			ring_data->val = 0;
+		if (acc_dev->device_variant == VRB1_VARIANT) {
+			if ((ring_data->int_nb < ACC_PF_INT_DMA_DL_DESC_IRQ) || (
+					ring_data->int_nb > ACC_PF_INT_DMA_MLD_DESC_IRQ)) {
+				rte_bbdev_log(WARNING, "InfoRing: ITR:%d Info:0x%x",
+						ring_data->int_nb, ring_data->detailed_info);
+				/* Initialize Info Ring entry and move forward. */
+				ring_data->val = 0;
+			}
+		} else { /* VRB2_VARIANT */
+			if ((ring_data->int_nb_vrb2 < ACC_PF_INT_DMA_DL_DESC_IRQ) || (
+					ring_data->int_nb_vrb2 > ACC_PF_INT_DMA_MLD_DESC_IRQ)) {
+				rte_bbdev_log(WARNING, "InfoRing: ITR:%d Info:0x%x",
+						ring_data->int_nb_vrb2, ring_data->val);
+				/* Initialize Info Ring entry and move forward. */
+				ring_data->val = 0;
+			}
 		}
 		info_ring_head++;
 		ring_data = acc_dev->info_ring + (info_ring_head & ACC_INFO_RING_MASK);
 	}
 }
+
 
 /* Interrupt handler triggered by dev for handling specific interrupt. */
 static void
@@ -361,16 +430,22 @@ vrb_dev_interrupt_handler(void *cb_arg)
 	struct acc_device *acc_dev = dev->data->dev_private;
 	volatile union acc_info_ring_data *ring_data;
 	struct acc_deq_intr_details deq_intr_det;
+	uint16_t vf_id, aq_id, qg_id, int_nb;
+	bool isVrb1 = (acc_dev->device_variant == VRB1_VARIANT);
 
 	ring_data = acc_dev->info_ring + (acc_dev->info_ring_head & ACC_INFO_RING_MASK);
 
 	while (ring_data->valid) {
+		vf_id = isVrb1 ? ring_data->vf_id : ring_data->vf_id_vrb2;
+		aq_id = isVrb1 ? ring_data->aq_id : ring_data->aq_id_vrb2;
+		qg_id = isVrb1 ? ring_data->qg_id : ring_data->qg_id_vrb2;
+		int_nb = isVrb1 ? ring_data->int_nb : ring_data->int_nb_vrb2;
 		if (acc_dev->pf_device) {
 			rte_bbdev_log_debug(
-					"VRB1 PF Interrupt received, Info Ring data: 0x%x -> %d",
-					ring_data->val, ring_data->int_nb);
+					"PF Interrupt received, Info Ring data: 0x%x -> %d",
+					ring_data->val, int_nb);
 
-			switch (ring_data->int_nb) {
+			switch (int_nb) {
 			case ACC_PF_INT_DMA_DL_DESC_IRQ:
 			case ACC_PF_INT_DMA_UL_DESC_IRQ:
 			case ACC_PF_INT_DMA_FFT_DESC_IRQ:
@@ -378,13 +453,11 @@ vrb_dev_interrupt_handler(void *cb_arg)
 			case ACC_PF_INT_DMA_DL5G_DESC_IRQ:
 			case ACC_PF_INT_DMA_MLD_DESC_IRQ:
 				deq_intr_det.queue_id = get_queue_id_from_ring_info(
-						dev->data, *ring_data);
+						dev->data, *ring_data, acc_dev->device_variant);
 				if (deq_intr_det.queue_id == UINT16_MAX) {
 					rte_bbdev_log(ERR,
 							"Couldn't find queue: aq_id: %u, qg_id: %u, vf_id: %u",
-							ring_data->aq_id,
-							ring_data->qg_id,
-							ring_data->vf_id);
+							aq_id, qg_id, vf_id);
 					return;
 				}
 				rte_bbdev_pmd_callback_process(dev,
@@ -396,9 +469,9 @@ vrb_dev_interrupt_handler(void *cb_arg)
 			}
 		} else {
 			rte_bbdev_log_debug(
-					"VRB1 VF Interrupt received, Info Ring data: 0x%x\n",
+					"VRB VF Interrupt received, Info Ring data: 0x%x\n",
 					ring_data->val);
-			switch (ring_data->int_nb) {
+			switch (int_nb) {
 			case ACC_VF_INT_DMA_DL_DESC_IRQ:
 			case ACC_VF_INT_DMA_UL_DESC_IRQ:
 			case ACC_VF_INT_DMA_FFT_DESC_IRQ:
@@ -406,14 +479,16 @@ vrb_dev_interrupt_handler(void *cb_arg)
 			case ACC_VF_INT_DMA_DL5G_DESC_IRQ:
 			case ACC_VF_INT_DMA_MLD_DESC_IRQ:
 				/* VFs are not aware of their vf_id - it's set to 0.  */
-				ring_data->vf_id = 0;
+				if (acc_dev->device_variant == VRB1_VARIANT)
+					ring_data->vf_id = 0;
+				else
+					ring_data->vf_id_vrb2 = 0;
 				deq_intr_det.queue_id = get_queue_id_from_ring_info(
-						dev->data, *ring_data);
+						dev->data, *ring_data, acc_dev->device_variant);
 				if (deq_intr_det.queue_id == UINT16_MAX) {
 					rte_bbdev_log(ERR,
 							"Couldn't find queue: aq_id: %u, qg_id: %u",
-							ring_data->aq_id,
-							ring_data->qg_id);
+							aq_id, qg_id);
 					return;
 				}
 				rte_bbdev_pmd_callback_process(dev,
@@ -428,8 +503,7 @@ vrb_dev_interrupt_handler(void *cb_arg)
 		/* Initialize Info Ring entry and move forward. */
 		ring_data->val = 0;
 		++acc_dev->info_ring_head;
-		ring_data = acc_dev->info_ring +
-				(acc_dev->info_ring_head & ACC_INFO_RING_MASK);
+		ring_data = acc_dev->info_ring + (acc_dev->info_ring_head & ACC_INFO_RING_MASK);
 	}
 }
 
@@ -461,7 +535,10 @@ allocate_info_ring(struct rte_bbdev *dev)
 	phys_low  = (uint32_t)(info_ring_iova);
 	acc_reg_write(d, d->reg_addr->info_ring_hi, phys_high);
 	acc_reg_write(d, d->reg_addr->info_ring_lo, phys_low);
-	acc_reg_write(d, d->reg_addr->info_ring_en, VRB1_REG_IRQ_EN_ALL);
+	if (d->device_variant == VRB1_VARIANT)
+		acc_reg_write(d, d->reg_addr->info_ring_en, VRB1_REG_IRQ_EN_ALL);
+	else
+		acc_reg_write(d, d->reg_addr->info_ring_en, VRB2_REG_IRQ_EN_ALL);
 	d->info_ring_head = (acc_reg_read(d, d->reg_addr->info_ring_ptr) &
 			0xFFF) / sizeof(union acc_info_ring_data);
 	return 0;
@@ -516,6 +593,7 @@ vrb_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 	phys_high = (uint32_t)(d->sw_rings_iova >> 32);
 	phys_low  = (uint32_t)(d->sw_rings_iova & ~(ACC_SIZE_64MBYTE-1));
 
+
 	/* Read the populated cfg from device registers. */
 	fetch_acc_config(dev);
 
@@ -540,6 +618,10 @@ vrb_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 	acc_reg_write(d, d->reg_addr->dma_ring_dl4g_lo, phys_low);
 	acc_reg_write(d, d->reg_addr->dma_ring_fft_hi, phys_high);
 	acc_reg_write(d, d->reg_addr->dma_ring_fft_lo, phys_low);
+	if (d->device_variant == VRB2_VARIANT) {
+		acc_reg_write(d, d->reg_addr->dma_ring_mld_hi, phys_high);
+		acc_reg_write(d, d->reg_addr->dma_ring_mld_lo, phys_low);
+	}
 	/*
 	 * Configure Ring Size to the max queue ring size
 	 * (used for wrapping purpose).
@@ -549,8 +631,7 @@ vrb_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 
 	/* Configure tail pointer for use when SDONE enabled. */
 	if (d->tail_ptrs == NULL)
-		d->tail_ptrs = rte_zmalloc_socket(
-				dev->device->driver->name,
+		d->tail_ptrs = rte_zmalloc_socket(dev->device->driver->name,
 				VRB_MAX_QGRPS * VRB_MAX_AQS * sizeof(uint32_t),
 				RTE_CACHE_LINE_SIZE, socket_id);
 	if (d->tail_ptrs == NULL) {
@@ -574,6 +655,10 @@ vrb_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 	acc_reg_write(d, d->reg_addr->tail_ptrs_dl4g_lo, phys_low);
 	acc_reg_write(d, d->reg_addr->tail_ptrs_fft_hi, phys_high);
 	acc_reg_write(d, d->reg_addr->tail_ptrs_fft_lo, phys_low);
+	if (d->device_variant == VRB2_VARIANT) {
+		acc_reg_write(d, d->reg_addr->tail_ptrs_mld_hi, phys_high);
+		acc_reg_write(d, d->reg_addr->tail_ptrs_mld_lo, phys_low);
+	}
 
 	ret = allocate_info_ring(dev);
 	if (ret < 0) {
@@ -671,10 +756,17 @@ vrb_intr_enable(struct rte_bbdev *dev)
 			return ret;
 		}
 
-		if (acc_dev->pf_device)
-			max_queues = VRB1_MAX_PF_MSIX;
-		else
-			max_queues = VRB1_MAX_VF_MSIX;
+		if (d->device_variant == VRB1_VARIANT) {
+			if (acc_dev->pf_device)
+				max_queues = VRB1_MAX_PF_MSIX;
+			else
+				max_queues = VRB1_MAX_VF_MSIX;
+		} else {
+			if (acc_dev->pf_device)
+				max_queues = VRB2_MAX_PF_MSIX;
+			else
+				max_queues = VRB2_MAX_VF_MSIX;
+		}
 
 		if (rte_intr_efd_enable(dev->intr_handle, max_queues)) {
 			rte_bbdev_log(ERR, "Failed to create fds for %u queues",
@@ -776,7 +868,10 @@ vrb_find_free_queue_idx(struct rte_bbdev *dev,
 			/* Mark the Queue as assigned. */
 			d->q_assigned_bit_map[group_idx] |= (1ULL << aq_idx);
 			/* Report the AQ Index. */
-			return (group_idx << VRB1_GRP_ID_SHIFT) + aq_idx;
+			if (d->device_variant == VRB1_VARIANT)
+				return (group_idx << VRB1_GRP_ID_SHIFT) + aq_idx;
+			else
+				return (group_idx << VRB2_GRP_ID_SHIFT) + aq_idx;
 		}
 	}
 	rte_bbdev_log(INFO, "Failed to find free queue on %s, priority %u",
@@ -818,6 +913,9 @@ vrb_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 			ACC_FCW_TD_BLEN : (conf->op_type == RTE_BBDEV_OP_LDPC_DEC ?
 			ACC_FCW_LD_BLEN : (conf->op_type == RTE_BBDEV_OP_FFT ?
 			ACC_FCW_FFT_BLEN : ACC_FCW_MLDTS_BLEN))));
+
+	if ((q->d->device_variant == VRB2_VARIANT) && (conf->op_type == RTE_BBDEV_OP_FFT))
+		fcw_len = ACC_FCW_FFT_BLEN_3;
 
 	for (desc_idx = 0; desc_idx < d->sw_ring_max_depth; desc_idx++) {
 		desc = q->ring_addr + desc_idx;
@@ -915,9 +1013,16 @@ vrb_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 		}
 	}
 
-	q->qgrp_id = (q_idx >> VRB1_GRP_ID_SHIFT) & 0xF;
-	q->vf_id = (q_idx >> VRB1_VF_ID_SHIFT)  & 0x3F;
-	q->aq_id = q_idx & 0xF;
+	if (d->device_variant == VRB1_VARIANT) {
+		q->qgrp_id = (q_idx >> VRB1_GRP_ID_SHIFT) & 0xF;
+		q->vf_id = (q_idx >> VRB1_VF_ID_SHIFT)  & 0x3F;
+		q->aq_id = q_idx & 0xF;
+	} else {
+		q->qgrp_id = (q_idx >> VRB2_GRP_ID_SHIFT) & 0x1F;
+		q->vf_id = (q_idx >> VRB2_VF_ID_SHIFT)  & 0x3F;
+		q->aq_id = q_idx & 0x3F;
+	}
+
 	q->aq_depth = 0;
 	if (conf->op_type ==  RTE_BBDEV_OP_TURBO_DEC)
 		q->aq_depth = (1 << d->acc_conf.q_ul_4g.aq_depth_log2);
@@ -1150,6 +1255,127 @@ vrb_dev_info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_info)
 		RTE_BBDEV_END_OF_CAPABILITIES_LIST()
 	};
 
+	static const struct rte_bbdev_op_cap vrb2_bbdev_capabilities[] = {
+		{
+			.type = RTE_BBDEV_OP_TURBO_DEC,
+			.cap.turbo_dec = {
+				.capability_flags =
+					RTE_BBDEV_TURBO_SUBBLOCK_DEINTERLEAVE |
+					RTE_BBDEV_TURBO_CRC_TYPE_24B |
+					RTE_BBDEV_TURBO_DEC_CRC_24B_DROP |
+					RTE_BBDEV_TURBO_EQUALIZER |
+					RTE_BBDEV_TURBO_SOFT_OUT_SATURATE |
+					RTE_BBDEV_TURBO_HALF_ITERATION_EVEN |
+					RTE_BBDEV_TURBO_CONTINUE_CRC_MATCH |
+					RTE_BBDEV_TURBO_SOFT_OUTPUT |
+					RTE_BBDEV_TURBO_EARLY_TERMINATION |
+					RTE_BBDEV_TURBO_DEC_INTERRUPTS |
+					RTE_BBDEV_TURBO_NEG_LLR_1_BIT_IN |
+					RTE_BBDEV_TURBO_NEG_LLR_1_BIT_SOFT_OUT |
+					RTE_BBDEV_TURBO_MAP_DEC |
+					RTE_BBDEV_TURBO_DEC_TB_CRC_24B_KEEP |
+					RTE_BBDEV_TURBO_DEC_SCATTER_GATHER,
+				.max_llr_modulus = INT8_MAX,
+				.num_buffers_src =
+						RTE_BBDEV_TURBO_MAX_CODE_BLOCKS,
+				.num_buffers_hard_out =
+						RTE_BBDEV_TURBO_MAX_CODE_BLOCKS,
+				.num_buffers_soft_out =
+						RTE_BBDEV_TURBO_MAX_CODE_BLOCKS,
+			}
+		},
+		{
+			.type = RTE_BBDEV_OP_TURBO_ENC,
+			.cap.turbo_enc = {
+				.capability_flags =
+					RTE_BBDEV_TURBO_CRC_24B_ATTACH |
+					RTE_BBDEV_TURBO_RV_INDEX_BYPASS |
+					RTE_BBDEV_TURBO_RATE_MATCH |
+					RTE_BBDEV_TURBO_ENC_INTERRUPTS |
+					RTE_BBDEV_TURBO_ENC_SCATTER_GATHER,
+				.num_buffers_src =
+						RTE_BBDEV_TURBO_MAX_CODE_BLOCKS,
+				.num_buffers_dst =
+						RTE_BBDEV_TURBO_MAX_CODE_BLOCKS,
+			}
+		},
+		{
+			.type   = RTE_BBDEV_OP_LDPC_ENC,
+			.cap.ldpc_enc = {
+				.capability_flags =
+					RTE_BBDEV_LDPC_RATE_MATCH |
+					RTE_BBDEV_LDPC_CRC_24B_ATTACH |
+					RTE_BBDEV_LDPC_INTERLEAVER_BYPASS |
+					RTE_BBDEV_LDPC_ENC_INTERRUPTS |
+					RTE_BBDEV_LDPC_ENC_SCATTER_GATHER |
+					RTE_BBDEV_LDPC_ENC_CONCATENATION,
+				.num_buffers_src =
+						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+				.num_buffers_dst =
+						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+			}
+		},
+		{
+			.type   = RTE_BBDEV_OP_LDPC_DEC,
+			.cap.ldpc_dec = {
+			.capability_flags =
+				RTE_BBDEV_LDPC_CRC_TYPE_24B_CHECK |
+				RTE_BBDEV_LDPC_CRC_TYPE_24B_DROP |
+				RTE_BBDEV_LDPC_CRC_TYPE_24A_CHECK |
+				RTE_BBDEV_LDPC_CRC_TYPE_16_CHECK |
+				RTE_BBDEV_LDPC_HQ_COMBINE_IN_ENABLE |
+				RTE_BBDEV_LDPC_HQ_COMBINE_OUT_ENABLE |
+				RTE_BBDEV_LDPC_ITERATION_STOP_ENABLE |
+				RTE_BBDEV_LDPC_DEINTERLEAVER_BYPASS |
+				RTE_BBDEV_LDPC_DEC_SCATTER_GATHER |
+				RTE_BBDEV_LDPC_HARQ_6BIT_COMPRESSION |
+				RTE_BBDEV_LDPC_HARQ_4BIT_COMPRESSION |
+				RTE_BBDEV_LDPC_LLR_COMPRESSION |
+				RTE_BBDEV_LDPC_SOFT_OUT_ENABLE |
+				RTE_BBDEV_LDPC_SOFT_OUT_RM_BYPASS |
+				RTE_BBDEV_LDPC_SOFT_OUT_DEINTERLEAVER_BYPASS |
+				RTE_BBDEV_LDPC_DEC_INTERRUPTS,
+			.llr_size = 8,
+			.llr_decimals = 2,
+			.num_buffers_src =
+					RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+			.num_buffers_hard_out =
+					RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+			.num_buffers_soft_out = 0,
+			}
+		},
+		{
+			.type	= RTE_BBDEV_OP_FFT,
+			.cap.fft = {
+				.capability_flags =
+						RTE_BBDEV_FFT_WINDOWING |
+						RTE_BBDEV_FFT_CS_ADJUSTMENT |
+						RTE_BBDEV_FFT_DFT_BYPASS |
+						RTE_BBDEV_FFT_IDFT_BYPASS |
+						RTE_BBDEV_FFT_FP16_INPUT |
+						RTE_BBDEV_FFT_FP16_OUTPUT |
+						RTE_BBDEV_FFT_POWER_MEAS |
+						RTE_BBDEV_FFT_WINDOWING_BYPASS,
+				.num_buffers_src =
+						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+				.num_buffers_dst =
+						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+			}
+		},
+		{
+			.type	= RTE_BBDEV_OP_MLDTS,
+			.cap.fft = {
+				.capability_flags =
+						RTE_BBDEV_MLDTS_REP,
+				.num_buffers_src =
+						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+				.num_buffers_dst =
+						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
+			}
+		},
+		RTE_BBDEV_END_OF_CAPABILITIES_LIST()
+	};
+
 	static struct rte_bbdev_queue_conf default_queue_conf;
 	default_queue_conf.socket = dev->data->socket_id;
 	default_queue_conf.queue_size = ACC_MAX_QUEUE_DEPTH;
@@ -1194,7 +1420,10 @@ vrb_dev_info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_info)
 	dev_info->default_queue_conf = default_queue_conf;
 	dev_info->cpu_flag_reqs = NULL;
 	dev_info->min_alignment = 1;
-	dev_info->capabilities = vrb1_bbdev_capabilities;
+	if (d->device_variant == VRB1_VARIANT)
+		dev_info->capabilities = vrb1_bbdev_capabilities;
+	else
+		dev_info->capabilities = vrb2_bbdev_capabilities;
 	dev_info->harq_buffer_size = 0;
 
 	vrb_check_ir(d);
@@ -1243,6 +1472,9 @@ static struct rte_pci_id pci_id_vrb_pf_map[] = {
 	{
 		RTE_PCI_DEVICE(RTE_VRB1_VENDOR_ID, RTE_VRB1_PF_DEVICE_ID)
 	},
+	{
+		RTE_PCI_DEVICE(RTE_VRB2_VENDOR_ID, RTE_VRB2_PF_DEVICE_ID)
+	},
 	{.device_id = 0},
 };
 
@@ -1250,6 +1482,9 @@ static struct rte_pci_id pci_id_vrb_pf_map[] = {
 static struct rte_pci_id pci_id_vrb_vf_map[] = {
 	{
 		RTE_PCI_DEVICE(RTE_VRB1_VENDOR_ID, RTE_VRB1_VF_DEVICE_ID)
+	},
+	{
+		RTE_PCI_DEVICE(RTE_VRB2_VENDOR_ID, RTE_VRB2_VF_DEVICE_ID)
 	},
 	{.device_id = 0},
 };
@@ -1287,6 +1522,7 @@ vrb_fcw_td_fill(const struct rte_bbdev_dec_op *op, struct acc_fcw_td *fcw)
 				fcw->ea = op->turbo_dec.cb_params.e;
 				fcw->eb = op->turbo_dec.cb_params.e;
 			}
+
 			if (op->turbo_dec.rv_index == 0)
 				fcw->k0_start_col = ACC_FCW_TD_RVIDX_0;
 			else if (op->turbo_dec.rv_index == 1)
@@ -1305,7 +1541,7 @@ vrb_fcw_td_fill(const struct rte_bbdev_dec_op *op, struct acc_fcw_td *fcw)
 		fcw->bypass_teq = 0;
 	}
 
-	fcw->code_block_mode = 1; /* FIXME */
+	fcw->code_block_mode = 1;
 	fcw->turbo_crc_type = check_bit(op->turbo_dec.op_flags,
 			RTE_BBDEV_TURBO_CRC_TYPE_24B);
 
@@ -1465,8 +1701,8 @@ vrb_dma_desc_td_fill(struct rte_bbdev_dec_op *op,
 	if (op->turbo_dec.code_block_mode == RTE_BBDEV_TRANSPORT_BLOCK) {
 		k = op->turbo_dec.tb_params.k_pos;
 		e = (r < op->turbo_dec.tb_params.cab)
-			? op->turbo_dec.tb_params.ea
-			: op->turbo_dec.tb_params.eb;
+				? op->turbo_dec.tb_params.ea
+				: op->turbo_dec.tb_params.eb;
 	} else {
 		k = op->turbo_dec.cb_params.k;
 		e = op->turbo_dec.cb_params.e;
@@ -1677,6 +1913,274 @@ vrb1_dma_desc_ld_fill(struct rte_bbdev_dec_op *op,
 	return 0;
 }
 
+/* Fill in a frame control word for LDPC decoding. */
+static inline void
+vrb2_fcw_ld_fill(struct rte_bbdev_dec_op *op, struct acc_fcw_ld *fcw,
+		union acc_harq_layout_data *harq_layout)
+{
+	uint16_t harq_out_length, harq_in_length, ncb_p, k0_p, parity_offset;
+	uint32_t harq_index;
+	uint32_t l;
+
+	fcw->qm = op->ldpc_dec.q_m;
+	fcw->nfiller = op->ldpc_dec.n_filler;
+	fcw->BG = (op->ldpc_dec.basegraph - 1);
+	fcw->Zc = op->ldpc_dec.z_c;
+	fcw->ncb = op->ldpc_dec.n_cb;
+	fcw->k0 = get_k0(fcw->ncb, fcw->Zc, op->ldpc_dec.basegraph,
+			op->ldpc_dec.rv_index);
+	if (op->ldpc_dec.code_block_mode == RTE_BBDEV_CODE_BLOCK)
+		fcw->rm_e = op->ldpc_dec.cb_params.e;
+	else
+		fcw->rm_e = (op->ldpc_dec.tb_params.r <
+				op->ldpc_dec.tb_params.cab) ?
+						op->ldpc_dec.tb_params.ea :
+						op->ldpc_dec.tb_params.eb;
+
+	if (unlikely(check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_HQ_COMBINE_IN_ENABLE) &&
+			(op->ldpc_dec.harq_combined_input.length == 0))) {
+		rte_bbdev_log(WARNING, "Null HARQ input size provided");
+		/* Disable HARQ input in that case to carry forward. */
+		op->ldpc_dec.op_flags ^= RTE_BBDEV_LDPC_HQ_COMBINE_IN_ENABLE;
+	}
+	if (unlikely(fcw->rm_e == 0)) {
+		rte_bbdev_log(WARNING, "Null E input provided");
+		fcw->rm_e = 2;
+	}
+
+	fcw->hcin_en = check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_HQ_COMBINE_IN_ENABLE);
+	fcw->hcout_en = check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_HQ_COMBINE_OUT_ENABLE);
+	fcw->crc_select = check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_CRC_TYPE_24B_CHECK);
+	fcw->so_en = check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_SOFT_OUT_ENABLE);
+	fcw->so_bypass_intlv = check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_SOFT_OUT_DEINTERLEAVER_BYPASS);
+	fcw->so_bypass_rm = check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_SOFT_OUT_RM_BYPASS);
+	fcw->bypass_dec = 0;
+	fcw->bypass_intlv = check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_DEINTERLEAVER_BYPASS);
+	if (op->ldpc_dec.q_m == 1) {
+		fcw->bypass_intlv = 1;
+		fcw->qm = 2;
+	}
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_HARQ_6BIT_COMPRESSION)) {
+		fcw->hcin_decomp_mode = 1;
+		fcw->hcout_comp_mode = 1;
+	} else if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_HARQ_4BIT_COMPRESSION)) {
+		fcw->hcin_decomp_mode = 4;
+		fcw->hcout_comp_mode = 4;
+	} else {
+		fcw->hcin_decomp_mode = 0;
+		fcw->hcout_comp_mode = 0;
+	}
+
+	fcw->llr_pack_mode = check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_LLR_COMPRESSION);
+	harq_index = hq_index(op->ldpc_dec.harq_combined_output.offset);
+	if (fcw->hcin_en > 0) {
+		harq_in_length = op->ldpc_dec.harq_combined_input.length;
+		if (fcw->hcin_decomp_mode == 1)
+			harq_in_length = harq_in_length * 8 / 6;
+		else if (fcw->hcin_decomp_mode == 4)
+			harq_in_length = harq_in_length * 2;
+		harq_in_length = RTE_MIN(harq_in_length, op->ldpc_dec.n_cb
+				- op->ldpc_dec.n_filler);
+		harq_in_length = RTE_ALIGN_CEIL(harq_in_length, 64);
+		fcw->hcin_size0 = harq_in_length;
+		fcw->hcin_offset = 0;
+		fcw->hcin_size1 = 0;
+	} else {
+		fcw->hcin_size0 = 0;
+		fcw->hcin_offset = 0;
+		fcw->hcin_size1 = 0;
+	}
+
+	fcw->itmax = op->ldpc_dec.iter_max;
+	fcw->so_it = op->ldpc_dec.iter_max;
+	fcw->itstop = check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_ITERATION_STOP_ENABLE);
+	fcw->cnu_algo = ACC_ALGO_MSA;
+	fcw->synd_precoder = fcw->itstop;
+
+	fcw->minsum_offset = 1;
+	fcw->dec_llrclip   = 2;
+
+	/*
+	 * These are all implicitly set
+	 * fcw->synd_post = 0;
+	 * fcw->dec_convllr = 0;
+	 * fcw->hcout_convllr = 0;
+	 * fcw->hcout_size1 = 0;
+	 * fcw->hcout_offset = 0;
+	 * fcw->negstop_th = 0;
+	 * fcw->negstop_it = 0;
+	 * fcw->negstop_en = 0;
+	 * fcw->gain_i = 1;
+	 * fcw->gain_h = 1;
+	 */
+	if (fcw->hcout_en > 0) {
+		parity_offset = (op->ldpc_dec.basegraph == 1 ? 20 : 8)
+			* op->ldpc_dec.z_c - op->ldpc_dec.n_filler;
+		k0_p = (fcw->k0 > parity_offset) ?
+				fcw->k0 - op->ldpc_dec.n_filler : fcw->k0;
+		ncb_p = fcw->ncb - op->ldpc_dec.n_filler;
+		l = k0_p + fcw->rm_e;
+		harq_out_length = (uint16_t) fcw->hcin_size0;
+		harq_out_length = RTE_MIN(RTE_MAX(harq_out_length, l), ncb_p);
+		harq_out_length = RTE_ALIGN_CEIL(harq_out_length, 64);
+		fcw->hcout_size0 = harq_out_length;
+		fcw->hcout_size1 = 0;
+		fcw->hcout_offset = 0;
+		harq_layout[harq_index].offset = fcw->hcout_offset;
+		harq_layout[harq_index].size0 = fcw->hcout_size0;
+	} else {
+		fcw->hcout_size0 = 0;
+		fcw->hcout_size1 = 0;
+		fcw->hcout_offset = 0;
+	}
+
+	fcw->tb_crc_select = 0;
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_CRC_TYPE_24A_CHECK))
+		fcw->tb_crc_select = 2;
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_CRC_TYPE_16_CHECK))
+		fcw->tb_crc_select = 1;
+}
+
+static inline int
+vrb2_dma_desc_ld_fill(struct rte_bbdev_dec_op *op,
+		struct acc_dma_req_desc *desc,
+		struct rte_mbuf **input, struct rte_mbuf *h_output,
+		uint32_t *in_offset, uint32_t *h_out_offset,
+		uint32_t *h_out_length, uint32_t *mbuf_total_left,
+		uint32_t *seg_total_left, struct acc_fcw_ld *fcw)
+{
+	struct rte_bbdev_op_ldpc_dec *dec = &op->ldpc_dec;
+	int next_triplet = 1; /* FCW already done. */
+	uint32_t input_length;
+	uint16_t output_length, crc24_overlap = 0;
+	uint16_t sys_cols, K, h_p_size, h_np_size;
+
+	acc_header_init(desc);
+
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_CRC_TYPE_24B_DROP))
+		crc24_overlap = 24;
+
+	/* Compute some LDPC BG lengths. */
+	input_length = fcw->rm_e;
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_LLR_COMPRESSION))
+		input_length = (input_length * 3 + 3) / 4;
+	sys_cols = (dec->basegraph == 1) ? 22 : 10;
+	K = sys_cols * dec->z_c;
+	output_length = K - dec->n_filler - crc24_overlap;
+
+	if (unlikely((*mbuf_total_left == 0) || (*mbuf_total_left < input_length))) {
+		rte_bbdev_log(ERR,
+				"Mismatch between mbuf length and included CB sizes: mbuf len %u, cb len %u",
+				*mbuf_total_left, input_length);
+		return -1;
+	}
+
+	next_triplet = acc_dma_fill_blk_type_in(desc, input,
+			in_offset, input_length,
+			seg_total_left, next_triplet,
+			check_bit(op->ldpc_dec.op_flags,
+			RTE_BBDEV_LDPC_DEC_SCATTER_GATHER));
+
+	if (unlikely(next_triplet < 0)) {
+		rte_bbdev_log(ERR,
+				"Mismatch between data to process and mbuf data length in bbdev_op: %p",
+				op);
+		return -1;
+	}
+
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_HQ_COMBINE_IN_ENABLE)) {
+		if (op->ldpc_dec.harq_combined_input.data == 0) {
+			rte_bbdev_log(ERR, "HARQ input is not defined");
+			return -1;
+		}
+		h_p_size = fcw->hcin_size0 + fcw->hcin_size1;
+		if (fcw->hcin_decomp_mode == 1)
+			h_p_size = (h_p_size * 3 + 3) / 4;
+		else if (fcw->hcin_decomp_mode == 4)
+			h_p_size = h_p_size / 2;
+		if (op->ldpc_dec.harq_combined_input.data == 0) {
+			rte_bbdev_log(ERR, "HARQ input is not defined");
+			return -1;
+		}
+		acc_dma_fill_blk_type(
+				desc,
+				op->ldpc_dec.harq_combined_input.data,
+				op->ldpc_dec.harq_combined_input.offset,
+				h_p_size,
+				next_triplet,
+				ACC_DMA_BLKID_IN_HARQ);
+		next_triplet++;
+	}
+
+	desc->data_ptrs[next_triplet - 1].last = 1;
+	desc->m2dlen = next_triplet;
+	*mbuf_total_left -= input_length;
+
+	next_triplet = acc_dma_fill_blk_type(desc, h_output,
+			*h_out_offset, output_length >> 3, next_triplet,
+			ACC_DMA_BLKID_OUT_HARD);
+
+	if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_SOFT_OUT_ENABLE)) {
+		if (op->ldpc_dec.soft_output.data == 0) {
+			rte_bbdev_log(ERR, "Soft output is not defined");
+			return -1;
+		}
+		dec->soft_output.length = fcw->rm_e;
+		acc_dma_fill_blk_type(desc, dec->soft_output.data, dec->soft_output.offset,
+				fcw->rm_e, next_triplet, ACC_DMA_BLKID_OUT_SOFT);
+		next_triplet++;
+	}
+
+	if (check_bit(op->ldpc_dec.op_flags,
+				RTE_BBDEV_LDPC_HQ_COMBINE_OUT_ENABLE)) {
+		if (op->ldpc_dec.harq_combined_output.data == 0) {
+			rte_bbdev_log(ERR, "HARQ output is not defined");
+			return -1;
+		}
+
+		/* Pruned size of the HARQ */
+		h_p_size = fcw->hcout_size0 + fcw->hcout_size1;
+		/* Non-Pruned size of the HARQ */
+		h_np_size = fcw->hcout_offset > 0 ?
+				fcw->hcout_offset + fcw->hcout_size1 :
+				h_p_size;
+		if (fcw->hcin_decomp_mode == 1) {
+			h_np_size = (h_np_size * 3 + 3) / 4;
+			h_p_size = (h_p_size * 3 + 3) / 4;
+		} else if (fcw->hcin_decomp_mode == 4) {
+			h_np_size = h_np_size / 2;
+			h_p_size = h_p_size / 2;
+		}
+		dec->harq_combined_output.length = h_np_size;
+		acc_dma_fill_blk_type(
+				desc,
+				dec->harq_combined_output.data,
+				dec->harq_combined_output.offset,
+				h_p_size,
+				next_triplet,
+				ACC_DMA_BLKID_OUT_HARQ);
+
+		next_triplet++;
+	}
+
+	*h_out_length = output_length >> 3;
+	dec->hard_output.length += *h_out_length;
+	*h_out_offset += *h_out_length;
+	desc->data_ptrs[next_triplet - 1].last = 1;
+	desc->d2mlen = next_triplet - desc->m2dlen;
+
+	desc->op_addr = op;
+
+	return 0;
+}
+
 static inline void
 vrb_dma_desc_ld_update(struct rte_bbdev_dec_op *op,
 		struct acc_dma_req_desc *desc,
@@ -1780,6 +2284,7 @@ enqueue_ldpc_enc_n_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ops,
 	/** This could be done at polling. */
 	acc_header_init(&desc->req);
 	desc->req.numCBs = num;
+	desc->req.dltb = 0;
 
 	in_length_in_bytes = ops[0]->ldpc_enc.input.data->data_len;
 	out_length = (enc->cb_params.e + 7) >> 3;
@@ -1818,7 +2323,7 @@ enqueue_ldpc_enc_n_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ops,
 	return num;
 }
 
-/* Enqueue one encode operations for device for a partial TB
+/* Enqueue one encode operations for VRB1 device for a partial TB
  * all codes blocks have same configuration multiplexed on the same descriptor.
  */
 static inline void
@@ -2005,6 +2510,105 @@ vrb1_enqueue_ldpc_enc_one_op_tb(struct acc_queue *q, struct rte_bbdev_enc_op *op
 	return return_descs;
 }
 
+/* Fill in a frame control word for LDPC encoding. */
+static inline void
+vrb2_fcw_letb_fill(const struct rte_bbdev_enc_op *op, struct acc_fcw_le *fcw)
+{
+	fcw->qm = op->ldpc_enc.q_m;
+	fcw->nfiller = op->ldpc_enc.n_filler;
+	fcw->BG = (op->ldpc_enc.basegraph - 1);
+	fcw->Zc = op->ldpc_enc.z_c;
+	fcw->ncb = op->ldpc_enc.n_cb;
+	fcw->k0 = get_k0(fcw->ncb, fcw->Zc, op->ldpc_enc.basegraph,
+			op->ldpc_enc.rv_index);
+	fcw->rm_e = op->ldpc_enc.tb_params.ea;
+	fcw->rm_e_b = op->ldpc_enc.tb_params.eb;
+	fcw->crc_select = check_bit(op->ldpc_enc.op_flags,
+			RTE_BBDEV_LDPC_CRC_24B_ATTACH);
+	fcw->bypass_intlv = 0;
+	if (op->ldpc_enc.tb_params.c > 1) {
+		fcw->mcb_count = 0;
+		fcw->C = op->ldpc_enc.tb_params.c;
+		fcw->Cab = op->ldpc_enc.tb_params.cab;
+	} else {
+		fcw->mcb_count = 1;
+		fcw->C = 0;
+	}
+}
+
+/* Enqueue one encode operations for device in TB mode.
+ * returns the number of descs used.
+ */
+static inline int
+vrb2_enqueue_ldpc_enc_one_op_tb(struct acc_queue *q, struct rte_bbdev_enc_op *op,
+		uint16_t enq_descs)
+{
+	union acc_dma_desc *desc = NULL;
+	uint32_t in_offset, out_offset, out_length, seg_total_left;
+	struct rte_mbuf *input, *output_head, *output;
+
+	uint16_t desc_idx = ((q->sw_ring_head + enq_descs) & q->sw_ring_wrap_mask);
+	desc = q->ring_addr + desc_idx;
+	vrb2_fcw_letb_fill(op, &desc->req.fcw_le);
+	struct rte_bbdev_op_ldpc_enc *enc = &op->ldpc_enc;
+	int next_triplet = 1; /* FCW already done */
+	uint32_t in_length_in_bytes;
+	uint16_t K, in_length_in_bits;
+
+	input = enc->input.data;
+	output_head = output = enc->output.data;
+	in_offset = enc->input.offset;
+	out_offset = enc->output.offset;
+	seg_total_left = rte_pktmbuf_data_len(enc->input.data) - in_offset;
+
+	acc_header_init(&desc->req);
+	K = (enc->basegraph == 1 ? 22 : 10) * enc->z_c;
+	in_length_in_bits = K - enc->n_filler;
+	if ((enc->op_flags & RTE_BBDEV_LDPC_CRC_24A_ATTACH) ||
+			(enc->op_flags & RTE_BBDEV_LDPC_CRC_24B_ATTACH))
+		in_length_in_bits -= 24;
+	in_length_in_bytes = (in_length_in_bits >> 3) * enc->tb_params.c;
+
+	next_triplet = acc_dma_fill_blk_type_in(&desc->req, &input, &in_offset,
+			in_length_in_bytes, &seg_total_left, next_triplet,
+			check_bit(enc->op_flags, RTE_BBDEV_LDPC_ENC_SCATTER_GATHER));
+	if (unlikely(next_triplet < 0)) {
+		rte_bbdev_log(ERR,
+				"Mismatch between data to process and mbuf data length in bbdev_op: %p",
+				op);
+		return -1;
+	}
+	desc->req.data_ptrs[next_triplet - 1].last = 1;
+	desc->req.m2dlen = next_triplet;
+
+	/* Set output length */
+	/* Integer round up division by 8 */
+	out_length = (enc->tb_params.ea * enc->tb_params.cab +
+			enc->tb_params.eb * (enc->tb_params.c - enc->tb_params.cab)  + 7) >> 3;
+
+	next_triplet = acc_dma_fill_blk_type(&desc->req, output, out_offset,
+			out_length, next_triplet, ACC_DMA_BLKID_OUT_ENC);
+	enc->output.length = out_length;
+	out_offset += out_length;
+	desc->req.data_ptrs[next_triplet - 1].last = 1;
+	desc->req.data_ptrs[next_triplet - 1].dma_ext = 0;
+	desc->req.d2mlen = next_triplet - desc->req.m2dlen;
+	desc->req.numCBs = enc->tb_params.c;
+	if (desc->req.numCBs > 1)
+		desc->req.dltb = 1;
+	desc->req.op_addr = op;
+
+	if (out_length < ACC_MAX_E_MBUF)
+		mbuf_append(output_head, output, out_length);
+
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+	acc_memdump("FCW", &desc->req.fcw_le, sizeof(desc->req.fcw_le));
+	acc_memdump("Req Desc.", desc, sizeof(*desc));
+#endif
+	/* One CB (one op) was successfully prepared to enqueue */
+	return 1;
+}
+
 /** Enqueue one decode operations for device in CB mode. */
 static inline int
 enqueue_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
@@ -2017,8 +2621,10 @@ enqueue_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 	struct rte_mbuf *input, *h_output_head, *h_output,
 		*s_output_head, *s_output;
 
-	/* Disable explictly SO for VRB 1. */
-	op->turbo_dec.op_flags &= ~RTE_BBDEV_TURBO_SOFT_OUTPUT;
+	if (q->d->device_variant == VRB1_VARIANT) {
+		/* Disable explictly SO for VRB 1. */
+		op->turbo_dec.op_flags &= ~RTE_BBDEV_TURBO_SOFT_OUTPUT;
+	}
 
 	desc = acc_desc(q, total_enqueued_cbs);
 	vrb_fcw_td_fill(op, &desc->req.fcw_td);
@@ -2061,7 +2667,7 @@ enqueue_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 	return 1;
 }
 
-/** Enqueue one decode operations for device in CB mode */
+/** Enqueue one decode operations for device in CB mode. */
 static inline int
 vrb_enqueue_ldpc_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		uint16_t total_enqueued_cbs, bool same_op)
@@ -2114,11 +2720,16 @@ vrb_enqueue_ldpc_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 			seg_total_left = rte_pktmbuf_data_len(input) - in_offset;
 		else
 			seg_total_left = fcw->rm_e;
-
-		ret = vrb1_dma_desc_ld_fill(op, &desc->req, &input, h_output,
-				&in_offset, &h_out_offset,
-				&h_out_length, &mbuf_total_left,
-				&seg_total_left, fcw);
+		if (q->d->device_variant == VRB1_VARIANT)
+			ret = vrb1_dma_desc_ld_fill(op, &desc->req, &input, h_output,
+					&in_offset, &h_out_offset,
+					&h_out_length, &mbuf_total_left,
+					&seg_total_left, fcw);
+		else
+			ret = vrb2_dma_desc_ld_fill(op, &desc->req, &input, h_output,
+					&in_offset, &h_out_offset,
+					&h_out_length, &mbuf_total_left,
+					&seg_total_left, fcw);
 		if (unlikely(ret < 0))
 			return ret;
 	}
@@ -2207,12 +2818,18 @@ vrb_enqueue_ldpc_dec_one_op_tb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		desc->req.data_ptrs[0].blen = ACC_FCW_LD_BLEN;
 		rte_memcpy(&desc->req.fcw_ld, &desc_first->req.fcw_ld, ACC_FCW_LD_BLEN);
 		desc->req.fcw_ld.tb_trailer_size = (c - r - 1) * trail_len;
-
-		ret = vrb1_dma_desc_ld_fill(op, &desc->req, &input,
-				h_output, &in_offset, &h_out_offset,
-				&h_out_length,
-				&mbuf_total_left, &seg_total_left,
-				&desc->req.fcw_ld);
+		if (q->d->device_variant == VRB1_VARIANT)
+			ret = vrb1_dma_desc_ld_fill(op, &desc->req, &input,
+					h_output, &in_offset, &h_out_offset,
+					&h_out_length,
+					&mbuf_total_left, &seg_total_left,
+					&desc->req.fcw_ld);
+		else
+			ret = vrb2_dma_desc_ld_fill(op, &desc->req, &input,
+					h_output, &in_offset, &h_out_offset,
+					&h_out_length,
+					&mbuf_total_left, &seg_total_left,
+					&desc->req.fcw_ld);
 
 		if (unlikely(ret < 0))
 			return ret;
@@ -2254,7 +2871,7 @@ vrb_enqueue_ldpc_dec_one_op_tb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 	return current_enqueued_cbs;
 }
 
-/* Enqueue one decode operations for device in TB mode */
+/* Enqueue one decode operations for device in TB mode. */
 static inline int
 enqueue_dec_one_op_tb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		uint16_t total_enqueued_cbs, uint8_t cbs_in_tb)
@@ -2476,14 +3093,23 @@ vrb_enqueue_ldpc_enc_tb(struct rte_bbdev_queue_data *q_data,
 	int descs_used;
 
 	for (i = 0; i < num; ++i) {
-		cbs_in_tb = get_num_cbs_in_tb_ldpc_enc(&ops[i]->ldpc_enc);
-		/* Check if there are available space for further processing. */
-		if (unlikely((avail - cbs_in_tb < 0) || (cbs_in_tb == 0))) {
-			acc_enqueue_ring_full(q_data);
-			break;
+		if (q->d->device_variant == VRB1_VARIANT) {
+			cbs_in_tb = get_num_cbs_in_tb_ldpc_enc(&ops[i]->ldpc_enc);
+			/* Check if there are available space for further processing. */
+			if (unlikely((avail - cbs_in_tb < 0) || (cbs_in_tb == 0))) {
+				acc_enqueue_ring_full(q_data);
+				break;
+			}
+			descs_used = vrb1_enqueue_ldpc_enc_one_op_tb(q, ops[i],
+					enqueued_descs, cbs_in_tb);
+		} else {
+			if (unlikely(avail < 1)) {
+				acc_enqueue_ring_full(q_data);
+				break;
+			}
+			descs_used = vrb2_enqueue_ldpc_enc_one_op_tb(q, ops[i], enqueued_descs);
 		}
 
-		descs_used = vrb1_enqueue_ldpc_enc_one_op_tb(q, ops[i], enqueued_descs, cbs_in_tb);
 		if (descs_used < 0) {
 			acc_enqueue_invalid(q_data);
 			break;
@@ -2617,7 +3243,6 @@ vrb_enqueue_ldpc_dec_cb(struct rte_bbdev_queue_data *q_data,
 			break;
 		}
 		avail -= 1;
-
 		rte_bbdev_log(INFO, "Op %d %d %d %d %d %d %d %d %d %d %d %d\n",
 			i, ops[i]->ldpc_dec.op_flags, ops[i]->ldpc_dec.rv_index,
 			ops[i]->ldpc_dec.iter_max, ops[i]->ldpc_dec.iter_count,
@@ -2745,6 +3370,7 @@ vrb_dequeue_enc_one_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 	op->status |= ((rsp.input_err) ? (1 << RTE_BBDEV_DATA_ERROR) : 0);
 	op->status |= ((rsp.dma_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
 	op->status |= ((rsp.fcw_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
+	op->status |= ((rsp.engine_hung) ? (1 << RTE_BBDEV_ENGINE_ERROR) : 0);
 
 	if (desc->req.last_desc_in_batch) {
 		(*aq_dequeued)++;
@@ -2765,7 +3391,56 @@ vrb_dequeue_enc_one_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 	return desc->req.numCBs;
 }
 
-/* Dequeue one LDPC encode operations from device in TB mode.
+
+/* Dequeue one LDPC encode operations from VRB2 device in TB mode
+ */
+static inline int
+vrb2_dequeue_ldpc_enc_one_op_tb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
+		uint16_t *dequeued_ops, uint32_t *aq_dequeued,
+		uint16_t *dequeued_descs)
+{
+	union acc_dma_desc *desc, atom_desc;
+	union acc_dma_rsp_desc rsp;
+	struct rte_bbdev_enc_op *op;
+	int desc_idx = ((q->sw_ring_tail + *dequeued_descs) & q->sw_ring_wrap_mask);
+
+	desc = q->ring_addr + desc_idx;
+	atom_desc.atom_hdr = __atomic_load_n((uint64_t *)desc, __ATOMIC_RELAXED);
+
+	/* Check fdone bit */
+	if (!(atom_desc.rsp.val & ACC_FDONE))
+		return -1;
+
+	rsp.val = atom_desc.rsp.val;
+	rte_bbdev_log_debug("Resp. desc %p: %x", desc, rsp.val);
+
+	/* Dequeue */
+	op = desc->req.op_addr;
+
+	/* Clearing status, it will be set based on response */
+	op->status = 0;
+	op->status |= rsp.input_err << RTE_BBDEV_DATA_ERROR;
+	op->status |= rsp.dma_err << RTE_BBDEV_DRV_ERROR;
+	op->status |= rsp.fcw_err << RTE_BBDEV_DRV_ERROR;
+	op->status |= rsp.engine_hung << RTE_BBDEV_ENGINE_ERROR;
+
+	if (desc->req.last_desc_in_batch) {
+		(*aq_dequeued)++;
+		desc->req.last_desc_in_batch = 0;
+	}
+	desc->rsp.val = ACC_DMA_DESC_TYPE;
+	desc->rsp.add_info_0 = 0; /*Reserved bits */
+	desc->rsp.add_info_1 = 0; /*Reserved bits */
+
+	/* One op was successfully dequeued */
+	ref_op[0] = op;
+	(*dequeued_descs)++;
+	(*dequeued_ops)++;
+	return 1;
+}
+
+
+/* Dequeue one encode operations from device in TB mode.
  * That operation may cover multiple descriptors.
  */
 static inline int
@@ -2815,6 +3490,7 @@ vrb_dequeue_enc_one_op_tb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 		op->status |= ((rsp.input_err) ? (1 << RTE_BBDEV_DATA_ERROR) : 0);
 		op->status |= ((rsp.dma_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
 		op->status |= ((rsp.fcw_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
+		op->status |= ((rsp.engine_hung) ? (1 << RTE_BBDEV_ENGINE_ERROR) : 0);
 
 		if (desc->req.last_desc_in_batch) {
 			(*aq_dequeued)++;
@@ -2861,6 +3537,8 @@ vrb_dequeue_dec_one_op_cb(struct rte_bbdev_queue_data *q_data,
 	op->status |= ((rsp.input_err) ? (1 << RTE_BBDEV_DATA_ERROR) : 0);
 	op->status |= ((rsp.dma_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
 	op->status |= ((rsp.fcw_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
+	op->status |= rsp.engine_hung << RTE_BBDEV_ENGINE_ERROR;
+
 	if (op->status != 0) {
 		/* These errors are not expected. */
 		q_data->queue_stats.dequeue_err_count++;
@@ -2914,6 +3592,7 @@ vrb_dequeue_ldpc_dec_one_op_cb(struct rte_bbdev_queue_data *q_data,
 	op->status |= rsp.input_err << RTE_BBDEV_DATA_ERROR;
 	op->status |= rsp.dma_err << RTE_BBDEV_DRV_ERROR;
 	op->status |= rsp.fcw_err << RTE_BBDEV_DRV_ERROR;
+	op->status |= rsp.engine_hung << RTE_BBDEV_ENGINE_ERROR;
 	if (op->status != 0)
 		q_data->queue_stats.dequeue_err_count++;
 
@@ -2995,6 +3674,7 @@ vrb_dequeue_dec_one_op_tb(struct acc_queue *q, struct rte_bbdev_dec_op **ref_op,
 		op->status |= ((rsp.input_err) ? (1 << RTE_BBDEV_DATA_ERROR) : 0);
 		op->status |= ((rsp.dma_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
 		op->status |= ((rsp.fcw_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
+		op->status |= ((rsp.engine_hung) ? (1 << RTE_BBDEV_ENGINE_ERROR) : 0);
 
 		if (check_bit(op->ldpc_dec.op_flags, RTE_BBDEV_LDPC_CRC_TYPE_24A_CHECK))
 			tb_crc_check ^= desc->rsp.add_info_1;
@@ -3046,7 +3726,6 @@ vrb_dequeue_enc(struct rte_bbdev_queue_data *q_data,
 	if (avail == 0)
 		return 0;
 	op = acc_op_tail(q, 0);
-
 	cbm = op->turbo_enc.code_block_mode;
 
 	for (i = 0; i < avail; i++) {
@@ -3089,9 +3768,14 @@ vrb_dequeue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 
 	for (i = 0; i < avail; i++) {
 		if (cbm == RTE_BBDEV_TRANSPORT_BLOCK)
-			ret = vrb_dequeue_enc_one_op_tb(q, &ops[dequeued_ops],
-					&dequeued_ops, &aq_dequeued,
-					&dequeued_descs, num);
+			if (q->d->device_variant == VRB1_VARIANT)
+				ret = vrb_dequeue_enc_one_op_tb(q, &ops[dequeued_ops],
+						&dequeued_ops, &aq_dequeued,
+						&dequeued_descs, num);
+			else
+				ret = vrb2_dequeue_ldpc_enc_one_op_tb(q, &ops[dequeued_ops],
+						&dequeued_ops, &aq_dequeued,
+						&dequeued_descs);
 		else
 			ret = vrb_dequeue_enc_one_op_cb(q, &ops[dequeued_ops],
 					&dequeued_ops, &aq_dequeued,
@@ -3221,6 +3905,47 @@ vrb1_fcw_fft_fill(struct rte_bbdev_fft_op *op, struct acc_fcw_fft *fcw)
 		fcw->bypass = 0;
 }
 
+/* Fill in a frame control word for FFT processing. */
+static inline void
+vrb2_fcw_fft_fill(struct rte_bbdev_fft_op *op, struct acc_fcw_fft_3 *fcw)
+{
+	fcw->in_frame_size = op->fft.input_sequence_size;
+	fcw->leading_pad_size = op->fft.input_leading_padding;
+	fcw->out_frame_size = op->fft.output_sequence_size;
+	fcw->leading_depad_size = op->fft.output_leading_depadding;
+	fcw->cs_window_sel = op->fft.window_index[0] +
+			(op->fft.window_index[1] << 8) +
+			(op->fft.window_index[2] << 16) +
+			(op->fft.window_index[3] << 24);
+	fcw->cs_window_sel2 = op->fft.window_index[4] +
+			(op->fft.window_index[5] << 8);
+	fcw->cs_enable_bmap = op->fft.cs_bitmap;
+	fcw->num_antennas = op->fft.num_antennas_log2;
+	fcw->idft_size = op->fft.idft_log2;
+	fcw->dft_size = op->fft.dft_log2;
+	fcw->cs_offset = op->fft.cs_time_adjustment;
+	fcw->idft_shift = op->fft.idft_shift;
+	fcw->dft_shift = op->fft.dft_shift;
+	fcw->cs_multiplier = op->fft.ncs_reciprocal;
+	fcw->power_shift = op->fft.power_shift;
+	fcw->exp_adj = op->fft.fp16_exp_adjust;
+	fcw->fp16_in = check_bit(op->fft.op_flags, RTE_BBDEV_FFT_FP16_INPUT);
+	fcw->fp16_out = check_bit(op->fft.op_flags, RTE_BBDEV_FFT_FP16_OUTPUT);
+	fcw->power_en = check_bit(op->fft.op_flags, RTE_BBDEV_FFT_POWER_MEAS);
+	if (check_bit(op->fft.op_flags,
+			RTE_BBDEV_FFT_IDFT_BYPASS)) {
+		if (check_bit(op->fft.op_flags,
+				RTE_BBDEV_FFT_WINDOWING_BYPASS))
+			fcw->bypass = 2;
+		else
+			fcw->bypass = 1;
+	} else if (check_bit(op->fft.op_flags,
+			RTE_BBDEV_FFT_DFT_BYPASS))
+		fcw->bypass = 3;
+	else
+		fcw->bypass = 0;
+}
+
 static inline int
 vrb1_dma_desc_fft_fill(struct rte_bbdev_fft_op *op,
 		struct acc_dma_req_desc *desc,
@@ -3254,6 +3979,58 @@ vrb1_dma_desc_fft_fill(struct rte_bbdev_fft_op *op,
 	return 0;
 }
 
+static inline int
+vrb2_dma_desc_fft_fill(struct rte_bbdev_fft_op *op,
+		struct acc_dma_req_desc *desc,
+		struct rte_mbuf *input, struct rte_mbuf *output, struct rte_mbuf *win_input,
+		struct rte_mbuf *pwr, uint32_t *in_offset, uint32_t *out_offset,
+		uint32_t *win_offset, uint32_t *pwr_offset)
+{
+	bool pwr_en = check_bit(op->fft.op_flags, RTE_BBDEV_FFT_POWER_MEAS);
+	bool win_en = check_bit(op->fft.op_flags, RTE_BBDEV_FFT_DEWINDOWING);
+	int num_cs = 0, i, bd_idx = 1;
+
+	/* FCW already done */
+	acc_header_init(desc);
+
+	RTE_SET_USED(win_input);
+	RTE_SET_USED(win_offset);
+
+	desc->data_ptrs[bd_idx].address = rte_pktmbuf_iova_offset(input, *in_offset);
+	desc->data_ptrs[bd_idx].blen = op->fft.input_sequence_size * ACC_IQ_SIZE;
+	desc->data_ptrs[bd_idx].blkid = ACC_DMA_BLKID_IN;
+	desc->data_ptrs[bd_idx].last = 1;
+	desc->data_ptrs[bd_idx].dma_ext = 0;
+	bd_idx++;
+
+	desc->data_ptrs[bd_idx].address = rte_pktmbuf_iova_offset(output, *out_offset);
+	desc->data_ptrs[bd_idx].blen = op->fft.output_sequence_size * ACC_IQ_SIZE;
+	desc->data_ptrs[bd_idx].blkid = ACC_DMA_BLKID_OUT_HARD;
+	desc->data_ptrs[bd_idx].last = pwr_en ? 0 : 1;
+	desc->data_ptrs[bd_idx].dma_ext = 0;
+	desc->m2dlen = win_en ? 3 : 2;
+	desc->d2mlen = pwr_en ? 2 : 1;
+	desc->ib_ant_offset = op->fft.input_sequence_size;
+	desc->num_ant = op->fft.num_antennas_log2 - 3;
+
+	for (i = 0; i < RTE_BBDEV_MAX_CS; i++)
+		if (check_bit(op->fft.cs_bitmap, 1 << i))
+			num_cs++;
+	desc->num_cs = num_cs;
+
+	if (pwr_en && pwr) {
+		bd_idx++;
+		desc->data_ptrs[bd_idx].address = rte_pktmbuf_iova_offset(pwr, *pwr_offset);
+		desc->data_ptrs[bd_idx].blen = num_cs * (1 << op->fft.num_antennas_log2) * 4;
+		desc->data_ptrs[bd_idx].blkid = ACC_DMA_BLKID_OUT_SOFT;
+		desc->data_ptrs[bd_idx].last = 1;
+		desc->data_ptrs[bd_idx].dma_ext = 0;
+	}
+	desc->ob_cyc_offset = op->fft.output_sequence_size;
+	desc->ob_ant_offset = op->fft.output_sequence_size * num_cs;
+	desc->op_addr = op;
+	return 0;
+}
 
 /** Enqueue one FFT operation for device. */
 static inline int
@@ -3261,26 +4038,35 @@ vrb_enqueue_fft_one_op(struct acc_queue *q, struct rte_bbdev_fft_op *op,
 		uint16_t total_enqueued_cbs)
 {
 	union acc_dma_desc *desc;
-	struct rte_mbuf *input, *output;
-	uint32_t in_offset, out_offset;
+	struct rte_mbuf *input, *output, *pwr, *win;
+	uint32_t in_offset, out_offset, pwr_offset, win_offset;
 	struct acc_fcw_fft *fcw;
 
 	desc = acc_desc(q, total_enqueued_cbs);
 	input = op->fft.base_input.data;
 	output = op->fft.base_output.data;
+	pwr = op->fft.power_meas_output.data;
+	win = op->fft.dewindowing_input.data;
 	in_offset = op->fft.base_input.offset;
 	out_offset = op->fft.base_output.offset;
+	pwr_offset = op->fft.power_meas_output.offset;
+	win_offset = op->fft.dewindowing_input.offset;
 
 	fcw = (struct acc_fcw_fft *) (q->fcw_ring +
 			((q->sw_ring_head + total_enqueued_cbs) & q->sw_ring_wrap_mask)
 			* ACC_MAX_FCW_SIZE);
 
-	vrb1_fcw_fft_fill(op, fcw);
-	vrb1_dma_desc_fft_fill(op, &desc->req, input, output, &in_offset, &out_offset);
+	if (q->d->device_variant == VRB1_VARIANT) {
+		vrb1_fcw_fft_fill(op, fcw);
+		vrb1_dma_desc_fft_fill(op, &desc->req, input, output, &in_offset, &out_offset);
+	} else {
+		vrb2_fcw_fft_fill(op, (struct acc_fcw_fft_3 *) fcw);
+		vrb2_dma_desc_fft_fill(op, &desc->req, input, output, win, pwr,
+				&in_offset, &out_offset, &win_offset, &pwr_offset);
+	}
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
-	rte_memdump(stderr, "FCW", &desc->req.fcw_fft,
-			sizeof(desc->req.fcw_fft));
-	rte_memdump(stderr, "Req Desc.", desc, sizeof(*desc));
+	acc_memdump("FCW", fcw, 128);
+	acc_memdump("Req Desc.", desc, 128);
 #endif
 	return 1;
 }
@@ -3353,6 +4139,7 @@ vrb_dequeue_fft_one_op(struct rte_bbdev_queue_data *q_data,
 	op->status |= rsp.input_err << RTE_BBDEV_DATA_ERROR;
 	op->status |= rsp.dma_err << RTE_BBDEV_DRV_ERROR;
 	op->status |= rsp.fcw_err << RTE_BBDEV_DRV_ERROR;
+	op->status |= rsp.engine_hung << RTE_BBDEV_ENGINE_ERROR;
 	if (op->status != 0)
 		q_data->queue_stats.dequeue_err_count++;
 
@@ -3383,10 +4170,376 @@ vrb_dequeue_fft(struct rte_bbdev_queue_data *q_data,
 	uint32_t aq_dequeued = 0;
 	int ret;
 
+
 	dequeue_num = RTE_MIN(avail, num);
 
 	for (i = 0; i < dequeue_num; ++i) {
 		ret = vrb_dequeue_fft_one_op(q_data, q, &ops[i], dequeued_cbs, &aq_dequeued);
+		if (ret <= 0)
+			break;
+		dequeued_cbs += ret;
+	}
+
+	q->aq_dequeued += aq_dequeued;
+	q->sw_ring_tail += dequeued_cbs;
+	/* Update enqueue stats. */
+	q_data->queue_stats.dequeued_count += i;
+	return i;
+}
+
+/* Fill in a frame control word for MLD-TS processing. */
+static inline void
+vrb2_fcw_mldts_fill(struct rte_bbdev_mldts_op *op, struct acc_fcw_mldts *fcw)
+{
+	fcw->nrb = op->mldts.num_rbs;
+	fcw->NLayers = op->mldts.num_layers - 1;
+	fcw->Qmod0 = (op->mldts.q_m[0] >> 1) - 1;
+	fcw->Qmod1 = (op->mldts.q_m[1] >> 1) - 1;
+	fcw->Qmod2 = (op->mldts.q_m[2] >> 1) - 1;
+	fcw->Qmod3 = (op->mldts.q_m[3] >> 1) - 1;
+	/* Mark some layers as disabled */
+	if (op->mldts.num_layers == 2) {
+		fcw->Qmod2 = 3;
+		fcw->Qmod3 = 3;
+	}
+	if (op->mldts.num_layers == 3)
+		fcw->Qmod3 = 3;
+	fcw->Rrep = op->mldts.r_rep;
+	fcw->Crep = op->mldts.c_rep;
+}
+
+/* Fill in descriptor for one MLD-TS processing operation. */
+static inline int
+vrb2_dma_desc_mldts_fill(struct rte_bbdev_mldts_op *op,
+		struct acc_dma_req_desc *desc,
+		struct rte_mbuf *input_q, struct rte_mbuf *input_r,
+		struct rte_mbuf *output,
+		uint32_t *in_offset, uint32_t *out_offset)
+{
+	uint16_t qsize_per_re[VRB2_MLD_LAY_SIZE] = {8, 12, 16}; /* Layer 2 to 4. */
+	uint16_t rsize_per_re[VRB2_MLD_LAY_SIZE] = {14, 26, 42};
+	uint16_t sc_factor_per_rrep[VRB2_MLD_RREP_SIZE] = {12, 6, 4, 3, 0, 2};
+	uint16_t i, outsize_per_re = 0;
+	uint32_t sc_num, r_num, q_size, r_size, out_size;
+
+	/* Prevent out of range access. */
+	if (op->mldts.r_rep > 5)
+		op->mldts.r_rep = 5;
+	if (op->mldts.num_layers < 2)
+		op->mldts.num_layers = 2;
+	if (op->mldts.num_layers > 4)
+		op->mldts.num_layers = 4;
+	for (i = 0; i < op->mldts.num_layers; i++)
+		outsize_per_re += op->mldts.q_m[i];
+	sc_num = op->mldts.num_rbs * RTE_BBDEV_SCPERRB * (op->mldts.c_rep + 1);
+	r_num = op->mldts.num_rbs * sc_factor_per_rrep[op->mldts.r_rep];
+	q_size = qsize_per_re[op->mldts.num_layers - 2] * sc_num;
+	r_size = rsize_per_re[op->mldts.num_layers - 2] * r_num;
+	out_size =  sc_num * outsize_per_re;
+	/* printf("Sc %d R num %d Size %d %d %d\n", sc_num, r_num, q_size, r_size, out_size); */
+
+	/* FCW already done. */
+	acc_header_init(desc);
+	desc->data_ptrs[1].address = rte_pktmbuf_iova_offset(input_q, *in_offset);
+	desc->data_ptrs[1].blen = q_size;
+	desc->data_ptrs[1].blkid = ACC_DMA_BLKID_IN;
+	desc->data_ptrs[1].last = 0;
+	desc->data_ptrs[1].dma_ext = 0;
+	desc->data_ptrs[2].address = rte_pktmbuf_iova_offset(input_r, *in_offset);
+	desc->data_ptrs[2].blen = r_size;
+	desc->data_ptrs[2].blkid = ACC_DMA_BLKID_IN_MLD_R;
+	desc->data_ptrs[2].last = 1;
+	desc->data_ptrs[2].dma_ext = 0;
+	desc->data_ptrs[3].address = rte_pktmbuf_iova_offset(output, *out_offset);
+	desc->data_ptrs[3].blen = out_size;
+	desc->data_ptrs[3].blkid = ACC_DMA_BLKID_OUT_HARD;
+	desc->data_ptrs[3].last = 1;
+	desc->data_ptrs[3].dma_ext = 0;
+	desc->m2dlen = 3;
+	desc->d2mlen = 1;
+	desc->op_addr = op;
+	desc->cbs_in_tb = 1;
+
+	return 0;
+}
+
+/* Check whether the MLD operation can be processed as a single operation. */
+static inline bool
+vrb2_check_mld_r_constraint(struct rte_bbdev_mldts_op *op) {
+	uint8_t layer_idx, rrep_idx;
+	uint16_t max_rb[VRB2_MLD_LAY_SIZE][VRB2_MLD_RREP_SIZE] = {
+			{188, 275, 275, 275, 0, 275},
+			{101, 202, 275, 275, 0, 275},
+			{62, 124, 186, 248, 0, 275} };
+
+	if (op->mldts.c_rep == 0)
+		return true;
+
+	layer_idx = RTE_MIN(op->mldts.num_layers - VRB2_MLD_MIN_LAYER,
+			VRB2_MLD_MAX_LAYER - VRB2_MLD_MIN_LAYER);
+	rrep_idx = RTE_MIN(op->mldts.r_rep, VRB2_MLD_MAX_RREP);
+	rte_bbdev_log_debug("RB %d index %d %d max %d\n", op->mldts.num_rbs, layer_idx, rrep_idx,
+			max_rb[layer_idx][rrep_idx]);
+
+	return (op->mldts.num_rbs <= max_rb[layer_idx][rrep_idx]);
+}
+
+/** Enqueue MLDTS operation split accross symbols. */
+static inline int
+enqueue_mldts_split_op(struct acc_queue *q, struct rte_bbdev_mldts_op *op,
+		uint16_t total_enqueued_descs)
+{
+	uint16_t qsize_per_re[VRB2_MLD_LAY_SIZE] = {8, 12, 16}; /* Layer 2 to 4. */
+	uint16_t rsize_per_re[VRB2_MLD_LAY_SIZE] = {14, 26, 42};
+	uint16_t sc_factor_per_rrep[VRB2_MLD_RREP_SIZE] = {12, 6, 4, 3, 0, 2};
+	uint32_t i, outsize_per_re = 0, sc_num, r_num, q_size, r_size, out_size, num_syms;
+	union acc_dma_desc *desc, *first_desc;
+	uint16_t desc_idx, symb;
+	struct rte_mbuf *input_q, *input_r, *output;
+	uint32_t in_offset, out_offset;
+	struct acc_fcw_mldts *fcw;
+
+	desc_idx = ((q->sw_ring_head + total_enqueued_descs) & q->sw_ring_wrap_mask);
+	first_desc = q->ring_addr + desc_idx;
+	input_q = op->mldts.qhy_input.data;
+	input_r = op->mldts.r_input.data;
+	output = op->mldts.output.data;
+	in_offset = op->mldts.qhy_input.offset;
+	out_offset = op->mldts.output.offset;
+	num_syms = op->mldts.c_rep + 1;
+	fcw = &first_desc->req.fcw_mldts;
+	vrb2_fcw_mldts_fill(op, fcw);
+	fcw->Crep = 0; /* C rep forced to zero. */
+
+	/* Prevent out of range access. */
+	if (op->mldts.r_rep > 5)
+		op->mldts.r_rep = 5;
+	if (op->mldts.num_layers < 2)
+		op->mldts.num_layers = 2;
+	if (op->mldts.num_layers > 4)
+		op->mldts.num_layers = 4;
+
+	for (i = 0; i < op->mldts.num_layers; i++)
+		outsize_per_re += op->mldts.q_m[i];
+	sc_num = op->mldts.num_rbs * RTE_BBDEV_SCPERRB; /* C rep forced to zero. */
+	r_num = op->mldts.num_rbs * sc_factor_per_rrep[op->mldts.r_rep];
+	q_size = qsize_per_re[op->mldts.num_layers - 2] * sc_num;
+	r_size = rsize_per_re[op->mldts.num_layers - 2] * r_num;
+	out_size =  sc_num * outsize_per_re;
+
+	for (symb = 0; symb < num_syms; symb++) {
+		desc_idx = ((q->sw_ring_head + total_enqueued_descs + symb) & q->sw_ring_wrap_mask);
+		desc = q->ring_addr + desc_idx;
+		acc_header_init(&desc->req);
+		if (symb == 0)
+			desc->req.cbs_in_tb = num_syms;
+		else
+			rte_memcpy(&desc->req.fcw_mldts, fcw, ACC_FCW_MLDTS_BLEN);
+		desc->req.data_ptrs[1].address = rte_pktmbuf_iova_offset(input_q, in_offset);
+		desc->req.data_ptrs[1].blen = q_size;
+		in_offset += q_size;
+		desc->req.data_ptrs[1].blkid = ACC_DMA_BLKID_IN;
+		desc->req.data_ptrs[1].last = 0;
+		desc->req.data_ptrs[1].dma_ext = 0;
+		desc->req.data_ptrs[2].address = rte_pktmbuf_iova_offset(input_r, 0);
+		desc->req.data_ptrs[2].blen = r_size;
+		desc->req.data_ptrs[2].blkid = ACC_DMA_BLKID_IN_MLD_R;
+		desc->req.data_ptrs[2].last = 1;
+		desc->req.data_ptrs[2].dma_ext = 0;
+		desc->req.data_ptrs[3].address = rte_pktmbuf_iova_offset(output, out_offset);
+		desc->req.data_ptrs[3].blen = out_size;
+		out_offset += out_size;
+		desc->req.data_ptrs[3].blkid = ACC_DMA_BLKID_OUT_HARD;
+		desc->req.data_ptrs[3].last = 1;
+		desc->req.data_ptrs[3].dma_ext = 0;
+		desc->req.m2dlen = VRB2_MLD_M2DLEN;
+		desc->req.d2mlen = 1;
+		desc->req.op_addr = op;
+
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+		acc_memdump("FCW", &desc->req.fcw_mldts, sizeof(desc->req.fcw_mldts));
+		acc_memdump("Req Desc.", desc, sizeof(*desc));
+#endif
+	}
+	desc->req.sdone_enable = 0;
+
+	return num_syms;
+}
+
+/** Enqueue one MLDTS operation. */
+static inline int
+enqueue_mldts_one_op(struct acc_queue *q, struct rte_bbdev_mldts_op *op,
+		uint16_t total_enqueued_descs)
+{
+	union acc_dma_desc *desc;
+	uint16_t desc_idx;
+	struct rte_mbuf *input_q, *input_r, *output;
+	uint32_t in_offset, out_offset;
+	struct acc_fcw_mldts *fcw;
+
+	desc_idx = ((q->sw_ring_head + total_enqueued_descs) & q->sw_ring_wrap_mask);
+	desc = q->ring_addr + desc_idx;
+	input_q = op->mldts.qhy_input.data;
+	input_r = op->mldts.r_input.data;
+	output = op->mldts.output.data;
+	in_offset = op->mldts.qhy_input.offset;
+	out_offset = op->mldts.output.offset;
+	fcw = &desc->req.fcw_mldts;
+	vrb2_fcw_mldts_fill(op, fcw);
+	vrb2_dma_desc_mldts_fill(op, &desc->req, input_q, input_r, output,
+			&in_offset, &out_offset);
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+	acc_memdump("FCW", &desc->req.fcw_mldts, sizeof(desc->req.fcw_mldts));
+	acc_memdump("Req Desc.", desc, sizeof(*desc));
+#endif
+	return 1;
+}
+
+/* Enqueue MLDTS operations. */
+static uint16_t
+vrb2_enqueue_mldts(struct rte_bbdev_queue_data *q_data,
+		struct rte_bbdev_mldts_op **ops, uint16_t num)
+{
+	int32_t aq_avail, avail;
+	struct acc_queue *q = q_data->queue_private;
+	uint16_t i, enqueued_descs = 0, descs_in_op;
+	int ret;
+	bool as_one_op;
+
+	aq_avail = acc_aq_avail(q_data, num);
+	if (unlikely((aq_avail <= 0) || (num == 0)))
+		return 0;
+	avail = acc_ring_avail_enq(q);
+
+	for (i = 0; i < num; ++i) {
+		as_one_op = vrb2_check_mld_r_constraint(ops[i]);
+		descs_in_op = as_one_op ? 1 : ops[i]->mldts.c_rep + 1;
+
+		/* Check if there are available space for further processing. */
+		if (unlikely(avail < descs_in_op)) {
+			acc_enqueue_ring_full(q_data);
+			break;
+		}
+		avail -= descs_in_op;
+
+		if (as_one_op)
+			ret = enqueue_mldts_one_op(q, ops[i], enqueued_descs);
+		else
+			ret = enqueue_mldts_split_op(q, ops[i], enqueued_descs);
+
+		if (ret < 0) {
+			acc_enqueue_invalid(q_data);
+			break;
+		}
+
+		enqueued_descs += ret;
+	}
+
+	if (unlikely(i == 0))
+		return 0; /* Nothing to enqueue. */
+
+	acc_dma_enqueue(q, enqueued_descs, &q_data->queue_stats);
+
+	/* Update stats. */
+	q_data->queue_stats.enqueued_count += i;
+	q_data->queue_stats.enqueue_err_count += num - i;
+	return i;
+}
+
+/*
+ * Dequeue one MLDTS operation.
+ * This may have been split over multiple descriptors.
+ */
+static inline int
+dequeue_mldts_one_op(struct rte_bbdev_queue_data *q_data,
+		struct acc_queue *q, struct rte_bbdev_mldts_op **ref_op,
+		uint16_t dequeued_ops, uint32_t *aq_dequeued)
+{
+	union acc_dma_desc *desc, atom_desc, *last_desc;
+	union acc_dma_rsp_desc rsp;
+	struct rte_bbdev_mldts_op *op;
+	uint8_t descs_in_op, i;
+
+	desc = acc_desc_tail(q, dequeued_ops);
+	atom_desc.atom_hdr = __atomic_load_n((uint64_t *)desc, __ATOMIC_RELAXED);
+
+	/* Check fdone bit. */
+	if (!(atom_desc.rsp.val & ACC_FDONE))
+		return -1;
+
+	descs_in_op = desc->req.cbs_in_tb;
+	if (descs_in_op > 1) {
+		/* Get last CB. */
+		last_desc = q->ring_addr + ((q->sw_ring_tail + dequeued_ops + descs_in_op - 1)
+				& q->sw_ring_wrap_mask);
+		/* Check if last op is ready to dequeue by checking fdone bit. If not exit. */
+		atom_desc.atom_hdr = __atomic_load_n((uint64_t *)last_desc, __ATOMIC_RELAXED);
+		if (!(atom_desc.rsp.val & ACC_FDONE))
+			return -1;
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+		acc_memdump("Last Resp", &last_desc->rsp.val, sizeof(desc->rsp.val));
+#endif
+		/* Check each operation iteratively using fdone. */
+		for (i = 1; i < descs_in_op - 1; i++) {
+			last_desc = q->ring_addr + ((q->sw_ring_tail + dequeued_ops + i)
+					& q->sw_ring_wrap_mask);
+			atom_desc.atom_hdr = __atomic_load_n((uint64_t *)last_desc,
+					__ATOMIC_RELAXED);
+			if (!(atom_desc.rsp.val & ACC_FDONE))
+				return -1;
+		}
+	}
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+	acc_memdump("Resp", &desc->rsp.val, sizeof(desc->rsp.val));
+#endif
+	/* Dequeue. */
+	op = desc->req.op_addr;
+
+	/* Clearing status, it will be set based on response. */
+	op->status = 0;
+
+	for (i = 0; i < descs_in_op; i++) {
+		desc = q->ring_addr + ((q->sw_ring_tail + dequeued_ops + i) & q->sw_ring_wrap_mask);
+		atom_desc.atom_hdr = __atomic_load_n((uint64_t *)desc, __ATOMIC_RELAXED);
+		rsp.val = atom_desc.rsp.val;
+		op->status |= rsp.input_err << RTE_BBDEV_DATA_ERROR;
+		op->status |= rsp.dma_err << RTE_BBDEV_DRV_ERROR;
+		op->status |= rsp.fcw_err << RTE_BBDEV_DRV_ERROR;
+		op->status |= rsp.engine_hung << RTE_BBDEV_ENGINE_ERROR;
+	}
+
+	if (op->status != 0)
+		q_data->queue_stats.dequeue_err_count++;
+	if (op->status & (1 << RTE_BBDEV_DRV_ERROR))
+		vrb_check_ir(q->d);
+
+	/* Check if this is the last desc in batch (Atomic Queue). */
+	if (desc->req.last_desc_in_batch) {
+		(*aq_dequeued)++;
+		desc->req.last_desc_in_batch = 0;
+	}
+	desc->rsp.val = ACC_DMA_DESC_TYPE;
+	desc->rsp.add_info_0 = 0;
+	*ref_op = op;
+
+	return descs_in_op;
+}
+
+/* Dequeue MLDTS operations from VRB2 device. */
+static uint16_t
+vrb2_dequeue_mldts(struct rte_bbdev_queue_data *q_data,
+		struct rte_bbdev_mldts_op **ops, uint16_t num)
+{
+	struct acc_queue *q = q_data->queue_private;
+	uint16_t dequeue_num, i, dequeued_cbs = 0;
+	uint32_t avail = acc_ring_avail_deq(q);
+	uint32_t aq_dequeued = 0;
+	int ret;
+
+	dequeue_num = RTE_MIN(avail, num);
+
+	for (i = 0; i < dequeue_num; ++i) {
+		ret = dequeue_mldts_one_op(q_data, q, &ops[i], dequeued_cbs, &aq_dequeued);
 		if (ret <= 0)
 			break;
 		dequeued_cbs += ret;
@@ -3417,6 +4570,8 @@ vrb_bbdev_init(struct rte_bbdev *dev, struct rte_pci_driver *drv)
 	dev->dequeue_ldpc_dec_ops = vrb_dequeue_ldpc_dec;
 	dev->enqueue_fft_ops = vrb_enqueue_fft;
 	dev->dequeue_fft_ops = vrb_dequeue_fft;
+	dev->enqueue_mldts_ops = vrb2_enqueue_mldts;
+	dev->dequeue_mldts_ops = vrb2_dequeue_mldts;
 
 	d->pf_device = !strcmp(drv->driver.name, RTE_STR(VRB_PF_DRIVER_NAME));
 	d->mmio_base = pci_dev->mem_resource[0].addr;
@@ -3433,6 +4588,16 @@ vrb_bbdev_init(struct rte_bbdev *dev, struct rte_pci_driver *drv)
 			d->reg_addr = &vrb1_pf_reg_addr;
 		else
 			d->reg_addr = &vrb1_vf_reg_addr;
+	} else {
+		d->device_variant = VRB2_VARIANT;
+		d->queue_offset = vrb2_queue_offset;
+		d->fcw_ld_fill = vrb2_fcw_ld_fill;
+		d->num_qgroups = VRB2_NUM_QGRPS;
+		d->num_aqs = VRB2_NUM_AQS;
+		if (d->pf_device)
+			d->reg_addr = &vrb2_pf_reg_addr;
+		else
+			d->reg_addr = &vrb2_vf_reg_addr;
 	}
 
 	rte_bbdev_log_debug("Init device %s [%s] @ vaddr %p paddr %#"PRIx64"",
