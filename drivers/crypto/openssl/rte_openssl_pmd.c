@@ -2674,10 +2674,13 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 	EVP_PKEY_CTX *kctx = NULL, *sctx = NULL, *cctx = NULL;
 	struct rte_crypto_asym_op *op = cop->asym;
 	OSSL_PARAM_BLD *param_bld = NULL;
+	ECDSA_SIG *ec_sign = NULL;
+	EVP_MD_CTX *md_ctx = NULL;
 	OSSL_PARAM *params = NULL;
+	EVP_MD *check_md = NULL;
 	EVP_PKEY *pkey = NULL;
 	BIGNUM *pkey_bn = NULL;
-	uint8_t pubkey[64];
+	uint8_t pubkey[65];
 	size_t len = 0;
 	int ret = -1;
 
@@ -2787,10 +2790,7 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 		{
 			unsigned char signbuf[128] = {0};
 			const unsigned char *signptr;
-			EVP_MD_CTX *md_ctx = NULL;
 			const BIGNUM *r, *s;
-			ECDSA_SIG *ec_sign;
-			EVP_MD *check_md;
 			size_t signlen;
 
 			kctx = EVP_PKEY_CTX_new_from_name(NULL, "SM2", NULL);
@@ -2842,17 +2842,12 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 			op->sm2.s.length = BN_num_bytes(s);
 			BN_bn2bin(r, op->sm2.r.data);
 			BN_bn2bin(s, op->sm2.s.data);
-
-			ECDSA_SIG_free(ec_sign);
 		}
 		break;
 	case RTE_CRYPTO_ASYM_OP_VERIFY:
 		{
-			unsigned char signbuf[128] = {0};
 			BIGNUM *r = NULL, *s = NULL;
-			EVP_MD_CTX *md_ctx = NULL;
-			ECDSA_SIG *ec_sign;
-			EVP_MD *check_md;
+			unsigned char *signbuf;
 			size_t signlen;
 
 			kctx = EVP_PKEY_CTX_new_from_name(NULL, "SM2", NULL);
@@ -2902,19 +2897,16 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 				goto err_sm2;
 			}
 
-			r = NULL;
-			s = NULL;
-
-			signlen = i2d_ECDSA_SIG(ec_sign, (unsigned char **)&signbuf);
-			if (signlen <= 0)
+			signlen = i2d_ECDSA_SIG(ec_sign, 0);
+			signbuf = rte_malloc(NULL, signlen, 0);
+			signlen = i2d_ECDSA_SIG(ec_sign, &signbuf);
+			if (signlen <= 0) {
+				rte_free(signbuf);
 				goto err_sm2;
+			}
 
 			if (!EVP_DigestVerifyFinal(md_ctx, signbuf, signlen))
 				goto err_sm2;
-
-			BN_free(r);
-			BN_free(s);
-			ECDSA_SIG_free(ec_sign);
 	}
 		break;
 	default:
@@ -2928,6 +2920,15 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 	ret = 0;
 	cop->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
 err_sm2:
+	if (ec_sign)
+		ECDSA_SIG_free(ec_sign);
+
+	if (check_md)
+		EVP_MD_free(check_md);
+
+	if (md_ctx)
+		EVP_MD_CTX_free(md_ctx);
+
 	if (kctx)
 		EVP_PKEY_CTX_free(kctx);
 
@@ -2942,6 +2943,12 @@ err_sm2:
 
 	if (param_bld)
 		OSSL_PARAM_BLD_free(param_bld);
+
+	if (params)
+		OSSL_PARAM_free(params);
+
+	if (pkey_bn)
+		BN_free(pkey_bn);
 
 	return ret;
 }
