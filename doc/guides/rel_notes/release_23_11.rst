@@ -78,6 +78,10 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Updated ipsec_mb crypto driver.**
+
+  * Added support for Digest Encrypted to AESNI_MB PMD asynchronous crypto.
+
 
 Removed Items
 -------------
