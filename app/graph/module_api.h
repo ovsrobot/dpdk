@@ -24,4 +24,6 @@
 extern volatile bool force_quit;
 extern struct conn *conn;
 
+bool app_graph_stats_enabled(void);
+
 #endif

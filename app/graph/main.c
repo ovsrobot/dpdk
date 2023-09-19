@@ -18,12 +18,13 @@
 volatile bool force_quit;
 struct conn *conn;
 
-static const char usage[] = "%s EAL_ARGS -- -s SCRIPT [-h HOST] [-p PORT] "
+static const char usage[] = "%s EAL_ARGS -- -s SCRIPT [-h HOST] [-p PORT] [--enable-graph-stats] "
 			    "[--help]\n";
 
 static struct app_params {
 	struct conn_params conn;
 	char *script_name;
+	bool enable_graph_stats;
 } app = {
 	.conn = {
 		.welcome = "\nWelcome!\n\n",
@@ -37,6 +38,7 @@ static struct app_params {
 		.msg_handle_arg = NULL, /* set later. */
 	},
 	.script_name = NULL,
+	.enable_graph_stats = false,
 };
 
 static void
@@ -53,6 +55,7 @@ app_args_parse(int argc, char **argv)
 {
 	struct option lgopts[] = {
 		{"help", 0, 0, 'H'},
+		{"enable-graph-stats", 0, 0, 'g'},
 	};
 	int h_present, p_present, s_present, n_args, i;
 	char *app_name = argv[0];
@@ -130,6 +133,12 @@ app_args_parse(int argc, char **argv)
 			}
 			break;
 
+		case 'g':
+			app.enable_graph_stats = true;
+			printf("WARNING! Telnet session can not be accessed with"
+			       "--enable-graph-stats");
+			break;
+
 		case 'H':
 		default:
 			printf(usage, app_name);
@@ -139,6 +148,12 @@ app_args_parse(int argc, char **argv)
 	optind = 1; /* reset getopt lib */
 
 	return 0;
+}
+
+bool
+app_graph_stats_enabled(void)
+{
+	return app.enable_graph_stats;
 }
 
 int
