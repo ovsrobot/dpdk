@@ -8925,9 +8925,7 @@ security_proto_supported(enum rte_security_session_action_type action,
 	const struct rte_security_capability *capability;
 	uint16_t i = 0;
 
-	struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-				rte_cryptodev_get_sec_ctx(
-				ts_params->valid_devs[0]);
+	void *ctx = rte_cryptodev_get_sec_ctx(ts_params->valid_devs[0]);
 
 
 	capabilities = rte_security_capabilities_get(ctx);
@@ -8967,9 +8965,7 @@ static int test_pdcp_proto(int i, int oop, enum rte_crypto_cipher_operation opc,
 	struct crypto_unittest_params *ut_params = &unittest_params;
 	uint8_t *plaintext;
 	int ret = TEST_SUCCESS;
-	struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-				rte_cryptodev_get_sec_ctx(
-				ts_params->valid_devs[0]);
+	void *ctx = rte_cryptodev_get_sec_ctx(ts_params->valid_devs[0]);
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 
@@ -9174,9 +9170,7 @@ test_pdcp_proto_SGL(int i, int oop,
 	unsigned int trn_data = 0;
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
-	struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-				rte_cryptodev_get_sec_ctx(
-				ts_params->valid_devs[0]);
+	void *ctx = rte_cryptodev_get_sec_ctx(ts_params->valid_devs[0]);
 	struct rte_mbuf *temp_mbuf;
 
 	rte_cryptodev_info_get(ts_params->valid_devs[0], &dev_info);
@@ -9772,7 +9766,7 @@ test_ipsec_proto_process(const struct ipsec_test_data td[],
 	struct ipsec_test_data *res_d_tmp = NULL;
 	uint8_t input_text[IPSEC_TEXT_MAX_LEN];
 	int salt_len, i, ret = TEST_SUCCESS;
-	struct rte_security_ctx *ctx;
+	void *ctx;
 	uint32_t src, dst;
 	uint32_t verify;
 
@@ -10905,9 +10899,7 @@ test_docsis_proto_uplink(const void *data)
 	uint32_t crc_data_len;
 	int ret = TEST_SUCCESS;
 
-	struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-					rte_cryptodev_get_sec_ctx(
-						ts_params->valid_devs[0]);
+	void *ctx = rte_cryptodev_get_sec_ctx(ts_params->valid_devs[0]);
 
 	/* Verify the capabilities */
 	struct rte_security_capability_idx sec_cap_idx;
@@ -11089,9 +11081,7 @@ test_docsis_proto_downlink(const void *data)
 	int32_t cipher_len, crc_len;
 	int ret = TEST_SUCCESS;
 
-	struct rte_security_ctx *ctx = (struct rte_security_ctx *)
-					rte_cryptodev_get_sec_ctx(
-						ts_params->valid_devs[0]);
+	void *ctx = rte_cryptodev_get_sec_ctx(ts_params->valid_devs[0]);
 
 	/* Verify the capabilities */
 	struct rte_security_capability_idx sec_cap_idx;
