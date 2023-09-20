@@ -14,6 +14,7 @@
 #include "cnxk_ml_dev.h"
 #include "cnxk_ml_model.h"
 #include "cnxk_ml_ops.h"
+#include "cnxk_ml_xstats.h"
 
 /* ML model macros */
 #define CN10K_ML_MODEL_MEMZONE_NAME "ml_cn10k_model_mz"
@@ -429,26 +430,6 @@ cn10k_ml_prep_fp_job_descriptor(struct cn10k_ml_dev *cn10k_mldev, struct cnxk_ml
 	req->cn10k_req.jd.model_run.num_batches = op->nb_batches;
 }
 
-struct xstat_info {
-	char name[32];
-	enum cn10k_ml_xstats_type type;
-	uint8_t reset_allowed;
-};
-
-/* Note: Device stats are not allowed to be reset. */
-static const struct xstat_info device_stats[] = {
-	{"nb_models_loaded", nb_models_loaded, 0},
-	{"nb_models_unloaded", nb_models_unloaded, 0},
-	{"nb_models_started", nb_models_started, 0},
-	{"nb_models_stopped", nb_models_stopped, 0},
-};
-
-static const struct xstat_info model_stats[] = {
-	{"Avg-HW-Latency", avg_hw_latency, 1}, {"Min-HW-Latency", min_hw_latency, 1},
-	{"Max-HW-Latency", max_hw_latency, 1}, {"Avg-FW-Latency", avg_fw_latency, 1},
-	{"Min-FW-Latency", min_fw_latency, 1}, {"Max-FW-Latency", max_fw_latency, 1},
-};
-
 static int
 cn10k_ml_xstats_init(struct rte_ml_dev *dev)
 {
@@ -463,10 +444,10 @@ cn10k_ml_xstats_init(struct rte_ml_dev *dev)
 	cn10k_mldev = &cnxk_mldev->cn10k_mldev;
 
 	/* Allocate memory for xstats entries. Don't allocate during reconfigure */
-	nb_stats = RTE_DIM(device_stats) + ML_CNXK_MAX_MODELS * RTE_DIM(model_stats);
+	nb_stats = RTE_DIM(device_xstats) + ML_CNXK_MAX_MODELS * RTE_DIM(layer_xstats);
 	if (cn10k_mldev->xstats.entries == NULL)
 		cn10k_mldev->xstats.entries = rte_zmalloc(
-			"cn10k_ml_xstats", sizeof(struct cn10k_ml_xstats_entry) * nb_stats,
+			"cn10k_ml_xstats", sizeof(struct cnxk_ml_xstats_entry) * nb_stats,
 			PLT_CACHE_LINE_SIZE);
 
 	if (cn10k_mldev->xstats.entries == NULL)
@@ -474,17 +455,17 @@ cn10k_ml_xstats_init(struct rte_ml_dev *dev)
 
 	/* Initialize device xstats */
 	stat_id = 0;
-	for (i = 0; i < RTE_DIM(device_stats); i++) {
+	for (i = 0; i < RTE_DIM(device_xstats); i++) {
 		cn10k_mldev->xstats.entries[stat_id].map.id = stat_id;
 		snprintf(cn10k_mldev->xstats.entries[stat_id].map.name,
 			 sizeof(cn10k_mldev->xstats.entries[stat_id].map.name), "%s",
-			 device_stats[i].name);
+			 device_xstats[i].name);
 
 		cn10k_mldev->xstats.entries[stat_id].mode = RTE_ML_DEV_XSTATS_DEVICE;
-		cn10k_mldev->xstats.entries[stat_id].type = device_stats[i].type;
-		cn10k_mldev->xstats.entries[stat_id].fn_id = CN10K_ML_XSTATS_FN_DEVICE;
+		cn10k_mldev->xstats.entries[stat_id].type = device_xstats[i].type;
+		cn10k_mldev->xstats.entries[stat_id].fn_id = CNXK_ML_XSTATS_FN_DEVICE;
 		cn10k_mldev->xstats.entries[stat_id].obj_idx = 0;
-		cn10k_mldev->xstats.entries[stat_id].reset_allowed = device_stats[i].reset_allowed;
+		cn10k_mldev->xstats.entries[stat_id].reset_allowed = device_xstats[i].reset_allowed;
 		stat_id++;
 	}
 	cn10k_mldev->xstats.count_mode_device = stat_id;
@@ -493,24 +474,24 @@ cn10k_ml_xstats_init(struct rte_ml_dev *dev)
 	for (model = 0; model < ML_CNXK_MAX_MODELS; model++) {
 		cn10k_mldev->xstats.offset_for_model[model] = stat_id;
 
-		for (i = 0; i < RTE_DIM(model_stats); i++) {
+		for (i = 0; i < RTE_DIM(layer_xstats); i++) {
 			cn10k_mldev->xstats.entries[stat_id].map.id = stat_id;
 			cn10k_mldev->xstats.entries[stat_id].mode = RTE_ML_DEV_XSTATS_MODEL;
-			cn10k_mldev->xstats.entries[stat_id].type = model_stats[i].type;
-			cn10k_mldev->xstats.entries[stat_id].fn_id = CN10K_ML_XSTATS_FN_MODEL;
+			cn10k_mldev->xstats.entries[stat_id].type = layer_xstats[i].type;
+			cn10k_mldev->xstats.entries[stat_id].fn_id = CNXK_ML_XSTATS_FN_MODEL;
 			cn10k_mldev->xstats.entries[stat_id].obj_idx = model;
 			cn10k_mldev->xstats.entries[stat_id].reset_allowed =
-				model_stats[i].reset_allowed;
+				layer_xstats[i].reset_allowed;
 
 			/* Name of xstat is updated during model load */
 			snprintf(cn10k_mldev->xstats.entries[stat_id].map.name,
 				 sizeof(cn10k_mldev->xstats.entries[stat_id].map.name),
-				 "Model-%u-%s", model, model_stats[i].name);
+				 "Model-%u-%s", model, layer_xstats[i].name);
 
 			stat_id++;
 		}
 
-		cn10k_mldev->xstats.count_per_model[model] = RTE_DIM(model_stats);
+		cn10k_mldev->xstats.count_per_model[model] = RTE_DIM(layer_xstats);
 	}
 
 	cn10k_mldev->xstats.count_mode_model = stat_id - cn10k_mldev->xstats.count_mode_device;
@@ -549,7 +530,7 @@ cn10k_ml_xstats_model_name_update(struct rte_ml_dev *dev, uint16_t model_id)
 	cnxk_mldev = dev->data->dev_private;
 	cn10k_mldev = &cnxk_mldev->cn10k_mldev;
 	model = dev->data->models[model_id];
-	stat_id = RTE_DIM(device_stats) + model_id * RTE_DIM(model_stats);
+	stat_id = RTE_DIM(device_xstats) + model_id * RTE_DIM(layer_xstats);
 
 	roc_clk_freq_get(&rclk_freq, &sclk_freq);
 	if (sclk_freq == 0)
@@ -558,17 +539,17 @@ cn10k_ml_xstats_model_name_update(struct rte_ml_dev *dev, uint16_t model_id)
 		strcpy(suffix, "ns");
 
 	/* Update xstat name based on model name and sclk availability */
-	for (i = 0; i < RTE_DIM(model_stats); i++) {
+	for (i = 0; i < RTE_DIM(layer_xstats); i++) {
 		snprintf(cn10k_mldev->xstats.entries[stat_id].map.name,
 			 sizeof(cn10k_mldev->xstats.entries[stat_id].map.name), "%s-%s-%s",
-			 model->layer[0].glow.metadata.model.name, model_stats[i].name, suffix);
+			 model->layer[0].glow.metadata.model.name, layer_xstats[i].name, suffix);
 		stat_id++;
 	}
 }
 
 static uint64_t
 cn10k_ml_dev_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx __rte_unused,
-		       enum cn10k_ml_xstats_type type)
+		       enum cnxk_ml_xstats_type type)
 {
 	struct cnxk_ml_dev *cnxk_mldev;
 
@@ -594,9 +575,9 @@ cn10k_ml_dev_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx __rte_unused,
 	do {                                                                                       \
 		value = 0;                                                                         \
 		for (qp_id = 0; qp_id < dev->data->nb_queue_pairs; qp_id++) {                      \
-			value += model->layer[0].glow.burst_stats[qp_id].str##_latency_tot;        \
-			count += model->layer[0].glow.burst_stats[qp_id].dequeued_count -          \
-				 model->layer[0].glow.burst_stats[qp_id].str##_reset_count;        \
+			value += model->layer[0].glow.burst_xstats[qp_id].str##_latency_tot;       \
+			count += model->layer[0].glow.burst_xstats[qp_id].dequeued_count -         \
+				 model->layer[0].glow.burst_xstats[qp_id].str##_reset_count;       \
 		}                                                                                  \
 		if (count != 0)                                                                    \
 			value = value / count;                                                     \
@@ -607,9 +588,10 @@ cn10k_ml_dev_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx __rte_unused,
 		value = UINT64_MAX;                                                                \
 		for (qp_id = 0; qp_id < dev->data->nb_queue_pairs; qp_id++) {                      \
 			value = PLT_MIN(                                                           \
-				value, model->layer[0].glow.burst_stats[qp_id].str##_latency_min); \
-			count += model->layer[0].glow.burst_stats[qp_id].dequeued_count -          \
-				 model->layer[0].glow.burst_stats[qp_id].str##_reset_count;        \
+				value,                                                             \
+				model->layer[0].glow.burst_xstats[qp_id].str##_latency_min);       \
+			count += model->layer[0].glow.burst_xstats[qp_id].dequeued_count -         \
+				 model->layer[0].glow.burst_xstats[qp_id].str##_reset_count;       \
 		}                                                                                  \
 		if (count == 0)                                                                    \
 			value = 0;                                                                 \
@@ -620,16 +602,17 @@ cn10k_ml_dev_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx __rte_unused,
 		value = 0;                                                                         \
 		for (qp_id = 0; qp_id < dev->data->nb_queue_pairs; qp_id++) {                      \
 			value = PLT_MAX(                                                           \
-				value, model->layer[0].glow.burst_stats[qp_id].str##_latency_max); \
-			count += model->layer[0].glow.burst_stats[qp_id].dequeued_count -          \
-				 model->layer[0].glow.burst_stats[qp_id].str##_reset_count;        \
+				value,                                                             \
+				model->layer[0].glow.burst_xstats[qp_id].str##_latency_max);       \
+			count += model->layer[0].glow.burst_xstats[qp_id].dequeued_count -         \
+				 model->layer[0].glow.burst_xstats[qp_id].str##_reset_count;       \
 		}                                                                                  \
 		if (count == 0)                                                                    \
 			value = 0;                                                                 \
 	} while (0)
 
 static uint64_t
-cn10k_ml_model_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx, enum cn10k_ml_xstats_type type)
+cn10k_ml_model_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx, enum cnxk_ml_xstats_type type)
 {
 	struct cnxk_ml_model *model;
 	uint16_t rclk_freq; /* MHz */
@@ -675,8 +658,8 @@ cn10k_ml_model_xstat_get(struct rte_ml_dev *dev, uint16_t obj_idx, enum cn10k_ml
 static int
 cn10k_ml_device_xstats_reset(struct rte_ml_dev *dev, const uint16_t stat_ids[], uint16_t nb_ids)
 {
-	struct cn10k_ml_xstats_entry *xs;
 	struct cn10k_ml_dev *cn10k_mldev;
+	struct cnxk_ml_xstats_entry *xs;
 	struct cnxk_ml_dev *cnxk_mldev;
 	uint16_t nb_stats;
 	uint16_t stat_id;
@@ -712,26 +695,26 @@ cn10k_ml_device_xstats_reset(struct rte_ml_dev *dev, const uint16_t stat_ids[], 
 #define ML_AVG_RESET_FOREACH_QP(dev, model, qp_id, str)                                            \
 	do {                                                                                       \
 		for (qp_id = 0; qp_id < dev->data->nb_queue_pairs; qp_id++) {                      \
-			model->layer[0].glow.burst_stats[qp_id].str##_latency_tot = 0;             \
-			model->layer[0].glow.burst_stats[qp_id].str##_reset_count =                \
-				model->layer[0].glow.burst_stats[qp_id].dequeued_count;            \
+			model->layer[0].glow.burst_xstats[qp_id].str##_latency_tot = 0;            \
+			model->layer[0].glow.burst_xstats[qp_id].str##_reset_count =               \
+				model->layer[0].glow.burst_xstats[qp_id].dequeued_count;           \
 		}                                                                                  \
 	} while (0)
 
 #define ML_MIN_RESET_FOREACH_QP(dev, model, qp_id, str)                                            \
 	do {                                                                                       \
 		for (qp_id = 0; qp_id < dev->data->nb_queue_pairs; qp_id++)                        \
-			model->layer[0].glow.burst_stats[qp_id].str##_latency_min = UINT64_MAX;    \
+			model->layer[0].glow.burst_xstats[qp_id].str##_latency_min = UINT64_MAX;   \
 	} while (0)
 
 #define ML_MAX_RESET_FOREACH_QP(dev, model, qp_id, str)                                            \
 	do {                                                                                       \
 		for (qp_id = 0; qp_id < dev->data->nb_queue_pairs; qp_id++)                        \
-			model->layer[0].glow.burst_stats[qp_id].str##_latency_max = 0;             \
+			model->layer[0].glow.burst_xstats[qp_id].str##_latency_max = 0;            \
 	} while (0)
 
 static void
-cn10k_ml_reset_model_stat(struct rte_ml_dev *dev, uint16_t model_id, enum cn10k_ml_xstats_type type)
+cn10k_ml_reset_model_stat(struct rte_ml_dev *dev, uint16_t model_id, enum cnxk_ml_xstats_type type)
 {
 	struct cnxk_ml_model *model;
 	uint32_t qp_id;
@@ -766,8 +749,8 @@ static int
 cn10k_ml_model_xstats_reset(struct rte_ml_dev *dev, int32_t model_id, const uint16_t stat_ids[],
 			    uint16_t nb_ids)
 {
-	struct cn10k_ml_xstats_entry *xs;
 	struct cn10k_ml_dev *cn10k_mldev;
+	struct cnxk_ml_xstats_entry *xs;
 	struct cnxk_ml_dev *cnxk_mldev;
 	struct cnxk_ml_model *model;
 	int32_t lcl_model_id = 0;
@@ -1346,10 +1329,10 @@ static int
 cn10k_ml_dev_xstats_by_name_get(struct rte_ml_dev *dev, const char *name, uint16_t *stat_id,
 				uint64_t *value)
 {
-	struct cn10k_ml_xstats_entry *xs;
+	struct cnxk_ml_xstats_entry *xs;
 	struct cn10k_ml_dev *cn10k_mldev;
 	struct cnxk_ml_dev *cnxk_mldev;
-	cn10k_ml_xstats_fn fn;
+	cnxk_ml_xstats_fn fn;
 	uint32_t i;
 
 	cnxk_mldev = dev->data->dev_private;
@@ -1361,10 +1344,10 @@ cn10k_ml_dev_xstats_by_name_get(struct rte_ml_dev *dev, const char *name, uint16
 				*stat_id = xs->map.id;
 
 			switch (xs->fn_id) {
-			case CN10K_ML_XSTATS_FN_DEVICE:
+			case CNXK_ML_XSTATS_FN_DEVICE:
 				fn = cn10k_ml_dev_xstat_get;
 				break;
-			case CN10K_ML_XSTATS_FN_MODEL:
+			case CNXK_ML_XSTATS_FN_MODEL:
 				fn = cn10k_ml_model_xstat_get;
 				break;
 			default:
@@ -1388,11 +1371,11 @@ static int
 cn10k_ml_dev_xstats_get(struct rte_ml_dev *dev, enum rte_ml_dev_xstats_mode mode, int32_t model_id,
 			const uint16_t stat_ids[], uint64_t values[], uint16_t nb_ids)
 {
-	struct cn10k_ml_xstats_entry *xs;
 	struct cn10k_ml_dev *cn10k_mldev;
+	struct cnxk_ml_xstats_entry *xs;
 	struct cnxk_ml_dev *cnxk_mldev;
 	uint32_t xstats_mode_count;
-	cn10k_ml_xstats_fn fn;
+	cnxk_ml_xstats_fn fn;
 	uint64_t val;
 	uint32_t idx;
 	uint32_t i;
@@ -1427,10 +1410,10 @@ cn10k_ml_dev_xstats_get(struct rte_ml_dev *dev, enum rte_ml_dev_xstats_mode mode
 		}
 
 		switch (xs->fn_id) {
-		case CN10K_ML_XSTATS_FN_DEVICE:
+		case CNXK_ML_XSTATS_FN_DEVICE:
 			fn = cn10k_ml_dev_xstat_get;
 			break;
-		case CN10K_ML_XSTATS_FN_MODEL:
+		case CNXK_ML_XSTATS_FN_MODEL:
 			fn = cn10k_ml_model_xstat_get;
 			break;
 		default:
@@ -1668,7 +1651,7 @@ cn10k_ml_model_load(struct rte_ml_dev *dev, struct rte_ml_model_params *params, 
 			  metadata->model.num_input * sizeof(struct rte_ml_io_info) +
 			  metadata->model.num_output * sizeof(struct rte_ml_io_info);
 	model_info_size = PLT_ALIGN_CEIL(model_info_size, ML_CN10K_ALIGN_SIZE);
-	model_stats_size = (dev->data->nb_queue_pairs + 1) * sizeof(struct cn10k_ml_layer_stats);
+	model_stats_size = (dev->data->nb_queue_pairs + 1) * sizeof(struct cn10k_ml_layer_xstats);
 
 	mz_size = PLT_ALIGN_CEIL(sizeof(struct cnxk_ml_model), ML_CN10K_ALIGN_SIZE) +
 		  2 * model_data_size + model_scratch_size + model_info_size +
@@ -1742,24 +1725,24 @@ cn10k_ml_model_load(struct rte_ml_dev *dev, struct rte_ml_model_params *params, 
 	model->layer[0].glow.req = PLT_PTR_ADD(model->info, model_info_size);
 
 	/* Reset burst and sync stats */
-	model->layer[0].glow.burst_stats =
+	model->layer[0].glow.burst_xstats =
 		PLT_PTR_ADD(model->layer[0].glow.req,
 			    PLT_ALIGN_CEIL(sizeof(struct cnxk_ml_req), ML_CN10K_ALIGN_SIZE));
 	for (qp_id = 0; qp_id < dev->data->nb_queue_pairs + 1; qp_id++) {
-		model->layer[0].glow.burst_stats[qp_id].hw_latency_tot = 0;
-		model->layer[0].glow.burst_stats[qp_id].hw_latency_min = UINT64_MAX;
-		model->layer[0].glow.burst_stats[qp_id].hw_latency_max = 0;
-		model->layer[0].glow.burst_stats[qp_id].fw_latency_tot = 0;
-		model->layer[0].glow.burst_stats[qp_id].fw_latency_min = UINT64_MAX;
-		model->layer[0].glow.burst_stats[qp_id].fw_latency_max = 0;
-		model->layer[0].glow.burst_stats[qp_id].hw_reset_count = 0;
-		model->layer[0].glow.burst_stats[qp_id].fw_reset_count = 0;
-		model->layer[0].glow.burst_stats[qp_id].dequeued_count = 0;
+		model->layer[0].glow.burst_xstats[qp_id].hw_latency_tot = 0;
+		model->layer[0].glow.burst_xstats[qp_id].hw_latency_min = UINT64_MAX;
+		model->layer[0].glow.burst_xstats[qp_id].hw_latency_max = 0;
+		model->layer[0].glow.burst_xstats[qp_id].fw_latency_tot = 0;
+		model->layer[0].glow.burst_xstats[qp_id].fw_latency_min = UINT64_MAX;
+		model->layer[0].glow.burst_xstats[qp_id].fw_latency_max = 0;
+		model->layer[0].glow.burst_xstats[qp_id].hw_reset_count = 0;
+		model->layer[0].glow.burst_xstats[qp_id].fw_reset_count = 0;
+		model->layer[0].glow.burst_xstats[qp_id].dequeued_count = 0;
 	}
 
-	model->layer[0].glow.sync_stats =
-		PLT_PTR_ADD(model->layer[0].glow.burst_stats,
-			    dev->data->nb_queue_pairs * sizeof(struct cn10k_ml_layer_stats));
+	model->layer[0].glow.sync_xstats =
+		PLT_PTR_ADD(model->layer[0].glow.burst_xstats,
+			    dev->data->nb_queue_pairs * sizeof(struct cn10k_ml_layer_xstats));
 
 	plt_spinlock_init(&model->lock);
 	model->state = ML_CNXK_MODEL_STATE_LOADED;
@@ -2312,7 +2295,7 @@ static __rte_always_inline void
 cn10k_ml_result_update(struct rte_ml_dev *dev, int qp_id, struct cnxk_ml_req *req)
 {
 	union cn10k_ml_error_code *error_code;
-	struct cn10k_ml_layer_stats *stats;
+	struct cn10k_ml_layer_xstats *xstats;
 	struct cn10k_ml_dev *cn10k_mldev;
 	struct cnxk_ml_dev *cnxk_mldev;
 	struct cn10k_ml_result *result;
@@ -2330,31 +2313,31 @@ cn10k_ml_result_update(struct rte_ml_dev *dev, int qp_id, struct cnxk_ml_req *re
 		if (likely(qp_id >= 0)) {
 			qp = dev->data->queue_pairs[qp_id];
 			qp->stats.dequeued_count++;
-			stats = &model->layer[0].glow.burst_stats[qp_id];
+			xstats = &model->layer[0].glow.burst_xstats[qp_id];
 		} else {
-			stats = model->layer[0].glow.sync_stats;
+			xstats = model->layer[0].glow.sync_xstats;
 		}
 
-		if (unlikely(stats->dequeued_count == stats->hw_reset_count)) {
-			stats->hw_latency_min = UINT64_MAX;
-			stats->hw_latency_max = 0;
+		if (unlikely(xstats->dequeued_count == xstats->hw_reset_count)) {
+			xstats->hw_latency_min = UINT64_MAX;
+			xstats->hw_latency_max = 0;
 		}
 
-		if (unlikely(stats->dequeued_count == stats->fw_reset_count)) {
-			stats->fw_latency_min = UINT64_MAX;
-			stats->fw_latency_max = 0;
+		if (unlikely(xstats->dequeued_count == xstats->fw_reset_count)) {
+			xstats->fw_latency_min = UINT64_MAX;
+			xstats->fw_latency_max = 0;
 		}
 
 		hw_latency = result->stats.hw_end - result->stats.hw_start;
 		fw_latency = result->stats.fw_end - result->stats.fw_start - hw_latency;
 
-		stats->hw_latency_tot += hw_latency;
-		stats->hw_latency_min = PLT_MIN(stats->hw_latency_min, hw_latency);
-		stats->hw_latency_max = PLT_MAX(stats->hw_latency_max, hw_latency);
-		stats->fw_latency_tot += fw_latency;
-		stats->fw_latency_min = PLT_MIN(stats->fw_latency_min, fw_latency);
-		stats->fw_latency_max = PLT_MAX(stats->fw_latency_max, fw_latency);
-		stats->dequeued_count++;
+		xstats->hw_latency_tot += hw_latency;
+		xstats->hw_latency_min = PLT_MIN(xstats->hw_latency_min, hw_latency);
+		xstats->hw_latency_max = PLT_MAX(xstats->hw_latency_max, hw_latency);
+		xstats->fw_latency_tot += fw_latency;
+		xstats->fw_latency_min = PLT_MIN(xstats->fw_latency_min, fw_latency);
+		xstats->fw_latency_max = PLT_MAX(xstats->fw_latency_max, fw_latency);
+		xstats->dequeued_count++;
 
 		op->impl_opaque = result->error_code;
 		op->status = RTE_ML_OP_STATUS_SUCCESS;
