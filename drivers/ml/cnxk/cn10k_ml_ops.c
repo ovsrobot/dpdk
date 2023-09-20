@@ -508,8 +508,10 @@ cn10k_ml_layer_load(void *device, uint16_t model_id, const char *layer_name, uin
 	int qp_id;
 	int ret;
 
-	PLT_SET_USED(size);
+#ifndef RTE_MLDEV_CNXK_ENABLE_MVTVM
 	PLT_SET_USED(layer_name);
+#endif
+	PLT_SET_USED(size);
 
 	cnxk_mldev = (struct cnxk_ml_dev *)device;
 	if (cnxk_mldev == NULL) {
@@ -523,6 +525,24 @@ cn10k_ml_layer_load(void *device, uint16_t model_id, const char *layer_name, uin
 		return -EINVAL;
 	}
 
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	if (model->type == ML_CNXK_MODEL_TYPE_TVM) {
+		for (layer_id = 0; layer_id < model->mvtvm.metadata.model.nb_layers; layer_id++) {
+			if (strcmp(model->layer[layer_id].name, layer_name) == 0)
+				break;
+		}
+
+		if (layer_id == model->mvtvm.metadata.model.nb_layers) {
+			plt_err("Invalid layer name: %s", layer_name);
+			return -EINVAL;
+		}
+
+		if (model->layer[layer_id].type != ML_CNXK_LAYER_TYPE_MRVL) {
+			plt_err("Invalid layer name / type: %s", layer_name);
+			return -EINVAL;
+		}
+	}
+#endif
 	layer = &model->layer[layer_id];
 
 	ret = cn10k_ml_model_metadata_check(buffer, size);
