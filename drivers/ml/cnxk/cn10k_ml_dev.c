@@ -2,6 +2,11 @@
  * Copyright (c) 2022 Marvell.
  */
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <rte_common.h>
 #include <rte_dev.h>
 #include <rte_devargs.h>
@@ -60,6 +65,57 @@ static const int valid_ocm_page_size[] = {1024, 2048, 4096, 8192, 16384};
 
 /* Dummy operations for ML device */
 struct rte_ml_dev_ops ml_dev_dummy_ops = {0};
+
+static int
+ml_read_file(const char *file, size_t *size, char **buffer)
+{
+	char *file_buffer = NULL;
+	struct stat file_stat;
+	char *file_map;
+	int ret;
+	int fd;
+
+	fd = open(file, O_RDONLY);
+	if (fd == -1) {
+		plt_err("Failed to open file: %s\n", file);
+		return -errno;
+	}
+
+	if (fstat(fd, &file_stat) != 0) {
+		plt_err("fstat failed for file: %s\n", file);
+		close(fd);
+		return -errno;
+	}
+
+	file_buffer = rte_malloc("ml_firmware", file_stat.st_size, PLT_CACHE_LINE_SIZE);
+	if (file_buffer == NULL) {
+		plt_err("Failed to allocate memory: %s\n", file);
+		ret = -ENOMEM;
+		goto error;
+	}
+
+	file_map = mmap(0, file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	if (file_map == MAP_FAILED) {
+		plt_err("Failed to map file: %s\n", file);
+		ret = -errno;
+		goto error;
+	}
+
+	rte_memcpy(file_buffer, file_map, file_stat.st_size);
+	munmap(file_map, file_stat.st_size);
+	close(fd);
+
+	*size = file_stat.st_size;
+	*buffer = file_buffer;
+
+	return 0;
+
+error:
+	free(file_buffer);
+	close(fd);
+
+	return ret;
+}
 
 static int
 parse_string_arg(const char *key __rte_unused, const char *value, void *extra_args)
@@ -736,7 +792,7 @@ cn10k_ml_fw_load(struct cn10k_ml_dev *mldev)
 {
 	const struct plt_memzone *mz;
 	struct cn10k_ml_fw *fw;
-	void *fw_buffer = NULL;
+	char *fw_buffer = NULL;
 	uint64_t mz_size = 0;
 	uint64_t fw_size = 0;
 	int ret = 0;
@@ -746,7 +802,7 @@ cn10k_ml_fw_load(struct cn10k_ml_dev *mldev)
 
 	if (roc_env_is_emulator() || roc_env_is_hw()) {
 		/* Read firmware image to a buffer */
-		ret = rte_firmware_read(fw->path, &fw_buffer, &fw_size);
+		ret = ml_read_file(fw->path, &fw_size, &fw_buffer);
 		if ((ret < 0) || (fw_buffer == NULL)) {
 			plt_err("Unable to read firmware data: %s\n", fw->path);
 			return ret;
@@ -763,7 +819,7 @@ cn10k_ml_fw_load(struct cn10k_ml_dev *mldev)
 	mz = plt_memzone_reserve_aligned(FW_MEMZONE_NAME, mz_size, 0, ML_CN10K_ALIGN_SIZE);
 	if (mz == NULL) {
 		plt_err("plt_memzone_reserve failed : %s", FW_MEMZONE_NAME);
-		free(fw_buffer);
+		rte_free(fw_buffer);
 		return -ENOMEM;
 	}
 	fw->req = mz->addr;
@@ -780,7 +836,7 @@ cn10k_ml_fw_load(struct cn10k_ml_dev *mldev)
 	if (roc_env_is_emulator() || roc_env_is_hw()) {
 		fw->data = PLT_PTR_ADD(mz->addr, sizeof(struct cn10k_ml_req));
 		ret = cn10k_ml_fw_load_cn10ka(fw, fw_buffer, fw_size);
-		free(fw_buffer);
+		rte_free(fw_buffer);
 	} else if (roc_env_is_asim()) {
 		fw->data = NULL;
 		ret = cn10k_ml_fw_load_asim(fw);
