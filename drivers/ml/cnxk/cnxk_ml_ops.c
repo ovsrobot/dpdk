@@ -9,6 +9,10 @@
 
 #include "cn10k_ml_ops.h"
 
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+#include "mvtvm_ml_ops.h"
+#endif
+
 #include "cnxk_ml_dev.h"
 #include "cnxk_ml_io.h"
 #include "cnxk_ml_model.h"
@@ -625,6 +629,12 @@ cnxk_ml_dev_configure(struct rte_ml_dev *dev, const struct rte_ml_dev_config *co
 		goto error;
 	}
 
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	ret = mvtvm_ml_dev_configure(cnxk_mldev, conf);
+	if (ret != 0)
+		goto error;
+#endif
+
 	/* Set device capabilities */
 	cnxk_mldev->max_nb_layers =
 		cnxk_mldev->cn10k_mldev.fw.req->cn10k_req.jd.fw_load.cap.s.max_models;
@@ -684,6 +694,11 @@ cnxk_ml_dev_close(struct rte_ml_dev *dev)
 
 	/* Un-initialize xstats */
 	cnxk_ml_xstats_uninit(cnxk_mldev);
+
+#ifdef RTE_MLDEV_CNXK_ENABLE_MVTVM
+	if (mvtvm_ml_dev_close(cnxk_mldev) != 0)
+		plt_err("Failed to close MVTVM ML Device");
+#endif
 
 	if (cn10k_ml_dev_close(cnxk_mldev) != 0)
 		plt_err("Failed to close CN10K ML Device");

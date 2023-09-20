@@ -7,6 +7,32 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
     subdir_done()
 endif
 
+enable_mvtvm = true
+
+if not jansson_dep.found()
+        message('drivers/ml/cnxk: jansson not found')
+        enable_mvtvm = false
+endif
+
+if not cc.check_header('dlpack/dlpack.h')
+        message('drivers/ml/cnxk: dlpack.h not found')
+        enable_mvtvm = false
+endif
+
+tvmrt_lib = cc.find_library('tvm_runtime', required: false)
+if tvmrt_lib.found()
+        tvmrt_dep = declare_dependency(dependencies: tvmrt_lib)
+else
+        message('drivers/ml/cnxk: tvm_runtime not found')
+        enable_mvtvm = false
+endif
+
+tvmdp_dep = dependency('tvmdp', required: false)
+if not tvmdp_dep.found()
+        message('drivers/ml/cnxk: tvmdp not found')
+        enable_mvtvm = false
+endif
+
 driver_sdk_headers = files(
         'cn10k_ml_dev.h',
         'cn10k_ml_ops.h',
@@ -33,6 +59,30 @@ sources = files(
 )
 
 deps += ['mldev', 'common_cnxk', 'kvargs', 'hash']
+
+if enable_mvtvm
+
+dpdk_conf.set('RTE_MLDEV_CNXK_ENABLE_MVTVM', true)
+
+driver_sdk_headers += files(
+        'mvtvm_ml_ops.h',
+)
+
+sources += files(
+        'mvtvm_ml_ops.c',
+)
+
+ext_deps += tvmrt_dep
+ext_deps += tvmdp_dep
+ext_deps += cc.find_library('stdc++', required: true)
+ext_deps += jansson_dep
+
+deps += ['bus_vdev']
+
+message('drivers/ml/cnxk: Enabled TVM model support')
+else
+message('drivers/ml/cnxk: Disabled TVM model support')
+endif
 
 require_iova_in_mbuf = false
 
