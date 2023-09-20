@@ -11,6 +11,7 @@
 
 #include "cnxk_ml_io.h"
 
+struct cnxk_ml_dev;
 struct cnxk_ml_model;
 
 /* Maximum number of objects per model */
@@ -48,5 +49,6 @@ struct mvtvm_ml_model_data {
 int mvtvm_ml_model_blob_parse(struct rte_ml_model_params *params,
 			      struct mvtvm_ml_model_object *object);
 void mvtvm_ml_model_io_info_update(struct cnxk_ml_model *model);
+void mvtvm_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *model);
 
 #endif /* _MVTVM_ML_MODEL_H_ */
