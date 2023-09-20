@@ -47,6 +47,12 @@ struct cnxk_ml_io {
 
 	/* Scale */
 	float scale;
+
+	/* Dequantized offset */
+	uint32_t offset_d;
+
+	/* Quantized offset */
+	uint32_t offset_q;
 };
 
 /* Model / Layer IO structure */
