@@ -1932,6 +1932,14 @@ rxa_init_service(struct event_eth_rx_adapter *rx_adapter, uint8_t id)
 			ret);
 		goto err_done;
 	}
+
+	if (rte_mbuf_dyn_rx_timestamp_register(
+			&event_eth_rx_timestamp_dynfield_offset,
+			&event_eth_rx_timestamp_dynflag) != 0) {
+		RTE_EDEV_LOG_ERR("Error registering timestamp field in mbuf\n");
+		return -rte_errno;
+	}
+
 	rx_adapter->event_port_id = rx_adapter_conf.event_port_id;
 	rx_adapter->max_nb_rx = rx_adapter_conf.max_nb_rx;
 	rx_adapter->service_inited = 1;
@@ -2471,13 +2479,6 @@ rxa_create(uint8_t id, uint8_t dev_id,
 
 	if (conf_cb == rxa_default_conf_cb)
 		rx_adapter->default_cb_arg = 1;
-
-	if (rte_mbuf_dyn_rx_timestamp_register(
-			&event_eth_rx_timestamp_dynfield_offset,
-			&event_eth_rx_timestamp_dynflag) != 0) {
-		RTE_EDEV_LOG_ERR("Error registering timestamp field in mbuf\n");
-		return -rte_errno;
-	}
 
 	rte_eventdev_trace_eth_rx_adapter_create(id, dev_id, conf_cb,
 		conf_arg);
