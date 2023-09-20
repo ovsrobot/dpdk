@@ -14,6 +14,7 @@
 
 #include "cnxk_ml_dev.h"
 #include "cnxk_ml_model.h"
+#include "cnxk_ml_ops.h"
 
 /* ML model macros */
 #define MVTVM_ML_MODEL_MEMZONE_NAME "ml_mvtvm_model_mz"
@@ -57,6 +58,7 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 	char str[RTE_MEMZONE_NAMESIZE];
 	const struct plt_memzone *mz;
 	size_t model_object_size = 0;
+	size_t model_xstats_size = 0;
 	uint16_t nb_mrvl_layers;
 	uint16_t nb_llvm_layers;
 	uint8_t layer_id = 0;
@@ -72,7 +74,11 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 	model_object_size = RTE_ALIGN_CEIL(object[0].size, RTE_CACHE_LINE_MIN_SIZE) +
 			    RTE_ALIGN_CEIL(object[1].size, RTE_CACHE_LINE_MIN_SIZE) +
 			    RTE_ALIGN_CEIL(object[2].size, RTE_CACHE_LINE_MIN_SIZE);
-	mz_size += model_object_size;
+
+	model_xstats_size =
+		cnxk_mldev->mldev->data->nb_queue_pairs * sizeof(struct mvtvm_ml_model_xstats);
+
+	mz_size += model_object_size + model_xstats_size;
 
 	/* Allocate memzone for model object */
 	snprintf(str, RTE_MEMZONE_NAMESIZE, "%s_%u", MVTVM_ML_MODEL_MEMZONE_NAME, model->model_id);
@@ -184,6 +190,22 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 
 	/* Set model info */
 	mvtvm_ml_model_info_set(cnxk_mldev, model);
+
+	/* Update model xstats name */
+	cnxk_ml_xstats_model_name_update(cnxk_mldev, model->model_id);
+
+	model->mvtvm.burst_xstats = RTE_PTR_ADD(
+		model->mvtvm.object.params.addr,
+		RTE_ALIGN_CEIL(model->mvtvm.object.params.size, RTE_CACHE_LINE_MIN_SIZE));
+
+	for (int qp_id = 0; qp_id < cnxk_mldev->mldev->data->nb_queue_pairs; qp_id++) {
+		model->mvtvm.burst_xstats[qp_id].tvm_rt_latency_tot = 0;
+		model->mvtvm.burst_xstats[qp_id].tvm_rt_latency = 0;
+		model->mvtvm.burst_xstats[qp_id].tvm_rt_latency_min = UINT64_MAX;
+		model->mvtvm.burst_xstats[qp_id].tvm_rt_latency_max = 0;
+		model->mvtvm.burst_xstats[qp_id].tvm_rt_reset_count = 0;
+		model->mvtvm.burst_xstats[qp_id].dequeued_count = 0;
+	}
 
 	return 0;
 
