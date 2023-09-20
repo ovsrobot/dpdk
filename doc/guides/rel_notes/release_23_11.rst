@@ -41,6 +41,11 @@ DPDK Release 23.11
 New Features
 ------------
 
+* **Added flow group set miss actions.**
+   Introduced ``rte_flow_group_set_miss_actions()`` API to explicitly set a group's miss actions,
+   which are the actions to be performed on packets that didn't match any of the flow rules
+   in the group.
+
 .. This section should contain new features added in this release.
    Sample format:
 
