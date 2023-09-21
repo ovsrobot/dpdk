@@ -349,6 +349,8 @@ struct rte_bbdev_driver_info {
 	const struct rte_bbdev_op_cap *capabilities;
 	/** Device cpu_flag requirements */
 	const enum rte_cpu_flag_t *cpu_flag_reqs;
+	/** Versioning number for the FFT configured on the device. */
+	uint16_t fft_version;
 };
 
 /** Macro used at end of bbdev PMD list */
