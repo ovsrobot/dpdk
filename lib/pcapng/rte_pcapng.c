@@ -368,7 +368,7 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
  */
 ssize_t
 rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
-		       const char *comment,
+		       const char *comment, uint64_t sample_time,
 		       uint64_t start_time, uint64_t end_time,
 		       uint64_t ifrecv, uint64_t ifdrop)
 {
@@ -376,7 +376,6 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 	struct pcapng_option *opt;
 	uint32_t optlen, len;
 	uint8_t *buf;
-	uint64_t ns;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
 
@@ -425,9 +424,8 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 	hdr->block_length = len;
 	hdr->interface_id = self->port_index[port_id];
 
-	ns = pcapng_tsc_to_ns(rte_get_tsc_cycles());
-	hdr->timestamp_hi = ns >> 32;
-	hdr->timestamp_lo = (uint32_t)ns;
+	hdr->timestamp_hi = sample_time >> 32;
+	hdr->timestamp_lo = (uint32_t)sample_time;
 
 	/* clone block_length after option */
 	memcpy(opt, &len, sizeof(uint32_t));

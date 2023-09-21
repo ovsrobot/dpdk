@@ -577,6 +577,7 @@ report_packet_stats(dumpcap_out_t out)
 	struct rte_pdump_stats pdump_stats;
 	struct interface *intf;
 	uint64_t ifrecv, ifdrop;
+	uint64_t timestamp = create_timestamp();
 	double percent;
 
 	fputc('\n', stderr);
@@ -590,7 +591,7 @@ report_packet_stats(dumpcap_out_t out)
 
 		if (use_pcapng)
 			rte_pcapng_write_stats(out.pcapng, intf->port, NULL,
-					       start_time, end_time,
+					       timestamp, start_time, end_time,
 					       ifrecv, ifdrop);
 
 		if (ifrecv == 0)

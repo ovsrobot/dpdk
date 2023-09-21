@@ -189,7 +189,9 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
  * @param port
  *  The Ethernet port to report stats on.
  * @param comment
- *   Optional comment to add to statistics.
+ *  Optional comment to add to statistics.
+ * @param timestamp
+ *  Time this statistic sample refers to in nanoseconds.
  * @param start_time
  *  The time when packet capture was started in nanoseconds.
  *  Optional: can be zero if not known.
@@ -209,6 +211,7 @@ __rte_experimental
 ssize_t
 rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port,
 		       const char *comment,
+		       uint64_t timestamp,
 		       uint64_t start_time, uint64_t end_time,
 		       uint64_t ifrecv, uint64_t ifdrop);
 
