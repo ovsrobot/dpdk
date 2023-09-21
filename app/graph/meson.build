@@ -16,5 +16,6 @@ sources = files(
         'ip6_route.c',
         'main.c',
         'mempool.c',
+        'neigh.c',
         'utils.c',
 )
