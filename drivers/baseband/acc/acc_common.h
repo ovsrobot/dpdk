@@ -512,6 +512,7 @@ struct acc_deq_intr_details {
 enum {
 	ACC_VF2PF_STATUS_REQUEST = 1,
 	ACC_VF2PF_USING_VF = 2,
+	ACC_VF2PF_LUT_VER_REQUEST = 3,
 };
 
 

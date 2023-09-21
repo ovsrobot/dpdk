@@ -298,6 +298,27 @@ vrb_device_status(struct rte_bbdev *dev)
 	return reg;
 }
 
+/* Request device FFT related version information. */
+static inline uint32_t
+vrb_device_fft_ver(struct rte_bbdev *dev)
+{
+	struct acc_device *d = dev->data->dev_private;
+	uint32_t reg, time_out = 0;
+
+	if (d->pf_device)
+		return 0;
+
+	vrb_vf2pf(d, ACC_VF2PF_LUT_VER_REQUEST);
+	reg = acc_reg_read(d, d->reg_addr->pf2vf_doorbell);
+	while ((time_out < ACC_STATUS_TO) && (reg == RTE_BBDEV_DEV_NOSTATUS)) {
+		usleep(ACC_STATUS_WAIT); /*< Wait or VF->PF->VF Comms */
+		reg = acc_reg_read(d, d->reg_addr->pf2vf_doorbell);
+		time_out++;
+	}
+
+	return reg;
+}
+
 /* Checks PF Info Ring to find the interrupt cause and handles it accordingly. */
 static inline void
 vrb_check_ir(struct acc_device *acc_dev)
@@ -1100,6 +1121,7 @@ vrb_dev_info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_info)
 	fetch_acc_config(dev);
 	/* Check the status of device. */
 	dev_info->device_status = vrb_device_status(dev);
+	dev_info->fft_version = vrb_device_fft_ver(dev);
 
 	/* Exposed number of queues. */
 	dev_info->num_queues[RTE_BBDEV_OP_NONE] = 0;
