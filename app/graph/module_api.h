@@ -7,7 +7,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+
 #include "cli.h"
+#include "conn.h"
 /*
  * Externs
  */
