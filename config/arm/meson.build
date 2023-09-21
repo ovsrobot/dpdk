@@ -43,7 +43,9 @@ implementer_generic = {
         },
         'generic_aarch32': {
             'march': 'armv8-a',
-            'compiler_options': ['-mfpu=neon'],
+            'force_march': true,
+            'march_features': ['simd'],
+            'compiler_options': ['-mfpu=auto'],
             'flags': [
                 ['RTE_ARCH_ARM_NEON_MEMCPY', false],
                 ['RTE_ARCH_STRICT_ALIGN', true],
@@ -692,6 +694,19 @@ if update_flags
 
     machine_args = [] # Clear previous machine args
 
+    # test supported compiler options
+    compiler_options = []
+    if part_number_config.has_key('compiler_options')
+        foreach flag: part_number_config['compiler_options']
+            if cc.has_argument(flag)
+                compiler_options += flag
+            else
+                warning('Configuration compiler option ' +
+                        '@0@ isn\'t supported.'.format(flag))
+            endif
+        endforeach
+    endif
+
     # probe supported archs and their features
     candidate_march = ''
     if part_number_config.has_key('march')
@@ -704,14 +719,18 @@ if update_flags
                 check_compiler_support = true
             endif
             if (check_compiler_support and
-                cc.has_argument('-march=' + supported_march))
+                cc.has_multi_arguments('-march=' + supported_march, compiler_options))
                 candidate_march = supported_march
                 # highest supported march version found
                 break
             endif
         endforeach
         if candidate_march == ''
-            error('No suitable armv8 march version found.')
+            if part_number_config.get('force_march', false)
+                candidate_march = part_number_config['march']
+            else
+                error('No suitable armv8 march version found.')
+            endif
         endif
         if candidate_march != part_number_config['march']
             warning('Configuration march version is ' +
@@ -728,27 +747,16 @@ if update_flags
             march_features += soc_config['extra_march_features']
         endif
         foreach feature: march_features
-            if cc.has_argument('+'.join([candidate_march, feature]))
+            if cc.has_multi_arguments('+'.join([candidate_march, feature]), compiler_options)
                 candidate_march = '+'.join([candidate_march, feature])
             else
                 warning('The compiler does not support feature @0@'
                     .format(feature))
             endif
         endforeach
-        machine_args += candidate_march
     endif
 
-    # apply supported compiler options
-    if part_number_config.has_key('compiler_options')
-        foreach flag: part_number_config['compiler_options']
-            if cc.has_argument(flag)
-                machine_args += flag
-            else
-                warning('Configuration compiler option ' +
-                        '@0@ isn\'t supported.'.format(flag))
-            endif
-        endforeach
-    endif
+    machine_args += [candidate_march] + compiler_options
 
     # apply flags
     foreach flag: dpdk_flags
