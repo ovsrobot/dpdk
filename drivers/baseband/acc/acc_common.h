@@ -18,6 +18,7 @@
 #define ACC_DMA_BLKID_OUT_HARQ      3
 #define ACC_DMA_BLKID_IN_HARQ       3
 #define ACC_DMA_BLKID_IN_MLD_R      3
+#define ACC_DMA_BLKID_DEWIN_IN      3
 
 /* Values used in filling in decode FCWs */
 #define ACC_FCW_TD_VER              1
@@ -103,6 +104,9 @@
 #define ACC_MAX_NUM_QGRPS              32
 #define ACC_RING_SIZE_GRANULARITY      64
 #define ACC_MAX_FCW_SIZE              128
+#define ACC_IQ_SIZE                    4
+
+#define ACC_FCW_FFT_BLEN_3             28
 
 /* Constants from K0 computation from 3GPP 38.212 Table 5.4.2.1-2 */
 #define ACC_N_ZC_1 66 /* N = 66 Zc for BG 1 */
@@ -132,6 +136,11 @@
 #define ACC_LIM_21 14 /* 0.21 */
 #define ACC_LIM_31 20 /* 0.31 */
 #define ACC_MAX_E (128 * 1024 - 2)
+#define ACC_MAX_CS 12
+
+#define ACC100_VARIANT          0
+#define VRB1_VARIANT		2
+#define VRB2_VARIANT		3
 
 /* Helper macro for logging */
 #define rte_acc_log(level, fmt, ...) \
@@ -332,6 +341,37 @@ struct __rte_packed acc_fcw_fft {
 		res:19;
 };
 
+/* FFT Frame Control Word. */
+struct __rte_packed acc_fcw_fft_3 {
+	uint32_t in_frame_size:16,
+		leading_pad_size:16;
+	uint32_t out_frame_size:16,
+		leading_depad_size:16;
+	uint32_t cs_window_sel;
+	uint32_t cs_window_sel2:16,
+		cs_enable_bmap:16;
+	uint32_t num_antennas:8,
+		idft_size:8,
+		dft_size:8,
+		cs_offset:8;
+	uint32_t idft_shift:8,
+		dft_shift:8,
+		cs_multiplier:16;
+	uint32_t bypass:2,
+		fp16_in:1,
+		fp16_out:1,
+		exp_adj:4,
+		power_shift:4,
+		power_en:1,
+		enable_dewin:1,
+		freq_resample_mode:2,
+		depad_ouput_size:16;
+	uint16_t cs_theta_0[ACC_MAX_CS];
+	uint32_t cs_theta_d[ACC_MAX_CS];
+	int8_t cs_time_offset[ACC_MAX_CS];
+};
+
+
 /* MLD-TS Frame Control Word */
 struct __rte_packed acc_fcw_mldts {
 	uint32_t fcw_version:4,
@@ -473,14 +513,14 @@ union acc_info_ring_data {
 		uint16_t valid: 1;
 	};
 	struct {
-		uint32_t aq_id_3: 6;
-		uint32_t qg_id_3: 5;
-		uint32_t vf_id_3: 6;
-		uint32_t int_nb_3: 6;
-		uint32_t msi_0_3: 1;
-		uint32_t vf2pf_3: 6;
-		uint32_t loop_3: 1;
-		uint32_t valid_3: 1;
+		uint32_t aq_id_vrb2: 6;
+		uint32_t qg_id_vrb2: 5;
+		uint32_t vf_id_vrb2: 6;
+		uint32_t int_nb_vrb2: 6;
+		uint32_t msi_0_vrb2: 1;
+		uint32_t vf2pf_vrb2: 6;
+		uint32_t loop_vrb2: 1;
+		uint32_t valid_vrb2: 1;
 	};
 } __rte_packed;
 
@@ -765,16 +805,20 @@ alloc_sw_rings_min_mem(struct rte_bbdev *dev, struct acc_device *d,
  */
 static inline uint16_t
 get_queue_id_from_ring_info(struct rte_bbdev_data *data,
-		const union acc_info_ring_data ring_data)
+		const union acc_info_ring_data ring_data, uint16_t device_variant)
 {
 	uint16_t queue_id;
+	struct acc_queue *acc_q;
+	uint16_t vf_id = (device_variant == VRB2_VARIANT) ? ring_data.vf_id_vrb2 : ring_data.vf_id;
+	uint16_t aq_id = (device_variant == VRB2_VARIANT) ? ring_data.aq_id_vrb2 : ring_data.aq_id;
+	uint16_t qg_id = (device_variant == VRB2_VARIANT) ? ring_data.qg_id_vrb2 : ring_data.qg_id;
 
 	for (queue_id = 0; queue_id < data->num_queues; ++queue_id) {
-		struct acc_queue *acc_q =
-				data->queues[queue_id].queue_private;
-		if (acc_q != NULL && acc_q->aq_id == ring_data.aq_id &&
-				acc_q->qgrp_id == ring_data.qg_id &&
-				acc_q->vf_id == ring_data.vf_id)
+		acc_q = data->queues[queue_id].queue_private;
+
+		if (acc_q != NULL && acc_q->aq_id == aq_id &&
+				acc_q->qgrp_id == qg_id &&
+				acc_q->vf_id == vf_id)
 			return queue_id;
 	}
 
@@ -1435,5 +1479,17 @@ get_num_cbs_in_tb_ldpc_enc(struct rte_bbdev_op_ldpc_enc *ldpc_enc)
 	}
 	return cbs_in_tb;
 }
+
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+static inline void
+acc_memdump(const char *string, void *buf, uint16_t bytes)
+{
+	printf("%s\n", string);
+	uint32_t *data = buf;
+	uint16_t i;
+	for (i = 0; i < bytes / 4; i++)
+		printf("0x%08X\n", data[i]);
+}
+#endif
 
 #endif /* _ACC_COMMON_H_ */

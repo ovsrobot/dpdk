@@ -294,7 +294,7 @@ acc100_pf_interrupt_handler(struct rte_bbdev *dev)
 		case ACC100_PF_INT_DMA_UL5G_DESC_IRQ:
 		case ACC100_PF_INT_DMA_DL5G_DESC_IRQ:
 			deq_intr_det.queue_id = get_queue_id_from_ring_info(
-					dev->data, *ring_data);
+					dev->data, *ring_data, acc100_dev->device_variant);
 			if (deq_intr_det.queue_id == UINT16_MAX) {
 				rte_bbdev_log(ERR,
 						"Couldn't find queue: aq_id: %u, qg_id: %u, vf_id: %u",
@@ -348,7 +348,7 @@ acc100_vf_interrupt_handler(struct rte_bbdev *dev)
 			 */
 			ring_data->vf_id = 0;
 			deq_intr_det.queue_id = get_queue_id_from_ring_info(
-					dev->data, *ring_data);
+					dev->data, *ring_data, acc100_dev->device_variant);
 			if (deq_intr_det.queue_id == UINT16_MAX) {
 				rte_bbdev_log(ERR,
 						"Couldn't find queue: aq_id: %u, qg_id: %u",

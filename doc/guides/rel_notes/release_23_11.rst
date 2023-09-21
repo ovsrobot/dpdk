@@ -78,6 +78,9 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Updated Intel vRAN Boost bbdev PMD.**
+
+  Added support for the new Intel vRAN Boost v2 device variant (GNR-D) within the unified driver.
 
 Removed Items
 -------------
