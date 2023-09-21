@@ -1480,6 +1480,13 @@ get_num_cbs_in_tb_ldpc_enc(struct rte_bbdev_op_ldpc_enc *ldpc_enc)
 	return cbs_in_tb;
 }
 
+static inline void
+acc_reg_fast_write(struct acc_device *d, uint32_t offset, uint32_t value)
+{
+	void *reg_addr = RTE_PTR_ADD(d->mmio_base, offset);
+	mmio_write(reg_addr, value);
+}
+
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 static inline void
 acc_memdump(const char *string, void *buf, uint16_t bytes)
