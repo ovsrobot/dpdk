@@ -10,7 +10,9 @@
 #include <rte_log.h>
 #include <rte_memzone.h>
 #include <rte_errno.h>
+#include <rte_reciprocal.h>
 #include <rte_string_fns.h>
+#include <rte_time.h>
 #include <rte_pcapng.h>
 
 #include "rte_pdump.h"
@@ -78,6 +80,33 @@ static struct {
 	const struct rte_memzone *mz;
 } *pdump_stats;
 
+/* Time conversion values */
+static struct {
+	uint64_t offset_ns;	/* ns since 1/1/1970 when initialized */
+	uint64_t tsc_base;	/* TSC when initialized */
+	uint64_t tsc_hz;	/* copy of rte_tsc_hz() */
+	struct rte_reciprocal_u64 tsc_hz_inverse; /* inverse of tsc_hz */
+} pdump_time;
+
+/* Convert from TSC (CPU cycles) to nanoseconds */
+static uint64_t pdump_timestamp(void)
+{
+	uint64_t delta, secs, ns;
+
+	delta = rte_get_tsc_cycles() - pdump_time.tsc_base;
+
+	/* Avoid numeric wraparound by computing seconds first */
+	secs = rte_reciprocal_divide_u64(delta, &pdump_time.tsc_hz_inverse);
+
+	/* Remove the seconds portion */
+	delta -= secs * pdump_time.tsc_hz;
+	ns = rte_reciprocal_divide_u64(delta * NS_PER_S,
+				       &pdump_time.tsc_hz_inverse);
+
+	return secs * NS_PER_S + ns + pdump_time.offset_ns;
+}
+
+
 /* Create a clone of mbuf to be placed into ring. */
 static void
 pdump_copy(uint16_t port_id, uint16_t queue,
@@ -90,7 +119,7 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 	int ring_enq;
 	uint16_t d_pkts = 0;
 	struct rte_mbuf *dup_bufs[nb_pkts];
-	uint64_t ts;
+	uint64_t timestamp = 0;
 	struct rte_ring *ring;
 	struct rte_mempool *mp;
 	struct rte_mbuf *p;
@@ -99,7 +128,6 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 	if (cbs->filter)
 		rte_bpf_exec_burst(cbs->filter, (void **)pkts, rcs, nb_pkts);
 
-	ts = rte_get_tsc_cycles();
 	ring = cbs->ring;
 	mp = cbs->mp;
 	for (i = 0; i < nb_pkts; i++) {
@@ -119,12 +147,17 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 		 * If using pcapng then want to wrap packets
 		 * otherwise a simple copy.
 		 */
-		if (cbs->ver == V2)
+		if (cbs->ver == V2) {
+			/* calculate timestamp on first packet */
+			if (timestamp == 0)
+				timestamp = pdump_timestamp();
+
 			p = rte_pcapng_copy(port_id, queue,
 					    pkts[i], mp, cbs->snaplen,
-					    ts, direction, NULL);
-		else
+					    timestamp, direction, NULL);
+		} else {
 			p = rte_pktmbuf_copy(pkts[i], mp, 0, cbs->snaplen);
+		}
 
 		if (unlikely(p == NULL))
 			__atomic_fetch_add(&stats->nombuf, 1, __ATOMIC_RELAXED);
@@ -421,7 +454,20 @@ int
 rte_pdump_init(void)
 {
 	const struct rte_memzone *mz;
+	struct timespec ts;
+	uint64_t cycles;
 	int ret;
+
+	/* Compute time base offsets */
+	cycles = rte_get_tsc_cycles();
+	clock_gettime(CLOCK_REALTIME, &ts);
+
+	/* put initial TSC value in middle of clock_gettime() call */
+	pdump_time.tsc_base = (cycles + rte_get_tsc_cycles()) / 2;
+	pdump_time.offset_ns = rte_timespec_to_ns(&ts);
+
+	pdump_time.tsc_hz = rte_get_tsc_hz();
+	pdump_time.tsc_hz_inverse = rte_reciprocal_value_u64(pdump_time.tsc_hz);
 
 	mz = rte_memzone_reserve(MZ_RTE_PDUMP_STATS, sizeof(*pdump_stats),
 				 rte_socket_id(), 0);

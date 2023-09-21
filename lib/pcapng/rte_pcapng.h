@@ -122,7 +122,7 @@ enum rte_pcapng_direction {
  *   The upper limit on bytes to copy.  Passing UINT32_MAX
  *   means all data (after offset).
  * @param timestamp
- *   The timestamp in TSC cycles.
+ *   The timestamp in nanoseconds since 1/1/1970.
  * @param direction
  *   The direction of the packer: receive, transmit or unknown.
  * @param comment

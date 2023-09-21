@@ -25,7 +25,6 @@
 #include <rte_mbuf.h>
 #include <rte_os_shim.h>
 #include <rte_pcapng.h>
-#include <rte_reciprocal.h>
 #include <rte_time.h>
 
 #include "pcapng_proto.h"
@@ -42,15 +41,6 @@ struct rte_pcapng {
 	/* DPDK port id to interface index in file */
 	uint32_t port_index[RTE_MAX_ETHPORTS];
 };
-
-/* For converting TSC cycles to PCAPNG ns format */
-static struct pcapng_time {
-	uint64_t ns;
-	uint64_t cycles;
-	uint64_t tsc_hz;
-	struct rte_reciprocal_u64 tsc_hz_inverse;
-} pcapng_time;
-
 
 #ifdef RTE_EXEC_ENV_WINDOWS
 /*
@@ -101,58 +91,6 @@ static ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 /* compatibility wrapper because name is optional */
 #define if_indextoname(ifindex, ifname) NULL
 #endif
-
-static inline void
-pcapng_init(void)
-{
-	struct timespec ts;
-
-	pcapng_time.cycles = rte_get_tsc_cycles();
-	clock_gettime(CLOCK_REALTIME, &ts);
-	pcapng_time.cycles = (pcapng_time.cycles + rte_get_tsc_cycles()) / 2;
-	pcapng_time.ns = rte_timespec_to_ns(&ts);
-
-	pcapng_time.tsc_hz = rte_get_tsc_hz();
-	pcapng_time.tsc_hz_inverse = rte_reciprocal_value_u64(pcapng_time.tsc_hz);
-}
-
-/* PCAPNG timestamps are in nanoseconds */
-static uint64_t pcapng_tsc_to_ns(uint64_t cycles)
-{
-	uint64_t delta, secs;
-
-	if (!pcapng_time.tsc_hz)
-		pcapng_init();
-
-	/* In essence the calculation is:
-	 *   delta = (cycles - pcapng_time.cycles) * NSEC_PRE_SEC / rte_get_tsc_hz()
-	 * but this overflows within 4 to 8 seconds depending on TSC frequency.
-	 * Instead, if delta >= pcapng_time.tsc_hz:
-	 *   Increase pcapng_time.ns and pcapng_time.cycles by the number of
-	 *   whole seconds in delta and reduce delta accordingly.
-	 * delta will therefore always lie in the interval [0, pcapng_time.tsc_hz),
-	 * which will not overflow when multiplied by NSEC_PER_SEC provided the
-	 * TSC frequency < approx 18.4GHz.
-	 *
-	 * Currently all TSCs operate below 5GHz.
-	 */
-	delta = cycles - pcapng_time.cycles;
-	if (unlikely(delta >= pcapng_time.tsc_hz)) {
-		if (likely(delta < pcapng_time.tsc_hz * 2)) {
-			delta -= pcapng_time.tsc_hz;
-			pcapng_time.cycles += pcapng_time.tsc_hz;
-			pcapng_time.ns += NSEC_PER_SEC;
-		} else {
-			secs = rte_reciprocal_divide_u64(delta, &pcapng_time.tsc_hz_inverse);
-			delta -= secs * pcapng_time.tsc_hz;
-			pcapng_time.cycles += secs * pcapng_time.tsc_hz;
-			pcapng_time.ns += secs * NSEC_PER_SEC;
-		}
-	}
-
-	return pcapng_time.ns + rte_reciprocal_divide_u64(delta * NSEC_PER_SEC,
-							  &pcapng_time.tsc_hz_inverse);
-}
 
 /* length of option including padding */
 static uint16_t pcapng_optlen(uint16_t len)
@@ -518,7 +456,7 @@ struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *md,
 		struct rte_mempool *mp,
-		uint32_t length, uint64_t cycles,
+		uint32_t length, uint64_t timestamp,
 		enum rte_pcapng_direction direction,
 		const char *comment)
 {
@@ -527,14 +465,11 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 	struct pcapng_option *opt;
 	uint16_t optlen;
 	struct rte_mbuf *mc;
-	uint64_t ns;
 	bool rss_hash;
 
 #ifdef RTE_LIBRTE_ETHDEV_DEBUG
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, NULL);
 #endif
-	ns = pcapng_tsc_to_ns(cycles);
-
 	orig_len = rte_pktmbuf_pkt_len(md);
 
 	/* Take snapshot of the data */
@@ -639,8 +574,8 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 	/* Interface index is filled in later during write */
 	mc->port = port_id;
 
-	epb->timestamp_hi = ns >> 32;
-	epb->timestamp_lo = (uint32_t)ns;
+	epb->timestamp_hi = timestamp >> 32;
+	epb->timestamp_lo = (uint32_t)timestamp;
 	epb->capture_length = data_len;
 	epb->original_length = orig_len;
 
