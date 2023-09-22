@@ -1728,6 +1728,9 @@ M: Nithin Dabilpuram <ndabilpuram@marvell.com>
 M: Pavan Nikhilesh <pbhagavatula@marvell.com>
 F: lib/node/
 
+Dispatcher - EXPERIMENTAL
+M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
+F: lib/dispatcher/
 
 Test Applications
 -----------------
