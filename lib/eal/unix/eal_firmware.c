@@ -25,19 +25,42 @@ static int
 firmware_open(struct firmware_read_ctx *ctx, const char *name, size_t blocksize)
 {
 	struct archive_entry *e;
+	int err;
 
 	ctx->a = archive_read_new();
 	if (ctx->a == NULL)
 		return -1;
-	if (archive_read_support_format_raw(ctx->a) != ARCHIVE_OK ||
-			archive_read_support_filter_xz(ctx->a) != ARCHIVE_OK ||
-			archive_read_open_filename(ctx->a, name, blocksize) != ARCHIVE_OK ||
-			archive_read_next_header(ctx->a, &e) != ARCHIVE_OK) {
-		archive_read_free(ctx->a);
-		ctx->a = NULL;
-		return -1;
+	err = archive_read_support_format_raw(ctx->a);
+	if (err != ARCHIVE_OK) {
+		RTE_LOG(ERR, EAL, "archive_read_support_format_raw() failed with %d: %s\n",
+			err, archive_error_string(ctx->a));
+		goto err;
 	}
+	err = archive_read_support_filter_xz(ctx->a);
+	if (err != ARCHIVE_OK) {
+		RTE_LOG(ERR, EAL, "archive_read_support_filter_xz() failed with %d: %s\n",
+			err, archive_error_string(ctx->a));
+		goto err;
+	}
+	err = archive_read_open_filename(ctx->a, name, blocksize);
+	if (err != ARCHIVE_OK) {
+		RTE_LOG(ERR, EAL, "archive_read_open_filename() failed with %d: %s\n",
+			err, archive_error_string(ctx->a));
+		goto err;
+	}
+	err = archive_read_next_header(ctx->a, &e);
+	if (err != ARCHIVE_OK) {
+		RTE_LOG(ERR, EAL, "archive_read_next_header() failed with %d: %s\n",
+			err, archive_error_string(ctx->a));
+		goto err;
+	}
+
 	return 0;
+
+err:
+	archive_read_free(ctx->a);
+	ctx->a = NULL;
+	return -1;
 }
 
 static ssize_t
