@@ -9,6 +9,7 @@ sources += files(
         'eal_common_bus.c',
         'eal_common_class.c',
         'eal_common_config.c',
+        'eal_common_cpu.c',
         'eal_common_debug.c',
         'eal_common_dev.c',
         'eal_common_devargs.c',

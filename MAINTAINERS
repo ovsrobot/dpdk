@@ -158,6 +158,7 @@ F: app/test/test_barrier.c
 F: app/test/test_bitcount.c
 F: app/test/test_byteorder.c
 F: app/test/test_common.c
+F: app/test/test_cpu.c
 F: app/test/test_cpuflags.c
 F: app/test/test_cycles.c
 F: app/test/test_debug.c

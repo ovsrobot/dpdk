@@ -424,6 +424,12 @@ INTERNAL {
 
 	rte_bus_register;
 	rte_bus_unregister;
+	rte_cpu_is_x86;
+	rte_cpu_x86_brand;
+	rte_cpu_x86_family;
+	rte_cpu_x86_is_amd;
+	rte_cpu_x86_is_intel;
+	rte_cpu_x86_model;
 	rte_eal_get_baseaddr;
 	rte_eal_parse_coremask;
 	rte_firmware_read;

@@ -44,6 +44,7 @@ source_file_deps = {
     'test_cmdline_string.c': [],
     'test_common.c': [],
     'test_compressdev.c': ['compressdev'],
+    'test_cpu.c': [],
     'test_cpuflags.c': [],
     'test_crc.c': ['net'],
     'test_cryptodev.c': test_cryptodev_deps,
