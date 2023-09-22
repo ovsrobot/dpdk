@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <eal_cpu.h>
 #include <rte_errno.h>
 #include <rte_mempool.h>
 #include <rte_class.h>
@@ -51,29 +52,6 @@ uint8_t haswell_broadwell_cpu;
  * to non-cached region eliminating the extra write memory barrier.
  */
 #define MLX5_SQ_DB_NC "sq_db_nc"
-
-/* In case this is an x86_64 intel processor to check if
- * we should use relaxed ordering.
- */
-#ifdef RTE_ARCH_X86_64
-/**
- * This function returns processor identification and feature information
- * into the registers.
- *
- * @param eax, ebx, ecx, edx
- *		Pointers to the registers that will hold cpu information.
- * @param level
- *		The main category of information returned.
- */
-static inline void mlx5_cpu_id(unsigned int level,
-				unsigned int *eax, unsigned int *ebx,
-				unsigned int *ecx, unsigned int *edx)
-{
-	__asm__("cpuid\n\t"
-		: "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
-		: "0" (level));
-}
-#endif
 
 RTE_LOG_REGISTER_DEFAULT(mlx5_common_logtype, NOTICE)
 
@@ -1246,46 +1224,29 @@ mlx5_common_init(void)
 RTE_INIT_PRIO(mlx5_is_haswell_broadwell_cpu, LOG)
 {
 #ifdef RTE_ARCH_X86_64
-	unsigned int broadwell_models[4] = {0x3d, 0x47, 0x4F, 0x56};
-	unsigned int haswell_models[4] = {0x3c, 0x3f, 0x45, 0x46};
-	unsigned int i, model, family, brand_id, vendor;
-	unsigned int signature_intel_ebx = 0x756e6547;
-	unsigned int extended_model;
-	unsigned int eax = 0;
-	unsigned int ebx = 0;
-	unsigned int ecx = 0;
-	unsigned int edx = 0;
-	int max_level;
+	uint8_t broadwell_models[] = {0x3d, 0x47, 0x4f, 0x56};
+	uint8_t haswell_models[] = {0x3c, 0x3f, 0x45, 0x46};
+	unsigned int i;
+	uint8_t model;
 
-	mlx5_cpu_id(0, &eax, &ebx, &ecx, &edx);
-	vendor = ebx;
-	max_level = eax;
-	if (max_level < 1) {
-		haswell_broadwell_cpu = 0;
+	if (!rte_cpu_is_x86() || !rte_cpu_x86_is_intel() || rte_cpu_x86_brand() != 0x0 ||
+			rte_cpu_x86_family() != 0x6)
+		goto out;
+
+	model = rte_cpu_x86_model();
+	for (i = 0; i < RTE_DIM(broadwell_models); i++) {
+		if (model != broadwell_models[i])
+			continue;
+		haswell_broadwell_cpu = 1;
 		return;
 	}
-	mlx5_cpu_id(1, &eax, &ebx, &ecx, &edx);
-	model = (eax >> 4) & 0x0f;
-	family = (eax >> 8) & 0x0f;
-	brand_id = ebx & 0xff;
-	extended_model = (eax >> 12) & 0xf0;
-	/* Check if the processor is Haswell or Broadwell */
-	if (vendor == signature_intel_ebx) {
-		if (family == 0x06)
-			model += extended_model;
-		if (brand_id == 0 && family == 0x6) {
-			for (i = 0; i < RTE_DIM(broadwell_models); i++)
-				if (model == broadwell_models[i]) {
-					haswell_broadwell_cpu = 1;
-					return;
-				}
-			for (i = 0; i < RTE_DIM(haswell_models); i++)
-				if (model == haswell_models[i]) {
-					haswell_broadwell_cpu = 1;
-					return;
-				}
-		}
+	for (i = 0; i < RTE_DIM(haswell_models); i++) {
+		if (model != haswell_models[i])
+			continue;
+		haswell_broadwell_cpu = 1;
+		return;
 	}
+out:
 #endif
 	haswell_broadwell_cpu = 0;
 }
