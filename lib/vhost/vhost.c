@@ -1540,6 +1540,9 @@ rte_vhost_notify_guest(int vid, uint16_t queue_id)
 
 	rte_rwlock_read_lock(&vq->access_lock);
 
+	if (unlikely(!vq->access_ok))
+		goto out_unlock;
+
 	if (dev->backend_ops->inject_irq(dev, vq)) {
 		if (dev->flags & VIRTIO_DEV_STATS_ENABLED)
 			__atomic_fetch_add(&vq->stats.guest_notifications_error,
@@ -1552,6 +1555,7 @@ rte_vhost_notify_guest(int vid, uint16_t queue_id)
 			dev->notify_ops->guest_notified(dev->vid);
 	}
 
+out_unlock:
 	rte_rwlock_read_unlock(&vq->access_lock);
 }
 
