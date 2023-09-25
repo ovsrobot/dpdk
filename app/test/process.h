@@ -18,6 +18,8 @@
 
 #include <rte_string_fns.h> /* strlcpy */
 
+#include <rte_devargs.h>
+
 #ifdef RTE_EXEC_ENV_FREEBSD
 #define self "curproc"
 #define exe "file"
@@ -34,6 +36,44 @@ extern uint16_t flag_for_send_pkts;
 #endif
 #endif
 
+#define PREFIX_A "-a"
+
+static int
+add_parameter_a(char **argv, int max_capacity)
+{
+	struct rte_devargs *devargs;
+	int count = 0;
+	int name_length, data_length;
+	char *dev;
+	int malloc_szie;
+
+	RTE_EAL_DEVARGS_FOREACH(NULL, devargs) {
+		if (count >= max_capacity)
+			return count;
+
+		name_length = strlen(devargs->name);
+		if (devargs->data != NULL)
+			data_length = strlen(devargs->data);
+		else
+			data_length = 0;
+
+		malloc_szie = name_length + data_length + 1;
+		dev = malloc(malloc_szie);
+
+		strncpy(dev, devargs->name, name_length);
+		if (data_length > 0)
+			strncpy(dev + name_length, devargs->data, data_length);
+		memset(dev + malloc_szie - 1, 0, 1);
+
+		*(argv + count) =  strdup(PREFIX_A);
+		count++;
+
+		*(argv + count) = dev;
+		count++;
+	}
+	return count;
+}
+
 /*
  * launches a second copy of the test process using the given argv parameters,
  * which should include argv[0] as the process name. To identify in the
@@ -44,7 +84,7 @@ static inline int
 process_dup(const char *const argv[], int numargs, const char *env_value)
 {
 	int num;
-	char *argv_cpy[numargs + 1];
+	char *argv_cpy[numargs + RTE_MAX_ETHPORTS * 2 + 1];
 	int i, status;
 	char path[32];
 #ifdef RTE_LIB_PDUMP
@@ -58,11 +98,12 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	if (pid < 0)
 		return -1;
 	else if (pid == 0) {
+		memset(argv_cpy, 0, numargs + RTE_MAX_ETHPORTS * 2 + 1);
 		/* make a copy of the arguments to be passed to exec */
 		for (i = 0; i < numargs; i++)
 			argv_cpy[i] = strdup(argv[i]);
-		argv_cpy[i] = NULL;
 		num = numargs;
+		num += add_parameter_a(&argv_cpy[i], RTE_MAX_ETHPORTS * 2);
 
 #ifdef RTE_EXEC_ENV_LINUX
 		{
@@ -130,6 +171,13 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 						path);
 			}
 			rte_panic("Cannot exec: %s\n", strerror(errno));
+		}
+
+		for (i = 0; i < num; i++) {
+			if (argv_cpy[i] != NULL) {
+				free(argv_cpy[i]);
+				argv_cpy[i] = NULL;
+			}
 		}
 	}
 	/* parent process does a wait */
