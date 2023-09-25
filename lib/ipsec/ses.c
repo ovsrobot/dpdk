@@ -44,7 +44,8 @@ rte_ipsec_session_prepare(struct rte_ipsec_session *ss)
 
 	ss->pkt_func = fp;
 
-	if (ss->type == RTE_SECURITY_ACTION_TYPE_NONE)
+	if (ss->type == RTE_SECURITY_ACTION_TYPE_NONE ||
+		ss->type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
 		rte_cryptodev_sym_session_opaque_data_set(ss->crypto.ses,
 			(uintptr_t)ss);
 	else
