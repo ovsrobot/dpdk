@@ -1811,6 +1811,13 @@ F: dts/
 F: devtools/dts-check-format.sh
 F: doc/guides/tools/dts.rst
 
+Graph application
+M: Sunil Kumar Kori <skori@marvell.com>
+M: Rakesh Kudurumalla <rkudurumalla@marvell.com>
+F: app/graph/
+F: doc/guides/tools/graph.rst
+F: doc/guides/tools/img/graph-usecase-l3fwd.svg
+
 
 Other Example Applications
 --------------------------
