@@ -142,6 +142,18 @@ file to express the requested use case configuration.
      - Command to dump ipv6_lookup help message
      - Yes
      - Yes
+   * - neigh add ipv4 <ip> <mac>
+     - Command to add a neighbour information into ``ipv4_rewrite`` node.
+     - No
+     - Yes
+   * - neigh add ipv6 <ip> <mac>
+     - Command to add a neighbour information into ``ipv6_rewrite`` node.
+     - No
+     - Yes
+   * - help neigh
+     - Command to dump neigh help message
+     - Yes
+     - Yes
 
 Runtime configuration
 ---------------------
