@@ -101,6 +101,7 @@ enum index {
 	QUEUE,
 	PUSH,
 	PULL,
+	HASH,
 
 	/* Flex arguments */
 	FLEX_ITEM_INIT,
@@ -205,6 +206,11 @@ enum index {
 	TABLE_RULES_NUMBER,
 	TABLE_PATTERN_TEMPLATE,
 	TABLE_ACTIONS_TEMPLATE,
+
+	/* Hash calculation arguments. */
+	HASH_CALC_TABLE,
+	HASH_CALC_PATTERN_INDEX,
+	HASH_CALC_PATTERN,
 
 	/* Tunnel arguments. */
 	TUNNEL_CREATE,
@@ -2678,6 +2684,9 @@ static int parse_push(struct context *, const struct token *,
 static int parse_pull(struct context *, const struct token *,
 		      const char *, unsigned int,
 		      void *, unsigned int);
+static int parse_hash(struct context *, const struct token *,
+		      const char *, unsigned int,
+		      void *, unsigned int);
 static int parse_tunnel(struct context *, const struct token *,
 			const char *, unsigned int,
 			void *, unsigned int);
@@ -3035,7 +3044,8 @@ static const struct token token_list[] = {
 			      FLEX,
 			      QUEUE,
 			      PUSH,
-			      PULL)),
+			      PULL,
+			      HASH)),
 		.call = parse_init,
 	},
 	/* Top-level command. */
@@ -3678,6 +3688,33 @@ static const struct token token_list[] = {
 		.help = "specify queue id",
 		.next = NEXT(NEXT_ENTRY(END), NEXT_ENTRY(COMMON_QUEUE_ID)),
 		.args = ARGS(ARGS_ENTRY(struct buffer, queue)),
+	},
+	/* Top-level command. */
+	[HASH] = {
+		.name = "hash",
+		.help = "calculate hash for a given pattern in a given template table",
+		.next = NEXT(NEXT_ENTRY(HASH_CALC_TABLE), NEXT_ENTRY(COMMON_PORT_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, port)),
+		.call = parse_hash,
+	},
+	/* Sub-level commands. */
+	[HASH_CALC_TABLE] = {
+		.name = "template_table",
+		.help = "specify table id",
+		.next = NEXT(NEXT_ENTRY(HASH_CALC_PATTERN_INDEX),
+			     NEXT_ENTRY(COMMON_TABLE_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer,
+					args.vc.table_id)),
+		.call = parse_hash,
+	},
+	[HASH_CALC_PATTERN_INDEX] = {
+		.name = "pattern_template",
+		.help = "specify pattern template id",
+		.next = NEXT(NEXT_ENTRY(ITEM_PATTERN),
+			     NEXT_ENTRY(COMMON_UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct buffer,
+					args.vc.pat_templ_id)),
+		.call = parse_hash,
 	},
 	/* Top-level command. */
 	[INDIRECT_ACTION] = {
@@ -10449,6 +10486,48 @@ parse_pull(struct context *ctx, const struct token *token,
 	return len;
 }
 
+/** Parse tokens for hash calculation commands. */
+static int
+parse_hash(struct context *ctx, const struct token *token,
+	 const char *str, unsigned int len,
+	 void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+
+	/* Token name must match. */
+	if (parse_default(ctx, token, str, len, NULL, 0) < 0)
+		return -1;
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return len;
+	if (!out->command) {
+		if (ctx->curr != HASH)
+			return -1;
+		if (sizeof(*out) > size)
+			return -1;
+		out->command = ctx->curr;
+		ctx->objdata = 0;
+		ctx->object = out;
+		ctx->objmask = NULL;
+		out->args.vc.data = (uint8_t *)out + size;
+		return len;
+	}
+	switch (ctx->curr) {
+	case HASH_CALC_TABLE:
+	case HASH_CALC_PATTERN_INDEX:
+		return len;
+	case ITEM_PATTERN:
+		out->args.vc.pattern =
+			(void *)RTE_ALIGN_CEIL((uintptr_t)(out + 1),
+					       sizeof(double));
+		ctx->object = out->args.vc.pattern;
+		ctx->objmask = NULL;
+		return len;
+	default:
+		return -1;
+	}
+}
+
 static int
 parse_flex(struct context *ctx, const struct token *token,
 	     const char *str, unsigned int len,
@@ -12350,6 +12429,11 @@ cmd_flow_parsed(const struct buffer *in)
 		break;
 	case PULL:
 		port_queue_flow_pull(in->port, in->queue);
+		break;
+	case HASH:
+		port_flow_hash_calc(in->port, in->args.vc.table_id,
+				    in->args.vc.pat_templ_id,
+				    in->args.vc.pattern);
 		break;
 	case QUEUE_AGED:
 		port_queue_flow_aged(in->port, in->queue,
