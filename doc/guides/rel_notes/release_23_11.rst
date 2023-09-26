@@ -78,6 +78,10 @@ New Features
 * build: Optional libraries can now be selected with the new ``enable_libs``
   build option similarly to the existing ``enable_drivers`` build option.
 
+* **Added amd-pstate driver support to power management library.**
+
+  Added support for amd-pstate driver which works on AMD EPYC processors.
+
 
 Removed Items
 -------------
