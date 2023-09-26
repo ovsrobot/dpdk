@@ -170,9 +170,7 @@ def _get_settings() -> _Settings:
         timeout=parsed_args.timeout,
         verbose=(parsed_args.verbose == "Y"),
         skip_setup=(parsed_args.skip_setup == "Y"),
-        dpdk_tarball_path=Path(
-            DPDKGitTarball(parsed_args.tarball, parsed_args.output_dir)
-        )
+        dpdk_tarball_path=Path(DPDKGitTarball(parsed_args.tarball, parsed_args.output_dir))
         if not os.path.exists(parsed_args.tarball)
         else Path(parsed_args.tarball),
         compile_timeout=parsed_args.compile_timeout,

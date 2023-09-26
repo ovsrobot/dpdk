@@ -117,8 +117,7 @@ class RemoteCommandExecutionError(DTSError):
 
     def __str__(self) -> str:
         return (
-            f"Command {self.command} returned a non-zero exit code: "
-            f"{self.command_return_code}"
+            f"Command {self.command} returned a non-zero exit code: " f"{self.command_return_code}"
         )
 
 

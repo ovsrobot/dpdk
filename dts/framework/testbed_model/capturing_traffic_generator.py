@@ -110,9 +110,7 @@ class CapturingTrafficGenerator(TrafficGenerator):
             duration,
         )
 
-        self._logger.debug(
-            f"Received packets: {get_packet_summaries(received_packets)}"
-        )
+        self._logger.debug(f"Received packets: {get_packet_summaries(received_packets)}")
         self._write_capture_from_packets(capture_name, received_packets)
         return received_packets
 
