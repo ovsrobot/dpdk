@@ -10,5 +10,6 @@ endif
 deps += ['bus_pci', 'graph', 'eal', 'lpm', 'ethdev', 'node', 'cmdline']
 sources = files(
         'cli.c',
+        'conn.c',
         'main.c',
 )
