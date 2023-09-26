@@ -11,6 +11,7 @@ deps += ['bus_pci', 'graph', 'eal', 'lpm', 'ethdev', 'node', 'cmdline']
 sources = files(
         'cli.c',
         'conn.c',
+        'ethdev_rx.c',
         'ethdev.c',
         'ip4_route.c',
         'ip6_route.c',
