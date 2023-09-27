@@ -18,6 +18,8 @@
 
 #include <rte_string_fns.h> /* strlcpy */
 
+#include <rte_devargs.h>
+
 #ifdef RTE_EXEC_ENV_FREEBSD
 #define self "curproc"
 #define exe "file"
@@ -34,6 +36,47 @@ extern uint16_t flag_for_send_pkts;
 #endif
 #endif
 
+#define PREFIX_ALLOW "--allow"
+
+static int
+add_parameter_allow(char **argv, int max_capacity)
+{
+	struct rte_devargs *devargs;
+	int count = 0;
+	int name_length, data_length;
+	char *dev;
+	int malloc_size;
+
+	RTE_EAL_DEVARGS_FOREACH(NULL, devargs) {
+		if (count >= max_capacity)
+			return count;
+
+		name_length = strlen(devargs->name);
+		if (name_length == 0)
+			continue;
+
+		if (devargs->data != NULL)
+			data_length = strlen(devargs->data);
+		else
+			data_length = 0;
+
+		malloc_size = name_length + data_length + 1;
+		dev = malloc(malloc_size);
+
+		memcpy(dev, devargs->name, name_length);
+		if (data_length > 0)
+			memcpy(dev + name_length, devargs->data, data_length);
+		memset(dev + malloc_size - 1, 0, 1);
+
+		*(argv + count) =  strdup(PREFIX_ALLOW);
+		count++;
+
+		*(argv + count) = dev;
+		count++;
+	}
+	return count;
+}
+
 /*
  * launches a second copy of the test process using the given argv parameters,
  * which should include argv[0] as the process name. To identify in the
@@ -44,7 +87,9 @@ static inline int
 process_dup(const char *const argv[], int numargs, const char *env_value)
 {
 	int num;
-	char *argv_cpy[numargs + 1];
+	char **argv_cpy;
+	unsigned int allow_num;
+	unsigned int argv_num;
 	int i, status;
 	char path[32];
 #ifdef RTE_LIB_PDUMP
@@ -58,12 +103,15 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	if (pid < 0)
 		return -1;
 	else if (pid == 0) {
+		allow_num = rte_devargs_type_count(RTE_DEVTYPE_ALLOWED);
+		argv_num = numargs + allow_num * 2 + 1;
+		argv_cpy = malloc(argv_num * sizeof(char *));
 		/* make a copy of the arguments to be passed to exec */
 		for (i = 0; i < numargs; i++)
 			argv_cpy[i] = strdup(argv[i]);
-		argv_cpy[i] = NULL;
 		num = numargs;
-
+		num += add_parameter_allow(&argv_cpy[i], allow_num * 2);
+		argv_cpy[argv_num - 1] = NULL;
 #ifdef RTE_EXEC_ENV_LINUX
 		{
 			const char *procdir = "/proc/" self "/fd/";
@@ -131,6 +179,12 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 			}
 			rte_panic("Cannot exec: %s\n", strerror(errno));
 		}
+
+		for (i = 0; i < num; i++) {
+			if (argv_cpy[i] != NULL)
+				free(argv_cpy[i]);
+		}
+		free(argv_cpy);
 	}
 	/* parent process does a wait */
 #ifdef RTE_LIB_PDUMP
