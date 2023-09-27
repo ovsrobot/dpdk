@@ -47,6 +47,34 @@ or cross-compiled on an x86 platform.
 Refer to :doc:`../platform/cnxk` for instructions to build your DPDK application.
 
 
+Compilation Prerequisites
+-------------------------
+
+This driver requires external libraries to optionally enable support for
+models compiled using Apache TVM framework. The following dependencies are
+not part of DPDK and must be installed separately:
+
+- **Jansson**
+
+  This library enables support to parse and read JSON files.
+
+- **libarchive**
+
+  Apached TVM framework generates compiled models as tar archives. This
+  library enables support to decompress and read archive files in tar,
+  xz and other formats.
+
+- **TVM**
+
+  Apache TVM provides a runtime library (libtvm_runtime) used to execute
+  models on CPU cores or hardware accelerators.
+
+- **TVMDP**
+
+  Marvell's TVM dataplane library which works as an interface between TVM
+  runtime and DPDK drivers. TVMDP library provides a simplified C interface
+  for TVM's runtime based on C++.
+
 Initialization
 --------------
 
