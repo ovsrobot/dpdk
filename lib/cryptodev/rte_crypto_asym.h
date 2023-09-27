@@ -376,16 +376,12 @@ struct rte_crypto_dsa_xform {
 struct rte_crypto_ec_xform {
 	enum rte_crypto_curve_id curve_id;
 	/**< Pre-defined ec groups */
-};
 
-/**
- * Asymmetric SM2 transform data.
- *
- * Structure describing SM2 xform params.
- */
-struct rte_crypto_sm2_xform {
-	enum rte_crypto_auth_algorithm hash;
-	/**< Hash algorithm used in SM2 op. */
+	rte_crypto_uint pkey;
+	/**< Private key */
+
+	struct rte_crypto_ec_point q;
+	/**< Public key */
 };
 
 /**
@@ -571,11 +567,8 @@ struct rte_crypto_ecdsa_op_param {
 	enum rte_crypto_asym_op_type op_type;
 	/**< Signature generation or verification */
 
-	rte_crypto_uint pkey;
-	/**< Private key of the signer for signature generation */
-
-	struct rte_crypto_ec_point q;
-	/**< Public key of the signer for verification */
+	enum rte_crypto_auth_algorithm hash;
+	/**< Hash algorithm used in EC op. */
 
 	rte_crypto_param message;
 	/**< Input message digest to be signed or verified */
@@ -657,11 +650,8 @@ struct rte_crypto_sm2_op_param {
 	enum rte_crypto_asym_op_type op_type;
 	/**< Signature generation or verification. */
 
-	rte_crypto_uint pkey;
-	/**< Private key for encryption or sign generation. */
-
-	struct rte_crypto_ec_point q;
-	/**< Public key for decryption or verification. */
+	enum rte_crypto_auth_algorithm hash;
+	/**< Hash algorithm used in EC op. */
 
 	rte_crypto_param message;
 	/**<

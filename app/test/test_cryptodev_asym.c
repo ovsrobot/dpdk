@@ -1503,6 +1503,12 @@ test_ecdsa_sign_verify(enum curve curve_id)
 	xform.next = NULL;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_ECDSA;
 	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.q.x.data = input_params.pubkey_qx.data;
+	xform.ec.q.x.length = input_params.pubkey_qx.length;
+	xform.ec.q.y.data = input_params.pubkey_qy.data;
+	xform.ec.q.y.length = input_params.pubkey_qy.length;
 
 	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
 	if (ret < 0) {
@@ -1524,8 +1530,6 @@ test_ecdsa_sign_verify(enum curve curve_id)
 	op->asym->ecdsa.message.length = input_params.digest.length;
 	op->asym->ecdsa.k.data = input_params.scalar.data;
 	op->asym->ecdsa.k.length = input_params.scalar.length;
-	op->asym->ecdsa.pkey.data = input_params.pkey.data;
-	op->asym->ecdsa.pkey.length = input_params.pkey.length;
 
 	/* Init out buf */
 	op->asym->ecdsa.r.data = output_buf_r;
@@ -1582,10 +1586,6 @@ test_ecdsa_sign_verify(enum curve curve_id)
 
 	/* Populate op with operational details */
 	op->asym->ecdsa.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
-	op->asym->ecdsa.q.x.data = input_params.pubkey_qx.data;
-	op->asym->ecdsa.q.x.length = input_params.pubkey_qx.length;
-	op->asym->ecdsa.q.y.data = input_params.pubkey_qy.data;
-	op->asym->ecdsa.q.y.length = input_params.pubkey_qx.length;
 	op->asym->ecdsa.r.data = asym_op->ecdsa.r.data;
 	op->asym->ecdsa.r.length = asym_op->ecdsa.r.length;
 	op->asym->ecdsa.s.data = asym_op->ecdsa.s.data;
@@ -1653,10 +1653,10 @@ test_ecpm(enum curve curve_id)
 	struct crypto_testsuite_ecpm_params input_params;
 	void *sess = NULL;
 	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_crypto_asym_xform xform = {0};
 	struct rte_crypto_op *result_op = NULL;
 	uint8_t output_buf_x[TEST_DATA_SIZE];
 	uint8_t output_buf_y[TEST_DATA_SIZE];
-	struct rte_crypto_asym_xform xform;
 	struct rte_crypto_asym_op *asym_op;
 	struct rte_cryptodev_info dev_info;
 	struct rte_crypto_op *op = NULL;
@@ -1838,7 +1838,13 @@ _test_sm2_sign(bool rnd_secret)
 	/* Setup asym xform */
 	xform.next = NULL;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2;
-	xform.sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.q.x.data = input_params.pubkey_qx.data;
+	xform.ec.q.x.length = input_params.pubkey_qx.length;
+	xform.ec.q.y.data = input_params.pubkey_qy.data;
+	xform.ec.q.y.length = input_params.pubkey_qy.length;
 
 	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
 	if (ret < 0) {
@@ -1856,16 +1862,23 @@ _test_sm2_sign(bool rnd_secret)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_SIGN;
-	asym_op->sm2.message.data = input_params.message.data;
-	asym_op->sm2.message.length = input_params.message.length;
-	asym_op->sm2.pkey.data = input_params.pkey.data;
-	asym_op->sm2.pkey.length = input_params.pkey.length;
-	asym_op->sm2.q.x.data = input_params.pubkey_qx.data;
-	asym_op->sm2.q.x.length = input_params.pubkey_qx.length;
-	asym_op->sm2.q.y.data = input_params.pubkey_qy.data;
-	asym_op->sm2.q.y.length = input_params.pubkey_qy.length;
-	asym_op->sm2.id.data = input_params.id.data;
-	asym_op->sm2.id.length = input_params.id.length;
+	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	else
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
+
+	if (asym_op->sm2.hash == RTE_CRYPTO_AUTH_SM3) {
+		asym_op->sm2.message.data = input_params.message.data;
+		asym_op->sm2.message.length = input_params.message.length;
+		asym_op->sm2.id.data = input_params.id.data;
+		asym_op->sm2.id.length = input_params.id.length;
+	} else {
+		asym_op->sm2.message.data = input_params.digest.data;
+		asym_op->sm2.message.length = input_params.digest.length;
+		asym_op->sm2.id.data = NULL;
+		asym_op->sm2.id.length = 0;
+	}
+
 	if (rnd_secret) {
 		asym_op->sm2.k.data = NULL;
 		asym_op->sm2.k.length = 0;
@@ -2019,7 +2032,13 @@ test_sm2_verify(void)
 	/* Setup asym xform */
 	xform.next = NULL;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2;
-	xform.sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.q.x.data = input_params.pubkey_qx.data;
+	xform.ec.q.x.length = input_params.pubkey_qx.length;
+	xform.ec.q.y.data = input_params.pubkey_qy.data;
+	xform.ec.q.y.length = input_params.pubkey_qy.length;
 
 	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
 	if (ret < 0) {
@@ -2037,14 +2056,23 @@ test_sm2_verify(void)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
-	asym_op->sm2.message.data = input_params.message.data;
-	asym_op->sm2.message.length = input_params.message.length;
-	asym_op->sm2.pkey.data = input_params.pkey.data;
-	asym_op->sm2.pkey.length = input_params.pkey.length;
-	asym_op->sm2.q.x.data = input_params.pubkey_qx.data;
-	asym_op->sm2.q.x.length = input_params.pubkey_qx.length;
-	asym_op->sm2.q.y.data = input_params.pubkey_qy.data;
-	asym_op->sm2.q.y.length = input_params.pubkey_qy.length;
+	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	else
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
+
+	if (asym_op->sm2.hash == RTE_CRYPTO_AUTH_SM3) {
+		asym_op->sm2.message.data = input_params.message.data;
+		asym_op->sm2.message.length = input_params.message.length;
+		asym_op->sm2.id.data = input_params.id.data;
+		asym_op->sm2.id.length = input_params.id.length;
+	} else {
+		asym_op->sm2.message.data = input_params.digest.data;
+		asym_op->sm2.message.length = input_params.digest.length;
+		asym_op->sm2.id.data = NULL;
+		asym_op->sm2.id.length = 0;
+	}
+
 	asym_op->sm2.r.data = input_params.sign_r.data;
 	asym_op->sm2.r.length = input_params.sign_r.length;
 	asym_op->sm2.s.data = input_params.sign_s.data;
@@ -2120,7 +2148,13 @@ _test_sm2_enc(bool rnd_secret)
 	/* Setup asym xform */
 	xform.next = NULL;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2;
-	xform.sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.q.x.data = input_params.pubkey_qx.data;
+	xform.ec.q.x.length = input_params.pubkey_qx.length;
+	xform.ec.q.y.data = input_params.pubkey_qy.data;
+	xform.ec.q.y.length = input_params.pubkey_qy.length;
 
 	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
 	if (ret < 0) {
@@ -2138,14 +2172,14 @@ _test_sm2_enc(bool rnd_secret)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_ENCRYPT;
+	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	else
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
+
 	asym_op->sm2.message.data = input_params.message.data;
 	asym_op->sm2.message.length = input_params.message.length;
-	asym_op->sm2.pkey.data = input_params.pkey.data;
-	asym_op->sm2.pkey.length = input_params.pkey.length;
-	asym_op->sm2.q.x.data = input_params.pubkey_qx.data;
-	asym_op->sm2.q.x.length = input_params.pubkey_qx.length;
-	asym_op->sm2.q.y.data = input_params.pubkey_qy.data;
-	asym_op->sm2.q.y.length = input_params.pubkey_qy.length;
+
 	if (rnd_secret) {
 		asym_op->sm2.k.data = NULL;
 		asym_op->sm2.k.length = 0;
@@ -2299,7 +2333,13 @@ test_sm2_dec(void)
 	/* Setup asym xform */
 	xform.next = NULL;
 	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2;
-	xform.sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.q.x.data = input_params.pubkey_qx.data;
+	xform.ec.q.x.length = input_params.pubkey_qx.length;
+	xform.ec.q.y.data = input_params.pubkey_qy.data;
+	xform.ec.q.y.length = input_params.pubkey_qy.length;
 
 	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
 	if (ret < 0) {
@@ -2317,14 +2357,13 @@ test_sm2_dec(void)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT;
+	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
+	else
+		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
+
 	asym_op->sm2.cipher.data = input_params.cipher.data;
 	asym_op->sm2.cipher.length = input_params.cipher.length;
-	asym_op->sm2.pkey.data = input_params.pkey.data;
-	asym_op->sm2.pkey.length = input_params.pkey.length;
-	asym_op->sm2.q.x.data = input_params.pubkey_qx.data;
-	asym_op->sm2.q.x.length = input_params.pubkey_qx.length;
-	asym_op->sm2.q.y.data = input_params.pubkey_qy.data;
-	asym_op->sm2.q.y.length = input_params.pubkey_qy.length;
 
 	/* Init out buf */
 	asym_op->sm2.message.data = output_buf_m;
