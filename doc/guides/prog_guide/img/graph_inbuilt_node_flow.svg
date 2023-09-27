@@ -37,174 +37,194 @@ digraph dpdk_inbuilt_nodes_flow {
     ethdev_tx -> pkt_drop [color="cyan" style="dashed"]
     pkt_cls->pkt_drop   [color="cyan" style="dashed"]
     kernel_tx -> kernel_rx [color="red" style="dashed"]
+    ip4_lookup -> ip4_local
+    ip4_local -> pkt_drop [color="cyan" style="dashed"]
 }
 
  -->
 <!-- input nodes -->
 <!-- Title: dpdk_inbuilt_nodes_flow Pages: 1 -->
-<svg width="470pt" height="425pt"
- viewBox="0.00 0.00 470.23 424.50" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 420.5)">
+<svg width="525pt" height="458pt"
+ viewBox="0.00 0.00 524.91 458.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 454)">
 <title>dpdk_inbuilt_nodes_flow</title>
-<polygon fill="white" stroke="none" points="-4,4 -4,-420.5 466.23,-420.5 466.23,4 -4,4"/>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-454 520.91,-454 520.91,4 -4,4"/>
 <!-- ethdev_rx -->
 <g id="node1" class="node">
 <title>ethdev_rx</title>
-<ellipse fill="none" stroke="green" cx="219.23" cy="-398.5" rx="47.77" ry="18"/>
-<text text-anchor="middle" x="219.23" y="-393.45" font-family="Times,serif" font-size="14.00">ethdev_rx</text>
+<ellipse fill="none" stroke="green" cx="120" cy="-432" rx="56.59" ry="18"/>
+<text text-anchor="middle" x="120" y="-428.3" font-family="Times,serif" font-size="14.00">ethdev_rx</text>
 </g>
 <!-- pkt_cls -->
 <g id="node6" class="node">
 <title>pkt_cls</title>
-<ellipse fill="none" stroke="red" cx="219.23" cy="-325.5" rx="37.53" ry="18"/>
-<text text-anchor="middle" x="219.23" y="-320.45" font-family="Times,serif" font-size="14.00">pkt_cls</text>
+<ellipse fill="none" stroke="red" cx="120" cy="-359" rx="42.79" ry="18"/>
+<text text-anchor="middle" x="120" y="-355.3" font-family="Times,serif" font-size="14.00">pkt_cls</text>
 </g>
 <!-- ethdev_rx&#45;&gt;pkt_cls -->
 <g id="edge1" class="edge">
 <title>ethdev_rx&#45;&gt;pkt_cls</title>
-<path fill="none" stroke="black" d="M219.23,-380.31C219.23,-372.55 219.23,-363.18 219.23,-354.45"/>
-<polygon fill="black" stroke="black" points="222.73,-354.53 219.23,-344.53 215.73,-354.53 222.73,-354.53"/>
+<path fill="none" stroke="black" d="M120,-413.81C120,-405.79 120,-396.05 120,-387.07"/>
+<polygon fill="black" stroke="black" points="123.5,-387.03 120,-377.03 116.5,-387.03 123.5,-387.03"/>
 </g>
 <!-- kernel_rx -->
 <g id="node2" class="node">
 <title>kernel_rx</title>
-<ellipse fill="none" stroke="green" cx="46.23" cy="-164" rx="46.23" ry="18"/>
-<text text-anchor="middle" x="46.23" y="-158.95" font-family="Times,serif" font-size="14.00">kernel_rx</text>
+<ellipse fill="none" stroke="green" cx="82" cy="-199" rx="53.89" ry="18"/>
+<text text-anchor="middle" x="82" y="-195.3" font-family="Times,serif" font-size="14.00">kernel_rx</text>
 </g>
 <!-- kernel_rx&#45;&gt;pkt_cls -->
 <g id="edge2" class="edge">
 <title>kernel_rx&#45;&gt;pkt_cls</title>
-<path fill="none" stroke="black" d="M41.45,-182.08C37.1,-201.37 33.27,-232.96 47.23,-255 73.68,-296.74 130.21,-313.41 171.26,-320.07"/>
-<polygon fill="black" stroke="black" points="170.73,-323.68 181.13,-321.66 171.74,-316.75 170.73,-323.68"/>
+<path fill="none" stroke="black" d="M70.87,-216.92C60.28,-235.27 47.29,-265.24 57,-290 64.12,-308.16 78.62,-324.37 91.92,-336.4"/>
+<polygon fill="black" stroke="black" points="89.69,-339.1 99.54,-342.99 94.26,-333.8 89.69,-339.1"/>
 </g>
 <!-- ethdev_tx -->
 <g id="node3" class="node">
 <title>ethdev_tx</title>
-<ellipse fill="none" stroke="magenta" cx="293.23" cy="-91" rx="47.26" ry="18"/>
-<text text-anchor="middle" x="293.23" y="-85.95" font-family="Times,serif" font-size="14.00">ethdev_tx</text>
+<ellipse fill="none" stroke="magenta" cx="338" cy="-91" rx="55.79" ry="18"/>
+<text text-anchor="middle" x="338" y="-87.3" font-family="Times,serif" font-size="14.00">ethdev_tx</text>
 </g>
 <!-- pkt_drop -->
 <g id="node4" class="node">
 <title>pkt_drop</title>
-<ellipse fill="none" stroke="cyan" cx="349.23" cy="-18" rx="44.19" ry="18"/>
-<text text-anchor="middle" x="349.23" y="-12.95" font-family="Times,serif" font-size="14.00">pkt_drop</text>
+<ellipse fill="none" stroke="cyan" cx="254" cy="-18" rx="51.99" ry="18"/>
+<text text-anchor="middle" x="254" y="-14.3" font-family="Times,serif" font-size="14.00">pkt_drop</text>
 </g>
 <!-- ethdev_tx&#45;&gt;pkt_drop -->
 <g id="edge14" class="edge">
 <title>ethdev_tx&#45;&gt;pkt_drop</title>
-<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M306.22,-73.53C313.15,-64.75 321.81,-53.76 329.55,-43.96"/>
-<polygon fill="cyan" stroke="cyan" points="332.87,-46.4 336.32,-36.38 327.37,-42.06 332.87,-46.4"/>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M318.94,-73.89C307.58,-64.29 293,-51.96 280.53,-41.42"/>
+<polygon fill="cyan" stroke="cyan" points="282.59,-38.58 272.7,-34.8 278.07,-43.93 282.59,-38.58"/>
 </g>
 <!-- kernel_tx -->
 <g id="node5" class="node">
 <title>kernel_tx</title>
-<ellipse fill="none" stroke="blue" cx="102.23" cy="-237" rx="45.72" ry="18"/>
-<text text-anchor="middle" x="102.23" y="-231.95" font-family="Times,serif" font-size="14.00">kernel_tx</text>
+<ellipse fill="none" stroke="blue" cx="120" cy="-272" rx="53.89" ry="18"/>
+<text text-anchor="middle" x="120" y="-268.3" font-family="Times,serif" font-size="14.00">kernel_tx</text>
 </g>
 <!-- kernel_tx&#45;&gt;kernel_rx -->
 <g id="edge16" class="edge">
 <title>kernel_tx&#45;&gt;kernel_rx</title>
-<path fill="none" stroke="red" stroke-dasharray="5,2" d="M89.25,-219.53C82.32,-210.75 73.65,-199.76 65.92,-189.96"/>
-<polygon fill="red" stroke="red" points="68.09,-188.06 59.15,-182.38 62.6,-192.4 68.09,-188.06"/>
+<path fill="none" stroke="red" stroke-dasharray="5,2" d="M110.99,-254.17C106.52,-245.81 101,-235.51 95.99,-226.14"/>
+<polygon fill="red" stroke="red" points="99.01,-224.36 91.2,-217.2 92.84,-227.67 99.01,-224.36"/>
 </g>
 <!-- pkt_cls&#45;&gt;pkt_drop -->
 <g id="edge15" class="edge">
 <title>pkt_cls&#45;&gt;pkt_drop</title>
-<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M255.09,-319.38C322.68,-308.72 462.23,-281.44 462.23,-238 462.23,-238 462.23,-238 462.23,-90 462.23,-57.84 429.01,-39.68 398.59,-29.8"/>
-<polygon fill="cyan" stroke="cyan" points="400.02,-26.27 389.44,-26.75 398.01,-32.98 400.02,-26.27"/>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M84,-348.97C48.65,-337.7 0,-314.61 0,-273 0,-273 0,-273 0,-90 0,-49.99 118.4,-31.52 193.52,-23.82"/>
+<polygon fill="cyan" stroke="cyan" points="194.21,-27.27 203.82,-22.81 193.52,-20.31 194.21,-27.27"/>
 </g>
 <!-- pkt_cls&#45;&gt;kernel_tx -->
 <g id="edge5" class="edge">
 <title>pkt_cls&#45;&gt;kernel_tx</title>
-<path fill="none" stroke="blue" d="M186.99,-315.75C170.62,-310.16 151.14,-301.64 136.48,-289.5 128.23,-282.66 121.2,-273.31 115.7,-264.46"/>
-<polygon fill="blue" stroke="blue" points="118.38,-263.1 110.34,-256.2 112.32,-266.61 118.38,-263.1"/>
-<text text-anchor="middle" x="176.61" y="-276.2" font-family="Times,serif" font-size="14.00">exception pkts</text>
+<path fill="none" stroke="blue" d="M120,-340.8C120,-329.16 120,-313.55 120,-300.24"/>
+<polygon fill="blue" stroke="blue" points="123.5,-300.18 120,-290.18 116.5,-300.18 123.5,-300.18"/>
+<text text-anchor="middle" x="172.5" y="-311.8" font-family="Times,serif" font-size="14.00">exception pkts</text>
 </g>
 <!-- ip4_lookup -->
 <g id="node7" class="node">
 <title>ip4_lookup</title>
-<ellipse fill="none" stroke="black" cx="219.23" cy="-237" rx="52.89" ry="18"/>
-<text text-anchor="middle" x="219.23" y="-231.95" font-family="Times,serif" font-size="14.00">ip4_lookup</text>
+<ellipse fill="none" stroke="black" cx="252" cy="-272" rx="60.39" ry="18"/>
+<text text-anchor="middle" x="252" y="-268.3" font-family="Times,serif" font-size="14.00">ip4_lookup</text>
 </g>
 <!-- pkt_cls&#45;&gt;ip4_lookup -->
 <g id="edge3" class="edge">
 <title>pkt_cls&#45;&gt;ip4_lookup</title>
-<path fill="none" stroke="black" d="M219.23,-307.41C219.23,-295.64 219.23,-279.73 219.23,-266.11"/>
-<polygon fill="black" stroke="black" points="222.73,-266.35 219.23,-256.35 215.73,-266.35 222.73,-266.35"/>
-<text text-anchor="middle" x="231.23" y="-276.2" font-family="Times,serif" font-size="14.00">ipv4</text>
+<path fill="none" stroke="black" d="M160.54,-352.79C182.64,-348.15 209.23,-339.41 228,-323 235.09,-316.81 240.26,-308.05 243.95,-299.6"/>
+<polygon fill="black" stroke="black" points="247.32,-300.57 247.62,-289.98 240.78,-298.07 247.32,-300.57"/>
+<text text-anchor="middle" x="254.5" y="-311.8" font-family="Times,serif" font-size="14.00">ipv4</text>
 </g>
 <!-- ip6_lookup -->
 <g id="node8" class="node">
 <title>ip6_lookup</title>
-<ellipse fill="none" stroke="black" cx="343.23" cy="-237" rx="52.89" ry="18"/>
-<text text-anchor="middle" x="343.23" y="-231.95" font-family="Times,serif" font-size="14.00">ip6_lookup</text>
+<ellipse fill="none" stroke="black" cx="439" cy="-272" rx="60.39" ry="18"/>
+<text text-anchor="middle" x="439" y="-268.3" font-family="Times,serif" font-size="14.00">ip6_lookup</text>
 </g>
 <!-- pkt_cls&#45;&gt;ip6_lookup -->
 <g id="edge4" class="edge">
 <title>pkt_cls&#45;&gt;ip6_lookup</title>
-<path fill="none" stroke="black" d="M239.99,-310.02C259.62,-296.33 289.35,-275.59 311.88,-259.87"/>
-<polygon fill="black" stroke="black" points="313.53,-262.29 319.73,-253.7 309.53,-256.55 313.53,-262.29"/>
-<text text-anchor="middle" x="304.23" y="-276.2" font-family="Times,serif" font-size="14.00">ipv6</text>
+<path fill="none" stroke="black" d="M157.52,-350.25C188.82,-343.6 234.51,-333.46 274,-323 313.2,-312.62 357.13,-299.22 389.79,-288.91"/>
+<polygon fill="black" stroke="black" points="391.08,-292.17 399.55,-285.81 388.96,-285.5 391.08,-292.17"/>
+<text text-anchor="middle" x="339.5" y="-311.8" font-family="Times,serif" font-size="14.00">ipv6</text>
 </g>
 <!-- ip4_lookup&#45;&gt;pkt_drop -->
 <g id="edge7" class="edge">
 <title>ip4_lookup&#45;&gt;pkt_drop</title>
-<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M192.86,-221.12C179.2,-211.83 163.82,-198.49 156.23,-182 149.55,-167.46 150.78,-161.04 156.23,-146 176.39,-90.45 198.32,-78.19 252.23,-54 269.14,-46.41 288.24,-39.24 304.98,-33.38"/>
-<polygon fill="cyan" stroke="cyan" points="305.75,-36.48 314.07,-29.92 303.47,-29.86 305.75,-36.48"/>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M239.17,-254.03C232.31,-243.87 224.56,-230.37 221,-217 204.89,-156.57 227.58,-83.56 242.59,-45.31"/>
+<polygon fill="cyan" stroke="cyan" points="245.89,-46.5 246.4,-35.92 239.4,-43.87 245.89,-46.5"/>
 </g>
 <!-- ip4_rewrite -->
 <g id="node9" class="node">
 <title>ip4_rewrite</title>
-<ellipse fill="none" stroke="black" cx="218.23" cy="-164" rx="53.4" ry="18"/>
-<text text-anchor="middle" x="218.23" y="-158.95" font-family="Times,serif" font-size="14.00">ip4_rewrite</text>
+<ellipse fill="none" stroke="black" cx="294" cy="-199" rx="63.89" ry="18"/>
+<text text-anchor="middle" x="294" y="-195.3" font-family="Times,serif" font-size="14.00">ip4_rewrite</text>
 </g>
 <!-- ip4_lookup&#45;&gt;ip4_rewrite -->
 <g id="edge6" class="edge">
 <title>ip4_lookup&#45;&gt;ip4_rewrite</title>
-<path fill="none" stroke="black" d="M218.99,-218.81C218.88,-211.05 218.75,-201.68 218.63,-192.95"/>
-<polygon fill="black" stroke="black" points="222.11,-192.98 218.47,-183.03 215.11,-193.08 222.11,-192.98"/>
+<path fill="none" stroke="black" d="M261.95,-254.17C266.95,-245.72 273.12,-235.29 278.71,-225.85"/>
+<polygon fill="black" stroke="black" points="281.75,-227.59 283.83,-217.2 275.72,-224.02 281.75,-227.59"/>
+</g>
+<!-- ip4_local -->
+<g id="node11" class="node">
+<title>ip4_local</title>
+<ellipse fill="none" stroke="black" cx="136" cy="-145" rx="51.19" ry="18"/>
+<text text-anchor="middle" x="136" y="-141.3" font-family="Times,serif" font-size="14.00">ip4_local</text>
+</g>
+<!-- ip4_lookup&#45;&gt;ip4_local -->
+<g id="edge17" class="edge">
+<title>ip4_lookup&#45;&gt;ip4_local</title>
+<path fill="none" stroke="black" d="M218.11,-256.86C207.64,-251.39 196.61,-244.41 188,-236 169.45,-217.88 155.34,-191.74 146.53,-172.29"/>
+<polygon fill="black" stroke="black" points="149.72,-170.86 142.52,-163.08 143.3,-173.65 149.72,-170.86"/>
 </g>
 <!-- ip6_lookup&#45;&gt;pkt_drop -->
 <g id="edge11" class="edge">
 <title>ip6_lookup&#45;&gt;pkt_drop</title>
-<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M369.2,-221.03C382.65,-211.71 397.78,-198.37 405.23,-182 426.87,-134.45 392.95,-75.95 369.19,-43.54"/>
-<polygon fill="cyan" stroke="cyan" points="371.64,-41.98 362.81,-36.13 366.06,-46.21 371.64,-41.98"/>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M470.57,-256.44C486.08,-247.46 503.27,-234.31 512,-217 519.2,-202.71 517.24,-196.12 512,-181 486.88,-108.48 466,-83.15 395,-54 367.69,-42.79 335.88,-34.51 309.39,-28.83"/>
+<polygon fill="cyan" stroke="cyan" points="310.02,-25.39 299.52,-26.78 308.6,-32.24 310.02,-25.39"/>
 </g>
 <!-- ip6_rewrite -->
 <g id="node10" class="node">
 <title>ip6_rewrite</title>
-<ellipse fill="none" stroke="black" cx="343.23" cy="-164" rx="53.4" ry="18"/>
-<text text-anchor="middle" x="343.23" y="-158.95" font-family="Times,serif" font-size="14.00">ip6_rewrite</text>
+<ellipse fill="none" stroke="black" cx="439" cy="-199" rx="63.89" ry="18"/>
+<text text-anchor="middle" x="439" y="-195.3" font-family="Times,serif" font-size="14.00">ip6_rewrite</text>
 </g>
 <!-- ip6_lookup&#45;&gt;ip6_rewrite -->
 <g id="edge10" class="edge">
 <title>ip6_lookup&#45;&gt;ip6_rewrite</title>
-<path fill="none" stroke="black" d="M343.23,-218.81C343.23,-211.05 343.23,-201.68 343.23,-192.95"/>
-<polygon fill="black" stroke="black" points="346.73,-193.03 343.23,-183.03 339.73,-193.03 346.73,-193.03"/>
+<path fill="none" stroke="black" d="M439,-253.81C439,-245.79 439,-236.05 439,-227.07"/>
+<polygon fill="black" stroke="black" points="442.5,-227.03 439,-217.03 435.5,-227.03 442.5,-227.03"/>
 </g>
 <!-- ip4_rewrite&#45;&gt;ethdev_tx -->
 <g id="edge8" class="edge">
 <title>ip4_rewrite&#45;&gt;ethdev_tx</title>
-<path fill="none" stroke="green" d="M235.63,-146.53C245.35,-137.33 257.64,-125.7 268.36,-115.54"/>
-<polygon fill="green" stroke="green" points="270.34,-118.55 275.19,-109.13 265.52,-113.47 270.34,-118.55"/>
+<path fill="none" stroke="green" d="M301.07,-180.97C308.09,-164.05 318.96,-137.86 327.09,-118.28"/>
+<polygon fill="green" stroke="green" points="330.35,-119.57 330.95,-108.99 323.88,-116.88 330.35,-119.57"/>
 </g>
 <!-- ip4_rewrite&#45;&gt;pkt_drop -->
 <g id="edge9" class="edge">
 <title>ip4_rewrite&#45;&gt;pkt_drop</title>
-<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M217.56,-145.54C217.71,-125.89 220.78,-93.99 237.23,-73 253.17,-52.67 278.68,-39.55 301.33,-31.33"/>
-<polygon fill="cyan" stroke="cyan" points="302.14,-34.42 310.5,-27.9 299.9,-27.79 302.14,-34.42"/>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M289.85,-180.97C285.53,-163.07 278.61,-134.1 273,-109 268.3,-87.99 263.29,-64.16 259.59,-46.3"/>
+<polygon fill="cyan" stroke="cyan" points="262.97,-45.37 257.52,-36.28 256.11,-46.78 262.97,-45.37"/>
 </g>
 <!-- ip6_rewrite&#45;&gt;ethdev_tx -->
 <g id="edge12" class="edge">
 <title>ip6_rewrite&#45;&gt;ethdev_tx</title>
-<path fill="none" stroke="green" d="M331.38,-146.17C325.34,-137.6 317.87,-126.99 311.15,-117.44"/>
-<polygon fill="green" stroke="green" points="313.62,-115.87 305,-109.71 307.89,-119.9 313.62,-115.87"/>
+<path fill="none" stroke="green" d="M423.22,-181.44C406.47,-163.86 379.84,-135.91 360.81,-115.94"/>
+<polygon fill="green" stroke="green" points="363.1,-113.27 353.67,-108.45 358.03,-118.1 363.1,-113.27"/>
 </g>
 <!-- ip6_rewrite&#45;&gt;pkt_drop -->
 <g id="edge13" class="edge">
 <title>ip6_rewrite&#45;&gt;pkt_drop</title>
-<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M345.67,-145.53C347.02,-134.98 348.56,-121.24 349.23,-109 350.38,-88.27 350.34,-64.81 350.03,-47.04"/>
-<polygon fill="cyan" stroke="cyan" points="353.51,-47.19 349.8,-37.27 346.51,-47.34 353.51,-47.19"/>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M438.77,-180.67C437.49,-154.09 431.22,-103.19 403,-73 379.35,-47.7 342.93,-34.22 312.02,-27.06"/>
+<polygon fill="cyan" stroke="cyan" points="312.71,-23.63 302.2,-24.95 311.24,-30.47 312.71,-23.63"/>
+</g>
+<!-- ip4_local&#45;&gt;pkt_drop -->
+<g id="edge18" class="edge">
+<title>ip4_local&#45;&gt;pkt_drop</title>
+<path fill="none" stroke="cyan" stroke-dasharray="5,2" d="M142.47,-126.87C150.6,-107.23 166.18,-75.04 188,-54 195,-47.25 203.56,-41.45 212.16,-36.63"/>
+<polygon fill="cyan" stroke="cyan" points="213.85,-39.7 221.08,-31.95 210.6,-33.5 213.85,-39.7"/>
 </g>
 </g>
 </svg>
