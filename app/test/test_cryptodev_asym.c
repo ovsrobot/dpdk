@@ -608,6 +608,7 @@ static inline void print_asym_capa(
 	break;
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
+	case RTE_CRYPTO_ASYM_XFORM_SM2:
 	default:
 		break;
 	}
@@ -1806,12 +1807,14 @@ test_ecpm_all_curve(void)
 }
 
 static int
-_test_sm2_sign(bool rnd_secret)
+test_sm2_sign(void)
 {
 	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
 	struct crypto_testsuite_sm2_params input_params = sm2_param_fp256;
+	const struct rte_cryptodev_asymmetric_xform_capability *capa;
 	struct rte_mempool *sess_mpool = ts_params->session_mpool;
 	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_cryptodev_asym_capability_idx idx;
 	uint8_t dev_id = ts_params->valid_devs[0];
 	struct rte_crypto_op *result_op = NULL;
 	uint8_t output_buf_r[TEST_DATA_SIZE];
@@ -1821,6 +1824,12 @@ _test_sm2_sign(bool rnd_secret)
 	struct rte_crypto_op *op = NULL;
 	int ret, status = TEST_SUCCESS;
 	void *sess = NULL;
+
+	/* Check SM2 capability */
+	idx.type = RTE_CRYPTO_ASYM_XFORM_SM2;
+	capa = rte_cryptodev_asym_capability_get(dev_id, &idx);
+	if (capa == NULL)
+		return -ENOTSUP;
 
 	/* Setup crypto op data structure */
 	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
@@ -1879,7 +1888,7 @@ _test_sm2_sign(bool rnd_secret)
 		asym_op->sm2.id.length = 0;
 	}
 
-	if (rnd_secret) {
+	if (capa->internal_rng != 0) {
 		asym_op->sm2.k.data = NULL;
 		asym_op->sm2.k.length = 0;
 	} else {
@@ -1928,7 +1937,7 @@ _test_sm2_sign(bool rnd_secret)
 	debug_hexdump(stdout, "s:",
 			asym_op->sm2.s.data, asym_op->sm2.s.length);
 
-	if (!rnd_secret) {
+	if (capa->internal_rng == 0) {
 		/* Verify sign (by comparison). */
 		if (memcmp(input_params.sign_r.data, asym_op->sm2.r.data,
 				   asym_op->sm2.r.length) != 0) {
@@ -1990,24 +1999,14 @@ exit:
 };
 
 static int
-test_sm2_sign_rnd_secret(void)
-{
-	return _test_sm2_sign(true);
-}
-
-__rte_used static int
-test_sm2_sign_plain_secret(void)
-{
-	return _test_sm2_sign(false);
-}
-
-static int
 test_sm2_verify(void)
 {
 	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
 	struct crypto_testsuite_sm2_params input_params = sm2_param_fp256;
+	const struct rte_cryptodev_asymmetric_xform_capability *capa;
 	struct rte_mempool *sess_mpool = ts_params->session_mpool;
 	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_cryptodev_asym_capability_idx idx;
 	uint8_t dev_id = ts_params->valid_devs[0];
 	struct rte_crypto_op *result_op = NULL;
 	struct rte_crypto_asym_xform xform;
@@ -2015,6 +2014,12 @@ test_sm2_verify(void)
 	struct rte_crypto_op *op = NULL;
 	int ret, status = TEST_SUCCESS;
 	void *sess = NULL;
+
+	/* Check SM2 capability */
+	idx.type = RTE_CRYPTO_ASYM_XFORM_SM2;
+	capa = rte_cryptodev_asym_capability_get(dev_id, &idx);
+	if (capa == NULL)
+		return -ENOTSUP;
 
 	/* Setup crypto op data structure */
 	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
@@ -2056,6 +2061,7 @@ test_sm2_verify(void)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
+
 	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
 	else
@@ -2077,8 +2083,6 @@ test_sm2_verify(void)
 	asym_op->sm2.r.length = input_params.sign_r.length;
 	asym_op->sm2.s.data = input_params.sign_s.data;
 	asym_op->sm2.s.length = input_params.sign_s.length;
-	asym_op->sm2.id.data = input_params.id.data;
-	asym_op->sm2.id.length = input_params.id.length;
 
 	RTE_LOG(DEBUG, USER1, "Process ASYM operation\n");
 
@@ -2118,13 +2122,15 @@ exit:
 };
 
 static int
-_test_sm2_enc(bool rnd_secret)
+test_sm2_enc(void)
 {
 	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
 	struct crypto_testsuite_sm2_params input_params = sm2_param_fp256;
+	const struct rte_cryptodev_asymmetric_xform_capability *capa;
 	struct rte_mempool *sess_mpool = ts_params->session_mpool;
 	struct rte_mempool *op_mpool = ts_params->op_mpool;
 	uint8_t output_buf[TEST_DATA_SIZE], *pbuf = NULL;
+	struct rte_cryptodev_asym_capability_idx idx;
 	uint8_t dev_id = ts_params->valid_devs[0];
 	struct rte_crypto_op *result_op = NULL;
 	struct rte_crypto_asym_xform xform;
@@ -2132,6 +2138,12 @@ _test_sm2_enc(bool rnd_secret)
 	struct rte_crypto_op *op = NULL;
 	int ret, status = TEST_SUCCESS;
 	void *sess = NULL;
+
+	/* Check SM2 capability */
+	idx.type = RTE_CRYPTO_ASYM_XFORM_SM2;
+	capa = rte_cryptodev_asym_capability_get(dev_id, &idx);
+	if (capa == NULL)
+		return -ENOTSUP;
 
 	/* Setup crypto op data structure */
 	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
@@ -2180,7 +2192,7 @@ _test_sm2_enc(bool rnd_secret)
 	asym_op->sm2.message.data = input_params.message.data;
 	asym_op->sm2.message.length = input_params.message.length;
 
-	if (rnd_secret) {
+	if (capa->internal_rng != 0) {
 		asym_op->sm2.k.data = NULL;
 		asym_op->sm2.k.length = 0;
 	} else {
@@ -2226,7 +2238,7 @@ _test_sm2_enc(bool rnd_secret)
 	debug_hexdump(stdout, "cipher:",
 			asym_op->sm2.cipher.data, asym_op->sm2.cipher.length);
 
-	if (!rnd_secret) {
+	if (capa->internal_rng == 0) {
 		if (memcmp(input_params.cipher.data, asym_op->sm2.cipher.data,
 				   asym_op->sm2.cipher.length) != 0) {
 			status = TEST_FAILED;
@@ -2291,24 +2303,14 @@ exit:
 };
 
 static int
-test_sm2_enc_rnd_secret(void)
-{
-	return _test_sm2_enc(true);
-}
-
-__rte_used static int
-test_sm2_enc_plain_secret(void)
-{
-	return _test_sm2_enc(false);
-}
-
-static int
 test_sm2_dec(void)
 {
 	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
 	struct crypto_testsuite_sm2_params input_params = sm2_param_fp256;
+	const struct rte_cryptodev_asymmetric_xform_capability *capa;
 	struct rte_mempool *sess_mpool = ts_params->session_mpool;
 	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_cryptodev_asym_capability_idx idx;
 	uint8_t dev_id = ts_params->valid_devs[0];
 	struct rte_crypto_op *result_op = NULL;
 	uint8_t output_buf_m[TEST_DATA_SIZE];
@@ -2317,6 +2319,12 @@ test_sm2_dec(void)
 	struct rte_crypto_op *op = NULL;
 	int ret, status = TEST_SUCCESS;
 	void *sess = NULL;
+
+	/* Check SM2 capability */
+	idx.type = RTE_CRYPTO_ASYM_XFORM_SM2;
+	capa = rte_cryptodev_asym_capability_get(dev_id, &idx);
+	if (capa == NULL)
+		return -ENOTSUP;
 
 	/* Setup crypto op data structure */
 	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
@@ -2724,9 +2732,9 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_dsa),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
 				test_dh_keygenration),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_sign_rnd_secret),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_sign),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_verify),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_enc_rnd_secret),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_enc),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_dec),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_rsa_enc_dec),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
@@ -2790,6 +2798,8 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_exp),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
 			     test_ecdsa_sign_verify_all_curve),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_sign),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_sm2_verify),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
 				test_ecpm_all_curve),
 		TEST_CASES_END() /**< NULL terminate unit test array */
