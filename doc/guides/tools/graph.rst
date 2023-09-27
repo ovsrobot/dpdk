@@ -80,6 +80,14 @@ file to express the requested use case configuration.
      - Dummy command description
      - No
      - No
+   * - mempool <mempool_name> size <mbuf_size> buffers <number_of_buffers> cache <cache_size> numa <numa_id>
+     - Command to create mempool which will be further associated to RxQ to dequeue the packets
+     - No
+     - No
+   * - help mempool
+     - Command to dump mempool help message
+     - Yes
+     - Yes
 
 Runtime configuration
 ---------------------
