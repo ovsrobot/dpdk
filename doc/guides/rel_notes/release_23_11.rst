@@ -45,6 +45,10 @@ New Features
 
      Added support in mldev library for models with multiple inputs and outputs.
 
+   * **Added support for Marvell TVM models in ML CNXK driver.**
+
+     Added support models compiled using TVM framework in ML CNXK driver.
+
 
 .. This section should contain new features added in this release.
    Sample format:
