@@ -70,11 +70,13 @@ if enable_mvtvm
 dpdk_conf.set('RTE_MLDEV_CNXK_ENABLE_MVTVM', 1)
 
 driver_sdk_headers += files(
+        'mvtvm_ml_dev.h',
         'mvtvm_ml_ops.h',
         'mvtvm_ml_model.h',
 )
 
 sources += files(
+        'mvtvm_ml_dev.c',
         'mvtvm_ml_ops.c',
         'mvtvm_ml_model.c',
 )
