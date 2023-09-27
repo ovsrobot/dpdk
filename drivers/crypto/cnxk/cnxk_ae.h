@@ -193,8 +193,11 @@ cnxk_ae_fill_ec_params(struct cnxk_ae_sess *sess,
 	case RTE_CRYPTO_EC_GROUP_SECP521R1:
 		ec->curveid = ROC_AE_EC_ID_P521;
 		break;
+	case RTE_CRYPTO_EC_GROUP_SM2:
+		ec->curveid = ROC_AE_EC_ID_SM2;
+		break;
 	default:
-		/* Only NIST curves (FIPS 186-4) are supported */
+		/* Only NIST curves (FIPS 186-4) and SM2 are supported */
 		return -EINVAL;
 	}
 
@@ -235,6 +238,7 @@ cnxk_ae_fill_session_parameters(struct cnxk_ae_sess *sess,
 		/* Fall through */
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
 	case RTE_CRYPTO_ASYM_XFORM_ECFPM:
+	case RTE_CRYPTO_ASYM_XFORM_SM2:
 		ret = cnxk_ae_fill_ec_params(sess, xform);
 		break;
 	default:
@@ -1114,6 +1118,23 @@ cnxk_ae_dequeue_ecdsa_op(struct rte_crypto_ecdsa_op_param *ecdsa, uint8_t *rptr,
 }
 
 static __rte_always_inline void
+cnxk_ae_dequeue_sm2_op(struct rte_crypto_sm2_op_param *sm2, uint8_t *rptr,
+			 struct roc_ae_ec_ctx *ec,
+			 struct roc_ae_ec_group **ec_grp)
+{
+	int prime_len = ec_grp[ec->curveid]->prime.length;
+
+	if (sm2->op_type == RTE_CRYPTO_ASYM_OP_VERIFY)
+		return;
+
+	/* Separate out sign r and s components */
+	rte_memcpy(sm2->r.data, rptr, prime_len);
+	rte_memcpy(sm2->s.data, rptr + RTE_ALIGN_CEIL(prime_len, 8), prime_len);
+	sm2->r.length = prime_len;
+	sm2->s.length = prime_len;
+}
+
+static __rte_always_inline void
 cnxk_ae_dequeue_ecpm_op(struct rte_crypto_ecpm_op_param *ecpm, uint8_t *rptr,
 			struct roc_ae_ec_ctx *ec,
 			struct roc_ae_ec_group **ec_grp)
@@ -1181,6 +1202,13 @@ cnxk_ae_enqueue(struct cnxk_cpt_qp *qp, struct rte_crypto_op *op,
 		if (unlikely(ret))
 			goto req_fail;
 		break;
+	case RTE_CRYPTO_ASYM_XFORM_SM2:
+		ret = cnxk_ae_enqueue_sm2_op(op, &meta_buf, sess,
+					       sess->cnxk_fpm_iova,
+					       sess->ec_grp, inst);
+		if (unlikely(ret))
+			goto req_fail;
+		break;
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
 		ret = cnxk_ae_ecpm_prep(&asym_op->ecpm, &meta_buf,
 					sess->ec_grp[sess->ec_ctx.curveid],
@@ -1228,6 +1256,10 @@ cnxk_ae_post_process(struct rte_crypto_op *cop, struct cnxk_ae_sess *sess,
 		break;
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
 		cnxk_ae_dequeue_ecdsa_op(&op->ecdsa, rptr, &sess->ec_ctx,
+					 sess->ec_grp);
+		break;
+	case RTE_CRYPTO_ASYM_XFORM_SM2:
+		cnxk_ae_dequeue_sm2_op(&op->sm2, rptr, &sess->ec_ctx,
 					 sess->ec_grp);
 		break;
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
