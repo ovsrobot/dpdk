@@ -188,6 +188,9 @@ struct rte_cryptodev_asymmetric_xform_capability {
 		 * random value. Otherwise, PMD would internally compute the random number.
 		 */
 	};
+
+	uint64_t hash_algos;
+	/**< Bitmask of hash algorithms supported for op_type. */
 };
 
 /**
@@ -345,6 +348,22 @@ int
 rte_cryptodev_asym_xform_capability_check_modlen(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
 		uint16_t modlen);
+
+/**
+ * Check if hash algorithm is supported.
+ *
+ * @param	capability	Asymmetric crypto capability.
+ * @param	hash		Hash algorithm.
+ *
+ * @return
+ *   - Return true if the hash algorithm is supported.
+ *   - Return false if the hash algorithm is not supported.
+ */
+__rte_experimental
+bool
+rte_cryptodev_asym_xform_capability_check_hash(
+	const struct rte_cryptodev_asymmetric_xform_capability *capability,
+	enum rte_crypto_auth_algorithm hash);
 
 /**
  * Provide the cipher algorithm enum, given an algorithm string
