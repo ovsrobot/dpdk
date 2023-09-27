@@ -9,6 +9,11 @@ endif
 
 enable_mvtvm = true
 
+if not libarchive.found()
+        message('drivers/ml/cnxk: libarchive not found')
+        enable_mvtvm = false
+endif
+
 if not jansson_dep.found()
         message('drivers/ml/cnxk: jansson not found')
         enable_mvtvm = false
@@ -71,6 +76,7 @@ driver_sdk_headers += files(
 
 sources += files(
         'mvtvm_ml_ops.c',
+        'mvtvm_ml_model.c',
 )
 
 ext_deps += tvmrt_dep
