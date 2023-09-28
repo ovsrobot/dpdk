@@ -1641,6 +1641,9 @@ rte_eth_dev_start(uint16_t port_id)
 	struct rte_eth_dev_info dev_info;
 	int diag;
 	int ret, ret_stop;
+	uint16_t i;
+	struct rte_eth_rxq_info rxq_info;
+	struct rte_eth_txq_info txq_info;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -1697,6 +1700,30 @@ rte_eth_dev_start(uint16_t port_id)
 		(*dev->dev_ops->link_update)(dev, 0);
 	}
 
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		if (rte_eth_dev_is_rx_hairpin_queue(dev, i))
+			continue;
+
+		memset(&rxq_info, 0, sizeof(rxq_info));
+		ret = rte_eth_rx_queue_info_get(port_id, i, &rxq_info);
+		if (ret == 0 && rxq_info.conf.rx_deferred_start != 0)
+			dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+		else
+			dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		if (rte_eth_dev_is_tx_hairpin_queue(dev, i))
+			continue;
+
+		memset(&txq_info, 0, sizeof(txq_info));
+		ret = rte_eth_tx_queue_info_get(port_id, i, &txq_info);
+		if (ret == 0 && txq_info.conf.tx_deferred_start != 0)
+			dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+		else
+			dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+	}
+
 	/* expose selection of PMD fast-path functions */
 	eth_dev_fp_ops_setup(rte_eth_fp_ops + port_id, dev);
 
@@ -1708,6 +1735,7 @@ int
 rte_eth_dev_stop(uint16_t port_id)
 {
 	struct rte_eth_dev *dev;
+	uint16_t i;
 	int ret;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
@@ -1730,6 +1758,18 @@ rte_eth_dev_stop(uint16_t port_id)
 	if (ret == 0)
 		dev->data->dev_started = 0;
 	rte_ethdev_trace_stop(port_id, ret);
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		if (rte_eth_dev_is_rx_hairpin_queue(dev, i))
+			continue;
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		if (rte_eth_dev_is_tx_hairpin_queue(dev, i))
+			continue;
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
 
 	return ret;
 }
