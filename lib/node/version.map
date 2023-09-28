@@ -6,6 +6,8 @@ EXPERIMENTAL {
 	rte_node_ip4_rewrite_add;
 	rte_node_ip6_rewrite_add;
 	rte_node_ip6_route_add;
+	rte_node_udp4_usr_node_add;
+	rte_node_udp4_dst_port_add;
 	rte_node_logtype;
 	local: *;
 };
