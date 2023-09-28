@@ -41,6 +41,10 @@ DPDK Release 23.11
 New Features
 ------------
 
+* **Updated Wangxun ngbe driver.**
+
+  * Added 100M and auto-neg support in YT PHY fiber mode.
+
 .. This section should contain new features added in this release.
    Sample format:
 
