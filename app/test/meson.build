@@ -11,7 +11,7 @@ packet_burst_generator_deps = ['net']
 sample_packet_forward_deps = ['net_ring', 'ethdev', 'bus_vdev']
 virtual_pmd_deps = ['ethdev', 'net', 'bus_pci']
 # test_cryptodev has material that other crypto tests need
-test_cryptodev_deps = ['bus_vdev', 'net', 'cryptodev', 'crypto_scheduler', 'security']
+test_cryptodev_deps = ['bus_vdev', 'net', 'cryptodev', 'security']
 
 source_file_deps = {
     # The C files providing functionality to other test cases
