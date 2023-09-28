@@ -828,6 +828,26 @@ enetc_tx_queue_stop(struct rte_eth_dev *dev, uint16_t qidx)
 	return 0;
 }
 
+static void
+enetc_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+		   struct rte_eth_rxq_info *qinfo)
+{
+	struct enetc_bdr *rx_ring;
+
+	rx_ring = dev->data->rx_queues[queue_id];
+	qinfo->conf.rx_deferred_start = rx_ring->rx_deferred_start;
+}
+
+static void
+enetc_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+		   struct rte_eth_txq_info *qinfo)
+{
+	struct enetc_bdr *tx_ring;
+
+	tx_ring = dev->data->tx_queues[queue_id];
+	qinfo->conf.tx_deferred_start = tx_ring->tx_deferred_start;
+}
+
 /*
  * The set of PCI devices this driver supports
  */
@@ -856,10 +876,12 @@ static const struct eth_dev_ops enetc_ops = {
 	.rx_queue_start       = enetc_rx_queue_start,
 	.rx_queue_stop        = enetc_rx_queue_stop,
 	.rx_queue_release     = enetc_rx_queue_release,
+	.rxq_info_get         = enetc_rxq_info_get,
 	.tx_queue_setup       = enetc_tx_queue_setup,
 	.tx_queue_start       = enetc_tx_queue_start,
 	.tx_queue_stop        = enetc_tx_queue_stop,
 	.tx_queue_release     = enetc_tx_queue_release,
+	.txq_info_get         = enetc_txq_info_get,
 	.dev_supported_ptypes_get = enetc_supported_ptypes_get,
 };
 
