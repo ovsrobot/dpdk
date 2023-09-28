@@ -206,6 +206,12 @@ usage(char* progname)
 	printf("  --hairpin-mode=0xXX: bitmask set the hairpin port mode.\n"
 	       "    0x10 - explicit Tx rule, 0x02 - hairpin ports paired\n"
 	       "    0x01 - hairpin ports loop, 0x00 - hairpin port self\n");
+	printf("  --hairpin-map=rxpi:rxq:txpi:txq:n: hairpin map.\n"
+	       "    rxpi - Rx port index.\n"
+	       "    rxq  - Rx queue.\n"
+	       "    txpi - Tx port index.\n"
+	       "    txq  - Tx queue.\n"
+	       "    n    - hairpin queues number.\n");
 }
 
 #ifdef RTE_LIB_CMDLINE
@@ -588,6 +594,55 @@ parse_link_speed(int n)
 	return speed;
 }
 
+static __rte_always_inline
+char *parse_hairpin_map_entry(char *input, char **next)
+{
+	char *tail = strchr(input, ':');
+
+	if (!tail)
+		return NULL;
+	tail[0] = '\0';
+	*next = tail + 1;
+	return input;
+}
+
+static int
+parse_hairpin_map(const char *hpmap)
+{
+	/*
+	 * Testpmd hairpin map format:
+	 * <Rx port id:First Rx queue:Tx port id:First Tx queue:queues number>
+	 */
+	char *head, *next = (char *)(uintptr_t)hpmap;
+	struct hairpin_map *map = calloc(1, sizeof(*map));
+
+	if (!map)
+		return -ENOMEM;
+
+	head = parse_hairpin_map_entry(next, &next);
+	if (!head)
+		goto err;
+	map->rx_port = atoi(head);
+	head = parse_hairpin_map_entry(next, &next);
+	if (!head)
+		goto err;
+	map->rxq_head = atoi(head);
+	head = parse_hairpin_map_entry(next, &next);
+	if (!head)
+		goto err;
+	map->tx_port = atoi(head);
+	head = parse_hairpin_map_entry(next, &next);
+	if (!head)
+		goto err;
+	map->txq_head = atoi(head);
+	map->qnum = atoi(next);
+	hairpin_add_multiport_map(map);
+	return 0;
+err:
+	free(map);
+	return -EINVAL;
+}
+
 void
 launch_args_parse(int argc, char** argv)
 {
@@ -663,6 +718,7 @@ launch_args_parse(int argc, char** argv)
 		{ "txd",			1, 0, 0 },
 		{ "hairpinq",			1, 0, 0 },
 		{ "hairpin-mode",		1, 0, 0 },
+		{ "hairpin-map",                1, 0, 0 },
 		{ "burst",			1, 0, 0 },
 		{ "flowgen-clones",		1, 0, 0 },
 		{ "flowgen-flows",		1, 0, 0 },
@@ -1110,6 +1166,13 @@ launch_args_parse(int argc, char** argv)
 					rte_exit(EXIT_FAILURE, "hairpin mode invalid\n");
 				else
 					hairpin_mode = (uint32_t)n;
+			}
+			if (!strcmp(lgopts[opt_idx].name, "hairpin-map")) {
+				hairpin_multiport_mode = true;
+				ret = parse_hairpin_map(optarg);
+				if (ret)
+					rte_exit(EXIT_FAILURE, "invalid hairpin map\n");
+
 			}
 			if (!strcmp(lgopts[opt_idx].name, "burst")) {
 				n = atoi(optarg);

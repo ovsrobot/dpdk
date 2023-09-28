@@ -434,6 +434,16 @@ uint8_t clear_ptypes = true;
 /* Hairpin ports configuration mode. */
 uint32_t hairpin_mode;
 
+bool hairpin_multiport_mode = false;
+
+static LIST_HEAD(, hairpin_map) hairpin_map_head = LIST_HEAD_INITIALIZER();
+
+void
+hairpin_add_multiport_map(struct hairpin_map *map)
+{
+	LIST_INSERT_HEAD(&hairpin_map_head, map, entry);
+}
+
 /* Pretty printing of ethdev events */
 static const char * const eth_event_desc[] = {
 	[RTE_ETH_EVENT_UNKNOWN] = "unknown",
@@ -2677,28 +2687,107 @@ port_is_started(portid_t port_id)
 #define HAIRPIN_MODE_TX_LOCKED_MEMORY RTE_BIT32(16)
 #define HAIRPIN_MODE_TX_RTE_MEMORY RTE_BIT32(17)
 
-
-/* Configure the Rx and Tx hairpin queues for the selected port. */
 static int
-setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
+port_config_hairpin_rxq(portid_t pi, uint16_t peer_tx_port,
+			queueid_t rxq_head, queueid_t txq_head,
+			uint16_t qcount, uint32_t manual_bind)
 {
-	queueid_t qi;
+	int diag;
+	queueid_t i, qi;
+	uint32_t tx_explicit = !!(hairpin_mode & 0x10);
+	uint32_t force_mem = !!(hairpin_mode & HAIRPIN_MODE_RX_FORCE_MEMORY);
+	uint32_t locked_mem = !!(hairpin_mode & HAIRPIN_MODE_RX_LOCKED_MEMORY);
+	uint32_t rte_mem = !!(hairpin_mode & HAIRPIN_MODE_RX_RTE_MEMORY);
+	struct rte_port *port = &ports[pi];
 	struct rte_eth_hairpin_conf hairpin_conf = {
 		.peer_count = 1,
 	};
-	int i;
+
+	for (qi = rxq_head, i = 0; qi < rxq_head + qcount; qi++) {
+		hairpin_conf.peers[0].port = peer_tx_port;
+		hairpin_conf.peers[0].queue = i + txq_head;
+		hairpin_conf.manual_bind = manual_bind;
+		hairpin_conf.tx_explicit = tx_explicit;
+		hairpin_conf.force_memory = force_mem;
+		hairpin_conf.use_locked_device_memory = locked_mem;
+		hairpin_conf.use_rte_memory = rte_mem;
+		diag = rte_eth_rx_hairpin_queue_setup
+			(pi, qi, nb_rxd, &hairpin_conf);
+		i++;
+		if (diag == 0)
+			continue;
+
+		/* Fail to setup rx queue, return */
+		if (port->port_status == RTE_PORT_HANDLING)
+			port->port_status = RTE_PORT_STOPPED;
+		else
+			fprintf(stderr,
+				"Port %d can not be set back to stopped\n", pi);
+		fprintf(stderr,
+			"Port %d failed to configure hairpin on rxq %u.\n"
+			"Peer port: %u peer txq: %u\n",
+			pi, qi, peer_tx_port, i);
+		/* try to reconfigure queues next time */
+		port->need_reconfig_queues = 1;
+		return -1;
+	}
+	return 0;
+}
+
+static int
+port_config_hairpin_txq(portid_t pi, uint16_t peer_rx_port,
+			queueid_t rxq_head, queueid_t txq_head,
+			uint16_t qcount, uint32_t manual_bind)
+{
 	int diag;
+	queueid_t i, qi;
+	uint32_t tx_explicit = !!(hairpin_mode & 0x10);
+	uint32_t force_mem = !!(hairpin_mode & HAIRPIN_MODE_TX_FORCE_MEMORY);
+	uint32_t locked_mem = !!(hairpin_mode & HAIRPIN_MODE_TX_LOCKED_MEMORY);
+	uint32_t rte_mem = !!(hairpin_mode & HAIRPIN_MODE_TX_RTE_MEMORY);
 	struct rte_port *port = &ports[pi];
+	struct rte_eth_hairpin_conf hairpin_conf = {
+		.peer_count = 1,
+	};
+
+	for (qi = txq_head, i = 0; qi < txq_head + qcount; qi++) {
+		hairpin_conf.peers[0].port = peer_rx_port;
+		hairpin_conf.peers[0].queue = i + rxq_head;
+		hairpin_conf.manual_bind = manual_bind;
+		hairpin_conf.tx_explicit = tx_explicit;
+		hairpin_conf.force_memory = force_mem;
+		hairpin_conf.use_locked_device_memory = locked_mem;
+		hairpin_conf.use_rte_memory = rte_mem;
+		diag = rte_eth_tx_hairpin_queue_setup
+			(pi, qi, nb_txd, &hairpin_conf);
+		i++;
+		if (diag == 0)
+			continue;
+
+		/* Fail to setup rx queue, return */
+		if (port->port_status == RTE_PORT_HANDLING)
+			port->port_status = RTE_PORT_STOPPED;
+		else
+			fprintf(stderr,
+				"Port %d can not be set back to stopped\n", pi);
+		fprintf(stderr,
+			"Port %d failed to configure hairpin on txq %u.\n"
+			"Peer port: %u peer rxq: %u\n",
+			pi, qi, peer_rx_port, i);
+		/* try to reconfigure queues next time */
+		port->need_reconfig_queues = 1;
+		return -1;
+	}
+	return 0;
+}
+
+static int
+setup_legacy_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
+{
+	int diag;
 	uint16_t peer_rx_port = pi;
 	uint16_t peer_tx_port = pi;
 	uint32_t manual = 1;
-	uint32_t tx_exp = hairpin_mode & 0x10;
-	uint32_t rx_force_memory = hairpin_mode & HAIRPIN_MODE_RX_FORCE_MEMORY;
-	uint32_t rx_locked_memory = hairpin_mode & HAIRPIN_MODE_RX_LOCKED_MEMORY;
-	uint32_t rx_rte_memory = hairpin_mode & HAIRPIN_MODE_RX_RTE_MEMORY;
-	uint32_t tx_force_memory = hairpin_mode & HAIRPIN_MODE_TX_FORCE_MEMORY;
-	uint32_t tx_locked_memory = hairpin_mode & HAIRPIN_MODE_TX_LOCKED_MEMORY;
-	uint32_t tx_rte_memory = hairpin_mode & HAIRPIN_MODE_TX_RTE_MEMORY;
 
 	if (!(hairpin_mode & 0xf)) {
 		peer_rx_port = pi;
@@ -2706,10 +2795,10 @@ setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
 		manual = 0;
 	} else if (hairpin_mode & 0x1) {
 		peer_tx_port = rte_eth_find_next_owned_by(pi + 1,
-						       RTE_ETH_DEV_NO_OWNER);
+							  RTE_ETH_DEV_NO_OWNER);
 		if (peer_tx_port >= RTE_MAX_ETHPORTS)
 			peer_tx_port = rte_eth_find_next_owned_by(0,
-						RTE_ETH_DEV_NO_OWNER);
+								  RTE_ETH_DEV_NO_OWNER);
 		if (p_pi != RTE_MAX_ETHPORTS) {
 			peer_rx_port = p_pi;
 		} else {
@@ -2725,67 +2814,58 @@ setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
 			peer_rx_port = p_pi;
 		} else {
 			peer_rx_port = rte_eth_find_next_owned_by(pi + 1,
-						RTE_ETH_DEV_NO_OWNER);
+								  RTE_ETH_DEV_NO_OWNER);
 			if (peer_rx_port >= RTE_MAX_ETHPORTS)
 				peer_rx_port = pi;
 		}
 		peer_tx_port = peer_rx_port;
 		manual = 1;
 	}
+	diag = port_config_hairpin_txq(pi, peer_rx_port, nb_rxq, nb_txq,
+				       nb_hairpinq, manual);
+	if (diag)
+		return diag;
+	diag = port_config_hairpin_rxq(pi, peer_tx_port, nb_rxq, nb_txq,
+				       nb_hairpinq, manual);
+	if (diag)
+		return diag;
+	return 0;
+}
 
-	for (qi = nb_txq, i = 0; qi < nb_hairpinq + nb_txq; qi++) {
-		hairpin_conf.peers[0].port = peer_rx_port;
-		hairpin_conf.peers[0].queue = i + nb_rxq;
-		hairpin_conf.manual_bind = !!manual;
-		hairpin_conf.tx_explicit = !!tx_exp;
-		hairpin_conf.force_memory = !!tx_force_memory;
-		hairpin_conf.use_locked_device_memory = !!tx_locked_memory;
-		hairpin_conf.use_rte_memory = !!tx_rte_memory;
-		diag = rte_eth_tx_hairpin_queue_setup
-			(pi, qi, nb_txd, &hairpin_conf);
-		i++;
-		if (diag == 0)
-			continue;
+static int
+setup_mapped_harpin_queues(portid_t pi)
+{
+	int ret = 0;
+	struct hairpin_map *map;
 
-		/* Fail to setup rx queue, return */
-		if (port->port_status == RTE_PORT_HANDLING)
-			port->port_status = RTE_PORT_STOPPED;
-		else
-			fprintf(stderr,
-				"Port %d can not be set back to stopped\n", pi);
-		fprintf(stderr, "Fail to configure port %d hairpin queues\n",
-			pi);
-		/* try to reconfigure queues next time */
-		port->need_reconfig_queues = 1;
-		return -1;
-	}
-	for (qi = nb_rxq, i = 0; qi < nb_hairpinq + nb_rxq; qi++) {
-		hairpin_conf.peers[0].port = peer_tx_port;
-		hairpin_conf.peers[0].queue = i + nb_txq;
-		hairpin_conf.manual_bind = !!manual;
-		hairpin_conf.tx_explicit = !!tx_exp;
-		hairpin_conf.force_memory = !!rx_force_memory;
-		hairpin_conf.use_locked_device_memory = !!rx_locked_memory;
-		hairpin_conf.use_rte_memory = !!rx_rte_memory;
-		diag = rte_eth_rx_hairpin_queue_setup
-			(pi, qi, nb_rxd, &hairpin_conf);
-		i++;
-		if (diag == 0)
-			continue;
-
-		/* Fail to setup rx queue, return */
-		if (port->port_status == RTE_PORT_HANDLING)
-			port->port_status = RTE_PORT_STOPPED;
-		else
-			fprintf(stderr,
-				"Port %d can not be set back to stopped\n", pi);
-		fprintf(stderr, "Fail to configure port %d hairpin queues\n",
-			pi);
-		/* try to reconfigure queues next time */
-		port->need_reconfig_queues = 1;
-		return -1;
+	LIST_FOREACH(map, &hairpin_map_head, entry) {
+		if (map->rx_port == pi) {
+			ret = port_config_hairpin_rxq(pi, map->tx_port,
+						      map->rxq_head,
+						      map->txq_head,
+						      map->qnum, true);
+			if (ret)
+				return ret;
+		}
+		if (map->tx_port == pi) {
+			ret = port_config_hairpin_txq(pi, map->rx_port,
+						      map->rxq_head,
+						      map->txq_head,
+						      map->qnum, true);
+			if (ret)
+				return ret;
+		}
 	}
 	return 0;
+}
+
+/* Configure the Rx and Tx hairpin queues for the selected port. */
+static int
+setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
+{
+	return !hairpin_multiport_mode ?
+	       setup_legacy_hairpin_queues(pi, p_pi, cnt_pi) :
+	       setup_mapped_harpin_queues(pi);
 }
 
 /* Configure the Rx with optional split. */
