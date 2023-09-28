@@ -125,6 +125,24 @@ enum noisy_fwd_mode {
 	NOISY_FWD_MODE_MAX,
 };
 
+struct hairpin_map {
+	LIST_ENTRY(hairpin_map) entry; /**< List entry. */
+	portid_t rx_port; /**< Hairpin Rx port ID. */
+	portid_t tx_port; /**< Hairpin Tx port ID. */
+	uint16_t rxq_head; /**< Hairpin Rx queue head. */
+	uint16_t txq_head; /**< Hairpin Tx queue head. */
+	uint16_t qnum; /**< Hairpin queues number. */
+};
+
+/**
+ * Command line arguments parser sets `hairpin_multiport_mode` to True
+ * if explicit hairpin map configuration mode was used.
+ */
+extern bool hairpin_multiport_mode;
+
+/** Hairpin maps list. */
+extern void hairpin_add_multiport_map(struct hairpin_map *map);
+
 /**
  * The data structure associated with RX and TX packet burst statistics
  * that are recorded for each forwarding stream.
