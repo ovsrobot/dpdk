@@ -835,6 +835,26 @@ idpf_dev_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static void
+idpf_rxq_info_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+		  struct rte_eth_rxq_info *qinfo)
+{
+	struct idpf_rx_queue *rxq;
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+	qinfo->conf.rx_deferred_start = rxq->rx_deferred_start;
+}
+
+static void
+idpf_txq_info_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+		  struct rte_eth_txq_info *qinfo)
+{
+	struct idpf_tx_queue *txq;
+
+	txq = dev->data->tx_queues[tx_queue_id];
+	qinfo->conf.tx_deferred_start = txq->tx_deferred_start;
+}
+
 static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_configure			= idpf_dev_configure,
 	.dev_close			= idpf_dev_close,
@@ -850,6 +870,8 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.tx_queue_stop			= idpf_tx_queue_stop,
 	.rx_queue_release		= idpf_dev_rx_queue_release,
 	.tx_queue_release		= idpf_dev_tx_queue_release,
+	.rxq_info_get			= idpf_rxq_info_get,
+	.txq_info_get			= idpf_txq_info_get,
 	.mtu_set			= idpf_dev_mtu_set,
 	.dev_supported_ptypes_get	= idpf_dev_supported_ptypes_get,
 	.stats_get			= idpf_dev_stats_get,
