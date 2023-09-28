@@ -326,9 +326,11 @@ enetc_tx_queue_setup(struct rte_eth_dev *dev,
 			       ENETC_TBMR, ENETC_TBMR_EN);
 		dev->data->tx_queue_state[tx_ring->index] =
 			       RTE_ETH_QUEUE_STATE_STARTED;
+		tx_ring->tx_deferred_start = false;
 	} else {
 		dev->data->tx_queue_state[tx_ring->index] =
 			       RTE_ETH_QUEUE_STATE_STOPPED;
+		tx_ring->tx_deferred_start = true;
 	}
 
 	return 0;
@@ -473,9 +475,11 @@ enetc_rx_queue_setup(struct rte_eth_dev *dev,
 			       ENETC_RBMR_EN);
 		dev->data->rx_queue_state[rx_ring->index] =
 			       RTE_ETH_QUEUE_STATE_STARTED;
+		rx_ring->rx_deferred_start = false;
 	} else {
 		dev->data->rx_queue_state[rx_ring->index] =
 			       RTE_ETH_QUEUE_STATE_STOPPED;
+		rx_ring->rx_deferred_start = true;
 	}
 
 	rx_ring->crc_len = (uint8_t)((rx_offloads & RTE_ETH_RX_OFFLOAD_KEEP_CRC) ?
