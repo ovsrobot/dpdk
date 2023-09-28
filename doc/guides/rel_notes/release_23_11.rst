@@ -97,6 +97,8 @@ Removed Items
 
 * kni: Removed the Kernel Network Interface (KNI) library and driver.
 
+* crypto: Removed SM2 xform parameter in asymmetric xform.
+
 
 API Changes
 -----------
