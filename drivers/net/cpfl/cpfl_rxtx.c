@@ -1606,3 +1606,29 @@ cpfl_set_tx_function(struct rte_eth_dev *dev)
 	}
 #endif /* RTE_ARCH_X86 */
 }
+
+void
+cpfl_dev_rxq_info_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+		      struct rte_eth_rxq_info *qinfo)
+{
+	struct cpfl_rx_queue *cpfl_rxq;
+
+	cpfl_rxq = dev->data->rx_queues[rx_queue_id];
+	qinfo->nb_desc = cpfl_rxq->base.nb_rx_desc;
+	qinfo->conf.rx_free_thresh = cpfl_rxq->base.nb_rx_desc;
+	qinfo->conf.rx_free_thresh = cpfl_rxq->base.rx_free_thresh;
+	qinfo->conf.rx_deferred_start = cpfl_rxq->base.rx_deferred_start;
+}
+
+void
+cpfl_dev_txq_info_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+		      struct rte_eth_txq_info *qinfo)
+{
+	struct cpfl_tx_queue *cpfl_txq;
+
+	cpfl_txq = dev->data->tx_queues[tx_queue_id];
+	qinfo->nb_desc = cpfl_txq->base.nb_tx_desc;
+	qinfo->conf.tx_rs_thresh = cpfl_txq->base.rs_thresh;
+	qinfo->conf.tx_free_thresh = cpfl_txq->base.free_thresh;
+	qinfo->conf.tx_deferred_start = cpfl_txq->base.tx_deferred_start;
+}

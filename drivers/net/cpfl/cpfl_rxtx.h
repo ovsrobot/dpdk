@@ -102,6 +102,10 @@ int cpfl_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 int cpfl_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id);
 void cpfl_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 void cpfl_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
+void cpfl_dev_rxq_info_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+			   struct rte_eth_rxq_info *qinfo);
+void cpfl_dev_txq_info_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+			   struct rte_eth_txq_info *qinfo);
 void cpfl_set_rx_function(struct rte_eth_dev *dev);
 void cpfl_set_tx_function(struct rte_eth_dev *dev);
 int cpfl_rx_hairpin_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
