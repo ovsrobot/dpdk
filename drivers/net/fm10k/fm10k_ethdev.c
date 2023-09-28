@@ -2835,6 +2835,32 @@ fm10k_dev_close(struct rte_eth_dev *dev)
 	return ret;
 }
 
+
+static void
+fm10k_dev_rxq_info_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+		  struct rte_eth_rxq_info *qinfo)
+{
+	struct fm10k_rx_queue *rxq;
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+	qinfo->nb_desc = rxq->nb_desc;
+	qinfo->conf.rx_drop_en = rxq->drop_en;
+	qinfo->conf.rx_deferred_start = rxq->rx_deferred_start;
+}
+
+static void
+fm10k_dev_txq_info_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+		  struct rte_eth_txq_info *qinfo)
+{
+	struct fm10k_tx_queue *txq;
+
+	txq = dev->data->tx_queues[tx_queue_id];
+	qinfo->nb_desc = txq->nb_desc;
+	qinfo->conf.tx_rs_thresh = txq->rs_thresh;
+	qinfo->conf.tx_free_thresh = txq->free_thresh;
+	qinfo->conf.tx_deferred_start = txq->tx_deferred_start;
+}
+
 static const struct eth_dev_ops fm10k_eth_dev_ops = {
 	.dev_configure		= fm10k_dev_configure,
 	.dev_start		= fm10k_dev_start,
@@ -2866,6 +2892,8 @@ static const struct eth_dev_ops fm10k_eth_dev_ops = {
 	.tx_queue_release	= fm10k_tx_queue_release,
 	.rx_queue_intr_enable	= fm10k_dev_rx_queue_intr_enable,
 	.rx_queue_intr_disable	= fm10k_dev_rx_queue_intr_disable,
+	.rxq_info_get		= fm10k_dev_rxq_info_get,
+	.txq_info_get		= fm10k_dev_txq_info_get,
 	.reta_update		= fm10k_reta_update,
 	.reta_query		= fm10k_reta_query,
 	.rss_hash_update	= fm10k_rss_hash_update,
