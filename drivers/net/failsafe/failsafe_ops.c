@@ -1565,6 +1565,28 @@ fs_rss_hash_update(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static void
+fs_rxq_info_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+		struct rte_eth_rxq_info *qinfo)
+{
+	struct rxq *rxq;
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+	qinfo->nb_desc = rxq->info.nb_desc;
+	qinfo->conf.rx_deferred_start = rxq->info.conf.rx_deferred_start;
+}
+
+static void
+fs_txq_info_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+		struct rte_eth_txq_info *qinfo)
+{
+	struct txq *txq;
+
+	txq = dev->data->tx_queues[tx_queue_id];
+	qinfo->nb_desc = txq->info.nb_desc;
+	qinfo->conf.tx_deferred_start = txq->info.conf.tx_deferred_start;
+}
+
 static int
 fs_flow_ops_get(struct rte_eth_dev *dev __rte_unused,
 		const struct rte_flow_ops **ops)
@@ -1604,6 +1626,8 @@ const struct eth_dev_ops failsafe_ops = {
 	.tx_queue_release = fs_tx_queue_release,
 	.rx_queue_intr_enable = fs_rx_intr_enable,
 	.rx_queue_intr_disable = fs_rx_intr_disable,
+	.rxq_info_get = fs_rxq_info_get,
+	.txq_info_get = fs_txq_info_get,
 	.flow_ctrl_get = fs_flow_ctrl_get,
 	.flow_ctrl_set = fs_flow_ctrl_set,
 	.mac_addr_remove = fs_mac_addr_remove,
