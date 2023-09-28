@@ -1737,6 +1737,7 @@ Dispatcher - EXPERIMENTAL
 M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
 F: lib/dispatcher/
 F: app/test/test_dispatcher.c
+F: doc/guides/prog_guide/dispatcher_lib.rst
 
 Test Applications
 -----------------
