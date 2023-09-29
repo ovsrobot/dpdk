@@ -3042,7 +3042,6 @@ virtio_dev_extbuf_alloc(struct virtio_net *dev, struct rte_mbuf *pkt, uint32_t s
 
 	iova = rte_malloc_virt2iova(buf);
 	rte_pktmbuf_attach_extbuf(pkt, buf, iova, buf_len, shinfo);
-	rte_pktmbuf_reset_headroom(pkt);
 
 	return 0;
 }

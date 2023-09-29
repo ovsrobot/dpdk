@@ -859,8 +859,7 @@ rte_pktmbuf_priv_size(struct rte_mempool *mp)
  */
 static inline void rte_pktmbuf_reset_headroom(struct rte_mbuf *m)
 {
-	m->data_off = (uint16_t)RTE_MIN((uint16_t)RTE_PKTMBUF_HEADROOM,
-					(uint16_t)m->buf_len);
+	m->data_off = RTE_PKTMBUF_HEADROOM;
 }
 
 /**
@@ -1028,13 +1027,13 @@ rte_pktmbuf_ext_shinfo_init_helper(void *buf_addr, uint16_t *buf_len,
  * provided via shinfo. This callback function will be called once all the
  * mbufs are detached from the buffer (refcnt becomes zero).
  *
- * The headroom length of the attaching mbuf will be set to zero and this
- * can be properly adjusted after attachment. For example, ``rte_pktmbuf_adj()``
- * or ``rte_pktmbuf_reset_headroom()`` might be used.
- *
- * Similarly, the packet length is initialized to 0. If the buffer contains
+ * The packet length is initialized to 0. If the buffer contains
  * data, the user has to adjust ``data_len`` and the ``pkt_len`` field of
  * the mbuf accordingly.
+ *
+ * Similarly, the headroom length of the attaching mbuf will be set to the
+ * default (RTE_PKTMBUF_HEADROOM). This can also be properly adjusted after
+ * attachment. For example, ``rte_pktmbuf_adj()`` might be used.
  *
  * More mbufs can be attached to the same external buffer by
  * ``rte_pktmbuf_attach()`` once the external buffer has been attached by
@@ -1094,7 +1093,7 @@ rte_pktmbuf_attach_extbuf(struct rte_mbuf *m, void *buf_addr,
 	m->buf_len = buf_len;
 
 	m->data_len = 0;
-	m->data_off = 0;
+	rte_pktmbuf_reset_headroom(m);
 
 	m->ol_flags |= RTE_MBUF_F_EXTERNAL;
 	m->shinfo = shinfo;

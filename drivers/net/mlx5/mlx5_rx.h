@@ -546,7 +546,6 @@ mprq_buf_to_pkt(struct mlx5_rxq_data *rxq, struct rte_mbuf *pkt, uint32_t len,
 		rte_pktmbuf_attach_extbuf(pkt, buf_addr, buf_iova,
 					  buf_len, shinfo);
 		/* Set mbuf head-room. */
-		SET_DATA_OFF(pkt, RTE_PKTMBUF_HEADROOM);
 		MLX5_ASSERT(pkt->ol_flags & RTE_MBUF_F_EXTERNAL);
 		MLX5_ASSERT(rte_pktmbuf_tailroom(pkt) >=
 			len - (hdrm_overlap > 0 ? hdrm_overlap : 0));
