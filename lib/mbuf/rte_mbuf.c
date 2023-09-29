@@ -93,7 +93,7 @@ rte_pktmbuf_init(struct rte_mempool *mp,
 	m->buf_len = (uint16_t)buf_len;
 
 	/* keep some headroom between start of buffer and data */
-	m->data_off = RTE_MIN(RTE_PKTMBUF_HEADROOM, (uint16_t)m->buf_len);
+	rte_pktmbuf_reset_headroom(m);
 
 	/* init some constant fields */
 	m->pool = mp;
@@ -196,7 +196,7 @@ __rte_pktmbuf_init_extmem(struct rte_mempool *mp,
 		++ctx->ext;
 	}
 	/* keep some headroom between start of buffer and data */
-	m->data_off = RTE_MIN(RTE_PKTMBUF_HEADROOM, (uint16_t)m->buf_len);
+	rte_pktmbuf_reset_headroom(m);
 
 	/* init some constant fields */
 	m->pool = mp;

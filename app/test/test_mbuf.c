@@ -608,9 +608,9 @@ test_attach_from_different_pool(struct rte_mempool *pktmbuf_pool,
 
 	/* save data pointer to compare it after detach() */
 	c_data = rte_pktmbuf_mtod(clone, char *);
-	if (c_data != (char *)clone + sizeof(*clone) + MBUF2_PRIV_SIZE)
+	if (c_data != (char *)clone + sizeof(*clone) + MBUF2_PRIV_SIZE + RTE_PKTMBUF_HEADROOM)
 		GOTO_FAIL("bad data pointer in clone");
-	if (rte_pktmbuf_headroom(clone) != 0)
+	if (rte_pktmbuf_headroom(clone) != RTE_PKTMBUF_HEADROOM)
 		GOTO_FAIL("bad headroom in clone");
 
 	rte_pktmbuf_attach(clone, m);
@@ -637,9 +637,9 @@ test_attach_from_different_pool(struct rte_mempool *pktmbuf_pool,
 
 	/* save data pointer to compare it after detach() */
 	c_data2 = rte_pktmbuf_mtod(clone2, char *);
-	if (c_data2 != (char *)clone2 + sizeof(*clone2) + MBUF2_PRIV_SIZE)
+	if (c_data2 != (char *)clone2 + sizeof(*clone2) + MBUF2_PRIV_SIZE + RTE_PKTMBUF_HEADROOM)
 		GOTO_FAIL("bad data pointer in clone2");
-	if (rte_pktmbuf_headroom(clone2) != 0)
+	if (rte_pktmbuf_headroom(clone2) != RTE_PKTMBUF_HEADROOM)
 		GOTO_FAIL("bad headroom in clone2");
 
 	rte_pktmbuf_attach(clone2, clone);
