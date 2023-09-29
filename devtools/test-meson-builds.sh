@@ -239,6 +239,9 @@ done
 build build-mini cc skipABI $use_shared -Ddisable_libs=* \
 	-Denable_drivers=net/null
 
+build build-gcc-shared-stdatomic gcc skipABI -Denable_stdatomic=true $use_shared
+build build-clang-shared-stdatomic clang skipABI -Denable_stdatomic=true $use_shared
+
 # test compilation with minimal x86 instruction set
 # Set the install path for libraries to "lib" explicitly to prevent problems
 # with pkg-config prefixes if installed in "lib/x86_64-linux-gnu" later.
