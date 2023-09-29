@@ -25,12 +25,12 @@ parser.add_argument("-p", "--testapp-path",
                     help="specifies path to the bbdev test app",
                     default=dpdk_path + "/" + dpdk_target + "/app/dpdk-test-bbdev")
 parser.add_argument("-e", "--eal-params",
-                    help="EAL arguments which are passed to the test app",
-                    default="--vdev=baseband_null0")
-parser.add_argument("-t", "--timeout",
+                    help="EAL arguments which must be passed to the test app",
+                    default="--vdev=baseband_null0 -a00:00.0")
+parser.add_argument("-T", "--timeout",
                     type=int,
                     help="Timeout in seconds",
-                    default=300)
+                    default=600)
 parser.add_argument("-c", "--test-cases",
                     nargs="+",
                     help="Defines test cases to run. Run all if not specified")
@@ -48,6 +48,14 @@ parser.add_argument("-b", "--burst-size",
                     type=int,
                     help="Operations enqueue/dequeue burst size.",
                     default=[32])
+parser.add_argument("-s", "--snr",
+                    type=int,
+                    help="SNR in dB for BLER tests",
+                    default=0)
+parser.add_argument("-t", "--iter-max",
+                    type=int,
+                    help="Max iterations",
+                    default=6)
 parser.add_argument("-l", "--num-lcores",
                     type=int,
                     help="Number of lcores to run.",
@@ -67,6 +75,12 @@ if args.eal_params:
     params.extend(shlex.split(args.eal_params))
 
 params.extend(["--"])
+
+if args.snr:
+    params.extend(["-s", str(args.snr)])
+
+if args.iter_max:
+    params.extend(["-t", str(args.iter_max)])
 
 if args.num_ops:
     params.extend(["-n", str(args.num_ops)])
