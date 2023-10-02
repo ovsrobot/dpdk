@@ -84,6 +84,8 @@ New Features
   default. The implementation using C11 standard atomic operations is enabled
   via the ``enable_stdatomic`` build option.
 
+* sample: Added a command option ``--relax-rx-mode`` in l3fwd example
+  to relax the rx RSS/Offload mode requirement if needed.
 
 Removed Items
 -------------

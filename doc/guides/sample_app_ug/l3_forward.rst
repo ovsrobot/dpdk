@@ -126,6 +126,8 @@ Where,
 
 * ``--parse-ptype:`` Optional, set to use software to analyze packet type. Without this option, hardware will check the packet type.
 
+* ``--relax-rx-mode:`` Optional, set to enable rx mode relax when RSS/offload is not fully supported by the hardware. When the IPv4 cksum offload is relaxed, it is calculated by the software instead. Without this option, the RSS and cksum offload will be forced.
+
 * ``--per-port-pool:`` Optional, set to use independent buffer pools per port. Without this option, single buffer pool is used for all ports.
 
 * ``--mode:`` Optional, Packet transfer mode for I/O, poll or eventdev.
@@ -140,7 +142,7 @@ Where,
 
 * ``--event-vector-tmo:`` Optional, Max timeout to form vector in nanoseconds if event vectorization is enabled.
 
-* ``--alg=<val>:`` optional, ACL classify method to use, one of:
+* ``--alg=<val>:`` Optional, ACL classify method to use, one of:
   ``scalar|sse|avx2|neon|altivec|avx512x16|avx512x32``
 
 * ``-E:`` Optional, enable exact match,
