@@ -41,6 +41,11 @@ DPDK Release 23.11
 New Features
 ------------
 
+   * **Added support for models with multiple I/O in mldev library.**
+
+     Added support in mldev library for models with multiple inputs and outputs.
+
+
 .. This section should contain new features added in this release.
    Sample format:
 
@@ -128,6 +133,11 @@ API Changes
 * mldev: Updated mldev API to support models with multiple inputs and outputs
   Updated the structure ``rte_ml_model_info`` to support input and output with
   arbitrary shapes.
+  Added support for ``rte_ml_io_layout``. Two layout types split and packed are
+  supported by the specification, which enables higher control in handling models
+  with multiple inputs and outputs. Updated ``rte_ml_op``, ``rte_ml_io_quantize``
+  and ``rte_ml_io_dequantize`` to support an array of ``rte_ml_buff_seg`` for
+  inputs and outputs and removed use of batches argument.
 
 ABI Changes
 -----------
