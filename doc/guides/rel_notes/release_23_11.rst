@@ -108,6 +108,8 @@ Removed Items
 
 * kni: Removed the Kernel Network Interface (KNI) library and driver.
 
+* mldev: Removed APIs ``rte_ml_io_input_size_get`` and ``rte_ml_io_output_size_get``.
+
 
 API Changes
 -----------
