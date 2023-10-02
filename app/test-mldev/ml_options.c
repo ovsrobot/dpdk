@@ -24,6 +24,7 @@ ml_options_default(struct ml_options *opt)
 	opt->dev_id = 0;
 	opt->socket_id = SOCKET_ID_ANY;
 	opt->nb_filelist = 0;
+	opt->quantized_io = false;
 	opt->repetitions = 1;
 	opt->burst_size = 1;
 	opt->queue_pairs = 1;
@@ -268,6 +269,7 @@ static struct option lgopts[] = {
 	{ML_SOCKET_ID, 1, 0, 0},
 	{ML_MODELS, 1, 0, 0},
 	{ML_FILELIST, 1, 0, 0},
+	{ML_QUANTIZED_IO, 0, 0, 0},
 	{ML_REPETITIONS, 1, 0, 0},
 	{ML_BURST_SIZE, 1, 0, 0},
 	{ML_QUEUE_PAIRS, 1, 0, 0},
@@ -315,6 +317,11 @@ ml_options_parse(struct ml_options *opt, int argc, char **argv)
 	while ((opts = getopt_long(argc, argv, "", lgopts, &opt_idx)) != EOF) {
 		switch (opts) {
 		case 0: /* parse long options */
+			if (!strcmp(lgopts[opt_idx].name, "quantized_io")) {
+				opt->quantized_io = true;
+				break;
+			}
+
 			if (!strcmp(lgopts[opt_idx].name, "stats")) {
 				opt->stats = true;
 				break;
@@ -359,4 +366,5 @@ ml_options_dump(struct ml_options *opt)
 		ml_dump("socket_id", "%d", opt->socket_id);
 
 	ml_dump("debug", "%s", (opt->debug ? "true" : "false"));
+	ml_dump("quantized_io", "%s", (opt->quantized_io ? "true" : "false"));
 }
