@@ -125,6 +125,9 @@ API Changes
   except ``rte_thread_setname()`` and ``rte_ctrl_thread_create()`` which are
   replaced with ``rte_thread_set_name()`` and ``rte_thread_create_control()``.
 
+* mldev: Updated mldev API to support models with multiple inputs and outputs
+  Updated the structure ``rte_ml_model_info`` to support input and output with
+  arbitrary shapes.
 
 ABI Changes
 -----------
