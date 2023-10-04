@@ -223,6 +223,15 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# forbid using rte_ symbols in cnxk driver base code
+	awk -v FOLDERS='drivers/common/cnxk/roc_*' \
+		-v SKIP_FILES='roc_platform*' \
+		-v EXPRESSIONS="rte_ RTE_" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Use plt_ symbols instead of rte_ symbols in cnxk driver base code' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	return $res
 }
 
