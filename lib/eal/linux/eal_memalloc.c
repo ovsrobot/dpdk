@@ -511,6 +511,13 @@ resize_hugefile(int fd, uint64_t fa_offset, uint64_t page_sz, bool grow,
 			grow, dirty);
 }
 
+__rte_no_asan
+static inline void
+page_fault(void *addr)
+{
+	*(volatile int *)addr = *(volatile int *)addr;
+}
+
 static int
 alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 		struct hugepage_info *hi, unsigned int list_idx,
@@ -641,7 +648,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	 * that is already there, so read the old value, and write itback.
 	 * kernel populates the page with zeroes initially.
 	 */
-	*(volatile int *)addr = *(volatile int *)addr;
+	page_fault(addr);
 
 	iova = rte_mem_virt2iova(addr);
 	if (iova == RTE_BAD_PHYS_ADDR) {
