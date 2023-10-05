@@ -1232,6 +1232,21 @@ typedef int (*eth_bond_notify_member)(struct rte_eth_dev *dev,
 				      struct rte_eth_dev *bonding_dev);
 
 /**
+ * @internal
+ * Get the status of specified bonding port created by member port hardware.
+ *
+ * @param dev
+ *   Member port (ethdev) handle.
+ * @param bonding_dev
+ *   Bonding port (ethdev) handle.
+ *
+ * @return
+ *   Negative on error, 0 on success.
+ */
+typedef int (*eth_bond_hw_create_get)(struct rte_eth_dev *dev,
+					  struct rte_eth_dev *bonding_dev);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -1473,6 +1488,11 @@ struct eth_dev_ops {
 
 	/** Notify the member port of bonding port information */
 	eth_bond_notify_member bond_notify_member;
+	/**
+	 * Get the status of whether bonding port is successfully created by
+	 * the member port hardware.
+	 */
+	eth_bond_hw_create_get bond_hw_create_get;
 };
 
 /**
