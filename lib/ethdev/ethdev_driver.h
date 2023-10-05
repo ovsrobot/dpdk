@@ -1217,6 +1217,21 @@ typedef int (*eth_map_aggr_tx_affinity_t)(struct rte_eth_dev *dev, uint16_t tx_q
 					  uint8_t affinity);
 
 /**
+ * @internal
+ * Bonding port notifies the member ports.
+ *
+ * @param dev
+ *   Member port (ethdev) handle.
+ * @param bonding_dev
+ *   Bonding port (ethdev) handle.
+ *
+ * @return
+ *   Negative on error, 0 on success.
+ */
+typedef int (*eth_bond_notify_member)(struct rte_eth_dev *dev,
+				      struct rte_eth_dev *bonding_dev);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -1455,6 +1470,9 @@ struct eth_dev_ops {
 	eth_count_aggr_ports_t count_aggr_ports;
 	/** Map a Tx queue with an aggregated port of the DPDK port */
 	eth_map_aggr_tx_affinity_t map_aggr_tx_affinity;
+
+	/** Notify the member port of bonding port information */
+	eth_bond_notify_member bond_notify_member;
 };
 
 /**

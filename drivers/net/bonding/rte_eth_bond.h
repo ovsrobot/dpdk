@@ -351,6 +351,52 @@ rte_eth_bond_link_up_prop_delay_set(uint16_t bonding_port_id,
 int
 rte_eth_bond_link_up_prop_delay_get(uint16_t bonding_port_id);
 
+/**
+ * Set the flag of whether bonding port notifies member ports.
+ *
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param notify_member
+ *   Flag of whether bonding port notifies member ports.
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_notify_member_flag_set(uint16_t bonding_port_id, bool notify_member);
+
+/**
+ * Get the flag of whether bonding port notifies member ports.
+ *
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param notify_member
+ *   Flag of whether bonding port notifies member ports.
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_notify_member_flag_get(uint16_t bonding_port_id, bool *notify_member);
+
+/**
+ * Notify the member ports of bonding port's information.
+ *
+ * This interface is called in the following functions:
+ * - bond_ethdev_lsc_event_callback()
+ * - bond_ethdev_configure()
+ *
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_notify_members(uint16_t bonding_port_id);
 
 #ifdef __cplusplus
 }

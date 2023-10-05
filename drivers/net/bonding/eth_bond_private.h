@@ -186,6 +186,8 @@ struct bond_dev_private {
 
 	void *vlan_filter_bmpmem;		/* enabled vlan filter bitmap */
 	struct rte_bitmap *vlan_filter_bmp;
+
+	bool notify_member; /**< Enable member notification of bonding port. */
 };
 
 extern const struct eth_dev_ops default_dev_ops;
