@@ -1214,3 +1214,10 @@ rte_eth_bond_hw_create_get(uint16_t bonding_port_id, uint16_t member_port_id)
 
 	return member_dev->dev_ops->bond_hw_create_get(member_dev, bonding_dev);
 }
+
+
+int
+rte_eth_bond_valid_bonding_port_id(uint16_t port_id)
+{
+	return valid_bonding_port_id(port_id);
+}
