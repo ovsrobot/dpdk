@@ -150,16 +150,8 @@ For example,
         rmmod i40e (To remove the i40e module)
         insmod i40e.ko max_vfs=2,2 (To enable two Virtual Functions per port)
 
-*   Using the DPDK PMD PF i40e driver:
-
-    Kernel Params: iommu=pt, intel_iommu=on
-
-    .. code-block:: console
-
-        modprobe uio
-        insmod igb_uio
-        ./dpdk-devbind.py -b igb_uio bb:ss.f
-        echo 2 > /sys/bus/pci/devices/0000\:bb\:ss.f/max_vfs (To enable two VFs on a specific PCI device)
+*   Using the DPDK PMD PF i40e driver, bind the PF device to ``vfio_pci`` or ``igb_uio`` and
+    create VF devices. See :ref:`linux_gsg_binding_kernel`.
 
     Launch the DPDK testpmd/example or your own host daemon application using the DPDK PMD library.
 
@@ -200,22 +192,14 @@ For example,
         rmmod ixgbe (To remove the ixgbe module)
         insmod ixgbe max_vfs=2,2 (To enable two Virtual Functions per port)
 
-*   Using the DPDK PMD PF ixgbe driver:
-
-    Kernel Params: iommu=pt, intel_iommu=on
-
-    .. code-block:: console
-
-        modprobe uio
-        insmod igb_uio
-        ./dpdk-devbind.py -b igb_uio bb:ss.f
-        echo 2 > /sys/bus/pci/devices/0000\:bb\:ss.f/max_vfs (To enable two VFs on a specific PCI device)
+*   Using the DPDK PMD PF ixgbe driver, bind the PF device to ``vfio_pci`` or ``igb_uio`` and
+    create VF devices. See :ref:`linux_gsg_binding_kernel`.
 
     Launch the DPDK testpmd/example or your own host daemon application using the DPDK PMD library.
 
 *   Using the DPDK PMD PF ixgbe driver to enable VF RSS:
 
-    Same steps as above to install the modules of uio, igb_uio, specify max_vfs for PCI device, and
+    Same steps as above to bind the PF device, create VF devices, and
     launch the DPDK testpmd/example or your own host daemon application using the DPDK PMD library.
 
     The available queue number (at most 4) per VF depends on the total number of pool, which is
@@ -286,15 +270,8 @@ For example,
         rmmod igb (To remove the igb module)
         insmod igb max_vfs=2,2 (To enable two Virtual Functions per port)
 
-*   Using DPDK PMD PF igb driver:
-
-    Kernel Params: iommu=pt, intel_iommu=on modprobe uio
-
-    .. code-block:: console
-
-        insmod igb_uio
-        ./dpdk-devbind.py -b igb_uio bb:ss.f
-        echo 2 > /sys/bus/pci/devices/0000\:bb\:ss.f/max_vfs (To enable two VFs on a specific pci device)
+*   Using the DPDK PMD PF igb driver, bind the PF device to ``vfio_pci`` or ``igb_uio`` and
+    create VF devices. See :ref:`linux_gsg_binding_kernel`.
 
     Launch DPDK testpmd/example or your own host daemon application using the DPDK PMD library.
 
@@ -409,22 +386,8 @@ The setup procedure is as follows:
         rmmod ixgbe
         modprobe ixgbe max_vfs=2,2
 
-    When using DPDK PMD PF driver, insert DPDK kernel module igb_uio and set the number of VF by sysfs max_vfs:
-
-    .. code-block:: console
-
-        modprobe uio
-        insmod igb_uio
-        ./dpdk-devbind.py -b igb_uio 02:00.0 02:00.1 0e:00.0 0e:00.1
-        echo 2 > /sys/bus/pci/devices/0000\:02\:00.0/max_vfs
-        echo 2 > /sys/bus/pci/devices/0000\:02\:00.1/max_vfs
-        echo 2 > /sys/bus/pci/devices/0000\:0e\:00.0/max_vfs
-        echo 2 > /sys/bus/pci/devices/0000\:0e\:00.1/max_vfs
-
-    .. note::
-
-        You need to explicitly specify number of vfs for each port, for example,
-        in the command above, it creates two vfs for the first two ixgbe ports.
+    When using DPDK PMD PF driver, bind the PF device to ``vfio_pci`` or ``igb_uio`` and
+    create VF devices. See :ref:`linux_gsg_binding_kernel`.
 
     Let say we have a machine with four physical ixgbe ports:
 
@@ -437,7 +400,7 @@ The setup procedure is as follows:
 
         0000:0e:00.1
 
-    The command above creates two vfs for device 0000:02:00.0:
+    The mentioned steps above should result in two vfs for device 0000:02:00.0:
 
     .. code-block:: console
 
