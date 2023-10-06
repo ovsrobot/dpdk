@@ -711,6 +711,13 @@ enum index {
 	ACTION_IPV6_EXT_PUSH,
 	ACTION_IPV6_EXT_PUSH_INDEX,
 	ACTION_IPV6_EXT_PUSH_INDEX_VALUE,
+	ACTION_PROG,
+	ACTION_PROG_NAME,
+	ACTION_PROG_NAME_STRING,
+	ACTION_PROG_ARGUMENTS,
+	ACTION_PROG_ARG_NAME,
+	ACTION_PROG_ARG_VALUE,
+	ACTION_PROG_ARG_END,
 };
 
 /** Maximum size for pattern in struct rte_flow_item_raw. */
@@ -739,6 +746,23 @@ struct action_rss_data {
 	struct rte_flow_action_rss conf;
 	uint8_t key[RSS_HASH_KEY_LENGTH];
 	uint16_t queue[ACTION_RSS_QUEUE_NUM];
+};
+
+#define ACTION_PROG_NAME_SIZE_MAX 32
+#define ACTION_PROG_ARG_NUM_MAX 16
+#define ACTION_PROG_ARG_VALUE_SIZE_MAX 32
+
+/** Storage for struct rte_flow_action_prog including external data. */
+struct action_prog_data {
+	struct rte_flow_action_prog conf;
+	struct {
+		char name[ACTION_PROG_NAME_SIZE_MAX];
+		struct rte_flow_action_prog_argument args[ACTION_PROG_ARG_NUM_MAX];
+		struct {
+			char names[ACTION_PROG_NAME_SIZE_MAX];
+			uint8_t value[ACTION_PROG_ARG_VALUE_SIZE_MAX];
+		} arg_data[ACTION_PROG_ARG_NUM_MAX];
+	} data;
 };
 
 /** Maximum data size in struct rte_flow_action_raw_encap. */
@@ -2153,6 +2177,7 @@ static const enum index next_action[] = {
 	ACTION_QUOTA_QU,
 	ACTION_IPV6_EXT_REMOVE,
 	ACTION_IPV6_EXT_PUSH,
+	ACTION_PROG,
 	ZERO,
 };
 
@@ -2494,6 +2519,13 @@ static const enum index action_represented_port[] = {
 	ZERO,
 };
 
+static const enum index action_prog[] = {
+	ACTION_PROG_NAME,
+	ACTION_PROG_ARGUMENTS,
+	ACTION_NEXT,
+	ZERO,
+};
+
 static int parse_set_raw_encap_decap(struct context *, const struct token *,
 				     const char *, unsigned int,
 				     void *, unsigned int);
@@ -2767,6 +2799,18 @@ static int
 parse_qu_mode_name(struct context *ctx, const struct token *token,
 		   const char *str, unsigned int len, void *buf,
 		   unsigned int size);
+static int
+parse_vc_action_prog(struct context *, const struct token *,
+		     const char *, unsigned int, void *,
+		     unsigned int);
+static int
+parse_vc_action_prog_arg_name(struct context *, const struct token *,
+			      const char *, unsigned int, void *,
+			      unsigned int);
+static int
+parse_vc_action_prog_arg_value(struct context *, const struct token *,
+			       const char *, unsigned int, void *,
+			       unsigned int);
 static int comp_none(struct context *, const struct token *,
 		     unsigned int, char *, unsigned int);
 static int comp_boolean(struct context *, const struct token *,
@@ -7458,6 +7502,48 @@ static const struct token token_list[] = {
 		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_tx_queue,
 					tx_queue)),
 	},
+	[ACTION_PROG] = {
+		.name = "prog",
+		.help = "match a programmable action",
+		.priv = PRIV_ACTION(PROG, sizeof(struct action_prog_data)),
+		.next = NEXT(action_prog),
+		.call = parse_vc_action_prog,
+	},
+	[ACTION_PROG_NAME] = {
+		.name = "name",
+		.help = "programble action name",
+		.next = NEXT(action_prog, NEXT_ENTRY(ACTION_PROG_NAME_STRING)),
+		.args = ARGS(ARGS_ENTRY(struct action_prog_data, data.name)),
+	},
+	[ACTION_PROG_NAME_STRING] = {
+		.name = "{string}",
+		.type = "STRING",
+		.help = "programmable action name string",
+		.call = parse_string0,
+	},
+	[ACTION_PROG_ARGUMENTS] = {
+		.name = "arguments",
+		.help = "programmable action name",
+		.next = NEXT(action_prog, NEXT_ENTRY(ACTION_PROG_ARG_NAME)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_PROG_ARG_NAME] = {
+		.name = "{string}",
+		.help = "programmable action argument name",
+		.next = NEXT(NEXT_ENTRY(ACTION_PROG_ARG_VALUE)),
+		.call = parse_vc_action_prog_arg_name,
+	},
+	[ACTION_PROG_ARG_VALUE] = {
+		.name = "{hex}",
+		.help = "programmable action argument value",
+		.next = NEXT(NEXT_ENTRY(ACTION_PROG_ARG_END, ACTION_PROG_ARG_NAME)),
+		.call = parse_vc_action_prog_arg_value,
+	},
+	[ACTION_PROG_ARG_END] = {
+		.name = "end",
+		.help = "end of the programmable action arguments",
+	},
+
 };
 
 /** Remove and return last entry from argument stack. */
@@ -11565,6 +11651,152 @@ parse_qu_mode_name(struct context *ctx, const struct token *token,
 				   query_update_mode_names,
 				   RTE_DIM(query_update_mode_names),
 				   (uint32_t *)&out->args.ia.qu_mode);
+}
+
+/** Parse prog action. */
+static int
+parse_vc_action_prog(struct context *ctx, const struct token *token,
+		     const char *str, unsigned int len,
+		     void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	struct rte_flow_action *action;
+	struct action_prog_data *action_prog_data;
+	uint16_t i;
+	int ret;
+
+	ret = parse_vc(ctx, token, str, len, buf, size);
+	if (ret < 0)
+		return ret;
+
+	if (!out)
+		return ret;
+
+	if (!out->args.vc.actions_n)
+		return -1;
+
+	action = &out->args.vc.actions[out->args.vc.actions_n - 1];
+	ctx->object = out->args.vc.data;
+	action_prog_data = ctx->object;
+	*action_prog_data = (struct action_prog_data) {
+		.conf = (struct rte_flow_action_prog) {
+			.args_num = 0,
+			.name = action_prog_data->data.name,
+			.args = action_prog_data->data.args,
+		},
+	};
+
+	for (i = 0; i < ACTION_PROG_ARG_NUM_MAX; ++i)
+		action_prog_data->data.args[i].name = action_prog_data->data.arg_data[i].names;
+	action->conf = &action_prog_data->conf;
+
+	return ret;
+}
+
+static int
+parse_vc_action_prog_arg_name(struct context *ctx, const struct token *token,
+			      const char *str, unsigned int len,
+			      void *buf, unsigned int size)
+{
+	struct action_prog_data *action_prog_data;
+	struct buffer *out = buf;
+	const struct arg *arg;
+	uint32_t i;
+	int ret;
+
+	(void)token;
+	(void)buf;
+	(void)size;
+	if (ctx->curr != ACTION_PROG_ARG_NAME)
+		return -1;
+
+	if (!out)
+		return len;
+
+	action_prog_data = (void *)out->args.vc.data;
+	i = action_prog_data->conf.args_num;
+
+	if (i >= ACTION_PROG_ARG_NUM_MAX)
+		return -1;
+
+	arg = ARGS_ENTRY_ARB(offsetof(struct action_prog_data,
+				      data.arg_data[i].names),
+			     ACTION_PROG_NAME_SIZE_MAX);
+
+	if (push_args(ctx, arg))
+		return -1;
+
+	ret = parse_string0(ctx, token, str, len, NULL, 0);
+	if (ret < 0) {
+		pop_args(ctx);
+		return -1;
+	}
+
+	return len;
+}
+
+static int
+parse_vc_action_prog_arg_value(struct context *ctx, const struct token *token,
+			       const char *str, unsigned int len,
+			       void *buf, unsigned int size)
+{
+	struct action_prog_data *action_prog_data;
+	const struct arg *arg_addr;
+	const struct arg *arg_size;
+	const struct arg *arg_data;
+	struct buffer *out = buf;
+	uint32_t i;
+	int ret;
+
+	(void)token;
+	(void)buf;
+	(void)size;
+	if (ctx->curr != ACTION_PROG_ARG_VALUE)
+		return -1;
+
+	if (!out)
+		return len;
+
+	action_prog_data = (void *)out->args.vc.data;
+	i = action_prog_data->conf.args_num;
+
+	arg_addr  = ARGS_ENTRY_ARB(offsetof(struct action_prog_data,
+					    data.args[i].value),
+				   sizeof(action_prog_data->data.args[i].value));
+
+	arg_size = ARGS_ENTRY_ARB(offsetof(struct action_prog_data,
+					   data.args[i].size),
+				   sizeof(action_prog_data->data.args[i].size));
+
+	arg_data = ARGS_ENTRY_ARB(offsetof(struct action_prog_data,
+					   data.arg_data[i].value),
+				  ACTION_PROG_ARG_VALUE_SIZE_MAX);
+
+	if (push_args(ctx, arg_addr))
+		return -1;
+
+	if (push_args(ctx, arg_size)) {
+		pop_args(ctx);
+		return -1;
+	}
+
+	if (push_args(ctx, arg_data)) {
+		pop_args(ctx);
+		pop_args(ctx);
+		return -1;
+	}
+
+	ret = parse_hex(ctx, token, str, len, NULL, 0);
+	if (ret < 0) {
+		pop_args(ctx);
+		pop_args(ctx);
+		pop_args(ctx);
+		return -1;
+	}
+
+	action_prog_data->conf.args_num++;
+
+	return len;
 }
 
 /** No completion. */
