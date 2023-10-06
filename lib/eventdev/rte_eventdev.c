@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include <rte_string_fns.h>
 #include <rte_log.h>
@@ -26,6 +27,8 @@
 #include "rte_eventdev.h"
 #include "eventdev_pmd.h"
 #include "eventdev_trace.h"
+
+static_assert(sizeof(struct rte_event) == 16, "Event structure size is not 16-bytes in size");
 
 static struct rte_eventdev rte_event_devices[RTE_EVENT_MAX_DEVS];
 
