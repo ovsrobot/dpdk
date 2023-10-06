@@ -183,6 +183,10 @@ ABI Changes
   fields, to move ``rxq`` and ``txq`` fields, to change the size of
   ``reserved1`` and ``reserved2`` fields.
 
+* The ``rte_event`` structure, used by eventdev library and DPDK "event" class drivers,
+  is now 16-byte aligned, as well as being 16-bytes in size.
+  In previous releases, the structure only required 8-byte alignment.
+
 
 Known Issues
 ------------

@@ -1272,6 +1272,8 @@ struct rte_event_vector {
 /**
  * The generic *rte_event* structure to hold the event attributes
  * for dequeue and enqueue operation
+ *
+ * This structure must be kept at 16-bytes in size, and has 16-byte alignment.
  */
 struct rte_event {
 	/** WORD0 */
@@ -1344,7 +1346,9 @@ struct rte_event {
 		struct rte_event_vector *vec;
 		/**< Event vector pointer. */
 	};
-};
+} __rte_aligned(16);
+
+_Static_assert(sizeof(struct rte_event) == 16, "Event structure size is not 16-bytes in size");
 
 /* Ethdev Rx adapter capability bitmap flags */
 #define RTE_EVENT_ETH_RX_ADAPTER_CAP_INTERNAL_PORT	0x1
