@@ -12,6 +12,7 @@
 #include <rte_kvargs.h>
 
 #include "rte_eth_bond.h"
+#include "rte_eth_bond_flow.h"
 #include "eth_bond_private.h"
 #include "eth_bond_8023ad_private.h"
 
