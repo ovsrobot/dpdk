@@ -63,9 +63,12 @@ bond_mode_alb_enable(struct rte_eth_dev *bond_dev);
  * forwarded to application without changes. If it is ARP reply, client table
  * is updated.
  *
- * @param eth_h			ETH header of received packet.
- * @param offset		Vlan header offset.
- * @param internals		Bonding data.
+ * @param eth_h
+ *   ETH header of received packet.
+ * @param offset
+ *   Vlan header offset.
+ * @param internals
+ *   Bonding data.
  */
 void
 bond_mode_alb_arp_recv(struct rte_ether_hdr *eth_h, uint16_t offset,
@@ -77,12 +80,15 @@ bond_mode_alb_arp_recv(struct rte_ether_hdr *eth_h, uint16_t offset,
  * If it is ARP Reply, it is send on member stored in client table for that
  * connection. On Reply function also updates data in client table.
  *
- * @param eth_h			ETH header of transmitted packet.
- * @param offset		Vlan header offset.
- * @param internals		Bonding data.
+ * @param eth_h
+ *   ETH header of transmitted packet.
+ * @param offset
+ *   Vlan header offset.
+ * @param internals
+ *   Bonding data.
  *
  * @return
- * Index of member on which packet should be sent.
+ *   Index of member on which packet should be sent.
  */
 uint16_t
 bond_mode_alb_arp_xmit(struct rte_ether_hdr *eth_h, uint16_t offset,
@@ -91,12 +97,15 @@ bond_mode_alb_arp_xmit(struct rte_ether_hdr *eth_h, uint16_t offset,
 /**
  * Function fills packet with ARP data from client_info.
  *
- * @param client_info	Data of client to which packet is sent.
- * @param pkt			Pointer to packet which is sent.
- * @param internals		Bonding data.
+ * @param client_info
+ *   Data of client to which packet is sent.
+ * @param pkt
+ *   Pointer to packet which is sent.
+ * @param internals
+ *   Bonding data.
  *
  * @return
- * Index of member on which packet should be sent.
+ *   Index of member on which packet should be sent.
  */
 uint16_t
 bond_mode_alb_arp_upd(struct client_data *client_info,
@@ -105,7 +114,8 @@ bond_mode_alb_arp_upd(struct client_data *client_info,
 /**
  * Function updates member indexes of active connections.
  *
- * @param bond_dev		Pointer to bonding device struct.
+ * @param bond_dev
+ *   Pointer to bonding device struct.
  */
 void
 bond_mode_alb_client_list_upd(struct rte_eth_dev *bond_dev);
