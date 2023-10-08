@@ -1171,3 +1171,31 @@ rte_eth_bond_notify_members(uint16_t bonding_port_id)
 
 	return 0;
 }
+
+int
+rte_eth_bond_hw_create_get(uint16_t bonding_port_id, uint16_t member_port_id)
+{
+	uint32_t i;
+	struct rte_eth_dev *bonding_dev;
+	struct rte_eth_dev *member_dev;
+	struct bond_dev_private *internals;
+
+	if (valid_bonding_port_id(bonding_port_id) != 0)
+		return -EINVAL;
+
+	bonding_dev = &rte_eth_devices[bonding_port_id];
+	internals = bonding_dev->data->dev_private;
+	for (i = 0; i < internals->member_count; i++) {
+		if (internals->members[i].port_id == member_port_id)
+			break;
+	}
+
+	if (i == internals->member_count)
+		return -EINVAL;
+
+	member_dev = &rte_eth_devices[member_port_id];
+	if (*member_dev->dev_ops->bond_hw_create_get == NULL)
+		return -ENOTSUP;
+
+	return member_dev->dev_ops->bond_hw_create_get(member_dev, bonding_dev);
+}
