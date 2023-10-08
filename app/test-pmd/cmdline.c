@@ -516,6 +516,12 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set allmulti (port_id|all) (on|off)\n"
 			"    Set the allmulti mode on port_id, or all.\n\n"
 
+			"mcast_addr add (port_id) (mcast_addr)\n"
+			"    Add a multicast MAC addresses on port_id.\n\n"
+
+			"mcast_addr remove (port_id) (mcast_addr)"
+			"    Remove a multicast MAC address from port_id.\n\n"
+
 			"set flow_ctrl rx (on|off) tx (on|off) (high_water)"
 			" (low_water) (pause_time) (send_xon) mac_ctrl_frame_fwd"
 			" (on|off) autoneg (on|off) (port_id)\n"
