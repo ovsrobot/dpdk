@@ -692,6 +692,124 @@ static cmdline_parse_inst_t cmd_set_bonding_agg_mode_policy = {
 	}
 };
 
+struct cmd_set_bonding_notify_member_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t bonding;
+	cmdline_fixed_string_t notify_member;
+	uint16_t port_num;
+	cmdline_fixed_string_t mode;
+};
+
+static void
+cmd_set_bonding_notify_member_parsed(void *parsed_result,
+	__rte_unused struct cmdline *cl, __rte_unused void *data)
+{
+	struct cmd_set_bonding_notify_member_result *res = parsed_result;
+	bool notify_member = false;
+
+	if (strcmp(res->notify_member, "enable") == 0)
+		notify_member = true;
+	else if (strcmp(res->notify_member, "disable") == 0)
+		notify_member = false;
+
+	rte_eth_bond_notify_member_flag_set(res->port_num, notify_member);
+}
+
+static cmdline_parse_token_string_t cmd_set_bonding_notify_member_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_notify_member_result,
+		set, "set");
+static cmdline_parse_token_string_t cmd_set_bonding_notify_member_bonding =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_notify_member_result,
+		bonding, "bonding");
+static cmdline_parse_token_string_t cmd_set_bonding_notify_member =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_notify_member_result,
+		notify_member, "notify_member");
+static cmdline_parse_token_num_t cmd_set_bonding_notify_member_portnum =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_bonding_notify_member_result,
+		port_num, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_set_bonding_notify_member_mode_string =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_notify_member_result,
+		mode, "enable#disable");
+
+static cmdline_parse_inst_t cmd_set_bonding_notify_member_ports = {
+	.f = cmd_set_bonding_notify_member_parsed,
+	.data = NULL,
+	.help_str = "set bonding notify_member (port_id) (enable|disable)",
+	.tokens = {
+		(void *)&cmd_set_bonding_notify_member_set,
+		(void *)&cmd_set_bonding_notify_member_bonding,
+		(void *)&cmd_set_bonding_notify_member,
+		(void *)&cmd_set_bonding_notify_member_portnum,
+		(void *)&cmd_set_bonding_notify_member_mode_string,
+		NULL
+	}
+};
+
+struct cmd_get_bonding_member_hw_create_result {
+	cmdline_fixed_string_t get;
+	cmdline_fixed_string_t bonding;
+	cmdline_fixed_string_t member;
+	cmdline_fixed_string_t hardware;
+	cmdline_fixed_string_t create;
+	uint16_t member_port_id;
+	uint16_t bonding_port_id;
+};
+
+static void
+cmd_get_bonding_member_hw_create_parsed(void *parsed_result,
+	__rte_unused struct cmdline *cl, __rte_unused void *data)
+{
+	struct cmd_get_bonding_member_hw_create_result *res = parsed_result;
+	int ret;
+
+	ret = rte_eth_bond_hw_create_get(res->bonding_port_id, res->member_port_id);
+	if (ret == 0)
+		printf("Member port %u hardware creates bonding port %u successfully\n",
+			res->member_port_id, res->bonding_port_id);
+	else
+		printf("Failed to get status of member port %u hardware creating"
+			" bonding port %u, %d\n",
+			res->member_port_id, res->bonding_port_id, ret);
+}
+
+static cmdline_parse_token_string_t cmd_get_bonding_member_hw_create_get =
+	TOKEN_STRING_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		get, "get");
+static cmdline_parse_token_string_t cmd_get_bonding_member_hw_create_bonding =
+	TOKEN_STRING_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		bonding, "bonding");
+static cmdline_parse_token_string_t cmd_get_bonding_member_hw_create_member =
+	TOKEN_STRING_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		member, "member");
+static cmdline_parse_token_string_t cmd_get_bonding_member_hw_create_hardware =
+	TOKEN_STRING_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		create, "hardware");
+static cmdline_parse_token_string_t cmd_get_bonding_member_hw_create_create =
+	TOKEN_STRING_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		create, "create");
+static cmdline_parse_token_num_t cmd_get_bonding_member_hw_create_memberportid =
+	TOKEN_NUM_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		member_port_id, RTE_UINT16);
+static cmdline_parse_token_num_t cmd_get_bonding_member_hw_create_bondingportid =
+	TOKEN_NUM_INITIALIZER(struct cmd_get_bonding_member_hw_create_result,
+		bonding_port_id, RTE_UINT16);
+
+static cmdline_parse_inst_t cmd_get_member_hw_create_bonding = {
+	.f = cmd_get_bonding_member_hw_create_parsed,
+	.data = NULL,
+	.help_str = "get bonding member hardware create (member_port_id) (bonding_port_id)",
+	.tokens = {
+		(void *)&cmd_get_bonding_member_hw_create_get,
+		(void *)&cmd_get_bonding_member_hw_create_bonding,
+		(void *)&cmd_get_bonding_member_hw_create_member,
+		(void *)&cmd_get_bonding_member_hw_create_hardware,
+		(void *)&cmd_get_bonding_member_hw_create_create,
+		(void *)&cmd_get_bonding_member_hw_create_memberportid,
+		(void *)&cmd_get_bonding_member_hw_create_bondingportid,
+		NULL
+	}
+};
+
 static struct testpmd_driver_commands bonding_cmds = {
 	.commands = {
 	{
@@ -748,6 +866,16 @@ static struct testpmd_driver_commands bonding_cmds = {
 		&cmd_set_bonding_agg_mode_policy,
 		"set bonding mode IEEE802.3AD aggregator policy (port_id) (agg_name)\n"
 		"	Set Aggregation mode for IEEE802.3AD (mode 4)\n",
+	},
+	{
+		&cmd_set_bonding_notify_member_ports,
+		"set bonding notify_member (port_id) (enable|disable)\n"
+		"	Enable/disable the notify member flag of bonding port\n",
+	},
+	{
+		&cmd_get_member_hw_create_bonding,
+		"get bonding member hardware create (member_port_id) (bonding_port_id)\n"
+		"	Get the status of member port hardware creating the bonding port\n",
 	},
 	{ NULL, NULL },
 	},
