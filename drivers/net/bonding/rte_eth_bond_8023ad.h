@@ -155,8 +155,10 @@ struct rte_eth_bond_8023ad_member_info {
  *
  * Function returns current configuration of 802.3AX mode.
  *
- * @param port_id   Bonding device id
- * @param conf		Pointer to timeout structure.
+ * @param port_id
+ *   Bonding device id
+ * @param conf
+ *   Pointer to timeout structure.
  *
  * @return
  *   0 - if ok
@@ -171,8 +173,10 @@ rte_eth_bond_8023ad_conf_get(uint16_t port_id,
  *
  * Function set new configuration of 802.3AX mode.
  *
- * @param port_id   Bonding device id
- * @param conf		Configuration, if NULL set default configuration.
+ * @param port_id
+ *   Bonding device id
+ * @param conf
+ *   Configuration, if NULL set default configuration.
  * @return
  *   0 - if ok
  *   -EINVAL if configuration is invalid.
@@ -186,8 +190,10 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
  *
  * Function returns current state of given member device.
  *
- * @param member_id  Port id of valid member.
- * @param conf		buffer for configuration
+ * @param member_id
+ *   Port id of valid member.
+ * @param conf
+ *   buffer for configuration
  * @return
  *   0 - if ok
  *   -EINVAL if conf is NULL or member id is invalid (not a member of given
@@ -201,9 +207,12 @@ rte_eth_bond_8023ad_member_info(uint16_t port_id, uint16_t member_id,
 /**
  * Configure a member port to start collecting.
  *
- * @param port_id	Bonding device id
- * @param member_id	Port id of valid member.
- * @param enabled	Non-zero when collection enabled.
+ * @param port_id
+ *   Bonding device id
+ * @param member_id
+ *   Port id of valid member.
+ * @param enabled
+ *   Non-zero when collection enabled.
  * @return
  *   0 - if ok
  *   -EINVAL if member is not valid.
@@ -215,8 +224,10 @@ rte_eth_bond_8023ad_ext_collect(uint16_t port_id, uint16_t member_id,
 /**
  * Get COLLECTING flag from member port actor state.
  *
- * @param port_id	Bonding device id
- * @param member_id	Port id of valid member.
+ * @param port_id
+ *   Bonding device id
+ * @param member_id
+ *   Port id of valid member.
  * @return
  *   0 - if not set
  *   1 - if set
@@ -228,9 +239,12 @@ rte_eth_bond_8023ad_ext_collect_get(uint16_t port_id, uint16_t member_id);
 /**
  * Configure a member port to start distributing.
  *
- * @param port_id	Bonding device id
- * @param member_id	Port id of valid member.
- * @param enabled	Non-zero when distribution enabled.
+ * @param port_id
+ *   Bonding device id
+ * @param member_id
+ *   Port id of valid member.
+ * @param enabled
+ *   Non-zero when distribution enabled.
  * @return
  *   0 - if ok
  *   -EINVAL if member is not valid.
@@ -242,8 +256,10 @@ rte_eth_bond_8023ad_ext_distrib(uint16_t port_id, uint16_t member_id,
 /**
  * Get DISTRIBUTING flag from member port actor state.
  *
- * @param port_id	Bonding device id
- * @param member_id	Port id of valid member.
+ * @param port_id
+ *   Bonding device id
+ * @param member_id
+ *   Port id of valid member.
  * @return
  *   0 - if not set
  *   1 - if set
@@ -256,9 +272,12 @@ rte_eth_bond_8023ad_ext_distrib_get(uint16_t port_id, uint16_t member_id);
  * LACPDU transmit path for external 802.3ad state machine.  Caller retains
  * ownership of the packet on failure.
  *
- * @param port_id	Bonding device id
- * @param member_id	Port ID of valid member device.
- * @param lacp_pkt	mbuf containing LACPDU.
+ * @param port_id
+ *   Bonding device id
+ * @param member_id
+ *   Port ID of valid member device.
+ * @param lacp_pkt
+ *   mbuf containing LACPDU.
  *
  * @return
  *   0 on success, negative value otherwise.
@@ -284,7 +303,8 @@ rte_eth_bond_8023ad_ext_slowtx(uint16_t port_id, uint16_t member_id,
  *
  * Bonding port must be stopped to change this configuration.
  *
- * @param port_id      Bonding device id
+ * @param port_id
+ *   Bonding device id
  *
  * @return
  *   0 on success, negative value otherwise.
@@ -299,9 +319,11 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port_id);
  *
  * Bonding port must be stopped to change this configuration.
  *
- * @see rte_eth_bond_8023ad_slow_pkt_hw_filter_enable
+ * @see
+ *   rte_eth_bond_8023ad_slow_pkt_hw_filter_enable
  *
- * @param port_id      Bonding device id
+ * @param port_id
+ *   Bonding device id
  * @return
  *   0 on success, negative value otherwise.
  *
@@ -309,9 +331,11 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port_id);
 int
 rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port_id);
 
-/*
+/**
  * Get aggregator mode for 8023ad
- * @param port_id Bonding device id
+ *
+ * @param port_id
+ *   Bonding device id
  *
  * @return
  *   aggregator mode on success, negative value otherwise
@@ -321,7 +345,9 @@ rte_eth_bond_8023ad_agg_selection_get(uint16_t port_id);
 
 /**
  * Set aggregator mode for 8023ad
- * @param port_id Bonding device id
+ * @param port_id
+ *   Bonding device id
+ *
  * @return
  *   0 on success, negative value otherwise
  */

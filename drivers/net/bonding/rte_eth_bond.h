@@ -95,12 +95,15 @@ extern "C" {
 /**
  * Create a bonding rte_eth_dev device
  *
- * @param name			Name of new link bonding device.
- * @param mode			Mode to initialize bonding device in.
- * @param socket_id		Socket Id on which to allocate eth_dev resources.
+ * @param name
+ *   Name of new link bonding device.
+ * @param mode
+ *   Mode to initialize bonding device in.
+ * @param socket_id
+ *   Socket Id on which to allocate eth_dev resources.
  *
  * @return
- *	Port Id of created rte_eth_dev on success, negative value otherwise
+ *   Port Id of created rte_eth_dev on success, negative value otherwise
  */
 int
 rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id);
@@ -108,10 +111,11 @@ rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id);
 /**
  * Free a bonding rte_eth_dev device
  *
- * @param name			Name of the link bonding device.
+ * @param name
+ *   Name of the link bonding device.
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 int
 rte_eth_bond_free(const char *name);
@@ -119,11 +123,13 @@ rte_eth_bond_free(const char *name);
 /**
  * Add a rte_eth_dev device as a member to the bonding device
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param member_port_id		Port ID of member device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param member_port_id
+ *   Port ID of member device.
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 __rte_experimental
 int
@@ -132,11 +138,13 @@ rte_eth_bond_member_add(uint16_t bonding_port_id, uint16_t member_port_id);
 /**
  * Remove a member rte_eth_dev device from the bonding device
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param member_port_id		Port ID of member device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param member_port_id
+ *   Port ID of member device.
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 __rte_experimental
 int
@@ -145,11 +153,13 @@ rte_eth_bond_member_remove(uint16_t bonding_port_id, uint16_t member_port_id);
 /**
  * Set link bonding mode of bonding device
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param mode				Bonding mode to set
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param mode
+ *   Bonding mode to set
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 int
 rte_eth_bond_mode_set(uint16_t bonding_port_id, uint8_t mode);
@@ -157,10 +167,11 @@ rte_eth_bond_mode_set(uint16_t bonding_port_id, uint8_t mode);
 /**
  * Get link bonding mode of bonding device
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *	link bonding mode on success, negative value otherwise
+ *   link bonding mode on success, negative value otherwise
  */
 int
 rte_eth_bond_mode_get(uint16_t bonding_port_id);
@@ -168,11 +179,13 @@ rte_eth_bond_mode_get(uint16_t bonding_port_id);
 /**
  * Set member rte_eth_dev as primary member of bonding device
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param member_port_id		Port ID of member device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param member_port_id
+ *   Port ID of member device.
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 int
 rte_eth_bond_primary_set(uint16_t bonding_port_id, uint16_t member_port_id);
@@ -180,10 +193,11 @@ rte_eth_bond_primary_set(uint16_t bonding_port_id, uint16_t member_port_id);
 /**
  * Get primary member of bonding device
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *	Port Id of primary member on success, -1 on failure
+ *   Port Id of primary member on success, -1 on failure
  */
 int
 rte_eth_bond_primary_get(uint16_t bonding_port_id);
@@ -191,13 +205,16 @@ rte_eth_bond_primary_get(uint16_t bonding_port_id);
 /**
  * Populate an array with list of the members port id's of the bonding device
  *
- * @param bonding_port_id	Port ID of bonding eth_dev to interrogate
- * @param members			Array to be populated with the current active members
- * @param len				Length of members array
+ * @param bonding_port_id
+ *   Port ID of bonding eth_dev to interrogate
+ * @param members
+ *   Array to be populated with the current active members
+ * @param len
+ *   Length of members array
  *
  * @return
- *	Number of members associated with bonding device on success,
- *	negative value otherwise
+ *   Number of members associated with bonding device on success,
+ *   negative value otherwise
  */
 __rte_experimental
 int
@@ -208,13 +225,16 @@ rte_eth_bond_members_get(uint16_t bonding_port_id, uint16_t members[],
  * Populate an array with list of the active members port id's of the bonding
  * device.
  *
- * @param bonding_port_id	Port ID of bonding eth_dev to interrogate
- * @param members			Array to be populated with the current active members
- * @param len				Length of members array
+ * @param bonding_port_id
+ *   Port ID of bonding eth_dev to interrogate
+ * @param members
+ *   Array to be populated with the current active members
+ * @param len
+ *   Length of members array
  *
  * @return
- *	Number of active members associated with bonding device on success,
- *	negative value otherwise
+ *   Number of active members associated with bonding device on success,
+ *   negative value otherwise
  */
 __rte_experimental
 int
@@ -224,12 +244,13 @@ rte_eth_bond_active_members_get(uint16_t bonding_port_id, uint16_t members[],
 /**
  * Set explicit MAC address to use on bonding device and it's members.
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param mac_addr			MAC Address to use on bonding device overriding
- *							members MAC addresses
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param mac_addr
+ *   MAC Address to use on bonding device overriding members MAC addresses
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 int
 rte_eth_bond_mac_address_set(uint16_t bonding_port_id,
@@ -239,10 +260,11 @@ rte_eth_bond_mac_address_set(uint16_t bonding_port_id,
  * Reset bonding device to use MAC from primary member on bonding device and it's
  * members.
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *	0 on success, negative value otherwise
+ *   0 on success, negative value otherwise
  */
 int
 rte_eth_bond_mac_address_reset(uint16_t bonding_port_id);
@@ -252,11 +274,13 @@ rte_eth_bond_mac_address_reset(uint16_t bonding_port_id);
  * balance mode, this parameter is otherwise ignored in other modes of
  * operation.
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param policy			Balance mode transmission policy.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param policy
+ *   Balance mode transmission policy.
  *
  * @return
- *	0 on success, negative value otherwise.
+ *   0 on success, negative value otherwise.
  */
 int
 rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy);
@@ -264,10 +288,11 @@ rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy);
 /**
  * Get the transmit policy set on bonding device for balance mode operation
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *	Balance transmit policy on success, negative value otherwise.
+ *   Balance transmit policy on success, negative value otherwise.
  */
 int
 rte_eth_bond_xmit_policy_get(uint16_t bonding_port_id);
@@ -276,11 +301,13 @@ rte_eth_bond_xmit_policy_get(uint16_t bonding_port_id);
  * Set the link monitoring frequency (in ms) for monitoring the link status of
  * member devices
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param internal_ms		Monitoring interval in milliseconds
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param internal_ms
+ *   Monitoring interval in milliseconds
  *
  * @return
- *	0 on success, negative value otherwise.
+ *   0 on success, negative value otherwise.
  */
 
 int
@@ -290,10 +317,11 @@ rte_eth_bond_link_monitoring_set(uint16_t bonding_port_id, uint32_t internal_ms)
  * Get the current link monitoring frequency (in ms) for monitoring of the link
  * status of member devices
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *	Monitoring interval on success, negative value otherwise.
+ *   Monitoring interval on success, negative value otherwise.
  */
 int
 rte_eth_bond_link_monitoring_get(uint16_t bonding_port_id);
@@ -303,11 +331,13 @@ rte_eth_bond_link_monitoring_get(uint16_t bonding_port_id);
  * Set the period in milliseconds for delaying the disabling of a bonding link
  * when the link down status has been detected
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param delay_ms			Delay period in milliseconds.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param delay_ms
+ *   Delay period in milliseconds.
  *
  * @return
- *  0 on success, negative value otherwise.
+ *   0 on success, negative value otherwise.
  */
 int
 rte_eth_bond_link_down_prop_delay_set(uint16_t bonding_port_id,
@@ -317,10 +347,11 @@ rte_eth_bond_link_down_prop_delay_set(uint16_t bonding_port_id,
  * Get the period in milliseconds set for delaying the disabling of a bonding
  * link when the link down status has been detected
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *  Delay period on success, negative value otherwise.
+ *   Delay period on success, negative value otherwise.
  */
 int
 rte_eth_bond_link_down_prop_delay_get(uint16_t bonding_port_id);
@@ -329,11 +360,13 @@ rte_eth_bond_link_down_prop_delay_get(uint16_t bonding_port_id);
  * Set the period in milliseconds for delaying the enabling of a bonding link
  * when the link up status has been detected
  *
- * @param bonding_port_id	Port ID of bonding device.
- * @param delay_ms			Delay period in milliseconds.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param delay_ms
+ *   Delay period in milliseconds.
  *
  * @return
- *  0 on success, negative value otherwise.
+ *   0 on success, negative value otherwise.
  */
 int
 rte_eth_bond_link_up_prop_delay_set(uint16_t bonding_port_id,
@@ -343,10 +376,11 @@ rte_eth_bond_link_up_prop_delay_set(uint16_t bonding_port_id,
  * Get the period in milliseconds set for delaying the enabling of a bonding
  * link when the link up status has been detected
  *
- * @param bonding_port_id	Port ID of bonding device.
+ * @param bonding_port_id
+ *   Port ID of bonding device.
  *
  * @return
- *  Delay period on success, negative value otherwise.
+ *   Delay period on success, negative value otherwise.
  */
 int
 rte_eth_bond_link_up_prop_delay_get(uint16_t bonding_port_id);
