@@ -180,6 +180,7 @@ struct bond_dev_private {
 	uint8_t member_update_idx;
 
 	bool kvargs_processing_is_done;
+	bool notify_member; /**< Enable member notification of bonding port. */
 
 	uint32_t candidate_max_rx_pktlen;
 	uint32_t max_rx_pktlen;

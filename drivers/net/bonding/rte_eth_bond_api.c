@@ -627,6 +627,17 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 
 	member_vlan_filter_set(bonding_port_id, member_port_id);
 
+	if (internals->notify_member &&
+			*member_eth_dev->dev_ops->bond_notify_member != NULL) {
+		ret = member_eth_dev->dev_ops->bond_notify_member(member_eth_dev,
+				bonding_eth_dev);
+		if (ret < 0) {
+			RTE_BOND_LOG(ERR, "Add member (port %u) notify failed!",
+					member_port_id);
+			return -1;
+		}
+	}
+
 	return 0;
 
 }
@@ -733,6 +744,10 @@ __eth_bond_member_remove_lock_free(uint16_t bonding_port_id,
 	member_eth_dev = &rte_eth_devices[member_port_id];
 	member_remove(internals, member_eth_dev);
 	member_eth_dev->data->dev_flags &= (~RTE_ETH_DEV_BONDING_MEMBER);
+	if (internals->notify_member &&
+			*member_eth_dev->dev_ops->bond_notify_member != NULL)
+		member_eth_dev->dev_ops->bond_notify_member(member_eth_dev,
+				bonding_eth_dev);
 
 	/*  first member in the active list will be the primary by default,
 	 *  otherwise use first device in list */
@@ -1097,4 +1112,62 @@ rte_eth_bond_link_up_prop_delay_get(uint16_t bonding_port_id)
 	internals = rte_eth_devices[bonding_port_id].data->dev_private;
 
 	return internals->link_up_delay_ms;
+}
+
+int
+rte_eth_bond_notify_member_flag_set(uint16_t bonding_port_id, bool notify_member)
+{
+	struct bond_dev_private *internals;
+
+	if (valid_bonding_port_id(bonding_port_id) != 0)
+		return -EINVAL;
+
+	internals = rte_eth_devices[bonding_port_id].data->dev_private;
+
+	internals->notify_member = notify_member;
+
+	return 0;
+}
+
+int
+rte_eth_bond_notify_member_flag_get(uint16_t bonding_port_id, bool *notify_member)
+{
+	struct bond_dev_private *internals;
+
+	if (valid_bonding_port_id(bonding_port_id) != 0)
+		return -EINVAL;
+
+	internals = rte_eth_devices[bonding_port_id].data->dev_private;
+
+	*notify_member = internals->notify_member;
+
+	return 0;
+}
+
+int
+rte_eth_bond_notify_members(uint16_t bonding_port_id)
+{
+	uint32_t i;
+	uint16_t member_port_id;
+	struct rte_eth_dev *bond_dev;
+	struct bond_dev_private *internals;
+	struct rte_eth_dev *member_dev[RTE_MAX_ETHPORTS];
+
+	if (valid_bonding_port_id(bonding_port_id) != 0)
+		return -EINVAL;
+
+	bond_dev = &rte_eth_devices[bonding_port_id];
+	internals = bond_dev->data->dev_private;
+
+	for (i = 0; i < internals->member_count; i++) {
+		member_port_id = internals->members[i].port_id;
+		member_dev[i] = &rte_eth_devices[member_port_id];
+		if (*member_dev[i]->dev_ops->bond_notify_member == NULL)
+			return -ENOTSUP;
+	}
+
+	for (i = 0; i < internals->member_count; i++)
+		member_dev[i]->dev_ops->bond_notify_member(member_dev[i], bond_dev);
+
+	return 0;
 }
