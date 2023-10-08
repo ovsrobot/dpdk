@@ -20,6 +20,8 @@ const char *pmd_bond_init_valid_arguments[] = {
 	PMD_BOND_MAC_ADDR_KVARG,
 	PMD_BOND_AGG_MODE_KVARG,
 	RTE_DEVARGS_KEY_DRIVER,
+	PMD_BOND_NOTIFY_MEMBER_KVARG,
+	PMD_BOND_DEDICATED_QUEUE_KVARG,
 	NULL
 };
 
@@ -294,6 +296,48 @@ bond_ethdev_parse_time_ms_kvarg(const char *key __rte_unused,
 		return -1;
 
 	*(uint32_t *)extra_args = time_ms;
+
+	return 0;
+}
+
+int
+bond_ethdev_parse_notify_member_kvarg(const char *key __rte_unused,
+		const char *value, void *extra_args)
+{
+	bool *notify_member;
+
+	if (value == NULL || extra_args == NULL)
+		return -1;
+
+	notify_member = extra_args;
+
+	if (strcmp("enable", value) == 0)
+		*notify_member = true;
+	else if (strcmp("disable", value) == 0)
+		*notify_member = false;
+	else
+		return -1;
+
+	return 0;
+}
+
+int
+bond_ethdev_parse_dedicated_queue_kvarg(const char *key __rte_unused,
+		const char *value, void *extra_args)
+{
+	bool *dedicated_queue;
+
+	if (value == NULL || extra_args == NULL)
+		return -1;
+
+	dedicated_queue = extra_args;
+
+	if (strcmp("enable", value) == 0)
+		*dedicated_queue = true;
+	else if (strcmp("disable", value) == 0)
+		*dedicated_queue = false;
+	else
+		return -1;
 
 	return 0;
 }
