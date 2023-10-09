@@ -645,6 +645,25 @@ Limitations
   - When using HWS flow engine (``dv_flow_en`` = 2),
     only meter mark action is supported.
 
+- Ptype:
+
+  - Only supports HW steering (``dv_flow_en=2``).
+  - The ``RTE_PTYPE_L2_ETHER_TIMESYNC``, ``RTE_PTYPE_L2_ETHER_ARP``, ``RTE_PTYPE_L2_ETHER_LLDP``,
+    ``RTE_PTYPE_L2_ETHER_NSH``, ``RTE_PTYPE_L2_ETHER_PPPOE``, ``RTE_PTYPE_L2_ETHER_FCOE``,
+    ``RTE_PTYPE_L2_ETHER_MPLS``, ``RTE_PTYPE_L3_IPV4_EXT``, ``RTE_PTYPE_L3_IPV4_EXT_UNKNOWN``,
+    ``RTE_PTYPE_L3_IPV6_EXT``, ``RTE_PTYPE_L3_IPV6_EXT_UNKNOWN``, ``RTE_PTYPE_L4_SCTP``,
+    ``RTE_PTYPE_L4_NONFRAG``, ``RTE_PTYPE_L4_IGMP``, ``RTE_PTYPE_INNER_L3_IPV4_EXT``,
+    ``RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN``, ``RTE_PTYPE_INNER_L3_IPV6_EXT``,
+    ``RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN``, ``RTE_PTYPE_INNER_L4_SCTP`` and
+    ``RTE_PTYPE_INNER_L4_NONFRAG`` values are not supported.
+    Using them as a value will cause unexpected behavior.
+  - The ``RTE_PTYPE_TUNNEL_XXXXX`` values are not supported. Using them as a value should fail.
+  - Matching on both outer and inner IP fragmented is supported using ``RTE_PTYPE_L4_FRAG`` and
+    ``RTE_PTYPE_INNER_L4_FRAG`` values. They are not part of L4 types, so they should be provided
+    explicitly as mask value during pattern template creation. Providing ``RTE_PTYPE_L4_MASK``
+    during pattern template creation and ``RTE_PTYPE_L4_FRAG`` during flow rule creation,
+    will cause unexpected behavior.
+
 - Integrity:
 
   - Integrity offload is enabled starting from **ConnectX-6 Dx**.
