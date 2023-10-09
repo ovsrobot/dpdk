@@ -80,6 +80,11 @@ New Features
   device is different from the Tx Ethernet device with respective driver
   callback functions in ``rte_eth_recycle_mbufs``.
 
+* **Added dispatcher library.**
+
+  Added dispatcher library which purpose is to help decouple different
+  parts (modules) of an eventdev-based application.
+
 * **Updated Solarflare net driver.**
 
   * Added support for transfer flow action ``INDIRECT`` with subtype ``VXLAN_ENCAP``.
