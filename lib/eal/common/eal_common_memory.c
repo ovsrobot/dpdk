@@ -263,6 +263,12 @@ eal_memseg_list_alloc(struct rte_memseg_list *msl, int reserve_flags)
 	RTE_LOG(DEBUG, EAL, "VA reserved for memseg list at %p, size %zx\n",
 			addr, mem_sz);
 
+#ifdef RTE_MALLOC_ASAN
+	if (eal_memseg_list_map_asan_shadow(msl) != 0) {
+		RTE_LOG(ERR, EAL, "Failed to map ASan shadow region for memseg list");
+		return -1;
+	}
+#endif
 	return 0;
 }
 
@@ -1050,6 +1056,9 @@ rte_eal_memory_detach(void)
 				RTE_LOG(ERR, EAL, "Could not unmap memory: %s\n",
 						rte_strerror(rte_errno));
 
+#ifdef RTE_MALLOC_ASAN
+		eal_memseg_list_unmap_asan_shadow(msl);
+#endif
 		/*
 		 * we are detaching the fbarray rather than destroying because
 		 * other processes might still reference this fbarray, and we
