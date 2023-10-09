@@ -233,6 +233,9 @@ enum mlx5_feature_name {
 /* IB BTH ITEM. */
 #define MLX5_FLOW_ITEM_IB_BTH (1ull << 51)
 
+/* PTYPE ITEM */
+#define MLX5_FLOW_ITEM_PTYPE (1ull << 52)
+
 /* Outer Masks. */
 #define MLX5_FLOW_LAYER_OUTER_L3 \
 	(MLX5_FLOW_LAYER_OUTER_L3_IPV4 | MLX5_FLOW_LAYER_OUTER_L3_IPV6)
