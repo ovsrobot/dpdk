@@ -43,7 +43,9 @@ implementer_generic = {
         },
         'generic_aarch32': {
             'march': 'armv8-a',
-            'compiler_options': ['-mfpu=neon'],
+            'force_march': true,
+            'march_features': ['simd'],
+            'compiler_options': ['-mfpu=auto'],
             'flags': [
                 ['RTE_ARCH_ARM_NEON_MEMCPY', false],
                 ['RTE_ARCH_STRICT_ALIGN', true],
@@ -711,7 +713,11 @@ if update_flags
             endif
         endforeach
         if candidate_march == ''
-            error('No suitable armv8 march version found.')
+            if part_number_config.get('force_march', false)
+                candidate_march = part_number_config['march']
+            else
+                error('No suitable armv8 march version found.')
+            endif
         endif
         if candidate_march != part_number_config['march']
             warning('Configuration march version is ' +
@@ -741,7 +747,7 @@ if update_flags
     # apply supported compiler options
     if part_number_config.has_key('compiler_options')
         foreach flag: part_number_config['compiler_options']
-            if cc.has_argument(flag)
+            if cc.has_multi_arguments(machine_args + [flag])
                 machine_args += flag
             else
                 warning('Configuration compiler option ' +
