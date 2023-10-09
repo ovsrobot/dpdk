@@ -188,11 +188,24 @@ RSS_KEY_I40E = bytes(
         0x81, 0x15, 0x03, 0x66,
     )
 )
+# rss_key_default, see drivers/net/cnxk/cnxk_flow.c
+# Marvell's cnxk NICs take 48 bytes keys
+RSS_KEY_CNXK = bytes(
+    (
+        0xfe, 0xed, 0x0b, 0xad, 0xfe, 0xed, 0x0b, 0xad,
+        0xfe, 0xed, 0x0b, 0xad, 0xfe, 0xed, 0x0b, 0xad,
+        0xfe, 0xed, 0x0b, 0xad, 0xfe, 0xed, 0x0b, 0xad,
+        0xfe, 0xed, 0x0b, 0xad, 0xfe, 0xed, 0x0b, 0xad,
+        0xfe, 0xed, 0x0b, 0xad, 0xfe, 0xed, 0x0b, 0xad,
+        0xfe, 0xed, 0x0b, 0xad, 0xfe, 0xed, 0x0b, 0xad,
+    )
+)
 # fmt: on
 DEFAULT_DRIVER_KEYS = {
     "intel": RSS_KEY_INTEL,
     "mlx": RSS_KEY_MLX,
     "i40e": RSS_KEY_I40E,
+    "cnxk": RSS_KEY_CNXK,
 }
 
 
@@ -202,7 +215,7 @@ def rss_key(value):
     try:
         key = binascii.unhexlify(value)
         if len(key) not in (40, 52):
-            raise argparse.ArgumentTypeError("The key must be 40 or 52 bytes long")
+            raise argparse.ArgumentTypeError("The key must be 40 to 52 bytes long")
         return key
     except (TypeError, ValueError) as e:
         raise argparse.ArgumentTypeError(str(e)) from e
@@ -299,7 +312,7 @@ def parse_args():
         default=RSS_KEY_INTEL,
         type=rss_key,
         help="""
-        The random 40-bytes key used to compute the RSS hash. This option
+        The random 40 to 52 bytes key used to compute the RSS hash. This option
         supports either a well-known name or the hex value of the key
         (well-known names: "intel", "mlx", default: "intel").
         """,
