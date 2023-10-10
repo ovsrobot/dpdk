@@ -910,6 +910,62 @@ is_iommu_enabled(void)
 	return n > 2;
 }
 
+/*
+ * IBM POWER systems support more than one type of memory management unit (MMU).
+ * The Power ISA 3.0 specification, which applies to P9 and later CPUs, defined
+ * a new Radix MMU which, among other things, allows an anonymous memory page
+ * mapping to be converted into a hugepage mapping at a specific address. This
+ * is a required feature in DPDK so we need to test the MMU type when POWER
+ * systems are used.
+ */
+static bool
+is_mmu_supported(void)
+{
+#ifdef RTE_ARCH_PPC_64
+	static const char proc_cpuinfo[] = "/proc/cpuinfo";
+	static const char str_mmu[] = "MMU";
+	static const char str_radix[] = "Radix";
+	char buf[512];
+	char *ret = NULL;
+	FILE *f = fopen(proc_cpuinfo, "r");
+
+	if (f == NULL) {
+		RTE_LOG(ERR, EAL, "Cannot open %s\n", proc_cpuinfo);
+		return false;
+	}
+
+	/*
+	 * Example "MMU" in /proc/cpuinfo:
+	 * ...
+	 * model	: 8335-GTW
+	 * machine	: PowerNV 8335-GTW
+	 * firmware	: OPAL
+	 * MMU		: Radix
+	 * ... or ...
+	 * model        : IBM,9009-22A
+	 * machine      : CHRP IBM,9009-22A
+	 * MMU          : Hash
+	 */
+	while (fgets(buf, sizeof(buf), f) != NULL) {
+		ret = strstr(buf, str_mmu);
+		if (ret == NULL)
+			continue;
+		ret += sizeof(str_mmu) - 1;
+		ret = strchr(ret, ':');
+		if (ret == NULL)
+			continue;
+		ret = strstr(ret, str_radix);
+		break;
+	}
+	fclose(f);
+	if (ret == NULL)
+		rte_eal_init_alert("DPDK on PPC64 requires radix-mmu.");
+	return (ret != NULL);
+#else
+	return true;
+#endif
+}
+
 static __rte_noreturn void *
 eal_worker_thread_loop(void *arg)
 {
@@ -979,6 +1035,13 @@ rte_eal_init(int argc, char **argv)
 	/* checks if the machine is adequate */
 	if (!rte_cpu_is_supported()) {
 		rte_eal_init_alert("unsupported cpu type.");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
+	/* verify if mmu is supported */
+	if (!is_mmu_supported()) {
+		rte_eal_init_alert("unsupported mmu type.");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
