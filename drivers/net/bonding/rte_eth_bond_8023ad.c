@@ -732,10 +732,14 @@ selection_logic(struct bond_dev_private *internals, uint16_t member_id)
 	switch (internals->mode4.agg_selection) {
 	case AGG_COUNT:
 		agg_new_idx = max_index(agg_count, members_count);
+		if (agg_new_idx >= members_count)
+			agg_new_idx = default_member;
 		new_agg_id = members[agg_new_idx];
 		break;
 	case AGG_BANDWIDTH:
 		agg_new_idx = max_index(agg_bandwidth, members_count);
+		if (agg_new_idx >= members_count)
+			agg_new_idx = default_member;
 		new_agg_id = members[agg_new_idx];
 		break;
 	case AGG_STABLE:
