@@ -205,6 +205,10 @@ static const struct rte_pci_id pci_id_cuda_map[] = {
 	},
 	{
 		RTE_PCI_DEVICE(NVIDIA_GPU_VENDOR_ID,
+				NVIDIA_GPU_QUADRO_RTX_8000_2)
+	},
+	{
+		RTE_PCI_DEVICE(NVIDIA_GPU_VENDOR_ID,
 				NVIDIA_GPU_QUADRO_RTX_A4000)
 	},
 	{
