@@ -9,6 +9,8 @@ sources = files(
         'otx2_ep_vf.c',
         'cnxk_ep_vf.c',
         'otx_ep_mbox.c',
+        'cnxk_ep_rx.c',
+        'cnxk_ep_tx.c',
 )
 
 if (toolchain == 'gcc' and cc.version().version_compare('>=11.0.0'))
