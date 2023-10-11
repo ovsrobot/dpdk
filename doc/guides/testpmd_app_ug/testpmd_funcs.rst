@@ -4108,6 +4108,14 @@ This section lists supported actions and their attributes, if any.
   - ``mtr_init_color {value}``: initial color value (green/yellow/red)
   - ``mtr_state {unsigned}``: meter state (disabled/enabled)
 
+- ``prog``: Set a Programmable Action that aligns with the current device
+  configuration, typically intended for use with a P4 programmable device.
+
+  - ``name {string}``: The name of a Programmable Action schema
+  - ``arguments [{string} {hex string} [...]] end``: It is optional, the names
+    and values of each argument for the Programmable Action in a list, the
+    name is represented as {string} and value is represented as {hex string}
+
 Destroying flow rules
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -5261,6 +5269,15 @@ A RAW rule can be created as following using ``pattern_hex`` key and mask.
              is 0 limit is 0 pattern_hex spec 00000000000000000000000000000000000000000000000000000a0a0a0a
              pattern_hex mask 0000000000000000000000000000000000000000000000000000ffffffff / end actions
              queue index 4 / end
+
+Sample Programmable Action rule
+
+A rule use Programmable Action to perform a customized tunnel header encap for specific IP packets.
+
+::
+
+    testpmd> flow create 0 ingress pattern eth / ipv4 src is 1.2.3.4 / end actions prog name cust_tun_encap
+             arguments tunn_id 55AA meta0 2E meta1 9000 end / end
 
 BPF Functions
 --------------
