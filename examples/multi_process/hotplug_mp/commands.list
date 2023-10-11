@@ -1,0 +1,5 @@
+attach <STRING>devargs     # attach a device
+detach <STRING>devargs     # detach a device
+list                       # list all devices
+help                       # show help
+quit                       # quit
