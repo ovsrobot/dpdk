@@ -122,6 +122,11 @@ New Features
   a group's miss actions, which are the actions to be performed on packets
   that didn't match any of the flow rules in the group.
 
+* **Added dispatcher library.**
+
+  Added dispatcher library which purpose is to help decouple different
+  parts (modules) of an eventdev-based application.
+
 * **Updated Solarflare net driver.**
 
   * Added support for transfer flow action ``INDIRECT`` with subtype ``VXLAN_ENCAP``.
