@@ -478,7 +478,7 @@ nfp_net_nfdk_tx_queue_setup(struct rte_eth_dev *dev,
 
 	/*
 	 * Free memory prior to re-allocation if needed. This is the case after
-	 * calling nfp_net_stop
+	 * calling nfp_net_stop().
 	 */
 	if (dev->data->tx_queues[queue_idx] != NULL) {
 		PMD_TX_LOG(DEBUG, "Freeing memory prior to re-allocation %d",
@@ -513,7 +513,7 @@ nfp_net_nfdk_tx_queue_setup(struct rte_eth_dev *dev,
 	txq->tx_count = nb_desc * NFDK_TX_DESC_PER_SIMPLE_PKT;
 	txq->tx_free_thresh = tx_free_thresh;
 
-	/* queue mapping based on firmware configuration */
+	/* Queue mapping based on firmware configuration */
 	txq->qidx = queue_idx;
 	txq->tx_qcidx = queue_idx * hw->stride_tx;
 	txq->qcp_q = hw->tx_bar + NFP_QCP_QUEUE_OFF(txq->tx_qcidx);
@@ -523,7 +523,7 @@ nfp_net_nfdk_tx_queue_setup(struct rte_eth_dev *dev,
 	txq->dma = tz->iova;
 	txq->ktxds = tz->addr;
 
-	/* mbuf pointers array for referencing mbufs linked to TX descriptors */
+	/* Mbuf pointers array for referencing mbufs linked to TX descriptors */
 	txq->txbufs = rte_zmalloc_socket("txq->txbufs",
 			sizeof(*txq->txbufs) * txq->tx_count,
 			RTE_CACHE_LINE_SIZE, socket_id);
@@ -539,7 +539,7 @@ nfp_net_nfdk_tx_queue_setup(struct rte_eth_dev *dev,
 
 	/*
 	 * Telling the HW about the physical address of the TX ring and number
-	 * of descriptors in log2 format
+	 * of descriptors in log2 format.
 	 */
 	nn_cfg_writeq(hw, NFP_NET_CFG_TXR_ADDR(queue_idx), txq->dma);
 	nn_cfg_writeb(hw, NFP_NET_CFG_TXR_SZ(queue_idx), rte_log2_u32(txq->tx_count));
