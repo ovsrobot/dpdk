@@ -3642,7 +3642,7 @@ iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		/* check the data_len in mbuf */
 		if (m->data_len < IAVF_TX_MIN_PKT_LEN ||
-			m->data_len > max_frame_size) {
+			(!(ol_flags & RTE_MBUF_F_TX_TCP_SEG) && m->data_len > max_frame_size)) {
 			rte_errno = EINVAL;
 			PMD_DRV_LOG(ERR, "INVALID mbuf: bad data_len=[%hu]", m->data_len);
 			return i;
