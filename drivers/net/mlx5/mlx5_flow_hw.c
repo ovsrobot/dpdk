@@ -1506,7 +1506,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 	uint32_t type;
 	bool reformat_used = false;
 	unsigned int of_vlan_offset;
-	uint16_t action_pos;
+	uint16_t dr_pos;
 	uint16_t jump_pos;
 	uint32_t ct_idx;
 	int ret, err;
@@ -1521,9 +1521,9 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 	else
 		type = MLX5DR_TABLE_TYPE_NIC_RX;
 	for (; !actions_end; actions++, masks++) {
+		dr_pos = at->dr_off[actions - at->actions];
 		switch ((int)actions->type) {
 		case RTE_FLOW_ACTION_TYPE_INDIRECT_LIST:
-			action_pos = at->actions_off[actions - at->actions];
 			if (!attr->group) {
 				DRV_LOG(ERR, "Indirect action is not supported in root table.");
 				goto err;
@@ -1531,61 +1531,57 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 			ret = table_template_translate_indirect_list
 				(dev, actions, masks, acts,
 				 actions - action_start,
-				 action_pos);
+				 dr_pos);
 			if (ret)
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_INDIRECT:
-			action_pos = at->actions_off[actions - at->actions];
 			if (!attr->group) {
 				DRV_LOG(ERR, "Indirect action is not supported in root table.");
 				goto err;
 			}
 			if (actions->conf && masks->conf) {
 				if (flow_hw_shared_action_translate
-				(dev, actions, acts, actions - action_start, action_pos))
+				(dev, actions, acts, actions - action_start, dr_pos))
 					goto err;
 			} else if (__flow_hw_act_data_general_append
-					(priv, acts, actions->type,
-					 actions - action_start, action_pos)){
+					(priv, acts, RTE_FLOW_ACTION_TYPE_INDIRECT,
+					 actions - action_start, dr_pos)){
 				goto err;
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_VOID:
 			break;
 		case RTE_FLOW_ACTION_TYPE_DROP:
-			action_pos = at->actions_off[actions - at->actions];
-			acts->rule_acts[action_pos].action =
+			acts->rule_acts[dr_pos].action =
 				priv->hw_drop[!!attr->group];
 			break;
 		case RTE_FLOW_ACTION_TYPE_MARK:
-			action_pos = at->actions_off[actions - at->actions];
 			acts->mark = true;
 			if (masks->conf &&
 			    ((const struct rte_flow_action_mark *)
 			     masks->conf)->id)
-				acts->rule_acts[action_pos].tag.value =
+				acts->rule_acts[dr_pos].tag.value =
 					mlx5_flow_mark_set
 					(((const struct rte_flow_action_mark *)
 					(actions->conf))->id);
 			else if (__flow_hw_act_data_general_append(priv, acts,
-				actions->type, actions - action_start, action_pos))
+								   actions->type, actions - action_start, dr_pos))
 				goto err;
-			acts->rule_acts[action_pos].action =
+			acts->rule_acts[dr_pos].action =
 				priv->hw_tag[!!attr->group];
 			__atomic_fetch_add(&priv->hws_mark_refcnt, 1, __ATOMIC_RELAXED);
 			flow_hw_rxq_flag_set(dev, true);
 			break;
 		case RTE_FLOW_ACTION_TYPE_OF_PUSH_VLAN:
-			action_pos = at->actions_off[actions - at->actions];
-			acts->rule_acts[action_pos].action =
+			acts->rule_acts[dr_pos].action =
 				priv->hw_push_vlan[type];
 			if (is_template_masked_push_vlan(masks->conf))
-				acts->rule_acts[action_pos].push_vlan.vlan_hdr =
+				acts->rule_acts[dr_pos].push_vlan.vlan_hdr =
 					vlan_hdr_to_be32(actions);
 			else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, action_pos))
+					 actions - action_start, dr_pos))
 				goto err;
 			of_vlan_offset = is_of_vlan_pcp_present(actions) ?
 					MLX5_HW_VLAN_PUSH_PCP_IDX :
@@ -1594,12 +1590,10 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 			masks += of_vlan_offset;
 			break;
 		case RTE_FLOW_ACTION_TYPE_OF_POP_VLAN:
-			action_pos = at->actions_off[actions - at->actions];
-			acts->rule_acts[action_pos].action =
+			acts->rule_acts[dr_pos].action =
 				priv->hw_pop_vlan[type];
 			break;
 		case RTE_FLOW_ACTION_TYPE_JUMP:
-			action_pos = at->actions_off[actions - at->actions];
 			if (masks->conf &&
 			    ((const struct rte_flow_action_jump *)
 			     masks->conf)->group) {
@@ -1610,17 +1604,16 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 						(dev, cfg, jump_group, error);
 				if (!acts->jump)
 					goto err;
-				acts->rule_acts[action_pos].action = (!!attr->group) ?
-						acts->jump->hws_action :
-						acts->jump->root_action;
+				acts->rule_acts[dr_pos].action = (!!attr->group) ?
+								 acts->jump->hws_action :
+								 acts->jump->root_action;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, action_pos)){
+					 actions - action_start, dr_pos)){
 				goto err;
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_QUEUE:
-			action_pos = at->actions_off[actions - at->actions];
 			if (masks->conf &&
 			    ((const struct rte_flow_action_queue *)
 			     masks->conf)->index) {
@@ -1630,16 +1623,15 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				 actions);
 				if (!acts->tir)
 					goto err;
-				acts->rule_acts[action_pos].action =
+				acts->rule_acts[dr_pos].action =
 					acts->tir->action;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, action_pos)) {
+					 actions - action_start, dr_pos)) {
 				goto err;
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_RSS:
-			action_pos = at->actions_off[actions - at->actions];
 			if (actions->conf && masks->conf) {
 				acts->tir = flow_hw_tir_action_register
 				(dev,
@@ -1647,11 +1639,11 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				 actions);
 				if (!acts->tir)
 					goto err;
-				acts->rule_acts[action_pos].action =
+				acts->rule_acts[dr_pos].action =
 					acts->tir->action;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, action_pos)) {
+					 actions - action_start, dr_pos)) {
 				goto err;
 			}
 			break;
@@ -1720,11 +1712,10 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 						NULL,
 						"Send to kernel action on root table is not supported in HW steering mode");
 			}
-			action_pos = at->actions_off[actions - at->actions];
 			table_type = attr->ingress ? MLX5DR_TABLE_TYPE_NIC_RX :
 				     ((attr->egress) ? MLX5DR_TABLE_TYPE_NIC_TX :
-				     MLX5DR_TABLE_TYPE_FDB);
-			acts->rule_acts[action_pos].action = priv->hw_send_to_kernel[table_type];
+				      MLX5DR_TABLE_TYPE_FDB);
+			acts->rule_acts[dr_pos].action = priv->hw_send_to_kernel[table_type];
 			break;
 		case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
 			err = flow_hw_modify_field_compile(dev, attr, action_start,
@@ -1744,10 +1735,9 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				action_start += 1;
 			break;
 		case RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT:
-			action_pos = at->actions_off[actions - at->actions];
 			if (flow_hw_represented_port_compile
 					(dev, attr, action_start, actions,
-					 masks, acts, action_pos, error))
+					 masks, acts, dr_pos, error))
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_METER:
@@ -1756,19 +1746,18 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 			 * Calculated DR offset is stored only for ASO_METER and FT
 			 * is assumed to be the next action.
 			 */
-			action_pos = at->actions_off[actions - at->actions];
-			jump_pos = action_pos + 1;
+			jump_pos = dr_pos + 1;
 			if (actions->conf && masks->conf &&
 			    ((const struct rte_flow_action_meter *)
 			     masks->conf)->mtr_id) {
 				err = flow_hw_meter_compile(dev, cfg,
-						action_pos, jump_pos, actions, acts, error);
+							    dr_pos, jump_pos, actions, acts, error);
 				if (err)
 					goto err;
 			} else if (__flow_hw_act_data_general_append(priv, acts,
-							actions->type,
+								     actions->type,
 							actions - action_start,
-							action_pos))
+								     dr_pos))
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_AGE:
@@ -1781,11 +1770,10 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 						NULL,
 						"Age action on root table is not supported in HW steering mode");
 			}
-			action_pos = at->actions_off[actions - at->actions];
 			if (__flow_hw_act_data_general_append(priv, acts,
-							 actions->type,
+							      actions->type,
 							 actions - action_start,
-							 action_pos))
+							      dr_pos))
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_COUNT:
@@ -1806,49 +1794,46 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				 * counter.
 				 */
 				break;
-			action_pos = at->actions_off[actions - at->actions];
 			if (masks->conf &&
 			    ((const struct rte_flow_action_count *)
 			     masks->conf)->id) {
-				err = flow_hw_cnt_compile(dev, action_pos, acts);
+				err = flow_hw_cnt_compile(dev, dr_pos, acts);
 				if (err)
 					goto err;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, action_pos)) {
+					 actions - action_start, dr_pos)) {
 				goto err;
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_CONNTRACK:
-			action_pos = at->actions_off[actions - at->actions];
 			if (masks->conf) {
 				ct_idx = MLX5_ACTION_CTX_CT_GET_IDX
 					 ((uint32_t)(uintptr_t)actions->conf);
 				if (flow_hw_ct_compile(dev, MLX5_HW_INV_QUEUE, ct_idx,
-						       &acts->rule_acts[action_pos]))
+						       &acts->rule_acts[dr_pos]))
 					goto err;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, action_pos)) {
+					 actions - action_start, dr_pos)) {
 				goto err;
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_METER_MARK:
-			action_pos = at->actions_off[actions - at->actions];
 			if (actions->conf && masks->conf &&
 			    ((const struct rte_flow_action_meter_mark *)
 			     masks->conf)->profile) {
 				err = flow_hw_meter_mark_compile(dev,
-							action_pos, actions,
-							acts->rule_acts,
-							&acts->mtr_id,
-							MLX5_HW_INV_QUEUE);
+								 dr_pos, actions,
+								 acts->rule_acts,
+								 &acts->mtr_id,
+								 MLX5_HW_INV_QUEUE);
 				if (err)
 					goto err;
 			} else if (__flow_hw_act_data_general_append(priv, acts,
-							actions->type,
+								     actions->type,
 							actions - action_start,
-							action_pos))
+								     dr_pos))
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_END:
@@ -4681,7 +4666,7 @@ action_template_set_type(struct rte_flow_actions_template *at,
 			 unsigned int action_src, uint16_t *curr_off,
 			 enum mlx5dr_action_type type)
 {
-	at->actions_off[action_src] = *curr_off;
+	at->dr_off[action_src] = *curr_off;
 	action_types[*curr_off] = type;
 	*curr_off = *curr_off + 1;
 }
@@ -4718,7 +4703,7 @@ flow_hw_dr_actions_template_handle_shared(const struct rte_flow_action *mask,
 						 action_src, curr_off,
 						 MLX5DR_ACTION_TYP_CTR);
 		}
-		at->actions_off[action_src] = *cnt_off;
+		at->dr_off[action_src] = *cnt_off;
 		break;
 	case RTE_FLOW_ACTION_TYPE_CONNTRACK:
 		action_template_set_type(at, action_types, action_src, curr_off,
@@ -4838,7 +4823,7 @@ flow_hw_dr_actions_template_create(struct rte_flow_actions_template *at)
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_METER:
-			at->actions_off[i] = curr_off;
+			at->dr_off[i] = curr_off;
 			action_types[curr_off++] = MLX5DR_ACTION_TYP_ASO_METER;
 			if (curr_off >= MLX5_HW_MAX_ACTS)
 				goto err_actions_num;
@@ -4846,14 +4831,14 @@ flow_hw_dr_actions_template_create(struct rte_flow_actions_template *at)
 			break;
 		case RTE_FLOW_ACTION_TYPE_OF_PUSH_VLAN:
 			type = mlx5_hw_dr_action_types[at->actions[i].type];
-			at->actions_off[i] = curr_off;
+			at->dr_off[i] = curr_off;
 			action_types[curr_off++] = type;
 			i += is_of_vlan_pcp_present(at->actions + i) ?
 				MLX5_HW_VLAN_PUSH_PCP_IDX :
 				MLX5_HW_VLAN_PUSH_VID_IDX;
 			break;
 		case RTE_FLOW_ACTION_TYPE_METER_MARK:
-			at->actions_off[i] = curr_off;
+			at->dr_off[i] = curr_off;
 			action_types[curr_off++] = MLX5DR_ACTION_TYP_ASO_METER;
 			if (curr_off >= MLX5_HW_MAX_ACTS)
 				goto err_actions_num;
@@ -4869,11 +4854,11 @@ flow_hw_dr_actions_template_create(struct rte_flow_actions_template *at)
 				cnt_off = curr_off++;
 				action_types[cnt_off] = MLX5DR_ACTION_TYP_CTR;
 			}
-			at->actions_off[i] = cnt_off;
+			at->dr_off[i] = cnt_off;
 			break;
 		default:
 			type = mlx5_hw_dr_action_types[at->actions[i].type];
-			at->actions_off[i] = curr_off;
+			at->dr_off[i] = curr_off;
 			action_types[curr_off++] = type;
 			break;
 		}
@@ -5234,7 +5219,7 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 	if (mask_len <= 0)
 		return NULL;
 	len += RTE_ALIGN(mask_len, 16);
-	len += RTE_ALIGN(act_num * sizeof(*at->actions_off), 16);
+	len += RTE_ALIGN(act_num * sizeof(*at->dr_off), 16);
 	at = mlx5_malloc(MLX5_MEM_ZERO, len + sizeof(*at),
 			 RTE_CACHE_LINE_SIZE, rte_socket_id());
 	if (!at) {
@@ -5258,10 +5243,10 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 	if (mask_len <= 0)
 		goto error;
 	/* DR actions offsets in the third part. */
-	at->actions_off = (uint16_t *)((uint8_t *)at->masks + mask_len);
+	at->dr_off = (uint16_t *)((uint8_t *)at->masks + mask_len);
 	at->actions_num = act_num;
 	for (i = 0; i < at->actions_num; ++i)
-		at->actions_off[i] = UINT16_MAX;
+		at->dr_off[i] = UINT16_MAX;
 	at->reformat_off = UINT16_MAX;
 	at->mhdr_off = UINT16_MAX;
 	at->rx_cpy_pos = pos;
