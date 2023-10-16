@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+#include <rte_power_pmd_mgmt.h>
 #include "pipeline_common.h"
 
 static __rte_always_inline int

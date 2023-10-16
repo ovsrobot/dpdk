@@ -24,6 +24,9 @@ struct config_data cdata = {
 	.worker_cq_depth = 16
 };
 
+static enum rte_power_pmd_mgmt_type pmgmt_mode;
+bool pmgmt_enabled;
+
 static void
 dump_core_info(unsigned int lcore_id, struct worker_data *data,
 		unsigned int worker_idx)
@@ -122,6 +125,8 @@ parse_coremask(const char *coremask)
 	return mask;
 }
 
+#define CMD_LINE_OPT_PMD_MGMT "pmd-mgmt"
+
 static struct option long_options[] = {
 	{"workers", required_argument, 0, 'w'},
 	{"packets", required_argument, 0, 'n'},
@@ -139,6 +144,7 @@ static struct option long_options[] = {
 	{"quiet", no_argument, 0, 'q'},
 	{"use-atq", no_argument, 0, 'a'},
 	{"dump", no_argument, 0, 'D'},
+	{CMD_LINE_OPT_PMD_MGMT, 1, 0, 0},
 	{0, 0, 0, 0}
 };
 
@@ -163,10 +169,36 @@ usage(void)
 		"  -q, --quiet                  Minimize printed output\n"
 		"  -a, --use-atq                Use all type queues\n"
 		"  -m, --mempool-size=N         Dictate the mempool size\n"
-		"  -D, --dump                   Print detailed statistics before exit"
+		"  -D, --dump                   Print detailed statistics before exit\n"
+		" --pmd-mgmt MODE		enable PMD power management mode."
 		"\n";
 	fprintf(stderr, "%s", usage_str);
 	exit(1);
+}
+
+static int
+parse_pmd_mgmt_config(const char *name)
+{
+#define PMD_MGMT_MONITOR "monitor"
+#define PMD_MGMT_PAUSE   "pause"
+#define PMD_MGMT_SCALE   "scale"
+
+	if (strncmp(PMD_MGMT_MONITOR, name, sizeof(PMD_MGMT_MONITOR)) == 0) {
+		pmgmt_mode = RTE_POWER_MGMT_TYPE_MONITOR;
+		return 0;
+	}
+
+	if (strncmp(PMD_MGMT_PAUSE, name, sizeof(PMD_MGMT_PAUSE)) == 0) {
+		pmgmt_mode = RTE_POWER_MGMT_TYPE_PAUSE;
+		return 0;
+	}
+
+	if (strncmp(PMD_MGMT_SCALE, name, sizeof(PMD_MGMT_SCALE)) == 0) {
+		pmgmt_mode = RTE_POWER_MGMT_TYPE_SCALE;
+		return 0;
+	}
+	/* unknown PMD power management mode */
+	return -1;
 }
 
 static void
@@ -246,6 +278,21 @@ parse_app_args(int argc, char **argv)
 		case 'm':
 			cdata.num_mbuf = (uint64_t)atol(optarg);
 			break;
+		/* long options */
+		case 0:
+			if (!strncmp(long_options[option_index].name,
+					CMD_LINE_OPT_PMD_MGMT,
+					sizeof(CMD_LINE_OPT_PMD_MGMT))) {
+				if (parse_pmd_mgmt_config(optarg) < 0) {
+					printf(" Invalid power mgmt mode: %s\n",
+							optarg);
+					return;
+				}
+				pmgmt_enabled = true;
+				printf("PMD power mgmt mode is enabled\n");
+			}
+			break;
+
 		default:
 			usage();
 		}
@@ -430,7 +477,20 @@ main(int argc, char **argv)
 			continue;
 
 		dump_core_info(lcore_id, worker_data, worker_idx);
-
+		if (pmgmt_enabled) {
+			if (fdata->worker_core[lcore_id]) {
+				err = rte_power_eventdev_pmgmt_port_enable(
+							lcore_id, worker_data[worker_idx].dev_id,
+							worker_data[worker_idx].port_id,
+							pmgmt_mode);
+				if (err) {
+					RTE_LOG(ERR, POWER,
+						"Power Management enabled failed on core %u\n",
+						lcore_id);
+					continue;
+				}
+			}
+		}
 		err = rte_eal_remote_launch(fdata->cap.worker,
 				&worker_data[worker_idx], lcore_id);
 		if (err) {

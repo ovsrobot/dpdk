@@ -19,6 +19,7 @@
 #include <rte_event_eth_tx_adapter.h>
 #include <rte_service.h>
 #include <rte_service_component.h>
+#include <rte_power_pmd_mgmt.h>
 
 #define MAX_NUM_STAGES 8
 #define BATCH_SIZE 16
