@@ -958,6 +958,7 @@ sw_probe(struct rte_vdev_device *vdev)
 			.port_link = sw_port_link,
 			.port_unlink = sw_port_unlink,
 			.port_unlinks_in_progress = sw_port_unlinks_in_progress,
+			.get_monitor_addr = sw_event_get_monitor_addr,
 
 			.eth_rx_adapter_caps_get = sw_eth_rx_adapter_caps_get,
 

@@ -10,6 +10,33 @@
 
 #define PORT_ENQUEUE_MAX_BURST_SIZE 64
 
+static int
+sw_event_ring_monitor_callback(const uint64_t value,
+		const uint64_t arg[RTE_POWER_MONITOR_OPAQUE_SZ])
+{
+	/* Check if the head pointer has changed */
+	return value != arg[0];
+}
+
+int
+sw_event_get_monitor_addr(void *port, struct rte_power_monitor_cond *pmc)
+{
+	struct sw_port *p = (void *)port;
+	struct rte_event_ring *ev_ring = p->cq_worker_ring;
+	struct rte_ring *rng = &ev_ring->r;
+
+	/*
+	 * Monitor event ring producer tail since if
+	 * prod.tail moves there are events to dequeue
+	 */
+	pmc->addr = &rng->prod.tail;
+	pmc->size = sizeof(rng->prod.tail);
+	pmc->opaque[0] = rng->prod.tail;
+	pmc->fn = sw_event_ring_monitor_callback;
+
+	return 0;
+}
+
 static inline void
 sw_event_release(struct sw_port *p, uint8_t index)
 {

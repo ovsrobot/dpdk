@@ -312,6 +312,8 @@ int sw_xstats_reset(struct rte_eventdev *dev,
 		int16_t queue_port_id,
 		const uint64_t ids[],
 		uint32_t nb_ids);
+int sw_event_get_monitor_addr(void *port,
+		struct rte_power_monitor_cond *pmc);
 
 int test_sw_eventdev(void);
 
