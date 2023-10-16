@@ -91,6 +91,61 @@ rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
  * @warning
  * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
  *
+ * Enable power management on a specified Event device port and lcore.
+ *
+ * @note This function is not thread-safe.
+ *
+ * @warning This function must be called when the event device stopped and
+ * no enqueue/dequeue is in progress!
+ *
+ * @param lcore_id
+ *   The lcore the event port will be polled from.
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   Event port identifier of the Event device.
+ * @param mode
+ *   The power management scheme to use for specified event port.
+ * @return
+ *   0 on success
+ *   <0 on error
+ */
+__rte_experimental
+int
+rte_power_eventdev_pmgmt_port_enable(unsigned int lcore_id,
+		uint8_t dev_id, uint8_t port_id,
+		enum rte_power_pmd_mgmt_type mode);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
+ * Disable power management on a specified Ethernet device Rx queue and lcore.
+ *
+ * @note This function is not thread-safe.
+ *
+ * @warning This function must be called when all affected Ethernet queues are
+ *   stopped and no Rx/Tx is in progress!
+ *
+ * @param lcore_id
+ *   The lcore the Rx queue is polled from.
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   Event port identifier of the Event device.
+ * @return
+ *   0 on success
+ *   <0 on error
+ */
+__rte_experimental
+int
+rte_power_eventdev_pmgmt_port_disable(unsigned int lcore_id,
+		uint8_t dev_id, uint8_t port_id);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
  * Set a emptypoll_max to specified value. Used to specify the number of empty
  * polls to wait before entering sleep state.
  *

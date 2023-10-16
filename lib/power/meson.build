@@ -32,4 +32,4 @@ headers = files(
 if cc.has_argument('-Wno-cast-qual')
     cflags += '-Wno-cast-qual'
 endif
-deps += ['timer', 'ethdev']
+deps += ['timer', 'ethdev', 'eventdev']

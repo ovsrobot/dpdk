@@ -9,8 +9,10 @@
 #include <rte_cpuflags.h>
 #include <rte_malloc.h>
 #include <rte_ethdev.h>
+#include <rte_eventdev.h>
 #include <rte_power_intrinsics.h>
 
+#include <eventdev_pmd.h>
 #include "rte_power_pmd_mgmt.h"
 #include "power_common.h"
 
@@ -53,6 +55,7 @@ struct queue_list_entry {
 	uint64_t n_empty_polls;
 	uint64_t n_sleeps;
 	const struct rte_eth_rxtx_callback *cb;
+	const struct rte_event_dequeue_callback *evt_cb;
 };
 
 struct pmd_core_cfg {
@@ -414,6 +417,64 @@ cfg_queues_stopped(struct pmd_core_cfg *queue_cfg)
 	return 1;
 }
 
+static uint16_t
+evt_clb_umwait(uint8_t dev_id, uint8_t port_id, struct rte_event *ev __rte_unused,
+		uint16_t nb_events, void *arg)
+{
+	struct queue_list_entry *queue_conf = arg;
+
+	/* this callback can't do more than one queue, omit multiqueue logic */
+	if (unlikely(nb_events == 0)) {
+		queue_conf->n_empty_polls++;
+		if (unlikely(queue_conf->n_empty_polls > emptypoll_max)) {
+			struct rte_power_monitor_cond pmc;
+			int ret;
+
+			/* use monitoring condition to sleep */
+			ret = rte_event_port_get_monitor_addr(dev_id, port_id,
+					&pmc);
+			if (ret == 0)
+				rte_power_monitor(&pmc, UINT64_MAX);
+		}
+	} else
+		queue_conf->n_empty_polls = 0;
+
+	return nb_events;
+}
+
+static uint16_t
+evt_clb_pause(uint8_t dev_id __rte_unused, uint8_t port_id __rte_unused,
+		struct rte_event *ev __rte_unused,
+		uint16_t nb_events, void *arg)
+{
+	const unsigned int lcore = rte_lcore_id();
+	struct queue_list_entry *queue_conf = arg;
+	struct pmd_core_cfg *lcore_conf;
+	const bool empty = nb_events == 0;
+	uint32_t pause_duration = rte_power_pmd_mgmt_get_pause_duration();
+
+	lcore_conf = &lcore_cfgs[lcore];
+
+	if (likely(!empty))
+		/* early exit */
+		queue_reset(lcore_conf, queue_conf);
+	else {
+		/* can this queue sleep? */
+		if (!queue_can_sleep(lcore_conf, queue_conf))
+			return nb_events;
+
+		/* can this lcore sleep? */
+		if (!lcore_can_sleep(lcore_conf))
+			return nb_events;
+
+		uint64_t i;
+		for (i = 0; i < global_data.pause_per_us * pause_duration; i++)
+			rte_pause();
+	}
+
+	return nb_events;
+}
+
 static int
 check_scale(unsigned int lcore)
 {
@@ -480,6 +541,171 @@ get_monitor_callback(void)
 	return global_data.intrinsics_support.power_monitor_multi ?
 		clb_multiwait : clb_umwait;
 }
+
+static int
+check_evt_monitor(struct pmd_core_cfg *cfg __rte_unused,
+		const union queue *qdata)
+{
+	struct rte_power_monitor_cond dummy;
+
+	/* check if rte_power_monitor is supported */
+	if (!global_data.intrinsics_support.power_monitor) {
+		RTE_LOG(DEBUG, POWER, "Monitoring intrinsics are not supported\n");
+		return -ENOTSUP;
+	}
+
+	/* check if the device supports the necessary PMD API */
+	if (rte_event_port_get_monitor_addr((uint8_t)qdata->portid, (uint8_t)qdata->qid,
+				&dummy) == -ENOTSUP) {
+		RTE_LOG(DEBUG, POWER, "event port does not support rte_event_get_monitor_addr\n");
+		return -ENOTSUP;
+	}
+
+	/* we're done */
+	return 0;
+}
+
+int
+rte_power_eventdev_pmgmt_port_enable(unsigned int lcore_id, uint8_t dev_id,
+		uint8_t port_id, enum rte_power_pmd_mgmt_type mode)
+{
+	const union queue qdata = {.portid = dev_id, .qid = port_id};
+	struct pmd_core_cfg *lcore_cfg;
+	struct queue_list_entry *queue_cfg;
+	struct rte_event_dev_info info;
+	rte_dequeue_callback_fn clb;
+	int ret;
+
+	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
+
+	if (lcore_id >= RTE_MAX_LCORE) {
+		ret = -EINVAL;
+		goto end;
+	}
+
+	if (rte_event_dev_info_get(dev_id, &info) < 0) {
+		ret = -EINVAL;
+		goto end;
+	}
+
+	/* check if queue id is valid */
+	if (port_id >= info.max_event_ports) {
+		ret = -EINVAL;
+		goto end;
+	}
+
+	lcore_cfg = &lcore_cfgs[lcore_id];
+
+	/* if callback was already enabled, check current callback type */
+	if (lcore_cfg->pwr_mgmt_state != PMD_MGMT_DISABLED &&
+		lcore_cfg->cb_mode != mode) {
+		ret = -EINVAL;
+		goto end;
+	}
+
+	/* we need this in various places */
+	rte_cpu_get_intrinsics_support(&global_data.intrinsics_support);
+
+	switch (mode) {
+	case RTE_POWER_MGMT_TYPE_MONITOR:
+		/* check if we can add a new port */
+		ret = check_evt_monitor(lcore_cfg, &qdata);
+		if (ret < 0)
+			goto end;
+
+		clb = evt_clb_umwait;
+		break;
+	case RTE_POWER_MGMT_TYPE_PAUSE:
+		/* figure out various time-to-tsc conversions */
+		if (global_data.tsc_per_us == 0)
+			calc_tsc();
+
+		clb = evt_clb_pause;
+		break;
+	default:
+		RTE_LOG(DEBUG, POWER, "Invalid power management type\n");
+		ret = -EINVAL;
+		goto end;
+	}
+	/* add this queue to the list */
+	ret = queue_list_add(lcore_cfg, &qdata);
+	if (ret < 0) {
+		RTE_LOG(DEBUG, POWER, "Failed to add queue to list: %s\n",
+				strerror(-ret));
+		goto end;
+	}
+	/* new queue is always added last */
+	queue_cfg = TAILQ_LAST(&lcore_cfg->head, queue_list_head);
+
+	/* when enabling first queue, ensure sleep target is not 0 */
+	if (lcore_cfg->n_queues == 1 && lcore_cfg->sleep_target == 0)
+		lcore_cfg->sleep_target = 1;
+
+	/* initialize data before enabling the callback */
+	if (lcore_cfg->n_queues == 1) {
+		lcore_cfg->cb_mode = mode;
+		lcore_cfg->pwr_mgmt_state = PMD_MGMT_ENABLED;
+	}
+	queue_cfg->evt_cb = rte_event_add_dequeue_callback(dev_id, port_id,
+						clb, queue_cfg);
+
+	ret = 0;
+end:
+	return ret;
+}
+
+int
+rte_power_eventdev_pmgmt_port_disable(unsigned int lcore_id,
+		uint8_t dev_id, uint8_t port_id)
+{
+	const union queue qdata = {.portid = dev_id, .qid = port_id};
+	struct pmd_core_cfg *lcore_cfg;
+	struct queue_list_entry *queue_cfg;
+
+	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
+
+	if (lcore_id >= RTE_MAX_LCORE)
+		return -EINVAL;
+
+	/* no need to check queue id as wrong queue id would not be enabled */
+	lcore_cfg = &lcore_cfgs[lcore_id];
+
+	if (lcore_cfg->pwr_mgmt_state != PMD_MGMT_ENABLED)
+		return -EINVAL;
+
+	/*
+	 * There is no good/easy way to do this without race conditions, so we
+	 * are just going to throw our hands in the air and hope that the user
+	 * has read the documentation and has ensured that ports are stopped at
+	 * the time we enter the API functions.
+	 */
+	queue_cfg = queue_list_take(lcore_cfg, &qdata);
+	if (queue_cfg == NULL)
+		return -ENOENT;
+
+	/* if we've removed all queues from the lists, set state to disabled */
+	if (lcore_cfg->n_queues == 0)
+		lcore_cfg->pwr_mgmt_state = PMD_MGMT_DISABLED;
+
+	switch (lcore_cfg->cb_mode) {
+	case RTE_POWER_MGMT_TYPE_MONITOR: /* fall-through */
+	case RTE_POWER_MGMT_TYPE_SCALE:
+	case RTE_POWER_MGMT_TYPE_PAUSE:
+		rte_event_remove_dequeue_callback(dev_id, port_id,
+			queue_cfg->evt_cb);
+		break;
+	}
+	/*
+	 * the API doc mandates that the user stops all processing on affected
+	 * ports before calling any of these API's, so we can assume that the
+	 * callbacks can be freed. we're intentionally casting away const-ness.
+	 */
+	rte_free((void *)queue_cfg->evt_cb);
+	free(queue_cfg);
+
+	return 0;
+}
+
 
 int
 rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,

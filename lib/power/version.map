@@ -52,4 +52,8 @@ EXPERIMENTAL {
 	rte_power_uncore_get_num_freqs;
 	rte_power_uncore_get_num_pkgs;
 	rte_power_uncore_init;
+
+	# added in 23.07
+	rte_power_eventdev_pmgmt_port_enable;
+	rte_power_eventdev_pmgmt_port_disable;
 };
