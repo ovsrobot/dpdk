@@ -605,7 +605,7 @@ flow_hw_act_data_indirect_list_append(struct mlx5_priv *priv,
 	act_data = __flow_hw_act_data_alloc(priv, type, action_src, action_dst);
 	if (!act_data)
 		return -1;
-	act_data->indirect_list.cb = cb;
+	act_data->indirect_list_cb = cb;
 	LIST_INSERT_HEAD(&acts->act_list, act_data, next);
 	return 0;
 }
@@ -2538,7 +2538,8 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 				    (int)action->type == act_data->type);
 		switch ((int)act_data->type) {
 		case RTE_FLOW_ACTION_TYPE_INDIRECT_LIST:
-			act_data->indirect_list.cb(dev, act_data, actions, rule_acts);
+			act_data->indirect_list_cb(dev, act_data, actions,
+						   &rule_acts[act_data->action_dst]);
 			break;
 		case RTE_FLOW_ACTION_TYPE_INDIRECT:
 			if (flow_hw_shared_action_construct
