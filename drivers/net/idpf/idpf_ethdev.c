@@ -281,9 +281,11 @@ idpf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 		idpf_vport_stats_update(&vport->eth_stats_offset, pstats);
 		stats->ipackets = pstats->rx_unicast + pstats->rx_multicast +
-				pstats->rx_broadcast - pstats->rx_discards;
+				pstats->rx_broadcast + pstats->rx_discards +
+				pstats->rx_errors + pstats->rx_unknown_protocol;
 		stats->opackets = pstats->tx_broadcast + pstats->tx_multicast +
-						pstats->tx_unicast;
+				pstats->tx_unicast + pstats->tx_discards +
+				pstats->tx_errors;
 		stats->ierrors = pstats->rx_errors;
 		stats->imissed = pstats->rx_discards;
 		stats->oerrors = pstats->tx_errors + pstats->tx_discards;
