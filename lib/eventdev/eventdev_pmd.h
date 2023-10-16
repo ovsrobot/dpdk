@@ -99,6 +99,19 @@ struct rte_eventdev_global {
 
 /**
  * @internal
+ * Structure used to hold information about the callbacks to be called for a
+ * port on dequeue.
+ */
+struct rte_event_dequeue_callback {
+	struct rte_event_dequeue_callback *next;
+	union{
+		rte_dequeue_callback_fn dequeue;
+	} fn;
+	void *param;
+};
+
+/**
+ * @internal
  * The data part, with no function pointers, associated with each device.
  *
  * This structure is safe to place in shared memory to be common among
@@ -171,6 +184,10 @@ struct rte_eventdev {
 	/**< Pointer to PMD dequeue burst function. */
 	event_maintain_t maintain;
 	/**< Pointer to PMD port maintenance function. */
+	struct rte_event_dequeue_callback *post_dequeue_burst_cbs[RTE_EVENT_MAX_PORTS_PER_DEV];
+	/**<  User-supplied functions called from dequeue_burst to post-process
+	 * received packets before passing them to the user
+	 */
 	event_tx_adapter_enqueue_t txa_enqueue_same_dest;
 	/**< Pointer to PMD eth Tx adapter burst enqueue function with
 	 * events destined to same Eth port & Tx queue.
@@ -244,6 +261,27 @@ rte_event_pmd_is_valid_dev(uint8_t dev_id)
 	else
 		return 1;
 }
+
+/**
+ * Executes all the user application registered callbacks for the specific
+ * event device.
+ *
+ * @param dev_id
+ *   Event device index.
+ * @param port_id
+ *   Event port index
+ * @param ev
+ *   Points to an array of *nb_events* objects of type *rte_event* structure
+ *   for output to be populated with the dequeued event objects.
+ * @param nb_events
+ *   number of event objects
+ *
+ * @return
+ * The number of event objects
+ */
+__rte_internal
+uint16_t rte_eventdev_pmd_dequeue_callback_process(uint8_t dev_id,
+		uint8_t port_id, struct rte_event ev[], uint16_t nb_events);
 
 /**
  * Definitions of all functions exported by a driver through the

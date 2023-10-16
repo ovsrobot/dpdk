@@ -954,6 +954,101 @@ void
 rte_event_port_quiesce(uint8_t dev_id, uint8_t port_id,
 		       rte_eventdev_port_flush_t release_cb, void *args);
 
+struct rte_event_dequeue_callback;
+
+/**
+ * Function type used for dequeue event processing callbacks.
+ *
+ * The callback function is called on dequeue with a burst of events that have
+ * been received on the given event port.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param[out] ev
+ *   Points to an array of *nb_events* objects of type *rte_event* structure
+ *   for output to be populated with the dequeued event objects.
+ * @param nb_events
+ *   The maximum number of event objects to dequeue, typically number of
+ *   rte_event_port_dequeue_depth() available for this port.
+ * @param opaque
+ *   Opaque pointer of event port callback related data.
+ *
+ * @return
+ *  The number of event objects returned to the user.
+ */
+typedef uint16_t (*rte_dequeue_callback_fn)(uint8_t dev_id, uint8_t port_id,
+		struct rte_event *ev, uint16_t nb_events, void *user_param);
+
+/**
+ * Add a callback to be called on event dequeue on a given event device port.
+ *
+ * This API configures a function to be called for each burst of
+ * events dequeued on a given event device port. The return value is a pointer
+ * that can be used to later remove the callback using
+ * rte_event_remove_dequeue_callback().
+ *
+ * Multiple functions are called in the order that they are added.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param fn
+ *   The callback function
+ * @param user_param
+ *   A generic pointer parameter which will be passed to each invocation of the
+ *   callback function on this event device port. Inter-thread synchronization
+ *   of any user data changes is the responsibility of the user.
+ *
+ * @return
+ *   NULL on error.
+ *   On success, a pointer value which can later be used to remove the callback.
+ */
+__rte_experimental
+const struct rte_event_dequeue_callback *
+rte_event_add_dequeue_callback(uint8_t dev_id, uint8_t port_id,
+		rte_dequeue_callback_fn fn, void *user_param);
+
+/**
+ * Remove a dequeue event callback from a given event device port.
+ *
+ * This API is used to removed callbacks that were added to a event device port
+ * using rte_event_add_dequeue_callback().
+ *
+ * Note: the callback is removed from the callback list but it isn't freed
+ * since the it may still be in use. The memory for the callback can be
+ * subsequently freed back by the application by calling rte_free():
+ *
+ * - Immediately - if the device is stopped, or the user knows that no
+ *   callbacks are in flight e.g. if called from the thread doing dequeue
+ *   on that port.
+ *
+ * - After a short delay - where the delay is sufficient to allow any
+ *   in-flight callbacks to complete. Alternately, the RCU mechanism can be
+ *   used to detect when data plane threads have ceased referencing the
+ *   callback memory.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param user_cb
+ *   The callback function
+ *
+ * @return
+ *   - 0: Success. Callback was removed.
+ *   - -ENODEV:  If *dev_id* is invalid.
+ *   - -EINVAL:  The port_id is out of range, or the callback
+ *               is NULL.
+ */
+__rte_experimental
+int
+rte_event_remove_dequeue_callback(uint8_t dev_id, uint8_t port_id,
+		const struct rte_event_dequeue_callback *user_cb);
+
+
 /**
  * The queue depth of the port on the enqueue side
  */

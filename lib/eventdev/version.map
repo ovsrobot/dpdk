@@ -155,6 +155,8 @@ EXPERIMENTAL {
 	rte_event_port_profile_unlink;
 	rte_event_port_profile_links_get;
 	rte_event_port_get_monitor_addr;
+	rte_event_add_dequeue_callback;
+	rte_event_remove_dequeue_callback;
 	__rte_eventdev_trace_port_profile_switch;
 };
 
@@ -165,6 +167,7 @@ INTERNAL {
 	event_dev_fp_ops_set;
 	event_dev_probing_finish;
 	rte_event_pmd_allocate;
+	rte_eventdev_pmd_dequeue_callback_process;
 	rte_event_pmd_get_named_dev;
 	rte_event_pmd_is_valid_dev;
 	rte_event_pmd_pci_probe;

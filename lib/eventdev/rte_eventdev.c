@@ -18,6 +18,7 @@
 #include <rte_common.h>
 #include <rte_malloc.h>
 #include <rte_errno.h>
+#include <rte_stdatomic.h>
 #include <ethdev_driver.h>
 #include <rte_cryptodev.h>
 #include <rte_dmadev.h>
@@ -38,6 +39,9 @@ static struct rte_eventdev_global eventdev_globals = {
 
 /* Public fastpath APIs. */
 struct rte_event_fp_ops rte_event_fp_ops[RTE_EVENT_MAX_DEVS];
+
+/* spinlock for add/remove dequeue callbacks */
+static rte_spinlock_t event_dev_dequeue_cb_lock = RTE_SPINLOCK_INITIALIZER;
 
 /* Event dev north bound API implementation */
 
@@ -882,6 +886,109 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 	rte_eventdev_trace_port_attr_get(dev_id, dev, port_id, attr_id, *attr_value);
 
 	return 0;
+}
+
+const struct rte_event_dequeue_callback *
+rte_event_add_dequeue_callback(uint8_t dev_id, uint8_t port_id,
+		rte_dequeue_callback_fn fn, void *user_param)
+{
+	struct rte_eventdev *dev;
+	struct rte_event_dequeue_callback *cb;
+	struct rte_event_dequeue_callback *tail;
+
+	/* check input parameters */
+	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, NULL);
+	dev = &rte_eventdevs[dev_id];
+	if (!is_valid_port(dev, port_id)) {
+		RTE_EDEV_LOG_ERR("Invalid port_id=%" PRIu8, port_id);
+		return NULL;
+	}
+
+	cb = rte_zmalloc(NULL, sizeof(*cb), 0);
+	if (cb == NULL) {
+		rte_errno = ENOMEM;
+		return NULL;
+	}
+	cb->fn.dequeue = fn;
+	cb->param = user_param;
+
+	rte_spinlock_lock(&event_dev_dequeue_cb_lock);
+	/* Add the callbacks in fifo order. */
+	tail = rte_eventdevs[dev_id].post_dequeue_burst_cbs[port_id];
+	if (!tail) {
+		/* Stores to cb->fn and cb->param should complete before
+		 * cb is visible to data plane.
+		 */
+		rte_atomic_store_explicit(
+			&rte_eventdevs[dev_id].post_dequeue_burst_cbs[port_id],
+			cb, __ATOMIC_RELEASE);
+	} else {
+		while (tail->next)
+			tail = tail->next;
+		/* Stores to cb->fn and cb->param should complete before
+		 * cb is visible to data plane.
+		 */
+		rte_atomic_store_explicit(&tail->next, cb, __ATOMIC_RELEASE);
+	}
+	rte_spinlock_unlock(&event_dev_dequeue_cb_lock);
+
+	return cb;
+}
+
+int
+rte_event_remove_dequeue_callback(uint8_t dev_id, uint8_t port_id,
+		const struct rte_event_dequeue_callback *user_cb)
+{
+	struct rte_eventdev *dev;
+	struct rte_event_dequeue_callback *cb;
+	struct rte_event_dequeue_callback **prev_cb;
+
+	/* Check input parameters. */
+	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
+	dev = &rte_eventdevs[dev_id];
+	if (user_cb == NULL || !is_valid_port(dev, port_id))
+		return -EINVAL;
+
+	rte_spinlock_lock(&event_dev_dequeue_cb_lock);
+	prev_cb = &dev->post_dequeue_burst_cbs[port_id];
+	for (; *prev_cb != NULL; prev_cb = &cb->next) {
+		cb = *prev_cb;
+		if (cb == user_cb) {
+			/* Remove the user cb from the callback list. */
+			rte_atomic_store_explicit(prev_cb, cb->next,
+						__ATOMIC_RELAXED);
+			break;
+		}
+	}
+	rte_spinlock_unlock(&event_dev_dequeue_cb_lock);
+
+	return 0;
+}
+
+uint16_t rte_eventdev_pmd_dequeue_callback_process(uint8_t dev_id,
+		uint8_t port_id, struct rte_event ev[], uint16_t nb_events)
+{
+	struct rte_event_dequeue_callback *cb;
+	const struct rte_event_fp_ops *fp_ops;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+
+	/* __ATOMIC_RELEASE memory order was used when the
+	 * call back was inserted into the list.
+	 * Since there is a clear dependency between loading
+	 * cb and cb->fn/cb->next, __ATOMIC_ACQUIRE memory order is
+	 * not required.
+	 */
+	cb = rte_atomic_load_explicit((void **)&fp_ops->ev_port.clbk[port_id],
+					__ATOMIC_RELAXED);
+	if (unlikely(cb != NULL))
+		while (cb != NULL) {
+			nb_events = cb->fn.dequeue(dev_id, port_id, ev,
+			nb_events, cb->param);
+			cb = cb->next;
+		}
+
+	return nb_events;
 }
 
 int

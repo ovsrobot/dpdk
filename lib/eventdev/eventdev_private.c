@@ -137,4 +137,6 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 	fp_op->dma_enqueue = dev->dma_enqueue;
 	fp_op->profile_switch = dev->profile_switch;
 	fp_op->data = dev->data->ports;
+	fp_op->ev_port.clbk = (void **)(uintptr_t)dev->post_dequeue_burst_cbs;
+	fp_op->ev_port.data = dev->data->ports;
 }

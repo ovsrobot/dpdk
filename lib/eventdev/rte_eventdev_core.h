@@ -49,6 +49,14 @@ typedef uint16_t (*event_dma_adapter_enqueue_t)(void *port, struct rte_event ev[
 typedef int (*event_profile_switch_t)(void *port, uint8_t profile);
 /**< @internal Switch active link profile on the event port. */
 
+struct rte_eventdev_port_data {
+	void **data;
+	/**< points to array of internal port data pointers */
+	void **clbk;
+	/**< points to array of port callback data pointers */
+};
+/**< @internal Structure used to hold opaque eventdev port data. */
+
 struct rte_event_fp_ops {
 	void **data;
 	/**< points to array of internal port data pointers */
@@ -76,7 +84,9 @@ struct rte_event_fp_ops {
 	/**< PMD DMA adapter enqueue function. */
 	event_profile_switch_t profile_switch;
 	/**< PMD Event switch profile function. */
-	uintptr_t reserved[4];
+	struct rte_eventdev_port_data ev_port;
+	/**< Eventdev port data. */
+	uintptr_t reserved[1];
 } __rte_cache_aligned;
 
 extern struct rte_event_fp_ops rte_event_fp_ops[RTE_EVENT_MAX_DEVS];
