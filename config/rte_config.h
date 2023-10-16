@@ -135,4 +135,7 @@
 /* DLB2 defines */
 // RTE_LIBRTE_PMD_DLB2_QUELL_STATS is not set
 
+/* Event/SW defines */
+#define RTE_EVENT_SW_DEQ_CALLBACKS 1
+
 #endif /* _RTE_CONFIG_H_ */

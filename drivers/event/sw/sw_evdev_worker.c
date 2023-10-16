@@ -5,6 +5,7 @@
 #include <rte_atomic.h>
 #include <rte_cycles.h>
 #include <rte_event_ring.h>
+#include <eventdev_pmd.h>
 
 #include "sw_evdev.h"
 
@@ -203,6 +204,10 @@ sw_event_dequeue_burst(void *port, struct rte_event *ev, uint16_t num,
 	p->total_polls++;
 
 end:
+#ifdef RTE_EVENT_SW_DEQ_CALLBACKS
+	ndeq = rte_eventdev_pmd_dequeue_callback_process(p->sw->data->dev_id,
+			p->id, ev, ndeq);
+#endif
 	return ndeq;
 }
 
