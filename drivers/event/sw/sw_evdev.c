@@ -1080,6 +1080,7 @@ sw_probe(struct rte_vdev_device *vdev)
 		SW_LOG_ERR("eventdev vdev init() failed");
 		return -EFAULT;
 	}
+	dev->dev = &vdev->device;
 	dev->dev_ops = &evdev_sw_ops;
 	dev->enqueue = sw_event_enqueue;
 	dev->enqueue_burst = sw_event_enqueue_burst;
