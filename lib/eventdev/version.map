@@ -154,6 +154,7 @@ EXPERIMENTAL {
 	rte_event_port_profile_links_set;
 	rte_event_port_profile_unlink;
 	rte_event_port_profile_links_get;
+	rte_event_port_get_monitor_addr;
 	__rte_eventdev_trace_port_profile_switch;
 };
 

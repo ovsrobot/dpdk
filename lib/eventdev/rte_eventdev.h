@@ -214,6 +214,7 @@ extern "C" {
 #include <rte_errno.h>
 #include <rte_mbuf_pool_ops.h>
 #include <rte_mempool.h>
+#include <rte_power_intrinsics.h>
 
 #include "rte_eventdev_trace_fp.h"
 
@@ -989,6 +990,30 @@ rte_event_port_quiesce(uint8_t dev_id, uint8_t port_id,
 int
 rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 			uint32_t *attr_value);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Retrieve the monitor condition for a given event port.
+ *
+ * @param dev_id
+ *   Eventdev id
+ * @param port_id
+ *   Eventdev port id
+ * @param pmc
+ *   The pointer to power-optimized monitoring condition structure.
+ *
+ * @return
+ *   - 0: Success.
+ *   -ENOTSUP: Operation not supported.
+ *   -EINVAL: Invalid parameters.
+ *   -ENODEV: Invalid device ID.
+ */
+__rte_experimental
+int
+rte_event_port_get_monitor_addr(uint8_t dev_id, uint8_t port_id,
+		struct rte_power_monitor_cond *pmc);
 
 /**
  * Start an event device.

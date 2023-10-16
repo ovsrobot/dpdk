@@ -526,6 +526,26 @@ typedef int (*eventdev_port_unlinks_in_progress_t)(struct rte_eventdev *dev,
 		void *port);
 
 /**
+ * @internal
+ * Get address of memory location whose contents will change whenever there is
+ * new data to be received on an Event port.
+ *
+ * @param port
+ *   Eventdev port pointer.
+ * @param pmc
+ *   The pointer to power-optimized monitoring condition structure.
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success
+ * @retval -EINVAL
+ *   Invalid parameters
+ */
+typedef int (*event_get_monitor_addr_t)(void *port,
+		struct rte_power_monitor_cond *pmc);
+
+/**
  * Converts nanoseconds to *timeout_ticks* value for rte_event_dequeue()
  *
  * @param dev
@@ -1564,6 +1584,8 @@ struct eventdev_ops {
 	eventdev_dump_t dump;
 	/* Dump internal information */
 
+	event_get_monitor_addr_t get_monitor_addr;
+	/** Get power monitoring condition for event port */
 	eventdev_xstats_get_t xstats_get;
 	/**< Get extended device statistics. */
 	eventdev_xstats_get_names_t xstats_get_names;

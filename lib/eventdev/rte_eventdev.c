@@ -885,6 +885,30 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 }
 
 int
+rte_event_port_get_monitor_addr(uint8_t dev_id, uint8_t port_id,
+				struct rte_power_monitor_cond *pmc)
+{
+	struct rte_eventdev *dev;
+
+	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
+	dev = &rte_eventdevs[dev_id];
+	if (!is_valid_port(dev, port_id)) {
+		RTE_EDEV_LOG_ERR("Invalid port_id=%" PRIu8, port_id);
+		return -EINVAL;
+	}
+
+	if (pmc == NULL) {
+		RTE_EDEV_LOG_ERR("devid %u port %u power monitor condition is NULL\n",
+				dev_id, port_id);
+		return -EINVAL;
+	}
+
+	if (*dev->dev_ops->get_monitor_addr == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->get_monitor_addr)(dev->data->ports[port_id], pmc);
+}
+
+int
 rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 			uint32_t *attr_value)
 {
