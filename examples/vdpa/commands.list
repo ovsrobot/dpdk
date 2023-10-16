@@ -1,0 +1,5 @@
+help                                    # show help
+list                                    # list all available vdpa devices
+create <STRING>socket_path <STRING>bdf  # create a new vdpa port
+stats <STRING>bdf <UINT32>qid           # show device statistics
+quit                                    # exit application
