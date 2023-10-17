@@ -4283,6 +4283,28 @@ flow_hw_validate_action_raw_encap(struct rte_eth_dev *dev __rte_unused,
 	return 0;
 }
 
+/**
+ * Process `... / raw_decap / raw_encap / ...` actions sequence.
+ * The PMD handles the sequence as a single encap or decap reformat action,
+ * depending on the raw_encap configuration.
+ *
+ * The function assumes that the sequence location in actions template list
+ * complies with relative HWS actions order for the required reformat.
+ */
+static uint64_t
+mlx5_decap_encap_reformat_type(const struct rte_flow_action *actions,
+			       uint32_t encap_ind, uint64_t flags)
+{
+	const struct rte_flow_action_raw_encap *encap = actions[encap_ind].conf;
+
+	if ((flags & MLX5_FLOW_ACTION_DECAP) == 0)
+		return MLX5_FLOW_ACTION_ENCAP;
+	if (actions[encap_ind - 1].type != RTE_FLOW_ACTION_TYPE_RAW_DECAP)
+		return MLX5_FLOW_ACTION_ENCAP;
+	return encap->size >= MLX5_ENCAPSULATION_DECISION_SIZE ?
+	       MLX5_FLOW_ACTION_ENCAP : MLX5_FLOW_ACTION_DECAP;
+}
+
 static inline uint16_t
 flow_hw_template_expand_modify_field(struct rte_flow_action actions[],
 				     struct rte_flow_action masks[],
@@ -4320,13 +4342,13 @@ flow_hw_template_expand_modify_field(struct rte_flow_action actions[],
 	 */
 	for (i = act_num - 2; (int)i >= 0; i--) {
 		enum rte_flow_action_type type = actions[i].type;
+		uint64_t reformat_type;
 
 		if (type == RTE_FLOW_ACTION_TYPE_INDIRECT)
 			type = masks[i].type;
 		switch (type) {
 		case RTE_FLOW_ACTION_TYPE_VXLAN_ENCAP:
 		case RTE_FLOW_ACTION_TYPE_NVGRE_ENCAP:
-		case RTE_FLOW_ACTION_TYPE_RAW_ENCAP:
 		case RTE_FLOW_ACTION_TYPE_DROP:
 		case RTE_FLOW_ACTION_TYPE_SEND_TO_KERNEL:
 		case RTE_FLOW_ACTION_TYPE_JUMP:
@@ -4337,10 +4359,20 @@ flow_hw_template_expand_modify_field(struct rte_flow_action actions[],
 		case RTE_FLOW_ACTION_TYPE_VOID:
 		case RTE_FLOW_ACTION_TYPE_END:
 			break;
+		case RTE_FLOW_ACTION_TYPE_RAW_ENCAP:
+			reformat_type =
+				mlx5_decap_encap_reformat_type(actions, i,
+							       flags);
+			if (reformat_type == MLX5_FLOW_ACTION_DECAP) {
+				i++;
+				goto insert;
+			}
+			if (flags & MLX5_FLOW_ACTION_DECAP)
+				i--;
+			break;
 		default:
 			i++; /* new MF inserted AFTER actions[i] */
 			goto insert;
-			break;
 		}
 	}
 	i = 0;
