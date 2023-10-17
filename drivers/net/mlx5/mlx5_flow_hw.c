@@ -9547,14 +9547,15 @@ mlx5_mirror_terminal_action(const struct rte_flow_action *action)
 
 static bool
 mlx5_mirror_validate_sample_action(struct rte_eth_dev *dev,
-	const struct rte_flow_action *action)
+				   const struct rte_flow_attr *flow_attr,
+				   const struct rte_flow_action *action)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 
 	switch(action->type) {
 	case RTE_FLOW_ACTION_TYPE_QUEUE:
 	case RTE_FLOW_ACTION_TYPE_RSS:
-		if (priv->sh->esw_mode)
+		if (flow_attr->transfer)
 			return false;
 		break;
 	case RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT:
@@ -9562,7 +9563,7 @@ mlx5_mirror_validate_sample_action(struct rte_eth_dev *dev,
 	case RTE_FLOW_ACTION_TYPE_RAW_DECAP:
 	case RTE_FLOW_ACTION_TYPE_VXLAN_ENCAP:
 	case RTE_FLOW_ACTION_TYPE_NVGRE_ENCAP:
-		if (!priv->sh->esw_mode)
+		if (!priv->sh->esw_mode && !flow_attr->transfer)
 			return false;
 		if (action[0].type == RTE_FLOW_ACTION_TYPE_RAW_DECAP &&
 		    action[1].type != RTE_FLOW_ACTION_TYPE_RAW_ENCAP)
@@ -9584,19 +9585,22 @@ mlx5_mirror_validate_sample_action(struct rte_eth_dev *dev,
  */
 static int
 mlx5_hw_mirror_actions_list_validate(struct rte_eth_dev *dev,
+				     const struct rte_flow_attr *flow_attr,
 				     const struct rte_flow_action *actions)
 {
 	if (actions[0].type == RTE_FLOW_ACTION_TYPE_SAMPLE) {
 		int i = 1;
 		bool valid;
 		const struct rte_flow_action_sample *sample = actions[0].conf;
-		valid = mlx5_mirror_validate_sample_action(dev, sample->actions);
+		valid = mlx5_mirror_validate_sample_action(dev, flow_attr,
+							   sample->actions);
 		if (!valid)
 			return -EINVAL;
 		if (actions[1].type == RTE_FLOW_ACTION_TYPE_SAMPLE) {
 			i = 2;
 			sample = actions[1].conf;
-			valid = mlx5_mirror_validate_sample_action(dev, sample->actions);
+			valid = mlx5_mirror_validate_sample_action(dev, flow_attr,
+								   sample->actions);
 			if (!valid)
 				return -EINVAL;
 		}
@@ -9780,15 +9784,17 @@ mlx5_hw_mirror_handle_create(struct rte_eth_dev *dev,
 	struct mlx5_mirror *mirror;
 	enum mlx5dr_table_type table_type;
 	struct mlx5_priv *priv = dev->data->dev_private;
+	const struct rte_flow_attr *flow_attr = &table_cfg->attr.flow_attr;
 	struct mlx5dr_action_dest_attr mirror_attr[MLX5_MIRROR_MAX_CLONES_NUM + 1];
 	enum mlx5dr_action_type array_action_types[MLX5_MIRROR_MAX_CLONES_NUM + 1]
 						  [MLX5_MIRROR_MAX_SAMPLE_ACTIONS_LEN + 1];
 
 	memset(mirror_attr, 0, sizeof(mirror_attr));
 	memset(array_action_types, 0, sizeof(array_action_types));
-	table_type = get_mlx5dr_table_type(&table_cfg->attr.flow_attr);
+	table_type = get_mlx5dr_table_type(flow_attr);
 	hws_flags = mlx5_hw_act_flag[MLX5_HW_ACTION_FLAG_NONE_ROOT][table_type];
-	clones_num = mlx5_hw_mirror_actions_list_validate(dev, actions);
+	clones_num = mlx5_hw_mirror_actions_list_validate(dev, flow_attr,
+							  actions);
 	if (clones_num < 0) {
 		rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
 				   actions, "Invalid mirror list format");
