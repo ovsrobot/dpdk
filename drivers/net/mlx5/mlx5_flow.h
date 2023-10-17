@@ -1331,7 +1331,7 @@ struct rte_flow_actions_template {
 	uint64_t action_flags; /* Bit-map of all valid action in template. */
 	uint16_t dr_actions_num; /* Amount of DR rules actions. */
 	uint16_t actions_num; /* Amount of flow actions */
-	uint16_t *actions_off; /* DR action offset for given rte action offset. */
+	uint16_t *dr_off; /* DR action offset for given rte action offset. */
 	uint16_t reformat_off; /* Offset of DR reformat action. */
 	uint16_t mhdr_off; /* Offset of DR modify header action. */
 	uint32_t refcnt; /* Reference counter. */
