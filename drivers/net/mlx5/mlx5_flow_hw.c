@@ -1015,11 +1015,11 @@ flow_hw_modify_field_init(struct mlx5_hw_modify_header_action *mhdr,
 static __rte_always_inline int
 flow_hw_modify_field_compile(struct rte_eth_dev *dev,
 			     const struct rte_flow_attr *attr,
-			     const struct rte_flow_action *action_start, /* Start of AT actions. */
 			     const struct rte_flow_action *action, /* Current action from AT. */
 			     const struct rte_flow_action *action_mask, /* Current mask from AT. */
 			     struct mlx5_hw_actions *acts,
 			     struct mlx5_hw_modify_header_action *mhdr,
+			     uint16_t src_pos,
 			     struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
@@ -1122,7 +1122,7 @@ flow_hw_modify_field_compile(struct rte_eth_dev *dev,
 	if (shared)
 		return 0;
 	ret = __flow_hw_act_data_hdr_modify_append(priv, acts, RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
-						   action - action_start, mhdr->pos,
+						   src_pos, mhdr->pos,
 						   cmds_start, cmds_end, shared,
 						   field, dcopy, mask);
 	if (ret)
@@ -1181,11 +1181,10 @@ flow_hw_validate_compiled_modify_field(struct rte_eth_dev *dev,
 static int
 flow_hw_represented_port_compile(struct rte_eth_dev *dev,
 				 const struct rte_flow_attr *attr,
-				 const struct rte_flow_action *action_start,
 				 const struct rte_flow_action *action,
 				 const struct rte_flow_action *action_mask,
 				 struct mlx5_hw_actions *acts,
-				 uint16_t action_dst,
+				 uint16_t action_src, uint16_t action_dst,
 				 struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
@@ -1241,7 +1240,7 @@ flow_hw_represented_port_compile(struct rte_eth_dev *dev,
 	} else {
 		ret = __flow_hw_act_data_general_append
 				(priv, acts, action->type,
-				 action - action_start, action_dst);
+				 action_src, action_dst);
 		if (ret)
 			return rte_flow_error_set
 					(error, ENOMEM,
@@ -1493,7 +1492,6 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 	const struct rte_flow_template_table_attr *table_attr = &cfg->attr;
 	const struct rte_flow_attr *attr = &table_attr->flow_attr;
 	struct rte_flow_action *actions = at->actions;
-	struct rte_flow_action *action_start = actions;
 	struct rte_flow_action *masks = at->masks;
 	enum mlx5dr_action_type refmt_type = MLX5DR_ACTION_TYP_LAST;
 	const struct rte_flow_action_raw_encap *raw_encap_data;
@@ -1506,7 +1504,6 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 	uint32_t type;
 	bool reformat_used = false;
 	unsigned int of_vlan_offset;
-	uint16_t dr_pos;
 	uint16_t jump_pos;
 	uint32_t ct_idx;
 	int ret, err;
@@ -1521,7 +1518,10 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 	else
 		type = MLX5DR_TABLE_TYPE_NIC_RX;
 	for (; !actions_end; actions++, masks++) {
-		dr_pos = at->dr_off[actions - at->actions];
+		uint64_t pos = actions - at->actions;
+		uint16_t src_pos = pos - at->src_off[pos];
+		uint16_t dr_pos = at->dr_off[pos];
+
 		switch ((int)actions->type) {
 		case RTE_FLOW_ACTION_TYPE_INDIRECT_LIST:
 			if (!attr->group) {
@@ -1529,9 +1529,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				goto err;
 			}
 			ret = table_template_translate_indirect_list
-				(dev, actions, masks, acts,
-				 actions - action_start,
-				 dr_pos);
+				(dev, actions, masks, acts, src_pos, dr_pos);
 			if (ret)
 				goto err;
 			break;
@@ -1542,11 +1540,11 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 			}
 			if (actions->conf && masks->conf) {
 				if (flow_hw_shared_action_translate
-				(dev, actions, acts, actions - action_start, dr_pos))
+				(dev, actions, acts, src_pos, dr_pos))
 					goto err;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, RTE_FLOW_ACTION_TYPE_INDIRECT,
-					 actions - action_start, dr_pos)){
+					 src_pos, dr_pos)){
 				goto err;
 			}
 			break;
@@ -1566,7 +1564,8 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					(((const struct rte_flow_action_mark *)
 					(actions->conf))->id);
 			else if (__flow_hw_act_data_general_append(priv, acts,
-								   actions->type, actions - action_start, dr_pos))
+								   actions->type,
+								   src_pos, dr_pos))
 				goto err;
 			acts->rule_acts[dr_pos].action =
 				priv->hw_tag[!!attr->group];
@@ -1581,7 +1580,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					vlan_hdr_to_be32(actions);
 			else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, dr_pos))
+					 src_pos, dr_pos))
 				goto err;
 			of_vlan_offset = is_of_vlan_pcp_present(actions) ?
 					MLX5_HW_VLAN_PUSH_PCP_IDX :
@@ -1609,7 +1608,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 								 acts->jump->root_action;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, dr_pos)){
+					 src_pos, dr_pos)){
 				goto err;
 			}
 			break;
@@ -1627,7 +1626,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					acts->tir->action;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, dr_pos)) {
+					 src_pos, dr_pos)) {
 				goto err;
 			}
 			break;
@@ -1643,7 +1642,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					acts->tir->action;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, dr_pos)) {
+					 src_pos, dr_pos)) {
 				goto err;
 			}
 			break;
@@ -1655,7 +1654,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				enc_item_m = ((const struct rte_flow_action_vxlan_encap *)
 					     masks->conf)->definition;
 			reformat_used = true;
-			reformat_src = actions - action_start;
+			reformat_src = src_pos;
 			refmt_type = MLX5DR_ACTION_TYP_REFORMAT_L2_TO_TNL_L2;
 			break;
 		case RTE_FLOW_ACTION_TYPE_NVGRE_ENCAP:
@@ -1666,7 +1665,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				enc_item_m = ((const struct rte_flow_action_nvgre_encap *)
 					     masks->conf)->definition;
 			reformat_used = true;
-			reformat_src = actions - action_start;
+			reformat_src = src_pos;
 			refmt_type = MLX5DR_ACTION_TYP_REFORMAT_L2_TO_TNL_L2;
 			break;
 		case RTE_FLOW_ACTION_TYPE_VXLAN_DECAP:
@@ -1696,7 +1695,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				refmt_type =
 				MLX5DR_ACTION_TYP_REFORMAT_L2_TO_TNL_L2;
 			}
-			reformat_src = actions - action_start;
+			reformat_src = src_pos;
 			break;
 		case RTE_FLOW_ACTION_TYPE_RAW_DECAP:
 			reformat_used = true;
@@ -1718,26 +1717,16 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 			acts->rule_acts[dr_pos].action = priv->hw_send_to_kernel[table_type];
 			break;
 		case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
-			err = flow_hw_modify_field_compile(dev, attr, action_start,
-							   actions, masks, acts, &mhdr,
-							   error);
+			err = flow_hw_modify_field_compile(dev, attr, actions,
+							   masks, acts, &mhdr,
+							   src_pos, error);
 			if (err)
 				goto err;
-			/*
-			 * Adjust the action source position for the following.
-			 * ... / MODIFY_FIELD: rx_cpy_pos / (QUEUE|RSS) / ...
-			 * The next action will be Q/RSS, there will not be
-			 * another adjustment and the real source position of
-			 * the following actions will be decreased by 1.
-			 * No change of the total actions in the new template.
-			 */
-			if ((actions - action_start) == at->rx_cpy_pos)
-				action_start += 1;
 			break;
 		case RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT:
 			if (flow_hw_represented_port_compile
-					(dev, attr, action_start, actions,
-					 masks, acts, dr_pos, error))
+					(dev, attr, actions,
+					 masks, acts, src_pos, dr_pos, error))
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_METER:
@@ -1756,7 +1745,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					goto err;
 			} else if (__flow_hw_act_data_general_append(priv, acts,
 								     actions->type,
-							actions - action_start,
+								     src_pos,
 								     dr_pos))
 				goto err;
 			break;
@@ -1772,7 +1761,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 			}
 			if (__flow_hw_act_data_general_append(priv, acts,
 							      actions->type,
-							 actions - action_start,
+							      src_pos,
 							      dr_pos))
 				goto err;
 			break;
@@ -1802,7 +1791,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					goto err;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, dr_pos)) {
+					 src_pos, dr_pos)) {
 				goto err;
 			}
 			break;
@@ -1815,7 +1804,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					goto err;
 			} else if (__flow_hw_act_data_general_append
 					(priv, acts, actions->type,
-					 actions - action_start, dr_pos)) {
+					 src_pos, dr_pos)) {
 				goto err;
 			}
 			break;
@@ -1832,7 +1821,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 					goto err;
 			} else if (__flow_hw_act_data_general_append(priv, acts,
 								     actions->type,
-							actions - action_start,
+								     src_pos,
 								     dr_pos))
 				goto err;
 			break;
@@ -1916,7 +1905,7 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 		if (shared_rfmt)
 			acts->rule_acts[at->reformat_off].reformat.offset = 0;
 		else if (__flow_hw_act_data_encap_append(priv, acts,
-				 (action_start + reformat_src)->type,
+				 (at->actions + reformat_src)->type,
 				 reformat_src, at->reformat_off, data_size))
 			goto err;
 		acts->encap_decap->shared = shared_rfmt;
@@ -4273,8 +4262,11 @@ flow_hw_validate_action_raw_encap(struct rte_eth_dev *dev __rte_unused,
  * The PMD handles the sequence as a single encap or decap reformat action,
  * depending on the raw_encap configuration.
  *
- * The function assumes that the sequence location in actions template list
- * complies with relative HWS actions order for the required reformat.
+ * The function assumes that the raw_decap / raw_encap location
+ * in actions template list complies with relative HWS actions order:
+ * for the required reformat configuration:
+ * ENCAP configuration must appear before [JUMP|DROP|PORT]
+ * DECAP configuration must appear at the template head.
  */
 static uint64_t
 mlx5_decap_encap_reformat_type(const struct rte_flow_action *actions,
@@ -4352,7 +4344,7 @@ flow_hw_template_expand_modify_field(struct rte_flow_action actions[],
 				i++;
 				goto insert;
 			}
-			if (flags & MLX5_FLOW_ACTION_DECAP)
+			if (actions[i - 1].type == RTE_FLOW_ACTION_TYPE_RAW_DECAP)
 				i--;
 			break;
 		default:
@@ -5131,6 +5123,7 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 	struct rte_flow_action mf_actions[MLX5_HW_MAX_ACTS];
 	struct rte_flow_action mf_masks[MLX5_HW_MAX_ACTS];
 	uint32_t expand_mf_num = 0;
+	uint16_t src_off[MLX5_HW_MAX_ACTS] = {0, };
 
 	if (mlx5_flow_hw_actions_validate(dev, attr, actions, masks,
 					  &action_flags, error))
@@ -5209,6 +5202,8 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 							   act_num,
 							   expand_mf_num);
 		act_num += expand_mf_num;
+		for (i = pos + expand_mf_num; i < act_num; i++)
+			src_off[i] += expand_mf_num;
 		action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
 	}
 	act_len = rte_flow_conv(RTE_FLOW_CONV_OP_ACTIONS, NULL, 0, ra, error);
@@ -5220,6 +5215,7 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 		return NULL;
 	len += RTE_ALIGN(mask_len, 16);
 	len += RTE_ALIGN(act_num * sizeof(*at->dr_off), 16);
+	len += RTE_ALIGN(act_num * sizeof(*at->src_off), 16);
 	at = mlx5_malloc(MLX5_MEM_ZERO, len + sizeof(*at),
 			 RTE_CACHE_LINE_SIZE, rte_socket_id());
 	if (!at) {
@@ -5244,12 +5240,14 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 		goto error;
 	/* DR actions offsets in the third part. */
 	at->dr_off = (uint16_t *)((uint8_t *)at->masks + mask_len);
+	at->src_off = RTE_PTR_ADD(at->dr_off,
+				  RTE_ALIGN(act_num * sizeof(*at->dr_off), 16));
+	memcpy(at->src_off, src_off, act_num * sizeof(at->src_off[0]));
 	at->actions_num = act_num;
 	for (i = 0; i < at->actions_num; ++i)
 		at->dr_off[i] = UINT16_MAX;
 	at->reformat_off = UINT16_MAX;
 	at->mhdr_off = UINT16_MAX;
-	at->rx_cpy_pos = pos;
 	for (i = 0; actions->type != RTE_FLOW_ACTION_TYPE_END;
 	     actions++, masks++, i++) {
 		const struct rte_flow_action_modify_field *info;
