@@ -1271,6 +1271,7 @@ struct mlx5_action_construct_data {
 	uint32_t idx;  /* Data index. */
 	uint16_t action_src; /* rte_flow_action src offset. */
 	uint16_t action_dst; /* mlx5dr_rule_action dst offset. */
+	indirect_list_callback_t indirect_list_cb;
 	union {
 		struct {
 			/* encap data len. */
@@ -1312,9 +1313,6 @@ struct mlx5_action_construct_data {
 			uint32_t id;
 			uint32_t conf_masked:1;
 		} shared_meter;
-		struct {
-			indirect_list_callback_t cb;
-		} indirect_list;
 	};
 };
 
