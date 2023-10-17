@@ -9690,11 +9690,11 @@ mirror_format_port(struct rte_eth_dev *dev,
 
 static int
 hw_mirror_clone_reformat(const struct rte_flow_action *actions,
-                         struct mlx5dr_action_dest_attr *dest_attr,
-                         enum mlx5dr_action_type *action_type, bool decap)
+			 struct mlx5dr_action_dest_attr *dest_attr,
+			 enum mlx5dr_action_type *action_type,
+			 uint8_t *reformat_buf, bool decap)
 {
 	int ret;
-	uint8_t encap_buf[MLX5_ENCAP_MAX_LEN];
 	const struct rte_flow_item *encap_item = NULL;
 	const struct rte_flow_action_raw_encap *encap_conf = NULL;
 	typeof(dest_attr->reformat) *reformat = &dest_attr->reformat;
@@ -9718,11 +9718,11 @@ hw_mirror_clone_reformat(const struct rte_flow_action *actions,
 		       MLX5DR_ACTION_TYP_REFORMAT_L2_TO_TNL_L3 :
 		       MLX5DR_ACTION_TYP_REFORMAT_L2_TO_TNL_L2;
 	if (encap_item) {
-		ret = flow_dv_convert_encap_data(encap_item, encap_buf,
+		ret = flow_dv_convert_encap_data(encap_item, reformat_buf,
 						 &reformat->reformat_data_sz, NULL);
 		if (ret)
 			return -EINVAL;
-		reformat->reformat_data = (void *)(uintptr_t)encap_buf;
+		reformat->reformat_data = reformat_buf;
 	} else {
 		reformat->reformat_data = (void *)(uintptr_t)encap_conf->data;
 		reformat->reformat_data_sz = encap_conf->size;
@@ -9736,7 +9736,7 @@ hw_mirror_format_clone(struct rte_eth_dev *dev,
                        const struct mlx5_flow_template_table_cfg *table_cfg,
                        const struct rte_flow_action *actions,
                        struct mlx5dr_action_dest_attr *dest_attr,
-                       struct rte_flow_error *error)
+		       uint8_t *reformat_buf, struct rte_flow_error *error)
 {
 	int ret;
 	uint32_t i;
@@ -9772,7 +9772,7 @@ hw_mirror_format_clone(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_NVGRE_ENCAP:
 			ret = hw_mirror_clone_reformat(&actions[i], dest_attr,
 						       &dest_attr->action_type[i],
-						       decap_seen);
+						       reformat_buf, decap_seen);
 			if (ret < 0)
 				return rte_flow_error_set(error, EINVAL,
 							  RTE_FLOW_ERROR_TYPE_ACTION,
@@ -9802,6 +9802,7 @@ mlx5_hw_mirror_handle_create(struct rte_eth_dev *dev,
 	enum mlx5dr_table_type table_type;
 	struct mlx5_priv *priv = dev->data->dev_private;
 	const struct rte_flow_attr *flow_attr = &table_cfg->attr.flow_attr;
+	uint8_t reformat_buf[MLX5_MIRROR_MAX_CLONES_NUM][MLX5_ENCAP_MAX_LEN];
 	struct mlx5dr_action_dest_attr mirror_attr[MLX5_MIRROR_MAX_CLONES_NUM + 1];
 	enum mlx5dr_action_type array_action_types[MLX5_MIRROR_MAX_CLONES_NUM + 1]
 						  [MLX5_MIRROR_MAX_SAMPLE_ACTIONS_LEN + 1];
@@ -9839,7 +9840,7 @@ mlx5_hw_mirror_handle_create(struct rte_eth_dev *dev,
 		}
 		ret = hw_mirror_format_clone(dev, &mirror->clone[i], table_cfg,
 					     clone_actions, &mirror_attr[i],
-					     error);
+					     reformat_buf[i], error);
 
 		if (ret)
 			goto error;
