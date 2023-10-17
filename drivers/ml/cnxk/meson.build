@@ -12,6 +12,7 @@ driver_sdk_headers = files(
         'cn10k_ml_ops.h',
         'cn10k_ml_model.h',
         'cn10k_ml_ocm.h',
+        'cnxk_ml_dev.h',
 )
 
 sources = files(
@@ -19,6 +20,7 @@ sources = files(
         'cn10k_ml_ops.c',
         'cn10k_ml_model.c',
         'cn10k_ml_ocm.c',
+        'cnxk_ml_dev.c',
 )
 
 deps += ['mldev', 'common_cnxk', 'kvargs', 'hash']
