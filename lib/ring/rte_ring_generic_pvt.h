@@ -23,7 +23,8 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
 	 * we need to wait for them to complete
 	 */
 	if (!single)
-		rte_wait_until_equal_32(&ht->tail, old_val, __ATOMIC_RELAXED);
+		rte_wait_until_equal_32((volatile uint32_t *)(uintptr_t)&ht->tail, old_val,
+			rte_memory_order_relaxed);
 
 	ht->tail = new_val;
 }

@@ -394,7 +394,7 @@ __mlx5_hws_cnt_pool_enqueue_revert(struct rte_ring *r, unsigned int n,
 	__rte_ring_get_elem_addr(r, revert2head, sizeof(cnt_id_t), n,
 			&zcd->ptr1, &zcd->n1, &zcd->ptr2);
 	/* Update tail */
-	__atomic_store_n(&r->prod.tail, revert2head, __ATOMIC_RELEASE);
+	rte_atomic_store_explicit(&r->prod.tail, revert2head, rte_memory_order_release);
 	return n;
 }
 
