@@ -1,0 +1,6 @@
+send <IP>ip   # sends one ARPrequest through bonding for IP
+start         # starts listening if not started at startup
+stop          # stops listening
+show          # shows some bond info, e.g. active members
+help          # show help
+quit          # close application
