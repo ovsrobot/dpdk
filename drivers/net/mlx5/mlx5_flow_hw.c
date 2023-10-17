@@ -4680,10 +4680,12 @@ flow_hw_dr_actions_template_handle_shared(const struct rte_flow_action *mask,
 		 * Both AGE and COUNT action need counter, the first one fills
 		 * the action_types array, and the second only saves the offset.
 		 */
-		if (*cnt_off == UINT16_MAX)
+		if (*cnt_off == UINT16_MAX) {
+			*cnt_off = *curr_off;
 			action_template_set_type(at, action_types,
 						 action_src, curr_off,
 						 MLX5DR_ACTION_TYP_CTR);
+		}
 		at->actions_off[action_src] = *cnt_off;
 		break;
 	case RTE_FLOW_ACTION_TYPE_CONNTRACK:
