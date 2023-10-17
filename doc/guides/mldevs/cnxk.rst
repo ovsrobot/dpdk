@@ -46,6 +46,64 @@ or cross-compiled on an x86 platform.
 
 Refer to :doc:`../platform/cnxk` for instructions to build your DPDK application.
 
+Compilation Prerequisites
+-------------------------
+
+This driver requires external libraries to optionally enable support for
+models compiled using Apache TVM framework. The following dependencies are
+not part of DPDK and must be installed separately:
+
+- **Jansson**
+
+  This library enables support to parse and read JSON files.
+
+- **TVM**
+
+  Apache TVM provides a runtime library (libtvm_runtime) used to execute
+  models on CPU cores or hardware accelerators.
+
+.. note::
+
+    DPDK CNXK ML driver requires TVM version 0.10.0
+
+.. code-block:: console
+
+    git clone https://github.com/apache/tvm.git
+    cd tvm
+    git checkout v0.10.0 -b v0.10.0
+    cmake -S ./ -B build \
+      -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+      -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+      -DMACHINE_NAME=aarch64-linux-gnu \
+      -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+      -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
+    make -C build
+    make -C build install
+
+- **TVMDP**
+
+  Marvell's `TVM Dataplane Library <https://github.com/MarvellEmbeddedProcessors/tvmdp>`_
+  works as an interface between TVM runtime and DPDK drivers. TVMDP library
+  provides a simplified C interface for TVM's runtime based on C++.
+
+.. code-block:: console
+
+    git clone https://github.com/MarvellEmbeddedProcessors/tvmdp.git
+    cd tvmdp
+    git checkout main
+    cmake -S ./ -B build \
+      -DCMAKE_TOOLCHAIN_FILE=config/toolchains/arm64_linux_gcc.cmake \
+      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_TESTING=OFF
+    make -C build
+    make -C build install
+
+- **libarchive**
+
+  Apached TVM framework generates compiled models as tar archives. This
+  library enables support to decompress and read archive files in tar,
+  xz and other formats.
+
 
 Initialization
 --------------
