@@ -1,0 +1,12 @@
+	This is at least a partial credits-file of people that have
+	contributed to the DPDK project.  It is sorted by name and
+	formatted to allow easy grepping and beautification by
+	scripts.  The fields are: name (N), email (E), web-address
+	(W), and description (D)
+
+----------
+
+N: Venky Vekatesan
+E: venky.venkatesan@intel.com
+D: Original founder of DPDK project
+W: https://www.dpdk.org/about/venky/
