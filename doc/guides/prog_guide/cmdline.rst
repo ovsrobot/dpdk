@@ -62,13 +62,16 @@ The format of the list file must be:
 
 * One command per line
 
-* Variable fields are prefixed by the type-name in angle-brackets, for example:
+* Variable fields are prefixed by the type-name, or "|"-delimited option-list, in angle-brackets.
+  For example:
 
   * ``<STRING>message``
 
   * ``<UINT16>port_id``
 
   * ``<IP>src_ip``
+
+  * ``<|rx|tx|rxtx|>mode``
 
 * The help text for a command is given in the form of a comment on the same line as the command
 
@@ -79,6 +82,7 @@ An example list file, with a variety of (unrelated) commands, is shown below::
    add <UINT16>x <UINT16>y  # add x and y
    echo <STRING>message     # print message to screen
    add socket <STRING>path  # add unix socket with the given path
+   set mode <|rx|tx|>rxtx   # set Rx-only or Tx-only mode
    quit                     # close the application
 
 Running the Generator Script
