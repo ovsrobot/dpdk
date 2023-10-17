@@ -1626,7 +1626,8 @@ cpfl_parse_devargs(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adap
 
 	if (rte_kvargs_count(kvlist, CPFL_VPORT) > 1) {
 		PMD_INIT_LOG(ERR, "devarg vport is duplicated.");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto fail;
 	}
 
 	ret = rte_kvargs_process(kvlist, CPFL_REPRESENTOR, &parse_repr, cpfl_args);
@@ -1635,7 +1636,7 @@ cpfl_parse_devargs(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adap
 		goto fail;
 
 	if (!first)
-		return 0;
+		goto fail;
 
 	ret = rte_kvargs_process(kvlist, CPFL_VPORT, &parse_vport,
 				 cpfl_args);
