@@ -4246,6 +4246,63 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 		return -1;
 	}
 
+	/* Parse/set notify member flag */
+	arg_count = rte_kvargs_count(kvlist, PMD_BOND_NOTIFY_MEMBER_KVARG);
+	if (arg_count == 1) {
+		bool notify_member;
+		if (rte_kvargs_process(kvlist,
+				       PMD_BOND_NOTIFY_MEMBER_KVARG,
+				       &bond_ethdev_parse_notify_member_kvarg,
+				       &notify_member) < 0) {
+			RTE_BOND_LOG(ERR,
+				     "Invalid notify member value specified"
+				     " for bonding device %s", name);
+			return -1;
+		}
+
+		if (rte_eth_bond_notify_member_flag_set(port_id, notify_member) != 0) {
+			RTE_BOND_LOG(ERR,
+				     "Failed to set notify member (%u) on"
+				     " bonding device %s", notify_member, name);
+			return -1;
+		}
+	} else if (arg_count > 1) {
+		RTE_BOND_LOG(ERR,
+			     "notify member flag can be specified only once"
+			     " for bonding device %s", name);
+		return -1;
+	}
+
+	/* Parse/set dedicated queue flag */
+	arg_count = rte_kvargs_count(kvlist, PMD_BOND_DEDICATED_QUEUE_KVARG);
+	if (arg_count == 1) {
+		bool dedicated_queue;
+		if (rte_kvargs_process(kvlist,
+				       PMD_BOND_DEDICATED_QUEUE_KVARG,
+				       &bond_ethdev_parse_dedicated_queue_kvarg,
+				       &dedicated_queue) < 0) {
+			RTE_BOND_LOG(ERR,
+				     "Invalid dedicated queue flag specified"
+				     " for bonding device %s", name);
+			return -1;
+		}
+
+		if (internals->mode == BONDING_MODE_8023AD) {
+			if (rte_eth_bond_dedicated_queue_flag_set(port_id, dedicated_queue) != 0) {
+				RTE_BOND_LOG(ERR,
+					     "Failed to enable/disable dedicated"
+					     " queue flag on bonding device %s",
+					     name);
+				return -1;
+			}
+		}
+	} else if (arg_count > 1) {
+		RTE_BOND_LOG(ERR,
+			     "dedicated queue flag can be specified only once"
+			     " for bonding device %s", name);
+		return -1;
+	}
+
 	/* configure members so we can pass mtu setting */
 	for (i = 0; i < internals->member_count; i++) {
 		struct rte_eth_dev *member_ethdev =
@@ -4283,7 +4340,9 @@ RTE_PMD_REGISTER_PARAM_STRING(net_bonding,
 	"mac=<mac addr> "
 	"lsc_poll_period_ms=<int> "
 	"up_delay=<int> "
-	"down_delay=<int>");
+	"down_delay=<int>"
+	"notify_member=[enable | disable] "
+	"dedicated_queue=[enable | disable] ");
 
 /* We can't use RTE_LOG_REGISTER_DEFAULT because of the forced name for
  * this library, see meson.build.

@@ -28,6 +28,8 @@
 #define PMD_BOND_LSC_POLL_PERIOD_KVARG		("lsc_poll_period_ms")
 #define PMD_BOND_LINK_UP_PROP_DELAY_KVARG	("up_delay")
 #define PMD_BOND_LINK_DOWN_PROP_DELAY_KVARG	("down_delay")
+#define PMD_BOND_NOTIFY_MEMBER_KVARG		("notify_member")
+#define PMD_BOND_DEDICATED_QUEUE_KVARG		("dedicated_queue")
 
 #define PMD_BOND_XMIT_POLICY_LAYER2_KVARG	("l2")
 #define PMD_BOND_XMIT_POLICY_LAYER23_KVARG	("l23")
@@ -317,6 +319,14 @@ bond_ethdev_parse_bond_mac_addr_kvarg(const char *key,
 
 int
 bond_ethdev_parse_time_ms_kvarg(const char *key,
+		const char *value, void *extra_args);
+
+int
+bond_ethdev_parse_notify_member_kvarg(const char *key __rte_unused,
+		const char *value, void *extra_args);
+
+int
+bond_ethdev_parse_dedicated_queue_kvarg(const char *key __rte_unused,
 		const char *value, void *extra_args);
 
 void

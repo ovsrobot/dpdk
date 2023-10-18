@@ -1115,6 +1115,20 @@ rte_eth_bond_link_up_prop_delay_get(uint16_t bonding_port_id)
 }
 
 int
+rte_eth_bond_dedicated_queue_flag_set(uint16_t bonding_port_id, bool queue_flag)
+{
+	struct bond_dev_private *internals;
+
+	if (valid_bonding_port_id(bonding_port_id) != 0)
+		return -1;
+
+	internals = rte_eth_devices[bonding_port_id].data->dev_private;
+	internals->mode4.dedicated_queues.enabled = queue_flag;
+
+	return 0;
+}
+
+int
 rte_eth_bond_notify_member_flag_set(uint16_t bonding_port_id, bool notify)
 {
 	struct bond_dev_private *internals;

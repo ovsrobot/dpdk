@@ -352,6 +352,20 @@ int
 rte_eth_bond_link_up_prop_delay_get(uint16_t bonding_port_id);
 
 /**
+ * Set the flag that whether bonding device enable dedicated queue.
+ *
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param queue_flag
+ *   The flag of enable bond dedicated queue
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ */
+int
+rte_eth_bond_dedicated_queue_flag_set(uint16_t bonding_port_id, bool queue_flag);
+
+/**
  * Set the flag of whether bonding port notifies member ports.
  *
  * @param bonding_port_id
