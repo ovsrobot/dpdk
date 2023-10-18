@@ -1,0 +1,9 @@
+This file lists some of the significant past contributors to the DPDK.
+It is sorted by name and formatted to allow easy searching use by scripts.
+The fields are: name (N), email (E), web-address (W), and description (D).
+
+----------
+
+N: Venky Venkatesan
+D: Original founder of DPDK project
+W: https://www.dpdk.org/about/venky/
