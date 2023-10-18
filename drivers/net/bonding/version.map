@@ -35,4 +35,7 @@ EXPERIMENTAL {
 	rte_eth_bond_member_add;
 	rte_eth_bond_member_remove;
 	rte_eth_bond_members_get;
+	rte_eth_bond_notify_member_flag_get;
+	rte_eth_bond_notify_member_flag_set;
+	rte_eth_bond_notify_members;
 };

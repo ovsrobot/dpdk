@@ -2982,11 +2982,13 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 	int valid_member = 0;
 	uint16_t active_pos, member_idx;
 	uint16_t i;
+	uint16_t bonding_port_id;
 
 	if (type != RTE_ETH_EVENT_INTR_LSC || param == NULL)
 		return rc;
 
-	bonding_eth_dev = &rte_eth_devices[*(uint16_t *)param];
+	bonding_port_id = *(uint16_t *)param;
+	bonding_eth_dev = &rte_eth_devices[bonding_port_id];
 
 	if (check_for_bonding_ethdev(bonding_eth_dev))
 		return rc;
@@ -3058,8 +3060,12 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 		 * using it.
 		 */
 		if (internals->user_defined_primary_port &&
-				internals->primary_port == port_id)
+				internals->primary_port == port_id) {
 			bond_ethdev_primary_set(internals, port_id);
+
+			if (internals->notify_member)
+				rte_eth_bond_notify_members(bonding_port_id);
+		}
 	} else {
 		if (active_pos == internals->active_member_count)
 			goto link_update;
@@ -3078,6 +3084,10 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 						internals->active_members[0]);
 			else
 				internals->current_primary_port = internals->primary_port;
+
+			if (internals->notify_member)
+				rte_eth_bond_notify_members(bonding_port_id);
+
 			mac_address_members_update(bonding_eth_dev);
 			bond_ethdev_promiscuous_update(bonding_eth_dev);
 			bond_ethdev_allmulticast_update(bonding_eth_dev);
@@ -3376,6 +3386,7 @@ dump_basic(const struct rte_eth_dev *dev, FILE *f)
 	struct bond_dev_private instant_priv;
 	const struct bond_dev_private *internals = &instant_priv;
 	int mode, i;
+	bool notify_member;
 
 	/* Obtain a instance of dev_private to prevent data from being modified. */
 	memcpy(&instant_priv, dev->data->dev_private, sizeof(struct bond_dev_private));
@@ -3445,6 +3456,13 @@ dump_basic(const struct rte_eth_dev *dev, FILE *f)
 		fprintf(f, "\tUser Defined Primary: [%u]\n", internals->primary_port);
 	if (internals->member_count > 0)
 		fprintf(f, "\tCurrent Primary: [%u]\n", internals->current_primary_port);
+
+	if (rte_eth_bond_notify_member_flag_get(internals->port_id, &notify_member) == 0)
+		fprintf(f, "\tNotify Member Ports Flag: %s\n",
+			notify_member ? "enable" : "disable");
+	else
+		fprintf(f, "\tFailed to get notify member ports flag for bonding port %d\n",
+			internals->port_id);
 }
 
 static void
@@ -3997,8 +4015,12 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 	 * if no kvlist, it means that this bonding device has been created
 	 * through the bonding api.
 	 */
-	if (!kvlist || internals->kvargs_processing_is_done)
+	if (!kvlist || internals->kvargs_processing_is_done) {
+		if (internals->notify_member && rte_eth_bond_notify_members(port_id) != 0)
+			RTE_BOND_LOG(ERR, "Notify member ports failed");
+
 		return 0;
+	}
 
 	internals->kvargs_processing_is_done = true;
 
@@ -4236,6 +4258,10 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 			return -1;
 		}
 	}
+
+	if (internals->notify_member && rte_eth_bond_notify_members(port_id) != 0)
+		RTE_BOND_LOG(ERR, "Notify member ports failed");
+
 	return 0;
 }
 
