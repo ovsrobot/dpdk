@@ -12,6 +12,10 @@ Based on the input file, application creates a graph to cater the use case.
 
 Also this application framework can be used by other graph based applications.
 
+Supported Use cases
+-------------------
+ * l3fwd
+
 Running the Application
 -----------------------
 
@@ -230,3 +234,10 @@ Created graph for use case
 
 On the successful execution of ``<usecase>.cli`` file, corresponding graph will be created.
 This section mentions the created graph for each use case.
+
+l3fwd
+~~~~~
+
+.. _figure_l3fwd_graph:
+
+.. figure:: img/graph-usecase-l3fwd.*
