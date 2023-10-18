@@ -637,3 +637,22 @@ in balance mode with a transmission policy of layer 2+3::
         Members (3): [1 3 4]
         Active Members (3): [1 3 4]
         Primary: [3]
+
+set bonding notify_member
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Set the notify member flag of bonding port::
+
+   testpmd> set bonding notify_member (port_id) (enable|disable)
+
+This command just set the flag of notification.
+If we enable it, bonding PMD will notify member ports when its some
+configurations changed. So member ports can do some private things, maybe hardware
+bonding creation and etc.
+
+get bonding member hardware create
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Get the status of member port hardware creating the bonding port::
+
+   testpmd> get bonding member hardware create (member_port_id) (bonding_port_id)
