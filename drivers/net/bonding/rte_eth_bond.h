@@ -427,6 +427,19 @@ __rte_experimental
 int
 rte_eth_bond_hw_create_get(uint16_t bonding_port_id, uint16_t member_port_id);
 
+/**
+ * Check whether bonding port id is valid.
+ *
+ * @param port_id
+ *   Port ID of bonding device.
+ *
+ * @return
+ *   true means the port is a bonding device, false means not.
+ */
+__rte_experimental
+bool
+rte_eth_bond_is_valid_port(uint16_t port_id);
+
 #ifdef __cplusplus
 }
 #endif

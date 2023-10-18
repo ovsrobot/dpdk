@@ -33,6 +33,7 @@ EXPERIMENTAL {
 	rte_eth_bond_8023ad_member_info;
 	rte_eth_bond_active_members_get;
 	rte_eth_bond_hw_create_get;
+	rte_eth_bond_is_valid_port;
 	rte_eth_bond_member_add;
 	rte_eth_bond_member_remove;
 	rte_eth_bond_members_get;
