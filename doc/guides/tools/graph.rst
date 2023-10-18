@@ -131,6 +131,15 @@ file to express the requested use case configuration.
      - Command to dump ipv4_lookup help message
      - Yes
      - Yes
+   * - ipv6_lookup route add ipv6 <ip> netmask <mask> via <ip>
+     - Command to add a route into ``ipv6_lookup`` LPM table. It is needed if user
+       wishes to route the packets based on LPM6 lookup table.
+     - Yes
+     - Yes
+   * - help ipv6_lookup
+     - Command to dump ipv6_lookup help message
+     - Yes
+     - Yes
 
 Runtime configuration
 ---------------------
