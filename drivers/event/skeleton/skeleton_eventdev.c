@@ -24,6 +24,7 @@
 
 #define EVENTDEV_NAME_SKELETON_PMD event_skeleton
 /**< Skeleton event device PMD name */
+#define EVENTDEV_NAME_STRING RTE_STR(EVENTDEV_NAME_SKELETON_PMD)
 
 static uint16_t
 skeleton_eventdev_enqueue(void *port, const struct rte_event *ev)
@@ -88,6 +89,7 @@ skeleton_eventdev_info_get(struct rte_eventdev *dev,
 
 	RTE_SET_USED(skel);
 
+	dev_info->driver_name = EVENTDEV_NAME_STRING;
 	dev_info->min_dequeue_timeout_ns = 1;
 	dev_info->max_dequeue_timeout_ns = 10000;
 	dev_info->dequeue_timeout_ns = 25;
