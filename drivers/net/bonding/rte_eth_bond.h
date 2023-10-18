@@ -398,6 +398,21 @@ __rte_experimental
 int
 rte_eth_bond_notify_members(uint16_t bonding_port_id);
 
+/**
+ * Get the status of specified bonding port created by member port hardware.
+ *
+ * @param bonding_port_id
+ *   Port ID of bonding device.
+ * @param member_port_id
+ *   Port ID of member device.
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_hw_create_get(uint16_t bonding_port_id, uint16_t member_port_id);
+
 #ifdef __cplusplus
 }
 #endif
