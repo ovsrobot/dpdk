@@ -70,6 +70,9 @@ find_port_id_by_dev_name(const char *name)
 
 		if (strcmp(rte_eth_devices[i].device->name, name) == 0)
 			return i;
+
+		if (strcmp(rte_eth_devices[i].data->name, name) == 0)
+			return i;
 	}
 	return -1;
 }
