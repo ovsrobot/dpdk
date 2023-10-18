@@ -74,10 +74,25 @@ file to express the requested use case configuration.
      - Description
      - Dynamic
      - Optional
-   * - Dummy command
-     - Dummy command description
+   * - graph <usecases> [bsz <size>] [tmo <ns>] [coremask <bitmask>] model <rtc | mcd | default>
+       pcap_enable <0 | 1> num_pcap_pkts <num> pcap_file <output_capture_file>
+     - Command to express the desired use case. Also enables/disable pcap capturing
      - No
      - No
+   * - graph start
+     - Command to start the graph.
+       This command triggers that no more commands are left to be parsed and graph
+       initialization can be started now. It must be the last command in ``<usecase>.cli``
+     - No
+     - No
+   * - graph stats show
+     - Command to dump current graph statistics
+     - Yes
+     - Yes
+   * - help graph
+     - Command to dump graph help message
+     - Yes
+     - Yes
    * - mempool <mempool_name> size <mbuf_size> buffers <number_of_buffers> cache <cache_size> numa <numa_id>
      - Command to create mempool which will be further associated to RxQ to dequeue the packets
      - No
