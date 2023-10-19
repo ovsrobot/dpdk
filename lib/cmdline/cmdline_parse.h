@@ -155,9 +155,6 @@ typedef cmdline_parse_inst_t *cmdline_parse_ctx_t;
 int cmdline_parse(struct cmdline *cl, const char *buf);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Try to parse a buffer according to the specified context, but do not
  * perform any function calls if parse is successful.
  *
@@ -166,7 +163,6 @@ int cmdline_parse(struct cmdline *cl, const char *buf);
  * CMDLINE_PARSE_BAD_ARGS on error and returns the parsed line length (>=0)
  * on successful parse.
  */
-__rte_experimental
 int cmdline_parse_check(struct cmdline *cl, const char *buf);
 
 /**
