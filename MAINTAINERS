@@ -427,7 +427,7 @@ T: git://dpdk.org/next/dpdk-next-net
 F: lib/ethdev/rte_tm*
 F: app/test-pmd/cmdline_tm.*
 
-Traffic Metering and Policing API - EXPERIMENTAL
+Traffic Metering and Policing API
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
 T: git://dpdk.org/next/dpdk-next-net
 F: lib/ethdev/rte_mtr*
