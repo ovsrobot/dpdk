@@ -40,7 +40,6 @@ enum rte_vhost_crypto_zero_copy {
  * @return
  *  0 on success, -1 on failure
  */
-__rte_experimental
 int
 rte_vhost_crypto_driver_start(const char *path);
 
