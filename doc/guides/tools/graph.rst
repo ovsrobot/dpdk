@@ -12,6 +12,14 @@ Based on the input file, application creates a graph to cater the use case.
 
 Also this application framework can be used by other graph based applications.
 
+Supported Use cases
+-------------------
+ * l3fwd
+
+This use case is supported for both PF and PCAP network devices. To demonstrate,
+corresponding .cli files are available at ``<dpdk_root_dir/app/graph/examples/>``
+named as ``l3fwd.cli`` and  ``l3fwd_pcap.cli`` respectively.
+
 Running the Application
 -----------------------
 
@@ -62,6 +70,26 @@ Following are the application command-line options:
 * ``--help``
 
        Dumps application usage
+
+Examples
+~~~~~~~~
+
+For PF devices
+
+.. code-block:: console
+
+   ./dpdk-graph -c 0xff -a 0002:02:00.0 -a 0002:03:00.0 --
+             -s <dpdk_root_dir>/app/graph/examples/l3fwd.cli
+
+For net_pcapX devices
+
+.. code-block:: console
+
+   ./dpdk-graph -c 0xff --vdev=net_pcap0,rx_pcap=in_net_pcap0.pcap,tx_pcap=out_net_pcap1.pcap
+                        --vdev=net_pcap1,rx_pcap=in_net_pcap1.pcap,tx_pcap=out_net_pcap0.pcap
+                        -- -s <dpdk_root_dir>/app/graph/examples/l3fwd_pcap.cli
+
+Refer section :ref:`verifying_traffic` to create .pcap file used here.
 
 Supported CLI commands
 ----------------------
@@ -223,3 +251,84 @@ Created graph for use case
 
 On the successful execution of ``<usecase>.cli`` file, corresponding graph will be created.
 This section mentions the created graph for each use case.
+
+l3fwd
+~~~~~
+
+.. _figure_l3fwd_graph:
+
+.. figure:: img/graph-usecase-l3fwd.*
+
+.. _verifying_traffic:
+
+Verifying traffic
+~~~~~~~~~~~~~~~~~
+
+``l3fwd.cli`` and ``l3fwd_pcap.cli`` creates setup with two network ports. Routing between
+these ports are done by lookup node routing information. For current use case, following
+routing table is used:
+
+.. code-block:: console
+
+   DIP        port
+   10.0.2.2    1
+   20.0.2.2    0
+
+On the successful execution of ``l3fwd.cli`` or ``l3fwd_pcap.cli``, user needs to send traffic
+with mentioned DIP.
+
+For net_pcapX devices, required pcap file should be created and passed to application. These
+pcap files can be created in several ways. Scapy is one of the method to get the same:
+
+.. code-block:: console
+
+   # scapy
+
+                     aSPY//YASa
+             apyyyyCY//////////YCa       |
+            sY//////YSpcs  scpCY//Pp     | Welcome to Scapy
+    ayp ayyyyyyySCP//Pp           syY//C    | Version 2.4.3
+    AYAsAYYYYYYYY///Ps              cY//S   |
+         pCCCCY//p          cSSps y//Y   | https://github.com/secdev/scapy
+         SPPPP///a          pP///AC//Y   |
+              A//A            cyP////C   | Have fun!
+              p///Ac            sC///a   |
+              P////YCpc           A//A   | We are in France, we say Skappee.
+       scccccp///pSP///p          p//Y   | OK? Merci.
+      sY/////////y  caa           S//P   |             -- Sebastien Chabal
+       cayCyayP//Ya              pY/Ya   |
+        sY/PsY////YCc          aC//Yp
+         sc  sccaCY//PCypaapyCP//YSs
+                  spCPY//////YPSps
+                       ccaacs
+                                       using IPython 7.13.0
+   >>>
+   >>>
+   >>> pkts=[Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="10.0.2.2")]
+   >>>
+   >>>wrpcap("in_net_pcap1.pcap",pkts)
+   >>>
+   >>>
+   >>> pkts=[Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="29.0.0.1", dst="20.0.2.2"),
+             Ether(dst="FA:09:F9:D7:E0:9D", src="10:70:1d:2f:42:2d")/IP(src="28.0.0.1", dst="20.0.2.2")]
+   >>>
+   >>>wrpcap("in_net_pcap0.pcap",pkts)
+   >>>
+   >>> quit
