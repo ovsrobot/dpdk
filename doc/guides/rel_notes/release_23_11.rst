@@ -243,6 +243,13 @@ New Features
   Added dispatcher library which purpose is to help decouple different
   parts (modules) of an eventdev-based application.
 
+* **Added CLI based graph application.**
+
+  Added CLI based graph application which exercises on different usecases.
+  Application provides a framework so that each usecase can be added via CLI
+  file. Each CLI will further be translated into a graph representing user's
+  required usecase.
+
 
 Removed Items
 -------------
