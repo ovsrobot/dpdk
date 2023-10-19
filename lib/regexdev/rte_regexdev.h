@@ -226,9 +226,6 @@ extern int rte_regexdev_logtype;
 } while (0)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Check if dev_id is ready.
  *
  * @param dev_id
@@ -238,27 +235,19 @@ extern int rte_regexdev_logtype;
  *   - 0 if device state is not in ready state.
  *   - 1 if device state is ready state.
  */
-__rte_experimental
 int rte_regexdev_is_valid_dev(uint16_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get the total number of RegEx devices that have been successfully
  * initialised.
  *
  * @return
  *   The total number of usable RegEx devices.
  */
-__rte_experimental
 uint8_t
 rte_regexdev_count(void);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get the device identifier for the named RegEx device.
  *
  * @param name
@@ -268,7 +257,6 @@ rte_regexdev_count(void);
  *   Returns RegEx device identifier on success.
  *   - <0: Failure to find named RegEx device.
  */
-__rte_experimental
 int
 rte_regexdev_get_dev_id(const char *name);
 
@@ -628,9 +616,6 @@ struct rte_regexdev_info {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Retrieve the contextual information of a RegEx device.
  *
  * @param dev_id
@@ -644,7 +629,6 @@ struct rte_regexdev_info {
  *   - 0: Success, driver updates the contextual information of the RegEx device
  *   - <0: Error code returned by the driver info get function.
  */
-__rte_experimental
 int
 rte_regexdev_info_get(uint8_t dev_id, struct rte_regexdev_info *dev_info);
 
@@ -723,9 +707,6 @@ struct rte_regexdev_config {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Configure a RegEx device.
  *
  * This function must be invoked first before any other function in the
@@ -743,7 +724,6 @@ struct rte_regexdev_config {
  * @return
  *   - 0: Success, device configured. Otherwise negative errno is returned.
  */
-__rte_experimental
 int
 rte_regexdev_configure(uint8_t dev_id, const struct rte_regexdev_config *cfg);
 
@@ -782,9 +762,6 @@ struct rte_regexdev_qp_conf {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Allocate and set up a RegEx queue pair for a RegEx device.
  *
  * @param dev_id
@@ -799,15 +776,11 @@ struct rte_regexdev_qp_conf {
  * @return
  *   0 on success. Otherwise negative errno is returned.
  */
-__rte_experimental
 int
 rte_regexdev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 			      const struct rte_regexdev_qp_conf *qp_conf);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Start a RegEx device.
  *
  * The device start step is the last one and consists of setting the RegEx
@@ -822,14 +795,10 @@ rte_regexdev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
  * @return
  *   0 on success. Otherwise negative errno is returned.
  */
-__rte_experimental
 int
 rte_regexdev_start(uint8_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Stop a RegEx device.
  *
  * Stop a RegEx device. The device can be restarted with a call to
@@ -845,14 +814,10 @@ rte_regexdev_start(uint8_t dev_id);
  * @return
  *   0 on success. Otherwise negative errno is returned.
  */
-__rte_experimental
 int
 rte_regexdev_stop(uint8_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Close a RegEx device. The device cannot be restarted!
  *
  * @param dev_id
@@ -861,7 +826,6 @@ rte_regexdev_stop(uint8_t dev_id);
  * @return
  *   0 on success. Otherwise negative errno is returned.
  */
-__rte_experimental
 int
 rte_regexdev_close(uint8_t dev_id);
 
@@ -897,9 +861,6 @@ enum rte_regexdev_attr_id {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get an attribute from a RegEx device.
  *
  * @param dev_id
@@ -915,15 +876,11 @@ enum rte_regexdev_attr_id {
  *   - -EINVAL: Invalid device or  *attr_id* provided, or *attr_value* is NULL.
  *   - -ENOTSUP: if the device doesn't support specific *attr_id*.
  */
-__rte_experimental
 int
 rte_regexdev_attr_get(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
 		      void *attr_value);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Set an attribute to a RegEx device.
  *
  * @param dev_id
@@ -939,7 +896,6 @@ rte_regexdev_attr_get(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
  *   - -EINVAL: Invalid device or  *attr_id* provided, or *attr_value* is NULL.
  *   - -ENOTSUP: if the device doesn't support specific *attr_id*.
  */
-__rte_experimental
 int
 rte_regexdev_attr_set(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
 		      const void *attr_value);
@@ -975,9 +931,6 @@ struct rte_regexdev_rule {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Update the local rule set.
  * This functions only modify the rule set in memory.
  * In order for the changes to take effect, the function
@@ -1008,16 +961,12 @@ struct rte_regexdev_rule {
  * @see rte_regexdev_rule_db_import(), rte_regexdev_rule_db_export(),
  *   rte_regexdev_rule_db_compile_activate()
  */
-__rte_experimental
 int
 rte_regexdev_rule_db_update(uint8_t dev_id,
 			    const struct rte_regexdev_rule *rules,
 			    uint32_t nb_rules);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Compile local rule set and burn the complied result to the
  * RegEx device.
  *
@@ -1030,14 +979,10 @@ rte_regexdev_rule_db_update(uint8_t dev_id,
  * @see rte_regexdev_rule_db_import(), rte_regexdev_rule_db_export(),
  *   rte_regexdev_rule_db_update()
  */
-__rte_experimental
 int
 rte_regexdev_rule_db_compile_activate(uint8_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Import a prebuilt rule database from a buffer to a RegEx device.
  *
  * @param dev_id
@@ -1055,15 +1000,11 @@ rte_regexdev_rule_db_compile_activate(uint8_t dev_id);
  *
  * @see rte_regexdev_rule_db_update(), rte_regexdev_rule_db_export()
  */
-__rte_experimental
 int
 rte_regexdev_rule_db_import(uint8_t dev_id, const char *rule_db,
 			    uint32_t rule_db_len);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Export the prebuilt rule database from a RegEx device to the buffer.
  *
  * @param dev_id
@@ -1080,7 +1021,6 @@ rte_regexdev_rule_db_import(uint8_t dev_id, const char *rule_db,
  *
  * @see rte_regexdev_rule_db_update(), rte_regexdev_rule_db_import()
  */
-__rte_experimental
 int
 rte_regexdev_rule_db_export(uint8_t dev_id, char *rule_db);
 
@@ -1102,9 +1042,6 @@ struct rte_regexdev_xstats_map {
 };
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Retrieve names of extended statistics of a regex device.
  *
  * @param dev_id
@@ -1120,15 +1057,11 @@ struct rte_regexdev_xstats_map {
  *      -ENODEV for invalid *dev_id*
  *      -ENOTSUP if the device doesn't support this function.
  */
-__rte_experimental
 int
 rte_regexdev_xstats_names_get(uint8_t dev_id,
 			      struct rte_regexdev_xstats_map *xstats_map);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Retrieve extended statistics of an regex device.
  *
  * @param dev_id
@@ -1147,15 +1080,11 @@ rte_regexdev_xstats_names_get(uint8_t dev_id,
  *      -ENODEV for invalid *dev_id*
  *      -ENOTSUP if the device doesn't support this function.
  */
-__rte_experimental
 int
 rte_regexdev_xstats_get(uint8_t dev_id, const uint16_t *ids,
 			uint64_t *values, uint16_t nb_values);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Retrieve the value of a single stat by requesting it by name.
  *
  * @param dev_id
@@ -1174,15 +1103,11 @@ rte_regexdev_xstats_get(uint8_t dev_id, const uint16_t *ids,
  *   - -EINVAL: invalid parameters
  *   - -ENOTSUP: if not supported.
  */
-__rte_experimental
 int
 rte_regexdev_xstats_by_name_get(uint8_t dev_id, const char *name,
 				uint16_t *id, uint64_t *value);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Reset the values of the xstats of the selected component in the device.
  *
  * @param dev_id
@@ -1198,15 +1123,11 @@ rte_regexdev_xstats_by_name_get(uint8_t dev_id, const char *name,
  *   - -EINVAL: invalid parameters.
  *   - -ENOTSUP: if not supported.
  */
-__rte_experimental
 int
 rte_regexdev_xstats_reset(uint8_t dev_id, const uint16_t *ids,
 			  uint16_t nb_ids);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Trigger the RegEx device self test.
  *
  * @param dev_id
@@ -1216,14 +1137,10 @@ rte_regexdev_xstats_reset(uint8_t dev_id, const uint16_t *ids,
  *   - -ENOTSUP if the device doesn't support selftest.
  *   - other values < 0 on failure.
  */
-__rte_experimental
 int
 rte_regexdev_selftest(uint8_t dev_id);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dump internal information about *dev_id* to the FILE* provided in *f*.
  *
  * @param dev_id
@@ -1234,7 +1151,6 @@ rte_regexdev_selftest(uint8_t dev_id);
  * @return
  *   0 on success, negative errno on failure.
  */
-__rte_experimental
 int
 rte_regexdev_dump(uint8_t dev_id, FILE *f);
 
@@ -1428,9 +1344,6 @@ struct rte_regex_ops {
 #include "rte_regexdev_core.h"
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Enqueue a burst of scan request on a RegEx device.
  *
  * The rte_regexdev_enqueue_burst() function is invoked to place
@@ -1464,7 +1377,6 @@ struct rte_regex_ops {
  *   remaining ops at the end of *ops* are not consumed and the caller has
  *   to take care of them.
  */
-__rte_experimental
 static inline uint16_t
 rte_regexdev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 			   struct rte_regex_ops **ops, uint16_t nb_ops)
@@ -1483,9 +1395,6 @@ rte_regexdev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Dequeue a burst of scan response from a queue on the RegEx device.
  * The dequeued operation are stored in *rte_regexdev_op* structures
  * whose pointers are supplied in the *ops* array.
@@ -1524,7 +1433,6 @@ rte_regexdev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
  *   ops at the end of *ops* are not consumed and the caller has to take care
  *   of them.
  */
-__rte_experimental
 static inline uint16_t
 rte_regexdev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 			   struct rte_regex_ops **ops, uint16_t nb_ops)
