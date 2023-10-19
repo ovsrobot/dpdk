@@ -42,4 +42,6 @@ DPDK_24 {
 	rte_power_uncore_get_num_pkgs;
 	rte_power_uncore_init;
 	rte_power_unset_uncore_env;
+
+	local: *;
 };
