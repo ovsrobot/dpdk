@@ -209,7 +209,6 @@ rte_bpf_get_jit(const struct rte_bpf *bpf, struct rte_bpf_jit *jit);
  * @param len
  *   Number of BPF instructions to dump.
  */
-__rte_experimental
 void
 rte_bpf_dump(FILE *f, const struct ebpf_insn *buf, uint32_t len);
 
@@ -229,7 +228,6 @@ struct bpf_program;
  *   - ENOMEM - can't reserve enough memory
  *   - ENOTSUP - operation not supported
  */
-__rte_experimental
 struct rte_bpf_prm *
 rte_bpf_convert(const struct bpf_program *prog);
 
