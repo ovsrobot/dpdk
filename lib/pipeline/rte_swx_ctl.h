@@ -83,7 +83,6 @@ struct rte_swx_ctl_pipeline_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_info_get(struct rte_swx_pipeline *p,
 			      struct rte_swx_ctl_pipeline_info *pipeline);
@@ -99,7 +98,6 @@ rte_swx_ctl_pipeline_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_numa_node_get(struct rte_swx_pipeline *p,
 				   int *numa_node);
@@ -121,7 +119,6 @@ rte_swx_ctl_pipeline_numa_node_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_port_in_stats_read(struct rte_swx_pipeline *p,
 					uint32_t port_id,
@@ -140,7 +137,6 @@ rte_swx_ctl_pipeline_port_in_stats_read(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_port_out_stats_read(struct rte_swx_pipeline *p,
 					 uint32_t port_id,
@@ -172,7 +168,6 @@ struct rte_swx_ctl_action_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_action_info_get(struct rte_swx_pipeline *p,
 			    uint32_t action_id,
@@ -208,7 +203,6 @@ struct rte_swx_ctl_action_arg_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_action_arg_info_get(struct rte_swx_pipeline *p,
 				uint32_t action_id,
@@ -259,7 +253,6 @@ struct rte_swx_ctl_table_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_table_info_get(struct rte_swx_pipeline *p,
 			   uint32_t table_id,
@@ -303,7 +296,6 @@ struct rte_swx_ctl_table_match_field_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_table_match_field_info_get(struct rte_swx_pipeline *p,
 	uint32_t table_id,
@@ -340,7 +332,6 @@ struct rte_swx_ctl_table_action_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_table_action_info_get(struct rte_swx_pipeline *p,
 	uint32_t table_id,
@@ -366,7 +357,6 @@ rte_swx_ctl_table_action_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_table_ops_get(struct rte_swx_pipeline *p,
 			  uint32_t table_id,
@@ -405,7 +395,6 @@ struct rte_swx_table_stats {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_table_stats_read(struct rte_swx_pipeline *p,
 				      const char *table_name,
@@ -443,7 +432,6 @@ struct rte_swx_ctl_selector_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_selector_info_get(struct rte_swx_pipeline *p,
 			      uint32_t selector_id,
@@ -462,7 +450,6 @@ rte_swx_ctl_selector_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_selector_group_id_field_info_get(struct rte_swx_pipeline *p,
 					     uint32_t selector_id,
@@ -483,7 +470,6 @@ rte_swx_ctl_selector_group_id_field_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_selector_field_info_get(struct rte_swx_pipeline *p,
 				    uint32_t selector_id,
@@ -503,7 +489,6 @@ rte_swx_ctl_selector_field_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_selector_member_id_field_info_get(struct rte_swx_pipeline *p,
 					      uint32_t selector_id,
@@ -528,7 +513,6 @@ struct rte_swx_pipeline_selector_stats {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_selector_stats_read(struct rte_swx_pipeline *p,
 					 const char *selector_name,
@@ -575,7 +559,6 @@ struct rte_swx_ctl_learner_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_learner_info_get(struct rte_swx_pipeline *p,
 			     uint32_t learner_id,
@@ -596,7 +579,6 @@ rte_swx_ctl_learner_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_learner_match_field_info_get(struct rte_swx_pipeline *p,
 					 uint32_t learner_id,
@@ -620,7 +602,6 @@ rte_swx_ctl_learner_match_field_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_learner_action_info_get(struct rte_swx_pipeline *p,
 				    uint32_t learner_id,
@@ -642,7 +623,6 @@ rte_swx_ctl_learner_action_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_learner_timeout_get(struct rte_swx_pipeline *p,
 					 uint32_t learner_id,
@@ -664,7 +644,6 @@ rte_swx_ctl_pipeline_learner_timeout_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_learner_timeout_set(struct rte_swx_pipeline *p,
 					 uint32_t learner_id,
@@ -714,7 +693,6 @@ struct rte_swx_learner_stats {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_learner_stats_read(struct rte_swx_pipeline *p,
 				      const char *learner_name,
@@ -750,7 +728,6 @@ struct rte_swx_pipeline_mirroring_session_params {
  *   -EINVAL: Invalid argument;
  *   -EEXIST: Pipeline was already built successfully.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_mirroring_session_set(struct rte_swx_pipeline *p,
 	uint32_t session_id,
@@ -790,7 +767,6 @@ struct rte_swx_table_state {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_pipeline_table_state_get(struct rte_swx_pipeline *p,
 				 struct rte_swx_table_state **table_state);
@@ -809,7 +785,6 @@ rte_swx_pipeline_table_state_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_pipeline_table_state_set(struct rte_swx_pipeline *p,
 				 struct rte_swx_table_state *table_state);
@@ -829,7 +804,6 @@ struct rte_swx_ctl_pipeline;
  * @return
  *   Valid pipeline control handle if found or NULL otherwise.
  */
-__rte_experimental
 struct rte_swx_ctl_pipeline *
 rte_swx_ctl_pipeline_find(const char *name);
 
@@ -841,7 +815,6 @@ rte_swx_ctl_pipeline_find(const char *name);
  * @return
  *   Pipeline control handle, on success, or NULL, on error.
  */
-__rte_experimental
 struct rte_swx_ctl_pipeline *
 rte_swx_ctl_pipeline_create(struct rte_swx_pipeline *p);
 
@@ -861,7 +834,6 @@ rte_swx_ctl_pipeline_create(struct rte_swx_pipeline *p);
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_table_entry_add(struct rte_swx_ctl_pipeline *ctl,
 				     const char *table_name,
@@ -883,7 +855,6 @@ rte_swx_ctl_pipeline_table_entry_add(struct rte_swx_ctl_pipeline *ctl,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_table_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
 					     const char *table_name,
@@ -906,7 +877,6 @@ rte_swx_ctl_pipeline_table_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_table_entry_delete(struct rte_swx_ctl_pipeline *ctl,
 					const char *table_name,
@@ -931,7 +901,6 @@ rte_swx_ctl_pipeline_table_entry_delete(struct rte_swx_ctl_pipeline *ctl,
  *   -EINVAL: Invalid argument;
  *   -ENOSPC: All groups are currently in use, no group available.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_selector_group_add(struct rte_swx_ctl_pipeline *ctl,
 					const char *selector_name,
@@ -954,7 +923,6 @@ rte_swx_ctl_pipeline_selector_group_add(struct rte_swx_ctl_pipeline *ctl,
  *   -EINVAL: Invalid argument;
  *   -ENOMEM: Not enough memory.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_selector_group_delete(struct rte_swx_ctl_pipeline *ctl,
 					   const char *selector_name,
@@ -984,7 +952,6 @@ rte_swx_ctl_pipeline_selector_group_delete(struct rte_swx_ctl_pipeline *ctl,
  *   -ENOMEM: Not enough memory;
  *   -ENOSPC: The group is full.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_selector_group_member_add(struct rte_swx_ctl_pipeline *ctl,
 					       const char *selector_name,
@@ -1010,7 +977,6 @@ rte_swx_ctl_pipeline_selector_group_member_add(struct rte_swx_ctl_pipeline *ctl,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_selector_group_member_delete(struct rte_swx_ctl_pipeline *ctl,
 						  const char *selector_name,
@@ -1032,7 +998,6 @@ rte_swx_ctl_pipeline_selector_group_member_delete(struct rte_swx_ctl_pipeline *c
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_learner_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
 					       const char *learner_name,
@@ -1053,7 +1018,6 @@ rte_swx_ctl_pipeline_learner_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl,
 			    int abort_on_fail);
@@ -1066,7 +1030,6 @@ rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl,
  * @param[in] ctl
  *   Pipeline control handle.
  */
-__rte_experimental
 void
 rte_swx_ctl_pipeline_abort(struct rte_swx_ctl_pipeline *ctl);
 
@@ -1089,7 +1052,6 @@ rte_swx_ctl_pipeline_abort(struct rte_swx_ctl_pipeline *ctl);
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 struct rte_swx_table_entry *
 rte_swx_ctl_pipeline_table_entry_read(struct rte_swx_ctl_pipeline *ctl,
 				      const char *table_name,
@@ -1115,7 +1077,6 @@ rte_swx_ctl_pipeline_table_entry_read(struct rte_swx_ctl_pipeline *ctl,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 struct rte_swx_table_entry *
 rte_swx_ctl_pipeline_learner_default_entry_read(struct rte_swx_ctl_pipeline *ctl,
 						const char *learner_name,
@@ -1137,7 +1098,6 @@ rte_swx_ctl_pipeline_learner_default_entry_read(struct rte_swx_ctl_pipeline *ctl
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_table_fprintf(FILE *f,
 				   struct rte_swx_ctl_pipeline *ctl,
@@ -1158,7 +1118,6 @@ rte_swx_ctl_pipeline_table_fprintf(FILE *f,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_selector_fprintf(FILE *f,
 				      struct rte_swx_ctl_pipeline *ctl,
@@ -1190,7 +1149,6 @@ struct rte_swx_ctl_regarray_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_regarray_info_get(struct rte_swx_pipeline *p,
 			      uint32_t regarray_id,
@@ -1211,7 +1169,6 @@ rte_swx_ctl_regarray_info_get(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_regarray_read(struct rte_swx_pipeline *p,
 				   const char *regarray_name,
@@ -1233,7 +1190,6 @@ rte_swx_ctl_pipeline_regarray_read(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_regarray_write(struct rte_swx_pipeline *p,
 				   const char *regarray_name,
@@ -1258,7 +1214,6 @@ rte_swx_ctl_pipeline_regarray_write(struct rte_swx_pipeline *p,
  *   -EINVAL: Invalid argument;
  *   -ENOMEM: Not enough memory.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_regarray_read_with_key(struct rte_swx_pipeline *p,
 					    const char *regarray_name,
@@ -1284,7 +1239,6 @@ rte_swx_ctl_pipeline_regarray_read_with_key(struct rte_swx_pipeline *p,
  *   -EINVAL: Invalid argument;
  *   -ENOMEM: Not enough memory.
  */
-__rte_experimental
 int
 rte_swx_ctl_pipeline_regarray_write_with_key(struct rte_swx_pipeline *p,
 					     const char *regarray_name,
@@ -1318,7 +1272,6 @@ struct rte_swx_ctl_metarray_info {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_metarray_info_get(struct rte_swx_pipeline *p,
 			      uint32_t metarray_id,
@@ -1339,7 +1292,6 @@ rte_swx_ctl_metarray_info_get(struct rte_swx_pipeline *p,
  *   -ENOMEM: Not enough space/cannot allocate memory;
  *   -EEXIST: Meter profile with this name already exists.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_profile_add(struct rte_swx_pipeline *p,
 			      const char *name,
@@ -1357,7 +1309,6 @@ rte_swx_ctl_meter_profile_add(struct rte_swx_pipeline *p,
  *   -EINVAL: Invalid argument;
  *   -EBUSY: Meter profile is currently in use.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_profile_delete(struct rte_swx_pipeline *p,
 				 const char *name);
@@ -1380,7 +1331,6 @@ rte_swx_ctl_meter_profile_delete(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_reset(struct rte_swx_pipeline *p,
 			const char *metarray_name,
@@ -1405,7 +1355,6 @@ rte_swx_ctl_meter_reset(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_set(struct rte_swx_pipeline *p,
 		      const char *metarray_name,
@@ -1436,7 +1385,6 @@ struct rte_swx_ctl_meter_stats {
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_stats_read(struct rte_swx_pipeline *p,
 			     const char *metarray_name,
@@ -1463,7 +1411,6 @@ rte_swx_ctl_meter_stats_read(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_reset_with_key(struct rte_swx_pipeline *p,
 				 const char *metarray_name,
@@ -1491,7 +1438,6 @@ rte_swx_ctl_meter_reset_with_key(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_set_with_key(struct rte_swx_pipeline *p,
 			       const char *metarray_name,
@@ -1516,7 +1462,6 @@ rte_swx_ctl_meter_set_with_key(struct rte_swx_pipeline *p,
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument.
  */
-__rte_experimental
 int
 rte_swx_ctl_meter_stats_read_with_key(struct rte_swx_pipeline *p,
 				      const char *metarray_name,
@@ -1612,7 +1557,6 @@ rte_swx_ctl_pipeline_rss_key_write(struct rte_swx_pipeline *p,
 				   const char *rss_obj_name,
 				   uint32_t key_size,
 				   uint8_t *key);
-
 /**
  * Pipeline control free
  *
@@ -1620,7 +1564,6 @@ rte_swx_ctl_pipeline_rss_key_write(struct rte_swx_pipeline *p,
  *   Pipeline control handle.
  *   If ctl is NULL, no operation is performed.
  */
-__rte_experimental
 void
 rte_swx_ctl_pipeline_free(struct rte_swx_ctl_pipeline *ctl);
 
