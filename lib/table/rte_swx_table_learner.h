@@ -107,7 +107,6 @@ struct rte_swx_table_learner_params {
  * @return
  *   Table memory footprint in bytes.
  */
-__rte_experimental
 uint64_t
 rte_swx_table_learner_footprint_get(struct rte_swx_table_learner_params *params);
 
@@ -121,7 +120,6 @@ rte_swx_table_learner_footprint_get(struct rte_swx_table_learner_params *params)
  * @return
  *   Table mailbox footprint in bytes.
  */
-__rte_experimental
 uint64_t
 rte_swx_table_learner_mailbox_size_get(void);
 
@@ -135,7 +133,6 @@ rte_swx_table_learner_mailbox_size_get(void);
  * @return
  *   Table handle, on success, or NULL, on error.
  */
-__rte_experimental
 void *
 rte_swx_table_learner_create(struct rte_swx_table_learner_params *params, int numa_node);
 
@@ -152,7 +149,6 @@ rte_swx_table_learner_create(struct rte_swx_table_learner_params *params, int nu
  *   0 on success or the following error codes otherwise:
  *   -EINVAL: Invalid argument(s).
  */
-__rte_experimental
 int
 rte_swx_table_learner_timeout_update(void *table,
 				     uint32_t key_timeout_id,
@@ -206,7 +202,6 @@ rte_swx_table_learner_timeout_update(void *table,
  *   0 when the table lookup operation is not yet completed, and 1 when the table lookup operation
  *   is completed. No other return values are allowed.
  */
-__rte_experimental
 int
 rte_swx_table_learner_lookup(void *table,
 			     void *mailbox,
@@ -239,7 +234,6 @@ rte_swx_table_learner_lookup(void *table,
  * @return
  *   0 on success, 1 or error (table full).
  */
-__rte_experimental
 uint32_t
 rte_swx_table_learner_add(void *table,
 			  void *mailbox,
@@ -261,7 +255,6 @@ rte_swx_table_learner_add(void *table,
  * @param[in] time
  *   Current time measured in CPU clock cycles.
  */
-__rte_experimental
 void
 rte_swx_table_learner_rearm(void *table,
 			    void *mailbox,
@@ -282,7 +275,6 @@ rte_swx_table_learner_rearm(void *table,
  * @param[in] key_timeout_id
  *   Key timeout ID.
  */
-__rte_experimental
 void
 rte_swx_table_learner_rearm_new(void *table,
 				void *mailbox,
@@ -301,7 +293,6 @@ rte_swx_table_learner_rearm_new(void *table,
  * @param[in] mailbox
  *   Mailbox for the current operation.
  */
-__rte_experimental
 void
 rte_swx_table_learner_delete(void *table,
 			     void *mailbox);
@@ -312,7 +303,6 @@ rte_swx_table_learner_delete(void *table,
  * @param[in] table
  *   Table handle.
  */
-__rte_experimental
 void
 rte_swx_table_learner_free(void *table);
 

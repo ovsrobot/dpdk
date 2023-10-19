@@ -83,7 +83,6 @@ struct rte_swx_table_selector_group {
  * @return
  *   Selector table memory footprint in bytes.
  */
-__rte_experimental
 uint64_t
 rte_swx_table_selector_footprint_get(uint32_t n_groups_max, uint32_t n_members_per_group_max);
 
@@ -97,7 +96,6 @@ rte_swx_table_selector_footprint_get(uint32_t n_groups_max, uint32_t n_members_p
  * @return
  *   Selector table mailbox footprint in bytes.
  */
-__rte_experimental
 uint64_t
 rte_swx_table_selector_mailbox_size_get(void);
 
@@ -115,7 +113,6 @@ rte_swx_table_selector_mailbox_size_get(void);
  * @return
  *   Table handle, on success, or NULL, on error.
  */
-__rte_experimental
 void *
 rte_swx_table_selector_create(struct rte_swx_table_selector_params *params,
 			      struct rte_swx_table_selector_group **groups,
@@ -135,7 +132,6 @@ rte_swx_table_selector_create(struct rte_swx_table_selector_params *params,
  *   -EINVAL: Invalid argument(s);
  *   -ENOSPC: Too many group members.
  */
-__rte_experimental
 int
 rte_swx_table_selector_group_set(void *table,
 				 uint32_t group_id,
@@ -177,7 +173,6 @@ rte_swx_table_selector_group_set(void *table,
  *   0 when the operation is not yet completed, and 1 when the operation is complete. No other
  *   return values are allowed.
  */
-__rte_experimental
 int
 rte_swx_table_selector_select(void *table,
 			      void *mailbox,
@@ -191,7 +186,6 @@ rte_swx_table_selector_select(void *table,
  * @param[in] table
  *   Selector table handle.
  */
-__rte_experimental
 void
 rte_swx_table_selector_free(void *table);
 
