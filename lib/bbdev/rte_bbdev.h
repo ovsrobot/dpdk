@@ -675,7 +675,6 @@ rte_bbdev_enqueue_ldpc_dec_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually enqueued.
  *   (This is the number of processed entries in the @p ops array.)
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_enqueue_fft_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_fft_op **ops, uint16_t num_ops)
@@ -860,7 +859,6 @@ rte_bbdev_dequeue_ldpc_dec_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually dequeued (this is the number of entries
  *   copied into the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_dequeue_fft_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_fft_op **ops, uint16_t num_ops)
@@ -1042,7 +1040,6 @@ rte_bbdev_queue_intr_ctl(uint16_t dev_id, uint16_t queue_id, int epfd, int op,
  * @returns
  *   Device status as string or NULL if invalid.
  */
-__rte_experimental
 const char*
 rte_bbdev_device_status_str(enum rte_bbdev_device_status status);
 
@@ -1055,7 +1052,6 @@ rte_bbdev_device_status_str(enum rte_bbdev_device_status status);
  * @returns
  *   Queue status as string or NULL if op_type is invalid.
  */
-__rte_experimental
 const char*
 rte_bbdev_enqueue_status_str(enum rte_bbdev_enqueue_status status);
 
