@@ -70,9 +70,6 @@ uint64_t
 rte_rand_max(uint64_t upper_bound);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * Generates a pseudo-random floating point number.
  *
  * This function returns a non-negative double-precision floating random
@@ -87,7 +84,6 @@ rte_rand_max(uint64_t upper_bound);
  * @return
  *   A pseudo-random value between 0 and 1.0.
  */
-__rte_experimental
 double rte_drand(void);
 
 #ifdef __cplusplus
