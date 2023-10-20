@@ -94,7 +94,6 @@ __ATOMIC128_CAS_OP(__cas_128_acq_rel, "caspal")
 
 #endif
 
-__rte_experimental
 static inline int
 rte_atomic128_cmp_exchange(rte_int128_t *dst, rte_int128_t *exp,
 		const rte_int128_t *src, unsigned int weak, int success,
