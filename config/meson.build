@@ -239,6 +239,7 @@ if libarchive.found()
     # Push libarchive link dependency at the project level to support
     # statically linking dpdk apps. Details at:
     # https://inbox.dpdk.org/dev/20210605004024.660267a1@sovereign/
+    add_project_link_arguments('-L' + libarchive.get_variable(pkgconfig: 'libdir'), language: 'c')
     add_project_link_arguments('-larchive', language: 'c')
     dpdk_extra_ldflags += '-larchive'
 endif
