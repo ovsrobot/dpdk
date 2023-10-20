@@ -38,14 +38,12 @@ enum rte_uncore_power_mgmt_env {
  *  - 0 on success.
  *  - Negative on error.
  */
-__rte_experimental
 int rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env);
 
 /**
  * Unset the global uncore environment configuration.
  * This can only be called after all threads have completed.
  */
-__rte_experimental
 void rte_power_unset_uncore_env(void);
 
 /**
@@ -54,7 +52,6 @@ void rte_power_unset_uncore_env(void);
  * @return
  *  power_management_env The configured environment.
  */
-__rte_experimental
 enum rte_uncore_power_mgmt_env rte_power_get_uncore_env(void);
 
 /**
@@ -74,7 +71,6 @@ enum rte_uncore_power_mgmt_env rte_power_get_uncore_env(void);
  *  - 0 on success.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_init(unsigned int pkg, unsigned int die);
 
@@ -96,7 +92,6 @@ rte_power_uncore_init(unsigned int pkg, unsigned int die);
  *  - 0 on success.
  *  - Negative on error.
  */
-__rte_experimental
 int
 rte_power_uncore_exit(unsigned int pkg, unsigned int die);
 
