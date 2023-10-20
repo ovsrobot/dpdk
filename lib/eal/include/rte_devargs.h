@@ -168,7 +168,6 @@ __rte_format_printf(2, 0);
  * @param da
  *   The devargs structure holding the device information.
  */
-__rte_experimental
 void
 rte_devargs_reset(struct rte_devargs *da);
 
