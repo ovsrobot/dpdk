@@ -1542,6 +1542,9 @@ rte_vhost_notify_guest(int vid, uint16_t queue_id)
 
 	rte_rwlock_read_lock(&vq->access_lock);
 
+	if (unlikely(!vq->access_ok))
+		goto out_unlock;
+
 	__atomic_store_n(&vq->irq_pending, false, __ATOMIC_RELEASE);
 
 	if (dev->backend_ops->inject_irq(dev, vq)) {
@@ -1556,6 +1559,7 @@ rte_vhost_notify_guest(int vid, uint16_t queue_id)
 			dev->notify_ops->guest_notified(dev->vid);
 	}
 
+out_unlock:
 	rte_rwlock_read_unlock(&vq->access_lock);
 }
 
