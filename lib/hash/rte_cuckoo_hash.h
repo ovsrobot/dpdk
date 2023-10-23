@@ -193,6 +193,8 @@ struct rte_hash {
 	/**< If read-write concurrency support is enabled */
 	uint8_t ext_table_support;     /**< Enable extendable bucket table */
 	uint8_t no_free_on_del;
+	/**< If update is prohibited on adding same key */
+	uint8_t no_update_data;
 	/**< If key index should be freed on calling rte_hash_del_xxx APIs.
 	 * If this is set, rte_hash_free_key_with_position must be called to
 	 * free the key index associated with the deleted entry.
