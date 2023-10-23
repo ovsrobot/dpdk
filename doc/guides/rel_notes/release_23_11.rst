@@ -122,6 +122,10 @@ New Features
   a group's miss actions, which are the actions to be performed on packets
   that didn't match any of the flow rules in the group.
 
+* **Added ptype matching criteria.**
+  Added ``RTE_FLOW_ITEM_TYPE_PTYPE`` to allow matching on L2/L3/L4
+  and tunnel  information as defined in mbuf packet type.
+
 * **Updated Intel cpfl driver.**
 
   * Added support for port representor.
