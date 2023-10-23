@@ -355,6 +355,13 @@ unsigned eal_cpu_core_id(unsigned lcore_id);
 int eal_cpu_detected(unsigned lcore_id);
 
 /**
+ * Check for architecture supported MMU.
+ *
+ * This function is private to the EAL.
+ */
+bool eal_mmu_supported_arch(void);
+
+/**
  * Set TSC frequency from precise value or estimation
  *
  * This function is private to the EAL.

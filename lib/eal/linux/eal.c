@@ -983,6 +983,13 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	/* verify if DPDK supported on architecture MMU */
+	if (!eal_mmu_supported_arch()) {
+		rte_eal_init_alert("unsupported MMU type.");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
 	if (!__atomic_compare_exchange_n(&run_once, &has_run, 1, 0,
 					__ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
 		rte_eal_init_alert("already called initialization.");
