@@ -153,11 +153,6 @@ rte_thread_create(rte_thread_t *thread_id,
 			goto cleanup;
 		}
 
-		if (thread_attr->priority ==
-				RTE_THREAD_PRIORITY_REALTIME_CRITICAL) {
-			ret = ENOTSUP;
-			goto cleanup;
-		}
 		ret = thread_map_priority_to_os_value(thread_attr->priority,
 				&param.sched_priority, &policy);
 		if (ret != 0)
@@ -274,10 +269,6 @@ rte_thread_set_priority(rte_thread_t thread_id,
 	struct sched_param param;
 	int policy;
 	int ret;
-
-	/* Realtime priority can cause crashes on non-Windows platforms. */
-	if (priority == RTE_THREAD_PRIORITY_REALTIME_CRITICAL)
-		return ENOTSUP;
 
 	ret = thread_map_priority_to_os_value(priority, &param.sched_priority,
 		&policy);

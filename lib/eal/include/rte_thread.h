@@ -59,7 +59,7 @@ enum rte_thread_priority {
 	RTE_THREAD_PRIORITY_NORMAL            = 0,
 	/**< normal thread priority, the default */
 	RTE_THREAD_PRIORITY_REALTIME_CRITICAL = 1,
-	/**< highest thread priority allowed */
+	/**< highest thread priority, use with caution */
 };
 
 /**
