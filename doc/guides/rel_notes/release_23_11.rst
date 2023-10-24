@@ -144,6 +144,10 @@ New Features
 
   * Added support for Network Service Header (NSH) flow matching.
 
+* **Updated Amazon Elastic Network Adapter ena net driver.**
+
+  * Upgraded ENA HAL to latest version.
+
 * **Updated Solarflare net driver.**
 
   * Added support for transfer flow action ``INDIRECT`` with subtype ``VXLAN_ENCAP``.

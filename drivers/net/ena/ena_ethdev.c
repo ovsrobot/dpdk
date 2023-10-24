@@ -1171,7 +1171,6 @@ static int ena_start(struct rte_eth_dev *dev)
 	struct ena_adapter *adapter = dev->data->dev_private;
 	uint64_t ticks;
 	int rc = 0;
-	uint16_t i;
 
 	/* Cannot allocate memory in secondary process */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
@@ -1209,11 +1208,6 @@ static int ena_start(struct rte_eth_dev *dev)
 	++adapter->dev_stats.dev_start;
 	adapter->state = ENA_ADAPTER_STATE_RUNNING;
 
-	for (i = 0; i < dev->data->nb_rx_queues; i++)
-		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
-	for (i = 0; i < dev->data->nb_tx_queues; i++)
-		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
-
 	return 0;
 
 err_rss_init:
@@ -1229,7 +1223,6 @@ static int ena_stop(struct rte_eth_dev *dev)
 	struct ena_com_dev *ena_dev = &adapter->ena_dev;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
-	uint16_t i;
 	int rc;
 
 	/* Cannot free memory in secondary process */
@@ -1260,11 +1253,6 @@ static int ena_stop(struct rte_eth_dev *dev)
 	++adapter->dev_stats.dev_stop;
 	adapter->state = ENA_ADAPTER_STATE_STOPPED;
 	dev->data->dev_started = 0;
-
-	for (i = 0; i < dev->data->nb_rx_queues; i++)
-		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
-	for (i = 0; i < dev->data->nb_tx_queues; i++)
-		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 
 	return 0;
 }
@@ -2687,7 +2675,6 @@ static uint16_t eth_ena_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 	/* Burst refill to save doorbells, memory barriers, const interval */
 	if (free_queue_entries >= rx_ring->rx_free_thresh) {
-		ena_com_update_dev_comp_head(rx_ring->ena_com_io_cq);
 		ena_populate_rx_queue(rx_ring, free_queue_entries);
 	}
 
@@ -3096,7 +3083,6 @@ static int ena_tx_cleanup(void *txp, uint32_t free_pkt_cnt)
 		/* acknowledge completion of sent packets */
 		tx_ring->next_to_clean = next_to_clean;
 		ena_com_comp_ack(tx_ring->ena_com_io_sq, total_tx_descs);
-		ena_com_update_dev_comp_head(tx_ring->ena_com_io_cq);
 	}
 
 	if (mbuf_cnt != 0)
@@ -3629,7 +3615,7 @@ static void ena_rx_queue_intr_set(struct rte_eth_dev *dev,
 	struct ena_ring *rxq = &adapter->rx_ring[queue_id];
 	struct ena_eth_io_intr_reg intr_reg;
 
-	ena_com_update_intr_reg(&intr_reg, 0, 0, unmask);
+	ena_com_update_intr_reg(&intr_reg, 0, 0, unmask, 1);
 	ena_com_unmask_intr(rxq->ena_com_io_cq, &intr_reg);
 }
 
