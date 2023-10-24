@@ -147,6 +147,7 @@ New Features
 * **Updated Amazon Elastic Network Adapter ena net driver.**
 
   * Upgraded ENA HAL to latest version.
+  * Added support for connection tracking allowance utilization metric.
 
 * **Updated Solarflare net driver.**
 
