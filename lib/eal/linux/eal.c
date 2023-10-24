@@ -44,6 +44,7 @@
 
 #include <telemetry_internal.h>
 #include "eal_private.h"
+#include "eal_linux_private.h"
 #include "eal_thread.h"
 #include "eal_internal_cfg.h"
 #include "eal_filesystem.h"
@@ -979,6 +980,13 @@ rte_eal_init(int argc, char **argv)
 	/* checks if the machine is adequate */
 	if (!rte_cpu_is_supported()) {
 		rte_eal_init_alert("unsupported cpu type.");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
+	/* verify if DPDK supported on architecture MMU */
+	if (!eal_mmu_supported_linux_arch()) {
+		rte_eal_init_alert("unsupported MMU type.");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
