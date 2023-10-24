@@ -95,7 +95,6 @@ int rte_vhost_async_channel_unregister_thread_unsafe(int vid,
  * @return
  *  num of packets enqueued
  */
-__rte_experimental
 uint16_t rte_vhost_submit_enqueue_burst(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
 		uint16_t vchan_id);
@@ -120,7 +119,6 @@ uint16_t rte_vhost_submit_enqueue_burst(int vid, uint16_t queue_id,
  * @return
  *  num of packets returned
  */
-__rte_experimental
 uint16_t rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
 		uint16_t vchan_id);
@@ -178,7 +176,6 @@ int rte_vhost_async_get_inflight_thread_unsafe(int vid, uint16_t queue_id);
  * @return
  *  Number of packets returned
  */
-__rte_experimental
 uint16_t rte_vhost_clear_queue_thread_unsafe(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
 		uint16_t vchan_id);
@@ -203,7 +200,6 @@ uint16_t rte_vhost_clear_queue_thread_unsafe(int vid, uint16_t queue_id,
  * @return
  *  Number of packets returned
  */
-__rte_experimental
 uint16_t rte_vhost_clear_queue(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
 		uint16_t vchan_id);
