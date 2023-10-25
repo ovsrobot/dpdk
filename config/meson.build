@@ -159,8 +159,13 @@ if not is_ms_compiler
     if host_machine.cpu_family().startswith('ppc')
         machine_args += '-mcpu=' + cpu_instruction_set
         machine_args += '-mtune=' + cpu_instruction_set
+        compiler_arch_support = cc.has_argument('-mcpu=' + cpu_instruction_set)
     else
         machine_args += '-march=' + cpu_instruction_set
+        compiler_arch_support = cc.has_argument('-march=' + cpu_instruction_set)
+    endif
+    if not compiler_arch_support
+        error('Compiler does not support "@0@" arch flag.'.format(cpu_instruction_set))
     endif
 endif
 
