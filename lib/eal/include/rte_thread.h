@@ -56,10 +56,11 @@ typedef uint32_t (*rte_thread_func) (void *arg);
  * Thread priority values.
  */
 enum rte_thread_priority {
+	/** Normal thread priority, the default. */
 	RTE_THREAD_PRIORITY_NORMAL            = 0,
-	/**< normal thread priority, the default */
+	/** Highest thread priority, use with caution.
+	 *  WARNING: System may be unstable because of a real-time busy loop. */
 	RTE_THREAD_PRIORITY_REALTIME_CRITICAL = 1,
-	/**< highest thread priority allowed */
 };
 
 /**
@@ -182,6 +183,14 @@ int rte_thread_join(rte_thread_t thread_id, uint32_t *value_ptr);
  *   On failure, return a positive errno-style error number.
  */
 int rte_thread_detach(rte_thread_t thread_id);
+
+/**
+ * Allow another thread to run on the same CPU core.
+ *
+ * Especially useful in real-time thread priority.
+ * @see RTE_THREAD_PRIORITY_REALTIME_CRITICAL
+ */
+void rte_thread_yield(void);
 
 /**
  * Get the id of the calling thread.

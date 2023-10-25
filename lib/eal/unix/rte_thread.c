@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +50,11 @@ thread_map_priority_to_os_value(enum rte_thread_priority eal_pri, int *os_pri,
 			sched_get_priority_max(SCHED_OTHER)) / 2;
 		break;
 	case RTE_THREAD_PRIORITY_REALTIME_CRITICAL:
+		/*
+		 * WARNING: Real-time busy loop takes priority on kernel threads,
+		 *          making the system unstable.
+		 *          There is also a known issue when using rte_ring.
+		 */
 		*pol = SCHED_RR;
 		*os_pri = sched_get_priority_max(SCHED_RR);
 		break;
@@ -153,11 +159,6 @@ rte_thread_create(rte_thread_t *thread_id,
 			goto cleanup;
 		}
 
-		if (thread_attr->priority ==
-				RTE_THREAD_PRIORITY_REALTIME_CRITICAL) {
-			ret = ENOTSUP;
-			goto cleanup;
-		}
 		ret = thread_map_priority_to_os_value(thread_attr->priority,
 				&param.sched_priority, &policy);
 		if (ret != 0)
@@ -227,6 +228,12 @@ rte_thread_detach(rte_thread_t thread_id)
 	return pthread_detach((pthread_t)thread_id.opaque_id);
 }
 
+void
+rte_thread_yield(void)
+{
+	sched_yield();
+}
+
 int
 rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
 {
@@ -274,10 +281,6 @@ rte_thread_set_priority(rte_thread_t thread_id,
 	struct sched_param param;
 	int policy;
 	int ret;
-
-	/* Realtime priority can cause crashes on non-Windows platforms. */
-	if (priority == RTE_THREAD_PRIORITY_REALTIME_CRITICAL)
-		return ENOTSUP;
 
 	ret = thread_map_priority_to_os_value(priority, &param.sched_priority,
 		&policy);
