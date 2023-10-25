@@ -56,10 +56,13 @@ typedef uint32_t (*rte_thread_func) (void *arg);
  * Thread priority values.
  */
 enum rte_thread_priority {
+	/** Normal thread priority, the default. */
 	RTE_THREAD_PRIORITY_NORMAL            = 0,
-	/**< normal thread priority, the default */
+	/**
+	 * Highest thread priority, use with caution.
+	 * WARNING: System may be unstable because of a real-time busy loop.
+	 */
 	RTE_THREAD_PRIORITY_REALTIME_CRITICAL = 1,
-	/**< highest thread priority allowed */
 };
 
 /**
