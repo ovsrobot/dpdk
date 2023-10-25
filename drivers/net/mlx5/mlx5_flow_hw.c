@@ -1035,7 +1035,7 @@ flow_hw_modify_field_compile(struct rte_eth_dev *dev,
 
 			value = *(const unaligned_uint32_t *)item.spec;
 			if (conf->dst.field == RTE_FLOW_FIELD_TAG &&
-			    tag_index == MLX5_LINEAR_HASH_TAG_INDEX)
+			    tag_index == RTE_PMD_MLX5_LINEAR_HASH_TAG_INDEX)
 				value = rte_cpu_to_be_32(value << 16);
 			else
 				value = rte_cpu_to_be_32(value);
@@ -2154,7 +2154,7 @@ flow_hw_modify_field_construct(struct mlx5_hw_q_job *job,
 
 		value_p = (unaligned_uint32_t *)values;
 		if (mhdr_action->dst.field == RTE_FLOW_FIELD_TAG &&
-		    tag_index == MLX5_LINEAR_HASH_TAG_INDEX)
+		    tag_index == RTE_PMD_MLX5_LINEAR_HASH_TAG_INDEX)
 			*value_p = rte_cpu_to_be_32(*value_p << 16);
 		else
 			*value_p = rte_cpu_to_be_32(*value_p);

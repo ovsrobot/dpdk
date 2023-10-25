@@ -112,10 +112,10 @@ mlx5_test_set_port_host_shaper(uint16_t port_id, uint16_t avail_thresh_triggered
 	host_shaper_avail_thresh_triggered[port_id] = avail_thresh_triggered ? 1 : 0;
 	if (!avail_thresh_triggered) {
 		ret = rte_pmd_mlx5_host_shaper_config(port_id, 0,
-		RTE_BIT32(MLX5_HOST_SHAPER_FLAG_AVAIL_THRESH_TRIGGERED));
+		RTE_BIT32(RTE_PMD_MLX5_HOST_SHAPER_FLAG_AVAIL_THRESH_TRIGGERED));
 	} else {
 		ret = rte_pmd_mlx5_host_shaper_config(port_id, 1,
-		RTE_BIT32(MLX5_HOST_SHAPER_FLAG_AVAIL_THRESH_TRIGGERED));
+		RTE_BIT32(RTE_PMD_MLX5_HOST_SHAPER_FLAG_AVAIL_THRESH_TRIGGERED));
 	}
 	if (ret)
 		return ret;
