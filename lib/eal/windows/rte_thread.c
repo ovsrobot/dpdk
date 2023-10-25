@@ -304,6 +304,21 @@ rte_thread_detach(rte_thread_t thread_id)
 	return 0;
 }
 
+void
+rte_thread_yield(void)
+{
+	Sleep(0);
+}
+
+void
+rte_thread_yield_realtime(void)
+{
+	/* Real-time threads are not causing problems on Windows.
+	 * A normal yield should be fine.
+	 */
+	Sleep(0);
+}
+
 int
 rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
 {
