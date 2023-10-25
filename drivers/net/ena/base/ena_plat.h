@@ -14,14 +14,16 @@
 #else
 #include <ena_plat_dpdk.h>
 #endif
+#elif defined(_WIN32)
+#include <ena_plat_windows.h>
 #elif defined(__FreeBSD__)
-#if defined(_KERNEL)
+#if defined(__KERNEL__)
 #include <ena_plat_fbsd.h>
 #else
 #include <ena_plat_dpdk.h>
 #endif
-#elif defined(_WIN32)
-#include <ena_plat_windows.h>
+#elif defined(__APPLE__)
+#include <ena_plat_macos.h>
 #else
 #error "Invalid platform"
 #endif
