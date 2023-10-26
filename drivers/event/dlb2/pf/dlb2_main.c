@@ -190,6 +190,7 @@ dlb2_pf_reset(struct dlb2_dev *dlb2_dev)
 	uint16_t rt_ctl_word;
 	uint32_t pri_reqs_dword;
 	uint16_t pri_ctrl_word;
+	uint16_t pasid_ctrl;
 
 	off_t pcie_cap_offset;
 	int pri_cap_offset;
@@ -197,6 +198,7 @@ dlb2_pf_reset(struct dlb2_dev *dlb2_dev)
 	int err_cap_offset;
 	int acs_cap_offset;
 	int wait_count;
+	int pasid_cap_offset;
 
 	uint16_t devsta_busy_word;
 	uint16_t devctl_word;
@@ -511,6 +513,28 @@ dlb2_pf_reset(struct dlb2_dev *dlb2_dev)
 			DLB2_LOG_ERR("[%s()] failed to write the pcie config space at offset %d\n",
 				__func__, (int)off);
 			return ret;
+		}
+	}
+
+	pasid_cap_offset = rte_pci_find_ext_capability(pdev, RTE_PCI_EXT_CAP_ID_PASID);
+
+	if (pasid_cap_offset >= 0) {
+		off = pasid_cap_offset + RTE_PCI_PASID_CTRL;
+
+		if (rte_pci_read_config(pdev, &pasid_ctrl, 2, off) != 2)
+			pasid_ctrl = 0;
+
+		if (pasid_ctrl) {
+
+			DLB2_INFO(dlb2_dev, "DLB2 disabling pasid...\n");
+			pasid_ctrl = 0;
+			ret = rte_pci_write_config(pdev, &pasid_ctrl, 2, off);
+
+			if (ret != 2) {
+				DLB2_LOG_ERR("[%s()] failed to write the pcie config space at offset %d\n",
+						__func__, (int)off);
+				return ret;
+			}
 		}
 	}
 
