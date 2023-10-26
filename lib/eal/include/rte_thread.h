@@ -184,6 +184,31 @@ int rte_thread_join(rte_thread_t thread_id, uint32_t *value_ptr);
 int rte_thread_detach(rte_thread_t thread_id);
 
 /**
+ * Allow another thread to run on the same CPU core.
+ *
+ * This is a scheduler request, with minimum latency.
+ * Lower priority threads may not be scheduled.
+ *
+ * Especially useful in real-time thread priority
+ * to schedule other real-time threads.
+ * @see RTE_THREAD_PRIORITY_REALTIME_CRITICAL
+ */
+__rte_experimental
+void rte_thread_yield(void);
+
+/**
+ * Unblock a CPU core running busy in a real-time thread.
+ *
+ * This is a sleep call, giving priority to all other threads.
+ *
+ * Especially useful in real-time thread priority
+ * to avoid a busy loop blocking vital threads on a core.
+ * @see RTE_THREAD_PRIORITY_REALTIME_CRITICAL
+ */
+__rte_experimental
+void rte_thread_yield_realtime(void);
+
+/**
  * Get the id of the calling thread.
  *
  * @return
