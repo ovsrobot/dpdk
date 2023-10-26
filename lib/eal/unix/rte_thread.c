@@ -5,9 +5,11 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <rte_errno.h>
 #include <rte_log.h>
@@ -225,6 +227,20 @@ int
 rte_thread_detach(rte_thread_t thread_id)
 {
 	return pthread_detach((pthread_t)thread_id.opaque_id);
+}
+
+void
+rte_thread_yield(void)
+{
+	sched_yield();
+}
+
+void
+rte_thread_yield_realtime(void)
+{
+	/* A simple yield may not be enough to schedule kernel threads. */
+	struct timespec wait = {.tv_nsec = 1000000}; /* 1 ms */
+	nanosleep(&wait, NULL);
 }
 
 int
