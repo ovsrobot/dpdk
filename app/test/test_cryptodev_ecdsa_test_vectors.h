@@ -7,6 +7,8 @@
 
 #include "rte_crypto_asym.h"
 
+#ifndef __TEST_CRYPTODEV_EC_CURVES__
+#define __TEST_CRYPTODEV_EC_CURVES__
 /* EC curve id */
 enum curve {
 	SECP192R1,
@@ -22,6 +24,7 @@ const char *curve[] = {"SECP192R1",
 		       "SECP256R1",
 		       "SECP384R1",
 		       "SECP521R1"};
+#endif
 
 struct crypto_testsuite_ecdsa_params {
 	rte_crypto_param pubkey_qx;
