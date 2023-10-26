@@ -815,7 +815,9 @@ Known Issues
 
   4. It MAY be used by preemptible multi-producer and/or preemptible multi-consumer pthreads whose scheduling policy are all SCHED_OTHER(cfs), SCHED_IDLE or SCHED_BATCH. User SHOULD be aware of the performance penalty before using it.
 
-  5. It MUST not be used by multi-producer/consumer pthreads, whose scheduling policies are SCHED_FIFO or SCHED_RR.
+  5. It MUST not be used by multi-producer/consumer pthreads
+     whose scheduling policies are ``SCHED_FIFO``
+     or ``SCHED_RR`` (``RTE_THREAD_PRIORITY_REALTIME_CRITICAL``).
 
   Alternatively, applications can use the lock-free stack mempool handler. When
   considering this handler, note that:
