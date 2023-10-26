@@ -127,6 +127,7 @@ New Features
   * Upgraded ENA HAL to latest version.
   * Added support for connection tracking allowance utilization metric.
   * Added support for reporting rx overrun errors in xstats.
+  * Added support for ENA-express metrics.
 
 * **Updated Intel cpfl driver.**
 
