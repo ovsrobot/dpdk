@@ -282,3 +282,9 @@ class OSSession(ABC):
         """
         Enable IPv4 forwarding in the underlying OS.
         """
+
+    @abstractmethod
+    def probe_driver(self, driver_name: str) -> None:
+        """
+        Load the module for the driver.
+        """

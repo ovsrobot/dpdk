@@ -199,3 +199,6 @@ class LinuxSession(PosixSession):
     def configure_ipv4_forwarding(self, enable: bool) -> None:
         state = 1 if enable else 0
         self.send_command(f"sysctl -w net.ipv4.ip_forward={state}", privileged=True)
+
+    def probe_driver(self, driver_name: str) -> None:
+        self.send_command(f"modprobe {driver_name}", verify=True)
