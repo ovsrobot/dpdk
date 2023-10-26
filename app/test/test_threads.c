@@ -22,7 +22,7 @@ thread_main(void *arg)
 	__atomic_store_n(&thread_id_ready, 1, __ATOMIC_RELEASE);
 
 	while (__atomic_load_n(&thread_id_ready, __ATOMIC_ACQUIRE) == 1)
-		;
+		rte_thread_yield_realtime(); /* required for RT priority */
 
 	return 0;
 }
@@ -97,21 +97,12 @@ test_thread_priority(void)
 		"Priority set mismatches priority get");
 
 	priority = RTE_THREAD_PRIORITY_REALTIME_CRITICAL;
-#ifndef RTE_EXEC_ENV_WINDOWS
-	RTE_TEST_ASSERT(rte_thread_set_priority(thread_id, priority) == ENOTSUP,
-		"Priority set to critical should fail");
-	RTE_TEST_ASSERT(rte_thread_get_priority(thread_id, &priority) == 0,
-		"Failed to get thread priority");
-	RTE_TEST_ASSERT(priority == RTE_THREAD_PRIORITY_NORMAL,
-		"Failed set to critical should have retained normal");
-#else
 	RTE_TEST_ASSERT(rte_thread_set_priority(thread_id, priority) == 0,
 		"Priority set to critical should succeed");
 	RTE_TEST_ASSERT(rte_thread_get_priority(thread_id, &priority) == 0,
 		"Failed to get thread priority");
 	RTE_TEST_ASSERT(priority == RTE_THREAD_PRIORITY_REALTIME_CRITICAL,
 		"Priority set mismatches priority get");
-#endif
 
 	priority = RTE_THREAD_PRIORITY_NORMAL;
 	RTE_TEST_ASSERT(rte_thread_set_priority(thread_id, priority) == 0,
