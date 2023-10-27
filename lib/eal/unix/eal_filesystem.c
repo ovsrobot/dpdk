@@ -84,20 +84,20 @@ int eal_parse_sysfs_value(const char *filename, unsigned long *val)
 	char *end = NULL;
 
 	if ((f = fopen(filename, "r")) == NULL) {
-		RTE_LOG(ERR, EAL, "%s(): cannot open sysfs value %s\n",
+		RTE_LOG(DEBUG, EAL, "%s(): cannot open sysfs value %s\n",
 			__func__, filename);
 		return -1;
 	}
 
 	if (fgets(buf, sizeof(buf), f) == NULL) {
-		RTE_LOG(ERR, EAL, "%s(): cannot read sysfs value %s\n",
+		RTE_LOG(DEBUG, EAL, "%s(): cannot read sysfs value %s\n",
 			__func__, filename);
 		fclose(f);
 		return -1;
 	}
 	*val = strtoul(buf, &end, 0);
 	if ((buf[0] == '\0') || (end == NULL) || (*end != '\n')) {
-		RTE_LOG(ERR, EAL, "%s(): cannot parse sysfs value %s\n",
+		RTE_LOG(DEBUG, EAL, "%s(): cannot parse sysfs value %s\n",
 				__func__, filename);
 		fclose(f);
 		return -1;
