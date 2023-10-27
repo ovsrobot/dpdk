@@ -7,6 +7,7 @@
 
 #define NITROX_DECOMP_CTX_SIZE 2048
 #define NITROX_CONSTANTS_MAX_SEARCH_DEPTH 31744
+#define NITROX_DEFAULT_DEFLATE_SEARCH_DEPTH 32768
 
 struct nitrox_qp;
 struct nitrox_softreq;
@@ -41,13 +42,14 @@ struct nitrox_comp_xform {
 	enum nitrox_comp_algo algo;
 	enum nitrox_comp_level level;
 	enum nitrox_chksum_type chksum_type;
-};
-
-struct nitrox_comp_stream {
-	struct nitrox_comp_xform xform;
-	int window_size;
-	char context[NITROX_DECOMP_CTX_SIZE] __rte_aligned(8);
-	char history_window[NITROX_CONSTANTS_MAX_SEARCH_DEPTH] __rte_aligned(8);
+	uint8_t *context;
+	uint8_t *history_window;
+	uint32_t chksum;
+	uint16_t window_size;
+	uint16_t hlen;
+	uint8_t exn;
+	uint8_t exbits;
+	bool bf;
 };
 
 int nitrox_process_comp_req(struct rte_comp_op *op, struct nitrox_softreq *sr);

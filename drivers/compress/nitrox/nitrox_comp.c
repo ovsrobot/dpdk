@@ -14,6 +14,8 @@
 #include "nitrox_qp.h"
 
 #define COMPRESSDEV_NAME_NITROX_PMD	compress_nitrox
+#define NITROX_COMP_WINDOW_SIZE_MIN 1
+#define NITROX_COMP_WINDOW_SIZE_MAX 15
 #define NITROX_COMP_LEVEL_LOWEST_START 1
 #define NITROX_COMP_LEVEL_LOWEST_END 2
 #define NITROX_COMP_LEVEL_LOWER_START 3
@@ -49,10 +51,12 @@ static const struct rte_compressdev_capabilities
 				      RTE_COMP_FF_SHAREABLE_PRIV_XFORM |
 				      RTE_COMP_FF_OOP_SGL_IN_SGL_OUT |
 				      RTE_COMP_FF_OOP_SGL_IN_LB_OUT |
-				      RTE_COMP_FF_OOP_LB_IN_SGL_OUT,
+				      RTE_COMP_FF_OOP_LB_IN_SGL_OUT |
+				      RTE_COMP_FF_STATEFUL_COMPRESSION |
+				      RTE_COMP_FF_STATEFUL_DECOMPRESSION,
 		.window_size = {
-			.min = 1,
-			.max = 15,
+			.min = NITROX_COMP_WINDOW_SIZE_MIN,
+			.max = NITROX_COMP_WINDOW_SIZE_MAX,
 			.increment = 1
 		},
 	},
@@ -64,6 +68,8 @@ static int nitrox_comp_dev_configure(struct rte_compressdev *dev,
 {
 	struct nitrox_comp_device *comp_dev = dev->data->dev_private;
 	struct nitrox_device *ndev = comp_dev->ndev;
+	uint32_t xform_cnt;
+	char name[RTE_MEMPOOL_NAMESIZE];
 
 	if (config->nb_queue_pairs > ndev->nr_queues) {
 		NITROX_LOG(ERR, "Invalid queue pairs, max supported %d\n",
@@ -71,21 +77,21 @@ static int nitrox_comp_dev_configure(struct rte_compressdev *dev,
 		return -EINVAL;
 	}
 
-	if (config->max_nb_priv_xforms) {
-		char xform_name[RTE_MEMPOOL_NAMESIZE];
+	xform_cnt = config->max_nb_priv_xforms + config->max_nb_streams;
+	if (unlikely(xform_cnt == 0)) {
+		NITROX_LOG(ERR, "Invalid configuration with 0 xforms\n");
+		return -EINVAL;
+	}
 
-		snprintf(xform_name, sizeof(xform_name), "%s_xform",
-			 dev->data->name);
-		comp_dev->xform_pool = rte_mempool_create(xform_name,
-				config->max_nb_priv_xforms,
-				sizeof(struct nitrox_comp_xform),
-				0, 0, NULL, NULL, NULL, NULL,
-				config->socket_id, 0);
-		if (comp_dev->xform_pool == NULL) {
-			NITROX_LOG(ERR, "Failed to create xform pool, err %d\n",
-				   rte_errno);
-			return -rte_errno;
-		}
+	snprintf(name, sizeof(name), "%s_xform", dev->data->name);
+	comp_dev->xform_pool = rte_mempool_create(name,
+			xform_cnt, sizeof(struct nitrox_comp_xform),
+			0, 0, NULL, NULL, NULL, NULL,
+			config->socket_id, 0);
+	if (comp_dev->xform_pool == NULL) {
+		NITROX_LOG(ERR, "Failed to create xform pool, err %d\n",
+			   rte_errno);
+		return -rte_errno;
 	}
 
 	return 0;
@@ -257,7 +263,7 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 					    void **private_xform)
 {
 	struct nitrox_comp_device *comp_dev = dev->data->dev_private;
-	struct nitrox_comp_xform *nitrox_xform;
+	struct nitrox_comp_xform *nxform;
 	enum rte_comp_checksum_type chksum_type;
 	int ret;
 
@@ -271,12 +277,13 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 		return -ENOMEM;
 	}
 
-	nitrox_xform = (struct nitrox_comp_xform *)*private_xform;
+	nxform = (struct nitrox_comp_xform *)*private_xform;
+	memset(nxform, 0, sizeof(*nxform));
 	if (xform->type == RTE_COMP_COMPRESS) {
 		enum rte_comp_huffman algo;
 		int level;
 
-		nitrox_xform->op = NITROX_COMP_OP_COMPRESS;
+		nxform->op = NITROX_COMP_OP_COMPRESS;
 		if (xform->compress.algo != RTE_COMP_ALGO_DEFLATE) {
 			NITROX_LOG(ERR, "Only deflate is supported\n");
 			ret = -ENOTSUP;
@@ -285,11 +292,11 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 
 		algo = xform->compress.deflate.huffman;
 		if (algo == RTE_COMP_HUFFMAN_DEFAULT)
-			nitrox_xform->algo = NITROX_COMP_ALGO_DEFLATE_DEFAULT;
+			nxform->algo = NITROX_COMP_ALGO_DEFLATE_DEFAULT;
 		else if (algo == RTE_COMP_HUFFMAN_FIXED)
-			nitrox_xform->algo = NITROX_COMP_ALGO_DEFLATE_FIXEDHUFF;
+			nxform->algo = NITROX_COMP_ALGO_DEFLATE_FIXEDHUFF;
 		else if (algo == RTE_COMP_HUFFMAN_DYNAMIC)
-			nitrox_xform->algo = NITROX_COMP_ALGO_DEFLATE_DYNHUFF;
+			nxform->algo = NITROX_COMP_ALGO_DEFLATE_DYNHUFF;
 		else {
 			NITROX_LOG(ERR, "Invalid deflate algorithm %d\n", algo);
 			ret = -EINVAL;
@@ -298,19 +305,19 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 
 		level = xform->compress.level;
 		if (level == RTE_COMP_LEVEL_PMD_DEFAULT) {
-			nitrox_xform->level = NITROX_COMP_LEVEL_MEDIUM;
+			nxform->level = NITROX_COMP_LEVEL_MEDIUM;
 		} else if (level >= NITROX_COMP_LEVEL_LOWEST_START &&
 			   level <= NITROX_COMP_LEVEL_LOWEST_END) {
-			nitrox_xform->level = NITROX_COMP_LEVEL_LOWEST;
+			nxform->level = NITROX_COMP_LEVEL_LOWEST;
 		} else if (level >= NITROX_COMP_LEVEL_LOWER_START &&
 			   level <= NITROX_COMP_LEVEL_LOWER_END) {
-			nitrox_xform->level = NITROX_COMP_LEVEL_LOWER;
+			nxform->level = NITROX_COMP_LEVEL_LOWER;
 		} else if (level >= NITROX_COMP_LEVEL_MEDIUM_START &&
 			   level <= NITROX_COMP_LEVEL_MEDIUM_END) {
-			nitrox_xform->level = NITROX_COMP_LEVEL_MEDIUM;
+			nxform->level = NITROX_COMP_LEVEL_MEDIUM;
 		} else if (level >= NITROX_COMP_LEVEL_BEST_START &&
 			   level <= NITROX_COMP_LEVEL_BEST_END) {
-			nitrox_xform->level = NITROX_COMP_LEVEL_BEST;
+			nxform->level = NITROX_COMP_LEVEL_BEST;
 		} else {
 			NITROX_LOG(ERR, "Unsupported compression level %d\n",
 				   xform->compress.level);
@@ -320,15 +327,15 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 
 		chksum_type = xform->compress.chksum;
 	} else if (xform->type == RTE_COMP_DECOMPRESS) {
-		nitrox_xform->op = NITROX_COMP_OP_DECOMPRESS;
+		nxform->op = NITROX_COMP_OP_DECOMPRESS;
 		if (xform->decompress.algo != RTE_COMP_ALGO_DEFLATE) {
 			NITROX_LOG(ERR, "Only deflate is supported\n");
 			ret = -ENOTSUP;
 			goto err_exit;
 		}
 
-		nitrox_xform->algo = NITROX_COMP_ALGO_DEFLATE_DEFAULT;
-		nitrox_xform->level = NITROX_COMP_LEVEL_BEST;
+		nxform->algo = NITROX_COMP_ALGO_DEFLATE_DEFAULT;
+		nxform->level = NITROX_COMP_LEVEL_BEST;
 		chksum_type = xform->decompress.chksum;
 	} else {
 		ret = -EINVAL;
@@ -336,11 +343,11 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 	}
 
 	if (chksum_type == RTE_COMP_CHECKSUM_NONE)
-		nitrox_xform->chksum_type = NITROX_CHKSUM_TYPE_NONE;
+		nxform->chksum_type = NITROX_CHKSUM_TYPE_NONE;
 	else if (chksum_type == RTE_COMP_CHECKSUM_CRC32)
-		nitrox_xform->chksum_type = NITROX_CHKSUM_TYPE_CRC32;
+		nxform->chksum_type = NITROX_CHKSUM_TYPE_CRC32;
 	else if (chksum_type == RTE_COMP_CHECKSUM_ADLER32)
-		nitrox_xform->chksum_type = NITROX_CHKSUM_TYPE_ADLER32;
+		nxform->chksum_type = NITROX_CHKSUM_TYPE_ADLER32;
 	else {
 		NITROX_LOG(ERR, "Unsupported checksum type %d\n",
 			   chksum_type);
@@ -348,27 +355,102 @@ static int nitrox_comp_private_xform_create(struct rte_compressdev *dev,
 		goto err_exit;
 	}
 
+	nxform->context = NULL;
+	nxform->history_window = NULL;
+	nxform->window_size = 0;
+	nxform->hlen = 0;
+	nxform->exn = 0;
+	nxform->exbits = 0;
+	nxform->bf = true;
 	return 0;
 err_exit:
-	memset(nitrox_xform, 0, sizeof(*nitrox_xform));
-	rte_mempool_put(comp_dev->xform_pool, nitrox_xform);
+	memset(nxform, 0, sizeof(*nxform));
+	rte_mempool_put(comp_dev->xform_pool, nxform);
 	return ret;
 }
 
 static int nitrox_comp_private_xform_free(struct rte_compressdev *dev,
 					  void *private_xform)
 {
-	struct nitrox_comp_xform *nitrox_xform = private_xform;
-	struct rte_mempool *mp = rte_mempool_from_obj(nitrox_xform);
+	struct nitrox_comp_xform *nxform = private_xform;
+	struct rte_mempool *mp = rte_mempool_from_obj(nxform);
 
 	RTE_SET_USED(dev);
-	if (nitrox_xform == NULL)
+	if (unlikely(nxform == NULL))
 		return -EINVAL;
 
-	memset(nitrox_xform, 0, sizeof(*nitrox_xform));
-	mp = rte_mempool_from_obj(nitrox_xform);
-	rte_mempool_put(mp, nitrox_xform);
+	memset(nxform, 0, sizeof(*nxform));
+	mp = rte_mempool_from_obj(nxform);
+	rte_mempool_put(mp, nxform);
 	return 0;
+}
+
+static int nitrox_comp_stream_free(struct rte_compressdev *dev, void *stream)
+{
+	struct nitrox_comp_xform *nxform = stream;
+
+	if (unlikely(nxform == NULL))
+		return -EINVAL;
+
+	rte_free(nxform->history_window);
+	nxform->history_window = NULL;
+	rte_free(nxform->context);
+	nxform->context = NULL;
+	return nitrox_comp_private_xform_free(dev, stream);
+}
+
+static int nitrox_comp_stream_create(struct rte_compressdev *dev,
+			const struct rte_comp_xform *xform, void **stream)
+{
+	int err;
+	struct nitrox_comp_xform *nxform;
+	struct nitrox_comp_device *comp_dev = dev->data->dev_private;
+
+	err = nitrox_comp_private_xform_create(dev, xform, stream);
+	if (unlikely(err))
+		return err;
+
+	nxform = *stream;
+	if (xform->type == RTE_COMP_COMPRESS) {
+		uint8_t window_size = xform->compress.window_size;
+
+		if (unlikely(window_size < NITROX_COMP_WINDOW_SIZE_MIN ||
+			      window_size > NITROX_COMP_WINDOW_SIZE_MAX)) {
+			NITROX_LOG(ERR, "Invalid window size %d\n",
+				   window_size);
+			return -EINVAL;
+		}
+
+		if (window_size == NITROX_COMP_WINDOW_SIZE_MAX)
+			nxform->window_size = NITROX_CONSTANTS_MAX_SEARCH_DEPTH;
+		else
+			nxform->window_size = RTE_BIT32(window_size);
+	} else {
+		nxform->window_size = NITROX_DEFAULT_DEFLATE_SEARCH_DEPTH;
+	}
+
+	nxform->history_window = rte_zmalloc_socket(NULL, nxform->window_size,
+					8, comp_dev->xform_pool->socket_id);
+	if (unlikely(nxform->history_window == NULL)) {
+		err = -ENOMEM;
+		goto err_exit;
+	}
+
+	if (xform->type == RTE_COMP_COMPRESS)
+		return 0;
+
+	nxform->context = rte_zmalloc_socket(NULL,
+					NITROX_DECOMP_CTX_SIZE, 8,
+					comp_dev->xform_pool->socket_id);
+	if (unlikely(nxform->context == NULL)) {
+		err = -ENOMEM;
+		goto err_exit;
+	}
+
+	return 0;
+err_exit:
+	nitrox_comp_stream_free(dev, *stream);
+	return err;
 }
 
 static int nitrox_enq_single_op(struct nitrox_qp *qp, struct rte_comp_op *op)
@@ -385,8 +467,12 @@ static int nitrox_enq_single_op(struct nitrox_qp *qp, struct rte_comp_op *op)
 		return err;
 	}
 
-	nitrox_qp_enqueue(qp, nitrox_comp_instr_addr(sr), sr);
-	return 0;
+	if (op->status == RTE_COMP_OP_STATUS_SUCCESS)
+		err = nitrox_qp_enqueue_sr(qp, sr);
+	else
+		nitrox_qp_enqueue(qp, nitrox_comp_instr_addr(sr), sr);
+
+	return err;
 }
 
 static uint16_t nitrox_comp_dev_enq_burst(void *queue_pair,
@@ -396,6 +482,7 @@ static uint16_t nitrox_comp_dev_enq_burst(void *queue_pair,
 	struct nitrox_qp *qp = queue_pair;
 	uint16_t free_slots = 0;
 	uint16_t cnt = 0;
+	uint16_t dbcnt = 0;
 	bool err = false;
 
 	free_slots = nitrox_qp_free_count(qp);
@@ -407,9 +494,12 @@ static uint16_t nitrox_comp_dev_enq_burst(void *queue_pair,
 			err = true;
 			break;
 		}
+
+		if (ops[cnt]->status != RTE_COMP_OP_STATUS_SUCCESS)
+			dbcnt++;
 	}
 
-	nitrox_ring_dbell(qp, cnt);
+	nitrox_ring_dbell(qp, dbcnt);
 	qp->stats.enqueued_count += cnt;
 	if (unlikely(err))
 		qp->stats.enqueue_err_count++;
@@ -472,8 +562,8 @@ static struct rte_compressdev_ops nitrox_compressdev_ops = {
 
 		.private_xform_create	= nitrox_comp_private_xform_create,
 		.private_xform_free	= nitrox_comp_private_xform_free,
-		.stream_create		= NULL,
-		.stream_free		= NULL
+		.stream_create		= nitrox_comp_stream_create,
+		.stream_free		= nitrox_comp_stream_free,
 };
 
 int
@@ -531,4 +621,3 @@ nitrox_comp_pmd_destroy(struct nitrox_device *ndev)
 	ndev->comp_dev = NULL;
 	return 0;
 }
-
