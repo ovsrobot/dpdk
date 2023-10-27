@@ -7,6 +7,7 @@
 #include "nitrox_device.h"
 #include "nitrox_hal.h"
 #include "nitrox_sym.h"
+#include "nitrox_comp.h"
 
 #define PCI_VENDOR_ID_CAVIUM	0x177d
 #define NITROX_V_PCI_VF_DEV_ID	0x13
@@ -67,7 +68,7 @@ nitrox_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		struct rte_pci_device *pdev)
 {
 	struct nitrox_device *ndev;
-	int err;
+	int err = -1;
 
 	/* Nitrox CSR space */
 	if (!pdev->mem_resource[0].addr)
@@ -79,12 +80,19 @@ nitrox_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 	ndev_init(ndev, pdev);
 	err = nitrox_sym_pmd_create(ndev);
-	if (err) {
-		ndev_release(ndev);
-		return err;
-	}
+	if (err)
+		goto err_exit;
+
+	err = nitrox_comp_pmd_create(ndev);
+	if (err)
+		goto err_exit;
 
 	return 0;
+err_exit:
+	nitrox_comp_pmd_destroy(ndev);
+	nitrox_sym_pmd_destroy(ndev);
+	ndev_release(ndev);
+	return err;
 }
 
 static int
@@ -98,6 +106,10 @@ nitrox_pci_remove(struct rte_pci_device *pdev)
 		return -ENODEV;
 
 	err = nitrox_sym_pmd_destroy(ndev);
+	if (err)
+		return err;
+
+	err = nitrox_comp_pmd_destroy(ndev);
 	if (err)
 		return err;
 
@@ -129,6 +141,20 @@ nitrox_sym_pmd_create(struct nitrox_device *ndev)
 
 __rte_weak int
 nitrox_sym_pmd_destroy(struct nitrox_device *ndev)
+{
+	RTE_SET_USED(ndev);
+	return 0;
+}
+
+__rte_weak int
+nitrox_comp_pmd_create(struct nitrox_device *ndev)
+{
+	RTE_SET_USED(ndev);
+	return 0;
+}
+
+__rte_weak int
+nitrox_comp_pmd_destroy(struct nitrox_device *ndev)
 {
 	RTE_SET_USED(ndev);
 	return 0;

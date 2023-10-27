@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright(C) 2019 Marvell International Ltd.
+# Copyright(C) 2019-2023 Marvell International Ltd.
 
 if not is_linux
     build = false
@@ -9,12 +9,18 @@ endif
 nitrox_crypto = true
 nitrox_crypto_path = 'crypto/nitrox'
 nitrox_crypto_relpath = '../../' + nitrox_crypto_path
+nitrox_compress = true
+nitrox_compress_path = 'compress/nitrox'
+nitrox_compress_relpath = '../../' + nitrox_compress_path
 
 if disable_drivers.contains(nitrox_crypto_path)
     nitrox_crypto = false
 endif
+if disable_drivers.contains(nitrox_compress_path)
+    nitrox_compress = false
+endif
 
-deps += ['bus_pci', 'cryptodev']
+deps += ['bus_pci', 'cryptodev', 'compressdev']
 sources = files(
         'nitrox_device.c',
         'nitrox_hal.c',
@@ -23,6 +29,7 @@ sources = files(
 )
 includes += include_directories(
         nitrox_crypto_relpath,
+        nitrox_compress_relpath,
 )
 
 if nitrox_crypto
@@ -31,5 +38,13 @@ if nitrox_crypto
 		'nitrox_sym_reqmgr.c',
         ]
         sources += files(join_paths(nitrox_crypto_relpath, f))
+    endforeach
+endif
+
+if nitrox_compress
+    foreach f: ['nitrox_comp.c',
+		'nitrox_comp_reqmgr.c',
+        ]
+        sources += files(join_paths(nitrox_compress_relpath, f))
     endforeach
 endif
