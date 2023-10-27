@@ -4645,6 +4645,10 @@ int
 rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
 			      struct rte_eth_rss_conf *rss_conf);
 
+
+const char *
+rte_eth_dev_rss_algo_name(enum rte_eth_hash_function rss_algo);
+
 /**
  * Add UDP tunneling port for a type of tunnel.
  *

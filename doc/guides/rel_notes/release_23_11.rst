@@ -243,6 +243,9 @@ New Features
   Added dispatcher library which purpose is to help decouple different
   parts (modules) of an eventdev-based application.
 
+* **Added new API for RSS hash algorithm**
+  Added new function ``rte_eth_dev_rss_algo_name`` to get name of RSS hash
+  algorithm.
 
 Removed Items
 -------------
