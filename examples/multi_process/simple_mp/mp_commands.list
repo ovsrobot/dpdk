@@ -1,0 +1,3 @@
+send <STRING>message  # send a string to another process
+help                  # show help
+quit                  # close the application
