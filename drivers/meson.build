@@ -13,6 +13,7 @@ subdirs = [
         'bus',
         'common/cnxk',    # depends on bus.
         'common/mlx5',    # depends on bus.
+	'common/nitrox',   # depends on bus.
         'common/qat',     # depends on bus.
         'common/sfc_efx', # depends on bus.
         'mempool',        # depends on common and bus.

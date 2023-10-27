@@ -13,7 +13,6 @@ drivers = [
         'ipsec_mb',
         'mlx5',
         'mvsam',
-        'nitrox',
         'null',
         'octeontx',
         'openssl',
