@@ -1269,6 +1269,7 @@ int
 rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 		      const struct rte_eth_conf *dev_conf)
 {
+	enum rte_eth_hash_function algorithm;
 	struct rte_eth_dev *dev;
 	struct rte_eth_dev_info dev_info;
 	struct rte_eth_conf orig_conf;
@@ -1496,6 +1497,18 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 			"Ethdev port_id=%u config invalid Rx mq_mode without RSS but %s offload is requested\n",
 			port_id,
 			rte_eth_dev_rx_offload_name(RTE_ETH_RX_OFFLOAD_RSS_HASH));
+		ret = -EINVAL;
+		goto rollback;
+	}
+
+	algorithm = dev_conf->rx_adv_conf.rss_conf.algorithm;
+	if ((dev_info.rss_algo_capa &
+	     RTE_ETH_HASH_ALGO_TO_CAPA(algorithm)) == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Ethdev port_id=%u config unsupported RSS hash algorithm: %u "
+			"with rss_algo_capa: %x\n",
+			port_id, algorithm,
+			dev_info.rss_algo_capa);
 		ret = -EINVAL;
 		goto rollback;
 	}
@@ -3757,6 +3770,7 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 	dev_info->min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN -
 		RTE_ETHER_CRC_LEN;
 	dev_info->max_mtu = UINT16_MAX;
+	dev_info->rss_algo_capa = RTE_ETH_HASH_ALGO_CAPA_MASK(DEFAULT);
 
 	if (*dev->dev_ops->dev_infos_get == NULL)
 		return -ENOTSUP;
@@ -4698,6 +4712,16 @@ rte_eth_dev_rss_hash_update(uint16_t port_id,
 		return -ENOTSUP;
 	}
 
+	if ((dev_info.rss_algo_capa &
+	     RTE_ETH_HASH_ALGO_TO_CAPA(rss_conf->algorithm)) == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Ethdev port_id=%u config unsupported RSS hash algorithm: %u "
+			"with rss_algo_capa: %x\n",
+			port_id, rss_conf->algorithm,
+			dev_info.rss_algo_capa);
+		return -EINVAL;
+	}
+
 	if (*dev->dev_ops->rss_hash_update == NULL)
 		return -ENOTSUP;
 	ret = eth_err(port_id, (*dev->dev_ops->rss_hash_update)(dev,
@@ -4724,6 +4748,8 @@ rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
 			port_id);
 		return -EINVAL;
 	}
+
+	rss_conf->algorithm = RTE_ETH_HASH_FUNCTION_DEFAULT;
 
 	if (*dev->dev_ops->rss_hash_conf_get == NULL)
 		return -ENOTSUP;

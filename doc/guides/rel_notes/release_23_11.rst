@@ -360,6 +360,11 @@ ABI Changes
 * security: struct ``rte_security_ipsec_sa_options`` was updated
   due to inline out-of-place feature addition.
 
+* ethdev: Added "rss_algo_capa" field to ``rte_eth_dev_info`` structure for
+* reporting RSS hash algorithm capability.
+
+* ethdev: Added "algorithm" field to ``rte_eth_rss_conf`` structure for RSS
+  hash algorithm.
 
 Known Issues
 ------------

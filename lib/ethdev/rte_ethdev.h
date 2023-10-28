@@ -446,6 +446,33 @@ struct rte_vlan_filter_conf {
 };
 
 /**
+ * Hash function types.
+ */
+enum rte_eth_hash_function {
+	/** DEFAULT means driver decides which hash algorithm to pick. */
+	RTE_ETH_HASH_FUNCTION_DEFAULT = 0,
+	RTE_ETH_HASH_FUNCTION_TOEPLITZ, /**< Toeplitz */
+	RTE_ETH_HASH_FUNCTION_SIMPLE_XOR, /**< Simple XOR */
+	/**
+	 * Symmetric Toeplitz: src, dst will be replaced by
+	 * xor(src, dst). For the case with src/dst only,
+	 * src or dst address will xor with zero pair.
+	 */
+	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ,
+	/**
+	 * Symmetric Toeplitz: L3 and L4 fields are sorted prior to
+	 * the hash function.
+	 *  If src_ip > dst_ip, swap src_ip and dst_ip.
+	 *  If src_port > dst_port, swap src_port and dst_port.
+	 */
+	RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ_SORT,
+	RTE_ETH_HASH_FUNCTION_MAX,
+};
+
+#define RTE_ETH_HASH_ALGO_TO_CAPA(x) RTE_BIT32(x)
+#define RTE_ETH_HASH_ALGO_CAPA_MASK(x) RTE_BIT32(RTE_ETH_HASH_FUNCTION_ ## x)
+
+/**
  * A structure used to configure the Receive Side Scaling (RSS) feature
  * of an Ethernet port.
  */
@@ -469,6 +496,7 @@ struct rte_eth_rss_conf {
 	 * which RSS hashing is to be applied.
 	 */
 	uint64_t rss_hf;
+	enum rte_eth_hash_function algorithm;	/**< Hash algorithm. */
 };
 
 /*
@@ -1783,7 +1811,10 @@ struct rte_eth_dev_info {
 	/** Supported error handling mode. */
 	enum rte_eth_err_handle_mode err_handle_mode;
 
-	uint64_t reserved_64s[2]; /**< Reserved for future fields */
+	/** RSS hash algorithms capabilities */
+	uint32_t rss_algo_capa;
+
+	uint32_t reserved_32s[3]; /**< Reserved for future fields */
 	void *reserved_ptrs[2];   /**< Reserved for future fields */
 };
 
