@@ -2112,6 +2112,7 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	struct rte_eth_dev *dev;
 	struct rte_eth_dev_info dev_info;
 	struct rte_eth_rxconf local_conf;
+	uint32_t vld_bufsize;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -2158,6 +2159,11 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 			return ret;
 
 		mbp_buf_size = rte_pktmbuf_data_room_size(mp);
+		vld_bufsize = mbp_buf_size - RTE_PKTMBUF_HEADROOM;
+		if (vld_bufsize > dev_info.max_rx_bufsize)
+			RTE_ETHDEV_LOG(INFO,
+				"Ethdev port_id=%u, the data size application used in each mbuf is just %u instead of the whole data room(%u).\n",
+				port_id, dev_info.max_rx_bufsize, vld_bufsize);
 	} else if (rx_conf != NULL && rx_conf->rx_nseg > 0) {
 		const struct rte_eth_rxseg_split *rx_seg;
 		uint16_t n_seg;
@@ -3757,6 +3763,7 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 	dev_info->min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN -
 		RTE_ETHER_CRC_LEN;
 	dev_info->max_mtu = UINT16_MAX;
+	dev_info->max_rx_bufsize = UINT32_MAX;
 
 	if (*dev->dev_ops->dev_infos_get == NULL)
 		return -ENOTSUP;
