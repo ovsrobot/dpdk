@@ -185,11 +185,13 @@ rte_devargs_parse(struct rte_devargs *da, const char *dev)
 {
 	struct rte_bus *bus = NULL;
 	const char *devname;
-	const size_t maxlen = sizeof(da->name);
 	size_t i;
 
 	if (da == NULL)
 		return -EINVAL;
+
+	const size_t maxlen = sizeof(da->name);
+
 	memset(da, 0, sizeof(*da));
 
 	/* First parse according global device syntax. */
