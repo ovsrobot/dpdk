@@ -89,6 +89,7 @@ F: devtools/check-doc-vs-code.sh
 F: devtools/check-dup-includes.sh
 F: devtools/check-maintainers.sh
 F: devtools/check-forbidden-tokens.awk
+F: devtools/check-inclusive-naming.py
 F: devtools/check-git-log.sh
 F: devtools/check-spdx-tag.sh
 F: devtools/check-symbol-change.sh
