@@ -190,6 +190,7 @@ dlb2_pf_reset(struct dlb2_dev *dlb2_dev)
 	uint16_t rt_ctl_word;
 	uint32_t pri_reqs_dword;
 	uint16_t pri_ctrl_word;
+	uint16_t pasid_ctrl;
 
 	off_t pcie_cap_offset;
 	int pri_cap_offset;
@@ -197,6 +198,7 @@ dlb2_pf_reset(struct dlb2_dev *dlb2_dev)
 	int err_cap_offset;
 	int acs_cap_offset;
 	int wait_count;
+	int pasid_cap_offset;
 
 	uint16_t devsta_busy_word;
 	uint16_t devctl_word;
@@ -507,6 +509,31 @@ dlb2_pf_reset(struct dlb2_dev *dlb2_dev)
 
 		off = acs_cap_offset + RTE_PCI_ACS_CTRL;
 		ret = rte_pci_write_config(pdev, &acs_ctrl, 2, off);
+		if (ret != 2) {
+			DLB2_LOG_ERR("[%s()] failed to write the pcie config space at offset %d\n",
+				__func__, (int)off);
+			return ret;
+		}
+	}
+
+	/* TODO - The current Linux kernel 6.2 vfio driver does not expose PASID capability to
+	 * users. It also enables PASID by default, which breaks DLB PF PMD. We have
+	 * to use the hardcoded offset for now to disable PASID. It may be different for
+	 * other device drivers since they may have different design. When PASID capability
+	 * is exposed to users, please revise this part and add api to disable PASID through
+	 * pci common code.
+	 */
+	pasid_cap_offset = RTE_PCI_PASID_CAP_OFFSET;
+
+	off = pasid_cap_offset + RTE_PCI_PASID_CTRL;
+	if (rte_pci_read_config(pdev, &pasid_ctrl, 2, off) != 2)
+		pasid_ctrl = 0;
+
+	if (pasid_ctrl) {
+		DLB2_INFO(dlb2_dev, "DLB2 disabling pasid...\n");
+
+		pasid_ctrl = 0;
+		ret = rte_pci_write_config(pdev, &pasid_ctrl, 2, off);
 		if (ret != 2) {
 			DLB2_LOG_ERR("[%s()] failed to write the pcie config space at offset %d\n",
 				__func__, (int)off);
