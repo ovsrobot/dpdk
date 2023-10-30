@@ -60,6 +60,7 @@ struct ice_dcf_vf_repr {
 	struct rte_ether_addr mac_addr;
 	uint16_t switch_domain_id;
 	uint16_t vf_id;
+	bool dcf_valid;
 
 	struct ice_dcf_vlan outer_vlan_info; /* DCF always handle outer VLAN */
 };
