@@ -14,9 +14,10 @@
 #include <linux/ipv6.h>
 #include <linux/if_tunnel.h>
 #include <linux/filter.h>
-#include <linux/bpf.h>
 
-#include "tap_rss.h"
+#include "bpf_api.h"
+#include "bpf_elf.h"
+#include "../tap_rss.h"
 
 /** Create IPv4 address */
 #define IPv4(a, b, c, d) ((__u32)(((a) & 0xff) << 24) | \
@@ -75,14 +76,14 @@ struct ipv4_l3_l4_tuple {
 	__u32    dst_addr;
 	__u16    dport;
 	__u16    sport;
-} __rte_packed;
+} __attribute__((packed));
 
 struct ipv6_l3_l4_tuple {
 	__u8        src_addr[16];
 	__u8        dst_addr[16];
 	__u16       dport;
 	__u16       sport;
-} __rte_packed;
+} __attribute__((packed));
 
 static const __u8 def_rss_key[TAP_RSS_HASH_KEY_SIZE] = {
 	0xd1, 0x81, 0xc6, 0x2c,
