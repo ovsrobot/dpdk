@@ -111,13 +111,15 @@ ice_dcf_vf_repr_link_update(__rte_unused struct rte_eth_dev *ethdev,
 static __rte_always_inline struct ice_dcf_hw *
 ice_dcf_vf_repr_hw(struct ice_dcf_vf_repr *repr)
 {
-	struct ice_dcf_adapter *dcf_adapter =
-			repr->dcf_eth_dev->data->dev_private;
+	struct rte_eth_dev_data *dcf_data = repr->dcf_eth_dev->data;
+	struct ice_dcf_adapter *dcf_adapter;
 
-	if (!dcf_adapter) {
+	if (!dcf_data || !dcf_data->dev_private) {
 		PMD_DRV_LOG(ERR, "DCF for VF representor has been released\n");
 		return NULL;
 	}
+
+	dcf_adapter = dcf_data->dev_private;
 
 	return &dcf_adapter->real_hw;
 }
