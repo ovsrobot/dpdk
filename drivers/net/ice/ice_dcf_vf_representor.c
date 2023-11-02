@@ -45,6 +45,9 @@ ice_dcf_vf_repr_dev_start(struct rte_eth_dev *dev)
 static int
 ice_dcf_vf_repr_dev_stop(struct rte_eth_dev *dev)
 {
+	struct ice_dcf_vf_repr *repr = dev->data->dev_private;
+
+	repr->dcf_valid = false;
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 
 	return 0;
@@ -111,13 +114,14 @@ ice_dcf_vf_repr_link_update(__rte_unused struct rte_eth_dev *ethdev,
 static __rte_always_inline struct ice_dcf_hw *
 ice_dcf_vf_repr_hw(struct ice_dcf_vf_repr *repr)
 {
-	struct ice_dcf_adapter *dcf_adapter =
-			repr->dcf_eth_dev->data->dev_private;
+	struct ice_dcf_adapter *dcf_adapter;
 
-	if (!dcf_adapter) {
+	if (!repr->dcf_valid) {
 		PMD_DRV_LOG(ERR, "DCF for VF representor has been released\n");
 		return NULL;
 	}
+
+	dcf_adapter = repr->dcf_eth_dev->data->dev_private;
 
 	return &dcf_adapter->real_hw;
 }
@@ -414,6 +418,7 @@ ice_dcf_vf_repr_init(struct rte_eth_dev *vf_rep_eth_dev, void *init_param)
 	repr->dcf_eth_dev = param->dcf_eth_dev;
 	repr->switch_domain_id = param->switch_domain_id;
 	repr->vf_id = param->vf_id;
+	repr->dcf_valid = true;
 	repr->outer_vlan_info.port_vlan_ena = false;
 	repr->outer_vlan_info.stripping_ena = false;
 	repr->outer_vlan_info.tpid = RTE_ETHER_TYPE_VLAN;
@@ -437,6 +442,14 @@ ice_dcf_vf_repr_init(struct rte_eth_dev *vf_rep_eth_dev, void *init_param)
 int
 ice_dcf_vf_repr_uninit(struct rte_eth_dev *vf_rep_eth_dev)
 {
+	struct ice_dcf_vf_repr *repr = vf_rep_eth_dev->data->dev_private;
+	struct ice_dcf_adapter *dcf_adapter;
+
+	if (repr->dcf_valid) {
+		dcf_adapter = repr->dcf_eth_dev->data->dev_private;
+		ice_dcf_handle_vf_repr_uninit(dcf_adapter, repr->vf_id);
+	}
+
 	vf_rep_eth_dev->data->mac_addrs = NULL;
 
 	return 0;
@@ -480,11 +493,11 @@ ice_dcf_vf_repr_stop_all(struct ice_dcf_adapter *dcf_adapter)
 	for (vf_id = 0; vf_id < dcf_adapter->real_hw.num_vfs; vf_id++) {
 		struct rte_eth_dev *vf_rep_eth_dev =
 				dcf_adapter->repr_infos[vf_id].vf_rep_eth_dev;
-		if (!vf_rep_eth_dev || vf_rep_eth_dev->data->dev_started == 0)
+		if (!vf_rep_eth_dev)
 			continue;
 
 		ret = ice_dcf_vf_repr_dev_stop(vf_rep_eth_dev);
 		if (!ret)
-			vf_rep_eth_dev->data->dev_started = 0;
+			dcf_adapter->repr_infos[vf_id].vf_rep_eth_dev = NULL;
 	}
 }

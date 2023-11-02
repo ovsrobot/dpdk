@@ -1618,6 +1618,26 @@ ice_dcf_free_repr_info(struct ice_dcf_adapter *dcf_adapter)
 	}
 }
 
+int
+ice_dcf_handle_vf_repr_uninit(struct ice_dcf_adapter *dcf_adapter,
+				uint16_t vf_id)
+{
+	struct ice_dcf_repr_info *vf_rep_info;
+
+	if (dcf_adapter->num_reprs >= vf_id) {
+		PMD_DRV_LOG(ERR, "Invalid VF id: %d", vf_id);
+		return -1;
+	}
+
+	if (!dcf_adapter->repr_infos)
+		return 0;
+
+	vf_rep_info = &dcf_adapter->repr_infos[vf_id];
+	vf_rep_info->vf_rep_eth_dev = NULL;
+
+	return 0;
+}
+
 static int
 ice_dcf_init_repr_info(struct ice_dcf_adapter *dcf_adapter)
 {
