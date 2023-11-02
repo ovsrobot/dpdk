@@ -871,7 +871,7 @@ rte_hash_cuckoo_move_insert_mw(const struct rte_hash *h,
 			/* The store to sig_current should not
 			 * move above the store to tbl_chng_cnt.
 			 */
-			__atomic_thread_fence(rte_memory_order_release);
+			__rte_atomic_thread_fence(rte_memory_order_release);
 		}
 
 		/* Need to swap current/alt sig to allow later
@@ -903,7 +903,7 @@ rte_hash_cuckoo_move_insert_mw(const struct rte_hash *h,
 		/* The store to sig_current should not
 		 * move above the store to tbl_chng_cnt.
 		 */
-		__atomic_thread_fence(rte_memory_order_release);
+		__rte_atomic_thread_fence(rte_memory_order_release);
 	}
 
 	curr_bkt->sig_current[curr_slot] = sig;
@@ -1396,7 +1396,7 @@ __rte_hash_lookup_with_hash_lf(const struct rte_hash *h, const void *key,
 		/* The loads of sig_current in search_one_bucket
 		 * should not move below the load from tbl_chng_cnt.
 		 */
-		__atomic_thread_fence(rte_memory_order_acquire);
+		__rte_atomic_thread_fence(rte_memory_order_acquire);
 		/* Re-read the table change counter to check if the
 		 * table has changed during search. If yes, re-do
 		 * the search.
@@ -1625,7 +1625,7 @@ __rte_hash_compact_ll(const struct rte_hash *h,
 				/* The store to sig_current should
 				 * not move above the store to tbl_chng_cnt.
 				 */
-				__atomic_thread_fence(rte_memory_order_release);
+				__rte_atomic_thread_fence(rte_memory_order_release);
 			}
 			last_bkt->sig_current[i] = NULL_SIGNATURE;
 			rte_atomic_store_explicit(&last_bkt->key_idx[i],
@@ -2216,7 +2216,7 @@ next_key:
 		/* The loads of sig_current in compare_signatures
 		 * should not move below the load from tbl_chng_cnt.
 		 */
-		__atomic_thread_fence(rte_memory_order_acquire);
+		__rte_atomic_thread_fence(rte_memory_order_acquire);
 		/* Re-read the table change counter to check if the
 		 * table has changed during search. If yes, re-do
 		 * the search.
