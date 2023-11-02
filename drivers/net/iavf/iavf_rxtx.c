@@ -3977,6 +3977,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 				PMD_DRV_LOG(DEBUG,
 					"AVX2 does not support outer checksum offload, using Basic Tx (port %d).",
 					dev->data->port_id);
+				return;
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
