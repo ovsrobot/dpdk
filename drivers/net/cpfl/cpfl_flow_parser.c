@@ -1613,6 +1613,60 @@ cpfl_parse_mr_key_action(struct cpfl_flow_js_mr_key_action *key_acts, int size,
 	return 0;
 }
 
+static int
+cpfl_translate_definition(struct rte_flow_item *definition, int def_length,
+			  struct cpfl_action_vxlan_encap_data *encap_data)
+{
+	int i;
+	struct rte_flow_item *item;
+
+	for (i = 0; i < def_length; i++) {
+		item = &encap_data->items[i];
+		item->type = definition[i].type;
+		switch (item->type) {
+		case RTE_FLOW_ITEM_TYPE_ETH:
+			item->spec = &encap_data->item_eth;
+			memcpy(&encap_data->item_eth, definition[i].spec,
+			       sizeof(struct rte_flow_item_eth));
+			break;
+		case RTE_FLOW_ITEM_TYPE_VOID:
+		case RTE_FLOW_ITEM_TYPE_VLAN:
+			item->spec = &encap_data->item_vlan;
+			memcpy(&encap_data->item_vlan, definition[i].spec,
+			       sizeof(struct rte_flow_item_vlan));
+			break;
+		case RTE_FLOW_ITEM_TYPE_IPV4:
+			item->spec = &encap_data->item_ipv4;
+			memcpy(&encap_data->item_ipv4, definition[i].spec,
+			       sizeof(struct rte_flow_item_ipv4));
+			break;
+		case RTE_FLOW_ITEM_TYPE_UDP:
+			item->spec = &encap_data->item_udp;
+			memcpy(&encap_data->item_udp, definition[i].spec,
+			       sizeof(struct rte_flow_item_udp));
+			break;
+		case RTE_FLOW_ITEM_TYPE_VXLAN:
+			item->spec = &encap_data->item_vxlan;
+			memcpy(&encap_data->item_vxlan, definition[i].spec,
+			       sizeof(struct rte_flow_item_vxlan));
+			break;
+		case RTE_FLOW_ITEM_TYPE_END:
+			break;
+		default:
+			return -EINVAL;
+		}
+		encap_data->item_eth.hdr.ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
+		encap_data->item_ipv4.hdr.version_ihl = RTE_IPV4_VHL_DEF;
+		encap_data->item_ipv4.hdr.next_proto_id = IPPROTO_UDP;
+		encap_data->item_ipv4.hdr.time_to_live = IPDEFTTL;
+		encap_data->item_ipv4.hdr.hdr_checksum = rte_cpu_to_be_16(1);
+		encap_data->item_udp.hdr.dgram_cksum = RTE_BE16(0x01);
+		encap_data->item_vxlan.flags = 0x08;
+	}
+
+	return 0;
+}
+
 /* output: uint8_t *buffer, uint16_t *byte_len */
 static int
 cpfl_parse_layout(struct cpfl_flow_js_mr_layout *layouts, int layout_size,
@@ -1644,12 +1698,19 @@ cpfl_parse_layout(struct cpfl_flow_js_mr_layout *layouts, int layout_size,
 		if (temp->type == RTE_FLOW_ACTION_TYPE_VXLAN_ENCAP) {
 			const struct rte_flow_action_vxlan_encap *action_vxlan_encap;
 			struct rte_flow_item *definition;
-			int def_length, k;
+			int def_length, k, ret;
+			struct cpfl_action_vxlan_encap_data vxlan_encap_data = {0};
 
 			action_vxlan_encap =
 			    (const struct rte_flow_action_vxlan_encap *)temp->encap.action->conf;
 			definition = action_vxlan_encap->definition;
 			def_length = cpfl_get_items_length(definition);
+			ret = cpfl_translate_definition(definition, def_length, &vxlan_encap_data);
+			if (ret < 0) {
+				PMD_DRV_LOG(ERR, "vxlan_encap: can't translate definition items.");
+				return -EINVAL;
+			}
+			definition = vxlan_encap_data.items;
 			for (k = 0; k < def_length - 1; k++) {
 				if ((strcmp(hint, "eth") == 0 &&
 				     definition[k].type == RTE_FLOW_ITEM_TYPE_ETH) ||

@@ -13,6 +13,7 @@
 #define CPFL_MAX_SEM_FV_KEY_SIZE 64
 #define CPFL_FLOW_JS_PROTO_SIZE 16
 #define CPFL_MOD_KEY_NUM_MAX 8
+#define CPFL_VXLAN_ENCAP_ITEMS_NUM_MAX 6
 
 /* Pattern Rules Storage */
 enum cpfl_flow_pr_action_type {
@@ -201,6 +202,16 @@ struct cpfl_flow_mr_key_action_vxlan_encap {
 	enum rte_flow_item_type protocols[CPFL_FLOW_JS_PROTO_SIZE];
 	uint16_t proto_size;
 	const struct rte_flow_action *action;
+};
+
+/* Storage for struct rte_flow_action_vxlan_encap including external data. */
+struct cpfl_action_vxlan_encap_data {
+	struct rte_flow_item items[CPFL_VXLAN_ENCAP_ITEMS_NUM_MAX];
+	struct rte_flow_item_eth item_eth;
+	struct rte_flow_item_vlan item_vlan;
+	struct rte_flow_item_ipv4 item_ipv4;
+	struct rte_flow_item_udp item_udp;
+	struct rte_flow_item_vxlan item_vxlan;
 };
 
 struct cpfl_flow_mr_key_action {
