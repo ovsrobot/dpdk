@@ -206,7 +206,7 @@ handle_eal_info_request(const char *cmd, const char *params __rte_unused,
 }
 
 int
-eal_save_args(int argc, char **argv)
+eal_save_args(int argc, char * const *argv)
 {
 	int i, j;
 

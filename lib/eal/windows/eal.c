@@ -98,7 +98,7 @@ eal_usage(const char *prgname)
 
 /* Parse the arguments for --log-level only */
 static void
-eal_log_level_parse(int argc, char **argv)
+eal_log_level_parse(int argc, char * const *argv)
 {
 	int opt;
 	char **argvopt;
@@ -273,7 +273,7 @@ rte_eal_cleanup(void)
 
 /* Launch threads, called at application init(). */
 int
-rte_eal_init(int argc, char **argv)
+rte_eal_init(int argc, char * const *argv)
 {
 	int i, fctret, bscan;
 	const struct rte_config *config = rte_eal_get_configuration();

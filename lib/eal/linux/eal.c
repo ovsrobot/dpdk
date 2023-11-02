@@ -548,7 +548,7 @@ eal_parse_vfio_vf_token(const char *vf_token)
 
 /* Parse the arguments for --log-level only */
 static void
-eal_log_level_parse(int argc, char **argv)
+eal_log_level_parse(int argc, char * const *argv)
 {
 	int opt;
 	char **argvopt;
@@ -964,7 +964,7 @@ out:
 
 /* Launch threads, called at application init(). */
 int
-rte_eal_init(int argc, char **argv)
+rte_eal_init(int argc, char * const *argv)
 {
 	int i, fctret, ret;
 	static RTE_ATOMIC(uint32_t) run_once;
