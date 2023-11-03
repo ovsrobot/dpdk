@@ -101,6 +101,11 @@ extern "C" {
 #define RTE_PCI_EXT_CAP_ID_ACS		0x0d	/* Access Control Services */
 #define RTE_PCI_EXT_CAP_ID_SRIOV	0x10	/* SR-IOV */
 #define RTE_PCI_EXT_CAP_ID_PRI		0x13	/* Page Request Interface */
+#define RTE_PCI_EXT_CAP_ID_PASID        0x1B    /* Process Address Space ID */
+
+/* Process Address Space ID */
+#define RTE_PCI_PASID_CTRL		0x06    /* PASID control register */
+#define RTE_PCI_PASID_CAP_OFFSET        0x148   /* PASID capability offset */
 
 /* Advanced Error Reporting (RTE_PCI_EXT_CAP_ID_ERR) */
 #define RTE_PCI_ERR_UNCOR_STATUS	0x04	/* Uncorrectable Error Status */

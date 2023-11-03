@@ -37,5 +37,6 @@ INTERNAL {
 
 	rte_pci_get_sysfs_path;
 	rte_pci_register;
+	rte_pci_set_pasid;
 	rte_pci_unregister;
 };
