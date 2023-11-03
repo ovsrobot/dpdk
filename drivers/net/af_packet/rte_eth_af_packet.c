@@ -1096,8 +1096,8 @@ rte_pmd_af_packet_probe(struct rte_vdev_device *dev)
 	 */
 	if (rte_kvargs_count(kvlist, ETH_AF_PACKET_IFACE_ARG) == 1) {
 
-		ret = rte_kvargs_process(kvlist, ETH_AF_PACKET_IFACE_ARG,
-		                         &open_packet_iface, &sockfd);
+		ret = rte_kvargs_process_opt(kvlist, ETH_AF_PACKET_IFACE_ARG,
+					     &open_packet_iface, &sockfd);
 		if (ret < 0)
 			goto exit;
 	}
