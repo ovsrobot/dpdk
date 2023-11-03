@@ -1897,6 +1897,7 @@ process_openssl_dsa_sign_op_evp(struct rte_crypto_op *cop,
 	size_t outlen;
 	unsigned char *dsa_sign_data;
 	const unsigned char *dsa_sign_data_p;
+	int ret = -1;
 
 	cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
 	params = OSSL_PARAM_BLD_to_param(param_bld);
@@ -1950,9 +1951,9 @@ process_openssl_dsa_sign_op_evp(struct rte_crypto_op *cop,
 		cop->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
 	}
 
+	ret = 0;
 	DSA_SIG_free(sign);
 	OPENSSL_free(dsa_sign_data);
-	return 0;
 
 err_dsa_sign:
 	if (params)
@@ -1961,7 +1962,9 @@ err_dsa_sign:
 		EVP_PKEY_CTX_free(key_ctx);
 	if (dsa_ctx)
 		EVP_PKEY_CTX_free(dsa_ctx);
-	return -1;
+
+	EVP_PKEY_free(pkey);
+	return ret;
 }
 
 /* process dsa verify operation */
@@ -2034,6 +2037,7 @@ process_openssl_dsa_verify_op_evp(struct rte_crypto_op *cop,
 		ret = 0;
 	}
 
+	OPENSSL_free(dsa_sig);
 err_dsa_verify:
 	if (sign)
 		DSA_SIG_free(sign);
@@ -2043,6 +2047,9 @@ err_dsa_verify:
 		EVP_PKEY_CTX_free(key_ctx);
 	if (dsa_ctx)
 		EVP_PKEY_CTX_free(dsa_ctx);
+
+	BN_free(pub_key);
+	EVP_PKEY_free(pkey);
 
 	return ret;
 }
@@ -2674,6 +2681,9 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 	EVP_PKEY_CTX *kctx = NULL, *sctx = NULL, *cctx = NULL;
 	struct rte_crypto_asym_op *op = cop->asym;
 	OSSL_PARAM *params = sess->u.sm2.params;
+	EVP_MD_CTX *md_ctx = NULL;
+	ECDSA_SIG *ec_sign = NULL;
+	EVP_MD *check_md = NULL;
 	EVP_PKEY *pkey = NULL;
 	int ret = -1;
 
@@ -2739,10 +2749,7 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 		{
 			unsigned char signbuf[128] = {0};
 			const unsigned char *signptr;
-			EVP_MD_CTX *md_ctx = NULL;
 			const BIGNUM *r, *s;
-			ECDSA_SIG *ec_sign;
-			EVP_MD *check_md;
 			size_t signlen;
 
 			kctx = EVP_PKEY_CTX_new_from_name(NULL, "SM2", NULL);
@@ -2800,11 +2807,8 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 		break;
 	case RTE_CRYPTO_ASYM_OP_VERIFY:
 		{
-			unsigned char signbuf[128] = {0};
+			unsigned char signbuf[128] = {0}, *signbuf_new = NULL;
 			BIGNUM *r = NULL, *s = NULL;
-			EVP_MD_CTX *md_ctx = NULL;
-			ECDSA_SIG *ec_sign;
-			EVP_MD *check_md;
 			size_t signlen;
 
 			kctx = EVP_PKEY_CTX_new_from_name(NULL, "SM2", NULL);
@@ -2857,11 +2861,12 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 			r = NULL;
 			s = NULL;
 
-			signlen = i2d_ECDSA_SIG(ec_sign, (unsigned char **)&signbuf);
+			signbuf_new = signbuf;
+			signlen = i2d_ECDSA_SIG(ec_sign, (unsigned char **)&signbuf_new);
 			if (signlen <= 0)
 				goto err_sm2;
 
-			if (!EVP_DigestVerifyFinal(md_ctx, signbuf, signlen))
+			if (!EVP_DigestVerifyFinal(md_ctx, signbuf_new, signlen))
 				goto err_sm2;
 
 			BN_free(r);
@@ -2880,6 +2885,9 @@ process_openssl_sm2_op_evp(struct rte_crypto_op *cop,
 	ret = 0;
 	cop->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
 err_sm2:
+	EVP_MD_free(check_md);
+	EVP_MD_CTX_free(md_ctx);
+
 	if (kctx)
 		EVP_PKEY_CTX_free(kctx);
 
