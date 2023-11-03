@@ -67,6 +67,7 @@ sources += files(
         'mvtvm_ml_model.c',
 )
 
+ext_deps += libarchive
 ext_deps += jansson_dep
 ext_deps += dlpack_dep
 ext_deps += dmlc_dep
