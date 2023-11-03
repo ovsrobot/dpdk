@@ -36,6 +36,7 @@ INTERNAL {
 	global:
 
 	rte_pci_get_sysfs_path;
+	rte_pci_pasid_ena_dis;
 	rte_pci_register;
 	rte_pci_unregister;
 };
