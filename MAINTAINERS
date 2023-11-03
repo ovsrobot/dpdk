@@ -1651,6 +1651,7 @@ F: examples/cmdline/
 F: doc/guides/sample_app_ug/cmd_line.rst
 
 Key/Value parsing
+M: Chengwen Feng <fengchengwen@huawei.com>
 F: lib/kvargs/
 F: app/test/test_kvargs.c
 
