@@ -243,6 +243,11 @@ New Features
   Added dispatcher library which purpose is to help decouple different
   parts (modules) of an eventdev-based application.
 
+* **Added layer 2 MACsec forwarding example application.**
+
+  Added a new example layer 2 forwarding application to benchmark
+  MACsec encryption/decryption using rte_security based inline sessions.
+
 
 Removed Items
 -------------
