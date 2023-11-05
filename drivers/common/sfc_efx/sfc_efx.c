@@ -52,8 +52,8 @@ sfc_efx_dev_class_get(struct rte_devargs *devargs)
 		return dev_class;
 
 	if (rte_kvargs_count(kvargs, RTE_DEVARGS_KEY_CLASS) != 0) {
-		rte_kvargs_process(kvargs, RTE_DEVARGS_KEY_CLASS,
-				   sfc_efx_kvarg_dev_class_handler, &dev_class);
+		rte_kvargs_process_opt(kvargs, RTE_DEVARGS_KEY_CLASS,
+				       sfc_efx_kvarg_dev_class_handler, &dev_class);
 	}
 
 	rte_kvargs_free(kvargs);
