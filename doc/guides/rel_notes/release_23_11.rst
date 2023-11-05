@@ -137,6 +137,19 @@ New Features
   a group's miss actions, which are the actions to be performed on packets
   that didn't match any of the flow rules in the group.
 
+* **Updated kvargs process API.**
+
+  * Introduced rte_kvargs_process_opt() API, which inherits the function
+    of rte_kvargs_process() and could handle both key=value and only-key
+    cases.
+
+  * Constraint rte_kvargs_process() API can only handle key=value cases,
+    it will return -1 when handle only-key case (that is the matched key's
+    value is NULL).
+
+  * Make sure rte_kvargs_process_opt() and rte_kvargs_process() API both
+    return -1 when the kvlist parameter is NULL.
+
 * **Updated Amazon ena (Elastic Network Adapter) net driver.**
 
   * Upgraded ENA HAL to latest version.
