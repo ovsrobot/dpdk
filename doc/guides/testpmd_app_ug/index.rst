@@ -14,3 +14,4 @@ Testpmd Application User Guide
     build_app
     run_app
     testpmd_funcs
+    event_handling
