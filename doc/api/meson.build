@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
+doc_api_build_dir = meson.current_build_dir()
 doxygen = find_program('doxygen', required: get_option('enable_docs'))
 
 if not doxygen.found()
