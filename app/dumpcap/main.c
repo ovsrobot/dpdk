@@ -691,10 +691,9 @@ static struct rte_mempool *create_mempool(void)
 			data_size = mbuf_size;
 	}
 
-	mp = rte_pktmbuf_pool_create_by_ops(pool_name, num_mbufs,
-					    MBUF_POOL_CACHE_SIZE, 0,
-					    data_size,
-					    rte_socket_id(), "ring_mp_sc");
+	mp = rte_pktmbuf_pool_create(pool_name, num_mbufs,
+				     MBUF_POOL_CACHE_SIZE, 0,
+				     data_size, rte_socket_id());
 	if (mp == NULL)
 		rte_exit(EXIT_FAILURE,
 			 "Mempool (%s) creation failed: %s\n", pool_name,
