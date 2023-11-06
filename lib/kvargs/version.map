@@ -16,4 +16,7 @@ EXPERIMENTAL {
 
 	# added in 21.11
 	rte_kvargs_get_with_value;
+
+	# added in 23.11
+	rte_kvargs_process_opt;
 };
