@@ -70,7 +70,7 @@ sfc_kvargs_process(struct sfc_adapter *sa, const char *key_match,
 	if (sa->kvargs == NULL)
 		return 0;
 
-	return -rte_kvargs_process(sa->kvargs, key_match, handler, opaque_arg);
+	return -rte_kvargs_process_opt(sa->kvargs, key_match, handler, opaque_arg);
 }
 
 int
