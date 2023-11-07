@@ -252,7 +252,7 @@ rte_distributor_process_single(struct rte_distributor_single *d,
 
 			if (match) {
 				next_mb = NULL;
-				unsigned worker = __builtin_ctzl(match);
+				unsigned worker = rte_ctz64(match);
 				if (add_to_backlog(&d->backlog[worker],
 						next_value) < 0)
 					next_idx--;
