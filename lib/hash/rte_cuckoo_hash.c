@@ -2357,7 +2357,7 @@ rte_hash_lookup_bulk_data(const struct rte_hash *h, const void **keys,
 	__rte_hash_lookup_bulk(h, keys, num_keys, positions, hit_mask, data);
 
 	/* Return number of hits */
-	return __builtin_popcountl(*hit_mask);
+	return rte_popcount64(*hit_mask);
 }
 
 
@@ -2474,7 +2474,7 @@ rte_hash_lookup_with_hash_bulk_data(const struct rte_hash *h,
 			positions, hit_mask, data);
 
 	/* Return number of hits */
-	return __builtin_popcountl(*hit_mask);
+	return rte_popcount64(*hit_mask);
 }
 
 int32_t
