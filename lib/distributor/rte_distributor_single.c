@@ -341,7 +341,7 @@ total_outstanding(const struct rte_distributor_single *d)
 {
 	unsigned wkr, total_outstanding;
 
-	total_outstanding = __builtin_popcountl(d->in_flight_bitmask);
+	total_outstanding = rte_popcount64(d->in_flight_bitmask);
 
 	for (wkr = 0; wkr < d->num_workers; wkr++)
 		total_outstanding += d->backlog[wkr].count;
