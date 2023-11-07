@@ -525,7 +525,6 @@ struct rte_mbuf {
 	 */
 	union {
 		uint32_t packet_type; /**< L2/L3/L4 and tunnel information. */
-		__extension__
 		struct {
 			uint8_t l2_type:4;   /**< (Outer) L2 type. */
 			uint8_t l3_type:4;   /**< (Outer) L3 type. */
@@ -537,7 +536,6 @@ struct rte_mbuf {
 				 * RTE_PTYPE_TUNNEL_ESP tunnel type is set
 				 * on both Tx and Rx.
 				 */
-				__extension__
 				struct {
 					uint8_t inner_l2_type:4;
 					/**< Inner L2 type. */
@@ -614,7 +612,6 @@ struct rte_mbuf {
 	/* fields to support TX offloads */
 	union {
 		uint64_t tx_offload;       /**< combined for easy fetch */
-		__extension__
 		struct {
 			uint64_t l2_len:RTE_MBUF_L2_LEN_BITS;
 			/**< L2 (MAC) Header Length for non-tunneling pkt.
