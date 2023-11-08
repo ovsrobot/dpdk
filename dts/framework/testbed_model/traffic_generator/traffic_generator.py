@@ -22,7 +22,8 @@ from framework.utils import get_packet_summaries
 class TrafficGenerator(ABC):
     """The base traffic generator.
 
-    Defines the few basic methods that each traffic generator must implement.
+    Exposes the common public methods of all traffic generators and defines private methods
+    that must implement the traffic generation logic in subclasses.
     """
 
     _config: TrafficGeneratorConfig
@@ -30,6 +31,12 @@ class TrafficGenerator(ABC):
     _logger: DTSLOG
 
     def __init__(self, tg_node: Node, config: TrafficGeneratorConfig):
+        """Initialize the traffic generator.
+
+        Args:
+            tg_node: The traffic generator node where the created traffic generator will be running.
+            config: The traffic generator's test run configuration.
+        """
         self._config = config
         self._tg_node = tg_node
         self._logger = getLogger(
@@ -37,9 +44,9 @@ class TrafficGenerator(ABC):
         )
 
     def send_packet(self, packet: Packet, port: Port) -> None:
-        """Send a packet and block until it is fully sent.
+        """Send `packet` and block until it is fully sent.
 
-        What fully sent means is defined by the traffic generator.
+        Send `packet` on `port`, then wait until `packet` is fully sent.
 
         Args:
             packet: The packet to send.
@@ -48,9 +55,9 @@ class TrafficGenerator(ABC):
         self.send_packets([packet], port)
 
     def send_packets(self, packets: list[Packet], port: Port) -> None:
-        """Send packets and block until they are fully sent.
+        """Send `packets` and block until they are fully sent.
 
-        What fully sent means is defined by the traffic generator.
+        Send `packets` on `port`, then wait until `packets` are fully sent.
 
         Args:
             packets: The packets to send.
@@ -62,19 +69,17 @@ class TrafficGenerator(ABC):
 
     @abstractmethod
     def _send_packets(self, packets: list[Packet], port: Port) -> None:
-        """
-        The extended classes must implement this method which
-        sends packets on send_port. The method should block until all packets
-        are fully sent.
+        """The implementation of :method:`send_packets`.
+
+        The subclasses must implement this method which sends `packets` on `port`.
+        The method should block until all `packets` are fully sent.
+
+        What full sent means is defined by the traffic generator.
         """
 
     @property
     def is_capturing(self) -> bool:
-        """Whether this traffic generator can capture traffic.
-
-        Returns:
-            True if the traffic generator can capture traffic, False otherwise.
-        """
+        """This traffic generator can't capture traffic."""
         return False
 
     @abstractmethod
