@@ -140,9 +140,8 @@ pcapng_section_block(rte_pcapng_t *self,
 {
 	struct pcapng_section_header *hdr;
 	struct pcapng_option *opt;
-	void *buf;
+	uint8_t buf[BUFSIZ];
 	uint32_t len;
-	ssize_t cc;
 
 	len = sizeof(*hdr);
 	if (hw)
@@ -158,8 +157,7 @@ pcapng_section_block(rte_pcapng_t *self,
 	len += pcapng_optlen(0);
 	len += sizeof(uint32_t);
 
-	buf = calloc(1, len);
-	if (!buf)
+	if (len > sizeof(buf))
 		return -1;
 
 	hdr = (struct pcapng_section_header *)buf;
@@ -193,10 +191,7 @@ pcapng_section_block(rte_pcapng_t *self,
 	/* clone block_length after option */
 	memcpy(opt, &hdr->block_length, sizeof(uint32_t));
 
-	cc = write(self->outfd, buf, len);
-	free(buf);
-
-	return cc;
+	return write(self->outfd, buf, len);
 }
 
 /* Write an interface block for a DPDK port */
@@ -213,7 +208,7 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 	struct pcapng_option *opt;
 	const uint8_t tsresol = 9;	/* nanosecond resolution */
 	uint32_t len;
-	void *buf;
+	uint8_t buf[BUFSIZ];
 	char ifname_buf[IF_NAMESIZE];
 	char ifhw[256];
 	uint64_t speed = 0;
@@ -267,8 +262,7 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 	len += pcapng_optlen(0);
 	len += sizeof(uint32_t);
 
-	buf = alloca(len);
-	if (!buf)
+	if (len > sizeof(buf))
 		return -1;
 
 	hdr = (struct pcapng_interface_block *)buf;
@@ -296,17 +290,16 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 		opt = pcapng_add_option(opt, PCAPNG_IFB_HARDWARE,
 					 ifhw, strlen(ifhw));
 	if (filter) {
-		/* Encoding is that the first octet indicates string vs BPF */
 		size_t len;
-		char *buf;
 
 		len = strlen(filter) + 1;
-		buf = alloca(len);
-		*buf = '\0';
-		memcpy(buf + 1, filter, len);
+		opt->code = PCAPNG_IFB_FILTER;
+		opt->length = len;
+		/* Encoding is that the first octet indicates string vs BPF */
+		opt->data[0] = 0;
+		memcpy(opt->data + 1, filter, strlen(filter));
 
-		opt = pcapng_add_option(opt, PCAPNG_IFB_FILTER,
-					buf, len);
+		opt = (struct pcapng_option *)((uint8_t *)opt + pcapng_optlen(len));
 	}
 
 	opt = pcapng_add_option(opt, PCAPNG_OPT_END, NULL, 0);
@@ -333,7 +326,7 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 	uint64_t start_time = self->offset_ns;
 	uint64_t sample_time;
 	uint32_t optlen, len;
-	uint8_t *buf;
+	uint8_t buf[BUFSIZ];
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
 
@@ -353,8 +346,7 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 		optlen += pcapng_optlen(0);
 
 	len = sizeof(*hdr) + optlen + sizeof(uint32_t);
-	buf = alloca(len);
-	if (buf == NULL)
+	if (len > sizeof(buf))
 		return -1;
 
 	hdr = (struct pcapng_statistics *)buf;
