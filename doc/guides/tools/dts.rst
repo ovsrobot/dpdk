@@ -283,7 +283,10 @@ When adding code to the DTS framework, pay attention to the rest of the code
 and try not to divert much from it. The :ref:`DTS developer tools <dts_dev_tools>` will issue
 warnings when some of the basics are not met.
 
-The code must be properly documented with docstrings. The style must conform to
+The API documentation, which is a helpful reference when developing, may be accessed
+in the code directly or generated with the `API docs build steps <building_api_docs>`_.
+
+Speaking of which, the code must be properly documented with docstrings. The style must conform to
 the `Google style <https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings>`_.
 See an example of the style
 `here <https://www.sphinx-doc.org/en/master/usage/extensions/example_google.html>`_.
@@ -408,3 +411,30 @@ There are three tools used in DTS to help with code checking, style and formatti
 These three tools are all used in ``devtools/dts-check-format.sh``,
 the DTS code check and format script.
 Refer to the script for usage: ``devtools/dts-check-format.sh -h``.
+
+
+.. _building_api_docs:
+
+Building DTS API docs
+---------------------
+
+To build DTS API docs, install the dependencies with Poetry, then enter its shell:
+
+.. code-block:: console
+
+   poetry install --with docs
+   poetry shell
+
+The documentation is built using the standard DPDK build system. After executing the meson command
+and entering Poetry's shell, build the documentation with:
+
+.. code-block:: console
+
+   ninja -C build dts-doc
+
+The output is generated in ``build/doc/api/dts/html``.
+
+.. Note::
+
+   Make sure to fix any Sphinx warnings when adding or updating docstrings. Also make sure to run
+   the ``devtools/dts-check-format.sh`` script and address any issues it finds.

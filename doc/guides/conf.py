@@ -7,10 +7,9 @@ from packaging.version import Version
 from sphinx import __version__ as sphinx_version
 from os import listdir
 from os import environ
-from os.path import basename
-from os.path import dirname
+from os.path import basename, dirname
 from os.path import join as path_join
-from sys import argv, stderr
+from sys import argv, stderr, path
 
 import configparser
 
@@ -24,6 +23,31 @@ except:
           file=stderr)
     pass
 
+extensions = ['sphinx.ext.napoleon', 'sphinx.ext.intersphinx']
+
+# Python docstring options
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'show-inheritance': True,
+}
+autodoc_class_signature = 'separated'
+autodoc_typehints = 'both'
+autodoc_typehints_format = 'short'
+autodoc_typehints_description_target = 'documented'
+napoleon_numpy_docstring = False
+napoleon_attr_annotations = True
+napoleon_preprocess_types = True
+add_module_names = False
+toc_object_entries = False
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+
+# Sidebar config
+html_theme_options = {
+    'collapse_navigation': False,
+    'navigation_depth': -1,
+}
+
 stop_on_error = ('-W' in argv)
 
 project = 'Data Plane Development Kit'
@@ -35,8 +59,8 @@ else:
 html_show_copyright = False
 highlight_language = 'none'
 
-release = environ.setdefault('DPDK_VERSION', "None")
-version = release
+path.append(environ.get('DTS_ROOT'))
+version = environ.setdefault('DPDK_VERSION', "None")
 
 master_doc = 'index'
 
