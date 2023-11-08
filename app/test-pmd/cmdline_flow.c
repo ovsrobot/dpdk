@@ -11331,7 +11331,7 @@ parse_indlst_id2ptr(struct context *ctx, const struct token *token,
 	struct rte_flow_action *action = ctx->object;
 	struct rte_flow_action_indirect_list *action_conf;
 	const struct indlst_conf *indlst_conf;
-	uint32_t id;
+	uint64_t id;
 	int ret;
 
 	if (!action)
@@ -11350,7 +11350,8 @@ parse_indlst_id2ptr(struct context *ctx, const struct token *token,
 	action_conf->handle = (typeof(action_conf->handle))
 				port_action_handle_get_by_id(ctx->port, id);
 		if (!action_conf->handle) {
-			printf("no indirect list handle for id %u\n", id);
+			printf("no indirect list handle for id %"PRIu64"\n",
+			       id);
 			return -1;
 		}
 		break;
