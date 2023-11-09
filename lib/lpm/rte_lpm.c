@@ -16,8 +16,12 @@
 #include <rte_string_fns.h>
 #include <rte_errno.h>
 #include <rte_tailq.h>
+#include <rte_hash.h>
+#include <rte_jhash.h>
 
 #include "rte_lpm.h"
+
+#define RULE_HASH_TABLE_EXTRA_SPACE              64
 
 TAILQ_HEAD(rte_lpm_list, rte_tailq_entry);
 
@@ -53,10 +57,11 @@ struct __rte_lpm {
 	/* LPM metadata. */
 	char name[RTE_LPM_NAMESIZE];        /**< Name of the lpm. */
 	uint32_t max_rules; /**< Max. balanced rules per lpm. */
+	uint32_t used_rules; /**< Used rules so far. */
 	uint32_t number_tbl8s; /**< Number of tbl8s. */
 	/**< Rule info table. */
 	struct rte_lpm_rule_info rule_info[RTE_LPM_MAX_DEPTH];
-	struct rte_lpm_rule *rules_tbl; /**< LPM rules. */
+	struct rte_hash *rules_tbl; /**< LPM rules. */
 
 	/* RCU config. */
 	struct rte_rcu_qsbr *v;		/* RCU QSBR variable. */
@@ -75,6 +80,47 @@ struct __rte_lpm {
 #else
 #define VERIFY_DEPTH(depth)
 #endif
+
+/*
+ * LPM rule hash function
+ *
+ * It's used as a hash function for the rte_hash
+ *	containing rules
+ */
+static inline uint32_t
+rule_hash(const void *data, __rte_unused uint32_t data_len,
+		  uint32_t init_val)
+{
+	return rte_jhash(data, sizeof(struct rte_lpm_rule_key), init_val);
+}
+
+static inline void
+rule_key_init(struct rte_lpm_rule_key *key, uint32_t ip, uint8_t depth)
+{
+	key->ip = ip;
+	key->depth = depth;
+}
+
+/* Find a rule */
+static inline int
+rule_find_with_key(struct rte_lpm *lpm, const struct rte_lpm_rule_key *rule_key, uint32_t *next_hop)
+{
+	struct __rte_lpm *i_lpm;
+	uint64_t hash_val;
+	int ret;
+
+	i_lpm = container_of(lpm, struct __rte_lpm, lpm);
+
+	/* lookup for a rule */
+	ret = rte_hash_lookup_data(i_lpm->rules_tbl, (const void *) rule_key,
+		(void **) &hash_val);
+	if (ret >= 0) {
+		*next_hop = (uint32_t) hash_val;
+		return 1;
+	}
+
+	return 0;
+}
 
 /*
  * Converts a given depth value to its corresponding mask value.
@@ -150,8 +196,9 @@ rte_lpm_create(const char *name, int socket_id,
 	struct __rte_lpm *i_lpm;
 	struct rte_lpm *lpm = NULL;
 	struct rte_tailq_entry *te;
-	uint32_t mem_size, rules_size, tbl8s_size;
+	uint32_t mem_size, tbl8s_size;
 	struct rte_lpm_list *lpm_list;
+	struct rte_hash *rules_tbl = NULL;
 
 	lpm_list = RTE_TAILQ_CAST(rte_lpm_tailq.head, rte_lpm_list);
 
@@ -164,7 +211,25 @@ rte_lpm_create(const char *name, int socket_id,
 		return NULL;
 	}
 
-	snprintf(mem_name, sizeof(mem_name), "LPM_%s", name);
+	snprintf(mem_name, sizeof(mem_name), "LRHv4_%s", name);
+	struct rte_hash_parameters rule_hash_tbl_params = {
+		.entries = config->max_rules * 1.2 + RULE_HASH_TABLE_EXTRA_SPACE,
+		.key_len = sizeof(struct rte_lpm_rule_key),
+		.hash_func = rule_hash,
+		.hash_func_init_val = 0,
+		.name = mem_name,
+		.reserved = 0,
+		.socket_id = socket_id,
+		.extra_flag = 0
+	};
+
+	rules_tbl = rte_hash_create(&rule_hash_tbl_params);
+	if (rules_tbl == NULL) {
+		RTE_LOG(ERR, LPM, "LPM rules hash table allocation failed: %s (%d)",
+				  rte_strerror(rte_errno), rte_errno);
+
+		return NULL;
+	}
 
 	rte_mcfg_tailq_write_lock();
 
@@ -182,7 +247,6 @@ rte_lpm_create(const char *name, int socket_id,
 
 	/* Determine the amount of memory to allocate. */
 	mem_size = sizeof(*i_lpm);
-	rules_size = sizeof(struct rte_lpm_rule) * config->max_rules;
 	tbl8s_size = sizeof(struct rte_lpm_tbl_entry) *
 			RTE_LPM_TBL8_GROUP_NUM_ENTRIES * config->number_tbl8s;
 
@@ -204,18 +268,6 @@ rte_lpm_create(const char *name, int socket_id,
 		goto exit;
 	}
 
-	i_lpm->rules_tbl = rte_zmalloc_socket(NULL,
-			(size_t)rules_size, RTE_CACHE_LINE_SIZE, socket_id);
-
-	if (i_lpm->rules_tbl == NULL) {
-		RTE_LOG(ERR, LPM, "LPM rules_tbl memory allocation failed\n");
-		rte_free(i_lpm);
-		i_lpm = NULL;
-		rte_free(te);
-		rte_errno = ENOMEM;
-		goto exit;
-	}
-
 	i_lpm->lpm.tbl8 = rte_zmalloc_socket(NULL,
 			(size_t)tbl8s_size, RTE_CACHE_LINE_SIZE, socket_id);
 
@@ -230,6 +282,7 @@ rte_lpm_create(const char *name, int socket_id,
 	}
 
 	/* Save user arguments. */
+	i_lpm->rules_tbl = rules_tbl;
 	i_lpm->max_rules = config->max_rules;
 	i_lpm->number_tbl8s = config->number_tbl8s;
 	strlcpy(i_lpm->name, name, sizeof(i_lpm->name));
@@ -277,7 +330,7 @@ rte_lpm_free(struct rte_lpm *lpm)
 	if (i_lpm->dq != NULL)
 		rte_rcu_qsbr_dq_delete(i_lpm->dq);
 	rte_free(i_lpm->lpm.tbl8);
-	rte_free(i_lpm->rules_tbl);
+	rte_hash_free(i_lpm->rules_tbl);
 	rte_free(i_lpm);
 	rte_free(te);
 }
@@ -359,106 +412,64 @@ rte_lpm_rcu_qsbr_add(struct rte_lpm *lpm, struct rte_lpm_rcu_config *cfg)
  * NOTE: Valid range for depth parameter is 1 .. 32 inclusive.
  */
 static int32_t
-rule_add(struct __rte_lpm *i_lpm, uint32_t ip_masked, uint8_t depth,
-	uint32_t next_hop)
+rule_add(struct rte_lpm *lpm, uint32_t ip_masked, uint8_t depth, uint32_t next_hop)
 {
-	uint32_t rule_gindex, rule_index, last_rule;
-	int i;
+	int ret, rule_exist;
+	struct rte_lpm_rule_key rule_key;
+	uint32_t unused;
 
 	VERIFY_DEPTH(depth);
 
-	/* Scan through rule group to see if rule already exists. */
-	if (i_lpm->rule_info[depth - 1].used_rules > 0) {
+	/* init a rule key */
+	rule_key_init(&rule_key, ip_masked, depth);
 
-		/* rule_gindex stands for rule group index. */
-		rule_gindex = i_lpm->rule_info[depth - 1].first_rule;
-		/* Initialise rule_index to point to start of rule group. */
-		rule_index = rule_gindex;
-		/* Last rule = Last used rule in this rule group. */
-		last_rule = rule_gindex + i_lpm->rule_info[depth - 1].used_rules;
+	/* Scan through rule list to see if rule already exists. */
+	rule_exist = rule_find_with_key(lpm, &rule_key, &unused);
 
-		for (; rule_index < last_rule; rule_index++) {
+	struct __rte_lpm *i_lpm = container_of(lpm, struct __rte_lpm, lpm);
 
-			/* If rule already exists update next hop and return. */
-			if (i_lpm->rules_tbl[rule_index].ip == ip_masked) {
+	if (!rule_exist && i_lpm->used_rules == i_lpm->max_rules)
+		return -ENOSPC;
 
-				if (i_lpm->rules_tbl[rule_index].next_hop
-						== next_hop)
-					return -EEXIST;
-				i_lpm->rules_tbl[rule_index].next_hop = next_hop;
+	ret = rte_hash_add_key_data(i_lpm->rules_tbl, &rule_key,
+		(void *)(uintptr_t) next_hop);
 
-				return rule_index;
-			}
-		}
-
-		if (rule_index == i_lpm->max_rules)
-			return -ENOSPC;
-	} else {
-		/* Calculate the position in which the rule will be stored. */
-		rule_index = 0;
-
-		for (i = depth - 1; i > 0; i--) {
-			if (i_lpm->rule_info[i - 1].used_rules > 0) {
-				rule_index = i_lpm->rule_info[i - 1].first_rule
-						+ i_lpm->rule_info[i - 1].used_rules;
-				break;
-			}
-		}
-		if (rule_index == i_lpm->max_rules)
-			return -ENOSPC;
-
-		i_lpm->rule_info[depth - 1].first_rule = rule_index;
-	}
-
-	/* Make room for the new rule in the array. */
-	for (i = RTE_LPM_MAX_DEPTH; i > depth; i--) {
-		if (i_lpm->rule_info[i - 1].first_rule
-				+ i_lpm->rule_info[i - 1].used_rules == i_lpm->max_rules)
-			return -ENOSPC;
-
-		if (i_lpm->rule_info[i - 1].used_rules > 0) {
-			i_lpm->rules_tbl[i_lpm->rule_info[i - 1].first_rule
-				+ i_lpm->rule_info[i - 1].used_rules]
-					= i_lpm->rules_tbl[i_lpm->rule_info[i - 1].first_rule];
-			i_lpm->rule_info[i - 1].first_rule++;
-		}
-	}
-
-	/* Add the new rule. */
-	i_lpm->rules_tbl[rule_index].ip = ip_masked;
-	i_lpm->rules_tbl[rule_index].next_hop = next_hop;
+	if (ret < 0)
+		return ret;
 
 	/* Increment the used rules counter for this rule group. */
-	i_lpm->rule_info[depth - 1].used_rules++;
+	if (!rule_exist) {
+		i_lpm->rule_info[depth - 1].used_rules++;
+		i_lpm->used_rules++;
+		return 1;
+	}
 
-	return rule_index;
+	return 0;
 }
 
 /*
  * Delete a rule from the rule table.
  * NOTE: Valid range for depth parameter is 1 .. 32 inclusive.
  */
-static void
-rule_delete(struct __rte_lpm *i_lpm, int32_t rule_index, uint8_t depth)
+static int
+rule_delete(struct __rte_lpm *i_lpm, int32_t ip, uint8_t depth)
 {
-	int i;
+	int ret;
+	struct rte_lpm_rule_key rule_key;
 
 	VERIFY_DEPTH(depth);
 
-	i_lpm->rules_tbl[rule_index] =
-			i_lpm->rules_tbl[i_lpm->rule_info[depth - 1].first_rule
-			+ i_lpm->rule_info[depth - 1].used_rules - 1];
+	rule_key_init(&rule_key, ip, depth);
 
-	for (i = depth; i < RTE_LPM_MAX_DEPTH; i++) {
-		if (i_lpm->rule_info[i].used_rules > 0) {
-			i_lpm->rules_tbl[i_lpm->rule_info[i].first_rule - 1] =
-					i_lpm->rules_tbl[i_lpm->rule_info[i].first_rule
-						+ i_lpm->rule_info[i].used_rules - 1];
-			i_lpm->rule_info[i].first_rule--;
-		}
+	/* delete the rule */
+	ret = rte_hash_del_key(i_lpm->rules_tbl, (void *) &rule_key);
+
+	if (ret >= 0) {
+		i_lpm->rule_info[depth - 1].used_rules--;
+		i_lpm->used_rules--;
 	}
 
-	i_lpm->rule_info[depth - 1].used_rules--;
+	return ret;
 }
 
 /*
@@ -466,24 +477,14 @@ rule_delete(struct __rte_lpm *i_lpm, int32_t rule_index, uint8_t depth)
  * NOTE: Valid range for depth parameter is 1 .. 32 inclusive.
  */
 static int32_t
-rule_find(struct __rte_lpm *i_lpm, uint32_t ip_masked, uint8_t depth)
+rule_find(struct rte_lpm *lpm, uint32_t ip_masked, uint8_t depth, uint32_t *next_hop)
 {
-	uint32_t rule_gindex, last_rule, rule_index;
+	struct rte_lpm_rule_key rule_key;
 
-	VERIFY_DEPTH(depth);
+	/* init a rule key */
+	rule_key_init(&rule_key, ip_masked, depth);
 
-	rule_gindex = i_lpm->rule_info[depth - 1].first_rule;
-	last_rule = rule_gindex + i_lpm->rule_info[depth - 1].used_rules;
-
-	/* Scan used rules at given depth to find rule. */
-	for (rule_index = rule_gindex; rule_index < last_rule; rule_index++) {
-		/* If rule is found return the rule index. */
-		if (i_lpm->rules_tbl[rule_index].ip == ip_masked)
-			return rule_index;
-	}
-
-	/* If rule is not found return -EINVAL. */
-	return -EINVAL;
+	return rule_find_with_key(lpm, &rule_key, next_hop);
 }
 
 /*
@@ -799,7 +800,7 @@ int
 rte_lpm_add(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 		uint32_t next_hop)
 {
-	int32_t rule_index, status = 0;
+	int32_t status = 0;
 	struct __rte_lpm *i_lpm;
 	uint32_t ip_masked;
 
@@ -811,17 +812,11 @@ rte_lpm_add(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 	ip_masked = ip & depth_to_mask(depth);
 
 	/* Add the rule to the rule table. */
-	rule_index = rule_add(i_lpm, ip_masked, depth, next_hop);
-
-	/* Skip table entries update if The rule is the same as
-	 * the rule in the rules table.
-	 */
-	if (rule_index == -EEXIST)
-		return 0;
+	status = rule_add(lpm, ip_masked, depth, next_hop);
 
 	/* If the is no space available for new rule return error. */
-	if (rule_index < 0) {
-		return rule_index;
+	if (status < 0) {
+		return status;
 	}
 
 	if (depth <= MAX_DEPTH_TBL24) {
@@ -834,7 +829,7 @@ rte_lpm_add(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 		 * rule that was added to rule table.
 		 */
 		if (status < 0) {
-			rule_delete(i_lpm, rule_index, depth);
+			rule_delete(i_lpm, ip_masked, depth);
 
 			return status;
 		}
@@ -850,9 +845,7 @@ int
 rte_lpm_is_rule_present(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 uint32_t *next_hop)
 {
-	struct __rte_lpm *i_lpm;
 	uint32_t ip_masked;
-	int32_t rule_index;
 
 	/* Check user arguments. */
 	if ((lpm == NULL) ||
@@ -861,44 +854,42 @@ uint32_t *next_hop)
 		return -EINVAL;
 
 	/* Look for the rule using rule_find. */
-	i_lpm = container_of(lpm, struct __rte_lpm, lpm);
 	ip_masked = ip & depth_to_mask(depth);
-	rule_index = rule_find(i_lpm, ip_masked, depth);
 
-	if (rule_index >= 0) {
-		*next_hop = i_lpm->rules_tbl[rule_index].next_hop;
+	if (rule_find(lpm, ip_masked, depth, next_hop))
 		return 1;
-	}
 
 	/* If rule is not found return 0. */
 	return 0;
 }
 
 static int32_t
-find_previous_rule(struct __rte_lpm *i_lpm, uint32_t ip, uint8_t depth,
-		uint8_t *sub_rule_depth)
+find_previous_rule(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
+	uint32_t *subrule_prev_hop, uint8_t *subrule_prev_depth)
 {
-	int32_t rule_index;
 	uint32_t ip_masked;
+	uint32_t prev_hop;
 	uint8_t prev_depth;
+	int found;
 
 	for (prev_depth = (uint8_t)(depth - 1); prev_depth > 0; prev_depth--) {
 		ip_masked = ip & depth_to_mask(prev_depth);
 
-		rule_index = rule_find(i_lpm, ip_masked, prev_depth);
+		found = rule_find(lpm, ip_masked, prev_depth, &prev_hop);
 
-		if (rule_index >= 0) {
-			*sub_rule_depth = prev_depth;
-			return rule_index;
+		if (found) {
+			*subrule_prev_hop = prev_hop;
+			*subrule_prev_depth = prev_depth;
+			return 1;
 		}
 	}
 
-	return -1;
+	return 0;
 }
 
 static int32_t
 delete_depth_small(struct __rte_lpm *i_lpm, uint32_t ip_masked,
-	uint8_t depth, int32_t sub_rule_index, uint8_t sub_rule_depth)
+	uint8_t depth, int found, uint32_t sub_rule_hop, uint8_t sub_rule_depth)
 {
 #define group_idx next_hop
 	uint32_t tbl24_range, tbl24_index, tbl8_group_index, tbl8_index, i, j;
@@ -912,7 +903,7 @@ delete_depth_small(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 	 * Firstly check the sub_rule_index. A -1 indicates no replacement rule
 	 * and a positive number indicates a sub_rule_index.
 	 */
-	if (sub_rule_index < 0) {
+	if (!found) {
 		/*
 		 * If no replacement rule exists then invalidate entries
 		 * associated with this rule.
@@ -949,7 +940,7 @@ delete_depth_small(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 		 */
 
 		struct rte_lpm_tbl_entry new_tbl24_entry = {
-			.next_hop = i_lpm->rules_tbl[sub_rule_index].next_hop,
+			.next_hop = sub_rule_hop,
 			.valid = VALID,
 			.valid_group = 0,
 			.depth = sub_rule_depth,
@@ -959,8 +950,7 @@ delete_depth_small(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 			.valid = VALID,
 			.valid_group = VALID,
 			.depth = sub_rule_depth,
-			.next_hop = i_lpm->rules_tbl
-			[sub_rule_index].next_hop,
+			.next_hop = sub_rule_hop,
 		};
 
 		for (i = tbl24_index; i < (tbl24_index + tbl24_range); i++) {
@@ -1052,7 +1042,7 @@ tbl8_recycle_check(struct rte_lpm_tbl_entry *tbl8,
 
 static int32_t
 delete_depth_big(struct __rte_lpm *i_lpm, uint32_t ip_masked,
-	uint8_t depth, int32_t sub_rule_index, uint8_t sub_rule_depth)
+	uint8_t depth, int found, uint32_t sub_rule_hop, uint8_t sub_rule_depth)
 {
 #define group_idx next_hop
 	uint32_t tbl24_index, tbl8_group_index, tbl8_group_start, tbl8_index,
@@ -1071,7 +1061,7 @@ delete_depth_big(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 	tbl8_index = tbl8_group_start + (ip_masked & 0xFF);
 	tbl8_range = depth_to_range(depth);
 
-	if (sub_rule_index < 0) {
+	if (!found) {
 		/*
 		 * Loop through the range of entries on tbl8 for which the
 		 * rule_to_delete must be removed or modified.
@@ -1086,7 +1076,7 @@ delete_depth_big(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 			.valid = VALID,
 			.depth = sub_rule_depth,
 			.valid_group = i_lpm->lpm.tbl8[tbl8_group_start].valid_group,
-			.next_hop = i_lpm->rules_tbl[sub_rule_index].next_hop,
+			.next_hop = sub_rule_hop,
 		};
 
 		/*
@@ -1142,9 +1132,10 @@ delete_depth_big(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 int
 rte_lpm_delete(struct rte_lpm *lpm, uint32_t ip, uint8_t depth)
 {
-	int32_t rule_to_delete_index, sub_rule_index;
+	int32_t found;
 	struct __rte_lpm *i_lpm;
 	uint32_t ip_masked;
+	uint32_t sub_rule_hop;
 	uint8_t sub_rule_depth;
 	/*
 	 * Check input arguments. Note: IP must be a positive integer of 32
@@ -1157,21 +1148,9 @@ rte_lpm_delete(struct rte_lpm *lpm, uint32_t ip, uint8_t depth)
 	i_lpm = container_of(lpm, struct __rte_lpm, lpm);
 	ip_masked = ip & depth_to_mask(depth);
 
-	/*
-	 * Find the index of the input rule, that needs to be deleted, in the
-	 * rule table.
-	 */
-	rule_to_delete_index = rule_find(i_lpm, ip_masked, depth);
-
-	/*
-	 * Check if rule_to_delete_index was found. If no rule was found the
-	 * function rule_find returns -EINVAL.
-	 */
-	if (rule_to_delete_index < 0)
-		return -EINVAL;
-
 	/* Delete the rule from the rule table. */
-	rule_delete(i_lpm, rule_to_delete_index, depth);
+	if (rule_delete(i_lpm, ip_masked, depth) < 0)
+		return -EINVAL;
 
 	/*
 	 * Find rule to replace the rule_to_delete. If there is no rule to
@@ -1179,18 +1158,18 @@ rte_lpm_delete(struct rte_lpm *lpm, uint32_t ip, uint8_t depth)
 	 * entries associated with this rule.
 	 */
 	sub_rule_depth = 0;
-	sub_rule_index = find_previous_rule(i_lpm, ip, depth, &sub_rule_depth);
+	found = find_previous_rule(lpm, ip, depth, &sub_rule_hop, &sub_rule_depth);
 
 	/*
 	 * If the input depth value is less than 25 use function
 	 * delete_depth_small otherwise use delete_depth_big.
 	 */
 	if (depth <= MAX_DEPTH_TBL24) {
-		return delete_depth_small(i_lpm, ip_masked, depth,
-				sub_rule_index, sub_rule_depth);
-	} else { /* If depth > MAX_DEPTH_TBL24 */
-		return delete_depth_big(i_lpm, ip_masked, depth, sub_rule_index,
-				sub_rule_depth);
+		return delete_depth_small(i_lpm, ip_masked, depth, found,
+				sub_rule_hop, sub_rule_depth);
+	} else {
+		return delete_depth_big(i_lpm, ip_masked, depth, found,
+				sub_rule_hop, sub_rule_depth);
 	}
 }
 
@@ -1205,6 +1184,7 @@ rte_lpm_delete_all(struct rte_lpm *lpm)
 	i_lpm = container_of(lpm, struct __rte_lpm, lpm);
 	/* Zero rule information. */
 	memset(i_lpm->rule_info, 0, sizeof(i_lpm->rule_info));
+	i_lpm->used_rules = 0;
 
 	/* Zero tbl24. */
 	memset(i_lpm->lpm.tbl24, 0, sizeof(i_lpm->lpm.tbl24));
@@ -1214,5 +1194,5 @@ rte_lpm_delete_all(struct rte_lpm *lpm)
 			* RTE_LPM_TBL8_GROUP_NUM_ENTRIES * i_lpm->number_tbl8s);
 
 	/* Delete all rules form the rules table. */
-	memset(i_lpm->rules_tbl, 0, sizeof(i_lpm->rules_tbl[0]) * i_lpm->max_rules);
+	rte_hash_reset(i_lpm->rules_tbl);
 }

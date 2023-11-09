@@ -108,6 +108,12 @@ struct rte_lpm_tbl_entry {
 
 #endif
 
+/** Rules tbl entry key. */
+struct rte_lpm_rule_key {
+	uint32_t ip;    /**< Rule IP address. */
+	uint32_t depth; /**< Rule depth. */
+};
+
 /** LPM configuration structure. */
 struct rte_lpm_config {
 	uint32_t max_rules;      /**< Max number of rules. */
