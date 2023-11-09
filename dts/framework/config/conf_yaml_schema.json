@@ -186,7 +186,8 @@
       "type": "string",
       "enum": [
         "hello_world",
-        "os_udp"
+        "os_udp",
+        "scatter"
       ]
     },
     "test_target": {
