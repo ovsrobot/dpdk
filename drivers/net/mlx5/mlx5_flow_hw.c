@@ -555,8 +555,8 @@ static void
 flow_hw_template_destroy_reformat_action(struct mlx5_hw_encap_decap_action *encap_decap)
 {
 	if (encap_decap->multi_pattern) {
-		uint32_t refcnt = __atomic_sub_fetch(encap_decap->multi_pattern_refcnt,
-						     1, __ATOMIC_RELAXED);
+		uint32_t refcnt = rte_atomic_fetch_sub_explicit(encap_decap->multi_pattern_refcnt,
+						     1, rte_memory_order_relaxed) - 1;
 		if (refcnt)
 			return;
 		mlx5_free((void *)(uintptr_t)encap_decap->multi_pattern_refcnt);
@@ -569,8 +569,8 @@ static void
 flow_hw_template_destroy_mhdr_action(struct mlx5_hw_modify_header_action *mhdr)
 {
 	if (mhdr->multi_pattern) {
-		uint32_t refcnt = __atomic_sub_fetch(mhdr->multi_pattern_refcnt,
-						     1, __ATOMIC_RELAXED);
+		uint32_t refcnt = rte_atomic_fetch_sub_explicit(mhdr->multi_pattern_refcnt,
+						     1, rte_memory_order_relaxed) - 1;
 		if (refcnt)
 			return;
 		mlx5_free((void *)(uintptr_t)mhdr->multi_pattern_refcnt);
@@ -604,7 +604,8 @@ __flow_hw_action_template_destroy(struct rte_eth_dev *dev,
 	}
 
 	if (acts->mark)
-		if (!(__atomic_fetch_sub(&priv->hws_mark_refcnt, 1, __ATOMIC_RELAXED) - 1))
+		if (!(rte_atomic_fetch_sub_explicit(&priv->hws_mark_refcnt, 1,
+		    rte_memory_order_relaxed) - 1))
 			flow_hw_rxq_flag_set(dev, false);
 
 	if (acts->jump) {
@@ -2168,7 +2169,8 @@ __flow_hw_actions_translate(struct rte_eth_dev *dev,
 				goto err;
 			acts->rule_acts[dr_pos].action =
 				priv->hw_tag[!!attr->group];
-			__atomic_fetch_add(&priv->hws_mark_refcnt, 1, __ATOMIC_RELAXED);
+			rte_atomic_fetch_add_explicit(&priv->hws_mark_refcnt, 1,
+			    rte_memory_order_relaxed);
 			flow_hw_rxq_flag_set(dev, true);
 			break;
 		case RTE_FLOW_ACTION_TYPE_OF_PUSH_VLAN:
@@ -4065,7 +4067,7 @@ mlx5_tbl_multi_pattern_process(struct rte_eth_dev *dev,
 
 	for (i = 0; i < MLX5_MULTIPATTERN_ENCAP_NUM; i++) {
 		uint32_t j;
-		uint32_t *reformat_refcnt;
+		RTE_ATOMIC(uint32_t) *reformat_refcnt;
 		typeof(mpat->reformat[0]) *reformat = mpat->reformat + i;
 		struct mlx5dr_action_reformat_header hdr[MLX5_HW_TBL_MAX_ACTION_TEMPLATE];
 		enum mlx5dr_action_type reformat_type =
@@ -4102,7 +4104,7 @@ mlx5_tbl_multi_pattern_process(struct rte_eth_dev *dev,
 	if (mpat->mh.elements_num) {
 		typeof(mpat->mh) *mh = &mpat->mh;
 		struct mlx5dr_action_mh_pattern pattern[MLX5_HW_TBL_MAX_ACTION_TEMPLATE];
-		uint32_t *mh_refcnt = mlx5_malloc(MLX5_MEM_ZERO, sizeof(uint32_t),
+		RTE_ATOMIC(uint32_t) *mh_refcnt = mlx5_malloc(MLX5_MEM_ZERO, sizeof(uint32_t),
 						 0, rte_socket_id());
 
 		if (!mh_refcnt)
@@ -4146,8 +4148,8 @@ mlx5_hw_build_template_table(struct rte_eth_dev *dev,
 	struct mlx5_tbl_multi_pattern_ctx mpat = MLX5_EMPTY_MULTI_PATTERN_CTX;
 
 	for (i = 0; i < nb_action_templates; i++) {
-		uint32_t refcnt = __atomic_add_fetch(&action_templates[i]->refcnt, 1,
-						     __ATOMIC_RELAXED);
+		uint32_t refcnt = rte_atomic_fetch_add_explicit(&action_templates[i]->refcnt, 1,
+						     rte_memory_order_relaxed) + 1;
 
 		if (refcnt <= 1) {
 			rte_flow_error_set(error, EINVAL,
@@ -4179,8 +4181,8 @@ mlx5_hw_build_template_table(struct rte_eth_dev *dev,
 at_error:
 	while (i--) {
 		__flow_hw_action_template_destroy(dev, &tbl->ats[i].acts);
-		__atomic_sub_fetch(&action_templates[i]->refcnt,
-				   1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&action_templates[i]->refcnt,
+				   1, rte_memory_order_relaxed);
 	}
 	return rte_errno;
 }
@@ -4326,8 +4328,8 @@ flow_hw_table_create(struct rte_eth_dev *dev,
 			rte_errno = EINVAL;
 			goto it_error;
 		}
-		ret = __atomic_fetch_add(&item_templates[i]->refcnt, 1,
-					 __ATOMIC_RELAXED) + 1;
+		ret = rte_atomic_fetch_add_explicit(&item_templates[i]->refcnt, 1,
+					 rte_memory_order_relaxed) + 1;
 		if (ret <= 1) {
 			rte_errno = EINVAL;
 			goto it_error;
@@ -4358,14 +4360,14 @@ flow_hw_table_create(struct rte_eth_dev *dev,
 at_error:
 	for (i = 0; i < nb_action_templates; i++) {
 		__flow_hw_action_template_destroy(dev, &tbl->ats[i].acts);
-		__atomic_fetch_sub(&action_templates[i]->refcnt,
-				   1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&action_templates[i]->refcnt,
+				   1, rte_memory_order_relaxed);
 	}
 	i = nb_item_templates;
 it_error:
 	while (i--)
-		__atomic_fetch_sub(&item_templates[i]->refcnt,
-				   1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&item_templates[i]->refcnt,
+				   1, rte_memory_order_relaxed);
 error:
 	err = rte_errno;
 	if (tbl) {
@@ -4567,12 +4569,12 @@ flow_hw_table_destroy(struct rte_eth_dev *dev,
 	}
 	LIST_REMOVE(table, next);
 	for (i = 0; i < table->nb_item_templates; i++)
-		__atomic_fetch_sub(&table->its[i]->refcnt,
-				   1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&table->its[i]->refcnt,
+				   1, rte_memory_order_relaxed);
 	for (i = 0; i < table->nb_action_templates; i++) {
 		__flow_hw_action_template_destroy(dev, &table->ats[i].acts);
-		__atomic_fetch_sub(&table->ats[i].action_template->refcnt,
-				   1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&table->ats[i].action_template->refcnt,
+				   1, rte_memory_order_relaxed);
 	}
 	mlx5dr_matcher_destroy(table->matcher);
 	mlx5_hlist_unregister(priv->sh->groups, &table->grp->entry);
@@ -6445,7 +6447,7 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 	if (!at->tmpl)
 		goto error;
 	at->action_flags = action_flags;
-	__atomic_fetch_add(&at->refcnt, 1, __ATOMIC_RELAXED);
+	rte_atomic_fetch_add_explicit(&at->refcnt, 1, rte_memory_order_relaxed);
 	LIST_INSERT_HEAD(&priv->flow_hw_at, at, next);
 	return at;
 error:
@@ -6481,7 +6483,7 @@ flow_hw_actions_template_destroy(struct rte_eth_dev *dev,
 	uint64_t flag = MLX5_FLOW_ACTION_IPV6_ROUTING_REMOVE |
 			MLX5_FLOW_ACTION_IPV6_ROUTING_PUSH;
 
-	if (__atomic_load_n(&template->refcnt, __ATOMIC_RELAXED) > 1) {
+	if (rte_atomic_load_explicit(&template->refcnt, rte_memory_order_relaxed) > 1) {
 		DRV_LOG(WARNING, "Action template %p is still in use.",
 			(void *)template);
 		return rte_flow_error_set(error, EBUSY,
@@ -6876,7 +6878,7 @@ setup_pattern_template:
 			}
 		}
 	}
-	__atomic_fetch_add(&it->refcnt, 1, __ATOMIC_RELAXED);
+	rte_atomic_fetch_add_explicit(&it->refcnt, 1, rte_memory_order_relaxed);
 	LIST_INSERT_HEAD(&priv->flow_hw_itt, it, next);
 	return it;
 }
@@ -6899,7 +6901,7 @@ flow_hw_pattern_template_destroy(struct rte_eth_dev *dev,
 			      struct rte_flow_pattern_template *template,
 			      struct rte_flow_error *error __rte_unused)
 {
-	if (__atomic_load_n(&template->refcnt, __ATOMIC_RELAXED) > 1) {
+	if (rte_atomic_load_explicit(&template->refcnt, rte_memory_order_relaxed) > 1) {
 		DRV_LOG(WARNING, "Item template %p is still in use.",
 			(void *)template);
 		return rte_flow_error_set(error, EBUSY,
@@ -9179,7 +9181,8 @@ flow_hw_configure(struct rte_eth_dev *dev,
 		}
 		dr_ctx_attr.shared_ibv_ctx = host_priv->sh->cdev->ctx;
 		priv->shared_host = host_dev;
-		__atomic_fetch_add(&host_priv->shared_refcnt, 1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_add_explicit(&host_priv->shared_refcnt, 1,
+		    rte_memory_order_relaxed);
 	}
 	dr_ctx = mlx5dr_context_open(priv->sh->cdev->ctx, &dr_ctx_attr);
 	/* rte_errno has been updated by HWS layer. */
@@ -9340,7 +9343,8 @@ err:
 	if (_queue_attr)
 		mlx5_free(_queue_attr);
 	if (priv->shared_host) {
-		__atomic_fetch_sub(&host_priv->shared_refcnt, 1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&host_priv->shared_refcnt, 1,
+		    rte_memory_order_relaxed);
 		priv->shared_host = NULL;
 	}
 	mlx5_free(priv->hw_attr);
@@ -9434,7 +9438,8 @@ flow_hw_resource_release(struct rte_eth_dev *dev)
 	claim_zero(mlx5dr_context_close(priv->dr_ctx));
 	if (priv->shared_host) {
 		struct mlx5_priv *host_priv = priv->shared_host->data->dev_private;
-		__atomic_fetch_sub(&host_priv->shared_refcnt, 1, __ATOMIC_RELAXED);
+		rte_atomic_fetch_sub_explicit(&host_priv->shared_refcnt, 1,
+		    rte_memory_order_relaxed);
 		priv->shared_host = NULL;
 	}
 	priv->dr_ctx = NULL;
@@ -9491,8 +9496,8 @@ flow_hw_conntrack_destroy(struct rte_eth_dev *dev __rte_unused,
 				NULL,
 				"Invalid CT destruction index");
 	}
-	__atomic_store_n(&ct->state, ASO_CONNTRACK_FREE,
-				 __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&ct->state, ASO_CONNTRACK_FREE,
+				 rte_memory_order_relaxed);
 	mlx5_ipool_free(pool->cts, ct_idx);
 	return 0;
 }
@@ -10185,7 +10190,7 @@ flow_hw_query_age(const struct rte_eth_dev *dev, uint32_t age_idx, void *data,
 		return rte_flow_error_set(error, EINVAL,
 					  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 					  NULL, "age data not available");
-	switch (__atomic_load_n(&param->state, __ATOMIC_RELAXED)) {
+	switch (rte_atomic_load_explicit(&param->state, rte_memory_order_relaxed)) {
 	case HWS_AGE_AGED_OUT_REPORTED:
 	case HWS_AGE_AGED_OUT_NOT_REPORTED:
 		resp->aged = 1;
@@ -10205,8 +10210,8 @@ flow_hw_query_age(const struct rte_eth_dev *dev, uint32_t age_idx, void *data,
 	}
 	resp->sec_since_last_hit_valid = !resp->aged;
 	if (resp->sec_since_last_hit_valid)
-		resp->sec_since_last_hit = __atomic_load_n
-				 (&param->sec_since_last_hit, __ATOMIC_RELAXED);
+		resp->sec_since_last_hit = rte_atomic_load_explicit
+				 (&param->sec_since_last_hit, rte_memory_order_relaxed);
 	return 0;
 }
 
