@@ -56,6 +56,8 @@ class TGNode(Node):
         send_port: Port,
         receive_port: Port,
         duration: float = 1,
+        no_lldp: bool = True,
+        no_arp: bool = True,
     ) -> list[Packet]:
         """Send a packet, return received traffic.
 
@@ -73,7 +75,7 @@ class TGNode(Node):
              A list of received packets. May be empty if no packets are captured.
         """
         return self.traffic_generator.send_packet_and_capture(
-            packet, send_port, receive_port, duration
+            packet, send_port, receive_port, duration, no_lldp, no_arp
         )
 
     def close(self) -> None:
