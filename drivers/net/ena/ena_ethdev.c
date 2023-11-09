@@ -531,8 +531,8 @@ ENA_PROXY_DESC(ena_com_get_eni_stats, ENA_MP_ENI_STATS_GET,
 ({
 	ENA_TOUCH(rsp);
 	ENA_TOUCH(ena_dev);
-	if (stats != (struct ena_admin_eni_stats *)&adapter->metrics_stats)
-		rte_memcpy(stats, &adapter->metrics_stats, sizeof(*stats));
+	if (stats != (struct ena_admin_eni_stats *)adapter->metrics_stats)
+		rte_memcpy(stats, adapter->metrics_stats, sizeof(*stats));
 }),
 	struct ena_com_dev *ena_dev, struct ena_admin_eni_stats *stats);
 
@@ -590,9 +590,8 @@ ENA_PROXY_DESC(ena_com_get_customer_metrics, ENA_MP_CUSTOMER_METRICS_GET,
 ({
 	ENA_TOUCH(rsp);
 	ENA_TOUCH(ena_dev);
-	ENA_TOUCH(buf_size);
-	if (buf != (char *)&adapter->metrics_stats)
-		rte_memcpy(buf, &adapter->metrics_stats, adapter->metrics_num * sizeof(uint64_t));
+	if (buf != (char *)adapter->metrics_stats)
+		rte_memcpy(buf, adapter->metrics_stats, buf_size);
 }),
 	struct ena_com_dev *ena_dev, char *buf, size_t buf_size);
 
@@ -3240,7 +3239,7 @@ static uint16_t eth_ena_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 }
 
 static void ena_copy_customer_metrics(struct ena_adapter *adapter, uint64_t *buf,
-					     size_t num_metrics)
+						 size_t num_metrics)
 {
 	struct ena_com_dev *ena_dev = &adapter->ena_dev;
 	int rc;
@@ -3252,10 +3251,10 @@ static void ena_copy_customer_metrics(struct ena_adapter *adapter, uint64_t *buf
 		}
 		rte_spinlock_lock(&adapter->admin_lock);
 		rc = ENA_PROXY(adapter,
-					ena_com_get_customer_metrics,
-					&adapter->ena_dev,
-					(char *)buf,
-					num_metrics * sizeof(uint64_t));
+			       ena_com_get_customer_metrics,
+			       &adapter->ena_dev,
+			       (char *)buf,
+			       num_metrics * sizeof(uint64_t));
 		rte_spinlock_unlock(&adapter->admin_lock);
 		if (rc != 0) {
 			PMD_DRV_LOG(WARNING, "Failed to get customer metrics, rc: %d\n", rc);
@@ -4088,7 +4087,7 @@ ena_mp_primary_handle(const struct rte_mp_msg *mp_msg, const void *peer)
 	case ENA_MP_CUSTOMER_METRICS_GET:
 		res = ena_com_get_customer_metrics(ena_dev,
 				(char *)adapter->metrics_stats,
-				sizeof(uint64_t) * adapter->metrics_num);
+				adapter->metrics_num * sizeof(uint64_t));
 		break;
 	case ENA_MP_SRD_STATS_GET:
 		res = ena_com_get_ena_srd_info(ena_dev,

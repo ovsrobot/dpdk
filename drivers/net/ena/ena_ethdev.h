@@ -344,8 +344,8 @@ struct ena_adapter {
 	 * Helper variables for holding the information about the supported
 	 * metrics.
 	 */
-	uint64_t metrics_stats[ENA_MAX_CUSTOMER_METRICS] __rte_cache_aligned;
-	uint16_t metrics_num;
+	uint16_t metrics_num __rte_cache_aligned;
+	uint64_t metrics_stats[ENA_MAX_CUSTOMER_METRICS];
 	struct ena_stats_srd srd_stats __rte_cache_aligned;
 };
 
