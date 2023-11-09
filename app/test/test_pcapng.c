@@ -173,8 +173,8 @@ test_write_stats(void)
 	ssize_t len;
 
 	/* write a statistics block */
-	len = rte_pcapng_write_stats(pcapng, port_id,
-				     NULL, 0, 0,
+	len = rte_pcapng_write_stats(pcapng, port_id, NULL,
+				     0, 0, 0,
 				     NUM_PACKETS, 0);
 	if (len <= 0) {
 		fprintf(stderr, "Write of statistics failed\n");
