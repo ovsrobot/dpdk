@@ -32,7 +32,7 @@ class TestPmdShell(InteractiveShell):
         self, get_privileged_command: Callable[[str], str] | None
     ) -> None:
         """See "_start_application" in InteractiveShell."""
-        self._app_args += " -- -i"
+        self._app_args += " -i"
         super()._start_application(get_privileged_command)
 
     def get_devices(self) -> list[TestPmdDevice]:
