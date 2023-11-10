@@ -4182,7 +4182,16 @@ test_reconfigure_bonding_device(void)
 static int
 test_close_bonding_device(void)
 {
-	rte_eth_dev_close(test_params->bonding_port_id);
+	int16_t bonding_port_id;
+	char pmd_name[RTE_ETH_NAME_MAX_LEN];
+
+	snprintf(pmd_name, RTE_ETH_NAME_MAX_LEN, "%s_%d",
+		 BONDING_DEV_NAME, ++bonding_id);
+	bonding_port_id = rte_eth_bond_create(pmd_name,
+				test_params->bonding_mode, rte_socket_id());
+	TEST_ASSERT(bonding_port_id >= 0,
+				"Failed to create bonding ethdev %s", pmd_name);
+	rte_eth_dev_close(bonding_port_id);
 	return 0;
 }
 
