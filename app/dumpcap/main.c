@@ -639,6 +639,11 @@ static void dpdk_init(void)
 		eal_argv[i++] = strdup(file_prefix);
 	}
 
+	for (i = 0; i < eal_argc; i++) {
+		if (eal_argv[i] == NULL)
+			rte_panic("No memory\n");
+	}
+
 	if (rte_eal_init(eal_argc, eal_argv) < 0)
 		rte_exit(EXIT_FAILURE, "EAL init failed: is primary process running?\n");
 }
