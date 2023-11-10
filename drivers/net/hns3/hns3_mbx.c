@@ -79,7 +79,7 @@ hns3_get_mbx_resp(struct hns3_hw *hw, uint16_t code, uint16_t subcode,
 			return -EIO;
 		}
 
-		hns3_dev_handle_mbx_msg(hw);
+		hns3vf_handle_mbx_msg(hw);
 		rte_delay_us(HNS3_WAIT_RESP_US);
 
 		if (hw->mbx_resp.received_match_resp)
@@ -373,9 +373,58 @@ scan_next:
 }
 
 void
-hns3_dev_handle_mbx_msg(struct hns3_hw *hw)
+hns3pf_handle_mbx_msg(struct hns3_hw *hw)
 {
-	struct hns3_adapter *hns = HNS3_DEV_HW_TO_ADAPTER(hw);
+	struct hns3_cmq_ring *crq = &hw->cmq.crq;
+	struct hns3_mbx_vf_to_pf_cmd *req;
+	struct hns3_cmd_desc *desc;
+	uint16_t flag;
+
+	rte_spinlock_lock(&hw->cmq.crq.lock);
+
+	while (!hns3_cmd_crq_empty(hw)) {
+		if (rte_atomic_load_explicit(&hw->reset.disable_cmd,
+					     rte_memory_order_relaxed)) {
+			rte_spinlock_unlock(&hw->cmq.crq.lock);
+			return;
+		}
+		desc = &crq->desc[crq->next_to_use];
+		req = (struct hns3_mbx_vf_to_pf_cmd *)desc->data;
+
+		flag = rte_le_to_cpu_16(crq->desc[crq->next_to_use].flag);
+		if (unlikely(!hns3_get_bit(flag, HNS3_CMDQ_RX_OUTVLD_B))) {
+			hns3_warn(hw,
+				  "dropped invalid mailbox message, code = %u",
+				  req->msg.code);
+
+			/* dropping/not processing this invalid message */
+			crq->desc[crq->next_to_use].flag = 0;
+			hns3_mbx_ring_ptr_move_crq(crq);
+			continue;
+		}
+
+		switch (req->msg.code) {
+		case HNS3_MBX_PUSH_LINK_STATUS:
+			hns3pf_handle_link_change_event(hw, req);
+			break;
+		default:
+			hns3_err(hw, "received unsupported(%u) mbx msg",
+				 req->msg.code);
+			break;
+		}
+		crq->desc[crq->next_to_use].flag = 0;
+		hns3_mbx_ring_ptr_move_crq(crq);
+	}
+
+	/* Write back CMDQ_RQ header pointer, IMP need this pointer */
+	hns3_write_dev(hw, HNS3_CMDQ_RX_HEAD_REG, crq->next_to_use);
+
+	rte_spinlock_unlock(&hw->cmq.crq.lock);
+}
+
+void
+hns3vf_handle_mbx_msg(struct hns3_hw *hw)
+{
 	struct hns3_cmq_ring *crq = &hw->cmq.crq;
 	struct hns3_mbx_pf_to_vf_cmd *req;
 	struct hns3_cmd_desc *desc;
@@ -386,7 +435,7 @@ hns3_dev_handle_mbx_msg(struct hns3_hw *hw)
 	rte_spinlock_lock(&hw->cmq.crq.lock);
 
 	handle_out = (rte_eal_process_type() != RTE_PROC_PRIMARY ||
-		      !rte_thread_is_intr()) && hns->is_vf;
+		      !rte_thread_is_intr());
 	if (handle_out) {
 		/*
 		 * Currently, any threads in the primary and secondary processes
@@ -432,8 +481,7 @@ hns3_dev_handle_mbx_msg(struct hns3_hw *hw)
 			continue;
 		}
 
-		handle_out = hns->is_vf && desc->opcode == 0;
-		if (handle_out) {
+		if (desc->opcode == 0) {
 			/* Message already processed by other thread */
 			crq->desc[crq->next_to_use].flag = 0;
 			hns3_mbx_ring_ptr_move_crq(crq);
@@ -449,16 +497,6 @@ hns3_dev_handle_mbx_msg(struct hns3_hw *hw)
 			break;
 		case HNS3_MBX_ASSERTING_RESET:
 			hns3_handle_asserting_reset(hw, req);
-			break;
-		case HNS3_MBX_PUSH_LINK_STATUS:
-			/*
-			 * This message is reported by the firmware and is
-			 * reported in 'struct hns3_mbx_vf_to_pf_cmd' format.
-			 * Therefore, we should cast the req variable to
-			 * 'struct hns3_mbx_vf_to_pf_cmd' and then process it.
-			 */
-			hns3pf_handle_link_change_event(hw,
-				(struct hns3_mbx_vf_to_pf_cmd *)req);
 			break;
 		case HNS3_MBX_PUSH_VLAN_INFO:
 			/*

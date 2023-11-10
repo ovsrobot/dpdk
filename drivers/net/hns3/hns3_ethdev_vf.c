@@ -605,7 +605,7 @@ hns3vf_interrupt_handler(void *param)
 		hns3_schedule_reset(hns);
 		break;
 	case HNS3VF_VECTOR0_EVENT_MBX:
-		hns3_dev_handle_mbx_msg(hw);
+		hns3vf_handle_mbx_msg(hw);
 		break;
 	default:
 		break;
@@ -654,7 +654,7 @@ hns3vf_get_push_lsc_cap(struct hns3_hw *hw)
 		 * driver has to actively handle the HNS3_MBX_LINK_STAT_CHANGE
 		 * mailbox from PF driver to get this capability.
 		 */
-		hns3_dev_handle_mbx_msg(hw);
+		hns3vf_handle_mbx_msg(hw);
 		if (rte_atomic_load_explicit(&vf->pf_push_lsc_cap, rte_memory_order_acquire) !=
 			HNS3_PF_PUSH_LSC_CAP_UNKNOWN)
 			break;
