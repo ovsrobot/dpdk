@@ -2402,7 +2402,8 @@ hns3_reset_init(struct hns3_hw *hw)
 	hw->reset.request = 0;
 	hw->reset.pending = 0;
 	hw->reset.resetting = 0;
-	__atomic_store_n(&hw->reset.disable_cmd, 0, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hw->reset.disable_cmd, 0,
+				  rte_memory_order_relaxed);
 	hw->reset.wait_data = rte_zmalloc("wait_data",
 					  sizeof(struct hns3_wait_data), 0);
 	if (!hw->reset.wait_data) {
@@ -2419,8 +2420,8 @@ hns3_schedule_reset(struct hns3_adapter *hns)
 
 	/* Reschedule the reset process after successful initialization */
 	if (hw->adapter_state == HNS3_NIC_UNINITIALIZED) {
-		__atomic_store_n(&hw->reset.schedule, SCHEDULE_PENDING,
-				 __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&hw->reset.schedule, SCHEDULE_PENDING,
+					  rte_memory_order_relaxed);
 		return;
 	}
 
@@ -2428,15 +2429,15 @@ hns3_schedule_reset(struct hns3_adapter *hns)
 		return;
 
 	/* Schedule restart alarm if it is not scheduled yet */
-	if (__atomic_load_n(&hw->reset.schedule, __ATOMIC_RELAXED) ==
-			SCHEDULE_REQUESTED)
+	if (rte_atomic_load_explicit(&hw->reset.schedule,
+			rte_memory_order_relaxed) == SCHEDULE_REQUESTED)
 		return;
-	if (__atomic_load_n(&hw->reset.schedule, __ATOMIC_RELAXED) ==
-			    SCHEDULE_DEFERRED)
+	if (rte_atomic_load_explicit(&hw->reset.schedule,
+			rte_memory_order_relaxed) == SCHEDULE_DEFERRED)
 		rte_eal_alarm_cancel(hw->reset.ops->reset_service, hns);
 
-	__atomic_store_n(&hw->reset.schedule, SCHEDULE_REQUESTED,
-				 __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hw->reset.schedule, SCHEDULE_REQUESTED,
+				  rte_memory_order_relaxed);
 
 	rte_eal_alarm_set(SWITCH_CONTEXT_US, hw->reset.ops->reset_service, hns);
 }
@@ -2453,11 +2454,11 @@ hns3_schedule_delayed_reset(struct hns3_adapter *hns)
 		return;
 	}
 
-	if (__atomic_load_n(&hw->reset.schedule, __ATOMIC_RELAXED) !=
-			    SCHEDULE_NONE)
+	if (rte_atomic_load_explicit(&hw->reset.schedule,
+			rte_memory_order_relaxed) != SCHEDULE_NONE)
 		return;
-	__atomic_store_n(&hw->reset.schedule, SCHEDULE_DEFERRED,
-			 __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hw->reset.schedule, SCHEDULE_DEFERRED,
+				  rte_memory_order_relaxed);
 	rte_eal_alarm_set(DEFERRED_SCHED_US, hw->reset.ops->reset_service, hns);
 }
 
@@ -2633,7 +2634,8 @@ hns3_reset_err_handle(struct hns3_adapter *hns)
 	 * Regardless of whether the execution is successful or not, the
 	 * flow after execution must be continued.
 	 */
-	if (__atomic_load_n(&hw->reset.disable_cmd, __ATOMIC_RELAXED))
+	if (rte_atomic_load_explicit(&hw->reset.disable_cmd,
+				     rte_memory_order_relaxed))
 		(void)hns3_cmd_init(hw);
 reset_fail:
 	hw->reset.attempts = 0;
@@ -2661,7 +2663,8 @@ hns3_reset_pre(struct hns3_adapter *hns)
 	int ret;
 
 	if (hw->reset.stage == RESET_STAGE_NONE) {
-		__atomic_store_n(&hns->hw.reset.resetting, 1, __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&hns->hw.reset.resetting, 1,
+					  rte_memory_order_relaxed);
 		hw->reset.stage = RESET_STAGE_DOWN;
 		hns3_report_reset_begin(hw);
 		ret = hw->reset.ops->stop_service(hns);
@@ -2750,7 +2753,8 @@ hns3_reset_post(struct hns3_adapter *hns)
 		hns3_notify_reset_ready(hw, false);
 		hns3_clear_reset_level(hw, &hw->reset.pending);
 		hns3_clear_reset_event(hw);
-		__atomic_store_n(&hns->hw.reset.resetting, 0, __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&hns->hw.reset.resetting, 0,
+					  rte_memory_order_relaxed);
 		hw->reset.attempts = 0;
 		hw->reset.stats.success_cnt++;
 		hw->reset.stage = RESET_STAGE_NONE;
@@ -2812,7 +2816,8 @@ hns3_reset_fail_handle(struct hns3_adapter *hns)
 		hw->reset.mbuf_deferred_free = false;
 	}
 	rte_spinlock_unlock(&hw->lock);
-	__atomic_store_n(&hns->hw.reset.resetting, 0, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hns->hw.reset.resetting, 0,
+				  rte_memory_order_relaxed);
 	hw->reset.stage = RESET_STAGE_NONE;
 	hns3_clock_gettime(&tv);
 	timersub(&tv, &hw->reset.start_time, &tv_delta);

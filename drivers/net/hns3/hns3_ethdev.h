@@ -999,20 +999,23 @@ hns3_atomic_test_bit(unsigned int nr, volatile uint64_t *addr)
 {
 	uint64_t res;
 
-	res = (__atomic_load_n(addr, __ATOMIC_RELAXED) & (1UL << nr)) != 0;
+	res = (rte_atomic_load_explicit(addr, rte_memory_order_relaxed) &
+	       (1UL << nr)) != 0;
 	return res;
 }
 
 static inline void
 hns3_atomic_set_bit(unsigned int nr, volatile uint64_t *addr)
 {
-	__atomic_fetch_or(addr, (1UL << nr), __ATOMIC_RELAXED);
+	rte_atomic_fetch_or_explicit(addr, (1UL << nr),
+				     rte_memory_order_relaxed);
 }
 
 static inline void
 hns3_atomic_clear_bit(unsigned int nr, volatile uint64_t *addr)
 {
-	__atomic_fetch_and(addr, ~(1UL << nr), __ATOMIC_RELAXED);
+	rte_atomic_fetch_and_explicit(addr, ~(1UL << nr),
+				      rte_memory_order_relaxed);
 }
 
 static inline uint64_t
@@ -1020,7 +1023,8 @@ hns3_test_and_clear_bit(unsigned int nr, volatile uint64_t *addr)
 {
 	uint64_t mask = (1UL << nr);
 
-	return __atomic_fetch_and(addr, ~mask, __ATOMIC_RELAXED) & mask;
+	return rte_atomic_fetch_and_explicit(addr,
+			~mask, rte_memory_order_relaxed) & mask;
 }
 
 int
