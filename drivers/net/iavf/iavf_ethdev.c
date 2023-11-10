@@ -2294,7 +2294,7 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	struct rte_kvargs *kvlist;
 	int ret;
 	int watchdog_period = -1;
-	uint16_t no_poll_on_link_down;
+	int no_poll_on_link_down = -1;
 
 	if (!devargs)
 		return 0;
@@ -2329,10 +2329,10 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 		ad->devargs.watchdog_period = watchdog_period;
 
 	ret = rte_kvargs_process(kvlist, IAVF_NO_POLL_ON_LINK_DOWN_ARG,
-				 &parse_u16, &no_poll_on_link_down);
+				 &parse_bool, &no_poll_on_link_down);
 	if (ret)
 		goto bail;
-	if (no_poll_on_link_down == 0)
+	if (no_poll_on_link_down == -1)
 		ad->devargs.no_poll_on_link_down = 0;
 	else
 		ad->devargs.no_poll_on_link_down = 1;
