@@ -134,7 +134,8 @@ hns3_proc_imp_reset_event(struct hns3_adapter *hns, uint32_t *vec_val)
 {
 	struct hns3_hw *hw = &hns->hw;
 
-	__atomic_store_n(&hw->reset.disable_cmd, 1, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hw->reset.disable_cmd, 1,
+				  rte_memory_order_relaxed);
 	hns3_atomic_set_bit(HNS3_IMP_RESET, &hw->reset.pending);
 	*vec_val = BIT(HNS3_VECTOR0_IMPRESET_INT_B);
 	hw->reset.stats.imp_cnt++;
@@ -148,7 +149,8 @@ hns3_proc_global_reset_event(struct hns3_adapter *hns, uint32_t *vec_val)
 {
 	struct hns3_hw *hw = &hns->hw;
 
-	__atomic_store_n(&hw->reset.disable_cmd, 1, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hw->reset.disable_cmd, 1,
+				  rte_memory_order_relaxed);
 	hns3_atomic_set_bit(HNS3_GLOBAL_RESET, &hw->reset.pending);
 	*vec_val = BIT(HNS3_VECTOR0_GLOBALRESET_INT_B);
 	hw->reset.stats.global_cnt++;
@@ -1151,7 +1153,8 @@ hns3_init_vlan_config(struct hns3_adapter *hns)
 	 * ensure that the hardware configuration remains unchanged before and
 	 * after reset.
 	 */
-	if (__atomic_load_n(&hw->reset.resetting, __ATOMIC_RELAXED) == 0) {
+	if (rte_atomic_load_explicit(&hw->reset.resetting,
+				     rte_memory_order_relaxed) == 0) {
 		hw->port_base_vlan_cfg.state = HNS3_PORT_BASE_VLAN_DISABLE;
 		hw->port_base_vlan_cfg.pvid = HNS3_INVALID_PVID;
 	}
@@ -1175,7 +1178,8 @@ hns3_init_vlan_config(struct hns3_adapter *hns)
 	 * we will restore configurations to hardware in hns3_restore_vlan_table
 	 * and hns3_restore_vlan_conf later.
 	 */
-	if (__atomic_load_n(&hw->reset.resetting, __ATOMIC_RELAXED) == 0) {
+	if (rte_atomic_load_explicit(&hw->reset.resetting,
+				     rte_memory_order_relaxed) == 0) {
 		ret = hns3_vlan_pvid_configure(hns, HNS3_INVALID_PVID, 0);
 		if (ret) {
 			hns3_err(hw, "pvid set fail in pf, ret =%d", ret);
@@ -5059,7 +5063,8 @@ hns3_dev_start(struct rte_eth_dev *dev)
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
-	if (__atomic_load_n(&hw->reset.resetting, __ATOMIC_RELAXED))
+	if (rte_atomic_load_explicit(&hw->reset.resetting,
+				     rte_memory_order_relaxed))
 		return -EBUSY;
 
 	rte_spinlock_lock(&hw->lock);
@@ -5150,7 +5155,8 @@ hns3_do_stop(struct hns3_adapter *hns)
 	 * during reset and is required to be released after the reset is
 	 * completed.
 	 */
-	if (__atomic_load_n(&hw->reset.resetting,  __ATOMIC_RELAXED) == 0)
+	if (rte_atomic_load_explicit(&hw->reset.resetting,
+				     rte_memory_order_relaxed) == 0)
 		hns3_dev_release_mbufs(hns);
 
 	ret = hns3_cfg_mac_mode(hw, false);
@@ -5158,7 +5164,8 @@ hns3_do_stop(struct hns3_adapter *hns)
 		return ret;
 	hw->mac.link_status = RTE_ETH_LINK_DOWN;
 
-	if (__atomic_load_n(&hw->reset.disable_cmd, __ATOMIC_RELAXED) == 0) {
+	if (rte_atomic_load_explicit(&hw->reset.disable_cmd,
+				     rte_memory_order_relaxed) == 0) {
 		hns3_configure_all_mac_addr(hns, true);
 		ret = hns3_reset_all_tqps(hns);
 		if (ret) {
@@ -5184,7 +5191,8 @@ hns3_dev_stop(struct rte_eth_dev *dev)
 	hns3_stop_rxtx_datapath(dev);
 
 	rte_spinlock_lock(&hw->lock);
-	if (__atomic_load_n(&hw->reset.resetting, __ATOMIC_RELAXED) == 0) {
+	if (rte_atomic_load_explicit(&hw->reset.resetting,
+				     rte_memory_order_relaxed) == 0) {
 		hns3_tm_dev_stop_proc(hw);
 		hns3_config_mac_tnl_int(hw, false);
 		hns3_stop_tqps(hw);
@@ -5553,10 +5561,12 @@ hns3_detect_reset_event(struct hns3_hw *hw)
 	last_req = hns3_get_reset_level(hns, &hw->reset.pending);
 	vector0_intr_state = hns3_read_dev(hw, HNS3_VECTOR0_OTHER_INT_STS_REG);
 	if (BIT(HNS3_VECTOR0_IMPRESET_INT_B) & vector0_intr_state) {
-		__atomic_store_n(&hw->reset.disable_cmd, 1, __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&hw->reset.disable_cmd, 1,
+					  rte_memory_order_relaxed);
 		new_req = HNS3_IMP_RESET;
 	} else if (BIT(HNS3_VECTOR0_GLOBALRESET_INT_B) & vector0_intr_state) {
-		__atomic_store_n(&hw->reset.disable_cmd, 1, __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&hw->reset.disable_cmd, 1,
+					  rte_memory_order_relaxed);
 		new_req = HNS3_GLOBAL_RESET;
 	}
 
@@ -5744,7 +5754,8 @@ hns3_prepare_reset(struct hns3_adapter *hns)
 		 * any mailbox handling or command to firmware is only valid
 		 * after hns3_cmd_init is called.
 		 */
-		__atomic_store_n(&hw->reset.disable_cmd, 1, __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&hw->reset.disable_cmd, 1,
+					  rte_memory_order_relaxed);
 		hw->reset.stats.request_cnt++;
 		break;
 	case HNS3_IMP_RESET:
@@ -5799,7 +5810,8 @@ hns3_stop_service(struct hns3_adapter *hns)
 	 * from table space. Hence, for function reset software intervention is
 	 * required to delete the entries
 	 */
-	if (__atomic_load_n(&hw->reset.disable_cmd, __ATOMIC_RELAXED) == 0)
+	if (rte_atomic_load_explicit(&hw->reset.disable_cmd,
+				     rte_memory_order_relaxed) == 0)
 		hns3_configure_all_mc_mac_addr(hns, true);
 	rte_spinlock_unlock(&hw->lock);
 
@@ -5920,10 +5932,10 @@ hns3_reset_service(void *param)
 	 * The interrupt may have been lost. It is necessary to handle
 	 * the interrupt to recover from the error.
 	 */
-	if (__atomic_load_n(&hw->reset.schedule, __ATOMIC_RELAXED) ==
-			    SCHEDULE_DEFERRED) {
-		__atomic_store_n(&hw->reset.schedule, SCHEDULE_REQUESTED,
-				  __ATOMIC_RELAXED);
+	if (rte_atomic_load_explicit(&hw->reset.schedule,
+			rte_memory_order_relaxed) == SCHEDULE_DEFERRED) {
+		rte_atomic_store_explicit(&hw->reset.schedule,
+				SCHEDULE_REQUESTED, rte_memory_order_relaxed);
 		hns3_err(hw, "Handling interrupts in delayed tasks");
 		hns3_interrupt_handler(&rte_eth_devices[hw->data->port_id]);
 		reset_level = hns3_get_reset_level(hns, &hw->reset.pending);
@@ -5932,7 +5944,8 @@ hns3_reset_service(void *param)
 			hns3_atomic_set_bit(HNS3_IMP_RESET, &hw->reset.pending);
 		}
 	}
-	__atomic_store_n(&hw->reset.schedule, SCHEDULE_NONE, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&hw->reset.schedule, SCHEDULE_NONE,
+				  rte_memory_order_relaxed);
 
 	/*
 	 * Check if there is any ongoing reset in the hardware. This status can
@@ -6582,8 +6595,8 @@ hns3_dev_init(struct rte_eth_dev *eth_dev)
 
 	hw->adapter_state = HNS3_NIC_INITIALIZED;
 
-	if (__atomic_load_n(&hw->reset.schedule, __ATOMIC_RELAXED) ==
-			    SCHEDULE_PENDING) {
+	if (rte_atomic_load_explicit(&hw->reset.schedule,
+			rte_memory_order_relaxed) == SCHEDULE_PENDING) {
 		hns3_err(hw, "Reschedule reset service after dev_init");
 		hns3_schedule_reset(hns);
 	} else {
