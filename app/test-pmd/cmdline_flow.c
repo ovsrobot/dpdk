@@ -7715,6 +7715,8 @@ parse_prefix(struct context *ctx, const struct token *token,
 	}
 	bytes = u / 8;
 	extra = u % 8;
+	if (size < arg->size)
+		goto error;
 	size = arg->size;
 	if (bytes > size || bytes + !!extra > size)
 		goto error;
@@ -10806,6 +10808,8 @@ parse_int(struct context *ctx, const struct token *token,
 		return len;
 	}
 	buf = (uint8_t *)ctx->object + arg->offset;
+	if (size < arg->size)
+		goto error;
 	size = arg->size;
 	if (u > RTE_LEN2MASK(size * CHAR_BIT, uint64_t))
 		return -1;
@@ -11093,6 +11097,8 @@ parse_mac_addr(struct context *ctx, const struct token *token,
 	/* Argument is expected. */
 	if (!arg)
 		return -1;
+	if (size < arg->size)
+		goto error;
 	size = arg->size;
 	/* Bit-mask fill is not supported. */
 	if (arg->mask || size != sizeof(tmp))
@@ -11134,6 +11140,8 @@ parse_ipv4_addr(struct context *ctx, const struct token *token,
 	/* Argument is expected. */
 	if (!arg)
 		return -1;
+	if (size < arg->size)
+		goto error;
 	size = arg->size;
 	/* Bit-mask fill is not supported. */
 	if (arg->mask || size != sizeof(tmp))
@@ -11181,6 +11189,8 @@ parse_ipv6_addr(struct context *ctx, const struct token *token,
 	/* Argument is expected. */
 	if (!arg)
 		return -1;
+	if (size < arg->size)
+		goto error;
 	size = arg->size;
 	/* Bit-mask fill is not supported. */
 	if (arg->mask || size != sizeof(tmp))
