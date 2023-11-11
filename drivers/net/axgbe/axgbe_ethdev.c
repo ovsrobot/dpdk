@@ -1492,12 +1492,6 @@ static int axgb_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	struct axgbe_port *pdata = dev->data->dev_private;
 	unsigned int val;
 
-	/* mtu setting is forbidden if port is start */
-	if (dev->data->dev_started) {
-		PMD_DRV_LOG(ERR, "port %d must be stopped before configuration",
-				dev->data->port_id);
-		return -EBUSY;
-	}
 	val = mtu > RTE_ETHER_MTU ? 1 : 0;
 	AXGMAC_IOWRITE_BITS(pdata, MAC_RCR, JE, val);
 

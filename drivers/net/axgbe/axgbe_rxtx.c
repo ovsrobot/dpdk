@@ -210,7 +210,7 @@ axgbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	uint64_t old_dirty = rxq->dirty;
 	struct rte_mbuf *mbuf, *tmbuf;
 	unsigned int err, etlt;
-	uint32_t error_status;
+	uint32_t error_status, max_len;
 	uint16_t idx, pidx, pkt_len;
 
 	idx = AXGBE_GET_DESC_IDX(rxq, rxq->cur);
@@ -300,6 +300,14 @@ axgbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 					| RTE_MBUF_F_RX_IEEE1588_TMST;
 		pkt_len = AXGMAC_GET_BITS_LE(desc->write.desc3, RX_NORMAL_DESC3,
 					     PL) - rxq->crc_len;
+
+		/* Be sure we don't exceed the configured MTU */
+		max_len = rxq->pdata->eth_dev->data->mtu  + RTE_ETHER_HDR_LEN;
+			if (pkt_len > max_len) {
+				printf( "packet length exceeds configured MTU\n");
+				goto err_set;
+			}
+
 		/* Mbuf populate */
 		mbuf->next = NULL;
 		mbuf->data_off = RTE_PKTMBUF_HEADROOM;
@@ -342,7 +350,7 @@ uint16_t eth_axgbe_recv_scattered_pkts(void *rx_queue,
 	struct rte_mbuf *first_seg = NULL;
 	struct rte_mbuf *mbuf, *tmbuf;
 	unsigned int err = 0, etlt;
-	uint32_t error_status = 0;
+	uint32_t error_status = 0, max_len = 0;
 	uint16_t idx, pidx, data_len = 0, pkt_len = 0;
 	bool eop = 0;
 
@@ -409,6 +417,14 @@ next_desc:
 			}
 
 		}
+
+                /* Be sure we don't exceed the configured MTU */
+                max_len = rxq->pdata->eth_dev->data->mtu  + RTE_ETHER_HDR_LEN;
+                        if (pkt_len > max_len) {
+                                printf( "packet length exceeds configured MTU\n");
+                                goto err_set;
+                        }
+
 		/* Mbuf populate */
 		mbuf->data_off = RTE_PKTMBUF_HEADROOM;
 		mbuf->data_len = data_len;
