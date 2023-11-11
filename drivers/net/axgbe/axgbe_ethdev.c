@@ -2130,16 +2130,18 @@ void
 axgbe_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct axgbe_port *pdata = dev->data->dev_private;
+	struct axgbe_tx_queue *txq = dev->data->tx_queues[0];
 
 	if (pdata->multi_segs_tx)
 		dev->tx_pkt_burst = &axgbe_xmit_pkts_seg;
+	else if (txq->vector_disable ||
+			rte_vect_get_max_simd_bitwidth() < RTE_VECT_SIMD_128)
+		dev->tx_pkt_burst = &axgbe_xmit_pkts;
+	else
 #ifdef RTE_ARCH_X86
-	struct axgbe_tx_queue *txq = dev->data->tx_queues[0];
-	if (!txq->vector_disable &&
-			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128)
 		dev->tx_pkt_burst = &axgbe_xmit_pkts_vec;
 #else
-	dev->tx_pkt_burst = &axgbe_xmit_pkts;
+		dev->tx_pkt_burst = &axgbe_xmit_pkts;
 #endif
 }
 
