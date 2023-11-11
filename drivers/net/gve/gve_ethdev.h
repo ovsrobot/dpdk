@@ -20,7 +20,13 @@
 #define GVE_DEFAULT_TX_RS_THRESH     32
 #define GVE_TX_MAX_FREE_SZ          512
 
-#define GVE_MIN_BUF_SIZE	    1024
+#define GVE_RX_BUF_ALIGN_DQO        128
+#define GVE_RX_MIN_BUF_SIZE_DQO    1024
+#define GVE_RX_MAX_BUF_SIZE_DQO    ((16 * 1024) - GVE_RX_BUF_ALIGN_DQO)
+
+#define GVE_RX_BUF_ALIGN_GQI       2048
+#define GVE_RX_MIN_BUF_SIZE_GQI    2048
+#define GVE_RX_MAX_BUF_SIZE_GQI    4096
 
 #define GVE_TX_CKSUM_OFFLOAD_MASK (		\
 		RTE_MBUF_F_TX_L4_MASK  |	\
@@ -335,6 +341,20 @@ gve_clear_device_rings_ok(struct gve_priv *priv)
 {
 	rte_bit_relaxed_clear32(GVE_PRIV_FLAGS_DEVICE_RINGS_OK,
 				&priv->state_flags);
+}
+
+static inline int
+gve_validate_rx_buffer_size(struct gve_priv *priv, uint16_t rx_buffer_size)
+{
+	uint16_t min_rx_buffer_size = gve_is_gqi(priv) ?
+		GVE_RX_MIN_BUF_SIZE_GQI : GVE_RX_MIN_BUF_SIZE_DQO;
+	if (rx_buffer_size < min_rx_buffer_size) {
+		PMD_DRV_LOG(ERR, "mbuf size must be at least %hu bytes",
+			    min_rx_buffer_size);
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 int
