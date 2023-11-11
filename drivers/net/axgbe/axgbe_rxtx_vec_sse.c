@@ -65,6 +65,7 @@ axgbe_xmit_pkts_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 	uint16_t idx, nb_commit, loop, i;
 	uint32_t tail_addr;
 
+	printf("jesna::Inside axgbe_xmit_pkts_vec \n");
 	txq  = (struct axgbe_tx_queue *)tx_queue;
 	if (txq->nb_desc_free < txq->free_thresh) {
 		axgbe_xmit_cleanup_vec(txq);

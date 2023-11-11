@@ -808,6 +808,24 @@ int axgbe_write_rss_lookup_table(struct axgbe_port *pdata)
 	return 0;
 }
 
+
+static void xgbe_config_tso_mode(struct axgbe_port *pdata)
+{
+        unsigned int i;
+
+        struct axgbe_tx_queue *txq;
+
+        for (i = 0; i < pdata->eth_dev->data->nb_tx_queues; i++) {
+                txq = pdata->eth_dev->data->tx_queues[i];
+                AXGMAC_DMA_IOWRITE_BITS(txq,DMA_CH_TCR, TSE,
+                                        1);
+		AXGMAC_DMA_IOWRITE_BITS(txq,DMA_CH_CR, MSS,
+					800);
+        }
+
+}
+
+
 static int axgbe_enable_rss(struct axgbe_port *pdata)
 {
 	int ret;
@@ -1314,6 +1332,7 @@ static int axgbe_init(struct axgbe_port *pdata)
 	axgbe_config_rx_pbl_val(pdata);
 	axgbe_config_rx_buffer_size(pdata);
 	axgbe_config_rss(pdata);
+	xgbe_config_tso_mode(pdata);
 	wrapper_tx_desc_init(pdata);
 	ret = wrapper_rx_desc_init(pdata);
 	if (ret)
