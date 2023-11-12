@@ -73,6 +73,7 @@ static enum L3FWD_LOOKUP_MODE lookup_mode;
 static int numa_on = 1; /**< NUMA is enabled by default. */
 static int parse_ptype; /**< Parse packet type using rx callback, and */
 			/**< disabled by default */
+static int relax_rx_mode; /**< Relax RX mode is disabled by default */
 static int per_port_pool; /**< Use separate buffer pools per port; disabled */
 			  /**< by default */
 
@@ -678,6 +679,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_MAX_PKT_LEN "max-pkt-len"
 #define CMD_LINE_OPT_HASH_ENTRY_NUM "hash-entry-num"
 #define CMD_LINE_OPT_PARSE_PTYPE "parse-ptype"
+#define CMD_LINE_OPT_RELAX_RX_MODE "relax-rx-mode"
 #define CMD_LINE_OPT_PER_PORT_POOL "per-port-pool"
 #define CMD_LINE_OPT_MODE "mode"
 #define CMD_LINE_OPT_EVENTQ_SYNC "eventq-sched"
@@ -705,6 +707,7 @@ enum {
 	CMD_LINE_OPT_MAX_PKT_LEN_NUM,
 	CMD_LINE_OPT_HASH_ENTRY_NUM_NUM,
 	CMD_LINE_OPT_PARSE_PTYPE_NUM,
+	CMD_LINE_OPT_RELAX_RX_MODE_NUM,
 	CMD_LINE_OPT_RULE_IPV4_NUM,
 	CMD_LINE_OPT_RULE_IPV6_NUM,
 	CMD_LINE_OPT_ALG_NUM,
@@ -728,6 +731,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_MAX_PKT_LEN, 1, 0, CMD_LINE_OPT_MAX_PKT_LEN_NUM},
 	{CMD_LINE_OPT_HASH_ENTRY_NUM, 1, 0, CMD_LINE_OPT_HASH_ENTRY_NUM_NUM},
 	{CMD_LINE_OPT_PARSE_PTYPE, 0, 0, CMD_LINE_OPT_PARSE_PTYPE_NUM},
+	{CMD_LINE_OPT_RELAX_RX_MODE, 0, 0, CMD_LINE_OPT_RELAX_RX_MODE_NUM},
 	{CMD_LINE_OPT_PER_PORT_POOL, 0, 0, CMD_LINE_OPT_PARSE_PER_PORT_POOL},
 	{CMD_LINE_OPT_MODE, 1, 0, CMD_LINE_OPT_MODE_NUM},
 	{CMD_LINE_OPT_EVENTQ_SYNC, 1, 0, CMD_LINE_OPT_EVENTQ_SYNC_NUM},
@@ -851,6 +855,11 @@ parse_args(int argc, char **argv)
 		case CMD_LINE_OPT_PARSE_PTYPE_NUM:
 			printf("soft parse-ptype is enabled\n");
 			parse_ptype = 1;
+			break;
+
+		case CMD_LINE_OPT_RELAX_RX_MODE_NUM:
+			printf("Relax rx mode is enabled\n");
+			relax_rx_mode = 1;
 			break;
 
 		case CMD_LINE_OPT_PARSE_PER_PORT_POOL:
@@ -1259,6 +1268,13 @@ l3fwd_poll_resource_setup(void)
 
 		if (dev_info.max_rx_queues == 1)
 			local_port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_NONE;
+
+		/* relax the rx rss requirement */
+		if (relax_rx_mode && !local_port_conf.rx_adv_conf.rss_conf.rss_hf) {
+			printf("warning: modified the rx mq_mode to RTE_ETH_MQ_RX_NONE base on"
+					" device capability\n");
+				local_port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_NONE;
+		}
 
 		if (local_port_conf.rx_adv_conf.rss_conf.rss_hf !=
 				port_conf.rx_adv_conf.rss_conf.rss_hf) {
