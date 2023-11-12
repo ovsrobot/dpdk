@@ -1285,6 +1285,20 @@ l3fwd_poll_resource_setup(void)
 				local_port_conf.rx_adv_conf.rss_conf.rss_hf);
 		}
 
+		/* relax the rx offload requirement */
+		if ((local_port_conf.rxmode.offloads & dev_info.rx_offload_capa) !=
+			local_port_conf.rxmode.offloads) {
+			printf("Port %u requested Rx offloads 0x%"PRIx64" does not"
+				" match Rx offloads capabilities 0x%"PRIx64"\n",
+				portid, local_port_conf.rxmode.offloads,
+				dev_info.rx_offload_capa);
+			if (relax_rx_mode) {
+				local_port_conf.rxmode.offloads &= dev_info.rx_offload_capa;
+				printf("warning: modified the rx offload to 0x%"PRIx64" based on device"
+				" capability\n", local_port_conf.rxmode.offloads);
+			}
+		}
+
 		ret = rte_eth_dev_configure(portid, nb_rx_queue,
 					(uint16_t)n_tx_queue, &local_port_conf);
 		if (ret < 0)
