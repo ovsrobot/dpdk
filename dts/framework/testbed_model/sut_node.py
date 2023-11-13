@@ -359,7 +359,8 @@ class SutNode(Node):
         shell_cls: Type[InteractiveShellType],
         timeout: float = SETTINGS.timeout,
         privileged: bool = False,
-        eal_parameters: EalParameters | str | None = None,
+        eal_parameters: EalParameters | str = "",
+        app_parameters: str = "",
     ) -> InteractiveShellType:
         """Factory method for creating a handler for an interactive session.
 
@@ -374,12 +375,14 @@ class SutNode(Node):
             eal_parameters: List of EAL parameters to use to launch the app. If this
                 isn't provided or an empty string is passed, it will default to calling
                 create_eal_parameters().
+            app_parameters: Additional arguments to pass into the application on the
+                command-line.
         Returns:
             Instance of the desired interactive application.
         """
-        if not eal_parameters:
+        if not eal_parameters and shell_cls.dpdk_app:
             eal_parameters = self.create_eal_parameters()
-
+            eal_parameters = f"{eal_parameters} --"
         # We need to append the build directory for DPDK apps
         if shell_cls.dpdk_app:
             shell_cls.path = self.main_session.join_remote_path(
@@ -387,5 +390,5 @@ class SutNode(Node):
             )
 
         return super().create_interactive_shell(
-            shell_cls, timeout, privileged, str(eal_parameters)
+            shell_cls, timeout, privileged, f"{eal_parameters} {app_parameters}"
         )
