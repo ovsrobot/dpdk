@@ -152,7 +152,11 @@ class TestSuite(object):
         self.sut_node.configure_ipv4_forwarding(enable)
 
     def send_packet_and_capture(
-        self, packet: Packet, duration: float = 1
+        self,
+        packet: Packet,
+        duration: float = 1,
+        no_lldp: bool = True,
+        no_arp: bool = True,
     ) -> list[Packet]:
         """
         Send a packet through the appropriate interface and
@@ -162,7 +166,12 @@ class TestSuite(object):
         """
         packet = self._adjust_addresses(packet)
         return self.tg_node.send_packet_and_capture(
-            packet, self._tg_port_egress, self._tg_port_ingress, duration
+            packet,
+            self._tg_port_egress,
+            self._tg_port_ingress,
+            duration,
+            no_lldp,
+            no_arp,
         )
 
     def get_expected_packet(self, packet: Packet) -> Packet:

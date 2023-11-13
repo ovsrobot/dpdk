@@ -52,6 +52,8 @@ class CapturingTrafficGenerator(TrafficGenerator):
         send_port: Port,
         receive_port: Port,
         duration: float,
+        no_lldp: bool,
+        no_arp: bool,
         capture_name: str = _get_default_capture_name(),
     ) -> list[Packet]:
         """Send a packet, return received traffic.
@@ -71,7 +73,7 @@ class CapturingTrafficGenerator(TrafficGenerator):
              A list of received packets. May be empty if no packets are captured.
         """
         return self.send_packets_and_capture(
-            [packet], send_port, receive_port, duration, capture_name
+            [packet], send_port, receive_port, duration, no_lldp, no_arp, capture_name
         )
 
     def send_packets_and_capture(
@@ -80,6 +82,8 @@ class CapturingTrafficGenerator(TrafficGenerator):
         send_port: Port,
         receive_port: Port,
         duration: float,
+        no_lldp: bool,
+        no_arp: bool,
         capture_name: str = _get_default_capture_name(),
     ) -> list[Packet]:
         """Send packets, return received traffic.
@@ -93,6 +97,8 @@ class CapturingTrafficGenerator(TrafficGenerator):
             send_port: The egress port on the TG node.
             receive_port: The ingress port in the TG node.
             duration: Capture traffic for this amount of time after sending the packets.
+            no_lldp: Option to disable capturing LLDP packets
+            no_arp: Option to disable capturing ARP packets
             capture_name: The name of the .pcap file where to store the capture.
 
         Returns:
@@ -108,6 +114,8 @@ class CapturingTrafficGenerator(TrafficGenerator):
             send_port,
             receive_port,
             duration,
+            no_lldp,
+            no_arp,
         )
 
         self._logger.debug(
@@ -123,6 +131,8 @@ class CapturingTrafficGenerator(TrafficGenerator):
         send_port: Port,
         receive_port: Port,
         duration: float,
+        no_lldp: bool,
+        no_arp: bool,
     ) -> list[Packet]:
         """
         The extended classes must implement this method which

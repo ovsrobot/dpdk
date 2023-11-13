@@ -69,6 +69,7 @@ def scapy_send_packets_and_capture(
     send_iface: str,
     recv_iface: str,
     duration: float,
+    sniff_filter: str,
 ) -> list[bytes]:
     """RPC function to send and capture packets.
 
@@ -90,6 +91,7 @@ def scapy_send_packets_and_capture(
         iface=recv_iface,
         store=True,
         started_callback=lambda *args: scapy.all.sendp(scapy_packets, iface=send_iface),
+        filter=sniff_filter,
     )
     sniffer.start()
     time.sleep(duration)
@@ -264,10 +266,16 @@ class ScapyTrafficGenerator(CapturingTrafficGenerator):
         send_port: Port,
         receive_port: Port,
         duration: float,
+        no_lldp: bool,
+        no_arp: bool,
         capture_name: str = _get_default_capture_name(),
     ) -> list[Packet]:
         binary_packets = [packet.build() for packet in packets]
-
+        sniff_filter = []
+        if no_lldp:
+            sniff_filter.append("ether[12:2] != 0x88cc")
+        if no_arp:
+            sniff_filter.append("ether[12:2] != 0x0806")
         xmlrpc_packets: list[
             xmlrpc.client.Binary
         ] = self.rpc_server_proxy.scapy_send_packets_and_capture(
@@ -275,6 +283,7 @@ class ScapyTrafficGenerator(CapturingTrafficGenerator):
             send_port.logical_name,
             receive_port.logical_name,
             duration,
+            " && ".join(sniff_filter),
         )  # type: ignore[assignment]
 
         scapy_packets = [Ether(packet.data) for packet in xmlrpc_packets]
