@@ -278,6 +278,15 @@ class OSSession(ABC):
         """
 
     @abstractmethod
+    def configure_port_mtu(self, mtu: int, port: Port) -> None:
+        """Configure MTU on a given port.
+
+        Args:
+            mtu: Desired MTU value.
+            port: Port to set the MTU on.
+        """
+
+    @abstractmethod
     def configure_ipv4_forwarding(self, enable: bool) -> None:
         """
         Enable IPv4 forwarding in the underlying OS.
