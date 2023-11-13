@@ -31,6 +31,9 @@
 #define OPDL_OPA_MASK    (0xFF)
 #define OPDL_OPA_OFFSET  (0x38)
 
+/* Equivalent to rte_is_power_of_2() but as macro. */
+#define IS_POWER_OF_2(x) (((x) & ((x) - 1)) == 0)
+
 /* Types of dependency between stages */
 enum dep_type {
 	DEP_NONE = 0,  /* no dependency */
@@ -910,7 +913,7 @@ opdl_ring_create(const char *name, uint32_t num_slots, uint32_t slot_size,
 			RTE_CACHE_LINE_MASK) != 0);
 	RTE_BUILD_BUG_ON((offsetof(struct opdl_ring, slots) &
 			RTE_CACHE_LINE_MASK) != 0);
-	RTE_BUILD_BUG_ON(!rte_is_power_of_2(OPDL_DISCLAIMS_PER_LCORE));
+	RTE_BUILD_BUG_ON(!IS_POWER_OF_2(OPDL_DISCLAIMS_PER_LCORE));
 
 	/* Parameter checking */
 	if (name == NULL) {
