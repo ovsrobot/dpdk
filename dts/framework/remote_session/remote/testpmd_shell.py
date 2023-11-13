@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2023 University of New Hampshire
 
+import time
 from pathlib import PurePath
 from typing import Callable
+
+from framework.settings import SETTINGS
 
 from .interactive_shell import InteractiveShell
 
@@ -47,3 +50,29 @@ class TestPmdShell(InteractiveShell):
             if "device name:" in line.lower():
                 dev_list.append(TestPmdDevice(line))
         return dev_list
+
+    def wait_link_status_up(self, port_id: int, timeout=SETTINGS.timeout) -> bool:
+        """Wait until the link status on the given port is "up".
+
+        Arguments:
+            port_id: Port to check the link status on.
+            timeout: time to wait for the link to come up.
+
+        Returns:
+            If the link came up in time or not.
+        """
+        time_to_stop = time.time() + timeout
+        while time.time() < time_to_stop:
+            port_info = self.send_command(f"show port info {port_id}")
+            if "Link status: up" in port_info:
+                break
+            time.sleep(0.5)
+        else:
+            self._logger.error(
+                f"The link for port {port_id} did not come up in the given timeout."
+            )
+        return "Link status: up" in port_info
+
+    def close(self) -> None:
+        self.send_command("exit", "")
+        return super().close()
