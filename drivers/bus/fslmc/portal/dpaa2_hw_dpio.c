@@ -129,7 +129,7 @@ dpaa2_affine_dpio_intr_to_respective_core(int32_t dpio_id, int cpu_id)
 	uint32_t cpu_mask = 1;
 	int ret;
 	size_t len = 0;
-	char *temp = NULL, *token = NULL;
+	char *temp = NULL, *token = NULL, *sp = NULL;
 	char string[STRING_LEN], command[COMMAND_LEN];
 	FILE *file;
 
@@ -141,7 +141,7 @@ dpaa2_affine_dpio_intr_to_respective_core(int32_t dpio_id, int cpu_id)
 	}
 	while (getline(&temp, &len, file) != -1) {
 		if ((strstr(temp, string)) != NULL) {
-			token = strtok(temp, ":");
+			token = strtok_r(temp, ":", &sp);
 			break;
 		}
 	}
