@@ -340,7 +340,7 @@ set_pdump_rxtx_cbs(const struct pdump_request *p)
 		if (ret != 0) {
 			PDUMP_LOG(ERR,
 				"Error during getting device (port %u) info: %s\n",
-				port, strerror(-ret));
+				port, rte_strerror(-ret));
 			return ret;
 		}
 
@@ -410,7 +410,7 @@ pdump_server(const struct rte_mp_msg *mp_msg, const void *peer)
 	mp_resp.num_fds = 0;
 	if (rte_mp_reply(&mp_resp, peer) < 0) {
 		PDUMP_LOG(ERR, "failed to send to client:%s\n",
-			  strerror(rte_errno));
+			  rte_strerror(rte_errno));
 		return -1;
 	}
 
@@ -741,7 +741,7 @@ rte_pdump_stats(uint16_t port, struct rte_pdump_stats *stats)
 	if (ret != 0) {
 		PDUMP_LOG(ERR,
 			  "Error during getting device (port %u) info: %s\n",
-			  port, strerror(-ret));
+			  port, rte_strerror(-ret));
 		return ret;
 	}
 
