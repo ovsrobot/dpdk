@@ -71,7 +71,7 @@ memif_msg_send_from_queue(struct memif_control_channel *cc)
 	size = memif_msg_send(rte_intr_fd_get(cc->intr_handle), &e->msg,
 			      e->fd);
 	if (size != sizeof(memif_msg_t)) {
-		MIF_LOG(ERR, "sendmsg fail: %s.", strerror(errno));
+		MIF_LOG(ERR, "sendmsg fail: %s.", rte_strerror(errno));
 		ret = -1;
 	} else {
 		MIF_LOG(DEBUG, "Sent msg type %u.", e->msg.type);
@@ -975,7 +975,7 @@ memif_socket_create(char *key, uint8_t listener, bool is_abstract, uid_t owner_u
 	return sock;
 
  error:
-	MIF_LOG(ERR, "Failed to setup socket %s: %s", key, strerror(errno));
+	MIF_LOG(ERR, "Failed to setup socket %s: %s", key, rte_strerror(errno));
 	if (sock != NULL) {
 		rte_intr_instance_free(sock->intr_handle);
 		rte_free(sock);

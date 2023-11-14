@@ -805,7 +805,7 @@ no_free_slots:
 			     sizeof(a));
 		if (unlikely(size < 0)) {
 			MIF_LOG(WARNING,
-				"Failed to send interrupt. %s", strerror(errno));
+				"Failed to send interrupt. %s", rte_strerror(errno));
 		}
 	}
 
@@ -960,7 +960,7 @@ no_free_slots:
 				     &a, sizeof(a));
 		if (unlikely(size < 0)) {
 			MIF_LOG(WARNING,
-				"Failed to send interrupt. %s", strerror(errno));
+				"Failed to send interrupt. %s", rte_strerror(errno));
 		}
 	}
 
@@ -1082,27 +1082,27 @@ memif_region_init_shm(struct rte_eth_dev *dev, uint8_t has_buffers)
 
 	r->fd = memfd_create(shm_name, MFD_ALLOW_SEALING);
 	if (r->fd < 0) {
-		MIF_LOG(ERR, "Failed to create shm file: %s.", strerror(errno));
+		MIF_LOG(ERR, "Failed to create shm file: %s.", rte_strerror(errno));
 		ret = -1;
 		goto error;
 	}
 
 	ret = fcntl(r->fd, F_ADD_SEALS, F_SEAL_SHRINK);
 	if (ret < 0) {
-		MIF_LOG(ERR, "Failed to add seals to shm file: %s.", strerror(errno));
+		MIF_LOG(ERR, "Failed to add seals to shm file: %s.", rte_strerror(errno));
 		goto error;
 	}
 
 	ret = ftruncate(r->fd, r->region_size);
 	if (ret < 0) {
-		MIF_LOG(ERR, "Failed to truncate shm file: %s.", strerror(errno));
+		MIF_LOG(ERR, "Failed to truncate shm file: %s.", rte_strerror(errno));
 		goto error;
 	}
 
 	r->addr = mmap(NULL, r->region_size, PROT_READ |
 		       PROT_WRITE, MAP_SHARED, r->fd, 0);
 	if (r->addr == MAP_FAILED) {
-		MIF_LOG(ERR, "Failed to mmap shm region: %s.", strerror(ret));
+		MIF_LOG(ERR, "Failed to mmap shm region: %s.", rte_strerror(ret));
 		ret = -1;
 		goto error;
 	}
@@ -1223,7 +1223,7 @@ memif_init_queues(struct rte_eth_dev *dev)
 		if (rte_intr_fd_get(mq->intr_handle) < 0) {
 			MIF_LOG(WARNING,
 				"Failed to create eventfd for tx queue %d: %s.", i,
-				strerror(errno));
+				rte_strerror(errno));
 		}
 		mq->buffers = NULL;
 		if (pmd->flags & ETH_MEMIF_FLAG_ZERO_COPY) {
@@ -1247,7 +1247,7 @@ memif_init_queues(struct rte_eth_dev *dev)
 		if (rte_intr_fd_get(mq->intr_handle) < 0) {
 			MIF_LOG(WARNING,
 				"Failed to create eventfd for rx queue %d: %s.", i,
-				strerror(errno));
+				rte_strerror(errno));
 		}
 		mq->buffers = NULL;
 		if (pmd->flags & ETH_MEMIF_FLAG_ZERO_COPY) {
@@ -1299,7 +1299,7 @@ memif_connect(struct rte_eth_dev *dev)
 						MAP_SHARED, mr->fd, 0);
 				if (mr->addr == MAP_FAILED) {
 					MIF_LOG(ERR, "mmap failed: %s\n",
-						strerror(errno));
+						rte_strerror(errno));
 					return -1;
 				}
 			}
@@ -1983,7 +1983,7 @@ rte_pmd_memif_probe(struct rte_vdev_device *vdev)
 	 */
 	if (ret < 0 && rte_errno != EEXIST)
 		MIF_LOG(WARNING, "Failed to register mp action callback: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 
 	/* use abstract address by default */
 	flags |= ETH_MEMIF_FLAG_SOCKET_ABSTRACT;
