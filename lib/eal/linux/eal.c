@@ -160,7 +160,7 @@ error:
 		closedir(dir);
 
 	RTE_LOG(ERR, EAL, "Error while clearing runtime dir: %s\n",
-		strerror(errno));
+		rte_strerror(errno));
 
 	return -1;
 }
@@ -288,7 +288,7 @@ rte_eal_config_attach(void)
 		close(mem_cfg_fd);
 		mem_cfg_fd = -1;
 		RTE_LOG(ERR, EAL, "Cannot mmap memory for rte_config! error %i (%s)\n",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -335,7 +335,7 @@ rte_eal_config_reattach(void)
 			return -1;
 		}
 		RTE_LOG(ERR, EAL, "Cannot mmap memory for rte_config! error %i (%s)\n",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -1421,7 +1421,7 @@ rte_eal_check_module(const char *module_name)
 	/* Check if there is sysfs mounted */
 	if (stat("/sys/module", &st) != 0) {
 		RTE_LOG(DEBUG, EAL, "sysfs is not mounted! error %i (%s)\n",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -1434,7 +1434,7 @@ rte_eal_check_module(const char *module_name)
 
 	if (stat(sysfs_mod_name, &st) != 0) {
 		RTE_LOG(DEBUG, EAL, "Module %s not found! error %i (%s)\n",
-		        sysfs_mod_name, errno, strerror(errno));
+			sysfs_mod_name, errno, rte_strerror(errno));
 		return 0;
 	}
 

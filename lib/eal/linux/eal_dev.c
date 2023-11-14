@@ -73,7 +73,7 @@ static void sigbus_handler(int signum, siginfo_t *info,
 	if (ret == -1) {
 		rte_exit(EXIT_FAILURE,
 			 "Failed to handle SIGBUS for hot-unplug, "
-			 "(rte_errno: %s)!", strerror(rte_errno));
+			 "(rte_errno: %s)!", rte_strerror(rte_errno));
 	} else if (ret == 1) {
 		if (sigbus_action_old.sa_flags == SA_SIGINFO
 		    && sigbus_action_old.sa_sigaction) {
