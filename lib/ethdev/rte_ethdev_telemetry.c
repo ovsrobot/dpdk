@@ -477,6 +477,7 @@ ethdev_parse_queue_params(const char *params, bool is_rx,
 	const char *qid_param;
 	uint16_t nb_queues;
 	char *end_param;
+	char *sp = NULL;
 	uint64_t qid;
 	int ret;
 
@@ -489,7 +490,7 @@ ethdev_parse_queue_params(const char *params, bool is_rx,
 	if (nb_queues == 1 && *end_param == '\0')
 		qid = 0;
 	else {
-		qid_param = strtok(end_param, ",");
+		qid_param = strtok_r(end_param, ",", &sp);
 		if (!qid_param || strlen(qid_param) == 0 || !isdigit(*qid_param))
 			return -EINVAL;
 
@@ -1221,9 +1222,10 @@ static int
 eth_dev_parse_tm_params(char *params, uint32_t *result)
 {
 	const char *splited_param;
+	char *sp = NULL;
 	uint64_t ret;
 
-	splited_param = strtok(params, ",");
+	splited_param = strtok_r(params, ",", &sp);
 	if (!splited_param || strlen(splited_param) == 0 || !isdigit(*splited_param))
 		return -EINVAL;
 
