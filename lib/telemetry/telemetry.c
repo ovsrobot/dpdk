@@ -411,6 +411,9 @@ client_handler(void *sock_id)
 static void *
 socket_listener(void *socket)
 {
+#define ERR_BUFF_SZ 256
+	char err_buf[ERR_BUFF_SZ] = {0};
+
 	while (1) {
 		pthread_t th;
 		int rc;
@@ -433,8 +436,9 @@ socket_listener(void *socket)
 		rc = pthread_create(&th, NULL, s->fn,
 				    (void *)(uintptr_t)s_accepted);
 		if (rc != 0) {
+			strerror_r(rc, err_buf, sizeof(err_buf));
 			TMTY_LOG(ERR, "Error with create client thread: %s\n",
-				 strerror(rc));
+				 err_buf);
 			close(s_accepted);
 			if (s->num_clients != NULL)
 				rte_atomic_fetch_sub_explicit(s->num_clients, 1,
@@ -467,9 +471,13 @@ unlink_sockets(void)
 static int
 create_socket(char *path)
 {
+#define ERR_BUFF_SZ 256
+	char err_buf[ERR_BUFF_SZ] = {0};
+
 	int sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
 	if (sock < 0) {
-		TMTY_LOG(ERR, "Error with socket creation, %s\n", strerror(errno));
+		strerror_r(errno, err_buf, sizeof(err_buf));
+		TMTY_LOG(ERR, "Error with socket creation, %s\n", err_buf);
 		return -1;
 	}
 
@@ -499,14 +507,16 @@ create_socket(char *path)
 		TMTY_LOG(DEBUG, "Attempting unlink and retrying bind\n");
 		unlink(sun.sun_path);
 		if (bind(sock, (void *) &sun, sizeof(sun)) < 0) {
-			TMTY_LOG(ERR, "Error binding socket: %s\n", strerror(errno));
+			strerror_r(errno, err_buf, sizeof(err_buf));
+			TMTY_LOG(ERR, "Error binding socket: %s\n", err_buf);
 			close(sock);
 			return -errno; /* if unlink failed, this will be -EADDRINUSE as above */
 		}
 	}
 
 	if (listen(sock, 1) < 0) {
-		TMTY_LOG(ERR, "Error calling listen for socket: %s\n", strerror(errno));
+		strerror_r(errno, err_buf, sizeof(err_buf));
+		TMTY_LOG(ERR, "Error calling listen for socket: %s\n", err_buf);
 		unlink(sun.sun_path);
 		close(sock);
 		return -errno;
@@ -531,6 +541,8 @@ set_thread_name(pthread_t id __rte_unused, const char *name __rte_unused)
 static int
 telemetry_legacy_init(void)
 {
+#define ERR_BUFF_SZ 256
+	char err_buf[ERR_BUFF_SZ] = {0};
 	pthread_t t_old;
 	int rc;
 
@@ -552,8 +564,9 @@ telemetry_legacy_init(void)
 	}
 	rc = pthread_create(&t_old, NULL, socket_listener, &v1_socket);
 	if (rc != 0) {
+		strerror_r(rc, err_buf, sizeof(err_buf));
 		TMTY_LOG(ERR, "Error with create legacy socket thread: %s\n",
-			 strerror(rc));
+			 err_buf);
 		close(v1_socket.sock);
 		v1_socket.sock = -1;
 		unlink(v1_socket.path);
@@ -570,7 +583,9 @@ telemetry_legacy_init(void)
 static int
 telemetry_v2_init(void)
 {
+#define ERR_BUFF_SZ 256
 	char spath[sizeof(v2_socket.path)];
+	char err_buf[ERR_BUFF_SZ] = {0};
 	pthread_t t_new;
 	short suffix = 0;
 	int rc;
@@ -606,8 +621,9 @@ telemetry_v2_init(void)
 	}
 	rc = pthread_create(&t_new, NULL, socket_listener, &v2_socket);
 	if (rc != 0) {
+		strerror_r(rc, err_buf, sizeof(err_buf));
 		TMTY_LOG(ERR, "Error with create socket thread: %s\n",
-			 strerror(rc));
+			 err_buf);
 		close(v2_socket.sock);
 		v2_socket.sock = -1;
 		unlink(v2_socket.path);
