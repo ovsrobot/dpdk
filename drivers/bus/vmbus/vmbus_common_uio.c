@@ -14,6 +14,7 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_bus_vmbus.h>
+#include <rte_errno.h>
 
 #include "private.h"
 
@@ -56,7 +57,7 @@ vmbus_uio_map_secondary(struct rte_vmbus_device *dev)
 	fd = open(uio_res->path, O_RDWR);
 	if (fd < 0) {
 		VMBUS_LOG(ERR, "Cannot open %s: %s",
-			  uio_res->path, strerror(errno));
+			  uio_res->path, rte_strerror(errno));
 		return -1;
 	}
 
