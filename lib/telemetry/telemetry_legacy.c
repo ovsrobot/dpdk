@@ -81,6 +81,8 @@ register_client(const char *cmd __rte_unused, const char *params,
 		char *buffer __rte_unused, int buf_len __rte_unused)
 {
 #ifndef RTE_EXEC_ENV_WINDOWS
+#define ERR_BUFF_SZ 256
+	char err_buf[ERR_BUFF_SZ] = {0};
 	pthread_t th;
 	char data[BUF_SIZE];
 	int fd;
@@ -117,8 +119,9 @@ register_client(const char *cmd __rte_unused, const char *params,
 	rc = pthread_create(&th, NULL, &legacy_client_handler,
 				(void *)(uintptr_t)fd);
 	if (rc != 0) {
+		(void)strerror_r(rc, err_buf, sizeof(err_buf));
 		fprintf(stderr, "Failed to create legacy client thread: %s\n",
-			strerror(rc));
+			err_buf);
 		close(fd);
 		return -1;
 	}
