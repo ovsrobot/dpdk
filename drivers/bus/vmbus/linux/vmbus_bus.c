@@ -18,6 +18,7 @@
 #include <rte_memory.h>
 #include <rte_malloc.h>
 #include <rte_bus_vmbus.h>
+#include <rte_errno.h>
 
 #include "eal_filesystem.h"
 #include "private.h"
@@ -50,7 +51,7 @@ parse_sysfs_uuid(const char *filename, rte_uuid_t uu)
 	f = fopen(filename, "r");
 	if (f == NULL) {
 		VMBUS_LOG(ERR, "cannot open sysfs value %s: %s",
-			  filename, strerror(errno));
+			  filename, rte_strerror(errno));
 		return -1;
 	}
 
@@ -92,7 +93,7 @@ get_sysfs_string(const char *filename, char *buf, size_t buflen)
 	f = fopen(filename, "r");
 	if (f == NULL) {
 		VMBUS_LOG(ERR, "cannot open sysfs value %s:%s",
-			  filename, strerror(errno));
+			  filename, rte_strerror(errno));
 		return -1;
 	}
 
@@ -350,7 +351,7 @@ rte_vmbus_scan(void)
 			return 0;
 
 		VMBUS_LOG(ERR, "opendir %s failed: %s",
-			  SYSFS_VMBUS_DEVICES, strerror(errno));
+			  SYSFS_VMBUS_DEVICES, rte_strerror(errno));
 		return -1;
 	}
 
