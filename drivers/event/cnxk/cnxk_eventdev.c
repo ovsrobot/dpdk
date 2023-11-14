@@ -478,7 +478,8 @@ parse_queue_param(char *value, void *opaque)
 	struct cnxk_sso_qos queue_qos = {0};
 	uint16_t *val = (uint16_t *)&queue_qos;
 	struct cnxk_sso_evdev *dev = opaque;
-	char *tok = strtok(value, "-");
+	char *sp = NULL;
+	char *tok = strtok_r(value, "-", &sp);
 	struct cnxk_sso_qos *old_ptr;
 
 	if (!strlen(value))
@@ -486,7 +487,7 @@ parse_queue_param(char *value, void *opaque)
 
 	while (tok != NULL) {
 		*val = atoi(tok);
-		tok = strtok(NULL, "-");
+		tok = strtok_r(NULL, "-", &sp);
 		val++;
 	}
 
@@ -514,7 +515,8 @@ parse_stash_param(char *value, void *opaque)
 	struct cnxk_sso_stash queue_stash = {0};
 	struct cnxk_sso_evdev *dev = opaque;
 	struct cnxk_sso_stash *old_ptr;
-	char *tok = strtok(value, "|");
+	char *sp = NULL;
+	char *tok = strtok_r(value, "|", &sp);
 	uint16_t *val;
 
 	if (!strlen(value))
@@ -523,7 +525,7 @@ parse_stash_param(char *value, void *opaque)
 	val = (uint16_t *)&queue_stash;
 	while (tok != NULL) {
 		*val = atoi(tok);
-		tok = strtok(NULL, "|");
+		tok = strtok_r(NULL, "|", &sp);
 		val++;
 	}
 
