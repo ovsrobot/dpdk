@@ -16,6 +16,7 @@
 
 #include <rte_thread.h>
 #include <rte_log.h>
+#include <rte_errno.h>
 
 #include "fd_man.h"
 #include "vduse.h"
@@ -129,7 +130,7 @@ read_fd_message(char *ifname, int sockfd, char *buf, int buflen, int *fds, int m
 	if (ret <= 0) {
 		if (ret)
 			VHOST_LOG_CONFIG(ifname, ERR, "recvmsg failed on fd %d (%s)\n",
-				sockfd, strerror(errno));
+				sockfd, rte_strerror(errno));
 		return ret;
 	}
 
@@ -200,7 +201,7 @@ send_fd_message(char *ifname, int sockfd, char *buf, int buflen, int *fds, int f
 
 	if (ret < 0) {
 		VHOST_LOG_CONFIG(ifname, ERR, "sendmsg error on fd %d (%s)\n",
-			sockfd, strerror(errno));
+			sockfd, rte_strerror(errno));
 		return ret;
 	}
 
@@ -358,7 +359,7 @@ create_unix_socket(struct vhost_user_socket *vsocket)
 	if (!vsocket->is_server && fcntl(fd, F_SETFL, O_NONBLOCK)) {
 		VHOST_LOG_CONFIG(vsocket->path, ERR,
 			"vhost-user: can't set nonblocking mode for socket, fd: %d (%s)\n",
-			fd, strerror(errno));
+			fd, rte_strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -392,7 +393,7 @@ vhost_user_start_server(struct vhost_user_socket *vsocket)
 	ret = bind(fd, (struct sockaddr *)&vsocket->un, sizeof(vsocket->un));
 	if (ret < 0) {
 		VHOST_LOG_CONFIG(path, ERR, "failed to bind: %s; remove it and try again\n",
-			strerror(errno));
+			rte_strerror(errno));
 		goto err;
 	}
 	VHOST_LOG_CONFIG(path, INFO, "binding succeeded\n");
@@ -445,7 +446,7 @@ vhost_user_connect_nonblock(char *path, int fd, struct sockaddr *un, size_t sz)
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0) {
 		VHOST_LOG_CONFIG(path, ERR, "can't get flags for connfd %d (%s)\n",
-			fd, strerror(errno));
+			fd, rte_strerror(errno));
 		return -2;
 	}
 	if ((flags & O_NONBLOCK) && fcntl(fd, F_SETFL, flags & ~O_NONBLOCK)) {
@@ -539,7 +540,7 @@ vhost_user_start_client(struct vhost_user_socket *vsocket)
 		return 0;
 	}
 
-	VHOST_LOG_CONFIG(path, WARNING, "failed to connect: %s\n", strerror(errno));
+	VHOST_LOG_CONFIG(path, WARNING, "failed to connect: %s\n", rte_strerror(errno));
 
 	if (ret == -2 || !vsocket->reconnect) {
 		close(fd);
