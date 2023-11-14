@@ -725,7 +725,7 @@ fman_finish(void)
 		if (unlikely(_errno < 0))
 			fprintf(stderr, "%s:%d:%s(): munmap() = %d (%s)\n",
 				__FILE__, __LINE__, __func__,
-				-errno, strerror(errno));
+				-errno, rte_strerror(errno));
 		printf("Tearing down %s\n", __if->node_path);
 		list_del(&__if->__if.node);
 		rte_free(__if);
