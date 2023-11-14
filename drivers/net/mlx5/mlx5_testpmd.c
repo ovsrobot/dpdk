@@ -199,13 +199,13 @@ mlx5_test_extend_devargs(char *identifier, char *extend)
 	socket_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
 	if (socket_fd < 0) {
 		TESTPMD_LOG(ERR, "Failed to create unix socket: %s\n",
-			    strerror(errno));
+			    rte_strerror(errno));
 		return -1;
 	}
 	rte_strlcpy(un.sun_path, path, sizeof(un.sun_path));
 	if (connect(socket_fd, (struct sockaddr *)&un, sizeof(un)) < 0) {
 		TESTPMD_LOG(ERR, "Failed to connect %s: %s\n", un.sun_path,
-			    strerror(errno));
+			    rte_strerror(errno));
 		close(socket_fd);
 		return -1;
 	}
@@ -216,7 +216,7 @@ mlx5_test_extend_devargs(char *identifier, char *extend)
 	} while (ret < 0 && errno == EINTR);
 	if (ret < 0) {
 		TESTPMD_LOG(ERR, "Failed to send request to (%s): %s\n", path,
-			    strerror(errno));
+			    rte_strerror(errno));
 		close(socket_fd);
 		return -1;
 	}
@@ -333,7 +333,7 @@ static void cmd_port_host_shaper_parsed(void *parsed_result,
 		ret = mlx5_test_set_port_host_shaper(res->port_num, res->fr,
 					   res->rate_num);
 	if (ret < 0)
-		printf("cmd_port_host_shaper error: (%s)\n", strerror(-ret));
+		printf("cmd_port_host_shaper error: (%s)\n", rte_strerror(-ret));
 }
 
 static cmdline_parse_token_string_t cmd_port_host_shaper_mlx5 =
@@ -492,7 +492,7 @@ mlx5_cmd_map_ext_rxq_parsed(void *parsed_result,
 			res->sw_queue_id);
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -565,7 +565,7 @@ mlx5_cmd_unmap_ext_rxq_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented or supported\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -648,7 +648,7 @@ mlx5_cmd_set_flow_engine_mode_parsed(void *parsed_result,
 	if (ret < 0)
 		fprintf(stderr, "Fail to set flow_engine to %s mode with flag 0x%x, error %s\n",
 			mode == RTE_PMD_MLX5_FLOW_ENGINE_MODE_ACTIVE ? "active" : "standby", flag,
-			strerror(-ret));
+			rte_strerror(-ret));
 	else
 		TESTPMD_LOG(DEBUG, "Set %d ports flow_engine to %s mode with flag 0x%x\n", ret,
 			mode == RTE_PMD_MLX5_FLOW_ENGINE_MODE_ACTIVE ? "active" : "standby", flag);

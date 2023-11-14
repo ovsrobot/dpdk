@@ -1195,14 +1195,14 @@ continue_dev_start:
 		ret = mlx5_dev_configure_rss_reta(dev);
 		if (ret) {
 			DRV_LOG(ERR, "port %u reta config failed: %s",
-				dev->data->port_id, strerror(rte_errno));
+				dev->data->port_id, rte_strerror(rte_errno));
 			return -rte_errno;
 		}
 	}
 	ret = mlx5_txpp_start(dev);
 	if (ret) {
 		DRV_LOG(ERR, "port %u Tx packet pacing init failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		goto error;
 	}
 	if (mlx5_devx_obj_ops_en(priv->sh) &&
@@ -1214,7 +1214,7 @@ continue_dev_start:
 	ret = mlx5_txq_start(dev);
 	if (ret) {
 		DRV_LOG(ERR, "port %u Tx queue allocation failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		goto error;
 	}
 	if (priv->config.std_delay_drop || priv->config.hp_delay_drop) {
@@ -1238,7 +1238,7 @@ continue_dev_start:
 	ret = mlx5_rxq_start(dev);
 	if (ret) {
 		DRV_LOG(ERR, "port %u Rx queue allocation failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		goto error;
 	}
 	/*
@@ -1248,7 +1248,7 @@ continue_dev_start:
 	ret = mlx5_hairpin_auto_bind(dev);
 	if (ret) {
 		DRV_LOG(ERR, "port %u hairpin auto binding failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		goto error;
 	}
 	/* Set started flag here for the following steps like control flow. */
@@ -1301,7 +1301,7 @@ continue_dev_start:
 	ret = mlx5_flow_start_default(dev);
 	if (ret) {
 		DRV_LOG(DEBUG, "port %u failed to start default actions: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		goto error;
 	}
 	if (mlx5_dev_ctx_shared_mempool_subscribe(dev) != 0) {
