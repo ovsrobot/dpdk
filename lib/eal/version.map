@@ -300,6 +300,7 @@ DPDK_24 {
 	rte_vfio_noiommu_is_enabled; # WINDOWS_NO_EXPORT
 	rte_vfio_release_device; # WINDOWS_NO_EXPORT
 	rte_vfio_setup_device; # WINDOWS_NO_EXPORT
+	rte_vfio_get_device_info; # WINDOWS_NO_EXPORT
 	rte_zmalloc;
 	rte_zmalloc_socket;
 

@@ -240,6 +240,32 @@ rte_vfio_get_group_num(const char *sysfs_base,
 		      const char *dev_addr, int *iommu_group_num);
 
 /**
+ * Get device information
+ *
+ * This function is only relevant to linux and will return
+ * an error on BSD.
+ *
+ * @param sysfs_base
+ *   sysfs path prefix.
+ *
+ * @param dev_addr
+ *   device location.
+ *
+ * @param vfio_dev_fd
+ *   VFIO fd.
+ *
+ * @param device_info
+ *   Device information.
+ *
+ * @return
+ *   0 on success.
+ *   <0 on failure.
+ */
+int
+rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
+			int *vfio_dev_fd, struct vfio_device_info *device_info);
+
+/**
  * Open a new VFIO container fd
  *
  * This function is only relevant to linux and will return
