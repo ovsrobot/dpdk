@@ -373,7 +373,7 @@ mlx4_rxmode_toggle(struct rte_eth_dev *dev, enum rxmode_toggle toggle)
 
 	ERROR("cannot toggle %s mode (code %d, \"%s\"),"
 	      " flow error type %d, cause %p, message: %s",
-	      mode, rte_errno, strerror(rte_errno), error.type, error.cause,
+	      mode, rte_errno, rte_strerror(rte_errno), error.type, error.cause,
 	      error.message ? error.message : "(unspecified)");
 	return ret;
 }
@@ -462,7 +462,7 @@ mlx4_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 	ERROR("failed to synchronize flow rules after removing MAC address"
 	      " at index %d (code %d, \"%s\"),"
 	      " flow error type %d, cause %p, message: %s",
-	      index, rte_errno, strerror(rte_errno), error.type, error.cause,
+	      index, rte_errno, rte_strerror(rte_errno), error.type, error.cause,
 	      error.message ? error.message : "(unspecified)");
 }
 
@@ -501,7 +501,7 @@ mlx4_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr,
 	ERROR("failed to synchronize flow rules after adding MAC address"
 	      " at index %d (code %d, \"%s\"),"
 	      " flow error type %d, cause %p, message: %s",
-	      index, rte_errno, strerror(rte_errno), error.type, error.cause,
+	      index, rte_errno, rte_strerror(rte_errno), error.type, error.cause,
 	      error.message ? error.message : "(unspecified)");
 	return ret;
 }
@@ -558,7 +558,7 @@ mlx4_set_mc_addr_list(struct rte_eth_dev *dev, struct rte_ether_addr *list,
 		return 0;
 	ERROR("failed to synchronize flow rules after modifying MC list,"
 	      " (code %d, \"%s\"), flow error type %d, cause %p, message: %s",
-	      rte_errno, strerror(rte_errno), error.type, error.cause,
+	      rte_errno, rte_strerror(rte_errno), error.type, error.cause,
 	      error.message ? error.message : "(unspecified)");
 	return ret;
 }
@@ -600,7 +600,7 @@ mlx4_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 	      " (code %d, \"%s\"), "
 	      " flow error type %d, cause %p, message: %s",
 	      on ? "enabling" : "disabling", vlan_id,
-	      rte_errno, strerror(rte_errno), error.type, error.cause,
+	      rte_errno, rte_strerror(rte_errno), error.type, error.cause,
 	      error.message ? error.message : "(unspecified)");
 	return ret;
 }
@@ -807,7 +807,7 @@ mlx4_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	}
 	(void)wait_to_complete;
 	if (mlx4_ifreq(priv, SIOCGIFFLAGS, &ifr)) {
-		WARN("ioctl(SIOCGIFFLAGS) failed: %s", strerror(rte_errno));
+		WARN("ioctl(SIOCGIFFLAGS) failed: %s", rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	memset(&dev_link, 0, sizeof(dev_link));
@@ -816,7 +816,7 @@ mlx4_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	ifr.ifr_data = (void *)&edata;
 	if (mlx4_ifreq(priv, SIOCETHTOOL, &ifr)) {
 		WARN("ioctl(SIOCETHTOOL, ETHTOOL_GSET) failed: %s",
-		     strerror(rte_errno));
+		     rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	link_speed = ethtool_cmd_speed(&edata);
@@ -858,7 +858,7 @@ mlx4_flow_ctrl_get(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 		ret = rte_errno;
 		WARN("ioctl(SIOCETHTOOL, ETHTOOL_GPAUSEPARAM)"
 		     " failed: %s",
-		     strerror(rte_errno));
+		     rte_strerror(rte_errno));
 		goto out;
 	}
 	fc_conf->autoneg = ethpause.autoneg;
@@ -913,7 +913,7 @@ mlx4_flow_ctrl_set(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 		ret = rte_errno;
 		WARN("ioctl(SIOCETHTOOL, ETHTOOL_SPAUSEPARAM)"
 		     " failed: %s",
-		     strerror(rte_errno));
+		     rte_strerror(rte_errno));
 		goto out;
 	}
 	ret = 0;
