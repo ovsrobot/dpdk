@@ -762,7 +762,7 @@ mlx5_common_dev_create(struct rte_device *eal_dev, uint32_t classes,
 	ret = mlx5_common_config_get(mkvlist, &cdev->config);
 	if (ret < 0) {
 		DRV_LOG(ERR, "Failed to process device arguments: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		rte_free(cdev);
 		return NULL;
 	}
@@ -837,7 +837,7 @@ mlx5_common_probe_again_args_validate(struct mlx5_common_device *cdev,
 	ret = mlx5_common_config_get(mkvlist, config);
 	if (ret) {
 		DRV_LOG(ERR, "Failed to process device configure: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		mlx5_free(config);
 		return ret;
 	}
@@ -1011,7 +1011,7 @@ mlx5_common_dev_probe(struct rte_device *eal_dev)
 		if (ret) {
 			DRV_LOG(ERR,
 				"Probe again parameters aren't compatible : %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			goto class_err;
 		}
 	}
