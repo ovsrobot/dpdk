@@ -772,7 +772,8 @@ mem_set_dump(void *ptr, size_t size, bool enable, uint64_t pagesz)
 
 	if (madvise(start, len, enable ? MADV_DODUMP : MADV_DONTDUMP) == -1) {
 		rte_log(RTE_LOG_INFO, vhost_config_log_level,
-			"VHOST_CONFIG: could not set coredump preference (%s).\n", strerror(errno));
+			"VHOST_CONFIG: could not set coredump preference (%s).\n",
+			rte_strerror(errno));
 	}
 #endif
 }
@@ -1138,7 +1139,7 @@ vhost_user_postcopy_region_register(struct virtio_net *dev,
 			(uint64_t)reg_struct.range.start +
 			(uint64_t)reg_struct.range.len - 1,
 			dev->postcopy_ufd,
-			strerror(errno));
+			rte_strerror(errno));
 		return -1;
 	}
 
@@ -1267,7 +1268,7 @@ vhost_user_mmap_region(struct virtio_net *dev,
 			MAP_SHARED | populate, region->fd, 0);
 
 	if (mmap_addr == MAP_FAILED) {
-		VHOST_LOG_CONFIG(dev->ifname, ERR, "mmap failed (%s).\n", strerror(errno));
+		VHOST_LOG_CONFIG(dev->ifname, ERR, "mmap failed (%s).\n", rte_strerror(errno));
 		return -1;
 	}
 
@@ -2698,7 +2699,7 @@ vhost_user_set_postcopy_advise(struct virtio_net **pdev,
 	if (dev->postcopy_ufd == -1) {
 		VHOST_LOG_CONFIG(dev->ifname, ERR,
 			"userfaultfd not available: %s\n",
-			strerror(errno));
+			rte_strerror(errno));
 		return RTE_VHOST_MSG_RESULT_ERR;
 	}
 	api_struct.api = UFFD_API;
@@ -2706,7 +2707,7 @@ vhost_user_set_postcopy_advise(struct virtio_net **pdev,
 	if (ioctl(dev->postcopy_ufd, UFFDIO_API, &api_struct)) {
 		VHOST_LOG_CONFIG(dev->ifname, ERR,
 			"UFFDIO_API ioctl failure: %s\n",
-			strerror(errno));
+			rte_strerror(errno));
 		close(dev->postcopy_ufd);
 		dev->postcopy_ufd = -1;
 		return RTE_VHOST_MSG_RESULT_ERR;
