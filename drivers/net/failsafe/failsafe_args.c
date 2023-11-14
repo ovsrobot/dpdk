@@ -112,7 +112,7 @@ fs_execute_cmd(struct sub_device *sdev, char *cmdline)
 	fp = popen(sdev->cmdline, "r");
 	if (fp == NULL) {
 		ret = -errno;
-		ERROR("popen: %s", strerror(errno));
+		ERROR("popen: %s", rte_strerror(errno));
 		return ret;
 	}
 	/* We only read one line */
@@ -131,7 +131,7 @@ fs_execute_cmd(struct sub_device *sdev, char *cmdline)
 		ERROR("Parsing device '%s' failed", output);
 ret_pclose:
 	if (pclose(fp) == -1)
-		ERROR("pclose: %s", strerror(errno));
+		ERROR("pclose: %s", rte_strerror(errno));
 	return ret;
 }
 
