@@ -49,7 +49,7 @@ tf_em_insert_int_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -113,7 +113,7 @@ tf_em_delete_int_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -153,7 +153,7 @@ tf_em_move_callback(void *user_data,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms.dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -163,7 +163,7 @@ tf_em_move_callback(void *user_data,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms.dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -202,7 +202,7 @@ tf_em_int_bind(struct tf *tfp,
 	cparms.alignment = 0;
 	if (tfp_calloc(&cparms) != 0) {
 		TFP_DRV_LOG(ERR, "em_rm_db alloc error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -232,7 +232,7 @@ tf_em_int_bind(struct tf *tfp,
 				    "%s, EM Allocation must be in blocks of %d, failure %s\n",
 				    tf_dir_2_str(i),
 				    TF_SESSION_EM_ENTRY_SIZE,
-				    strerror(-rc));
+				    rte_strerror(-rc));
 
 			return rc;
 		}
@@ -278,7 +278,7 @@ tf_em_int_bind(struct tf *tfp,
 				TFP_DRV_LOG(ERR,
 					 "%s, EM stack allocation failure %s\n",
 					 tf_dir_2_str(i),
-					 strerror(-rc));
+					 rte_strerror(-rc));
 				return rc;
 			}
 

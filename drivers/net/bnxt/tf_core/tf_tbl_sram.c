@@ -114,7 +114,7 @@ static int tf_tbl_sram_get_info(struct tf_tbl_sram_get_info_parms *parms)
 			    "%s: Failed to get hcapi_type %s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->tbl_type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	parms->bank_id = tf_tbl_sram_hcapi_2_bank[hcapi_type];
@@ -129,7 +129,7 @@ static int tf_tbl_sram_get_info(struct tf_tbl_sram_get_info_parms *parms)
 			    "%s: Failed to get slice cnt %s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->tbl_type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	if (slices)
@@ -168,7 +168,7 @@ tf_tbl_sram_unbind(struct tf *tfp __rte_unused)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get sram_handle from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	if (sram_handle)
@@ -204,7 +204,7 @@ tf_tbl_sram_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get tbl_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -214,7 +214,7 @@ tf_tbl_sram_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get sram_handle from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -290,7 +290,7 @@ tf_tbl_sram_free(struct tf *tfp __rte_unused,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -299,7 +299,7 @@ tf_tbl_sram_free(struct tf *tfp __rte_unused,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get sram_handle from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -345,7 +345,7 @@ tf_tbl_sram_free(struct tf *tfp __rte_unused,
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
 			    parms->idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		rc = -ENOMEM;
 		return rc;
 	}
@@ -417,7 +417,7 @@ tf_tbl_sram_set(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -426,7 +426,7 @@ tf_tbl_sram_set(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get sram_handle from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -489,7 +489,7 @@ tf_tbl_sram_set(struct tf *tfp,
 				    tf_dir_2_str(parms->dir),
 				    tf_tbl_type_2_str(parms->type),
 				    parms->idx,
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			rc = -ENOMEM;
 			return rc;
 		}
@@ -504,7 +504,7 @@ tf_tbl_sram_set(struct tf *tfp,
 			    "%s, Failed type lookup, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -519,7 +519,7 @@ tf_tbl_sram_set(struct tf *tfp,
 			    "%s, Set failed, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	return rc;
@@ -553,7 +553,7 @@ tf_tbl_sram_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -562,7 +562,7 @@ tf_tbl_sram_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get sram_handle from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -592,7 +592,7 @@ tf_tbl_sram_get(struct tf *tfp,
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
 			    parms->idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		rc = -ENOMEM;
 		return rc;
 	}
@@ -607,7 +607,7 @@ tf_tbl_sram_get(struct tf *tfp,
 			    "%s, Failed type lookup, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	if (parms->type == TF_TBL_TYPE_ACT_STATS_64)
@@ -626,7 +626,7 @@ tf_tbl_sram_get(struct tf *tfp,
 			    "%s, Get failed, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	return rc;
@@ -661,7 +661,7 @@ tf_tbl_sram_bulk_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -670,7 +670,7 @@ tf_tbl_sram_bulk_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get sram_handle from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -703,7 +703,7 @@ tf_tbl_sram_bulk_get(struct tf *tfp,
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
 			    parms->starting_idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		rc = -ENOMEM;
 		return rc;
 	}
@@ -716,7 +716,7 @@ tf_tbl_sram_bulk_get(struct tf *tfp,
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
 			    idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		rc = -ENOMEM;
 		return rc;
 	}
@@ -730,7 +730,7 @@ tf_tbl_sram_bulk_get(struct tf *tfp,
 			    "%s, Failed type lookup, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -751,7 +751,7 @@ tf_tbl_sram_bulk_get(struct tf *tfp,
 			    "%s, Bulk get failed, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 	return rc;
 }

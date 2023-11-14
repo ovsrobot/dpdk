@@ -216,7 +216,7 @@ tf_msg_session_client_register(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -224,7 +224,7 @@ tf_msg_session_client_register(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Unable to lookup FW id, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -291,7 +291,7 @@ tf_msg_session_client_unregister(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -299,7 +299,7 @@ tf_msg_session_client_unregister(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Unable to lookup FW id, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -361,7 +361,7 @@ tf_msg_session_qcfg(struct tf *tfp)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -370,7 +370,7 @@ tf_msg_session_qcfg(struct tf *tfp)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -378,7 +378,7 @@ tf_msg_session_qcfg(struct tf *tfp)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Unable to lookup FW id, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -447,7 +447,7 @@ tf_msg_session_resc_qcaps(struct tf *tfp,
 		TFP_DRV_LOG(WARNING,
 			    "%s: QCAPS message size error, rc:%s, request %d vs response %d\n",
 			    tf_dir_2_str(dir),
-			    strerror(EINVAL),
+			    rte_strerror(EINVAL),
 			    size,
 			    resp.size);
 	}
@@ -498,7 +498,7 @@ tf_msg_session_resc_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -509,7 +509,7 @@ tf_msg_session_resc_alloc(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -559,7 +559,7 @@ tf_msg_session_resc_alloc(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Alloc message size error, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(EINVAL));
+			    rte_strerror(EINVAL));
 		rc = -EINVAL;
 		goto cleanup;
 	}
@@ -605,7 +605,7 @@ tf_msg_session_resc_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -616,7 +616,7 @@ tf_msg_session_resc_info(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -666,7 +666,7 @@ tf_msg_session_resc_info(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Alloc message size error, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(EINVAL));
+			    rte_strerror(EINVAL));
 		rc = -EINVAL;
 		goto cleanup;
 	}
@@ -712,7 +712,7 @@ tf_msg_session_resc_flush(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -722,7 +722,7 @@ tf_msg_session_resc_flush(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -731,7 +731,7 @@ tf_msg_session_resc_flush(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -797,7 +797,7 @@ tf_msg_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -807,7 +807,7 @@ tf_msg_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -816,7 +816,7 @@ tf_msg_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -830,7 +830,7 @@ tf_msg_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Invalid parameters for msg type, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -893,7 +893,7 @@ tf_msg_hash_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -903,7 +903,7 @@ tf_msg_hash_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -912,7 +912,7 @@ tf_msg_hash_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -927,7 +927,7 @@ tf_msg_hash_insert_em_internal_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Record size to large, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -982,7 +982,7 @@ tf_msg_delete_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -992,7 +992,7 @@ tf_msg_delete_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1001,7 +1001,7 @@ tf_msg_delete_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1050,7 +1050,7 @@ tf_msg_move_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1060,7 +1060,7 @@ tf_msg_move_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1069,7 +1069,7 @@ tf_msg_move_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(em_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1120,7 +1120,7 @@ int tf_msg_ext_em_ctxt_mem_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1129,7 +1129,7 @@ int tf_msg_ext_em_ctxt_mem_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	/* Retrieve the session information */
@@ -1149,7 +1149,7 @@ int tf_msg_ext_em_ctxt_mem_alloc(struct tf *tfp,
 		rc = tfp_send_msg_direct(tf_session_get_bp(tfp), &parms);
 		if (rc) {
 			TFP_DRV_LOG(ERR, "Failed ext_em_alloc error rc:%s\n",
-				strerror(-rc));
+				rte_strerror(-rc));
 			return rc;
 		}
 
@@ -1180,7 +1180,7 @@ int tf_msg_ext_em_ctxt_mem_free(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1189,7 +1189,7 @@ int tf_msg_ext_em_ctxt_mem_free(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	/* Retrieve the session information */
@@ -1231,7 +1231,7 @@ tf_msg_em_mem_rgtr(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1240,7 +1240,7 @@ tf_msg_em_mem_rgtr(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	fw_se_id = tfs->session_id.internal.fw_session_id;
@@ -1284,7 +1284,7 @@ tf_msg_em_mem_unrgtr(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1293,7 +1293,7 @@ tf_msg_em_mem_unrgtr(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1334,7 +1334,7 @@ tf_msg_em_qcaps(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	fw_se_id = tfs->session_id.internal.fw_session_id;
@@ -1345,7 +1345,7 @@ tf_msg_em_qcaps(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1401,7 +1401,7 @@ tf_msg_em_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1411,7 +1411,7 @@ tf_msg_em_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1465,7 +1465,7 @@ tf_msg_ext_em_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1475,7 +1475,7 @@ tf_msg_ext_em_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	fw_se_id = tfs->session_id.internal.fw_session_id;
@@ -1534,7 +1534,7 @@ tf_msg_em_op(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1544,7 +1544,7 @@ tf_msg_em_op(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1585,7 +1585,7 @@ tf_msg_tcam_entry_set(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1594,7 +1594,7 @@ tf_msg_tcam_entry_set(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1664,7 +1664,7 @@ tf_msg_tcam_entry_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1673,7 +1673,7 @@ tf_msg_tcam_entry_get(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1705,7 +1705,7 @@ tf_msg_tcam_entry_get(struct tf *tfp,
 			    tf_dir_2_str(parms->dir),
 			    parms->key_size,
 			    resp.key_size,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	parms->key_size = resp.key_size;
@@ -1734,7 +1734,7 @@ tf_msg_tcam_entry_free(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1743,7 +1743,7 @@ tf_msg_tcam_entry_free(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(in_parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1793,7 +1793,7 @@ tf_msg_set_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1803,7 +1803,7 @@ tf_msg_set_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1812,7 +1812,7 @@ tf_msg_set_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1877,7 +1877,7 @@ tf_msg_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1887,7 +1887,7 @@ tf_msg_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1896,7 +1896,7 @@ tf_msg_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	flags = (dir == TF_DIR_TX ?
@@ -1964,7 +1964,7 @@ tf_msg_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1974,7 +1974,7 @@ tf_msg_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1983,7 +1983,7 @@ tf_msg_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2043,7 +2043,7 @@ tf_msg_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2053,7 +2053,7 @@ tf_msg_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2062,7 +2062,7 @@ tf_msg_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2082,7 +2082,7 @@ tf_msg_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Invalid parameters for msg type, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2140,7 +2140,7 @@ tf_msg_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2150,7 +2150,7 @@ tf_msg_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2159,7 +2159,7 @@ tf_msg_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Unable to lookup FW id, rc:%s\n",
 			    tf_dir_2_str(dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	flags = (dir == TF_DIR_TX ?
@@ -2217,7 +2217,7 @@ tf_msg_get_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2227,7 +2227,7 @@ tf_msg_get_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2278,7 +2278,7 @@ tf_msg_set_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(params->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2366,7 +2366,7 @@ tf_msg_session_set_hotup_state(struct tf *tfp, uint16_t state)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2375,7 +2375,7 @@ tf_msg_session_set_hotup_state(struct tf *tfp, uint16_t state)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2383,7 +2383,7 @@ tf_msg_session_set_hotup_state(struct tf *tfp, uint16_t state)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Unable to lookup FW id, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2421,7 +2421,7 @@ tf_msg_session_get_hotup_state(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2430,7 +2430,7 @@ tf_msg_session_get_hotup_state(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -2438,7 +2438,7 @@ tf_msg_session_get_hotup_state(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Unable to lookup FW id, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
