@@ -273,7 +273,7 @@ virtio_user_notify_queue(struct virtio_hw *hw, struct virtqueue *vq)
 
 	if (write(dev->kickfds[vq->vq_queue_index], &buf, sizeof(buf)) < 0)
 		PMD_DRV_LOG(ERR, "failed to kick backend: %s",
-			    strerror(errno));
+			    rte_strerror(errno));
 }
 
 static int
@@ -382,7 +382,7 @@ vdpa_dynamic_major_num(void)
 	fp = fopen("/proc/devices", "r");
 	if (fp == NULL) {
 		PMD_INIT_LOG(ERR, "Cannot open /proc/devices: %s",
-			     strerror(errno));
+			     rte_strerror(errno));
 		return UNNAMED_MAJOR;
 	}
 
@@ -409,7 +409,7 @@ virtio_user_backend_type(const char *path)
 			return VIRTIO_USER_BACKEND_VHOST_USER;
 
 		PMD_INIT_LOG(ERR, "Stat fails: %s (%s)", path,
-			     strerror(errno));
+			     rte_strerror(errno));
 		return VIRTIO_USER_BACKEND_UNKNOWN;
 	}
 

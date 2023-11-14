@@ -401,13 +401,13 @@ virtio_user_dev_init_notify(struct virtio_user_dev *dev)
 		 */
 		callfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 		if (callfd < 0) {
-			PMD_DRV_LOG(ERR, "(%s) callfd error, %s", dev->path, strerror(errno));
+			PMD_DRV_LOG(ERR, "(%s) callfd error, %s", dev->path, rte_strerror(errno));
 			goto err;
 		}
 		kickfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 		if (kickfd < 0) {
 			close(callfd);
-			PMD_DRV_LOG(ERR, "(%s) kickfd error, %s", dev->path, strerror(errno));
+			PMD_DRV_LOG(ERR, "(%s) kickfd error, %s", dev->path, rte_strerror(errno));
 			goto err;
 		}
 		dev->callfds[i] = callfd;
@@ -1043,7 +1043,7 @@ virtio_user_control_queue_notify(struct virtqueue *vq, void *cookie)
 
 	if (write(dev->kickfds[vq->vq_queue_index], &buf, sizeof(buf)) < 0)
 		PMD_DRV_LOG(ERR, "failed to kick backend: %s",
-			    strerror(errno));
+			    rte_strerror(errno));
 }
 
 int
@@ -1264,7 +1264,7 @@ virtio_user_dev_server_reconnect(struct virtio_user_dev *dev)
 
 	if (dev->ops->get_features(dev, &dev->device_features) < 0) {
 		PMD_INIT_LOG(ERR, "get_features failed: %s",
-			     strerror(errno));
+			     rte_strerror(errno));
 		return -1;
 	}
 
