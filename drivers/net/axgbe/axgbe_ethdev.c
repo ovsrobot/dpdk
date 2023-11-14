@@ -12,6 +12,8 @@
 
 #include "eal_filesystem.h"
 
+#include <rte_vect.h>
+
 #ifdef RTE_ARCH_X86
 #include <cpuid.h>
 #else
@@ -2137,15 +2139,15 @@ axgbe_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct axgbe_port *pdata = dev->data->dev_private;
 
+	dev->tx_pkt_burst = &axgbe_xmit_pkts;
+
 	if (pdata->multi_segs_tx)
 		dev->tx_pkt_burst = &axgbe_xmit_pkts_seg;
 #ifdef RTE_ARCH_X86
 	struct axgbe_tx_queue *txq = dev->data->tx_queues[0];
-	if (!txq->vector_disable &&
+	else if (!txq->vector_disable &&
 			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128)
 		dev->tx_pkt_burst = &axgbe_xmit_pkts_vec;
-#else
-	dev->tx_pkt_burst = &axgbe_xmit_pkts;
 #endif
 }
 
