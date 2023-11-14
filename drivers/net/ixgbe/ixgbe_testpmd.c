@@ -141,7 +141,7 @@ cmd_set_vf_split_drop_en_parsed(void *parsed_result,
 		fprintf(stderr, "not supported on port %d\n", res->port_id);
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -243,7 +243,7 @@ cmd_set_macsec_offload_on_parsed(void *parsed_result,
 		fprintf(stderr, "not supported on port %d\n", port_id);
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -327,7 +327,7 @@ cmd_set_macsec_offload_off_parsed(void *parsed_result,
 		fprintf(stderr, "not supported on port %d\n", port_id);
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -402,7 +402,7 @@ cmd_set_macsec_sc_parsed(void *parsed_result,
 		fprintf(stderr, "not supported on port %d\n", res->port_id);
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -510,7 +510,7 @@ cmd_set_macsec_sa_parsed(void *parsed_result,
 		fprintf(stderr, "not supported on port %d\n", res->port_id);
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -599,7 +599,7 @@ cmd_tc_min_bw_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
