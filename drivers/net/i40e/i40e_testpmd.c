@@ -53,7 +53,7 @@ cmd_queue_region_parsed(void *parsed_result,
 		break;
 	default:
 		fprintf(stderr, "queue region config error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 	}
 }
 
@@ -148,7 +148,7 @@ cmd_region_flowtype_parsed(void *parsed_result,
 		break;
 	default:
 		fprintf(stderr, "region flowtype config error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 	}
 }
 
@@ -233,7 +233,7 @@ cmd_user_priority_region_parsed(void *parsed_result,
 		break;
 	default:
 		fprintf(stderr, "user_priority region config error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 	}
 }
 
@@ -320,7 +320,7 @@ cmd_flush_queue_region_parsed(void *parsed_result,
 		break;
 	default:
 		fprintf(stderr, "queue region config flush error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 	}
 }
 
@@ -433,7 +433,7 @@ cmd_show_queue_region_info_parsed(void *parsed_result,
 		break;
 	default:
 		fprintf(stderr, "queue region config info show error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 	}
 }
 
@@ -536,7 +536,7 @@ cmd_flow_director_filter_parsed(void *parsed_result,
 							add);
 	if (ret < 0)
 		fprintf(stderr, "flow director config error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 	close_file(conf.input.packet);
 }
 
@@ -666,7 +666,7 @@ cmd_set_vf_promisc_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -745,7 +745,7 @@ cmd_set_vf_allmulti_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -825,7 +825,7 @@ cmd_set_vf_broadcast_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -908,7 +908,7 @@ cmd_set_vf_vlan_tag_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -1013,7 +1013,7 @@ cmd_vf_max_bw_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -1108,7 +1108,7 @@ cmd_vf_tc_min_bw_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -1158,7 +1158,7 @@ cmd_vf_tc_max_bw_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -1207,7 +1207,7 @@ cmd_strict_link_prio_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -1928,7 +1928,7 @@ cmd_pctype_mapping_reset_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -2000,7 +2000,7 @@ cmd_pctype_mapping_get_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		return;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 		return;
 	}
 
@@ -2111,7 +2111,7 @@ cmd_pctype_mapping_update_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -2191,7 +2191,7 @@ cmd_ptype_mapping_get_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 
 	if (!ret) {
@@ -2280,7 +2280,7 @@ cmd_ptype_mapping_replace_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -2347,7 +2347,7 @@ cmd_ptype_mapping_reset_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
@@ -2427,7 +2427,7 @@ cmd_ptype_mapping_update_parsed(void *parsed_result,
 		fprintf(stderr, "function not implemented\n");
 		break;
 	default:
-		fprintf(stderr, "programming error: (%s)\n", strerror(-ret));
+		fprintf(stderr, "programming error: (%s)\n", rte_strerror(-ret));
 	}
 }
 
