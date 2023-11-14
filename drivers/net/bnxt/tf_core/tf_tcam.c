@@ -57,7 +57,7 @@ tf_tcam_bind(struct tf *tfp,
 		rc = -EOPNOTSUPP;
 		TFP_DRV_LOG(ERR,
 			    "Operation not supported, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -91,7 +91,7 @@ tf_tcam_bind(struct tf *tfp,
 	cparms.alignment = 0;
 	if (tfp_calloc(&cparms) != 0) {
 		TFP_DRV_LOG(ERR, "tcam_rm_db alloc error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -301,7 +301,7 @@ tf_tcam_alloc(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -320,7 +320,7 @@ tf_tcam_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get tcam_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tcam_db = (struct tcam_rm_db *)tcam_db_ptr;
@@ -385,7 +385,7 @@ tf_tcam_free(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -417,7 +417,7 @@ tf_tcam_free(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tcam_db = (struct tcam_rm_db *)tcam_db_ptr;
@@ -477,7 +477,7 @@ tf_tcam_free(struct tf *tfp,
 			    tf_dir_2_str(parms->dir),
 			    tf_tcam_tbl_2_str(parms->type),
 			    parms->idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -515,7 +515,7 @@ tf_tcam_set(struct tf *tfp __rte_unused,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -535,7 +535,7 @@ tf_tcam_set(struct tf *tfp __rte_unused,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tcam_db = (struct tcam_rm_db *)tcam_db_ptr;
@@ -579,7 +579,7 @@ tf_tcam_set(struct tf *tfp __rte_unused,
 			    tf_dir_2_str(parms->dir),
 			    tf_tcam_tbl_2_str(parms->type),
 			    parms->idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	return 0;
@@ -618,7 +618,7 @@ tf_tcam_get(struct tf *tfp __rte_unused,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tcam_db = (struct tcam_rm_db *)tcam_db_ptr;
@@ -662,7 +662,7 @@ tf_tcam_get(struct tf *tfp __rte_unused,
 			    tf_dir_2_str(parms->dir),
 			    tf_tcam_tbl_2_str(parms->type),
 			    parms->idx,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 

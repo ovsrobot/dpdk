@@ -83,7 +83,7 @@ tf_global_cfg_bind(struct tf *tfp,
 	cparms.alignment = 0;
 	if (tfp_calloc(&cparms) != 0) {
 		TFP_DRV_LOG(ERR, "global_rm_db alloc error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -141,7 +141,7 @@ tf_global_cfg_set(struct tf *tfp,
 			    "%s, Failed type lookup, type:%d, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    parms->type,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -151,7 +151,7 @@ tf_global_cfg_set(struct tf *tfp,
 			    "%s, Set failed, type:%d, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    parms->type,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return 0;
@@ -185,7 +185,7 @@ tf_global_cfg_get(struct tf *tfp,
 			    "%s, Failed type lookup, type:%d, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    parms->type,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -196,7 +196,7 @@ tf_global_cfg_get(struct tf *tfp,
 			    "%s, Get failed, type:%d, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    parms->type,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return 0;
