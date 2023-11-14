@@ -92,7 +92,7 @@ vhost_kernel_ioctl(int fd, uint64_t request, void *arg)
 	ret = ioctl(fd, request, arg);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Vhost-kernel ioctl %"PRIu64" failed (%s)",
-				request, strerror(errno));
+				request, rte_strerror(errno));
 		return -1;
 	}
 
@@ -428,7 +428,7 @@ vhost_kernel_setup(struct virtio_user_dev *dev)
 	for (i = 0; i < dev->max_queue_pairs; ++i) {
 		vhostfd = open(dev->path, O_RDWR);
 		if (vhostfd < 0) {
-			PMD_DRV_LOG(ERR, "fail to open %s, %s", dev->path, strerror(errno));
+			PMD_DRV_LOG(ERR, "fail to open %s, %s", dev->path, rte_strerror(errno));
 			goto err_tapfds;
 		}
 		data->vhostfds[i] = vhostfd;
@@ -511,14 +511,14 @@ vhost_kernel_set_backend(int vhostfd, int tapfd)
 	f.index = 0;
 	if (ioctl(vhostfd, VHOST_NET_SET_BACKEND, &f) < 0) {
 		PMD_DRV_LOG(ERR, "VHOST_NET_SET_BACKEND fails, %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
 	f.index = 1;
 	if (ioctl(vhostfd, VHOST_NET_SET_BACKEND, &f) < 0) {
 		PMD_DRV_LOG(ERR, "VHOST_NET_SET_BACKEND fails, %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 

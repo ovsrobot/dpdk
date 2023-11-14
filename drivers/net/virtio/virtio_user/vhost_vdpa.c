@@ -92,7 +92,7 @@ vhost_vdpa_ioctl(int fd, uint64_t request, void *arg)
 	ret = ioctl(fd, request, arg);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Vhost-vDPA ioctl %"PRIu64" failed (%s)",
-				request, strerror(errno));
+				request, rte_strerror(errno));
 		return -1;
 	}
 
@@ -186,7 +186,7 @@ vhost_vdpa_iotlb_batch_begin(struct virtio_user_dev *dev)
 
 	if (write(data->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
 		PMD_DRV_LOG(ERR, "Failed to send IOTLB batch begin (%s)",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -212,7 +212,7 @@ vhost_vdpa_iotlb_batch_end(struct virtio_user_dev *dev)
 
 	if (write(data->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
 		PMD_DRV_LOG(ERR, "Failed to send IOTLB batch end (%s)",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -243,7 +243,7 @@ vhost_vdpa_dma_map(struct virtio_user_dev *dev, void *addr,
 
 	if (write(data->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
 		PMD_DRV_LOG(ERR, "Failed to send IOTLB update (%s)",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -272,7 +272,7 @@ vhost_vdpa_dma_unmap(struct virtio_user_dev *dev, __rte_unused void *addr,
 
 	if (write(data->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
 		PMD_DRV_LOG(ERR, "Failed to send IOTLB invalidate (%s)",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -530,7 +530,7 @@ vhost_vdpa_setup(struct virtio_user_dev *dev)
 	data->vhostfd = open(dev->path, O_RDWR);
 	if (data->vhostfd < 0) {
 		PMD_DRV_LOG(ERR, "Failed to open %s: %s",
-				dev->path, strerror(errno));
+				dev->path, rte_strerror(errno));
 		free(data);
 		return -1;
 	}
