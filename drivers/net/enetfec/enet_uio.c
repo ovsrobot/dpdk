@@ -231,7 +231,7 @@ enetfec_configure(void)
 	d = opendir(FEC_UIO_DEVICE_SYS_ATTR_PATH);
 	if (d == NULL) {
 		ENETFEC_PMD_ERR("\nError opening directory '%s': %s\n",
-			FEC_UIO_DEVICE_SYS_ATTR_PATH, strerror(errno));
+			FEC_UIO_DEVICE_SYS_ATTR_PATH, rte_strerror(errno));
 		return -1;
 	}
 
