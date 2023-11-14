@@ -120,7 +120,7 @@ sfc_ft_tunnel_rule_detect(struct sfc_adapter *sa,
 		if (rc != 0) {
 			/* The loop above might have spotted wrong actions. */
 			sfc_err(sa, "FT: TUNNEL: invalid actions: %s",
-				strerror(rc));
+				rte_strerror(rc));
 			goto fail;
 		}
 
