@@ -265,7 +265,7 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 		if (ret != 0) {
 			RTE_LOG(INFO, LATENCY_STATS,
 				"Error during getting device (port %u) info: %s\n",
-				pid, strerror(-ret));
+				pid, rte_strerror(-ret));
 
 			continue;
 		}
@@ -309,7 +309,7 @@ rte_latencystats_uninit(void)
 		if (ret != 0) {
 			RTE_LOG(INFO, LATENCY_STATS,
 				"Error during getting device (port %u) info: %s\n",
-				pid, strerror(-ret));
+				pid, rte_strerror(-ret));
 
 			continue;
 		}
