@@ -761,7 +761,7 @@ cnxk_nix_tel_handle_info_x(const char *cmd, const char *params,
 			   struct plt_tel_data *d)
 {
 	struct nix_tel_node *node;
-	char *name, *param;
+	char *name, *param, *sp = NULL;
 	char buf[1024];
 	int rc = -1;
 
@@ -769,11 +769,11 @@ cnxk_nix_tel_handle_info_x(const char *cmd, const char *params,
 		goto exit;
 
 	plt_strlcpy(buf, params, PCI_PRI_STR_SIZE + 1);
-	name = strtok(buf, ",");
+	name = strtok_s(buf, ",", &sp);
 	if (name == NULL)
 		goto exit;
 
-	param = strtok(NULL, "\0");
+	param = strtok_s(NULL, "\0", &sp);
 
 	node = nix_tel_node_get_by_pcidev_name(name);
 	if (!node)
@@ -782,7 +782,7 @@ cnxk_nix_tel_handle_info_x(const char *cmd, const char *params,
 	plt_tel_data_start_dict(d);
 
 	if (strstr(cmd, "rq")) {
-		char *tok = strtok(param, ",");
+		char *tok = strtok_s(param, ",", &sp);
 		int rq;
 
 		if (!tok)
@@ -798,7 +798,7 @@ cnxk_nix_tel_handle_info_x(const char *cmd, const char *params,
 			rc = cnxk_tel_nix_rq(node->rqs[rq], d);
 
 	} else if (strstr(cmd, "cq")) {
-		char *tok = strtok(param, ",");
+		char *tok = strtok_s(param, ",", &sp);
 		int cq;
 
 		if (!tok)
@@ -814,7 +814,7 @@ cnxk_nix_tel_handle_info_x(const char *cmd, const char *params,
 			rc = cnxk_tel_nix_cq(node->cqs[cq], d);
 
 	} else if (strstr(cmd, "sq")) {
-		char *tok = strtok(param, ",");
+		char *tok = strtok_s(param, ",", &sp);
 		int sq;
 
 		if (!tok)
