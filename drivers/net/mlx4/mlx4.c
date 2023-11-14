@@ -255,7 +255,7 @@ mlx4_dev_configure(struct rte_eth_dev *dev)
 	if (ret) {
 		ERROR("cannot set up internal flow rules (code %d, \"%s\"),"
 		      " flow error type %d, cause %p, message: %s",
-		      -ret, strerror(-ret), error.type, error.cause,
+		      -ret, rte_strerror(-ret), error.type, error.cause,
 		      error.message ? error.message : "(unspecified)");
 		goto exit;
 	}
@@ -302,7 +302,7 @@ mlx4_dev_start(struct rte_eth_dev *dev)
 	ret = mlx4_rss_init(priv);
 	if (ret) {
 		ERROR("%p: cannot initialize RSS resources: %s",
-		      (void *)dev, strerror(-ret));
+		      (void *)dev, rte_strerror(-ret));
 		goto err;
 	}
 #ifdef RTE_LIBRTE_MLX4_DEBUG
@@ -319,7 +319,7 @@ mlx4_dev_start(struct rte_eth_dev *dev)
 		ERROR("%p: cannot attach flow rules (code %d, \"%s\"),"
 		      " flow error type %d, cause %p, message: %s",
 		      (void *)dev,
-		      -ret, strerror(-ret), error.type, error.cause,
+		      -ret, rte_strerror(-ret), error.type, error.cause,
 		      error.message ? error.message : "(unspecified)");
 		goto err;
 	}
@@ -793,7 +793,7 @@ mlx4_pci_probe(struct rte_pci_driver *pci_drv, struct rte_pci_device *pci_dev)
 	err = mlx4_init_once();
 	if (err) {
 		ERROR("unable to init PMD global data: %s",
-		      strerror(rte_errno));
+		      rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	MLX4_ASSERT(pci_drv == &mlx4_driver);
@@ -946,7 +946,7 @@ err_secondary:
 		err = mlx4_glue->query_port(ctx, port, &port_attr);
 		if (err) {
 			err = ENODEV;
-			ERROR("port query failed: %s", strerror(err));
+			ERROR("port query failed: %s", rte_strerror(err));
 			goto port_error;
 		}
 		if (port_attr.link_layer != IBV_LINK_LAYER_ETHERNET) {
@@ -963,7 +963,7 @@ err_secondary:
 		err = mlx4_fd_set_non_blocking(ctx->async_fd);
 		if (err) {
 			ERROR("cannot make asynchronous FD non-blocking: %s",
-			      strerror(err));
+			      rte_strerror(err));
 			goto port_error;
 		}
 		/* Allocate protection domain. */
@@ -1024,7 +1024,7 @@ err_secondary:
 		err = mlx4_get_mac(priv, &mac.addr_bytes);
 		if (err) {
 			ERROR("cannot get MAC address, is mlx4_en loaded?"
-			      " (error: %s)", strerror(err));
+			      " (error: %s)", rte_strerror(err));
 			goto port_error;
 		}
 		INFO("port %u MAC address is " RTE_ETHER_ADDR_PRT_FMT,
