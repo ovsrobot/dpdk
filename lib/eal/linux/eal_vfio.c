@@ -1223,6 +1223,25 @@ vfio_set_iommu_type(int vfio_container_fd)
 }
 
 int
+rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
+			int *vfio_dev_fd, struct vfio_device_info *device_info)
+{
+	if (!device_info || *vfio_dev_fd < 0)
+		return -1;
+
+	if (*vfio_dev_fd == 0) {
+		if (rte_vfio_setup_device(sysfs_base, dev_addr,
+				vfio_dev_fd, device_info))
+			return -1;
+	} else {
+		if (ioctl(*vfio_dev_fd, VFIO_DEVICE_GET_INFO, &device_info))
+			return -1;
+	}
+
+	return 0;
+}
+
+int
 vfio_has_supported_extensions(int vfio_container_fd)
 {
 	int ret;
