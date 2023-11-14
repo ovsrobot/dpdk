@@ -103,9 +103,10 @@ parser_usecases_read(char *usecases)
 {
 	bool valid = false;
 	uint32_t i, j = 0;
+	char *sp = NULL;
 	char *token;
 
-	token = strtok(usecases, ",");
+	token = strtok_r(usecases, ",", &sp);
 	while (token != NULL) {
 		for (i = 0; i < RTE_DIM(supported_usecases); i++) {
 			if (strcmp(supported_usecases[i], token) == 0) {
@@ -116,7 +117,7 @@ parser_usecases_read(char *usecases)
 				break;
 			}
 		}
-		token = strtok(NULL, ",");
+		token = strtok_r(NULL, ",", &sp);
 	}
 
 	return valid;
