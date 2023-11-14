@@ -8,6 +8,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <rte_errno.h>
+
 #include "roc_api.h"
 #include "roc_priv.h"
 
@@ -1313,7 +1315,7 @@ dev_lmt_setup(struct dev *dev)
 	mz = plt_lmt_region_reserve_aligned(name, LMT_REGION_SIZE,
 					    LMT_REGION_SIZE);
 	if (!mz) {
-		plt_err("Memory alloc failed: %s", strerror(errno));
+		plt_err("Memory alloc failed: %s", rte_strerror(errno));
 		goto fail;
 	}
 
