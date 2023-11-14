@@ -1027,7 +1027,7 @@ rte_fbarray_destroy(struct rte_fbarray *arr)
 		eal_get_fbarray_path(path, sizeof(path), arr->name);
 		if (unlink(path)) {
 			RTE_LOG(DEBUG, EAL, "Cannot unlink fbarray: %s\n",
-				strerror(errno));
+				rte_strerror(errno));
 			rte_errno = errno;
 			/*
 			 * we're still holding an exclusive lock, so drop it to

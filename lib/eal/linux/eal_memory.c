@@ -105,7 +105,7 @@ rte_mem_virt2phy(const void *virtaddr)
 	fd = open("/proc/self/pagemap", O_RDONLY);
 	if (fd < 0) {
 		RTE_LOG(INFO, EAL, "%s(): cannot open /proc/self/pagemap: %s\n",
-			__func__, strerror(errno));
+			__func__, rte_strerror(errno));
 		return RTE_BAD_IOVA;
 	}
 
@@ -113,7 +113,7 @@ rte_mem_virt2phy(const void *virtaddr)
 	offset = sizeof(uint64_t) * virt_pfn;
 	if (lseek(fd, offset, SEEK_SET) == (off_t) -1) {
 		RTE_LOG(INFO, EAL, "%s(): seek error in /proc/self/pagemap: %s\n",
-				__func__, strerror(errno));
+				__func__, rte_strerror(errno));
 		close(fd);
 		return RTE_BAD_IOVA;
 	}
@@ -122,7 +122,7 @@ rte_mem_virt2phy(const void *virtaddr)
 	close(fd);
 	if (retval < 0) {
 		RTE_LOG(INFO, EAL, "%s(): cannot read /proc/self/pagemap: %s\n",
-				__func__, strerror(errno));
+				__func__, rte_strerror(errno));
 		return RTE_BAD_IOVA;
 	} else if (retval != PFN_MASK_SIZE) {
 		RTE_LOG(INFO, EAL, "%s(): read %d bytes from /proc/self/pagemap "
@@ -237,7 +237,7 @@ static int huge_wrap_sigsetjmp(void)
 /* Callback for numa library. */
 void numa_error(char *where)
 {
-	RTE_LOG(ERR, EAL, "%s failed: %s\n", where, strerror(errno));
+	RTE_LOG(ERR, EAL, "%s failed: %s\n", where, rte_strerror(errno));
 }
 #endif
 
@@ -278,7 +278,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 				  oldmask->size + 1, 0, 0) < 0) {
 			RTE_LOG(ERR, EAL,
 				"Failed to get current mempolicy: %s. "
-				"Assuming MPOL_DEFAULT.\n", strerror(errno));
+				"Assuming MPOL_DEFAULT.\n", rte_strerror(errno));
 			oldpolicy = MPOL_DEFAULT;
 		}
 		for (i = 0; i < RTE_MAX_NUMA_NODES; i++)
@@ -333,7 +333,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 		fd = open(hf->filepath, O_CREAT | O_RDWR, 0600);
 		if (fd < 0) {
 			RTE_LOG(DEBUG, EAL, "%s(): open failed: %s\n", __func__,
-					strerror(errno));
+					rte_strerror(errno));
 			goto out;
 		}
 
@@ -346,7 +346,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 				MAP_SHARED | MAP_POPULATE, fd, 0);
 		if (virtaddr == MAP_FAILED) {
 			RTE_LOG(DEBUG, EAL, "%s(): mmap failed: %s\n", __func__,
-					strerror(errno));
+					rte_strerror(errno));
 			close(fd);
 			goto out;
 		}
@@ -379,7 +379,7 @@ map_all_hugepages(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi,
 		/* set shared lock on the file. */
 		if (flock(fd, LOCK_SH) < 0) {
 			RTE_LOG(DEBUG, EAL, "%s(): Locking file failed:%s \n",
-				__func__, strerror(errno));
+				__func__, rte_strerror(errno));
 			close(fd);
 			goto out;
 		}
@@ -397,7 +397,7 @@ out:
 		} else if (set_mempolicy(oldpolicy, oldmask->maskp,
 					 oldmask->size + 1) < 0) {
 			RTE_LOG(ERR, EAL, "Failed to restore mempolicy: %s\n",
-				strerror(errno));
+				rte_strerror(errno));
 			numa_set_localalloc();
 		}
 	}
@@ -590,7 +590,7 @@ unlink_hugepage_files(struct hugepage_file *hugepg_tbl,
 
 		if (hp->orig_va != NULL && unlink(hp->filepath)) {
 			RTE_LOG(WARNING, EAL, "%s(): Removing %s failed: %s\n",
-				__func__, hp->filepath, strerror(errno));
+				__func__, hp->filepath, rte_strerror(errno));
 		}
 	}
 	return 0;
@@ -640,7 +640,8 @@ unmap_unneeded_hugepages(struct hugepage_file *hugepg_tbl,
 						hp->orig_va = NULL;
 						if (unlink(hp->filepath) == -1) {
 							RTE_LOG(ERR, EAL, "%s(): Removing %s failed: %s\n",
-									__func__, hp->filepath, strerror(errno));
+								__func__, hp->filepath,
+								rte_strerror(errno));
 							return -1;
 						}
 					} else {
@@ -736,13 +737,13 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 		fd = open(hfile->filepath, O_RDWR);
 		if (fd < 0) {
 			RTE_LOG(ERR, EAL, "Could not open '%s': %s\n",
-					hfile->filepath, strerror(errno));
+					hfile->filepath, rte_strerror(errno));
 			return -1;
 		}
 		/* set shared lock on the file. */
 		if (flock(fd, LOCK_SH) < 0) {
 			RTE_LOG(DEBUG, EAL, "Could not lock '%s': %s\n",
-					hfile->filepath, strerror(errno));
+					hfile->filepath, rte_strerror(errno));
 			close(fd);
 			return -1;
 		}
@@ -756,7 +757,7 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 				MAP_SHARED | MAP_POPULATE | MAP_FIXED, fd, 0);
 		if (addr == MAP_FAILED) {
 			RTE_LOG(ERR, EAL, "Couldn't remap '%s': %s\n",
-					hfile->filepath, strerror(errno));
+					hfile->filepath, rte_strerror(errno));
 			close(fd);
 			return -1;
 		}
@@ -1178,13 +1179,13 @@ eal_legacy_hugepage_init(void)
 		memfd = memfd_create("nohuge", 0);
 		if (memfd < 0) {
 			RTE_LOG(DEBUG, EAL, "Cannot create memfd: %s\n",
-					strerror(errno));
+					rte_strerror(errno));
 			RTE_LOG(DEBUG, EAL, "Falling back to anonymous map\n");
 		} else {
 			/* we got an fd - now resize it */
 			if (ftruncate(memfd, internal_conf->memory) < 0) {
 				RTE_LOG(ERR, EAL, "Cannot resize memfd: %s\n",
-						strerror(errno));
+						rte_strerror(errno));
 				RTE_LOG(ERR, EAL, "Falling back to anonymous map\n");
 				close(memfd);
 			} else {
@@ -1212,7 +1213,7 @@ eal_legacy_hugepage_init(void)
 				flags | MAP_FIXED, fd, 0);
 		if (addr == MAP_FAILED || addr != prealloc_addr) {
 			RTE_LOG(ERR, EAL, "%s: mmap() failed: %s\n", __func__,
-					strerror(errno));
+					rte_strerror(errno));
 			munmap(prealloc_addr, mem_sz);
 			return -1;
 		}
@@ -1571,7 +1572,7 @@ eal_legacy_hugepage_attach(void)
 		fd = open(hf->filepath, O_RDWR);
 		if (fd < 0) {
 			RTE_LOG(ERR, EAL, "Could not open %s: %s\n",
-				hf->filepath, strerror(errno));
+				hf->filepath, rte_strerror(errno));
 			goto error;
 		}
 
@@ -1579,14 +1580,14 @@ eal_legacy_hugepage_attach(void)
 				MAP_SHARED | MAP_FIXED, fd, 0);
 		if (map_addr == MAP_FAILED) {
 			RTE_LOG(ERR, EAL, "Could not map %s: %s\n",
-				hf->filepath, strerror(errno));
+				hf->filepath, rte_strerror(errno));
 			goto fd_error;
 		}
 
 		/* set shared lock on the file. */
 		if (flock(fd, LOCK_SH) < 0) {
 			RTE_LOG(DEBUG, EAL, "%s(): Locking file failed: %s\n",
-				__func__, strerror(errno));
+				__func__, rte_strerror(errno));
 			goto mmap_error;
 		}
 
@@ -1931,7 +1932,7 @@ rte_eal_memseg_init(void)
 
 		if (setrlimit(RLIMIT_NOFILE, &lim) < 0) {
 			RTE_LOG(DEBUG, EAL, "Setting maximum number of open files failed: %s\n",
-					strerror(errno));
+					rte_strerror(errno));
 		} else {
 			RTE_LOG(DEBUG, EAL, "Setting maximum number of open files to %"
 					PRIu64 "\n",
