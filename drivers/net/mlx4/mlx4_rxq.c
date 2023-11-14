@@ -353,7 +353,7 @@ mlx4_rss_init(struct mlx4_priv *priv)
 	if (ret) {
 		ERROR("cannot set up range size for RSS context to %u"
 		      " (for %u Rx queues), error: %s",
-		      1 << log2_range, dev->data->nb_rx_queues, strerror(ret));
+		      1 << log2_range, dev->data->nb_rx_queues, rte_strerror(ret));
 		rte_errno = ret;
 		return -ret;
 	}
@@ -431,7 +431,7 @@ wq_num_check:
 	return 0;
 error:
 	ERROR("cannot initialize common RSS resources (queue %u): %s: %s",
-	      i, msg, strerror(ret));
+	      i, msg, rte_strerror(ret));
 	while (i--) {
 		struct rxq *rxq = ETH_DEV(priv)->data->rx_queues[i];
 
@@ -631,7 +631,7 @@ error:
 	--rxq->usecnt;
 	rte_errno = ret;
 	ERROR("error while attaching Rx queue %p: %s: %s",
-	      (void *)rxq, msg, strerror(ret));
+	      (void *)rxq, msg, rte_strerror(ret));
 	priv->verbs_alloc_ctx.type = MLX4_VERBS_ALLOC_TYPE_NONE;
 	return -ret;
 }
@@ -882,13 +882,13 @@ mlx4_rx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 			rte_errno = ENOMEM;
 			ERROR("%p: Rx interrupt completion channel creation"
 			      " failure: %s",
-			      (void *)dev, strerror(rte_errno));
+			      (void *)dev, rte_strerror(rte_errno));
 			goto error;
 		}
 		if (mlx4_fd_set_non_blocking(rxq->channel->fd) < 0) {
 			ERROR("%p: unable to make Rx interrupt completion"
 			      " channel non-blocking: %s",
-			      (void *)dev, strerror(rte_errno));
+			      (void *)dev, rte_strerror(rte_errno));
 			goto error;
 		}
 	}
