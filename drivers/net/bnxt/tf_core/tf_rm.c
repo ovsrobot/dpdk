@@ -1059,7 +1059,7 @@ tf_rm_get_pool(struct tf_rm_new_db *rm_db,
 			    "%s: Invalid pool for this type:%d, rc:%s\n",
 			    tf_dir_2_str(rm_db->dir),
 			    tmp_subtype,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	*new_subtype = tmp_subtype;
@@ -1106,7 +1106,7 @@ tf_rm_allocate(struct tf_rm_allocate_parms *parms)
 		TFP_DRV_LOG(ERR,
 			    "%s: Allocation failed, rc:%s\n",
 			    tf_dir_2_str(rm_db->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1120,7 +1120,7 @@ tf_rm_allocate(struct tf_rm_allocate_parms *parms)
 		TFP_DRV_LOG(ERR,
 			    "%s: Alloc adjust of base index failed, rc:%s\n",
 			    tf_dir_2_str(rm_db->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EINVAL;
 	}
 

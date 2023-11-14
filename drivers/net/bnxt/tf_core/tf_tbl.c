@@ -45,7 +45,7 @@ tf_tbl_bind(struct tf *tfp,
 	cparms.alignment = 0;
 	if (tfp_calloc(&cparms) != 0) {
 		TFP_DRV_LOG(ERR, "tbl_rm_db alloc error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -143,7 +143,7 @@ tf_tbl_alloc(struct tf *tfp __rte_unused,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get tbl_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -195,7 +195,7 @@ tf_tbl_free(struct tf *tfp __rte_unused,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -234,7 +234,7 @@ tf_tbl_free(struct tf *tfp __rte_unused,
 				    "%s, Failed type lookup, type:%s, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
 				    tf_tbl_type_2_str(parms->type),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 		/* Clear the counter
@@ -250,7 +250,7 @@ tf_tbl_free(struct tf *tfp __rte_unused,
 				    "%s, Set failed, type:%s, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
 				    tf_tbl_type_2_str(parms->type),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}
@@ -302,7 +302,7 @@ tf_tbl_set(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -341,7 +341,7 @@ tf_tbl_set(struct tf *tfp,
 			    "%s, Failed type lookup, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -356,7 +356,7 @@ tf_tbl_set(struct tf *tfp,
 			    "%s, Set failed, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -393,7 +393,7 @@ tf_tbl_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -432,7 +432,7 @@ tf_tbl_get(struct tf *tfp,
 			    "%s, Failed type lookup, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -449,7 +449,7 @@ tf_tbl_get(struct tf *tfp,
 			    "%s, Get failed, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -485,7 +485,7 @@ tf_tbl_bulk_get(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	tbl_db = (struct tbl_rm_db *)tbl_db_ptr;
@@ -517,7 +517,7 @@ tf_tbl_bulk_get(struct tf *tfp,
 			    "%s, Failed type lookup, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -535,7 +535,7 @@ tf_tbl_bulk_get(struct tf *tfp,
 			    "%s, Bulk get failed, type:%s, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    tf_tbl_type_2_str(parms->type),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return rc;
