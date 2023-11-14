@@ -31,6 +31,7 @@
 #include <rte_log.h>
 #include <rte_eal.h>
 #include <rte_memory.h>
+#include <rte_errno.h>
 
 #include "eal_filesystem.h"
 #include "eal_internal_cfg.h"
@@ -161,7 +162,7 @@ prepare_numa(int *oldpolicy, struct bitmask *oldmask, int socket_id)
 			  oldmask->size + 1, 0, 0) < 0) {
 		RTE_LOG(ERR, EAL,
 			"Failed to get current mempolicy: %s. "
-			"Assuming MPOL_DEFAULT.\n", strerror(errno));
+			"Assuming MPOL_DEFAULT.\n", rte_strerror(errno));
 		*oldpolicy = MPOL_DEFAULT;
 	}
 	RTE_LOG(DEBUG, EAL,
@@ -180,7 +181,7 @@ restore_numa(int *oldpolicy, struct bitmask *oldmask)
 	} else if (set_mempolicy(*oldpolicy, oldmask->maskp,
 				 oldmask->size + 1) < 0) {
 		RTE_LOG(ERR, EAL, "Failed to restore mempolicy: %s\n",
-			strerror(errno));
+			rte_strerror(errno));
 		numa_set_localalloc();
 	}
 	numa_free_cpumask(oldmask);
@@ -224,7 +225,7 @@ static int lock(int fd, int type)
 		return 0;
 	} else if (ret) {
 		RTE_LOG(ERR, EAL, "%s(): error calling flock(): %s\n",
-			__func__, strerror(errno));
+			__func__, rte_strerror(errno));
 		return -1;
 	}
 	/* lock was successful */
@@ -252,7 +253,7 @@ get_seg_memfd(struct hugepage_info *hi __rte_unused,
 			fd = memfd_create(segname, flags);
 			if (fd < 0) {
 				RTE_LOG(DEBUG, EAL, "%s(): memfd create failed: %s\n",
-					__func__, strerror(errno));
+					__func__, rte_strerror(errno));
 				return -1;
 			}
 			fd_list[list_idx].memseg_list_fd = fd;
@@ -266,7 +267,7 @@ get_seg_memfd(struct hugepage_info *hi __rte_unused,
 			fd = memfd_create(segname, flags);
 			if (fd < 0) {
 				RTE_LOG(DEBUG, EAL, "%s(): memfd create failed: %s\n",
-					__func__, strerror(errno));
+					__func__, rte_strerror(errno));
 				return -1;
 			}
 			fd_list[list_idx].fds[seg_idx] = fd;
@@ -317,7 +318,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	ret = stat(path, &st);
 	if (ret < 0 && errno != ENOENT) {
 		RTE_LOG(DEBUG, EAL, "%s(): stat() for '%s' failed: %s\n",
-			__func__, path, strerror(errno));
+			__func__, path, rte_strerror(errno));
 		return -1;
 	}
 	if (!internal_conf->hugepage_file.unlink_existing && ret == 0 &&
@@ -343,7 +344,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 		/* coverity[toctou] */
 		if (unlink(path) < 0) {
 			RTE_LOG(DEBUG, EAL, "%s(): could not remove '%s': %s\n",
-				__func__, path, strerror(errno));
+				__func__, path, rte_strerror(errno));
 			return -1;
 		}
 	}
@@ -352,13 +353,13 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	fd = open(path, O_CREAT | O_RDWR, 0600);
 	if (fd < 0) {
 		RTE_LOG(ERR, EAL, "%s(): open '%s' failed: %s\n",
-			__func__, path, strerror(errno));
+			__func__, path, rte_strerror(errno));
 		return -1;
 	}
 	/* take out a read lock */
 	if (lock(fd, LOCK_SH) < 0) {
 		RTE_LOG(ERR, EAL, "%s(): lock '%s' failed: %s\n",
-			__func__, path, strerror(errno));
+			__func__, path, rte_strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -380,7 +381,7 @@ resize_hugefile_in_memory(int fd, uint64_t fa_offset,
 	if (ret < 0) {
 		RTE_LOG(DEBUG, EAL, "%s(): fallocate() failed: %s\n",
 				__func__,
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -415,7 +416,7 @@ resize_hugefile_in_filesystem(int fd, uint64_t fa_offset, uint64_t page_sz,
 			if (new_size > cur_size &&
 					ftruncate(fd, new_size) < 0) {
 				RTE_LOG(DEBUG, EAL, "%s(): ftruncate() failed: %s\n",
-					__func__, strerror(errno));
+					__func__, rte_strerror(errno));
 				return -1;
 			}
 		} else {
@@ -451,7 +452,7 @@ resize_hugefile_in_filesystem(int fd, uint64_t fa_offset, uint64_t page_sz,
 				} else {
 					RTE_LOG(DEBUG, EAL, "%s(): fallocate() failed: %s\n",
 						__func__,
-						strerror(errno));
+						rte_strerror(errno));
 					return -1;
 				}
 			} else {
@@ -484,7 +485,7 @@ close_hugefile(int fd, char *path, int list_idx)
 			rte_eal_process_type() == RTE_PROC_PRIMARY &&
 			unlink(path))
 		RTE_LOG(ERR, EAL, "%s(): unlinking '%s' failed: %s\n",
-			__func__, path, strerror(errno));
+			__func__, path, rte_strerror(errno));
 
 	close(fd);
 	fd_list[list_idx].memseg_list_fd = -1;
@@ -585,14 +586,14 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 			map_offset = 0;
 			if (ftruncate(fd, alloc_sz) < 0) {
 				RTE_LOG(DEBUG, EAL, "%s(): ftruncate() failed: %s\n",
-					__func__, strerror(errno));
+					__func__, rte_strerror(errno));
 				goto resized;
 			}
 			if (internal_conf->hugepage_file.unlink_before_mapping &&
 					!internal_conf->in_memory) {
 				if (unlink(path)) {
 					RTE_LOG(DEBUG, EAL, "%s(): unlink() failed: %s\n",
-						__func__, strerror(errno));
+						__func__, rte_strerror(errno));
 					goto resized;
 				}
 			}
@@ -611,7 +612,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 
 	if (va == MAP_FAILED) {
 		RTE_LOG(DEBUG, EAL, "%s(): mmap() failed: %s\n", __func__,
-			strerror(errno));
+			rte_strerror(errno));
 		/* mmap failed, but the previous region might have been
 		 * unmapped anyway. try to remap it
 		 */
@@ -662,7 +663,7 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 					MPOL_F_NODE | MPOL_F_ADDR);
 		if (ret < 0) {
 			RTE_LOG(DEBUG, EAL, "%s(): get_mempolicy: %s\n",
-				__func__, strerror(errno));
+				__func__, rte_strerror(errno));
 			goto mapped;
 		} else if (cur_socket_id != socket_id) {
 			RTE_LOG(DEBUG, EAL,
@@ -874,13 +875,13 @@ alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 		dir_fd = open(wa->hi->hugedir, O_RDONLY);
 		if (dir_fd < 0) {
 			RTE_LOG(ERR, EAL, "%s(): Cannot open '%s': %s\n",
-				__func__, wa->hi->hugedir, strerror(errno));
+				__func__, wa->hi->hugedir, rte_strerror(errno));
 			return -1;
 		}
 		/* blocking writelock */
 		if (flock(dir_fd, LOCK_EX)) {
 			RTE_LOG(ERR, EAL, "%s(): Cannot lock '%s': %s\n",
-				__func__, wa->hi->hugedir, strerror(errno));
+				__func__, wa->hi->hugedir, rte_strerror(errno));
 			close(dir_fd);
 			return -1;
 		}
@@ -981,13 +982,13 @@ free_seg_walk(const struct rte_memseg_list *msl, void *arg)
 		dir_fd = open(wa->hi->hugedir, O_RDONLY);
 		if (dir_fd < 0) {
 			RTE_LOG(ERR, EAL, "%s(): Cannot open '%s': %s\n",
-				__func__, wa->hi->hugedir, strerror(errno));
+				__func__, wa->hi->hugedir, rte_strerror(errno));
 			return -1;
 		}
 		/* blocking writelock */
 		if (flock(dir_fd, LOCK_EX)) {
 			RTE_LOG(ERR, EAL, "%s(): Cannot lock '%s': %s\n",
-				__func__, wa->hi->hugedir, strerror(errno));
+				__func__, wa->hi->hugedir, rte_strerror(errno));
 			close(dir_fd);
 			return -1;
 		}
@@ -1345,13 +1346,13 @@ sync_existing(struct rte_memseg_list *primary_msl,
 	dir_fd = open(hi->hugedir, O_RDONLY);
 	if (dir_fd < 0) {
 		RTE_LOG(ERR, EAL, "%s(): Cannot open '%s': %s\n", __func__,
-			hi->hugedir, strerror(errno));
+			hi->hugedir, rte_strerror(errno));
 		return -1;
 	}
 	/* blocking writelock */
 	if (flock(dir_fd, LOCK_EX)) {
 		RTE_LOG(ERR, EAL, "%s(): Cannot lock '%s': %s\n", __func__,
-			hi->hugedir, strerror(errno));
+			hi->hugedir, rte_strerror(errno));
 		close(dir_fd);
 		return -1;
 	}
