@@ -1105,12 +1105,12 @@ static int
 parse_bytes(uint8_t *data, char *input_arg, uint16_t max_size)
 {
 	unsigned byte_count;
-	char *token;
+	char *token, *sp = NULL;
 
 	errno = 0;
-	for (byte_count = 0, token = strtok(input_arg, ":");
+	for (byte_count = 0, token = strtok_s(input_arg, ":", &sp);
 			(byte_count < max_size) && (token != NULL);
-			token = strtok(NULL, ":")) {
+			token = strtok_s(NULL, ":", &sp)) {
 
 		int number = (int)strtol(token, NULL, 16);
 
