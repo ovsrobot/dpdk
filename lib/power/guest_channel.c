@@ -14,6 +14,7 @@
 
 #include <rte_log.h>
 #include <rte_power.h>
+#include <rte_errno.h>
 
 #include "guest_channel.h"
 
@@ -75,7 +76,7 @@ guest_channel_host_connect(const char *path, unsigned int lcore_id)
 	fd = open(fd_path, O_RDWR);
 	if (fd < 0) {
 		RTE_LOG(ERR, GUEST_CHANNEL, "Unable to connect to '%s' with error "
-				"%s\n", fd_path, strerror(errno));
+				"%s\n", fd_path, rte_strerror(errno));
 		return -1;
 	}
 
@@ -104,7 +105,7 @@ guest_channel_host_connect(const char *path, unsigned int lcore_id)
 	if (ret != 0) {
 		RTE_LOG(ERR, GUEST_CHANNEL,
 				"Error on channel '%s' communications test: %s\n",
-				fd_path, ret > 0 ? strerror(ret) :
+				fd_path, ret > 0 ? rte_strerror(ret) :
 				"channel not connected");
 		goto error;
 	}
@@ -184,7 +185,7 @@ int power_guest_channel_read_msg(void *pkt,
 		return -1;
 	} else if (ret < 0) {
 		RTE_LOG(ERR, GUEST_CHANNEL, "Error occurred during poll function: %s\n",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
