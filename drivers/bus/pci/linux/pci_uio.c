@@ -21,6 +21,7 @@
 #include <rte_bus_pci.h>
 #include <rte_common.h>
 #include <rte_malloc.h>
+#include <rte_errno.h>
 
 #include "eal_filesystem.h"
 #include "pci_init.h"
@@ -111,7 +112,7 @@ pci_mknod_uio_dev(const char *sysfs_uio_path, unsigned uio_num)
 	ret = mknod(filename, S_IFCHR | S_IRUSR | S_IWUSR, dev);
 	if (ret != 0) {
 		RTE_LOG(ERR, EAL, "%s(): mknod() failed %s\n",
-			__func__, strerror(errno));
+			__func__, rte_strerror(errno));
 		return -1;
 	}
 
@@ -241,7 +242,7 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 	fd = open(devname, O_RDWR);
 	if (fd < 0) {
 		RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",
-			devname, strerror(errno));
+			devname, rte_strerror(errno));
 		goto error;
 	}
 
@@ -254,7 +255,7 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 	uio_cfg_fd = open(cfgname, O_RDWR);
 	if (uio_cfg_fd < 0) {
 		RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",
-			cfgname, strerror(errno));
+			cfgname, rte_strerror(errno));
 		goto error;
 	}
 
@@ -314,7 +315,7 @@ pci_uio_map_resource_by_index(struct rte_pci_device *dev, int res_idx,
 	maps[map_idx].path = rte_malloc(NULL, sizeof(devname), 0);
 	if (maps[map_idx].path == NULL) {
 		RTE_LOG(ERR, EAL, "Cannot allocate memory for path: %s\n",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -348,7 +349,7 @@ pci_uio_map_resource_by_index(struct rte_pci_device *dev, int res_idx,
 		fd = open(devname, O_RDWR);
 		if (fd < 0) {
 			RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",
-				devname, strerror(errno));
+				devname, rte_strerror(errno));
 			goto error;
 		}
 	}
@@ -404,7 +405,7 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 	f = fopen(filename, "r");
 	if (f == NULL) {
 		RTE_LOG(ERR, EAL, "%s(): Cannot open sysfs resource: %s\n",
-			__func__, strerror(errno));
+			__func__, rte_strerror(errno));
 		return -1;
 	}
 
@@ -446,7 +447,7 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 		int uio_num = pci_get_uio_dev(dev, dirname, sizeof(dirname), 0);
 		if (uio_num < 0) {
 			RTE_LOG(ERR, EAL, "cannot open %s: %s\n",
-				dirname, strerror(errno));
+				dirname, rte_strerror(errno));
 			goto error;
 		}
 
@@ -454,7 +455,7 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 		fd = open(filename, O_RDWR);
 		if (fd < 0) {
 			RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",
-				filename, strerror(errno));
+				filename, rte_strerror(errno));
 			goto error;
 		}
 		if (rte_intr_fd_set(dev->intr_handle, fd))
@@ -494,7 +495,7 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 	f = fopen(filename, "r");
 	if (f == NULL) {
 		RTE_LOG(ERR, EAL, "Cannot open sysfs resource: %s\n",
-			strerror(errno));
+			rte_strerror(errno));
 		return -1;
 	}
 	for (i = 0; i < bar + 1; i++) {
@@ -518,7 +519,7 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 	fd = open(filename, O_RDWR);
 	if (fd < 0) {
 		RTE_LOG(ERR, EAL, "Cannot open %s: %s\n", filename,
-			strerror(errno));
+			rte_strerror(errno));
 		goto error;
 	}
 	addr = mmap(NULL, end_addr + 1, PROT_READ | PROT_WRITE,
@@ -526,7 +527,7 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 	close(fd);
 	if (addr == MAP_FAILED) {
 		RTE_LOG(ERR, EAL, "Cannot mmap IO port resource: %s\n",
-			strerror(errno));
+			rte_strerror(errno));
 		goto error;
 	}
 
