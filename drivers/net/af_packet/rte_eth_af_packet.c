@@ -108,7 +108,7 @@ RTE_LOG_REGISTER_DEFAULT(af_packet_logtype, NOTICE);
 
 #define PMD_LOG_ERRNO(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, af_packet_logtype, \
-		"%s(): " fmt ":%s\n", __func__, ##args, strerror(errno))
+		"%s(): " fmt ":%s\n", __func__, ##args, rte_strerror(errno))
 
 static uint16_t
 eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
