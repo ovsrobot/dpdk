@@ -567,7 +567,7 @@ eth_vhost_update_intr(struct rte_eth_dev *eth_dev, uint16_t rxq_idx)
 	if (vq->kickfd >= 0 && vq->kickfd != vring.kickfd) {
 		if (epoll_ctl(vq->ev.data.fd, EPOLL_CTL_DEL, vq->kickfd, &vq->ev) < 0) {
 			VHOST_LOG(DEBUG, "Failed to unregister %d from rxq-%d epoll: %s\n",
-				vq->kickfd, rxq_idx, strerror(errno));
+				vq->kickfd, rxq_idx, rte_strerror(errno));
 		} else {
 			VHOST_LOG(DEBUG, "Unregistered %d from rxq-%d epoll\n",
 				vq->kickfd, rxq_idx);
@@ -579,7 +579,7 @@ eth_vhost_update_intr(struct rte_eth_dev *eth_dev, uint16_t rxq_idx)
 	if (vq->kickfd != vring.kickfd && vring.kickfd >= 0) {
 		if (epoll_ctl(vq->ev.data.fd, EPOLL_CTL_ADD, vring.kickfd, &vq->ev) < 0) {
 			VHOST_LOG(ERR, "Failed to register %d in rxq-%d epoll: %s\n",
-				vring.kickfd, rxq_idx, strerror(errno));
+				vring.kickfd, rxq_idx, rte_strerror(errno));
 		} else {
 			vq->kickfd = vring.kickfd;
 			VHOST_LOG(DEBUG, "Registered %d in rxq-%d epoll\n",
@@ -730,7 +730,7 @@ eth_vhost_unconfigure_intr(struct rte_eth_dev *eth_dev)
 		if (vq->kickfd >= 0) {
 			if (epoll_ctl(vq->ev.data.fd, EPOLL_CTL_DEL, vq->kickfd, &vq->ev) < 0) {
 				VHOST_LOG(DEBUG, "Failed to unregister %d from rxq-%d epoll: %s\n",
-					vq->kickfd, i, strerror(errno));
+					vq->kickfd, i, rte_strerror(errno));
 			} else {
 				VHOST_LOG(DEBUG, "Unregistered %d from rxq-%d epoll\n",
 					vq->kickfd, i);
