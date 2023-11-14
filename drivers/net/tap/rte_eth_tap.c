@@ -196,7 +196,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	/* Set the TUN/TAP configuration and set the name if needed */
 	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
 		TAP_LOG(WARNING, "Unable to set TUNSETIFF for %s: %s",
-			ifr.ifr_name, strerror(errno));
+			ifr.ifr_name, rte_strerror(errno));
 		goto error;
 	}
 
@@ -204,7 +204,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	if (persistent && ioctl(fd, TUNSETPERSIST, 1) < 0) {
 		TAP_LOG(WARNING,
 			"Unable to set persist %s: %s",
-			ifr.ifr_name, strerror(errno));
+			ifr.ifr_name, rte_strerror(errno));
 		goto error;
 	}
 
@@ -224,7 +224,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 		if (ioctl(fd, TUNSETQUEUE, (void *)&ifr) < 0) {
 			TAP_LOG(WARNING,
 				"Unable to detach keep-alive queue for %s: %s",
-				ifr.ifr_name, strerror(errno));
+				ifr.ifr_name, rte_strerror(errno));
 			goto error;
 		}
 	}
@@ -242,7 +242,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	if (fcntl(fd, F_SETFL, flags) < 0) {
 		TAP_LOG(WARNING,
 			"Unable to set %s to nonblocking: %s",
-			ifr.ifr_name, strerror(errno));
+			ifr.ifr_name, rte_strerror(errno));
 		goto error;
 	}
 
@@ -295,18 +295,18 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 		/* Enable signal on file descriptor */
 		if (fcntl(fd, F_SETSIG, signo) < 0) {
 			TAP_LOG(WARNING, "Unable to set signo %d for fd %d: %s",
-				signo, fd, strerror(errno));
+				signo, fd, rte_strerror(errno));
 			goto error;
 		}
 		if (fcntl(fd, F_SETFL, flags | O_ASYNC) < 0) {
 			TAP_LOG(WARNING, "Unable to set fcntl flags: %s",
-				strerror(errno));
+				rte_strerror(errno));
 			goto error;
 		}
 
 		if (fcntl(fd, F_SETOWN, getpid()) < 0) {
 			TAP_LOG(WARNING, "Unable to set fcntl owner: %s",
-				strerror(errno));
+				rte_strerror(errno));
 			goto error;
 		}
 	}
@@ -821,7 +821,7 @@ apply:
 
 error:
 	TAP_LOG(DEBUG, "%s(%s) failed: %s(%d)", ifr->ifr_name,
-		tap_ioctl_req2str(request), strerror(errno), errno);
+		tap_ioctl_req2str(request), rte_strerror(errno), errno);
 	return -errno;
 }
 
@@ -1966,7 +1966,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	if (pmd->ioctl_sock == -1) {
 		TAP_LOG(ERR,
 			"%s Unable to get a socket for management: %s",
-			tuntap_name, strerror(errno));
+			tuntap_name, rte_strerror(errno));
 		goto error_exit;
 	}
 
@@ -2127,7 +2127,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 
 disable_rte_flow:
 	TAP_LOG(ERR, " Disabling rte flow support: %s(%d)",
-		strerror(errno), errno);
+		rte_strerror(errno), errno);
 	if (strlen(remote_iface)) {
 		TAP_LOG(ERR, "Remote feature requires flow support.");
 		goto error_exit;
@@ -2137,7 +2137,7 @@ disable_rte_flow:
 
 error_remote:
 	TAP_LOG(ERR, " Can't set up remote feature: %s(%d)",
-		strerror(errno), errno);
+		rte_strerror(errno), errno);
 	tap_flow_implicit_flush(pmd, NULL);
 
 error_exit:
@@ -2475,7 +2475,7 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 			ret = rte_mp_action_register(TAP_MP_REQ_START_RXTX, tap_mp_req_start_rxtx);
 			if (ret < 0 && rte_errno != ENOTSUP) {
 				TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
-					strerror(rte_errno));
+					rte_strerror(rte_errno));
 				return -1;
 			}
 		}
@@ -2535,7 +2535,7 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 		ret = rte_mp_action_register(TAP_MP_KEY, tap_mp_sync_queues);
 		if (ret < 0 && rte_errno != ENOTSUP) {
 			TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			goto leave;
 		}
 	}
