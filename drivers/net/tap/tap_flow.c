@@ -1409,7 +1409,7 @@ tap_flow_create(struct rte_eth_dev *dev,
 	if (err < 0) {
 		TAP_LOG(ERR,
 			"Kernel refused TC filter rule creation (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		rte_flow_error_set(error, EEXIST, RTE_FLOW_ERROR_TYPE_HANDLE,
 				   NULL,
 				   "overlapping rules or Kernel too old for flower support");
@@ -1454,7 +1454,7 @@ tap_flow_create(struct rte_eth_dev *dev,
 		if (err < 0) {
 			TAP_LOG(ERR,
 				"Kernel refused TC filter rule creation (%d): %s",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			rte_flow_error_set(
 				error, ENOMEM, RTE_FLOW_ERROR_TYPE_HANDLE,
 				NULL,
@@ -1508,7 +1508,7 @@ tap_flow_destroy_pmd(struct pmd_internals *pmd,
 	if (ret < 0) {
 		TAP_LOG(ERR,
 			"Kernel refused TC filter rule deletion (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		rte_flow_error_set(
 			error, ENOTSUP, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"couldn't receive kernel ack to our request");
@@ -1532,7 +1532,7 @@ tap_flow_destroy_pmd(struct pmd_internals *pmd,
 		if (ret < 0) {
 			TAP_LOG(ERR,
 				"Kernel refused TC filter rule deletion (%d): %s",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			rte_flow_error_set(
 				error, ENOMEM, RTE_FLOW_ERROR_TYPE_HANDLE,
 				NULL, "Failure trying to receive nl ack");
@@ -1755,7 +1755,7 @@ int tap_flow_implicit_create(struct pmd_internals *pmd,
 			goto success;
 		TAP_LOG(ERR,
 			"Kernel refused TC filter rule creation (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		goto fail;
 	}
 	LIST_INSERT_HEAD(&pmd->implicit_flows, remote_flow, next);
@@ -1871,7 +1871,7 @@ static int rss_enable(struct pmd_internals *pmd,
 	if (pmd->map_fd < 0) {
 		TAP_LOG(ERR,
 			"Failed to create BPF map (%d): %s",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 		rte_flow_error_set(
 			error, ENOTSUP, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"Kernel too old or not configured "
@@ -1946,7 +1946,7 @@ static int rss_enable(struct pmd_internals *pmd,
 		if (err < 0) {
 			TAP_LOG(ERR,
 				"Kernel refused TC filter rule creation (%d): %s",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			return err;
 		}
 		LIST_INSERT_HEAD(&pmd->rss_flows, rss_flow, next);
@@ -2111,7 +2111,7 @@ static int rss_add_actions(struct rte_flow *flow, struct pmd_internals *pmd,
 	if (err) {
 		TAP_LOG(ERR,
 			"Failed to update BPF map entry #%u (%d): %s",
-			flow->key_idx, errno, strerror(errno));
+			flow->key_idx, errno, rte_strerror(errno));
 		rte_flow_error_set(
 			error, ENOTSUP, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"Kernel too old or not configured "
@@ -2130,7 +2130,7 @@ static int rss_add_actions(struct rte_flow *flow, struct pmd_internals *pmd,
 	if (flow->bpf_fd[SEC_L3_L4] < 0) {
 		TAP_LOG(ERR,
 			"Failed to load BPF section %s (%d): %s",
-				sec_name[SEC_L3_L4], errno, strerror(errno));
+				sec_name[SEC_L3_L4], errno, rte_strerror(errno));
 		rte_flow_error_set(
 			error, ENOTSUP, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"Kernel too old or not configured "
