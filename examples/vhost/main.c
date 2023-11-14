@@ -246,6 +246,7 @@ open_dma(const char *value)
 	char *ptrs[2];
 	char *start, *end, *substr;
 	int64_t socketid, vring_id;
+	char *sp = NULL;
 
 	struct rte_dma_info info;
 	struct rte_dma_conf dev_config = { .nb_vchans = 1 };
@@ -269,7 +270,7 @@ open_dma(const char *value)
 
 	/* process DMA devices within bracket. */
 	addrs++;
-	substr = strtok(addrs, ";]");
+	substr = strtok_s(addrs, ";]", &sp);
 	if (!substr) {
 		ret = -1;
 		goto out;
