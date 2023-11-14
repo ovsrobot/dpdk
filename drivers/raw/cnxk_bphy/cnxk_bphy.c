@@ -6,6 +6,7 @@
 #include <dev_driver.h>
 #include <rte_eal.h>
 #include <rte_lcore.h>
+#include <rte_log.h>
 #include <rte_pci.h>
 #include <rte_rawdev.h>
 #include <rte_rawdev_pmd.h>
@@ -14,6 +15,11 @@
 
 #include "cnxk_bphy_irq.h"
 #include "rte_pmd_bphy.h"
+
+extern int bphy_rawdev_logtype;
+
+#define BPHY_LOG(level, fmt, args...) \
+	rte_log(RTE_LOG_ ## level, bphy_rawdev_logtype, "%s(): " fmt "\n", __func__, ##args)
 
 static const struct rte_pci_id pci_bphy_map[] = {
 	{RTE_PCI_DEVICE(PCI_VENDOR_ID_CAVIUM, PCI_DEVID_CNXK_BPHY)},
@@ -81,7 +87,7 @@ bphy_rawdev_selftest(uint16_t dev_id)
 		goto err_desc;
 	if (descs != 1) {
 		ret = -ENODEV;
-		plt_err("Wrong number of descs reported\n");
+		BPHY_LOG(ERR, "Wrong number of descs reported\n");
 		goto err_desc;
 	}
 
@@ -95,7 +101,7 @@ bphy_rawdev_selftest(uint16_t dev_id)
 
 	ret = rte_pmd_bphy_intr_init(dev_id);
 	if (ret) {
-		plt_err("intr init failed");
+		BPHY_LOG(ERR, "intr init failed");
 		return ret;
 	}
 
@@ -103,7 +109,7 @@ bphy_rawdev_selftest(uint16_t dev_id)
 
 	test = rte_zmalloc("BPHY", max_irq * sizeof(*test), 0);
 	if (test == NULL) {
-		plt_err("intr alloc failed");
+		BPHY_LOG(ERR, "intr alloc failed");
 		goto err_alloc;
 	}
 
@@ -132,7 +138,7 @@ bphy_rawdev_selftest(uint16_t dev_id)
 		}
 
 		if (ret) {
-			plt_err("intr register failed at irq %d", i);
+			BPHY_LOG(ERR, "intr register failed at irq %d", i);
 			goto err_register;
 		}
 	}
@@ -142,12 +148,12 @@ bphy_rawdev_selftest(uint16_t dev_id)
 
 	for (i = 0; i < max_irq; i++) {
 		if (!test[i].handled_intr) {
-			plt_err("intr %u not handled", i);
+			BPHY_LOG(ERR, "intr %u not handled", i);
 			ret = -1;
 			break;
 		}
 		if (test[i].handled_data != test[i].test_data) {
-			plt_err("intr %u has wrong handler", i);
+			BPHY_LOG(ERR, "intr %u has wrong handler", i);
 			ret = -1;
 			break;
 		}
@@ -251,7 +257,7 @@ cnxk_bphy_irq_enqueue_bufs(struct rte_rawdev *dev,
 
 	/* get rid of last response if any */
 	if (qp->rsp) {
-		RTE_LOG(WARNING, PMD, "Previous response got overwritten\n");
+		BPHY_LOG(WARNING, "Previous response got overwritten");
 		rte_free(qp->rsp);
 	}
 	qp->rsp = rsp;
@@ -332,9 +338,8 @@ bphy_rawdev_probe(struct rte_pci_driver *pci_drv,
 		return 0;
 
 	if (!pci_dev->mem_resource[0].addr) {
-		plt_err("BARs have invalid values: BAR0 %p\n BAR2 %p",
-			pci_dev->mem_resource[0].addr,
-			pci_dev->mem_resource[2].addr);
+		BPHY_LOG(ERR, "BARs have invalid values: BAR0 %p\n BAR2 %p",
+			 pci_dev->mem_resource[0].addr, pci_dev->mem_resource[2].addr);
 		return -ENODEV;
 	}
 
@@ -346,7 +351,7 @@ bphy_rawdev_probe(struct rte_pci_driver *pci_drv,
 	bphy_rawdev = rte_rawdev_pmd_allocate(name, sizeof(*bphy_dev),
 					      rte_socket_id());
 	if (bphy_rawdev == NULL) {
-		plt_err("Failed to allocate rawdev");
+		BPHY_LOG(ERR, "Failed to allocate rawdev");
 		return -ENOMEM;
 	}
 
@@ -381,14 +386,14 @@ bphy_rawdev_remove(struct rte_pci_device *pci_dev)
 		return 0;
 
 	if (pci_dev == NULL) {
-		plt_err("invalid pci_dev");
+		BPHY_LOG(ERR, "invalid pci_dev");
 		return -EINVAL;
 	}
 
 	bphy_rawdev_get_name(name, pci_dev);
 	rawdev = rte_rawdev_pmd_get_named_dev(name);
 	if (rawdev == NULL) {
-		plt_err("invalid device name (%s)", name);
+		BPHY_LOG(ERR, "invalid device name (%s)", name);
 		return -EINVAL;
 	}
 
@@ -410,3 +415,4 @@ static struct rte_pci_driver cnxk_bphy_rawdev_pmd = {
 RTE_PMD_REGISTER_PCI(bphy_rawdev_pci_driver, cnxk_bphy_rawdev_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(bphy_rawdev_pci_driver, pci_bphy_map);
 RTE_PMD_REGISTER_KMOD_DEP(bphy_rawdev_pci_driver, "vfio-pci");
+RTE_LOG_REGISTER_DEFAULT(bphy_rawdev_logtype, WARNING);
