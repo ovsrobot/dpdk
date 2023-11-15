@@ -12,6 +12,7 @@
  * This file defines a generic API for atomic operations.
  */
 
+#include <stdalign.h>
 #include <stdint.h>
 
 #include <rte_common.h>
@@ -1096,6 +1097,7 @@ static inline void rte_atomic64_clear(rte_atomic64_t *v)
  */
 typedef struct {
 	union {
+		alignas(16)
 		uint64_t val[2];
 #ifdef RTE_ARCH_64
 #ifndef RTE_TOOLCHAIN_MSVC
@@ -1103,7 +1105,7 @@ typedef struct {
 #endif
 #endif
 	};
-} __rte_aligned(16) rte_int128_t;
+} rte_int128_t;
 
 #ifdef __DOXYGEN__
 

@@ -5,6 +5,7 @@
 #ifndef MALLOC_HEAP_H_
 #define MALLOC_HEAP_H_
 
+#include <stdalign.h>
 #include <stdbool.h>
 #include <sys/queue.h>
 
@@ -22,6 +23,7 @@ struct malloc_elem;
  * Structure to hold malloc heap
  */
 struct malloc_heap {
+	alignas(RTE_CACHE_LINE_SIZE)
 	rte_spinlock_t lock;
 	LIST_HEAD(, malloc_elem) free_head[RTE_HEAP_NUM_FREELISTS];
 	struct malloc_elem *volatile first;
@@ -31,7 +33,7 @@ struct malloc_heap {
 	unsigned int socket_id;
 	size_t total_size;
 	char name[RTE_HEAP_NAME_MAX_LEN];
-} __rte_cache_aligned;
+};
 
 void *
 malloc_heap_alloc(const char *type, size_t size, int socket, unsigned int flags,

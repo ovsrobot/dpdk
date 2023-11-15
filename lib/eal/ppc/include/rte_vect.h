@@ -6,6 +6,8 @@
 #ifndef _RTE_VECT_PPC_64_H_
 #define _RTE_VECT_PPC_64_H_
 
+#include <stdalign.h>
+
 #include "rte_altivec.h"
 
 #include "generic/rte_vect.h"
@@ -23,13 +25,14 @@ typedef __vector signed int xmm_t;
 #define	XMM_MASK	(XMM_SIZE - 1)
 
 typedef union rte_xmm {
+	alignas(16)
 	xmm_t    x;
 	uint8_t  u8[XMM_SIZE / sizeof(uint8_t)];
 	uint16_t u16[XMM_SIZE / sizeof(uint16_t)];
 	uint32_t u32[XMM_SIZE / sizeof(uint32_t)];
 	uint64_t u64[XMM_SIZE / sizeof(uint64_t)];
 	double   pd[XMM_SIZE / sizeof(double)];
-} __rte_aligned(16) rte_xmm_t;
+} rte_xmm_t;
 
 #ifdef __cplusplus
 }

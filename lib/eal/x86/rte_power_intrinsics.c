@@ -2,6 +2,8 @@
  * Copyright(c) 2020 Intel Corporation
  */
 
+#include <stdalign.h>
+
 #include <rte_common.h>
 #include <rte_lcore.h>
 #include <rte_rtm.h>
@@ -13,9 +15,10 @@
  * Per-lcore structure holding current status of C0.2 sleeps.
  */
 static struct power_wait_status {
+	alignas(RTE_CACHE_LINE_SIZE)
 	rte_spinlock_t lock;
 	volatile void *monitor_addr; /**< NULL if not currently sleeping */
-} __rte_cache_aligned wait_status[RTE_MAX_LCORE];
+} wait_status[RTE_MAX_LCORE];
 
 /*
  * This function uses UMONITOR/UMWAIT instructions and will enter C0.2 state.
@@ -86,9 +89,10 @@ static void amd_mwaitx(const uint64_t timeout)
 }
 
 static struct {
+	alignas(RTE_CACHE_LINE_SIZE)
 	void (*mmonitor)(volatile void *addr);
 	void (*mwait)(const uint64_t timeout);
-} __rte_cache_aligned power_monitor_ops;
+} power_monitor_ops;
 
 static inline void
 __umwait_wakeup(volatile void *addr)

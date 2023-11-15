@@ -5,6 +5,7 @@
 #ifndef RTE_VECT_LOONGARCH_H
 #define RTE_VECT_LOONGARCH_H
 
+#include <stdalign.h>
 #include <stdint.h>
 #include "generic/rte_vect.h"
 #include "rte_common.h"
@@ -16,6 +17,7 @@ extern "C" {
 #define RTE_VECT_DEFAULT_SIMD_BITWIDTH RTE_VECT_SIMD_DISABLED
 
 typedef union xmm {
+	alignas(16)
 	int8_t   i8[16];
 	int16_t  i16[8];
 	int32_t  i32[4];
@@ -25,19 +27,20 @@ typedef union xmm {
 	uint32_t u32[4];
 	uint64_t u64[2];
 	double   pd[2];
-} __rte_aligned(16) xmm_t;
+} xmm_t;
 
 #define XMM_SIZE        (sizeof(xmm_t))
 #define XMM_MASK        (XMM_SIZE - 1)
 
 typedef union rte_xmm {
+	alignas(16)
 	xmm_t	 x;
 	uint8_t	 u8[XMM_SIZE / sizeof(uint8_t)];
 	uint16_t u16[XMM_SIZE / sizeof(uint16_t)];
 	uint32_t u32[XMM_SIZE / sizeof(uint32_t)];
 	uint64_t u64[XMM_SIZE / sizeof(uint64_t)];
 	double   pd[XMM_SIZE / sizeof(double)];
-} __rte_aligned(16) rte_xmm_t;
+} rte_xmm_t;
 
 static inline xmm_t
 vect_load_128(void *p)

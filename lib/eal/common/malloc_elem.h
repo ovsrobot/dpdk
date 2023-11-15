@@ -5,6 +5,7 @@
 #ifndef MALLOC_ELEM_H_
 #define MALLOC_ELEM_H_
 
+#include <stdalign.h>
 #include <stdbool.h>
 
 #include <rte_common.h>
@@ -21,6 +22,7 @@ enum elem_state {
 };
 
 struct malloc_elem {
+	alignas(RTE_CACHE_LINE_SIZE)
 	struct malloc_heap *heap;
 	struct malloc_elem *volatile prev;
 	/**< points to prev elem in memseg */
@@ -48,7 +50,7 @@ struct malloc_elem {
 	size_t user_size;
 	uint64_t asan_cookie[2]; /* must be next to header_cookie */
 #endif
-} __rte_cache_aligned;
+};
 
 static const unsigned int MALLOC_ELEM_HEADER_LEN = sizeof(struct malloc_elem);
 

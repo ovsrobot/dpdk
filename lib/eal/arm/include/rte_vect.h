@@ -5,6 +5,7 @@
 #ifndef _RTE_VECT_ARM_H_
 #define _RTE_VECT_ARM_H_
 
+#include <stdalign.h>
 #include <stdint.h>
 #include "generic/rte_vect.h"
 #include "rte_debug.h"
@@ -25,13 +26,14 @@ typedef int32x4_t xmm_t;
 #define	XMM_MASK	(XMM_SIZE - 1)
 
 typedef union rte_xmm {
+	alignas(16)
 	xmm_t    x;
 	uint8_t  u8[XMM_SIZE / sizeof(uint8_t)];
 	uint16_t u16[XMM_SIZE / sizeof(uint16_t)];
 	uint32_t u32[XMM_SIZE / sizeof(uint32_t)];
 	uint64_t u64[XMM_SIZE / sizeof(uint64_t)];
 	double   pd[XMM_SIZE / sizeof(double)];
-} __rte_aligned(16) rte_xmm_t;
+} rte_xmm_t;
 
 #if defined(RTE_ARCH_ARM) && defined(RTE_ARCH_32)
 /* NEON intrinsic vqtbl1q_u8() is not supported in ARMv7-A(AArch32) */
