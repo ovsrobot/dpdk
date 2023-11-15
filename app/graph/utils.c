@@ -13,7 +13,7 @@
 #include "module_api.h"
 
 #define white_spaces_skip(pos)			\
-({						\
+__extension__ ({				\
 	__typeof__(pos) _p = (pos);		\
 	for ( ; isspace(*_p); _p++)		\
 		;				\

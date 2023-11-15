@@ -20,7 +20,7 @@
 #define MAX_NUM_SHARED_SHAPERS		256
 
 #define skip_white_spaces(pos)			\
-({						\
+__extension__ ({				\
 	__typeof__(pos) _p = (pos);		\
 	for ( ; isspace(*_p); _p++)		\
 		;				\

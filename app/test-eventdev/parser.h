@@ -11,7 +11,7 @@
 #define PARSE_DELIMITER				" \f\n\r\t\v"
 
 #define skip_white_spaces(pos)			\
-({						\
+__extension__ ({				\
 	__typeof__(pos) _p = (pos);		\
 	for ( ; isspace(*_p); _p++)		\
 		;				\
