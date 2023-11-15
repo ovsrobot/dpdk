@@ -4866,12 +4866,12 @@ static void bnxt_free_ctx_mem(struct bnxt *bp)
 
 #define bnxt_roundup(x, y)   ((((x) + ((y) - 1)) / (y)) * (y))
 
-#define min_t(type, x, y) ({                    \
+#define min_t(type, x, y) __extension__ ({      \
 	type __min1 = (x);                      \
 	type __min2 = (y);                      \
 	__min1 < __min2 ? __min1 : __min2; })
 
-#define max_t(type, x, y) ({                    \
+#define max_t(type, x, y) __extension__ ({      \
 	type __max1 = (x);                      \
 	type __max2 = (y);                      \
 	__max1 > __max2 ? __max1 : __max2; })

@@ -136,7 +136,7 @@ typedef uint64_t  dma_addr_t;
 #define cxgbe_roundup(_p, _s) (((unsigned long)(_p) + (_s - 1)) & ~(_s - 1))
 
 #ifndef container_of
-#define container_of(ptr, type, member) ({ \
+#define container_of(ptr, type, member) __extension__ ({ \
 		typeof(((type *)0)->member)(*__mptr) = (ptr); \
 		(type *)((char *)__mptr - offsetof(type, member)); })
 #endif

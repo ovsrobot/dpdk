@@ -8,7 +8,7 @@
 #include "opae_osdep.h"
 
 #undef container_of
-#define container_of(ptr, type, member) ({ \
+#define container_of(ptr, type, member) __extension__ ({ \
 		typeof(((type *)0)->member)(*__mptr) = (ptr); \
 		(type *)((char *)__mptr - offsetof(type, member)); })
 
@@ -36,7 +36,7 @@
  * by polling with given interval and timeout.
  */
 #define fpga_wait_register_field(_field, _expect, _reg_addr, _timeout, _invl)\
-({									     \
+__extension__ ({							     \
 	int wait = 0;							     \
 	int ret = -ETIMEDOUT;						     \
 	typeof(_expect) value;						     \
