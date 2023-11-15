@@ -249,11 +249,21 @@ struct offloads {
 
 extern struct offloads tx_offloads;
 
+/*
+ * This structure is used for the key in hash table.
+ * Padding is added to force the struct to use 8 bytes,
+ * to ensure memory is notread past this structs boundary
+ * (the hash key calculation reads 8 bytes if this struct is size 5 bytes).
+ * The padding should be zeroed.
+ * If fields are modified in this struct, the padding must be updated to
+ * ensure multiple of 8 bytes size overall.
+ */
 struct cdev_key {
 	uint16_t lcore_id;
 	uint8_t cipher_algo;
 	uint8_t auth_algo;
 	uint8_t aead_algo;
+	uint8_t padding[3];
 };
 
 struct socket_ctx {
