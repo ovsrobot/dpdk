@@ -147,6 +147,10 @@ txgbe_host_interface_command(struct txgbe_hw *hw, u32 *buffer,
 	 * two byes instead of one byte
 	 */
 	if (resp->cmd == 0x30) {
+		if (length < ((dword_len + 2) << 2)) {
+			err = TXGBE_ERR_HOST_INTERFACE_COMMAND;
+			goto rel_out;
+		}
 		for (; bi < dword_len + 2; bi++)
 			buffer[bi] = rd32a(hw, TXGBE_MNGMBX, bi);
 
