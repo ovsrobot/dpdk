@@ -145,6 +145,18 @@ Limitations
 - TSO (Transmit Segmentation Offload) is supported in OFED version
   4.4 and above.
 
+- RSS only works on power of two number of queues.
+- The user can open none power of two queues,  but the PMD will round down
+  to the highest power of two queues by default for RSS.
+  Other queues can be utilized through flow API.
+  example::
+      ./dpdk-testpmd -a 08:00.0 -- -i --rxq 12 --txq 12 --rss-ip
+
+  The first 8 queues will be used by default for RSS over IP.
+  The rest of the queues can be utilized through rte flow like the following::
+  flow create 0 ingress pattern eth / ipv4 / tcp / end actions rss queues 8 9 10 11 end / end
+
+
 Prerequisites
 -------------
 
