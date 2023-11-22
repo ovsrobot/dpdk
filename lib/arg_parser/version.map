@@ -1,0 +1,10 @@
+DPDK_24 {
+    local: *;
+};
+
+EXPERIMENTAL {
+    global:
+
+    # added in 24.03
+    rte_parse_corelist;
+};

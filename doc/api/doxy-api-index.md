@@ -221,7 +221,8 @@ The public API headers are grouped by topics:
   [config file](@ref rte_cfgfile.h),
   [key/value args](@ref rte_kvargs.h),
   [string](@ref rte_string_fns.h),
-  [thread](@ref rte_thread.h)
+  [thread](@ref rte_thread.h),
+  [argument parsing](@ref rte_arg_parser.h)
 
 - **debug**:
   [jobstats](@ref rte_jobstats.h),
