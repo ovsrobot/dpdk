@@ -30,6 +30,7 @@
 #include <rte_tailq.h>
 #include <rte_version.h>
 #include <rte_devargs.h>
+#include <rte_arg_parser.h>
 #include <rte_memcpy.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <rte_telemetry.h>
@@ -706,7 +707,7 @@ update_lcore_config(int *cores)
 }
 
 static int
-check_core_list(int *lcores, unsigned int count)
+check_core_list(uint16_t *lcores, unsigned int count)
 {
 	char lcorestr[RTE_MAX_LCORE * 10];
 	bool overflow = false;
@@ -746,60 +747,18 @@ check_core_list(int *lcores, unsigned int count)
 int
 rte_eal_parse_coremask(const char *coremask, int *cores)
 {
-	const char *coremask_orig = coremask;
-	int lcores[RTE_MAX_LCORE];
-	unsigned int count = 0;
-	int i, j, idx;
-	int val;
-	char c;
+	int count;
+	uint16_t lcores[RTE_MAX_LCORE];
+	int idx;
 
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++)
 		cores[idx] = -1;
-	idx = 0;
 
-	/* Remove all blank characters ahead and after .
-	 * Remove 0x/0X if exists.
-	 */
-	while (isblank(*coremask))
-		coremask++;
-	if (coremask[0] == '0' && ((coremask[1] == 'x')
-		|| (coremask[1] == 'X')))
-		coremask += 2;
-	i = strlen(coremask);
-	while ((i > 0) && isblank(coremask[i - 1]))
-		i--;
-	if (i == 0) {
-		RTE_LOG(ERR, EAL, "No lcores in coremask: [%s]\n",
-			coremask_orig);
-		return -1;
-	}
+	/* Call public coremask parsing API */
+	count = rte_parse_coremask(coremask, lcores, RTE_MAX_LCORE);
 
-	for (i = i - 1; i >= 0; i--) {
-		c = coremask[i];
-		if (isxdigit(c) == 0) {
-			/* invalid characters */
-			RTE_LOG(ERR, EAL, "invalid characters in coremask: [%s]\n",
-				coremask_orig);
-			return -1;
-		}
-		val = xdigit2val(c);
-		for (j = 0; j < BITS_PER_HEX; j++, idx++)
-		{
-			if ((1 << j) & val) {
-				if (count >= RTE_MAX_LCORE) {
-					RTE_LOG(ERR, EAL, "Too many lcores provided. Cannot exceed RTE_MAX_LCORE (%d)\n",
-						RTE_MAX_LCORE);
-					return -1;
-				}
-				lcores[count++] = idx;
-			}
-		}
-	}
-	if (count == 0) {
-		RTE_LOG(ERR, EAL, "No lcores in coremask: [%s]\n",
-			coremask_orig);
+	if (count <= 0 || count > RTE_MAX_LCORE)
 		return -1;
-	}
 
 	if (check_core_list(lcores, count))
 		return -1;
@@ -898,64 +857,17 @@ eal_parse_service_corelist(const char *corelist)
 static int
 eal_parse_corelist(const char *corelist, int *cores)
 {
-	unsigned int count = 0, i;
-	int lcores[RTE_MAX_LCORE];
-	char *end = NULL;
-	int min, max;
+	int count;
+	uint16_t lcores[RTE_MAX_LCORE];
 	int idx;
 
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++)
 		cores[idx] = -1;
 
-	/* Remove all blank characters ahead */
-	while (isblank(*corelist))
-		corelist++;
+	/* Call public corelist parsing API */
+	count = rte_parse_corelist(corelist, lcores, RTE_MAX_LCORE);
 
-	/* Get list of cores */
-	min = -1;
-	do {
-		while (isblank(*corelist))
-			corelist++;
-		if (*corelist == '\0')
-			return -1;
-		errno = 0;
-		idx = strtol(corelist, &end, 10);
-		if (errno || end == NULL)
-			return -1;
-		if (idx < 0)
-			return -1;
-		while (isblank(*end))
-			end++;
-		if (*end == '-') {
-			min = idx;
-		} else if ((*end == ',') || (*end == '\0')) {
-			max = idx;
-			if (min == -1)
-				min = idx;
-			for (idx = min; idx <= max; idx++) {
-				bool dup = false;
-
-				/* Check if this idx is already present */
-				for (i = 0; i < count; i++) {
-					if (lcores[i] == idx)
-						dup = true;
-				}
-				if (dup)
-					continue;
-				if (count >= RTE_MAX_LCORE) {
-					RTE_LOG(ERR, EAL, "Too many lcores provided. Cannot exceed RTE_MAX_LCORE (%d)\n",
-						RTE_MAX_LCORE);
-					return -1;
-				}
-				lcores[count++] = idx;
-			}
-			min = -1;
-		} else
-			return -1;
-		corelist = end + 1;
-	} while (*end != '\0');
-
-	if (count == 0)
+	if (count <= 0 || count > RTE_MAX_LCORE)
 		return -1;
 
 	if (check_core_list(lcores, count))
