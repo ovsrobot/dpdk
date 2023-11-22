@@ -124,6 +124,9 @@ New Features
   * Added new function ``rte_eth_dev_rss_algo_name``
     to get name of RSS hash algorithm.
 
+  * Added new function ``rte_eth_find_rss_algo``
+    to get RSS hash algorithm by its name.
+
 * **Added packet type flow matching criteria.**
 
   Added ``RTE_FLOW_ITEM_TYPE_PTYPE`` to allow matching on L2/L3/L4
