@@ -922,49 +922,37 @@ dlb2_resource_probe(struct dlb2_hw *hw, const void *probe_args)
 {
 	const struct dlb2_devargs *args = (const struct dlb2_devargs *)probe_args;
 	const char *mask = args ? args->producer_coremask : NULL;
-	int cpu = 0, cnt = 0, cores[RTE_MAX_LCORE], i;
+	int cpu = 0, i;
+	uint16_t cores[RTE_MAX_LCORE];
 
 	if (args) {
 		mask = (const char *)args->producer_coremask;
 	}
 
-	if (mask && rte_eal_parse_coremask(mask, cores)) {
+	int ret = rte_parse_coremask(mask, cores, RTE_DIM(cores));
+
+	if (mask && ret == -1) {
 		DLB2_LOG_ERR(": Invalid producer coremask=%s", mask);
 		return -1;
 	}
 
-	hw->num_prod_cores = 0;
-	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		bool is_pcore = (mask && cores[i] != -1);
+	hw->num_prod_cores = ret;
+	/* Check for no producer cores and then get the second EAL core */
+	if (hw->num_prod_cores > 0)
+		cpu = cores[0];
+	else if (rte_lcore_count() < DLB2_EAL_PROBE_CORE)
+		cpu = rte_get_main_lcore();
+	else
+		cpu = rte_get_next_lcore(-1, 1, 0);
 
-		if (rte_lcore_is_enabled(i)) {
-			if (is_pcore) {
-				/*
-				 * Populate the producer cores from parsed
-				 * coremask
-				 */
-				hw->prod_core_list[cores[i]] = i;
-				hw->num_prod_cores++;
-
-			} else if ((++cnt == DLB2_EAL_PROBE_CORE ||
-			   rte_lcore_count() < DLB2_EAL_PROBE_CORE)) {
-				/*
-				 * If no producer coremask is provided, use the
-				 * second EAL core to probe
-				 */
-				cpu = i;
-				break;
-			}
-		} else if (is_pcore) {
-			DLB2_LOG_ERR("Producer coremask(%s) must be a subset of EAL coremask",
-				     mask);
+	/* check our producer list is valid and error out if not */
+	for (i = 0; i < hw->num_prod_cores; i++) {
+		if (!rte_lcore_is_enabled(cores[i])) {
+			DLB2_LOG_ERR("Producer coremask(%s) must be a subset of EAL coremask", mask);						 			 				 
 			return -1;
-		}
-
-	}
-	/* Use the first core in producer coremask to probe */
-	if (hw->num_prod_cores)
-		cpu = hw->prod_core_list[0];
+	} 
+	hw->prod_core_list[i] = cores[i];
+}
 
 	dlb2_get_pp_allocation(hw, cpu, DLB2_LDB_PORT);
 	dlb2_get_pp_allocation(hw, cpu, DLB2_DIR_PORT);

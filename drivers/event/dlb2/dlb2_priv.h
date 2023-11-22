@@ -10,6 +10,7 @@
 
 #include <rte_eventdev.h>
 #include <rte_config.h>
+#include <rte_arg_parser.h>
 #include "dlb2_user.h"
 #include "dlb2_log.h"
 #include "rte_pmd_dlb2.h"
@@ -728,9 +729,6 @@ void dlb2_event_build_hcws(struct dlb2_port *qm_port,
 			   int num,
 			   uint8_t *sched_type,
 			   uint8_t *queue_id);
-
-/* Extern functions */
-extern int rte_eal_parse_coremask(const char *coremask, int *cores);
 
 /* Extern globals */
 extern struct process_local_port_data dlb2_port[][DLB2_NUM_PORT_TYPES];
