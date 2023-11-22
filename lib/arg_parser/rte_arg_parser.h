@@ -58,6 +58,39 @@ __rte_experimental
 int
 rte_parse_corelist(const char *corelist, uint16_t *cores, uint32_t cores_len);
 
+/**
+ * Convert a string describing a bitmask of core ids into an array of core ids.
+ *
+ * On success, the passed array is filled with the core ids present in the
+ * bitmask up to the "cores_len", and the number of elements added into the array is returned.
+ * For example, passing a 0xA "coremask" results in an array of [1, 3]
+ * and would return 2.
+ * 
+ * Like the snprintf function for strings, if the length of the input array is
+ * insufficient to hold the number of cores in the "coresmask", the input array is
+ * filled to capacity and the return value is the number of elements which would
+ * be returned if the array had been big enough.
+ * Function can also be called with a NULL array and 0 "cores_len" to find out
+ * the "cores_len" required.
+ *
+ * @param coremask
+ *   A string containing a bitmask of core ids.
+ * @param cores
+ *   An array where to store the core ids.
+ *   Array can be NULL if "cores_len" is 0.
+ * @param cores_len
+ *   The length of the "cores" array.
+ *   If the size is smaller than that needed to hold all cores from "coremask",
+ *   only "cores_len" elements will be written to the array.
+ * @return
+ *   n: the number of unique cores present in "coremask".
+ *   -1 if the string was invalid.
+ *   NOTE: if n > "cores_len", then only "cores_len" elements in the "cores" array are valid.
+*/
+__rte_experimental
+int
+rte_parse_coremask(const char* coremask, uint16_t *cores, uint32_t cores_len);
+
 
 #ifdef __cplusplus
 }

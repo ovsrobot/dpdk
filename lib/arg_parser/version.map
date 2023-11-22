@@ -7,4 +7,5 @@ EXPERIMENTAL {
 
     # added in 24.03
     rte_parse_corelist;
+    rte_parse_coremask;
 };
