@@ -2326,19 +2326,18 @@ This command performs:
 
 #. Call the regular ``port attach`` function with updated identifier.
 
-For example, to attach a port whose PCI address is ``0000:0a:00.0``
-and its socket path is ``/var/run/import_ipc_socket``:
+   For example, to attach a port whose PCI address is ``0000:0a:00.0``
+   and its socket path is ``/var/run/import_ipc_socket``:
 
-.. code-block:: console
+   .. code-block:: console
 
-   testpmd> mlx5 port attach 0000:0a:00.0 socket=/var/run/import_ipc_socket
-   testpmd: MLX5 socket path is /var/run/import_ipc_socket
-   testpmd: Attach port with extra devargs 0000:0a:00.0,cmd_fd=40,pd_handle=1
-   Attaching a new port...
-   EAL: Probe PCI driver: mlx5_pci (15b3:101d) device: 0000:0a:00.0 (socket 0)
-   Port 0 is attached. Now total ports is 1
-   Done
-
+      testpmd> mlx5 port attach 0000:0a:00.0 socket=/var/run/import_ipc_socket
+      testpmd: MLX5 socket path is /var/run/import_ipc_socket
+      testpmd: Attach port with extra devargs 0000:0a:00.0,cmd_fd=40,pd_handle=1
+      Attaching a new port...
+      EAL: Probe PCI driver: mlx5_pci (15b3:101d) device: 0000:0a:00.0 (socket 0)
+      Port 0 is attached. Now total ports is 1
+      Done
 
 port map external Rx queue
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
