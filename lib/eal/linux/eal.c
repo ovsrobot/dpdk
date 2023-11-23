@@ -1067,6 +1067,14 @@ rte_eal_init(int argc, char **argv)
 
 	phys_addrs = rte_eal_using_phys_addrs() != 0;
 
+	if (!phys_addrs) {
+		/* if we have no access to physical addresses,
+		 * pick IOVA as VA mode.
+		 */
+		iova_mode = RTE_IOVA_VA;
+		RTE_LOG(INFO, EAL, "Physical addresses are unavailable, selecting IOVA as VA mode.\n");
+	}
+
 	/* if no EAL option "--iova-mode=<pa|va>", use bus IOVA scheme */
 	if (internal_conf->iova_mode == RTE_IOVA_DC) {
 		/* autodetect the IOVA mapping mode */
@@ -1078,12 +1086,6 @@ rte_eal_init(int argc, char **argv)
 			if (!RTE_IOVA_IN_MBUF) {
 				iova_mode = RTE_IOVA_VA;
 				RTE_LOG(DEBUG, EAL, "IOVA as VA mode is forced by build option.\n");
-			} else if (!phys_addrs) {
-				/* if we have no access to physical addresses,
-				 * pick IOVA as VA mode.
-				 */
-				iova_mode = RTE_IOVA_VA;
-				RTE_LOG(DEBUG, EAL, "Physical addresses are unavailable, selecting IOVA as VA mode.\n");
 			} else if (is_iommu_enabled()) {
 				/* we have an IOMMU, pick IOVA as VA mode */
 				iova_mode = RTE_IOVA_VA;
