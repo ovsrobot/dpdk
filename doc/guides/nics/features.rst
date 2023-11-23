@@ -31,6 +31,7 @@ Speed capabilities
 Supports getting the speed capabilities that the current device is capable of.
 
 * **[provides] rte_eth_dev_info**: ``speed_capa:RTE_ETH_LINK_SPEED_*``.
+* **[uses]     user config**: ``dev_conf.link_speeds``.
 * **[related]  API**: ``rte_eth_dev_info_get()``.
 
 
