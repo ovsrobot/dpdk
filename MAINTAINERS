@@ -877,6 +877,8 @@ F: drivers/net/mlx5/
 F: buildtools/options-ibverbs-static.sh
 F: doc/guides/nics/mlx5.rst
 F: doc/guides/nics/features/mlx5.ini
+F: doc/guides/platform/bluefield.rst
+F: doc/guides/platform/mlx5.rst
 
 Microsoft mana
 M: Long Li <longli@microsoft.com>
