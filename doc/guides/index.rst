@@ -7,6 +7,7 @@ DPDK documentation
 .. toctree::
    :maxdepth: 1
 
+   getting_started_guide/index
    linux_gsg/index
    freebsd_gsg/index
    windows_gsg/index
