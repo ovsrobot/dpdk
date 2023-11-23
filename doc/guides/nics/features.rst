@@ -41,10 +41,13 @@ Link status
 
 Supports getting the link speed, duplex mode and link state (up/down).
 
-* **[implements] eth_dev_ops**: ``link_update``.
+* **[implements] eth_dev_ops**: ``link_update``, ``dev_set_link_up``, ``dev_set_link_down``.
 * **[implements] rte_eth_dev_data**: ``dev_link``.
 * **[related]    API**: ``rte_eth_link_get()``, ``rte_eth_link_get_nowait()``.
 
+Set link up/down an Ethernet device.
+
+* **[related]    API**: ``rte_eth_dev_set_link_up()``, ``rte_eth_dev_set_link_down()``.
 
 .. _nic_features_link_status_event:
 
