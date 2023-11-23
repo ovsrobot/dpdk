@@ -277,10 +277,12 @@ RSS hash
 Supports RSS hashing on RX.
 
 * **[uses]     user config**: ``dev_conf.rxmode.mq_mode`` = ``RTE_ETH_MQ_RX_RSS_FLAG``.
-* **[uses]     user config**: ``dev_conf.rx_adv_conf.rss_conf``.
+* **[uses]     user config**: ``rss_conf.rss_hf``.
 * **[uses]     rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_RSS_HASH``.
 * **[provides] rte_eth_dev_info**: ``flow_type_rss_offloads``.
 * **[provides] mbuf**: ``mbuf.ol_flags:RTE_MBUF_F_RX_RSS_HASH``, ``mbuf.rss``.
+* **[related]  API**: ``rte_eth_dev_configure``, ``rte_eth_dev_rss_hash_update``
+  ``rte_eth_dev_rss_hash_conf_get()``.
 
 
 .. _nic_features_inner_rss:
@@ -288,7 +290,7 @@ Supports RSS hashing on RX.
 Inner RSS
 ---------
 
-Supports RX RSS hashing on Inner headers.
+Supports RX RSS hashing on Inner headers by rte_flow API.
 
 * **[uses]    rte_flow_action_rss**: ``level``.
 * **[uses]    rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_RSS_HASH``.
@@ -303,9 +305,24 @@ RSS key update
 Supports configuration of Receive Side Scaling (RSS) hash computation. Updating
 Receive Side Scaling (RSS) hash key.
 
-* **[implements] eth_dev_ops**: ``rss_hash_update``, ``rss_hash_conf_get``.
+* **[implements] eth_dev_ops**: ``dev_configure``, ``rss_hash_update``, ``rss_hash_conf_get``.
+* **[uses]     user config**: ``rss_conf.rss_key``, ``rss_conf.rss_key_len``
 * **[provides]   rte_eth_dev_info**: ``hash_key_size``.
-* **[related]    API**: ``rte_eth_dev_rss_hash_update()``,
+* **[related]    API**: ``rte_eth_dev_configure``, ``rte_eth_dev_rss_hash_update()``,
+  ``rte_eth_dev_rss_hash_conf_get()``.
+
+.. _nic_features_rss_hash_algo_update:
+
+RSS hash algorithm update
+--------------
+
+Supports configuration of Receive Side Scaling (RSS) hash algorithm. Updating
+RSS hash algorithm.
+
+* **[implements] eth_dev_ops**: ``dev_configure``, ``rss_hash_update``, ``rss_hash_conf_get``.
+* **[uses]     user config**: ``rss_conf.algorithm``
+* **[provides]   rte_eth_dev_info**: ``rss_algo_capa``.
+* **[related]    API**: ``rte_eth_dev_configure``, ``rte_eth_dev_rss_hash_update()``,
   ``rte_eth_dev_rss_hash_conf_get()``.
 
 
