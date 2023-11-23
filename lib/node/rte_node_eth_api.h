@@ -57,6 +57,23 @@ struct rte_node_ethdev_config {
  */
 int rte_node_eth_config(struct rte_node_ethdev_config *cfg,
 			uint16_t cnt, uint16_t nb_graphs);
+
+/**
+ * Update ethdev rx next node.
+ *
+ * @param id
+ *   Node id whose edge is to be updated.
+ * @param edge_name
+ *   Name of the next node.
+ *
+ * @return
+ *   RTE_EDGE_ID_INVALID if id is invalid
+ *   EINVAL if edge name doesn't exist
+ *   0 on successful initialization.
+ */
+__rte_experimental
+int rte_node_ethdev_rx_next_update(rte_node_t id, const char *edge_name);
+
 #ifdef __cplusplus
 }
 #endif
