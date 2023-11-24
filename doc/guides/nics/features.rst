@@ -45,6 +45,18 @@ Supports configurating fixed speed and link autonegotiation.
 * **[related]  API**: ``rte_eth_dev_configure()``.
 
 
+.. _nic_features_loopback:
+
+Loopback configuration
+----------------------
+
+Supports configurating loopback mode. The default value 0 is to disable
+loopback mode and other value is defined by given Ethernet controller.
+
+* **[uses]     user config**: ``dev_conf.lpbk_mode``.
+* **[related]  API**: ``rte_eth_dev_configure()``.
+
+
 .. _nic_features_link_status:
 
 Link status
