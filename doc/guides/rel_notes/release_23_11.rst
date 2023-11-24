@@ -63,8 +63,8 @@ New Features
 
   More specifically, the requirements will be:
 
-  * Support for flag "-std=c11" (or similar)
-  * __STDC_NO_ATOMICS__ is *not defined* when using c11 flag
+  * Support for flag ``-std=c11`` (or similar)
+  * ``__STDC_NO_ATOMICS__`` is *not defined* when using c11 flag
 
   Please note:
 
@@ -92,9 +92,11 @@ New Features
 
 * **Added support for power intrinsics with AMD processors.**
 
-* **Added support for allow/block list in vmbus bus driver.***
+  Added support for power intrinsics with AMD processors.
 
-  The ``vmbus`` bus driver now supports -a and -b EAL options for selecting
+* **Added support for allow/block list in vmbus bus driver.**
+
+  The ``vmbus`` bus driver now supports ``-a`` and ``-b`` EAL options for selecting
   devices.
 
 * **Added mbuf recycling support.**
@@ -133,7 +135,7 @@ New Features
 
   For P4-programmable devices, hardware pipeline can be configured through
   a new "PROG" action type and its associated custom arguments.
-  Such P4 pipeline, not using the standard blocks of the flow API,
+  Such P4 pipelines, not using the standard blocks of the flow API,
   can be managed with ``RTE_FLOW_ITEM_TYPE_FLEX`` and ``RTE_FLOW_ACTION_TYPE_PROG``.
 
 * **Added flow group set miss actions.**
@@ -145,7 +147,7 @@ New Features
 * **Updated Amazon ena (Elastic Network Adapter) net driver.**
 
   * Upgraded ENA HAL to latest version.
-  * Added support for connection tracking allowance utilization metric.
+  * Added support for connection tracking allowance utilization metrics.
   * Added support for reporting Rx overrun errors in xstats.
   * Added support for ENA-express metrics.
 
@@ -212,12 +214,12 @@ New Features
   Added Rx inject API to allow applications to submit packets
   for protocol offload and have them injected back to ethdev Rx
   so that further ethdev Rx actions (IP reassembly, packet parsing and flow lookups)
-  can happen based on inner packet.
+  can happen based on the inner packet.
 
-  The API when implemented by an ethdev, application would be able to process
+  When using the API when implemented by an ethdev the application would be able to process
   packets that are received without/failed inline offload processing
   (such as fragmented ESP packets with inline IPsec offload).
-  The API when implemented by a cryptodev, can be used for injecting packets
+  When using the AP when implemented by a cryptodev it can be used for injecting packets
   to ethdev Rx after IPsec processing and take advantage of ethdev Rx actions
   for the inner packet which cannot be accelerated in inline protocol offload mode.
 
@@ -229,7 +231,7 @@ New Features
 * **Updated ipsec_mb crypto driver.**
 
   * Added Intel IPsec MB v1.5 library support for x86 platform.
-  * Added support for digest encrypted to AESNI_MB asynchronous crypto driver.
+  * Added support for digest encrypted to the AESNI_MB asynchronous crypto driver.
 
 * **Updated Intel QuickAssist Technology driver.**
 
@@ -272,8 +274,8 @@ New Features
 
 * **Added eventdev support to link queues to port with link profile.**
 
-  Introduced event link profiles that can be used to associated links between
-  event queues and an event port with a unique identifier termed as link profile.
+  Introduced event link profiles that can be used to associate links between
+  event queues and an event port with a unique identifier termed the "link profile".
   The profile can be used to switch between the associated links in fast-path
   without the additional overhead of linking/unlinking and waiting for unlinking.
 
@@ -298,8 +300,8 @@ New Features
 
 * **Added CLI based graph application.**
 
-  Added CLI based graph application which exercises on different use cases.
-  Application provides a framework so that each use case can be added via a file.
+  Added CLI based graph application which exercises different use cases.
+  The application provides a framework so that each use case can be added via a file.
   Each CLI will further be translated into a graph representing the use case.
 
 * **Added layer 2 MACsec forwarding example application.**
