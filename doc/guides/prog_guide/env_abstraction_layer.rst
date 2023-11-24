@@ -559,9 +559,12 @@ IOVA Mode is selected by considering what the current usable Devices on the
 system require and/or support.
 
 On FreeBSD, RTE_IOVA_PA is always the default. On Linux, the IOVA mode is
-detected based on a 2-step heuristic detailed below.
+detected based on a heuristic detailed below.
 
-For the first step, EAL asks each bus its requirement in terms of IOVA mode
+For the first step, if no Physical Addresses are available RTE_IOVA_VA is
+selected.
+
+Then EAL asks each bus its requirement in terms of IOVA mode
 and decides on a preferred IOVA mode.
 
 - if all buses report RTE_IOVA_PA, then the preferred IOVA mode is RTE_IOVA_PA,
@@ -575,7 +578,7 @@ and decides on a preferred IOVA mode.
 If the buses have expressed no preference on which IOVA mode to pick, then a
 default is selected using the following logic:
 
-- if physical addresses are not available, RTE_IOVA_VA mode is used
+- if enable_iova_as_pa was not set at build RTE_IOVA_VA mode is used
 - if /sys/kernel/iommu_groups is not empty, RTE_IOVA_VA mode is used
 - otherwise, RTE_IOVA_PA mode is used
 
