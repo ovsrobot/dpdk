@@ -832,6 +832,18 @@ registers and register size).
 * **[related]    API**: ``rte_eth_dev_get_reg_info()``.
 
 
+.. _nic_features_device_private_info_dump:
+
+Device private information dump
+-------------------------------
+
+Supports retrieving device private information to a file. Provided data and
+the order depends on PMD.
+
+* **[implements] eth_dev_ops**: ``eth_dev_priv_dump``.
+* **[related]    API**: ``rte_eth_dev_priv_dump()``.
+
+
 .. _nic_features_led:
 
 LED
