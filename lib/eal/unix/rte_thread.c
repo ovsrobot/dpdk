@@ -378,3 +378,23 @@ rte_thread_get_affinity_by_id(rte_thread_t thread_id,
 	return pthread_getaffinity_np((pthread_t)thread_id.opaque_id,
 		sizeof(*cpuset), cpuset);
 }
+
+int
+rte_thread_timedjoin_np(rte_thread_t thread_id, void **retval,
+		const struct timespec *abstime)
+{
+	return pthread_timedjoin_np((pthread_t) thread_id.opaque_id, retval,
+		abstime);
+}
+
+int
+rte_thread_getname_np(rte_thread_t thread_id, char name[], size_t size)
+{
+	return pthread_getname_np((pthread_t) thread_id.opaque_id, name, size);
+}
+
+int
+rte_thread_cancel(rte_thread_t thread_id)
+{
+	return pthread_cancel((pthread_t) thread_id.opaque_id);
+}

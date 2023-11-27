@@ -463,6 +463,55 @@ int rte_thread_value_set(rte_thread_key key, const void *value);
  */
 void *rte_thread_value_get(rte_thread_key key);
 
+/**
+ * Try to join with a terminated thread. If thread has not yet terminated,
+ * then the call blocks until a maximum time, specified in abstime.
+ *
+ * @param thread_id
+ *   Id of the thread.
+ *
+ * @param retval
+ *   Exit status of the thread.
+ *
+ * @param abstime
+ *   Maximum time of call blocking, measured against the CLOCK_REALTIME clock.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+int rte_thread_timedjoin_np(rte_thread_t thread_id, void **retval, const struct timespec *abstime);
+
+/**
+ * Get name of the thread.
+ *
+ * @param thread_id
+ *   Id of the thread.
+ *
+ * @param name
+ *   Name of the thread.
+ *
+ * @param size
+ *   The number of bytes available in name.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+int rte_thread_getname_np(rte_thread_t thread_id, char name[], size_t size);
+
+/**
+ * Send a cancelation request to a thread.
+ *
+ * @param thread_id
+ *   Id of the thread.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+int rte_thread_cancel(rte_thread_t thread_id);
+
 #ifdef __cplusplus
 }
 #endif

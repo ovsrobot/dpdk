@@ -310,6 +310,9 @@ DPDK_24 {
 	rte_thread_unregister;
 	rte_thread_value_get;
 	rte_thread_value_set;
+	rte_thread_timedjoin_np; # WINDOWS_NO_EXPORT
+	rte_thread_getname_np; # WINDOWS_NO_EXPORT
+	rte_thread_cancel; # WINDOWS_NO_EXPORT
 	rte_uuid_compare;
 	rte_uuid_is_null;
 	rte_uuid_parse;
