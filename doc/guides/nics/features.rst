@@ -45,6 +45,10 @@ Supports getting the link speed, duplex mode and link state (up/down).
 * **[implements] rte_eth_dev_data**: ``dev_link``.
 * **[related]    API**: ``rte_eth_link_get()``, ``rte_eth_link_get_nowait()``.
 
+Set link up/down an Ethernet device.
+
+* **[implements] eth_dev_ops**: ``dev_set_link_up``, ``dev_set_link_down``.
+* **[related]    API**: ``rte_eth_dev_set_link_up()``, ``rte_eth_dev_set_link_down()``.
 
 .. _nic_features_link_status_event:
 
