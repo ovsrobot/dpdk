@@ -982,3 +982,4 @@ Other dev ops not represented by a Feature
 * ``udp_tunnel_port_add``
 * ``udp_tunnel_port_del``
 * ``tx_pkt_prepare``
+* ``eth_dev_priv_dump``
