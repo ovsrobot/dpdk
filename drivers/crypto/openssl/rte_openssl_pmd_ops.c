@@ -610,6 +610,20 @@ static const struct rte_cryptodev_capabilities openssl_pmd_capabilities[] = {
 		}
 		}
 	},
+	{	/* EDDSA */
+		.op = RTE_CRYPTO_OP_TYPE_ASYMMETRIC,
+		{.asym = {
+			.xform_capa = {
+				.xform_type = RTE_CRYPTO_ASYM_XFORM_EDDSA,
+				.hash_algos = (1 << RTE_CRYPTO_AUTH_SHA512 |
+					       1 << RTE_CRYPTO_AUTH_SHAKE_256),
+				.op_types =
+				((1<<RTE_CRYPTO_ASYM_OP_SIGN) |
+				 (1 << RTE_CRYPTO_ASYM_OP_VERIFY)),
+			}
+		}
+		}
+	},
 
 	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
 };
@@ -1415,6 +1429,66 @@ err_sm2:
 		return -ENOTSUP;
 #endif
 	}
+	case RTE_CRYPTO_ASYM_XFORM_EDDSA:
+	{
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+		OSSL_PARAM_BLD *param_bld = NULL;
+		OSSL_PARAM *params = NULL;
+		int ret = -1;
+
+		asym_session->u.eddsa.curve_id = xform->ec.curve_id;
+
+		param_bld = OSSL_PARAM_BLD_new();
+		if (!param_bld) {
+			OPENSSL_LOG(ERR, "failed to allocate params\n");
+			goto err_eddsa;
+		}
+
+		ret = OSSL_PARAM_BLD_push_utf8_string(param_bld,
+			  OSSL_PKEY_PARAM_GROUP_NAME, "ED25519", sizeof("ED25519"));
+		if (!ret) {
+			OPENSSL_LOG(ERR, "failed to push params\n");
+			goto err_eddsa;
+		}
+
+		ret = OSSL_PARAM_BLD_push_octet_string(param_bld, OSSL_PKEY_PARAM_PRIV_KEY,
+				xform->ec.pkey.data, xform->ec.pkey.length);
+		if (!ret) {
+			OPENSSL_LOG(ERR, "failed to push params\n");
+			goto err_eddsa;
+		}
+
+		ret = OSSL_PARAM_BLD_push_octet_string(param_bld, OSSL_PKEY_PARAM_PUB_KEY,
+				xform->ec.qcomp.data, xform->ec.qcomp.length);
+		if (!ret) {
+			OPENSSL_LOG(ERR, "failed to push params\n");
+			goto err_eddsa;
+		}
+
+		params = OSSL_PARAM_BLD_to_param(param_bld);
+		if (!params) {
+			OPENSSL_LOG(ERR, "failed to push params\n");
+			goto err_eddsa;
+		}
+
+		asym_session->u.eddsa.params = params;
+		OSSL_PARAM_BLD_free(param_bld);
+
+		asym_session->xfrm_type = RTE_CRYPTO_ASYM_XFORM_EDDSA;
+		break;
+err_eddsa:
+		if (param_bld)
+			OSSL_PARAM_BLD_free(param_bld);
+
+		if (asym_session->u.eddsa.params)
+			OSSL_PARAM_free(asym_session->u.eddsa.params);
+
+		return -1;
+#else
+		OPENSSL_LOG(WARNING, "EDDSA unsupported for OpenSSL Version < 3.0");
+		return -ENOTSUP;
+#endif
+	}
 	default:
 		return ret;
 	}
@@ -1511,6 +1585,12 @@ static void openssl_reset_asym_session(struct openssl_asym_session *sess)
 #if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 		OSSL_PARAM_free(sess->u.sm2.params);
 #endif
+		break;
+	case RTE_CRYPTO_ASYM_XFORM_EDDSA:
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+		OSSL_PARAM_free(sess->u.eddsa.params);
+#endif
+		break;
 	default:
 		break;
 	}

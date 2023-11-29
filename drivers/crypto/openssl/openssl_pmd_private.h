@@ -212,6 +212,12 @@ struct openssl_asym_session {
 			OSSL_PARAM * params;
 #endif
 		} sm2;
+		struct {
+			uint8_t curve_id;
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+			OSSL_PARAM *params;
+#endif
+		} eddsa;
 	} u;
 } __rte_cache_aligned;
 /** Set and validate OPENSSL crypto session parameters */
