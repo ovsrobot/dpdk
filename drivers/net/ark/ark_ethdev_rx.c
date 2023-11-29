@@ -283,7 +283,7 @@ eth_ark_recv_pkts(void *rx_queue,
 		mbuf->pkt_len = meta->pkt_len;
 		mbuf->data_len = meta->pkt_len;
 
-		if (ARK_DEBUG_CORE) {	/* debug sanity checks */
+		if (ARK_DEBUG_CORE) {	/* debug checks */
 
 			if ((meta->pkt_len > (1024 * 16)) ||
 			    (meta->pkt_len == 0)) {
