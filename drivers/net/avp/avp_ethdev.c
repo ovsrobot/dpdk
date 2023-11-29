@@ -1231,7 +1231,7 @@ _avp_mac_filter(struct avp_dev *avp, struct rte_mbuf *m)
 
 #ifdef RTE_LIBRTE_AVP_DEBUG_BUFFERS
 static inline void
-__avp_dev_buffer_sanity_check(struct avp_dev *avp, struct rte_avp_desc *buf)
+__avp_dev_buffer_check(struct avp_dev *avp, struct rte_avp_desc *buf)
 {
 	struct rte_avp_desc *first_buf;
 	struct rte_avp_desc *pkt_buf;
@@ -1272,12 +1272,12 @@ __avp_dev_buffer_sanity_check(struct avp_dev *avp, struct rte_avp_desc *buf)
 			  first_buf->pkt_len, pkt_len);
 }
 
-#define avp_dev_buffer_sanity_check(a, b) \
-	__avp_dev_buffer_sanity_check((a), (b))
+#define avp_dev_buffer_check(a, b) \
+	__avp_dev_buffer_check((a), (b))
 
 #else /* RTE_LIBRTE_AVP_DEBUG_BUFFERS */
 
-#define avp_dev_buffer_sanity_check(a, b) do {} while (0)
+#define avp_dev_buffer_check(a, b) do {} while (0)
 
 #endif
 
@@ -1302,7 +1302,7 @@ avp_dev_copy_from_buffers(struct avp_dev *avp,
 	void *pkt_data;
 	unsigned int i;
 
-	avp_dev_buffer_sanity_check(avp, buf);
+	avp_dev_buffer_check(avp, buf);
 
 	/* setup the first source buffer */
 	pkt_buf = avp_dev_translate_buffer(avp, buf);
@@ -1370,7 +1370,7 @@ avp_dev_copy_from_buffers(struct avp_dev *avp,
 	rte_pktmbuf_pkt_len(m) = total_length;
 	m->vlan_tci = vlan_tci;
 
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_verify(m, 1);
 
 	return m;
 }
@@ -1614,7 +1614,7 @@ avp_dev_copy_to_buffers(struct avp_dev *avp,
 	char *pkt_data;
 	unsigned int i;
 
-	__rte_mbuf_sanity_check(mbuf, 1);
+	__rte_mbuf_verify(mbuf, 1);
 
 	m = mbuf;
 	src_offset = 0;
@@ -1680,7 +1680,7 @@ avp_dev_copy_to_buffers(struct avp_dev *avp,
 		first_buf->vlan_tci = mbuf->vlan_tci;
 	}
 
-	avp_dev_buffer_sanity_check(avp, buffers[0]);
+	avp_dev_buffer_check(avp, buffers[0]);
 
 	return total_length;
 }
@@ -1798,7 +1798,7 @@ avp_xmit_scattered_pkts(void *tx_queue,
 
 #ifdef RTE_LIBRTE_AVP_DEBUG_BUFFERS
 	for (i = 0; i < nb_pkts; i++)
-		avp_dev_buffer_sanity_check(avp, tx_bufs[i]);
+		avp_dev_buffer_check(avp, tx_bufs[i]);
 #endif
 
 	/* send the packets */
