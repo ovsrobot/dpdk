@@ -19,7 +19,7 @@
 	{printf(x "() test failed!\n");\
 	return -1;}
 
-/* this is really a sanity check */
+/* this is really a consistency check */
 static int
 test_macros(int __rte_unused unused_parm)
 {
