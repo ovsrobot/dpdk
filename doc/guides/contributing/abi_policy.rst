@@ -328,6 +328,16 @@ new APIs and start finding issues with them, new DPDK APIs will be automatically
 marked as ``experimental`` to allow for a period of stabilization before they
 become part of a tracked ABI version.
 
+The experimental tag has as limited lifetime (sunset provision).
+It is expected to be removed in a future release.
+The tag may be removed as soon as the second release with the new DPDK API.
+After one year, the API must be stable and tag removed unless an
+exception is approved by the technical board.
+
+For example, the symbol ``rte_flow_dev_dump`` was introduced
+in 20.02 release as ``experimental``. The tag could have been removed
+in 20.05 release, and should have been removed in 21.03 release.
+
 Note that marking an API as experimental is a multi step process.
 To mark an API as experimental, the symbols which are desired to be exported
 must be placed in an EXPERIMENTAL version block in the corresponding libraries'
