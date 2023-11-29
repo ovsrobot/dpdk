@@ -187,7 +187,7 @@ bnx2x_stats_pmf_update(struct bnx2x_softc *sc)
 		 */
 		return;
 	}
-	/* sanity */
+	/* input valid? */
 	if (!sc->port.pmf || !sc->port.port_stx) {
 		PMD_DRV_LOG(ERR, sc, "BUG!");
 		return;
@@ -237,7 +237,7 @@ bnx2x_port_stats_init(struct bnx2x_softc *sc)
     uint32_t mac_addr;
     uint32_t *stats_comp = BNX2X_SP(sc, stats_comp);
 
-    /* sanity */
+    /* input valid? */
     if (!sc->link_vars.link_up || !sc->port.pmf) {
 	PMD_DRV_LOG(ERR, sc, "BUG!");
 	return;
@@ -461,7 +461,7 @@ bnx2x_func_stats_init(struct bnx2x_softc *sc)
     struct dmae_command *dmae = &sc->stats_dmae;
     uint32_t *stats_comp = BNX2X_SP(sc, stats_comp);
 
-    /* sanity */
+    /* input valid? */
     if (!sc->func_stx) {
 	PMD_DRV_LOG(ERR, sc, "BUG!");
 	return;
@@ -1301,7 +1301,7 @@ bnx2x_port_stats_base_init(struct bnx2x_softc *sc)
     struct dmae_command *dmae;
     uint32_t *stats_comp = BNX2X_SP(sc, stats_comp);
 
-    /* sanity */
+    /* input valid? */
     if (!sc->port.pmf || !sc->port.port_stx) {
 	PMD_DRV_LOG(ERR, sc, "BUG!");
 	return;
