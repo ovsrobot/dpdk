@@ -20,6 +20,7 @@
 #include "test_cryptodev_ecdh_test_vectors.h"
 #include "test_cryptodev_ecdsa_test_vectors.h"
 #include "test_cryptodev_ecpm_test_vectors.h"
+#include "test_cryptodev_eddsa_test_vectors.h"
 #include "test_cryptodev_mod_test_vectors.h"
 #include "test_cryptodev_rsa_test_vectors.h"
 #include "test_cryptodev_sm2_test_vectors.h"
@@ -3171,6 +3172,343 @@ exit:
 	return status;
 };
 
+static int
+test_eddsa_sign(enum rte_crypto_edward_instance instance)
+{
+	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
+	const struct rte_cryptodev_asymmetric_xform_capability *capa;
+	struct rte_mempool *sess_mpool = ts_params->session_mpool;
+	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct crypto_testsuite_eddsa_params input_params;
+	struct rte_cryptodev_asym_capability_idx idx;
+	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_crypto_op *result_op = NULL;
+	uint8_t output_buf_r[TEST_DATA_SIZE];
+	struct rte_crypto_asym_xform xform;
+	struct rte_crypto_asym_op *asym_op;
+	struct rte_crypto_op *op = NULL;
+	int ret, status = TEST_FAILED;
+	void *sess = NULL;
+	bool ctx = false;
+
+	switch (instance) {
+	case RTE_CRYPTO_EDCURVE_25519:
+		input_params = eddsa_param_ed25519;
+		break;
+	case RTE_CRYPTO_EDCURVE_25519CTX:
+		input_params = eddsa_param_ed25519ctx;
+		ctx = true;
+		break;
+	case RTE_CRYPTO_EDCURVE_25519PH:
+		input_params = eddsa_param_ed25519ph;
+		break;
+	case RTE_CRYPTO_EDCURVE_448:
+		input_params = eddsa_param_ed448;
+		break;
+	case RTE_CRYPTO_EDCURVE_448PH:
+		input_params = eddsa_param_ed448ph;
+		break;
+	default:
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Unsupported curve id\n");
+		status = TEST_SKIPPED;
+		goto exit;
+	}
+
+	/* Check EDDSA capability */
+	idx.type = RTE_CRYPTO_ASYM_XFORM_EDDSA;
+	capa = rte_cryptodev_asym_capability_get(dev_id, &idx);
+	if (capa == NULL)
+		return -ENOTSUP;
+
+	/* Setup crypto op data structure */
+	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to allocate asymmetric crypto "
+				"operation struct\n");
+		status = TEST_FAILED;
+		goto exit;
+	}
+
+	asym_op = op->asym;
+
+	/* Setup asym xform */
+	xform.next = NULL;
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_EDDSA;
+	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.qcomp.data = input_params.pubkey.data;
+	xform.ec.qcomp.length = input_params.pubkey.length;
+
+	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
+	if (ret < 0) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Session creation failed\n");
+		status = (ret == -ENOTSUP) ? TEST_SKIPPED : TEST_FAILED;
+		goto exit;
+	}
+
+	/* Attach asymmetric crypto session to crypto operations */
+	rte_crypto_op_attach_asym_session(op, sess);
+
+	/* Compute sign */
+
+	/* Populate op with operational details */
+	asym_op->eddsa.op_type = RTE_CRYPTO_ASYM_OP_SIGN;
+	asym_op->eddsa.instance = input_params.instance;
+	asym_op->eddsa.message.data = input_params.message.data;
+	asym_op->eddsa.message.length = input_params.message.length;
+	if (ctx) {
+		asym_op->eddsa.context.data = input_params.context.data;
+		asym_op->eddsa.context.length = input_params.context.length;
+	}
+
+	/* Init out buf */
+	asym_op->eddsa.sign.data = output_buf_r;
+
+	RTE_LOG(DEBUG, USER1, "Process ASYM operation\n");
+
+	/* Process crypto operation */
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Error sending packet for operation\n");
+		goto exit;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &result_op, 1) == 0)
+		rte_pause();
+
+	if (result_op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to process asym crypto op\n");
+		goto exit;
+	}
+
+	if (result_op->status != RTE_CRYPTO_OP_STATUS_SUCCESS) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to process asym crypto op\n");
+		goto exit;
+	}
+
+	asym_op = result_op->asym;
+
+	debug_hexdump(stdout, "sign:",
+			asym_op->eddsa.sign.data, asym_op->eddsa.sign.length);
+
+	/* Verify sign (by comparison). */
+	if (memcmp(input_params.sign.data, asym_op->eddsa.sign.data,
+			   asym_op->eddsa.sign.length) != 0) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"EDDSA sign failed.\n");
+		goto exit;
+	}
+
+	status = TEST_SUCCESS;
+exit:
+	if (sess != NULL)
+		rte_cryptodev_asym_session_free(dev_id, sess);
+	rte_crypto_op_free(op);
+	return status;
+};
+
+static int
+test_eddsa_verify(enum rte_crypto_edward_instance instance)
+{
+	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
+	const struct rte_cryptodev_asymmetric_xform_capability *capa;
+	struct rte_mempool *sess_mpool = ts_params->session_mpool;
+	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct crypto_testsuite_eddsa_params input_params;
+	struct rte_cryptodev_asym_capability_idx idx;
+	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_crypto_op *result_op = NULL;
+	struct rte_crypto_asym_xform xform;
+	struct rte_crypto_asym_op *asym_op;
+	struct rte_crypto_op *op = NULL;
+	int ret, status = TEST_FAILED;
+	void *sess = NULL;
+	bool ctx = false;
+
+	switch (instance) {
+	case RTE_CRYPTO_EDCURVE_25519:
+		input_params = eddsa_param_ed25519;
+		break;
+	case RTE_CRYPTO_EDCURVE_25519CTX:
+		input_params = eddsa_param_ed25519ctx;
+		ctx = true;
+		break;
+	case RTE_CRYPTO_EDCURVE_25519PH:
+		input_params = eddsa_param_ed25519ph;
+		break;
+	case RTE_CRYPTO_EDCURVE_448:
+		input_params = eddsa_param_ed448;
+		break;
+	case RTE_CRYPTO_EDCURVE_448PH:
+		input_params = eddsa_param_ed448ph;
+		break;
+	default:
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Unsupported curve id\n");
+		status = TEST_SKIPPED;
+		goto exit;
+	}
+
+	/* Check EDDSA capability */
+	idx.type = RTE_CRYPTO_ASYM_XFORM_EDDSA;
+	capa = rte_cryptodev_asym_capability_get(dev_id, &idx);
+	if (capa == NULL)
+		return -ENOTSUP;
+
+	/* Setup crypto op data structure */
+	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to allocate asymmetric crypto "
+				"operation struct\n");
+		goto exit;
+	}
+
+	asym_op = op->asym;
+
+	/* Setup asym xform */
+	xform.next = NULL;
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_EDDSA;
+	xform.ec.curve_id = input_params.curve;
+	xform.ec.pkey.data = input_params.pkey.data;
+	xform.ec.pkey.length = input_params.pkey.length;
+	xform.ec.qcomp.data = input_params.pubkey.data;
+	xform.ec.qcomp.length = input_params.pubkey.length;
+
+	ret = rte_cryptodev_asym_session_create(dev_id, &xform, sess_mpool, &sess);
+	if (ret < 0) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Session creation failed\n");
+		status = (ret == -ENOTSUP) ? TEST_SKIPPED : TEST_FAILED;
+		goto exit;
+	}
+
+	/* Attach asymmetric crypto session to crypto operations */
+	rte_crypto_op_attach_asym_session(op, sess);
+
+	/* Compute sign */
+
+	/* Populate op with operational details */
+	asym_op->eddsa.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
+	asym_op->eddsa.instance = input_params.instance;
+	asym_op->eddsa.message.data = input_params.message.data;
+	asym_op->eddsa.message.length = input_params.message.length;
+	if (ctx) {
+		asym_op->eddsa.context.data = input_params.context.data;
+		asym_op->eddsa.context.length = input_params.context.length;
+	}
+
+	/* Init out buf */
+	asym_op->eddsa.sign.data = input_params.sign.data;
+	asym_op->eddsa.sign.length = input_params.sign.length;
+
+	RTE_LOG(DEBUG, USER1, "Process ASYM operation\n");
+
+	/* Process crypto operation */
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Error sending packet for operation\n");
+		goto exit;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &result_op, 1) == 0)
+		rte_pause();
+
+	if (result_op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to process asym crypto op\n");
+		goto exit;
+	}
+
+	if (result_op->status != RTE_CRYPTO_OP_STATUS_SUCCESS) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to process asym crypto op\n");
+		goto exit;
+	}
+
+	asym_op = result_op->asym;
+
+	debug_hexdump(stdout, "sign:",
+			asym_op->eddsa.sign.data, asym_op->eddsa.sign.length);
+
+	/* Verify sign (by comparison). */
+	if (memcmp(input_params.sign.data, asym_op->eddsa.sign.data,
+			   asym_op->eddsa.sign.length) != 0) {
+		status = TEST_FAILED;
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"EDDSA sign failed.\n");
+		goto exit;
+	}
+
+	status = TEST_SUCCESS;
+exit:
+	if (sess != NULL)
+		rte_cryptodev_asym_session_free(dev_id, sess);
+	rte_crypto_op_free(op);
+	return status;
+};
+
+static int
+test_eddsa_sign_verify_all_curve(void)
+{
+	static const char * const edcurve[] = {"ed25519", "ed25519ctx", "ed25519ph",
+					       "ed448", "ed448ph"};
+	int status, overall_status = TEST_SUCCESS;
+	enum rte_crypto_edward_instance ins;
+	int test_index = 0;
+	const char *msg;
+
+	for (ins = RTE_CRYPTO_EDCURVE_25519; ins <= RTE_CRYPTO_EDCURVE_448PH; ins++) {
+		status = test_eddsa_sign(ins);
+		if (status == TEST_SUCCESS) {
+			msg = "succeeded";
+		} else if (status == TEST_SKIPPED) {
+			msg = "skipped";
+		} else {
+			msg = "failed";
+			overall_status = status;
+		}
+		printf("  %u) TestCase Sign Curve %s  %s\n",
+		       test_index ++, edcurve[ins], msg);
+	}
+
+	for (ins = RTE_CRYPTO_EDCURVE_25519; ins <= RTE_CRYPTO_EDCURVE_448PH; ins++) {
+		status = test_eddsa_verify(ins);
+		if (status == TEST_SUCCESS) {
+			msg = "succeeded";
+		} else if (status == TEST_SKIPPED) {
+			msg = "skipped";
+		} else {
+			msg = "failed";
+			overall_status = status;
+		}
+		printf("  %u) TestCase Verify Curve %s  %s\n",
+		       test_index ++, edcurve[ins], msg);
+	}
+
+	return overall_status;
+}
+
 static int send_one(void)
 {
 	int ticks = 0;
@@ -3513,6 +3851,7 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 			"Modex Group 18 test",
 			ut_setup_asym, ut_teardown_asym,
 			modular_exponentiation, &modex_group_test_cases[5]),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_eddsa_sign_verify_all_curve),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
