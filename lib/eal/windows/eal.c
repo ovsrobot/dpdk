@@ -194,7 +194,7 @@ eal_parse_args(int argc, char **argv)
 	if (eal_adjust_config(internal_conf) != 0)
 		return -1;
 
-	/* sanity checks */
+	/* options checks */
 	if (eal_check_common_options(internal_conf) != 0) {
 		eal_usage(prgname);
 		return -1;

@@ -501,7 +501,7 @@ eal_parse_args(int argc, char **argv)
 		goto out;
 	}
 
-	/* sanity checks */
+	/* options checks */
 	if (eal_check_common_options(internal_conf) != 0) {
 		eal_usage(prgname);
 		ret = -1;
