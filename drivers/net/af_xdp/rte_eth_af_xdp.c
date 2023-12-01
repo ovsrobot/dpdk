@@ -1242,6 +1242,7 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 
 	if (ret) {
 		AF_XDP_LOG(ERR, "Failed to create umem\n");
+		rte_memzone_free(mz);
 		goto err;
 	}
 	umem->mz = mz;
