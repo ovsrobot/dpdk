@@ -1254,10 +1254,12 @@ flow_hw_modify_field_compile(struct rte_eth_dev *dev,
 			else
 				value = rte_cpu_to_be_32(value);
 			item.spec = &value;
-		} else if (conf->dst.field == RTE_FLOW_FIELD_GTP_PSC_QFI) {
+		} else if (conf->dst.field == RTE_FLOW_FIELD_GTP_PSC_QFI ||
+			   conf->dst.field == RTE_FLOW_FIELD_GENEVE_OPT_TYPE) {
 			/*
-			 * QFI is passed as an uint8_t integer, but it is accessed through
-			 * a 2nd least significant byte of a 32-bit field in modify header command.
+			 * Both QFI and Geneve option type are passed as an uint8_t integer,
+			 * but it is accessed through a 2nd least significant byte of a 32-bit
+			 * field in modify header command.
 			 */
 			value = *(const uint8_t *)item.spec;
 			value = rte_cpu_to_be_32(value << 8);
@@ -2825,12 +2827,14 @@ flow_hw_modify_field_construct(struct mlx5_hw_q_job *job,
 			*value_p = rte_cpu_to_be_32(*value_p << 16);
 		else
 			*value_p = rte_cpu_to_be_32(*value_p);
-	} else if (mhdr_action->dst.field == RTE_FLOW_FIELD_GTP_PSC_QFI) {
+	} else if (mhdr_action->dst.field == RTE_FLOW_FIELD_GTP_PSC_QFI ||
+		   mhdr_action->dst.field == RTE_FLOW_FIELD_GENEVE_OPT_TYPE) {
 		uint32_t tmp;
 
 		/*
-		 * QFI is passed as an uint8_t integer, but it is accessed through
-		 * a 2nd least significant byte of a 32-bit field in modify header command.
+		 * Both QFI and Geneve option type are passed as an uint8_t integer,
+		 * but it is accessed through a 2nd least significant byte of a 32-bit
+		 * field in modify header command.
 		 */
 		tmp = values[0];
 		value_p = (unaligned_uint32_t *)values;
@@ -4944,6 +4948,14 @@ flow_hw_modify_field_is_used(const struct rte_flow_action_modify_field *action,
 	return action->src.field == field || action->dst.field == field;
 }
 
+static bool
+flow_hw_modify_field_is_geneve_opt(enum rte_flow_field_id field)
+{
+	return field == RTE_FLOW_FIELD_GENEVE_OPT_TYPE ||
+	       field == RTE_FLOW_FIELD_GENEVE_OPT_CLASS ||
+	       field == RTE_FLOW_FIELD_GENEVE_OPT_DATA;
+}
+
 static int
 flow_hw_validate_action_modify_field(struct rte_eth_dev *dev,
 				     const struct rte_flow_action *action,
@@ -4977,15 +4989,17 @@ flow_hw_validate_action_modify_field(struct rte_eth_dev *dev,
 	ret = flow_validate_modify_field_level(&action_conf->dst, error);
 	if (ret)
 		return ret;
-	if (action_conf->dst.tag_index &&
-	    !flow_modify_field_support_tag_array(action_conf->dst.field))
-		return rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_ACTION, action,
-				"destination tag index is not supported");
-	if (action_conf->dst.class_id)
-		return rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_ACTION, action,
-				"destination class id is not supported");
+	if (!flow_hw_modify_field_is_geneve_opt(action_conf->dst.field)) {
+		if (action_conf->dst.tag_index &&
+		    !flow_modify_field_support_tag_array(action_conf->dst.field))
+			return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, action,
+					"destination tag index is not supported");
+		if (action_conf->dst.class_id)
+			return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, action,
+					"destination class id is not supported");
+	}
 	if (mask_conf->dst.level != UINT8_MAX)
 		return rte_flow_error_set(error, EINVAL,
 			RTE_FLOW_ERROR_TYPE_ACTION, action,
@@ -5000,15 +5014,17 @@ flow_hw_validate_action_modify_field(struct rte_eth_dev *dev,
 				"destination field mask and template are not equal");
 	if (action_conf->src.field != RTE_FLOW_FIELD_POINTER &&
 	    action_conf->src.field != RTE_FLOW_FIELD_VALUE) {
-		if (action_conf->src.tag_index &&
-		    !flow_modify_field_support_tag_array(action_conf->src.field))
-			return rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_ACTION, action,
-				"source tag index is not supported");
-		if (action_conf->src.class_id)
-			return rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_ACTION, action,
-				"source class id is not supported");
+		if (!flow_hw_modify_field_is_geneve_opt(action_conf->src.field)) {
+			if (action_conf->src.tag_index &&
+			    !flow_modify_field_support_tag_array(action_conf->src.field))
+				return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, action,
+					"source tag index is not supported");
+			if (action_conf->src.class_id)
+				return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, action,
+					"source class id is not supported");
+		}
 		if (mask_conf->src.level != UINT8_MAX)
 			return rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION, action,
@@ -5059,6 +5075,13 @@ flow_hw_validate_action_modify_field(struct rte_eth_dev *dev,
 		return rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION, action,
 				"modifying Geneve VNI is not supported when GENEVE opt is supported");
+	if (priv->tlv_options == NULL &&
+	    (flow_hw_modify_field_is_used(action_conf, RTE_FLOW_FIELD_GENEVE_OPT_TYPE) ||
+	     flow_hw_modify_field_is_used(action_conf, RTE_FLOW_FIELD_GENEVE_OPT_CLASS) ||
+	     flow_hw_modify_field_is_used(action_conf, RTE_FLOW_FIELD_GENEVE_OPT_DATA)))
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ACTION, action,
+				"modifying Geneve TLV option is supported only after parser configuration");
 	/* Due to HW bug, tunnel MPLS header is read only. */
 	if (action_conf->dst.field == RTE_FLOW_FIELD_MPLS)
 		return rte_flow_error_set(error, EINVAL,
