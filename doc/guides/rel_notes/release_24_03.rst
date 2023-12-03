@@ -59,6 +59,7 @@ New Features
 
   * Added HW steering support for ``RTE_FLOW_ITEM_TYPE_GENEVE`` flow item.
   * Added HW steering support for ``RTE_FLOW_ITEM_TYPE_GENEVE_OPT`` flow item.
+  * Added HW steering support for modify field ``RTE_FLOW_FIELD_GENEVE_VNI`` flow action.
 
 
 Removed Items
