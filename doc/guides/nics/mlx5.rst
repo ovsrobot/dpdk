@@ -347,6 +347,7 @@ Limitations
      - Multiple of same Geneve TLV option isn't supported at the same pattern
        template.
      - Supported only when ``FLEX_PARSER_PROFILE_ENABLE`` = 8.
+     - Supported also when ``FLEX_PARSER_PROFILE_ENABLE`` = 0 for single DW only.
 
 - VF: flow rules created on VF devices can only match traffic targeted at the
   configured MAC addresses (see ``rte_eth_dev_mac_addr_add()``).
@@ -2429,8 +2430,14 @@ Limitations
 ~~~~~~~~~~~
 
 * Supported only in HW steering (``dv_flow_en`` = 2).
-* Supported only when ``FLEX_PARSER_PROFILE_ENABLE`` = 8.
 * Supported for FW version **xx.37.0142** and above.
+* Parser creation can be done only for E-Switch manager.
+* Supported for multiple DW only when ``FLEX_PARSER_PROFILE_ENABLE`` = 8.
+* Supported for single DW also when ``FLEX_PARSER_PROFILE_ENABLE`` = 0 with some limitations:
+
+   - ``sample_len`` must be equal to ``option_len`` and not bigger than 1.
+   - ``match_on_class_mode`` different than 1 is not supported.
+   - ``offset`` must be 0.
 
 
 Testpmd driver specific commands
