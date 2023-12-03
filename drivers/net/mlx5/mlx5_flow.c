@@ -12476,3 +12476,33 @@ mlx5_flow_pick_transfer_proxy(struct rte_eth_dev *dev,
 				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 				  NULL, "unable to find a proxy port");
 }
+
+void *
+rte_pmd_mlx5_create_geneve_tlv_parser(uint16_t port_id,
+				      const struct rte_pmd_mlx5_geneve_tlv tlv_list[],
+				      uint8_t nb_options)
+{
+#ifdef HAVE_MLX5_HWS_SUPPORT
+	return mlx5_geneve_tlv_parser_create(port_id, tlv_list, nb_options);
+#else
+	(void)port_id;
+	(void)tlv_list;
+	(void)nb_options;
+	DRV_LOG(ERR, "%s is not supported.", __func__);
+	rte_errno = ENOTSUP;
+	return NULL;
+#endif
+}
+
+int
+rte_pmd_mlx5_destroy_geneve_tlv_parser(void *handle)
+{
+#ifdef HAVE_MLX5_HWS_SUPPORT
+	return mlx5_geneve_tlv_parser_destroy(handle);
+#else
+	(void)handle;
+	DRV_LOG(ERR, "%s is not supported.", __func__);
+	rte_errno = ENOTSUP;
+	return -rte_errno;
+#endif
+}

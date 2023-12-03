@@ -2298,6 +2298,128 @@ and disables ``avail_thresh_triggered``.
    testpmd> mlx5 set port 1 host_shaper avail_thresh_triggered 0 rate 50
 
 
+.. _geneve_parser_api:
+
+GENEVE TLV options parser
+-------------------------
+
+NVIDIA ConnectX and BlueField devices support configure flex parser for
+`GENEVE TLV options <https://www.rfc-editor.org/rfc/rfc8926.html#name-tunnel-options>`_.
+
+Each physical device has 7 DWs for GENEVE TLV options.
+Partial option configuration is supported, mask for data is provided in parser
+creation indicating which DWs configuration is requested. Only masked data DWs
+can be matched later as item field using flow API.
+
+Matching of ``type`` field is supported for each configured option.
+However, for matching ``class` field, the option should be configured with
+``match_on_class_mode=2``. Matching on ``length`` field is not supported.
+When ``match_on_class_mode=2`` is requested, one extra DW is consumed for it.
+
+Parser API
+~~~~~~~~~~
+
+An API to create/destroy GENEVE TLV parser is added.
+Although the parser is created per physical device, this API is port oriented.
+Each port should call this API before using GENEVE OPT item,
+but its configuration must use the same options list with same internal order
+configured by first port.
+
+Calling this API for different ports under same physical device doesn't consume
+more DWs, the first one creates the parser and the rest use same configuration.
+
+``struct rte_pmd_mlx5_geneve_tlv`` is used for single option configuration:
+
+.. _table_rte_pmd_mlx5_geneve_tlv:
+
+.. table:: GENEVE TLV
+
+   +-------------------------+-------------------------------------------------+
+   | Field                   | Value                                           |
+   +=========================+=================================================+
+   | ``option_class``        | class                                           |
+   +-------------------------+-------------------------------------------------+
+   | ``option_type``         | type                                            |
+   +-------------------------+-------------------------------------------------+
+   | ``option_len``          | data length in DW granularity                   |
+   +-------------------------+-------------------------------------------------+
+   | ``match_on_class_mode`` | indicator about class field role in this option |
+   +-------------------------+-------------------------------------------------+
+   | ``offset``              | offset of the first sample in DW granularity    |
+   +-------------------------+-------------------------------------------------+
+   | ``sample_len``          | number of DW to sample                          |
+   +-------------------------+-------------------------------------------------+
+   | ``match_data_mask``     | array of DWs which each bit marks if this bit   |
+   |                         | should be sampled                               |
+   +-------------------------+-------------------------------------------------+
+
+Creation
+^^^^^^^^
+
+Creates GENEVE TLV parser for the selected port.
+This function must be called before first use of GENEVE option.
+
+.. code-block:: c
+
+   void *
+   rte_pmd_mlx5_create_geneve_tlv_parser(uint16_t port_id,
+                                         const struct rte_pmd_mlx5_geneve_tlv tlv_list[],
+                                         uint8_t nb_options);
+
+The parser creation is done once for all GENEVE TLV options.
+For adding a new option, the exist parser should be destroyed first.
+
+Arguments:
+
+- ``port_id``: port identifier of Ethernet device.
+- ``tlv_list``: list of GENEVE TLV options to create parser for them.
+- ``nb_options``: number of options in TLV list.
+
+Return values:
+
+- A valid handle in case of success, NULL otherwise (``rte_errno`` is also set),
+  the following errors are defined.
+- ``ENODEV``: there is no Ethernet device for this port id.
+- ``EINVAL``: invalid GENEVE TLV option requested.
+- ``ENOTSUP``: the port doesn't support GENEVE TLV parsing.
+- ``EEXIST``: this port already has GENEVE TLV parser or another port under same
+  physical device has already prepared a different parser.
+- ``ENOMEM``: not enough memory to execute the function, or resource limitation
+  on the device.
+
+
+Destruction
+^^^^^^^^^^^
+
+Destroy GENEVE TLV parser created by ``rte_pmd_mlx5_create_geneve_tlv_parser()``.
+This function must be called after last use of GENEVE option and before port
+closing.
+
+.. code-block:: c
+
+   int
+   rte_pmd_mlx5_destroy_geneve_tlv_parser(void *handle);
+
+Failure to destroy a parser handle may occur when one of the options is used by
+valid template table.
+
+Arguments:
+
+- ``handle``: handle for the GENEVE TLV parser object to be destroyed.
+
+Return values:
+
+- 0 on success, a negative errno value otherwise and ``rte_errno`` is set.
+
+
+Limitations
+~~~~~~~~~~~
+
+* Supported only in HW steering (``dv_flow_en`` = 2).
+* Supported only when ``FLEX_PARSER_PROFILE_ENABLE`` = 8.
+* Supported for FW version **xx.37.0142** and above.
+
+
 Testpmd driver specific commands
 --------------------------------
 
