@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated NVIDIA mlx5 net driver.**
+
+  * Added HW steering support for ``RTE_FLOW_ITEM_TYPE_GENEVE`` flow item.
+  * Added HW steering support for ``RTE_FLOW_ITEM_TYPE_GENEVE_OPT`` flow item.
+
 
 Removed Items
 -------------

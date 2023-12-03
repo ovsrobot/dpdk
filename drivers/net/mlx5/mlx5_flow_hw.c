@@ -6781,6 +6781,17 @@ flow_hw_pattern_validate(struct rte_eth_dev *dev,
 							  " attribute");
 			break;
 		}
+		case RTE_FLOW_ITEM_TYPE_GENEVE_OPT:
+		{
+			int ret;
+
+			ret = mlx5_flow_geneve_tlv_option_validate(priv,
+								   &items[i],
+								   error);
+			if (ret < 0)
+				return ret;
+			break;
+		}
 		case RTE_FLOW_ITEM_TYPE_VOID:
 		case RTE_FLOW_ITEM_TYPE_ETH:
 		case RTE_FLOW_ITEM_TYPE_VLAN:
@@ -6792,6 +6803,7 @@ flow_hw_pattern_validate(struct rte_eth_dev *dev,
 		case RTE_FLOW_ITEM_TYPE_GTP_PSC:
 		case RTE_FLOW_ITEM_TYPE_VXLAN:
 		case RTE_FLOW_ITEM_TYPE_MPLS:
+		case RTE_FLOW_ITEM_TYPE_GENEVE:
 		case MLX5_RTE_FLOW_ITEM_TYPE_SQ:
 		case RTE_FLOW_ITEM_TYPE_GRE:
 		case RTE_FLOW_ITEM_TYPE_GRE_KEY:
@@ -6959,24 +6971,45 @@ setup_pattern_template:
 		}
 	}
 	for (i = 0; items[i].type != RTE_FLOW_ITEM_TYPE_END; ++i) {
-		if (items[i].type == RTE_FLOW_ITEM_TYPE_FLEX) {
+		switch (items[i].type) {
+		case RTE_FLOW_ITEM_TYPE_FLEX: {
 			const struct rte_flow_item_flex *spec =
 				(const struct rte_flow_item_flex *)items[i].spec;
 			struct rte_flow_item_flex_handle *handle = spec->handle;
 
 			if (flow_hw_flex_item_acquire(dev, handle, &it->flex_item)) {
-				claim_zero(mlx5dr_match_template_destroy(it->mt));
-				mlx5_free(it);
 				rte_flow_error_set(error, rte_errno,
 						   RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
 						   "Failed to acquire flex item");
-				return NULL;
+				goto error;
 			}
+			break;
+		}
+		case RTE_FLOW_ITEM_TYPE_GENEVE_OPT: {
+			const struct rte_flow_item_geneve_opt *spec = items[i].spec;
+
+			if (mlx5_geneve_tlv_option_register(priv, spec,
+							    &it->geneve_opt_mng)) {
+				rte_flow_error_set(error, rte_errno,
+						   RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
+						   "Failed to register GENEVE TLV option");
+				goto error;
+			}
+			break;
+		}
+		default:
+			break;
 		}
 	}
 	__atomic_fetch_add(&it->refcnt, 1, __ATOMIC_RELAXED);
 	LIST_INSERT_HEAD(&priv->flow_hw_itt, it, next);
 	return it;
+error:
+	flow_hw_flex_item_release(dev, &it->flex_item);
+	mlx5_geneve_tlv_options_unregister(priv, &it->geneve_opt_mng);
+	claim_zero(mlx5dr_match_template_destroy(it->mt));
+	mlx5_free(it);
+	return NULL;
 }
 
 /**
@@ -6997,6 +7030,8 @@ flow_hw_pattern_template_destroy(struct rte_eth_dev *dev,
 			      struct rte_flow_pattern_template *template,
 			      struct rte_flow_error *error __rte_unused)
 {
+	struct mlx5_priv *priv = dev->data->dev_private;
+
 	if (__atomic_load_n(&template->refcnt, __ATOMIC_RELAXED) > 1) {
 		DRV_LOG(WARNING, "Item template %p is still in use.",
 			(void *)template);
@@ -7010,6 +7045,7 @@ flow_hw_pattern_template_destroy(struct rte_eth_dev *dev,
 		mlx5_free_srh_flex_parser(dev);
 	LIST_REMOVE(template, next);
 	flow_hw_flex_item_release(dev, &template->flex_item);
+	mlx5_geneve_tlv_options_unregister(priv, &template->geneve_opt_mng);
 	claim_zero(mlx5dr_match_template_destroy(template->mt));
 	mlx5_free(template);
 	return 0;
