@@ -1328,7 +1328,7 @@ static inline int __rte_pktmbuf_pinned_extbuf_decref(struct rte_mbuf *m)
  *
  * This function does the same than a free, except that it does not
  * return the segment to its pool.
- * It decreases the reference counter, and if it reaches 0, it is
+ * It decreases the reference counter, and if it reaches 1, it is
  * detached from its parent for an indirect mbuf.
  *
  * @param m
@@ -1358,25 +1358,9 @@ rte_pktmbuf_prefree_seg(struct rte_mbuf *m)
 			m->nb_segs = 1;
 
 		return m;
-
-	} else if (__rte_mbuf_refcnt_update(m, -1) == 0) {
-
-		if (!RTE_MBUF_DIRECT(m)) {
-			rte_pktmbuf_detach(m);
-			if (RTE_MBUF_HAS_EXTBUF(m) &&
-			    RTE_MBUF_HAS_PINNED_EXTBUF(m) &&
-			    __rte_pktmbuf_pinned_extbuf_decref(m))
-				return NULL;
-		}
-
-		if (m->next != NULL)
-			m->next = NULL;
-		if (m->nb_segs != 1)
-			m->nb_segs = 1;
-		rte_mbuf_refcnt_set(m, 1);
-
-		return m;
 	}
+
+	__rte_mbuf_refcnt_update(m, -1);
 	return NULL;
 }
 
