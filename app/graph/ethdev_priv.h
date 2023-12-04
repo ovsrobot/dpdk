@@ -61,6 +61,13 @@ struct ethdev_ip6_cmd_tokens {
 	cmdline_fixed_string_t mask;
 };
 
+struct ethdev_fwd_cmd_tokens {
+	cmdline_fixed_string_t cmd;
+	cmdline_fixed_string_t fwd;
+	cmdline_fixed_string_t tx_dev;
+	cmdline_fixed_string_t rx_dev;
+};
+
 struct ethdev_cmd_tokens {
 	cmdline_fixed_string_t cmd;
 	cmdline_fixed_string_t dev;
@@ -98,6 +105,7 @@ struct ethdev_config {
 		uint32_t queue_size;
 	} tx;
 
+	uint16_t tx_port_id;
 	int promiscuous;
 	uint32_t mtu;
 };
