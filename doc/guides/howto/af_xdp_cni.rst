@@ -38,9 +38,10 @@ The XSKMAP is a BPF map of AF_XDP sockets (XSK).
 The client can then proceed with creating an AF_XDP socket
 and inserting that socket into the XSKMAP pointed to by the descriptor.
 
-The EAL vdev argument ``use_cni`` is used to indicate that the user wishes
-to run the PMD in unprivileged mode and to receive the XSKMAP file descriptor
-from the CNI.
+The EAL vdev arguments ``use_cni`` and ``uds_path`` are used to indicate that
+the user wishes to run the PMD in unprivileged mode and to receive the XSKMAP
+file descriptor from the CNI.
+
 When this flag is set,
 the ``XSK_LIBBPF_FLAGS__INHIBIT_PROG_LOAD`` libbpf flag
 should be used when creating the socket
@@ -49,7 +50,7 @@ Instead the loading is handled by the CNI.
 
 .. note::
 
-   The Unix Domain Socket file path appear in the end user is "/tmp/afxdp.sock".
+   The Unix Domain Socket file path appears to the end user at "/tmp/afxdp_dp/<netdev>/afxdp.sock".
 
 
 Prerequisites
@@ -223,8 +224,7 @@ Howto run dpdk-testpmd with CNI plugin:
          securityContext:
           capabilities:
              add:
-               - CAP_NET_RAW
-               - CAP_BPF
+               - NET_RAW
          resources:
            requests:
              hugepages-2Mi: 2Gi
@@ -239,14 +239,20 @@ Howto run dpdk-testpmd with CNI plugin:
 
   .. _pod.yaml: https://github.com/intel/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/pod-1c1d.yaml
 
+.. note::
+
+   For Kernel versions older than 5.19 `CAP_BPF` is also required in
+   the container capabilities stanza.
+
 * Run DPDK with a command like the following:
 
   .. code-block:: console
 
      kubectl exec -i <Pod name> --container <containers name> -- \
-           /<Path>/dpdk-testpmd -l 0,1 --no-pci \
-           --vdev=net_af_xdp0,use_cni=1,iface=<interface name> \
-           -- --no-mlockall --in-memory
+           /<Path>/dpdk-testpmd -l 0-2 --no-pci --main-lcore=2 \
+           --vdev net_af_xdp0,iface=<interface name>,use_cni=1,uds_path=/tmp/afxdp_dp/<interface name>/afxdp.sock \
+           --vdev net_af_xdp1,iface=e<interface name>,use_cni=1,uds_path=/tmp/afxdp_dp/<interface name>/afxdp.sock \
+           -- -i --a --nb-cores=2 --rxq=1 --txq=1 --forward-mode=macswap;
 
 For further reference please use the `e2e`_ test case in `AF_XDP Plugin for Kubernetes`_
 
