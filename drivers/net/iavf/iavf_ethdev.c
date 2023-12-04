@@ -90,6 +90,23 @@ static struct iavf_proto_xtr_ol iavf_proto_xtr_params[] = {
 			&rte_pmd_ifd_dynflag_proto_xtr_ipsec_crypto_said_mask },
 };
 
+/* struct holding pending PF-to-VF reset */
+struct iavf_reset_info {
+	pthread_mutex_t lock;
+	rte_thread_t reset_tid;
+	uint32_t pending;
+	uint32_t head;
+	uint32_t tail;
+	struct rte_eth_dev *dev[IAVF_MAX_VF_COUNT];
+};
+
+static struct iavf_reset_info reset_info = {
+	.lock = PTHREAD_MUTEX_INITIALIZER,
+	.head = 0,
+	.tail = 0,
+	.pending = 0,
+};
+
 static int iavf_dev_configure(struct rte_eth_dev *dev);
 static int iavf_dev_start(struct rte_eth_dev *dev);
 static int iavf_dev_stop(struct rte_eth_dev *dev);
@@ -310,8 +327,10 @@ iavf_dev_watchdog(void *cb_arg)
 			adapter->vf.vf_reset = true;
 			adapter->vf.link_up = false;
 
-			iavf_dev_event_post(adapter->vf.eth_dev, RTE_ETH_EVENT_INTR_RESET,
-				NULL, 0);
+			adapter->devargs.auto_reset ?
+				iavf_reset_enqueue(adapter->vf.eth_dev) :
+				iavf_dev_event_post(adapter->vf.eth_dev,
+					RTE_ETH_EVENT_INTR_RESET, NULL, 0);
 		}
 	}
 
@@ -1085,9 +1104,6 @@ iavf_dev_stop(struct rte_eth_dev *dev)
 	struct rte_intr_handle *intr_handle = dev->intr_handle;
 
 	PMD_INIT_FUNC_TRACE();
-
-	if (vf->vf_reset)
-		return 0;
 
 	if (adapter->closed)
 		return -1;
@@ -1986,14 +2002,11 @@ iavf_check_vf_reset_done(struct iavf_hw *hw)
 		reset = reset >> IAVF_VFGEN_RSTAT_VFR_STATE_SHIFT;
 		if (reset == VIRTCHNL_VFR_VFACTIVE ||
 		    reset == VIRTCHNL_VFR_COMPLETED)
-			break;
+			return 0;
 		rte_delay_ms(20);
 	}
 
-	if (i >= IAVF_RESET_WAIT_CNT)
-		return -1;
-
-	return 0;
+	return -1;
 }
 
 static int
@@ -2928,15 +2941,12 @@ out:
 static int
 iavf_dev_uninit(struct rte_eth_dev *dev)
 {
-	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
-
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return -EPERM;
 
 	iavf_dev_close(dev);
 
-	if (!vf->in_reset_recovery)
-		iavf_dev_event_handler_fini();
+	iavf_dev_event_handler_fini();
 
 	return 0;
 }
@@ -2949,7 +2959,6 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 {
 	int ret;
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 
 	/*
 	 * Check whether the VF reset has been done and inform application,
@@ -2961,7 +2970,6 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 		PMD_DRV_LOG(ERR, "Wait too long for reset done!\n");
 		return ret;
 	}
-	vf->vf_reset = false;
 
 	PMD_DRV_LOG(DEBUG, "Start dev_reset ...\n");
 	ret = iavf_dev_uninit(dev);
@@ -2971,41 +2979,127 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 	return iavf_dev_init(dev);
 }
 
+static struct rte_eth_dev *
+iavf_reset_dequeue(void)
+{
+	struct rte_eth_dev *dev;
+
+	pthread_mutex_lock(&reset_info.lock);
+	if (reset_info.head == reset_info.tail) {
+		pthread_mutex_unlock(&reset_info.lock);
+		return NULL;
+	}
+	dev = reset_info.dev[reset_info.head];
+	reset_info.head = (reset_info.head + 1) % IAVF_MAX_VF_COUNT;
+	reset_info.pending--;
+	pthread_mutex_unlock(&reset_info.lock);
+
+	return dev;
+}
+
+static inline bool
+iavf_is_reset(struct iavf_hw *hw)
+{
+	return !(IAVF_READ_REG(hw, IAVF_VF_ARQLEN1) &
+		 IAVF_VF_ARQLEN1_ARQENABLE_MASK);
+}
+
+static bool
+iavf_is_reset_detected(struct iavf_adapter *adapter)
+{
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(adapter);
+	int i;
+
+	/* poll until we see the reset actually happen */
+	for (i = 0; i < IAVF_RESET_DETECTED_CNT; i++) {
+		if (iavf_is_reset(hw))
+			return true;
+		rte_delay_ms(20);
+	}
+
+	return false;
+}
+
 /*
  * Handle hardware reset
  */
-int
-iavf_handle_hw_reset(struct rte_eth_dev *dev)
+static uint32_t
+iavf_hw_reset_handler(void *arg __rte_unused)
 {
-	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
-	int ret;
+	struct rte_eth_dev *dev;
+	int ret, i;
 
-	vf->in_reset_recovery = true;
+	for (dev = iavf_reset_dequeue(); dev != NULL; dev = iavf_reset_dequeue()) {
+		struct iavf_adapter *adapter = dev->data->dev_private;
+		struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 
-	ret = iavf_dev_reset(dev);
-	if (ret)
-		goto error;
+		if (!iavf_is_reset_detected(adapter))
+			return 0;
 
-	/* VF states restore */
-	ret = iavf_dev_configure(dev);
-	if (ret)
-		goto error;
+		vf->in_reset_recovery = true;
 
-	iavf_dev_xstats_reset(dev);
+		ret = iavf_dev_reset(dev);
+		if (ret)
+			goto error;
 
-	/* start the device */
-	ret = iavf_dev_start(dev);
-	if (ret)
-		goto error;
-	dev->data->dev_started = 1;
+		/* VF states restore */
+		ret = iavf_dev_configure(dev);
+		if (ret)
+			goto error;
 
-	vf->in_reset_recovery = false;
-	return 0;
+		iavf_dev_xstats_reset(dev);
+
+		/* start the device */
+		ret = iavf_dev_start(dev);
+		if (ret)
+			goto error;
+
+		/* Restore queue parameters */
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			struct iavf_rx_queue *rxq = dev->data->rx_queues[i];
+			rxq->vsi = &vf->vsi;
+		}
+
+		for (i = 0; i < dev->data->nb_tx_queues; i++) {
+			struct iavf_tx_queue *txq = dev->data->tx_queues[i];
+			txq->vsi = &vf->vsi;
+		}
+		dev->data->dev_started = 1;
 
 error:
-	PMD_DRV_LOG(DEBUG, "RESET recover with error code=%d\n", ret);
-	vf->in_reset_recovery = false;
-	return ret;
+		vf->in_reset_recovery = false;
+	}
+
+	return -1;
+}
+
+int
+iavf_reset_enqueue(struct rte_eth_dev *dev)
+{
+	int first_entry;
+
+	pthread_mutex_lock(&reset_info.lock);
+	if ((reset_info.tail + 1) % IAVF_MAX_VF_COUNT == reset_info.head) {
+		pthread_mutex_unlock(&reset_info.lock);
+		return -1;
+	}
+	first_entry = reset_info.pending == 0;
+	reset_info.dev[reset_info.tail] = dev;
+	reset_info.tail = (reset_info.tail + 1) % IAVF_MAX_VF_COUNT;
+	reset_info.pending++;
+	if (first_entry) {
+		PMD_DRV_LOG(DEBUG, "Create reset thread !!!\n");
+		if (rte_thread_create_internal_control(&reset_info.reset_tid,
+			"iavf-reset-thread", iavf_hw_reset_handler, NULL)) {
+			pthread_mutex_unlock(&reset_info.lock);
+			PMD_DRV_LOG(ERR, "Fail to kick off iavf-reset-thread\n");
+			return -1;
+		}
+		rte_thread_detach(reset_info.reset_tid);
+	}
+	pthread_mutex_unlock(&reset_info.lock);
+
+	return 0;
 }
 
 static int

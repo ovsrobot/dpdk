@@ -80,14 +80,6 @@ iavf_dev_event_handle(void *param __rte_unused)
 		TAILQ_FOREACH_SAFE(pos, &pending, next, save_next) {
 			TAILQ_REMOVE(&pending, pos, next);
 
-			struct iavf_adapter *adapter = pos->dev->data->dev_private;
-			if (pos->event == RTE_ETH_EVENT_INTR_RESET &&
-			    adapter->devargs.auto_reset) {
-				iavf_handle_hw_reset(pos->dev);
-				rte_free(pos);
-				continue;
-			}
-
 			rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
 			rte_free(pos);
 		}
@@ -462,8 +454,9 @@ iavf_handle_pf_event_msg(struct rte_eth_dev *dev, uint8_t *msg,
 		vf->link_up = false;
 		if (!vf->vf_reset) {
 			vf->vf_reset = true;
-			iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET,
-				NULL, 0);
+			adapter->devargs.auto_reset ?
+				iavf_reset_enqueue(dev) :
+				iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET, NULL, 0);
 		}
 		break;
 	case VIRTCHNL_EVENT_LINK_CHANGE:
