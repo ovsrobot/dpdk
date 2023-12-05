@@ -3,6 +3,7 @@
  */
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include <rte_ethdev.h>
 #include <rte_graph.h>
@@ -128,4 +129,48 @@ rte_node_eth_config(struct rte_node_ethdev_config *conf, uint16_t nb_confs,
 
 	ctrl.nb_graphs = nb_graphs;
 	return 0;
+}
+
+int
+rte_node_ethdev_rx_next_update(rte_node_t id, const char *edge_name)
+{
+	struct ethdev_rx_node_main *data;
+	ethdev_rx_node_elem_t *elem;
+	char **next_nodes;
+	int rc = -EINVAL;
+	uint32_t count;
+	uint16_t i = 0;
+
+	if (edge_name == NULL)
+		return rc;
+
+	count = rte_node_edge_get(id, NULL);
+
+	if (count == RTE_NODE_ID_INVALID)
+		return rc;
+
+	next_nodes = malloc(count);
+	if (next_nodes == NULL)
+		return -ENOMEM;
+
+	count = rte_node_edge_get(id, next_nodes);
+
+	while (next_nodes[i] != NULL) {
+		if (strcmp(edge_name, next_nodes[i]) == 0) {
+			data = ethdev_rx_get_node_data_get();
+			elem = data->head;
+			while (elem->next != data->head) {
+				if (elem->nid == id) {
+					elem->ctx.cls_next = i;
+					rc = 0;
+					goto exit;
+				}
+				elem = elem->next;
+			}
+		}
+		i++;
+	}
+exit:
+	free(next_nodes);
+	return rc;
 }
