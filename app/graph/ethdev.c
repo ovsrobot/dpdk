@@ -77,6 +77,18 @@ ethdev_port_by_id(uint16_t port_id)
 	return NULL;
 }
 
+int16_t
+find_txport_by_rxport(uint16_t portid_rx)
+{
+	int portid = -EINVAL;
+	struct ethdev *port;
+	port = ethdev_port_by_id(portid_rx);
+	if (port)
+		portid = port->config.tx_port_id;
+
+	return portid;
+}
+
 void *
 ethdev_mempool_list_by_portid(uint16_t portid)
 {
