@@ -9,7 +9,7 @@ pcap-config = ''
 [host_machine]
 system = 'linux'
 cpu_family = 'aarch64'
-cpu = 'armv8-a'
+cpu = 'aarch64'
 endian = 'little'
 
 [properties]
