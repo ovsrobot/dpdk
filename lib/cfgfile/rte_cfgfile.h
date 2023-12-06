@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 #ifndef CFG_VALUE_LEN
-#define CFG_VALUE_LEN 256
+#define CFG_VALUE_LEN 2048
 #endif
 
 /** Configuration file */
