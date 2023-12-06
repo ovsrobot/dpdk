@@ -6,6 +6,7 @@
 
 #include <rte_kvargs.h>
 
+#include "nfb_log.h"
 #include "nfb_rx.h"
 #include "nfb.h"
 
@@ -19,7 +20,7 @@ nfb_eth_rx_queue_start(struct rte_eth_dev *dev, uint16_t rxq_id)
 	int ret;
 
 	if (rxq->queue == NULL) {
-		RTE_LOG(ERR, PMD, "RX NDP queue is NULL!\n");
+		NFP_LOG(ERR, "RX NDP queue is NULL");
 		return -EINVAL;
 	}
 
@@ -40,7 +41,7 @@ nfb_eth_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rxq_id)
 	int ret;
 
 	if (rxq->queue == NULL) {
-		RTE_LOG(ERR, PMD, "RX NDP queue is NULL!\n");
+		NFB_LOG(ERR, "RX NDP queue is NULL");
 		return -EINVAL;
 	}
 
@@ -70,8 +71,8 @@ nfb_eth_rx_queue_setup(struct rte_eth_dev *dev,
 			RTE_CACHE_LINE_SIZE, socket_id);
 
 	if (rxq == NULL) {
-		RTE_LOG(ERR, PMD, "rte_zmalloc_socket() failed for rx queue id "
-				"%" PRIu16 "!\n", rx_queue_id);
+		NFB_LOG(ERR, "rte_zmalloc_socket() failed for rx queue id %" PRIu16,
+			rx_queue_id);
 		return -ENOMEM;
 	}
 
