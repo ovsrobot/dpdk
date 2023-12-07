@@ -403,7 +403,7 @@ struct hns3_reset_data {
 	/* Reset flag, covering the entire reset process */
 	uint16_t resetting;
 	/* Used to disable sending cmds during reset */
-	uint16_t disable_cmd;
+	RTE_ATOMIC(uint16_t) disable_cmd;
 	/* The reset level being processed */
 	enum hns3_reset_level level;
 	/* Reset level set, each bit represents a reset level */
