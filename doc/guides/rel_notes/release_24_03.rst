@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added TLS record test suite.**
+
+  Added a new test suite in cryptodev autotest framework to test TLS record
+  security offload by supported cryptodevs.
 
 Removed Items
 -------------
