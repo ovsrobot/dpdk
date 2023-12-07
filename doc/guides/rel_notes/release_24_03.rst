@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell Octeon ep driver.**
+
+  * Added SSE/AVX2 Rx routines.
+  * Updated Tx queue thresholds.
+
 
 Removed Items
 -------------
