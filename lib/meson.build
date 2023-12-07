@@ -11,6 +11,7 @@
 libraries = [
         'log',
         'kvargs', # eal depends on kvargs
+        'arg_parser',
         'telemetry', # basic info querying
         'eal', # everything depends on eal
         'ring',
@@ -72,6 +73,7 @@ if is_ms_compiler
             'log',
             'kvargs',
             'telemetry',
+            'arg_parser',
     ]
 endif
 
