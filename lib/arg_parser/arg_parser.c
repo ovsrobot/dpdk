@@ -7,9 +7,14 @@
 #include "ctype.h"
 #include "string.h"
 #include "stdbool.h"
+#include "stdio.h"
 
 #include <rte_arg_parser.h>
 #include <rte_common.h>
+
+#define RTE_ARG_PARSE_TYPE_COREMASK 0
+#define RTE_ARG_PARSE_TYPE_CORELIST 1
+#define RTE_ARG_PARSE_TYPE_UNKNOWN 2
 
 #define BITS_PER_HEX 4
 #define MAX_COREMASK_SIZE ((UINT16_MAX + 1) / BITS_PER_HEX)
@@ -21,6 +26,7 @@ struct core_bits {
 	uint16_t min_bit_set;
 	uint32_t total_bits_set;
 };
+
 
 static inline bool
 get_core_bit(struct core_bits *mask, uint16_t idx)
@@ -158,4 +164,66 @@ rte_arg_parse_coremask(const char *coremask, uint16_t *cores, uint32_t cores_len
 	uint32_t total_count = corebits_to_array(&mask, cores, cores_len);
 
 	return total_count;
+}
+
+int
+rte_arg_parse_arg_type(const char *core_string)
+{
+	/* Remove leading whitespace */
+	while (isblank(*core_string))
+		core_string++;
+
+	/* Check for 0x prefix */
+	if (core_string[0] == '0' && tolower(core_string[1]) == 'x') {
+		if (core_string[2] != '\0')
+			return RTE_ARG_PARSE_TYPE_COREMASK;
+		return -1;
+	}
+
+	int i = 0, idx = 0;
+	/* Check for ',' and '-' and check for A-F */
+	do {
+		while (isblank(core_string[idx]))
+			idx++;
+
+		if (core_string[idx] == ',' || core_string[idx] == '-')
+			return RTE_ARG_PARSE_TYPE_CORELIST;
+
+		if (isalpha(core_string[idx])) {
+			if (isxdigit(core_string[idx]))
+				return RTE_ARG_PARSE_TYPE_COREMASK;
+			return -1;
+		}
+		idx++;
+		i++;
+	} while (core_string[idx] != '\0');
+
+	/* Check length of core_string if ambiguous as max length of a uint16_t is 5 digits
+	 * implying its a coremask.
+	 */
+	if (i > 5)
+		return RTE_ARG_PARSE_TYPE_COREMASK;
+
+	return -1;
+}
+
+int
+rte_arg_parse_core_string(const char *core_string, uint16_t *cores, uint32_t cores_len,
+		int default_type)
+{
+	if (default_type != RTE_ARG_PARSE_TYPE_COREMASK &&
+			default_type != RTE_ARG_PARSE_TYPE_CORELIST) {
+		return -1;
+	}
+	switch (rte_arg_parse_arg_type(core_string)) {
+	case RTE_ARG_PARSE_TYPE_COREMASK:
+		return rte_arg_parse_coremask(core_string, cores, cores_len);
+	case RTE_ARG_PARSE_TYPE_CORELIST:
+		return rte_arg_parse_corelist(core_string, cores, cores_len);
+	default:
+		return default_type == RTE_ARG_PARSE_TYPE_COREMASK ?
+			rte_arg_parse_coremask(core_string, cores, cores_len) :
+			rte_arg_parse_corelist(core_string, cores, cores_len);
+		return -1;
+	}
 }
