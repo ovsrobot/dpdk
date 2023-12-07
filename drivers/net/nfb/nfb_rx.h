@@ -156,7 +156,7 @@ nfb_eth_ndp_rx(void *queue,
 	struct rte_mbuf *mbufs[nb_pkts];
 
 	if (unlikely(ndp->queue == NULL || nb_pkts == 0)) {
-		RTE_LOG(ERR, PMD, "RX invalid arguments!\n");
+		NFB_LOG(ERR, "RX invalid arguments");
 		return 0;
 	}
 
