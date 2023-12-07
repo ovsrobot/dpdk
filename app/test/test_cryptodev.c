@@ -53,6 +53,7 @@
 #include "test_cryptodev_security_pdcp_sdap_test_vectors.h"
 #include "test_cryptodev_security_pdcp_test_func.h"
 #include "test_cryptodev_security_docsis_test_vectors.h"
+#include "test_security_proto.h"
 
 #define SDAP_DISABLED	0
 #define SDAP_ENABLED	1
@@ -10229,9 +10230,7 @@ test_ipsec_proto_process(const struct ipsec_test_data td[],
 		ut_params->aead_xform.aead.iv.offset = IV_OFFSET;
 
 		/* Verify crypto capabilities */
-		if (test_ipsec_crypto_caps_aead_verify(
-				sec_cap,
-				&ut_params->aead_xform) != 0) {
+		if (test_sec_crypto_caps_aead_verify(sec_cap, &ut_params->aead_xform) != 0) {
 			if (!silent)
 				RTE_LOG(INFO, USER1,
 					"Crypto capabilities not supported\n");
@@ -10242,9 +10241,7 @@ test_ipsec_proto_process(const struct ipsec_test_data td[],
 		       sizeof(ut_params->auth_xform));
 		ut_params->auth_xform.auth.key.data = td[0].auth_key.data;
 
-		if (test_ipsec_crypto_caps_auth_verify(
-				sec_cap,
-				&ut_params->auth_xform) != 0) {
+		if (test_sec_crypto_caps_auth_verify(sec_cap, &ut_params->auth_xform) != 0) {
 			if (!silent)
 				RTE_LOG(INFO, USER1,
 					"Auth crypto capabilities not supported\n");
@@ -10261,18 +10258,14 @@ test_ipsec_proto_process(const struct ipsec_test_data td[],
 
 		/* Verify crypto capabilities */
 
-		if (test_ipsec_crypto_caps_cipher_verify(
-				sec_cap,
-				&ut_params->cipher_xform) != 0) {
+		if (test_sec_crypto_caps_cipher_verify(sec_cap, &ut_params->cipher_xform) != 0) {
 			if (!silent)
 				RTE_LOG(INFO, USER1,
 					"Cipher crypto capabilities not supported\n");
 			return TEST_SKIPPED;
 		}
 
-		if (test_ipsec_crypto_caps_auth_verify(
-				sec_cap,
-				&ut_params->auth_xform) != 0) {
+		if (test_sec_crypto_caps_auth_verify(sec_cap, &ut_params->auth_xform) != 0) {
 			if (!silent)
 				RTE_LOG(INFO, USER1,
 					"Auth crypto capabilities not supported\n");
