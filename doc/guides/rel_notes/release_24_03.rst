@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Added support of vector instructions on IDPF.**
+
+     Added support of AVX2 instructions in IDPF single queue RX and TX path.
 
 Removed Items
 -------------
