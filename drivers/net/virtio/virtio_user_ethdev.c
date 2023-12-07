@@ -18,6 +18,7 @@
 #include <bus_vdev_driver.h>
 #include <rte_alarm.h>
 #include <rte_cycles.h>
+#include <rte_io.h>
 
 #include "virtio_ethdev.h"
 #include "virtio_logs.h"
@@ -232,6 +233,7 @@ virtio_user_setup_queue(struct virtio_hw *hw, struct virtqueue *vq)
 	else
 		virtio_user_setup_queue_split(vq, dev);
 
+	vq->notify_addr = dev->notify_area[vq->vq_queue_index];
 	if (dev->hw_cvq && hw->cvq && (virtnet_cq_to_vq(hw->cvq) == vq))
 		return virtio_user_dev_create_shadow_cvq(dev, vq);
 
@@ -262,8 +264,8 @@ virtio_user_del_queue(struct virtio_hw *hw, struct virtqueue *vq)
 static void
 virtio_user_notify_queue(struct virtio_hw *hw, struct virtqueue *vq)
 {
-	uint64_t buf = 1;
 	struct virtio_user_dev *dev = virtio_user_get_dev(hw);
+	uint64_t notify_data = 1;
 
 	if (hw->cvq && (virtnet_cq_to_vq(hw->cvq) == vq)) {
 		virtio_user_handle_cq(dev, vq->vq_queue_index);
@@ -271,9 +273,34 @@ virtio_user_notify_queue(struct virtio_hw *hw, struct virtqueue *vq)
 		return;
 	}
 
-	if (write(dev->kickfds[vq->vq_queue_index], &buf, sizeof(buf)) < 0)
-		PMD_DRV_LOG(ERR, "failed to kick backend: %s",
-			    strerror(errno));
+	if (!dev->notify_area_mapped) {
+		if (write(dev->kickfds[vq->vq_queue_index], &notify_data,
+			  sizeof(notify_data)) < 0)
+			PMD_DRV_LOG(ERR, "failed to kick backend: %s",
+				    strerror(errno));
+		return;
+	} else if (!virtio_with_feature(hw, VIRTIO_F_NOTIFICATION_DATA)) {
+		rte_write16(vq->vq_queue_index, vq->notify_addr);
+		return;
+	}
+
+	if (virtio_with_packed_queue(hw)) {
+		/* Bit[0:15]: vq queue index
+		 * Bit[16:30]: avail index
+		 * Bit[31]: avail wrap counter
+		 */
+		notify_data = ((uint32_t)(!!(vq->vq_packed.cached_flags &
+				VRING_PACKED_DESC_F_AVAIL)) << 31) |
+				((uint32_t)vq->vq_avail_idx << 16) |
+				vq->vq_queue_index;
+	} else {
+		/* Bit[0:15]: vq queue index
+		 * Bit[16:31]: avail index
+		 */
+		notify_data = ((uint32_t)vq->vq_avail_idx << 16) |
+				vq->vq_queue_index;
+	}
+	rte_write32(notify_data, vq->notify_addr);
 }
 
 static int
@@ -329,6 +356,8 @@ static const char *valid_args[] = {
 	VIRTIO_USER_ARG_SPEED,
 #define VIRTIO_USER_ARG_VECTORIZED     "vectorized"
 	VIRTIO_USER_ARG_VECTORIZED,
+#define VIRTIO_USER_ARG_NOTIFICATION_DATA  "notification_data"
+	VIRTIO_USER_ARG_NOTIFICATION_DATA,
 	NULL
 };
 
@@ -480,6 +509,7 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	uint64_t in_order = 1;
 	uint64_t packed_vq = 0;
 	uint64_t vectorized = 0;
+	uint64_t notification_data = 1;
 	char *path = NULL;
 	char *ifname = NULL;
 	char *mac_addr = NULL;
@@ -637,6 +667,15 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 		}
 	}
 
+	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_NOTIFICATION_DATA) == 1) {
+		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_NOTIFICATION_DATA,
+				       &get_integer_arg, &notification_data) < 0) {
+			PMD_INIT_LOG(ERR, "error to parse %s",
+				     VIRTIO_USER_ARG_NOTIFICATION_DATA);
+			goto end;
+		}
+	}
+
 	eth_dev = virtio_user_eth_dev_alloc(vdev);
 	if (!eth_dev) {
 		PMD_INIT_LOG(ERR, "virtio_user fails to alloc device");
@@ -645,9 +684,10 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 
 	dev = eth_dev->data->dev_private;
 	hw = &dev->hw;
-	if (virtio_user_dev_init(dev, path, (uint16_t)queues, cq,
-			 queue_size, mac_addr, &ifname, server_mode,
-			 mrg_rxbuf, in_order, packed_vq, backend_type) < 0) {
+	if (virtio_user_dev_init(dev, path, (uint16_t)queues, cq, queue_size,
+				 mac_addr, &ifname, server_mode, mrg_rxbuf,
+				 in_order, packed_vq, notification_data,
+				 backend_type) < 0) {
 		PMD_INIT_LOG(ERR, "virtio_user_dev_init fails");
 		virtio_user_eth_dev_free(eth_dev);
 		goto end;
@@ -784,4 +824,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_virtio_user,
 	"in_order=<0|1> "
 	"packed_vq=<0|1> "
 	"speed=<int> "
-	"vectorized=<0|1>");
+	"vectorized=<0|1> "
+	"notification_data=<0|1> ");
