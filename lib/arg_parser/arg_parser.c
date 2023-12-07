@@ -11,6 +11,9 @@
 #include <rte_arg_parser.h>
 #include <rte_common.h>
 
+#define BITS_PER_HEX 4
+#define MAX_COREMASK_SIZE ((UINT16_MAX + 1) / BITS_PER_HEX)
+
 
 struct core_bits {
 	uint8_t bits[(UINT16_MAX + 1) / CHAR_BIT];
@@ -57,6 +60,15 @@ corebits_to_array(struct core_bits *mask, uint16_t *cores, size_t max_cores)
 	return mask->total_bits_set;
 }
 
+static int xdigit2val(unsigned char c)
+{
+	if (isdigit(c))
+		return c - '0';
+	else if (isupper(c))
+		return c - 'A' + 10;
+	else
+		return c - 'a' + 10;
+}
 
 int
 rte_arg_parse_corelist(const char *corelist, uint16_t *cores, uint32_t cores_len)
@@ -101,6 +113,47 @@ rte_arg_parse_corelist(const char *corelist, uint16_t *cores, uint32_t cores_len
 			return -1;
 		corelist = end + 1;
 	} while (*end != '\0');
+
+	uint32_t total_count = corebits_to_array(&mask, cores, cores_len);
+
+	return total_count;
+}
+
+int
+rte_arg_parse_coremask(const char *coremask, uint16_t *cores, uint32_t cores_len)
+{
+	struct core_bits mask = {0};
+
+	/* Remove all blank characters ahead and after .
+	 * Remove 0x/0X if exists.
+	 */
+	while (isblank(*coremask))
+		coremask++;
+	if (coremask[0] == '0' && ((coremask[1] == 'x') || (coremask[1] == 'X')))
+		coremask += 2;
+
+	int32_t i = strlen(coremask);
+	while ((i > 0) && isblank(coremask[i - 1]))
+		i--;
+	if (i == 0 || i > MAX_COREMASK_SIZE)
+		return -1;
+
+	uint32_t idx = 0;
+
+	for (i = i - 1; i >= 0; i--) {
+		int val;
+		char c = coremask[i];
+
+		if (isxdigit(c) == 0)
+			return -1;
+
+		val = xdigit2val(c);
+
+		for (uint8_t j = 0; j < BITS_PER_HEX; j++, idx++) {
+			if ((1 << j) & val)
+				set_core_bit(&mask, idx);
+		}
+	}
 
 	uint32_t total_count = corebits_to_array(&mask, cores, cores_len);
 
