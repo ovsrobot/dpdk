@@ -573,96 +573,48 @@ eal_plugins_init(void)
  * the global configuration (core role and core count) with the parsed
  * value.
  */
-static int xdigit2val(unsigned char c)
-{
-	int val;
-
-	if (isdigit(c))
-		val = c - '0';
-	else if (isupper(c))
-		val = c - 'A' + 10;
-	else
-		val = c - 'a' + 10;
-	return val;
-}
-
 static int
 eal_parse_service_coremask(const char *coremask)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
-	int i, j, idx = 0;
-	unsigned int count = 0;
-	char c;
-	int val;
+	uint16_t cores[RTE_MAX_LCORE];
+	int64_t count;
 	uint32_t taken_lcore_count = 0;
 
-	if (coremask == NULL)
-		return -1;
-	/* Remove all blank characters ahead and after .
-	 * Remove 0x/0X if exists.
-	 */
-	while (isblank(*coremask))
-		coremask++;
-	if (coremask[0] == '0' && ((coremask[1] == 'x')
-		|| (coremask[1] == 'X')))
-		coremask += 2;
-	i = strlen(coremask);
-	while ((i > 0) && isblank(coremask[i - 1]))
-		i--;
+	count = rte_arg_parse_coremask(coremask, cores, RTE_DIM(cores));
 
-	if (i == 0)
+	if (count == 0 || count == -1)
 		return -1;
 
-	for (i = i - 1; i >= 0 && idx < RTE_MAX_LCORE; i--) {
-		c = coremask[i];
-		if (isxdigit(c) == 0) {
-			/* invalid characters */
+	for (int i = 0; i < count; i++) {
+		uint32_t lcore = cores[i];
+		if (main_lcore_parsed &&
+				cfg->main_lcore == lcore) {
+			RTE_LOG(ERR, EAL,
+				"lcore %u is main lcore, cannot use as service core\n",
+				cores[i]);
 			return -1;
 		}
-		val = xdigit2val(c);
-		for (j = 0; j < BITS_PER_HEX && idx < RTE_MAX_LCORE;
-				j++, idx++) {
-			if ((1 << j) & val) {
-				/* handle main lcore already parsed */
-				uint32_t lcore = idx;
-				if (main_lcore_parsed &&
-						cfg->main_lcore == lcore) {
-					RTE_LOG(ERR, EAL,
-						"lcore %u is main lcore, cannot use as service core\n",
-						idx);
-					return -1;
-				}
 
-				if (eal_cpu_detected(idx) == 0) {
-					RTE_LOG(ERR, EAL,
-						"lcore %u unavailable\n", idx);
-					return -1;
-				}
-
-				if (cfg->lcore_role[idx] == ROLE_RTE)
-					taken_lcore_count++;
-
-				lcore_config[idx].core_role = ROLE_SERVICE;
-				count++;
-			}
+		if (eal_cpu_detected(cores[i]) == 0) {
+			RTE_LOG(ERR, EAL,
+				"lcore %u unavailable\n", cores[i]);
+			return -1;
 		}
+
+		if (cfg->lcore_role[cores[i]] == ROLE_RTE)
+			taken_lcore_count++;
+
+		lcore_config[cores[i]].core_role = ROLE_SERVICE;
 	}
-
-	for (; i >= 0; i--)
-		if (coremask[i] != '0')
-			return -1;
-
-	for (; idx < RTE_MAX_LCORE; idx++)
-		lcore_config[idx].core_index = -1;
-
-	if (count == 0)
-		return -1;
-
 	if (core_parsed && taken_lcore_count != count) {
 		RTE_LOG(WARNING, EAL,
-			"Not all service cores are in the coremask. "
+			"Not all service cores were in the coremask. "
 			"Please ensure -c or -l includes service cores\n");
 	}
+
+	for (uint16_t j = count*4; j < RTE_MAX_LCORE; j++)
+		lcore_config[j].core_index = -1;
 
 	cfg->service_lcore_count = count;
 	return 0;
@@ -780,70 +732,29 @@ static int
 eal_parse_service_corelist(const char *corelist)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
-	int i;
-	unsigned count = 0;
-	char *end = NULL;
-	uint32_t min, max, idx;
+	int64_t i, count;
+	uint16_t cores[RTE_MAX_LCORE];
 	uint32_t taken_lcore_count = 0;
 
-	if (corelist == NULL)
+	count = rte_arg_parse_corelist(corelist, cores, RTE_DIM(cores));
+
+	if (count == 0 || count == -1)
 		return -1;
 
-	/* Remove all blank characters ahead and after */
-	while (isblank(*corelist))
-		corelist++;
-	i = strlen(corelist);
-	while ((i > 0) && isblank(corelist[i - 1]))
-		i--;
+	for (i = 0; i < count; i++) {
+		uint32_t lcore = cores[i];
+		if (cfg->main_lcore == lcore &&
+				main_lcore_parsed) {
+			RTE_LOG(ERR, EAL,
+				"Error: lcore %u is main lcore, cannot use as service core\n",
+				cores[i]);
+			return -1;
+		}
+		if (cfg->lcore_role[cores[i]] == ROLE_RTE)
+			taken_lcore_count++;
 
-	/* Get list of cores */
-	min = RTE_MAX_LCORE;
-	do {
-		while (isblank(*corelist))
-			corelist++;
-		if (*corelist == '\0')
-			return -1;
-		errno = 0;
-		idx = strtoul(corelist, &end, 10);
-		if (errno || end == NULL)
-			return -1;
-		if (idx >= RTE_MAX_LCORE)
-			return -1;
-		while (isblank(*end))
-			end++;
-		if (*end == '-') {
-			min = idx;
-		} else if ((*end == ',') || (*end == '\0')) {
-			max = idx;
-			if (min == RTE_MAX_LCORE)
-				min = idx;
-			for (idx = min; idx <= max; idx++) {
-				if (cfg->lcore_role[idx] != ROLE_SERVICE) {
-					/* handle main lcore already parsed */
-					uint32_t lcore = idx;
-					if (cfg->main_lcore == lcore &&
-							main_lcore_parsed) {
-						RTE_LOG(ERR, EAL,
-							"Error: lcore %u is main lcore, cannot use as service core\n",
-							idx);
-						return -1;
-					}
-					if (cfg->lcore_role[idx] == ROLE_RTE)
-						taken_lcore_count++;
-
-					lcore_config[idx].core_role =
-							ROLE_SERVICE;
-					count++;
-				}
-			}
-			min = RTE_MAX_LCORE;
-		} else
-			return -1;
-		corelist = end + 1;
-	} while (*end != '\0');
-
-	if (count == 0)
-		return -1;
+		lcore_config[cores[i]].core_role = ROLE_SERVICE;
+	}
 
 	if (core_parsed && taken_lcore_count != count) {
 		RTE_LOG(WARNING, EAL,
