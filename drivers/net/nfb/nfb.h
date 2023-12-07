@@ -36,8 +36,6 @@
 
 #define RTE_NFB_DRIVER_NAME net_nfb
 
-/* Device arguments */
-static const char * const VALID_KEYS[] = {NULL};
 
 struct pmd_internals {
 	uint16_t         max_rxmac;
