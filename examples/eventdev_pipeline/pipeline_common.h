@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 
+#include <rte_arg_parser.h>
 #include <rte_eal.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
