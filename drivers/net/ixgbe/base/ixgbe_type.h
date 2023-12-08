@@ -2023,7 +2023,7 @@ enum {
 #define IXGBE_FTQF_QUEUE_ENABLE		0x80000000
 
 /* Interrupt clear mask */
-#define IXGBE_IRQ_CLEAR_MASK	0xFFFFFFFF
+#define IXGBE_IRQ_CLEAR_MASK	0x7FFFFFFF
 
 /* Interrupt Vector Allocation Registers */
 #define IXGBE_IVAR_REG_NUM		25
