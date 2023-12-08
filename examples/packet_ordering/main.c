@@ -455,8 +455,11 @@ rx_thread(struct rte_ring *ring_out)
 				app_stats.rx.rx_pkts += nb_rx_pkts;
 
 				/* mark sequence number */
-				for (i = 0; i < nb_rx_pkts; )
-					*rte_reorder_seqn(pkts[i++]) = seqn++;
+				if (!disable_reorder) {
+					for (i = 0; i < nb_rx_pkts;) {
+						*rte_reorder_seqn(pkts[i++]) = seqn++;              
+					}
+				}
 
 				/* enqueue to rx_to_workers ring */
 				ret = rte_ring_enqueue_burst(ring_out,
