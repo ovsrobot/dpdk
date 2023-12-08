@@ -349,6 +349,11 @@ Below devargs are supported by the virtio-user vdev:
     election.
     (Default: 0 (disabled))
 
+#.  ``notification_data``:
+
+    It is used to enable virtio device notification data feature.
+    (Default: 1 (enabled))
+
 Virtio paths Selection and Usage
 --------------------------------
 

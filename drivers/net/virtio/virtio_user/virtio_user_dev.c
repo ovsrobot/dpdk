@@ -18,6 +18,7 @@
 #include <rte_string_fns.h>
 #include <rte_eal_memconfig.h>
 #include <rte_malloc.h>
+#include <rte_io.h>
 
 #include "vhost.h"
 #include "virtio_user_dev.h"
@@ -413,6 +414,12 @@ virtio_user_dev_init_notify(struct virtio_user_dev *dev)
 		dev->callfds[i] = callfd;
 		dev->kickfds[i] = kickfd;
 	}
+	dev->notify_area_mapped = false;
+	if (dev->ops->map_notification_area) {
+		if (dev->ops->map_notification_area(dev, true))
+			goto err;
+		dev->notify_area_mapped = true;
+	}
 
 	return 0;
 err:
@@ -444,6 +451,11 @@ virtio_user_dev_uninit_notify(struct virtio_user_dev *dev)
 			close(dev->callfds[i]);
 			dev->callfds[i] = -1;
 		}
+	}
+	if (dev->ops->map_notification_area && dev->notify_area_mapped) {
+		/* Unmap notification area */
+		dev->ops->map_notification_area(dev, false);
+		dev->notify_area_mapped = false;
 	}
 }
 
@@ -674,12 +686,14 @@ virtio_user_free_vrings(struct virtio_user_dev *dev)
 	 1ULL << VIRTIO_NET_F_GUEST_TSO6	|	\
 	 1ULL << VIRTIO_F_IN_ORDER		|	\
 	 1ULL << VIRTIO_F_VERSION_1		|	\
-	 1ULL << VIRTIO_F_RING_PACKED)
+	 1ULL << VIRTIO_F_RING_PACKED		|	\
+	 1ULL << VIRTIO_F_NOTIFICATION_DATA)
 
 int
 virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 		     int cq, int queue_size, const char *mac, char **ifname,
 		     int server, int mrg_rxbuf, int in_order, int packed_vq,
+		     int notification_data,
 		     enum virtio_user_backend_type backend_type)
 {
 	uint64_t backend_features;
@@ -736,6 +750,9 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 
 	if (!packed_vq)
 		dev->unsupported_features |= (1ull << VIRTIO_F_RING_PACKED);
+
+	if (!notification_data)
+		dev->unsupported_features |= (1ull << VIRTIO_F_NOTIFICATION_DATA);
 
 	if (dev->mac_specified)
 		dev->frontend_features |= (1ull << VIRTIO_NET_F_MAC);
@@ -1039,11 +1056,35 @@ static void
 virtio_user_control_queue_notify(struct virtqueue *vq, void *cookie)
 {
 	struct virtio_user_dev *dev = cookie;
-	uint64_t buf = 1;
+	uint64_t notify_data = 1;
 
-	if (write(dev->kickfds[vq->vq_queue_index], &buf, sizeof(buf)) < 0)
-		PMD_DRV_LOG(ERR, "failed to kick backend: %s",
-			    strerror(errno));
+	if (!dev->notify_area_mapped) {
+		if (write(dev->kickfds[vq->vq_queue_index], &notify_data, sizeof(notify_data)) < 0)
+			PMD_DRV_LOG(ERR, "failed to kick backend: %s",
+				    strerror(errno));
+		return;
+	} else if (!virtio_with_feature(&dev->hw, VIRTIO_F_NOTIFICATION_DATA)) {
+		rte_write16(vq->vq_queue_index, vq->notify_addr);
+		return;
+	}
+
+	if (virtio_with_packed_queue(&dev->hw)) {
+		/* Bit[0:15]: vq queue index
+		 * Bit[16:30]: avail index
+		 * Bit[31]: avail wrap counter
+		 */
+		notify_data = ((uint32_t)(!!(vq->vq_packed.cached_flags &
+				VRING_PACKED_DESC_F_AVAIL)) << 31) |
+				((uint32_t)vq->vq_avail_idx << 16) |
+				vq->vq_queue_index;
+	} else {
+		/* Bit[0:15]: vq queue index
+		 * Bit[16:31]: avail index
+		 */
+		notify_data = ((uint32_t)vq->vq_avail_idx << 16) |
+				vq->vq_queue_index;
+	}
+	rte_write32(notify_data, vq->notify_addr);
 }
 
 int
@@ -1062,6 +1103,7 @@ virtio_user_dev_create_shadow_cvq(struct virtio_user_dev *dev, struct virtqueue 
 
 	scvq->cq.notify_queue = &virtio_user_control_queue_notify;
 	scvq->cq.notify_cookie = dev;
+	scvq->notify_addr = vq->notify_addr;
 	dev->scvq = scvq;
 
 	return 0;
