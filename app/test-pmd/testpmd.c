@@ -3413,8 +3413,7 @@ stop_port(portid_t pid)
 
 		ret = eth_dev_stop_mp(pi);
 		if (ret != 0) {
-			RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
-				pi);
+			fprintf(stderr, "rte_eth_dev_stop failed for port %u\n", pi);
 			/* Allow to retry stopping the port. */
 			port->port_status = RTE_PORT_STARTED;
 			continue;
@@ -3812,23 +3811,20 @@ pmd_test_exit(void)
 	if (hot_plug) {
 		ret = rte_dev_event_monitor_stop();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to stop device event monitor.");
+			fprintf(stderr, "fail to stop device event monitor.");
 			return;
 		}
 
 		ret = rte_dev_event_callback_unregister(NULL,
 			dev_event_callback, NULL);
 		if (ret < 0) {
-			RTE_LOG(ERR, EAL,
-				"fail to unregister device event callback.\n");
+			fprintf(stderr, "fail to unregister device event callback.\n");
 			return;
 		}
 
 		ret = rte_dev_hotplug_handle_disable();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to disable hotplug handling.\n");
+			fprintf(stderr, "fail to disable hotplug handling.\n");
 			return;
 		}
 	}
@@ -4062,12 +4058,10 @@ dev_event_callback(const char *device_name, enum rte_dev_event_type type,
 
 	switch (type) {
 	case RTE_DEV_EVENT_REMOVE:
-		RTE_LOG(DEBUG, EAL, "The device: %s has been removed!\n",
-			device_name);
+		fprintf(stderr, "The device: %s has been removed!\n", device_name);
 		ret = rte_eth_dev_get_port_by_name(device_name, &port_id);
 		if (ret) {
-			RTE_LOG(ERR, EAL, "can not get port by device %s!\n",
-				device_name);
+			fprintf(stderr, "Can not get port by device %s!\n", device_name);
 			return;
 		}
 		/*
@@ -4081,12 +4075,10 @@ dev_event_callback(const char *device_name, enum rte_dev_event_type type,
 		 */
 		if (rte_eal_alarm_set(100000,
 				rmv_port_callback, (void *)(intptr_t)port_id))
-			RTE_LOG(ERR, EAL,
-				"Could not set up deferred device removal\n");
+			fprintf(stderr, "Could not set up deferred device removal\n");
 		break;
 	case RTE_DEV_EVENT_ADD:
-		RTE_LOG(ERR, EAL, "The device: %s has been added!\n",
-			device_name);
+		fprintf(stderr, "The device: %s has been added!\n", device_name);
 		/* TODO: After finish kernel driver binding,
 		 * begin to attach port.
 		 */
@@ -4632,23 +4624,20 @@ main(int argc, char** argv)
 	if (hot_plug) {
 		ret = rte_dev_hotplug_handle_enable();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to enable hotplug handling.");
+			fprintf(stderr, "fail to enable hotplug handling.");
 			return -1;
 		}
 
 		ret = rte_dev_event_monitor_start();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to start device event monitoring.");
+			fprintf(stderr, "fail to start device event monitoring.");
 			return -1;
 		}
 
 		ret = rte_dev_event_callback_register(NULL,
 			dev_event_callback, NULL);
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail  to register device event callback\n");
+			fprintf(stderr, "fail  to register device event callback\n");
 			return -1;
 		}
 	}
