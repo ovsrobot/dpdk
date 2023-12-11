@@ -29,6 +29,8 @@ extern "C" {
 extern const char **rte_cyptodev_names;
 
 /* Logging Macros */
+extern int rte_cryptodev_logtype;
+#define RTE_LOGTYPE_CRYPTODEV	rte_cryptodev_logtype
 
 #define CDEV_LOG_ERR(...) \
 	RTE_LOG(ERR, CRYPTODEV, \
