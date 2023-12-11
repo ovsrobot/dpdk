@@ -288,10 +288,9 @@ create_lookaside_session(struct ipsec_ctx *ipsec_ctx_lcore[],
 		if (cdev_id == RTE_CRYPTO_MAX_DEVS)
 			cdev_id = ipsec_ctx->tbl[cdev_id_qp].id;
 		else if (cdev_id != ipsec_ctx->tbl[cdev_id_qp].id) {
-			RTE_LOG(ERR, IPSEC,
-					"SA mapping to multiple cryptodevs is "
-					"not supported!");
-			return -EINVAL;
+			RTE_LOG(WARNING, IPSEC,
+				"SA mapped to multiple cryptodevs for SPI %d\n",
+				sa->spi);
 		}
 
 		/* Store per core queue pair information */
@@ -908,7 +907,11 @@ ipsec_enqueue(ipsec_xform_fn xform_func, struct ipsec_ctx *ipsec_ctx,
 			continue;
 		}
 
-		enqueue_cop(sa->cqp[ipsec_ctx->lcore_id], &priv->cop);
+		if (sa->cqp[ipsec_ctx->lcore_id])
+			enqueue_cop(sa->cqp[ipsec_ctx->lcore_id], &priv->cop);
+		else
+			RTE_LOG(ERR, IPSEC, "No CQP available for lcore %d\n",
+					ipsec_ctx->lcore_id);
 	}
 }
 
