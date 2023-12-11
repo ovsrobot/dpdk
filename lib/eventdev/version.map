@@ -75,6 +75,7 @@ DPDK_24 {
 	rte_event_eth_tx_adapter_stats_reset;
 	rte_event_eth_tx_adapter_stop;
 	rte_event_fp_ops;
+	rte_event_logtype;
 	rte_event_port_attr_get;
 	rte_event_port_default_conf_get;
 	rte_event_port_link;
