@@ -81,6 +81,11 @@ struct rte_config *rte_eal_get_configuration(void);
 int rte_eal_memzone_init(void);
 
 /**
+ * Cleanup the memzone subsystem (private to eal).
+ */
+void rte_eal_memzone_cleanup(void);
+
+/**
  * Fill configuration with number of physical and logical processors
  *
  * This function is private to EAL.

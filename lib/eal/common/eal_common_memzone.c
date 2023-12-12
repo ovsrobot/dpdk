@@ -447,6 +447,18 @@ rte_eal_memzone_init(void)
 	return ret;
 }
 
+void
+rte_eal_memzone_cleanup(void)
+{
+	struct rte_mem_config *mcfg;
+
+	mcfg = rte_eal_get_configuration()->mem_config;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		rte_fbarray_destroy(&mcfg->memzones);
+	}
+}
+
 /* Walk all reserved memory zones */
 void rte_memzone_walk(void (*func)(const struct rte_memzone *, void *),
 		      void *arg)

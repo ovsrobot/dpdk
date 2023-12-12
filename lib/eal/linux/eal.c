@@ -1375,6 +1375,7 @@ rte_eal_cleanup(void)
 	eal_trace_fini();
 	eal_mp_dev_hotplug_cleanup();
 	rte_eal_alarm_cleanup();
+	rte_eal_memzone_cleanup();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	rte_eal_malloc_heap_cleanup();
