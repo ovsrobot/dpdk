@@ -593,7 +593,7 @@ open_socket_fd(void)
 }
 
 static void
-close_socket_fd(int fd)
+remove_socket_fd(int fd)
 {
 	char path[PATH_MAX];
 
@@ -672,9 +672,9 @@ rte_mp_channel_cleanup(void)
 	if (fd < 0)
 		return;
 
+	remove_socket_fd(fd);
 	pthread_cancel((pthread_t)mp_handle_tid.opaque_id);
 	rte_thread_join(mp_handle_tid, NULL);
-	close_socket_fd(fd);
 }
 
 /**
