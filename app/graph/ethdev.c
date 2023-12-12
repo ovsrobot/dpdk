@@ -188,7 +188,6 @@ ethdev_start(void)
 	}
 }
 
-
 static int
 ethdev_show(const char *name)
 {
@@ -343,7 +342,6 @@ ethdev_mtu_config(const char *name, uint32_t mtu)
 	rc = -EINVAL;
 	return rc;
 }
-
 
 static int
 ethdev_process(const char *name, struct ethdev_config *params)
@@ -560,21 +558,23 @@ ethdev_stats_show(const char *name)
 	return 0;
 }
 
-static void
-cli_ethdev_mtu(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_dev_mtu_parsed(void *parsed_result, __rte_unused struct cmdline *cl,
+			  void *data __rte_unused)
 {
-	struct ethdev_mtu_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_dev_mtu_result *res = parsed_result;
 	int rc = -EINVAL;
 
 	rc = ethdev_mtu_config(res->dev, res->size);
 	if (rc < 0)
-		printf(MSG_CMD_FAIL, res->cmd);
+		printf(MSG_CMD_FAIL, res->ethdev);
 }
 
-static void
-cli_ethdev_prom_mode(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_dev_promiscuous_parsed(void *parsed_result, __rte_unused struct cmdline *cl,
+				  void *data __rte_unused)
 {
-	struct ethdev_prom_mode_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_dev_promiscuous_result *res = parsed_result;
 	bool enable = false;
 	int rc = -EINVAL;
 
@@ -583,57 +583,49 @@ cli_ethdev_prom_mode(void *parsed_result, __rte_unused struct cmdline *cl, void 
 
 	rc = ethdev_prom_mode_config(res->dev, enable);
 	if (rc < 0)
-		printf(MSG_CMD_FAIL, res->cmd);
+		printf(MSG_CMD_FAIL, res->ethdev);
 }
 
-static void
-cli_ip4_addr(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_dev_ip4_addr_add_parsed(void *parsed_result, __rte_unused struct cmdline *cl,
+				   void *data __rte_unused)
 {
-	struct ethdev_ip4_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_dev_ip4_addr_add_result *res = parsed_result;
 	struct ipv4_addr_config config;
 	int rc = -EINVAL;
 
-	if (parser_ip4_read(&config.ip, res->ip)) {
-		printf(MSG_ARG_INVALID, "ip");
-		return;
-	}
-
-	if (parser_ip4_read(&config.mask, res->mask)) {
-		printf(MSG_ARG_INVALID, "netmask");
-		return;
-	}
+	config.ip = rte_be_to_cpu_32(res->ip.addr.ipv4.s_addr);
+	config.mask = rte_be_to_cpu_32(res->mask.addr.ipv4.s_addr);
 
 	rc = ethdev_ip4_addr_add(res->dev, &config);
 	if (rc < 0)
-		printf(MSG_CMD_FAIL, res->cmd);
+		printf(MSG_CMD_FAIL, res->ethdev);
 }
 
-static void
-cli_ip6_addr(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_dev_ip6_addr_add_parsed(void *parsed_result, __rte_unused struct cmdline *cl,
+				   void *data __rte_unused)
 {
-	struct ethdev_ip6_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_dev_ip6_addr_add_result *res = parsed_result;
 	struct ipv6_addr_config config;
-	int rc = -EINVAL;
+	int rc = -EINVAL, i;
 
-	if (parser_ip6_read(config.ip, res->ip)) {
-		printf(MSG_ARG_INVALID, "ip");
-		return;
-	}
+	for (i = 0; i < ETHDEV_IPV6_ADDR_LEN; i++)
+		config.ip[i] = res->ip.addr.ipv6.s6_addr[i];
 
-	if (parser_ip6_read(config.mask, res->mask)) {
-		printf(MSG_ARG_INVALID, "netmask");
-		return;
-	}
+	for (i = 0; i < ETHDEV_IPV6_ADDR_LEN; i++)
+		config.mask[i] = res->mask.addr.ipv6.s6_addr[i];
 
 	rc = ethdev_ip6_addr_add(res->dev, &config);
 	if (rc < 0)
-		printf(MSG_CMD_FAIL, res->cmd);
+		printf(MSG_CMD_FAIL, res->ethdev);
 }
 
-static void
-cli_ethdev_show(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_dev_show_parsed(void *parsed_result, __rte_unused struct cmdline *cl,
+			   void *data __rte_unused)
 {
-	struct ethdev_show_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_dev_show_result *res = parsed_result;
 	int rc = -EINVAL;
 
 	rc = ethdev_show(res->dev);
@@ -641,10 +633,11 @@ cli_ethdev_show(void *parsed_result, __rte_unused struct cmdline *cl, void *data
 		printf(MSG_ARG_INVALID, res->dev);
 }
 
-static void
-cli_ethdev_stats(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_dev_stats_parsed(void *parsed_result, __rte_unused struct cmdline *cl,
+			    void *data __rte_unused)
 {
-	struct ethdev_stats_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_dev_stats_result *res = parsed_result;
 	int rc = -EINVAL;
 
 	rc = ethdev_stats_show(res->dev);
@@ -652,10 +645,10 @@ cli_ethdev_stats(void *parsed_result, __rte_unused struct cmdline *cl, void *dat
 		printf(MSG_ARG_INVALID, res->dev);
 }
 
-static void
-cli_ethdev(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
+void
+cmd_ethdev_parsed(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rte_unused)
 {
-	struct ethdev_cmd_tokens *res = parsed_result;
+	struct cmd_ethdev_result *res = parsed_result;
 	struct ethdev_config config;
 	int rc;
 
@@ -671,12 +664,12 @@ cli_ethdev(void *parsed_result, __rte_unused struct cmdline *cl, void *data __rt
 
 	rc = ethdev_process(res->dev, &config);
 	if (rc < 0)
-		printf(MSG_CMD_FAIL, res->cmd);
+		printf(MSG_CMD_FAIL, res->ethdev);
 }
 
-static void
-cli_ethdev_help(__rte_unused void *parsed_result, __rte_unused struct cmdline *cl,
-		__rte_unused void *data)
+void
+cmd_help_ethdev_parsed(__rte_unused void *parsed_result, __rte_unused struct cmdline *cl,
+		       __rte_unused void *data)
 {
 	size_t len;
 
@@ -691,200 +684,3 @@ cli_ethdev_help(__rte_unused void *parsed_result, __rte_unused struct cmdline *c
 	len = strlen(conn->msg_out);
 	conn->msg_out_len_max -= len;
 }
-
-cmdline_parse_token_string_t ethdev_stats_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_stats_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_stats_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_stats_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_stats_stats =
-	TOKEN_STRING_INITIALIZER(struct ethdev_stats_cmd_tokens, stats, "stats");
-
-cmdline_parse_inst_t ethdev_stats_cmd_ctx = {
-	.f = cli_ethdev_stats,
-	.data = NULL,
-	.help_str = "",
-	.tokens = {
-		(void *)&ethdev_stats_cmd,
-		(void *)&ethdev_stats_dev,
-		(void *)&ethdev_stats_stats,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_show_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_show_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_show_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_show_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_show_show =
-	TOKEN_STRING_INITIALIZER(struct ethdev_show_cmd_tokens, show, "show");
-
-cmdline_parse_inst_t ethdev_show_cmd_ctx = {
-	.f = cli_ethdev_show,
-	.data = NULL,
-	.help_str = cmd_ethdev_show_help,
-	.tokens = {
-		(void *)&ethdev_show_cmd,
-		(void *)&ethdev_show_dev,
-		(void *)&ethdev_show_show,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_mtu_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_mtu_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_mtu_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_mtu_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_mtu_mtu =
-	TOKEN_STRING_INITIALIZER(struct ethdev_mtu_cmd_tokens, mtu, "mtu");
-cmdline_parse_token_num_t ethdev_mtu_size =
-	TOKEN_NUM_INITIALIZER(struct ethdev_mtu_cmd_tokens, size, RTE_UINT16);
-
-cmdline_parse_inst_t ethdev_mtu_cmd_ctx = {
-	.f = cli_ethdev_mtu,
-	.data = NULL,
-	.help_str = cmd_ethdev_mtu_help,
-	.tokens = {
-		(void *)&ethdev_mtu_cmd,
-		(void *)&ethdev_mtu_dev,
-		(void *)&ethdev_mtu_mtu,
-		(void *)&ethdev_mtu_size,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_prom_mode_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_prom_mode_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_prom_mode_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_prom_mode_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_prom_mode_prom =
-	TOKEN_STRING_INITIALIZER(struct ethdev_prom_mode_cmd_tokens, prom, "promiscuous");
-cmdline_parse_token_string_t ethdev_prom_mode_enable =
-	TOKEN_STRING_INITIALIZER(struct ethdev_prom_mode_cmd_tokens, enable, "on#off");
-
-cmdline_parse_inst_t ethdev_prom_mode_cmd_ctx = {
-	.f = cli_ethdev_prom_mode,
-	.data = NULL,
-	.help_str = cmd_ethdev_prom_mode_help,
-	.tokens = {
-		(void *)&ethdev_prom_mode_cmd,
-		(void *)&ethdev_prom_mode_dev,
-		(void *)&ethdev_prom_mode_prom,
-		(void *)&ethdev_prom_mode_enable,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_ip4_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_ip4_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_ip4_ip4 =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, ip4, "ip4");
-cmdline_parse_token_string_t ethdev_ip4_addr =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, addr, "addr");
-cmdline_parse_token_string_t ethdev_ip4_add =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, add, "add");
-cmdline_parse_token_string_t ethdev_ip4_ip =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, ip, NULL);
-cmdline_parse_token_string_t ethdev_ip4_netmask =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, netmask, "netmask");
-cmdline_parse_token_string_t ethdev_ip4_mask =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip4_cmd_tokens, mask, NULL);
-
-cmdline_parse_inst_t ethdev_ip4_cmd_ctx = {
-	.f = cli_ip4_addr,
-	.data = NULL,
-	.help_str = cmd_ethdev_ip4_addr_help,
-	.tokens = {
-		(void *)&ethdev_ip4_cmd,
-		(void *)&ethdev_ip4_dev,
-		(void *)&ethdev_ip4_ip4,
-		(void *)&ethdev_ip4_addr,
-		(void *)&ethdev_ip4_add,
-		(void *)&ethdev_ip4_ip,
-		(void *)&ethdev_ip4_netmask,
-		(void *)&ethdev_ip4_mask,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_ip6_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_ip6_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_ip6_ip6 =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, ip6, "ip6");
-cmdline_parse_token_string_t ethdev_ip6_addr =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, addr, "addr");
-cmdline_parse_token_string_t ethdev_ip6_add =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, add, "add");
-cmdline_parse_token_string_t ethdev_ip6_ip =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, ip, NULL);
-cmdline_parse_token_string_t ethdev_ip6_netmask =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, netmask, "netmask");
-cmdline_parse_token_string_t ethdev_ip6_mask =
-	TOKEN_STRING_INITIALIZER(struct ethdev_ip6_cmd_tokens, mask, NULL);
-
-cmdline_parse_inst_t ethdev_ip6_cmd_ctx = {
-	.f = cli_ip6_addr,
-	.data = NULL,
-	.help_str = cmd_ethdev_ip6_addr_help,
-	.tokens = {
-		(void *)&ethdev_ip6_cmd,
-		(void *)&ethdev_ip6_dev,
-		(void *)&ethdev_ip6_ip6,
-		(void *)&ethdev_ip6_addr,
-		(void *)&ethdev_ip6_add,
-		(void *)&ethdev_ip6_ip,
-		(void *)&ethdev_ip6_netmask,
-		(void *)&ethdev_ip6_mask,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_cmd_tokens, cmd, "ethdev");
-cmdline_parse_token_string_t ethdev_dev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_cmd_tokens, dev, NULL);
-cmdline_parse_token_string_t ethdev_rxq =
-	TOKEN_STRING_INITIALIZER(struct ethdev_cmd_tokens, rxq, "rxq");
-cmdline_parse_token_num_t ethdev_nb_rxq =
-	TOKEN_NUM_INITIALIZER(struct ethdev_cmd_tokens, nb_rxq, RTE_UINT16);
-cmdline_parse_token_string_t ethdev_txq =
-	TOKEN_STRING_INITIALIZER(struct ethdev_cmd_tokens, txq, "txq");
-cmdline_parse_token_num_t ethdev_nb_txq =
-	TOKEN_NUM_INITIALIZER(struct ethdev_cmd_tokens, nb_txq, RTE_UINT16);
-cmdline_parse_token_string_t ethdev_mempool =
-	TOKEN_STRING_INITIALIZER(struct ethdev_cmd_tokens, mempool, NULL);
-
-cmdline_parse_inst_t ethdev_cmd_ctx = {
-	.f = cli_ethdev,
-	.data = NULL,
-	.help_str = cmd_ethdev_help,
-	.tokens = {
-		(void *)&ethdev_cmd,
-		(void *)&ethdev_dev,
-		(void *)&ethdev_rxq,
-		(void *)&ethdev_nb_rxq,
-		(void *)&ethdev_txq,
-		(void *)&ethdev_nb_txq,
-		(void *)&ethdev_mempool,
-		NULL,
-	},
-};
-
-cmdline_parse_token_string_t ethdev_help_cmd =
-	TOKEN_STRING_INITIALIZER(struct ethdev_help_cmd_tokens, help, "help");
-cmdline_parse_token_string_t ethdev_help_ethdev =
-	TOKEN_STRING_INITIALIZER(struct ethdev_help_cmd_tokens, ethdev, "ethdev");
-
-cmdline_parse_inst_t ethdev_help_cmd_ctx = {
-	.f = cli_ethdev_help,
-	.data = NULL,
-	.help_str = "",
-	.tokens = {
-		(void *)&ethdev_help_cmd,
-		(void *)&ethdev_help_ethdev,
-		NULL,
-	},
-};
