@@ -423,7 +423,10 @@ __rte_ipv4_udptcp_cksum_mbuf(const struct rte_mbuf *m,
 	if (l4_off > m->pkt_len)
 		return 0;
 
-	if (rte_raw_cksum_mbuf(m, l4_off, m->pkt_len - l4_off, &raw_cksum))
+	uint16_t len = rte_be_to_cpu_16(ipv4_hdr->total_length) -
+				(uint16_t)rte_ipv4_hdr_len(ipv4_hdr);
+
+	if (rte_raw_cksum_mbuf(m, l4_off, len, &raw_cksum))
 		return 0;
 
 	cksum = raw_cksum + rte_ipv4_phdr_cksum(ipv4_hdr, 0);
@@ -666,7 +669,9 @@ __rte_ipv6_udptcp_cksum_mbuf(const struct rte_mbuf *m,
 	if (l4_off > m->pkt_len)
 		return 0;
 
-	if (rte_raw_cksum_mbuf(m, l4_off, m->pkt_len - l4_off, &raw_cksum))
+	uint16_t len = rte_be_to_cpu_16(ipv6_hdr->payload_len);
+
+	if (rte_raw_cksum_mbuf(m, l4_off, len, &raw_cksum))
 		return 0;
 
 	cksum = raw_cksum + rte_ipv6_phdr_cksum(ipv6_hdr, 0);
