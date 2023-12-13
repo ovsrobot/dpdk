@@ -19,11 +19,10 @@
 	rte_log(RTE_LOG_ ## level, otx_net_logtype_mbox, \
 			"%s(): " fmt "\n", __func__, ## args)
 
-#define octeontx_log_info(fmt, args...)			\
-	RTE_LOG(INFO, PMD, fmt "\n", ## args)
 
 #define octeontx_log_err(s, ...) PMD_INIT_LOG(ERR, s, ##__VA_ARGS__)
 #define octeontx_log_dbg(s, ...) PMD_DRV_LOG(DEBUG, s, ##__VA_ARGS__)
+#define octeontx_log_info(s, ...) PMD_DRV_LOG(INFO, s, ##__VA_ARGS__)
 #define octeontx_mbox_log(s, ...) PMD_MBOX_LOG(DEBUG, s, ##__VA_ARGS__)
 
 #define PMD_RX_LOG	PMD_DRV_LOG
