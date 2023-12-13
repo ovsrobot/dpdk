@@ -81,6 +81,13 @@
 		"%s():%u " fmt "\n",				\
 		__func__, __LINE__, ##args)
 
+#define otx_ep_log_dp(level, fmt, args...)			\
+	rte_log_dp(RTE_LOG_ ## level, otx_net_ep_logtype,	\
+		   "%s():%u " fmt "\n",				\
+		   __func__, __LINE__, ##args)
+
+
+
 /* IO Access */
 #define oct_ep_read64(addr) rte_read64_relaxed((void *)(addr))
 #define oct_ep_write64(val, addr) rte_write64_relaxed((val), (void *)(addr))
