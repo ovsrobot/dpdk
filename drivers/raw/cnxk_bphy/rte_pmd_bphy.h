@@ -26,6 +26,11 @@
 extern "C" {
 #endif
 
+extern int bphy_logtype;
+
+#define BPHY_LOG(level, fmt, args...)	\
+	rte_log(RTE_LOG_ ## level, bphy_logtype, "%s(): " fmt "\n", __func__, ## args)
+
 /** Available message types */
 enum cnxk_bphy_cgx_msg_type {
 	/** Type used to obtain link information */
