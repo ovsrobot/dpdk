@@ -13,8 +13,13 @@
 #include <rte_log.h>
 #include <rte_io.h>
 
-#define WARNINGOUT(S, args...)  RTE_LOG(WARNING, PMD, S, ##args)
-#define DEBUGOUT(S, args...)    RTE_LOG(DEBUG, PMD, S, ##args)
+extern int ifcvf_logtype;
+
+#define IFCVF_LOG(level, fmt, args...) \
+	rte_log(RTE_LOG_ ## level, ifcvf_logtype, fmt "\n", ## args)
+
+#define WARNINGOUT(S, args...)  IFCVF_LOG(WARNING, S, ##args)
+#define DEBUGOUT(S, args...)    IFCVF_LOG(DEBUG, S, ##args)
 #define STATIC                  static
 
 #define msec_delay(x)	rte_delay_us_sleep(1000 * (x))
