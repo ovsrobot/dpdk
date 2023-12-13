@@ -265,11 +265,13 @@ extern int cnxk_logtype_tm;
 extern int cnxk_logtype_ree;
 extern int cnxk_logtype_dpi;
 
-#define plt_err(fmt, args...)                                                  \
-	RTE_LOG(ERR, PMD, "%s():%u " fmt "\n", __func__, __LINE__, ##args)
-#define plt_info(fmt, args...) RTE_LOG(INFO, PMD, fmt "\n", ##args)
-#define plt_warn(fmt, args...) RTE_LOG(WARNING, PMD, fmt "\n", ##args)
-#define plt_print(fmt, args...) RTE_LOG(INFO, PMD, fmt "\n", ##args)
+#define plt_log(level, fmt, args...)					\
+	rte_log(RTE_LOG_ ## level, cnxk_logtype_base,			\
+		"%s():%u " fmt "\n", __func__, __LINE__, ##args)
+#define plt_err(fmt, ...) plt_log(ERR, fmt, ##__VA_ARGS__)
+#define plt_info(fmt, ...) plt_log(INFO, fmt, ##__VA_ARGS__)
+#define plt_warn(fmt, ...) plt_log(WARNING, fmt, ##__VA_ARGS__)
+#define plt_print(fmt, ...) plt_log(INFO, fmt,  ##__VA_ARGS__)
 #define plt_dump(fmt, ...)      fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #define plt_dump_no_nl(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
 
@@ -278,8 +280,7 @@ extern int cnxk_logtype_dpi;
  */
 #define plt_dbg(subsystem, fmt, args...)                                       \
 	rte_log(RTE_LOG_DEBUG, cnxk_logtype_##subsystem,                       \
-		"[%s] %s():%u " fmt "\n", #subsystem, __func__, __LINE__,      \
-##args)
+		"[%s] %s():%u " fmt "\n", #subsystem, __func__, __LINE__, ##args)
 
 #define plt_base_dbg(fmt, ...)	plt_dbg(base, fmt, ##__VA_ARGS__)
 #define plt_cpt_dbg(fmt, ...)	plt_dbg(cpt, fmt, ##__VA_ARGS__)
@@ -295,12 +296,13 @@ extern int cnxk_logtype_dpi;
 #define plt_dpi_dbg(fmt, ...)	plt_dbg(dpi, fmt, ##__VA_ARGS__)
 
 /* Datapath logs */
-#define plt_dp_err(fmt, args...)                                               \
-	RTE_LOG_DP(ERR, PMD, "%s():%u " fmt "\n", __func__, __LINE__, ##args)
-#define plt_dp_info(fmt, args...)                                              \
-	RTE_LOG_DP(INFO, PMD, "%s():%u " fmt "\n", __func__, __LINE__, ##args)
-#define plt_dp_dbg(fmt, args...)                                              \
-	RTE_LOG_DP(DEBUG, PMD, "%s():%u " fmt "\n", __func__, __LINE__, ##args)
+#define plt_dp_log(level, fmt, args...)					\
+	rte_log_dp(RTE_LOG_ ## level, cnxk_logtype_base,		\
+		"%s():%u " fmt "\n", __func__, __LINE__, ## args)
+
+#define plt_dp_err(fmt, ...)  plt_dp_log(ERR, fmt, ##__VA_ARGS__)
+#define plt_dp_info(fmt, ...) plt_dp_log(INFO, fmt, ##__VA_ARGS__)
+#define plt_dp_dbg(fmt, ...)  plt_dp_log(DEBUG, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 #define CNXK_PCI_ID(subsystem_dev, dev)                                        \
