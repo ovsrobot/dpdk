@@ -16,8 +16,10 @@
 #include <rte_byteorder.h>
 #include <rte_memcpy.h>
 
+extern int ifpga_rawdev_logtype;
+
 #define dev_printf(level, fmt, args...) \
-	RTE_LOG(level, PMD, "osdep_rte: " fmt, ## args)
+	rte_log(RTE_LOG_ ## level, ifpga_rawdev_logtype, "osdep_rte: " fmt, ## args)
 
 #define osdep_panic(...) rte_panic(...)
 
