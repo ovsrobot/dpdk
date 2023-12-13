@@ -23,6 +23,6 @@ extern int bbdev_la12xx_logtype;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define rte_bbdev_dp_log(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt, ## args)
+	rte_log_dp(RTE_LOG_ ## level, bbdev_la12xx_logtype, fmt, ## args)
 
 #endif /* _BBDEV_LA12XX_PMD_LOGS_H_ */
