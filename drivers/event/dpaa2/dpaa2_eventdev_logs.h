@@ -26,7 +26,7 @@ extern int dpaa2_logtype_event;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define DPAA2_EVENTDEV_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt, ## args)
+	rte_log_dp(RTE_LOG_ ## level, dpaa2_logtype_event, fmt, ## args)
 
 #define DPAA2_EVENTDEV_DP_DEBUG(fmt, args...) \
 	DPAA2_EVENTDEV_DP_LOG(DEBUG, fmt, ## args)
