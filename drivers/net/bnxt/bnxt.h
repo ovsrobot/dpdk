@@ -1058,6 +1058,11 @@ extern int bnxt_logtype_driver;
 #define PMD_DRV_LOG(level, fmt, args...) \
 	  PMD_DRV_LOG_RAW(level, fmt, ## args)
 
+#define PMD_DRV_LOG_DP(level, fmt, args...)			\
+	rte_log_dp(RTE_LOG_ ## level, bnxt_logtype_driver,	\
+		   fmt, ## args)
+
+
 extern const struct rte_flow_ops bnxt_ulp_rte_flow_ops;
 int32_t bnxt_ulp_port_init(struct bnxt *bp);
 void bnxt_ulp_port_deinit(struct bnxt *bp);
