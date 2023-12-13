@@ -40,11 +40,14 @@
 #define __maybe_unused __rte_unused
 #endif
 
+extern int dpaax_logger;
+
 #if defined(SUPPRESS_PRINTS)
 #define pr_msg(l, fmt, ...) do { } while (0)
 #else
 #define pr_msg(l, fmt, ...) \
-	RTE_LOG(l, PMD, "%s(): " fmt "\n", __func__, ##__VA_ARGS__)
+	rte_log(RTE_LOG_ ## l, dpaax_logger, "%s(): " fmt "\n", \
+		__func__, ##__VA_ARGS__)
 #endif
 
 #if !defined(pr_debug)
