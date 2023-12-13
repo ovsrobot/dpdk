@@ -348,9 +348,6 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
  * @param ...
  *   The fmt string, as in printf(3), followed by the variable arguments
  *   required by the format.
- * @return
- *   - 0: Success.
- *   - Negative on error.
  */
 #define RTE_LOG_DP(l, t, ...)					\
 	(void)((RTE_LOG_ ## l <= RTE_LOG_DP_LEVEL) ?		\
