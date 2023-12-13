@@ -34,7 +34,7 @@
  * level of 'pmd' has to be used.
  */
 #define CPT_LOG_DP(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt "\n", ## args)
+	rte_log_dp(RTE_LOG_ ## level, CPT_LOGTYPE, fmt "\n", ## args)
 
 #define CPT_LOG_DP_DEBUG(fmt, args...) \
 	CPT_LOG_DP(DEBUG, fmt, ## args)
