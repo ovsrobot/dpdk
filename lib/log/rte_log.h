@@ -355,6 +355,27 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 		 RTE_LOGTYPE_ ## t, # t ": " __VA_ARGS__) :	\
 	 0)
 
+/**
+ * Generates a log message for data path.
+ *
+ * Similar to rte_log(), except that it gets optimized away
+ * if the RTE_LOG_DP_LEVEL configuration option is lower than the log
+ * level argument.
+ *
+ * @param l
+ *   Log level. A value between RTE_LOG_EMERG (1) and RTE_LOG_DEBUG (8).
+ * @param t
+ *   The log type, for example, RTE_LOGTYPE_EAL.
+ * @param ...
+ *   The format string, as in printf(3), followed by the variable arguments
+ *   required by the format.
+ */
+#define rte_log_dp(l, t, ...)				\
+	do {						\
+		if ((l) <= RTE_LOG_DP_LEVEL)		\
+			rte_log(l, t, __VA_ARGS__);	\
+	} while (0)
+
 #define RTE_LOG_REGISTER_IMPL(type, name, level)			    \
 int type;								    \
 RTE_INIT(__##type)							    \
