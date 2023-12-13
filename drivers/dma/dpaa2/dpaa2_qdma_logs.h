@@ -30,7 +30,8 @@ extern int dpaa2_qdma_logtype;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define DPAA2_QDMA_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, "dpaa2_qdma: " fmt "\n", ## args)
+	rte_log_dp(RTE_LOG_ ## level, dpaa2_qdma_logtype, \
+		   "dpaa2_qdma: " fmt "\n", ## args)
 
 #define DPAA2_QDMA_DP_DEBUG(fmt, args...) \
 	DPAA2_QDMA_DP_LOG(DEBUG, fmt, ## args)
