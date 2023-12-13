@@ -21,15 +21,17 @@ extern int igc_logtype_driver;
 #define PMD_INIT_FUNC_TRACE() PMD_INIT_LOG(DEBUG, " >>")
 
 #ifdef RTE_ETHDEV_DEBUG_RX
-#define PMD_RX_LOG(level, fmt, args...) \
-	RTE_LOG(level, PMD, "%s(): " fmt "\n", __func__, ## args)
+#define PMD_RX_LOG(level, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, igc_logtype_driver,	\
+		"%s(): " fmt "\n", __func__, ## args)
 #else
 #define PMD_RX_LOG(level, fmt, args...) do { } while (0)
 #endif
 
 #ifdef RTE_ETHDEV_DEBUG_TX
-#define PMD_TX_LOG(level, fmt, args...) \
-	RTE_LOG(level, PMD, "%s(): " fmt "\n", __func__, ## args)
+#define PMD_TX_LOG(level, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, igc_logtype_driver,	\
+		"%s(): " fmt "\n", __func__, ## args)
 #else
 #define PMD_TX_LOG(level, fmt, args...) do { } while (0)
 #endif
