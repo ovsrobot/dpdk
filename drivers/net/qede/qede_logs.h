@@ -58,16 +58,18 @@ extern int qede_logtype_init;
 #define PMD_INIT_FUNC_TRACE(edev) PMD_INIT_LOG(DEBUG, edev, " >>")
 
 #ifdef RTE_LIBRTE_QEDE_DEBUG_TX
-#define PMD_TX_LOG(level, q, fmt, args...) \
-	RTE_LOG(level, PMD, "%s(): port=%u queue=%u " fmt "\n", \
+#define PMD_TX_LOG(level, q, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, qede_logtype_driver,		\
+		"%s(): port=%u queue=%u " fmt "\n",		\
 		__func__, q->port_id, q->queue_id, ## args)
 #else
 #define PMD_TX_LOG(level, fmt, args...) do { } while (0)
 #endif
 
 #ifdef RTE_LIBRTE_QEDE_DEBUG_RX
-#define PMD_RX_LOG(level, q, fmt, args...) \
-	RTE_LOG(level, PMD, "%s(): port=%u queue=%u " fmt "\n",	\
+#define PMD_RX_LOG(level, q, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, qede_logtype_driver,		\
+		"%s(): port=%u queue=%u " fmt "\n",		\
 		__func__, q->port_id, q->queue_id, ## args)
 #else
 #define PMD_RX_LOG(level, q, fmt, args...) do { } while (0)
