@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel iavf driver.**
+
+  * Added support for Tx LLDP packet on scalar and avx512.
 
 Removed Items
 -------------
