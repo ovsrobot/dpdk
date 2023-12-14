@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include <rte_malloc.h>
 #include <rte_kvargs.h>
 #include <rte_telemetry.h>
 
@@ -1395,6 +1396,96 @@ out:
 	return ret;
 }
 
+static int
+eth_dev_get_port_regs(uint16_t port_id, struct rte_dev_reg_info *reg_info,
+		      const char *file_name)
+{
+	uint64_t buf_size;
+	size_t nr_written;
+	void *data;
+	FILE *fp;
+	int ret;
+
+	ret = rte_eth_dev_get_reg_info(port_id, reg_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Error getting device reg info: %d\n", ret);
+		return ret;
+	}
+
+	buf_size = reg_info->length * reg_info->width;
+	data = rte_zmalloc(NULL, buf_size, 0);
+	if (!data) {
+		RTE_ETHDEV_LOG(ERR,
+			"Error allocating %zu bytes buffer\n", buf_size);
+		return -ENOMEM;
+	}
+
+	reg_info->data = data;
+	ret = rte_eth_dev_get_reg_info(port_id, reg_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Error getting regs from device: %d\n", ret);
+		goto out;
+	}
+
+	fp = fopen(file_name, "wb");
+	if (fp == NULL) {
+		printf("Error during opening '%s' for writing: %s\n",
+			file_name, strerror(errno));
+		ret = -EINVAL;
+	} else {
+		nr_written = fwrite(reg_info->data, 1, buf_size, fp);
+		if (nr_written != buf_size)
+			printf("Error during writing %s: %s\n",
+				file_name, strerror(errno));
+		fclose(fp);
+	}
+
+out:
+	rte_free(data);
+	reg_info->data = NULL;
+	return ret;
+}
+
+static int
+eth_dev_handle_port_regs(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_dev_reg_info reg_info = {0};
+	char file_name[RTE_TEL_MAX_STRING_LEN];
+	const char *suffix;
+	uint16_t port_id;
+	char *end_param;
+	int ret;
+
+	ret = eth_dev_parse_port_params(params, &port_id, &end_param, true);
+	if (ret != 0)
+		return ret;
+
+	suffix = strtok_r(end_param, ",", &end_param);
+	if (!suffix || strlen(suffix) == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Please pass suffix parameters ethdev telemetry command\n");
+		return -EINVAL;
+	}
+	snprintf(file_name, RTE_TEL_MAX_STRING_LEN, "port_%u_regs_%s",
+		 port_id, suffix);
+	ret = eth_dev_get_port_regs(port_id, &reg_info, file_name);
+	if (ret != 0)
+		return ret;
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_uint(d, "regs_offset", reg_info.offset);
+	rte_tel_data_add_dict_uint(d, "regs_length", reg_info.length);
+	rte_tel_data_add_dict_uint(d, "regs_width", reg_info.width);
+	rte_tel_data_add_dict_uint_hex(d, "device_version", reg_info.version, 0);
+	rte_tel_data_add_dict_string(d, "regs_file", file_name);
+
+	return 0;
+}
+
 RTE_INIT(ethdev_init_telemetry)
 {
 	rte_telemetry_register_cmd("/ethdev/list", eth_dev_handle_port_list,
@@ -1436,4 +1527,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns TM Level Capabilities info for a port. Parameters: int port_id, int level_id (see tm_capability for the max)");
 	rte_telemetry_register_cmd("/ethdev/tm_node_capability", eth_dev_handle_port_tm_node_caps,
 			"Returns TM Node Capabilities info for a port. Parameters: int port_id, int node_id (see tm_capability for the max)");
+	rte_telemetry_register_cmd("/ethdev/regs", eth_dev_handle_port_regs,
+			"Returns regs for a port. Parameters: int port_id, char *suffix");
 }
