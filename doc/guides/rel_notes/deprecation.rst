@@ -146,3 +146,8 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* tap: The support for RTE_FLOW_ACTION_TYPE_RSS is deprecated and
+  will be removed in DPDK 24.11 release. It is already broken on recent
+  Linux kernels due to changes in how BPF programs are loaded,
+  and will not be fixed.
