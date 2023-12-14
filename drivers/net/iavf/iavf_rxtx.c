@@ -2427,6 +2427,8 @@ iavf_calc_context_desc(uint64_t flags, uint8_t vlan_flag)
 	if (flags & RTE_MBUF_F_TX_VLAN &&
 	    vlan_flag & IAVF_TX_FLAGS_VLAN_TAG_LOC_L2TAG2)
 		return 1;
+	if (rte_mbuf_dynflag_lookup(IAVF_TX_LLDP_DYNFLAG, NULL) > 0)
+		return 1;
 	return 0;
 }
 
@@ -2445,6 +2447,9 @@ iavf_fill_ctx_desc_cmd_field(volatile uint64_t *field, struct rte_mbuf *m,
 		cmd |= IAVF_TX_CTX_DESC_IL2TAG2
 			<< IAVF_TXD_CTX_QW1_CMD_SHIFT;
 	}
+	if (rte_mbuf_dynflag_lookup(IAVF_TX_LLDP_DYNFLAG, NULL) > 0)
+		cmd |= IAVF_TX_CTX_DESC_SWTCH_UPLINK
+			<< IAVF_TXD_CTX_QW1_CMD_SHIFT;
 
 	*field |= cmd;
 }

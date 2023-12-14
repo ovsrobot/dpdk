@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#define IAVF_TX_LLDP_DYNFLAG "intel_pmd_dynflag_tx_lldp"
+
 /**
  * The supported network flexible descriptor's extraction metadata format.
  */
