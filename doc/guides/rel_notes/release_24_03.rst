@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added flow matching of random value.**
+
+  * Added ``RTE_FLOW_ITEM_TYPE_RANDOM`` to match random value.
+  * Added ``RTE_FLOW_FIELD_RANDOM`` to represent it in field API.
+
 
 Removed Items
 -------------
