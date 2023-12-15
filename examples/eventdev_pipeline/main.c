@@ -56,69 +56,23 @@ core_in_use(unsigned int lcore_id) {
 		fdata->tx_core[lcore_id] || fdata->worker_core[lcore_id]);
 }
 
-/*
- * Parse the coremask given as argument (hexadecimal string) and fill
- * the global configuration (core role and core count) with the parsed
- * value.
- */
-static int xdigit2val(unsigned char c)
-{
-	int val;
-
-	if (isdigit(c))
-		val = c - '0';
-	else if (isupper(c))
-		val = c - 'A' + 10;
-	else
-		val = c - 'a' + 10;
-	return val;
-}
-
 static uint64_t
 parse_coremask(const char *coremask)
 {
-	int i, j, idx = 0;
-	unsigned int count = 0;
-	char c;
-	int val;
+	int count;
+	uint16_t i;
 	uint64_t mask = 0;
-	const int32_t BITS_HEX = 4;
+	uint16_t cores[RTE_MAX_LCORE];
 
-	if (coremask == NULL)
-		return -1;
-	/* Remove all blank characters ahead and after .
-	 * Remove 0x/0X if exists.
-	 */
-	while (isblank(*coremask))
-		coremask++;
-	if (coremask[0] == '0' && ((coremask[1] == 'x')
-		|| (coremask[1] == 'X')))
-		coremask += 2;
-	i = strlen(coremask);
-	while ((i > 0) && isblank(coremask[i - 1]))
-		i--;
-	if (i == 0)
+	count = rte_arg_parse_core_string(coremask, cores, RTE_DIM(cores),
+				RTE_ARG_PARSE_TYPE_COREMASK);
+
+	if (count == 0 || count == -1)
 		return -1;
 
-	for (i = i - 1; i >= 0 && idx < MAX_NUM_CORE; i--) {
-		c = coremask[i];
-		if (isxdigit(c) == 0) {
-			/* invalid characters */
-			return -1;
-		}
-		val = xdigit2val(c);
-		for (j = 0; j < BITS_HEX && idx < MAX_NUM_CORE; j++, idx++) {
-			if ((1 << j) & val) {
-				mask |= (1ULL << idx);
-				count++;
-			}
-		}
-	}
-	for (; i >= 0; i--)
-		if (coremask[i] != '0')
-			return -1;
-	if (count == 0)
-		return -1;
+	for (i = 0; i < count; i++)
+		mask |= 1ULL << cores[i];
+
 	return mask;
 }
 
