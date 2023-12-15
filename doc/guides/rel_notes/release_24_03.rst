@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Integration of AF_XDP PMD with AF_XDP Device Plugin**
+
+  The EAL vdev argument for the AF_XDP PMD ``uds_path`` was added
+  to allow Kubernetes Pods that which to use AF_XDP with DPDK to run
+  with limited privileges. This flag indicates that the AF_XDP PMD
+  will be used in unprivileged mode and will receive the XSKMAP FD from
+  the AF_XDP Device Plugin.
 
 Removed Items
 -------------
