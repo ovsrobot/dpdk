@@ -215,6 +215,7 @@ The public API headers are grouped by topics:
     [udp4_input_node](@ref rte_node_udp4_input_api.h)
 
 - **basic**:
+  [argument parsing](@ref rte_arg_parser.h),
   [bitops](@ref rte_bitops.h),
   [approx fraction](@ref rte_approx.h),
   [random](@ref rte_random.h),

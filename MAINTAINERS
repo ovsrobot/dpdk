@@ -1756,6 +1756,10 @@ M: Nithin Dabilpuram <ndabilpuram@marvell.com>
 M: Pavan Nikhilesh <pbhagavatula@marvell.com>
 F: lib/node/
 
+Argument parsing
+M: Bruce Richardson <bruce.richardson@intel.com>
+F: lib/arg_parser/
+
 
 Test Applications
 -----------------
