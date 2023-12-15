@@ -742,6 +742,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 	const struct rte_flow_item_ppp *ppp_spec, *ppp_mask;
 	const struct rte_flow_item *item = pattern;
 	struct virtchnl_proto_hdr *hdr, *hdr1 = NULL;
+	struct virtchnl_proto_hdr_w_msk *hdr_w_msk, *hdr1_w_msk = NULL;
 	struct rte_ecpri_common_hdr ecpri_common;
 	uint64_t input_set = IAVF_INSET_NONE;
 	enum rte_flow_item_type item_type;
@@ -749,12 +750,10 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 	uint8_t tun_inner = 0;
 	uint16_t ether_type, flags_version;
 	uint8_t item_num = 0;
+	int with_mask = 0;
 	int layer = 0;
 
-	uint8_t  ipv6_addr_mask[16] = {
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-	};
+	uint8_t ipv6_zero_addr[16] = {0};
 
 	for (item = pattern; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
 		item_type = item->type;
@@ -838,8 +837,10 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			next_type = (item + 1)->type;
 
 			hdr1 = &hdrs->proto_hdr[layer];
+			hdr1_w_msk = &hdrs->proto_hdr_w_msk[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr1, ETH);
+			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr1_w_msk, ETH);
 
 			if (next_type == RTE_FLOW_ITEM_TYPE_END &&
 			    (!eth_spec || !eth_mask)) {
@@ -850,43 +851,60 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			}
 
 			if (eth_spec && eth_mask) {
-				if (!rte_is_zero_ether_addr(&eth_mask->hdr.dst_addr)) {
-					input_set |= IAVF_INSET_DMAC;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1,
-									ETH,
-									DST);
-				} else if (!rte_is_zero_ether_addr(&eth_mask->hdr.src_addr)) {
-					input_set |= IAVF_INSET_SMAC;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1,
-									ETH,
-									SRC);
-				}
-
-				if (eth_mask->hdr.ether_type) {
-					if (eth_mask->hdr.ether_type != RTE_BE16(0xffff)) {
-						rte_flow_error_set(error, EINVAL,
-							RTE_FLOW_ERROR_TYPE_ITEM,
-							item, "Invalid type mask.");
-						return -rte_errno;
+				if ((!rte_is_zero_ether_addr(&eth_mask->hdr.dst_addr) &&
+					!rte_is_broadcast_ether_addr(&eth_mask->hdr.dst_addr)) ||
+					(!rte_is_zero_ether_addr(&eth_mask->hdr.src_addr) &&
+					!rte_is_broadcast_ether_addr(&eth_mask->hdr.src_addr))) {
+					if (!rte_is_zero_ether_addr(&eth_mask->hdr.dst_addr))
+						input_set |= IAVF_INSET_DMAC;
+					if (!rte_is_zero_ether_addr(&eth_mask->hdr.src_addr))
+						input_set |= IAVF_INSET_SMAC;
+					if (eth_mask->hdr.ether_type)
+						input_set |= IAVF_INSET_ETHERTYPE;
+					rte_memcpy(hdr1_w_msk->buffer_spec, eth_spec,
+					sizeof(struct rte_ether_hdr));
+					rte_memcpy(hdr1_w_msk->buffer_mask, eth_mask,
+					sizeof(struct rte_ether_hdr));
+					with_mask = 1;
+				} else {
+					if (!rte_is_zero_ether_addr(&eth_mask->hdr.dst_addr)) {
+						input_set |= IAVF_INSET_DMAC;
+						VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1,
+										ETH,
+										DST);
+					} else if (!rte_is_zero_ether_addr(&eth_mask->hdr.src_addr)) {
+						input_set |= IAVF_INSET_SMAC;
+						VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1,
+										ETH,
+										SRC);
 					}
 
-					ether_type = rte_be_to_cpu_16(eth_spec->hdr.ether_type);
-					if (ether_type == RTE_ETHER_TYPE_IPV4 ||
-						ether_type == RTE_ETHER_TYPE_IPV6) {
-						rte_flow_error_set(error, EINVAL,
-							RTE_FLOW_ERROR_TYPE_ITEM,
-							item,
-							"Unsupported ether_type.");
-						return -rte_errno;
+					if (eth_mask->hdr.ether_type) {
+						if (eth_mask->hdr.ether_type != RTE_BE16(0xffff)) {
+							rte_flow_error_set(error, EINVAL,
+								RTE_FLOW_ERROR_TYPE_ITEM,
+								item, "Invalid type mask.");
+							return -rte_errno;
+						}
+
+						ether_type = rte_be_to_cpu_16(eth_spec->hdr.ether_type);
+						if (ether_type == RTE_ETHER_TYPE_IPV4 ||
+							ether_type == RTE_ETHER_TYPE_IPV6) {
+							rte_flow_error_set(error, EINVAL,
+								RTE_FLOW_ERROR_TYPE_ITEM,
+								item,
+								"Unsupported ether_type.");
+							return -rte_errno;
+						}
+
+						input_set |= IAVF_INSET_ETHERTYPE;
+						VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1, ETH,
+										ETHERTYPE);
 					}
 
-					input_set |= IAVF_INSET_ETHERTYPE;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1, ETH,
-									ETHERTYPE);
+					rte_memcpy(hdr1->buffer, eth_spec,
+							sizeof(struct rte_ether_hdr));
 				}
-
-				rte_memcpy(hdr1->buffer, eth_spec,
-					   sizeof(struct rte_ether_hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -899,9 +917,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			ipv4_mask = item->mask;
 			next_type = (item + 1)->type;
 
-			hdr = &hdrs->proto_hdr[layer];
+			hdr_w_msk = &hdrs->proto_hdr_w_msk[layer];
 
-			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, IPV4);
+			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr_w_msk, IPV4);
 
 			if (!(ipv4_spec && ipv4_mask)) {
 				hdrs->count = ++layer;
@@ -932,52 +950,31 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				return -rte_errno;
 			}
 
-			/* Mask for IPv4 src/dst addrs not supported */
-			if (ipv4_mask->hdr.src_addr &&
-				ipv4_mask->hdr.src_addr != UINT32_MAX)
-				return -rte_errno;
-			if (ipv4_mask->hdr.dst_addr &&
-				ipv4_mask->hdr.dst_addr != UINT32_MAX)
-				return -rte_errno;
-
-			if (ipv4_mask->hdr.type_of_service ==
-			    UINT8_MAX) {
+			if (ipv4_mask->hdr.type_of_service == UINT8_MAX)
 				input_set |= IAVF_INSET_IPV4_TOS;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4,
-								 DSCP);
-			}
 
-			if (ipv4_mask->hdr.next_proto_id == UINT8_MAX) {
+			if (ipv4_mask->hdr.next_proto_id == UINT8_MAX)
 				input_set |= IAVF_INSET_IPV4_PROTO;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4,
-								 PROT);
-			}
 
-			if (ipv4_mask->hdr.time_to_live == UINT8_MAX) {
+			if (ipv4_mask->hdr.time_to_live == UINT8_MAX)
 				input_set |= IAVF_INSET_IPV4_TTL;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4,
-								 TTL);
-			}
 
-			if (ipv4_mask->hdr.src_addr == UINT32_MAX) {
+			if (ipv4_mask->hdr.src_addr)
 				input_set |= IAVF_INSET_IPV4_SRC;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4,
-								 SRC);
-			}
 
-			if (ipv4_mask->hdr.dst_addr == UINT32_MAX) {
+			if (ipv4_mask->hdr.dst_addr)
 				input_set |= IAVF_INSET_IPV4_DST;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4,
-								 DST);
-			}
+
+			rte_memcpy(hdr_w_msk->buffer_spec, &ipv4_spec->hdr,
+				   sizeof(ipv4_spec->hdr));
+			rte_memcpy(hdr_w_msk->buffer_mask, &ipv4_mask->hdr,
+				   sizeof(ipv4_mask->hdr));
+			with_mask = 1;
 
 			if (tun_inner) {
 				input_set &= ~IAVF_PROT_IPV4_OUTER;
 				input_set |= IAVF_PROT_IPV4_INNER;
 			}
-
-			rte_memcpy(hdr->buffer, &ipv4_spec->hdr,
-				   sizeof(ipv4_spec->hdr));
 
 			hdrs->count = ++layer;
 
@@ -1012,9 +1009,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			ipv6_spec = item->spec;
 			ipv6_mask = item->mask;
 
-			hdr = &hdrs->proto_hdr[layer];
+			hdr_w_msk = &hdrs->proto_hdr_w_msk[layer];
 
-			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, IPV6);
+			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr_w_msk, IPV6);
 
 			if (!(ipv6_spec && ipv6_mask)) {
 				hdrs->count = ++layer;
@@ -1029,45 +1026,33 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			}
 
 			if ((ipv6_mask->hdr.vtc_flow &
-			      rte_cpu_to_be_32(IAVF_IPV6_TC_MASK))
-			     == rte_cpu_to_be_32(IAVF_IPV6_TC_MASK)) {
+					rte_cpu_to_be_32(IAVF_IPV6_TC_MASK))
+					== rte_cpu_to_be_32(IAVF_IPV6_TC_MASK))
 				input_set |= IAVF_INSET_IPV6_TC;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6,
-								 TC);
-			}
 
-			if (ipv6_mask->hdr.proto == UINT8_MAX) {
+			if (ipv6_mask->hdr.proto == UINT8_MAX)
 				input_set |= IAVF_INSET_IPV6_NEXT_HDR;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6,
-								 PROT);
-			}
 
-			if (ipv6_mask->hdr.hop_limits == UINT8_MAX) {
+			if (ipv6_mask->hdr.hop_limits == UINT8_MAX)
 				input_set |= IAVF_INSET_IPV6_HOP_LIMIT;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6,
-								 HOP_LIMIT);
-			}
 
-			if (!memcmp(ipv6_mask->hdr.src_addr, ipv6_addr_mask,
-				    RTE_DIM(ipv6_mask->hdr.src_addr))) {
+			if (memcmp(ipv6_mask->hdr.src_addr, ipv6_zero_addr,
+				RTE_DIM(ipv6_mask->hdr.src_addr)))
 				input_set |= IAVF_INSET_IPV6_SRC;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6,
-								 SRC);
-			}
-			if (!memcmp(ipv6_mask->hdr.dst_addr, ipv6_addr_mask,
-				    RTE_DIM(ipv6_mask->hdr.dst_addr))) {
+			if (memcmp(ipv6_mask->hdr.dst_addr, ipv6_zero_addr,
+				RTE_DIM(ipv6_mask->hdr.dst_addr)))
 				input_set |= IAVF_INSET_IPV6_DST;
-				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6,
-								 DST);
-			}
+
+			rte_memcpy(hdr_w_msk->buffer_spec, &ipv6_spec->hdr,
+					sizeof(ipv6_spec->hdr));
+			rte_memcpy(hdr_w_msk->buffer_mask, &ipv6_mask->hdr,
+					sizeof(ipv6_mask->hdr));
+			with_mask = 1;
 
 			if (tun_inner) {
 				input_set &= ~IAVF_PROT_IPV6_OUTER;
 				input_set |= IAVF_PROT_IPV6_INNER;
 			}
-
-			rte_memcpy(hdr->buffer, &ipv6_spec->hdr,
-				   sizeof(ipv6_spec->hdr));
 
 			hdrs->count = ++layer;
 			break;
@@ -1117,9 +1102,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			udp_spec = item->spec;
 			udp_mask = item->mask;
 
-			hdr = &hdrs->proto_hdr[layer];
+			hdr_w_msk = &hdrs->proto_hdr_w_msk[layer];
 
-			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, UDP);
+			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr_w_msk, UDP);
 
 			if (udp_spec && udp_mask) {
 				if (udp_mask->hdr.dgram_len ||
@@ -1130,36 +1115,24 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					return -rte_errno;
 				}
 
-				/* Mask for UDP src/dst ports not supported */
-				if (udp_mask->hdr.src_port &&
-					udp_mask->hdr.src_port != UINT16_MAX)
-					return -rte_errno;
-				if (udp_mask->hdr.dst_port &&
-					udp_mask->hdr.dst_port != UINT16_MAX)
-					return -rte_errno;
-
-				if (udp_mask->hdr.src_port == UINT16_MAX) {
-					input_set |= IAVF_INSET_UDP_SRC_PORT;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, UDP, SRC_PORT);
-				}
-				if (udp_mask->hdr.dst_port == UINT16_MAX) {
-					input_set |= IAVF_INSET_UDP_DST_PORT;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, UDP, DST_PORT);
+				if (udp_mask->hdr.src_port || udp_mask->hdr.dst_port) {
+					if (udp_mask->hdr.src_port)
+						input_set |= IAVF_INSET_UDP_SRC_PORT;
+					if (udp_mask->hdr.dst_port)
+						input_set |= IAVF_INSET_UDP_DST_PORT;
+					if (l3 == RTE_FLOW_ITEM_TYPE_IPV4 ||
+						l3 == RTE_FLOW_ITEM_TYPE_IPV6)
+						rte_memcpy(hdr_w_msk->buffer_spec, &udp_spec->hdr,
+							sizeof(udp_spec->hdr));
+					rte_memcpy(hdr_w_msk->buffer_mask, &udp_mask->hdr,
+						   sizeof(udp_mask->hdr));
+					with_mask = 1;
 				}
 
 				if (tun_inner) {
 					input_set &= ~IAVF_PROT_UDP_OUTER;
 					input_set |= IAVF_PROT_UDP_INNER;
 				}
-
-				if (l3 == RTE_FLOW_ITEM_TYPE_IPV4)
-					rte_memcpy(hdr->buffer,
-						&udp_spec->hdr,
-						sizeof(udp_spec->hdr));
-				else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6)
-					rte_memcpy(hdr->buffer,
-						&udp_spec->hdr,
-						sizeof(udp_spec->hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1169,9 +1142,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			tcp_spec = item->spec;
 			tcp_mask = item->mask;
 
-			hdr = &hdrs->proto_hdr[layer];
+			hdr_w_msk = &hdrs->proto_hdr_w_msk[layer];
 
-			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, TCP);
+			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr_w_msk, TCP);
 
 			if (tcp_spec && tcp_mask) {
 				if (tcp_mask->hdr.sent_seq ||
@@ -1187,36 +1160,24 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					return -rte_errno;
 				}
 
-				/* Mask for TCP src/dst ports not supported */
-				if (tcp_mask->hdr.src_port &&
-					tcp_mask->hdr.src_port != UINT16_MAX)
-					return -rte_errno;
-				if (tcp_mask->hdr.dst_port &&
-					tcp_mask->hdr.dst_port != UINT16_MAX)
-					return -rte_errno;
-
-				if (tcp_mask->hdr.src_port == UINT16_MAX) {
-					input_set |= IAVF_INSET_TCP_SRC_PORT;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, TCP, SRC_PORT);
-				}
-				if (tcp_mask->hdr.dst_port == UINT16_MAX) {
-					input_set |= IAVF_INSET_TCP_DST_PORT;
-					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, TCP, DST_PORT);
+				if (tcp_mask->hdr.src_port || tcp_mask->hdr.dst_port) {
+					if (tcp_mask->hdr.src_port)
+						input_set |= IAVF_INSET_TCP_SRC_PORT;
+					if (tcp_mask->hdr.dst_port)
+						input_set |= IAVF_INSET_TCP_DST_PORT;
+					if (l3 == RTE_FLOW_ITEM_TYPE_IPV4 ||
+						l3 == RTE_FLOW_ITEM_TYPE_IPV6)
+						rte_memcpy(hdr_w_msk->buffer_spec, &tcp_spec->hdr,
+							sizeof(tcp_spec->hdr));
+					rte_memcpy(hdr_w_msk->buffer_mask, &tcp_mask->hdr,
+							sizeof(tcp_mask->hdr));
+					with_mask = 1;
 				}
 
 				if (tun_inner) {
 					input_set &= ~IAVF_PROT_TCP_OUTER;
 					input_set |= IAVF_PROT_TCP_INNER;
 				}
-
-				if (l3 == RTE_FLOW_ITEM_TYPE_IPV4)
-					rte_memcpy(hdr->buffer,
-						&tcp_spec->hdr,
-						sizeof(tcp_spec->hdr));
-				else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6)
-					rte_memcpy(hdr->buffer,
-						&tcp_spec->hdr,
-						sizeof(tcp_spec->hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1555,6 +1516,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			return -rte_errno;
 		}
 	}
+
+	if (with_mask)
+		hdrs->count += VIRTCHNL_MAX_NUM_PROTO_HDRS;
 
 	if (layer > VIRTCHNL_MAX_NUM_PROTO_HDRS) {
 		rte_flow_error_set(error, EINVAL,
