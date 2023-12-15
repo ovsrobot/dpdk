@@ -6,6 +6,8 @@ EXPERIMENTAL {
 	global:
 
 	# added in 24.03
+	rte_arg_parse_arg_type;
 	rte_arg_parse_corelist;
 	rte_arg_parse_coremask;
+	rte_arg_parse_core_string;
 };

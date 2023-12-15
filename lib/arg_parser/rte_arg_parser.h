@@ -23,6 +23,9 @@ extern "C" {
 
 #include <rte_compat.h>
 
+#define RTE_ARG_PARSE_TYPE_COREMASK 0
+#define RTE_ARG_PARSE_TYPE_CORELIST 1
+#define RTE_ARG_PARSE_TYPE_UNKNOWN 2
 
 /**
  * Convert a string describing a list of core ids into an array of core ids.
@@ -92,6 +95,67 @@ __rte_experimental
 int
 rte_arg_parse_coremask(const char *coremask, uint16_t *cores, uint32_t cores_len);
 
+/**
+ * Use heuristics to determine if a string contains a coremask or a corelist.
+ *
+ * This function will check a series of conditions and return an int representing which
+ * core type (mask or list) the string represents or report the type as unknown if the
+ * string is ambiguous.
+ *
+ * @param core_string
+ *   A string describing the intended cores to be parsed
+ * @return
+ *   int representing the core type
+ *   RTE_ARG_PARSE_TYPE_COREMASK: coremask.
+ *   RTE_ARG_PARSE_TYPE_CORELIST: corelist.
+ *   RTE_ARG_PARSE_TYPE_UNKNOWN: unknown (ambiguous).
+ *   -EINVAL if the string was invalid.
+ */
+__rte_experimental
+int
+rte_arg_parse_arg_type(const char *core_string);
+
+/**
+ * Convert a string describing either a corelist or coremask into an array of core ids.
+ *
+ * This function will fill the "cores" array up to "cores_len" with the core ids described
+ * in the "core_string". The string can either describe a corelist or a coremask, and
+ * will be parsed accordingly. The number of unique core ids in the string is then returned.
+ * For example:
+ * "1-4" is treated as a corelist and results in an array of [1,2,3,4] with 4 being returned
+ * "0xA1" is treated as a coremask and results in an array of [0,5,7] with 3 being returned
+ *
+ * In the case of an ambiguous string, the function will use the default_type parameter to
+ * decide.
+ *
+ * NOTE: if the length of the input array is insufficient to hold the number of core ids
+ * in "core_string" the input array is filled to capacity but the return value is the
+ * number of elements which would have been written to the array, had enough space been
+ * available. [This is similar to the behaviour of the snprintf function]. Because of
+ * this, the number of core values in the "core_string" may be determined by calling the
+ * function with a NULL array pointer and array length given as 0.
+ *
+ * @param core_string
+ *   A string describing the intended cores to be parsed.
+ * @param cores
+ *   An array where to store the core ids.
+ *   Array can be NULL if "cores_len" is 0.
+ * @param cores_len
+ *   The length of the "cores" array.
+ *   If the size is smaller than that needed to hold all cores from "core_string"
+ * @param default_type
+ *   How to treat ambiguous cases (e.g. '4' could be mask or list).
+ *   RTE_ARG_PARSE_TYPE_COREMASK: coremask.
+ *   RTE_ARG_PARSE_TYPE_CORELIST: corelist.
+ * @return
+ *   n: the number of unique cores present in "core_string".
+ *   -EINVAL if the string was invalid.
+ *   NOTE: if n > "cores_len", then only "cores_len" elements in the "cores" array are valid.
+ */
+__rte_experimental
+int
+rte_arg_parse_core_string(const char *core_string, uint16_t *cores, uint32_t cores_len,
+		int default_type);
 
 #ifdef __cplusplus
 }
