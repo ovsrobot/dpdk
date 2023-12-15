@@ -12,6 +12,7 @@
 #include <rte_lcore.h>
 #include <rte_power.h>
 #include <rte_string_fns.h>
+#include <rte_arg_parser.h>
 
 #include "perf_core.h"
 #include "main.h"
@@ -177,56 +178,21 @@ parse_perf_config(const char *q_arg)
 int
 parse_perf_core_list(const char *corelist)
 {
-	int i, idx = 0;
-	unsigned int count = 0;
-	char *end = NULL;
-	int min, max;
+	int count;
+	uint16_t cores[RTE_MAX_LCORE];
 
 	if (corelist == NULL) {
 		printf("invalid core list\n");
 		return -1;
 	}
 
+	count = rte_arg_parse_core_string(corelist, cores, RTE_DIM(cores),
+				RTE_ARG_PARSE_TYPE_CORELIST);
 
-	/* Remove all blank characters ahead and after */
-	while (isblank(*corelist))
-		corelist++;
-	i = strlen(corelist);
-	while ((i > 0) && isblank(corelist[i - 1]))
-		i--;
+	for (int i = 0; i < count; i++)
+		hp_lcores[i] = cores[i];
 
-	/* Get list of cores */
-	min = RTE_MAX_LCORE;
-	do {
-		while (isblank(*corelist))
-			corelist++;
-		if (*corelist == '\0')
-			return -1;
-		errno = 0;
-		idx = strtoul(corelist, &end, 10);
-		if (errno || end == NULL)
-			return -1;
-		while (isblank(*end))
-			end++;
-		if (*end == '-') {
-			min = idx;
-		} else if ((*end == ',') || (*end == '\0')) {
-			max = idx;
-			if (min == RTE_MAX_LCORE)
-				min = idx;
-			for (idx = min; idx <= max; idx++) {
-				hp_lcores[count] = idx;
-				count++;
-			}
-			min = RTE_MAX_LCORE;
-		} else {
-			printf("invalid core list\n");
-			return -1;
-		}
-		corelist = end + 1;
-	} while (*end != '\0');
-
-	if (count == 0) {
+	if (count == 0 || count == -1) {
 		printf("invalid core list\n");
 		return -1;
 	}
@@ -234,7 +200,7 @@ parse_perf_core_list(const char *corelist)
 	nb_hp_lcores = count;
 
 	printf("Configured %d high performance cores\n", nb_hp_lcores);
-	for (i = 0; i < nb_hp_lcores; i++)
+	for (int i = 0; i < nb_hp_lcores; i++)
 		printf("\tHigh performance core %d %d\n",
 				i, hp_lcores[i]);
 
