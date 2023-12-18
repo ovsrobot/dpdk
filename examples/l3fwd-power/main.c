@@ -1399,8 +1399,8 @@ start_rx:
 static int
 check_lcore_params(void)
 {
-	uint8_t queue, lcore;
-	uint16_t i;
+	uint8_t queue;
+	uint16_t lcore, i;
 	int socketid;
 
 	for (i = 0; i < nb_lcore_params; ++i) {
@@ -1469,7 +1469,7 @@ static int
 init_lcore_rx_queues(void)
 {
 	uint16_t i, nb_rx_queue;
-	uint8_t lcore;
+	uint16_t lcore;
 
 	for (i = 0; i < nb_lcore_params; ++i) {
 		lcore = lcore_params[i].lcore_id;
@@ -1661,6 +1661,8 @@ parse_config(const char *q_arg)
 	char *str_fld[_NUM_FLD];
 	int i;
 	unsigned size;
+	unsigned int max_fld[_NUM_FLD] = {RTE_MAX_ETHPORTS,
+					255, RTE_MAX_LCORE};
 
 	nb_lcore_params = 0;
 
@@ -1681,7 +1683,7 @@ parse_config(const char *q_arg)
 			errno = 0;
 			int_fld[i] = strtoul(str_fld[i], &end, 0);
 			if (errno != 0 || end == str_fld[i] || int_fld[i] >
-									255)
+									max_fld[i])
 				return -1;
 		}
 		if (nb_lcore_params >= MAX_LCORE_PARAMS) {
@@ -1694,7 +1696,7 @@ parse_config(const char *q_arg)
 		lcore_params_array[nb_lcore_params].queue_id =
 				(uint8_t)int_fld[FLD_QUEUE];
 		lcore_params_array[nb_lcore_params].lcore_id =
-				(uint8_t)int_fld[FLD_LCORE];
+				(uint16_t)int_fld[FLD_LCORE];
 		++nb_lcore_params;
 	}
 	lcore_params = lcore_params_array;
