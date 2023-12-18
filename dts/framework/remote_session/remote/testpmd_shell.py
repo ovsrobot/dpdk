@@ -1,8 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2023 University of New Hampshire
 
+import time
+from enum import auto
 from pathlib import PurePath
 from typing import Callable
+
+from framework.exception import InteractiveCommandExecutionError
+from framework.settings import SETTINGS
+from framework.utils import StrEnum
 
 from .interactive_shell import InteractiveShell
 
@@ -17,6 +23,37 @@ class TestPmdDevice(object):
         return self.pci_address
 
 
+class TestPmdForwardingModes(StrEnum):
+    r"""The supported packet forwarding modes for :class:`~TestPmdShell`\s"""
+
+    #:
+    io = auto()
+    #:
+    mac = auto()
+    #:
+    macswap = auto()
+    #:
+    flowgen = auto()
+    #:
+    rxonly = auto()
+    #:
+    txonly = auto()
+    #:
+    csum = auto()
+    #:
+    icmpecho = auto()
+    #:
+    ieee1588 = auto()
+    #:
+    noisy = auto()
+    #:
+    fivetswap = "5tswap"
+    #:
+    shared_rxq = "shared-rxq"
+    #:
+    recycle_mbufs = auto()
+
+
 class TestPmdShell(InteractiveShell):
     path: PurePath = PurePath("app", "dpdk-testpmd")
     dpdk_app: bool = True
@@ -27,6 +64,27 @@ class TestPmdShell(InteractiveShell):
         """See "_start_application" in InteractiveShell."""
         self._app_args += " -- -i"
         super()._start_application(get_privileged_command)
+
+    def start(self, verify: bool = True) -> None:
+        """Start packet forwarding with the current configuration.
+
+        Args:
+            verify: If :data:`True` , a second start command will be sent in an attempt to verify
+                packet forwarding started as expected.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and forwarding fails to
+                start.
+        """
+        self.send_command("start")
+        if verify:
+            # If forwarding was already started, sending "start" again should tell us
+            if "Packet forwarding already started" not in self.send_command("start"):
+                raise InteractiveCommandExecutionError("Testpmd failed to start packet forwarding.")
+
+    def stop(self) -> None:
+        """Stop packet forwarding."""
+        self.send_command("stop")
 
     def get_devices(self) -> list[TestPmdDevice]:
         """Get a list of device names that are known to testpmd
@@ -43,3 +101,37 @@ class TestPmdShell(InteractiveShell):
             if "device name:" in line.lower():
                 dev_list.append(TestPmdDevice(line))
         return dev_list
+
+    def wait_link_status_up(self, port_id: int, timeout=SETTINGS.timeout) -> bool:
+        """Wait until the link status on the given port is "up".
+
+        Arguments:
+            port_id: Port to check the link status on.
+            timeout: Time to wait for the link to come up. The default value for this
+                argument is set using the :option:`-t, --timeout` command-line argument
+                or the :envvar:`DTS_TIMEOUT` environment variable.
+
+        Returns:
+            If the link came up in time or not.
+        """
+        time_to_stop = time.time() + timeout
+        while time.time() < time_to_stop:
+            port_info = self.send_command(f"show port info {port_id}")
+            if "Link status: up" in port_info:
+                break
+            time.sleep(0.5)
+        else:
+            self._logger.error(f"The link for port {port_id} did not come up in the given timeout.")
+        return "Link status: up" in port_info
+
+    def set_forward_mode(self, mode: TestPmdForwardingModes):
+        """Set packet forwarding mode.
+
+        Args:
+            mode: The forwarding mode to use.
+        """
+        self.send_command(f"set fwd {mode.value}")
+
+    def close(self) -> None:
+        self.send_command("exit", "")
+        return super().close()

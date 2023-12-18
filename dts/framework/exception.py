@@ -119,6 +119,10 @@ class RemoteCommandExecutionError(DTSError):
         return f"Command {self.command} returned a non-zero exit code: {self.command_return_code}"
 
 
+class InteractiveCommandExecutionError(DTSError):
+    severity: ClassVar[ErrorSeverity] = ErrorSeverity.REMOTE_CMD_EXEC_ERR
+
+
 class RemoteDirectoryExistsError(DTSError):
     """
     Raised when a remote directory to be created already exists.
