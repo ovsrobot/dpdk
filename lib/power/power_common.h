@@ -15,7 +15,7 @@ extern int power_logtype;
 
 #ifdef RTE_LIBRTE_POWER_DEBUG
 #define POWER_DEBUG_LOG(fmt, args...) \
-	RTE_LOG(ERR, POWER, "%s: " fmt "\n", __func__, ## args)
+	RTE_LOG_LINE(ERR, POWER, "%s: " fmt, __func__, ## args)
 #else
 #define POWER_DEBUG_LOG(fmt, args...)
 #endif
