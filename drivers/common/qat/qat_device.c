@@ -199,6 +199,8 @@ pick_gen(const struct rte_pci_device *pci_dev)
 	case 0x4943:
 	case 0x4945:
 		return QAT_GEN4;
+	case 0x0da5:
+		return QAT_VQAT;
 	default:
 		QAT_LOG(ERR, "Invalid dev_id, can't determine generation");
 		return QAT_N_GENS;
