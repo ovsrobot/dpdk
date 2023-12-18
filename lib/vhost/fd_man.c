@@ -334,8 +334,8 @@ fdset_pipe_init(struct fdset *fdset)
 	int ret;
 
 	if (pipe(fdset->u.pipefd) < 0) {
-		RTE_LOG(ERR, VHOST_FDMAN,
-			"failed to create pipe for vhost fdset\n");
+		RTE_LOG_LINE(ERR, VHOST_FDMAN,
+			"failed to create pipe for vhost fdset");
 		return -1;
 	}
 
@@ -343,8 +343,8 @@ fdset_pipe_init(struct fdset *fdset)
 			fdset_pipe_read_cb, NULL, NULL);
 
 	if (ret < 0) {
-		RTE_LOG(ERR, VHOST_FDMAN,
-			"failed to add pipe readfd %d into vhost server fdset\n",
+		RTE_LOG_LINE(ERR, VHOST_FDMAN,
+			"failed to add pipe readfd %d into vhost server fdset",
 			fdset->u.readfd);
 
 		fdset_pipe_uninit(fdset);

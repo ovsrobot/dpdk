@@ -34,8 +34,8 @@ rte_hash_crc_set_alg(uint8_t alg)
 
 #if defined RTE_ARCH_X86
 	if (!(alg & CRC32_SSE42_x64))
-		RTE_LOG(WARNING, HASH_CRC,
-			"Unsupported CRC32 algorithm requested using CRC32_x64/CRC32_SSE42\n");
+		RTE_LOG_LINE(WARNING, HASH_CRC,
+			"Unsupported CRC32 algorithm requested using CRC32_x64/CRC32_SSE42");
 	if (!rte_cpu_get_flag_enabled(RTE_CPUFLAG_EM64T) || alg == CRC32_SSE42)
 		rte_hash_crc32_alg = CRC32_SSE42;
 	else
@@ -44,15 +44,15 @@ rte_hash_crc_set_alg(uint8_t alg)
 
 #if defined RTE_ARCH_ARM64
 	if (!(alg & CRC32_ARM64))
-		RTE_LOG(WARNING, HASH_CRC,
-			"Unsupported CRC32 algorithm requested using CRC32_ARM64\n");
+		RTE_LOG_LINE(WARNING, HASH_CRC,
+			"Unsupported CRC32 algorithm requested using CRC32_ARM64");
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_CRC32))
 		rte_hash_crc32_alg = CRC32_ARM64;
 #endif
 
 	if (rte_hash_crc32_alg == CRC32_SW)
-		RTE_LOG(WARNING, HASH_CRC,
-			"Unsupported CRC32 algorithm requested using CRC32_SW\n");
+		RTE_LOG_LINE(WARNING, HASH_CRC,
+			"Unsupported CRC32 algorithm requested using CRC32_SW");
 }
 
 /* Setting the best available algorithm */

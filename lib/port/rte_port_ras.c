@@ -69,16 +69,16 @@ rte_port_ring_writer_ras_create(void *params, int socket_id, int is_ipv4)
 
 	/* Check input parameters */
 	if (conf == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter conf is NULL\n", __func__);
+		RTE_LOG_LINE(ERR, PORT, "%s: Parameter conf is NULL", __func__);
 		return NULL;
 	}
 	if (conf->ring == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter ring is NULL\n", __func__);
+		RTE_LOG_LINE(ERR, PORT, "%s: Parameter ring is NULL", __func__);
 		return NULL;
 	}
 	if ((conf->tx_burst_sz == 0) ||
 	    (conf->tx_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX)) {
-		RTE_LOG(ERR, PORT, "%s: Parameter tx_burst_sz is invalid\n",
+		RTE_LOG_LINE(ERR, PORT, "%s: Parameter tx_burst_sz is invalid",
 			__func__);
 		return NULL;
 	}
@@ -87,7 +87,7 @@ rte_port_ring_writer_ras_create(void *params, int socket_id, int is_ipv4)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate socket\n", __func__);
+		RTE_LOG_LINE(ERR, PORT, "%s: Failed to allocate socket", __func__);
 		return NULL;
 	}
 
@@ -103,7 +103,7 @@ rte_port_ring_writer_ras_create(void *params, int socket_id, int is_ipv4)
 		socket_id);
 
 	if (port->frag_tbl == NULL) {
-		RTE_LOG(ERR, PORT, "%s: rte_ip_frag_table_create failed\n",
+		RTE_LOG_LINE(ERR, PORT, "%s: rte_ip_frag_table_create failed",
 			__func__);
 		rte_free(port);
 		return NULL;
@@ -282,7 +282,7 @@ rte_port_ring_writer_ras_free(void *port)
 			port;
 
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter port is NULL\n", __func__);
+		RTE_LOG_LINE(ERR, PORT, "%s: Parameter port is NULL", __func__);
 		return -1;
 	}
 

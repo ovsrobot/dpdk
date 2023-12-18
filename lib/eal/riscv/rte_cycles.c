@@ -38,14 +38,14 @@ __rte_riscv_timefrq(void)
 		break;
 	}
 fail:
-	RTE_LOG(WARNING, EAL, "Unable to read timebase-frequency from FDT.\n");
+	RTE_LOG_LINE(WARNING, EAL, "Unable to read timebase-frequency from FDT.");
 	return 0;
 }
 
 uint64_t
 get_tsc_freq_arch(void)
 {
-	RTE_LOG(NOTICE, EAL, "TSC using RISC-V %s.\n",
+	RTE_LOG_LINE(NOTICE, EAL, "TSC using RISC-V %s.",
 		RTE_RISCV_RDTSC_USE_HPM ? "rdcycle" : "rdtime");
 	if (!RTE_RISCV_RDTSC_USE_HPM)
 		return __rte_riscv_timefrq();

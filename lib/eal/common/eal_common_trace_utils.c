@@ -348,7 +348,7 @@ trace_mkdir(void)
 		return -rte_errno;
 	}
 
-	RTE_LOG(INFO, EAL, "Trace dir: %s\n", trace->dir);
+	RTE_LOG_LINE(INFO, EAL, "Trace dir: %s", trace->dir);
 	already_done = true;
 	return 0;
 }

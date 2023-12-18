@@ -68,7 +68,7 @@ eal_cpu_core_id(unsigned lcore_id)
 	return (unsigned)id;
 
 err:
-	RTE_LOG(ERR, EAL, "Error reading core id value from %s "
-			"for lcore %u - assuming core 0\n", SYS_CPU_DIR, lcore_id);
+	RTE_LOG_LINE(ERR, EAL, "Error reading core id value from %s "
+			"for lcore %u - assuming core 0", SYS_CPU_DIR, lcore_id);
 	return 0;
 }

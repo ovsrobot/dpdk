@@ -101,7 +101,7 @@ rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
 	rte_spinlock_lock(&global_env_cfg_lock);
 
 	if (default_uncore_env != RTE_UNCORE_PM_ENV_NOT_SET) {
-		RTE_LOG(ERR, POWER, "Uncore Power Management Env already set.\n");
+		RTE_LOG_LINE(ERR, POWER, "Uncore Power Management Env already set.");
 		rte_spinlock_unlock(&global_env_cfg_lock);
 		return -1;
 	}
@@ -124,7 +124,7 @@ rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
 		rte_power_uncore_get_num_pkgs = power_intel_uncore_get_num_pkgs;
 		rte_power_uncore_get_num_dies = power_intel_uncore_get_num_dies;
 	} else {
-		RTE_LOG(ERR, POWER, "Invalid Power Management Environment(%d) set\n", env);
+		RTE_LOG_LINE(ERR, POWER, "Invalid Power Management Environment(%d) set", env);
 		ret = -1;
 		goto out;
 	}
@@ -159,12 +159,12 @@ rte_power_uncore_init(unsigned int pkg, unsigned int die)
 	case RTE_UNCORE_PM_ENV_INTEL_UNCORE:
 		return power_intel_uncore_init(pkg, die);
 	default:
-		RTE_LOG(INFO, POWER, "Uncore Env isn't set yet!\n");
+		RTE_LOG_LINE(INFO, POWER, "Uncore Env isn't set yet!");
 		break;
 	}
 
 	/* Auto detect Environment */
-	RTE_LOG(INFO, POWER, "Attempting to initialise Intel Uncore power mgmt...\n");
+	RTE_LOG_LINE(INFO, POWER, "Attempting to initialise Intel Uncore power mgmt...");
 	ret = power_intel_uncore_init(pkg, die);
 	if (ret == 0) {
 		rte_power_set_uncore_env(RTE_UNCORE_PM_ENV_INTEL_UNCORE);
@@ -172,8 +172,8 @@ rte_power_uncore_init(unsigned int pkg, unsigned int die)
 	}
 
 	if (default_uncore_env == RTE_UNCORE_PM_ENV_NOT_SET) {
-		RTE_LOG(ERR, POWER, "Unable to set Power Management Environment "
-			"for package %u Die %u\n", pkg, die);
+		RTE_LOG_LINE(ERR, POWER, "Unable to set Power Management Environment "
+			"for package %u Die %u", pkg, die);
 		ret = 0;
 	}
 out:
@@ -187,7 +187,7 @@ rte_power_uncore_exit(unsigned int pkg, unsigned int die)
 	case RTE_UNCORE_PM_ENV_INTEL_UNCORE:
 		return power_intel_uncore_exit(pkg, die);
 	default:
-		RTE_LOG(ERR, POWER, "Uncore Env has not been set, unable to exit gracefully\n");
+		RTE_LOG_LINE(ERR, POWER, "Uncore Env has not been set, unable to exit gracefully");
 		break;
 	}
 	return -1;

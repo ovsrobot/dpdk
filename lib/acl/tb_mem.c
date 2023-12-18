@@ -26,7 +26,7 @@ tb_pool(struct tb_mem_pool *pool, size_t sz)
 	size = sz + pool->alignment - 1;
 	block = calloc(1, size + sizeof(*pool->block));
 	if (block == NULL) {
-		RTE_LOG(ERR, ACL, "%s(%zu) failed, currently allocated by pool: %zu bytes\n",
+		RTE_LOG_LINE(ERR, ACL, "%s(%zu) failed, currently allocated by pool: %zu bytes",
 			__func__, sz, pool->alloc);
 		siglongjmp(pool->fail, -ENOMEM);
 		return NULL;

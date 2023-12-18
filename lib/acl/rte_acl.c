@@ -399,15 +399,15 @@ rte_acl_create(const struct rte_acl_param *param)
 		te = rte_zmalloc("ACL_TAILQ_ENTRY", sizeof(*te), 0);
 
 		if (te == NULL) {
-			RTE_LOG(ERR, ACL, "Cannot allocate tailq entry!\n");
+			RTE_LOG_LINE(ERR, ACL, "Cannot allocate tailq entry!");
 			goto exit;
 		}
 
 		ctx = rte_zmalloc_socket(name, sz, RTE_CACHE_LINE_SIZE, param->socket_id);
 
 		if (ctx == NULL) {
-			RTE_LOG(ERR, ACL,
-				"allocation of %zu bytes on socket %d for %s failed\n",
+			RTE_LOG_LINE(ERR, ACL,
+				"allocation of %zu bytes on socket %d for %s failed",
 				sz, param->socket_id, name);
 			rte_free(te);
 			goto exit;
@@ -473,7 +473,7 @@ rte_acl_add_rules(struct rte_acl_ctx *ctx, const struct rte_acl_rule *rules,
 			((uintptr_t)rules + i * ctx->rule_sz);
 		rc = acl_check_rule(&rv->data);
 		if (rc != 0) {
-			RTE_LOG(ERR, ACL, "%s(%s): rule #%u is invalid\n",
+			RTE_LOG_LINE(ERR, ACL, "%s(%s): rule #%u is invalid",
 				__func__, ctx->name, i + 1);
 			return rc;
 		}
