@@ -361,7 +361,8 @@ class SutNode(Node):
         shell_cls: Type[InteractiveShellType],
         timeout: float = SETTINGS.timeout,
         privileged: bool = False,
-        eal_parameters: EalParameters | str | None = None,
+        eal_parameters: EalParameters | None = None,
+        app_parameters: str = "",
     ) -> InteractiveShellType:
         """Factory method for creating a handler for an interactive session.
 
@@ -376,19 +377,22 @@ class SutNode(Node):
             eal_parameters: List of EAL parameters to use to launch the app. If this
                 isn't provided or an empty string is passed, it will default to calling
                 create_eal_parameters().
+            app_parameters: Additional arguments to pass into the application on the
+                command-line.
         Returns:
             Instance of the desired interactive application.
         """
-        if not eal_parameters:
-            eal_parameters = self.create_eal_parameters()
-
-        # We need to append the build directory for DPDK apps
+        # We need to append the build directory and add EAL parameters for DPDK apps
         if shell_cls.dpdk_app:
+            if not eal_parameters:
+                eal_parameters = self.create_eal_parameters()
+            app_parameters = f"{eal_parameters} -- {app_parameters}"
+
             shell_cls.path = self.main_session.join_remote_path(
                 self.remote_dpdk_build_dir, shell_cls.path
             )
 
-        return super().create_interactive_shell(shell_cls, timeout, privileged, str(eal_parameters))
+        return super().create_interactive_shell(shell_cls, timeout, privileged, app_parameters)
 
     def bind_ports_to_driver(self, for_dpdk: bool = True) -> None:
         """Bind all ports on the SUT to a driver.

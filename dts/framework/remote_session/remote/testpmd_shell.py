@@ -62,7 +62,7 @@ class TestPmdShell(InteractiveShell):
 
     def _start_application(self, get_privileged_command: Callable[[str], str] | None) -> None:
         """See "_start_application" in InteractiveShell."""
-        self._app_args += " -- -i"
+        self._app_args += " -i"
         super()._start_application(get_privileged_command)
 
     def start(self, verify: bool = True) -> None:
