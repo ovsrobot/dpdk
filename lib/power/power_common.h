@@ -14,10 +14,10 @@ extern int power_logtype;
 #define RTE_LOGTYPE_POWER power_logtype
 
 #ifdef RTE_LIBRTE_POWER_DEBUG
-#define POWER_DEBUG_TRACE(fmt, args...) \
-		RTE_LOG(ERR, POWER, "%s: " fmt, __func__, ## args)
+#define POWER_DEBUG_LOG(fmt, args...) \
+	RTE_LOG(ERR, POWER, "%s: " fmt "\n", __func__, ## args)
 #else
-#define POWER_DEBUG_TRACE(fmt, args...)
+#define POWER_DEBUG_LOG(fmt, args...)
 #endif
 
 /* check if scaling driver matches one we want */
