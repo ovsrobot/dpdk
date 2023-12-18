@@ -1499,8 +1499,7 @@ qat_asym_init_op_cookie(void *op_cookie)
 }
 
 int
-qat_asym_dev_create(struct qat_pci_device *qat_pci_dev,
-		const struct qat_dev_cmd_param *qat_dev_cmd_param)
+qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 {
 	struct qat_cryptodev_private *internals;
 	struct rte_cryptodev *cryptodev;
@@ -1515,7 +1514,6 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev,
 		&qat_asym_gen_dev_ops[qat_pci_dev->qat_dev_gen];
 	char name[RTE_CRYPTODEV_NAME_MAX_LEN];
 	char capa_memz_name[RTE_CRYPTODEV_NAME_MAX_LEN];
-	int i = 0;
 	uint16_t slice_map = 0;
 
 	snprintf(name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s",
@@ -1572,17 +1570,6 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev,
 	internals = cryptodev->data->dev_private;
 	internals->qat_dev = qat_pci_dev;
 	internals->dev_id = cryptodev->data->dev_id;
-
-	while (1) {
-		if (qat_dev_cmd_param[i].name == NULL)
-			break;
-		if (!strcmp(qat_dev_cmd_param[i].name, ASYM_ENQ_THRESHOLD_NAME))
-			internals->min_enq_burst_threshold =
-					qat_dev_cmd_param[i].val;
-		if (!strcmp(qat_dev_cmd_param[i].name, QAT_CMD_SLICE_MAP))
-			slice_map = qat_dev_cmd_param[i].val;
-		i++;
-	}
 
 	if (slice_map & ICP_ACCEL_MASK_PKE_SLICE) {
 		QAT_LOG(ERR, "Device %s does not support PKE slice",

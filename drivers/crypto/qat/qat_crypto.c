@@ -8,6 +8,8 @@
 #include "qat_sym.h"
 #include "qat_asym.h"
 
+#define QAT_CL_SYM_ENQ_TH	"qat_sym_enq_threshold"
+
 int
 qat_cryptodev_config(__rte_unused struct rte_cryptodev *dev,
 		__rte_unused struct rte_cryptodev_config *config)
@@ -193,4 +195,9 @@ qat_cryptodev_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 	}
 
 	return 0;
+}
+
+RTE_INIT(qat_crypto)
+{
+	qat_cmdline_key_add(QAT_CL_SYM_ENQ_TH);
 }
