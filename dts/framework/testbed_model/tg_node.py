@@ -23,7 +23,10 @@ from framework.config import (
 )
 from framework.exception import ConfigurationError
 
-from .capturing_traffic_generator import CapturingTrafficGenerator
+from .capturing_traffic_generator import (
+    CapturingTrafficGenerator,
+    PacketFilteringConfig,
+)
 from .hw.port import Port
 from .node import Node
 
@@ -53,6 +56,7 @@ class TGNode(Node):
         packet: Packet,
         send_port: Port,
         receive_port: Port,
+        filter_config: PacketFilteringConfig = PacketFilteringConfig(),
         duration: float = 1,
     ) -> list[Packet]:
         """Send a packet, return received traffic.
@@ -71,7 +75,11 @@ class TGNode(Node):
              A list of received packets. May be empty if no packets are captured.
         """
         return self.traffic_generator.send_packet_and_capture(
-            packet, send_port, receive_port, duration
+            packet,
+            send_port,
+            receive_port,
+            filter_config,
+            duration,
         )
 
     def close(self) -> None:

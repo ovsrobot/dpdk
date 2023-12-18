@@ -27,6 +27,7 @@ from .logger import DTSLOG, getLogger
 from .settings import SETTINGS
 from .test_result import BuildTargetResult, Result, TestCaseResult, TestSuiteResult
 from .testbed_model import SutNode, TGNode
+from .testbed_model.capturing_traffic_generator import PacketFilteringConfig
 from .testbed_model.hw.port import Port, PortLink
 from .utils import get_packet_summaries
 
@@ -149,7 +150,12 @@ class TestSuite(object):
     def _configure_ipv4_forwarding(self, enable: bool) -> None:
         self.sut_node.configure_ipv4_forwarding(enable)
 
-    def send_packet_and_capture(self, packet: Packet, duration: float = 1) -> list[Packet]:
+    def send_packet_and_capture(
+        self,
+        packet: Packet,
+        filter_config: PacketFilteringConfig = PacketFilteringConfig(),
+        duration: float = 1,
+    ) -> list[Packet]:
         """
         Send a packet through the appropriate interface and
         receive on the appropriate interface.
@@ -158,7 +164,11 @@ class TestSuite(object):
         """
         packet = self._adjust_addresses(packet)
         return self.tg_node.send_packet_and_capture(
-            packet, self._tg_port_egress, self._tg_port_ingress, duration
+            packet,
+            self._tg_port_egress,
+            self._tg_port_ingress,
+            filter_config,
+            duration,
         )
 
     def get_expected_packet(self, packet: Packet) -> Packet:
