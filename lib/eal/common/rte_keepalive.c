@@ -53,7 +53,7 @@ struct rte_keepalive {
 static void
 print_trace(const char *msg, struct rte_keepalive *keepcfg, int idx_core)
 {
-	RTE_LOG(INFO, EAL, "%sLast seen %" PRId64 "ms ago.\n",
+	RTE_LOG_LINE(INFO, EAL, "%sLast seen %" PRId64 "ms ago.",
 		msg,
 		((rte_rdtsc() - keepcfg->last_alive[idx_core])*1000)
 		/ rte_get_tsc_hz()

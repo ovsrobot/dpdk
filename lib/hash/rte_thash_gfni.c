@@ -20,8 +20,8 @@ rte_thash_gfni(const uint64_t *mtrx __rte_unused,
 
 	if (!warned) {
 		warned = true;
-		RTE_LOG(ERR, HASH,
-			"%s is undefined under given arch\n", __func__);
+		RTE_LOG_LINE(ERR, HASH,
+			"%s is undefined under given arch", __func__);
 	}
 
 	return 0;
@@ -38,8 +38,8 @@ rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
 
 	if (!warned) {
 		warned = true;
-		RTE_LOG(ERR, HASH,
-			"%s is undefined under given arch\n", __func__);
+		RTE_LOG_LINE(ERR, HASH,
+			"%s is undefined under given arch", __func__);
 	}
 
 	for (i = 0; i < num; i++)

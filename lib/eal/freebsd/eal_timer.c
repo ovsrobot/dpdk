@@ -36,20 +36,20 @@ get_tsc_freq(void)
 	tmp = 0;
 
 	if (sysctlbyname("kern.timecounter.smp_tsc", &tmp, &sz, NULL, 0))
-		RTE_LOG(WARNING, EAL, "%s\n", strerror(errno));
+		RTE_LOG_LINE(WARNING, EAL, "%s", strerror(errno));
 	else if (tmp != 1)
-		RTE_LOG(WARNING, EAL, "TSC is not safe to use in SMP mode\n");
+		RTE_LOG_LINE(WARNING, EAL, "TSC is not safe to use in SMP mode");
 
 	tmp = 0;
 
 	if (sysctlbyname("kern.timecounter.invariant_tsc", &tmp, &sz, NULL, 0))
-		RTE_LOG(WARNING, EAL, "%s\n", strerror(errno));
+		RTE_LOG_LINE(WARNING, EAL, "%s", strerror(errno));
 	else if (tmp != 1)
-		RTE_LOG(WARNING, EAL, "TSC is not invariant\n");
+		RTE_LOG_LINE(WARNING, EAL, "TSC is not invariant");
 
 	sz = sizeof(tsc_hz);
 	if (sysctlbyname("machdep.tsc_freq", &tsc_hz, &sz, NULL, 0)) {
-		RTE_LOG(WARNING, EAL, "%s\n", strerror(errno));
+		RTE_LOG_LINE(WARNING, EAL, "%s", strerror(errno));
 		return 0;
 	}
 

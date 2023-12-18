@@ -16,7 +16,7 @@ __rte_panic(const char *funcname, const char *format, ...)
 {
 	va_list ap;
 
-	rte_log(RTE_LOG_CRIT, RTE_LOGTYPE_EAL, "PANIC in %s():\n", funcname);
+	RTE_LOG_LINE(CRIT, EAL, "PANIC in %s():", funcname);
 	va_start(ap, format);
 	rte_vlog(RTE_LOG_CRIT, RTE_LOGTYPE_EAL, format, ap);
 	va_end(ap);
@@ -42,7 +42,7 @@ rte_exit(int exit_code, const char *format, ...)
 	va_end(ap);
 
 	if (rte_eal_cleanup() != 0 && rte_errno != EALREADY)
-		RTE_LOG(CRIT, EAL,
-			"EAL could not release all resources\n");
+		RTE_LOG_LINE(CRIT, EAL,
+			"EAL could not release all resources");
 	exit(exit_code);
 }

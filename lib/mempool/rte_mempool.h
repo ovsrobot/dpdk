@@ -847,7 +847,7 @@ rte_mempool_ops_enqueue_bulk(struct rte_mempool *mp, void * const *obj_table,
 	ret = ops->enqueue(mp, obj_table, n);
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
 	if (unlikely(ret < 0))
-		RTE_LOG(CRIT, MEMPOOL, "cannot enqueue %u objects to mempool %s\n",
+		RTE_LOG_LINE(CRIT, MEMPOOL, "cannot enqueue %u objects to mempool %s",
 			n, mp->name);
 #endif
 	return ret;

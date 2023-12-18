@@ -146,7 +146,7 @@ logtype_set_level(uint32_t type, uint32_t level)
 
 	if (current != level) {
 		rte_logs.dynamic_types[type].loglevel = level;
-		RTE_LOG(DEBUG, EAL, "%s log level changed from %s to %s\n",
+		RTE_LOG_LINE(DEBUG, EAL, "%s log level changed from %s to %s",
 			rte_logs.dynamic_types[type].name == NULL ?
 				"" : rte_logs.dynamic_types[type].name,
 			eal_log_level2str(current),
@@ -518,8 +518,8 @@ eal_log_set_default(FILE *default_log)
 	default_log_stream = default_log;
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-	RTE_LOG(NOTICE, EAL,
-		"Debug dataplane logs available - lower performance\n");
+	RTE_LOG_LINE(NOTICE, EAL,
+		"Debug dataplane logs available - lower performance");
 #endif
 }
 

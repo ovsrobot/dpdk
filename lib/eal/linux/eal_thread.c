@@ -28,7 +28,7 @@ void rte_thread_set_name(rte_thread_t thread_id, const char *thread_name)
 	const size_t truncatedsz = sizeof(truncated);
 
 	if (strlcpy(truncated, thread_name, truncatedsz) >= truncatedsz)
-		RTE_LOG(DEBUG, EAL, "Truncated thread name\n");
+		RTE_LOG_LINE(DEBUG, EAL, "Truncated thread name");
 
 	ret = pthread_setname_np((pthread_t)thread_id.opaque_id, truncated);
 #endif
@@ -37,5 +37,5 @@ void rte_thread_set_name(rte_thread_t thread_id, const char *thread_name)
 	RTE_SET_USED(thread_name);
 
 	if (ret != 0)
-		RTE_LOG(DEBUG, EAL, "Failed to set thread name\n");
+		RTE_LOG_LINE(DEBUG, EAL, "Failed to set thread name");
 }
