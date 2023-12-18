@@ -31,7 +31,7 @@ extern "C" {
 				 /* was RTE_LOGTYPE_RING */
 				 /* was RTE_LOGTYPE_MEMPOOL */
 				 /* was RTE_LOGTYPE_TIMER */
-#define RTE_LOGTYPE_PMD        5 /**< Log related to poll mode driver. */
+#define RTE_LOGTYPE_PMD  RTE_DEPRECATED(RTE_LOGTYPE_PMD) 5
 				 /* was RTE_LOGTYPE_HASH */
 				 /* was RTE_LOGTYPE_LPM */
 				 /* was RTE_LOGTYPE_KNI */

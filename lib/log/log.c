@@ -352,6 +352,9 @@ struct logtype {
 
 static const struct logtype logtype_strings[] = {
 	{RTE_LOGTYPE_EAL,        "lib.eal"},
+/* avoid deprecated warning */
+#undef RTE_LOGTYPE_PMD
+#define RTE_LOGTYPE_PMD        5
 	{RTE_LOGTYPE_PMD,        "pmd"},
 	{RTE_LOGTYPE_PORT,       "lib.port"},
 	{RTE_LOGTYPE_TABLE,      "lib.table"},
