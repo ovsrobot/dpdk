@@ -687,7 +687,8 @@ qat_comp_dev_create(struct qat_pci_device *qat_pci_dev,
 			qat_pci_dev->name, "comp");
 	QAT_LOG(DEBUG, "Creating QAT COMP device %s", name);
 
-	if (qat_comp_gen_ops->compressdev_ops == NULL) {
+	if (qat_comp_gen_ops->compressdev_ops == NULL ||
+			qat_dev_instance->pci_dev->id.device_id == 0x578b) {
 		QAT_LOG(DEBUG, "Device %s does not support compression", name);
 		return -ENOTSUP;
 	}
