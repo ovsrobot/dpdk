@@ -43,8 +43,8 @@ struct lcore_params {
 	uint16_t kick_batch;
 	uint32_t buf_size;
 	uint16_t test_secs;
-	struct rte_mbuf **srcs;
-	struct rte_mbuf **dsts;
+	void **srcs;
+	void **dsts;
 	volatile struct worker_info worker_info;
 };
 
@@ -110,17 +110,17 @@ output_result(uint8_t scenario_id, uint32_t lcore_id, char *dma_name, uint16_t r
 }
 
 static inline void
-cache_flush_buf(__rte_unused struct rte_mbuf **array,
+cache_flush_buf(__rte_unused void **array,
 		__rte_unused uint32_t buf_size,
 		__rte_unused uint32_t nr_buf)
 {
 #ifdef RTE_ARCH_X86_64
 	char *data;
-	struct rte_mbuf **srcs = array;
+	void **srcs = array;
 	uint32_t i, offset;
 
 	for (i = 0; i < nr_buf; i++) {
-		data = rte_pktmbuf_mtod(srcs[i], char *);
+		data = (char *) srcs[i];
 		for (offset = 0; offset < buf_size; offset += 64)
 			__builtin_ia32_clflush(data + offset);
 	}
@@ -224,8 +224,8 @@ do_dma_mem_copy(void *p)
 	const uint32_t nr_buf = para->nr_buf;
 	const uint16_t kick_batch = para->kick_batch;
 	const uint32_t buf_size = para->buf_size;
-	struct rte_mbuf **srcs = para->srcs;
-	struct rte_mbuf **dsts = para->dsts;
+	void **srcs = para->srcs;
+	void **dsts = para->dsts;
 	uint16_t nr_cpl;
 	uint64_t async_cnt = 0;
 	uint32_t i;
@@ -241,8 +241,12 @@ do_dma_mem_copy(void *p)
 	while (1) {
 		for (i = 0; i < nr_buf; i++) {
 dma_copy:
-			ret = rte_dma_copy(dev_id, 0, rte_mbuf_data_iova(srcs[i]),
-				rte_mbuf_data_iova(dsts[i]), buf_size, 0);
+			ret = rte_dma_copy(dev_id,
+					0,
+					(rte_iova_t) srcs[i],
+					(rte_iova_t) dsts[i],
+					buf_size,
+					0);
 			if (unlikely(ret < 0)) {
 				if (ret == -ENOSPC) {
 					do_dma_submit_and_poll(dev_id, &async_cnt, worker_info);
@@ -276,8 +280,8 @@ do_cpu_mem_copy(void *p)
 	volatile struct worker_info *worker_info = &(para->worker_info);
 	const uint32_t nr_buf = para->nr_buf;
 	const uint32_t buf_size = para->buf_size;
-	struct rte_mbuf **srcs = para->srcs;
-	struct rte_mbuf **dsts = para->dsts;
+	void **srcs = para->srcs;
+	void **dsts = para->dsts;
 	uint32_t i;
 
 	worker_info->stop_flag = false;
@@ -288,8 +292,8 @@ do_cpu_mem_copy(void *p)
 
 	while (1) {
 		for (i = 0; i < nr_buf; i++) {
-			const void *src = rte_pktmbuf_mtod(dsts[i], void *);
-			void *dst = rte_pktmbuf_mtod(srcs[i], void *);
+			const void *src = (void *) dsts[i];
+			void *dst = (void *) srcs[i];
 
 			/* copy buffer form src to dst */
 			rte_memcpy(dst, src, (size_t)buf_size);
@@ -303,8 +307,8 @@ do_cpu_mem_copy(void *p)
 }
 
 static int
-setup_memory_env(struct test_configure *cfg, struct rte_mbuf ***srcs,
-			struct rte_mbuf ***dsts)
+setup_memory_env(struct test_configure *cfg, void ***srcs,
+			void ***dsts)
 {
 	unsigned int buf_size = cfg->buf_size.cur;
 	unsigned int nr_sockets;
@@ -317,47 +321,57 @@ setup_memory_env(struct test_configure *cfg, struct rte_mbuf ***srcs,
 		return -1;
 	}
 
-	src_pool = rte_pktmbuf_pool_create("Benchmark_DMA_SRC",
+	src_pool = rte_mempool_create("Benchmark_DMA_SRC",
 			nr_buf,
+			buf_size,
 			0,
 			0,
-			buf_size + RTE_PKTMBUF_HEADROOM,
-			cfg->src_numa_node);
+			NULL,
+			NULL,
+			NULL,
+			NULL,
+			cfg->src_numa_node,
+			RTE_MEMPOOL_F_SP_PUT | RTE_MEMPOOL_F_SC_GET);
 	if (src_pool == NULL) {
 		PRINT_ERR("Error with source mempool creation.\n");
 		return -1;
 	}
 
-	dst_pool = rte_pktmbuf_pool_create("Benchmark_DMA_DST",
+	dst_pool = rte_mempool_create("Benchmark_DMA_DST",
 			nr_buf,
+			buf_size,
 			0,
 			0,
-			buf_size + RTE_PKTMBUF_HEADROOM,
-			cfg->dst_numa_node);
+			NULL,
+			NULL,
+			NULL,
+			NULL,
+			cfg->dst_numa_node,
+			RTE_MEMPOOL_F_SP_PUT | RTE_MEMPOOL_F_SC_GET);
 	if (dst_pool == NULL) {
 		PRINT_ERR("Error with destination mempool creation.\n");
 		return -1;
 	}
 
-	*srcs = rte_malloc(NULL, nr_buf * sizeof(struct rte_mbuf *), 0);
+	*srcs = rte_malloc_socket(NULL, nr_buf * sizeof(unsigned char *), 0, cfg->src_numa_node);
 	if (*srcs == NULL) {
 		printf("Error: srcs malloc failed.\n");
 		return -1;
 	}
 
-	*dsts = rte_malloc(NULL, nr_buf * sizeof(struct rte_mbuf *), 0);
+	*dsts = rte_malloc_socket(NULL, nr_buf * sizeof(unsigned char *), 0, cfg->dst_numa_node);
 	if (*dsts == NULL) {
 		printf("Error: dsts malloc failed.\n");
 		return -1;
 	}
 
-	if (rte_pktmbuf_alloc_bulk(src_pool, *srcs, nr_buf) != 0) {
-		printf("alloc src mbufs failed.\n");
+	if (rte_mempool_get_bulk(src_pool, *srcs, nr_buf) != 0) {
+		printf("alloc src bufs failed.\n");
 		return -1;
 	}
 
-	if (rte_pktmbuf_alloc_bulk(dst_pool, *dsts, nr_buf) != 0) {
-		printf("alloc dst mbufs failed.\n");
+	if (rte_mempool_get_bulk(dst_pool, *dsts, nr_buf) != 0) {
+		printf("alloc dst bufs failed.\n");
 		return -1;
 	}
 
@@ -370,7 +384,7 @@ mem_copy_benchmark(struct test_configure *cfg, bool is_dma)
 	uint16_t i;
 	uint32_t offset;
 	unsigned int lcore_id = 0;
-	struct rte_mbuf **srcs = NULL, **dsts = NULL;
+	void **srcs = NULL, **dsts = NULL;
 	struct lcore_dma_map_t *ldm = &cfg->lcore_dma_map;
 	unsigned int buf_size = cfg->buf_size.cur;
 	uint16_t kick_batch = cfg->kick_batch.cur;
@@ -478,9 +492,9 @@ mem_copy_benchmark(struct test_configure *cfg, bool is_dma)
 out:
 	/* free mbufs used in the test */
 	if (srcs != NULL)
-		rte_pktmbuf_free_bulk(srcs, nr_buf);
+		rte_mempool_put_bulk(src_pool, srcs, nr_buf);
 	if (dsts != NULL)
-		rte_pktmbuf_free_bulk(dsts, nr_buf);
+		rte_mempool_put_bulk(dst_pool, dsts, nr_buf);
 
 	/* free the points for the mbufs */
 	rte_free(srcs);
