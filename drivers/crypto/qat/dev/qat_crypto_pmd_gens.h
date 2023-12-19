@@ -116,7 +116,10 @@ qat_auth_is_len_in_bits(struct qat_sym_session *ctx,
 {
 	if (ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_SNOW_3G_UIA2 ||
 		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_KASUMI_F9 ||
-		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_3G_128_EIA3) {
+		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_3G_128_EIA3 ||
+		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_32 ||
+		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_64 ||
+		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_128) {
 		if (unlikely((op->sym->auth.data.offset % BYTE_LENGTH != 0) ||
 				(op->sym->auth.data.length % BYTE_LENGTH != 0)))
 			return -EINVAL;
@@ -131,7 +134,8 @@ qat_cipher_is_len_in_bits(struct qat_sym_session *ctx,
 {
 	if (ctx->qat_cipher_alg == ICP_QAT_HW_CIPHER_ALGO_SNOW_3G_UEA2 ||
 		ctx->qat_cipher_alg == ICP_QAT_HW_CIPHER_ALGO_KASUMI ||
-		ctx->qat_cipher_alg == ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3) {
+		ctx->qat_cipher_alg == ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3 ||
+		ctx->qat_cipher_alg == ICP_QAT_HW_CIPHER_ALGO_ZUC_256)  {
 		if (unlikely((op->sym->cipher.data.length % BYTE_LENGTH != 0) ||
 			((op->sym->cipher.data.offset %
 			BYTE_LENGTH) != 0)))
@@ -588,10 +592,31 @@ qat_sym_convert_op_to_vec_aead(struct rte_crypto_op *op,
 	return 0;
 }
 
+static inline void
+zuc256_modify_iv(uint8_t *iv)
+{
+	uint8_t iv_tmp[8];
+
+	iv_tmp[0] = iv[16];
+	/* pack the last 8 bytes of IV to 6 bytes.
+	 * discard the 2 MSB bits of each byte
+	 */
+	iv_tmp[1] = (((iv[17] & 0x3f) << 2) | ((iv[18] >> 4) & 0x3));
+	iv_tmp[2] = (((iv[18] & 0xf) << 4) | ((iv[19] >> 2) & 0xf));
+	iv_tmp[3] = (((iv[19] & 0x3) << 6) | (iv[20] & 0x3f));
+
+	iv_tmp[4] = (((iv[21] & 0x3f) << 2) | ((iv[22] >> 4) & 0x3));
+	iv_tmp[5] = (((iv[22] & 0xf) << 4) | ((iv[23] >> 2) & 0xf));
+	iv_tmp[6] = (((iv[23] & 0x3) << 6) | (iv[24] & 0x3f));
+
+	memcpy(iv + 16, iv_tmp, 8);
+}
+
 static __rte_always_inline void
 qat_set_cipher_iv(struct icp_qat_fw_la_cipher_req_params *cipher_param,
 		struct rte_crypto_va_iova_ptr *iv_ptr, uint32_t iv_len,
-		struct icp_qat_fw_la_bulk_req *qat_req)
+		struct icp_qat_fw_la_bulk_req *qat_req,
+		uint8_t is_zuc256)
 {
 	/* copy IV into request if it fits */
 	if (iv_len <= sizeof(cipher_param->u.cipher_IV_array))
@@ -602,6 +627,9 @@ qat_set_cipher_iv(struct icp_qat_fw_la_cipher_req_params *cipher_param,
 				qat_req->comn_hdr.serv_specif_flags,
 				ICP_QAT_FW_CIPH_IV_64BIT_PTR);
 		cipher_param->u.s.cipher_IV_ptr = iv_ptr->iova;
+
+		if (is_zuc256 && iv_len == 25)
+			zuc256_modify_iv(iv_ptr->va);
 	}
 }
 
@@ -626,7 +654,7 @@ enqueue_one_cipher_job_gen1(struct qat_sym_session *ctx,
 	cipher_param = (void *)&req->serv_specif_rqpars;
 
 	/* cipher IV */
-	qat_set_cipher_iv(cipher_param, iv, ctx->cipher_iv.length, req);
+	qat_set_cipher_iv(cipher_param, iv, ctx->cipher_iv.length, req, ctx->is_zuc256);
 	cipher_param->cipher_offset = ofs.ofs.cipher.head;
 	cipher_param->cipher_length = data_len - ofs.ofs.cipher.head -
 			ofs.ofs.cipher.tail;
@@ -664,6 +692,9 @@ enqueue_one_auth_job_gen1(struct qat_sym_session *ctx,
 	case ICP_QAT_HW_AUTH_ALGO_SNOW_3G_UIA2:
 	case ICP_QAT_HW_AUTH_ALGO_KASUMI_F9:
 	case ICP_QAT_HW_AUTH_ALGO_ZUC_3G_128_EIA3:
+	case ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_32:
+	case ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_64:
+	case ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_128:
 		auth_param->u1.aad_adr = auth_iv->iova;
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_GALOIS_128:
@@ -719,7 +750,7 @@ enqueue_one_chain_job_gen1(struct qat_sym_session *ctx,
 
 	cipher_param->cipher_offset = ofs.ofs.cipher.head;
 	cipher_param->cipher_length = cipher_len;
-	qat_set_cipher_iv(cipher_param, cipher_iv, ctx->cipher_iv.length, req);
+	qat_set_cipher_iv(cipher_param, cipher_iv, ctx->cipher_iv.length, req, ctx->is_zuc256);
 
 	auth_param->auth_off = ofs.ofs.auth.head;
 	auth_param->auth_len = auth_len;
@@ -746,6 +777,9 @@ enqueue_one_chain_job_gen1(struct qat_sym_session *ctx,
 	case ICP_QAT_HW_AUTH_ALGO_SNOW_3G_UIA2:
 	case ICP_QAT_HW_AUTH_ALGO_KASUMI_F9:
 	case ICP_QAT_HW_AUTH_ALGO_ZUC_3G_128_EIA3:
+	case ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_32:
+	case ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_64:
+	case ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_128:
 		auth_param->u1.aad_adr = auth_iv->iova;
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_GALOIS_128:

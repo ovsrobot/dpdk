@@ -75,7 +75,8 @@ struct icp_qat_fw_comn_req_hdr {
 	uint8_t service_type;
 	uint8_t hdr_flags;
 	uint16_t serv_specif_flags;
-	uint16_t comn_req_flags;
+	uint8_t comn_req_flags;
+	uint8_t ext_flags;
 };
 
 struct icp_qat_fw_comn_req_rqpars {

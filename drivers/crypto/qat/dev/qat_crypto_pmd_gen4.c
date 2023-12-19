@@ -174,7 +174,7 @@ enqueue_one_aead_job_gen4(struct qat_sym_session *ctx,
 		 * operation
 		 */
 		qat_set_cipher_iv(cipher_param, iv, ctx->cipher_iv.length,
-				req);
+				req, ctx->is_zuc256);
 		cipher_param->cipher_offset = ofs.ofs.cipher.head;
 		cipher_param->cipher_length = data_len -
 				ofs.ofs.cipher.head - ofs.ofs.cipher.tail;

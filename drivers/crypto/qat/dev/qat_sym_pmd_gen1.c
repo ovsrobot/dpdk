@@ -270,6 +270,8 @@ qat_sym_build_op_auth_gen1(void *in_op, struct qat_sym_session *ctx,
 	struct rte_crypto_va_iova_ptr digest;
 	union rte_crypto_sym_ofs ofs;
 	int32_t total_len;
+	struct rte_cryptodev *cdev;
+	struct qat_cryptodev_private *internals;
 
 	in_sgl.vec = in_vec;
 	out_sgl.vec = out_vec;
@@ -283,6 +285,16 @@ qat_sym_build_op_auth_gen1(void *in_op, struct qat_sym_session *ctx,
 		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
 		return -EINVAL;
 	}
+
+	if (ctx->is_zuc256)
+		zuc256_modify_iv(auth_iv.va);
+
+	cdev = rte_cryptodev_pmd_get_dev(ctx->dev_id);
+	internals = cdev->data->dev_private;
+
+	if (internals->qat_dev->has_wireless_slice && !ctx->is_gmac)
+		ICP_QAT_FW_LA_CIPH_IV_FLD_FLAG_SET(
+				req->comn_hdr.serv_specif_flags, 0);
 
 	total_len = qat_sym_build_req_set_data(req, in_op, cookie,
 			in_sgl.vec, in_sgl.num, out_sgl.vec, out_sgl.num);
@@ -373,6 +385,9 @@ qat_sym_build_op_chain_gen1(void *in_op, struct qat_sym_session *ctx,
 		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
 		return -EINVAL;
 	}
+
+	if (ctx->is_zuc256)
+		zuc256_modify_iv(auth_iv.va);
 
 	total_len = qat_sym_build_req_set_data(req, in_op, cookie,
 			in_sgl.vec, in_sgl.num, out_sgl.vec, out_sgl.num);

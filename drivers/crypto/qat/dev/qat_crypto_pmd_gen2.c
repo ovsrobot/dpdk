@@ -199,6 +199,7 @@ qat_sym_session_set_ext_hash_flags_gen2(struct qat_sym_session *session,
 				header->serv_specif_flags, 0);
 		break;
 	case ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3:
+	case ICP_QAT_HW_CIPHER_ALGO_ZUC_256:
 		ICP_QAT_FW_LA_PROTO_SET(header->serv_specif_flags,
 				ICP_QAT_FW_LA_NO_PROTO);
 		ICP_QAT_FW_LA_ZUC_3G_PROTO_FLAG_SET(
