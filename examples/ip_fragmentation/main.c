@@ -71,7 +71,7 @@
 /*
  * Max number of fragments per packet expected - defined by config file.
  */
-#define	MAX_PACKET_FRAG RTE_LIBRTE_IP_FRAG_MAX_FRAG
+#define	MAX_PACKET_FRAG RTE_IP_FRAG_MAX_FRAG
 
 #define NB_MBUF   8192
 

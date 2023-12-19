@@ -85,7 +85,7 @@
 #define RTE_RAWDEV_MAX_DEVS 64
 
 /* ip_fragmentation defines */
-#define RTE_LIBRTE_IP_FRAG_MAX_FRAG 8
+#define RTE_IP_FRAG_MAX_FRAG 8
 // RTE_LIBRTE_IP_FRAG_TBL_STAT is not set
 
 /* rte_power defines */

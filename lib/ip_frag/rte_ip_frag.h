@@ -32,7 +32,7 @@ struct rte_mbuf;
 
 /** death row size in mbufs */
 #define RTE_IP_FRAG_DEATH_ROW_MBUF_LEN \
-	(RTE_IP_FRAG_DEATH_ROW_LEN * (RTE_LIBRTE_IP_FRAG_MAX_FRAG + 1))
+	(RTE_IP_FRAG_DEATH_ROW_LEN * (RTE_IP_FRAG_MAX_FRAG + 1))
 
 /** mbuf death row (packets to be freed) */
 struct rte_ip_frag_death_row {

@@ -69,7 +69,7 @@
 #define	MIN_FLOW_TTL	1
 #define	DEF_FLOW_TTL	MS_PER_S
 
-#define MAX_FRAG_NUM RTE_LIBRTE_IP_FRAG_MAX_FRAG
+#define MAX_FRAG_NUM RTE_IP_FRAG_MAX_FRAG
 
 /* Should be power of two. */
 #define	IP_FRAG_TBL_BUCKET_ENTRIES	16
