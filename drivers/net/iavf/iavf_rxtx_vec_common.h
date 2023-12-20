@@ -10,6 +10,7 @@
 
 #include "iavf.h"
 #include "iavf_rxtx.h"
+#include "rte_pmd_iavf.h"
 
 #ifndef __INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wcast-qual"
@@ -248,6 +249,11 @@ iavf_tx_vec_queue_default(struct iavf_tx_queue *txq)
 
 	if (txq->offloads & IAVF_TX_NO_VECTOR_FLAGS)
 		return -1;
+
+	if (rte_mbuf_dynfield_lookup(IAVF_TX_LLDP_DYNFIELD, NULL) > 0) {
+		txq->use_ctx = 1;
+		return IAVF_VECTOR_CTX_PATH;
+	}
 
 	/**
 	 * Vlan tci needs to be inserted via ctx desc, if the vlan_flag is L2TAG2.
