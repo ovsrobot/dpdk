@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#define IAVF_TX_LLDP_DYNFIELD "intel_pmd_dynfield_tx_lldp"
+
 /**
  * The supported network flexible descriptor's extraction metadata format.
  */
@@ -94,6 +96,8 @@ extern uint64_t rte_pmd_ifd_dynflag_proto_xtr_ipv6_flow_mask;
 extern uint64_t rte_pmd_ifd_dynflag_proto_xtr_tcp_mask;
 extern uint64_t rte_pmd_ifd_dynflag_proto_xtr_ip_offset_mask;
 extern uint64_t rte_pmd_ifd_dynflag_proto_xtr_ipsec_crypto_said_mask;
+
+extern int iavf_tx_lldp_dynfield_offset;
 
 /**
  * The mbuf dynamic field pointer for flexible descriptor's extraction metadata.
