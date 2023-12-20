@@ -220,8 +220,8 @@ static const char *cfgfile;
 
 struct lcore_params {
 	uint16_t port_id;
-	uint8_t queue_id;
-	uint8_t lcore_id;
+	uint16_t queue_id;
+	uint16_t lcore_id;
 } __rte_cache_aligned;
 
 static struct lcore_params lcore_params_array[MAX_LCORE_PARAMS];
@@ -696,8 +696,7 @@ ipsec_poll_mode_worker(void)
 	uint32_t lcore_id;
 	uint64_t prev_tsc, diff_tsc, cur_tsc;
 	int32_t i, nb_rx;
-	uint16_t portid;
-	uint8_t queueid;
+	uint16_t portid, queueid;
 	struct lcore_conf *qconf;
 	int32_t rc, socket_id;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1)
@@ -789,8 +788,7 @@ int
 check_flow_params(uint16_t fdir_portid, uint8_t fdir_qid)
 {
 	uint16_t i;
-	uint16_t portid;
-	uint8_t queueid;
+	uint16_t portid, queueid;
 
 	for (i = 0; i < nb_lcore_params; ++i) {
 		portid = lcore_params_array[i].port_id;
@@ -810,7 +808,7 @@ check_flow_params(uint16_t fdir_portid, uint8_t fdir_qid)
 static int32_t
 check_poll_mode_params(struct eh_conf *eh_conf)
 {
-	uint8_t lcore;
+	uint16_t lcore;
 	uint16_t portid;
 	uint16_t i;
 	int32_t socket_id;
@@ -829,13 +827,13 @@ check_poll_mode_params(struct eh_conf *eh_conf)
 	for (i = 0; i < nb_lcore_params; ++i) {
 		lcore = lcore_params[i].lcore_id;
 		if (!rte_lcore_is_enabled(lcore)) {
-			printf("error: lcore %hhu is not enabled in "
+			printf("error: lcore %hu is not enabled in "
 				"lcore mask\n", lcore);
 			return -1;
 		}
 		socket_id = rte_lcore_to_socket_id(lcore);
 		if (socket_id != 0 && numa_on == 0) {
-			printf("warning: lcore %hhu is on socket %d "
+			printf("warning: lcore %hu is on socket %d "
 				"with numa off\n",
 				lcore, socket_id);
 		}
@@ -852,7 +850,7 @@ check_poll_mode_params(struct eh_conf *eh_conf)
 	return 0;
 }
 
-static uint8_t
+static uint16_t
 get_port_nb_rx_queues(const uint16_t port)
 {
 	int32_t queue = -1;
@@ -863,14 +861,14 @@ get_port_nb_rx_queues(const uint16_t port)
 				lcore_params[i].queue_id > queue)
 			queue = lcore_params[i].queue_id;
 	}
-	return (uint8_t)(++queue);
+	return (uint16_t)(++queue);
 }
 
 static int32_t
 init_lcore_rx_queues(void)
 {
 	uint16_t i, nb_rx_queue;
-	uint8_t lcore;
+	uint16_t lcore;
 
 	for (i = 0; i < nb_lcore_params; ++i) {
 		lcore = lcore_params[i].lcore_id;
@@ -1051,6 +1049,8 @@ parse_config(const char *q_arg)
 	char *str_fld[_NUM_FLD];
 	int32_t i;
 	uint32_t size;
+	uint16_t max_fld[_NUM_FLD] = {RTE_MAX_ETHPORTS,
+				USHRT_MAX, RTE_MAX_LCORE};
 
 	nb_lcore_params = 0;
 
@@ -1071,7 +1071,7 @@ parse_config(const char *q_arg)
 		for (i = 0; i < _NUM_FLD; i++) {
 			errno = 0;
 			int_fld[i] = strtoul(str_fld[i], &end, 0);
-			if (errno != 0 || end == str_fld[i] || int_fld[i] > 255)
+			if (errno != 0 || end == str_fld[i] || int_fld[i] > max_fld[i])
 				return -1;
 		}
 		if (nb_lcore_params >= MAX_LCORE_PARAMS) {
@@ -1080,11 +1080,11 @@ parse_config(const char *q_arg)
 			return -1;
 		}
 		lcore_params_array[nb_lcore_params].port_id =
-			(uint8_t)int_fld[FLD_PORT];
+			(uint16_t)int_fld[FLD_PORT];
 		lcore_params_array[nb_lcore_params].queue_id =
-			(uint8_t)int_fld[FLD_QUEUE];
+			(uint16_t)int_fld[FLD_QUEUE];
 		lcore_params_array[nb_lcore_params].lcore_id =
-			(uint8_t)int_fld[FLD_LCORE];
+			(uint16_t)int_fld[FLD_LCORE];
 		++nb_lcore_params;
 	}
 	lcore_params = lcore_params_array;
