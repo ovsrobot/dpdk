@@ -179,8 +179,14 @@ uint16_t
 qat_sym_dequeue_burst(void *qp, struct rte_crypto_op **ops,
 		uint16_t nb_ops)
 {
-	return qat_dequeue_op_burst(qp, (void **)ops,
-				qat_sym_process_response, nb_ops);
+	struct qat_qp *tmp_qp = (struct qat_qp *)qp;
+
+	if (tmp_qp->qat_dev_gen == QAT_GEN5)
+		return qat_dequeue_op_burst(qp, (void **)ops,
+				qat_sym_process_response_gen5, nb_ops);
+	else
+		return qat_dequeue_op_burst(qp, (void **)ops,
+					qat_sym_process_response, nb_ops);
 }
 
 int

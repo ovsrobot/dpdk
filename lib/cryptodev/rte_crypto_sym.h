@@ -492,6 +492,9 @@ enum rte_crypto_aead_operation {
 	/**< Verify digest and decrypt */
 };
 
+/* In GEN5 AEAD AES GCM Algorithm has ID 0 */
+#define RTE_CRYPTO_AEAD_AES_GCM_GEN5 0
+
 /** Authentication operation name strings */
 extern const char *
 rte_crypto_aead_operation_strings[];

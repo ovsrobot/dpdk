@@ -111,7 +111,10 @@ struct qat_sym_session {
 	enum icp_qat_hw_auth_op auth_op;
 	enum icp_qat_hw_auth_mode auth_mode;
 	void *bpi_ctx;
-	struct qat_sym_cd cd;
+	union {
+		struct qat_sym_cd cd;
+		uint8_t key_array[32];
+	};
 	uint8_t prefix_state[QAT_PREFIX_TBL_SIZE] __rte_cache_aligned;
 	uint8_t *cd_cur_ptr;
 	phys_addr_t cd_paddr;
