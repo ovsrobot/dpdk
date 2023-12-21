@@ -43,7 +43,12 @@ Note that all update/lookup operations on Fragment Table are not thread safe.
 So if different execution contexts (threads/processes) will access the same table simultaneously,
 then some external syncing mechanism have to be provided.
 
-Each table entry can hold information about packets consisting of up to RTE_LIBRTE_IP_FRAG_MAX (by default: 4) fragments.
+Each table entry can hold information about packets of up to ``RTE_LIBRTE_IP_FRAG_MAX_FRAGS`` fragments,
+where ``RTE_LIBRTE_IP_FRAG_MAX_FRAGS`` defaults to:
+
+.. literalinclude:: ../../../config/rte_config.h
+    :start-after: ip_fragmentation defines 8<
+    :end-before: >8 End of ip_fragmentation defines
 
 Code example, that demonstrates creation of a new Fragment table:
 
