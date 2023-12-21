@@ -2054,7 +2054,8 @@ static int qede_flow_ctrl_get(struct rte_eth_dev *eth_dev,
 }
 
 static const uint32_t *
-qede_dev_supported_ptypes_get(struct rte_eth_dev *eth_dev)
+qede_dev_supported_ptypes_get(struct rte_eth_dev *eth_dev,
+			      uint32_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -2074,15 +2075,17 @@ qede_dev_supported_ptypes_get(struct rte_eth_dev *eth_dev)
 		RTE_PTYPE_INNER_L3_IPV6,
 		RTE_PTYPE_INNER_L4_TCP,
 		RTE_PTYPE_INNER_L4_UDP,
-		RTE_PTYPE_INNER_L4_FRAG,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_INNER_L4_FRAG
 	};
 
 	if (eth_dev->rx_pkt_burst == qede_recv_pkts ||
 	    eth_dev->rx_pkt_burst == qede_recv_pkts_regular ||
-	    eth_dev->rx_pkt_burst == qede_recv_pkts_cmt)
+	    eth_dev->rx_pkt_burst == qede_recv_pkts_cmt) {
+		*no_of_elements = RTE_DIM(ptypes);
 		return ptypes;
+	}
 
+	*no_of_elements = 0;
 	return NULL;
 }
 

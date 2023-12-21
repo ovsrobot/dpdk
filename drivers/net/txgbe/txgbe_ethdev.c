@@ -2727,14 +2727,17 @@ txgbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 }
 
 const uint32_t *
-txgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+txgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev,
+			    uint32_t *no_of_elements)
 {
 	if (dev->rx_pkt_burst == txgbe_recv_pkts ||
 	    dev->rx_pkt_burst == txgbe_recv_pkts_lro_single_alloc ||
 	    dev->rx_pkt_burst == txgbe_recv_pkts_lro_bulk_alloc ||
-	    dev->rx_pkt_burst == txgbe_recv_pkts_bulk_alloc)
-		return txgbe_get_supported_ptypes();
+	    dev->rx_pkt_burst == txgbe_recv_pkts_bulk_alloc) {
+		return txgbe_get_supported_ptypes(no_of_elements);
+	}
 
+	*no_of_elements = 0;
 	return NULL;
 }
 

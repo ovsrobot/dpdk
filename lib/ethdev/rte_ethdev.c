@@ -3857,6 +3857,7 @@ rte_eth_dev_get_supported_ptypes(uint16_t port_id, uint32_t ptype_mask,
 	int i, j;
 	struct rte_eth_dev *dev;
 	const uint32_t *all_ptypes;
+	uint32_t no_of_elements = 0;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -3870,12 +3871,12 @@ rte_eth_dev_get_supported_ptypes(uint16_t port_id, uint32_t ptype_mask,
 
 	if (*dev->dev_ops->dev_supported_ptypes_get == NULL)
 		return 0;
-	all_ptypes = (*dev->dev_ops->dev_supported_ptypes_get)(dev);
+	all_ptypes = (*dev->dev_ops->dev_supported_ptypes_get)(dev, &no_of_elements);
 
 	if (!all_ptypes)
 		return 0;
 
-	for (i = 0, j = 0; all_ptypes[i] != RTE_PTYPE_UNKNOWN; ++i)
+	for (i = 0, j = 0; all_ptypes[i] < no_of_elements; ++i)
 		if (all_ptypes[i] & ptype_mask) {
 			if (j < num) {
 				ptypes[j] = all_ptypes[i];
@@ -3907,6 +3908,7 @@ rte_eth_dev_set_ptypes(uint16_t port_id, uint32_t ptype_mask,
 	uint32_t unused_mask;
 	unsigned int i, j;
 	int ret;
+	uint32_t no_of_elements = 0;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -3945,7 +3947,7 @@ rte_eth_dev_set_ptypes(uint16_t port_id, uint32_t ptype_mask,
 		goto ptype_unknown;
 	}
 
-	all_ptypes = (*dev->dev_ops->dev_supported_ptypes_get)(dev);
+	all_ptypes = (*dev->dev_ops->dev_supported_ptypes_get)(dev, &no_of_elements);
 	if (all_ptypes == NULL) {
 		ret = 0;
 		goto ptype_unknown;
@@ -3956,7 +3958,7 @@ rte_eth_dev_set_ptypes(uint16_t port_id, uint32_t ptype_mask,
 	 * set_ptypes array is insufficient fill it partially.
 	 */
 	for (i = 0, j = 0; set_ptypes != NULL &&
-				(all_ptypes[i] != RTE_PTYPE_UNKNOWN); ++i) {
+				(all_ptypes[i] < no_of_elements); ++i) {
 		if (ptype_mask & all_ptypes[i]) {
 			if (j < num - 1) {
 				set_ptypes[j] = all_ptypes[i];

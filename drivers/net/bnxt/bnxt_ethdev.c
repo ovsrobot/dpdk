@@ -3435,7 +3435,8 @@ bnxt_flow_ops_get_op(struct rte_eth_dev *dev,
 }
 
 static const uint32_t *
-bnxt_dev_supported_ptypes_get_op(struct rte_eth_dev *dev)
+bnxt_dev_supported_ptypes_get_op(struct rte_eth_dev *dev,
+			 uint32_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER_VLAN,
@@ -3448,13 +3449,13 @@ bnxt_dev_supported_ptypes_get_op(struct rte_eth_dev *dev)
 		RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN,
 		RTE_PTYPE_INNER_L4_ICMP,
 		RTE_PTYPE_INNER_L4_TCP,
-		RTE_PTYPE_INNER_L4_UDP,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_INNER_L4_UDP
 	};
 
 	if (!dev->rx_pkt_burst)
 		return NULL;
 
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 

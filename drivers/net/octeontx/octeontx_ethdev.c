@@ -1467,7 +1467,8 @@ octeontx_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 }
 
 static const uint32_t *
-octeontx_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+octeontx_dev_supported_ptypes_get(struct rte_eth_dev *dev,
+				uint32_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L3_IPV4,
@@ -1476,13 +1477,15 @@ octeontx_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 		RTE_PTYPE_L3_IPV6_EXT,
 		RTE_PTYPE_L4_TCP,
 		RTE_PTYPE_L4_UDP,
-		RTE_PTYPE_L4_FRAG,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_L4_FRAG
 	};
 
-	if (dev->rx_pkt_burst == octeontx_recv_pkts)
+	if (dev->rx_pkt_burst == octeontx_recv_pkts) {
+		*no_of_elements = RTE_DIM(ptypes);
 		return ptypes;
+	}
 
+	*no_of_elements = 0;
 	return NULL;
 }
 
