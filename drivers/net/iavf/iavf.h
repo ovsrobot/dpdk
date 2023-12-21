@@ -113,9 +113,15 @@ struct iavf_ipsec_crypto_stats {
 	} ierrors;
 };
 
+struct iavf_mdd_stats {
+	uint64_t mdd_mbuf_err_count;
+	uint64_t mdd_pkt_err_count;
+};
+
 struct iavf_eth_xstats {
 	struct virtchnl_eth_stats eth_stats;
 	struct iavf_ipsec_crypto_stats ips_stats;
+	struct iavf_mdd_stats mdd_stats;
 };
 
 /* Structure that defines a VSI, associated with a adapter. */
@@ -299,6 +305,7 @@ enum iavf_proto_xtr_type {
 	IAVF_PROTO_XTR_MAX,
 };
 
+
 /**
  * Cache devargs parse result.
  */
@@ -309,9 +316,26 @@ struct iavf_devargs {
 	uint32_t watchdog_period;
 	int auto_reset;
 	int no_poll_on_link_down;
+	int mbuf_check;
 };
 
 struct iavf_security_ctx;
+
+struct iavf_rx_burst_elem {
+	TAILQ_ENTRY(iavf_rx_burst_elem) next;
+	eth_rx_burst_t rx_pkt_burst;
+};
+
+struct iavf_tx_burst_elem {
+	TAILQ_ENTRY(iavf_tx_burst_elem) next;
+	eth_tx_burst_t tx_pkt_burst;
+};
+
+#define IAVF_MDD_CHECK_F_TX_MBUF        (1ULL << 0)
+#define IAVF_MDD_CHECK_F_TX_SIZE        (1ULL << 1)
+#define IAVF_MDD_CHECK_F_TX_SEGMENT     (1ULL << 2)
+#define IAVF_MDD_CHECK_F_TX_OFFLOAD     (1ULL << 3)
+#define IAVF_MDD_CHECK_F_TX_STRICT      (1ULL << 4)
 
 /* Structure to store private data for each VF instance. */
 struct iavf_adapter {
@@ -329,7 +353,7 @@ struct iavf_adapter {
 	bool closed;
 	bool no_poll;
 	eth_rx_burst_t rx_pkt_burst;
-	eth_tx_burst_t tx_pkt_burst;
+	uint64_t mc_flags; /* mdd check flags. */
 	uint16_t fdir_ref_cnt;
 	struct iavf_devargs devargs;
 };

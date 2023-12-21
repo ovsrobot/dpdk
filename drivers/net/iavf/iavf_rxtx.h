@@ -203,6 +203,10 @@ struct iavf_txq_ops {
 	void (*release_mbufs)(struct iavf_tx_queue *txq);
 };
 
+struct iavf_pkt_burst {
+	TAILQ_HEAD(rx_pkt_burst_list, iavf_rx_burst_elem) rx_burst_list;
+	TAILQ_HEAD(tx_pkt_burst_list, iavf_tx_burst_elem) tx_burst_list;
+};
 
 struct iavf_rx_queue_stats {
 	uint64_t reserved;
@@ -296,6 +300,9 @@ struct iavf_tx_queue {
 	uint16_t next_dd;              /* next to set RS, for VPMD */
 	uint16_t next_rs;              /* next to check DD,  for VPMD */
 	uint16_t ipsec_crypto_pkt_md_offset;
+
+	uint64_t mdd_mbuf_err_count;
+	uint64_t mdd_pkt_err_count;
 
 	bool q_set;                    /* if rx queue has been configured */
 	bool tx_deferred_start;        /* don't start this queue in dev start */
@@ -669,6 +676,7 @@ uint16_t iavf_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		       uint16_t nb_pkts);
 void iavf_set_rx_function(struct rte_eth_dev *dev);
 void iavf_set_tx_function(struct rte_eth_dev *dev);
+void iavf_pkt_burst_init(struct rte_eth_dev *dev);
 void iavf_dev_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 			  struct rte_eth_rxq_info *qinfo);
 void iavf_dev_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,

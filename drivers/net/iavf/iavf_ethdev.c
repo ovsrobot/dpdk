@@ -39,6 +39,8 @@
 #define IAVF_RESET_WATCHDOG_ARG    "watchdog_period"
 #define IAVF_ENABLE_AUTO_RESET_ARG "auto_reset"
 #define IAVF_NO_POLL_ON_LINK_DOWN_ARG "no-poll-on-link-down"
+#define IAVF_MDD_CHECK_ARG       "mbuf_check"
+
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
 
@@ -48,6 +50,7 @@ static const char * const iavf_valid_args[] = {
 	IAVF_RESET_WATCHDOG_ARG,
 	IAVF_ENABLE_AUTO_RESET_ARG,
 	IAVF_NO_POLL_ON_LINK_DOWN_ARG,
+	IAVF_MDD_CHECK_ARG,
 	NULL
 };
 
@@ -188,6 +191,8 @@ static const struct rte_iavf_xstats_name_off rte_iavf_stats_strings[] = {
 			_OFF_OF(ips_stats.ierrors.ipsec_length)},
 	{"inline_ipsec_crypto_ierrors_misc",
 			_OFF_OF(ips_stats.ierrors.misc)},
+	{"mdd_mbuf_error_packets", _OFF_OF(mdd_stats.mdd_mbuf_err_count)},
+	{"mdd_pkt_error_packets", _OFF_OF(mdd_stats.mdd_pkt_err_count)},
 };
 #undef _OFF_OF
 
@@ -1881,6 +1886,9 @@ static int iavf_dev_xstats_get(struct rte_eth_dev *dev,
 {
 	int ret;
 	unsigned int i;
+	struct iavf_tx_queue *txq;
+	uint64_t mdd_mbuf_err_count = 0;
+	uint64_t mdd_pkt_err_count = 0;
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
@@ -1903,6 +1911,16 @@ static int iavf_dev_xstats_get(struct rte_eth_dev *dev,
 
 	if (iavf_ipsec_crypto_supported(adapter))
 		iavf_dev_update_ipsec_xstats(dev, &iavf_xtats.ips_stats);
+
+	if (adapter->devargs.mbuf_check) {
+		for (i = 0; i < dev->data->nb_tx_queues; i++) {
+			txq = dev->data->tx_queues[i];
+			mdd_mbuf_err_count += txq->mdd_mbuf_err_count;
+			mdd_pkt_err_count += txq->mdd_pkt_err_count;
+		}
+		iavf_xtats.mdd_stats.mdd_mbuf_err_count = mdd_mbuf_err_count;
+		iavf_xtats.mdd_stats.mdd_pkt_err_count = mdd_pkt_err_count;
+	}
 
 	/* loop over xstats array and values from pstats */
 	for (i = 0; i < IAVF_NB_XSTATS; i++) {
@@ -2286,6 +2304,52 @@ iavf_parse_watchdog_period(__rte_unused const char *key, const char *value, void
 	return 0;
 }
 
+static int
+iavf_parse_mdd_checker(__rte_unused const char *key, const char *value, void *args)
+{
+	char *cur;
+	char *tmp;
+	int str_len;
+	int valid_len;
+
+	int ret = 0;
+	uint64_t *mc_flags = args;
+	char *str2 = strdup(value);
+	if (str2 == NULL)
+		return -1;
+
+	str_len = strlen(str2);
+	if (str2[0] == '[' && str2[str_len - 1] == ']') {
+		if (str_len < 3) {
+			ret = -1;
+			goto mdd_end;
+		}
+		valid_len = str_len - 2;
+		memmove(str2, str2 + 1, valid_len);
+		memset(str2 + valid_len, '\0', 2);
+	}
+	cur = strtok_r(str2, ",", &tmp);
+	while (cur != NULL) {
+		if (!strcmp(cur, "mbuf"))
+			*mc_flags |= IAVF_MDD_CHECK_F_TX_MBUF;
+		else if (!strcmp(cur, "size"))
+			*mc_flags |= IAVF_MDD_CHECK_F_TX_SIZE;
+		else if (!strcmp(cur, "segment"))
+			*mc_flags |= IAVF_MDD_CHECK_F_TX_SEGMENT;
+		else if (!strcmp(cur, "offload"))
+			*mc_flags |= IAVF_MDD_CHECK_F_TX_OFFLOAD;
+		else if (!strcmp(cur, "strict"))
+			*mc_flags |= IAVF_MDD_CHECK_F_TX_STRICT;
+		else
+			PMD_DRV_LOG(ERR, "Unsupported mdd check type: %s", cur);
+		cur = strtok_r(NULL, ",", &tmp);
+	}
+
+mdd_end:
+	free(str2);
+	return ret;
+}
+
 static int iavf_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *ad =
@@ -2339,6 +2403,14 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 		ret = -EINVAL;
 		goto bail;
 	}
+
+	ret = rte_kvargs_process(kvlist, IAVF_MDD_CHECK_ARG,
+				 &iavf_parse_mdd_checker, &ad->mc_flags);
+	if (ret)
+		goto bail;
+
+	if (ad->mc_flags)
+		ad->devargs.mbuf_check = 1;
 
 	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_AUTO_RESET_ARG,
 				 &parse_bool, &ad->devargs.auto_reset);
@@ -2717,6 +2789,8 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	hw->back = IAVF_DEV_PRIVATE_TO_ADAPTER(eth_dev->data->dev_private);
 	adapter->dev_data = eth_dev->data;
 	adapter->stopped = 1;
+
+	iavf_pkt_burst_init(eth_dev);
 
 	if (iavf_dev_event_handler_init())
 		goto init_vf_err;
