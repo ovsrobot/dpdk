@@ -11,6 +11,7 @@
 #include "roc_cpt.h"
 
 #include "cn10k_ipsec.h"
+#include "cn10k_tls.h"
 
 struct cn10k_sec_session {
 	struct rte_security_session rte_sess;
@@ -28,6 +29,12 @@ struct cn10k_sec_session {
 			uint8_t ip_csum;
 			bool is_outbound;
 		} ipsec;
+		struct {
+			uint8_t enable_padding : 1;
+			uint8_t hdr_len : 4;
+			uint8_t rvsd : 3;
+			bool is_write;
+		} tls;
 	};
 	/** Queue pair */
 	struct cnxk_cpt_qp *qp;
@@ -39,6 +46,7 @@ struct cn10k_sec_session {
 	 */
 	union {
 		struct cn10k_ipsec_sa sa;
+		struct cn10k_tls_record tls_rec;
 	};
 } __rte_aligned(ROC_ALIGN);
 
