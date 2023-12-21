@@ -45,6 +45,25 @@
 
 #define ICE_TX_MIN_PKT_LEN 17
 
+#define ICE_TX_OFFLOAD_MASK (    \
+		RTE_MBUF_F_TX_OUTER_IPV6 |	 \
+		RTE_MBUF_F_TX_OUTER_IPV4 |	 \
+		RTE_MBUF_F_TX_OUTER_IP_CKSUM |  \
+		RTE_MBUF_F_TX_VLAN |        \
+		RTE_MBUF_F_TX_IPV6 |		 \
+		RTE_MBUF_F_TX_IPV4 |		 \
+		RTE_MBUF_F_TX_IP_CKSUM |        \
+		RTE_MBUF_F_TX_L4_MASK |         \
+		RTE_MBUF_F_TX_IEEE1588_TMST |	 \
+		RTE_MBUF_F_TX_TCP_SEG |         \
+		RTE_MBUF_F_TX_QINQ |        \
+		RTE_MBUF_F_TX_TUNNEL_MASK |	 \
+		RTE_MBUF_F_TX_UDP_SEG |	 \
+		RTE_MBUF_F_TX_OUTER_UDP_CKSUM)
+
+#define ICE_TX_OFFLOAD_NOTSUP_MASK \
+		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ ICE_TX_OFFLOAD_MASK)
+
 extern uint64_t ice_timestamp_dynflag;
 extern int ice_timestamp_dynfield_offset;
 
@@ -72,6 +91,11 @@ enum ice_rx_dtype {
 	ICE_RX_DTYPE_NO_SPLIT       = 0,
 	ICE_RX_DTYPE_HEADER_SPLIT   = 1,
 	ICE_RX_DTYPE_SPLIT_ALWAYS   = 2,
+};
+
+struct ice_pkt_burst {
+	TAILQ_HEAD(rx_pkt_burst_list, ice_rx_burst_elem) rx_burst_list;
+	TAILQ_HEAD(tx_pkt_burst_list, ice_tx_burst_elem) tx_burst_list;
 };
 
 struct ice_rx_queue {
@@ -164,6 +188,10 @@ struct ice_tx_queue {
 	struct ice_vsi *vsi; /* the VSI this queue belongs to */
 	uint16_t tx_next_dd;
 	uint16_t tx_next_rs;
+
+	uint64_t mdd_mbuf_err_count;
+	uint64_t mdd_pkt_err_count;
+
 	bool tx_deferred_start; /* don't start this queue in dev start */
 	bool q_set; /* indicate if tx queue has been configured */
 	ice_tx_release_mbufs_t tx_rel_mbufs;
@@ -259,6 +287,7 @@ uint16_t ice_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 void ice_set_tx_function_flag(struct rte_eth_dev *dev,
 			      struct ice_tx_queue *txq);
 void ice_set_tx_function(struct rte_eth_dev *dev);
+void ice_pkt_burst_init(struct rte_eth_dev *dev);
 uint32_t ice_rx_queue_count(void *rx_queue);
 void ice_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 		      struct rte_eth_rxq_info *qinfo);

@@ -259,6 +259,11 @@ struct ice_vsi_list {
 struct ice_rx_queue;
 struct ice_tx_queue;
 
+struct ice_mdd_stats {
+	uint64_t mdd_mbuf_err_count;
+	uint64_t mdd_pkt_err_count;
+};
+
 /**
  * Structure that defines a VSI, associated with a adapter.
  */
@@ -534,6 +539,7 @@ struct ice_pf {
 	uint16_t fdir_fltr_cnt[ICE_FLTR_PTYPE_MAX][ICE_FD_HW_SEG_MAX];
 	struct ice_hw_port_stats stats_offset;
 	struct ice_hw_port_stats stats;
+	struct ice_mdd_stats mdd_stats;
 	/* internal packet statistics, it should be excluded from the total */
 	struct ice_eth_stats internal_stats_offset;
 	struct ice_eth_stats internal_stats;
@@ -568,6 +574,7 @@ struct ice_devargs {
 	uint8_t xtr_flag_offs[PROTO_XTR_MAX];
 	/* Name of the field. */
 	char xtr_field_name[RTE_MBUF_DYN_NAMESIZE];
+	int mbuf_check;
 };
 
 /**
@@ -585,6 +592,23 @@ struct ice_rss_prof_info {
 	struct ice_parser_profile prof;
 	bool symm;
 };
+
+
+struct ice_rx_burst_elem {
+	TAILQ_ENTRY(ice_rx_burst_elem) next;
+	eth_rx_burst_t rx_pkt_burst;
+};
+
+struct ice_tx_burst_elem {
+	TAILQ_ENTRY(ice_tx_burst_elem) next;
+	eth_tx_burst_t tx_pkt_burst;
+};
+
+#define ICE_MDD_CHECK_F_TX_MBUF        (1ULL << 0)
+#define ICE_MDD_CHECK_F_TX_SIZE        (1ULL << 1)
+#define ICE_MDD_CHECK_F_TX_SEGMENT     (1ULL << 2)
+#define ICE_MDD_CHECK_F_TX_OFFLOAD     (1ULL << 3)
+#define ICE_MDD_CHECK_F_TX_STRICT      (1ULL << 4)
 
 /**
  * Structure to store private data for each PF/VF instance.
@@ -616,6 +640,8 @@ struct ice_adapter {
 	/* Set bit if the engine is disabled */
 	unsigned long disabled_engine_mask;
 	struct ice_parser *psr;
+	uint64_t mc_flags; /* mdd check flags. */
+	uint16_t max_pkt_len; /* Maximum packet length */
 #ifdef RTE_ARCH_X86
 	bool rx_use_avx2;
 	bool rx_use_avx512;

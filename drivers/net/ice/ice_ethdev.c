@@ -34,6 +34,7 @@
 #define ICE_HW_DEBUG_MASK_ARG     "hw_debug_mask"
 #define ICE_ONE_PPS_OUT_ARG       "pps_out"
 #define ICE_RX_LOW_LATENCY_ARG    "rx_low_latency"
+#define ICE_MDD_CHECK_ARG       "mbuf_check"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -49,6 +50,7 @@ static const char * const ice_valid_args[] = {
 	ICE_ONE_PPS_OUT_ARG,
 	ICE_RX_LOW_LATENCY_ARG,
 	ICE_DEFAULT_MAC_DISABLE,
+	ICE_MDD_CHECK_ARG,
 	NULL
 };
 
@@ -318,6 +320,16 @@ static const struct ice_xstats_name_off ice_stats_strings[] = {
 
 #define ICE_NB_ETH_XSTATS (sizeof(ice_stats_strings) / \
 		sizeof(ice_stats_strings[0]))
+
+static const struct ice_xstats_name_off ice_mdd_strings[] = {
+	{"mdd_mbuf_error_packets", offsetof(struct ice_mdd_stats,
+		mdd_mbuf_err_count)},
+	{"mdd_pkt_error_packets", offsetof(struct ice_mdd_stats,
+		mdd_pkt_err_count)},
+};
+
+#define ICE_NB_MDD_XSTATS (sizeof(ice_mdd_strings) / \
+		sizeof(ice_mdd_strings[0]))
 
 static const struct ice_xstats_name_off ice_hw_port_strings[] = {
 	{"tx_link_down_dropped", offsetof(struct ice_hw_port_stats,
@@ -2060,6 +2072,52 @@ handle_pps_out_arg(__rte_unused const char *key, const char *value,
 	return 0;
 }
 
+static int
+ice_parse_mdd_checker(__rte_unused const char *key, const char *value, void *args)
+{
+	char *cur;
+	char *tmp;
+	int str_len;
+	int valid_len;
+
+	int ret = 0;
+	uint64_t *mc_flags = args;
+	char *str2 = strdup(value);
+	if (str2 == NULL)
+		return -1;
+
+	str_len = strlen(str2);
+	if (str2[0] == '[' && str2[str_len - 1] == ']') {
+		if (str_len < 3) {
+			ret = -1;
+			goto mdd_end;
+		}
+		valid_len = str_len - 2;
+		memmove(str2, str2 + 1, valid_len);
+		memset(str2 + valid_len, '\0', 2);
+	}
+	cur = strtok_r(str2, ",", &tmp);
+	while (cur != NULL) {
+		if (!strcmp(cur, "mbuf"))
+			*mc_flags |= ICE_MDD_CHECK_F_TX_MBUF;
+		else if (!strcmp(cur, "size"))
+			*mc_flags |= ICE_MDD_CHECK_F_TX_SIZE;
+		else if (!strcmp(cur, "segment"))
+			*mc_flags |= ICE_MDD_CHECK_F_TX_SEGMENT;
+		else if (!strcmp(cur, "offload"))
+			*mc_flags |= ICE_MDD_CHECK_F_TX_OFFLOAD;
+		else if (!strcmp(cur, "strict"))
+			*mc_flags |= ICE_MDD_CHECK_F_TX_STRICT;
+		else
+			PMD_DRV_LOG(ERR, "Unsupported mdd check type: %s", cur);
+		cur = strtok_r(NULL, ",", &tmp);
+	}
+
+mdd_end:
+	free(str2);
+	return ret;
+}
+
 static int ice_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct ice_adapter *ad =
@@ -2115,6 +2173,14 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 				 &handle_pps_out_arg, &ad->devargs);
 	if (ret)
 		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_MDD_CHECK_ARG,
+				 &ice_parse_mdd_checker, &ad->mc_flags);
+	if (ret)
+		goto bail;
+
+	if (ad->mc_flags)
+		ad->devargs.mbuf_check = 1;
 
 	ret = rte_kvargs_process(kvlist, ICE_RX_LOW_LATENCY_ARG,
 				 &parse_bool, &ad->devargs.rx_low_latency);
@@ -2291,6 +2357,7 @@ ice_dev_init(struct rte_eth_dev *dev)
 	dev->rx_pkt_burst = ice_recv_pkts;
 	dev->tx_pkt_burst = ice_xmit_pkts;
 	dev->tx_pkt_prepare = ice_prep_pkts;
+	ice_pkt_burst_init(dev);
 
 	/* for secondary processes, we don't initialise any further as primary
 	 * has already done this work.
@@ -3778,6 +3845,7 @@ ice_dev_start(struct rte_eth_dev *dev)
 	max_frame_size = pf->dev_data->mtu ?
 		pf->dev_data->mtu + ICE_ETH_OVERHEAD :
 		ICE_FRAME_SIZE_MAX;
+	ad->max_pkt_len = max_frame_size;
 
 	/* Set the max frame size to HW*/
 	ice_aq_set_mac_cfg(hw, max_frame_size, false, NULL);
@@ -6142,7 +6210,7 @@ ice_xstats_calc_num(void)
 {
 	uint32_t num;
 
-	num = ICE_NB_ETH_XSTATS + ICE_NB_HW_PORT_XSTATS;
+	num = ICE_NB_ETH_XSTATS + ICE_NB_MDD_XSTATS + ICE_NB_HW_PORT_XSTATS;
 
 	return num;
 }
@@ -6153,9 +6221,14 @@ ice_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 {
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_adapter *adapter =
+		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	unsigned int i;
 	unsigned int count;
 	struct ice_hw_port_stats *hw_stats = &pf->stats;
+	struct ice_tx_queue *txq;
+	uint64_t mdd_mbuf_err_count = 0;
+	uint64_t mdd_pkt_err_count = 0;
 
 	count = ice_xstats_calc_num();
 	if (n < count)
@@ -6173,6 +6246,26 @@ ice_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 		xstats[count].value =
 			*(uint64_t *)((char *)&hw_stats->eth +
 				      ice_stats_strings[i].offset);
+		xstats[count].id = count;
+		count++;
+	}
+
+	/* Get stats from ice_mdd_stats struct */
+	if (adapter->devargs.mbuf_check) {
+		for (i = 0; i < dev->data->nb_tx_queues; i++) {
+			txq = dev->data->tx_queues[i];
+			mdd_mbuf_err_count += txq->mdd_mbuf_err_count;
+			mdd_pkt_err_count += txq->mdd_pkt_err_count;
+		}
+
+		pf->mdd_stats.mdd_mbuf_err_count = mdd_mbuf_err_count;
+		pf->mdd_stats.mdd_pkt_err_count = mdd_pkt_err_count;
+	}
+
+	for (i = 0; i < ICE_NB_MDD_XSTATS; i++) {
+		xstats[count].value =
+			*(uint64_t *)((char *)&pf->mdd_stats +
+					ice_mdd_strings[i].offset);
 		xstats[count].id = count;
 		count++;
 	}
@@ -6204,6 +6297,13 @@ static int ice_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 	/* Get stats from ice_eth_stats struct */
 	for (i = 0; i < ICE_NB_ETH_XSTATS; i++) {
 		strlcpy(xstats_names[count].name, ice_stats_strings[i].name,
+			sizeof(xstats_names[count].name));
+		count++;
+	}
+
+	/* Get stats from ice_mdd_stats struct */
+	for (i = 0; i < ICE_NB_MDD_XSTATS; i++) {
+		strlcpy(xstats_names[count].name, ice_mdd_strings[i].name,
 			sizeof(xstats_names[count].name));
 		count++;
 	}
