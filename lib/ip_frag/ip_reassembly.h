@@ -16,7 +16,7 @@ enum {
 	IP_LAST_FRAG_IDX,    /* index of last fragment */
 	IP_FIRST_FRAG_IDX,   /* index of first fragment */
 	IP_MIN_FRAG_NUM,     /* minimum number of fragments */
-	IP_MAX_FRAG_NUM = RTE_LIBRTE_IP_FRAG_MAX_FRAG,
+	IP_MAX_FRAG_NUM = RTE_IP_FRAG_MAX_FRAG,
 	/* maximum number of fragments per packet */
 };
 

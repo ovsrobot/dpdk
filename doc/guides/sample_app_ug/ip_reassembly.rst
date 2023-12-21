@@ -135,7 +135,7 @@ Fragment table maintains information about already received fragments of the pac
 Each IP packet is uniquely identified by triple <Source IP address>, <Destination IP address>, <ID>.
 To avoid lock contention, each RX queue has its own Fragment Table,
 e.g. the application can't handle the situation when different fragments of the same packet arrive through different RX queues.
-Each table entry can hold information about packet consisting of up to RTE_LIBRTE_IP_FRAG_MAX_FRAGS fragments.
+Each table entry can hold information about packet consisting of up to RTE_IP_FRAG_MAX_FRAGS fragments.
 
 .. literalinclude:: ../../../examples/ip_reassembly/main.c
     :language: c
@@ -147,7 +147,7 @@ Mempools Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The reassembly application demands a lot of mbuf's to be allocated.
-At any given time up to (2 \* max_flow_num \* RTE_LIBRTE_IP_FRAG_MAX_FRAGS \* <maximum number of mbufs per packet>)
+At any given time up to (2 \* max_flow_num \* RTE_IP_FRAG_MAX_FRAGS_FRAG \* <maximum number of mbufs per packet>)
 can be stored inside Fragment Table waiting for remaining fragments.
 To keep mempool size under reasonable limits and to avoid situation when one RX queue can starve other queues,
 each RX queue uses its own mempool.

@@ -291,7 +291,7 @@ send_fragment_packet(struct lcore_conf *qconf, struct rte_mbuf *m,
 	len = tbl->len;
 
 	/* free space for new fragments */
-	if (len + RTE_LIBRTE_IP_FRAG_MAX_FRAG >=  RTE_DIM(tbl->m_table)) {
+	if (len + RTE_IP_FRAG_MAX_FRAG >=  RTE_DIM(tbl->m_table)) {
 		send_burst(qconf, len, port);
 		len = 0;
 	}
