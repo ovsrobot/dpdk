@@ -41,6 +41,7 @@
 #define IAVF_NO_POLL_ON_LINK_DOWN_ARG "no-poll-on-link-down"
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
+int iavf_tx_lldp_dynfield_offset = -1;
 
 static const char * const iavf_valid_args[] = {
 	IAVF_PROTO_XTR_ARG,
