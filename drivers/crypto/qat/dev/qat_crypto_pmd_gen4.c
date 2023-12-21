@@ -419,6 +419,7 @@ RTE_INIT(qat_sym_crypto_gen4_init)
 			qat_sym_create_security_gen1;
 }
 
+#ifdef BUILD_QAT_ASYM
 RTE_INIT(qat_asym_crypto_gen4_init)
 {
 	qat_asym_gen_dev_ops[QAT_GEN4].cryptodev_ops =
@@ -430,3 +431,4 @@ RTE_INIT(qat_asym_crypto_gen4_init)
 	qat_asym_gen_dev_ops[QAT_GEN4].set_session =
 			qat_asym_crypto_set_session_gen1;
 }
+#endif
