@@ -81,6 +81,11 @@ struct i40e_rx_entry {
 	struct rte_mbuf *mbuf;
 };
 
+struct i40e_pkt_burst {
+	TAILQ_HEAD(rx_pkt_burst_list, i40e_rx_burst_elem) rx_burst_list;
+	TAILQ_HEAD(tx_pkt_burst_list, i40e_tx_burst_elem) tx_burst_list;
+};
+
 /*
  * Structure associated with each RX queue.
  */
@@ -167,6 +172,10 @@ struct i40e_tx_queue {
 	uint16_t tx_next_dd;
 	uint16_t tx_next_rs;
 	bool q_set; /**< indicate if tx queue has been configured */
+
+	uint64_t mdd_mbuf_err_count;
+	uint64_t mdd_pkt_err_count;
+
 	bool tx_deferred_start; /**< don't start this queue in dev start */
 	uint8_t dcb_tc;         /**< Traffic class of tx queue */
 	uint64_t offloads; /**< Tx offload flags of RTE_ETH_TX_OFFLOAD_* */
@@ -255,6 +264,7 @@ void i40e_set_rx_function(struct rte_eth_dev *dev);
 void i40e_set_tx_function_flag(struct rte_eth_dev *dev,
 			       struct i40e_tx_queue *txq);
 void i40e_set_tx_function(struct rte_eth_dev *dev);
+void i40e_pkt_burst_init(struct rte_eth_dev *dev);
 void i40e_set_default_ptype_table(struct rte_eth_dev *dev);
 void i40e_set_default_pctype_table(struct rte_eth_dev *dev);
 uint16_t i40e_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,

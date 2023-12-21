@@ -376,6 +376,11 @@ struct i40e_macvlan_filter {
 	uint16_t vlan_id;
 };
 
+struct i40e_mdd_stats {
+	uint64_t mdd_mbuf_err_count;
+	uint64_t mdd_pkt_err_count;
+};
+
 /*
  * Structure that defines a VSI, associated with a adapter.
  */
@@ -1122,6 +1127,7 @@ struct i40e_pf {
 
 	struct i40e_hw_port_stats stats_offset;
 	struct i40e_hw_port_stats stats;
+	struct i40e_mdd_stats mdd_stats;
 	u64 rx_err1;	/* rxerr1 */
 	u64 rx_err1_offset;
 
@@ -1224,6 +1230,29 @@ struct i40e_vsi_vlan_pvid_info {
 #define I40E_MAX_PKT_TYPE  256
 #define I40E_FLOW_TYPE_MAX 64
 
+
+struct i40e_rx_burst_elem {
+	TAILQ_ENTRY(i40e_rx_burst_elem) next;
+	eth_rx_burst_t rx_pkt_burst;
+};
+
+struct i40e_tx_burst_elem {
+	TAILQ_ENTRY(i40e_tx_burst_elem) next;
+	eth_tx_burst_t tx_pkt_burst;
+};
+
+#define I40E_MDD_CHECK_F_TX_MBUF        (1ULL << 0)
+#define I40E_MDD_CHECK_F_TX_SIZE        (1ULL << 1)
+#define I40E_MDD_CHECK_F_TX_SEGMENT     (1ULL << 2)
+#define I40E_MDD_CHECK_F_TX_OFFLOAD     (1ULL << 3)
+#define I40E_MDD_CHECK_F_TX_STRICT      (1ULL << 4)
+
+/**
+ * Cache devargs parse result.
+ */
+struct i40e_devargs {
+	int mbuf_check;
+};
 /*
  * Structure to store private data for each PF/VF instance.
  */
@@ -1240,6 +1269,9 @@ struct i40e_adapter {
 	bool tx_simple_allowed;
 	bool tx_vec_allowed;
 
+	struct i40e_devargs devargs;
+	uint64_t mc_flags; /* mdd check flags. */
+	uint16_t max_pkt_len; /* Maximum packet length */
 	/* For PTP */
 	struct rte_timecounter systime_tc;
 	struct rte_timecounter rx_tstamp_tc;
