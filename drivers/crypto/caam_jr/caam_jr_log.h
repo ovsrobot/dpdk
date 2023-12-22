@@ -10,13 +10,13 @@
 extern int caam_jr_logtype;
 #define RTE_LOGTYPE_CAAM_JR caam_jr_logtype
 
-#define CAAM_JR_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, caam_jr_logtype, "caam_jr: " \
-		fmt "\n", ##args)
+#define CAAM_JR_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, caam_jr_logtype,	\
+		"caam_jr: " fmt "\n", ##args)
 
-#define CAAM_JR_DEBUG(fmt, args...) \
-	rte_log(RTE_LOG_DEBUG, caam_jr_logtype, "caam_jr: %s(): " \
-		fmt "\n", __func__, ##args)
+#define CAAM_JR_DEBUG(fmt, args...)				\
+	rte_log(RTE_LOG_DEBUG, caam_jr_logtype,			\
+		"caam_jr: %s(): " fmt "\n", __func__, ##args)
 
 #define PMD_INIT_FUNC_TRACE() CAAM_JR_DEBUG(" >>")
 
