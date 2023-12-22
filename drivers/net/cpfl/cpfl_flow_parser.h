@@ -273,7 +273,7 @@ struct cpfl_flow_mr_action {
 	};
 };
 
-int cpfl_parser_create(struct cpfl_flow_js_parser **parser, const char *filename);
+int cpfl_parser_create(struct cpfl_flow_parser *flow_parser, const char *filename);
 int cpfl_parser_destroy(struct cpfl_flow_js_parser *parser);
 int cpfl_flow_parse_items(struct cpfl_itf *itf,
 			  struct cpfl_flow_js_parser *parser,

@@ -185,6 +185,12 @@ struct cpfl_repr {
 	bool func_up; /* If the represented function is up */
 };
 
+struct cpfl_flow_parser {
+	struct cpfl_flow_js_parser *fixed_parser;
+	struct cpfl_tdi_program *p4_parser;
+	bool is_p4_parser;
+};
+
 struct cpfl_metadata_chunk {
 	int type;
 	uint8_t data[CPFL_META_CHUNK_LENGTH];
@@ -218,8 +224,7 @@ struct cpfl_adapter_ext {
 
 	rte_spinlock_t repr_lock;
 	struct rte_hash *repr_allowlist_hash;
-
-	struct cpfl_flow_js_parser *flow_parser;
+	struct cpfl_flow_parser flow_parser;
 	struct rte_bitmap *mod_bm;
 	void *mod_bm_mem;
 

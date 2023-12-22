@@ -6,6 +6,7 @@
 
 #include "cpfl_flow.h"
 #include "cpfl_flow_parser.h"
+#include "cpfl_tdi_parser.h"
 
 TAILQ_HEAD(cpfl_flow_engine_list, cpfl_flow_engine);
 
@@ -331,9 +332,14 @@ err:
 void
 cpfl_flow_uninit(struct cpfl_adapter_ext *ad)
 {
-	if (ad->flow_parser == NULL)
+	if (ad->flow_parser.fixed_parser == NULL && ad->flow_parser.p4_parser == NULL)
 		return;
 
-	cpfl_parser_destroy(ad->flow_parser);
+	if (ad->flow_parser.fixed_parser)
+		cpfl_parser_destroy(ad->flow_parser.fixed_parser);
+
+	if (ad->flow_parser.p4_parser)
+		cpfl_tdi_program_destroy(ad->flow_parser.p4_parser);
+
 	cpfl_flow_engine_uninit(ad);
 }

@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 
 #include "cpfl_flow_parser.h"
+#include "cpfl_tdi_parser.h"
 
 static enum rte_flow_item_type
 cpfl_get_item_type_by_str(const char *type)
@@ -938,36 +939,65 @@ cpfl_parser_init(json_t *ob_root, struct cpfl_flow_js_parser *parser)
 	return 0;
 }
 
+static int
+cpfl_check_is_p4_mode(json_t *ob_root)
+{
+	return json_object_get(ob_root, "patterns") ? false : true;
+}
+
 int
-cpfl_parser_create(struct cpfl_flow_js_parser **flow_parser, const char *filename)
+cpfl_parser_create(struct cpfl_flow_parser *flow_parser, const char *filename)
 {
 	struct cpfl_flow_js_parser *parser;
+	struct cpfl_tdi_program *prog;
 	json_error_t json_error;
 	json_t *root;
 	int ret;
 
-	parser = rte_zmalloc("flow_parser", sizeof(struct cpfl_flow_js_parser), 0);
-	if (!parser) {
-		PMD_DRV_LOG(ERR, "Not enough memory to create flow parser.");
-		return -ENOMEM;
-	}
 	root = json_load_file(filename, 0, &json_error);
 	if (!root) {
 		PMD_DRV_LOG(ERR, "Bad JSON file \"%s\": %s", filename, json_error.text);
-		goto free_parser;
+		return -EINVAL;
 	}
-	ret = cpfl_parser_init(root, parser);
-	if (ret < 0) {
-		PMD_DRV_LOG(ERR, "parser init failed.");
-		goto free_parser;
+
+	if (cpfl_check_is_p4_mode(root)) {
+		PMD_DRV_LOG(NOTICE, "flow parser mode is p4 mode.");
+		prog = rte_zmalloc("tdi_parser", sizeof(struct cpfl_tdi_program), 0);
+		if (prog == NULL) {
+			PMD_DRV_LOG(ERR, "Failed to create program object.");
+			return -ENOMEM;
+		}
+		ret = cpfl_tdi_program_create(root, prog);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "Failed to create tdi program from file %s", filename);
+			rte_free(prog);
+			return -EINVAL;
+		}
+		flow_parser->p4_parser = prog;
+		flow_parser->fixed_parser = NULL;
+		flow_parser->is_p4_parser = true;
+	} else {
+		PMD_DRV_LOG(NOTICE, "flow parser mode is fixed function mode.");
+		parser = rte_zmalloc("flow_parser", sizeof(struct cpfl_flow_js_parser), 0);
+		if (!parser) {
+			PMD_DRV_LOG(ERR, "Not enough memory to create flow parser.");
+			return -ENOMEM;
+		}
+
+		ret = cpfl_parser_init(root, parser);
+		if (ret < 0) {
+			PMD_DRV_LOG(ERR, "parser init failed.");
+			rte_free(parser);
+			return -EINVAL;
+		}
+		flow_parser->fixed_parser = parser;
+		flow_parser->p4_parser = NULL;
+		flow_parser->is_p4_parser = false;
 	}
-	*flow_parser = parser;
+
 	json_decref(root);
 
 	return 0;
-free_parser:
-	rte_free(parser);
-	return -EINVAL;
 }
 
 static void

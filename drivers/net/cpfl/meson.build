@@ -47,6 +47,7 @@ if dpdk_conf.has('RTE_HAS_JANSSON')
             'cpfl_flow_engine_fxp.c',
             'cpfl_flow_parser.c',
             'cpfl_fxp_rule.c',
+            'cpfl_tdi_parser.c',
     )
     ext_deps += jansson_dep
 endif
