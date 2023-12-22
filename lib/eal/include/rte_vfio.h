@@ -17,6 +17,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <rte_compat.h>
+
 /*
  * determine if VFIO is present on the system
  */
@@ -28,6 +30,9 @@ extern "C" {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
 #define HAVE_VFIO_DEV_REQ_INTERFACE
 #endif /* kernel version >= 4.0.0 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#define VFIO_IOMMUFD_PRESENT
+#endif /* kernel version >= 6.6.0 */
 #endif /* RTE_EAL_VFIO */
 
 #ifdef VFIO_PRESENT
@@ -41,6 +46,10 @@ extern "C" {
 #define VFIO_GET_REGION_IDX(x) (x >> 40)
 #define VFIO_NOIOMMU_MODE      \
 	"/sys/module/vfio/parameters/enable_unsafe_noiommu_mode"
+
+#ifdef VFIO_IOMMUFD_PRESENT
+#define VFIO_CDEV_CLASS_DIR "/sys/class/vfio-dev"
+#endif
 
 /* NOIOMMU is defined from kernel version 4.5 onwards */
 #ifdef VFIO_NOIOMMU_IOMMU
@@ -138,6 +147,33 @@ int rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		int *vfio_dev_fd, struct vfio_device_info *device_info);
 
 /**
+ * Setup iommufd_cfg for the device identified by its address.
+ *
+ * This function is only relevant to linux and will return
+ * an error on BSD.
+ *
+ * @param sysfs_base
+ *   sysfs path prefix.
+ *
+ * @param dev_addr
+ *   device location.
+ *
+ * @param vfio_dev_fd
+ *   VFIO fd.
+ *
+ * @param device_info
+ *   Device information.
+ *
+ * @return
+ *   0 on success.
+ *   <0 on failure.
+ *   >1 if the device cannot be managed this way.
+ */
+__rte_experimental
+int rte_vfio_iommufd_setup_device(const char *sysfs_base, const char *dev_addr,
+				  int *vfio_dev_fd, struct vfio_device_info *device_info);
+
+/**
  * Release a device mapped to a VFIO-managed I/O MMU group.
  *
  * This function is only relevant to linux and will return
@@ -157,6 +193,25 @@ int rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
  *   <0 on failure.
  */
 int rte_vfio_release_device(const char *sysfs_base, const char *dev_addr, int fd);
+
+/**
+ * Release a device mapped to a VFIO-iommufd-managed I/O MMU group.
+ *
+ * This function is only relevant to linux and will return
+ * an error on BSD.
+ *
+ * @param dev_addr
+ *   device location.
+ *
+ * @param fd
+ *   VFIO fd.
+ *
+ * @return
+ *   0 on success.
+ *   <0 on failure.
+ */
+__rte_experimental
+int rte_vfio_iommufd_release_device(const char *dev_addr, int fd);
 
 /**
  * Enable a VFIO-related kmod.

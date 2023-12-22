@@ -396,6 +396,8 @@ EXPERIMENTAL {
 
 	rte_iommufd_enable; # WINDOWS_NO_EXPORT
 	rte_iommufd_is_enabled; # WINDOWS_NO_EXPORT
+	rte_vfio_iommufd_release_device; # WINDOWS_NO_EXPORT
+	rte_vfio_iommufd_setup_device; # WINDOWS_NO_EXPORT
 };
 
 INTERNAL {

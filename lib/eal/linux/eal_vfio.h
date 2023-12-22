@@ -17,6 +17,9 @@
 #else
 #pragma message("VFIO configured but not supported by this kernel, disabling.")
 #endif /* kernel version >= 3.6.0 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#define VFIO_IOMMUFD_PRESENT
+#endif /* kernel version >= 6.6.0 */
 #endif /* RTE_EAL_VFIO */
 
 #ifdef VFIO_PRESENT
