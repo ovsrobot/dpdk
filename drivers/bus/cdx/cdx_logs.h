@@ -6,6 +6,7 @@
 #define CDX_LOGS_H
 
 extern int cdx_logtype_bus;
+#define RTE_LOGTYPE_CDX_BUS cdx_logtype_bus
 
 #define CDX_BUS_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, cdx_logtype_bus, "cdx: " fmt "\n", \
@@ -25,7 +26,7 @@ extern int cdx_logtype_bus;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define CDX_BUS_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt, ## args)
+	RTE_LOG_DP(level, CDX_BUS, fmt, ## args)
 
 #define CDX_BUS_DP_DEBUG(fmt, args...) \
 	CDX_BUS_DP_LOG(DEBUG, fmt, ## args)

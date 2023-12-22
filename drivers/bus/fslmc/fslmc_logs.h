@@ -8,6 +8,7 @@
 #define _FSLMC_LOGS_H_
 
 extern int dpaa2_logtype_bus;
+#define RTE_LOGTYPE_DPAA2_BUS dpaa2_logtype_bus
 
 #define DPAA2_BUS_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, dpaa2_logtype_bus, "fslmc: " fmt "\n", \
@@ -27,7 +28,7 @@ extern int dpaa2_logtype_bus;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define DPAA2_BUS_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt, ## args)
+	RTE_LOG_DP(level, DPAA2_BUS, fmt, ## args)
 
 #define DPAA2_BUS_DP_DEBUG(fmt, args...) \
 	DPAA2_BUS_DP_LOG(DEBUG, fmt, ## args)
