@@ -9,6 +9,18 @@
 
 #define CPFL_MAX_KEY_LEN 128
 #define CPFL_MAX_RULE_ACTIONS 32
+#define CPFL_RESP_REQ_DEF	2
+#define CPFL_PIN_TO_CACHE_DEF	0
+#define CPFL_CLEAR_MIRROR_1ST_STATE_DEF	0
+#define CPFL_FIXED_FETCH_DEF	0
+#define CPFL_PTI_DEF		0
+#define CPFL_MOD_OBJ_SIZE_DEF	0
+#define CPFL_PIN_MOD_CONTENT_DEF	0
+#define CPFL_HOST_ID_DEF	0
+#define CPFL_PORT_NUM_DEF	0
+#define CPFL_VSI_DEF	0
+#define CPFL_COOKIE_DEF		0x1000
+#define CPFL_MOD_COOKIE_DEF	0x1237561
 
 struct cpfl_sem_rule_info {
 	uint16_t prof_id;

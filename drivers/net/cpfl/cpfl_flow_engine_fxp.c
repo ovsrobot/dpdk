@@ -27,23 +27,11 @@
 #include "cpfl_fxp_rule.h"
 #include "cpfl_flow_parser.h"
 
-#define CPFL_COOKIE_DEF		0x1000
-#define CPFL_MOD_COOKIE_DEF	0x1237561
 #define CPFL_PREC_DEF		1
 #define CPFL_PREC_SET		5
 #define CPFL_TYPE_ID		3
 #define CPFL_OFFSET		0x0a
-#define CPFL_HOST_ID_DEF	0
 #define CPFL_PF_NUM_DEF		0
-#define CPFL_PORT_NUM_DEF	0
-#define CPFL_RESP_REQ_DEF	2
-#define CPFL_PIN_TO_CACHE_DEF	0
-#define CPFL_CLEAR_MIRROR_1ST_STATE_DEF	0
-#define CPFL_FIXED_FETCH_DEF	0
-#define CPFL_PTI_DEF		0
-#define CPFL_MOD_OBJ_SIZE_DEF	0
-#define CPFL_PIN_MOD_CONTENT_DEF	0
-
 #define CPFL_MAX_MOD_CONTENT_INDEX	256
 #define CPFL_MAX_MR_ACTION_NUM	8
 

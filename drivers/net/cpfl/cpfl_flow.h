@@ -15,6 +15,7 @@ extern const struct rte_flow_ops cpfl_flow_ops;
 enum cpfl_flow_engine_type {
 	CPFL_FLOW_ENGINE_NONE = 0,
 	CPFL_FLOW_ENGINE_FXP,
+	CPFL_FLOW_ENGINE_TDI,
 };
 
 typedef int (*engine_init_t)(struct cpfl_adapter_ext *ad);
