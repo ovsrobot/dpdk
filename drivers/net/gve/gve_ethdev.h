@@ -8,12 +8,24 @@
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <rte_ether.h>
-#include <rte_pci.h>
 
 #include "base/gve.h"
 
 /* TODO: this is a workaround to ensure that Tx complq is enough */
 #define DQO_TX_MULTIPLIER 4
+
+/*
+ * Following macros are derived from linux/pci_regs.h, however,
+ * we can't simply include that header here, as there is no such
+ * file for non-Linux platform.
+ */
+#define PCI_CFG_SPACE_SIZE	256
+#define PCI_CAPABILITY_LIST	0x34	/* Offset of first capability list entry */
+#define PCI_STD_HEADER_SIZEOF	64
+#define PCI_CAP_SIZEOF		4
+#define PCI_CAP_ID_MSIX		0x11	/* MSI-X */
+#define PCI_MSIX_FLAGS		2	/* Message Control */
+#define PCI_MSIX_FLAGS_QSIZE	0x07FF	/* Table size */
 
 #define GVE_DEFAULT_RX_FREE_THRESH   64
 #define GVE_DEFAULT_TX_FREE_THRESH   32
@@ -85,6 +97,7 @@ struct gve_rx_stats {
 	uint64_t errors;
 	uint64_t no_mbufs;
 	uint64_t no_mbufs_bulk;
+	uint64_t imissed;
 };
 
 struct gve_xstats_name_offset {
@@ -272,6 +285,11 @@ struct gve_priv {
 
 	struct gve_tx_queue **txqs;
 	struct gve_rx_queue **rxqs;
+
+	uint32_t stats_report_len;
+	const struct rte_memzone *stats_report_mem;
+	uint16_t stats_start_idx; /* start index of array of stats written by NIC */
+	uint16_t stats_end_idx; /* end index of array of stats written by NIC */
 };
 
 static inline bool
