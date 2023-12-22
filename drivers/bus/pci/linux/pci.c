@@ -67,6 +67,12 @@ rte_pci_map_device(struct rte_pci_device *dev)
 			ret = pci_vfio_map_resource(dev);
 #endif
 		break;
+	case RTE_PCI_KDRV_VFIO_IOMMUFD:
+#ifdef VFIO_IOMMUFD_PRESENT
+		if (pci_iommufd_is_enabled())
+			ret = pci_vfio_map_resource(dev);
+#endif
+		break;
 	case RTE_PCI_KDRV_IGB_UIO:
 	case RTE_PCI_KDRV_UIO_GENERIC:
 		if (rte_eal_using_phys_addrs()) {
@@ -93,6 +99,12 @@ rte_pci_unmap_device(struct rte_pci_device *dev)
 	case RTE_PCI_KDRV_VFIO:
 #ifdef VFIO_PRESENT
 		if (pci_vfio_is_enabled())
+			pci_vfio_unmap_resource(dev);
+#endif
+		break;
+	case RTE_PCI_KDRV_VFIO_IOMMUFD:
+#ifdef VFIO_IOMMUFD_PRESENT
+		if (pci_iommufd_is_enabled())
 			pci_vfio_unmap_resource(dev);
 #endif
 		break;
@@ -645,6 +657,7 @@ int rte_pci_read_config(const struct rte_pci_device *device,
 		return pci_uio_read_config(intr_handle, buf, len, offset);
 #ifdef VFIO_PRESENT
 	case RTE_PCI_KDRV_VFIO:
+	case RTE_PCI_KDRV_VFIO_IOMMUFD:
 		return pci_vfio_read_config(device, buf, len, offset);
 #endif
 	default:
@@ -669,6 +682,7 @@ int rte_pci_write_config(const struct rte_pci_device *device,
 		return pci_uio_write_config(intr_handle, buf, len, offset);
 #ifdef VFIO_PRESENT
 	case RTE_PCI_KDRV_VFIO:
+	case RTE_PCI_KDRV_VFIO_IOMMUFD:
 		return pci_vfio_write_config(device, buf, len, offset);
 #endif
 	default:

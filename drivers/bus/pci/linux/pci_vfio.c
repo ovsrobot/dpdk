@@ -21,6 +21,9 @@
 #include <bus_driver.h>
 #include <rte_spinlock.h>
 #include <rte_tailq.h>
+#ifdef VFIO_IOMMUFD_PRESENT
+#include <rte_iommufd.h>
+#endif
 
 #include "eal_filesystem.h"
 
@@ -783,10 +786,21 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 	snprintf(pci_addr, sizeof(pci_addr), PCI_PRI_FMT,
 			loc->domain, loc->bus, loc->devid, loc->function);
 
-	ret = rte_vfio_setup_device(rte_pci_get_sysfs_path(), pci_addr,
-					&vfio_dev_fd, &device_info);
-	if (ret)
-		return ret;
+#ifdef VFIO_IOMMUFD_PRESENT
+	if (dev->kdrv == RTE_PCI_KDRV_VFIO_IOMMUFD) {
+		ret = rte_vfio_iommufd_setup_device(rte_pci_get_sysfs_path(), pci_addr,
+						    &vfio_dev_fd, &device_info);
+		if (ret)
+			return ret;
+	} else {
+#endif
+		ret = rte_vfio_setup_device(rte_pci_get_sysfs_path(), pci_addr,
+					    &vfio_dev_fd, &device_info);
+		if (ret)
+			return ret;
+#ifdef VFIO_IOMMUFD_PRESENT
+	}
+#endif
 
 	if (rte_intr_dev_fd_set(dev->intr_handle, vfio_dev_fd))
 		goto err_vfio_dev_fd;
@@ -1148,12 +1162,24 @@ pci_vfio_unmap_resource_primary(struct rte_pci_device *dev)
 		return -1;
 	}
 
-	ret = rte_vfio_release_device(rte_pci_get_sysfs_path(), pci_addr,
-				      vfio_dev_fd);
-	if (ret < 0) {
-		RTE_LOG(ERR, EAL, "Cannot release VFIO device\n");
-		return ret;
+#ifdef VFIO_IOMMUFD_PRESENT
+	if (dev->kdrv == RTE_PCI_KDRV_VFIO_IOMMUFD) {
+		ret = rte_vfio_iommufd_release_device(pci_addr, vfio_dev_fd);
+		if (ret < 0) {
+			RTE_LOG(ERR, EAL, "Cannot release VFIO device\n");
+			return ret;
+		}
+	} else {
+#endif
+		ret = rte_vfio_release_device(rte_pci_get_sysfs_path(), pci_addr,
+					      vfio_dev_fd);
+		if (ret < 0) {
+			RTE_LOG(ERR, EAL, "Cannot release VFIO device\n");
+			return ret;
+		}
+#ifdef VFIO_IOMMUFD_PRESENT
 	}
+#endif
 
 	vfio_res_list =
 		RTE_TAILQ_CAST(rte_vfio_tailq.head, mapped_pci_res_list);
@@ -1325,5 +1351,13 @@ int
 pci_vfio_is_enabled(void)
 {
 	return rte_vfio_is_enabled("vfio_pci");
+}
+#endif
+
+#ifdef VFIO_IOMMUFD_PRESENT
+int
+pci_iommufd_is_enabled(void)
+{
+	return rte_iommufd_is_enabled("iommufd");
 }
 #endif

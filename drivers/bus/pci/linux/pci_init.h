@@ -79,4 +79,8 @@ int pci_vfio_is_enabled(void);
 
 #endif
 
+#ifdef VFIO_IOMMUFD_PRESENT
+int pci_iommufd_is_enabled(void);
+#endif
+
 #endif /* EAL_PCI_INIT_H_ */
