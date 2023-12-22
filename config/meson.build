@@ -442,6 +442,9 @@ install_headers(['rte_config.h'],
 # enable VFIO only if it is linux OS
 dpdk_conf.set('RTE_EAL_VFIO', is_linux)
 
+# enable IOMMUFD only if it is linux OS
+dpdk_conf.set('RTE_EAL_IOMMUFD', is_linux)
+
 # specify -D_GNU_SOURCE unconditionally
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
 

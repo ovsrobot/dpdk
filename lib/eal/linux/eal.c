@@ -41,6 +41,7 @@
 #include <rte_version.h>
 #include <malloc_heap.h>
 #include <rte_vfio.h>
+#include <rte_iommufd.h>
 
 #include <telemetry_internal.h>
 #include "eal_private.h"
@@ -52,6 +53,7 @@
 #include "eal_trace.h"
 #include "eal_options.h"
 #include "eal_vfio.h"
+#include "eal_iommufd.h"
 #include "hotplug_mp.h"
 #include "log_internal.h"
 
@@ -877,6 +879,16 @@ static int rte_eal_vfio_setup(void)
 }
 #endif
 
+#ifdef IOMMUFD_PRESENT
+static int rte_eal_iommufd_setup(void)
+{
+	if (rte_iommufd_enable("iommufd"))
+		return -1;
+
+	return 0;
+}
+#endif
+
 static void rte_eal_init_alert(const char *msg)
 {
 	fprintf(stderr, "EAL: FATAL: %s\n", msg);
@@ -1162,6 +1174,16 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 #endif
+
+#ifdef IOMMUFD_PRESENT
+	if (rte_eal_iommufd_setup() < 0) {
+		rte_eal_init_alert("Cannot init IOMMUFD");
+		rte_errno = EAGAIN;
+		rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
+		return -1;
+	}
+#endif
+
 	/* in secondary processes, memory init may allocate additional fbarrays
 	 * not present in primary processes, so to avoid any potential issues,
 	 * initialize memzones first.

@@ -38,6 +38,7 @@
 #define RTE_MAX_TAILQ 32
 #define RTE_LOG_DP_LEVEL RTE_LOG_INFO
 #define RTE_MAX_VFIO_CONTAINERS 64
+#define RTE_MAX_IOMMUFD_FD 1
 
 /* bsd module defines */
 #define RTE_CONTIGMEM_MAX_NUM_BUFS 64
