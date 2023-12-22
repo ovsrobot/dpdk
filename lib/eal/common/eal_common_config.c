@@ -58,6 +58,12 @@ rte_eal_iova_mode(void)
 	return rte_eal_get_configuration()->iova_mode;
 }
 
+enum rte_vfio_mode
+rte_eal_vfio_mode(void)
+{
+	return internal_config.vfio_mode;
+}
+
 /* Get the EAL base address */
 uint64_t
 rte_eal_get_baseaddr(void)

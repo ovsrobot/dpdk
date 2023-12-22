@@ -89,6 +89,8 @@ enum {
 	OPT_FORCE_MAX_SIMD_BITWIDTH_NUM,
 #define OPT_HUGE_WORKER_STACK  "huge-worker-stack"
 	OPT_HUGE_WORKER_STACK_NUM,
+#define OPT_VFIO_MODE          "vfio-mode"
+	OPT_VFIO_MODE_NUM,
 
 	OPT_LONG_MAX_NUM
 };

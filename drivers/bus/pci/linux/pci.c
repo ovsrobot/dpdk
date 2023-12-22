@@ -226,6 +226,7 @@ pci_scan_one(const char *dirname, const struct rte_pci_addr *addr)
 	struct rte_pci_device_internal *pdev;
 	struct rte_pci_device *dev;
 	char driver[PATH_MAX];
+	enum rte_vfio_mode vfio_mode;
 	int ret;
 
 	pdev = malloc(sizeof(*pdev));
@@ -317,6 +318,8 @@ pci_scan_one(const char *dirname, const struct rte_pci_addr *addr)
 		return -1;
 	}
 
+	vfio_mode = rte_eal_vfio_mode();
+
 	/* parse driver */
 	snprintf(filename, sizeof(filename), "%s/driver", dirname);
 	ret = pci_get_kernel_driver_by_path(filename, driver, sizeof(driver));
@@ -327,8 +330,10 @@ pci_scan_one(const char *dirname, const struct rte_pci_addr *addr)
 	}
 
 	if (!ret) {
-		if (!strcmp(driver, "vfio-pci"))
+		if (!strcmp(driver, "vfio-pci") && vfio_mode == RTE_VFIO_CONTAINER)
 			dev->kdrv = RTE_PCI_KDRV_VFIO;
+		else if (!strcmp(driver, "vfio-pci") && vfio_mode == RTE_VFIO_IOMMUFD)
+			dev->kdrv = RTE_PCI_KDRV_VFIO_IOMMUFD;
 		else if (!strcmp(driver, "igb_uio"))
 			dev->kdrv = RTE_PCI_KDRV_IGB_UIO;
 		else if (!strcmp(driver, "uio_pci_generic"))

@@ -473,6 +473,24 @@ enum rte_iova_mode {
 enum rte_iova_mode rte_eal_iova_mode(void);
 
 /**
+ * VFIO mode.
+ */
+enum rte_vfio_mode {
+	RTE_VFIO_CONTAINER = 0, /* vfio container mode */
+	RTE_VFIO_IOMMUFD = 1  /* vfio iommufd mode */
+};
+
+/**
+ * Get the vfio mode
+ *
+ * @return
+ *   enum rte_vfio_mode value.
+ */
+
+__rte_experimental
+enum rte_vfio_mode rte_eal_vfio_mode(void);
+
+/**
  * Get user provided pool ops name for mbuf
  *
  * @return

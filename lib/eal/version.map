@@ -394,6 +394,7 @@ EXPERIMENTAL {
 	rte_memzone_max_get;
 	rte_memzone_max_set;
 
+	rte_eal_vfio_mode; # WINDOWS_NO_EXPORT
 	rte_iommufd_enable; # WINDOWS_NO_EXPORT
 	rte_iommufd_is_enabled; # WINDOWS_NO_EXPORT
 	rte_vfio_iommufd_release_device; # WINDOWS_NO_EXPORT

@@ -35,6 +35,7 @@
 #include <rte_telemetry.h>
 #endif
 #include <rte_vect.h>
+#include <rte_vfio.h>
 
 #include "eal_internal_cfg.h"
 #include "eal_options.h"
@@ -96,6 +97,7 @@ eal_long_options[] = {
 	{OPT_SYSLOG,            1, NULL, OPT_SYSLOG_NUM           },
 	{OPT_VDEV,              1, NULL, OPT_VDEV_NUM             },
 	{OPT_VFIO_INTR,         1, NULL, OPT_VFIO_INTR_NUM        },
+	{OPT_VFIO_MODE,         1, NULL, OPT_VFIO_MODE_NUM        },
 	{OPT_VFIO_VF_TOKEN,     1, NULL, OPT_VFIO_VF_TOKEN_NUM    },
 	{OPT_VMWARE_TSC_MAP,    0, NULL, OPT_VMWARE_TSC_MAP_NUM   },
 	{OPT_LEGACY_MEM,        0, NULL, OPT_LEGACY_MEM_NUM       },
@@ -1598,6 +1600,42 @@ available_cores(void)
 	return str;
 }
 
+static int
+eal_parse_vfio_mode(const char *name)
+{
+	int mode;
+	struct internal_config *internal_conf =
+		eal_get_internal_configuration();
+#ifdef VFIO_IOMMUFD_PRESENT
+	char dirname[PATH_MAX] = VFIO_CDEV_CLASS_DIR;
+#endif
+
+	if (name == NULL)
+		return -1;
+
+	if (!strcmp("container", name)) {
+		mode = RTE_VFIO_CONTAINER;
+	} else if (!strcmp("iommufd", name)) {
+#ifdef VFIO_IOMMUFD_PRESENT
+		if (opendir(dirname) == NULL) {
+			RTE_LOG(WARNING, EAL, "vfio cdev isn't supported, change to vfio container mode\n");
+			mode = RTE_VFIO_CONTAINER;
+		} else {
+			mode = RTE_VFIO_IOMMUFD;
+		}
+#else
+		RTE_LOG(WARNING, EAL, "vfio cdev isn't supported, change to vfio container mode\n");
+		mode = RTE_VFIO_CONTAINER;
+#endif
+	} else {
+		RTE_LOG(ERR, EAL, "unsupported vfio mode\n");
+		return -1;
+	}
+
+	internal_conf->vfio_mode = mode;
+	return 0;
+}
+
 #define HUGE_UNLINK_NEVER "never"
 
 static int
@@ -1922,7 +1960,13 @@ eal_parse_common_option(int opt, const char *optarg,
 			return -1;
 		}
 		break;
-
+	case OPT_VFIO_MODE_NUM:
+		if (eal_parse_vfio_mode(optarg) < 0) {
+			RTE_LOG(ERR, EAL, "invalid parameters for --"
+				OPT_VFIO_MODE "\n");
+			return -1;
+		}
+		break;
 	/* don't know what to do, leave this to caller */
 	default:
 		return 1;
@@ -2189,6 +2233,8 @@ eal_common_usage(void)
 	       "                      (ex: --vdev=net_pcap0,iface=eth2).\n"
 	       "  --"OPT_IOVA_MODE"   Set IOVA mode. 'pa' for IOVA_PA\n"
 	       "                      'va' for IOVA_VA\n"
+	       "  --"OPT_VFIO_MODE"   Set VFIO mode. 'container' for VFIO_CONTAINER\n"
+	       "                      'cdev' for VFIO_IOMMUFD\n"
 	       "  -d LIB.so|DIR       Add a driver or driver directory\n"
 	       "                      (can be used multiple times)\n"
 	       "  --"OPT_VMWARE_TSC_MAP"    Use VMware TSC map instead of native RDTSC\n"
