@@ -425,6 +425,8 @@ struct iavf_txq_ops iavf_txq_release_mbufs_ops[] = {
 
 };
 
+static struct iavf_pkt_burst iavf_rxtx_pkt_burst[RTE_MAX_ETHPORTS];
+
 static inline void
 iavf_rxd_to_pkt_fields_by_comms_ovs(__rte_unused struct iavf_rx_queue *rxq,
 				    struct rte_mbuf *mb,
@@ -3394,34 +3396,34 @@ check_mbuf_len(struct offload_info *info, struct rte_mbuf *m)
 {
 	if (m->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) {
 		if (info->outer_l2_len != m->outer_l2_len) {
-			PMD_TX_LOG(ERR, "outer_l2_len error in mbuf. Original "
-			"length: %hu, calculated length: %u", m->outer_l2_len,
+			PMD_DRV_LOG(ERR, "outer_l2_len error in mbuf. Original "
+			"length: %d, calculated length: %u", m->outer_l2_len,
 			info->outer_l2_len);
 			return -1;
 		}
 		if (info->outer_l3_len != m->outer_l3_len) {
-			PMD_TX_LOG(ERR, "outer_l3_len error in mbuf. Original "
-			"length: %hu,calculated length: %u", m->outer_l3_len,
+			PMD_DRV_LOG(ERR, "outer_l3_len error in mbuf. Original "
+			"length: %d,calculated length: %u", m->outer_l3_len,
 			info->outer_l3_len);
 			return -1;
 		}
 	}
 
 	if (info->l2_len != m->l2_len) {
-		PMD_TX_LOG(ERR, "l2_len error in mbuf. Original "
-		"length: %hu, calculated length: %u", m->l2_len,
+		PMD_DRV_LOG(ERR, "l2_len error in mbuf. Original "
+		"length: %d, calculated length: %u", m->l2_len,
 		info->l2_len);
 		return -1;
 	}
 	if (info->l3_len != m->l3_len) {
-		PMD_TX_LOG(ERR, "l3_len error in mbuf. Original "
-		"length: %hu, calculated length: %u", m->l3_len,
+		PMD_DRV_LOG(ERR, "l3_len error in mbuf. Original "
+		"length: %d, calculated length: %u", m->l3_len,
 		info->l3_len);
 		return -1;
 	}
 	if (info->l4_len != m->l4_len) {
-		PMD_TX_LOG(ERR, "l4_len error in mbuf. Original "
-		"length: %hu, calculated length: %u", m->l4_len,
+		PMD_DRV_LOG(ERR, "l4_len error in mbuf. Original "
+		"length: %d, calculated length: %u", m->l4_len,
 		info->l4_len);
 		return -1;
 	}
@@ -3438,24 +3440,24 @@ check_ether_type(struct offload_info *info, struct rte_mbuf *m)
 		if (info->outer_ethertype ==
 			rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 			if (!(m->ol_flags & RTE_MBUF_F_TX_OUTER_IPV4)) {
-				PMD_TX_LOG(ERR, "Outer ethernet type is ipv4, "
+				PMD_DRV_LOG(ERR, "Outer ethernet type is ipv4, "
 				"tx offload missing `RTE_MBUF_F_TX_OUTER_IPV4` flag.");
 				ret = -1;
 			}
 			if (m->ol_flags & RTE_MBUF_F_TX_OUTER_IPV6) {
-				PMD_TX_LOG(ERR, "Outer ethernet type is ipv4, tx "
+				PMD_DRV_LOG(ERR, "Outer ethernet type is ipv4, tx "
 				"offload contains wrong `RTE_MBUF_F_TX_OUTER_IPV6` flag");
 				ret = -1;
 			}
 		} else if (info->outer_ethertype ==
 			rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6)) {
 			if (!(m->ol_flags & RTE_MBUF_F_TX_OUTER_IPV6)) {
-				PMD_TX_LOG(ERR, "Outer ethernet type is ipv6, "
+				PMD_DRV_LOG(ERR, "Outer ethernet type is ipv6, "
 				"tx offload missing `RTE_MBUF_F_TX_OUTER_IPV6` flag.");
 				ret = -1;
 			}
 			if (m->ol_flags & RTE_MBUF_F_TX_OUTER_IPV4) {
-				PMD_TX_LOG(ERR, "Outer ethernet type is ipv6, tx "
+				PMD_DRV_LOG(ERR, "Outer ethernet type is ipv6, tx "
 				"offload contains wrong `RTE_MBUF_F_TX_OUTER_IPV4` flag");
 				ret = -1;
 			}
@@ -3465,24 +3467,24 @@ check_ether_type(struct offload_info *info, struct rte_mbuf *m)
 	if (info->ethertype ==
 		rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 		if (!(m->ol_flags & RTE_MBUF_F_TX_IPV4)) {
-			PMD_TX_LOG(ERR, "Ethernet type is ipv4, tx offload "
+			PMD_DRV_LOG(ERR, "Ethernet type is ipv4, tx offload "
 			"missing `RTE_MBUF_F_TX_IPV4` flag.");
 			ret = -1;
 		}
 		if (m->ol_flags & RTE_MBUF_F_TX_IPV6) {
-			PMD_TX_LOG(ERR, "Ethernet type is ipv4, tx "
+			PMD_DRV_LOG(ERR, "Ethernet type is ipv4, tx "
 			"offload contains wrong `RTE_MBUF_F_TX_IPV6` flag");
 			ret = -1;
 		}
 	} else if (info->ethertype ==
 		rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6)) {
 		if (!(m->ol_flags & RTE_MBUF_F_TX_IPV6)) {
-			PMD_TX_LOG(ERR, "Ethernet type is ipv6, tx offload "
+			PMD_DRV_LOG(ERR, "Ethernet type is ipv6, tx offload "
 			"missing `RTE_MBUF_F_TX_IPV6` flag.");
 			ret = -1;
 		}
 		if (m->ol_flags & RTE_MBUF_F_TX_IPV4) {
-			PMD_TX_LOG(ERR, "Ethernet type is ipv6, tx offload "
+			PMD_DRV_LOG(ERR, "Ethernet type is ipv6, tx offload "
 			"contains wrong `RTE_MBUF_F_TX_IPV4` flag");
 			ret = -1;
 		}
@@ -3512,12 +3514,12 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		parse_gtp(udp_hdr, &info);
 		if (info.is_tunnel) {
 			if (!tunnel_type) {
-				PMD_TX_LOG(ERR, "gtp tunnel packet missing tx "
+				PMD_DRV_LOG(ERR, "gtp tunnel packet missing tx "
 				"offload missing `RTE_MBUF_F_TX_TUNNEL_GTP` flag.");
 				return -1;
 			}
 			if (tunnel_type != RTE_MBUF_F_TX_TUNNEL_GTP) {
-				PMD_TX_LOG(ERR, "gtp tunnel packet, tx offload has wrong "
+				PMD_DRV_LOG(ERR, "gtp tunnel packet, tx offload has wrong "
 				"`%s` flag, correct is `RTE_MBUF_F_TX_TUNNEL_GTP` flag",
 				rte_get_tx_ol_flag_name(tunnel_type));
 				return -1;
@@ -3527,12 +3529,12 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		parse_vxlan_gpe(udp_hdr, &info);
 		if (info.is_tunnel) {
 			if (!tunnel_type) {
-				PMD_TX_LOG(ERR, "vxlan gpe tunnel packet missing tx "
+				PMD_DRV_LOG(ERR, "vxlan gpe tunnel packet missing tx "
 				"offload missing `RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE` flag.");
 				return -1;
 			}
 			if (tunnel_type != RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE) {
-				PMD_TX_LOG(ERR, "vxlan gpe tunnel packet, tx offload has "
+				PMD_DRV_LOG(ERR, "vxlan gpe tunnel packet, tx offload has "
 				"wrong `%s` flag, correct is "
 				"`RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE` flag",
 				rte_get_tx_ol_flag_name(tunnel_type));
@@ -3543,12 +3545,12 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		parse_vxlan(udp_hdr, &info);
 		if (info.is_tunnel) {
 			if (!tunnel_type) {
-				PMD_TX_LOG(ERR, "vxlan tunnel packet missing tx "
+				PMD_DRV_LOG(ERR, "vxlan tunnel packet missing tx "
 				"offload missing `RTE_MBUF_F_TX_TUNNEL_VXLAN` flag.");
 				return -1;
 			}
 			if (tunnel_type != RTE_MBUF_F_TX_TUNNEL_VXLAN) {
-				PMD_TX_LOG(ERR, "vxlan tunnel packet, tx offload has "
+				PMD_DRV_LOG(ERR, "vxlan tunnel packet, tx offload has "
 				"wrong `%s` flag, correct is "
 				"`RTE_MBUF_F_TX_TUNNEL_VXLAN` flag",
 				rte_get_tx_ol_flag_name(tunnel_type));
@@ -3559,12 +3561,12 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		parse_geneve(udp_hdr, &info);
 		if (info.is_tunnel) {
 			if (!tunnel_type) {
-				PMD_TX_LOG(ERR, "geneve tunnel packet missing tx "
+				PMD_DRV_LOG(ERR, "geneve tunnel packet missing tx "
 				"offload missing `RTE_MBUF_F_TX_TUNNEL_GENEVE` flag.");
 				return -1;
 			}
 			if (tunnel_type != RTE_MBUF_F_TX_TUNNEL_GENEVE) {
-				PMD_TX_LOG(ERR, "geneve tunnel packet, tx offload has "
+				PMD_DRV_LOG(ERR, "geneve tunnel packet, tx offload has "
 				"wrong `%s` flag, correct is "
 				"`RTE_MBUF_F_TX_TUNNEL_GENEVE` flag",
 				rte_get_tx_ol_flag_name(tunnel_type));
@@ -3575,7 +3577,7 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		/* Always keep last. */
 		if (unlikely(RTE_ETH_IS_TUNNEL_PKT(m->packet_type)
 			!= 0)) {
-			PMD_TX_LOG(ERR, "Unknown tunnel packet. UDP dst port: %hu",
+			PMD_DRV_LOG(ERR, "Unknown tunnel packet. UDP dst port: %hu",
 				udp_hdr->dst_port);
 				return -1;
 		}
@@ -3587,12 +3589,12 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		parse_gre(gre_hdr, &info);
 		if (info.is_tunnel) {
 			if (!tunnel_type) {
-				PMD_TX_LOG(ERR, "gre tunnel packet missing tx "
+				PMD_DRV_LOG(ERR, "gre tunnel packet missing tx "
 				"offload missing `RTE_MBUF_F_TX_TUNNEL_GRE` flag.");
 				return -1;
 			}
 			if (tunnel_type != RTE_MBUF_F_TX_TUNNEL_GRE) {
-				PMD_TX_LOG(ERR, "gre tunnel packet, tx offload has "
+				PMD_DRV_LOG(ERR, "gre tunnel packet, tx offload has "
 				"wrong `%s` flag, correct is "
 				"`RTE_MBUF_F_TX_TUNNEL_GRE` flag",
 				rte_get_tx_ol_flag_name(tunnel_type));
@@ -3607,12 +3609,12 @@ iavf_check_mbuf(struct rte_mbuf *m)
 		parse_encap_ip(encap_ip_hdr, &info);
 		if (info.is_tunnel) {
 			if (!tunnel_type) {
-				PMD_TX_LOG(ERR, "Ipip tunnel packet missing tx "
+				PMD_DRV_LOG(ERR, "Ipip tunnel packet missing tx "
 				"offload missing `RTE_MBUF_F_TX_TUNNEL_IPIP` flag.");
 				return -1;
 			}
 			if (tunnel_type != RTE_MBUF_F_TX_TUNNEL_IPIP) {
-				PMD_TX_LOG(ERR, "Ipip tunnel packet, tx offload has "
+				PMD_DRV_LOG(ERR, "Ipip tunnel packet, tx offload has "
 				"wrong `%s` flag, correct is "
 				"`RTE_MBUF_F_TX_TUNNEL_IPIP` flag",
 				rte_get_tx_ol_flag_name(tunnel_type));
@@ -3627,6 +3629,100 @@ check_len:
 		return -1;
 
 	return check_ether_type(&info, m);
+}
+
+/* Tx MDD check */
+static uint16_t
+iavf_xmit_pkts_mdd(void *tx_queue, struct rte_mbuf **tx_pkts,
+	      uint16_t nb_pkts)
+{
+	struct iavf_tx_queue *txq = tx_queue;
+	struct iavf_adapter *adapter = txq->vsi->adapter;
+	uint16_t idx;
+	uint64_t ol_flags;
+	struct rte_mbuf *mb;
+	const char *reason = NULL;
+	uint64_t pkt_errors = 0;
+
+
+	for (idx = 0; idx < nb_pkts; idx++) {
+		mb = tx_pkts[idx];
+		ol_flags = mb->ol_flags;
+
+		if ((adapter->mc_flags & IAVF_MDD_CHECK_F_TX_MBUF) &&
+			(rte_mbuf_check(mb, 1, &reason) != 0)) {
+			PMD_DRV_LOG(ERR, "INVALID mbuf: %s\n", reason);
+			pkt_errors++;
+			continue;
+		}
+
+		if ((adapter->mc_flags & IAVF_MDD_CHECK_F_TX_SIZE) &&
+			(mb->data_len < IAVF_TX_MIN_PKT_LEN ||
+			mb->data_len > adapter->vf.max_pkt_len)) {
+			PMD_DRV_LOG(ERR, "INVALID mbuf: data_len (%u) is out "
+			"of range, reasonable range (%d - %u)\n", mb->data_len,
+			IAVF_TX_MIN_PKT_LEN, adapter->vf.max_pkt_len);
+			pkt_errors++;
+			continue;
+		}
+
+		if (adapter->mc_flags & IAVF_MDD_CHECK_F_TX_SEGMENT) {
+			/* Check condition for nb_segs > IAVF_TX_MAX_MTU_SEG. */
+			if (!(ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG))) {
+				if (mb->nb_segs > IAVF_TX_MAX_MTU_SEG) {
+					PMD_DRV_LOG(ERR, "INVALID mbuf: nb_segs (%d) exceeds "
+					"HW limit, maximum allowed value is %d\n", mb->nb_segs,
+					IAVF_TX_MAX_MTU_SEG);
+					pkt_errors++;
+					continue;
+				}
+			} else if ((mb->tso_segsz < IAVF_MIN_TSO_MSS) ||
+				(mb->tso_segsz > IAVF_MAX_TSO_MSS)) {
+				/* MSS outside the range are considered malicious */
+				PMD_DRV_LOG(ERR, "INVALID mbuf: tso_segsz (%u) is out "
+				"of range, reasonable range (%d - %u)\n", mb->tso_segsz,
+				IAVF_MIN_TSO_MSS, IAVF_MAX_TSO_MSS);
+				pkt_errors++;
+				continue;
+			} else if (mb->nb_segs > txq->nb_tx_desc) {
+				PMD_DRV_LOG(ERR, "INVALID mbuf: nb_segs out "
+				"of ring length\n");
+				pkt_errors++;
+				continue;
+			}
+		}
+
+		if (adapter->mc_flags & IAVF_MDD_CHECK_F_TX_OFFLOAD) {
+			if (ol_flags & IAVF_TX_OFFLOAD_NOTSUP_MASK) {
+				PMD_DRV_LOG(ERR, "INVALID mbuf: TX offload "
+				"is not supported\n");
+				pkt_errors++;
+				continue;
+			}
+
+			if (!rte_validate_tx_offload(mb)) {
+				PMD_DRV_LOG(ERR, "INVALID mbuf: TX offload "
+				"setup error\n");
+				pkt_errors++;
+				continue;
+			}
+		}
+
+		if (adapter->mc_flags & IAVF_MDD_CHECK_F_TX_STRICT &&
+			iavf_check_mbuf(mb)) {
+			pkt_errors++;
+			continue;
+		}
+	}
+
+	if (pkt_errors) {
+		__atomic_fetch_add(&txq->mdd_pkt_errors,
+			pkt_errors, rte_memory_order_release);
+		return 0;
+	}
+
+	return iavf_rxtx_pkt_burst[txq->port_id].tx_burst_raw(tx_queue,
+								tx_pkts, nb_pkts);
 }
 
 /* TX prep functions */
@@ -3715,7 +3811,7 @@ iavf_recv_pkts_no_poll(void *rx_queue, struct rte_mbuf **rx_pkts,
 	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
 		return 0;
 
-	return rxq->vsi->adapter->rx_pkt_burst(rx_queue,
+	return iavf_rxtx_pkt_burst[rxq->port_id].rx_burst_raw(rx_queue,
 								rx_pkts, nb_pkts);
 }
 
@@ -3727,7 +3823,7 @@ iavf_xmit_pkts_no_poll(void *tx_queue, struct rte_mbuf **tx_pkts,
 	if (!txq->vsi || txq->vsi->adapter->no_poll)
 		return 0;
 
-	return txq->vsi->adapter->tx_pkt_burst(tx_queue,
+	return iavf_rxtx_pkt_burst[txq->port_id].tx_burst_raw(tx_queue,
 								tx_pkts, nb_pkts);
 }
 
@@ -3917,7 +4013,8 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 		}
 
 		if (no_poll_on_link_down) {
-			adapter->rx_pkt_burst = dev->rx_pkt_burst;
+			iavf_rxtx_pkt_burst[dev->data->port_id].rx_burst_raw =
+				dev->rx_pkt_burst;
 			dev->rx_pkt_burst = iavf_recv_pkts_no_poll;
 		}
 		return;
@@ -3937,7 +4034,8 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 		dev->rx_pkt_burst = iavf_recv_pkts_vec;
 
 		if (no_poll_on_link_down) {
-			adapter->rx_pkt_burst = dev->rx_pkt_burst;
+			iavf_rxtx_pkt_burst[dev->data->port_id].rx_burst_raw =
+				dev->rx_pkt_burst;
 			dev->rx_pkt_burst = iavf_recv_pkts_no_poll;
 		}
 		return;
@@ -3964,7 +4062,8 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 	}
 
 	if (no_poll_on_link_down) {
-		adapter->rx_pkt_burst = dev->rx_pkt_burst;
+		iavf_rxtx_pkt_burst[dev->data->port_id].rx_burst_raw =
+			dev->rx_pkt_burst;
 		dev->rx_pkt_burst = iavf_recv_pkts_no_poll;
 	}
 }
@@ -3976,6 +4075,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	int no_poll_on_link_down = adapter->devargs.no_poll_on_link_down;
+	int mbuf_check = adapter->devargs.mbuf_check;
 #ifdef RTE_ARCH_X86
 	struct iavf_tx_queue *txq;
 	int i;
@@ -4063,8 +4163,13 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		}
 
 		if (no_poll_on_link_down) {
-			adapter->tx_pkt_burst = dev->tx_pkt_burst;
+			iavf_rxtx_pkt_burst[dev->data->port_id].tx_burst_raw =
+				dev->tx_pkt_burst;
 			dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
+		} else if (mbuf_check) {
+			iavf_rxtx_pkt_burst[dev->data->port_id].tx_burst_raw =
+				dev->tx_pkt_burst;
+			dev->tx_pkt_burst = iavf_xmit_pkts_mdd;
 		}
 		return;
 	}
@@ -4077,8 +4182,13 @@ normal:
 	dev->tx_pkt_prepare = iavf_prep_pkts;
 
 	if (no_poll_on_link_down) {
-		adapter->tx_pkt_burst = dev->tx_pkt_burst;
+		iavf_rxtx_pkt_burst[dev->data->port_id].tx_burst_raw =
+			dev->tx_pkt_burst;
 		dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
+	} else if (mbuf_check) {
+		iavf_rxtx_pkt_burst[dev->data->port_id].tx_burst_raw =
+			dev->tx_pkt_burst;
+		dev->tx_pkt_burst = iavf_xmit_pkts_mdd;
 	}
 }
 
