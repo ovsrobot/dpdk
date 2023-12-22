@@ -2976,8 +2976,7 @@ mrvl_tx_sg_pkt_burst(void *txq, struct rte_mbuf **tx_pkts,
 		 */
 		if (nb_segs > PP2_PPIO_DESC_NUM_FRAGS) {
 			total_descs -= nb_segs;
-			RTE_LOG(ERR, PMD,
-				"Too many segments. Packet won't be sent.\n");
+			MRVL_LOG(ERR, "Too many segments. Packet won't be sent.");
 			break;
 		}
 
