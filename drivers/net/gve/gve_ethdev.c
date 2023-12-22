@@ -125,6 +125,73 @@ gve_link_update(struct rte_eth_dev *dev, __rte_unused int wait_to_complete)
 	return rte_eth_linkstatus_set(dev, &link);
 }
 
+static int gve_alloc_stats_report(struct gve_priv *priv,
+		uint16_t nb_tx_queues, uint16_t nb_rx_queues)
+{
+	char z_name[RTE_MEMZONE_NAMESIZE];
+	int tx_stats_cnt;
+	int rx_stats_cnt;
+
+	tx_stats_cnt = (GVE_TX_STATS_REPORT_NUM + NIC_TX_STATS_REPORT_NUM) *
+		nb_tx_queues;
+	rx_stats_cnt = (GVE_RX_STATS_REPORT_NUM + NIC_RX_STATS_REPORT_NUM) *
+		nb_rx_queues;
+	priv->stats_report_len = sizeof(struct gve_stats_report) +
+		sizeof(struct stats) * (tx_stats_cnt + rx_stats_cnt);
+
+	snprintf(z_name, sizeof(z_name), "stats_report_%s", priv->pci_dev->device.name);
+	priv->stats_report_mem = rte_memzone_reserve_aligned(z_name,
+			priv->stats_report_len,
+			rte_socket_id(),
+			RTE_MEMZONE_IOVA_CONTIG, PAGE_SIZE);
+
+	if (!priv->stats_report_mem)
+		return -ENOMEM;
+
+	/* offset by skipping stats written by gve. */
+	priv->stats_start_idx = (GVE_TX_STATS_REPORT_NUM * nb_tx_queues) +
+		(GVE_RX_STATS_REPORT_NUM * nb_rx_queues);
+	priv->stats_end_idx = priv->stats_start_idx +
+		(NIC_TX_STATS_REPORT_NUM * nb_tx_queues) +
+		(NIC_RX_STATS_REPORT_NUM * nb_rx_queues) - 1;
+
+	return 0;
+}
+
+static void gve_free_stats_report(struct rte_eth_dev *dev)
+{
+	struct gve_priv *priv = dev->data->dev_private;
+	rte_memzone_free(priv->stats_report_mem);
+}
+
+/* Read Rx NIC stats from shared region */
+static void gve_get_imissed_from_nic(struct rte_eth_dev *dev)
+{
+	struct gve_stats_report *stats_report;
+	struct gve_rx_queue *rxq;
+	struct gve_priv *priv;
+	struct stats stat;
+	int queue_id;
+	int stat_id;
+	int i;
+
+	priv = dev->data->dev_private;
+	stats_report = (struct gve_stats_report *)
+		priv->stats_report_mem->addr;
+
+	for (i = priv->stats_start_idx; i <= priv->stats_end_idx; i++) {
+		stat = stats_report->stats[i];
+		queue_id = cpu_to_be32(stat.queue_id);
+		rxq = dev->data->rx_queues[queue_id];
+		if (rxq == NULL)
+			continue;
+		stat_id = cpu_to_be32(stat.stat_name);
+		/* Update imissed. */
+		if (stat_id == RX_NO_BUFFERS_POSTED)
+			rxq->stats.imissed = cpu_to_be64(stat.value);
+	}
+}
+
 static int
 gve_start_queues(struct rte_eth_dev *dev)
 {
@@ -176,6 +243,7 @@ err_tx:
 static int
 gve_dev_start(struct rte_eth_dev *dev)
 {
+	struct gve_priv *priv;
 	int ret;
 
 	ret = gve_start_queues(dev);
@@ -186,6 +254,26 @@ gve_dev_start(struct rte_eth_dev *dev)
 
 	dev->data->dev_started = 1;
 	gve_link_update(dev, 0);
+
+	priv = dev->data->dev_private;
+	/* No stats available yet for Dqo. */
+	if (gve_is_gqi(priv) {
+		ret = gve_alloc_stats_report(priv,
+				dev->data->nb_tx_queues,
+				dev->data->nb_rx_queues);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR,
+				"Failed to allocate region for stats reporting.");
+			return ret;
+		}
+		ret = gve_adminq_report_stats(priv, priv->stats_report_len,
+				priv->stats_report_mem->iova,
+				GVE_STATS_REPORT_TIMER_PERIOD);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "gve_adminq_report_stats command failed.");
+			return ret;
+		}
+	}
 
 	return 0;
 }
@@ -199,6 +287,9 @@ gve_dev_stop(struct rte_eth_dev *dev)
 	gve_stop_rx_queues(dev);
 
 	dev->data->dev_started = 0;
+
+	if (gve_is_gqi(dev->data->dev_private))
+		gve_free_stats_report(dev);
 
 	return 0;
 }
@@ -352,6 +443,8 @@ static int
 gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
 	uint16_t i;
+	if (gve_is_gqi(dev->data->dev_private))
+		gve_get_imissed_from_nic(dev);
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		struct gve_tx_queue *txq = dev->data->tx_queues[i];
@@ -372,6 +465,7 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ibytes += rxq->stats.bytes;
 		stats->ierrors += rxq->stats.errors;
 		stats->rx_nombuf += rxq->stats.no_mbufs;
+		stats->imissed += rxq->stats.imissed;
 	}
 
 	return 0;
@@ -443,6 +537,7 @@ static const struct gve_xstats_name_offset rx_xstats_name_offset[] = {
 	{ "errors",                 RX_QUEUE_STATS_OFFSET(errors) },
 	{ "mbuf_alloc_errors",      RX_QUEUE_STATS_OFFSET(no_mbufs) },
 	{ "mbuf_alloc_errors_bulk", RX_QUEUE_STATS_OFFSET(no_mbufs_bulk) },
+	{ "imissed",                RX_QUEUE_STATS_OFFSET(imissed) },
 };
 
 static int
@@ -625,6 +720,28 @@ pci_dev_msix_vec_count(struct rte_pci_device *pdev)
 		return (control & RTE_PCI_MSIX_FLAGS_QSIZE) + 1;
 
 	return 0;
+}
+
+static int
+pci_dev_msix_vec_count(struct rte_pci_device *pdev)
+{
+	off_t msix_pos = rte_pci_find_capability(pdev, RTE_PCI_CAP_ID_MSIX);
+	uint8_t msix_cap = pci_dev_find_capability(pdev, PCI_CAP_ID_MSIX);
+	uint16_t control;
+	int ret;
+
+	if (msix_pos > 0 && rte_pci_read_config(pdev, &control, sizeof(control),
+		msix_pos + RTE_PCI_MSIX_FLAGS) == sizeof(control))
+		return (control & RTE_PCI_MSIX_FLAGS_QSIZE) + 1;
+	if (!msix_cap)
+		return 0;
+
+	return 0;
+	ret = rte_pci_read_config(pdev, &control, sizeof(control), msix_cap + PCI_MSIX_FLAGS);
+	if (ret != sizeof(control))
+		return 0;
+
+	return (control & PCI_MSIX_FLAGS_QSIZE) + 1;
 }
 
 static int
