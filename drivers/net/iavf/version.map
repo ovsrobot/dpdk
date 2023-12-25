@@ -16,4 +16,7 @@ EXPERIMENTAL {
 
 	# added in 21.11
 	rte_pmd_ifd_dynflag_proto_xtr_ipsec_crypto_said_mask;
+
+	# added in 24.03
+	rte_pmd_iavf_tx_lldp_dynfield_offset;
 };
