@@ -203,6 +203,9 @@ struct iavf_txq_ops {
 	void (*release_mbufs)(struct iavf_tx_queue *txq);
 };
 
+struct iavf_tx_burst_ops {
+	eth_tx_burst_t tx_pkt_burst;
+};
 
 struct iavf_rx_queue_stats {
 	uint64_t reserved;
@@ -296,6 +299,8 @@ struct iavf_tx_queue {
 	uint16_t next_dd;              /* next to set RS, for VPMD */
 	uint16_t next_rs;              /* next to check DD,  for VPMD */
 	uint16_t ipsec_crypto_pkt_md_offset;
+
+	uint64_t mbuf_errors;
 
 	bool q_set;                    /* if rx queue has been configured */
 	bool tx_deferred_start;        /* don't start this queue in dev start */

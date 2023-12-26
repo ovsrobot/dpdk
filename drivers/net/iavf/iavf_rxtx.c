@@ -425,6 +425,23 @@ struct iavf_txq_ops iavf_txq_release_mbufs_ops[] = {
 
 };
 
+static const
+struct iavf_tx_burst_ops iavf_tx_pkt_burst_ops[] = {
+	[IAVF_PKT_BURST_DEFAULT].tx_pkt_burst = iavf_xmit_pkts,
+#ifdef RTE_ARCH_X86
+	[IAVF_PKT_BURST_VEC].tx_pkt_burst = iavf_xmit_pkts_vec,
+	[IAVF_PKT_BURST_VEC_AVX2].tx_pkt_burst = iavf_xmit_pkts_vec_avx2,
+	[IAVF_PKT_BURST_VEC_AVX2_OFFLOAD].tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload,
+#ifdef CC_AVX512_SUPPORT
+	[IAVF_PKT_BURST_VEC_AVX512].tx_pkt_burst = iavf_xmit_pkts_vec_avx512,
+	[IAVF_PKT_BURST_VEC_AVX512_OFFLOAD].tx_pkt_burst =
+		iavf_xmit_pkts_vec_avx512_offload,
+	[IAVF_PKT_BURST_VEC_AVX512_CTX_OFFLOAD].tx_pkt_burst =
+		iavf_xmit_pkts_vec_avx512_ctx_offload,
+#endif
+#endif
+};
+
 static inline void
 iavf_rxd_to_pkt_fields_by_comms_ovs(__rte_unused struct iavf_rx_queue *rxq,
 				    struct rte_mbuf *mb,
@@ -3629,6 +3646,103 @@ check_len:
 	return check_ether_type(&info, m);
 }
 
+/* Tx mbuf check */
+static uint16_t
+iavf_xmit_pkts_check(void *tx_queue, struct rte_mbuf **tx_pkts,
+	      uint16_t nb_pkts)
+{
+	uint16_t idx;
+	uint64_t ol_flags;
+	struct rte_mbuf *mb;
+	uint16_t good_pkts = nb_pkts;
+	const char *reason = NULL;
+	bool pkt_error = false;
+	struct iavf_tx_queue *txq = tx_queue;
+	struct iavf_adapter *adapter = txq->vsi->adapter;
+	enum iavf_tx_pkt_burst_type tx_burst_type =
+		txq->vsi->adapter->tx_burst_type;
+
+	for (idx = 0; idx < nb_pkts; idx++) {
+		mb = tx_pkts[idx];
+		ol_flags = mb->ol_flags;
+
+		if ((adapter->mc_flags & IAVF_MBUF_CHECK_F_TX_MBUF) &&
+			(rte_mbuf_check(mb, 1, &reason) != 0)) {
+			PMD_TX_LOG(ERR, "INVALID mbuf: %s\n", reason);
+			pkt_error = true;
+			break;
+		}
+
+		if ((adapter->mc_flags & IAVF_MBUF_CHECK_F_TX_SIZE) &&
+			(mb->data_len < IAVF_TX_MIN_PKT_LEN ||
+			mb->data_len > adapter->vf.max_pkt_len)) {
+			PMD_TX_LOG(ERR, "INVALID mbuf: data_len (%u) is out "
+			"of range, reasonable range (%d - %u)\n", mb->data_len,
+			IAVF_TX_MIN_PKT_LEN, adapter->vf.max_pkt_len);
+			pkt_error = true;
+			break;
+		}
+
+		if (adapter->mc_flags & IAVF_MBUF_CHECK_F_TX_SEGMENT) {
+			/* Check condition for nb_segs > IAVF_TX_MAX_MTU_SEG. */
+			if (!(ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG))) {
+				if (mb->nb_segs > IAVF_TX_MAX_MTU_SEG) {
+					PMD_TX_LOG(ERR, "INVALID mbuf: nb_segs (%d) exceeds "
+					"HW limit, maximum allowed value is %d\n", mb->nb_segs,
+					IAVF_TX_MAX_MTU_SEG);
+					pkt_error = true;
+					break;
+				}
+			} else if ((mb->tso_segsz < IAVF_MIN_TSO_MSS) ||
+				(mb->tso_segsz > IAVF_MAX_TSO_MSS)) {
+				/* MSS outside the range are considered malicious */
+				PMD_TX_LOG(ERR, "INVALID mbuf: tso_segsz (%u) is out "
+				"of range, reasonable range (%d - %u)\n", mb->tso_segsz,
+				IAVF_MIN_TSO_MSS, IAVF_MAX_TSO_MSS);
+				pkt_error = true;
+				break;
+			} else if (mb->nb_segs > txq->nb_tx_desc) {
+				PMD_TX_LOG(ERR, "INVALID mbuf: nb_segs out "
+				"of ring length\n");
+				pkt_error = true;
+				break;
+			}
+		}
+
+		if (adapter->mc_flags & IAVF_MBUF_CHECK_F_TX_OFFLOAD) {
+			if (ol_flags & IAVF_TX_OFFLOAD_NOTSUP_MASK) {
+				PMD_TX_LOG(ERR, "INVALID mbuf: TX offload "
+				"is not supported\n");
+				pkt_error = true;
+				break;
+			}
+
+			if (!rte_validate_tx_offload(mb)) {
+				PMD_TX_LOG(ERR, "INVALID mbuf: TX offload "
+				"setup error\n");
+				pkt_error = true;
+				break;
+			}
+		}
+
+		if (adapter->mc_flags & IAVF_MBUF_CHECK_F_TX_STRICT &&
+			iavf_check_mbuf(mb)) {
+			pkt_error = true;
+			break;
+		}
+	}
+
+	if (pkt_error) {
+		__atomic_fetch_add(&txq->mbuf_errors, 1, __ATOMIC_RELAXED);
+		good_pkts = idx;
+		if (good_pkts == 0)
+			return 0;
+	}
+
+	return iavf_tx_pkt_burst_ops[tx_burst_type].tx_pkt_burst(tx_queue,
+								tx_pkts, good_pkts);
+}
+
 /* TX prep functions */
 uint16_t
 iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
@@ -3724,10 +3838,13 @@ iavf_xmit_pkts_no_poll(void *tx_queue, struct rte_mbuf **tx_pkts,
 				uint16_t nb_pkts)
 {
 	struct iavf_tx_queue *txq = tx_queue;
+	enum iavf_tx_pkt_burst_type tx_burst_type =
+		txq->vsi->adapter->tx_burst_type;
+
 	if (!txq->vsi || txq->vsi->adapter->no_poll)
 		return 0;
 
-	return txq->vsi->adapter->tx_pkt_burst(tx_queue,
+	return iavf_tx_pkt_burst_ops[tx_burst_type].tx_pkt_burst(tx_queue,
 								tx_pkts, nb_pkts);
 }
 
@@ -3975,6 +4092,8 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	enum iavf_tx_pkt_burst_type tx_burst_type;
+	int mbuf_check = adapter->devargs.mbuf_check;
 	int no_poll_on_link_down = adapter->devargs.no_poll_on_link_down;
 #ifdef RTE_ARCH_X86
 	struct iavf_tx_queue *txq;
@@ -4011,10 +4130,12 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 			PMD_DRV_LOG(DEBUG, "Using Vector Tx (port %d).",
 				    dev->data->port_id);
 			dev->tx_pkt_burst = iavf_xmit_pkts_vec;
+			tx_burst_type = IAVF_PKT_BURST_VEC;
 		}
 		if (use_avx2) {
 			if (check_ret == IAVF_VECTOR_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX2;
 				PMD_DRV_LOG(DEBUG, "Using AVX2 Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else if (check_ret == IAVF_VECTOR_CTX_OFFLOAD_PATH) {
@@ -4023,6 +4144,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 				goto normal;
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX2_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX2 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
@@ -4032,15 +4154,18 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		if (use_avx512) {
 			if (check_ret == IAVF_VECTOR_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX512;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else if (check_ret == IAVF_VECTOR_OFFLOAD_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512_offload;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX512_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512_ctx_offload;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX512_CTX_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 CONTEXT OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
@@ -4063,8 +4188,11 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		}
 
 		if (no_poll_on_link_down) {
-			adapter->tx_pkt_burst = dev->tx_pkt_burst;
+			adapter->tx_burst_type = tx_burst_type;
 			dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
+		} else if (mbuf_check) {
+			adapter->tx_burst_type = tx_burst_type;
+			dev->tx_pkt_burst = iavf_xmit_pkts_check;
 		}
 		return;
 	}
@@ -4074,11 +4202,15 @@ normal:
 	PMD_DRV_LOG(DEBUG, "Using Basic Tx callback (port=%d).",
 		    dev->data->port_id);
 	dev->tx_pkt_burst = iavf_xmit_pkts;
+	tx_burst_type = IAVF_PKT_BURST_DEFAULT;
 	dev->tx_pkt_prepare = iavf_prep_pkts;
 
 	if (no_poll_on_link_down) {
-		adapter->tx_pkt_burst = dev->tx_pkt_burst;
+		adapter->tx_burst_type = tx_burst_type;
 		dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
+	} else if (mbuf_check) {
+		adapter->tx_burst_type = tx_burst_type;
+		dev->tx_pkt_burst = iavf_xmit_pkts_check;
 	}
 }
 
