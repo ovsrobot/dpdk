@@ -5841,6 +5841,10 @@ mlx5_flow_hw_actions_validate(struct rte_eth_dev *dev,
 				MLX5_HW_VLAN_PUSH_VID_IDX;
 			action_flags |= MLX5_FLOW_ACTION_OF_PUSH_VLAN;
 			break;
+		case RTE_FLOW_ACTION_TYPE_NAT64:
+			/* TODO: Validation logic */
+			action_flags |= MLX5_FLOW_ACTION_NAT64;
+			break;
 		case RTE_FLOW_ACTION_TYPE_END:
 			actions_end = true;
 			break;
