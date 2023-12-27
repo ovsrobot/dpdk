@@ -167,7 +167,7 @@ Features
 - Sub-Function.
 - Matching on represented port.
 - Matching on aggregated affinity.
-
+- NAT64.
 
 Limitations
 -----------
@@ -778,6 +778,13 @@ Limitations
   The flow engine of a process cannot move from active to standby mode
   if preceding active application rules are still present and vice versa.
 
+
+- NAT64 action:
+  - Supported only with HW Steering enabled (``dv_flow_en`` = 2).
+  - Supported only on non-root table.
+  - Actions order limitation should follow the modify fields action.
+  - The last 2 TAG registers will be used implicitly in address backup mode.
+  - Even if the action can be shared, new steering entries will be created per flow rule. It is recommended a single rule with NAT64 should be shared to reduce the duplication of entries. The default address and other fields covertion will be handled with NAT64 action. To support other address, new rule(s) with modify fields on the IP addresses should be created.
 
 Statistics
 ----------
