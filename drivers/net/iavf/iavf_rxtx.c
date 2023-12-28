@@ -425,6 +425,23 @@ struct iavf_txq_ops iavf_txq_release_mbufs_ops[] = {
 
 };
 
+static const
+struct iavf_tx_burst_ops iavf_tx_pkt_burst_ops[] = {
+	[IAVF_PKT_BURST_DEFAULT].tx_pkt_burst = iavf_xmit_pkts,
+#ifdef RTE_ARCH_X86
+	[IAVF_PKT_BURST_VEC].tx_pkt_burst = iavf_xmit_pkts_vec,
+	[IAVF_PKT_BURST_VEC_AVX2].tx_pkt_burst = iavf_xmit_pkts_vec_avx2,
+	[IAVF_PKT_BURST_VEC_AVX2_OFFLOAD].tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload,
+#ifdef CC_AVX512_SUPPORT
+	[IAVF_PKT_BURST_VEC_AVX512].tx_pkt_burst = iavf_xmit_pkts_vec_avx512,
+	[IAVF_PKT_BURST_VEC_AVX512_OFFLOAD].tx_pkt_burst =
+		iavf_xmit_pkts_vec_avx512_offload,
+	[IAVF_PKT_BURST_VEC_AVX512_CTX_OFFLOAD].tx_pkt_burst =
+		iavf_xmit_pkts_vec_avx512_ctx_offload,
+#endif
+#endif
+};
+
 static inline void
 iavf_rxd_to_pkt_fields_by_comms_ovs(__rte_unused struct iavf_rx_queue *rxq,
 				    struct rte_mbuf *mb,
@@ -3724,10 +3741,13 @@ iavf_xmit_pkts_no_poll(void *tx_queue, struct rte_mbuf **tx_pkts,
 				uint16_t nb_pkts)
 {
 	struct iavf_tx_queue *txq = tx_queue;
+	enum iavf_tx_pkt_burst_type tx_burst_type =
+		txq->vsi->adapter->tx_burst_type;
+
 	if (!txq->vsi || txq->vsi->adapter->no_poll)
 		return 0;
 
-	return txq->vsi->adapter->tx_pkt_burst(tx_queue,
+	return iavf_tx_pkt_burst_ops[tx_burst_type].tx_pkt_burst(tx_queue,
 								tx_pkts, nb_pkts);
 }
 
@@ -3975,6 +3995,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	enum iavf_tx_pkt_burst_type tx_burst_type;
 	int no_poll_on_link_down = adapter->devargs.no_poll_on_link_down;
 #ifdef RTE_ARCH_X86
 	struct iavf_tx_queue *txq;
@@ -4011,10 +4032,12 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 			PMD_DRV_LOG(DEBUG, "Using Vector Tx (port %d).",
 				    dev->data->port_id);
 			dev->tx_pkt_burst = iavf_xmit_pkts_vec;
+			tx_burst_type = IAVF_PKT_BURST_VEC;
 		}
 		if (use_avx2) {
 			if (check_ret == IAVF_VECTOR_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX2;
 				PMD_DRV_LOG(DEBUG, "Using AVX2 Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else if (check_ret == IAVF_VECTOR_CTX_OFFLOAD_PATH) {
@@ -4023,6 +4046,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 				goto normal;
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX2_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX2 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
@@ -4032,15 +4056,18 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		if (use_avx512) {
 			if (check_ret == IAVF_VECTOR_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX512;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else if (check_ret == IAVF_VECTOR_OFFLOAD_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512_offload;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX512_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512_ctx_offload;
+				tx_burst_type = IAVF_PKT_BURST_VEC_AVX512_CTX_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 CONTEXT OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
@@ -4063,7 +4090,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		}
 
 		if (no_poll_on_link_down) {
-			adapter->tx_pkt_burst = dev->tx_pkt_burst;
+			adapter->tx_burst_type = tx_burst_type;
 			dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
 		}
 		return;
@@ -4074,10 +4101,11 @@ normal:
 	PMD_DRV_LOG(DEBUG, "Using Basic Tx callback (port=%d).",
 		    dev->data->port_id);
 	dev->tx_pkt_burst = iavf_xmit_pkts;
+	tx_burst_type = IAVF_PKT_BURST_DEFAULT;
 	dev->tx_pkt_prepare = iavf_prep_pkts;
 
 	if (no_poll_on_link_down) {
-		adapter->tx_pkt_burst = dev->tx_pkt_burst;
+		adapter->tx_burst_type = tx_burst_type;
 		dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
 	}
 }

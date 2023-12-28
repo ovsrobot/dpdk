@@ -313,6 +313,16 @@ struct iavf_devargs {
 
 struct iavf_security_ctx;
 
+enum iavf_tx_pkt_burst_type {
+	IAVF_PKT_BURST_DEFAULT		= 0,
+	IAVF_PKT_BURST_VEC		= 1,
+	IAVF_PKT_BURST_VEC_AVX2		= 2,
+	IAVF_PKT_BURST_VEC_AVX2_OFFLOAD	= 3,
+	IAVF_PKT_BURST_VEC_AVX512	= 4,
+	IAVF_PKT_BURST_VEC_AVX512_OFFLOAD	= 5,
+	IAVF_PKT_BURST_VEC_AVX512_CTX_OFFLOAD	= 6,
+};
+
 /* Structure to store private data for each VF instance. */
 struct iavf_adapter {
 	struct iavf_hw hw;
@@ -329,7 +339,7 @@ struct iavf_adapter {
 	bool closed;
 	bool no_poll;
 	eth_rx_burst_t rx_pkt_burst;
-	eth_tx_burst_t tx_pkt_burst;
+	enum iavf_tx_pkt_burst_type tx_burst_type;
 	uint16_t fdir_ref_cnt;
 	struct iavf_devargs devargs;
 };
