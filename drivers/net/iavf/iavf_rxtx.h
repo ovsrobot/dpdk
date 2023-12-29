@@ -203,6 +203,14 @@ struct iavf_txq_ops {
 	void (*release_mbufs)(struct iavf_tx_queue *txq);
 };
 
+struct iavf_rx_burst_ops {
+	eth_rx_burst_t rx_pkt_burst;
+};
+
+struct iavf_tx_burst_ops {
+	eth_tx_burst_t tx_pkt_burst;
+};
+
 
 struct iavf_rx_queue_stats {
 	uint64_t reserved;

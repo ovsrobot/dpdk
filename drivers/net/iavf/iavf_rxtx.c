@@ -3707,15 +3707,88 @@ iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 	return i;
 }
 
+static const
+struct iavf_rx_burst_ops iavf_rx_pkt_burst_ops[] = {
+	[IAVF_RX_BURST_DEFAULT].rx_pkt_burst = iavf_recv_pkts,
+	[IAVF_RX_BURST_FRXD].rx_pkt_burst = iavf_recv_pkts_flex_rxd,
+	[IAVF_RX_BURST_BULK_ALLOC].rx_pkt_burst = iavf_recv_pkts_bulk_alloc,
+	[IAVF_RX_BURST_SCATTERED].rx_pkt_burst = iavf_recv_scattered_pkts,
+	[IAVF_RX_BURST_SFRXD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_flex_rxd,
+#ifdef RTE_ARCH_X86
+	[IAVF_RX_BURST_VEC_SSE].rx_pkt_burst = iavf_recv_pkts_vec,
+	[IAVF_RX_BURST_VEC_AVX2].rx_pkt_burst = iavf_recv_pkts_vec_avx2,
+	[IAVF_RX_BURST_VEC_AVX2_OFFLOAD].rx_pkt_burst =
+		iavf_recv_pkts_vec_avx2_offload,
+	[IAVF_RX_BURST_VEC_SSE_FRXD].rx_pkt_burst =
+		iavf_recv_pkts_vec_flex_rxd,
+	[IAVF_RX_BURST_VEC_AVX2_FRXD].rx_pkt_burst =
+		iavf_recv_pkts_vec_avx2_flex_rxd,
+	[IAVF_RX_BURST_VEC_AVX2_FRXD_OFFLOAD].rx_pkt_burst =
+		iavf_recv_pkts_vec_avx2_flex_rxd_offload,
+	[IAVF_RX_BURST_VEC_SSE_SCATTERED].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec,
+	[IAVF_RX_BURST_VEC_AVX2_SCATTERED].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx2,
+	[IAVF_RX_BURST_VEC_AVX2_SCATTERED_OFFLOAD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx2_offload,
+	[IAVF_RX_BURST_VEC_SSE_SFLEX_RXD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_flex_rxd,
+	[IAVF_RX_BURST_VEC_AVX2_SFLEX_RXD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx2_flex_rxd,
+	[IAVF_RX_BURST_VEC_AVX2_SFRXD_OFFLOAD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx2_flex_rxd_offload,
+#ifdef CC_AVX512_SUPPORT
+	[IAVF_RX_BURST_VEC_AVX512].rx_pkt_burst = iavf_recv_pkts_vec_avx512,
+	[IAVF_RX_BURST_VEC_AVX512_OFFLOAD].rx_pkt_burst =
+		iavf_recv_pkts_vec_avx512_offload,
+	[IAVF_RX_BURST_VEC_AVX512_FRXD].rx_pkt_burst =
+		iavf_recv_pkts_vec_avx512_flex_rxd,
+	[IAVF_RX_BURST_VEC_AVX512_FRXD_OFFLOAD].rx_pkt_burst =
+		iavf_recv_pkts_vec_avx512_flex_rxd_offload,
+	[IAVF_RX_BURST_VEC_AVX512_SCATTERED].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx512,
+	[IAVF_RX_BURST_VEC_AVX512_SCATTERED_OFFLOAD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx512_offload,
+	[IAVF_RX_BURST_VEC_AVX512_SFLEX_RXD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx512_flex_rxd,
+	[IAVF_RX_BURST_VEC_AVX512_SFRXD_OFFLOAD].rx_pkt_burst =
+		iavf_recv_scattered_pkts_vec_avx512_flex_rxd_offload,
+#endif
+#elif defined RTE_ARCH_ARM
+	[IAVF_RX_BURST_VEC_SSE].rx_pkt_burst = iavf_recv_pkts_vec,
+#endif
+};
+
+static const
+struct iavf_tx_burst_ops iavf_tx_pkt_burst_ops[] = {
+	[IAVF_TX_BURST_DEFAULT].tx_pkt_burst = iavf_xmit_pkts,
+#ifdef RTE_ARCH_X86
+	[IAVF_TX_BURST_VEC_SSE].tx_pkt_burst = iavf_xmit_pkts_vec,
+	[IAVF_TX_BURST_VEC_AVX2].tx_pkt_burst = iavf_xmit_pkts_vec_avx2,
+	[IAVF_TX_BURST_VEC_AVX2_OFFLOAD].tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload,
+#ifdef CC_AVX512_SUPPORT
+	[IAVF_TX_BURST_VEC_AVX512].tx_pkt_burst = iavf_xmit_pkts_vec_avx512,
+	[IAVF_TX_BURST_VEC_AVX512_OFFLOAD].tx_pkt_burst =
+		iavf_xmit_pkts_vec_avx512_offload,
+	[IAVF_TX_BURST_VEC_AVX512_CTX_OFFLOAD].tx_pkt_burst =
+		iavf_xmit_pkts_vec_avx512_ctx_offload,
+#endif
+#endif
+};
+
 static uint16_t
 iavf_recv_pkts_no_poll(void *rx_queue, struct rte_mbuf **rx_pkts,
 				uint16_t nb_pkts)
 {
 	struct iavf_rx_queue *rxq = rx_queue;
+	enum iavf_rx_burst_type rx_burst_type =
+		rxq->vsi->adapter->rx_burst_type;
+
 	if (!rxq->vsi || rxq->vsi->adapter->no_poll)
 		return 0;
 
-	return rxq->vsi->adapter->rx_pkt_burst(rx_queue,
+	return iavf_rx_pkt_burst_ops[rx_burst_type].rx_pkt_burst(rx_queue,
 								rx_pkts, nb_pkts);
 }
 
@@ -3724,10 +3797,13 @@ iavf_xmit_pkts_no_poll(void *tx_queue, struct rte_mbuf **tx_pkts,
 				uint16_t nb_pkts)
 {
 	struct iavf_tx_queue *txq = tx_queue;
+	enum iavf_tx_burst_type tx_burst_type =
+		txq->vsi->adapter->tx_burst_type;
+
 	if (!txq->vsi || txq->vsi->adapter->no_poll)
 		return 0;
 
-	return txq->vsi->adapter->tx_pkt_burst(tx_queue,
+	return iavf_tx_pkt_burst_ops[tx_burst_type].tx_pkt_burst(tx_queue,
 								tx_pkts, nb_pkts);
 }
 
@@ -3738,6 +3814,7 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	enum iavf_rx_burst_type rx_burst_type;
 	int no_poll_on_link_down = adapter->devargs.no_poll_on_link_down;
 	int i;
 	struct iavf_rx_queue *rxq;
@@ -3809,42 +3886,64 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 			}
 			if (use_flex) {
 				dev->rx_pkt_burst = iavf_recv_scattered_pkts_vec_flex_rxd;
+				rx_burst_type = IAVF_RX_BURST_VEC_SSE_SFLEX_RXD;
 				if (use_avx2) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx2_flex_rxd;
-					else
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX2_SFLEX_RXD;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx2_flex_rxd_offload;
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX2_SFRXD_OFFLOAD;
+					}
 				}
 #ifdef CC_AVX512_SUPPORT
 				if (use_avx512) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx512_flex_rxd;
-					else
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX512_SFLEX_RXD;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx512_flex_rxd_offload;
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX512_SFRXD_OFFLOAD;
+					}
 				}
 #endif
 			} else {
 				dev->rx_pkt_burst = iavf_recv_scattered_pkts_vec;
+				rx_burst_type = IAVF_RX_BURST_VEC_SSE_SCATTERED;
 				if (use_avx2) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx2;
-					else
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX2_SCATTERED;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx2_offload;
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX2_SCATTERED_OFFLOAD;
+					}
 				}
 #ifdef CC_AVX512_SUPPORT
 				if (use_avx512) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx512;
-					else
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX512_SCATTERED;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_scattered_pkts_vec_avx512_offload;
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX512_SCATTERED_OFFLOAD;
+					}
 				}
 #endif
 			}
@@ -3875,49 +3974,64 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 			}
 			if (use_flex) {
 				dev->rx_pkt_burst = iavf_recv_pkts_vec_flex_rxd;
+				rx_burst_type = IAVF_RX_BURST_VEC_SSE_FRXD;
 				if (use_avx2) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx2_flex_rxd;
-					else
+					rx_burst_type = IAVF_RX_BURST_VEC_AVX2_FRXD;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx2_flex_rxd_offload;
+					rx_burst_type = IAVF_RX_BURST_VEC_AVX2_FRXD_OFFLOAD;
+					}
 				}
 #ifdef CC_AVX512_SUPPORT
 				if (use_avx512) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx512_flex_rxd;
-					else
+						rx_burst_type = IAVF_RX_BURST_VEC_AVX512_FRXD;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx512_flex_rxd_offload;
+						rx_burst_type =
+							IAVF_RX_BURST_VEC_AVX512_FRXD_OFFLOAD;
+					}
 				}
 #endif
 			} else {
 				dev->rx_pkt_burst = iavf_recv_pkts_vec;
+				rx_burst_type = IAVF_RX_BURST_VEC_SSE;
 				if (use_avx2) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx2;
-					else
+						rx_burst_type = IAVF_RX_BURST_VEC_AVX2;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx2_offload;
+						rx_burst_type = IAVF_RX_BURST_VEC_AVX2_OFFLOAD;
+					}
 				}
 #ifdef CC_AVX512_SUPPORT
 				if (use_avx512) {
-					if (check_ret == IAVF_VECTOR_PATH)
+					if (check_ret == IAVF_VECTOR_PATH) {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx512;
-					else
+						rx_burst_type = IAVF_RX_BURST_VEC_AVX512;
+					} else {
 						dev->rx_pkt_burst =
 							iavf_recv_pkts_vec_avx512_offload;
+						rx_burst_type = IAVF_RX_BURST_VEC_AVX512_OFFLOAD;
+					}
 				}
 #endif
 			}
 		}
 
 		if (no_poll_on_link_down) {
-			adapter->rx_pkt_burst = dev->rx_pkt_burst;
+			adapter->rx_burst_type = rx_burst_type;
 			dev->rx_pkt_burst = iavf_recv_pkts_no_poll;
 		}
 		return;
@@ -3935,9 +4049,10 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 			(void)iavf_rxq_vec_setup(rxq);
 		}
 		dev->rx_pkt_burst = iavf_recv_pkts_vec;
+		rx_burst_type = IAVF_RX_BURST_VEC_SSE;
 
 		if (no_poll_on_link_down) {
-			adapter->rx_pkt_burst = dev->rx_pkt_burst;
+			adapter->rx_burst_type = rx_burst_type;
 			dev->rx_pkt_burst = iavf_recv_pkts_no_poll;
 		}
 		return;
@@ -3946,25 +4061,32 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 	if (dev->data->scattered_rx) {
 		PMD_DRV_LOG(DEBUG, "Using a Scattered Rx callback (port=%d).",
 			    dev->data->port_id);
-		if (use_flex)
+		if (use_flex) {
 			dev->rx_pkt_burst = iavf_recv_scattered_pkts_flex_rxd;
-		else
+			rx_burst_type = IAVF_RX_BURST_SFRXD;
+		} else {
 			dev->rx_pkt_burst = iavf_recv_scattered_pkts;
+			rx_burst_type = IAVF_RX_BURST_SCATTERED;
+		}
 	} else if (adapter->rx_bulk_alloc_allowed) {
 		PMD_DRV_LOG(DEBUG, "Using bulk Rx callback (port=%d).",
 			    dev->data->port_id);
 		dev->rx_pkt_burst = iavf_recv_pkts_bulk_alloc;
+		rx_burst_type = IAVF_RX_BURST_BULK_ALLOC;
 	} else {
 		PMD_DRV_LOG(DEBUG, "Using Basic Rx callback (port=%d).",
 			    dev->data->port_id);
-		if (use_flex)
+		if (use_flex) {
 			dev->rx_pkt_burst = iavf_recv_pkts_flex_rxd;
-		else
+			rx_burst_type = IAVF_RX_BURST_FRXD;
+		} else {
 			dev->rx_pkt_burst = iavf_recv_pkts;
+			rx_burst_type = IAVF_RX_BURST_DEFAULT;
+		}
 	}
 
 	if (no_poll_on_link_down) {
-		adapter->rx_pkt_burst = dev->rx_pkt_burst;
+		adapter->rx_burst_type = rx_burst_type;
 		dev->rx_pkt_burst = iavf_recv_pkts_no_poll;
 	}
 }
@@ -3975,6 +4097,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	enum iavf_tx_burst_type tx_burst_type;
 	int no_poll_on_link_down = adapter->devargs.no_poll_on_link_down;
 #ifdef RTE_ARCH_X86
 	struct iavf_tx_queue *txq;
@@ -4011,10 +4134,12 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 			PMD_DRV_LOG(DEBUG, "Using Vector Tx (port %d).",
 				    dev->data->port_id);
 			dev->tx_pkt_burst = iavf_xmit_pkts_vec;
+			tx_burst_type = IAVF_TX_BURST_VEC_SSE;
 		}
 		if (use_avx2) {
 			if (check_ret == IAVF_VECTOR_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2;
+				tx_burst_type = IAVF_TX_BURST_VEC_AVX2;
 				PMD_DRV_LOG(DEBUG, "Using AVX2 Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else if (check_ret == IAVF_VECTOR_CTX_OFFLOAD_PATH) {
@@ -4023,6 +4148,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 				goto normal;
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx2_offload;
+				tx_burst_type = IAVF_TX_BURST_VEC_AVX2_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX2 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
@@ -4032,15 +4158,18 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		if (use_avx512) {
 			if (check_ret == IAVF_VECTOR_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512;
+				tx_burst_type = IAVF_TX_BURST_VEC_AVX512;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else if (check_ret == IAVF_VECTOR_OFFLOAD_PATH) {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512_offload;
+				tx_burst_type = IAVF_TX_BURST_VEC_AVX512_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
 			} else {
 				dev->tx_pkt_burst = iavf_xmit_pkts_vec_avx512_ctx_offload;
+				tx_burst_type = IAVF_TX_BURST_VEC_AVX512_CTX_OFFLOAD;
 				dev->tx_pkt_prepare = iavf_prep_pkts;
 				PMD_DRV_LOG(DEBUG, "Using AVX512 CONTEXT OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
@@ -4063,7 +4192,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		}
 
 		if (no_poll_on_link_down) {
-			adapter->tx_pkt_burst = dev->tx_pkt_burst;
+			adapter->tx_burst_type = tx_burst_type;
 			dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
 		}
 		return;
@@ -4074,10 +4203,11 @@ normal:
 	PMD_DRV_LOG(DEBUG, "Using Basic Tx callback (port=%d).",
 		    dev->data->port_id);
 	dev->tx_pkt_burst = iavf_xmit_pkts;
+	tx_burst_type = IAVF_TX_BURST_DEFAULT;
 	dev->tx_pkt_prepare = iavf_prep_pkts;
 
 	if (no_poll_on_link_down) {
-		adapter->tx_pkt_burst = dev->tx_pkt_burst;
+		adapter->tx_burst_type = tx_burst_type;
 		dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
 	}
 }

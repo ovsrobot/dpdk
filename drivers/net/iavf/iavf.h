@@ -313,6 +313,44 @@ struct iavf_devargs {
 
 struct iavf_security_ctx;
 
+enum iavf_rx_burst_type {
+	IAVF_RX_BURST_DEFAULT,
+	IAVF_RX_BURST_FRXD,
+	IAVF_RX_BURST_BULK_ALLOC,
+	IAVF_RX_BURST_SCATTERED,
+	IAVF_RX_BURST_SFRXD,
+	IAVF_RX_BURST_VEC_SSE,
+	IAVF_RX_BURST_VEC_AVX2,
+	IAVF_RX_BURST_VEC_AVX2_OFFLOAD,
+	IAVF_RX_BURST_VEC_SSE_FRXD,
+	IAVF_RX_BURST_VEC_AVX2_FRXD,
+	IAVF_RX_BURST_VEC_AVX2_FRXD_OFFLOAD,
+	IAVF_RX_BURST_VEC_SSE_SCATTERED,
+	IAVF_RX_BURST_VEC_AVX2_SCATTERED,
+	IAVF_RX_BURST_VEC_AVX2_SCATTERED_OFFLOAD,
+	IAVF_RX_BURST_VEC_SSE_SFLEX_RXD,
+	IAVF_RX_BURST_VEC_AVX2_SFLEX_RXD,
+	IAVF_RX_BURST_VEC_AVX2_SFRXD_OFFLOAD,
+	IAVF_RX_BURST_VEC_AVX512,
+	IAVF_RX_BURST_VEC_AVX512_OFFLOAD,
+	IAVF_RX_BURST_VEC_AVX512_FRXD,
+	IAVF_RX_BURST_VEC_AVX512_FRXD_OFFLOAD,
+	IAVF_RX_BURST_VEC_AVX512_SCATTERED,
+	IAVF_RX_BURST_VEC_AVX512_SCATTERED_OFFLOAD,
+	IAVF_RX_BURST_VEC_AVX512_SFLEX_RXD,
+	IAVF_RX_BURST_VEC_AVX512_SFRXD_OFFLOAD,
+};
+
+enum iavf_tx_burst_type {
+	IAVF_TX_BURST_DEFAULT,
+	IAVF_TX_BURST_VEC_SSE,
+	IAVF_TX_BURST_VEC_AVX2,
+	IAVF_TX_BURST_VEC_AVX2_OFFLOAD,
+	IAVF_TX_BURST_VEC_AVX512,
+	IAVF_TX_BURST_VEC_AVX512_OFFLOAD,
+	IAVF_TX_BURST_VEC_AVX512_CTX_OFFLOAD,
+};
+
 /* Structure to store private data for each VF instance. */
 struct iavf_adapter {
 	struct iavf_hw hw;
@@ -328,8 +366,8 @@ struct iavf_adapter {
 	bool stopped;
 	bool closed;
 	bool no_poll;
-	eth_rx_burst_t rx_pkt_burst;
-	eth_tx_burst_t tx_pkt_burst;
+	enum iavf_rx_burst_type rx_burst_type;
+	enum iavf_tx_burst_type tx_burst_type;
 	uint16_t fdir_ref_cnt;
 	struct iavf_devargs devargs;
 };
