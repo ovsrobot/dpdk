@@ -72,13 +72,15 @@ fill_multi_seg_mbuf(struct rte_mbuf *m, struct rte_mempool *mp,
 		rte_mbuf_refcnt_set(m, 1);
 		next_mbuf = (struct rte_mbuf *) ((uint8_t *) m +
 					mbuf_hdr_size + segment_sz);
-		m->next = next_mbuf;
-		m = next_mbuf;
+
 		remaining_segments--;
-
+		if (remaining_segments > 0) {
+			m->next = next_mbuf;
+			m = next_mbuf;
+		} else {
+			m->next = NULL;
+		}
 	} while (remaining_segments > 0);
-
-	m->next = NULL;
 }
 
 static void
