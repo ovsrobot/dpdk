@@ -339,6 +339,7 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	struct rte_ether_hdr eth_hdr;
 	uint16_t nb_tx;
 	uint16_t nb_pkt;
+	uint16_t nb_prep;
 	uint16_t vlan_tci, vlan_tci_outer;
 	uint64_t ol_flags = 0;
 	uint64_t tx_offloads;
@@ -396,7 +397,17 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	if (nb_pkt == 0)
 		return false;
 
-	nb_tx = common_fwd_stream_transmit(fs, pkts_burst, nb_pkt);
+	nb_prep = rte_eth_tx_prepare(fs->tx_port, fs->tx_queue,
+		pkts_burst, nb_pkt);
+	if (unlikely(nb_prep != nb_pkt)) {
+		fprintf(stderr,
+			"Preparing packet burst to transmit failed: %s\n",
+			rte_strerror(rte_errno));
+		fs->fwd_dropped += (nb_pkt - nb_prep);
+		rte_pktmbuf_free_bulk(&pkts_burst[nb_prep], nb_pkt - nb_prep);
+	}
+
+	nb_tx = common_fwd_stream_transmit(fs, pkts_burst, nb_prep);
 
 	if (txonly_multi_flow)
 		RTE_PER_LCORE(_src_port_var) -= nb_pkt - nb_tx;
