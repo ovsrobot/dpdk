@@ -113,6 +113,7 @@ cperf_verify_op(struct rte_crypto_op *op,
 	uint8_t *data;
 	uint32_t cipher_offset, auth_offset;
 	uint8_t	cipher, auth;
+	bool is_encrypt = false;
 	int res = 0;
 
 	if (op->status != RTE_CRYPTO_OP_STATUS_SUCCESS)
@@ -154,12 +155,14 @@ cperf_verify_op(struct rte_crypto_op *op,
 		cipher_offset = 0;
 		auth = 0;
 		auth_offset = 0;
+		is_encrypt = options->cipher_op == RTE_CRYPTO_CIPHER_OP_ENCRYPT;
 		break;
 	case CPERF_CIPHER_THEN_AUTH:
 		cipher = 1;
 		cipher_offset = 0;
 		auth = 1;
 		auth_offset = options->test_buffer_size;
+		is_encrypt = options->cipher_op == RTE_CRYPTO_CIPHER_OP_ENCRYPT;
 		break;
 	case CPERF_AUTH_ONLY:
 		cipher = 0;
@@ -172,12 +175,14 @@ cperf_verify_op(struct rte_crypto_op *op,
 		cipher_offset = 0;
 		auth = 1;
 		auth_offset = options->test_buffer_size;
+		is_encrypt = options->cipher_op == RTE_CRYPTO_CIPHER_OP_ENCRYPT;
 		break;
 	case CPERF_AEAD:
 		cipher = 1;
 		cipher_offset = 0;
-		auth = 1;
+		auth = options->aead_op == RTE_CRYPTO_AEAD_OP_ENCRYPT;
 		auth_offset = options->test_buffer_size;
+		is_encrypt = !!auth;
 		break;
 	default:
 		res = 1;
@@ -185,7 +190,7 @@ cperf_verify_op(struct rte_crypto_op *op,
 	}
 
 	if (cipher == 1) {
-		if (options->cipher_op == RTE_CRYPTO_CIPHER_OP_ENCRYPT)
+		if (is_encrypt)
 			res += !!memcmp(data + cipher_offset,
 					vector->ciphertext.data,
 					options->test_buffer_size);
