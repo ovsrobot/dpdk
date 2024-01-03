@@ -305,6 +305,14 @@ rte_eal_init(int argc, char **argv)
 	if (fctret < 0)
 		exit(1);
 
+#ifdef RTE_TOOLCHAIN_MSVC
+	if (eal_plugins_init() < 0) {
+		rte_eal_init_alert("Cannot init plugins");
+		rte_errno = EINVAL;
+		return -1;
+	}
+#endif
+
 	if (eal_option_device_parse()) {
 		rte_errno = ENODEV;
 		return -1;
