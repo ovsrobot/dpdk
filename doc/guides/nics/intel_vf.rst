@@ -111,6 +111,15 @@ For more detail on SR-IOV, please refer to the following documents:
     by setting the ``devargs`` parameter like ``-a 18:01.0,no-poll-on-link-down=1``
     when IAVF is backed by an Intel\ |reg| E810 device or an Intel\ |reg| 700 Series Ethernet device.
 
+    When IAVF is backed by an Intel\ |reg| E810 device or an Intel\ |reg| 700 series Ethernet devices.
+    Set the ``devargs`` parameter ``mbuf_check`` to enable TX diagnostics. For example,
+    ``-a 18:01.0,mbuf_check=mbuf`` or ``-a 18:01.0,mbuf_check=[mbuf,size]``. Supported cases:
+
+    *   mbuf: Check for corrupted mbuf.
+    *   size: Check min/max packet length according to hw spec.
+    *   segment: Check number of mbuf segments not exceed hw limitation.
+    *   offload: Check any unsupported offload flag.
+
 The PCIE host-interface of Intel Ethernet Switch FM10000 Series VF infrastructure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
