@@ -85,7 +85,8 @@ enetc_dev_stop(struct rte_eth_dev *dev)
 }
 
 static const uint32_t *
-enetc_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused)
+enetc_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused,
+		    size_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -94,10 +95,10 @@ enetc_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused)
 		RTE_PTYPE_L4_TCP,
 		RTE_PTYPE_L4_UDP,
 		RTE_PTYPE_L4_SCTP,
-		RTE_PTYPE_L4_ICMP,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_L4_ICMP
 	};
 
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 

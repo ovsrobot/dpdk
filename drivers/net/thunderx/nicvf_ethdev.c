@@ -379,7 +379,8 @@ nicvf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 }
 
 static const uint32_t *
-nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev,
+			 size_t *no_of_elements)
 {
 	size_t copied;
 	static uint32_t ptypes[32];
@@ -391,15 +392,13 @@ nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 		RTE_PTYPE_L3_IPV6_EXT,
 		RTE_PTYPE_L4_TCP,
 		RTE_PTYPE_L4_UDP,
-		RTE_PTYPE_L4_FRAG,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_L4_FRAG
 	};
 	static const uint32_t ptypes_tunnel[] = {
 		RTE_PTYPE_TUNNEL_GRE,
 		RTE_PTYPE_TUNNEL_GENEVE,
 		RTE_PTYPE_TUNNEL_VXLAN,
-		RTE_PTYPE_TUNNEL_NVGRE,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_TUNNEL_NVGRE
 	};
 	static const uint32_t ptypes_end = RTE_PTYPE_UNKNOWN;
 
@@ -414,6 +413,7 @@ nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 	memcpy((char *)ptypes + copied, &ptypes_end, sizeof(ptypes_end));
 
 	/* All Ptypes are supported in all Rx functions. */
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 

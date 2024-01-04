@@ -448,7 +448,8 @@ typedef int (*eth_dev_infos_get_t)(struct rte_eth_dev *dev,
 				   struct rte_eth_dev_info *dev_info);
 
 /** @internal Get supported ptypes of an Ethernet device. */
-typedef const uint32_t *(*eth_dev_supported_ptypes_get_t)(struct rte_eth_dev *dev);
+typedef const uint32_t *(*eth_dev_supported_ptypes_get_t)(struct rte_eth_dev *dev,
+				   size_t *no_of_elements);
 
 /**
  * @internal

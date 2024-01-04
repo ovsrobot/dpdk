@@ -1971,7 +1971,8 @@ hns3_rx_scattered_calc(struct rte_eth_dev *dev)
 }
 
 const uint32_t *
-hns3_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+hns3_dev_supported_ptypes_get(struct rte_eth_dev *dev,
+		    size_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -1997,8 +1998,7 @@ hns3_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 		RTE_PTYPE_INNER_L4_SCTP,
 		RTE_PTYPE_INNER_L4_ICMP,
 		RTE_PTYPE_TUNNEL_GRENAT,
-		RTE_PTYPE_TUNNEL_NVGRE,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_TUNNEL_NVGRE
 	};
 	static const uint32_t adv_layout_ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -2025,8 +2025,7 @@ hns3_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 		RTE_PTYPE_INNER_L4_UDP,
 		RTE_PTYPE_INNER_L4_TCP,
 		RTE_PTYPE_INNER_L4_SCTP,
-		RTE_PTYPE_INNER_L4_ICMP,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_INNER_L4_ICMP
 	};
 	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -2034,10 +2033,13 @@ hns3_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 	    dev->rx_pkt_burst == hns3_recv_scattered_pkts ||
 	    dev->rx_pkt_burst == hns3_recv_pkts_vec ||
 	    dev->rx_pkt_burst == hns3_recv_pkts_vec_sve) {
-		if (hns3_dev_get_support(hw, RXD_ADV_LAYOUT))
+		if (hns3_dev_get_support(hw, RXD_ADV_LAYOUT)) {
+			*no_of_elements = RTE_DIM(adv_layout_ptypes);
 			return adv_layout_ptypes;
-		else
+		} else {
+			*no_of_elements = RTE_DIM(ptypes);
 			return ptypes;
+		}
 	}
 
 	return NULL;

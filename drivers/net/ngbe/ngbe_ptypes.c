@@ -92,7 +92,7 @@ static u32 ngbe_ptype_lookup[NGBE_PTID_MAX] __rte_cache_aligned = {
 	TPTE(0xCD, ETHER, IPV6, NONE, IP, NONE, IPV6, SCTP),
 };
 
-u32 *ngbe_get_supported_ptypes(void)
+u32 *ngbe_get_supported_ptypes(size_t *no_of_elements)
 {
 	static u32 ptypes[] = {
 		/* For non-vec functions,
@@ -114,6 +114,7 @@ u32 *ngbe_get_supported_ptypes(void)
 		RTE_PTYPE_UNKNOWN
 	};
 
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 

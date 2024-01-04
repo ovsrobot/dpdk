@@ -93,7 +93,8 @@ static void axgbe_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	struct rte_eth_rxq_info *qinfo);
 static void axgbe_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	struct rte_eth_txq_info *qinfo);
-const uint32_t *axgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+const uint32_t *axgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev,
+	size_t *no_of_elements);
 static int axgb_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
 
 static int
@@ -1454,7 +1455,8 @@ axgbe_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	qinfo->conf.tx_free_thresh = txq->free_thresh;
 }
 const uint32_t *
-axgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+axgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev,
+	size_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -1480,12 +1482,13 @@ axgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 		RTE_PTYPE_INNER_L4_NONFRAG,
 		RTE_PTYPE_INNER_L4_SCTP,
 		RTE_PTYPE_INNER_L4_TCP,
-		RTE_PTYPE_INNER_L4_UDP,
-		RTE_PTYPE_UNKNOWN
+		RTE_PTYPE_INNER_L4_UDP
 	};
 
-	if (dev->rx_pkt_burst == axgbe_recv_pkts)
+	if (dev->rx_pkt_burst == axgbe_recv_pkts) {
+		*no_of_elements = RTE_DIM(ptypes);
 		return ptypes;
+	}
 	return NULL;
 }
 
