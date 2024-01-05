@@ -185,10 +185,18 @@ struct cpfl_repr {
 	bool func_up; /* If the represented function is up */
 };
 
+struct cpfl_tdi_table_node;
+TAILQ_HEAD(cpfl_tdi_table_list, cpfl_tdi_table_node);
+
+struct cpfl_tdi_action_node;
+TAILQ_HEAD(cpfl_tdi_action_list, cpfl_tdi_action_node);
+
 struct cpfl_flow_parser {
 	struct cpfl_flow_js_parser *fixed_parser;
 	struct cpfl_tdi_program *p4_parser;
 	bool is_p4_parser;
+	struct cpfl_tdi_table_list tdi_table_list;
+	struct cpfl_tdi_action_list tdi_action_list;
 };
 
 struct cpfl_metadata_chunk {

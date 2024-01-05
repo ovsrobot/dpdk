@@ -6,6 +6,7 @@
 
 #include "cpfl_flow_parser.h"
 #include "cpfl_tdi_parser.h"
+#include "cpfl_tdi.h"
 
 static enum rte_flow_item_type
 cpfl_get_item_type_by_str(const char *type)
@@ -976,6 +977,13 @@ cpfl_parser_create(struct cpfl_flow_parser *flow_parser, const char *filename)
 		flow_parser->p4_parser = prog;
 		flow_parser->fixed_parser = NULL;
 		flow_parser->is_p4_parser = true;
+
+		ret = cpfl_tdi_build(flow_parser);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "Failed to build tdi program %s", filename);
+			rte_free(prog);
+			return -EINVAL;
+		}
 	} else {
 		PMD_DRV_LOG(NOTICE, "flow parser mode is fixed function mode.");
 		parser = rte_zmalloc("flow_parser", sizeof(struct cpfl_flow_js_parser), 0);
