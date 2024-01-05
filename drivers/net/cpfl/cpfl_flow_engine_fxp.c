@@ -503,20 +503,25 @@ cpfl_fxp_parse_pattern_action(struct rte_eth_dev *dev,
 	struct cpfl_rule_info_meta *rim;
 	int ret;
 
+	if (adapter->flow_parser.is_p4_parser)
+		return -EINVAL;
+
 	ret = cpfl_fxp_get_metadata_port(itf, actions);
 	if (!ret) {
 		PMD_DRV_LOG(ERR, "Fail to save metadata.");
 		return -EINVAL;
 	}
 
-	ret = cpfl_flow_parse_items(itf, adapter->flow_parser, pattern, attr, &pr_action);
+	ret = cpfl_flow_parse_items(itf, adapter->flow_parser.fixed_parser, pattern, attr,
+				    &pr_action);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "No Match pattern support.");
 		return -EINVAL;
 	}
 
 	if (cpfl_is_mod_action(actions)) {
-		ret = cpfl_flow_parse_actions(adapter->flow_parser, actions, mr_action);
+		ret = cpfl_flow_parse_actions(adapter->flow_parser.fixed_parser,
+					      actions, mr_action);
 		if (ret) {
 			PMD_DRV_LOG(ERR, "action parse fails.");
 			return -EINVAL;
