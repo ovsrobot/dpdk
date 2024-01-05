@@ -15,6 +15,7 @@ Contributor's Guidelines
     documentation
     unit_test
     new_library
+    library_dependency
     patches
     vulnerability
     stable
