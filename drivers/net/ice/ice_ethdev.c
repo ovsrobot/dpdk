@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <rte_tailq.h>
+#include <rte_os_shim.h>
 
 #include "eal_firmware.h"
 
@@ -34,6 +35,7 @@
 #define ICE_HW_DEBUG_MASK_ARG     "hw_debug_mask"
 #define ICE_ONE_PPS_OUT_ARG       "pps_out"
 #define ICE_RX_LOW_LATENCY_ARG    "rx_low_latency"
+#define ICE_MBUF_CHECK_ARG       "mbuf_check"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -49,6 +51,7 @@ static const char * const ice_valid_args[] = {
 	ICE_ONE_PPS_OUT_ARG,
 	ICE_RX_LOW_LATENCY_ARG,
 	ICE_DEFAULT_MAC_DISABLE,
+	ICE_MBUF_CHECK_ARG,
 	NULL
 };
 
@@ -318,6 +321,14 @@ static const struct ice_xstats_name_off ice_stats_strings[] = {
 
 #define ICE_NB_ETH_XSTATS (sizeof(ice_stats_strings) / \
 		sizeof(ice_stats_strings[0]))
+
+static const struct ice_xstats_name_off ice_mbuf_strings[] = {
+	{"tx_mbuf_error_packets", offsetof(struct ice_mbuf_stats,
+		tx_pkt_errors)},
+};
+
+#define ICE_NB_MBUF_XSTATS (sizeof(ice_mbuf_strings) / \
+		sizeof(ice_mbuf_strings[0]))
 
 static const struct ice_xstats_name_off ice_hw_port_strings[] = {
 	{"tx_link_down_dropped", offsetof(struct ice_hw_port_stats,
@@ -2060,6 +2071,50 @@ handle_pps_out_arg(__rte_unused const char *key, const char *value,
 	return 0;
 }
 
+static int
+ice_parse_mbuf_check(__rte_unused const char *key, const char *value, void *args)
+{
+	char *cur;
+	char *tmp;
+	int str_len;
+	int valid_len;
+
+	int ret = 0;
+	uint64_t *mc_flags = args;
+	char *str2 = strdup(value);
+	if (str2 == NULL)
+		return -1;
+
+	str_len = strlen(str2);
+	if (str2[0] == '[' && str2[str_len - 1] == ']') {
+		if (str_len < 3) {
+			ret = -1;
+			goto mdd_end;
+		}
+		valid_len = str_len - 2;
+		memmove(str2, str2 + 1, valid_len);
+		memset(str2 + valid_len, '\0', 2);
+	}
+	cur = strtok_r(str2, ",", &tmp);
+	while (cur != NULL) {
+		if (!strcmp(cur, "mbuf"))
+			*mc_flags |= ICE_MBUF_CHECK_F_TX_MBUF;
+		else if (!strcmp(cur, "size"))
+			*mc_flags |= ICE_MBUF_CHECK_F_TX_SIZE;
+		else if (!strcmp(cur, "segment"))
+			*mc_flags |= ICE_MBUF_CHECK_F_TX_SEGMENT;
+		else if (!strcmp(cur, "offload"))
+			*mc_flags |= ICE_MBUF_CHECK_F_TX_OFFLOAD;
+		else
+			PMD_DRV_LOG(ERR, "Unsupported mdd check type: %s", cur);
+		cur = strtok_r(NULL, ",", &tmp);
+	}
+
+mdd_end:
+	free(str2);
+	return ret;
+}
+
 static int ice_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct ice_adapter *ad =
@@ -2115,6 +2170,14 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 				 &handle_pps_out_arg, &ad->devargs);
 	if (ret)
 		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_MBUF_CHECK_ARG,
+				 &ice_parse_mbuf_check, &ad->mc_flags);
+	if (ret)
+		goto bail;
+
+	if (ad->mc_flags)
+		ad->devargs.mbuf_check = 1;
 
 	ret = rte_kvargs_process(kvlist, ICE_RX_LOW_LATENCY_ARG,
 				 &parse_bool, &ad->devargs.rx_low_latency);
@@ -3778,6 +3841,7 @@ ice_dev_start(struct rte_eth_dev *dev)
 	max_frame_size = pf->dev_data->mtu ?
 		pf->dev_data->mtu + ICE_ETH_OVERHEAD :
 		ICE_FRAME_SIZE_MAX;
+	ad->max_pkt_len = max_frame_size;
 
 	/* Set the max frame size to HW*/
 	ice_aq_set_mac_cfg(hw, max_frame_size, false, NULL);
@@ -6134,6 +6198,9 @@ ice_stats_reset(struct rte_eth_dev *dev)
 	/* read the stats, reading current register values into offset */
 	ice_read_stats_registers(pf, hw);
 
+	memset(&pf->mbuf_stats, 0,
+		sizeof(struct ice_mbuf_stats));
+
 	return 0;
 }
 
@@ -6142,9 +6209,22 @@ ice_xstats_calc_num(void)
 {
 	uint32_t num;
 
-	num = ICE_NB_ETH_XSTATS + ICE_NB_HW_PORT_XSTATS;
+	num = ICE_NB_ETH_XSTATS + ICE_NB_MBUF_XSTATS + ICE_NB_HW_PORT_XSTATS;
 
 	return num;
+}
+
+static void
+ice_update_mbuf_stats(struct rte_eth_dev *ethdev,
+		struct ice_mbuf_stats *mbuf_stats)
+{
+	uint16_t idx;
+	struct ice_tx_queue *txq;
+
+	for (idx = 0; idx < ethdev->data->nb_tx_queues; idx++) {
+		txq = ethdev->data->tx_queues[idx];
+		mbuf_stats->tx_pkt_errors += txq->mbuf_errors;
+	}
 }
 
 static int
@@ -6153,6 +6233,9 @@ ice_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 {
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_adapter *adapter =
+		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct ice_mbuf_stats mbuf_stats = {0};
 	unsigned int i;
 	unsigned int count;
 	struct ice_hw_port_stats *hw_stats = &pf->stats;
@@ -6168,11 +6251,23 @@ ice_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 
 	count = 0;
 
+	if (adapter->devargs.mbuf_check)
+		ice_update_mbuf_stats(dev, &mbuf_stats);
+
 	/* Get stats from ice_eth_stats struct */
 	for (i = 0; i < ICE_NB_ETH_XSTATS; i++) {
 		xstats[count].value =
 			*(uint64_t *)((char *)&hw_stats->eth +
 				      ice_stats_strings[i].offset);
+		xstats[count].id = count;
+		count++;
+	}
+
+	/* Get stats from ice_mbuf_stats struct */
+	for (i = 0; i < ICE_NB_MBUF_XSTATS; i++) {
+		xstats[count].value =
+			*(uint64_t *)((char *)&mbuf_stats +
+					ice_mbuf_strings[i].offset);
 		xstats[count].id = count;
 		count++;
 	}
@@ -6204,6 +6299,13 @@ static int ice_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 	/* Get stats from ice_eth_stats struct */
 	for (i = 0; i < ICE_NB_ETH_XSTATS; i++) {
 		strlcpy(xstats_names[count].name, ice_stats_strings[i].name,
+			sizeof(xstats_names[count].name));
+		count++;
+	}
+
+	/* Get stats from ice_mbuf_stats struct */
+	for (i = 0; i < ICE_NB_MBUF_XSTATS; i++) {
+		strlcpy(xstats_names[count].name, ice_mbuf_strings[i].name,
 			sizeof(xstats_names[count].name));
 		count++;
 	}

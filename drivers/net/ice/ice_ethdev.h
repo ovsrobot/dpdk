@@ -505,6 +505,10 @@ struct ice_tm_conf {
 	bool committed;
 };
 
+struct ice_mbuf_stats {
+	uint64_t tx_pkt_errors;
+};
+
 struct ice_pf {
 	struct ice_adapter *adapter; /* The adapter this PF associate to */
 	struct ice_vsi *main_vsi; /* pointer to main VSI structure */
@@ -534,6 +538,7 @@ struct ice_pf {
 	uint16_t fdir_fltr_cnt[ICE_FLTR_PTYPE_MAX][ICE_FD_HW_SEG_MAX];
 	struct ice_hw_port_stats stats_offset;
 	struct ice_hw_port_stats stats;
+	struct ice_mbuf_stats mbuf_stats;
 	/* internal packet statistics, it should be excluded from the total */
 	struct ice_eth_stats internal_stats_offset;
 	struct ice_eth_stats internal_stats;
@@ -568,6 +573,7 @@ struct ice_devargs {
 	uint8_t xtr_flag_offs[PROTO_XTR_MAX];
 	/* Name of the field. */
 	char xtr_field_name[RTE_MBUF_DYN_NAMESIZE];
+	int mbuf_check;
 };
 
 /**
@@ -584,6 +590,21 @@ struct ice_fdir_prof_info {
 struct ice_rss_prof_info {
 	struct ice_parser_profile prof;
 	bool symm;
+};
+
+#define ICE_MBUF_CHECK_F_TX_MBUF        (1ULL << 0)
+#define ICE_MBUF_CHECK_F_TX_SIZE        (1ULL << 1)
+#define ICE_MBUF_CHECK_F_TX_SEGMENT     (1ULL << 2)
+#define ICE_MBUF_CHECK_F_TX_OFFLOAD     (1ULL << 3)
+
+enum ice_tx_burst_type {
+	ICE_TX_DEFAULT,
+	ICE_TX_SIMPLE,
+	ICE_TX_VEC_SSE,
+	ICE_TX_VEC_AVX2,
+	ICE_TX_VEC_AVX2_OFFLOAD,
+	ICE_TX_VEC_AVX512,
+	ICE_TX_VEC_AVX512_OFFLOAD,
 };
 
 /**
@@ -616,6 +637,9 @@ struct ice_adapter {
 	/* Set bit if the engine is disabled */
 	unsigned long disabled_engine_mask;
 	struct ice_parser *psr;
+	uint64_t mc_flags; /* mbuf check flags. */
+	uint16_t max_pkt_len; /* Maximum packet length */
+	enum ice_tx_burst_type tx_burst_type;
 #ifdef RTE_ARCH_X86
 	bool rx_use_avx2;
 	bool rx_use_avx512;
