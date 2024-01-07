@@ -77,6 +77,8 @@ def main():
         write_header(out, args.source)
         for path in args.file:
             elffile = ELFFile(open_input(path))
+            if elffile['e_machine'] != 'EM_BPF':
+                sys.exit(f'{path} is not BPF')
             sections = load_sections(elffile)
             for name, insns in sections:
                 dump_section(name, insns, out)
