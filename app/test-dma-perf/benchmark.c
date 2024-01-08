@@ -144,11 +144,18 @@ cache_flush_buf(__rte_unused struct rte_mbuf **array,
 
 static int
 vchan_data_populate(uint32_t dev_id, struct rte_dma_vchan_conf *qconf,
-		    struct test_configure *cfg)
+		    struct test_configure *cfg, uint16_t dev_num)
 {
 	struct rte_dma_info info;
 
 	qconf->direction = cfg->transfer_dir;
+
+	/* If its a bi-directional test, configure odd device for inbound dma
+	 * transfer and even device for outbound dma transfer.
+	 */
+	if (cfg->is_bidir)
+		qconf->direction = (dev_num % 2) ? RTE_DMA_DIR_MEM_TO_DEV :
+				   RTE_DMA_DIR_DEV_TO_MEM;
 
 	rte_dma_info_get(dev_id, &info);
 	if (!(RTE_BIT64(qconf->direction) & info.dev_capa))
@@ -181,14 +188,15 @@ vchan_data_populate(uint32_t dev_id, struct rte_dma_vchan_conf *qconf,
 
 /* Configuration of device. */
 static void
-configure_dmadev_queue(uint32_t dev_id, struct test_configure *cfg, uint8_t ptrs_max)
+configure_dmadev_queue(uint32_t dev_id, struct test_configure *cfg, uint8_t ptrs_max,
+		       uint16_t dev_num)
 {
 	uint16_t vchan = 0;
 	struct rte_dma_info info;
 	struct rte_dma_conf dev_config = { .nb_vchans = 1 };
 	struct rte_dma_vchan_conf qconf = { 0 };
 
-	if (vchan_data_populate(dev_id, &qconf, cfg) != 0)
+	if (vchan_data_populate(dev_id, &qconf, cfg, dev_num) != 0)
 		rte_exit(EXIT_FAILURE, "Error with vchan data populate.\n");
 
 	if (rte_dma_configure(dev_id, &dev_config) != 0)
@@ -235,7 +243,7 @@ config_dmadevs(struct test_configure *cfg)
 		}
 
 		ldm->dma_ids[i] = dev_id;
-		configure_dmadev_queue(dev_id, cfg, ptrs_max);
+		configure_dmadev_queue(dev_id, cfg, ptrs_max, nb_dmadevs);
 		++nb_dmadevs;
 	}
 
@@ -433,7 +441,8 @@ setup_memory_env(struct test_configure *cfg,
 			 struct rte_dma_sge **src_sges, struct rte_dma_sge **dst_sges)
 {
 	static struct rte_mbuf_ext_shared_info *ext_buf_info;
-	unsigned int buf_size = cfg->buf_size.cur;
+	unsigned int cur_buf_size = cfg->buf_size.cur;
+	unsigned int buf_size = cur_buf_size + RTE_PKTMBUF_HEADROOM;
 	unsigned int nr_sockets;
 	uint32_t nr_buf = cfg->nr_buf;
 	uint32_t i;
@@ -449,7 +458,7 @@ setup_memory_env(struct test_configure *cfg,
 			nr_buf,
 			0,
 			0,
-			buf_size + RTE_PKTMBUF_HEADROOM,
+			buf_size,
 			cfg->src_numa_node);
 	if (src_pool == NULL) {
 		PRINT_ERR("Error with source mempool creation.\n");
@@ -460,7 +469,7 @@ setup_memory_env(struct test_configure *cfg,
 			nr_buf,
 			0,
 			0,
-			buf_size + RTE_PKTMBUF_HEADROOM,
+			buf_size,
 			cfg->dst_numa_node);
 	if (dst_pool == NULL) {
 		PRINT_ERR("Error with destination mempool creation.\n");
@@ -490,8 +499,8 @@ setup_memory_env(struct test_configure *cfg,
 	}
 
 	for (i = 0; i < nr_buf; i++) {
-		memset(rte_pktmbuf_mtod((*srcs)[i], void *), rte_rand(), buf_size);
-		memset(rte_pktmbuf_mtod((*dsts)[i], void *), 0, buf_size);
+		memset(rte_pktmbuf_mtod((*srcs)[i], void *), rte_rand(), cur_buf_size);
+		memset(rte_pktmbuf_mtod((*dsts)[i], void *), 0, cur_buf_size);
 	}
 
 	if (cfg->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM ||
@@ -503,24 +512,38 @@ setup_memory_env(struct test_configure *cfg,
 		}
 	}
 
-	if (cfg->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM) {
+	if (cfg->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM && !cfg->is_bidir) {
 		ext_buf_info->free_cb = dummy_free_ext_buf;
 		ext_buf_info->fcb_opaque = NULL;
 		for (i = 0; i < nr_buf; i++) {
 			/* Using mbuf structure to hold remote iova address. */
-			rte_pktmbuf_attach_extbuf((*srcs)[i], (void *)cfg->raddr,
-						  (rte_iova_t)cfg->raddr, 0, ext_buf_info);
+			rte_pktmbuf_attach_extbuf((*srcs)[i], (void *)(cfg->raddr + (i * buf_size)),
+						  (rte_iova_t)(cfg->raddr + (i * buf_size)), 0,
+						  ext_buf_info);
 			rte_mbuf_ext_refcnt_update(ext_buf_info, 1);
 		}
 	}
 
-	if (cfg->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV) {
+	if (cfg->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV && !cfg->is_bidir) {
 		ext_buf_info->free_cb = dummy_free_ext_buf;
 		ext_buf_info->fcb_opaque = NULL;
 		for (i = 0; i < nr_buf; i++) {
 			/* Using mbuf structure to hold remote iova address. */
-			rte_pktmbuf_attach_extbuf((*dsts)[i], (void *)cfg->raddr,
-						  (rte_iova_t)cfg->raddr, 0, ext_buf_info);
+			rte_pktmbuf_attach_extbuf((*dsts)[i], (void *)(cfg->raddr + (i * buf_size)),
+						  (rte_iova_t)(cfg->raddr + (i * buf_size)), 0,
+						  ext_buf_info);
+			rte_mbuf_ext_refcnt_update(ext_buf_info, 1);
+		}
+	}
+
+	if (cfg->is_bidir) {
+		ext_buf_info->free_cb = dummy_free_ext_buf;
+		ext_buf_info->fcb_opaque = NULL;
+		for (i = 0; i < nr_buf; i++) {
+			/* Using mbuf structure to hold remote iova address. */
+			rte_pktmbuf_attach_extbuf((*srcs)[i], (void *)(cfg->raddr + (i * buf_size)),
+						  (rte_iova_t)(cfg->raddr + (i * buf_size)), 0,
+						  ext_buf_info);
 			rte_mbuf_ext_refcnt_update(ext_buf_info, 1);
 		}
 	}
@@ -646,16 +669,30 @@ mem_copy_benchmark(struct test_configure *cfg)
 		lcores[i]->nr_buf = (uint32_t)(nr_buf / nb_workers);
 		lcores[i]->buf_size = buf_size;
 		lcores[i]->test_secs = test_secs;
-		lcores[i]->srcs = srcs + offset;
-		lcores[i]->dsts = dsts + offset;
 		lcores[i]->scenario_id = cfg->scenario_id;
 		lcores[i]->lcore_id = lcore_id;
 
-		if (cfg->is_sg) {
-			lcores[i]->src_ptrs = cfg->src_ptrs;
-			lcores[i]->dst_ptrs = cfg->dst_ptrs;
-			lcores[i]->src_sges = src_sges + (nr_sgsrc / nb_workers * i);
-			lcores[i]->dst_sges = dst_sges + (nr_sgdst / nb_workers * i);
+		/* Number of workers is equal to number of devices. In case of bi-directional
+		 * dma, use 1 device for mem-to-dev and 1 device for dev-to-mem.
+		 */
+		if (cfg->is_dma && cfg->is_bidir && (i % 2 != 0)) {
+			lcores[i]->dsts = srcs + offset;
+			lcores[i]->srcs = dsts + offset;
+			if (cfg->is_sg) {
+				lcores[i]->dst_ptrs = cfg->src_ptrs;
+				lcores[i]->src_ptrs = cfg->dst_ptrs;
+				lcores[i]->dst_sges = src_sges + (nr_sgsrc / nb_workers * i);
+				lcores[i]->src_sges = dst_sges + (nr_sgdst / nb_workers * i);
+			}
+		} else {
+			lcores[i]->srcs = srcs + offset;
+			lcores[i]->dsts = dsts + offset;
+			if (cfg->is_sg) {
+				lcores[i]->src_ptrs = cfg->src_ptrs;
+				lcores[i]->dst_ptrs = cfg->dst_ptrs;
+				lcores[i]->src_sges = src_sges + (nr_sgsrc / nb_workers * i);
+				lcores[i]->dst_sges = dst_sges + (nr_sgdst / nb_workers * i);
+			}
 		}
 
 		if (cfg->is_dma) {
@@ -699,7 +736,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 
 	rte_eal_mp_wait_lcore();
 
-	if (!cfg->is_sg) {
+	if (!cfg->is_sg && cfg->transfer_dir == RTE_DMA_DIR_MEM_TO_MEM) {
 		for (i = 0; i < (nr_buf / nb_workers) * nb_workers; i++) {
 			if (memcmp(rte_pktmbuf_mtod(srcs[i], void *),
 					rte_pktmbuf_mtod(dsts[i], void *),
@@ -709,7 +746,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 				goto out;
 			}
 		}
-	} else {
+	} else if (cfg->is_sg && cfg->transfer_dir == RTE_DMA_DIR_MEM_TO_MEM) {
 		size_t src_remsz = buf_size % cfg->src_ptrs;
 		size_t dst_remsz = buf_size % cfg->dst_ptrs;
 		size_t src_sz = buf_size / cfg->src_ptrs;
@@ -756,6 +793,8 @@ mem_copy_benchmark(struct test_configure *cfg)
 		calc_result(buf_size, nr_buf, nb_workers, test_secs,
 			lcores[i]->worker_info.test_cpl,
 			&memory, &avg_cycles, &bandwidth, &mops);
+		if (cfg->is_bidir)
+			printf("%s direction\n", i % 2 ? "MEM-to-DEV" : "DEV-to-MEM");
 		output_result(cfg, lcores[i], kick_batch, avg_cycles, buf_size,
 			nr_buf / nb_workers, memory, bandwidth, mops);
 		mops_total += mops;
@@ -769,7 +808,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 
 out:
 
-	if (cfg->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM)
+	if (cfg->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM || cfg->is_bidir)
 		m = srcs;
 	else if (cfg->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV)
 		m = dsts;

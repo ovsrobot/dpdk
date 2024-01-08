@@ -66,6 +66,7 @@ struct test_configure {
 	uint8_t pfid;
 	uint16_t vfid;
 	uintptr_t raddr;
+	bool is_bidir;
 };
 
 int mem_copy_benchmark(struct test_configure *cfg);

@@ -342,6 +342,7 @@ load_configs(const char *path)
 		*src_ptrs_str, *dst_ptrs_str;
 	const char *skip;
 	const char *raddr, *scoreid, *dcoreid, *vfid, *pfid;
+	const char *xfer_mode;
 	int args_nr, nb_vp;
 	bool is_dma;
 
@@ -393,6 +394,20 @@ load_configs(const char *path)
 				test_case->is_valid = false;
 				continue;
 			}
+			xfer_mode = rte_cfgfile_get_entry(cfgfile, section_name, "xfer_mode");
+			if (xfer_mode) {
+				int xmode = atoi(xfer_mode);
+				if (xmode == 1) {
+					if (test_case->transfer_dir == RTE_DMA_DIR_MEM_TO_MEM) {
+						printf("Error: Invalid configuration. For mem to"
+						       " mem dma transfer bi-directional cannot be"
+						       " configured.\n");
+						test_case->is_valid = false;
+						continue;
+					}
+					test_case->is_bidir = true;
+				}
+			}
 			is_dma = true;
 		} else if (strcmp(case_type, CPU_MEM_COPY) == 0) {
 			test_case->test_type = TEST_TYPE_CPU_MEM_COPY;
@@ -405,7 +420,7 @@ load_configs(const char *path)
 		}
 
 		if (test_case->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV ||
-			test_case->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM) {
+		    test_case->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM) {
 			char *endptr;
 
 			raddr = rte_cfgfile_get_entry(cfgfile, section_name, "raddr");
@@ -434,7 +449,7 @@ load_configs(const char *path)
 
 		}
 
-		if (test_case->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM) {
+		if (test_case->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM || test_case->is_bidir) {
 			scoreid = rte_cfgfile_get_entry(cfgfile, section_name, "scoreid");
 			if (scoreid == NULL) {
 				printf("Error: No scoreid configured for case%d.\n", i + 1);
@@ -444,7 +459,7 @@ load_configs(const char *path)
 			test_case->scoreid = (uint8_t)atoi(scoreid);
 		}
 
-		if (test_case->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV) {
+		if (test_case->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV || test_case->is_bidir) {
 			dcoreid = rte_cfgfile_get_entry(cfgfile, section_name, "dcoreid");
 			if (dcoreid == NULL) {
 				printf("Error: No dcoreid configured for case%d.\n", i + 1);
