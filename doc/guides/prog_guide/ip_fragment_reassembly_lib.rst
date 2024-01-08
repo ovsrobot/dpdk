@@ -43,12 +43,12 @@ Note that all update/lookup operations on Fragment Table are not thread safe.
 So if different execution contexts (threads/processes) will access the same table simultaneously,
 then some external syncing mechanism have to be provided.
 
-Each table entry can hold information about packets of up to ``RTE_LIBRTE_IP_FRAG_MAX_FRAG`` fragments,
-where ``RTE_LIBRTE_IP_FRAG_MAX_FRAG`` defaults to:
+Each table entry can hold information about packets of up to ``RTE_IP_FRAG_MAX_FRAG`` fragments,
+where ``RTE_IP_FRAG_MAX_FRAG`` defaults to:
 
 .. literalinclude:: ../../../config/rte_config.h
     :language: c
-    :start-at: #define RTE_LIBRTE_IP_FRAG_MAX_FRAG
+    :start-at: #define RTE_IP_FRAG_MAX_FRAG
     :lines: 1
 
 Code example, that demonstrates creation of a new Fragment table:
@@ -69,7 +69,7 @@ Also, entries that resides in the table longer then <max_cycles> are considered 
 and could be removed/replaced by the new ones.
 
 Note that reassembly demands a lot of mbuf's to be allocated.
-At any given time up to (2 \* bucket_entries \* RTE_LIBRTE_IP_FRAG_MAX \* <maximum number of mbufs per packet>)
+At any given time up to (2 \* bucket_entries \* RTE_IP_FRAG_MAX_FRAG \* <maximum number of mbufs per packet>)
 can be stored inside Fragment Table waiting for remaining fragments.
 
 Packet Reassembly
