@@ -273,8 +273,8 @@ gve_verify_driver_compatibility(struct gve_priv *priv)
 		},
 	};
 
-	populate_driver_version_strings((char *)driver_info->os_version_str1,
-			(char *)driver_info->os_version_str2);
+	rte_strscpy(driver_info.os_version_str1, OS_VERSION_STRLEN,
+		    rte_version());
 
 	err = gve_adminq_verify_driver_compatibility(priv,
 		sizeof(struct gve_driver_info),

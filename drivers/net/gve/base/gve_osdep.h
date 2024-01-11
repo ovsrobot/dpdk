@@ -171,17 +171,4 @@ gve_free_dma_mem(struct gve_dma_mem *mem)
 	mem->pa = 0;
 }
 
-static inline void
-populate_driver_version_strings(char *str1, char *str2)
-{
-	struct utsname uts;
-	if (uname(&uts) >= 0) {
-		/* release */
-		rte_strscpy(str1, uts.release,
-			OS_VERSION_STRLEN);
-		/* version */
-		rte_strscpy(str2, uts.version,
-			OS_VERSION_STRLEN);
-	}
-}
 #endif /* _GVE_OSDEP_H_ */
