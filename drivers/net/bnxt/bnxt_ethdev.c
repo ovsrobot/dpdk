@@ -6384,7 +6384,7 @@ static int bnxt_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	if (pci_dev->device.devargs) {
 		ret = rte_eth_devargs_parse(pci_dev->device.devargs->args,
 					    &eth_da);
-		if (ret)
+		if (ret < 0)
 			return ret;
 	}
 

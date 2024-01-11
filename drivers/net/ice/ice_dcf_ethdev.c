@@ -2042,7 +2042,7 @@ eth_ice_dcf_pci_probe(__rte_unused struct rte_pci_driver *pci_drv,
 		return 1;
 
 	ret = rte_eth_devargs_parse(pci_dev->device.devargs->args, &eth_da);
-	if (ret)
+	if (ret < 0)
 		return ret;
 
 	ret = rte_eth_dev_pci_generic_probe(pci_dev,

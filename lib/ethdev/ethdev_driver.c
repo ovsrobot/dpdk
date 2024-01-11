@@ -470,14 +470,13 @@ eth_dev_devargs_tokenise(struct rte_kvargs *arglist, const char *str_in)
 }
 
 int
-rte_eth_devargs_parse(const char *dargs, struct rte_eth_devargs *eth_da)
+rte_eth_devargs_parse(const char *dargs, struct rte_eth_devargs *eth_devargs)
 {
-	struct rte_kvargs args;
+	struct rte_eth_devargs *eth_da;
 	struct rte_kvargs_pair *pair;
-	unsigned int i;
+	struct rte_kvargs args;
+	unsigned int i, j = 0;
 	int result = 0;
-
-	memset(eth_da, 0, sizeof(*eth_da));
 
 	result = eth_dev_devargs_tokenise(&args, dargs);
 	if (result < 0)
@@ -486,18 +485,16 @@ rte_eth_devargs_parse(const char *dargs, struct rte_eth_devargs *eth_da)
 	for (i = 0; i < args.count; i++) {
 		pair = &args.pairs[i];
 		if (strcmp("representor", pair->key) == 0) {
-			if (eth_da->type != RTE_ETH_REPRESENTOR_NONE) {
-				RTE_ETHDEV_LOG_LINE(ERR, "duplicated representor key: %s",
-					dargs);
-				result = -1;
-				goto parse_cleanup;
-			}
+			eth_da = &eth_devargs[j];
+			memset(eth_da, 0, sizeof(*eth_da));
 			result = rte_eth_devargs_parse_representor_ports(
 					pair->value, eth_da);
 			if (result < 0)
 				goto parse_cleanup;
+			j++;
 		}
 	}
+	result = (int)j;
 
 parse_cleanup:
 	free(args.str);

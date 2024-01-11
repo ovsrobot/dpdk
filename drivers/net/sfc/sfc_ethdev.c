@@ -3306,7 +3306,7 @@ sfc_parse_rte_devargs(const char *args, struct rte_eth_devargs *devargs)
 
 	if (args != NULL) {
 		rc = rte_eth_devargs_parse(args, &eth_da);
-		if (rc != 0) {
+		if (rc < 0) {
 			SFC_GENERIC_LOG(ERR,
 					"Failed to parse generic devargs '%s'",
 					args);

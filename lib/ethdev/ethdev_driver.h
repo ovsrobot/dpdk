@@ -1800,10 +1800,10 @@ rte_eth_representor_id_get(uint16_t port_id,
  * @param devargs
  *  device arguments
  * @param eth_devargs
- *  parsed ethdev specific arguments.
+ *  contiguous memory populated with parsed ethdev specific arguments.
  *
  * @return
- *   Negative errno value on error, 0 on success.
+ *   Negative errno value on error, no of devargs parsed on success.
  */
 __rte_internal
 int
