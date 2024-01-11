@@ -60,6 +60,9 @@ typedef uint16_t (*eth_recycle_tx_mbufs_reuse_t)(void *txq,
 /** @internal Refill Rx descriptors with the recycling mbufs */
 typedef void (*eth_recycle_rx_descriptors_refill_t)(void *rxq, uint16_t nb);
 
+/** @internal Get number of used descriptors on a transmit queue. */
+typedef int (*eth_tx_queue_count_t)(void *txq);
+
 /**
  * @internal
  * Structure used to hold opaque pointers to internal ethdev Rx/Tx
@@ -116,7 +119,9 @@ struct rte_eth_fp_ops {
 	eth_tx_descriptor_status_t tx_descriptor_status;
 	/** Copy used mbufs from Tx mbuf ring into Rx. */
 	eth_recycle_tx_mbufs_reuse_t recycle_tx_mbufs_reuse;
-	uintptr_t reserved2[2];
+	/** Get the number of used Tx descriptors. */
+	eth_tx_queue_count_t tx_queue_count;
+	uintptr_t reserved2[1];
 	/**@}*/
 
 } __rte_cache_aligned;

@@ -481,6 +481,9 @@ RTE_TRACE_POINT_REGISTER(rte_eth_trace_count_aggr_ports,
 RTE_TRACE_POINT_REGISTER(rte_eth_trace_map_aggr_tx_affinity,
 	lib.ethdev.map_aggr_tx_affinity)
 
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_tx_queue_count,
+	lib.ethdev.tx_queue_count)
+
 RTE_TRACE_POINT_REGISTER(rte_flow_trace_copy,
 	lib.ethdev.flow.copy)
 
