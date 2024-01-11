@@ -335,13 +335,16 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	struct rte_port *txp;
 	struct rte_mbuf *pkt;
+	struct rte_mbuf *mb;
 	struct rte_mempool *mbp;
 	struct rte_ether_hdr eth_hdr;
 	uint16_t nb_tx;
 	uint16_t nb_pkt;
+	uint16_t nb_prep;
 	uint16_t vlan_tci, vlan_tci_outer;
 	uint64_t ol_flags = 0;
 	uint64_t tx_offloads;
+	char buf[256];
 
 	mbp = current_fwd_lcore()->mbp;
 	txp = &ports[fs->tx_port];
@@ -396,7 +399,19 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	if (nb_pkt == 0)
 		return false;
 
-	nb_tx = common_fwd_stream_transmit(fs, pkts_burst, nb_pkt);
+	nb_prep = rte_eth_tx_prepare(fs->tx_port, fs->tx_queue,
+		pkts_burst, nb_pkt);
+	if (unlikely(nb_prep != nb_pkt)) {
+		mb = pkts_burst[nb_prep];
+		rte_get_tx_ol_flag_list(mb->ol_flags, buf, sizeof(buf));
+		fprintf(stderr,
+			"Preparing packet burst to transmit failed: %s ol_flags: %s\n",
+			rte_strerror(rte_errno), buf);
+		fs->fwd_dropped += nb_pkt - nb_prep;
+		rte_pktmbuf_free_bulk(&pkts_burst[nb_prep], nb_pkt - nb_prep);
+	}
+
+	nb_tx = common_fwd_stream_transmit(fs, pkts_burst, nb_prep);
 
 	if (txonly_multi_flow)
 		RTE_PER_LCORE(_src_port_var) -= nb_pkt - nb_tx;
