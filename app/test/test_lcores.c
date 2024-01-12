@@ -411,4 +411,4 @@ test_lcores(void)
 	return TEST_SUCCESS;
 }
 
-REGISTER_FAST_TEST(lcores_autotest, true, true, test_lcores);
+REGISTER_TEST_COMMAND(lcores_autotest, test_lcores);
