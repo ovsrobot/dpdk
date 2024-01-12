@@ -48,8 +48,9 @@ int tap_flow_bpf_cls_q(__u32 queue_idx)
  */
 int tap_flow_bpf_calc_l3_l4_hash(__u32 key_idx, int map_fd)
 {
-	l3_l4_hash_insns[4].imm = key_idx;
-	l3_l4_hash_insns[9].imm = map_fd;
+	l3_l4_hash_insns[1].imm = key_idx;
+	l3_l4_hash_insns[6].imm = map_fd;
+	l3_l4_hash_insns[6].src_reg = 1;
 
 	return bpf_load(BPF_PROG_TYPE_SCHED_ACT,
 		(struct bpf_insn *)l3_l4_hash_insns,
