@@ -68,6 +68,7 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* acc101: Removed obsolete code for non productized HW variant.
 
 API Changes
 -----------
