@@ -68,6 +68,11 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* log: the statically defined log types that were used internally by DPDK are no longer
+  defined or used. All code should be using the dynamic log types ``RTE_LOG_REGISTER()``.
+  The application reserved statically defined logtypes ``RTE_LOGTYPE_USER1..RTE_LOGTYPE_USER8``
+  are still defined.
+
 
 API Changes
 -----------
