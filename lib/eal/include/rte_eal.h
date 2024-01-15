@@ -112,6 +112,54 @@ int rte_eal_iopl_init(void);
 int rte_eal_init(int argc, char **argv);
 
 /**
+ * Initialize the Environment Abstraction Layer (EAL): Initial setup
+ *
+ * Its called from rte_eal_init() on MASTER lcore only and must NOT be directly
+ * called by user application.
+ * The driver dependent code is present in this function, ie before calling any other
+ * function eal library function this function must be complete successfully.
+ *
+ * return value is same as rte_eal_init().
+ */
+__rte_experimental int rte_eal_init_setup(int argc, char **argv);
+
+/**
+ * Initialize the Environment Abstraction Layer (EAL): FLR and probe device
+ *
+ * Its thread is forked by rte_eal_init() and must NOT be directly called by user application.
+ * Launched on next available slave lcore.
+ * In this function initialisation needed for memory pool creation is completed,
+ * so this code can be executed in parallel to non device related operations
+ * like mbuf pool creation.
+ *
+ * return value is same as rte_eal_init().
+ */
+__rte_experimental int rte_eal_init_async(__attribute__((unused)) void *arg);
+
+/**
+ * Initialize the Environment Abstraction Layer (EAL): Indication of rte_eal_init() completion
+ *
+ * It waits for rte_eal_init_async() to finish. It MUST be called from application,
+ * when a thread join is needed. Typically application will call this function after
+ * it performs all device independent operation (like mbuf pool creation) on master lcore.
+ *
+ * return value is same as rte_eal_init().
+ */
+__rte_experimental int rte_eal_init_wait_async_complete(void);
+
+/**
+ * Initialize the Environment Abstraction Layer (EAL): Indication of rte_eal_init() completion
+ *
+ * It shows status of rte_eal_init_async() ie the function is executing or completed.
+ * It MUST be called from application,
+ * Typically an application will call this function when it wants to know status of
+ * rte_eal_init_async() (ie FLR and probe thread).
+ *
+ * return value is same as rte_eal_init().
+ */
+__rte_experimental int rte_eal_init_async_done(int lcore_id);
+
+/**
  * Clean up the Environment Abstraction Layer (EAL)
  *
  * This function must be called to release any internal resources that EAL has
