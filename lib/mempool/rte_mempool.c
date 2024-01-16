@@ -50,9 +50,7 @@ static void
 mempool_event_callback_invoke(enum rte_mempool_event event,
 			      struct rte_mempool *mp);
 
-#define CACHE_FLUSHTHRESH_MULTIPLIER 1.5
-#define CALC_CACHE_FLUSHTHRESH(c)	\
-	((typeof(c))((c) * CACHE_FLUSHTHRESH_MULTIPLIER))
+#define CALC_CACHE_FLUSHTHRESH(c) ((c) + (c) / 2)
 
 #if defined(RTE_ARCH_X86)
 /*
