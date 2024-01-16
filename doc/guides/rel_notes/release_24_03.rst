@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added HiSilicon UACCE bus support.**
+
+  UACCE (Unified/User-space-access-intended Accelerator Framework) bus driver
+  has been added, so that the accelerator devices could seen at DPDK and could
+  be further registered such as a compress, crypto, dma and ethdev device.
+
 
 Removed Items
 -------------
