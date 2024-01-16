@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+#include <assert.h>
 #include <stdint.h>
 #include <limits.h>
 
@@ -495,7 +496,7 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 /**
  * Triggers an error at compilation time if the condition is true.
  */
-#define RTE_BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
+#define RTE_BUILD_BUG_ON(condition) { static_assert(!(condition), #condition); }
 
 /*********** Cache line related macros ********/
 
