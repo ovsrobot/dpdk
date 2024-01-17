@@ -88,7 +88,10 @@ iavf_dev_event_handle(void *param __rte_unused)
 				continue;
 			}
 
-			rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
+			/* Don't invoke an application reset callback if not started yet. */
+			if (pos->event != RTE_ETH_EVENT_INTR_RESET ||
+					pos->dev->data->dev_started != 0)
+				rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
 			rte_free(pos);
 		}
 	}
