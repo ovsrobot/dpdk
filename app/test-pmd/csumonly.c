@@ -870,16 +870,24 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 
 	/* receive a burst of packet */
 	nb_rx = common_fwd_stream_receive(fs, pkts_burst, nb_pkt_per_burst);
-	if (unlikely(nb_rx == 0))
+	if (unlikely(nb_rx == 0)) {
+#ifdef RTE_LIB_GRO
+		gro_enable = gro_ports[fs->rx_port].enable;
+		if (unlikely(gro_enable && (gro_flush_cycles != GRO_DEFAULT_FLUSH_CYCLES))) {
+			goto init;
+		} else {
+			return false;
+		}
+#else
 		return false;
+#endif
+	}
 
+init:
 	rx_bad_ip_csum = 0;
 	rx_bad_l4_csum = 0;
 	rx_bad_outer_l4_csum = 0;
 	rx_bad_outer_ip_csum = 0;
-#ifdef RTE_LIB_GRO
-	gro_enable = gro_ports[fs->rx_port].enable;
-#endif
 
 	txp = &ports[fs->tx_port];
 	tx_offloads = txp->dev_conf.txmode.offloads;
