@@ -60,6 +60,7 @@ New Features
   * Added support for Rx inject in crypto_cn10k.
   * Added support for TLS record processing in crypto_cn10k. Supports TLS 1.2
     and DTLS 1.2.
+  * Added PMD API to allow raw submission of instructions to CPT.
 
 
 Removed Items
