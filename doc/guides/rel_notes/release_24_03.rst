@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cnxk crypto driver.**
+
+  * Added support for Rx inject in crypto_cn10k.
+
 
 Removed Items
 -------------
