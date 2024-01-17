@@ -187,4 +187,15 @@ is_same_common_tcp_key(struct cmn_tcp_key *k1, struct cmn_tcp_key *k2)
 	return (!memcmp(k1, k2, sizeof(struct cmn_tcp_key)));
 }
 
+static inline void
+update_tcp_hdr_flags(struct rte_tcp_hdr *tcp_hdr, struct rte_mbuf *pkt)
+{
+	struct rte_tcp_hdr *merged_tcp_hdr;
+
+	merged_tcp_hdr = rte_pktmbuf_mtod_offset(pkt, struct rte_tcp_hdr *, pkt->l2_len +
+							pkt->l3_len);
+	merged_tcp_hdr->tcp_flags |= tcp_hdr->tcp_flags;
+
+}
+
 #endif
