@@ -4531,6 +4531,7 @@ main(int argc, char** argv)
 	portid_t port_id;
 	uint16_t count;
 	int ret;
+	int lcore_id;
 
 #ifdef RTE_EXEC_ENV_WINDOWS
 	signal(SIGINT, signal_handler);
@@ -4555,6 +4556,25 @@ main(int argc, char** argv)
 		rte_exit(EXIT_FAILURE, "Cannot init EAL: %s\n",
 			 rte_strerror(rte_errno));
 
+	lcore_id = rte_lcore_id();
+	lcore_id = rte_get_next_lcore(lcore_id, 0, 1);
+	/* Gives status of rte_eal_init_async() */
+	while (rte_eal_init_async_done(lcore_id) == 0)
+		;
+
+	/*
+	 * Use rte_eal_init_wait_async_complete() to get return value of
+	 * rte_eal_init_async().
+	 * Or
+	 * if testpmd application dont want to know progress/status of
+	 * rte_eal_init_async() and just want to wait till it finishes
+	 * then use following function.
+	 */
+	ret = rte_eal_init_wait_async_complete();
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "Cannot init EAL: "
+			 "rte_eal_init_async() failed: %s\n",
+			 strerror(ret));
 	/* allocate port structures, and init them */
 	init_port();
 
