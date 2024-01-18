@@ -379,7 +379,7 @@ nicvf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 }
 
 static const uint32_t *
-nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev, size_t *no_of_elements)
 {
 	size_t copied;
 	static uint32_t ptypes[32];
@@ -414,6 +414,7 @@ nicvf_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 	memcpy((char *)ptypes + copied, &ptypes_end, sizeof(ptypes_end));
 
 	/* All Ptypes are supported in all Rx functions. */
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 
