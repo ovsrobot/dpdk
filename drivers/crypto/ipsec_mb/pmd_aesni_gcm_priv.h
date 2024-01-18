@@ -143,25 +143,4 @@ struct aesni_gcm_qp_data {
 	/**< Operation Handlers */
 };
 
-/** AESNI GCM private session structure */
-struct aesni_gcm_session {
-	struct {
-		uint16_t length;
-		uint16_t offset;
-	} iv;
-	/**< IV parameters */
-	uint16_t aad_length;
-	/**< AAD length */
-	uint16_t req_digest_length;
-	/**< Requested digest length */
-	uint16_t gen_digest_length;
-	/**< Generated digest length */
-	enum ipsec_mb_operation op;
-	/**< GCM operation type */
-	struct gcm_key_data gdata_key;
-	/**< GCM parameters */
-	enum aesni_gcm_key_length key_length;
-	/** Key Length */
-};
-
 #endif /* _PMD_AESNI_GCM_PRIV_H_ */
