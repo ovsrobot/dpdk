@@ -393,6 +393,12 @@ EXPERIMENTAL {
 	# added in 23.07
 	rte_memzone_max_get;
 	rte_memzone_max_set;
+
+	# added in 24.01
+	rte_eal_init_async;
+	rte_eal_init_async_done;
+	rte_eal_init_setup;
+	rte_eal_init_wait_async_complete;
 };
 
 INTERNAL {
