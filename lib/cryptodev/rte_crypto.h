@@ -220,6 +220,11 @@ struct rte_crypto_op_pool_private {
 	/**< Crypto op pool type operation. */
 	uint16_t priv_size;
 	/**< Size of private area in each crypto operation. */
+
+	unsigned long vp_cache;
+	/* Virtual page address of previous op. */
+	rte_iova_t iovp_cache;
+	/* I/O virtual page address of previous op. */
 };
 
 

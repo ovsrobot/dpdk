@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <unistd.h>
 
 #include <rte_log.h>
 #include <rte_debug.h>
@@ -2568,12 +2569,32 @@ rte_crypto_op_init(struct rte_mempool *mempool,
 {
 	struct rte_crypto_op *op = _op_data;
 	enum rte_crypto_op_type type = *(enum rte_crypto_op_type *)opaque_arg;
+	struct rte_crypto_op_pool_private *priv;
+	unsigned long virt_addr = (unsigned long)(uintptr_t)_op_data;
+#ifdef RTE_EXEC_ENV_WINDOWS
+	unsigned long page_mask = 4095;
+#else
+	unsigned long page_mask = sysconf(_SC_PAGESIZE) - 1;
+#endif
+	unsigned long virt_page = virt_addr & ~page_mask;
 
 	memset(_op_data, 0, mempool->elt_size);
 
 	__rte_crypto_op_reset(op, type);
 
-	op->phys_addr = rte_mem_virt2iova(_op_data);
+	priv = (struct rte_crypto_op_pool_private *)
+		rte_mempool_get_priv(mempool);
+
+	if (virt_page == priv->vp_cache) {
+		op->phys_addr = priv->iovp_cache + (virt_addr & page_mask);
+	} else {
+		op->phys_addr = rte_mem_virt2iova(_op_data);
+
+		/* Update cached values */
+		priv->vp_cache = virt_page;
+		priv->iovp_cache = op->phys_addr & ~page_mask;
+	}
+
 	op->mempool = mempool;
 }
 
