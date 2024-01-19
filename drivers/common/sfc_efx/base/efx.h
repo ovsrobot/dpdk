@@ -7,6 +7,8 @@
 #ifndef	_SYS_EFX_H
 #define	_SYS_EFX_H
 
+#include <assert.h>
+
 #include "efx_annote.h"
 #include "efsys.h"
 #include "efx_types.h"
@@ -17,8 +19,8 @@
 extern "C" {
 #endif
 
-#define	EFX_STATIC_ASSERT(_cond)		\
-	((void)sizeof (char[(_cond) ? 1 : -1]))
+#define	EFX_STATIC_ASSERT(_cond) \
+	do { static_assert((_cond), "assert failed" #_cond); } while (0)
 
 #define	EFX_ARRAY_SIZE(_array)			\
 	(sizeof (_array) / sizeof ((_array)[0]))
