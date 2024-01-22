@@ -130,20 +130,24 @@ class RemoteCommandExecutionError(DTSError):
     #: The executed command.
     command: str
     _command_return_code: int
+    _command_stderr: str
 
-    def __init__(self, command: str, command_return_code: int):
+    def __init__(self, command: str, command_return_code: int, command_stderr: str):
         """Define the meaning of the first two arguments.
 
         Args:
             command: The executed command.
             command_return_code: The return code of the executed command.
+            command_stderr: The stderr of the executed command.
         """
         self.command = command
         self._command_return_code = command_return_code
+        self._command_stderr = command_stderr
 
     def __str__(self) -> str:
-        """Include both the command and return code in the string representation."""
-        return f"Command {self.command} returned a non-zero exit code: {self._command_return_code}"
+        """Include the command, its return code and stderr in the string representation."""
+        return (f"Command '{self.command}' returned a non-zero exit code: "
+                f"{self._command_return_code}\n{self._command_stderr}")
 
 
 class RemoteDirectoryExistsError(DTSError):

@@ -157,7 +157,7 @@ class RemoteSession(ABC):
             )
             self._logger.debug(f"stdout: '{result.stdout}'")
             self._logger.debug(f"stderr: '{result.stderr}'")
-            raise RemoteCommandExecutionError(command, result.return_code)
+            raise RemoteCommandExecutionError(command, result.return_code, result.stderr)
         self._logger.debug(f"Received from '{command}':\n{result}")
         self.history.append(result)
         return result
