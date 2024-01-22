@@ -215,12 +215,16 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
 .. code-block:: console
 
    (dts-py3.10) $ ./main.py --help
-   usage: main.py [-h] [--config-file CONFIG_FILE] [--output-dir OUTPUT_DIR] [-t TIMEOUT] [-v] [-s] [--tarball TARBALL] [--compile-timeout COMPILE_TIMEOUT] [--test-cases TEST_CASES] [--re-run RE_RUN]
+   usage: main.py [-h] (--tarball FILEPATH | --revision ID) [--config-file CONFIG_FILE] [--output-dir OUTPUT_DIR] [-t TIMEOUT] [-v] [-s] [--compile-timeout COMPILE_TIMEOUT] [--test-cases TEST_CASES] [--re-run RE_RUN]
 
    Run DPDK test suites. All options may be specified with the environment variables provided in brackets. Command line arguments have higher priority.
 
    options:
    -h, --help            show this help message and exit
+   --tarball FILEPATH, --snapshot FILEPATH
+                         Path to DPDK source code tarball to test. (default: None)
+   --revision ID, --rev ID, --git-ref ID
+                         Git revision ID to test. Could be commit, tag, tree ID and vice versa. To test local changes, first commit them, then use their commit ID (default: None)
    --config-file CONFIG_FILE
                          [DTS_CFG_FILE] configuration file that describes the test cases, SUTs and targets. (default: ./conf.yaml)
    --output-dir OUTPUT_DIR, --output OUTPUT_DIR
@@ -229,8 +233,6 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
                          [DTS_TIMEOUT] The default timeout for all DTS operations except for compiling DPDK. (default: 15)
    -v, --verbose         [DTS_VERBOSE] Specify to enable verbose output, logging all messages to the console. (default: False)
    -s, --skip-setup      [DTS_SKIP_SETUP] Specify to skip all setup steps on SUT and TG nodes. (default: None)
-   --tarball TARBALL, --snapshot TARBALL, --git-ref TARBALL
-                         [DTS_DPDK_TARBALL] Path to DPDK source code tarball or a git commit ID, tag ID or tree ID to test. To test local changes, first commit them, then use the commit ID with this option. (default: dpdk.tar.xz)
    --compile-timeout COMPILE_TIMEOUT
                          [DTS_COMPILE_TIMEOUT] The timeout for compiling DPDK. (default: 1200)
    --test-cases TEST_CASES

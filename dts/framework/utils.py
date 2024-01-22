@@ -70,6 +70,32 @@ def get_packet_summaries(packets: list[Packet]) -> str:
     return f"Packet contents: \n{packet_summaries}"
 
 
+def get_commit_id(rev_id: str) -> str:
+    """Given a Git revision ID, return the corresponding commit ID.
+
+    Args:
+        rev_id: The Git revision ID.
+
+    Raises:
+        ConfigurationError: The ``git rev-parse`` command failed. Suggesting
+            an invalid or ambiguous revision ID was supplied.
+    """
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", rev_id],
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        raise ConfigurationError(
+            f"{rev_id} is neither a path to an existing DPDK "
+            "archive nor a valid git reference.\n"
+            f"Command: {result.args}\n"
+            f"Stdout: {result.stdout}\n"
+            f"Stderr: {result.stderr}"
+        )
+    return result.stdout.strip()
+
+
 class StrEnum(Enum):
     """Enum with members stored as strings."""
 
@@ -170,7 +196,6 @@ class DPDKGitTarball(object):
 
         self._tarball_dir = Path(output_dir, "tarball")
 
-        self._get_commit_id()
         self._create_tarball_dir()
 
         self._tarball_name = (
@@ -180,21 +205,7 @@ class DPDKGitTarball(object):
         if not self._tarball_path:
             self._create_tarball()
 
-    def _get_commit_id(self) -> None:
-        result = subprocess.run(
-            ["git", "rev-parse", "--verify", self._git_ref],
-            text=True,
-            capture_output=True,
-        )
-        if result.returncode != 0:
-            raise ConfigurationError(
-                f"{self._git_ref} is neither a path to an existing DPDK "
-                "archive nor a valid git reference.\n"
-                f"Command: {result.args}\n"
-                f"Stdout: {result.stdout}\n"
-                f"Stderr: {result.stderr}"
-            )
-        self._git_ref = result.stdout.strip()
+
 
     def _create_tarball_dir(self) -> None:
         os.makedirs(self._tarball_dir, exist_ok=True)
