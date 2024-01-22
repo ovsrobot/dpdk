@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
+doc_api_build_dir = meson.current_build_dir()
 doxygen = find_program('doxygen', required: get_option('enable_docs'))
 
 if not doxygen.found()
@@ -32,14 +33,18 @@ example = custom_target('examples.dox',
 # set up common Doxygen configuration
 cdata = configuration_data()
 cdata.set('VERSION', meson.project_version())
-cdata.set('API_EXAMPLES', join_paths(dpdk_build_root, 'doc', 'api', 'examples.dox'))
-cdata.set('OUTPUT', join_paths(dpdk_build_root, 'doc', 'api'))
+cdata.set('API_EXAMPLES', join_paths(doc_api_build_dir, 'examples.dox'))
+cdata.set('OUTPUT', doc_api_build_dir)
 cdata.set('TOPDIR', dpdk_source_root)
-cdata.set('STRIP_FROM_PATH', ' '.join([dpdk_source_root, join_paths(dpdk_build_root, 'doc', 'api')]))
+cdata.set('STRIP_FROM_PATH', ' '.join([dpdk_source_root, doc_api_build_dir]))
 cdata.set('WARN_AS_ERROR', 'NO')
 if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
+# A local reference must be relative to the main index.html page
+# The path below can't be taken from the DTS meson file as that would
+# require recursive subdir traversal (doc, dts, then doc again)
+cdata.set('DTS_API_MAIN_PAGE', join_paths('..', 'dts', 'html', 'index.html'))
 
 # configure HTML Doxygen run
 html_cdata = configuration_data()
