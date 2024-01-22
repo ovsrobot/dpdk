@@ -71,6 +71,7 @@ Typical usage example::
 
 import argparse
 import os
+import sys
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -315,6 +316,11 @@ def get_settings() -> Settings:
 
     The inputs are taken from the command line and from environment variables.
     """
+
+    if len(sys.argv) == 1:
+        _get_parser().print_help()
+        sys.exit(1)
+
     parsed_args = _get_parser().parse_args()
     return Settings(
         config_file_path=parsed_args.config_file,
