@@ -39,6 +39,70 @@ extern "C" {
  */
 #define RTE_BIT32(nr) (UINT32_C(1) << (nr))
 
+/**
+ * Get the uint64_t value for a multiple bits set.
+ *
+ * @param val
+ *   The value may not all 1s.
+ * @param nr
+ *   The bit number in range of 0 to (64 - width of val).
+ */
+#define RTE_MBIT64(val, nr) (UINT64_C(val) << (nr))
+
+/**
+ * Get the uint32_t value for a multiple bits set.
+ *
+ * @param val
+ *   The value may not all 1s.
+ * @param nr
+ *   The bit number in range of 0 to (32 - width of val).
+ */
+#define RTE_MBIT32(val, nr) (UINT32_C(val) << (nr))
+
+/**
+ * Generate a contiguous 64bit bitmask starting at bit position low
+ * and ending at position high.
+ *
+ * @param high
+ *   High bit position.
+ * @param low
+ *   Low bit position.
+ */
+#define RTE_GENMASK64(high, low) (((~UINT64_C(0)) << (low)) & (~UINT64_C(0) >> (63u - (high))))
+
+/**
+ * Generate a contiguous 32bit bitmask starting at bit position low
+ * and ending at position high.
+ *
+ * @param high
+ *   High bit position.
+ * @param low
+ *   Low bit position.
+ */
+#define RTE_GENMASK32(high, low) (((~UINT32_C(0)) << (low)) & (~UINT32_C(0) >> (31u - (high))))
+
+/**
+ * Extract a 64bit field element.
+ *
+ * @param mask
+ *   shifted mask.
+ * @param reg
+ *   value of entire bitfield.
+ */
+#define RTE_FIELD_GET64(mask, reg) \
+		(typeof(mask))(((reg) & (mask)) >> rte_ctz64(mask))
+
+/**
+ * Extract a 32bit field element.
+ *
+ * @param mask
+ *   shifted mask.
+ * @param reg
+ *   value of entire bitfield.
+ */
+#define RTE_FIELD_GET32(mask, reg) \
+		(typeof(mask))(((reg) & (mask)) >> rte_ctz32(mask))
+
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
 /**
