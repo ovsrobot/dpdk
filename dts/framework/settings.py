@@ -170,6 +170,15 @@ def _parse_revision_id(rev_id: str) -> str:
         )
 
 
+class ArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser with a custom error message."""
+    def error(self, message):
+        print(f"{self.prog}: error: {message}\n", file=sys.stderr)
+        self.exit(2,
+                  "For help and usage, "
+                  "run the command with the --help flag.\n")
+
+
 @dataclass(slots=True)
 class Settings:
     """Default framework-wide user settings.
@@ -200,8 +209,8 @@ class Settings:
 SETTINGS: Settings = Settings()
 
 
-def _get_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+def _get_parser() -> ArgumentParser:
+    parser = ArgumentParser(
         description="Run DPDK test suites. All options may be specified with the environment "
         "variables provided in brackets. Command line arguments have higher priority.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
