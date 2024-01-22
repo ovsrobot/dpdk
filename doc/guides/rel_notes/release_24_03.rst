@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Introduce argument parse library.**
+
+  Introduce argparse library, compared with getopt, it makes it easy to write
+  user-friendly command-like program.
+
 
 Removed Items
 -------------
