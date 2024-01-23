@@ -29,7 +29,7 @@ RTE_LOG_REGISTER_DEFAULT(fpga_5gnr_fec_logtype, NOTICE);
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 
-/* Read Ring Control Register of FPGA 5GNR FEC device */
+/* Read Ring Control Register of FPGA 5GNR FEC device. */
 static inline void
 print_ring_reg_debug_info(void *mmio_base, uint32_t offset)
 {
@@ -380,7 +380,7 @@ fpga_5gnr_get_queue_map(struct fpga_5gnr_fec_device *d, uint32_t q_id)
 static int
 fpga_5gnr_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 {
-	/* Number of queues bound to a PF/VF */
+	/* Number of queues bound to a PF/VF. */
 	uint32_t hw_q_num = 0;
 	uint32_t ring_size, payload, address, q_id, offset;
 	rte_iova_t phys_addr;
@@ -395,7 +395,7 @@ fpga_5gnr_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id
 		return -EPERM;
 	}
 
-	/* Clear queue registers structure */
+	/* Clear queue registers structure. */
 	memset(&ring_reg, 0, sizeof(struct fpga_5gnr_ring_ctrl_reg));
 
 	/* Scan queue map.
@@ -411,7 +411,7 @@ fpga_5gnr_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id
 
 		if (hw_q_id != FPGA_5GNR_INVALID_HW_QUEUE_ID) {
 			d->q_bound_bit_map |= (1ULL << q_id);
-			/* Clear queue register of found queue */
+			/* Clear queue register of found queue. */
 			offset = FPGA_5GNR_FEC_RING_CTRL_REGS +
 				(sizeof(struct fpga_5gnr_ring_ctrl_reg) * q_id);
 			fpga_ring_reg_write(d->mmio_base, offset, ring_reg);
@@ -435,10 +435,10 @@ fpga_5gnr_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id
 	else
 		ring_size = FPGA_5GNR_RING_MAX_SIZE * sizeof(struct agx100_dma_dec_desc);
 
-	/* Enforce 32 byte alignment */
+	/* Enforce 32 byte alignment. */
 	RTE_BUILD_BUG_ON((RTE_CACHE_LINE_SIZE % 32) != 0);
 
-	/* Allocate memory for SW descriptor rings */
+	/* Allocate memory for SW descriptor rings. */
 	d->sw_rings = rte_zmalloc_socket(dev->device->driver->name,
 			num_queues * ring_size, RTE_CACHE_LINE_SIZE,
 			socket_id);
@@ -453,7 +453,7 @@ fpga_5gnr_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id
 	d->sw_ring_size = ring_size;
 	d->sw_ring_max_depth = FPGA_5GNR_RING_MAX_SIZE;
 
-	/* Allocate memory for ring flush status */
+	/* Allocate memory for ring flush status. */
 	d->flush_queue_status = rte_zmalloc_socket(NULL,
 			sizeof(uint64_t), RTE_CACHE_LINE_SIZE, socket_id);
 	if (d->flush_queue_status == NULL) {
@@ -463,7 +463,7 @@ fpga_5gnr_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id
 		return -ENOMEM;
 	}
 
-	/* Set the flush status address registers */
+	/* Set the flush status address registers. */
 	phys_addr = rte_malloc_virt2iova(d->flush_queue_status);
 
 	address = FPGA_5GNR_FEC_VFQ_FLUSH_STATUS_LW;
@@ -572,7 +572,7 @@ fpga_5gnr_dev_info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_
 		RTE_BBDEV_END_OF_CAPABILITIES_LIST()
 	};
 
-	/* Check the HARQ DDR size available */
+	/* Check the HARQ DDR size available (in MB). */
 	uint8_t timeout_counter = 0;
 	uint32_t harq_buf_ready = fpga_5gnr_reg_read_32(d->mmio_base,
 			FPGA_5GNR_FEC_HARQ_BUF_SIZE_RDY_REGS);
@@ -610,7 +610,7 @@ fpga_5gnr_dev_info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_
 	dev_info->data_endianness = RTE_LITTLE_ENDIAN;
 	dev_info->device_status = RTE_BBDEV_DEV_NOT_SUPPORTED;
 
-	/* Calculates number of queues assigned to device */
+	/* Calculates number of queues assigned to device. */
 	dev_info->max_num_queues = 0;
 	for (q_id = 0; q_id < d->total_num_queues; ++q_id) {
 		uint32_t hw_q_id = fpga_5gnr_get_queue_map(d, q_id);
@@ -618,12 +618,12 @@ fpga_5gnr_dev_info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_
 		if (hw_q_id != FPGA_5GNR_INVALID_HW_QUEUE_ID)
 			dev_info->max_num_queues++;
 	}
-	/* Expose number of queue per operation type */
+	/* Expose number of queue per operation type. */
 	dev_info->num_queues[RTE_BBDEV_OP_NONE] = 0;
 	dev_info->num_queues[RTE_BBDEV_OP_TURBO_DEC] = 0;
 	dev_info->num_queues[RTE_BBDEV_OP_TURBO_ENC] = 0;
-	dev_info->num_queues[RTE_BBDEV_OP_LDPC_DEC] = dev_info->max_num_queues / 2;
-	dev_info->num_queues[RTE_BBDEV_OP_LDPC_ENC] = dev_info->max_num_queues / 2;
+	dev_info->num_queues[RTE_BBDEV_OP_LDPC_DEC] = dev_info->max_num_queues >> 1;
+	dev_info->num_queues[RTE_BBDEV_OP_LDPC_ENC] = dev_info->max_num_queues >> 1;
 	dev_info->queue_priority[RTE_BBDEV_OP_LDPC_DEC] = 1;
 	dev_info->queue_priority[RTE_BBDEV_OP_LDPC_ENC] = 1;
 }
@@ -648,9 +648,9 @@ fpga_5gnr_find_free_queue_idx(struct rte_bbdev *dev,
 
 	for (; i < range; ++i) {
 		q_idx = 1ULL << i;
-		/* Check if index of queue is bound to current PF/VF */
+		/* Check if index of queue is bound to current PF/VF. */
 		if (d->q_bound_bit_map & q_idx)
-			/* Check if found queue was not already assigned */
+			/* Check if found queue was not already assigned. */
 			if (!(d->q_assigned_bit_map & q_idx)) {
 				d->q_assigned_bit_map |= q_idx;
 				return i;
@@ -671,7 +671,7 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	struct fpga_5gnr_queue *q;
 	int8_t q_idx;
 
-	/* Check if there is a free queue to assign */
+	/* Check if there is a free queue to assign. */
 	q_idx = fpga_5gnr_find_free_queue_idx(dev, conf);
 	if (q_idx == -1)
 		return -1;
@@ -680,7 +680,7 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	q = rte_zmalloc_socket(dev->device->driver->name, sizeof(*q),
 			RTE_CACHE_LINE_SIZE, conf->socket);
 	if (q == NULL) {
-		/* Mark queue as un-assigned */
+		/* Mark queue as un-assigned. */
 		d->q_assigned_bit_map &= (0xFFFFFFFF - (1ULL << q_idx));
 		rte_bbdev_log(ERR, "Failed to allocate queue memory");
 		return -ENOMEM;
@@ -689,7 +689,7 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	q->d = d;
 	q->q_idx = q_idx;
 
-	/* Set ring_base_addr */
+	/* Set ring_base_addr. */
 	if (d->fpga_variant == VC_5GNR_FPGA_VARIANT)
 		q->vc_5gnr_ring_addr = RTE_PTR_ADD(d->sw_rings, (d->sw_ring_size * queue_id));
 	else
@@ -697,11 +697,11 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 
 	q->ring_ctrl_reg.ring_base_addr = d->sw_rings_phys + (d->sw_ring_size * queue_id);
 
-	/* Allocate memory for Completion Head variable*/
+	/* Allocate memory for Completion Head variable. */
 	q->ring_head_addr = rte_zmalloc_socket(dev->device->driver->name,
 			sizeof(uint64_t), RTE_CACHE_LINE_SIZE, conf->socket);
 	if (q->ring_head_addr == NULL) {
-		/* Mark queue as un-assigned */
+		/* Mark queue as un-assigned. */
 		d->q_assigned_bit_map &= (0xFFFFFFFF - (1ULL << q_idx));
 		rte_free(q);
 		rte_bbdev_log(ERR,
@@ -709,15 +709,15 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 				dev->device->driver->name, dev->data->dev_id);
 		return -ENOMEM;
 	}
-	/* Set ring_head_addr */
+	/* Set ring_head_addr. */
 	q->ring_ctrl_reg.ring_head_addr = rte_malloc_virt2iova(q->ring_head_addr);
 
-	/* Clear shadow_completion_head */
+	/* Clear shadow_completion_head. */
 	q->shadow_completion_head = 0;
 
-	/* Set ring_size */
+	/* Set ring_size. */
 	if (conf->queue_size > FPGA_5GNR_RING_MAX_SIZE) {
-		/* Mark queue as un-assigned */
+		/* Mark queue as un-assigned. */
 		d->q_assigned_bit_map &= (0xFFFFFFFF - (1ULL << q_idx));
 		rte_free(q->ring_head_addr);
 		rte_free(q);
@@ -730,34 +730,34 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	q->ring_ctrl_reg.ring_size = conf->queue_size;
 
 	/* Set Miscellaneous FPGA 5GNR register. */
-	/* Max iteration number for TTI mitigation - todo */
+	/* TODO: Max iteration number for TTI mitigation. */
 	q->ring_ctrl_reg.max_ul_dec = 0;
-	/* Enable max iteration number for TTI - todo */
+	/* TODO: Enable max iteration number for TTI. */
 	q->ring_ctrl_reg.max_ul_dec_en = 0;
 
-	/* Enable the ring */
+	/* Enable the ring. */
 	q->ring_ctrl_reg.enable = 1;
 
-	/* Set FPGA 5GNR head_point and tail registers */
+	/* Set FPGA 5GNR head_point and tail registers. */
 	q->ring_ctrl_reg.head_point = q->tail = 0;
 
-	/* Set FPGA 5GNR shadow_tail register */
+	/* Set FPGA 5GNR shadow_tail register. */
 	q->ring_ctrl_reg.shadow_tail = q->tail;
 
-	/* Calculates the ring offset for found queue */
+	/* Calculates the ring offset for found queue. */
 	ring_offset = FPGA_5GNR_FEC_RING_CTRL_REGS +
 			(sizeof(struct fpga_5gnr_ring_ctrl_reg) * q_idx);
 
-	/* Set FPGA 5GNR Ring Control Registers */
+	/* Set FPGA 5GNR Ring Control Registers. */
 	fpga_ring_reg_write(d->mmio_base, ring_offset, q->ring_ctrl_reg);
 
-	/* Store MMIO register of shadow_tail */
+	/* Store MMIO register of shadow_tail. */
 	address = ring_offset + FPGA_5GNR_FEC_RING_SHADOW_TAIL;
 	q->shadow_tail_addr = RTE_PTR_ADD(d->mmio_base, address);
 
 	q->head_free_desc = q->tail;
 
-	/* Set wrap mask */
+	/* Set wrap mask. */
 	q->sw_ring_wrap_mask = conf->queue_size - 1;
 
 	rte_bbdev_log_debug("Setup dev%u q%u: queue_idx=%u",
@@ -768,7 +768,7 @@ fpga_5gnr_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	rte_bbdev_log_debug("BBDEV queue[%d] set up for FPGA 5GNR queue[%d]", queue_id, q_idx);
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
-	/* Read FPGA Ring Control Registers after configuration*/
+	/* Read FPGA Ring Control Registers after configuration. */
 	print_ring_reg_debug_info(d->mmio_base, ring_offset);
 #endif
 	return 0;
@@ -788,13 +788,13 @@ fpga_5gnr_queue_release(struct rte_bbdev *dev, uint16_t queue_id)
 		memset(&ring_reg, 0, sizeof(struct fpga_5gnr_ring_ctrl_reg));
 		offset = FPGA_5GNR_FEC_RING_CTRL_REGS +
 			(sizeof(struct fpga_5gnr_ring_ctrl_reg) * q->q_idx);
-		/* Disable queue */
+		/* Disable queue. */
 		fpga_5gnr_reg_write_8(d->mmio_base,
 				offset + FPGA_5GNR_FEC_RING_ENABLE, 0x00);
-		/* Clear queue registers */
+		/* Clear queue registers. */
 		fpga_ring_reg_write(d->mmio_base, offset, ring_reg);
 
-		/* Mark the Queue as un-assigned */
+		/* Mark the Queue as un-assigned. */
 		d->q_assigned_bit_map &= (0xFFFFFFFF - (1ULL << q->q_idx));
 		rte_free(q->ring_head_addr);
 		rte_free(q);
@@ -825,14 +825,14 @@ fpga_5gnr_queue_start(struct rte_bbdev *dev, uint16_t queue_id)
 		return -1;
 	}
 
-	/* Clear queue head and tail variables */
+	/* Clear queue head and tail variables. */
 	q->tail = q->head_free_desc = 0;
 
-	/* Clear FPGA 5GNR head_point and tail registers */
+	/* Clear FPGA 5GNR head_point and tail registers. */
 	fpga_5gnr_reg_write_16(d->mmio_base, offset + FPGA_5GNR_FEC_RING_HEAD_POINT, zero);
 	fpga_5gnr_reg_write_16(d->mmio_base, offset + FPGA_5GNR_FEC_RING_SHADOW_TAIL, zero);
 
-	/* Enable queue */
+	/* Enable queue. */
 	fpga_5gnr_reg_write_8(d->mmio_base, offset + FPGA_5GNR_FEC_RING_ENABLE, enable);
 
 	rte_bbdev_log_debug("FPGA 5GNR Queue[%d] started", queue_id);
@@ -857,7 +857,7 @@ fpga_5gnr_queue_stop(struct rte_bbdev *dev, uint16_t queue_id)
 	uint8_t counter = 0;
 	uint8_t timeout = FPGA_5GNR_QUEUE_FLUSH_TIMEOUT_US / FPGA_5GNR_TIMEOUT_CHECK_INTERVAL;
 
-	/* Set flush_queue_en bit to trigger queue flushing */
+	/* Set flush_queue_en bit to trigger queue flushing. */
 	fpga_5gnr_reg_write_8(d->mmio_base,
 			offset + FPGA_5GNR_FEC_RING_FLUSH_QUEUE_EN, payload);
 
@@ -875,7 +875,7 @@ fpga_5gnr_queue_stop(struct rte_bbdev *dev, uint16_t queue_id)
 		counter++;
 	}
 
-	/* Disable queue */
+	/* Disable queue. */
 	payload = 0x00;
 	fpga_5gnr_reg_write_8(d->mmio_base, offset + FPGA_5GNR_FEC_RING_ENABLE, payload);
 
@@ -909,7 +909,7 @@ fpga_5gnr_dev_interrupt_handler(void *cb_arg)
 	uint16_t queue_id;
 	uint8_t i;
 
-	/* Scan queue assigned to this device */
+	/* Scan queue assigned to this device. */
 	for (i = 0; i < d->total_num_queues; ++i) {
 		q_idx = 1ULL << i;
 		if (d->q_bound_bit_map & q_idx) {
@@ -917,7 +917,7 @@ fpga_5gnr_dev_interrupt_handler(void *cb_arg)
 			if (queue_id == (uint16_t) -1)
 				continue;
 
-			/* Check if completion head was changed */
+			/* Check if completion head was changed. */
 			q = dev->data->queues[queue_id].queue_private;
 			ring_head = *q->ring_head_addr;
 			if (q->shadow_completion_head != ring_head &&
@@ -1079,7 +1079,7 @@ fpga_5gnr_dma_enqueue(struct fpga_5gnr_queue *q, uint16_t num_desc,
 	uint64_t start_time = 0;
 	queue_stats->acc_offload_cycles = 0;
 
-	/* Update tail and shadow_tail register */
+	/* Update tail and shadow_tail register. */
 	q->tail = fpga_5gnr_desc_idx_tail(q, num_desc);
 
 	rte_wmb();
@@ -1092,7 +1092,7 @@ fpga_5gnr_dma_enqueue(struct fpga_5gnr_queue *q, uint16_t num_desc,
 	queue_stats->acc_offload_cycles += rte_rdtsc_precise() - start_time;
 }
 
-/* Read flag value 0/1/ from bitmap */
+/* Read flag value 0/1/ from bitmap. */
 static inline bool
 check_bit(uint32_t bitmap, uint32_t bitmask)
 {
@@ -1236,7 +1236,7 @@ get_k0(uint16_t n_cb, uint16_t z_c, uint8_t bg, uint8_t rv_index)
 		else
 			return (bg == 1 ? K0_3_1 : K0_3_2) * z_c;
 	}
-	/* LBRM case - includes a division by N */
+	/* LBRM case - includes a division by N. */
 	if (rv_index == 1)
 		return (((bg == 1 ? K0_1_1 : K0_1_2) * n_cb)
 				/ n) * z_c;
@@ -1280,7 +1280,7 @@ vc_5gnr_dma_desc_te_fill(struct rte_bbdev_enc_op *op,
 		uint32_t in_offset, uint32_t out_offset, uint16_t desc_offset,
 		uint8_t cbs_in_op)
 {
-	/* reset */
+	/* Reset. */
 	desc->done = 0;
 	desc->error = 0;
 	desc->k_ = k_;
@@ -1296,7 +1296,7 @@ vc_5gnr_dma_desc_te_fill(struct rte_bbdev_enc_op *op,
 			op->ldpc_enc.basegraph, op->ldpc_enc.rv_index);
 	desc->ncb = op->ldpc_enc.n_cb;
 	desc->num_null = op->ldpc_enc.n_filler;
-	/* Set inbound data buffer address */
+	/* Set inbound data buffer address. */
 	desc->in_addr_hi = (uint32_t)(
 			rte_pktmbuf_iova_offset(input, in_offset) >> 32);
 	desc->in_addr_lw = (uint32_t)(
@@ -1306,9 +1306,9 @@ vc_5gnr_dma_desc_te_fill(struct rte_bbdev_enc_op *op,
 			rte_pktmbuf_iova_offset(output, out_offset) >> 32);
 	desc->out_addr_lw = (uint32_t)(
 			rte_pktmbuf_iova_offset(output, out_offset));
-	/* Save software context needed for dequeue */
+	/* Save software context needed for dequeue. */
 	desc->op_addr = op;
-	/* Set total number of CBs in an op */
+	/* Set total number of CBs in an op. */
 	desc->cbs_in_op = cbs_in_op;
 	return 0;
 }
@@ -1345,7 +1345,7 @@ agx100_dma_desc_le_fill(struct rte_bbdev_enc_op *op,
 		uint32_t in_offset, uint32_t out_offset, uint16_t desc_offset,
 		uint8_t cbs_in_op)
 {
-	/* reset. */
+	/* Reset. */
 	desc->done = 0;
 	desc->error_msg = 0;
 	desc->error_code = 0;
@@ -1384,7 +1384,7 @@ agx100_dma_desc_le_fill(struct rte_bbdev_enc_op *op,
 			rte_pktmbuf_iova_offset(input, in_offset) >> 32);
 	desc->input_start_addr_lo = (uint32_t)(
 			rte_pktmbuf_iova_offset(input, in_offset));
-	desc->output_length = (e + 7) >> 3; /* in bytes. */
+	desc->output_length = (e + 7) >> 3; /* In bytes. */
 	desc->input_length = input->data_len;
 	desc->enqueue_timestamp = 0;
 	desc->completion_timestamp = 0;
@@ -1424,10 +1424,10 @@ vc_5gnr_dma_desc_ld_fill(struct rte_bbdev_dec_op *op,
 		uint16_t desc_offset,
 		uint8_t cbs_in_op)
 {
-	/* reset */
+	/* Reset. */
 	desc->done = 0;
 	desc->error = 0;
-	/* Set inbound data buffer address */
+	/* Set inbound data buffer address. */
 	desc->in_addr_hi = (uint32_t)(
 			rte_pktmbuf_iova_offset(input, in_offset) >> 32);
 	desc->in_addr_lw = (uint32_t)(
@@ -1455,9 +1455,9 @@ vc_5gnr_dma_desc_ld_fill(struct rte_bbdev_dec_op *op,
 			rte_pktmbuf_iova_offset(output, out_offset) >> 32);
 	desc->out_addr_lw = (uint32_t)(
 			rte_pktmbuf_iova_offset(output, out_offset));
-	/* Save software context needed for dequeue */
+	/* Save software context needed for dequeue. */
 	desc->op_addr = op;
-	/* Set total number of CBs in an op */
+	/* Set total number of CBs in an op. */
 	desc->cbs_in_op = cbs_in_op;
 
 	return 0;
@@ -1493,7 +1493,7 @@ agx100_dma_desc_ld_fill(struct rte_bbdev_dec_op *op,
 		uint16_t desc_offset,
 		uint8_t cbs_in_op)
 {
-	/* reset. */
+	/* Reset. */
 	desc->done = 0;
 	desc->tb_crc_pass = 0;
 	desc->cb_crc_all_pass = 0;
@@ -1611,7 +1611,7 @@ vc_5gnr_validate_ldpc_enc_op(struct rte_bbdev_enc_op *op)
 	}
 
 	z_c = ldpc_enc->z_c;
-	/* Check Zc is valid value */
+	/* Check Zc is valid value. */
 	if ((z_c > 384) || (z_c < 4)) {
 		rte_bbdev_log(ERR, "Zc (%u) is out of range", z_c);
 		return -1;
@@ -1667,7 +1667,7 @@ vc_5gnr_validate_ldpc_enc_op(struct rte_bbdev_enc_op *op)
 
 	}
 
-	/* K' range check */
+	/* K' range check. */
 	if (Kp % 8 > 0) {
 		rte_bbdev_log(ERR, "K' not byte aligned %u", Kp);
 		return -1;
@@ -1684,23 +1684,23 @@ vc_5gnr_validate_ldpc_enc_op(struct rte_bbdev_enc_op *op)
 		rte_bbdev_log(ERR, "K - F invalid %u %u", K, n_filler);
 		return -1;
 	}
-	/* Ncb range check */
+	/* Ncb range check. */
 	if ((n_cb > N) || (n_cb < 32) || (n_cb <= (Kp - crc24))) {
 		rte_bbdev_log(ERR, "Ncb (%u) is out of range K  %d N %d", n_cb, K, N);
 		return -1;
 	}
-	/* Qm range check */
+	/* Qm range check. */
 	if (!check_bit(op->ldpc_enc.op_flags, RTE_BBDEV_LDPC_INTERLEAVER_BYPASS) &&
 			((q_m == 0) || ((q_m > 2) && ((q_m % 2) == 1)) || (q_m > 8))) {
 		rte_bbdev_log(ERR, "Qm (%u) is out of range", q_m);
 		return -1;
 	}
-	/* K0 range check */
+	/* K0 range check. */
 	if (((k0 % z_c) > 0) || (k0 >= n_cb) || ((k0 >= (Kp - 2 * z_c)) && (k0 < (K - 2 * z_c)))) {
 		rte_bbdev_log(ERR, "K0 (%u) is out of range", k0);
 		return -1;
 	}
-	/* E range check */
+	/* E range check. */
 	if (e <= RTE_MAX(32, z_c)) {
 		rte_bbdev_log(ERR, "E is too small %"PRIu32"", e);
 		return -1;
@@ -1715,7 +1715,7 @@ vc_5gnr_validate_ldpc_enc_op(struct rte_bbdev_enc_op *op)
 			return -1;
 		}
 	}
-	/* Code word in RM range check */
+	/* Code word in RM range check. */
 	if (k0 > (Kp - 2 * z_c))
 		L = k0 + e;
 	else
@@ -1815,7 +1815,7 @@ vc_5gnr_validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
 	}
 
 	z_c = ldpc_dec->z_c;
-	/* Check Zc is valid value */
+	/* Check Zc is valid value. */
 	if ((z_c > 384) || (z_c < 4)) {
 		rte_bbdev_log(ERR, "Zc (%u) is out of range", z_c);
 		return -1;
@@ -1864,7 +1864,7 @@ vc_5gnr_validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
 		rte_bbdev_log(ERR, "TB mode not supported");
 		return -1;
 	}
-	/* Enforce HARQ input length */
+	/* Enforce HARQ input length. */
 	ldpc_dec->harq_combined_input.length = RTE_MIN((uint32_t) n_cb,
 			ldpc_dec->harq_combined_input.length);
 	if ((ldpc_dec->harq_combined_input.length == 0) &&
@@ -1881,7 +1881,7 @@ vc_5gnr_validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
 		ldpc_dec->harq_combined_input.length = 0;
 	}
 
-	/* K' range check */
+	/* K' range check. */
 	if (Kp % 8 > 0) {
 		rte_bbdev_log(ERR, "K' not byte aligned %u", Kp);
 		return -1;
@@ -1898,12 +1898,12 @@ vc_5gnr_validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
 		rte_bbdev_log(ERR, "K - F invalid %u %u", K, n_filler);
 		return -1;
 	}
-	/* Ncb range check */
+	/* Ncb range check. */
 	if (n_cb != N) {
 		rte_bbdev_log(ERR, "Ncb (%u) is out of range K  %d N %d", n_cb, K, N);
 		return -1;
 	}
-	/* Qm range check */
+	/* Qm range check. */
 	if (!check_bit(op->ldpc_dec.op_flags,
 			RTE_BBDEV_LDPC_INTERLEAVER_BYPASS) &&
 			((q_m == 0) || ((q_m > 2) && ((q_m % 2) == 1))
@@ -1911,12 +1911,12 @@ vc_5gnr_validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
 		rte_bbdev_log(ERR, "Qm (%u) is out of range", q_m);
 		return -1;
 	}
-	/* K0 range check */
+	/* K0 range check. */
 	if (((k0 % z_c) > 0) || (k0 >= n_cb) || ((k0 >= (Kp - 2 * z_c)) && (k0 < (K - 2 * z_c)))) {
 		rte_bbdev_log(ERR, "K0 (%u) is out of range", k0);
 		return -1;
 	}
-	/* E range check */
+	/* E range check. */
 	if (e <= RTE_MAX(32, z_c)) {
 		rte_bbdev_log(ERR, "E is too small");
 		return -1;
@@ -1931,7 +1931,7 @@ vc_5gnr_validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
 			return -1;
 		}
 	}
-	/* Code word in RM range check */
+	/* Code word in RM range check. */
 	if (k0 > (Kp - 2 * z_c))
 		L = k0 + e;
 	else
@@ -1989,9 +1989,9 @@ static inline void
 fpga_5gnr_mutex_acquisition(struct fpga_5gnr_queue *q)
 {
 	uint32_t mutex_ctrl, mutex_read, cnt = 0;
-	/* Assign a unique id for the duration of the DDR access */
+	/* Assign a unique id for the duration of the DDR access. */
 	q->ddr_mutex_uuid = rand();
-	/* Request and wait for acquisition of the mutex */
+	/* Request and wait for acquisition of the mutex. */
 	mutex_ctrl = (q->ddr_mutex_uuid << 16) + 1;
 	do {
 		if (cnt > 0)
@@ -2186,7 +2186,7 @@ enqueue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_enc_op *o
 		}
 	}
 
-	/* Clear op status */
+	/* Clear op status. */
 	op->status = 0;
 
 	if (m_in == NULL || m_out == NULL) {
@@ -2207,7 +2207,7 @@ enqueue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_enc_op *o
 	c = 1;
 	e = enc->cb_params.e;
 
-	/* Update total_left */
+	/* Update total_left. */
 	K = (enc->basegraph == 1 ? 22 : 10) * enc->z_c;
 	k_ = K - enc->n_filler;
 	in_length = (k_ - crc24_bits) >> 3;
@@ -2215,7 +2215,7 @@ enqueue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_enc_op *o
 
 	total_left = rte_pktmbuf_data_len(m_in) - in_offset;
 
-	/* Update offsets */
+	/* Update offsets. */
 	if (total_left != in_length) {
 		op->status |= 1 << RTE_BBDEV_DATA_ERROR;
 		rte_bbdev_log(ERR,
@@ -2243,7 +2243,7 @@ enqueue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_enc_op *o
 	if (unlikely(ret < 0))
 		return ret;
 
-	/* Update lengths */
+	/* Update lengths. */
 	total_left -= in_length;
 	op->ldpc_enc.output.length += out_length;
 
@@ -2287,10 +2287,10 @@ vc_5gnr_enqueue_ldpc_dec_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_d
 		return -EINVAL;
 	}
 
-	/* Clear op status */
+	/* Clear op status. */
 	op->status = 0;
 
-	/* Setup DMA Descriptor */
+	/* Setup DMA Descriptor. */
 	ring_offset = fpga_5gnr_desc_idx_tail(q, desc_offset);
 	desc = vc_5gnr_get_desc_tail(q, desc_offset);
 
@@ -2317,16 +2317,16 @@ vc_5gnr_enqueue_ldpc_dec_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_d
 			ret = -1;
 		}
 
-		/* Set descriptor for dequeue */
+		/* Set descriptor for dequeue. */
 		desc->dec_req.done = 1;
 		desc->dec_req.error = 0;
 		desc->dec_req.op_addr = op;
 		desc->dec_req.cbs_in_op = 1;
 
-		/* Mark this dummy descriptor to be dropped by HW */
+		/* Mark this dummy descriptor to be dropped by HW. */
 		desc->dec_req.desc_idx = (ring_offset + 1) & q->sw_ring_wrap_mask;
 
-		return ret; /* Error or number of CB */
+		return ret; /* Error or number of CB. */
 	}
 
 	if (m_in == NULL || m_out == NULL) {
@@ -2381,7 +2381,7 @@ vc_5gnr_enqueue_ldpc_dec_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_d
 
 	if (unlikely(ret < 0))
 		return ret;
-	/* Update lengths */
+	/* Update lengths. */
 	seg_total_left -= in_length;
 	op->ldpc_dec.hard_output.length += out_length;
 	if (seg_total_left > 0) {
@@ -2532,11 +2532,11 @@ fpga_5gnr_enqueue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 	union agx100_dma_desc *agx100_desc;
 	struct fpga_5gnr_fec_device *d = q->d;
 
-	/* Check if queue is not full */
+	/* Check if queue is not full. */
 	if (unlikely((fpga_5gnr_desc_idx_tail(q, 1)) == q->head_free_desc))
 		return 0;
 
-	/* Calculates available space */
+	/* Calculates available space. */
 	avail = (q->head_free_desc > q->tail) ?
 		q->head_free_desc - q->tail - 1 :
 		q->ring_ctrl_reg.ring_size + q->head_free_desc - q->tail - 1;
@@ -2573,7 +2573,7 @@ fpga_5gnr_enqueue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 
 	fpga_5gnr_dma_enqueue(q, total_enqueued_cbs, &q_data->queue_stats);
 
-	/* Update stats */
+	/* Update stats. */
 	q_data->queue_stats.enqueued_count += i;
 	q_data->queue_stats.enqueue_err_count += num - i;
 
@@ -2592,11 +2592,11 @@ fpga_5gnr_enqueue_ldpc_dec(struct rte_bbdev_queue_data *q_data,
 	union agx100_dma_desc *agx100_desc;
 	struct fpga_5gnr_fec_device *d = q->d;
 
-	/* Check if queue is not full */
+	/* Check if queue is not full. */
 	if (unlikely((fpga_5gnr_desc_idx_tail(q, 1)) == q->head_free_desc))
 		return 0;
 
-	/* Calculates available space */
+	/* Calculates available space. */
 	avail = (q->head_free_desc > q->tail) ?
 		q->head_free_desc - q->tail - 1 :
 		q->ring_ctrl_reg.ring_size + q->head_free_desc - q->tail - 1;
@@ -2627,7 +2627,7 @@ fpga_5gnr_enqueue_ldpc_dec(struct rte_bbdev_queue_data *q_data,
 				q->head_free_desc, q->tail);
 	}
 
-	/* Update stats */
+	/* Update stats. */
 	q_data->queue_stats.enqueued_count += i;
 	q_data->queue_stats.enqueue_err_count += num - i;
 
@@ -2653,14 +2653,14 @@ vc_5gnr_dequeue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_e
 {
 	union vc_5gnr_dma_desc *desc;
 	int desc_error;
-	/* Set current desc */
+	/* Set current desc. */
 	desc = vc_5gnr_get_desc(q, desc_offset);
 
-	/*check if done */
+	/*check if done. */
 	if (desc->enc_req.done == 0)
 		return -1;
 
-	/* make sure the response is read atomically */
+	/* Make sure the response is read atomically. */
 	rte_smp_rmb();
 
 	rte_bbdev_log_debug("DMA response desc %p", desc);
@@ -2669,7 +2669,7 @@ vc_5gnr_dequeue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_e
 	vc_5gnr_print_dma_enc_desc_debug_info(desc);
 #endif
 	*op = desc->enc_req.op_addr;
-	/* Check the descriptor error field, return 1 on error */
+	/* Check the descriptor error field, return 1 on error. */
 	desc_error = vc_5gnr_check_desc_error(desc->enc_req.error);
 	(*op)->status = desc_error << RTE_BBDEV_DATA_ERROR;
 
@@ -2685,11 +2685,11 @@ agx100_dequeue_ldpc_enc_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_en
 
 	/* Set current desc. */
 	desc = agx100_get_desc(q, desc_offset);
-	/*check if done */
+	/*check if done. */
 	if (desc->enc_req.done == 0)
 		return -1;
 
-	/* make sure the response is read atomically. */
+	/* Make sure the response is read atomically. */
 	rte_smp_rmb();
 
 	rte_bbdev_log_debug("DMA response desc %p", desc);
@@ -2714,14 +2714,14 @@ vc_5gnr_dequeue_ldpc_dec_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_d
 	union vc_5gnr_dma_desc *desc;
 	int desc_error;
 
-	/* Set descriptor */
+	/* Set descriptor. */
 	desc = vc_5gnr_get_desc(q, desc_offset);
 
-	/* Verify done bit is set */
+	/* Verify done bit is set. */
 	if (desc->dec_req.done == 0)
 		return -1;
 
-	/* make sure the response is read atomically */
+	/* Make sure the response is read atomically. */
 	rte_smp_rmb();
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
@@ -2736,17 +2736,17 @@ vc_5gnr_dequeue_ldpc_dec_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_d
 		return 1;
 	}
 
-	/* FPGA reports iterations based on round-up minus 1 */
+	/* FPGA reports iterations based on round-up minus 1. */
 	(*op)->ldpc_dec.iter_count = desc->dec_req.iter + 1;
 
-	/* CRC Check criteria */
+	/* CRC Check criteria. */
 	if (desc->dec_req.crc24b_ind && !(desc->dec_req.crcb_pass))
 		(*op)->status = 1 << RTE_BBDEV_CRC_ERROR;
 
-	/* et_pass = 0 when decoder fails */
+	/* et_pass = 0 when decoder fails. */
 	(*op)->status |= !(desc->dec_req.et_pass) << RTE_BBDEV_SYNDROME_ERROR;
 
-	/* Check the descriptor error field, return 1 on error */
+	/* Check the descriptor error field, return 1 on error. */
 	desc_error = vc_5gnr_check_desc_error(desc->dec_req.error);
 
 	(*op)->status |= desc_error << RTE_BBDEV_DATA_ERROR;
@@ -2767,7 +2767,7 @@ agx100_dequeue_ldpc_dec_one_op_cb(struct fpga_5gnr_queue *q, struct rte_bbdev_de
 	if (desc->dec_req.done == 0)
 		return -1;
 
-	/* make sure the response is read atomically. */
+	/* Make sure the response is read atomically. */
 	rte_smp_rmb();
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
@@ -2824,10 +2824,10 @@ fpga_5gnr_dequeue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 				dequeued_cbs, num, q->head_free_desc, q->tail);
 	}
 
-	/* Update head */
+	/* Update head. */
 	q->head_free_desc = fpga_5gnr_desc_idx(q, dequeued_cbs);
 
-	/* Update stats */
+	/* Update stats. */
 	q_data->queue_stats.dequeued_count += i;
 
 	return i;
@@ -2858,17 +2858,17 @@ fpga_5gnr_dequeue_ldpc_dec(struct rte_bbdev_queue_data *q_data,
 				dequeued_cbs, num, q->head_free_desc, q->tail);
 	}
 
-	/* Update head */
+	/* Update head. */
 	q->head_free_desc = fpga_5gnr_desc_idx(q, dequeued_cbs);
 
-	/* Update stats */
+	/* Update stats. */
 	q_data->queue_stats.dequeued_count += i;
 
 	return i;
 }
 
 
-/* Initialization Function */
+/* Initialization Function. */
 static void
 fpga_5gnr_fec_init(struct rte_bbdev *dev, struct rte_pci_driver *drv)
 {
@@ -2926,12 +2926,12 @@ fpga_5gnr_fec_probe(struct rte_pci_driver *pci_drv,
 
 	rte_pci_device_name(&pci_dev->addr, dev_name, sizeof(dev_name));
 
-	/* Allocate memory to be used privately by drivers */
+	/* Allocate memory to be used privately by drivers. */
 	bbdev = rte_bbdev_allocate(pci_dev->device.name);
 	if (bbdev == NULL)
 		return -ENODEV;
 
-	/* allocate device private memory */
+	/* Allocate device private memory. */
 	bbdev->data->dev_private = rte_zmalloc_socket(dev_name,
 			sizeof(struct fpga_5gnr_fec_device),
 			RTE_CACHE_LINE_SIZE,
@@ -2945,12 +2945,12 @@ fpga_5gnr_fec_probe(struct rte_pci_driver *pci_drv,
 			return -ENOMEM;
 	}
 
-	/* Fill HW specific part of device structure */
+	/* Fill HW specific part of device structure. */
 	bbdev->device = &pci_dev->device;
 	bbdev->intr_handle = pci_dev->intr_handle;
 	bbdev->data->socket_id = pci_dev->device.numa_node;
 
-	/* Invoke FPGA 5GNR FEC device initialization function */
+	/* Invoke FPGA 5GNR FEC device initialization function. */
 	fpga_5gnr_fec_init(bbdev, pci_drv);
 
 	rte_bbdev_log_debug("bbdev id = %u [%s]",
@@ -2988,7 +2988,7 @@ fpga_5gnr_fec_remove(struct rte_pci_device *pci_dev)
 	if (pci_dev == NULL)
 		return -EINVAL;
 
-	/* Find device */
+	/* Find device. */
 	bbdev = rte_bbdev_get_named_dev(pci_dev->device.name);
 	if (bbdev == NULL) {
 		rte_bbdev_log(CRIT,
@@ -2998,17 +2998,17 @@ fpga_5gnr_fec_remove(struct rte_pci_device *pci_dev)
 	}
 	dev_id = bbdev->data->dev_id;
 
-	/* free device private memory before close */
+	/* Free device private memory before close. */
 	rte_free(bbdev->data->dev_private);
 
-	/* Close device */
+	/* Close device. */
 	ret = rte_bbdev_close(dev_id);
 	if (ret < 0)
 		rte_bbdev_log(ERR,
 				"Device %i failed to close during uninit: %i",
 				dev_id, ret);
 
-	/* release bbdev from library */
+	/* Release bbdev from library. */
 	ret = rte_bbdev_release(bbdev);
 	if (ret)
 		rte_bbdev_log(ERR, "Device %i failed to uninit: %i", dev_id, ret);
@@ -3021,16 +3021,16 @@ fpga_5gnr_fec_remove(struct rte_pci_device *pci_dev)
 static inline void
 fpga_5gnr_set_default_conf(struct rte_fpga_5gnr_fec_conf *def_conf)
 {
-	/* clear default configuration before initialization */
+	/* Clear default configuration before initialization. */
 	memset(def_conf, 0, sizeof(struct rte_fpga_5gnr_fec_conf));
-	/* Set pf mode to true */
+	/* Set pf mode to true. */
 	def_conf->pf_mode_en = true;
 
 	/* Set ratio between UL and DL to 1:1 (unit of weight is 3 CBs) */
 	def_conf->ul_bandwidth = 3;
 	def_conf->dl_bandwidth = 3;
 
-	/* Set Load Balance Factor to 64 */
+	/* Set Load Balance Factor to 64. */
 	def_conf->dl_load_balance = 64;
 	def_conf->ul_load_balance = 64;
 }
@@ -3070,7 +3070,7 @@ static int vc_5gnr_configure(const char *dev_name, const struct rte_fpga_5gnr_fe
 	address = VC_5GNR_CONFIGURATION;
 	fpga_5gnr_reg_write_16(d->mmio_base, address, payload_16);
 
-	/* Clear all queues registers */
+	/* Clear all queues registers. */
 	payload_32 = FPGA_5GNR_INVALID_HW_QUEUE_ID;
 	for (q_id = 0; q_id < d->total_num_queues; ++q_id) {
 		address = (q_id << 2) + VC_5GNR_QUEUE_MAP;
@@ -3138,7 +3138,7 @@ static int vc_5gnr_configure(const char *dev_name, const struct rte_fpga_5gnr_fe
 			fpga_5gnr_reg_write_32(d->mmio_base, address, payload_32);
 		}
 	} else {
-		/* Calculate total number of UL and DL queues to configure */
+		/* Calculate total number of UL and DL queues to configure. */
 		total_ul_q_id = total_dl_q_id = 0;
 		for (vf_id = 0; vf_id < FPGA_5GNR_FEC_NUM_VFS; ++vf_id) {
 			total_ul_q_id += conf->vf_ul_queues_number[vf_id];
@@ -3181,17 +3181,17 @@ static int vc_5gnr_configure(const char *dev_name, const struct rte_fpga_5gnr_fe
 		}
 	}
 
-	/* Setting Load Balance Factor */
+	/* Setting Load Balance Factor. */
 	payload_16 = (conf->dl_load_balance << 8) | (conf->ul_load_balance);
 	address = FPGA_5GNR_FEC_LOAD_BALANCE_FACTOR;
 	fpga_5gnr_reg_write_16(d->mmio_base, address, payload_16);
 
-	/* Setting length of ring descriptor entry */
+	/* Setting length of ring descriptor entry. */
 	payload_16 = FPGA_5GNR_RING_DESC_ENTRY_LENGTH;
 	address = FPGA_5GNR_FEC_RING_DESC_LEN;
 	fpga_5gnr_reg_write_16(d->mmio_base, address, payload_16);
 
-	/* Queue PF/VF mapping table is ready */
+	/* Queue PF/VF mapping table is ready. */
 	payload_8 = 0x1;
 	address = FPGA_5GNR_FEC_QUEUE_PF_VF_MAP_DONE;
 	fpga_5gnr_reg_write_8(d->mmio_base, address, payload_8);
@@ -3234,7 +3234,7 @@ static int agx100_configure(const char *dev_name, const struct rte_fpga_5gnr_fec
 	uint8_t num_ul_queues = total_num_queues >> 1;
 	uint8_t num_dl_queues = total_num_queues >> 1;
 
-	/* Clear all queues registers */
+	/* Clear all queues registers. */
 	payload_32 = FPGA_5GNR_INVALID_HW_QUEUE_ID;
 	for (q_id = 0; q_id < total_num_queues; ++q_id) {
 		address = (q_id << 2) + AGX100_QUEUE_MAP;
@@ -3385,7 +3385,7 @@ int rte_fpga_5gnr_fec_configure(const char *dev_name, const struct rte_fpga_5gnr
 	return -ENODEV;
 }
 
-/* FPGA 5GNR FEC PCI PF address map */
+/* FPGA 5GNR FEC PCI PF address map. */
 static struct rte_pci_id pci_id_fpga_5gnr_fec_pf_map[] = {
 	{
 		RTE_PCI_DEVICE(AGX100_VENDOR_ID, AGX100_PF_DEVICE_ID)
@@ -3403,7 +3403,7 @@ static struct rte_pci_driver fpga_5gnr_fec_pci_pf_driver = {
 	.drv_flags = RTE_PCI_DRV_NEED_MAPPING
 };
 
-/* FPGA 5GNR FEC PCI VF address map */
+/* FPGA 5GNR FEC PCI VF address map. */
 static struct rte_pci_id pci_id_fpga_5gnr_fec_vf_map[] = {
 	{
 		RTE_PCI_DEVICE(AGX100_VENDOR_ID, AGX100_VF_DEVICE_ID)

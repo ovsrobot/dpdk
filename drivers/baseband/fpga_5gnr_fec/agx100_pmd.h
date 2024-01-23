@@ -95,7 +95,7 @@ struct __rte_packed agx100_dma_enc_desc {
 		c:10, /**< Total code block number in TB or CBG. */
 		rsrvd4:2,
 		num_null:10; /**< Number of null bits. */
-	uint32_t ea:21, /**< Value of E when worload is CB. */
+	uint32_t ea:21, /**< Value of E when workload is CB. */
 		rsrvd5:11;
 	uint32_t eb:21, /**< Only valid when workload is TB or CBGs. */
 		rsrvd6:11;
@@ -194,7 +194,7 @@ struct __rte_packed agx100_dma_dec_desc {
 		llr_pckg:1, /**< 0: 8-bit LLR 1: 6-bit LLR packed together. */
 		syndrome_check_mode:1, /**<0: full syndrome check 1: 4-layer syndome check.*/
 		num_null:10; /**< Number of null bits. */
-	uint32_t ea:21, /**< Value of E when worload is CB. */
+	uint32_t ea:21, /**< Value of E when workload is CB. */
 		rsrvd2:3,
 		eba:8; /**< Only valid when workload is TB or CBGs. */
 	uint32_t hbstore_offset_out:24, /**< HARQ buffer write address. */

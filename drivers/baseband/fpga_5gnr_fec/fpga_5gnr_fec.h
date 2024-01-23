@@ -11,7 +11,7 @@
 #include "agx100_pmd.h"
 #include "vc_5gnr_pmd.h"
 
-/* Helper macro for logging */
+/* Helper macro for logging. */
 #define rte_bbdev_log(level, fmt, ...) \
 	rte_log(RTE_LOG_ ## level, fpga_5gnr_fec_logtype, fmt "\n", \
 		##__VA_ARGS__)
@@ -24,7 +24,7 @@
 #define rte_bbdev_log_debug(fmt, ...)
 #endif
 
-/* FPGA 5GNR FEC driver names */
+/* FPGA 5GNR FEC driver names. */
 #define FPGA_5GNR_FEC_PF_DRIVER_NAME intel_fpga_5gnr_fec_pf
 #define FPGA_5GNR_FEC_VF_DRIVER_NAME intel_fpga_5gnr_fec_vf
 
@@ -43,15 +43,15 @@
 #define VC_5GNR_FPGA_VARIANT	0
 #define AGX100_FPGA_VARIANT	1
 
-/* Constants from K0 computation from 3GPP 38.212 Table 5.4.2.1-2 */
-#define N_ZC_1 66 /* N = 66 Zc for BG 1 */
-#define N_ZC_2 50 /* N = 50 Zc for BG 2 */
-#define K0_1_1 17 /* K0 fraction numerator for rv 1 and BG 1 */
-#define K0_1_2 13 /* K0 fraction numerator for rv 1 and BG 2 */
-#define K0_2_1 33 /* K0 fraction numerator for rv 2 and BG 1 */
-#define K0_2_2 25 /* K0 fraction numerator for rv 2 and BG 2 */
-#define K0_3_1 56 /* K0 fraction numerator for rv 3 and BG 1 */
-#define K0_3_2 43 /* K0 fraction numerator for rv 3 and BG 2 */
+/* Constants from K0 computation from 3GPP 38.212 Table 5.4.2.1-2. */
+#define N_ZC_1 66 /**< N = 66 Zc for BG 1. */
+#define N_ZC_2 50 /**< N = 50 Zc for BG 2. */
+#define K0_1_1 17 /**< K0 fraction numerator for rv 1 and BG 1. */
+#define K0_1_2 13 /**< K0 fraction numerator for rv 1 and BG 2. */
+#define K0_2_1 33 /**< K0 fraction numerator for rv 2 and BG 1. */
+#define K0_2_2 25 /**< K0 fraction numerator for rv 2 and BG 2. */
+#define K0_3_1 56 /**< K0 fraction numerator for rv 3 and BG 1. */
+#define K0_3_2 43 /**< K0 fraction numerator for rv 3 and BG 2. */
 
 /* FPGA 5GNR Ring Control Registers. */
 enum {
@@ -93,7 +93,7 @@ struct __rte_packed fpga_5gnr_ring_ctrl_reg {
 	uint64_t ring_head_addr;
 	uint16_t ring_size:11;
 	uint16_t rsrvd0;
-	union { /* Miscellaneous register */
+	union { /* Miscellaneous register. */
 		uint8_t misc;
 		uint8_t max_ul_dec:5,
 			max_ul_dec_en:1,
@@ -140,26 +140,23 @@ struct fpga_5gnr_fec_device {
 
 /** Structure associated with each queue. */
 struct __rte_cache_aligned fpga_5gnr_queue {
-	struct fpga_5gnr_ring_ctrl_reg ring_ctrl_reg;  /**< Ring Control Register */
+	struct fpga_5gnr_ring_ctrl_reg ring_ctrl_reg;  /**< Ring Control Register. */
 	union {
 		/** Virtual address of VC 5GNR software ring. */
 		union vc_5gnr_dma_desc *vc_5gnr_ring_addr;
 		/** Virtual address of AGX100 software ring. */
 		union agx100_dma_desc *agx100_ring_addr;
 	};
-	uint64_t *ring_head_addr;  /* Virtual address of completion_head */
-	uint64_t shadow_completion_head; /* Shadow completion head value */
-	uint16_t head_free_desc;  /* Ring head */
-	uint16_t tail;  /* Ring tail */
-	/* Mask used to wrap enqueued descriptors on the sw ring */
-	uint32_t sw_ring_wrap_mask;
-	uint32_t irq_enable;  /* Enable ops dequeue interrupts if set to 1 */
-	uint8_t q_idx;  /* Queue index */
-	/** uuid used for MUTEX acquision for DDR */
-	uint16_t ddr_mutex_uuid;
-	struct fpga_5gnr_fec_device *d;
-	/* MMIO register of shadow_tail used to enqueue descriptors */
-	void *shadow_tail_addr;
+	uint64_t *ring_head_addr;  /**< Virtual address of completion_head. */
+	uint64_t shadow_completion_head; /**< Shadow completion head value. */
+	uint16_t head_free_desc;  /**< Ring head. */
+	uint16_t tail;  /**< Ring tail. */
+	uint32_t sw_ring_wrap_mask; /**< Mask used to wrap enqueued descriptors on the sw ring. */
+	uint32_t irq_enable;  /**< Enable ops dequeue interrupts if set to 1. */
+	uint8_t q_idx;  /**< Queue index. */
+	uint16_t ddr_mutex_uuid; /**< uuid used for MUTEX acquision for DDR. */
+	struct fpga_5gnr_fec_device *d; /**< FPGA 5GNR device structure. */
+	void *shadow_tail_addr; /**< MMIO register of shadow_tail used to enqueue descriptors. */
 };
 
 /* Write to 16 bit MMIO register address. */
