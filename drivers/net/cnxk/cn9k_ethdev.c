@@ -689,6 +689,14 @@ nix_eth_dev_ops_override(void)
 		cn9k_nix_timesync_read_tx_timestamp;
 }
 
+static int
+cn9k_nix_tx_queue_count(void *tx_queue)
+{
+	struct cn9k_eth_txq *txq = (struct cn9k_eth_txq *)tx_queue;
+
+	return cnxk_nix_tx_queue_count(txq->fc_mem, txq->sqes_per_sqb_log2);
+}
+
 /* Update platform specific eth dev ops */
 static void
 nix_tm_ops_override(void)
@@ -758,6 +766,8 @@ cn9k_nix_probe(struct rte_pci_driver *pci_drv, struct rte_pci_device *pci_dev)
 			return 0;
 		return -ENOENT;
 	}
+
+	eth_dev->tx_queue_count = cn9k_nix_tx_queue_count;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
 		/* Setup callbacks for secondary process */

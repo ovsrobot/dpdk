@@ -458,6 +458,17 @@ cnxk_eth_txq_to_sp(void *__txq)
 	return ((struct cnxk_eth_txq_sp *)__txq) - 1;
 }
 
+static inline int
+cnxk_nix_tx_queue_count(uint64_t *mem, uint16_t sqes_per_sqb_log2)
+{
+	uint64_t val;
+
+	val = rte_atomic_load_explicit(mem, rte_memory_order_relaxed);
+	val = (val << sqes_per_sqb_log2) - val;
+
+	return (val & 0xFFFF);
+}
+
 /* Common ethdev ops */
 extern struct eth_dev_ops cnxk_eth_dev_ops;
 
