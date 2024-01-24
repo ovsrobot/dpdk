@@ -28,6 +28,6 @@ extern int enetfec_logtype_pmd;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define ENETFEC_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt, ## args)
+	RTE_LOG_DP(level, PMD, fmt "\n", ## args)
 
 #endif /* _ENETFEC_LOGS_H_ */

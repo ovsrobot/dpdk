@@ -232,6 +232,6 @@ extern int dpaa_logtype_pmd;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define DPAA_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PMD, fmt, ## args)
+	RTE_LOG_DP(level, PMD, fmt "\n", ## args)
 
 #endif
