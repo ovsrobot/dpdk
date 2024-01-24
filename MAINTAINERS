@@ -275,6 +275,10 @@ F: lib/eal/include/rte_random.h
 F: lib/eal/common/rte_random.c
 F: app/test/test_rand_perf.c
 
+AMD x86
+M: Vipin Varghese <vipin.varghese@amd.com>
+F: doc/guides/linux_gsg/amd_platform.rst
+
 ARM v7
 M: Ruifeng Wang <ruifeng.wang@arm.com>
 F: config/arm/
