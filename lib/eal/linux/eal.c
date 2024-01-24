@@ -962,9 +962,8 @@ out:
 	return ret;
 }
 
-/* Launch threads, called at application init(). */
-int
-rte_eal_init(int argc, char **argv)
+__rte_experimental
+int rte_eal_init_setup(int argc, char **argv)
 {
 	int i, fctret, ret;
 	static RTE_ATOMIC(uint32_t) run_once;
@@ -1268,7 +1267,15 @@ rte_eal_init(int argc, char **argv)
 	 */
 	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
 	rte_eal_mp_wait_lcore();
+	return fctret;
+}
 
+__rte_experimental int
+rte_eal_init_async_setup(__attribute__((unused)) void *arg)
+{
+	int ret = 0;
+	struct internal_config *internal_conf =
+		eal_get_internal_configuration();
 	/* initialize services so vdevs register service during bus_probe. */
 	ret = rte_service_init();
 	if (ret) {
@@ -1322,6 +1329,55 @@ rte_eal_init(int argc, char **argv)
 
 	eal_mcfg_complete();
 
+	return 0;
+}
+
+/*
+ * waits until function executing on given lcore finishes.
+ * returns value returned by the function executing on that lcore.
+ */
+__rte_experimental int
+rte_eal_init_wait_async_setup_complete(void)
+{
+	int lcore_id = -1;
+	lcore_id = rte_lcore_id();
+	lcore_id = rte_get_next_lcore(lcore_id, 0, 1);
+	int ret = rte_eal_wait_lcore(lcore_id);
+	return ret;
+}
+
+/*
+ * returns current status of execution on a given lcore
+ */
+__rte_experimental int
+rte_eal_init_async_setup_done(int lcore_id)
+{
+	int ret = (lcore_config[lcore_id].state);
+	return (ret == WAIT);
+}
+
+/* Launch threads, called at application init(). */
+int
+rte_eal_init(int argc, char **argv)
+{
+	int fctret = rte_eal_init_setup(argc, argv);
+	if (fctret < 0)
+		return fctret;
+	return rte_eal_init_async_setup(NULL);
+}
+
+/* Launch threads, called at application init(). */
+__rte_experimental int
+rte_eal_init_async(int argc, char **argv)
+{
+	int lcore_id;
+	int fctret = rte_eal_init_setup(argc, argv);	/* initial lcore*/
+	if (fctret < 0)
+		return fctret;
+	lcore_id = rte_lcore_id();
+	lcore_id = rte_get_next_lcore(lcore_id, 0, 1);
+	/* running on a worker lcore */
+	rte_eal_remote_launch(rte_eal_init_async_setup, NULL, lcore_id);
 	return fctret;
 }
 
