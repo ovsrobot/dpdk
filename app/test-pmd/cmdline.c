@@ -12558,6 +12558,83 @@ static cmdline_parse_inst_t cmd_show_port_supported_ptypes = {
 	},
 };
 
+/* *** display tx queue desc used count *** */
+struct cmd_show_tx_queue_desc_count_result {
+	cmdline_fixed_string_t cmd_show;
+	cmdline_fixed_string_t cmd_port;
+	cmdline_fixed_string_t cmd_txq;
+	cmdline_fixed_string_t cmd_desc;
+	cmdline_fixed_string_t cmd_count;
+	portid_t cmd_pid;
+	portid_t cmd_qid;
+};
+
+static void
+cmd_show_tx_queue_desc_count_parsed(void *parsed_result,
+		__rte_unused struct cmdline *cl,
+		__rte_unused void *data)
+{
+	struct cmd_show_tx_queue_desc_count_result *res = parsed_result;
+	int rc;
+
+	if (rte_eth_tx_queue_is_valid(res->cmd_pid, res->cmd_qid) != 0) {
+		fprintf(stderr, "Invalid input: port id = %d, queue id = %d\n",	res->cmd_pid,
+			res->cmd_qid);
+		return;
+	}
+
+	rc = rte_eth_tx_queue_count(res->cmd_pid, res->cmd_qid);
+	if (rc < 0) {
+		fprintf(stderr, "Tx queue count get failed rc=%d queue_id=%d\n", rc, res->cmd_qid);
+		return;
+	}
+	printf("TxQ %d used desc count = %d\n", res->cmd_qid, rc);
+}
+
+static cmdline_parse_token_string_t cmd_show_tx_queue_desc_count_show =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_show, "show");
+static cmdline_parse_token_string_t cmd_show_tx_queue_desc_count_port =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_port, "port");
+static cmdline_parse_token_num_t cmd_show_tx_queue_desc_count_pid =
+	TOKEN_NUM_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_pid, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_show_tx_queue_desc_count_txq =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_txq, "txq");
+static cmdline_parse_token_num_t cmd_show_tx_queue_desc_count_qid =
+	TOKEN_NUM_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_qid, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_show_tx_queue_desc_count_desc =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_desc, "desc");
+static cmdline_parse_token_string_t cmd_show_tx_queue_desc_count_count =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_show_tx_queue_desc_count_result,
+		 cmd_count, "count");
+static cmdline_parse_inst_t cmd_show_tx_queue_desc_count = {
+	.f = cmd_show_tx_queue_desc_count_parsed,
+	.data = NULL,
+	.help_str = "show port <port_id> txq <queue_id> desc count",
+	.tokens = {
+		(void *)&cmd_show_tx_queue_desc_count_show,
+		(void *)&cmd_show_tx_queue_desc_count_port,
+		(void *)&cmd_show_tx_queue_desc_count_pid,
+		(void *)&cmd_show_tx_queue_desc_count_txq,
+		(void *)&cmd_show_tx_queue_desc_count_qid,
+		(void *)&cmd_show_tx_queue_desc_count_desc,
+		(void *)&cmd_show_tx_queue_desc_count_count,
+		NULL,
+	},
+};
+
 /* *** display rx/tx descriptor status *** */
 struct cmd_show_rx_tx_desc_status_result {
 	cmdline_fixed_string_t cmd_show;
@@ -13265,6 +13342,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_show_tx_metadata,
 	(cmdline_parse_inst_t *)&cmd_show_rx_tx_desc_status,
 	(cmdline_parse_inst_t *)&cmd_show_rx_queue_desc_used_count,
+	(cmdline_parse_inst_t *)&cmd_show_tx_queue_desc_count,
 	(cmdline_parse_inst_t *)&cmd_set_raw,
 	(cmdline_parse_inst_t *)&cmd_show_set_raw,
 	(cmdline_parse_inst_t *)&cmd_show_set_raw_all,
