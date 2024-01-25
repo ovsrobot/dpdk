@@ -387,7 +387,7 @@ mana_dev_rx_queue_info(struct rte_eth_dev *dev, uint16_t queue_id,
 }
 
 static const uint32_t *
-mana_supported_ptypes(struct rte_eth_dev *dev __rte_unused)
+mana_supported_ptypes(struct rte_eth_dev *dev __rte_unused, size_t *no_of_elements)
 {
 	static const uint32_t ptypes[] = {
 		RTE_PTYPE_L2_ETHER,
@@ -396,9 +396,9 @@ mana_supported_ptypes(struct rte_eth_dev *dev __rte_unused)
 		RTE_PTYPE_L4_FRAG,
 		RTE_PTYPE_L4_TCP,
 		RTE_PTYPE_L4_UDP,
-		RTE_PTYPE_UNKNOWN
 	};
 
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 

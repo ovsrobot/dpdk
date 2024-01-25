@@ -1266,7 +1266,7 @@ nfp_net_common_init(struct rte_pci_device *pci_dev,
 }
 
 const uint32_t *
-nfp_net_supported_ptypes_get(struct rte_eth_dev *dev)
+nfp_net_supported_ptypes_get(struct rte_eth_dev *dev, size_t *no_of_elements)
 {
 	struct nfp_net_hw *net_hw;
 	static const uint32_t ptypes[] = {
@@ -1299,7 +1299,6 @@ nfp_net_supported_ptypes_get(struct rte_eth_dev *dev)
 		RTE_PTYPE_INNER_L4_NONFRAG,
 		RTE_PTYPE_INNER_L4_ICMP,
 		RTE_PTYPE_INNER_L4_SCTP,
-		RTE_PTYPE_UNKNOWN
 	};
 
 	if (dev->rx_pkt_burst != nfp_net_recv_pkts)
@@ -1309,6 +1308,7 @@ nfp_net_supported_ptypes_get(struct rte_eth_dev *dev)
 	if ((net_hw->super.cap_ext & NFP_NET_CFG_CTRL_PKT_TYPE) == 0)
 		return NULL;
 
+	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
 }
 
