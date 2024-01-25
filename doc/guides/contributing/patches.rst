@@ -275,6 +275,12 @@ Here are some guidelines for the body of a commit message:
 
      Signed-off-by: Alex Smith <alex.smith@example.com>
 
+* .. Note::
+
+     Maintainers remove the "Cc: author@example.com" line when merging the patch.
+     To help the maintainer, the submitter may move this line to the notes section
+     of the commit, after the ``---`` separator.
+
 * When fixing an error or warning it is useful to add the error message and instructions on how to reproduce it.
 
 * Use correct capitalization, punctuation and spelling.
