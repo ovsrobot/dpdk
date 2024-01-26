@@ -91,6 +91,7 @@ enum index {
 	VALIDATE,
 	CREATE,
 	DESTROY,
+	ACTIONS_UPDATE,
 	FLUSH,
 	DUMP,
 	QUERY,
@@ -250,6 +251,7 @@ enum index {
 	VC_TUNNEL_SET,
 	VC_TUNNEL_MATCH,
 	VC_USER_ID,
+	VC_IS_USER_ID,
 
 	/* Dump arguments */
 	DUMP_ALL,
@@ -3074,6 +3076,7 @@ static const struct token token_list[] = {
 			      VALIDATE,
 			      CREATE,
 			      DESTROY,
+			      ACTIONS_UPDATE,
 			      FLUSH,
 			      DUMP,
 			      LIST,
@@ -3878,6 +3881,17 @@ static const struct token token_list[] = {
 		.args = ARGS(ARGS_ENTRY(struct buffer, port)),
 		.call = parse_destroy,
 	},
+	[ACTIONS_UPDATE] = {
+		.name = "actions_update",
+		.help = "update a flow rule with new actions",
+		.next = NEXT(NEXT_ENTRY(VC_IS_USER_ID, END),
+			     NEXT_ENTRY(ACTIONS),
+			     NEXT_ENTRY(COMMON_RULE_ID),
+			     NEXT_ENTRY(COMMON_PORT_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, args.vc.rule_id),
+			     ARGS_ENTRY(struct buffer, port)),
+		.call = parse_vc,
+	},
 	[FLUSH] = {
 		.name = "flush",
 		.help = "destroy all flow rules",
@@ -4122,6 +4136,11 @@ static const struct token token_list[] = {
 		.help = "specify a user id to create",
 		.next = NEXT(next_vc_attr, NEXT_ENTRY(COMMON_UNSIGNED)),
 		.args = ARGS(ARGS_ENTRY(struct buffer, args.vc.user_id)),
+		.call = parse_vc,
+	},
+	[VC_IS_USER_ID] = {
+		.name = "user_id",
+		.help = "rule identifier is user-id",
 		.call = parse_vc,
 	},
 	/* Validate/create pattern. */
@@ -8058,8 +8077,13 @@ parse_vc(struct context *ctx, const struct token *token,
 	if (!out->command) {
 		if (ctx->curr != VALIDATE && ctx->curr != CREATE &&
 		    ctx->curr != PATTERN_TEMPLATE_CREATE &&
-		    ctx->curr != ACTIONS_TEMPLATE_CREATE)
+		    ctx->curr != ACTIONS_TEMPLATE_CREATE &&
+		    ctx->curr != ACTIONS_UPDATE)
 			return -1;
+		if (ctx->curr == ACTIONS_UPDATE)
+			out->args.vc.pattern =
+				(void *)RTE_ALIGN_CEIL((uintptr_t)(out + 1),
+						       sizeof(double));
 		if (sizeof(*out) > size)
 			return -1;
 		out->command = ctx->curr;
@@ -8130,6 +8154,9 @@ parse_vc(struct context *ctx, const struct token *token,
 					       sizeof(double));
 		ctx->object = out->args.vc.actions;
 		ctx->objmask = NULL;
+		return len;
+	case VC_IS_USER_ID:
+		out->args.vc.user_id = true;
 		return len;
 	default:
 		if (!token->priv)
@@ -12687,6 +12714,11 @@ cmd_flow_parsed(const struct buffer *in)
 		port_flow_destroy(in->port, in->args.destroy.rule_n,
 				  in->args.destroy.rule,
 				  in->args.destroy.is_user_id);
+		break;
+	case ACTIONS_UPDATE:
+		port_flow_actions_update(in->port, in->args.vc.rule_id,
+					 in->args.vc.actions,
+					 in->args.vc.user_id);
 		break;
 	case FLUSH:
 		port_flow_flush(in->port);
