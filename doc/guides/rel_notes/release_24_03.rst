@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Atomic Rules' Arkville PMD.**
+
+  * Added support for Atomic Rules' TK242 packet-capture family of devices
+    with PCI IDs: ``0x1024, 0x1025, 0x1026``.
 
 Removed Items
 -------------
