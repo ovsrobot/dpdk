@@ -2639,6 +2639,8 @@ test_sm2_sign(void)
 		asym_op->sm2.k.data = input_params.k.data;
 		asym_op->sm2.k.length = input_params.k.length;
 	}
+	asym_op->sm2.k.data = input_params.k.data;
+	asym_op->sm2.k.length = input_params.k.length;
 
 	/* Init out buf */
 	asym_op->sm2.r.data = output_buf_r;
@@ -3188,7 +3190,7 @@ static int send_one(void)
 		ticks++;
 		if (ticks >= DEQ_TIMEOUT) {
 			RTE_LOG(ERR, USER1,
-				"line %u FAILED: Cannot dequeue the crypto op on device %d",
+				"line %u FAILED: Cannot dequeue the crypto op on device, timeout %d",
 				__LINE__, params->valid_devs[0]);
 			return TEST_FAILED;
 		}
@@ -3467,6 +3469,110 @@ KAT_RSA_Decrypt_CRT(const void *data)
 	return 0;
 }
 
+static int
+test_sm2_encryption(const void *data)
+{
+	struct rte_crypto_asym_xform xform = { 0 };
+	const uint8_t dev_id = params->valid_devs[0];
+	const struct crypto_testsuite_sm2_params *test_vector = data;
+	uint8_t result_C1_x1[TEST_DATA_SIZE] = { 0 };
+	uint8_t result_C1_y1[TEST_DATA_SIZE] = { 0 };
+	uint8_t result_kP_x1[TEST_DATA_SIZE] = { 0 };
+	uint8_t result_kP_y1[TEST_DATA_SIZE] = { 0 };
+
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2;
+	xform.ec.curve_id = RTE_CRYPTO_EC_GROUP_SM2;
+	xform.ec.q = test_vector->pubkey;
+	self->op->asym->sm2.op_type = RTE_CRYPTO_ASYM_OP_ENCRYPT;
+	self->op->asym->sm2.k = test_vector->k;
+	if (rte_cryptodev_asym_session_create(dev_id, &xform,
+			params->session_mpool, &self->sess) < 0) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: Session creation failed",
+			__LINE__);
+		return TEST_FAILED;
+	}
+	rte_crypto_op_attach_asym_session(self->op, self->sess);
+
+	self->op->asym->sm2.C1.x.data = result_C1_x1;
+	self->op->asym->sm2.C1.y.data = result_C1_y1;
+	self->op->asym->sm2.kP.x.data = result_kP_x1;
+	self->op->asym->sm2.kP.y.data = result_kP_y1;
+	TEST_ASSERT_SUCCESS(send_one(),
+		"Failed to process crypto op");
+
+	debug_hexdump(stdout, "C1[x]", self->op->asym->sm2.C1.x.data,
+		self->op->asym->sm2.C1.x.length);
+	debug_hexdump(stdout, "C1[y]", self->op->asym->sm2.C1.y.data,
+		self->op->asym->sm2.C1.y.length);
+	debug_hexdump(stdout, "kP[x]", self->op->asym->sm2.kP.x.data,
+		self->op->asym->sm2.kP.x.length);
+	debug_hexdump(stdout, "kP[y]", self->op->asym->sm2.kP.y.data,
+		self->op->asym->sm2.kP.y.length);
+
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(test_vector->C1.x.data,
+		self->op->asym->sm2.C1.x.data,
+		test_vector->C1.x.length,
+		"Incorrect value of C1[x]\n");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(test_vector->C1.y.data,
+		self->op->asym->sm2.C1.y.data,
+		test_vector->C1.y.length,
+		"Incorrect value of C1[y]\n");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(test_vector->kP.x.data,
+		self->op->asym->sm2.kP.x.data,
+		test_vector->kP.x.length,
+		"Incorrect value of kP[x]\n");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(test_vector->kP.y.data,
+		self->op->asym->sm2.kP.y.data,
+		test_vector->kP.y.length,
+		"Incorrect value of kP[y]\n");
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_sm2_decryption(const void *data)
+{
+	struct rte_crypto_asym_xform xform = {};
+	const uint8_t dev_id = params->valid_devs[0];
+	const struct crypto_testsuite_sm2_params *test_vector = data;
+	uint8_t result_kP_x1[TEST_DATA_SIZE] = { 0 };
+	uint8_t result_kP_y1[TEST_DATA_SIZE] = { 0 };
+
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2;
+	xform.ec.pkey = test_vector->pkey;
+	self->op->asym->sm2.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT;
+	self->op->asym->sm2.C1 = test_vector->C1;
+
+	if (rte_cryptodev_asym_session_create(dev_id, &xform,
+			params->session_mpool, &self->sess) < 0) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: Session creation failed",
+			__LINE__);
+		return TEST_FAILED;
+	}
+	rte_crypto_op_attach_asym_session(self->op, self->sess);
+
+	self->op->asym->sm2.kP.x.data = result_kP_x1;
+	self->op->asym->sm2.kP.y.data = result_kP_y1;
+	TEST_ASSERT_SUCCESS(send_one(),
+		"Failed to process crypto op");
+
+	debug_hexdump(stdout, "kP[x]", self->op->asym->sm2.kP.x.data,
+		self->op->asym->sm2.C1.x.length);
+	debug_hexdump(stdout, "kP[y]", self->op->asym->sm2.kP.y.data,
+		self->op->asym->sm2.C1.y.length);
+
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(test_vector->kP.x.data,
+		self->op->asym->sm2.kP.x.data,
+		test_vector->kP.x.length,
+		"Incorrect value of kP[x]\n");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(test_vector->kP.y.data,
+		self->op->asym->sm2.kP.y.data,
+		test_vector->kP.y.length,
+		"Incorrect value of kP[y]\n");
+
+	return 0;
+}
+
 static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
@@ -3522,6 +3628,14 @@ static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
+		TEST_CASE_NAMED_WITH_DATA(
+			"SM2 encryption - test case 1",
+			ut_setup_asym, ut_teardown_asym,
+			test_sm2_encryption, &sm2_enc_hw_t1),
+		TEST_CASE_NAMED_WITH_DATA(
+			"SM2 decryption - test case 1",
+			ut_setup_asym, ut_teardown_asym,
+			test_sm2_decryption, &sm2_enc_hw_t1),
 		TEST_CASE_NAMED_WITH_DATA(
 			"Modular Exponentiation (mod=128, base=20, exp=3, res=128)",
 			ut_setup_asym, ut_teardown_asym,
