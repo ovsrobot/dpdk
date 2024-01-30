@@ -271,9 +271,10 @@ Here are some guidelines for the body of a commit message:
      Update the docs, fixing description of some parameter.
 
      Fixes: abcdefgh1234 ("doc: add some parameter")
-     Cc: author@example.com
 
      Signed-off-by: Alex Smith <alex.smith@example.com>
+     ---
+     Cc: author@example.com
 
 * When fixing an error or warning it is useful to add the error message and instructions on how to reproduce it.
 
