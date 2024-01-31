@@ -5746,6 +5746,10 @@ struct rte_flow_template_table;
  * if the hint is supported.
  */
 #define RTE_FLOW_TABLE_SPECIALIZE_TRANSFER_VPORT_ORIG RTE_BIT32(1)
+/**
+ * Specialize table for resize.
+ */
+#define RTE_FLOW_TABLE_SPECIALIZE_RESIZABLE_TABLE RTE_BIT32(2)
 /**@}*/
 
 /**
@@ -5823,6 +5827,28 @@ struct rte_flow_template_table_attr {
 	 */
 	enum rte_flow_table_hash_func hash_func;
 };
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Query if a table can be resized
+ *
+ * @param port_id
+ *    Port identifier of Ethernet device.
+ * @param tbl_attr
+ *    Template table
+ *
+ * @return
+ *   True if the table can be resized.
+ */
+static __rte_always_inline bool
+rte_flow_table_resizable(__rte_unused uint16_t port_id,
+			 const struct rte_flow_template_table_attr *tbl_attr)
+{
+	return (tbl_attr->specialize &
+		RTE_FLOW_TABLE_SPECIALIZE_RESIZABLE_TABLE) != 0;
+}
 
 /**
  * @warning
@@ -6750,6 +6776,94 @@ rte_flow_calc_table_hash(uint16_t port_id, const struct rte_flow_template_table 
 			 const struct rte_flow_item pattern[], uint8_t pattern_template_index,
 			 uint32_t *hash, struct rte_flow_error *error);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Change template table flow rules capacity.
+ * PMD implementation must support table change to the new size.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param table
+ *   Template table to modify.
+ * @param nb_rules
+ *   New flow rules capacity.
+ * @param error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   - (0) if success.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-ENOTSUP) if underlying device does not support this functionality.
+ *   - (-EINVAL) if *table* cannot be resized or resize to *nb_rules*
+ *               is not supported in PMD.
+ */
+__rte_experimental
+int
+rte_flow_template_table_resize(uint16_t port_id,
+			       struct rte_flow_template_table *table,
+			       uint32_t nb_rules,
+			       struct rte_flow_error *error);
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Following table resize, update flow resources in port.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue
+ *   Flow queue for async operation.
+ * @param attr
+ *   Async operation attributes.
+ * @param rule
+ *   Flow rule to update.
+ * @param user_data
+ *   The user data that will be returned on async completion event.
+ * @param error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   - (0) if success.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-ENOTSUP) if underlying device does not support this functionality.
+ *   - (-EINVAL) if *rule* cannot be updated.
+ */
+__rte_experimental
+int
+rte_flow_async_update_resized(uint16_t port_id, uint32_t queue,
+			      const struct rte_flow_op_attr *attr,
+			      struct rte_flow *rule, void *user_data,
+			      struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Following table resize, notify port that all table flows were updated.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param table
+ *   Template table that undergoing resize operation.
+ * @param error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   - (0) if success.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-ENOTSUP) if underlying device does not support this functionality.
+ *   - (-EINVAL) PMD cannot complete table resize.
+ */
+__rte_experimental
+int
+rte_flow_template_table_resize_complete(uint16_t port_id,
+					struct rte_flow_template_table *table,
+					struct rte_flow_error *error);
 #ifdef __cplusplus
 }
 #endif

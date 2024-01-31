@@ -55,6 +55,8 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for template API table resize.**
+
 
 Removed Items
 -------------

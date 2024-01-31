@@ -316,6 +316,11 @@ EXPERIMENTAL {
 	rte_eth_recycle_rx_queue_info_get;
 	rte_flow_group_set_miss_actions;
 	rte_flow_calc_table_hash;
+
+	# added in 24.03
+	rte_flow_template_table_resize;
+	rte_flow_async_update_resized;
+	rte_flow_template_table_resize_complete;
 };
 
 INTERNAL {
