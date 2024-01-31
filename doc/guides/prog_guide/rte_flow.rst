@@ -3506,6 +3506,14 @@ The packets will be received by the kernel driver sharing the same device
 as the DPDK port on which this action is configured.
 
 
+Action: ``NAT64``
+^^^^^^^^^^^^^^^^^
+
+This action does the header translation between IPv4 and IPv6. Besides
+converting the IP addresses, other fields in the IP header are handled as
+well. The ``type`` field should be provided as defined in the
+``rte_flow_action_nat64`` when creating the action.
+
 Negative types
 ~~~~~~~~~~~~~~
 
