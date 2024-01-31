@@ -3120,11 +3120,8 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 						VHOST_ACCESS_RO) < 0))
 			break;
 
-		update_shadow_used_ring_split(vq, head_idx, 0);
-
 		if (unlikely(buf_len <= dev->vhost_hlen)) {
-			dropped += 1;
-			i++;
+			dropped = 1;
 			break;
 		}
 
@@ -3143,8 +3140,7 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 					buf_len, mbuf_pool->name);
 				allocerr_warned = true;
 			}
-			dropped += 1;
-			i++;
+			dropped = 1;
 			break;
 		}
 
@@ -3155,17 +3151,17 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 				VHOST_DATA_LOG(dev->ifname, ERR, "failed to copy desc to mbuf.");
 				allocerr_warned = true;
 			}
-			dropped += 1;
-			i++;
+			dropped = 1;
 			break;
 		}
 
+		update_shadow_used_ring_split(vq, head_idx, 0);
 	}
 
-	if (dropped)
-		rte_pktmbuf_free_bulk(&pkts[i - 1], count - i + 1);
+	if (unlikely(count != i))
+		rte_pktmbuf_free_bulk(&pkts[i], count - i);
 
-	vq->last_avail_idx += i;
+	vq->last_avail_idx += i + dropped;
 
 	do_data_copy_dequeue(vq);
 	if (unlikely(i < count))
@@ -3175,7 +3171,7 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		vhost_vring_call_split(dev, vq);
 	}
 
-	return (i - dropped);
+	return i;
 }
 
 __rte_noinline
