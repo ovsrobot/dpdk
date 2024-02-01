@@ -92,9 +92,10 @@ commit message body as follows::
      Update the docs, fixing description of some parameter.
 
      Fixes: abcdefgh1234 ("doc: add some parameter")
-     Cc: stable@dpdk.org
 
      Signed-off-by: Alex Smith <alex.smith@example.com>
+     ---
+     Cc: stable@dpdk.org
 
 
 Fixes not suitable for backport should not include the ``Cc: stable@dpdk.org`` tag.
