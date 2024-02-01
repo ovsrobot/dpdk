@@ -199,7 +199,7 @@ typedef void (sfc_dp_rx_qpurge_t)(struct sfc_dp_rxq *dp_rxq);
 
 /** Get packet types recognized/classified */
 typedef const uint32_t * (sfc_dp_rx_supported_ptypes_get_t)(
-				uint32_t tunnel_encaps);
+			  uint32_t tunnel_encaps, size_t *no_of_elements);
 
 /** Get number of pending Rx descriptors */
 typedef unsigned int (sfc_dp_rx_qdesc_npending_t)(struct sfc_dp_rxq *dp_rxq);
