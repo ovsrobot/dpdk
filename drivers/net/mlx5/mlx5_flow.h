@@ -17,6 +17,8 @@
 #include <mlx5_prm.h>
 
 #include "mlx5.h"
+#include "hws/mlx5dr.h"
+#include "rte_flow.h"
 #include "rte_pmd_mlx5.h"
 #include "hws/mlx5dr.h"
 
