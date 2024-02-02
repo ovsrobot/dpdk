@@ -1198,6 +1198,20 @@ mlx5_flow_calc_table_hash(struct rte_eth_dev *dev,
 			  uint8_t pattern_template_index,
 			  uint32_t *hash, struct rte_flow_error *error);
 
+static int
+mlx5_template_table_resize(struct rte_eth_dev *dev,
+			   struct rte_flow_template_table *table,
+			   uint32_t nb_rules, struct rte_flow_error *error);
+static int
+mlx5_flow_async_update_resized(struct rte_eth_dev *dev, uint32_t queue,
+			       const struct rte_flow_op_attr *attr,
+			       struct rte_flow *rule, void *user_data,
+			       struct rte_flow_error *error);
+static int
+mlx5_table_resize_complete(struct rte_eth_dev *dev,
+			   struct rte_flow_template_table *table,
+			   struct rte_flow_error *error);
+
 static const struct rte_flow_ops mlx5_flow_ops = {
 	.validate = mlx5_flow_validate,
 	.create = mlx5_flow_create,
@@ -1253,6 +1267,9 @@ static const struct rte_flow_ops mlx5_flow_ops = {
 	.async_action_list_handle_query_update =
 		mlx5_flow_async_action_list_handle_query_update,
 	.flow_calc_table_hash = mlx5_flow_calc_table_hash,
+	.flow_template_table_resize = mlx5_template_table_resize,
+	.flow_update_resized = mlx5_flow_async_update_resized,
+	.flow_template_table_resize_complete = mlx5_table_resize_complete,
 };
 
 /* Tunnel information. */
@@ -11113,6 +11130,40 @@ mlx5_flow_calc_table_hash(struct rte_eth_dev *dev,
 					  NULL, "no query_update handler");
 	return fops->flow_calc_table_hash(dev, table, pattern, pattern_template_index,
 					  hash, error);
+}
+
+static int
+mlx5_template_table_resize(struct rte_eth_dev *dev,
+			   struct rte_flow_template_table *table,
+			   uint32_t nb_rules, struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops;
+
+	MLX5_DRV_FOPS_OR_ERR(dev, fops, table_resize, ENOTSUP);
+	return fops->table_resize(dev, table, nb_rules, error);
+}
+
+static int
+mlx5_table_resize_complete(struct rte_eth_dev *dev,
+			   struct rte_flow_template_table *table,
+			   struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops;
+
+	MLX5_DRV_FOPS_OR_ERR(dev, fops, table_resize_complete, ENOTSUP);
+	return fops->table_resize_complete(dev, table, error);
+}
+
+static int
+mlx5_flow_async_update_resized(struct rte_eth_dev *dev, uint32_t queue,
+			       const struct rte_flow_op_attr *op_attr,
+			       struct rte_flow *rule, void *user_data,
+			       struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops;
+
+	MLX5_DRV_FOPS_OR_ERR(dev, fops, flow_update_resized, ENOTSUP);
+	return fops->flow_update_resized(dev, queue, op_attr, rule, user_data, error);
 }
 
 /**
