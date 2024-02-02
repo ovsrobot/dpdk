@@ -378,7 +378,7 @@ rte_dpaa2_mbuf_alloc_bulk(struct rte_mempool *pool,
 			obj_table[n] = (struct rte_mbuf *)
 				       (bufs[i] - bp_info->meta_data_size);
 			DPAA2_MEMPOOL_DP_DEBUG(
-				   "Acquired %p address %p from BMAN\n",
+				   "Acquired %p address %p from BMAN",
 				   (void *)bufs[i], (void *)obj_table[n]);
 			n++;
 		}
@@ -386,7 +386,7 @@ rte_dpaa2_mbuf_alloc_bulk(struct rte_mempool *pool,
 
 #ifdef RTE_LIBRTE_DPAA2_DEBUG_DRIVER
 	alloc += n;
-	DPAA2_MEMPOOL_DP_DEBUG("Total = %d , req = %d done = %d\n",
+	DPAA2_MEMPOOL_DP_DEBUG("Total = %d , req = %d done = %d",
 			       alloc, count, n);
 #endif
 	return 0;
@@ -439,7 +439,7 @@ rte_hw_mbuf_get_count(const struct rte_mempool *mp)
 		return 0;
 	}
 
-	DPAA2_MEMPOOL_DP_DEBUG("Free bufs = %u\n", num_of_bufs);
+	DPAA2_MEMPOOL_DP_DEBUG("Free bufs = %u", num_of_bufs);
 
 	return num_of_bufs;
 }

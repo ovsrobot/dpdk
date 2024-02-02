@@ -102,7 +102,7 @@ ern_sec_fq_handler(struct qman_portal *qm __rte_unused,
 		   struct qman_fq *fq,
 		   const struct qm_mr_entry *msg)
 {
-	DPAA_SEC_DP_ERR("sec fq %d error, RC = %x, seqnum = %x\n",
+	DPAA_SEC_DP_ERR("sec fq %d error, RC = %x, seqnum = %x",
 			fq->fqid, msg->ern.rc, msg->ern.seqnum);
 }
 
@@ -849,8 +849,7 @@ dpaa_sec_deq(struct dpaa_sec_qp *qp, struct rte_crypto_op **ops, int nb_ops)
 			op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
 		} else {
 			if (dpaa_sec_dp_dump > DPAA_SEC_DP_NO_DUMP) {
-				DPAA_SEC_DP_WARN("SEC return err:0x%x\n",
-						  ctx->fd_status);
+				DPAA_SEC_DP_WARN("SEC return err:0x%x", ctx->fd_status);
 				if (dpaa_sec_dp_dump > DPAA_SEC_DP_ERR_DUMP)
 					dpaa_sec_dump(ctx, qp);
 			}
@@ -1921,8 +1920,7 @@ dpaa_sec_enqueue_burst(void *qp, struct rte_crypto_op **ops,
 				ses = SECURITY_GET_SESS_PRIV(op->sym->session);
 				break;
 			default:
-				DPAA_SEC_DP_ERR(
-					"sessionless crypto op not supported");
+				DPAA_SEC_DP_ERR("sessionless crypto op not supported");
 				frames_to_send = loop;
 				nb_ops = loop;
 				goto send_pkts;
@@ -1943,8 +1941,7 @@ dpaa_sec_enqueue_burst(void *qp, struct rte_crypto_op **ops,
 				}
 			} else if (unlikely(ses->qp[rte_lcore_id() %
 						MAX_DPAA_CORES] != qp)) {
-				DPAA_SEC_DP_ERR("Old:sess->qp = %p"
-					" New qp = %p\n",
+				DPAA_SEC_DP_ERR("Old:sess->qp = %p New qp = %p",
 					ses->qp[rte_lcore_id() %
 					MAX_DPAA_CORES], qp);
 				frames_to_send = loop;
@@ -2054,7 +2051,7 @@ dpaa_sec_enqueue_burst(void *qp, struct rte_crypto_op **ops,
 				fd->cmd = 0x80000000 |
 					*((uint32_t *)((uint8_t *)op +
 					ses->pdcp.hfn_ovd_offset));
-				DPAA_SEC_DP_DEBUG("Per packet HFN: %x, ovd:%u\n",
+				DPAA_SEC_DP_DEBUG("Per packet HFN: %x, ovd:%u",
 					*((uint32_t *)((uint8_t *)op +
 					ses->pdcp.hfn_ovd_offset)),
 					ses->pdcp.hfn_ovd);
@@ -2095,7 +2092,7 @@ dpaa_sec_dequeue_burst(void *qp, struct rte_crypto_op **ops,
 	dpaa_qp->rx_pkts += num_rx;
 	dpaa_qp->rx_errs += nb_ops - num_rx;
 
-	DPAA_SEC_DP_DEBUG("SEC Received %d Packets\n", num_rx);
+	DPAA_SEC_DP_DEBUG("SEC Received %d Packets", num_rx);
 
 	return num_rx;
 }

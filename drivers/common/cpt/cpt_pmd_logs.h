@@ -34,7 +34,7 @@
  * DP logs, toggled out at compile time if level lower than current level.
  */
 #define CPT_LOG_DP(level, fmt, args...) \
-	RTE_LOG_DP(level, CPT, fmt "\n", ## args)
+	RTE_LOG_DP_LINE(level, CPT, fmt, ## args)
 
 #define CPT_LOG_DP_DEBUG(fmt, args...) \
 	CPT_LOG_DP(DEBUG, fmt, ## args)

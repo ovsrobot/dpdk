@@ -779,7 +779,7 @@ dpaa_qdma_enqueue(void *dev_private, uint16_t vchan,
 			(dma_addr_t)dst, (dma_addr_t)src,
 			length, NULL, NULL);
 	if (!fsl_comp) {
-		DPAA_QDMA_DP_DEBUG("fsl_comp is NULL\n");
+		DPAA_QDMA_DP_DEBUG("fsl_comp is NULL");
 		return -1;
 	}
 	ret = fsl_qdma_enqueue_desc(fsl_chan, fsl_comp, flags);

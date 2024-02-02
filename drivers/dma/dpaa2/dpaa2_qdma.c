@@ -607,8 +607,7 @@ dpdmai_dev_dequeue_multijob_prefetch(struct qdma_virt_queue *qdma_vq,
 		}
 		while (1) {
 			if (qbman_swp_pull(swp, &pulldesc)) {
-				DPAA2_QDMA_DP_WARN(
-					"VDQ command not issued.QBMAN busy\n");
+				DPAA2_QDMA_DP_WARN("VDQ command not issued. QBMAN busy");
 					/* Portal was busy, try again */
 				continue;
 			}
@@ -683,8 +682,7 @@ dpdmai_dev_dequeue_multijob_prefetch(struct qdma_virt_queue *qdma_vq,
 	/* issue a volatile dequeue command for next pull */
 	while (1) {
 		if (qbman_swp_pull(swp, &pulldesc)) {
-			DPAA2_QDMA_DP_WARN(
-				"VDQ command is not issued. QBMAN is busy (2)\n");
+			DPAA2_QDMA_DP_WARN("VDQ command is not issued. QBMAN is busy (2)");
 			continue;
 		}
 		break;
@@ -756,8 +754,7 @@ dpdmai_dev_dequeue_multijob_no_prefetch(struct qdma_virt_queue *qdma_vq,
 
 		while (1) {
 			if (qbman_swp_pull(swp, &pulldesc)) {
-				DPAA2_QDMA_DP_WARN(
-					"VDQ command not issued. QBMAN busy");
+				DPAA2_QDMA_DP_WARN("VDQ command not issued. QBMAN busy");
 				/* Portal was busy, try again */
 				continue;
 			}

@@ -297,7 +297,7 @@ dsw_pmd_priv(const struct rte_eventdev *eventdev)
 }
 
 #define DSW_LOG_DP(level, fmt, args...)					\
-	RTE_LOG_DP(level, EVENTDEV, "[%s] %s() line %u: " fmt,		\
+	RTE_LOG_DP_LINE(level, EVENTDEV, "[%s] %s() line %u: " fmt,	\
 		   DSW_PMD_NAME,					\
 		   __func__, __LINE__, ## args)
 

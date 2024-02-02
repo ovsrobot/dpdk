@@ -27,6 +27,6 @@ extern int pfe_logtype_pmd;
 
 /* DP Logs, toggled out at compile time if level lower than current level */
 #define PFE_DP_LOG(level, fmt, args...) \
-	RTE_LOG_DP(level, PFE_PMD, fmt, ## args)
+	RTE_LOG_DP_LINE(level, PFE_PMD, fmt, ## args)
 
 #endif /* _PFE_LOGS_H_ */

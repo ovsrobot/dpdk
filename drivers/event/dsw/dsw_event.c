@@ -55,7 +55,7 @@ dsw_port_acquire_credits(struct dsw_evdev *dsw, struct dsw_port *port,
 		return false;
 	}
 
-	DSW_LOG_DP_PORT(DEBUG, port->id, "Acquired %d tokens from pool.\n",
+	DSW_LOG_DP_PORT(DEBUG, port->id, "Acquired %d tokens from pool.",
 			acquired_credits);
 
 	port->inflight_credits += acquired_credits;
@@ -81,7 +81,7 @@ dsw_port_return_credits(struct dsw_evdev *dsw, struct dsw_port *port,
 				   __ATOMIC_RELAXED);
 
 		DSW_LOG_DP_PORT(DEBUG, port->id,
-				"Returned %d tokens to pool.\n",
+				"Returned %d tokens to pool.",
 				return_credits);
 	}
 }
@@ -257,7 +257,7 @@ dsw_port_add_paused_flows(struct dsw_port *port, struct dsw_queue_flow *qfs,
 		struct dsw_queue_flow *qf = &qfs[i];
 
 		DSW_LOG_DP_PORT(DEBUG, port->id,
-				"Pausing queue_id %d flow_hash %d.\n",
+				"Pausing queue_id %d flow_hash %d.",
 				qf->queue_id, qf->flow_hash);
 
 		port->paused_flows[port->paused_flows_len] = *qf;
@@ -283,7 +283,7 @@ dsw_port_remove_paused_flow(struct dsw_port *port,
 			port->paused_flows_len--;
 
 			DSW_LOG_DP_PORT(DEBUG, port->id,
-					"Unpausing queue_id %d flow_hash %d.\n",
+					"Unpausing queue_id %d flow_hash %d.",
 					target_qf->queue_id,
 					target_qf->flow_hash);
 
@@ -292,7 +292,7 @@ dsw_port_remove_paused_flow(struct dsw_port *port,
 	}
 
 	DSW_LOG_DP_PORT(ERR, port->id,
-			"Failed to unpause queue_id %d flow_hash %d.\n",
+			"Failed to unpause queue_id %d flow_hash %d.",
 			target_qf->queue_id, target_qf->flow_hash);
 }
 
@@ -515,7 +515,7 @@ dsw_select_emigration_target(struct dsw_evdev *dsw,
 
 	DSW_LOG_DP_PORT(DEBUG, source_port->id, "Selected queue_id %d "
 			"flow_hash %d (with flow load %d) for migration "
-			"to port %d.\n", candidate_qf->queue_id,
+			"to port %d.", candidate_qf->queue_id,
 			candidate_qf->flow_hash,
 			DSW_LOAD_TO_PERCENT(candidate_flow_load),
 			candidate_port_id);
@@ -560,7 +560,7 @@ dsw_select_emigration_targets(struct dsw_evdev *dsw,
 	if (*targets_len == 0)
 		DSW_LOG_DP_PORT(DEBUG, source_port->id,
 				"For the %d flows considered, no target port "
-				"was found.\n", num_bursts);
+				"was found.", num_bursts);
 }
 
 static uint8_t
@@ -578,7 +578,7 @@ dsw_schedule(struct dsw_evdev *dsw, uint8_t queue_id, uint16_t flow_hash)
 		port_id = queue->serving_ports[0];
 
 	DSW_LOG_DP(DEBUG, "Event with queue_id %d flow_hash %d is scheduled "
-		   "to port %d.\n", queue_id, flow_hash, port_id);
+		   "to port %d.", queue_id, flow_hash, port_id);
 
 	return port_id;
 }
@@ -767,7 +767,7 @@ dsw_port_end_emigration(struct dsw_evdev *dsw, struct dsw_port *port,
 		}
 
 		DSW_LOG_DP_PORT(DEBUG, port->id, "Migration completed for "
-				"queue_id %d flow_hash %d.\n", queue_id,
+				"queue_id %d flow_hash %d.", queue_id,
 				flow_hash);
 	}
 
@@ -835,11 +835,11 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 	if (dsw->num_ports == 1)
 		return;
 
-	DSW_LOG_DP_PORT(DEBUG, source_port->id, "Considering emigration.\n");
+	DSW_LOG_DP_PORT(DEBUG, source_port->id, "Considering emigration.");
 
 	if (seen_events_len < DSW_MAX_EVENTS_RECORDED) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id, "Not enough events "
-				"are recorded to allow for a migration.\n");
+				"are recorded to allow for a migration.");
 		return;
 	}
 
@@ -857,7 +857,7 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 	 */
 	if (source_port->paused_events_len > 0) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id, "There are "
-				"events in the paus buffer.\n");
+				"events in the paus buffer.");
 		return;
 	}
 
@@ -871,7 +871,7 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 
 	if (source_port->migration_state != DSW_MIGRATION_STATE_IDLE) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id,
-				"Emigration already in progress.\n");
+				"Emigration already in progress.");
 		return;
 	}
 
@@ -881,7 +881,7 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 	 */
 	if (source_port->in_buffer_len > 0) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id, "There are still "
-				"events in the input buffer.\n");
+				"events in the input buffer.");
 		return;
 	}
 
@@ -889,7 +889,7 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 		__atomic_load_n(&source_port->load, __ATOMIC_RELAXED);
 	if (source_port_load < DSW_MIN_SOURCE_LOAD_FOR_MIGRATION) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id,
-		      "Load %d is below threshold level %d.\n",
+		      "Load %d is below threshold level %d.",
 		      DSW_LOAD_TO_PERCENT(source_port_load),
 		      DSW_LOAD_TO_PERCENT(DSW_MIN_SOURCE_LOAD_FOR_MIGRATION));
 		return;
@@ -904,7 +904,7 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 	if (!any_port_below_limit) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id,
 				"Candidate target ports are all too highly "
-				"loaded.\n");
+				"loaded.");
 		return;
 	}
 
@@ -916,7 +916,7 @@ dsw_port_consider_emigration(struct dsw_evdev *dsw,
 	 */
 	if (num_bursts < 2) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id, "Only a single flow "
-				"queue_id %d flow_hash %d has been seen.\n",
+				"queue_id %d flow_hash %d has been seen.",
 				bursts[0].queue_flow.queue_id,
 				bursts[0].queue_flow.flow_hash);
 		return;
@@ -1260,7 +1260,7 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	uint16_t i;
 
 	DSW_LOG_DP_PORT(DEBUG, source_port->id, "Attempting to enqueue %d "
-			"events.\n", events_len);
+			"events.", events_len);
 
 	dsw_port_bg_process(dsw, source_port);
 
@@ -1329,7 +1329,7 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	}
 
 	DSW_LOG_DP_PORT(DEBUG, source_port->id, "%d non-release events "
-			"accepted.\n", num_non_release);
+			"accepted.", num_non_release);
 
 	return (num_non_release + num_release);
 }
@@ -1505,7 +1505,7 @@ dsw_event_dequeue_burst(void *port, struct rte_event *events, uint16_t num,
 	dsw_port_note_op(source_port, dequeued);
 
 	if (dequeued > 0) {
-		DSW_LOG_DP_PORT(DEBUG, source_port->id, "Dequeued %d events.\n",
+		DSW_LOG_DP_PORT(DEBUG, source_port->id, "Dequeued %d events.",
 				dequeued);
 
 		dsw_port_return_credits(dsw, source_port, dequeued);

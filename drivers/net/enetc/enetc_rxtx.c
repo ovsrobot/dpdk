@@ -255,7 +255,7 @@ static inline void enetc_slow_parsing(struct rte_mbuf *m,
 static inline void __rte_hot
 enetc_dev_rx_parse(struct rte_mbuf *m, uint16_t parse_results)
 {
-	ENETC_PMD_DP_DEBUG("parse summary = 0x%x   ", parse_results);
+	ENETC_PMD_DP_DEBUG("parse summary = 0x%x", parse_results);
 	m->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD | RTE_MBUF_F_RX_L4_CKSUM_GOOD;
 
 	switch (parse_results) {

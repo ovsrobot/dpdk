@@ -67,9 +67,7 @@ dpaa2_cmdif_enqueue_bufs(struct rte_rawdev *dev,
 	if (unlikely(!DPAA2_PER_LCORE_DPIO)) {
 		ret = dpaa2_affine_qbman_swp();
 		if (ret) {
-			DPAA2_CMDIF_ERR(
-				"Failed to allocate IO portal, tid: %d\n",
-				rte_gettid());
+			DPAA2_CMDIF_ERR("Failed to allocate IO portal, tid: %d", rte_gettid());
 			return 0;
 		}
 	}
@@ -106,7 +104,7 @@ dpaa2_cmdif_enqueue_bufs(struct rte_rawdev *dev,
 	if (ret < 0)
 		return ret;
 
-	DPAA2_CMDIF_DP_DEBUG("Successfully transmitted a packet\n");
+	DPAA2_CMDIF_DP_DEBUG("Successfully transmitted a packet");
 
 	return 1;
 }
@@ -152,7 +150,7 @@ dpaa2_cmdif_dequeue_bufs(struct rte_rawdev *dev,
 
 	while (1) {
 		if (qbman_swp_pull(swp, &pulldesc)) {
-			DPAA2_CMDIF_DP_WARN("VDQ cmd not issued. QBMAN is busy\n");
+			DPAA2_CMDIF_DP_WARN("VDQ cmd not issued. QBMAN is busy");
 			/* Portal was busy, try again */
 			continue;
 		}
@@ -169,7 +167,7 @@ dpaa2_cmdif_dequeue_bufs(struct rte_rawdev *dev,
 	/* Check for valid frame. */
 	status = (uint8_t)qbman_result_DQ_flags(dq_storage);
 	if (unlikely((status & QBMAN_DQ_STAT_VALIDFRAME) == 0)) {
-		DPAA2_CMDIF_DP_DEBUG("No frame is delivered\n");
+		DPAA2_CMDIF_DP_DEBUG("No frame is delivered");
 		return 0;
 	}
 
@@ -181,7 +179,7 @@ dpaa2_cmdif_dequeue_bufs(struct rte_rawdev *dev,
 	cmdif_rcv_cnxt->flc = DPAA2_GET_FD_FLC(fd);
 	cmdif_rcv_cnxt->frc = DPAA2_GET_FD_FRC(fd);
 
-	DPAA2_CMDIF_DP_DEBUG("packet received\n");
+	DPAA2_CMDIF_DP_DEBUG("packet received");
 
 	return 1;
 }
