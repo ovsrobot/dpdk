@@ -1518,7 +1518,7 @@ struct rte_event_vector {
  * for dequeue and enqueue operation
  */
 struct rte_event {
-	/** WORD0 */
+	/* WORD0 */
 	union {
 		uint64_t event;
 		/** Event attributes for dequeue or enqueue operation */
@@ -1631,7 +1631,7 @@ struct rte_event {
 			 */
 		};
 	};
-	/** WORD1 */
+	/* WORD1 */
 	union {
 		uint64_t u64;
 		/**< Opaque 64-bit value */
