@@ -2346,7 +2346,7 @@ caam_jr_dev_init(const char *name,
 
 	rte_cryptodev_pmd_probing_finish(dev);
 
-	RTE_LOG(INFO, PMD, "%s cryptodev init\n", dev->data->name);
+	CAAM_JR_LOG(INFO, "%s cryptodev init", dev->data->name);
 
 	return 0;
 
@@ -2386,8 +2386,7 @@ cryptodev_caam_jr_probe(struct rte_vdev_device *vdev)
 
 	ret = of_init();
 	if (ret) {
-		RTE_LOG(ERR, PMD,
-		"of_init failed\n");
+		CAAM_JR_LOG(ERR, "of_init failed");
 		return -EINVAL;
 	}
 	/* if sec device version is not configured */
