@@ -930,7 +930,7 @@ efx_rx_qcreate_internal(
 	    ndescs, id, flags, eep, erp)) != 0)
 		goto fail4;
 
-	/* Sanity check queue creation result */
+	/* Check queue creation result */
 	if (flags & EFX_RXQ_FLAG_RSS_HASH) {
 		const efx_rx_prefix_layout_t *erplp = &erp->er_prefix_layout;
 		const efx_rx_prefix_field_info_t *rss_hash_field;
