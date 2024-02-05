@@ -562,7 +562,7 @@ check_dma_mask(uint8_t maskbits, bool thread_unsafe)
 	uint64_t mask;
 	int ret;
 
-	/* Sanity check. We only check width can be managed with 64 bits
+	/* We only check width can be managed with 64 bits
 	 * variables. Indeed any higher value is likely wrong. */
 	if (maskbits > MAX_DMA_MASK_BITS) {
 		EAL_LOG(ERR, "wrong dma mask size %u (Max: %u)",
