@@ -80,7 +80,7 @@ Similarly to CUDA shared library, if the **libgdrapi.so** shared library
 is not installed in default locations (e.g. /usr/local/lib),
 you can use the variable ``GDRCOPY_PATH_L``.
 
-As an example, to enable the CPU map feature sanity check,
+As an example, to enable the CPU map feature check,
 run the ``app/test-gpudev`` application with:
 
 .. code-block:: console
