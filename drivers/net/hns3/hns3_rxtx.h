@@ -178,6 +178,8 @@
 		(HNS3_TXD_VLD_CMD | HNS3_TXD_FE_CMD | HNS3_TXD_DEFAULT_BDTYPE)
 #define HNS3_TXD_SEND_SIZE_SHIFT	16
 
+#define HNS3_KEEP_CRC_OK_MIN_PKT_LEN	60
+
 enum hns3_pkt_l2t_type {
 	HNS3_L2_TYPE_UNICAST,
 	HNS3_L2_TYPE_MULTICAST,
@@ -327,6 +329,13 @@ struct hns3_rx_queue {
 
 	/* 4 if RTE_ETH_RX_OFFLOAD_KEEP_CRC offload set, 0 otherwise */
 	uint8_t crc_len;
+
+	/*
+	 * Indicate the range of packet type that fail to keep CRC.
+	 * For HIP08 hardware, only the IP-TCP packet type is included.
+	 * For other hardwares, all IP packet type is included.
+	 */
+	uint8_t keep_crc_fail_only_tcp:1;
 
 	/*
 	 * Indicate whether ignore the outer VLAN field in the Rx BD reported
