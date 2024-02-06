@@ -86,6 +86,43 @@ API Changes
 
 * gso: ``rte_gso_segment`` now returns -ENOTSUP for unknown protocols.
 
+* ethdev: PMDs implementing asynchronous flow operations are required to provide relevant functions
+  implementation through ``rte_flow_fp_ops`` struct, instead of ``rte_flow_ops`` struct.
+  Pointer to device-dependent ``rte_flow_fp_ops`` should be provided to ``rte_eth_dev.flow_fp_ops``.
+  This change applies to the following API functions:
+
+   * ``rte_flow_async_create``
+   * ``rte_flow_async_create_by_index``
+   * ``rte_flow_async_actions_update``
+   * ``rte_flow_async_destroy``
+   * ``rte_flow_push``
+   * ``rte_flow_pull``
+   * ``rte_flow_async_action_handle_create``
+   * ``rte_flow_async_action_handle_destroy``
+   * ``rte_flow_async_action_handle_update``
+   * ``rte_flow_async_action_handle_query``
+   * ``rte_flow_async_action_handle_query_update``
+   * ``rte_flow_async_action_list_handle_create``
+   * ``rte_flow_async_action_list_handle_destroy``
+   * ``rte_flow_async_action_list_handle_query_update``
+
+* ethdev: Removed the following fields from ``rte_flow_ops`` struct:
+
+   * ``async_create``
+   * ``async_create_by_index``
+   * ``async_actions_update``
+   * ``async_destroy``
+   * ``push``
+   * ``pull``
+   * ``async_action_handle_create``
+   * ``async_action_handle_destroy``
+   * ``async_action_handle_update``
+   * ``async_action_handle_query``
+   * ``async_action_handle_query_update``
+   * ``async_action_list_handle_create``
+   * ``async_action_list_handle_destroy``
+   * ``async_action_list_handle_query_update``
+
 
 ABI Changes
 -----------
