@@ -6,8 +6,6 @@
 
 """The DTS executable."""
 
-import logging
-
 from framework import settings
 
 
