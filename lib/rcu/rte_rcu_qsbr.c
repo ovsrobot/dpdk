@@ -450,6 +450,14 @@ rte_rcu_qsbr_dq_reclaim(struct rte_rcu_qsbr_dq *dq, unsigned int n,
 	return 0;
 }
 
+/**
+ * Return the number of entries in a defer queue.
+ */
+unsigned int rte_rcu_qsbr_dq_count(struct rte_rcu_qsbr_dq *dq)
+{
+	return rte_ring_count(dq->r);
+}
+
 /* Delete a defer queue. */
 int
 rte_rcu_qsbr_dq_delete(struct rte_rcu_qsbr_dq *dq)

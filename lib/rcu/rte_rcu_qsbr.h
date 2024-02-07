@@ -795,6 +795,17 @@ rte_rcu_qsbr_dq_reclaim(struct rte_rcu_qsbr_dq *dq, unsigned int n,
 	unsigned int *freed, unsigned int *pending, unsigned int *available);
 
 /**
+ * Return the number of entries in a defer queue.
+ *
+ * @param dq
+ *   Defer queue.
+ * @return
+ *   The number of entries in the defer queue.
+ */
+unsigned int
+rte_rcu_qsbr_dq_count(struct rte_rcu_qsbr_dq *dq);
+
+/**
  * Delete a defer queue.
  *
  * It tries to reclaim all the resources on the defer queue.

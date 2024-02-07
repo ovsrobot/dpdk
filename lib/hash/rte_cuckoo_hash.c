@@ -556,6 +556,15 @@ rte_hash_max_key_id(const struct rte_hash *h)
 }
 
 int32_t
+rte_hash_dq_count(const struct rte_hash *h)
+{
+	if (h->dq == NULL)
+		return -EINVAL;
+
+	return rte_rcu_qsbr_dq_count(h->dq);
+}
+
+int32_t
 rte_hash_count(const struct rte_hash *h)
 {
 	uint32_t tot_ring_cnt, cached_cnt = 0;

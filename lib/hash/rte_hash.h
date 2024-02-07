@@ -193,6 +193,19 @@ rte_hash_free(struct rte_hash *h);
 void
 rte_hash_reset(struct rte_hash *h);
 
+
+/**
+ * Return the number of records in the defer queue of the hash table 
+ * if RCU is enabled.
+ * @param h
+ *  Hash table to query from
+ * @return
+ *   - -EINVAL if parameters are invalid
+ *   - A value indicating how many records were inserted in the table.
+ */
+int32_t
+rte_hash_dq_count(const struct rte_hash *h);
+
 /**
  * Return the number of keys in the hash table
  * @param h
