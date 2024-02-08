@@ -9,6 +9,9 @@
 #define TAP_MAX_QUEUES 16
 #endif
 
+/* Size of the map from BPF classid to queue table */
+#define TAP_RSS_MAX	TAP_MAX_QUEUES
+
 /* Fixed RSS hash key size in bytes. */
 #define TAP_RSS_HASH_KEY_SIZE 40
 
