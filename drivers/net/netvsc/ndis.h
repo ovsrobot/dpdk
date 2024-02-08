@@ -316,16 +316,19 @@ struct ndis_offload {
  */
 
 /* VLAN */
-#define	NDIS_VLAN_INFO_SIZE		sizeof(uint32_t)
-#define	NDIS_VLAN_INFO_PRI_MASK		0x0007
-#define	NDIS_VLAN_INFO_CFI_MASK		0x0008
-#define	NDIS_VLAN_INFO_ID_MASK		0xfff0
-#define	NDIS_VLAN_INFO_MAKE(id, pri, cfi)	\
-	(((pri) & NDIS_VLAN_INFO_PRI_MASK) |	\
-	 (((cfi) & 0x1) << 3) | (((id) & 0xfff) << 4))
-#define	NDIS_VLAN_INFO_ID(inf)		(((inf) & NDIS_VLAN_INFO_ID_MASK) >> 4)
-#define	NDIS_VLAN_INFO_CFI(inf)		(((inf) & NDIS_VLAN_INFO_CFI_MASK) >> 3)
-#define	NDIS_VLAN_INFO_PRI(inf)		((inf) & NDIS_VLAN_INFO_PRI_MASK)
+struct ndis_pkt_vlan_info {
+	union {
+		struct {
+			uint32_t pri:3; /* User Priority */
+			uint32_t cfi:1; /* Canonical Format ID / DEI */
+			uint32_t vlanid:12; /* VLAN ID */
+			uint32_t reserved:16;
+		};
+		uint32_t value;
+	};
+};
+
+#define	NDIS_VLAN_INFO_SIZE		sizeof(struct ndis_pkt_vlan_info)
 
 /* Reception checksum */
 #define	NDIS_RXCSUM_INFO_SIZE		sizeof(uint32_t)

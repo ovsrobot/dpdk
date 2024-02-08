@@ -42,8 +42,13 @@
 #define HN_TXD_CACHE_SIZE	32 /* per cpu tx_descriptor pool cache */
 #define HN_RXQ_EVENT_DEFAULT	2048
 
+#define HN_VLAN_PRIO_MASK	0xe000 /* Priority Code Point */
+#define HN_VLAN_PRIO_SHIFT	13
+#define HN_VLAN_CFI_MASK	0x1000 /* Canonical Format Indicator / Drop Eligible Indicator */
+#define HN_VLAN_VID_MASK	0x0fff /* VLAN Identifier */
+
 struct hn_rxinfo {
-	uint32_t	vlan_info;
+	struct ndis_pkt_vlan_info vlan_info;
 	uint32_t	csum_info;
 	uint32_t	hash_info;
 	uint32_t	hash_value;
@@ -477,7 +482,7 @@ hn_rndis_rxinfo(const void *info_data, unsigned int info_dlen,
 		case NDIS_PKTINFO_TYPE_VLAN:
 			if (unlikely(dlen < NDIS_VLAN_INFO_SIZE))
 				return -EINVAL;
-			info->vlan_info = *((const uint32_t *)data);
+			info->vlan_info = *((const struct ndis_pkt_vlan_info *)data);
 			mask |= HN_RXINFO_VLAN;
 			break;
 
@@ -611,8 +616,10 @@ static void hn_rxpkt(struct hn_rx_queue *rxq, struct hn_rx_bufinfo *rxb,
 					   RTE_PTYPE_L3_MASK |
 					   RTE_PTYPE_L4_MASK);
 
-	if (info->vlan_info != HN_NDIS_VLAN_INFO_INVALID) {
-		m->vlan_tci = info->vlan_info;
+	if (info->vlan_info.value != HN_NDIS_VLAN_INFO_INVALID) {
+		m->vlan_tci = info->vlan_info.vlanid |
+				(info->vlan_info.pri << HN_VLAN_PRIO_SHIFT) |
+				(info->vlan_info.cfi ? HN_VLAN_CFI_MASK : 0);
 		m->ol_flags |= RTE_MBUF_F_RX_VLAN_STRIPPED | RTE_MBUF_F_RX_VLAN;
 
 		/* NDIS always strips tag, put it back if necessary */
@@ -669,7 +676,7 @@ static void hn_rndis_rx_data(struct hn_rx_queue *rxq,
 	unsigned int pktinfo_off, pktinfo_len;
 	const struct rndis_packet_msg *pkt = data;
 	struct hn_rxinfo info = {
-		.vlan_info = HN_NDIS_VLAN_INFO_INVALID,
+		.vlan_info.value = HN_NDIS_VLAN_INFO_INVALID,
 		.csum_info = HN_NDIS_RXCSUM_INFO_INVALID,
 		.hash_info = HN_NDIS_HASH_INFO_INVALID,
 	};
@@ -1332,7 +1339,11 @@ static void hn_encap(struct rndis_packet_msg *pkt,
 	if (m->ol_flags & RTE_MBUF_F_TX_VLAN) {
 		pi_data = hn_rndis_pktinfo_append(pkt, NDIS_VLAN_INFO_SIZE,
 						  NDIS_PKTINFO_TYPE_VLAN);
-		*pi_data = m->vlan_tci;
+		struct ndis_pkt_vlan_info *vlan = (struct ndis_pkt_vlan_info *)pi_data;
+		vlan->value = 0;
+		vlan->vlanid = (m->vlan_tci & HN_VLAN_VID_MASK);
+		vlan->cfi = (!!(m->vlan_tci & HN_VLAN_CFI_MASK));
+		vlan->pri = ((m->vlan_tci & HN_VLAN_PRIO_MASK) >> HN_VLAN_PRIO_SHIFT);
 	}
 
 	if (m->ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
