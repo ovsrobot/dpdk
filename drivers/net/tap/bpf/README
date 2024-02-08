@@ -1,0 +1,12 @@
+This is the BPF program used to implement the RSS across queues
+flow action. It works like the skbedit tc filter but instead of mapping
+to only one queues, it maps to multiple queues based on RSS hash.
+
+This version is built the BPF Compile Once — Run Everywhere (CO-RE)
+framework and uses libbpf and bpftool.
+
+Limitations
+- requires libbpf version XX or later
+- rebuilding the BPF requires clang and bpftool
+- only Toeplitz hash with standard 40 byte key is supported
+- the number of queues per RSS action is limited to 16
