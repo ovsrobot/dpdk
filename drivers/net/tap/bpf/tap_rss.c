@@ -24,7 +24,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__uint(key_size, sizeof(__u16));
 	__uint(value_size, sizeof(struct rss_key));
-	__uint(max_entries, TAP_MAX_QUEUES);
+	__uint(max_entries, TAP_RSS_MAX);
 } rss_map SEC(".maps");
 
 

@@ -42,6 +42,7 @@ clang_flags = [
     '-O2',
     '-Wall',
     '-Wextra',
+    max_queues,
     '-target',
     'bpf',
     '-g',

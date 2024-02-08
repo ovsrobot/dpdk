@@ -1138,6 +1138,7 @@ tap_dev_close(struct rte_eth_dev *dev)
 		tap_flow_implicit_flush(internals, NULL);
 		tap_nl_final(internals->nlsk_fd);
 		internals->nlsk_fd = -1;
+		tap_flow_bpf_destroy(internals);
 	}
 
 	for (i = 0; i < RTE_PMD_TAP_MAX_QUEUES; i++) {
@@ -1959,6 +1960,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	strlcpy(pmd->name, tap_name, sizeof(pmd->name));
 	pmd->type = type;
 	pmd->ka_fd = -1;
+	pmd->rss = NULL;
 	pmd->nlsk_fd = -1;
 	pmd->gso_ctx_mp = NULL;
 
