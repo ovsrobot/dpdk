@@ -42,6 +42,19 @@
 #define HN_TXD_CACHE_SIZE	32 /* per cpu tx_descriptor pool cache */
 #define HN_RXQ_EVENT_DEFAULT	2048
 
+#define HN_VLAN_CFI_SHIFT	12
+#define HN_VLAN_PRI_SHIFT	13
+#define HN_VLAN_PRI_MASK	0xe000 /* Priority Code Point */
+#define HN_VLAN_CFI_MASK	0x1000 /* Canonical Format Indicator / Drop Eligible Indicator */
+#define HN_VLAN_VID_MASK	0x0fff /* VLAN Identifier */
+
+#define HN_VLAN_TCI_ID(vlan_tci)	((vlan_tci) & HN_VLAN_VID_MASK)
+#define HN_VLAN_TCI_PRI(vlan_tci)	(((vlan_tci) & HN_VLAN_PRI_MASK) >> HN_VLAN_PRI_SHIFT)
+#define HN_VLAN_TCI_CFI(vlan_tci)	(((vlan_tci) & HN_VLAN_CFI_MASK) >> HN_VLAN_CFI_SHIFT)
+#define HN_VLAN_TCI_MAKE(id, pri, cfi)	((id) |				\
+					 ((pri) << HN_VLAN_PRI_SHIFT) |	\
+					 ((cfi) << HN_VLAN_CFI_SHIFT))
+
 struct hn_rxinfo {
 	uint32_t	vlan_info;
 	uint32_t	csum_info;
@@ -612,7 +625,9 @@ static void hn_rxpkt(struct hn_rx_queue *rxq, struct hn_rx_bufinfo *rxb,
 					   RTE_PTYPE_L4_MASK);
 
 	if (info->vlan_info != HN_NDIS_VLAN_INFO_INVALID) {
-		m->vlan_tci = info->vlan_info;
+		m->vlan_tci = HN_VLAN_TCI_MAKE(NDIS_VLAN_INFO_ID(info->vlan_info),
+					       NDIS_VLAN_INFO_PRI(info->vlan_info),
+					       NDIS_VLAN_INFO_CFI(info->vlan_info));
 		m->ol_flags |= RTE_MBUF_F_RX_VLAN_STRIPPED | RTE_MBUF_F_RX_VLAN;
 
 		/* NDIS always strips tag, put it back if necessary */
@@ -1332,7 +1347,9 @@ static void hn_encap(struct rndis_packet_msg *pkt,
 	if (m->ol_flags & RTE_MBUF_F_TX_VLAN) {
 		pi_data = hn_rndis_pktinfo_append(pkt, NDIS_VLAN_INFO_SIZE,
 						  NDIS_PKTINFO_TYPE_VLAN);
-		*pi_data = m->vlan_tci;
+		*pi_data = NDIS_VLAN_INFO_MAKE(HN_VLAN_TCI_ID(m->vlan_tci),
+					       HN_VLAN_TCI_PRI(m->vlan_tci),
+					       HN_VLAN_TCI_CFI(m->vlan_tci));
 	}
 
 	if (m->ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
