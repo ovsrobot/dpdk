@@ -32,7 +32,7 @@ struct dir24_8_tbl {
 	uint64_t	*tbl8;		/**< tbl8 table. */
 	uint64_t	*tbl8_idxes;	/**< bitmap containing free tbl8 idxes*/
 	/* tbl24 table. */
-	__extension__ uint64_t	tbl24[0] __rte_cache_aligned;
+	uint64_t	tbl24[] __rte_cache_aligned;
 };
 
 static inline void *
