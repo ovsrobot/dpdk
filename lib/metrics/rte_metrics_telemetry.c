@@ -19,14 +19,14 @@ int metrics_log_level;
 #define RTE_LOGTYPE_METRICS metrics_log_level
 
 /* Logging Macros */
-#define METRICS_LOG(level, fmt, args...) \
-	RTE_LOG_LINE(level, METRICS, "%s(): "fmt, __func__, ## args)
+#define METRICS_LOG(level, fmt, ...) \
+	RTE_LOG_LINE(level, METRICS, "%s(): "fmt, __func__, ## __VA_ARGS__)
 
-#define METRICS_LOG_ERR(fmt, args...) \
-	METRICS_LOG(ERR, fmt, ## args)
+#define METRICS_LOG_ERR(fmt, ...) \
+	METRICS_LOG(ERR, fmt, ## __VA_ARGS__)
 
-#define METRICS_LOG_WARN(fmt, args...) \
-	METRICS_LOG(WARNING, fmt, ## args)
+#define METRICS_LOG_WARN(fmt, ...) \
+	METRICS_LOG(WARNING, fmt, ## __VA_ARGS__)
 
 static int32_t
 rte_metrics_tel_reg_port_ethdev_to_metrics(uint16_t port_id)
