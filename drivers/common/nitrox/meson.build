@@ -43,6 +43,7 @@ endif
 
 if nitrox_compress
     foreach f: ['nitrox_comp.c',
+		'nitrox_comp_reqmgr.c',
         ]
         sources += files(join_paths(nitrox_compress_relpath, f))
     endforeach
