@@ -30,15 +30,15 @@ extern int librawdev_logtype;
 #define RTE_LOGTYPE_RAWDEV librawdev_logtype
 
 /* Logging Macros */
-#define RTE_RDEV_LOG(level, fmt, args...) \
-	RTE_LOG_LINE(level, RAWDEV, "%s(): " fmt, __func__, ##args)
+#define RTE_RDEV_LOG(level, fmt, ...) \
+	RTE_LOG_LINE(level, RAWDEV, "%s(): " fmt, __func__, ## __VA_ARGS__)
 
-#define RTE_RDEV_ERR(fmt, args...) \
-	RTE_RDEV_LOG(ERR, fmt, ## args)
-#define RTE_RDEV_DEBUG(fmt, args...) \
-	RTE_RDEV_LOG(DEBUG, fmt, ## args)
-#define RTE_RDEV_INFO(fmt, args...) \
-	RTE_RDEV_LOG(INFO, fmt, ## args)
+#define RTE_RDEV_ERR(fmt, ...) \
+	RTE_RDEV_LOG(ERR, fmt, ## __VA_ARGS__)
+#define RTE_RDEV_DEBUG(fmt, ...) \
+	RTE_RDEV_LOG(DEBUG, fmt, ## __VA_ARGS__)
+#define RTE_RDEV_INFO(fmt, ...) \
+	RTE_RDEV_LOG(INFO, fmt, ## __VA_ARGS__)
 
 
 /* Macros to check for valid device */
