@@ -582,6 +582,12 @@ __extension__ typedef uint32_t RTE_MARKER32[0];
 /** Marker for 8B alignment in a structure. */
 __extension__ typedef uint64_t RTE_MARKER64[0];
 
+#define __rte_marker(type, name) type name /* __rte_deprecated */
+
+#else
+
+#define __rte_marker(type, name)
+
 #endif
 
 /*********** Macros for calculating min and max **********/
