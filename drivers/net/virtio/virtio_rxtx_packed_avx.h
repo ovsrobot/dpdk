@@ -36,10 +36,10 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 	/* Load four mbufs rearm data */
 	RTE_BUILD_BUG_ON(REFCNT_BITS_OFFSET >= 64);
 	RTE_BUILD_BUG_ON(SEG_NUM_BITS_OFFSET >= 64);
-	__m256i mbufs = _mm256_set_epi64x(*tx_pkts[3]->rearm_data,
-					  *tx_pkts[2]->rearm_data,
-					  *tx_pkts[1]->rearm_data,
-					  *tx_pkts[0]->rearm_data);
+	__m256i mbufs = _mm256_set_epi64x(tx_pkts[3]->rearm_data,
+					  tx_pkts[2]->rearm_data,
+					  tx_pkts[1]->rearm_data,
+					  tx_pkts[0]->rearm_data);
 
 	/* refcnt=1 and nb_segs=1 */
 	__m256i mbuf_ref = _mm256_set1_epi64x(DEFAULT_REARM_DATA);

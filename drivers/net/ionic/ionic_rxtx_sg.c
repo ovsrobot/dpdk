@@ -285,7 +285,7 @@ ionic_rx_clean_one_sg(struct ionic_rx_qcq *rxq,
 	info[0] = NULL;
 
 	/* Set the mbuf metadata based on the cq entry */
-	rxm->rearm_data[0] = rxq->rearm_data;
+	rxm->rearm_data = rxq->rearm_data;
 	rxm->pkt_len = cq_desc_len;
 	rxm->data_len = RTE_MIN(rxq->hdr_seg_size, cq_desc_len);
 	left = cq_desc_len - rxm->data_len;
@@ -298,7 +298,7 @@ ionic_rx_clean_one_sg(struct ionic_rx_qcq *rxq,
 		info[i] = NULL;
 
 		/* Set the chained mbuf metadata */
-		rxm_seg->rearm_data[0] = rxq->rearm_seg_data;
+		rxm_seg->rearm_data = rxq->rearm_seg_data;
 		rxm_seg->data_len = RTE_MIN(rxq->seg_size, left);
 		left -= rxm_seg->data_len;
 

@@ -98,10 +98,10 @@ static inline void
 desc_to_olflags_v_ipsec(__m128i descs[4], struct rte_mbuf **rx_pkts)
 {
 	__m128i sterr, rearm, tmp_e, tmp_p;
-	uint32_t *rearm0 = (uint32_t *)rx_pkts[0]->rearm_data + 2;
-	uint32_t *rearm1 = (uint32_t *)rx_pkts[1]->rearm_data + 2;
-	uint32_t *rearm2 = (uint32_t *)rx_pkts[2]->rearm_data + 2;
-	uint32_t *rearm3 = (uint32_t *)rx_pkts[3]->rearm_data + 2;
+	uint32_t *rearm0 = (uint32_t *)&rx_pkts[0]->rearm_data + 2;
+	uint32_t *rearm1 = (uint32_t *)&rx_pkts[1]->rearm_data + 2;
+	uint32_t *rearm2 = (uint32_t *)&rx_pkts[2]->rearm_data + 2;
+	uint32_t *rearm3 = (uint32_t *)&rx_pkts[3]->rearm_data + 2;
 	const __m128i ipsec_sterr_msk =
 			_mm_set1_epi32(IXGBE_RXDADV_IPSEC_STATUS_SECP |
 				       IXGBE_RXDADV_IPSEC_ERROR_AUTH_FAILED);

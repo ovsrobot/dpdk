@@ -464,152 +464,179 @@ enum {
  * The generic rte_mbuf, containing a packet mbuf.
  */
 struct rte_mbuf {
-	RTE_MARKER cacheline0;
-
-	void *buf_addr;           /**< Virtual address of segment buffer. */
+	union {
+		struct {
+			union {
+				void *cacheline0;
+				void *buf_addr; /**< Virtual address of segment buffer. */
+			};
 #if RTE_IOVA_IN_MBUF
-	/**
-	 * Physical address of segment buffer.
-	 * This field is undefined if the build is configured to use only
-	 * virtual address as IOVA (i.e. RTE_IOVA_IN_MBUF is 0).
-	 * Force alignment to 8-bytes, so as to ensure we have the exact
-	 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
-	 * working on vector drivers easier.
-	 */
-	rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+			/**
+			 * Physical address of segment buffer.
+			 * This field is undefined if the build is configured to use only
+			 * virtual address as IOVA (i.e. RTE_IOVA_IN_MBUF is 0).
+			 * Force alignment to 8-bytes, so as to ensure we have the exact
+			 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
+			 * working on vector drivers easier.
+			 */
+			rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
 #else
-	/**
-	 * Next segment of scattered packet.
-	 * This field is valid when physical address field is undefined.
-	 * Otherwise next pointer in the second cache line will be used.
-	 */
-	struct rte_mbuf *next;
+			/**
+			 * Next segment of scattered packet.
+			 * This field is valid when physical address field is undefined.
+			 * Otherwise next pointer in the second cache line will be used.
+			 */
+			struct rte_mbuf *next;
 #endif
 
-	/* next 8 bytes are initialised on RX descriptor rearm */
-	RTE_MARKER64 rearm_data;
-	uint16_t data_off;
-
-	/**
-	 * Reference counter. Its size should at least equal to the size
-	 * of port field (16 bits), to support zero-copy broadcast.
-	 * It should only be accessed using the following functions:
-	 * rte_mbuf_refcnt_update(), rte_mbuf_refcnt_read(), and
-	 * rte_mbuf_refcnt_set(). The functionality of these functions (atomic,
-	 * or non-atomic) is controlled by the RTE_MBUF_REFCNT_ATOMIC flag.
-	 */
-	RTE_ATOMIC(uint16_t) refcnt;
-
-	/**
-	 * Number of segments. Only valid for the first segment of an mbuf
-	 * chain.
-	 */
-	uint16_t nb_segs;
-
-	/** Input port (16 bits to support more than 256 virtual ports).
-	 * The event eth Tx adapter uses this field to specify the output port.
-	 */
-	uint16_t port;
-
-	uint64_t ol_flags;        /**< Offload features. */
-
-	/* remaining bytes are set on RX when pulling packet from descriptor */
-	RTE_MARKER rx_descriptor_fields1;
-
-	/*
-	 * The packet type, which is the combination of outer/inner L2, L3, L4
-	 * and tunnel types. The packet_type is about data really present in the
-	 * mbuf. Example: if vlan stripping is enabled, a received vlan packet
-	 * would have RTE_PTYPE_L2_ETHER and not RTE_PTYPE_L2_VLAN because the
-	 * vlan is stripped from the data.
-	 */
-	union {
-		uint32_t packet_type; /**< L2/L3/L4 and tunnel information. */
-		__extension__
-		struct {
-			uint8_t l2_type:4;   /**< (Outer) L2 type. */
-			uint8_t l3_type:4;   /**< (Outer) L3 type. */
-			uint8_t l4_type:4;   /**< (Outer) L4 type. */
-			uint8_t tun_type:4;  /**< Tunnel type. */
+			/* next 8 bytes are initialised on RX descriptor rearm */
 			union {
-				uint8_t inner_esp_next_proto;
-				/**< ESP next protocol type, valid if
-				 * RTE_PTYPE_TUNNEL_ESP tunnel type is set
-				 * on both Tx and Rx.
-				 */
-				__extension__
+				uint64_t rearm_data;
 				struct {
-					uint8_t inner_l2_type:4;
-					/**< Inner L2 type. */
-					uint8_t inner_l3_type:4;
-					/**< Inner L3 type. */
+					uint16_t data_off;
+
+					/**
+					 * Reference counter. Its size should at least equal to
+					 * the size of port field (16 bits), to support zero-copy
+					 * broadcast.
+					 * It should only be accessed using the following
+					 * functions: rte_mbuf_refcnt_update(),
+					 * rte_mbuf_refcnt_read(), and rte_mbuf_refcnt_set(). The
+					 * functionality of these functions (atomic, or non-atomic)
+					 * is controlled by the RTE_MBUF_REFCNT_ATOMIC flag.
+					 */
+					RTE_ATOMIC(uint16_t) refcnt;
+
+					/**
+					 * Number of segments. Only valid for the first segment of
+					 * an mbuf chain.
+					 */
+					uint16_t nb_segs;
+
+					/** Input port (16 bits to support more than 256 virtual
+					 * ports). The event eth Tx adapter uses this field to
+					 * specify the output port.
+					 */
+					uint16_t port;
 				};
 			};
-			uint8_t inner_l4_type:4; /**< Inner L4 type. */
-		};
-	};
 
-	uint32_t pkt_len;         /**< Total pkt len: sum of all segments. */
-	uint16_t data_len;        /**< Amount of data in segment buffer. */
-	/** VLAN TCI (CPU order), valid if RTE_MBUF_F_RX_VLAN is set. */
-	uint16_t vlan_tci;
+			uint64_t ol_flags;        /**< Offload features. */
 
-	union {
-		union {
-			uint32_t rss;     /**< RSS hash result if RSS enabled */
-			struct {
-				union {
-					struct {
-						uint16_t hash;
-						uint16_t id;
+			/* remaining bytes are set on RX when pulling packet from descriptor */
+			union {
+				void *rx_descriptor_fields1;
+
+				/*
+				 * The packet type, which is the combination of outer/inner L2, L3,
+				 * L4 and tunnel types. The packet_type is about data really
+				 * present in the mbuf. Example: if vlan stripping is enabled, a
+				 * received vlan packet would have RTE_PTYPE_L2_ETHER and not
+				 * RTE_PTYPE_L2_VLAN because the vlan is stripped from the data.
+				 */
+				struct {
+					union {
+						/** < L2/L3/L4 and tunnel information. */
+						uint32_t packet_type;
+						__extension__
+						struct {
+							/**< (Outer) L2 type. */
+							uint8_t l2_type:4;
+							/**< (Outer) L3 type. */
+							uint8_t l3_type:4;
+							/**< (Outer) L4 type. */
+							uint8_t l4_type:4;
+							/**< Tunnel type. */
+							uint8_t tun_type:4;
+							union {
+								uint8_t inner_esp_next_proto;
+								/**< ESP next protocol type, valid
+								 * if RTE_PTYPE_TUNNEL_ESP tunnel
+								 * type is set on both Tx and Rx.
+								 */
+								__extension__
+								struct {
+									uint8_t inner_l2_type:4;
+									/**< Inner L2 type. */
+									uint8_t inner_l3_type:4;
+									/**< Inner L3 type. */
+								};
+							};
+							/**< Inner L4 type. */
+							uint8_t inner_l4_type:4;
+						};
 					};
-					uint32_t lo;
-					/**< Second 4 flexible bytes */
+					/**< Total pkt len: sum of all segments. */
+					uint32_t pkt_len;
 				};
-				uint32_t hi;
-				/**< First 4 flexible bytes or FD ID, dependent
-				 * on RTE_MBUF_F_RX_FDIR_* flag in ol_flags.
-				 */
-			} fdir;	/**< Filter identifier if FDIR enabled */
-			struct rte_mbuf_sched sched;
-			/**< Hierarchical scheduler : 8 bytes */
-			struct {
-				uint32_t reserved1;
-				uint16_t reserved2;
-				uint16_t txq;
-				/**< The event eth Tx adapter uses this field
-				 * to store Tx queue id.
-				 * @see rte_event_eth_tx_adapter_txq_set()
-				 */
-			} txadapter; /**< Eventdev ethdev Tx adapter */
-			uint32_t usr;
-			/**< User defined tags. See rte_distributor_process() */
-		} hash;                   /**< hash information */
-	};
+			};
 
-	/** Outer VLAN TCI (CPU order), valid if RTE_MBUF_F_RX_QINQ is set. */
-	uint16_t vlan_tci_outer;
+			uint16_t data_len;        /**< Amount of data in segment buffer. */
+			/** VLAN TCI (CPU order), valid if RTE_MBUF_F_RX_VLAN is set. */
+			uint16_t vlan_tci;
 
-	uint16_t buf_len;         /**< Length of segment buffer. */
+			union {
+				union {
+					uint32_t rss;     /**< RSS hash result if RSS enabled */
+					struct {
+						union {
+							struct {
+								uint16_t hash;
+								uint16_t id;
+							};
+							uint32_t lo;
+							/**< Second 4 flexible bytes */
+						};
+						uint32_t hi;
+						/**< First 4 flexible bytes or FD ID, dependent
+						 * on RTE_MBUF_F_RX_FDIR_* flag in ol_flags.
+						 */
+					} fdir;	/**< Filter identifier if FDIR enabled */
+					struct rte_mbuf_sched sched;
+					/**< Hierarchical scheduler : 8 bytes */
+					struct {
+						uint32_t reserved1;
+						uint16_t reserved2;
+						uint16_t txq;
+						/**< The event eth Tx adapter uses this field
+						 * to store Tx queue id.
+						 * @see rte_event_eth_tx_adapter_txq_set()
+						 */
+					} txadapter; /**< Eventdev ethdev Tx adapter */
+					uint32_t usr;
+					/**< User defined tags. See rte_distributor_process() */
+				} hash;                   /**< hash information */
+			};
 
-	struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
+			/** Outer VLAN TCI (CPU order), valid if RTE_MBUF_F_RX_QINQ is set. */
+			uint16_t vlan_tci_outer;
+
+			uint16_t buf_len;         /**< Length of segment buffer. */
+
+			struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
+
+		};
+		uint8_t pad_cacheline0[RTE_CACHE_LINE_MIN_SIZE];
+	}; /* cacheline0 */
 
 	/* second cache line - fields only used in slow path or on TX */
-	RTE_MARKER cacheline1 __rte_cache_min_aligned;
+	union {
+		void *cacheline1;
 
 #if RTE_IOVA_IN_MBUF
-	/**
-	 * Next segment of scattered packet. Must be NULL in the last
-	 * segment or in case of non-segmented packet.
-	 */
-	struct rte_mbuf *next;
+		/**
+		 * Next segment of scattered packet. Must be NULL in the last
+		 * segment or in case of non-segmented packet.
+		 */
+		struct rte_mbuf *next;
 #else
-	/**
-	 * Reserved for dynamic fields
-	 * when the next pointer is in first cache line (i.e. RTE_IOVA_IN_MBUF is 0).
-	 */
-	uint64_t dynfield2;
+		/**
+		 * Reserved for dynamic fields
+		 * when the next pointer is in first cache line (i.e. RTE_IOVA_IN_MBUF is 0).
+		 */
+		uint64_t dynfield2;
 #endif
+	};
 
 	/* fields to support TX offloads */
 	union {
@@ -663,6 +690,11 @@ struct rte_mbuf {
 
 	uint32_t dynfield1[9]; /**< Reserved for dynamic fields. */
 } __rte_cache_aligned;
+
+static_assert(offsetof(struct rte_mbuf, cacheline1) == RTE_CACHE_LINE_MIN_SIZE,
+	"offsetof cacheline1");
+static_assert(sizeof(struct rte_mbuf) == RTE_CACHE_LINE_MIN_SIZE * 2,
+	"sizeof struct rte_mbuf");
 
 /**
  * Function typedef of callback to free externally attached buffer.
