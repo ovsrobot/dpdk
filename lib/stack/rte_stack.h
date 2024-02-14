@@ -42,7 +42,7 @@ struct rte_stack_lf_head {
 
 struct rte_stack_lf_list {
 	/** List head */
-	struct rte_stack_lf_head head __rte_aligned(16);
+	alignas(16) struct rte_stack_lf_head head;
 	/** List len */
 	RTE_ATOMIC(uint64_t) len;
 };
