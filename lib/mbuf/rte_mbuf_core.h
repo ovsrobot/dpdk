@@ -476,7 +476,7 @@ struct rte_mbuf {
 	 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
 	 * working on vector drivers easier.
 	 */
-	rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+	rte_iova_t buf_iova;
 #else
 	/**
 	 * Next segment of scattered packet.
