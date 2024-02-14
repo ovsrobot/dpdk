@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <stdalign.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -193,7 +194,7 @@ struct rte_sched_subport {
 
 	/* Bitmap */
 	struct rte_bitmap *bmp;
-	uint32_t grinder_base_bmp_pos[RTE_SCHED_PORT_N_GRINDERS] __rte_aligned_16;
+	alignas(16) uint32_t grinder_base_bmp_pos[RTE_SCHED_PORT_N_GRINDERS];
 
 	/* Grinders */
 	struct rte_sched_grinder grinder[RTE_SCHED_PORT_N_GRINDERS];
