@@ -477,7 +477,7 @@ rte_distributor_process(struct rte_distributor *d,
 		return 0;
 
 	while (next_idx < num_mbufs) {
-		uint16_t matches[RTE_DIST_BURST_SIZE] __rte_aligned(128);
+		alignas(128) uint16_t matches[RTE_DIST_BURST_SIZE];
 		unsigned int pkts;
 
 		if ((num_mbufs - next_idx) < RTE_DIST_BURST_SIZE)
