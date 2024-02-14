@@ -65,7 +65,7 @@ extern "C" {
  * Force alignment
  */
 #ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_aligned(a)
+#define __rte_aligned(a) __declspec(align(a))
 #else
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 #endif
