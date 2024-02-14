@@ -55,6 +55,18 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added  API to change template table flows capacity.**
+
+  * ``RTE_FLOW_TABLE_SPECIALIZE_RESIZABLE_TABLE`` table configuration bit.
+    Set when template must be created with the resizable property.
+  * ``rte_flow_template_table_resizable()``.
+    Query wheather template table can be resized.
+  * ``rte_flow_template_table_resize()``.
+    Reconfigure template table for new flows capacity.
+  * ``rte_flow_async_update_resized()``.
+    Reconfigure flows for the updated table configuration.
+  * ``rte_flow_template_table_resize_complete()``.
+    Complete table resize.
 
 Removed Items
 -------------
