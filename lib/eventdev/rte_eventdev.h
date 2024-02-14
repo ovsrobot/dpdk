@@ -1078,7 +1078,7 @@ rte_event_dev_close(uint8_t dev_id);
 /**
  * Event vector structure.
  */
-struct rte_event_vector {
+struct __rte_aligned(16) rte_event_vector {
 	uint16_t nb_elem;
 	/**< Number of elements valid in this event vector. */
 	uint16_t elem_offset : 12;
@@ -1118,19 +1118,19 @@ struct rte_event_vector {
 	 * value to share between dequeue and enqueue operation.
 	 * The application should not modify this field.
 	 */
-	union {
+	union __rte_aligned(16) {
 #endif
 		struct rte_mbuf *mbufs[0];
 		void *ptrs[0];
 		uint64_t u64s[0];
 #ifndef __cplusplus
-	} __rte_aligned(16);
+	};
 #endif
 	/**< Start of the vector array union. Depending upon the event type the
 	 * vector array can be an array of mbufs or pointers or opaque u64
 	 * values.
 	 */
-} __rte_aligned(16);
+};
 
 /* Scheduler type definitions */
 #define RTE_SCHED_TYPE_ORDERED          0
