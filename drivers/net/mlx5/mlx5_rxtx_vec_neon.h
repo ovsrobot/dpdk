@@ -99,7 +99,7 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		t_pkt->data_len + (rxq->crc_present * RTE_ETHER_CRC_LEN);
 	uint16_t pkts_n = mcqe_n;
 	const uint64x2_t rearm =
-		vld1q_u64((void *)&t_pkt->rearm_data);
+		vld1q_u64((void *)&t_pkt->mbuf_rearm_data);
 	const uint32x4_t rxdf_mask = {
 		0xffffffff, /* packet_type */
 		0,          /* skip pkt_len */
@@ -107,7 +107,7 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		0,          /* skip hash.rss */
 	};
 	const uint8x16_t rxdf =
-		vandq_u8(vld1q_u8((void *)&t_pkt->rx_descriptor_fields1),
+		vandq_u8(vld1q_u8((void *)&t_pkt->mbuf_rx_descriptor_fields1),
 			 vreinterpretq_u8_u32(rxdf_mask));
 	const uint16x8_t crc_adj = {
 		0, 0,
@@ -131,8 +131,8 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	/*
 	 * A. load mCQEs into a 128bit register.
 	 * B. store rearm data to mbuf.
-	 * C. combine data from mCQEs with rx_descriptor_fields1.
-	 * D. store rx_descriptor_fields1.
+	 * C. combine data from mCQEs with mbuf_rx_descriptor_fields1.
+	 * D. store mbuf_rx_descriptor_fields1.
 	 * E. store flow tag (rte_flow mark).
 	 */
 cycle:
@@ -140,10 +140,10 @@ cycle:
 		rte_prefetch0((void *)(cq + mcqe_n));
 	for (pos = 0; pos < mcqe_n; ) {
 		uint8_t *p = (void *)&mcq[pos % 8];
-		uint8_t *e0 = (void *)&elts[pos]->rearm_data;
-		uint8_t *e1 = (void *)&elts[pos + 1]->rearm_data;
-		uint8_t *e2 = (void *)&elts[pos + 2]->rearm_data;
-		uint8_t *e3 = (void *)&elts[pos + 3]->rearm_data;
+		uint8_t *e0 = (void *)&elts[pos]->mbuf_rearm_data;
+		uint8_t *e1 = (void *)&elts[pos + 1]->mbuf_rearm_data;
+		uint8_t *e2 = (void *)&elts[pos + 2]->mbuf_rearm_data;
+		uint8_t *e3 = (void *)&elts[pos + 3]->mbuf_rearm_data;
 		uint16x4_t byte_cnt;
 #ifdef MLX5_PMD_SOFT_COUNTERS
 		uint16x4_t invalid_mask =
@@ -164,14 +164,14 @@ cycle:
 		"add %[e0], %[e0], #16 \n\t"
 		"st1 {%[rearm].2d}, [%[e1]] \n\t"
 		"add %[e1], %[e1], #16 \n\t"
-		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
+		/* C.1 combine data from mCQEs with mbuf_rx_descriptor_fields1. */
 		"tbl v18.16b, {v16.16b}, %[mcqe_shuf_m1].16b \n\t"
 		"tbl v19.16b, {v16.16b}, %[mcqe_shuf_m2].16b \n\t"
 		"sub v18.8h, v18.8h, %[crc_adj].8h \n\t"
 		"sub v19.8h, v19.8h, %[crc_adj].8h \n\t"
 		"orr v18.16b, v18.16b, %[rxdf].16b \n\t"
 		"orr v19.16b, v19.16b, %[rxdf].16b \n\t"
-		/* D.1 store rx_descriptor_fields1. */
+		/* D.1 store mbuf_rx_descriptor_fields1. */
 		"st1 {v18.2d}, [%[e0]] \n\t"
 		"st1 {v19.2d}, [%[e1]] \n\t"
 		/* B.1 store rearm data to mbuf. */
@@ -179,14 +179,14 @@ cycle:
 		"add %[e2], %[e2], #16 \n\t"
 		"st1 {%[rearm].2d}, [%[e3]] \n\t"
 		"add %[e3], %[e3], #16 \n\t"
-		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
+		/* C.1 combine data from mCQEs with mbuf_rx_descriptor_fields1. */
 		"tbl v18.16b, {v17.16b}, %[mcqe_shuf_m1].16b \n\t"
 		"tbl v19.16b, {v17.16b}, %[mcqe_shuf_m2].16b \n\t"
 		"sub v18.8h, v18.8h, %[crc_adj].8h \n\t"
 		"sub v19.8h, v19.8h, %[crc_adj].8h \n\t"
 		"orr v18.16b, v18.16b, %[rxdf].16b \n\t"
 		"orr v19.16b, v19.16b, %[rxdf].16b \n\t"
-		/* D.1 store rx_descriptor_fields1. */
+		/* D.1 store mbuf_rx_descriptor_fields1. */
 		"st1 {v18.2d}, [%[e2]] \n\t"
 		"st1 {v19.2d}, [%[e3]] \n\t"
 #ifdef MLX5_PMD_SOFT_COUNTERS
@@ -513,10 +513,10 @@ rxq_cq_to_ptype_oflags_v(struct mlx5_rxq_data *rxq,
 					(vgetq_lane_u32(ol_flags, 0),
 					 vreinterpretq_u32_u64(mbuf_init), 2));
 
-	vst1q_u64((void *)&pkts[0]->rearm_data, rearm0);
-	vst1q_u64((void *)&pkts[1]->rearm_data, rearm1);
-	vst1q_u64((void *)&pkts[2]->rearm_data, rearm2);
-	vst1q_u64((void *)&pkts[3]->rearm_data, rearm3);
+	vst1q_u64((void *)&pkts[0]->mbuf_rearm_data, rearm0);
+	vst1q_u64((void *)&pkts[1]->mbuf_rearm_data, rearm1);
+	vst1q_u64((void *)&pkts[2]->mbuf_rearm_data, rearm2);
+	vst1q_u64((void *)&pkts[3]->mbuf_rearm_data, rearm3);
 }
 
 /**
@@ -736,17 +736,17 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		"tbl %[op_own].8b, {v20.16b - v23.16b}, %[owner_shuf_m].8b \n\t"
 		/* C.2 (CQE 3) adjust flow mark. */
 		"add v15.4s, v15.4s, %[flow_mark_adj].4s \n\t"
-		/* C.3 (CQE 3) fill in mbuf - rx_descriptor_fields1. */
+		/* C.3 (CQE 3) fill in mbuf - mbuf_rx_descriptor_fields1. */
 		"st1 {v15.2d}, [%[e3]] \n\t"
 		/* C.2 (CQE 2) adjust flow mark. */
 		"add v14.4s, v14.4s, %[flow_mark_adj].4s \n\t"
-		/* C.3 (CQE 2) fill in mbuf - rx_descriptor_fields1. */
+		/* C.3 (CQE 2) fill in mbuf - mbuf_rx_descriptor_fields1. */
 		"st1 {v14.2d}, [%[e2]] \n\t"
 		/* C.1 (CQE 0) generate final structure for mbuf. */
 		"tbl v12.16b, {v20.16b}, %[mb_shuf_m].16b \n\t"
 		/* C.2 (CQE 1) adjust flow mark. */
 		"add v13.4s, v13.4s, %[flow_mark_adj].4s \n\t"
-		/* C.3 (CQE 1) fill in mbuf - rx_descriptor_fields1. */
+		/* C.3 (CQE 1) fill in mbuf - mbuf_rx_descriptor_fields1. */
 		"st1 {v13.2d}, [%[e1]] \n\t"
 #ifdef MLX5_PMD_SOFT_COUNTERS
 		/* Extract byte_cnt. */
@@ -760,7 +760,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		"st1 {v24.2d - v25.2d}, [%[pkts_p]] \n\t"
 		/* C.2 (CQE 0) adjust flow mark. */
 		"add v12.4s, v12.4s, %[flow_mark_adj].4s \n\t"
-		/* C.3 (CQE 1) fill in mbuf - rx_descriptor_fields1. */
+		/* C.3 (CQE 1) fill in mbuf - mbuf_rx_descriptor_fields1. */
 		"st1 {v12.2d}, [%[e0]] \n\t"
 		:[op_own]"=&w"(op_own),
 		 [byte_cnt]"=&w"(byte_cnt),
@@ -831,7 +831,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		opcode = vbic_u16(opcode, mini_mask);
 		/* D.4 mark if any error is set */
 		*err |= vget_lane_u64(vreinterpret_u64_u16(opcode), 0);
-		/* C.4 fill in mbuf - rearm_data and packet_type. */
+		/* C.4 fill in mbuf - mbuf_rearm_data and packet_type. */
 		rxq_cq_to_ptype_oflags_v(rxq, ptype_info, flow_tag,
 					 opcode, &elts[pos]);
 		if (unlikely(rxq->shared)) {

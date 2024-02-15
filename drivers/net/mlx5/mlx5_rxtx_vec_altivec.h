@@ -101,10 +101,10 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	uint16_t pkts_n = mcqe_n;
 	const __vector unsigned char rearm =
 		(__vector unsigned char)vec_vsx_ld(0,
-		(signed int const *)&t_pkt->rearm_data);
+		(signed int const *)&t_pkt->mbuf_rearm_data);
 	const __vector unsigned char rxdf =
 		(__vector unsigned char)vec_vsx_ld(0,
-		(signed int const *)&t_pkt->rx_descriptor_fields1);
+		(signed int const *)&t_pkt->mbuf_rx_descriptor_fields1);
 	const __vector unsigned char crc_adj =
 		(__vector unsigned char)(__vector unsigned short){
 			0, 0, rxq->crc_present * RTE_ETHER_CRC_LEN, 0,
@@ -132,8 +132,8 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	/*
 	 * A. load mCQEs into a 128bit register.
 	 * B. store rearm data to mbuf.
-	 * C. combine data from mCQEs with rx_descriptor_fields1.
-	 * D. store rx_descriptor_fields1.
+	 * C. combine data from mCQEs with mbuf_rx_descriptor_fields1.
+	 * D. store mbuf_rx_descriptor_fields1.
 	 * E. store flow tag (rte_flow mark).
 	 */
 cycle:
@@ -173,11 +173,11 @@ cycle:
 
 		/* B.1 store rearm data to mbuf. */
 		*(__vector unsigned char *)
-			&elts[pos]->rearm_data = rearm;
+			&elts[pos]->mbuf_rearm_data = rearm;
 		*(__vector unsigned char *)
-			&elts[pos + 1]->rearm_data = rearm;
+			&elts[pos + 1]->mbuf_rearm_data = rearm;
 
-		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
+		/* C.1 combine data from mCQEs with mbuf_rx_descriptor_fields1. */
 		rxdf1 = vec_perm(mcqe1, zero, shuf_mask1);
 		rxdf2 = vec_perm(mcqe1, zero, shuf_mask2);
 		rxdf1 = (__vector unsigned char)
@@ -193,19 +193,19 @@ cycle:
 			vec_sel((__vector unsigned short)rxdf2,
 			(__vector unsigned short)rxdf, rxdf_sel_mask);
 
-		/* D.1 store rx_descriptor_fields1. */
+		/* D.1 store mbuf_rx_descriptor_fields1. */
 		*(__vector unsigned char *)
-			&elts[pos]->rx_descriptor_fields1 = rxdf1;
+			&elts[pos]->mbuf_rx_descriptor_fields1 = rxdf1;
 		*(__vector unsigned char *)
-			&elts[pos + 1]->rx_descriptor_fields1 = rxdf2;
+			&elts[pos + 1]->mbuf_rx_descriptor_fields1 = rxdf2;
 
 		/* B.1 store rearm data to mbuf. */
 		*(__vector unsigned char *)
-			&elts[pos + 2]->rearm_data = rearm;
+			&elts[pos + 2]->mbuf_rearm_data = rearm;
 		*(__vector unsigned char *)
-			&elts[pos + 3]->rearm_data = rearm;
+			&elts[pos + 3]->mbuf_rearm_data = rearm;
 
-		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
+		/* C.1 combine data from mCQEs with mbuf_rx_descriptor_fields1. */
 		rxdf1 = vec_perm(mcqe2, zero, shuf_mask1);
 		rxdf2 = vec_perm(mcqe2, zero, shuf_mask2);
 		rxdf1 = (__vector unsigned char)
@@ -221,11 +221,11 @@ cycle:
 			vec_sel((__vector unsigned short)rxdf2,
 			(__vector unsigned short)rxdf, rxdf_sel_mask);
 
-		/* D.1 store rx_descriptor_fields1. */
+		/* D.1 store mbuf_rx_descriptor_fields1. */
 		*(__vector unsigned char *)
-			&elts[pos + 2]->rx_descriptor_fields1 = rxdf1;
+			&elts[pos + 2]->mbuf_rx_descriptor_fields1 = rxdf1;
 		*(__vector unsigned char *)
-			&elts[pos + 3]->rx_descriptor_fields1 = rxdf2;
+			&elts[pos + 3]->mbuf_rx_descriptor_fields1 = rxdf2;
 
 #ifdef MLX5_PMD_SOFT_COUNTERS
 		invalid_mask = (__vector unsigned char)(__vector unsigned long){
@@ -767,15 +767,15 @@ rxq_cq_to_ptype_oflags_v(struct mlx5_rxq_data *rxq,
 		vec_sro((__vector unsigned short)ol_flags,
 		(__vector unsigned char){32}), rearm_sel_mask);
 
-	/* Write 8B rearm_data and 8B ol_flags. */
+	/* Write 8B mbuf_rearm_data and 8B ol_flags. */
 	vec_vsx_st(rearm0, 0,
-		(__vector unsigned char *)&pkts[0]->rearm_data);
+		(__vector unsigned char *)&pkts[0]->mbuf_rearm_data);
 	vec_vsx_st(rearm1, 0,
-		(__vector unsigned char *)&pkts[1]->rearm_data);
+		(__vector unsigned char *)&pkts[1]->mbuf_rearm_data);
 	vec_vsx_st(rearm2, 0,
-		(__vector unsigned char *)&pkts[2]->rearm_data);
+		(__vector unsigned char *)&pkts[2]->mbuf_rearm_data);
 	vec_vsx_st(rearm3, 0,
-		(__vector unsigned char *)&pkts[3]->rearm_data);
+		(__vector unsigned char *)&pkts[3]->mbuf_rearm_data);
 }
 
 /**
@@ -1046,7 +1046,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 			((__vector unsigned int)pkt_mb2 +
 			(__vector unsigned int)flow_mark_adj);
 
-		/* D.1 fill in mbuf - rx_descriptor_fields1. */
+		/* D.1 fill in mbuf - mbuf_rx_descriptor_fields1. */
 		*(__vector unsigned char *)
 			&pkts[pos + 3]->pkt_len = pkt_mb3;
 		*(__vector unsigned char *)
@@ -1115,7 +1115,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 			vec_mergel((__vector unsigned long)op_own_tmp1,
 			(__vector unsigned long)op_own_tmp2);
 
-		/* D.1 fill in mbuf - rx_descriptor_fields1. */
+		/* D.1 fill in mbuf - mbuf_rx_descriptor_fields1. */
 		*(__vector unsigned char *)
 			&pkts[pos + 1]->pkt_len = pkt_mb1;
 		*(__vector unsigned char *)
@@ -1245,7 +1245,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		/* D.4 mark if any error is set */
 		*err |= ((__vector unsigned long)opcode)[0];
 
-		/* D.5 fill in mbuf - rearm_data and packet_type. */
+		/* D.5 fill in mbuf - mbuf_rearm_data and packet_type. */
 		rxq_cq_to_ptype_oflags_v(rxq, cqes, opcode, &pkts[pos]);
 		if (unlikely(rxq->shared)) {
 			pkts[pos]->port = cq[pos].user_index_low;

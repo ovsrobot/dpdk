@@ -98,9 +98,9 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		t_pkt->data_len + (rxq->crc_present * RTE_ETHER_CRC_LEN);
 	uint16_t pkts_n = mcqe_n;
 	const __m128i rearm =
-		_mm_loadu_si128((__m128i *)&t_pkt->rearm_data);
+		_mm_loadu_si128((__m128i *)&t_pkt->mbuf_rearm_data);
 	const __m128i rxdf =
-		_mm_loadu_si128((__m128i *)&t_pkt->rx_descriptor_fields1);
+		_mm_loadu_si128((__m128i *)&t_pkt->mbuf_rx_descriptor_fields1);
 	const __m128i crc_adj =
 		_mm_set_epi16(0, 0, 0,
 			      rxq->crc_present * RTE_ETHER_CRC_LEN,
@@ -123,8 +123,8 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	/*
 	 * A. load mCQEs into a 128bit register.
 	 * B. store rearm data to mbuf.
-	 * C. combine data from mCQEs with rx_descriptor_fields1.
-	 * D. store rx_descriptor_fields1.
+	 * C. combine data from mCQEs with mbuf_rx_descriptor_fields1.
+	 * D. store mbuf_rx_descriptor_fields1.
 	 * E. store flow tag (rte_flow mark).
 	 */
 cycle:
@@ -145,38 +145,38 @@ cycle:
 		mcqe1 = _mm_loadu_si128((__m128i *)&mcq[pos % 8]);
 		mcqe2 = _mm_loadu_si128((__m128i *)&mcq[pos % 8 + 2]);
 		/* B.1 store rearm data to mbuf. */
-		_mm_storeu_si128((__m128i *)&elts[pos]->rearm_data, rearm);
-		_mm_storeu_si128((__m128i *)&elts[pos + 1]->rearm_data, rearm);
-		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
+		_mm_storeu_si128((__m128i *)&elts[pos]->mbuf_rearm_data, rearm);
+		_mm_storeu_si128((__m128i *)&elts[pos + 1]->mbuf_rearm_data, rearm);
+		/* C.1 combine data from mCQEs with mbuf_rx_descriptor_fields1. */
 		rxdf1 = _mm_shuffle_epi8(mcqe1, shuf_mask1);
 		rxdf2 = _mm_shuffle_epi8(mcqe1, shuf_mask2);
 		rxdf1 = _mm_sub_epi16(rxdf1, crc_adj);
 		rxdf2 = _mm_sub_epi16(rxdf2, crc_adj);
 		rxdf1 = _mm_blend_epi16(rxdf1, rxdf, 0x23);
 		rxdf2 = _mm_blend_epi16(rxdf2, rxdf, 0x23);
-		/* D.1 store rx_descriptor_fields1. */
+		/* D.1 store mbuf_rx_descriptor_fields1. */
 		_mm_storeu_si128((__m128i *)
-				  &elts[pos]->rx_descriptor_fields1,
+				  &elts[pos]->mbuf_rx_descriptor_fields1,
 				 rxdf1);
 		_mm_storeu_si128((__m128i *)
-				  &elts[pos + 1]->rx_descriptor_fields1,
+				  &elts[pos + 1]->mbuf_rx_descriptor_fields1,
 				 rxdf2);
 		/* B.1 store rearm data to mbuf. */
-		_mm_storeu_si128((__m128i *)&elts[pos + 2]->rearm_data, rearm);
-		_mm_storeu_si128((__m128i *)&elts[pos + 3]->rearm_data, rearm);
-		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
+		_mm_storeu_si128((__m128i *)&elts[pos + 2]->mbuf_rearm_data, rearm);
+		_mm_storeu_si128((__m128i *)&elts[pos + 3]->mbuf_rearm_data, rearm);
+		/* C.1 combine data from mCQEs with mbuf_rx_descriptor_fields1. */
 		rxdf1 = _mm_shuffle_epi8(mcqe2, shuf_mask1);
 		rxdf2 = _mm_shuffle_epi8(mcqe2, shuf_mask2);
 		rxdf1 = _mm_sub_epi16(rxdf1, crc_adj);
 		rxdf2 = _mm_sub_epi16(rxdf2, crc_adj);
 		rxdf1 = _mm_blend_epi16(rxdf1, rxdf, 0x23);
 		rxdf2 = _mm_blend_epi16(rxdf2, rxdf, 0x23);
-		/* D.1 store rx_descriptor_fields1. */
+		/* D.1 store mbuf_rx_descriptor_fields1. */
 		_mm_storeu_si128((__m128i *)
-				  &elts[pos + 2]->rx_descriptor_fields1,
+				  &elts[pos + 2]->mbuf_rx_descriptor_fields1,
 				 rxdf1);
 		_mm_storeu_si128((__m128i *)
-				  &elts[pos + 3]->rx_descriptor_fields1,
+				  &elts[pos + 3]->mbuf_rx_descriptor_fields1,
 				 rxdf2);
 #ifdef MLX5_PMD_SOFT_COUNTERS
 		invalid_mask = _mm_set_epi64x(0,
@@ -510,11 +510,11 @@ rxq_cq_to_ptype_oflags_v(struct mlx5_rxq_data *rxq, __m128i cqes[4],
 	rearm1 = _mm_blend_epi16(mbuf_init, _mm_slli_si128(ol_flags, 4), 0x30);
 	rearm2 = _mm_blend_epi16(mbuf_init, ol_flags, 0x30);
 	rearm3 = _mm_blend_epi16(mbuf_init, _mm_srli_si128(ol_flags, 4), 0x30);
-	/* Write 8B rearm_data and 8B ol_flags. */
-	_mm_store_si128((__m128i *)&pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&pkts[3]->rearm_data, rearm3);
+	/* Write 8B mbuf_rearm_data and 8B ol_flags. */
+	_mm_store_si128((__m128i *)&pkts[0]->mbuf_rearm_data, rearm0);
+	_mm_store_si128((__m128i *)&pkts[1]->mbuf_rearm_data, rearm1);
+	_mm_store_si128((__m128i *)&pkts[2]->mbuf_rearm_data, rearm2);
+	_mm_store_si128((__m128i *)&pkts[3]->mbuf_rearm_data, rearm3);
 }
 
 /**
@@ -693,7 +693,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		/* C.4 adjust flow mark. */
 		pkt_mb3 = _mm_add_epi32(pkt_mb3, flow_mark_adj);
 		pkt_mb2 = _mm_add_epi32(pkt_mb2, flow_mark_adj);
-		/* D.1 fill in mbuf - rx_descriptor_fields1. */
+		/* D.1 fill in mbuf - mbuf_rx_descriptor_fields1. */
 		_mm_storeu_si128((void *)&pkts[pos + 3]->pkt_len, pkt_mb3);
 		_mm_storeu_si128((void *)&pkts[pos + 2]->pkt_len, pkt_mb2);
 		/* E.1 extract op_own field. */
@@ -723,7 +723,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		/* E.1 extract op_own byte. */
 		op_own_tmp1 = _mm_unpacklo_epi32(cqes[0], cqes[1]);
 		op_own = _mm_unpackhi_epi64(op_own_tmp1, op_own_tmp2);
-		/* D.1 fill in mbuf - rx_descriptor_fields1. */
+		/* D.1 fill in mbuf - mbuf_rx_descriptor_fields1. */
 		_mm_storeu_si128((void *)&pkts[pos + 1]->pkt_len, pkt_mb1);
 		_mm_storeu_si128((void *)&pkts[pos]->pkt_len, pkt_mb0);
 		/* E.2 mask out CQEs belonging to HW. */
@@ -779,7 +779,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		opcode = _mm_andnot_si128(mini_mask, opcode);
 		/* D.4 mark if any error is set */
 		*err |= _mm_cvtsi128_si64(opcode);
-		/* D.5 fill in mbuf - rearm_data and packet_type. */
+		/* D.5 fill in mbuf - mbuf_rearm_data and packet_type. */
 		rxq_cq_to_ptype_oflags_v(rxq, cqes, opcode, &pkts[pos]);
 		if (unlikely(rxq->shared)) {
 			pkts[pos]->port = cq[pos].user_index_low;
