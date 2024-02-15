@@ -104,13 +104,13 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 	 * calls above.
 	 */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 4);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 10);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 12);
 
 	/* Status/Error flag masks */
 	/**
@@ -374,10 +374,10 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 		 */
 		/* check the structure matches expectations */
 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-				 offsetof(struct rte_mbuf, rearm_data) + 8);
-		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+				 offsetof(struct rte_mbuf, mbuf_rearm_data) + 8);
+		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, mbuf_rearm_data) !=
 				 RTE_ALIGN(offsetof(struct rte_mbuf,
-						    rearm_data),
+						    mbuf_rearm_data),
 					   16));
 		/* build up data and do writes */
 		__m256i rearm0, rearm1, rearm2, rearm3, rearm4, rearm5,
@@ -398,13 +398,13 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 		rearm2 = _mm256_permute2f128_si256(rearm2, mb2_3, 0x20);
 		rearm0 = _mm256_permute2f128_si256(rearm0, mb0_1, 0x20);
 		/* write to mbuf */
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 6]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 6]->mbuf_rearm_data,
 				    rearm6);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 4]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 4]->mbuf_rearm_data,
 				    rearm4);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 2]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 2]->mbuf_rearm_data,
 				    rearm2);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 0]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 0]->mbuf_rearm_data,
 				    rearm0);
 
 		/* repeat for the odd mbufs */
@@ -427,13 +427,13 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 		rearm3 = _mm256_blend_epi32(rearm3, mb2_3, 0xF0);
 		rearm1 = _mm256_blend_epi32(rearm1, mb0_1, 0xF0);
 		/* again write to mbufs */
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 7]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 7]->mbuf_rearm_data,
 				    rearm7);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 5]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 5]->mbuf_rearm_data,
 				    rearm5);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 3]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 3]->mbuf_rearm_data,
 				    rearm3);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 1]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 1]->mbuf_rearm_data,
 				    rearm1);
 
 		/* extract and record EOP bit */
@@ -628,13 +628,13 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 	 * calls above.
 	 */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 4);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 10);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 12);
 
 	/* Status/Error flag masks */
 	/**
@@ -1281,10 +1281,10 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 		 */
 		/* check the structure matches expectations */
 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-				 offsetof(struct rte_mbuf, rearm_data) + 8);
-		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+				 offsetof(struct rte_mbuf, mbuf_rearm_data) + 8);
+		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, mbuf_rearm_data) !=
 				 RTE_ALIGN(offsetof(struct rte_mbuf,
-						    rearm_data),
+						    mbuf_rearm_data),
 					   16));
 		/* build up data and do writes */
 		__m256i rearm0, rearm1, rearm2, rearm3, rearm4, rearm5,
@@ -1305,13 +1305,13 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 		rearm2 = _mm256_permute2f128_si256(rearm2, mb2_3, 0x20);
 		rearm0 = _mm256_permute2f128_si256(rearm0, mb0_1, 0x20);
 		/* write to mbuf */
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 6]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 6]->mbuf_rearm_data,
 				    rearm6);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 4]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 4]->mbuf_rearm_data,
 				    rearm4);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 2]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 2]->mbuf_rearm_data,
 				    rearm2);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 0]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 0]->mbuf_rearm_data,
 				    rearm0);
 
 		/* repeat for the odd mbufs */
@@ -1334,13 +1334,13 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 		rearm3 = _mm256_blend_epi32(rearm3, mb2_3, 0xF0);
 		rearm1 = _mm256_blend_epi32(rearm1, mb0_1, 0xF0);
 		/* again write to mbufs */
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 7]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 7]->mbuf_rearm_data,
 				    rearm7);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 5]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 5]->mbuf_rearm_data,
 				    rearm5);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 3]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 3]->mbuf_rearm_data,
 				    rearm3);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 1]->rearm_data,
+		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 1]->mbuf_rearm_data,
 				    rearm1);
 
 		/* extract and record EOP bit */

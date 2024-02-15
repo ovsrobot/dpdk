@@ -159,10 +159,10 @@ desc_to_olflags_v(struct iavf_rx_queue *rxq, volatile union iavf_rx_desc *rxdp,
 	rearm2 = vsetq_lane_u64(vgetq_lane_u32(vlan0, 2), mbuf_init, 1);
 	rearm3 = vsetq_lane_u64(vgetq_lane_u32(vlan0, 3), mbuf_init, 1);
 
-	vst1q_u64((uint64_t *)&rx_pkts[0]->rearm_data, rearm0);
-	vst1q_u64((uint64_t *)&rx_pkts[1]->rearm_data, rearm1);
-	vst1q_u64((uint64_t *)&rx_pkts[2]->rearm_data, rearm2);
-	vst1q_u64((uint64_t *)&rx_pkts[3]->rearm_data, rearm3);
+	vst1q_u64((uint64_t *)&rx_pkts[0]->mbuf_rearm_data, rearm0);
+	vst1q_u64((uint64_t *)&rx_pkts[1]->mbuf_rearm_data, rearm1);
+	vst1q_u64((uint64_t *)&rx_pkts[2]->mbuf_rearm_data, rearm2);
+	vst1q_u64((uint64_t *)&rx_pkts[3]->mbuf_rearm_data, rearm3);
 }
 
 #define PKTLEN_SHIFT     10
@@ -332,13 +332,13 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *__rte_restrict rxq,
 		pkt_mb1 = vreinterpretq_u8_u16(tmp);
 
 		/* D.3 copy final data to rx_pkts */
-		vst1q_u8((void *)&rx_pkts[pos + 3]->rx_descriptor_fields1,
+		vst1q_u8((void *)&rx_pkts[pos + 3]->mbuf_rx_descriptor_fields1,
 				pkt_mb4);
-		vst1q_u8((void *)&rx_pkts[pos + 2]->rx_descriptor_fields1,
+		vst1q_u8((void *)&rx_pkts[pos + 2]->mbuf_rx_descriptor_fields1,
 				pkt_mb3);
-		vst1q_u8((void *)&rx_pkts[pos + 1]->rx_descriptor_fields1,
+		vst1q_u8((void *)&rx_pkts[pos + 1]->mbuf_rx_descriptor_fields1,
 				pkt_mb2);
-		vst1q_u8((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		vst1q_u8((void *)&rx_pkts[pos]->mbuf_rx_descriptor_fields1,
 				pkt_mb1);
 
 		desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
