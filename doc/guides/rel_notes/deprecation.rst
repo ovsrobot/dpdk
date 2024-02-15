@@ -17,6 +17,26 @@ Other API and ABI deprecation notices are to be posted below.
 Deprecation Notices
 -------------------
 
+* mbuf: Named zero sized fields of type ``RTE_MARKER`` and ``RTE_MARKER64``
+  will be removed from ``struct rte_mbuf`` and replaced with new fields
+  in anonymous unions.
+
+  The names of the fields impacted are:
+
+    old name                  new name
+
+  ``cacheline0``            ``mbuf_cachelin0``
+  ``rearm_data``            ``mbuf_rearm_data``
+  ``rx_descriptor_fields1`` ``mbuf_rx_descriptor_fields1``
+  ``cacheline1``            ``mbuf_cachelin1``
+
+  Contributions to DPDK should immediately start using the new names,
+  applications should adapt to new names as soon as possible as the
+  old names will be removed in a future DPDK release.
+
+  Note: types of the new names are not API compatible with the old and
+  some code conversion is required to maintain correct behavior.
+
 * build: The ``enable_kmods`` option is deprecated and will be removed in a future release.
   Setting/clearing the option has no impact on the build.
   Instead, kernel modules will be always built for OS's where out-of-tree kernel modules
