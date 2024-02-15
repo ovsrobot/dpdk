@@ -1323,9 +1323,9 @@ nicvf_rxq_mbuf_setup(struct nicvf_rxq *rxq)
 	mb_def.port = rxq->port_id;
 	rte_mbuf_refcnt_set(&mb_def, 1);
 
-	/* Prevent compiler reordering: rearm_data covers previous fields */
+	/* Prevent compiler reordering: mbuf_rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
+	p = (uintptr_t)&mb_def.mbuf_rearm_data;
 	rxq->mbuf_initializer.value = *(uint64_t *)p;
 }
 
