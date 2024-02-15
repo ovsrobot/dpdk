@@ -39,9 +39,9 @@ virtio_rxq_vec_setup(struct virtnet_rx *rxq)
 	mb_def.port = vq->hw->port_id;
 	rte_mbuf_refcnt_set(&mb_def, 1);
 
-	/* prevent compiler reordering: rearm_data covers previous fields */
+	/* prevent compiler reordering: mbuf_rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
+	p = (uintptr_t)&mb_def.mbuf_rearm_data;
 	rxq->mbuf_initializer = *(uint64_t *)p;
 
 	return 0;

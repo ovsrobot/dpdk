@@ -36,10 +36,10 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 	/* Load four mbufs rearm data */
 	RTE_BUILD_BUG_ON(REFCNT_BITS_OFFSET >= 64);
 	RTE_BUILD_BUG_ON(SEG_NUM_BITS_OFFSET >= 64);
-	__m256i mbufs = _mm256_set_epi64x(*tx_pkts[3]->rearm_data,
-					  *tx_pkts[2]->rearm_data,
-					  *tx_pkts[1]->rearm_data,
-					  *tx_pkts[0]->rearm_data);
+	__m256i mbufs = _mm256_set_epi64x(*(uint64_t *)tx_pkts[3]->mbuf_rearm_data,
+					  *(uint64_t *)tx_pkts[2]->mbuf_rearm_data,
+					  *(uint64_t *)tx_pkts[1]->mbuf_rearm_data,
+					  *(uint64_t *)tx_pkts[0]->mbuf_rearm_data);
 
 	/* refcnt=1 and nb_segs=1 */
 	__m256i mbuf_ref = _mm256_set1_epi64x(DEFAULT_REARM_DATA);
@@ -54,7 +54,7 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 	/* Check headroom is enough */
 	const __mmask16 data_mask = 0x1 | 0x1 << 4 | 0x1 << 8 | 0x1 << 12;
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) !=
-		offsetof(struct rte_mbuf, rearm_data));
+		offsetof(struct rte_mbuf, mbuf_rearm_data));
 	cmp = _mm256_mask_cmplt_epu16_mask(data_mask, mbufs, head_rooms);
 	if (unlikely(cmp))
 		return -1;
@@ -187,7 +187,7 @@ virtqueue_dequeue_batch_packed_vec(struct virtnet_rx *rxvq,
 		rx_pkts[i] = (struct rte_mbuf *)vq->vq_descx[id + i].cookie;
 		rte_packet_prefetch(rte_pktmbuf_mtod(rx_pkts[i], void *));
 
-		addrs[i] = (uintptr_t)rx_pkts[i]->rx_descriptor_fields1;
+		addrs[i] = (uintptr_t)rx_pkts[i]->mbuf_rx_descriptor_fields1;
 	}
 
 	/*
@@ -205,7 +205,7 @@ virtqueue_dequeue_batch_packed_vec(struct virtnet_rx *rxvq,
 
 	/* assert offset of data_len */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-		offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+		offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 
 	__m512i v_index = _mm512_set_epi64(addrs[3] + 8, addrs[3],
 					   addrs[2] + 8, addrs[2],
