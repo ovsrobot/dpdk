@@ -266,7 +266,7 @@ recv_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		if (num_valid == 0)
 			break;
 
-		/* Update mbuf rearm_data for eight packets. */
+		/* Update mbuf mbuf_rearm_data for eight packets. */
 		mbuf01 = _mm256_shuffle_epi8(rxcmp0_1, shuf_msk);
 		mbuf23 = _mm256_shuffle_epi8(rxcmp2_3, shuf_msk);
 		mbuf45 = _mm256_shuffle_epi8(rxcmp4_5, shuf_msk);
@@ -310,13 +310,13 @@ recv_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 					    0x04);
 
 		/* Store all mbuf fields for first four packets. */
-		_mm256_storeu_si256((void *)&rx_pkts[i + 0]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 0]->mbuf_rearm_data,
 				    rearm0);
-		_mm256_storeu_si256((void *)&rx_pkts[i + 1]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 1]->mbuf_rearm_data,
 				    rearm1);
-		_mm256_storeu_si256((void *)&rx_pkts[i + 2]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 2]->mbuf_rearm_data,
 				    rearm2);
-		_mm256_storeu_si256((void *)&rx_pkts[i + 3]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 3]->mbuf_rearm_data,
 				    rearm3);
 
 		/* Unpack rearm data, set fixed fields for final four mbufs. */
@@ -336,13 +336,13 @@ recv_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 					    0x04);
 
 		/* Store all mbuf fields for final four packets. */
-		_mm256_storeu_si256((void *)&rx_pkts[i + 4]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 4]->mbuf_rearm_data,
 				    rearm4);
-		_mm256_storeu_si256((void *)&rx_pkts[i + 5]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 5]->mbuf_rearm_data,
 				    rearm5);
-		_mm256_storeu_si256((void *)&rx_pkts[i + 6]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 6]->mbuf_rearm_data,
 				    rearm6);
-		_mm256_storeu_si256((void *)&rx_pkts[i + 7]->rearm_data,
+		_mm256_storeu_si256((void *)&rx_pkts[i + 7]->mbuf_rearm_data,
 				    rearm7);
 
 		nb_rx_pkts += num_valid;

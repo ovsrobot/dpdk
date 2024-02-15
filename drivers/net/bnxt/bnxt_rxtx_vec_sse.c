@@ -118,35 +118,35 @@ descs_to_mbufs(__m128i mm_rxcmp[4], __m128i mm_rxcmp1[4],
 	errors = _mm_or_si128(errors, _mm_srli_epi32(is_tunnel, 1));
 	index = _mm_or_si128(index, is_tunnel);
 
-	/* Update mbuf rearm_data for four packets. */
+	/* Update mbuf mbuf_rearm_data for four packets. */
 	GET_OL_FLAGS(rss_flags, index, errors, 0, ol_flags);
-	_mm_store_si128((void *)&mbuf[0]->rearm_data,
+	_mm_store_si128((void *)&mbuf[0]->mbuf_rearm_data,
 			_mm_or_si128(mbuf_init, _mm_set_epi64x(ol_flags, 0)));
 
 	GET_OL_FLAGS(rss_flags, index, errors, 1, ol_flags);
-	_mm_store_si128((void *)&mbuf[1]->rearm_data,
+	_mm_store_si128((void *)&mbuf[1]->mbuf_rearm_data,
 			_mm_or_si128(mbuf_init, _mm_set_epi64x(ol_flags, 0)));
 
 	GET_OL_FLAGS(rss_flags, index, errors, 2, ol_flags);
-	_mm_store_si128((void *)&mbuf[2]->rearm_data,
+	_mm_store_si128((void *)&mbuf[2]->mbuf_rearm_data,
 			_mm_or_si128(mbuf_init, _mm_set_epi64x(ol_flags, 0)));
 
 	GET_OL_FLAGS(rss_flags, index, errors, 3, ol_flags);
-	_mm_store_si128((void *)&mbuf[3]->rearm_data,
+	_mm_store_si128((void *)&mbuf[3]->mbuf_rearm_data,
 			_mm_or_si128(mbuf_init, _mm_set_epi64x(ol_flags, 0)));
 
-	/* Update mbuf rx_descriptor_fields1 for four packes. */
+	/* Update mbuf mbuf_rx_descriptor_fields1 for four packes. */
 	GET_DESC_FIELDS(mm_rxcmp[0], mm_rxcmp1[0], shuf_msk, ptype_idx, 0, t0);
-	_mm_store_si128((void *)&mbuf[0]->rx_descriptor_fields1, t0);
+	_mm_store_si128((void *)&mbuf[0]->mbuf_rx_descriptor_fields1, t0);
 
 	GET_DESC_FIELDS(mm_rxcmp[1], mm_rxcmp1[1], shuf_msk, ptype_idx, 1, t0);
-	_mm_store_si128((void *)&mbuf[1]->rx_descriptor_fields1, t0);
+	_mm_store_si128((void *)&mbuf[1]->mbuf_rx_descriptor_fields1, t0);
 
 	GET_DESC_FIELDS(mm_rxcmp[2], mm_rxcmp1[2], shuf_msk, ptype_idx, 2, t0);
-	_mm_store_si128((void *)&mbuf[2]->rx_descriptor_fields1, t0);
+	_mm_store_si128((void *)&mbuf[2]->mbuf_rx_descriptor_fields1, t0);
 
 	GET_DESC_FIELDS(mm_rxcmp[3], mm_rxcmp1[3], shuf_msk, ptype_idx, 3, t0);
-	_mm_store_si128((void *)&mbuf[3]->rx_descriptor_fields1, t0);
+	_mm_store_si128((void *)&mbuf[3]->mbuf_rx_descriptor_fields1, t0);
 }
 
 static uint16_t
