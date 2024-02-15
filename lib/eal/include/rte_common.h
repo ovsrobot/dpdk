@@ -24,6 +24,12 @@ extern "C" {
 /* OS specific include */
 #include <rte_os.h>
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_attribute(a)
+#else
+#define __rte_attribute(a) __attribute__(a)
+#endif
+
 #ifndef RTE_TOOLCHAIN_MSVC
 #ifndef typeof
 #define typeof __typeof__
@@ -83,29 +89,16 @@ typedef uint16_t unaligned_uint16_t;
 /**
  * Force a structure to be packed
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_packed
-#else
-#define __rte_packed __attribute__((__packed__))
-#endif
+#define __rte_packed __rte_attribute((__packed__))
 
 /**
  * Macro to mark a type that is not subject to type-based aliasing rules
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_may_alias
-#else
-#define __rte_may_alias __attribute__((__may_alias__))
-#endif
+#define __rte_may_alias __rte_attribute((__may_alias__))
 
 /******* Macro to mark functions and fields scheduled for removal *****/
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_deprecated
-#define __rte_deprecated_msg(msg)
-#else
-#define __rte_deprecated	__attribute__((__deprecated__))
-#define __rte_deprecated_msg(msg)	__attribute__((__deprecated__(msg)))
-#endif
+#define __rte_deprecated	__rte_attribute((__deprecated__))
+#define __rte_deprecated_msg(msg)	__rte_attribute((__deprecated__(msg)))
 
 /**
  *  Macro to mark macros and defines scheduled for removal
@@ -121,27 +114,19 @@ typedef uint16_t unaligned_uint16_t;
 /**
  * Mark a function or variable to a weak reference.
  */
-#define __rte_weak __attribute__((__weak__))
+#define __rte_weak __rte_attribute((__weak__))
 
 /**
  * Force symbol to be generated even if it appears to be unused.
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_used
-#else
-#define __rte_used __attribute__((used))
-#endif
+#define __rte_used __rte_attribute((used))
 
 /*********** Macros to eliminate unused variable warnings ********/
 
 /**
  * short definition to mark a function parameter unused
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_unused
-#else
-#define __rte_unused __attribute__((__unused__))
-#endif
+#define __rte_unused __rte_attribute((__unused__))
 
 /**
  * Mark pointer as restricted with regard to pointer aliasing.
@@ -165,16 +150,12 @@ typedef uint16_t unaligned_uint16_t;
  * even if the underlying stdio implementation is ANSI-compliant,
  * so this must be overridden.
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_format_printf(format_index, first_arg)
-#else
 #if RTE_CC_IS_GNU
 #define __rte_format_printf(format_index, first_arg) \
-	__attribute__((format(gnu_printf, format_index, first_arg)))
+	__rte_attribute((format(gnu_printf, format_index, first_arg)))
 #else
 #define __rte_format_printf(format_index, first_arg) \
-	__attribute__((format(printf, format_index, first_arg)))
-#endif
+	__rte_attribute((format(printf, format_index, first_arg)))
 #endif
 
 /**
@@ -298,11 +279,7 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 /**
  * Hint never returning function
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_noreturn
-#else
-#define __rte_noreturn __attribute__((noreturn))
-#endif
+#define __rte_noreturn __rte_attribute((noreturn))
 
 /**
  * Issue a warning in case the function's return value is ignored.
@@ -327,39 +304,27 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  *  }
  * @endcode
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_warn_unused_result
-#else
-#define __rte_warn_unused_result __attribute__((warn_unused_result))
-#endif
+#define __rte_warn_unused_result __rte_attribute((warn_unused_result))
 
 /**
  * Force a function to be inlined
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_always_inline
-#else
-#define __rte_always_inline inline __attribute__((always_inline))
-#endif
+#define __rte_always_inline inline __rte_attribute((always_inline))
 
 /**
  * Force a function to be noinlined
  */
-#define __rte_noinline __attribute__((noinline))
+#define __rte_noinline __rte_attribute((noinline))
 
 /**
  * Hint function in the hot path
  */
-#define __rte_hot __attribute__((hot))
+#define __rte_hot __rte_attribute((hot))
 
 /**
  * Hint function in the cold path
  */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_cold
-#else
-#define __rte_cold __attribute__((cold))
-#endif
+#define __rte_cold __rte_attribute((cold))
 
 /**
  * Disable AddressSanitizer on some code
