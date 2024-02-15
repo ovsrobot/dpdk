@@ -435,9 +435,9 @@ cnxk_nix_rxq_mbuf_setup(struct cnxk_eth_dev *dev)
 	mb_def.port = port_id;
 	rte_mbuf_refcnt_set(&mb_def, 1);
 
-	/* Prevent compiler reordering: rearm_data covers previous fields */
+	/* Prevent compiler reordering: mbuf_rearm_data covers previous fields */
 	rte_compiler_barrier();
-	tmp = (uint64_t *)&mb_def.rearm_data;
+	tmp = (uint64_t *)&mb_def.mbuf_rearm_data;
 
 	return *tmp;
 }
