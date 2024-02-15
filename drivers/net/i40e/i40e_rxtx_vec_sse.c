@@ -318,13 +318,13 @@ desc_to_olflags_v(struct i40e_rx_queue *rxq, volatile union i40e_rx_desc *rxdp,
 
 	/* write the rearm data and the olflags in one write */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-			offsetof(struct rte_mbuf, rearm_data) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
-			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&rx_pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&rx_pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&rx_pkts[3]->rearm_data, rearm3);
+			offsetof(struct rte_mbuf, mbuf_rearm_data) + 8);
+	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, mbuf_rearm_data) !=
+			RTE_ALIGN(offsetof(struct rte_mbuf, mbuf_rearm_data), 16));
+	_mm_store_si128((__m128i *)&rx_pkts[0]->mbuf_rearm_data, rearm0);
+	_mm_store_si128((__m128i *)&rx_pkts[1]->mbuf_rearm_data, rearm1);
+	_mm_store_si128((__m128i *)&rx_pkts[2]->mbuf_rearm_data, rearm2);
+	_mm_store_si128((__m128i *)&rx_pkts[3]->mbuf_rearm_data, rearm3);
 }
 
 #define PKTLEN_SHIFT     10
@@ -377,9 +377,9 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	 * call above.
 	 */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 4);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 	__m128i dd_check, eop_check;
 
 	/* nb_pkts has to be floor-aligned to RTE_I40E_DESCS_PER_LOOP */
@@ -427,13 +427,13 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	 * here for completeness in case of future modifications.
 	 */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 4);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 10);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 12);
 
 	/* Cache is empty -> need to scan the buffer rings, but first move
 	 * the next 'n' mbufs into the cache
@@ -537,9 +537,9 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		staterr = _mm_unpacklo_epi32(sterr_tmp1, sterr_tmp2);
 
 		/* D.3 copy final 3,4 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+3]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos+3]->mbuf_rx_descriptor_fields1,
 				 pkt_mb4);
-		_mm_storeu_si128((void *)&rx_pkts[pos+2]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos+2]->mbuf_rx_descriptor_fields1,
 				 pkt_mb3);
 
 		/* D.2 pkt 1,2 set in_port/nb_seg and remove crc */
@@ -573,9 +573,9 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		staterr = _mm_packs_epi32(staterr, zero);
 
 		/* D.3 copy final 1,2 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+1]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos+1]->mbuf_rx_descriptor_fields1,
 				 pkt_mb2);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos]->mbuf_rx_descriptor_fields1,
 				 pkt_mb1);
 		desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
 		/* C.4 calc available number of desc */

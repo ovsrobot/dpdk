@@ -197,9 +197,9 @@ i40e_rxq_vec_setup_default(struct i40e_rx_queue *rxq)
 	mb_def.port = rxq->port_id;
 	rte_mbuf_refcnt_set(&mb_def, 1);
 
-	/* prevent compiler reordering: rearm_data covers previous fields */
+	/* prevent compiler reordering: mbuf_rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
+	p = (uintptr_t)&mb_def.mbuf_rearm_data;
 	rxq->mbuf_initializer = *(uint64_t *)p;
 	rxq->rx_using_sse = 1;
 	return 0;
