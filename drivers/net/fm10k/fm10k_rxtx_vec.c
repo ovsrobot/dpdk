@@ -237,9 +237,9 @@ fm10k_rxq_vec_setup(struct fm10k_rx_queue *rxq)
 	mb_def.port = rxq->port_id;
 	rte_mbuf_refcnt_set(&mb_def, 1);
 
-	/* prevent compiler reordering: rearm_data covers previous fields */
+	/* prevent compiler reordering: mbuf_rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
+	p = (uintptr_t)&mb_def.mbuf_rearm_data;
 	rxq->mbuf_initializer = *(uint64_t *)p;
 	return 0;
 }
@@ -290,9 +290,9 @@ fm10k_rxq_rearm(struct fm10k_rx_queue *rxq)
 		/* Flush mbuf with pkt template.
 		 * Data to be rearmed is 6 bytes long.
 		 */
-		p0 = (uintptr_t)&mb0->rearm_data;
+		p0 = (uintptr_t)&mb0->mbuf_rearm_data;
 		*(uint64_t *)p0 = rxq->mbuf_initializer;
-		p1 = (uintptr_t)&mb1->rearm_data;
+		p1 = (uintptr_t)&mb1->mbuf_rearm_data;
 		*(uint64_t *)p1 = rxq->mbuf_initializer;
 
 		/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
@@ -428,13 +428,13 @@ fm10k_recv_raw_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 	 * here for completeness in case of future modifications.
 	 */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 4);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 10);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
+			offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 12);
 
 	/* Cache is empty -> need to scan the buffer rings, but first move
 	 * the next 'n' mbufs into the cache
@@ -519,9 +519,9 @@ fm10k_recv_raw_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 		staterr = _mm_unpacklo_epi32(sterr_tmp1, sterr_tmp2);
 
 		/* D.3 copy final 3,4 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+3]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos+3]->mbuf_rx_descriptor_fields1,
 				pkt_mb4);
-		_mm_storeu_si128((void *)&rx_pkts[pos+2]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos+2]->mbuf_rx_descriptor_fields1,
 				pkt_mb3);
 
 		/* C* extract and record EOP bit */
@@ -557,9 +557,9 @@ fm10k_recv_raw_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 		staterr = _mm_packs_epi32(staterr, zero);
 
 		/* D.3 copy final 1,2 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+1]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos+1]->mbuf_rx_descriptor_fields1,
 				pkt_mb2);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128((void *)&rx_pkts[pos]->mbuf_rx_descriptor_fields1,
 				pkt_mb1);
 
 		fm10k_desc_to_pktype_v(descs0, &rx_pkts[pos]);
