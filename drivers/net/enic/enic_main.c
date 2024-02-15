@@ -584,7 +584,7 @@ int enic_enable(struct enic *enic)
 
 		/*
 		 * mbuf_initializer contains const-after-init fields of
-		 * receive mbufs (i.e. 64 bits of fields from rearm_data).
+		 * receive mbufs (i.e. 64 bits of fields from mbuf_rearm_data).
 		 * It is currently used by the vectorized handler.
 		 */
 		mb_def.nb_segs = 1;
@@ -592,7 +592,7 @@ int enic_enable(struct enic *enic)
 		mb_def.port = enic->port_id;
 		rte_mbuf_refcnt_set(&mb_def, 1);
 		rte_compiler_barrier();
-		p = (uintptr_t)&mb_def.rearm_data;
+		p = (uintptr_t)&mb_def.mbuf_rearm_data;
 		enic->mbuf_initializer = *(uint64_t *)p;
 	}
 

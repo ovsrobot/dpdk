@@ -92,7 +92,7 @@ struct enic {
 	struct vnic_dev *vdev;
 
 	/*
-	 * mbuf_initializer contains 64 bits of mbuf rearm_data, used by
+	 * mbuf_initializer contains 64 bits of mbuf mbuf_rearm_data, used by
 	 * the avx2 handler at this time.
 	 */
 	uint64_t mbuf_initializer;

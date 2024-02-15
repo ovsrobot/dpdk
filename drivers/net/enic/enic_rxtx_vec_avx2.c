@@ -19,7 +19,7 @@ rx_one(struct cq_enet_rq_desc *cqd, struct rte_mbuf *mb, struct enic *enic)
 {
 	bool tnl;
 
-	*(uint64_t *)&mb->rearm_data = enic->mbuf_initializer;
+	*(uint64_t *)&mb->mbuf_rearm_data = enic->mbuf_initializer;
 	mb->data_len = cqd->bytes_written_flags &
 		CQ_ENET_RQ_DESC_BYTES_WRITTEN_MASK;
 	mb->pkt_len = mb->data_len;
@@ -394,13 +394,13 @@ enic_noscatter_vec_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	 * type_color               - 15  (unused)
 	 *
 	 * --- mbuf fields ---       offset
-	 * rearm_data              ---- 16
+	 * mbuf_rearm_data            ---- 16
 	 * data_off    - 0      (mbuf_init) -+
 	 * refcnt      - 2      (mbuf_init)  |
 	 * nb_segs     - 4      (mbuf_init)  | 16B 128b
 	 * port        - 6      (mbuf_init)  |
 	 * ol_flag     - 8      (from cqd)  -+
-	 * rx_descriptor_fields1   ---- 32
+	 * mbuf_rx_descriptor_fields1 ---- 32
 	 * packet_type - 0      (from cqd)  -+
 	 * pkt_len     - 4      (from cqd)   |
 	 * data_len    - 8      (from cqd)   | 16B 128b
@@ -737,14 +737,14 @@ enic_noscatter_vec_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		 * vlan_tci    - 26     (from cqd)
 		 * rss         - 28     (from cqd)
 		 */
-		_mm256_storeu_si256((__m256i *)&rxmb[0]->rearm_data, rearm0);
-		_mm256_storeu_si256((__m256i *)&rxmb[1]->rearm_data, rearm1);
-		_mm256_storeu_si256((__m256i *)&rxmb[2]->rearm_data, rearm2);
-		_mm256_storeu_si256((__m256i *)&rxmb[3]->rearm_data, rearm3);
-		_mm256_storeu_si256((__m256i *)&rxmb[4]->rearm_data, rearm4);
-		_mm256_storeu_si256((__m256i *)&rxmb[5]->rearm_data, rearm5);
-		_mm256_storeu_si256((__m256i *)&rxmb[6]->rearm_data, rearm6);
-		_mm256_storeu_si256((__m256i *)&rxmb[7]->rearm_data, rearm7);
+		_mm256_storeu_si256((__m256i *)&rxmb[0]->mbuf_rearm_data, rearm0);
+		_mm256_storeu_si256((__m256i *)&rxmb[1]->mbuf_rearm_data, rearm1);
+		_mm256_storeu_si256((__m256i *)&rxmb[2]->mbuf_rearm_data, rearm2);
+		_mm256_storeu_si256((__m256i *)&rxmb[3]->mbuf_rearm_data, rearm3);
+		_mm256_storeu_si256((__m256i *)&rxmb[4]->mbuf_rearm_data, rearm4);
+		_mm256_storeu_si256((__m256i *)&rxmb[5]->mbuf_rearm_data, rearm5);
+		_mm256_storeu_si256((__m256i *)&rxmb[6]->mbuf_rearm_data, rearm6);
+		_mm256_storeu_si256((__m256i *)&rxmb[7]->mbuf_rearm_data, rearm7);
 
 		max_rx -= 8;
 		cqd += 8;
