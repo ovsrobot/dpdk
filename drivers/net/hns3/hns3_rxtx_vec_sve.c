@@ -33,7 +33,7 @@ hns3_desc_parse_field_sve(struct hns3_rx_queue *rxq,
 	int ret, i;
 
 	for (i = 0; i < (int)bd_vld_num; i++) {
-		/* init rte_mbuf.rearm_data last 64-bit */
+		/* init rte_mbuf.mbuf_rearm_data last 64-bit */
 		rx_pkts[i]->ol_flags = RTE_MBUF_F_RX_RSS_HASH;
 		rx_pkts[i]->hash.rss = rxdp[i].rx.rss_hash;
 		rx_pkts[i]->pkt_len = rte_le_to_cpu_16(rxdp[i].rx.pkt_len) -
@@ -123,9 +123,9 @@ hns3_recv_burst_vec_sve(struct hns3_rx_queue *__restrict rxq,
 		mbuf_init = svdup_n_u64(rxq->mbuf_initializer);
 		/* save mbuf_initializer */
 		svst1_scatter_u64base_offset_u64(PG64_256BIT, mbp1st,
-			offsetof(struct rte_mbuf, rearm_data), mbuf_init);
+			offsetof(struct rte_mbuf, mbuf_rearm_data), mbuf_init);
 		svst1_scatter_u64base_offset_u64(PG64_256BIT, mbp2st,
-			offsetof(struct rte_mbuf, rearm_data), mbuf_init);
+			offsetof(struct rte_mbuf, mbuf_rearm_data), mbuf_init);
 
 		next_rxdp = rxdp + HNS3_SVE_DEFAULT_DESCS_PER_LOOP;
 		rte_prefetch_non_temporal(next_rxdp);

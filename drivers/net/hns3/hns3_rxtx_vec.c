@@ -121,27 +121,27 @@ hns3_rxq_vec_setup_rearm_data(struct hns3_rx_queue *rxq)
 	mb_def.port = rxq->port_id;
 	rte_mbuf_refcnt_set(&mb_def, 1);
 
-	/* compile-time verifies the rearm_data first 8bytes */
+	/* compile-time verifies the mbuf_rearm_data first 8bytes */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) <
-			 offsetof(struct rte_mbuf, rearm_data));
+			 offsetof(struct rte_mbuf, mbuf_rearm_data));
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, refcnt) <
-			 offsetof(struct rte_mbuf, rearm_data));
+			 offsetof(struct rte_mbuf, mbuf_rearm_data));
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, nb_segs) <
-			 offsetof(struct rte_mbuf, rearm_data));
+			 offsetof(struct rte_mbuf, mbuf_rearm_data));
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, port) <
-			 offsetof(struct rte_mbuf, rearm_data));
+			 offsetof(struct rte_mbuf, mbuf_rearm_data));
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) -
-			 offsetof(struct rte_mbuf, rearm_data) > 6);
+			 offsetof(struct rte_mbuf, mbuf_rearm_data) > 6);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, refcnt) -
-			 offsetof(struct rte_mbuf, rearm_data) > 6);
+			 offsetof(struct rte_mbuf, mbuf_rearm_data) > 6);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, nb_segs) -
-			 offsetof(struct rte_mbuf, rearm_data) > 6);
+			 offsetof(struct rte_mbuf, mbuf_rearm_data) > 6);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, port) -
-			 offsetof(struct rte_mbuf, rearm_data) > 6);
+			 offsetof(struct rte_mbuf, mbuf_rearm_data) > 6);
 
-	/* prevent compiler reordering: rearm_data covers previous fields */
+	/* prevent compiler reordering: mbuf_rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
+	p = (uintptr_t)&mb_def.mbuf_rearm_data;
 	rxq->mbuf_initializer = *(uint64_t *)p;
 }
 

@@ -104,7 +104,7 @@ hns3_desc_parse_field(struct hns3_rx_queue *rxq,
 	for (i = 0; i < bd_vld_num; i++) {
 		pkt = sw_ring[i].mbuf;
 
-		/* init rte_mbuf.rearm_data last 64-bit */
+		/* init rte_mbuf.mbuf_rearm_data last 64-bit */
 		pkt->ol_flags = RTE_MBUF_F_RX_RSS_HASH;
 
 		l234_info = rxdp[i].rx.l234_info;
@@ -139,7 +139,7 @@ hns3_recv_burst_vec(struct hns3_rx_queue *__restrict rxq,
 	uint32_t pos;
 	int offset;
 
-	/* mask to shuffle from desc to mbuf's rx_descriptor_fields1 */
+	/* mask to shuffle from desc to mbuf's mbuf_rx_descriptor_fields1 */
 	uint8x16_t shuf_desc_fields_msk = {
 		0xff, 0xff, 0xff, 0xff,  /* packet type init zero */
 		20, 21, 0xff, 0xff,      /* rx.pkt_len to rte_mbuf.pkt_len */
@@ -158,11 +158,11 @@ hns3_recv_burst_vec(struct hns3_rx_queue *__restrict rxq,
 
 	/* compile-time verifies the shuffle mask */
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
+			 offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 4);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+			 offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash.rss) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
+			 offsetof(struct rte_mbuf, mbuf_rx_descriptor_fields1) + 12);
 
 	for (pos = 0; pos < nb_pkts; pos += HNS3_DEFAULT_DESCS_PER_LOOP,
 				     rxdp += HNS3_DEFAULT_DESCS_PER_LOOP) {
@@ -236,23 +236,23 @@ hns3_recv_burst_vec(struct hns3_rx_queue *__restrict rxq,
 		pkt_mb4 = vreinterpretq_u8_u16(tmp);
 
 		/* save packet info to rx_pkts mbuf */
-		vst1q_u8((void *)&sw_ring[pos + 0].mbuf->rx_descriptor_fields1,
+		vst1q_u8((void *)&sw_ring[pos + 0].mbuf->mbuf_rx_descriptor_fields1,
 			 pkt_mb1);
-		vst1q_u8((void *)&sw_ring[pos + 1].mbuf->rx_descriptor_fields1,
+		vst1q_u8((void *)&sw_ring[pos + 1].mbuf->mbuf_rx_descriptor_fields1,
 			 pkt_mb2);
-		vst1q_u8((void *)&sw_ring[pos + 2].mbuf->rx_descriptor_fields1,
+		vst1q_u8((void *)&sw_ring[pos + 2].mbuf->mbuf_rx_descriptor_fields1,
 			 pkt_mb3);
-		vst1q_u8((void *)&sw_ring[pos + 3].mbuf->rx_descriptor_fields1,
+		vst1q_u8((void *)&sw_ring[pos + 3].mbuf->mbuf_rx_descriptor_fields1,
 			 pkt_mb4);
 
-		/* store the first 8 bytes of packets mbuf's rearm_data */
-		*(uint64_t *)&sw_ring[pos + 0].mbuf->rearm_data =
+		/* store the first 8 bytes of packets mbuf's mbuf_rearm_data */
+		*(uint64_t *)&sw_ring[pos + 0].mbuf->mbuf_rearm_data =
 			rxq->mbuf_initializer;
-		*(uint64_t *)&sw_ring[pos + 1].mbuf->rearm_data =
+		*(uint64_t *)&sw_ring[pos + 1].mbuf->mbuf_rearm_data =
 			rxq->mbuf_initializer;
-		*(uint64_t *)&sw_ring[pos + 2].mbuf->rearm_data =
+		*(uint64_t *)&sw_ring[pos + 2].mbuf->mbuf_rearm_data =
 			rxq->mbuf_initializer;
-		*(uint64_t *)&sw_ring[pos + 3].mbuf->rearm_data =
+		*(uint64_t *)&sw_ring[pos + 3].mbuf->mbuf_rearm_data =
 			rxq->mbuf_initializer;
 
 		rte_prefetch_non_temporal(rxdp + HNS3_DEFAULT_DESCS_PER_LOOP);
