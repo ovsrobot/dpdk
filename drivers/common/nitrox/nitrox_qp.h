@@ -8,8 +8,15 @@
 #include <stdbool.h>
 
 #include <rte_io.h>
+#include "nitrox_hal.h"
 
 struct nitrox_softreq;
+
+enum nitrox_queue_type {
+	NITROX_QUEUE_SE,
+	NITROX_QUEUE_AE,
+	NITROX_QUEUE_ZIP,
+};
 
 struct command_queue {
 	const struct rte_memzone *mz;
@@ -30,6 +37,8 @@ struct nitrox_qp_stats {
 };
 
 struct nitrox_qp {
+	enum nitrox_queue_type type;
+	uint8_t *bar_addr;
 	struct command_queue cmdq;
 	struct rid *ridq;
 	uint32_t count;
@@ -94,6 +103,23 @@ nitrox_qp_enqueue(struct nitrox_qp *qp, void *instr, struct nitrox_softreq *sr)
 	qp->ridq[head].sr = sr;
 	rte_smp_wmb();
 	rte_atomic16_inc(&qp->pending_count);
+}
+
+static inline int
+nitrox_qp_enqueue_sr(struct nitrox_qp *qp, struct nitrox_softreq *sr)
+{
+	uint32_t head = qp->head % qp->count;
+	int err;
+
+	err = inc_zqmq_next_cmd(qp->bar_addr, qp->qno);
+	if (unlikely(err))
+		return err;
+
+	qp->head++;
+	qp->ridq[head].sr = sr;
+	rte_smp_wmb();
+	rte_atomic16_inc(&qp->pending_count);
+	return 0;
 }
 
 static inline void
