@@ -870,16 +870,29 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 
 	/* receive a burst of packet */
 	nb_rx = common_fwd_stream_receive(fs, pkts_burst, nb_pkt_per_burst);
-	if (unlikely(nb_rx == 0))
+	if (unlikely(nb_rx == 0)) {
+#ifndef RTE_LIB_GRO
 		return false;
+#else
+		gro_enable = gro_ports[fs->rx_port].enable;
+		/*
+		 * Make sure that in case of Heavyweight mode GRO the packets in
+		 * GRO cache should be flushed as the timer could have expired.
+		 *
+		 * The order of conditions should be the same as gro_ctx is valid
+		 * only when gro_flush_cycles is not the GRO_DEFAULT_FLUSH_CYCLES which
+		 * indicates light weight mode GRO
+		 */
+		if (!gro_enable || (gro_flush_cycles == GRO_DEFAULT_FLUSH_CYCLES) ||
+			(rte_gro_get_pkt_count(current_fwd_lcore()->gro_ctx) == 0))
+			return false;
+#endif
+	}
 
 	rx_bad_ip_csum = 0;
 	rx_bad_l4_csum = 0;
 	rx_bad_outer_l4_csum = 0;
 	rx_bad_outer_ip_csum = 0;
-#ifdef RTE_LIB_GRO
-	gro_enable = gro_ports[fs->rx_port].enable;
-#endif
 
 	txp = &ports[fs->tx_port];
 	tx_offloads = txp->dev_conf.txmode.offloads;
@@ -1110,6 +1123,7 @@ tunnel_update:
 	}
 
 #ifdef RTE_LIB_GRO
+	gro_enable = gro_ports[fs->rx_port].enable;
 	if (unlikely(gro_enable)) {
 		if (gro_flush_cycles == GRO_DEFAULT_FLUSH_CYCLES) {
 			nb_rx = rte_gro_reassemble_burst(pkts_burst, nb_rx,
