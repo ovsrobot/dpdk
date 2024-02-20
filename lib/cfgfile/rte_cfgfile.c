@@ -105,6 +105,16 @@ static int
 _add_entry(struct rte_cfgfile_section *section, const char *entryname,
 		const char *entryvalue)
 {
+	int name_len, value_len;
+
+	name_len = strlen(entryname);
+	value_len = strlen(entryvalue);
+	if (name_len == 0 || name_len >= CFG_NAME_LEN || value_len >= CFG_VALUE_LEN) {
+		CFG_LOG(ERR, "invalid entry name %s or value %s in section %s",
+			entryname, entryvalue, section->name);
+		return -EINVAL;
+	}
+
 	/* resize entry structure if we don't have room for more entries */
 	if (section->num_entries == section->allocated_entries) {
 		struct rte_cfgfile_entry *n_entries = realloc(
@@ -322,6 +332,7 @@ error1:
 int
 rte_cfgfile_add_section(struct rte_cfgfile *cfg, const char *sectionname)
 {
+	int len;
 	int i;
 
 	if (cfg == NULL)
@@ -329,6 +340,12 @@ rte_cfgfile_add_section(struct rte_cfgfile *cfg, const char *sectionname)
 
 	if (sectionname == NULL)
 		return -EINVAL;
+
+	len = strlen(sectionname);
+	if (len == 0 || len >= CFG_NAME_LEN) {
+		CFG_LOG(ERR, "invalid section name %s", sectionname);
+		return -EINVAL;
+	}
 
 	/* resize overall struct if we don't have room for more	sections */
 	if (cfg->num_sections == cfg->allocated_sections) {
