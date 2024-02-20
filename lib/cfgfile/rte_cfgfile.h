@@ -56,6 +56,13 @@ enum {
 	 * be zero length (e.g., "key=").
 	 */
 	CFG_FLAG_EMPTY_VALUES = 2,
+
+	/**
+	 * Indicates that file should have unique section name AND unique
+	 * entry's name. If a duplicate name is detected, the operation will
+	 * return error.
+	 */
+	CFG_FLAG_UNIQUE_NAME = 4,
 };
 /**@} */
 
