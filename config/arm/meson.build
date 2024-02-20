@@ -424,6 +424,14 @@ soc_tys2500 = {
     'numa': true
 }
 
+soc_grace = {
+    'description': 'NVIDIA Grace',
+    'implementer': '0x41',
+    'part_number': '0xd4f',
+    'extra_march_features': ['crypto'],
+    'numa': true
+}
+
 soc_graviton2 = {
     'description': 'AWS Graviton2',
     'implementer': '0x41',
@@ -551,6 +559,7 @@ dpaa:            NXP DPAA
 emag:            Ampere eMAG
 ft2000plus:      Phytium FT-2000+
 tys2500:         Phytium TengYun S2500
+grace:           NVIDIA Grace
 graviton2:       AWS Graviton2
 graviton3:       AWS Graviton3
 hip10:           HiSilicon HIP10
@@ -583,6 +592,7 @@ socs = {
     'emag': soc_emag,
     'ft2000plus': soc_ft2000plus,
     'tys2500': soc_tys2500,
+    'grace': soc_grace,
     'graviton2': soc_graviton2,
     'graviton3': soc_graviton3,
     'hip10': soc_hip10,
