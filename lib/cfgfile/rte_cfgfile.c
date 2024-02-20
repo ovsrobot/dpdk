@@ -182,6 +182,7 @@ rte_cfgfile_load_with_params(const char *filename, int flags,
 	char buffer[CFG_NAME_LEN + CFG_VALUE_LEN + 4];
 	int lineno = 0;
 	struct rte_cfgfile *cfg;
+	int ret;
 
 	if (rte_cfgfile_check_params(params))
 		return NULL;
@@ -226,7 +227,9 @@ rte_cfgfile_load_with_params(const char *filename, int flags,
 			*end = '\0';
 			_strip(&buffer[1], end - &buffer[1]);
 
-			rte_cfgfile_add_section(cfg, &buffer[1]);
+			ret = rte_cfgfile_add_section(cfg, &buffer[1]);
+			if (ret != 0)
+				goto error1;
 		} else {
 			/* key and value line */
 			char *split[2] = {NULL};
@@ -261,8 +264,10 @@ rte_cfgfile_load_with_params(const char *filename, int flags,
 			if (cfg->num_sections == 0)
 				goto error1;
 
-			_add_entry(&cfg->sections[cfg->num_sections - 1],
-					split[0], split[1]);
+			ret = _add_entry(&cfg->sections[cfg->num_sections - 1],
+					 split[0], split[1]);
+			if (ret != 0)
+				goto error1;
 		}
 	}
 	fclose(f);
@@ -277,6 +282,7 @@ struct rte_cfgfile *
 rte_cfgfile_create(int flags)
 {
 	int i;
+	int ret;
 	struct rte_cfgfile *cfg;
 
 	/* future proof flags usage */
@@ -310,8 +316,11 @@ rte_cfgfile_create(int flags)
 		cfg->sections[i].allocated_entries = CFG_ALLOC_ENTRY_BATCH;
 	}
 
-	if (flags & CFG_FLAG_GLOBAL_SECTION)
-		rte_cfgfile_add_section(cfg, "GLOBAL");
+	if (flags & CFG_FLAG_GLOBAL_SECTION) {
+		ret = rte_cfgfile_add_section(cfg, "GLOBAL");
+		if (ret != 0)
+			goto error1;
+	}
 
 	return cfg;
 error1:
