@@ -2,8 +2,7 @@
 # Copyright(c) 2024 AMD Limited
 
 drivers = [
-        'core',
-        'uncore',
+        'intel',
 ]
 
 std_deps = ['power']

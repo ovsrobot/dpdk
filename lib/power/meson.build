@@ -13,7 +13,6 @@ if not is_linux
 endif
 sources = files(
         'power_common.c',
-        'power_intel_uncore.c',
         'rte_power.c',
         'rte_power_uncore.c',
         'rte_power_pmd_mgmt.c',
