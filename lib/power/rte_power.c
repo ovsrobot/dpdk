@@ -8,64 +8,80 @@
 #include <rte_spinlock.h>
 
 #include "rte_power.h"
-#include "power_acpi_cpufreq.h"
-#include "power_cppc_cpufreq.h"
 #include "power_common.h"
-#include "power_kvm_vm.h"
-#include "power_pstate_cpufreq.h"
-#include "power_amd_pstate_cpufreq.h"
 
 enum power_management_env global_default_env = PM_ENV_NOT_SET;
 
 static rte_spinlock_t global_env_cfg_lock = RTE_SPINLOCK_INITIALIZER;
+static struct rte_power_ops rte_power_ops[PM_ENV_MAX];
 
-/* function pointers */
-rte_power_freqs_t rte_power_freqs  = NULL;
-rte_power_get_freq_t rte_power_get_freq = NULL;
-rte_power_set_freq_t rte_power_set_freq = NULL;
-rte_power_freq_change_t rte_power_freq_up = NULL;
-rte_power_freq_change_t rte_power_freq_down = NULL;
-rte_power_freq_change_t rte_power_freq_max = NULL;
-rte_power_freq_change_t rte_power_freq_min = NULL;
-rte_power_freq_change_t rte_power_turbo_status;
-rte_power_freq_change_t rte_power_freq_enable_turbo;
-rte_power_freq_change_t rte_power_freq_disable_turbo;
-rte_power_get_capabilities_t rte_power_get_capabilities;
-
-static void
-reset_power_function_ptrs(void)
+/* register the ops struct in rte_power_ops, return 0 on success. */
+int
+rte_power_register_ops(const struct rte_power_ops *op)
 {
-	rte_power_freqs  = NULL;
-	rte_power_get_freq = NULL;
-	rte_power_set_freq = NULL;
-	rte_power_freq_up = NULL;
-	rte_power_freq_down = NULL;
-	rte_power_freq_max = NULL;
-	rte_power_freq_min = NULL;
-	rte_power_turbo_status = NULL;
-	rte_power_freq_enable_turbo = NULL;
-	rte_power_freq_disable_turbo = NULL;
-	rte_power_get_capabilities = NULL;
+	struct rte_power_ops *ops;
+
+	if (op->env >= PM_ENV_MAX) {
+		POWER_LOG(ERR, "Unsupported power management environment\n");
+		return -EINVAL;
+	}
+
+	if (op->status != 0) {
+		POWER_LOG(ERR, "Power management env[%d] ops registered already\n",
+			op->env);
+		return -EINVAL;
+	}
+
+	if (!op->init || !op->exit || !op->check_env_support ||
+		!op->get_avail_freqs || !op->get_freq || !op->set_freq ||
+		!op->freq_up || !op->freq_down || !op->freq_max ||
+		!op->freq_min || !op->turbo_status || !op->enable_turbo ||
+		!op->disable_turbo || !op->get_caps) {
+		POWER_LOG(ERR, "Missing callbacks while registering power ops\n");
+		return -EINVAL;
+	}
+
+	ops = &rte_power_ops[op->env];
+	ops->env = op->env;
+	ops->init = op->init;
+	ops->exit = op->exit;
+	ops->check_env_support = op->check_env_support;
+	ops->get_avail_freqs = op->get_avail_freqs;
+	ops->get_freq = op->get_freq;
+	ops->set_freq = op->set_freq;
+	ops->freq_up = op->freq_up;
+	ops->freq_down = op->freq_down;
+	ops->freq_max = op->freq_max;
+	ops->freq_min = op->freq_min;
+	ops->turbo_status = op->turbo_status;
+	ops->enable_turbo = op->enable_turbo;
+	ops->disable_turbo = op->disable_turbo;
+	ops->status = 1; /* registered */
+
+	return 0;
+}
+
+struct rte_power_ops *
+rte_power_get_ops(int ops_index)
+{
+	RTE_VERIFY((ops_index >= PM_ENV_NOT_SET) && (ops_index < PM_ENV_MAX));
+	RTE_VERIFY(rte_power_ops[ops_index].status != 0);
+
+	return &rte_power_ops[ops_index];
 }
 
 int
 rte_power_check_env_supported(enum power_management_env env)
 {
-	switch (env) {
-	case PM_ENV_ACPI_CPUFREQ:
-		return power_acpi_cpufreq_check_supported();
-	case PM_ENV_PSTATE_CPUFREQ:
-		return power_pstate_cpufreq_check_supported();
-	case PM_ENV_KVM_VM:
-		return power_kvm_vm_check_supported();
-	case PM_ENV_CPPC_CPUFREQ:
-		return power_cppc_cpufreq_check_supported();
-	case PM_ENV_AMD_PSTATE_CPUFREQ:
-		return power_amd_pstate_cpufreq_check_supported();
-	default:
-		rte_errno = EINVAL;
-		return -1;
+	struct rte_power_ops *ops;
+
+	if ((env > PM_ENV_NOT_SET) && (env < PM_ENV_MAX)) {
+		ops = rte_power_get_ops(env);
+		return ops->check_env_support();
 	}
+
+	rte_errno = EINVAL;
+	return -1;
 }
 
 int
@@ -80,80 +96,26 @@ rte_power_set_env(enum power_management_env env)
 	}
 
 	int ret = 0;
+	struct rte_power_ops *ops;
 
-	if (env == PM_ENV_ACPI_CPUFREQ) {
-		rte_power_freqs = power_acpi_cpufreq_freqs;
-		rte_power_get_freq = power_acpi_cpufreq_get_freq;
-		rte_power_set_freq = power_acpi_cpufreq_set_freq;
-		rte_power_freq_up = power_acpi_cpufreq_freq_up;
-		rte_power_freq_down = power_acpi_cpufreq_freq_down;
-		rte_power_freq_min = power_acpi_cpufreq_freq_min;
-		rte_power_freq_max = power_acpi_cpufreq_freq_max;
-		rte_power_turbo_status = power_acpi_turbo_status;
-		rte_power_freq_enable_turbo = power_acpi_enable_turbo;
-		rte_power_freq_disable_turbo = power_acpi_disable_turbo;
-		rte_power_get_capabilities = power_acpi_get_capabilities;
-	} else if (env == PM_ENV_KVM_VM) {
-		rte_power_freqs = power_kvm_vm_freqs;
-		rte_power_get_freq = power_kvm_vm_get_freq;
-		rte_power_set_freq = power_kvm_vm_set_freq;
-		rte_power_freq_up = power_kvm_vm_freq_up;
-		rte_power_freq_down = power_kvm_vm_freq_down;
-		rte_power_freq_min = power_kvm_vm_freq_min;
-		rte_power_freq_max = power_kvm_vm_freq_max;
-		rte_power_turbo_status = power_kvm_vm_turbo_status;
-		rte_power_freq_enable_turbo = power_kvm_vm_enable_turbo;
-		rte_power_freq_disable_turbo = power_kvm_vm_disable_turbo;
-		rte_power_get_capabilities = power_kvm_vm_get_capabilities;
-	} else if (env == PM_ENV_PSTATE_CPUFREQ) {
-		rte_power_freqs = power_pstate_cpufreq_freqs;
-		rte_power_get_freq = power_pstate_cpufreq_get_freq;
-		rte_power_set_freq = power_pstate_cpufreq_set_freq;
-		rte_power_freq_up = power_pstate_cpufreq_freq_up;
-		rte_power_freq_down = power_pstate_cpufreq_freq_down;
-		rte_power_freq_min = power_pstate_cpufreq_freq_min;
-		rte_power_freq_max = power_pstate_cpufreq_freq_max;
-		rte_power_turbo_status = power_pstate_turbo_status;
-		rte_power_freq_enable_turbo = power_pstate_enable_turbo;
-		rte_power_freq_disable_turbo = power_pstate_disable_turbo;
-		rte_power_get_capabilities = power_pstate_get_capabilities;
+	if ((env == PM_ENV_NOT_SET) || (env >= PM_ENV_MAX)) {
+		POWER_LOG(ERR, "Invalid Power Management Environment(%d)"
+				" set\n", env);
+		ret = -1;
+	}
 
-	} else if (env == PM_ENV_CPPC_CPUFREQ) {
-		rte_power_freqs = power_cppc_cpufreq_freqs;
-		rte_power_get_freq = power_cppc_cpufreq_get_freq;
-		rte_power_set_freq = power_cppc_cpufreq_set_freq;
-		rte_power_freq_up = power_cppc_cpufreq_freq_up;
-		rte_power_freq_down = power_cppc_cpufreq_freq_down;
-		rte_power_freq_min = power_cppc_cpufreq_freq_min;
-		rte_power_freq_max = power_cppc_cpufreq_freq_max;
-		rte_power_turbo_status = power_cppc_turbo_status;
-		rte_power_freq_enable_turbo = power_cppc_enable_turbo;
-		rte_power_freq_disable_turbo = power_cppc_disable_turbo;
-		rte_power_get_capabilities = power_cppc_get_capabilities;
-	} else if (env == PM_ENV_AMD_PSTATE_CPUFREQ) {
-		rte_power_freqs = power_amd_pstate_cpufreq_freqs;
-		rte_power_get_freq = power_amd_pstate_cpufreq_get_freq;
-		rte_power_set_freq = power_amd_pstate_cpufreq_set_freq;
-		rte_power_freq_up = power_amd_pstate_cpufreq_freq_up;
-		rte_power_freq_down = power_amd_pstate_cpufreq_freq_down;
-		rte_power_freq_min = power_amd_pstate_cpufreq_freq_min;
-		rte_power_freq_max = power_amd_pstate_cpufreq_freq_max;
-		rte_power_turbo_status = power_amd_pstate_turbo_status;
-		rte_power_freq_enable_turbo = power_amd_pstate_enable_turbo;
-		rte_power_freq_disable_turbo = power_amd_pstate_disable_turbo;
-		rte_power_get_capabilities = power_amd_pstate_get_capabilities;
-	} else {
-		POWER_LOG(ERR, "Invalid Power Management Environment(%d) set",
-				env);
+	ops = rte_power_get_ops(env);
+	if (ops->status == 0) {
+		POWER_LOG(ERR, WER,
+			"Power Management Environment(%d) not"
+			" registered\n", env);
 		ret = -1;
 	}
 
 	if (ret == 0)
 		global_default_env = env;
-	else {
+	else
 		global_default_env = PM_ENV_NOT_SET;
-		reset_power_function_ptrs();
-	}
 
 	rte_spinlock_unlock(&global_env_cfg_lock);
 	return ret;
@@ -164,7 +126,6 @@ rte_power_unset_env(void)
 {
 	rte_spinlock_lock(&global_env_cfg_lock);
 	global_default_env = PM_ENV_NOT_SET;
-	reset_power_function_ptrs();
 	rte_spinlock_unlock(&global_env_cfg_lock);
 }
 
@@ -177,59 +138,76 @@ int
 rte_power_init(unsigned int lcore_id)
 {
 	int ret = -1;
+	struct rte_power_ops *ops;
 
-	switch (global_default_env) {
-	case PM_ENV_ACPI_CPUFREQ:
-		return power_acpi_cpufreq_init(lcore_id);
-	case PM_ENV_KVM_VM:
-		return power_kvm_vm_init(lcore_id);
-	case PM_ENV_PSTATE_CPUFREQ:
-		return power_pstate_cpufreq_init(lcore_id);
-	case PM_ENV_CPPC_CPUFREQ:
-		return power_cppc_cpufreq_init(lcore_id);
-	case PM_ENV_AMD_PSTATE_CPUFREQ:
-		return power_amd_pstate_cpufreq_init(lcore_id);
-	default:
-		POWER_LOG(INFO, "Env isn't set yet!");
+	if (global_default_env != PM_ENV_NOT_SET) {
+		ops = &rte_power_ops[global_default_env];
+		if (!ops->status) {
+			POWER_LOG(ERR, "Power management env[%d] not"
+				" supported\n", global_default_env);
+			goto out;
+		}
+		return ops->init(lcore_id);
 	}
+	POWER_LOG(INFO, POWER, "Env isn't set yet!\n");
 
 	/* Auto detect Environment */
-	POWER_LOG(INFO, "Attempting to initialise ACPI cpufreq power management...");
-	ret = power_acpi_cpufreq_init(lcore_id);
-	if (ret == 0) {
-		rte_power_set_env(PM_ENV_ACPI_CPUFREQ);
-		goto out;
+	POWER_LOG(INFO, "Attempting to initialise ACPI cpufreq"
+			" power management...\n");
+	ops = &rte_power_ops[PM_ENV_ACPI_CPUFREQ];
+	if (ops->status) {
+		ret = ops->init(lcore_id);
+		if (ret == 0) {
+			rte_power_set_env(PM_ENV_ACPI_CPUFREQ);
+			goto out;
+		}
 	}
 
-	POWER_LOG(INFO, "Attempting to initialise PSTAT power management...");
-	ret = power_pstate_cpufreq_init(lcore_id);
-	if (ret == 0) {
-		rte_power_set_env(PM_ENV_PSTATE_CPUFREQ);
-		goto out;
+	POWER_LOG(INFO, "Attempting to initialise PSTAT"
+			" power management...\n");
+	ops = &rte_power_ops[PM_ENV_PSTATE_CPUFREQ];
+	if (ops->status) {
+		ret = ops->init(lcore_id);
+		if (ret == 0) {
+			rte_power_set_env(PM_ENV_PSTATE_CPUFREQ);
+			goto out;
+		}
 	}
 
-	POWER_LOG(INFO, "Attempting to initialise AMD PSTATE power management...");
-	ret = power_amd_pstate_cpufreq_init(lcore_id);
-	if (ret == 0) {
-		rte_power_set_env(PM_ENV_AMD_PSTATE_CPUFREQ);
-		goto out;
+	POWER_LOG(INFO,	"Attempting to initialise AMD PSTATE"
+			" power management...\n");
+	ops = &rte_power_ops[PM_ENV_AMD_PSTATE_CPUFREQ];
+	if (ops->status) {
+		ret = ops->init(lcore_id);
+		if (ret == 0) {
+			rte_power_set_env(PM_ENV_AMD_PSTATE_CPUFREQ);
+			goto out;
+		}
 	}
 
-	POWER_LOG(INFO, "Attempting to initialise CPPC power management...");
-	ret = power_cppc_cpufreq_init(lcore_id);
-	if (ret == 0) {
-		rte_power_set_env(PM_ENV_CPPC_CPUFREQ);
-		goto out;
+	POWER_LOG(INFO, "Attempting to initialise CPPC power"
+			" management...\n");
+	ops = &rte_power_ops[PM_ENV_CPPC_CPUFREQ];
+	if (ops->status) {
+		ret = ops->init(lcore_id);
+		if (ret == 0) {
+			rte_power_set_env(PM_ENV_CPPC_CPUFREQ);
+			goto out;
+		}
 	}
 
-	POWER_LOG(INFO, "Attempting to initialise VM power management...");
-	ret = power_kvm_vm_init(lcore_id);
-	if (ret == 0) {
-		rte_power_set_env(PM_ENV_KVM_VM);
-		goto out;
+	POWER_LOG(INFO, "Attempting to initialise VM power"
+			" management...\n");
+	ops = &rte_power_ops[PM_ENV_KVM_VM];
+	if (ops->status) {
+		ret = ops->init(lcore_id);
+		if (ret == 0) {
+			rte_power_set_env(PM_ENV_KVM_VM);
+			goto out;
+		}
 	}
-	POWER_LOG(ERR, "Unable to set Power Management Environment for lcore "
-			"%u", lcore_id);
+	POWER_LOG(ERR, "Unable to set Power Management Environment"
+			" for lcore %u\n", lcore_id);
 out:
 	return ret;
 }
@@ -237,21 +215,14 @@ out:
 int
 rte_power_exit(unsigned int lcore_id)
 {
-	switch (global_default_env) {
-	case PM_ENV_ACPI_CPUFREQ:
-		return power_acpi_cpufreq_exit(lcore_id);
-	case PM_ENV_KVM_VM:
-		return power_kvm_vm_exit(lcore_id);
-	case PM_ENV_PSTATE_CPUFREQ:
-		return power_pstate_cpufreq_exit(lcore_id);
-	case PM_ENV_CPPC_CPUFREQ:
-		return power_cppc_cpufreq_exit(lcore_id);
-	case PM_ENV_AMD_PSTATE_CPUFREQ:
-		return power_amd_pstate_cpufreq_exit(lcore_id);
-	default:
-		POWER_LOG(ERR, "Environment has not been set, unable to exit gracefully");
+	struct rte_power_ops *ops;
 
+	if (global_default_env != PM_ENV_NOT_SET) {
+		ops = &rte_power_ops[global_default_env];
+		return ops->exit(lcore_id);
 	}
-	return -1;
+	POWER_LOG(ERR, "Environment has not been set, unable "
+			"to exit gracefully\n");
 
+	return -1;
 }

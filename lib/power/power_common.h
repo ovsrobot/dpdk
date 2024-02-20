@@ -23,13 +23,24 @@ extern int power_logtype;
 #endif
 
 /* check if scaling driver matches one we want */
+__rte_internal
 int cpufreq_check_scaling_driver(const char *driver);
+
+__rte_internal
 int power_set_governor(unsigned int lcore_id, const char *new_governor,
 		char *orig_governor, size_t orig_governor_len);
+
+__rte_internal
 int open_core_sysfs_file(FILE **f, const char *mode, const char *format, ...)
 		__rte_format_printf(3, 4);
+
+__rte_internal
 int read_core_sysfs_u32(FILE *f, uint32_t *val);
+
+__rte_internal
 int read_core_sysfs_s(FILE *f, char *buf, unsigned int len);
+
+__rte_internal
 int write_core_sysfs_s(FILE *f, const char *str);
 
 #endif /* _POWER_COMMON_H_ */
