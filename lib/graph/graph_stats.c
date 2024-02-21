@@ -122,6 +122,26 @@ print_node(FILE *f, const struct rte_graph_cluster_node_stats *stat)
 	}
 }
 
+static inline void
+print_err(FILE *f, const struct rte_graph_cluster_node_stats *stat)
+{
+	int i;
+
+	if (rte_graph_worker_model_get(STAILQ_FIRST(graph_list_head_get())->graph) ==
+	    RTE_GRAPH_MODEL_MCORE_DISPATCH) {
+		for (i = 0; i < stat->node_error_cntrs; i++)
+			fprintf(f,
+				"|\t%-24s|%15s|%-15" PRIu64 "|%15s|%15s|%15s|%15s|%15s|%11.4s|\n",
+				stat->node_error_desc[i], "", stat->node_error_count[i], "", "", "",
+				"", "", "");
+	} else {
+		for (i = 0; i < stat->node_error_cntrs; i++)
+			fprintf(f, "|\t%-24s|%15s|%-15" PRIu64 "|%15s|%15.3s|%15.6s|%11.4s|\n",
+				stat->node_error_desc[i], "", stat->node_error_count[i], "", "", "",
+				"");
+	}
+}
+
 static int
 graph_cluster_stats_cb(bool is_first, bool is_last, void *cookie,
 		       const struct rte_graph_cluster_node_stats *stat)
@@ -133,8 +153,11 @@ graph_cluster_stats_cb(bool is_first, bool is_last, void *cookie,
 
 	if (unlikely(is_first))
 		print_banner(f);
-	if (stat->objs)
+	if (stat->objs) {
 		print_node(f, stat);
+		if (stat->node_error_cntrs)
+			print_err(f, stat);
+	}
 	if (unlikely(is_last)) {
 		if (model == RTE_GRAPH_MODEL_MCORE_DISPATCH)
 			boarder_model_dispatch();
@@ -188,6 +211,7 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 	struct cluster_node *cluster;
 	struct rte_node *node;
 	rte_node_t count;
+	uint8_t i;
 
 	cluster = stats->clusters;
 
@@ -225,6 +249,36 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 		SET_ERR_JMP(ENOENT, free, "Failed to find node %s in graph %s",
 			    graph_node->node->name, graph->name);
 	cluster->nodes[cluster->nb_nodes++] = node;
+	if (graph_node->node->errs) {
+		cluster->stat.node_error_cntrs = graph_node->node->errs->nb_errors;
+		cluster->stat.node_error_count = rte_zmalloc_socket(
+			NULL, sizeof(uint64_t) * graph_node->node->errs->nb_errors,
+			RTE_CACHE_LINE_SIZE, stats->socket_id);
+		if (cluster->stat.node_error_count == NULL)
+			SET_ERR_JMP(ENOMEM, free, "Failed to allocate memory node %s graph %s",
+				    graph_node->node->name, graph->name);
+
+		cluster->stat.node_error_desc = rte_zmalloc_socket(
+			NULL, sizeof(RTE_NODE_ERROR_DESC_SIZE) * graph_node->node->errs->nb_errors,
+			RTE_CACHE_LINE_SIZE, stats->socket_id);
+		if (cluster->stat.node_error_desc == NULL) {
+			rte_free(cluster->stat.node_error_count);
+			SET_ERR_JMP(ENOMEM, free, "Failed to allocate memory node %s graph %s",
+				    graph_node->node->name, graph->name);
+		}
+
+		for (i = 0; i < cluster->stat.node_error_cntrs; i++) {
+			if (rte_strscpy(cluster->stat.node_error_desc[i],
+					graph_node->node->errs->err_desc[i],
+					RTE_NODE_ERROR_DESC_SIZE) < 0) {
+				rte_free(cluster->stat.node_error_count);
+				rte_free(cluster->stat.node_error_desc);
+				SET_ERR_JMP(E2BIG, free,
+					    "Error description overflow node %s graph %s",
+					    graph_node->node->name, graph->name);
+			}
+		}
+	}
 
 	stats->sz += stats->cluster_node_size;
 	stats->max_nodes++;
@@ -371,6 +425,18 @@ fail:
 void
 rte_graph_cluster_stats_destroy(struct rte_graph_cluster_stats *stat)
 {
+	struct cluster_node *cluster;
+	rte_node_t count;
+
+	cluster = stat->clusters;
+	for (count = 0; count < stat->max_nodes; count++) {
+		if (cluster->stat.node_error_cntrs) {
+			rte_free(cluster->stat.node_error_count);
+			rte_free(cluster->stat.node_error_desc);
+		}
+
+		cluster = RTE_PTR_ADD(cluster, stat->cluster_node_size);
+	}
 	return rte_free(stat);
 }
 
@@ -382,9 +448,13 @@ cluster_node_arregate_stats(struct cluster_node *cluster)
 	uint64_t sched_objs = 0, sched_fail = 0;
 	struct rte_node *node;
 	rte_node_t count;
+	uint64_t *err;
+	uint8_t i;
 	int model;
 
 	model = rte_graph_worker_model_get(STAILQ_FIRST(graph_list_head_get())->graph);
+
+	memset(stat->node_error_count, 0, sizeof(uint64_t) * stat->node_error_cntrs);
 	for (count = 0; count < cluster->nb_nodes; count++) {
 		node = cluster->nodes[count];
 
@@ -397,6 +467,12 @@ cluster_node_arregate_stats(struct cluster_node *cluster)
 		objs += node->total_objs;
 		cycles += node->total_cycles;
 		realloc_count += node->realloc_count;
+
+		if (node->err_off == 0)
+			continue;
+		err = RTE_PTR_ADD(node, node->err_off);
+		for (i = 0; i < stat->node_error_cntrs; i++)
+			stat->node_error_count[i] += err[i];
 	}
 
 	stat->calls = calls;
@@ -449,6 +525,7 @@ rte_graph_cluster_stats_reset(struct rte_graph_cluster_stats *stat)
 {
 	struct cluster_node *cluster;
 	rte_node_t count;
+	uint8_t i;
 
 	cluster = stat->clusters;
 
@@ -464,6 +541,8 @@ rte_graph_cluster_stats_reset(struct rte_graph_cluster_stats *stat)
 		node->prev_objs = 0;
 		node->prev_cycles = 0;
 		node->realloc_count = 0;
+		for (i = 0; i < node->node_error_cntrs; i++)
+			node->node_error_count[i] = 0;
 		cluster = RTE_PTR_ADD(cluster, stat->cluster_node_size);
 	}
 }
