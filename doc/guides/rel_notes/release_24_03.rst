@@ -132,6 +132,10 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Updated Broadcom bnxt driver.**
+
+  * Added support for 5760X device family.
+
 
 Removed Items
 -------------
