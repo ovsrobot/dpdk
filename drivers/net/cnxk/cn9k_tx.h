@@ -644,6 +644,10 @@ cn9k_nix_prepare_mseg(struct cn9k_eth_txq *txq,
 #else
 	RTE_SET_USED(cookie);
 #endif
+#ifdef RTE_ENABLE_ASSERT
+	m->next = NULL;
+	m->nb_segs = 1;
+#endif
 	m = m_next;
 	if (!m)
 		goto done;
@@ -679,6 +683,9 @@ cn9k_nix_prepare_mseg(struct cn9k_eth_txq *txq,
 			sg_u = sg->u;
 			slist++;
 		}
+#ifdef RTE_ENABLE_ASSERT
+		m->next = NULL;
+#endif
 		m = m_next;
 	} while (nb_segs);
 
@@ -692,6 +699,9 @@ done:
 	segdw += (off >> 1) + 1 + !!(flags & NIX_TX_OFFLOAD_TSTAMP_F);
 	send_hdr->w0.sizem1 = segdw - 1;
 
+#ifdef RTE_ENABLE_ASSERT
+	rte_io_wmb();
+#endif
 	return segdw;
 }
 
@@ -908,6 +918,10 @@ cn9k_nix_prepare_mseg_vec_list(struct cn9k_eth_txq *txq,
 	RTE_SET_USED(cookie);
 #endif
 
+#ifdef RTE_ENABLE_ASSERT
+	m->next = NULL;
+	m->nb_segs = 1;
+#endif
 	m = m_next;
 	/* Fill mbuf segments */
 	do {
@@ -938,6 +952,9 @@ cn9k_nix_prepare_mseg_vec_list(struct cn9k_eth_txq *txq,
 			sg_u = sg->u;
 			slist++;
 		}
+#ifdef RTE_ENABLE_ASSERT
+		m->next = NULL;
+#endif
 		m = m_next;
 	} while (nb_segs);
 
@@ -953,6 +970,9 @@ cn9k_nix_prepare_mseg_vec_list(struct cn9k_eth_txq *txq,
 		 !!(flags & NIX_TX_OFFLOAD_TSTAMP_F);
 	send_hdr->w0.sizem1 = segdw - 1;
 
+#ifdef RTE_ENABLE_ASSERT
+	rte_io_wmb();
+#endif
 	return segdw;
 }
 
