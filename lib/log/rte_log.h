@@ -379,6 +379,20 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 		RTE_FMT_TAIL(__VA_ARGS__ ,))); \
 } while (0)
 
+#define _RTE_LOG_COMMA ,
+
+#define RTE_LOG_LINE_PREFIX(l, t, prefix, args, ...) do { \
+	RTE_LOG_CHECK_NO_NEWLINE(RTE_FMT_HEAD(prefix __VA_ARGS__ ,)); \
+	RTE_LOG(l, t, RTE_FMT(prefix RTE_FMT_HEAD(__VA_ARGS__ ,) "\n", \
+	    args _RTE_LOG_COMMA RTE_FMT_TAIL(__VA_ARGS__ ,))); \
+} while (0)
+
+#define RTE_LOG_DP_LINE_PREFIX(l, t, prefix, args, ...) do { \
+	RTE_LOG_CHECK_NO_NEWLINE(RTE_FMT_HEAD(prefix __VA_ARGS__ ,)); \
+	RTE_LOG_DP(l, t, RTE_FMT(prefix RTE_FMT_HEAD(__VA_ARGS__ ,) "\n", \
+	    args _RTE_LOG_COMMA RTE_FMT_TAIL(__VA_ARGS__ ,))); \
+} while (0)
+
 #define RTE_LOG_REGISTER_IMPL(type, name, level)			    \
 int type;								    \
 RTE_INIT(__##type)							    \
