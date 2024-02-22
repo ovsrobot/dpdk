@@ -107,6 +107,7 @@ struct rte_node {
 			uint64_t total_sched_fail; /**< Number of scheduled failure. */
 		} dispatch;
 	};
+	rte_graph_off_t err_off; /**< Offset to error counters. */
 	/* Fast path area  */
 #define RTE_NODE_CTX_SZ 16
 	uint8_t ctx[RTE_NODE_CTX_SZ] __rte_cache_aligned; /**< Node Context. */
