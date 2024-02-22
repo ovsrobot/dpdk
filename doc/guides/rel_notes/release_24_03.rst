@@ -110,6 +110,7 @@ New Features
 
   * Added support for ``RTE_FLOW_ITEM_TYPE_PPPOES`` flow item.
   * Added support for ``RTE_FLOW_ACTION_TYPE_SAMPLE`` flow item.
+  * Added support for Rx inject in cn10k.
 
 * **Updated Marvell OCTEON EP driver.**
 
