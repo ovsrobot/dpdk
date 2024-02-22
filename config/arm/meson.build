@@ -94,6 +94,7 @@ part_number_config_arm = {
     '0xd49': {
         'march': 'armv9-a',
         'march_features': ['sve2'],
+        'fallback_march': 'armv8.5-a',
         'mcpu': 'neoverse-n2',
         'flags': [
             ['RTE_MACHINE', '"neoverse-n2"'],
@@ -708,6 +709,7 @@ if update_flags
 
     candidate_mcpu = ''
     candidate_march = ''
+    fallback_march = ''
 
     if part_number_config.has_key('mcpu') and
        cc.has_argument('-mcpu=' + part_number_config['mcpu'])
@@ -736,16 +738,22 @@ if update_flags
                     # start checking from this version downwards
                     check_compiler_support = true
                 endif
-                if (check_compiler_support and
+                if (check_compiler_support and candidate_march == '' and
                     cc.has_argument('-march=' + supported_march))
                     candidate_march = supported_march
-                    # highest supported march version found
-                    break
+                endif
+                if (part_number_config.has_key('fallback_march') and
+                    supported_march == part_number_config['fallback_march'] and
+                    cc.has_argument('-march=' + supported_march))
+                    fallback_march = supported_march
                 endif
             endforeach
         endif
 
         if candidate_march != part_number_config['march']
+            if fallback_march != ''
+                candidate_march = fallback_march
+            endif
             warning('Configuration march version is @0@, not supported.'
                     .format(part_number_config['march']))
             if candidate_march != ''
