@@ -138,6 +138,10 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Updated ipsec_mb crypto driver.**
+
+  * Bump minimum IPSec Multi-buffer version to 1.4 for SW PMDs.
+
 
 Removed Items
 -------------
