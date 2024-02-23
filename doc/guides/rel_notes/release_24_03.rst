@@ -130,6 +130,8 @@ New Features
   * Added support for matching a random value.
   * Added support for comparing result between packet fields or value.
   * Added support for accumulating value of field into another one.
+  * Added support for sharing indirect action objects of type ``RTE_FLOW_ACTION_TYPE_CONNTRACK``
+    with HW steering flow engine.
 
 * **Updated Marvell cnxk crypto driver.**
 
