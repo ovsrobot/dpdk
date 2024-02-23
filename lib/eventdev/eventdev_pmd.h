@@ -107,7 +107,7 @@ struct rte_eventdev_global {
  * This structure is safe to place in shared memory to be common among
  * different processes in a multi-process configuration.
  */
-struct rte_eventdev_data {
+struct __rte_cache_aligned rte_eventdev_data {
 	int socket_id;
 	/**< Socket ID where memory is allocated */
 	uint8_t dev_id;
@@ -146,10 +146,10 @@ struct rte_eventdev_data {
 
 	uint64_t reserved_64s[4]; /**< Reserved for future fields */
 	void *reserved_ptrs[4];	  /**< Reserved for future fields */
-} __rte_cache_aligned;
+};
 
 /** @internal The data structure associated with each event device. */
-struct rte_eventdev {
+struct __rte_cache_aligned rte_eventdev {
 	struct rte_eventdev_data *data;
 	/**< Pointer to device data */
 	struct eventdev_ops *dev_ops;
@@ -189,7 +189,7 @@ struct rte_eventdev {
 
 	uint64_t reserved_64s[3]; /**< Reserved for future fields */
 	void *reserved_ptrs[3];	  /**< Reserved for future fields */
-} __rte_cache_aligned;
+};
 
 extern struct rte_eventdev *rte_eventdevs;
 /** @internal The pool of rte_eventdev structures. */
