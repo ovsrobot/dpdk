@@ -185,6 +185,9 @@ API Changes
 * ethdev: Renamed structure ``rte_flow_action_modify_data`` to be
   ``rte_flow_field_data`` for more generic usage.
 
+* ethdev: Add new function ``rte_eth_dev_is_repr()`` to check if a device is
+  representor port.
+
 
 ABI Changes
 -----------

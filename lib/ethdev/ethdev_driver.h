@@ -2120,6 +2120,23 @@ struct rte_eth_fdir_conf {
 	struct rte_eth_fdir_flex_conf flex_conf;
 };
 
+/**
+ * @internal
+ * Check if the ethdev is a representor port.
+ *
+ * @param dev
+ *  Pointer to struct rte_eth_dev.
+ *
+ * @return
+ *  false the ethdev is not a representor port.
+ *  true  the ethdev is a representor port.
+ */
+static inline bool
+rte_eth_dev_is_repr(const struct rte_eth_dev *dev)
+{
+	return ((dev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR) != 0);
+}
+
 #ifdef __cplusplus
 }
 #endif
