@@ -257,7 +257,7 @@ ionic_rx_clean_one(struct ionic_rx_qcq *rxq,
 	info[0] = NULL;
 
 	/* Set the mbuf metadata based on the cq entry */
-	rxm->rearm_data[0] = rxq->rearm_data;
+	*rte_mbuf_rearm_data(rxm) = rxq->rearm_data;
 	rxm->pkt_len = cq_desc_len;
 	rxm->data_len = cq_desc_len;
 
