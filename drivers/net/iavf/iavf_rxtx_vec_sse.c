@@ -183,10 +183,10 @@ desc_to_olflags_v(struct iavf_rx_queue *rxq, __m128i descs[4],
 			offsetof(struct rte_mbuf, rearm_data) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
 			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&rx_pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&rx_pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&rx_pkts[3]->rearm_data, rearm3);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[0]), rearm0);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[1]), rearm1);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[2]), rearm2);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[3]), rearm3);
 }
 
 static inline __m128i
@@ -416,10 +416,10 @@ flex_desc_to_olflags_v(struct iavf_rx_queue *rxq, __m128i descs[4],
 			 offsetof(struct rte_mbuf, rearm_data) + 8);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
 			 RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&rx_pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&rx_pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&rx_pkts[3]->rearm_data, rearm3);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[0]), rearm0);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[1]), rearm1);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[2]), rearm2);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[3]), rearm3);
 }
 
 #define PKTLEN_SHIFT     10
@@ -651,10 +651,10 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* D.3 copy final 3,4 data to rx_pkts */
 		_mm_storeu_si128(
-			(void *)&rx_pkts[pos + 3]->rx_descriptor_fields1,
+			rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3]),
 			pkt_mb4);
 		_mm_storeu_si128(
-			(void *)&rx_pkts[pos + 2]->rx_descriptor_fields1,
+			rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2]),
 			pkt_mb3);
 
 		/* D.2 pkt 1,2 remove crc */
@@ -689,9 +689,9 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* D.3 copy final 1,2 data to rx_pkts */
 		_mm_storeu_si128(
-			(void *)&rx_pkts[pos + 1]->rx_descriptor_fields1,
+			rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1]),
 			pkt_mb2);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 				 pkt_mb1);
 		desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
 		/* C.4 calc available number of desc */
@@ -1089,10 +1089,10 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 
 		/* D.3 copy final 3,4 data to rx_pkts */
 		_mm_storeu_si128
-			((void *)&rx_pkts[pos + 3]->rx_descriptor_fields1,
+			(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3]),
 			 pkt_mb3);
 		_mm_storeu_si128
-			((void *)&rx_pkts[pos + 2]->rx_descriptor_fields1,
+			(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2]),
 			 pkt_mb2);
 
 		/* C* extract and record EOP bit */
@@ -1116,9 +1116,9 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 
 		/* D.3 copy final 1,2 data to rx_pkts */
 		_mm_storeu_si128
-			((void *)&rx_pkts[pos + 1]->rx_descriptor_fields1,
+			(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1]),
 			 pkt_mb1);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 				 pkt_mb0);
 		flex_desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
 		/* C.4 calc available number of desc */
