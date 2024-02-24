@@ -289,7 +289,6 @@ otx_ep_set_rearm_data(struct otx_ep_device *otx_ep)
 {
 	uint16_t port_id = otx_ep->port_id;
 	struct rte_mbuf mb_def;
-	uint64_t *tmp;
 
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) % 8 != 0);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, refcnt) - offsetof(struct rte_mbuf, data_off) !=
@@ -305,9 +304,7 @@ otx_ep_set_rearm_data(struct otx_ep_device *otx_ep)
 
 	/* Prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	tmp = (uint64_t *)&mb_def.rearm_data;
-
-	return *tmp;
+	return *rte_mbuf_rearm_data(&mb_def);
 }
 
 /* OQ initialization */
