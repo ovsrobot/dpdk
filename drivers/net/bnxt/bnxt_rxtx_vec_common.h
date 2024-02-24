@@ -36,7 +36,6 @@ bnxt_xmit_flags_len(uint16_t len, uint16_t flags)
 static inline int
 bnxt_rxq_vec_setup_common(struct bnxt_rx_queue *rxq)
 {
-	uintptr_t p;
 	struct rte_mbuf mb_def = { .buf_addr = 0 }; /* zeroed mbuf */
 
 	mb_def.nb_segs = 1;
@@ -46,8 +45,7 @@ bnxt_rxq_vec_setup_common(struct bnxt_rx_queue *rxq)
 
 	/* prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer = *(uint64_t *)p;
+	rxq->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 	rxq->rxrearm_nb = 0;
 	rxq->rxrearm_start = 0;
 	return 0;
