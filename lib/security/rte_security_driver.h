@@ -24,7 +24,7 @@ extern "C" {
  * Security session to be used by library for internal usage
  */
 struct rte_security_session {
-	RTE_MARKER cacheline0;
+	__rte_marker(RTE_MARKER, cacheline0)
 	uint64_t opaque_data;
 	/**< Opaque user defined data */
 	uint64_t fast_mdata;
@@ -32,7 +32,8 @@ struct rte_security_session {
 	rte_iova_t driver_priv_data_iova;
 	/**< session private data IOVA address */
 
-	RTE_MARKER cacheline1 __rte_cache_min_aligned;
+	 __rte_cache_min_aligned
+	__rte_marker(RTE_MARKER, cacheline1)
 	uint8_t driver_priv_data[];
 	/**< Private session material, variable size (depends on driver) */
 };
