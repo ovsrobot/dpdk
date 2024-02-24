@@ -437,7 +437,7 @@ cnxk_nix_rxq_mbuf_setup(struct cnxk_eth_dev *dev)
 
 	/* Prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	tmp = (uint64_t *)&mb_def.rearm_data;
+	tmp = rte_mbuf_rearm_data(&mb_def);
 
 	return *tmp;
 }
