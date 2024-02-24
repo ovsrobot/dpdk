@@ -232,7 +232,6 @@ _ice_tx_queue_release_mbufs_vec(struct ice_tx_queue *txq)
 static inline int
 ice_rxq_vec_setup_default(struct ice_rx_queue *rxq)
 {
-	uintptr_t p;
 	struct rte_mbuf mb_def = { .buf_addr = 0 }; /* zeroed mbuf */
 
 	mb_def.nb_segs = 1;
@@ -242,8 +241,7 @@ ice_rxq_vec_setup_default(struct ice_rx_queue *rxq)
 
 	/* prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer = *(uint64_t *)p;
+	rxq->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 	return 0;
 }
 
