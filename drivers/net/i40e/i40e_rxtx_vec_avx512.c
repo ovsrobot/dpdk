@@ -580,13 +580,13 @@ _recv_raw_pkts_vec_avx512(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		rearm0 = _mm256_permute2f128_si256(rearm0, mb0_1, 0x20);
 		/* write to mbuf */
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 6]->rearm_data, rearm6);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 6]), rearm6);
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 4]->rearm_data, rearm4);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 4]), rearm4);
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 2]->rearm_data, rearm2);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 2]), rearm2);
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 0]->rearm_data, rearm0);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 0]), rearm0);
 
 		/* repeat for the odd mbufs */
 		const __m256i odd_flags = _mm256_castsi128_si256
@@ -606,13 +606,13 @@ _recv_raw_pkts_vec_avx512(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		rearm1 = _mm256_blend_epi32(rearm1, mb0_1, 0xF0);
 		/* again write to mbufs */
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 7]->rearm_data, rearm7);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 7]), rearm7);
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 5]->rearm_data, rearm5);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 5]), rearm5);
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 3]->rearm_data, rearm3);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 3]), rearm3);
 		_mm256_storeu_si256
-			((__m256i *)&rx_pkts[i + 1]->rearm_data, rearm1);
+			((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 1]), rearm1);
 
 		/* extract and record EOP bit */
 		if (split_packet) {

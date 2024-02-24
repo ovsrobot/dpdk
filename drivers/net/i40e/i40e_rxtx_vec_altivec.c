@@ -55,7 +55,6 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 	/* Initialize the mbufs in vector, process 2 mbufs in one loop */
 	for (i = 0; i < RTE_I40E_RXQ_REARM_THRESH; i += 2, rxep += 2) {
 		__vector unsigned long vaddr0, vaddr1;
-		uintptr_t p0, p1;
 
 		mb0 = rxep[0].mbuf;
 		mb1 = rxep[1].mbuf;
@@ -66,10 +65,8 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 		  * anyway. So overwrite whole 8 bytes with one load:
 		  * 6 bytes of rearm_data plus first 2 bytes of ol_flags.
 		  */
-		p0 = (uintptr_t)&mb0->rearm_data;
-		*(uint64_t *)p0 = rxq->mbuf_initializer;
-		p1 = (uintptr_t)&mb1->rearm_data;
-		*(uint64_t *)p1 = rxq->mbuf_initializer;
+		*rte_mbuf_rearm_data(mb0) = rxq->mbuf_initializer;
+		*rte_mbuf_rearm_data(mb1) = rxq->mbuf_initializer;
 
 		/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
 		vaddr0 = vec_ld(0, (__vector unsigned long *)&mb0->buf_addr);
@@ -370,12 +367,10 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* D.3 copy final 3,4 data to rx_pkts */
 		vec_st(pkt_mb4, 0,
-		 (__vector unsigned char *)&rx_pkts[pos + 3]
-			->rx_descriptor_fields1
+		 (__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3])
 		);
 		vec_st(pkt_mb3, 0,
-		 (__vector unsigned char *)&rx_pkts[pos + 2]
-			->rx_descriptor_fields1
+		 (__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2])
 		);
 
 		/* D.2 pkt 1,2 set in_port/nb_seg and remove crc */
@@ -422,11 +417,10 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* D.3 copy final 1,2 data to rx_pkts */
 		vec_st(pkt_mb2, 0,
-		 (__vector unsigned char *)&rx_pkts[pos + 1]
-			->rx_descriptor_fields1
+		 (__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1])
 		);
 		vec_st(pkt_mb1, 0,
-		 (__vector unsigned char *)&rx_pkts[pos]->rx_descriptor_fields1
+		 (__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[pos])
 		);
 		desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
 		desc_to_olflags_v(descs, &rx_pkts[pos]);
