@@ -138,10 +138,8 @@ virtio_recv_pkts_vec(void *rx_queue,
 				vreinterpretq_u16_u64(pkt_mb[1]), len_adjust));
 		pkt_mb[0] = vreinterpretq_u64_u16(vsubq_u16(
 				vreinterpretq_u16_u64(pkt_mb[0]), len_adjust));
-		vst1q_u64((void *)&rx_pkts[1]->rx_descriptor_fields1,
-			pkt_mb[1]);
-		vst1q_u64((void *)&rx_pkts[0]->rx_descriptor_fields1,
-			pkt_mb[0]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[1]), pkt_mb[1]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[0]), pkt_mb[0]);
 
 		pkt_mb[3] = vreinterpretq_u64_u8(vqtbl1q_u8(
 				vreinterpretq_u8_u64(desc[1]), shuf_msk2));
@@ -151,10 +149,8 @@ virtio_recv_pkts_vec(void *rx_queue,
 				vreinterpretq_u16_u64(pkt_mb[3]), len_adjust));
 		pkt_mb[2] = vreinterpretq_u64_u16(vsubq_u16(
 				vreinterpretq_u16_u64(pkt_mb[2]), len_adjust));
-		vst1q_u64((void *)&rx_pkts[3]->rx_descriptor_fields1,
-			pkt_mb[3]);
-		vst1q_u64((void *)&rx_pkts[2]->rx_descriptor_fields1,
-			pkt_mb[2]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[3]), pkt_mb[3]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[2]), pkt_mb[2]);
 
 		pkt_mb[5] = vreinterpretq_u64_u8(vqtbl1q_u8(
 				vreinterpretq_u8_u64(desc[2]), shuf_msk2));
@@ -164,10 +160,8 @@ virtio_recv_pkts_vec(void *rx_queue,
 				vreinterpretq_u16_u64(pkt_mb[5]), len_adjust));
 		pkt_mb[4] = vreinterpretq_u64_u16(vsubq_u16(
 				vreinterpretq_u16_u64(pkt_mb[4]), len_adjust));
-		vst1q_u64((void *)&rx_pkts[5]->rx_descriptor_fields1,
-			pkt_mb[5]);
-		vst1q_u64((void *)&rx_pkts[4]->rx_descriptor_fields1,
-			pkt_mb[4]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[5]), pkt_mb[5]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[4]), pkt_mb[4]);
 
 		pkt_mb[7] = vreinterpretq_u64_u8(vqtbl1q_u8(
 				vreinterpretq_u8_u64(desc[3]), shuf_msk2));
@@ -177,10 +171,8 @@ virtio_recv_pkts_vec(void *rx_queue,
 				vreinterpretq_u16_u64(pkt_mb[7]), len_adjust));
 		pkt_mb[6] = vreinterpretq_u64_u16(vsubq_u16(
 				vreinterpretq_u16_u64(pkt_mb[6]), len_adjust));
-		vst1q_u64((void *)&rx_pkts[7]->rx_descriptor_fields1,
-			pkt_mb[7]);
-		vst1q_u64((void *)&rx_pkts[6]->rx_descriptor_fields1,
-			pkt_mb[6]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[7]), pkt_mb[7]);
+		vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[6]), pkt_mb[6]);
 
 		if (unlikely(nb_used <= RTE_VIRTIO_DESC_PER_LOOP)) {
 			if (sw_ring + nb_used <= sw_ring_end)

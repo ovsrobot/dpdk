@@ -31,7 +31,6 @@ int __rte_cold
 virtio_rxq_vec_setup(struct virtnet_rx *rxq)
 {
 	struct virtqueue *vq = virtnet_rxq_to_vq(rxq);
-	uintptr_t p;
 	struct rte_mbuf mb_def = { .buf_addr = 0 }; /* zeroed mbuf */
 
 	mb_def.nb_segs = 1;
@@ -41,8 +40,7 @@ virtio_rxq_vec_setup(struct virtnet_rx *rxq)
 
 	/* prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer = *(uint64_t *)p;
+	rxq->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 
 	return 0;
 }

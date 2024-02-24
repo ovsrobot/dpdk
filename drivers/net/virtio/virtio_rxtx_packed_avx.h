@@ -36,10 +36,10 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 	/* Load four mbufs rearm data */
 	RTE_BUILD_BUG_ON(REFCNT_BITS_OFFSET >= 64);
 	RTE_BUILD_BUG_ON(SEG_NUM_BITS_OFFSET >= 64);
-	__m256i mbufs = _mm256_set_epi64x(*tx_pkts[3]->rearm_data,
-					  *tx_pkts[2]->rearm_data,
-					  *tx_pkts[1]->rearm_data,
-					  *tx_pkts[0]->rearm_data);
+	__m256i mbufs = _mm256_set_epi64x(*rte_mbuf_rearm_data(tx_pkts[3]),
+					  *rte_mbuf_rearm_data(tx_pkts[2]),
+					  *rte_mbuf_rearm_data(tx_pkts[1]),
+					  *rte_mbuf_rearm_data(tx_pkts[0]));
 
 	/* refcnt=1 and nb_segs=1 */
 	__m256i mbuf_ref = _mm256_set1_epi64x(DEFAULT_REARM_DATA);
@@ -187,7 +187,7 @@ virtqueue_dequeue_batch_packed_vec(struct virtnet_rx *rxvq,
 		rx_pkts[i] = (struct rte_mbuf *)vq->vq_descx[id + i].cookie;
 		rte_packet_prefetch(rte_pktmbuf_mtod(rx_pkts[i], void *));
 
-		addrs[i] = (uintptr_t)rx_pkts[i]->rx_descriptor_fields1;
+		addrs[i] = (uintptr_t)rte_mbuf_rx_descriptor_fields1(rx_pkts[i]);
 	}
 
 	/*
