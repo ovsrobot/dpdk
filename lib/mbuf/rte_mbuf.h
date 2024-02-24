@@ -136,6 +136,26 @@ rte_mbuf_prefetch_part2(struct rte_mbuf *m)
 #endif
 }
 
+static inline
+uint64_t *
+rte_mbuf_rearm_data(struct rte_mbuf *m)
+{
+	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+			 offsetof(struct rte_mbuf, data_off) + 8);
+	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+			 RTE_ALIGN(offsetof(struct rte_mbuf,
+					    data_off),
+					    16));
+
+	return (uint64_t *)&m->data_off;
+}
+
+static inline
+void *
+rte_mbuf_rx_descriptor_fields1(struct rte_mbuf *m)
+{
+	return &m->packet_type;
+}
 
 static inline uint16_t rte_pktmbuf_priv_size(struct rte_mempool *mp);
 
