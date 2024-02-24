@@ -464,7 +464,7 @@ enum {
  * The generic rte_mbuf, containing a packet mbuf.
  */
 struct rte_mbuf {
-	RTE_MARKER cacheline0;
+	__rte_marker(RTE_MARKER, cacheline0)
 
 	void *buf_addr;           /**< Virtual address of segment buffer. */
 #if RTE_IOVA_IN_MBUF
@@ -487,7 +487,7 @@ struct rte_mbuf {
 #endif
 
 	/* next 8 bytes are initialised on RX descriptor rearm */
-	RTE_MARKER64 rearm_data;
+	__rte_marker(RTE_MARKER64, rearm_data)
 	uint16_t data_off;
 
 	/**
@@ -514,7 +514,7 @@ struct rte_mbuf {
 	uint64_t ol_flags;        /**< Offload features. */
 
 	/* remaining bytes are set on RX when pulling packet from descriptor */
-	RTE_MARKER rx_descriptor_fields1;
+	__rte_marker(RTE_MARKER, rx_descriptor_fields1)
 
 	/*
 	 * The packet type, which is the combination of outer/inner L2, L3, L4
@@ -595,8 +595,8 @@ struct rte_mbuf {
 	struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
 
 	/* second cache line - fields only used in slow path or on TX */
-	RTE_MARKER cacheline1 __rte_cache_min_aligned;
-
+	__rte_cache_min_aligned
+	__rte_marker(RTE_MARKER, cacheline1)
 #if RTE_IOVA_IN_MBUF
 	/**
 	 * Next segment of scattered packet. Must be NULL in the last
