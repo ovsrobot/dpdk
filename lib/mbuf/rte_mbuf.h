@@ -108,7 +108,7 @@ int rte_get_tx_ol_flag_list(uint64_t mask, char *buf, size_t buflen);
 static inline void
 rte_mbuf_prefetch_part1(struct rte_mbuf *m)
 {
-	rte_prefetch0(&m->cacheline0);
+	rte_prefetch0(&m->buf_addr);
 }
 
 /**
@@ -126,7 +126,11 @@ static inline void
 rte_mbuf_prefetch_part2(struct rte_mbuf *m)
 {
 #if RTE_CACHE_LINE_SIZE == 64
-	rte_prefetch0(&m->cacheline1);
+#if RTE_IOVA_IN_MBUF
+	rte_prefetch0(&m->next);
+#else
+	rte_prefetch0(&m->dynfield2);
+#endif
 #else
 	RTE_SET_USED(m);
 #endif
