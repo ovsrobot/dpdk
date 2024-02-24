@@ -200,7 +200,7 @@ rxq_alloc_elts_sprq(struct mlx5_rxq_ctrl *rxq_ctrl)
 		 */
 		rte_compiler_barrier();
 		rxq->mbuf_initializer =
-			*(rte_xmm_t *)&mbuf_init->rearm_data;
+			*(rte_xmm_t *)rte_mbuf_rearm_data(mbuf_init);
 		/* Padding with a fake mbuf for vectorized Rx. */
 		for (j = 0; j < MLX5_VPMD_DESCS_PER_LOOP; ++j)
 			(*rxq->elts)[elts_n + j] = &rxq->fake_mbuf;

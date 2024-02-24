@@ -101,10 +101,10 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	uint16_t pkts_n = mcqe_n;
 	const __vector unsigned char rearm =
 		(__vector unsigned char)vec_vsx_ld(0,
-		(signed int const *)&t_pkt->rearm_data);
+		(signed int const *)rte_mbuf_rearm_data(t_pkt));
 	const __vector unsigned char rxdf =
 		(__vector unsigned char)vec_vsx_ld(0,
-		(signed int const *)&t_pkt->rx_descriptor_fields1);
+		(signed int const *)rte_mbuf_rx_descriptor_fields1(t_pkt));
 	const __vector unsigned char crc_adj =
 		(__vector unsigned char)(__vector unsigned short){
 			0, 0, rxq->crc_present * RTE_ETHER_CRC_LEN, 0,
@@ -173,9 +173,9 @@ cycle:
 
 		/* B.1 store rearm data to mbuf. */
 		*(__vector unsigned char *)
-			&elts[pos]->rearm_data = rearm;
+			rte_mbuf_rearm_data(elts[pos]) = rearm;
 		*(__vector unsigned char *)
-			&elts[pos + 1]->rearm_data = rearm;
+			rte_mbuf_rearm_data(elts[pos + 1]) = rearm;
 
 		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
 		rxdf1 = vec_perm(mcqe1, zero, shuf_mask1);
@@ -195,15 +195,15 @@ cycle:
 
 		/* D.1 store rx_descriptor_fields1. */
 		*(__vector unsigned char *)
-			&elts[pos]->rx_descriptor_fields1 = rxdf1;
+			rte_mbuf_rx_descriptor_fields1(elts[pos]) = rxdf1;
 		*(__vector unsigned char *)
-			&elts[pos + 1]->rx_descriptor_fields1 = rxdf2;
+			rte_mbuf_rx_descriptor_fields1(elts[pos + 1]) = rxdf2;
 
 		/* B.1 store rearm data to mbuf. */
 		*(__vector unsigned char *)
-			&elts[pos + 2]->rearm_data = rearm;
+			rte_mbuf_rearm_data(elts[pos + 2]) = rearm;
 		*(__vector unsigned char *)
-			&elts[pos + 3]->rearm_data = rearm;
+			rte_mbuf_rearm_data(elts[pos + 3]) = rearm;
 
 		/* C.1 combine data from mCQEs with rx_descriptor_fields1. */
 		rxdf1 = vec_perm(mcqe2, zero, shuf_mask1);
@@ -223,9 +223,9 @@ cycle:
 
 		/* D.1 store rx_descriptor_fields1. */
 		*(__vector unsigned char *)
-			&elts[pos + 2]->rx_descriptor_fields1 = rxdf1;
+			rte_mbuf_rx_descriptor_fields1(elts[pos + 2]) = rxdf1;
 		*(__vector unsigned char *)
-			&elts[pos + 3]->rx_descriptor_fields1 = rxdf2;
+			rte_mbuf_rx_descriptor_fields1(elts[pos + 3]) = rxdf2;
 
 #ifdef MLX5_PMD_SOFT_COUNTERS
 		invalid_mask = (__vector unsigned char)(__vector unsigned long){
@@ -769,13 +769,13 @@ rxq_cq_to_ptype_oflags_v(struct mlx5_rxq_data *rxq,
 
 	/* Write 8B rearm_data and 8B ol_flags. */
 	vec_vsx_st(rearm0, 0,
-		(__vector unsigned char *)&pkts[0]->rearm_data);
+		(__vector unsigned char *)rte_mbuf_rearm_data(pkts[0]));
 	vec_vsx_st(rearm1, 0,
-		(__vector unsigned char *)&pkts[1]->rearm_data);
+		(__vector unsigned char *)rte_mbuf_rearm_data(pkts[1]));
 	vec_vsx_st(rearm2, 0,
-		(__vector unsigned char *)&pkts[2]->rearm_data);
+		(__vector unsigned char *)rte_mbuf_rearm_data(pkts[2]));
 	vec_vsx_st(rearm3, 0,
-		(__vector unsigned char *)&pkts[3]->rearm_data);
+		(__vector unsigned char *)rte_mbuf_rearm_data(pkts[3]));
 }
 
 /**
