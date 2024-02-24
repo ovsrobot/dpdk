@@ -226,7 +226,6 @@ fm10k_rx_vec_condition_check(struct rte_eth_dev *dev)
 int __rte_cold
 fm10k_rxq_vec_setup(struct fm10k_rx_queue *rxq)
 {
-	uintptr_t p;
 	struct rte_mbuf mb_def = { .buf_addr = 0 }; /* zeroed mbuf */
 
 	mb_def.nb_segs = 1;
@@ -239,8 +238,7 @@ fm10k_rxq_vec_setup(struct fm10k_rx_queue *rxq)
 
 	/* prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer = *(uint64_t *)p;
+	rxq->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 	return 0;
 }
 
@@ -282,7 +280,6 @@ fm10k_rxq_rearm(struct fm10k_rx_queue *rxq)
 	/* Initialize the mbufs in vector, process 2 mbufs in one loop */
 	for (i = 0; i < RTE_FM10K_RXQ_REARM_THRESH; i += 2, mb_alloc += 2) {
 		__m128i vaddr0, vaddr1;
-		uintptr_t p0, p1;
 
 		mb0 = mb_alloc[0];
 		mb1 = mb_alloc[1];
@@ -290,10 +287,8 @@ fm10k_rxq_rearm(struct fm10k_rx_queue *rxq)
 		/* Flush mbuf with pkt template.
 		 * Data to be rearmed is 6 bytes long.
 		 */
-		p0 = (uintptr_t)&mb0->rearm_data;
-		*(uint64_t *)p0 = rxq->mbuf_initializer;
-		p1 = (uintptr_t)&mb1->rearm_data;
-		*(uint64_t *)p1 = rxq->mbuf_initializer;
+		*rte_mbuf_rearm_data(mb0) = rxq->mbuf_initializer;
+		*rte_mbuf_rearm_data(mb1) = rxq->mbuf_initializer;
 
 		/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, buf_iova) !=
@@ -519,9 +514,9 @@ fm10k_recv_raw_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 		staterr = _mm_unpacklo_epi32(sterr_tmp1, sterr_tmp2);
 
 		/* D.3 copy final 3,4 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+3]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos+3]),
 				pkt_mb4);
-		_mm_storeu_si128((void *)&rx_pkts[pos+2]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos+2]),
 				pkt_mb3);
 
 		/* C* extract and record EOP bit */
@@ -557,9 +552,9 @@ fm10k_recv_raw_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 		staterr = _mm_packs_epi32(staterr, zero);
 
 		/* D.3 copy final 1,2 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+1]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos+1]),
 				pkt_mb2);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 				pkt_mb1);
 
 		fm10k_desc_to_pktype_v(descs0, &rx_pkts[pos]);
