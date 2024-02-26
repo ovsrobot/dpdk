@@ -410,4 +410,18 @@ struct icp_qat_fw_la_cipher_20_req_params {
 	uint8_t    spc_auth_res_sz;
 };
 
+struct icp_qat_fw_la_cipher_30_req_params {
+		uint32_t   spc_aad_sz;
+		uint8_t    cipher_length;
+		uint8_t    reserved[2];
+		uint8_t    spc_auth_res_sz;
+		union {
+				uint32_t cipher_IV_array[ICP_QAT_FW_NUM_LONGWORDS_4];
+				struct {
+						uint64_t cipher_IV_ptr;
+						uint64_t resrvd1;
+			} s;
+
+		} u;
+};
 #endif
