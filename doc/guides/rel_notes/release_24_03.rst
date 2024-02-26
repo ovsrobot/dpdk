@@ -120,6 +120,8 @@ New Features
   * Added optimized SSE Rx routines.
   * Added optimized AVX2 Rx routines.
   * Added optimized NEON Rx routines.
+  * Added devarg to enable/disable ISM memory accesses which gives better performance
+    for lower packet sizes when enabled.
 
 * **Updated NVIDIA mlx5 driver.**
 
