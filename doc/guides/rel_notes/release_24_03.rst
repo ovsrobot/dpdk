@@ -130,6 +130,7 @@ New Features
   * Added support for matching a random value.
   * Added support for comparing result between packet fields or value.
   * Added support for accumulating value of field into another one.
+  * Added support for copy inner fields in HWS flow engine.
 
 * **Updated Marvell cnxk crypto driver.**
 
