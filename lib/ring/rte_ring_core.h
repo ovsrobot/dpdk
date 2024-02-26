@@ -19,6 +19,8 @@
  * instead.
  */
 
+#include <stdalign.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,7 +80,7 @@ struct rte_ring_headtail {
 
 union __rte_ring_rts_poscnt {
 	/** raw 8B value to read/write *cnt* and *pos* as one atomic op */
-	RTE_ATOMIC(uint64_t) raw __rte_aligned(8);
+	alignas(sizeof(uint64_t)) RTE_ATOMIC(uint64_t) raw;
 	struct {
 		uint32_t cnt; /**< head/tail reference counter */
 		uint32_t pos; /**< head/tail position */
@@ -94,7 +96,7 @@ struct rte_ring_rts_headtail {
 
 union __rte_ring_hts_pos {
 	/** raw 8B value to read/write *head* and *tail* as one atomic op */
-	RTE_ATOMIC(uint64_t) raw __rte_aligned(8);
+	alignas(sizeof(uint64_t)) RTE_ATOMIC(uint64_t) raw;
 	struct {
 		RTE_ATOMIC(uint32_t) head; /**< head position */
 		RTE_ATOMIC(uint32_t) tail; /**< tail position */
@@ -117,7 +119,7 @@ struct rte_ring_hts_headtail {
  * a problem.
  */
 struct rte_ring {
-	char name[RTE_RING_NAMESIZE] __rte_cache_aligned;
+	alignas(RTE_CACHE_LINE_SIZE) char name[RTE_RING_NAMESIZE];
 	/**< Name of the ring. */
 	int flags;               /**< Flags supplied at creation. */
 	const struct rte_memzone *memzone;
@@ -129,20 +131,20 @@ struct rte_ring {
 	RTE_CACHE_GUARD;
 
 	/** Ring producer status. */
-	union {
+	union __rte_cache_aligned {
 		struct rte_ring_headtail prod;
 		struct rte_ring_hts_headtail hts_prod;
 		struct rte_ring_rts_headtail rts_prod;
-	}  __rte_cache_aligned;
+	};
 
 	RTE_CACHE_GUARD;
 
 	/** Ring consumer status. */
-	union {
+	union __rte_cache_aligned {
 		struct rte_ring_headtail cons;
 		struct rte_ring_hts_headtail hts_cons;
 		struct rte_ring_rts_headtail rts_cons;
-	}  __rte_cache_aligned;
+	};
 
 	RTE_CACHE_GUARD;
 };
