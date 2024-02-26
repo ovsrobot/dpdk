@@ -138,6 +138,11 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+  * **Added support for dumping registers with names and filter.**
+
+    * Added new API functions ``rte_eth_dev_get_reg_info_ext()`` to and filter
+      the registers by their names and get the information of registers(names,
+      values and other attributes).
 
 Removed Items
 -------------
@@ -202,6 +207,9 @@ ABI Changes
    =======================================================
 
 * No ABI change that would break compatibility with 23.11.
+
+* ethdev: Added ``filter`` and ``names`` fields to ``rte_dev_reg_info``
+  structure for reporting names of registers and filtering them by names.
 
 
 Known Issues
