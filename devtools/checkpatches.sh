@@ -61,6 +61,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# refrain from new uses of RTE_MARKER
+	awk -v FOLDERS="lib drivers" \
+		-v EXPRESSIONS="RTE_MARKER(8|16|32|64)?" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Using RTE_MARKER' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# no output on stdout or stderr
 	awk -v FOLDERS="lib drivers" \
 		-v EXPRESSIONS="\\\<printf\\\> \\\<fprintf\\\(stdout, \\\<fprintf\\\(stderr," \
