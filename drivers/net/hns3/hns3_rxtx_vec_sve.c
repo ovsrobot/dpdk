@@ -123,9 +123,9 @@ hns3_recv_burst_vec_sve(struct hns3_rx_queue *__restrict rxq,
 		mbuf_init = svdup_n_u64(rxq->mbuf_initializer);
 		/* save mbuf_initializer */
 		svst1_scatter_u64base_offset_u64(PG64_256BIT, mbp1st,
-			offsetof(struct rte_mbuf, rearm_data), mbuf_init);
+			offsetof(struct rte_mbuf, data_off), mbuf_init);
 		svst1_scatter_u64base_offset_u64(PG64_256BIT, mbp2st,
-			offsetof(struct rte_mbuf, rearm_data), mbuf_init);
+			offsetof(struct rte_mbuf, data_off), mbuf_init);
 
 		next_rxdp = rxdp + HNS3_SVE_DEFAULT_DESCS_PER_LOOP;
 		rte_prefetch_non_temporal(next_rxdp);

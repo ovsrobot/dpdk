@@ -156,14 +156,6 @@ hns3_recv_burst_vec(struct hns3_rx_queue *__restrict rxq,
 		0, 0, 0,      /* ignore non-length fields */
 	};
 
-	/* compile-time verifies the shuffle mask */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash.rss) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
-
 	for (pos = 0; pos < nb_pkts; pos += HNS3_DEFAULT_DESCS_PER_LOOP,
 				     rxdp += HNS3_DEFAULT_DESCS_PER_LOOP) {
 		uint64x2x2_t descs[HNS3_DEFAULT_DESCS_PER_LOOP];
@@ -236,23 +228,23 @@ hns3_recv_burst_vec(struct hns3_rx_queue *__restrict rxq,
 		pkt_mb4 = vreinterpretq_u8_u16(tmp);
 
 		/* save packet info to rx_pkts mbuf */
-		vst1q_u8((void *)&sw_ring[pos + 0].mbuf->rx_descriptor_fields1,
+		vst1q_u8(rte_mbuf_rx_descriptor_fields1(sw_ring[pos + 0].mbuf),
 			 pkt_mb1);
-		vst1q_u8((void *)&sw_ring[pos + 1].mbuf->rx_descriptor_fields1,
+		vst1q_u8(rte_mbuf_rx_descriptor_fields1(sw_ring[pos + 1].mbuf),
 			 pkt_mb2);
-		vst1q_u8((void *)&sw_ring[pos + 2].mbuf->rx_descriptor_fields1,
+		vst1q_u8(rte_mbuf_rx_descriptor_fields1(sw_ring[pos + 2].mbuf),
 			 pkt_mb3);
-		vst1q_u8((void *)&sw_ring[pos + 3].mbuf->rx_descriptor_fields1,
+		vst1q_u8(rte_mbuf_rx_descriptor_fields1(sw_ring[pos + 3].mbuf),
 			 pkt_mb4);
 
 		/* store the first 8 bytes of packets mbuf's rearm_data */
-		*(uint64_t *)&sw_ring[pos + 0].mbuf->rearm_data =
+		*rte_mbuf_rearm_data(sw_ring[pos + 0].mbuf) =
 			rxq->mbuf_initializer;
-		*(uint64_t *)&sw_ring[pos + 1].mbuf->rearm_data =
+		*rte_mbuf_rearm_data(sw_ring[pos + 1].mbuf) =
 			rxq->mbuf_initializer;
-		*(uint64_t *)&sw_ring[pos + 2].mbuf->rearm_data =
+		*rte_mbuf_rearm_data(sw_ring[pos + 2].mbuf) =
 			rxq->mbuf_initializer;
-		*(uint64_t *)&sw_ring[pos + 3].mbuf->rearm_data =
+		*rte_mbuf_rearm_data(sw_ring[pos + 3].mbuf) =
 			rxq->mbuf_initializer;
 
 		rte_prefetch_non_temporal(rxdp + HNS3_DEFAULT_DESCS_PER_LOOP);
