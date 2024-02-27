@@ -37,12 +37,12 @@
 
 /* reference count offset in mbuf rearm data */
 #define REFCNT_BITS_OFFSET ((offsetof(struct rte_mbuf, refcnt) - \
-	offsetof(struct rte_mbuf, rearm_data)) * BYTE_SIZE)
+	offsetof(struct rte_mbuf, data_off)) * BYTE_SIZE)
 
 #ifdef CC_AVX512_SUPPORT
 /* segment number offset in mbuf rearm data */
 #define SEG_NUM_BITS_OFFSET ((offsetof(struct rte_mbuf, nb_segs) - \
-	offsetof(struct rte_mbuf, rearm_data)) * BYTE_SIZE)
+	offsetof(struct rte_mbuf, data_off)) * BYTE_SIZE)
 /* default rearm data */
 #define DEFAULT_REARM_DATA (1ULL << SEG_NUM_BITS_OFFSET | \
 	1ULL << REFCNT_BITS_OFFSET)

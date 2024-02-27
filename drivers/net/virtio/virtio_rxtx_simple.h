@@ -39,10 +39,7 @@ virtio_rxq_rearm_vec(struct virtnet_rx *rxvq)
 	}
 
 	for (i = 0; i < RTE_VIRTIO_VPMD_RX_REARM_THRESH; i++) {
-		uintptr_t p;
-
-		p = (uintptr_t)&sw_ring[i]->rearm_data;
-		*(uint64_t *)p = rxvq->mbuf_initializer;
+		*rte_mbuf_rearm_data(sw_ring[i]) = rxvq->mbuf_initializer;
 
 		start_dp[i].addr = VIRTIO_MBUF_ADDR(sw_ring[i], vq) +
 			RTE_PKTMBUF_HEADROOM - vq->hw->vtnet_hdr_size;

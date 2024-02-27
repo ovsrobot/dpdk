@@ -134,36 +134,36 @@ virtio_recv_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 		pkt_mb[0] = _mm_shuffle_epi8(desc[0], shuf_msk1);
 		pkt_mb[1] = _mm_add_epi16(pkt_mb[1], len_adjust);
 		pkt_mb[0] = _mm_add_epi16(pkt_mb[0], len_adjust);
-		_mm_storeu_si128((void *)&rx_pkts[1]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[1]),
 			pkt_mb[1]);
-		_mm_storeu_si128((void *)&rx_pkts[0]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[0]),
 			pkt_mb[0]);
 
 		pkt_mb[3] = _mm_shuffle_epi8(desc[1], shuf_msk2);
 		pkt_mb[2] = _mm_shuffle_epi8(desc[1], shuf_msk1);
 		pkt_mb[3] = _mm_add_epi16(pkt_mb[3], len_adjust);
 		pkt_mb[2] = _mm_add_epi16(pkt_mb[2], len_adjust);
-		_mm_storeu_si128((void *)&rx_pkts[3]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[3]),
 			pkt_mb[3]);
-		_mm_storeu_si128((void *)&rx_pkts[2]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[2]),
 			pkt_mb[2]);
 
 		pkt_mb[5] = _mm_shuffle_epi8(desc[2], shuf_msk2);
 		pkt_mb[4] = _mm_shuffle_epi8(desc[2], shuf_msk1);
 		pkt_mb[5] = _mm_add_epi16(pkt_mb[5], len_adjust);
 		pkt_mb[4] = _mm_add_epi16(pkt_mb[4], len_adjust);
-		_mm_storeu_si128((void *)&rx_pkts[5]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[5]),
 			pkt_mb[5]);
-		_mm_storeu_si128((void *)&rx_pkts[4]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[4]),
 			pkt_mb[4]);
 
 		pkt_mb[7] = _mm_shuffle_epi8(desc[3], shuf_msk2);
 		pkt_mb[6] = _mm_shuffle_epi8(desc[3], shuf_msk1);
 		pkt_mb[7] = _mm_add_epi16(pkt_mb[7], len_adjust);
 		pkt_mb[6] = _mm_add_epi16(pkt_mb[6], len_adjust);
-		_mm_storeu_si128((void *)&rx_pkts[7]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[7]),
 			pkt_mb[7]);
-		_mm_storeu_si128((void *)&rx_pkts[6]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[6]),
 			pkt_mb[6]);
 
 		if (unlikely(nb_used <= RTE_VIRTIO_DESC_PER_LOOP)) {

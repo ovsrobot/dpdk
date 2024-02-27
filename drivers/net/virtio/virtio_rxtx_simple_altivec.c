@@ -138,9 +138,9 @@ virtio_recv_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 			((__vector unsigned short)pkt_mb[0] + len_adjust);
 		pkt_mb[1] = (__vector unsigned char)
 			((__vector unsigned short)pkt_mb[1] + len_adjust);
-		*(__vector unsigned char *)&rx_pkts[0]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[0]) =
 			pkt_mb[0];
-		*(__vector unsigned char *)&rx_pkts[1]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[1]) =
 			pkt_mb[1];
 
 		pkt_mb[2] = vec_perm(desc[1], zero, shuf_msk1);
@@ -149,9 +149,9 @@ virtio_recv_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 			((__vector unsigned short)pkt_mb[2] + len_adjust);
 		pkt_mb[3] = (__vector unsigned char)
 			((__vector unsigned short)pkt_mb[3] + len_adjust);
-		*(__vector unsigned char *)&rx_pkts[2]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[2]) =
 			pkt_mb[2];
-		*(__vector unsigned char *)&rx_pkts[3]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[3]) =
 			pkt_mb[3];
 
 		pkt_mb[4] = vec_perm(desc[2], zero, shuf_msk1);
@@ -160,9 +160,9 @@ virtio_recv_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 			((__vector unsigned short)pkt_mb[4] + len_adjust);
 		pkt_mb[5] = (__vector unsigned char)
 			((__vector unsigned short)pkt_mb[5] + len_adjust);
-		*(__vector unsigned char *)&rx_pkts[4]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[4]) =
 			pkt_mb[4];
-		*(__vector unsigned char *)&rx_pkts[5]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[5]) =
 			pkt_mb[5];
 
 		pkt_mb[6] = vec_perm(desc[3], zero, shuf_msk1);
@@ -171,9 +171,9 @@ virtio_recv_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 			((__vector unsigned short)pkt_mb[6] + len_adjust);
 		pkt_mb[7] = (__vector unsigned char)
 			((__vector unsigned short)pkt_mb[7] + len_adjust);
-		*(__vector unsigned char *)&rx_pkts[6]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[6]) =
 			pkt_mb[6];
-		*(__vector unsigned char *)&rx_pkts[7]->rx_descriptor_fields1 =
+		*(__vector unsigned char *)rte_mbuf_rx_descriptor_fields1(rx_pkts[7]) =
 			pkt_mb[7];
 
 		if (unlikely(nb_used <= RTE_VIRTIO_DESC_PER_LOOP)) {

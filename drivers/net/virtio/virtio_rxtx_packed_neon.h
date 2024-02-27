@@ -59,10 +59,10 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 	uint8x16x2_t mbuf;
 	/* Load four mbufs rearm data. */
 	RTE_BUILD_BUG_ON(REFCNT_BITS_OFFSET >= 64);
-	pkts[0] = vld1_u16((uint16_t *)&tx_pkts[0]->rearm_data);
-	pkts[1] = vld1_u16((uint16_t *)&tx_pkts[1]->rearm_data);
-	pkts[2] = vld1_u16((uint16_t *)&tx_pkts[2]->rearm_data);
-	pkts[3] = vld1_u16((uint16_t *)&tx_pkts[3]->rearm_data);
+	pkts[0] = vld1_u16((uint16_t *)rte_mbuf_rearm_data(tx_pkts[0]));
+	pkts[1] = vld1_u16((uint16_t *)rte_mbuf_rearm_data(tx_pkts[1]));
+	pkts[2] = vld1_u16((uint16_t *)rte_mbuf_rearm_data(tx_pkts[2]));
+	pkts[3] = vld1_u16((uint16_t *)rte_mbuf_rearm_data(tx_pkts[3]));
 
 	mbuf.val[0] = vreinterpretq_u8_u16(vcombine_u16(pkts[0], pkts[1]));
 	mbuf.val[1] = vreinterpretq_u8_u16(vcombine_u16(pkts[2], pkts[3]));
@@ -77,8 +77,6 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 
 	/* Check headroom is enough. */
 	uint16x4_t head_rooms = vdup_n_u16(head_size);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) !=
-			 offsetof(struct rte_mbuf, rearm_data));
 	uint16x4_t data_offset = vreinterpret_u16_u8(vqtbl2_u8(mbuf, data_msk));
 	uint64x1_t cmp2 = vreinterpret_u64_u16(vclt_u16(data_offset, head_rooms));
 	if (unlikely(vget_lane_u64(cmp2, 0)))
@@ -263,10 +261,10 @@ virtqueue_dequeue_batch_packed_vec(struct virtnet_rx *rxvq,
 	pkt_mb[3] = vreinterpretq_u64_u16(vsubq_u16(
 			vreinterpretq_u16_u64(pkt_mb[3]), len_adjust));
 
-	vst1q_u64((void *)&rx_pkts[0]->rx_descriptor_fields1, pkt_mb[0]);
-	vst1q_u64((void *)&rx_pkts[1]->rx_descriptor_fields1, pkt_mb[1]);
-	vst1q_u64((void *)&rx_pkts[2]->rx_descriptor_fields1, pkt_mb[2]);
-	vst1q_u64((void *)&rx_pkts[3]->rx_descriptor_fields1, pkt_mb[3]);
+	vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[0]), pkt_mb[0]);
+	vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[1]), pkt_mb[1]);
+	vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[2]), pkt_mb[2]);
+	vst1q_u64(rte_mbuf_rx_descriptor_fields1(rx_pkts[3]), pkt_mb[3]);
 
 	if (hw->has_rx_offload) {
 		virtio_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
