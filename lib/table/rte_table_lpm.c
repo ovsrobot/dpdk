@@ -47,7 +47,7 @@ struct rte_table_lpm {
 
 	/* Next Hop Table (NHT) */
 	uint32_t nht_users[RTE_TABLE_LPM_MAX_NEXT_HOPS];
-	uint8_t nht[0] __rte_cache_aligned;
+	uint8_t nht[] __rte_cache_aligned;
 };
 
 static void *

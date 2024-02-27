@@ -79,7 +79,7 @@ struct rte_table_hash {
 	uint32_t *stack;
 
 	/* Lookup table */
-	uint8_t memory[0] __rte_cache_aligned;
+	uint8_t memory[] __rte_cache_aligned;
 };
 
 static int

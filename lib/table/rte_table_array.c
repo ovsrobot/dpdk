@@ -39,7 +39,7 @@ struct rte_table_array {
 	uint32_t entry_pos_mask;
 
 	/* Internal table */
-	uint8_t array[0] __rte_cache_aligned;
+	uint8_t array[] __rte_cache_aligned;
 } __rte_cache_aligned;
 
 static void *

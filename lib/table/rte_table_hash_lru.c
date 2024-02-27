@@ -76,7 +76,7 @@ struct rte_table_hash {
 	uint32_t *key_stack;
 
 	/* Table memory */
-	uint8_t memory[0] __rte_cache_aligned;
+	uint8_t memory[] __rte_cache_aligned;
 };
 
 static int

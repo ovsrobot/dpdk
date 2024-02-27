@@ -42,7 +42,7 @@ struct rte_table_hash {
 	struct rte_hash *h_table;
 
 	/* Lookup table */
-	uint8_t memory[0] __rte_cache_aligned;
+	uint8_t memory[] __rte_cache_aligned;
 };
 
 static int
