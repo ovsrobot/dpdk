@@ -106,7 +106,7 @@ struct rte_lpm6 {
 
 	struct rte_lpm_tbl8_hdr *tbl8_hdrs; /* array of tbl8 headers */
 
-	struct rte_lpm6_tbl_entry tbl8[0]
+	struct rte_lpm6_tbl_entry tbl8[]
 			__rte_cache_aligned; /**< LPM tbl8 table. */
 };
 
