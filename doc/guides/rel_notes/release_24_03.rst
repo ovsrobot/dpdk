@@ -166,6 +166,9 @@ Removed Items
   through new inline functions ``rte_mbuf_rearm_data()`` and
   ``rte_mbuf_rx_descriptor_fields1()`` respectively.
 
+* security: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
+  have been removed from ``struct rte_security_session``.
+
 API Changes
 -----------
 
