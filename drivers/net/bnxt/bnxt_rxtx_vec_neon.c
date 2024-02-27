@@ -135,27 +135,27 @@ descs_to_mbufs(uint32x4_t mm_rxcmp[4], uint32x4_t mm_rxcmp1[4],
 
 	/* Update mbuf rearm_data for four packets. */
 	GET_OL_FLAGS(rss_flags, index, errors, 0, ol_flags);
-	vst1q_u32((uint32_t *)&mbuf[0]->rearm_data,
+	vst1q_u32((uint32_t *)rte_mbuf_rearm_data(mbuf[0]),
 		  vsetq_lane_u32(ol_flags, vreinterpretq_u32_u64(mb_init), 2));
 	GET_OL_FLAGS(rss_flags, index, errors, 1, ol_flags);
-	vst1q_u32((uint32_t *)&mbuf[1]->rearm_data,
+	vst1q_u32((uint32_t *)rte_mbuf_rearm_data(mbuf[1]),
 		  vsetq_lane_u32(ol_flags, vreinterpretq_u32_u64(mb_init), 2));
 	GET_OL_FLAGS(rss_flags, index, errors, 2, ol_flags);
-	vst1q_u32((uint32_t *)&mbuf[2]->rearm_data,
+	vst1q_u32((uint32_t *)rte_mbuf_rearm_data(mbuf[2]),
 		  vsetq_lane_u32(ol_flags, vreinterpretq_u32_u64(mb_init), 2));
 	GET_OL_FLAGS(rss_flags, index, errors, 3, ol_flags);
-	vst1q_u32((uint32_t *)&mbuf[3]->rearm_data,
+	vst1q_u32((uint32_t *)rte_mbuf_rearm_data(mbuf[3]),
 		  vsetq_lane_u32(ol_flags, vreinterpretq_u32_u64(mb_init), 2));
 
 	/* Update mbuf rx_descriptor_fields1 for four packets. */
 	GET_DESC_FIELDS(mm_rxcmp[0], mm_rxcmp1[0], shuf_msk, ptype_idx, 0, tmp);
-	vst1q_u32((uint32_t *)&mbuf[0]->rx_descriptor_fields1, tmp);
+	vst1q_u32((uint32_t *)rte_mbuf_rx_descriptor_fields1(mbuf[0]), tmp);
 	GET_DESC_FIELDS(mm_rxcmp[1], mm_rxcmp1[1], shuf_msk, ptype_idx, 1, tmp);
-	vst1q_u32((uint32_t *)&mbuf[1]->rx_descriptor_fields1, tmp);
+	vst1q_u32((uint32_t *)rte_mbuf_rx_descriptor_fields1(mbuf[1]), tmp);
 	GET_DESC_FIELDS(mm_rxcmp[2], mm_rxcmp1[2], shuf_msk, ptype_idx, 2, tmp);
-	vst1q_u32((uint32_t *)&mbuf[2]->rx_descriptor_fields1, tmp);
+	vst1q_u32((uint32_t *)rte_mbuf_rx_descriptor_fields1(mbuf[2]), tmp);
 	GET_DESC_FIELDS(mm_rxcmp[3], mm_rxcmp1[3], shuf_msk, ptype_idx, 3, tmp);
-	vst1q_u32((uint32_t *)&mbuf[3]->rx_descriptor_fields1, tmp);
+	vst1q_u32((uint32_t *)rte_mbuf_rx_descriptor_fields1(mbuf[3]), tmp);
 }
 
 static uint16_t
