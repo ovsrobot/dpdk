@@ -16,8 +16,11 @@
  * New fields and flags should fit in the "dynamic space".
  */
 
+#include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 
+#include <rte_common.h>
 #include <rte_byteorder.h>
 #include <rte_stdatomic.h>
 
@@ -672,6 +675,37 @@ struct rte_mbuf {
 
 	uint32_t dynfield1[9]; /**< Reserved for dynamic fields. */
 } __rte_cache_aligned;
+
+static_assert(!(offsetof(struct rte_mbuf, ol_flags) !=
+	offsetof(struct rte_mbuf, rearm_data) + 8), "ol_flags");
+static_assert(!(offsetof(struct rte_mbuf, rearm_data) !=
+	RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16)), "rearm_data");
+static_assert(!(offsetof(struct rte_mbuf, data_off) !=
+	offsetof(struct rte_mbuf, rearm_data)), "data_off");
+static_assert(!(offsetof(struct rte_mbuf, data_off) <
+	offsetof(struct rte_mbuf, rearm_data)), "data_off");
+static_assert(!(offsetof(struct rte_mbuf, refcnt) <
+	offsetof(struct rte_mbuf, rearm_data)), "refcnt");
+static_assert(!(offsetof(struct rte_mbuf, nb_segs) <
+	offsetof(struct rte_mbuf, rearm_data)), "nb_segs");
+static_assert(!(offsetof(struct rte_mbuf, port) <
+	offsetof(struct rte_mbuf, rearm_data)), "port");
+static_assert(!(offsetof(struct rte_mbuf, data_off) -
+	offsetof(struct rte_mbuf, rearm_data) > 6), "data_off");
+static_assert(!(offsetof(struct rte_mbuf, refcnt) -
+	offsetof(struct rte_mbuf, rearm_data) > 6), "refcnt");
+static_assert(!(offsetof(struct rte_mbuf, nb_segs) -
+	offsetof(struct rte_mbuf, rearm_data) > 6), "nb_segs");
+static_assert(!(offsetof(struct rte_mbuf, port) -
+	offsetof(struct rte_mbuf, rearm_data) > 6), "port");
+static_assert(!(offsetof(struct rte_mbuf, pkt_len) !=
+	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4), "pkt_len");
+static_assert(!(offsetof(struct rte_mbuf, data_len) !=
+	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8), "data_len");
+static_assert(!(offsetof(struct rte_mbuf, vlan_tci) !=
+	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10), "vlan_tci");
+static_assert(!(offsetof(struct rte_mbuf, hash) !=
+	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12), "hash");
 
 /**
  * Function typedef of callback to free externally attached buffer.
