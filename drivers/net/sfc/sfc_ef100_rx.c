@@ -553,9 +553,7 @@ sfc_ef100_rx_process_ready_pkts(struct sfc_ef100_rxq *rxq,
 		pkt = sfc_ef100_rx_next_mbuf(rxq);
 		__rte_mbuf_raw_sanity_check(pkt);
 
-		RTE_BUILD_BUG_ON(sizeof(pkt->rearm_data[0]) !=
-				 sizeof(rxq->rearm_data));
-		pkt->rearm_data[0] = rxq->rearm_data;
+		*rte_mbuf_rearm_data(pkt) = rxq->rearm_data;
 
 		/* data_off already moved past Rx prefix */
 		rx_prefix = (const efx_xword_t *)sfc_ef100_rx_pkt_prefix(pkt);
@@ -760,8 +758,7 @@ sfc_ef100_mk_mbuf_rearm_data(uint16_t port_id, uint16_t prefix_size)
 
 	/* rearm_data covers structure members filled in above */
 	rte_compiler_barrier();
-	RTE_BUILD_BUG_ON(sizeof(m.rearm_data[0]) != sizeof(uint64_t));
-	return m.rearm_data[0];
+	return *rte_mbuf_rearm_data(&m);
 }
 
 static sfc_dp_rx_qcreate_t sfc_ef100_rx_qcreate;

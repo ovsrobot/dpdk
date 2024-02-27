@@ -322,8 +322,7 @@ sfc_ef10_rx_process_event(struct sfc_ef10_rxq *rxq, efx_qword_t rx_ev,
 
 	m = rxd->mbuf;
 
-	RTE_BUILD_BUG_ON(sizeof(m->rearm_data[0]) != sizeof(rxq->rearm_data));
-	m->rearm_data[0] = rxq->rearm_data;
+	*rte_mbuf_rearm_data(m) = rxq->rearm_data;
 
 	/* Classify packet based on Rx event */
 	/* Mask RSS hash offload flag if RSS is not enabled */
@@ -377,9 +376,7 @@ sfc_ef10_rx_process_event(struct sfc_ef10_rxq *rxq, efx_qword_t rx_ev,
 			rxq->completed = pending;
 		}
 
-		RTE_BUILD_BUG_ON(sizeof(m->rearm_data[0]) !=
-				 sizeof(rxq->rearm_data));
-		m->rearm_data[0] = rxq->rearm_data;
+		*rte_mbuf_rearm_data(m) = rxq->rearm_data;
 
 		/* Event-dependent information is the same */
 		m->ol_flags = m0->ol_flags;
@@ -633,8 +630,7 @@ sfc_ef10_mk_mbuf_rearm_data(uint16_t port_id, uint16_t prefix_size)
 
 	/* rearm_data covers structure members filled in above */
 	rte_compiler_barrier();
-	RTE_BUILD_BUG_ON(sizeof(m.rearm_data[0]) != sizeof(uint64_t));
-	return m.rearm_data[0];
+	return *rte_mbuf_rearm_data(&m);
 }
 
 static sfc_dp_rx_qcreate_t sfc_ef10_rx_qcreate;
