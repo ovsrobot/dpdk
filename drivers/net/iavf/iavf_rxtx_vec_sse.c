@@ -179,14 +179,10 @@ desc_to_olflags_v(struct iavf_rx_queue *rxq, __m128i descs[4],
 	rearm3 = _mm_blend_epi16(mbuf_init, _mm_srli_si128(vlan0, 4), 0x10);
 
 	/* write the rearm data and the olflags in one write */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-			offsetof(struct rte_mbuf, rearm_data) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
-			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&rx_pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&rx_pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&rx_pkts[3]->rearm_data, rearm3);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[0]), rearm0);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[1]), rearm1);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[2]), rearm2);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[3]), rearm3);
 }
 
 static inline __m128i
@@ -412,14 +408,10 @@ flex_desc_to_olflags_v(struct iavf_rx_queue *rxq, __m128i descs[4],
 	rearm3 = _mm_blend_epi16(mbuf_init, _mm_srli_si128(flags, 4), 0x30);
 
 	/* write the rearm data and the olflags in one write */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-			 offsetof(struct rte_mbuf, rearm_data) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
-			 RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&rx_pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&rx_pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&rx_pkts[3]->rearm_data, rearm3);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[0]), rearm0);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[1]), rearm1);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[2]), rearm2);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[3]), rearm3);
 }
 
 #define PKTLEN_SHIFT     10
@@ -488,14 +480,7 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 				-rxq->crc_len, /* sub crc on pkt_len */
 				0, 0            /* ignore pkt_type field */
 			);
-	/* compile-time check the above crc_adjust layout is correct.
-	 * NOTE: the first field (lowest address) is given last in set_epi16
-	 * call above.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+
 	__m128i dd_check, eop_check;
 
 	/* nb_pkts has to be floor-aligned to IAVF_VPMD_DESCS_PER_LOOP */
@@ -536,18 +521,6 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		15, 14,      /* octet 15~14, low 16 bits pkt_len */
 		0xFF, 0xFF, 0xFF, 0xFF /* pkt_type set as unknown */
 		);
-	/* Compile-time verify the shuffle mask
-	 * NOTE: some field positions already verified above, but duplicated
-	 * here for completeness in case of future modifications.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
 
 	/* Cache is empty -> need to scan the buffer rings, but first move
 	 * the next 'n' mbufs into the cache
@@ -651,10 +624,10 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* D.3 copy final 3,4 data to rx_pkts */
 		_mm_storeu_si128(
-			(void *)&rx_pkts[pos + 3]->rx_descriptor_fields1,
+			rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3]),
 			pkt_mb4);
 		_mm_storeu_si128(
-			(void *)&rx_pkts[pos + 2]->rx_descriptor_fields1,
+			rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2]),
 			pkt_mb3);
 
 		/* D.2 pkt 1,2 remove crc */
@@ -689,9 +662,9 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* D.3 copy final 1,2 data to rx_pkts */
 		_mm_storeu_si128(
-			(void *)&rx_pkts[pos + 1]->rx_descriptor_fields1,
+			rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1]),
 			pkt_mb2);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 				 pkt_mb1);
 		desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
 		/* C.4 calc available number of desc */
@@ -760,16 +733,6 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 						   0x04, 0x0C,
 						   0x00, 0x08);
 
-	/**
-	 * compile-time check the above crc_adjust layout is correct.
-	 * NOTE: the first field (lowest address) is given last in set_epi16
-	 * call above.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-
 	/* 4 packets DD mask */
 	const __m128i dd_check = _mm_set_epi64x(0x0000000100000001LL,
 						0x0000000100000001LL);
@@ -817,20 +780,6 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 	}
 
 #endif
-
-	/**
-	 * Compile-time verify the shuffle mask
-	 * NOTE: some field positions already verified above, but duplicated
-	 * here for completeness in case of future modifications.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
 
 	/* Cache is empty -> need to scan the buffer rings, but first move
 	 * the next 'n' mbufs into the cache
@@ -1089,10 +1038,10 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 
 		/* D.3 copy final 3,4 data to rx_pkts */
 		_mm_storeu_si128
-			((void *)&rx_pkts[pos + 3]->rx_descriptor_fields1,
+			(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3]),
 			 pkt_mb3);
 		_mm_storeu_si128
-			((void *)&rx_pkts[pos + 2]->rx_descriptor_fields1,
+			(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2]),
 			 pkt_mb2);
 
 		/* C* extract and record EOP bit */
@@ -1116,9 +1065,9 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 
 		/* D.3 copy final 1,2 data to rx_pkts */
 		_mm_storeu_si128
-			((void *)&rx_pkts[pos + 1]->rx_descriptor_fields1,
+			(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1]),
 			 pkt_mb1);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 				 pkt_mb0);
 		flex_desc_to_ptype_v(descs, &rx_pkts[pos], ptype_tbl);
 		/* C.4 calc available number of desc */
