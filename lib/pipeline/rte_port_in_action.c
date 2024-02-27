@@ -282,7 +282,7 @@ rte_port_in_action_profile_free(struct rte_port_in_action_profile *profile)
 struct rte_port_in_action {
 	struct ap_config cfg;
 	struct ap_data data;
-	uint8_t memory[0] __rte_cache_aligned;
+	uint8_t memory[] __rte_cache_aligned;
 };
 
 static __rte_always_inline void *
