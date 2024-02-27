@@ -60,7 +60,7 @@ cnxk_ep_process_pkts_vec_avx(struct rte_mbuf **rx_pkts, struct otx_ep_droq *droq
 
 		/* Store the 256bit data to the mbuf. */
 		for (i = 0; i < CNXK_EP_OQ_DESC_PER_LOOP_AVX; i++)
-			_mm256_storeu_si256((__m256i *)&m[i]->rearm_data, data[i]);
+			_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(m[i]), data[i]);
 
 		for (i = 0; i < CNXK_EP_OQ_DESC_PER_LOOP_AVX; i++)
 			rx_pkts[pkts++] = m[i];

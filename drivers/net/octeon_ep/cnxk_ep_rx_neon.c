@@ -72,10 +72,10 @@ cnxk_ep_process_pkts_vec_neon(struct rte_mbuf **rx_pkts, struct otx_ep_droq *dro
 		*(uint64_t *)&m3->pkt_len = vgetq_lane_u64(s23, 1);
 
 		/* Reset rearm data. */
-		*(uint64_t *)&m0->rearm_data = droq->rearm_data;
-		*(uint64_t *)&m1->rearm_data = droq->rearm_data;
-		*(uint64_t *)&m2->rearm_data = droq->rearm_data;
-		*(uint64_t *)&m3->rearm_data = droq->rearm_data;
+		*rte_mbuf_rearm_data(m0) = droq->rearm_data;
+		*rte_mbuf_rearm_data(m1) = droq->rearm_data;
+		*rte_mbuf_rearm_data(m2) = droq->rearm_data;
+		*rte_mbuf_rearm_data(m3) = droq->rearm_data;
 
 		rx_pkts[pkts++] = m0;
 		rx_pkts[pkts++] = m1;

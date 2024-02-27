@@ -158,7 +158,7 @@ cnxk_ep_process_pkts_scalar(struct rte_mbuf **rx_pkts, struct otx_ep_droq *droq,
 		mbuf->pkt_len = pkt_len;
 		mbuf->data_len = pkt_len;
 
-		*(uint64_t *)&mbuf->rearm_data = droq->rearm_data;
+		*rte_mbuf_rearm_data(mbuf) = droq->rearm_data;
 		rx_pkts[pkts] = mbuf;
 		bytes_rsvd += pkt_len;
 	}
