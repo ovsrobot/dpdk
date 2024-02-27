@@ -486,7 +486,12 @@ struct rte_mbuf {
 	struct rte_mbuf *next;
 #endif
 
-	/* next 8 bytes are initialised on RX descriptor rearm */
+	/**
+	 * next 8 bytes are initialised on RX descriptor rearm
+	 *
+	 * To obtain a pointer to rearm_data use the rte_mbuf_rearm_data()
+	 * accessor instead of directly referencing through the data_off field.
+	 */
 	RTE_MARKER64 rearm_data;
 	uint16_t data_off;
 
@@ -522,6 +527,10 @@ struct rte_mbuf {
 	 * mbuf. Example: if vlan stripping is enabled, a received vlan packet
 	 * would have RTE_PTYPE_L2_ETHER and not RTE_PTYPE_L2_VLAN because the
 	 * vlan is stripped from the data.
+	 *
+	 * To obtain a pointer to rx_descriptor_fields1 use the
+	 * rte_mbuf_rx_descriptor_fields1() accessor instead of directly
+	 * referencing through the the anonymous union fields.
 	 */
 	union {
 		uint32_t packet_type; /**< L2/L3/L4 and tunnel information. */
