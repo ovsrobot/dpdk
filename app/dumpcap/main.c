@@ -830,11 +830,12 @@ static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
 				intf->opts.promisc_mode = false;
 			} else {
 				ret = rte_eth_promiscuous_enable(intf->port);
-				if (ret != 0)
+				if (ret != 0) {
 					fprintf(stderr,
 						"port %u set promiscuous enable failed: %d\n",
 						intf->port, ret);
-				intf->opts.promisc_mode = false;
+					intf->opts.promisc_mode = false;
+				}
 			}
 		}
 		++count;
