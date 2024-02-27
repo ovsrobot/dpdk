@@ -577,7 +577,6 @@ int enic_enable(struct enic *enic)
 	int err;
 	struct rte_eth_dev *eth_dev = enic->rte_dev;
 	uint64_t simple_tx_offloads;
-	uintptr_t p;
 
 	if (enic->enable_avx2_rx) {
 		struct rte_mbuf mb_def = { .buf_addr = 0 };
@@ -592,8 +591,7 @@ int enic_enable(struct enic *enic)
 		mb_def.port = enic->port_id;
 		rte_mbuf_refcnt_set(&mb_def, 1);
 		rte_compiler_barrier();
-		p = (uintptr_t)&mb_def.rearm_data;
-		enic->mbuf_initializer = *(uint64_t *)p;
+		enic->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 	}
 
 	eth_dev->data->dev_link.link_speed = vnic_dev_port_speed(enic->vdev);
