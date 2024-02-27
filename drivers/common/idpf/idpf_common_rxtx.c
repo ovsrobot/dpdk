@@ -1595,7 +1595,6 @@ static const struct idpf_rxq_ops def_rx_ops_vec = {
 static inline int
 idpf_rxq_vec_setup_default(struct idpf_rx_queue *rxq)
 {
-	uintptr_t p;
 	struct rte_mbuf mb_def = { .buf_addr = 0 }; /* zeroed mbuf */
 
 	mb_def.nb_segs = 1;
@@ -1605,8 +1604,7 @@ idpf_rxq_vec_setup_default(struct idpf_rx_queue *rxq)
 
 	/* prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer = *(uint64_t *)p;
+	rxq->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 	return 0;
 }
 
