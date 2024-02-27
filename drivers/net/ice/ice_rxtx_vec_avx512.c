@@ -100,20 +100,6 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 			 0xFFFFFFFF
 			);
 
-	/**
-	 * compile-time check the above crc and shuffle layout is correct.
-	 * NOTE: the first field (lowest address) is given last in set_epi
-	 * calls above.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
-
 	/* following code block is for Rx Checksum Offload */
 	/* Status/Error flag masks */
 	/**
@@ -568,13 +554,6 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 		 * add in the previously computed rx_descriptor fields to
 		 * make a single 256-bit write per mbuf
 		 */
-		/* check the structure matches expectations */
-		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-				 offsetof(struct rte_mbuf, rearm_data) + 8);
-		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
-				 RTE_ALIGN(offsetof(struct rte_mbuf,
-						    rearm_data),
-					   16));
 		/* build up data and do writes */
 		__m256i rearm0, rearm1, rearm2, rearm3, rearm4, rearm5,
 			rearm6, rearm7;
@@ -597,13 +576,13 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 		rearm0 = _mm256_permute2f128_si256(rearm0, mb0_1, 0x20);
 
 		/* write to mbuf */
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 6]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 6]),
 				    rearm6);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 4]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 4]),
 				    rearm4);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 2]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 2]),
 				    rearm2);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 0]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 0]),
 				    rearm0);
 
 		/* repeat for the odd mbufs */
@@ -627,13 +606,13 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 		rearm3 = _mm256_blend_epi32(rearm3, mb2_3, 0xF0);
 		rearm1 = _mm256_blend_epi32(rearm1, mb0_1, 0xF0);
 		/* again write to mbufs */
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 7]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 7]),
 				    rearm7);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 5]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 5]),
 				    rearm5);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 3]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 3]),
 				    rearm3);
-		_mm256_storeu_si256((__m256i *)&rx_pkts[i + 1]->rearm_data,
+		_mm256_storeu_si256((__m256i *)rte_mbuf_rearm_data(rx_pkts[i + 1]),
 				    rearm1);
 
 		/* extract and record EOP bit */
