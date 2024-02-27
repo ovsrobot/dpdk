@@ -1306,7 +1306,6 @@ nicvf_dev_tx_queue_stop(struct rte_eth_dev *dev, uint16_t qidx)
 static inline void
 nicvf_rxq_mbuf_setup(struct nicvf_rxq *rxq)
 {
-	uintptr_t p;
 	struct rte_mbuf mb_def;
 	struct nicvf *nic = rxq->nic;
 
@@ -1328,8 +1327,7 @@ nicvf_rxq_mbuf_setup(struct nicvf_rxq *rxq)
 
 	/* Prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer.value = *(uint64_t *)p;
+	rxq->mbuf_initializer.value = *rte_mbuf_rearm_data(&mb_def);
 }
 
 static int

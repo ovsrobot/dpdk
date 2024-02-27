@@ -66,7 +66,7 @@ nicvf_mbuff_init_update(struct rte_mbuf *pkt, const uint64_t mbuf_init,
 #else
 	init.value += apad;
 #endif
-	*(uint64_t *)(&pkt->rearm_data) = init.value;
+	*rte_mbuf_rearm_data(pkt) = init.value;
 }
 
 static inline void
@@ -80,7 +80,7 @@ nicvf_mbuff_init_mseg_update(struct rte_mbuf *pkt, const uint64_t mbuf_init,
 	init.value += apad;
 #endif
 	init.fields.nb_segs = nb_segs;
-	*(uint64_t *)(&pkt->rearm_data) = init.value;
+	*rte_mbuf_rearm_data(pkt) = init.value;
 }
 
 uint32_t nicvf_dev_rx_queue_count(void *rx_queue);
