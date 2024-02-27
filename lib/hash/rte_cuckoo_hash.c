@@ -1857,8 +1857,50 @@ rte_hash_free_key_with_position(const struct rte_hash *h,
 
 }
 
+#if defined(__ARM_NEON)
+
 static inline void
-compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
+compare_signatures_dense(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
+			const struct rte_hash_bucket *prim_bkt,
+			const struct rte_hash_bucket *sec_bkt,
+			uint16_t sig,
+			enum rte_hash_sig_compare_function sig_cmp_fn)
+{
+	unsigned int i;
+
+	/* For match mask every bits indicates the match */
+	switch (sig_cmp_fn) {
+	case RTE_HASH_COMPARE_NEON: {
+		uint16x8_t vmat, vsig, x;
+		int16x8_t shift = {0, 1, 2, 3, 4, 5, 6, 7};
+
+		vsig = vld1q_dup_u16((uint16_t const *)&sig);
+		/* Compare all signatures in the primary bucket */
+		vmat = vceqq_u16(vsig,
+			vld1q_u16((uint16_t const *)prim_bkt->sig_current));
+		x = vshlq_u16(vandq_u16(vmat, vdupq_n_u16(0x0001)), shift);
+		*prim_hash_matches = (uint32_t)(vaddvq_u16(x));
+		/* Compare all signatures in the secondary bucket */
+		vmat = vceqq_u16(vsig,
+			vld1q_u16((uint16_t const *)sec_bkt->sig_current));
+		x = vshlq_u16(vandq_u16(vmat, vdupq_n_u16(0x0001)), shift);
+		*sec_hash_matches = (uint32_t)(vaddvq_u16(x));
+		}
+		break;
+	default:
+		for (i = 0; i < RTE_HASH_BUCKET_ENTRIES; i++) {
+			*prim_hash_matches |=
+				((sig == prim_bkt->sig_current[i]) << i);
+			*sec_hash_matches |=
+				((sig == sec_bkt->sig_current[i]) << i);
+		}
+	}
+}
+
+#else
+
+static inline void
+compare_signatures_sparse(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 			const struct rte_hash_bucket *prim_bkt,
 			const struct rte_hash_bucket *sec_bkt,
 			uint16_t sig,
@@ -1885,25 +1927,7 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 		/* Extract the even-index bits only */
 		*sec_hash_matches &= 0x5555;
 		break;
-#elif defined(__ARM_NEON)
-	case RTE_HASH_COMPARE_NEON: {
-		uint16x8_t vmat, vsig, x;
-		int16x8_t shift = {-15, -13, -11, -9, -7, -5, -3, -1};
-
-		vsig = vld1q_dup_u16((uint16_t const *)&sig);
-		/* Compare all signatures in the primary bucket */
-		vmat = vceqq_u16(vsig,
-			vld1q_u16((uint16_t const *)prim_bkt->sig_current));
-		x = vshlq_u16(vandq_u16(vmat, vdupq_n_u16(0x8000)), shift);
-		*prim_hash_matches = (uint32_t)(vaddvq_u16(x));
-		/* Compare all signatures in the secondary bucket */
-		vmat = vceqq_u16(vsig,
-			vld1q_u16((uint16_t const *)sec_bkt->sig_current));
-		x = vshlq_u16(vandq_u16(vmat, vdupq_n_u16(0x8000)), shift);
-		*sec_hash_matches = (uint32_t)(vaddvq_u16(x));
-		}
-		break;
-#endif
+#endif /* defined(__SSE2__) */
 	default:
 		for (i = 0; i < RTE_HASH_BUCKET_ENTRIES; i++) {
 			*prim_hash_matches |=
@@ -1913,6 +1937,8 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 		}
 	}
 }
+
+#endif /* defined(__ARM_NEON) */
 
 static inline void
 __bulk_lookup_l(const struct rte_hash *h, const void **keys,
@@ -1928,18 +1954,30 @@ __bulk_lookup_l(const struct rte_hash *h, const void **keys,
 	uint32_t sec_hitmask[RTE_HASH_LOOKUP_BULK_MAX] = {0};
 	struct rte_hash_bucket *cur_bkt, *next_bkt;
 
+#if defined(__ARM_NEON)
+	const int hitmask_padding = 0;
+#else
+	const int hitmask_padding = 1;
+#endif
+
 	__hash_rw_reader_lock(h);
 
 	/* Compare signatures and prefetch key slot of first hit */
 	for (i = 0; i < num_keys; i++) {
-		compare_signatures(&prim_hitmask[i], &sec_hitmask[i],
+#if defined(__ARM_NEON)
+		compare_signatures_dense(&prim_hitmask[i], &sec_hitmask[i],
 			primary_bkt[i], secondary_bkt[i],
 			sig[i], h->sig_cmp_fn);
+#else
+		compare_signatures_sparse(&prim_hitmask[i], &sec_hitmask[i],
+			primary_bkt[i], secondary_bkt[i],
+			sig[i], h->sig_cmp_fn);
+#endif
 
 		if (prim_hitmask[i]) {
 			uint32_t first_hit =
 					rte_ctz32(prim_hitmask[i])
-					>> 1;
+					>> hitmask_padding;
 			uint32_t key_idx =
 				primary_bkt[i]->key_idx[first_hit];
 			const struct rte_hash_key *key_slot =
@@ -1953,7 +1991,7 @@ __bulk_lookup_l(const struct rte_hash *h, const void **keys,
 		if (sec_hitmask[i]) {
 			uint32_t first_hit =
 					rte_ctz32(sec_hitmask[i])
-					>> 1;
+					>> hitmask_padding;
 			uint32_t key_idx =
 				secondary_bkt[i]->key_idx[first_hit];
 			const struct rte_hash_key *key_slot =
@@ -1970,7 +2008,7 @@ __bulk_lookup_l(const struct rte_hash *h, const void **keys,
 		while (prim_hitmask[i]) {
 			uint32_t hit_index =
 					rte_ctz32(prim_hitmask[i])
-					>> 1;
+					>> hitmask_padding;
 			uint32_t key_idx =
 				primary_bkt[i]->key_idx[hit_index];
 			const struct rte_hash_key *key_slot =
@@ -1992,13 +2030,13 @@ __bulk_lookup_l(const struct rte_hash *h, const void **keys,
 				positions[i] = key_idx - 1;
 				goto next_key;
 			}
-			prim_hitmask[i] &= ~(3ULL << (hit_index << 1));
+			prim_hitmask[i] &= ~(1 << (hit_index << hitmask_padding));
 		}
 
 		while (sec_hitmask[i]) {
 			uint32_t hit_index =
 					rte_ctz32(sec_hitmask[i])
-					>> 1;
+					>> hitmask_padding;
 			uint32_t key_idx =
 				secondary_bkt[i]->key_idx[hit_index];
 			const struct rte_hash_key *key_slot =
@@ -2021,7 +2059,7 @@ __bulk_lookup_l(const struct rte_hash *h, const void **keys,
 				positions[i] = key_idx - 1;
 				goto next_key;
 			}
-			sec_hitmask[i] &= ~(3ULL << (hit_index << 1));
+			sec_hitmask[i] &= ~(1 << (hit_index << hitmask_padding));
 		}
 next_key:
 		continue;
@@ -2076,6 +2114,12 @@ __bulk_lookup_lf(const struct rte_hash *h, const void **keys,
 	struct rte_hash_bucket *cur_bkt, *next_bkt;
 	uint32_t cnt_b, cnt_a;
 
+#if defined(__ARM_NEON)
+	const int hitmask_padding = 0;
+#else
+	const int hitmask_padding = 1;
+#endif
+
 	for (i = 0; i < num_keys; i++)
 		positions[i] = -ENOENT;
 
@@ -2089,14 +2133,20 @@ __bulk_lookup_lf(const struct rte_hash *h, const void **keys,
 
 		/* Compare signatures and prefetch key slot of first hit */
 		for (i = 0; i < num_keys; i++) {
-			compare_signatures(&prim_hitmask[i], &sec_hitmask[i],
+#if defined(__ARM_NEON)
+			compare_signatures_dense(&prim_hitmask[i], &sec_hitmask[i],
 				primary_bkt[i], secondary_bkt[i],
 				sig[i], h->sig_cmp_fn);
+#else
+			compare_signatures_sparse(&prim_hitmask[i], &sec_hitmask[i],
+				primary_bkt[i], secondary_bkt[i],
+				sig[i], h->sig_cmp_fn);
+#endif
 
 			if (prim_hitmask[i]) {
 				uint32_t first_hit =
 						rte_ctz32(prim_hitmask[i])
-						>> 1;
+						>> hitmask_padding;
 				uint32_t key_idx =
 					primary_bkt[i]->key_idx[first_hit];
 				const struct rte_hash_key *key_slot =
@@ -2110,7 +2160,7 @@ __bulk_lookup_lf(const struct rte_hash *h, const void **keys,
 			if (sec_hitmask[i]) {
 				uint32_t first_hit =
 						rte_ctz32(sec_hitmask[i])
-						>> 1;
+						>> hitmask_padding;
 				uint32_t key_idx =
 					secondary_bkt[i]->key_idx[first_hit];
 				const struct rte_hash_key *key_slot =
@@ -2126,7 +2176,7 @@ __bulk_lookup_lf(const struct rte_hash *h, const void **keys,
 			while (prim_hitmask[i]) {
 				uint32_t hit_index =
 						rte_ctz32(prim_hitmask[i])
-						>> 1;
+						>> hitmask_padding;
 				uint32_t key_idx =
 				rte_atomic_load_explicit(
 					&primary_bkt[i]->key_idx[hit_index],
@@ -2152,13 +2202,13 @@ __bulk_lookup_lf(const struct rte_hash *h, const void **keys,
 					positions[i] = key_idx - 1;
 					goto next_key;
 				}
-				prim_hitmask[i] &= ~(3ULL << (hit_index << 1));
+				prim_hitmask[i] &= ~(1 << (hit_index << hitmask_padding));
 			}
 
 			while (sec_hitmask[i]) {
 				uint32_t hit_index =
 						rte_ctz32(sec_hitmask[i])
-						>> 1;
+						>> hitmask_padding;
 				uint32_t key_idx =
 				rte_atomic_load_explicit(
 					&secondary_bkt[i]->key_idx[hit_index],
@@ -2185,7 +2235,7 @@ __bulk_lookup_lf(const struct rte_hash *h, const void **keys,
 					positions[i] = key_idx - 1;
 					goto next_key;
 				}
-				sec_hitmask[i] &= ~(3ULL << (hit_index << 1));
+				sec_hitmask[i] &= ~(1 << (hit_index << hitmask_padding));
 			}
 next_key:
 			continue;
