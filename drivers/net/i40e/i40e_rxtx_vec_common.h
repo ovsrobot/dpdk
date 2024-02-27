@@ -189,7 +189,6 @@ _i40e_rx_queue_release_mbufs_vec(struct i40e_rx_queue *rxq)
 static inline int
 i40e_rxq_vec_setup_default(struct i40e_rx_queue *rxq)
 {
-	uintptr_t p;
 	struct rte_mbuf mb_def = { .buf_addr = 0 }; /* zeroed mbuf */
 
 	mb_def.nb_segs = 1;
@@ -199,8 +198,7 @@ i40e_rxq_vec_setup_default(struct i40e_rx_queue *rxq)
 
 	/* prevent compiler reordering: rearm_data covers previous fields */
 	rte_compiler_barrier();
-	p = (uintptr_t)&mb_def.rearm_data;
-	rxq->mbuf_initializer = *(uint64_t *)p;
+	rxq->mbuf_initializer = *rte_mbuf_rearm_data(&mb_def);
 	rxq->rx_using_sse = 1;
 	return 0;
 }
