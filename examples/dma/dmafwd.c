@@ -294,9 +294,10 @@ static inline void
 pktmbuf_metadata_copy(const struct rte_mbuf *src, struct rte_mbuf *dst)
 {
 	dst->data_off = src->data_off;
-	memcpy(&dst->rx_descriptor_fields1, &src->rx_descriptor_fields1,
+	memcpy(rte_mbuf_rx_descriptor_fields1(dst),
+		rte_mbuf_rx_descriptor_fields1((struct rte_mbuf *)(uintptr_t)src),
 		offsetof(struct rte_mbuf, buf_len) -
-		offsetof(struct rte_mbuf, rx_descriptor_fields1));
+		offsetof(struct rte_mbuf, data_off));
 }
 
 /* Copy packet data */
