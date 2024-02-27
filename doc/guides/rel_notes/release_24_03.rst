@@ -138,6 +138,10 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Updated Marvell cnxk eventdev driver.**
+
+  * Added ARM WFE instruction in ``GETWORK(rte_event_dev_dequeue)`` routine
+    to save power while waiting for SSO to schedule work.
 
 Removed Items
 -------------
