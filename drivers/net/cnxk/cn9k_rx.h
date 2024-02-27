@@ -155,7 +155,7 @@ nix_cqe_xtract_mseg(const union nix_rx_parse_u *rx, struct rte_mbuf *mbuf,
 
 		mbuf->data_len = sg & 0xFFFF;
 		sg = sg >> 16;
-		*(uint64_t *)(&mbuf->rearm_data) = rearm;
+		*rte_mbuf_rearm_data(mbuf) = rearm;
 		nb_segs--;
 		iova_list++;
 
@@ -398,7 +398,7 @@ skip_parse:
 			nix_update_match_id(rx->cn9k.match_id, ol_flags, mbuf);
 
 	mbuf->ol_flags = ol_flags;
-	*(uint64_t *)(&mbuf->rearm_data) = val;
+	*rte_mbuf_rearm_data(mbuf) = val;
 	mbuf->pkt_len = len;
 	mbuf->data_len = len;
 
@@ -799,16 +799,16 @@ cn9k_nix_recv_pkts_vector(void *rx_queue, struct rte_mbuf **rx_pkts,
 		rearm3 = vsetq_lane_u64(ol_flags3, rearm3, 1);
 
 		/* Update rx_descriptor_fields1 */
-		vst1q_u64((uint64_t *)mbuf0->rx_descriptor_fields1, f0);
-		vst1q_u64((uint64_t *)mbuf1->rx_descriptor_fields1, f1);
-		vst1q_u64((uint64_t *)mbuf2->rx_descriptor_fields1, f2);
-		vst1q_u64((uint64_t *)mbuf3->rx_descriptor_fields1, f3);
+		vst1q_u64((uint64_t *)rte_mbuf_rx_descriptor_fields1(mbuf0), f0);
+		vst1q_u64((uint64_t *)rte_mbuf_rx_descriptor_fields1(mbuf1), f1);
+		vst1q_u64((uint64_t *)rte_mbuf_rx_descriptor_fields1(mbuf2), f2);
+		vst1q_u64((uint64_t *)rte_mbuf_rx_descriptor_fields1(mbuf3), f3);
 
 		/* Update rearm_data */
-		vst1q_u64((uint64_t *)mbuf0->rearm_data, rearm0);
-		vst1q_u64((uint64_t *)mbuf1->rearm_data, rearm1);
-		vst1q_u64((uint64_t *)mbuf2->rearm_data, rearm2);
-		vst1q_u64((uint64_t *)mbuf3->rearm_data, rearm3);
+		vst1q_u64(rte_mbuf_rearm_data(mbuf0), rearm0);
+		vst1q_u64(rte_mbuf_rearm_data(mbuf1), rearm1);
+		vst1q_u64(rte_mbuf_rearm_data(mbuf2), rearm2);
+		vst1q_u64(rte_mbuf_rearm_data(mbuf3), rearm3);
 
 		if (flags & NIX_RX_MULTI_SEG_F) {
 			/* Multi segment is enable build mseg list for
