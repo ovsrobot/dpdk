@@ -744,8 +744,7 @@ ionic_rx_rearm_data(struct ionic_lif *lif)
 
 	rte_compiler_barrier();
 
-	RTE_BUILD_BUG_ON(sizeof(rxm.rearm_data[0]) != sizeof(uint64_t));
-	return rxm.rearm_data[0];
+	return *rte_mbuf_rearm_data(&rxm);
 }
 
 static uint64_t
@@ -762,8 +761,7 @@ ionic_rx_seg_rearm_data(struct ionic_lif *lif)
 
 	rte_compiler_barrier();
 
-	RTE_BUILD_BUG_ON(sizeof(rxm.rearm_data[0]) != sizeof(uint64_t));
-	return rxm.rearm_data[0];
+	return *rte_mbuf_rearm_data(&rxm);
 }
 
 int
