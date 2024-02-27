@@ -98,10 +98,10 @@ static inline void
 desc_to_olflags_v_ipsec(__m128i descs[4], struct rte_mbuf **rx_pkts)
 {
 	__m128i sterr, rearm, tmp_e, tmp_p;
-	uint32_t *rearm0 = (uint32_t *)rx_pkts[0]->rearm_data + 2;
-	uint32_t *rearm1 = (uint32_t *)rx_pkts[1]->rearm_data + 2;
-	uint32_t *rearm2 = (uint32_t *)rx_pkts[2]->rearm_data + 2;
-	uint32_t *rearm3 = (uint32_t *)rx_pkts[3]->rearm_data + 2;
+	uint32_t *rearm0 = (uint32_t *)rte_mbuf_rearm_data(rx_pkts[0]) + 2;
+	uint32_t *rearm1 = (uint32_t *)rte_mbuf_rearm_data(rx_pkts[1]) + 2;
+	uint32_t *rearm2 = (uint32_t *)rte_mbuf_rearm_data(rx_pkts[2]) + 2;
+	uint32_t *rearm3 = (uint32_t *)rte_mbuf_rearm_data(rx_pkts[3]) + 2;
 	const __m128i ipsec_sterr_msk =
 			_mm_set1_epi32(IXGBE_RXDADV_IPSEC_STATUS_SECP |
 				       IXGBE_RXDADV_IPSEC_ERROR_AUTH_FAILED);
@@ -251,14 +251,10 @@ desc_to_olflags_v(__m128i descs[4], __m128i mbuf_init, uint8_t vlan_flags,
 	rearm3 = _mm_blend_epi16(mbuf_init, _mm_slli_si128(vtag1, 2), 0x10);
 
 	/* write the rearm data and the olflags in one write */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
-			offsetof(struct rte_mbuf, rearm_data) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
-			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
-	_mm_store_si128((__m128i *)&rx_pkts[1]->rearm_data, rearm1);
-	_mm_store_si128((__m128i *)&rx_pkts[2]->rearm_data, rearm2);
-	_mm_store_si128((__m128i *)&rx_pkts[3]->rearm_data, rearm3);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[0]), rearm0);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[1]), rearm1);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[2]), rearm2);
+	_mm_store_si128((__m128i *)rte_mbuf_rearm_data(rx_pkts[3]), rearm3);
 }
 
 static inline uint32_t get_packet_type(int index,
@@ -350,15 +346,7 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 				-rxq->crc_len, /* sub crc on pkt_len */
 				0, 0            /* ignore pkt_type field */
 			);
-	/*
-	 * compile-time check the above crc_adjust layout is correct.
-	 * NOTE: the first field (lowest address) is given last in set_epi16
-	 * call above.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+
 	__m128i dd_check, eop_check;
 	__m128i mbuf_init;
 	uint8_t vlan_flags;
@@ -417,19 +405,6 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		0xFF, 0xFF,  /* skip 32 bit pkt_type */
 		0xFF, 0xFF
 		);
-	/*
-	 * Compile-time verify the shuffle mask
-	 * NOTE: some field positions already verified above, but duplicated
-	 * here for completeness in case of future modifications.
-	 */
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
 
 	mbuf_init = _mm_set_epi64x(0, rxq->mbuf_initializer);
 
@@ -530,9 +505,9 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		staterr = _mm_unpacklo_epi32(sterr_tmp1, sterr_tmp2);
 
 		/* D.3 copy final 3,4 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+3]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3]),
 				pkt_mb4);
-		_mm_storeu_si128((void *)&rx_pkts[pos+2]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2]),
 				pkt_mb3);
 
 		/* D.2 pkt 1,2 set in_port/nb_seg and remove crc */
@@ -566,9 +541,9 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		staterr = _mm_packs_epi32(staterr, zero);
 
 		/* D.3 copy final 1,2 data to rx_pkts */
-		_mm_storeu_si128((void *)&rx_pkts[pos+1]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1]),
 				pkt_mb2);
-		_mm_storeu_si128((void *)&rx_pkts[pos]->rx_descriptor_fields1,
+		_mm_storeu_si128(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 				pkt_mb1);
 
 		desc_to_ptype_v(descs, rxq->pkt_type_mask, &rx_pkts[pos]);

@@ -56,13 +56,13 @@ ixgbe_rxq_rearm(struct ixgbe_rx_queue *rxq)
 		 * Flush mbuf with pkt template.
 		 * Data to be rearmed is 6 bytes long.
 		 */
-		vst1_u8((uint8_t *)&mb0->rearm_data, p);
+		vst1_u8((uint8_t *)rte_mbuf_rearm_data(mb0), p);
 		paddr = mb0->buf_iova + RTE_PKTMBUF_HEADROOM;
 		dma_addr0 = vsetq_lane_u64(paddr, zero, 0);
 		/* flush desc with pa dma_addr */
 		vst1q_u64((uint64_t *)&rxdp++->read, dma_addr0);
 
-		vst1_u8((uint8_t *)&mb1->rearm_data, p);
+		vst1_u8((uint8_t *)rte_mbuf_rearm_data(mb1), p);
 		paddr = mb1->buf_iova + RTE_PKTMBUF_HEADROOM;
 		dma_addr1 = vsetq_lane_u64(paddr, zero, 0);
 		vst1q_u64((uint64_t *)&rxdp++->read, dma_addr1);
@@ -411,9 +411,9 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		pkt_mb3 = vreinterpretq_u8_u16(tmp);
 
 		/* D.3 copy final 3,4 data to rx_pkts */
-		vst1q_u8((void *)&rx_pkts[pos + 3]->rx_descriptor_fields1,
+		vst1q_u8(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 3]),
 			 pkt_mb4);
-		vst1q_u8((void *)&rx_pkts[pos + 2]->rx_descriptor_fields1,
+		vst1q_u8(rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 2]),
 			 pkt_mb3);
 
 		/* D.2 pkt 1,2 set in_port/nb_seg and remove crc */
@@ -441,9 +441,9 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		rte_prefetch_non_temporal(rxdp + RTE_IXGBE_DESCS_PER_LOOP);
 
 		/* D.3 copy final 1,2 data to rx_pkts */
-		vst1q_u8((uint8_t *)&rx_pkts[pos + 1]->rx_descriptor_fields1,
+		vst1q_u8((uint8_t *)rte_mbuf_rx_descriptor_fields1(rx_pkts[pos + 1]),
 			 pkt_mb2);
-		vst1q_u8((uint8_t *)&rx_pkts[pos]->rx_descriptor_fields1,
+		vst1q_u8((uint8_t *)rte_mbuf_rx_descriptor_fields1(rx_pkts[pos]),
 			 pkt_mb1);
 
 		desc_to_ptype_v(descs, rxq->pkt_type_mask, &rx_pkts[pos]);
