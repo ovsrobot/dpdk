@@ -48,3 +48,10 @@ DPDK_24 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_siphash;
+	rte_hsiphash;
+};
