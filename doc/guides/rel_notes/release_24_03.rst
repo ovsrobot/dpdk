@@ -156,6 +156,15 @@ Removed Items
   The application reserved statically defined logtypes ``RTE_LOGTYPE_USER1..RTE_LOGTYPE_USER8``
   are still defined.
 
+* mbuf: ``RTE_MARKER`` fields ``cacheline0`` ``cacheline1``
+  ``rx_descriptor_fields1`` and ``RTE_MARKER64`` field ``rearm_data``
+  have been removed from ``struct rte_mbuf``.
+  Prefetch of ``cacheline0`` and ``cacheline1`` may be achieved through
+  ``rte_mbuf_prefetch_part1()`` and ``rte_mbuf_prefetch_part2()`` inline
+  functions respectively.
+  Access to ``rearm_data`` and ``rx_descriptor_fields1`` should be
+  through new inline functions ``rte_mbuf_rearm_data()`` and
+  ``rte_mbuf_rx_descriptor_fields1()`` respectively.
 
 API Changes
 -----------

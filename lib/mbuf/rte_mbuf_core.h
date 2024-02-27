@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdalign.h>
 #include <stdint.h>
 
 #include <rte_common.h>
@@ -467,8 +468,6 @@ enum {
  * The generic rte_mbuf, containing a packet mbuf.
  */
 struct rte_mbuf {
-	RTE_MARKER cacheline0;
-
 	void *buf_addr;           /**< Virtual address of segment buffer. */
 #if RTE_IOVA_IN_MBUF
 	/**
@@ -495,7 +494,6 @@ struct rte_mbuf {
 	 * To obtain a pointer to rearm_data use the rte_mbuf_rearm_data()
 	 * accessor instead of directly referencing through the data_off field.
 	 */
-	RTE_MARKER64 rearm_data;
 	uint16_t data_off;
 
 	/**
@@ -522,8 +520,6 @@ struct rte_mbuf {
 	uint64_t ol_flags;        /**< Offload features. */
 
 	/* remaining bytes are set on RX when pulling packet from descriptor */
-	RTE_MARKER rx_descriptor_fields1;
-
 	/*
 	 * The packet type, which is the combination of outer/inner L2, L3, L4
 	 * and tunnel types. The packet_type is about data really present in the
@@ -607,8 +603,7 @@ struct rte_mbuf {
 	struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
 
 	/* second cache line - fields only used in slow path or on TX */
-	RTE_MARKER cacheline1 __rte_cache_min_aligned;
-
+	alignas(RTE_CACHE_LINE_MIN_SIZE)
 #if RTE_IOVA_IN_MBUF
 	/**
 	 * Next segment of scattered packet. Must be NULL in the last
@@ -677,35 +672,31 @@ struct rte_mbuf {
 } __rte_cache_aligned;
 
 static_assert(!(offsetof(struct rte_mbuf, ol_flags) !=
-	offsetof(struct rte_mbuf, rearm_data) + 8), "ol_flags");
-static_assert(!(offsetof(struct rte_mbuf, rearm_data) !=
-	RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16)), "rearm_data");
+	offsetof(struct rte_mbuf, data_off) + 8), "ol_flags");
 static_assert(!(offsetof(struct rte_mbuf, data_off) !=
-	offsetof(struct rte_mbuf, rearm_data)), "data_off");
-static_assert(!(offsetof(struct rte_mbuf, data_off) <
-	offsetof(struct rte_mbuf, rearm_data)), "data_off");
+	RTE_ALIGN(offsetof(struct rte_mbuf, data_off), 16)), "data_off");
 static_assert(!(offsetof(struct rte_mbuf, refcnt) <
-	offsetof(struct rte_mbuf, rearm_data)), "refcnt");
+	offsetof(struct rte_mbuf, data_off)), "refcnt");
 static_assert(!(offsetof(struct rte_mbuf, nb_segs) <
-	offsetof(struct rte_mbuf, rearm_data)), "nb_segs");
+	offsetof(struct rte_mbuf, data_off)), "nb_segs");
 static_assert(!(offsetof(struct rte_mbuf, port) <
-	offsetof(struct rte_mbuf, rearm_data)), "port");
+	offsetof(struct rte_mbuf, data_off)), "port");
 static_assert(!(offsetof(struct rte_mbuf, data_off) -
-	offsetof(struct rte_mbuf, rearm_data) > 6), "data_off");
+	offsetof(struct rte_mbuf, data_off) > 6), "data_off");
 static_assert(!(offsetof(struct rte_mbuf, refcnt) -
-	offsetof(struct rte_mbuf, rearm_data) > 6), "refcnt");
+	offsetof(struct rte_mbuf, data_off) > 6), "refcnt");
 static_assert(!(offsetof(struct rte_mbuf, nb_segs) -
-	offsetof(struct rte_mbuf, rearm_data) > 6), "nb_segs");
+	offsetof(struct rte_mbuf, data_off) > 6), "nb_segs");
 static_assert(!(offsetof(struct rte_mbuf, port) -
-	offsetof(struct rte_mbuf, rearm_data) > 6), "port");
+	offsetof(struct rte_mbuf, data_off) > 6), "port");
 static_assert(!(offsetof(struct rte_mbuf, pkt_len) !=
-	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4), "pkt_len");
+	offsetof(struct rte_mbuf, packet_type) + 4), "pkt_len");
 static_assert(!(offsetof(struct rte_mbuf, data_len) !=
-	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8), "data_len");
+	offsetof(struct rte_mbuf, packet_type) + 8), "data_len");
 static_assert(!(offsetof(struct rte_mbuf, vlan_tci) !=
-	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10), "vlan_tci");
+	offsetof(struct rte_mbuf, packet_type) + 10), "vlan_tci");
 static_assert(!(offsetof(struct rte_mbuf, hash) !=
-	offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12), "hash");
+	offsetof(struct rte_mbuf, packet_type) + 12), "hash");
 
 /**
  * Function typedef of callback to free externally attached buffer.
