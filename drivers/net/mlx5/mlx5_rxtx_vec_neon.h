@@ -99,7 +99,7 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		t_pkt->data_len + (rxq->crc_present * RTE_ETHER_CRC_LEN);
 	uint16_t pkts_n = mcqe_n;
 	const uint64x2_t rearm =
-		vld1q_u64((void *)&t_pkt->rearm_data);
+		vld1q_u64((void *)rte_mbuf_rearm_data(t_pkt));
 	const uint32x4_t rxdf_mask = {
 		0xffffffff, /* packet_type */
 		0,          /* skip pkt_len */
@@ -107,7 +107,7 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		0,          /* skip hash.rss */
 	};
 	const uint8x16_t rxdf =
-		vandq_u8(vld1q_u8((void *)&t_pkt->rx_descriptor_fields1),
+		vandq_u8(vld1q_u8(rte_mbuf_rx_descriptor_fields1(t_pkt)),
 			 vreinterpretq_u8_u32(rxdf_mask));
 	const uint16x8_t crc_adj = {
 		0, 0,
@@ -140,10 +140,10 @@ cycle:
 		rte_prefetch0((void *)(cq + mcqe_n));
 	for (pos = 0; pos < mcqe_n; ) {
 		uint8_t *p = (void *)&mcq[pos % 8];
-		uint8_t *e0 = (void *)&elts[pos]->rearm_data;
-		uint8_t *e1 = (void *)&elts[pos + 1]->rearm_data;
-		uint8_t *e2 = (void *)&elts[pos + 2]->rearm_data;
-		uint8_t *e3 = (void *)&elts[pos + 3]->rearm_data;
+		uint8_t *e0 = (void *)rte_mbuf_rearm_data(elts[pos]);
+		uint8_t *e1 = (void *)rte_mbuf_rearm_data(elts[pos + 1]);
+		uint8_t *e2 = (void *)rte_mbuf_rearm_data(elts[pos + 2]);
+		uint8_t *e3 = (void *)rte_mbuf_rearm_data(elts[pos + 3]);
 		uint16x4_t byte_cnt;
 #ifdef MLX5_PMD_SOFT_COUNTERS
 		uint16x4_t invalid_mask =
@@ -513,10 +513,10 @@ rxq_cq_to_ptype_oflags_v(struct mlx5_rxq_data *rxq,
 					(vgetq_lane_u32(ol_flags, 0),
 					 vreinterpretq_u32_u64(mbuf_init), 2));
 
-	vst1q_u64((void *)&pkts[0]->rearm_data, rearm0);
-	vst1q_u64((void *)&pkts[1]->rearm_data, rearm1);
-	vst1q_u64((void *)&pkts[2]->rearm_data, rearm2);
-	vst1q_u64((void *)&pkts[3]->rearm_data, rearm3);
+	vst1q_u64((void *)rte_mbuf_rearm_data(pkts[0]), rearm0);
+	vst1q_u64((void *)rte_mbuf_rearm_data(pkts[1]), rearm1);
+	vst1q_u64((void *)rte_mbuf_rearm_data(pkts[2]), rearm2);
+	vst1q_u64((void *)rte_mbuf_rearm_data(pkts[3]), rearm3);
 }
 
 /**

@@ -29,25 +29,6 @@
 #define S_ASSERT_MLX5_CQE(s) \
 	static_assert(s, "A field of struct mlx5_cqe is changed")
 
-/* rxq_cq_decompress_v() */
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, pkt_len) ==
-		  offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, data_len) ==
-		  offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, hash) ==
-		  offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
-
-/* rxq_cq_to_ptype_oflags_v() */
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, ol_flags) ==
-		  offsetof(struct rte_mbuf, rearm_data) + 8);
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, rearm_data) ==
-		  RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-
-/* rxq_burst_v() */
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, pkt_len) ==
-		  offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
-S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, data_len) ==
-		  offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
 #if (RTE_CACHE_LINE_SIZE == 128)
 S_ASSERT_MLX5_CQE(offsetof(struct mlx5_cqe, pkt_info) == 64);
 #else
