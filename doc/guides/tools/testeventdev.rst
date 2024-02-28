@@ -124,6 +124,10 @@ The following are the application command-line options:
 
         Use crypto device as producer.
 
+* ``--prod_type_dmadev``
+
+        Use dma device as producer.
+
 * ``--timer_tick_nsec``
 
        Used to dictate number of nano seconds between bucket traversal of the
@@ -155,6 +159,11 @@ The following are the application command-line options:
 * ``--crypto_adptr_mode``
 
         Set crypto adapter mode. Use 0 for OP_NEW (default) and 1 for
+        OP_FORWARD mode.
+
+* ``--dma_adptr_mode``
+
+        Set dma adapter mode. Use 0 for OP_NEW (default) and 1 for
         OP_FORWARD mode.
 
 * ``--crypto_op_type``
@@ -459,6 +468,7 @@ Supported application command line options are following::
         --prod_type_timerdev_burst
         --prod_type_timerdev
         --prod_type_cryptodev
+        --prod_type_dmadev
         --prod_enq_burst_sz
         --timer_tick_nsec
         --max_tmo_nsec
@@ -467,6 +477,7 @@ Supported application command line options are following::
         --nb_timer_adptrs
         --deq_tmo_nsec
         --crypto_adptr_mode
+        --dma_adptr_mode
 
 Example
 ^^^^^^^
@@ -570,6 +581,7 @@ Supported application command line options are following::
         --prod_type_timerdev_burst
         --prod_type_timerdev
         --prod_type_cryptodev
+        --prod_type_dmadev
         --timer_tick_nsec
         --max_tmo_nsec
         --expiry_nsec
@@ -577,6 +589,7 @@ Supported application command line options are following::
         --nb_timer_adptrs
         --deq_tmo_nsec
         --crypto_adptr_mode
+        --dma_adptr_mode
 
 Example
 ^^^^^^^
