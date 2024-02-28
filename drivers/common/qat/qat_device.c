@@ -62,6 +62,9 @@ static const struct rte_pci_id pci_id_qat_map[] = {
 		{
 			RTE_PCI_DEVICE(0x8086, 0x4945),
 		},
+		{
+			RTE_PCI_DEVICE(0x8086, 0x1454),
+		},
 		{.device_id = 0},
 };
 
@@ -199,6 +202,8 @@ pick_gen(const struct rte_pci_device *pci_dev)
 	case 0x4943:
 	case 0x4945:
 		return QAT_GEN4;
+	case 0x1454:
+		return QAT_GEN_LCE;
 	default:
 		QAT_LOG(ERR, "Invalid dev_id, can't determine generation");
 		return QAT_N_GENS;
