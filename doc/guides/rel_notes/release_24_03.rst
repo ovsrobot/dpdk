@@ -138,6 +138,12 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Updated ipsec_mb crypto driver.**
+
+  * Kasumi, Snow3G, ChaChaPoly and ZUC PMDs now share the job API codepath
+    with AESNI_MB PMD. Depending on the architecture, the performance of ZUC
+    crypto PMD is approximately 10% less for small fixed packet sizes.
+
 
 Removed Items
 -------------
