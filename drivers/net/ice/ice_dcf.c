@@ -731,7 +731,7 @@ dcf_get_vlan_offload_caps_v2(struct ice_dcf_hw *hw)
 		return ret;
 	}
 
-	rte_memcpy(&hw->vlan_v2_caps, &vlan_v2_caps, sizeof(vlan_v2_caps));
+	memcpy(&hw->vlan_v2_caps, &vlan_v2_caps, sizeof(vlan_v2_caps));
 	return 0;
 }
 
@@ -1407,8 +1407,7 @@ ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,
 		return -ENOMEM;
 	}
 
-	rte_memcpy(list->list[0].addr, addr->addr_bytes,
-			sizeof(addr->addr_bytes));
+	memcpy(list->list[0].addr, addr->addr_bytes, sizeof(addr->addr_bytes));
 
 	PMD_DRV_LOG(DEBUG, "add/rm mac:" RTE_ETHER_ADDR_PRT_FMT,
 			    RTE_ETHER_ADDR_BYTES(addr));
