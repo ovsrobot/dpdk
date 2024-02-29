@@ -62,6 +62,9 @@ static const struct rte_pci_id pci_id_qat_map[] = {
 		{
 			RTE_PCI_DEVICE(0x8086, 0x4945),
 		},
+		{
+			RTE_PCI_DEVICE(0x8086, 0x0da5),
+		},
 		{.device_id = 0},
 };
 
@@ -199,6 +202,8 @@ pick_gen(const struct rte_pci_device *pci_dev)
 	case 0x4943:
 	case 0x4945:
 		return QAT_GEN4;
+	case 0x0da5:
+		return QAT_VQAT;
 	default:
 		QAT_LOG(ERR, "Invalid dev_id, can't determine generation");
 		return QAT_N_GENS;
@@ -281,6 +286,7 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 	strlcpy(qat_dev->name, name, QAT_DEV_NAME_MAX_LEN);
 	qat_dev->qat_dev_id = qat_dev_id;
 	qat_dev->qat_dev_gen = qat_dev_gen;
+	qat_pci_devs[qat_dev_id].pci_dev = pci_dev;
 
 	ops_hw = qat_dev_hw_spec[qat_dev->qat_dev_gen];
 	NOT_NULL(ops_hw->qat_dev_get_misc_bar, goto error,
@@ -326,7 +332,6 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 	 * qat_dev to list of devices
 	 */
 	qat_pci_devs[qat_dev_id].mz = qat_dev_mz;
-	qat_pci_devs[qat_dev_id].pci_dev = pci_dev;
 	qat_nb_pci_devices++;
 
 	QAT_LOG(DEBUG, "QAT device %d found, name %s, total QATs %d",
