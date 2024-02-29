@@ -676,7 +676,7 @@ dpaa_sec_dump(struct dpaa_sec_op_ctx *ctx, struct dpaa_sec_qp *qp)
 	}
 
 	cdb = &sess->cdb;
-	rte_memcpy(&c_cdb, cdb, sizeof(struct sec_cdb));
+	memcpy(&c_cdb, cdb, sizeof(struct sec_cdb));
 #ifdef RTE_LIB_SECURITY
 	printf("\nsession protocol type = %d\n", sess->proto_alg);
 #endif
