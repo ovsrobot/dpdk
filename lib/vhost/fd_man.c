@@ -19,8 +19,8 @@
 
 RTE_LOG_REGISTER_SUFFIX(vhost_fdset_logtype, fdset, INFO);
 #define RTE_LOGTYPE_VHOST_FDMAN vhost_fdset_logtype
-#define VHOST_FDMAN_LOG(level, ...) \
-	RTE_LOG_LINE(level, VHOST_FDMAN, "" __VA_ARGS__)
+#define VHOST_FDMAN_LOG(prefix, level, fmt, args...) \
+	RTE_LOG_LINE(level, VHOST_FDMAN, "(%s) " fmt, prefix, ##args)
 
 #define FDPOLLERR (POLLERR | POLLHUP | POLLNVAL)
 
@@ -126,15 +126,13 @@ fdset_sync_init(struct fdset *fdset)
 
 	fdset->sync_fd = eventfd(0, 0);
 	if (fdset->sync_fd < 0) {
-		VHOST_FDMAN_LOG(ERR, "failed to create eventfd for %s fdset", fdset->name);
+		VHOST_FDMAN_LOG(fdset->name, ERR, "failed to create eventfd");
 		return -1;
 	}
 
 	ret = fdset_add_no_sync(fdset, fdset->sync_fd, fdset_sync_read_cb, NULL, fdset);
 	if (ret < 0) {
-		VHOST_FDMAN_LOG(ERR, "failed to add eventfd %d to %s fdset",
-			fdset->sync_fd, fdset->name);
-
+		VHOST_FDMAN_LOG(fdset->name, ERR, "failed to add eventfd %d", fdset->sync_fd);
 		fdset_sync_uninit(fdset);
 		return -1;
 	}
@@ -152,8 +150,8 @@ fdset_sync(struct fdset *fdset)
 	fdset->sync = false;
 	ret = eventfd_write(fdset->sync_fd, (eventfd_t)1);
 	if (ret < 0) {
-		VHOST_FDMAN_LOG(ERR, "Failed to write sync eventfd for %s fdset: %s",
-			fdset->name, strerror(errno));
+		VHOST_FDMAN_LOG(fdset->name, ERR, "Failed to write sync eventfd: %s",
+				strerror(errno));
 		goto out_unlock;
 	}
 
@@ -251,7 +249,7 @@ fdset_init(const char *name)
 	int i;
 
 	if (name == NULL) {
-		VHOST_FDMAN_LOG(ERR, "Invalid name");
+		VHOST_FDMAN_LOG("fdset", ERR, "Invalid name");
 		goto err;
 	}
 
@@ -264,7 +262,7 @@ fdset_init(const char *name)
 
 	fdset = rte_zmalloc(NULL, sizeof(*fdset), 0);
 	if (!fdset) {
-		VHOST_FDMAN_LOG(ERR, "Failed to alloc fdset %s", name);
+		VHOST_FDMAN_LOG(name, ERR, "Failed to alloc fdset");
 		goto err_unlock;
 	}
 
@@ -280,19 +278,18 @@ fdset_init(const char *name)
 	fdset->num = 0;
 
 	if (fdset_sync_init(fdset)) {
-		VHOST_FDMAN_LOG(ERR, "Failed to init sync for %s", name);
+		VHOST_FDMAN_LOG(fdset->name, ERR, "Failed to init sync");
 		goto err_free;
 	}
 
 	if (rte_thread_create_internal_control(&fdset->tid, fdset->name,
 					fdset_event_dispatch, fdset)) {
-		VHOST_FDMAN_LOG(ERR, "Failed to create %s event dispatch thread",
-				fdset->name);
+		VHOST_FDMAN_LOG(fdset->name, ERR, "Failed to create event dispatch thread");
 		goto err_sync;
 	}
 
 	if (fdset_insert(fdset)) {
-		VHOST_FDMAN_LOG(ERR, "Failed to insert fdset %s", name);
+		VHOST_FDMAN_LOG(fdset->name, ERR, "Failed to insert fdset");
 		goto err_thread;
 	}
 
