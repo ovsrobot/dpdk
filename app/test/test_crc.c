@@ -83,7 +83,7 @@ test_crc_calc(void)
 		return -7;
 
 	for (i = 0; i < CRC32_VEC_LEN1; i += 12)
-		rte_memcpy(&test_data[i], crc32_vec1, 12);
+		memcpy(&test_data[i], crc32_vec1, 12);
 
 	result = crc_calc(test_data, CRC32_VEC_LEN1, type);
 	if (result != crc32_vec1_res) {
@@ -93,7 +93,7 @@ test_crc_calc(void)
 
 	/* 32-bit ethernet CRC: Test 3 */
 	for (i = 0; i < CRC32_VEC_LEN2; i += 12)
-		rte_memcpy(&test_data[i], crc32_vec1, 12);
+		memcpy(&test_data[i], crc32_vec1, 12);
 
 	result = crc_calc(test_data, CRC32_VEC_LEN2, type);
 	if (result != crc32_vec2_res) {

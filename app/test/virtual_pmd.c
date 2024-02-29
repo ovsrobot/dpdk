@@ -186,7 +186,7 @@ virtual_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	struct virtual_ethdev_private *dev_private = dev->data->dev_private;
 
 	if (stats)
-		rte_memcpy(stats, &dev_private->eth_stats, sizeof(*stats));
+		memcpy(stats, &dev_private->eth_stats, sizeof(*stats));
 
 	return 0;
 }
