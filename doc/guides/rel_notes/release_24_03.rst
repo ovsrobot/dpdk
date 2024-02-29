@@ -138,6 +138,13 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Enabled AF_XDP PMD multi interface (UDS) support with AF_XDP Device Plugin**.
+
+  The EAL vdev argument for the AF_XDP PMD ``use_cni`` previously limited
+  a pod to using only a single netdev/interface. The latest changes (adding
+  the ``dp_path`` parameter) remove this limitation and maintain backward
+  compatibility for any applications already using the ``use_cni`` vdev
+  argument with the AF_XDP Device Plugin.
 
 Removed Items
 -------------
