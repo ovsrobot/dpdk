@@ -2292,7 +2292,8 @@ cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *a
 
 	strncpy(adapter->name, pci_dev->device.name, PCI_PRI_STR_SIZE);
 
-	rte_memcpy(&base->caps, &req_caps, sizeof(struct virtchnl2_get_capabilities));
+	memcpy(&base->caps, &req_caps,
+	       sizeof(struct virtchnl2_get_capabilities));
 
 	ret = idpf_adapter_init(base);
 	if (ret != 0) {
