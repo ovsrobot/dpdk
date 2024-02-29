@@ -2094,7 +2094,7 @@ get_iface_info(const char *if_name,
 	if (ioctl(sock, SIOCGIFHWADDR, &ifr))
 		goto error;
 
-	rte_memcpy(eth_addr, ifr.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
+	memcpy(eth_addr, ifr.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
 
 	close(sock);
 	return 0;
