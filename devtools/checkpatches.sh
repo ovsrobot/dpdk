@@ -61,6 +61,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# forbid use of variadic argument pack extension in macros
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS='#[[:space:]]*define.*[^(,[:space:]]\\.\\.\\.[[:space:]]*)' \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Do not use variadic argument pack in macros' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# no output on stdout or stderr
 	awk -v FOLDERS="lib drivers" \
 		-v EXPRESSIONS="\\\<printf\\\> \\\<fprintf\\\(stdout, \\\<fprintf\\\(stderr," \
