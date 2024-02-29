@@ -225,7 +225,7 @@ dlb2_hw_query_resources(struct dlb2_eventdev *dlb2)
 	handle->info.hw_rsrc_max.reorder_window_size =
 		dlb2->hw_rsrc_query_results.num_hist_list_entries;
 
-	rte_memcpy(dlb2_info, &handle->info.hw_rsrc_max, sizeof(*dlb2_info));
+	memcpy(dlb2_info, &handle->info.hw_rsrc_max, sizeof(*dlb2_info));
 
 	return 0;
 }
@@ -1671,7 +1671,7 @@ dlb2_hw_create_ldb_port(struct dlb2_eventdev *dlb2,
 	qm_port->issued_releases = 0;
 
 	/* Save config message too. */
-	rte_memcpy(&qm_port->cfg.ldb, &cfg, sizeof(qm_port->cfg.ldb));
+	memcpy(&qm_port->cfg.ldb, &cfg, sizeof(qm_port->cfg.ldb));
 
 	/* update state */
 	qm_port->state = PORT_STARTED; /* enabled at create time */
@@ -1872,7 +1872,7 @@ dlb2_hw_create_dir_port(struct dlb2_eventdev *dlb2,
 	qm_port->issued_releases = 0;
 
 	/* Save config message too. */
-	rte_memcpy(&qm_port->cfg.dir, &cfg, sizeof(qm_port->cfg.dir));
+	memcpy(&qm_port->cfg.dir, &cfg, sizeof(qm_port->cfg.dir));
 
 	/* update state */
 	qm_port->state = PORT_STARTED; /* enabled at create time */
