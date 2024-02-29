@@ -90,7 +90,7 @@ rte_pmd_i40e_set_vf_mac_anti_spoof(uint16_t port, uint16_t vf_id, uint8_t on)
 		vsi->info.sec_flags &= ~I40E_AQ_VSI_SEC_FLAG_ENABLE_MAC_CHK;
 
 	memset(&ctxt, 0, sizeof(ctxt));
-	rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.seid = vsi->seid;
 
 	hw = I40E_VSI_TO_HW(vsi);
@@ -192,7 +192,7 @@ rte_pmd_i40e_set_vf_vlan_anti_spoof(uint16_t port, uint16_t vf_id, uint8_t on)
 		vsi->info.sec_flags &= ~I40E_AQ_VSI_SEC_FLAG_ENABLE_VLAN_CHK;
 
 	memset(&ctxt, 0, sizeof(ctxt));
-	rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.seid = vsi->seid;
 
 	hw = I40E_VSI_TO_HW(vsi);
@@ -237,9 +237,8 @@ i40e_vsi_rm_mac_filter(struct i40e_vsi *vsi)
 
 		for (i = 0; i < vlan_num; i++) {
 			mv_f[i].filter_type = filter_type;
-			rte_memcpy(&mv_f[i].macaddr,
-					 &f->mac_info.mac_addr,
-					 ETH_ADDR_LEN);
+			memcpy(&mv_f[i].macaddr, &f->mac_info.mac_addr,
+			       ETH_ADDR_LEN);
 		}
 		if (filter_type == I40E_MACVLAN_PERFECT_MATCH ||
 		    filter_type == I40E_MACVLAN_HASH_MATCH) {
@@ -298,9 +297,8 @@ i40e_vsi_restore_mac_filter(struct i40e_vsi *vsi)
 
 		for (i = 0; i < vlan_num; i++) {
 			mv_f[i].filter_type = f->mac_info.filter_type;
-			rte_memcpy(&mv_f[i].macaddr,
-					 &f->mac_info.mac_addr,
-					 ETH_ADDR_LEN);
+			memcpy(&mv_f[i].macaddr, &f->mac_info.mac_addr,
+			       ETH_ADDR_LEN);
 		}
 
 		if (f->mac_info.filter_type == I40E_MACVLAN_PERFECT_MATCH ||
@@ -380,7 +378,7 @@ i40e_vsi_set_tx_loopback(struct i40e_vsi *vsi, uint8_t on)
 		vsi->info.switch_id &= ~I40E_AQ_VSI_SW_ID_FLAG_ALLOW_LB;
 
 	memset(&ctxt, 0, sizeof(ctxt));
-	rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.seid = vsi->seid;
 
 	ret = i40e_aq_update_vsi_params(hw, &ctxt, NULL);
@@ -705,7 +703,7 @@ int rte_pmd_i40e_set_vf_vlan_insert(uint16_t port, uint16_t vf_id,
 		vsi->info.port_vlan_flags &= ~I40E_AQ_VSI_PVLAN_INSERT_PVID;
 
 	memset(&ctxt, 0, sizeof(ctxt));
-	rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.seid = vsi->seid;
 
 	hw = I40E_VSI_TO_HW(vsi);
@@ -767,7 +765,7 @@ int rte_pmd_i40e_set_vf_broadcast(uint16_t port, uint16_t vf_id,
 	}
 
 	if (on) {
-		rte_memcpy(&filter.mac_addr, &broadcast, RTE_ETHER_ADDR_LEN);
+		memcpy(&filter.mac_addr, &broadcast, RTE_ETHER_ADDR_LEN);
 		filter.filter_type = I40E_MACVLAN_PERFECT_MATCH;
 		ret = i40e_vsi_add_mac(vsi, &filter);
 	} else {
@@ -839,7 +837,7 @@ int rte_pmd_i40e_set_vf_vlan_tag(uint16_t port, uint16_t vf_id, uint8_t on)
 	}
 
 	memset(&ctxt, 0, sizeof(ctxt));
-	rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.seid = vsi->seid;
 
 	hw = I40E_VSI_TO_HW(vsi);
@@ -2586,11 +2584,10 @@ i40e_vsi_update_queue_region_mapping(struct i40e_hw *hw,
 		return ret;
 	}
 	/* update the local VSI info with updated queue map */
-	rte_memcpy(&vsi->info.tc_mapping, &ctxt.info.tc_mapping,
-					sizeof(vsi->info.tc_mapping));
-	rte_memcpy(&vsi->info.queue_mapping,
-			&ctxt.info.queue_mapping,
-			sizeof(vsi->info.queue_mapping));
+	memcpy(&vsi->info.tc_mapping, &ctxt.info.tc_mapping,
+	       sizeof(vsi->info.tc_mapping));
+	memcpy(&vsi->info.queue_mapping, &ctxt.info.queue_mapping,
+	       sizeof(vsi->info.queue_mapping));
 	vsi->info.mapping_flags = ctxt.info.mapping_flags;
 	vsi->info.valid_sections = 0;
 
@@ -2961,8 +2958,7 @@ i40e_queue_region_get_all_info(struct i40e_pf *pf,
 {
 	struct i40e_queue_regions *info = &pf->queue_region;
 
-	rte_memcpy(regions_ptr, info,
-			sizeof(struct i40e_queue_regions));
+	memcpy(regions_ptr, info, sizeof(struct i40e_queue_regions));
 
 	return 0;
 }
