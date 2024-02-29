@@ -314,7 +314,7 @@ static int he_hssi_config(struct afu_rawdev *dev, void *config,
 	if (cfg->port >= NUM_HE_HSSI_PORTS)
 		return -EINVAL;
 
-	rte_memcpy(&priv->he_hssi_cfg, cfg, sizeof(priv->he_hssi_cfg));
+	memcpy(&priv->he_hssi_cfg, cfg, sizeof(priv->he_hssi_cfg));
 
 	return 0;
 }

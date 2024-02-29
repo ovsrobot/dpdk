@@ -126,7 +126,7 @@ static int he_mem_tg_config(struct afu_rawdev *dev, void *config,
 	if (config_size != sizeof(struct rte_pmd_afu_he_mem_tg_cfg))
 		return -EINVAL;
 
-	rte_memcpy(&priv->he_mem_tg_cfg, config, sizeof(priv->he_mem_tg_cfg));
+	memcpy(&priv->he_mem_tg_cfg, config, sizeof(priv->he_mem_tg_cfg));
 
 	return 0;
 }

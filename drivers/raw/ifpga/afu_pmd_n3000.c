@@ -1867,8 +1867,8 @@ static int n3000_afu_config(struct afu_rawdev *dev, void *config,
 		if ((cfg->nlb_cfg.end < cfg->nlb_cfg.begin) ||
 			(cfg->nlb_cfg.end > MAX_CACHE_LINES))
 			return -EINVAL;
-		rte_memcpy(&priv->nlb_cfg, &cfg->nlb_cfg,
-			sizeof(struct rte_pmd_afu_nlb_cfg));
+		memcpy(&priv->nlb_cfg, &cfg->nlb_cfg,
+		       sizeof(struct rte_pmd_afu_nlb_cfg));
 	} else if (cfg->type == RTE_PMD_AFU_N3000_DMA) {
 		if (cfg->dma_cfg.index >= NUM_N3000_DMA)
 			return -EINVAL;
@@ -1887,8 +1887,8 @@ static int n3000_afu_config(struct afu_rawdev *dev, void *config,
 					cfg->dma_cfg.length);
 			}
 		}
-		rte_memcpy(&priv->dma_cfg, &cfg->dma_cfg,
-			sizeof(struct rte_pmd_afu_dma_cfg));
+		memcpy(&priv->dma_cfg, &cfg->dma_cfg,
+		       sizeof(struct rte_pmd_afu_dma_cfg));
 	} else {
 		IFPGA_RAWDEV_PMD_ERR("Invalid type of N3000 AFU");
 		return -EINVAL;

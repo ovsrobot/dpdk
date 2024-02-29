@@ -363,7 +363,7 @@ static int he_lpbk_config(struct afu_rawdev *dev, void *config,
 	if ((cfg->end < cfg->begin) || (cfg->end > MAX_CACHE_LINES))
 		return -EINVAL;
 
-	rte_memcpy(&priv->he_lpbk_cfg, cfg, sizeof(priv->he_lpbk_cfg));
+	memcpy(&priv->he_lpbk_cfg, cfg, sizeof(priv->he_lpbk_cfg));
 
 	return 0;
 }
