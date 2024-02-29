@@ -1221,8 +1221,8 @@ static int enic_set_rsskey(struct enic *enic, uint8_t *user_key)
 
 	/* Save for later queries */
 	if (!err) {
-		rte_memcpy(&enic->rss_key, rss_key_buf_va,
-			   sizeof(union vnic_rss_key));
+		memcpy(&enic->rss_key, rss_key_buf_va,
+		       sizeof(union vnic_rss_key));
 	}
 	enic_free_consistent(enic, sizeof(union vnic_rss_key),
 		rss_key_buf_va, rss_key_buf_pa);
@@ -1243,7 +1243,7 @@ int enic_set_rss_reta(struct enic *enic, union vnic_rss_cpu *rss_cpu)
 	if (!rss_cpu_buf_va)
 		return -ENOMEM;
 
-	rte_memcpy(rss_cpu_buf_va, rss_cpu, sizeof(union vnic_rss_cpu));
+	memcpy(rss_cpu_buf_va, rss_cpu, sizeof(union vnic_rss_cpu));
 
 	err = enic_set_rss_cpu(enic,
 		rss_cpu_buf_pa,
@@ -1254,7 +1254,7 @@ int enic_set_rss_reta(struct enic *enic, union vnic_rss_cpu *rss_cpu)
 
 	/* Save for later queries */
 	if (!err)
-		rte_memcpy(&enic->rss_cpu, rss_cpu, sizeof(union vnic_rss_cpu));
+		memcpy(&enic->rss_cpu, rss_cpu, sizeof(union vnic_rss_cpu));
 	return err;
 }
 
