@@ -2,7 +2,9 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <rte_common.h>
@@ -16,6 +18,87 @@ RTE_LOG_REGISTER_SUFFIX(vhost_fdset_logtype, fdset, INFO);
 	RTE_LOG_LINE(level, VHOST_FDMAN, "" __VA_ARGS__)
 
 #define FDPOLLERR (POLLERR | POLLHUP | POLLNVAL)
+
+static void
+fdset_pipe_read_cb(int readfd, void *dat,
+		   int *remove __rte_unused)
+{
+	char charbuf[16];
+	struct fdset *fdset = dat;
+	int r = read(readfd, charbuf, sizeof(charbuf));
+	/*
+	 * Just an optimization, we don't care if read() failed
+	 * so ignore explicitly its return value to make the
+	 * compiler happy
+	 */
+	RTE_SET_USED(r);
+
+	pthread_mutex_lock(&fdset->sync_mutex);
+	fdset->sync = true;
+	pthread_cond_broadcast(&fdset->sync_cond);
+	pthread_mutex_unlock(&fdset->sync_mutex);
+}
+
+static void
+fdset_pipe_uninit(struct fdset *fdset)
+{
+	fdset_del(fdset, fdset->u.readfd);
+	close(fdset->u.readfd);
+	fdset->u.readfd = -1;
+	close(fdset->u.writefd);
+	fdset->u.writefd = -1;
+}
+
+static int
+fdset_pipe_init(struct fdset *fdset)
+{
+	int ret;
+
+	pthread_mutex_init(&fdset->sync_mutex, NULL);
+	pthread_cond_init(&fdset->sync_cond, NULL);
+
+	if (pipe(fdset->u.pipefd) < 0) {
+		VHOST_FDMAN_LOG(ERR,
+			"failed to create pipe for vhost fdset");
+		return -1;
+	}
+
+	ret = fdset_add(fdset, fdset->u.readfd,
+			fdset_pipe_read_cb, NULL, fdset);
+	if (ret < 0) {
+		VHOST_FDMAN_LOG(ERR,
+			"failed to add pipe readfd %d into vhost server fdset",
+			fdset->u.readfd);
+
+		fdset_pipe_uninit(fdset);
+		return -1;
+	}
+
+	return 0;
+}
+
+static void
+fdset_sync(struct fdset *fdset)
+{
+	int ret;
+
+	pthread_mutex_lock(&fdset->sync_mutex);
+
+	fdset->sync = false;
+	ret = write(fdset->u.writefd, "1", 1);
+	if (ret < 0) {
+		VHOST_FDMAN_LOG(ERR,
+			"Failed to write to notification pipe: %s",
+			strerror(errno));
+		goto out_unlock;
+	}
+
+	while (!fdset->sync)
+		pthread_cond_wait(&fdset->sync_cond, &fdset->sync_mutex);
+
+out_unlock:
+	pthread_mutex_unlock(&fdset->sync_mutex);
+}
 
 static int
 get_last_valid_idx(struct fdset *pfdset, int last_valid_idx)
@@ -96,6 +179,12 @@ fdset_add_fd(struct fdset *pfdset, int idx, int fd,
 	pfd->revents = 0;
 }
 
+void
+fdset_uninit(struct fdset *pfdset)
+{
+	fdset_pipe_uninit(pfdset);
+}
+
 int
 fdset_init(struct fdset *pfdset)
 {
@@ -113,7 +202,7 @@ fdset_init(struct fdset *pfdset)
 	}
 	pfdset->num = 0;
 
-	return 0;
+	return fdset_pipe_init(pfdset);
 }
 
 /**
@@ -142,6 +231,8 @@ fdset_add(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat)
 
 	fdset_add_fd(pfdset, i, fd, rcb, wcb, dat);
 	pthread_mutex_unlock(&pfdset->fd_mutex);
+
+	fdset_sync(pfdset);
 
 	return 0;
 }
@@ -173,6 +264,8 @@ fdset_del(struct fdset *pfdset, int fd)
 		}
 		pthread_mutex_unlock(&pfdset->fd_mutex);
 	} while (i != -1);
+
+	fdset_sync(pfdset);
 
 	return dat;
 }
@@ -207,6 +300,9 @@ fdset_try_del(struct fdset *pfdset, int fd)
 	}
 
 	pthread_mutex_unlock(&pfdset->fd_mutex);
+
+	fdset_sync(pfdset);
+
 	return 0;
 }
 
@@ -311,80 +407,4 @@ fdset_event_dispatch(void *arg)
 	}
 
 	return 0;
-}
-
-static void
-fdset_pipe_read_cb(int readfd, void *dat,
-		   int *remove __rte_unused)
-{
-	char charbuf[16];
-	struct fdset *fdset = dat;
-	int r = read(readfd, charbuf, sizeof(charbuf));
-	/*
-	 * Just an optimization, we don't care if read() failed
-	 * so ignore explicitly its return value to make the
-	 * compiler happy
-	 */
-	RTE_SET_USED(r);
-
-	pthread_mutex_lock(&fdset->sync_mutex);
-	fdset->sync = true;
-	pthread_cond_broadcast(&fdset->sync_cond);
-	pthread_mutex_unlock(&fdset->sync_mutex);
-}
-
-void
-fdset_pipe_uninit(struct fdset *fdset)
-{
-	fdset_del(fdset, fdset->u.readfd);
-	close(fdset->u.readfd);
-	close(fdset->u.writefd);
-}
-
-int
-fdset_pipe_init(struct fdset *fdset)
-{
-	int ret;
-
-	if (pipe(fdset->u.pipefd) < 0) {
-		VHOST_FDMAN_LOG(ERR,
-			"failed to create pipe for vhost fdset");
-		return -1;
-	}
-
-	ret = fdset_add(fdset, fdset->u.readfd,
-			fdset_pipe_read_cb, NULL, fdset);
-
-	if (ret < 0) {
-		VHOST_FDMAN_LOG(ERR,
-			"failed to add pipe readfd %d into vhost server fdset",
-			fdset->u.readfd);
-
-		fdset_pipe_uninit(fdset);
-		return -1;
-	}
-
-	return 0;
-}
-
-void
-fdset_pipe_notify(struct fdset *fdset)
-{
-	int r;
-
-	pthread_mutex_lock(&fdset->sync_mutex);
-
-	fdset->sync = false;
-	r = write(fdset->u.writefd, "1", 1);
-	/*
-	 * Just an optimization, we don't care if write() failed
-	 * so ignore explicitly its return value to make the
-	 * compiler happy
-	 */
-	RTE_SET_USED(r);
-
-	while (!fdset->sync)
-		pthread_cond_wait(&fdset->sync_cond, &fdset->sync_mutex);
-
-	pthread_mutex_unlock(&fdset->sync_mutex);
 }
