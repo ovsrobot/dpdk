@@ -180,7 +180,7 @@ static void qed_handle_bulletin_change(struct ecore_hwfn *hwfn)
 	is_mac_exist = ecore_vf_bulletin_get_forced_mac(hwfn, mac,
 						      &is_mac_forced);
 	if (is_mac_exist && is_mac_forced)
-		rte_memcpy(hwfn->hw_info.hw_mac_addr, mac, ETH_ALEN);
+		memcpy(hwfn->hw_info.hw_mac_addr, mac, ETH_ALEN);
 
 	/* Always update link configuration according to bulletin */
 	qed_link_update(hwfn);
