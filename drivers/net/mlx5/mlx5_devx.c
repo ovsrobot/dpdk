@@ -512,7 +512,7 @@ mlx5_rxq_obj_hairpin_new(struct mlx5_rxq_priv *rxq)
 		 * during queue setup.
 		 */
 		MLX5_ASSERT(hca_attr->hairpin_data_buffer_locked);
-		rte_memcpy(&locked_attr, &unlocked_attr, sizeof(locked_attr));
+		memcpy(&locked_attr, &unlocked_attr, sizeof(locked_attr));
 		locked_attr.hairpin_data_buffer_type =
 				MLX5_RQC_HAIRPIN_DATA_BUFFER_TYPE_LOCKED_INTERNAL_BUFFER;
 		tmpl->rq = mlx5_devx_cmd_create_rq(priv->sh->cdev->ctx, &locked_attr,
@@ -1289,7 +1289,7 @@ mlx5_txq_obj_hairpin_new(struct rte_eth_dev *dev, uint16_t idx)
 		 */
 		MLX5_ASSERT(hca_attr->hairpin_sq_wq_in_host_mem);
 		MLX5_ASSERT(hca_attr->hairpin_sq_wqe_bb_size > 0);
-		rte_memcpy(&host_mem_attr, &dev_mem_attr, sizeof(host_mem_attr));
+		memcpy(&host_mem_attr, &dev_mem_attr, sizeof(host_mem_attr));
 		umem_size = MLX5_WQE_SIZE *
 			RTE_BIT32(host_mem_attr.wq_attr.log_hairpin_num_packets);
 		umem_dbrec = RTE_ALIGN(umem_size, MLX5_DBR_SIZE);
