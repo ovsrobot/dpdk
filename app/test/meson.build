@@ -68,6 +68,7 @@ source_file_deps = {
     'test_dmadev_api.c': ['dmadev'],
     'test_eal_flags.c': [],
     'test_eal_fs.c': [],
+    'test_eal_ptr_compress.c': [],
     'test_efd.c': ['efd', 'net'],
     'test_efd_perf.c': ['efd', 'hash'],
     'test_errno.c': [],
