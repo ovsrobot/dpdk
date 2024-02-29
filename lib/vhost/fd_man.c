@@ -309,10 +309,11 @@ fdset_event_dispatch(void *arg)
 }
 
 static void
-fdset_pipe_read_cb(int readfd, void *dat __rte_unused,
+fdset_pipe_read_cb(int readfd, void *dat,
 		   int *remove __rte_unused)
 {
 	char charbuf[16];
+	struct fdset *fdset = dat;
 	int r = read(readfd, charbuf, sizeof(charbuf));
 	/*
 	 * Just an optimization, we don't care if read() failed
@@ -320,6 +321,11 @@ fdset_pipe_read_cb(int readfd, void *dat __rte_unused,
 	 * compiler happy
 	 */
 	RTE_SET_USED(r);
+
+	pthread_mutex_lock(&fdset->sync_mutex);
+	fdset->sync = true;
+	pthread_cond_broadcast(&fdset->sync_cond);
+	pthread_mutex_unlock(&fdset->sync_mutex);
 }
 
 void
@@ -342,7 +348,7 @@ fdset_pipe_init(struct fdset *fdset)
 	}
 
 	ret = fdset_add(fdset, fdset->u.readfd,
-			fdset_pipe_read_cb, NULL, NULL);
+			fdset_pipe_read_cb, NULL, fdset);
 
 	if (ret < 0) {
 		VHOST_FDMAN_LOG(ERR,
@@ -359,7 +365,12 @@ fdset_pipe_init(struct fdset *fdset)
 void
 fdset_pipe_notify(struct fdset *fdset)
 {
-	int r = write(fdset->u.writefd, "1", 1);
+	int r;
+
+	pthread_mutex_lock(&fdset->sync_mutex);
+
+	fdset->sync = false;
+	r = write(fdset->u.writefd, "1", 1);
 	/*
 	 * Just an optimization, we don't care if write() failed
 	 * so ignore explicitly its return value to make the
@@ -367,4 +378,8 @@ fdset_pipe_notify(struct fdset *fdset)
 	 */
 	RTE_SET_USED(r);
 
+	while (!fdset->sync)
+		pthread_cond_wait(&fdset->sync_cond, &fdset->sync_mutex);
+
+	pthread_mutex_unlock(&fdset->sync_mutex);
 }
