@@ -3102,15 +3102,13 @@ enqueue_ldpc_dec_one_op_cb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		uint8_t *prev_ptr = (uint8_t *) prev_desc;
 		uint8_t *new_ptr = (uint8_t *) desc;
 		/* Copy first 4 words and BDESCs */
-		rte_memcpy(new_ptr, prev_ptr, ACC_5GUL_SIZE_0);
-		rte_memcpy(new_ptr + ACC_5GUL_OFFSET_0,
-				prev_ptr + ACC_5GUL_OFFSET_0,
-				ACC_5GUL_SIZE_1);
+		memcpy(new_ptr, prev_ptr, ACC_5GUL_SIZE_0);
+		memcpy(new_ptr + ACC_5GUL_OFFSET_0,
+		       prev_ptr + ACC_5GUL_OFFSET_0, ACC_5GUL_SIZE_1);
 		desc->req.op_addr = prev_desc->req.op_addr;
 		/* Copy FCW */
-		rte_memcpy(new_ptr + ACC_DESC_FCW_OFFSET,
-				prev_ptr + ACC_DESC_FCW_OFFSET,
-				ACC_FCW_LD_BLEN);
+		memcpy(new_ptr + ACC_DESC_FCW_OFFSET,
+		       prev_ptr + ACC_DESC_FCW_OFFSET, ACC_FCW_LD_BLEN);
 		acc100_dma_desc_ld_update(op, &desc->req, input, h_output,
 				&in_offset, &h_out_offset,
 				&h_out_length, harq_layout);
@@ -3257,7 +3255,8 @@ enqueue_ldpc_dec_one_op_tb(struct acc_queue *q, struct rte_bbdev_dec_op *op,
 		desc = acc_desc(q, total_enqueued_cbs);
 		desc->req.data_ptrs[0].address = q->ring_addr_iova + fcw_offset;
 		desc->req.data_ptrs[0].blen = ACC_FCW_LD_BLEN;
-		rte_memcpy(&desc->req.fcw_ld, &desc_first->req.fcw_ld, ACC_FCW_LD_BLEN);
+		memcpy(&desc->req.fcw_ld, &desc_first->req.fcw_ld,
+		       ACC_FCW_LD_BLEN);
 		ret = acc100_dma_desc_ld_fill(op, &desc->req, &input,
 				h_output, &in_offset, &h_out_offset,
 				&h_out_length,
@@ -4560,7 +4559,7 @@ acc100_configure(const char *dev_name, struct rte_acc_conf *conf)
 	struct acc_device *d = bbdev->data->dev_private;
 
 	/* Store configuration */
-	rte_memcpy(&d->acc_conf, conf, sizeof(d->acc_conf));
+	memcpy(&d->acc_conf, conf, sizeof(d->acc_conf));
 
 	value = acc_reg_read(d, HwPfPcieGpexBridgeControl);
 	bool firstCfg = (value != ACC100_CFG_PCI_BRIDGE);
@@ -4955,7 +4954,7 @@ acc101_configure(const char *dev_name, struct rte_acc_conf *conf)
 	struct acc_device *d = bbdev->data->dev_private;
 
 	/* Store configuration */
-	rte_memcpy(&d->acc_conf, conf, sizeof(d->acc_conf));
+	memcpy(&d->acc_conf, conf, sizeof(d->acc_conf));
 
 	/* PCIe Bridge configuration */
 	acc_reg_write(d, HwPfPcieGpexBridgeControl, ACC101_CFG_PCI_BRIDGE);
