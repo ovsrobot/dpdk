@@ -983,8 +983,7 @@ static int hinic_normal_item_check_ip(const struct rte_flow_item **in_out_item,
 		}
 
 		ipv6_spec = (const struct rte_flow_item_ipv6 *)item->spec;
-		rte_memcpy(rule->hinic_fdir.dst_ipv6,
-			   ipv6_spec->hdr.dst_addr, 16);
+		memcpy(rule->hinic_fdir.dst_ipv6, ipv6_spec->hdr.dst_addr, 16);
 
 		/*
 		 * Check if the next not void item is TCP or UDP or ICMP.
@@ -2193,8 +2192,8 @@ static int hinic_add_del_ntuple_filter(struct rte_eth_dev *dev,
 				sizeof(struct hinic_5tuple_filter), 0);
 		if (filter == NULL)
 			return -ENOMEM;
-		rte_memcpy(&filter->filter_info, &filter_5tuple,
-				sizeof(struct hinic_5tuple_filter_info));
+		memcpy(&filter->filter_info, &filter_5tuple,
+		       sizeof(struct hinic_5tuple_filter_info));
 		filter->queue = ntuple_filter->queue;
 
 		filter_info->qid = ntuple_filter->queue;
@@ -2912,8 +2911,7 @@ static int hinic_add_del_tcam_fdir_filter(struct rte_eth_dev *dev,
 				sizeof(struct hinic_tcam_filter), 0);
 		if (tcam_filter == NULL)
 			return -ENOMEM;
-		(void)rte_memcpy(&tcam_filter->tcam_key,
-				 &tcam_key, sizeof(struct tag_tcam_key));
+		memcpy(&tcam_filter->tcam_key, &tcam_key, sizeof(struct tag_tcam_key));
 		tcam_filter->queue = fdir_tcam_rule.data.qid;
 
 		ret = hinic_add_tcam_filter(dev, tcam_filter, &fdir_tcam_rule);
@@ -2990,9 +2988,9 @@ static struct rte_flow *hinic_flow_create(struct rte_eth_dev *dev,
 							&ntuple_filter, FALSE);
 				goto out;
 			}
-			rte_memcpy(&ntuple_filter_ptr->filter_info,
-				   &ntuple_filter,
-				   sizeof(struct rte_eth_ntuple_filter));
+			memcpy(&ntuple_filter_ptr->filter_info,
+			       &ntuple_filter,
+			       sizeof(struct rte_eth_ntuple_filter));
 			TAILQ_INSERT_TAIL(&nic_dev->filter_ntuple_list,
 			ntuple_filter_ptr, entries);
 			flow->rule = ntuple_filter_ptr;
@@ -3022,9 +3020,9 @@ static struct rte_flow *hinic_flow_create(struct rte_eth_dev *dev,
 						&ethertype_filter, FALSE);
 				goto out;
 			}
-			rte_memcpy(&ethertype_filter_ptr->filter_info,
-				&ethertype_filter,
-				sizeof(struct rte_eth_ethertype_filter));
+			memcpy(&ethertype_filter_ptr->filter_info,
+			       &ethertype_filter,
+			       sizeof(struct rte_eth_ethertype_filter));
 			TAILQ_INSERT_TAIL(&nic_dev->filter_ethertype_list,
 				ethertype_filter_ptr, entries);
 			flow->rule = ethertype_filter_ptr;
@@ -3065,8 +3063,8 @@ static struct rte_flow *hinic_flow_create(struct rte_eth_dev *dev,
 
 				goto out;
 			}
-			rte_memcpy(&fdir_rule_ptr->filter_info, &fdir_rule,
-				sizeof(struct hinic_fdir_rule));
+			memcpy(&fdir_rule_ptr->filter_info, &fdir_rule,
+			       sizeof(struct hinic_fdir_rule));
 			TAILQ_INSERT_TAIL(&nic_dev->filter_fdir_rule_list,
 				fdir_rule_ptr, entries);
 			flow->rule = fdir_rule_ptr;
@@ -3109,8 +3107,8 @@ static int hinic_flow_destroy(struct rte_eth_dev *dev, struct rte_flow *flow,
 	case RTE_ETH_FILTER_NTUPLE:
 		ntuple_filter_ptr = (struct hinic_ntuple_filter_ele *)
 					pmd_flow->rule;
-		rte_memcpy(&ntuple_filter, &ntuple_filter_ptr->filter_info,
-			sizeof(struct rte_eth_ntuple_filter));
+		memcpy(&ntuple_filter, &ntuple_filter_ptr->filter_info,
+		       sizeof(struct rte_eth_ntuple_filter));
 		ret = hinic_add_del_ntuple_filter(dev, &ntuple_filter, FALSE);
 		if (!ret) {
 			TAILQ_REMOVE(&nic_dev->filter_ntuple_list,
@@ -3121,9 +3119,8 @@ static int hinic_flow_destroy(struct rte_eth_dev *dev, struct rte_flow *flow,
 	case RTE_ETH_FILTER_ETHERTYPE:
 		ethertype_filter_ptr = (struct hinic_ethertype_filter_ele *)
 					pmd_flow->rule;
-		rte_memcpy(&ethertype_filter,
-			&ethertype_filter_ptr->filter_info,
-			sizeof(struct rte_eth_ethertype_filter));
+		memcpy(&ethertype_filter, &ethertype_filter_ptr->filter_info,
+		       sizeof(struct rte_eth_ethertype_filter));
 		ret = hinic_add_del_ethertype_filter(dev,
 				&ethertype_filter, FALSE);
 		if (!ret) {
@@ -3134,9 +3131,8 @@ static int hinic_flow_destroy(struct rte_eth_dev *dev, struct rte_flow *flow,
 		break;
 	case RTE_ETH_FILTER_FDIR:
 		fdir_rule_ptr = (struct hinic_fdir_rule_ele *)pmd_flow->rule;
-		rte_memcpy(&fdir_rule,
-			&fdir_rule_ptr->filter_info,
-			sizeof(struct hinic_fdir_rule));
+		memcpy(&fdir_rule, &fdir_rule_ptr->filter_info,
+		       sizeof(struct hinic_fdir_rule));
 		if (fdir_rule.mode == HINIC_FDIR_MODE_NORMAL) {
 			ret = hinic_add_del_fdir_filter(dev, &fdir_rule, FALSE);
 		} else if (fdir_rule.mode == HINIC_FDIR_MODE_TCAM) {
