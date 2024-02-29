@@ -243,6 +243,7 @@ hn_dev_tx_queue_setup(struct rte_eth_dev *dev,
 {
 	struct hn_data *hv = dev->data->dev_private;
 	struct hn_tx_queue *txq;
+	struct hn_rx_queue *rxq;
 	char name[RTE_MEMPOOL_NAMESIZE];
 	uint32_t tx_free_thresh;
 	int err = -ENOMEM;
@@ -299,6 +300,22 @@ hn_dev_tx_queue_setup(struct rte_eth_dev *dev,
 		PMD_DRV_LOG(ERR,
 			    "mempool %s create failed: %d", name, rte_errno);
 		goto error;
+	}
+
+	/*
+	 * If there are more Tx queues than Rx queues, allocate rx_queues
+	 * with event buffer so that Tx completion messages can still be
+	 * received
+	 */
+	if (queue_idx >= dev->data->nb_rx_queues) {
+		rxq = hn_rx_queue_alloc(hv, queue_idx, socket_id);
+		/*
+		 * Don't allocate mbuf pool or rx ring.  RSS is always configured
+		 * to ensure packets aren't received by this Rx queue.
+		 */
+		rxq->mb_pool = NULL;
+		rxq->rx_ring = NULL;
+		dev->data->rx_queues[queue_idx] = rxq;
 	}
 
 	txq->agg_szmax  = RTE_MIN(hv->chim_szmax, hv->rndis_agg_size);
@@ -363,6 +380,13 @@ hn_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 
 	if (!txq)
 		return;
+
+	/*
+	 * Free any Rx queues allocated for a Tx queue without a corresponding
+	 * Rx queue
+	 */
+	if (qid >= dev->data->nb_rx_queues)
+		hn_rx_queue_free_common(dev->data->rx_queues[qid]);
 
 	rte_mempool_free(txq->txdesc_pool);
 
@@ -942,6 +966,13 @@ hn_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	if (queue_idx == 0) {
 		rxq = hv->primary;
 	} else {
+		/*
+		 * If the number of Tx queues was previously greater than
+		 * the number of Rx queues, we may already have allocated
+		 * an rxq. If so, free it now before allocating a new one.
+		 */
+		hn_rx_queue_free_common(dev->data->rx_queues[queue_idx]);
+
 		rxq = hn_rx_queue_alloc(hv, queue_idx, socket_id);
 		if (!rxq)
 			return -ENOMEM;
@@ -996,6 +1027,15 @@ hn_rx_queue_free(struct hn_rx_queue *rxq, bool keep_primary)
 
 	/* Keep primary queue to allow for control operations */
 	if (keep_primary && rxq == rxq->hv->primary)
+		return;
+
+	hn_rx_queue_free_common(rxq);
+}
+
+static void
+hn_rx_queue_free_common(struct hn_rx_queue *rxq)
+{
+	if (!rxq)
 		return;
 
 	rte_free(rxq->rxbuf_info);

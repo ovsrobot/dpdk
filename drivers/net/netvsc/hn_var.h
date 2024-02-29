@@ -216,6 +216,7 @@ int	hn_dev_tx_descriptor_status(void *arg, uint16_t offset);
 struct hn_rx_queue *hn_rx_queue_alloc(struct hn_data *hv,
 				      uint16_t queue_id,
 				      unsigned int socket_id);
+static void hn_rx_queue_free_common(struct hn_rx_queue *rxq);
 int	hn_dev_rx_queue_setup(struct rte_eth_dev *dev,
 			      uint16_t queue_idx, uint16_t nb_desc,
 			      unsigned int socket_id,
