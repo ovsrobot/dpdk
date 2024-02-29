@@ -1484,9 +1484,9 @@ igb_flow_create(struct rte_eth_dev *dev,
 				goto out;
 			}
 
-			rte_memcpy(&ntuple_filter_ptr->filter_info,
-				&ntuple_filter,
-				sizeof(struct rte_eth_ntuple_filter));
+			memcpy(&ntuple_filter_ptr->filter_info,
+			       &ntuple_filter,
+			       sizeof(struct rte_eth_ntuple_filter));
 			TAILQ_INSERT_TAIL(&igb_filter_ntuple_list,
 				ntuple_filter_ptr, entries);
 			flow->rule = ntuple_filter_ptr;
@@ -1511,9 +1511,9 @@ igb_flow_create(struct rte_eth_dev *dev,
 				goto out;
 			}
 
-			rte_memcpy(&ethertype_filter_ptr->filter_info,
-				&ethertype_filter,
-				sizeof(struct rte_eth_ethertype_filter));
+			memcpy(&ethertype_filter_ptr->filter_info,
+			       &ethertype_filter,
+			       sizeof(struct rte_eth_ethertype_filter));
 			TAILQ_INSERT_TAIL(&igb_filter_ethertype_list,
 				ethertype_filter_ptr, entries);
 			flow->rule = ethertype_filter_ptr;
@@ -1536,9 +1536,8 @@ igb_flow_create(struct rte_eth_dev *dev,
 				goto out;
 			}
 
-			rte_memcpy(&syn_filter_ptr->filter_info,
-				&syn_filter,
-				sizeof(struct rte_eth_syn_filter));
+			memcpy(&syn_filter_ptr->filter_info, &syn_filter,
+			       sizeof(struct rte_eth_syn_filter));
 			TAILQ_INSERT_TAIL(&igb_filter_syn_list,
 				syn_filter_ptr,
 				entries);
@@ -1562,9 +1561,8 @@ igb_flow_create(struct rte_eth_dev *dev,
 				goto out;
 			}
 
-			rte_memcpy(&flex_filter_ptr->filter_info,
-				&flex_filter,
-				sizeof(struct igb_flex_filter));
+			memcpy(&flex_filter_ptr->filter_info, &flex_filter,
+			       sizeof(struct igb_flex_filter));
 			TAILQ_INSERT_TAIL(&igb_filter_flex_list,
 				flex_filter_ptr, entries);
 			flow->rule = flex_filter_ptr;
