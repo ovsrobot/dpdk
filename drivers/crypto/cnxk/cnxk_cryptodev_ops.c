@@ -959,7 +959,7 @@ again:
 	lmt_dst = PLT_PTR_CAST(lmt_base);
 
 	for (j = 0; j < i; j++) {
-		rte_memcpy(lmt_dst, inst, sizeof(struct cpt_inst_s));
+		memcpy(lmt_dst, inst, sizeof(struct cpt_inst_s));
 		inst = RTE_PTR_ADD(inst, sizeof(struct cpt_inst_s));
 		lmt_dst = RTE_PTR_ADD(lmt_dst, 2 * sizeof(struct cpt_inst_s));
 	}

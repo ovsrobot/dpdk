@@ -1161,7 +1161,7 @@ cpt_sm_prep(uint32_t flags, uint64_t d_offs, uint64_t d_lens, struct roc_se_fc_p
 			void *dst = PLT_PTR_ADD(offset_vaddr, ROC_SE_OFF_CTRL_LEN);
 			const uint64_t *src = fc_params->iv_buf;
 
-			rte_memcpy(dst, src, 16);
+			memcpy(dst, src, 16);
 		}
 		inst->w4.u64 = cpt_inst_w4.u64;
 	} else {
