@@ -182,7 +182,7 @@ bond_flow_query_count(struct rte_eth_dev *dev, struct rte_flow *flow,
 	count->hits = 0;
 	count->bytes_set = 0;
 	count->hits_set = 0;
-	rte_memcpy(&member_count, count, sizeof(member_count));
+	memcpy(&member_count, count, sizeof(member_count));
 	for (i = 0; i < internals->member_count; i++) {
 		ret = rte_flow_query(internals->members[i].port_id,
 				     flow->flows[i], action,

@@ -1539,10 +1539,10 @@ rte_eth_bond_8023ad_member_info(uint16_t port_id, uint16_t member_id,
 	info->selected = port->selected;
 
 	info->actor_state = port->actor_state;
-	rte_memcpy(&info->actor, &port->actor, sizeof(port->actor));
+	memcpy(&info->actor, &port->actor, sizeof(port->actor));
 
 	info->partner_state = port->partner_state;
-	rte_memcpy(&info->partner, &port->partner, sizeof(port->partner));
+	memcpy(&info->partner, &port->partner, sizeof(port->partner));
 
 	info->agg_port_id = port->aggregator_port_id;
 	return 0;
