@@ -115,8 +115,8 @@ dpaa_mbuf_create_pool(struct rte_mempool *mp)
 		return -ENOMEM;
 	}
 
-	rte_memcpy(bp_info, (void *)&rte_dpaa_bpid_info[bpid],
-		   sizeof(struct dpaa_bp_info));
+	memcpy(bp_info, (void *)&rte_dpaa_bpid_info[bpid],
+	       sizeof(struct dpaa_bp_info));
 	mp->pool_data = (void *)bp_info;
 
 	DPAA_MEMPOOL_INFO("BMAN pool created for bpid =%d", bpid);
