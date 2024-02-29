@@ -10,7 +10,6 @@
 #include <rte_log.h>
 #include <rte_common.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_eal_memconfig.h>
 #include <rte_string_fns.h>
 #include <rte_errno.h>
@@ -138,7 +137,7 @@ ip6_mask_addr(uint8_t *ip, uint8_t depth)
 static inline void
 ip6_copy_addr(uint8_t *dst, const uint8_t *src)
 {
-	rte_memcpy(dst, src, RTE_LPM6_IPV6_ADDR_SIZE);
+	memcpy(dst, src, RTE_LPM6_IPV6_ADDR_SIZE);
 }
 
 /*
