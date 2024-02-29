@@ -368,6 +368,7 @@ load_configs(const char *path)
 	const char *skip;
 	struct rte_kvargs *kvlist;
 	const char *vchan_dev;
+	const char *xfer_mode;
 	int args_nr, nb_vp;
 	bool is_dma;
 
@@ -421,6 +422,21 @@ load_configs(const char *path)
 					test_case->transfer_dir = RTE_DMA_DIR_MEM_TO_MEM;
 				}
 			}
+
+			xfer_mode = rte_cfgfile_get_entry(cfgfile, section_name, "xfer_mode");
+			if (xfer_mode) {
+				int xmode = atoi(xfer_mode);
+				if (xmode == 1) {
+					if (test_case->transfer_dir == RTE_DMA_DIR_MEM_TO_MEM) {
+						printf("Error: Invalid configuration. For mem to"
+						       " mem dma transfer bi-directional cannot be"
+						       " configured.\n");
+						test_case->is_valid = false;
+						continue;
+					}
+					test_case->is_bidir = true;
+				}
+			}
 			is_dma = true;
 		} else if (strcmp(case_type, CPU_MEM_COPY) == 0) {
 			test_case->test_type = TEST_TYPE_CPU_MEM_COPY;
@@ -433,7 +449,7 @@ load_configs(const char *path)
 		}
 
 		if (test_case->transfer_dir == RTE_DMA_DIR_MEM_TO_DEV ||
-			test_case->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM) {
+		    test_case->transfer_dir == RTE_DMA_DIR_DEV_TO_MEM) {
 			vchan_dev = rte_cfgfile_get_entry(cfgfile, section_name, "vchan_dev");
 			if (vchan_dev == NULL) {
 				printf("Transfer direction mem2dev and dev2mem"

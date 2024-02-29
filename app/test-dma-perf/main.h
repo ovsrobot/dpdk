@@ -67,6 +67,7 @@ struct test_configure {
 	const char *eal_args;
 	uint8_t scenario_id;
 	struct test_vchan_dev_config vchan_dev;
+	bool is_bidir;
 };
 
 int mem_copy_benchmark(struct test_configure *cfg);
