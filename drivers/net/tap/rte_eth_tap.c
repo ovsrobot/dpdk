@@ -863,21 +863,44 @@ tap_mp_req_on_rxtx(struct rte_eth_dev *dev)
 		msg.fds[fd_iterator++] = process_private->txq_fds[i];
 		msg.num_fds++;
 		request_param->txq_count++;
+
+		/* Need to break request into chunks */
+		if (fd_iterator >= RTE_MP_MAX_FD_NUM) {
+			err = rte_mp_sendmsg(&msg);
+			if (err < 0)
+				goto fail;
+
+			fd_iterator = 0;
+			msg.num_fds = 0;
+			request_param->txq_count = 0;
+		}
 	}
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		msg.fds[fd_iterator++] = process_private->rxq_fds[i];
 		msg.num_fds++;
 		request_param->rxq_count++;
+
+		if (fd_iterator >= RTE_MP_MAX_FD_NUM) {
+			err = rte_mp_sendmsg(&msg);
+			if (err < 0)
+				goto fail;
+
+			fd_iterator = 0;
+			msg.num_fds = 0;
+			request_param->rxq_count = 0;
+		}
 	}
 
-	err = rte_mp_sendmsg(&msg);
-	if (err < 0) {
-		TAP_LOG(ERR, "Failed to send start req to secondary %d",
-			rte_errno);
-		return -1;
+	if (msg.num_fds > 0) {
+		err = rte_mp_sendmsg(&msg);
+		if (err < 0)
+			goto fail;
 	}
 
 	return 0;
+fail:
+	TAP_LOG(ERR, "Failed to send start req to secondary %d", rte_errno);
+	return err;
 }
 
 static int
@@ -885,8 +908,11 @@ tap_dev_start(struct rte_eth_dev *dev)
 {
 	int err, i;
 
-	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
-		tap_mp_req_on_rxtx(dev);
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		err = tap_mp_req_on_rxtx(dev);
+		if (err)
+			return err;
+	}
 
 	err = tap_intr_handle_set(dev, 1);
 	if (err)
