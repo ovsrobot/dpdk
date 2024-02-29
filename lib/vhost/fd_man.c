@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/eventfd.h>
 #include <unistd.h>
 
 #include <rte_common.h>
@@ -40,19 +41,11 @@ struct fdset {
 	pthread_mutex_t fd_polling_mutex;
 	int num;	/* current fd number of this fdset */
 
-	union pipefds {
-		struct {
-			int pipefd[2];
-		};
-		struct {
-			int readfd;
-			int writefd;
-		};
-	} u;
-
+	int sync_fd;
 	pthread_mutex_t sync_mutex;
 	pthread_cond_t sync_cond;
 	bool sync;
+
 	bool destroy;
 };
 
@@ -97,12 +90,11 @@ fdset_insert(struct fdset *fdset)
 }
 
 static void
-fdset_pipe_read_cb(int readfd, void *dat,
-		   int *remove __rte_unused)
+fdset_sync_read_cb(int sync_fd, void *dat, int *remove __rte_unused)
 {
-	char charbuf[16];
+	eventfd_t val;
 	struct fdset *fdset = dat;
-	int r = read(readfd, charbuf, sizeof(charbuf));
+	int r = eventfd_read(sync_fd, &val);
 	/*
 	 * Just an optimization, we don't care if read() failed
 	 * so ignore explicitly its return value to make the
@@ -117,37 +109,33 @@ fdset_pipe_read_cb(int readfd, void *dat,
 }
 
 static void
-fdset_pipe_uninit(struct fdset *fdset)
+fdset_sync_uninit(struct fdset *fdset)
 {
-	fdset_del(fdset, fdset->u.readfd);
-	close(fdset->u.readfd);
-	fdset->u.readfd = -1;
-	close(fdset->u.writefd);
-	fdset->u.writefd = -1;
+	fdset_del(fdset, fdset->sync_fd);
+	close(fdset->sync_fd);
+	fdset->sync_fd = -1;
 }
 
 static int
-fdset_pipe_init(struct fdset *fdset)
+fdset_sync_init(struct fdset *fdset)
 {
 	int ret;
 
 	pthread_mutex_init(&fdset->sync_mutex, NULL);
 	pthread_cond_init(&fdset->sync_cond, NULL);
 
-	if (pipe(fdset->u.pipefd) < 0) {
-		VHOST_FDMAN_LOG(ERR,
-			"failed to create pipe for vhost fdset");
+	fdset->sync_fd = eventfd(0, 0);
+	if (fdset->sync_fd < 0) {
+		VHOST_FDMAN_LOG(ERR, "failed to create eventfd for %s fdset", fdset->name);
 		return -1;
 	}
 
-	ret = fdset_add_no_sync(fdset, fdset->u.readfd,
-			fdset_pipe_read_cb, NULL, fdset);
+	ret = fdset_add_no_sync(fdset, fdset->sync_fd, fdset_sync_read_cb, NULL, fdset);
 	if (ret < 0) {
-		VHOST_FDMAN_LOG(ERR,
-			"failed to add pipe readfd %d into vhost server fdset",
-			fdset->u.readfd);
+		VHOST_FDMAN_LOG(ERR, "failed to add eventfd %d to %s fdset",
+			fdset->sync_fd, fdset->name);
 
-		fdset_pipe_uninit(fdset);
+		fdset_sync_uninit(fdset);
 		return -1;
 	}
 
@@ -162,11 +150,10 @@ fdset_sync(struct fdset *fdset)
 	pthread_mutex_lock(&fdset->sync_mutex);
 
 	fdset->sync = false;
-	ret = write(fdset->u.writefd, "1", 1);
+	ret = eventfd_write(fdset->sync_fd, (eventfd_t)1);
 	if (ret < 0) {
-		VHOST_FDMAN_LOG(ERR,
-			"Failed to write to notification pipe: %s",
-			strerror(errno));
+		VHOST_FDMAN_LOG(ERR, "Failed to write sync eventfd for %s fdset: %s",
+			fdset->name, strerror(errno));
 		goto out_unlock;
 	}
 
@@ -292,8 +279,8 @@ fdset_init(const char *name)
 	}
 	fdset->num = 0;
 
-	if (fdset_pipe_init(fdset)) {
-		VHOST_FDMAN_LOG(ERR, "Failed to init pipe for %s", name);
+	if (fdset_sync_init(fdset)) {
+		VHOST_FDMAN_LOG(ERR, "Failed to init sync for %s", name);
 		goto err_free;
 	}
 
@@ -301,7 +288,7 @@ fdset_init(const char *name)
 					fdset_event_dispatch, fdset)) {
 		VHOST_FDMAN_LOG(ERR, "Failed to create %s event dispatch thread",
 				fdset->name);
-		goto err_pipe;
+		goto err_sync;
 	}
 
 	if (fdset_insert(fdset)) {
@@ -317,8 +304,8 @@ err_thread:
 	fdset->destroy = true;
 	fdset_sync(fdset);
 	rte_thread_join(fdset->tid, &val);
-err_pipe:
-	fdset_pipe_uninit(fdset);
+err_sync:
+	fdset_sync_uninit(fdset);
 err_free:
 	rte_free(fdset);
 err_unlock:
