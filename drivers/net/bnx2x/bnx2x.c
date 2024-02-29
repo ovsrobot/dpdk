@@ -2242,18 +2242,18 @@ int bnx2x_tx_encap(struct bnx2x_tx_queue *txq, struct rte_mbuf *m0)
 		tx_parse_bd->parsing_data =
 		    (mac_type << ETH_TX_PARSE_BD_E2_ETH_ADDR_TYPE_SHIFT);
 
-		rte_memcpy(&tx_parse_bd->data.mac_addr.dst_hi,
-			   &eh->dst_addr.addr_bytes[0], 2);
-		rte_memcpy(&tx_parse_bd->data.mac_addr.dst_mid,
-			   &eh->dst_addr.addr_bytes[2], 2);
-		rte_memcpy(&tx_parse_bd->data.mac_addr.dst_lo,
-			   &eh->dst_addr.addr_bytes[4], 2);
-		rte_memcpy(&tx_parse_bd->data.mac_addr.src_hi,
-			   &eh->src_addr.addr_bytes[0], 2);
-		rte_memcpy(&tx_parse_bd->data.mac_addr.src_mid,
-			   &eh->src_addr.addr_bytes[2], 2);
-		rte_memcpy(&tx_parse_bd->data.mac_addr.src_lo,
-			   &eh->src_addr.addr_bytes[4], 2);
+		memcpy(&tx_parse_bd->data.mac_addr.dst_hi,
+		       &eh->dst_addr.addr_bytes[0], 2);
+		memcpy(&tx_parse_bd->data.mac_addr.dst_mid,
+		       &eh->dst_addr.addr_bytes[2], 2);
+		memcpy(&tx_parse_bd->data.mac_addr.dst_lo,
+		       &eh->dst_addr.addr_bytes[4], 2);
+		memcpy(&tx_parse_bd->data.mac_addr.src_hi,
+		       &eh->src_addr.addr_bytes[0], 2);
+		memcpy(&tx_parse_bd->data.mac_addr.src_mid,
+		       &eh->src_addr.addr_bytes[2], 2);
+		memcpy(&tx_parse_bd->data.mac_addr.src_lo,
+		       &eh->src_addr.addr_bytes[4], 2);
 
 		tx_parse_bd->data.mac_addr.dst_hi =
 		    rte_cpu_to_be_16(tx_parse_bd->data.mac_addr.dst_hi);
@@ -6675,8 +6675,7 @@ bnx2x_config_rss_pf(struct bnx2x_softc *sc, struct ecore_rss_config_obj *rss_obj
 	/* Hash bits */
 	params.rss_result_mask = MULTI_MASK;
 
-	rte_memcpy(params.ind_table, rss_obj->ind_table,
-			 sizeof(params.ind_table));
+	memcpy(params.ind_table, rss_obj->ind_table, sizeof(params.ind_table));
 
 	if (config_hash) {
 /* RSS keys */
@@ -6742,8 +6741,7 @@ bnx2x_set_mac_one(struct bnx2x_softc *sc, uint8_t * mac,
 
 	/* fill a user request section if needed */
 	if (!rte_bit_relaxed_get32(RAMROD_CONT, ramrod_flags)) {
-		rte_memcpy(ramrod_param.user_req.u.mac.mac, mac,
-				 ETH_ALEN);
+		memcpy(ramrod_param.user_req.u.mac.mac, mac, ETH_ALEN);
 
 		rte_bit_relaxed_set32(mac_type,
 				      &ramrod_param.user_req.vlan_mac_flags);
@@ -6958,7 +6956,7 @@ static void bnx2x_link_report_locked(struct bnx2x_softc *sc)
 
 	ELINK_DEBUG_P1(sc, "link status change count = %x", sc->link_cnt);
 	/* report new link params and remember the state for the next time */
-	rte_memcpy(&sc->last_reported_link, &cur_data, sizeof(cur_data));
+	memcpy(&sc->last_reported_link, &cur_data, sizeof(cur_data));
 
 	if (rte_bit_relaxed_get32(BNX2X_LINK_REPORT_LINK_DOWN,
 			 &cur_data.link_report_flags)) {
