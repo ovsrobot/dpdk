@@ -6,6 +6,7 @@ headers = files(
         'rte_hash_crc.h',
         'rte_hash.h',
         'rte_jhash.h',
+        'rte_siphash.h',
         'rte_thash.h',
         'rte_thash_gfni.h',
 )
@@ -21,6 +22,7 @@ sources = files(
         'rte_cuckoo_hash.c',
         'rte_hash_crc.c',
         'rte_fbk_hash.c',
+        'rte_siphash.c',
         'rte_thash.c',
         'rte_thash_gfni.c',
 )
