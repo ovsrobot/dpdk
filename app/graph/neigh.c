@@ -91,14 +91,14 @@ ip6_rewrite_node_add(struct neigh_ipv6_config *v6_config)
 	memset(data, 0, len);
 
 	/* Copy dst mac */
-	rte_memcpy((void *)&data[0], (void *)&v6_config->mac, RTE_ETHER_ADDR_LEN);
+	memcpy((void *)&data[0], (void *)&v6_config->mac, RTE_ETHER_ADDR_LEN);
 
 	/* Copy src mac */
 	rc = rte_eth_macaddr_get(portid, &smac);
 	if (rc < 0)
 		return rc;
 
-	rte_memcpy(&data[RTE_ETHER_ADDR_LEN], smac.addr_bytes, RTE_ETHER_ADDR_LEN);
+	memcpy(&data[RTE_ETHER_ADDR_LEN], smac.addr_bytes, RTE_ETHER_ADDR_LEN);
 
 	return rte_node_ip6_rewrite_add(portid, data, len, portid);
 }
@@ -121,7 +121,7 @@ ip4_rewrite_node_add(struct neigh_ipv4_config *v4_config)
 	memset(data, 0, len);
 
 	/* Copy dst mac */
-	rte_memcpy((void *)&data[0], (void *)&v4_config->mac, RTE_ETHER_ADDR_LEN);
+	memcpy((void *)&data[0], (void *)&v4_config->mac, RTE_ETHER_ADDR_LEN);
 
 	/* Copy src mac */
 	rc = rte_eth_macaddr_get(portid, &smac);
@@ -130,7 +130,7 @@ ip4_rewrite_node_add(struct neigh_ipv4_config *v4_config)
 		return rc;
 	}
 
-	rte_memcpy(&data[RTE_ETHER_ADDR_LEN], smac.addr_bytes, RTE_ETHER_ADDR_LEN);
+	memcpy(&data[RTE_ETHER_ADDR_LEN], smac.addr_bytes, RTE_ETHER_ADDR_LEN);
 
 	return rte_node_ip4_rewrite_add(portid, data, len, portid);
 }
