@@ -131,6 +131,10 @@ New Features
   * Added support for comparing result between packet fields or value.
   * Added support for accumulating value of field into another one.
 
+* **Updated Intel QuickAssist Technology driver.**
+
+  * Added support for GEN LCE (1454) device, for AES-GCM only.
+
 * **Updated Marvell cnxk crypto driver.**
 
   * Added support for Rx inject in crypto_cn10k.
