@@ -291,8 +291,8 @@ process_snow3g_hash_op(struct ipsec_mb_qp *qp, struct rte_crypto_op **ops,
 
 			/* Copy back digest from src to auth.digest.data */
 			if (digest_appended)
-				rte_memcpy(ops[i]->sym->auth.digest.data,
-					dst, SNOW3G_DIGEST_LENGTH);
+				memcpy(ops[i]->sym->auth.digest.data, dst,
+				       SNOW3G_DIGEST_LENGTH);
 		}
 		processed_ops++;
 	}
