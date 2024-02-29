@@ -119,7 +119,7 @@ sfc_flow_rss_parse_conf(struct sfc_adapter *sa,
 		key = ethdev_rss->key;
 	}
 
-	rte_memcpy(out->key, key, sizeof(out->key));
+	memcpy(out->key, key, sizeof(out->key));
 
 	switch (in->func) {
 	case RTE_ETH_HASH_FUNCTION_DEFAULT:
