@@ -159,7 +159,7 @@ skip_linking:
 					"Unable to allocate event object");
 				goto send_partial;
 			}
-			rte_memcpy(ev_temp, event, sizeof(struct rte_event));
+			memcpy(ev_temp, event, sizeof(struct rte_event));
 			DPAA2_SET_FD_ADDR((&fd_arr[loop]), (size_t)ev_temp);
 			DPAA2_SET_FD_LEN((&fd_arr[loop]),
 					 sizeof(struct rte_event));
@@ -230,7 +230,7 @@ static void dpaa2_eventdev_process_parallel(struct qbman_swp *swp,
 
 	RTE_SET_USED(rxq);
 
-	rte_memcpy(ev, ev_temp, sizeof(struct rte_event));
+	memcpy(ev, ev_temp, sizeof(struct rte_event));
 	rte_free(ev_temp);
 
 	qbman_swp_dqrr_consume(swp, dq);
@@ -249,7 +249,7 @@ static void dpaa2_eventdev_process_atomic(struct qbman_swp *swp,
 	RTE_SET_USED(swp);
 	RTE_SET_USED(rxq);
 
-	rte_memcpy(ev, ev_temp, sizeof(struct rte_event));
+	memcpy(ev, ev_temp, sizeof(struct rte_event));
 	rte_free(ev_temp);
 	*dpaa2_seqn(ev->mbuf) = dqrr_index + 1;
 	DPAA2_PER_LCORE_DQRR_SIZE++;
