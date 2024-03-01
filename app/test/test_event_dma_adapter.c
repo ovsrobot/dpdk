@@ -269,8 +269,8 @@ test_op_forward_mode(void)
 		op->vchan = TEST_DMA_VCHAN_ID;
 
 		response_info.event = dma_response_info.event;
-		rte_memcpy((uint8_t *)op + sizeof(struct rte_event_dma_adapter_op), &response_info,
-			   sizeof(struct rte_event));
+		memcpy((uint8_t *)op + sizeof(struct rte_event_dma_adapter_op),
+		       &response_info, sizeof(struct rte_event));
 
 		/* Fill in event info and update event_ptr with rte_event_dma_adapter_op */
 		memset(&ev[i], 0, sizeof(struct rte_event));

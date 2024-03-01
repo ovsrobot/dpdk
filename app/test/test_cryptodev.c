@@ -2345,8 +2345,8 @@ test_AES_CBC_HMAC_SHA1_encrypt_digest(void)
 	sym_op->auth.data.length = QUOTE_512_BYTES;
 
 	/* Copy IV at the end of the crypto operation */
-	rte_memcpy(rte_crypto_op_ctod_offset(ut_params->op, uint8_t *, IV_OFFSET),
-			aes_cbc_iv, CIPHER_IV_LENGTH_AES_CBC);
+	memcpy(rte_crypto_op_ctod_offset(ut_params->op, uint8_t *, IV_OFFSET),
+	       aes_cbc_iv, CIPHER_IV_LENGTH_AES_CBC);
 
 	/* Set crypto operation cipher parameters */
 	sym_op->cipher.data.offset = 0;
@@ -2480,9 +2480,7 @@ test_AES_CBC_HMAC_SHA512_decrypt_perform(void *sess,
 			DIGEST_BYTE_LENGTH_SHA512);
 	TEST_ASSERT_NOT_NULL(ut_params->digest, "no room to append digest");
 
-	rte_memcpy(ut_params->digest,
-			digest,
-			DIGEST_BYTE_LENGTH_SHA512);
+	memcpy(ut_params->digest, digest, DIGEST_BYTE_LENGTH_SHA512);
 
 	/* Generate Crypto op data structure */
 	ut_params->op = rte_crypto_op_alloc(ts_params->op_mpool,
@@ -2505,8 +2503,8 @@ test_AES_CBC_HMAC_SHA512_decrypt_perform(void *sess,
 	sym_op->auth.data.length = QUOTE_512_BYTES;
 
 	/* Copy IV at the end of the crypto operation */
-	rte_memcpy(rte_crypto_op_ctod_offset(ut_params->op, uint8_t *, IV_OFFSET),
-			iv, CIPHER_IV_LENGTH_AES_CBC);
+	memcpy(rte_crypto_op_ctod_offset(ut_params->op, uint8_t *, IV_OFFSET),
+	       iv, CIPHER_IV_LENGTH_AES_CBC);
 
 	sym_op->cipher.data.offset = 0;
 	sym_op->cipher.data.length = QUOTE_512_BYTES;
@@ -8863,7 +8861,7 @@ create_aead_operation(enum rte_crypto_aead_operation op,
 				uint8_t *, IV_OFFSET);
 
 		if (tdata->iv.len == 0) {
-			rte_memcpy(iv_ptr, tdata->iv.data, AES_GCM_J0_LENGTH);
+			memcpy(iv_ptr, tdata->iv.data, AES_GCM_J0_LENGTH);
 			debug_hexdump(stdout, "iv:", iv_ptr,
 				AES_GCM_J0_LENGTH);
 		} else {
@@ -13659,8 +13657,8 @@ test_multi_session_random_usage(void)
 
 	for (i = 0; i < MB_SESSION_NUMBER; i++) {
 
-		rte_memcpy(&ut_paramz[i].ut_params, &unittest_params,
-				sizeof(struct crypto_unittest_params));
+		memcpy(&ut_paramz[i].ut_params, &unittest_params,
+		       sizeof(struct crypto_unittest_params));
 
 		test_AES_CBC_HMAC_SHA512_decrypt_create_session_params(
 				&ut_paramz[i].ut_params,
