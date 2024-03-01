@@ -14,7 +14,8 @@
  * Level compressed tree implementation for IPv6 Longest Prefix Match
  */
 
-#include <rte_memcpy.h>
+#include <string.h>
+
 #include <rte_common.h>
 
 #ifdef __cplusplus
@@ -61,7 +62,7 @@ rte_rib6_copy_addr(uint8_t *dst, const uint8_t *src)
 {
 	if ((dst == NULL) || (src == NULL))
 		return;
-	rte_memcpy(dst, src, RTE_RIB6_IPV6_ADDR_SIZE);
+	memcpy(dst, src, RTE_RIB6_IPV6_ADDR_SIZE);
 }
 
 /**
