@@ -1400,7 +1400,7 @@ cnxk_ml_model_info_get(struct rte_ml_dev *dev, uint16_t model_id,
 	}
 
 	info = (struct rte_ml_model_info *)model->info;
-	rte_memcpy(model_info, info, sizeof(struct rte_ml_model_info));
+	memcpy(model_info, info, sizeof(struct rte_ml_model_info));
 	model_info->input_info = info->input_info;
 	model_info->output_info = info->output_info;
 
