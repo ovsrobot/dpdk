@@ -616,7 +616,10 @@ static int ice_set_node_rate(struct ice_hw *hw,
 					   ICE_MAX_BW,
 					   rate);
 	if (status) {
-		PMD_DRV_LOG(ERR, "Failed to set max bandwidth for node %u", tm_node->id);
+		if (tm_node != NULL)
+			PMD_DRV_LOG(ERR, "Failed to set max bandwidth for node %u", tm_node->id);
+		else
+			PMD_DRV_LOG(ERR, "Failed to set max bandwidth");
 		return -EINVAL;
 	}
 
@@ -630,7 +633,10 @@ static int ice_set_node_rate(struct ice_hw *hw,
 					   ICE_MIN_BW,
 					   rate);
 	if (status) {
-		PMD_DRV_LOG(ERR, "Failed to set min bandwidth for node %u", tm_node->id);
+		if (tm_node != NULL)
+			PMD_DRV_LOG(ERR, "Failed to set min bandwidth for node %u", tm_node->id);
+		else
+			PMD_DRV_LOG(ERR, "Failed to set min bandwidth");
 		return -EINVAL;
 	}
 
