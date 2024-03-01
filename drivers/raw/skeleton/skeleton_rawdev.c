@@ -245,8 +245,8 @@ static int skeleton_rawdev_queue_def_conf(struct rte_rawdev *dev,
 	skelq = &skeldev->queues[queue_id];
 
 	if (queue_id < SKELETON_MAX_QUEUES)
-		rte_memcpy(queue_conf, skelq,
-			sizeof(struct skeleton_rawdev_queue));
+		memcpy(queue_conf, skelq,
+		       sizeof(struct skeleton_rawdev_queue));
 
 	return 0;
 }
@@ -281,8 +281,7 @@ static int skeleton_rawdev_queue_setup(struct rte_rawdev *dev,
 
 	if (skeldev->num_queues > queue_id &&
 	    q->depth < SKELETON_QUEUE_MAX_DEPTH) {
-		rte_memcpy(q, queue_conf,
-			   sizeof(struct skeleton_rawdev_queue));
+		memcpy(q, queue_conf, sizeof(struct skeleton_rawdev_queue));
 		clear_queue_bufs(queue_id);
 	} else {
 		SKELETON_PMD_ERR("Invalid queue configuration");
