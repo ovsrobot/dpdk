@@ -13,7 +13,7 @@ rte_eth_random_addr(uint8_t *addr)
 	uint64_t rand = rte_rand();
 	uint8_t *p = (uint8_t *)&rand;
 
-	rte_memcpy(addr, p, RTE_ETHER_ADDR_LEN);
+	memcpy(addr, p, RTE_ETHER_ADDR_LEN);
 	addr[0] &= (uint8_t)~RTE_ETHER_GROUP_ADDR;	/* clear multicast bit */
 	addr[0] |= RTE_ETHER_LOCAL_ADMIN_ADDR;	/* set local assignment bit */
 }
