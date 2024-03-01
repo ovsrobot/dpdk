@@ -878,6 +878,7 @@ pcap_write_packets(pcap_dumper_t *dumper,
 	struct pcap_pkthdr header;
 	uint16_t i;
 	size_t total = 0;
+	const void *data;
 
 	gettimeofday(&header.ts, NULL);
 
@@ -886,9 +887,12 @@ pcap_write_packets(pcap_dumper_t *dumper,
 
 		header.len = rte_pktmbuf_pkt_len(m);
 		header.caplen = RTE_MIN(header.len, sizeof(temp_data));
-
-		pcap_dump((u_char *)dumper, &header,
-			  rte_pktmbuf_read(m, 0, header.caplen, temp_data));
+		data = rte_pktmbuf_read(m, 0, header.caplen, temp_data);
+		if (!data) {
+			rte_pktmbuf_free(m);
+			continue;
+		}
+		pcap_dump((u_char *)dumper, &header, data);
 
 		total += sizeof(header) + header.len;
 	}
