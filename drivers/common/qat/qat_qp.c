@@ -871,9 +871,8 @@ qat_cq_get_fw_cipher_crc_cap(struct qat_qp *qp)
 		return -EINVAL;
 	}
 
-	rte_memcpy(src_data_addr,
-			cipher_crc_cap_check_plaintext,
-			sizeof(cipher_crc_cap_check_plaintext));
+	memcpy(src_data_addr, cipher_crc_cap_check_plaintext,
+	       sizeof(cipher_crc_cap_check_plaintext));
 
 	phy_src_addr = rte_mem_virt2iova(src_data_addr);
 	if (phy_src_addr == 0 || phy_src_addr == RTE_BAD_IOVA) {
@@ -892,9 +891,8 @@ qat_cq_get_fw_cipher_crc_cap(struct qat_qp *qp)
 	auth_param = (void *)((uint8_t *)cipher_param +
 			ICP_QAT_FW_HASH_REQUEST_PARAMETERS_OFFSET);
 
-	rte_memcpy(cipher_param->u.cipher_IV_array,
-			cipher_crc_cap_check_iv,
-			sizeof(cipher_crc_cap_check_iv));
+	memcpy(cipher_param->u.cipher_IV_array, cipher_crc_cap_check_iv,
+	       sizeof(cipher_crc_cap_check_iv));
 
 	cipher_param->cipher_offset = cipher_crc_cap_check_cipher_offset;
 	cipher_param->cipher_length =
