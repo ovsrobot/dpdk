@@ -178,10 +178,10 @@ nfp_mask_id_alloc(struct nfp_flow_priv *priv,
 		return -ENOENT;
 	}
 
-	rte_memcpy(&temp_id, &ring->buf[ring->tail], NFP_FLOWER_MASK_ELEMENT_RS);
+	memcpy(&temp_id, &ring->buf[ring->tail], NFP_FLOWER_MASK_ELEMENT_RS);
 	*mask_id = temp_id;
 
-	rte_memcpy(&ring->buf[ring->tail], &freed_id, NFP_FLOWER_MASK_ELEMENT_RS);
+	memcpy(&ring->buf[ring->tail], &freed_id, NFP_FLOWER_MASK_ELEMENT_RS);
 	ring->tail = (ring->tail + NFP_FLOWER_MASK_ELEMENT_RS) %
 			(NFP_FLOWER_MASK_ENTRY_RS * NFP_FLOWER_MASK_ELEMENT_RS);
 
@@ -200,7 +200,7 @@ nfp_mask_id_free(struct nfp_flow_priv *priv,
 	if (CIRC_SPACE(ring->head, ring->tail, NFP_FLOWER_MASK_ENTRY_RS) == 0)
 		return -ENOBUFS;
 
-	rte_memcpy(&ring->buf[ring->head], &mask_id, NFP_FLOWER_MASK_ELEMENT_RS);
+	memcpy(&ring->buf[ring->head], &mask_id, NFP_FLOWER_MASK_ELEMENT_RS);
 	ring->head = (ring->head + NFP_FLOWER_MASK_ELEMENT_RS) %
 			(NFP_FLOWER_MASK_ENTRY_RS * NFP_FLOWER_MASK_ELEMENT_RS);
 
@@ -2247,13 +2247,13 @@ nfp_flow_action_set_mac(char *act_data,
 
 	set_mac = action->conf;
 	if (mac_src_flag) {
-		rte_memcpy(&set_eth->eth_addr[RTE_ETHER_ADDR_LEN],
-				set_mac->mac_addr, RTE_ETHER_ADDR_LEN);
+		memcpy(&set_eth->eth_addr[RTE_ETHER_ADDR_LEN],
+		       set_mac->mac_addr, RTE_ETHER_ADDR_LEN);
 		for (i = 0; i < RTE_ETHER_ADDR_LEN; i++)
 			set_eth->eth_addr_mask[RTE_ETHER_ADDR_LEN + i] = 0xff;
 	} else {
-		rte_memcpy(&set_eth->eth_addr[0],
-				set_mac->mac_addr, RTE_ETHER_ADDR_LEN);
+		memcpy(&set_eth->eth_addr[0], set_mac->mac_addr,
+		       RTE_ETHER_ADDR_LEN);
 		for (i = 0; i < RTE_ETHER_ADDR_LEN; i++)
 			set_eth->eth_addr_mask[i] = 0xff;
 	}
@@ -2329,7 +2329,7 @@ nfp_flow_action_set_ipv6(char *act_data,
 	set_ip->reserved = 0;
 
 	for (i = 0; i < 4; i++) {
-		rte_memcpy(&tmp, &set_ipv6->ipv6_addr[i * 4], 4);
+		memcpy(&tmp, &set_ipv6->ipv6_addr[i * 4], 4);
 		set_ip->ipv6[i].exact = tmp;
 		set_ip->ipv6[i].mask = RTE_BE32(0xffffffff);
 	}
