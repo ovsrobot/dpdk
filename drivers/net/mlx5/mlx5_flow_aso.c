@@ -1327,9 +1327,9 @@ mlx5_aso_ct_status_update(struct mlx5_aso_sq *sq, uint16_t num)
 		MLX5_ASSERT(ct);
 		MLX5_ASO_CT_UPDATE_STATE(ct, ASO_CONNTRACK_READY);
 		if (sq->elts[idx].query_data)
-			rte_memcpy(sq->elts[idx].query_data,
-				   (char *)((uintptr_t)sq->mr.addr + idx * 64),
-				   64);
+			memcpy(sq->elts[idx].query_data,
+			       (char *)((uintptr_t)sq->mr.addr + idx * 64),
+			       64);
 	}
 }
 

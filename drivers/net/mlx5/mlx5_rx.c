@@ -761,9 +761,9 @@ mlx5_rx_poll_len(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cqe,
 					ret = check_cqe_iteration(next, rxq->cqe_n, rxq->cq_ci);
 					if (ret != MLX5_CQE_STATUS_SW_OWN ||
 					    MLX5_CQE_FORMAT(next->op_own) == MLX5_COMPRESSED)
-						rte_memcpy(&rxq->title_cqe,
-							   (const void *)(uintptr_t)cqe,
-							   sizeof(struct mlx5_cqe));
+						memcpy(&rxq->title_cqe,
+						       (const void *)(uintptr_t)cqe,
+						       sizeof(struct mlx5_cqe));
 				}
 			}
 		}
