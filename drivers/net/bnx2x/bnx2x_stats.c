@@ -114,8 +114,8 @@ bnx2x_hw_stats_post(struct bnx2x_softc *sc)
 
 	/* Update MCP's statistics if possible */
 	if (sc->func_stx) {
-		rte_memcpy(BNX2X_SP(sc, func_stats), &sc->func_stats,
-				sizeof(sc->func_stats));
+		memcpy(BNX2X_SP(sc, func_stats), &sc->func_stats,
+		       sizeof(sc->func_stats));
 	}
 
 	/* loader */
@@ -817,10 +817,10 @@ bnx2x_hw_stats_update(struct bnx2x_softc *sc)
 			  etherstatspktsover1522octets);
     }
 
-    rte_memcpy(old, new, sizeof(struct nig_stats));
+    memcpy(old, new, sizeof(struct nig_stats));
 
-    rte_memcpy(&(estats->rx_stat_ifhcinbadoctets_hi), &(pstats->mac_stx[1]),
-	   sizeof(struct mac_stx));
+    memcpy(&(estats->rx_stat_ifhcinbadoctets_hi), &(pstats->mac_stx[1]),
+           sizeof(struct mac_stx));
     estats->brb_drop_hi = pstats->brb_drop_hi;
     estats->brb_drop_lo = pstats->brb_drop_lo;
 
