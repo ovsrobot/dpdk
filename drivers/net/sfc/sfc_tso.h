@@ -35,7 +35,7 @@ sfc_tso_ip4_get_ipid(const uint8_t *pkt_hdrp, size_t ip_hdr_off)
 	uint16_t ipid;
 
 	ip_hdrp = (const struct rte_ipv4_hdr *)(pkt_hdrp + ip_hdr_off);
-	rte_memcpy(&ipid, &ip_hdrp->packet_id, sizeof(ipid));
+	memcpy(&ipid, &ip_hdrp->packet_id, sizeof(ipid));
 
 	return rte_be_to_cpu_16(ipid);
 }
@@ -46,9 +46,8 @@ sfc_tso_outer_udp_fix_len(const struct rte_mbuf *m, uint8_t *tsoh)
 	rte_be16_t len = rte_cpu_to_be_16(m->l2_len + m->l3_len + m->l4_len +
 					  m->tso_segsz);
 
-	rte_memcpy(tsoh + m->outer_l2_len + m->outer_l3_len +
-		   offsetof(struct rte_udp_hdr, dgram_len),
-		   &len, sizeof(len));
+	memcpy(tsoh + m->outer_l2_len + m->outer_l3_len + offsetof(struct rte_udp_hdr, dgram_len),
+	       &len, sizeof(len));
 }
 
 static inline void
@@ -67,7 +66,7 @@ sfc_tso_innermost_ip_fix_len(const struct rte_mbuf *m, uint8_t *tsoh,
 		len = rte_cpu_to_be_16(ip_payload_len);
 	}
 
-	rte_memcpy(tsoh + iph_ofst + field_ofst, &len, sizeof(len));
+	memcpy(tsoh + iph_ofst + field_ofst, &len, sizeof(len));
 }
 
 unsigned int sfc_tso_prepare_header(uint8_t *tsoh, size_t header_len,

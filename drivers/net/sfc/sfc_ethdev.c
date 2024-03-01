@@ -1287,8 +1287,7 @@ sfc_set_mc_addr_list(struct rte_eth_dev *dev,
 	}
 
 	for (i = 0; i < nb_mc_addr; ++i) {
-		rte_memcpy(mc_addrs, mc_addr_set[i].addr_bytes,
-				 EFX_MAC_ADDR_LEN);
+		memcpy(mc_addrs, mc_addr_set[i].addr_bytes, EFX_MAC_ADDR_LEN);
 		mc_addrs += EFX_MAC_ADDR_LEN;
 	}
 
@@ -1672,7 +1671,7 @@ sfc_dev_rss_hash_conf_get(struct rte_eth_dev *dev,
 	rss_conf->rss_hf = sfc_rx_hf_efx_to_rte(rss, rss->hash_types);
 	rss_conf->rss_key_len = EFX_RSS_KEY_SIZE;
 	if (rss_conf->rss_key != NULL)
-		rte_memcpy(rss_conf->rss_key, rss->key, EFX_RSS_KEY_SIZE);
+		memcpy(rss_conf->rss_key, rss->key, EFX_RSS_KEY_SIZE);
 
 	return 0;
 }
@@ -1741,7 +1740,7 @@ sfc_dev_rss_hash_update(struct rte_eth_dev *dev,
 			}
 		}
 
-		rte_memcpy(rss->key, rss_conf->rss_key, sizeof(rss->key));
+		memcpy(rss->key, rss_conf->rss_key, sizeof(rss->key));
 	}
 
 	rss->hash_types = efx_hash_types;
@@ -1840,7 +1839,7 @@ sfc_dev_rss_reta_update(struct rte_eth_dev *dev,
 
 	sfc_adapter_lock(sa);
 
-	rte_memcpy(rss_tbl_new, rss->tbl, sizeof(rss->tbl));
+	memcpy(rss_tbl_new, rss->tbl, sizeof(rss->tbl));
 
 	for (entry = 0; entry < reta_size; entry++) {
 		int grp_idx = entry % RTE_ETH_RETA_GROUP_SIZE;
@@ -1864,7 +1863,7 @@ sfc_dev_rss_reta_update(struct rte_eth_dev *dev,
 			goto fail_scale_tbl_set;
 	}
 
-	rte_memcpy(rss->tbl, rss_tbl_new, sizeof(rss->tbl));
+	memcpy(rss->tbl, rss_tbl_new, sizeof(rss->tbl));
 
 fail_scale_tbl_set:
 bad_reta_entry:
