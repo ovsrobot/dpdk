@@ -26,6 +26,7 @@
 #include <rte_launch.h>
 #include <rte_cycles.h>
 #include <rte_prefetch.h>
+#include <rte_random.h>
 #include <rte_lcore.h>
 #include <rte_per_lcore.h>
 #include <rte_branch_prediction.h>
@@ -220,7 +221,7 @@ l2fwd_main_loop(void)
 	}
 
 	uint64_t tsc_initial = rte_rdtsc();
-	uint64_t tsc_lifetime = (rand()&0x07) * rte_get_tsc_hz();
+	uint64_t tsc_lifetime = rte_rand_max(8 * rte_get_tsc_hz());
 
 	while (!terminate_signal_received) {
 		/* Keepalive heartbeat. 8< */
