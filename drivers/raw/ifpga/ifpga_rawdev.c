@@ -14,7 +14,6 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_devargs.h>
-#include <rte_memcpy.h>
 #include <rte_pci.h>
 #include <bus_pci_driver.h>
 #include <rte_kvargs.h>
@@ -258,7 +257,7 @@ static int ifpga_rawdev_fill_info(struct ifpga_rawdev *ifpga_dev)
 	if (point < 12)
 		return -1;
 	point -= 12;
-	rte_memcpy(ifpga_dev->parent_bdf, &link[point], 12);
+	memcpy(ifpga_dev->parent_bdf, &link[point], 12);
 
 	point = strlen(link1);
 	if (point < 26)
@@ -948,10 +947,10 @@ ifpga_rawdev_pr(struct rte_rawdev *dev,
 		if (ret)
 			return ret;
 
-		rte_memcpy(&afu_pr_conf->afu_id.uuid.uuid_low, uuid.b,
-			sizeof(u64));
-		rte_memcpy(&afu_pr_conf->afu_id.uuid.uuid_high, uuid.b + 8,
-			sizeof(u64));
+		memcpy(&afu_pr_conf->afu_id.uuid.uuid_low, uuid.b,
+		       sizeof(u64));
+		memcpy(&afu_pr_conf->afu_id.uuid.uuid_high, uuid.b + 8,
+		       sizeof(u64));
 
 		IFPGA_RAWDEV_PMD_INFO("%s: uuid_l=0x%lx, uuid_h=0x%lx\n",
 			__func__,
