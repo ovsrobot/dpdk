@@ -1441,7 +1441,7 @@ pkt_ipv6_work_nat(struct rte_ipv6_hdr *ip,
 				tcp->src_port,
 				data->port);
 
-			rte_memcpy(ip->src_addr, data->addr, 16);
+			memcpy(ip->src_addr, data->addr, 16);
 			tcp->src_port = data->port;
 			tcp->cksum = tcp_cksum;
 		} else {
@@ -1454,7 +1454,7 @@ pkt_ipv6_work_nat(struct rte_ipv6_hdr *ip,
 				udp->src_port,
 				data->port);
 
-			rte_memcpy(ip->src_addr, data->addr, 16);
+			memcpy(ip->src_addr, data->addr, 16);
 			udp->src_port = data->port;
 			udp->dgram_cksum = udp_cksum;
 		}
@@ -1469,7 +1469,7 @@ pkt_ipv6_work_nat(struct rte_ipv6_hdr *ip,
 				tcp->dst_port,
 				data->port);
 
-			rte_memcpy(ip->dst_addr, data->addr, 16);
+			memcpy(ip->dst_addr, data->addr, 16);
 			tcp->dst_port = data->port;
 			tcp->cksum = tcp_cksum;
 		} else {
@@ -1482,7 +1482,7 @@ pkt_ipv6_work_nat(struct rte_ipv6_hdr *ip,
 				udp->dst_port,
 				data->port);
 
-			rte_memcpy(ip->dst_addr, data->addr, 16);
+			memcpy(ip->dst_addr, data->addr, 16);
 			udp->dst_port = data->port;
 			udp->dgram_cksum = udp_cksum;
 		}
