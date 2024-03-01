@@ -15,7 +15,6 @@
 #include <rte_log.h>
 #include <rte_interrupts.h>
 #include <rte_kvargs.h>
-#include <rte_memcpy.h>
 #include <rte_common.h>
 #include <rte_mempool.h>
 #include <rte_malloc.h>
@@ -618,7 +617,7 @@ rte_eth_dev_owner_get(const uint16_t port_id, struct rte_eth_dev_owner *owner)
 	rte_spinlock_lock(rte_mcfg_ethdev_get_lock());
 
 	if (eth_dev_shared_data_prepare() != NULL) {
-		rte_memcpy(owner, &ethdev->data->owner, sizeof(*owner));
+		memcpy(owner, &ethdev->data->owner, sizeof(*owner));
 		ret = 0;
 	} else {
 		ret = -ENOMEM;
