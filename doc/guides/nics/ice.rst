@@ -257,6 +257,19 @@ Runtime Configuration
   As a trade-off, this configuration may cause the packet processing performance
   degradation due to the PCI bandwidth limitation.
 
+- ``Tx diagnostics`` (default ``not enabled``)
+
+  Set the ``devargs`` parameter ``mbuf_check`` to enable TX diagnostics. For example,
+  ``-a 18:01.0,mbuf_check=<case>`` or ``-a 18:01.0,mbuf_check=[<case1>,<case2>...]``.
+  Also, ``xstats_get`` can be used to get the error counts, which are collected in
+  ``tx_mbuf_error_packets`` xstats. For example, ``testpmd> show port xstats all``.
+  Supported cases:
+
+  *   mbuf: Check for corrupted mbuf.
+  *   size: Check min/max packet length according to hw spec.
+  *   segment: Check number of mbuf segments not exceed hw limitation.
+  *   offload: Check any unsupported offload flag.
+
 Driver compilation and testing
 ------------------------------
 
