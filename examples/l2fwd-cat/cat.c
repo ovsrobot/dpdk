@@ -12,7 +12,6 @@
 #include <stdio.h>
 
 #include <rte_common.h>
-#include <rte_memcpy.h>
 
 #include <pqos.h>
 
@@ -314,8 +313,7 @@ parse_l3ca(const char *l3ca)
 		if (cmask != 0 && is_contiguous(cmask) == 0)
 			goto err;
 
-		rte_memcpy(&m_config[idx].cpumask,
-			&cpuset, sizeof(rte_cpuset_t));
+		memcpy(&m_config[idx].cpumask, &cpuset, sizeof(rte_cpuset_t));
 
 		if (cmask != 0) {
 			m_config[idx].cdp = 1;
