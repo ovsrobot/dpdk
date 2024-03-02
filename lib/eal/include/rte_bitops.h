@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include <rte_debug.h>
+#include <rte_stdatomic.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -705,6 +706,342 @@ __RTE_GEN_BIT_CLEAR(rte_bit_once_clear32, 32, volatile)
 __RTE_GEN_BIT_TEST(rte_bit_once_test64, 64, volatile)
 __RTE_GEN_BIT_SET(rte_bit_once_set64, 64, volatile)
 __RTE_GEN_BIT_CLEAR(rte_bit_once_clear64, 64, volatile)
+
+/**
+ * Test if a particular bit in a 32-bit word is set with a particular
+ * memory order.
+ *
+ * Test a bit with the resulting memory load ordered as per the
+ * specified memory order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to query.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+static inline bool
+rte_bit_atomic_test32(const uint32_t *addr, unsigned int nr, int memory_order);
+
+/**
+ * Atomically set bit in 32-bit word.
+ *
+ * Atomically bit specified by @c nr in the 32-bit word pointed to by
+ * @c addr to '1', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+static inline void
+rte_bit_atomic_set32(uint32_t *addr, unsigned int nr, int memory_order);
+
+/**
+ * Atomically clear bit in 32-bit word.
+ *
+ * Atomically set bit specified by @c nr in the 32-bit word pointed to
+ * by @c addr to '0', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+static inline void
+rte_bit_atomic_clear32(uint32_t *addr, unsigned int nr, int memory_order);
+
+/**
+ * Atomically assign a value to bit in a 32-bit word.
+ *
+ * Atomically set bit specified by @c nr in the 32-bit word pointed to
+ * by @c addr to the value indicated by @c value, with the memory
+ * ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+static inline void
+rte_bit_atomic_assign32(uint32_t *addr, unsigned int nr, bool value,
+			int memory_order);
+
+/*
+ * Atomic test-and-assign is not considered useful-enough to document
+ * and expose in the public API.
+ */
+static inline bool
+__rte_bit_atomic_test_and_assign32(uint32_t *addr, unsigned int nr, bool value,
+				   int memory_order);
+
+/**
+ * Atomically test and set a bit in a 32-bit word.
+ *
+ * Atomically test and set bit specified by @c nr in the 32-bit word
+ * pointed to by @c addr to the value indicated by @c value, with the
+ * memory ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+static inline bool
+rte_bit_atomic_test_and_set32(uint32_t *addr, unsigned int nr,
+			      int memory_order)
+{
+	return __rte_bit_atomic_test_and_assign32(addr, nr, true, memory_order);
+}
+
+/**
+ * Atomically test and clear a bit in a 32-bit word.
+ *
+ * Atomically test and clear bit specified by @c nr in the 32-bit word
+ * pointed to by @c addr to the value indicated by @c value, with the
+ * memory ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+static inline bool
+rte_bit_atomic_test_and_clear32(uint32_t *addr, unsigned int nr,
+				int memory_order)
+{
+	return __rte_bit_atomic_test_and_assign32(addr, nr, false, memory_order);
+}
+
+/**
+ * Test if a particular bit in a 32-bit word is set with a particular
+ * memory order.
+ *
+ * Test a bit with the resulting memory load ordered as per the
+ * specified memory order.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to query.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+static inline bool
+rte_bit_atomic_test64(const uint64_t *addr, unsigned int nr, int memory_order);
+
+/**
+ * Atomically set bit in 64-bit word.
+ *
+ * Atomically bit specified by @c nr in the 64-bit word pointed to by
+ * @c addr to '1', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+static inline void
+rte_bit_atomic_set64(uint64_t *addr, unsigned int nr, int memory_order);
+
+/**
+ * Atomically clear bit in 64-bit word.
+ *
+ * Atomically set bit specified by @c nr in the 64-bit word pointed to
+ * by @c addr to '0', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+static inline void
+rte_bit_atomic_clear64(uint64_t *addr, unsigned int nr, int memory_order);
+
+/**
+ * Atomically assign a value to bit in a 64-bit word.
+ *
+ * Atomically set bit specified by @c nr in the 64-bit word pointed to
+ * by @c addr to the value indicated by @c value, with the memory
+ * ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+static inline void
+rte_bit_atomic_assign64(uint64_t *addr, unsigned int nr, bool value,
+			int memory_order);
+
+/*
+ * Atomic test-and-assign is not considered useful-enough to document
+ * and expose in the public API.
+ */
+static inline bool
+__rte_bit_atomic_test_and_assign64(uint64_t *addr, unsigned int nr, bool value,
+				   int memory_order);
+/**
+ * Atomically test and set a bit in a 64-bit word.
+ *
+ * Atomically test and set bit specified by @c nr in the 64-bit word
+ * pointed to by @c addr to the value indicated by @c value, with the
+ * memory ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+static inline bool
+rte_bit_atomic_test_and_set64(uint64_t *addr, unsigned int nr,
+			      int memory_order)
+{
+	return __rte_bit_atomic_test_and_assign64(addr, nr, true, memory_order);
+}
+
+/**
+ * Atomically test and clear a bit in a 64-bit word.
+ *
+ * Atomically test and clear bit specified by @c nr in the 64-bit word
+ * pointed to by @c addr to the value indicated by @c value, with the
+ * memory ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+static inline bool
+rte_bit_atomic_test_and_clear64(uint64_t *addr, unsigned int nr,
+			      int memory_order)
+{
+	return __rte_bit_atomic_test_and_assign64(addr, nr, false, memory_order);
+}
+
+#ifndef RTE_ENABLE_STDATOMIC
+
+#define __RTE_GEN_BIT_ATOMIC_TEST(size)					\
+	static inline bool						\
+	rte_bit_atomic_test ## size(const uint ## size ## _t *addr,	\
+				    unsigned int nr, int memory_order)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		return __atomic_load_n(addr, memory_order) & mask;	\
+	}
+
+#define __RTE_GEN_BIT_ATOMIC_SET(size)					\
+	static inline void						\
+	rte_bit_atomic_set ## size(uint ## size ## _t *addr,		\
+				   unsigned int nr, int memory_order)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		__atomic_fetch_or(addr, mask, memory_order);		\
+	}
+
+#define __RTE_GEN_BIT_ATOMIC_CLEAR(size)				\
+	static inline void						\
+	rte_bit_atomic_clear ## size(uint ## size ## _t *addr,		\
+				     unsigned int nr, int memory_order)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		__atomic_fetch_and(addr, ~mask, memory_order);		\
+	}
+
+#define __RTE_GEN_BIT_ATOMIC_ASSIGN(size)				\
+	static inline void						\
+	rte_bit_atomic_assign ## size(uint ## size ## _t *addr,		\
+				      unsigned int nr, bool value,	\
+				      int memory_order)			\
+	{								\
+		if (value)						\
+			rte_bit_atomic_set ## size(addr, nr, memory_order); \
+		else							\
+			rte_bit_atomic_clear ## size(addr, nr, memory_order); \
+	}
+
+#define __RTE_GEN_BIT_ATOMIC_TEST_AND_ASSIGN(size)			\
+	static inline bool						\
+	__rte_bit_atomic_test_and_assign ## size(uint ## size ## _t *addr, \
+						 unsigned int nr,	\
+						 bool value,		\
+						 int memory_order)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t before;				\
+		uint ## size ## _t after;				\
+									\
+		before = __atomic_load_n(addr, __ATOMIC_RELAXED);	\
+									\
+		do {							\
+			rte_bit_assign ## size(&before, nr, value);	\
+		} while(!__atomic_compare_exchange_n(addr, &before, after, \
+						     true, __ATOMIC_RELAXED, \
+						     memory_order));	\
+		return rte_bit_test ## size(&before, nr);		\
+	}
+
+#else
+#error "C11 atomics (MSVC) not supported in this RFC version"
+#endif
+
+#define __RTE_GEN_BIT_ATOMIC_OPS(size)			\
+	__RTE_GEN_BIT_ATOMIC_TEST(size)			\
+	__RTE_GEN_BIT_ATOMIC_SET(size)			\
+	__RTE_GEN_BIT_ATOMIC_CLEAR(size)		\
+	__RTE_GEN_BIT_ATOMIC_ASSIGN(size)		\
+	__RTE_GEN_BIT_ATOMIC_TEST_AND_ASSIGN(size)
+
+__RTE_GEN_BIT_ATOMIC_OPS(32)
+__RTE_GEN_BIT_ATOMIC_OPS(64)
 
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
