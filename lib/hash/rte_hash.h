@@ -674,6 +674,21 @@ rte_hash_iterate(const struct rte_hash *h, const void **key, void **data, uint32
  */
 int rte_hash_rcu_qsbr_add(struct rte_hash *h, struct rte_hash_rcu_config *cfg);
 
+/**
+ * Reclaim resources from the defer queue.
+ * This API reclaim the resources from the defer queue if rcu is enabled.
+ *
+ * @param h
+ *   the hash object to reclaim resources
+ * @return
+ *   On success - 0
+ *   On error - 1 with error code set in rte_errno.
+ *   Possible rte_errno codes are:
+ *   - EINVAL - invalid pointer or invalid rcu mode
+ */
+__rte_experimental
+int rte_hash_rcu_qsbr_dq_reclaim(struct rte_hash *h);
+
 #ifdef __cplusplus
 }
 #endif
