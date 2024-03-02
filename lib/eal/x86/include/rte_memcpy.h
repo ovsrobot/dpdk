@@ -233,13 +233,15 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	 */
 	if (n <= 32) {
 		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov16((uint8_t *)dst - 16 + n,
+		if (n > 16)
+			rte_mov16((uint8_t *)dst - 16 + n,
 				  (const uint8_t *)src - 16 + n);
 		return ret;
 	}
 	if (n <= 64) {
 		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov32((uint8_t *)dst - 32 + n,
+		if (n > 32)
+			rte_mov32((uint8_t *)dst - 32 + n,
 				  (const uint8_t *)src - 32 + n);
 		return ret;
 	}
