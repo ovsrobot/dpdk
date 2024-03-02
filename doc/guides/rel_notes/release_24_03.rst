@@ -138,6 +138,9 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Added Marvell NITROX compression PMD.**
+
+  * Added support for DEFLATE compression and decompression.
 
 Removed Items
 -------------
