@@ -108,6 +108,87 @@ extern "C" {
 		((typeof(mask))(((reg) & (mask)) >> rte_ctz64(mask)))
 
 /**
+ * Test bit in word.
+ *
+ * Generic selection macro to test the value of a bit in a 32-bit or
+ * 64-bit word. The type of operation depends on the type of the @c
+ * addr parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_test(addr, nr)				\
+	_Generic((addr),				\
+		 uint32_t *: rte_bit_test32,		\
+		 uint64_t *: rte_bit_test64)(addr, nr)
+
+/**
+ * Set bit in word.
+ *
+ * Generic selection macro to set a bit in a 32-bit or 64-bit
+ * word. The type of operation depends on the type of the @c addr
+ * parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_set(addr, nr)				\
+	_Generic((addr),				\
+		 uint32_t *: rte_bit_set32,		\
+		 uint64_t *: rte_bit_set64)(addr, nr)
+
+/**
+ * Clear bit in word.
+ *
+ * Generic selection macro to clear a bit in a 32-bit or 64-bit
+ * word. The type of operation depends on the type of the @c addr
+ * parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_clear(addr, nr)			\
+	_Generic((addr),				\
+		 uint32_t *: rte_bit_clear32,		\
+		 uint64_t *: rte_bit_clear64)(addr, nr)
+
+/**
+ * Assign a value to a bit in word.
+ *
+ * Generic selection macro to assign a value to a bit in a 32-bit or 64-bit
+ * word. The type of operation depends on the type of the @c addr parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+#define rte_bit_assign(addr, nr, value)			\
+	_Generic((addr),				\
+		 uint32_t *: rte_bit_assign32,			\
+		 uint64_t *: rte_bit_assign64)(addr, nr, value)
+
+/**
  * Test if a particular bit in a 32-bit word is set.
  *
  * This function does not give any guarantees in regards to memory
