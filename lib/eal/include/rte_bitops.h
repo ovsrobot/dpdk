@@ -189,6 +189,107 @@ extern "C" {
 		 uint64_t *: rte_bit_assign64)(addr, nr, value)
 
 /**
+ * Test exactly once if a particular bit in a word is set.
+ *
+ * Generic selection macro to exactly once test the value of a bit in
+ * a 32-bit or 64-bit word. The type of operation depends on the type
+ * of the @c addr parameter.
+ *
+ * This macro is guaranteed to result in exactly one memory load. See
+ * rte_bit_once_test32() for more information and uses cases for the
+ * "once" class of functions.
+ *
+ * rte_bit_once_test() does give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to query.
+ * @param nr
+ *   The index of the bit.
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+
+#define rte_bit_once_test(addr, nr)				\
+	_Generic((addr),					\
+		 uint32_t *: rte_bit_once_test32,		\
+		 uint64_t *: rte_bit_once_test64)(addr, nr)
+
+/**
+ * Set bit in word exactly once.
+ *
+ * Set bit specified by @c nr in the word pointed to by @c addr to '1'
+ * exactly once.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit set operation.
+ *
+ * See rte_bit_test_once32() for more information and uses cases for
+ * the "once" class of functions.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_once_set(addr, nr)				\
+	_Generic((addr),					\
+		 uint32_t *: rte_bit_once_set32,		\
+		 uint64_t *: rte_bit_once_set64)(addr, nr)
+
+/**
+ * Clear bit in word exactly once.
+ *
+ * Set bit specified by @c nr in the word pointed to by @c addr to '0'
+ * exactly once.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * See rte_bit_test_once32() for more information and uses cases for
+ * the "once" class of functions.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_once_clear(addr, nr)				\
+	_Generic((addr),					\
+		 uint32_t *: rte_bit_once_clear32,		\
+		 uint64_t *: rte_bit_once_clear64)(addr, nr)
+
+/**
+ * Assign a value to bit in a word exactly once.
+ *
+ * Set bit specified by @c nr in the word pointed to by @c addr to the
+ * value indicated by @c value exactly once.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+#define rte_bit_once_assign(addr, nr, value)				\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_once_assign32,			\
+		 uint64_t *: rte_bit_once_assign64)(addr, nr, value)
+
+/**
  * Test if a particular bit in a 32-bit word is set.
  *
  * This function does not give any guarantees in regards to memory
