@@ -2,6 +2,7 @@
  * Copyright(c) 2020 Arm Limited
  * Copyright(c) 2010-2019 Intel Corporation
  * Copyright(c) 2023 Microsoft Corporation
+ * Copyright(c) 2024 Ericsson AB
  */
 
 #ifndef _RTE_BITOPS_H_
@@ -11,8 +12,9 @@
  * @file
  * Bit Operations
  *
- * This file defines a family of APIs for bit operations
- * without enforcing memory ordering.
+ * This file provides functionality for low-level, single-word
+ * arithmetic and bit-level operations, such as counting or
+ * setting individual bits.
  */
 
 #include <stdint.h>
@@ -104,6 +106,194 @@ extern "C" {
  */
 #define RTE_FIELD_GET64(mask, reg) \
 		((typeof(mask))(((reg) & (mask)) >> rte_ctz64(mask)))
+
+/**
+ * Test if a particular bit in a 32-bit word is set.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to query.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+static inline bool
+rte_bit_test32(const uint32_t *addr, unsigned int nr);
+
+/**
+ * Set bit in 32-bit word.
+ *
+ * Set bit specified by @c nr in the 32-bit word pointed to by
+ * @c addr to '1'.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ */
+static inline void
+rte_bit_set32(uint32_t *addr, unsigned int nr);
+
+/**
+ * Clear bit in 32-bit word.
+ *
+ * Set bit specified by @c nr in the 32-bit word pointed to by
+ * @c addr to '0'.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ */
+static inline void
+rte_bit_clear32(uint32_t *addr, unsigned int nr);
+
+/**
+ * Assign a value to bit in a 32-bit word.
+ *
+ * Set bit specified by @c nr in the 32-bit word pointed to by
+ * @c addr to the value indicated by @c value.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+static inline void
+rte_bit_assign32(uint32_t *addr, unsigned int nr, bool value)
+{
+	if (value)
+		rte_bit_set32(addr, nr);
+	else
+		rte_bit_clear32(addr, nr);
+}
+
+/**
+ * Test if a particular bit in a 64-bit word is set.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to query.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+static inline bool
+rte_bit_test64(const uint64_t *addr, unsigned int nr);
+
+/**
+ * Set bit in 64-bit word.
+ *
+ * Set bit specified by @c nr in the 64-bit word pointed to by
+ * @c addr to '1'.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ */
+static inline void
+rte_bit_set64(uint64_t *addr, unsigned int nr);
+
+/**
+ * Clear bit in 64-bit word.
+ *
+ * Set bit specified by @c nr in the 64-bit word pointed to by
+ * @c addr to '0'.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ */
+static inline void
+rte_bit_clear64(uint64_t *addr, unsigned int nr);
+
+/**
+ * Assign a value to bit in a 64-bit word.
+ *
+ * Set bit specified by @c nr in the 64-bit word pointed to by
+ * @c addr to the value indicated by @c value.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+static inline void
+rte_bit_assign64(uint64_t *addr, unsigned int nr, bool value)
+{
+	if (value)
+		rte_bit_set64(addr, nr);
+	else
+		rte_bit_clear64(addr, nr);
+}
+
+#define __RTE_GEN_BIT_TEST(name, size, qualifier)			\
+	static inline bool						\
+	name(const qualifier uint ## size ## _t *addr, unsigned int nr)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		return *addr & mask;					\
+	}
+
+#define __RTE_GEN_BIT_SET(name, size, qualifier)			\
+	static inline void						\
+	name(qualifier uint ## size ## _t *addr, unsigned int nr)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		*addr |= mask;						\
+	}								\
+
+#define __RTE_GEN_BIT_CLEAR(name, size, qualifier)			\
+	static inline void						\
+	name(qualifier uint ## size ## _t *addr, unsigned int nr)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = ~((uint ## size ## _t)1 << nr); \
+		(*addr) &= mask;					\
+	}								\
+
+__RTE_GEN_BIT_TEST(rte_bit_test32, 32,)
+__RTE_GEN_BIT_SET(rte_bit_set32, 32,)
+__RTE_GEN_BIT_CLEAR(rte_bit_clear32, 32,)
+
+__RTE_GEN_BIT_TEST(rte_bit_test64, 64,)
+__RTE_GEN_BIT_SET(rte_bit_set64, 64,)
+__RTE_GEN_BIT_CLEAR(rte_bit_clear64, 64,)
 
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
