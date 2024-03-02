@@ -291,6 +291,131 @@ extern "C" {
 		 uint64_t *: rte_bit_once_assign64)(addr, nr, value)
 
 /**
+ * Test if a particular bit in a word is set with a particular memory
+ * order.
+ *
+ * Test a bit with the resulting memory load ordered as per the
+ * specified memory order.
+ *
+ * @param addr
+ *   A pointer to the word to query.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+#define rte_bit_atomic_test(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_atomic_test32,			\
+		 uint64_t *: rte_bit_atomic_test64)(addr, nr, memory_order)
+
+/**
+ * Atomically set bit in word.
+ *
+ * Atomically set bit specified by @c nr in the word pointed to by @c
+ * addr to '1', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_set(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_atomic_set32,			\
+		 uint64_t *: rte_bit_atomic_set64)(addr, nr, memory_order)
+
+/**
+ * Atomically clear bit in word.
+ *
+ * Atomically set bit specified by @c nr in the word pointed to by @c
+ * addr to '0', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_clear(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_atomic_clear32,			\
+		 uint64_t *: rte_bit_atomic_clear64)(addr, nr, memory_order)
+
+/**
+ * Atomically assign a value to bit in word.
+ *
+ * Atomically set bit specified by @c nr in the word pointed to by @c
+ * addr to the value indicated by @c value, with the memory ordering
+ * as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_assign(addr, nr, value, memory_order)		\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_atomic_assign32,			\
+		 uint64_t *: rte_bit_atomic_assign64)(addr, nr, value,	\
+						      memory_order)
+
+/**
+ * Atomically test and set a bit in word.
+ *
+ * Atomically test and set bit specified by @c nr in the word pointed
+ * to by @c addr to '1', with the memory ordering as specified with @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+#define rte_bit_atomic_test_and_set(addr, nr, memory_order)		\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_atomic_test_and_set32,		\
+		 uint64_t *: rte_bit_atomic_test_and_set64)(addr, nr,	\
+							    memory_order))
+
+/**
+ * Atomically test and clear a bit in word.
+ *
+ * Atomically test and clear bit specified by @c nr in the word
+ * pointed to by @c addr to '0', with the memory ordering as specified
+ * with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+#define rte_bit_atomic_test_and_clear(addr, nr, memory_order)		\
+	_Generic((addr),						\
+		 uint32_t *: rte_bit_atomic_test_and_clear32,		\
+		 uint64_t *: rte_bit_atomic_test_and_clear64)(addr, nr, \
+							      memory_order))
+
+/**
  * Test if a particular bit in a 32-bit word is set.
  *
  * This function does not give any guarantees in regards to memory
