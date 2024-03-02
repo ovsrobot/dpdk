@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
+ * Copyright(c) 2024 SmartShare Systems
  */
 
 #ifndef _RTE_MEMCPY_X86_64_H_
@@ -91,14 +92,6 @@ rte_mov15_or_less(void *dst, const void *src, size_t n)
 	return ret;
 }
 
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-
-#define ALIGNMENT_MASK 0x3F
-
-/**
- * AVX512 implementation below
- */
-
 /**
  * Copy 16 bytes from one location to another,
  * locations should not overlap.
@@ -119,10 +112,15 @@ rte_mov16(uint8_t *dst, const uint8_t *src)
 static __rte_always_inline void
 rte_mov32(uint8_t *dst, const uint8_t *src)
 {
+#if (defined __AVX512F__ && defined RTE_MEMCPY_AVX512) || defined __AVX2__ || defined __AVX__
 	__m256i ymm0;
 
 	ymm0 = _mm256_loadu_si256((const __m256i *)src);
 	_mm256_storeu_si256((__m256i *)dst, ymm0);
+#else /* SSE implementation */
+	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
+	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
+#endif
 }
 
 /**
@@ -132,10 +130,15 @@ rte_mov32(uint8_t *dst, const uint8_t *src)
 static __rte_always_inline void
 rte_mov64(uint8_t *dst, const uint8_t *src)
 {
+#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
 	__m512i zmm0;
 
 	zmm0 = _mm512_loadu_si512((const void *)src);
 	_mm512_storeu_si512((void *)dst, zmm0);
+#else /* AVX2, AVX & SSE implementation */
+	rte_mov32((uint8_t *)dst + 0 * 32, (const uint8_t *)src + 0 * 32);
+	rte_mov32((uint8_t *)dst + 1 * 32, (const uint8_t *)src + 1 * 32);
+#endif
 }
 
 /**
@@ -156,11 +159,17 @@ rte_mov128(uint8_t *dst, const uint8_t *src)
 static __rte_always_inline void
 rte_mov256(uint8_t *dst, const uint8_t *src)
 {
-	rte_mov64(dst + 0 * 64, src + 0 * 64);
-	rte_mov64(dst + 1 * 64, src + 1 * 64);
-	rte_mov64(dst + 2 * 64, src + 2 * 64);
-	rte_mov64(dst + 3 * 64, src + 3 * 64);
+	rte_mov128(dst + 0 * 128, src + 0 * 128);
+	rte_mov128(dst + 1 * 128, src + 1 * 128);
 }
+
+#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
+
+#define ALIGNMENT_MASK 0x3F
+
+/**
+ * AVX512 implementation below
+ */
 
 /**
  * Copy 128-byte blocks from one location to another,
@@ -231,10 +240,20 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	/**
 	 * Fast way when copy size doesn't exceed 512 bytes
 	 */
+	if (__builtin_constant_p(n) && n == 32) {
+		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+		return ret;
+	}
 	if (n <= 32) {
 		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+		if (__builtin_constant_p(n) && n == 16)
+			return ret; /* avoid (harmless) duplicate copy */
 		rte_mov16((uint8_t *)dst - 16 + n,
 				  (const uint8_t *)src - 16 + n);
+		return ret;
+	}
+	if (__builtin_constant_p(n) && n == 64) {
+		rte_mov64((uint8_t *)dst, (const uint8_t *)src);
 		return ret;
 	}
 	if (n <= 64) {
@@ -322,73 +341,6 @@ COPY_BLOCK_128_BACK63:
  */
 
 /**
- * Copy 16 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov16(uint8_t *dst, const uint8_t *src)
-{
-	__m128i xmm0;
-
-	xmm0 = _mm_loadu_si128((const __m128i *)(const void *)src);
-	_mm_storeu_si128((__m128i *)(void *)dst, xmm0);
-}
-
-/**
- * Copy 32 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov32(uint8_t *dst, const uint8_t *src)
-{
-	__m256i ymm0;
-
-	ymm0 = _mm256_loadu_si256((const __m256i *)(const void *)src);
-	_mm256_storeu_si256((__m256i *)(void *)dst, ymm0);
-}
-
-/**
- * Copy 64 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov64(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov32((uint8_t *)dst + 0 * 32, (const uint8_t *)src + 0 * 32);
-	rte_mov32((uint8_t *)dst + 1 * 32, (const uint8_t *)src + 1 * 32);
-}
-
-/**
- * Copy 128 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov128(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov32((uint8_t *)dst + 0 * 32, (const uint8_t *)src + 0 * 32);
-	rte_mov32((uint8_t *)dst + 1 * 32, (const uint8_t *)src + 1 * 32);
-	rte_mov32((uint8_t *)dst + 2 * 32, (const uint8_t *)src + 2 * 32);
-	rte_mov32((uint8_t *)dst + 3 * 32, (const uint8_t *)src + 3 * 32);
-}
-
-/**
- * Copy 256 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov256(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov32((uint8_t *)dst + 0 * 32, (const uint8_t *)src + 0 * 32);
-	rte_mov32((uint8_t *)dst + 1 * 32, (const uint8_t *)src + 1 * 32);
-	rte_mov32((uint8_t *)dst + 2 * 32, (const uint8_t *)src + 2 * 32);
-	rte_mov32((uint8_t *)dst + 3 * 32, (const uint8_t *)src + 3 * 32);
-	rte_mov32((uint8_t *)dst + 4 * 32, (const uint8_t *)src + 4 * 32);
-	rte_mov32((uint8_t *)dst + 5 * 32, (const uint8_t *)src + 5 * 32);
-	rte_mov32((uint8_t *)dst + 6 * 32, (const uint8_t *)src + 6 * 32);
-	rte_mov32((uint8_t *)dst + 7 * 32, (const uint8_t *)src + 7 * 32);
-}
-
-/**
  * Copy 128-byte blocks from one location to another,
  * locations should not overlap.
  */
@@ -437,15 +389,14 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	/**
 	 * Fast way when copy size doesn't exceed 256 bytes
 	 */
-	if (n <= 32) {
-		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov16((uint8_t *)dst - 16 + n,
-				(const uint8_t *)src - 16 + n);
+	if (__builtin_constant_p(n) && n == 32) {
+		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
 		return ret;
 	}
-	if (n <= 48) {
+	if (n <= 32) {
 		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov16((uint8_t *)dst + 16, (const uint8_t *)src + 16);
+		if (__builtin_constant_p(n) && n == 16)
+			return ret; /* avoid (harmless) duplicate copy */
 		rte_mov16((uint8_t *)dst - 16 + n,
 				(const uint8_t *)src - 16 + n);
 		return ret;
@@ -518,85 +469,6 @@ COPY_BLOCK_128_BACK31:
 /**
  * SSE & AVX implementation below
  */
-
-/**
- * Copy 16 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov16(uint8_t *dst, const uint8_t *src)
-{
-	__m128i xmm0;
-
-	xmm0 = _mm_loadu_si128((const __m128i *)(const void *)src);
-	_mm_storeu_si128((__m128i *)(void *)dst, xmm0);
-}
-
-/**
- * Copy 32 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov32(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
-	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
-}
-
-/**
- * Copy 64 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov64(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
-	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
-	rte_mov16((uint8_t *)dst + 2 * 16, (const uint8_t *)src + 2 * 16);
-	rte_mov16((uint8_t *)dst + 3 * 16, (const uint8_t *)src + 3 * 16);
-}
-
-/**
- * Copy 128 bytes from one location to another,
- * locations should not overlap.
- */
-static __rte_always_inline void
-rte_mov128(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
-	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
-	rte_mov16((uint8_t *)dst + 2 * 16, (const uint8_t *)src + 2 * 16);
-	rte_mov16((uint8_t *)dst + 3 * 16, (const uint8_t *)src + 3 * 16);
-	rte_mov16((uint8_t *)dst + 4 * 16, (const uint8_t *)src + 4 * 16);
-	rte_mov16((uint8_t *)dst + 5 * 16, (const uint8_t *)src + 5 * 16);
-	rte_mov16((uint8_t *)dst + 6 * 16, (const uint8_t *)src + 6 * 16);
-	rte_mov16((uint8_t *)dst + 7 * 16, (const uint8_t *)src + 7 * 16);
-}
-
-/**
- * Copy 256 bytes from one location to another,
- * locations should not overlap.
- */
-static inline void
-rte_mov256(uint8_t *dst, const uint8_t *src)
-{
-	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
-	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
-	rte_mov16((uint8_t *)dst + 2 * 16, (const uint8_t *)src + 2 * 16);
-	rte_mov16((uint8_t *)dst + 3 * 16, (const uint8_t *)src + 3 * 16);
-	rte_mov16((uint8_t *)dst + 4 * 16, (const uint8_t *)src + 4 * 16);
-	rte_mov16((uint8_t *)dst + 5 * 16, (const uint8_t *)src + 5 * 16);
-	rte_mov16((uint8_t *)dst + 6 * 16, (const uint8_t *)src + 6 * 16);
-	rte_mov16((uint8_t *)dst + 7 * 16, (const uint8_t *)src + 7 * 16);
-	rte_mov16((uint8_t *)dst + 8 * 16, (const uint8_t *)src + 8 * 16);
-	rte_mov16((uint8_t *)dst + 9 * 16, (const uint8_t *)src + 9 * 16);
-	rte_mov16((uint8_t *)dst + 10 * 16, (const uint8_t *)src + 10 * 16);
-	rte_mov16((uint8_t *)dst + 11 * 16, (const uint8_t *)src + 11 * 16);
-	rte_mov16((uint8_t *)dst + 12 * 16, (const uint8_t *)src + 12 * 16);
-	rte_mov16((uint8_t *)dst + 13 * 16, (const uint8_t *)src + 13 * 16);
-	rte_mov16((uint8_t *)dst + 14 * 16, (const uint8_t *)src + 14 * 16);
-	rte_mov16((uint8_t *)dst + 15 * 16, (const uint8_t *)src + 15 * 16);
-}
 
 /**
  * Macro for copying unaligned block from one location to another with constant load offset,
@@ -710,20 +582,26 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	/**
 	 * Fast way when copy size doesn't exceed 512 bytes
 	 */
-	if (n <= 32) {
-		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
+	if (__builtin_constant_p(n) && n == 32) {
+		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
 		return ret;
 	}
-	if (n <= 48) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+	if (n <= 32) {
+		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+		if (__builtin_constant_p(n) && n == 16)
+			return ret; /* avoid (harmless) duplicate copy */
 		rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
 		return ret;
 	}
 	if (n <= 64) {
 		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov16((uint8_t *)dst + 32, (const uint8_t *)src + 32);
+#if defined __AVX__
+		rte_mov32((uint8_t *)dst - 32 + n, (const uint8_t *)src - 32 + n);
+#else /* SSE implementation */
+		if (n > 48)
+			rte_mov16((uint8_t *)dst + 32, (const uint8_t *)src + 32);
 		rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
+#endif
 		return ret;
 	}
 	if (n <= 128) {
@@ -828,8 +706,14 @@ rte_memcpy_aligned(void *dst, const void *src, size_t n)
 	}
 
 	/* Copy 16 <= size <= 32 bytes */
+	if (__builtin_constant_p(n) && n == 32) {
+		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+		return ret;
+	}
 	if (n <= 32) {
 		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+		if (__builtin_constant_p(n) && n == 16)
+			return ret; /* avoid (harmless) duplicate copy */
 		rte_mov16((uint8_t *)dst - 16 + n,
 				(const uint8_t *)src - 16 + n);
 
