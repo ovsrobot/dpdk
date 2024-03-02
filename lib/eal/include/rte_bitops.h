@@ -1179,6 +1179,10 @@ __RTE_GEN_BIT_ATOMIC_OPS(64)
  *   The address holding the bit.
  * @return
  *   The target bit.
+ * @note
+ *   This function is deprecated. Use rte_bit_test32(),
+ *   rte_bit_once_test32(), or rte_bit_atomic_test32() instead,
+ *   depending on exactly what guarantees are required.
  */
 static inline uint32_t
 rte_bit_relaxed_get32(unsigned int nr, volatile uint32_t *addr)
@@ -1196,6 +1200,10 @@ rte_bit_relaxed_get32(unsigned int nr, volatile uint32_t *addr)
  *   The target bit to set.
  * @param addr
  *   The address holding the bit.
+ * @note
+ *   This function is deprecated. Use rte_bit_set32(),
+ *   rte_bit_once_set32(), or rte_bit_atomic_set32() instead,
+ *   depending on exactly what guarantees are required.
  */
 static inline void
 rte_bit_relaxed_set32(unsigned int nr, volatile uint32_t *addr)
@@ -1213,6 +1221,10 @@ rte_bit_relaxed_set32(unsigned int nr, volatile uint32_t *addr)
  *   The target bit to clear.
  * @param addr
  *   The address holding the bit.
+ * @note
+ *   This function is deprecated. Use rte_bit_clear32(),
+ *   rte_bit_once_clear32(), or rte_bit_atomic_clear32() instead,
+ *   depending on exactly what guarantees are required.
  */
 static inline void
 rte_bit_relaxed_clear32(unsigned int nr, volatile uint32_t *addr)
@@ -1233,6 +1245,12 @@ rte_bit_relaxed_clear32(unsigned int nr, volatile uint32_t *addr)
  *   The address holding the bit.
  * @return
  *   The original bit.
+ * @note
+ *   This function is deprecated and replaced by
+ *   rte_bit_atomic_test_and_set32(), for use cases where the
+ *   operation needs to be atomic. For non-atomic/non-ordered use
+ *   cases, use rte_bit_test32() + rte_bit_set32() or
+ *   rte_bit_once_test32() + rte_bit_once_set32().
  */
 static inline uint32_t
 rte_bit_relaxed_test_and_set32(unsigned int nr, volatile uint32_t *addr)
@@ -1255,6 +1273,12 @@ rte_bit_relaxed_test_and_set32(unsigned int nr, volatile uint32_t *addr)
  *   The address holding the bit.
  * @return
  *   The original bit.
+ * @note
+ *   This function is deprecated and replaced by
+ *   rte_bit_atomic_test_and_clear32(), for use cases where the
+ *   operation needs to be atomic. For non-atomic/non-ordered use
+ *   cases, use rte_bit_test32() + rte_bit_clear32() or
+ *   rte_bit_once_test32() + rte_bit_once_clear32().
  */
 static inline uint32_t
 rte_bit_relaxed_test_and_clear32(unsigned int nr, volatile uint32_t *addr)
@@ -1278,6 +1302,10 @@ rte_bit_relaxed_test_and_clear32(unsigned int nr, volatile uint32_t *addr)
  *   The address holding the bit.
  * @return
  *   The target bit.
+ * @note
+ *   This function is deprecated. Use rte_bit_test64(),
+ *   rte_bit_once_test64(), or rte_bit_atomic_test64() instead,
+ *   depending on exactly what guarantees are required.
  */
 static inline uint64_t
 rte_bit_relaxed_get64(unsigned int nr, volatile uint64_t *addr)
@@ -1295,6 +1323,10 @@ rte_bit_relaxed_get64(unsigned int nr, volatile uint64_t *addr)
  *   The target bit to set.
  * @param addr
  *   The address holding the bit.
+ * @note
+ *   This function is deprecated. Use rte_bit_set64(),
+ *   rte_bit_once_set64(), or rte_bit_atomic_set64() instead,
+ *   depending on exactly what guarantees are required.
  */
 static inline void
 rte_bit_relaxed_set64(unsigned int nr, volatile uint64_t *addr)
@@ -1312,6 +1344,10 @@ rte_bit_relaxed_set64(unsigned int nr, volatile uint64_t *addr)
  *   The target bit to clear.
  * @param addr
  *   The address holding the bit.
+ * @note
+ *   This function is deprecated. Use rte_bit_clear64(),
+ *   rte_bit_once_clear64(), or rte_bit_atomic_clear64() instead,
+ *   depending on exactly what guarantees are required.
  */
 static inline void
 rte_bit_relaxed_clear64(unsigned int nr, volatile uint64_t *addr)
@@ -1332,6 +1368,12 @@ rte_bit_relaxed_clear64(unsigned int nr, volatile uint64_t *addr)
  *   The address holding the bit.
  * @return
  *   The original bit.
+ * @note
+ *   This function is deprecated and replaced by
+ *   rte_bit_atomic_test_and_set64(), for use cases where the
+ *   operation needs to be atomic. For non-atomic/non-ordered use
+ *   cases, use rte_bit_test64() + rte_bit_set64() or
+ *   rte_bit_once_test64() + rte_bit_once_set64().
  */
 static inline uint64_t
 rte_bit_relaxed_test_and_set64(unsigned int nr, volatile uint64_t *addr)
@@ -1354,6 +1396,12 @@ rte_bit_relaxed_test_and_set64(unsigned int nr, volatile uint64_t *addr)
  *   The address holding the bit.
  * @return
  *   The original bit.
+ * @note
+ *   This function is deprecated and replaced by
+ *   rte_bit_atomic_test_and_clear64(), for use cases where the
+ *   operation needs to be atomic. For non-atomic/non-ordered use
+ *   cases, use rte_bit_test64() + rte_bit_clear64() or
+ *   rte_bit_once_test64() + rte_bit_once_clear64().
  */
 static inline uint64_t
 rte_bit_relaxed_test_and_clear64(unsigned int nr, volatile uint64_t *addr)
