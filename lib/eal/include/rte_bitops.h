@@ -338,6 +338,227 @@ rte_bit_assign64(uint64_t *addr, unsigned int nr, bool value)
 		rte_bit_clear64(addr, nr);
 }
 
+/**
+ * Test exactly once if a particular bit in a 32-bit word is set.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * (e.g., it may not be eliminate or merged by the compiler).
+ *
+ * \code{.c}
+ * rte_bit_once_set32(addr, 17);
+ * if (rte_bit_once_test32(addr, 17)) {
+ *     ...
+ * }
+ * \endcode
+ *
+ * In the above example, rte_bit_once_set32() may not be removed by
+ * the compiler, which would be allowed in case rte_bit_set32() and
+ * rte_bit_test32() was used.
+ *
+ * \code{.c}
+ * while (rte_bit_once_test32(addr, 17);
+ *     ;
+ * \endcode
+ *
+ * In case rte_bit_test32(addr, 17) was used instead, the resulting
+ * object code could (and in many cases would be) replaced with
+ * with the equivalent to
+ * \code{.c}
+ * if (rte_bit_test32(addr, 17)) {
+ *   for (;;) // spin forever
+ *       ;
+ * }
+ * \endcode
+ *
+ * The regular bit set operations (e.g., rte_bit_test32()) should be
+ * preffered over the "once" family of operations (e.g.,
+ * rte_bit_once_test32()), since the latter may prevent optimizations
+ * crucial for run-time performance.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering (except ordering from the same thread to the same memory
+ * location) or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to query.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+
+static inline bool
+rte_bit_once_test32(const volatile uint32_t *addr, unsigned int nr);
+
+/**
+ * Set bit in 32-bit word exactly once.
+ *
+ * Set bit specified by @c nr in the 32-bit word pointed to by
+ * @c addr to '1'.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit set operation.
+ *
+ * See rte_bit_test_once32() for more information and uses cases for
+ * the "once" class of functions.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ */
+static inline void
+rte_bit_once_set32(volatile uint32_t *addr, unsigned int nr);
+
+/**
+ * Clear bit in 32-bit word exactly once.
+ *
+ * Set bit specified by @c nr in the 32-bit word pointed to by @c addr
+ * to '0'.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * See rte_bit_once_test32() for more information and uses cases for the
+ * "once" class of functions.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ */
+static inline void
+rte_bit_once_clear32(volatile uint32_t *addr, unsigned int nr);
+
+/**
+ * Assign a value to bit in a 32-bit word exactly once.
+ *
+ * Set bit specified by @c nr in the 32-bit word pointed to by
+ * @c addr to the value indicated by @c value.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 32-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-31).
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+static inline void
+rte_bit_once_assign32(uint32_t *addr, unsigned int nr, bool value)
+{
+	if (value)
+		rte_bit_once_set32(addr, nr);
+	else
+		rte_bit_once_clear32(addr, nr);
+}
+
+/**
+ * Test exactly once if a particular bit in a 64-bit word is set.
+ *
+ * This function is guaranteed to result in exactly one memory load.
+ * See rte_bit_once_test32() for more information and uses cases for the
+ * "once" class of functions.
+ *
+ * rte_v_bit_test64() does give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to query.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+
+static inline bool
+rte_bit_once_test64(const volatile uint64_t *addr, unsigned int nr);
+
+/**
+ * Set bit in 64-bit word exactly once.
+ *
+ * Set bit specified by @c nr in the 64-bit word pointed to by
+ * @c addr to '1'.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit set operation.
+ *
+ * See rte_bit_once_test32() for more information and uses cases for the
+ * "once" class of functions.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ */
+static inline void
+rte_bit_once_set64(volatile uint64_t *addr, unsigned int nr);
+
+/**
+ * Clear bit in 64-bit word exactly once.
+ *
+ * Set bit specified by @c nr in the 64-bit word pointed to by @c addr
+ * to '0'.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * See rte_bit_once_test32() for more information and uses cases for the
+ * "once" class of functions.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ */
+static inline void
+rte_bit_once_clear64(volatile uint64_t *addr, unsigned int nr);
+
+/**
+ * Assign a value to bit in a 64-bit word exactly once.
+ *
+ * Set bit specified by @c nr in the 64-bit word pointed to by
+ * @c addr to the value indicated by @c value.
+ *
+ * This function is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * This function does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the 64-bit word to modify.
+ * @param nr
+ *   The index of the bit (0-63).
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+static inline void
+rte_bit_once_assign64(volatile uint64_t *addr, unsigned int nr, bool value)
+{
+	if (value)
+		rte_bit_once_set64(addr, nr);
+	else
+		rte_bit_once_clear64(addr, nr);
+}
+
 #define __RTE_GEN_BIT_TEST(name, size, qualifier)			\
 	static inline bool						\
 	name(const qualifier uint ## size ## _t *addr, unsigned int nr)	\
@@ -375,6 +596,14 @@ __RTE_GEN_BIT_CLEAR(rte_bit_clear32, 32,)
 __RTE_GEN_BIT_TEST(rte_bit_test64, 64,)
 __RTE_GEN_BIT_SET(rte_bit_set64, 64,)
 __RTE_GEN_BIT_CLEAR(rte_bit_clear64, 64,)
+
+__RTE_GEN_BIT_TEST(rte_bit_once_test32, 32, volatile)
+__RTE_GEN_BIT_SET(rte_bit_once_set32, 32, volatile)
+__RTE_GEN_BIT_CLEAR(rte_bit_once_clear32, 32, volatile)
+
+__RTE_GEN_BIT_TEST(rte_bit_once_test64, 64, volatile)
+__RTE_GEN_BIT_SET(rte_bit_once_set64, 64, volatile)
+__RTE_GEN_BIT_CLEAR(rte_bit_once_clear64, 64, volatile)
 
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
