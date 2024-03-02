@@ -48,3 +48,10 @@ DPDK_24 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	#added in 24.1
+	rte_hash_rcu_qsbr_dq_reclaim;
+}
