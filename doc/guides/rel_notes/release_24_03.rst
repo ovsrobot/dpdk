@@ -143,6 +143,10 @@ New Features
   * Added support for DMA event enqueue and dequeue.
   * Added support for dual workslot DMA event enqueue.
 
+* **Updated Marvell cnxk eventdev driver.**
+
+  * Added support for DMA driver callback assignment to eventdev enqueue and dequeue.
+
 Removed Items
 -------------
 
