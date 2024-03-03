@@ -138,6 +138,10 @@ New Features
     to support TLS v1.2, TLS v1.3 and DTLS v1.2.
   * Added PMD API to allow raw submission of instructions to CPT.
 
+* **Updated Marvell cnxk DMA driver.**
+
+  * Added support for DMA event enqueue and dequeue.
+  * Added support for dual workslot DMA event enqueue.
 
 Removed Items
 -------------
