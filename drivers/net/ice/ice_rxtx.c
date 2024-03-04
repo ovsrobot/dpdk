@@ -3695,6 +3695,132 @@ ice_check_empty_mbuf(struct rte_mbuf *tx_pkt)
 	return 0;
 }
 
+static
+const eth_tx_burst_t ice_tx_pkt_burst_ops[] = {
+	[ICE_TX_DEFAULT] = ice_xmit_pkts,
+	[ICE_TX_SIMPLE] = ice_xmit_pkts_simple,
+#ifdef RTE_ARCH_X86
+	[ICE_TX_VEC_SSE] = ice_xmit_pkts_vec,
+	[ICE_TX_VEC_AVX2] = ice_xmit_pkts_vec_avx2,
+	[ICE_TX_VEC_AVX2_OFFLOAD] = ice_xmit_pkts_vec_avx2_offload,
+#ifdef CC_AVX512_SUPPORT
+	[ICE_TX_VEC_AVX512] = ice_xmit_pkts_vec_avx512,
+	[ICE_TX_VEC_AVX512_OFFLOAD] = ice_xmit_pkts_vec_avx512_offload,
+#endif
+#endif
+};
+
+/* Tx mbuf check */
+static uint16_t
+ice_xmit_pkts_check(void *tx_queue, struct rte_mbuf **tx_pkts,
+	      uint16_t nb_pkts)
+{
+	struct ice_tx_queue *txq = tx_queue;
+	uint16_t idx;
+	struct rte_mbuf *mb;
+	bool pkt_error = false;
+	uint16_t good_pkts = nb_pkts;
+	const char *reason = NULL;
+	struct ice_adapter *adapter = txq->vsi->adapter;
+	enum ice_tx_burst_type tx_burst_type =
+		txq->vsi->adapter->tx_burst_type;
+	uint64_t ol_flags;
+
+	for (idx = 0; idx < nb_pkts; idx++) {
+		mb = tx_pkts[idx];
+		ol_flags = mb->ol_flags;
+
+		if ((adapter->devargs.mbuf_check & ICE_MBUF_CHECK_F_TX_MBUF) &&
+			(rte_mbuf_check(mb, 0, &reason) != 0)) {
+			PMD_TX_LOG(ERR, "INVALID mbuf: %s\n", reason);
+			pkt_error = true;
+			break;
+		}
+
+		if ((adapter->devargs.mbuf_check & ICE_MBUF_CHECK_F_TX_SIZE) &&
+			(mb->data_len > mb->pkt_len ||
+			mb->data_len < ICE_TX_MIN_PKT_LEN ||
+			mb->data_len > ICE_FRAME_SIZE_MAX)) {
+			PMD_TX_LOG(ERR, "INVALID mbuf: data_len (%u) is out "
+			"of range, reasonable range (%d - %d)\n", mb->data_len,
+			ICE_TX_MIN_PKT_LEN, ICE_FRAME_SIZE_MAX);
+			pkt_error = true;
+			break;
+		}
+
+		if (adapter->devargs.mbuf_check & ICE_MBUF_CHECK_F_TX_SEGMENT) {
+			if (!(ol_flags & RTE_MBUF_F_TX_TCP_SEG)) {
+				/**
+				 * No TSO case: nb->segs, pkt_len to not exceed
+				 * the limites.
+				 */
+				if (mb->nb_segs > ICE_TX_MTU_SEG_MAX) {
+					PMD_TX_LOG(ERR, "INVALID mbuf: nb_segs (%d) exceeds "
+					"HW limit, maximum allowed value is %d\n", mb->nb_segs,
+					ICE_TX_MTU_SEG_MAX);
+					pkt_error = true;
+					break;
+				}
+				if (mb->pkt_len > ICE_FRAME_SIZE_MAX) {
+					PMD_TX_LOG(ERR, "INVALID mbuf: pkt_len (%d) exceeds "
+					"HW limit, maximum allowed value is %d\n", mb->nb_segs,
+					ICE_FRAME_SIZE_MAX);
+					pkt_error = true;
+					break;
+				}
+			} else if (ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
+				/** TSO case: tso_segsz, nb_segs, pkt_len not exceed
+				 * the limits.
+				 */
+				if (mb->tso_segsz < ICE_MIN_TSO_MSS ||
+					mb->tso_segsz > ICE_MAX_TSO_MSS) {
+					/**
+					 * MSS outside the range are considered malicious
+					 */
+					PMD_TX_LOG(ERR, "INVALID mbuf: tso_segsz (%u) is out "
+					"of range, reasonable range (%d - %u)\n", mb->tso_segsz,
+					ICE_MIN_TSO_MSS, ICE_MAX_TSO_MSS);
+					pkt_error = true;
+					break;
+				}
+				if (mb->nb_segs >
+					((struct ice_tx_queue *)tx_queue)->nb_tx_desc) {
+					PMD_TX_LOG(ERR, "INVALID mbuf: nb_segs out "
+					"of ring length\n");
+					pkt_error = true;
+					break;
+				}
+			}
+		}
+
+		if (adapter->devargs.mbuf_check & ICE_MBUF_CHECK_F_TX_OFFLOAD) {
+			if (ol_flags & ICE_TX_OFFLOAD_NOTSUP_MASK) {
+				PMD_TX_LOG(ERR, "INVALID mbuf: TX offload "
+				"is not supported\n");
+				pkt_error = true;
+				break;
+			}
+
+			if (!rte_validate_tx_offload(mb)) {
+				PMD_TX_LOG(ERR, "INVALID mbuf: TX offload "
+				"setup error\n");
+				pkt_error = true;
+				break;
+			}
+		}
+	}
+
+	if (pkt_error) {
+		txq->mbuf_errors++;
+		good_pkts = idx;
+		if (good_pkts == 0)
+			return 0;
+	}
+
+	return ice_tx_pkt_burst_ops[tx_burst_type](tx_queue,
+				tx_pkts, good_pkts);
+}
+
 uint16_t
 ice_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	      uint16_t nb_pkts)
@@ -3763,6 +3889,8 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct ice_adapter *ad =
 		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	enum ice_tx_burst_type tx_burst_type = ICE_TX_DEFAULT;
+	int mbuf_check = ad->devargs.mbuf_check;
 #ifdef RTE_ARCH_X86
 	struct ice_tx_queue *txq;
 	int i;
@@ -3817,14 +3945,13 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 				PMD_DRV_LOG(NOTICE,
 					    "Using AVX512 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
-				dev->tx_pkt_burst =
-					ice_xmit_pkts_vec_avx512_offload;
+				tx_burst_type = ICE_TX_VEC_AVX512_OFFLOAD;
 				dev->tx_pkt_prepare = ice_prep_pkts;
 			} else {
 				PMD_DRV_LOG(NOTICE,
 					    "Using AVX512 Vector Tx (port %d).",
 					    dev->data->port_id);
-				dev->tx_pkt_burst = ice_xmit_pkts_vec_avx512;
+				tx_burst_type = ICE_TX_VEC_AVX512;
 			}
 #endif
 		} else {
@@ -3832,31 +3959,42 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 				PMD_DRV_LOG(NOTICE,
 					    "Using AVX2 OFFLOAD Vector Tx (port %d).",
 					    dev->data->port_id);
-				dev->tx_pkt_burst =
-					ice_xmit_pkts_vec_avx2_offload;
+				tx_burst_type = ICE_TX_VEC_AVX2_OFFLOAD;
 				dev->tx_pkt_prepare = ice_prep_pkts;
 			} else {
 				PMD_DRV_LOG(DEBUG, "Using %sVector Tx (port %d).",
 					    ad->tx_use_avx2 ? "avx2 " : "",
 					    dev->data->port_id);
-				dev->tx_pkt_burst = ad->tx_use_avx2 ?
-						    ice_xmit_pkts_vec_avx2 :
-						    ice_xmit_pkts_vec;
+				tx_burst_type = ad->tx_use_avx2 ?
+							ICE_TX_VEC_AVX2 : ICE_TX_VEC_SSE;
 			}
 		}
 
+		if (mbuf_check) {
+			ad->tx_burst_type = tx_burst_type;
+			dev->tx_pkt_burst = ice_xmit_pkts_check;
+		} else {
+			dev->tx_pkt_burst = ice_tx_pkt_burst_ops[tx_burst_type];
+		}
 		return;
 	}
 #endif
 
 	if (ad->tx_simple_allowed) {
 		PMD_INIT_LOG(DEBUG, "Simple tx finally be used.");
-		dev->tx_pkt_burst = ice_xmit_pkts_simple;
+		tx_burst_type = ICE_TX_SIMPLE;
 		dev->tx_pkt_prepare = NULL;
 	} else {
 		PMD_INIT_LOG(DEBUG, "Normal tx finally be used.");
-		dev->tx_pkt_burst = ice_xmit_pkts;
+		tx_burst_type = ICE_TX_DEFAULT;
 		dev->tx_pkt_prepare = ice_prep_pkts;
+	}
+
+	if (mbuf_check) {
+		ad->tx_burst_type = tx_burst_type;
+		dev->tx_pkt_burst = ice_xmit_pkts_check;
+	} else {
+		dev->tx_pkt_burst = ice_tx_pkt_burst_ops[tx_burst_type];
 	}
 }
 
