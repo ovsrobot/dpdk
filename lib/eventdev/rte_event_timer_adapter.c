@@ -4,6 +4,7 @@
  */
 
 #include <ctype.h>
+#include <stdalign.h>
 #include <string.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -511,11 +512,11 @@ rte_event_timer_remaining_ticks_get(
 
 #define EXP_TIM_BUF_SZ 128
 
-struct event_buffer {
+struct __rte_cache_aligned event_buffer {
 	size_t head;
 	size_t tail;
 	struct rte_event events[EVENT_BUFFER_SZ];
-} __rte_cache_aligned;
+};
 
 static inline bool
 event_buffer_full(struct event_buffer *bufp)
@@ -631,9 +632,9 @@ struct swtim {
 	/* Identifier of timer data instance */
 	uint32_t timer_data_id;
 	/* Track which cores have actually armed a timer */
-	struct {
+	alignas(RTE_CACHE_LINE_SIZE) struct {
 		RTE_ATOMIC(uint16_t) v;
-	} __rte_cache_aligned in_use[RTE_MAX_LCORE];
+	} in_use[RTE_MAX_LCORE];
 	/* Track which cores' timer lists should be polled */
 	RTE_ATOMIC(unsigned int) poll_lcores[RTE_MAX_LCORE];
 	/* The number of lists that should be polled */
