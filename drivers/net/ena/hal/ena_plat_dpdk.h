@@ -40,7 +40,7 @@ typedef uint64_t dma_addr_t;
 #define ETIME ETIMEDOUT
 #endif
 
-#define ENA_PRIU64 PRIu64
+#define ENA_PRIu64 PRIu64
 #define ena_atomic32_t rte_atomic32_t
 #define ena_mem_handle_t const struct rte_memzone *
 
@@ -73,8 +73,7 @@ typedef uint64_t dma_addr_t;
 /* Redefine memcpy with caution: rte_memcpy can be simply aliased to memcpy, so
  * make the redefinition only if it's safe (and beneficial) to do so.
  */
-#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64_MEMCPY) || \
-	defined(RTE_ARCH_ARM_NEON_MEMCPY)
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64_MEMCPY) || defined(RTE_ARCH_ARM_NEON_MEMCPY)
 #undef memcpy
 #define memcpy rte_memcpy
 #endif
