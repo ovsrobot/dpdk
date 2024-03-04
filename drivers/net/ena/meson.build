@@ -10,10 +10,10 @@ endif
 sources = files(
         'ena_ethdev.c',
         'ena_rss.c',
-        'base/ena_com.c',
-        'base/ena_eth_com.c',
+        'hal/ena_com.c',
+        'hal/ena_eth_com.c',
 )
 
 deps += ['timer']
 
-includes += include_directories('base', 'base/ena_defs')
+includes += include_directories('hal', 'hal/ena_defs')
