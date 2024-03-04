@@ -105,6 +105,7 @@ New Features
 
   * Removed the reporting of `rx_overruns` errors from xstats and instead updated `imissed` stat with its value.
   * Added support for sub-optimal configuration notifications from the device.
+  * Restructured fast release of mbufs when RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE optimization is enabled.
 
 * **Updated Atomic Rules' Arkville driver.**
 
