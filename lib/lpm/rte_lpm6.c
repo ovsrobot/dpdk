@@ -98,16 +98,16 @@ struct rte_lpm6 {
 
 	/* LPM Tables. */
 	struct rte_hash *rules_tbl; /**< LPM rules. */
-	struct rte_lpm6_tbl_entry tbl24[RTE_LPM6_TBL24_NUM_ENTRIES]
-			__rte_cache_aligned; /**< LPM tbl24 table. */
+	alignas(RTE_CACHE_LINE_SIZE) struct rte_lpm6_tbl_entry tbl24[RTE_LPM6_TBL24_NUM_ENTRIES];
+			/**< LPM tbl24 table. */
 
 	uint32_t *tbl8_pool; /**< pool of indexes of free tbl8s */
 	uint32_t tbl8_pool_pos; /**< current position in the tbl8 pool */
 
 	struct rte_lpm_tbl8_hdr *tbl8_hdrs; /* array of tbl8 headers */
 
-	struct rte_lpm6_tbl_entry tbl8[0]
-			__rte_cache_aligned; /**< LPM tbl8 table. */
+	alignas(RTE_CACHE_LINE_SIZE) struct rte_lpm6_tbl_entry tbl8[0];
+			/**< LPM tbl8 table. */
 };
 
 /*
