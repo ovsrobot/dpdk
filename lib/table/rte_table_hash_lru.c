@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2017 Intel Corporation
  */
 
+#include <stdalign.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -76,7 +77,7 @@ struct rte_table_hash {
 	uint32_t *key_stack;
 
 	/* Table memory */
-	uint8_t memory[0] __rte_cache_aligned;
+	alignas(RTE_CACHE_LINE_SIZE) uint8_t memory[0];
 };
 
 static int

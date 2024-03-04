@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <stdalign.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -44,7 +45,7 @@ struct rte_table_lpm_ipv6 {
 
 	/* Next Hop Table (NHT) */
 	uint32_t nht_users[RTE_TABLE_LPM_MAX_NEXT_HOPS];
-	uint8_t nht[0] __rte_cache_aligned;
+	alignas(RTE_CACHE_LINE_SIZE) uint8_t nht[0];
 };
 
 static void *
