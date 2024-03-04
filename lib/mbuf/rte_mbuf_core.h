@@ -463,7 +463,7 @@ enum {
 /**
  * The generic rte_mbuf, containing a packet mbuf.
  */
-struct rte_mbuf {
+struct __rte_cache_aligned rte_mbuf {
 	RTE_MARKER cacheline0;
 
 	void *buf_addr;           /**< Virtual address of segment buffer. */
@@ -476,7 +476,7 @@ struct rte_mbuf {
 	 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
 	 * working on vector drivers easier.
 	 */
-	rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+	alignas(sizeof(rte_iova_t)) rte_iova_t buf_iova;
 #else
 	/**
 	 * Next segment of scattered packet.
@@ -662,7 +662,7 @@ struct rte_mbuf {
 	uint16_t timesync;
 
 	uint32_t dynfield1[9]; /**< Reserved for dynamic fields. */
-} __rte_cache_aligned;
+};
 
 /**
  * Function typedef of callback to free externally attached buffer.
