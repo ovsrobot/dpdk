@@ -12,6 +12,8 @@
  * for DPDK.
  */
 
+#include <stdalign.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,10 +65,19 @@ extern "C" {
 #endif
 
 /**
- * Force alignment
+ * Force type alignment
+ *
+ * This macro should be used when alignment of a struct or union type
+ * is required. For toolchain compatibility it should appear between
+ * the {struct,union} keyword and tag. e.g.
+ *
+ *   struct __rte_aligned(8) tag { ... };
+ *
+ * If alignment of an object/variable is required then this macro should
+ * not be used, instead prefer C11 alignas(a).
  */
 #ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_aligned(a)
+#define __rte_aligned(a) __declspec(align(a))
 #else
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 #endif
@@ -538,18 +549,14 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 #define RTE_CACHE_LINE_MIN_SIZE 64
 
 /** Force alignment to cache line. */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_cache_aligned
-#else
 #define __rte_cache_aligned __rte_aligned(RTE_CACHE_LINE_SIZE)
-#endif
 
 /** Force minimum cache line alignment. */
 #define __rte_cache_min_aligned __rte_aligned(RTE_CACHE_LINE_MIN_SIZE)
 
 #define _RTE_CACHE_GUARD_HELPER2(unique) \
-	char cache_guard_ ## unique[RTE_CACHE_LINE_SIZE * RTE_CACHE_GUARD_LINES] \
-	__rte_cache_aligned
+	alignas(RTE_CACHE_LINE_SIZE) \
+	char cache_guard_ ## unique[RTE_CACHE_LINE_SIZE * RTE_CACHE_GUARD_LINES]
 #define _RTE_CACHE_GUARD_HELPER1(unique) _RTE_CACHE_GUARD_HELPER2(unique)
 /**
  * Empty cache lines, to guard against false sharing-like effects

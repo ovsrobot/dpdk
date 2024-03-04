@@ -2,6 +2,7 @@
  * Copyright(c) 2015-2016 Intel Corporation
  */
 
+#include <stdalign.h>
 #include <inttypes.h>
 
 #include <rte_common.h>
@@ -19,7 +20,7 @@ struct rte_keepalive {
 		/*
 		 * Each element must be cache aligned to prevent false sharing.
 		 */
-		enum rte_keepalive_state core_state __rte_cache_aligned;
+		alignas(RTE_CACHE_LINE_SIZE) enum rte_keepalive_state core_state;
 	} live_data[RTE_KEEPALIVE_MAXCORES];
 
 	/** Last-seen-alive timestamps */
