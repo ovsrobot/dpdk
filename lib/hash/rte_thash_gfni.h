@@ -2,14 +2,13 @@
  * Copyright(c) 2021 Intel Corporation
  */
 
-#ifndef _RTE_THASH_GFNI_H_
-#define _RTE_THASH_GFNI_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <rte_log.h>
+/*
+ * This header file is not supposed to included directly in application
+ */
+#ifndef _RTE_THASH_H
+#error Do not include rte_thash_gfni.h directly
+#else
 
 #ifdef RTE_ARCH_X86
 
@@ -33,8 +32,13 @@ extern "C" {
  * @return
  *  Calculated Toeplitz hash value.
  */
-uint32_t
-rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
+static inline uint32_t
+rte_thash_gfni(const uint64_t *mtrx __rte_unused,
+	const uint8_t *key __rte_unused, int len __rte_unused)
+{
+	RTE_LOG(ERR, HASH, "%s is undefined under given arch\n", __func__);
+	return 0;
+}
 
 /**
  * Bulk implementation for Toeplitz hash.
@@ -53,14 +57,18 @@ rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
  * @param num
  *  Number of tuples to hash.
  */
-void
-rte_thash_gfni_bulk(const uint64_t *mtrx, int len, uint8_t *tuple[],
-	uint32_t val[], uint32_t num);
+static inline void
+rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
+	int len __rte_unused, uint8_t *tuple[] __rte_unused,
+	uint32_t val[], uint32_t num)
+{
+	unsigned int i;
 
-#endif /* RTE_THASH_GFNI_DEFINED */
-
-#ifdef __cplusplus
+	RTE_LOG(ERR, HASH, "%s is undefined under given arch\n", __func__);
+	for (i = 0; i < num; i++)
+		val[i] = 0;
 }
-#endif
 
-#endif /* _RTE_THASH_GFNI_H_ */
+#endif /* !RTE_THASH_GFNI_DEFINED */
+
+#endif /* !_RTE_HASH__H_ */
