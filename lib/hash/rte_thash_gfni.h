@@ -9,8 +9,6 @@
 extern "C" {
 #endif
 
-#include <rte_log.h>
-
 #ifdef RTE_ARCH_X86
 
 #include <rte_thash_x86_gfni.h>
@@ -19,9 +17,10 @@ extern "C" {
 
 #ifndef RTE_THASH_GFNI_DEFINED
 
+#include <rte_debug.h>
+
 /**
  * Calculate Toeplitz hash.
- * Dummy implementation.
  *
  * @param m
  *  Pointer to the matrices generated from the corresponding
@@ -31,14 +30,21 @@ extern "C" {
  * @param len
  *  Length of the data to be hashed.
  * @return
- *  Calculated Toeplitz hash value.
+ *   Calculated hash value.
  */
-uint32_t
-rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
+static inline uint32_t
+rte_thash_gfni(const uint64_t *mtrx __rte_unused,
+	const uint8_t *key __rte_unused, int len __rte_unused)
+{
+	/*
+	 * This stub always panics because the application should be calling
+	 * rte_thash_gfni_supported() to check if the arch supports this.
+	 */
+	rte_panic("%s is undefined under given arch\n", __func__);
+}
 
 /**
  * Bulk implementation for Toeplitz hash.
- * Dummy implementation.
  *
  * @param m
  *  Pointer to the matrices generated from the corresponding
@@ -53,9 +59,17 @@ rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
  * @param num
  *  Number of tuples to hash.
  */
-void
-rte_thash_gfni_bulk(const uint64_t *mtrx, int len, uint8_t *tuple[],
-	uint32_t val[], uint32_t num);
+static inline void
+rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
+	int len __rte_unused, uint8_t *tuple[] __rte_unused,
+	uint32_t val[] __rte_unused, uint32_t num __rte_unused)
+{
+	/*
+	 * This stub always panics because the application should be calling
+	 * rte_thash_gfni_supported() to check if the arch supports this.
+	 */
+	rte_panic("%s is undefined under given arch\n", __func__);
+}
 
 #endif /* RTE_THASH_GFNI_DEFINED */
 
