@@ -497,6 +497,20 @@ soc_n2 = {
     'numa': false
 }
 
+soc_odyssey = {
+    'description' : 'Marvell Odyssey',
+    'implementer' : '0x41',
+    'flags': [
+        ['RTE_MAX_LCORE', 80],
+        ['RTE_MAX_NUMA_NODES', 1],
+        ['RTE_MEMPOOL_ALIGN', 128],
+    ],
+    'part_number': '0xd4f',
+    'extra_march_features': ['crypto'],
+    'numa': false,
+    'sve_acle': false
+}
+
 soc_cn9k = {
     'description': 'Marvell OCTEON 9',
     'implementer': '0x43',
@@ -614,6 +628,7 @@ socs = {
     'kunpeng930': soc_kunpeng930,
     'n1sdp': soc_n1sdp,
     'n2': soc_n2,
+    'odyssey' : soc_odyssey,
     'stingray': soc_stingray,
     'thunderx2': soc_thunderx2,
     'thunderxt88': soc_thunderxt88,
