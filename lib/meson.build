@@ -222,105 +222,111 @@ foreach l:libraries
     includes += include_directories(l)
     dpdk_includes += include_directories(l)
 
-    if developer_mode and is_windows and use_function_versioning
-        message('@0@: Function versioning is not supported by Windows.'.format(name))
-    endif
-
-    if use_function_versioning
-        cflags += '-DRTE_USE_FUNCTION_VERSIONING'
-    endif
-    cflags += '-DRTE_LOG_DEFAULT_LOGTYPE=lib.' + l
-    if annotate_locks and cc.get_id() == 'clang' and cc.version().version_compare('>=3.5.0')
-        cflags += '-DRTE_ANNOTATE_LOCKS'
-        cflags += '-Wthread-safety'
-    endif
-
-    # first build static lib
-    static_lib = static_library(libname,
-            sources,
-            objects: objs,
-            c_args: cflags,
-            dependencies: static_deps,
-            include_directories: includes,
-            install: true)
-    static_dep = declare_dependency(
-            include_directories: includes,
-            dependencies: static_deps)
-
-    if not use_function_versioning or is_windows
-        # use pre-build objects to build shared lib
-        sources = []
-        objs += static_lib.extract_all_objects(recursive: false)
-    else
-        # for compat we need to rebuild with
-        # RTE_BUILD_SHARED_LIB defined
-        cflags += '-DRTE_BUILD_SHARED_LIB'
-    endif
-
-    version_map = '@0@/@1@/version.map'.format(meson.current_source_dir(), l)
-    lk_deps = [version_map]
-
-    if is_ms_linker
-        def_file = custom_target(libname + '_def',
-                command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
-                input: version_map,
-                output: '@0@_exports.def'.format(libname))
-        lk_deps += [def_file]
-
-        if is_ms_compiler
-            lk_args = ['/def:' + def_file.full_path()]
-            if meson.version().version_compare('<0.54.0')
-                lk_args += ['/implib:lib\\librte_' + l + '.dll.a']
-            endif
-        else
-            lk_args = ['-Wl,/def:' + def_file.full_path()]
-            if meson.version().version_compare('<0.54.0')
-                lk_args += ['-Wl,/implib:lib\\librte_' + l + '.dll.a']
-            endif
+    if sources.length() != 0
+        if developer_mode and is_windows and use_function_versioning
+            message('@0@: Function versioning is not supported by Windows.'.format(name))
         endif
-    else
-        if is_windows
-            mingw_map = custom_target(libname + '_mingw',
+
+        if use_function_versioning
+            cflags += '-DRTE_USE_FUNCTION_VERSIONING'
+        endif
+        cflags += '-DRTE_LOG_DEFAULT_LOGTYPE=lib.' + l
+        if annotate_locks and cc.get_id() == 'clang' and cc.version().version_compare('>=3.5.0')
+            cflags += '-DRTE_ANNOTATE_LOCKS'
+            cflags += '-Wthread-safety'
+        endif
+
+        # first build static lib
+        static_lib = static_library(libname,
+                sources,
+                objects: objs,
+                c_args: cflags,
+                dependencies: static_deps,
+                include_directories: includes,
+                install: true)
+        static_dep = declare_dependency(
+                include_directories: includes,
+                dependencies: static_deps)
+
+        if not use_function_versioning or is_windows
+            # use pre-build objects to build shared lib
+            sources = []
+            objs += static_lib.extract_all_objects(recursive: false)
+        else
+            # for compat we need to rebuild with
+            # RTE_BUILD_SHARED_LIB defined
+            cflags += '-DRTE_BUILD_SHARED_LIB'
+        endif
+
+        version_map = '@0@/@1@/version.map'.format(meson.current_source_dir(), l)
+        lk_deps = [version_map]
+
+        if is_ms_linker
+            def_file = custom_target(libname + '_def',
                     command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
                     input: version_map,
-                    output: '@0@_mingw.map'.format(libname))
-            lk_deps += [mingw_map]
+                    output: '@0@_exports.def'.format(libname))
+            lk_deps += [def_file]
 
-            lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]
+            if is_ms_compiler
+                lk_args = ['/def:' + def_file.full_path()]
+                if meson.version().version_compare('<0.54.0')
+                    lk_args += ['/implib:lib\\librte_' + l + '.dll.a']
+                endif
+            else
+                lk_args = ['-Wl,/def:' + def_file.full_path()]
+                if meson.version().version_compare('<0.54.0')
+                    lk_args += ['-Wl,/implib:lib\\librte_' + l + '.dll.a']
+                endif
+            endif
         else
-            lk_args = ['-Wl,--version-script=' + version_map]
+            if is_windows
+                mingw_map = custom_target(libname + '_mingw',
+                        command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
+                        input: version_map,
+                        output: '@0@_mingw.map'.format(libname))
+                lk_deps += [mingw_map]
+
+                lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]
+            else
+                lk_args = ['-Wl,--version-script=' + version_map]
+            endif
         endif
+
+        if developer_mode and not is_windows
+            # on unix systems check the output of the
+            # check-symbols.sh script, using it as a
+            # dependency of the .so build
+            lk_deps += custom_target(name + '.sym_chk',
+                    command: [check_symbols,
+                        version_map, '@INPUT@'],
+                    capture: true,
+                    input: static_lib,
+                    output: name + '.sym_chk')
+        endif
+
+        shared_lib = shared_library(libname,
+                sources,
+                objects: objs,
+                c_args: cflags,
+                dependencies: shared_deps,
+                include_directories: includes,
+                link_args: lk_args,
+                link_depends: lk_deps,
+                version: abi_version,
+                soversion: so_version,
+                install: true)
+        shared_dep = declare_dependency(link_with: shared_lib,
+                include_directories: includes,
+                dependencies: shared_deps)
+
+        dpdk_libraries = [shared_lib] + dpdk_libraries
+        dpdk_static_libraries = [static_lib] + dpdk_static_libraries
+    else # sources.length() == 0
+        # if no C files, just set a dependency on header path
+        shared_dep = declare_dependency(include_directories: includes)
+        static_dep = shared_dep
     endif
-
-    if developer_mode and not is_windows
-        # on unix systems check the output of the
-        # check-symbols.sh script, using it as a
-        # dependency of the .so build
-        lk_deps += custom_target(name + '.sym_chk',
-                command: [check_symbols,
-                    version_map, '@INPUT@'],
-                capture: true,
-                input: static_lib,
-                output: name + '.sym_chk')
-    endif
-
-    shared_lib = shared_library(libname,
-            sources,
-            objects: objs,
-            c_args: cflags,
-            dependencies: shared_deps,
-            include_directories: includes,
-            link_args: lk_args,
-            link_depends: lk_deps,
-            version: abi_version,
-            soversion: so_version,
-            install: true)
-    shared_dep = declare_dependency(link_with: shared_lib,
-            include_directories: includes,
-            dependencies: shared_deps)
-
-    dpdk_libraries = [shared_lib] + dpdk_libraries
-    dpdk_static_libraries = [static_lib] + dpdk_static_libraries
 
     set_variable('shared_rte_' + name, shared_dep)
     set_variable('static_rte_' + name, static_dep)
