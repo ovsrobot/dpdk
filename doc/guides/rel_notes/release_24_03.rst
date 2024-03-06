@@ -107,6 +107,8 @@ New Features
   * Added support for sub-optimal configuration notifications from the device.
   * Restructured fast release of mbufs when RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE optimization is enabled.
   * Replaced `enable_llq` and `large_llq_hdr` devargs with a new devarg `llq_policy`.
+  * Added support for LLQ header size recommendation from the device.
+  * Allowed large LLQ with 1024 entries when the device supports enlarged memory BAR.
 
 * **Updated Atomic Rules' Arkville driver.**
 
