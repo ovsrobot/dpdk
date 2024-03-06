@@ -63,7 +63,9 @@ fi
 find_empty_maps ()
 {
     for map in $@ ; do
-        [ $(buildtools/map-list-symbol.sh $map | wc -l) != '0' ] || echo $map
+        # ignore maps that do not have a 'global:' section since they are empty by design
+        [ $(buildtools/map-list-symbol.sh $map | wc -l) != '0' ] ||
+            ! grep -q 'global:' $map || echo $map
     done
 }
 
