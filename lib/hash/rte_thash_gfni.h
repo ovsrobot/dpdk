@@ -17,11 +17,22 @@ extern "C" {
 
 #endif
 
-#ifndef RTE_THASH_GFNI_DEFINED
+/*
+ * @internal
+ * Stubs defined for only used when GFNI is not available
+ */
+__rte_internal
+uint32_t
+___rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
 
+__rte_internal
+void
+___rte_thash_gfni_bulk(const uint64_t *mtrx, int len, uint8_t *tuple[],
+		       uint32_t val[], uint32_t num);
+
+#ifndef RTE_THASH_GFNI_DEFINED
 /**
  * Calculate Toeplitz hash.
- * Dummy implementation.
  *
  * @param m
  *  Pointer to the matrices generated from the corresponding
@@ -33,12 +44,14 @@ extern "C" {
  * @return
  *  Calculated Toeplitz hash value.
  */
-uint32_t
-rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
+static inline uint32_t
+rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len)
+{
+	return ___rte_thash_gfni(mtrx, key, len);
+}
 
 /**
  * Bulk implementation for Toeplitz hash.
- * Dummy implementation.
  *
  * @param m
  *  Pointer to the matrices generated from the corresponding
@@ -53,9 +66,12 @@ rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
  * @param num
  *  Number of tuples to hash.
  */
-void
+static inline void
 rte_thash_gfni_bulk(const uint64_t *mtrx, int len, uint8_t *tuple[],
-	uint32_t val[], uint32_t num);
+	uint32_t val[], uint32_t num)
+{
+	return ___rte_thash_gfni_bulk(mtrx, len, tuple, val);
+}
 
 #endif /* RTE_THASH_GFNI_DEFINED */
 
