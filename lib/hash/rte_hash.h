@@ -631,7 +631,7 @@ rte_hash_lookup_with_hash_bulk_data(const struct rte_hash *h,
  */
 int
 rte_hash_lookup_bulk(const struct rte_hash *h, const void **keys,
-		      uint32_t num_keys, int32_t *positions);
+		    uint32_t num_keys, int32_t *positions);
 
 /**
  * Iterate through the hash table, returning key-value pairs.
@@ -673,6 +673,32 @@ rte_hash_iterate(const struct rte_hash *h, const void **key, void **data, uint32
  *   - ENOMEM - memory allocation failure
  */
 int rte_hash_rcu_qsbr_add(struct rte_hash *h, struct rte_hash_rcu_config *cfg);
+
+/**
+ * Reclaim resources from the defer queue.
+ * This API reclaim the resources from the defer queue if rcu is enabled.
+ *
+ * @param h
+ *   The hash object to reclaim resources.
+ * @param n
+ *   Maximum number of resources to free.
+ * @param freed
+ *   Number of resources that were freed.
+ * @param pending
+ *   Number of resources pending on the defer queue.
+ *   This number might not be accurate if multi-thread safety is configured.
+ * @param available
+ *   Number of resources that can be added to the defer queue.
+ *   This number might not be accurate if multi-thread safety is configured.
+ * @return
+ *   On success - 0
+ *   On error - 1 with error code set in rte_errno.
+ *   Possible rte_errno codes are:
+ *   - EINVAL - invalid pointer
+ */
+__rte_experimental
+int rte_hash_rcu_qsbr_dq_reclaim(struct rte_hash *h, unsigned int *freed,
+		unsigned int *pending, unsigned int *available);
 
 #ifdef __cplusplus
 }
