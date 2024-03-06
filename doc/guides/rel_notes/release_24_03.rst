@@ -110,6 +110,11 @@ New Features
 
   * Added support for 5760X device family.
 
+* **Updated Intel i40e driver.**
+
+  * Added support for configuring the Forward Error Correction(FEC) mode, querying
+  * FEC capabilities and current FEC mode from a device.
+
 * **Updated Marvell cnxk net driver.**
 
   * Added support for port representors.
