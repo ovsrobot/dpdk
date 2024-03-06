@@ -470,7 +470,8 @@ mem_copy_benchmark(struct test_configure *cfg, bool is_dma)
 		bandwidth_total += bandwidth;
 		avg_cycles_total += avg_cycles;
 	}
-	printf("\nTotal Bandwidth: %.3lf Gbps, Total MOps: %.3lf\n", bandwidth_total, mops_total);
+	printf("\nAverage Cycles/op per worker: %.1f, Total Bandwidth: %.3lf Gbps, Total MOps: %.3lf\n",
+			(avg_cycles_total * (float) 1.0) / nb_workers, bandwidth_total, mops_total);
 	snprintf(output_str[MAX_WORKER_NB], MAX_OUTPUT_STR_LEN, CSV_TOTAL_LINE_FMT,
 			cfg->scenario_id, nr_buf, memory * nb_workers,
 			avg_cycles_total / nb_workers, bandwidth_total, mops_total);
