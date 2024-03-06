@@ -301,11 +301,12 @@ ena_mem_alloc_coherent(struct rte_eth_dev_data *data, size_t size,
 #define ENA_WAIT_EVENTS_DESTROY(admin_queue) ((void)(admin_queue))
 
 /* The size must be 8 byte align */
-#define ENA_MEMCPY_TO_DEVICE_64(dst, src, size)				       \
+#define ENA_MEMCPY_TO_DEVICE_64(bus, dst, src, size)			       \
 	do {								       \
 		int count, i;						       \
 		uint64_t *to = (uint64_t *)(dst);			       \
 		const uint64_t *from = (const uint64_t *)(src);		       \
+		(void)(bus);						       \
 		count = (size) / 8;					       \
 		for (i = 0; i < count; i++, from++, to++)		       \
 			rte_write64_relaxed(*from, to);			       \
