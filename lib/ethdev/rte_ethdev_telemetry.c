@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include <rte_malloc.h>
 #include <rte_kvargs.h>
 #include <rte_telemetry.h>
 
@@ -1395,6 +1396,161 @@ out:
 	return ret;
 }
 
+static void
+eth_dev_add_u32_hex(struct rte_tel_data *d, const char *name, uint32_t **data)
+{
+	if (*data == NULL)
+		return;
+	rte_tel_data_add_dict_uint_hex(d, name, **data, 0);
+	(*data)++;
+}
+
+static void
+eth_dev_add_u64_hex(struct rte_tel_data *d, const char *name, uint64_t **data)
+{
+	if (*data == NULL)
+		return;
+	rte_tel_data_add_dict_uint_hex(d, name, **data, 0);
+	(*data)++;
+}
+
+static int
+eth_dev_store_regs(struct rte_tel_data *d, struct rte_dev_reg_info *reg_info)
+{
+	struct rte_tel_data *groups[RTE_TEL_MAX_DICT_ENTRIES];
+	char group_name[RTE_TEL_MAX_STRING_LEN] = {0};
+	struct rte_tel_data *group = NULL;
+	uint32_t *data0 = NULL;
+	uint64_t *data1 = NULL;
+	uint32_t grp_num = 0;
+	int ret = 0;
+	uint32_t i;
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_uint(d, "register_length", reg_info->length);
+	rte_tel_data_add_dict_uint(d, "register_width", reg_info->width);
+	rte_tel_data_add_dict_uint_hex(d, "register_offset", reg_info->offset, 0);
+	rte_tel_data_add_dict_uint_hex(d, "version", reg_info->version, 0);
+
+	if (reg_info->width == sizeof(uint32_t))
+		data0 = reg_info->data;
+	else
+		data1 = reg_info->data;
+
+	if (reg_info->length <= RTE_TEL_MAX_DICT_ENTRIES) {
+		for (i = 0; i < reg_info->length; i++) {
+			eth_dev_add_u32_hex(d, reg_info->names[i].name, &data0);
+			eth_dev_add_u64_hex(d, reg_info->names[i].name, &data1);
+		}
+		return 0;
+	}
+
+	for (i = 0; i < reg_info->length; i++) {
+		if (i % RTE_TEL_MAX_DICT_ENTRIES == 0) {
+			group = rte_tel_data_alloc();
+			if (group == NULL) {
+				ret = -ENOMEM;
+				goto out;
+			}
+			groups[grp_num++] = group;
+			rte_tel_data_start_dict(group);
+		}
+		eth_dev_add_u32_hex(group, reg_info->names[i].name, &data0);
+		eth_dev_add_u64_hex(group, reg_info->names[i].name, &data1);
+	}
+
+	for (i = 0; i < grp_num; i++) {
+		snprintf(group_name, RTE_TEL_MAX_STRING_LEN,
+					"group_%u", i);
+		rte_tel_data_add_dict_container(d, group_name, groups[i], 0);
+	}
+	return 0;
+out:
+	for (i = 0; i < grp_num; i++)
+		rte_tel_data_free(groups[i]);
+
+	return ret;
+}
+
+static int
+eth_dev_get_port_regs(int port_id, struct rte_tel_data *d, char *filter)
+{
+	struct rte_dev_reg_info reg_info;
+	uint32_t max_length;
+	int ret;
+
+	memset(&reg_info, 0, sizeof(reg_info));
+	reg_info.filter = filter;
+
+	ret = rte_eth_dev_get_reg_info_ext(port_id, &reg_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Error getting device reg info: %d", ret);
+		return ret;
+	}
+
+	/* 4 is space for other information of registers. */
+	max_length = RTE_TEL_MAX_DICT_ENTRIES *
+			(RTE_TEL_MAX_DICT_ENTRIES - 4);
+	if (reg_info.length > max_length) {
+		RTE_ETHDEV_LOG_LINE(WARNING,
+			"Reduced register number to be obtained from %u to %u due to limited memory",
+			reg_info.length, max_length);
+		reg_info.length = max_length;
+	}
+
+	reg_info.data = calloc(reg_info.length, reg_info.width);
+	if (reg_info.data == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Fail to allocate memory for reg_info.data");
+		return -ENOMEM;
+	}
+
+	reg_info.names = calloc(reg_info.length, sizeof(struct rte_eth_reg_name));
+	if (reg_info.names == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Fail to allocate memory for reg_info.names");
+		free(reg_info.data);
+		return -ENOMEM;
+	}
+
+	ret = rte_eth_dev_get_reg_info_ext(port_id, &reg_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Error getting regs from device: %d", ret);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = eth_dev_store_regs(d, &reg_info);
+out:
+	free(reg_info.data);
+	free(reg_info.names);
+
+	return ret;
+}
+
+static int
+eth_dev_handle_port_regs(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	char *filter = NULL;
+	uint16_t port_id;
+	char *end_param;
+	int ret;
+
+	ret = eth_dev_parse_port_params(params, &port_id, &end_param, true);
+	if (ret != 0)
+		return ret;
+
+	filter = strtok(end_param, ",");
+	if (filter != NULL && strlen(filter) == 0)
+		filter = NULL;
+
+	return eth_dev_get_port_regs(port_id, d, filter);
+}
+
 RTE_INIT(ethdev_init_telemetry)
 {
 	rte_telemetry_register_cmd("/ethdev/list", eth_dev_handle_port_list,
@@ -1436,4 +1592,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns TM Level Capabilities info for a port. Parameters: int port_id, int level_id (see tm_capability for the max)");
 	rte_telemetry_register_cmd("/ethdev/tm_node_capability", eth_dev_handle_port_tm_node_caps,
 			"Returns TM Node Capabilities info for a port. Parameters: int port_id, int node_id (see tm_capability for the max)");
+	rte_telemetry_register_cmd("/ethdev/regs", eth_dev_handle_port_regs,
+			"Returns regs for a port. Parameters: int port_id, string filter");
 }
