@@ -4,10 +4,9 @@
 
 #include <stdbool.h>
 
+#include <rte_compat.h>
 #include <rte_log.h>
 #include <rte_thash_gfni.h>
-
-#ifndef RTE_THASH_GFNI_DEFINED
 
 RTE_LOG_REGISTER_SUFFIX(hash_gfni_logtype, gfni, INFO);
 #define RTE_LOGTYPE_HASH hash_gfni_logtype
@@ -15,7 +14,7 @@ RTE_LOG_REGISTER_SUFFIX(hash_gfni_logtype, gfni, INFO);
 	RTE_LOG_LINE(level, HASH, "" __VA_ARGS__)
 
 uint32_t
-rte_thash_gfni(const uint64_t *mtrx __rte_unused,
+___rte_thash_gfni(const uint64_t *mtrx __rte_unused,
 	const uint8_t *key __rte_unused, int len __rte_unused)
 {
 	static bool warned;
@@ -30,7 +29,7 @@ rte_thash_gfni(const uint64_t *mtrx __rte_unused,
 }
 
 void
-rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
+___rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
 	int len __rte_unused, uint8_t *tuple[] __rte_unused,
 	uint32_t val[], uint32_t num)
 {
@@ -47,5 +46,3 @@ rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
 	for (i = 0; i < num; i++)
 		val[i] = 0;
 }
-
-#endif
