@@ -30,6 +30,7 @@ apps = [
         'test-flow-perf',
         'test-gpudev',
         'test-mldev',
+        'test-mp',
         'test-pipeline',
         'test-pmd',
         'test-regex',
