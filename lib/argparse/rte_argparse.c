@@ -50,7 +50,7 @@ arg_attr_flag_multi(const struct rte_argparse_arg *arg)
 	return RTE_FIELD_GET64(ARG_ATTR_SUPPORT_MULTI_MASK, arg->flags);
 }
 
-static inline uint32_t
+static inline uint64_t
 arg_attr_unused_bits(const struct rte_argparse_arg *arg)
 {
 #define USED_BIT_MASK	(ARG_ATTR_HAS_VAL_MASK | ARG_ATTR_VAL_TYPE_MASK | \
@@ -172,7 +172,7 @@ static int
 verify_arg_flags(const struct rte_argparse *obj, uint32_t index)
 {
 	const struct rte_argparse_arg *arg = &obj->args[index];
-	uint32_t unused_bits = arg_attr_unused_bits(arg);
+	uint64_t unused_bits = arg_attr_unused_bits(arg);
 
 	if (unused_bits != 0) {
 		ARGPARSE_LOG(ERR, "argument %s flags unused bits should not be set!",

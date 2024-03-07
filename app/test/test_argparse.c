@@ -16,6 +16,9 @@ static char *default_argv[1];
 static char *strdup_store_array[MAX_STRDUP_STORE_NUM];
 static uint32_t strdup_store_index;
 
+#define TEST_ARGPARSE_FLAG_HAS_ARG_BITMASK	RTE_SHIFT_VAL64(3, 0)
+#define TEST_ARGPARSE_FLAG_VAL_TYPE_BITMASK	RTE_SHIFT_VAL64(255, 2)
+
 /*
  * Define strdup wrapper.
  * 1. Mainly to fix compile error "warning: assignment discards 'const'
@@ -188,7 +191,7 @@ test_argparse_invalid_arg_help(void)
 static int
 test_argparse_invalid_has_val(void)
 {
-	uint32_t set_mask[] = { 0,
+	uint64_t set_mask[] = { 0,
 				RTE_ARGPARSE_ARG_NO_VALUE,
 				RTE_ARGPARSE_ARG_OPTIONAL_VALUE
 			      };
@@ -197,7 +200,7 @@ test_argparse_invalid_has_val(void)
 	int ret;
 
 	obj = test_argparse_init_obj();
-	obj->args[0].flags &= ~0x3u;
+	obj->args[0].flags &= ~TEST_ARGPARSE_FLAG_HAS_ARG_BITMASK;
 	ret = rte_argparse_parse(obj, default_argc, default_argv);
 	TEST_ASSERT(ret == -EINVAL, "Argparse parse expect failed!");
 
@@ -205,7 +208,7 @@ test_argparse_invalid_has_val(void)
 		obj = test_argparse_init_obj();
 		obj->args[0].name_long = "abc";
 		obj->args[0].name_short = NULL;
-		obj->args[0].flags &= ~0x3u;
+		obj->args[0].flags &= ~TEST_ARGPARSE_FLAG_HAS_ARG_BITMASK;
 		obj->args[0].flags |= set_mask[index];
 		ret = rte_argparse_parse(obj, default_argc, default_argv);
 		TEST_ASSERT(ret == -EINVAL, "Argparse parse expect failed!");
@@ -269,7 +272,9 @@ test_argparse_invalid_arg_flags(void)
 	int ret;
 
 	obj = test_argparse_init_obj();
-	obj->args[0].flags |= ~0x107FFu;
+	obj->args[0].flags |= ~(TEST_ARGPARSE_FLAG_HAS_ARG_BITMASK |
+				TEST_ARGPARSE_FLAG_VAL_TYPE_BITMASK |
+				RTE_ARGPARSE_ARG_SUPPORT_MULTI);
 	ret = rte_argparse_parse(obj, default_argc, default_argv);
 	TEST_ASSERT(ret == -EINVAL, "Argparse parse expect failed!");
 
@@ -337,7 +342,7 @@ test_argparse_invalid_option(void)
 static int
 test_argparse_opt_autosave_parse_int_of_no_val(void)
 {
-	uint32_t flags = RTE_ARGPARSE_ARG_NO_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
+	uint64_t flags = RTE_ARGPARSE_ARG_NO_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
 	struct rte_argparse *obj;
 	int val_saver = 0;
 	char *argv[2];
@@ -369,7 +374,7 @@ test_argparse_opt_autosave_parse_int_of_no_val(void)
 static int
 test_argparse_opt_autosave_parse_int_of_required_val(void)
 {
-	uint32_t flags = RTE_ARGPARSE_ARG_REQUIRED_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
+	uint64_t flags = RTE_ARGPARSE_ARG_REQUIRED_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
 	struct rte_argparse *obj;
 	int val_saver = 0;
 	char *argv[3];
@@ -410,7 +415,7 @@ test_argparse_opt_autosave_parse_int_of_required_val(void)
 static int
 test_argparse_opt_autosave_parse_int_of_optional_val(void)
 {
-	uint32_t flags = RTE_ARGPARSE_ARG_OPTIONAL_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
+	uint64_t flags = RTE_ARGPARSE_ARG_OPTIONAL_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
 	struct rte_argparse *obj;
 	int val_saver = 0;
 	char *argv[2];
@@ -645,7 +650,7 @@ test_argparse_opt_callback_parse_int_of_optional_val(void)
 static int
 test_argparse_pos_autosave_parse_int(void)
 {
-	uint32_t flags = RTE_ARGPARSE_ARG_REQUIRED_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
+	uint64_t flags = RTE_ARGPARSE_ARG_REQUIRED_VALUE | RTE_ARGPARSE_ARG_VALUE_INT;
 	struct rte_argparse *obj;
 	int val_saver = 0;
 	char *argv[3];
