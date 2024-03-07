@@ -176,6 +176,12 @@ New Features
   * Added power-saving during polling within the ``rte_event_dequeue_burst()`` API.
   * Added support for DMA adapter.
 
+* **Added support for dumping registers with names and filter.**
+
+  * Added new API functions ``rte_eth_dev_get_reg_info_ext()`` to and filter
+    the registers by their names and get the information of registers(names,
+    values and other attributes).
+
 
 Removed Items
 -------------
@@ -242,6 +248,9 @@ ABI Changes
    =======================================================
 
 * No ABI change that would break compatibility with 23.11.
+
+* ethdev: Added ``filter`` and ``names`` fields to ``rte_dev_reg_info``
+  structure for reporting names of registers and filtering them by names.
 
 
 Known Issues
