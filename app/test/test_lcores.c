@@ -2,6 +2,7 @@
  * Copyright (c) 2020 Red Hat, Inc.
  */
 
+#include <sched.h>
 #include <string.h>
 
 #include <rte_common.h>
@@ -43,7 +44,7 @@ static uint32_t thread_loop(void *arg)
 
 	/* Wait for release from the control thread. */
 	while (__atomic_load_n(t->registered_count, __ATOMIC_ACQUIRE) != 0)
-		;
+		sched_yield();
 	rte_thread_unregister();
 	lcore_id = rte_lcore_id();
 	if (lcore_id != LCORE_ID_ANY) {
@@ -85,7 +86,7 @@ test_non_eal_lcores(unsigned int eal_threads_count)
 	/* Wait all non-EAL threads to register. */
 	while (__atomic_load_n(&registered_count, __ATOMIC_ACQUIRE) !=
 			non_eal_threads_count)
-		;
+		sched_yield();
 
 	/* We managed to create the max number of threads, let's try to create
 	 * one more. This will allow one more check.
@@ -101,7 +102,7 @@ test_non_eal_lcores(unsigned int eal_threads_count)
 		printf("non-EAL threads count: %u\n", non_eal_threads_count);
 		while (__atomic_load_n(&registered_count, __ATOMIC_ACQUIRE) !=
 				non_eal_threads_count)
-			;
+			sched_yield();
 	}
 
 skip_lcore_any:
@@ -267,7 +268,7 @@ test_non_eal_lcores_callback(unsigned int eal_threads_count)
 	non_eal_threads_count++;
 	while (__atomic_load_n(&registered_count, __ATOMIC_ACQUIRE) !=
 			non_eal_threads_count)
-		;
+		sched_yield();
 	if (l[0].init != eal_threads_count + 1 ||
 			l[1].init != eal_threads_count + 1) {
 		printf("Error: incorrect init calls, expected %u, %u, got %u, %u\n",
@@ -290,7 +291,7 @@ test_non_eal_lcores_callback(unsigned int eal_threads_count)
 	non_eal_threads_count++;
 	while (__atomic_load_n(&registered_count, __ATOMIC_ACQUIRE) !=
 			non_eal_threads_count)
-		;
+		sched_yield();
 	if (l[0].init != eal_threads_count + 2 ||
 			l[1].init != eal_threads_count + 2) {
 		printf("Error: incorrect init calls, expected %u, %u, got %u, %u\n",
