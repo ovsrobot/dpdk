@@ -428,6 +428,9 @@ int eal_dev_hotplug_request_to_secondary(struct eal_dev_mp_req *req)
 			if (req->t == EAL_DEV_REQ_TYPE_ATTACH &&
 				resp->result == -EEXIST)
 				continue;
+			if (req->t == EAL_DEV_REQ_TYPE_ATTACH &&
+				resp->result == -ENOTSUP)
+				continue;
 			if (req->t == EAL_DEV_REQ_TYPE_DETACH &&
 				resp->result == -ENOENT)
 				continue;
