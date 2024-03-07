@@ -837,8 +837,24 @@ hns3_get_regs_num(struct hns3_hw *hw, uint32_t *regs_num_32_bit,
 	return 0;
 }
 
+static uint32_t
+hns3_get_direct_regs_cnt(const struct direct_reg_list *list,
+			 uint32_t len, const char *filter)
+{
+	uint32_t i;
+	uint32_t count = 0;
+
+	for (i = 0 ; i < len; i++) {
+		if (filter != NULL && !strstr(list[i].name, filter))
+			continue;
+		count++;
+	}
+
+	return count;
+}
+
 static int
-hns3_get_regs_length(struct hns3_hw *hw, uint32_t *length)
+hns3_get_regs_length(struct hns3_hw *hw, uint32_t *length, const char *filter)
 {
 	struct hns3_adapter *hns = HNS3_DEV_HW_TO_ADAPTER(hw);
 	uint32_t cmdq_cnt, common_cnt, ring_cnt, tqp_intr_cnt;
@@ -847,13 +863,18 @@ hns3_get_regs_length(struct hns3_hw *hw, uint32_t *length)
 	uint32_t len;
 	int ret;
 
-	cmdq_cnt = RTE_DIM(cmdq_reg_list);
+	cmdq_cnt = hns3_get_direct_regs_cnt(cmdq_reg_list,
+					    RTE_DIM(cmdq_reg_list), filter);
 	if (hns->is_vf)
-		common_cnt = sizeof(common_vf_reg_list);
+		common_cnt = hns3_get_direct_regs_cnt(common_vf_reg_list,
+					RTE_DIM(common_vf_reg_list), filter);
 	else
-		common_cnt = RTE_DIM(common_reg_list);
-	ring_cnt = RTE_DIM(ring_reg_list);
-	tqp_intr_cnt = RTE_DIM(tqp_intr_reg_list);
+		common_cnt = hns3_get_direct_regs_cnt(common_reg_list,
+					RTE_DIM(common_reg_list), filter);
+	ring_cnt = hns3_get_direct_regs_cnt(ring_reg_list,
+					    RTE_DIM(ring_reg_list), filter);
+	tqp_intr_cnt = hns3_get_direct_regs_cnt(tqp_intr_reg_list,
+					RTE_DIM(tqp_intr_reg_list), filter);
 
 	len = cmdq_cnt + common_cnt + ring_cnt * hw->tqps_num +
 	      tqp_intr_cnt * hw->intr_tqps_num;
@@ -995,47 +1016,160 @@ hns3_get_64_bit_regs(struct hns3_hw *hw, uint32_t regs_num, void *data)
 	return 0;
 }
 
-static int
-hns3_direct_access_regs(struct hns3_hw *hw, uint32_t *data)
+
+static uint32_t
+hns3_direct_access_cmdq_reg(struct hns3_hw *hw,
+			    struct rte_dev_reg_info *regs,
+			    uint32_t count)
 {
-	struct hns3_adapter *hns = HNS3_DEV_HW_TO_ADAPTER(hw);
-	uint32_t *origin_data_ptr = data;
+	uint32_t *data = regs->data;
+	size_t reg_num;
+	data += count;
+	size_t i;
+
+	reg_num = RTE_DIM(cmdq_reg_list);
+	for (i = 0; i < reg_num; i++) {
+		if (regs->filter != NULL &&
+			!strstr(cmdq_reg_list[i].name, regs->filter))
+			continue;
+		*data++ = hns3_read_dev(hw, cmdq_reg_list[i].addr);
+		if (regs->names == NULL)
+			continue;
+		snprintf(regs->names[count++].name, RTE_ETH_REG_NAME_SIZE,
+			 "%s", cmdq_reg_list[i].name);
+	}
+
+	return count;
+}
+static uint32_t
+hns3_direct_access_common_reg(struct hns3_hw *hw,
+			      struct rte_dev_reg_info *regs,
+			      uint32_t count)
+{
+	uint32_t *data = regs->data;
+	size_t reg_num;
+	data += count;
+	size_t i;
+
+	reg_num = RTE_DIM(common_reg_list);
+	for (i = 0; i < reg_num; i++) {
+		if (regs->filter != NULL &&
+			!strstr(common_reg_list[i].name, regs->filter))
+			continue;
+		*data++ = hns3_read_dev(hw, common_reg_list[i].addr);
+		if (regs->names == NULL)
+			continue;
+		snprintf(regs->names[count++].name, RTE_ETH_REG_NAME_SIZE,
+			 "%s", common_reg_list[i].name);
+	}
+
+	return count;
+}
+
+static uint32_t
+hns3_direct_access_vf_common_reg(struct hns3_hw *hw,
+				 struct rte_dev_reg_info *regs,
+				 uint32_t count)
+{
+	uint32_t *data = regs->data;
+	size_t reg_num;
+	data += count;
+	size_t i;
+
+	reg_num = RTE_DIM(common_vf_reg_list);
+	for (i = 0; i < reg_num; i++) {
+		if (regs->filter != NULL &&
+			!strstr(common_vf_reg_list[i].name, regs->filter))
+			continue;
+		*data++ = hns3_read_dev(hw, common_vf_reg_list[i].addr);
+		if (regs->names == NULL)
+			continue;
+		snprintf(regs->names[count++].name, RTE_ETH_REG_NAME_SIZE,
+			 "%s", common_vf_reg_list[i].name);
+	}
+
+	return count;
+}
+
+static uint32_t
+hns3_direct_access_ring_reg(struct hns3_hw *hw,
+			    struct rte_dev_reg_info *regs,
+			    uint32_t count)
+{
+	uint32_t *data = regs->data;
 	uint32_t reg_offset;
 	size_t reg_num;
 	uint16_t j;
 	size_t i;
 
-	/* fetching per-PF registers values from PF PCIe register space */
-	reg_num = RTE_DIM(cmdq_reg_list);
-	for (i = 0; i < reg_num; i++)
-		*data++ = hns3_read_dev(hw, cmdq_reg_list[i].addr);
-
-	if (hns->is_vf)
-		reg_num = RTE_DIM(common_vf_reg_list);
-	else
-		reg_num = RTE_DIM(common_reg_list);
-	for (i = 0; i < reg_num; i++)
-		if (hns->is_vf)
-			*data++ = hns3_read_dev(hw, common_vf_reg_list[i].addr);
-		else
-			*data++ = hns3_read_dev(hw, common_reg_list[i].addr);
-
+	data += count;
 	reg_num = RTE_DIM(ring_reg_list);
 	for (j = 0; j < hw->tqps_num; j++) {
 		reg_offset = hns3_get_tqp_reg_offset(j);
-		for (i = 0; i < reg_num; i++)
-			*data++ = hns3_read_dev(hw,
-						ring_reg_list[i].addr + reg_offset);
+		for (i = 0; i < reg_num; i++) {
+			if (regs->filter != NULL &&
+				!strstr(ring_reg_list[i].name, regs->filter))
+				continue;
+			*data++ = hns3_read_dev(hw, ring_reg_list[i].addr +
+						    reg_offset);
+			if (regs->names == NULL)
+				continue;
+			snprintf(regs->names[count++].name, RTE_ETH_REG_NAME_SIZE,
+				"queue_%u_%s", j, ring_reg_list[i].name);
+		}
 	}
 
+	return count;
+}
+
+static uint32_t
+hns3_direct_access_tqp_intr_reg(struct hns3_hw *hw,
+			    struct rte_dev_reg_info *regs,
+			    uint32_t count)
+{
+	uint32_t *data = regs->data;
+	uint32_t reg_offset;
+	size_t reg_num;
+	uint16_t j;
+	size_t i;
+
+	data += count;
 	reg_num = RTE_DIM(tqp_intr_reg_list);
 	for (j = 0; j < hw->intr_tqps_num; j++) {
 		reg_offset = hns3_get_tqp_intr_reg_offset(j);
-		for (i = 0; i < reg_num; i++)
+		for (i = 0; i < reg_num; i++) {
+			if (regs->filter != NULL &&
+				!strstr(tqp_intr_reg_list[i].name, regs->filter))
+				continue;
 			*data++ = hns3_read_dev(hw, tqp_intr_reg_list[i].addr +
 						reg_offset);
+			if (regs->names == NULL)
+				continue;
+			snprintf(regs->names[count++].name, RTE_ETH_REG_NAME_SIZE,
+				"queue_%u_%s", j, tqp_intr_reg_list[i].name);
+		}
 	}
-	return data - origin_data_ptr;
+
+	return count;
+}
+
+static uint32_t
+hns3_direct_access_regs(struct hns3_hw *hw,
+			struct rte_dev_reg_info *regs,
+			uint32_t count)
+{
+	struct hns3_adapter *hns = HNS3_DEV_HW_TO_ADAPTER(hw);
+
+	count = hns3_direct_access_cmdq_reg(hw, regs, count);
+	if (!hns->is_vf)
+		count = hns3_direct_access_common_reg(hw, regs, count);
+	else
+		count = hns3_direct_access_vf_common_reg(hw, regs, count);
+
+	count = hns3_direct_access_ring_reg(hw, regs, count);
+	count = hns3_direct_access_tqp_intr_reg(hw, regs, count);
+
+	return count;
 }
 
 static int
@@ -1177,11 +1311,12 @@ hns3_get_regs(struct rte_eth_dev *eth_dev, struct rte_dev_reg_info *regs)
 	struct hns3_hw *hw = &hns->hw;
 	uint32_t regs_num_32_bit;
 	uint32_t regs_num_64_bit;
+	uint32_t count = 0;
 	uint32_t length;
 	uint32_t *data;
 	int ret;
 
-	ret = hns3_get_regs_length(hw, &length);
+	ret = hns3_get_regs_length(hw, &length, regs->filter);
 	if (ret)
 		return ret;
 
@@ -1193,13 +1328,14 @@ hns3_get_regs(struct rte_eth_dev *eth_dev, struct rte_dev_reg_info *regs)
 	}
 
 	/* Only full register dump is supported */
-	if (regs->length && regs->length != length)
+	if ((regs->length && regs->length != length))
 		return -ENOTSUP;
 
 	regs->version = hw->fw_version;
 
 	/* fetching per-PF registers values from PF PCIe register space */
-	data += hns3_direct_access_regs(hw, data);
+	count = hns3_direct_access_regs(hw, regs, count);
+	data += count;
 
 	if (hns->is_vf)
 		return 0;
