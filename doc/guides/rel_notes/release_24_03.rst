@@ -225,6 +225,10 @@ API Changes
 * ethdev: Renamed structure ``rte_flow_action_modify_data`` to be
   ``rte_flow_field_data`` for more generic usage.
 
+* eal: The maximum number of file descriptors allowed to be passed in
+  multi-process requests is increased from 8 to the maximum possible on
+  Linux unix domain sockets 253. This allows for more queues on XDP and
+  TAP device.
 
 ABI Changes
 -----------
