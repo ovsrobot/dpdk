@@ -1063,6 +1063,8 @@ launch_args_parse(int argc, char** argv)
 					rte_exit(EXIT_FAILURE, "rxq %d invalid - must be"
 						  " >= 0 && <= %u\n", n,
 						  get_allowed_max_nb_rxq(&pid));
+				if (!nb_rxq && !nb_txq)
+					rte_exit(EXIT_FAILURE, "Either rx or tx queues should be non-zero\n");
 			}
 			if (!strcmp(lgopts[opt_idx].name, "txq")) {
 				n = atoi(optarg);
@@ -1072,6 +1074,8 @@ launch_args_parse(int argc, char** argv)
 					rte_exit(EXIT_FAILURE, "txq %d invalid - must be"
 						  " >= 0 && <= %u\n", n,
 						  get_allowed_max_nb_txq(&pid));
+				if (!nb_rxq && !nb_txq)
+					rte_exit(EXIT_FAILURE, "Either rx or tx queues should be non-zero\n");
 			}
 			if (!strcmp(lgopts[opt_idx].name, "hairpinq")) {
 				n = atoi(optarg);
@@ -1097,10 +1101,6 @@ launch_args_parse(int argc, char** argv)
 						  " >= 0 && <= %u\n",
 						  n + nb_rxq,
 						  get_allowed_max_nb_rxq(&pid));
-			}
-			if (!nb_rxq && !nb_txq) {
-				rte_exit(EXIT_FAILURE, "Either rx or tx queues should "
-						"be non-zero\n");
 			}
 			if (!strcmp(lgopts[opt_idx].name, "hairpin-mode")) {
 				char *end = NULL;
