@@ -27,6 +27,7 @@
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_thread.h>
+#include <rte_function_versioning.h>
 
 #include "eal_memcfg.h"
 #include "eal_private.h"
@@ -796,7 +797,7 @@ mp_send(struct rte_mp_msg *msg, const char *peer, int type)
 }
 
 static int
-check_input(const struct rte_mp_msg *msg)
+check_input(const struct rte_mp_msg *msg, int max_fd)
 {
 	if (msg == NULL) {
 		EAL_LOG(ERR, "Msg cannot be NULL");
@@ -825,9 +826,8 @@ check_input(const struct rte_mp_msg *msg)
 		return -1;
 	}
 
-	if (msg->num_fds > RTE_MP_MAX_FD_NUM) {
-		EAL_LOG(ERR, "Cannot send more than %d FDs",
-			RTE_MP_MAX_FD_NUM);
+	if (msg->num_fds > max_fd) {
+		EAL_LOG(ERR, "Cannot send more than %d FDs", max_fd);
 		rte_errno = E2BIG;
 		return -1;
 	}
@@ -835,13 +835,13 @@ check_input(const struct rte_mp_msg *msg)
 	return 0;
 }
 
-int
-rte_mp_sendmsg(struct rte_mp_msg *msg)
+static int
+mp_sendmsg(struct rte_mp_msg *msg, int max_fd)
 {
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
-	if (check_input(msg) != 0)
+	if (check_input(msg, max_fd) != 0)
 		return -1;
 
 	if (internal_conf->no_shconf) {
@@ -853,6 +853,24 @@ rte_mp_sendmsg(struct rte_mp_msg *msg)
 	EAL_LOG(DEBUG, "sendmsg: %s", msg->name);
 	return mp_send(msg, NULL, MP_MSG);
 }
+
+int rte_mp_sendmsg_V23(struct rte_mp_old_msg *msg);
+int rte_mp_sendmsg_V24(struct rte_mp_msg *msg);
+
+int
+rte_mp_sendmsg_V23(struct rte_mp_old_msg *omsg)
+{
+	return mp_sendmsg((struct rte_mp_msg *)omsg, RTE_MP_MAX_OLD_FD_NUM);
+}
+VERSION_SYMBOL(rte_mp_sendmsg, _V23, 23);
+
+int
+rte_mp_sendmsg_V24(struct rte_mp_msg *msg)
+{
+	return mp_sendmsg(msg, RTE_MP_MAX_FD_NUM);
+}
+BIND_DEFAULT_SYMBOL(rte_mp_sendmsg, _V24, 24);
+MAP_STATIC_SYMBOL(int rte_mp_sendmsg(struct rte_mp_msg *msg), rte_mp_sendmsg_V24);
 
 static int
 mp_request_async(const char *dst, struct rte_mp_msg *req,
@@ -988,9 +1006,9 @@ mp_request_sync(const char *dst, struct rte_mp_msg *req,
 	return 0;
 }
 
-int
-rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
-		const struct timespec *ts)
+static int
+__rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
+		      const struct timespec *ts, int max_fd)
 {
 	int dir_fd, ret = -1;
 	DIR *mp_dir;
@@ -1005,7 +1023,7 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 	reply->nb_received = 0;
 	reply->msgs = NULL;
 
-	if (check_input(req) != 0)
+	if (check_input(req, max_fd) != 0)
 		goto end;
 
 	if (internal_conf->no_shconf) {
@@ -1085,9 +1103,34 @@ end:
 	return ret;
 }
 
+int rte_mp_request_sync_V23(struct rte_mp_old_msg *req, struct rte_mp_reply *reply,
+			    const struct timespec *ts);
+int rte_mp_request_sync_V24(struct rte_mp_msg *req, struct rte_mp_reply *reply,
+			    const struct timespec *ts);
+
+
 int
-rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
-		rte_mp_async_reply_t clb)
+rte_mp_request_sync_V23(struct rte_mp_old_msg *req, struct rte_mp_reply *reply,
+		    const struct timespec *ts)
+{
+	return __rte_mp_request_sync((struct rte_mp_msg *)req, reply, ts, RTE_MP_MAX_OLD_FD_NUM);
+}
+VERSION_SYMBOL(rte_mp_request_sync, _V23, 23);
+
+int
+rte_mp_request_sync_V24(struct rte_mp_msg *req, struct rte_mp_reply *reply,
+			const struct timespec *ts)
+{
+	return __rte_mp_request_sync(req, reply, ts, RTE_MP_MAX_FD_NUM);
+}
+BIND_DEFAULT_SYMBOL(rte_mp_request_sync, _V24, 24);
+MAP_STATIC_SYMBOL(int rte_mp_request_sync(struct rte_mp_msg *req, \
+					  struct rte_mp_reply *reply, \
+					  const struct timespec *ts), rte_mp_request_sync_V24);
+
+static int
+__rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
+		       rte_mp_async_reply_t clb, int max_fd)
 {
 	struct rte_mp_msg *copy;
 	struct pending_request *dummy;
@@ -1104,7 +1147,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 
 	EAL_LOG(DEBUG, "request: %s", req->name);
 
-	if (check_input(req) != 0)
+	if (check_input(req, max_fd) != 0)
 		return -1;
 
 	if (internal_conf->no_shconf) {
@@ -1237,14 +1280,38 @@ fail:
 	return -1;
 }
 
+int rte_mp_request_async_V23(struct rte_mp_old_msg *req, const struct timespec *ts,
+			     rte_mp_async_reply_t clb);
+int rte_mp_request_async_V24(struct rte_mp_msg *req, const struct timespec *ts,
+			     rte_mp_async_reply_t clb);
+
 int
-rte_mp_reply(struct rte_mp_msg *msg, const char *peer)
+rte_mp_request_async_V23(struct rte_mp_old_msg *req, const struct timespec *ts,
+			 rte_mp_async_reply_t clb)
+{
+	return __rte_mp_request_async((struct rte_mp_msg *)req, ts, clb, RTE_MP_MAX_OLD_FD_NUM);
+}
+VERSION_SYMBOL(rte_mp_request_async, _V23, 23);
+
+int
+rte_mp_request_async_V24(struct rte_mp_msg *req, const struct timespec *ts,
+			 rte_mp_async_reply_t clb)
+{
+	return __rte_mp_request_async(req, ts, clb, RTE_MP_MAX_FD_NUM);
+}
+BIND_DEFAULT_SYMBOL(rte_mp_request_async, _V24, 24);
+MAP_STATIC_SYMBOL(int rte_mp_request_async(struct rte_mp_msg *req,	\
+					   const struct timespec *ts,	\
+					   rte_mp_async_reply_t clb), rte_mp_request_async_V24);
+
+static int
+mp_reply(struct rte_mp_msg *msg, const char *peer, int max_fd)
 {
 	EAL_LOG(DEBUG, "reply: %s", msg->name);
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
-	if (check_input(msg) != 0)
+	if (check_input(msg, max_fd) != 0)
 		return -1;
 
 	if (peer == NULL) {
@@ -1260,6 +1327,25 @@ rte_mp_reply(struct rte_mp_msg *msg, const char *peer)
 
 	return mp_send(msg, peer, MP_REP);
 }
+
+int rte_mp_reply_V23(struct rte_mp_old_msg *msg, const char *peer);
+int rte_mp_reply_V24(struct rte_mp_msg *msg, const char *peer);
+
+int
+rte_mp_reply_V23(struct rte_mp_old_msg *msg, const char *peer)
+{
+	return mp_reply((struct rte_mp_msg *)msg, peer, RTE_MP_MAX_OLD_FD_NUM);
+}
+VERSION_SYMBOL(rte_mp_reply, _V23, 23);
+
+int
+rte_mp_reply_V24(struct rte_mp_msg *msg, const char *peer)
+{
+	return mp_reply(msg, peer, RTE_MP_MAX_FD_NUM);
+}
+BIND_DEFAULT_SYMBOL(rte_mp_reply, _V24, 24);
+MAP_STATIC_SYMBOL(int rte_mp_reply(struct rte_mp_msg *msg, const char *peer), rte_mp_reply_V24);
+
 
 /* Internally, the status of the mp feature is represented as a three-state:
  * - "unknown" as long as no secondary process attached to a primary process

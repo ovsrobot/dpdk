@@ -155,15 +155,26 @@ int rte_eal_primary_proc_alive(const char *config_file_path);
  */
 bool rte_mp_disable(void);
 
-#define RTE_MP_MAX_FD_NUM	8    /* The max amount of fds */
+#define RTE_MP_MAX_FD_NUM	253  /* The max number of fds (SCM_MAX_FD) */
 #define RTE_MP_MAX_NAME_LEN	64   /* The max length of action name */
 #define RTE_MP_MAX_PARAM_LEN	256  /* The max length of param */
+
 struct rte_mp_msg {
 	char name[RTE_MP_MAX_NAME_LEN];
 	int len_param;
 	int num_fds;
 	uint8_t param[RTE_MP_MAX_PARAM_LEN];
 	int fds[RTE_MP_MAX_FD_NUM];
+};
+
+/* Legacy API version */
+#define RTE_MP_MAX_OLD_FD_NUM	8    /* The legacy limit on fds */
+struct rte_mp_old_msg {
+	char name[RTE_MP_MAX_NAME_LEN];
+	int len_param;
+	int num_fds;
+	uint8_t param[RTE_MP_MAX_PARAM_LEN];
+	int fds[RTE_MP_MAX_OLD_FD_NUM];
 };
 
 struct rte_mp_reply {

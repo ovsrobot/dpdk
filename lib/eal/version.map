@@ -344,6 +344,15 @@ DPDK_24 {
 	local: *;
 };
 
+DPDK_23 {
+	global:
+
+	rte_mp_reply;
+	rte_mp_request_async;
+	rte_mp_request_sync;
+	rte_mp_sendmsg;
+} DPDK_24;
+
 EXPERIMENTAL {
 	global:
 

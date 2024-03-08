@@ -3,6 +3,8 @@
 
 includes += include_directories('.')
 
+use_function_versioning = true
+
 cflags += [ '-DABI_VERSION="@0@"'.format(abi_version) ]
 
 sources += files(
