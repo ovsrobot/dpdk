@@ -3292,9 +3292,6 @@ modular_multiplicative_inverse(const void *test_data)
 	arg.qt.coef.data = coef; \
 	arg.qt.coef.length = vector->coef.len
 
-typedef void (*rsa_key_init_t)(struct rte_crypto_asym_xform *,
-	const struct rsa_test_data_2 *);
-
 static int
 RSA_Encrypt(const struct rsa_test_data_2 *vector, uint8_t *cipher_buf)
 {
@@ -3335,41 +3332,14 @@ RSA_Decrypt(const struct rsa_test_data_2 *vector, uint8_t *plaintext,
 	return 0;
 }
 
-static void
-RSA_key_init_Exp(struct rte_crypto_asym_xform *xform,
-		const struct rsa_test_data_2 *vector)
-{
-	SET_RSA_PARAM(xform->rsa, vector, n);
-	SET_RSA_PARAM(xform->rsa, vector, e);
-	SET_RSA_PARAM(xform->rsa, vector, d);
-	xform->rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
-}
-
-static void
-RSA_key_init_CRT(struct rte_crypto_asym_xform *xform,
-		const struct rsa_test_data_2 *vector)
-{
-	SET_RSA_PARAM(xform->rsa, vector, n);
-	SET_RSA_PARAM(xform->rsa, vector, e);
-	SET_RSA_PARAM_QT(xform->rsa, vector, p);
-	SET_RSA_PARAM_QT(xform->rsa, vector, q);
-	SET_RSA_PARAM_QT(xform->rsa, vector, dP);
-	SET_RSA_PARAM_QT(xform->rsa, vector, dQ);
-	SET_RSA_PARAM_QT(xform->rsa, vector, qInv);
-	xform->rsa.key_type = RTE_RSA_KEY_TYPE_QT;
-}
-
 static int
-RSA_Init_Session(const struct rsa_test_data_2 *vector,
-	rsa_key_init_t key_init)
+RSA_Init_Session(struct rte_crypto_asym_xform *xform)
 {
 	const uint8_t dev_id = params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
-	struct rte_crypto_asym_xform xform = { };
 	int ret = 0;
 
-	key_init(&xform, vector);
-	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_RSA;
+	xform->xform_type = RTE_CRYPTO_ASYM_XFORM_RSA;
 
 	rte_cryptodev_info_get(dev_id, &dev_info);
 	if (!(dev_info.feature_flags & RTE_CRYPTODEV_FF_RSA_PRIV_OP_KEY_QT)) {
@@ -3377,7 +3347,7 @@ RSA_Init_Session(const struct rsa_test_data_2 *vector,
 			"Device doesn't support decrypt op with quintuple key type. Test skipped\n");
 		return TEST_SKIPPED;
 	}
-	ret = rte_cryptodev_asym_session_create(dev_id, &xform,
+	ret = rte_cryptodev_asym_session_create(dev_id, xform,
 		params->session_mpool, &self->sess);
 	if (ret < 0) {
 		RTE_LOG(ERR, USER1,
@@ -3392,7 +3362,13 @@ KAT_RSA_Encrypt(const void *data)
 {
 	uint8_t cipher_buf[TEST_DATA_SIZE] = {0};
 	const struct rsa_test_data_2 *vector = data;
-	int ret = RSA_Init_Session(vector, RSA_key_init_Exp);
+	struct rte_crypto_asym_xform xform = { };
+
+	SET_RSA_PARAM(xform.rsa, vector, n);
+	SET_RSA_PARAM(xform.rsa, vector, e);
+	SET_RSA_PARAM(xform.rsa, vector, d);
+	xform.rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
+	int ret = RSA_Init_Session(&xform);
 
 	if (ret) {
 		RTE_LOG(ERR, USER1, "Failed to init session for RSA\n");
@@ -3412,8 +3388,17 @@ KAT_RSA_Encrypt_CRT(const void *data)
 {
 	uint8_t cipher_buf[TEST_DATA_SIZE] = {0};
 	const struct rsa_test_data_2 *vector = data;
-	int ret = RSA_Init_Session(vector, RSA_key_init_CRT);
+	struct rte_crypto_asym_xform xform = { };
 
+	SET_RSA_PARAM(xform.rsa, vector, n);
+	SET_RSA_PARAM(xform.rsa, vector, e);
+	SET_RSA_PARAM_QT(xform.rsa, vector, p);
+	SET_RSA_PARAM_QT(xform.rsa, vector, q);
+	SET_RSA_PARAM_QT(xform.rsa, vector, dP);
+	SET_RSA_PARAM_QT(xform.rsa, vector, dQ);
+	SET_RSA_PARAM_QT(xform.rsa, vector, qInv);
+	xform.rsa.key_type = RTE_RSA_KEY_TYPE_QT;
+	int ret = RSA_Init_Session(&xform);
 	if (ret) {
 		RTE_LOG(ERR, USER1, "Failed to init session for RSA\n");
 		return ret;
@@ -3432,7 +3417,13 @@ KAT_RSA_Decrypt(const void *data)
 {
 	uint8_t message[TEST_DATA_SIZE] = {0};
 	const struct rsa_test_data_2 *vector = data;
-	int ret = RSA_Init_Session(vector, RSA_key_init_Exp);
+	struct rte_crypto_asym_xform xform = { };
+
+	SET_RSA_PARAM(xform.rsa, vector, n);
+	SET_RSA_PARAM(xform.rsa, vector, e);
+	SET_RSA_PARAM(xform.rsa, vector, d);
+	xform.rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
+	int ret = RSA_Init_Session(&xform);
 
 	if (ret) {
 		RTE_LOG(ERR, USER1, "Failed to init session for RSA\n");
@@ -3452,8 +3443,17 @@ KAT_RSA_Decrypt_CRT(const void *data)
 {
 	uint8_t message[TEST_DATA_SIZE] = {0};
 	const struct rsa_test_data_2 *vector = data;
-	int ret = RSA_Init_Session(vector, RSA_key_init_CRT);
+	struct rte_crypto_asym_xform xform = { };
 
+	SET_RSA_PARAM(xform.rsa, vector, n);
+	SET_RSA_PARAM(xform.rsa, vector, e);
+	SET_RSA_PARAM_QT(xform.rsa, vector, p);
+	SET_RSA_PARAM_QT(xform.rsa, vector, q);
+	SET_RSA_PARAM_QT(xform.rsa, vector, dP);
+	SET_RSA_PARAM_QT(xform.rsa, vector, dQ);
+	SET_RSA_PARAM_QT(xform.rsa, vector, qInv);
+	xform.rsa.key_type = RTE_RSA_KEY_TYPE_QT;
+	int ret = RSA_Init_Session(&xform);
 	if (ret) {
 		RTE_LOG(ERR, USER1, "Failed to init session for RSA\n");
 		return ret;
