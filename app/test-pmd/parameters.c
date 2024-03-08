@@ -1128,9 +1128,9 @@ launch_args_parse(int argc, char** argv)
 								0,
 								&dev_info);
 					if (ret != 0)
-						return;
-
-					rec_nb_pkts = dev_info
+						rec_nb_pkts = 0;
+					else
+						rec_nb_pkts = dev_info
 						.default_rxportconf.burst_size;
 
 					if (rec_nb_pkts == 0)
