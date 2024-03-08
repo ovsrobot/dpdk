@@ -7,13 +7,18 @@
 #define RTE_KEEPALIVE_SHM_ALIVE 1
 #define RTE_KEEPALIVE_SHM_DEAD 2
 
+
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+
 #include <rte_keepalive.h>
+#include <rte_log.h>
+
+#define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 /**
  * Keepalive SHM structure.
