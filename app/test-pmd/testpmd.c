@@ -615,8 +615,8 @@ change_bonding_member_port_status(portid_t bond_pid, bool is_stop)
 	num_members = rte_eth_bond_members_get(bond_pid, member_pids,
 						RTE_MAX_ETHPORTS);
 	if (num_members < 0) {
-		fprintf(stderr, "Failed to get member list for port = %u\n",
-			bond_pid);
+		TESTPMD_LOG(ERR, "Failed to get member list for port = %u\n",
+			    bond_pid);
 		return num_members;
 	}
 
@@ -1289,8 +1289,8 @@ check_socket_id(const unsigned int socket_id)
 
 	if (new_socket_id(socket_id)) {
 		if (!warning_once && numa_support)
-			fprintf(stderr,
-				"Warning: NUMA should be configured manually by using --port-numa-config and --ring-numa-config parameters along with --numa.\n");
+			TESTPMD_LOG(WARNING,
+				    "NUMA should be configured manually by using --port-numa-config and --ring-numa-config parameters along with --numa.\n");
 		warning_once = 1;
 		return -1;
 	}
@@ -1337,9 +1337,9 @@ check_nb_rxq(queueid_t rxq)
 
 	allowed_max_rxq = get_allowed_max_nb_rxq(&pid);
 	if (rxq > allowed_max_rxq) {
-		fprintf(stderr,
-			"Fail: input rxq (%u) can't be greater than max_rx_queues (%u) of port %u\n",
-			rxq, allowed_max_rxq, pid);
+		TESTPMD_LOG(ERR,
+			    "Fail: input rxq (%u) can't be greater than max_rx_queues (%u) of port %u\n",
+			    rxq, allowed_max_rxq, pid);
 		return -1;
 	}
 	return 0;
@@ -1385,7 +1385,7 @@ check_nb_txq(queueid_t txq)
 
 	allowed_max_txq = get_allowed_max_nb_txq(&pid);
 	if (txq > allowed_max_txq) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: input txq (%u) can't be greater than max_tx_queues (%u) of port %u\n",
 			txq, allowed_max_txq, pid);
 		return -1;
@@ -1458,7 +1458,7 @@ check_nb_rxd(queueid_t rxd)
 
 	allowed_max_rxd = get_allowed_max_nb_rxd(&pid);
 	if (rxd > allowed_max_rxd) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: input rxd (%u) can't be greater than max_rxds (%u) of port %u\n",
 			rxd, allowed_max_rxd, pid);
 		return -1;
@@ -1466,7 +1466,7 @@ check_nb_rxd(queueid_t rxd)
 
 	allowed_min_rxd = get_allowed_min_nb_rxd(&pid);
 	if (rxd < allowed_min_rxd) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: input rxd (%u) can't be less than min_rxds (%u) of port %u\n",
 			rxd, allowed_min_rxd, pid);
 		return -1;
@@ -1539,7 +1539,7 @@ check_nb_txd(queueid_t txd)
 
 	allowed_max_txd = get_allowed_max_nb_txd(&pid);
 	if (txd > allowed_max_txd) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: input txd (%u) can't be greater than max_txds (%u) of port %u\n",
 			txd, allowed_max_txd, pid);
 		return -1;
@@ -1547,7 +1547,7 @@ check_nb_txd(queueid_t txd)
 
 	allowed_min_txd = get_allowed_min_nb_txd(&pid);
 	if (txd < allowed_min_txd) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: input txd (%u) can't be less than min_txds (%u) of port %u\n",
 			txd, allowed_min_txd, pid);
 		return -1;
@@ -1595,7 +1595,7 @@ check_nb_hairpinq(queueid_t hairpinq)
 
 	allowed_max_hairpinq = get_allowed_max_nb_hairpinq(&pid);
 	if (hairpinq > allowed_max_hairpinq) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: input hairpin (%u) can't be greater than max_hairpin_queues (%u) of port %u\n",
 			hairpinq, allowed_max_hairpinq, pid);
 		return -1;
@@ -1841,13 +1841,13 @@ init_fwd_streams(void)
 	RTE_ETH_FOREACH_DEV(pid) {
 		port = &ports[pid];
 		if (nb_rxq > port->dev_info.max_rx_queues) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Fail: nb_rxq(%d) is greater than max_rx_queues(%d)\n",
 				nb_rxq, port->dev_info.max_rx_queues);
 			return -1;
 		}
 		if (nb_txq > port->dev_info.max_tx_queues) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Fail: nb_txq(%d) is greater than max_tx_queues(%d)\n",
 				nb_txq, port->dev_info.max_tx_queues);
 			return -1;
@@ -1876,7 +1876,7 @@ init_fwd_streams(void)
 
 	q = RTE_MAX(nb_rxq, nb_txq);
 	if (q == 0) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Fail: Cannot allocate fwd streams as number of queues is 0\n");
 		return -1;
 	}
@@ -2083,7 +2083,7 @@ fwd_stats_display(void)
 
 		ret = rte_eth_stats_get(pt_id, &stats);
 		if (ret != 0) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"%s: Error: failed to get stats (port %u): %d",
 				__func__, pt_id, ret);
 			continue;
@@ -2190,7 +2190,7 @@ fwd_stats_reset(void)
 		pt_id = fwd_ports_ids[i];
 		ret = rte_eth_stats_get(pt_id, &ports[pt_id].stats);
 		if (ret != 0)
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"%s: Error: failed to clear stats (port %u):%d",
 				__func__, pt_id, ret);
 	}
@@ -2395,7 +2395,7 @@ launch_packet_forwarding(lcore_function_t *pkt_fwd_on_lcore)
 			diag = rte_eal_remote_launch(pkt_fwd_on_lcore,
 						     fwd_lcores[i], lc_id);
 			if (diag != 0)
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"launch lcore %u failed - diag=%d\n",
 					lc_id, diag);
 		}
@@ -2518,11 +2518,11 @@ start_packet_forwarding(int with_tx_first)
 			cur_fwd_eng->fwd_mode_name);
 
 	if (all_ports_started() == 0) {
-		fprintf(stderr, "Not all ports were started\n");
+		TESTPMD_LOG(ERR, "Not all ports were started\n");
 		return;
 	}
 	if (test_done == 0) {
-		fprintf(stderr, "Packet forwarding already started\n");
+		TESTPMD_LOG(ERR, "Packet forwarding already started\n");
 		return;
 	}
 
@@ -2542,7 +2542,7 @@ start_packet_forwarding(int with_tx_first)
 	if (port_fwd_begin != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
 			if (port_fwd_begin(fwd_ports_ids[i])) {
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"Packet forwarding is not ready\n");
 				return;
 			}
@@ -2554,7 +2554,7 @@ start_packet_forwarding(int with_tx_first)
 		if (port_fwd_begin != NULL) {
 			for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
 				if (port_fwd_begin(fwd_ports_ids[i])) {
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Packet forwarding is not ready\n");
 					return;
 				}
@@ -2594,7 +2594,7 @@ stop_packet_forwarding(void)
 	int i;
 
 	if (test_done) {
-		fprintf(stderr, "Packet forwarding not started\n");
+		TESTPMD_LOG(ERR, "Packet forwarding not started\n");
 		return;
 	}
 	printf("Telling cores to stop...");
@@ -2620,14 +2620,14 @@ void
 dev_set_link_up(portid_t pid)
 {
 	if (rte_eth_dev_set_link_up(pid) < 0)
-		fprintf(stderr, "\nSet link up fail.\n");
+		TESTPMD_LOG(ERR, "\nSet link up fail.\n");
 }
 
 void
 dev_set_link_down(portid_t pid)
 {
 	if (rte_eth_dev_set_link_down(pid) < 0)
-		fprintf(stderr, "\nSet link down fail.\n");
+		TESTPMD_LOG(ERR, "\nSet link down fail.\n");
 }
 
 static int
@@ -2767,9 +2767,9 @@ setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
 		if (port->port_status == RTE_PORT_HANDLING)
 			port->port_status = RTE_PORT_STOPPED;
 		else
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Port %d can not be set back to stopped\n", pi);
-		fprintf(stderr, "Fail to configure port %d hairpin queues\n",
+		TESTPMD_LOG(ERR, "Fail to configure port %d hairpin queues\n",
 			pi);
 		/* try to reconfigure queues next time */
 		port->need_reconfig_queues = 1;
@@ -2793,9 +2793,9 @@ setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
 		if (port->port_status == RTE_PORT_HANDLING)
 			port->port_status = RTE_PORT_STOPPED;
 		else
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Port %d can not be set back to stopped\n", pi);
-		fprintf(stderr, "Fail to configure port %d hairpin queues\n",
+		TESTPMD_LOG(ERR, "Fail to configure port %d hairpin queues\n",
 			pi);
 		/* try to reconfigure queues next time */
 		port->need_reconfig_queues = 1;
@@ -2855,7 +2855,7 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		struct rte_eth_dev_info dev_info;
 
 		if (mbuf_data_size_n <= 1) {
-			fprintf(stderr, "Invalid number of mempools %u\n",
+			TESTPMD_LOG(ERR, "Invalid number of mempools %u\n",
 				mbuf_data_size_n);
 			return -EINVAL;
 		}
@@ -2863,7 +2863,7 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		if (ret != 0)
 			return ret;
 		if (dev_info.max_rx_mempools == 0) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Port %u doesn't support requested multi-rx-mempool configuration.\n",
 				port_id);
 			return -ENOTSUP;
@@ -2975,7 +2975,7 @@ fill_xstats_display_info_for_port(portid_t pi)
 		rc = rte_eth_xstats_get_id_by_name(pi, xstat_name,
 						   ids_supp + stat_supp);
 		if (rc != 0) {
-			fprintf(stderr, "No xstat '%s' on port %u - skip it %u\n",
+			TESTPMD_LOG(ERR, "No xstat '%s' on port %u - skip it %u\n",
 				xstat_name, pi, stat);
 			continue;
 		}
@@ -3014,7 +3014,7 @@ update_bonding_port_dev_conf(portid_t bond_pid)
 
 	ret = eth_dev_info_get_print_err(bond_pid, &port->dev_info);
 	if (ret != 0) {
-		fprintf(stderr, "Failed to get dev info for port = %u\n",
+		TESTPMD_LOG(ERR, "Failed to get dev info for port = %u\n",
 			bond_pid);
 		return;
 	}
@@ -3059,7 +3059,7 @@ start_port(portid_t pid)
 			continue;
 
 		if (port_is_bonding_member(pi)) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from bonding device.\n",
 				pi);
 			continue;
@@ -3072,7 +3072,7 @@ start_port(portid_t pid)
 			port->port_status = RTE_PORT_HANDLING;
 			all_ports_already_started = false;
 		} else {
-			fprintf(stderr, "Port %d is now not stopped\n", pi);
+			TESTPMD_LOG(ERR, "Port %d is now not stopped\n", pi);
 			continue;
 		}
 
@@ -3085,7 +3085,7 @@ start_port(portid_t pid)
 			if (flow_isolate_all) {
 				int ret = port_flow_isolate(pi, 1);
 				if (ret) {
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Failed to apply isolated mode on port %d\n",
 						pi);
 					return -1;
@@ -3096,7 +3096,7 @@ start_port(portid_t pid)
 					port->socket_id);
 			if (nb_hairpinq > 0 &&
 			    rte_eth_dev_hairpin_capability_get(pi, &cap)) {
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"Port %d doesn't support hairpin queues\n",
 					pi);
 				return -1;
@@ -3115,10 +3115,10 @@ start_port(portid_t pid)
 				if (port->port_status == RTE_PORT_HANDLING)
 					port->port_status = RTE_PORT_STOPPED;
 				else
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Port %d can not be set back to stopped\n",
 						pi);
-				fprintf(stderr, "Fail to configure port %d\n",
+				TESTPMD_LOG(ERR, "Fail to configure port %d\n",
 					pi);
 				/* try to reconfigure port next time */
 				port->need_reconfig = 1;
@@ -3127,7 +3127,7 @@ start_port(portid_t pid)
 			/* get device configuration*/
 			if (0 !=
 				eth_dev_conf_get_print_err(pi, &dev_conf)) {
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"port %d can not get device configuration\n",
 					pi);
 				return -1;
@@ -3186,10 +3186,10 @@ start_port(portid_t pid)
 				if (port->port_status == RTE_PORT_HANDLING)
 					port->port_status = RTE_PORT_STOPPED;
 				else
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Port %d can not be set back to stopped\n",
 						pi);
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"Fail to configure port %d tx queues\n",
 					pi);
 				/* try to reconfigure queues next time */
@@ -3204,7 +3204,7 @@ start_port(portid_t pid)
 						mbuf_pool_find
 							(rxring_numa[pi], 0);
 					if (mp == NULL) {
-						fprintf(stderr,
+						TESTPMD_LOG(ERR,
 							"Failed to setup RX queue: No mempool allocation on the socket %d\n",
 							rxring_numa[pi]);
 						return -1;
@@ -3220,7 +3220,7 @@ start_port(portid_t pid)
 						mbuf_pool_find
 							(port->socket_id, 0);
 					if (mp == NULL) {
-						fprintf(stderr,
+						TESTPMD_LOG(ERR,
 							"Failed to setup RX queue: No mempool allocation on the socket %d\n",
 							port->socket_id);
 						return -1;
@@ -3238,10 +3238,10 @@ start_port(portid_t pid)
 				if (port->port_status == RTE_PORT_HANDLING)
 					port->port_status = RTE_PORT_STOPPED;
 				else
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Port %d can not be set back to stopped\n",
 						pi);
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"Fail to configure port %d rx queues\n",
 					pi);
 				/* try to reconfigure queues next time */
@@ -3257,7 +3257,7 @@ start_port(portid_t pid)
 			diag = rte_eth_dev_set_ptypes(pi, RTE_PTYPE_UNKNOWN,
 					NULL, 0);
 			if (diag < 0)
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"Port %d: Failed to disable Ptype parsing\n",
 					pi);
 		}
@@ -3268,14 +3268,14 @@ start_port(portid_t pid)
 		/* start port */
 		diag = eth_dev_start_mp(pi);
 		if (diag < 0) {
-			fprintf(stderr, "Fail to start port %d: %s\n",
+			TESTPMD_LOG(ERR, "Fail to start port %d: %s\n",
 				pi, rte_strerror(-diag));
 
 			/* Fail to setup rx queue, return */
 			if (port->port_status == RTE_PORT_HANDLING)
 				port->port_status = RTE_PORT_STOPPED;
 			else
-				fprintf(stderr,
+				TESTPMD_LOG(ERR,
 					"Port %d can not be set back to stopped\n",
 					pi);
 			continue;
@@ -3284,7 +3284,7 @@ start_port(portid_t pid)
 		if (port->port_status == RTE_PORT_HANDLING)
 			port->port_status = RTE_PORT_STARTED;
 		else
-			fprintf(stderr, "Port %d can not be set into started\n",
+			TESTPMD_LOG(ERR, "Port %d can not be set into started\n",
 				pi);
 
 		if (eth_macaddr_get_print_err(pi, &port->eth_addr) == 0)
@@ -3301,7 +3301,7 @@ start_port(portid_t pid)
 	if (at_least_one_port_successfully_started && !no_link_check)
 		check_all_ports_link_status(RTE_PORT_ALL);
 	else if (at_least_one_port_exist & all_ports_already_started)
-		fprintf(stderr, "Please stop the ports first\n");
+		TESTPMD_LOG(ERR, "Please stop the ports first\n");
 
 	if (hairpin_mode & 0xf) {
 		uint16_t i;
@@ -3320,7 +3320,7 @@ start_port(portid_t pid)
 					continue;
 				diag = rte_eth_hairpin_bind(pi, peer_pl[j]);
 				if (diag < 0) {
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Error during binding hairpin Tx port %u to %u: %s\n",
 						pi, peer_pl[j],
 						rte_strerror(-diag));
@@ -3337,7 +3337,7 @@ start_port(portid_t pid)
 					continue;
 				diag = rte_eth_hairpin_bind(peer_pl[j], pi);
 				if (diag < 0) {
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Error during binding hairpin Tx port %u to %u: %s\n",
 						peer_pl[j], pi,
 						rte_strerror(-diag));
@@ -3373,14 +3373,14 @@ stop_port(portid_t pid)
 			continue;
 
 		if (port_is_forwarding(pi) != 0 && test_done == 0) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from forwarding configuration.\n",
 				pi);
 			continue;
 		}
 
 		if (port_is_bonding_member(pi)) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from bonding device.\n",
 				pi);
 			continue;
@@ -3413,8 +3413,8 @@ stop_port(portid_t pid)
 
 		ret = eth_dev_stop_mp(pi);
 		if (ret != 0) {
-			RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
-				pi);
+			TESTPMD_LOG(ERR,
+				    "rte_eth_dev_stop failed for port %u\n", pi);
 			/* Allow to retry stopping the port. */
 			port->port_status = RTE_PORT_STARTED;
 			continue;
@@ -3423,8 +3423,7 @@ stop_port(portid_t pid)
 		if (port->port_status == RTE_PORT_HANDLING)
 			port->port_status = RTE_PORT_STOPPED;
 		else
-			fprintf(stderr, "Port %d can not be set into stopped\n",
-				pi);
+			TESTPMD_LOG(ERR, "Port %d can not be set into stopped\n", pi);
 		need_check_link_status = 1;
 	}
 	if (need_check_link_status && !no_link_check)
@@ -3478,7 +3477,7 @@ clear_bonding_member_device(portid_t *member_pids, uint16_t num_members)
 		member_pid = member_pids[i];
 		if (port_is_started(member_pid) == 1) {
 			if (rte_eth_dev_stop(member_pid) != 0)
-				fprintf(stderr, "rte_eth_dev_stop failed for port %u\n",
+				TESTPMD_LOG(ERR, "rte_eth_dev_stop failed for port %u\n",
 					member_pid);
 
 			port = &ports[member_pid];
@@ -3511,14 +3510,14 @@ close_port(portid_t pid)
 			continue;
 
 		if (port_is_forwarding(pi) != 0 && test_done == 0) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from forwarding configuration.\n",
 				pi);
 			continue;
 		}
 
 		if (port_is_bonding_member(pi)) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from bonding device.\n",
 				pi);
 			continue;
@@ -3526,7 +3525,7 @@ close_port(portid_t pid)
 
 		port = &ports[pi];
 		if (port->port_status == RTE_PORT_CLOSED) {
-			fprintf(stderr, "Port %d is already closed\n", pi);
+			TESTPMD_LOG(ERR, "Port %d is already closed\n", pi);
 			continue;
 		}
 
@@ -3566,7 +3565,7 @@ reset_port(portid_t pid)
 
 	if ((pid == (portid_t)RTE_PORT_ALL && !all_ports_stopped()) ||
 		(pid != (portid_t)RTE_PORT_ALL && !port_is_stopped(pid))) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Can not reset port(s), please stop port(s) first.\n");
 		return;
 	}
@@ -3578,14 +3577,14 @@ reset_port(portid_t pid)
 			continue;
 
 		if (port_is_forwarding(pi) != 0 && test_done == 0) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from forwarding configuration.\n",
 				pi);
 			continue;
 		}
 
 		if (port_is_bonding_member(pi)) {
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Please remove port %d from bonding device.\n",
 				pi);
 			continue;
@@ -3598,7 +3597,7 @@ reset_port(portid_t pid)
 				port->need_reconfig = 1;
 				port->need_reconfig_queues = 1;
 			} else {
-				fprintf(stderr, "Failed to reset port %d. diag=%d\n",
+				TESTPMD_LOG(ERR, "Failed to reset port %d. diag=%d\n",
 					pi, diag);
 			}
 		}
@@ -3616,7 +3615,7 @@ attach_port(char *identifier)
 	printf("Attaching a new port...\n");
 
 	if (identifier == NULL) {
-		fprintf(stderr, "Invalid parameters are specified\n");
+		TESTPMD_LOG(ERR, "Invalid parameters are specified\n");
 		return;
 	}
 
@@ -3657,7 +3656,7 @@ setup_attached_port(portid_t pi)
 	reconfig(pi, socket_id);
 	ret = rte_eth_promiscuous_enable(pi);
 	if (ret != 0)
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Error during enabling promiscuous mode for port %u: %s - ignore\n",
 			pi, rte_strerror(-ret));
 
@@ -3677,7 +3676,7 @@ detach_device(struct rte_device *dev)
 	portid_t sibling;
 
 	if (dev == NULL) {
-		fprintf(stderr, "Device already removed\n");
+		TESTPMD_LOG(ERR, "Device already removed\n");
 		return;
 	}
 
@@ -3686,7 +3685,7 @@ detach_device(struct rte_device *dev)
 	RTE_ETH_FOREACH_DEV_OF(sibling, dev) {
 		if (ports[sibling].port_status != RTE_PORT_CLOSED) {
 			if (ports[sibling].port_status != RTE_PORT_STOPPED) {
-				fprintf(stderr, "Port %u not stopped\n",
+				TESTPMD_LOG(ERR, "Port %u not stopped\n",
 					sibling);
 				return;
 			}
@@ -3717,10 +3716,10 @@ detach_port_device(portid_t port_id)
 
 	if (ports[port_id].port_status != RTE_PORT_CLOSED) {
 		if (ports[port_id].port_status != RTE_PORT_STOPPED) {
-			fprintf(stderr, "Port not stopped\n");
+			TESTPMD_LOG(ERR, "Port not stopped\n");
 			return;
 		}
-		fprintf(stderr, "Port was not closed\n");
+		TESTPMD_LOG(ERR, "Port was not closed\n");
 	}
 
 	ret = eth_dev_info_get_print_err(port_id, &dev_info);
@@ -3744,14 +3743,14 @@ detach_devargs(char *identifier)
 
 	memset(&da, 0, sizeof(da));
 	if (rte_devargs_parsef(&da, "%s", identifier)) {
-		fprintf(stderr, "cannot parse identifier\n");
+		TESTPMD_LOG(ERR, "cannot parse identifier\n");
 		return;
 	}
 
 	RTE_ETH_FOREACH_MATCHING_DEV(port_id, identifier, &iterator) {
 		if (ports[port_id].port_status != RTE_PORT_CLOSED) {
 			if (ports[port_id].port_status != RTE_PORT_STOPPED) {
-				fprintf(stderr, "Port %u not stopped\n",
+				TESTPMD_LOG(ERR, "Port %u not stopped\n",
 					port_id);
 				rte_eth_iterator_cleanup(&iterator);
 				rte_devargs_reset(&da);
@@ -3812,23 +3811,20 @@ pmd_test_exit(void)
 	if (hot_plug) {
 		ret = rte_dev_event_monitor_stop();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to stop device event monitor.");
+			TESTPMD_LOG(ERR, "fail to stop device event monitor.");
 			return;
 		}
 
 		ret = rte_dev_event_callback_unregister(NULL,
 			dev_event_callback, NULL);
 		if (ret < 0) {
-			RTE_LOG(ERR, EAL,
-				"fail to unregister device event callback.\n");
+			TESTPMD_LOG(ERR, "fail to unregister device event callback.\n");
 			return;
 		}
 
 		ret = rte_dev_hotplug_handle_disable();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to disable hotplug handling.\n");
+			TESTPMD_LOG(ERR, "fail to disable hotplug handling.\n");
 			return;
 		}
 	}
@@ -3871,7 +3867,7 @@ check_all_ports_link_status(uint32_t port_mask)
 			if (ret < 0) {
 				all_ports_up = 0;
 				if (print_flag == 1)
-					fprintf(stderr,
+					TESTPMD_LOG(ERR,
 						"Port %u link get failed: %s\n",
 						portid, rte_strerror(-ret));
 				continue;
@@ -3950,10 +3946,9 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 	RTE_SET_USED(ret_param);
 
 	if (type >= RTE_ETH_EVENT_MAX) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"\nPort %" PRIu16 ": %s called upon invalid event %d\n",
 			port_id, __func__, type);
-		fflush(stderr);
 	} else if (event_print_mask & (UINT32_C(1) << type)) {
 		printf("\nPort %" PRIu16 ": %s event\n", port_id,
 			eth_event_desc[type]);
@@ -3970,7 +3965,7 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 			break;
 		if (rte_eal_alarm_set(100000,
 				rmv_port_callback, (void *)(intptr_t)port_id))
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Could not set up deferred device removal\n");
 		break;
 	case RTE_ETH_EVENT_DESTROY:
@@ -4054,20 +4049,13 @@ dev_event_callback(const char *device_name, enum rte_dev_event_type type,
 	uint16_t port_id;
 	int ret;
 
-	if (type >= RTE_DEV_EVENT_MAX) {
-		fprintf(stderr, "%s called upon invalid event %d\n",
-			__func__, type);
-		fflush(stderr);
-	}
-
 	switch (type) {
 	case RTE_DEV_EVENT_REMOVE:
-		RTE_LOG(DEBUG, EAL, "The device: %s has been removed!\n",
-			device_name);
+		TESTPMD_LOG(INFO, "The device: %s has been removed!\n", device_name);
 		ret = rte_eth_dev_get_port_by_name(device_name, &port_id);
 		if (ret) {
-			RTE_LOG(ERR, EAL, "can not get port by device %s!\n",
-				device_name);
+			TESTPMD_LOG(ERR,
+				    "Can not get port for device %s!\n", device_name);
 			return;
 		}
 		/*
@@ -4081,17 +4069,20 @@ dev_event_callback(const char *device_name, enum rte_dev_event_type type,
 		 */
 		if (rte_eal_alarm_set(100000,
 				rmv_port_callback, (void *)(intptr_t)port_id))
-			RTE_LOG(ERR, EAL,
-				"Could not set up deferred device removal\n");
+			TESTPMD_LOG(ERR, "Could not set up deferred device removal\n");
 		break;
+
 	case RTE_DEV_EVENT_ADD:
-		RTE_LOG(ERR, EAL, "The device: %s has been added!\n",
-			device_name);
+		TESTPMD_LOG(INFO, "The device: %s has been added!\n", device_name);
 		/* TODO: After finish kernel driver binding,
 		 * begin to attach port.
 		 */
 		break;
+
 	default:
+		if (type >= RTE_DEV_EVENT_MAX)
+			TESTPMD_LOG(ERR, "%s called upon invalid event %d\n",
+				    __func__, type);
 		break;
 	}
 }
@@ -4189,7 +4180,7 @@ update_mtu_from_frame_size(portid_t portid, uint32_t max_rx_pktlen)
 		return 0;
 
 	if (eth_dev_set_mtu_mp(portid, new_mtu) != 0) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Failed to set MTU to %u for port %u\n",
 			new_mtu, portid);
 		return -1;
@@ -4425,7 +4416,7 @@ init_port_dcb_config(portid_t pid,
 	 */
 	if (dcb_mode == DCB_VT_ENABLED &&
 	    rte_port->dev_info.vmdq_pool_base > 0) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"VMDQ_DCB multi-queue mode is nonsensical for port %d.\n",
 			pid);
 		return -1;
@@ -4613,17 +4604,17 @@ main(int argc, char** argv)
 				"interactive mode.\n");
 
 	if (tx_first && lsc_interrupt) {
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Warning: lsc_interrupt needs to be off when using tx_first. Disabling.\n");
 		lsc_interrupt = 0;
 	}
 
 	if (!nb_rxq && !nb_txq)
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Warning: Either rx or tx queues should be non-zero\n");
 
 	if (nb_rxq > 1 && nb_rxq > nb_txq)
-		fprintf(stderr,
+		TESTPMD_LOG(ERR,
 			"Warning: nb_rxq=%d enables RSS configuration, but nb_txq=%d will prevent to fully test it.\n",
 			nb_rxq, nb_txq);
 
@@ -4632,23 +4623,19 @@ main(int argc, char** argv)
 	if (hot_plug) {
 		ret = rte_dev_hotplug_handle_enable();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to enable hotplug handling.");
+			TESTPMD_LOG(ERR, "fail to enable hotplug handling.");
 			return -1;
 		}
 
 		ret = rte_dev_event_monitor_start();
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail to start device event monitoring.");
+			TESTPMD_LOG(ERR, "fail to start device event monitoring.");
 			return -1;
 		}
 
-		ret = rte_dev_event_callback_register(NULL,
-			dev_event_callback, NULL);
+		ret = rte_dev_event_callback_register(NULL, dev_event_callback, NULL);
 		if (ret) {
-			RTE_LOG(ERR, EAL,
-				"fail  to register device event callback\n");
+			TESTPMD_LOG(ERR, "fail to register device event callback\n");
 			return -1;
 		}
 	}
@@ -4658,14 +4645,14 @@ main(int argc, char** argv)
 			rte_eal_cleanup();
 			rte_exit(EXIT_FAILURE, "Start ports failed\n");
 		}
-		fprintf(stderr, "Start ports failed\n");
+		TESTPMD_LOG(ERR, "Start ports failed\n");
 	}
 
 	/* set all ports to promiscuous mode by default */
 	RTE_ETH_FOREACH_DEV(port_id) {
 		ret = rte_eth_promiscuous_enable(port_id);
 		if (ret != 0)
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Error during enabling promiscuous mode for port %u: %s - ignore\n",
 				port_id, rte_strerror(-ret));
 	}
@@ -4679,10 +4666,10 @@ main(int argc, char** argv)
 	if (latencystats_enabled != 0) {
 		int ret = rte_latencystats_init(1, NULL);
 		if (ret)
-			fprintf(stderr,
+			TESTPMD_LOG(ERR,
 				"Warning: latencystats init() returned error %d\n",
 				ret);
-		fprintf(stderr, "Latencystats running on lcore %d\n",
+		TESTPMD_LOG(ERR, "Latencystats running on lcore %d\n",
 			latencystats_lcore_id);
 	}
 #endif
