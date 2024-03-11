@@ -1688,6 +1688,7 @@ F: lib/pci/
 Pointer Compression
 M: Paul Szczepanek <paul.szczepanek@arm.com>
 F: lib/ptr_compress/
+F: doc/guides/prog_guide/ptr_compress_lib.rst
 
 Power management
 M: Anatoly Burakov <anatoly.burakov@intel.com>
