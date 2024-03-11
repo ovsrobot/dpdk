@@ -452,6 +452,8 @@ rte_hash_create(const struct rte_hash_parameters *params)
 #elif defined(RTE_ARCH_ARM64)
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON)) {
 		h->sig_cmp_fn = RTE_HASH_COMPARE_NEON;
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_SVE))
+			h->sig_cmp_fn = RTE_HASH_COMPARE_SVE;
 	}
 	else
 #endif
