@@ -487,32 +487,32 @@ bnx2x_func_stats_init(struct bnx2x_softc *sc)
 static void
 bnx2x_stats_start(struct bnx2x_softc *sc)
 {
-    /*
-     * VFs travel through here as part of the statistics FSM, but no action
-     * is required
-     */
-    if (IS_VF(sc)) {
-	return;
-    }
+	/*
+	 * VFs travel through here as part of the statistics FSM, but no action
+	 * is required
+	 */
+	if (IS_VF(sc)) {
+		return;
+	}
 
-    if (sc->port.pmf) {
-	bnx2x_port_stats_init(sc);
-    }
+	if (sc->port.pmf) {
+		bnx2x_port_stats_init(sc);
+	}
 
-    else if (sc->func_stx) {
-	bnx2x_func_stats_init(sc);
-    }
+	else if (sc->func_stx) {
+		bnx2x_func_stats_init(sc);
+	}
 
-    bnx2x_hw_stats_post(sc);
-    bnx2x_storm_stats_post(sc);
+	bnx2x_hw_stats_post(sc);
+	bnx2x_storm_stats_post(sc);
 }
 
 static void
 bnx2x_stats_pmf_start(struct bnx2x_softc *sc)
 {
-    bnx2x_stats_comp(sc);
-    bnx2x_stats_pmf_update(sc);
-    bnx2x_stats_start(sc);
+	bnx2x_stats_comp(sc);
+	bnx2x_stats_pmf_update(sc);
+	bnx2x_stats_start(sc);
 }
 
 static void
@@ -1334,84 +1334,84 @@ bnx2x_port_stats_base_init(struct bnx2x_softc *sc)
 static void
 bnx2x_prep_fw_stats_req(struct bnx2x_softc *sc)
 {
-    int i;
-    int first_queue_query_index;
-    struct stats_query_header *stats_hdr = &sc->fw_stats_req->hdr;
-    rte_iova_t cur_data_offset;
-    struct stats_query_entry *cur_query_entry;
+	int i;
+	int first_queue_query_index;
+	struct stats_query_header *stats_hdr = &sc->fw_stats_req->hdr;
+	rte_iova_t cur_data_offset;
+	struct stats_query_entry *cur_query_entry;
 
-    stats_hdr->cmd_num = sc->fw_stats_num;
-    stats_hdr->drv_stats_counter = 0;
+	stats_hdr->cmd_num = sc->fw_stats_num;
+	stats_hdr->drv_stats_counter = 0;
 
-    /*
-     * The storm_counters struct contains the counters of completed
-     * statistics requests per storm which are incremented by FW
-     * each time it completes hadning a statistics ramrod. We will
-     * check these counters in the timer handler and discard a
-     * (statistics) ramrod completion.
-     */
-    cur_data_offset = (sc->fw_stats_data_mapping +
-		       offsetof(struct bnx2x_fw_stats_data, storm_counters));
+	/*
+	 * The storm_counters struct contains the counters of completed
+	 * statistics requests per storm which are incremented by FW
+	 * each time it completes hadning a statistics ramrod. We will
+	 * check these counters in the timer handler and discard a
+	 * (statistics) ramrod completion.
+	 */
+	cur_data_offset = (sc->fw_stats_data_mapping +
+			   offsetof(struct bnx2x_fw_stats_data, storm_counters));
 
-    stats_hdr->stats_counters_addrs.hi = htole32(U64_HI(cur_data_offset));
-    stats_hdr->stats_counters_addrs.lo = htole32(U64_LO(cur_data_offset));
+	stats_hdr->stats_counters_addrs.hi = htole32(U64_HI(cur_data_offset));
+	stats_hdr->stats_counters_addrs.lo = htole32(U64_LO(cur_data_offset));
 
-    /*
-     * Prepare the first stats ramrod (will be completed with
-     * the counters equal to zero) - init counters to something different.
-     */
-    memset(&sc->fw_stats_data->storm_counters, 0xff,
-	   sizeof(struct stats_counter));
+	/*
+	 * Prepare the first stats ramrod (will be completed with
+	 * the counters equal to zero) - init counters to something different.
+	 */
+	memset(&sc->fw_stats_data->storm_counters, 0xff,
+	       sizeof(struct stats_counter));
 
-    /**** Port FW statistics data ****/
-    cur_data_offset = (sc->fw_stats_data_mapping +
-		       offsetof(struct bnx2x_fw_stats_data, port));
+	/**** Port FW statistics data ****/
+	cur_data_offset = (sc->fw_stats_data_mapping +
+			   offsetof(struct bnx2x_fw_stats_data, port));
 
-    cur_query_entry = &sc->fw_stats_req->query[BNX2X_PORT_QUERY_IDX];
+	cur_query_entry = &sc->fw_stats_req->query[BNX2X_PORT_QUERY_IDX];
 
-    cur_query_entry->kind = STATS_TYPE_PORT;
-    /* For port query index is a DON'T CARE */
-    cur_query_entry->index = SC_PORT(sc);
-    /* For port query funcID is a DON'T CARE */
-    cur_query_entry->funcID = htole16(SC_FUNC(sc));
-    cur_query_entry->address.hi = htole32(U64_HI(cur_data_offset));
-    cur_query_entry->address.lo = htole32(U64_LO(cur_data_offset));
-
-    /**** PF FW statistics data ****/
-    cur_data_offset = (sc->fw_stats_data_mapping +
-		       offsetof(struct bnx2x_fw_stats_data, pf));
-
-    cur_query_entry = &sc->fw_stats_req->query[BNX2X_PF_QUERY_IDX];
-
-    cur_query_entry->kind = STATS_TYPE_PF;
-    /* For PF query index is a DON'T CARE */
-    cur_query_entry->index = SC_PORT(sc);
-    cur_query_entry->funcID = htole16(SC_FUNC(sc));
-    cur_query_entry->address.hi = htole32(U64_HI(cur_data_offset));
-    cur_query_entry->address.lo = htole32(U64_LO(cur_data_offset));
-
-    /**** Clients' queries ****/
-    cur_data_offset = (sc->fw_stats_data_mapping +
-		       offsetof(struct bnx2x_fw_stats_data, queue_stats));
-
-    /*
-     * First queue query index depends whether FCoE offloaded request will
-     * be included in the ramrod
-     */
-	first_queue_query_index = (BNX2X_FIRST_QUEUE_QUERY_IDX - 1);
-
-    for (i = 0; i < sc->num_queues; i++) {
-	cur_query_entry =
-	    &sc->fw_stats_req->query[first_queue_query_index + i];
-
-	cur_query_entry->kind = STATS_TYPE_QUEUE;
-	cur_query_entry->index = bnx2x_stats_id(&sc->fp[i]);
+	cur_query_entry->kind = STATS_TYPE_PORT;
+	/* For port query index is a DON'T CARE */
+	cur_query_entry->index = SC_PORT(sc);
+	/* For port query funcID is a DON'T CARE */
 	cur_query_entry->funcID = htole16(SC_FUNC(sc));
 	cur_query_entry->address.hi = htole32(U64_HI(cur_data_offset));
 	cur_query_entry->address.lo = htole32(U64_LO(cur_data_offset));
 
-	cur_data_offset += sizeof(struct per_queue_stats);
-    }
+	/**** PF FW statistics data ****/
+	cur_data_offset = (sc->fw_stats_data_mapping +
+			   offsetof(struct bnx2x_fw_stats_data, pf));
+
+	cur_query_entry = &sc->fw_stats_req->query[BNX2X_PF_QUERY_IDX];
+
+	cur_query_entry->kind = STATS_TYPE_PF;
+	/* For PF query index is a DON'T CARE */
+	cur_query_entry->index = SC_PORT(sc);
+	cur_query_entry->funcID = htole16(SC_FUNC(sc));
+	cur_query_entry->address.hi = htole32(U64_HI(cur_data_offset));
+	cur_query_entry->address.lo = htole32(U64_LO(cur_data_offset));
+
+	/**** Clients' queries ****/
+	cur_data_offset = (sc->fw_stats_data_mapping +
+			   offsetof(struct bnx2x_fw_stats_data, queue_stats));
+
+	/*
+	 * First queue query index depends whether FCoE offloaded request will
+	 * be included in the ramrod
+	 */
+	first_queue_query_index = (BNX2X_FIRST_QUEUE_QUERY_IDX - 1);
+
+	for (i = 0; i < sc->num_queues; i++) {
+		cur_query_entry =
+			&sc->fw_stats_req->query[first_queue_query_index + i];
+
+		cur_query_entry->kind = STATS_TYPE_QUEUE;
+		cur_query_entry->index = bnx2x_stats_id(&sc->fp[i]);
+		cur_query_entry->funcID = htole16(SC_FUNC(sc));
+		cur_query_entry->address.hi = htole32(U64_HI(cur_data_offset));
+		cur_query_entry->address.lo = htole32(U64_LO(cur_data_offset));
+
+		cur_data_offset += sizeof(struct per_queue_stats);
+	}
 }
 
 void bnx2x_memset_stats(struct bnx2x_softc *sc)
@@ -1476,7 +1476,7 @@ bnx2x_stats_init(struct bnx2x_softc *sc)
 	}
 
 	PMD_DRV_LOG(DEBUG, sc, "port_stx 0x%x func_stx 0x%x",
-			sc->port.port_stx, sc->func_stx);
+		    sc->port.port_stx, sc->func_stx);
 
 	/* pmf should retrieve port statistics from SP on a non-init*/
 	if (!sc->stats_init && sc->port.pmf && sc->port.port_stx) {
@@ -1492,11 +1492,11 @@ bnx2x_stats_init(struct bnx2x_softc *sc)
 		REG_RD(sc, NIG_REG_STAT0_BRB_TRUNCATE + port*0x38);
 	if (!CHIP_IS_E3(sc)) {
 		REG_RD_DMAE(sc, NIG_REG_STAT0_EGRESS_MAC_PKT0 + port*0x50,
-				RTE_PTR_ADD(&sc->port.old_nig_stats,
-				offsetof(struct nig_stats, egress_mac_pkt0_lo)), 2);
+			    RTE_PTR_ADD(&sc->port.old_nig_stats,
+					offsetof(struct nig_stats, egress_mac_pkt0_lo)), 2);
 		REG_RD_DMAE(sc, NIG_REG_STAT0_EGRESS_MAC_PKT1 + port*0x50,
-				RTE_PTR_ADD(&sc->port.old_nig_stats,
-				offsetof(struct nig_stats, egress_mac_pkt1_lo)), 2);
+			    RTE_PTR_ADD(&sc->port.old_nig_stats,
+					offsetof(struct nig_stats, egress_mac_pkt1_lo)), 2);
 	}
 
 	/* function stats */
@@ -1506,9 +1506,9 @@ bnx2x_stats_init(struct bnx2x_softc *sc)
 		memset(&sc->fp[i].old_xclient, 0, sizeof(sc->fp[i].old_xclient));
 		if (sc->stats_init) {
 			memset(&sc->fp[i].eth_q_stats, 0,
-					sizeof(sc->fp[i].eth_q_stats));
+			       sizeof(sc->fp[i].eth_q_stats));
 			memset(&sc->fp[i].eth_q_stats_old, 0,
-					sizeof(sc->fp[i].eth_q_stats_old));
+			       sizeof(sc->fp[i].eth_q_stats_old));
 		}
 	}
 
