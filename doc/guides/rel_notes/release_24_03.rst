@@ -176,6 +176,12 @@ New Features
   * Added power-saving during polling within the ``rte_event_dequeue_burst()`` API.
   * Added support for DMA adapter.
 
+* **Introduced pointer compression library.**
+
+  Library provides functions to compress and decompress arrays of pointers
+  which can improve application performance under certain conditions.
+  Performance test was added to help users evaluate performance on their setup.
+
 
 Removed Items
 -------------
