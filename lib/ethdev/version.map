@@ -83,7 +83,7 @@ DPDK_24 {
 	rte_eth_find_next_of;
 	rte_eth_find_next_owned_by;
 	rte_eth_find_next_sibling;
-	rte_eth_fp_ops;
+	rte_eth_fp_ops; # MSVC_NO_EXPORT
 	rte_eth_iterator_cleanup;
 	rte_eth_iterator_init;
 	rte_eth_iterator_next;

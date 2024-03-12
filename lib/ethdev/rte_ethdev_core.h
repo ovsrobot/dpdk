@@ -16,6 +16,8 @@
  * Applications should not use these directly.
  */
 
+#include <rte_ethdev_export.h>
+
 struct rte_eth_dev_callback;
 /** @internal Structure to keep track of registered callbacks */
 RTE_TAILQ_HEAD(rte_eth_dev_cb_list, rte_eth_dev_callback);
@@ -126,6 +128,7 @@ struct __rte_cache_aligned rte_eth_fp_ops {
 
 };
 
+__rte_ethdev_export
 extern struct rte_eth_fp_ops rte_eth_fp_ops[RTE_MAX_ETHPORTS];
 
 #endif /* _RTE_ETHDEV_CORE_H_ */
