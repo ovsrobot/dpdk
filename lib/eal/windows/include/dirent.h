@@ -8,6 +8,12 @@
 #ifndef DIRENT_H
 #define DIRENT_H
 
+#include <winapifamily.h>
+
+#ifndef WINAPI_FAMILY_PHONE_APP
+#define WINAPI_FAMILY_PHONE_APP 3
+#endif
+
 /*
  * Include windows.h without Windows Sockets 1.1 to prevent conflicts with
  * Windows Sockets 2.0.
