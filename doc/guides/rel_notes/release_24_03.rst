@@ -162,6 +162,8 @@ New Features
 * **Updated ipsec_mb crypto driver.**
 
   * Bump minimum IPSec Multi-buffer version to 1.4 for SW PMDs.
+  * Kasumi and ChaChaPoly PMDs now share the job API codepath
+    with AESNI_MB PMD.
 
 * **Updated Marvell cnxk crypto driver.**
 
