@@ -5,6 +5,9 @@
 #define TEST_CRYPTODEV_H_
 
 #include <rte_cryptodev.h>
+#ifdef RTE_LIB_SECURITY
+#include "test_security_proto.h"
+#endif
 
 #define HEX_DUMP 0
 
@@ -21,9 +24,16 @@
 #define DEFAULT_NUM_XFORMS              (2)
 #define NUM_MBUFS                       (8191)
 #define MBUF_CACHE_SIZE                 (256)
+
+#ifdef RTE_LIB_SECURITY
+#define MBUF_DATAPAYLOAD_SIZE		RTE_MAX((unsigned int)(4096 + DIGEST_BYTE_LENGTH_SHA512), \
+						TEST_SEC_CIPHERTEXT_MAX_LEN)
+#else
 #define MBUF_DATAPAYLOAD_SIZE		(4096 + DIGEST_BYTE_LENGTH_SHA512)
+#endif
+
 #define MBUF_SIZE			(sizeof(struct rte_mbuf) + \
-		RTE_PKTMBUF_HEADROOM + MBUF_DATAPAYLOAD_SIZE)
+					RTE_PKTMBUF_HEADROOM + MBUF_DATAPAYLOAD_SIZE)
 
 #define BYTE_LENGTH(x)				(x/8)
 /* HASH DIGEST LENGTHS */
