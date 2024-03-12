@@ -16,6 +16,7 @@ headers += files(
         'rte_dev.h',
         'rte_devargs.h',
         'rte_eal.h',
+        'rte_eal_export.h',
         'rte_eal_memconfig.h',
         'rte_eal_trace.h',
         'rte_errno.h',

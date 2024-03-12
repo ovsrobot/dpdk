@@ -15,8 +15,10 @@
 extern "C" {
 #endif
 
+#include <rte_eal_export.h>
 #include <rte_per_lcore.h>
 
+__rte_eal_export
 RTE_DECLARE_PER_LCORE(int, _rte_errno); /**< Per core error number. */
 
 /**

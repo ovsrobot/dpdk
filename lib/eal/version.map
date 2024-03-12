@@ -4,9 +4,9 @@ DPDK_24 {
 	__rte_panic;
 	eal_parse_sysfs_value; # WINDOWS_NO_EXPORT
 	eal_timer_source; # WINDOWS_NO_EXPORT
-	per_lcore__lcore_id;
-	per_lcore__rte_errno;
-	per_lcore__thread_id;
+	per_lcore__lcore_id; # MSVC_NO_EXPORT
+	per_lcore__rte_errno; # MSVC_NO_EXPORT
+	per_lcore__thread_id; # MSVC_NO_EXPORT
 	rte_bus_dump;
 	rte_bus_find;
 	rte_bus_find_by_device;

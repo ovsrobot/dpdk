@@ -16,6 +16,7 @@
 
 #include <rte_config.h>
 #include <rte_compat.h>
+#include <rte_eal_export.h>
 #include <rte_per_lcore.h>
 #include <rte_uuid.h>
 
@@ -426,6 +427,7 @@ void rte_eal_vfio_get_vf_token(rte_uuid_t vf_token);
  */
 int rte_sys_gettid(void);
 
+__rte_eal_export
 RTE_DECLARE_PER_LCORE(int, _thread_id);
 
 /**

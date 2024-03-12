@@ -235,6 +235,8 @@ foreach l:libraries
         cflags += '-Wthread-safety'
     endif
 
+    cflags += '-D__rte_@0@_export'.format(name)
+
     # first build static lib
     static_lib = static_library(libname,
             sources,

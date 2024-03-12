@@ -26,6 +26,14 @@ extern "C" {
 /* OS specific include */
 #include <rte_os.h>
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_declare_import __declspec(dllimport)
+#define __rte_declare_export __declspec(dllexport)
+#else
+#define __rte_declare_import
+#define __rte_declare_export
+#endif
+
 #ifndef RTE_TOOLCHAIN_MSVC
 #ifndef typeof
 #define typeof __typeof__
