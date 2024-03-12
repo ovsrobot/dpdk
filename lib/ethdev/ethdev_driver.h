@@ -2003,7 +2003,6 @@ __rte_internal
 int
 rte_eth_ip_reassembly_dynfield_register(int *field_offset, int *flag);
 
-
 /*
  * Legacy ethdev API used internally by drivers.
  */

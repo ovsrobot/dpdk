@@ -5969,6 +5969,7 @@ hns3_get_speed_fec_capa(struct rte_eth_fec_capa *speed_fec_capa,
 	for (i = 0; i < RTE_DIM(speed_fec_capa_tbl); i++) {
 		speed_bit =
 			rte_eth_speed_bitflag(speed_fec_capa_tbl[i].speed,
+					      RTE_ETH_LANES_UNKNOWN,
 					      RTE_ETH_LINK_FULL_DUPLEX);
 		if ((speed_capa & speed_bit) == 0)
 			continue;

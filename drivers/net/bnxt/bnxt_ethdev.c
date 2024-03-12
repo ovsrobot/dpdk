@@ -711,7 +711,8 @@ static int bnxt_update_phy_setting(struct bnxt *bp)
 	}
 
 	/* convert to speedbit flag */
-	curr_speed_bit = rte_eth_speed_bitflag((uint32_t)link->link_speed, 1);
+	curr_speed_bit = rte_eth_speed_bitflag((uint32_t)link->link_speed,
+					       RTE_ETH_LANES_UNKNOWN, 1);
 
 	/*
 	 * Device is not obliged link down in certain scenarios, even

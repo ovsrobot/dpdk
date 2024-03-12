@@ -169,6 +169,12 @@ DPDK_24 {
 	local: *;
 };
 
+DPDK_25 {
+	global:
+
+	rte_eth_speed_bitflag;
+} DPDK_24;
+
 EXPERIMENTAL {
 	global:
 
@@ -320,6 +326,7 @@ EXPERIMENTAL {
 	# added in 24.03
 	__rte_eth_trace_tx_queue_count;
 	rte_eth_find_rss_algo;
+	rte_eth_speed_capa_to_info;
 	rte_flow_async_update_resized;
 	rte_flow_calc_encap_hash;
 	rte_flow_template_table_resizable;

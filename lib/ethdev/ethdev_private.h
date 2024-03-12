@@ -79,4 +79,8 @@ void eth_dev_txq_release(struct rte_eth_dev *dev, uint16_t qid);
 int eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues);
 int eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues);
 
+/* versioned functions */
+uint32_t rte_eth_speed_bitflag_v24(uint32_t speed, int duplex);
+uint32_t rte_eth_speed_bitflag_v25(uint32_t speed, uint8_t lanes, int duplex);
+
 #endif /* _ETH_PRIVATE_H_ */

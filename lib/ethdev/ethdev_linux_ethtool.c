@@ -111,10 +111,107 @@ static const uint32_t link_modes[] = {
 	[101] =      11, /* ETHTOOL_LINK_MODE_10baseT1S_P2MP_Half_BIT */
 };
 
+/*
+ * Link modes sorted with index as defined in ethtool.
+ * Values are lanes.
+ */
+static const uint32_t link_modes_lanes[] = {
+	  [0] =      1, /* ETHTOOL_LINK_MODE_10baseT_Half_BIT */
+	  [1] =      1, /* ETHTOOL_LINK_MODE_10baseT_Full_BIT */
+	  [2] =      1, /* ETHTOOL_LINK_MODE_100baseT_Half_BIT */
+	  [3] =      1, /* ETHTOOL_LINK_MODE_100baseT_Full_BIT */
+	  [4] =      1, /* ETHTOOL_LINK_MODE_1000baseT_Half_BIT */
+	  [5] =      1, /* ETHTOOL_LINK_MODE_1000baseT_Full_BIT */
+	 [12] =      1, /* ETHTOOL_LINK_MODE_10000baseT_Full_BIT */
+	 [15] =      1, /* ETHTOOL_LINK_MODE_2500baseX_Full_BIT */
+	 [17] =      1, /* ETHTOOL_LINK_MODE_1000baseKX_Full_BIT */
+	 [18] =      4, /* ETHTOOL_LINK_MODE_10000baseKX4_Full_BIT */
+	 [19] =      1, /* ETHTOOL_LINK_MODE_10000baseKR_Full_BIT */
+	 [20] =      1, /* ETHTOOL_LINK_MODE_10000baseR_FEC_BIT */
+	 [21] =      2, /* ETHTOOL_LINK_MODE_20000baseMLD2_Full_BIT */
+	 [22] =      2, /* ETHTOOL_LINK_MODE_20000baseKR2_Full_BIT */
+	 [23] =      4, /* ETHTOOL_LINK_MODE_40000baseKR4_Full_BIT */
+	 [24] =      4, /* ETHTOOL_LINK_MODE_40000baseCR4_Full_BIT */
+	 [25] =      4, /* ETHTOOL_LINK_MODE_40000baseSR4_Full_BIT */
+	 [26] =      4, /* ETHTOOL_LINK_MODE_40000baseLR4_Full_BIT */
+	 [27] =      4, /* ETHTOOL_LINK_MODE_56000baseKR4_Full_BIT */
+	 [28] =      4, /* ETHTOOL_LINK_MODE_56000baseCR4_Full_BIT */
+	 [29] =      4, /* ETHTOOL_LINK_MODE_56000baseSR4_Full_BIT */
+	 [30] =      4, /* ETHTOOL_LINK_MODE_56000baseLR4_Full_BIT */
+	 [31] =      1, /* ETHTOOL_LINK_MODE_25000baseCR_Full_BIT */
+	 [32] =      1, /* ETHTOOL_LINK_MODE_25000baseKR_Full_BIT */
+	 [33] =      1, /* ETHTOOL_LINK_MODE_25000baseSR_Full_BIT */
+	 [34] =      2, /* ETHTOOL_LINK_MODE_50000baseCR2_Full_BIT */
+	 [35] =      2, /* ETHTOOL_LINK_MODE_50000baseKR2_Full_BIT */
+	 [36] =      4, /* ETHTOOL_LINK_MODE_100000baseKR4_Full_BIT */
+	 [37] =      4, /* ETHTOOL_LINK_MODE_100000baseSR4_Full_BIT */
+	 [38] =      4, /* ETHTOOL_LINK_MODE_100000baseCR4_Full_BIT */
+	 [39] =      4, /* ETHTOOL_LINK_MODE_100000baseLR4_ER4_Full_BIT */
+	 [40] =      2, /* ETHTOOL_LINK_MODE_50000baseSR2_Full_BIT */
+	 [41] =      1, /* ETHTOOL_LINK_MODE_1000baseX_Full_BIT */
+	 [42] =      1, /* ETHTOOL_LINK_MODE_10000baseCR_Full_BIT */
+	 [43] =      1, /* ETHTOOL_LINK_MODE_10000baseSR_Full_BIT */
+	 [44] =      1, /* ETHTOOL_LINK_MODE_10000baseLR_Full_BIT */
+	 [45] =      1, /* ETHTOOL_LINK_MODE_10000baseLRM_Full_BIT */
+	 [46] =      1, /* ETHTOOL_LINK_MODE_10000baseER_Full_BIT */
+	 [47] =      1, /* ETHTOOL_LINK_MODE_2500baseT_Full_BIT */
+	 [48] =      1, /* ETHTOOL_LINK_MODE_5000baseT_Full_BIT */
+	 [52] =      1, /* ETHTOOL_LINK_MODE_50000baseKR_Full_BIT */
+	 [53] =      1, /* ETHTOOL_LINK_MODE_50000baseSR_Full_BIT */
+	 [54] =      1, /* ETHTOOL_LINK_MODE_50000baseCR_Full_BIT */
+	 [55] =      1, /* ETHTOOL_LINK_MODE_50000baseLR_ER_FR_Full_BIT */
+	 [56] =      1, /* ETHTOOL_LINK_MODE_50000baseDR_Full_BIT */
+	 [57] =      2, /* ETHTOOL_LINK_MODE_100000baseKR2_Full_BIT */
+	 [58] =      2, /* ETHTOOL_LINK_MODE_100000baseSR2_Full_BIT */
+	 [59] =      2, /* ETHTOOL_LINK_MODE_100000baseCR2_Full_BIT */
+	 [60] =      2, /* ETHTOOL_LINK_MODE_100000baseLR2_ER2_FR2_Full_BIT */
+	 [61] =      2, /* ETHTOOL_LINK_MODE_100000baseDR2_Full_BIT */
+	 [62] =      4, /* ETHTOOL_LINK_MODE_200000baseKR4_Full_BIT */
+	 [63] =      4, /* ETHTOOL_LINK_MODE_200000baseSR4_Full_BIT */
+	 [64] =      4, /* ETHTOOL_LINK_MODE_200000baseLR4_ER4_FR4_Full_BIT */
+	 [65] =      4, /* ETHTOOL_LINK_MODE_200000baseDR4_Full_BIT */
+	 [66] =      4, /* ETHTOOL_LINK_MODE_200000baseCR4_Full_BIT */
+	 [67] =      1, /* ETHTOOL_LINK_MODE_100baseT1_Full_BIT */
+	 [68] =      1, /* ETHTOOL_LINK_MODE_1000baseT1_Full_BIT */
+	 [69] =      8, /* ETHTOOL_LINK_MODE_400000baseKR8_Full_BIT */
+	 [70] =      8, /* ETHTOOL_LINK_MODE_400000baseSR8_Full_BIT */
+	 [71] =      8, /* ETHTOOL_LINK_MODE_400000baseLR8_ER8_FR8_Full_BIT */
+	 [72] =      8, /* ETHTOOL_LINK_MODE_400000baseDR8_Full_BIT */
+	 [73] =      8, /* ETHTOOL_LINK_MODE_400000baseCR8_Full_BIT */
+	 [75] =      1, /* ETHTOOL_LINK_MODE_100000baseKR_Full_BIT */
+	 [76] =      1, /* ETHTOOL_LINK_MODE_100000baseSR_Full_BIT */
+	 [77] =      1, /* ETHTOOL_LINK_MODE_100000baseLR_ER_FR_Full_BIT */
+	 [78] =      1, /* ETHTOOL_LINK_MODE_100000baseCR_Full_BIT */
+	 [79] =      1, /* ETHTOOL_LINK_MODE_100000baseDR_Full_BIT */
+	 [80] =      2, /* ETHTOOL_LINK_MODE_200000baseKR2_Full_BIT */
+	 [81] =      2, /* ETHTOOL_LINK_MODE_200000baseSR2_Full_BIT */
+	 [82] =      2, /* ETHTOOL_LINK_MODE_200000baseLR2_ER2_FR2_Full_BIT */
+	 [83] =      2, /* ETHTOOL_LINK_MODE_200000baseDR2_Full_BIT */
+	 [84] =      2, /* ETHTOOL_LINK_MODE_200000baseCR2_Full_BIT */
+	 [85] =      4, /* ETHTOOL_LINK_MODE_400000baseKR4_Full_BIT */
+	 [86] =      4, /* ETHTOOL_LINK_MODE_400000baseSR4_Full_BIT */
+	 [87] =      4, /* ETHTOOL_LINK_MODE_400000baseLR4_ER4_FR4_Full_BIT */
+	 [88] =      4, /* ETHTOOL_LINK_MODE_400000baseDR4_Full_BIT */
+	 [89] =      4, /* ETHTOOL_LINK_MODE_400000baseCR4_Full_BIT */
+	 [90] =      1, /* ETHTOOL_LINK_MODE_100baseFX_Half_BIT */
+	 [91] =      1, /* ETHTOOL_LINK_MODE_100baseFX_Full_BIT */
+	 [92] =      1, /* ETHTOOL_LINK_MODE_10baseT1L_Full_BIT */
+	 [93] =      8, /* ETHTOOL_LINK_MODE_800000baseCR8_Full_BIT */
+	 [94] =      8, /* ETHTOOL_LINK_MODE_800000baseKR8_Full_BIT */
+	 [95] =      8, /* ETHTOOL_LINK_MODE_800000baseDR8_Full_BIT */
+	 [96] =      8, /* ETHTOOL_LINK_MODE_800000baseDR8_2_Full_BIT */
+	 [97] =      8, /* ETHTOOL_LINK_MODE_800000baseSR8_Full_BIT */
+	 [98] =      8, /* ETHTOOL_LINK_MODE_800000baseVR8_Full_BIT */
+	 [99] =      1, /* ETHTOOL_LINK_MODE_10baseT1S_Full_BIT */
+	[100] =      1, /* ETHTOOL_LINK_MODE_10baseT1S_Half_BIT */
+	[101] =      1, /* ETHTOOL_LINK_MODE_10baseT1S_P2MP_Half_BIT */
+};
+
 uint32_t
 rte_eth_link_speed_ethtool(enum ethtool_link_mode_bit_indices bit)
 {
 	uint32_t speed;
+	uint8_t lanes;
 	int duplex;
 
 	/* get mode from array */
@@ -131,7 +228,9 @@ rte_eth_link_speed_ethtool(enum ethtool_link_mode_bit_indices bit)
 			RTE_ETH_LINK_FULL_DUPLEX;
 	speed &= RTE_GENMASK32(31, 1);
 
-	return rte_eth_speed_bitflag(speed, duplex);
+	lanes = link_modes_lanes[bit];
+
+	return rte_eth_speed_bitflag(speed, lanes, duplex);
 }
 
 uint32_t

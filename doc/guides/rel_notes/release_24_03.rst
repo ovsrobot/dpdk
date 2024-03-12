@@ -76,6 +76,10 @@ New Features
   * Added a fath path function ``rte_eth_tx_queue_count``
     to get the number of used descriptors of a Tx queue.
 
+* **Support setting lanes for ethdev.**
+  * Support setting lanes by extended ``RTE_ETH_LINK_SPEED_*``.
+  * Added function to convert bitmap flag to the struct of link speed info.
+
 * **Added hash calculation of an encapsulated packet as done by the HW.**
 
   Added function to calculate hash when doing tunnel encapsulation:
@@ -240,8 +244,10 @@ ABI Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
-
 * No ABI change that would break compatibility with 23.11.
+
+* ethdev: Convert a numerical speed to a bitmap flag with lanes:
+  The function ``rte_eth_speed_bitflag`` add lanes parameters.
 
 
 Known Issues

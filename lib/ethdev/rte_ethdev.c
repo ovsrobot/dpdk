@@ -26,6 +26,7 @@
 #include <rte_class.h>
 #include <rte_ether.h>
 #include <rte_telemetry.h>
+#include <rte_function_versioning.h>
 
 #include "rte_ethdev.h"
 #include "rte_ethdev_trace_fp.h"
@@ -991,62 +992,110 @@ rte_eth_dev_tx_queue_stop(uint16_t port_id, uint16_t tx_queue_id)
 	return ret;
 }
 
-uint32_t
-rte_eth_speed_bitflag(uint32_t speed, int duplex)
+uint32_t __vsym
+rte_eth_speed_bitflag_v25(uint32_t speed, uint8_t lanes, int duplex)
 {
-	uint32_t ret;
+	uint32_t ret = 0;
 
 	switch (speed) {
 	case RTE_ETH_SPEED_NUM_10M:
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_1)
+			break;
 		ret = duplex ? RTE_ETH_LINK_SPEED_10M : RTE_ETH_LINK_SPEED_10M_HD;
 		break;
 	case RTE_ETH_SPEED_NUM_100M:
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_1)
+			break;
 		ret = duplex ? RTE_ETH_LINK_SPEED_100M : RTE_ETH_LINK_SPEED_100M_HD;
 		break;
 	case RTE_ETH_SPEED_NUM_1G:
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_1)
+			break;
 		ret = RTE_ETH_LINK_SPEED_1G;
 		break;
 	case RTE_ETH_SPEED_NUM_2_5G:
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_1)
+			break;
 		ret = RTE_ETH_LINK_SPEED_2_5G;
 		break;
 	case RTE_ETH_SPEED_NUM_5G:
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_1)
+			break;
 		ret = RTE_ETH_LINK_SPEED_5G;
 		break;
 	case RTE_ETH_SPEED_NUM_10G:
-		ret = RTE_ETH_LINK_SPEED_10G;
+		if (lanes == RTE_ETH_LANES_1)
+			ret = RTE_ETH_LINK_SPEED_10G;
+		if (lanes == RTE_ETH_LANES_4)
+			ret = RTE_ETH_LINK_SPEED_10G_4LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_20G:
-		ret = RTE_ETH_LINK_SPEED_20G;
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_2)
+			break;
+		ret = RTE_ETH_LINK_SPEED_20G_2LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_25G:
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_1)
+			break;
 		ret = RTE_ETH_LINK_SPEED_25G;
 		break;
 	case RTE_ETH_SPEED_NUM_40G:
-		ret = RTE_ETH_LINK_SPEED_40G;
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_4)
+			break;
+		ret = RTE_ETH_LINK_SPEED_40G_4LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_50G:
-		ret = RTE_ETH_LINK_SPEED_50G;
+		if (lanes == RTE_ETH_LANES_1)
+			ret = RTE_ETH_LINK_SPEED_50G;
+		if (lanes == RTE_ETH_LANES_2)
+			ret = RTE_ETH_LINK_SPEED_50G_2LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_56G:
-		ret = RTE_ETH_LINK_SPEED_56G;
+		if (lanes != RTE_ETH_LANES_UNKNOWN && lanes != RTE_ETH_LANES_4)
+			break;
+		ret = RTE_ETH_LINK_SPEED_56G_4LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_100G:
-		ret = RTE_ETH_LINK_SPEED_100G;
+		if (lanes == RTE_ETH_LANES_1)
+			ret = RTE_ETH_LINK_SPEED_100G;
+		if (lanes == RTE_ETH_LANES_2)
+			ret = RTE_ETH_LINK_SPEED_100G_2LANES;
+		if (lanes == RTE_ETH_LANES_4)
+			ret = RTE_ETH_LINK_SPEED_100G_4LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_200G:
-		ret = RTE_ETH_LINK_SPEED_200G;
+		if (lanes == RTE_ETH_LANES_2)
+			ret = RTE_ETH_LINK_SPEED_200G_2LANES;
+		if (lanes == RTE_ETH_LANES_4)
+			ret = RTE_ETH_LINK_SPEED_200G_4LANES;
 		break;
 	case RTE_ETH_SPEED_NUM_400G:
+		if (lanes == RTE_ETH_LANES_4)
+			ret = RTE_ETH_LINK_SPEED_400G_4LANES;
+		if (lanes == RTE_ETH_LANES_8)
+			ret = RTE_ETH_LINK_SPEED_400G_8LANES;
 		ret = RTE_ETH_LINK_SPEED_400G;
 		break;
 	default:
 		ret = 0;
 	}
 
-	rte_eth_trace_speed_bitflag(speed, duplex, ret);
+	rte_eth_trace_speed_bitflag(speed, lanes, duplex, ret);
 
 	return ret;
 }
+
+uint32_t __vsym
+rte_eth_speed_bitflag_v24(uint32_t speed, int duplex)
+{
+	return rte_eth_speed_bitflag_v25(speed, RTE_ETH_LANES_UNKNOWN, duplex);
+}
+
+/* mark the v24 function as the older version, and v25 as the default version */
+VERSION_SYMBOL(rte_eth_speed_bitflag, _v24, 24);
+BIND_DEFAULT_SYMBOL(rte_eth_speed_bitflag, _v25, 25);
+MAP_STATIC_SYMBOL(uint32_t rte_eth_speed_bitflag(uint32_t speed, uint8_t lanes, int duplex),
+		  rte_eth_speed_bitflag_v25);
 
 const char *
 rte_eth_dev_rx_offload_name(uint64_t offload)
@@ -1064,6 +1113,204 @@ rte_eth_dev_rx_offload_name(uint64_t offload)
 	rte_ethdev_trace_rx_offload_name(offload, name);
 
 	return name;
+}
+
+int
+rte_eth_speed_capa_to_info(uint32_t link_speed,
+			   struct rte_eth_speed_capa_info *capa_info)
+{
+	const struct {
+		uint32_t speed_capa;
+		struct rte_eth_speed_capa_info capa_info;
+	} speed_capa_info_map[] = {
+		{
+			RTE_ETH_LINK_SPEED_10M_HD,
+				{
+					RTE_ETH_SPEED_NUM_10M,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_HALF_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_10M,
+				{
+					RTE_ETH_SPEED_NUM_10M,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_100M_HD,
+				{
+					RTE_ETH_SPEED_NUM_100M,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_HALF_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_100M,
+				{
+					RTE_ETH_SPEED_NUM_100M,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_1G,
+				{
+					RTE_ETH_SPEED_NUM_1G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_2_5G,
+				{
+					RTE_ETH_SPEED_NUM_2_5G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_5G,
+				{
+					RTE_ETH_SPEED_NUM_5G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_10G,
+				{
+					RTE_ETH_SPEED_NUM_10G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_20G_2LANES,
+				{
+					RTE_ETH_SPEED_NUM_20G,
+					RTE_ETH_LANES_2,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_25G,
+				{
+					RTE_ETH_SPEED_NUM_25G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_40G_4LANES,
+				{
+					RTE_ETH_SPEED_NUM_40G,
+					RTE_ETH_LANES_4,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_50G,
+				{
+					RTE_ETH_SPEED_NUM_50G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_56G_4LANES,
+				{
+					RTE_ETH_SPEED_NUM_56G,
+					RTE_ETH_LANES_4,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_100G,
+				{
+					RTE_ETH_SPEED_NUM_100G,
+					RTE_ETH_LANES_1,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_200G_4LANES,
+				{
+					RTE_ETH_SPEED_NUM_200G,
+					RTE_ETH_LANES_4,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_400G_4LANES,
+				{
+					RTE_ETH_SPEED_NUM_400G,
+					RTE_ETH_LANES_4,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_10G_4LANES,
+				{
+					RTE_ETH_SPEED_NUM_10G,
+					RTE_ETH_LANES_4,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_50G_2LANES,
+				{
+					RTE_ETH_SPEED_NUM_50G,
+					RTE_ETH_LANES_2,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_100G_2LANES,
+				{
+					RTE_ETH_SPEED_NUM_100G,
+					RTE_ETH_LANES_2,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_100G_4LANES,
+				{
+					RTE_ETH_SPEED_NUM_100G,
+					RTE_ETH_LANES_4,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_200G_2LANES,
+				{
+					RTE_ETH_SPEED_NUM_200G,
+					RTE_ETH_LANES_2,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		},
+		{
+			RTE_ETH_LINK_SPEED_400G_8LANES,
+				{
+					RTE_ETH_SPEED_NUM_400G,
+					RTE_ETH_LANES_8,
+					RTE_ETH_LINK_FULL_DUPLEX
+				}
+		}
+	};
+	uint32_t i;
+
+	for (i = 0; i < RTE_DIM(speed_capa_info_map); i++)
+		if (link_speed == speed_capa_info_map[i].speed_capa) {
+			capa_info->speed = speed_capa_info_map[i].capa_info.speed;
+			capa_info->lanes = speed_capa_info_map[i].capa_info.lanes;
+			capa_info->duplex = speed_capa_info_map[i].capa_info.duplex;
+			return 0;
+		}
+
+	return -EINVAL;
 }
 
 const char *
@@ -3111,8 +3358,9 @@ rte_eth_link_to_str(char *str, size_t len, const struct rte_eth_link *eth_link)
 	if (eth_link->link_status == RTE_ETH_LINK_DOWN)
 		ret = snprintf(str, len, "Link down");
 	else
-		ret = snprintf(str, len, "Link up at %s %s %s",
+		ret = snprintf(str, len, "Link up at %s %ulanes %s %s",
 			rte_eth_link_speed_to_str(eth_link->link_speed),
+			eth_link->link_lanes,
 			(eth_link->link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
 			"FDX" : "HDX",
 			(eth_link->link_autoneg == RTE_ETH_LINK_AUTONEG) ?

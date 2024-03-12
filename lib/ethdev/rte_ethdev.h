@@ -288,24 +288,40 @@ struct rte_eth_stats {
 /**@{@name Link speed capabilities
  * Device supported speeds bitmap flags
  */
-#define RTE_ETH_LINK_SPEED_AUTONEG 0             /**< Autonegotiate (all speeds) */
-#define RTE_ETH_LINK_SPEED_FIXED   RTE_BIT32(0)  /**< Disable autoneg (fixed speed) */
-#define RTE_ETH_LINK_SPEED_10M_HD  RTE_BIT32(1)  /**<  10 Mbps half-duplex */
-#define RTE_ETH_LINK_SPEED_10M     RTE_BIT32(2)  /**<  10 Mbps full-duplex */
-#define RTE_ETH_LINK_SPEED_100M_HD RTE_BIT32(3)  /**< 100 Mbps half-duplex */
-#define RTE_ETH_LINK_SPEED_100M    RTE_BIT32(4)  /**< 100 Mbps full-duplex */
-#define RTE_ETH_LINK_SPEED_1G      RTE_BIT32(5)  /**<   1 Gbps */
-#define RTE_ETH_LINK_SPEED_2_5G    RTE_BIT32(6)  /**< 2.5 Gbps */
-#define RTE_ETH_LINK_SPEED_5G      RTE_BIT32(7)  /**<   5 Gbps */
-#define RTE_ETH_LINK_SPEED_10G     RTE_BIT32(8)  /**<  10 Gbps */
-#define RTE_ETH_LINK_SPEED_20G     RTE_BIT32(9)  /**<  20 Gbps */
-#define RTE_ETH_LINK_SPEED_25G     RTE_BIT32(10) /**<  25 Gbps */
-#define RTE_ETH_LINK_SPEED_40G     RTE_BIT32(11) /**<  40 Gbps */
-#define RTE_ETH_LINK_SPEED_50G     RTE_BIT32(12) /**<  50 Gbps */
-#define RTE_ETH_LINK_SPEED_56G     RTE_BIT32(13) /**<  56 Gbps */
-#define RTE_ETH_LINK_SPEED_100G    RTE_BIT32(14) /**< 100 Gbps */
-#define RTE_ETH_LINK_SPEED_200G    RTE_BIT32(15) /**< 200 Gbps */
-#define RTE_ETH_LINK_SPEED_400G    RTE_BIT32(16) /**< 400 Gbps */
+#define RTE_ETH_LINK_SPEED_AUTONEG        0             /**< Autonegotiate (all speeds) */
+#define RTE_ETH_LINK_SPEED_FIXED          RTE_BIT32(0)  /**< Disable autoneg (fixed speed) */
+#define RTE_ETH_LINK_SPEED_10M_HD         RTE_BIT32(1)  /**<  10 Mbps half-duplex */
+#define RTE_ETH_LINK_SPEED_10M            RTE_BIT32(2)  /**<  10 Mbps full-duplex */
+#define RTE_ETH_LINK_SPEED_100M_HD        RTE_BIT32(3)  /**< 100 Mbps half-duplex */
+#define RTE_ETH_LINK_SPEED_100M           RTE_BIT32(4)  /**< 100 Mbps full-duplex */
+#define RTE_ETH_LINK_SPEED_1G             RTE_BIT32(5)  /**<   1 Gbps */
+#define RTE_ETH_LINK_SPEED_2_5G           RTE_BIT32(6)  /**< 2.5 Gbps */
+#define RTE_ETH_LINK_SPEED_5G             RTE_BIT32(7)  /**<   5 Gbps */
+#define RTE_ETH_LINK_SPEED_10G            RTE_BIT32(8)  /**<  10 Gbps */
+#define RTE_ETH_LINK_SPEED_20G_2LANES     RTE_BIT32(9)  /**<  20 Gbps 2lanes */
+#define RTE_ETH_LINK_SPEED_25G            RTE_BIT32(10) /**<  25 Gbps */
+#define RTE_ETH_LINK_SPEED_40G_4LANES     RTE_BIT32(11) /**<  40 Gbps 4lanes */
+#define RTE_ETH_LINK_SPEED_50G            RTE_BIT32(12) /**<  50 Gbps */
+#define RTE_ETH_LINK_SPEED_56G_4LANES     RTE_BIT32(13) /**<  56 Gbps  4lanes */
+#define RTE_ETH_LINK_SPEED_100G           RTE_BIT32(14) /**< 100 Gbps */
+#define RTE_ETH_LINK_SPEED_200G_4LANES    RTE_BIT32(15) /**< 200 Gbps 4lanes */
+#define RTE_ETH_LINK_SPEED_400G_4LANES    RTE_BIT32(16) /**< 400 Gbps 4lanes */
+#define RTE_ETH_LINK_SPEED_10G_4LANES     RTE_BIT32(17)  /**<  10 Gbps 4lanes */
+#define RTE_ETH_LINK_SPEED_50G_2LANES     RTE_BIT32(18) /**<  50 Gbps 2 lanes */
+#define RTE_ETH_LINK_SPEED_100G_2LANES    RTE_BIT32(19) /**< 100 Gbps 2 lanes */
+#define RTE_ETH_LINK_SPEED_100G_4LANES    RTE_BIT32(20) /**< 100 Gbps 4lanes */
+#define RTE_ETH_LINK_SPEED_200G_2LANES    RTE_BIT32(21) /**< 200 Gbps 2lanes */
+#define RTE_ETH_LINK_SPEED_400G_8LANES    RTE_BIT32(22) /**< 400 Gbps 8lanes */
+/**@}*/
+
+/**@{@name Link speed capabilities
+ * Default lanes, use to compatible with earlier versions
+ */
+#define RTE_ETH_LINK_SPEED_20G	RTE_ETH_LINK_SPEED_20G_2LANES
+#define RTE_ETH_LINK_SPEED_40G	RTE_ETH_LINK_SPEED_40G_4LANES
+#define RTE_ETH_LINK_SPEED_56G	RTE_ETH_LINK_SPEED_56G_4LANES
+#define RTE_ETH_LINK_SPEED_200G	RTE_ETH_LINK_SPEED_200G_4LANES
+#define RTE_ETH_LINK_SPEED_400G	RTE_ETH_LINK_SPEED_400G_4LANES
 /**@}*/
 
 /**@{@name Link speed
@@ -329,6 +345,25 @@ struct rte_eth_stats {
 #define RTE_ETH_SPEED_NUM_UNKNOWN UINT32_MAX /**< Unknown */
 /**@}*/
 
+/**@{@name Link lane number
+ * Ethernet lane number
+ */
+#define RTE_ETH_LANES_UNKNOWN    0 /**< Unknown */
+#define RTE_ETH_LANES_1          1 /**< 1 lanes */
+#define RTE_ETH_LANES_2          2 /**< 2 lanes */
+#define RTE_ETH_LANES_4          4 /**< 4 lanes */
+#define RTE_ETH_LANES_8          8 /**< 8 lanes */
+/**@}*/
+
+/**
+ * A structure used to store information of link speed capability.
+ */
+struct rte_eth_speed_capa_info {
+	uint32_t speed;        /**< RTE_ETH_SPEED_NUM_ */
+	uint8_t  lanes;        /**< RTE_ETH_LANES_ */
+	uint8_t  duplex;       /**< RTE_ETH_LANES_ */
+};
+
 /**
  * A structure used to retrieve link-level information of an Ethernet port.
  */
@@ -338,6 +373,7 @@ struct __rte_aligned(8) rte_eth_link { /**< aligned for atomic64 read/write */
 	uint16_t link_duplex  : 1;  /**< RTE_ETH_LINK_[HALF/FULL]_DUPLEX */
 	uint16_t link_autoneg : 1;  /**< RTE_ETH_LINK_[AUTONEG/FIXED] */
 	uint16_t link_status  : 1;  /**< RTE_ETH_LINK_[DOWN/UP] */
+	uint16_t link_lanes   : 8;  /**< RTE_ETH_LANES_ */
 };
 
 /**@{@name Link negotiation
@@ -1641,6 +1677,13 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP         RTE_BIT64(3)
 /** Device supports keeping shared flow objects across restart. */
 #define RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP RTE_BIT64(4)
+/**
+ * Device supports setting lanes. When the driver does not support setting lane,
+ * the lane in the speed capability reported by the driver may be incorrect,
+ * for example, if the driver reports that the 200G speed capability
+ * (@see RTE_ETH_LINK_SPEED_200G), the number of used lanes may be 2 or 4.
+ */
+#define RTE_ETH_DEV_CAPA_SETTING_LANES RTE_BIT64(4)
 /**@}*/
 
 /*
@@ -2301,12 +2344,30 @@ uint16_t rte_eth_dev_count_total(void);
  *
  * @param speed
  *   Numerical speed value in Mbps
+ * @param lanes
+ *   RTE_ETH_LANES_x
  * @param duplex
  *   RTE_ETH_LINK_[HALF/FULL]_DUPLEX (only for 10/100M speeds)
  * @return
  *   0 if the speed cannot be mapped
  */
-uint32_t rte_eth_speed_bitflag(uint32_t speed, int duplex);
+uint32_t rte_eth_speed_bitflag(uint32_t speed, uint8_t lanes, int duplex);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Convert bitmap flag to the struct of link speed capability info
+ *
+ * @param link_speed
+ *   speed bitmap (RTE_ETH_LINK_SPEED_)
+ * @return
+ *   - (0) if successful.
+ *   - (-EINVAL) if bad parameter.
+ */
+__rte_experimental
+int rte_eth_speed_capa_to_info(uint32_t link_speed,
+				struct rte_eth_speed_capa_info *capa_info);
 
 /**
  * Get RTE_ETH_RX_OFFLOAD_* flag name.

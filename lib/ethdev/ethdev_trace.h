@@ -183,8 +183,10 @@ RTE_TRACE_POINT(
 
 RTE_TRACE_POINT(
 	rte_eth_trace_speed_bitflag,
-	RTE_TRACE_POINT_ARGS(uint32_t speed, int duplex, uint32_t ret),
+	RTE_TRACE_POINT_ARGS(uint32_t speed, uint8_t lanes, int duplex,
+			     uint32_t ret),
 	rte_trace_point_emit_u32(speed);
+	rte_trace_point_emit_u8(lanes);
 	rte_trace_point_emit_int(duplex);
 	rte_trace_point_emit_u32(ret);
 )
