@@ -20,6 +20,7 @@ from typing import Callable, ClassVar
 
 from paramiko import Channel, SSHClient, channel  # type: ignore[import]
 
+from framework.exception import InteractiveCommandExecutionError
 from framework.logger import DTSLogger
 from framework.settings import SETTINGS
 
@@ -124,6 +125,10 @@ class InteractiveShell(ABC):
 
         Returns:
             All output in the buffer before expected string.
+
+        Raises:
+            InteractiveCommandExecutionError: If command was sent but prompt could not be found in
+                the output.
         """
         self._logger.info(f"Sending: '{command}'")
         if prompt is None:
@@ -131,14 +136,19 @@ class InteractiveShell(ABC):
         self._stdin.write(f"{command}{self._command_extra_chars}\n")
         self._stdin.flush()
         out: str = ""
-        for line in self._stdout:
-            out += line
-            if prompt in line and not line.rstrip().endswith(
-                command.rstrip()
-            ):  # ignore line that sent command
-                break
-        self._logger.debug(f"Got output: {out}")
-        return out
+        try:
+            for line in self._stdout:
+                out += line
+                if line.rstrip().endswith(prompt):
+                    break
+        except TimeoutError:
+            raise InteractiveCommandExecutionError(
+                f"Failed to find the prompt ({prompt}) at the end of a line in the output from the"
+                f" command ({command}). Got:\n{out}"
+            )
+        else:
+            self._logger.debug(f"Got output: {out}")
+            return out
 
     def close(self) -> None:
         """Properly free all resources."""
