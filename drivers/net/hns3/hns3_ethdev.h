@@ -168,6 +168,7 @@ struct hns3_set_link_speed_cfg {
 	uint32_t speed;
 	uint8_t duplex  : 1;
 	uint8_t autoneg : 1;
+	uint8_t lanes   : 6;
 };
 
 /* mac media type */
@@ -190,6 +191,7 @@ struct hns3_mac {
 	uint8_t link_autoneg : 1; /* RTE_ETH_LINK_[AUTONEG/FIXED] */
 	uint8_t link_status  : 1; /* RTE_ETH_LINK_[DOWN/UP] */
 	uint32_t link_speed;      /* RTE_ETH_SPEED_NUM_ */
+	uint8_t link_lanes;       /* RTE_ETH_LANES_ */
 	/*
 	 * Some firmware versions support only the SFP speed query. In addition
 	 * to the SFP speed query, some firmware supports the query of the speed

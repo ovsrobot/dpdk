@@ -753,7 +753,9 @@ struct hns3_config_mac_mode_cmd {
 struct hns3_config_mac_speed_dup_cmd {
 	uint8_t speed_dup;
 	uint8_t mac_change_fec_en;
-	uint8_t rsv[22];
+	uint8_t rsv[4];
+	uint8_t lanes;
+	uint8_t rsv1[17];
 };
 
 #define HNS3_TQP_ENABLE_B		0
@@ -789,12 +791,15 @@ struct hns3_sfp_type {
 #define HNS3_FIBER_LINK_SPEED_1G_BIT		BIT(0)
 #define HNS3_FIBER_LINK_SPEED_10G_BIT		BIT(1)
 #define HNS3_FIBER_LINK_SPEED_25G_BIT		BIT(2)
-#define HNS3_FIBER_LINK_SPEED_50G_BIT		BIT(3)
-#define HNS3_FIBER_LINK_SPEED_100G_BIT		BIT(4)
+#define HNS3_FIBER_LINK_SPEED_50G_R2_BIT	BIT(3)
+#define HNS3_FIBER_LINK_SPEED_100G_R4_BIT	BIT(4)
 #define HNS3_FIBER_LINK_SPEED_40G_BIT		BIT(5)
 #define HNS3_FIBER_LINK_SPEED_100M_BIT		BIT(6)
 #define HNS3_FIBER_LINK_SPEED_10M_BIT		BIT(7)
-#define HNS3_FIBER_LINK_SPEED_200G_BIT		BIT(8)
+#define HNS3_FIBER_LINK_SPEED_200G_EXT_BIT	BIT(8)
+#define HNS3_FIBER_LINK_SPEED_50G_R1_BIT	BIT(9)
+#define HNS3_FIBER_LINK_SPEED_100G_R2_BIT	BIT(10)
+#define HNS3_FIBER_LINK_SPEED_200G_R4_BIT	BIT(11)
 
 #define HNS3_FIBER_FEC_AUTO_BIT		BIT(0)
 #define HNS3_FIBER_FEC_BASER_BIT	BIT(1)
@@ -823,7 +828,7 @@ struct hns3_sfp_info_cmd {
 	uint32_t supported_speed; /* speed supported by current media */
 	uint32_t module_type;
 	uint8_t fec_ability; /* supported fec modes, see HNS3_FIBER_FEC_XXX_BIT */
-	uint8_t rsv0;
+	uint8_t lanes;
 	uint8_t pause_status;
 	uint8_t rsv1[5];
 };

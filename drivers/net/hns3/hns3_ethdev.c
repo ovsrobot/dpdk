@@ -2235,12 +2235,16 @@ hns3_get_firber_port_speed_capa(uint32_t supported_speed)
 		speed_capa |= RTE_ETH_LINK_SPEED_25G;
 	if (supported_speed & HNS3_FIBER_LINK_SPEED_40G_BIT)
 		speed_capa |= RTE_ETH_LINK_SPEED_40G;
-	if (supported_speed & HNS3_FIBER_LINK_SPEED_50G_BIT)
+	if (supported_speed & HNS3_FIBER_LINK_SPEED_50G_R1_BIT)
 		speed_capa |= RTE_ETH_LINK_SPEED_50G;
-	if (supported_speed & HNS3_FIBER_LINK_SPEED_100G_BIT)
-		speed_capa |= RTE_ETH_LINK_SPEED_100G;
-	if (supported_speed & HNS3_FIBER_LINK_SPEED_200G_BIT)
-		speed_capa |= RTE_ETH_LINK_SPEED_200G;
+	if (supported_speed & HNS3_FIBER_LINK_SPEED_50G_R2_BIT)
+		speed_capa |= RTE_ETH_LINK_SPEED_50G_2LANES;
+	if (supported_speed & HNS3_FIBER_LINK_SPEED_100G_R4_BIT)
+		speed_capa |= RTE_ETH_LINK_SPEED_100G_4LANES;
+	if (supported_speed & HNS3_FIBER_LINK_SPEED_100G_R2_BIT)
+		speed_capa |= RTE_ETH_LINK_SPEED_100G_2LANES;
+	if (supported_speed & HNS3_FIBER_LINK_SPEED_200G_R4_BIT)
+		speed_capa |= RTE_ETH_LINK_SPEED_200G_4LANES;
 
 	return speed_capa;
 }
@@ -2308,6 +2312,7 @@ hns3_setup_linkstatus(struct rte_eth_dev *eth_dev,
 	if (!mac->link_status)
 		new_link->link_speed = RTE_ETH_SPEED_NUM_NONE;
 
+	new_link->link_lanes = mac->link_lanes;
 	new_link->link_duplex = mac->link_duplex;
 	new_link->link_status = mac->link_status ? RTE_ETH_LINK_UP : RTE_ETH_LINK_DOWN;
 	new_link->link_autoneg = mac->link_autoneg;
@@ -2934,7 +2939,8 @@ hns3_map_tqp(struct hns3_hw *hw)
 }
 
 static int
-hns3_cfg_mac_speed_dup_hw(struct hns3_hw *hw, uint32_t speed, uint8_t duplex)
+hns3_cfg_mac_speed_dup_hw(struct hns3_hw *hw, uint32_t speed, uint8_t lanes,
+			  uint8_t duplex)
 {
 	struct hns3_config_mac_speed_dup_cmd *req;
 	struct hns3_cmd_desc desc;
@@ -2989,6 +2995,7 @@ hns3_cfg_mac_speed_dup_hw(struct hns3_hw *hw, uint32_t speed, uint8_t duplex)
 	}
 
 	hns3_set_bit(req->mac_change_fec_en, HNS3_CFG_MAC_SPEED_CHANGE_EN_B, 1);
+	req->lanes = lanes;
 
 	ret = hns3_cmd_send(hw, &desc, 1);
 	if (ret)
@@ -3643,7 +3650,9 @@ hns3_mac_init(struct hns3_hw *hw)
 
 	pf->support_sfp_query = true;
 	mac->link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
-	ret = hns3_cfg_mac_speed_dup_hw(hw, mac->link_speed, mac->link_duplex);
+	/* If lane is set to 0, the firmware selects the default lane.*/
+	ret = hns3_cfg_mac_speed_dup_hw(hw, mac->link_speed, 0,
+					mac->link_duplex);
 	if (ret) {
 		PMD_INIT_LOG(ERR, "Config mac speed dup fail ret = %d", ret);
 		return ret;
@@ -4052,6 +4061,7 @@ hns3_get_sfp_info(struct hns3_hw *hw, struct hns3_mac *mac_info)
 		return 0;
 
 	mac_info->link_speed = rte_le_to_cpu_32(resp->sfp_speed);
+	mac_info->link_lanes = resp->lanes;
 	/*
 	 * if resp->supported_speed is 0, it means it's an old version
 	 * firmware, do not update these params.
@@ -4088,16 +4098,18 @@ hns3_check_speed_dup(uint8_t duplex, uint32_t speed)
 }
 
 static int
-hns3_cfg_mac_speed_dup(struct hns3_hw *hw, uint32_t speed, uint8_t duplex)
+hns3_cfg_mac_speed_dup(struct hns3_hw *hw, uint32_t speed, uint8_t lanes,
+		       uint8_t duplex)
 {
 	struct hns3_mac *mac = &hw->mac;
 	int ret;
 
 	duplex = hns3_check_speed_dup(duplex, speed);
-	if (mac->link_speed == speed && mac->link_duplex == duplex)
+	if (mac->link_speed == speed && mac->link_lanes == lanes &&
+	    mac->link_duplex == duplex)
 		return 0;
 
-	ret = hns3_cfg_mac_speed_dup_hw(hw, speed, duplex);
+	ret = hns3_cfg_mac_speed_dup_hw(hw, speed, lanes, duplex);
 	if (ret)
 		return ret;
 
@@ -4106,6 +4118,7 @@ hns3_cfg_mac_speed_dup(struct hns3_hw *hw, uint32_t speed, uint8_t duplex)
 		return ret;
 
 	mac->link_speed = speed;
+	mac->link_lanes = lanes;
 	mac->link_duplex = duplex;
 
 	return 0;
@@ -4150,6 +4163,7 @@ hns3_update_fiber_link_info(struct hns3_hw *hw)
 		}
 
 		mac->link_speed = mac_info.link_speed;
+		mac->link_lanes = mac_info.link_lanes;
 		mac->supported_speed = mac_info.supported_speed;
 		mac->support_autoneg = mac_info.support_autoneg;
 		mac->link_autoneg = mac_info.link_autoneg;
@@ -4161,7 +4175,7 @@ hns3_update_fiber_link_info(struct hns3_hw *hw)
 	}
 
 	/* Config full duplex for SFP */
-	return hns3_cfg_mac_speed_dup(hw, mac_info.link_speed,
+	return hns3_cfg_mac_speed_dup(hw, mac_info.link_speed, mac_info.link_lanes,
 				      RTE_ETH_LINK_FULL_DUPLEX);
 }
 
@@ -4512,11 +4526,11 @@ hns3_set_firber_default_support_speed(struct hns3_hw *hw)
 	case RTE_ETH_SPEED_NUM_40G:
 		return HNS3_FIBER_LINK_SPEED_40G_BIT;
 	case RTE_ETH_SPEED_NUM_50G:
-		return HNS3_FIBER_LINK_SPEED_50G_BIT;
+		return HNS3_FIBER_LINK_SPEED_50G_R2_BIT;
 	case RTE_ETH_SPEED_NUM_100G:
-		return HNS3_FIBER_LINK_SPEED_100G_BIT;
+		return HNS3_FIBER_LINK_SPEED_100G_R4_BIT;
 	case RTE_ETH_SPEED_NUM_200G:
-		return HNS3_FIBER_LINK_SPEED_200G_BIT;
+		return HNS3_FIBER_LINK_SPEED_200G_R4_BIT;
 	default:
 		hns3_warn(hw, "invalid speed %u Mbps.", mac->link_speed);
 		return 0;
@@ -4773,13 +4787,19 @@ hns3_convert_link_speeds2bitmap_fiber(uint32_t link_speeds)
 		speed_bit = HNS3_FIBER_LINK_SPEED_40G_BIT;
 		break;
 	case RTE_ETH_LINK_SPEED_50G:
-		speed_bit = HNS3_FIBER_LINK_SPEED_50G_BIT;
+		speed_bit = HNS3_FIBER_LINK_SPEED_50G_R1_BIT;
 		break;
-	case RTE_ETH_LINK_SPEED_100G:
-		speed_bit = HNS3_FIBER_LINK_SPEED_100G_BIT;
+	case RTE_ETH_LINK_SPEED_50G_2LANES:
+		speed_bit = HNS3_FIBER_LINK_SPEED_50G_R2_BIT;
 		break;
-	case RTE_ETH_LINK_SPEED_200G:
-		speed_bit = HNS3_FIBER_LINK_SPEED_200G_BIT;
+	case RTE_ETH_LINK_SPEED_100G_4LANES:
+		speed_bit = HNS3_FIBER_LINK_SPEED_100G_R4_BIT;
+		break;
+	case RTE_ETH_LINK_SPEED_100G_2LANES:
+		speed_bit = HNS3_FIBER_LINK_SPEED_100G_R2_BIT;
+		break;
+	case RTE_ETH_LINK_SPEED_200G_4LANES:
+		speed_bit = HNS3_FIBER_LINK_SPEED_200G_R4_BIT;
 		break;
 	default:
 		speed_bit = 0;
@@ -4808,45 +4828,6 @@ hns3_check_port_speed(struct hns3_hw *hw, uint32_t link_speeds)
 	}
 
 	return 0;
-}
-
-static uint32_t
-hns3_get_link_speed(uint32_t link_speeds)
-{
-	uint32_t speed = RTE_ETH_SPEED_NUM_NONE;
-
-	if (link_speeds & RTE_ETH_LINK_SPEED_10M ||
-	    link_speeds & RTE_ETH_LINK_SPEED_10M_HD)
-		speed = RTE_ETH_SPEED_NUM_10M;
-	if (link_speeds & RTE_ETH_LINK_SPEED_100M ||
-	    link_speeds & RTE_ETH_LINK_SPEED_100M_HD)
-		speed = RTE_ETH_SPEED_NUM_100M;
-	if (link_speeds & RTE_ETH_LINK_SPEED_1G)
-		speed = RTE_ETH_SPEED_NUM_1G;
-	if (link_speeds & RTE_ETH_LINK_SPEED_10G)
-		speed = RTE_ETH_SPEED_NUM_10G;
-	if (link_speeds & RTE_ETH_LINK_SPEED_25G)
-		speed = RTE_ETH_SPEED_NUM_25G;
-	if (link_speeds & RTE_ETH_LINK_SPEED_40G)
-		speed = RTE_ETH_SPEED_NUM_40G;
-	if (link_speeds & RTE_ETH_LINK_SPEED_50G)
-		speed = RTE_ETH_SPEED_NUM_50G;
-	if (link_speeds & RTE_ETH_LINK_SPEED_100G)
-		speed = RTE_ETH_SPEED_NUM_100G;
-	if (link_speeds & RTE_ETH_LINK_SPEED_200G)
-		speed = RTE_ETH_SPEED_NUM_200G;
-
-	return speed;
-}
-
-static uint8_t
-hns3_get_link_duplex(uint32_t link_speeds)
-{
-	if ((link_speeds & RTE_ETH_LINK_SPEED_10M_HD) ||
-	    (link_speeds & RTE_ETH_LINK_SPEED_100M_HD))
-		return RTE_ETH_LINK_HALF_DUPLEX;
-	else
-		return RTE_ETH_LINK_FULL_DUPLEX;
 }
 
 static int
@@ -4939,7 +4920,7 @@ hns3_set_fiber_port_link_speed(struct hns3_hw *hw,
 		return 0;
 	}
 
-	return hns3_cfg_mac_speed_dup(hw, cfg->speed, cfg->duplex);
+	return hns3_cfg_mac_speed_dup(hw, cfg->speed, cfg->lanes, cfg->duplex);
 }
 
 const char *
@@ -4979,15 +4960,23 @@ hns3_set_port_link_speed(struct hns3_hw *hw,
 static int
 hns3_apply_link_speed(struct hns3_hw *hw)
 {
+	struct rte_eth_speed_capa_info capa_info = { 0 };
 	struct rte_eth_conf *conf = &hw->data->dev_conf;
 	struct hns3_set_link_speed_cfg cfg;
+	int ret;
 
 	memset(&cfg, 0, sizeof(struct hns3_set_link_speed_cfg));
 	cfg.autoneg = (conf->link_speeds == RTE_ETH_LINK_SPEED_AUTONEG) ?
 			RTE_ETH_LINK_AUTONEG : RTE_ETH_LINK_FIXED;
 	if (cfg.autoneg != RTE_ETH_LINK_AUTONEG) {
-		cfg.speed = hns3_get_link_speed(conf->link_speeds);
-		cfg.duplex = hns3_get_link_duplex(conf->link_speeds);
+		ret = rte_eth_speed_capa_to_info(conf->link_speeds, &capa_info);
+		if (ret) {
+			hns3_err(hw, "speed capability error, ret = %d", ret);
+			return ret;
+		}
+		cfg.speed = capa_info.speed;
+		cfg.lanes = capa_info.lanes;
+		cfg.duplex = capa_info.duplex;
 	}
 
 	return hns3_set_port_link_speed(hw, &cfg);

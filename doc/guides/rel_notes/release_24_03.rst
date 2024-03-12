@@ -180,6 +180,8 @@ New Features
   * Added power-saving during polling within the ``rte_event_dequeue_burst()`` API.
   * Added support for DMA adapter.
 
+* **Added setting lanes for hns3 PF driver.**
+  * This feature add support for setting lanes and report lanes.
 
 Removed Items
 -------------
