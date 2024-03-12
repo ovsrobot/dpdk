@@ -9,6 +9,11 @@
 #include <rte_net.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>
+#include <rte_arp.h>
+#include <rte_icmp.h>
+#include <rte_ip.h>
+#include <rte_tcp.h>
+#include <rte_udp.h>
 #include <rte_vxlan.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
@@ -16,6 +21,7 @@
 #include "testpmd.h"
 
 #define MAX_STRING_LEN 8192
+#define MAX_DUMP_LEN   1024
 
 #define MKDUMPSTR(buf, buf_size, cur_len, ...) \
 do { \
@@ -67,9 +73,10 @@ get_timestamp(const struct rte_mbuf *mbuf)
 			timestamp_dynfield_offset, rte_mbuf_timestamp_t *);
 }
 
-static inline void
-dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
-	      uint16_t nb_pkts, int is_rx)
+/* More verbose older style packet decode */
+static void
+dump_pkt_verbose(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
+		 uint16_t nb_pkts, int is_rx)
 {
 	struct rte_mbuf  *mb;
 	const struct rte_ether_hdr *eth_hdr;
@@ -295,6 +302,348 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 			printf("%s", print_buf);
 		cur_len = 0;
 	}
+}
+
+static void
+dissect_arp(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_arp_hdr *arp;
+	struct rte_arp_hdr _arp;
+	uint16_t ar_op;
+	char buf[128];
+
+	arp = rte_pktmbuf_read(mb, offset, sizeof(*arp), &_arp);
+	if (unlikely(arp == NULL)) {
+		printf("truncated ARP! ");
+		return;
+	}
+
+	ar_op = RTE_BE_TO_CPU_16(arp->arp_opcode);
+	switch (ar_op) {
+	case RTE_ARP_OP_REQUEST:
+		inet_ntop(AF_INET, &arp->arp_data.arp_tip, buf, sizeof(buf));
+		printf("Who has %s? ", buf);
+
+		rte_ether_format_addr(buf, sizeof(buf), &arp->arp_data.arp_sha);
+		printf("Tell %s ", buf);
+		break;
+	case RTE_ARP_OP_REPLY:
+		inet_ntop(AF_INET, &arp->arp_data.arp_sip, buf, sizeof(buf));
+		printf("%s is at", buf);
+
+		rte_ether_format_addr(buf, sizeof(buf), &arp->arp_data.arp_sha);
+		printf("%s ", buf);
+		break;
+	case RTE_ARP_OP_INVREQUEST:
+		rte_ether_format_addr(buf, sizeof(buf), &arp->arp_data.arp_tha);
+		printf("Who is %s? ", buf);
+
+		rte_ether_format_addr(buf, sizeof(buf), &arp->arp_data.arp_sha);
+		printf("Tell %s ", buf);
+		break;
+
+	case RTE_ARP_OP_INVREPLY:
+		rte_ether_format_addr(buf, sizeof(buf), &arp->arp_data.arp_sha);
+		printf("%s is at ", buf);
+
+		inet_ntop(AF_INET, &arp->arp_data.arp_sip, buf, sizeof(buf));
+		printf("%s ", buf);
+		break;
+	default:
+		printf("Unknown ARP %#x ", ar_op);
+		break;
+	}
+}
+
+static void
+dissect_udp(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_udp_hdr *udph;
+	struct rte_udp_hdr _udp;
+	uint16_t src_port, dst_port;
+
+	udph = rte_pktmbuf_read(mb, offset, sizeof(*udph), &_udp);
+	if (unlikely(udph == NULL)) {
+		printf("truncated UDP! ");
+		return;
+	}
+
+	src_port = RTE_BE_TO_CPU_16(udph->src_port);
+	dst_port = RTE_BE_TO_CPU_16(udph->dst_port);
+
+	/* TODO handle vxlan */
+
+	printf("UDP %u %u → %u ",
+		  RTE_BE_TO_CPU_16(udph->dgram_len),
+		  src_port, dst_port);
+
+}
+
+static void
+dissect_tcp(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_tcp_hdr *tcph;
+	struct rte_tcp_hdr _tcp;
+	uint16_t src_port, dst_port;
+
+	tcph = rte_pktmbuf_read(mb, offset, sizeof(*tcph), &_tcp);
+	if (unlikely(tcph == NULL)) {
+		printf("truncated TCP! ");
+		return;
+	}
+
+	src_port = RTE_BE_TO_CPU_16(tcph->src_port);
+	dst_port = RTE_BE_TO_CPU_16(tcph->dst_port);
+
+	printf("TCP %u → %u",
+		  src_port, dst_port);
+#define PRINT_TCP_FLAG(flag) \
+	if (tcph->tcp_flags & RTE_TCP_ ## flag ## _FLAG) \
+		printf(" [" #flag" ]")
+
+	PRINT_TCP_FLAG(URG);
+	PRINT_TCP_FLAG(ACK);
+	PRINT_TCP_FLAG(RST);
+	PRINT_TCP_FLAG(SYN);
+	PRINT_TCP_FLAG(FIN);
+#undef PRINT_TCP_FLAG
+
+	printf("Seq=%u Ack=%u Win=%u ",
+		  RTE_BE_TO_CPU_16(tcph->sent_seq),
+		  RTE_BE_TO_CPU_16(tcph->recv_ack),
+		  RTE_BE_TO_CPU_16(tcph->rx_win));
+}
+
+static void
+dissect_icmp(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_icmp_hdr *icmp;
+	struct rte_icmp_hdr _icmp;
+	static const char * const icmp_types[256] = {
+		[RTE_IP_ICMP_ECHO_REPLY]   = "ICMP Reply",
+		[RTE_IP_ICMP_ECHO_REQUEST] = "ICMP Request",
+		[RTE_ICMP6_ECHO_REPLY]     = "ICMPv6 Reply",
+		[RTE_ICMP6_ECHO_REQUEST]   = "ICMPv6 Request",
+		[133]                      = "ICMPv6 Router Solicitation",
+		[134]                      = "ICMPv6 Router Solicitation",
+	};
+
+
+	icmp = rte_pktmbuf_read(mb, offset, sizeof(*icmp), &_icmp);
+	if (unlikely(icmp == NULL)) {
+		printf("truncated ICMP! ");
+	} else {
+		const char *name = icmp_types[icmp->icmp_type];
+
+		if (name != NULL)
+			printf("%s ", name);
+		else
+			printf("ICMP type %u ", icmp->icmp_type);
+	}
+}
+
+static void
+dissect_ipv4(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_ipv4_hdr *ip_hdr;
+	struct rte_ipv4_hdr _ip_hdr;
+	char sbuf[INET_ADDRSTRLEN], dbuf[INET_ADDRSTRLEN];
+
+	ip_hdr = rte_pktmbuf_read(mb, offset, sizeof(*ip_hdr), &_ip_hdr);
+	if (unlikely(ip_hdr == NULL)) {
+		printf("truncated IP! ");
+		return;
+	}
+
+	inet_ntop(AF_INET, &ip_hdr->src_addr, sbuf, sizeof(sbuf));
+	inet_ntop(AF_INET, &ip_hdr->dst_addr, dbuf, sizeof(dbuf));
+	printf("%s → %s ", sbuf, dbuf);
+
+	offset += ip_hdr->ihl * 4;
+	switch (ip_hdr->next_proto_id) {
+	case IPPROTO_UDP:
+		return dissect_udp(mb, offset);
+	case IPPROTO_TCP:
+		return dissect_tcp(mb, offset);
+	case IPPROTO_ICMP:
+		return dissect_icmp(mb, offset);
+	default:
+		/* TODO dissect tunnels */
+		printf("IP proto %#x ", ip_hdr->next_proto_id);
+	}
+}
+
+static void
+dissect_ipv6(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_ipv6_hdr *ip6_hdr;
+	struct rte_ipv6_hdr _ip6_hdr;
+	char sbuf[INET6_ADDRSTRLEN], dbuf[INET6_ADDRSTRLEN];
+	uint16_t proto;
+	unsigned int i;
+
+	ip6_hdr = rte_pktmbuf_read(mb, offset, sizeof(*ip6_hdr), &_ip6_hdr);
+	if (unlikely(ip6_hdr == NULL)) {
+		printf("truncated IPv6! ");
+		return;
+	}
+	offset += sizeof(*ip6_hdr);
+
+	inet_ntop(AF_INET6, ip6_hdr->src_addr, sbuf, sizeof(sbuf));
+	inet_ntop(AF_INET6, ip6_hdr->dst_addr, dbuf, sizeof(dbuf));
+	printf("%s → %s ", sbuf, dbuf);
+
+#define MAX_EXT_HDRS 5
+	proto = ip6_hdr->proto;
+	for (i = 0; i < MAX_EXT_HDRS; i++) {
+		switch (proto) {
+		case IPPROTO_UDP:
+			return dissect_udp(mb, offset);
+		case IPPROTO_TCP:
+			return dissect_tcp(mb, offset);
+		case IPPROTO_ICMPV6:
+			return dissect_icmp(mb, offset);
+
+		case IPPROTO_HOPOPTS:
+		case IPPROTO_ROUTING:
+		case IPPROTO_DSTOPTS:
+		{
+			const struct rte_ipv6_routing_ext *xh;
+			struct rte_ipv6_routing_ext _xh;
+
+			xh = rte_pktmbuf_read(mb, offset, sizeof(*xh), &_xh);
+			if (unlikely(xh == NULL)) {
+				printf("truncated IPV6 option! ");
+				return;
+			}
+			offset += (xh->hdr_len + 1) * 8;
+			proto = xh->next_hdr;
+			continue;
+		}
+
+		case IPPROTO_FRAGMENT:
+			printf("FRAG ");
+			return;
+
+		case IPPROTO_NONE:
+			printf("NONE ");
+			return;
+
+		default:
+			printf("IPv6 proto %u ", proto);
+			return;
+		}
+	}
+
+	printf("Too many extensions! ");
+}
+
+static void
+dissect_eth(const struct rte_mbuf *mb, uint16_t offset)
+{
+	const struct rte_ether_hdr *eth_hdr;
+	struct rte_ether_hdr _eth_hdr;
+	uint16_t eth_type;
+	char sbuf[RTE_ETHER_ADDR_FMT_SIZE], dbuf[RTE_ETHER_ADDR_FMT_SIZE];
+
+	eth_hdr = rte_pktmbuf_read(mb, offset, sizeof(struct rte_ether_hdr), &_eth_hdr);
+	if (unlikely(eth_hdr == NULL)) {
+		printf("missing Eth header! offset=%u", offset);
+		return;
+	}
+
+	offset += sizeof(*eth_hdr);
+	eth_type = RTE_BE_TO_CPU_16(eth_hdr->ether_type);
+	if (eth_type == RTE_ETHER_TYPE_VLAN || eth_type == RTE_ETHER_TYPE_QINQ) {
+		const struct rte_vlan_hdr *vh
+			= (const struct rte_vlan_hdr *)(eth_hdr + 1);
+		eth_type = vh->eth_proto;
+		offset += sizeof(*vh);
+
+		printf("%s %#x ", eth_type == RTE_ETHER_TYPE_VLAN ? "VLAN" : "QINQ",
+		       RTE_BE_TO_CPU_16(vh->vlan_tci));
+	}
+
+	switch (eth_type) {
+	case RTE_ETHER_TYPE_ARP:
+		rte_ether_format_addr(sbuf, sizeof(sbuf), &eth_hdr->src_addr);
+		rte_ether_format_addr(sbuf, sizeof(dbuf), &eth_hdr->dst_addr);
+		printf("%s → %s ARP ", sbuf, dbuf);
+
+		dissect_arp(mb, offset);
+		break;
+	case RTE_ETHER_TYPE_IPV4:
+		dissect_ipv4(mb, offset);
+		break;
+
+	case RTE_ETHER_TYPE_IPV6:
+		dissect_ipv6(mb, offset);
+		break;
+	default:
+		printf("Ethernet proto %#x ", eth_type);
+	}
+}
+
+/* Brief tshark style one line output which is
+ * number time_delta Source Destination Protocol len info
+ */
+static void
+dump_pkt_brief(uint16_t queue, struct rte_mbuf *pkts[], uint16_t nb_pkts)
+{
+	static uint64_t start_cycles;
+	static uint64_t packet_count;
+	uint64_t now;
+	uint64_t count;
+	double interval;
+	uint16_t i;
+
+	if (!nb_pkts)
+		return;
+
+	now = rte_rdtsc();
+	if (start_cycles == 0)
+		start_cycles = now;
+	interval = (double)(now - start_cycles) / (double)rte_get_tsc_hz();
+
+	count = __atomic_fetch_add(&packet_count, nb_pkts, __ATOMIC_RELAXED);
+
+	for (i = 0; i < nb_pkts; i++) {
+		const struct rte_mbuf *mb = pkts[i];
+
+		printf("%6"PRIu64" %11.9f %4u:%-3u ", count + i, interval, mb->port, queue);
+		dissect_eth(mb, 0);
+		putchar('\n');
+	}
+	fflush(stdout);
+}
+
+/* Hex dump of packet data */
+static void
+dump_pkt_hex(struct rte_mbuf *pkts[], uint16_t nb_pkts)
+{
+	uint16_t i;
+
+	for (i = 0; i < nb_pkts; i++)
+		rte_pktmbuf_dump(stdout, pkts[i], MAX_DUMP_LEN);
+
+	fflush(stdout);
+}
+
+static uint16_t
+dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
+	      uint16_t nb_pkts, int is_rx)
+{
+	switch (verbose_level) {
+	case VERBOSE_RX ... VERBOSE_BOTH:
+		dump_pkt_verbose(port_id, queue, pkts, nb_pkts, is_rx);
+		break;
+	case VERBOSE_DISSECT:
+		dump_pkt_brief(queue, pkts, nb_pkts);
+		break;
+	case VERBOSE_HEX:
+		dump_pkt_hex(pkts, nb_pkts);
+	}
+	return nb_pkts;
 }
 
 uint16_t
