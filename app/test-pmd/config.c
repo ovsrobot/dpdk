@@ -587,39 +587,51 @@ device_infos_display_speeds(uint32_t speed_capa)
 	if (speed_capa == RTE_ETH_LINK_SPEED_AUTONEG)
 		printf(" Autonegotiate (all speeds)");
 	if (speed_capa & RTE_ETH_LINK_SPEED_FIXED)
-		printf(" Disable autonegotiate (fixed speed)  ");
+		printf(" Disable autonegotiate (fixed speed) /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_10M_HD)
-		printf(" 10 Mbps half-duplex  ");
+		printf(" 10Mbps_1lane_half-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_10M)
-		printf(" 10 Mbps full-duplex  ");
+		printf(" 10Mbps_1lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_100M_HD)
-		printf(" 100 Mbps half-duplex  ");
+		printf(" 100Mbps_lane_half-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_100M)
-		printf(" 100 Mbps full-duplex  ");
+		printf(" 100Mbps_1lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_1G)
-		printf(" 1 Gbps  ");
+		printf(" 1Gbps_1lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_2_5G)
-		printf(" 2.5 Gbps  ");
+		printf(" 2.5Gbps_1lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_5G)
-		printf(" 5 Gbps  ");
+		printf(" 5Gbps_1lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_10G)
-		printf(" 10 Gbps  ");
-	if (speed_capa & RTE_ETH_LINK_SPEED_20G)
-		printf(" 20 Gbps  ");
+		printf(" 10Gbps_1lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_10G_4LANES)
+		printf(" 10Gbps_4lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_20G_2LANES)
+		printf(" 20Gbps_2lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_25G)
-		printf(" 25 Gbps  ");
-	if (speed_capa & RTE_ETH_LINK_SPEED_40G)
-		printf(" 40 Gbps  ");
+		printf(" 25Gbps_1lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_40G_4LANES)
+		printf(" 40Gbps_4lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_50G)
-		printf(" 50 Gbps  ");
-	if (speed_capa & RTE_ETH_LINK_SPEED_56G)
-		printf(" 56 Gbps  ");
+		printf(" 50Gbps_1lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_50G_2LANES)
+		printf(" 50Gbps_2lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_56G_4LANES)
+		printf(" 56Gbps_4lane_full-duplex /");
 	if (speed_capa & RTE_ETH_LINK_SPEED_100G)
-		printf(" 100 Gbps  ");
-	if (speed_capa & RTE_ETH_LINK_SPEED_200G)
-		printf(" 200 Gbps  ");
-	if (speed_capa & RTE_ETH_LINK_SPEED_400G)
-		printf(" 400 Gbps  ");
+		printf(" 100Gbps_1lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_100G_2LANES)
+		printf(" 100Gbps_2lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_100G_4LANES)
+		printf(" 100Gbps_4lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_200G_4LANES)
+		printf(" 200Gbps_4lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_200G_2LANES)
+		printf(" 200Gbps_2lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_400G_4LANES)
+		printf(" 400Gbps_4lane_full-duplex /");
+	if (speed_capa & RTE_ETH_LINK_SPEED_400G_8LANES)
+		printf(" 400Gbps_8lane_full-duplex /");
 }
 
 void
@@ -828,6 +840,10 @@ port_infos_display(portid_t port_id)
 
 	printf("\nLink status: %s\n", (link.link_status) ? ("up") : ("down"));
 	printf("Link speed: %s\n", rte_eth_link_speed_to_str(link.link_speed));
+	if (link.link_lanes == 0)
+		printf("Link lanes: unknown\n");
+	else
+		printf("Link lanes: %u\n", link.link_lanes);
 	printf("Link duplex: %s\n", (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
 	       ("full-duplex") : ("half-duplex"));
 	printf("Autoneg status: %s\n", (link.link_autoneg == RTE_ETH_LINK_AUTONEG) ?

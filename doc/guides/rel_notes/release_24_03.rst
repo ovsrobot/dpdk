@@ -79,6 +79,7 @@ New Features
 * **Support setting lanes for ethdev.**
   * Support setting lanes by extended ``RTE_ETH_LINK_SPEED_*``.
   * Added function to convert bitmap flag to the struct of link speed info.
+  ``rte_eth_speed_capa_to_info()``
 
 * **Added hash calculation of an encapsulated packet as done by the HW.**
 

@@ -1356,15 +1356,20 @@ struct cmd_config_speed_all {
 	cmdline_fixed_string_t keyword;
 	cmdline_fixed_string_t all;
 	cmdline_fixed_string_t item1;
+	cmdline_fixed_string_t lanes_item;
 	cmdline_fixed_string_t item2;
 	cmdline_fixed_string_t value1;
+	uint8_t lanes_value;
 	cmdline_fixed_string_t value2;
 };
 
 static int
-parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
+parse_and_check_speed_duplex(char *speedstr, uint8_t lanes, char *duplexstr,
+			     uint32_t *speed)
 {
 
+	uint32_t speed_num;
+	char *endptr;
 	int duplex;
 
 	if (!strcmp(duplexstr, "half")) {
@@ -1378,47 +1383,22 @@ parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
 		return -1;
 	}
 
-	if (!strcmp(speedstr, "10")) {
-		*speed = (duplex == RTE_ETH_LINK_HALF_DUPLEX) ?
-				RTE_ETH_LINK_SPEED_10M_HD : RTE_ETH_LINK_SPEED_10M;
-	} else if (!strcmp(speedstr, "100")) {
-		*speed = (duplex == RTE_ETH_LINK_HALF_DUPLEX) ?
-				RTE_ETH_LINK_SPEED_100M_HD : RTE_ETH_LINK_SPEED_100M;
-	} else {
-		if (duplex != RTE_ETH_LINK_FULL_DUPLEX) {
-			fprintf(stderr, "Invalid speed/duplex parameters\n");
-			return -1;
-		}
-		if (!strcmp(speedstr, "1000")) {
-			*speed = RTE_ETH_LINK_SPEED_1G;
-		} else if (!strcmp(speedstr, "2500")) {
-			*speed = RTE_ETH_LINK_SPEED_2_5G;
-		} else if (!strcmp(speedstr, "5000")) {
-			*speed = RTE_ETH_LINK_SPEED_5G;
-		} else if (!strcmp(speedstr, "10000")) {
-			*speed = RTE_ETH_LINK_SPEED_10G;
-		} else if (!strcmp(speedstr, "25000")) {
-			*speed = RTE_ETH_LINK_SPEED_25G;
-		} else if (!strcmp(speedstr, "40000")) {
-			*speed = RTE_ETH_LINK_SPEED_40G;
-		} else if (!strcmp(speedstr, "50000")) {
-			*speed = RTE_ETH_LINK_SPEED_50G;
-		} else if (!strcmp(speedstr, "100000")) {
-			*speed = RTE_ETH_LINK_SPEED_100G;
-		} else if (!strcmp(speedstr, "200000")) {
-			*speed = RTE_ETH_LINK_SPEED_200G;
-		} else if (!strcmp(speedstr, "400000")) {
-			*speed = RTE_ETH_LINK_SPEED_400G;
-		} else if (!strcmp(speedstr, "auto")) {
-			*speed = RTE_ETH_LINK_SPEED_AUTONEG;
-		} else {
-			fprintf(stderr, "Unknown speed parameter\n");
-			return -1;
-		}
+	if (!strcmp(speedstr, "auto")) {
+		*speed = RTE_ETH_LINK_SPEED_AUTONEG;
+		return 0;
 	}
 
-	if (*speed != RTE_ETH_LINK_SPEED_AUTONEG)
-		*speed |= RTE_ETH_LINK_SPEED_FIXED;
+	speed_num = strtol(speedstr, &endptr, 10);
+	if (*endptr != '\0') {
+		fprintf(stderr, "Unknown speed parameter\n");
+		return -1;
+	}
+
+	*speed = rte_eth_speed_bitflag(speed_num, lanes, duplex);
+	if (*speed == 0) {
+		fprintf(stderr, "param error\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -1429,19 +1409,27 @@ cmd_config_speed_all_parsed(void *parsed_result,
 			__rte_unused void *data)
 {
 	struct cmd_config_speed_all *res = parsed_result;
+	struct rte_eth_dev_info dev_info;
 	uint32_t link_speed;
 	portid_t pid;
+	int ret;
 
 	if (!all_ports_stopped()) {
 		fprintf(stderr, "Please stop all ports first\n");
 		return;
 	}
 
-	if (parse_and_check_speed_duplex(res->value1, res->value2,
-			&link_speed) < 0)
+	if (parse_and_check_speed_duplex(res->value1, res->lanes_value,
+					 res->value2, &link_speed) < 0)
 		return;
 
 	RTE_ETH_FOREACH_DEV(pid) {
+		ret = eth_dev_info_get_print_err(pid, &dev_info);
+		if (ret != 0)
+			return;
+		if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_SETTING_LANES) == 0)
+			fprintf(stderr, "The setting lane may not take effect because "
+					"the port (%u) does not support it\n", pid);
 		ports[pid].dev_conf.link_speeds = link_speed;
 	}
 
@@ -1460,6 +1448,11 @@ static cmdline_parse_token_string_t cmd_config_speed_all_item1 =
 static cmdline_parse_token_string_t cmd_config_speed_all_value1 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, value1,
 				"10#100#1000#2500#5000#10000#25000#40000#50000#100000#200000#400000#auto");
+static cmdline_parse_token_string_t cmd_config_speed_all_lanes_item =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, lanes_item, "lanes");
+static cmdline_parse_token_num_t cmd_config_speed_all_lanes_value =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_speed_all, lanes_value,
+			      RTE_UINT8);
 static cmdline_parse_token_string_t cmd_config_speed_all_item2 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, item2, "duplex");
 static cmdline_parse_token_string_t cmd_config_speed_all_value2 =
@@ -1470,14 +1463,16 @@ static cmdline_parse_inst_t cmd_config_speed_all = {
 	.f = cmd_config_speed_all_parsed,
 	.data = NULL,
 	.help_str = "port config all speed "
-		"10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto duplex "
-							"half|full|auto",
+		"10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto"
+		" lanes 1|2|4|8 duplex half|full|auto",
 	.tokens = {
 		(void *)&cmd_config_speed_all_port,
 		(void *)&cmd_config_speed_all_keyword,
 		(void *)&cmd_config_speed_all_all,
 		(void *)&cmd_config_speed_all_item1,
 		(void *)&cmd_config_speed_all_value1,
+		(void *)&cmd_config_speed_all_lanes_item,
+		(void *)&cmd_config_speed_all_lanes_value,
 		(void *)&cmd_config_speed_all_item2,
 		(void *)&cmd_config_speed_all_value2,
 		NULL,
@@ -1490,8 +1485,10 @@ struct cmd_config_speed_specific {
 	cmdline_fixed_string_t keyword;
 	portid_t id;
 	cmdline_fixed_string_t item1;
+	cmdline_fixed_string_t lanes_item;
 	cmdline_fixed_string_t item2;
 	cmdline_fixed_string_t value1;
+	uint8_t lanes_value;
 	cmdline_fixed_string_t value2;
 };
 
@@ -1501,7 +1498,9 @@ cmd_config_speed_specific_parsed(void *parsed_result,
 				__rte_unused void *data)
 {
 	struct cmd_config_speed_specific *res = parsed_result;
+	struct rte_eth_dev_info dev_info;
 	uint32_t link_speed;
+	int ret;
 
 	if (port_id_is_invalid(res->id, ENABLED_WARN))
 		return;
@@ -1511,8 +1510,15 @@ cmd_config_speed_specific_parsed(void *parsed_result,
 		return;
 	}
 
-	if (parse_and_check_speed_duplex(res->value1, res->value2,
-			&link_speed) < 0)
+	ret = eth_dev_info_get_print_err(res->id, &dev_info);
+	if (ret != 0)
+		return;
+	if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_SETTING_LANES) == 0)
+		fprintf(stderr, "The setting lane may not take effect because "
+				"the port (%d) does not support it\n", res->id);
+
+	if (parse_and_check_speed_duplex(res->value1, res->lanes_value,
+					 res->value2, &link_speed) < 0)
 		return;
 
 	ports[res->id].dev_conf.link_speeds = link_speed;
@@ -1535,6 +1541,12 @@ static cmdline_parse_token_string_t cmd_config_speed_specific_item1 =
 static cmdline_parse_token_string_t cmd_config_speed_specific_value1 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, value1,
 				"10#100#1000#2500#5000#10000#25000#40000#50000#100000#200000#400000#auto");
+static cmdline_parse_token_string_t cmd_config_speed_specific_lanes_item =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, lanes_item,
+								"lanes");
+static cmdline_parse_token_num_t cmd_config_speed_specific_lanes_value =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_speed_specific, lanes_value,
+			      RTE_UINT8);
 static cmdline_parse_token_string_t cmd_config_speed_specific_item2 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, item2,
 								"duplex");
@@ -1546,14 +1558,16 @@ static cmdline_parse_inst_t cmd_config_speed_specific = {
 	.f = cmd_config_speed_specific_parsed,
 	.data = NULL,
 	.help_str = "port config <port_id> speed "
-		"10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto duplex "
-							"half|full|auto",
+		"10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto"
+		" lanes 1|2|4|8 duplex half|full|auto",
 	.tokens = {
 		(void *)&cmd_config_speed_specific_port,
 		(void *)&cmd_config_speed_specific_keyword,
 		(void *)&cmd_config_speed_specific_id,
 		(void *)&cmd_config_speed_specific_item1,
 		(void *)&cmd_config_speed_specific_value1,
+		(void *)&cmd_config_speed_specific_lanes_item,
+		(void *)&cmd_config_speed_specific_lanes_value,
 		(void *)&cmd_config_speed_specific_item2,
 		(void *)&cmd_config_speed_specific_value2,
 		NULL,
