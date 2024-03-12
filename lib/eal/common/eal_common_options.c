@@ -18,9 +18,7 @@
 #include <libgen.h>
 #endif
 #include <sys/stat.h>
-#ifndef RTE_EXEC_ENV_WINDOWS
 #include <dirent.h>
-#endif
 
 #include <rte_string_fns.h>
 #include <rte_eal.h>
@@ -123,10 +121,8 @@ struct shared_driver {
 static struct shared_driver_list solib_list =
 TAILQ_HEAD_INITIALIZER(solib_list);
 
-#ifndef RTE_EXEC_ENV_WINDOWS
 /* Default path of external loadable drivers */
 static const char *default_solib_dir = RTE_EAL_PMD_PATH;
-#endif
 
 /*
  * Stringified version of solib path used by dpdk-pmdinfo.py
@@ -391,12 +387,12 @@ eal_plugin_add(const char *path)
 }
 
 #ifdef RTE_EXEC_ENV_WINDOWS
-int
-eal_plugins_init(void)
-{
-	return 0;
-}
+#define SOEXT    ".dll"
 #else
+#define SOEXT    ".so"
+#endif
+
+#define SOABIEXT  SOEXT"."ABI_VERSION
 
 static int
 eal_plugindir_init(const char *path)
@@ -417,12 +413,14 @@ eal_plugindir_init(const char *path)
 
 	while ((dent = readdir(d)) != NULL) {
 		struct stat sb;
-		int nlen = strnlen(dent->d_name, sizeof(dent->d_name));
+		size_t nlen = strnlen(dent->d_name, sizeof(dent->d_name));
 
-		/* check if name ends in .so or .so.ABI_VERSION */
-		if (strcmp(&dent->d_name[nlen - 3], ".so") != 0 &&
-		    strcmp(&dent->d_name[nlen - 4 - strlen(ABI_VERSION)],
-			   ".so."ABI_VERSION) != 0)
+		if (nlen < strlen(SOABIEXT))
+			continue;
+
+		/* check if name ends in SOEXT or SOABIEXT */
+		if (strcmp(&dent->d_name[nlen - strlen(SOEXT)], SOEXT) != 0 &&
+		    strcmp(&dent->d_name[nlen - strlen(SOABIEXT)], SOABIEXT) != 0)
 			continue;
 
 		snprintf(sopath, sizeof(sopath), "%s/%s", path, dent->d_name);
@@ -440,6 +438,68 @@ eal_plugindir_init(const char *path)
 	return (dent == NULL) ? 0 : -1;
 }
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static void*
+eal_dlopen(const char *pathname)
+{
+	void *retval = NULL;
+	struct stat pathstat;
+	char *fullpath = _fullpath(NULL, pathname, 0);
+
+	const char *loadpath = fullpath;
+	DWORD loadflags = 0;
+
+	if (fullpath == NULL) {
+		RTE_LOG_LINE(ERR, EAL, "Error expanding full path for %s, %s",
+		pathname, strerror(errno));
+	} else {
+		/* Verify that the path exists */
+		if ((stat(fullpath, &pathstat) != 0) && (errno == ENOENT)) {
+			/* not a full or relative path, try a load from default dirs */
+			loadpath = pathname;
+			loadflags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS;
+		}
+
+		retval = LoadLibraryExA(loadpath, NULL, loadflags);
+		if (retval == NULL)
+			RTE_LOG_LINE(ERR, EAL, "Error loading %s, error code: %lu",
+			    loadpath, GetLastError());
+	}
+
+	free(fullpath);
+	return retval;
+}
+
+static int
+is_shared_build(void)
+{
+	int shared = 0;
+	HMODULE apphandle = NULL;
+	HMODULE libhandle = NULL;
+
+	/* if fail to get handle, assume statically linked */
+	apphandle = GetModuleHandleA(NULL);
+	if (apphandle == NULL) {
+		RTE_LOG_LINE(ERR, EAL, "Cannot get handle to the app");
+		goto out;
+	}
+
+	/* if fail to get handle, assume statically linked */
+	if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+	    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+	    (LPCSTR)&eal_plugins_init,
+	    &libhandle)) {
+		if (apphandle != libhandle) {
+			/* lib and app handles are different. */
+			/* Therefore lib is dynamically linked */
+			shared = 1;
+		}
+	}
+
+out:
+	return shared;
+}
+#else
 static int
 verify_perms(const char *dirpath)
 {
@@ -547,6 +607,7 @@ is_shared_build(void)
 	EAL_LOG(INFO, "Detected static linkage of DPDK");
 	return 0;
 }
+#endif
 
 int
 eal_plugins_init(void)
@@ -585,7 +646,6 @@ eal_plugins_init(void)
 	}
 	return 0;
 }
-#endif
 
 /*
  * Parse the coremask given as argument (hexadecimal string) and fill
