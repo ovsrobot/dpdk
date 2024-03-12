@@ -752,7 +752,7 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 	if (virtio_user_dev_init_max_queue_pairs(dev, queues))
 		dev->unsupported_features |= (1ull << VIRTIO_NET_F_MQ);
 
-	if (dev->max_queue_pairs > 1)
+	if (dev->max_queue_pairs > 1 || dev->hw_cvq)
 		cq = 1;
 
 	if (!mrg_rxbuf)
@@ -770,8 +770,9 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 		dev->unsupported_features |= (1ull << VIRTIO_NET_F_MAC);
 
 	if (cq) {
-		/* device does not really need to know anything about CQ,
-		 * so if necessary, we just claim to support CQ
+		/* Except for vDPA, the device does not really need to know
+		 * anything about CQ, so if necessary, we just claim to support
+		 * control queue.
 		 */
 		dev->frontend_features |= (1ull << VIRTIO_NET_F_CTRL_VQ);
 	} else {
