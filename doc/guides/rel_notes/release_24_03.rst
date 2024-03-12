@@ -111,6 +111,8 @@ New Features
   * Added `normal_llq_hdr` devarg that enforce normal llq header policy.
   * Added support for LLQ header size recommendation from the device.
   * Allowed large LLQ with 1024 entries when the device supports enlarged memory BAR.
+  * Added `control_poll_interval` devarg that configure control-path to work in poll-mode.
+  * Added support for binding ports to `uio_pci_generic` kernel module.
 
 * **Updated Atomic Rules' Arkville driver.**
 
