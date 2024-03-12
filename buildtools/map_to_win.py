@@ -4,9 +4,11 @@
 
 import sys
 
+def is_function_line(ln, cc):
+    if not ln.startswith('\t') or ":" in ln or ";" not in ln:
+        return False
 
-def is_function_line(ln):
-    return ln.startswith('\t') and ln.endswith(';\n') and ":" not in ln and "# WINDOWS_NO_EXPORT" not in ln
+    return not (cc == 'msvc' and "# MSVC_NO_EXPORT" in ln or "# WINDOWS_NO_EXPORT" in ln)
 
 # MinGW keeps the original .map file but replaces per_lcore* to __emutls_v.per_lcore*
 def create_mingw_map_file(input_map, output_map):
@@ -27,9 +29,12 @@ def main(args):
 # This works taking indented lines only which end with a ";" and which don't
 # have a colon in them, i.e. the lines defining functions only.
     else:
+        cc = 'notmsvc'
+        if len(args) == 4:
+            cc = args[3]
         with open(args[1]) as f_in:
-            functions = [ln[:-2] + '\n' for ln in sorted(f_in.readlines())
-                         if is_function_line(ln)]
+            functions = [ln.split(';', 1)[0] + '\n' for ln in sorted(f_in.readlines())
+                          if is_function_line(ln, cc)]
             functions = ["EXPORTS\n"] + functions
 
     with open(args[2], 'w') as f_out:

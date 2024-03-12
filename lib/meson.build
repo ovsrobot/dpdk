@@ -262,7 +262,7 @@ foreach l:libraries
 
     if is_ms_linker
         def_file = custom_target(libname + '_def',
-                command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
+                command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@', cc.get_id()],
                 input: version_map,
                 output: '@0@_exports.def'.format(libname))
         lk_deps += [def_file]
@@ -281,7 +281,7 @@ foreach l:libraries
     else
         if is_windows
             mingw_map = custom_target(libname + '_mingw',
-                    command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
+                    command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@', cc.get_id()],
                     input: version_map,
                     output: '@0@_mingw.map'.format(libname))
             lk_deps += [mingw_map]
