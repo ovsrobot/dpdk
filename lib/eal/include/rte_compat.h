@@ -68,6 +68,16 @@ _Pragma("GCC diagnostic pop")
 __attribute__((section(".text.internal")))
 #endif
 
+/*
+ * Used to by ASAN bounds checker for flexible arrays
+ * Supported by Gcc >= 14 and clang >=18
+ */
+#if __has_attribute(__element_count__)
+# define __rte_counted_by(member)	__attribute__((__element_count__(member)))
+#else
+# define __rte_counted_by(member)
+#endif
+
 #endif
 
 #ifdef __cplusplus
