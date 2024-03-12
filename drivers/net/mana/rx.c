@@ -532,6 +532,21 @@ repoll:
 			mbuf->hash.rss = oob->packet_info[pkt_idx].packet_hash;
 		}
 
+		if (oob->rx_vlan_tag_present) {
+			mbuf->ol_flags |=
+				RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED;
+			mbuf->vlan_tci = oob->rx_vlan_id;
+
+			if (!priv->vlan_strip && rte_vlan_insert(&mbuf)) {
+				DRV_LOG(ERR, "vlan insert failed");
+				rxq->stats.errors++;
+				rte_pktmbuf_free(mbuf);
+
+				i++;
+				goto drop;
+			}
+		}
+
 		pkts[pkt_received++] = mbuf;
 		rxq->stats.packets++;
 		rxq->stats.bytes += mbuf->data_len;
