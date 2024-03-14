@@ -1124,8 +1124,6 @@ cn10k_cpt_tls_post_process(struct rte_crypto_op *cop, struct cpt_cn10k_res_s *re
 	uint16_t m_len = res->rlen;
 
 	if (!res->uc_compcode) {
-		if ((tls_opt.tls_ver == RTE_SECURITY_VERSION_TLS_1_3) && (!tls_opt.is_write))
-			m_len -= 1;
 		if (mbuf->next == NULL)
 			mbuf->data_len = m_len;
 		mbuf->pkt_len = m_len;
