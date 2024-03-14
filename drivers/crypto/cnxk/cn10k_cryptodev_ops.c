@@ -989,12 +989,15 @@ cn10k_cpt_ipsec_post_process(struct rte_crypto_op *cop, struct cpt_cn10k_res_s *
 }
 
 static inline void
-cn10k_cpt_tls_post_process(struct rte_crypto_op *cop, struct cpt_cn10k_res_s *res)
+cn10k_cpt_tls_post_process(struct rte_crypto_op *cop, struct cpt_cn10k_res_s *res,
+			   struct cn10k_sec_session *sess)
 {
 	struct rte_mbuf *mbuf = cop->sym->m_src;
-	const uint16_t m_len = res->rlen;
+	uint16_t m_len = res->rlen;
 
 	if (!res->uc_compcode) {
+		if ((sess->tls.tls_ver == RTE_SECURITY_VERSION_TLS_1_3) && (!sess->tls.is_write))
+			m_len -= 1;
 		if (mbuf->next == NULL)
 			mbuf->data_len = m_len;
 		mbuf->pkt_len = m_len;
@@ -1015,7 +1018,7 @@ cn10k_cpt_sec_post_process(struct rte_crypto_op *cop, struct cpt_cn10k_res_s *re
 	if (sess->proto == RTE_SECURITY_PROTOCOL_IPSEC)
 		cn10k_cpt_ipsec_post_process(cop, res);
 	else if (sess->proto == RTE_SECURITY_PROTOCOL_TLS_RECORD)
-		cn10k_cpt_tls_post_process(cop, res);
+		cn10k_cpt_tls_post_process(cop, res, sess);
 }
 
 static inline void

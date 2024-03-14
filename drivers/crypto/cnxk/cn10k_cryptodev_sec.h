@@ -37,7 +37,8 @@ struct cn10k_sec_session {
 			uint8_t enable_padding : 1;
 			uint8_t tail_fetch_len : 2;
 			uint8_t is_write : 1;
-			uint8_t rvsd : 4;
+			uint8_t tls_ver : 2;
+			uint8_t rvsd : 2;
 		} tls;
 	};
 	/** Queue pair */

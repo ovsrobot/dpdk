@@ -610,6 +610,7 @@ cn10k_tls_read_sa_create(struct roc_cpt *roc_cpt, struct roc_cpt_lf *lf,
 			 struct cn10k_sec_session *sec_sess)
 {
 	struct roc_ie_ot_tls_read_sa *sa_dptr;
+	uint8_t tls_ver = tls_xfrm->ver;
 	struct cn10k_tls_record *tls;
 	union cpt_inst_w4 inst_w4;
 	void *read_sa;
@@ -659,6 +660,7 @@ cn10k_tls_read_sa_create(struct roc_cpt *roc_cpt, struct roc_cpt_lf *lf,
 			ROC_IE_OT_TLS13_MAJOR_OP_RECORD_DEC | ROC_IE_OT_INPLACE_BIT;
 	}
 
+	sec_sess->tls.tls_ver = tls_ver;
 	sec_sess->inst.w4 = inst_w4.u64;
 	sec_sess->inst.w7 = cpt_inst_w7_get(roc_cpt, read_sa);
 
@@ -694,6 +696,7 @@ cn10k_tls_write_sa_create(struct roc_cpt *roc_cpt, struct roc_cpt_lf *lf,
 			  struct cn10k_sec_session *sec_sess)
 {
 	struct roc_ie_ot_tls_write_sa *sa_dptr;
+	uint8_t tls_ver = tls_xfrm->ver;
 	struct cn10k_tls_record *tls;
 	union cpt_inst_w4 inst_w4;
 	void *write_sa;
@@ -727,6 +730,7 @@ cn10k_tls_write_sa_create(struct roc_cpt *roc_cpt, struct roc_cpt_lf *lf,
 		sec_sess->iv_length = crypto_xfrm->next->cipher.iv.length;
 	}
 
+	sec_sess->tls.tls_ver = tls_ver;
 	sec_sess->tls.is_write = 1;
 	sec_sess->tls.enable_padding = tls_xfrm->options.extra_padding_enable;
 	sec_sess->max_extended_len = tls_write_rlens_get(tls_xfrm, crypto_xfrm);
