@@ -1639,6 +1639,27 @@ static const struct rte_cryptodev_capabilities sec_tls12_caps_sha1_sha2[] = {
 			}, }
 		}, }
 	},
+	{	/* SHA384 HMAC */
+		.op = RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+		{.sym = {
+			.xform_type = RTE_CRYPTO_SYM_XFORM_AUTH,
+			{.auth = {
+				.algo = RTE_CRYPTO_AUTH_SHA384_HMAC,
+				.block_size = 64,
+				.key_size = {
+					.min = 48,
+					.max = 48,
+					.increment = 0
+				},
+				.digest_size = {
+					.min = 48,
+					.max = 48,
+					.increment = 0
+				},
+			}, }
+		}, }
+	},
+
 };
 
 static const struct rte_cryptodev_capabilities sec_tls13_caps_aes[] = {

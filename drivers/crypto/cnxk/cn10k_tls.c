@@ -28,7 +28,8 @@ tls_xform_cipher_auth_verify(struct rte_crypto_sym_xform *cipher_xform,
 	switch (c_algo) {
 	case RTE_CRYPTO_CIPHER_NULL:
 		if ((a_algo == RTE_CRYPTO_AUTH_MD5_HMAC) || (a_algo == RTE_CRYPTO_AUTH_SHA1_HMAC) ||
-		    (a_algo == RTE_CRYPTO_AUTH_SHA256_HMAC))
+		    (a_algo == RTE_CRYPTO_AUTH_SHA256_HMAC) ||
+		    (a_algo == RTE_CRYPTO_AUTH_SHA384_HMAC))
 			ret = 0;
 		break;
 	case RTE_CRYPTO_CIPHER_3DES_CBC:
@@ -37,7 +38,8 @@ tls_xform_cipher_auth_verify(struct rte_crypto_sym_xform *cipher_xform,
 		break;
 	case RTE_CRYPTO_CIPHER_AES_CBC:
 		if ((a_algo == RTE_CRYPTO_AUTH_SHA1_HMAC) ||
-		    (a_algo == RTE_CRYPTO_AUTH_SHA256_HMAC))
+		    (a_algo == RTE_CRYPTO_AUTH_SHA256_HMAC) ||
+		    (a_algo == RTE_CRYPTO_AUTH_SHA384_HMAC))
 			ret = 0;
 		break;
 	default:
@@ -69,7 +71,8 @@ tls_xform_auth_verify(struct rte_crypto_sym_xform *crypto_xform)
 
 	if (((a_algo == RTE_CRYPTO_AUTH_MD5_HMAC) && (keylen == 16)) ||
 	    ((a_algo == RTE_CRYPTO_AUTH_SHA1_HMAC) && (keylen == 20)) ||
-	    ((a_algo == RTE_CRYPTO_AUTH_SHA256_HMAC) && (keylen == 32)))
+	    ((a_algo == RTE_CRYPTO_AUTH_SHA256_HMAC) && (keylen == 32)) ||
+	    ((a_algo == RTE_CRYPTO_AUTH_SHA384_HMAC) && (keylen == 48)))
 		return 0;
 
 	return -EINVAL;
@@ -251,6 +254,9 @@ tls_write_rlens_get(struct rte_security_tls_record_xform *tls_xfrm,
 	case RTE_CRYPTO_AUTH_SHA256_HMAC:
 		mac_len = 32;
 		break;
+	case RTE_CRYPTO_AUTH_SHA384_HMAC:
+		mac_len = 32;
+		break;
 	default:
 		mac_len = 0;
 		break;
@@ -397,6 +403,8 @@ tls_read_sa_fill(struct roc_ie_ot_tls_read_sa *read_sa,
 		read_sa->w2.s.mac_select = ROC_IE_OT_TLS_MAC_SHA1;
 	else if (auth_xfrm->auth.algo == RTE_CRYPTO_AUTH_SHA256_HMAC)
 		read_sa->w2.s.mac_select = ROC_IE_OT_TLS_MAC_SHA2_256;
+	else if (auth_xfrm->auth.algo == RTE_CRYPTO_AUTH_SHA384_HMAC)
+		read_sa->w2.s.mac_select = ROC_IE_OT_TLS_MAC_SHA2_384;
 	else
 		return -EINVAL;
 
@@ -538,6 +546,8 @@ tls_write_sa_fill(struct roc_ie_ot_tls_write_sa *write_sa,
 			write_sa->w2.s.mac_select = ROC_IE_OT_TLS_MAC_SHA1;
 		else if (auth_xfrm->auth.algo == RTE_CRYPTO_AUTH_SHA256_HMAC)
 			write_sa->w2.s.mac_select = ROC_IE_OT_TLS_MAC_SHA2_256;
+		else if (auth_xfrm->auth.algo == RTE_CRYPTO_AUTH_SHA384_HMAC)
+			write_sa->w2.s.mac_select = ROC_IE_OT_TLS_MAC_SHA2_384;
 		else
 			return -EINVAL;
 
