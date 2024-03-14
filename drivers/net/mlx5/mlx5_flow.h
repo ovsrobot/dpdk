@@ -2001,6 +2001,24 @@ flow_hw_get_reg_id(struct rte_eth_dev *dev,
 #endif
 }
 
+static __rte_always_inline int
+flow_hw_get_port_id_from_ctx(void *dr_ctx, uint32_t *port_val)
+{
+	uint32_t port;
+
+	MLX5_ETH_FOREACH_DEV(port, NULL) {
+		struct mlx5_priv *priv;
+		priv = rte_eth_devices[port].data->dev_private;
+
+		if (priv->dr_ctx == dr_ctx) {
+			*port_val = port;
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
 /**
  * Get GENEVE TLV option FW information according type and class.
  *
