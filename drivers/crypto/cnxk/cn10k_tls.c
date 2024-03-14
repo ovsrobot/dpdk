@@ -309,7 +309,7 @@ tls_read_ctx_size(struct roc_ie_ot_tls_read_sa *sa, enum rte_security_tls_versio
 	/* Variable based on Anti-replay Window */
 	if (tls_ver == RTE_SECURITY_VERSION_TLS_1_3) {
 		size = offsetof(struct roc_ie_ot_tls_read_sa, tls_13.ctx) +
-		       offsetof(struct roc_ie_ot_tls_read_ctx_update_reg, ar_winbits);
+		       sizeof(struct roc_ie_ot_tls_1_3_read_ctx_update_reg);
 	} else {
 		size = offsetof(struct roc_ie_ot_tls_read_sa, tls_12.ctx) +
 		       offsetof(struct roc_ie_ot_tls_read_ctx_update_reg, ar_winbits);
