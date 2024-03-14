@@ -80,7 +80,7 @@ foreach subpath:subdirs
         subdir(class)
         skip_class = false
         foreach d:std_deps
-            if not is_variable('shared_rte_' + d)
+            if not is_variable('static_rte_' + d)
                 skip_class = true
                 reason = 'missing internal dependency, "@0@"'.format(d)
                 if dpdk_libs_deprecated.contains(d)
@@ -173,7 +173,7 @@ foreach subpath:subdirs
                 if not build
                     break
                 endif
-                if not is_variable('shared_rte_' + d)
+                if not is_variable('static_rte_' + d)
                     build = false
                     reason = 'missing internal dependency, "@0@"'.format(d)
                     if dpdk_libs_deprecated.contains(d)
@@ -188,7 +188,9 @@ foreach subpath:subdirs
                                 +'\tPlease enable missing dependency "@0@"'.format(d))
                     endif
                 else
-                    shared_deps += [get_variable('shared_rte_' + d)]
+                    if is_shared_enabled
+                        shared_deps += [get_variable('shared_rte_' + d)]
+                    endif
                     static_deps += [get_variable('static_rte_' + d)]
                 endif
             endforeach
@@ -247,7 +249,7 @@ foreach subpath:subdirs
                 include_directories: includes,
                 dependencies: static_deps,
                 c_args: cflags,
-                install: true)
+                install: install_static)
 
         # now build the shared driver
         version_map = '@0@/@1@/version.map'.format(meson.current_source_dir(), drv_path)
@@ -271,7 +273,7 @@ foreach subpath:subdirs
             endif
         endif
 
-        if is_windows
+        if is_windows and is_shared_enabled
             if is_ms_linker
                 def_file = custom_target(lib_name + '_def',
                         command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
@@ -296,30 +298,33 @@ foreach subpath:subdirs
             lk_args = ['-Wl,--version-script=' + version_map]
         endif
 
-        shared_lib = shared_library(lib_name, sources,
-                objects: objs,
-                include_directories: includes,
-                dependencies: shared_deps,
-                c_args: cflags,
-                link_args: lk_args,
-                link_depends: lk_deps,
-                version: abi_version,
-                soversion: so_version,
-                install: true,
-                install_dir: driver_install_path)
+        if is_shared_enabled
+            shared_lib = shared_library(lib_name, sources,
+                    objects: objs,
+                    include_directories: includes,
+                    dependencies: shared_deps,
+                    c_args: cflags,
+                    link_args: lk_args,
+                    link_depends: lk_deps,
+                    version: abi_version,
+                    soversion: so_version,
+                    install: install_shared,
+                    install_dir: driver_install_path)
 
-        # create a dependency object and add it to the global dictionary so
-        # testpmd or other built-in apps can find it if necessary
-        shared_dep = declare_dependency(link_with: shared_lib,
-                include_directories: includes,
-                dependencies: shared_deps)
+            # create a dependency object and add it to the global dictionary so
+            # testpmd or other built-in apps can find it if necessary
+            shared_dep = declare_dependency(link_with: shared_lib,
+                    include_directories: includes,
+                    dependencies: shared_deps)
+
+            set_variable('shared_@0@'.format(lib_name), shared_dep)
+        endif
         static_dep = declare_dependency(
                 include_directories: includes,
                 dependencies: static_deps)
 
         dpdk_drivers += static_lib
 
-        set_variable('shared_@0@'.format(lib_name), shared_dep)
         set_variable('static_@0@'.format(lib_name), static_dep)
         # for drivers, we only need to add dependency objects for static libs,
         # shared lib drivers are not linked in

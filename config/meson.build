@@ -516,4 +516,24 @@ if get_option('default_library') == 'both'
  NOTE: DPDK always builds both shared and static libraries.  Please set
  "default_library" to either "static" or "shared" to select default linkage
  for apps and any examples.''')
+elif get_option('default_library') == 'shared' and is_windows and not is_ms_compiler
+    error( '''
+ Unsupported value "shared" for "default_library" option.
+
+ NOTE: DPDK Windows shared is only supported when building with MSVC. Please set
+ "default_library" to either "static" or use MSVC.''')
+endif
+
+if is_windows and not is_ms_compiler
+    is_shared_enabled=false
+else
+    is_shared_enabled=true
+endif
+
+if is_windows
+    install_static = get_option('default_library') == 'static'
+    install_shared = get_option('default_library') == 'shared'
+else
+    install_static=true
+    install_shared=true
 endif

@@ -184,7 +184,7 @@ foreach l:libraries
         if not build
             break
         endif
-        if not is_variable('shared_rte_' + d)
+        if not is_variable('static_rte_' + d)
             build = false
             reason = 'missing internal dependency, "@0@"'.format(d)
             if dpdk_libs_deprecated.contains(d)
@@ -197,7 +197,9 @@ foreach l:libraries
                         + '\tPlease add missing dependency "@0@" to "enable_libs" option'.format(d))
             endif
         else
-            shared_deps += [get_variable('shared_rte_' + d)]
+            if is_shared_enabled
+                shared_deps += [get_variable('shared_rte_' + d)]
+            endif
             static_deps += [get_variable('static_rte_' + d)]
         endif
     endforeach
@@ -242,7 +244,7 @@ foreach l:libraries
             c_args: cflags,
             dependencies: static_deps,
             include_directories: includes,
-            install: true)
+            install: install_static)
     static_dep = declare_dependency(
             include_directories: includes,
             dependencies: static_deps)
@@ -260,35 +262,37 @@ foreach l:libraries
     version_map = '@0@/@1@/version.map'.format(meson.current_source_dir(), l)
     lk_deps = [version_map]
 
-    if is_ms_linker
-        def_file = custom_target(libname + '_def',
-                command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
-                input: version_map,
-                output: '@0@_exports.def'.format(libname))
-        lk_deps += [def_file]
-
-        if is_ms_compiler
-            lk_args = ['/def:' + def_file.full_path()]
-            if meson.version().version_compare('<0.54.0')
-                lk_args += ['/implib:lib\\librte_' + l + '.dll.a']
-            endif
-        else
-            lk_args = ['-Wl,/def:' + def_file.full_path()]
-            if meson.version().version_compare('<0.54.0')
-                lk_args += ['-Wl,/implib:lib\\librte_' + l + '.dll.a']
-            endif
-        endif
-    else
-        if is_windows
-            mingw_map = custom_target(libname + '_mingw',
+    if is_shared_enabled
+        if is_ms_linker
+            def_file = custom_target(libname + '_def',
                     command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
                     input: version_map,
-                    output: '@0@_mingw.map'.format(libname))
-            lk_deps += [mingw_map]
+                    output: '@0@_exports.def'.format(libname))
+            lk_deps += [def_file]
 
-            lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]
+            if is_ms_compiler
+                lk_args = ['/def:' + def_file.full_path()]
+                if meson.version().version_compare('<0.54.0')
+                    lk_args += ['/implib:lib\\librte_' + l + '.dll.a']
+                endif
+            else
+                lk_args = ['-Wl,/def:' + def_file.full_path()]
+                if meson.version().version_compare('<0.54.0')
+                    lk_args += ['-Wl,/implib:lib\\librte_' + l + '.dll.a']
+                endif
+            endif
         else
-            lk_args = ['-Wl,--version-script=' + version_map]
+            if is_windows
+                mingw_map = custom_target(libname + '_mingw',
+                        command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
+                        input: version_map,
+                        output: '@0@_mingw.map'.format(libname))
+                lk_deps += [mingw_map]
+
+                lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]
+            else
+                lk_args = ['-Wl,--version-script=' + version_map]
+            endif
         endif
     endif
 
@@ -304,27 +308,29 @@ foreach l:libraries
                 output: name + '.sym_chk')
     endif
 
-    shared_lib = shared_library(libname,
-            sources,
-            objects: objs,
-            c_args: cflags,
-            dependencies: shared_deps,
-            include_directories: includes,
-            link_args: lk_args,
-            link_depends: lk_deps,
-            version: abi_version,
-            soversion: so_version,
-            install: true)
-    shared_dep = declare_dependency(link_with: shared_lib,
-            include_directories: includes,
-            dependencies: shared_deps)
+    if is_shared_enabled
+        shared_lib = shared_library(libname,
+                sources,
+                objects: objs,
+                c_args: cflags,
+                dependencies: shared_deps,
+                include_directories: includes,
+                link_args: lk_args,
+                link_depends: lk_deps,
+                version: abi_version,
+                soversion: so_version,
+                install: install_shared)
+        shared_dep = declare_dependency(link_with: shared_lib,
+                include_directories: includes,
+                dependencies: shared_deps)
 
-    dpdk_libraries = [shared_lib] + dpdk_libraries
+        dpdk_libraries = [shared_lib] + dpdk_libraries
+        set_variable('shared_rte_' + name, shared_dep)
+        dpdk_shared_lib_deps += shared_dep
+    endif
+
     dpdk_static_libraries = [static_lib] + dpdk_static_libraries
-
-    set_variable('shared_rte_' + name, shared_dep)
     set_variable('static_rte_' + name, static_dep)
-    dpdk_shared_lib_deps += shared_dep
     dpdk_static_lib_deps += static_dep
     if developer_mode
         message('lib/@0@: Defining dependency "@1@"'.format(l, name))
