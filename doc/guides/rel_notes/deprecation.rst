@@ -120,6 +120,10 @@ Deprecation Notices
   which got error interrupt to the application,
   so that application can reset that particular queue pair.
 
+* cryptodev: In 24.11 LTS release the Intel IPsec Multi-buffer version will be
+  bumped to a minimum version of v1.4. This will effect the KASUMI, SNOW3G, ZUC,
+  AESNI GCM, AESNI MB and CHACHAPOLY SW PMDs.
+
 * eventdev: The single-event (non-burst) enqueue and dequeue operations,
   used by static inline burst enqueue and dequeue functions in ``rte_eventdev.h``,
   will be removed in DPDK 23.11.
