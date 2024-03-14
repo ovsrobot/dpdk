@@ -97,6 +97,9 @@ tls_xform_aead_verify(struct rte_security_tls_record_xform *tls_xform,
 			return 0;
 	}
 
+	if ((crypto_xform->aead.algo == RTE_CRYPTO_AEAD_CHACHA20_POLY1305) && (keylen == 32))
+		return 0;
+
 	return -EINVAL;
 }
 
@@ -351,15 +354,20 @@ tls_read_sa_fill(struct roc_ie_ot_tls_read_sa *read_sa,
 	cipher_key = read_sa->cipher_key;
 
 	/* Set encryption algorithm */
-	if ((crypto_xfrm->type == RTE_CRYPTO_SYM_XFORM_AEAD) &&
-	    (crypto_xfrm->aead.algo == RTE_CRYPTO_AEAD_AES_GCM)) {
-		read_sa->w2.s.cipher_select = ROC_IE_OT_TLS_CIPHER_AES_GCM;
-
+	if (crypto_xfrm->type == RTE_CRYPTO_SYM_XFORM_AEAD) {
 		length = crypto_xfrm->aead.key.length;
-		if (length == 16)
-			read_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_128;
-		else
+		if (crypto_xfrm->aead.algo == RTE_CRYPTO_AEAD_AES_GCM) {
+			read_sa->w2.s.cipher_select = ROC_IE_OT_TLS_CIPHER_AES_GCM;
+			if (length == 16)
+				read_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_128;
+			else
+				read_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_256;
+		}
+
+		if (crypto_xfrm->aead.algo == RTE_CRYPTO_AEAD_CHACHA20_POLY1305) {
+			read_sa->w2.s.cipher_select = ROC_IE_OT_TLS_CIPHER_CHACHA_POLY;
 			read_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_256;
+		}
 
 		key = crypto_xfrm->aead.key.data;
 		memcpy(cipher_key, key, length);
@@ -500,15 +508,19 @@ tls_write_sa_fill(struct roc_ie_ot_tls_write_sa *write_sa,
 	cipher_key = write_sa->cipher_key;
 
 	/* Set encryption algorithm */
-	if ((crypto_xfrm->type == RTE_CRYPTO_SYM_XFORM_AEAD) &&
-	    (crypto_xfrm->aead.algo == RTE_CRYPTO_AEAD_AES_GCM)) {
-		write_sa->w2.s.cipher_select = ROC_IE_OT_TLS_CIPHER_AES_GCM;
-
+	if (crypto_xfrm->type == RTE_CRYPTO_SYM_XFORM_AEAD) {
 		length = crypto_xfrm->aead.key.length;
-		if (length == 16)
-			write_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_128;
-		else
+		if (crypto_xfrm->aead.algo == RTE_CRYPTO_AEAD_AES_GCM) {
+			write_sa->w2.s.cipher_select = ROC_IE_OT_TLS_CIPHER_AES_GCM;
+			if (length == 16)
+				write_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_128;
+			else
+				write_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_256;
+		}
+		if (crypto_xfrm->aead.algo == RTE_CRYPTO_AEAD_CHACHA20_POLY1305) {
+			write_sa->w2.s.cipher_select = ROC_IE_OT_TLS_CIPHER_CHACHA_POLY;
 			write_sa->w2.s.aes_key_len = ROC_IE_OT_TLS_AES_KEY_LEN_256;
+		}
 
 		key = crypto_xfrm->aead.key.data;
 		memcpy(cipher_key, key, length);
