@@ -118,8 +118,8 @@ cnxk_tls_xform_verify(struct rte_security_tls_record_xform *tls_xform,
 
 	if (crypto_xform->type == RTE_CRYPTO_SYM_XFORM_AEAD) {
 		/* optional padding is not allowed in TLS-1.2 for AEAD */
-		if ((tls_xform->ver == RTE_SECURITY_VERSION_TLS_1_2) &&
-		    (tls_xform->options.extra_padding_enable == 1))
+		if ((tls_xform->options.extra_padding_enable == 1) &&
+		    (tls_xform->ver != RTE_SECURITY_VERSION_TLS_1_3))
 			return -EINVAL;
 
 		return tls_xform_aead_verify(tls_xform, crypto_xform);
