@@ -264,9 +264,7 @@ alloc_devargs(const char *name, const char *args)
 }
 
 static int
-insert_vdev(const char *name, const char *args,
-		struct rte_vdev_device **p_dev,
-		bool init)
+insert_vdev(const char *name, const char *args, struct rte_vdev_device **p_dev)
 {
 	struct rte_vdev_device *dev;
 	struct rte_devargs *devargs;
@@ -300,8 +298,7 @@ insert_vdev(const char *name, const char *args,
 		goto fail;
 	}
 
-	if (init)
-		rte_devargs_insert(&devargs);
+	rte_devargs_insert(&devargs);
 	dev->device.devargs = devargs;
 	TAILQ_INSERT_TAIL(&vdev_device_list, dev, next);
 
@@ -323,7 +320,7 @@ rte_vdev_init(const char *name, const char *args)
 	int ret;
 
 	rte_spinlock_recursive_lock(&vdev_device_list_lock);
-	ret = insert_vdev(name, args, &dev, true);
+	ret = insert_vdev(name, args, &dev);
 	if (ret == 0) {
 		ret = vdev_probe_all_drivers(dev);
 		if (ret) {
@@ -449,7 +446,7 @@ vdev_action(const struct rte_mp_msg *mp_msg, const void *peer)
 		break;
 	case VDEV_SCAN_ONE:
 		VDEV_LOG(INFO, "receive vdev, %s", in->name);
-		ret = insert_vdev(in->name, NULL, NULL, false);
+		ret = insert_vdev(in->name, NULL, NULL);
 		if (ret == -EEXIST)
 			VDEV_LOG(DEBUG, "device already exist, %s", in->name);
 		else if (ret < 0)
