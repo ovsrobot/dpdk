@@ -11,6 +11,7 @@
 #include <rte_eal.h>
 #include <rte_errno.h>
 #include <rte_cryptodev.h>
+#include <rte_net_crc.h>
 #ifdef RTE_CRYPTO_SCHEDULER
 #include <rte_cryptodev_scheduler.h>
 #endif
@@ -598,6 +599,9 @@ main(int argc, char **argv)
 		nb_cryptodevs = 0;
 		goto err;
 	}
+
+	if (opts.op_type == CPERF_DOCSIS)
+		rte_net_crc_set_alg(RTE_NET_CRC_AVX512);
 
 	ret = cperf_verify_devices_capabilities(&opts, enabled_cdevs,
 			nb_cryptodevs);
