@@ -176,6 +176,10 @@ New Features
   * Added power-saving during polling within the ``rte_event_dequeue_burst()`` API.
   * Added support for DMA adapter.
 
+  * **Updated HiSilicon hns3 ethdev driver.**
+
+  * Added new device supporting RDMA/DCB/ROH with PCI IDs: ``0xa227, 0xa22c``.
+
 
 Removed Items
 -------------
