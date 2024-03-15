@@ -43,6 +43,8 @@ print_usage () {
 	Run Linux kernel checkpatch.pl with DPDK options.
 	The environment variable DPDK_CHECKPATCH_PATH can be set, if not we will
 	try to find the script in the sources of the currently running kernel.
+	If the script cannot be found, you will be prompted for downloading it
+	from the upstream linux sources.
 
 	The patches to check can be from stdin, files specified on the command line,
 	latest git commits limited with -n option, or commits in the git range
@@ -376,10 +378,14 @@ while getopts hn:qr:v ARG ; do
 done
 shift $(($OPTIND - 1))
 
+url="https://raw.githubusercontent.com/torvalds/linux/master/scripts/checkpatch.pl"
+
 if [ ! -f "$DPDK_CHECKPATCH_PATH" ] || [ ! -x "$DPDK_CHECKPATCH_PATH" ] ; then
 	default_path="/lib/modules/$(uname -r)/source/scripts/checkpatch.pl"
 	if [ -f "$default_path" ] && [ -x "$default_path" ] ; then
 		DPDK_CHECKPATCH_PATH="$default_path"
+	elif download_script DPDK_CHECKPATCH_PATH "$url"; then
+		true
 	else
 		print_usage >&2
 		echo

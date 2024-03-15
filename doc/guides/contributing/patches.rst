@@ -462,6 +462,7 @@ This uses the Linux kernel development tool ``checkpatch.pl`` which  can be obta
 updating the Linux kernel sources.
 
 The path to the original Linux script must be set in the environment variable ``DPDK_CHECKPATCH_PATH``.
+If this variable is not set, ``checkpatches.sh`` will prompt before downloading it locally.
 
 Spell checking of commonly misspelled words is enabled
 by default if installed in ``/usr/share/codespell/dictionary.txt``.

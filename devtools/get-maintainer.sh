@@ -18,9 +18,18 @@ print_usage () {
 	the get_maintainer.pl script located in Linux kernel sources. Example:
 	DPDK_GETMAINTAINER_PATH=~/linux/scripts/get_maintainer.pl
 
+	If the script cannot be found, you will be prompted for downloading it
+	from the upstream linux sources.
+
 	Also refer to devtools/load-devel-config to store your configuration.
 	END_OF_HELP
 }
+
+if [ ! -f "$DPDK_GETMAINTAINER_PATH" ] ||
+   [ ! -x "$DPDK_GETMAINTAINER_PATH" ] ; then
+	download_script DPDK_GETMAINTAINER_PATH \
+		"https://raw.githubusercontent.com/torvalds/linux/master/scripts/get_maintainer.pl"
+fi
 
 # Requires DPDK_GETMAINTAINER_PATH devel config option set
 if [ ! -f "$DPDK_GETMAINTAINER_PATH" ] ||
