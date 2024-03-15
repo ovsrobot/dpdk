@@ -122,7 +122,7 @@ enum rte_dma_dev_state {
  * @internal
  * The generic data structure associated with each DMA device.
  */
-struct __rte_cache_aligned rte_dma_dev {
+struct __rte_aligned(8) rte_dma_dev {
 	/** Device info which supplied during device initialization. */
 	struct rte_device *device;
 	struct rte_dma_dev_data *data; /**< Pointer to shared device data. */
