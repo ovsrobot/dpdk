@@ -592,6 +592,14 @@ rte_eal_init(int argc, char **argv)
 		internal_conf->in_memory = false;
 	}
 
+	if (eal_log_init(program_invocation_short_name,
+			 internal_conf->syslog_facility) < 0) {
+		rte_eal_init_alert("Cannot init logging.");
+		rte_errno = ENOMEM;
+		rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
+		return -1;
+	}
+
 	if (eal_plugins_init() < 0) {
 		rte_eal_init_alert("Cannot init plugins");
 		rte_errno = EINVAL;
@@ -716,14 +724,6 @@ rte_eal_init(int argc, char **argv)
 		EAL_LOG(WARNING, "Ignoring --vmware-tsc-map because "
 				"RTE_LIBRTE_EAL_VMWARE_TSC_MAP_SUPPORT is not set");
 #endif
-	}
-
-	if (eal_log_init(program_invocation_short_name,
-			 internal_conf->syslog_facility) < 0) {
-		rte_eal_init_alert("Cannot init logging.");
-		rte_errno = ENOMEM;
-		rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
-		return -1;
 	}
 
 	/* in secondary processes, memory init may allocate additional fbarrays
