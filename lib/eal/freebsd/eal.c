@@ -760,6 +760,14 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
+	if (eal_log_init(program_invocation_short_name,
+			 internal_conf->syslog_facility) < 0) {
+		rte_eal_init_alert("Cannot init logging.");
+		rte_errno = ENOMEM;
+		rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
+		return -1;
+	}
+
 	/* in secondary processes, memory init may allocate additional fbarrays
 	 * not present in primary processes, so to avoid any potential issues,
 	 * initialize memzones first.
