@@ -14,6 +14,17 @@ followed by the default value defined in this module.
 
 The command line arguments along with the supported environment variables are:
 
+.. option:: --tarball, --snapshot
+.. envvar:: DTS_DPDK_TARBALL
+
+    Path to DPDK source code tarball to test.
+
+.. option:: --revision, --rev, --git-ref
+.. envvar:: DTS_DPDK_REVISION_ID
+
+    Git revision ID to test. Could be commit, tag, tree ID etc.
+    To test local changes, first commit them, then use their commit ID.
+
 .. option:: --config-file
 .. envvar:: DTS_CFG_FILE
 
@@ -43,11 +54,6 @@ The command line arguments along with the supported environment variables are:
 .. envvar:: DTS_SKIP_SETUP
 
     Set to any value to skip building DPDK.
-
-.. option:: --tarball, --snapshot, --git-ref
-.. envvar:: DTS_DPDK_TARBALL
-
-    The path to a DPDK tarball, git commit ID, tag ID or tree ID to test.
 
 .. option:: --test-suite
 .. envvar:: DTS_TEST_SUITES
@@ -79,8 +85,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Generator, NamedTuple
 
+from .exception import ConfigurationError
 from .config import TestSuiteConfig
-from .utils import DPDKGitTarball
+from .utils import DPDKGitTarball, get_commit_id
 
 
 #: The prefix to be added to all of the environment variables.
@@ -88,6 +95,7 @@ ENV_PREFIX = "DTS_"
 
 
 DPDK_TARBALL_PATH_ARGUMENT_NAME = "dpdk_tarball_path"
+DPDK_REVISION_ID_ARGUMENT_NAME = "dpdk_revision_id"
 CONFIG_FILE_ARGUMENT_NAME = "config_file"
 OUTPUT_DIR_ARGUMENT_NAME = "output_dir"
 TIMEOUT_ARGUMENT_NAME = "timeout"
@@ -96,6 +104,24 @@ SKIP_SETUP_ARGUMENT_NAME = "skip_setup"
 COMPILE_TIMEOUT_ARGUMENT_NAME = "compile_timeout"
 TEST_SUITES_ARGUMENT_NAME = "test_suites"
 RERUN_ARGUMENT_NAME = "re_run"
+
+
+def _parse_tarball_path(file_path: str) -> Path:
+    """Validate whether `file_path` is valid and return a Path object."""
+
+    path = Path(file_path)
+    if not path.exists() or not path.is_file():
+        raise argparse.ArgumentTypeError("The file path provided is not a valid file")
+    return path
+
+
+def _parse_revision_id(rev_id: str) -> str:
+    """Validate revision ID and retrieve corresponding commit ID."""
+
+    try:
+        return get_commit_id(rev_id)
+    except ConfigurationError:
+        raise argparse.ArgumentTypeError("The Git revision ID supplied is invalid or ambiguous")
 
 
 @dataclass(slots=True)
@@ -116,7 +142,7 @@ class Settings:
     #:
     skip_setup: bool = False
     #:
-    dpdk_tarball_path: Path | str = "dpdk.tar.xz"
+    dpdk_tarball_path: Path | str = ""
     #:
     compile_timeout: float = 1200
     #:
@@ -284,6 +310,25 @@ class ArgumentGroup:
 
 ARGS = ArgumentGroup(
     Argument(
+        DPDK_TARBALL_PATH_ARGUMENT_NAME,
+        "--tarball",
+        "--snapshot",
+        type=_parse_tarball_path,
+        help="Path to DPDK source code tarball to test.",
+        metavar="FILE_PATH",
+        env_var_name="DPDK_TARBALL",
+    ),
+    Argument(
+        DPDK_REVISION_ID_ARGUMENT_NAME,
+        "--revision",
+        "--rev",
+        "--git-ref",
+        type=_parse_revision_id,
+        help="Git revision ID to test. Could be commit, tag, tree ID etc. "
+        "To test local changes, first commit them, then use their commit ID.",
+        metavar="ID",
+    ),
+    Argument(
         CONFIG_FILE_ARGUMENT_NAME,
         "--config-file",
         default=SETTINGS.config_file_path,
@@ -322,19 +367,6 @@ ARGS = ArgumentGroup(
         "--skip-setup",
         action="store_true",
         help="Specify to skip all setup steps on SUT and TG nodes.",
-    ),
-    Argument(
-        DPDK_TARBALL_PATH_ARGUMENT_NAME,
-        "--tarball",
-        "--snapshot",
-        "--git-ref",
-        type=Path,
-        default=SETTINGS.dpdk_tarball_path,
-        help="Path to DPDK source code tarball or a git commit ID,"
-        "tag ID or tree ID to test. To test local changes, first commit them, "
-        "then use the commit ID with this option.",
-        metavar="FILE_PATH",
-        env_var_name="DPDK_TARBALL",
     ),
     Argument(
         COMPILE_TIMEOUT_ARGUMENT_NAME,
@@ -411,7 +443,14 @@ def _get_parser() -> ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         allow_abbrev=False,
     )
-    for arg in ARGS:
+
+    dpdk_source = parser.add_mutually_exclusive_group(required=True)
+    dpdk_source_arg_group = [DPDK_TARBALL_PATH_ARGUMENT_NAME, DPDK_REVISION_ID_ARGUMENT_NAME]
+    for arg_name in dpdk_source_arg_group:
+        ARGS[arg_name].add_to(dpdk_source)
+
+    arg_group = [arg for arg in ARGS if arg.name not in dpdk_source_arg_group]
+    for arg in arg_group:
         arg.add_to(parser)
 
     return parser
@@ -458,11 +497,10 @@ def get_settings() -> Settings:
 
     ARGS.values = parser.parse_args()
 
-    ARGS.values.dpdk_tarball_path = Path(
-        Path(DPDKGitTarball(ARGS.values.dpdk_tarball_path, ARGS.values.output_dir))
-        if not os.path.exists(ARGS.values.dpdk_tarball_path)
-        else Path(ARGS.values.dpdk_tarball_path)
-    )
+    if ARGS.values.dpdk_revision_id:
+        ARGS.values.dpdk_tarball_path = DPDKGitTarball(
+            ARGS.values.dpdk_revision_id, ARGS.values.output_dir
+        )
 
     ARGS.values.test_suites = _process_test_suites(ARGS.values.test_suites)
 

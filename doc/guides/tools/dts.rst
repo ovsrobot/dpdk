@@ -215,14 +215,20 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
 .. code-block:: console
 
    (dts-py3.10) $ ./main.py --help
-   usage: main.py [-h] [--config-file FILE_PATH] [--output-dir DIR_PATH] [-t SECONDS] [-v] [-s] [--tarball FILE_PATH]
-                  [--compile-timeout SECONDS] [--test-suite TEST_SUITE [TEST_CASES ...]] [--re-run N_TIMES]
+   usage: main.py [-h] (--tarball FILE_PATH | --revision ID) [--config-file FILE_PATH] [--output-dir DIR_PATH]
+                  [-t SECONDS] [-v] [-s] [--compile-timeout SECONDS] [--test-suite TEST_SUITE [TEST_CASES ...]]
+                  [--re-run N_TIMES]
 
    Run DPDK test suites. All options may be specified with the environment variables provided in brackets. Command
    line arguments have higher priority.
 
    options:
      -h, --help            show this help message and exit
+     --tarball FILE_PATH, --snapshot FILE_PATH
+                           [DTS_DPDK_TARBALL] Path to DPDK source code tarball to test. (default: None)
+     --revision ID, --rev ID, --git-ref ID
+                           [DTS_DPDK_REVISION_ID] Git revision ID to test. Could be commit, tag, tree ID etc. To test
+                           local changes, first commit them, then use their commit ID. (default: None)
      --config-file FILE_PATH
                            [DTS_CFG_FILE] The configuration file that describes the test cases, SUTs and targets.
                            (default: conf.yaml)
@@ -234,10 +240,6 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
      -v, --verbose         [DTS_VERBOSE] Specify to enable verbose output, logging all messages to the console.
                            (default: False)
      -s, --skip-setup      [DTS_SKIP_SETUP] Specify to skip all setup steps on SUT and TG nodes. (default: False)
-     --tarball FILE_PATH, --snapshot FILE_PATH, --git-ref FILE_PATH
-                           [DTS_DPDK_TARBALL] Path to DPDK source code tarball or a git commit ID,tag ID or tree ID to
-                           test. To test local changes, first commit them, then use the commit ID with this option.
-                           (default: dpdk.tar.xz)
      --compile-timeout SECONDS
                            [DTS_COMPILE_TIMEOUT] The timeout for compiling DPDK. (default: 1200)
      --test-suite TEST_SUITE [TEST_CASES ...]
