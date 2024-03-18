@@ -106,6 +106,27 @@ Headers should be protected against multiple inclusion with the usual:
 
    #endif /* _FILE_H_ */
 
+Language Linkage
+~~~~~~~~~~~~~~~~
+
+Public headers should enclose all function and variable declarations and definitions in an ``extern "C"`` block to facilitate interoperability with C++.
+
+.. code-block:: c
+
+   #ifndef _FILE_H_
+   #define _FILE_H_
+
+   #ifdef __cplusplus
+   extern "C" {
+   #endif
+
+   /* Code */
+
+   #ifdef __cplusplus
+   }
+   #endif
+
+   #endif /* _FILE_H_ */
 
 Macros
 ~~~~~~
