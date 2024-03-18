@@ -5,8 +5,8 @@ Log Library
 ===========
 
 The DPDK Log library provides the logging functionality for other DPDK libraries and drivers.
-By default, in a Linux application, logs are sent to syslog and also to the console.
-On FreeBSD and Windows applications, logs are sent only to the console.
+By default, in a Linux (or FreeBSD) application, logs are sent to syslog and also to the console.
+In Windows applications, logs are sent only to the console.
 However, the log function can be overridden by the user to use a different logging mechanism.
 
 Log Levels
@@ -28,6 +28,7 @@ At runtime, only messages of a configured level or above (i.e. of higher importa
 will be emitted by the application to the log output.
 That level can be configured either by the application calling the relevant APIs from the logging library,
 or by the user passing the ``--log-level`` parameter to the EAL via the application.
+
 
 Setting Global Log Level
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -58,6 +59,19 @@ For example::
 	/path/to/app --log-level=lib.*:warning
 
 Within an application, the same result can be got using the ``rte_log_set_level_pattern()`` or ``rte_log_set_level_regex()`` APIs.
+
+
+Setting syslog facility
+~~~~~~~~~~~~~~~~~~~~~~~
+
+On Linux and FreeBSD, where syslog is used a ``facility`` argument can be
+used to specify what type of program is logging.
+The default facility is ``daemon`` but it can be overridden
+by the ``--syslog`` EAL parameter. See ``syslog.3`` man page for full values.
+For example::
+
+	/path/to/app --syslog local0
+
 
 Using Logging APIs to Generate Log Messages
 -------------------------------------------
