@@ -21,6 +21,8 @@ int eal_log_init(const char *id, int facility);
  */
 __rte_internal
 void eal_log_set_default(FILE *default_log);
+__rte_internal
+FILE *eal_log_get_default(void);
 
 /*
  * Save a log option for later.

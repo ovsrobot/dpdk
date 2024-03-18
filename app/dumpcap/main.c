@@ -633,6 +633,9 @@ static void dpdk_init(void)
 			rte_panic("No memory\n");
 	}
 
+	/* keep any logging away from syslog. */
+	rte_openlog_stream(stderr);
+
 	if (rte_eal_init(eal_argc, eal_argv) < 0)
 		rte_exit(EXIT_FAILURE, "EAL init failed: is primary process running?\n");
 }

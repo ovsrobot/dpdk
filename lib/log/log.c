@@ -519,6 +519,12 @@ eal_log_set_default(FILE *default_log)
 #endif
 }
 
+FILE *
+eal_log_get_default(void)
+{
+	return default_log_stream;
+}
+
 /*
  * Called by eal_cleanup
  */
