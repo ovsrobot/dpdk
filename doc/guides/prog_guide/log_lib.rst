@@ -73,6 +73,16 @@ For example::
 	/path/to/app --syslog local0
 
 
+Console timestamp
+~~~~~~~~~~~~~~~~~
+
+On Linux and FreeBSD, an optional timestamp can be added before each
+message by adding the ``--log-timestamp`` option.
+For example::
+
+	/path/to/app --log-level=lib.*:debug --log-timestamp
+
+
 Using Logging APIs to Generate Log Messages
 -------------------------------------------
 
