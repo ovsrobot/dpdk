@@ -49,6 +49,10 @@ eal_log_init(const char *id, int facility)
 {
 	FILE *log_stream;
 
+	/* skip if user has already setup a log stream */
+	if (eal_log_get_default())
+		return 0;
+
 	log_stream = fopencookie(NULL, "w+", console_log_func);
 	if (log_stream == NULL)
 		return -1;

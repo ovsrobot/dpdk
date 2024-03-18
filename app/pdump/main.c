@@ -995,6 +995,9 @@ main(int argc, char **argv)
 
 	argc += 2;
 
+	/* keep any logging away from syslog. */
+	rte_openlog_stream(stderr);
+
 	diag = rte_eal_init(argc, argp);
 	if (diag < 0)
 		rte_panic("Cannot init EAL\n");
