@@ -6,6 +6,12 @@
 #include <rte_log.h>
 #include "log_internal.h"
 
+void
+eal_log_enable_timestamp(void)
+{
+	/* not implemented */
+}
+
 /* set the log to default function, called during eal init process. */
 int
 eal_log_init(__rte_unused const char *id, __rte_unused int facility)
