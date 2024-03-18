@@ -15,6 +15,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef RTE_TOOLCHAIN_MSVC
 
 /* Unsigned vector types */
@@ -225,5 +229,9 @@ uint16_t rte_vect_get_max_simd_bitwidth(void);
  *   - -EPERM if bitwidth is forced.
  */
 int rte_vect_set_max_simd_bitwidth(uint16_t bitwidth);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _RTE_VECT_H_ */
