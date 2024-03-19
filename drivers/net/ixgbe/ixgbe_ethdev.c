@@ -4313,49 +4313,50 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 #ifdef RTE_EXEC_ENV_FREEBSD
 	wait = 1;
 #endif
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		if (vf)
+			diag = ixgbevf_check_link(hw, &link_speed, &link_up, wait);
+		else
+			diag = ixgbe_check_link(hw, &link_speed, &link_up, wait);
 
-	if (vf)
-		diag = ixgbevf_check_link(hw, &link_speed, &link_up, wait);
-	else
-		diag = ixgbe_check_link(hw, &link_speed, &link_up, wait);
-
-	if (diag != 0) {
-		link.link_speed = RTE_ETH_SPEED_NUM_100M;
-		link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
-		return rte_eth_linkstatus_set(dev, &link);
-	}
-
-	if (ixgbe_get_media_type(hw) == ixgbe_media_type_fiber &&
-	    !ad->sdp3_no_tx_disable) {
-		esdp_reg = IXGBE_READ_REG(hw, IXGBE_ESDP);
-		if ((esdp_reg & IXGBE_ESDP_SDP3))
-			link_up = 0;
-	}
-
-	if (link_up == 0) {
-		if (ixgbe_get_media_type(hw) == ixgbe_media_type_fiber) {
-			ixgbe_dev_wait_setup_link_complete(dev, 0);
-			/* NOTE: review for potential ordering optimization */
-			if (!__atomic_test_and_set(&ad->link_thread_running, __ATOMIC_SEQ_CST)) {
-				/* To avoid race condition between threads, set
-				 * the IXGBE_FLAG_NEED_LINK_CONFIG flag only
-				 * when there is no link thread running.
-				 */
-				intr->flags |= IXGBE_FLAG_NEED_LINK_CONFIG;
-				if (rte_thread_create_internal_control(&ad->link_thread_tid,
-						"ixgbe-link",
-						ixgbe_dev_setup_link_thread_handler, dev) < 0) {
-					PMD_DRV_LOG(ERR,
-						"Create link thread failed!");
-					/* NOTE: review for potential ordering optimization */
-					__atomic_clear(&ad->link_thread_running, __ATOMIC_SEQ_CST);
-				}
-			} else {
-				PMD_DRV_LOG(ERR,
-					"Other link thread is running now!");
-			}
+		if (diag != 0) {
+			link.link_speed = RTE_ETH_SPEED_NUM_100M;
+			link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+			return rte_eth_linkstatus_set(dev, &link);
 		}
-		return rte_eth_linkstatus_set(dev, &link);
+
+		if (ixgbe_get_media_type(hw) == ixgbe_media_type_fiber &&
+	    	!ad->sdp3_no_tx_disable) {
+			esdp_reg = IXGBE_READ_REG(hw, IXGBE_ESDP);
+			if ((esdp_reg & IXGBE_ESDP_SDP3))
+				link_up = 0;
+		}
+
+		if (link_up == 0) {
+			if (ixgbe_get_media_type(hw) == ixgbe_media_type_fiber) {
+				ixgbe_dev_wait_setup_link_complete(dev, 0);
+				/* NOTE: review for potential ordering optimization */
+				if (!__atomic_test_and_set(&ad->link_thread_running, __ATOMIC_SEQ_CST)) {
+					/* To avoid race condition between threads, set
+				 	* the IXGBE_FLAG_NEED_LINK_CONFIG flag only
+				 	* when there is no link thread running.
+				 	*/
+					intr->flags |= IXGBE_FLAG_NEED_LINK_CONFIG;
+					if (rte_thread_create_internal_control(&ad->link_thread_tid,
+							"ixgbe-link",
+							ixgbe_dev_setup_link_thread_handler, dev) < 0) {
+						PMD_DRV_LOG(ERR,
+							"Create link thread failed!");
+						/* NOTE: review for potential ordering optimization */
+						__atomic_clear(&ad->link_thread_running, __ATOMIC_SEQ_CST);
+					}
+				} else {
+					PMD_DRV_LOG(ERR,
+						"Other link thread is running now!");
+				}
+			}
+			return rte_eth_linkstatus_set(dev, &link);
+		}
 	}
 
 	link.link_status = RTE_ETH_LINK_UP;
