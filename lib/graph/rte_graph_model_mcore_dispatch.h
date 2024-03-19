@@ -97,12 +97,12 @@ rte_graph_walk_mcore_dispatch(struct rte_graph *graph)
 		__rte_graph_mcore_dispatch_sched_wq_process(graph);
 
 	while (likely(head != graph->tail)) {
-		node = (struct rte_node *)RTE_PTR_ADD(graph, cir_start[(int32_t)head++]);
+		node = (struct rte_node *)RTE_PTR_ADD(graph, cir_start[(int32_t)head]);
 
 		/* skip the src nodes which not bind with current worker */
 		if ((int32_t)head < 0 && node->dispatch.lcore_id != graph->dispatch.lcore_id)
 			continue;
-
+		head++;
 		/* Schedule the node until all task/objs are done */
 		if (node->dispatch.lcore_id != RTE_MAX_LCORE &&
 		    graph->dispatch.lcore_id != node->dispatch.lcore_id &&
