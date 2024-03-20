@@ -38,6 +38,7 @@ extern "C" {
 /**
  * IPv4 Header
  */
+__rte_msvc_pack
 struct rte_ipv4_hdr {
 	__extension__
 	union {
@@ -523,6 +524,7 @@ rte_ipv4_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
 /**
  * IPv6 Header
  */
+__rte_msvc_pack
 struct rte_ipv6_hdr {
 	rte_be32_t vtc_flow;	/**< IP version, traffic class & flow label. */
 	rte_be16_t payload_len;	/**< IP payload size, including ext. headers */
@@ -538,6 +540,7 @@ struct rte_ipv6_hdr {
 /**
  * IPv6 Routing Extension Header
  */
+__rte_msvc_pack
 struct rte_ipv6_routing_ext {
 	uint8_t next_hdr;			/**< Protocol, next header. */
 	uint8_t hdr_len;			/**< Header length. */
@@ -783,6 +786,7 @@ rte_ipv6_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
 #define RTE_IPV6_SET_FRAG_DATA(fo, mf)	\
 	(((fo) & RTE_IPV6_EHDR_FO_MASK) | ((mf) & RTE_IPV6_EHDR_MF_MASK))
 
+__rte_msvc_pack
 struct rte_ipv6_fragment_ext {
 	uint8_t next_header;	/**< Next header type */
 	uint8_t reserved;	/**< Reserved */

@@ -25,6 +25,7 @@ extern "C" {
 /**
  * ICMP base header
  */
+__rte_msvc_pack
 struct rte_icmp_base_hdr {
 	uint8_t type;
 	uint8_t code;
@@ -34,6 +35,7 @@ struct rte_icmp_base_hdr {
 /**
  * ICMP echo header
  */
+__rte_msvc_pack
 struct rte_icmp_echo_hdr {
 	struct rte_icmp_base_hdr base;
 	rte_be16_t identifier;
@@ -45,6 +47,7 @@ struct rte_icmp_echo_hdr {
  *
  * @see rte_icmp_echo_hdr which is similar.
  */
+__rte_msvc_pack
 struct rte_icmp_hdr {
 	uint8_t  icmp_type;     /* ICMP packet type. */
 	uint8_t  icmp_code;     /* ICMP packet code. */
