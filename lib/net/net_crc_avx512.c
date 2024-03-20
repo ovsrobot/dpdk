@@ -8,7 +8,11 @@
 
 #include "net_crc.h"
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 
 /* VPCLMULQDQ CRC computation context structure */
 struct crc_vpclmulqdq_ctx {
@@ -331,13 +335,10 @@ crc32_load_init_constants(void)
 			c9, c10, c11);
 	crc32_eth.fold_3x128b = _mm512_setr_epi64(c12, c13, c14, c15,
 			c16, c17, 0, 0);
-	crc32_eth.fold_1x128b = _mm_setr_epi64(_mm_cvtsi64_m64(c16),
-			_mm_cvtsi64_m64(c17));
+	crc32_eth.fold_1x128b = _mm_set_epi64x(c17, c16);
 
-	crc32_eth.rk5_rk6 = _mm_setr_epi64(_mm_cvtsi64_m64(c18),
-			_mm_cvtsi64_m64(c19));
-	crc32_eth.rk7_rk8 = _mm_setr_epi64(_mm_cvtsi64_m64(c20),
-			_mm_cvtsi64_m64(c21));
+	crc32_eth.rk5_rk6 = _mm_set_epi64x(c19, c18);
+	crc32_eth.rk7_rk8 = _mm_set_epi64x(c21, c20);
 }
 
 static void
@@ -378,13 +379,10 @@ crc16_load_init_constants(void)
 			c9, c10, c11);
 	crc16_ccitt.fold_3x128b = _mm512_setr_epi64(c12, c13, c14, c15,
 			c16, c17, 0, 0);
-	crc16_ccitt.fold_1x128b = _mm_setr_epi64(_mm_cvtsi64_m64(c16),
-			_mm_cvtsi64_m64(c17));
+	crc16_ccitt.fold_1x128b = _mm_set_epi64x(c17, c16);
 
-	crc16_ccitt.rk5_rk6 = _mm_setr_epi64(_mm_cvtsi64_m64(c18),
-			_mm_cvtsi64_m64(c19));
-	crc16_ccitt.rk7_rk8 = _mm_setr_epi64(_mm_cvtsi64_m64(c20),
-			_mm_cvtsi64_m64(c21));
+	crc16_ccitt.rk5_rk6 = _mm_set_epi64x(c19, c18);
+	crc16_ccitt.rk7_rk8 = _mm_set_epi64x(c21, c20);
 }
 
 void
@@ -392,12 +390,6 @@ rte_net_crc_avx512_init(void)
 {
 	crc32_load_init_constants();
 	crc16_load_init_constants();
-
-	/*
-	 * Reset the register as following calculation may
-	 * use other data types such as float, double, etc.
-	 */
-	_mm_empty();
 }
 
 uint32_t
