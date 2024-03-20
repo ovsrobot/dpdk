@@ -61,8 +61,8 @@
 /* Per-port statistics struct */
 struct l2fwd_port_statistics {
 	uint64_t dropped;
-	uint64_t tx;
-	uint64_t rx;
+	RTE_ATOMIC(uint64_t) tx;
+	RTE_ATOMIC(uint64_t) rx;
 } __rte_cache_aligned;
 
 /* Event vector attributes */
