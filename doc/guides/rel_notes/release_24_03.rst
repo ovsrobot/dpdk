@@ -196,6 +196,10 @@ New Features
   Added DMA producer mode to measure performance of ``OP_FORWARD`` mode
   of event DMA adapter.
 
+* **Added CPU latency PM QoS support.**
+
+  Added the interface querying cpu latency PM QoS limit on system and
+  the interface sending cpu latency QoS request in power lib.
 
 Removed Items
 -------------

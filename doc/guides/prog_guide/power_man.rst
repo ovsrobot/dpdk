@@ -249,6 +249,22 @@ Get Num Pkgs
 Get Num Dies
   Get the number of die's on a given package.
 
+PM QoS API
+----------
+The deeper the idle state, the lower the power consumption, but the longer
+the resume time. Some service threads are delay sensitive and very except
+the low resume time, like interrupt packet receiving mode.
+
+This PM QoS API is aimed to obtain the CPU latency limit on system and send the
+CPU latency QoS request for the application that need them.
+
+* ``rte_power_qos_get_curr_cpu_latency()`` is used to get the current CPU
+  latency limit on system.
+* For sending CPU latency QoS request, first call ``rte_power_create_qos_request()``
+  to create a QoS request, then update CPU latency value by calling
+  ``rte_power_qos_update_request()``. The ``rte_power_release_qos_request()`` is
+  used to release this QoS request when process exit.
+
 References
 ----------
 
