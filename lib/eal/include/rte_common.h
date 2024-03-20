@@ -748,8 +748,10 @@ rte_str_to_size(const char *str);
  *     printf format characters which will be expanded using any further parameters
  *     to the function.
  */
-__rte_noreturn void
+void
 rte_exit(int exit_code, const char *format, ...)
+	__rte_cold
+	__rte_noreturn
 	__rte_format_printf(2, 3);
 
 #ifdef __cplusplus
