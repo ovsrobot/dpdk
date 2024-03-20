@@ -292,6 +292,7 @@ int __rte_trace_point_register(rte_trace_point_t *trace, const char *name,
 #define __RTE_TRACE_FIELD_ENABLE_MASK (1ULL << 63)
 #define __RTE_TRACE_FIELD_ENABLE_DISCARD (1ULL << 62)
 
+__rte_msvc_pack
 struct __rte_trace_stream_header {
 	uint32_t magic;
 	rte_uuid_t uuid;

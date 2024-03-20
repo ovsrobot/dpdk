@@ -43,6 +43,7 @@ extern struct lcore_config lcore_config[RTE_MAX_LCORE];
 /**
  * The global RTE configuration structure.
  */
+__rte_msvc_pack
 struct rte_config {
 	uint32_t main_lcore;         /**< Id of the main lcore */
 	uint32_t lcore_count;        /**< Number of available logical cores. */
