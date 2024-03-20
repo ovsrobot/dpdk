@@ -89,6 +89,7 @@ struct testpmd_offload_info {
 };
 
 /* simplified GRE header */
+__rte_msvc_pack
 struct simple_gre_hdr {
 	uint16_t flags;
 	uint16_t proto;
