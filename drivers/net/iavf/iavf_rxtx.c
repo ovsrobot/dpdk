@@ -50,6 +50,7 @@
 static uint16_t vxlan_gpe_udp_port = RTE_VXLAN_GPE_DEFAULT_PORT;
 static uint16_t geneve_udp_port = RTE_GENEVE_DEFAULT_PORT;
 
+__rte_msvc_pack
 struct simple_gre_hdr {
 	uint16_t flags;
 	uint16_t proto;

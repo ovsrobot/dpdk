@@ -11,12 +11,14 @@
 
 
 
+__rte_msvc_pack
 struct iavf_tx_ipsec_desc {
 	union {
 		struct {
 			__le64 qw0;
 			__le64 qw1;
 		};
+		__rte_msvc_pack
 		struct {
 			__le16 l4payload_length;
 			__le32 esn;
@@ -84,6 +86,7 @@ enum iavf_ipsec_iv_len {
  * transmit data path. Parameters set for session by calling
  * rte_security_set_pkt_metadata() API.
  */
+__rte_msvc_pack
 struct iavf_ipsec_crypto_pkt_metadata {
 	uint32_t sa_idx;                /* SA hardware index (20b/4B) */
 
