@@ -348,7 +348,7 @@ struct dlb2_port {
 	uint32_t dequeue_depth;
 	enum dlb2_token_pop_mode token_pop_mode;
 	union dlb2_port_config cfg;
-	uint32_t *credit_pool[DLB2_NUM_QUEUE_TYPES]; /* use __atomic builtins */
+	RTE_ATOMIC(uint32_t) *credit_pool[DLB2_NUM_QUEUE_TYPES];
 	union {
 		struct {
 			uint16_t cached_ldb_credits;
@@ -586,7 +586,7 @@ struct dlb2_eventdev {
 	uint32_t xstats_count_mode_dev;
 	uint32_t xstats_count_mode_port;
 	uint32_t xstats_count;
-	uint32_t inflights; /* use __atomic builtins */
+	RTE_ATOMIC(uint32_t) inflights; /* use __atomic builtins */
 	uint32_t new_event_limit;
 	int max_num_events_override;
 	int num_dir_credits_override;
@@ -624,14 +624,14 @@ struct dlb2_eventdev {
 			uint16_t max_ldb_credits;
 			uint16_t max_dir_credits;
 			/* use __atomic builtins */ /* shared hw cred */
-			uint32_t ldb_credit_pool __rte_cache_aligned;
+			RTE_ATOMIC(uint32_t) ldb_credit_pool __rte_cache_aligned;
 			/* use __atomic builtins */ /* shared hw cred */
-			uint32_t dir_credit_pool __rte_cache_aligned;
+			RTE_ATOMIC(uint32_t) dir_credit_pool __rte_cache_aligned;
 		};
 		struct {
 			uint16_t max_credits;
 			/* use __atomic builtins */ /* shared hw cred */
-			uint32_t credit_pool __rte_cache_aligned;
+			RTE_ATOMIC(uint32_t) credit_pool __rte_cache_aligned;
 		};
 	};
 	uint32_t cos_ports[DLB2_COS_NUM_VALS]; /* total ldb ports in each class */
