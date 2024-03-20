@@ -47,6 +47,7 @@
 #include <rte_telemetry.h>
 #include <rte_power_pmd_mgmt.h>
 #include <rte_power_uncore.h>
+#include <rte_power_qos.h>
 
 #include "perf_core.h"
 #include "main.h"
@@ -2233,11 +2234,47 @@ static int check_ptype(uint16_t portid)
 }
 
 static int
+pm_qos_init(void)
+{
+	int cur_cpu_latency;
+	int ret;
+
+	ret = rte_power_qos_get_curr_cpu_latency(&cur_cpu_latency);
+	if (ret < 0) {
+		RTE_LOG(ERR, L3FWD_POWER, "failed to get current cpu latency.\n");
+		return ret;
+	}
+	RTE_LOG(INFO, L3FWD_POWER, "current cpu latency is %dus on system.\n",
+			(cur_cpu_latency / QOS_USEC_PER_SEC));
+
+	ret = rte_power_create_qos_request();
+	if (ret < 0) {
+		RTE_LOG(ERR, L3FWD_POWER, "Failed to create power QoS request.\n");
+		return ret;
+	}
+
+	/*
+	 * Set strict latency requirement to prevent service thread going into
+	 * a deeper sleep state whose resume time is longer.
+	 */
+	ret = rte_power_qos_update_request(PM_QOS_STRICT_LATENCY_VALUE);
+	if (ret < 0)
+		RTE_LOG(ERR, L3FWD_POWER, "Failed to change cpu latency to 0.\n");
+	return ret;
+}
+
+static int
 init_power_library(void)
 {
 	enum power_management_env env;
 	unsigned int lcore_id;
-	int ret = 0;
+	int ret;
+
+	ret = pm_qos_init();
+	if (ret != 0) {
+		RTE_LOG(ERR, L3FWD_POWER, "init power Qos failed.\n");
+		return ret;
+	}
 
 	RTE_LCORE_FOREACH(lcore_id) {
 		/* init power management library */
@@ -2267,6 +2304,8 @@ deinit_power_library(void)
 {
 	unsigned int lcore_id, max_pkg, max_die, die, pkg;
 	int ret = 0;
+
+	rte_power_release_qos_request();
 
 	RTE_LCORE_FOREACH(lcore_id) {
 		/* deinit power management library */
