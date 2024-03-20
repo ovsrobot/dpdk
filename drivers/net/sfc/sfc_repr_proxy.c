@@ -83,7 +83,7 @@ sfc_repr_proxy_mbox_send(struct sfc_repr_proxy_mbox *mbox,
 	 * Release ordering enforces marker set after data is populated.
 	 * Paired with acquire ordering in sfc_repr_proxy_mbox_handle().
 	 */
-	__atomic_store_n(&mbox->write_marker, true, __ATOMIC_RELEASE);
+	rte_atomic_store_explicit(&mbox->write_marker, true, rte_memory_order_release);
 
 	/*
 	 * Wait for the representor routine to process the request.
@@ -94,7 +94,7 @@ sfc_repr_proxy_mbox_send(struct sfc_repr_proxy_mbox *mbox,
 		 * Paired with release ordering in sfc_repr_proxy_mbox_handle()
 		 * on acknowledge write.
 		 */
-		if (__atomic_load_n(&mbox->ack, __ATOMIC_ACQUIRE))
+		if (rte_atomic_load_explicit(&mbox->ack, rte_memory_order_acquire))
 			break;
 
 		rte_delay_ms(1);
@@ -119,7 +119,7 @@ sfc_repr_proxy_mbox_handle(struct sfc_repr_proxy *rp)
 	 * Paired with release ordering in sfc_repr_proxy_mbox_send()
 	 * on marker set.
 	 */
-	if (!__atomic_load_n(&mbox->write_marker, __ATOMIC_ACQUIRE))
+	if (!rte_atomic_load_explicit(&mbox->write_marker, rte_memory_order_acquire))
 		return;
 
 	mbox->write_marker = false;
@@ -146,7 +146,7 @@ sfc_repr_proxy_mbox_handle(struct sfc_repr_proxy *rp)
 	 * Paired with acquire ordering in sfc_repr_proxy_mbox_send()
 	 * on acknowledge read.
 	 */
-	__atomic_store_n(&mbox->ack, true, __ATOMIC_RELEASE);
+	rte_atomic_store_explicit(&mbox->ack, true, rte_memory_order_release);
 }
 
 static void

@@ -47,9 +47,8 @@ int main(void)
     __int128 a = 0;
     __int128 b;
 
-    b = __atomic_load_n(&a, __ATOMIC_RELAXED);
-    __atomic_store(&b, &a, __ATOMIC_RELAXED);
-    __atomic_store_n(&b, a, __ATOMIC_RELAXED);
+    b = rte_atomic_load_explicit(&a, rte_memory_order_relaxed);
+    rte_atomic_store_explicit(&b, a, rte_memory_order_relaxed);
     return 0;
 }
 '''

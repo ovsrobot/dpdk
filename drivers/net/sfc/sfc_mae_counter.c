@@ -131,8 +131,8 @@ sfc_mae_counter_fw_rsrc_enable(struct sfc_adapter *sa,
 	 * And it does not depend on different stores/loads in other threads.
 	 * Paired with relaxed ordering in counter increment.
 	 */
-	__atomic_store(&p->reset.pkts_bytes.int128,
-		       &p->value.pkts_bytes.int128, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&p->reset.pkts_bytes.int128,
+		       p->value.pkts_bytes.int128, rte_memory_order_relaxed);
 	p->generation_count = generation_count;
 
 	p->ft_switch_hit_counter = counterp->ft_switch_hit_counter;
@@ -142,7 +142,7 @@ sfc_mae_counter_fw_rsrc_enable(struct sfc_adapter *sa,
 	 * at the beginning of delete operation. Release ordering is
 	 * paired with acquire ordering on load in counter increment operation.
 	 */
-	__atomic_store_n(&p->inuse, true, __ATOMIC_RELEASE);
+	rte_atomic_store_explicit(&p->inuse, true, rte_memory_order_release);
 
 	sfc_info(sa, "enabled MAE counter 0x%x-#%u with reset pkts=%" PRIu64
 		 " bytes=%" PRIu64, counterp->type, mae_counter.id,
@@ -189,7 +189,7 @@ sfc_mae_counter_fw_rsrc_disable(struct sfc_adapter *sa,
 	 * paired with acquire ordering on load in counter increment operation.
 	 */
 	p = &counters->mae_counters[mae_counter->id];
-	__atomic_store_n(&p->inuse, false, __ATOMIC_RELEASE);
+	rte_atomic_store_explicit(&p->inuse, false, rte_memory_order_release);
 
 	rc = efx_mae_counters_free_type(sa->nic, counter->type, 1, &unused,
 					mae_counter, NULL);
@@ -228,7 +228,7 @@ sfc_mae_counter_increment(struct sfc_adapter *sa,
 	 * Acquire ordering is paired with release ordering in counter add
 	 * and delete operations.
 	 */
-	__atomic_load(&p->inuse, &inuse, __ATOMIC_ACQUIRE);
+	inuse = rte_atomic_load_explicit(&p->inuse, rte_memory_order_acquire);
 	if (!inuse) {
 		/*
 		 * Two possible cases include:
@@ -258,15 +258,15 @@ sfc_mae_counter_increment(struct sfc_adapter *sa,
 	 * And it does not depend on different stores/loads in other threads.
 	 * Paired with relaxed ordering on counter reset.
 	 */
-	__atomic_store(&p->value.pkts_bytes,
-		       &cnt_val.pkts_bytes, __ATOMIC_RELAXED);
+	rte_atomic_store_explicit(&p->value.pkts_bytes,
+		       cnt_val.pkts_bytes, rte_memory_order_relaxed);
 
 	if (p->ft_switch_hit_counter != NULL) {
 		uint64_t ft_switch_hit_counter;
 
 		ft_switch_hit_counter = *p->ft_switch_hit_counter + pkts;
-		__atomic_store_n(p->ft_switch_hit_counter, ft_switch_hit_counter,
-				 __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(p->ft_switch_hit_counter, ft_switch_hit_counter,
+				 rte_memory_order_relaxed);
 	}
 
 	sfc_info(sa, "update MAE counter 0x%x-#%u: pkts+%" PRIu64 "=%" PRIu64
@@ -498,8 +498,8 @@ sfc_mae_counter_thread(void *data)
 		&sa->mae.counter_registry;
 	int32_t rc;
 
-	while (__atomic_load_n(&counter_registry->polling.thread.run,
-			       __ATOMIC_ACQUIRE)) {
+	while (rte_atomic_load_explicit(&counter_registry->polling.thread.run,
+			       rte_memory_order_acquire)) {
 		rc = sfc_mae_counter_poll_packets(sa);
 		if (rc == 0) {
 			/*
@@ -684,8 +684,8 @@ sfc_mae_counter_thread_stop(struct sfc_adapter *sa)
 	int rc;
 
 	/* Ensure that flag is set before attempting to join thread */
-	__atomic_store_n(&counter_registry->polling.thread.run, false,
-			 __ATOMIC_RELEASE);
+	rte_atomic_store_explicit(&counter_registry->polling.thread.run, false,
+			 rte_memory_order_release);
 
 	rc = rte_thread_join(counter_registry->polling.thread.id, NULL);
 	if (rc != 0)
@@ -1024,8 +1024,8 @@ sfc_mae_counter_get(struct sfc_adapter *sa,
 	 * And it does not depend on different stores/loads in other threads.
 	 * Paired with relaxed ordering in counter increment.
 	 */
-	value.pkts_bytes.int128 = __atomic_load_n(&p->value.pkts_bytes.int128,
-						  __ATOMIC_RELAXED);
+	value.pkts_bytes.int128 = rte_atomic_load_explicit(&p->value.pkts_bytes.int128,
+						  rte_memory_order_relaxed);
 
 	data->hits_set = 1;
 	data->hits = value.pkts - p->reset.pkts;
