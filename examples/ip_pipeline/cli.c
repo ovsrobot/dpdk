@@ -2566,6 +2566,7 @@ cmd_pipeline_table_stats(char **tokens,
  *    | lpm
  *       ipv4 | ipv6 <addr> <depth>
  */
+__rte_msvc_pack
 struct pkt_key_qinq {
 	uint16_t ethertype_svlan;
 	uint16_t svlan;
@@ -2573,6 +2574,7 @@ struct pkt_key_qinq {
 	uint16_t cvlan;
 } __rte_packed;
 
+__rte_msvc_pack
 struct pkt_key_ipv4_5tuple {
 	uint8_t time_to_live;
 	uint8_t proto;
@@ -2583,6 +2585,7 @@ struct pkt_key_ipv4_5tuple {
 	uint16_t dp;
 } __rte_packed;
 
+__rte_msvc_pack
 struct pkt_key_ipv6_5tuple {
 	uint16_t payload_length;
 	uint8_t proto;
@@ -2593,10 +2596,12 @@ struct pkt_key_ipv6_5tuple {
 	uint16_t dp;
 } __rte_packed;
 
+__rte_msvc_pack
 struct pkt_key_ipv4_addr {
 	uint32_t addr;
 } __rte_packed;
 
+__rte_msvc_pack
 struct pkt_key_ipv6_addr {
 	uint8_t addr[16];
 } __rte_packed;
