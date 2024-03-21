@@ -1658,7 +1658,7 @@ parse_config(const char *q_arg)
 	char *str_fld[_NUM_FLD];
 	int i;
 	unsigned size;
-	unsigned int max_fld[_NUM_FLD] = {USHRT_MAX,
+	unsigned int max_fld[_NUM_FLD] = {RTE_MAX_ETHPORTS,
 					USHRT_MAX, RTE_MAX_LCORE};
 
 	nb_lcore_params = 0;
@@ -1689,7 +1689,7 @@ parse_config(const char *q_arg)
 			return -1;
 		}
 		lcore_params_array[nb_lcore_params].port_id =
-				(uint8_t)int_fld[FLD_PORT];
+				(uint16_t)int_fld[FLD_PORT];
 		lcore_params_array[nb_lcore_params].queue_id =
 				(uint16_t)int_fld[FLD_QUEUE];
 		lcore_params_array[nb_lcore_params].lcore_id =
