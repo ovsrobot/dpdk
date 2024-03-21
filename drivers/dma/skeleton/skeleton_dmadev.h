@@ -81,7 +81,7 @@ struct skeldma_hw {
 	/* Cache delimiter for cpuwork thread's operation data */
 	char cache2 __rte_cache_aligned;
 	volatile uint32_t zero_req_count;
-	uint64_t completed_count;
+	RTE_ATOMIC(uint64_t) completed_count;
 };
 
 #endif /* SKELETON_DMADEV_H */
