@@ -168,7 +168,7 @@ test_cfgfile_invalid_section_header(void)
 	struct rte_cfgfile *cfgfile;
 
 	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/invalid_section.ini", 0);
-	TEST_ASSERT_NULL(cfgfile, "Expected failured did not occur");
+	TEST_ASSERT_NULL(cfgfile, "Expected failed did not occur");
 
 	return 0;
 }
