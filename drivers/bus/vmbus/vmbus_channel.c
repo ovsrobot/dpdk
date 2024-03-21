@@ -19,22 +19,23 @@
 #include "private.h"
 
 static inline void
-vmbus_sync_set_bit(volatile uint32_t *addr, uint32_t mask)
+vmbus_sync_set_bit(volatile RTE_ATOMIC(uint32_t) *addr, uint32_t mask)
 {
 	/* Use GCC builtin which atomic does atomic OR operation */
-	__atomic_fetch_or(addr, mask, __ATOMIC_SEQ_CST);
+	rte_atomic_fetch_or_explicit(addr, mask, rte_memory_order_seq_cst);
 }
 
 static inline void
 vmbus_set_monitor(const struct vmbus_channel *channel, uint32_t monitor_id)
 {
-	uint32_t *monitor_addr, monitor_mask;
+	RTE_ATOMIC(uint32_t) *monitor_addr, monitor_mask;
 	unsigned int trigger_index;
 
 	trigger_index = monitor_id / HV_MON_TRIG_LEN;
 	monitor_mask = 1u << (monitor_id % HV_MON_TRIG_LEN);
 
-	monitor_addr = &channel->monitor_page->trigs[trigger_index].pending;
+	monitor_addr =
+	    (uint32_t __rte_atomic *)&channel->monitor_page->trigs[trigger_index].pending;
 	vmbus_sync_set_bit(monitor_addr, monitor_mask);
 }
 
