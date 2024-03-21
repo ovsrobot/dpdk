@@ -29,7 +29,7 @@ struct hinic_rq_ctrl {
 };
 
 struct hinic_rq_cqe {
-	u32 status;
+	RTE_ATOMIC(u32) status;
 	u32 vlan_len;
 	u32 offload_type;
 	u32 rss_hash;
