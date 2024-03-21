@@ -24,7 +24,7 @@ struct perf_lcore_params {
 	uint16_t port_id;
 	uint16_t queue_id;
 	uint8_t high_perf;
-	uint8_t lcore_idx;
+	uint32_t lcore_idx;
 } __rte_cache_aligned;
 
 static struct perf_lcore_params prf_lc_prms[MAX_LCORE_PARAMS];
@@ -133,7 +133,7 @@ parse_perf_config(const char *q_arg)
 	int i;
 	unsigned int size;
 	unsigned int max_fld[_NUM_FLD] = {USHRT_MAX, USHRT_MAX,
-					UCHAR_MAX, UCHAR_MAX};
+					UCHAR_MAX, RTE_MAX_LCORE};
 
 	nb_prf_lc_prms = 0;
 
@@ -171,7 +171,7 @@ parse_perf_config(const char *q_arg)
 		prf_lc_prms[nb_prf_lc_prms].high_perf =
 				!!(uint8_t)int_fld[FLD_LCORE_HP];
 		prf_lc_prms[nb_prf_lc_prms].lcore_idx =
-				(uint8_t)int_fld[FLD_LCORE_IDX];
+				(uint32_t)int_fld[FLD_LCORE_IDX];
 		++nb_prf_lc_prms;
 	}
 
