@@ -1362,6 +1362,27 @@ struct cmd_config_speed_all {
 };
 
 static int
+cmd_validate_lanes(portid_t pid, uint32_t *lanes)
+{
+	struct rte_eth_speed_lanes_capa spd_lanes = {0};
+	int ret;
+
+	ret = rte_eth_speed_lanes_get(pid, &spd_lanes);
+	/* if not supported default lanes to 0 */
+	if (ret == -ENOTSUP) {
+		*lanes = 0;
+		return 0;
+	}
+
+	if (*lanes > spd_lanes.max_lanes_cap) {
+		fprintf(stderr, "Invalid lanes %d configuration\n", *lanes);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
 parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
 {
 
@@ -1672,6 +1693,125 @@ static cmdline_parse_inst_t cmd_config_loopback_specific = {
 		(void *)&cmd_config_loopback_specific_id,
 		(void *)&cmd_config_loopback_specific_item,
 		(void *)&cmd_config_loopback_specific_mode,
+		NULL,
+	},
+};
+
+/* *** configure speed_lanes for all ports *** */
+struct cmd_config_speed_lanes_all {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t keyword;
+	cmdline_fixed_string_t all;
+	cmdline_fixed_string_t item;
+	uint32_t lanes;
+};
+
+static void
+cmd_config_speed_lanes_all_parsed(void *parsed_result,
+				  __rte_unused struct cmdline *cl,
+				  __rte_unused void *data)
+{
+	struct cmd_config_speed_lanes_all *res = parsed_result;
+	portid_t pid;
+
+	if (!all_ports_stopped()) {
+		fprintf(stderr, "Please stop all ports first\n");
+		return;
+	}
+
+	RTE_ETH_FOREACH_DEV(pid) {
+		if (cmd_validate_lanes(pid, &res->lanes))
+			return;
+		rte_eth_speed_lanes_set(pid, res->lanes);
+	}
+
+	cmd_reconfig_device_queue(RTE_PORT_ALL, 1, 1);
+}
+
+static cmdline_parse_token_string_t cmd_config_speed_lanes_all_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_all, port, "port");
+static cmdline_parse_token_string_t cmd_config_speed_lanes_all_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_all, keyword,
+				 "config");
+static cmdline_parse_token_string_t cmd_config_speed_lanes_all_all =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_all, all, "all");
+static cmdline_parse_token_string_t cmd_config_speed_lanes_all_item =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_all, item,
+				 "speed_lanes");
+static cmdline_parse_token_num_t cmd_config_speed_lanes_all_lanes =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_speed_lanes_all, lanes, RTE_UINT32);
+
+static cmdline_parse_inst_t cmd_config_speed_lanes_all = {
+	.f = cmd_config_speed_lanes_all_parsed,
+	.data = NULL,
+	.help_str = "port config all speed_lanes <value>",
+	.tokens = {
+		(void *)&cmd_config_speed_lanes_all_port,
+		(void *)&cmd_config_speed_lanes_all_keyword,
+		(void *)&cmd_config_speed_lanes_all_all,
+		(void *)&cmd_config_speed_lanes_all_item,
+		(void *)&cmd_config_speed_lanes_all_lanes,
+		NULL,
+	},
+};
+
+/* *** configure speed_lanes for specific port *** */
+struct cmd_config_speed_lanes_specific {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t keyword;
+	uint16_t port_id;
+	cmdline_fixed_string_t item;
+	uint32_t lanes;
+};
+
+static void
+cmd_config_speed_lanes_specific_parsed(void *parsed_result,
+				       __rte_unused struct cmdline *cl,
+				       __rte_unused void *data)
+{
+	struct cmd_config_speed_lanes_specific *res = parsed_result;
+
+	if (port_id_is_invalid(res->port_id, ENABLED_WARN))
+		return;
+
+	if (!port_is_stopped(res->port_id)) {
+		fprintf(stderr, "Please stop port %u first\n", res->port_id);
+		return;
+	}
+
+	if (cmd_validate_lanes(res->port_id, &res->lanes))
+		return;
+	rte_eth_speed_lanes_set(res->port_id, res->lanes);
+
+	cmd_reconfig_device_queue(res->port_id, 1, 1);
+}
+
+static cmdline_parse_token_string_t cmd_config_speed_lanes_specific_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_specific, port,
+				 "port");
+static cmdline_parse_token_string_t cmd_config_speed_lanes_specific_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_specific, keyword,
+				 "config");
+static cmdline_parse_token_num_t cmd_config_speed_lanes_specific_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_speed_lanes_specific, port_id,
+			      RTE_UINT16);
+static cmdline_parse_token_string_t cmd_config_speed_lanes_specific_item =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_lanes_specific, item,
+				 "speed_lanes");
+static cmdline_parse_token_num_t cmd_config_speed_lanes_specific_lanes =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_speed_lanes_specific, lanes,
+			      RTE_UINT32);
+
+static cmdline_parse_inst_t cmd_config_speed_lanes_specific = {
+	.f = cmd_config_speed_lanes_specific_parsed,
+	.data = NULL,
+	.help_str = "port config <port_id> speed_lanes <value>",
+	.tokens = {
+		(void *)&cmd_config_speed_lanes_specific_port,
+		(void *)&cmd_config_speed_lanes_specific_keyword,
+		(void *)&cmd_config_speed_lanes_specific_id,
+		(void *)&cmd_config_speed_lanes_specific_item,
+		(void *)&cmd_config_speed_lanes_specific_lanes,
 		NULL,
 	},
 };
@@ -13381,6 +13521,8 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_show_port_cman_config,
 	(cmdline_parse_inst_t *)&cmd_set_port_cman_config,
 	(cmdline_parse_inst_t *)&cmd_config_tx_affinity_map,
+	(cmdline_parse_inst_t *)&cmd_config_speed_lanes_all,
+	(cmdline_parse_inst_t *)&cmd_config_speed_lanes_specific,
 	NULL,
 };
 
