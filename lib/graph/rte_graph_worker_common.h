@@ -112,7 +112,14 @@ struct __rte_cache_aligned rte_node {
 	};
 	/* Fast path area  */
 #define RTE_NODE_CTX_SZ 16
-	alignas(RTE_CACHE_LINE_SIZE) uint8_t ctx[RTE_NODE_CTX_SZ]; /**< Node Context. */
+	__extension__ alignas(RTE_CACHE_LINE_SIZE) union {
+		uint8_t ctx[RTE_NODE_CTX_SZ];
+		/* Convenience aliases to store pointers without complex casting. */
+		__extension__ struct {
+			void *ctx_ptr;
+			void *ctx_ptr2;
+		};
+	}; /**< Node Context. */
 	uint16_t size;		/**< Total number of objects available. */
 	uint16_t idx;		/**< Number of objects used. */
 	rte_graph_off_t off;	/**< Offset of node in the graph reel. */
@@ -129,6 +136,9 @@ struct __rte_cache_aligned rte_node {
 		};
 	alignas(RTE_CACHE_LINE_MIN_SIZE) struct rte_node *nodes[]; /**< Next nodes. */
 };
+
+static_assert(offsetof(struct rte_node, size) - offsetof(struct rte_node, ctx) == RTE_NODE_CTX_SZ,
+	"The node context anonymous union cannot be larger than RTE_NODE_CTX_SZ");
 
 /**
  * @internal
