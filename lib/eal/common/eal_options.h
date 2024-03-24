@@ -63,8 +63,6 @@ enum {
 	OPT_SOCKET_MEM_NUM,
 #define OPT_SOCKET_LIMIT        "socket-limit"
 	OPT_SOCKET_LIMIT_NUM,
-#define OPT_SYSLOG            "syslog"
-	OPT_SYSLOG_NUM,
 #define OPT_VDEV              "vdev"
 	OPT_VDEV_NUM,
 #define OPT_VFIO_INTR         "vfio-intr"

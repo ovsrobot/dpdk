@@ -5,8 +5,7 @@ Log Library
 ===========
 
 The DPDK Log library provides the logging functionality for other DPDK libraries and drivers.
-By default, in a Linux application, logs are sent to syslog and also to the console.
-On FreeBSD and Windows applications, logs are sent only to the console.
+By default, log messages are sent to the stderr.
 However, the log function can be overridden by the user to use a different logging mechanism.
 
 Log Levels

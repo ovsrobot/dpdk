@@ -11,7 +11,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <syslog.h>
 #include <getopt.h>
 #include <sys/file.h>
 #include <stddef.h>
@@ -563,11 +562,13 @@ rte_eal_init(int argc, char **argv)
 
 	eal_reset_internal_config(internal_conf);
 
-	/* clone argv to report out later in telemetry */
-	eal_save_args(argc, argv);
-
 	/* set log level as early as possible */
 	eal_log_level_parse(argc, argv);
+
+	eal_log_init(getprogname());
+
+	/* clone argv to report out later in telemetry */
+	eal_save_args(argc, argv);
 
 	if (rte_eal_cpu_init() < 0) {
 		rte_eal_init_alert("Cannot detect lcores.");

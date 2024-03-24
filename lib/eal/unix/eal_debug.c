@@ -43,8 +43,7 @@ static char *safe_itoa(long val, char *buf, size_t len, unsigned int radix)
  * used in this code since may be called from inside libc or
  * when malloc poll is corrupt.
  *
- * Most of libc is therefore not safe, include RTE_LOG (calls syslog);
- * backtrace_symbols (calls malloc), etc.
+ * Most of libc is therefore not safe including backtrace_symbols (calls malloc), etc.
  */
 void rte_dump_stack(void)
 {
