@@ -26,16 +26,21 @@ struct rte_log_dynamic_type {
 	uint32_t loglevel;
 };
 
+typedef int (*log_print_t)(FILE *f, uint32_t level, const char *fmt, va_list ap);
+static int log_print(FILE *f, uint32_t level, const char *format, va_list ap);
+
 /** The rte_log structure. */
 static struct rte_logs {
 	uint32_t type;  /**< Bitfield with enabled logs. */
 	uint32_t level; /**< Log level. */
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
+	log_print_t print_func;
 	size_t dynamic_types_len;
 	struct rte_log_dynamic_type *dynamic_types;
 } rte_logs = {
 	.type = UINT32_MAX,
 	.level = RTE_LOG_DEBUG,
+	.print_func = log_print,
 };
 
 struct rte_eal_opt_loglevel {
@@ -67,8 +72,6 @@ struct log_cur_msg {
  /* per core log */
 static RTE_DEFINE_PER_LCORE(struct log_cur_msg, log_cur_msg);
 
-/* default logs */
-
 /* Change the stream that will be used by logging system */
 int
 rte_openlog_stream(FILE *f)
@@ -77,6 +80,7 @@ rte_openlog_stream(FILE *f)
 		fclose(rte_logs.file);
 
 	rte_logs.file = f;
+	rte_logs.print_func = log_print;
 	return 0;
 }
 
@@ -473,7 +477,7 @@ rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 	RTE_PER_LCORE(log_cur_msg).loglevel = level;
 	RTE_PER_LCORE(log_cur_msg).logtype = logtype;
 
-	ret = vfprintf(f, format, ap);
+	ret = (*rte_logs.print_func)(f, level, format, ap);
 	fflush(f);
 	return ret;
 }
@@ -507,6 +511,15 @@ rte_eal_log_cleanup(void)
 		fclose(f);
 		rte_logs.file = NULL;
 	}
+}
+
+/* default log print function */
+__rte_format_printf(3, 0)
+static int
+log_print(FILE *f, uint32_t level __rte_unused,
+	  const char *format, va_list ap)
+{
+	return vfprintf(f, format, ap);
 }
 
 /* initialize logging */
