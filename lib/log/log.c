@@ -11,6 +11,7 @@
 #include <regex.h>
 #include <fnmatch.h>
 #include <sys/queue.h>
+#include <unistd.h>
 
 #include <rte_log.h>
 #include <rte_per_lcore.h>
@@ -18,12 +19,21 @@
 #include "log_internal.h"
 
 #ifdef RTE_EXEC_ENV_WINDOWS
-#define strdup _strdup
+#include <rte_os_shim.h>
 #endif
 
 struct rte_log_dynamic_type {
 	const char *name;
 	uint32_t loglevel;
+};
+
+enum eal_log_time_format {
+	EAL_LOG_TIMESTAMP_NONE = 0,
+	EAL_LOG_TIMESTAMP_TIME,		/* time since start */
+	EAL_LOG_TIMESTAMP_DELTA,	/* time since last message */
+	EAL_LOG_TIMESTAMP_RELTIME,
+	EAL_LOG_TIMESTAMP_CTIME,
+	EAL_LOG_TIMESTAMP_ISO,
 };
 
 typedef int (*log_print_t)(FILE *f, uint32_t level, const char *fmt, va_list ap);
@@ -35,6 +45,12 @@ static struct rte_logs {
 	uint32_t level; /**< Log level. */
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
 	log_print_t print_func;
+
+	enum eal_log_time_format time_format;
+	struct timespec started;   /* when log was initialized */
+	struct timespec previous;  /* when last msg was printed */
+	struct tm last_tm;	   /*  in local time format */
+
 	size_t dynamic_types_len;
 	struct rte_log_dynamic_type *dynamic_types;
 } rte_logs = {
@@ -362,6 +378,9 @@ RTE_INIT_PRIO(log_init, LOG)
 {
 	uint32_t i;
 
+	clock_gettime(CLOCK_MONOTONIC, &rte_logs.started);
+	rte_logs.previous = rte_logs.started;
+
 	rte_log_set_global_level(RTE_LOG_DEBUG);
 
 	rte_logs.dynamic_types = calloc(RTE_LOGTYPE_FIRST_EXT_ID,
@@ -513,6 +532,132 @@ rte_eal_log_cleanup(void)
 	}
 }
 
+/* Set the log timestamp format */
+int
+eal_log_timestamp(const char *str)
+{
+	if (str == NULL)
+		rte_logs.time_format = EAL_LOG_TIMESTAMP_TIME;
+	else if (strcmp(str, "notime") == 0)
+		rte_logs.time_format = EAL_LOG_TIMESTAMP_NONE;
+	else if (strcmp(str, "reltime") == 0)
+		rte_logs.time_format = EAL_LOG_TIMESTAMP_RELTIME;
+	else if (strcmp(str, "delta") == 0)
+		rte_logs.time_format = EAL_LOG_TIMESTAMP_DELTA;
+	else if (strcmp(str, "ctime") == 0)
+		rte_logs.time_format =  EAL_LOG_TIMESTAMP_CTIME;
+	else if (strcmp(str, "iso") == 0)
+		rte_logs.time_format = EAL_LOG_TIMESTAMP_ISO;
+	else
+		return -1;
+
+	return 0;
+}
+
+/* Subtract two timespec values and handle wraparound */
+static struct timespec
+timespec_sub(const struct timespec *t0, const struct timespec *t1)
+{
+	struct timespec ts;
+
+	ts.tv_sec = t0->tv_sec - t1->tv_sec;
+	ts.tv_nsec = t0->tv_nsec - t1->tv_nsec;
+	if (ts.tv_nsec < 0) {
+		ts.tv_sec--;
+		ts.tv_nsec += 1000000000L;
+	}
+	return ts;
+}
+
+/* Format up a timestamp based on current format */
+static ssize_t
+format_timestamp(char *tsbuf, size_t tsbuflen)
+{
+	struct timespec now, delta;
+	struct tm *tm;
+
+	switch (rte_logs.time_format) {
+	case EAL_LOG_TIMESTAMP_NONE:
+		return 0;
+
+	case EAL_LOG_TIMESTAMP_TIME:
+		if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
+			return 0;
+
+		delta = timespec_sub(&now, &rte_logs.started);
+
+		return snprintf(tsbuf, tsbuflen, "%6lu.%06lu",
+				(unsigned long)delta.tv_sec,
+				(unsigned long)delta.tv_nsec / 1000u);
+
+	case EAL_LOG_TIMESTAMP_DELTA:
+		if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
+			return 0;
+
+		delta = timespec_sub(&now, &rte_logs.previous);
+		rte_logs.previous = now;
+
+		return snprintf(tsbuf, tsbuflen, "<%6lu.%06lu>",
+				(unsigned long)delta.tv_sec,
+				(unsigned long)delta.tv_nsec / 1000u);
+
+	case EAL_LOG_TIMESTAMP_RELTIME:
+		if (clock_gettime(CLOCK_REALTIME, &now) < 0)
+			return 0;
+
+		tm = localtime(&now.tv_sec);
+		delta = timespec_sub(&now, &rte_logs.previous);
+		rte_logs.previous = now;
+
+		/* if minute, day, hour hasn't changed then print delta */
+		if (tm->tm_min != rte_logs
+.last_tm.tm_min ||
+		    tm->tm_hour != rte_logs.last_tm.tm_hour ||
+		    tm->tm_yday != rte_logs.last_tm.tm_yday) {
+			rte_logs.last_tm = *tm;
+			return strftime(tsbuf, tsbuflen, "%b%d %H:%M", tm);
+		} else {
+			return snprintf(tsbuf, tsbuflen, "+%4lu.%06lu",
+					(unsigned long)delta.tv_sec,
+					(unsigned long)delta.tv_nsec / 1000u);
+		}
+
+	case EAL_LOG_TIMESTAMP_CTIME:
+		if (clock_gettime(CLOCK_REALTIME, &now) < 0)
+			return 0;
+
+		/* trncate to remove newline from ctime result */
+		return snprintf(tsbuf, tsbuflen, "%.24s", ctime(&now.tv_sec));
+
+	case EAL_LOG_TIMESTAMP_ISO: {
+		char dbuf[64]; /* "2024-05-01T22:11:00" */
+		char zbuf[16]; /* "+0800" */
+
+		if (clock_gettime(CLOCK_REALTIME, &now) < 0)
+			return 0;
+
+		tm = localtime(&now.tv_sec);
+
+		/* make "2024-05-01T22:11:00,123456+0100" */
+		if (strftime(dbuf, sizeof(dbuf), "%Y-%m-%dT%H:%M:%S", tm) == 0)
+			return 0;
+
+		/* convert timezone to +HH:MM */
+		if (strftime(zbuf, sizeof(zbuf), "%z", tm) == 0)
+			return 0;
+		/* insert : required in ISO */
+		memmove(zbuf + 3, zbuf + 4, 2);
+		zbuf[3] = ':';
+		zbuf[6] = '\0';
+
+		return snprintf(tsbuf, tsbuflen, "%s,%06lu%s",
+				dbuf, now.tv_nsec / 1000u, zbuf);
+		}
+	}
+
+	return 0;
+}
+
 /* default log print function */
 __rte_format_printf(3, 0)
 static int
@@ -522,10 +667,31 @@ log_print(FILE *f, uint32_t level __rte_unused,
 	return vfprintf(f, format, ap);
 }
 
+/* print timestamp before message */
+__rte_format_printf(3, 0)
+static int
+log_print_with_timestamp(FILE *f, uint32_t level,
+			 const char *format, va_list ap)
+{
+	char tsbuf[128];
+
+	if (format_timestamp(tsbuf, sizeof(tsbuf)) > 0)
+		fprintf(f, "[%s] ", tsbuf);
+
+	return log_print(f, level, format, ap);
+}
+
 /* initialize logging */
 void
 eal_log_init(const char *id __rte_unused)
 {
+	/* skip if user has already setup a log stream */
+	if (rte_logs.file != NULL)
+		return;
+
+	if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE)
+		rte_logs.print_func = log_print_with_timestamp;
+
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
 		"Debug dataplane logs available - lower performance\n");
