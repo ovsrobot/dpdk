@@ -13,14 +13,19 @@
 #include <sys/queue.h>
 #include <unistd.h>
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+#include <rte_os_shim.h>
+#else
+#include <sys/uio.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
+
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
 #include "log_internal.h"
-
-#ifdef RTE_EXEC_ENV_WINDOWS
-#include <rte_os_shim.h>
-#endif
 
 struct rte_log_dynamic_type {
 	const char *name;
@@ -39,11 +44,13 @@ enum eal_log_time_format {
 typedef int (*log_print_t)(FILE *f, uint32_t level, const char *fmt, va_list ap);
 static int log_print(FILE *f, uint32_t level, const char *format, va_list ap);
 
+
 /** The rte_log structure. */
 static struct rte_logs {
 	uint32_t type;  /**< Bitfield with enabled logs. */
 	uint32_t level; /**< Log level. */
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
+	int journal_fd;	/**< Journal file descriptor if using */
 	log_print_t print_func;
 
 	enum eal_log_time_format time_format;
@@ -681,6 +688,116 @@ log_print_with_timestamp(FILE *f, uint32_t level,
 	return log_print(f, level, format, ap);
 }
 
+#ifdef RTE_EXEC_ENV_LINUX
+/*
+ * send message using journal protocol to journald
+ */
+__rte_format_printf(3, 0)
+static int
+journal_print(FILE *f __rte_unused, uint32_t level, const char *format, va_list ap)
+{
+	struct iovec iov[3];
+	char *buf = NULL;
+	size_t len;
+	char msg[] = "MESSAGE=";
+	char *prio;
+
+	iov[0].iov_base = msg;
+	iov[0].iov_len = strlen(msg);
+
+	len = vasprintf(&buf, format, ap);
+	if (len == 0)
+		return 0;
+
+	/* check that message ends with newline */
+	if (buf[len - 1] != '\n') {
+		char *clone  = alloca(len + 1);
+		if (clone == NULL)
+			return 0;
+		memcpy(clone, buf, len);
+		clone[len++] = '\n';
+		buf = clone;
+	}
+
+	iov[1].iov_base = buf;
+	iov[1].iov_len = len;
+
+	/* priority value between 0 ("emerg") and 7 ("debug") */
+	len = asprintf(&prio, "PRIORITY=%i\n", level - 1);
+	iov[2].iov_base = prio;
+	iov[2].iov_len = len;
+
+	return writev(rte_logs.journal_fd, iov, 3);
+}
+
+static void
+journal_send_id(int fd, const char *id)
+{
+	char *syslog_id = NULL;
+	size_t len;
+
+	len = asprintf(&syslog_id, "SYSLOG_IDENTIFIER=%s\n", id);
+	if (len > 0)
+		write(fd, syslog_id, len);
+
+}
+
+/*
+ * Check if stderr is going to system journal.
+ * This is the documented way to handle systemd journal
+ *
+ * See: https://systemd.io/JOURNAL_NATIVE_PROTOCOL/
+ *
+ */
+static bool
+using_journal(void)
+{
+	char *jenv, *endp = NULL;
+	struct stat st;
+	unsigned long dev, ino;
+
+	jenv = getenv("JOURNAL_STREAM");
+	if (jenv == NULL)
+		return false;
+
+	if (fstat(STDERR_FILENO, &st) < 0)
+		return false;
+
+	/* systemd sets colon-separated list of device and inode number */
+	dev = strtoul(jenv, &endp, 10);
+	if (endp == NULL || *endp != ':')
+		return false;	/* missing colon */
+
+	ino = strtoul(endp + 1, NULL, 10);
+
+	return dev == st.st_dev && ino == st.st_ino;
+}
+
+/*
+ * If we are being run as systemd service and stderr is going to journal
+ * then upgrade to use journal protocol.
+ */
+static int
+open_journal(void)
+{
+	struct sockaddr_un sun = {
+		.sun_family = AF_UNIX,
+		.sun_path = "/run/systemd/journal/socket",
+	};
+	int s;
+
+	s = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (s < 0)
+		return -1;
+
+	if (connect(s, (struct sockaddr *)&sun, sizeof(sun)) < 0) {
+		close(s);
+		return -1;
+	}
+	return s;
+}
+#endif
+
 /* initialize logging */
 void
 eal_log_init(const char *id __rte_unused)
@@ -689,8 +806,22 @@ eal_log_init(const char *id __rte_unused)
 	if (rte_logs.file != NULL)
 		return;
 
-	if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE)
+#ifdef RTE_EXEC_ENV_LINUX
+	if (using_journal()) {
+		int jfd = open_journal();
+
+		if (jfd < 0) {
+			RTE_LOG_LINE(NOTICE, EAL, "Cannot connect to journal");
+		} else {
+			rte_logs.journal_fd = jfd;
+			rte_logs.print_func = journal_print;
+			journal_send_id(jfd, id);
+		}
+	} else
+#endif
+	if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE) {
 		rte_logs.print_func = log_print_with_timestamp;
+	}
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
