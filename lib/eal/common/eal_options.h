@@ -37,6 +37,8 @@ enum {
 	OPT_LOG_LEVEL_NUM,
 #define OPT_LOG_TIMESTAMP     "log-timestamp"
 	OPT_LOG_TIMESTAMP_NUM,
+#define OPT_LOG_COLOR	      "log-color"
+	OPT_LOG_COLOR_NUM,
 #define OPT_TRACE             "trace"
 	OPT_TRACE_NUM,
 #define OPT_TRACE_DIR         "trace-dir"

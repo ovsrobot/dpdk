@@ -22,6 +22,7 @@
 #include <sys/un.h>
 #endif
 
+#include <rte_common.h>
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
@@ -41,6 +42,12 @@ enum eal_log_time_format {
 	EAL_LOG_TIMESTAMP_ISO,
 };
 
+enum eal_log_color {
+	EAL_LOG_COLOR_AUTO = 0,	/* default */
+	EAL_LOG_COLOR_NEVER,
+	EAL_LOG_COLOR_ALWAYS,
+};
+
 typedef int (*log_print_t)(FILE *f, uint32_t level, const char *fmt, va_list ap);
 static int log_print(FILE *f, uint32_t level, const char *format, va_list ap);
 
@@ -53,6 +60,7 @@ static struct rte_logs {
 	int journal_fd;	/**< Journal file descriptor if using */
 	log_print_t print_func;
 
+	enum eal_log_color color_mode;
 	enum eal_log_time_format time_format;
 	struct timespec started;   /* when log was initialized */
 	struct timespec previous;  /* when last msg was printed */
@@ -665,6 +673,74 @@ format_timestamp(char *tsbuf, size_t tsbuflen)
 	return 0;
 }
 
+enum color {
+	COLOR_NONE,
+	COLOR_RED,
+	COLOR_GREEN,
+	COLOR_YELLOW,
+	COLOR_BLUE,
+	COLOR_MAGENTA,
+	COLOR_CYAN,
+	COLOR_WHITE,
+	COLOR_BOLD,
+	COLOR_CLEAR
+};
+
+static const char * const color_code[] = {
+	[COLOR_NONE]	= "",
+	[COLOR_RED]	= "\e[31m",
+	[COLOR_GREEN]	= "\e[32m",
+	[COLOR_YELLOW]	= "\e[33m",
+	[COLOR_BLUE]	= "\e[34m",
+	[COLOR_MAGENTA] = "\e[35m",
+	[COLOR_CYAN]    = "\e[36m",
+	[COLOR_WHITE]	= "\e[37m",
+	[COLOR_BOLD]	= "\e[1m",
+	[COLOR_CLEAR]	= "\e[0m",
+};
+
+__rte_format_printf(3, 4)
+static int color_fprintf(FILE *out, enum color color, const char *fmt, ...)
+{
+	va_list args;
+	int ret = 0;
+
+	va_start(args, fmt);
+	ret = fprintf(out, "%s", color_code[color]);
+	ret += vfprintf(out, fmt, args);
+	ret += fprintf(out, "%s", color_code[COLOR_CLEAR]);
+
+	return ret;
+}
+
+static ssize_t
+color_log_write(FILE *f, int level, char *msg)
+{
+	char *cp;
+	ssize_t ret = 0;
+
+	/*
+	 * use convention that first part of message (up to the ':' character)
+	 * is the subsystem id and should be highlighted.
+	 */
+	cp = strchr(msg, ':');
+	if (cp) {
+		/* print first part in yellow */
+		ret = color_fprintf(stderr, COLOR_YELLOW, "%.*s",
+				    (int)(cp - msg + 1), msg);
+		msg = cp + 1;
+	}
+
+	if (level <= 0 || level >= (int)RTE_LOG_INFO)
+		ret += fprintf(f, "%s", msg);
+	else if (level >= (int)RTE_LOG_ERR)
+		ret += color_fprintf(f, COLOR_BOLD, "%s", msg);
+	else
+		ret += color_fprintf(f, COLOR_RED, "%s", msg);
+
+	return ret;
+}
+
 /* default log print function */
 __rte_format_printf(3, 0)
 static int
@@ -686,6 +762,70 @@ log_print_with_timestamp(FILE *f, uint32_t level,
 		fprintf(f, "[%s] ", tsbuf);
 
 	return log_print(f, level, format, ap);
+}
+
+__rte_format_printf(3, 0)
+static int
+color_print(FILE *f, uint32_t level, const char *format, va_list ap)
+{
+	char *buf = NULL;
+
+	/* need to make temporary buffer for color scan */
+	if (vasprintf(&buf, format, ap) > 0)
+		return color_log_write(f, level, buf);
+
+	/* if vasprintf fails, print without color */
+	return log_print(f, level, format, ap);
+}
+
+__rte_format_printf(3, 0)
+static int
+color_print_with_timestamp(FILE *f, uint32_t level,
+			   const char *format, va_list ap)
+{
+	char tsbuf[128];
+
+	if (format_timestamp(tsbuf, sizeof(tsbuf)) > 0)
+		color_fprintf(f, COLOR_GREEN, "[%s] ", tsbuf);
+
+	return color_print(f, level, format, ap);
+}
+
+/*
+ * Controls whether color is enabled:
+ * modes are:
+ *   always - enable color output regardless
+ *   auto - enable if stderr is a terminal
+ *   never - color output is disabled.
+ */
+int
+eal_log_color(const char *mode)
+{
+	if (mode == NULL || strcmp(mode, "always") == 0)
+		rte_logs.color_mode = EAL_LOG_COLOR_ALWAYS;
+	else if (strcmp(mode, "never") == 0)
+		rte_logs.color_mode = EAL_LOG_COLOR_NEVER;
+	else if (strcmp(mode, "auto") == 0)
+		rte_logs.color_mode = EAL_LOG_COLOR_AUTO;
+	else
+		return -1;
+
+	return 0;
+}
+
+static bool
+use_color(int out_fd)
+{
+	switch (rte_logs.color_mode) {
+	default:
+	case EAL_LOG_COLOR_NEVER:
+		return false;
+	case EAL_LOG_COLOR_ALWAYS:
+		return true;
+	case EAL_LOG_COLOR_AUTO:
+		return !!isatty(out_fd);
+	}
+
 }
 
 #ifdef RTE_EXEC_ENV_LINUX
@@ -817,10 +957,19 @@ eal_log_init(const char *id __rte_unused)
 			rte_logs.print_func = journal_print;
 			journal_send_id(jfd, id);
 		}
+
 	} else
 #endif
-	if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE) {
-		rte_logs.print_func = log_print_with_timestamp;
+	if (use_color(STDERR_FILENO)) {
+		if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE)
+			rte_logs.print_func = color_print_with_timestamp;
+		else
+			rte_logs.print_func = color_print;
+	} else {
+		if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE)
+			rte_logs.print_func = log_print_with_timestamp;
+		else
+			rte_logs.print_func = log_print;
 	}
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG

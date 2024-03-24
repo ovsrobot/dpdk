@@ -58,6 +58,19 @@ For example::
 
 Within an application, the same result can be got using the ``rte_log_set_level_pattern()`` or ``rte_log_set_level_regex()`` APIs.
 
+Color output
+~~~~~~~~~~~~
+
+It is useful ot be able see important messages highlighted. This is controlled by the
+``--log-color`` option.  The optional argument ``when`` can be ``auto``, ``never``,
+or ``always``.The default setting is ``auto`` which enables color when the output to
+``stderr`` is a terminal. If the ``when`` argument is omitted, it defaults to ``always``.
+
+For example to turn off all coloring::
+
+	/path/to/app --log-color=none
+
+
 Console timestamp
 ~~~~~~~~~~~~~~~~~
 
@@ -81,7 +94,6 @@ Multiple timestamp alternative timestamp formats are available:
 To prefix all console messages with ISO format time the syntax is::
 
 	/path/to/app --log-timestamp=iso
-
 
 
 Using Logging APIs to Generate Log Messages
