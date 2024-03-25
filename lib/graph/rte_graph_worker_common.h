@@ -131,6 +131,60 @@ struct __rte_cache_aligned rte_node {
 };
 
 /**
+ * Cast the first 8 bytes of node context as an opaque pointer.
+ *
+ * @param node
+ *   Pointer to the node object.
+ *
+ * @return
+ *   The opaque pointer value.
+ */
+static inline void *rte_node_ctx_ptr1_get(struct rte_node *node)
+{
+	return ((void **)node->ctx)[0];
+}
+
+/**
+ * Cast the last 8 bytes of node context as an opaque pointer.
+ *
+ * @param node
+ *   Pointer to the node object.
+ *
+ * @return
+ *   The opaque pointer value.
+ */
+static inline void *rte_node_ctx_ptr2_get(struct rte_node *node)
+{
+	return ((void **)node->ctx)[1];
+}
+
+/**
+ * Set the first 8 bytes of node context to an opaque pointer value.
+ *
+ * @param node
+ *   Pointer to the node object.
+ * @param ptr
+ *   The opaque pointer value.
+ */
+static inline void rte_node_ctx_ptr1_set(struct rte_node *node, void *ptr)
+{
+	((void **)node->ctx)[0] = ptr;
+}
+
+/**
+ * Set the last 8 bytes of node context to an opaque pointer value.
+ *
+ * @param node
+ *   Pointer to the node object.
+ * @param ptr
+ *   The opaque pointer value.
+ */
+static inline void rte_node_ctx_ptr2_set(struct rte_node *node, void *ptr)
+{
+	((void **)node->ctx)[1] = ptr;
+}
+
+/**
  * @internal
  *
  * Allocate a stream of objects.
