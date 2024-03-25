@@ -12,7 +12,9 @@
  * process, enqueue and move streams of objects to the next nodes.
  */
 
+#include <assert.h>
 #include <stdalign.h>
+#include <stddef.h>
 
 #include <rte_common.h>
 #include <rte_cycles.h>
@@ -112,7 +114,19 @@ struct __rte_cache_aligned rte_node {
 	};
 	/* Fast path area  */
 #define RTE_NODE_CTX_SZ 16
-	alignas(RTE_CACHE_LINE_SIZE) uint8_t ctx[RTE_NODE_CTX_SZ]; /**< Node Context. */
+	/*
+	 * alignas(RTE_CACHE_LINE_SIZE) cannot be used for ctx since it is part of an unnamed union.
+	 * The compiler shifts the next field on the next cache line which is not what we want.
+	 * The alignment is enforced via a explcicit static asserts below.
+	 */
+	union {
+		uint8_t ctx[RTE_NODE_CTX_SZ];
+		/* Convenience aliases to store pointers without complex casting. */
+		__extension__ struct {
+			void *ctx_ptr;
+			void *ctx_ptr2;
+		};
+	}; /**< Node Context. */
 	uint16_t size;		/**< Total number of objects available. */
 	uint16_t idx;		/**< Number of objects used. */
 	rte_graph_off_t off;	/**< Offset of node in the graph reel. */
@@ -129,6 +143,11 @@ struct __rte_cache_aligned rte_node {
 		};
 	alignas(RTE_CACHE_LINE_MIN_SIZE) struct rte_node *nodes[]; /**< Next nodes. */
 };
+
+static_assert(offsetof(struct rte_node, ctx) % RTE_CACHE_LINE_SIZE == 0,
+	"rte_node ctx must be aligned on a cache line");
+static_assert(offsetof(struct rte_node, size) - offsetof(struct rte_node, ctx) == RTE_NODE_CTX_SZ,
+	"rte_node context union cannot be larger than RTE_NODE_CTX_SZ");
 
 /**
  * @internal
