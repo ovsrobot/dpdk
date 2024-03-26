@@ -34,17 +34,17 @@ void
 rte_exit(int exit_code, const char *format, ...)
 {
 	va_list ap;
+	char *msg = NULL;
 
 	if (exit_code != 0)
-		RTE_LOG(CRIT, EAL, "Error - exiting with code: %d\n"
-				"  Cause: ", exit_code);
+		EAL_LOG(CRIT, "Error - exiting with code: %d", exit_code);
 
 	va_start(ap, format);
-	rte_vlog(RTE_LOG_CRIT, RTE_LOGTYPE_EAL, format, ap);
+	if (vasprintf(&msg, format, ap) > 0)
+		rte_log(RTE_LOG_CRIT, RTE_LOGTYPE_EAL, "EAL: Cause - %s", msg);
 	va_end(ap);
 
 	if (rte_eal_cleanup() != 0 && rte_errno != EALREADY)
-		EAL_LOG(CRIT,
-			"EAL could not release all resources");
+		EAL_LOG(CRIT, "EAL could not release all resources");
 	exit(exit_code);
 }
