@@ -41,8 +41,10 @@ class InteractiveShell(ABC):
     _stdout: channel.ChannelFile
     _ssh_channel: Channel
     _logger: DTSLogger
+    __default_timeout: float
     _timeout: float
     _app_args: Params | None
+    _is_privileged: bool = False
 
     #: Prompt to expect at the end of output when sending a command.
     #: This is often overridden by subclasses.
@@ -88,7 +90,7 @@ class InteractiveShell(ABC):
         self._ssh_channel.settimeout(timeout)
         self._ssh_channel.set_combine_stderr(True)  # combines stdout and stderr streams
         self._logger = logger
-        self._timeout = timeout
+        self._timeout = self.__default_timeout = timeout
         self._app_args = app_args
         self._start_application(get_privileged_command)
 
@@ -105,6 +107,7 @@ class InteractiveShell(ABC):
         start_command = f"{self.path} {self._app_args or ''}"
         if get_privileged_command is not None:
             start_command = get_privileged_command(start_command)
+            self._is_privileged = True
         self.send_command(start_command)
 
     def send_command(self, command: str, prompt: str | None = None) -> str:
@@ -150,3 +153,16 @@ class InteractiveShell(ABC):
     def __del__(self) -> None:
         """Make sure the session is properly closed before deleting the object."""
         self.close()
+
+    @property
+    def is_privileged(self) -> bool:
+        """Property specifying if the interactive shell is running in privileged mode."""
+        return self._is_privileged
+
+    def set_timeout(self, timeout: float):
+        """Set the timeout to use with the next commands."""
+        self._timeout = timeout
+
+    def reset_timeout(self):
+        """Reset the timeout to the default setting."""
+        self._timeout = self.__default_timeout
