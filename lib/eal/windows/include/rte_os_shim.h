@@ -3,6 +3,7 @@
 #ifndef _RTE_OS_SHIM_
 #define _RTE_OS_SHIM_
 
+#include <stdio.h>
 #include <time.h>
 
 #include <rte_os.h>
@@ -120,4 +121,49 @@ rte_localtime_r(const time_t *timer, struct tm *buf)
 }
 #define localtime_r(timer, buf) rte_localtime_r(timer, buf)
 
+/* print to allocated string */
+static inline int
+rte_vasprintf(char **strp, const char *fmt, va_list ap)
+{
+	char *str;
+	int len, ret;
+
+	*strp = NULL;
+
+	/* determine size of buffer needed */
+	len = _vscprintf(fmt, ap);
+	if (len < 0)
+		return -1;
+
+	len += 1;	/* for nul termination */
+	str = malloc(len);
+	if (str == NULL)
+		return -1;
+
+	ret = vsnprintf(str, len, fmt, ap);
+	if (ret < 0) {
+		free(str);
+		return -1;
+	} else {
+		*strp = str;
+		return ret;
+	}
+}
+#define vasprintf(strp, fmt, ap) rte_vasprintf(strp, fmt, ap)
+
+static inline int
+rte_asprintf(char **strp, const char *fmt, ...)
+{
+	int ret;
+
+	va_list ap;
+
+	va_start(ap, fmt);
+	ret = rte_vasprintf(strp, fmt, ap);
+	va_end(ap);
+
+	return ret;
+}
+
+#define asprintf(strp, fmt, ...) rte_asprintf(strp, fmt, __VA_ARGS__)
 #endif /* _RTE_OS_SHIM_ */
