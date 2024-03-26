@@ -392,8 +392,10 @@ eal_parse_args(int argc, char **argv)
 			goto out;
 		}
 
-		/* eal_log_level_parse() already handled these */
-		if (opt == OPT_LOG_LEVEL_NUM || opt == OPT_LOG_SYSLOG_NUM)
+		/* eal_log_level_parse() already handled these options */
+		if (opt == OPT_LOG_LEVEL_NUM ||
+		    opt == OPT_SYSLOG_NUM ||
+		    opt == OPT_LOG_TIMESTAMP_NUM)
 			continue;
 
 		ret = eal_parse_common_option(opt, optarg, internal_conf);
