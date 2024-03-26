@@ -678,19 +678,27 @@ class TestPmdDevice(object):
         return self.pci_address
 
 
+@dataclass(slots=True)
+class TestPmdState:
+    """Session state container."""
+
+    #:
+    packet_forwarding_started: bool = False
+
+    #: The number of ports which were allowed on the command-line when testpmd was started.
+    number_of_ports: int = 0
+
+
 class TestPmdShell(InteractiveShell):
     """Testpmd interactive shell.
 
     The testpmd shell users should never use
     the :meth:`~.interactive_shell.InteractiveShell.send_command` method directly, but rather
     call specialized methods. If there isn't one that satisfies a need, it should be added.
-
-    Attributes:
-        number_of_ports: The number of ports which were allowed on the command-line when testpmd
-            was started.
     """
 
-    number_of_ports: int
+    #: Current state
+    state: TestPmdState = TestPmdState()
 
     #: The path to the testpmd executable.
     path: ClassVar[PurePath] = PurePath("app", "dpdk-testpmd")
@@ -723,7 +731,13 @@ class TestPmdShell(InteractiveShell):
         if self._app_args.app_params is None:
             self._app_args.app_params = TestPmdParameters()
 
-        self.number_of_ports = len(self._app_args.ports) if self._app_args.ports is not None else 0
+        assert isinstance(self._app_args.app_params, TestPmdParameters)
+
+        if self._app_args.app_params.auto_start:
+            self.state.packet_forwarding_started = True
+
+        if self._app_args.ports is not None:
+            self.state.number_of_ports = len(self._app_args.ports)
 
         super()._start_application(get_privileged_command)
 
@@ -746,11 +760,13 @@ class TestPmdShell(InteractiveShell):
                 self._logger.debug(f"Failed to start packet forwarding: \n{start_cmd_output}")
                 raise InteractiveCommandExecutionError("Testpmd failed to start packet forwarding.")
 
-            for port_id in range(self.number_of_ports):
+            for port_id in range(self.state.number_of_ports):
                 if not self.wait_link_status_up(port_id):
                     raise InteractiveCommandExecutionError(
                         "Not all ports came up after starting packet forwarding in testpmd."
                     )
+
+        self.state.packet_forwarding_started = True
 
     def stop(self, verify: bool = True) -> None:
         """Stop packet forwarding.
@@ -773,6 +789,8 @@ class TestPmdShell(InteractiveShell):
                 self._logger.debug(f"Failed to stop packet forwarding: \n{stop_cmd_output}")
                 raise InteractiveCommandExecutionError("Testpmd failed to stop packet forwarding.")
 
+        self.state.packet_forwarding_started = False
+
     def get_devices(self) -> list[TestPmdDevice]:
         """Get a list of device names that are known to testpmd.
 
@@ -788,19 +806,16 @@ class TestPmdShell(InteractiveShell):
                 dev_list.append(TestPmdDevice(line))
         return dev_list
 
-    def wait_link_status_up(self, port_id: int, timeout=SETTINGS.timeout) -> bool:
-        """Wait until the link status on the given port is "up".
+    def wait_link_status_up(self, port_id: int) -> bool:
+        """Wait until the link status on the given port is "up". Times out.
 
         Arguments:
             port_id: Port to check the link status on.
-            timeout: Time to wait for the link to come up. The default value for this
-                argument may be modified using the :option:`--timeout` command-line argument
-                or the :envvar:`DTS_TIMEOUT` environment variable.
 
         Returns:
             Whether the link came up in time or not.
         """
-        time_to_stop = time.time() + timeout
+        time_to_stop = time.time() + self._timeout
         port_info: str = ""
         while time.time() < time_to_stop:
             port_info = self.send_command(f"show port info {port_id}")
