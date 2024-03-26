@@ -23,7 +23,11 @@ from scapy.packet import Raw  # type: ignore[import]
 from scapy.utils import hexstr  # type: ignore[import]
 
 from framework.params import StrParams
-from framework.remote_session.testpmd_shell import TestPmdForwardingModes, TestPmdShell
+from framework.remote_session.testpmd_shell import (
+    TestPmdForwardingModes,
+    TestPmdShell,
+    TestPmdParameters,
+)
 from framework.test_suite import TestSuite
 
 
@@ -104,16 +108,15 @@ class TestPmdBufferScatter(TestSuite):
         """
         testpmd = self.sut_node.create_interactive_shell(
             TestPmdShell,
-            app_parameters=StrParams(
-                "--mbcache=200 "
-                f"--mbuf-size={mbsize} "
-                "--max-pkt-len=9000 "
-                "--port-topology=paired "
-                "--tx-offloads=0x00008000"
+            app_parameters=TestPmdParameters(
+                forward_mode=TestPmdForwardingModes.mac,
+                mbcache=200,
+                mbuf_size=[mbsize],
+                max_pkt_len=9000,
+                tx_offloads=0x00008000,
             ),
             privileged=True,
         )
-        testpmd.set_forward_mode(TestPmdForwardingModes.mac)
         testpmd.start()
 
         for offset in [-1, 0, 1, 4, 5]:
