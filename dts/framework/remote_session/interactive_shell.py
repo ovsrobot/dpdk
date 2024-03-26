@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2023 University of New Hampshire
+# Copyright(c) 2024 Arm Limited
 
 """Common functionality for interactive shell handling.
 
@@ -21,6 +22,7 @@ from typing import Callable, ClassVar
 from paramiko import Channel, SSHClient, channel  # type: ignore[import]
 
 from framework.logger import DTSLogger
+from framework.params import Params
 from framework.settings import SETTINGS
 
 
@@ -40,7 +42,7 @@ class InteractiveShell(ABC):
     _ssh_channel: Channel
     _logger: DTSLogger
     _timeout: float
-    _app_args: str
+    _app_args: Params | None
 
     #: Prompt to expect at the end of output when sending a command.
     #: This is often overridden by subclasses.
@@ -63,7 +65,7 @@ class InteractiveShell(ABC):
         interactive_session: SSHClient,
         logger: DTSLogger,
         get_privileged_command: Callable[[str], str] | None,
-        app_args: str = "",
+        app_args: Params | None = None,
         timeout: float = SETTINGS.timeout,
     ) -> None:
         """Create an SSH channel during initialization.
@@ -100,7 +102,7 @@ class InteractiveShell(ABC):
             get_privileged_command: A function (but could be any callable) that produces
                 the version of the command with elevated privileges.
         """
-        start_command = f"{self.path} {self._app_args}"
+        start_command = f"{self.path} {self._app_args or ''}"
         if get_privileged_command is not None:
             start_command = get_privileged_command(start_command)
         self.send_command(start_command)

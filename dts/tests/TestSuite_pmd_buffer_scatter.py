@@ -22,6 +22,7 @@ from scapy.layers.l2 import Ether  # type: ignore[import]
 from scapy.packet import Raw  # type: ignore[import]
 from scapy.utils import hexstr  # type: ignore[import]
 
+from framework.params import StrParams
 from framework.remote_session.testpmd_shell import TestPmdForwardingModes, TestPmdShell
 from framework.test_suite import TestSuite
 
@@ -103,7 +104,7 @@ class TestPmdBufferScatter(TestSuite):
         """
         testpmd = self.sut_node.create_interactive_shell(
             TestPmdShell,
-            app_parameters=(
+            app_parameters=StrParams(
                 "--mbcache=200 "
                 f"--mbuf-size={mbsize} "
                 "--max-pkt-len=9000 "

@@ -2,6 +2,7 @@
 # Copyright(c) 2010-2014 Intel Corporation
 # Copyright(c) 2022-2023 PANTHEON.tech s.r.o.
 # Copyright(c) 2022-2023 University of New Hampshire
+# Copyright(c) 2024 Arm Limited
 
 """Common functionality for node management.
 
@@ -24,6 +25,7 @@ from framework.config import (
 )
 from framework.exception import ConfigurationError
 from framework.logger import DTSLogger, get_dts_logger
+from framework.params import Params
 from framework.settings import SETTINGS
 
 from .cpu import (
@@ -199,7 +201,7 @@ class Node(ABC):
         shell_cls: Type[InteractiveShellType],
         timeout: float = SETTINGS.timeout,
         privileged: bool = False,
-        app_args: str = "",
+        app_args: Params | None = None,
     ) -> InteractiveShellType:
         """Factory for interactive session handlers.
 

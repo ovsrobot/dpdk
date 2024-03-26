@@ -23,6 +23,6 @@ to properly build and test DPDK.
 from .cpu import LogicalCoreCount, LogicalCoreCountFilter, LogicalCoreList
 from .node import Node
 from .port import Port, PortLink
-from .sut_node import SutNode
+from .sut_node import SutNode, EalParameters
 from .tg_node import TGNode
 from .virtual_device import VirtualDevice

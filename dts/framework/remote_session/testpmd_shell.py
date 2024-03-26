@@ -21,6 +21,7 @@ from pathlib import PurePath
 from typing import Callable, ClassVar
 
 from framework.exception import InteractiveCommandExecutionError
+from framework.params import StrParams
 from framework.settings import SETTINGS
 from framework.utils import StrEnum
 
@@ -118,8 +119,15 @@ class TestPmdShell(InteractiveShell):
         Also find the number of pci addresses which were allowed on the command line when the app
         was started.
         """
-        self._app_args += " -i --mask-event intr_lsc"
-        self.number_of_ports = self._app_args.count("-a ")
+        from framework.testbed_model.sut_node import EalParameters
+
+        assert isinstance(self._app_args, EalParameters)
+
+        if isinstance(self._app_args.app_params, StrParams):
+            self._app_args.app_params.value += " -i --mask-event intr_lsc"
+
+        self.number_of_ports = len(self._app_args.ports) if self._app_args.ports is not None else 0
+
         super()._start_application(get_privileged_command)
 
     def start(self, verify: bool = True) -> None:
