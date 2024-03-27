@@ -987,9 +987,10 @@ test_misc_flags(void)
 	/* With empty --syslog */
 	const char *argv3[] = {prgname, prefix, mp_flag, "--syslog"};
 	/* With valid --syslog */
-	const char *argv4[] = {prgname, prefix, mp_flag, "--syslog", "always"};
+	const char *argv4[] = {prgname, prefix, mp_flag, "--syslog=both"};
 	/* With invalid --syslog */
-	const char *argv5[] = {prgname, prefix, mp_flag, "--syslog", "error"};
+	const char *argv5[] = {prgname, prefix, mp_flag, "--syslog=invalid"};
+
 	/* With no-sh-conf, also use no-huge to ensure this test runs on BSD */
 	const char *argv6[] = {prgname, "-m", DEFAULT_MEM_SIZE,
 			no_shconf, nosh_prefix, no_huge};
