@@ -187,6 +187,7 @@ do {									\
 #define BITS_PER_BYTE       8
 
 /* memory allocation tracking */
+__rte_msvc_pack
 struct ice_dma_mem {
 	void *va;
 	u64 pa;
@@ -194,6 +195,7 @@ struct ice_dma_mem {
 	const void *zone;
 } __rte_packed;
 
+__rte_msvc_pack
 struct ice_virt_mem {
 	void *va;
 	u32 size;
