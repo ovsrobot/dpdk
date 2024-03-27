@@ -658,6 +658,7 @@ struct mlx5_flow_dv_tag_resource {
 };
 
 /* Modify resource structure */
+__rte_msvc_pack
 struct mlx5_flow_dv_modify_hdr_resource {
 	struct mlx5_list_entry entry;
 	void *action; /**< Modify header action object. */
@@ -812,6 +813,7 @@ struct mlx5_flow_dv_dest_array_resource {
 
 
 /** Device flow handle structure for DV mode only. */
+__rte_msvc_pack
 struct mlx5_flow_handle_dv {
 	/* Flow DV api: */
 	struct mlx5_flow_dv_matcher *matcher; /**< Cache to matcher. */
@@ -830,6 +832,7 @@ struct mlx5_flow_handle_dv {
 } __rte_packed;
 
 /** Device flow handle structure: used both for creating & destroying. */
+__rte_msvc_pack
 struct mlx5_flow_handle {
 	SILIST_ENTRY(uint32_t)next;
 	struct mlx5_vf_vlan vf_vlan; /**< Structure for VF VLAN workaround. */
@@ -1231,6 +1234,7 @@ struct mlx5_flow_attr {
 };
 
 /* Flow structure. */
+__rte_msvc_pack
 struct rte_flow {
 	uint32_t dev_handles;
 	/**< Device flow handles that are part of the flow. */
@@ -1304,6 +1308,7 @@ enum {
 #endif
 
 /** HWS flow struct. */
+__rte_msvc_pack
 struct rte_flow_hw {
 	/** The table flow allcated from. */
 	struct rte_flow_template_table *table;
