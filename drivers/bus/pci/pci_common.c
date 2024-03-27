@@ -45,38 +45,6 @@ const char *rte_pci_get_sysfs_path(void)
 	return path;
 }
 
-#ifdef RTE_EXEC_ENV_WINDOWS
-#define asprintf pci_asprintf
-
-static int
-__rte_format_printf(2, 3)
-pci_asprintf(char **buffer, const char *format, ...)
-{
-	int size, ret;
-	va_list arg;
-
-	va_start(arg, format);
-	size = vsnprintf(NULL, 0, format, arg);
-	va_end(arg);
-	if (size < 0)
-		return -1;
-	size++;
-
-	*buffer = malloc(size);
-	if (*buffer == NULL)
-		return -1;
-
-	va_start(arg, format);
-	ret = vsnprintf(*buffer, size, format, arg);
-	va_end(arg);
-	if (ret != size - 1) {
-		free(*buffer);
-		return -1;
-	}
-	return ret;
-}
-#endif /* RTE_EXEC_ENV_WINDOWS */
-
 static struct rte_devargs *
 pci_devargs_lookup(const struct rte_pci_addr *pci_addr)
 {
