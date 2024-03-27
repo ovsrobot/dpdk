@@ -13,14 +13,16 @@
 #include <sys/queue.h>
 #include <unistd.h>
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+#include <rte_os_shim.h>
+#else
+#include <syslog.h>
+#endif
+
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
 #include "log_internal.h"
-
-#ifdef RTE_EXEC_ENV_WINDOWS
-#include <rte_os_shim.h>
-#endif
 
 struct rte_log_dynamic_type {
 	const char *name;
@@ -36,14 +38,25 @@ enum eal_log_time_format {
 	EAL_LOG_TIMESTAMP_ISO,
 };
 
+enum eal_log_syslog {
+	EAL_LOG_SYSLOG_NONE = 0,	/* do not use syslog */
+	EAL_LOG_SYSLOG_AUTO,		/* use syslog only if not a terminal */
+	EAL_LOG_SYSLOG_ALWAYS,		/* always use syslog */
+	EAL_LOG_SYSLOG_BOTH,		/* log to both syslog and stderr */
+};
+
 typedef int (*log_print_t)(FILE *f, uint32_t level, const char *fmt, va_list ap);
 static int log_print(FILE *f, uint32_t level, const char *format, va_list ap);
+
 
 /** The rte_log structure. */
 static struct rte_logs {
 	uint32_t type;  /**< Bitfield with enabled logs. */
 	uint32_t level; /**< Log level. */
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
+#ifndef RTE_EXEC_ENV_WINDOWS
+	enum eal_log_syslog syslog_opt;
+#endif
 	log_print_t print_func;
 
 	enum eal_log_time_format time_format;
@@ -532,9 +545,23 @@ rte_log(uint32_t level, uint32_t logtype, const char *format, ...)
 
 /* Placeholder */
 int
-eal_log_syslog(const char *mode __rte_unused)
+eal_log_syslog(const char *str)
 {
+#ifdef RTE_EXEC_ENV_WINDOWS
+	RTE_SET_USED(str);
 	return -1;
+#else
+	if (str == NULL || strcmp(str, "auto") == 0)
+		/* log to syslog only if stderr is not a terminal */
+		rte_logs.syslog_opt = EAL_LOG_SYSLOG_AUTO;
+	else if (strcmp(str, "both") == 0)
+		rte_logs.syslog_opt = EAL_LOG_SYSLOG_BOTH;
+	else if (strcmp(str, "always") == 0)
+		rte_logs.syslog_opt = EAL_LOG_SYSLOG_ALWAYS;
+	else
+		return -1;
+	return 0;
+#endif
 }
 
 /* Set the log timestamp format */
@@ -706,16 +733,94 @@ log_print_with_timestamp(FILE *f, uint32_t level,
 	return log_print(f, level, format, ap);
 }
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+static bool
+using_syslog(bool is_terminal)
+{
+	switch (rte_logs.syslog_opt) {
+	default:
+		return false;
+
+	case EAL_LOG_SYSLOG_ALWAYS:
+	case EAL_LOG_SYSLOG_BOTH:
+		return true;
+
+	case EAL_LOG_SYSLOG_AUTO:
+		return !is_terminal;
+	}
+}
+
+/*
+ * wrapper for log stream to put messages into syslog
+ * useful for cases like:
+ *   rte_hex_dump(rte_get_log_stream(), ...)
+ */
+static ssize_t
+syslog_log_write(__rte_unused void *c, const char *buf, size_t size)
+{
+	/* Syslog error levels are from 0 to 7, so subtract 1 to convert */
+	syslog(rte_log_cur_msg_loglevel() - 1, "%.*s", (int)size, buf);
+	return size;
+}
+
+static int
+syslog_log_close(__rte_unused void *c)
+{
+	closelog();
+	return 0;
+}
+
+static cookie_io_functions_t syslog_log_func = {
+	.write = syslog_log_write,
+	.close = syslog_log_close,
+};
+
+static void
+log_open_syslog(const char *id, bool is_terminal)
+{
+	int flags = LOG_NDELAY | LOG_PID;
+
+#ifdef LOG_PERROR
+	if (rte_logs.syslog_opt == EAL_LOG_SYSLOG_BOTH)
+		flags |= LOG_PERROR;
+#endif
+	openlog(id, flags, is_terminal ? LOG_USER : LOG_DAEMON);
+
+	/* redirect other log messages to syslog as well */
+	FILE *log_stream = fopencookie(NULL, "w", syslog_log_func);
+	if (log_stream != NULL)
+		default_log_stream = log_stream;
+}
+#endif
+
+/* Choose how log output is directed */
+static void
+log_output_selection(const char *id)
+{
+	RTE_SET_USED(id);
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	bool is_terminal = isatty(STDERR_FILENO);
+
+	if (using_syslog(is_terminal)) {
+		log_open_syslog(id, is_terminal);
+		return;
+	}
+#endif
+	if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE)
+		rte_logs.print_func = log_print_with_timestamp;
+}
+
 /*
  * Called by rte_eal_init
  */
 void
-eal_log_init(const char *id __rte_unused)
+eal_log_init(const char *id)
 {
-	if (rte_logs.time_format != EAL_LOG_TIMESTAMP_NONE)
-		rte_logs.print_func = log_print_with_timestamp;
-
+	rte_logs.print_func = log_print;
 	default_log_stream = stderr;
+
+	log_output_selection(id);
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
