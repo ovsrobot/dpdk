@@ -5,8 +5,7 @@
 #include <rte_common.h>
 #include "log_internal.h"
 
-int
+void
 eal_log_init(__rte_unused const char *id)
 {
-	return 0;
 }
