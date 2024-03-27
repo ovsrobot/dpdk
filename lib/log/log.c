@@ -17,6 +17,10 @@
 #include <rte_os_shim.h>
 #else
 #include <syslog.h>
+#include <sys/uio.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #endif
 
 #include <rte_log.h>
@@ -56,6 +60,7 @@ static struct rte_logs {
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
 #ifndef RTE_EXEC_ENV_WINDOWS
 	enum eal_log_syslog syslog_opt;
+	int journal_fd;
 #endif
 	log_print_t print_func;
 
@@ -775,6 +780,138 @@ static cookie_io_functions_t syslog_log_func = {
 	.close = syslog_log_close,
 };
 
+/*
+ * send message using journal protocol to journald
+ */
+static int
+journal_send(uint32_t level, const char *buf, size_t len)
+{
+	struct iovec iov[3];
+	char msg[] = "MESSAGE=";
+	char prio[32];
+	int ret;
+
+	iov[0].iov_base = msg;
+	iov[0].iov_len = strlen(msg);
+
+	iov[1].iov_base = (char *)(uintptr_t)buf;
+	iov[1].iov_len = len;
+
+	/* priority value between 0 ("emerg") and 7 ("debug") */
+	iov[2].iov_base = prio;
+	iov[2].iov_len = snprintf(prio, sizeof(prio),
+				  "PRIORITY=%i\n", level - 1);
+
+	ret = writev(rte_logs.journal_fd, iov, 3);
+	return ret;
+}
+
+__rte_format_printf(3, 0)
+static int
+journal_print(FILE *f __rte_unused, uint32_t level, const char *format, va_list ap)
+{
+	char buf[BUFSIZ];
+	size_t len;
+
+	len = vsnprintf(buf, sizeof(buf), format, ap);
+	if (len == 0)
+		return 0;
+
+	/* check for truncation */
+	if (len >= sizeof(buf) - 1)
+		len = sizeof(buf) - 1;
+
+	/* check that message ends with newline, if not add one */
+	if (buf[len - 1] != '\n')
+		buf[len++] = '\n';
+
+	return journal_send(level, buf, len);
+}
+
+/* wrapper for log stream to put messages into journal */
+static ssize_t
+journal_log_write(__rte_unused void *c, const char *buf, size_t size)
+{
+	return journal_send(rte_log_cur_msg_loglevel(), buf, size);
+}
+
+static cookie_io_functions_t journal_log_func = {
+	.write = journal_log_write,
+};
+
+/*
+ * Check if stderr is going to system journal.
+ * This is the documented way to handle systemd journal
+ *
+ * See: https://systemd.io/JOURNAL_NATIVE_PROTOCOL/
+ *
+ */
+static bool
+is_journal(int fd)
+{
+	char *jenv, *endp = NULL;
+	struct stat st;
+	unsigned long dev, ino;
+
+	jenv = getenv("JOURNAL_STREAM");
+	if (jenv == NULL)
+		return false;
+
+	if (fstat(fd, &st) < 0)
+		return false;
+
+	/* systemd sets colon-separated list of device and inode number */
+	dev = strtoul(jenv, &endp, 10);
+	if (endp == NULL || *endp != ':')
+		return false;	/* missing colon */
+
+	ino = strtoul(endp + 1, NULL, 10);
+
+	return dev == st.st_dev && ino == st.st_ino;
+}
+
+/* Connect to systemd's journal service */
+static int
+open_journal(const char *id)
+{
+	char *syslog_id = NULL;
+	struct sockaddr_un sun = {
+		.sun_family = AF_UNIX,
+		.sun_path = "/run/systemd/journal/socket",
+	};
+	ssize_t len;
+	int s;
+
+	s = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (s < 0)
+		return -1;
+
+	if (connect(s, (struct sockaddr *)&sun, sizeof(sun)) < 0)
+		goto error;
+
+	/* Send syslog identifier as first message */
+	len = asprintf(&syslog_id, "SYSLOG_IDENTIFIER=%s\n", id);
+	if (len == 0)
+		goto error;
+
+	if (write(s, syslog_id, len) != len)
+		goto error;
+
+	free(syslog_id);
+
+	/* redirect other log messages to journal */
+	FILE *log_stream = fopencookie(NULL, "w", journal_log_func);
+	if (log_stream != NULL)
+		default_log_stream = log_stream;
+
+	return s;
+
+error:
+	free(syslog_id);
+	close(s);
+	return -1;
+}
+
 static void
 log_open_syslog(const char *id, bool is_terminal)
 {
@@ -797,10 +934,23 @@ log_open_syslog(const char *id, bool is_terminal)
 static void
 log_output_selection(const char *id)
 {
+#ifdef RTE_EXEC_ENV_WINDOWS
 	RTE_SET_USED(id);
-
-#ifndef RTE_EXEC_ENV_WINDOWS
+#else
 	bool is_terminal = isatty(STDERR_FILENO);
+
+	/* If stderr is redirected to systemd journal then upgrade */
+	if (!is_terminal && is_journal(STDERR_FILENO)) {
+		int jfd = open_journal(id);
+
+		if (jfd < 0) {
+			RTE_LOG_LINE(NOTICE, EAL, "Cannot connect to journal: %s",
+				     strerror(errno));
+		} else {
+			rte_logs.print_func = journal_print;
+			return;
+		}
+	}
 
 	if (using_syslog(is_terminal)) {
 		log_open_syslog(id, is_terminal);
