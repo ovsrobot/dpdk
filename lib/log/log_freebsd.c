@@ -6,7 +6,7 @@
 #include "log_internal.h"
 
 int
-eal_log_init(__rte_unused const char *id, __rte_unused int facility)
+eal_log_init(__rte_unused const char *id)
 {
 	return 0;
 }
