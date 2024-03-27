@@ -32,6 +32,7 @@ struct rte_member_setsum *setsum_vbf;
 struct rte_member_setsum *setsum_sketch;
 
 /* 5-tuple key type */
+__rte_msvc_pack
 struct flow_key {
 	uint32_t ip_src;
 	uint32_t ip_dst;

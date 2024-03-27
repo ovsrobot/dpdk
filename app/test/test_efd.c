@@ -33,6 +33,7 @@ test_efd(void)
 static unsigned int test_socket_id;
 
 /* 5-tuple key type */
+__rte_msvc_pack
 struct flow_key {
 	uint32_t ip_src;
 	uint32_t ip_dst;
