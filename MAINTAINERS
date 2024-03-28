@@ -1797,7 +1797,6 @@ F: app/test/sample_packet_forward.h
 
 Networking drivers testing tool
 M: Aman Singh <aman.deep.singh@intel.com>
-M: Yuying Zhang <yuying.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net
 F: app/test-pmd/
 F: doc/guides/testpmd_app_ug/
