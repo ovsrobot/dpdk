@@ -70,12 +70,13 @@ struct log_cur_msg {
  /* per core log */
 static RTE_DEFINE_PER_LCORE(struct log_cur_msg, log_cur_msg);
 
-/* default logs */
-
 /* Change the stream that will be used by logging system */
 int
 rte_openlog_stream(FILE *f)
 {
+	if (rte_logs.file != NULL)
+		fclose(rte_logs.file);
+
 	rte_logs.file = f;
 	return 0;
 }
@@ -505,13 +506,20 @@ rte_log(uint32_t level, uint32_t logtype, const char *format, ...)
 	return ret;
 }
 
+/* Placeholder */
+int
+eal_log_syslog(const char *mode __rte_unused)
+{
+	return -1;
+}
+
 /*
- * Called by environment-specific initialization functions.
+ * Called by rte_eal_init
  */
 void
-eal_log_set_default(FILE *default_log)
+eal_log_init(const char *id __rte_unused)
 {
-	default_log_stream = default_log;
+	default_log_stream = stderr;
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
@@ -525,8 +533,11 @@ eal_log_set_default(FILE *default_log)
 void
 rte_eal_log_cleanup(void)
 {
-	if (default_log_stream) {
-		fclose(default_log_stream);
-		default_log_stream = NULL;
-	}
+	FILE *log_stream = rte_log_get_stream();
+
+	/* don't close stderr on the application */
+	if (log_stream != stderr)
+		fclose(log_stream);
+
+	rte_logs.file = NULL;
 }
