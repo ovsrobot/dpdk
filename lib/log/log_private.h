@@ -23,4 +23,12 @@ bool log_journal_enabled(const char *id);
 __rte_format_printf(3, 0)
 int journal_print(FILE *f, uint32_t level, const char *format, va_list ap);
 
+bool log_color_enabled(bool is_tty);
+
+__rte_format_printf(3, 0)
+int color_print(FILE *f, uint32_t level, const char *format, va_list ap);
+
+__rte_format_printf(3, 0)
+int color_print_with_timestamp(FILE *f, uint32_t level, const char *format, va_list ap);
+
 #endif /* LOG_PRIVATE_H */

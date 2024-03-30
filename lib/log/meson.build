@@ -4,6 +4,7 @@
 includes += global_inc
 sources = files(
         'log.c',
+        'log_color.c',
         'log_timestamp.c',
 )
 
@@ -16,6 +17,5 @@ if is_windows
 else
 	sources += files('log_syslog.c')
 endif
-
 
 headers = files('rte_log.h')
