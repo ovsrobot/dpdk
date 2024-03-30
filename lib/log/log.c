@@ -21,7 +21,7 @@
 #include "log_private.h"
 
 #ifdef RTE_EXEC_ENV_WINDOWS
-#define strdup _strdup
+#include <rte_os_shim.h>
 #endif
 
 struct rte_log_dynamic_type {
@@ -29,13 +29,13 @@ struct rte_log_dynamic_type {
 	uint32_t loglevel;
 };
 
-
 /** The rte_log structure. */
 static struct rte_logs {
 	uint32_t type;  /**< Bitfield with enabled logs. */
 	uint32_t level; /**< Log level. */
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
 	log_print_t print_func;
+
 	size_t dynamic_types_len;
 	struct rte_log_dynamic_type *dynamic_types;
 } rte_logs = {
@@ -359,7 +359,6 @@ static const struct logtype logtype_strings[] = {
 RTE_INIT_PRIO(log_init, LOG)
 {
 	uint32_t i;
-
 	rte_log_set_global_level(RTE_LOG_DEBUG);
 
 	rte_logs.dynamic_types = calloc(RTE_LOGTYPE_FIRST_EXT_ID,
@@ -510,6 +509,11 @@ eal_log_syslog(const char *mode __rte_unused)
 void
 eal_log_init(const char *id __rte_unused)
 {
+	if (log_timestamp_enabled())
+		rte_logs.print_func = log_print_with_timestamp;
+	else
+		rte_logs.print_func = vfprintf;
+
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
 		"Debug dataplane logs available - lower performance\n");
