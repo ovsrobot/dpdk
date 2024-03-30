@@ -26,3 +26,9 @@ eal_log_syslog(const char *str __rte_unused)
 {
 	return -1;
 }
+
+int
+eal_log_journal(const char *str __rte_unused)
+{
+	return -1;
+}
