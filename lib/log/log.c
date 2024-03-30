@@ -18,6 +18,7 @@
 #include <rte_per_lcore.h>
 
 #include "log_internal.h"
+#include "log_private.h"
 
 #ifdef RTE_EXEC_ENV_WINDOWS
 #define strdup _strdup
@@ -28,16 +29,19 @@ struct rte_log_dynamic_type {
 	uint32_t loglevel;
 };
 
+
 /** The rte_log structure. */
 static struct rte_logs {
 	uint32_t type;  /**< Bitfield with enabled logs. */
 	uint32_t level; /**< Log level. */
 	FILE *file;     /**< Output file set by rte_openlog_stream, or NULL. */
+	log_print_t print_func;
 	size_t dynamic_types_len;
 	struct rte_log_dynamic_type *dynamic_types;
 } rte_logs = {
 	.type = UINT32_MAX,
 	.level = RTE_LOG_DEBUG,
+	.print_func = log_print,
 };
 
 struct rte_eal_opt_loglevel {
@@ -74,6 +78,7 @@ int
 rte_openlog_stream(FILE *f)
 {
 	rte_logs.file = f;
+	rte_logs.print_func = log_print;
 	return 0;
 }
 
@@ -470,7 +475,7 @@ rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 	RTE_PER_LCORE(log_cur_msg).loglevel = level;
 	RTE_PER_LCORE(log_cur_msg).logtype = logtype;
 
-	ret = vfprintf(f, format, ap);
+	ret = (*rte_logs.print_func)(f, level, format, ap);
 	fflush(f);
 	return ret;
 }
@@ -497,6 +502,13 @@ int
 eal_log_syslog(const char *mode __rte_unused)
 {
 	return -1;
+}
+
+/* default log print function */
+int
+log_print(FILE *f, uint32_t level __rte_unused,  const char *format, va_list ap)
+{
+	return vfprintf(f, format, ap);
 }
 
 /*
