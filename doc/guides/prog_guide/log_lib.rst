@@ -59,6 +59,21 @@ For example::
 
 Within an application, the same result can be got using the ``rte_log_set_level_pattern()`` or ``rte_log_set_level_regex()`` APIs.
 
+Color output
+~~~~~~~~~~~~
+
+The log library will highlight important messages.
+This is controlled by the ``--log-color`` option.
+he optional argument ``when`` can be ``auto``, ``never``, or ``always``.
+The default setting is ``auto`` which enables color when the output to
+``stderr`` is a terminal.
+If the ``when`` argument is omitted, it defaults to ``always``.
+
+For example to turn off all coloring::
+
+	/path/to/app --log-color=none
+
+
 Log timestamp
 ~~~~~~~~~~~~~
 
@@ -114,7 +129,6 @@ There are three possible settings for this option:
 
 *always*
     Always try to direct messages to journal socket.
-
 
 Using Logging APIs to Generate Log Messages
 -------------------------------------------
