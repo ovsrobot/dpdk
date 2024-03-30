@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -12,6 +13,7 @@
 #include <fnmatch.h>
 #include <sys/queue.h>
 
+#include <rte_common.h>
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
