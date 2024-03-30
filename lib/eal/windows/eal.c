@@ -503,34 +503,6 @@ rte_eal_init(int argc, char **argv)
 	return fctret;
 }
 
-/* Don't use MinGW asprintf() to have identical code with all toolchains. */
-int
-eal_asprintf(char **buffer, const char *format, ...)
-{
-	int size, ret;
-	va_list arg;
-
-	va_start(arg, format);
-	size = vsnprintf(NULL, 0, format, arg);
-	va_end(arg);
-	if (size < 0)
-		return -1;
-	size++;
-
-	*buffer = malloc(size);
-	if (*buffer == NULL)
-		return -1;
-
-	va_start(arg, format);
-	ret = vsnprintf(*buffer, size, format, arg);
-	va_end(arg);
-	if (ret != size - 1) {
-		free(*buffer);
-		return -1;
-	}
-	return ret;
-}
-
 int
 rte_vfio_container_dma_map(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
