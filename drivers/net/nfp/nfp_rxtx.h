@@ -77,6 +77,12 @@ struct nfp_net_txq {
 	 * in a cache line.
 	 */
 	uint64_t dma;
+
+	/** TX pointer ring write back area (indexed by queue id) */
+	uint64_t *txrwb;
+
+	/** TX pointer ring write back area DMA address */
+	uint64_t txrwb_dma;
 } __rte_aligned(64);
 
 /* RX and freelist descriptor format */
