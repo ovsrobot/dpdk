@@ -9534,7 +9534,7 @@ static void cmd_set_vxlan_parsed(void *parsed_result,
 		vxlan_encap_conf.select_ipv4 = 0;
 	else
 		return;
-	rte_memcpy(vxlan_encap_conf.vni, &id.vni[1], 3);
+	memcpy(vxlan_encap_conf.vni, &id.vni[1], 3);
 	vxlan_encap_conf.udp_src = rte_cpu_to_be_16(res->udp_src);
 	vxlan_encap_conf.udp_dst = rte_cpu_to_be_16(res->udp_dst);
 	vxlan_encap_conf.ip_tos = res->tos;
@@ -9548,10 +9548,10 @@ static void cmd_set_vxlan_parsed(void *parsed_result,
 	}
 	if (vxlan_encap_conf.select_vlan)
 		vxlan_encap_conf.vlan_tci = rte_cpu_to_be_16(res->tci);
-	rte_memcpy(vxlan_encap_conf.eth_src, res->eth_src.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
-	rte_memcpy(vxlan_encap_conf.eth_dst, res->eth_dst.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
+	memcpy(vxlan_encap_conf.eth_src, res->eth_src.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
+	memcpy(vxlan_encap_conf.eth_dst, res->eth_dst.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
 }
 
 static cmdline_parse_inst_t cmd_set_vxlan = {
@@ -9729,7 +9729,7 @@ static void cmd_set_nvgre_parsed(void *parsed_result,
 		nvgre_encap_conf.select_ipv4 = 0;
 	else
 		return;
-	rte_memcpy(nvgre_encap_conf.tni, &id.tni[1], 3);
+	memcpy(nvgre_encap_conf.tni, &id.tni[1], 3);
 	if (nvgre_encap_conf.select_ipv4) {
 		IPV4_ADDR_TO_UINT(res->ip_src, nvgre_encap_conf.ipv4_src);
 		IPV4_ADDR_TO_UINT(res->ip_dst, nvgre_encap_conf.ipv4_dst);
@@ -9739,10 +9739,10 @@ static void cmd_set_nvgre_parsed(void *parsed_result,
 	}
 	if (nvgre_encap_conf.select_vlan)
 		nvgre_encap_conf.vlan_tci = rte_cpu_to_be_16(res->tci);
-	rte_memcpy(nvgre_encap_conf.eth_src, res->eth_src.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
-	rte_memcpy(nvgre_encap_conf.eth_dst, res->eth_dst.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
+	memcpy(nvgre_encap_conf.eth_src, res->eth_src.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
+	memcpy(nvgre_encap_conf.eth_dst, res->eth_dst.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
 }
 
 static cmdline_parse_inst_t cmd_set_nvgre = {
@@ -9856,10 +9856,10 @@ static void cmd_set_l2_encap_parsed(void *parsed_result,
 		return;
 	if (l2_encap_conf.select_vlan)
 		l2_encap_conf.vlan_tci = rte_cpu_to_be_16(res->tci);
-	rte_memcpy(l2_encap_conf.eth_src, res->eth_src.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
-	rte_memcpy(l2_encap_conf.eth_dst, res->eth_dst.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
+	memcpy(l2_encap_conf.eth_src, res->eth_src.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
+	memcpy(l2_encap_conf.eth_dst, res->eth_dst.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
 }
 
 static cmdline_parse_inst_t cmd_set_l2_encap = {
@@ -10038,7 +10038,7 @@ static void cmd_set_mplsogre_encap_parsed(void *parsed_result,
 		mplsogre_encap_conf.select_ipv4 = 0;
 	else
 		return;
-	rte_memcpy(mplsogre_encap_conf.label, &id.label, 3);
+	memcpy(mplsogre_encap_conf.label, &id.label, 3);
 	if (mplsogre_encap_conf.select_ipv4) {
 		IPV4_ADDR_TO_UINT(res->ip_src, mplsogre_encap_conf.ipv4_src);
 		IPV4_ADDR_TO_UINT(res->ip_dst, mplsogre_encap_conf.ipv4_dst);
@@ -10048,10 +10048,10 @@ static void cmd_set_mplsogre_encap_parsed(void *parsed_result,
 	}
 	if (mplsogre_encap_conf.select_vlan)
 		mplsogre_encap_conf.vlan_tci = rte_cpu_to_be_16(res->tci);
-	rte_memcpy(mplsogre_encap_conf.eth_src, res->eth_src.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
-	rte_memcpy(mplsogre_encap_conf.eth_dst, res->eth_dst.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
+	memcpy(mplsogre_encap_conf.eth_src, res->eth_src.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
+	memcpy(mplsogre_encap_conf.eth_dst, res->eth_dst.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
 }
 
 static cmdline_parse_inst_t cmd_set_mplsogre_encap = {
@@ -10274,7 +10274,7 @@ static void cmd_set_mplsoudp_encap_parsed(void *parsed_result,
 		mplsoudp_encap_conf.select_ipv4 = 0;
 	else
 		return;
-	rte_memcpy(mplsoudp_encap_conf.label, &id.label, 3);
+	memcpy(mplsoudp_encap_conf.label, &id.label, 3);
 	mplsoudp_encap_conf.udp_src = rte_cpu_to_be_16(res->udp_src);
 	mplsoudp_encap_conf.udp_dst = rte_cpu_to_be_16(res->udp_dst);
 	if (mplsoudp_encap_conf.select_ipv4) {
@@ -10286,10 +10286,10 @@ static void cmd_set_mplsoudp_encap_parsed(void *parsed_result,
 	}
 	if (mplsoudp_encap_conf.select_vlan)
 		mplsoudp_encap_conf.vlan_tci = rte_cpu_to_be_16(res->tci);
-	rte_memcpy(mplsoudp_encap_conf.eth_src, res->eth_src.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
-	rte_memcpy(mplsoudp_encap_conf.eth_dst, res->eth_dst.addr_bytes,
-		   RTE_ETHER_ADDR_LEN);
+	memcpy(mplsoudp_encap_conf.eth_src, res->eth_src.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
+	memcpy(mplsoudp_encap_conf.eth_dst, res->eth_dst.addr_bytes,
+	       RTE_ETHER_ADDR_LEN);
 }
 
 static cmdline_parse_inst_t cmd_set_mplsoudp_encap = {

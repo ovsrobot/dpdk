@@ -2639,8 +2639,8 @@ port_flow_template_table_create(portid_t port_id, uint32_t id,
 	}
 	pt->nb_pattern_templates = nb_pattern_templates;
 	pt->nb_actions_templates = nb_actions_templates;
-	rte_memcpy(&pt->flow_attr, &table_attr->flow_attr,
-		   sizeof(struct rte_flow_attr));
+	memcpy(&pt->flow_attr, &table_attr->flow_attr,
+	       sizeof(struct rte_flow_attr));
 	printf("Template table #%u created\n", pt->id);
 	return 0;
 }
@@ -3259,8 +3259,8 @@ port_queue_action_handle_update(portid_t port_id,
 		update = action->conf;
 		break;
 	case RTE_FLOW_ACTION_TYPE_METER_MARK:
-		rte_memcpy(&mtr_update.meter_mark, action->conf,
-			sizeof(struct rte_flow_action_meter_mark));
+		memcpy(&mtr_update.meter_mark, action->conf,
+		       sizeof(struct rte_flow_action_meter_mark));
 		if (mtr_update.meter_mark.profile)
 			mtr_update.profile_valid = 1;
 		if (mtr_update.meter_mark.policy)
