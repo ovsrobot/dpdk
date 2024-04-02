@@ -994,9 +994,8 @@ rte_flow_conv_rule(struct rte_flow_conv_rule *dst,
 	if (src->attr_ro) {
 		off = RTE_ALIGN_CEIL(off, sizeof(double));
 		if (size && size >= off + sizeof(*dst->attr))
-			dst->attr = rte_memcpy
-				((void *)((uintptr_t)dst + off),
-				 src->attr_ro, sizeof(*dst->attr));
+			dst->attr = memcpy((void *)((uintptr_t)dst + off),
+					   src->attr_ro, sizeof(*dst->attr));
 		off += sizeof(*dst->attr);
 	}
 	if (src->pattern_ro) {
