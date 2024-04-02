@@ -103,13 +103,8 @@ options. Default interface name is ``dtunX``, where X stands for unique id.
 Flow API support
 ----------------
 
-The tap PMD supports major flow API pattern items and actions, when running on
-linux kernels above 4.2 ("Flower" classifier required).
-The kernel support can be checked with this command::
 
-   zcat /proc/config.gz | ( grep 'CLS_FLOWER=' || echo 'not supported' ) |
-   tee -a /dev/stderr | grep -q '=m' &&
-   lsmod | ( grep cls_flower || echo 'try modprobe cls_flower' )
+The tap PMD supports major flow API pattern items and actions, when running on a supported Linux version. See :ref:`linux_gsg_kernel_version`.
 
 Supported items:
 
@@ -123,7 +118,7 @@ Supported actions:
 - DROP
 - QUEUE
 - PASSTHRU
-- RSS (requires kernel 4.9)
+- RSS (requires clang, libbpf, and bpftool)
 
 It is generally not possible to provide a "last" item. However, if the "last"
 item, once masked, is identical to the masked spec, then it is supported.
@@ -229,80 +224,40 @@ load commands at startup in command line or Lua script in pktgen.
 
 RSS specifics
 -------------
-Packet distribution in TAP is done by the kernel which has a default
-distribution. This feature is adding RSS distribution based on eBPF code.
-The default eBPF code calculates RSS hash based on Toeplitz algorithm for
-a fixed RSS key. It is calculated on fixed packet offsets. For IPv4 and IPv6 it
-is calculated over src/dst addresses (8 or 32 bytes for IPv4 or IPv6
-respectively) and src/dst TCP/UDP ports (4 bytes).
+The default packet distribution in TAP without flow rules is done by the
+kernel which has a default flow based distribution.
+When flow rules are used to distribute packets across a set of queues
+an eBPF program is used to calculate the RSS based on Toeplitz algorithm for
+with the given key.
 
-The RSS algorithm is written in file ``tap_bpf_program.c`` which
-does not take part in TAP PMD compilation. Instead this file is compiled
-in advance to eBPF object file. The eBPF object file is then parsed and
-translated into eBPF byte code in the format of C arrays of eBPF
-instructions. The C array of eBPF instructions is part of TAP PMD tree and
-is taking part in TAP PMD compilation. At run time the C arrays are uploaded to
-the kernel via BPF system calls and the RSS hash is calculated by the
-kernel.
+The hash is calculated for IPv4 and IPv6, over src/dst addresses
+(8 or 32 bytes for IPv4 or IPv6 respectively) and
+optionally the src/dst TCP/UDP ports (4 bytes).
 
-It is possible to support different RSS hash algorithms by updating file
-``tap_bpf_program.c``  In order to add a new RSS hash algorithm follow these
-steps:
-
-#. Write the new RSS implementation in file ``tap_bpf_program.c``
-
-   BPF programs which are uploaded to the kernel correspond to
-   C functions under different ELF sections.
-
-#. Install ``LLVM`` library and ``clang`` compiler versions 3.7 and above
-
-#. Use make to compile  `tap_bpf_program.c`` via ``LLVM`` into an object file
-   and extract the resulting instructions into ``tap_bpf_insn.h``::
-
-    cd bpf; make
-
-#. Recompile the TAP PMD.
-
-The C arrays are uploaded to the kernel using BPF system calls.
-
-``tc`` (traffic control) is a well known user space utility program used to
-configure the Linux kernel packet scheduler. It is usually packaged as
-part of the ``iproute2`` package.
-Since commit 11c39b5e9 ("tc: add eBPF support to f_bpf") ``tc`` can be used
-to uploads eBPF code to the kernel and can be patched in order to print the
-C arrays of eBPF instructions just before calling the BPF system call.
-Please refer to ``iproute2`` package file ``lib/bpf.c`` function
-``bpf_prog_load()``.
-
-An example utility for eBPF instruction generation in the format of C arrays will
-be added in next releases
+The RSS algorithm is written in file ``tap_rss.c`` which is compiled with
+clang and then turned into a skeleton header file with bpftool.
+The skeleton header file is then compiled into the tap driver.
 
 TAP reports on supported RSS functions as part of dev_infos_get callback:
 ``RTE_ETH_RSS_IP``, ``RTE_ETH_RSS_UDP`` and ``RTE_ETH_RSS_TCP``.
-**Known limitation:** TAP supports all of the above hash functions together
-and not in partial combinations.
+
+**Known limitation:** TAP supports only these functions, it is not possible
+to be more fine grained. For example, selecting only IPv4 and not IPV6
+to be hashed is not possible.
 
 Systems supporting flow API
 ---------------------------
 
-- "tc flower" classifier requires linux kernel above 4.2
-- eBPF/RSS requires linux kernel above 4.9
+- Any system which meets the current DPDK kernel requirements should
+  be able to support the flow API.
 
-+--------------------+-----------------------+
-| RH7.3              | No flow rule support  |
-+--------------------+-----------------------+
-| RH7.4              | No RSS action support |
-+--------------------+-----------------------+
-| RH7.5              | No RSS action support |
-+--------------------+-----------------------+
-| SLES 15,           | No limitation         |
-| kernel 4.12        |                       |
-+--------------------+-----------------------+
-| Azure Ubuntu 16.04,| No limitation         |
-| kernel 4.13        |                       |
-+--------------------+-----------------------+
+- Supporting eBPF/RSS requires ``bpftool`` and ``libbpf``.
 
 Limitations
 -----------
 
 * Rx/Tx must have the same number of queues.
+
+* The kernel will distribute packets across all queues.
+  If using flow API then add a default match and action to force a different
+  behavior.
