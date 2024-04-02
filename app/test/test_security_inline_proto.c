@@ -245,8 +245,8 @@ create_inline_ipsec_session(struct ipsec_test_data *sa, uint16_t portid,
 
 	/* Copy cipher session parameters */
 	if (sa->aead) {
-		rte_memcpy(sess_conf->crypto_xform, &sa->xform.aead,
-				sizeof(struct rte_crypto_sym_xform));
+		memcpy(sess_conf->crypto_xform, &sa->xform.aead,
+		       sizeof(struct rte_crypto_sym_xform));
 		sess_conf->crypto_xform->aead.key.data = sa->key.data;
 		/* Verify crypto capabilities */
 		if (test_sec_crypto_caps_aead_verify(sec_cap, sess_conf->crypto_xform) != 0) {
@@ -256,13 +256,13 @@ create_inline_ipsec_session(struct ipsec_test_data *sa, uint16_t portid,
 		}
 	} else {
 		if (dir == RTE_SECURITY_IPSEC_SA_DIR_EGRESS) {
-			rte_memcpy(&sess_conf->crypto_xform->cipher,
-					&sa->xform.chain.cipher.cipher,
-					sizeof(struct rte_crypto_cipher_xform));
+			memcpy(&sess_conf->crypto_xform->cipher,
+			       &sa->xform.chain.cipher.cipher,
+			       sizeof(struct rte_crypto_cipher_xform));
 
-			rte_memcpy(&sess_conf->crypto_xform->next->auth,
-					&sa->xform.chain.auth.auth,
-					sizeof(struct rte_crypto_auth_xform));
+			memcpy(&sess_conf->crypto_xform->next->auth,
+			       &sa->xform.chain.auth.auth,
+			       sizeof(struct rte_crypto_auth_xform));
 			sess_conf->crypto_xform->cipher.key.data =
 							sa->key.data;
 			sess_conf->crypto_xform->next->auth.key.data =
@@ -282,12 +282,12 @@ create_inline_ipsec_session(struct ipsec_test_data *sa, uint16_t portid,
 				return TEST_SKIPPED;
 			}
 		} else {
-			rte_memcpy(&sess_conf->crypto_xform->next->cipher,
-					&sa->xform.chain.cipher.cipher,
-					sizeof(struct rte_crypto_cipher_xform));
-			rte_memcpy(&sess_conf->crypto_xform->auth,
-					&sa->xform.chain.auth.auth,
-					sizeof(struct rte_crypto_auth_xform));
+			memcpy(&sess_conf->crypto_xform->next->cipher,
+			       &sa->xform.chain.cipher.cipher,
+			       sizeof(struct rte_crypto_cipher_xform));
+			memcpy(&sess_conf->crypto_xform->auth,
+			       &sa->xform.chain.auth.auth,
+			       sizeof(struct rte_crypto_auth_xform));
 			sess_conf->crypto_xform->auth.key.data =
 							sa->auth_key.data;
 			sess_conf->crypto_xform->next->cipher.key.data =
@@ -463,12 +463,12 @@ init_packet(struct rte_mempool *mp, const uint8_t *data, unsigned int len, bool 
 		return NULL;
 
 	if (outer_ipv4) {
-		rte_memcpy(rte_pktmbuf_append(pkt, RTE_ETHER_HDR_LEN),
-				&dummy_ipv4_eth_hdr, RTE_ETHER_HDR_LEN);
+		memcpy(rte_pktmbuf_append(pkt, RTE_ETHER_HDR_LEN),
+		       &dummy_ipv4_eth_hdr, RTE_ETHER_HDR_LEN);
 		pkt->l3_len = sizeof(struct rte_ipv4_hdr);
 	} else {
-		rte_memcpy(rte_pktmbuf_append(pkt, RTE_ETHER_HDR_LEN),
-				&dummy_ipv6_eth_hdr, RTE_ETHER_HDR_LEN);
+		memcpy(rte_pktmbuf_append(pkt, RTE_ETHER_HDR_LEN),
+		       &dummy_ipv6_eth_hdr, RTE_ETHER_HDR_LEN);
 		pkt->l3_len = sizeof(struct rte_ipv6_hdr);
 	}
 	pkt->l2_len = RTE_ETHER_HDR_LEN;
