@@ -4516,8 +4516,8 @@ flow_action_handles_translate(struct rte_eth_dev *dev,
 				(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION_NUM,
 				 NULL, "too many shared actions");
 		}
-		rte_memcpy(&handle[copied_n].action, &actions[n].conf,
-			   sizeof(actions[n].conf));
+		memcpy(&handle[copied_n].action, &actions[n].conf,
+		       sizeof(actions[n].conf));
 		handle[copied_n].index = n;
 		copied_n++;
 	}
@@ -5383,30 +5383,30 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_NVGRE_ENCAP:
 		case RTE_FLOW_ACTION_TYPE_OF_PUSH_VLAN:
 		case RTE_FLOW_ACTION_TYPE_OF_SET_VLAN_PCP:
-			rte_memcpy(actions_tx, actions,
+			memcpy(actions_tx, actions,
 			       sizeof(struct rte_flow_action));
 			actions_tx++;
 			break;
 		case RTE_FLOW_ACTION_TYPE_OF_SET_VLAN_VID:
 			if (push_vlan) {
-				rte_memcpy(actions_tx, actions,
-					   sizeof(struct rte_flow_action));
+				memcpy(actions_tx, actions,
+				       sizeof(struct rte_flow_action));
 				actions_tx++;
 			} else {
-				rte_memcpy(actions_rx, actions,
-					   sizeof(struct rte_flow_action));
+				memcpy(actions_rx, actions,
+				       sizeof(struct rte_flow_action));
 				actions_rx++;
 			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_COUNT:
 		case RTE_FLOW_ACTION_TYPE_AGE:
 			if (encap) {
-				rte_memcpy(actions_tx, actions,
-					   sizeof(struct rte_flow_action));
+				memcpy(actions_tx, actions,
+				       sizeof(struct rte_flow_action));
 				actions_tx++;
 			} else {
-				rte_memcpy(actions_rx, actions,
-					   sizeof(struct rte_flow_action));
+				memcpy(actions_rx, actions,
+				       sizeof(struct rte_flow_action));
 				actions_rx++;
 			}
 			break;
@@ -5418,8 +5418,8 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 				actions_tx++;
 				encap = 1;
 			} else {
-				rte_memcpy(actions_rx, actions,
-					   sizeof(struct rte_flow_action));
+				memcpy(actions_rx, actions,
+				       sizeof(struct rte_flow_action));
 				actions_rx++;
 			}
 			break;
@@ -5430,14 +5430,14 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 				       sizeof(struct rte_flow_action));
 				actions_tx++;
 			} else {
-				rte_memcpy(actions_rx, actions,
-					   sizeof(struct rte_flow_action));
+				memcpy(actions_rx, actions,
+				       sizeof(struct rte_flow_action));
 				actions_rx++;
 			}
 			break;
 		default:
-			rte_memcpy(actions_rx, actions,
-				   sizeof(struct rte_flow_action));
+			memcpy(actions_rx, actions,
+			       sizeof(struct rte_flow_action));
 			actions_rx++;
 			break;
 		}
@@ -5447,7 +5447,7 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 	tag_action->type = (enum rte_flow_action_type)
 			   MLX5_RTE_FLOW_ACTION_TYPE_TAG;
 	actions_rx++;
-	rte_memcpy(actions_rx, actions, sizeof(struct rte_flow_action));
+	memcpy(actions_rx, actions, sizeof(struct rte_flow_action));
 	actions_rx++;
 	set_tag = (void *)actions_rx;
 	*set_tag = (struct mlx5_rte_flow_action_set_tag) {
@@ -5457,7 +5457,7 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 	MLX5_ASSERT(set_tag->id > REG_NON);
 	tag_action->conf = set_tag;
 	/* Create Tx item list. */
-	rte_memcpy(actions_tx, actions, sizeof(struct rte_flow_action));
+	memcpy(actions_tx, actions, sizeof(struct rte_flow_action));
 	addr = (void *)&pattern_tx[2];
 	item = pattern_tx;
 	item->type = (enum rte_flow_item_type)

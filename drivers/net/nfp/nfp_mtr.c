@@ -243,7 +243,7 @@ nfp_mtr_profile_mod(struct nfp_app_fw_flower *app_fw_flower,
 	struct nfp_profile_conf old_conf;
 
 	/* Get the old profile config */
-	rte_memcpy(&old_conf, &mtr_profile->conf, sizeof(old_conf));
+	memcpy(&old_conf, &mtr_profile->conf, sizeof(old_conf));
 
 	memset(&mtr_profile->conf, 0, sizeof(struct nfp_profile_conf));
 
@@ -267,7 +267,7 @@ nfp_mtr_profile_mod(struct nfp_app_fw_flower *app_fw_flower,
 	return 0;
 
 rollback:
-	rte_memcpy(&mtr_profile->conf, &old_conf, sizeof(old_conf));
+	memcpy(&mtr_profile->conf, &old_conf, sizeof(old_conf));
 
 	return ret;
 }
@@ -492,8 +492,8 @@ nfp_mtr_policy_add(struct rte_eth_dev *dev,
 	}
 
 	mtr_policy->policy_id = mtr_policy_id;
-	rte_memcpy(&mtr_policy->policy, policy,
-			sizeof(struct rte_mtr_meter_policy_params));
+	memcpy(&mtr_policy->policy, policy,
+	       sizeof(struct rte_mtr_meter_policy_params));
 
 	/* Insert policy into policy list */
 	LIST_INSERT_HEAD(&priv->policies, mtr_policy, next);
@@ -1028,7 +1028,7 @@ nfp_mtr_stats_read(struct rte_eth_dev *dev,
 	*stats_mask = mtr->stats_mask;
 
 	rte_spinlock_lock(&priv->mtr_stats_lock);
-	rte_memcpy(&curr, &mtr->mtr_stats.curr, sizeof(curr));
+	memcpy(&curr, &mtr->mtr_stats.curr, sizeof(curr));
 	rte_spinlock_unlock(&priv->mtr_stats_lock);
 
 	prev = &mtr->mtr_stats.prev;

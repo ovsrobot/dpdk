@@ -16,7 +16,6 @@
 #include <sys/ioctl.h>
 
 #include <rte_ethdev.h>
-#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_memzone.h>
 #include <rte_devargs.h>

@@ -4304,9 +4304,8 @@ txgbe_add_del_ntuple_filter(struct rte_eth_dev *dev,
 				sizeof(struct txgbe_5tuple_filter), 0);
 		if (filter == NULL)
 			return -ENOMEM;
-		rte_memcpy(&filter->filter_info,
-				 &filter_5tuple,
-				 sizeof(struct txgbe_5tuple_filter_info));
+		memcpy(&filter->filter_info, &filter_5tuple,
+		       sizeof(struct txgbe_5tuple_filter_info));
 		filter->queue = ntuple_filter->queue;
 		ret = txgbe_add_5tuple_filter(dev, filter);
 		if (ret < 0) {
@@ -5109,9 +5108,7 @@ txgbe_dev_l2_tunnel_filter_add(struct rte_eth_dev *dev,
 		if (!node)
 			return -ENOMEM;
 
-		rte_memcpy(&node->key,
-				 &key,
-				 sizeof(struct txgbe_l2_tn_key));
+		memcpy(&node->key, &key, sizeof(struct txgbe_l2_tn_key));
 		node->pool = l2_tunnel->pool;
 		ret = txgbe_insert_l2_tn_filter(l2_tn_info, node);
 		if (ret < 0) {

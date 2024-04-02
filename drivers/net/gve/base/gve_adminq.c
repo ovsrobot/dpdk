@@ -785,7 +785,7 @@ int gve_adminq_describe_device(struct gve_priv *priv)
 	}
 	priv->max_mtu = mtu;
 	priv->num_event_counters = be16_to_cpu(descriptor->counters);
-	rte_memcpy(priv->dev_addr.addr_bytes, descriptor->mac, ETH_ALEN);
+	memcpy(priv->dev_addr.addr_bytes, descriptor->mac, ETH_ALEN);
 	PMD_DRV_LOG(INFO, "MAC addr: " RTE_ETHER_ADDR_PRT_FMT,
 		    RTE_ETHER_ADDR_BYTES(&priv->dev_addr));
 	priv->tx_pages_per_qpl = be16_to_cpu(descriptor->tx_pages_per_qpl);

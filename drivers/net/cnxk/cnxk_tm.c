@@ -300,8 +300,7 @@ cnxk_nix_tm_shaper_profile_add(struct rte_eth_dev *eth_dev, uint32_t id,
 	profile->profile.pkt_len_adj = params->pkt_length_adjust;
 	profile->profile.pkt_mode = params->packet_mode;
 	profile->profile.free_fn = rte_free;
-	rte_memcpy(&profile->params, params,
-		   sizeof(struct rte_tm_shaper_params));
+	memcpy(&profile->params, params, sizeof(struct rte_tm_shaper_params));
 
 	rc = roc_nix_tm_shaper_profile_add(nix, &profile->profile);
 
@@ -373,7 +372,7 @@ cnxk_nix_tm_node_add(struct rte_eth_dev *eth_dev, uint32_t node_id,
 	if (!node)
 		return -ENOMEM;
 
-	rte_memcpy(&node->params, params, sizeof(struct rte_tm_node_params));
+	memcpy(&node->params, params, sizeof(struct rte_tm_node_params));
 
 	node->nix_node.id = node_id;
 	node->nix_node.parent_id = parent_node_id;

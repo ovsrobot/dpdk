@@ -677,7 +677,7 @@ cnxk_rep_mac_addr_set(struct rte_eth_dev *eth_dev, struct rte_ether_addr *addr)
 	cnxk_rep_msg_populate_header(buffer, &len);
 
 	msg_sm_meta.portid = rep_dev->rep_id;
-	rte_memcpy(&msg_sm_meta.addr_bytes, addr->addr_bytes, RTE_ETHER_ADDR_LEN);
+	memcpy(&msg_sm_meta.addr_bytes, addr->addr_bytes, RTE_ETHER_ADDR_LEN);
 	cnxk_rep_msg_populate_command_meta(buffer, &len, &msg_sm_meta,
 					   sizeof(cnxk_rep_msg_eth_set_mac_meta_t),
 					   CNXK_REP_MSG_ETH_SET_MAC);

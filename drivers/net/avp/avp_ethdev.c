@@ -248,7 +248,7 @@ avp_dev_process_request(struct avp_dev *avp, struct rte_avp_request *request)
 	while (avp_fifo_get(avp->resp_q, (void **)&resp_addr, 1))
 		PMD_DRV_LOG(DEBUG, "Discarding stale response\n");
 
-	rte_memcpy(avp->sync_addr, request, sizeof(*request));
+	memcpy(avp->sync_addr, request, sizeof(*request));
 	count = avp_fifo_put(avp->req_q, &avp->host_sync_addr, 1);
 	if (count < 1) {
 		PMD_DRV_LOG(ERR, "Cannot send request %u to host\n",
@@ -285,7 +285,7 @@ avp_dev_process_request(struct avp_dev *avp, struct rte_avp_request *request)
 	}
 
 	/* copy to user buffer */
-	rte_memcpy(request, avp->sync_addr, sizeof(*request));
+	memcpy(request, avp->sync_addr, sizeof(*request));
 	ret = 0;
 
 	PMD_DRV_LOG(DEBUG, "Result %d received for request %u\n",

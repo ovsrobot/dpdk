@@ -850,7 +850,7 @@ sfc_rss_attach(struct sfc_adapter *sa)
 	efx_ev_fini(sa->nic);
 	efx_intr_fini(sa->nic);
 
-	rte_memcpy(rss->key, default_rss_key, sizeof(rss->key));
+	memcpy(rss->key, default_rss_key, sizeof(rss->key));
 	memset(&rss->dummy_ctx, 0, sizeof(rss->dummy_ctx));
 	rss->dummy_ctx.conf.qid_span = 1;
 	rss->dummy_ctx.dummy = true;

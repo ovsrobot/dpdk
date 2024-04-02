@@ -902,16 +902,16 @@ fs_stats_get(struct rte_eth_dev *dev,
 	ret = fs_lock(dev, 0);
 	if (ret != 0)
 		return ret;
-	rte_memcpy(stats, &PRIV(dev)->stats_accumulator, sizeof(*stats));
+	memcpy(stats, &PRIV(dev)->stats_accumulator, sizeof(*stats));
 	FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_ACTIVE) {
 		struct rte_eth_stats *snapshot = &sdev->stats_snapshot.stats;
 		uint64_t *timestamp = &sdev->stats_snapshot.timestamp;
 
-		rte_memcpy(&backup, snapshot, sizeof(backup));
+		memcpy(&backup, snapshot, sizeof(backup));
 		ret = rte_eth_stats_get(PORT_ID(sdev), snapshot);
 		if (ret) {
 			if (!fs_err(sdev, ret)) {
-				rte_memcpy(snapshot, &backup, sizeof(backup));
+				memcpy(snapshot, &backup, sizeof(backup));
 				goto inc;
 			}
 			ERROR("Operation rte_eth_stats_get failed for sub_device %d with error %d",

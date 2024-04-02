@@ -465,7 +465,7 @@ eth_rss_hash_update(struct rte_eth_dev *dev, struct rte_eth_rss_conf *rss_conf)
 				rss_conf->rss_hf & internal->flow_type_rss_offloads;
 
 	if (rss_conf->rss_key)
-		rte_memcpy(internal->rss_key, rss_conf->rss_key, 40);
+		memcpy(internal->rss_key, rss_conf->rss_key, 40);
 
 	rte_spinlock_unlock(&internal->rss_lock);
 
@@ -482,7 +482,7 @@ eth_rss_hash_conf_get(struct rte_eth_dev *dev,
 
 	rss_conf->rss_hf = dev->data->dev_conf.rx_adv_conf.rss_conf.rss_hf;
 	if (rss_conf->rss_key)
-		rte_memcpy(rss_conf->rss_key, internal->rss_key, 40);
+		memcpy(rss_conf->rss_key, internal->rss_key, 40);
 
 	rte_spinlock_unlock(&internal->rss_lock);
 
@@ -577,7 +577,7 @@ eth_dev_null_create(struct rte_vdev_device *dev, struct pmd_options *args)
 	internals->flow_type_rss_offloads =  RTE_ETH_RSS_PROTO_MASK;
 	internals->reta_size = RTE_DIM(internals->reta_conf) * RTE_ETH_RETA_GROUP_SIZE;
 
-	rte_memcpy(internals->rss_key, default_rss_key, 40);
+	memcpy(internals->rss_key, default_rss_key, 40);
 
 	data = eth_dev->data;
 	data->nb_rx_queues = (uint16_t)nb_rx_queues;

@@ -55,26 +55,24 @@ static int write_smt_entry(struct rte_eth_dev *dev, struct smt_entry *e)
 		 */
 		if (e->idx & 1) {
 			req->pfvf1 = 0x0;
-			rte_memcpy(req->src_mac1, e->src_mac,
-				   RTE_ETHER_ADDR_LEN);
+			memcpy(req->src_mac1, e->src_mac, RTE_ETHER_ADDR_LEN);
 
 			/* fill pfvf0/src_mac0 with entry
 			 * at prev index from smt-tab.
 			 */
 			req->pfvf0 = 0x0;
-			rte_memcpy(req->src_mac0, s->smtab[e->idx - 1].src_mac,
-				   RTE_ETHER_ADDR_LEN);
+			memcpy(req->src_mac0, s->smtab[e->idx - 1].src_mac,
+			       RTE_ETHER_ADDR_LEN);
 		} else {
 			req->pfvf0 = 0x0;
-			rte_memcpy(req->src_mac0, e->src_mac,
-				   RTE_ETHER_ADDR_LEN);
+			memcpy(req->src_mac0, e->src_mac, RTE_ETHER_ADDR_LEN);
 
 			/* fill pfvf1/src_mac1 with entry
 			 * at next index from smt-tab
 			 */
 			req->pfvf1 = 0x0;
-			rte_memcpy(req->src_mac1, s->smtab[e->idx + 1].src_mac,
-				   RTE_ETHER_ADDR_LEN);
+			memcpy(req->src_mac1, s->smtab[e->idx + 1].src_mac,
+			       RTE_ETHER_ADDR_LEN);
 		}
 		row = (e->hw_idx >> 1);
 	} else {
@@ -87,8 +85,8 @@ static int write_smt_entry(struct rte_eth_dev *dev, struct smt_entry *e)
 
 		/* fill pfvf0/src_mac0 from smt-tab */
 		t6req->pfvf0 = 0x0;
-		rte_memcpy(t6req->src_mac0, s->smtab[e->idx].src_mac,
-			   RTE_ETHER_ADDR_LEN);
+		memcpy(t6req->src_mac0, s->smtab[e->idx].src_mac,
+		       RTE_ETHER_ADDR_LEN);
 		row = e->hw_idx;
 		req = (struct cpl_smt_write_req *)t6req;
 	}
@@ -158,7 +156,7 @@ static struct smt_entry *t4_smt_alloc_switching(struct rte_eth_dev *dev,
 		t4_os_lock(&e->lock);
 		if (__atomic_load_n(&e->refcnt, __ATOMIC_RELAXED) == 0) {
 			e->pfvf = pfvf;
-			rte_memcpy(e->src_mac, smac, RTE_ETHER_ADDR_LEN);
+			memcpy(e->src_mac, smac, RTE_ETHER_ADDR_LEN);
 			ret = write_smt_entry(dev, e);
 			if (ret) {
 				e->pfvf = 0;

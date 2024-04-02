@@ -383,7 +383,8 @@ cnxk_representee_notification(void *roc_nix, struct roc_eswitch_repte_notify_msg
 		goto done;
 	}
 
-	rte_memcpy(msg->notify_msg, notify_msg, sizeof(struct roc_eswitch_repte_notify_msg));
+	memcpy(msg->notify_msg, notify_msg,
+	       sizeof(struct roc_eswitch_repte_notify_msg));
 	plt_rep_dbg("Pushing new notification : msg type %d", msg->notify_msg->type);
 	pthread_mutex_lock(&eswitch_dev->repte_msg_proc.mutex);
 	TAILQ_INSERT_TAIL(&repte_msg_proc->msg_list, msg, next);

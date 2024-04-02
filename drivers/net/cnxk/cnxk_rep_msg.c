@@ -58,7 +58,7 @@ receive_control_message(int socketfd, void *data, uint32_t len)
 			if (cmsg->cmsg_type == SCM_CREDENTIALS) {
 				cr = (struct ucred *)CMSG_DATA(cmsg);
 			} else if (cmsg->cmsg_type == SCM_RIGHTS) {
-				rte_memcpy(&afd, CMSG_DATA(cmsg), sizeof(int));
+				memcpy(&afd, CMSG_DATA(cmsg), sizeof(int));
 				plt_rep_dbg("afd %d", afd);
 			}
 		}
@@ -90,7 +90,7 @@ send_message_on_socket(int socketfd, void *data, uint32_t len, int afd)
 		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 		cmsg->cmsg_level = SOL_SOCKET;
 		cmsg->cmsg_type = SCM_RIGHTS;
-		rte_memcpy(CMSG_DATA(cmsg), &afd, sizeof(int));
+		memcpy(CMSG_DATA(cmsg), &afd, sizeof(int));
 	}
 
 	size = sendmsg(socketfd, &mh, MSG_DONTWAIT);
@@ -198,7 +198,7 @@ cnxk_rep_msg_populate_type(void *buffer, uint32_t *length, cnxk_type_t type, uin
 	data.length = sz;
 
 	/* Populate the type data */
-	rte_memcpy(RTE_PTR_ADD(buffer, len), &data, sizeof(cnxk_type_data_t));
+	memcpy(RTE_PTR_ADD(buffer, len), &data, sizeof(cnxk_type_data_t));
 	len += sizeof(cnxk_type_data_t);
 
 	*length = len;
@@ -218,7 +218,7 @@ cnxk_rep_msg_populate_header(void *buffer, uint32_t *length)
 	hdr.signature = CTRL_MSG_SIGNATURE;
 
 	/* Populate header data */
-	rte_memcpy(RTE_PTR_ADD(buffer, len), &hdr, sizeof(cnxk_header_t));
+	memcpy(RTE_PTR_ADD(buffer, len), &hdr, sizeof(cnxk_header_t));
 	len += sizeof(cnxk_header_t);
 
 	*length = len;

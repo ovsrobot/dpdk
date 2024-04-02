@@ -1470,7 +1470,7 @@ nfp_ct_do_flow_merge(struct nfp_ct_zone_entry *ze,
 	merge_entry->ze = ze;
 	merge_entry->pre_ct_parent = pre_ct_entry;
 	merge_entry->post_ct_parent = post_ct_entry;
-	rte_memcpy(merge_entry->cookie, new_cookie, sizeof(new_cookie));
+	memcpy(merge_entry->cookie, new_cookie, sizeof(new_cookie));
 	merge_entry->rule.items_cnt = pre_ct_entry->rule.items_cnt +
 			post_ct_entry->rule.items_cnt - cnt_same_item - 1;
 	merge_entry->rule.actions_cnt = pre_ct_entry->rule.actions_cnt +

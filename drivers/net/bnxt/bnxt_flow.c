@@ -233,8 +233,9 @@ bnxt_validate_and_parse_flow_type(const struct rte_flow_attr *attr,
 						    "DMAC is invalid!\n");
 					return -rte_errno;
 				}
-				rte_memcpy(filter->dst_macaddr,
-					   &eth_spec->hdr.dst_addr, RTE_ETHER_ADDR_LEN);
+				memcpy(filter->dst_macaddr,
+				       &eth_spec->hdr.dst_addr,
+				       RTE_ETHER_ADDR_LEN);
 				en |= use_ntuple ?
 					NTUPLE_FLTR_ALLOC_INPUT_EN_DST_MACADDR :
 					EM_FLOW_ALLOC_INPUT_EN_DST_MACADDR;
@@ -257,8 +258,9 @@ bnxt_validate_and_parse_flow_type(const struct rte_flow_attr *attr,
 						    "SMAC is invalid!\n");
 					return -rte_errno;
 				}
-				rte_memcpy(filter->src_macaddr,
-					   &eth_spec->hdr.src_addr, RTE_ETHER_ADDR_LEN);
+				memcpy(filter->src_macaddr,
+				       &eth_spec->hdr.src_addr,
+				       RTE_ETHER_ADDR_LEN);
 				en |= use_ntuple ?
 					NTUPLE_FLTR_ALLOC_INPUT_EN_SRC_MACADDR :
 					EM_FLOW_ALLOC_INPUT_EN_SRC_MACADDR;
@@ -423,23 +425,23 @@ bnxt_validate_and_parse_flow_type(const struct rte_flow_attr *attr,
 				en |= EM_FLOW_ALLOC_INPUT_EN_SRC_IPADDR |
 					EM_FLOW_ALLOC_INPUT_EN_DST_IPADDR;
 
-			rte_memcpy(filter->src_ipaddr,
-				   ipv6_spec->hdr.src_addr, 16);
-			rte_memcpy(filter->dst_ipaddr,
-				   ipv6_spec->hdr.dst_addr, 16);
+			memcpy(filter->src_ipaddr, ipv6_spec->hdr.src_addr,
+			       16);
+			memcpy(filter->dst_ipaddr, ipv6_spec->hdr.dst_addr,
+			       16);
 
 			if (!bnxt_check_zero_bytes(ipv6_mask->hdr.src_addr,
 						   16)) {
-				rte_memcpy(filter->src_ipaddr_mask,
-					   ipv6_mask->hdr.src_addr, 16);
+				memcpy(filter->src_ipaddr_mask,
+				       ipv6_mask->hdr.src_addr, 16);
 				en |= !use_ntuple ? 0 :
 				    NTUPLE_FLTR_ALLOC_INPUT_EN_SRC_IPADDR_MASK;
 			}
 
 			if (!bnxt_check_zero_bytes(ipv6_mask->hdr.dst_addr,
 						   16)) {
-				rte_memcpy(filter->dst_ipaddr_mask,
-					   ipv6_mask->hdr.dst_addr, 16);
+				memcpy(filter->dst_ipaddr_mask,
+				       ipv6_mask->hdr.dst_addr, 16);
 				en |= !use_ntuple ? 0 :
 				     NTUPLE_FLTR_ALLOC_INPUT_EN_DST_IPADDR_MASK;
 			}
@@ -591,8 +593,8 @@ bnxt_validate_and_parse_flow_type(const struct rte_flow_attr *attr,
 					return -rte_errno;
 				}
 
-				rte_memcpy(((uint8_t *)&tenant_id_be + 1),
-					   vxlan_spec->hdr.vni, 3);
+				memcpy(((uint8_t *)&tenant_id_be + 1),
+				       vxlan_spec->hdr.vni, 3);
 				filter->vni =
 					rte_be_to_cpu_32(tenant_id_be);
 				filter->tunnel_type =
@@ -645,8 +647,8 @@ bnxt_validate_and_parse_flow_type(const struct rte_flow_attr *attr,
 						 "Invalid TNI mask");
 					return -rte_errno;
 				}
-				rte_memcpy(((uint8_t *)&tenant_id_be + 1),
-					   nvgre_spec->tni, 3);
+				memcpy(((uint8_t *)&tenant_id_be + 1),
+				       nvgre_spec->tni, 3);
 				filter->vni =
 					rte_be_to_cpu_32(tenant_id_be);
 				filter->tunnel_type =

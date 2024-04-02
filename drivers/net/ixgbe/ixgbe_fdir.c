@@ -74,7 +74,7 @@
 		else \
 			ipv6_addr[i] = 0; \
 	} \
-	rte_memcpy((ipaddr), ipv6_addr, sizeof(ipv6_addr));\
+	memcpy((ipaddr), ipv6_addr, sizeof(ipv6_addr));\
 } while (0)
 
 #define IXGBE_FDIRIP6M_INNER_MAC_SHIFT 4
@@ -1217,9 +1217,8 @@ ixgbe_fdir_filter_program(struct rte_eth_dev *dev,
 				   0);
 		if (!node)
 			return -ENOMEM;
-		rte_memcpy(&node->ixgbe_fdir,
-				 &rule->ixgbe_fdir,
-				 sizeof(union ixgbe_atr_input));
+		memcpy(&node->ixgbe_fdir, &rule->ixgbe_fdir,
+		       sizeof(union ixgbe_atr_input));
 		node->fdirflags = fdircmd_flags;
 		node->fdirhash = fdirhash;
 		node->queue = queue;

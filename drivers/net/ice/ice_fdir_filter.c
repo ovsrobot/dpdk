@@ -1224,13 +1224,13 @@ ice_fdir_extract_fltr_key(struct ice_fdir_fltr_pattern *key,
 	memset(key, 0, sizeof(*key));
 
 	key->flow_type = input->flow_type;
-	rte_memcpy(&key->ip, &input->ip, sizeof(key->ip));
-	rte_memcpy(&key->mask, &input->mask, sizeof(key->mask));
-	rte_memcpy(&key->ext_data, &input->ext_data, sizeof(key->ext_data));
-	rte_memcpy(&key->ext_mask, &input->ext_mask, sizeof(key->ext_mask));
+	memcpy(&key->ip, &input->ip, sizeof(key->ip));
+	memcpy(&key->mask, &input->mask, sizeof(key->mask));
+	memcpy(&key->ext_data, &input->ext_data, sizeof(key->ext_data));
+	memcpy(&key->ext_mask, &input->ext_mask, sizeof(key->ext_mask));
 
-	rte_memcpy(&key->gtpu_data, &input->gtpu_data, sizeof(key->gtpu_data));
-	rte_memcpy(&key->gtpu_mask, &input->gtpu_mask, sizeof(key->gtpu_mask));
+	memcpy(&key->gtpu_data, &input->gtpu_data, sizeof(key->gtpu_data));
+	memcpy(&key->gtpu_mask, &input->gtpu_mask, sizeof(key->gtpu_mask));
 
 	key->tunnel_type = filter->tunnel_type;
 }
@@ -1358,7 +1358,7 @@ ice_fdir_create_filter(struct ice_adapter *ad,
 		if (!entry)
 			goto error;
 
-		rte_memcpy(entry, filter, sizeof(*filter));
+		memcpy(entry, filter, sizeof(*filter));
 
 		flow->rule = entry;
 
@@ -1419,7 +1419,7 @@ ice_fdir_create_filter(struct ice_adapter *ad,
 	if (filter->mark_flag == 1)
 		ice_fdir_rx_parsing_enable(ad, 1);
 
-	rte_memcpy(entry, filter, sizeof(*entry));
+	memcpy(entry, filter, sizeof(*entry));
 	ret = ice_fdir_entry_insert(pf, entry, &key);
 	if (ret) {
 		rte_flow_error_set(error, -ret,
@@ -1720,8 +1720,8 @@ ice_fdir_parse_action(struct ice_adapter *ad,
 
 			act_count = actions->conf;
 			filter->input.cnt_ena = ICE_FXD_FLTR_QW0_STAT_ENA_PKTS;
-			rte_memcpy(&filter->act_count, act_count,
-						sizeof(filter->act_count));
+			memcpy(&filter->act_count, act_count,
+			       sizeof(filter->act_count));
 
 			break;
 		default:
@@ -1978,12 +1978,13 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			p_ext_data = (tunnel_type && is_outer) ?
 				     &filter->input.ext_data_outer :
 				     &filter->input.ext_data;
-			rte_memcpy(&p_ext_data->src_mac,
-				   &eth_spec->hdr.src_addr, RTE_ETHER_ADDR_LEN);
-			rte_memcpy(&p_ext_data->dst_mac,
-				   &eth_spec->hdr.dst_addr, RTE_ETHER_ADDR_LEN);
-			rte_memcpy(&p_ext_data->ether_type,
-				   &eth_spec->hdr.ether_type, sizeof(eth_spec->hdr.ether_type));
+			memcpy(&p_ext_data->src_mac, &eth_spec->hdr.src_addr,
+			       RTE_ETHER_ADDR_LEN);
+			memcpy(&p_ext_data->dst_mac, &eth_spec->hdr.dst_addr,
+			       RTE_ETHER_ADDR_LEN);
+			memcpy(&p_ext_data->ether_type,
+			       &eth_spec->hdr.ether_type,
+			       sizeof(eth_spec->hdr.ether_type));
 			break;
 		case RTE_FLOW_ITEM_TYPE_IPV4:
 			flow_type = ICE_FLTR_PTYPE_NONF_IPV4_OTHER;
@@ -2108,8 +2109,8 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			if (ipv6_mask->hdr.hop_limits == UINT8_MAX)
 				*input_set |= ICE_INSET_IPV6_HOP_LIMIT;
 
-			rte_memcpy(&p_v6->dst_ip, ipv6_spec->hdr.dst_addr, 16);
-			rte_memcpy(&p_v6->src_ip, ipv6_spec->hdr.src_addr, 16);
+			memcpy(&p_v6->dst_ip, ipv6_spec->hdr.dst_addr, 16);
+			memcpy(&p_v6->src_ip, ipv6_spec->hdr.src_addr, 16);
 			vtc_flow_cpu = rte_be_to_cpu_32(ipv6_spec->hdr.vtc_flow);
 			p_v6->tc = (uint8_t)(vtc_flow_cpu >> ICE_FDIR_IPV6_TC_OFFSET);
 			p_v6->proto = ipv6_spec->hdr.proto;

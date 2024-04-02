@@ -325,8 +325,8 @@ sfc_flow_parse_eth(const struct rte_flow_item *item,
 		efx_spec->efs_match_flags |= is_ifrm ?
 			EFX_FILTER_MATCH_IFRM_LOC_MAC :
 			EFX_FILTER_MATCH_LOC_MAC;
-		rte_memcpy(loc_mac, spec->hdr.dst_addr.addr_bytes,
-			   EFX_MAC_ADDR_LEN);
+		memcpy(loc_mac, spec->hdr.dst_addr.addr_bytes,
+		       EFX_MAC_ADDR_LEN);
 	} else if (memcmp(mask->hdr.dst_addr.addr_bytes, ig_mask,
 			  EFX_MAC_ADDR_LEN) == 0) {
 		if (rte_is_unicast_ether_addr(&spec->hdr.dst_addr))
@@ -348,8 +348,8 @@ sfc_flow_parse_eth(const struct rte_flow_item *item,
 	 */
 	if (rte_is_same_ether_addr(&mask->hdr.src_addr, &supp_mask.hdr.src_addr)) {
 		efx_spec->efs_match_flags |= EFX_FILTER_MATCH_REM_MAC;
-		rte_memcpy(efx_spec->efs_rem_mac, spec->hdr.src_addr.addr_bytes,
-			   EFX_MAC_ADDR_LEN);
+		memcpy(efx_spec->efs_rem_mac, spec->hdr.src_addr.addr_bytes,
+		       EFX_MAC_ADDR_LEN);
 	} else if (!rte_is_zero_ether_addr(&mask->hdr.src_addr)) {
 		goto fail_bad_mask;
 	}
@@ -624,8 +624,8 @@ sfc_flow_parse_ipv6(const struct rte_flow_item *item,
 
 		RTE_BUILD_BUG_ON(sizeof(efx_spec->efs_rem_host) !=
 				 sizeof(spec->hdr.src_addr));
-		rte_memcpy(&efx_spec->efs_rem_host, spec->hdr.src_addr,
-			   sizeof(efx_spec->efs_rem_host));
+		memcpy(&efx_spec->efs_rem_host, spec->hdr.src_addr,
+		       sizeof(efx_spec->efs_rem_host));
 	} else if (!sfc_flow_is_zero(mask->hdr.src_addr,
 				     sizeof(mask->hdr.src_addr))) {
 		goto fail_bad_mask;
@@ -637,8 +637,8 @@ sfc_flow_parse_ipv6(const struct rte_flow_item *item,
 
 		RTE_BUILD_BUG_ON(sizeof(efx_spec->efs_loc_host) !=
 				 sizeof(spec->hdr.dst_addr));
-		rte_memcpy(&efx_spec->efs_loc_host, spec->hdr.dst_addr,
-			   sizeof(efx_spec->efs_loc_host));
+		memcpy(&efx_spec->efs_loc_host, spec->hdr.dst_addr,
+		       sizeof(efx_spec->efs_loc_host));
 	} else if (!sfc_flow_is_zero(mask->hdr.dst_addr,
 				     sizeof(mask->hdr.dst_addr))) {
 		goto fail_bad_mask;
@@ -889,8 +889,8 @@ sfc_flow_set_efx_spec_vni_or_vsid(efx_filter_spec_t *efx_spec,
 	if (memcmp(vni_or_vsid_mask, vni_or_vsid_full_mask,
 		   EFX_VNI_OR_VSID_LEN) == 0) {
 		efx_spec->efs_match_flags |= EFX_FILTER_MATCH_VNI_OR_VSID;
-		rte_memcpy(efx_spec->efs_vni_or_vsid, vni_or_vsid_val,
-			   EFX_VNI_OR_VSID_LEN);
+		memcpy(efx_spec->efs_vni_or_vsid, vni_or_vsid_val,
+		       EFX_VNI_OR_VSID_LEN);
 	} else if (!sfc_flow_is_zero(vni_or_vsid_mask, EFX_VNI_OR_VSID_LEN)) {
 		rte_flow_error_set(error, EINVAL,
 				   RTE_FLOW_ERROR_TYPE_ITEM, item,
