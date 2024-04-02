@@ -161,6 +161,8 @@ Removed Items
 
 * acc101: Removed obsolete code for non productized HW variant.
 
+* mbuf: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
+  have been removed from ``struct rte_mbuf``.
 
 API Changes
 -----------
