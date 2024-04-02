@@ -125,7 +125,7 @@ The setup procedure is as follows:
             tapvm01: tap
             tapvm02: tap
 
-#.  Configure your TAP networking interfaces using ip/ifconfig tools.
+#.  Configure your TAP networking interfaces using iproute2 tools.
 
 #.  Log in to the guest OS and check that the expected emulated devices exist:
 

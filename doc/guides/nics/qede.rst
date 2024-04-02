@@ -226,8 +226,8 @@ This section provides instructions to configure SR-IOV with Linux OS.
 
    .. code-block:: console
 
-      ifconfig ens5f0 up
-      ifconfig ens5f1 up
+      ip link set dev ens5f0 up
+      ip link set dev ens5f1 up
 
 #. Create VF device(s):
 

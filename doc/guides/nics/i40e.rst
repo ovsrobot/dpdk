@@ -326,7 +326,7 @@ SR-IOV: Prerequisites and sample Application Notes
 
    .. code-block:: console
 
-      ifconfig ens802f0 up
+      ip link set dev ens802f0 up
 
 #. Create VF device(s):
 

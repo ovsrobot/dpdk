@@ -86,7 +86,7 @@ operations such as querying/updating the MTU and flow control parameters.
 This capability allows the PMD to coexist with kernel network interfaces
 which remain functional, although they stop receiving unicast packets as
 long as they share the same MAC address.
-This means legacy linux control tools (for example: ethtool, ifconfig and
+This means legacy linux control tools (for example: ethtool, iproute and
 more) can operate on the same network interfaces that owned by the DPDK
 application.
 

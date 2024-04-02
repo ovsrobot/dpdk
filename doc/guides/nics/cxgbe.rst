@@ -344,11 +344,11 @@ Unified Wire package for Linux operating system are as follows:
 
       modprobe cxgb4
 
-#. Use ifconfig to get the interface name assigned to Chelsio card:
+#. Use ip to get the interface name assigned to Chelsio card:
 
    .. code-block:: console
 
-      ifconfig -a | grep "00:07:43"
+      ip -br link show | grep "00:07:43"
 
    Example output:
 
@@ -502,11 +502,11 @@ virtual functions.
       Both the interfaces of a Chelsio 2-port adapter are bound to the
       same PCI bus address.
 
-#. Use ifconfig to get the interface name assigned to Chelsio card:
+#. Use ip to get the interface name assigned to Chelsio card:
 
    .. code-block:: console
 
-      ifconfig -a | grep "00:07:43"
+      ip -br link show | grep "00:07:43"
 
    Example output:
 
@@ -519,8 +519,8 @@ virtual functions.
 
    .. code-block:: console
 
-      ifconfig p1p1 up
-      ifconfig p1p2 up
+      ip link set dev p1p1 up
+      ip link set dev p1p2 up
 
 #. Instantiate SR-IOV Virtual Functions. PF0..3 can be used for
    SR-IOV VFs. Multiple VFs can be instantiated on each of PF0..3.
@@ -886,4 +886,3 @@ port.
 
 For this reason, one cannot allow/block a single port without
 allowing/blocking the other ports on the same device.
-
