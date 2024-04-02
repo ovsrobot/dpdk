@@ -445,21 +445,21 @@ Setup bridge on host_server_1
    # ens3f0 is the Niantic NIC
    # ens6f0 is the Fortville NIC
 
-   ifconfig ens3f0 down
-   ifconfig tap1 down
-   ifconfig ens6f0 down
-   ifconfig virbr0 down
+   ip link set dev ens3f0 down
+   ip link set dev tap1 down
+   ip link set dev ens6f0 down
+   ip link set dev virbr0 down
 
-   brctl show virbr0
-   brctl addif virbr0 ens3f0
-   brctl addif virbr0 ens6f0
-   brctl addif virbr0 tap1
-   brctl show virbr0
+   bridge link show dev virbr0
+   ip link set dev ens3f0 master virbr0
+   ip link set dev ens6f0 master virbr0
+   ip link set dev tap1 master virbr0
+   bridge link show dev virbr0
 
-   ifconfig ens3f0 up
-   ifconfig tap1 up
-   ifconfig ens6f0 up
-   ifconfig virbr0 up
+   ip link set dev ens3f0 up
+   ip link set dev tap1 up
+   ip link set dev ens6f0 up
+   ip link set dev virbr0 up
 
 connect_to_qemu_mon_on_host.sh
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -548,21 +548,21 @@ Setup bridge on host_server_2
    # ens4f0 is the Niantic NIC
    # ens5f0 is the Fortville NIC
 
-   ifconfig ens4f0 down
-   ifconfig tap1 down
-   ifconfig ens5f0 down
-   ifconfig virbr0 down
+   ip link set dev ens4f0 down
+   ip link set dev tap1 down
+   ip link set dev ens5f0 down
+   ip link set dev virbr0 down
 
-   brctl show virbr0
-   brctl addif virbr0 ens4f0
-   brctl addif virbr0 ens5f0
-   brctl addif virbr0 tap1
-   brctl show virbr0
+   bridge link show dev virbr0
+   ip link set dev ens4f0 master virbr0
+   ip link set dev ens5f0 master virbr0
+   ip link set dev tap1 master virbr0
+   bridge link show dev virbr0
 
-   ifconfig ens4f0 up
-   ifconfig tap1 up
-   ifconfig ens5f0 up
-   ifconfig virbr0 up
+   ip link set dev ens4f0 up
+   ip link set dev tap1 up
+   ip link set dev ens5f0 up
+   ip link set dev virbr0 up
 
 .. _lm_bond_virtio_sriov_vm_scripts:
 
@@ -585,7 +585,7 @@ Set up DPDK in the Virtual Machine
    /root/dpdk/usertools/dpdk-hugepages.py --setup 2G
    /root/dpdk/usertools/dpdk-hugepages.py --show
 
-   ifconfig -a
+   ip link show
    /root/dpdk/usertools/dpdk-devbind.py --status
 
    rmmod virtio-pci ixgbevf

@@ -415,7 +415,7 @@ setup_dpdk_virtio_in_vm.sh
    /root/dpdk/usertools/dpdk-hugepages.py --setup 2G
    /root/dpdk/usertools/dpdk-hugepages.py --show
 
-   ifconfig -a
+   ip -br link show
    /root/dpdk/usertools/dpdk-devbind.py --status
 
    rmmod virtio-pci
