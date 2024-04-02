@@ -375,7 +375,7 @@ qat_comp_build_multiple_requests(void *in_op, struct qat_qp *qp,
 	QAT_DP_LOG(DEBUG, "op %p, parent_cookie %p", op, parent_cookie);
 
 	/* copy original op to the local variable for restoring later */
-	rte_memcpy(&op_backup, op, sizeof(op_backup));
+	memcpy(&op_backup, op, sizeof(op_backup));
 
 	parent_cookie->nb_child_responses = 0;
 	parent_cookie->nb_children = 0;
@@ -401,7 +401,7 @@ qat_comp_build_multiple_requests(void *in_op, struct qat_qp *qp,
 	}
 
 	/* prepare local dst mbuf */
-	rte_memcpy(&dst_mbuf, op->m_dst, sizeof(dst_mbuf));
+	memcpy(&dst_mbuf, op->m_dst, sizeof(dst_mbuf));
 	rte_pktmbuf_reset(&dst_mbuf);
 	dst_mbuf.buf_len = dst_data_size;
 	dst_mbuf.data_len = dst_data_size;
@@ -457,7 +457,7 @@ qat_comp_build_multiple_requests(void *in_op, struct qat_qp *qp,
 		if (ret < 0) {
 			QAT_DP_LOG(WARNING, "Failed to build child descriptor");
 			/* restore op and clear cookie */
-			rte_memcpy(op, &op_backup, sizeof(op_backup));
+			memcpy(op, &op_backup, sizeof(op_backup));
 			parent_cookie->split_op = 0;
 			parent_cookie->nb_children = 0;
 			return ret;
@@ -468,7 +468,7 @@ qat_comp_build_multiple_requests(void *in_op, struct qat_qp *qp,
 	}
 
 	/* restore backed up original op */
-	rte_memcpy(op, &op_backup, sizeof(op_backup));
+	memcpy(op, &op_backup, sizeof(op_backup));
 
 	if (nb_descr != num_descriptors_built)
 		QAT_DP_LOG(ERR, "split op. expected %d, built %d",
