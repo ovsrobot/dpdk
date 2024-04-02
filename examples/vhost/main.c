@@ -405,9 +405,9 @@ get_eth_conf(struct rte_eth_conf *eth_conf, uint32_t num_devices)
 		conf.pool_map[i].pools = (1UL << i);
 	}
 
-	(void)(rte_memcpy(eth_conf, &vmdq_conf_default, sizeof(*eth_conf)));
-	(void)(rte_memcpy(&eth_conf->rx_adv_conf.vmdq_rx_conf, &conf,
-		   sizeof(eth_conf->rx_adv_conf.vmdq_rx_conf)));
+	memcpy(eth_conf, &vmdq_conf_default, sizeof(*eth_conf));
+	memcpy(&eth_conf->rx_adv_conf.vmdq_rx_conf, &conf,
+	       sizeof(eth_conf->rx_adv_conf.vmdq_rx_conf));
 	return 0;
 }
 
