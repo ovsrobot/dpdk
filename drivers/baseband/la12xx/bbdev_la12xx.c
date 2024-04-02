@@ -597,8 +597,8 @@ dequeue_single_op(struct bbdev_la12xx_q_priv *q_priv, void *dst)
 
 	op = q_priv->bbdev_op[ci];
 
-	rte_memcpy(dst, q_priv->msg_ch_vaddr[ci],
-		sizeof(struct bbdev_ipc_enqueue_op));
+	memcpy(dst, q_priv->msg_ch_vaddr[ci],
+	       sizeof(struct bbdev_ipc_enqueue_op));
 
 	/* Move Consumer Index forward */
 	ci++;
