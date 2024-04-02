@@ -13,7 +13,6 @@
 #include <bus_driver.h>
 #include <rte_malloc.h>
 #include <rte_devargs.h>
-#include <rte_memcpy.h>
 #include <ethdev_driver.h>
 #include <rte_mbuf_dyn.h>
 

@@ -8,7 +8,6 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_devargs.h>
-#include <rte_memcpy.h>
 #include <eal_filesystem.h>
 
 #include "../private.h"

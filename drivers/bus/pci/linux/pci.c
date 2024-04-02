@@ -10,7 +10,6 @@
 #include <rte_bus_pci.h>
 #include <rte_malloc.h>
 #include <rte_devargs.h>
-#include <rte_memcpy.h>
 #include <rte_vfio.h>
 
 #include "eal_filesystem.h"
