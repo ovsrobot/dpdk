@@ -375,7 +375,7 @@ Such model has the following benefits:
  - It is secure and robust, as the memory management and isolation
    is done by the kernel.
  - It enables the user to use legacy linux tools such as ``ethtool`` or
-   ``ifconfig`` while running DPDK application on the same network ports.
+   ``ip`` while running DPDK application on the same network ports.
  - It enables the DPDK application to filter only part of the traffic,
    while the rest will be directed and handled by the kernel driver.
    The flow bifurcation is performed by the NIC hardware.
