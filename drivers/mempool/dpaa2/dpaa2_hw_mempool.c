@@ -16,7 +16,6 @@
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_string_fns.h>
 #include <rte_cycles.h>
 #include <rte_kvargs.h>
@@ -125,8 +124,8 @@ rte_hw_mbuf_create_pool(struct rte_mempool *mp)
 	rte_dpaa2_bpid_info[bpid].bp_list = bp_list;
 	rte_dpaa2_bpid_info[bpid].bpid = bpid;
 
-	rte_memcpy(bp_info, (void *)&rte_dpaa2_bpid_info[bpid],
-		   sizeof(struct dpaa2_bp_info));
+	memcpy(bp_info, (void *)&rte_dpaa2_bpid_info[bpid],
+	       sizeof(struct dpaa2_bp_info));
 	mp->pool_data = (void *)bp_info;
 
 	DPAA2_MEMPOOL_DEBUG("BP List created for bpid =%d", dpbp_attr.bpid);
