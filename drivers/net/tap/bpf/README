@@ -1,0 +1,38 @@
+This is the BPF program used to implement the RSS across queues flow action.
+The program is loaded when first RSS flow rule is created and is never unloaded.
+
+Each flow rule creates a unique key (handle) and this is used as the key
+for finding the RSS information for that flow rule.
+
+This version is built the BPF Compile Once — Run Everywhere (CO-RE)
+framework and uses libbpf and bpftool.
+
+Limitations
+-----------
+- requires libbpf to run
+- rebuilding the BPF requires Clang and bpftool.
+  Some older versions of Ubuntu do not have working bpftool package.
+  Need a version of Clang that can compile to BPF.
+- only standard Toeplitz hash with standard 40 byte key is supported
+- the number of flow rules using RSS is limited to 32
+
+Building
+--------
+During the DPDK build process the meson build file checks that
+libbpf, bpftool, and clang are not available. If everything is
+there then BPF RSS is enabled.
+
+1. Using clang to compile tap_rss.c the tap_rss.bpf.o file.
+
+2. Using bpftool generate a skeleton header file tap_rss.skel.h from tap_rss.bpf.o.
+   This skeleton header is an large byte array which contains the
+   BPF binary and wrappers to load and use it.
+
+3. The tap flow code then compiles that BPF byte array into the PMD object.
+
+4. When needed the BPF array is loaded by libbpf.
+
+References
+----------
+BPF and XDP reference guide
+https://docs.cilium.io/en/latest/bpf/progtypes/
