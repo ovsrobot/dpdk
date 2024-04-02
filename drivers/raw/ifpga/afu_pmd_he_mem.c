@@ -14,7 +14,6 @@
 
 #include <rte_eal.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_io.h>
 #include <rte_vfio.h>
 #include <bus_pci_driver.h>
@@ -126,7 +125,7 @@ static int he_mem_tg_config(struct afu_rawdev *dev, void *config,
 	if (config_size != sizeof(struct rte_pmd_afu_he_mem_tg_cfg))
 		return -EINVAL;
 
-	rte_memcpy(&priv->he_mem_tg_cfg, config, sizeof(priv->he_mem_tg_cfg));
+	memcpy(&priv->he_mem_tg_cfg, config, sizeof(priv->he_mem_tg_cfg));
 
 	return 0;
 }
