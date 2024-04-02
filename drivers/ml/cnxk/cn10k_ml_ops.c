@@ -668,11 +668,13 @@ cn10k_ml_layer_load(void *device, uint16_t model_id, const char *layer_name, uin
 	}
 
 	/* Copy metadata to internal buffer */
-	rte_memcpy(&layer->glow.metadata, buffer, sizeof(struct cn10k_ml_model_metadata));
+	memcpy(&layer->glow.metadata, buffer,
+	       sizeof(struct cn10k_ml_model_metadata));
 	cn10k_ml_model_metadata_update(&layer->glow.metadata);
 
 	/* Set layer name */
-	rte_memcpy(layer->name, layer->glow.metadata.model.name, MRVL_ML_MODEL_NAME_LEN);
+	memcpy(layer->name, layer->glow.metadata.model.name,
+	       MRVL_ML_MODEL_NAME_LEN);
 
 	/* Enable support for batch_size of 256 */
 	if (layer->glow.metadata.model.batch_size == 0)
@@ -748,11 +750,12 @@ cn10k_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 	model->subtype = ML_CNXK_MODEL_SUBTYPE_GLOW_MRVL;
 
 	/* Copy metadata to internal buffer */
-	rte_memcpy(&model->glow.metadata, params->addr, sizeof(struct cn10k_ml_model_metadata));
+	memcpy(&model->glow.metadata, params->addr,
+	       sizeof(struct cn10k_ml_model_metadata));
 	cn10k_ml_model_metadata_update(&model->glow.metadata);
 
 	/* Set model name */
-	rte_memcpy(model->name, (char *)model->glow.metadata.model.name, 64);
+	memcpy(model->name, (char *)model->glow.metadata.model.name, 64);
 
 	/* Enable support for batch_size of 256 */
 	if (model->glow.metadata.model.batch_size == 0)

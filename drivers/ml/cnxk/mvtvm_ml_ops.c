@@ -194,7 +194,7 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 	/* Copy mod.so */
 	model->mvtvm.object.so.addr = mz->addr;
 	model->mvtvm.object.so.size = object[0].size;
-	rte_memcpy(model->mvtvm.object.so.name, object[0].name, TVMDP_NAME_STRLEN);
+	memcpy(model->mvtvm.object.so.name, object[0].name, TVMDP_NAME_STRLEN);
 	rte_memcpy(model->mvtvm.object.so.addr, object[0].buffer, object[0].size);
 	rte_free(object[0].buffer);
 
@@ -203,7 +203,8 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 		RTE_PTR_ADD(model->mvtvm.object.so.addr,
 			    RTE_ALIGN_CEIL(model->mvtvm.object.so.size, RTE_CACHE_LINE_MIN_SIZE));
 	model->mvtvm.object.json.size = object[1].size;
-	rte_memcpy(model->mvtvm.object.json.name, object[1].name, TVMDP_NAME_STRLEN);
+	memcpy(model->mvtvm.object.json.name, object[1].name,
+	       TVMDP_NAME_STRLEN);
 	rte_memcpy(model->mvtvm.object.json.addr, object[1].buffer, object[1].size);
 	rte_free(object[1].buffer);
 
@@ -212,7 +213,8 @@ mvtvm_ml_model_load(struct cnxk_ml_dev *cnxk_mldev, struct rte_ml_model_params *
 		RTE_PTR_ADD(model->mvtvm.object.json.addr,
 			    RTE_ALIGN_CEIL(model->mvtvm.object.json.size, RTE_CACHE_LINE_MIN_SIZE));
 	model->mvtvm.object.params.size = object[2].size;
-	rte_memcpy(model->mvtvm.object.params.name, object[2].name, TVMDP_NAME_STRLEN);
+	memcpy(model->mvtvm.object.params.name, object[2].name,
+	       TVMDP_NAME_STRLEN);
 	rte_memcpy(model->mvtvm.object.params.addr, object[2].buffer, object[2].size);
 	rte_free(object[2].buffer);
 
