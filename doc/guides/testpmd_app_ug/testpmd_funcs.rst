@@ -1381,7 +1381,8 @@ Set the allmulti mode for a port or for all ports::
 
    testpmd> set allmulti (port_id|all) (on|off)
 
-Same as the ifconfig (8) option. Controls how multicast packets are handled.
+Same as the ``ip link set NETDEV allmulticast (on|off)`` command.
+Controls how multicast packets are handled.
 
 set flow_ctrl rx
 ~~~~~~~~~~~~~~~~
