@@ -177,22 +177,17 @@ pipeline_tx_first(struct test_pipeline *t, struct evt_options *opt)
 			mbuf->pkt_len = pkt_sz;
 
 			/* Copy Ethernet header */
-			rte_memcpy(rte_pktmbuf_mtod_offset(mbuf, char *, 0),
-				   &eth_hdr, sizeof(struct rte_ether_hdr));
+			memcpy(rte_pktmbuf_mtod_offset(mbuf, char *, 0),
+			       &eth_hdr, sizeof(struct rte_ether_hdr));
 
 			/* Copy Ipv4 header */
-			rte_memcpy(rte_pktmbuf_mtod_offset(
-					   mbuf, char *,
-					   sizeof(struct rte_ether_hdr)),
-				   &ip_hdr, sizeof(struct rte_ipv4_hdr));
+			memcpy(rte_pktmbuf_mtod_offset(mbuf, char *, sizeof(struct rte_ether_hdr)),
+			       &ip_hdr, sizeof(struct rte_ipv4_hdr));
 
 			/* Copy UDP header */
-			rte_memcpy(
-				rte_pktmbuf_mtod_offset(
-					mbuf, char *,
-					sizeof(struct rte_ipv4_hdr) +
-						sizeof(struct rte_ether_hdr)),
-				&udp_hdr, sizeof(struct rte_udp_hdr));
+			memcpy(rte_pktmbuf_mtod_offset(mbuf, char *, sizeof(struct rte_ipv4_hdr)
+						       + sizeof(struct rte_ether_hdr)),
+			       &udp_hdr, sizeof(struct rte_udp_hdr));
 			pkt_udp_hdr = rte_pktmbuf_mtod_offset(
 				mbuf, struct rte_udp_hdr *,
 				sizeof(struct rte_ipv4_hdr) +
