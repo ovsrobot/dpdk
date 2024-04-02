@@ -164,6 +164,9 @@ Removed Items
 * mbuf: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
   have been removed from ``struct rte_mbuf``.
 
+* security: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
+  have been removed from ``struct rte_security_session``.
+
 API Changes
 -----------
 
