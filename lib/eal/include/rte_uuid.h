@@ -18,6 +18,8 @@ extern "C" {
 #include <stddef.h>
 #include <string.h>
 
+#include <rte_compat.h>
+
 /**
  * Struct describing a Universal Unique Identifier
  */
@@ -94,11 +96,29 @@ int	rte_uuid_parse(const char *in, rte_uuid_t uu);
  * @param uu
  *    UUID to format
  * @param out
- *    Resulting string buffer
+ *    Resulting string bufferm
  * @param len
  *    Sizeof the available string buffer
  */
 void	rte_uuid_unparse(const rte_uuid_t uu, char *out, size_t len);
+
+/**
+ * Generate a random uuid
+ *
+ * @param uu
+ *   Resulting UUID
+ */
+__rte_experimental
+void   rte_uuid_generate_random(rte_uuid_t uu);
+
+/**
+ * Generate a uuid based on time stamp.
+ *
+ * @param uu
+ *   Resulting UUID
+ */
+__rte_experimental
+void   rte_uuid_generate_time(rte_uuid_t uu);
 
 #ifdef __cplusplus
 }
