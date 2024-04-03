@@ -25,6 +25,7 @@ sources = files(
         'vdpa.c',
         'vhost.c',
         'vhost_crypto.c',
+        'vhost_thread.c',
         'vhost_user.c',
         'virtio_net.c',
         'virtio_net_ctrl.c',

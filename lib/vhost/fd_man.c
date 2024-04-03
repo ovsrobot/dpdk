@@ -9,6 +9,7 @@
 #include <rte_log.h>
 
 #include "fd_man.h"
+#include "vhost_thread.h"
 
 RTE_LOG_REGISTER_SUFFIX(vhost_fdset_logtype, fdset, INFO);
 #define RTE_LOGTYPE_VHOST_FDMAN vhost_fdset_logtype
@@ -250,6 +251,7 @@ fdset_event_dispatch(void *arg)
 		if (val < 0)
 			continue;
 
+		vhost_thread_read_lock();
 		need_shrink = 0;
 		for (i = 0; i < numfds; i++) {
 			pthread_mutex_lock(&pfdset->fd_mutex);
@@ -303,6 +305,7 @@ fdset_event_dispatch(void *arg)
 
 		if (need_shrink)
 			fdset_shrink(pfdset);
+		vhost_thread_read_unlock();
 	}
 
 	return 0;
