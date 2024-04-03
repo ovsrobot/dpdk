@@ -1119,6 +1119,34 @@ typedef const uint32_t *(*eth_buffer_split_supported_hdr_ptypes_get_t)(struct rt
  */
 typedef int (*eth_dev_priv_dump_t)(struct rte_eth_dev *dev, FILE *file);
 
+/** @internal Retrieve physical link settings of a port.
+ *
+ * @param dev
+ *   Port (ethdev) handle
+ *
+ * @param[out] settings
+ *   Physical port link settings.
+ *
+ * @return
+ *   Negative errno value on error, zero otherwise
+ */
+typedef int (*eth_get_link_settings_t)(struct rte_eth_dev *dev,
+				 struct rte_link_settings *settings);
+
+/** @internal Configure physical link settings of a port.
+ *
+ * @param dev
+ *   Port (ethdev) handle
+ *
+ * @param settings
+ *   Physical port link settings.
+ *
+ * @return
+ *   Negative errno value on error, zero otherwise
+ */
+typedef int (*eth_set_link_settings_t)(struct rte_eth_dev *dev,
+				 const struct rte_link_settings *settings);
+
 /**
  * @internal Set Rx queue available descriptors threshold.
  * @see rte_eth_rx_avail_thresh_set()
@@ -1474,6 +1502,11 @@ struct eth_dev_ops {
 	eth_count_aggr_ports_t count_aggr_ports;
 	/** Map a Tx queue with an aggregated port of the DPDK port */
 	eth_map_aggr_tx_affinity_t map_aggr_tx_affinity;
+
+	/** Retrieve physical link settings */
+	eth_get_link_settings_t get_link_settings;
+	/** Configure physical link settings */
+	eth_set_link_settings_t set_link_settings;
 };
 
 /**

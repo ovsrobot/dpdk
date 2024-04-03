@@ -335,7 +335,7 @@ struct rte_eth_stats {
 __extension__
 struct __rte_aligned(8) rte_eth_link { /**< aligned for atomic64 read/write */
 	uint32_t link_speed;        /**< RTE_ETH_SPEED_NUM_ */
-	uint16_t link_duplex  : 1;  /**< RTE_ETH_LINK_[HALF/FULL]_DUPLEX */
+	uint16_t link_duplex  : 2;  /**< RTE_ETH_LINK_[HALF/FULL/UNKNOWN]_DUPLEX */
 	uint16_t link_autoneg : 1;  /**< RTE_ETH_LINK_[AUTONEG/FIXED] */
 	uint16_t link_status  : 1;  /**< RTE_ETH_LINK_[DOWN/UP] */
 };
@@ -343,13 +343,27 @@ struct __rte_aligned(8) rte_eth_link { /**< aligned for atomic64 read/write */
 /**@{@name Link negotiation
  * Constants used in link management.
  */
-#define RTE_ETH_LINK_HALF_DUPLEX 0 /**< Half-duplex connection (see link_duplex). */
-#define RTE_ETH_LINK_FULL_DUPLEX 1 /**< Full-duplex connection (see link_duplex). */
-#define RTE_ETH_LINK_DOWN        0 /**< Link is down (see link_status). */
-#define RTE_ETH_LINK_UP          1 /**< Link is up (see link_status). */
-#define RTE_ETH_LINK_FIXED       0 /**< No autonegotiation (see link_autoneg). */
-#define RTE_ETH_LINK_AUTONEG     1 /**< Autonegotiated (see link_autoneg). */
-#define RTE_ETH_LINK_MAX_STR_LEN 40 /**< Max length of default link string. */
+#define RTE_ETH_LINK_HALF_DUPLEX	0 /**< Half-duplex connection (see link_duplex). */
+#define RTE_ETH_LINK_FULL_DUPLEX	1 /**< Full-duplex connection (see link_duplex). */
+#define RTE_ETH_LINK_UNKNOWN_DUPLEX	2 /**</ Unknown-duplex (see link_duplex). */
+#define RTE_ETH_LINK_DOWN		0 /**< Link is down (see link_status). */
+#define RTE_ETH_LINK_UP			1 /**< Link is up (see link_status). */
+#define RTE_ETH_LINK_FIXED		0 /**< No autonegotiation (see link_autoneg). */
+#define RTE_ETH_LINK_AUTONEG		1 /**< Autonegotiated (see link_autoneg). */
+#define RTE_ETH_LINK_MAX_STR_LEN	40 /**< Max length of default link string. */
+/**@}*/
+
+/**@{@name Link negotiation
+ * Constants used in link management to specify connector port.
+ */
+#define RTE_PORT_TP             0x00
+#define RTE_PORT_AUI            0x01
+#define RTE_PORT_MII            0x02
+#define RTE_PORT_FIBRE          0x03
+#define RTE_PORT_BNC            0x04
+#define RTE_PORT_DA             0x05
+#define RTE_PORT_NONE           0xef
+#define RTE_PORT_OTHER          0xff
 /**@}*/
 
 /**
@@ -1431,6 +1445,147 @@ struct rte_eth_pfc_queue_conf {
 		 */
 		uint8_t tc;
 	} tx_pause; /* Valid when (mode == FC_TX_PAUSE || mode == FC_FULL) */
+};
+
+/* Enable or disable autonegotiation. */
+#define RTE_AUTONEG_DISABLE         0x00
+#define RTE_AUTONEG_ENABLE          0x01
+
+/* MDI or MDI-X status/control - if MDI/MDI_X/AUTO is set then
+ * the driver is required to renegotiate link
+ */
+#define RTE_TP_MDI_INVALID      0x00 /* status: unknown; control: unsupported */
+#define RTE_TP_MDI              0x01 /* status: MDI;     control: force MDI */
+#define RTE_TP_MDI_X            0x02 /* status: MDI-X;   control: force MDI-X */
+#define RTE_TP_MDI_AUTO         0x03 /*                  control: auto-select */
+
+/* Link mode bit indices */
+enum rte_link_mode_bit_indices {
+	RTE_LINK_MODE_10baseT_Half_BIT	= 0,
+	RTE_LINK_MODE_10baseT_Full_BIT	= 1,
+	RTE_LINK_MODE_100baseT_Half_BIT	= 2,
+	RTE_LINK_MODE_100baseT_Full_BIT	= 3,
+	RTE_LINK_MODE_1000baseT_Half_BIT	= 4,
+	RTE_LINK_MODE_1000baseT_Full_BIT	= 5,
+	RTE_LINK_MODE_Autoneg_BIT		= 6,
+	RTE_LINK_MODE_TP_BIT		= 7,
+	RTE_LINK_MODE_AUI_BIT		= 8,
+	RTE_LINK_MODE_MII_BIT		= 9,
+	RTE_LINK_MODE_FIBRE_BIT		= 10,
+	RTE_LINK_MODE_BNC_BIT		= 11,
+	RTE_LINK_MODE_10000baseT_Full_BIT	= 12,
+	RTE_LINK_MODE_Pause_BIT		= 13,
+	RTE_LINK_MODE_Asym_Pause_BIT	= 14,
+	RTE_LINK_MODE_2500baseX_Full_BIT	= 15,
+	RTE_LINK_MODE_Backplane_BIT		= 16,
+	RTE_LINK_MODE_1000baseKX_Full_BIT	= 17,
+	RTE_LINK_MODE_10000baseKX4_Full_BIT	= 18,
+	RTE_LINK_MODE_10000baseKR_Full_BIT	= 19,
+	RTE_LINK_MODE_10000baseR_FEC_BIT	= 20,
+	RTE_LINK_MODE_20000baseMLD2_Full_BIT = 21,
+	RTE_LINK_MODE_20000baseKR2_Full_BIT	= 22,
+	RTE_LINK_MODE_40000baseKR4_Full_BIT	= 23,
+	RTE_LINK_MODE_40000baseCR4_Full_BIT	= 24,
+	RTE_LINK_MODE_40000baseSR4_Full_BIT	= 25,
+	RTE_LINK_MODE_40000baseLR4_Full_BIT	= 26,
+	RTE_LINK_MODE_56000baseKR4_Full_BIT	= 27,
+	RTE_LINK_MODE_56000baseCR4_Full_BIT	= 28,
+	RTE_LINK_MODE_56000baseSR4_Full_BIT	= 29,
+	RTE_LINK_MODE_56000baseLR4_Full_BIT	= 30,
+	RTE_LINK_MODE_25000baseCR_Full_BIT	= 31,
+	RTE_LINK_MODE_25000baseKR_Full_BIT	= 32,
+	RTE_LINK_MODE_25000baseSR_Full_BIT	= 33,
+	RTE_LINK_MODE_50000baseCR2_Full_BIT	= 34,
+	RTE_LINK_MODE_50000baseKR2_Full_BIT	= 35,
+	RTE_LINK_MODE_100000baseKR4_Full_BIT	= 36,
+	RTE_LINK_MODE_100000baseSR4_Full_BIT	= 37,
+	RTE_LINK_MODE_100000baseCR4_Full_BIT	= 38,
+	RTE_LINK_MODE_100000baseLR4_ER4_Full_BIT	= 39,
+	RTE_LINK_MODE_50000baseSR2_Full_BIT		= 40,
+	RTE_LINK_MODE_1000baseX_Full_BIT	= 41,
+	RTE_LINK_MODE_10000baseCR_Full_BIT	= 42,
+	RTE_LINK_MODE_10000baseSR_Full_BIT	= 43,
+	RTE_LINK_MODE_10000baseLR_Full_BIT	= 44,
+	RTE_LINK_MODE_10000baseLRM_Full_BIT	= 45,
+	RTE_LINK_MODE_10000baseER_Full_BIT	= 46,
+	RTE_LINK_MODE_2500baseT_Full_BIT	= 47,
+	RTE_LINK_MODE_5000baseT_Full_BIT	= 48,
+
+	RTE_LINK_MODE_FEC_NONE_BIT	= 49,
+	RTE_LINK_MODE_FEC_RS_BIT	= 50,
+	RTE_LINK_MODE_FEC_BASER_BIT	= 51,
+	RTE_LINK_MODE_50000baseKR_Full_BIT		 = 52,
+	RTE_LINK_MODE_50000baseSR_Full_BIT		 = 53,
+	RTE_LINK_MODE_50000baseCR_Full_BIT		 = 54,
+	RTE_LINK_MODE_50000baseLR_ER_FR_Full_BIT	 = 55,
+	RTE_LINK_MODE_50000baseDR_Full_BIT		 = 56,
+	RTE_LINK_MODE_100000baseKR2_Full_BIT	 = 57,
+	RTE_LINK_MODE_100000baseSR2_Full_BIT	 = 58,
+	RTE_LINK_MODE_100000baseCR2_Full_BIT	 = 59,
+	RTE_LINK_MODE_100000baseLR2_ER2_FR2_Full_BIT = 60,
+	RTE_LINK_MODE_100000baseDR2_Full_BIT	 = 61,
+	RTE_LINK_MODE_200000baseKR4_Full_BIT	 = 62,
+	RTE_LINK_MODE_200000baseSR4_Full_BIT	 = 63,
+	RTE_LINK_MODE_200000baseLR4_ER4_FR4_Full_BIT = 64,
+	RTE_LINK_MODE_200000baseDR4_Full_BIT	 = 65,
+	RTE_LINK_MODE_200000baseCR4_Full_BIT	 = 66,
+	RTE_LINK_MODE_100baseT1_Full_BIT		 = 67,
+	RTE_LINK_MODE_1000baseT1_Full_BIT		 = 68,
+	RTE_LINK_MODE_400000baseKR8_Full_BIT	 = 69,
+	RTE_LINK_MODE_400000baseSR8_Full_BIT	 = 70,
+	RTE_LINK_MODE_400000baseLR8_ER8_FR8_Full_BIT = 71,
+	RTE_LINK_MODE_400000baseDR8_Full_BIT	 = 72,
+	RTE_LINK_MODE_400000baseCR8_Full_BIT	 = 73,
+	RTE_LINK_MODE_FEC_LLRS_BIT			 = 74,
+	RTE_LINK_MODE_100000baseKR_Full_BIT		 = 75,
+	RTE_LINK_MODE_100000baseSR_Full_BIT		 = 76,
+	RTE_LINK_MODE_100000baseLR_ER_FR_Full_BIT	 = 77,
+	RTE_LINK_MODE_100000baseCR_Full_BIT		 = 78,
+	RTE_LINK_MODE_100000baseDR_Full_BIT		 = 79,
+	RTE_LINK_MODE_200000baseKR2_Full_BIT	 = 80,
+	RTE_LINK_MODE_200000baseSR2_Full_BIT	 = 81,
+	RTE_LINK_MODE_200000baseLR2_ER2_FR2_Full_BIT = 82,
+	RTE_LINK_MODE_200000baseDR2_Full_BIT	 = 83,
+	RTE_LINK_MODE_200000baseCR2_Full_BIT	 = 84,
+	RTE_LINK_MODE_400000baseKR4_Full_BIT	 = 85,
+	RTE_LINK_MODE_400000baseSR4_Full_BIT	 = 86,
+	RTE_LINK_MODE_400000baseLR4_ER4_FR4_Full_BIT = 87,
+	RTE_LINK_MODE_400000baseDR4_Full_BIT	 = 88,
+	RTE_LINK_MODE_400000baseCR4_Full_BIT	 = 89,
+	RTE_LINK_MODE_100baseFX_Half_BIT		 = 90,
+	RTE_LINK_MODE_100baseFX_Full_BIT		 = 91,
+	/* must be last entry */
+	__RTE_LINK_MODE_MASK_NBITS
+};
+
+/* number of 32-bit words to store the user's link mode bitmaps */
+#define RTE_DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+#define __RTE_LINK_MODE_MASK_NU32                   \
+	RTE_DIV_ROUND_UP(__RTE_LINK_MODE_MASK_NBITS, 32)
+
+/**
+ * Link control and status
+ * @speed: Link speed (Mbps)
+ * @duplex: Duplex mode; one of %DUPLEX_*
+ * @port: Physical connector type; one of %PORT_*
+ * @autoneg: Enable/disable autonegotiation and auto-detection;
+ *	either %AUTONEG_DISABLE or %AUTONEG_ENABLE
+ */
+struct rte_link_base_settings {
+	struct rte_eth_link link;
+	uint8_t port;
+	uint8_t phy_address;
+	uint8_t eth_tp_mdix;
+	uint8_t eth_tp_mdix_ctrl;
+};
+
+struct rte_link_settings {
+	struct rte_link_base_settings base;
+	struct {
+		uint32_t supported[__RTE_LINK_MODE_MASK_NU32];
+		uint32_t advertising[__RTE_LINK_MODE_MASK_NU32];
+		uint32_t lp_advertising[__RTE_LINK_MODE_MASK_NU32];
+	} link_modes;
 };
 
 /**
@@ -5935,6 +6090,50 @@ int rte_eth_cman_config_init(uint16_t port_id, struct rte_eth_cman_config *confi
  */
 __rte_experimental
 int rte_eth_cman_config_set(uint16_t port_id, const struct rte_eth_cman_config *config);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Retrieve link settings
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param settings
+ *   A pointer to a structure of type *rte_link_settings* to retrieve
+ *   link settings parameters for the given port.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if support for cman_config_get does not exist.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+__rte_experimental
+int rte_eth_dev_get_link_settings(uint16_t port_id,
+				  struct rte_link_settings *settings);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Configure link settings
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param settings
+ *   A pointer to a structure of type *rte_link_settings* to configure
+ *   link settings parameters for the given port.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if support for cman_config_get does not exist.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+__rte_experimental
+int rte_eth_dev_set_link_settings(uint16_t port_id,
+				  const struct rte_link_settings *settings);
 
 /**
  * @warning

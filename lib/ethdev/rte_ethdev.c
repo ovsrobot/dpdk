@@ -6844,6 +6844,32 @@ rte_eth_dev_priv_dump(uint16_t port_id, FILE *file)
 	return eth_err(port_id, (*dev->dev_ops->eth_dev_priv_dump)(dev, file));
 }
 
+int rte_eth_dev_get_link_settings(uint16_t port_id,
+				  struct rte_link_settings *settings)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->get_link_settings == NULL)
+		return -ENOTSUP;
+	return eth_err(port_id, (*dev->dev_ops->get_link_settings)(dev, settings));
+}
+
+int rte_eth_dev_set_link_settings(uint16_t port_id,
+				  const struct rte_link_settings *settings)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->set_link_settings == NULL)
+		return -ENOTSUP;
+	return eth_err(port_id, (*dev->dev_ops->set_link_settings)(dev, settings));
+}
+
 int
 rte_eth_rx_descriptor_dump(uint16_t port_id, uint16_t queue_id,
 			   uint16_t offset, uint16_t num, FILE *file)

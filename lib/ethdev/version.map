@@ -325,6 +325,9 @@ EXPERIMENTAL {
 	rte_flow_template_table_resizable;
 	rte_flow_template_table_resize;
 	rte_flow_template_table_resize_complete;
+	rte_eth_dev_get_link_settings;
+	rte_eth_dev_set_link_settings;
+
 };
 
 INTERNAL {
