@@ -1109,6 +1109,7 @@ vrb_queue_stop(struct rte_bbdev *dev, uint16_t queue_id)
 	dev->data->queues[queue_id].queue_stats.dequeue_err_count = 0;
 	dev->data->queues[queue_id].queue_stats.enqueue_warn_count = 0;
 	dev->data->queues[queue_id].queue_stats.dequeue_warn_count = 0;
+	dev->data->queues[queue_id].queue_stats.enqueue_depth_avail = 0;
 	return 0;
 }
 
@@ -2738,9 +2739,7 @@ vrb_enqueue_enc_cb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, i, &q_data->queue_stats);
 
-	/* Update stats */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 	return i;
 }
 
@@ -2778,9 +2777,7 @@ vrb_enqueue_ldpc_enc_cb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, desc_idx, &q_data->queue_stats);
 
-	/* Update stats. */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 
 	return i;
 }
@@ -2817,9 +2814,7 @@ vrb_enqueue_enc_tb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, enqueued_cbs, &q_data->queue_stats);
 
-	/* Update stats */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 
 	return i;
 }
@@ -2864,9 +2859,7 @@ vrb_enqueue_ldpc_enc_tb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, enqueued_descs, &q_data->queue_stats);
 
-	/* Update stats. */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 
 	return i;
 }
@@ -2926,9 +2919,7 @@ vrb_enqueue_dec_cb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, i, &q_data->queue_stats);
 
-	/* Update stats. */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 
 	return i;
 }
@@ -2961,9 +2952,7 @@ vrb_enqueue_ldpc_dec_tb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, enqueued_cbs, &q_data->queue_stats);
 
-	/* Update stats. */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 	return i;
 }
 
@@ -3004,9 +2993,7 @@ vrb_enqueue_ldpc_dec_cb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, i, &q_data->queue_stats);
 
-	/* Update stats. */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 	return i;
 }
 
@@ -3041,9 +3028,7 @@ vrb_enqueue_dec_tb(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, enqueued_cbs, &q_data->queue_stats);
 
-	/* Update stats */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 
 	return i;
 }
@@ -3443,8 +3428,7 @@ vrb_dequeue_enc(struct rte_bbdev_queue_data *q_data,
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_descs;
 
-	/* Update enqueue stats. */
-	q_data->queue_stats.dequeued_count += dequeued_ops;
+	acc_update_qstat_dequeue(q_data, dequeued_ops);
 
 	return dequeued_ops;
 }
@@ -3486,8 +3470,7 @@ vrb_dequeue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_descs;
 
-	/* Update enqueue stats. */
-	q_data->queue_stats.dequeued_count += dequeued_ops;
+	acc_update_qstat_dequeue(q_data, dequeued_ops);
 
 	return dequeued_ops;
 }
@@ -3525,8 +3508,7 @@ vrb_dequeue_dec(struct rte_bbdev_queue_data *q_data,
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_cbs;
 
-	/* Update enqueue stats */
-	q_data->queue_stats.dequeued_count += i;
+	acc_update_qstat_dequeue(q_data, i);
 
 	return i;
 }
@@ -3565,8 +3547,7 @@ vrb_dequeue_ldpc_dec(struct rte_bbdev_queue_data *q_data,
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_cbs;
 
-	/* Update enqueue stats. */
-	q_data->queue_stats.dequeued_count += i;
+	acc_update_qstat_dequeue(q_data, i);
 
 	return i;
 }
@@ -3772,9 +3753,7 @@ vrb_enqueue_fft(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, i, &q_data->queue_stats);
 
-	/* Update stats */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 	return i;
 }
 
@@ -3840,8 +3819,7 @@ vrb_dequeue_fft(struct rte_bbdev_queue_data *q_data,
 
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_cbs;
-	/* Update enqueue stats. */
-	q_data->queue_stats.dequeued_count += i;
+	acc_update_qstat_dequeue(q_data, i);
 	return i;
 }
 
@@ -4095,9 +4073,7 @@ vrb2_enqueue_mldts(struct rte_bbdev_queue_data *q_data,
 
 	acc_dma_enqueue(q, enqueued_descs, &q_data->queue_stats);
 
-	/* Update stats. */
-	q_data->queue_stats.enqueued_count += i;
-	q_data->queue_stats.enqueue_err_count += num - i;
+	acc_update_qstat_enqueue(q_data, i, num - i);
 	return i;
 }
 
@@ -4192,8 +4168,9 @@ vrb2_dequeue_mldts(struct rte_bbdev_queue_data *q_data,
 
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_cbs;
-	/* Update enqueue stats. */
-	q_data->queue_stats.dequeued_count += i;
+
+	acc_update_qstat_dequeue(q_data, i);
+
 	return i;
 }
 
