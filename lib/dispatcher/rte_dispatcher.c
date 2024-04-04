@@ -119,7 +119,7 @@ evd_dispatch_events(struct rte_dispatcher *dispatcher,
 	struct rte_event *events, uint16_t num_events)
 {
 	int i;
-	struct rte_event bursts[EVD_MAX_HANDLERS][num_events];
+	struct rte_event *bursts = alloca(sizeof(struct rte_event) * EVD_MAX_HANDLERS * num_events);
 	uint16_t burst_lens[EVD_MAX_HANDLERS] = { 0 };
 	uint16_t drop_count = 0;
 	uint16_t dispatch_count;
@@ -136,7 +136,7 @@ evd_dispatch_events(struct rte_dispatcher *dispatcher,
 			continue;
 		}
 
-		bursts[handler_idx][burst_lens[handler_idx]] = *event;
+		bursts[handler_idx * num_events + burst_lens[handler_idx]] = *event;
 		burst_lens[handler_idx]++;
 	}
 
@@ -152,7 +152,7 @@ evd_dispatch_events(struct rte_dispatcher *dispatcher,
 			continue;
 
 		handler->process_fun(dispatcher->event_dev_id, port->port_id,
-				     bursts[i], len, handler->process_data);
+				     &bursts[i * num_events], len, handler->process_data);
 
 		dispatched += len;
 
