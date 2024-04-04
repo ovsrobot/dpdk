@@ -110,7 +110,8 @@ read_fd_message(char *ifname, int sockfd, char *buf, int buflen, int *fds, int m
 {
 	struct iovec iov;
 	struct msghdr msgh;
-	char control[CMSG_SPACE(max_fds * sizeof(int))];
+	const size_t control_sz = sizeof(char) * CMSG_SPACE(max_fds * sizeof(int));
+	char *control = alloca(control_sz);
 	struct cmsghdr *cmsg;
 	int got_fds = 0;
 	int ret;
@@ -124,7 +125,7 @@ read_fd_message(char *ifname, int sockfd, char *buf, int buflen, int *fds, int m
 	msgh.msg_iov = &iov;
 	msgh.msg_iovlen = 1;
 	msgh.msg_control = control;
-	msgh.msg_controllen = sizeof(control);
+	msgh.msg_controllen = control_sz;
 
 	ret = recvmsg(sockfd, &msgh, 0);
 	if (ret <= 0) {
