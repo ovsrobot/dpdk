@@ -5,6 +5,8 @@
 #ifndef _CRYPTODEV_PMD_H_
 #define _CRYPTODEV_PMD_H_
 
+#include <stdalign.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -139,7 +141,6 @@ struct cryptodev_driver {
  * has a fixed algo, key, op-type, digest_len etc.
  */
 struct rte_cryptodev_sym_session {
-	RTE_MARKER cacheline0;
 	uint64_t opaque_data;
 	/**< Can be used for external metadata */
 	uint32_t sess_data_sz;
@@ -151,7 +152,7 @@ struct rte_cryptodev_sym_session {
 	rte_iova_t driver_priv_data_iova;
 	/**< Session driver data IOVA address */
 
-	alignas(RTE_CACHE_LINE_MIN_SIZE) RTE_MARKER cacheline1;
+	alignas(RTE_CACHE_LINE_MIN_SIZE)
 	/**< Second cache line - start of the driver session data */
 	uint8_t driver_priv_data[];
 	/**< Driver specific session data, variable size */

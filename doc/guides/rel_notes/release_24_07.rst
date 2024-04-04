@@ -71,6 +71,9 @@ Removed Items
 * mbuf: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
   have been removed from ``struct rte_mbuf``.
 
+* cryptodev: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
+  have been removed from ``struct cryptodev_driver``.
+
 * security: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
   have been removed from ``struct rte_security_session``.
 
