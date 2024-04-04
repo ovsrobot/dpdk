@@ -68,6 +68,9 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mbuf: ``RTE_MARKER`` fields ``cacheline0`` and ``cacheline1``
+  have been removed from ``struct rte_mbuf``.
+
 
 API Changes
 -----------
