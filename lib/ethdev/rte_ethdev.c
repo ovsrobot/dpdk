@@ -15,7 +15,6 @@
 #include <rte_log.h>
 #include <rte_interrupts.h>
 #include <rte_kvargs.h>
-#include <rte_memcpy.h>
 #include <rte_common.h>
 #include <rte_mempool.h>
 #include <rte_malloc.h>
@@ -618,7 +617,7 @@ rte_eth_dev_owner_get(const uint16_t port_id, struct rte_eth_dev_owner *owner)
 	rte_spinlock_lock(rte_mcfg_ethdev_get_lock());
 
 	if (eth_dev_shared_data_prepare() != NULL) {
-		rte_memcpy(owner, &ethdev->data->owner, sizeof(*owner));
+		*owner = ethdev->data->owner;
 		ret = 0;
 	} else {
 		ret = -ENOMEM;
@@ -1316,15 +1315,14 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 	dev->data->dev_configured = 0;
 
 	 /* Store original config, as rollback required on failure */
-	memcpy(&orig_conf, &dev->data->dev_conf, sizeof(dev->data->dev_conf));
+	orig_conf = dev->data->dev_conf;
 
 	/*
 	 * Copy the dev_conf parameter into the dev structure.
 	 * rte_eth_dev_info_get() requires dev_conf, copy it before dev_info get
 	 */
 	if (dev_conf != &dev->data->dev_conf)
-		memcpy(&dev->data->dev_conf, dev_conf,
-		       sizeof(dev->data->dev_conf));
+		dev->data->dev_conf = *dev_conf;
 
 	/* Backup mtu for rollback */
 	old_mtu = dev->data->mtu;
@@ -1601,7 +1599,7 @@ reset_queues:
 	eth_dev_rx_queue_config(dev, 0);
 	eth_dev_tx_queue_config(dev, 0);
 rollback:
-	memcpy(&dev->data->dev_conf, &orig_conf, sizeof(dev->data->dev_conf));
+	dev->data->dev_conf = orig_conf;
 	if (old_mtu != dev->data->mtu)
 		dev->data->mtu = old_mtu;
 
@@ -3843,7 +3841,7 @@ rte_eth_dev_conf_get(uint16_t port_id, struct rte_eth_conf *dev_conf)
 		return -EINVAL;
 	}
 
-	memcpy(dev_conf, &dev->data->dev_conf, sizeof(struct rte_eth_conf));
+	*dev_conf = dev->data->dev_conf;
 
 	rte_ethdev_trace_conf_get(port_id, dev_conf);
 
