@@ -204,23 +204,6 @@ parse_ipv6(const struct __sk_buff *skb, __u32 hash_type, const __u32 *key)
 }
 
 /*
- * Compute RSS hash for packets.
- * Returns 0 if no hash is possible.
- */
-static __u32 __attribute__((always_inline))
-calculate_rss_hash(const struct __sk_buff *skb, const struct rss_key *rsskey)
-{
-	const __u32 *key = (const __u32 *)rsskey->key;
-
-	if (skb->protocol == bpf_htons(ETH_P_IP))
-		return parse_ipv4(skb, rsskey->hash_fields, key);
-	else if (skb->protocol == bpf_htons(ETH_P_IPV6))
-		return parse_ipv6(skb, rsskey->hash_fields, key);
-	else
-		return 0;
-}
-
-/*
  * Scale value to be into range [0, n)
  * Assumes val is large (ie hash covers whole u32 range)
  */
@@ -244,20 +227,40 @@ SEC("action") int
 rss_flow_action(struct __sk_buff *skb)
 {
 	const struct rss_key *rsskey;
-	__u32 mark = skb->mark;
+	const __u32 *key;
+	__be16 proto;
+	__u32 mark;
 	__u32 hash;
+	__u16 queue;
+
+	__builtin_preserve_access_index(({
+		mark = skb->mark;
+		proto = skb->protocol;
+	}));
 
 	/* Lookup RSS configuration for that BPF class */
 	rsskey = bpf_map_lookup_elem(&rss_map, &mark);
 	if (rsskey == NULL)
 		return TC_ACT_OK;
 
-	hash = calculate_rss_hash(skb, rsskey);
-	if (!hash)
+	key = (const __u32 *)rsskey->key;
+
+	if (proto == bpf_htons(ETH_P_IP))
+		hash = parse_ipv4(skb, rsskey->hash_fields, key);
+	else if (proto == bpf_htons(ETH_P_IPV6))
+		hash = parse_ipv6(skb, rsskey->hash_fields, key);
+	else
+		hash = 0;
+
+	if (hash == 0)
 		return TC_ACT_OK;
 
 	/* Fold hash to the number of queues configured */
-	skb->queue_mapping = reciprocal_scale(hash, rsskey->nb_queues);
+	queue = reciprocal_scale(hash, rsskey->nb_queues);
+
+	__builtin_preserve_access_index(({
+		skb->queue_mapping = queue;
+	}));
 	return TC_ACT_PIPE;
 }
 
