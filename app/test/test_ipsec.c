@@ -601,10 +601,10 @@ setup_test_string_tunneled(struct rte_mempool *mpool, const char *string,
 	/* copy outer IP and ESP header */
 	ipv4_outer.total_length = rte_cpu_to_be_16(t_len);
 	ipv4_outer.packet_id = rte_cpu_to_be_16(seq);
-	rte_memcpy(dst, &ipv4_outer, sizeof(ipv4_outer));
+	memcpy(dst, &ipv4_outer, sizeof(ipv4_outer));
 	dst += sizeof(ipv4_outer);
 	m->l3_len = sizeof(ipv4_outer);
-	rte_memcpy(dst, &esph, sizeof(esph));
+	memcpy(dst, &esph, sizeof(esph));
 	dst += sizeof(esph);
 
 	if (string != NULL) {
@@ -616,7 +616,7 @@ setup_test_string_tunneled(struct rte_mempool *mpool, const char *string,
 			sizeof(esp_pad_bytes)));
 		dst += padlen;
 		/* copy ESP tail header */
-		rte_memcpy(dst, &espt, sizeof(espt));
+		memcpy(dst, &espt, sizeof(espt));
 	} else
 		memset(dst, 0, t_len);
 
