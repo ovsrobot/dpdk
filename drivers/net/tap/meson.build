@@ -16,7 +16,7 @@ sources = files(
 
 deps = ['bus_vdev', 'gso', 'hash']
 
-cflags += '-DTAP_MAX_QUEUES=16'
+cflags += '-DTAP_MAX_QUEUES=8'
 
 # input array for meson symbol search:
 # [ "MACRO to define if found", "header for the search",
