@@ -19,7 +19,6 @@
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_memory.h>
 #include <rte_memzone.h>
 #include <rte_pci.h>

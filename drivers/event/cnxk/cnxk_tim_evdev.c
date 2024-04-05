@@ -115,8 +115,8 @@ cnxk_tim_ring_info_get(const struct rte_event_timer_adapter *adptr,
 	adptr_info->min_resolution_ns = tim_ring->ena_periodic ?
 						tim_ring->max_tout :
 						tim_ring->tck_nsec;
-	rte_memcpy(&adptr_info->conf, &adptr->data->conf,
-		   sizeof(struct rte_event_timer_adapter_conf));
+	memcpy(&adptr_info->conf, &adptr->data->conf,
+	       sizeof(struct rte_event_timer_adapter_conf));
 }
 
 static int
