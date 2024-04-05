@@ -158,7 +158,7 @@ a vxlan-encapsulated tcp packet:
 
   This is similar to case 1), but l2_len is different. It is supported
   on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM.
-  Note that it can only work if outer L4 checksum is 0.
+  Note that some driver may set outer L4 checksum to 0.
 
 - calculate checksum of in_ip and in_tcp::
 
@@ -169,7 +169,7 @@ a vxlan-encapsulated tcp packet:
   This is similar to case 2), but l2_len is different. It is supported
   on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM and
   RTE_ETH_TX_OFFLOAD_TCP_CKSUM.
-  Note that it can only work if outer L4 checksum is 0.
+  Note that some driver may set outer L4 checksum to 0.
 
 - segment inner TCP::
 
@@ -180,7 +180,7 @@ a vxlan-encapsulated tcp packet:
       RTE_MBUF_F_TX_TCP_SEG;
 
   This is supported on hardware advertising RTE_ETH_TX_OFFLOAD_TCP_TSO.
-  Note that it can only work if outer L4 checksum is 0.
+  Note that some driver may set outer L4 checksum to 0.
 
 - calculate checksum of out_ip, in_ip, in_tcp::
 
@@ -193,7 +193,7 @@ a vxlan-encapsulated tcp packet:
 
   This is supported on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM,
   RTE_ETH_TX_OFFLOAD_UDP_CKSUM and RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM.
-  Note that it can only work if outer L4 checksum is 0.
+  Note that some driver may set outer L4 checksum to 0.
 
 The list of flags and their precise meaning is described in the mbuf API
 documentation (rte_mbuf.h). Also refer to the testpmd source code
