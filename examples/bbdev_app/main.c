@@ -359,7 +359,7 @@ add_ether_hdr(struct rte_mbuf *pkt_src, struct rte_mbuf *pkt_dst)
 	eth_to = rte_pktmbuf_mtod(pkt_dst, struct rte_ether_hdr *);
 
 	/* copy header */
-	rte_memcpy(eth_to, eth_from, sizeof(struct rte_ether_hdr));
+	memcpy(eth_to, eth_from, sizeof(struct rte_ether_hdr));
 }
 
 static inline void
