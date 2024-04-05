@@ -1389,6 +1389,7 @@ ice_interrupt_handler(void *param)
 	uint32_t oicr;
 	uint32_t reg;
 	uint8_t pf_num;
+	uint16_t vf_num;
 	uint8_t event;
 	uint16_t queue;
 	int ret;
@@ -1432,28 +1433,48 @@ ice_interrupt_handler(void *param)
 		if (reg & GL_MDET_TX_PQM_VALID_M) {
 			pf_num = (reg & GL_MDET_TX_PQM_PF_NUM_M) >>
 				 GL_MDET_TX_PQM_PF_NUM_S;
+			vf_num = (reg & GL_MDET_TX_PQM_VF_NUM_M) >>
+				 GL_MDET_TX_PQM_VF_NUM_S;
 			event = (reg & GL_MDET_TX_PQM_MAL_TYPE_M) >>
 				GL_MDET_TX_PQM_MAL_TYPE_S;
 			queue = (reg & GL_MDET_TX_PQM_QNUM_M) >>
 				GL_MDET_TX_PQM_QNUM_S;
 
 			PMD_DRV_LOG(WARNING, "Malicious Driver Detection event "
-				    "%d by PQM on TX queue %d PF# %d",
-				    event, queue, pf_num);
+				    "%d by PQM on TX queue %d PF# %d VF# %d",
+				    event, queue, pf_num, vf_num);
 		}
 
 		reg = ICE_READ_REG(hw, GL_MDET_TX_TCLAN);
 		if (reg & GL_MDET_TX_TCLAN_VALID_M) {
 			pf_num = (reg & GL_MDET_TX_TCLAN_PF_NUM_M) >>
 				 GL_MDET_TX_TCLAN_PF_NUM_S;
+			vf_num = (reg & GL_MDET_TX_TCLAN_VF_NUM_M) >>
+				 GL_MDET_TX_TCLAN_VF_NUM_S;
 			event = (reg & GL_MDET_TX_TCLAN_MAL_TYPE_M) >>
 				GL_MDET_TX_TCLAN_MAL_TYPE_S;
 			queue = (reg & GL_MDET_TX_TCLAN_QNUM_M) >>
 				GL_MDET_TX_TCLAN_QNUM_S;
 
 			PMD_DRV_LOG(WARNING, "Malicious Driver Detection event "
-				    "%d by TCLAN on TX queue %d PF# %d",
-				    event, queue, pf_num);
+				    "%d by TCLAN on TX queue %d PF# %d VF# %d",
+				    event, queue, pf_num, vf_num);
+		}
+
+		reg = ICE_READ_REG(hw, GL_MDET_TX_TDPU);
+		if (reg & GL_MDET_TX_TDPU_VALID_M) {
+			pf_num = (reg & GL_MDET_TX_TDPU_PF_NUM_M) >>
+				 GL_MDET_TX_TDPU_PF_NUM_S;
+			vf_num = (reg & GL_MDET_TX_TDPU_VF_NUM_M) >>
+				 GL_MDET_TX_TDPU_VF_NUM_S;
+			event = (reg & GL_MDET_TX_TDPU_MAL_TYPE_M) >>
+				GL_MDET_TX_TDPU_MAL_TYPE_S;
+			queue = (reg & GL_MDET_TX_TDPU_QNUM_M) >>
+				GL_MDET_TX_TDPU_QNUM_S;
+
+			PMD_DRV_LOG(WARNING, "Malicious Driver Detection event "
+				    "%d by TDPU on TX queue %d PF# %d VF# %d",
+				    event, queue, pf_num, vf_num);
 		}
 	}
 done:
