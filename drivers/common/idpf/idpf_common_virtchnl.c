@@ -290,7 +290,8 @@ idpf_vc_caps_get(struct idpf_adapter *adapter)
 		return err;
 	}
 
-	rte_memcpy(&adapter->caps, args.out_buffer, sizeof(struct virtchnl2_get_capabilities));
+	memcpy(&adapter->caps, args.out_buffer,
+	       sizeof(struct virtchnl2_get_capabilities));
 
 	return 0;
 }
@@ -327,7 +328,8 @@ idpf_vc_vport_create(struct idpf_vport *vport,
 		return err;
 	}
 
-	rte_memcpy(&(vport->vport_info.info), args.out_buffer, IDPF_DFLT_MBX_BUF_SIZE);
+	memcpy(&(vport->vport_info.info), args.out_buffer,
+	       IDPF_DFLT_MBX_BUF_SIZE);
 	return 0;
 }
 
@@ -383,7 +385,7 @@ idpf_vc_queue_grps_add(struct idpf_vport *vport,
 		return err;
 	}
 
-	rte_memcpy(p2p_queue_grps_out, args.out_buffer, IDPF_DFLT_MBX_BUF_SIZE);
+	memcpy(p2p_queue_grps_out, args.out_buffer, IDPF_DFLT_MBX_BUF_SIZE);
 	return 0;
 }
 
@@ -922,7 +924,7 @@ idpf_vc_ptype_info_query(struct idpf_adapter *adapter,
 	if (err != 0)
 		DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_GET_PTYPE_INFO");
 
-	rte_memcpy(recv_ptype_info, args.out_buffer, IDPF_DFLT_MBX_BUF_SIZE);
+	memcpy(recv_ptype_info, args.out_buffer, IDPF_DFLT_MBX_BUF_SIZE);
 	return err;
 }
 
