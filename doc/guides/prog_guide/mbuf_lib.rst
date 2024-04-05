@@ -126,6 +126,9 @@ processing to the hardware if it supports it. For instance, the
 RTE_MBUF_F_TX_IP_CKSUM flag allows to offload the computation of the IPv4
 checksum.
 
+Support for such processing by the hardware is advertised through RTE_ETH_TX_OFFLOAD_* capabilities.
+Please note that a call to ``rte_eth_tx_prepare`` is needed to handle driver specific requirements such as resetting some checksum fields.
+
 The following examples explain how to configure different TX offloads on
 a vxlan-encapsulated tcp packet:
 ``out_eth/out_ip/out_udp/vxlan/in_eth/in_ip/in_tcp/payload``
@@ -135,7 +138,6 @@ a vxlan-encapsulated tcp packet:
     mb->l2_len = len(out_eth)
     mb->l3_len = len(out_ip)
     mb->ol_flags |= RTE_MBUF_F_TX_IPV4 | RTE_MBUF_F_TX_IP_CSUM
-    set out_ip checksum to 0 in the packet
 
   This is supported on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM.
 
@@ -144,8 +146,6 @@ a vxlan-encapsulated tcp packet:
     mb->l2_len = len(out_eth)
     mb->l3_len = len(out_ip)
     mb->ol_flags |= RTE_MBUF_F_TX_IPV4 | RTE_MBUF_F_TX_IP_CSUM | RTE_MBUF_F_TX_UDP_CKSUM
-    set out_ip checksum to 0 in the packet
-    set out_udp checksum to pseudo header using rte_ipv4_phdr_cksum()
 
   This is supported on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM
   and RTE_ETH_TX_OFFLOAD_UDP_CKSUM.
@@ -155,7 +155,6 @@ a vxlan-encapsulated tcp packet:
     mb->l2_len = len(out_eth + out_ip + out_udp + vxlan + in_eth)
     mb->l3_len = len(in_ip)
     mb->ol_flags |= RTE_MBUF_F_TX_IPV4 | RTE_MBUF_F_TX_IP_CSUM
-    set in_ip checksum to 0 in the packet
 
   This is similar to case 1), but l2_len is different. It is supported
   on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM.
@@ -166,8 +165,6 @@ a vxlan-encapsulated tcp packet:
     mb->l2_len = len(out_eth + out_ip + out_udp + vxlan + in_eth)
     mb->l3_len = len(in_ip)
     mb->ol_flags |= RTE_MBUF_F_TX_IPV4 | RTE_MBUF_F_TX_IP_CSUM | RTE_MBUF_F_TX_TCP_CKSUM
-    set in_ip checksum to 0 in the packet
-    set in_tcp checksum to pseudo header using rte_ipv4_phdr_cksum()
 
   This is similar to case 2), but l2_len is different. It is supported
   on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM and
@@ -181,9 +178,6 @@ a vxlan-encapsulated tcp packet:
     mb->l4_len = len(in_tcp)
     mb->ol_flags |= RTE_MBUF_F_TX_IPV4 | RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_TCP_CKSUM |
       RTE_MBUF_F_TX_TCP_SEG;
-    set in_ip checksum to 0 in the packet
-    set in_tcp checksum to pseudo header without including the IP
-      payload length using rte_ipv4_phdr_cksum()
 
   This is supported on hardware advertising RTE_ETH_TX_OFFLOAD_TCP_TSO.
   Note that it can only work if outer L4 checksum is 0.
@@ -196,12 +190,10 @@ a vxlan-encapsulated tcp packet:
     mb->l3_len = len(in_ip)
     mb->ol_flags |= RTE_MBUF_F_TX_OUTER_IPV4 | RTE_MBUF_F_TX_OUTER_IP_CKSUM  | \
       RTE_MBUF_F_TX_IP_CKSUM |  RTE_MBUF_F_TX_TCP_CKSUM;
-    set out_ip checksum to 0 in the packet
-    set in_ip checksum to 0 in the packet
-    set in_tcp checksum to pseudo header using rte_ipv4_phdr_cksum()
 
   This is supported on hardware advertising RTE_ETH_TX_OFFLOAD_IPV4_CKSUM,
   RTE_ETH_TX_OFFLOAD_UDP_CKSUM and RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM.
+  Note that it can only work if outer L4 checksum is 0.
 
 The list of flags and their precise meaning is described in the mbuf API
 documentation (rte_mbuf.h). Also refer to the testpmd source code
