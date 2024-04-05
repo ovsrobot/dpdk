@@ -5,6 +5,14 @@ if not is_linux
     build = false
     reason = 'only supported on Linux'
 endif
+
+# The flower classifier was introduced in Linux 4.2
+# any kernel older than that is outside current DPDK support
+if not cc.has_header_symbol('linux/pkt_cls.h', 'TCA_FLOWER_ACT')
+    build = false
+    reason = 'does not support TC flower'
+endif
+
 sources = files(
         'rte_eth_tap.c',
         'tap_bpf_api.c',
@@ -23,12 +31,7 @@ cflags += '-DTAP_MAX_QUEUES=8'
 #   "enum/define", "symbol to search" ]
 #
 args = [
-        [ 'HAVE_TC_FLOWER', 'linux/pkt_cls.h', 'TCA_FLOWER_UNSPEC' ],
-        [ 'HAVE_TC_VLAN_ID', 'linux/pkt_cls.h', 'TCA_FLOWER_KEY_VLAN_PRIO' ],
-        [ 'HAVE_TC_BPF', 'linux/pkt_cls.h', 'TCA_BPF_UNSPEC' ],
-        [ 'HAVE_TC_BPF_FD', 'linux/pkt_cls.h', 'TCA_BPF_FD' ],
         [ 'HAVE_TC_ACT_BPF', 'linux/tc_act/tc_bpf.h', 'TCA_ACT_BPF_UNSPEC' ],
-        [ 'HAVE_TC_ACT_BPF_FD', 'linux/tc_act/tc_bpf.h', 'TCA_ACT_BPF_FD' ],
 ]
 config = configuration_data()
 foreach arg:args
