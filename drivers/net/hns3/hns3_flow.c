@@ -2416,8 +2416,8 @@ hns3_flow_query(struct rte_eth_dev *dev, struct rte_flow *flow,
 			}
 			rss_conf = (struct rte_flow_action_rss *)data;
 			rss_rule = (struct hns3_rss_conf_ele *)flow->rule;
-			rte_memcpy(rss_conf, &rss_rule->filter_info.conf,
-				   sizeof(struct rte_flow_action_rss));
+			memcpy(rss_conf, &rss_rule->filter_info.conf,
+			       sizeof(struct rte_flow_action_rss));
 			break;
 		default:
 			return rte_flow_error_set(error, ENOTSUP,

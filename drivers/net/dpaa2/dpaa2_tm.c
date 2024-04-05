@@ -324,7 +324,7 @@ dpaa2_shaper_profile_add(struct rte_eth_dev *dev, uint32_t shaper_profile_id,
 					 NULL, NULL);
 
 	profile->id = shaper_profile_id;
-	rte_memcpy(&profile->params, params, sizeof(profile->params));
+	memcpy(&profile->params, params, sizeof(profile->params));
 
 	LIST_INSERT_HEAD(&priv->shaper_profiles, profile, next);
 

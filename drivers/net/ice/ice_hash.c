@@ -715,7 +715,7 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 		pkt_len, ICE_BLK_RSS, true, &prof))
 		return -rte_errno;
 
-	rte_memcpy(&meta->raw.prof, &prof, sizeof(prof));
+	memcpy(&meta->raw.prof, &prof, sizeof(prof));
 
 	rte_free(pkt_buf);
 	rte_free(msk_buf);

@@ -9,7 +9,6 @@
 #include <sys/sysctl.h>
 
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 
 #include "pcap_osdep.h"
 
@@ -52,7 +51,7 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 	ifm = (struct if_msghdr *)buf;
 	sdl = (struct sockaddr_dl *)(ifm + 1);
 
-	rte_memcpy(mac->addr_bytes, LLADDR(sdl), RTE_ETHER_ADDR_LEN);
+	memcpy(mac->addr_bytes, LLADDR(sdl), RTE_ETHER_ADDR_LEN);
 
 	rte_free(buf);
 	return 0;

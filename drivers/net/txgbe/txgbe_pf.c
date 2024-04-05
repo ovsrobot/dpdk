@@ -17,7 +17,6 @@
 #include <rte_eal.h>
 #include <rte_ether.h>
 #include <ethdev_driver.h>
-#include <rte_memcpy.h>
 #include <rte_malloc.h>
 #include <rte_random.h>
 #include <bus_pci_driver.h>
@@ -435,7 +434,7 @@ txgbe_vf_reset(struct rte_eth_dev *eth_dev, uint16_t vf, uint32_t *msgbuf)
 
 	/* reply to reset with ack and vf mac address */
 	msgbuf[0] = TXGBE_VF_RESET | TXGBE_VT_MSGTYPE_ACK;
-	rte_memcpy(new_mac, vf_mac, RTE_ETHER_ADDR_LEN);
+	memcpy(new_mac, vf_mac, RTE_ETHER_ADDR_LEN);
 	/*
 	 * Piggyback the multicast filter type so VF can compute the
 	 * correct vectors
@@ -457,7 +456,7 @@ txgbe_vf_set_mac_addr(struct rte_eth_dev *eth_dev,
 	struct rte_ether_addr *ea = (struct rte_ether_addr *)new_mac;
 
 	if (rte_is_valid_assigned_ether_addr(ea)) {
-		rte_memcpy(vfinfo[vf].vf_mac_addresses, new_mac, 6);
+		memcpy(vfinfo[vf].vf_mac_addresses, new_mac, 6);
 		return hw->mac.set_rar(hw, rar_entry, new_mac, vf, true);
 	}
 	return -1;

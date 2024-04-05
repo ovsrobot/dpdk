@@ -920,7 +920,7 @@ iavf_get_vlan_offload_caps_v2(struct iavf_adapter *adapter)
 		return ret;
 	}
 
-	rte_memcpy(&vf->vlan_v2_caps, vf->aq_resp, sizeof(vf->vlan_v2_caps));
+	memcpy(&vf->vlan_v2_caps, vf->aq_resp, sizeof(vf->vlan_v2_caps));
 
 	return 0;
 }
@@ -1427,8 +1427,8 @@ iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add)
 			addr = &adapter->dev_data->mac_addrs[i];
 			if (rte_is_zero_ether_addr(addr))
 				continue;
-			rte_memcpy(list->list[j].addr, addr->addr_bytes,
-				   sizeof(addr->addr_bytes));
+			memcpy(list->list[j].addr, addr->addr_bytes,
+			       sizeof(addr->addr_bytes));
 			list->list[j].type = (j == 0 ?
 					      VIRTCHNL_ETHER_ADDR_PRIMARY :
 					      VIRTCHNL_ETHER_ADDR_EXTRA);
@@ -1547,8 +1547,7 @@ iavf_add_del_eth_addr(struct iavf_adapter *adapter, struct rte_ether_addr *addr,
 	list->vsi_id = vf->vsi_res->vsi_id;
 	list->num_elements = 1;
 	list->list[0].type = type;
-	rte_memcpy(list->list[0].addr, addr->addr_bytes,
-		   sizeof(addr->addr_bytes));
+	memcpy(list->list[0].addr, addr->addr_bytes, sizeof(addr->addr_bytes));
 
 	args.ops = add ? VIRTCHNL_OP_ADD_ETH_ADDR : VIRTCHNL_OP_DEL_ETH_ADDR;
 	args.in_args = cmd_buffer;

@@ -1526,7 +1526,7 @@ sfc_rx_process_adv_conf_rss(struct sfc_adapter *sa,
 				sizeof(rss->key));
 			return EINVAL;
 		}
-		rte_memcpy(rss->key, conf->rss_key, sizeof(rss->key));
+		memcpy(rss->key, conf->rss_key, sizeof(rss->key));
 	}
 
 	rss->hash_types = efx_hash_types;

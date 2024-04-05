@@ -8,7 +8,6 @@
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <rte_os_shim.h>
 #include <rte_string_fns.h>
 #include <bus_vdev_driver.h>

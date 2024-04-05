@@ -454,7 +454,7 @@ cnxk_nix_mac_addr_set(struct rte_eth_dev *eth_dev, struct rte_ether_addr *addr)
 	}
 
 	/* Update mac address to cnxk ethernet device */
-	rte_memcpy(dev->mac_addr, addr->addr_bytes, RTE_ETHER_ADDR_LEN);
+	memcpy(dev->mac_addr, addr->addr_bytes, RTE_ETHER_ADDR_LEN);
 
 exit:
 	return rc;

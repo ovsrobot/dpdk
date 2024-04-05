@@ -2072,7 +2072,7 @@ mlx5_tbl_translate_modify_header(struct rte_eth_dev *dev,
 		return rte_flow_error_set(error, ENOMEM,
 					  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 					  NULL, "translate modify_header: no memory for modify header context");
-	rte_memcpy(acts->mhdr, mhdr, sizeof(*mhdr));
+	memcpy(acts->mhdr, mhdr, sizeof(*mhdr));
 	pattern.data = (__be64 *)acts->mhdr->mhdr_cmds;
 	if (mhdr->shared) {
 		uint32_t flags = mlx5_hw_act_flag[!!attr->group][tbl_type] |
@@ -2669,8 +2669,8 @@ flow_hw_populate_rule_acts_caches(struct rte_eth_dev *dev,
 		struct mlx5dr_rule_action *rule_acts =
 				flow_hw_get_dr_action_buffer(priv, table, at_idx, q);
 
-		rte_memcpy(rule_acts, table->ats[at_idx].acts.rule_acts,
-			   sizeof(table->ats[at_idx].acts.rule_acts));
+		memcpy(rule_acts, table->ats[at_idx].acts.rule_acts,
+		       sizeof(table->ats[at_idx].acts.rule_acts));
 	}
 }
 
@@ -2972,9 +2972,9 @@ flow_hw_modify_field_construct(struct mlx5_modification_cmd *mhdr_cmd,
 	    mhdr_action->src.field != RTE_FLOW_FIELD_POINTER)
 		return 0;
 	if (mhdr_action->src.field == RTE_FLOW_FIELD_VALUE)
-		rte_memcpy(values, &mhdr_action->src.value, sizeof(values));
+		memcpy(values, &mhdr_action->src.value, sizeof(values));
 	else
-		rte_memcpy(values, mhdr_action->src.pvalue, sizeof(values));
+		memcpy(values, mhdr_action->src.pvalue, sizeof(values));
 	if (mhdr_action->dst.field == RTE_FLOW_FIELD_META ||
 	    mhdr_action->dst.field == RTE_FLOW_FIELD_TAG ||
 	    mhdr_action->dst.field == RTE_FLOW_FIELD_METER_COLOR ||
@@ -4825,7 +4825,7 @@ error:
 			rte_flow_error_set(error, err, RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
 					   "Failed to create template table");
 		else
-			rte_memcpy(error, &sub_error, sizeof(sub_error));
+			memcpy(error, &sub_error, sizeof(sub_error));
 	}
 	return NULL;
 }
@@ -6917,8 +6917,9 @@ flow_hw_set_vlan_vid(struct rte_eth_dev *dev,
 	if (masked) {
 		uint32_t mask_val = 0xffffffff;
 
-		rte_memcpy(spec->src.value, &conf->vlan_vid, sizeof(conf->vlan_vid));
-		rte_memcpy(mask->src.value, &mask_val, sizeof(mask_val));
+		memcpy(spec->src.value, &conf->vlan_vid,
+		       sizeof(conf->vlan_vid));
+		memcpy(mask->src.value, &mask_val, sizeof(mask_val));
 	}
 	ra[set_vlan_vid_ix].type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD;
 	ra[set_vlan_vid_ix].conf = spec;
@@ -6954,7 +6955,7 @@ flow_hw_set_vlan_vid_construct(struct rte_eth_dev *dev,
 		.conf = &conf
 	};
 
-	rte_memcpy(conf.src.value, &vid, sizeof(vid));
+	memcpy(conf.src.value, &vid, sizeof(vid));
 	return flow_hw_modify_field_construct(mhdr_cmd, act_data, hw_acts, &modify_action);
 }
 
@@ -8577,8 +8578,8 @@ flow_hw_create_tx_repr_tag_jump_acts_tmpl(struct rte_eth_dev *dev,
 	struct rte_flow_action actions_m[4] = { { 0 } };
 	unsigned int idx = 0;
 
-	rte_memcpy(set_tag_v.src.value, &tag_value, sizeof(tag_value));
-	rte_memcpy(set_tag_m.src.value, &tag_mask, sizeof(tag_mask));
+	memcpy(set_tag_v.src.value, &tag_value, sizeof(tag_value));
+	memcpy(set_tag_m.src.value, &tag_mask, sizeof(tag_mask));
 	flow_hw_update_action_mask(&actions_v[idx], &actions_m[idx],
 				   RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
 				   &set_tag_v, &set_tag_m);
@@ -8985,8 +8986,8 @@ flow_hw_create_ctrl_regc_jump_actions_template(struct rte_eth_dev *dev,
 	};
 
 	set_reg_v.dst.offset = rte_bsf32(marker_mask);
-	rte_memcpy(set_reg_v.src.value, &marker_bits, sizeof(marker_bits));
-	rte_memcpy(set_reg_m.src.value, &marker_mask, sizeof(marker_mask));
+	memcpy(set_reg_v.src.value, &marker_bits, sizeof(marker_bits));
+	memcpy(set_reg_m.src.value, &marker_mask, sizeof(marker_mask));
 	return flow_hw_actions_template_create(dev, &attr, actions_v, actions_m, error);
 }
 

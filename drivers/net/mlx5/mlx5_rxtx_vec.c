@@ -349,8 +349,8 @@ rxq_burst_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 		ret = check_cqe_iteration(next,	rxq->cqe_n, rxq->cq_ci);
 		if (ret != MLX5_CQE_STATUS_SW_OWN ||
 		    MLX5_CQE_FORMAT(next->op_own) == MLX5_COMPRESSED)
-			rte_memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
-				   sizeof(struct rte_mbuf));
+			memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
+			       sizeof(struct rte_mbuf));
 	}
 	/* Decompress the last CQE if compressed. */
 	if (comp_idx < MLX5_VPMD_DESCS_PER_LOOP) {
@@ -499,8 +499,8 @@ rxq_burst_mprq_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 		ret = check_cqe_iteration(next,	rxq->cqe_n, rxq->cq_ci);
 		if (ret != MLX5_CQE_STATUS_SW_OWN ||
 		    MLX5_CQE_FORMAT(next->op_own) == MLX5_COMPRESSED)
-			rte_memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
-				   sizeof(struct rte_mbuf));
+			memcpy(&rxq->title_pkt, elts[nocmp_n - 1],
+			       sizeof(struct rte_mbuf));
 	}
 	/* Decompress the last CQE if compressed. */
 	if (comp_idx < MLX5_VPMD_DESCS_PER_LOOP) {

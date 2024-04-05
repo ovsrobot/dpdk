@@ -2019,7 +2019,7 @@ iavf_pattern_skip_void_item(struct rte_flow_item *items,
 		pb = pe + 1;
 	}
 	/* Copy the END item. */
-	rte_memcpy(items, pe, sizeof(struct rte_flow_item));
+	memcpy(items, pe, sizeof(struct rte_flow_item));
 }
 
 /* Check if the pattern matches a supported item type array */

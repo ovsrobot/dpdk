@@ -115,7 +115,7 @@ static struct clip_entry *t4_clip_alloc(struct rte_eth_dev *dev,
 	if (ce) {
 		t4_os_lock(&ce->lock);
 		if (__atomic_load_n(&ce->refcnt, __ATOMIC_RELAXED) == 0) {
-			rte_memcpy(ce->addr, lip, sizeof(ce->addr));
+			memcpy(ce->addr, lip, sizeof(ce->addr));
 			if (v6) {
 				ce->type = FILTER_TYPE_IPV6;
 				__atomic_store_n(&ce->refcnt, 1,

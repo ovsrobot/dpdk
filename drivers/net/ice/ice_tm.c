@@ -293,8 +293,8 @@ ice_shaper_profile_add(struct rte_eth_dev *dev,
 	if (!shaper_profile)
 		return -ENOMEM;
 	shaper_profile->shaper_profile_id = shaper_profile_id;
-	rte_memcpy(&shaper_profile->profile, profile,
-			 sizeof(struct rte_tm_shaper_params));
+	memcpy(&shaper_profile->profile, profile,
+	       sizeof(struct rte_tm_shaper_params));
 	TAILQ_INSERT_TAIL(&pf->tm_conf.shaper_profile_list,
 			  shaper_profile, node);
 
@@ -403,8 +403,8 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 		tm_node->shaper_profile = shaper_profile;
 		tm_node->children =
 			(void *)((uint8_t *)tm_node + sizeof(struct ice_tm_node));
-		rte_memcpy(&tm_node->params, params,
-				 sizeof(struct rte_tm_node_params));
+		memcpy(&tm_node->params, params,
+		       sizeof(struct rte_tm_node_params));
 		pf->tm_conf.root = tm_node;
 		return 0;
 	}
@@ -480,8 +480,7 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 		PMD_DRV_LOG(WARNING, "weight != 1 not supported in level %d",
 			    level_id);
 
-	rte_memcpy(&tm_node->params, params,
-			 sizeof(struct rte_tm_node_params));
+	memcpy(&tm_node->params, params, sizeof(struct rte_tm_node_params));
 	tm_node->parent->reference_count++;
 
 	return 0;

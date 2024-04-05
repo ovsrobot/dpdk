@@ -81,7 +81,8 @@ prepare_pattern_data(const struct rte_flow_item *pattern, uint16_t nb_pattern,
 			hdr.mask_sz = term[pattern->type].item_size;
 		}
 
-		rte_memcpy(RTE_PTR_ADD(pattern_data, len), &hdr, sizeof(cnxk_pattern_hdr_t));
+		memcpy(RTE_PTR_ADD(pattern_data, len), &hdr,
+		       sizeof(cnxk_pattern_hdr_t));
 		len += sizeof(cnxk_pattern_hdr_t);
 
 		/* Copy pattern spec data */
@@ -228,7 +229,8 @@ prepare_action_data(const struct rte_flow_action *action, uint16_t nb_action, ui
 		hdr.type = action->type;
 		hdr.conf_sz = sz;
 
-		rte_memcpy(RTE_PTR_ADD(action_data, len), &hdr, sizeof(cnxk_action_hdr_t));
+		memcpy(RTE_PTR_ADD(action_data, len), &hdr,
+		       sizeof(cnxk_action_hdr_t));
 		len += sizeof(cnxk_action_hdr_t);
 
 		/* Copy action conf data */

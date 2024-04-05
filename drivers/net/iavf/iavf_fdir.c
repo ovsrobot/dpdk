@@ -374,7 +374,7 @@ iavf_fdir_create(struct iavf_adapter *ad,
 	if (filter->mark_flag == 1)
 		iavf_fdir_rx_proc_enable(ad, 1);
 
-	rte_memcpy(rule, filter, sizeof(*rule));
+	memcpy(rule, filter, sizeof(*rule));
 	flow->rule = rule;
 
 	return 0;
@@ -672,15 +672,13 @@ iavf_fdir_refine_input_set(const uint64_t input_set,
 		VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4, PROT);
 		memset(&ipv4_spec, 0, sizeof(ipv4_spec));
 		ipv4_spec.hdr.next_proto_id = proto_id;
-		rte_memcpy(hdr->buffer, &ipv4_spec.hdr,
-			   sizeof(ipv4_spec.hdr));
+		memcpy(hdr->buffer, &ipv4_spec.hdr, sizeof(ipv4_spec.hdr));
 		return true;
 	case VIRTCHNL_PROTO_HDR_IPV6:
 		VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6, PROT);
 		memset(&ipv6_spec, 0, sizeof(ipv6_spec));
 		ipv6_spec.hdr.proto = proto_id;
-		rte_memcpy(hdr->buffer, &ipv6_spec.hdr,
-			   sizeof(ipv6_spec.hdr));
+		memcpy(hdr->buffer, &ipv6_spec.hdr, sizeof(ipv6_spec.hdr));
 		return true;
 	default:
 		return false;
@@ -885,8 +883,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 									ETHERTYPE);
 				}
 
-				rte_memcpy(hdr1->buffer, eth_spec,
-					   sizeof(struct rte_ether_hdr));
+				memcpy(hdr1->buffer, eth_spec,
+				       sizeof(struct rte_ether_hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -976,8 +974,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				input_set |= IAVF_PROT_IPV4_INNER;
 			}
 
-			rte_memcpy(hdr->buffer, &ipv4_spec->hdr,
-				   sizeof(ipv4_spec->hdr));
+			memcpy(hdr->buffer, &ipv4_spec->hdr,
+			       sizeof(ipv4_spec->hdr));
 
 			hdrs->count = ++layer;
 
@@ -1066,8 +1064,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				input_set |= IAVF_PROT_IPV6_INNER;
 			}
 
-			rte_memcpy(hdr->buffer, &ipv6_spec->hdr,
-				   sizeof(ipv6_spec->hdr));
+			memcpy(hdr->buffer, &ipv6_spec->hdr,
+			       sizeof(ipv6_spec->hdr));
 
 			hdrs->count = ++layer;
 			break;
@@ -1101,8 +1099,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr1, ETH,
 								 ETHERTYPE);
 
-				rte_memcpy(hdr->buffer, &ipv6_frag_spec->hdr,
-					   sizeof(ipv6_frag_spec->hdr));
+				memcpy(hdr->buffer, &ipv6_frag_spec->hdr,
+				       sizeof(ipv6_frag_spec->hdr));
 			} else if (ipv6_frag_mask->hdr.id == UINT32_MAX) {
 				rte_flow_error_set(error, EINVAL,
 						   RTE_FLOW_ERROR_TYPE_ITEM,
@@ -1153,13 +1151,11 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				}
 
 				if (l3 == RTE_FLOW_ITEM_TYPE_IPV4)
-					rte_memcpy(hdr->buffer,
-						&udp_spec->hdr,
-						sizeof(udp_spec->hdr));
+					memcpy(hdr->buffer, &udp_spec->hdr,
+					       sizeof(udp_spec->hdr));
 				else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6)
-					rte_memcpy(hdr->buffer,
-						&udp_spec->hdr,
-						sizeof(udp_spec->hdr));
+					memcpy(hdr->buffer, &udp_spec->hdr,
+					       sizeof(udp_spec->hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1210,13 +1206,11 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				}
 
 				if (l3 == RTE_FLOW_ITEM_TYPE_IPV4)
-					rte_memcpy(hdr->buffer,
-						&tcp_spec->hdr,
-						sizeof(tcp_spec->hdr));
+					memcpy(hdr->buffer, &tcp_spec->hdr,
+					       sizeof(tcp_spec->hdr));
 				else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6)
-					rte_memcpy(hdr->buffer,
-						&tcp_spec->hdr,
-						sizeof(tcp_spec->hdr));
+					memcpy(hdr->buffer, &tcp_spec->hdr,
+					       sizeof(tcp_spec->hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1256,13 +1250,11 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				}
 
 				if (l3 == RTE_FLOW_ITEM_TYPE_IPV4)
-					rte_memcpy(hdr->buffer,
-						&sctp_spec->hdr,
-						sizeof(sctp_spec->hdr));
+					memcpy(hdr->buffer, &sctp_spec->hdr,
+					       sizeof(sctp_spec->hdr));
 				else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6)
-					rte_memcpy(hdr->buffer,
-						&sctp_spec->hdr,
-						sizeof(sctp_spec->hdr));
+					memcpy(hdr->buffer, &sctp_spec->hdr,
+					       sizeof(sctp_spec->hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1291,8 +1283,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, GTPU_IP, TEID);
 				}
 
-				rte_memcpy(hdr->buffer,
-					gtp_spec, sizeof(*gtp_spec));
+				memcpy(hdr->buffer, gtp_spec,
+				       sizeof(*gtp_spec));
 			}
 
 			tun_inner = 1;
@@ -1346,8 +1338,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 				psc.qfi = gtp_psc_spec->hdr.qfi;
 				psc.type = gtp_psc_spec->hdr.type;
 				psc.next = 0;
-				rte_memcpy(hdr->buffer, &psc,
-					sizeof(struct iavf_gtp_psc_spec_hdr));
+				memcpy(hdr->buffer, &psc,
+				       sizeof(struct iavf_gtp_psc_spec_hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1367,8 +1359,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, L2TPV3, SESS_ID);
 				}
 
-				rte_memcpy(hdr->buffer, l2tpv3oip_spec,
-					sizeof(*l2tpv3oip_spec));
+				memcpy(hdr->buffer, l2tpv3oip_spec,
+				       sizeof(*l2tpv3oip_spec));
 			}
 
 			hdrs->count = ++layer;
@@ -1388,8 +1380,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, ESP, SPI);
 				}
 
-				rte_memcpy(hdr->buffer, &esp_spec->hdr,
-					sizeof(esp_spec->hdr));
+				memcpy(hdr->buffer, &esp_spec->hdr,
+				       sizeof(esp_spec->hdr));
 			}
 
 			hdrs->count = ++layer;
@@ -1409,8 +1401,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, AH, SPI);
 				}
 
-				rte_memcpy(hdr->buffer, ah_spec,
-					sizeof(*ah_spec));
+				memcpy(hdr->buffer, ah_spec, sizeof(*ah_spec));
 			}
 
 			hdrs->count = ++layer;
@@ -1430,8 +1421,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, PFCP, S_FIELD);
 				}
 
-				rte_memcpy(hdr->buffer, pfcp_spec,
-					sizeof(*pfcp_spec));
+				memcpy(hdr->buffer, pfcp_spec,
+				       sizeof(*pfcp_spec));
 			}
 
 			hdrs->count = ++layer;
@@ -1455,8 +1446,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 									 PC_RTC_ID);
 				}
 
-				rte_memcpy(hdr->buffer, ecpri_spec,
-					sizeof(*ecpri_spec));
+				memcpy(hdr->buffer, ecpri_spec,
+				       sizeof(*ecpri_spec));
 			}
 
 			hdrs->count = ++layer;
@@ -1471,8 +1462,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GRE);
 
 			if (gre_spec && gre_mask) {
-				rte_memcpy(hdr->buffer, gre_spec,
-					   sizeof(*gre_spec));
+				memcpy(hdr->buffer, gre_spec,
+				       sizeof(*gre_spec));
 			}
 
 			tun_inner = 1;
@@ -1520,8 +1511,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 								SESS_ID);
 				}
 
-				rte_memcpy(hdr->buffer, l2tpv2_spec,
-					   sizeof(*l2tpv2_spec));
+				memcpy(hdr->buffer, l2tpv2_spec,
+				       sizeof(*l2tpv2_spec));
 			}
 
 			tun_inner = 1;
@@ -1538,8 +1529,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, PPP);
 
 			if (ppp_spec && ppp_mask) {
-				rte_memcpy(hdr->buffer, ppp_spec,
-					   sizeof(*ppp_spec));
+				memcpy(hdr->buffer, ppp_spec,
+				       sizeof(*ppp_spec));
 			}
 
 			hdrs->count = ++layer;

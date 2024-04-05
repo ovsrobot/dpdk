@@ -1944,10 +1944,10 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 		if (item->spec) {
 			rule->b_spec = TRUE;
 			ipv6_spec = item->spec;
-			rte_memcpy(rule->ixgbe_fdir.formatted.src_ip,
-				   ipv6_spec->hdr.src_addr, 16);
-			rte_memcpy(rule->ixgbe_fdir.formatted.dst_ip,
-				   ipv6_spec->hdr.dst_addr, 16);
+			memcpy(rule->ixgbe_fdir.formatted.src_ip,
+			       ipv6_spec->hdr.src_addr, 16);
+			memcpy(rule->ixgbe_fdir.formatted.dst_ip,
+			       ipv6_spec->hdr.dst_addr, 16);
 		}
 
 		/**
@@ -3070,9 +3070,9 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 				PMD_DRV_LOG(ERR, "failed to allocate memory");
 				goto out;
 			}
-			rte_memcpy(&ntuple_filter_ptr->filter_info,
-				&ntuple_filter,
-				sizeof(struct rte_eth_ntuple_filter));
+			memcpy(&ntuple_filter_ptr->filter_info,
+			       &ntuple_filter,
+			       sizeof(struct rte_eth_ntuple_filter));
 			TAILQ_INSERT_TAIL(&filter_ntuple_list,
 				ntuple_filter_ptr, entries);
 			flow->rule = ntuple_filter_ptr;
@@ -3096,9 +3096,9 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 				PMD_DRV_LOG(ERR, "failed to allocate memory");
 				goto out;
 			}
-			rte_memcpy(&ethertype_filter_ptr->filter_info,
-				&ethertype_filter,
-				sizeof(struct rte_eth_ethertype_filter));
+			memcpy(&ethertype_filter_ptr->filter_info,
+			       &ethertype_filter,
+			       sizeof(struct rte_eth_ethertype_filter));
 			TAILQ_INSERT_TAIL(&filter_ethertype_list,
 				ethertype_filter_ptr, entries);
 			flow->rule = ethertype_filter_ptr;
@@ -3120,9 +3120,8 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 				PMD_DRV_LOG(ERR, "failed to allocate memory");
 				goto out;
 			}
-			rte_memcpy(&syn_filter_ptr->filter_info,
-				&syn_filter,
-				sizeof(struct rte_eth_syn_filter));
+			memcpy(&syn_filter_ptr->filter_info, &syn_filter,
+			       sizeof(struct rte_eth_syn_filter));
 			TAILQ_INSERT_TAIL(&filter_syn_list,
 				syn_filter_ptr,
 				entries);
@@ -3141,9 +3140,8 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 		if (fdir_rule.b_mask) {
 			if (!fdir_info->mask_added) {
 				/* It's the first time the mask is set. */
-				rte_memcpy(&fdir_info->mask,
-					&fdir_rule.mask,
-					sizeof(struct ixgbe_hw_fdir_mask));
+				memcpy(&fdir_info->mask, &fdir_rule.mask,
+				       sizeof(struct ixgbe_hw_fdir_mask));
 
 				if (fdir_rule.mask.flex_bytes_mask) {
 					ret = ixgbe_fdir_set_flexbytes_offset(dev,
@@ -3185,9 +3183,9 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 					PMD_DRV_LOG(ERR, "failed to allocate memory");
 					goto out;
 				}
-				rte_memcpy(&fdir_rule_ptr->filter_info,
-					&fdir_rule,
-					sizeof(struct ixgbe_fdir_rule));
+				memcpy(&fdir_rule_ptr->filter_info,
+				       &fdir_rule,
+				       sizeof(struct ixgbe_fdir_rule));
 				TAILQ_INSERT_TAIL(&filter_fdir_list,
 					fdir_rule_ptr, entries);
 				flow->rule = fdir_rule_ptr;
@@ -3222,9 +3220,8 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 				PMD_DRV_LOG(ERR, "failed to allocate memory");
 				goto out;
 			}
-			rte_memcpy(&l2_tn_filter_ptr->filter_info,
-				&l2_tn_filter,
-				sizeof(struct ixgbe_l2_tunnel_conf));
+			memcpy(&l2_tn_filter_ptr->filter_info, &l2_tn_filter,
+			       sizeof(struct ixgbe_l2_tunnel_conf));
 			TAILQ_INSERT_TAIL(&filter_l2_tunnel_list,
 				l2_tn_filter_ptr, entries);
 			flow->rule = l2_tn_filter_ptr;
@@ -3351,9 +3348,8 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	case RTE_ETH_FILTER_NTUPLE:
 		ntuple_filter_ptr = (struct ixgbe_ntuple_filter_ele *)
 					pmd_flow->rule;
-		rte_memcpy(&ntuple_filter,
-			&ntuple_filter_ptr->filter_info,
-			sizeof(struct rte_eth_ntuple_filter));
+		memcpy(&ntuple_filter, &ntuple_filter_ptr->filter_info,
+		       sizeof(struct rte_eth_ntuple_filter));
 		ret = ixgbe_add_del_ntuple_filter(dev, &ntuple_filter, FALSE);
 		if (!ret) {
 			TAILQ_REMOVE(&filter_ntuple_list,
@@ -3364,9 +3360,8 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	case RTE_ETH_FILTER_ETHERTYPE:
 		ethertype_filter_ptr = (struct ixgbe_ethertype_filter_ele *)
 					pmd_flow->rule;
-		rte_memcpy(&ethertype_filter,
-			&ethertype_filter_ptr->filter_info,
-			sizeof(struct rte_eth_ethertype_filter));
+		memcpy(&ethertype_filter, &ethertype_filter_ptr->filter_info,
+		       sizeof(struct rte_eth_ethertype_filter));
 		ret = ixgbe_add_del_ethertype_filter(dev,
 				&ethertype_filter, FALSE);
 		if (!ret) {
@@ -3378,9 +3373,8 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	case RTE_ETH_FILTER_SYN:
 		syn_filter_ptr = (struct ixgbe_eth_syn_filter_ele *)
 				pmd_flow->rule;
-		rte_memcpy(&syn_filter,
-			&syn_filter_ptr->filter_info,
-			sizeof(struct rte_eth_syn_filter));
+		memcpy(&syn_filter, &syn_filter_ptr->filter_info,
+		       sizeof(struct rte_eth_syn_filter));
 		ret = ixgbe_syn_filter_set(dev, &syn_filter, FALSE);
 		if (!ret) {
 			TAILQ_REMOVE(&filter_syn_list,
@@ -3390,9 +3384,8 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 		break;
 	case RTE_ETH_FILTER_FDIR:
 		fdir_rule_ptr = (struct ixgbe_fdir_rule_ele *)pmd_flow->rule;
-		rte_memcpy(&fdir_rule,
-			&fdir_rule_ptr->filter_info,
-			sizeof(struct ixgbe_fdir_rule));
+		memcpy(&fdir_rule, &fdir_rule_ptr->filter_info,
+		       sizeof(struct ixgbe_fdir_rule));
 		ret = ixgbe_fdir_filter_program(dev, &fdir_rule, TRUE, FALSE);
 		if (!ret) {
 			TAILQ_REMOVE(&filter_fdir_list,
@@ -3405,8 +3398,8 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	case RTE_ETH_FILTER_L2_TUNNEL:
 		l2_tn_filter_ptr = (struct ixgbe_eth_l2_tunnel_conf_ele *)
 				pmd_flow->rule;
-		rte_memcpy(&l2_tn_filter, &l2_tn_filter_ptr->filter_info,
-			sizeof(struct ixgbe_l2_tunnel_conf));
+		memcpy(&l2_tn_filter, &l2_tn_filter_ptr->filter_info,
+		       sizeof(struct ixgbe_l2_tunnel_conf));
 		ret = ixgbe_dev_l2_tunnel_filter_del(dev, &l2_tn_filter);
 		if (!ret) {
 			TAILQ_REMOVE(&filter_l2_tunnel_list,

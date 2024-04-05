@@ -996,7 +996,7 @@ int hns3_fdir_filter_program(struct hns3_adapter *hns,
 		return -ENOMEM;
 	}
 
-	rte_memcpy(&node->fdir_conf, rule, sizeof(struct hns3_fdir_rule));
+	memcpy(&node->fdir_conf, rule, sizeof(struct hns3_fdir_rule));
 	ret = hns3_insert_fdir_filter(hw, fdir_info, node);
 	if (ret < 0) {
 		rte_free(node);

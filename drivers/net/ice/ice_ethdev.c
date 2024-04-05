@@ -3453,11 +3453,11 @@ static int ice_init_rss(struct ice_pf *pf)
 			   RTE_MIN(rss_conf->rss_key_len,
 				   vsi->rss_key_size));
 
-	rte_memcpy(key.standard_rss_key, vsi->rss_key,
-		ICE_AQC_GET_SET_RSS_KEY_DATA_RSS_KEY_SIZE);
-	rte_memcpy(key.extended_hash_key,
-		&vsi->rss_key[ICE_AQC_GET_SET_RSS_KEY_DATA_RSS_KEY_SIZE],
-		ICE_AQC_GET_SET_RSS_KEY_DATA_HASH_KEY_SIZE);
+	memcpy(key.standard_rss_key, vsi->rss_key,
+	       ICE_AQC_GET_SET_RSS_KEY_DATA_RSS_KEY_SIZE);
+	memcpy(key.extended_hash_key,
+	       &vsi->rss_key[ICE_AQC_GET_SET_RSS_KEY_DATA_RSS_KEY_SIZE],
+	       ICE_AQC_GET_SET_RSS_KEY_DATA_HASH_KEY_SIZE);
 	ret = ice_aq_set_rss_key(hw, vsi->idx, &key);
 	if (ret)
 		goto out;
@@ -4549,7 +4549,7 @@ ice_vsi_config_vlan_filter(struct ice_vsi *vsi, bool on)
 		vsi->info.sw_flags2 &= ~sw_flags2;
 
 	vsi->info.sw_id = hw->port_info->sw_id;
-	(void)rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.info.valid_sections =
 		rte_cpu_to_le_16(ICE_AQ_VSI_PROP_SW_VALID |
 				 ICE_AQ_VSI_PROP_SECURITY_VALID);
@@ -5367,7 +5367,7 @@ ice_vsi_vlan_pvid_set(struct ice_vsi *vsi, struct ice_vsi_vlan_pvid_info *info)
 				  ICE_AQ_VSI_INNER_VLAN_EMODE_M);
 	vsi->info.inner_vlan_flags |= vlan_flags;
 	memset(&ctxt, 0, sizeof(ctxt));
-	rte_memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
+	memcpy(&ctxt.info, &vsi->info, sizeof(vsi->info));
 	ctxt.info.valid_sections =
 		rte_cpu_to_le_16(ICE_AQ_VSI_PROP_VLAN_VALID);
 	ctxt.vsi_num = vsi->vsi_id;
