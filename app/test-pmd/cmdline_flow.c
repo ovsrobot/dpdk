@@ -13768,7 +13768,7 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 			fprintf(stderr, "Error - Not supported action\n");
 			return;
 		}
-		rte_memcpy(data, action, sizeof(struct rte_flow_action));
+		memcpy(data, action, sizeof(struct rte_flow_action));
 		data++;
 	}
 }
@@ -13929,8 +13929,8 @@ cmd_set_raw_parsed(const struct buffer *in)
 
 				/* We have to add GTP header extra word. */
 				*total_size += sizeof(ext_word);
-				rte_memcpy(data_tail - (*total_size),
-					   &ext_word, sizeof(ext_word));
+				memcpy(data_tail - (*total_size), &ext_word,
+				       sizeof(ext_word));
 			}
 			size = sizeof(struct rte_gtp_hdr);
 			break;
@@ -13975,21 +13975,21 @@ cmd_set_raw_parsed(const struct buffer *in)
 				if (opt->checksum_rsvd.checksum) {
 					*total_size +=
 						sizeof(opt->checksum_rsvd);
-					rte_memcpy(data_tail - (*total_size),
-						   &opt->checksum_rsvd,
-						   sizeof(opt->checksum_rsvd));
+					memcpy(data_tail - (*total_size),
+					       &opt->checksum_rsvd,
+					       sizeof(opt->checksum_rsvd));
 				}
 				if (opt->key.key) {
 					*total_size += sizeof(opt->key.key);
-					rte_memcpy(data_tail - (*total_size),
-						   &opt->key.key,
-						   sizeof(opt->key.key));
+					memcpy(data_tail - (*total_size),
+					       &opt->key.key,
+					       sizeof(opt->key.key));
 				}
 				if (opt->sequence.sequence) {
 					*total_size += sizeof(opt->sequence.sequence);
-					rte_memcpy(data_tail - (*total_size),
-						   &opt->sequence.sequence,
-						   sizeof(opt->sequence.sequence));
+					memcpy(data_tail - (*total_size),
+					       &opt->sequence.sequence,
+					       sizeof(opt->sequence.sequence));
 				}
 			}
 			proto = 0x2F;
