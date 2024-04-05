@@ -745,7 +745,6 @@ F: doc/guides/nics/features/hns3.ini
 Huawei hinic
 M: Ziyang Xuan <xuanziyang2@huawei.com>
 M: Xiaoyun Wang <cloud.wangxiaoyun@huawei.com>
-M: Guoyang Zhou <zhouguoyang@huawei.com>
 F: drivers/net/hinic/
 F: doc/guides/nics/hinic.rst
 F: doc/guides/nics/features/hinic.ini
@@ -801,7 +800,6 @@ F: doc/guides/nics/idpf.rst
 F: doc/guides/nics/features/idpf.ini
 
 Intel cpfl - EXPERIMENTAL
-M: Yuying Zhang <yuying.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/net/cpfl/
 F: doc/guides/nics/cpfl.rst
