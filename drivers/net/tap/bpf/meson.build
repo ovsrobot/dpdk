@@ -3,15 +3,26 @@
 
 enable_tap_rss = false
 
-libbpf = dependency('libbpf', required: false, method: 'pkg-config')
+# Loading BPF requires libbpf
+# and the bpf_map__XXX API's were introduced in 0.8.0
+libbpf = dependency('libbpf', version: '>= 1.0',
+                    required: false, method: 'pkg-config')
 if not libbpf.found()
     message('net/tap: no RSS support missing libbpf')
     subdir_done()
 endif
 
+# Making skeleton needs bpftool
 # Debian install this in /usr/sbin which is not in $PATH
-bpftool = find_program('bpftool', '/usr/sbin/bpftool', required: false, version: '>= 5.6.0')
-if not bpftool.found()
+bpftool_supports_skel = false
+bpftool = find_program('bpftool', '/usr/sbin/bpftool', required: false)
+if bpftool.found()
+    # Some Ubuntu has non-functional bpftool
+    bpftool_supports_skel = run_command(bpftool, 'gen', 'help',
+                                        check:false).returncode() == 0
+endif
+
+if not bpftool_supports_skel
     message('net/tap: no RSS support missing bpftool')
     subdir_done()
 endif
@@ -42,6 +53,7 @@ clang_flags = [
     '-O2',
     '-Wall',
     '-Wextra',
+    max_queues,
     '-target',
     'bpf',
     '-g',
@@ -66,6 +78,22 @@ skel_h_cmd = [
     'skeleton',
     '@INPUT@'
 ]
+
+vmlinux_h_cmd = [
+    bpftool,
+    'btf',
+    'dump',
+    'file',
+    '/sys/kernel/btf/vmlinux',
+    'format',
+    'c'
+]
+
+vmlinux_h = custom_target(
+    'vmlinux.h',
+    output: 'vmlinux.h',
+    command: vmlinux_h_cmd,
+    capture: true)
 
 tap_rss_o = custom_target(
     'tap_rss.bpf.o',
