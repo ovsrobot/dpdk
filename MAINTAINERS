@@ -745,7 +745,6 @@ F: doc/guides/nics/features/hns3.ini
 Huawei hinic
 M: Ziyang Xuan <xuanziyang2@huawei.com>
 M: Xiaoyun Wang <cloud.wangxiaoyun@huawei.com>
-M: Guoyang Zhou <zhouguoyang@huawei.com>
 F: drivers/net/hinic/
 F: doc/guides/nics/hinic.rst
 F: doc/guides/nics/features/hinic.ini
@@ -766,7 +765,6 @@ F: doc/guides/nics/intel_vf.rst
 F: doc/guides/nics/features/ixgbe*.ini
 
 Intel i40e
-M: Yuying Zhang <Yuying.Zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/net/i40e/
 F: doc/guides/nics/i40e.rst
@@ -801,7 +799,6 @@ F: doc/guides/nics/idpf.rst
 F: doc/guides/nics/features/idpf.ini
 
 Intel cpfl - EXPERIMENTAL
-M: Yuying Zhang <yuying.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/net/cpfl/
 F: doc/guides/nics/cpfl.rst
@@ -1797,7 +1794,6 @@ F: app/test/sample_packet_forward.h
 
 Networking drivers testing tool
 M: Aman Singh <aman.deep.singh@intel.com>
-M: Yuying Zhang <yuying.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net
 F: app/test-pmd/
 F: doc/guides/testpmd_app_ug/
