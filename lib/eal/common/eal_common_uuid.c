@@ -3,12 +3,18 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 
+#include <rte_stdatomic.h>
+#include <rte_random.h>
+#include <rte_time.h>
 #include <rte_uuid.h>
+#include <rte_os_shim.h>
 
 /* UUID packed form */
 struct uuid {
@@ -164,4 +170,54 @@ void rte_uuid_unparse(const rte_uuid_t uu, char *out, size_t len)
 		uuid.clock_seq >> 8, uuid.clock_seq & 0xFF,
 		uuid.node[0], uuid.node[1], uuid.node[2],
 		uuid.node[3], uuid.node[4], uuid.node[5]);
+}
+
+void rte_uuid_generate_random(rte_uuid_t out)
+{
+	union {
+		uint64_t words[2];
+		rte_uuid_t uuid;
+	} buf;
+	struct uuid uu;
+
+	/* UUID is 128 bit */
+	buf.words[0] = rte_rand();
+	buf.words[1] = rte_rand();
+
+	/* Mark these random bytes a version 4 random uuid */
+	uuid_unpack(buf.uuid, &uu);
+	uu.clock_seq = (uu.clock_seq & 0x3FFF) | 0x8000;
+	uu.time_hi_and_version = (uu.time_hi_and_version & 0x0FFF) | 0x4000;
+	uuid_pack(&uu, out);
+}
+
+void rte_uuid_generate_time(rte_uuid_t out)
+{
+	struct uuid uu;
+	struct timespec ts;
+	uint64_t ns, rnd;
+	static RTE_ATOMIC(uint16_t) sequence;
+
+	/* The time value for UUID is 100ns since 15 October 1582 */
+	clock_gettime(CLOCK_REALTIME, &ts);
+
+	ns = ts.tv_nsec / 100;
+	ns += (uint64_t) ts.tv_sec * (NSEC_PER_SEC / 100);
+	ns += (((uint64_t) 0x01B21DD2) << 32) + 0x13814000;
+
+	uu.time_low = (uint32_t) ns;
+	uu.time_mid = (uint16_t) (ns >> 32);
+	uu.time_hi_and_version = (uint16_t) (ns >> 48);
+	uu.time_hi_and_version = (uu.time_hi_and_version & 0x0FFF) | 0x4000;
+	uu.clock_seq = rte_atomic_fetch_add_explicit(&sequence, 1, rte_memory_order_relaxed);
+
+	rnd = rte_rand();
+	memcpy(uu.node, &rnd, 6);
+	/*
+	 * Follow the convention so that random node part
+	 * will not match a valid MAC address,
+	 */
+	uu.node[0] |= 0x1;
+
+	uuid_pack(&uu, out);
 }

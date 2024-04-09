@@ -396,6 +396,10 @@ EXPERIMENTAL {
 
 	# added in 24.03
 	rte_vfio_get_device_info; # WINDOWS_NO_EXPORT
+
+	# added in 24.07
+	rte_uuid_generate_random;
+	rte_uuid_generate_time;
 };
 
 INTERNAL {
