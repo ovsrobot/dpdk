@@ -101,6 +101,9 @@ Running DPDK Applications
 
 To run a DPDK application, some customization may be required on the target machine.
 
+.. _linux_gsg_kernel_version:
+
+
 System Software
 ~~~~~~~~~~~~~~~
 
