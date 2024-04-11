@@ -181,6 +181,10 @@ static int ice_timesync_read_time(struct rte_eth_dev *dev,
 static int ice_timesync_write_time(struct rte_eth_dev *dev,
 				   const struct timespec *timestamp);
 static int ice_timesync_disable(struct rte_eth_dev *dev);
+static int ice_fec_get_capability(struct rte_eth_dev *dev, struct rte_eth_fec_capa *speed_fec_capa,
+			   unsigned int num);
+static int ice_fec_get(struct rte_eth_dev *dev, uint32_t *fec_capa);
+static int ice_fec_set(struct rte_eth_dev *dev, uint32_t fec_capa);
 static const uint32_t *ice_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev,
 						size_t *no_of_elements);
 
@@ -298,6 +302,9 @@ static const struct eth_dev_ops ice_eth_dev_ops = {
 	.timesync_write_time          = ice_timesync_write_time,
 	.timesync_disable             = ice_timesync_disable,
 	.tm_ops_get                   = ice_tm_ops_get,
+	.fec_get_capability           = ice_fec_get_capability,
+	.fec_get                      = ice_fec_get,
+	.fec_set                      = ice_fec_set,
 	.buffer_split_supported_hdr_ptypes_get = ice_buffer_split_supported_hdr_ptypes_get,
 };
 
@@ -6642,6 +6649,175 @@ ice_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev __rte_unused,
 
 	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
+}
+
+static int
+ice_fec_get_capa_num(struct ice_aqc_get_phy_caps_data *pcaps,
+			   struct rte_eth_fec_capa *speed_fec_capa)
+{
+	int num = 0;
+
+	if (!pcaps)
+		return ICE_ERR_NO_MEMORY;
+
+	if (pcaps->caps & ICE_AQC_PHY_EN_AUTO_FEC) {
+		if (speed_fec_capa)
+			speed_fec_capa[num].capa = RTE_ETH_FEC_MODE_CAPA_MASK(AUTO);
+		num++;
+	}
+
+	if (pcaps->link_fec_options & ICE_AQC_PHY_FEC_10G_KR_40G_KR4_EN ||
+	    pcaps->link_fec_options & ICE_AQC_PHY_FEC_10G_KR_40G_KR4_REQ ||
+	    pcaps->link_fec_options & ICE_AQC_PHY_FEC_25G_KR_CLAUSE74_EN ||
+	    pcaps->link_fec_options & ICE_AQC_PHY_FEC_25G_KR_REQ) {
+		if (speed_fec_capa)
+			speed_fec_capa[num].capa = RTE_ETH_FEC_MODE_CAPA_MASK(BASER);
+		num++;
+	}
+
+	if (pcaps->link_fec_options & ICE_AQC_PHY_FEC_25G_RS_528_REQ ||
+	    pcaps->link_fec_options & ICE_AQC_PHY_FEC_25G_RS_544_REQ ||
+	    pcaps->link_fec_options & ICE_AQC_PHY_FEC_25G_RS_CLAUSE91_EN) {
+		if (speed_fec_capa)
+			speed_fec_capa[num].capa = RTE_ETH_FEC_MODE_CAPA_MASK(RS);
+		num++;
+	}
+
+	if (pcaps->link_fec_options == 0) {
+		if (speed_fec_capa)
+			speed_fec_capa[num].capa = RTE_ETH_FEC_MODE_CAPA_MASK(NOFEC);
+		num++;
+	}
+
+	return num;
+}
+
+static int
+ice_fec_get_capability(struct rte_eth_dev *dev, struct rte_eth_fec_capa *speed_fec_capa,
+			   unsigned int num)
+{
+	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_aqc_get_phy_caps_data *pcaps;
+	unsigned int capa_num;
+	int ret;
+
+	pcaps = (struct ice_aqc_get_phy_caps_data *)
+			ice_malloc(hw, sizeof(*pcaps));
+	if (!pcaps)
+		return ICE_ERR_NO_MEMORY;
+
+	ret = ice_aq_get_phy_caps(hw->port_info, false, ICE_AQC_REPORT_TOPO_CAP_MEDIA,
+				  pcaps, NULL);
+	if (ret)
+		goto done;
+
+	/* first time to get capa_num */
+	capa_num = ice_fec_get_capa_num(pcaps, NULL);
+	if (!speed_fec_capa || num < capa_num) {
+		ret = capa_num;
+		goto done;
+	}
+
+	ret = ice_fec_get_capa_num(pcaps, speed_fec_capa);
+
+done:
+	ice_free(hw, pcaps);
+	return ret;
+}
+
+static int
+ice_fec_get(struct rte_eth_dev *dev, uint32_t *fec_capa)
+{
+	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_port_info *pi = hw->port_info;
+	u32 temp_fec_capa = 0;
+	int ret = 0;
+
+	if (!pi)
+		return -ENOTSUP;
+
+	/* Get current FEC mode from port info */
+	switch (pi->phy.curr_user_fec_req) {
+	case ICE_FEC_NONE:
+		temp_fec_capa = RTE_ETH_FEC_MODE_CAPA_MASK(NOFEC);
+		break;
+	case ICE_FEC_AUTO:
+	case ICE_FEC_DIS_AUTO:
+		temp_fec_capa = RTE_ETH_FEC_MODE_CAPA_MASK(AUTO);
+		break;
+	case ICE_FEC_BASER:
+		temp_fec_capa = RTE_ETH_FEC_MODE_CAPA_MASK(BASER);
+		break;
+	case ICE_FEC_RS:
+		temp_fec_capa = RTE_ETH_FEC_MODE_CAPA_MASK(RS);
+		break;
+	default:
+		ret = -ENOTSUP;
+		break;
+	}
+
+	*fec_capa = temp_fec_capa;
+	return ret;
+}
+
+static int
+ice_fec_set(struct rte_eth_dev *dev, uint32_t fec_capa)
+{
+	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_port_info *pi = hw->port_info;
+	struct ice_aqc_set_phy_cfg_data config = { 0 };
+	enum ice_fec_mode req_fec;
+	int ret = 0;
+
+	if (!pi)
+		return -ENOTSUP;
+
+	switch (fec_capa) {
+	case RTE_ETH_FEC_MODE_CAPA_MASK(NOFEC):
+		req_fec = ICE_FEC_NONE;
+		break;
+	case RTE_ETH_FEC_MODE_CAPA_MASK(AUTO):
+		if (ice_fw_supports_fec_dis_auto(hw))
+			req_fec = ICE_FEC_DIS_AUTO;
+		else
+			req_fec = ICE_FEC_AUTO;
+		break;
+	case RTE_ETH_FEC_MODE_CAPA_MASK(BASER):
+		req_fec = ICE_FEC_BASER;
+		break;
+	case RTE_ETH_FEC_MODE_CAPA_MASK(RS):
+		req_fec = ICE_FEC_RS;
+		break;
+	default:
+		PMD_DRV_LOG(ERR, "Unsupported FEC mode: %d\n", fec_capa);
+		return -EINVAL;
+	}
+
+	/* Proceed only if requesting different FEC mode */
+	if (pi->phy.curr_user_fec_req == req_fec)
+		return 0;
+
+	/* Copy the current user PHY configuration. The current user PHY
+	 * configuration is initialized during probe from PHY capabilities
+	 * software mode, and updated on set PHY configuration.
+	 */
+	memcpy(&config, &pi->phy.curr_user_phy_cfg, sizeof(config));
+
+	ret = ice_cfg_phy_fec(pi, &config, req_fec);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to set FEC mode");
+		return -EINVAL;
+	}
+
+	config.caps |= ICE_AQ_PHY_ENA_AUTO_LINK_UPDT;
+
+	if (ice_aq_set_phy_cfg(pi->hw, pi, &config, NULL))
+		return -EAGAIN;
+
+	/* Save requested FEC config */
+	pi->phy.curr_user_fec_req = req_fec;
+
+	return 0;
 }
 
 static int
