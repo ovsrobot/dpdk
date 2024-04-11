@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel i40e driver.**
+
+  * Added support for configuring the Forward Error Correction(FEC) mode, querying
+  * FEC capabilities and current FEC mode from a device.
 
 Removed Items
 -------------
