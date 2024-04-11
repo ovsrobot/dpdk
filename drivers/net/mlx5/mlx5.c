@@ -2457,6 +2457,10 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 	 * mlx5_os_mac_addr_flush() uses ibdev_path for retrieving
 	 * ifindex if Netlink fails.
 	 */
+
+	/* Avoid race condition if mlx5_dev_interrupt_nl_cb is running. */
+	rte_delay_us_sleep(1000);
+
 	mlx5_free_shared_dev_ctx(priv->sh);
 	if (priv->domain_id != RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID) {
 		unsigned int c = 0;
