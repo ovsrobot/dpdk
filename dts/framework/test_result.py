@@ -24,11 +24,13 @@ variable modify the directory where the files with results will be stored.
 """
 
 import os.path
-from collections.abc import MutableSequence
-from dataclasses import dataclass
+from collections.abc import MutableSequence, MutableSet
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from types import MethodType
 from typing import Union
+
+from framework.remote_session import NicCapability
 
 from .config import (
     OS,
@@ -64,6 +66,14 @@ class TestSuiteWithCases:
 
     test_suite_class: type[TestSuite]
     test_cases: list[MethodType]
+    req_capabilities: set[NicCapability] = field(default_factory=set, init=False)
+
+    def __post_init__(self):
+        """Gather the required capabilities of the test suite and all test cases."""
+        for test_object in [self.test_suite_class] + self.test_cases:
+            test_object.skip = False
+            if hasattr(test_object, "req_capa"):
+                self.req_capabilities.update(test_object.req_capa)
 
     def create_config(self) -> TestSuiteConfig:
         """Generate a :class:`TestSuiteConfig` from the stored test suite with test cases.
@@ -75,6 +85,47 @@ class TestSuiteWithCases:
             test_suite=self.test_suite_class.__name__,
             test_cases=[test_case.__name__ for test_case in self.test_cases],
         )
+
+    def mark_skip(self, supported_capabilities: MutableSet[NicCapability]) -> None:
+        """Mark the test suite and test cases to be skipped.
+
+        The mark is applied is object to be skipped requires any capabilities and at least one of
+        them is not among `capabilities`.
+
+        Args:
+            supported_capabilities: The supported capabilities.
+        """
+        for test_object in [self.test_suite_class] + self.test_cases:
+            if set(getattr(test_object, "req_capa", [])) - supported_capabilities:
+                test_object.skip = True
+
+    @staticmethod
+    def should_not_be_skipped(test_object: Union[type[TestSuite] | MethodType]) -> bool:
+        """Figure out whether `test_object` should be skipped.
+
+        If `test_object` is a :class:`TestSuite`, its test cases are not checked,
+        only the class itself.
+
+        Args:
+            test_object: The test suite or test case to be inspected.
+
+        Returns:
+            :data:`True` if the test suite or test case should be skipped, :data:`False` otherwise.
+        """
+        return not getattr(test_object, "skip", False)
+
+    def __bool__(self) -> bool:
+        """The truth value is determined by whether the test suite should be run.
+
+        Returns:
+            :data:`False` if the test suite should be skipped, :data:`True` otherwise.
+        """
+        found_test_case_to_run = False
+        for test_case in self.test_cases:
+            if self.should_not_be_skipped(test_case):
+                found_test_case_to_run = True
+                break
+        return found_test_case_to_run and self.should_not_be_skipped(self.test_suite_class)
 
 
 class Result(Enum):
@@ -170,12 +221,13 @@ class BaseResult(object):
         self.setup_result.result = result
         self.setup_result.error = error
 
-        if result in [Result.BLOCK, Result.ERROR, Result.FAIL]:
-            self.update_teardown(Result.BLOCK)
-            self._block_result()
+        if result != Result.PASS:
+            result_to_mark = Result.BLOCK if result != Result.SKIP else Result.SKIP
+            self.update_teardown(result_to_mark)
+            self._mark_results(result_to_mark)
 
-    def _block_result(self) -> None:
-        r"""Mark the result as :attr:`~Result.BLOCK`\ed.
+    def _mark_results(self, result) -> None:
+        """Mark the result as well as the child result as `result`.
 
         The blocking of child results should be done in overloaded methods.
         """
@@ -390,11 +442,11 @@ class ExecutionResult(BaseResult):
         self.sut_os_version = sut_info.os_version
         self.sut_kernel_version = sut_info.kernel_version
 
-    def _block_result(self) -> None:
-        r"""Mark the result as :attr:`~Result.BLOCK`\ed."""
+    def _mark_results(self, result) -> None:
+        """Mark the result as well as the child result as `result`."""
         for build_target in self._config.build_targets:
             child_result = self.add_build_target(build_target)
-            child_result.update_setup(Result.BLOCK)
+            child_result.update_setup(result)
 
 
 class BuildTargetResult(BaseResult):
@@ -464,11 +516,11 @@ class BuildTargetResult(BaseResult):
         self.compiler_version = versions.compiler_version
         self.dpdk_version = versions.dpdk_version
 
-    def _block_result(self) -> None:
-        r"""Mark the result as :attr:`~Result.BLOCK`\ed."""
+    def _mark_results(self, result) -> None:
+        """Mark the result as well as the child result as `result`."""
         for test_suite_with_cases in self._test_suites_with_cases:
             child_result = self.add_test_suite(test_suite_with_cases)
-            child_result.update_setup(Result.BLOCK)
+            child_result.update_setup(result)
 
 
 class TestSuiteResult(BaseResult):
@@ -508,11 +560,11 @@ class TestSuiteResult(BaseResult):
         self.child_results.append(result)
         return result
 
-    def _block_result(self) -> None:
-        r"""Mark the result as :attr:`~Result.BLOCK`\ed."""
+    def _mark_results(self, result) -> None:
+        """Mark the result as well as the child result as `result`."""
         for test_case_method in self._test_suite_with_cases.test_cases:
             child_result = self.add_test_case(test_case_method.__name__)
-            child_result.update_setup(Result.BLOCK)
+            child_result.update_setup(result)
 
 
 class TestCaseResult(BaseResult, FixtureResult):
@@ -566,9 +618,9 @@ class TestCaseResult(BaseResult, FixtureResult):
         """
         statistics += self.result
 
-    def _block_result(self) -> None:
-        r"""Mark the result as :attr:`~Result.BLOCK`\ed."""
-        self.update(Result.BLOCK)
+    def _mark_results(self, result) -> None:
+        r"""Mark the result as `result`."""
+        self.update(result)
 
     def __bool__(self) -> bool:
         """The test case passed only if setup, teardown and the test case itself passed."""

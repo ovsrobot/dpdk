@@ -13,12 +13,15 @@ needed by subclasses:
     * Test case verification.
 """
 
+from collections.abc import Callable
 from ipaddress import IPv4Interface, IPv6Interface, ip_interface
 from typing import ClassVar, Union
 
 from scapy.layers.inet import IP  # type: ignore[import]
 from scapy.layers.l2 import Ether  # type: ignore[import]
 from scapy.packet import Packet, Padding  # type: ignore[import]
+
+from framework.remote_session import NicCapability
 
 from .exception import TestCaseVerifyError
 from .logger import DTSLogger, get_dts_logger
@@ -62,6 +65,7 @@ class TestSuite(object):
     #: Whether the test suite is blocking. A failure of a blocking test suite
     #: will block the execution of all subsequent test suites in the current build target.
     is_blocking: ClassVar[bool] = False
+    skip: bool
     _logger: DTSLogger
     _port_links: list[PortLink]
     _sut_port_ingress: Port
@@ -89,6 +93,7 @@ class TestSuite(object):
         """
         self.sut_node = sut_node
         self.tg_node = tg_node
+        self.skip = False
         self._logger = get_dts_logger(self.__class__.__name__)
         self._port_links = []
         self._process_links()
@@ -360,3 +365,23 @@ class TestSuite(object):
         if received_packet.src != expected_packet.src or received_packet.dst != expected_packet.dst:
             return False
         return True
+
+
+def requires(capability: NicCapability) -> Callable:
+    """A decorator that marks the decorated test case or test suite as one to be skipped.
+
+    Args:
+        The capability that's required by the decorated test case or test suite.
+
+    Returns:
+        The decorated function.
+    """
+
+    def add_req_capa(func) -> Callable:
+        if hasattr(func, "req_capa"):
+            func.req_capa.append(capability)
+        else:
+            func.req_capa = [capability]
+        return func
+
+    return add_req_capa

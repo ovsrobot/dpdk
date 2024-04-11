@@ -501,6 +501,12 @@ class DTSRunner:
         The method assumes the build target we're testing has already been built on the SUT node.
         The current build target thus corresponds to the current DPDK build present on the SUT node.
 
+        Before running any suites, the method determines whether they should be skipped
+        by inspecting any required capabilities the test suite needs and comparing those
+        to capabilities supported by the tested NIC. If all capabilities are supported,
+        the suite is run. If all test cases in a test suite would be skipped, the whole test suite
+        is skipped (the setup and teardown is not run).
+
         If a blocking test suite (such as the smoke test suite) fails, the rest of the test suites
         in the current build target won't be executed.
 
@@ -512,10 +518,30 @@ class DTSRunner:
             test_suites_with_cases: The test suites with test cases to run.
         """
         end_build_target = False
+        required_capabilities = set()
+        supported_capabilities = set()
+        for test_suite_with_cases in test_suites_with_cases:
+            required_capabilities.update(test_suite_with_cases.req_capabilities)
+        self._logger.debug(f"Found required capabilities: {required_capabilities}")
+        if required_capabilities:
+            supported_capabilities = sut_node.get_supported_capabilities(required_capabilities)
         for test_suite_with_cases in test_suites_with_cases:
             test_suite_result = build_target_result.add_test_suite(test_suite_with_cases)
+            test_suite_with_cases.mark_skip(supported_capabilities)
             try:
-                self._run_test_suite(sut_node, tg_node, test_suite_result, test_suite_with_cases)
+                if test_suite_with_cases:
+                    self._run_test_suite(
+                        sut_node,
+                        tg_node,
+                        test_suite_result,
+                        test_suite_with_cases,
+                    )
+                else:
+                    self._logger.info(
+                        f"Test suite execution SKIPPED: "
+                        f"{test_suite_with_cases.test_suite_class.__name__}"
+                    )
+                    test_suite_result.update_setup(Result.SKIP)
             except BlockingTestSuiteError as e:
                 self._logger.exception(
                     f"An error occurred within {test_suite_with_cases.test_suite_class.__name__}. "
@@ -614,14 +640,18 @@ class DTSRunner:
             test_case_result = test_suite_result.add_test_case(test_case_name)
             all_attempts = SETTINGS.re_run + 1
             attempt_nr = 1
-            self._run_test_case(test_suite, test_case_method, test_case_result)
-            while not test_case_result and attempt_nr < all_attempts:
-                attempt_nr += 1
-                self._logger.info(
-                    f"Re-running FAILED test case '{test_case_name}'. "
-                    f"Attempt number {attempt_nr} out of {all_attempts}."
-                )
+            if TestSuiteWithCases.should_not_be_skipped(test_case_method):
                 self._run_test_case(test_suite, test_case_method, test_case_result)
+                while not test_case_result and attempt_nr < all_attempts:
+                    attempt_nr += 1
+                    self._logger.info(
+                        f"Re-running FAILED test case '{test_case_name}'. "
+                        f"Attempt number {attempt_nr} out of {all_attempts}."
+                    )
+                    self._run_test_case(test_suite, test_case_method, test_case_result)
+            else:
+                self._logger.info(f"Test case execution SKIPPED: {test_case_name}")
+                test_case_result.update_setup(Result.SKIP)
 
     def _run_test_case(
         self,

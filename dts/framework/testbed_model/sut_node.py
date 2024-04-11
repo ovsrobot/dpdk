@@ -15,7 +15,7 @@ import os
 import tarfile
 import time
 from pathlib import PurePath
-from typing import Type
+from typing import Iterable, Type
 
 from framework.config import (
     BuildTargetConfiguration,
@@ -23,7 +23,7 @@ from framework.config import (
     NodeInfo,
     SutNodeConfiguration,
 )
-from framework.remote_session import CommandResult
+from framework.remote_session import CommandResult, NicCapability, TestPmdShell
 from framework.settings import SETTINGS
 from framework.utils import MesonArgs
 
@@ -227,6 +227,27 @@ class SutNode(Node):
 
     def _guess_dpdk_remote_dir(self) -> PurePath:
         return self.main_session.guess_dpdk_remote_dir(self._remote_tmp_dir)
+
+    def get_supported_capabilities(
+        self, capabilities: Iterable[NicCapability]
+    ) -> set[NicCapability]:
+        """Get the supported capabilities of the current NIC from `capabilities`.
+
+        Args:
+            capabilities: The capabilities to verify.
+
+        Returns:
+            The set of supported capabilities of the current NIC.
+        """
+        supported_capas: set[NicCapability] = set()
+        unsupported_capas: set[NicCapability] = set()
+        self._logger.debug(f"Checking which capabilities from {capabilities} NIC are supported.")
+        testpmd_shell = self.create_interactive_shell(TestPmdShell, privileged=True)
+        for capability in capabilities:
+            if capability not in supported_capas or capability not in unsupported_capas:
+                capability.value(testpmd_shell, supported_capas, unsupported_capas)
+        del testpmd_shell
+        return supported_capas
 
     def _set_up_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
         """Setup DPDK on the SUT node.

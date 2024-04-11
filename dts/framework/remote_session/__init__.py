@@ -22,7 +22,7 @@ from .interactive_shell import InteractiveShell
 from .python_shell import PythonShell
 from .remote_session import CommandResult, RemoteSession
 from .ssh_session import SSHSession
-from .testpmd_shell import TestPmdShell
+from .testpmd_shell import NicCapability, TestPmdShell
 
 
 def create_remote_session(

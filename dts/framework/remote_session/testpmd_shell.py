@@ -16,7 +16,9 @@ Typical usage example in a TestSuite::
 """
 
 import time
-from enum import auto
+from collections.abc import MutableSet
+from enum import Enum, auto
+from functools import partial
 from pathlib import PurePath
 from typing import Callable, ClassVar
 
@@ -229,3 +231,43 @@ class TestPmdShell(InteractiveShell):
         """Overrides :meth:`~.interactive_shell.close`."""
         self.send_command("quit", "")
         return super().close()
+
+    def get_capas_rxq(
+        self, supported_capabilities: MutableSet, unsupported_capabilities: MutableSet
+    ) -> None:
+        """Get all rxq capabilities and divide them into supported and unsupported.
+
+        Args:
+            supported_capabilities: A set where capabilities which are supported will be stored.
+            unsupported_capabilities: A set where capabilities which are
+                not supported will be stored.
+        """
+        self._logger.debug("Getting rxq capabilities.")
+        command = "show rxq info 0 0"
+        rxq_info = self.send_command(command)
+        for line in rxq_info.split("\n"):
+            bare_line = line.strip()
+            if bare_line.startswith("RX scattered packets:"):
+                if bare_line.endswith("on"):
+                    supported_capabilities.add(NicCapability.scattered_rx)
+                else:
+                    unsupported_capabilities.add(NicCapability.scattered_rx)
+
+
+class NicCapability(Enum):
+    """A mapping between capability names and the associated :class:`TestPmdShell` methods.
+
+    The :class:`TestPmdShell` method executes the command that checks
+    whether the capability is supported.
+
+    The signature of each :class:`TestPmdShell` method must be::
+
+        fn(self, supported_capabilities: MutableSet, unsupported_capabilities: MutableSet) -> None
+
+    The function must execute the testpmd command from which the capability support can be obtained.
+    If multiple capabilities can be obtained from the same testpmd command, each should be obtained
+    in one function. These capabilities should then be added to `supported_capabilities` or
+    `unsupported_capabilities` based on their support.
+    """
+
+    scattered_rx = partial(TestPmdShell.get_capas_rxq)

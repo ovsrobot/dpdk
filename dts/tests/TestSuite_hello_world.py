@@ -7,7 +7,8 @@ Run the helloworld example app and verify it prints a message for each used core
 No other EAL parameters apart from cores are used.
 """
 
-from framework.test_suite import TestSuite
+from framework.remote_session import NicCapability
+from framework.test_suite import TestSuite, requires
 from framework.testbed_model import (
     LogicalCoreCount,
     LogicalCoreCountFilter,
@@ -26,6 +27,7 @@ class TestHelloWorld(TestSuite):
         """
         self.app_helloworld_path = self.sut_node.build_dpdk_app("helloworld")
 
+    @requires(NicCapability.scattered_rx)
     def test_hello_world_single_core(self) -> None:
         """Single core test case.
 
