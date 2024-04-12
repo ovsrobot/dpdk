@@ -46,6 +46,8 @@ default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
 default_ldflags = []
 if get_option('default_library') == 'static' and not is_windows
     default_ldflags += ['-Wl,--export-dynamic']
+elif get_option('default_library') == 'shared' and is_ms_compiler
+    default_ldflags += ['/experimental:tlsDllInterface']
 endif
 
 foreach app:apps
@@ -102,6 +104,10 @@ foreach app:apps
     link_libs = []
     if get_option('default_library') == 'static'
         link_libs = dpdk_static_libraries + dpdk_drivers
+    endif
+
+    if is_windows and is_shared_enabled
+        cflags += '-DRTE_BUILD_SHARED_LIB'
     endif
 
     exec = executable('dpdk-' + name,

@@ -53,6 +53,9 @@ if is_ms_compiler
 
     # enable statement expressions extension
     add_project_arguments('/experimental:statementExpressions', language: 'c')
+
+    # enable export of thread_local variables
+    add_project_arguments('/experimental:tlsDllInterface', language: 'c')
 endif
 
 # set the major version, which might be used by drivers and libraries
@@ -516,4 +519,21 @@ if get_option('default_library') == 'both'
  NOTE: DPDK always builds both shared and static libraries.  Please set
  "default_library" to either "static" or "shared" to select default linkage
  for apps and any examples.''')
+elif get_option('default_library') == 'shared' and is_windows and not is_ms_compiler
+    error( '''
+ Unsupported value "shared" for "default_library" option.
+
+ NOTE: DPDK Windows shared is only supported when building with MSVC. Please set
+ "default_library" to either "static" or use MSVC.''')
+endif
+
+is_shared_enabled=true
+install_static = true
+install_shared = true
+if is_windows
+    install_static = get_option('default_library') == 'static'
+    install_shared = get_option('default_library') == 'shared'
+    if not is_ms_compiler or not install_shared
+        is_shared_enabled = false
+    endif
 endif

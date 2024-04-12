@@ -85,6 +85,8 @@ endif
 default_ldflags = dpdk_extra_ldflags
 if get_option('default_library') == 'static' and not is_windows
     default_ldflags += ['-Wl,--export-dynamic']
+elif is_ms_compiler
+    default_ldflags += ['/experimental:tlsDllInterface']
 endif
 
 foreach example: examples
@@ -119,6 +121,10 @@ foreach example: examples
         endif
         message('Skipping example "' + name + '"')
         continue
+    endif
+
+    if is_windows and is_shared_enabled
+        cflags += '-DRTE_BUILD_SHARED_LIB'
     endif
 
     if allow_experimental_apis
