@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Intel Corporation
 
+doc_guides_source_dir = meson.current_source_dir()
 sphinx = find_program('sphinx-build', required: get_option('enable_docs'))
 
 if not sphinx.found()
