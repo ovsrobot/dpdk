@@ -20,10 +20,11 @@ sources += gen_c_files.process(dpdk_chkinc_headers)
 
 # some driver SDK headers depend on these two buses, which are mandatory in build
 # so we always include them in deps list
-deps = [get_variable('shared_rte_bus_vdev'), get_variable('shared_rte_bus_pci')]
+library_type = get_option('default_library')
+deps = [get_variable(library_type + '_rte_bus_vdev'), get_variable(library_type + '_rte_bus_pci')]
 # add the rest of the libs to the dependencies
 foreach l:dpdk_libs_enabled
-    deps += get_variable('shared_rte_' + l)
+    deps += get_variable(library_type + '_rte_' + l)
 endforeach
 
 executable('chkincs', sources,
