@@ -83,6 +83,11 @@ extern "C" {
  * information from it. When ARP reply from that peer is received, its MAC is
  * stored, one of member MACs assigned and ARP reply send to that peer.
  */
+#define BONDING_MODE_DIRECT	(7)
+/**< Direct bonding mode (Mode 7)
+ * In this mode, all packets are transmitted using the same member port on which
+ * it was received. This is decided based on the 'port' field of 'rte_mbuf'.
+ */
 
 /* Balance Mode Transmit Policies */
 #define BALANCE_XMIT_POLICY_LAYER2		(0)

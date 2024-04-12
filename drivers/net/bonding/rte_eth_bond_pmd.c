@@ -578,9 +578,14 @@ bond_ethdev_rx_burst_alb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	return nb_recv_pkts;
 }
 
+enum tx_member_populate_mode {
+	RR_ONLY,
+	DIRECT_WITH_RR_FALLBACK,
+};
+
 static uint16_t
-bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
-		uint16_t nb_pkts)
+bond_ethdev_tx_burst_rr_generic(void *queue, struct rte_mbuf **bufs,
+		uint16_t nb_pkts, enum tx_member_populate_mode pop_mode)
 {
 	struct bond_dev_private *internals;
 	struct bond_tx_queue *bd_tx_q;
@@ -594,7 +599,7 @@ bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
 	uint16_t num_tx_total = 0, num_tx_member;
 
 	static int member_idx;
-	int i, cmember_idx = 0, tx_fail_total = 0;
+	int i, j, cmember_idx = 0, tx_fail_total = 0;
 
 	bd_tx_q = (struct bond_tx_queue *)queue;
 	internals = bd_tx_q->dev_private;
@@ -611,6 +616,17 @@ bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
 	/* Populate members mbuf with which packets are to be sent on it  */
 	for (i = 0; i < nb_pkts; i++) {
 		cmember_idx = (member_idx + i) % num_of_members;
+
+		if (pop_mode == DIRECT_WITH_RR_FALLBACK) {
+			/* Try to find correct member index */
+			for (j = 0; j < num_of_members; j++) {
+				if (bufs[i]->port == members[j]) {
+					cmember_idx = j;
+					break;
+				}
+			}
+		}
+
 		member_bufs[cmember_idx][(member_nb_pkts[cmember_idx])++] = bufs[i];
 	}
 
@@ -644,6 +660,20 @@ bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
 	}
 
 	return num_tx_total;
+}
+
+static uint16_t
+bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
+		uint16_t nb_pkts)
+{
+	return bond_ethdev_tx_burst_rr_generic(queue, bufs, nb_pkts, RR_ONLY);
+}
+
+static uint16_t
+bond_ethdev_tx_burst_direct(void *queue, struct rte_mbuf **bufs,
+		uint16_t nb_pkts)
+{
+	return bond_ethdev_tx_burst_rr_generic(queue, bufs, nb_pkts, DIRECT_WITH_RR_FALLBACK);
 }
 
 static uint16_t
@@ -1551,6 +1581,7 @@ mac_address_members_update(struct rte_eth_dev *bonding_eth_dev)
 	case BONDING_MODE_ROUND_ROBIN:
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
+	case BONDING_MODE_DIRECT:
 		for (i = 0; i < internals->member_count; i++) {
 			if (rte_eth_dev_default_mac_addr_set(
 					internals->members[i].port_id,
@@ -1647,6 +1678,10 @@ bond_ethdev_mode_set(struct rte_eth_dev *eth_dev, uint8_t mode)
 
 		eth_dev->tx_pkt_burst = bond_ethdev_tx_burst_alb;
 		eth_dev->rx_pkt_burst = bond_ethdev_rx_burst_alb;
+		break;
+	case BONDING_MODE_DIRECT:
+		eth_dev->tx_pkt_burst = bond_ethdev_tx_burst_direct;
+		eth_dev->rx_pkt_burst = bond_ethdev_rx_burst;
 		break;
 	default:
 		return -1;
@@ -2581,6 +2616,7 @@ bond_ethdev_link_update(struct rte_eth_dev *ethdev, int wait_to_complete)
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_TLB:
 	case BONDING_MODE_ALB:
+	case BONDING_MODE_DIRECT:
 	default:
 		/**
 		 * In theses mode the maximum theoretical link speed is the sum
@@ -2678,6 +2714,7 @@ bond_ethdev_promiscuous_enable(struct rte_eth_dev *eth_dev)
 	case BONDING_MODE_ROUND_ROBIN:
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
+	case BONDING_MODE_DIRECT:
 	case BONDING_MODE_8023AD: {
 		unsigned int member_ok = 0;
 
@@ -2732,6 +2769,7 @@ bond_ethdev_promiscuous_disable(struct rte_eth_dev *dev)
 	case BONDING_MODE_ROUND_ROBIN:
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
+	case BONDING_MODE_DIRECT:
 	case BONDING_MODE_8023AD: {
 		unsigned int member_ok = 0;
 
@@ -2790,6 +2828,7 @@ bond_ethdev_promiscuous_update(struct rte_eth_dev *dev)
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
 	case BONDING_MODE_8023AD:
+	case BONDING_MODE_DIRECT:
 		/* As promiscuous mode is propagated to all members for these
 		 * mode, no need to update for bonding device.
 		 */
@@ -2825,6 +2864,7 @@ bond_ethdev_allmulticast_enable(struct rte_eth_dev *eth_dev)
 	case BONDING_MODE_ROUND_ROBIN:
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
+	case BONDING_MODE_DIRECT:
 	case BONDING_MODE_8023AD: {
 		unsigned int member_ok = 0;
 
@@ -2879,6 +2919,7 @@ bond_ethdev_allmulticast_disable(struct rte_eth_dev *eth_dev)
 	case BONDING_MODE_ROUND_ROBIN:
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
+	case BONDING_MODE_DIRECT:
 	case BONDING_MODE_8023AD: {
 		unsigned int member_ok = 0;
 
@@ -2936,6 +2977,7 @@ bond_ethdev_allmulticast_update(struct rte_eth_dev *dev)
 	case BONDING_MODE_BALANCE:
 	case BONDING_MODE_BROADCAST:
 	case BONDING_MODE_8023AD:
+	case BONDING_MODE_DIRECT:
 		/* As allmulticast mode is propagated to all members for these
 		 * mode, no need to update for bonding device.
 		 */
@@ -3365,6 +3407,8 @@ bond_mode_name(uint8_t mode)
 		return "TLB";
 	case BONDING_MODE_ALB:
 		return "ALB";
+	case BONDING_MODE_DIRECT:
+		return "DIRECT";
 	default:
 		return "Unknown";
 	}

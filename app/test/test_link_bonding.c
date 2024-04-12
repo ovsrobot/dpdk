@@ -2134,6 +2134,211 @@ test_roundrobin_verify_polling_member_link_status_change(void)
 	return remove_members_and_stop_bonding_device();
 }
 
+/** Direct mode Tests */
+
+static int
+test_direct_tx_burst_single_member(void)
+{
+	unsigned int i;
+	int member_port_id;
+	struct rte_eth_stats port_stats;
+	struct rte_mbuf *pkts[MAX_PKT_BURST];
+	const unsigned int burst_size = 20;
+
+	TEST_ASSERT(burst_size <= MAX_PKT_BURST,
+			"Burst size specified is greater than supported.");
+
+	TEST_ASSERT_SUCCESS(initialize_bonding_device_with_members(
+			BONDING_MODE_DIRECT, 0, 1, 1),
+			"Failed to initialize bonding device with single member");
+
+	/* Generate burst of test packets */
+	TEST_ASSERT_EQUAL(generate_test_burst(pkts, burst_size, 0, 1, 0, 0, 0),
+			(int) burst_size, "Failed to generate test burst");
+
+	member_port_id = test_params->member_port_ids[0];
+
+	/* Set the 'port' mbuf attribute to the appropriate value */
+	for (i = 0; i < burst_size; i++) {
+		pkts[i]->port = member_port_id;
+	}
+
+	/* Send burst on bonding port */
+	TEST_ASSERT_EQUAL(rte_eth_tx_burst(
+			test_params->bonding_port_id, 0, pkts, burst_size),
+			burst_size,
+			"TX burst failed");
+
+	/* Verify stats on bonding port */
+	rte_eth_stats_get(test_params->bonding_port_id, &port_stats);
+	TEST_ASSERT_EQUAL(port_stats.opackets, burst_size,
+			"Bonding port (%d) opackets value (%u) not as expeected (%u)\n",
+			test_params->bonding_port_id, (unsigned int) port_stats.opackets,
+			burst_size);
+
+	/* Verify stats on member port */
+	rte_eth_stats_get(member_port_id, &port_stats);
+	TEST_ASSERT_EQUAL(port_stats.opackets, burst_size,
+			"Member port (%d) opackets value (%u) not as expeected (%u)\n",
+			member_port_id, (unsigned int) port_stats.opackets,
+			burst_size);
+
+	/* Put all members down and try to transmit */
+	virtual_ethdev_simulate_link_status_interrupt(member_port_id, 0);
+
+	/* Try to send burst on bonding port */
+	TEST_ASSERT_EQUAL(rte_eth_tx_burst(test_params->bonding_port_id, 0,
+			pkts, burst_size), 0,
+			"TX burst returned unexpected value");
+
+	/* Clean up and remove members from bonding device */
+	return remove_members_and_stop_bonding_device();
+}
+
+static int
+test_direct_tx_burst_multiple_members_single_tx(void)
+{
+	unsigned int i;
+	struct rte_eth_stats port_stats;
+	struct rte_mbuf *pkts[MAX_PKT_BURST];
+	const unsigned int num_members = 4;
+	const unsigned int burst_size = 20;
+	const int exp_member_port_id = test_params->member_port_ids[0];
+	int cmember_port_id;
+	unsigned int expected_pkts;
+
+
+	TEST_ASSERT(burst_size <= MAX_PKT_BURST,
+			"Burst size specified is greater than supported.");
+
+	TEST_ASSERT_SUCCESS(initialize_bonding_device_with_members(
+			BONDING_MODE_DIRECT, 0, num_members, 1),
+			"Failed to initialize bonding device with single member");
+
+	/* Generate burst of test packets */
+	TEST_ASSERT_EQUAL(generate_test_burst(
+			pkts, burst_size, 0, 1, 0, 0, 0),
+			(int) burst_size,
+			"Failed to generate test burst");
+
+
+	/* Set the 'port' mbuf attribute to the appropriate value */
+	for (i = 0; i < burst_size; i++) {
+		pkts[i]->port = exp_member_port_id;
+	}
+
+	/* Send burst on bonding port */
+	TEST_ASSERT_EQUAL(rte_eth_tx_burst(
+			test_params->bonding_port_id, 0, pkts, burst_size),
+			burst_size,
+			"TX burst failed");
+
+	/* Verify stats on bonding port */
+	rte_eth_stats_get(test_params->bonding_port_id, &port_stats);
+	TEST_ASSERT_EQUAL(port_stats.opackets, burst_size,
+			"Bonding port (%d) opackets value (%u) not as expeected (%u)\n",
+			test_params->bonding_port_id, (unsigned int) port_stats.opackets,
+			burst_size);
+
+	/* Verify member ports tx stats */
+	for (i = 0; i < test_params->bonding_member_count; i++) {
+		cmember_port_id = test_params->member_port_ids[i];
+
+		if (cmember_port_id == exp_member_port_id)
+			expected_pkts = burst_size;
+		else
+			expected_pkts = 0;
+
+		rte_eth_stats_get(cmember_port_id, &port_stats);
+		TEST_ASSERT_EQUAL(port_stats.opackets,
+				(uint64_t)expected_pkts,
+				"Member Port (%d) opackets value (%u) not as expected (%u)\n",
+				test_params->bonding_port_id, (unsigned int)port_stats.opackets,
+				expected_pkts);
+	}
+
+	/* Put all members down and try and transmit */
+	for (i = 0; i < test_params->bonding_member_count; i++) {
+		virtual_ethdev_simulate_link_status_interrupt(
+				test_params->member_port_ids[i], 0);
+	}
+
+	/* Try to send burst on bonding port */
+	TEST_ASSERT_EQUAL(rte_eth_tx_burst(test_params->bonding_port_id, 0,
+			pkts, burst_size), 0,
+			"TX burst returned unexpected value");
+
+	/* Clean up and remove members from bonding device */
+	return remove_members_and_stop_bonding_device();
+}
+
+static int
+test_direct_tx_burst_multiple_members_rr_fallback(void)
+{
+	unsigned int i;
+	struct rte_eth_stats port_stats;
+	struct rte_mbuf *pkts[MAX_PKT_BURST];
+	const unsigned int num_members = 4;
+	const unsigned int pkts_per_member = 20;
+	const unsigned int burst_size = num_members * pkts_per_member;
+
+
+	TEST_ASSERT(burst_size <= MAX_PKT_BURST,
+			"Burst size specified is greater than supported.");
+
+	TEST_ASSERT_SUCCESS(initialize_bonding_device_with_members(
+			BONDING_MODE_DIRECT, 0, num_members, 1),
+			"Failed to initialize bonding device with single member");
+
+	/* Generate burst of test packets */
+	TEST_ASSERT_EQUAL(generate_test_burst(
+			pkts, burst_size, 0, 1, 0, 0, 0),
+			(int) burst_size,
+			"Failed to generate test burst");
+
+
+	/* Set the 'port' mbuf attribute to the appropriate value */
+	for (i = 0; i < burst_size; i++) {
+		pkts[i]->port = RTE_MAX_ETHPORTS;
+	}
+
+	/* Send burst on bonding port */
+	TEST_ASSERT_EQUAL(rte_eth_tx_burst(
+			test_params->bonding_port_id, 0, pkts, burst_size),
+			burst_size,
+			"TX burst failed");
+
+	/* Verify stats on bonding port */
+	rte_eth_stats_get(test_params->bonding_port_id, &port_stats);
+	TEST_ASSERT_EQUAL(port_stats.opackets, burst_size,
+			"Bonding port (%d) opackets value (%u) not as expeected (%u)\n",
+			test_params->bonding_port_id, (unsigned int) port_stats.opackets,
+			burst_size);
+
+	/* Verify member ports tx stats */
+	for (i = 0; i < test_params->bonding_member_count; i++) {
+		rte_eth_stats_get(test_params->member_port_ids[i], &port_stats);
+		TEST_ASSERT_EQUAL(port_stats.opackets,
+				(uint64_t)pkts_per_member,
+				"Member Port (%d) opackets value (%u) not as expected (%u)\n",
+				test_params->bonding_port_id, (unsigned int)port_stats.opackets,
+				pkts_per_member);
+	}
+
+	/* Put all members down and try and transmit */
+	for (i = 0; i < test_params->bonding_member_count; i++) {
+		virtual_ethdev_simulate_link_status_interrupt(
+				test_params->member_port_ids[i], 0);
+	}
+
+	/* Try to send burst on bonding port */
+	TEST_ASSERT_EQUAL(rte_eth_tx_burst(test_params->bonding_port_id, 0,
+			pkts, burst_size), 0,
+			"TX burst returned unexpected value");
+
+	/* Clean up and remove members from bonding device */
+	return remove_members_and_stop_bonding_device();
+}
 
 /** Active Backup Mode Tests */
 
@@ -5174,6 +5379,9 @@ static struct unit_test_suite link_bonding_test_suite  = {
 		TEST_CASE(test_roundrobin_verify_mac_assignment),
 		TEST_CASE(test_roundrobin_verify_member_link_status_change_behaviour),
 		TEST_CASE(test_roundrobin_verify_polling_member_link_status_change),
+		TEST_CASE(test_direct_tx_burst_single_member),
+		TEST_CASE(test_direct_tx_burst_multiple_members_single_tx),
+		TEST_CASE(test_direct_tx_burst_multiple_members_rr_fallback),
 		TEST_CASE(test_activebackup_tx_burst),
 		TEST_CASE(test_activebackup_rx_burst),
 		TEST_CASE(test_activebackup_verify_promiscuous_enable_disable),

@@ -158,6 +158,7 @@ bond_ethdev_parse_member_mode_kvarg(const char *key __rte_unused,
 	case BONDING_MODE_8023AD:
 	case BONDING_MODE_TLB:
 	case BONDING_MODE_ALB:
+	case BONDING_MODE_DIRECT:
 		return 0;
 	default:
 		RTE_BOND_LOG(ERR, "Invalid member mode value (%s) specified", value);
