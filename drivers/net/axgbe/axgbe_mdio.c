@@ -1058,7 +1058,7 @@ static void axgbe_phy_status(struct axgbe_port *pdata)
 							     &an_restart);
 	if (an_restart) {
 		axgbe_phy_config_aneg(pdata);
-		return;
+		goto adjust_link;
 	}
 
 	if (pdata->phy.link) {
