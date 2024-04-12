@@ -129,6 +129,19 @@ Currently the Link Bonding PMD library supports following modes of operation:
     changes the transmitting member, according to the computed load. Statistics
     are collected in 100ms intervals and scheduled every 10ms.
 
+*   **Transmit Load Balancing (Mode 7):**
+
+.. figure:: img/bond-mode-7.*
+
+   Direct TX (Mode 7)
+
+
+    This mode is a specialized version of round robin bonding mode. It transmits
+    packets to the same member ports on which they were received (based on the
+    ``port`` attribute of ``struct rte_mbuf``). In case the port attribute does
+    not belong to any managed bonding members, this mode reverts back to round
+    robin TX mode. Note that this mode does not implement a specific RX mode,
+    instead using a round robin approach.
 
 Implementation Details
 ----------------------
