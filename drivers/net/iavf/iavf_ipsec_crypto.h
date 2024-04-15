@@ -11,12 +11,14 @@
 
 
 
+__rte_msvc_pack
 struct iavf_tx_ipsec_desc {
 	union {
 		struct {
 			__le64 qw0;
 			__le64 qw1;
 		};
+		__rte_msvc_pack
 		struct {
 			__le16 l4payload_length;
 			__le32 esn;
@@ -97,7 +99,7 @@ struct iavf_ipsec_crypto_pkt_metadata {
 	uint8_t next_proto;		/* Next Protocol (8b/1B) */
 
 	uint32_t esn;		        /* Extended Sequence Number (32b/4B) */
-} __rte_packed;
+};
 
 /**
  * Inline IPsec Crypto offload is supported
