@@ -109,6 +109,7 @@ enum inline_ipsec_ops {
 };
 
 /* Not all valid, if certain field is invalid, set 1 for all bits */
+__rte_msvc_pack
 struct virtchnl_algo_cap  {
 	u32 algo_type;
 
@@ -132,6 +133,7 @@ struct virtchnl_algo_cap  {
 } __rte_packed;
 
 /* vf record the capability of crypto from the virtchnl */
+__rte_msvc_pack
 struct virtchnl_sym_crypto_cap {
 	u8 crypto_type;
 	u8 algo_cap_num;
@@ -142,6 +144,7 @@ struct virtchnl_sym_crypto_cap {
  * VF pass virtchnl_ipsec_cap to PF
  * and PF return capability of ipsec from virtchnl.
  */
+__rte_msvc_pack
 struct virtchnl_ipsec_cap {
 	/* max number of SA per VF */
 	u16 max_sa_num;
@@ -172,6 +175,7 @@ struct virtchnl_ipsec_cap {
 } __rte_packed;
 
 /* configuration of crypto function */
+__rte_msvc_pack
 struct virtchnl_ipsec_crypto_cfg_item {
 	u8 crypto_type;
 
@@ -203,6 +207,7 @@ struct virtchnl_ipsec_sym_crypto_cfg {
  * PF create SA as configuration and PF driver will return
  * an unique index (sa_idx) for the created SA.
  */
+__rte_msvc_pack
 struct virtchnl_ipsec_sa_cfg {
 	/* IPsec SA Protocol - AH/ESP */
 	u8 virtchnl_protocol_type;
@@ -298,6 +303,7 @@ struct virtchnl_ipsec_sa_cfg {
  * VF send configuration of index of SA to PF
  * PF will update SA according to configuration
  */
+__rte_msvc_pack
 struct virtchnl_ipsec_sa_update {
 	u32 sa_index; /* SA to update */
 	u32 esn_hi; /* high 32 bits of esn */
@@ -310,6 +316,7 @@ struct virtchnl_ipsec_sa_update {
  * flag bitmap indicate all SA or just selected SA will
  * be destroyed
  */
+__rte_msvc_pack
 struct virtchnl_ipsec_sa_destroy {
 	/* All zero bitmap indicates all SA will be destroyed.
 	 * Non-zero bitmap indicates the selected SA in
@@ -325,6 +332,7 @@ struct virtchnl_ipsec_sa_destroy {
  * VF send this SA configuration to PF using virtchnl;
  * PF read SA and will return configuration for the created SA.
  */
+__rte_msvc_pack
 struct virtchnl_ipsec_sa_read {
 	/* SA valid - invalid/valid */
 	u8 valid;
@@ -431,6 +439,7 @@ struct virtchnl_ipsec_sa_read {
 #define VIRTCHNL_IPSEC_INBOUND_SPD_TBL_IPV6	(1)
 
 /* Add allowlist entry in IES */
+__rte_msvc_pack
 struct virtchnl_ipsec_sp_cfg {
 	u32 spi;
 	u32 dip[4];
@@ -459,6 +468,7 @@ struct virtchnl_ipsec_sp_cfg {
 
 
 /* Delete allowlist entry in IES */
+__rte_msvc_pack
 struct virtchnl_ipsec_sp_destroy {
 	/* 0 for IPv4 table, 1 for IPv6 table. */
 	u8 table_id;
@@ -494,6 +504,7 @@ struct virtchnl_ipsec_resp {
 };
 
 /* Internal message descriptor for VF <-> IPsec communication */
+__rte_msvc_pack
 struct inline_ipsec_msg {
 	u16 ipsec_opcode;
 	u16 req_id;
