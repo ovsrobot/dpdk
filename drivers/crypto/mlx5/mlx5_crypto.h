@@ -95,6 +95,7 @@ struct mlx5_crypto_devarg_params {
 	uint32_t is_aes_gcm:1;
 };
 
+__rte_msvc_pack
 struct mlx5_crypto_session {
 	union {
 		/**< AES-XTS configuration. */
