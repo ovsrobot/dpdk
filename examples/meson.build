@@ -121,6 +121,10 @@ foreach example: examples
         continue
     endif
 
+    if is_windows and is_shared_enabled
+        cflags += '-DRTE_BUILD_SHARED_LIB'
+    endif
+
     if allow_experimental_apis
         cflags += '-DALLOW_EXPERIMENTAL_API'
     endif

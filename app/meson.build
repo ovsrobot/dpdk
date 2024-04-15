@@ -104,6 +104,10 @@ foreach app:apps
         link_libs = dpdk_static_libraries + dpdk_drivers
     endif
 
+    if is_windows and is_shared_enabled
+        cflags += '-DRTE_BUILD_SHARED_LIB'
+    endif
+
     exec = executable('dpdk-' + name,
             sources,
             c_args: cflags,

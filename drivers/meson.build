@@ -208,6 +208,9 @@ foreach subpath:subdirs
         enabled_drivers += name
         lib_name = '_'.join(['rte', class, name])
         cflags += '-DRTE_LOG_DEFAULT_LOGTYPE=' + '.'.join([log_prefix, name])
+        if is_windows and is_shared_enabled
+            cflags += '-DRTE_BUILD_SHARED_LIB'
+        endif
         if annotate_locks and cc.get_id() == 'clang' and cc.version().version_compare('>=3.5.0')
             cflags += '-DRTE_ANNOTATE_LOCKS'
             cflags += '-Wthread-safety'
@@ -247,7 +250,7 @@ foreach subpath:subdirs
                 include_directories: includes,
                 dependencies: static_deps,
                 c_args: cflags,
-                install: true)
+                install: install_static)
 
         # now build the shared driver
         version_map = '@0@/@1@/version.map'.format(meson.current_source_dir(), drv_path)
@@ -271,48 +274,39 @@ foreach subpath:subdirs
             endif
         endif
 
-        if is_windows
-            if is_ms_linker
+        if is_shared_enabled
+            if is_ms_compiler
                 def_file = custom_target(lib_name + '_def',
                         command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
                         input: version_map,
                         output: '@0@_exports.def'.format(lib_name))
                 lk_deps += [def_file]
-
-                lk_args = ['-Wl,/def:' + def_file.full_path()]
-                if meson.version().version_compare('<0.54.0')
-                    lk_args += ['-Wl,/implib:drivers\\lib' + lib_name + '.dll.a']
-                endif
+                lk_args = ['/def:' + def_file.full_path()]
             else
-                mingw_map = custom_target(lib_name + '_mingw',
-                        command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
-                        input: version_map,
-                        output: '@0@_mingw.map'.format(lib_name))
-                lk_deps += [mingw_map]
-
-                lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]
+                lk_args = ['-Wl,--version-script=' + version_map]
             endif
-        else
-            lk_args = ['-Wl,--version-script=' + version_map]
         endif
 
-        shared_lib = shared_library(lib_name, sources,
-                objects: objs,
-                include_directories: includes,
-                dependencies: shared_deps,
-                c_args: cflags,
-                link_args: lk_args,
-                link_depends: lk_deps,
-                version: abi_version,
-                soversion: so_version,
-                install: true,
-                install_dir: driver_install_path)
+        shared_dep = {}
+        if is_shared_enabled
+            shared_lib = shared_library(lib_name, sources,
+                    objects: objs,
+                    include_directories: includes,
+                    dependencies: shared_deps,
+                    c_args: cflags,
+                    link_args: lk_args,
+                    link_depends: lk_deps,
+                    version: abi_version,
+                    soversion: so_version,
+                    install: install_shared,
+                    install_dir: driver_install_path)
 
-        # create a dependency object and add it to the global dictionary so
-        # testpmd or other built-in apps can find it if necessary
-        shared_dep = declare_dependency(link_with: shared_lib,
-                include_directories: includes,
-                dependencies: shared_deps)
+            # create a dependency object and add it to the global dictionary so
+            # testpmd or other built-in apps can find it if necessary
+            shared_dep = declare_dependency(link_with: shared_lib,
+                    include_directories: includes,
+                    dependencies: shared_deps)
+        endif
         static_dep = declare_dependency(
                 include_directories: includes,
                 dependencies: static_deps)
