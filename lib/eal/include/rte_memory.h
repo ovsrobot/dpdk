@@ -46,6 +46,7 @@ extern "C" {
 /**
  * Physical memory segment descriptor.
  */
+__rte_msvc_pack
 struct rte_memseg {
 	rte_iova_t iova;            /**< Start IO address. */
 	union {
