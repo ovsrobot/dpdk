@@ -26,6 +26,7 @@ extern "C" {
  * IB Specification Vol 1-Release-1.4.
  */
 __extension__
+__rte_msvc_pack
 struct rte_ib_bth {
 	uint8_t	opcode;		/**< Opcode. */
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN

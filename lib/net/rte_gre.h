@@ -27,6 +27,7 @@ extern "C" {
  * GRE Header
  */
 __extension__
+__rte_msvc_pack
 struct rte_gre_hdr {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint16_t res2:4; /**< Reserved */
@@ -51,6 +52,7 @@ struct rte_gre_hdr {
 /**
  * Optional field checksum in GRE header
  */
+__rte_msvc_pack
 struct rte_gre_hdr_opt_checksum_rsvd {
 	rte_be16_t checksum;
 	rte_be16_t reserved1;
@@ -59,6 +61,7 @@ struct rte_gre_hdr_opt_checksum_rsvd {
 /**
  * Optional field key in GRE header
  */
+__rte_msvc_pack
 struct rte_gre_hdr_opt_key {
 	rte_be32_t key;
 } __rte_packed;
@@ -66,6 +69,7 @@ struct rte_gre_hdr_opt_key {
 /**
  * Optional field sequence in GRE header
  */
+__rte_msvc_pack
 struct rte_gre_hdr_opt_sequence {
 	rte_be32_t sequence;
 } __rte_packed;

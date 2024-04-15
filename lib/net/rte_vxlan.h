@@ -31,6 +31,7 @@ extern "C" {
  * Reserved fields (24 bits and 8 bits)
  */
 __extension__ /* no named member in struct */
+__rte_msvc_pack
 struct rte_vxlan_hdr {
 	union {
 		struct {
@@ -57,6 +58,7 @@ struct rte_vxlan_hdr {
  * Identifier and Reserved fields (16 bits and 8 bits).
  */
 __extension__ /* no named member in struct */
+__rte_msvc_pack
 struct rte_vxlan_gpe_hdr {
 	union {
 		struct {

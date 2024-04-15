@@ -28,6 +28,7 @@ extern "C" {
  * No optional fields and next extension header.
  */
 __extension__
+__rte_msvc_pack
 struct rte_gtp_hdr {
 	union {
 		uint8_t gtp_hdr_info; /**< GTP header info */
@@ -55,6 +56,7 @@ struct rte_gtp_hdr {
 } __rte_packed;
 
 /* Optional word of GTP header, present if any of E, S, PN is set. */
+__rte_msvc_pack
 struct rte_gtp_hdr_ext_word {
 	rte_be16_t sqn;	      /**< Sequence Number. */
 	uint8_t npdu;	      /**< N-PDU number. */
@@ -66,6 +68,7 @@ struct rte_gtp_hdr_ext_word {
  * defined based on RFC 38415-g30.
  */
 __extension__
+__rte_msvc_pack
 struct rte_gtp_psc_generic_hdr {
 	uint8_t ext_hdr_len;	/**< PDU ext hdr len in multiples of 4 bytes */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
@@ -89,6 +92,7 @@ struct rte_gtp_psc_generic_hdr {
  * type0 defined based on RFC 38415-g30
  */
 __extension__
+__rte_msvc_pack
 struct rte_gtp_psc_type0_hdr {
 	uint8_t ext_hdr_len;	/**< PDU ext hdr len in multiples of 4 bytes */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
@@ -116,6 +120,7 @@ struct rte_gtp_psc_type0_hdr {
  * type1 defined based on RFC 38415-g30
  */
 __extension__
+__rte_msvc_pack
 struct rte_gtp_psc_type1_hdr {
 	uint8_t ext_hdr_len;	/**< PDU ext hdr len in multiples of 4 bytes */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
