@@ -1072,7 +1072,7 @@ launch_args_parse(int argc, char** argv)
 		case TESTPMD_OPT_NB_CORES_NUM:
 			n = atoi(optarg);
 			if (n > 0 && n <= nb_lcores)
-				nb_fwd_lcores = (uint8_t) n;
+				nb_fwd_lcores = (lcoreid_t) n;
 			else
 				rte_exit(EXIT_FAILURE,
 					"nb-cores should be > 0 and <= %d\n",
