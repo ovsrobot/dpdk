@@ -75,8 +75,7 @@ static const struct latency_stats_nameoff lat_stats_strings[] = {
 	{"jitter_ns", offsetof(struct rte_latency_stats, jitter)},
 };
 
-#define NUM_LATENCY_STATS (sizeof(lat_stats_strings) / \
-				sizeof(lat_stats_strings[0]))
+#define NUM_LATENCY_STATS RTE_DIM(lat_stats_strings)
 
 int32_t
 rte_latencystats_update(void)

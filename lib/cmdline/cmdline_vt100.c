@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <rte_common.h>
+
 #include "cmdline_vt100.h"
 
 const char *cmdline_vt100_commands[] = {
@@ -56,7 +58,7 @@ match_command(char *buf, unsigned int size)
 	size_t cmdlen;
 	unsigned int i = 0;
 
-	for (i=0 ; i<sizeof(cmdline_vt100_commands)/sizeof(const char *) ; i++) {
+	for (i = 0; i < RTE_DIM(cmdline_vt100_commands); i++) {
 		cmd = *(cmdline_vt100_commands + i);
 
 		cmdlen = strnlen(cmd, CMDLINE_VT100_BUF_SIZE);
