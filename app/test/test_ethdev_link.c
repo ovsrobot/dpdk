@@ -135,8 +135,7 @@ test_link_speed_all_values(void)
 		{ "Invalid",   50505 }
 	};
 
-	for (i = 0; i < sizeof(speed_str_map) / sizeof(struct link_speed_t);
-			i++) {
+	for (i = 0; i < RTE_DIM(speed_str_map); i++) {
 		speed = rte_eth_link_speed_to_str(speed_str_map[i].link_speed);
 		TEST_ASSERT_BUFFERS_ARE_EQUAL(speed_str_map[i].value,
 			speed, strlen(speed_str_map[i].value),

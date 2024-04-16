@@ -965,9 +965,7 @@ args_parse(int argc, char **argv)
 						"meter-profile") == 0) {
 				i = 0;
 				token = strsep(&optarg, ",\0");
-				while (token != NULL && i < sizeof(
-						meter_profile_values) /
-						sizeof(uint64_t)) {
+				while (token != NULL && i < RTE_DIM(meter_profile_values)) {
 					meter_profile_values[i++] = atol(token);
 					token = strsep(&optarg, ",\0");
 				}

@@ -1294,7 +1294,7 @@ test_inline_macsec_encap_all(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
 		err = test_macsec(&cur_td, MCS_ENCAP, &opts);
@@ -1332,7 +1332,7 @@ test_inline_macsec_decap_all(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
 		err = test_macsec(&cur_td, MCS_DECAP, &opts);
@@ -1371,7 +1371,7 @@ test_inline_macsec_auth_only_all(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+	size = RTE_DIM(list_mcs_integrity_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_integrity_vectors[i];
@@ -1410,7 +1410,7 @@ test_inline_macsec_verify_only_all(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+	size = RTE_DIM(list_mcs_integrity_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_integrity_vectors[i];
@@ -1451,7 +1451,7 @@ test_inline_macsec_encap_decap_all(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
@@ -1492,7 +1492,7 @@ test_inline_macsec_auth_verify_all(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+	size = RTE_DIM(list_mcs_integrity_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_integrity_vectors[i];
@@ -1578,7 +1578,7 @@ test_inline_macsec_with_vlan(void)
 	opts.nb_td = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_vlan_vectors) / sizeof((list_mcs_vlan_vectors)[0]));
+	size = RTE_DIM(list_mcs_vlan_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_vlan_vectors[i];
@@ -1653,7 +1653,7 @@ test_inline_macsec_pkt_drop(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_err_cipher_vectors) / sizeof((list_mcs_err_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_err_cipher_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_err_cipher_vectors[i];
@@ -1693,8 +1693,7 @@ test_inline_macsec_untagged_rx(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_untagged_rx = 1;
 
-	size = (sizeof(list_mcs_untagged_cipher_vectors) /
-		sizeof((list_mcs_untagged_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_untagged_cipher_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_untagged_cipher_vectors[i];
@@ -1747,7 +1746,7 @@ test_inline_macsec_bad_tag_rx(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_bad_tag_cnt = 1;
 
-	size = (sizeof(list_mcs_bad_tag_vectors) / sizeof((list_mcs_bad_tag_vectors)[0]));
+	size = RTE_DIM(list_mcs_bad_tag_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_bad_tag_vectors[i];
@@ -1786,7 +1785,7 @@ test_inline_macsec_sa_not_in_use(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_sa_not_in_use = 1;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
@@ -1825,7 +1824,7 @@ test_inline_macsec_decap_stats(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_decap_stats = 1;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
@@ -1866,7 +1865,7 @@ test_inline_macsec_verify_only_stats(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_verify_only_stats = 1;
 
-	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+	size = RTE_DIM(list_mcs_integrity_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_integrity_vectors[i];
@@ -1906,7 +1905,7 @@ test_inline_macsec_pkts_invalid_stats(void)
 	opts.sectag_insert_mode = 1;
 	opts.mtu = RTE_ETHER_MTU;
 
-	size = (sizeof(list_mcs_err_cipher_vectors) / sizeof((list_mcs_err_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_err_cipher_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_err_cipher_vectors[i];
@@ -1943,7 +1942,7 @@ test_inline_macsec_pkts_unchecked_stats(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_pkts_unchecked_stats = 1;
 
-	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+	size = RTE_DIM(list_mcs_integrity_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_integrity_vectors[i];
@@ -1982,7 +1981,7 @@ test_inline_macsec_out_pkts_untagged(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_out_pkts_untagged = 1;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
 		err = test_macsec(&cur_td, MCS_ENCAP, &opts);
@@ -2020,7 +2019,7 @@ test_inline_macsec_out_pkts_toolong(void)
 	opts.mtu = 50;
 	opts.check_out_pkts_toolong = 1;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
 		err = test_macsec(&cur_td, MCS_ENCAP, &opts);
@@ -2058,7 +2057,7 @@ test_inline_macsec_encap_stats(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_encap_stats = 1;
 
-	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+	size = RTE_DIM(list_mcs_cipher_vectors);
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_cipher_vectors[i];
 		err = test_macsec(&cur_td, MCS_ENCAP, &opts);
@@ -2095,7 +2094,7 @@ test_inline_macsec_auth_only_stats(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.check_auth_only_stats = 1;
 
-	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+	size = RTE_DIM(list_mcs_integrity_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_integrity_vectors[i];
@@ -2146,7 +2145,7 @@ test_inline_macsec_interrupts_all(void)
 	rte_eth_dev_callback_register(port_id, RTE_ETH_EVENT_MACSEC,
 			test_macsec_event_callback, &err_vector);
 
-	size = (sizeof(list_mcs_intr_test_vectors) / sizeof((list_mcs_intr_test_vectors)[0]));
+	size = RTE_DIM(list_mcs_intr_test_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_intr_test_vectors[i];
@@ -2194,7 +2193,7 @@ test_inline_macsec_rekey_tx(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.rekey_en = 1;
 
-	size = (sizeof(list_mcs_rekey_vectors) / sizeof((list_mcs_rekey_vectors)[0]));
+	size = RTE_DIM(list_mcs_rekey_vectors);
 
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_rekey_vectors[i];
@@ -2236,7 +2235,7 @@ test_inline_macsec_rekey_rx(void)
 	opts.mtu = RTE_ETHER_MTU;
 	opts.rekey_en = 1;
 
-	size = (sizeof(list_mcs_rekey_vectors) / sizeof((list_mcs_rekey_vectors)[0]));
+	size = RTE_DIM(list_mcs_rekey_vectors);
 	for (i = 0; i < size; i++) {
 		cur_td = &list_mcs_rekey_vectors[i];
 		opts.rekey_td = &list_mcs_rekey_vectors[++i];
@@ -2277,7 +2276,7 @@ test_inline_macsec_anti_replay(void)
 	opts.sectag_insert_mode = 1;
 	opts.replay_protect = 1;
 
-	size = (sizeof(list_mcs_anti_replay_vectors) / sizeof((list_mcs_anti_replay_vectors)[0]));
+	size = RTE_DIM(list_mcs_anti_replay_vectors);
 
 	for (j = 0; j < 2; j++) {
 		opts.replay_win_sz = replay_win_sz[j];
