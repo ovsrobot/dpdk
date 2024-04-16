@@ -116,8 +116,7 @@ static struct lcore_params lcore_params_array_default[] = {
 };
 
 static struct lcore_params * lcore_params = lcore_params_array_default;
-static uint16_t nb_lcore_params = sizeof(lcore_params_array_default) /
-				sizeof(lcore_params_array_default[0]);
+static uint16_t nb_lcore_params = RTE_DIM(lcore_params_array_default);
 
 static struct rte_eth_conf port_conf = {
 	.rxmode = {

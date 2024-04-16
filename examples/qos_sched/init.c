@@ -206,8 +206,7 @@ struct rte_sched_subport_params subport_params[MAX_SCHED_SUBPORTS] = {
 		.n_pipes_per_subport_enabled = 4096,
 		.qsize = {64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64},
 		.pipe_profiles = pipe_profiles,
-		.n_pipe_profiles = sizeof(pipe_profiles) /
-			sizeof(struct rte_sched_pipe_params),
+		.n_pipe_profiles = RTE_DIM(pipe_profiles),
 		.n_max_pipe_profiles = MAX_SCHED_PIPE_PROFILES,
 		.cman_params = NULL,
 	},
