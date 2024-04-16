@@ -38,6 +38,7 @@ extern "C" {
  * More-bits (optional) variable length options.
  */
 __extension__
+__rte_msvc_pack
 struct rte_geneve_hdr {
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
 	uint8_t ver:2;		/**< Version. */

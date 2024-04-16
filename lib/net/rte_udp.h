@@ -25,6 +25,7 @@ extern "C" {
 /**
  * UDP Header
  */
+__rte_msvc_pack
 struct rte_udp_hdr {
 	rte_be16_t src_port;    /**< UDP source port. */
 	rte_be16_t dst_port;    /**< UDP destination port. */
