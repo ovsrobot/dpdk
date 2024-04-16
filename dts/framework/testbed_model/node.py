@@ -97,6 +97,10 @@ class Node(ABC):
         self.virtual_devices = []
         self._init_ports()
 
+    @property
+    def _hugepage_default_size(self) -> int:
+        return 2048
+
     def _init_ports(self) -> None:
         self.ports = [Port(self.name, port_config) for port_config in self.config.ports]
         self.main_session.update_ports(self.ports)
@@ -266,7 +270,9 @@ class Node(ABC):
         """
         if self.config.hugepages:
             self.main_session.setup_hugepages(
-                self.config.hugepages.amount, self.config.hugepages.force_first_numa
+                self.config.hugepages.amount,
+                self._hugepage_default_size,
+                self.config.hugepages.force_first_numa,
             )
 
     def configure_port_state(self, port: Port, enable: bool = True) -> None:

@@ -345,7 +345,9 @@ class OSSession(ABC):
         """
 
     @abstractmethod
-    def setup_hugepages(self, hugepage_count: int, force_first_numa: bool) -> None:
+    def setup_hugepages(
+        self, hugepage_count: int, hugepage_size: int, force_first_numa: bool
+    ) -> None:
         """Configure hugepages on the node.
 
         Get the node's Hugepage Size, configure the specified count of hugepages
