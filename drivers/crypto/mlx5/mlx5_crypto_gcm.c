@@ -62,6 +62,7 @@ struct mlx5_crypto_gcm_data {
 	uint32_t dst_mkey;
 };
 
+__rte_msvc_pack
 struct mlx5_crypto_gcm_tag_cpy_info {
 	void *digest;
 	uint8_t tag_len;
