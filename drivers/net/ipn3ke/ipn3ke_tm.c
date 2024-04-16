@@ -67,8 +67,7 @@ struct ipn3ke_tm_shaper_params_range_type ipn3ke_tm_shaper_params_rang[] = {
 	{512,    1023,    15,    32768,    67108864,    134086656},
 };
 
-#define IPN3KE_TM_SHAPER_RANGE_NUM (sizeof(ipn3ke_tm_shaper_params_rang) / \
-	sizeof(struct ipn3ke_tm_shaper_params_range_type))
+#define IPN3KE_TM_SHAPER_RANGE_NUM RTE_DIM(ipn3ke_tm_shaper_params_rang)
 
 #define IPN3KE_TM_SHAPER_COMMITTED_RATE_MAX \
 	(ipn3ke_tm_shaper_params_rang[IPN3KE_TM_SHAPER_RANGE_NUM - 1].high)

@@ -72,13 +72,13 @@ const char *media_type[] = { "Unknown", "Twisted Pair",
 	"Direct Attached Copper", "Fiber"
 };
 
-#define MAX_MEDIA_TYPE (sizeof(media_type) / sizeof(const char *))
+#define MAX_MEDIA_TYPE RTE_DIM(media_type)
 
 const char *link_status_str[] = { "Down. No link or cable detected.",
 	"Down. No link, but a cable has been detected.", "Up.",
 };
 
-#define MAX_LINK_STR (sizeof(link_status_str) / sizeof(const char *))
+#define MAX_LINK_STR RTE_DIM(link_status_str)
 
 const char *fec_mode[] = {
 	"No active FEC",
@@ -90,13 +90,13 @@ const char *fec_mode[] = {
 	"FEC RS(272,257)"
 };
 
-#define MAX_FEC_MODE (sizeof(fec_mode) / sizeof(const char *))
+#define MAX_FEC_MODE RTE_DIM(fec_mode)
 
 const char *signal_mode[] = {
 	"NRZ", "PAM4", "PAM4_112"
 };
 
-#define MAX_SIG_MODE (sizeof(signal_mode) / sizeof(const char *))
+#define MAX_SIG_MODE RTE_DIM(signal_mode)
 
 /* multi-purpose multi-key table container.
  * Add a unique entry for a new PHY attribs as per HW CAS.
@@ -226,7 +226,7 @@ struct link_speeds2_tbl {
 	},
 };
 
-#define BNXT_SPEEDS2_TBL_SZ (sizeof(link_speeds2_tbl) / sizeof(*link_speeds2_tbl))
+#define BNXT_SPEEDS2_TBL_SZ RTE_DIM(link_speeds2_tbl)
 
 /* In hwrm_phy_qcfg reports trained up speeds in link_speed(offset:0x8[31:16]) */
 struct link_speeds_tbl {
@@ -269,7 +269,7 @@ struct link_speeds_tbl {
 	},
 };
 
-#define BNXT_SPEEDS_TBL_SZ (sizeof(link_speeds_tbl) / sizeof(*link_speeds_tbl))
+#define BNXT_SPEEDS_TBL_SZ RTE_DIM(link_speeds_tbl)
 
 static const char *bnxt_get_xcvr_type(uint32_t xcvr_identifier_type_tx_lpi_timer)
 {

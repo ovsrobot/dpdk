@@ -188,8 +188,7 @@ static const struct rte_igc_xstats_name_off rte_igc_stats_strings[] = {
 		offsetof(struct igc_hw_stats, icrxdmtc)},
 };
 
-#define IGC_NB_XSTATS (sizeof(rte_igc_stats_strings) / \
-		sizeof(rte_igc_stats_strings[0]))
+#define IGC_NB_XSTATS RTE_DIM(rte_igc_stats_strings)
 
 static int eth_igc_configure(struct rte_eth_dev *dev);
 static int eth_igc_link_update(struct rte_eth_dev *dev, int wait_to_complete);

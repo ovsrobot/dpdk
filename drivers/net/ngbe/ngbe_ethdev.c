@@ -238,8 +238,7 @@ static const struct rte_ngbe_xstats_name_off rte_ngbe_stats_strings[] = {
 	HW_XSTAT_NAME(rx_xoff_packets, "rx_flow_control_xoff_packets"),
 };
 
-#define NGBE_NB_HW_STATS (sizeof(rte_ngbe_stats_strings) / \
-			   sizeof(rte_ngbe_stats_strings[0]))
+#define NGBE_NB_HW_STATS RTE_DIM(rte_ngbe_stats_strings)
 
 /* Per-queue statistics */
 #define QP_XSTAT(m) {#m, offsetof(struct ngbe_hw_stats, qp[0].m)}
@@ -251,8 +250,7 @@ static const struct rte_ngbe_xstats_name_off rte_ngbe_qp_strings[] = {
 	QP_XSTAT(rx_qp_mc_packets),
 };
 
-#define NGBE_NB_QP_STATS (sizeof(rte_ngbe_qp_strings) / \
-			   sizeof(rte_ngbe_qp_strings[0]))
+#define NGBE_NB_QP_STATS RTE_DIM(rte_ngbe_qp_strings)
 
 static inline int32_t
 ngbe_pf_reset_hw(struct ngbe_hw *hw)

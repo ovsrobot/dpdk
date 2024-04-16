@@ -297,7 +297,7 @@ options(const char *id)
 {
 	unsigned int i;
 
-	for (i = 0; i < sizeof(toptions) / sizeof(struct OPTIONS); i++) {
+	for (i = 0; i < RTE_DIM(toptions); i++) {
 		if (strcmp(id, toptions[i].opt) == 0)
 			return &toptions[i];
 	}

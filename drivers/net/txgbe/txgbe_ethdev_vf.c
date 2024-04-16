@@ -112,8 +112,7 @@ static const struct rte_txgbe_xstats_name_off rte_txgbevf_stats_strings[] = {
 			offsetof(struct txgbevf_hw_stats, qp[7].vfmprc)}
 };
 
-#define TXGBEVF_NB_XSTATS (sizeof(rte_txgbevf_stats_strings) /	\
-		sizeof(rte_txgbevf_stats_strings[0]))
+#define TXGBEVF_NB_XSTATS RTE_DIM(rte_txgbevf_stats_strings)
 
 /*
  * Negotiate mailbox API version with the PF.

@@ -1483,8 +1483,7 @@ iavf_ipsec_crypto_capabilities_get(void *device)
 	 * crypto capabilities, except for last element of the array which is
 	 * the null termination
 	 */
-	for (i = 0; i < ((sizeof(iavf_security_capabilities) /
-			sizeof(iavf_security_capabilities[0])) - 1); i++) {
+	for (i = 0; i < (RTE_DIM(iavf_security_capabilities) - 1); i++) {
 		iavf_security_capabilities[i].crypto_capabilities =
 			iavf_sctx->crypto_capabilities;
 	}

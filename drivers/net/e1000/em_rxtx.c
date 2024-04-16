@@ -1666,8 +1666,7 @@ em_rctl_bsize(__rte_unused enum e1000_mac_type hwtyp, uint32_t *bufsz)
 	 * ***************************************************************
 	 */
 
-	for (i = 0; i != sizeof(bufsz_to_rctl) / sizeof(bufsz_to_rctl[0]);
-			i++) {
+	for (i = 0; i != RTE_DIM(bufsz_to_rctl); i++) {
 		if (rctl_bsize >= bufsz_to_rctl[i].bufsz) {
 			*bufsz = bufsz_to_rctl[i].bufsz;
 			return bufsz_to_rctl[i].rctl;

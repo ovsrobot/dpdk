@@ -36,6 +36,5 @@ struct octeontx_xstats octeontx_bgx_xstats[] = {
 	BGX_XSTAT(tx_pause_packets),
 };
 
-#define NUM_BGX_XSTAT \
-	(sizeof(octeontx_bgx_xstats) / sizeof(struct octeontx_xstats))
+#define NUM_BGX_XSTAT RTE_DIM(octeontx_bgx_xstats)
 #endif /* __OCTEONTX_STATS_H__ */

@@ -269,8 +269,7 @@ static const struct rte_txgbe_xstats_name_off rte_txgbe_stats_strings[] = {
 	HW_XSTAT_NAME(rx_xoff_packets, "rx_flow_control_xoff_packets"),
 };
 
-#define TXGBE_NB_HW_STATS (sizeof(rte_txgbe_stats_strings) / \
-			   sizeof(rte_txgbe_stats_strings[0]))
+#define TXGBE_NB_HW_STATS RTE_DIM(rte_txgbe_stats_strings)
 
 /* Per-priority statistics */
 #define UP_XSTAT(m) {#m, offsetof(struct txgbe_hw_stats, up[0].m)}
@@ -290,8 +289,7 @@ static const struct rte_txgbe_xstats_name_off rte_txgbe_up_strings[] = {
 	UP_XSTAT(tx_up_xon2off_packets),
 };
 
-#define TXGBE_NB_UP_STATS (sizeof(rte_txgbe_up_strings) / \
-			   sizeof(rte_txgbe_up_strings[0]))
+#define TXGBE_NB_UP_STATS RTE_DIM(rte_txgbe_up_strings)
 
 /* Per-queue statistics */
 #define QP_XSTAT(m) {#m, offsetof(struct txgbe_hw_stats, qp[0].m)}
@@ -303,8 +301,7 @@ static const struct rte_txgbe_xstats_name_off rte_txgbe_qp_strings[] = {
 	QP_XSTAT(rx_qp_mc_packets),
 };
 
-#define TXGBE_NB_QP_STATS (sizeof(rte_txgbe_qp_strings) / \
-			   sizeof(rte_txgbe_qp_strings[0]))
+#define TXGBE_NB_QP_STATS RTE_DIM(rte_txgbe_qp_strings)
 
 static inline int
 txgbe_is_sfp(struct txgbe_hw *hw)
