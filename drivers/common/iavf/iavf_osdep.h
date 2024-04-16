@@ -158,6 +158,7 @@ do {                                                            \
 } while (0)
 
 /* memory allocation tracking */
+__rte_msvc_pack
 struct iavf_dma_mem {
 	void *va;
 	u64 pa;
@@ -165,6 +166,7 @@ struct iavf_dma_mem {
 	const void *zone;
 } __rte_packed;
 
+__rte_msvc_pack
 struct iavf_virt_mem {
 	void *va;
 	u32 size;
