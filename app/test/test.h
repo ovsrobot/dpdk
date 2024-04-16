@@ -27,6 +27,10 @@
 
 #include <rte_test.h>
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
 #define TEST_ASSERT RTE_TEST_ASSERT
 
 #define TEST_ASSERT_EQUAL RTE_TEST_ASSERT_EQUAL

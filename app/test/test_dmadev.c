@@ -869,42 +869,52 @@ test_completion_handling(int16_t dev_id, uint16_t vchan)
 static int
 test_enqueue_fill(int16_t dev_id, uint16_t vchan)
 {
+	uint64_t pattern[3] = {0x0, 0xfedcba9876543210, 0xffffffffffffffff};
 	const unsigned int lengths[] = {8, 64, 1024, 50, 100, 89};
+	unsigned int i, j, k;
 	struct rte_mbuf *dst;
 	char *dst_data;
-	uint64_t pattern = 0xfedcba9876543210;
-	unsigned int i, j;
 
 	dst = rte_pktmbuf_alloc(pool);
 	if (dst == NULL)
 		ERR_RETURN("Failed to allocate mbuf\n");
 	dst_data = rte_pktmbuf_mtod(dst, char *);
 
-	for (i = 0; i < RTE_DIM(lengths); i++) {
-		/* reset dst_data */
-		memset(dst_data, 0, rte_pktmbuf_data_len(dst));
+	for (k = 0; k < ARRAY_SIZE(pattern); k++) {
+		printf("Test fill pattern: 0x%016lx\n", pattern[k]);
+		for (i = 0; i < RTE_DIM(lengths); i++) {
+			/* reset dst_data */
+			memset(dst_data, 0, rte_pktmbuf_data_len(dst));
 
-		/* perform the fill operation */
-		int id = rte_dma_fill(dev_id, vchan, pattern,
-				rte_pktmbuf_iova(dst), lengths[i], RTE_DMA_OP_FLAG_SUBMIT);
-		if (id < 0)
-			ERR_RETURN("Error with rte_dma_fill\n");
-		await_hw(dev_id, vchan);
+			/* perform the fill operation */
+			int id = rte_dma_fill(dev_id, vchan, pattern[k],
+					rte_pktmbuf_iova(dst), lengths[i], RTE_DMA_OP_FLAG_SUBMIT);
+			if (id < 0) {
+				if (id == -ENOTSUP) {
+					rte_pktmbuf_free(dst);
+					break;
+				}
+				ERR_RETURN("Error with rte_dma_fill\n");
+			}
+			await_hw(dev_id, vchan);
 
-		if (rte_dma_completed(dev_id, vchan, 1, NULL, NULL) != 1)
-			ERR_RETURN("Error: fill operation failed (length: %u)\n", lengths[i]);
-		/* check the data from the fill operation is correct */
-		for (j = 0; j < lengths[i]; j++) {
-			char pat_byte = ((char *)&pattern)[j % 8];
-			if (dst_data[j] != pat_byte)
-				ERR_RETURN("Error with fill operation (lengths = %u): got (%x), not (%x)\n",
-						lengths[i], dst_data[j], pat_byte);
+			if (rte_dma_completed(dev_id, vchan, 1, NULL, NULL) != 1)
+				ERR_RETURN("Error: fill operation failed (length: %u)\n",
+					   lengths[i]);
+			/* check the data from the fill operation is correct */
+			for (j = 0; j < lengths[i]; j++) {
+				char pat_byte = ((char *)&pattern[k])[j % 8];
+
+				if (dst_data[j] != pat_byte)
+					ERR_RETURN("Error with fill operation (lengths = %u): got (%x), not (%x)\n",
+							lengths[i], dst_data[j], pat_byte);
+			}
+			/* check that the data after the fill operation was not written to */
+			for (; j < rte_pktmbuf_data_len(dst); j++)
+				if (dst_data[j] != 0)
+					ERR_RETURN("Error, fill operation wrote too far (lengths = %u): got (%x), not (%x)\n",
+							lengths[i], dst_data[j], 0);
 		}
-		/* check that the data after the fill operation was not written to */
-		for (; j < rte_pktmbuf_data_len(dst); j++)
-			if (dst_data[j] != 0)
-				ERR_RETURN("Error, fill operation wrote too far (lengths = %u): got (%x), not (%x)\n",
-						lengths[i], dst_data[j], 0);
 	}
 
 	rte_pktmbuf_free(dst);
