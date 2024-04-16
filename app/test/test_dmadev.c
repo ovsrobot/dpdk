@@ -393,33 +393,25 @@ test_stop_start(int16_t dev_id, uint16_t vchan)
 }
 
 static int
-test_enqueue_sg_copies(int16_t dev_id, uint16_t vchan)
+test_enqueue_sg(int16_t dev_id, uint16_t vchan, unsigned int n_sge, unsigned int test_len)
 {
-	unsigned int src_len, dst_len, n_sge, len, i, j, k;
 	char orig_src[COPY_LEN], orig_dst[COPY_LEN];
-	struct rte_dma_info info = { 0 };
+	unsigned int src_len, dst_len, i, j, k;
 	enum rte_dma_status_code status;
 	uint16_t id, n_src, n_dst;
-
-	if (rte_dma_info_get(dev_id, &info) < 0)
-		ERR_RETURN("Failed to get dev info");
-
-	if (info.max_sges < 2)
-		ERR_RETURN("Test needs minimum 2 SG pointers");
-
-	n_sge = info.max_sges;
 
 	for (n_src = 1; n_src <= n_sge; n_src++) {
 		for (n_dst = 1; n_dst <= n_sge; n_dst++) {
 			/* Normalize SG buffer lengths */
-			len = COPY_LEN;
-			len -= (len % (n_src * n_dst));
-			dst_len = len / n_dst;
-			src_len = len / n_src;
-
+			unsigned int len = test_len - (test_len % (n_src * n_dst));
 			struct rte_dma_sge sg_src[n_sge], sg_dst[n_sge];
 			struct rte_mbuf *src[n_sge], *dst[n_sge];
 			char *src_data[n_sge], *dst_data[n_sge];
+
+			dst_len = len / n_dst;
+			src_len = len / n_src;
+			if (dst_len == 0 || src_len == 0)
+				continue;
 
 			for (i = 0 ; i < len; i++)
 				orig_src[i] = rte_rand() & 0xFF;
@@ -508,6 +500,27 @@ test_enqueue_sg_copies(int16_t dev_id, uint16_t vchan)
 			id_count++;
 		}
 	}
+	return 0;
+}
+
+static int
+test_enqueue_sg_copies(int16_t dev_id, uint16_t vchan)
+{
+	struct rte_dma_info info = { 0 };
+	unsigned int n_sge, len;
+	int loop_count = 0;
+
+	if (rte_dma_info_get(dev_id, &info) < 0)
+		ERR_RETURN("Failed to get dev info");
+
+	n_sge = RTE_MIN(info.max_sges, TEST_SG_MAX);
+	len = COPY_LEN;
+
+	do {
+		test_enqueue_sg(dev_id, vchan, n_sge, len);
+		loop_count++;
+	} while (loop_count * n_sge * n_sge < TEST_RINGSIZE * 3);
+
 	return 0;
 }
 
