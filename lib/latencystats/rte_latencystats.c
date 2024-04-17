@@ -159,7 +159,7 @@ calc_latency(uint16_t pid __rte_unused,
 {
 	unsigned int i, cnt = 0;
 	uint64_t now;
-	float latency[nb_pkts];
+	float *latency = alloca(sizeof(float) * nb_pkts);
 	static float prev_latency;
 	/*
 	 * Alpha represents degree of weighting decrease in EWMA,
