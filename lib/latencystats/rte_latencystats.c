@@ -2,16 +2,25 @@
  * Copyright(c) 2018 Intel Corporation
  */
 
+#include <errno.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
 
-#include <rte_string_fns.h>
-#include <rte_mbuf_dyn.h>
-#include <rte_log.h>
+#include <rte_common.h>
 #include <rte_cycles.h>
+#include <rte_eal.h>
+#include <rte_errno.h>
 #include <rte_ethdev.h>
-#include <rte_metrics.h>
-#include <rte_memzone.h>
 #include <rte_lcore.h>
+#include <rte_log.h>
+#include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
+#include <rte_memzone.h>
+#include <rte_metrics.h>
+#include <rte_spinlock.h>
+#include <rte_string_fns.h>
 
 #include "rte_latencystats.h"
 
@@ -148,14 +157,15 @@ add_time_stamps(uint16_t pid __rte_unused,
 
 static uint16_t
 calc_latency(uint16_t pid __rte_unused,
-		uint16_t qid __rte_unused,
-		struct rte_mbuf **pkts,
-		uint16_t nb_pkts,
-		void *_ __rte_unused)
+	     uint16_t qid __rte_unused,
+	     struct rte_mbuf **pkts,
+	     uint16_t nb_pkts,
+	     void *_ __rte_unused)
 {
 	unsigned int i;
 	uint64_t now, latency;
 	static uint64_t prev_latency;
+	static bool first_sample = true;
 
 	now = rte_rdtsc();
 
@@ -166,32 +176,41 @@ calc_latency(uint16_t pid __rte_unused,
 
 		latency = now - *timestamp_dynfield(pkts[i]);
 
-		/*
-		 * The jitter is calculated as statistical mean of interpacket
-		 * delay variation. The "jitter estimate" is computed by taking
-		 * the absolute values of the ipdv sequence and applying an
-		 * exponential filter with parameter 1/16 to generate the
-		 * estimate. i.e J=J+(|D(i-1,i)|-J)/16. Where J is jitter,
-		 * D(i-1,i) is difference in latency of two consecutive packets
-		 * i-1 and i.
-		 * Reference: Calculated as per RFC 5481, sec 4.1,
-		 * RFC 3393 sec 4.5, RFC 1889 sec.
-		 */
-		glob_stats->jitter += ((prev_latency - latency) - glob_stats->jitter) / 16;
-		if (glob_stats->min_latency == 0)
+		if (first_sample) {
+			first_sample = false;
+
 			glob_stats->min_latency = latency;
-		else if (latency < glob_stats->min_latency)
-			glob_stats->min_latency = latency;
-		else if (latency > glob_stats->max_latency)
 			glob_stats->max_latency = latency;
-		/*
-		 * The average latency is measured using exponential moving
-		 * average, i.e. using EWMA
-		 * https://en.wikipedia.org/wiki/Moving_average
-		 *
-		 * Alpha is .25
-		 */
-		glob_stats->avg_latency += (latency - glob_stats->avg_latency) / 4;
+			glob_stats->avg_latency = latency;
+			glob_stats->jitter = 0;
+		} else {
+			/*
+			 * The jitter is calculated as statistical mean of interpacket
+			 * delay variation. The "jitter estimate" is computed by taking
+			 * the absolute values of the ipdv sequence and applying an
+			 * exponential filter with parameter 1/16 to generate the
+			 * estimate. i.e J=J+(|D(i-1,i)|-J)/16. Where J is jitter,
+			 * D(i-1,i) is difference in latency of two consecutive packets
+			 * i-1 and i.
+			 * Reference: Calculated as per RFC 5481, sec 4.1,
+			 * RFC 3393 sec 4.5, RFC 1889 sec.
+			 */
+			glob_stats->jitter += ((prev_latency - latency)
+					       - glob_stats->jitter) / 16;
+			if (latency < glob_stats->min_latency)
+				glob_stats->min_latency = latency;
+			if (latency > glob_stats->max_latency)
+				glob_stats->max_latency = latency;
+			/*
+			 * The average latency is measured using exponential moving
+			 * average, i.e. using EWMA
+			 * https://en.wikipedia.org/wiki/Moving_average
+			 *
+			 * Alpha is .25
+			 */
+			glob_stats->avg_latency += (latency - glob_stats->avg_latency) / 4;
+		}
+
 		prev_latency = latency;
 	}
 	rte_spinlock_unlock(&glob_stats->lock);
