@@ -47,10 +47,10 @@ static uint64_t timer_tsc;
 static uint64_t prev_tsc;
 
 struct rte_latency_stats {
-	float min_latency; /**< Minimum latency in nano seconds */
-	float avg_latency; /**< Average latency in nano seconds */
-	float max_latency; /**< Maximum latency in nano seconds */
-	float jitter; /** Latency variation */
+	uint64_t min_latency; /**< Minimum latency */
+	uint64_t avg_latency; /**< Average latency */
+	uint64_t max_latency; /**< Maximum latency */
+	uint64_t jitter; /** Latency variation */
 	rte_spinlock_t lock; /** Latency calculation lock */
 };
 
@@ -82,13 +82,12 @@ int32_t
 rte_latencystats_update(void)
 {
 	unsigned int i;
-	float *stats_ptr = NULL;
 	uint64_t values[NUM_LATENCY_STATS] = {0};
 	int ret;
 
 	for (i = 0; i < NUM_LATENCY_STATS; i++) {
-		stats_ptr = RTE_PTR_ADD(glob_stats,
-				lat_stats_strings[i].offset);
+		const uint64_t *stats_ptr = RTE_PTR_ADD(glob_stats,
+							lat_stats_strings[i].offset);
 		values[i] = floor(*stats_ptr / latencystat_cycles_per_ns());
 	}
 
@@ -105,11 +104,10 @@ static void
 rte_latencystats_fill_values(struct rte_metric_value *values)
 {
 	unsigned int i;
-	float *stats_ptr = NULL;
 
 	for (i = 0; i < NUM_LATENCY_STATS; i++) {
-		stats_ptr = RTE_PTR_ADD(glob_stats,
-				lat_stats_strings[i].offset);
+		const uint64_t *stats_ptr = RTE_PTR_ADD(glob_stats,
+							lat_stats_strings[i].offset);
 		values[i].key = i;
 		values[i].value = floor(*stats_ptr / latencystat_cycles_per_ns());
 	}
@@ -156,15 +154,8 @@ calc_latency(uint16_t pid __rte_unused,
 		void *_ __rte_unused)
 {
 	unsigned int i;
-	uint64_t now;
-	float latency;
-	static float prev_latency;
-	/*
-	 * Alpha represents degree of weighting decrease in EWMA,
-	 * a constant smoothing factor between 0 and 1. The value
-	 * is used below for measuring average latency.
-	 */
-	const float alpha = 0.2;
+	uint64_t now, latency;
+	static uint64_t prev_latency;
 
 	now = rte_rdtsc();
 
@@ -186,8 +177,7 @@ calc_latency(uint16_t pid __rte_unused,
 		 * Reference: Calculated as per RFC 5481, sec 4.1,
 		 * RFC 3393 sec 4.5, RFC 1889 sec.
 		 */
-		glob_stats->jitter +=  (fabsf(prev_latency - latency)
-					- glob_stats->jitter)/16;
+		glob_stats->jitter += ((prev_latency - latency) - glob_stats->jitter) / 16;
 		if (glob_stats->min_latency == 0)
 			glob_stats->min_latency = latency;
 		else if (latency < glob_stats->min_latency)
@@ -198,9 +188,10 @@ calc_latency(uint16_t pid __rte_unused,
 		 * The average latency is measured using exponential moving
 		 * average, i.e. using EWMA
 		 * https://en.wikipedia.org/wiki/Moving_average
+		 *
+		 * Alpha is .25
 		 */
-		glob_stats->avg_latency +=
-			alpha * (latency - glob_stats->avg_latency);
+		glob_stats->avg_latency += (latency - glob_stats->avg_latency) / 4;
 		prev_latency = latency;
 	}
 	rte_spinlock_unlock(&glob_stats->lock);
