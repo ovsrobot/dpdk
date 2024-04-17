@@ -604,7 +604,7 @@ ipv4_reassembly_interleaved_flows_perf(uint8_t nb_frags)
 		for (j = 0; j < 4; j++)
 			nb_frags += frag_per_flow[i + j];
 
-		struct rte_mbuf *buf_arr[nb_frags];
+		struct rte_mbuf **buf_arr = alloca(sizeof(struct rte_mbuf *) * nb_frags);
 		for (j = 0; j < 4; j++) {
 			join_array(buf_arr, mbufs[i + j], prev,
 				   frag_per_flow[i + j]);
@@ -815,7 +815,7 @@ ipv6_reassembly_interleaved_flows_perf(int8_t nb_frags)
 		for (j = 0; j < 4; j++)
 			nb_frags += frag_per_flow[i + j];
 
-		struct rte_mbuf *buf_arr[nb_frags];
+		struct rte_mbuf **buf_arr = alloca(sizeof(struct rte_mbuf *) * nb_frags);
 		for (j = 0; j < 4; j++) {
 			join_array(buf_arr, mbufs[i + j], prev,
 				   frag_per_flow[i + j]);
