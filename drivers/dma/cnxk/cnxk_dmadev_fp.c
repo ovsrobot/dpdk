@@ -457,7 +457,6 @@ cn10k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 	struct cnxk_dpi_compl_s *comp_ptr;
 	struct cnxk_dpi_conf *dpi_conf;
 	struct cnxk_dpi_vf_s *dpivf;
-	struct rte_event *rsp_info;
 	struct cn10k_sso_hws *work;
 	uint16_t nb_src, nb_dst;
 	rte_mcslock_t mcs_lock_me;
@@ -469,9 +468,7 @@ cn10k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 
 	for (count = 0; count < nb_events; count++) {
 		op = ev[count].event_ptr;
-		rsp_info = (struct rte_event *)((uint8_t *)op +
-			     sizeof(struct rte_event_dma_adapter_op));
-		dpivf =	rte_dma_fp_objs[op->dma_dev_id].dev_private;
+		dpivf = rte_dma_fp_objs[op->dma_dev_id].dev_private;
 		dpi_conf = &dpivf->conf[op->vchan];
 
 		if (unlikely(rte_mempool_get(dpi_conf->adapter_info.req_mp, (void **)&comp_ptr)))
@@ -488,15 +485,14 @@ cn10k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 		hdr[0] = dpi_conf->cmd.u | ((uint64_t)DPI_HDR_PT_WQP << 54);
 		hdr[0] |= (nb_dst << 6) | nb_src;
 		hdr[1] = ((uint64_t)comp_ptr);
-		hdr[2] = cnxk_dma_adapter_format_event(rsp_info->event);
+		hdr[2] = cnxk_dma_adapter_format_event(ev[count].event);
 
-		src = &op->src_seg[0];
-		dst = &op->dst_seg[0];
+		src = &op->src_dst_seg[0];
+		dst = &op->src_dst_seg[op->nb_src];
 
 		if (CNXK_TAG_IS_HEAD(work->gw_rdata) ||
 		    ((CNXK_TT_FROM_TAG(work->gw_rdata) == SSO_TT_ORDERED) &&
-		    (rsp_info->sched_type & DPI_HDR_TT_MASK) ==
-			    RTE_SCHED_TYPE_ORDERED))
+		     (ev[count].sched_type & DPI_HDR_TT_MASK) == RTE_SCHED_TYPE_ORDERED))
 			roc_sso_hws_head_wait(work->base);
 
 		rte_mcslock_lock(&dpivf->mcs_lock, &mcs_lock_me);
@@ -566,12 +562,12 @@ cn9k_dma_adapter_dual_enqueue(void *ws, struct rte_event ev[], uint16_t nb_event
 		 * For all other cases, src pointers are first pointers.
 		 */
 		if (((dpi_conf->cmd.u >> 48) & DPI_HDR_XTYPE_MASK) == DPI_XTYPE_INBOUND) {
-			fptr = &op->dst_seg[0];
-			lptr = &op->src_seg[0];
+			fptr = &op->src_dst_seg[nb_src];
+			lptr = &op->src_dst_seg[0];
 			RTE_SWAP(nb_src, nb_dst);
 		} else {
-			fptr = &op->src_seg[0];
-			lptr = &op->dst_seg[0];
+			fptr = &op->src_dst_seg[0];
+			lptr = &op->src_dst_seg[nb_src];
 		}
 
 		hdr[0] = ((uint64_t)nb_dst << 54) | (uint64_t)nb_src << 48;
@@ -612,7 +608,6 @@ cn9k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 	struct cnxk_dpi_compl_s *comp_ptr;
 	struct cnxk_dpi_conf *dpi_conf;
 	struct cnxk_dpi_vf_s *dpivf;
-	struct rte_event *rsp_info;
 	struct cn9k_sso_hws *work;
 	uint16_t nb_src, nb_dst;
 	rte_mcslock_t mcs_lock_me;
@@ -624,9 +619,7 @@ cn9k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 
 	for (count = 0; count < nb_events; count++) {
 		op = ev[count].event_ptr;
-		rsp_info = (struct rte_event *)((uint8_t *)op +
-			    sizeof(struct rte_event_dma_adapter_op));
-		dpivf =	rte_dma_fp_objs[op->dma_dev_id].dev_private;
+		dpivf = rte_dma_fp_objs[op->dma_dev_id].dev_private;
 		dpi_conf = &dpivf->conf[op->vchan];
 
 		if (unlikely(rte_mempool_get(dpi_conf->adapter_info.req_mp, (void **)&comp_ptr)))
@@ -647,18 +640,18 @@ cn9k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 		 * For all other cases, src pointers are first pointers.
 		 */
 		if (((dpi_conf->cmd.u >> 48) & DPI_HDR_XTYPE_MASK) == DPI_XTYPE_INBOUND) {
-			fptr = &op->dst_seg[0];
-			lptr = &op->src_seg[0];
+			fptr = &op->src_dst_seg[nb_src];
+			lptr = &op->src_dst_seg[0];
 			RTE_SWAP(nb_src, nb_dst);
 		} else {
-			fptr = &op->src_seg[0];
-			lptr = &op->dst_seg[0];
+			fptr = &op->src_dst_seg[0];
+			lptr = &op->src_dst_seg[nb_src];
 		}
 
 		hdr[0] = ((uint64_t)nb_dst << 54) | (uint64_t)nb_src << 48;
-		hdr[0] |= cnxk_dma_adapter_format_event(rsp_info->event);
+		hdr[0] |= cnxk_dma_adapter_format_event(ev[count].event);
 
-		if ((rsp_info->sched_type & DPI_HDR_TT_MASK) == RTE_SCHED_TYPE_ORDERED)
+		if ((ev[count].sched_type & DPI_HDR_TT_MASK) == RTE_SCHED_TYPE_ORDERED)
 			roc_sso_hws_head_wait(work->base);
 
 		rte_mcslock_lock(&dpivf->mcs_lock, &mcs_lock_me);
