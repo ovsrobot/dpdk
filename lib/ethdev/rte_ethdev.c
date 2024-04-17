@@ -3241,7 +3241,8 @@ rte_eth_xstats_get_id_by_name(uint16_t port_id, const char *xstat_name,
 	}
 
 	/* Get id-name lookup table */
-	struct rte_eth_xstat_name xstats_names[cnt_xstats];
+	struct rte_eth_xstat_name *xstats_names =
+	    alloca(sizeof(struct rte_eth_xstat_name) * cnt_xstats);
 
 	if (cnt_xstats != rte_eth_xstats_get_names_by_id(
 			port_id, xstats_names, cnt_xstats, NULL)) {
@@ -3342,7 +3343,7 @@ rte_eth_xstats_get_names_by_id(uint16_t port_id,
 		return -EINVAL;
 
 	if (ids && dev->dev_ops->xstats_get_names_by_id != NULL && size > 0) {
-		uint64_t ids_copy[size];
+		uint64_t *ids_copy = alloca(sizeof(uint64_t) * size);
 
 		for (i = 0; i < size; i++) {
 			if (ids[i] < basic_count) {
@@ -3535,7 +3536,7 @@ rte_eth_xstats_get_by_id(uint16_t port_id, const uint64_t *ids,
 	if (ret < 0)
 		return ret;
 	expected_entries = (uint16_t)ret;
-	struct rte_eth_xstat xstats[expected_entries];
+	struct rte_eth_xstat *xstats = alloca(sizeof(struct rte_eth_xstat) * expected_entries);
 	basic_count = eth_dev_get_xstats_basic_count(dev);
 
 	/* Return max number of stats if no ids given */
@@ -3551,7 +3552,7 @@ rte_eth_xstats_get_by_id(uint16_t port_id, const uint64_t *ids,
 
 	if (ids && dev->dev_ops->xstats_get_by_id != NULL && size) {
 		unsigned int basic_count = eth_dev_get_xstats_basic_count(dev);
-		uint64_t ids_copy[size];
+		uint64_t *ids_copy = alloca(sizeof(uint64_t) * size);
 
 		for (i = 0; i < size; i++) {
 			if (ids[i] < basic_count) {
