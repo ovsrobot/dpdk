@@ -3743,7 +3743,8 @@ This section lists supported pattern items and their attributes, if any.
   - ``type {unsigned}``: GENEVE option type.
   - ``length {unsigned}``: GENEVE option length in 32-bit words.
   - ``data {hex string}``: GENEVE option data, the length is defined by
-    ``length`` field.
+    ``data_size`` field.
+  - ``data_size {unsigned}``: GENEVE option data size in 32-bit words.
 
 - ``vxlan-gpe``: match VXLAN-GPE header.
 

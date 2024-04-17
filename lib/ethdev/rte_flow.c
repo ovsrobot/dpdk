@@ -81,6 +81,21 @@ rte_flow_item_flex_conv(void *buf, const void *data)
 	return src->length;
 }
 
+static size_t
+rte_flow_item_geneve_opt_conv(void *buf, const void *data)
+{
+	const struct rte_flow_item_geneve_opt *src = data;
+	uint16_t byte_size = src->data_array_size << 2;
+
+	if (buf) {
+		struct rte_flow_item_geneve_opt *dst = buf;
+		void *deep_src = (void *)((uintptr_t)(dst + 1));
+
+		dst->data = rte_memcpy(deep_src, src->data, byte_size);
+	}
+	return byte_size;
+}
+
 /** Generate flow_item[] entry. */
 #define MK_FLOW_ITEM(t, s) \
 	[RTE_FLOW_ITEM_TYPE_ ## t] = { \
@@ -155,7 +170,8 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	MK_FLOW_ITEM(L2TPV3OIP, sizeof(struct rte_flow_item_l2tpv3oip)),
 	MK_FLOW_ITEM(PFCP, sizeof(struct rte_flow_item_pfcp)),
 	MK_FLOW_ITEM(ECPRI, sizeof(struct rte_flow_item_ecpri)),
-	MK_FLOW_ITEM(GENEVE_OPT, sizeof(struct rte_flow_item_geneve_opt)),
+	MK_FLOW_ITEM_FN(GENEVE_OPT, sizeof(struct rte_flow_item_geneve_opt),
+			rte_flow_item_geneve_opt_conv),
 	MK_FLOW_ITEM(INTEGRITY, sizeof(struct rte_flow_item_integrity)),
 	MK_FLOW_ITEM(CONNTRACK, sizeof(uint32_t)),
 	MK_FLOW_ITEM(PORT_REPRESENTOR, sizeof(struct rte_flow_item_ethdev)),
@@ -622,7 +638,6 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 	switch (item->type) {
 		union {
 			const struct rte_flow_item_raw *raw;
-			const struct rte_flow_item_geneve_opt *geneve_opt;
 		} spec;
 		union {
 			const struct rte_flow_item_raw *raw;
@@ -632,11 +647,9 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 		} mask;
 		union {
 			const struct rte_flow_item_raw *raw;
-			const struct rte_flow_item_geneve_opt *geneve_opt;
 		} src;
 		union {
 			struct rte_flow_item_raw *raw;
-			struct rte_flow_item_geneve_opt *geneve_opt;
 		} dst;
 		void *deep_src;
 		size_t tmp;
@@ -675,21 +688,6 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 			}
 			off += tmp;
 		}
-		break;
-	case RTE_FLOW_ITEM_TYPE_GENEVE_OPT:
-		off = rte_flow_conv_copy(buf, data, size,
-					 rte_flow_desc_item, item->type);
-		spec.geneve_opt = item->spec;
-		src.geneve_opt = data;
-		dst.geneve_opt = buf;
-		tmp = spec.geneve_opt->option_len << 2;
-		if (size > 0 && src.geneve_opt->data) {
-			deep_src = (void *)((uintptr_t)(dst.geneve_opt + 1));
-			dst.geneve_opt->data = rte_memcpy(deep_src,
-							  src.geneve_opt->data,
-							  tmp);
-		}
-		off += tmp;
 		break;
 	default:
 		off = rte_flow_conv_copy(buf, data, size,

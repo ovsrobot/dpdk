@@ -1876,7 +1876,8 @@ struct rte_flow_item_geneve_opt {
 	rte_be16_t option_class;
 	uint8_t option_type;
 	uint8_t option_len;
-	uint32_t *data;
+	rte_be32_t *data;
+	uint8_t data_array_size;
 };
 
 /** Default mask for RTE_FLOW_ITEM_TYPE_GENEVE_OPT. */

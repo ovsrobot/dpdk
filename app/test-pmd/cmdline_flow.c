@@ -492,6 +492,7 @@ enum index {
 	ITEM_GENEVE_OPT_TYPE,
 	ITEM_GENEVE_OPT_LENGTH,
 	ITEM_GENEVE_OPT_DATA,
+	ITEM_GENEVE_OPT_DATA_ARRAY_SIZE,
 	ITEM_INTEGRITY,
 	ITEM_INTEGRITY_LEVEL,
 	ITEM_INTEGRITY_VALUE,
@@ -2032,6 +2033,7 @@ static const enum index item_geneve_opt[] = {
 	ITEM_GENEVE_OPT_TYPE,
 	ITEM_GENEVE_OPT_LENGTH,
 	ITEM_GENEVE_OPT_DATA,
+	ITEM_GENEVE_OPT_DATA_ARRAY_SIZE,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -5771,6 +5773,14 @@ static const struct token token_list[] = {
 			     ARGS_ENTRY_ARB
 				(sizeof(struct rte_flow_item_geneve_opt),
 				ITEM_GENEVE_OPT_DATA_SIZE)),
+	},
+	[ITEM_GENEVE_OPT_DATA_ARRAY_SIZE] = {
+		.name = "data_size",
+		.help = "GENEVE option data array size",
+		.next = NEXT(item_geneve_opt, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_geneve_opt,
+					data_array_size)),
 	},
 	[ITEM_INTEGRITY] = {
 		.name = "integrity",

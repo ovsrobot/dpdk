@@ -1092,6 +1092,22 @@ Matches a GENEVE header.
 - ``rsvd1``: reserved, normally 0x00.
 - Default ``mask`` matches VNI only.
 
+
+Item: ``GENEVE_OPT``
+^^^^^^^^^^^^^^^^^^^^
+
+Matches a GENEVE TLV option header.
+
+- ``option_class``: option class ID.
+- ``option_type``: option type.
+- ``option_len``: option data length in 4-bytes granularity.
+- ``data``: option data array.
+- ``data_array_size``: option data array size.
+  This field is not matchable, it is descriptor how to read the array.
+  It should be specified in ``mask`` as well.
+- Default ``mask`` matches type only.
+
+
 Item: ``VXLAN-GPE``
 ^^^^^^^^^^^^^^^^^^^
 
