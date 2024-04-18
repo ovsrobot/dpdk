@@ -292,7 +292,7 @@ qat_sym_build_op_auth_gen1(void *in_op, struct qat_sym_session *ctx,
 	cdev = rte_cryptodev_pmd_get_dev(ctx->dev_id);
 	internals = cdev->data->dev_private;
 
-	if (internals->qat_dev->has_wireless_slice && !ctx->is_gmac)
+	if (internals->qat_dev->options.has_wireless_slice && !ctx->is_gmac)
 		ICP_QAT_FW_LA_CIPH_IV_FLD_FLAG_SET(
 				req->comn_hdr.serv_specif_flags, 0);
 

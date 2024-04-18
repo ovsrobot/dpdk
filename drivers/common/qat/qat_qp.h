@@ -57,7 +57,8 @@ struct qat_queue {
  *   - EINVAL if error
  **/
 typedef int (*qat_op_build_request_t)(void *in_op, uint8_t *out_msg,
-		void *op_cookie, uint64_t *opaque, enum qat_device_gen dev_gen);
+		void *op_cookie, uint64_t *opaque, enum qat_device_gen dev_gen,
+		struct qat_options options);
 
 /**
  * Type define qat_op_dequeue_t function pointer, passed in as argument

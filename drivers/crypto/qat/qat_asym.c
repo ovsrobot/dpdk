@@ -1031,7 +1031,8 @@ asym_set_input(struct icp_qat_fw_pke_request *qat_req,
 static int
 qat_asym_build_request(void *in_op, uint8_t *out_msg, void *op_cookie,
 			__rte_unused uint64_t *opaque,
-			__rte_unused enum qat_device_gen qat_dev_gen)
+			__rte_unused enum qat_device_gen qat_dev_gen,
+			__rte_unused struct qat_options options)
 {
 	struct rte_crypto_op *op = (struct rte_crypto_op *)in_op;
 	struct rte_crypto_asym_op *asym_op = op->asym;
@@ -1594,7 +1595,7 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 			atoi(cmdline);
 	}
 
-	if (qat_pci_dev->slice_map & ICP_ACCEL_MASK_PKE_SLICE) {
+	if (qat_pci_dev->options.slice_map & ICP_ACCEL_MASK_PKE_SLICE) {
 		QAT_LOG(ERR, "Device %s does not support PKE slice",
 				name);
 		rte_cryptodev_pmd_destroy(cryptodev);
@@ -1604,7 +1605,7 @@ qat_asym_dev_create(struct qat_pci_device *qat_pci_dev)
 	}
 
 	if (gen_dev_ops->get_capabilities(internals,
-			capa_memz_name, qat_pci_dev->slice_map) < 0) {
+			capa_memz_name, qat_pci_dev->options.slice_map) < 0) {
 		QAT_LOG(ERR,
 			"Device cannot obtain capabilities, destroying PMD for %s",
 			name);

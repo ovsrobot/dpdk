@@ -331,7 +331,7 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev)
 	qat_pci_devs[qat_dev_id].pci_dev = pci_dev;
 
 	if (wireless_slice_support(pci_dev->id.device_id))
-		qat_dev->has_wireless_slice = 1;
+		qat_dev->options.has_wireless_slice = 1;
 
 	ops_hw = qat_dev_hw_spec[qat_dev->qat_dev_gen];
 	NOT_NULL(ops_hw->qat_dev_get_misc_bar, goto error,
@@ -372,7 +372,7 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev)
 	NOT_NULL(ops_hw->qat_dev_get_slice_map, goto error,
 		"QAT internal error! Read slice function not set, gen : %d",
 		qat_dev_gen);
-	if (ops_hw->qat_dev_get_slice_map(&qat_dev->slice_map, pci_dev) < 0) {
+	if (ops_hw->qat_dev_get_slice_map(&qat_dev->options.slice_map, pci_dev) < 0) {
 		RTE_LOG(ERR, EAL,
 			"Cannot read slice configuration\n");
 		goto error;

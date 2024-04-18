@@ -71,7 +71,8 @@ qat_sym_init_op_cookie(void *op_cookie)
 
 static __rte_always_inline int
 qat_sym_build_request(void *in_op, uint8_t *out_msg,
-		void *op_cookie, uint64_t *opaque, enum qat_device_gen dev_gen)
+		void *op_cookie, uint64_t *opaque, enum qat_device_gen dev_gen,
+		__rte_unused struct qat_options options)
 {
 	struct rte_crypto_op *op = (struct rte_crypto_op *)in_op;
 	uintptr_t sess = (uintptr_t)opaque[0];
@@ -317,7 +318,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev)
 		internals->cipher_crc_offload_enable = atoi(cmdline);
 
 	if (gen_dev_ops->get_capabilities(internals,
-			capa_memz_name, qat_pci_dev->slice_map) < 0) {
+			capa_memz_name, qat_pci_dev->options.slice_map) < 0) {
 		QAT_LOG(ERR,
 			"Device cannot obtain capabilities, destroying PMD for %s",
 			name);

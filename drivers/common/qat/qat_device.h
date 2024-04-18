@@ -122,14 +122,12 @@ struct qat_pci_device {
 	/**< Address of misc bar */
 	void *dev_private;
 	/**< Per generation specific information */
-	uint32_t slice_map;
-	/**< Map of the crypto and compression slices */
-	uint16_t has_wireless_slice;
-	/**< Wireless Slices supported */
 	char *command_line;
 	/**< Map of the crypto and compression slices */
 	void *pmd[QAT_MAX_SERVICES];
 	/**< link back to pmd private data */
+	struct qat_options options;
+	/**< qat device options */
 };
 
 struct qat_gen_hw_data {

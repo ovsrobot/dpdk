@@ -265,7 +265,7 @@ qat_sym_crypto_cap_get_gen3(struct qat_cryptodev_private *internals,
 			continue;
 		}
 
-		if (internals->qat_dev->has_wireless_slice && (
+		if (internals->qat_dev->options.has_wireless_slice && (
 			check_auth_capa(&capabilities[iter],
 				RTE_CRYPTO_AUTH_KASUMI_F9) ||
 			check_cipher_capa(&capabilities[iter],
@@ -279,7 +279,7 @@ qat_sym_crypto_cap_get_gen3(struct qat_cryptodev_private *internals,
 		memcpy(addr + curr_capa, capabilities + iter,
 			sizeof(struct rte_cryptodev_capabilities));
 
-		if (internals->qat_dev->has_wireless_slice && (
+		if (internals->qat_dev->options.has_wireless_slice && (
 			check_auth_capa(&capabilities[iter],
 				RTE_CRYPTO_AUTH_ZUC_EIA3))) {
 			cap = addr + curr_capa;
@@ -290,7 +290,7 @@ qat_sym_crypto_cap_get_gen3(struct qat_cryptodev_private *internals,
 			cap->sym.auth.digest_size.max = 16;
 			cap->sym.auth.digest_size.increment = 4;
 		}
-		if (internals->qat_dev->has_wireless_slice && (
+		if (internals->qat_dev->options.has_wireless_slice && (
 			check_cipher_capa(&capabilities[iter],
 				RTE_CRYPTO_CIPHER_ZUC_EEA3))) {
 			cap = addr + curr_capa;
@@ -551,7 +551,7 @@ qat_sym_crypto_set_session_gen3(void *cdev, void *session)
 				ctx->qat_cipher_alg ==
 				ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3)) {
 			qat_sym_session_set_ext_hash_flags_gen2(ctx, 0);
-		} else if ((internals->qat_dev->has_wireless_slice) &&
+		} else if ((internals->qat_dev->options.has_wireless_slice) &&
 				((ctx->aes_cmac ||
 				ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_NULL) &&
 				(ctx->qat_cipher_alg ==
@@ -560,7 +560,7 @@ qat_sym_crypto_set_session_gen3(void *cdev, void *session)
 				ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3 ||
 				ctx->qat_cipher_alg == ICP_QAT_HW_CIPHER_ALGO_ZUC_256))) {
 			qat_sym_session_set_ext_hash_flags_gen2(ctx, 0);
-		} else if ((internals->qat_dev->has_wireless_slice) &&
+		} else if ((internals->qat_dev->options.has_wireless_slice) &&
 			(ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_32 ||
 				ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_64 ||
 				ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_256_MAC_128) &&
