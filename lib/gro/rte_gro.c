@@ -179,7 +179,7 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 	struct gro_vxlan_udp4_item vxlan_udp_items[RTE_GRO_MAX_BURST_ITEM_NUM]
 			= {{{0}} };
 
-	struct rte_mbuf *unprocess_pkts[nb_pkts];
+	struct rte_mbuf **unprocess_pkts = alloca(sizeof(struct rte_mbuf *) * nb_pkts);
 	uint32_t item_num;
 	int32_t ret;
 	uint16_t i, unprocess_num = 0, nb_after_gro = nb_pkts;
@@ -360,7 +360,7 @@ rte_gro_reassemble(struct rte_mbuf **pkts,
 		uint16_t nb_pkts,
 		void *ctx)
 {
-	struct rte_mbuf *unprocess_pkts[nb_pkts];
+	struct rte_mbuf **unprocess_pkts = alloca(sizeof(struct rte_mbuf *) * nb_pkts);
 	struct gro_ctx *gro_ctx = ctx;
 	void *tcp_tbl, *udp_tbl, *vxlan_tcp_tbl, *vxlan_udp_tbl, *tcp6_tbl;
 	uint64_t current_time;
