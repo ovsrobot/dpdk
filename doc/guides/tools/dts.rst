@@ -131,7 +131,11 @@ There are two areas that need to be set up on a System Under Test:
 
      You may specify the optional hugepage configuration in the DTS config file.
      If you do, DTS will take care of configuring hugepages,
-     overwriting your current SUT hugepage configuration.
+     overwriting your current SUT hugepage configuration. Configuration of hugepages via DTS
+     allows only for allocation of 2MB hugepages, as doing so prevents accidental/over
+     allocation of hugepages and hugepages sizes not recommended during runtime due to
+     contiguous memory space requirements. Thus, if you require hugepage
+     sizes not equal to 2MB, then this configuration must be done outside of the DTS framework.
 
    * System under test configuration
 
