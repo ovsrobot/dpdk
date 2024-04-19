@@ -186,7 +186,6 @@
       "type": "string",
       "enum": [
         "hello_world",
-        "os_udp",
         "pmd_buffer_scatter"
       ]
     },

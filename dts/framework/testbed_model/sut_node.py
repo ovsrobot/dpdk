@@ -10,7 +10,6 @@ and the hardware we're testing with DPDK (NICs, crypto and other devices).
 An SUT node is where this SUT runs.
 """
 
-
 import os
 import tarfile
 import time
@@ -428,14 +427,6 @@ class SutNode(Node):
         return self.main_session.send_command(
             f"{app_path} {eal_args}", timeout, privileged=True, verify=True
         )
-
-    def configure_ipv4_forwarding(self, enable: bool) -> None:
-        """Enable/disable IPv4 forwarding on the node.
-
-        Args:
-            enable: If :data:`True`, enable the forwarding, otherwise disable it.
-        """
-        self.main_session.configure_ipv4_forwarding(enable)
 
     def create_interactive_shell(
         self,
