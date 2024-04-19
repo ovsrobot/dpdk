@@ -59,6 +59,10 @@ New Features
 
   * Added SSE/NEON vector datapath.
 
+* **Updated Wangxun ngbe driver.**
+
+  * Added SSE/NEON vector datapath.
+
 
 Removed Items
 -------------
