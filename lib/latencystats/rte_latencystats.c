@@ -18,12 +18,7 @@
 /** Nano seconds per second */
 #define NS_PER_SEC 1E9
 
-/** Clock cycles per nano second */
-static uint64_t
-latencystat_cycles_per_ns(void)
-{
-	return rte_get_timer_hz() / NS_PER_SEC;
-}
+static double cycles_per_ns;
 
 RTE_LOG_REGISTER_DEFAULT(latencystat_logtype, INFO);
 #define RTE_LOGTYPE_LATENCY_STATS latencystat_logtype
@@ -89,8 +84,7 @@ rte_latencystats_update(void)
 	for (i = 0; i < NUM_LATENCY_STATS; i++) {
 		stats_ptr = RTE_PTR_ADD(glob_stats,
 				lat_stats_strings[i].offset);
-		values[i] = (uint64_t)floor((*stats_ptr)/
-				latencystat_cycles_per_ns());
+		values[i] = floor(*stats_ptr / cycles_per_ns);
 	}
 
 	ret = rte_metrics_update_values(RTE_METRICS_GLOBAL,
@@ -112,8 +106,7 @@ rte_latencystats_fill_values(struct rte_metric_value *values)
 		stats_ptr = RTE_PTR_ADD(glob_stats,
 				lat_stats_strings[i].offset);
 		values[i].key = i;
-		values[i].value = (uint64_t)floor((*stats_ptr)/
-						latencystat_cycles_per_ns());
+		values[i].value = floor(*stats_ptr / cycles_per_ns);
 	}
 }
 
@@ -235,9 +228,11 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 		return -ENOMEM;
 	}
 
+	cycles_per_ns = (double)rte_get_timer_hz() / NS_PER_SEC;
+
 	glob_stats = mz->addr;
 	rte_spinlock_init(&glob_stats->lock);
-	samp_intvl = app_samp_intvl * latencystat_cycles_per_ns();
+	samp_intvl = (uint64_t)(app_samp_intvl * cycles_per_ns);
 
 	/** Register latency stats with stats library */
 	for (i = 0; i < NUM_LATENCY_STATS; i++)
