@@ -37,6 +37,8 @@ extern int iocpt_logtype;
 
 #define IOCPT_PRINT_CALL() IOCPT_PRINT(DEBUG, " >>")
 
+const struct rte_cryptodev_capabilities *iocpt_get_caps(uint64_t flags);
+
 static inline void iocpt_struct_size_checks(void)
 {
 	RTE_BUILD_BUG_ON(sizeof(struct ionic_doorbell) != 8);
@@ -163,6 +165,50 @@ struct iocpt_admin_q {
 	uint16_t flags;
 };
 
+struct iocpt_crypto_q {
+	/* cacheline0, cacheline1 */
+	IOCPT_COMMON_FIELDS;
+
+	/* cacheline2 */
+	uint64_t last_wdog_cycles;
+	uint16_t flags;
+
+	/* cacheline3 */
+	struct rte_cryptodev_stats stats;
+
+	uint64_t enqueued_wdogs;
+	uint64_t dequeued_wdogs;
+	uint8_t wdog_iv[IOCPT_Q_WDOG_IV_LEN];
+	uint8_t wdog_pld[IOCPT_Q_WDOG_PLD_LEN];
+	uint8_t wdog_tag[IOCPT_Q_WDOG_TAG_LEN];
+};
+
+#define IOCPT_S_F_INITED	BIT(0)
+
+struct iocpt_session_priv {
+	struct iocpt_dev *dev;
+
+	uint32_t index;
+
+	uint16_t iv_offset;
+	uint16_t iv_length;
+	uint16_t digest_length;
+	uint16_t aad_length;
+
+	uint8_t flags;
+	uint8_t op;
+	uint8_t type;
+
+	uint16_t key_len;
+	uint8_t key[IOCPT_SESS_KEY_LEN_MAX_SYMM];
+};
+
+static inline uint32_t
+iocpt_session_size(void)
+{
+	return sizeof(struct iocpt_session_priv);
+}
+
 #define IOCPT_DEV_F_INITED		BIT(0)
 #define IOCPT_DEV_F_UP			BIT(1)
 #define IOCPT_DEV_F_FW_RESET		BIT(2)
@@ -194,6 +240,7 @@ struct iocpt_dev {
 	rte_spinlock_t adminq_service_lock;
 
 	struct iocpt_admin_q *adminq;
+	struct iocpt_crypto_q **cryptoqs;
 
 	struct rte_bitmap  *sess_bm;	/* SET bit indicates index is free */
 
@@ -242,6 +289,9 @@ int iocpt_probe(void *bus_dev, struct rte_device *rte_dev,
 int iocpt_remove(struct rte_device *rte_dev);
 
 void iocpt_configure(struct iocpt_dev *dev);
+int iocpt_assign_ops(struct rte_cryptodev *cdev);
+int iocpt_start(struct iocpt_dev *dev);
+void iocpt_stop(struct iocpt_dev *dev);
 void iocpt_deinit(struct iocpt_dev *dev);
 
 int iocpt_dev_identify(struct iocpt_dev *dev);
@@ -251,6 +301,14 @@ void iocpt_dev_reset(struct iocpt_dev *dev);
 
 int iocpt_adminq_post_wait(struct iocpt_dev *dev, struct iocpt_admin_ctx *ctx);
 
+int iocpt_cryptoq_alloc(struct iocpt_dev *dev, uint32_t socket_id,
+	uint32_t index, uint16_t ndescs);
+void iocpt_cryptoq_free(struct iocpt_crypto_q *cptq);
+
+int iocpt_session_init(struct iocpt_session_priv *priv);
+int iocpt_session_update(struct iocpt_session_priv *priv);
+void iocpt_session_deinit(struct iocpt_session_priv *priv);
+
 struct ionic_doorbell __iomem *iocpt_db_map(struct iocpt_dev *dev,
 	struct iocpt_queue *q);
 
@@ -258,6 +316,10 @@ typedef bool (*iocpt_cq_cb)(struct iocpt_cq *cq, uint16_t cq_desc_index,
 		void *cb_arg);
 uint32_t iocpt_cq_service(struct iocpt_cq *cq, uint32_t work_to_do,
 	iocpt_cq_cb cb, void *cb_arg);
+
+void iocpt_get_stats(const struct iocpt_dev *dev,
+	struct rte_cryptodev_stats *stats);
+void iocpt_reset_stats(struct iocpt_dev *dev);
 
 static inline uint16_t
 iocpt_q_space_avail(struct iocpt_queue *q)
