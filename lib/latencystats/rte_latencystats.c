@@ -2,17 +2,25 @@
  * Copyright(c) 2018 Intel Corporation
  */
 
+#include <errno.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
 
 #include <rte_common.h>
-#include <rte_string_fns.h>
-#include <rte_mbuf_dyn.h>
-#include <rte_log.h>
 #include <rte_cycles.h>
+#include <rte_eal.h>
+#include <rte_errno.h>
 #include <rte_ethdev.h>
-#include <rte_metrics.h>
-#include <rte_memzone.h>
 #include <rte_lcore.h>
+#include <rte_log.h>
+#include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
+#include <rte_memzone.h>
+#include <rte_metrics.h>
+#include <rte_spinlock.h>
+#include <rte_string_fns.h>
 
 #include "rte_latencystats.h"
 
