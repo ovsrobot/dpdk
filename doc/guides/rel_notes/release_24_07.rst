@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Wangxun txgbe driver.**
+
+  * Added SSE/NEON vector datapath.
+
 
 Removed Items
 -------------
