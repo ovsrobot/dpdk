@@ -20,6 +20,11 @@
 #include "ionic_crypto_if.h"
 #include "ionic_regs.h"
 
+/* Devargs */
+/* NONE */
+
+#define IOCPT_MAX_RING_DESC		32768
+#define IOCPT_MIN_RING_DESC		16
 #define IOCPT_ADMINQ_LENGTH		16	/* must be a power of two */
 
 #define IOCPT_CRYPTOQ_WAIT		10	/* 1s */
@@ -31,6 +36,64 @@ extern int iocpt_logtype;
 	RTE_LOG_LINE_PREFIX(level, IOCPT, "%s(): ", __func__, __VA_ARGS__)
 
 #define IOCPT_PRINT_CALL() IOCPT_PRINT(DEBUG, " >>")
+
+static inline void iocpt_struct_size_checks(void)
+{
+	RTE_BUILD_BUG_ON(sizeof(struct ionic_doorbell) != 8);
+	RTE_BUILD_BUG_ON(sizeof(struct ionic_intr) != 32);
+	RTE_BUILD_BUG_ON(sizeof(struct ionic_intr_status) != 8);
+
+	RTE_BUILD_BUG_ON(sizeof(union iocpt_dev_regs) != 4096);
+	RTE_BUILD_BUG_ON(sizeof(union iocpt_dev_info_regs) != 2048);
+	RTE_BUILD_BUG_ON(sizeof(union iocpt_dev_cmd_regs) != 2048);
+
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_admin_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_admin_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_nop_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_nop_comp) != 16);
+
+	/* Device commands */
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_dev_identify_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_dev_identify_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_dev_reset_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_dev_reset_comp) != 16);
+
+	/* LIF commands */
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_identify_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_identify_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_init_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_init_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_reset_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_getattr_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_getattr_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_setattr_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_lif_setattr_comp) != 16);
+
+	/* Queue commands */
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_q_identify_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_q_identify_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_q_init_cmd) != 64);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_q_init_comp) != 16);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_q_control_cmd) != 64);
+
+	/* Crypto */
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_crypto_desc) != 32);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_crypto_sg_desc) != 256);
+	RTE_BUILD_BUG_ON(sizeof(struct iocpt_crypto_comp) != 16);
+}
+
+struct iocpt_dev_bars {
+	struct ionic_dev_bar bar[IONIC_BARS_MAX];
+	uint32_t num_bars;
+};
+
+/* Queue watchdog */
+#define IOCPT_Q_WDOG_SESS_IDX		0
+#define IOCPT_Q_WDOG_KEY_LEN		16
+#define IOCPT_Q_WDOG_IV_LEN		12
+#define IOCPT_Q_WDOG_PLD_LEN		4
+#define IOCPT_Q_WDOG_TAG_LEN		16
+#define IOCPT_Q_WDOG_OP_TYPE		RTE_CRYPTO_OP_TYPE_UNDEFINED
 
 struct iocpt_qtype_info {
 	uint8_t	 version;
@@ -108,8 +171,10 @@ struct iocpt_admin_q {
 struct iocpt_dev {
 	const char *name;
 	char fw_version[IOCPT_FWVERS_BUFLEN];
+	struct iocpt_dev_bars bars;
 	struct iocpt_identity ident;
 
+	const struct iocpt_dev_intf *intf;
 	void *bus_dev;
 	struct rte_cryptodev *crypto_dev;
 
@@ -130,6 +195,8 @@ struct iocpt_dev {
 
 	struct iocpt_admin_q *adminq;
 
+	struct rte_bitmap  *sess_bm;	/* SET bit indicates index is free */
+
 	uint64_t features;
 	uint32_t hw_features;
 
@@ -144,6 +211,20 @@ struct iocpt_dev {
 	struct rte_cryptodev_stats stats_base;
 };
 
+struct iocpt_dev_intf {
+	int  (*setup_bars)(struct iocpt_dev *dev);
+	void (*unmap_bars)(struct iocpt_dev *dev);
+};
+
+static inline int
+iocpt_setup_bars(struct iocpt_dev *dev)
+{
+	if (dev->intf->setup_bars == NULL)
+		return -EINVAL;
+
+	return (*dev->intf->setup_bars)(dev);
+}
+
 /** iocpt_admin_ctx - Admin command context.
  * @pending_work:	Flag that indicates a completion.
  * @cmd:		Admin command (64B) to be copied to the queue.
@@ -154,6 +235,14 @@ struct iocpt_admin_ctx {
 	union iocpt_adminq_cmd cmd;
 	union iocpt_adminq_comp comp;
 };
+
+int iocpt_probe(void *bus_dev, struct rte_device *rte_dev,
+	struct iocpt_dev_bars *bars, const struct iocpt_dev_intf *intf,
+	uint8_t driver_id, uint8_t socket_id);
+int iocpt_remove(struct rte_device *rte_dev);
+
+void iocpt_configure(struct iocpt_dev *dev);
+void iocpt_deinit(struct iocpt_dev *dev);
 
 int iocpt_dev_identify(struct iocpt_dev *dev);
 int iocpt_dev_init(struct iocpt_dev *dev, rte_iova_t info_pa);
