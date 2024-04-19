@@ -26,7 +26,7 @@ EAL_REGISTER_TAILQ(rte_uio_tailq)
 static int
 pci_uio_map_secondary(struct rte_pci_device *dev)
 {
-	int fd, i, j;
+	int fd, i, map_idx = 0, res_idx;
 	struct mapped_pci_resource *uio_res;
 	struct mapped_pci_res_list *uio_res_list =
 			RTE_TAILQ_CAST(rte_uio_tailq.head, mapped_pci_res_list);
@@ -37,41 +37,51 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 		if (rte_pci_addr_cmp(&uio_res->pci_addr, &dev->addr))
 			continue;
 
-		for (i = 0; i != uio_res->nb_maps; i++) {
+		/* Map all BARs */
+		for (res_idx = 0; res_idx != PCI_MAX_RESOURCE; res_idx++) {
+			 /* skip empty BAR */
+			if (dev->mem_resource[res_idx].phys_addr == 0)
+				continue;
+
+			if (map_idx >= uio_res->nb_maps)
+				return -1;
+
 			/*
 			 * open devname, to mmap it
 			 */
-			fd = open(uio_res->maps[i].path, O_RDWR);
+			fd = open(uio_res->maps[map_idx].path, O_RDWR);
 			if (fd < 0) {
 				RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",
-					uio_res->maps[i].path, strerror(errno));
+					uio_res->maps[map_idx].path, strerror(errno));
 				return -1;
 			}
 
-			void *mapaddr = pci_map_resource(uio_res->maps[i].addr,
-					fd, (off_t)uio_res->maps[i].offset,
-					(size_t)uio_res->maps[i].size, 0);
+			void *mapaddr = pci_map_resource(uio_res->maps[map_idx].addr,
+					fd, (off_t)uio_res->maps[map_idx].offset,
+					(size_t)uio_res->maps[map_idx].size, 0);
 
 			/* fd is not needed in secondary process, close it */
 			close(fd);
-			if (mapaddr != uio_res->maps[i].addr) {
+			if (mapaddr != uio_res->maps[map_idx].addr) {
 				RTE_LOG(ERR, EAL,
 					"Cannot mmap device resource file %s to address: %p\n",
-					uio_res->maps[i].path,
-					uio_res->maps[i].addr);
+					uio_res->maps[map_idx].path,
+					uio_res->maps[map_idx].addr);
 				if (mapaddr != NULL) {
 					/* unmap addrs correctly mapped */
-					for (j = 0; j < i; j++)
+					for (i = 0; i < map_idx; i++)
 						pci_unmap_resource(
-							uio_res->maps[j].addr,
-							(size_t)uio_res->maps[j].size);
+							uio_res->maps[i].addr,
+							(size_t)uio_res->maps[i].size);
 					/* unmap addr wrongly mapped */
 					pci_unmap_resource(mapaddr,
-						(size_t)uio_res->maps[i].size);
+						(size_t)uio_res->maps[map_idx].size);
 				}
 				return -1;
 			}
-			dev->mem_resource[i].addr = mapaddr;
+			dev->mem_resource[res_idx].addr = mapaddr;
+
+			map_idx++;
 		}
 		return 0;
 	}
