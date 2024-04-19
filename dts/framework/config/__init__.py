@@ -16,7 +16,7 @@ the :doc:`types <framework.config.types>` module.
 
 The test run configuration has two main sections:
 
-    * The :class:`ExecutionConfiguration` which defines what tests are going to be run
+    * The :class:`TestRunConfiguration` which defines what tests are going to be run
       and how DPDK will be built. It also references the testbed where these tests and DPDK
       are going to be run,
     * The nodes of the testbed are defined in the other section,
@@ -46,9 +46,9 @@ import yaml
 from framework.config.types import (
     BuildTargetConfigDict,
     ConfigurationDict,
-    ExecutionConfigDict,
     NodeConfigDict,
     PortConfigDict,
+    TestRunConfigDict,
     TestSuiteConfigDict,
     TrafficGeneratorConfigDict,
 )
@@ -428,8 +428,8 @@ class TestSuiteConfig:
 
 
 @dataclass(slots=True, frozen=True)
-class ExecutionConfiguration:
-    """The configuration of an execution.
+class TestRunConfiguration:
+    """The configuration of a test run.
 
     The configuration contains testbed information, what tests to execute
     and with what DPDK build.
@@ -440,8 +440,8 @@ class ExecutionConfiguration:
         func: Whether to run functional tests.
         skip_smoke_tests: Whether to skip smoke tests.
         test_suites: The names of test suites and/or test cases to execute.
-        system_under_test_node: The SUT node to use in this execution.
-        traffic_generator_node: The TG node to use in this execution.
+        system_under_test_node: The SUT node to use in this test run.
+        traffic_generator_node: The TG node to use in this test run.
         vdevs: The names of virtual devices to test.
     """
 
@@ -456,9 +456,9 @@ class ExecutionConfiguration:
 
     @staticmethod
     def from_dict(
-        d: ExecutionConfigDict,
+        d: TestRunConfigDict,
         node_map: dict[str, Union[SutNodeConfiguration | TGNodeConfiguration]],
-    ) -> "ExecutionConfiguration":
+    ) -> "TestRunConfiguration":
         """A convenience method that processes the inputs before creating an instance.
 
         The build target and the test suite config are transformed into their respective objects.
@@ -466,11 +466,11 @@ class ExecutionConfiguration:
         are just stored.
 
         Args:
-            d: The configuration dictionary.
+            d: The test run configuration dictionary.
             node_map: A dictionary mapping node names to their config objects.
 
         Returns:
-            The execution configuration instance.
+            The test run configuration instance.
         """
         build_targets: list[BuildTargetConfiguration] = list(
             map(BuildTargetConfiguration.from_dict, d["build_targets"])
@@ -478,14 +478,14 @@ class ExecutionConfiguration:
         test_suites: list[TestSuiteConfig] = list(map(TestSuiteConfig.from_dict, d["test_suites"]))
         sut_name = d["system_under_test_node"]["node_name"]
         skip_smoke_tests = d.get("skip_smoke_tests", False)
-        assert sut_name in node_map, f"Unknown SUT {sut_name} in execution {d}"
+        assert sut_name in node_map, f"Unknown SUT {sut_name} in test run {d}"
         system_under_test_node = node_map[sut_name]
         assert isinstance(
             system_under_test_node, SutNodeConfiguration
         ), f"Invalid SUT configuration {system_under_test_node}"
 
         tg_name = d["traffic_generator_node"]
-        assert tg_name in node_map, f"Unknown TG {tg_name} in execution {d}"
+        assert tg_name in node_map, f"Unknown TG {tg_name} in test run {d}"
         traffic_generator_node = node_map[tg_name]
         assert isinstance(
             traffic_generator_node, TGNodeConfiguration
@@ -494,7 +494,7 @@ class ExecutionConfiguration:
         vdevs = (
             d["system_under_test_node"]["vdevs"] if "vdevs" in d["system_under_test_node"] else []
         )
-        return ExecutionConfiguration(
+        return TestRunConfiguration(
             build_targets=build_targets,
             perf=d["perf"],
             func=d["func"],
@@ -505,7 +505,7 @@ class ExecutionConfiguration:
             vdevs=vdevs,
         )
 
-    def copy_and_modify(self, **kwargs) -> "ExecutionConfiguration":
+    def copy_and_modify(self, **kwargs) -> "TestRunConfiguration":
         """Create a shallow copy with any of the fields modified.
 
         The only new data are those passed to this method.
@@ -513,10 +513,10 @@ class ExecutionConfiguration:
 
         Args:
             **kwargs: The names and types of keyword arguments are defined
-                by the fields of the :class:`ExecutionConfiguration` class.
+                by the fields of the :class:`TestRunConfiguration` class.
 
         Returns:
-            The copied and modified execution configuration.
+            The copied and modified test run configuration.
         """
         new_config = {}
         for field in fields(self):
@@ -525,7 +525,7 @@ class ExecutionConfiguration:
             else:
                 new_config[field.name] = getattr(self, field.name)
 
-        return ExecutionConfiguration(**new_config)
+        return TestRunConfiguration(**new_config)
 
 
 @dataclass(slots=True, frozen=True)
@@ -533,13 +533,13 @@ class Configuration:
     """DTS testbed and test configuration.
 
     The node configuration is not stored in this object. Rather, all used node configurations
-    are stored inside the execution configuration where the nodes are actually used.
+    are stored inside the test run configuration where the nodes are actually used.
 
     Attributes:
-        executions: Execution configurations.
+        test_runs: Test run configurations.
     """
 
-    executions: list[ExecutionConfiguration]
+    test_runs: list[TestRunConfiguration]
 
     @staticmethod
     def from_dict(d: ConfigurationDict) -> "Configuration":
@@ -563,11 +563,11 @@ class Configuration:
         node_map = {node.name: node for node in nodes}
         assert len(nodes) == len(node_map), "Duplicate node names are not allowed"
 
-        executions: list[ExecutionConfiguration] = list(
-            map(ExecutionConfiguration.from_dict, d["executions"], [node_map for _ in d])
+        test_runs: list[TestRunConfiguration] = list(
+            map(TestRunConfiguration.from_dict, d["test_runs"], [node_map for _ in d])
         )
 
-        return Configuration(executions=executions)
+        return Configuration(test_runs=test_runs)
 
 
 def load_config(config_file_path: Path) -> Configuration:
