@@ -3004,4 +3004,4 @@ rte_sched_port_dequeue(struct rte_sched_port *port, struct rte_mbuf **pkts, uint
 	return count;
 }
 
-RTE_LOG_REGISTER_DEFAULT(sched_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(sched_logtype, INFO)

@@ -1092,4 +1092,4 @@ RTE_PMD_REGISTER_CRYPTO_DRIVER(uadk_crypto_drv, uadk_crypto_pmd.driver,
 			       uadk_cryptodev_driver_id);
 RTE_PMD_REGISTER_PARAM_STRING(UADK_CRYPTO_DRIVER_NAME,
 			      "max_nb_queue_pairs=<int>");
-RTE_LOG_REGISTER_DEFAULT(uadk_crypto_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(uadk_crypto_logtype, INFO)

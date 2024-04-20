@@ -2323,4 +2323,4 @@ static struct rte_dpaa_driver rte_dpaa_pmd = {
 };
 
 RTE_PMD_REGISTER_DPAA(net_dpaa, rte_dpaa_pmd);
-RTE_LOG_REGISTER_DEFAULT(dpaa_logtype_pmd, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(dpaa_logtype_pmd, NOTICE)

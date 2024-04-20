@@ -25,7 +25,7 @@ latencystat_cycles_per_ns(void)
 	return rte_get_timer_hz() / NS_PER_SEC;
 }
 
-RTE_LOG_REGISTER_DEFAULT(latencystat_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(latencystat_logtype, INFO)
 #define RTE_LOGTYPE_LATENCY_STATS latencystat_logtype
 #define LATENCY_STATS_LOG(level, ...) \
 	RTE_LOG_LINE(level, LATENCY_STATS, "" __VA_ARGS__)

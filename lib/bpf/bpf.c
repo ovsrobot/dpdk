@@ -49,4 +49,4 @@ __rte_bpf_jit(struct rte_bpf *bpf)
 	return rc;
 }
 
-RTE_LOG_REGISTER_DEFAULT(rte_bpf_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(rte_bpf_logtype, INFO)

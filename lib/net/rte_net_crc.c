@@ -70,7 +70,7 @@ static const rte_net_crc_handler handlers_neon[] = {
 
 static uint16_t max_simd_bitwidth;
 
-RTE_LOG_REGISTER_DEFAULT(libnet_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(libnet_logtype, INFO)
 #define RTE_LOGTYPE_NET libnet_logtype
 
 #define NET_LOG(level, ...) \

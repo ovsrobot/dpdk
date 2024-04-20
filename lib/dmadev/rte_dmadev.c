@@ -31,7 +31,7 @@ static struct {
 	struct rte_dma_dev_data data[0];
 } *dma_devices_shared_data;
 
-RTE_LOG_REGISTER_DEFAULT(rte_dma_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(rte_dma_logtype, INFO)
 #define RTE_LOGTYPE_DMADEV rte_dma_logtype
 
 #define RTE_DMA_LOG(level, ...) \

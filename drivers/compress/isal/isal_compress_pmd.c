@@ -754,4 +754,4 @@ static struct rte_vdev_driver compdev_isal_pmd_drv = {
 RTE_PMD_REGISTER_VDEV(COMPDEV_NAME_ISAL_PMD, compdev_isal_pmd_drv);
 RTE_PMD_REGISTER_PARAM_STRING(COMPDEV_NAME_ISAL_PMD,
 	"socket_id=<int>");
-RTE_LOG_REGISTER_DEFAULT(isal_logtype_driver, INFO);
+RTE_LOG_REGISTER_DEFAULT(isal_logtype_driver, INFO)

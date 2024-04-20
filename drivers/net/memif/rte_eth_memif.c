@@ -2080,4 +2080,4 @@ RTE_PMD_REGISTER_PARAM_STRING(net_memif,
 			      ETH_MEMIF_ZC_ARG "=yes|no"
 			      ETH_MEMIF_SECRET_ARG "=<string>");
 
-RTE_LOG_REGISTER_DEFAULT(memif_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(memif_logtype, NOTICE)

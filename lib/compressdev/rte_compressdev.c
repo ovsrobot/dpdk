@@ -775,4 +775,4 @@ rte_compressdev_name_get(uint8_t dev_id)
 	return dev->data->name;
 }
 
-RTE_LOG_REGISTER_DEFAULT(compressdev_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(compressdev_logtype, NOTICE)

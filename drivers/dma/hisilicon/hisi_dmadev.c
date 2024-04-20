@@ -17,7 +17,7 @@
 
 #include "hisi_dmadev.h"
 
-RTE_LOG_REGISTER_DEFAULT(hisi_dma_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(hisi_dma_logtype, INFO)
 #define HISI_DMA_LOG(level, fmt, args...) \
 		rte_log(RTE_LOG_ ## level, hisi_dma_logtype, \
 		"%s(): " fmt "\n", __func__, ##args)

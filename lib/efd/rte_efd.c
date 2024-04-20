@@ -29,7 +29,7 @@
 #include "rte_efd_arm64.h"
 #endif
 
-RTE_LOG_REGISTER_DEFAULT(efd_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(efd_logtype, INFO)
 #define RTE_LOGTYPE_EFD	efd_logtype
 #define EFD_LOG(level, ...) \
 	RTE_LOG_LINE(level, EFD, "" __VA_ARGS__)

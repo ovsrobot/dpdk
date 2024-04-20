@@ -636,4 +636,4 @@ cleanup:
 
 int idxd_pmd_logtype;
 
-RTE_LOG_REGISTER_DEFAULT(idxd_pmd_logtype, WARNING);
+RTE_LOG_REGISTER_DEFAULT(idxd_pmd_logtype, WARNING)

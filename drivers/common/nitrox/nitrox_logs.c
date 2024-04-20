@@ -4,4 +4,4 @@
 
 #include <rte_log.h>
 
-RTE_LOG_REGISTER_DEFAULT(nitrox_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(nitrox_logtype, NOTICE)

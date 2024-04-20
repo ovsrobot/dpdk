@@ -59,7 +59,7 @@ static gdr_t gdrc_h;
 #define GPU_PAGE_SHIFT 16
 #define GPU_PAGE_SIZE (1UL << GPU_PAGE_SHIFT)
 
-RTE_LOG_REGISTER_DEFAULT(cuda_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(cuda_logtype, NOTICE)
 
 /* NVIDIA GPU address map */
 static const struct rte_pci_id pci_id_cuda_map[] = {

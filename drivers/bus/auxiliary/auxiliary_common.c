@@ -440,4 +440,4 @@ struct rte_auxiliary_bus auxiliary_bus = {
 };
 
 RTE_REGISTER_BUS(auxiliary, auxiliary_bus.bus);
-RTE_LOG_REGISTER_DEFAULT(auxiliary_bus_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(auxiliary_bus_logtype, NOTICE)

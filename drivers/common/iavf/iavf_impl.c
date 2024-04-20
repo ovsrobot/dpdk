@@ -86,4 +86,4 @@ iavf_free_virt_mem_d(__rte_unused struct iavf_hw *hw,
 	return IAVF_SUCCESS;
 }
 
-RTE_LOG_REGISTER_DEFAULT(iavf_common_logger, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(iavf_common_logger, NOTICE)

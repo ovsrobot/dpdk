@@ -7008,4 +7008,4 @@ int rte_eth_dev_map_aggr_tx_affinity(uint16_t port_id, uint16_t tx_queue_id,
 	return ret;
 }
 
-RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO)

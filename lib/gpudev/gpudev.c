@@ -16,7 +16,7 @@
 #include "gpudev_driver.h"
 
 /* Logging */
-RTE_LOG_REGISTER_DEFAULT(gpu_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(gpu_logtype, NOTICE)
 #define RTE_LOGTYPE_GPUDEV gpu_logtype
 
 #define GPU_LOG(level, ...) \

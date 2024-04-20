@@ -379,4 +379,4 @@ int idpf_set_rss_key(struct idpf_hw *hw, u16 vsi_id,
 	return idpf_get_set_rss_key(hw, vsi_id, key, true);
 }
 
-RTE_LOG_REGISTER_DEFAULT(idpf_common_logger, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(idpf_common_logger, NOTICE)

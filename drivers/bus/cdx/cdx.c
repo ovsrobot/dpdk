@@ -667,4 +667,4 @@ struct rte_cdx_bus rte_cdx_bus = {
 };
 
 RTE_REGISTER_BUS(cdx, rte_cdx_bus.bus);
-RTE_LOG_REGISTER_DEFAULT(cdx_logtype_bus, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(cdx_logtype_bus, NOTICE)

@@ -20,7 +20,7 @@
 #include "rte_lpm.h"
 #include "lpm_log.h"
 
-RTE_LOG_REGISTER_DEFAULT(lpm_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(lpm_logtype, INFO)
 
 TAILQ_HEAD(rte_lpm_list, rte_tailq_entry);
 

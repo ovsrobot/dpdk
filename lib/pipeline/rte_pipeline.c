@@ -12,7 +12,7 @@
 
 #include "rte_pipeline.h"
 
-RTE_LOG_REGISTER_DEFAULT(pipeline_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(pipeline_logtype, INFO)
 #define RTE_LOGTYPE_PIPELINE pipeline_logtype
 
 #define PIPELINE_LOG(level, ...) \

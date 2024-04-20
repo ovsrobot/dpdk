@@ -478,4 +478,4 @@ static struct rte_vdev_driver vdev_eventdev_skeleton_pmd = {
 };
 
 RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_SKELETON_PMD, vdev_eventdev_skeleton_pmd);
-RTE_LOG_REGISTER_DEFAULT(skeleton_eventdev_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(skeleton_eventdev_logtype, INFO)

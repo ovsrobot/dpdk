@@ -28,7 +28,7 @@ struct rte_cfgfile {
 };
 
 /* Setting up dynamic logging 8< */
-RTE_LOG_REGISTER_DEFAULT(cfgfile_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(cfgfile_logtype, INFO)
 #define RTE_LOGTYPE_CFGFILE cfgfile_logtype
 
 #define CFG_LOG(level, ...) \

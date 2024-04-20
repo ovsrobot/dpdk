@@ -779,4 +779,4 @@ rte_cryptodev_scheduler_option_get(uint8_t scheduler_id,
 }
 
 
-RTE_LOG_REGISTER_DEFAULT(scheduler_logtype_driver, INFO);
+RTE_LOG_REGISTER_DEFAULT(scheduler_logtype_driver, INFO)

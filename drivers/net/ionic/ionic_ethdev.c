@@ -1284,4 +1284,4 @@ eth_ionic_dev_remove(struct rte_device *rte_dev)
 	return ret;
 }
 
-RTE_LOG_REGISTER_DEFAULT(ionic_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(ionic_logtype, NOTICE)

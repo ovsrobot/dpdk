@@ -702,4 +702,4 @@ static struct rte_vdev_driver pmd_enetfec_drv = {
 };
 
 RTE_PMD_REGISTER_VDEV(ENETFEC_NAME_PMD, pmd_enetfec_drv);
-RTE_LOG_REGISTER_DEFAULT(enetfec_logtype_pmd, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(enetfec_logtype_pmd, NOTICE)

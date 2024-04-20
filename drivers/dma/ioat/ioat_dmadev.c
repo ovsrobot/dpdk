@@ -12,7 +12,7 @@
 
 static struct rte_pci_driver ioat_pmd_drv;
 
-RTE_LOG_REGISTER_DEFAULT(ioat_pmd_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(ioat_pmd_logtype, INFO)
 
 #define DESC_SZ sizeof(struct ioat_dma_hw_desc)
 

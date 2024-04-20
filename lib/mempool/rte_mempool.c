@@ -31,7 +31,7 @@
 #include "mempool_trace.h"
 #include "rte_mempool.h"
 
-RTE_LOG_REGISTER_DEFAULT(rte_mempool_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(rte_mempool_logtype, INFO)
 
 TAILQ_HEAD(rte_mempool_list, rte_tailq_entry);
 

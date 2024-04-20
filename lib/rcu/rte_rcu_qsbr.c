@@ -476,4 +476,4 @@ rte_rcu_qsbr_dq_delete(struct rte_rcu_qsbr_dq *dq)
 	return 0;
 }
 
-RTE_LOG_REGISTER_DEFAULT(rte_rcu_log_type, ERR);
+RTE_LOG_REGISTER_DEFAULT(rte_rcu_log_type, ERR)

@@ -15,7 +15,7 @@
 
 #include "rte_pdump.h"
 
-RTE_LOG_REGISTER_DEFAULT(pdump_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(pdump_logtype, NOTICE)
 #define RTE_LOGTYPE_PDUMP pdump_logtype
 
 #define PDUMP_LOG_LINE(level, ...) \

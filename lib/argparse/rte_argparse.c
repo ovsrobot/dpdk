@@ -10,7 +10,7 @@
 
 #include "rte_argparse.h"
 
-RTE_LOG_REGISTER_DEFAULT(rte_argparse_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(rte_argparse_logtype, INFO)
 #define RTE_LOGTYPE_ARGPARSE rte_argparse_logtype
 #define ARGPARSE_LOG(level, ...) \
 	RTE_LOG_LINE(level, ARGPARSE, "" __VA_ARGS__)

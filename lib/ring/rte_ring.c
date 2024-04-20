@@ -28,7 +28,7 @@
 #include "rte_ring.h"
 #include "rte_ring_elem.h"
 
-RTE_LOG_REGISTER_DEFAULT(ring_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(ring_logtype, INFO)
 #define RTE_LOGTYPE_RING ring_logtype
 #define RING_LOG(level, ...) \
 	RTE_LOG_LINE(level, RING, "" __VA_ARGS__)

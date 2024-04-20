@@ -834,4 +834,4 @@ static struct rte_dpaa_bus rte_dpaa_bus = {
 };
 
 RTE_REGISTER_BUS(FSL_DPAA_BUS_NAME, rte_dpaa_bus.bus);
-RTE_LOG_REGISTER_DEFAULT(dpaa_logtype_bus, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(dpaa_logtype_bus, NOTICE)

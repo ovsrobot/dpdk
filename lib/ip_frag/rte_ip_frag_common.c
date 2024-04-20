@@ -7,7 +7,7 @@
 
 #include <rte_log.h>
 
-RTE_LOG_REGISTER_DEFAULT(ipfrag_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(ipfrag_logtype, INFO)
 
 #include "ip_frag_common.h"
 

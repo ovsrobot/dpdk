@@ -1078,4 +1078,4 @@ static struct rte_dpaa_driver rte_dpaa_qdma_pmd = {
 };
 
 RTE_PMD_REGISTER_DPAA(dpaa_qdma, rte_dpaa_qdma_pmd);
-RTE_LOG_REGISTER_DEFAULT(dpaa_qdma_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(dpaa_qdma_logtype, INFO)

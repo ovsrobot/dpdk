@@ -100,7 +100,7 @@ static struct rte_eth_link pmd_link = {
 	.link_autoneg = RTE_ETH_LINK_FIXED,
 };
 
-RTE_LOG_REGISTER_DEFAULT(af_packet_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(af_packet_logtype, NOTICE)
 
 #define PMD_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, af_packet_logtype, \

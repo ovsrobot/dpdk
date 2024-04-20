@@ -2598,4 +2598,4 @@ RTE_PMD_REGISTER_PARAM_STRING(net_tap,
 			      ETH_TAP_IFACE_ARG "=<string> "
 			      ETH_TAP_MAC_ARG "=" ETH_TAP_MAC_ARG_FMT " "
 			      ETH_TAP_REMOTE_ARG "=<string>");
-RTE_LOG_REGISTER_DEFAULT(tap_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(tap_logtype, NOTICE)

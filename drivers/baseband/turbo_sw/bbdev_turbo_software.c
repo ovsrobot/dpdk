@@ -36,7 +36,7 @@
 
 #define DRIVER_NAME baseband_turbo_sw
 
-RTE_LOG_REGISTER_DEFAULT(bbdev_turbo_sw_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(bbdev_turbo_sw_logtype, NOTICE)
 
 /* Helper macro for logging */
 #define rte_bbdev_log(level, fmt, ...) \

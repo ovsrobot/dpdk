@@ -643,6 +643,6 @@ struct rte_platform_bus platform_bus = {
 };
 
 RTE_REGISTER_BUS(platform, platform_bus.bus);
-RTE_LOG_REGISTER_DEFAULT(platform_bus_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(platform_bus_logtype, NOTICE)
 
 #endif /* VFIO_PRESENT */

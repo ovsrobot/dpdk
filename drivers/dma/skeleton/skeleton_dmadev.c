@@ -20,7 +20,7 @@
 
 #include "skeleton_dmadev.h"
 
-RTE_LOG_REGISTER_DEFAULT(skeldma_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(skeldma_logtype, INFO)
 #define SKELDMA_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, skeldma_logtype, "%s(): " fmt "\n", \
 		__func__, ##args)

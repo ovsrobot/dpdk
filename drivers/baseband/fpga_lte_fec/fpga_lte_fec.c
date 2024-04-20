@@ -21,9 +21,9 @@
 #include "fpga_lte_fec.h"
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
-RTE_LOG_REGISTER_DEFAULT(fpga_lte_fec_logtype, DEBUG);
+RTE_LOG_REGISTER_DEFAULT(fpga_lte_fec_logtype, DEBUG)
 #else
-RTE_LOG_REGISTER_DEFAULT(fpga_lte_fec_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(fpga_lte_fec_logtype, NOTICE)
 #endif
 
 /* Helper macro for logging */

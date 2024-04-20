@@ -879,6 +879,6 @@ static struct rte_pci_driver rte_otx_ep_pmd = {
 RTE_PMD_REGISTER_PCI(net_otx_ep, rte_otx_ep_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_otx_ep, pci_id_otx_ep_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_otx_ep, "* igb_uio | vfio-pci");
-RTE_LOG_REGISTER_DEFAULT(otx_net_ep_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(otx_net_ep_logtype, NOTICE)
 RTE_PMD_REGISTER_PARAM_STRING(net_otx_ep,
 			      OTX_ISM_ENABLE "=<0|1>");

@@ -4,4 +4,4 @@
 
 #include <rte_log.h>
 
-RTE_LOG_REGISTER_DEFAULT(table_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(table_logtype, INFO)

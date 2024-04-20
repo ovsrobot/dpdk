@@ -17,7 +17,7 @@
 
 #include "rte_reorder.h"
 
-RTE_LOG_REGISTER_DEFAULT(reorder_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(reorder_logtype, INFO)
 #define RTE_LOGTYPE_REORDER reorder_logtype
 #define REORDER_LOG(level, ...) \
 	RTE_LOG_LINE(level, REORDER, "" __VA_ARGS__)

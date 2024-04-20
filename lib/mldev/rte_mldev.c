@@ -907,4 +907,4 @@ rte_ml_op_error_get(int16_t dev_id, struct rte_ml_op *op, struct rte_ml_op_error
 	return (*dev->op_error_get)(dev, op, error);
 }
 
-RTE_LOG_REGISTER_DEFAULT(rte_ml_dev_logtype, INFO);
+RTE_LOG_REGISTER_DEFAULT(rte_ml_dev_logtype, INFO)

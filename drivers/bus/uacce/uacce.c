@@ -698,4 +698,4 @@ static struct rte_uacce_bus uacce_bus = {
 };
 
 RTE_REGISTER_BUS(uacce, uacce_bus.bus);
-RTE_LOG_REGISTER_DEFAULT(uacce_bus_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(uacce_bus_logtype, NOTICE)

@@ -117,4 +117,4 @@ sfc_efx_family(struct rte_pci_device *pci_dev,
 	return rc;
 }
 
-RTE_LOG_REGISTER_DEFAULT(sfc_efx_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(sfc_efx_logtype, NOTICE)

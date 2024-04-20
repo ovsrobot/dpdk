@@ -27,7 +27,7 @@
 #define BBDEV_OP_TYPE_COUNT 7
 
 /* BBDev library logging ID */
-RTE_LOG_REGISTER_DEFAULT(bbdev_logtype, NOTICE);
+RTE_LOG_REGISTER_DEFAULT(bbdev_logtype, NOTICE)
 #define RTE_LOGTYPE_BBDEV bbdev_logtype
 
 /* Helper macro for logging */
