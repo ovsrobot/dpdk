@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -112,6 +113,35 @@ thread_start_wrapper(void *arg)
 		return NULL;
 
 	return (void *)(uintptr_t)thread_func(thread_args);
+}
+
+/* Function to convert cpu_set_t to a string. */
+static void cpuset_to_string(const cpu_set_t *cpuset,
+			char *cpus_str, size_t cpus_str_size) {
+	int cpu;
+	// Track the current position in the string
+	size_t offset = 0;
+
+	// Clear the string buffer
+	memset(cpus_str, 0, cpus_str_size);
+	cpus_str_size = RTE_MAX_LCORE < cpus_str_size ?
+		RTE_MAX_LCORE : cpus_str_size;
+
+	// Iterate over each CPU core, and check if it is included in the set
+	for (cpu = 0; cpu < RTE_MAX_LCORE && offset < cpus_str_size - 1; ++cpu) {
+		if (CPU_ISSET(cpu, cpuset)) {
+			// Append the current CPU number to the string
+			int written = snprintf(cpus_str + offset, cpus_str_size - offset,
+				"%s%d", (offset > 0 ? "," : ""), cpu);
+			if (written > 0)
+				offset += written;
+			if (offset >= cpus_str_size - 1)
+				break;
+			}
+	}
+
+	// Ensure the string is properly terminated
+	cpus_str[cpus_str_size - 1] = '\0';
 }
 
 int
@@ -369,8 +399,25 @@ int
 rte_thread_set_affinity_by_id(rte_thread_t thread_id,
 		const rte_cpuset_t *cpuset)
 {
-	return pthread_setaffinity_np((pthread_t)thread_id.opaque_id,
-		sizeof(*cpuset), cpuset);
+	int ret;
+	char cpus_str[RTE_MAX_LCORE + 1] = {'\0'};
+	char thread_name[RTE_MAX_THREAD_NAME_LEN] = {'\0'};
+
+	errno = 0;
+	ret = pthread_setaffinity_np((pthread_t)thread_id.opaque_id,
+				sizeof(*cpuset), cpuset);
+	if (ret != 0) {
+		if (pthread_getname_np((pthread_t)thread_id.opaque_id,
+					thread_name, sizeof(thread_name)) != 0)
+			EAL_LOG(ERR, "pthread_getname_np failed!");
+		cpuset_to_string(cpuset, cpus_str, sizeof(cpus_str));
+		EAL_LOG(ERR, "Cannot set affinity for thread %s with cpus %s, "
+			"ret: %d, errno: %d, error description: %s",
+			thread_name, cpus_str,
+			ret, errno, strerror(errno));
+	}
+
+	return ret;
 }
 
 int
