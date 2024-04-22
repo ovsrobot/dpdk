@@ -21,7 +21,7 @@
 static uint16_t portid;
 static struct rte_ring *ring;
 
-static struct rte_metric_name lat_stats_strings[] = {
+static struct rte_metric_name lat_stats_strings[NUM_STATS] = {
 	{"min_latency_ns"},
 	{"avg_latency_ns"},
 	{"max_latency_ns"},
@@ -70,13 +70,9 @@ static int test_latency_uninit(void)
 /* Test case to get names of latency stats */
 static int test_latencystats_get_names(void)
 {
-	int ret = 0, i = 0;
-	int size = 0;
-	struct rte_metric_name names[NUM_STATS];
-
-	size_t m_size = sizeof(struct rte_metric_name);
-	for (i = 0; i < NUM_STATS; i++)
-		memset(&names[i], 0, m_size);
+	int ret, i;
+	uint16_t size;
+	struct rte_metric_name names[NUM_STATS] = { };
 
 	/* Success Test: Valid names and size */
 	size = NUM_STATS;
@@ -106,13 +102,9 @@ static int test_latencystats_get_names(void)
 /* Test case to get latency stats values */
 static int test_latencystats_get(void)
 {
-	int ret = 0, i = 0;
-	int size = 0;
-	struct rte_metric_value values[NUM_STATS];
-
-	size_t v_size = sizeof(struct rte_metric_value);
-	for (i = 0; i < NUM_STATS; i++)
-		memset(&values[i], 0, v_size);
+	int ret;
+	uint16_t size;
+	struct rte_metric_value values[NUM_STATS] = { };
 
 	/* Success Test: Valid values and valid size */
 	size = NUM_STATS;
