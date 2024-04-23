@@ -82,7 +82,7 @@ class StrEnum(Enum):
         return self.name
 
 
-class MesonArgs(object):
+class MesonArgs:
     """Aggregate the arguments needed to build DPDK."""
 
     _default_library: str
@@ -131,7 +131,7 @@ class _TarCompressionFormat(StrEnum):
     zstd = "zst"
 
 
-class DPDKGitTarball(object):
+class DPDKGitTarball:
     """Compressed tarball of DPDK from the repository.
 
     The class supports the :class:`os.PathLike` protocol,
