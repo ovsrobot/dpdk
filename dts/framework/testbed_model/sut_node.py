@@ -20,6 +20,7 @@ from typing import Type
 from framework.config import (
     BuildTargetConfiguration,
     BuildTargetInfo,
+    ExecutionConfiguration,
     NodeInfo,
     SutNodeConfiguration,
 )
@@ -107,10 +108,12 @@ class SutNode(Node):
     or the git commit ID, tag ID or tree ID to test.
 
     Attributes:
-        config: The SUT node configuration
+        config: The SUT node configuration.
+        virtual_devices: The virtual devices used on the node.
     """
 
     config: SutNodeConfiguration
+    virtual_devices: list[VirtualDevice]
     _dpdk_prefix_list: list[str]
     _dpdk_timestamp: str
     _build_target_config: BuildTargetConfiguration | None
@@ -131,6 +134,7 @@ class SutNode(Node):
             node_config: The SUT node's test run configuration.
         """
         super().__init__(node_config)
+        self.virtual_devices = []
         self._dpdk_prefix_list = []
         self._build_target_config = None
         self._env_vars = {}
@@ -228,25 +232,44 @@ class SutNode(Node):
     def _guess_dpdk_remote_dir(self) -> PurePath:
         return self.main_session.guess_dpdk_remote_dir(self._remote_tmp_dir)
 
-    def _set_up_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
-        """Setup DPDK on the SUT node.
+    def set_up_execution(self, execution_config: ExecutionConfiguration) -> None:
+        """Extend the execution setup with vdev config.
 
-        Additional build target setup steps on top of those in :class:`Node`.
+        Args:
+            execution_config: The execution test run configuration according to which
+                the setup steps will be taken.
         """
-        # we want to ensure that dpdk_version and compiler_version is reset for new
-        # build targets
-        self._dpdk_version = None
-        self._compiler_version = None
+        super().set_up_execution(execution_config)
+        for vdev in execution_config.vdevs:
+            self.virtual_devices.append(VirtualDevice(vdev))
+
+    def tear_down_execution(self) -> None:
+        """Extend the execution teardown with virtual device teardown."""
+        super().tear_down_execution()
+        self.virtual_devices = []
+
+    def set_up_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
+        """Set up DPDK the SUT node and bind ports.
+
+        DPDK setup includes setting all internals needed for the build, the copying of DPDK tarball
+        and then building DPDK. The drivers are bound to those that DPDK needs.
+
+        Args:
+            build_target_config: The build target test run configuration according to which
+                the setup steps will be taken.
+        """
         self._configure_build_target(build_target_config)
         self._copy_dpdk_tarball()
         self._build_dpdk()
         self.bind_ports_to_driver()
 
-    def _tear_down_build_target(self) -> None:
-        """Bind ports to the operating system drivers.
-
-        Additional build target teardown steps on top of those in :class:`Node`.
-        """
+    def tear_down_build_target(self) -> None:
+        """Reset DPDK variables and bind port driver to the OS driver."""
+        self._env_vars = {}
+        self._build_target_config = None
+        self.__remote_dpdk_dir = None
+        self._dpdk_version = None
+        self._compiler_version = None
         self.bind_ports_to_driver(for_dpdk=False)
 
     def _configure_build_target(self, build_target_config: BuildTargetConfiguration) -> None:

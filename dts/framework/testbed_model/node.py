@@ -16,12 +16,7 @@ from abc import ABC
 from ipaddress import IPv4Interface, IPv6Interface
 from typing import Any, Callable, Type, Union
 
-from framework.config import (
-    OS,
-    BuildTargetConfiguration,
-    ExecutionConfiguration,
-    NodeConfiguration,
-)
+from framework.config import OS, ExecutionConfiguration, NodeConfiguration
 from framework.exception import ConfigurationError
 from framework.logger import DTSLogger, get_dts_logger
 from framework.settings import SETTINGS
@@ -36,7 +31,6 @@ from .cpu import (
 from .linux_session import LinuxSession
 from .os_session import InteractiveShellType, OSSession
 from .port import Port
-from .virtual_device import VirtualDevice
 
 
 class Node(ABC):
@@ -55,7 +49,6 @@ class Node(ABC):
         lcores: The list of logical cores that DTS can use on the node.
             It's derived from logical cores present on the node and the test run configuration.
         ports: The ports of this node specified in the test run configuration.
-        virtual_devices: The virtual devices used on the node.
     """
 
     main_session: OSSession
@@ -65,8 +58,6 @@ class Node(ABC):
     ports: list[Port]
     _logger: DTSLogger
     _other_sessions: list[OSSession]
-    _execution_config: ExecutionConfiguration
-    virtual_devices: list[VirtualDevice]
 
     def __init__(self, node_config: NodeConfiguration):
         """Connect to the node and gather info during initialization.
@@ -94,7 +85,6 @@ class Node(ABC):
         ).filter()
 
         self._other_sessions = []
-        self.virtual_devices = []
         self._init_ports()
 
     def _init_ports(self) -> None:
@@ -106,67 +96,20 @@ class Node(ABC):
     def set_up_execution(self, execution_config: ExecutionConfiguration) -> None:
         """Execution setup steps.
 
-        Configure hugepages and call :meth:`_set_up_execution` where
-        the rest of the configuration steps (if any) are implemented.
+        Configure hugepages on all DTS node types. Additional steps can be added by
+        extending the method in subclasses with the use of super().
 
         Args:
             execution_config: The execution test run configuration according to which
                 the setup steps will be taken.
         """
         self._setup_hugepages()
-        self._set_up_execution(execution_config)
-        self._execution_config = execution_config
-        for vdev in execution_config.vdevs:
-            self.virtual_devices.append(VirtualDevice(vdev))
-
-    def _set_up_execution(self, execution_config: ExecutionConfiguration) -> None:
-        """Optional additional execution setup steps for subclasses.
-
-        Subclasses should override this if they need to add additional execution setup steps.
-        """
 
     def tear_down_execution(self) -> None:
         """Execution teardown steps.
 
         There are currently no common execution teardown steps common to all DTS node types.
-        """
-        self.virtual_devices = []
-        self._tear_down_execution()
-
-    def _tear_down_execution(self) -> None:
-        """Optional additional execution teardown steps for subclasses.
-
-        Subclasses should override this if they need to add additional execution teardown steps.
-        """
-
-    def set_up_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
-        """Build target setup steps.
-
-        There are currently no common build target setup steps common to all DTS node types.
-
-        Args:
-            build_target_config: The build target test run configuration according to which
-                the setup steps will be taken.
-        """
-        self._set_up_build_target(build_target_config)
-
-    def _set_up_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
-        """Optional additional build target setup steps for subclasses.
-
-        Subclasses should override this if they need to add additional build target setup steps.
-        """
-
-    def tear_down_build_target(self) -> None:
-        """Build target teardown steps.
-
-        There are currently no common build target teardown steps common to all DTS node types.
-        """
-        self._tear_down_build_target()
-
-    def _tear_down_build_target(self) -> None:
-        """Optional additional build target teardown steps for subclasses.
-
-        Subclasses should override this if they need to add additional build target teardown steps.
+        Additional steps can be added by extending the method in subclasses with the use of super().
         """
 
     def create_session(self, name: str) -> OSSession:
