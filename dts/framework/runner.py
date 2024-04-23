@@ -422,6 +422,7 @@ class DTSRunner:
         execution_result.add_sut_info(sut_node.node_info)
         try:
             sut_node.set_up_execution(execution)
+            tg_node.set_up_execution(execution)
             execution_result.update_setup(Result.PASS)
         except Exception as e:
             self._logger.exception("Execution setup failed.")
@@ -438,6 +439,7 @@ class DTSRunner:
             try:
                 self._logger.set_stage(DtsStage.execution_teardown)
                 sut_node.tear_down_execution()
+                tg_node.tear_down_execution()
                 execution_result.update_teardown(Result.PASS)
             except Exception as e:
                 self._logger.exception("Execution teardown failed.")
