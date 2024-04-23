@@ -249,7 +249,7 @@ class DTSResult(BaseResult):
         Args:
             logger: The logger instance the whole result will use.
         """
-        super(DTSResult, self).__init__()
+        super().__init__()
         self.dpdk_version = None
         self._logger = logger
         self._errors = []
@@ -338,7 +338,7 @@ class ExecutionResult(BaseResult):
         Args:
             execution: The execution's test run configuration.
         """
-        super(ExecutionResult, self).__init__()
+        super().__init__()
         self._config = execution
         self._test_suites_with_cases = []
 
@@ -430,7 +430,7 @@ class BuildTargetResult(BaseResult):
             test_suites_with_cases: The test suites with test cases to be run in this build target.
             build_target: The build target's test run configuration.
         """
-        super(BuildTargetResult, self).__init__()
+        super().__init__()
         self.arch = build_target.arch
         self.os = build_target.os
         self.cpu = build_target.cpu
@@ -491,7 +491,7 @@ class TestSuiteResult(BaseResult):
         Args:
             test_suite_with_cases: The test suite with test cases.
         """
-        super(TestSuiteResult, self).__init__()
+        super().__init__()
         self.test_suite_name = test_suite_with_cases.test_suite_class.__name__
         self._test_suite_with_cases = test_suite_with_cases
 
@@ -534,7 +534,7 @@ class TestCaseResult(BaseResult, FixtureResult):
         Args:
             test_case_name: The test case's name.
         """
-        super(TestCaseResult, self).__init__()
+        super().__init__()
         self.test_case_name = test_case_name
 
     def update(self, result: Result, error: Exception | None = None) -> None:
@@ -592,7 +592,7 @@ class Statistics(dict):
         Args:
             dpdk_version: The version of tested DPDK.
         """
-        super(Statistics, self).__init__()
+        super().__init__()
         for result in Result:
             self[result.name] = 0
         self["PASS RATE"] = 0.0
