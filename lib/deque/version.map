@@ -1,0 +1,14 @@
+EXPERIMENTAL {
+	global:
+
+	# added in 24.07
+	rte_deque_log_type;
+	rte_deque_create;
+	rte_deque_dump;
+	rte_deque_free;
+	rte_deque_get_memsize_elem;
+	rte_deque_init;
+	rte_deque_reset;
+
+	local: *;
+};
