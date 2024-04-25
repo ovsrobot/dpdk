@@ -2,6 +2,7 @@
  * Copyright(c) 2020 Arm Limited
  * Copyright(c) 2010-2019 Intel Corporation
  * Copyright(c) 2023 Microsoft Corporation
+ * Copyright(c) 2024 Ericsson AB
  */
 
 #ifndef _RTE_BITOPS_H_
@@ -11,12 +12,14 @@
  * @file
  * Bit Operations
  *
- * This file defines a family of APIs for bit operations
- * without enforcing memory ordering.
+ * This file provides functionality for low-level, single-word
+ * arithmetic and bit-level operations, such as counting or
+ * setting individual bits.
  */
 
 #include <stdint.h>
 
+#include <rte_compat.h>
 #include <rte_debug.h>
 
 #ifdef __cplusplus
@@ -104,6 +107,157 @@ extern "C" {
  */
 #define RTE_FIELD_GET64(mask, reg) \
 		((typeof(mask))(((reg) & (mask)) >> rte_ctz64(mask)))
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Test bit in word.
+ *
+ * Generic selection macro to test the value of a bit in a 32-bit or
+ * 64-bit word. The type of operation depends on the type of the @c
+ * addr parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_test(addr, nr)					\
+	_Generic((addr),					\
+		 uint32_t *: __rte_bit_test32,			\
+		 uint64_t *: __rte_bit_test64)(addr, nr)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Set bit in word.
+ *
+ * Generic selection macro to set a bit in a 32-bit or 64-bit
+ * word. The type of operation depends on the type of the @c addr
+ * parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_set(addr, nr)				\
+	_Generic((addr),				\
+		 uint32_t *: __rte_bit_set32,		\
+		 uint64_t *: __rte_bit_set64)(addr, nr)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Clear bit in word.
+ *
+ * Generic selection macro to clear a bit in a 32-bit or 64-bit
+ * word. The type of operation depends on the type of the @c addr
+ * parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_clear(addr, nr)					\
+	_Generic((addr),					\
+		 uint32_t *: __rte_bit_clear32,			\
+		 uint64_t *: __rte_bit_clear64)(addr, nr)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Assign a value to a bit in word.
+ *
+ * Generic selection macro to assign a value to a bit in a 32-bit or 64-bit
+ * word. The type of operation depends on the type of the @c addr parameter.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+#define rte_bit_assign(addr, nr, value)					\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_assign32,			\
+		 uint64_t *: __rte_bit_assign64)(addr, nr, value)
+
+#define __RTE_GEN_BIT_TEST(name, size, qualifier)			\
+	static inline bool						\
+	name(const qualifier uint ## size ## _t *addr, unsigned int nr)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		return *addr & mask;					\
+	}
+
+#define __RTE_GEN_BIT_SET(name, size, qualifier)			\
+	static inline void						\
+	name(qualifier uint ## size ## _t *addr, unsigned int nr)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = (uint ## size ## _t)1 << nr;	\
+		*addr |= mask;						\
+	}								\
+
+#define __RTE_GEN_BIT_CLEAR(name, size, qualifier)			\
+	static inline void						\
+	name(qualifier uint ## size ## _t *addr, unsigned int nr)	\
+	{								\
+		RTE_ASSERT(nr < size);					\
+									\
+		uint ## size ## _t mask = ~((uint ## size ## _t)1 << nr); \
+		(*addr) &= mask;					\
+	}								\
+
+__RTE_GEN_BIT_TEST(__rte_bit_test32, 32,)
+__RTE_GEN_BIT_SET(__rte_bit_set32, 32,)
+__RTE_GEN_BIT_CLEAR(__rte_bit_clear32, 32,)
+
+__RTE_GEN_BIT_TEST(__rte_bit_test64, 64,)
+__RTE_GEN_BIT_SET(__rte_bit_set64, 64,)
+__RTE_GEN_BIT_CLEAR(__rte_bit_clear64, 64,)
+
+__rte_experimental
+static inline void
+__rte_bit_assign32(uint32_t *addr, unsigned int nr, bool value)
+{
+	if (value)
+		__rte_bit_set32(addr, nr);
+	else
+		__rte_bit_clear32(addr, nr);
+}
+
+__rte_experimental
+static inline void
+__rte_bit_assign64(uint64_t *addr, unsigned int nr, bool value)
+{
+	if (value)
+		__rte_bit_set64(addr, nr);
+	else
+		__rte_bit_clear64(addr, nr);
+}
 
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
