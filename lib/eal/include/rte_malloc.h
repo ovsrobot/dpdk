@@ -37,8 +37,7 @@ struct rte_malloc_socket_stats {
  * NUMA socket as the core that calls this function.
  *
  * @param type
- *   A string identifying the type of allocated objects (useful for debug
- *   purposes, such as identifying the cause of a memory leak). Can be NULL.
+ *   Legacy argument, never unused should be NULL.
  * @param size
  *   Size (in bytes) to be allocated.
  * @param align
@@ -64,8 +63,7 @@ rte_malloc(const char *type, size_t size, unsigned align)
  * same NUMA socket as the core that calls this function.
  *
  * @param type
- *   A string identifying the type of allocated objects (useful for debug
- *   purposes, such as identifying the cause of a memory leak). Can be NULL.
+ *   Legacy argument, never unused should be NULL.
  * @param size
  *   Size (in bytes) to be allocated.
  * @param align
@@ -89,8 +87,7 @@ rte_zmalloc(const char *type, size_t size, unsigned align)
  * same NUMA socket as the core that calls this function.
  *
  * @param type
- *   A string identifying the type of allocated objects (useful for debug
- *   purposes, such as identifying the cause of a memory leak). Can be NULL.
+ *   Legacy argument, never unused should be NULL.
  * @param num
  *   Number of elements to be allocated.
  * @param size
@@ -165,8 +162,7 @@ rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
  * is not cleared.
  *
  * @param type
- *   A string identifying the type of allocated objects (useful for debug
- *   purposes, such as identifying the cause of a memory leak). Can be NULL.
+ *   Legacy argument, never unused should be NULL.
  * @param size
  *   Size (in bytes) to be allocated.
  * @param align
@@ -194,8 +190,7 @@ rte_malloc_socket(const char *type, size_t size, unsigned align, int socket)
  * initialised with zeros.
  *
  * @param type
- *   A string identifying the type of allocated objects (useful for debug
- *   purposes, such as identifying the cause of a memory leak). Can be NULL.
+ *   Legacy argument, never unused should be NULL.
  * @param size
  *   Size (in bytes) to be allocated.
  * @param align
@@ -221,8 +216,7 @@ rte_zmalloc_socket(const char *type, size_t size, unsigned align, int socket)
  * initialised with zeros.
  *
  * @param type
- *   A string identifying the type of allocated objects (useful for debug
- *   purposes, such as identifying the cause of a memory leak). Can be NULL.
+ *   Legacy argument, never unused should be NULL.
  * @param num
  *   Number of elements to be allocated.
  * @param size
@@ -502,8 +496,7 @@ rte_malloc_heap_socket_is_external(int socket_id);
  * @param f
  *   A pointer to a file for output
  * @param type
- *   A string identifying the type of objects to dump, or NULL
- *   to dump all objects.
+ *   Legacy argument, never unused should be NULL.
  */
 void
 rte_malloc_dump_stats(FILE *f, const char *type);
