@@ -3131,6 +3131,9 @@ int rte_eth_stats_get(uint16_t port_id, struct rte_eth_stats *stats);
 /**
  * Reset the general I/O statistics of an Ethernet device.
  *
+ * API is not multi-thread safe.
+ * Application should stop forwarding before calling this API.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @return
@@ -3290,6 +3293,9 @@ int rte_eth_xstats_get_id_by_name(uint16_t port_id, const char *xstat_name,
 
 /**
  * Reset extended statistics of an Ethernet device.
+ *
+ * API is not multi-thread safe.
+ * Application should stop forwarding before calling this API.
  *
  * @param port_id
  *   The port identifier of the Ethernet device.
