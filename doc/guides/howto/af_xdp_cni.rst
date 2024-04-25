@@ -16,7 +16,7 @@ to redirect packets to a memory buffer in userspace.
 This document explains how to enable the `AF_XDP Plugin for Kubernetes`_ within
 a DPDK application using the :doc:`../nics/af_xdp` to connect and use these technologies.
 
-.. _AF_XDP Plugin for Kubernetes: https://github.com/intel/afxdp-plugins-for-kubernetes
+.. _AF_XDP Plugin for Kubernetes: https://github.com/redhat-et/afxdp-plugins-for-kubernetes
 
 
 Background
@@ -91,7 +91,7 @@ Howto run dpdk-testpmd with CNI plugin:
 
   .. code-block:: console
 
-     # git clone https://github.com/intel/afxdp-plugins-for-kubernetes.git
+     # git clone https://github.com/redhat-et/afxdp-plugins-for-kubernetes.git
 
 * Build the CNI plugin
 
@@ -128,7 +128,7 @@ Howto run dpdk-testpmd with CNI plugin:
 
   For further reference please use the `config.json`_
 
-  .. _config.json: https://github.com/intel/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/config.json
+  .. _config.json: https://github.com/redhat-et/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/config.json
 
 * Create the Network Attachment definition
 
@@ -167,7 +167,7 @@ Howto run dpdk-testpmd with CNI plugin:
 
   For further reference please use the `nad.yaml`_
 
-  .. _nad.yaml: https://github.com/intel/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/nad.yaml
+  .. _nad.yaml: https://github.com/redhat-et/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/nad.yaml
 
 * Build the Docker image
 
@@ -237,7 +237,7 @@ Howto run dpdk-testpmd with CNI plugin:
 
   For further reference please use the `pod.yaml`_
 
-  .. _pod.yaml: https://github.com/intel/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/pod-1c1d.yaml
+  .. _pod.yaml: https://github.com/redhat-et/afxdp-plugins-for-kubernetes/blob/v0.0.2/test/e2e/pod-1c1d.yaml
 
 * Run DPDK with a command like the following:
 
@@ -250,4 +250,4 @@ Howto run dpdk-testpmd with CNI plugin:
 
 For further reference please use the `e2e`_ test case in `AF_XDP Plugin for Kubernetes`_
 
-  .. _e2e: https://github.com/intel/afxdp-plugins-for-kubernetes/tree/v0.0.2/test/e2e
+  .. _e2e: https://github.com/redhat-et/afxdp-plugins-for-kubernetes/tree/v0.0.2/test/e2e
