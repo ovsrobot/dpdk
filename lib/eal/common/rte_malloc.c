@@ -51,8 +51,7 @@ eal_free_no_trace(void *addr)
 }
 
 static void *
-malloc_socket(const char *type, size_t size, unsigned int align,
-		int socket_arg, const bool trace_ena)
+malloc_socket(size_t size, unsigned int align, int socket_arg, const bool trace_ena)
 {
 	void *ptr;
 
@@ -69,11 +68,11 @@ malloc_socket(const char *type, size_t size, unsigned int align,
 				!rte_eal_has_hugepages())
 		socket_arg = SOCKET_ID_ANY;
 
-	ptr = malloc_heap_alloc(type, size, socket_arg, 0,
+	ptr = malloc_heap_alloc(size, socket_arg, 0,
 			align == 0 ? 1 : align, 0, false);
 
 	if (trace_ena)
-		rte_eal_trace_mem_malloc(type, size, align, socket_arg, ptr);
+		rte_eal_trace_mem_malloc(size, align, socket_arg, ptr);
 	return ptr;
 }
 
@@ -81,16 +80,15 @@ malloc_socket(const char *type, size_t size, unsigned int align,
  * Allocate memory on specified heap.
  */
 void *
-rte_malloc_socket(const char *type, size_t size, unsigned int align,
-		int socket_arg)
+rte_malloc_socket(const char *type __rte_unused, size_t size, unsigned int align, int socket_arg)
 {
-	return malloc_socket(type, size, align, socket_arg, true);
+	return malloc_socket(size, align, socket_arg, true);
 }
 
 void *
-eal_malloc_no_trace(const char *type, size_t size, unsigned int align)
+eal_malloc_no_trace(const char *type __rte_unused, size_t size, unsigned int align)
 {
-	return malloc_socket(type, size, align, SOCKET_ID_ANY, false);
+	return malloc_socket(size, align, SOCKET_ID_ANY, false);
 }
 
 /*

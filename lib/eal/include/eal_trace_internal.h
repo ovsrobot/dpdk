@@ -103,9 +103,7 @@ RTE_TRACE_POINT(
 
 RTE_TRACE_POINT(
 	rte_eal_trace_mem_malloc,
-	RTE_TRACE_POINT_ARGS(const char *type, size_t size, unsigned int align,
-		int socket, void *ptr),
-	rte_trace_point_emit_string(type);
+	RTE_TRACE_POINT_ARGS(size_t size, unsigned int align, int socket, void *ptr),
 	rte_trace_point_emit_size_t(size);
 	rte_trace_point_emit_u32(align);
 	rte_trace_point_emit_int(socket);
