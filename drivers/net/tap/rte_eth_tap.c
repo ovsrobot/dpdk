@@ -1131,6 +1131,7 @@ tap_dev_close(struct rte_eth_dev *dev)
 		tap_flow_implicit_flush(internals, NULL);
 		tap_nl_final(internals->nlsk_fd);
 		internals->nlsk_fd = -1;
+		tap_flow_bpf_destroy(internals);
 	}
 #endif
 
@@ -1956,6 +1957,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	strlcpy(pmd->name, tap_name, sizeof(pmd->name));
 	pmd->type = type;
 	pmd->ka_fd = -1;
+
 #ifdef HAVE_TCA_FLOWER
 	pmd->nlsk_fd = -1;
 #endif
@@ -2038,13 +2040,6 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	/* Make network device persist after application exit */
 	pmd->persist = persist;
 
-	pmd->if_index = if_nametoindex(pmd->name);
-	if (!pmd->if_index) {
-		TAP_LOG(ERR, "%s: failed to get if_index.", pmd->name);
-		goto disable_rte_flow;
-	}
-
-
 #ifdef HAVE_TCA_FLOWER
 	/*
 	 * Set up everything related to rte_flow:
@@ -2058,6 +2053,11 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	if (pmd->nlsk_fd == -1) {
 		TAP_LOG(WARNING, "%s: failed to create netlink socket.",
 			pmd->name);
+		goto disable_rte_flow;
+	}
+	pmd->if_index = if_nametoindex(pmd->name);
+	if (!pmd->if_index) {
+		TAP_LOG(ERR, "%s: failed to get if_index.", pmd->name);
 		goto disable_rte_flow;
 	}
 	if (qdisc_create_multiq(pmd->nlsk_fd, pmd->if_index) < 0) {
