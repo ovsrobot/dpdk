@@ -51,8 +51,10 @@ struct pkt_rx_queue {
 	uint16_t in_port;
 	uint8_t vlan_strip;
 
-	volatile unsigned long rx_pkts;
-	volatile unsigned long rx_bytes;
+	uint64_t rx_pkts;
+	uint64_t rx_bytes;
+	uint64_t rx_pkts_offset;
+	uint64_t rx_bytes_offset;
 };
 
 struct pkt_tx_queue {
@@ -64,9 +66,12 @@ struct pkt_tx_queue {
 	unsigned int framecount;
 	unsigned int framenum;
 
-	volatile unsigned long tx_pkts;
-	volatile unsigned long err_pkts;
-	volatile unsigned long tx_bytes;
+	uint64_t tx_pkts;
+	uint64_t err_pkts;
+	uint64_t tx_bytes;
+	uint64_t tx_pkts_offset;
+	uint64_t err_pkts_offset;
+	uint64_t tx_bytes_offset;
 };
 
 struct pmd_internals {
@@ -385,8 +390,15 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	return 0;
 }
 
+
+static uint64_t
+stats_get_diff(uint64_t stats, uint64_t offset)
+{
+	return stats - offset;
+}
+
 static int
-eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
+eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
 	unsigned i, imax;
 	unsigned long rx_total = 0, tx_total = 0, tx_err_total = 0;
@@ -396,27 +408,29 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
 	imax = (internal->nb_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS ?
 	        internal->nb_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS);
 	for (i = 0; i < imax; i++) {
-		igb_stats->q_ipackets[i] = internal->rx_queue[i].rx_pkts;
-		igb_stats->q_ibytes[i] = internal->rx_queue[i].rx_bytes;
-		rx_total += igb_stats->q_ipackets[i];
-		rx_bytes_total += igb_stats->q_ibytes[i];
+		struct pkt_rx_queue *rxq = &internal->rx_queue[i];
+		stats->q_ipackets[i] = stats_get_diff(rxq->rx_pkts, rxq->rx_pkts_offset);
+		stats->q_ibytes[i] = stats_get_diff(rxq->rx_bytes, rxq->rx_bytes_offset);
+		rx_total += stats->q_ipackets[i];
+		rx_bytes_total += stats->q_ibytes[i];
 	}
 
 	imax = (internal->nb_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS ?
 	        internal->nb_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS);
 	for (i = 0; i < imax; i++) {
-		igb_stats->q_opackets[i] = internal->tx_queue[i].tx_pkts;
-		igb_stats->q_obytes[i] = internal->tx_queue[i].tx_bytes;
-		tx_total += igb_stats->q_opackets[i];
-		tx_err_total += internal->tx_queue[i].err_pkts;
-		tx_bytes_total += igb_stats->q_obytes[i];
+		struct pkt_tx_queue *txq = &internal->tx_queue[i];
+		stats->q_opackets[i] = stats_get_diff(txq->tx_pkts, txq->tx_pkts_offset);
+		stats->q_obytes[i] = stats_get_diff(txq->tx_bytes, txq->tx_bytes_offset);
+		tx_total += stats->q_opackets[i];
+		tx_err_total += stats_get_diff(txq->err_pkts, txq->err_pkts_offset);
+		tx_bytes_total += stats->q_obytes[i];
 	}
 
-	igb_stats->ipackets = rx_total;
-	igb_stats->ibytes = rx_bytes_total;
-	igb_stats->opackets = tx_total;
-	igb_stats->oerrors = tx_err_total;
-	igb_stats->obytes = tx_bytes_total;
+	stats->ipackets = rx_total;
+	stats->ibytes = rx_bytes_total;
+	stats->opackets = tx_total;
+	stats->oerrors = tx_err_total;
+	stats->obytes = tx_bytes_total;
 	return 0;
 }
 
@@ -427,14 +441,16 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	struct pmd_internals *internal = dev->data->dev_private;
 
 	for (i = 0; i < internal->nb_queues; i++) {
-		internal->rx_queue[i].rx_pkts = 0;
-		internal->rx_queue[i].rx_bytes = 0;
+		struct pkt_rx_queue *rxq = &internal->rx_queue[i];
+		rxq->rx_pkts_offset = rxq->rx_pkts;
+		rxq->rx_bytes_offset = rxq->rx_bytes;
 	}
 
 	for (i = 0; i < internal->nb_queues; i++) {
-		internal->tx_queue[i].tx_pkts = 0;
-		internal->tx_queue[i].err_pkts = 0;
-		internal->tx_queue[i].tx_bytes = 0;
+		struct pkt_tx_queue *txq = &internal->tx_queue[i];
+		txq->tx_pkts_offset = txq->tx_pkts;
+		txq->err_pkts_offset = txq->err_pkts;
+		txq->tx_bytes_offset = txq->tx_bytes;
 	}
 
 	return 0;
