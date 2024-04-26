@@ -212,7 +212,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	 * and need to find the resulting device.
 	 */
 	TAP_LOG(DEBUG, "Device name is '%s'", ifr.ifr_name);
-	strlcpy(pmd->name, ifr.ifr_name, RTE_ETH_NAME_MAX_LEN);
+	strlcpy(pmd->name, ifr.ifr_name, IFNAMSIZ);
 
 	if (is_keepalive) {
 		/*
@@ -1151,9 +1151,13 @@ tap_dev_close(struct rte_eth_dev *dev)
 	}
 
 	if (internals->remote_if_index) {
+		struct ifreq remote_ifr;
+
+		strlcpy(remote_ifr.ifr_name, internals->remote_iface, IFNAMSIZ);
+		remote_ifr.ifr_flags = internals->remote_flags;
+
 		/* Restore initial remote state */
-		int ret = ioctl(internals->ioctl_sock, SIOCSIFFLAGS,
-				&internals->remote_initial_flags);
+		int ret = ioctl(internals->ioctl_sock, SIOCSIFFLAGS, &remote_ifr);
 		if (ret)
 			TAP_LOG(ERR, "restore remote state failed: %d", ret);
 
@@ -2074,16 +2078,22 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	LIST_INIT(&pmd->flows);
 
 	if (strlen(remote_iface)) {
+		struct ifreq remote_ifr;
+
 		pmd->remote_if_index = if_nametoindex(remote_iface);
 		if (!pmd->remote_if_index) {
 			TAP_LOG(ERR, "%s: failed to get %s if_index.",
 				pmd->name, remote_iface);
 			goto error_remote;
 		}
-		strlcpy(pmd->remote_iface, remote_iface, RTE_ETH_NAME_MAX_LEN);
+		strlcpy(pmd->remote_iface, remote_iface, IFNAMSIZ);
+
+		memset(&remote_ifr, 0, sizeof(ifr));
+		strlcpy(remote_ifr.ifr_name, remote_iface, IFNAMSIZ);
 
 		/* Save state of remote device */
-		tap_ioctl(pmd, SIOCGIFFLAGS, &pmd->remote_initial_flags, 0, REMOTE_ONLY);
+		tap_ioctl(pmd, SIOCGIFFLAGS, &remote_ifr, 0, REMOTE_ONLY);
+		pmd->remote_flags = remote_ifr.ifr_flags;
 
 		/* Replicate remote MAC address */
 		if (tap_ioctl(pmd, SIOCGIFHWADDR, &ifr, 0, REMOTE_ONLY) < 0) {
@@ -2197,10 +2207,10 @@ set_interface_name(const char *key __rte_unused,
 				value);
 			return -1;
 		}
-		strlcpy(name, value, RTE_ETH_NAME_MAX_LEN);
+		strlcpy(name, value, IFNAMSIZ);
 	} else {
 		/* use tap%d which causes kernel to choose next available */
-		strlcpy(name, DEFAULT_TAP_NAME "%d", RTE_ETH_NAME_MAX_LEN);
+		strlcpy(name, DEFAULT_TAP_NAME "%d", IFNAMSIZ);
 	}
 	return 0;
 }
@@ -2218,7 +2228,7 @@ set_remote_iface(const char *key __rte_unused,
 				value);
 			return -1;
 		}
-		strlcpy(name, value, RTE_ETH_NAME_MAX_LEN);
+		strlcpy(name, value, IFNAMSIZ);
 	}
 
 	return 0;
@@ -2269,13 +2279,13 @@ rte_pmd_tun_probe(struct rte_vdev_device *dev)
 	const char *name, *params;
 	int ret;
 	struct rte_kvargs *kvlist = NULL;
-	char tun_name[RTE_ETH_NAME_MAX_LEN];
-	char remote_iface[RTE_ETH_NAME_MAX_LEN];
+	char tun_name[IFNAMSIZ];
+	char remote_iface[IFNAMSIZ];
 	struct rte_eth_dev *eth_dev;
 
 	name = rte_vdev_device_name(dev);
 	params = rte_vdev_device_args(dev);
-	memset(remote_iface, 0, RTE_ETH_NAME_MAX_LEN);
+	memset(remote_iface, 0, IFNAMSIZ);
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY &&
 	    strlen(params) == 0) {
@@ -2291,7 +2301,7 @@ rte_pmd_tun_probe(struct rte_vdev_device *dev)
 	}
 
 	/* use tun%d which causes kernel to choose next available */
-	strlcpy(tun_name, DEFAULT_TUN_NAME "%d", RTE_ETH_NAME_MAX_LEN);
+	strlcpy(tun_name, DEFAULT_TUN_NAME "%d", IFNAMSIZ);
 
 	if (params && (params[0] != '\0')) {
 		TAP_LOG(DEBUG, "parameters (%s)", params);
@@ -2431,8 +2441,8 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 	int ret;
 	struct rte_kvargs *kvlist = NULL;
 	int speed;
-	char tap_name[RTE_ETH_NAME_MAX_LEN];
-	char remote_iface[RTE_ETH_NAME_MAX_LEN];
+	char tap_name[IFNAMSIZ];
+	char remote_iface[IFNAMSIZ];
 	struct rte_ether_addr user_mac = { .addr_bytes = {0} };
 	struct rte_eth_dev *eth_dev;
 	int tap_devices_count_increased = 0;
@@ -2486,8 +2496,8 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 	speed = RTE_ETH_SPEED_NUM_10G;
 
 	/* use tap%d which causes kernel to choose next available */
-	strlcpy(tap_name, DEFAULT_TAP_NAME "%d", RTE_ETH_NAME_MAX_LEN);
-	memset(remote_iface, 0, RTE_ETH_NAME_MAX_LEN);
+	strlcpy(tap_name, DEFAULT_TAP_NAME "%d", IFNAMSIZ);
+	memset(remote_iface, 0, IFNAMSIZ);
 
 	if (params && (params[0] != '\0')) {
 		TAP_LOG(DEBUG, "parameters (%s)", params);
