@@ -1124,12 +1124,15 @@ tap_dev_close(struct rte_eth_dev *dev)
 
 	if (!internals->persist)
 		tap_link_set_down(dev);
+
+#ifdef HAVE_TCA_FLOWER
 	if (internals->nlsk_fd != -1) {
 		tap_flow_flush(dev, NULL);
 		tap_flow_implicit_flush(internals, NULL);
 		tap_nl_final(internals->nlsk_fd);
 		internals->nlsk_fd = -1;
 	}
+#endif
 
 	for (i = 0; i < RTE_PMD_TAP_MAX_QUEUES; i++) {
 		struct rx_queue *rxq = &internals->rxq[i];
@@ -1265,6 +1268,7 @@ tap_promisc_enable(struct rte_eth_dev *dev)
 	if (ret != 0)
 		return ret;
 
+#ifdef HAVE_TCA_FLOWER
 	if (pmd->remote_if_index && !pmd->flow_isolate) {
 		dev->data->promiscuous = 1;
 		ret = tap_flow_implicit_create(pmd, TAP_REMOTE_PROMISC);
@@ -1278,7 +1282,7 @@ tap_promisc_enable(struct rte_eth_dev *dev)
 			return ret;
 		}
 	}
-
+#endif
 	return 0;
 }
 
@@ -1293,6 +1297,7 @@ tap_promisc_disable(struct rte_eth_dev *dev)
 	if (ret != 0)
 		return ret;
 
+#ifdef HAVE_TCA_FLOWER
 	if (pmd->remote_if_index && !pmd->flow_isolate) {
 		dev->data->promiscuous = 0;
 		ret = tap_flow_implicit_destroy(pmd, TAP_REMOTE_PROMISC);
@@ -1306,6 +1311,7 @@ tap_promisc_disable(struct rte_eth_dev *dev)
 			return ret;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -1321,6 +1327,7 @@ tap_allmulti_enable(struct rte_eth_dev *dev)
 	if (ret != 0)
 		return ret;
 
+#ifdef HAVE_TCA_FLOWER
 	if (pmd->remote_if_index && !pmd->flow_isolate) {
 		dev->data->all_multicast = 1;
 		ret = tap_flow_implicit_create(pmd, TAP_REMOTE_ALLMULTI);
@@ -1334,6 +1341,7 @@ tap_allmulti_enable(struct rte_eth_dev *dev)
 			return ret;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -1349,6 +1357,7 @@ tap_allmulti_disable(struct rte_eth_dev *dev)
 	if (ret != 0)
 		return ret;
 
+#ifdef HAVE_TCA_FLOWER
 	if (pmd->remote_if_index && !pmd->flow_isolate) {
 		dev->data->all_multicast = 0;
 		ret = tap_flow_implicit_destroy(pmd, TAP_REMOTE_ALLMULTI);
@@ -1362,6 +1371,7 @@ tap_allmulti_disable(struct rte_eth_dev *dev)
 			return ret;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -1407,6 +1417,8 @@ tap_mac_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 	if (ret < 0)
 		return ret;
 	rte_memcpy(&pmd->eth_addr, mac_addr, RTE_ETHER_ADDR_LEN);
+
+#ifdef HAVE_TCA_FLOWER
 	if (pmd->remote_if_index && !pmd->flow_isolate) {
 		/* Replace MAC redirection rule after a MAC change */
 		ret = tap_flow_implicit_destroy(pmd, TAP_REMOTE_LOCAL_MAC);
@@ -1424,6 +1436,7 @@ tap_mac_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 			return ret;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -1901,7 +1914,9 @@ static const struct eth_dev_ops ops = {
 	.stats_reset            = tap_stats_reset,
 	.dev_supported_ptypes_get = tap_dev_supported_ptypes_get,
 	.rss_hash_update        = tap_rss_hash_update,
+#ifdef HAVE_TCA_FLOWER
 	.flow_ops_get           = tap_dev_flow_ops_get,
+#endif
 };
 
 static int
@@ -1941,7 +1956,9 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	strlcpy(pmd->name, tap_name, sizeof(pmd->name));
 	pmd->type = type;
 	pmd->ka_fd = -1;
+#ifdef HAVE_TCA_FLOWER
 	pmd->nlsk_fd = -1;
+#endif
 	pmd->gso_ctx_mp = NULL;
 
 	pmd->ioctl_sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -2021,6 +2038,14 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	/* Make network device persist after application exit */
 	pmd->persist = persist;
 
+	pmd->if_index = if_nametoindex(pmd->name);
+	if (!pmd->if_index) {
+		TAP_LOG(ERR, "%s: failed to get if_index.", pmd->name);
+		goto disable_rte_flow;
+	}
+
+
+#ifdef HAVE_TCA_FLOWER
 	/*
 	 * Set up everything related to rte_flow:
 	 * - netlink socket
@@ -2035,11 +2060,6 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 			pmd->name);
 		goto disable_rte_flow;
 	}
-	pmd->if_index = if_nametoindex(pmd->name);
-	if (!pmd->if_index) {
-		TAP_LOG(ERR, "%s: failed to get if_index.", pmd->name);
-		goto disable_rte_flow;
-	}
 	if (qdisc_create_multiq(pmd->nlsk_fd, pmd->if_index) < 0) {
 		TAP_LOG(ERR, "%s: failed to create multiq qdisc.",
 			pmd->name);
@@ -2050,6 +2070,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 			pmd->name);
 		goto disable_rte_flow;
 	}
+
 	LIST_INIT(&pmd->flows);
 
 	if (strlen(remote_iface)) {
@@ -2102,6 +2123,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 			goto error_remote;
 		}
 	}
+#endif
 
 	rte_eth_dev_probing_finish(dev);
 	return 0;
@@ -2116,14 +2138,18 @@ disable_rte_flow:
 	rte_eth_dev_probing_finish(dev);
 	return 0;
 
+#ifdef HAVE_TCA_FLOWER
 error_remote:
 	TAP_LOG(ERR, " Can't set up remote feature: %s(%d)",
 		strerror(errno), errno);
 	tap_flow_implicit_flush(pmd, NULL);
+#endif
 
 error_exit:
+#ifdef HAVE_TCA_FLOWER
 	if (pmd->nlsk_fd != -1)
 		close(pmd->nlsk_fd);
+#endif
 	if (pmd->ka_fd != -1)
 		close(pmd->ka_fd);
 	if (pmd->ioctl_sock != -1)
