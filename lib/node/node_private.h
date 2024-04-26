@@ -12,6 +12,9 @@
 #include <rte_mbuf.h>
 #include <rte_mbuf_dyn.h>
 
+#include <rte_graph_worker_common.h>
+#include <rte_graph_feature_arc_worker.h>
+
 extern int rte_node_logtype;
 #define RTE_LOGTYPE_NODE rte_node_logtype
 
@@ -35,8 +38,13 @@ struct node_mbuf_priv1 {
 			uint16_t ttl;
 			uint32_t cksum;
 		};
-
 		uint64_t u;
+	};
+	struct {
+		/** feature that current mbuf holds */
+		rte_graph_feature_t current_feature;
+		/** interface index */
+		uint32_t index;
 	};
 };
 
