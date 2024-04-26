@@ -6,6 +6,7 @@
  * All rights reserved.
  */
 
+#include <rte_common.h>
 #include <rte_string_fns.h>
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
@@ -53,7 +54,7 @@ struct pkt_rx_queue {
 
 	volatile unsigned long rx_pkts;
 	volatile unsigned long rx_bytes;
-};
+} __rte_cache_aligned;
 
 struct pkt_tx_queue {
 	int sockfd;
@@ -67,7 +68,7 @@ struct pkt_tx_queue {
 	volatile unsigned long tx_pkts;
 	volatile unsigned long err_pkts;
 	volatile unsigned long tx_bytes;
-};
+} __rte_cache_aligned;
 
 struct pmd_internals {
 	unsigned nb_queues;
