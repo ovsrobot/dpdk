@@ -485,7 +485,6 @@ extern "C" {
 		 uint32_t *: __rte_bit_atomic_test_and_clear32,		\
 		 uint64_t *: __rte_bit_atomic_test_and_clear64)(addr, nr, \
 								memory_order)
-
 /**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
