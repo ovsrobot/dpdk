@@ -1,0 +1,30 @@
+---
+# Place opening and closing parentheses on the same line for control statements
+BreakBeforeBraces: Custom
+BraceWrapping:
+        AfterFunction: true
+        AfterControlStatement: false
+
+# Set maximum line length to 100 characters
+ColumnLimit: 100
+
+# Use LF (line feed) as the end-of-line character
+EndOfLine: lf
+
+# Specify style options for the entire file
+File:
+        # Insert a final newline character at the end of the file
+        EndOfFile: true
+
+IndentWidth: 8
+
+# Set tab width to 8 spaces
+TabWidth: 8
+
+# Use tabs for indentation
+UseTab: Always
+
+# Specify whitespace-related style options
+Whitespace:
+        # Trim trailing whitespace at the end of each line
+        TrimTrailingWhitespace: true
