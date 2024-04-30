@@ -26,3 +26,14 @@ Runtime Configuration
 
 None
 
+Features
+--------
+
+The ionic crypto PMD has support for:
+
+Symmetric Crypto Algorithms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+AEAD algorithms:
+
+* ``RTE_CRYPTO_AEAD_AES_GCM``
