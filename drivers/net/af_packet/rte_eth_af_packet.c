@@ -39,6 +39,10 @@
 #define DFLT_FRAME_SIZE		(1 << 11)
 #define DFLT_FRAME_COUNT	(1 << 9)
 
+#ifndef READ_ONCE
+#define READ_ONCE(var) (*((volatile typeof(var) *)(&(var))))
+#endif
+
 struct pkt_rx_queue {
 	int sockfd;
 
@@ -51,8 +55,8 @@ struct pkt_rx_queue {
 	uint16_t in_port;
 	uint8_t vlan_strip;
 
-	volatile unsigned long rx_pkts;
-	volatile unsigned long rx_bytes;
+	uint64_t rx_pkts;
+	uint64_t rx_bytes;
 };
 
 struct pkt_tx_queue {
@@ -64,9 +68,8 @@ struct pkt_tx_queue {
 	unsigned int framecount;
 	unsigned int framenum;
 
-	volatile unsigned long tx_pkts;
-	volatile unsigned long err_pkts;
-	volatile unsigned long tx_bytes;
+	uint64_t tx_pkts;
+	uint64_t tx_bytes;
 };
 
 struct pmd_internals {
@@ -305,7 +308,6 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	pkt_q->framenum = framenum;
 	pkt_q->tx_pkts += num_tx;
-	pkt_q->err_pkts += i - num_tx;
 	pkt_q->tx_bytes += num_tx_bytes;
 	return i;
 }
@@ -386,54 +388,66 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 }
 
 static int
-eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
+eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
-	unsigned i, imax;
-	unsigned long rx_total = 0, tx_total = 0, tx_err_total = 0;
-	unsigned long rx_bytes_total = 0, tx_bytes_total = 0;
+	unsigned int i;
 	const struct pmd_internals *internal = dev->data->dev_private;
+	uint64_t bytes, packets;
 
-	imax = (internal->nb_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS ?
-	        internal->nb_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS);
-	for (i = 0; i < imax; i++) {
-		igb_stats->q_ipackets[i] = internal->rx_queue[i].rx_pkts;
-		igb_stats->q_ibytes[i] = internal->rx_queue[i].rx_bytes;
-		rx_total += igb_stats->q_ipackets[i];
-		rx_bytes_total += igb_stats->q_ibytes[i];
+	for (i = 0; i < internal->nb_queues; i++) {
+		const struct pkt_rx_queue *rxq = &internal->rx_queue[i];
+		struct tpacket_stats pkt_stats;
+		socklen_t optlen = sizeof(pkt_stats);
+		int fd = rxq->sockfd;
+
+		bytes = READ_ONCE(rxq->rx_bytes);
+		packets = READ_ONCE(rxq->rx_pkts);
+
+		stats->ipackets += packets;
+		stats->ibytes += bytes;
+
+		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			stats->q_ipackets[i] = packets;
+			stats->q_ibytes[i] = bytes;
+		}
+
+		if (getsockopt(fd, SOL_PACKET, PACKET_STATISTICS, &pkt_stats, &optlen) < 0) {
+			PMD_LOG_ERRNO(ERR, "could not getet PACKET_STATISTICS on AF_PACKET socket");
+			return -1;
+		}
+		stats->imissed = pkt_stats.tp_drops;
 	}
 
-	imax = (internal->nb_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS ?
-	        internal->nb_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS);
-	for (i = 0; i < imax; i++) {
-		igb_stats->q_opackets[i] = internal->tx_queue[i].tx_pkts;
-		igb_stats->q_obytes[i] = internal->tx_queue[i].tx_bytes;
-		tx_total += igb_stats->q_opackets[i];
-		tx_err_total += internal->tx_queue[i].err_pkts;
-		tx_bytes_total += igb_stats->q_obytes[i];
+	for (i = 0; i < internal->nb_queues; i++) {
+		const struct pkt_tx_queue *txq = &internal->tx_queue[i];
+
+		bytes = READ_ONCE(txq->tx_bytes);
+		packets = READ_ONCE(txq->tx_pkts);
+
+		stats->opackets += packets;
+		stats->obytes += bytes;
+
+		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			stats->q_opackets[i] = packets;
+			stats->q_obytes[i] = bytes;
+		}
 	}
 
-	igb_stats->ipackets = rx_total;
-	igb_stats->ibytes = rx_bytes_total;
-	igb_stats->opackets = tx_total;
-	igb_stats->oerrors = tx_err_total;
-	igb_stats->obytes = tx_bytes_total;
+
 	return 0;
 }
 
 static int
 eth_stats_reset(struct rte_eth_dev *dev)
 {
-	unsigned i;
+	unsigned int i;
 	struct pmd_internals *internal = dev->data->dev_private;
 
 	for (i = 0; i < internal->nb_queues; i++) {
 		internal->rx_queue[i].rx_pkts = 0;
 		internal->rx_queue[i].rx_bytes = 0;
-	}
 
-	for (i = 0; i < internal->nb_queues; i++) {
 		internal->tx_queue[i].tx_pkts = 0;
-		internal->tx_queue[i].err_pkts = 0;
 		internal->tx_queue[i].tx_bytes = 0;
 	}
 
