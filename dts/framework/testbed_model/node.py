@@ -266,7 +266,7 @@ class Node(ABC):
         """
         if self.config.hugepages:
             self.main_session.setup_hugepages(
-                self.config.hugepages.amount,
+                self.config.hugepages.quantity,
                 self.main_session.hugepage_size,
                 self.config.hugepages.force_first_numa,
             )
