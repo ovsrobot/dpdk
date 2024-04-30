@@ -589,6 +589,199 @@ extern "C" {
 								 value, \
 								 memory_order)
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Test if a particular bit in a word is set with a particular memory
+ * order.
+ *
+ * Test a bit with the resulting memory load ordered as per the
+ * specified memory order.
+ *
+ * @param addr
+ *   A pointer to the word to query.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+#define rte_bit_atomic_test(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_test32,			\
+		 uint64_t *: __rte_bit_atomic_test64)(addr, nr, memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically set bit in word.
+ *
+ * Atomically set bit specified by @c nr in the word pointed to by @c
+ * addr to '1', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_set(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_set32,			\
+		 uint64_t *: __rte_bit_atomic_set64)(addr, nr, memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically clear bit in word.
+ *
+ * Atomically set bit specified by @c nr in the word pointed to by @c
+ * addr to '0', with the memory ordering as specified by @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_clear(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_clear32,			\
+		 uint64_t *: __rte_bit_atomic_clear64)(addr, nr, memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically assign a value to bit in word.
+ *
+ * Atomically set bit specified by @c nr in the word pointed to by @c
+ * addr to the value indicated by @c value, with the memory ordering
+ * as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_assign(addr, nr, value, memory_order)		\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_assign32,			\
+		 uint64_t *: __rte_bit_atomic_assign64)(addr, nr, value, \
+							memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically flip bit in word.
+ *
+ * Atomically negate the value of the bit specified by @c nr in the
+ * word pointed to by @c addr to the value indicated by @c value, with
+ * the memory ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ */
+#define rte_bit_atomic_flip(addr, nr, memory_order)			\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_flip32,			\
+		 uint64_t *: __rte_bit_atomic_flip64)(addr, nr, memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically test and set a bit in word.
+ *
+ * Atomically test and set bit specified by @c nr in the word pointed
+ * to by @c addr to '1', with the memory ordering as specified with @c
+ * memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+#define rte_bit_atomic_test_and_set(addr, nr, memory_order)		\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_test_and_set32,		\
+		 uint64_t *: __rte_bit_atomic_test_and_set64)(addr, nr,	\
+							      memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically test and clear a bit in word.
+ *
+ * Atomically test and clear bit specified by @c nr in the word
+ * pointed to by @c addr to '0', with the memory ordering as specified
+ * with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+#define rte_bit_atomic_test_and_clear(addr, nr, memory_order)		\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_test_and_clear32,		\
+		 uint64_t *: __rte_bit_atomic_test_and_clear64)(addr, nr, \
+								memory_order)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Atomically test and assign a bit in word.
+ *
+ * Atomically test and assign bit specified by @c nr in the word
+ * pointed to by @c addr the value specified by @c value, with the
+ * memory ordering as specified with @c memory_order.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ * @param memory_order
+ *   The memory order to use. See <rte_stdatomics.h> for details.
+ * @return
+ *   Returns true if the bit was set, and false otherwise.
+ */
+#define rte_bit_atomic_test_and_assign(addr, nr, value, memory_order)	\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_atomic_test_and_assign32,	\
+		 uint64_t *: __rte_bit_atomic_test_and_assign64)(addr, nr, \
+								 value, \
+								 memory_order)
+
 #define __RTE_GEN_BIT_TEST(family, fun, qualifier, size)		\
 	__rte_experimental						\
 	static inline bool						\
@@ -1534,6 +1727,7 @@ rte_log2_u64(uint64_t v)
 #undef rte_bit_atomic_set
 #undef rte_bit_atomic_clear
 #undef rte_bit_atomic_assign
+#undef rte_bit_atomic_flip
 #undef rte_bit_atomic_test_and_set
 #undef rte_bit_atomic_test_and_clear
 #undef rte_bit_atomic_test_and_assign
