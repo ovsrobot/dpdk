@@ -56,6 +56,14 @@ GEN_TEST_BIT_ACCESS(test_bit_access32, rte_bit_set, rte_bit_clear,
 GEN_TEST_BIT_ACCESS(test_bit_access64, rte_bit_set, rte_bit_clear,
 		    rte_bit_assign, rte_bit_flip, rte_bit_test, 64)
 
+GEN_TEST_BIT_ACCESS(test_bit_once_access32, rte_bit_once_set,
+		    rte_bit_once_clear, rte_bit_once_assign,
+		    rte_bit_once_flip, rte_bit_once_test, 32)
+
+GEN_TEST_BIT_ACCESS(test_bit_once_access64, rte_bit_once_set,
+		    rte_bit_once_clear, rte_bit_once_assign,
+		    rte_bit_once_flip, rte_bit_once_test, 64)
+
 static uint32_t val32;
 static uint64_t val64;
 
@@ -172,6 +180,8 @@ static struct unit_test_suite test_suite = {
 	.unit_test_cases = {
 		TEST_CASE(test_bit_access32),
 		TEST_CASE(test_bit_access64),
+		TEST_CASE(test_bit_once_access32),
+		TEST_CASE(test_bit_once_access64),
 		TEST_CASE(test_bit_relaxed_set),
 		TEST_CASE(test_bit_relaxed_clear),
 		TEST_CASE(test_bit_relaxed_test_set_clear),
