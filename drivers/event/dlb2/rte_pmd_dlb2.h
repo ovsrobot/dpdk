@@ -75,6 +75,7 @@ rte_pmd_dlb2_set_token_pop_mode(uint8_t dev_id,
 
 struct dlb2_port_param {
 	uint16_t inflight_threshold : 12;
+	uint16_t port_hl;
 };
 
 /*!
