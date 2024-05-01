@@ -527,6 +527,7 @@ struct __rte_cache_aligned dlb2_eventdev_port {
 	struct rte_event_port_conf conf; /* user-supplied configuration */
 	uint16_t inflight_credits; /* num credits this port has right now */
 	uint16_t credit_update_quanta;
+	uint32_t credit_return_count; /* count till the credit return condition is true */
 	struct dlb2_eventdev *dlb2; /* backlink optimization */
 	alignas(RTE_CACHE_LINE_SIZE) struct dlb2_port_stats stats;
 	struct dlb2_event_queue_link link[DLB2_MAX_NUM_QIDS_PER_LDB_CQ];
