@@ -68,15 +68,16 @@ struct tx_queue {
 
 struct pmd_internals {
 	struct rte_eth_dev *dev;          /* Ethernet device. */
-	char remote_iface[RTE_ETH_NAME_MAX_LEN]; /* Remote netdevice name */
-	char name[RTE_ETH_NAME_MAX_LEN];  /* Internal Tap device name */
+	char remote_iface[IFNAMSIZ];	  /* Remote netdevice name */
+	char name[IFNAMSIZ];		  /* Internal Tap device name */
 	int type;                         /* Type field - TUN|TAP */
 	int persist;			  /* 1 if keep link up, else 0 */
 	struct rte_ether_addr eth_addr;   /* Mac address of the device port */
-	struct ifreq remote_initial_flags;/* Remote netdevice flags on init */
+	uint16_t remote_flags;		  /* Remote netdevice flags on init */
 	int remote_if_index;              /* remote netdevice IF_INDEX */
 	int if_index;                     /* IF_INDEX for the port */
 	int ioctl_sock;                   /* socket for ioctl calls */
+	int ka_fd;                        /* keep-alive file descriptor */
 
 #ifdef HAVE_TCA_FLOWER
 	int nlsk_fd;                      /* Netlink socket fd */
@@ -88,12 +89,11 @@ struct pmd_internals {
 	/* implicit rte_flow rules set when a remote device is active */
 	LIST_HEAD(tap_implicit_flows, rte_flow) implicit_flows;
 #endif
+	struct rte_intr_handle *intr_handle;         /* LSC interrupt handle. */
+	struct rte_mempool *gso_ctx_mp;     /* Mempool for GSO packets */
 
 	struct rx_queue rxq[RTE_PMD_TAP_MAX_QUEUES]; /* List of RX queues */
 	struct tx_queue txq[RTE_PMD_TAP_MAX_QUEUES]; /* List of TX queues */
-	struct rte_intr_handle *intr_handle;         /* LSC interrupt handle. */
-	int ka_fd;                        /* keep-alive file descriptor */
-	struct rte_mempool *gso_ctx_mp;     /* Mempool for GSO packets */
 };
 
 struct pmd_process_private {
