@@ -389,6 +389,8 @@ struct dlb2_port {
 	bool use_avx512;
 	uint32_t cq_weight;
 	bool is_producer; /* True if port is of type producer */
+	uint16_t inflight_threshold; /* DLB2.5 HW inflight threshold */
+	bool enable_inflight_ctrl; /*DLB2.5 enable HW inflight control */
 };
 
 /* Per-process per-port mmio and memory pointers */
@@ -717,6 +719,9 @@ int dlb2_secondary_eventdev_probe(struct rte_eventdev *dev,
 
 uint32_t dlb2_get_queue_depth(struct dlb2_eventdev *dlb2,
 			      struct dlb2_eventdev_queue *queue);
+
+int dlb2_set_port_param(struct dlb2_eventdev *dlb2, int port_id,
+			uint64_t flags, void *val);
 
 int dlb2_parse_params(const char *params,
 		      const char *name,
