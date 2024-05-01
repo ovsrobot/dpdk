@@ -18,10 +18,16 @@ from abc import ABC
 from pathlib import PurePath
 from typing import Callable, ClassVar
 
-from paramiko import Channel, SSHClient, channel  # type: ignore[import]
+from paramiko import Channel, channel  # type: ignore[import]
 
+from framework.exception import (
+    InteractiveSSHSessionDeadError,
+    InteractiveSSHTimeoutError,
+)
 from framework.logger import DTSLogger
 from framework.settings import SETTINGS
+
+from .interactive_remote_session import InteractiveRemoteSession
 
 
 class InteractiveShell(ABC):
@@ -34,7 +40,7 @@ class InteractiveShell(ABC):
     session.
     """
 
-    _interactive_session: SSHClient
+    _interactive_session: InteractiveRemoteSession
     _stdin: channel.ChannelStdinFile
     _stdout: channel.ChannelFile
     _ssh_channel: Channel
@@ -60,7 +66,7 @@ class InteractiveShell(ABC):
 
     def __init__(
         self,
-        interactive_session: SSHClient,
+        interactive_session: InteractiveRemoteSession,
         logger: DTSLogger,
         get_privileged_command: Callable[[str], str] | None,
         app_args: str = "",
@@ -80,7 +86,7 @@ class InteractiveShell(ABC):
                 and no output is gathered within the timeout, an exception is thrown.
         """
         self._interactive_session = interactive_session
-        self._ssh_channel = self._interactive_session.invoke_shell()
+        self._ssh_channel = self._interactive_session.session.invoke_shell()
         self._stdin = self._ssh_channel.makefile_stdin("w")
         self._stdout = self._ssh_channel.makefile("r")
         self._ssh_channel.settimeout(timeout)
@@ -124,20 +130,34 @@ class InteractiveShell(ABC):
 
         Returns:
             All output in the buffer before expected string.
+
+        Raises:
+            InteractiveSSHSessionDeadError: The session died while executing the command.
+            InteractiveSSHTimeoutError: If command was sent but prompt could not be found in
+                the output before the timeout.
         """
         self._logger.info(f"Sending: '{command}'")
         if prompt is None:
             prompt = self._default_prompt
-        self._stdin.write(f"{command}{self._command_extra_chars}\n")
-        self._stdin.flush()
         out: str = ""
-        for line in self._stdout:
-            out += line
-            if prompt in line and not line.rstrip().endswith(
-                command.rstrip()
-            ):  # ignore line that sent command
-                break
-        self._logger.debug(f"Got output: {out}")
+        try:
+            self._stdin.write(f"{command}{self._command_extra_chars}\n")
+            self._stdin.flush()
+            for line in self._stdout:
+                out += line
+                if line.rstrip().endswith(prompt):
+                    break
+        except TimeoutError as e:
+            self._logger.exception(e)
+            self._logger.debug(
+                f"Prompt ({prompt}) was not found in output from command before timeout."
+            )
+            raise InteractiveSSHTimeoutError(command) from e
+        except OSError as e:
+            self._logger.exception(e)
+            raise InteractiveSSHSessionDeadError(self._interactive_session.hostname) from e
+        finally:
+            self._logger.debug(f"Got output: {out}")
         return out
 
     def close(self) -> None:
