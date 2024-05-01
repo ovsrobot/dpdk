@@ -854,6 +854,7 @@ perf_producer_wrapper(void *arg)
 	struct rte_event_dev_info dev_info;
 	struct prod_data *p  = arg;
 	struct test_perf *t = p->t;
+	int ret = 0;
 
 	rte_event_dev_info_get(p->dev_id, &dev_info);
 	if (!t->opt->prod_enq_burst_sz) {
@@ -870,29 +871,32 @@ perf_producer_wrapper(void *arg)
 	 */
 	if (t->opt->prod_type == EVT_PROD_TYPE_SYNT &&
 			t->opt->prod_enq_burst_sz == 1)
-		return perf_producer(arg);
+		ret = perf_producer(arg);
 	else if (t->opt->prod_type == EVT_PROD_TYPE_SYNT &&
 			t->opt->prod_enq_burst_sz > 1) {
 		if (dev_info.max_event_port_enqueue_depth == 1)
 			evt_err("This event device does not support burst mode");
 		else
-			return perf_producer_burst(arg);
+			ret = perf_producer_burst(arg);
 	}
 	else if (t->opt->prod_type == EVT_PROD_TYPE_EVENT_TIMER_ADPTR &&
 			!t->opt->timdev_use_burst)
-		return perf_event_timer_producer(arg);
+		ret = perf_event_timer_producer(arg);
 	else if (t->opt->prod_type == EVT_PROD_TYPE_EVENT_TIMER_ADPTR &&
 			t->opt->timdev_use_burst)
-		return perf_event_timer_producer_burst(arg);
+		ret = perf_event_timer_producer_burst(arg);
 	else if (t->opt->prod_type == EVT_PROD_TYPE_EVENT_CRYPTO_ADPTR) {
 		if (t->opt->prod_enq_burst_sz > 1)
-			return perf_event_crypto_producer_burst(arg);
+			ret = perf_event_crypto_producer_burst(arg);
 		else
-			return perf_event_crypto_producer(arg);
+			ret = perf_event_crypto_producer(arg);
 	} else if (t->opt->prod_type == EVT_PROD_TYPE_EVENT_DMA_ADPTR)
-		return perf_event_dma_producer(arg);
+		ret = perf_event_dma_producer(arg);
 
-	return 0;
+	/* Unlink port to release any acquired HW resources*/
+	rte_event_port_unlink(p->dev_id, p->port_id, &p->queue_id, 1);
+
+	return ret;
 }
 
 static inline uint64_t
