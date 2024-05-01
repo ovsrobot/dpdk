@@ -442,6 +442,7 @@ class SutNode(Node):
         shell_cls: Type[InteractiveShellType],
         timeout: float = SETTINGS.timeout,
         privileged: bool = False,
+        name: str = "",
         app_parameters: str = "",
         eal_parameters: EalParameters | None = None,
     ) -> InteractiveShellType:
@@ -459,6 +460,8 @@ class SutNode(Node):
                 reading from the buffer and don't receive any data within the timeout
                 it will throw an error.
             privileged: Whether to run the shell with administrative privileges.
+            name: The name to use for the interactive application in the logs. If not specified,
+                this will default to the name `shell_cls`.
             eal_parameters: List of EAL parameters to use to launch the app. If this
                 isn't provided or an empty string is passed, it will default to calling
                 :meth:`create_eal_parameters`.
@@ -478,7 +481,9 @@ class SutNode(Node):
                 self.remote_dpdk_build_dir, shell_cls.path
             )
 
-        return super().create_interactive_shell(shell_cls, timeout, privileged, app_parameters)
+        return super().create_interactive_shell(
+            shell_cls, timeout, privileged, name, app_parameters
+        )
 
     def bind_ports_to_driver(self, for_dpdk: bool = True) -> None:
         """Bind all ports on the SUT to a driver.

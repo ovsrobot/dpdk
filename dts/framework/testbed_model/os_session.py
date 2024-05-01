@@ -134,6 +134,7 @@ class OSSession(ABC):
         shell_cls: Type[InteractiveShellType],
         timeout: float,
         privileged: bool,
+        name: str,
         app_args: str,
     ) -> InteractiveShellType:
         """Factory for interactive session handlers.
@@ -146,14 +147,15 @@ class OSSession(ABC):
                 reading from the buffer and don't receive any data within the timeout
                 it will throw an error.
             privileged: Whether to run the shell with administrative privileges.
+            name: Name for the shell to use in the logs.
             app_args: The arguments to be passed to the application.
 
         Returns:
             An instance of the desired interactive application shell.
         """
         return shell_cls(
-            self.interactive_session.session,
-            self._logger,
+            name,
+            self.interactive_session,
             self._get_privileged_command if privileged else None,
             app_args,
             timeout,
