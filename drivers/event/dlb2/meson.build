@@ -68,3 +68,15 @@ endif
 headers = files('rte_pmd_dlb2.h')
 
 deps += ['mbuf', 'mempool', 'ring', 'pci', 'bus_pci']
+
+if meson.version().version_compare('> 0.58.0')
+fs = import('fs')
+dlb_options = fs.read('meson_options.txt').strip().split('\n')
+
+foreach opt: dlb_options
+	if (opt.strip().startswith('#') or opt.strip() == '')
+		continue
+	endif
+	cflags += '-D' + opt.strip().to_upper().replace(' ','')
+endforeach
+endif
