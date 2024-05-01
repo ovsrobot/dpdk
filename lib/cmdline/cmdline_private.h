@@ -17,7 +17,11 @@
 
 #include <cmdline.h>
 
+#ifndef RDLINE_CUSTOM_BUF_SIZE
 #define RDLINE_BUF_SIZE 512
+#else
+#define RDLINE_BUF_SIZE RDLINE_CUSTOM_BUF_SIZE
+#endif
 #define RDLINE_PROMPT_SIZE  32
 #define RDLINE_VT100_BUF_SIZE  8
 #define RDLINE_HISTORY_BUF_SIZE BUFSIZ
