@@ -14,8 +14,6 @@
 #include "eal_internal_cfg.h"
 #include "eal_filesystem.h"
 
-#define CONTIGMEM_DEV "/dev/contigmem"
-
 /*
  * Uses mmap to create a shared memory area for storage of data
  * Used in this file to store the hugepage file map on disk
@@ -85,9 +83,13 @@ eal_hugepage_info_init(void)
 		return -1;
 	}
 
-	fd = open(CONTIGMEM_DEV, O_RDWR);
+	char contigmemdev[64];
+	snprintf(contigmemdev, sizeof(contigmemdev), "/dev/%s",
+		internal_conf->hugefile_prefix);
+
+	fd = open(contigmemdev, O_RDWR);
 	if (fd < 0) {
-		EAL_LOG(ERR, "could not open "CONTIGMEM_DEV);
+		EAL_LOG(ERR, "could not open %s", contigmemdev);
 		return -1;
 	}
 	if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
@@ -105,7 +107,7 @@ eal_hugepage_info_init(void)
 		EAL_LOG(INFO, "Contigmem driver has %d buffers, each of size %dKB",
 				num_buffers, (int)(buffer_size>>10));
 
-	strlcpy(hpi->hugedir, CONTIGMEM_DEV, sizeof(hpi->hugedir));
+	strlcpy(hpi->hugedir, contigmemdev, sizeof(hpi->hugedir));
 	hpi->hugepage_sz = buffer_size;
 	hpi->num_pages[0] = num_buffers;
 	hpi->lock_descriptor = fd;
