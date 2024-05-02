@@ -542,7 +542,6 @@ tap_write_mbufs(struct tx_queue *txq, uint16_t num_mbufs,
 		struct rte_mbuf *seg = mbuf;
 		uint64_t l4_ol_flags;
 		int proto;
-		int n;
 		int j;
 		int k; /* current index in iovecs for copying segments */
 
@@ -647,14 +646,18 @@ skip_l4_cksum:
 		}
 
 		/* copy the tx frame data */
-		n = writev(process_private->fds[txq->queue_id], iovecs, k);
-		if (n <= 0)
-			return -1;
+		if (unlikely(writev(process_private->fds[txq->queue_id], iovecs, k) < 0)) {
+			TAP_LOG(DEBUG, "writev (qid=%u fd=%d) %s",
+				txq->queue_id, process_private->fds[txq->queue_id],
+				strerror(errno));
+			return (errno == EAGAIN) ? 0 : -1;
+		}
 
 		(*num_packets)++;
 		(*num_tx_bytes) += rte_pktmbuf_pkt_len(mbuf);
 	}
-	return 0;
+
+	return 1;
 }
 
 /* Callback to handle sending packets from the tap interface
