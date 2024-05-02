@@ -60,6 +60,8 @@ source_file_deps = {
     'test_cryptodev_security_tls_record.c': ['cryptodev', 'security'],
     'test_cycles.c': [],
     'test_debug.c': [],
+    'test_deque_enqueue_dequeue.c': ['deque'],
+    'test_deque_helper_functions.c': ['deque'],
     'test_devargs.c': ['kvargs'],
     'test_dispatcher.c': ['dispatcher'],
     'test_distributor.c': ['distributor'],
