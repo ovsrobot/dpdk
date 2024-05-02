@@ -14,6 +14,7 @@ libraries = [
         'argparse',
         'telemetry', # basic info querying
         'eal', # everything depends on eal
+        'deque',
         'ring',
         'rcu', # rcu depends on ring
         'mempool',
@@ -74,6 +75,7 @@ if is_ms_compiler
             'kvargs',
             'telemetry',
             'eal',
+            'deque',
             'ring',
     ]
 endif
