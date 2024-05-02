@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **TAP PMD updates.**
+
+  * Fixed support of RSS flow action to work with current Linux
+    kernels and BPF tooling. Will only be enabled if clang and bpftool
+    are available.
+
+  * Support up to 8 queues when used by secondary process
 
 Removed Items
 -------------
