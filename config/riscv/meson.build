@@ -26,6 +26,11 @@ flags_common = [
     # read from /proc/device-tree/cpus/timebase-frequency. This property is
     # guaranteed on Linux, as riscv time_init() requires it.
     ['RTE_RISCV_TIME_FREQ', 0],
+
+    # Enable use of RISC-V Wait-on-Reservation-Set extension (Zawrs)
+    # Mitigates looping when polling on memory locations
+    # Make sure to add '_zawrs' to your target's -march below
+    ['RTE_RISCV_ZAWRS', false]
 ]
 
 ## SoC-specific options.
