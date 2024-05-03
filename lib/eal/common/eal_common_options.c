@@ -313,11 +313,13 @@ eal_option_device_parse(void)
 const char *
 eal_get_hugefile_prefix(void)
 {
+#ifndef RTE_EXEC_ENV_FREEBSD
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
 	if (internal_conf->hugefile_prefix != NULL)
 		return internal_conf->hugefile_prefix;
+#endif
 	return HUGEFILE_PREFIX_DEFAULT;
 }
 

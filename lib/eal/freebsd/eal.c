@@ -464,6 +464,18 @@ eal_parse_args(int argc, char **argv)
 			}
 			break;
 		}
+		case OPT_FILE_PREFIX_NUM:
+		{
+			char *prefix = strdup(optarg);
+			if (prefix == NULL)
+				EAL_LOG(ERR, "Could not store file prefix");
+			else {
+				/* free old prefix */
+				free(internal_conf->hugefile_prefix);
+				internal_conf->hugefile_prefix = prefix;
+			}
+			break;
+		}
 		case OPT_HELP_NUM:
 			eal_usage(prgname);
 			exit(EXIT_SUCCESS);

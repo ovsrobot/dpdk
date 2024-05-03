@@ -128,7 +128,8 @@ rte_eal_hugepage_init(void)
 			 * the previous one.
 			 */
 			snprintf(physaddr_str, sizeof(physaddr_str),
-					"hw.contigmem.physaddr.%d", j);
+					"hw.contigmem.%s.%d",
+					internal_conf->hugefile_prefix, j);
 			error = sysctlbyname(physaddr_str, &physaddr,
 					&sysctl_size, NULL, 0);
 			if (error < 0) {
