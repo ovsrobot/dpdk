@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2001-2020 Intel Corporation
+ * Copyright(c) 2001-2024 Intel Corporation
  */
 
 #ifndef _IXGBE_OS_H_
 #define _IXGBE_OS_H_
 
+#include <pthread.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -79,6 +80,7 @@ enum {
 #define IXGBE_NTOHS(_i)	rte_be_to_cpu_16(_i)
 #define IXGBE_CPU_TO_LE16(_i)  rte_cpu_to_le_16(_i)
 #define IXGBE_CPU_TO_LE32(_i)  rte_cpu_to_le_32(_i)
+#define IXGBE_LE16_TO_CPU(_i)  rte_le_to_cpu_16(_i)
 #define IXGBE_LE32_TO_CPU(_i)  rte_le_to_cpu_32(_i)
 #define IXGBE_LE32_TO_CPUS(_i) rte_le_to_cpu_32(_i)
 #define IXGBE_CPU_TO_BE16(_i)  rte_cpu_to_be_16(_i)
@@ -151,5 +153,19 @@ do {									\
 	while (((IXGBE_READ_REG(hw, (reg))) & (mask)) && (cnt--))	\
 		rte_delay_ms(1);					\
 } while (0)
+
+struct ixgbe_hw;
+struct ixgbe_lock {
+	pthread_mutex_t mutex;
+};
+
+void *ixgbe_calloc(struct ixgbe_hw *hw, size_t count, size_t size);
+void *ixgbe_malloc(struct ixgbe_hw *hw, size_t size);
+void ixgbe_free(struct ixgbe_hw *hw, void *addr);
+
+void ixgbe_init_lock(struct ixgbe_lock *lock);
+void ixgbe_destroy_lock(struct ixgbe_lock *lock);
+void ixgbe_acquire_lock(struct ixgbe_lock *lock);
+void ixgbe_release_lock(struct ixgbe_lock *lock);
 
 #endif /* _IXGBE_OS_H_ */
