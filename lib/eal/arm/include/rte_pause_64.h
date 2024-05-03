@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+#include <assert.h>
+
 #include <rte_common.h>
 
 #ifdef RTE_ARM_USE_WFE
@@ -153,7 +155,7 @@ rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
 {
 	uint16_t value;
 
-	RTE_BUILD_BUG_ON(memorder != rte_memory_order_acquire &&
+	assert(memorder != rte_memory_order_acquire &&
 		memorder != rte_memory_order_relaxed);
 
 	__RTE_ARM_LOAD_EXC_16(addr, value, memorder)
@@ -172,7 +174,7 @@ rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
 {
 	uint32_t value;
 
-	RTE_BUILD_BUG_ON(memorder != rte_memory_order_acquire &&
+	assert(memorder != rte_memory_order_acquire &&
 		memorder != rte_memory_order_relaxed);
 
 	__RTE_ARM_LOAD_EXC_32(addr, value, memorder)
@@ -191,7 +193,7 @@ rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
 {
 	uint64_t value;
 
-	RTE_BUILD_BUG_ON(memorder != rte_memory_order_acquire &&
+	assert(memorder != rte_memory_order_acquire &&
 		memorder != rte_memory_order_relaxed);
 
 	__RTE_ARM_LOAD_EXC_64(addr, value, memorder)
