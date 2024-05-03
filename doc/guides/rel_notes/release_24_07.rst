@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated IXGBE base code.**
+
+  * Updated shared code to more recent version.
+  * Added support for E610 device family.
 
 Removed Items
 -------------

@@ -119,6 +119,14 @@
 #define E610_SR_NVM_CTRL_WORD		0x00
 #define E610_SR_PBA_BLOCK_PTR		0x16
 
+/* The Orom version topology */
+#define IXGBE_OROM_VER_PATCH_SHIFT	0
+#define IXGBE_OROM_VER_PATCH_MASK	(0xff << IXGBE_OROM_VER_PATCH_SHIFT)
+#define IXGBE_OROM_VER_BUILD_SHIFT	8
+#define IXGBE_OROM_VER_BUILD_MASK	(0xffff << IXGBE_OROM_VER_BUILD_SHIFT)
+#define IXGBE_OROM_VER_SHIFT		24
+#define IXGBE_OROM_VER_MASK		(0xff << IXGBE_OROM_VER_SHIFT)
+
 /* CSS Header words */
 #define IXGBE_NVM_CSS_HDR_LEN_L			0x02
 #define IXGBE_NVM_CSS_HDR_LEN_H			0x03
@@ -127,6 +135,39 @@
 
 /* Length of Authentication header section in words */
 #define IXGBE_NVM_AUTH_HEADER_LEN		0x08
+
+/* The Netlist ID Block is located after all of the Link Topology nodes. */
+#define IXGBE_NETLIST_ID_BLK_SIZE		0x30
+#define IXGBE_NETLIST_ID_BLK_OFFSET(n)		IXGBE_NETLIST_LINK_TOPO_OFFSET(0x0004 + 2 * (n))
+
+/* netlist ID block field offsets (word offsets) */
+#define IXGBE_NETLIST_ID_BLK_MAJOR_VER_LOW	0x02
+#define IXGBE_NETLIST_ID_BLK_MAJOR_VER_HIGH	0x03
+#define IXGBE_NETLIST_ID_BLK_MINOR_VER_LOW	0x04
+#define IXGBE_NETLIST_ID_BLK_MINOR_VER_HIGH	0x05
+#define IXGBE_NETLIST_ID_BLK_TYPE_LOW		0x06
+#define IXGBE_NETLIST_ID_BLK_TYPE_HIGH		0x07
+#define IXGBE_NETLIST_ID_BLK_REV_LOW		0x08
+#define IXGBE_NETLIST_ID_BLK_REV_HIGH		0x09
+#define IXGBE_NETLIST_ID_BLK_SHA_HASH_WORD(n)	(0x0A + (n))
+#define IXGBE_NETLIST_ID_BLK_CUST_VER		0x2F
+
+/* The Link Topology Netlist section is stored as a series of words. It is
+ * stored in the NVM as a TLV, with the first two words containing the type
+ * and length.
+ */
+#define IXGBE_NETLIST_LINK_TOPO_MOD_ID		0x011B
+#define IXGBE_NETLIST_TYPE_OFFSET		0x0000
+#define IXGBE_NETLIST_LEN_OFFSET		0x0001
+
+/* The Link Topology section follows the TLV header. When reading the netlist
+ * using ixgbe_read_netlist_module, we need to account for the 2-word TLV
+ * header.
+ */
+#define IXGBE_NETLIST_LINK_TOPO_OFFSET(n)	((n) + 2)
+#define IXGBE_LINK_TOPO_MODULE_LEN	IXGBE_NETLIST_LINK_TOPO_OFFSET(0x0000)
+#define IXGBE_LINK_TOPO_NODE_COUNT	IXGBE_NETLIST_LINK_TOPO_OFFSET(0x0001)
+#define IXGBE_LINK_TOPO_NODE_COUNT_M	MAKEMASK(0x3FF, 0)
 
 /* Auxiliary field, mask and shift definition for Shadow RAM and NVM Flash */
 #define IXGBE_SR_CTRL_WORD_1_S		0x06
@@ -151,6 +192,9 @@
  * including the checksum word itself, the sum should be 0xBABA.
  */
 #define IXGBE_SR_SW_CHECKSUM_BASE		0xBABA
+
+/* Netlist */
+#define IXGBE_MAX_NETLIST_SIZE			10
 
 /* General registers */
 
@@ -227,16 +271,80 @@
 #define GLNVM_FLA_LOCKED_S			6
 #define GLNVM_FLA_LOCKED_M			BIT(6)
 
+/* Bit Bang registers */
+#define RDASB_MSGCTL				0x000B6820
+#define RDASB_MSGCTL_HDR_DWS_S			0
+#define RDASB_MSGCTL_EXP_RDW_S			8
+#define RDASB_MSGCTL_CMDV_M			BIT(31)
+#define RDASB_RSPCTL				0x000B6824
+#define RDASB_RSPCTL_BAD_LENGTH_M		BIT(30)
+#define RDASB_RSPCTL_NOT_SUCCESS_M		BIT(31)
+#define RDASB_WHDR0				0x000B68F4
+#define RDASB_WHDR1				0x000B68F8
+#define RDASB_WHDR2				0x000B68FC
+#define RDASB_WHDR3				0x000B6900
+#define RDASB_WHDR4				0x000B6904
+#define RDASB_RHDR0				0x000B6AFC
+#define RDASB_RHDR0_RESPONSE_S			27
+#define RDASB_RHDR0_RESPONSE_M			MAKEMASK(0x7, 27)
+#define RDASB_RDATA0				0x000B6B00
+#define RDASB_RDATA1				0x000B6B04
+
+/* SPI Registers */
+#define SPISB_MSGCTL				0x000B7020
+#define SPISB_MSGCTL_HDR_DWS_S			0
+#define SPISB_MSGCTL_EXP_RDW_S			8
+#define SPISB_MSGCTL_MSG_MODE_S			26
+#define SPISB_MSGCTL_TOKEN_MODE_S		28
+#define SPISB_MSGCTL_BARCLR_S			30
+#define SPISB_MSGCTL_CMDV_S			31
+#define SPISB_MSGCTL_CMDV_M			BIT(31)
+#define SPISB_RSPCTL				0x000B7024
+#define SPISB_RSPCTL_BAD_LENGTH_M		BIT(30)
+#define SPISB_RSPCTL_NOT_SUCCESS_M		BIT(31)
+#define SPISB_WHDR0				0x000B70F4
+#define SPISB_WHDR0_DEST_SEL_S			12
+#define SPISB_WHDR0_OPCODE_SEL_S		16
+#define SPISB_WHDR0_TAG_S			24
+#define SPISB_WHDR1				0x000B70F8
+#define SPISB_WHDR2				0x000B70FC
+#define SPISB_RDATA				0x000B7300
+#define SPISB_WDATA				0x000B7100
+
+/* Firmware Reset Count register */
+#define GL_FWRESETCNT				0x00083100 /* Reset Source: POR */
+#define GL_FWRESETCNT_FWRESETCNT_S		0
+#define GL_FWRESETCNT_FWRESETCNT_M		MAKEMASK(0xFFFFFFFF, 0)
+
 /* Admin Command Interface (ACI) registers */
 #define PF_HIDA(_i)			(0x00085000 + ((_i) * 4))
 #define PF_HIDA_2(_i)			(0x00085020 + ((_i) * 4))
 #define PF_HIBA(_i)			(0x00084000 + ((_i) * 4))
 #define PF_HICR				0x00082048
 
+#define PF_HIDA_MAX_INDEX		15
+#define PF_HIBA_MAX_INDEX		1023
+
 #define PF_HICR_EN			BIT(0)
 #define PF_HICR_C			BIT(1)
 #define PF_HICR_SV			BIT(2)
 #define PF_HICR_EV			BIT(3)
+
+#define GL_HIDA(_i)			(0x00082000 + ((_i) * 4))
+#define GL_HIDA_2(_i)			(0x00082020 + ((_i) * 4))
+#define GL_HIBA(_i)			(0x00081000 + ((_i) * 4))
+#define GL_HICR				0x00082040
+
+#define GL_HIDA_MAX_INDEX		15
+#define GL_HIBA_MAX_INDEX		1023
+
+#define GL_HICR_C			BIT(1)
+#define GL_HICR_SV			BIT(2)
+#define GL_HICR_EV			BIT(3)
+
+#define GL_HICR_EN			0x00082044
+
+#define GL_HICR_EN_CHECK		BIT(0)
 
 /* Admin Command Interface (ACI) defines */
 /* Defines that help manage the driver vs FW API checks.
@@ -259,6 +367,14 @@
 #define IXGBE_ACI_ASYNC_RESPONSE_TIMEOUT	150000
 /* [ms] timeout of waiting for resource release */
 #define IXGBE_ACI_RELEASE_RES_TIMEOUT		10000
+
+/* Timestamp spacing for Tools ACI: queue is active if spacing is within the range [LO..HI] */
+#define IXGBE_TOOLS_ACI_ACTIVE_STAMP_SPACING_LO      0
+#define IXGBE_TOOLS_ACI_ACTIVE_STAMP_SPACING_HI      200
+
+/* Timestamp spacing for Tools ACI: queue is expired if spacing is outside the range [LO..HI] */
+#define IXGBE_TOOLS_ACI_EXPIRED_STAMP_SPACING_LO     -5
+#define IXGBE_TOOLS_ACI_EXPIRED_STAMP_SPACING_HI     205
 
 /* FW defined boundary for a large buffer, 4k >= Large buffer > 512 bytes */
 #define IXGBE_ACI_LG_BUF		512
@@ -488,6 +604,8 @@ IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_get_exp_err);
 
 /* FW update timeout definitions are in milliseconds */
 #define IXGBE_NVM_TIMEOUT		180000
+#define IXGBE_CHANGE_LOCK_TIMEOUT	1000
+#define IXGBE_GLOBAL_CFG_LOCK_TIMEOUT	3000
 
 enum ixgbe_aci_res_access_type {
 	IXGBE_RES_READ = 1,
@@ -1234,9 +1352,47 @@ struct ixgbe_aci_cmd_nvm {
 };
 
 /* NVM Module_Type ID, needed offset and read_len for struct ixgbe_aci_cmd_nvm. */
+#define IXGBE_ACI_NVM_SECTOR_UNIT		4096 /* In Bytes */
+#define IXGBE_ACI_NVM_WORD_UNIT			2 /* In Bytes */
+
 #define IXGBE_ACI_NVM_START_POINT		0
+#define IXGBE_ACI_NVM_EMP_SR_PTR_OFFSET		0x90
+#define IXGBE_ACI_NVM_EMP_SR_PTR_RD_LEN		2 /* In Bytes */
+#define IXGBE_ACI_NVM_EMP_SR_PTR_M		MAKEMASK(0x7FFF, 0)
+#define IXGBE_ACI_NVM_EMP_SR_PTR_TYPE_S		15
+#define IXGBE_ACI_NVM_EMP_SR_PTR_TYPE_M		BIT(15)
+#define IXGBE_ACI_NVM_EMP_SR_PTR_TYPE_SECTOR	1
+
+#define IXGBE_ACI_NVM_LLDP_CFG_PTR_OFFSET	0x46
+#define IXGBE_ACI_NVM_LLDP_CFG_HEADER_LEN	2 /* In Bytes */
+#define IXGBE_ACI_NVM_LLDP_CFG_PTR_RD_LEN	2 /* In Bytes */
+
+#define IXGBE_ACI_NVM_LLDP_PRESERVED_MOD_ID		0x129
+#define IXGBE_ACI_NVM_CUR_LLDP_PERSIST_RD_OFFSET	2 /* In Bytes */
+#define IXGBE_ACI_NVM_LLDP_STATUS_M			MAKEMASK(0xF, 0)
+#define IXGBE_ACI_NVM_LLDP_STATUS_M_LEN			4 /* In Bits */
+#define IXGBE_ACI_NVM_LLDP_STATUS_RD_LEN		4 /* In Bytes */
+
+#define IXGBE_ACI_NVM_MINSREV_MOD_ID		0x130
 
 IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_nvm);
+
+/* Used for reading and writing MinSRev using 0x0701 and 0x0703. Note that the
+ * type field is excluded from the section when reading and writing from
+ * a module using the module_typeid field with these AQ commands.
+ */
+struct ixgbe_aci_cmd_nvm_minsrev {
+	__le16 length;
+	__le16 validity;
+#define IXGBE_ACI_NVM_MINSREV_NVM_VALID		BIT(0)
+#define IXGBE_ACI_NVM_MINSREV_OROM_VALID	BIT(1)
+	__le16 nvm_minsrev_l;
+	__le16 nvm_minsrev_h;
+	__le16 orom_minsrev_l;
+	__le16 orom_minsrev_h;
+};
+
+IXGBE_CHECK_STRUCT_LEN(12, ixgbe_aci_cmd_nvm_minsrev);
 
 /* Used for 0x0704 as well as for 0x0705 commands */
 struct ixgbe_aci_cmd_nvm_cfg {
@@ -1253,6 +1409,14 @@ struct ixgbe_aci_cmd_nvm_cfg {
 };
 
 IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_nvm_cfg);
+
+struct ixgbe_aci_cmd_nvm_cfg_data {
+	__le16 field_id;
+	__le16 field_options;
+	__le16 field_value;
+};
+
+IXGBE_CHECK_STRUCT_LEN(6, ixgbe_aci_cmd_nvm_cfg_data);
 
 /* NVM Checksum Command (direct, 0x0706) */
 struct ixgbe_aci_cmd_nvm_checksum {
@@ -1328,6 +1492,211 @@ struct ixgbe_aci_cmd_clear_port_alt_write {
 };
 
 IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_clear_port_alt_write);
+
+/* Get CGU abilities command response data structure (indirect 0x0C61) */
+struct ixgbe_aci_cmd_get_cgu_abilities {
+	u8 num_inputs;
+	u8 num_outputs;
+	u8 pps_dpll_idx;
+	u8 synce_dpll_idx;
+	__le32 max_in_freq;
+	__le32 max_in_phase_adj;
+	__le32 max_out_freq;
+	__le32 max_out_phase_adj;
+	u8 cgu_part_num;
+	u8 rsvd[3];
+};
+
+IXGBE_CHECK_STRUCT_LEN(24, ixgbe_aci_cmd_get_cgu_abilities);
+
+#define IXGBE_ACI_NODE_HANDLE_VALID	BIT(10)
+#define IXGBE_ACI_NODE_HANDLE		MAKEMASK(0x3FF, 0)
+#define IXGBE_ACI_DRIVING_CLK_NUM_SHIFT	10
+#define IXGBE_ACI_DRIVING_CLK_NUM	MAKEMASK(0x3F, IXGBE_ACI_DRIVING_CLK_NUM_SHIFT)
+
+/* Set CGU input config (direct 0x0C62) */
+struct ixgbe_aci_cmd_set_cgu_input_config {
+	u8 input_idx;
+	u8 flags1;
+#define IXGBE_ACI_SET_CGU_IN_CFG_FLG1_UPDATE_FREQ	BIT(6)
+#define IXGBE_ACI_SET_CGU_IN_CFG_FLG1_UPDATE_DELAY	BIT(7)
+	u8 flags2;
+#define IXGBE_ACI_SET_CGU_IN_CFG_FLG2_INPUT_EN		BIT(5)
+#define IXGBE_ACI_SET_CGU_IN_CFG_FLG2_ESYNC_EN		BIT(6)
+	u8 rsvd;
+	__le32 freq;
+	__le32 phase_delay;
+	u8 rsvd2[2];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_set_cgu_input_config);
+
+/* Get CGU input config response descriptor structure (direct 0x0C63) */
+struct ixgbe_aci_cmd_get_cgu_input_config {
+	u8 input_idx;
+	u8 status;
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_LOS		BIT(0)
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_SCM_FAIL	BIT(1)
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_CFM_FAIL	BIT(2)
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_GST_FAIL	BIT(3)
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_PFM_FAIL	BIT(4)
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_ESYNC_FAIL	BIT(6)
+#define IXGBE_ACI_GET_CGU_IN_CFG_STATUS_ESYNC_CAP	BIT(7)
+	u8 type;
+#define IXGBE_ACI_GET_CGU_IN_CFG_TYPE_READ_ONLY		BIT(0)
+#define IXGBE_ACI_GET_CGU_IN_CFG_TYPE_GPS		BIT(4)
+#define IXGBE_ACI_GET_CGU_IN_CFG_TYPE_EXTERNAL		BIT(5)
+#define IXGBE_ACI_GET_CGU_IN_CFG_TYPE_PHY		BIT(6)
+	u8 flags1;
+#define IXGBE_ACI_GET_CGU_IN_CFG_FLG1_PHASE_DELAY_SUPP	BIT(0)
+#define IXGBE_ACI_GET_CGU_IN_CFG_FLG1_1PPS_SUPP		BIT(2)
+#define IXGBE_ACI_GET_CGU_IN_CFG_FLG1_10MHZ_SUPP	BIT(3)
+#define IXGBE_ACI_GET_CGU_IN_CFG_FLG1_ANYFREQ		BIT(7)
+	__le32 freq;
+	__le32 phase_delay;
+	u8 flags2;
+#define IXGBE_ACI_GET_CGU_IN_CFG_FLG2_INPUT_EN		BIT(5)
+#define IXGBE_ACI_GET_CGU_IN_CFG_FLG2_ESYNC_EN		BIT(6)
+	u8 rsvd[1];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_get_cgu_input_config);
+
+/* Set CGU output config (direct 0x0C64) */
+struct ixgbe_aci_cmd_set_cgu_output_config {
+	u8 output_idx;
+	u8 flags;
+#define IXGBE_ACI_SET_CGU_OUT_CFG_OUT_EN		BIT(0)
+#define IXGBE_ACI_SET_CGU_OUT_CFG_ESYNC_EN		BIT(1)
+#define IXGBE_ACI_SET_CGU_OUT_CFG_UPDATE_FREQ		BIT(2)
+#define IXGBE_ACI_SET_CGU_OUT_CFG_UPDATE_PHASE		BIT(3)
+#define IXGBE_ACI_SET_CGU_OUT_CFG_UPDATE_SRC_SEL	BIT(4)
+	u8 src_sel;
+#define IXGBE_ACI_SET_CGU_OUT_CFG_DPLL_SRC_SEL		MAKEMASK(0x1F, 0)
+	u8 rsvd;
+	__le32 freq;
+	__le32 phase_delay;
+	u8 rsvd2[2];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_set_cgu_output_config);
+
+/* Get CGU output config (direct 0x0C65) */
+struct ixgbe_aci_cmd_get_cgu_output_config {
+	u8 output_idx;
+	u8 flags;
+#define IXGBE_ACI_GET_CGU_OUT_CFG_OUT_EN		BIT(0)
+#define IXGBE_ACI_GET_CGU_OUT_CFG_ESYNC_EN		BIT(1)
+#define IXGBE_ACI_GET_CGU_OUT_CFG_ESYNC_ABILITY		BIT(2)
+	u8 src_sel;
+#define IXGBE_ACI_GET_CGU_OUT_CFG_DPLL_SRC_SEL_SHIFT	0
+#define IXGBE_ACI_GET_CGU_OUT_CFG_DPLL_SRC_SEL \
+	MAKEMASK(0x1F, IXGBE_ACI_GET_CGU_OUT_CFG_DPLL_SRC_SEL_SHIFT)
+#define IXGBE_ACI_GET_CGU_OUT_CFG_DPLL_MODE_SHIFT	5
+#define IXGBE_ACI_GET_CGU_OUT_CFG_DPLL_MODE \
+	MAKEMASK(0x7, IXGBE_ACI_GET_CGU_OUT_CFG_DPLL_MODE_SHIFT)
+	u8 rsvd;
+	__le32 freq;
+	__le32 src_freq;
+	u8 rsvd2[2];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_get_cgu_output_config);
+
+/* Get CGU DPLL status (direct 0x0C66) */
+struct ixgbe_aci_cmd_get_cgu_dpll_status {
+	u8 dpll_num;
+	u8 ref_state;
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_REF_SW_LOS		BIT(0)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_REF_SW_SCM		BIT(1)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_REF_SW_CFM		BIT(2)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_REF_SW_GST		BIT(3)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_REF_SW_PFM		BIT(4)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_FAST_LOCK_EN		BIT(5)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_REF_SW_ESYNC		BIT(6)
+	__le16 dpll_state;
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_LOCK		BIT(0)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_HO			BIT(1)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_HO_READY		BIT(2)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_FLHIT		BIT(5)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_PSLHIT		BIT(7)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_CLK_REF_SHIFT	8
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_CLK_REF_SEL		\
+	MAKEMASK(0x1F, IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_CLK_REF_SHIFT)
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_MODE_SHIFT		13
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_MODE 		\
+	MAKEMASK(0x7, IXGBE_ACI_GET_CGU_DPLL_STATUS_STATE_MODE_SHIFT)
+	__le32 phase_offset_h;
+	__le32 phase_offset_l;
+	u8 eec_mode;
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_EEC_MODE_1		0xA
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_EEC_MODE_2		0xB
+#define IXGBE_ACI_GET_CGU_DPLL_STATUS_EEC_MODE_UNKNOWN		0xF
+	u8 rsvd[1];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_get_cgu_dpll_status);
+
+/* Set CGU DPLL config (direct 0x0C67) */
+struct ixgbe_aci_cmd_set_cgu_dpll_config {
+	u8 dpll_num;
+	u8 ref_state;
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_SW_LOS	BIT(0)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_SW_SCM	BIT(1)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_SW_CFM	BIT(2)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_SW_GST	BIT(3)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_SW_PFM	BIT(4)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_FLOCK_EN	BIT(5)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_REF_SW_ESYNC	BIT(6)
+	u8 rsvd;
+	u8 config;
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_CLK_REF_SEL	MAKEMASK(0x1F, 0)
+#define IXGBE_ACI_SET_CGU_DPLL_CONFIG_MODE		MAKEMASK(0x7, 5)
+	u8 rsvd2[8];
+	u8 eec_mode;
+	u8 rsvd3[1];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_set_cgu_dpll_config);
+
+/* Set CGU reference priority (direct 0x0C68) */
+struct ixgbe_aci_cmd_set_cgu_ref_prio {
+	u8 dpll_num;
+	u8 ref_idx;
+	u8 ref_priority;
+	u8 rsvd[11];
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_set_cgu_ref_prio);
+
+/* Get CGU reference priority (direct 0x0C69) */
+struct ixgbe_aci_cmd_get_cgu_ref_prio {
+	u8 dpll_num;
+	u8 ref_idx;
+	u8 ref_priority; /* Valid only in response */
+	u8 rsvd[13];
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_get_cgu_ref_prio);
+
+/* Get CGU info (direct 0x0C6A) */
+struct ixgbe_aci_cmd_get_cgu_info {
+	__le32 cgu_id;
+	__le32 cgu_cfg_ver;
+	__le32 cgu_fw_ver;
+	u8 node_part_num;
+	u8 dev_rev;
+	__le16 node_handle;
+};
+
+IXGBE_CHECK_PARAM_LEN(ixgbe_aci_cmd_get_cgu_info);
 
 /* Debug Dump Internal Data (indirect 0xFF08) */
 struct ixgbe_aci_cmd_debug_dump_internals {
@@ -1694,6 +2063,16 @@ struct ixgbe_ts_dev_info {
 	u8 tmr1_ena;
 };
 
+#pragma pack(1)
+struct ixgbe_orom_civd_info {
+	u8 signature[4];	/* Must match ASCII '$CIV' characters */
+	u8 checksum;		/* Simple modulo 256 sum of all structure bytes must equal 0 */
+	__le32 combo_ver;	/* Combo Image Version number */
+	u8 combo_name_len;	/* Length of the unicode combo image version string, max of 32 */
+	__le16 combo_name[32];	/* Unicode string representing the Combo Image version */
+};
+#pragma pack()
+
 /* Function specific capabilities */
 struct ixgbe_hw_func_caps {
 	struct ixgbe_hw_common_caps common_cap;
@@ -1722,6 +2101,14 @@ struct ixgbe_aci_event {
 struct ixgbe_aci_info {
 	enum ixgbe_aci_err last_status;	/* last status of sent admin command */
 	struct ixgbe_lock lock;		/* admin command interface lock */
+};
+
+/* Minimum Security Revision information */
+struct ixgbe_minsrev_info {
+	u32 nvm;
+	u32 orom;
+	u8 nvm_valid : 1;
+	u8 orom_valid : 1;
 };
 
 /* Enumeration of which flash bank is desired to read from, either the active
@@ -1779,6 +2166,21 @@ struct ixgbe_flash_info {
 	u16 sr_words;				/* Shadow RAM size in words */
 	u32 flash_size;				/* Size of available flash in bytes */
 	u8 blank_nvm_mode;			/* is NVM empty (no FW present) */
+};
+
+#define IXGBE_NVM_CMD_READ		0x0000000B
+#define IXGBE_NVM_CMD_WRITE		0x0000000C
+
+/* NVM Access command */
+struct ixgbe_nvm_access_cmd {
+	u32 command;		/* NVM command: READ or WRITE */
+	u32 offset;			/* Offset to read/write, in bytes */
+	u32 data_size;		/* Size of data field, in bytes */
+};
+
+/* NVM Access data */
+struct ixgbe_nvm_access_data {
+	u32 regval;			/* Storage for register value */
 };
 
 #endif /* _IXGBE_TYPE_E610_H_ */

@@ -1208,6 +1208,25 @@ s32 ixgbe_discover_func_caps(struct ixgbe_hw *hw,
 }
 
 /**
+ * ixgbe_get_caps - get info about the HW
+ * @hw: pointer to the hardware structure
+ *
+ * Retrieve both device and function capabilities.
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_get_caps(struct ixgbe_hw *hw)
+{
+	s32 status;
+
+	status = ixgbe_discover_dev_caps(hw, &hw->dev_caps);
+	if (status)
+		return status;
+
+	return ixgbe_discover_func_caps(hw, &hw->func_caps);
+}
+
+/**
  * ixgbe_aci_disable_rxen - disable RX
  * @hw: pointer to the HW struct
  *
@@ -1273,6 +1292,45 @@ s32 ixgbe_aci_get_phy_caps(struct ixgbe_hw *hw, bool qual_mods, u8 report_mode,
 	}
 
 	return status;
+}
+
+/**
+ * ixgbe_phy_caps_equals_cfg - check if capabilities match the PHY config
+ * @phy_caps: PHY capabilities
+ * @phy_cfg: PHY configuration
+ *
+ * Helper function to determine if PHY capabilities match PHY
+ * configuration
+ *
+ * Return: true if PHY capabilities match PHY configuration.
+ */
+bool
+ixgbe_phy_caps_equals_cfg(struct ixgbe_aci_cmd_get_phy_caps_data *phy_caps,
+			  struct ixgbe_aci_cmd_set_phy_cfg_data *phy_cfg)
+{
+	u8 caps_mask, cfg_mask;
+
+	if (!phy_caps || !phy_cfg)
+		return false;
+
+	/* These bits are not common between capabilities and configuration.
+	 * Do not use them to determine equality.
+	 */
+	caps_mask = IXGBE_ACI_PHY_CAPS_MASK & ~(IXGBE_ACI_PHY_AN_MODE |
+					      IXGBE_ACI_PHY_EN_MOD_QUAL);
+	cfg_mask = IXGBE_ACI_PHY_ENA_VALID_MASK &
+		   ~IXGBE_ACI_PHY_ENA_AUTO_LINK_UPDT;
+
+	if (phy_caps->phy_type_low != phy_cfg->phy_type_low ||
+	    phy_caps->phy_type_high != phy_cfg->phy_type_high ||
+	    ((phy_caps->caps & caps_mask) != (phy_cfg->caps & cfg_mask)) ||
+	    phy_caps->low_power_ctrl_an != phy_cfg->low_power_ctrl_an ||
+	    phy_caps->eee_cap != phy_cfg->eee_cap ||
+	    phy_caps->eeer_value != phy_cfg->eeer_value ||
+	    phy_caps->link_fec_options != phy_cfg->link_fec_opt)
+		return false;
+
+	return true;
 }
 
 /**
@@ -1727,6 +1785,239 @@ s32 ixgbe_aci_get_netlist_node(struct ixgbe_hw *hw,
 }
 
 /**
+ * ixgbe_aci_get_netlist_node_pin - get a node pin handle
+ * @hw: pointer to the hw struct
+ * @cmd: get_link_topo_pin AQ structure
+ * @node_handle: output node handle parameter if node found
+ *
+ * Get the netlist node pin and assign it to
+ * the provided handle using ACI command (0x06E1).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_get_netlist_node_pin(struct ixgbe_hw *hw,
+				   struct ixgbe_aci_cmd_get_link_topo_pin *cmd,
+				   u16 *node_handle)
+{
+	struct ixgbe_aci_desc desc;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_get_link_topo_pin);
+	desc.params.get_link_topo_pin = *cmd;
+
+	if (ixgbe_aci_send_cmd(hw, &desc, NULL, 0))
+		return IXGBE_ERR_NOT_SUPPORTED;
+
+	if (node_handle)
+		*node_handle =
+			IXGBE_LE16_TO_CPU(desc.params.get_link_topo_pin.addr.handle);
+
+	return IXGBE_SUCCESS;
+}
+
+/**
+ * ixgbe_find_netlist_node - find a node handle
+ * @hw: pointer to the hw struct
+ * @node_type_ctx: type of netlist node to look for
+ * @node_part_number: node part number to look for
+ * @node_handle: output parameter if node found - optional
+ *
+ * Find and return the node handle for a given node type and part number in the
+ * netlist. When found IXGBE_SUCCESS is returned, IXGBE_ERR_NOT_SUPPORTED
+ * otherwise. If @node_handle provided, it would be set to found node handle.
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_find_netlist_node(struct ixgbe_hw *hw, u8 node_type_ctx,
+			    u8 node_part_number, u16 *node_handle)
+{
+	struct ixgbe_aci_cmd_get_link_topo cmd;
+	u8 rec_node_part_number;
+	u16 rec_node_handle;
+	s32 status;
+	u8 idx;
+
+	for (idx = 0; idx < IXGBE_MAX_NETLIST_SIZE; idx++) {
+		memset(&cmd, 0, sizeof(cmd));
+
+		cmd.addr.topo_params.node_type_ctx =
+			(node_type_ctx << IXGBE_ACI_LINK_TOPO_NODE_TYPE_S);
+		cmd.addr.topo_params.index = idx;
+
+		status = ixgbe_aci_get_netlist_node(hw, &cmd,
+						    &rec_node_part_number,
+						    &rec_node_handle);
+		if (status)
+			return status;
+
+		if (rec_node_part_number == node_part_number) {
+			if (node_handle)
+				*node_handle = rec_node_handle;
+			return IXGBE_SUCCESS;
+		}
+	}
+
+	return IXGBE_ERR_NOT_SUPPORTED;
+}
+
+/**
+ * ixgbe_aci_read_i2c - read I2C register value
+ * @hw: pointer to the hw struct
+ * @topo_addr: topology address for a device to communicate with
+ * @bus_addr: 7-bit I2C bus address
+ * @addr: I2C memory address (I2C offset) with up to 16 bits
+ * @params: I2C parameters: bit [7] - Repeated start,
+ *				      bits [6:5] data offset size,
+ *			    bit [4] - I2C address type, bits [3:0] - data size
+ *				      to read (0-16 bytes)
+ * @data: pointer to data (0 to 16 bytes) to be read from the I2C device
+ *
+ * Read the value of the I2C pin register using ACI command (0x06E2).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_read_i2c(struct ixgbe_hw *hw,
+		       struct ixgbe_aci_cmd_link_topo_addr topo_addr,
+		       u16 bus_addr, __le16 addr, u8 params, u8 *data)
+{
+	struct ixgbe_aci_desc desc = { 0 };
+	struct ixgbe_aci_cmd_i2c *cmd;
+	u8 data_size;
+	s32 status;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_read_i2c);
+	cmd = &desc.params.read_write_i2c;
+
+	if (!data)
+		return IXGBE_ERR_PARAM;
+
+	data_size = (params & IXGBE_ACI_I2C_DATA_SIZE_M) >>
+		    IXGBE_ACI_I2C_DATA_SIZE_S;
+
+	cmd->i2c_bus_addr = IXGBE_CPU_TO_LE16(bus_addr);
+	cmd->topo_addr = topo_addr;
+	cmd->i2c_params = params;
+	cmd->i2c_addr = addr;
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+	if (!status) {
+		struct ixgbe_aci_cmd_read_i2c_resp *resp;
+		u8 i;
+
+		resp = &desc.params.read_i2c_resp;
+		for (i = 0; i < data_size; i++) {
+			*data = resp->i2c_data[i];
+			data++;
+		}
+	}
+
+	return status;
+}
+
+/**
+ * ixgbe_aci_write_i2c - write a value to I2C register
+ * @hw: pointer to the hw struct
+ * @topo_addr: topology address for a device to communicate with
+ * @bus_addr: 7-bit I2C bus address
+ * @addr: I2C memory address (I2C offset) with up to 16 bits
+ * @params: I2C parameters: bit [4] - I2C address type, bits [3:0] - data size
+ *				      to write (0-7 bytes)
+ * @data: pointer to data (0 to 4 bytes) to be written to the I2C device
+ *
+ * Write a value to the I2C pin register using ACI command (0x06E3).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_write_i2c(struct ixgbe_hw *hw,
+			struct ixgbe_aci_cmd_link_topo_addr topo_addr,
+			u16 bus_addr, __le16 addr, u8 params, u8 *data)
+{
+	struct ixgbe_aci_desc desc = { 0 };
+	struct ixgbe_aci_cmd_i2c *cmd;
+	u8 i, data_size;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_write_i2c);
+	cmd = &desc.params.read_write_i2c;
+
+	data_size = (params & IXGBE_ACI_I2C_DATA_SIZE_M) >>
+		    IXGBE_ACI_I2C_DATA_SIZE_S;
+
+	/* data_size limited to 4 */
+	if (data_size > 4)
+		return IXGBE_ERR_PARAM;
+
+	cmd->i2c_bus_addr = IXGBE_CPU_TO_LE16(bus_addr);
+	cmd->topo_addr = topo_addr;
+	cmd->i2c_params = params;
+	cmd->i2c_addr = addr;
+
+	for (i = 0; i < data_size; i++) {
+		cmd->i2c_data[i] = *data;
+		data++;
+	}
+
+	return ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+}
+
+/**
+ * ixgbe_aci_set_gpio - set GPIO pin state
+ * @hw: pointer to the hw struct
+ * @gpio_ctrl_handle: GPIO controller node handle
+ * @pin_idx: IO Number of the GPIO that needs to be set
+ * @value: SW provide IO value to set in the LSB
+ *
+ * Set the GPIO pin state that is a part of the topology
+ * using ACI command (0x06EC).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_set_gpio(struct ixgbe_hw *hw, u16 gpio_ctrl_handle, u8 pin_idx,
+		       bool value)
+{
+	struct ixgbe_aci_cmd_gpio *cmd;
+	struct ixgbe_aci_desc desc;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_set_gpio);
+	cmd = &desc.params.read_write_gpio;
+	cmd->gpio_ctrl_handle = IXGBE_CPU_TO_LE16(gpio_ctrl_handle);
+	cmd->gpio_num = pin_idx;
+	cmd->gpio_val = value ? 1 : 0;
+
+	return ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+}
+
+/**
+ * ixgbe_aci_get_gpio - get GPIO pin state
+ * @hw: pointer to the hw struct
+ * @gpio_ctrl_handle: GPIO controller node handle
+ * @pin_idx: IO Number of the GPIO that needs to be set
+ * @value: IO value read
+ *
+ * Get the value of a GPIO signal which is part of the topology
+ * using ACI command (0x06ED).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_get_gpio(struct ixgbe_hw *hw, u16 gpio_ctrl_handle, u8 pin_idx,
+		       bool *value)
+{
+	struct ixgbe_aci_cmd_gpio *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_get_gpio);
+	cmd = &desc.params.read_write_gpio;
+	cmd->gpio_ctrl_handle = IXGBE_CPU_TO_LE16(gpio_ctrl_handle);
+	cmd->gpio_num = pin_idx;
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+	if (status)
+		return status;
+
+	*value = !!cmd->gpio_val;
+	return IXGBE_SUCCESS;
+}
+
+/**
  * ixgbe_aci_sff_eeprom - read/write SFF EEPROM
  * @hw: pointer to the HW struct
  * @lport: bits [7:0] = logical port, bit [8] = logical port valid
@@ -1770,6 +2061,72 @@ s32 ixgbe_aci_sff_eeprom(struct ixgbe_hw *hw, u16 lport, u8 bus_addr,
 
 	status = ixgbe_aci_send_cmd(hw, &desc, data, length);
 	return status;
+}
+
+/**
+ * ixgbe_aci_prog_topo_dev_nvm - program Topology Device NVM
+ * @hw: pointer to the hardware structure
+ * @topo_params: pointer to structure storing topology parameters for a device
+ *
+ * Program Topology Device NVM using ACI command (0x06F2).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_prog_topo_dev_nvm(struct ixgbe_hw *hw,
+			struct ixgbe_aci_cmd_link_topo_params *topo_params)
+{
+	struct ixgbe_aci_cmd_prog_topo_dev_nvm *cmd;
+	struct ixgbe_aci_desc desc;
+
+	cmd = &desc.params.prog_topo_dev_nvm;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_prog_topo_dev_nvm);
+
+	memcpy(&cmd->topo_params, topo_params, sizeof(*topo_params));
+
+	return ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+}
+
+/**
+ * ixgbe_aci_read_topo_dev_nvm - read Topology Device NVM
+ * @hw: pointer to the hardware structure
+ * @topo_params: pointer to structure storing topology parameters for a device
+ * @start_address: byte offset in the topology device NVM
+ * @data: pointer to data buffer
+ * @data_size: number of bytes to be read from the topology device NVM
+ * Read Topology Device NVM (0x06F3)
+ *
+ * Read Topology of Device NVM using ACI command (0x06F3).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_read_topo_dev_nvm(struct ixgbe_hw *hw,
+			struct ixgbe_aci_cmd_link_topo_params *topo_params,
+			u32 start_address, u8 *data, u8 data_size)
+{
+	struct ixgbe_aci_cmd_read_topo_dev_nvm *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	if (!data || data_size == 0 ||
+	    data_size > IXGBE_ACI_READ_TOPO_DEV_NVM_DATA_READ_SIZE)
+		return IXGBE_ERR_PARAM;
+
+	cmd = &desc.params.read_topo_dev_nvm;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_read_topo_dev_nvm);
+
+	desc.datalen = IXGBE_CPU_TO_LE16(data_size);
+	memcpy(&cmd->topo_params, topo_params, sizeof(*topo_params));
+	cmd->start_address = IXGBE_CPU_TO_LE32(start_address);
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+	if (status)
+		return status;
+
+	memcpy(data, cmd->data_read, data_size);
+
+	return IXGBE_SUCCESS;
 }
 
 /**
@@ -1892,6 +2249,37 @@ s32 ixgbe_nvm_validate_checksum(struct ixgbe_hw *hw)
 				      "Invalid Shadow Ram checksum");
 			status = IXGBE_ERR_NVM_CHECKSUM;
 		}
+
+	return status;
+}
+
+/**
+ * ixgbe_nvm_recalculate_checksum - recalculate checksum
+ * @hw: pointer to the HW struct
+ *
+ * Recalculate NVM PFA checksum using ACI command (0x0706).
+ * The function acquires and then releases the NVM ownership.
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_nvm_recalculate_checksum(struct ixgbe_hw *hw)
+{
+	struct ixgbe_aci_cmd_nvm_checksum *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	status = ixgbe_acquire_nvm(hw, IXGBE_RES_READ);
+	if (status)
+		return status;
+
+	cmd = &desc.params.nvm_checksum;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_nvm_checksum);
+	cmd->flags = IXGBE_ACI_NVM_CHECKSUM_RECALC;
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+
+	ixgbe_release_nvm(hw);
 
 	return status;
 }
@@ -2101,6 +2489,60 @@ static s32 ixgbe_read_nvm_sr_copy(struct ixgbe_hw *hw,
 }
 
 /**
+ * ixgbe_get_nvm_minsrevs - Get the minsrevs values from flash
+ * @hw: pointer to the HW struct
+ * @minsrevs: structure to store NVM and OROM minsrev values
+ *
+ * Read the Minimum Security Revision TLV and extract
+ * the revision values from the flash image
+ * into a readable structure for processing.
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_get_nvm_minsrevs(struct ixgbe_hw *hw,
+			   struct ixgbe_minsrev_info *minsrevs)
+{
+	struct ixgbe_aci_cmd_nvm_minsrev data;
+	s32 status;
+	u16 valid;
+
+	status = ixgbe_acquire_nvm(hw, IXGBE_RES_READ);
+	if (status)
+		return status;
+
+	status = ixgbe_aci_read_nvm(hw, IXGBE_ACI_NVM_MINSREV_MOD_ID,
+				    0, sizeof(data), &data,
+				    true, false);
+
+	ixgbe_release_nvm(hw);
+
+	if (status)
+		return status;
+
+	valid = IXGBE_LE16_TO_CPU(data.validity);
+
+	/* Extract NVM minimum security revision */
+	if (valid & IXGBE_ACI_NVM_MINSREV_NVM_VALID) {
+		u16 minsrev_l = IXGBE_LE16_TO_CPU(data.nvm_minsrev_l);
+		u16 minsrev_h = IXGBE_LE16_TO_CPU(data.nvm_minsrev_h);
+
+		minsrevs->nvm = minsrev_h << 16 | minsrev_l;
+		minsrevs->nvm_valid = true;
+	}
+
+	/* Extract the OROM minimum security revision */
+	if (valid & IXGBE_ACI_NVM_MINSREV_OROM_VALID) {
+		u16 minsrev_l = IXGBE_LE16_TO_CPU(data.orom_minsrev_l);
+		u16 minsrev_h = IXGBE_LE16_TO_CPU(data.orom_minsrev_h);
+
+		minsrevs->orom = minsrev_h << 16 | minsrev_l;
+		minsrevs->orom_valid = true;
+	}
+
+	return IXGBE_SUCCESS;
+}
+
+/**
  * ixgbe_get_nvm_srev - Read the security revision from the NVM CSS header
  * @hw: pointer to the HW struct
  * @bank: whether to read from the active or inactive flash bank
@@ -2176,6 +2618,22 @@ static s32 ixgbe_get_nvm_ver_info(struct ixgbe_hw *hw,
 }
 
 /**
+ * ixgbe_get_inactive_nvm_ver - Read Option ROM version from the inactive bank
+ * @hw: pointer to the HW structure
+ * @nvm: storage for Option ROM version information
+ *
+ * Reads the NVM EETRACK ID, Map version, and security revision of the
+ * inactive NVM bank. Used to access version data for a pending update that
+ * has not yet been activated.
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_get_inactive_nvm_ver(struct ixgbe_hw *hw, struct ixgbe_nvm_info *nvm)
+{
+	return ixgbe_get_nvm_ver_info(hw, IXGBE_INACTIVE_FLASH_BANK, nvm);
+}
+
+/**
  * ixgbe_get_active_nvm_ver - Read Option ROM version from the active bank
  * @hw: pointer to the HW structure
  * @nvm: storage for Option ROM version information
@@ -2188,6 +2646,308 @@ static s32 ixgbe_get_nvm_ver_info(struct ixgbe_hw *hw,
 s32 ixgbe_get_active_nvm_ver(struct ixgbe_hw *hw, struct ixgbe_nvm_info *nvm)
 {
 	return ixgbe_get_nvm_ver_info(hw, IXGBE_ACTIVE_FLASH_BANK, nvm);
+}
+
+/**
+ * ixgbe_read_sr_pointer - Read the value of a Shadow RAM pointer word
+ * @hw: pointer to the HW structure
+ * @offset: the word offset of the Shadow RAM word to read
+ * @pointer: pointer value read from Shadow RAM
+ *
+ * Read the given Shadow RAM word, and convert it to a pointer value specified
+ * in bytes. This function assumes the specified offset is a valid pointer
+ * word.
+ *
+ * Each pointer word specifies whether it is stored in word size or 4KB
+ * sector size by using the highest bit. The reported pointer value will be in
+ * bytes, intended for flat NVM reads.
+ *
+ * Return: the exit code of the operation.
+ */
+static s32 ixgbe_read_sr_pointer(struct ixgbe_hw *hw, u16 offset, u32 *pointer)
+{
+	s32 status;
+	u16 value;
+
+	status = ixgbe_read_ee_aci_E610(hw, offset, &value);
+	if (status)
+		return status;
+
+	/* Determine if the pointer is in 4KB or word units */
+	if (value & IXGBE_SR_NVM_PTR_4KB_UNITS)
+		*pointer = (value & ~IXGBE_SR_NVM_PTR_4KB_UNITS) * 4 * 1024;
+	else
+		*pointer = value * 2;
+
+	return IXGBE_SUCCESS;
+}
+
+/**
+ * ixgbe_read_sr_area_size - Read an area size from a Shadow RAM word
+ * @hw: pointer to the HW structure
+ * @offset: the word offset of the Shadow RAM to read
+ * @size: size value read from the Shadow RAM
+ *
+ * Read the given Shadow RAM word, and convert it to an area size value
+ * specified in bytes. This function assumes the specified offset is a valid
+ * area size word.
+ *
+ * Each area size word is specified in 4KB sector units. This function reports
+ * the size in bytes, intended for flat NVM reads.
+ *
+ * Return: the exit code of the operation.
+ */
+static s32 ixgbe_read_sr_area_size(struct ixgbe_hw *hw, u16 offset, u32 *size)
+{
+	s32 status;
+	u16 value;
+
+	status = ixgbe_read_ee_aci_E610(hw, offset, &value);
+	if (status)
+		return status;
+
+	/* Area sizes are always specified in 4KB units */
+	*size = value * 4 * 1024;
+
+	return IXGBE_SUCCESS;
+}
+
+/**
+ * ixgbe_discover_flash_size - Discover the available flash size.
+ * @hw: pointer to the HW struct
+ *
+ * The device flash could be up to 16MB in size. However, it is possible that
+ * the actual size is smaller. Use bisection to determine the accessible size
+ * of flash memory.
+ *
+ * Return: the exit code of the operation.
+ */
+static s32 ixgbe_discover_flash_size(struct ixgbe_hw *hw)
+{
+	u32 min_size = 0, max_size = IXGBE_ACI_NVM_MAX_OFFSET + 1;
+	s32 status;
+
+	status = ixgbe_acquire_nvm(hw, IXGBE_RES_READ);
+	if (status)
+		return status;
+
+	while ((max_size - min_size) > 1) {
+		u32 offset = (max_size + min_size) / 2;
+		u32 len = 1;
+		u8 data;
+
+		status = ixgbe_read_flat_nvm(hw, offset, &len, &data, false);
+		if (status == IXGBE_ERR_ACI_ERROR &&
+		    hw->aci.last_status == IXGBE_ACI_RC_EINVAL) {
+			status = IXGBE_SUCCESS;
+			max_size = offset;
+		} else if (!status) {
+			min_size = offset;
+		} else {
+			/* an unexpected error occurred */
+			goto err_read_flat_nvm;
+		}
+	}
+
+	hw->flash.flash_size = max_size;
+
+err_read_flat_nvm:
+	ixgbe_release_nvm(hw);
+
+	return status;
+}
+
+/**
+ * ixgbe_determine_active_flash_banks - Discover active bank for each module
+ * @hw: pointer to the HW struct
+ *
+ * Read the Shadow RAM control word and determine which banks are active for
+ * the NVM, OROM, and Netlist modules. Also read and calculate the associated
+ * pointer and size. These values are then cached into the ixgbe_flash_info
+ * structure for later use in order to calculate the correct offset to read
+ * from the active module.
+ *
+ * Return: the exit code of the operation.
+ */
+static s32 ixgbe_determine_active_flash_banks(struct ixgbe_hw *hw)
+{
+	struct ixgbe_bank_info *banks = &hw->flash.banks;
+	u16 ctrl_word;
+	s32 status;
+
+	status = ixgbe_read_ee_aci_E610(hw, E610_SR_NVM_CTRL_WORD, &ctrl_word);
+	if (status) {
+		return status;
+	}
+
+	/* Check that the control word indicates validity */
+	if ((ctrl_word & IXGBE_SR_CTRL_WORD_1_M) >> IXGBE_SR_CTRL_WORD_1_S !=
+	    IXGBE_SR_CTRL_WORD_VALID) {
+		return IXGBE_ERR_CONFIG;
+	}
+
+	if (!(ctrl_word & IXGBE_SR_CTRL_WORD_NVM_BANK))
+		banks->nvm_bank = IXGBE_1ST_FLASH_BANK;
+	else
+		banks->nvm_bank = IXGBE_2ND_FLASH_BANK;
+
+	if (!(ctrl_word & IXGBE_SR_CTRL_WORD_OROM_BANK))
+		banks->orom_bank = IXGBE_1ST_FLASH_BANK;
+	else
+		banks->orom_bank = IXGBE_2ND_FLASH_BANK;
+
+	if (!(ctrl_word & IXGBE_SR_CTRL_WORD_NETLIST_BANK))
+		banks->netlist_bank = IXGBE_1ST_FLASH_BANK;
+	else
+		banks->netlist_bank = IXGBE_2ND_FLASH_BANK;
+
+	status = ixgbe_read_sr_pointer(hw, E610_SR_1ST_NVM_BANK_PTR,
+				       &banks->nvm_ptr);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_read_sr_area_size(hw, E610_SR_NVM_BANK_SIZE,
+					 &banks->nvm_size);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_read_sr_pointer(hw, E610_SR_1ST_OROM_BANK_PTR,
+				       &banks->orom_ptr);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_read_sr_area_size(hw, E610_SR_OROM_BANK_SIZE,
+					 &banks->orom_size);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_read_sr_pointer(hw, E610_SR_NETLIST_BANK_PTR,
+				       &banks->netlist_ptr);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_read_sr_area_size(hw, E610_SR_NETLIST_BANK_SIZE,
+					 &banks->netlist_size);
+	if (status) {
+		return status;
+	}
+
+	return IXGBE_SUCCESS;
+}
+
+/**
+ * ixgbe_init_nvm - initializes NVM setting
+ * @hw: pointer to the HW struct
+ *
+ * Read and populate NVM settings such as Shadow RAM size,
+ * max_timeout, and blank_nvm_mode
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_init_nvm(struct ixgbe_hw *hw)
+{
+	struct ixgbe_flash_info *flash = &hw->flash;
+	u32 fla, gens_stat, status;
+	u8 sr_size;
+
+	/* The SR size is stored regardless of the NVM programming mode
+	 * as the blank mode may be used in the factory line.
+	 */
+	gens_stat = IXGBE_READ_REG(hw, GLNVM_GENS);
+	sr_size = (gens_stat & GLNVM_GENS_SR_SIZE_M) >> GLNVM_GENS_SR_SIZE_S;
+
+	/* Switching to words (sr_size contains power of 2) */
+	flash->sr_words = BIT(sr_size) * IXGBE_SR_WORDS_IN_1KB;
+
+	/* Check if we are in the normal or blank NVM programming mode */
+	fla = IXGBE_READ_REG(hw, GLNVM_FLA);
+	if (fla & GLNVM_FLA_LOCKED_M) { /* Normal programming mode */
+		flash->blank_nvm_mode = false;
+	} else {
+		/* Blank programming mode */
+		flash->blank_nvm_mode = true;
+		return IXGBE_ERR_NVM_BLANK_MODE;
+	}
+
+	status = ixgbe_discover_flash_size(hw);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_determine_active_flash_banks(hw);
+	if (status) {
+		return status;
+	}
+
+	status = ixgbe_get_nvm_ver_info(hw, IXGBE_ACTIVE_FLASH_BANK,
+					&flash->nvm);
+	if (status) {
+		return status;
+	}
+
+	return IXGBE_SUCCESS;
+}
+
+/**
+ * ixgbe_sanitize_operate - Clear the user data
+ * @hw: pointer to the HW struct
+ *
+ * Clear user data from NVM using ACI command (0x070C).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_sanitize_operate(struct ixgbe_hw *hw)
+{
+	s32 status;
+	u8 values;
+
+	u8 cmd_flags = IXGBE_ACI_SANITIZE_REQ_OPERATE |
+		       IXGBE_ACI_SANITIZE_OPERATE_SUBJECT_CLEAR;
+
+	status = ixgbe_sanitize_nvm(hw, cmd_flags, &values);
+	if (status)
+		return status;
+	if ((!(values & IXGBE_ACI_SANITIZE_OPERATE_HOST_CLEAN_DONE) &&
+	     !(values & IXGBE_ACI_SANITIZE_OPERATE_BMC_CLEAN_DONE)) ||
+	    ((values & IXGBE_ACI_SANITIZE_OPERATE_HOST_CLEAN_DONE) &&
+	     !(values & IXGBE_ACI_SANITIZE_OPERATE_HOST_CLEAN_SUCCESS)) ||
+	    ((values & IXGBE_ACI_SANITIZE_OPERATE_BMC_CLEAN_DONE) &&
+	     !(values & IXGBE_ACI_SANITIZE_OPERATE_BMC_CLEAN_SUCCESS)))
+		return IXGBE_ERR_ACI_ERROR;
+
+	return IXGBE_SUCCESS;
+}
+
+/**
+ * ixgbe_sanitize_nvm - Sanitize NVM
+ * @hw: pointer to the HW struct
+ * @cmd_flags: flag to the ACI command
+ * @values: values returned from the command
+ *
+ * Sanitize NVM using ACI command (0x070C).
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_sanitize_nvm(struct ixgbe_hw *hw, u8 cmd_flags, u8 *values)
+{
+	struct ixgbe_aci_desc desc;
+	struct ixgbe_aci_cmd_nvm_sanitization *cmd;
+	s32 status;
+
+	cmd = &desc.params.nvm_sanitization;
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_nvm_sanitization);
+	cmd->cmd_flags = cmd_flags;
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+	if (values)
+		*values = cmd->values;
+
+	return status;
 }
 
 /**
@@ -2308,6 +3068,335 @@ s32 ixgbe_read_flat_nvm(struct ixgbe_hw  *hw, u32 offset, u32 *length,
 
 	*length = bytes_read;
 	return status;
+}
+
+/**
+ * ixgbe_aci_alternate_write - write to alternate structure
+ * @hw: pointer to the hardware structure
+ * @reg_addr0: address of first dword to be written
+ * @reg_val0: value to be written under 'reg_addr0'
+ * @reg_addr1: address of second dword to be written
+ * @reg_val1: value to be written under 'reg_addr1'
+ *
+ * Write one or two dwords to alternate structure using ACI command (0x0900).
+ * Fields are indicated by 'reg_addr0' and 'reg_addr1' register numbers.
+ *
+ * Return: 0 on success and error code on failure.
+ */
+s32 ixgbe_aci_alternate_write(struct ixgbe_hw *hw, u32 reg_addr0,
+			      u32 reg_val0, u32 reg_addr1, u32 reg_val1)
+{
+	struct ixgbe_aci_cmd_read_write_alt_direct *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	cmd = &desc.params.read_write_alt_direct;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_write_alt_direct);
+	cmd->dword0_addr = IXGBE_CPU_TO_LE32(reg_addr0);
+	cmd->dword1_addr = IXGBE_CPU_TO_LE32(reg_addr1);
+	cmd->dword0_value = IXGBE_CPU_TO_LE32(reg_val0);
+	cmd->dword1_value = IXGBE_CPU_TO_LE32(reg_val1);
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+
+	return status;
+}
+
+/**
+ * ixgbe_aci_alternate_read - read from alternate structure
+ * @hw: pointer to the hardware structure
+ * @reg_addr0: address of first dword to be read
+ * @reg_val0: pointer for data read from 'reg_addr0'
+ * @reg_addr1: address of second dword to be read
+ * @reg_val1: pointer for data read from 'reg_addr1'
+ *
+ * Read one or two dwords from alternate structure using ACI command (0x0902).
+ * Fields are indicated by 'reg_addr0' and 'reg_addr1' register numbers.
+ * If 'reg_val1' pointer is not passed then only register at 'reg_addr0'
+ * is read.
+ *
+ * Return: 0 on success and error code on failure.
+ */
+s32 ixgbe_aci_alternate_read(struct ixgbe_hw *hw, u32 reg_addr0,
+			     u32 *reg_val0, u32 reg_addr1, u32 *reg_val1)
+{
+	struct ixgbe_aci_cmd_read_write_alt_direct *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	cmd = &desc.params.read_write_alt_direct;
+
+	if (!reg_val0)
+		return IXGBE_ERR_PARAM;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_read_alt_direct);
+	cmd->dword0_addr = IXGBE_CPU_TO_LE32(reg_addr0);
+	cmd->dword1_addr = IXGBE_CPU_TO_LE32(reg_addr1);
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+
+	if (status == IXGBE_SUCCESS) {
+		*reg_val0 = IXGBE_LE32_TO_CPU(cmd->dword0_value);
+
+		if (reg_val1)
+			*reg_val1 = IXGBE_LE32_TO_CPU(cmd->dword1_value);
+	}
+
+	return status;
+}
+
+/**
+ * ixgbe_aci_alternate_write_done - check if writing to alternate structure
+ * is done
+ * @hw: pointer to the HW structure.
+ * @bios_mode: indicates whether the command is executed by UEFI or legacy BIOS
+ * @reset_needed: indicates the SW should trigger GLOBAL reset
+ *
+ * Indicates to the FW that alternate structures have been changed.
+ *
+ * Return: 0 on success and error code on failure.
+ */
+s32 ixgbe_aci_alternate_write_done(struct ixgbe_hw *hw, u8 bios_mode,
+				   bool *reset_needed)
+{
+	struct ixgbe_aci_cmd_done_alt_write *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	cmd = &desc.params.done_alt_write;
+
+	if (!reset_needed)
+		return IXGBE_ERR_PARAM;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc, ixgbe_aci_opc_done_alt_write);
+	cmd->flags = bios_mode;
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+	if (!status)
+		*reset_needed = (IXGBE_LE16_TO_CPU(cmd->flags) &
+				 IXGBE_ACI_RESP_RESET_NEEDED) != 0;
+
+	return status;
+}
+
+/**
+ * ixgbe_aci_alternate_clear - clear alternate structure
+ * @hw: pointer to the HW structure.
+ *
+ * Clear the alternate structures of the port from which the function
+ * is called.
+ *
+ * Return: 0 on success and error code on failure.
+ */
+s32 ixgbe_aci_alternate_clear(struct ixgbe_hw *hw)
+{
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc,
+					ixgbe_aci_opc_clear_port_alt_write);
+
+	status = ixgbe_aci_send_cmd(hw, &desc, NULL, 0);
+
+	return status;
+}
+
+/**
+ * ixgbe_aci_get_internal_data - get internal FW/HW data
+ * @hw: pointer to the hardware structure
+ * @cluster_id: specific cluster to dump
+ * @table_id: table ID within cluster
+ * @start: index of line in the block to read
+ * @buf: dump buffer
+ * @buf_size: dump buffer size
+ * @ret_buf_size: return buffer size (returned by FW)
+ * @ret_next_cluster: next cluster to read (returned by FW)
+ * @ret_next_table: next block to read (returned by FW)
+ * @ret_next_index: next index to read (returned by FW)
+ *
+ * Get internal FW/HW data using ACI command (0xFF08) for debug purposes.
+ *
+ * Return: the exit code of the operation.
+ */
+s32 ixgbe_aci_get_internal_data(struct ixgbe_hw *hw, u16 cluster_id,
+				u16 table_id, u32 start, void *buf,
+				u16 buf_size, u16 *ret_buf_size,
+				u16 *ret_next_cluster, u16 *ret_next_table,
+				u32 *ret_next_index)
+{
+	struct ixgbe_aci_cmd_debug_dump_internals *cmd;
+	struct ixgbe_aci_desc desc;
+	s32 status;
+
+	cmd = &desc.params.debug_dump;
+
+	if (buf_size == 0 || !buf)
+		return IXGBE_ERR_PARAM;
+
+	ixgbe_fill_dflt_direct_cmd_desc(&desc,
+					ixgbe_aci_opc_debug_dump_internals);
+
+	cmd->cluster_id = IXGBE_CPU_TO_LE16(cluster_id);
+	cmd->table_id = IXGBE_CPU_TO_LE16(table_id);
+	cmd->idx = IXGBE_CPU_TO_LE32(start);
+
+	status = ixgbe_aci_send_cmd(hw, &desc, buf, buf_size);
+
+	if (!status) {
+		if (ret_buf_size)
+			*ret_buf_size = IXGBE_LE16_TO_CPU(desc.datalen);
+		if (ret_next_cluster)
+			*ret_next_cluster = IXGBE_LE16_TO_CPU(cmd->cluster_id);
+		if (ret_next_table)
+			*ret_next_table = IXGBE_LE16_TO_CPU(cmd->table_id);
+		if (ret_next_index)
+			*ret_next_index = IXGBE_LE32_TO_CPU(cmd->idx);
+	}
+
+	return status;
+}
+
+/**
+ * ixgbe_validate_nvm_rw_reg - Check that an NVM access request is valid
+ * @cmd: NVM access command structure
+ *
+ * Validates that an NVM access structure is request to read or write a valid
+ * register offset. First validates that the module and flags are correct, and
+ * then ensures that the register offset is one of the accepted registers.
+ *
+ * Return: 0 if the register access is valid, out of range error code otherwise.
+ */
+static s32
+ixgbe_validate_nvm_rw_reg(struct ixgbe_nvm_access_cmd *cmd)
+{
+	u16 i;
+
+	switch (cmd->offset) {
+	case GL_HICR:
+	case GL_HICR_EN: /* Note, this register is read only */
+	case GL_FWSTS:
+	case GL_MNG_FWSM:
+	case GLNVM_GENS:
+	case GLNVM_FLA:
+	case GL_FWRESETCNT:
+		return 0;
+	default:
+		break;
+	}
+
+	for (i = 0; i <= GL_HIDA_MAX_INDEX; i++)
+		if (cmd->offset == (u32)GL_HIDA(i))
+			return 0;
+
+	for (i = 0; i <= GL_HIBA_MAX_INDEX; i++)
+		if (cmd->offset == (u32)GL_HIBA(i))
+			return 0;
+
+	/* All other register offsets are not valid */
+	return IXGBE_ERR_OUT_OF_RANGE;
+}
+
+/**
+ * ixgbe_nvm_access_read - Handle an NVM read request
+ * @hw: pointer to the HW struct
+ * @cmd: NVM access command to process
+ * @data: storage for the register value read
+ *
+ * Process an NVM access request to read a register.
+ *
+ * Return: 0 if the register read is valid and successful,
+ * out of range error code otherwise.
+ */
+static s32 ixgbe_nvm_access_read(struct ixgbe_hw *hw,
+			struct ixgbe_nvm_access_cmd *cmd,
+			struct ixgbe_nvm_access_data *data)
+{
+	s32 status;
+
+	/* Always initialize the output data, even on failure */
+	memset(&data->regval, 0, cmd->data_size);
+
+	/* Make sure this is a valid read/write access request */
+	status = ixgbe_validate_nvm_rw_reg(cmd);
+	if (status)
+		return status;
+
+	DEBUGOUT1("NVM access: reading register %08x\n", cmd->offset);
+
+	/* Read the register and store the contents in the data field */
+	data->regval = IXGBE_READ_REG(hw, cmd->offset);
+
+	return 0;
+}
+
+/**
+ * ixgbe_nvm_access_write - Handle an NVM write request
+ * @hw: pointer to the HW struct
+ * @cmd: NVM access command to process
+ * @data: NVM access data to write
+ *
+ * Process an NVM access request to write a register.
+ *
+ * Return: 0 if the register write is valid and successful,
+ * out of range error code otherwise.
+ */
+static s32 ixgbe_nvm_access_write(struct ixgbe_hw *hw,
+			struct ixgbe_nvm_access_cmd *cmd,
+			struct ixgbe_nvm_access_data *data)
+{
+	s32 status;
+
+	/* Make sure this is a valid read/write access request */
+	status = ixgbe_validate_nvm_rw_reg(cmd);
+	if (status)
+		return status;
+
+	/* Reject requests to write to read-only registers */
+	switch (cmd->offset) {
+	case GL_HICR_EN:
+		return IXGBE_ERR_OUT_OF_RANGE;
+	default:
+		break;
+	}
+
+	DEBUGOUT2("NVM access: writing register %08x with value %08x\n",
+		cmd->offset, data->regval);
+
+	/* Write the data field to the specified register */
+	IXGBE_WRITE_REG(hw, cmd->offset, data->regval);
+
+	return 0;
+}
+
+/**
+ * ixgbe_handle_nvm_access - Handle an NVM access request
+ * @hw: pointer to the HW struct
+ * @cmd: NVM access command info
+ * @data: pointer to read or return data
+ *
+ * Process an NVM access request. Read the command structure information and
+ * determine if it is valid. If not, report an error indicating the command
+ * was invalid.
+ *
+ * For valid commands, perform the necessary function, copying the data into
+ * the provided data buffer.
+ *
+ * Return: 0 if the nvm access request is valid and successful,
+ * error code otherwise.
+ */
+s32 ixgbe_handle_nvm_access(struct ixgbe_hw *hw,
+			struct ixgbe_nvm_access_cmd *cmd,
+			struct ixgbe_nvm_access_data *data)
+{
+	switch (cmd->command) {
+	case IXGBE_NVM_CMD_READ:
+		return ixgbe_nvm_access_read(hw, cmd, data);
+	case IXGBE_NVM_CMD_WRITE:
+		return ixgbe_nvm_access_write(hw, cmd, data);
+	default:
+		return IXGBE_ERR_PARAM;
+	}
 }
 
 /**

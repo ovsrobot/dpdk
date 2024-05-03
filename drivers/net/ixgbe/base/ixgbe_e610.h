@@ -20,6 +20,8 @@ void ixgbe_fill_dflt_direct_cmd_desc(struct ixgbe_aci_desc *desc, u16 opcode);
 
 s32 ixgbe_aci_get_fw_ver(struct ixgbe_hw *hw);
 s32 ixgbe_aci_send_driver_ver(struct ixgbe_hw *hw, struct ixgbe_driver_ver *dv);
+s32 ixgbe_aci_set_pf_context(struct ixgbe_hw *hw, u8 pf_id);
+
 s32 ixgbe_acquire_res(struct ixgbe_hw *hw, enum ixgbe_aci_res_ids res,
 		      enum ixgbe_aci_res_access_type access, u32 timeout);
 void ixgbe_release_res(struct ixgbe_hw *hw, enum ixgbe_aci_res_ids res);
@@ -29,9 +31,12 @@ s32 ixgbe_discover_dev_caps(struct ixgbe_hw *hw,
 			    struct ixgbe_hw_dev_caps *dev_caps);
 s32 ixgbe_discover_func_caps(struct ixgbe_hw* hw,
 			     struct ixgbe_hw_func_caps* func_caps);
+s32 ixgbe_get_caps(struct ixgbe_hw *hw);
 s32 ixgbe_aci_disable_rxen(struct ixgbe_hw *hw);
 s32 ixgbe_aci_get_phy_caps(struct ixgbe_hw *hw, bool qual_mods, u8 report_mode,
 			   struct ixgbe_aci_cmd_get_phy_caps_data *pcaps);
+bool ixgbe_phy_caps_equals_cfg(struct ixgbe_aci_cmd_get_phy_caps_data *caps,
+			       struct ixgbe_aci_cmd_set_phy_cfg_data *cfg);
 void ixgbe_copy_phy_caps_to_cfg(struct ixgbe_aci_cmd_get_phy_caps_data *caps,
 				struct ixgbe_aci_cmd_set_phy_cfg_data *cfg);
 s32 ixgbe_aci_set_phy_cfg(struct ixgbe_hw *hw,
@@ -43,9 +48,34 @@ s32 ixgbe_aci_get_link_info(struct ixgbe_hw *hw, bool ena_lse,
 			    struct ixgbe_link_status *link);
 s32 ixgbe_aci_set_event_mask(struct ixgbe_hw *hw, u8 port_num, u16 mask);
 s32 ixgbe_configure_lse(struct ixgbe_hw *hw, bool activate, u16 mask);
+
+s32 ixgbe_aci_get_netlist_node(struct ixgbe_hw *hw,
+			       struct ixgbe_aci_cmd_get_link_topo *cmd,
+			       u8 *node_part_number, u16 *node_handle);
+s32 ixgbe_aci_get_netlist_node_pin(struct ixgbe_hw *hw,
+				   struct ixgbe_aci_cmd_get_link_topo_pin *cmd,
+				   u16 *node_handle);
+s32 ixgbe_find_netlist_node(struct ixgbe_hw *hw, u8 node_type_ctx,
+			    u8 node_part_number, u16 *node_handle);
+s32 ixgbe_aci_read_i2c(struct ixgbe_hw *hw,
+		       struct ixgbe_aci_cmd_link_topo_addr topo_addr,
+		       u16 bus_addr, __le16 addr, u8 params, u8 *data);
+s32 ixgbe_aci_write_i2c(struct ixgbe_hw *hw,
+			struct ixgbe_aci_cmd_link_topo_addr topo_addr,
+			u16 bus_addr, __le16 addr, u8 params, u8 *data);
+s32 ixgbe_aci_set_gpio(struct ixgbe_hw *hw, u16 gpio_ctrl_handle, u8 pin_idx,
+		       bool value);
+s32 ixgbe_aci_get_gpio(struct ixgbe_hw *hw, u16 gpio_ctrl_handle, u8 pin_idx,
+		       bool *value);
 s32 ixgbe_aci_sff_eeprom(struct ixgbe_hw *hw, u16 lport, u8 bus_addr,
 			 u16 mem_addr, u8 page, u8 page_bank_ctrl, u8 *data,
 			 u8 length, bool write);
+s32 ixgbe_aci_prog_topo_dev_nvm(struct ixgbe_hw *hw,
+			struct ixgbe_aci_cmd_link_topo_params *topo_params);
+s32 ixgbe_aci_read_topo_dev_nvm(struct ixgbe_hw *hw,
+			struct ixgbe_aci_cmd_link_topo_params *topo_params,
+			u32 start_address, u8 *data, u8 data_size);
+
 s32 ixgbe_acquire_nvm(struct ixgbe_hw *hw,
 		      enum ixgbe_aci_res_access_type access);
 void ixgbe_release_nvm(struct ixgbe_hw *hw);
@@ -55,11 +85,39 @@ s32 ixgbe_aci_read_nvm(struct ixgbe_hw *hw, u16 module_typeid, u32 offset,
 		       bool read_shadow_ram);
 
 s32 ixgbe_nvm_validate_checksum(struct ixgbe_hw *hw);
+s32 ixgbe_nvm_recalculate_checksum(struct ixgbe_hw *hw);
+
+s32 ixgbe_get_nvm_minsrevs(struct ixgbe_hw *hw, struct ixgbe_minsrev_info *minsrevs);
+s32 ixgbe_get_inactive_nvm_ver(struct ixgbe_hw *hw, struct ixgbe_nvm_info *nvm);
 s32 ixgbe_get_active_nvm_ver(struct ixgbe_hw *hw, struct ixgbe_nvm_info *nvm);
+s32 ixgbe_init_nvm(struct ixgbe_hw *hw);
+
+s32 ixgbe_sanitize_operate(struct ixgbe_hw *hw);
+s32 ixgbe_sanitize_nvm(struct ixgbe_hw *hw, u8 cmd_flags, u8 *values);
+
 s32 ixgbe_read_sr_word_aci(struct ixgbe_hw  *hw, u16 offset, u16 *data);
 s32 ixgbe_read_sr_buf_aci(struct ixgbe_hw *hw, u16 offset, u16 *words, u16 *data);
 s32 ixgbe_read_flat_nvm(struct ixgbe_hw  *hw, u32 offset, u32 *length,
 			u8 *data, bool read_shadow_ram);
+
+s32 ixgbe_aci_alternate_write(struct ixgbe_hw *hw, u32 reg_addr0,
+			      u32 reg_val0, u32 reg_addr1, u32 reg_val1);
+s32 ixgbe_aci_alternate_read(struct ixgbe_hw *hw, u32 reg_addr0,
+			     u32 *reg_val0, u32 reg_addr1, u32 *reg_val1);
+s32 ixgbe_aci_alternate_write_done(struct ixgbe_hw *hw, u8 bios_mode,
+				   bool *reset_needed);
+s32 ixgbe_aci_alternate_clear(struct ixgbe_hw *hw);
+
+s32 ixgbe_aci_get_internal_data(struct ixgbe_hw *hw, u16 cluster_id,
+				u16 table_id, u32 start, void *buf,
+				u16 buf_size, u16 *ret_buf_size,
+				u16 *ret_next_cluster, u16 *ret_next_table,
+				u32 *ret_next_index);
+
+s32 ixgbe_handle_nvm_access(struct ixgbe_hw *hw,
+				struct ixgbe_nvm_access_cmd *cmd,
+				struct ixgbe_nvm_access_data *data);
+
 /* E610 operations */
 s32 ixgbe_reset_hw_E610(struct ixgbe_hw *hw);
 s32 ixgbe_start_hw_E610(struct ixgbe_hw *hw);
