@@ -1,0 +1,42 @@
+---
+BasedOnStyle: LLVM
+
+# Place opening and closing parentheses on the same line for control statements
+BreakBeforeBraces: Custom
+BraceWrapping:
+        AfterFunction: false
+        AfterControlStatement: false
+        AfterEnum: false
+
+# Set maximum line length to 100 characters
+ColumnLimit: 100
+
+# Use LF (line feed) as the end-of-line character
+LineEnding: LF
+
+# Insert a newline at the end of the file
+InsertNewlineAtEOF: true
+
+# Set indentation width to 8 spaces
+IndentWidth: 8
+
+# Set continuation indentation width to 8 spaces
+ContinuationIndentWidth: 8
+
+# Set tab width to 8 spaces
+TabWidth: 8
+
+# Use tabs for indentation
+UseTab: Always
+
+# Preserve include blocks as they are
+IncludeBlocks: Preserve
+
+# Never sort includes
+SortIncludes: Never
+
+# Always break after return type for top-level definitions
+AlwaysBreakAfterReturnType: TopLevelDefinitions
+
+# Always break before multiline string literals
+AlignEscapedNewlines: Left
