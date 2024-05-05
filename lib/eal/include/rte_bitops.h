@@ -226,6 +226,183 @@ extern "C" {
 		 uint32_t *: __rte_bit_flip32,				\
 		 uint64_t *: __rte_bit_flip64)(addr, nr)
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Generic selection macro to test exactly once the value of a bit in
+ * a 32-bit or 64-bit word. The type of operation depends on the type
+ * of the @c addr parameter.
+ *
+ * rte_bit_once_test() is guaranteed to result in exactly one memory
+ * load (e.g., it may not be eliminate or merged by the compiler).
+ *
+ * \code{.c}
+ * rte_bit_once_set(addr, 17);
+ * if (rte_bit_once_test(addr, 17)) {
+ *     ...
+ * }
+ * \endcode
+ *
+ * In the above example, rte_bit_once_set() may not be removed by
+ * the compiler, which would be allowed in case rte_bit_set() and
+ * rte_bit_test() was used.
+ *
+ * \code{.c}
+ * while (rte_bit_once_test(addr, 17);
+ *     ;
+ * \endcode
+ *
+ * In case rte_bit_test(addr, 17) was used instead, the resulting
+ * object code could (and in many cases would be) replaced with
+ * the equivalent to
+ * \code{.c}
+ * if (rte_bit_test(addr, 17)) {
+ *   for (;;) // spin forever
+ *       ;
+ * }
+ * \endcode
+ *
+ * rte_bit_once_test() does not give any guarantees in regards to
+ * memory ordering or atomicity.
+ *
+ * The regular bit set operations (e.g., rte_bit_test()) should be
+ * preferred over the "once" family of operations (e.g.,
+ * rte_bit_once_test()) if possible, since the latter may prevent
+ * optimizations crucial for run-time performance.
+ *
+ * @param addr
+ *   A pointer to the word to query.
+ * @param nr
+ *   The index of the bit.
+ * @return
+ *   Returns true if the bit is set, and false otherwise.
+ */
+
+#define rte_bit_once_test(addr, nr)					\
+	_Generic((addr),						\
+		uint32_t *: __rte_bit_once_test32,			\
+		const uint32_t *: __rte_bit_once_test32,		\
+		uint64_t *: __rte_bit_once_test64,			\
+		const uint64_t *: __rte_bit_once_test64)(addr, nr)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Set bit in word exactly once.
+ *
+ * Generic selection macro to set bit specified by @c nr in the word
+ * pointed to by @c addr to '1' exactly once.
+ *
+ * rte_bit_once_set() is guaranteed to result in exactly one memory
+ * load and exactly one memory store, *or* an atomic bit set
+ * operation.
+ *
+ * See rte_bit_test_once32() for more information and uses cases for
+ * the "once" class of functions.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+
+#define rte_bit_once_set(addr, nr)				\
+	_Generic((addr),					\
+		 uint32_t *: __rte_bit_once_set32,		\
+		 uint64_t *: __rte_bit_once_set64)(addr, nr)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Clear bit in word exactly once.
+ *
+ * Generic selection macro to set bit specified by @c nr in the word
+ * pointed to by @c addr to '0' exactly once.
+ *
+ * rte_bit_once_clear() is guaranteed to result in exactly one memory load
+ * and exactly one memory store, *or* an atomic bit clear operation.
+ *
+ * See rte_bit_test_once() for more information and uses cases for
+ * the "once" class of functions.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_once_clear(addr, nr)				\
+	_Generic((addr),					\
+		 uint32_t *: __rte_bit_once_clear32,		\
+		 uint64_t *: __rte_bit_once_clear64)(addr, nr)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Assign a value to bit in a word exactly once.
+ *
+ * Generic selection macro to set bit specified by @c nr in the word
+ * pointed to by @c addr to the value indicated by @c value exactly
+ * once.
+ *
+ * rte_bit_once_assign() is guaranteed to result in exactly one memory
+ * load and exactly one memory store, *or* an atomic bit clear
+ * operation.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ * @param value
+ *   The new value of the bit - true for '1', or false for '0'.
+ */
+#define rte_bit_once_assign(addr, nr, value)				\
+	_Generic((addr),						\
+		 uint32_t *: __rte_bit_once_assign32,			\
+		 uint64_t *: __rte_bit_once_assign64)(addr, nr, value)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Flip bit in word, reading and writing exactly once.
+ *
+ * Generic selection macro to change the value of a bit to '0' if '1'
+ * or '1' if '0' in a 32-bit or 64-bit word. The type of operation
+ * depends on the type of the @c addr parameter.
+ *
+ * rte_bit_once_flip() is guaranteed to result in exactly one memory
+ * load and exactly one memory store, *or* an atomic bit flip
+ * operation.
+ *
+ * See rte_bit_test_once() for more information and uses cases for the
+ * "once" class of functions.
+ *
+ * This macro does not give any guarantees in regards to memory
+ * ordering or atomicity.
+ *
+ * @param addr
+ *   A pointer to the word to modify.
+ * @param nr
+ *   The index of the bit.
+ */
+#define rte_bit_once_flip(addr, nr)				\
+	_Generic((addr),					\
+		 uint32_t *: __rte_bit_once_flip32,		\
+		 uint64_t *: __rte_bit_once_flip64)(addr, nr)
+
 #define __RTE_GEN_BIT_TEST(family, fun, qualifier, size)		\
 	__rte_experimental						\
 	static inline bool						\
@@ -297,6 +474,18 @@ __RTE_GEN_BIT_SET(, set,, 64)
 __RTE_GEN_BIT_CLEAR(, clear,, 64)
 __RTE_GEN_BIT_ASSIGN(, assign,, 64)
 __RTE_GEN_BIT_FLIP(, flip,, 64)
+
+__RTE_GEN_BIT_TEST(once_, test, volatile, 32)
+__RTE_GEN_BIT_SET(once_, set, volatile, 32)
+__RTE_GEN_BIT_CLEAR(once_, clear, volatile, 32)
+__RTE_GEN_BIT_ASSIGN(once_, assign, volatile, 32)
+__RTE_GEN_BIT_FLIP(once_, flip, volatile, 32)
+
+__RTE_GEN_BIT_TEST(once_, test, volatile, 64)
+__RTE_GEN_BIT_SET(once_, set, volatile, 64)
+__RTE_GEN_BIT_CLEAR(once_, clear, volatile, 64)
+__RTE_GEN_BIT_ASSIGN(once_, assign, volatile, 64)
+__RTE_GEN_BIT_FLIP(once_, flip, volatile, 64)
 
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
@@ -993,6 +1182,12 @@ rte_log2_u64(uint64_t v)
 #undef rte_bit_assign
 #undef rte_bit_flip
 
+#undef rte_bit_once_test
+#undef rte_bit_once_set
+#undef rte_bit_once_clear
+#undef rte_bit_once_assign
+#undef rte_bit_once_flip
+
 #define __RTE_BIT_OVERLOAD_SZ_2(fun, qualifier, size, arg1_type, arg1_name) \
 	static inline void						\
 	rte_bit_ ## fun(qualifier uint ## size ## _t *addr,		\
@@ -1041,6 +1236,12 @@ __RTE_BIT_OVERLOAD_2(set,, unsigned int, nr)
 __RTE_BIT_OVERLOAD_2(clear,, unsigned int, nr)
 __RTE_BIT_OVERLOAD_3(assign,, unsigned int, nr, bool, value)
 __RTE_BIT_OVERLOAD_2(flip,, unsigned int, nr)
+
+__RTE_BIT_OVERLOAD_2R(once_test, const volatile, bool, unsigned int, nr)
+__RTE_BIT_OVERLOAD_2(once_set, volatile, unsigned int, nr)
+__RTE_BIT_OVERLOAD_2(once_clear, volatile, unsigned int, nr)
+__RTE_BIT_OVERLOAD_3(once_assign, volatile, unsigned int, nr, bool, value)
+__RTE_BIT_OVERLOAD_2(once_flip, volatile, unsigned int, nr)
 
 #endif
 
