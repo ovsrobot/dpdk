@@ -11546,8 +11546,7 @@ parse_hex(struct context *ctx, const struct token *token,
 	char tmp[16]; /* Ought to be enough. */
 	int ret;
 	unsigned int hexlen = len;
-	unsigned int length = 256;
-	uint8_t hex_tmp[length];
+	uint8_t hex_tmp[256];
 
 	/* Arguments are expected. */
 	if (!arg_data)
@@ -11574,7 +11573,7 @@ parse_hex(struct context *ctx, const struct token *token,
 		str += 2;
 		hexlen -= 2;
 	}
-	if (hexlen > length)
+	if (hexlen > RTE_DIM(hex_tmp))
 		goto error;
 	ret = parse_hex_string(str, hex_tmp, &hexlen);
 	if (ret < 0)
@@ -11707,7 +11706,7 @@ parse_ipv4_addr(struct context *ctx, const struct token *token,
 		void *buf, unsigned int size)
 {
 	const struct arg *arg = pop_args(ctx);
-	char str2[len + 1];
+	char *str2 = alloca(len + 1);
 	struct in_addr tmp;
 	int ret;
 
@@ -11753,7 +11752,7 @@ parse_ipv6_addr(struct context *ctx, const struct token *token,
 		void *buf, unsigned int size)
 {
 	const struct arg *arg = pop_args(ctx);
-	char str2[len + 1];
+	char *str2 = alloca(len + 1);
 	struct in6_addr tmp;
 	int ret;
 
