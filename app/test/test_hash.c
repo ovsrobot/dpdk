@@ -1930,8 +1930,8 @@ test_hash_rcu_qsbr_dq_mode(uint8_t ext_bkt)
 		.socket_id = 0,
 		.extra_flag = hash_extra_flag,
 	};
-	int pos[total_entries];
-	int expected_pos[total_entries];
+	int *pos = alloca(sizeof(int) * total_entries);
+	int *expected_pos = alloca(sizeof(int) * total_entries);
 	unsigned int i;
 	size_t sz;
 	int32_t status;
@@ -2100,8 +2100,8 @@ test_hash_rcu_qsbr_sync_mode(uint8_t ext_bkt)
 		.socket_id = 0,
 		.extra_flag = hash_extra_flag,
 	};
-	int pos[total_entries];
-	int expected_pos[total_entries];
+	int *pos = alloca(sizeof(int) * total_entries);
+	int *expected_pos = alloca(sizeof(int) * total_entries);
 	unsigned int i;
 	size_t sz;
 	int32_t status;
