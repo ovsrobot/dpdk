@@ -337,7 +337,7 @@ rte_lpm_lookup_bulk_func(const struct rte_lpm *lpm, const uint32_t *ips,
 		uint32_t *next_hops, const unsigned n)
 {
 	unsigned i;
-	unsigned tbl24_indexes[n];
+	unsigned int *tbl24_indexes = (unsigned int *)alloca(sizeof(unsigned int) * n);
 	const uint32_t *ptbl;
 
 	/* DEBUG: Check user input arguments. */
