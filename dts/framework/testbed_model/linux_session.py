@@ -138,7 +138,7 @@ class LinuxSession(PosixSession):
         # there's no reason to do any numa specific configuration)
         return len(self._numa_nodes) > 1
 
-    def _configure_huge_pages(self, amount: int, size: int, force_first_numa: bool) -> None:
+    def _configure_huge_pages(self, quantity: int, size: int, force_first_numa: bool) -> None:
         self._logger.info("Configuring Hugepages.")
         hugepage_config_path = f"/sys/kernel/mm/hugepages/hugepages-{size}kB/nr_hugepages"
         if force_first_numa and self._supports_numa():
@@ -149,7 +149,7 @@ class LinuxSession(PosixSession):
                 f"/hugepages-{size}kB/nr_hugepages"
             )
 
-        self.send_command(f"echo {amount} | tee {hugepage_config_path}", privileged=True)
+        self.send_command(f"echo {quantity} | tee {hugepage_config_path}", privileged=True)
 
     def update_ports(self, ports: list[Port]) -> None:
         """Overrides :meth:`~.os_session.OSSession.update_ports`."""

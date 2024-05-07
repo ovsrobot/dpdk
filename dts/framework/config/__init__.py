@@ -127,11 +127,11 @@ class HugepageConfiguration:
     r"""The hugepage configuration of :class:`~framework.testbed_model.node.Node`\s.
 
     Attributes:
-        amount: The number of hugepages.
+        quantity: The quantity of hugepages.
         force_first_numa: If :data:`True`, the hugepages will be configured on the first NUMA node.
     """
 
-    amount: int
+    quantity: int
     force_first_numa: bool
 
 
