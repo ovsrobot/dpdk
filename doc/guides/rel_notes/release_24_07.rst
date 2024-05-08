@@ -68,6 +68,8 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* dma/hisilicon: remove support for HIP09 platform
+
 
 API Changes
 -----------
