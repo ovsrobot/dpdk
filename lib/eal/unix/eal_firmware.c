@@ -16,6 +16,21 @@
 #include "eal_firmware.h"
 #include "eal_private.h"
 
+#ifndef RTE_HAS_LIBARCHIVE
+/* Fake definitions for the compression_algorithms array below. */
+struct archive;
+extern int archive_read_support_filter_xz(struct archive *a);
+extern int archive_read_support_filter_zstd(struct archive *a);
+#endif
+
+static struct {
+	const char *suffix;
+	int (*support_callback)(struct archive *a);
+} compression_algorithms[] = {
+	{ "xz", archive_read_support_filter_xz, },
+	{ "zst", archive_read_support_filter_zstd, },
+};
+
 #ifdef RTE_HAS_LIBARCHIVE
 
 struct firmware_read_ctx {
@@ -26,7 +41,7 @@ static int
 firmware_open(struct firmware_read_ctx *ctx, const char *name, size_t blocksize)
 {
 	struct archive_entry *e;
-	int err;
+	unsigned int i;
 
 	ctx->a = archive_read_new();
 	if (ctx->a == NULL)
@@ -35,9 +50,12 @@ firmware_open(struct firmware_read_ctx *ctx, const char *name, size_t blocksize)
 	if (archive_read_support_format_raw(ctx->a) != ARCHIVE_OK)
 		goto error;
 
-	err = archive_read_support_filter_xz(ctx->a);
-	if (err != ARCHIVE_OK && err != ARCHIVE_WARN)
-		goto error;
+	for (i = 0; i < RTE_DIM(compression_algorithms); i++) {
+		int err = compression_algorithms[i].support_callback(ctx->a);
+		if (err != ARCHIVE_OK && err != ARCHIVE_WARN)
+			EAL_LOG(WARNING, "could not initialise libarchive for %s compression",
+				compression_algorithms[i].suffix);
+	}
 
 	if (archive_read_open_filename(ctx->a, name, blocksize) != ARCHIVE_OK)
 		goto error;
@@ -148,16 +166,22 @@ rte_firmware_read(const char *name, void **buf, size_t *bufsz)
 
 	ret = firmware_read(name, buf, bufsz);
 	if (ret < 0) {
-		snprintf(path, sizeof(path), "%s.xz", name);
-		path[PATH_MAX - 1] = '\0';
+		unsigned int i;
+
+		for (i = 0; i < RTE_DIM(compression_algorithms); i++) {
+			snprintf(path, sizeof(path), "%s.%s", name,
+				compression_algorithms[i].suffix);
+			path[PATH_MAX - 1] = '\0';
+			if (access(path, F_OK) != 0)
+				continue;
 #ifndef RTE_HAS_LIBARCHIVE
-		if (access(path, F_OK) == 0) {
 			EAL_LOG(WARNING, "libarchive not linked, %s cannot be decompressed",
 				path);
-		}
 #else
-		ret = firmware_read(path, buf, bufsz);
+			ret = firmware_read(path, buf, bufsz);
 #endif
+			break;
+		}
 	}
 	return ret;
 }
