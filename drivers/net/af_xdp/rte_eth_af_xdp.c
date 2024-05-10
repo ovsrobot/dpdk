@@ -124,6 +124,7 @@ struct rx_stats {
 	uint64_t rx_pkts;
 	uint64_t rx_bytes;
 	uint64_t rx_dropped;
+	uint64_t alloc_failed;
 };
 
 struct pkt_rx_queue {
@@ -339,6 +340,8 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 * xsk_ring_cons__peek
 		 */
 		rx->cached_cons -= nb_pkts;
+		rxq->stats.alloc_failed += nb_pkts;
+
 		return 0;
 	}
 
@@ -408,6 +411,7 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 * xsk_ring_cons__peek
 		 */
 		rx->cached_cons -= nb_pkts;
+		rxq->stats.alloc_failed += nb_pkts;
 		return 0;
 	}
 
@@ -872,6 +876,7 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ibytes += stats->q_ibytes[i];
 		stats->imissed += rxq->stats.rx_dropped;
 		stats->oerrors += txq->stats.tx_dropped;
+		dev->data->rx_mbuf_alloc_failed += rxq->stats.alloc_failed;
 		fd = process_private->rxq_xsk_fds[i];
 		ret = fd >= 0 ? getsockopt(fd, SOL_XDP, XDP_STATISTICS,
 					   &xdp_stats, &optlen) : -1;
