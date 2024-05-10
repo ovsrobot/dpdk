@@ -358,4 +358,11 @@ INTERNAL {
 	rte_eth_switch_domain_alloc;
 	rte_eth_switch_domain_free;
 	rte_flow_fp_default_ops;
+
+	rte_eth_qsw_error_inc;
+	rte_eth_qsw_stats_get;
+	rte_eth_qsw_stats_reset;
+	rte_eth_qsw_update;
+	rte_eth_qsw_xstats_get;
+	rte_eth_qsw_xstats_get_names;
 };
