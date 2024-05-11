@@ -1039,16 +1039,35 @@ eth_link_update(struct rte_eth_dev *dev __rte_unused,
 }
 
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
-static inline uintptr_t get_base_addr(struct rte_mempool *mp, uint64_t *align)
+static inline uintptr_t get_memhdr_info(struct rte_mempool *mp, uint64_t *align, size_t *len)
 {
-	struct rte_mempool_memhdr *memhdr;
+	struct rte_mempool_memhdr *memhdr, *next;
 	uintptr_t memhdr_addr, aligned_addr;
+	size_t memhdr_len = 0;
 
+	/* get the mempool base addr and align */
 	memhdr = STAILQ_FIRST(&mp->mem_list);
 	memhdr_addr = (uintptr_t)memhdr->addr;
 	aligned_addr = memhdr_addr & ~(getpagesize() - 1);
 	*align = memhdr_addr - aligned_addr;
+	memhdr_len += memhdr->len;
 
+	/* check if virtual contiguous memory for multiple memhdrs */
+	next = STAILQ_NEXT(memhdr, next);
+	while (next != NULL) {
+		if ((uintptr_t)next->addr != (uintptr_t)memhdr->addr + memhdr->len) {
+			AF_XDP_LOG(ERR, "memory chunks not virtual contiguous, "
+					"next: %p, cur: %p(len: %" PRId64 " )\n",
+					next->addr, memhdr->addr, memhdr->len);
+			return 0;
+		}
+		/* virtual contiguous */
+		memhdr = next;
+		memhdr_len += memhdr->len;
+		next = STAILQ_NEXT(memhdr, next);
+	}
+
+	*len = memhdr_len;
 	return aligned_addr;
 }
 
@@ -1125,6 +1144,7 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 	void *base_addr = NULL;
 	struct rte_mempool *mb_pool = rxq->mb_pool;
 	uint64_t umem_size, align = 0;
+	size_t len = 0;
 
 	if (internals->shared_umem) {
 		if (get_shared_umem(rxq, internals->if_name, &umem) < 0)
@@ -1156,10 +1176,12 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 		}
 
 		umem->mb_pool = mb_pool;
-		base_addr = (void *)get_base_addr(mb_pool, &align);
-		umem_size = (uint64_t)mb_pool->populated_size *
-				(uint64_t)usr_config.frame_size +
-				align;
+		base_addr = (void *)get_memhdr_info(mb_pool, &align, &len);
+		if (!base_addr) {
+			AF_XDP_LOG(ERR, "Failed to parse memhdr info from pool\n");
+			goto err;
+		}
+		umem_size = (uint64_t)len + align;
 
 		ret = xsk_umem__create(&umem->umem, base_addr, umem_size,
 				&rxq->fq, &rxq->cq, &usr_config);
