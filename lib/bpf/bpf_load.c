@@ -108,7 +108,9 @@ rte_bpf_load(const struct rte_bpf_prm *prm)
 		return NULL;
 	}
 
-	rc = __rte_bpf_validate(bpf);
+	if (!prm->skip_verification)
+		rc = __rte_bpf_validate(bpf);
+
 	if (rc == 0) {
 		__rte_bpf_jit(bpf);
 		if (mprotect(bpf, bpf->sz, PROT_READ) != 0)
