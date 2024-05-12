@@ -3407,6 +3407,8 @@ static const char * const sample_filters[] = {
 	" and (tcp[((tcp[12] & 0xF0) >> 4 ) * 4 + 1] = 0x03)"
 	" and (tcp[((tcp[12] & 0xF0) >> 4 ) * 4 + 2] < 0x04)"
 	" and ((ip[2:2] - 4 * (ip[0] & 0x0F) - 4 * ((tcp[12] & 0xF0) >> 4) > 69))",
+	/* Performance */
+	"ether host a0:38:6d:af:17:eb or b3:a3:ff:b6:c1:ef or 4a:e8:e7:5b:76:ce or 0d:87:fa:7a:a6:6d or bb:fd:c6:4b:bc:ae or 4e:28:dc:f1:1c:f6 or 3d:f2:b7:99:54:55 or 1c:5a:90:4b:82:ce or a7:28:08:ea:c9:84 or 1f:c0:2f:2f:0a:01 or c6:64:91:e9:78:f2 or 5b:cc:3f:90:39:ae or 4c:38:8f:ed:16:5c or cb:89:cb:54:0f:4f or 1e:0d:d7:b2:21:84 or 91:07:2b:88:e0:96 or 6c:ca:cf:bf:cf:3e or b9:df:f1:d6:dd:11 or ea:34:0b:b3:96:9e or 70:e5:18:9f:22:93",
 	/* Other */
 	"len = 128",
 };

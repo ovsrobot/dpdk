@@ -567,6 +567,7 @@ rte_bpf_convert(const struct bpf_program *prog)
 	/* Classic BPF programs use mbufs */
 	prm->prog_arg.type = RTE_BPF_ARG_PTR_MBUF;
 	prm->prog_arg.size = sizeof(struct rte_mbuf);
+	prm->skip_verification = true;
 
 	return prm;
 }

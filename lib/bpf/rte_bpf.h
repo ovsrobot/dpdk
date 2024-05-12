@@ -94,6 +94,7 @@ struct rte_bpf_prm {
 	/**< array of external symbols that eBPF code is allowed to reference */
 	uint32_t nb_xsym; /**< number of elements in xsym */
 	struct rte_bpf_arg prog_arg; /**< eBPF program input arg description */
+	bool skip_verification; /**< should skip eBPF verification before load */
 };
 
 /**
