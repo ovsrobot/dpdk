@@ -14,29 +14,29 @@ When recording, specific instrumentation points placed in the software source
 code generate events that are saved on a giant tape: a trace file.
 The trace file then later can be opened in *trace viewers* to visualize and
 analyze the trace events with timestamps and multi-core views.
-Such a mechanism will be useful for resolving a wide range of problems such as
-multi-core synchronization issues, latency measurements, finding out the
-post analysis information like CPU idle time, etc that would otherwise be
-extremely challenging to get.
+This mechanism will be useful for resolving a wide range of problems such as
+multi-core synchronization issues, latency measurements, and finding
+post analysis information like CPU idle time, etc., that would otherwise be
+extremely challenging to gather.
 
 Tracing is often compared to *logging*. However, tracers and loggers are two
-different tools, serving two different purposes.
-Tracers are designed to record much lower-level events that occur much more
+different tools serving two different purposes.
+Tracers are designed to record much lower-level events that occur more
 frequently than log messages, often in the range of thousands per second, with
 very little execution overhead.
 Logging is more appropriate for a very high-level analysis of less frequent
 events: user accesses, exceptional conditions (errors and warnings, for
-example), database transactions, instant messaging communications, and such.
+example), database transactions, instant messaging communications, etc.
 Simply put, logging is one of the many use cases that can be satisfied with
 tracing.
 
 DPDK tracing library features
 -----------------------------
 
-- A framework to add tracepoints in control and fast path APIs with minimum
+- Provides framework to add tracepoints in control and fast path APIs with minimum
   impact on performance.
   Typical trace overhead is ~20 cycles and instrumentation overhead is 1 cycle.
-- Enable and disable the tracepoints at runtime.
+- Enable and disable tracepoints at runtime.
 - Save the trace buffer to the filesystem at any point in time.
 - Support ``overwrite`` and ``discard`` trace mode operations.
 - String-based tracepoint object lookup.
@@ -47,7 +47,7 @@ DPDK tracing library features
   For detailed information, refer to
   `Common Trace Format <https://diamon.org/ctf/>`_.
 
-How to add a tracepoint?
+How to add a Tracepoint
 ------------------------
 
 This section steps you through the details of adding a simple tracepoint.
@@ -67,14 +67,14 @@ Create the tracepoint header file
         rte_trace_point_emit_string(str);
  )
 
-The above macro creates ``app_trace_string`` tracepoint.
+The above macro creates the ``app_trace_string`` tracepoint.
 The user can choose any name for the tracepoint.
 However, when adding a tracepoint in the DPDK library, the
 ``rte_<library_name>_trace_[<domain>_]<name>`` naming convention must be
 followed.
 The examples are ``rte_eal_trace_generic_str``, ``rte_mempool_trace_create``.
 
-The ``RTE_TRACE_POINT`` macro expands from above definition as the following
+The ``RTE_TRACE_POINT`` macro expands from the above definition as the following
 function template:
 
 .. code-block:: c
@@ -91,7 +91,7 @@ The consumer of this tracepoint can invoke
 ``app_trace_string(const char *str)`` to emit the trace event to the trace
 buffer.
 
-Register the tracepoint
+Register the Tracepoint
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: c
@@ -122,40 +122,40 @@ convention.
 
    The ``RTE_TRACE_POINT_REGISTER`` defines the placeholder for the
    ``rte_trace_point_t`` tracepoint object.
-   For generic tracepoint or for tracepoint used in public header files,
+   For a generic tracepoint or for the tracepoint used in public header files,
    the user must export a ``__<trace_function_name>`` symbol
    in the library ``.map`` file for this tracepoint
-   to be used out of the library, in shared builds.
+   to be used out of the library in shared builds.
    For example, ``__app_trace_string`` will be the exported symbol in the
    above example.
 
-Fast path tracepoint
+Fast Path Tracepoint
 --------------------
 
 In order to avoid performance impact in fast path code, the library introduced
 ``RTE_TRACE_POINT_FP``. When adding the tracepoint in fast path code,
 the user must use ``RTE_TRACE_POINT_FP`` instead of ``RTE_TRACE_POINT``.
 
-``RTE_TRACE_POINT_FP`` is compiled out by default and it can be enabled using
+``RTE_TRACE_POINT_FP`` is compiled by default and can be enabled using
 the ``enable_trace_fp`` option for meson build.
 
-Event record mode
+Event Record Mode
 -----------------
 
-Event record mode is an attribute of trace buffers. Trace library exposes the
+Event record mode is an attribute of trace buffers. The trace library exposes the
 following modes:
 
 Overwrite
-   When the trace buffer is full, new trace events overwrites the existing
+   When the trace buffer is full, new trace events overwrite the existing
    captured events in the trace buffer.
 Discard
    When the trace buffer is full, new trace events will be discarded.
 
-The mode can be configured either using EAL command line parameter
-``--trace-mode`` on application boot up or use ``rte_trace_mode_set()`` API to
+The mode can be configured either using the EAL command line parameter
+``--trace-mode`` on application boot up or use the ``rte_trace_mode_set()`` API to
 configure at runtime.
 
-Trace file location
+Trace File Location
 -------------------
 
 On ``rte_trace_save()`` or ``rte_eal_cleanup()`` invocation, the library saves
@@ -167,7 +167,7 @@ option.
 For more information, refer to :doc:`../linux_gsg/linux_eal_parameters` for
 trace EAL command line options.
 
-View and analyze the recorded events
+View and Analyze Recorded Events
 ------------------------------------
 
 Once the trace directory is available, the user can view/inspect the recorded
@@ -176,7 +176,7 @@ events.
 There are many tools you can use to read DPDK traces:
 
 #. ``babeltrace`` is a command-line utility that converts trace formats; it
-   supports the format that DPDK trace library produces, CTF, as well as a
+   supports the format that the DPDK trace library produces, CTF, as well as a
    basic text output that can be grep'ed.
    The babeltrace command is part of the Open Source Babeltrace project.
 
