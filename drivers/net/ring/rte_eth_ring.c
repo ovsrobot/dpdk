@@ -7,6 +7,7 @@
 #include "rte_eth_ring.h"
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
+#include <ethdev_swstats.h>
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
 #include <rte_os_shim.h>
@@ -44,8 +45,8 @@ enum dev_action {
 
 struct ring_queue {
 	struct rte_ring *rng;
-	uint64_t rx_pkts;
-	uint64_t tx_pkts;
+
+	struct rte_eth_counters stats;
 };
 
 struct pmd_internals {
@@ -77,12 +78,13 @@ eth_ring_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
 	void **ptrs = (void *)&bufs[0];
 	struct ring_queue *r = q;
-	const uint16_t nb_rx = (uint16_t)rte_ring_dequeue_burst(r->rng,
-			ptrs, nb_bufs, NULL);
-	if (r->rng->flags & RING_F_SC_DEQ)
-		r->rx_pkts += nb_rx;
-	else
-		__atomic_fetch_add(&r->rx_pkts, nb_rx, __ATOMIC_RELAXED);
+	uint16_t i, nb_rx;
+
+	nb_rx = (uint16_t)rte_ring_dequeue_burst(r->rng, ptrs, nb_bufs, NULL);
+
+	for (i = 0; i < nb_rx; i++)
+		rte_eth_count_mbuf(&r->stats, bufs[i]);
+
 	return nb_rx;
 }
 
@@ -90,13 +92,20 @@ static uint16_t
 eth_ring_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
 	void **ptrs = (void *)&bufs[0];
+	uint32_t *sizes;
 	struct ring_queue *r = q;
-	const uint16_t nb_tx = (uint16_t)rte_ring_enqueue_burst(r->rng,
-			ptrs, nb_bufs, NULL);
-	if (r->rng->flags & RING_F_SP_ENQ)
-		r->tx_pkts += nb_tx;
-	else
-		__atomic_fetch_add(&r->tx_pkts, nb_tx, __ATOMIC_RELAXED);
+	uint16_t i, nb_tx;
+
+	sizes = alloca(sizeof(uint32_t) * nb_bufs);
+
+	for (i = 0; i < nb_bufs; i++)
+		sizes[i] = rte_pktmbuf_pkt_len(bufs[i]);
+
+	nb_tx = (uint16_t)rte_ring_enqueue_burst(r->rng, ptrs, nb_bufs, NULL);
+
+	for (i = 0; i < nb_tx; i++)
+		rte_eth_count_packet(&r->stats, sizes[i]);
+
 	return nb_tx;
 }
 
@@ -193,41 +202,32 @@ eth_dev_info(struct rte_eth_dev *dev,
 static int
 eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
-	unsigned int i;
-	unsigned long rx_total = 0, tx_total = 0;
-	const struct pmd_internals *internal = dev->data->dev_private;
-
-	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
-			i < dev->data->nb_rx_queues; i++) {
-		stats->q_ipackets[i] = internal->rx_ring_queues[i].rx_pkts;
-		rx_total += stats->q_ipackets[i];
-	}
-
-	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
-			i < dev->data->nb_tx_queues; i++) {
-		stats->q_opackets[i] = internal->tx_ring_queues[i].tx_pkts;
-		tx_total += stats->q_opackets[i];
-	}
-
-	stats->ipackets = rx_total;
-	stats->opackets = tx_total;
-
-	return 0;
+	return rte_eth_counters_stats_get(dev, offsetof(struct ring_queue, stats),
+					  offsetof(struct ring_queue, stats),
+					  stats);
 }
 
 static int
 eth_stats_reset(struct rte_eth_dev *dev)
 {
-	unsigned int i;
-	struct pmd_internals *internal = dev->data->dev_private;
-
-	for (i = 0; i < dev->data->nb_rx_queues; i++)
-		internal->rx_ring_queues[i].rx_pkts = 0;
-	for (i = 0; i < dev->data->nb_tx_queues; i++)
-		internal->tx_ring_queues[i].tx_pkts = 0;
-
-	return 0;
+	return rte_eth_counters_reset(dev, offsetof(struct ring_queue, stats),
+				      offsetof(struct ring_queue, stats));
 }
+
+static int
+eth_xstats_get_names(struct rte_eth_dev *dev, struct rte_eth_xstat_name *names,
+		     __rte_unused unsigned int limit)
+{
+	return rte_eth_counters_xstats_get_names(dev, names);
+}
+
+static int
+eth_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats, unsigned int n)
+{
+	return rte_eth_counters_xstats_get(dev, offsetof(struct ring_queue, stats),
+					   offsetof(struct ring_queue, stats), xstats, n);
+}
+
 
 static void
 eth_mac_addr_remove(struct rte_eth_dev *dev __rte_unused,
@@ -339,6 +339,9 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.xstats_get_names = eth_xstats_get_names,
+	.xstats_get = eth_xstats_get,
+	.xstats_reset = eth_stats_reset,
 	.mac_addr_remove = eth_mac_addr_remove,
 	.mac_addr_add = eth_mac_addr_add,
 	.promiscuous_enable = eth_promiscuous_enable,
