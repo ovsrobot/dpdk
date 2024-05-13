@@ -195,12 +195,12 @@ to babeltrace with no options::
 all their events, merging them in chronological order.
 
 You can pipe the output of the babeltrace into a tool like grep(1) for further
-filtering. Below example grep the events for ``ethdev`` only::
+filtering. Here's an example of how you grep the events for ``ethdev`` only::
 
     babeltrace /tmp/my-dpdk-trace | grep ethdev
 
 You can pipe the output of babeltrace into a tool like wc(1) to count the
-recorded events. Below example count the number of ``ethdev`` events::
+recorded events. Below is an example of counting the number of ``ethdev`` events::
 
     babeltrace /tmp/my-dpdk-trace | grep ethdev | wc --lines
 
@@ -210,14 +210,14 @@ Use the tracecompass GUI tool
 ``Tracecompass`` is another tool to view/analyze the DPDK traces which gives
 a graphical view of events. Like ``babeltrace``, tracecompass also provides
 an interface to search for a particular event.
-To use ``tracecompass``, following are the minimum required steps:
+To use ``tracecompass``, the following are the minimum required steps:
 
 - Install ``tracecompass`` to the localhost. Variants are available for Linux,
   Windows, and OS-X.
 - Launch ``tracecompass`` which will open a graphical window with trace
   management interfaces.
-- Open a trace using ``File->Open Trace`` option and select metadata file which
-  is to be viewed/analyzed.
+- Open a trace using the ``File->Open Trace`` option and select the metadata file which
+  will be viewed/analyzed.
 
 For more details, refer
 `Trace Compass <https://www.eclipse.org/tracecompass/>`_.
@@ -225,7 +225,7 @@ For more details, refer
 Quick start
 -----------
 
-This section steps you through the details of generating trace and viewing it.
+This section steps you through the details of generating the trace and viewing it.
 
 - Start the dpdk-test::
 
@@ -238,8 +238,8 @@ This section steps you through the details of generating trace and viewing it.
 Implementation details
 ----------------------
 
-As DPDK trace library is designed to generate traces that uses ``Common Trace
-Format (CTF)``. ``CTF`` specification consists of the following units to create
+As the DPDK trace library is designed to generate traces that use the ``Common Trace
+Format (CTF)``. ``CTF`` specification and consists of the following units to create
 a trace.
 
 - ``Stream`` Sequence of packets.
@@ -249,7 +249,7 @@ a trace.
 For detailed information, refer to
 `Common Trace Format <https://diamon.org/ctf/>`_.
 
-The implementation details broadly divided into the following areas:
+Implementation details are broadly divided into the following areas:
 
 Trace metadata creation
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -277,7 +277,7 @@ per thread to enable lock less trace-emit function.
 For non lcore threads, the trace memory is allocated on the first trace
 emission.
 
-For lcore threads, if trace points are enabled through a EAL option, the trace
+For lcore threads, if trace points are enabled through an EAL option, the trace
 memory is allocated when the threads are known of DPDK
 (``rte_eal_init`` for EAL lcores, ``rte_thread_register`` for non-EAL lcores).
 Otherwise, when trace points are enabled later in the life of the application,
@@ -348,7 +348,7 @@ trace.header
   | timestamp [47:0]     |
   +----------------------+
 
-The trace header is 64 bits, it consists of 48 bits of timestamp and 16 bits
+The trace header is 64 bits. It consists of 48 bits of timestamp and 16 bits
 event ID.
 
 The ``packet.header`` and ``packet.context`` will be written in the slow path
