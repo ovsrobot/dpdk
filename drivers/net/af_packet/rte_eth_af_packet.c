@@ -10,6 +10,7 @@
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
 #include <ethdev_vdev.h>
+#include <ethdev_swstats.h>
 #include <rte_malloc.h>
 #include <rte_kvargs.h>
 #include <bus_vdev_driver.h>
@@ -28,6 +29,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <poll.h>
+
 
 #define ETH_AF_PACKET_IFACE_ARG		"iface"
 #define ETH_AF_PACKET_NUM_Q_ARG		"qpairs"
@@ -51,8 +53,7 @@ struct pkt_rx_queue {
 	uint16_t in_port;
 	uint8_t vlan_strip;
 
-	volatile unsigned long rx_pkts;
-	volatile unsigned long rx_bytes;
+	struct rte_eth_counters stats;
 };
 
 struct pkt_tx_queue {
@@ -64,10 +65,9 @@ struct pkt_tx_queue {
 	unsigned int framecount;
 	unsigned int framenum;
 
-	volatile unsigned long tx_pkts;
-	volatile unsigned long err_pkts;
-	volatile unsigned long tx_bytes;
+	struct rte_eth_counters stats;
 };
+
 
 struct pmd_internals {
 	unsigned nb_queues;
@@ -118,8 +118,6 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct rte_mbuf *mbuf;
 	uint8_t *pbuf;
 	struct pkt_rx_queue *pkt_q = queue;
-	uint16_t num_rx = 0;
-	unsigned long num_rx_bytes = 0;
 	unsigned int framecount, framenum;
 
 	if (unlikely(nb_pkts == 0))
@@ -164,13 +162,11 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		/* account for the receive frame */
 		bufs[i] = mbuf;
-		num_rx++;
-		num_rx_bytes += mbuf->pkt_len;
+		rte_eth_count_mbuf(&pkt_q->stats, mbuf);
 	}
 	pkt_q->framenum = framenum;
-	pkt_q->rx_pkts += num_rx;
-	pkt_q->rx_bytes += num_rx_bytes;
-	return num_rx;
+
+	return i;
 }
 
 /*
@@ -205,8 +201,6 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	unsigned int framecount, framenum;
 	struct pollfd pfd;
 	struct pkt_tx_queue *pkt_q = queue;
-	uint16_t num_tx = 0;
-	unsigned long num_tx_bytes = 0;
 	int i;
 
 	if (unlikely(nb_pkts == 0))
@@ -285,8 +279,7 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			framenum = 0;
 		ppd = (struct tpacket2_hdr *) pkt_q->rd[framenum].iov_base;
 
-		num_tx++;
-		num_tx_bytes += mbuf->pkt_len;
+		rte_eth_count_mbuf(&pkt_q->stats, mbuf);
 		rte_pktmbuf_free(mbuf);
 	}
 
@@ -298,15 +291,9 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 * packets will be considered successful even though only some
 		 * are sent.
 		 */
-
-		num_tx = 0;
-		num_tx_bytes = 0;
 	}
 
 	pkt_q->framenum = framenum;
-	pkt_q->tx_pkts += num_tx;
-	pkt_q->err_pkts += i - num_tx;
-	pkt_q->tx_bytes += num_tx_bytes;
 	return i;
 }
 
@@ -386,58 +373,31 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 }
 
 static int
-eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
+eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
-	unsigned i, imax;
-	unsigned long rx_total = 0, tx_total = 0, tx_err_total = 0;
-	unsigned long rx_bytes_total = 0, tx_bytes_total = 0;
-	const struct pmd_internals *internal = dev->data->dev_private;
-
-	imax = (internal->nb_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS ?
-	        internal->nb_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS);
-	for (i = 0; i < imax; i++) {
-		igb_stats->q_ipackets[i] = internal->rx_queue[i].rx_pkts;
-		igb_stats->q_ibytes[i] = internal->rx_queue[i].rx_bytes;
-		rx_total += igb_stats->q_ipackets[i];
-		rx_bytes_total += igb_stats->q_ibytes[i];
-	}
-
-	imax = (internal->nb_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS ?
-	        internal->nb_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS);
-	for (i = 0; i < imax; i++) {
-		igb_stats->q_opackets[i] = internal->tx_queue[i].tx_pkts;
-		igb_stats->q_obytes[i] = internal->tx_queue[i].tx_bytes;
-		tx_total += igb_stats->q_opackets[i];
-		tx_err_total += internal->tx_queue[i].err_pkts;
-		tx_bytes_total += igb_stats->q_obytes[i];
-	}
-
-	igb_stats->ipackets = rx_total;
-	igb_stats->ibytes = rx_bytes_total;
-	igb_stats->opackets = tx_total;
-	igb_stats->oerrors = tx_err_total;
-	igb_stats->obytes = tx_bytes_total;
-	return 0;
+	return rte_eth_counters_stats_get(dev, offsetof(struct pkt_tx_queue, stats),
+					  offsetof(struct pkt_rx_queue, stats), stats);
 }
 
 static int
 eth_stats_reset(struct rte_eth_dev *dev)
 {
-	unsigned i;
-	struct pmd_internals *internal = dev->data->dev_private;
+	return rte_eth_counters_reset(dev, offsetof(struct pkt_tx_queue, stats),
+				      offsetof(struct pkt_rx_queue, stats));
+}
 
-	for (i = 0; i < internal->nb_queues; i++) {
-		internal->rx_queue[i].rx_pkts = 0;
-		internal->rx_queue[i].rx_bytes = 0;
-	}
+static int eth_xstats_get_names(struct rte_eth_dev *dev,
+				struct rte_eth_xstat_name *names,
+				__rte_unused unsigned int limit)
+{
+	return rte_eth_counters_xstats_get_names(dev, names);
+}
 
-	for (i = 0; i < internal->nb_queues; i++) {
-		internal->tx_queue[i].tx_pkts = 0;
-		internal->tx_queue[i].err_pkts = 0;
-		internal->tx_queue[i].tx_bytes = 0;
-	}
-
-	return 0;
+static int
+eth_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats, unsigned int n)
+{
+	return rte_eth_counters_xstats_get(dev, offsetof(struct pkt_tx_queue, stats),
+					   offsetof(struct pkt_rx_queue, stats), xstats, n);
 }
 
 static int
@@ -636,6 +596,9 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.xstats_get = eth_xstats_get,
+	.xstats_get_names = eth_xstats_get_names,
+	.xstats_reset = eth_stats_reset,
 };
 
 /*
