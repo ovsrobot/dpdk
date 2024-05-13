@@ -358,4 +358,12 @@ INTERNAL {
 	rte_eth_switch_domain_alloc;
 	rte_eth_switch_domain_free;
 	rte_flow_fp_default_ops;
+
+	rte_eth_count_error;
+	rte_eth_count_mbuf;
+	rte_eth_count_packet;
+	rte_eth_counters_reset;
+	rte_eth_counters_stats_get;
+	rte_eth_counters_xstats_get;
+	rte_eth_counters_xstats_get_names;
 };
