@@ -432,7 +432,6 @@ pmd_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct rx_queue *rxq = queue;
 	struct pmd_process_private *process_private;
 	uint16_t num_rx;
-	unsigned long num_rx_bytes = 0;
 	uint32_t trigger = tap_trigger;
 
 	if (trigger == rxq->trigger_seen)
@@ -455,7 +454,7 @@ pmd_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		/* Packet couldn't fit in the provided mbuf */
 		if (unlikely(rxq->pi.flags & TUN_PKT_STRIP)) {
-			rxq->stats.ierrors++;
+			rte_eth_count_error(&rxq->stats);
 			continue;
 		}
 
@@ -467,7 +466,9 @@ pmd_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			struct rte_mbuf *buf = rte_pktmbuf_alloc(rxq->mp);
 
 			if (unlikely(!buf)) {
-				rxq->stats.rx_nombuf++;
+				struct rte_eth_dev *dev = &rte_eth_devices[rxq->in_port];
+				++dev->data->rx_mbuf_alloc_failed;
+
 				/* No new buf has been allocated: do nothing */
 				if (!new_tail || !seg)
 					goto end;
@@ -509,11 +510,9 @@ pmd_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		/* account for the receive frame */
 		bufs[num_rx++] = mbuf;
-		num_rx_bytes += mbuf->pkt_len;
+		rte_eth_count_mbuf(&rxq->stats, mbuf);
 	}
 end:
-	rxq->stats.ipackets += num_rx;
-	rxq->stats.ibytes += num_rx_bytes;
 
 	if (trigger && num_rx < nb_pkts)
 		rxq->trigger_seen = trigger;
@@ -523,8 +522,7 @@ end:
 
 static inline int
 tap_write_mbufs(struct tx_queue *txq, uint16_t num_mbufs,
-			struct rte_mbuf **pmbufs,
-			uint16_t *num_packets, unsigned long *num_tx_bytes)
+		struct rte_mbuf **pmbufs)
 {
 	struct pmd_process_private *process_private;
 	int i;
@@ -647,8 +645,7 @@ skip_l4_cksum:
 		if (n <= 0)
 			return -1;
 
-		(*num_packets)++;
-		(*num_tx_bytes) += rte_pktmbuf_pkt_len(mbuf);
+		rte_eth_count_mbuf(&txq->stats, mbuf);
 	}
 	return 0;
 }
@@ -660,8 +657,6 @@ pmd_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
 	struct tx_queue *txq = queue;
 	uint16_t num_tx = 0;
-	uint16_t num_packets = 0;
-	unsigned long num_tx_bytes = 0;
 	uint32_t max_size;
 	int i;
 
@@ -693,7 +688,7 @@ pmd_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			tso_segsz = mbuf_in->tso_segsz + hdrs_len;
 			if (unlikely(tso_segsz == hdrs_len) ||
 				tso_segsz > *txq->mtu) {
-				txq->stats.errs++;
+				rte_eth_count_error(&txq->stats);
 				break;
 			}
 			gso_ctx->gso_size = tso_segsz;
@@ -728,10 +723,10 @@ pmd_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			num_mbufs = 1;
 		}
 
-		ret = tap_write_mbufs(txq, num_mbufs, mbuf,
-				&num_packets, &num_tx_bytes);
+		ret = tap_write_mbufs(txq, num_mbufs, mbuf);
 		if (ret == -1) {
-			txq->stats.errs++;
+			rte_eth_count_error(&txq->stats);
+
 			/* free tso mbufs */
 			if (num_tso_mbufs > 0)
 				rte_pktmbuf_free_bulk(mbuf, num_tso_mbufs);
@@ -748,10 +743,6 @@ pmd_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			rte_pktmbuf_free_bulk(mbuf, num_tso_mbufs);
 		}
 	}
-
-	txq->stats.opackets += num_packets;
-	txq->stats.errs += nb_pkts - num_tx;
-	txq->stats.obytes += num_tx_bytes;
 
 	return num_tx;
 }
@@ -1055,64 +1046,30 @@ tap_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 static int
 tap_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *tap_stats)
 {
-	unsigned int i, imax;
-	unsigned long rx_total = 0, tx_total = 0, tx_err_total = 0;
-	unsigned long rx_bytes_total = 0, tx_bytes_total = 0;
-	unsigned long rx_nombuf = 0, ierrors = 0;
-	const struct pmd_internals *pmd = dev->data->dev_private;
-
-	/* rx queue statistics */
-	imax = (dev->data->nb_rx_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS) ?
-		dev->data->nb_rx_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS;
-	for (i = 0; i < imax; i++) {
-		tap_stats->q_ipackets[i] = pmd->rxq[i].stats.ipackets;
-		tap_stats->q_ibytes[i] = pmd->rxq[i].stats.ibytes;
-		rx_total += tap_stats->q_ipackets[i];
-		rx_bytes_total += tap_stats->q_ibytes[i];
-		rx_nombuf += pmd->rxq[i].stats.rx_nombuf;
-		ierrors += pmd->rxq[i].stats.ierrors;
-	}
-
-	/* tx queue statistics */
-	imax = (dev->data->nb_tx_queues < RTE_ETHDEV_QUEUE_STAT_CNTRS) ?
-		dev->data->nb_tx_queues : RTE_ETHDEV_QUEUE_STAT_CNTRS;
-
-	for (i = 0; i < imax; i++) {
-		tap_stats->q_opackets[i] = pmd->txq[i].stats.opackets;
-		tap_stats->q_obytes[i] = pmd->txq[i].stats.obytes;
-		tx_total += tap_stats->q_opackets[i];
-		tx_err_total += pmd->txq[i].stats.errs;
-		tx_bytes_total += tap_stats->q_obytes[i];
-	}
-
-	tap_stats->ipackets = rx_total;
-	tap_stats->ibytes = rx_bytes_total;
-	tap_stats->ierrors = ierrors;
-	tap_stats->rx_nombuf = rx_nombuf;
-	tap_stats->opackets = tx_total;
-	tap_stats->oerrors = tx_err_total;
-	tap_stats->obytes = tx_bytes_total;
-	return 0;
+	return rte_eth_counters_stats_get(dev, offsetof(struct tx_queue, stats),
+					  offsetof(struct rx_queue, stats), tap_stats);
 }
 
 static int
 tap_stats_reset(struct rte_eth_dev *dev)
 {
-	int i;
-	struct pmd_internals *pmd = dev->data->dev_private;
+	return rte_eth_counters_reset(dev, offsetof(struct tx_queue, stats),
+				      offsetof(struct rx_queue, stats));
+}
 
-	for (i = 0; i < RTE_PMD_TAP_MAX_QUEUES; i++) {
-		pmd->rxq[i].stats.ipackets = 0;
-		pmd->rxq[i].stats.ibytes = 0;
-		pmd->rxq[i].stats.ierrors = 0;
-		pmd->rxq[i].stats.rx_nombuf = 0;
+static int
+tap_xstats_get_names(struct rte_eth_dev *dev,
+				struct rte_eth_xstat_name *names,
+				__rte_unused unsigned int limit)
+{
+	return rte_eth_counters_xstats_get_names(dev, names);
+}
 
-		pmd->txq[i].stats.opackets = 0;
-		pmd->txq[i].stats.errs = 0;
-		pmd->txq[i].stats.obytes = 0;
-	}
-
-	return 0;
+static int
+tap_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats, unsigned int n)
+{
+	return rte_eth_counters_xstats_get(dev, offsetof(struct tx_queue, stats),
+					   offsetof(struct rx_queue, stats), xstats, n);
 }
 
 static int
@@ -1919,6 +1876,9 @@ static const struct eth_dev_ops ops = {
 	.set_mc_addr_list       = tap_set_mc_addr_list,
 	.stats_get              = tap_stats_get,
 	.stats_reset            = tap_stats_reset,
+	.xstats_get_names       = tap_xstats_get_names,
+	.xstats_get             = tap_xstats_get,
+	.xstats_reset            = tap_stats_reset,
 	.dev_supported_ptypes_get = tap_dev_supported_ptypes_get,
 	.rss_hash_update        = tap_rss_hash_update,
 	.flow_ops_get           = tap_dev_flow_ops_get,
