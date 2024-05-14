@@ -44,10 +44,16 @@ The command line arguments along with the supported environment variables are:
 
     Set to any value to skip building DPDK.
 
-.. option:: --tarball, --snapshot, --git-ref
+.. option:: --tarball, --snapshot
 .. envvar:: DTS_DPDK_TARBALL
 
-    The path to a DPDK tarball, git commit ID, tag ID or tree ID to test.
+    Path to DPDK source code tarball to test.
+
+.. option:: --revision, --rev, --git-ref
+.. envvar:: DTS_DPDK_REVISION_ID
+
+    Git revision ID to test. Could be commit, tag, tree ID etc.
+    To test local changes, first commit them, then use their commit ID.
 
 .. option:: --test-suite
 .. envvar:: DTS_TEST_SUITES
@@ -84,7 +90,24 @@ from pathlib import Path
 from typing import Callable, ParamSpec
 
 from .config import TestSuiteConfig
-from .utils import DPDKGitTarball
+from .exception import ConfigurationError
+from .utils import DPDKGitTarball, get_commit_id
+
+
+def _parse_tarball_path(file_path: str) -> Path:
+    """Validate whether `file_path` is valid and return a Path object."""
+    path = Path(file_path)
+    if not path.exists() or not path.is_file():
+        raise argparse.ArgumentTypeError("The file path provided is not a valid file")
+    return path
+
+
+def _parse_revision_id(rev_id: str) -> str:
+    """Validate revision ID and retrieve corresponding commit ID."""
+    try:
+        return get_commit_id(rev_id)
+    except ConfigurationError:
+        raise argparse.ArgumentTypeError("The Git revision ID supplied is invalid or ambiguous")
 
 
 @dataclass(slots=True)
@@ -105,7 +128,7 @@ class Settings:
     #:
     skip_setup: bool = False
     #:
-    dpdk_tarball_path: Path | str = "dpdk.tar.xz"
+    dpdk_tarball_path: Path | str = ""
     #:
     compile_timeout: float = 1200
     #:
@@ -305,19 +328,29 @@ def _get_parser() -> ArgumentParser:
         help="Specify to skip all setup steps on SUT and TG nodes.",
     )
 
-    add_argument_to_parser_with_env(
+    dpdk_source = parser.add_mutually_exclusive_group(required=True)
+    add_argument_to_dpdk_source_with_env = augment_add_argument_with_env(dpdk_source.add_argument)
+
+    add_argument_to_dpdk_source_with_env(
         "--tarball",
         "--snapshot",
-        "--git-ref",
-        default=SETTINGS.dpdk_tarball_path,
-        type=Path,
-        help="Path to DPDK source code tarball or a git commit ID, "
-        "tag ID or tree ID to test. To test local changes, first commit them, "
-        "then use the commit ID with this option.",
+        type=_parse_tarball_path,
+        help="Path to DPDK source code tarball to test.",
         metavar="FILE_PATH",
         dest="dpdk_tarball_path",
         env_var_name="DPDK_TARBALL",
     )
+
+    add_argument_to_dpdk_source_with_env(
+        "--revision",
+        "--rev",
+        "--git-ref",
+        type=_parse_revision_id,
+        help="Git revision ID to test. Could be commit, tag, tree ID etc. "
+        "To test local changes, first commit them, then use their commit ID.",
+        metavar="ID",
+        dest="dpdk_revision_id",
+    ),
 
     add_argument_to_parser_with_env(
         "--compile-timeout",
@@ -393,11 +426,8 @@ def get_settings() -> Settings:
 
     args = parser.parse_args()
 
-    args.dpdk_tarball_path = Path(
-        Path(DPDKGitTarball(args.dpdk_tarball_path, args.output_dir))
-        if not os.path.exists(args.dpdk_tarball_path)
-        else Path(args.dpdk_tarball_path)
-    )
+    if args.dpdk_revision_id:
+        args.dpdk_tarball_path = DPDKGitTarball(args.dpdk_revision_id, args.output_dir)
 
     args.test_suites = _process_test_suites(parser, args.test_suites)
 
