@@ -12,6 +12,7 @@ headers += files(
         'rte_class.h',
         'rte_common.h',
         'rte_compat.h',
+        'rte_counter.h',
         'rte_debug.h',
         'rte_dev.h',
         'rte_devargs.h',
