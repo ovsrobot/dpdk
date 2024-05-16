@@ -1,0 +1,70 @@
+diff --git a/drivers/net/cpfl/cpfl_ethdev.c b/drivers/net/cpfl/cpfl_ethdev.c
+index ef19aa1b6a..cc708039da 100644
+--- a/drivers/net/cpfl/cpfl_ethdev.c
++++ b/drivers/net/cpfl/cpfl_ethdev.c
+@@ -2270,6 +2270,33 @@ cpfl_repr_allowlist_uninit(struct cpfl_adapter_ext *adapter)
+	rte_hash_free(adapter->repr_allowlist_hash);
+}
++static uint8_t
++get_running_host_id(void)
++{
++	char buf[BUFSIZ];
++	FILE *fd;
++	uint8_t host_id = CPFL_INVALID_HOST_ID;
++
++	fd = fopen("/etc/issue.net", "r");
++	if (fd == NULL) {
++		PMD_INIT_LOG(ERR, "Cannot open /etc/issue.net\n");
++		return host_id;
++	}
++
++	if (fgets(buf, sizeof(buf), fd)) {
++		/* get the first line */
++		if (strstr(buf, "IMC")) {
++			PMD_INIT_LOG(ERR, "CPFL PMD cannot running on IMC.");
++		} else if (strstr(buf, "ACC")) {
++			host_id = CPFL_HOST_ID_ACC;
++		} else {
++			host_id = CPFL_HOST_ID_HOST;
++		}
++	}
++
++	fclose(fd);
++	return host_id;
++}
+static int
+cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter,
+@@ -2290,6 +2317,7 @@ cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *a
+	hw->device_id = pci_dev->id.device_id;
+	hw->subsystem_vendor_id = pci_dev->id.subsystem_vendor_id;
++	adapter->host_id = get_running_host_id();
+	strncpy(adapter->name, pci_dev->device.name, PCI_PRI_STR_SIZE);
+	rte_memcpy(&base->caps, &req_caps, sizeof(struct virtchnl2_get_capabilities));
+diff --git a/drivers/net/cpfl/cpfl_ethdev.h b/drivers/net/cpfl/cpfl_ethdev.h
+index 457db6d6be..3987afbd82 100644
+--- a/drivers/net/cpfl/cpfl_ethdev.h
++++ b/drivers/net/cpfl/cpfl_ethdev.h
+@@ -66,6 +66,7 @@
+#define CPFL_PF_TYPE_NUM	2
+#define CPFL_HOST_ID_HOST	0
+#define CPFL_HOST_ID_ACC	1
++#define CPFL_INVALID_HOST_ID    UINT8_MAX
+#define CPFL_PF_TYPE_APF	0
+#define CPFL_PF_TYPE_CPF	1
+@@ -230,6 +231,8 @@ struct cpfl_adapter_ext {
+	uint8_t ctrl_vport_recv_info[IDPF_DFLT_MBX_BUF_SIZE];
+	struct idpf_ctlq_info *ctlqp[CPFL_CFGQ_NUM];
+	struct cpfl_ctlq_create_info cfgq_info[CPFL_CFGQ_NUM];
++
++	uint8_t host_id;
+};
+TAILQ_HEAD(cpfl_adapter_list, cpfl_adapter_ext);
+@@ -296,7 +299,8 @@ cpfl_get_vsi_id(struct cpfl_itf *itf)
+		vport_identity.func_type = CPCHNL2_FTYPE_LAN_PF;
+		/* host: CPFL_HOST0_CPF_ID, acc: CPFL_ACC_CPF_ID */
+-		vport_identity.pf_id = CPFL_ACC_CPF_ID;
++		vport_identity.pf_id = (itf->adapter->host_id == CPFL_HOST_ID_ACC) ?
++								CPFL_ACC_CPF_ID : CPFL_HOST0_CPF_ID;
+		vport_identity.vf_id = 0;
+		vport_identity.vport_id = vport_id;
+		ret = rte_hash_lookup_data(itf->adapter->vport_map_hash,
