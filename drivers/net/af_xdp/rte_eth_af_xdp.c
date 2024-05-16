@@ -20,6 +20,7 @@
 #include <rte_ethdev.h>
 #include <ethdev_driver.h>
 #include <ethdev_vdev.h>
+#include <ethdev_swstats.h>
 #include <rte_kvargs.h>
 #include <bus_vdev_driver.h>
 #include <rte_string_fns.h>
@@ -120,19 +121,13 @@ struct xsk_umem_info {
 	uint32_t max_xsks;
 };
 
-struct rx_stats {
-	uint64_t rx_pkts;
-	uint64_t rx_bytes;
-	uint64_t rx_dropped;
-};
-
 struct pkt_rx_queue {
 	struct xsk_ring_cons rx;
 	struct xsk_umem_info *umem;
 	struct xsk_socket *xsk;
 	struct rte_mempool *mb_pool;
 
-	struct rx_stats stats;
+	struct rte_eth_counters stats;
 
 	struct xsk_ring_prod fq;
 	struct xsk_ring_cons cq;
@@ -143,17 +138,11 @@ struct pkt_rx_queue {
 	int busy_budget;
 };
 
-struct tx_stats {
-	uint64_t tx_pkts;
-	uint64_t tx_bytes;
-	uint64_t tx_dropped;
-};
-
 struct pkt_tx_queue {
 	struct xsk_ring_prod tx;
 	struct xsk_umem_info *umem;
 
-	struct tx_stats stats;
+	struct rte_eth_counters stats;
 
 	struct pkt_rx_queue *pair;
 	int xsk_queue_idx;
@@ -308,7 +297,6 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct xsk_ring_prod *fq = &rxq->fq;
 	struct xsk_umem_info *umem = rxq->umem;
 	uint32_t idx_rx = 0;
-	unsigned long rx_bytes = 0;
 	int i;
 	struct rte_mbuf *fq_bufs[ETH_AF_XDP_RX_BATCH_SIZE];
 
@@ -363,15 +351,12 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		rte_pktmbuf_pkt_len(bufs[i]) = len;
 		rte_pktmbuf_data_len(bufs[i]) = len;
-		rx_bytes += len;
+
+		rte_eth_count_mbuf(&rxq->stats, bufs[i]);
 	}
 
 	xsk_ring_cons__release(rx, nb_pkts);
 	(void)reserve_fill_queue(umem, nb_pkts, fq_bufs, fq);
-
-	/* statistics */
-	rxq->stats.rx_pkts += nb_pkts;
-	rxq->stats.rx_bytes += rx_bytes;
 
 	return nb_pkts;
 }
@@ -384,7 +369,6 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct xsk_umem_info *umem = rxq->umem;
 	struct xsk_ring_prod *fq = &rxq->fq;
 	uint32_t idx_rx = 0;
-	unsigned long rx_bytes = 0;
 	int i;
 	uint32_t free_thresh = fq->size >> 1;
 	struct rte_mbuf *mbufs[ETH_AF_XDP_RX_BATCH_SIZE];
@@ -424,15 +408,12 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		rte_ring_enqueue(umem->buf_ring, (void *)addr);
 		rte_pktmbuf_pkt_len(mbufs[i]) = len;
 		rte_pktmbuf_data_len(mbufs[i]) = len;
-		rx_bytes += len;
+		rte_eth_count_mbuf(&rxq->stats, mbufs[i]);
+
 		bufs[i] = mbufs[i];
 	}
 
 	xsk_ring_cons__release(rx, nb_pkts);
-
-	/* statistics */
-	rxq->stats.rx_pkts += nb_pkts;
-	rxq->stats.rx_bytes += rx_bytes;
 
 	return nb_pkts;
 }
@@ -527,9 +508,8 @@ af_xdp_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct pkt_tx_queue *txq = queue;
 	struct xsk_umem_info *umem = txq->umem;
 	struct rte_mbuf *mbuf;
-	unsigned long tx_bytes = 0;
 	int i;
-	uint32_t idx_tx;
+	uint32_t idx_tx, pkt_len;
 	uint16_t count = 0;
 	struct xdp_desc *desc;
 	uint64_t addr, offset;
@@ -541,6 +521,7 @@ af_xdp_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	for (i = 0; i < nb_pkts; i++) {
 		mbuf = bufs[i];
+		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		if (mbuf->pool == umem->mb_pool) {
 			if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx)) {
@@ -589,16 +570,12 @@ af_xdp_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			count++;
 		}
 
-		tx_bytes += mbuf->pkt_len;
+		rte_eth_count_packet(&txq->stats, pkt_len);
 	}
 
 out:
 	xsk_ring_prod__submit(&txq->tx, count);
 	kick_tx(txq, cq);
-
-	txq->stats.tx_pkts += count;
-	txq->stats.tx_bytes += tx_bytes;
-	txq->stats.tx_dropped += nb_pkts - count;
 
 	return count;
 }
@@ -610,7 +587,6 @@ af_xdp_tx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct xsk_umem_info *umem = txq->umem;
 	struct rte_mbuf *mbuf;
 	void *addrs[ETH_AF_XDP_TX_BATCH_SIZE];
-	unsigned long tx_bytes = 0;
 	int i;
 	uint32_t idx_tx;
 	struct xsk_ring_cons *cq = &txq->pair->cq;
@@ -640,16 +616,14 @@ af_xdp_tx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		pkt = xsk_umem__get_data(umem->mz->addr,
 					 desc->addr);
 		rte_memcpy(pkt, rte_pktmbuf_mtod(mbuf, void *), desc->len);
-		tx_bytes += mbuf->pkt_len;
+		rte_eth_qsw_update(&txq->stats, mbuf);
+
 		rte_pktmbuf_free(mbuf);
 	}
 
 	xsk_ring_prod__submit(&txq->tx, nb_pkts);
 
 	kick_tx(txq, cq);
-
-	txq->stats.tx_pkts += nb_pkts;
-	txq->stats.tx_bytes += tx_bytes;
 
 	return nb_pkts;
 }
@@ -847,39 +821,26 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 static int
 eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
-	struct pmd_internals *internals = dev->data->dev_private;
 	struct pmd_process_private *process_private = dev->process_private;
-	struct xdp_statistics xdp_stats;
-	struct pkt_rx_queue *rxq;
-	struct pkt_tx_queue *txq;
-	socklen_t optlen;
-	int i, ret, fd;
+	unsigned int i;
+
+	rte_eth_counters_stats_get(dev, offsetof(struct pkt_tx_queue, stats),
+				   offsetof(struct pkt_rx_queue, stats), stats);
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-		optlen = sizeof(struct xdp_statistics);
-		rxq = &internals->rx_queues[i];
-		txq = rxq->pair;
-		stats->q_ipackets[i] = rxq->stats.rx_pkts;
-		stats->q_ibytes[i] = rxq->stats.rx_bytes;
+		struct xdp_statistics xdp_stats;
+		socklen_t optlen = sizeof(xdp_stats);
+		int fd;
 
-		stats->q_opackets[i] = txq->stats.tx_pkts;
-		stats->q_obytes[i] = txq->stats.tx_bytes;
-
-		stats->ipackets += stats->q_ipackets[i];
-		stats->ibytes += stats->q_ibytes[i];
-		stats->imissed += rxq->stats.rx_dropped;
-		stats->oerrors += txq->stats.tx_dropped;
 		fd = process_private->rxq_xsk_fds[i];
-		ret = fd >= 0 ? getsockopt(fd, SOL_XDP, XDP_STATISTICS,
-					   &xdp_stats, &optlen) : -1;
-		if (ret != 0) {
+		if (fd < 0)
+			continue;
+		if (getsockopt(fd, SOL_XDP, XDP_STATISTICS,
+			       &xdp_stats, &optlen)  < 0) {
 			AF_XDP_LOG(ERR, "getsockopt() failed for XDP_STATISTICS.\n");
 			return -1;
 		}
 		stats->imissed += xdp_stats.rx_dropped;
-
-		stats->opackets += stats->q_opackets[i];
-		stats->obytes += stats->q_obytes[i];
 	}
 
 	return 0;
@@ -888,17 +849,8 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 static int
 eth_stats_reset(struct rte_eth_dev *dev)
 {
-	struct pmd_internals *internals = dev->data->dev_private;
-	int i;
-
-	for (i = 0; i < internals->queue_cnt; i++) {
-		memset(&internals->rx_queues[i].stats, 0,
-					sizeof(struct rx_stats));
-		memset(&internals->tx_queues[i].stats, 0,
-					sizeof(struct tx_stats));
-	}
-
-	return 0;
+	return rte_eth_counters_reset(dev, offsetof(struct pkt_tx_queue, stats),
+				      offsetof(struct pkt_rx_queue, stats));
 }
 
 #ifdef RTE_NET_AF_XDP_LIBBPF_XDP_ATTACH
