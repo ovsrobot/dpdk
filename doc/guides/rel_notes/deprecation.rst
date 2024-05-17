@@ -91,6 +91,11 @@ Deprecation Notices
   - ``rte_flow_item_pppoe``
   - ``rte_flow_item_pppoe_proto_id``
 
+* ethdev: The flow item ``RTE_FLOW_ITEM_TYPE_VXLAN_GPE`` is replaced with ``RTE_FLOW_ITEM_TYPE_VXLAN``.
+  The item ``RTE_FLOW_ITEM_TYPE_VXLAN_GPE``, the struct ``rte_flow_item_vxlan_gpe``, its mask ``rte_flow_item_vxlan_gpe_mask``,
+  and the header struct ``rte_vxlan_gpe_hdr`` with the macro ``RTE_ETHER_VXLAN_GPE_HLEN``
+  will be removed in DPDK 25.11.
+
 * ethdev: Queue specific stats fields will be removed from ``struct rte_eth_stats``.
   Mentioned fields are: ``q_ipackets``, ``q_opackets``, ``q_ibytes``, ``q_obytes``,
   ``q_errors``.
