@@ -19,6 +19,14 @@ static struct rte_mempool *mp;
 struct rte_ring *rxtx[NUM_RINGS];
 static int tx_porta, rx_portb, rxtx_portc, rxtx_portd, rxtx_porte;
 
+/* make a valid zero sized mbuf */
+static void
+test_mbuf_init(struct rte_mbuf *mbuf)
+{
+	memset(mbuf, 0, sizeof(*mbuf));
+	rte_pktmbuf_reset(mbuf);
+}
+
 static int
 test_ethdev_configure_port(int port)
 {
@@ -68,14 +76,16 @@ test_ethdev_configure_port(int port)
 static int
 test_send_basic_packets(void)
 {
-	struct rte_mbuf  bufs[RING_SIZE];
+	struct rte_mbuf bufs[RING_SIZE];
 	struct rte_mbuf *pbufs[RING_SIZE];
 	int i;
 
 	printf("Testing send and receive RING_SIZE/2 packets (tx_porta -> rx_portb)\n");
 
-	for (i = 0; i < RING_SIZE/2; i++)
+	for (i = 0; i < RING_SIZE / 2; i++) {
+		test_mbuf_init(&bufs[i]);
 		pbufs[i] = &bufs[i];
+	}
 
 	if (rte_eth_tx_burst(tx_porta, 0, pbufs, RING_SIZE/2) < RING_SIZE/2) {
 		printf("Failed to transmit packet burst port %d\n", tx_porta);
@@ -99,14 +109,16 @@ test_send_basic_packets(void)
 static int
 test_send_basic_packets_port(int port)
 {
-	struct rte_mbuf  bufs[RING_SIZE];
+	struct rte_mbuf bufs[RING_SIZE];
 	struct rte_mbuf *pbufs[RING_SIZE];
 	int i;
 
 	printf("Testing send and receive RING_SIZE/2 packets (cmdl_port0 -> cmdl_port0)\n");
 
-	for (i = 0; i < RING_SIZE/2; i++)
+	for (i = 0; i < RING_SIZE / 2; i++) {
+		test_mbuf_init(&bufs[i]);
 		pbufs[i] = &bufs[i];
+	}
 
 	if (rte_eth_tx_burst(port, 0, pbufs, RING_SIZE/2) < RING_SIZE/2) {
 		printf("Failed to transmit packet burst port %d\n", port);
@@ -134,10 +146,11 @@ test_get_stats(int port)
 	struct rte_eth_stats stats;
 	struct rte_mbuf buf, *pbuf = &buf;
 
+	test_mbuf_init(&buf);
+
 	printf("Testing ring PMD stats_get port %d\n", port);
 
 	/* check stats of RXTX port, should all be zero */
-
 	rte_eth_stats_get(port, &stats);
 	if (stats.ipackets != 0 || stats.opackets != 0 ||
 			stats.ibytes != 0 || stats.obytes != 0 ||
@@ -172,6 +185,8 @@ test_stats_reset(int port)
 {
 	struct rte_eth_stats stats;
 	struct rte_mbuf buf, *pbuf = &buf;
+
+	test_mbuf_init(&buf);
 
 	printf("Testing ring PMD stats_reset port %d\n", port);
 
@@ -228,6 +243,7 @@ test_pmd_ring_pair_create_attach(void)
 	int ret;
 
 	memset(&null_conf, 0, sizeof(struct rte_eth_conf));
+	test_mbuf_init(&buf);
 
 	if ((rte_eth_dev_configure(rxtx_portd, 1, 1, &null_conf) < 0)
 			|| (rte_eth_dev_configure(rxtx_porte, 1, 1,
