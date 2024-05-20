@@ -2271,8 +2271,32 @@ cpfl_repr_allowlist_uninit(struct cpfl_adapter_ext *adapter)
 {
 	rte_hash_free(adapter->repr_allowlist_hash);
 }
+static uint8_t
+get_running_host_id(void)
+{
+	char buf[BUFSIZ];
+	FILE *fd;
+	uint8_t host_id = CPFL_INVALID_HOST_ID;
 
+	fd = fopen("/etc/issue.net", "r");
+	if (fd == NULL) {
+		PMD_INIT_LOG(ERR, "Cannot open /etc/issue.net\n");
+		return host_id;
+	}
 
+	if (fgets(buf, sizeof(buf), fd)) {
+		/* get the first line */
+		if (strstr(buf, "IMC"))
+			PMD_INIT_LOG(ERR, "CPFL PMD cannot running on IMC.");
+		else if (strstr(buf, "ACC"))
+			host_id = CPFL_HOST_ID_ACC;
+		else
+			host_id = CPFL_HOST_ID_HOST;
+	}
+
+	fclose(fd);
+	return host_id;
+}
 static int
 cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter,
 		      struct cpfl_devargs *devargs)
@@ -2291,6 +2315,7 @@ cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *a
 	hw->vendor_id = pci_dev->id.vendor_id;
 	hw->device_id = pci_dev->id.device_id;
 	hw->subsystem_vendor_id = pci_dev->id.subsystem_vendor_id;
+	adapter->host_id = get_running_host_id();
 
 	strncpy(adapter->name, pci_dev->device.name, PCI_PRI_STR_SIZE);
 
