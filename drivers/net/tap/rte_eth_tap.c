@@ -235,9 +235,8 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 
 	flags = fcntl(fd, F_GETFL);
 	if (flags == -1) {
-		TAP_LOG(WARNING,
-			"Unable to get %s current flags\n",
-			ifr.ifr_name);
+		TAP_LOG(WARNING, "Unable to get %s current flags: %s",
+			ifr.ifr_name, strerror(errno));
 		goto error;
 	}
 
@@ -279,7 +278,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 
 		if (sigaction(signo, &sa, NULL) == -1) {
 			TAP_LOG(WARNING,
-				"Unable to set rt-signal %d handler\n", signo);
+				"Unable to set rt-signal %d handler", signo);
 			goto error;
 		}
 
@@ -290,11 +289,11 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	}
 
 	if (signo == SIGRTMAX) {
-		TAP_LOG(WARNING, "All rt-signals are in use\n");
+		TAP_LOG(WARNING, "All rt-signals are in use");
 
 		/* Disable trigger globally in case of error */
 		tap_trigger = 0;
-		TAP_LOG(NOTICE, "No Rx trigger signal available\n");
+		TAP_LOG(NOTICE, "No Rx trigger signal available");
 	} else {
 		/* Enable signal on file descriptor */
 		if (fcntl(fd, F_SETSIG, signo) < 0) {
@@ -920,7 +919,7 @@ tap_mp_req_start_rxtx(const struct rte_mp_msg *request, __rte_unused const void 
 	}
 
 	process_private = dev->process_private;
-	TAP_LOG(DEBUG, "tap_attach q:%d\n", request_param->q_count);
+	TAP_LOG(DEBUG, "tap_attach q:%d", request_param->q_count);
 
 	for (int q = 0; q < request_param->q_count; q++)
 		process_private->fds[q] = request->fds[q];
@@ -1463,7 +1462,7 @@ tap_gso_ctx_setup(struct rte_gso_ctx *gso_ctx, struct rte_eth_dev *dev)
 		if (ret < 0 || ret >= (int)sizeof(pool_name)) {
 			TAP_LOG(ERR,
 				"%s: failed to create mbuf pool name for device %s,"
-				"device name too long or output error, ret: %d\n",
+				"device name too long or output error, ret: %d",
 				pmd->name, dev->device->name, ret);
 			return -ENAMETOOLONG;
 		}
@@ -1473,7 +1472,7 @@ tap_gso_ctx_setup(struct rte_gso_ctx *gso_ctx, struct rte_eth_dev *dev)
 			SOCKET_ID_ANY);
 		if (!pmd->gso_ctx_mp) {
 			TAP_LOG(ERR,
-				"%s: failed to create mbuf pool for device %s\n",
+				"%s: failed to create mbuf pool for device %s",
 				pmd->name, dev->device->name);
 			return -1;
 		}
