@@ -8,6 +8,7 @@
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
 #include <ethdev_vdev.h>
+#include <ethdev_swstats.h>
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
 #include <bus_vdev_driver.h>
@@ -37,8 +38,8 @@ struct null_queue {
 	struct rte_mempool *mb_pool;
 	struct rte_mbuf *dummy_packet;
 
-	RTE_ATOMIC(uint64_t) rx_pkts;
-	RTE_ATOMIC(uint64_t) tx_pkts;
+	struct rte_eth_counters tx_stats;
+	struct rte_eth_counters rx_stats;
 };
 
 struct pmd_options {
@@ -101,9 +102,7 @@ eth_null_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->port = h->internals->port_id;
 	}
 
-	/* NOTE: review for potential ordering optimization */
-	rte_atomic_fetch_add_explicit(&h->rx_pkts, i, rte_memory_order_seq_cst);
-
+	rte_eth_count_packets(&h->rx_stats, i, i * packet_size);
 	return i;
 }
 
@@ -129,8 +128,7 @@ eth_null_copy_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->port = h->internals->port_id;
 	}
 
-	/* NOTE: review for potential ordering optimization */
-	rte_atomic_fetch_add_explicit(&h->rx_pkts, i, rte_memory_order_seq_cst);
+	rte_eth_count_packets(&h->rx_stats, i, i * packet_size);
 
 	return i;
 }
@@ -147,16 +145,17 @@ eth_null_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
 	int i;
 	struct null_queue *h = q;
+	uint32_t tx_bytes = 0;
 
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
-	for (i = 0; i < nb_bufs; i++)
+	for (i = 0; i < nb_bufs; i++) {
+		tx_bytes += rte_pktmbuf_pkt_len(bufs[i]);
 		rte_pktmbuf_free(bufs[i]);
+	}
 
-	/* NOTE: review for potential ordering optimization */
-	rte_atomic_fetch_add_explicit(&h->tx_pkts, i, rte_memory_order_seq_cst);
-
+	rte_eth_count_packets(&h->tx_stats, i, tx_bytes);
 	return i;
 }
 
@@ -166,20 +165,20 @@ eth_null_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	int i;
 	struct null_queue *h = q;
 	unsigned int packet_size;
+	uint32_t tx_bytes = 0;
 
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
 	packet_size = h->internals->packet_size;
 	for (i = 0; i < nb_bufs; i++) {
+		tx_bytes += rte_pktmbuf_pkt_len(bufs[i]);
 		rte_memcpy(h->dummy_packet, rte_pktmbuf_mtod(bufs[i], void *),
 					packet_size);
 		rte_pktmbuf_free(bufs[i]);
 	}
 
-	/* NOTE: review for potential ordering optimization */
-	rte_atomic_fetch_add_explicit(&h->tx_pkts, i, rte_memory_order_seq_cst);
-
+	rte_eth_count_packets(&h->tx_stats, i, tx_bytes);
 	return i;
 }
 
@@ -322,60 +321,20 @@ eth_dev_info(struct rte_eth_dev *dev,
 }
 
 static int
-eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
+eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
-	unsigned int i, num_stats;
-	unsigned long rx_total = 0, tx_total = 0;
-	const struct pmd_internals *internal;
-
-	if ((dev == NULL) || (igb_stats == NULL))
-		return -EINVAL;
-
-	internal = dev->data->dev_private;
-	num_stats = RTE_MIN((unsigned int)RTE_ETHDEV_QUEUE_STAT_CNTRS,
-			RTE_MIN(dev->data->nb_rx_queues,
-				RTE_DIM(internal->rx_null_queues)));
-	for (i = 0; i < num_stats; i++) {
-		/* NOTE: review for atomic access */
-		igb_stats->q_ipackets[i] =
-			internal->rx_null_queues[i].rx_pkts;
-		rx_total += igb_stats->q_ipackets[i];
-	}
-
-	num_stats = RTE_MIN((unsigned int)RTE_ETHDEV_QUEUE_STAT_CNTRS,
-			RTE_MIN(dev->data->nb_tx_queues,
-				RTE_DIM(internal->tx_null_queues)));
-	for (i = 0; i < num_stats; i++) {
-		/* NOTE: review for atomic access */
-		igb_stats->q_opackets[i] =
-			internal->tx_null_queues[i].tx_pkts;
-		tx_total += igb_stats->q_opackets[i];
-	}
-
-	igb_stats->ipackets = rx_total;
-	igb_stats->opackets = tx_total;
-
-	return 0;
+	return rte_eth_counters_stats_get(dev,
+					  offsetof(struct null_queue, tx_stats),
+					  offsetof(struct null_queue, rx_stats),
+					  stats);
 }
 
 static int
 eth_stats_reset(struct rte_eth_dev *dev)
 {
-	unsigned int i;
-	struct pmd_internals *internal;
-
-	if (dev == NULL)
-		return -EINVAL;
-
-	internal = dev->data->dev_private;
-	for (i = 0; i < RTE_DIM(internal->rx_null_queues); i++)
-		/* NOTE: review for atomic access */
-		internal->rx_null_queues[i].rx_pkts = 0;
-	for (i = 0; i < RTE_DIM(internal->tx_null_queues); i++)
-		/* NOTE: review for atomic access */
-		internal->tx_null_queues[i].tx_pkts = 0;
-
-	return 0;
+	return rte_eth_counters_reset(dev,
+				      offsetof(struct null_queue, tx_stats),
+				      offsetof(struct null_queue, rx_stats));
 }
 
 static void
