@@ -3,6 +3,7 @@
 
 sources = files(
         'ethdev_driver.c',
+        'ethdev_swstats.c',
         'ethdev_private.c',
         'ethdev_profile.c',
         'ethdev_trace_points.c',
@@ -42,6 +43,7 @@ driver_sdk_headers += files(
         'ethdev_driver.h',
         'ethdev_pci.h',
         'ethdev_vdev.h',
+        'ethdev_swstats.h',
 )
 
 if is_linux
