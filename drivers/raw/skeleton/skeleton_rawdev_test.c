@@ -7,7 +7,6 @@
 #include <rte_common.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
-#include <rte_memcpy.h>
 #include <dev_driver.h>
 #include <rte_rawdev.h>
 #include <bus_vdev_driver.h>
