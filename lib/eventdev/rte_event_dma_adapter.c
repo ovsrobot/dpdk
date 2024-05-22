@@ -447,7 +447,7 @@ rte_event_dma_adapter_create(uint8_t id, uint8_t evdev_id, struct rte_event_port
 	if (pc == NULL)
 		return -ENOMEM;
 
-	rte_memcpy(pc, port_config, sizeof(struct rte_event_port_conf));
+	memcpy(pc, port_config, sizeof(struct rte_event_port_conf));
 	ret = rte_event_dma_adapter_create_ext(id, evdev_id, edma_default_config_cb, mode, pc);
 	if (ret != 0)
 		rte_free(pc);
@@ -668,7 +668,7 @@ edma_ops_enqueue_burst(struct event_dma_adapter *adapter, struct rte_event_dma_a
 			continue;
 		}
 
-		rte_memcpy(ev, response_info, sizeof(struct rte_event));
+		memcpy(ev, response_info, sizeof(struct rte_event));
 		ev->event_ptr = ops[i];
 		ev->event_type = RTE_EVENT_TYPE_DMADEV;
 		if (adapter->implicit_release_disabled)
