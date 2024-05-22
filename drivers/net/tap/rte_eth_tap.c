@@ -1404,11 +1404,11 @@ tap_mac_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 			mac_addr))
 		mode = LOCAL_AND_REMOTE;
 	ifr.ifr_hwaddr.sa_family = AF_LOCAL;
-	rte_memcpy(ifr.ifr_hwaddr.sa_data, mac_addr, RTE_ETHER_ADDR_LEN);
+	memcpy(ifr.ifr_hwaddr.sa_data, mac_addr, RTE_ETHER_ADDR_LEN);
 	ret = tap_ioctl(pmd, SIOCSIFHWADDR, &ifr, 1, mode);
 	if (ret < 0)
 		return ret;
-	rte_memcpy(&pmd->eth_addr, mac_addr, RTE_ETHER_ADDR_LEN);
+	memcpy(&pmd->eth_addr, mac_addr, RTE_ETHER_ADDR_LEN);
 	if (pmd->remote_if_index && !pmd->flow_isolate) {
 		/* Replace MAC redirection rule after a MAC change */
 		ret = tap_flow_implicit_destroy(pmd, TAP_REMOTE_LOCAL_MAC);
@@ -2010,7 +2010,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 		if (rte_is_zero_ether_addr(mac_addr))
 			rte_eth_random_addr((uint8_t *)&pmd->eth_addr);
 		else
-			rte_memcpy(&pmd->eth_addr, mac_addr, sizeof(*mac_addr));
+			memcpy(&pmd->eth_addr, mac_addr, sizeof(*mac_addr));
 	}
 
 	/*
@@ -2033,8 +2033,8 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	if (pmd->type == ETH_TUNTAP_TYPE_TAP) {
 		memset(&ifr, 0, sizeof(struct ifreq));
 		ifr.ifr_hwaddr.sa_family = AF_LOCAL;
-		rte_memcpy(ifr.ifr_hwaddr.sa_data, &pmd->eth_addr,
-				RTE_ETHER_ADDR_LEN);
+		memcpy(ifr.ifr_hwaddr.sa_data, &pmd->eth_addr,
+		       RTE_ETHER_ADDR_LEN);
 		if (tap_ioctl(pmd, SIOCSIFHWADDR, &ifr, 0, LOCAL_ONLY) < 0)
 			goto error_exit;
 	}
@@ -2091,8 +2091,8 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 				pmd->name, pmd->remote_iface);
 			goto error_remote;
 		}
-		rte_memcpy(&pmd->eth_addr, ifr.ifr_hwaddr.sa_data,
-			   RTE_ETHER_ADDR_LEN);
+		memcpy(&pmd->eth_addr, ifr.ifr_hwaddr.sa_data,
+		       RTE_ETHER_ADDR_LEN);
 		/* The desired MAC is already in ifreq after SIOCGIFHWADDR. */
 		if (tap_ioctl(pmd, SIOCSIFHWADDR, &ifr, 0, LOCAL_ONLY) < 0) {
 			TAP_LOG(ERR, "%s: failed to get %s MAC address.",
