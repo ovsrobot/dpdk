@@ -560,7 +560,7 @@ cn10k_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 
 	/* Set model info */
 	memset(info, 0, sizeof(struct rte_ml_model_info));
-	rte_memcpy(info->name, metadata->model.name, MRVL_ML_MODEL_NAME_LEN);
+	memcpy(info->name, metadata->model.name, MRVL_ML_MODEL_NAME_LEN);
 	snprintf(info->version, RTE_ML_STR_MAX, "%u.%u.%u.%u", metadata->model.version[0],
 		 metadata->model.version[1], metadata->model.version[2],
 		 metadata->model.version[3]);
@@ -579,7 +579,8 @@ cn10k_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 
 	/* Set input info */
 	for (i = 0; i < info->nb_inputs; i++) {
-		rte_memcpy(input[i].name, io_info->input[i].name, MRVL_ML_INPUT_NAME_LEN);
+		memcpy(input[i].name, io_info->input[i].name,
+		       MRVL_ML_INPUT_NAME_LEN);
 		input[i].nb_dims = io_info->input[i].nb_dims;
 		input[i].shape = &io_info->input[i].shape[0];
 		input[i].type = io_info->input[i].qtype;
@@ -590,7 +591,8 @@ cn10k_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 
 	/* Set output info */
 	for (i = 0; i < info->nb_outputs; i++) {
-		rte_memcpy(output[i].name, io_info->output[i].name, MRVL_ML_INPUT_NAME_LEN);
+		memcpy(output[i].name, io_info->output[i].name,
+		       MRVL_ML_INPUT_NAME_LEN);
 		output[i].nb_dims = io_info->output[i].nb_dims;
 		output[i].shape = &io_info->output[i].shape[0];
 		output[i].type = io_info->output[i].qtype;
