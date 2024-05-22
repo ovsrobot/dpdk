@@ -13,7 +13,6 @@ test_efd(void)
 
 #else
 
-#include <rte_memcpy.h>
 #include <rte_malloc.h>
 #include <rte_efd.h>
 #include <rte_byteorder.h>

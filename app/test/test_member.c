@@ -7,7 +7,6 @@
 #include <math.h>
 #include "test.h"
 
-#include <rte_memcpy.h>
 #include <rte_malloc.h>
 
 #ifdef RTE_EXEC_ENV_WINDOWS
