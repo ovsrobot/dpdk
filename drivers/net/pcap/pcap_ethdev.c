@@ -11,6 +11,7 @@
 
 #include <rte_cycles.h>
 #include <ethdev_driver.h>
+#include <ethdev_swstats.h>
 #include <ethdev_vdev.h>
 #include <rte_kvargs.h>
 #include <rte_malloc.h>
@@ -48,13 +49,6 @@ static uint8_t iface_idx;
 static uint64_t timestamp_rx_dynflag;
 static int timestamp_dynfield_offset = -1;
 
-struct queue_stat {
-	volatile unsigned long pkts;
-	volatile unsigned long bytes;
-	volatile unsigned long err_pkts;
-	volatile unsigned long rx_nombuf;
-};
-
 struct queue_missed_stat {
 	/* last value retrieved from pcap */
 	unsigned int pcap;
@@ -68,7 +62,7 @@ struct pcap_rx_queue {
 	uint16_t port_id;
 	uint16_t queue_id;
 	struct rte_mempool *mb_pool;
-	struct queue_stat rx_stat;
+	struct rte_eth_counters rx_stat;
 	struct queue_missed_stat missed_stat;
 	char name[PATH_MAX];
 	char type[ETH_PCAP_ARG_MAXLEN];
@@ -80,7 +74,7 @@ struct pcap_rx_queue {
 struct pcap_tx_queue {
 	uint16_t port_id;
 	uint16_t queue_id;
-	struct queue_stat tx_stat;
+	struct rte_eth_counters tx_stat;
 	char name[PATH_MAX];
 	char type[ETH_PCAP_ARG_MAXLEN];
 };
@@ -258,14 +252,13 @@ eth_pcap_rx_infinite(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		bufs[i]->data_len = pcap_buf->data_len;
 		bufs[i]->pkt_len = pcap_buf->pkt_len;
 		bufs[i]->port = pcap_q->port_id;
-		rx_bytes += pcap_buf->data_len;
+		rx_bytes += pcap_buf->pkt_len;
 
 		/* Enqueue packet back on ring to allow infinite rx. */
 		rte_ring_enqueue(pcap_q->pkts, pcap_buf);
 	}
 
-	pcap_q->rx_stat.pkts += i;
-	pcap_q->rx_stat.bytes += rx_bytes;
+	rte_eth_count_packets(&pcap_q->rx_stat, i, rx_bytes);
 
 	return i;
 }
@@ -300,7 +293,9 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		mbuf = rte_pktmbuf_alloc(pcap_q->mb_pool);
 		if (unlikely(mbuf == NULL)) {
-			pcap_q->rx_stat.rx_nombuf++;
+			struct rte_eth_dev *dev = &rte_eth_devices[pcap_q->port_id];
+
+			++dev->data->rx_mbuf_alloc_failed;
 			break;
 		}
 
@@ -315,7 +310,7 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 						       mbuf,
 						       packet,
 						       header.caplen) == -1)) {
-				pcap_q->rx_stat.err_pkts++;
+				rte_eth_count_error(&pcap_q->rx_stat);
 				rte_pktmbuf_free(mbuf);
 				break;
 			}
@@ -332,9 +327,8 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		num_rx++;
 		rx_bytes += header.caplen;
 	}
-	pcap_q->rx_stat.pkts += num_rx;
-	pcap_q->rx_stat.bytes += rx_bytes;
 
+	rte_eth_count_packets(&pcap_q->rx_stat, num_rx, rx_bytes);
 	return num_rx;
 }
 
@@ -423,9 +417,8 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	 * we flush the pcap dumper within each burst.
 	 */
 	pcap_dump_flush(dumper);
-	dumper_q->tx_stat.pkts += num_tx;
-	dumper_q->tx_stat.bytes += tx_bytes;
-	dumper_q->tx_stat.err_pkts += nb_pkts - num_tx;
+
+	rte_eth_count_packets(&dumper_q->tx_stat, num_tx, tx_bytes);
 
 	return nb_pkts;
 }
@@ -448,9 +441,7 @@ eth_tx_drop(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		rte_pktmbuf_free(bufs[i]);
 	}
 
-	tx_queue->tx_stat.pkts += nb_pkts;
-	tx_queue->tx_stat.bytes += tx_bytes;
-
+	rte_eth_count_packets(&tx_queue->tx_stat, nb_pkts, tx_bytes);
 	return i;
 }
 
@@ -502,9 +493,7 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		rte_pktmbuf_free(mbuf);
 	}
 
-	tx_queue->tx_stat.pkts += num_tx;
-	tx_queue->tx_stat.bytes += tx_bytes;
-	tx_queue->tx_stat.err_pkts += i - num_tx;
+	rte_eth_count_packets(&tx_queue->tx_stat, num_tx, tx_bytes);
 
 	return i;
 }
@@ -746,41 +735,12 @@ static int
 eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
 	unsigned int i;
-	unsigned long rx_packets_total = 0, rx_bytes_total = 0;
-	unsigned long rx_missed_total = 0;
-	unsigned long rx_nombuf_total = 0, rx_err_total = 0;
-	unsigned long tx_packets_total = 0, tx_bytes_total = 0;
-	unsigned long tx_packets_err_total = 0;
-	const struct pmd_internals *internal = dev->data->dev_private;
 
-	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
-			i < dev->data->nb_rx_queues; i++) {
-		stats->q_ipackets[i] = internal->rx_queue[i].rx_stat.pkts;
-		stats->q_ibytes[i] = internal->rx_queue[i].rx_stat.bytes;
-		rx_nombuf_total += internal->rx_queue[i].rx_stat.rx_nombuf;
-		rx_err_total += internal->rx_queue[i].rx_stat.err_pkts;
-		rx_packets_total += stats->q_ipackets[i];
-		rx_bytes_total += stats->q_ibytes[i];
-		rx_missed_total += queue_missed_stat_get(dev, i);
-	}
+	rte_eth_counters_stats_get(dev, offsetof(struct pcap_tx_queue, tx_stat),
+				   offsetof(struct pcap_rx_queue, rx_stat), stats);
 
-	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
-			i < dev->data->nb_tx_queues; i++) {
-		stats->q_opackets[i] = internal->tx_queue[i].tx_stat.pkts;
-		stats->q_obytes[i] = internal->tx_queue[i].tx_stat.bytes;
-		tx_packets_total += stats->q_opackets[i];
-		tx_bytes_total += stats->q_obytes[i];
-		tx_packets_err_total += internal->tx_queue[i].tx_stat.err_pkts;
-	}
-
-	stats->ipackets = rx_packets_total;
-	stats->ibytes = rx_bytes_total;
-	stats->imissed = rx_missed_total;
-	stats->ierrors = rx_err_total;
-	stats->rx_nombuf = rx_nombuf_total;
-	stats->opackets = tx_packets_total;
-	stats->obytes = tx_bytes_total;
-	stats->oerrors = tx_packets_err_total;
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		stats->imissed += queue_missed_stat_get(dev, i);
 
 	return 0;
 }
@@ -789,21 +749,12 @@ static int
 eth_stats_reset(struct rte_eth_dev *dev)
 {
 	unsigned int i;
-	struct pmd_internals *internal = dev->data->dev_private;
 
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-		internal->rx_queue[i].rx_stat.pkts = 0;
-		internal->rx_queue[i].rx_stat.bytes = 0;
-		internal->rx_queue[i].rx_stat.err_pkts = 0;
-		internal->rx_queue[i].rx_stat.rx_nombuf = 0;
+	rte_eth_counters_reset(dev, offsetof(struct pcap_tx_queue, tx_stat),
+			       offsetof(struct pcap_rx_queue, rx_stat));
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
 		queue_missed_stat_reset(dev, i);
-	}
-
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		internal->tx_queue[i].tx_stat.pkts = 0;
-		internal->tx_queue[i].tx_stat.bytes = 0;
-		internal->tx_queue[i].tx_stat.err_pkts = 0;
-	}
 
 	return 0;
 }
@@ -929,13 +880,6 @@ eth_rx_queue_setup(struct rte_eth_dev *dev,
 				pcap_pkt_count);
 			return -EINVAL;
 		}
-
-		/*
-		 * Reset the stats for this queue since eth_pcap_rx calls above
-		 * didn't result in the application receiving packets.
-		 */
-		pcap_q->rx_stat.pkts = 0;
-		pcap_q->rx_stat.bytes = 0;
 	}
 
 	return 0;
