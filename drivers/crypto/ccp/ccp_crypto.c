@@ -168,7 +168,7 @@ static int partial_hash_sha1(uint8_t *data_in, uint8_t *data_out)
 	if (!SHA1_Init(&ctx))
 		return -EFAULT;
 	SHA1_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, SHA_DIGEST_LENGTH);
+	memcpy(data_out, &ctx, SHA_DIGEST_LENGTH);
 	return 0;
 }
 
@@ -179,8 +179,7 @@ static int partial_hash_sha224(uint8_t *data_in, uint8_t *data_out)
 	if (!SHA224_Init(&ctx))
 		return -EFAULT;
 	SHA256_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx,
-		   SHA256_DIGEST_LENGTH);
+	memcpy(data_out, &ctx, SHA256_DIGEST_LENGTH);
 	return 0;
 }
 
@@ -191,8 +190,7 @@ static int partial_hash_sha256(uint8_t *data_in, uint8_t *data_out)
 	if (!SHA256_Init(&ctx))
 		return -EFAULT;
 	SHA256_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx,
-		   SHA256_DIGEST_LENGTH);
+	memcpy(data_out, &ctx, SHA256_DIGEST_LENGTH);
 	return 0;
 }
 
@@ -203,8 +201,7 @@ static int partial_hash_sha384(uint8_t *data_in, uint8_t *data_out)
 	if (!SHA384_Init(&ctx))
 		return -EFAULT;
 	SHA512_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx,
-		   SHA512_DIGEST_LENGTH);
+	memcpy(data_out, &ctx, SHA512_DIGEST_LENGTH);
 	return 0;
 }
 
@@ -215,8 +212,7 @@ static int partial_hash_sha512(uint8_t *data_in, uint8_t *data_out)
 	if (!SHA512_Init(&ctx))
 		return -EFAULT;
 	SHA512_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx,
-		   SHA512_DIGEST_LENGTH);
+	memcpy(data_out, &ctx, SHA512_DIGEST_LENGTH);
 	return 0;
 }
 

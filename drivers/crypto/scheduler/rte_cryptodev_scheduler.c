@@ -79,7 +79,7 @@ sync_caps(struct rte_cryptodev_capabilities *caps,
 
 		/* remove a uncommon cap from the array */
 		for (j = i; j < sync_nb_caps - 1; j++)
-			rte_memcpy(&caps[j], &caps[j+1], sizeof(*cap));
+			memcpy(&caps[j], &caps[j + 1], sizeof(*cap));
 
 		memset(&caps[sync_nb_caps - 1], 0, sizeof(*cap));
 		sync_nb_caps--;
@@ -216,8 +216,8 @@ sync_sec_caps(uint32_t worker_idx,
 		 * caps, from the arrays
 		 */
 		for (j = i; j < nb_sec_caps - 1; j++) {
-			rte_memcpy(&sec_caps[j], &sec_caps[j+1],
-					sizeof(*sec_cap));
+			memcpy(&sec_caps[j], &sec_caps[j + 1],
+			       sizeof(*sec_cap));
 
 			rte_memcpy(&sec_crypto_caps[j][0],
 					&sec_crypto_caps[j+1][0],
