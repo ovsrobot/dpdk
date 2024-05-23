@@ -199,6 +199,8 @@ post_process_raw_dp_op(void *user_data,	uint32_t index __rte_unused,
 static struct crypto_testsuite_params testsuite_params = { NULL };
 struct crypto_testsuite_params *p_testsuite_params = &testsuite_params;
 static struct crypto_unittest_params unittest_params;
+static bool enq_cb_called;
+static bool deq_cb_called;
 
 int
 process_sym_raw_dp_op(uint8_t dev_id, uint16_t qp_id,
@@ -14556,6 +14558,7 @@ test_enq_callback(uint16_t dev_id, uint16_t qp_id, struct rte_crypto_op **ops,
 	RTE_SET_USED(ops);
 	RTE_SET_USED(user_param);
 
+	enq_cb_called = true;
 	printf("crypto enqueue callback called\n");
 	return nb_ops;
 }
@@ -14569,6 +14572,7 @@ test_deq_callback(uint16_t dev_id, uint16_t qp_id, struct rte_crypto_op **ops,
 	RTE_SET_USED(ops);
 	RTE_SET_USED(user_param);
 
+	deq_cb_called = true;
 	printf("crypto dequeue callback called\n");
 	return nb_ops;
 }
@@ -14583,7 +14587,7 @@ test_enqdeq_callback_thread(void *arg)
 	/* DP thread calls rte_cryptodev_enqueue_burst()/
 	 * rte_cryptodev_dequeue_burst() and invokes callback.
 	 */
-	test_null_burst_operation();
+	test_AES_CBC_HMAC_SHA1_encrypt_digest();
 	return 0;
 }
 
@@ -14591,6 +14595,7 @@ static int
 test_enq_callback_setup(void)
 {
 	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	struct rte_cryptodev_sym_capability_idx cap_idx;
 	struct rte_cryptodev_info dev_info;
 	struct rte_cryptodev_qp_conf qp_conf = {
 		.nb_descriptors = MAX_NUM_OPS_INFLIGHT
@@ -14598,6 +14603,19 @@ test_enq_callback_setup(void)
 
 	struct rte_cryptodev_cb *cb;
 	uint16_t qp_id = 0;
+	int j = 0;
+
+	/* Verify the crypto capabilities for which enqueue/dequeue is done. */
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_AUTH;
+	cap_idx.algo.auth = RTE_CRYPTO_AUTH_SHA1_HMAC;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return TEST_SKIPPED;
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
+	cap_idx.algo.cipher = RTE_CRYPTO_CIPHER_AES_CBC;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return TEST_SKIPPED;
 
 	/* Stop the device in case it's started so it can be configured */
 	rte_cryptodev_stop(ts_params->valid_devs[0]);
@@ -14621,6 +14639,7 @@ test_enq_callback_setup(void)
 			qp_conf.nb_descriptors, qp_id,
 			ts_params->valid_devs[0]);
 
+	enq_cb_called = false;
 	/* Test with invalid crypto device */
 	cb = rte_cryptodev_add_enq_callback(RTE_CRYPTO_MAX_DEVS,
 			qp_id, test_enq_callback, NULL);
@@ -14660,6 +14679,10 @@ test_enq_callback_setup(void)
 	/* Wait until reader exited. */
 	rte_eal_mp_wait_lcore();
 
+	/* Wait until callback not called. */
+	while (!enq_cb_called && (j++ < 10))
+		rte_delay_ms(10);
+
 	/* Test with invalid crypto device */
 	TEST_ASSERT_FAIL(rte_cryptodev_remove_enq_callback(
 			RTE_CRYPTO_MAX_DEVS, qp_id, cb),
@@ -14683,6 +14706,8 @@ test_enq_callback_setup(void)
 			"qp %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
 
+	TEST_ASSERT(enq_cb_called == true, "Crypto enqueue callback not called");
+
 	return TEST_SUCCESS;
 }
 
@@ -14690,6 +14715,7 @@ static int
 test_deq_callback_setup(void)
 {
 	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	struct rte_cryptodev_sym_capability_idx cap_idx;
 	struct rte_cryptodev_info dev_info;
 	struct rte_cryptodev_qp_conf qp_conf = {
 		.nb_descriptors = MAX_NUM_OPS_INFLIGHT
@@ -14697,6 +14723,19 @@ test_deq_callback_setup(void)
 
 	struct rte_cryptodev_cb *cb;
 	uint16_t qp_id = 0;
+	int j = 0;
+
+	/* Verify the crypto capabilities for which enqueue/dequeue is done. */
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_AUTH;
+	cap_idx.algo.auth = RTE_CRYPTO_AUTH_SHA1_HMAC;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return TEST_SKIPPED;
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
+	cap_idx.algo.cipher = RTE_CRYPTO_CIPHER_AES_CBC;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return TEST_SKIPPED;
 
 	/* Stop the device in case it's started so it can be configured */
 	rte_cryptodev_stop(ts_params->valid_devs[0]);
@@ -14720,6 +14759,7 @@ test_deq_callback_setup(void)
 			qp_conf.nb_descriptors, qp_id,
 			ts_params->valid_devs[0]);
 
+	deq_cb_called = false;
 	/* Test with invalid crypto device */
 	cb = rte_cryptodev_add_deq_callback(RTE_CRYPTO_MAX_DEVS,
 			qp_id, test_deq_callback, NULL);
@@ -14759,6 +14799,10 @@ test_deq_callback_setup(void)
 	/* Wait until reader exited. */
 	rte_eal_mp_wait_lcore();
 
+	/* Wait until callback not called. */
+	while (!deq_cb_called && (j++ < 10))
+		rte_delay_ms(10);
+
 	/* Test with invalid crypto device */
 	TEST_ASSERT_FAIL(rte_cryptodev_remove_deq_callback(
 			RTE_CRYPTO_MAX_DEVS, qp_id, cb),
@@ -14781,6 +14825,8 @@ test_deq_callback_setup(void)
 			"Failed test to remove callback on "
 			"qp %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
+
+	TEST_ASSERT(deq_cb_called == true, "Crypto dequeue callback not called");
 
 	return TEST_SUCCESS;
 }
