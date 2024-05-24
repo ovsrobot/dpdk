@@ -128,6 +128,7 @@ struct dsw_queue_flow {
 enum dsw_migration_state {
 	DSW_MIGRATION_STATE_IDLE,
 	DSW_MIGRATION_STATE_PAUSING,
+	DSW_MIGRATION_STATE_FINISH_PENDING,
 	DSW_MIGRATION_STATE_UNPAUSING
 };
 
@@ -147,6 +148,8 @@ struct __rte_cache_aligned dsw_port {
 	int32_t inflight_credits;
 
 	int32_t new_event_threshold;
+
+	bool implicit_release;
 
 	uint16_t pending_releases;
 

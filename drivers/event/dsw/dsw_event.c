@@ -1150,6 +1150,15 @@ dsw_port_move_emigrating_flows(struct dsw_evdev *dsw,
 }
 
 static void
+dsw_port_try_finish_pending(struct dsw_evdev *dsw, struct dsw_port *source_port)
+{
+	if (unlikely(source_port->migration_state ==
+		     DSW_MIGRATION_STATE_FINISH_PENDING &&
+		     source_port->pending_releases == 0))
+		dsw_port_move_emigrating_flows(dsw, source_port);
+}
+
+static void
 dsw_port_handle_confirm(struct dsw_evdev *dsw, struct dsw_port *port)
 {
 	port->cfm_cnt++;
@@ -1157,14 +1166,15 @@ dsw_port_handle_confirm(struct dsw_evdev *dsw, struct dsw_port *port)
 	if (port->cfm_cnt == (dsw->num_ports-1)) {
 		switch (port->migration_state) {
 		case DSW_MIGRATION_STATE_PAUSING:
-			dsw_port_move_emigrating_flows(dsw, port);
+			port->migration_state =
+				DSW_MIGRATION_STATE_FINISH_PENDING;
 			break;
 		case DSW_MIGRATION_STATE_UNPAUSING:
 			dsw_port_end_emigration(dsw, port,
 						RTE_SCHED_TYPE_ATOMIC);
 			break;
 		default:
-			RTE_ASSERT(0);
+			RTE_VERIFY(0);
 			break;
 		}
 	}
@@ -1203,18 +1213,17 @@ dsw_port_note_op(struct dsw_port *port, uint16_t num_events)
 static void
 dsw_port_bg_process(struct dsw_evdev *dsw, struct dsw_port *port)
 {
-	/* For simplicity (in the migration logic), avoid all
-	 * background processing in case event processing is in
-	 * progress.
-	 */
-	if (port->pending_releases > 0)
-		return;
-
 	/* Polling the control ring is relatively inexpensive, and
 	 * polling it often helps bringing down migration latency, so
 	 * do this for every iteration.
 	 */
 	dsw_port_ctl_process(dsw, port);
+
+	/* Always check if a migration is waiting for pending releases
+	 * to arrive, to minimize the amount of time dequeuing events
+	 * from the port is disabled.
+	 */
+	dsw_port_try_finish_pending(dsw, port);
 
 	/* To avoid considering migration and flushing output buffers
 	 * on every dequeue/enqueue call, the scheduler only performs
@@ -1260,8 +1269,8 @@ static __rte_always_inline uint16_t
 dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 				const struct rte_event events[],
 				uint16_t events_len, bool op_types_known,
-				uint16_t num_new, uint16_t num_release,
-				uint16_t num_non_release)
+				uint16_t num_new, uint16_t num_forward,
+				uint16_t num_release)
 {
 	struct dsw_evdev *dsw = source_port->dsw;
 	bool enough_credits;
@@ -1295,14 +1304,14 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	if (!op_types_known)
 		for (i = 0; i < events_len; i++) {
 			switch (events[i].op) {
-			case RTE_EVENT_OP_RELEASE:
-				num_release++;
-				break;
 			case RTE_EVENT_OP_NEW:
 				num_new++;
-				/* Falls through. */
-			default:
-				num_non_release++;
+				break;
+			case RTE_EVENT_OP_FORWARD:
+				num_forward++;
+				break;
+			case RTE_EVENT_OP_RELEASE:
+				num_release++;
 				break;
 			}
 		}
@@ -1318,15 +1327,15 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 		     source_port->new_event_threshold))
 		return 0;
 
-	enough_credits = dsw_port_acquire_credits(dsw, source_port,
-						  num_non_release);
+	enough_credits = dsw_port_acquire_credits(dsw, source_port, num_new);
 	if (unlikely(!enough_credits))
 		return 0;
 
-	source_port->pending_releases -= num_release;
+	dsw_port_return_credits(dsw, source_port, num_release);
 
-	dsw_port_enqueue_stats(source_port, num_new,
-			       num_non_release-num_new, num_release);
+	source_port->pending_releases -= (num_forward + num_release);
+
+	dsw_port_enqueue_stats(source_port, num_new, num_forward, num_release);
 
 	for (i = 0; i < events_len; i++) {
 		const struct rte_event *event = &events[i];
@@ -1338,9 +1347,9 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	}
 
 	DSW_LOG_DP_PORT(DEBUG, source_port->id, "%d non-release events "
-			"accepted.\n", num_non_release);
+			"accepted.\n", num_new + num_forward);
 
-	return (num_non_release + num_release);
+	return (num_new + num_forward + num_release);
 }
 
 uint16_t
@@ -1367,7 +1376,7 @@ dsw_event_enqueue_new_burst(void *port, const struct rte_event events[],
 
 	return dsw_event_enqueue_burst_generic(source_port, events,
 					       events_len, true, events_len,
-					       0, events_len);
+					       0, 0);
 }
 
 uint16_t
@@ -1380,8 +1389,8 @@ dsw_event_enqueue_forward_burst(void *port, const struct rte_event events[],
 		events_len = source_port->enqueue_depth;
 
 	return dsw_event_enqueue_burst_generic(source_port, events,
-					       events_len, true, 0, 0,
-					       events_len);
+					       events_len, true, 0,
+					       events_len, 0);
 }
 
 uint16_t
@@ -1493,21 +1502,34 @@ dsw_event_dequeue_burst(void *port, struct rte_event *events, uint16_t num,
 	struct dsw_evdev *dsw = source_port->dsw;
 	uint16_t dequeued;
 
-	source_port->pending_releases = 0;
+	if (source_port->implicit_release) {
+		dsw_port_return_credits(dsw, port,
+					source_port->pending_releases);
+
+		source_port->pending_releases = 0;
+	}
 
 	dsw_port_bg_process(dsw, source_port);
 
 	if (unlikely(num > source_port->dequeue_depth))
 		num = source_port->dequeue_depth;
 
-	dequeued = dsw_port_dequeue_burst(source_port, events, num);
+	if (unlikely(source_port->migration_state ==
+		     DSW_MIGRATION_STATE_FINISH_PENDING))
+		/* Do not take on new work - only finish outstanding
+		 * (unreleased) events, to allow the migration
+		 * procedure to complete.
+		 */
+		dequeued = 0;
+	else
+		dequeued = dsw_port_dequeue_burst(source_port, events, num);
 
 	if (unlikely(source_port->migration_state ==
 		     DSW_MIGRATION_STATE_PAUSING))
 		dsw_port_stash_migrating_events(source_port, events,
 						&dequeued);
 
-	source_port->pending_releases = dequeued;
+	source_port->pending_releases += dequeued;
 
 	dsw_port_load_record(source_port, dequeued);
 
@@ -1516,8 +1538,6 @@ dsw_event_dequeue_burst(void *port, struct rte_event *events, uint16_t num,
 	if (dequeued > 0) {
 		DSW_LOG_DP_PORT(DEBUG, source_port->id, "Dequeued %d events.\n",
 				dequeued);
-
-		dsw_port_return_credits(dsw, source_port, dequeued);
 
 		/* One potential optimization one might think of is to
 		 * add a migration state (prior to 'pausing'), and
