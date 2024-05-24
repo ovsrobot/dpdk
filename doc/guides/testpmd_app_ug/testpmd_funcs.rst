@@ -2919,14 +2919,6 @@ for port 0 and queue 0::
 
    testpmd> set port cman config 0 0 obj queue mode red 10 100 1
 
-Filter Functions
-----------------
-
-This section details the available filter functions that are available.
-
-Note these functions interface the deprecated legacy filtering framework,
-superseded by *rte_flow*. See `Flow rules management`_.
-
 .. _testpmd_rte_flow:
 
 Flow rules management
@@ -2935,10 +2927,6 @@ Flow rules management
 Control of the generic flow API (*rte_flow*) is fully exposed through the
 ``flow`` command (configuration, validation, creation, destruction, queries
 and operation modes).
-
-Considering *rte_flow* overlaps with all `Filter Functions`_, using both
-features simultaneously may cause undefined side-effects and is therefore
-not recommended.
 
 ``flow`` syntax
 ~~~~~~~~~~~~~~~
