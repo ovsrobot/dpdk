@@ -19,6 +19,7 @@ from typing import ClassVar, Union
 from scapy.layers.inet import IP  # type: ignore[import]
 from scapy.layers.l2 import Ether  # type: ignore[import]
 from scapy.packet import Packet, Padding  # type: ignore[import]
+from scapy.packet import Raw
 
 from .exception import TestCaseVerifyError
 from .logger import DTSLogger, get_dts_logger
@@ -180,6 +181,8 @@ class TestSuite(object):
         packet: Packet,
         filter_config: PacketFilteringConfig = PacketFilteringConfig(),
         duration: float = 1,
+        define_payload: bool = False,
+        payload: str = "D" * 80,
     ) -> list[Packet]:
         """Send and receive `packet` using the associated TG.
 
@@ -190,11 +193,16 @@ class TestSuite(object):
             packet: The packet to send.
             filter_config: The filter to use when capturing packets.
             duration: Capture traffic for this amount of time after sending `packet`.
+            define_payload: Enabling true adds a payload to packet's layer 2.
+            payload: user may use default payload or set their own.
 
         Returns:
             A list of received packets.
         """
         packet = self._adjust_addresses(packet)
+        if define_payload:
+            packet = packet / Raw(load=payload)
+
         return self.tg_node.send_packet_and_capture(
             packet,
             self._tg_port_egress,
