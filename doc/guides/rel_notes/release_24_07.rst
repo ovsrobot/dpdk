@@ -24,6 +24,11 @@ DPDK Release 24.07
 New Features
 ------------
 
+* **Added UADK compress driver.**
+
+  Added a new compress driver for the UADK library. See the
+  :doc:`../compressdevs/uadk` guide for more details on this new driver.
+
 .. This section should contain new features added in this release.
    Sample format:
 
