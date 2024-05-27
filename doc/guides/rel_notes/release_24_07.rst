@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell CNXK DMA driver.**
+
+  * Updated DMA driver internal pool to use higher chunk size, effectively
+    reducing the number of mempool allocs needed, thereby increasing DMA
+    performance.
+
 
 Removed Items
 -------------
