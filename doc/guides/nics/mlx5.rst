@@ -685,6 +685,11 @@ Limitations
     - Second tunnel fields are not supported.
 
   - Encapsulation levels greater than ``2`` are not supported.
+  - Modification of the VXLAN header is supported with below limitations:
+
+    - Only in HW steering (``dv_flow_en=2``).
+    - Support VNI and rsvd1 modifications for traffic with default VXLAN/VXLAN-GPE/VXLAN-GBP
+      UDP destination port.
 
 - Age action:
 
