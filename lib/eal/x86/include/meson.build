@@ -7,7 +7,6 @@ arch_headers = files(
         'rte_cpuflags.h',
         'rte_cycles.h',
         'rte_io.h',
-        'rte_memcpy.h',
         'rte_pause.h',
         'rte_power_intrinsics.h',
         'rte_prefetch.h',
@@ -16,6 +15,11 @@ arch_headers = files(
         'rte_spinlock.h',
         'rte_vect.h',
 )
+
+if not get_option('use_cc_memcpy')
+        arch_headers += 'rte_memcpy.h'
+endif
+
 arch_indirect_headers = files(
         'rte_atomic_32.h',
         'rte_atomic_64.h',
