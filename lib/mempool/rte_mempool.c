@@ -1230,6 +1230,7 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 #endif
 	struct rte_mempool_memhdr *memhdr;
 	struct rte_mempool_ops *ops;
+	unsigned int n;
 	unsigned common_count;
 	unsigned cache_count;
 	size_t mem_len = 0;
@@ -1262,6 +1263,15 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	if (mem_len != 0) {
 		fprintf(f, "  avg bytes/object=%#Lf\n",
 			(long double)mem_len / mp->size);
+	}
+
+	fprintf(f, "  mem_list:\n");
+	n = 0;
+	STAILQ_FOREACH(memhdr, &mp->mem_list, next) {
+		fprintf(f, "    addr[%u]=%p\n", n, memhdr->addr);
+		fprintf(f, "    iova[%u]=0x%" PRIx64 "\n", n, memhdr->iova);
+		fprintf(f, "    len[%u]=%zu\n", n, memhdr->len);
+		n++;
 	}
 
 	cache_count = rte_mempool_dump_cache(f, mp);
