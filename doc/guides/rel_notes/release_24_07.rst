@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Marvell Odyssey ODM DMA device support.**
+
+  Added Marvell Odyssey ODM DMA device PMD.
+
 
 Removed Items
 -------------
