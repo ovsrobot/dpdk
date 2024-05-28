@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cnxk net driver.**
+
+  * Added support disabling custom meta aura and seperately use custom
+    SA action support.
 
 Removed Items
 -------------
