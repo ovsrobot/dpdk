@@ -19,27 +19,4 @@
 
 #define APF
 
-int idpf_init_hw(struct idpf_hw *hw, struct idpf_ctlq_size ctlq_size);
-void idpf_deinit_hw(struct idpf_hw *hw);
-
-int idpf_clean_arq_element(struct idpf_hw *hw,
-			   struct idpf_arq_event_info *e,
-			   u16 *events_pending);
-bool idpf_asq_done(struct idpf_hw *hw);
-bool idpf_check_asq_alive(struct idpf_hw *hw);
-
-int idpf_get_rss_lut(struct idpf_hw *hw, u16 seid, bool pf_lut,
-		     u8 *lut, u16 lut_size);
-int idpf_set_rss_lut(struct idpf_hw *hw, u16 seid, bool pf_lut,
-		     u8 *lut, u16 lut_size);
-int idpf_get_rss_key(struct idpf_hw *hw, u16 seid,
-		     struct idpf_get_set_rss_key_data *key);
-int idpf_set_rss_key(struct idpf_hw *hw, u16 seid,
-		     struct idpf_get_set_rss_key_data *key);
-
-int idpf_set_mac_type(struct idpf_hw *hw);
-
-int idpf_reset(struct idpf_hw *hw);
-int idpf_send_msg_to_cp(struct idpf_hw *hw, int v_opcode,
-			int v_retval, u8 *msg, u16 msglen);
 #endif /* _IDPF_PROTOTYPE_H_ */
