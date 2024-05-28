@@ -128,7 +128,7 @@ static int idpf_ctlq_xn_process_recv(struct idpf_ctlq_xn_recv_params *params, st
 	IDPF_IOVEC recv_buf;
 	u16 msg_cookie;
 	void *payload;
-	u8 xn_index;
+	u16 xn_index;
 	int status;
 	int ret;
 
