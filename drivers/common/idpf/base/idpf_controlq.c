@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2001-2023 Intel Corporation
+ * Copyright(c) 2001-2024 Intel Corporation
  */
 
 #include "idpf_controlq.h"
@@ -145,8 +145,12 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 	    qinfo->buf_size > IDPF_CTLQ_MAX_BUF_LEN)
 		return -EINVAL;
 
+#ifndef NVME_CPF
 	cq = (struct idpf_ctlq_info *)
 	     idpf_calloc(hw, 1, sizeof(struct idpf_ctlq_info));
+#else
+	cq = *cq_out;
+#endif
 	if (!cq)
 		return -ENOMEM;
 
@@ -172,10 +176,15 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 	}
 
 	if (status)
+#ifdef NVME_CPF
+		return status;
+#else
 		goto init_free_q;
+#endif
 
 	if (is_rxq) {
 		idpf_ctlq_init_rxq_bufs(cq);
+#ifndef NVME_CPF
 	} else {
 		/* Allocate the array of msg pointers for TX queues */
 		cq->bi.tx_msg = (struct idpf_ctlq_msg **)
@@ -185,6 +194,7 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 			status = -ENOMEM;
 			goto init_dealloc_q_mem;
 		}
+#endif
 	}
 
 	idpf_ctlq_setup_regs(cq, qinfo);
@@ -195,6 +205,7 @@ int idpf_ctlq_add(struct idpf_hw *hw,
 
 	LIST_INSERT_HEAD(&hw->cq_list_head, cq, cq_list);
 
+#ifndef NVME_CPF
 	*cq_out = cq;
 	return status;
 
@@ -205,6 +216,7 @@ init_free_q:
 	idpf_free(hw, cq);
 	cq = NULL;
 
+#endif
 	return status;
 }
 
@@ -232,8 +244,13 @@ void idpf_ctlq_remove(struct idpf_hw *hw,
  * destroyed. This must be called prior to using the individual add/remove
  * APIs.
  */
+#ifdef NVME_CPF
+int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
+                   struct idpf_ctlq_create_info *q_info, struct idpf_ctlq_info **ctlq)
+#else
 int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
 		   struct idpf_ctlq_create_info *q_info)
+#endif
 {
 	struct idpf_ctlq_info *cq = NULL, *tmp = NULL;
 	int ret_code = 0;
@@ -244,6 +261,10 @@ int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
 	for (i = 0; i < num_q; i++) {
 		struct idpf_ctlq_create_info *qinfo = q_info + i;
 
+#ifdef NVME_CPF
+		cq = *(ctlq + i);
+
+#endif	
 		ret_code = idpf_ctlq_add(hw, qinfo, &cq);
 		if (ret_code)
 			goto init_destroy_qs;
@@ -398,7 +419,7 @@ sq_send_command_out:
  * ctlq_msgs and free or reuse the DMA buffers.
  */
 static int __idpf_ctlq_clean_sq(struct idpf_ctlq_info *cq, u16 *clean_count,
-				struct idpf_ctlq_msg *msg_status[], bool force)
+		                struct idpf_ctlq_msg *msg_status[], bool force)
 {
 	struct idpf_ctlq_desc *desc;
 	u16 i = 0, num_to_clean;
@@ -469,7 +490,7 @@ static int __idpf_ctlq_clean_sq(struct idpf_ctlq_info *cq, u16 *clean_count,
  * ctlq_msgs and free or reuse the DMA buffers.
  */
 int idpf_ctlq_clean_sq_force(struct idpf_ctlq_info *cq, u16 *clean_count,
-			     struct idpf_ctlq_msg *msg_status[])
+		             struct idpf_ctlq_msg *msg_status[])
 {
 	return __idpf_ctlq_clean_sq(cq, clean_count, msg_status, true);
 }
