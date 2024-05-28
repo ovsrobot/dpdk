@@ -414,7 +414,7 @@ out:
 static int
 find_numasocket(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi)
 {
-	int socket_id;
+	int socket_id = -1;
 	char *end, *nodestr;
 	unsigned i, hp_count = 0;
 	uint64_t virt_addr;
@@ -432,54 +432,61 @@ find_numasocket(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi)
 	snprintf(hugedir_str, sizeof(hugedir_str),
 			"%s/%s", hpi->hugedir, eal_get_hugefile_prefix());
 
-	/* parse numa map */
-	while (fgets(buf, sizeof(buf), f) != NULL) {
-
-		/* ignore non huge page */
-		if (strstr(buf, " huge ") == NULL &&
+	/* if we find this page in our mappings, set socket_id */
+	for (i = 0; i < hpi->num_pages[0]; i++) {
+		void *va = NULL;
+		/* parse numa map */
+		while (fgets(buf, sizeof(buf), f) != NULL) {
+			if (strstr(buf, " huge ") == NULL &&
 				strstr(buf, hugedir_str) == NULL)
-			continue;
-
-		/* get zone addr */
-		virt_addr = strtoull(buf, &end, 16);
-		if (virt_addr == 0 || end == buf) {
-			EAL_LOG(ERR, "%s(): error in numa_maps parsing", __func__);
-			goto error;
-		}
-
-		/* get node id (socket id) */
-		nodestr = strstr(buf, " N");
-		if (nodestr == NULL) {
-			EAL_LOG(ERR, "%s(): error in numa_maps parsing", __func__);
-			goto error;
-		}
-		nodestr += 2;
-		end = strstr(nodestr, "=");
-		if (end == NULL) {
-			EAL_LOG(ERR, "%s(): error in numa_maps parsing", __func__);
-			goto error;
-		}
-		end[0] = '\0';
-		end = NULL;
-
-		socket_id = strtoul(nodestr, &end, 0);
-		if ((nodestr[0] == '\0') || (end == NULL) || (*end != '\0')) {
-			EAL_LOG(ERR, "%s(): error in numa_maps parsing", __func__);
-			goto error;
-		}
-
-		/* if we find this page in our mappings, set socket_id */
-		for (i = 0; i < hpi->num_pages[0]; i++) {
-			void *va = (void *)(unsigned long)virt_addr;
-			if (hugepg_tbl[i].orig_va == va) {
-				hugepg_tbl[i].socket_id = socket_id;
-				hp_count++;
-#ifdef RTE_EAL_NUMA_AWARE_HUGEPAGES
-				EAL_LOG(DEBUG,
-					"Hugepage %s is on socket %d",
-					hugepg_tbl[i].filepath, socket_id);
-#endif
+				continue;
+			/* get zone addr */
+			virt_addr = strtoull(buf, &end, 16);
+			if (virt_addr == 0 || end == buf) {
+				EAL_LOG(ERR, "error in numa_maps parsing");
+				goto error;
 			}
+
+			/* get node id (socket id) */
+			nodestr = strstr(buf, " N");
+			if (nodestr == NULL) {
+				EAL_LOG(ERR, "error in numa_maps parsing");
+				goto error;
+			}
+			nodestr += 2;
+			end = strstr(nodestr, "=");
+			if (end == NULL) {
+				EAL_LOG(ERR, "error in numa_maps parsing");
+				goto error;
+			}
+			end[0] = '\0';
+			end = NULL;
+
+			socket_id = strtoul(nodestr, &end, 0);
+			if ((nodestr[0] == '\0') || (end == NULL) || (*end != '\0')) {
+				EAL_LOG(ERR, "error in numa_maps parsing");
+				goto error;
+			}
+			va = (void *)(unsigned long)virt_addr;
+			if (hugepg_tbl[i].orig_va != va) {
+				EAL_LOG(DEBUG, "search %p not seq, let's start from begin",
+					hugepg_tbl[i].orig_va);
+				fseek(f, 0, SEEK_SET);
+			} else {
+				break;
+			}
+		}
+		if (hugepg_tbl[i].orig_va == va) {
+			hugepg_tbl[i].socket_id = socket_id;
+			hp_count++;
+#ifdef RTE_EAL_NUMA_AWARE_HUGEPAGES
+			EAL_LOG(DEBUG,
+				"Hugepage %s is on socket %d",
+				hugepg_tbl[i].filepath, socket_id);
+#endif
+		} else {
+			EAL_LOG(ERR,
+				"shoudn't happen %p", hugepg_tbl[i].orig_va);
 		}
 	}
 
@@ -492,6 +499,25 @@ find_numasocket(struct hugepage_file *hugepg_tbl, struct hugepage_info *hpi)
 error:
 	fclose(f);
 	return -1;
+}
+
+static int
+cmp_orig_va(const void *a, const void *b)
+{
+#ifndef RTE_ARCH_PPC_64
+	const struct hugepage_file *p1 = a;
+	const struct hugepage_file *p2 = b;
+#else
+	/* PowerPC needs memory sorted in reverse order from x86 */
+	const struct hugepage_file *p1 = b;
+	const struct hugepage_file *p2 = a;
+#endif
+	if (p1->orig_va < p2->orig_va)
+		return -1;
+	else if (p1->orig_va > p2->orig_va)
+		return 1;
+	else
+		return 0;
 }
 
 static int
@@ -1323,6 +1349,9 @@ eal_legacy_hugepage_init(void)
 				goto fail;
 			}
 		}
+
+		qsort(&tmp_hp[hp_offset], hpi->num_pages[0],
+		      sizeof(struct hugepage_file), cmp_orig_va);
 
 		if (find_numasocket(&tmp_hp[hp_offset], hpi) < 0){
 			EAL_LOG(DEBUG, "Failed to find NUMA socket for %u MB pages",
