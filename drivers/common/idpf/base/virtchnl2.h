@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2001-2023 Intel Corporation
+ * Copyright(c) 2001-2024 Intel Corporation
  */
 
 #ifndef _VIRTCHNL2_H_
@@ -47,9 +47,9 @@
  * that is never used.
  */
 #define VIRTCHNL2_CHECK_STRUCT_LEN(n, X) enum virtchnl2_static_assert_enum_##X \
-	{ virtchnl2_static_assert_##X = (n)/((sizeof(struct X) == (n)) ? 1 : 0) }
+        { virtchnl2_static_assert_##X = (n)/((sizeof(struct X) == (n)) ? 1 : 0) }
 #define VIRTCHNL2_CHECK_UNION_LEN(n, X) enum virtchnl2_static_asset_enum_##X \
-	{ virtchnl2_static_assert_##X = (n)/((sizeof(union X) == (n)) ? 1 : 0) }
+        { virtchnl2_static_assert_##X = (n)/((sizeof(union X) == (n)) ? 1 : 0) }
 
 /* New major set of opcodes introduced and so leaving room for
  * old misc opcodes to be added in future. Also these opcodes may only
@@ -471,8 +471,8 @@
  * error regardless of version mismatch.
  */
 struct virtchnl2_version_info {
-	u32 major;
-	u32 minor;
+        u32 major;
+        u32 minor;
 };
 
 VIRTCHNL2_CHECK_STRUCT_LEN(8, virtchnl2_version_info);
@@ -1414,9 +1414,9 @@ VIRTCHNL2_CHECK_STRUCT_LEN(16, virtchnl2_mac_addr_list);
  * and returns the status.
  */
 struct virtchnl2_promisc_info {
-	__le32 vport_id;
+        __le32 vport_id;
 	/* see VIRTCHNL2_PROMISC_FLAGS definitions */
-	__le16 flags;
+        __le16 flags;
 	u8 pad[2];
 };
 
@@ -1733,7 +1733,8 @@ virtchnl2_vc_validate_vf_msg(__rte_unused struct virtchnl2_version_info *ver, u3
 	case VIRTCHNL2_OP_ADD_QUEUE_GROUPS:
 		valid_len = sizeof(struct virtchnl2_add_queue_groups);
 		if (msglen != valid_len) {
-			__le32 i = 0, offset = 0;
+			__le64 offset;
+			__le32 i;
 			struct virtchnl2_add_queue_groups *add_queue_grp =
 				(struct virtchnl2_add_queue_groups *)msg;
 			struct virtchnl2_queue_groups *groups = &(add_queue_grp->qg_info);
@@ -1904,8 +1905,8 @@ virtchnl2_vc_validate_vf_msg(__rte_unused struct virtchnl2_version_info *ver, u3
 	/* These are always errors coming from the VF. */
 	case VIRTCHNL2_OP_EVENT:
 	case VIRTCHNL2_OP_UNKNOWN:
-	default:
-		return VIRTCHNL2_STATUS_ERR_ESRCH;
+        default:
+                return VIRTCHNL2_STATUS_ERR_ESRCH;
 	}
 	/* few more checks */
 	if (err_msg_format || valid_len != msglen)
