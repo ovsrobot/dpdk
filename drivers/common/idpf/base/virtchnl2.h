@@ -1669,13 +1669,13 @@ struct virtchnl2_rss_key {
 
 	__le16 key_len;
 	u8 pad;
+	u8 key[STRUCT_VAR_LEN];
 #ifdef FLEX_ARRAY_SUPPORT
-	DECLARE_FLEX_ARRAY(u8, key);
+} __packed;
 #else
-	u8 key[1];
-#endif /* FLEX_ARRAY_SUPPORT */
 };
-VIRTCHNL2_CHECK_STRUCT_LEN(8, virtchnl2_rss_key);
+#endif /* FLEX_ARRAY_SUPPORT */
+VIRTCHNL2_CHECK_STRUCT_VAR_LEN(8, virtchnl2_rss_key, key);
 
 /**
  * struct virtchnl2_queue_chunk - Chunk of contiguous queues
