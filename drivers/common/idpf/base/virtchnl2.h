@@ -1454,7 +1454,11 @@ struct virtchnl2_ptype {
 	u8 proto_id_count;
 	__le16 pad;
 	__le16 proto_id[STRUCT_VAR_LEN];
+#ifdef FLEX_ARRAY_SUPPORT
+} __packed __aligned(2);
+#else
 };
+#endif /* FLEX_ARRAY_SUPPORT */
 VIRTCHNL2_CHECK_STRUCT_VAR_LEN(8, virtchnl2_ptype, proto_id);
 
 /**
