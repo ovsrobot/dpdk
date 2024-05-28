@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2001-2023 Intel Corporation
+ * Copyright(c) 2001-2024 Intel Corporation
  */
 
 #ifndef _IDPF_OSDEP_H_
@@ -12,6 +12,11 @@
 #include <inttypes.h>
 #include <sys/queue.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
 
 #include <rte_common.h>
 #include <rte_memcpy.h>
@@ -352,5 +357,78 @@ idpf_hweight32(u32 num)
 	LIST_FOREACH(pos, head, list)
 
 #endif
+
+#ifndef IDPF_DFLT_MBX_BUF_SIZE
+#define IDPF_DFLT_MBX_BUF_SIZE	4096
+#endif
+
+#ifndef __iovec_defined
+#define __iovec_defined 1
+
+#define __need_size_t
+
+/* Structure for scatter/gather I/O.  */
+struct iovec
+  {
+    void *iov_base;	/* Pointer to data.  */
+    size_t iov_len;	/* Length of data.  */
+  };
+
+#endif
+
+#define IDPF_IOVEC	struct iovec
+
+#define IDPF_LIST_HEAD(name, type)			SLIST_HEAD(name, type)
+#define IDPF_LIST_HEAD_INIT(head)			SLIST_INIT(head)
+#define IDPF_LIST_ENTRY(type) 				SLIST_ENTRY(type)
+#define IDPF_LIST_ADD(head, node) 			SLIST_INSERT_HEAD(head, node, entry)
+#define IDPF_LIST_DEL(head)					SLIST_REMOVE_HEAD(head, entry)
+#define IDPF_LIST_FOR_EACH(var, head)		SLIST_FOREACH(var, head, entry)
+#define IDPF_LIST_EMPTY(head)				SLIST_EMPTY(head)
+#define IDPF_LIST_FIRST(head)				SLIST_FIRST(head)
+
+/* OSdep changes */
+#define IDPF_LOCK pthread_mutex_t
+#define IDPF_LOCK_INIT(mutex) pthread_mutex_init(mutex, NULL)
+#define IDPF_LOCK_DESTROY(mutex) pthread_mutex_destroy(mutex)
+#define IDPF_LOCK_ACQUIRE(mutex) pthread_mutex_lock(mutex)
+#define IDPF_LOCK_RELEASE(mutex) pthread_mutex_unlock(mutex)
+
+#ifndef FIELD_PREP
+
+#define __bf_shf(x) (__builtin_ffsll(x) - 1)
+#define FIELD_PREP(_mask, _val)                                                \
+        ({                                                                     \
+                ((typeof(_mask))(_val) << __bf_shf(_mask)) & (_mask);          \
+        })
+
+#define FIELD_GET(_mask, _reg)                                                 \
+        ({                                                                     \
+                (typeof(_mask))(((_reg) & (_mask)) >> __bf_shf(_mask));        \
+        })
+#endif /* FIELD_PREP */
+
+struct completion {
+	int event_fd;
+	int poll_fd;
+};
+
+/* Valid opcodes ( "op" parameter ) to issue to epoll_ctl().  */
+#define EPOLL_CTL_ADD 1	/* Add a file descriptor to the interface.  */
+
+int idpf_compl_event_init(struct completion *completion);
+int idpf_compl_event_reinit(struct completion *completion);
+int idpf_compl_event_sig(struct completion *completion, uint64_t status);
+int idpf_compl_event_wait(struct completion *completion, int timeout);
+void idpf_compl_event_deinit(struct completion *completion);
+
+#define IDPF_CMD_COMPLETION				struct completion
+#define IDPF_CMD_COMPLETION_INIT(x)		idpf_compl_event_init(x)
+#define IDPF_CMD_COMPLETION_REINIT(x)	idpf_compl_event_reinit(x)
+#define IDPF_CMD_COMPLETION_DEINIT(x)	idpf_compl_event_deinit(x)
+#define IDPF_CMD_COMPLETION_SIG(x, y)	idpf_compl_event_sig(x, y)
+#define IDPF_CMD_COMPLETION_WAIT(x, y)	idpf_compl_event_wait(x, y)
+
+#define IDPF_DEBUG_PRINT  printf
 
 #endif /* _IDPF_OSDEP_H_ */

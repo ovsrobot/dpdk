@@ -3,8 +3,10 @@
 
 sources += files(
         'idpf_common.c',
+        'idpf_osdep.c',
         'idpf_controlq.c',
         'idpf_controlq_setup.c',
+        'idpf_xn.c'
 )
 
 cflags += ['-Wno-unused-value']
