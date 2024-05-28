@@ -31,6 +31,8 @@
 
 #define IDPF_DFLT_INTERVAL	16
 
+#define ETH_ALEN 6
+
 #define IDPF_RX_MAX_PTYPE_PROTO_IDS	32
 #define IDPF_RX_MAX_PTYPE_SZ	(sizeof(struct virtchnl2_ptype) +	\
 				 (sizeof(uint16_t) *			\
