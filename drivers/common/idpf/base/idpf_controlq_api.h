@@ -154,6 +154,36 @@ enum idpf_mbx_opc {
 	idpf_mbq_opc_send_msg_to_peer_drv	= 0x0804,
 };
 
+/* Define the APF hardware struct to replace other control structs as needed
+ * Align to ctlq_hw_info
+ */
+struct idpf_hw {
+	/* Some part of BAR0 address space is not mapped by the LAN driver.
+	 * This results in 2 regions of BAR0 to be mapped by LAN driver which
+	 * will have its own base hardware address when mapped.
+	 */
+	u8 *hw_addr;
+	u8 *hw_addr_region2;
+	u64 hw_addr_len;
+	u64 hw_addr_region2_len;
+
+	void *back;
+
+	/* control queue - send and receive */
+	struct idpf_ctlq_info *asq;
+	struct idpf_ctlq_info *arq;
+
+	/* pci info */
+	u16 device_id;
+	u16 vendor_id;
+	u16 subsystem_device_id;
+	u16 subsystem_vendor_id;
+	u8 revision_id;
+	bool adapter_stopped;
+
+	LIST_HEAD_TYPE(list_head, idpf_ctlq_info) cq_list_head;
+};
+
 /* API supported for control queue management */
 /* Will init all required q including default mb.  "q_info" is an array of
  * create_info structs equal to the number of control queues to be created.
@@ -161,10 +191,12 @@ enum idpf_mbx_opc {
 #ifdef NVME_CPF
 int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
                    struct idpf_ctlq_create_info *q_info, struct idpf_ctlq_info **ctlq);
+
 #else
 int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
 		   struct idpf_ctlq_create_info *q_info);
-#endif
+
+#endif /* NVME_CPF */
 
 /* Allocate and initialize a single control queue, which will be added to the
  * control queue list; returns a handle to the created control queue

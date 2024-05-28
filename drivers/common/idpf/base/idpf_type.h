@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2001-2023 Intel Corporation
+ * Copyright(c) 2001-2024 Intel Corporation
  */
 
 #ifndef _IDPF_TYPE_H_
@@ -78,14 +78,6 @@ struct idpf_ctlq_size {
 	u16 asq_ring_size;
 	u16 arq_buf_size;
 	u16 arq_ring_size;
-};
-
-/* Temporary definition to compile - TBD if needed */
-struct idpf_arq_event_info {
-	struct idpf_ctlq_desc desc;
-	u16 msg_len;
-	u16 buf_len;
-	u8 *msg_buf;
 };
 
 struct idpf_get_set_rss_key_data {
