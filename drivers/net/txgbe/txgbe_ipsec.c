@@ -595,7 +595,7 @@ txgbe_crypto_enable_ipsec(struct rte_eth_dev *dev)
 	rx_offloads = dev->data->dev_conf.rxmode.offloads;
 	tx_offloads = dev->data->dev_conf.txmode.offloads;
 
-	/* sanity checks */
+	/* offload checks */
 	if (rx_offloads & RTE_ETH_RX_OFFLOAD_TCP_LRO) {
 		PMD_DRV_LOG(ERR, "RSC and IPsec not supported");
 		return -1;
