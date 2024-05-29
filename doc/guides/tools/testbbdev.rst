@@ -9,7 +9,7 @@ dpdk-test-bbdev Application
 The ``dpdk-test-bbdev`` tool is a Data Plane Development Kit (DPDK) utility that
 allows measuring performance parameters of PMDs available in the bbdev framework.
 Tests available for execution are: latency, throughput, validation,
-bler and sanity tests. Execution of tests can be customized using various
+bler and basic functionality. Execution of tests can be customized using various
 parameters passed to a python running script.
 
 
@@ -97,8 +97,8 @@ Test Cases
 
 There are 7 main test cases that can be executed using testbbdev tool:
 
-* Sanity checks [-c unittest]
-    - Performs sanity checks on BBDEV interface, validating basic functionality
+* Functional checks [-c unittest]
+    - Performs checks on BBDEV interface, validating basic functionality
 
 * Validation tests [-c validation]
     - Performs full operation of enqueue and dequeue
@@ -232,7 +232,7 @@ vector name refer more explicitly processing specificity such as
 is purely read/written for external DDR, lbrm when limited buffer
 rate matching is expected, or crc_fail when a CRC failure is expected.
 They are chosen to have a good coverage across sizes and processing
-parameters while still keeping their number limited as part of sanity
+parameters while still keeping their number limited as part of functional
 regression.
 
 Shortened tree of isg_cid-wireless_dpdk_ae with dpdk compiled and output
