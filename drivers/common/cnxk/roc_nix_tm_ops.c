@@ -528,7 +528,7 @@ roc_nix_tm_hierarchy_disable(struct roc_nix *roc_nix)
 		node->flags &= ~NIX_TM_NODE_ENABLED;
 	}
 
-	/* Verify sanity of all tx queues */
+	/* Verify all tx queues */
 	for (i = 0; i < sq_cnt; i++) {
 		sq = nix->sqs[i];
 		if (!sq)
