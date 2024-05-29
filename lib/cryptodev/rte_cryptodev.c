@@ -628,6 +628,7 @@ rte_cryptodev_asym_xform_capability_check_hash(
 	return ret;
 }
 
+#if RTE_CRYPTO_CALLBACKS
 /* spinlock for crypto device enq callbacks */
 static rte_spinlock_t rte_cryptodev_callback_lock = RTE_SPINLOCK_INITIALIZER;
 
@@ -744,6 +745,7 @@ cb_init_err:
 	cryptodev_cb_cleanup(dev);
 	return -ENOMEM;
 }
+#endif /* RTE_CRYPTO_CALLBACKS */
 
 const char *
 rte_cryptodev_get_feature_name(uint64_t flag)
@@ -1244,9 +1246,11 @@ rte_cryptodev_configure(uint8_t dev_id, struct rte_cryptodev_config *config)
 	if (*dev->dev_ops->dev_configure == NULL)
 		return -ENOTSUP;
 
+#if RTE_CRYPTO_CALLBACKS
 	rte_spinlock_lock(&rte_cryptodev_callback_lock);
 	cryptodev_cb_cleanup(dev);
 	rte_spinlock_unlock(&rte_cryptodev_callback_lock);
+#endif
 
 	/* Setup new number of queue pairs and reconfigure device. */
 	diag = rte_cryptodev_queue_pairs_config(dev, config->nb_queue_pairs,
@@ -1257,6 +1261,7 @@ rte_cryptodev_configure(uint8_t dev_id, struct rte_cryptodev_config *config)
 		return diag;
 	}
 
+#if RTE_CRYPTO_CALLBACKS
 	rte_spinlock_lock(&rte_cryptodev_callback_lock);
 	diag = cryptodev_cb_init(dev);
 	rte_spinlock_unlock(&rte_cryptodev_callback_lock);
@@ -1264,6 +1269,7 @@ rte_cryptodev_configure(uint8_t dev_id, struct rte_cryptodev_config *config)
 		CDEV_LOG_ERR("Callback init failed for dev_id=%d", dev_id);
 		return diag;
 	}
+#endif
 
 	rte_cryptodev_trace_configure(dev_id, config);
 	return (*dev->dev_ops->dev_configure)(dev, config);
@@ -1485,6 +1491,7 @@ rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 			socket_id);
 }
 
+#if RTE_CRYPTO_CALLBACKS
 struct rte_cryptodev_cb *
 rte_cryptodev_add_enq_callback(uint8_t dev_id,
 			       uint16_t qp_id,
@@ -1763,6 +1770,7 @@ cb_err:
 	rte_spinlock_unlock(&rte_cryptodev_callback_lock);
 	return ret;
 }
+#endif /* RTE_CRYPTO_CALLBACKS */
 
 int
 rte_cryptodev_stats_get(uint8_t dev_id, struct rte_cryptodev_stats *stats)

@@ -14547,6 +14547,7 @@ test_null_burst_operation(void)
 	return TEST_SUCCESS;
 }
 
+#if RTE_CRYPTO_CALLBACKS
 static uint16_t
 test_enq_callback(uint16_t dev_id, uint16_t qp_id, struct rte_crypto_op **ops,
 		  uint16_t nb_ops, void *user_param)
@@ -14784,6 +14785,7 @@ test_deq_callback_setup(void)
 
 	return TEST_SUCCESS;
 }
+#endif /* RTE_CRYPTO_CALLBACKS */
 
 static void
 generate_gmac_large_plaintext(uint8_t *data)
@@ -18069,8 +18071,10 @@ static struct unit_test_suite cryptodev_gen_testsuite  = {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 				test_device_configure_invalid_queue_pair_ids),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_stats),
+#if RTE_CRYPTO_CALLBACKS
 		TEST_CASE_ST(ut_setup, ut_teardown, test_enq_callback_setup),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_deq_callback_setup),
+#endif
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
