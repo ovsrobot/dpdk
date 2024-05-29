@@ -620,7 +620,7 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 		struct pcapng_enhance_packet_block *epb;
 		uint64_t cycles, timestamp;
 
-		/* sanity check that is really a pcapng mbuf */
+		/* Check that is really a pcapng mbuf */
 		epb = rte_pktmbuf_mtod(m, struct pcapng_enhance_packet_block *);
 		if (unlikely(epb->block_type != PCAPNG_ENHANCED_PACKET_BLOCK ||
 			     epb->block_length != rte_pktmbuf_data_len(m))) {
