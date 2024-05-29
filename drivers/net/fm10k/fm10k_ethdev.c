@@ -1758,7 +1758,7 @@ mempool_element_size_valid(struct rte_mempool *mp)
 	/* account for up to 512B of alignment */
 	min_size -= FM10K_RX_DATABUF_ALIGN;
 
-	/* sanity check for overflow */
+	/* check for overflow */
 	if (min_size > mp->elt_size)
 		return 0;
 
