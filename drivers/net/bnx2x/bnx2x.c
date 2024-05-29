@@ -7820,7 +7820,7 @@ static int bnx2x_check_valid_mf_cfg(struct bnx2x_softc *sc)
 	uint32_t ovlan2;
 	uint8_t i, j;
 
-	/* various MF mode sanity checks... */
+	/* various MF mode checks... */
 
 	if (mf_info->mf_config[SC_VN(sc)] & FUNC_MF_CFG_FUNC_HIDE) {
 		PMD_DRV_LOG(NOTICE, sc,

@@ -1088,7 +1088,7 @@ static void elink_get_epio(struct bnx2x_softc *sc, uint32_t epio_pin,
 {
 	uint32_t epio_mask, gp_oenable;
 	*en = 0;
-	/* Sanity check */
+	/* Input check */
 	if (epio_pin > 31) {
 		ELINK_DEBUG_P1(sc, "Invalid EPIO pin %d to get", epio_pin);
 		return;
@@ -1105,7 +1105,7 @@ static void elink_set_epio(struct bnx2x_softc *sc, uint32_t epio_pin, uint32_t e
 {
 	uint32_t epio_mask, gp_output, gp_oenable;
 
-	/* Sanity check */
+	/* Input check */
 	if (epio_pin > 31) {
 		ELINK_DEBUG_P1(sc, "Invalid EPIO pin %d to set", epio_pin);
 		return;
