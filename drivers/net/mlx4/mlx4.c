@@ -1216,7 +1216,7 @@ static struct rte_pci_driver mlx4_driver = {
 /**
  * Suffix RTE_EAL_PMD_PATH with "-glue".
  *
- * This function performs a sanity check on RTE_EAL_PMD_PATH before
+ * This function performs a check on RTE_EAL_PMD_PATH before
  * suffixing its last component.
  *
  * @param buf[out]

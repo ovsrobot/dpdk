@@ -21,7 +21,7 @@
 	 RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM)
 
 /*
- * Compile time sanity check for vectorized functions.
+ * Compile time checks for vectorized functions.
  */
 
 #define S_ASSERT_RTE_MBUF(s) \
