@@ -24,7 +24,7 @@ from framework.exception import (
     InteractiveSSHSessionDeadError,
     InteractiveSSHTimeoutError,
 )
-from framework.logger import DTSLogger
+from framework.logger import DTSLogger, get_dts_logger
 from framework.settings import SETTINGS
 
 from .interactive_remote_session import InteractiveRemoteSession
@@ -69,8 +69,8 @@ class InteractiveShell(ABC):
 
     def __init__(
         self,
+        name: str,
         interactive_session: InteractiveRemoteSession,
-        logger: DTSLogger,
         get_privileged_command: Callable[[str], str] | None,
         app_args: str = "",
         timeout: float = SETTINGS.timeout,
@@ -78,8 +78,9 @@ class InteractiveShell(ABC):
         """Create an SSH channel during initialization.
 
         Args:
+            name: Name for the interactive shell to use for logging. This name will be appended to
+                the name of the underlying node which it is running on.
             interactive_session: The SSH session dedicated to interactive shells.
-            logger: The logger instance this session will use.
             get_privileged_command: A method for modifying a command to allow it to use
                 elevated privileges. If :data:`None`, the application will not be started
                 with elevated privileges.
@@ -94,7 +95,7 @@ class InteractiveShell(ABC):
         self._stdout = self._ssh_channel.makefile("r")
         self._ssh_channel.settimeout(timeout)
         self._ssh_channel.set_combine_stderr(True)  # combines stdout and stderr streams
-        self._logger = logger
+        self._logger = get_dts_logger(f"{interactive_session.node_config.name}.{name}")
         self._timeout = timeout
         self._app_args = app_args
         self._start_application(get_privileged_command)

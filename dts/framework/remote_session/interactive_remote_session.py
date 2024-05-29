@@ -39,6 +39,7 @@ class InteractiveRemoteSession:
         password: Password of the user connecting to the host. This will default to an
             empty string if a password is not provided.
         session: The underlying paramiko connection.
+        node_config: The configuration of the node that this session is connected to.
 
     Raises:
         SSHConnectionError: There is an error creating the SSH connection.
@@ -50,8 +51,8 @@ class InteractiveRemoteSession:
     username: str
     password: str
     session: SSHClient
+    node_config: NodeConfiguration
     _logger: DTSLogger
-    _node_config: NodeConfiguration
     _transport: Transport | None
 
     def __init__(self, node_config: NodeConfiguration, logger: DTSLogger) -> None:
@@ -61,7 +62,7 @@ class InteractiveRemoteSession:
             node_config: The test run configuration of the node to connect to.
             logger: The logger instance this session will use.
         """
-        self._node_config = node_config
+        self.node_config = node_config
         self._logger = logger
         self.hostname = node_config.hostname
         self.username = node_config.user

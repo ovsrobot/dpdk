@@ -199,6 +199,7 @@ class Node(ABC):
         shell_cls: Type[InteractiveShellType],
         timeout: float = SETTINGS.timeout,
         privileged: bool = False,
+        name: str = "",
         app_args: str = "",
     ) -> InteractiveShellType:
         """Factory for interactive session handlers.
@@ -210,6 +211,8 @@ class Node(ABC):
             timeout: Timeout for reading output from the SSH channel. If you are reading from
                 the buffer and don't receive any data within the timeout it will throw an error.
             privileged: Whether to run the shell with administrative privileges.
+            name: The name to use for the interactive application in the logs. If not specified,
+                this will default to the name of `shell_cls`.
             app_args: The arguments to be passed to the application.
 
         Returns:
@@ -218,10 +221,14 @@ class Node(ABC):
         if not shell_cls.dpdk_app:
             shell_cls.path = self.main_session.join_remote_path(shell_cls.path)
 
+        if name == "":
+            name = shell_cls.__name__
+
         return self.main_session.create_interactive_shell(
             shell_cls,
             timeout,
             privileged,
+            name,
             app_args,
         )
 
