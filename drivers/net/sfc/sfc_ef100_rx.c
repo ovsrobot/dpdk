@@ -179,7 +179,7 @@ sfc_ef100_rx_qrefill(struct sfc_ef100_rxq *rxq)
 			struct sfc_ef100_rx_sw_desc *rxd;
 			rte_iova_t dma_addr;
 
-			__rte_mbuf_raw_sanity_check(m);
+			__rte_mbuf_raw_verify(m);
 
 			dma_addr = rte_mbuf_data_iova_default(m);
 			if (rxq->flags & SFC_EF100_RXQ_NIC_DMA_MAP) {
@@ -551,7 +551,7 @@ sfc_ef100_rx_process_ready_pkts(struct sfc_ef100_rxq *rxq,
 		rxq->ready_pkts--;
 
 		pkt = sfc_ef100_rx_next_mbuf(rxq);
-		__rte_mbuf_raw_sanity_check(pkt);
+		__rte_mbuf_raw_verify(pkt);
 
 		RTE_BUILD_BUG_ON(sizeof(pkt->rearm_data[0]) !=
 				 sizeof(rxq->rearm_data));
@@ -575,7 +575,7 @@ sfc_ef100_rx_process_ready_pkts(struct sfc_ef100_rxq *rxq,
 			struct rte_mbuf *seg;
 
 			seg = sfc_ef100_rx_next_mbuf(rxq);
-			__rte_mbuf_raw_sanity_check(seg);
+			__rte_mbuf_raw_verify(seg);
 
 			seg->data_off = RTE_PKTMBUF_HEADROOM;
 
