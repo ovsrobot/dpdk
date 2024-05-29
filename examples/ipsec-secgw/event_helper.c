@@ -2100,7 +2100,7 @@ eh_launch_worker(struct eh_conf *conf, struct eh_app_worker_params *app_wrkr,
 		goto clean_and_exit;
 	}
 
-	/* Verify sanity of the matched worker */
+	/* Verify validity of the matched worker */
 	if (eh_verify_match_worker(match_wrkr) != 1) {
 		EH_LOG_ERR("Failed to validate the matched worker");
 		goto clean_and_exit;
