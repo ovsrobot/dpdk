@@ -622,7 +622,7 @@ npa_aura_alloc(struct npa_lf *lf, const uint32_t block_count, int pool_id,
 {
 	int rc, aura_id;
 
-	/* Sanity check */
+	/* parameter check */
 	if (!lf || !aura || !aura_handle)
 		return NPA_ERR_PARAM;
 
