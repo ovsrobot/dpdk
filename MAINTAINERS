@@ -1063,6 +1063,12 @@ F: drivers/net/memif/
 F: doc/guides/nics/memif.rst
 F: doc/guides/nics/features/memif.ini
 
+NTNIC PMD
+M: Christian Koue Muf <ckm@napatech.com>
+M: Serhii Iliushyk <sil-plv@napatech.com>
+F: drivers/net/ntnic/
+F: doc/guides/nics/ntnic.rst
+F: doc/guides/nics/features/ntnic.ini
 
 Crypto Drivers
 --------------
