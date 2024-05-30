@@ -85,7 +85,7 @@ class LinuxSession(PosixSession):
         return dpdk_prefix
 
     def setup_hugepages(
-        self, hugepage_count: int, hugepage_size: int, force_first_numa: bool
+        self, number_of: int, hugepage_size: int, force_first_numa: bool
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.setup_hugepages`."""
         self._logger.info("Getting Hugepage information.")
@@ -97,10 +97,10 @@ class LinuxSession(PosixSession):
             raise ConfigurationError("hugepage size not supported by operating system")
         self._numa_nodes = self._get_numa_nodes()
 
-        if force_first_numa or hugepages_total < hugepage_count:
+        if force_first_numa or hugepages_total < number_of:
             # when forcing numa, we need to clear existing hugepages regardless
             # of size, so they can be moved to the first numa node
-            self._configure_huge_pages(hugepage_count, hugepage_size, force_first_numa)
+            self._configure_huge_pages(number_of, hugepage_size, force_first_numa)
         else:
             self._logger.info("Hugepages already configured.")
         self._mount_huge_pages()
@@ -138,7 +138,7 @@ class LinuxSession(PosixSession):
         # there's no reason to do any numa specific configuration)
         return len(self._numa_nodes) > 1
 
-    def _configure_huge_pages(self, amount: int, size: int, force_first_numa: bool) -> None:
+    def _configure_huge_pages(self, number_of: int, size: int, force_first_numa: bool) -> None:
         self._logger.info("Configuring Hugepages.")
         hugepage_config_path = f"/sys/kernel/mm/hugepages/hugepages-{size}kB/nr_hugepages"
         if force_first_numa and self._supports_numa():
@@ -149,7 +149,7 @@ class LinuxSession(PosixSession):
                 f"/hugepages-{size}kB/nr_hugepages"
             )
 
-        self.send_command(f"echo {amount} | tee {hugepage_config_path}", privileged=True)
+        self.send_command(f"echo {number_of} | tee {hugepage_config_path}", privileged=True)
 
     def update_ports(self, ports: list[Port]) -> None:
         """Overrides :meth:`~.os_session.OSSession.update_ports`."""
