@@ -26,6 +26,12 @@ flags_common = [
     # read from /proc/device-tree/cpus/timebase-frequency. This property is
     # guaranteed on Linux, as riscv time_init() requires it.
     ['RTE_RISCV_TIME_FREQ', 0],
+
+    # When true override the default implementation of the prefetching functions
+    # (rte_prefetch*) with a version that explicitly uses the Zicbop extension.
+    # Do not enable when using modern versions of GCC (13.1.0+) or Clang
+    # (17.0.1+). They will emit these instructions in the default implementation
+    ['RTE_RISCV_ZICBOP', false],
 ]
 
 ## SoC-specific options.
