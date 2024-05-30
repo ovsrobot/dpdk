@@ -65,14 +65,7 @@ static inline void rte_prefetch_non_temporal(const volatile void *p);
  */
 __rte_experimental
 static inline void
-rte_prefetch0_write(const void *p)
-{
-	/* 1 indicates intention to write, 3 sets target cache level to L1. See
-	 * GCC docs where these integer constants are described in more detail:
-	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
-	 */
-	__builtin_prefetch(p, 1, 3);
-}
+rte_prefetch0_write(const void *p);
 
 /**
  * @warning
@@ -86,14 +79,7 @@ rte_prefetch0_write(const void *p)
  */
 __rte_experimental
 static inline void
-rte_prefetch1_write(const void *p)
-{
-	/* 1 indicates intention to write, 2 sets target cache level to L2. See
-	 * GCC docs where these integer constants are described in more detail:
-	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
-	 */
-	__builtin_prefetch(p, 1, 2);
-}
+rte_prefetch1_write(const void *p);
 
 /**
  * @warning
@@ -107,6 +93,33 @@ rte_prefetch1_write(const void *p)
  */
 __rte_experimental
 static inline void
+rte_prefetch2_write(const void *p);
+
+#ifndef RTE_PREFETCH_WRITE_ARCH_DEFINED
+__rte_experimental
+static inline void
+rte_prefetch0_write(const void *p)
+{
+	/* 1 indicates intention to write, 3 sets target cache level to L1. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch(p, 1, 3);
+}
+
+__rte_experimental
+static inline void
+rte_prefetch1_write(const void *p)
+{
+	/* 1 indicates intention to write, 2 sets target cache level to L2. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch(p, 1, 2);
+}
+
+__rte_experimental
+static inline void
 rte_prefetch2_write(const void *p)
 {
 	/* 1 indicates intention to write, 1 sets target cache level to L3. See
@@ -115,6 +128,8 @@ rte_prefetch2_write(const void *p)
 	 */
 	__builtin_prefetch(p, 1, 1);
 }
+
+#endif /* RTE_PREFETCH_WRITE_ARCH_DEFINED */
 
 /**
  * @warning
