@@ -21,6 +21,8 @@
 
 #include "nthw_gfg.h"
 #include "nthw_gmf.h"
+#include "nthw_gpio_phy.h"
+#include "nthw_mac_pcs.h"
 #include "nthw_mac_pcs_xxv.h"
 #include "nthw_mac_tfg.h"
 #include "nthw_sdc.h"
