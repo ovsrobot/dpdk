@@ -7,6 +7,8 @@
 #define NT4GA_TFG_H_
 
 typedef struct nt4ga_tfg_s {
+	nthw_gfg_t *mp_nthw_gfg;
+	nthw_gmf_t *mp_nthw_gmf;
 	nthw_mac_tfg_t *mp_nthw_mac_tfg;
 } nt4ga_tfg_t;
 

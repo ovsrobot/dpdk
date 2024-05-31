@@ -93,6 +93,7 @@ typedef struct nim_i2c_ctx {
 	union {
 		nthw_iic_t hwiic;	/* depends on *Fpga_t, instance number, and cycle time */
 		struct {
+			nthw_i2cm_t *p_nt_i2cm;
 			int mux_channel;
 		} hwagx;
 	};
