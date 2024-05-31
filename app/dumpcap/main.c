@@ -11,6 +11,7 @@
 #include <getopt.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -60,6 +61,7 @@ static const char *tmp_dir = "/tmp";
 static unsigned int ring_size = 2048;
 static const char *capture_comment;
 static const char *file_prefix;
+static const char *lcores_arg;
 static bool dump_bpf;
 static bool show_interfaces;
 static bool print_stats;
@@ -343,6 +345,7 @@ static void parse_opts(int argc, char **argv)
 		{ "ifdescr",	     required_argument, NULL, 0 },
 		{ "ifname",	     required_argument, NULL, 0 },
 		{ "interface",       required_argument, NULL, 'i' },
+		{ "lcores",	     required_argument, NULL, 0 },
 		{ "list-interfaces", no_argument,       NULL, 'D' },
 		{ "no-promiscuous-mode", no_argument,   NULL, 'p' },
 		{ "output-file",     required_argument, NULL, 'w' },
@@ -369,6 +372,8 @@ static void parse_opts(int argc, char **argv)
 
 			if (!strcmp(longopt, "capture-comment")) {
 				capture_comment = optarg;
+			} else if (!strcmp(longopt, "lcores")) {
+				lcores_arg = optarg;
 			} else if (!strcmp(longopt, "file-prefix")) {
 				file_prefix = optarg;
 			} else if (!strcmp(longopt, "temp-dir")) {
@@ -608,10 +613,14 @@ static void dpdk_init(void)
 		"--log-level", "notice"
 	};
 	int eal_argc = RTE_DIM(args);
+	cpu_set_t cpuset;
 	char **eal_argv;
 	unsigned int i;
 
 	if (file_prefix != NULL)
+		eal_argc += 2;
+
+	if (lcores_arg != NULL)
 		eal_argc += 2;
 
 	/* DPDK API requires mutable versions of command line arguments. */
@@ -623,6 +632,11 @@ static void dpdk_init(void)
 	for (i = 1; i < RTE_DIM(args); i++)
 		eal_argv[i] = strdup(args[i]);
 
+	if (lcores_arg != NULL) {
+		eal_argv[i++] = strdup("--lcores");
+		eal_argv[i++] = strdup(lcores_arg);
+	}
+
 	if (file_prefix != NULL) {
 		eal_argv[i++] = strdup("--file-prefix");
 		eal_argv[i++] = strdup(file_prefix);
@@ -633,8 +647,24 @@ static void dpdk_init(void)
 			rte_panic("No memory\n");
 	}
 
+	if (pthread_getaffinity_np(pthread_self(), sizeof(cpuset), &cpuset) < 0)
+		rte_panic("pthread_getaffinity failed\n");
+
 	if (rte_eal_init(eal_argc, eal_argv) < 0)
 		rte_exit(EXIT_FAILURE, "EAL init failed: is primary process running?\n");
+
+	/*
+	 * If no lcores argument was speciried, then run this program as a normal process
+	 * which can be scheduled on any non-isolated CPU.
+	 *
+	 * EAL init will cause this thread to be assigned to the first lcore
+	 * which is not what what we want for this secondary process that will
+	 * be interacting with the Linux kernel.
+	 */
+	if (lcores_arg == NULL) {
+		if (pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset) < 0)
+			perror("pthread_setaffinity");
+	}
 }
 
 /* Create packet ring shared between callbacks and process */
