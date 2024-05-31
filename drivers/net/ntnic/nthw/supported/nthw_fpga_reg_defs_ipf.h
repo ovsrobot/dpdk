@@ -1,0 +1,84 @@
+/*
+ * nthw_fpga_reg_defs_ipf.h
+ *
+ * Auto-generated file - do *NOT* edit
+ *
+ */
+
+#ifndef _NTHW_FPGA_REG_DEFS_IPF_
+#define _NTHW_FPGA_REG_DEFS_IPF_
+
+/* IPF */
+#define NTHW_MOD_IPF (0x9d43904cUL)
+#define IPF_CTRL (0x3b50b688UL)
+#define IPF_CTRL_ALL_UNM (0x8b16703UL)
+#define IPF_CTRL_ALL_UNM_INNER (0x16068451UL)
+#define IPF_CTRL_DEL_UNM (0x7d86196cUL)
+#define IPF_CTRL_ENABLE (0xd827d73eUL)
+#define IPF_CTRL_FST_UNM (0x6f063580UL)
+#define IPF_CTRL_PASSIVE (0x441c1633UL)
+#define IPF_CTRL_PERSIST (0xf52aa922UL)
+#define IPF_DEBUG (0x4418698UL)
+#define IPF_DEBUG_FTF_N (0x2cda6a1fUL)
+#define IPF_DEBUG_LIMIT_N (0x8588c40eUL)
+#define IPF_EXPIRE (0xa1d1a3e0UL)
+#define IPF_EXPIRE_PERSIST (0x8d985989UL)
+#define IPF_EXPIRE_T (0x37792e51UL)
+#define IPF_FTF_DEBUG (0x2e34232dUL)
+#define IPF_FTF_DEBUG_N (0x59f772edUL)
+#define IPF_RCP_CTRL (0xaed9eb64UL)
+#define IPF_RCP_CTRL_ADR (0x71e6f593UL)
+#define IPF_RCP_CTRL_CNT (0x61ee6c42UL)
+#define IPF_RCP_DATA (0x108697dUL)
+#define IPF_RCP_DATA_ALL_UNM (0xe9fd243cUL)
+#define IPF_RCP_DATA_COL_INH (0x9da0e920UL)
+#define IPF_RCP_DATA_DEL_UNM (0x9cca5a53UL)
+#define IPF_RCP_DATA_DISC_INH (0x8914e9a0UL)
+#define IPF_RCP_DATA_DUP_INH (0x5f5a8cd0UL)
+#define IPF_RCP_DATA_ENABLE (0x9afcf075UL)
+#define IPF_RCP_DATA_FST_UNM (0x8e4a76bfUL)
+#define IPF_RCP_DATA_GROUP_ID (0xffc993cdUL)
+#define IPF_RCP_DATA_HASH_CENC (0x812cf8c7UL)
+#define IPF_RCP_DATA_HSH_INH (0x1e33d9faUL)
+#define IPF_RCP_DATA_PORT_GROUP_ID (0xd786e10bUL)
+#define IPF_RCP_DATA_QUEUE_INH (0x6cafcc65UL)
+#define IPF_RCP_DATA_UNMQ_HI (0xb6bb8520UL)
+#define IPF_RCP_DATA_UNMQ_LO (0x3bb4e511UL)
+#define IPF_RCP_DATA_UNM_FLAG_CENC (0xbb06fcddUL)
+#define IPF_SIZE_DEBUG (0xa3c27df1UL)
+#define IPF_SIZE_DEBUG_N (0xf8a909fbUL)
+#define IPF_STAT_MAX1 (0xbb09703fUL)
+#define IPF_STAT_MAX1_N (0xd361974dUL)
+#define IPF_STAT_MAX2 (0x22002185UL)
+#define IPF_STAT_MAX2_N (0xd1272914UL)
+#define IPF_STAT_MAX3 (0x55071113UL)
+#define IPF_STAT_MAX3_N (0xd0e54323UL)
+#define IPF_STAT_MAX4 (0xcb6384b0UL)
+#define IPF_STAT_MAX4_N (0xd5aa55a6UL)
+#define IPF_TIMEOUT (0x9b16c106UL)
+#define IPF_TIMEOUT_T (0x9ce14088UL)
+#define IPF_UNMQ_CTRL (0x9c6c2c32UL)
+#define IPF_UNMQ_CTRL_ADR (0x5a052e55UL)
+#define IPF_UNMQ_CTRL_CNT (0x4a0db784UL)
+#define IPF_UNMQ_DATA (0x33bdae2bUL)
+#define IPF_UNMQ_DATA_CENC (0xe444d471UL)
+#define IPF_UNMQ_DATA_EN (0x60b4924bUL)
+#define IPF_UNMQ_DATA_ID (0x2cd43459UL)
+#define IPF_UNM_FEED (0x5be1a729UL)
+#define IPF_UNM_FEED_ADDR (0x109a9424UL)
+#define IPF_UNM_FEED_CNT (0xab58226eUL)
+#define IPF_UNM_FEED_FEED (0x614042baUL)
+#define IPF_UNM_FEED_FEED_VALID (0xba08d9c3UL)
+#define IPF_UNM_FEED_RES1 (0x82ccb216UL)
+#define IPF_UNM_FEED_RES2 (0x1bc5e3acUL)
+#define IPF_UNM_FEED_RES3 (0x6cc2d33aUL)
+
+#endif	/* _NTHW_FPGA_REG_DEFS_IPF_ */
+
+/*
+ * Auto-generated file - do *NOT* edit
+ */
+
+/*
+ * EOF
+ */
