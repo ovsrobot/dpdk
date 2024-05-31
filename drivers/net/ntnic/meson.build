@@ -77,6 +77,7 @@ headers = files('rte_pmd_ntnic.h')
 # all sources
 sources = files(
     'dpdk_mod_reg.c',
+    'drivers/net/ntnic/driver/modules/adapter/nt4ga_adapter.c',
     'drivers/net/ntnic/driver/modules/adapter/nt4ga_pci_ta_tg.c',
     'drivers/net/ntnic/driver/modules/adapter/nt4ga_tfg.c',
     'nthw/supported/nthw_fpga_9563_055_039_0000.c',
