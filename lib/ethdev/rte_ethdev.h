@@ -308,6 +308,16 @@ struct rte_eth_stats {
 #define RTE_ETH_LINK_SPEED_400G    RTE_BIT32(16) /**< 400 Gbps */
 /**@}*/
 
+/**@{@name Link speed lane capabilities
+ * Device supported speeds lane bitmap flags
+ */
+#define RTE_ETH_LINK_SPEED_MAX_BIT	17 /**< RTE_ETH_LINK_SPEED_400G bit position + 1 */
+#define LANE_1	RTE_BIT32(1)
+#define LANE_2 	RTE_BIT32(2)
+#define LANE_4 	RTE_BIT32(4)
+#define LANE_8 	RTE_BIT32(8)
+/**@}*/
+
 /**@{@name Link speed
  * Ethernet numeric link speeds in Mbps
  */
@@ -6968,6 +6978,28 @@ int rte_eth_speed_lanes_get(uint16_t port_id, struct rte_eth_speed_lanes_capa *c
  */
 __rte_experimental
 int rte_eth_speed_lanes_set(uint16_t port_id, uint32_t speed_lanes_capa);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Set speed lanes supported by the NIC.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param speed_lanes_bmap
+ *   speed_lanes_bmap int array updated by driver by valid lanes bmap.
+ *
+ * @return
+ *  - (>=0) valid input and supported by driver or hardware.
+ *   - (-ENOTSUP) if underlying hardware OR driver doesn't support.
+ *     that operation.
+ *   - (-EIO) if device is removed.
+ *   - (-ENODEV)  if *port_id* invalid.
+ *   - (-EINVAL)  if *speed_lanes* invalid
+ */
+__rte_experimental
+int rte_eth_speed_lanes_get_capa(uint16_t port_id, uint32_t *speed_lanes_bmap);
 
 #ifdef __cplusplus
 }

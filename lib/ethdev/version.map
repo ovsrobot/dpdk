@@ -327,6 +327,7 @@ EXPERIMENTAL {
 	rte_flow_template_table_resize_complete;
 	rte_eth_speed_lanes_get;
 	rte_eth_speed_lanes_set;
+	rte_eth_speed_lanes_get_capa;
 };
 
 INTERNAL {

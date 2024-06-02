@@ -1226,6 +1226,26 @@ typedef int (*eth_speed_lanes_set_t)(struct rte_eth_dev *dev, uint32_t speed_lan
 
 /**
  * @internal
+ * Get speed vs number of lanes supported bitmap that controller supports
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param speed_lanes_capa
+ *   int array of size max speeds bitmap ie 17
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, driver updates the speed_lanes_capa bitmap.
+ * @retval -ENOTSUP
+ *   Operation is not supported.
+ * @retval -EIO
+ *   Device is removed.
+ */
+typedef int (*eth_speed_lanes_get_capa_t)(struct rte_eth_dev *dev, uint32_t *speed_lanes_bmap);
+
+/**
+ * @internal
  * Dump Tx descriptor info to a file.
  *
  * This API is used for debugging, not a dataplane API.
@@ -1523,6 +1543,7 @@ struct eth_dev_ops {
 	eth_speed_lanes_get_t speed_lanes_get;
 	/** Set number of speed lanes */
 	eth_speed_lanes_set_t speed_lanes_set;
+	eth_speed_lanes_get_capa_t speed_lanes_get_capa;
 };
 
 /**
