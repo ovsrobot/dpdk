@@ -1181,6 +1181,51 @@ typedef int (*eth_rx_descriptor_dump_t)(const struct rte_eth_dev *dev,
 
 /**
  * @internal
+ * Get number of current active lanes and max supported lanes
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param speed_lanes_capa
+ *   Number of active lanes that the link is trained up.
+ *   Max number of lanes supported by HW
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, get speed_lanes data success.
+ * @retval -ENOTSUP
+ *   Operation is not supported.
+ * @retval -EIO
+ *   Device is removed.
+ */
+typedef int (*eth_speed_lanes_get_t)(struct rte_eth_dev *dev,
+				     struct rte_eth_speed_lanes_capa *speed_lanes_capa);
+
+/**
+ * @internal
+ * Set speed lanes
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param speed_lanes_capa
+ *   Non-negative number of lanes
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, set lanes success.
+ * @retval -ENOTSUP
+ *   Operation is not supported.
+ * @retval -EINVAL
+ *   Unsupported mode requested.
+ * @retval -EIO
+ *   Device is removed.
+ */
+typedef int (*eth_speed_lanes_set_t)(struct rte_eth_dev *dev, uint32_t speed_lanes_capa);
+
+/**
+ * @internal
  * Dump Tx descriptor info to a file.
  *
  * This API is used for debugging, not a dataplane API.
@@ -1474,6 +1519,10 @@ struct eth_dev_ops {
 	eth_count_aggr_ports_t count_aggr_ports;
 	/** Map a Tx queue with an aggregated port of the DPDK port */
 	eth_map_aggr_tx_affinity_t map_aggr_tx_affinity;
+	/** Get number of speed lanes supported and active lanes */
+	eth_speed_lanes_get_t speed_lanes_get;
+	/** Set number of speed lanes */
+	eth_speed_lanes_set_t speed_lanes_set;
 };
 
 /**

@@ -1997,6 +1997,12 @@ struct rte_eth_fec_capa {
 	uint32_t capa;  /**< FEC capabilities bitmask */
 };
 
+/* A structure used to get and set lanes capabilities per link speed */
+struct rte_eth_speed_lanes_capa {
+	uint32_t active_lanes;
+	uint32_t max_lanes_cap;
+};
+
 #define RTE_ETH_ALL RTE_MAX_ETHPORTS
 
 /* Macros to check for valid port */
@@ -6916,6 +6922,52 @@ out:
 	rte_eth_trace_tx_queue_count(port_id, queue_id, rc);
 	return rc;
 }
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Get maximum speed lanes supported by the NIC.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param speed_lanes_capa
+ *   speed_lanes_capa is out only with max speed lanes capabilities.
+ *   If set to NULL, then its assumed zero or not supported.
+ *
+ * @return
+ *   - A non-negative value of active lanes that currently link is up with.
+ *   - A non-negative value that this HW scales up to for all speeds.
+ *   - (-ENOTSUP) if underlying hardware OR driver doesn't support.
+ *     that operation.
+ *   - (-EIO) if device is removed.
+ *   - (-ENODEV)  if *port_id* invalid.
+ *   - (-EINVAL)  if *speed_lanes_capa* invalid
+ */
+__rte_experimental
+int rte_eth_speed_lanes_get(uint16_t port_id, struct rte_eth_speed_lanes_capa *capa);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Set speed lanes supported by the NIC.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param speed_lanes
+ *   speed_lanes a non-zero value of number lanes for this speeds.
+ *
+ * @return
+ *  - (>=0) valid input and supported by driver or hardware.
+ *   - (-ENOTSUP) if underlying hardware OR driver doesn't support.
+ *     that operation.
+ *   - (-EIO) if device is removed.
+ *   - (-ENODEV)  if *port_id* invalid.
+ *   - (-EINVAL)  if *speed_lanes* invalid
+ */
+__rte_experimental
+int rte_eth_speed_lanes_set(uint16_t port_id, uint32_t speed_lanes_capa);
 
 #ifdef __cplusplus
 }

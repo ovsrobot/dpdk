@@ -7008,4 +7008,30 @@ int rte_eth_dev_map_aggr_tx_affinity(uint16_t port_id, uint16_t tx_queue_id,
 	return ret;
 }
 
+int
+rte_eth_speed_lanes_get(uint16_t port_id, struct rte_eth_speed_lanes_capa *capa)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->speed_lanes_get == NULL)
+		return -ENOTSUP;
+	return eth_err(port_id, (*dev->dev_ops->speed_lanes_get)(dev, capa));
+}
+
+int
+rte_eth_speed_lanes_set(uint16_t port_id, uint32_t speed_lanes_capa)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->speed_lanes_set == NULL)
+		return -ENOTSUP;
+	return eth_err(port_id, (*dev->dev_ops->speed_lanes_set)(dev, speed_lanes_capa));
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
