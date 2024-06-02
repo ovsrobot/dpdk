@@ -3361,6 +3361,7 @@ stop_port(portid_t pid)
 	int need_check_link_status = 0;
 	portid_t peer_pl[RTE_MAX_ETHPORTS];
 	int peer_pi;
+	bool left_ebusy = false;
 	int ret;
 
 	if (port_id_is_invalid(pid, ENABLED_WARN))
@@ -3412,12 +3413,25 @@ stop_port(portid_t pid)
 			port_flow_flush(pi);
 
 		ret = eth_dev_stop_mp(pi);
-		if (ret != 0) {
-			RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
-				pi);
+		if (ret == -EBUSY) {
+			if (pid == (portid_t)RTE_PORT_ALL) {
+				left_ebusy = true;
+				printf("Stopping port %u will be retried.\n", pi);
+			} else {
+				printf("rte_eth_dev_stop failed for port %u. "
+				       "It can be stopped again after related ports "
+				       "are stopped\n", pi);
+			}
 			/* Allow to retry stopping the port. */
 			port->port_status = RTE_PORT_STARTED;
 			continue;
+		} else if (ret != 0) {
+			printf("rte_eth_dev_stop failed for port %u\n", pi);
+			/* Allow to retry stopping the port. */
+			port->port_status = RTE_PORT_STARTED;
+			continue;
+		} else {
+			printf("Port %u is stopped\n", pi);
 		}
 
 		if (port->port_status == RTE_PORT_HANDLING)
@@ -3426,6 +3440,27 @@ stop_port(portid_t pid)
 			fprintf(stderr, "Port %d can not be set into stopped\n",
 				pi);
 		need_check_link_status = 1;
+	}
+	if (left_ebusy) {
+		RTE_ETH_FOREACH_DEV(pi) {
+			port = &ports[pi];
+
+			if (port->port_status == RTE_PORT_STARTED)
+				port->port_status = RTE_PORT_HANDLING;
+			else
+				continue;
+
+			if (eth_dev_stop_mp(pi) != 0)
+				printf("rte_eth_dev_stop failed for port %u\n", pi);
+			else
+				printf("Port %u is stopped\n", pi);
+
+			if (port->port_status == RTE_PORT_HANDLING)
+				port->port_status = RTE_PORT_STOPPED;
+			else
+				fprintf(stderr, "Port %d can not be set into stopped\n",
+					pi);
+		}
 	}
 	if (need_check_link_status && !no_link_check)
 		check_all_ports_link_status(RTE_PORT_ALL);
@@ -3797,11 +3832,7 @@ pmd_test_exit(void)
 #endif
 	if (ports != NULL) {
 		no_link_check = 1;
-		RTE_ETH_FOREACH_DEV(pt_id) {
-			printf("\nStopping port %d...\n", pt_id);
-			fflush(stdout);
-			stop_port(pt_id);
-		}
+		stop_port(RTE_PORT_ALL);
 		RTE_ETH_FOREACH_DEV(pt_id) {
 			printf("\nShutting down port %d...\n", pt_id);
 			fflush(stdout);
