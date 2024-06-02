@@ -1637,6 +1637,133 @@ static cmdline_parse_inst_t cmd_config_loopback_all = {
 	},
 };
 
+/* *** display speed lanes per port capabilities *** */
+struct cmd_show_speed_lanes_result {
+	cmdline_fixed_string_t cmd_show;
+	cmdline_fixed_string_t cmd_port;
+	cmdline_fixed_string_t cmd_keyword;
+	portid_t cmd_pid;
+};
+
+static const char*
+get_device_infos_display_speeds(uint32_t speed_capa)
+{
+        if (speed_capa & RTE_ETH_LINK_SPEED_10M_HD)
+                return(" 10 Mbps half-duplex  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_10M)
+                return(" 10 Mbps full-duplex  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_100M_HD)
+                return(" 100 Mbps half-duplex  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_100M)
+                return(" 100 Mbps full-duplex  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_1G)
+                return(" 1 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_2_5G)
+                return(" 2.5 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_5G)
+                return(" 5 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_10G)
+                return(" 10 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_20G)
+                return(" 20 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_25G)
+                return(" 25 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_40G)
+                return(" 40 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_50G)
+                return(" 50 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_56G)
+                return(" 56 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_100G)
+                return(" 100 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_200G)
+                return(" 200 Gbps  ");
+        if (speed_capa & RTE_ETH_LINK_SPEED_400G)
+                return(" 400 Gbps  ");
+
+	return("Unkown");
+}
+
+static void
+cmd_show_speed_lanes_parsed(void *parsed_result,
+			    __rte_unused struct cmdline *cl,
+			    __rte_unused void *data)
+{
+	struct cmd_show_speed_lanes_result *res = parsed_result;
+	uint32_t speed_lanes_bmap[RTE_ETH_LINK_SPEED_MAX_BIT] = {0};
+	struct rte_eth_speed_lanes_capa spd_lanes = {0};
+	struct rte_eth_dev_info dev_info;
+	//char lanes_speed_str[128] = {0};
+	bool skip_spd_chk = false;
+	int ret, i;
+	uint32_t j;
+
+	if (!rte_eth_dev_is_valid_port(res->cmd_pid)) {
+		fprintf(stderr, "Invalid port id %u\n", res->cmd_pid);
+		return;
+	}
+
+	/* get max lanes this nic supports */
+	ret = rte_eth_speed_lanes_get(res->cmd_pid, &spd_lanes);
+        if (ret == -ENOTSUP)
+		return;
+
+	/* Pull out capability if nic supports */
+	ret = rte_eth_speed_lanes_get_capa(res->cmd_pid, speed_lanes_bmap);
+        if (ret == -ENOTSUP)
+		return;
+
+	ret = eth_dev_info_get_print_err(res->cmd_pid, &dev_info);
+	/* when link is down, PHY does not report any speeds */
+	if (ret == 0)
+		skip_spd_chk = true;
+
+	printf("\n%-25s %-10s", " Supported speeds", "Valid lanes");
+	printf("\n-----------------------------------");
+        for (i = 1; i <= RTE_ETH_LINK_SPEED_MAX_BIT; i++) {
+		if ((dev_info.speed_capa & RTE_BIT32(i) || skip_spd_chk) &&
+		    (speed_lanes_bmap[i])) {
+			printf("\n%-25s ",
+			       get_device_infos_display_speeds(RTE_BIT32(i))) ;
+			for (j = 0; j <= spd_lanes.max_lanes_cap; j++) {
+				if (RTE_BIT32(j) & speed_lanes_bmap[i])
+					printf("%-2d", j);
+			}
+		}
+        }
+	printf("\n");
+}
+
+static cmdline_parse_token_string_t cmd_show_speed_lanes_show =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_speed_lanes_result,
+				 cmd_show, "show");
+static cmdline_parse_token_string_t cmd_show_speed_lanes_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_speed_lanes_result,
+				 cmd_port, "port");
+static cmdline_parse_token_num_t cmd_show_speed_lanes_pid =
+	TOKEN_NUM_INITIALIZER(struct cmd_show_speed_lanes_result,
+			      cmd_pid, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_show_speed_lanes_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_speed_lanes_result,
+				 cmd_keyword, "speed_lanes");
+static cmdline_parse_token_string_t cmd_show_speed_lanes_cap_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_show_speed_lanes_result,
+				 cmd_keyword, "capabilities");
+
+static cmdline_parse_inst_t cmd_show_speed_lanes = {
+	.f = cmd_show_speed_lanes_parsed,
+	.data = NULL,
+	.help_str = "show port <port_id> speed_lanes capabilities",
+	.tokens = {
+		(void *)&cmd_show_speed_lanes_show,
+		(void *)&cmd_show_speed_lanes_port,
+		(void *)&cmd_show_speed_lanes_pid,
+		(void *)&cmd_show_speed_lanes_keyword,
+		(void *)&cmd_show_speed_lanes_cap_keyword,
+		NULL,
+	},
+};
+
 /* *** configure loopback for specific port *** */
 struct cmd_config_loopback_specific {
 	cmdline_fixed_string_t port;
@@ -13523,6 +13650,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_config_tx_affinity_map,
 	(cmdline_parse_inst_t *)&cmd_config_speed_lanes_all,
 	(cmdline_parse_inst_t *)&cmd_config_speed_lanes_specific,
+	(cmdline_parse_inst_t *)&cmd_show_speed_lanes,
 	NULL,
 };
 
