@@ -779,6 +779,7 @@ port_infos_display(portid_t port_id)
 	struct rte_ether_addr mac_addr;
 	struct rte_eth_link link;
 	struct rte_eth_dev_info dev_info;
+	struct rte_eth_speed_lanes_capa spd_lanes = {0};
 	int vlan_offload;
 	struct rte_mempool * mp;
 	static const char *info_border = "*********************";
@@ -828,6 +829,8 @@ port_infos_display(portid_t port_id)
 
 	printf("\nLink status: %s\n", (link.link_status) ? ("up") : ("down"));
 	printf("Link speed: %s\n", rte_eth_link_speed_to_str(link.link_speed));
+	rte_eth_speed_lanes_get(port_id, &spd_lanes);
+	printf("Lanes: %d\n", spd_lanes.active_lanes);
 	printf("Link duplex: %s\n", (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
 	       ("full-duplex") : ("half-duplex"));
 	printf("Autoneg status: %s\n", (link.link_autoneg == RTE_ETH_LINK_AUTONEG) ?
@@ -962,8 +965,8 @@ port_summary_header_display(void)
 
 	port_number = rte_eth_dev_count_avail();
 	printf("Number of available ports: %i\n", port_number);
-	printf("%-4s %-17s %-12s %-14s %-8s %s\n", "Port", "MAC Address", "Name",
-			"Driver", "Status", "Link");
+	printf("%-4s %-17s %-12s %-14s %-8s %-8s %s\n", "Port", "MAC Address", "Name",
+			"Driver", "Status", "Link", "Lanes");
 }
 
 void
@@ -972,6 +975,7 @@ port_summary_display(portid_t port_id)
 	struct rte_ether_addr mac_addr;
 	struct rte_eth_link link;
 	struct rte_eth_dev_info dev_info;
+	struct rte_eth_speed_lanes_capa spd_lanes = {0};
 	char name[RTE_ETH_NAME_MAX_LEN];
 	int ret;
 
@@ -993,10 +997,11 @@ port_summary_display(portid_t port_id)
 	if (ret != 0)
 		return;
 
-	printf("%-4d " RTE_ETHER_ADDR_PRT_FMT " %-12s %-14s %-8s %s\n",
+	rte_eth_speed_lanes_get(port_id, &spd_lanes);
+	printf("%-4d " RTE_ETHER_ADDR_PRT_FMT " %-12s %-14s %-8s %-8s %d\n",
 		port_id, RTE_ETHER_ADDR_BYTES(&mac_addr), name,
 		dev_info.driver_name, (link.link_status) ? ("up") : ("down"),
-		rte_eth_link_speed_to_str(link.link_speed));
+		rte_eth_link_speed_to_str(link.link_speed), spd_lanes.active_lanes);
 }
 
 void
