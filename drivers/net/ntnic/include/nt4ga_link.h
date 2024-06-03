@@ -115,8 +115,16 @@ typedef struct port_action_s {
 	uint32_t port_lpbk_mode;
 } port_action_t;
 
+typedef struct adapter_100g_s {
+	nim_i2c_ctx_t nim_ctx[NUM_ADAPTER_PORTS_MAX];	/* Should be the first field */
+	nthw_mac_pcs_t mac_pcs100g[NUM_ADAPTER_PORTS_MAX];
+	nthw_gfg_t gfg[NUM_ADAPTER_PORTS_MAX];
+	nthw_gpio_phy_t gpio_phy[NUM_ADAPTER_PORTS_MAX];
+} adapter_100g_t;
+
 typedef union adapter_var_s {
 	nim_i2c_ctx_t nim_ctx[NUM_ADAPTER_PORTS_MAX];	/* First field in all the adaptors type */
+	adapter_100g_t var100g;
 } adapter_var_u;
 
 typedef struct nt4ga_link_s {
