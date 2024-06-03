@@ -1590,6 +1590,9 @@ process_openssl_combined_op
 		return;
 	}
 
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+	EVP_CIPHER_CTX_copy(ctx, sess->cipher.ctx);
+
 	iv = rte_crypto_op_ctod_offset(op, uint8_t *,
 			sess->iv.offset);
 	if (sess->auth.algo == RTE_CRYPTO_AUTH_AES_GMAC) {
@@ -1623,12 +1626,12 @@ process_openssl_combined_op
 			status = process_openssl_auth_encryption_gcm(
 					mbuf_src, offset, srclen,
 					aad, aadlen, iv,
-					dst, tag, sess->cipher.ctx);
+					dst, tag, ctx);
 		else
 			status = process_openssl_auth_encryption_ccm(
 					mbuf_src, offset, srclen,
 					aad, aadlen, iv,
-					dst, tag, taglen, sess->cipher.ctx);
+					dst, tag, taglen, ctx);
 
 	} else {
 		if (sess->auth.algo == RTE_CRYPTO_AUTH_AES_GMAC ||
@@ -1636,13 +1639,15 @@ process_openssl_combined_op
 			status = process_openssl_auth_decryption_gcm(
 					mbuf_src, offset, srclen,
 					aad, aadlen, iv,
-					dst, tag, sess->cipher.ctx);
+					dst, tag, ctx);
 		else
 			status = process_openssl_auth_decryption_ccm(
 					mbuf_src, offset, srclen,
 					aad, aadlen, iv,
-					dst, tag, taglen, sess->cipher.ctx);
+					dst, tag, taglen, ctx);
 	}
+
+	EVP_CIPHER_CTX_free(ctx);
 
 	if (status != 0) {
 		if (status == (-EFAULT) &&
