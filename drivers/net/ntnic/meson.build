@@ -40,6 +40,7 @@ includes = [
     include_directories('nthw'),
     include_directories('nthw/supported'),
     include_directories('nthw/model'),
+    include_directories('nim/include'),
 ]
 
 # ntnic_core
@@ -59,6 +60,9 @@ if fs.is_dir('nthw/core/nt400dxx')
     includes += include_directories('nthw/core/nt400dxx')
     includes += include_directories('nthw/core/nt400dxx/reset')
 endif
+includes += include_directories('adapter')
+includes += include_directories('link_mgmt')
+includes += include_directories('nim')
 if fs.is_dir('nim/sfp_sensors')
     includes += include_directories('nim/sfp_sensors')
 endif
@@ -74,10 +78,17 @@ headers = files('rte_pmd_ntnic.h')
 
 # all sources
 sources = files(
+    'adapter/nt4ga_adapter.c',
+    'adapter/nt4ga_pci_ta_tg.c',
+    'adapter/nt4ga_tfg.c',
     'dpdk_mod_reg.c',
     'adapter/nt4ga_adapter.c',
     'adapter/nt4ga_pci_ta_tg.c',
     'adapter/nt4ga_tfg.c',
+    'link_mgmt/link_100g/nt4ga_link_100g.c',
+    'link_mgmt/nt4ga_link.c',
+    'nim/i2c_nim.c',
+    'nim/nt_link_speed.c',
     'nthw/supported/nthw_fpga_9563_055_039_0000.c',
     'nthw/supported/nthw_fpga_instances.c',
     'nthw/supported/nthw_fpga_mod_str_map.c',
@@ -89,9 +100,11 @@ sources = files(
     'nthw/core/nthw_fpga_rst.c',
     'nthw/core/nthw_gfg.c',
     'nthw/core/nthw_gmf.c',
+    'nthw/core/nthw_gpio_phy.c',
     'nthw/core/nthw_hif.c',
     'nthw/core/nthw_i2cm.c',
     'nthw/core/nthw_iic.c',
+    'nthw/core/nthw_mac_pcs.c',
     'nthw/core/nthw_mac_pcs_xxv.c',
     'nthw/core/nthw_pcie3.c',
     'nthw/core/nthw_pci_rd_tg.c',
