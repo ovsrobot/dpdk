@@ -984,11 +984,10 @@ test_misc_flags(void)
 	const char *argv1[] = {prgname, prefix, mp_flag, "--no-pci"};
 	/* With -v */
 	const char *argv2[] = {prgname, prefix, mp_flag, "-v"};
+	/* With empty --syslog */
+	const char *argv3[] = {prgname, prefix, mp_flag, "--syslog"};
 	/* With valid --syslog */
-	const char *argv3[] = {prgname, prefix, mp_flag,
-			"--syslog", "syslog"};
-	/* With empty --syslog (should fail) */
-	const char *argv4[] = {prgname, prefix, mp_flag, "--syslog"};
+	const char *argv4[] = {prgname, prefix, mp_flag, "--syslog", "always"};
 	/* With invalid --syslog */
 	const char *argv5[] = {prgname, prefix, mp_flag, "--syslog", "error"};
 	/* With no-sh-conf, also use no-huge to ensure this test runs on BSD */
@@ -1083,8 +1082,8 @@ test_misc_flags(void)
 		printf("Error - process did not run ok with --syslog flag\n");
 		goto fail;
 	}
-	if (launch_proc(argv4) == 0) {
-		printf("Error - process run ok with empty --syslog flag\n");
+	if (launch_proc(argv4) != 0) {
+		printf("Error - process did not with --syslog always flag\n");
 		goto fail;
 	}
 	if (launch_proc(argv5) == 0) {
