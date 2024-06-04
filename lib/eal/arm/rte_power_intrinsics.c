@@ -4,20 +4,28 @@
 
 #include <errno.h>
 
+#include <rte_per_lcore.h>
+
+#include "rte_cpuflags.h"
 #include "rte_power_intrinsics.h"
 
 /**
- * This function uses WFE instruction to make lcore suspend
+ * Per core rte_power_monitor_info struct.
+ */
+RTE_DEFINE_PER_LCORE(struct rte_power_monitor_info, pm_info) = {
+	.init_done = 0,
+	.wfet_en = 0,
+};
+
+/**
+ * This function uses WFE/WFET instruction to make lcore suspend
  * execution on ARM.
- * Note that timestamp based timeout is not supported yet.
  */
 int
 rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 		const uint64_t tsc_timestamp)
 {
-	RTE_SET_USED(tsc_timestamp);
-
-#ifdef RTE_ARM_USE_WFE
+	struct rte_power_monitor_info *pminfo;
 	const unsigned int lcore_id = rte_lcore_id();
 	uint64_t cur_value;
 
@@ -31,33 +39,37 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	if (pmc->fn == NULL)
 		return -EINVAL;
 
+	pminfo = &RTE_PER_LCORE(pm_info);
+
+	if (unlikely(!(pminfo->init_done))) {
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_WFXT))
+			pminfo->wfet_en = 1;
+		pminfo->init_done = 1;
+	}
+
 	switch (pmc->size) {
 	case sizeof(uint8_t):
-		__RTE_ARM_LOAD_EXC_8(pmc->addr, cur_value, rte_memory_order_relaxed)
-		__RTE_ARM_WFE()
+		__RTE_ARM_LOAD_EXC_8(pmc->addr, cur_value, rte_memory_order_relaxed);
 		break;
 	case sizeof(uint16_t):
-		__RTE_ARM_LOAD_EXC_16(pmc->addr, cur_value, rte_memory_order_relaxed)
-		__RTE_ARM_WFE()
+		__RTE_ARM_LOAD_EXC_16(pmc->addr, cur_value, rte_memory_order_relaxed);
 		break;
 	case sizeof(uint32_t):
-		__RTE_ARM_LOAD_EXC_32(pmc->addr, cur_value, rte_memory_order_relaxed)
-		__RTE_ARM_WFE()
+		__RTE_ARM_LOAD_EXC_32(pmc->addr, cur_value, rte_memory_order_relaxed);
 		break;
 	case sizeof(uint64_t):
-		__RTE_ARM_LOAD_EXC_64(pmc->addr, cur_value, rte_memory_order_relaxed)
-		__RTE_ARM_WFE()
+		__RTE_ARM_LOAD_EXC_64(pmc->addr, cur_value, rte_memory_order_relaxed);
 		break;
 	default:
 		return -EINVAL; /* unexpected size */
 	}
 
-	return 0;
-#else
-	RTE_SET_USED(pmc);
+	if (pminfo->wfet_en)
+		__RTE_ARM_WFET(tsc_timestamp)
+	else
+		__RTE_ARM_WFE()
 
-	return -ENOTSUP;
-#endif
+	return 0;
 }
 
 /**
@@ -80,14 +92,8 @@ int
 rte_power_monitor_wakeup(const unsigned int lcore_id)
 {
 	RTE_SET_USED(lcore_id);
-
-#ifdef RTE_ARM_USE_WFE
-	__RTE_ARM_SEV()
-
+	__RTE_ARM_SEV();
 	return 0;
-#else
-	return -ENOTSUP;
-#endif
 }
 
 int

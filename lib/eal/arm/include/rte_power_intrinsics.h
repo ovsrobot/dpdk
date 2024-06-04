@@ -13,6 +13,12 @@ extern "C" {
 
 #include "generic/rte_power_intrinsics.h"
 
+struct rte_power_monitor_info {
+	uint16_t init_done:1,   /* Initialization status bit */
+		wfet_en:1,	/* FEAT_WFET enabled bit */
+		reserved:14;	/* Reserved */
+};
+
 #ifdef __cplusplus
 }
 #endif
