@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2001-2023 Intel Corporation
+ * Copyright(c) 2001-2024 Intel Corporation
  */
 
 #ifndef _IDPF_CONTROLQ_API_H_
@@ -158,8 +158,13 @@ enum idpf_mbx_opc {
 /* Will init all required q including default mb.  "q_info" is an array of
  * create_info structs equal to the number of control queues to be created.
  */
+#ifdef NVME_CPF
+int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
+			struct idpf_ctlq_create_info *q_info, struct idpf_ctlq_info **ctlq);
+#else
 int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
 		   struct idpf_ctlq_create_info *q_info);
+#endif
 
 /* Allocate and initialize a single control queue, which will be added to the
  * control queue list; returns a handle to the created control queue
