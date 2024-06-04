@@ -1006,6 +1006,7 @@ static const char *const flow_field_ids[] = {
 	"ipv6_flow_label", "ipv6_traffic_class",
 	"esp_spi", "esp_seq_num", "esp_proto",
 	"random",
+	"vxlan_last_rsvd",
 	NULL
 };
 
