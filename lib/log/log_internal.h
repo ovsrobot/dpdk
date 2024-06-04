@@ -14,7 +14,7 @@
  * Initialize the default log stream.
  */
 __rte_internal
-int eal_log_init(const char *id, int facility);
+int eal_log_init(const char *id);
 
 /*
  * Determine where log data is written when no call to rte_openlog_stream.
@@ -29,6 +29,9 @@ __rte_internal
 int eal_log_save_regexp(const char *regexp, uint32_t level);
 __rte_internal
 int eal_log_save_pattern(const char *pattern, uint32_t level);
+
+__rte_internal
+int eal_log_syslog(const char *name);
 
 /*
  * Convert log level to string.

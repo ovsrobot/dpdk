@@ -3,12 +3,55 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <syslog.h>
 
+#include <rte_common.h>
 #include <rte_log.h>
 
 #include "log_internal.h"
+
+static int log_facility = LOG_DAEMON;
+
+static const struct {
+	const char *name;
+	int value;
+} facilitys[] = {
+	{ "auth", LOG_AUTH },
+	{ "cron", LOG_CRON },
+	{ "daemon", LOG_DAEMON },
+	{ "ftp", LOG_FTP },
+	{ "kern", LOG_KERN },
+	{ "lpr", LOG_LPR },
+	{ "mail", LOG_MAIL },
+	{ "news", LOG_NEWS },
+	{ "syslog", LOG_SYSLOG },
+	{ "user", LOG_USER },
+	{ "uucp", LOG_UUCP },
+	{ "local0", LOG_LOCAL0 },
+	{ "local1", LOG_LOCAL1 },
+	{ "local2", LOG_LOCAL2 },
+	{ "local3", LOG_LOCAL3 },
+	{ "local4", LOG_LOCAL4 },
+	{ "local5", LOG_LOCAL5 },
+	{ "local6", LOG_LOCAL6 },
+	{ "local7", LOG_LOCAL7 },
+};
+
+int
+eal_log_syslog(const char *name)
+{
+	unsigned int i;
+
+	for (i = 0; i < RTE_DIM(facilitys); i++) {
+		if (!strcmp(name, facilitys[i].name)) {
+			log_facility = facilitys[i].value;
+			return 0;
+		}
+	}
+	return -1;
+}
 
 /*
  * default log function
@@ -45,7 +88,7 @@ static cookie_io_functions_t console_log_func = {
  * once memzones are available.
  */
 int
-eal_log_init(const char *id, int facility)
+eal_log_init(const char *id)
 {
 	FILE *log_stream;
 
@@ -53,7 +96,7 @@ eal_log_init(const char *id, int facility)
 	if (log_stream == NULL)
 		return -1;
 
-	openlog(id, LOG_NDELAY | LOG_PID, facility);
+	openlog(id, LOG_NDELAY | LOG_PID, log_facility);
 
 	eal_log_set_default(log_stream);
 
