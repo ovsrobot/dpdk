@@ -3697,6 +3697,17 @@ This section lists supported pattern items and their attributes, if any.
 
   - ``vni {unsigned}``: VXLAN identifier.
   - ``last_rsvd {unsigned}``: VXLAN last reserved 8-bits.
+  - ``flag_g {unsigned}``: VXLAN flag GBP bit
+  - ``flag_ver {unsigned}``: VXLAN flag GPE version bits
+  - ``flag_i {unsigned}``: VXLAN flag instance bit
+  - ``flag_p {unsigned}``: VXLAN flag GPE Next Protocol bit
+  - ``flag_b {unsigned}``: VXLAN flag GPE Ingress-Replicated BUM
+  - ``flag_o {unsigned}``: VXLAN flag GPE OAM Packet bit
+  - ``flag_d {unsigned}``: VXLAN flag GBP Don't Learn bit
+  - ``flag_a {unsigned}``: VXLAN flag GBP Applied bit
+  - ``group_policy_id {unsigned}``: VXLAN-GBP Group Policy ID.
+  - ``protocol {unsigned}`` : VXLAN-GPE next protocol
+  - ``rsvd0_gpe {unsigned}`` : VXLAN-GPE rsvd0
 
 - ``e_tag``: match IEEE 802.1BR E-Tag header.
 
