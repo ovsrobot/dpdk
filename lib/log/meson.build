@@ -2,5 +2,9 @@
 # Copyright(c) 2023 Intel Corporation
 
 includes += global_inc
-sources = files('log.c')
+sources = files(
+        'log.c',
+        'log_timestamp.c',
+)
+
 headers = files('rte_log.h')
