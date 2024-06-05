@@ -54,7 +54,10 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
+* **Updated ipsec_mb crypto driver.**
 
+  * Kasumi and ChaChaPoly PMDs now share the job API codepath
+    with AESNI_MB PMD.
 
 Removed Items
 -------------
