@@ -11,12 +11,19 @@
  * Functions for SSE/AVX/AVX2/AVX512 implementation of memcpy().
  */
 
+#include <rte_config.h>
+
+#ifdef RTE_USE_CC_MEMCPY
+
+#include <generic/rte_memcpy.h>
+
+#else
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <rte_vect.h>
 #include <rte_common.h>
-#include <rte_config.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -877,5 +884,7 @@ rte_memcpy(void *dst, const void *src, size_t n)
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* RTE_USE_CC_MEMCPY */
 
 #endif /* _RTE_MEMCPY_X86_64_H_ */

@@ -6,6 +6,14 @@
 #ifndef _RTE_MEMCPY_PPC_64_H_
 #define _RTE_MEMCPY_PPC_64_H_
 
+#include <rte_config.h>
+
+#ifdef RTE_USE_CC_MEMCPY
+
+#include <generic/rte_memcpy.h>
+
+#else
+
 #include <stdint.h>
 #include <string.h>
 
@@ -214,5 +222,7 @@ rte_memcpy_func(void *dst, const void *src, size_t n)
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* RTE_USE_CC_MEMCPY */
 
 #endif /* _RTE_MEMCPY_PPC_64_H_ */
