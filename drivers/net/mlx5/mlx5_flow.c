@@ -4929,15 +4929,16 @@ flow_check_hairpin_split(struct rte_eth_dev *dev,
 }
 
 /* Declare flow create/destroy prototype in advance. */
+
 static uint32_t
-flow_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+flow_drv_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		 const struct rte_flow_attr *attr,
 		 const struct rte_flow_item items[],
 		 const struct rte_flow_action actions[],
 		 bool external, struct rte_flow_error *error);
 
 static void
-flow_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+flow_drv_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		  uint32_t flow_idx);
 
 int
@@ -5058,7 +5059,7 @@ flow_dv_mreg_create_cb(void *tool_ctx, void *cb_ctx)
 	 * be applied, removed, deleted in arbitrary order
 	 * by list traversing.
 	 */
-	mcp_res->rix_flow = flow_list_create(dev, MLX5_FLOW_TYPE_MCP,
+	mcp_res->rix_flow = flow_drv_list_create(dev, MLX5_FLOW_TYPE_MCP,
 					&attr, items, actions, false, error);
 	if (!mcp_res->rix_flow) {
 		mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_MCP], idx);
@@ -5152,7 +5153,7 @@ flow_dv_mreg_remove_cb(void *tool_ctx, struct mlx5_list_entry *entry)
 	struct mlx5_priv *priv = dev->data->dev_private;
 
 	MLX5_ASSERT(mcp_res->rix_flow);
-	flow_list_destroy(dev, MLX5_FLOW_TYPE_MCP, mcp_res->rix_flow);
+	flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_MCP, mcp_res->rix_flow);
 	mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_MCP], mcp_res->idx);
 }
 
@@ -7242,12 +7243,12 @@ flow_tunnel_from_rule(const struct mlx5_flow *flow)
  * @return
  *   A flow index on success, 0 otherwise and rte_errno is set.
  */
-static uint32_t
-flow_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-		 const struct rte_flow_attr *attr,
-		 const struct rte_flow_item items[],
-		 const struct rte_flow_action original_actions[],
-		 bool external, struct rte_flow_error *error)
+uint32_t
+flow_legacy_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+		    const struct rte_flow_attr *attr,
+		    const struct rte_flow_item items[],
+		    const struct rte_flow_action original_actions[],
+		    bool external, struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct rte_flow *flow = NULL;
@@ -7294,8 +7295,14 @@ flow_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		.table_id = 0
 	};
 	int ret;
+	struct mlx5_shared_action_rss *shared_rss_action;
 
-	MLX5_ASSERT(wks);
+	if (!wks)
+		return rte_flow_error_set(error, ENOMEM,
+					  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+					  NULL,
+					  "failed to push flow workspace");
+	memset(indir_actions, 0, sizeof(indir_actions));
 	rss_desc = &wks->rss_desc;
 	ret = flow_action_handles_translate(dev, original_actions,
 					    indir_actions,
@@ -7469,11 +7476,16 @@ error:
 	ret = rte_errno; /* Save rte_errno before cleanup. */
 	flow_mreg_del_copy_action(dev, flow);
 	flow_drv_destroy(dev, flow);
-	if (rss_desc->shared_rss)
-		rte_atomic_fetch_sub_explicit(&((struct mlx5_shared_action_rss *)
+
+	if (rss_desc->shared_rss) {
+		shared_rss_action = (struct mlx5_shared_action_rss *)
 			mlx5_ipool_get
 			(priv->sh->ipool[MLX5_IPOOL_RSS_SHARED_ACTIONS],
-			rss_desc->shared_rss))->refcnt, 1, rte_memory_order_relaxed);
+			rss_desc->shared_rss);
+		if (shared_rss_action)
+			rte_atomic_fetch_sub_explicit(&(shared_rss_action)->refcnt, 1,
+						      rte_memory_order_relaxed);
+	}
 	mlx5_ipool_free(priv->flows[type], idx);
 	rte_errno = ret; /* Restore rte_errno. */
 	ret = rte_errno;
@@ -7528,7 +7540,7 @@ mlx5_flow_create_esw_table_zero_flow(struct rte_eth_dev *dev)
 	};
 	struct rte_flow_error error;
 
-	return (void *)(uintptr_t)flow_list_create(dev, MLX5_FLOW_TYPE_CTL,
+	return (void *)(uintptr_t)flow_drv_list_create(dev, MLX5_FLOW_TYPE_CTL,
 						   &attr, &pattern,
 						   actions, false, &error);
 }
@@ -7596,14 +7608,14 @@ mlx5_flow_create_devx_sq_miss_flow(struct rte_eth_dev *dev, uint32_t sq_num)
 	 * Creates group 0, highest priority jump flow.
 	 * Matches txq to bypass kernel packets.
 	 */
-	if (flow_list_create(dev, MLX5_FLOW_TYPE_CTL, &attr, pattern, actions,
+	if (flow_drv_list_create(dev, MLX5_FLOW_TYPE_CTL, &attr, pattern, actions,
 			     false, &error) == 0)
 		return 0;
 	/* Create group 1, lowest priority redirect flow for txq. */
 	attr.group = 1;
 	actions[0].conf = &port;
 	actions[0].type = RTE_FLOW_ACTION_TYPE_PORT_ID;
-	return flow_list_create(dev, MLX5_FLOW_TYPE_CTL, &attr, pattern,
+	return flow_drv_list_create(dev, MLX5_FLOW_TYPE_CTL, &attr, pattern,
 				actions, false, &error);
 }
 
@@ -7737,8 +7749,9 @@ mlx5_flow_cache_flow_toggle(struct rte_eth_dev *dev, bool orig_prio)
 			attr = flow_info->attr;
 			if (orig_prio)
 				attr.priority = flow_info->orig_prio;
-			flow_info->flow_idx_high_prio = flow_list_create(dev, MLX5_FLOW_TYPE_GEN,
-					&attr, flow_info->items, flow_info->actions,
+			flow_info->flow_idx_high_prio = mlx5_flow_list_create(dev,
+					MLX5_FLOW_TYPE_GEN, &attr,
+					flow_info->items, flow_info->actions,
 					true, &error);
 			if (!flow_info->flow_idx_high_prio) {
 				DRV_LOG(ERR, "Priority toggle failed internally.");
@@ -7758,7 +7771,7 @@ mlx5_flow_cache_flow_toggle(struct rte_eth_dev *dev, bool orig_prio)
 					flow_info->flow_idx_low_prio);
 			if (high && low) {
 				RTE_SWAP(*low, *high);
-				flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
+				flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
 						  flow_info->flow_idx_low_prio);
 				flow_info->flow_idx_high_prio = 0;
 			}
@@ -7772,7 +7785,7 @@ err:
 	while (flow_info) {
 		if (flow_info->orig_prio != flow_info->attr.priority) {
 			if (flow_info->flow_idx_high_prio)
-				flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
+				flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
 						  flow_info->flow_idx_high_prio);
 			else
 				break;
@@ -7907,13 +7920,6 @@ mlx5_flow_create(struct rte_eth_dev *dev,
 	uint32_t prio = attr->priority;
 	uint32_t flow_idx;
 
-	if (priv->sh->config.dv_flow_en == 2) {
-		rte_flow_error_set(error, ENOTSUP,
-			  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
-			  NULL,
-			  "Flow non-Q creation not supported");
-		return NULL;
-	}
 	/*
 	 * If the device is not started yet, it is not allowed to created a
 	 * flow from application. PMD default flows and traffic control flows
@@ -7934,16 +7940,42 @@ mlx5_flow_create(struct rte_eth_dev *dev,
 				RTE_PMD_MLX5_FLOW_ENGINE_FLAG_STANDBY_DUP_INGRESS)))
 			new_attr->priority += 1;
 	}
-	flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_GEN, attr, items, actions, true, error);
+	flow_idx = flow_drv_list_create(dev, MLX5_FLOW_TYPE_GEN, attr, items, actions, true, error);
 	if (!flow_idx)
 		return NULL;
 	if (unlikely(mlx5_need_cache_flow(priv, attr))) {
 		if (mlx5_flow_cache_flow_info(dev, attr, prio, items, actions, flow_idx)) {
-			flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
+			flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
 			flow_idx = 0;
 		}
 	}
 	return (void *)(uintptr_t)flow_idx;
+}
+
+uint32_t
+mlx5_flow_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+		      const struct rte_flow_attr *attr,
+		      const struct rte_flow_item items[],
+		      const struct rte_flow_action actions[],
+		      bool external, struct rte_flow_error *error)
+{
+	return flow_drv_list_create(dev, type, attr, items, actions, external,
+				error);
+}
+
+uint32_t
+flow_drv_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+		      const struct rte_flow_attr *attr,
+		      const struct rte_flow_item items[],
+		      const struct rte_flow_action actions[],
+		      bool external, struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops;
+	enum mlx5_flow_drv_type drv_type = flow_get_drv_type(dev, attr);
+
+	fops = flow_get_drv_ops(drv_type);
+	return fops->list_create(dev, type, attr, items, actions, external,
+		error);
 }
 
 /**
@@ -7954,15 +7986,16 @@ mlx5_flow_create(struct rte_eth_dev *dev,
  * @param[in] flow_idx
  *   Index of flow to destroy.
  */
-static void
-flow_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-		  uint32_t flow_idx)
+void
+flow_legacy_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+		     uint32_t flow_idx)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	struct rte_flow *flow = mlx5_ipool_get(priv->flows[type], flow_idx);
+	struct rte_flow *flow = mlx5_ipool_get(priv->flows[type], (uint32_t)flow_idx);
 
 	if (!flow)
 		return;
+	MLX5_ASSERT((type >= MLX5_FLOW_TYPE_CTL) && (type < MLX5_FLOW_TYPE_MAXI));
 	MLX5_ASSERT(flow->type == type);
 	/*
 	 * Update RX queue flags only if port is started, otherwise it is
@@ -7982,6 +8015,25 @@ flow_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 	}
 	flow_mreg_del_copy_action(dev, flow);
 	mlx5_ipool_free(priv->flows[type], flow_idx);
+}
+
+static void
+flow_drv_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+		  uint32_t flow_idx)
+{
+	const struct mlx5_flow_driver_ops *fops;
+	struct rte_flow_attr attr = { .transfer = 0 };
+	enum mlx5_flow_drv_type drv_type = flow_get_drv_type(dev, &attr);
+
+	fops = flow_get_drv_ops(drv_type);
+	fops->list_destroy(dev, type, flow_idx);
+}
+
+void
+mlx5_flow_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
+		       uint32_t flow_idx)
+{
+	flow_drv_list_destroy(dev, type, flow_idx);
 }
 
 /**
@@ -8013,7 +8065,7 @@ mlx5_flow_list_flush(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 #endif
 
 	MLX5_IPOOL_FOREACH(priv->flows[type], fidx, flow) {
-		flow_list_destroy(dev, type, fidx);
+		flow_drv_list_destroy(dev, type, fidx);
 		if (unlikely(mlx5_need_cache_flow(priv, NULL) && type == MLX5_FLOW_TYPE_GEN)) {
 			flow_info = LIST_FIRST(&mode_info->hot_upgrade);
 			while (flow_info) {
@@ -8285,7 +8337,7 @@ mlx5_ctrl_flow_source_queue(struct rte_eth_dev *dev,
 	actions[0].type = RTE_FLOW_ACTION_TYPE_JUMP;
 	actions[0].conf = &jump;
 	actions[1].type = RTE_FLOW_ACTION_TYPE_END;
-	flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_CTL,
+	flow_idx = flow_drv_list_create(dev, MLX5_FLOW_TYPE_CTL,
 				    &attr, items, actions, false, &error);
 	if (!flow_idx) {
 		DRV_LOG(DEBUG,
@@ -8375,7 +8427,7 @@ mlx5_ctrl_flow_vlan(struct rte_eth_dev *dev,
 		action_rss.types = 0;
 	for (i = 0; i != priv->reta_idx_n; ++i)
 		queue[i] = (*priv->reta_idx)[i];
-	flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_CTL,
+	flow_idx = flow_drv_list_create(dev, MLX5_FLOW_TYPE_CTL,
 				    &attr, items, actions, false, &error);
 	if (!flow_idx)
 		return -rte_errno;
@@ -8450,7 +8502,7 @@ mlx5_flow_lacp_miss(struct rte_eth_dev *dev)
 		},
 	};
 	struct rte_flow_error error;
-	uint32_t flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_CTL,
+	uint32_t flow_idx = flow_drv_list_create(dev, MLX5_FLOW_TYPE_CTL,
 					&attr, items, actions,
 					false, &error);
 
@@ -8479,7 +8531,7 @@ mlx5_flow_destroy(struct rte_eth_dev *dev,
 			  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 			  NULL,
 			  "Flow non-Q destruction not supported");
-	flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
+	flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
 				(uintptr_t)(void *)flow);
 	if (unlikely(mlx5_need_cache_flow(priv, NULL))) {
 		flow_info = LIST_FIRST(&mode_info->hot_upgrade);
@@ -9791,14 +9843,14 @@ mlx5_flow_discover_mreg_c(struct rte_eth_dev *dev)
 		if (!priv->sh->config.dv_flow_en)
 			break;
 		/* Create internal flow, validation skips copy action. */
-		flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_GEN, &attr,
+		flow_idx = flow_drv_list_create(dev, MLX5_FLOW_TYPE_GEN, &attr,
 					items, actions, false, &error);
 		flow = mlx5_ipool_get(priv->flows[MLX5_FLOW_TYPE_GEN],
 				      flow_idx);
 		if (!flow)
 			continue;
 		priv->sh->flow_mreg_c[n++] = idx;
-		flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
+		flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
 	}
 	for (; n < MLX5_MREG_C_NUM; ++n)
 		priv->sh->flow_mreg_c[n] = REG_NON;
@@ -12015,11 +12067,12 @@ mlx5_flow_discover_ipv6_tc_support(struct rte_eth_dev *dev)
 	actions[0].conf = &set_dscp;
 	actions[1].type = RTE_FLOW_ACTION_TYPE_END;
 
-	flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_GEN, &attr, items, actions, true, &error);
+	flow_idx = mlx5_flow_list_create(dev, MLX5_FLOW_TYPE_GEN, &attr, items,
+					 actions, true, &error);
 	if (!flow_idx)
 		return -EOPNOTSUPP;
 
-	flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
+	mlx5_flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
 	return 0;
 }
 
