@@ -150,6 +150,9 @@ Runtime Configuration
   Then the PMD will load json file for device ``ca:00.0``.
   The parameter is optional.
 
+  As CPFL PMD can run on both XEON host and IPU's ACC, the driver dynamically detects
+  which system it is running on using get_running_host_id functionality.
+
 Driver compilation and testing
 ------------------------------
 
