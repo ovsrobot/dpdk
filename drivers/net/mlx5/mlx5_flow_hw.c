@@ -2254,12 +2254,12 @@ err1:
  */
 static int
 __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
-			    const struct mlx5_flow_template_table_cfg *cfg,
-			    struct mlx5_hw_actions *acts,
-			    struct rte_flow_actions_template *at,
-			    struct mlx5_tbl_multi_pattern_ctx *mp_ctx,
-			    bool nt_mode __rte_unused,
-			    struct rte_flow_error *error)
+				     const struct mlx5_flow_template_table_cfg *cfg,
+				     struct mlx5_hw_actions *acts,
+				     struct rte_flow_actions_template *at,
+				     struct mlx5_tbl_multi_pattern_ctx *mp_ctx,
+				     bool nt_mode,
+				     struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	const struct rte_flow_template_table_attr *table_attr = &cfg->attr;
@@ -10596,7 +10596,7 @@ static int
 flow_hw_validate_attributes(const struct rte_flow_port_attr *port_attr,
 			    uint16_t nb_queue,
 			    const struct rte_flow_queue_attr *queue_attr[],
-			    struct rte_flow_error *error)
+			    bool nt_mode, struct rte_flow_error *error)
 {
 	uint32_t size;
 	unsigned int i;
@@ -10605,7 +10605,7 @@ flow_hw_validate_attributes(const struct rte_flow_port_attr *port_attr,
 		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
 					  "Port attributes must be non-NULL");
 
-	if (nb_queue == 0)
+	if (nb_queue == 0 && !nt_mode)
 		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
 					  "At least one flow queue is required");
 
@@ -10682,7 +10682,7 @@ __flow_hw_configure(struct rte_eth_dev *dev,
 		rte_errno = EINVAL;
 		goto err;
 	}
-	if (flow_hw_validate_attributes(port_attr, nb_queue, queue_attr, error))
+	if (flow_hw_validate_attributes(port_attr, nb_queue, queue_attr, nt_mode, error))
 		return -rte_errno;
 	/*
 	 * Calling rte_flow_configure() again is allowed if
@@ -10700,7 +10700,7 @@ __flow_hw_configure(struct rte_eth_dev *dev,
 			}
 		}
 		/* If previous configuration was not default non template mode config. */
-		if (!(priv->hw_attr->nt_mode)) {
+		if (!priv->hw_attr->nt_mode) {
 			if (flow_hw_compare_config(priv->hw_attr, port_attr, nb_queue, queue_attr))
 				return 0;
 			else
@@ -12163,6 +12163,7 @@ flow_hw_get_aged_flows(struct rte_eth_dev *dev, void **contexts,
 /**
  * Initialization function for non template API which calls
  * flow_hw_configure with default values.
+ * Configure non queues cause 1 queue is configured by default for inner usage.
  *
  * @param[in] dev
  *   Pointer to the Ethernet device structure.
@@ -12172,8 +12173,6 @@ flow_hw_get_aged_flows(struct rte_eth_dev *dev, void **contexts,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
- /* Configure non queues cause 1 queue is configured by default for inner usage. */
-
 int
 flow_hw_init(struct rte_eth_dev *dev,
 	     struct rte_flow_error *error)
@@ -12201,10 +12200,10 @@ flow_hw_init(struct rte_eth_dev *dev,
 }
 
 static int flow_hw_prepare(struct rte_eth_dev *dev,
-					const struct rte_flow_action actions[] __rte_unused,
-					enum mlx5_flow_type type,
-					struct rte_flow_hw **flow,
-					struct rte_flow_error *error)
+			   const struct rte_flow_action actions[] __rte_unused,
+			   enum mlx5_flow_type type,
+			   struct rte_flow_hw **flow,
+			   struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	uint32_t idx = 0;
@@ -12327,14 +12326,14 @@ flow_hw_encap_decap_resource_register
 
 static int
 flow_hw_translate_flow_actions(struct rte_eth_dev *dev,
-			  const struct rte_flow_attr *attr,
-			  const struct rte_flow_action actions[],
-			  struct rte_flow_hw *flow,
-			  struct mlx5_flow_hw_action_params *ap,
-			  struct mlx5_hw_actions *hw_acts,
-			  uint64_t item_flags,
-			  bool external,
-			  struct rte_flow_error *error)
+			       const struct rte_flow_attr *attr,
+			       const struct rte_flow_action actions[],
+			       struct rte_flow_hw *flow,
+			       struct mlx5_flow_hw_action_params *ap,
+			       struct mlx5_hw_actions *hw_acts,
+			       uint64_t item_flags,
+			       bool external,
+			       struct rte_flow_error *error)
 {
 	int ret = 0;
 	uint32_t src_group = 0;
@@ -12432,12 +12431,12 @@ end:
 }
 
 static int flow_hw_register_matcher(struct rte_eth_dev *dev,
-				const struct rte_flow_attr *attr,
-				const struct rte_flow_item items[],
-				bool external,
-				struct rte_flow_hw *flow,
-				struct mlx5_flow_dv_matcher *matcher,
-				struct rte_flow_error *error)
+				    const struct rte_flow_attr *attr,
+				    const struct rte_flow_item items[],
+				    bool external,
+				    struct rte_flow_hw *flow,
+				    struct mlx5_flow_dv_matcher *matcher,
+				    struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct rte_flow_error sub_error = {
@@ -12468,10 +12467,7 @@ static int flow_hw_register_matcher(struct rte_eth_dev *dev,
 
 	matcher->crc = rte_raw_cksum((const void *)matcher->mask.buf,
 				    matcher->mask.size);
-	matcher->priority = mlx5_get_matcher_priority(dev, attr,
-							matcher->priority,
-							external);
-
+	matcher->priority = attr->priority;
 	ret = __translate_group(dev, attr, external, attr->group, &group, error);
 	if (ret)
 		return ret;
@@ -12579,10 +12575,10 @@ err:
 
 /* TODO: remove dev if not used */
 static int flow_hw_apply(struct rte_eth_dev *dev __rte_unused,
-				const struct rte_flow_item items[],
-				struct mlx5dr_rule_action rule_actions[],
-				struct rte_flow_hw *flow,
-				struct rte_flow_error *error)
+			 const struct rte_flow_item items[],
+			 struct mlx5dr_rule_action rule_actions[],
+			 struct rte_flow_hw *flow,
+			 struct rte_flow_error *error)
 {
 	struct mlx5dr_bwc_rule *rule = NULL;
 
@@ -12623,13 +12619,13 @@ static int flow_hw_apply(struct rte_eth_dev *dev __rte_unused,
  *   0 on success, negative errno value otherwise and rte_errno set.
  */
 static int flow_hw_create_flow(struct rte_eth_dev *dev,
-					enum mlx5_flow_type type,
-					const struct rte_flow_attr *attr,
-					const struct rte_flow_item items[],
-					const struct rte_flow_action actions[],
-					bool external,
-					struct rte_flow_hw **flow,
-					struct rte_flow_error *error)
+			       enum mlx5_flow_type type,
+			       const struct rte_flow_attr *attr,
+			       const struct rte_flow_item items[],
+			       const struct rte_flow_action actions[],
+			       bool external,
+			       struct rte_flow_hw **flow,
+			       struct rte_flow_error *error)
 {
 	int ret;
 	struct mlx5_hw_actions hw_act;
@@ -12794,7 +12790,7 @@ flow_hw_destroy(struct rte_eth_dev *dev, struct rte_flow_hw *flow)
  *   Address of flow to destroy.
  */
 static void flow_hw_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-					uintptr_t flow_addr)
+				 uintptr_t flow_addr)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	/* Get flow via idx */
@@ -12830,12 +12826,12 @@ static void flow_hw_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type ty
  *   A flow addr on success, 0 otherwise and rte_errno is set.
  */
 static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
-					enum mlx5_flow_type type,
-					const struct rte_flow_attr *attr,
-					const struct rte_flow_item items[],
-					const struct rte_flow_action actions[],
-					bool external,
-					struct rte_flow_error *error)
+				     enum mlx5_flow_type type,
+				     const struct rte_flow_attr *attr,
+				     const struct rte_flow_item items[],
+				     const struct rte_flow_action actions[],
+				     bool external,
+				     struct rte_flow_error *error)
 {
 	int ret;
 	struct rte_flow_hw *flow = NULL;
