@@ -4930,7 +4930,7 @@ flow_check_hairpin_split(struct rte_eth_dev *dev,
 
 /* Declare flow create/destroy prototype in advance. */
 
-static uint32_t
+static uintptr_t
 flow_drv_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		 const struct rte_flow_attr *attr,
 		 const struct rte_flow_item items[],
@@ -4939,7 +4939,7 @@ flow_drv_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 
 static void
 flow_drv_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-		  uint32_t flow_idx);
+		  uintptr_t flow_idx);
 
 int
 flow_dv_mreg_match_cb(void *tool_ctx __rte_unused,
@@ -7243,7 +7243,7 @@ flow_tunnel_from_rule(const struct mlx5_flow *flow)
  * @return
  *   A flow index on success, 0 otherwise and rte_errno is set.
  */
-uint32_t
+uintptr_t
 flow_legacy_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		    const struct rte_flow_attr *attr,
 		    const struct rte_flow_item items[],
@@ -7918,7 +7918,7 @@ mlx5_flow_create(struct rte_eth_dev *dev,
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct rte_flow_attr *new_attr = (void *)(uintptr_t)attr;
 	uint32_t prio = attr->priority;
-	uint32_t flow_idx;
+	uintptr_t flow_idx;
 
 	/*
 	 * If the device is not started yet, it is not allowed to created a
@@ -7952,7 +7952,7 @@ mlx5_flow_create(struct rte_eth_dev *dev,
 	return (void *)(uintptr_t)flow_idx;
 }
 
-uint32_t
+uintptr_t
 mlx5_flow_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		      const struct rte_flow_attr *attr,
 		      const struct rte_flow_item items[],
@@ -7963,7 +7963,7 @@ mlx5_flow_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 				error);
 }
 
-uint32_t
+uintptr_t
 flow_drv_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		      const struct rte_flow_attr *attr,
 		      const struct rte_flow_item items[],
@@ -7988,7 +7988,7 @@ flow_drv_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
  */
 void
 flow_legacy_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-		     uint32_t flow_idx)
+		     uintptr_t flow_idx)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct rte_flow *flow = mlx5_ipool_get(priv->flows[type], (uint32_t)flow_idx);
@@ -8019,7 +8019,7 @@ flow_legacy_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 
 static void
 flow_drv_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-		  uint32_t flow_idx)
+		  uintptr_t flow_idx)
 {
 	const struct mlx5_flow_driver_ops *fops;
 	struct rte_flow_attr attr = { .transfer = 0 };
@@ -8031,7 +8031,7 @@ flow_drv_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 
 void
 mlx5_flow_list_destroy(struct rte_eth_dev *dev, enum mlx5_flow_type type,
-		       uint32_t flow_idx)
+		       uintptr_t flow_idx)
 {
 	flow_drv_list_destroy(dev, type, flow_idx);
 }
@@ -8060,12 +8060,14 @@ mlx5_flow_list_flush(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 	if (priv->sh->config.dv_flow_en == 2 &&
 	    type == MLX5_FLOW_TYPE_GEN) {
 		flow_hw_q_flow_flush(dev, NULL);
-		return;
 	}
 #endif
-
 	MLX5_IPOOL_FOREACH(priv->flows[type], fidx, flow) {
-		flow_drv_list_destroy(dev, type, fidx);
+		if (priv->sh->config.dv_flow_en == 2) {
+			flow_drv_list_destroy(dev, type, (uintptr_t)flow);
+		} else {
+			flow_drv_list_destroy(dev, type, fidx);
+		}
 		if (unlikely(mlx5_need_cache_flow(priv, NULL) && type == MLX5_FLOW_TYPE_GEN)) {
 			flow_info = LIST_FIRST(&mode_info->hot_upgrade);
 			while (flow_info) {
@@ -8526,11 +8528,6 @@ mlx5_flow_destroy(struct rte_eth_dev *dev,
 	struct rte_pmd_mlx5_flow_engine_mode_info *mode_info = &priv->mode_info;
 	struct mlx5_dv_flow_info *flow_info;
 
-	if (priv->sh->config.dv_flow_en == 2)
-		return rte_flow_error_set(error, ENOTSUP,
-			  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
-			  NULL,
-			  "Flow non-Q destruction not supported");
 	flow_drv_list_destroy(dev, MLX5_FLOW_TYPE_GEN,
 				(uintptr_t)(void *)flow);
 	if (unlikely(mlx5_need_cache_flow(priv, NULL))) {
