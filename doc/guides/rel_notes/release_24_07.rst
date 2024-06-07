@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eventdev: Reorganize the fastpath structure ``rte_event_dma_adapter_op``
+  to optimize the memory layout and improve performance.
+
 
 ABI Changes
 -----------
