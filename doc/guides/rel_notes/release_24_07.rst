@@ -24,6 +24,13 @@ DPDK Release 24.07
 New Features
 ------------
 
+* **Updated the DSW event device.**
+
+  * Added support for ``RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE``,
+    allowing applications to take on new tasks without having completed
+    (released) the previous event batch. This in turn facilities DSW
+    use alongside high-latency look-aside hardware accelerators.
+
 .. This section should contain new features added in this release.
    Sample format:
 
