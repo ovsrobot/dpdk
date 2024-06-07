@@ -24,6 +24,10 @@ DPDK Release 24.07
 New Features
 ------------
 
+* **Added AMD Pensando ionic crypto driver.**
+
+  Added a new crypto driver for AMD Pensando hardware accelerators.
+
 .. This section should contain new features added in this release.
    Sample format:
 
