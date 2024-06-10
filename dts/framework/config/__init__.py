@@ -570,29 +570,39 @@ class Configuration:
         return Configuration(executions=executions)
 
 
-def load_config(config_file_path: Path) -> Configuration:
+def load_config(node_config_file_path: Path, exec_config_file_path: Path) -> Configuration:
     """Load DTS test run configuration from a file.
 
-    Load the YAML test run configuration file
+    Load both the YAML testbed and execution configuration files
     and :download:`the configuration file schema <conf_yaml_schema.json>`,
-    validate the test run configuration file, and create a test run configuration object.
+    validate both configuration files to create a test run configuration object.
 
     The YAML test run configuration file is specified in the :option:`--config-file` command line
     argument or the :envvar:`DTS_CFG_FILE` environment variable.
 
     Args:
-        config_file_path: The path to the YAML test run configuration file.
+        node_config_file_path: The path to the testbed configuration YAML file.
+        exec_config_file_path: The path to the execution configuration YAML file.
 
     Returns:
         The parsed test run configuration.
     """
-    with open(config_file_path, "r") as f:
-        config_data = yaml.safe_load(f)
+    with open(node_config_file_path, "r") as f:
+        node_config_data = yaml.safe_load(f)
+    with open(exec_config_file_path, "r") as f:
+        execution_config_data = yaml.safe_load(f)
 
     schema_path = os.path.join(Path(__file__).parent.resolve(), "conf_yaml_schema.json")
 
     with open(schema_path, "r") as f:
         schema = json.load(f)
-    config = warlock.model_factory(schema, name="_Config")(config_data)
-    config_obj: Configuration = Configuration.from_dict(dict(config))  # type: ignore[arg-type]
+    config = {
+        **dict(warlock.model_factory(schema, name="_Config")(node_config_data)),
+        **dict(warlock.model_factory(schema, name="_Config")(execution_config_data)),
+    }
+    if "nodes" not in config or "executions" not in config:
+        raise ConfigurationError(
+            f"{'node' if 'nodes' not in config else 'execution'} data not configured."
+        )
+    config_obj: Configuration = Configuration.from_dict(config)  # type: ignore[arg-type]
     return config_obj

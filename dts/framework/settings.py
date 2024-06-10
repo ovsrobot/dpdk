@@ -13,10 +13,15 @@ followed by the default value defined in this module.
 
 The command line arguments along with the supported environment variables are:
 
-.. option:: --config-file
-.. envvar:: DTS_CFG_FILE
+.. option:: --node-config-file
+.. envvar:: DTS_NODE_CFG_FILE
 
-    The path to the YAML test run configuration file.
+    The path to the YAML testbed configuration file.
+
+.. option:: --exec-config-file
+.. envvar:: DTS_EXEC_CFG_FILE
+
+    The path to the YAML execution configuration file.
 
 .. option:: --output-dir, --output
 .. envvar:: DTS_OUTPUT_DIR
@@ -88,7 +93,9 @@ class Settings:
     """
 
     #:
-    config_file_path: Path = Path(__file__).parent.parent.joinpath("conf.yaml")
+    node_config_file_path: Path = Path(__file__).parent.parent.joinpath("node_conf.yaml")
+    #:
+    exec_config_file_path: Path = Path(__file__).parent.parent.joinpath("execution_conf.yaml")
     #:
     output_dir: str = "output"
     #:
@@ -143,11 +150,18 @@ def _get_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--config-file",
-        default=env_arg("DTS_CFG_FILE", SETTINGS.config_file_path),
+        "--node-config-file",
+        default=env_arg("DTS_NODE_CFG_FILE", SETTINGS.node_config_file_path),
         type=Path,
-        help="[DTS_CFG_FILE] The configuration file that describes the test cases, "
+        help="[DTS_NODE_CFG_FILE] The configuration file that describes the testbed devices, "
         "SUTs and targets.",
+    )
+
+    parser.add_argument(
+        "--exec-config-file",
+        default=env_arg("DTS_EXEC_CFG_FILE", SETTINGS.exec_config_file_path),
+        type=Path,
+        help="[DTS_EXEC_CFG_FILE] The configuration file that describes the test cases.",
     )
 
     parser.add_argument(
@@ -263,7 +277,8 @@ def get_settings() -> Settings:
     """
     parsed_args = _get_parser().parse_args()
     return Settings(
-        config_file_path=parsed_args.config_file,
+        node_config_file_path=parsed_args.node_config_file,
+        exec_config_file_path=parsed_args.exec_config_file,
         output_dir=parsed_args.output_dir,
         timeout=parsed_args.timeout,
         verbose=parsed_args.verbose,
