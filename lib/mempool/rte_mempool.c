@@ -1264,6 +1264,10 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 			(long double)mem_len / mp->size);
 	}
 
+	STAILQ_FOREACH(memhdr, &mp->mem_list, next)
+		fprintf(f, "    memory chunk at %p, addr=%p, iova=0x%" PRIx64 ", len=%zu\n",
+				memhdr, memhdr->addr, memhdr->iova, memhdr->len);
+
 	cache_count = rte_mempool_dump_cache(f, mp);
 	common_count = rte_mempool_ops_get_count(mp);
 	if ((cache_count + common_count) > mp->size)
