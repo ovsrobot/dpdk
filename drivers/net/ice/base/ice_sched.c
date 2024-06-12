@@ -4660,7 +4660,6 @@ ice_sched_save_tc_node_bw(struct ice_port_info *pi, u8 tc,
 }
 
 #define ICE_SCHED_GENERIC_STRICT_MODE		BIT(4)
-#define ICE_SCHED_GENERIC_PRIO_M		0xE
 #define ICE_SCHED_GENERIC_PRIO_S		1
 
 /**
