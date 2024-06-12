@@ -1609,9 +1609,7 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 	TAILQ_INIT(&vsi->vlan_list);
 
 	/* Be sync with RTE_ETH_RSS_RETA_SIZE_x maximum value definition */
-	pf->hash_lut_size = hw->func_caps.common_cap.rss_table_size >
-			RTE_ETH_RSS_RETA_SIZE_512 ? RTE_ETH_RSS_RETA_SIZE_512 :
-			hw->func_caps.common_cap.rss_table_size;
+	pf->hash_lut_size = hw->func_caps.common_cap.rss_table_size;
 	pf->flags |= ICE_FLAG_RSS_AQ_CAPABLE;
 
 	/* Defines the type of outer tag expected */
