@@ -101,6 +101,7 @@ ice_write_tx_drbell_q_ctx(struct ice_hw *hw,
 			  struct ice_tx_drbell_q_ctx *tx_drbell_q_ctx,
 			  u32 tx_drbell_q_index);
 
+int ice_lut_size_to_type(int lut_size);
 int
 ice_aq_get_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params *get_params);
 int

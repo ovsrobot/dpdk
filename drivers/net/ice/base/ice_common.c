@@ -4127,6 +4127,51 @@ ice_aq_read_topo_dev_nvm(struct ice_hw *hw,
 	return 0;
 }
 
+static u16 ice_lut_type_to_size(u16 lut_type)
+{
+	switch (lut_type) {
+	case ICE_LUT_VSI:
+		return ICE_LUT_VSI_SIZE;
+	case ICE_LUT_GLOBAL:
+		return ICE_LUT_GLOBAL_SIZE;
+	case ICE_LUT_PF:
+		return ICE_LUT_PF_SIZE;
+	default:
+		return 0;
+	}
+}
+
+static u16 ice_lut_size_to_flag(u16 lut_size)
+{
+	u16 f = 0;
+
+	switch (lut_size) {
+	case ICE_LUT_GLOBAL_SIZE:
+		f = ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512_FLAG;
+		break;
+	case ICE_LUT_PF_SIZE:
+		f = ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K_FLAG;
+		break;
+	default:
+		break;
+	}
+	return f << ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S;
+}
+
+int ice_lut_size_to_type(int lut_size)
+{
+	switch (lut_size) {
+	case ICE_LUT_VSI_SIZE:
+		return ICE_LUT_VSI;
+	case ICE_LUT_GLOBAL_SIZE:
+		return ICE_LUT_GLOBAL;
+	case ICE_LUT_PF_SIZE:
+		return ICE_LUT_PF;
+	default:
+		return -1;
+	}
+}
+
 /**
  * __ice_aq_get_set_rss_lut
  * @hw: pointer to the hardware structure
@@ -4138,7 +4183,7 @@ ice_aq_read_topo_dev_nvm(struct ice_hw *hw,
 static int
 __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params *params, bool set)
 {
-	u16 flags = 0, vsi_id, lut_type, lut_size, glob_lut_idx, vsi_handle;
+	u16 flags, vsi_id, lut_type, lut_size, glob_lut_idx = 0, vsi_handle;
 	struct ice_aqc_get_set_rss_lut *cmd_resp;
 	struct ice_aq_desc desc;
 	int status;
@@ -4149,16 +4194,22 @@ __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params
 
 	vsi_handle = params->vsi_handle;
 	lut = params->lut;
+	lut_type = params->lut_type;
+	lut_size = ice_lut_type_to_size(lut_type);
+	cmd_resp = &desc.params.get_set_rss_lut;
+	if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL)
+		glob_lut_idx = params->global_lut_id;
 
-	if (!ice_is_vsi_valid(hw, vsi_handle) || !lut)
+	if (!lut || !lut_size || !ice_is_vsi_valid(hw, vsi_handle))
 		return ICE_ERR_PARAM;
 
-	lut_size = params->lut_size;
-	lut_type = params->lut_type;
-	glob_lut_idx = params->global_lut_id;
-	vsi_id = ice_get_hw_vsi_num(hw, vsi_handle);
+	if (lut_size > params->lut_size)
+		return ICE_ERR_INVAL_SIZE;
 
-	cmd_resp = &desc.params.get_set_rss_lut;
+	if (set && lut_size != params->lut_size)
+		return ICE_ERR_PARAM;
+
+	vsi_id = ice_get_hw_vsi_num(hw, vsi_handle);
 
 	if (set) {
 		ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_set_rss_lut);
@@ -4172,61 +4223,16 @@ __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params
 					ICE_AQC_GSET_RSS_LUT_VSI_ID_M) |
 				       ICE_AQC_GSET_RSS_LUT_VSI_VALID);
 
-	switch (lut_type) {
-	case ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_VSI:
-	case ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF:
-	case ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL:
-		flags |= ((lut_type << ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_S) &
-			  ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_M);
-		break;
-	default:
-		status = ICE_ERR_PARAM;
-		goto ice_aq_get_set_rss_lut_exit;
-	}
+	flags = ice_lut_size_to_flag(lut_size) |
+		 ((lut_type << ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_S) &
+		  ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_M) |
+		 ((glob_lut_idx << ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_S) &
+		  ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_M);
 
-	if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL) {
-		flags |= ((glob_lut_idx << ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_S) &
-			  ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_M);
-
-		if (!set)
-			goto ice_aq_get_set_rss_lut_send;
-	} else if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF) {
-		if (!set)
-			goto ice_aq_get_set_rss_lut_send;
-	} else {
-		goto ice_aq_get_set_rss_lut_send;
-	}
-
-	/* LUT size is only valid for Global and PF table types */
-	switch (lut_size) {
-	case ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_128:
-		flags |= (ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_128_FLAG <<
-			  ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S) &
-			 ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_M;
-		break;
-	case ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512:
-		flags |= (ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512_FLAG <<
-			  ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S) &
-			 ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_M;
-		break;
-	case ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K:
-		if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF) {
-			flags |= (ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K_FLAG <<
-				  ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S) &
-				 ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_M;
-			break;
-		}
-		/* fall-through */
-	default:
-		status = ICE_ERR_PARAM;
-		goto ice_aq_get_set_rss_lut_exit;
-	}
-
-ice_aq_get_set_rss_lut_send:
 	cmd_resp->flags = CPU_TO_LE16(flags);
 	status = ice_aq_send_cmd(hw, &desc, lut, lut_size, NULL);
 
-ice_aq_get_set_rss_lut_exit:
+	params->lut_size = LE16_TO_CPU(desc.datalen);
 	return status;
 }
 
