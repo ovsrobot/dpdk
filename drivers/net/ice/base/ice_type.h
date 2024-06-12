@@ -1696,4 +1696,10 @@ struct ice_aq_get_set_rss_lut_params {
 /* AQ API version for FW auto drop reports */
 #define ICE_FW_API_AUTO_DROP_MAJ		1
 #define ICE_FW_API_AUTO_DROP_MIN		4
+
+static inline bool
+ice_is_nac_dual(struct ice_hw *hw)
+{
+	return !!(hw->dev_caps.nac_topo.mode & ICE_NAC_TOPO_DUAL_M);
+}
 #endif /* _ICE_TYPE_H_ */

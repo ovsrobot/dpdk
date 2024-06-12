@@ -2321,70 +2321,6 @@ ice_get_phy_tx_tstamp_ready_eth56g(struct ice_hw *hw, u8 port,
 	return 0;
 }
 
-#define ICE_DEVID_MASK 0xFFF8
-
-/**
- * ice_ptp_init_phy_model - Initialize hw->phy_model based on device type
- * @hw: pointer to the HW structure
- *
- * Determine the PHY model for the device, and initialize hw->phy_model
- * for use by other functions.
- */
-void ice_ptp_init_phy_model(struct ice_hw *hw)
-{
-	unsigned int phy;
-
-	for (phy = 0; phy < MAX_PHYS_PER_ICE; phy++)
-		hw->phy_addr[phy] = 0;
-
-	switch (hw->device_id & ICE_DEVID_MASK) {
-	case ICE_DEV_ID_E825C_BACKPLANE & ICE_DEVID_MASK:
-		hw->phy_addr[0] = eth56g_dev_0;
-		hw->phy_addr[1] = eth56g_dev_1;
-		hw->num_phys = ICE_PHYS_PER_CPLX_C825X;
-		hw->phy_ports = ICE_PORTS_PER_PHY_C825X;
-		hw->max_phy_port = ice_is_nac_dual(hw) ?
-		       ICE_PORTS_PER_PHY_C825X :
-		       ICE_PHYS_PER_CPLX_C825X * ICE_PORTS_PER_PHY_C825X;
-		break;
-	default:
-		goto e8xx;
-	}
-
-	ice_sb_access_ena_eth56g(hw, true);
-	for (phy = 0; phy < hw->num_phys; phy++)
-		if (hw->phy_addr[phy]) {
-			int err;
-			u32 phy_rev;
-
-			err = ice_read_phy_eth56g_raw_lp(hw, phy,
-							 PHY_REG_REVISION,
-							 &phy_rev, true);
-			if (err) {
-				hw->phy_model = ICE_PHY_UNSUP;
-				return;
-			}
-
-			if (phy_rev != PHY_REVISION_ETH56G) {
-				hw->phy_model = ICE_PHY_UNSUP;
-				return;
-			}
-		}
-
-	hw->phy_model = ICE_PHY_ETH56G;
-
-	return;
-e8xx:
-
-	if (ice_is_e810(hw))
-		hw->phy_model = ICE_PHY_E810;
-	else
-		hw->phy_model = ICE_PHY_E822;
-
-	hw->phy_ports = ICE_NUM_EXTERNAL_PORTS;
-	hw->max_phy_port = ICE_NUM_EXTERNAL_PORTS;
-}
-
 /* E822 family functions
  *
  * The following functions operate on the E822 family of devices.
@@ -5641,6 +5577,69 @@ bool ice_ptp_lock(struct ice_hw *hw)
 void ice_ptp_unlock(struct ice_hw *hw)
 {
 	wr32(hw, PFTSYN_SEM + (PFTSYN_SEM_BYTES * hw->pf_id), 0);
+}
+
+#define ICE_DEVID_MASK 0xFFF8
+
+/**
+ * ice_ptp_init_phy_model - Initialize hw->phy_model based on device type
+ * @hw: pointer to the HW structure
+ *
+ * Determine the PHY model for the device, and initialize hw->phy_model
+ * for use by other functions.
+ */
+void ice_ptp_init_phy_model(struct ice_hw *hw)
+{
+	unsigned int phy;
+
+	for (phy = 0; phy < MAX_PHYS_PER_ICE; phy++)
+		hw->phy_addr[phy] = 0;
+
+	switch (hw->device_id & ICE_DEVID_MASK) {
+	case ICE_DEV_ID_E825C_BACKPLANE & ICE_DEVID_MASK:
+		hw->phy_addr[0] = eth56g_dev_0;
+		hw->phy_addr[1] = eth56g_dev_1;
+		hw->num_phys = ICE_PHYS_PER_CPLX_C825X;
+		hw->phy_ports = ICE_PORTS_PER_PHY_C825X;
+		hw->max_phy_port = ice_is_nac_dual(hw) ?
+		       ICE_PORTS_PER_PHY_C825X :
+		       ICE_PHYS_PER_CPLX_C825X * ICE_PORTS_PER_PHY_C825X;
+		break;
+	default:
+		goto e8xx;
+	}
+
+	ice_sb_access_ena_eth56g(hw, true);
+	for (phy = 0; phy < hw->num_phys; phy++)
+		if (hw->phy_addr[phy]) {
+			int err;
+			u32 phy_rev;
+
+			err = ice_read_phy_eth56g_raw_lp(hw, phy,
+							 PHY_REG_REVISION,
+							 &phy_rev, true);
+			if (err) {
+				hw->phy_model = ICE_PHY_UNSUP;
+				return;
+			}
+
+			if (phy_rev != PHY_REVISION_ETH56G) {
+				hw->phy_model = ICE_PHY_UNSUP;
+				return;
+			}
+		}
+
+	hw->phy_model = ICE_PHY_ETH56G;
+
+	return;
+e8xx:
+
+	if (ice_is_e810(hw))
+		hw->phy_model = ICE_PHY_E810;
+	else
+		hw->phy_model = ICE_PHY_E822;
+	hw->phy_ports = ICE_NUM_EXTERNAL_PORTS;
+	hw->max_phy_port = ICE_NUM_EXTERNAL_PORTS;
 }
 
 /**
