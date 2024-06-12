@@ -982,13 +982,15 @@ ice_read_phy_eth56g_raw_lp(struct ice_hw *hw, u8 phy_index, u32 reg_addr,
 
 	err = ice_sbq_rw_reg_lp(hw, &phy_msg, lock_sbq);
 
-	if (err)
+	if (err) {
 		ice_debug(hw, ICE_DBG_PTP, "PTP failed to send msg to phy %d\n",
 			  err);
-	else
-		*val = phy_msg.data;
+		return err;
+	}
 
-	return err;
+	*val = phy_msg.data;
+
+	return ICE_SUCCESS;
 }
 
 /**
@@ -1479,8 +1481,16 @@ ice_read_phy_tstamp_eth56g(struct ice_hw *hw, u8 port, u8 idx, u64 *tstamp)
  * @port: the quad to read from
  * @idx: the timestamp index to reset
  *
- * Clear a timestamp, resetting its valid bit, in the PHY port memory of
+ * Read and then forcibly clear the timestamp index to ensure the valid bit is
+ * cleared and the timestamp status bit is reset in the PHY port memory of
  * internal PHYs of the 56G devices.
+ *
+ * To directly clear the contents of the timestamp block entirely, discarding
+ * all timestamp data at once, software should instead use
+ * ice_ptp_reset_ts_memory_quad_eth56g().
+ *
+ * This function should only be called on an idx whose bit is set according to
+ * ice_get_phy_tx_tstamp_ready().
  */
 static int
 ice_clear_phy_tstamp_eth56g(struct ice_hw *hw, u8 port, u8 idx)
@@ -1509,9 +1519,6 @@ static void ice_ptp_reset_ts_memory_eth56g(struct ice_hw *hw)
 	unsigned int port;
 
 	for (port = 0; port < hw->max_phy_port; port++) {
-		if (!(hw->ena_lports & BIT(port)))
-			continue;
-
 		ice_write_phy_reg_eth56g(hw, port, PHY_REG_TX_MEMORY_STATUS_L,
 					 0);
 		ice_write_phy_reg_eth56g(hw, port, PHY_REG_TX_MEMORY_STATUS_U,
@@ -1568,8 +1575,7 @@ ice_ptp_prep_phy_time_eth56g(struct ice_hw *hw, u32 time)
 
 	for (port = 0; port < hw->max_phy_port; port++) {
 		int err;
-		if (!(hw->ena_lports & BIT(port)))
-			continue;
+
 		err = ice_ptp_prep_port_phy_time_eth56g(hw, port, phy_time);
 
 		if (err) {
@@ -1664,8 +1670,6 @@ ice_ptp_prep_phy_adj_eth56g(struct ice_hw *hw, s32 adj, bool lock_sbq)
 	cycles = (s64)adj << 32;
 
 	for (port = 0; port < hw->max_phy_port; port++) {
-		if (!(hw->ena_lports & BIT(port)))
-			continue;
 
 		err = ice_ptp_prep_port_adj_eth56g(hw, port, cycles, lock_sbq);
 		if (err)
@@ -1691,8 +1695,6 @@ ice_ptp_prep_phy_incval_eth56g(struct ice_hw *hw, u64 incval)
 
 	for (port = 0; port < hw->max_phy_port; port++) {
 		int err;
-		if (!(hw->ena_lports & BIT(port)))
-			continue;
 		err = ice_write_40b_phy_reg_eth56g(hw, port, PHY_REG_TIMETUS_L,
 						   incval);
 		if (err) {
@@ -1752,9 +1754,6 @@ ice_ptp_prep_phy_adj_target_eth56g(struct ice_hw *hw, u32 target_time)
 	u8 port;
 
 	for (port = 0; port < hw->max_phy_port; port++) {
-		if (!(hw->ena_lports & BIT(port)))
-			continue;
-
 		/* Tx case */
 		/* No sub-nanoseconds data */
 		err = ice_write_phy_reg_eth56g_lp(hw, port,
@@ -1836,7 +1835,7 @@ ice_ptp_read_port_capture_eth56g(struct ice_hw *hw, u8 port, u64 *tx_ts,
 }
 
 /**
- * ice_ptp_one_port_cmd_eth56g - Prepare a single PHY port for a timer command
+ * ice_ptp_write_port_cmd_eth56g - Prepare a single PHY port for a timer command
  * @hw: pointer to HW struct
  * @port: Port to which cmd has to be sent
  * @cmd: Command to be sent to the port
@@ -1844,53 +1843,16 @@ ice_ptp_read_port_capture_eth56g(struct ice_hw *hw, u8 port, u64 *tx_ts,
  *
  * Prepare the requested port for an upcoming timer sync command.
  */
-int
-ice_ptp_one_port_cmd_eth56g(struct ice_hw *hw, u8 port,
-			    enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
+static int
+ice_ptp_write_port_cmd_eth56g(struct ice_hw *hw, u8 port,
+			      enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
 {
+	u32 val = ice_ptp_tmr_cmd_to_port_reg(hw, cmd);
 	int err;
-	u32 cmd_val, val;
-	u8 tmr_idx;
-
-	tmr_idx = ice_get_ptp_src_clock_index(hw);
-	cmd_val = tmr_idx << SEL_PHY_SRC;
-	switch (cmd) {
-	case ICE_PTP_INIT_TIME:
-		cmd_val |= PHY_CMD_INIT_TIME;
-		break;
-	case ICE_PTP_INIT_INCVAL:
-		cmd_val |= PHY_CMD_INIT_INCVAL;
-		break;
-	case ICE_PTP_ADJ_TIME:
-		cmd_val |= PHY_CMD_ADJ_TIME;
-		break;
-	case ICE_PTP_ADJ_TIME_AT_TIME:
-		cmd_val |= PHY_CMD_ADJ_TIME_AT_TIME;
-		break;
-	case ICE_PTP_READ_TIME:
-		cmd_val |= PHY_CMD_READ_TIME;
-		break;
-	default:
-		ice_warn(hw, "Unknown timer command %u\n", cmd);
-		return ICE_ERR_PARAM;
-	}
 
 	/* Tx case */
-	/* Read, modify, write */
-	err = ice_read_phy_reg_eth56g_lp(hw, port, PHY_REG_TX_TMR_CMD, &val,
-					    lock_sbq);
-	if (err) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to read TX_TMR_CMD, err %d\n",
-			  err);
-		return err;
-	}
-
-	/* Modify necessary bits only and perform write */
-	val &= ~TS_CMD_MASK;
-	val |= cmd_val;
-
 	err = ice_write_phy_reg_eth56g_lp(hw, port, PHY_REG_TX_TMR_CMD, val,
-					     lock_sbq);
+					  lock_sbq);
 	if (err) {
 		ice_debug(hw, ICE_DBG_PTP, "Failed to write back TX_TMR_CMD, err %d\n",
 			  err);
@@ -1898,53 +1860,12 @@ ice_ptp_one_port_cmd_eth56g(struct ice_hw *hw, u8 port,
 	}
 
 	/* Rx case */
-	/* Read, modify, write */
-	err = ice_read_phy_reg_eth56g_lp(hw, port, PHY_REG_RX_TMR_CMD, &val,
-					    lock_sbq);
-	if (err) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to read RX_TMR_CMD, err %d\n",
-			  err);
-		return err;
-	}
-
-	/* Modify necessary bits only and perform write */
-	val &= ~TS_CMD_MASK;
-	val |= cmd_val;
-
 	err = ice_write_phy_reg_eth56g_lp(hw, port, PHY_REG_RX_TMR_CMD, val,
-					     lock_sbq);
+					  lock_sbq);
 	if (err) {
 		ice_debug(hw, ICE_DBG_PTP, "Failed to write back RX_TMR_CMD, err %d\n",
 			  err);
 		return err;
-	}
-
-	return 0;
-}
-
-/**
- * ice_ptp_port_cmd_eth56g - Prepare all ports for a timer command
- * @hw: pointer to the HW struct
- * @cmd: timer command to prepare
- * @lock_sbq: true if the sideband queue lock must  be acquired
- *
- * Prepare all ports connected to this device for an upcoming timer sync
- * command.
- */
-int
-ice_ptp_port_cmd_eth56g(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
-			bool lock_sbq)
-{
-	int err;
-	u8 port;
-
-	for (port = 0; port < hw->max_phy_port; port++) {
-		if (!(hw->ena_lports & BIT(port)))
-			continue;
-
-		err = ice_ptp_one_port_cmd_eth56g(hw, port, cmd, lock_sbq);
-		if (err)
-			return err;
 	}
 
 	return 0;
@@ -2108,7 +2029,7 @@ ice_read_phy_and_phc_time_eth56g(struct ice_hw *hw, u8 port, u64 *phy_time,
 	ice_ptp_src_cmd(hw, ICE_PTP_READ_TIME);
 
 	/* Prepare the PHY timer for a ICE_PTP_READ_TIME capture command */
-	err = ice_ptp_one_port_cmd_eth56g(hw, port, ICE_PTP_READ_TIME, true);
+	err = ice_ptp_one_port_cmd(hw, port, ICE_PTP_READ_TIME, true);
 	if (err)
 		return err;
 
@@ -2182,7 +2103,7 @@ static int ice_sync_phy_timer_eth56g(struct ice_hw *hw, u8 port)
 	if (err)
 		goto err_unlock;
 
-	err = ice_ptp_one_port_cmd_eth56g(hw, port, ICE_PTP_ADJ_TIME, true);
+	err = ice_ptp_one_port_cmd(hw, port, ICE_PTP_ADJ_TIME, true);
 	if (err)
 		goto err_unlock;
 
@@ -2271,8 +2192,7 @@ ice_start_phy_timer_eth56g(struct ice_hw *hw, u8 port, bool bypass)
 	if (err)
 		return err;
 
-	err = ice_ptp_one_port_cmd_eth56g(hw, port, ICE_PTP_INIT_INCVAL,
-					     true);
+	err = ice_ptp_one_port_cmd(hw, port, ICE_PTP_INIT_INCVAL, true);
 	if (err)
 		return err;
 
@@ -2925,7 +2845,7 @@ ice_read_quad_reg_e822_lp(struct ice_hw *hw, u8 quad, u16 offset, u32 *val,
 
 	*val = msg.data;
 
-	return 0;
+	return ICE_SUCCESS;
 }
 
 int
@@ -2966,7 +2886,7 @@ ice_write_quad_reg_e822_lp(struct ice_hw *hw, u8 quad, u16 offset, u32 val,
 		return err;
 	}
 
-	return 0;
+	return ICE_SUCCESS;
 }
 
 int
@@ -5738,6 +5658,8 @@ int ice_ptp_write_port_cmd(struct ice_hw *hw, u8 port,
 			   enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
 {
 	switch (hw->phy_model) {
+	case ICE_PHY_ETH56G:
+		return ice_ptp_write_port_cmd_eth56g(hw, port, cmd, lock_sbq);
 	case ICE_PHY_E822:
 		return ice_ptp_write_port_cmd_e822(hw, port, cmd, lock_sbq);
 	default:
