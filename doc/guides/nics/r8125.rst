@@ -1,0 +1,18 @@
+..  SPDX-License-Identifier: BSD-3-Clause
+    Copyright(c) 2024 Realtek Corporation. All rights reserved
+
+R8125 Poll Mode Driver
+======================
+
+The R8125 PMD provides poll mode driver support for Realtek 2.5 Gigabit
+Ethernet NICs.
+
+Features
+--------
+
+Features of the R8125 PMD are:
+
+* MAC/VLAN filtering
+* Checksum offload
+* TCP segmentation offload
+* Jumbo frames supported
