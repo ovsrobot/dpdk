@@ -2917,6 +2917,7 @@ struct ice_aqc_debug_dump_internals {
 #define ICE_AQC_DBG_DUMP_CLUSTER_ID_L2P			8
 #define ICE_AQC_DBG_DUMP_CLUSTER_ID_QUEUE_MNG		9
 #define ICE_AQC_DBG_DUMP_CLUSTER_ID_FULL_CSR_SPACE	21
+#define ICE_ACQ_DBG_DUMP_CLUSTER_ID_MNG_TRANSACTION	22
 	u8 reserved;
 	__le16 table_id; /* Used only for non-memory clusters */
 	__le32 idx; /* In table entries for tables, in bytes for memory */

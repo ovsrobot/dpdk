@@ -1864,7 +1864,7 @@ static const u8 dummy_pppoe_ipv6_udp_packet[] = {
 static const struct ice_dummy_pkt_offsets dummy_ipv4_esp_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV4_OFOS,	14 },
-	{ ICE_ESP,			34 },
+	{ ICE_ESP,		34 },
 	{ ICE_PROTOCOL_LAST,	0 },
 };
 
@@ -1888,7 +1888,7 @@ static const u8 dummy_ipv4_esp_pkt[] = {
 static const struct ice_dummy_pkt_offsets dummy_ipv6_esp_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV6_OFOS,	14 },
-	{ ICE_ESP,			54 },
+	{ ICE_ESP,		54 },
 	{ ICE_PROTOCOL_LAST,	0 },
 };
 
@@ -1917,7 +1917,7 @@ static const u8 dummy_ipv6_esp_pkt[] = {
 static const struct ice_dummy_pkt_offsets dummy_ipv4_ah_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV4_OFOS,	14 },
-	{ ICE_AH,			34 },
+	{ ICE_AH,		34 },
 	{ ICE_PROTOCOL_LAST,	0 },
 };
 
@@ -1942,7 +1942,7 @@ static const u8 dummy_ipv4_ah_pkt[] = {
 static const struct ice_dummy_pkt_offsets dummy_ipv6_ah_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV6_OFOS,	14 },
-	{ ICE_AH,			54 },
+	{ ICE_AH,		54 },
 	{ ICE_PROTOCOL_LAST,	0 },
 };
 
@@ -2546,7 +2546,7 @@ ice_get_recp_frm_fw(struct ice_hw *hw, struct ice_sw_recipe *recps, u8 rid,
 		LIST_ADD(&rg_entry->l_entry, &recps[rid].rg_list);
 
 		/* Propagate some data to the recipe database */
-		recps[idx].is_root = !!is_root;
+		recps[idx].is_root = is_root;
 		recps[idx].priority = root_bufs.content.act_ctrl_fwd_priority;
 		ice_zero_bitmap(recps[idx].res_idxs, ICE_MAX_FV_WORDS);
 		if (root_bufs.content.result_indx & ICE_AQ_RECIPE_RESULT_EN) {
