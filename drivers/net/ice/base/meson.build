@@ -28,6 +28,7 @@ sources = [
         'ice_parser_rt.c',
         'ice_ddp.c',
         'ice_fwlog.c',
+        'ice_vf_mbx.c',
 ]
 
 error_cflags = [
