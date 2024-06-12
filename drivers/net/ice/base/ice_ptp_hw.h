@@ -530,6 +530,10 @@ int ice_ptp_init_phy_cfg(struct ice_hw *hw);
 #define E830_HIGH_TX_MEMORY_BANK(slot, port) \
 				(E830_PRTTSYN_TXTIME_H(slot) + 0x8 * (port))
 
+#define ICE_SMA_MIN_BIT_E810T	3
+#define ICE_SMA_MAX_BIT_E810T	7
+#define ICE_PCA9575_P1_OFFSET	8
+
 /* E810T PCA9575 IO controller registers */
 #define ICE_PCA9575_P0_IN	0x0
 #define ICE_PCA9575_P1_IN	0x1
@@ -546,9 +550,6 @@ int ice_ptp_init_phy_cfg(struct ice_hw *hw);
 #define ICE_E810T_P1_SMA2_DIR_EN	BIT(6)
 #define ICE_E810T_P1_SMA2_TX_EN		BIT(7)
 
-#define ICE_E810T_SMA_MIN_BIT	3
-#define ICE_E810T_SMA_MAX_BIT	7
-#define ICE_E810T_P1_OFFSET	8
 /* 56G PHY quad register base addresses */
 #define ICE_PHY0_BASE			0x092000
 #define ICE_PHY1_BASE			0x126000
