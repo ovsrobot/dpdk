@@ -3806,9 +3806,9 @@ ice_phy_calc_pmd_adj_e822(struct ice_hw *hw, u8 port,
 			  enum ice_ptp_fec_mode fec_mode, u64 *pmd_adj)
 {
 	u64 cur_freq, clk_incval, tu_per_sec, mult, adj;
-	u32 pmd_adj_divisor, val;
-	int err;
 	u8 pmd_align;
+	u32 val;
+	int err;
 
 	err = ice_read_phy_reg_e822(hw, port, P_REG_PMD_ALIGNMENT, &val);
 	if (err) {
@@ -3824,9 +3824,6 @@ ice_phy_calc_pmd_adj_e822(struct ice_hw *hw, u8 port,
 
 	/* Calculate TUs per second */
 	tu_per_sec = cur_freq * clk_incval;
-
-	/* Get the link speed dependent PMD adjustment divisor */
-	pmd_adj_divisor = e822_vernier[link_spd].pmd_adj_divisor;
 
 	/* The PMD alignment adjustment measurement depends on the link speed,
 	 * and whether FEC is enabled. For each link speed, the alignment
@@ -3892,7 +3889,7 @@ ice_phy_calc_pmd_adj_e822(struct ice_hw *hw, u8 port,
 	 */
 	adj = DIV_U64(tu_per_sec, 125);
 	adj *= mult;
-	adj = DIV_U64(adj, pmd_adj_divisor);
+	adj = DIV_U64(adj, e822_vernier[link_spd].pmd_adj_divisor);
 
 	/* Finally, for 25G-RS and 50G-RS, a further adjustment for the Rx
 	 * cycle count is necessary.
@@ -3915,7 +3912,7 @@ ice_phy_calc_pmd_adj_e822(struct ice_hw *hw, u8 port,
 
 			cycle_adj = DIV_U64(tu_per_sec, 125);
 			cycle_adj *= mult;
-			cycle_adj = DIV_U64(cycle_adj, pmd_adj_divisor);
+			cycle_adj = DIV_U64(cycle_adj, e822_vernier[link_spd].pmd_adj_divisor);
 
 			adj += cycle_adj;
 		}
@@ -3937,7 +3934,7 @@ ice_phy_calc_pmd_adj_e822(struct ice_hw *hw, u8 port,
 
 			cycle_adj = DIV_U64(tu_per_sec, 125);
 			cycle_adj *= mult;
-			cycle_adj = DIV_U64(cycle_adj, pmd_adj_divisor);
+			cycle_adj = DIV_U64(cycle_adj, e822_vernier[link_spd].pmd_adj_divisor);
 
 			adj += cycle_adj;
 		}
