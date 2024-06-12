@@ -256,11 +256,11 @@ ice_phy_get_speed_and_fec_e822(struct ice_hw *hw, u8 port,
 void ice_phy_cfg_lane_e822(struct ice_hw *hw, u8 port);
 int
 ice_stop_phy_timer_e822(struct ice_hw *hw, u8 port, bool soft_reset);
-int
-ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass);
+int ice_start_phy_timer_e822(struct ice_hw *hw, u8 port);
 int ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port);
 int ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port);
-int ice_phy_exit_bypass_e822(struct ice_hw *hw, u8 port);
+int
+ice_phy_cfg_intr_e822(struct ice_hw *hw, u8 quad, bool ena, u8 threshold);
 
 /* E810 family functions */
 int ice_ptp_init_phy_e810(struct ice_hw *hw);
@@ -301,9 +301,11 @@ ice_ptp_read_tx_hwtstamp_status_eth56g(struct ice_hw *hw, u32 *ts_status);
 int
 ice_stop_phy_timer_eth56g(struct ice_hw *hw, u8 port, bool soft_reset);
 int
-ice_start_phy_timer_eth56g(struct ice_hw *hw, u8 port, bool bypass);
+ice_start_phy_timer_eth56g(struct ice_hw *hw, u8 port);
 int ice_phy_cfg_tx_offset_eth56g(struct ice_hw *hw, u8 port);
 int ice_phy_cfg_rx_offset_eth56g(struct ice_hw *hw, u8 port);
+int
+ice_phy_cfg_intr_eth56g(struct ice_hw *hw, u8 port, bool ena, u8 threshold);
 
 #define ICE_ETH56G_PLL_FREQ		800000000
 #define ICE_ETH56G_NOMINAL_INCVAL	0x140000000ULL
