@@ -380,10 +380,10 @@ ice_aq_manage_mac_read(struct ice_hw *hw, void *buf, u16 buf_size,
 		if (resp[i].addr_type == ICE_AQC_MAN_MAC_ADDR_TYPE_LAN) {
 			ice_memcpy(hw->port_info->mac.lan_addr,
 				   resp[i].mac_addr, ETH_ALEN,
-				   ICE_DMA_TO_NONDMA);
+				   ICE_NONDMA_TO_NONDMA);
 			ice_memcpy(hw->port_info->mac.perm_addr,
 				   resp[i].mac_addr,
-				   ETH_ALEN, ICE_DMA_TO_NONDMA);
+				   ETH_ALEN, ICE_NONDMA_TO_NONDMA);
 			break;
 		}
 	return 0;
