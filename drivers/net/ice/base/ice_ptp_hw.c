@@ -4065,6 +4065,9 @@ int ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port)
 	if (err)
 		return err;
 
+	ice_info(hw,
+		 "Port=%d Rx vernier offset calibration complete\n", port);
+
 	return 0;
 }
 
