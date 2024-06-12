@@ -12,8 +12,8 @@
 #define ICE_ETH_VLAN_TCI_OFFSET		14
 #define ICE_MAX_VLAN_ID			0xFFF
 #define ICE_IPV6_ETHER_ID		0x86DD
-#define ICE_IPV4_NVGRE_PROTO_ID		0x002F
 #define ICE_PPP_IPV6_PROTO_ID		0x0057
+#define ICE_IPV4_NVGRE_PROTO_ID		0x002F
 #define ICE_TCP_PROTO_ID		0x06
 #define ICE_GTPU_PROFILE		24
 #define ICE_MPLS_ETHER_ID		0x8847
@@ -1141,15 +1141,6 @@ static const u8 dummy_ipv6_gtpu_ipv6_udp_packet[] = {
 	0x00, 0x00, /* 2 bytes for 4 byte alignment */
 };
 
-static const struct ice_dummy_pkt_offsets dummy_ipv4_gtpu_ipv4_packet_offsets[] = {
-	{ ICE_MAC_OFOS,		0 },
-	{ ICE_IPV4_OFOS,	14 },
-	{ ICE_UDP_OF,		34 },
-	{ ICE_GTP,		42 },
-	{ ICE_IPV4_IL,		62 },
-	{ ICE_PROTOCOL_LAST,	0 },
-};
-
 static const u8 dummy_ipv4_gtpu_ipv4_packet[] = {
 	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
 	0x00, 0x00, 0x00, 0x00,
@@ -1180,8 +1171,17 @@ static const u8 dummy_ipv4_gtpu_ipv4_packet[] = {
 	0x00, 0x00,
 };
 
-static const
-struct ice_dummy_pkt_offsets dummy_ipv4_gtpu_ipv6_packet_offsets[] = {
+static const struct
+ice_dummy_pkt_offsets dummy_ipv4_gtpu_ipv4_packet_offsets[] = {
+	{ ICE_MAC_OFOS,		0 },
+	{ ICE_IPV4_OFOS,	14 },
+	{ ICE_UDP_OF,		34 },
+	{ ICE_GTP,		42 },
+	{ ICE_IPV4_IL,		62 },
+	{ ICE_PROTOCOL_LAST,	0 },
+};
+
+static const struct ice_dummy_pkt_offsets dummy_ipv4_gtpu_ipv6_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV4_OFOS,	14 },
 	{ ICE_UDP_OF,		34 },
@@ -1226,8 +1226,7 @@ static const u8 dummy_ipv4_gtpu_ipv6_packet[] = {
 	0x00, 0x00,
 };
 
-static const
-struct ice_dummy_pkt_offsets dummy_ipv6_gtpu_ipv4_packet_offsets[] = {
+static const struct ice_dummy_pkt_offsets dummy_ipv6_gtpu_ipv4_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV6_OFOS,	14 },
 	{ ICE_UDP_OF,		54 },
@@ -1272,8 +1271,7 @@ static const u8 dummy_ipv6_gtpu_ipv4_packet[] = {
 	0x00, 0x00,
 };
 
-static const
-struct ice_dummy_pkt_offsets dummy_ipv6_gtpu_ipv6_packet_offsets[] = {
+static const struct ice_dummy_pkt_offsets dummy_ipv6_gtpu_ipv6_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_IPV6_OFOS,	14 },
 	{ ICE_UDP_OF,		54 },
@@ -2221,6 +2219,7 @@ static struct ice_prof_type_entry ice_prof_type_tbl[ICE_GTPU_PROFILE] = {
 /**
  * ice_get_tun_type_for_recipe - get tunnel type for the recipe
  * @rid: recipe ID that we are populating
+ * @vlan: flag of vlan protocol
  */
 static enum ice_sw_tunnel_type ice_get_tun_type_for_recipe(u8 rid, bool vlan)
 {
@@ -2230,7 +2229,8 @@ static enum ice_sw_tunnel_type ice_get_tun_type_for_recipe(u8 rid, bool vlan)
 	u8 pppoe_profile[7] = {34, 35, 36, 37, 38, 39, 40};
 	u8 non_tun_profile[6] = {4, 5, 6, 7, 8, 9};
 	enum ice_sw_tunnel_type tun_type;
-	u16 i, j, k, profile_num = 0;
+	u16 i, j, profile_num = 0;
+	u16 k;
 	bool udp_tun_valid = false;
 	bool non_tun_valid = false;
 	bool pppoe_valid = false;
@@ -2760,7 +2760,7 @@ ice_free_sw_marker_lg(struct ice_hw *hw, u16 marker_lg_id, u32 sw_marker)
 		return ICE_ERR_NO_MEMORY;
 
 	sw_buf->num_elems = CPU_TO_LE16(num_elems);
-	if (sw_marker == (sw_marker & 0xFFFF))
+	if (sw_marker <= 0xFFFF)
 		sw_buf->res_type = CPU_TO_LE16(ICE_AQC_RES_TYPE_WIDE_TABLE_1);
 	else
 		sw_buf->res_type = CPU_TO_LE16(ICE_AQC_RES_TYPE_WIDE_TABLE_2);
@@ -5151,6 +5151,7 @@ ice_remove_rule_internal(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 
 	rule_lock = &recp_list->filt_rule_lock;
 	ice_acquire_lock(rule_lock);
+
 	list_elem = ice_find_rule_entry(&recp_list->filt_rules,
 					&f_entry->fltr_info);
 	if (!list_elem) {
@@ -7318,7 +7319,7 @@ static struct ice_protocol_entry ice_prot_id_tbl[ICE_PROTOCOL_LAST] = {
 	{ ICE_FLG_DIR,		ICE_META_DATA_ID_HW},
 };
 
-/**
+/*
  * ice_find_recp - find a recipe
  * @hw: pointer to the hardware structure
  * @lkup_exts: extension sequence to match
@@ -8162,6 +8163,18 @@ ice_get_compat_fv_bitmap(struct ice_hw *hw, struct ice_adv_rule_info *rinfo,
 	case ICE_SW_TUN_NVGRE:
 		prof_type = ICE_PROF_TUN_GRE;
 		break;
+	case ICE_SW_IPV4_TCP:
+		ice_set_bit(ICE_PROFID_IPV4_TCP, bm);
+		return;
+	case ICE_SW_IPV4_UDP:
+		ice_set_bit(ICE_PROFID_IPV4_UDP, bm);
+		return;
+	case ICE_SW_IPV6_TCP:
+		ice_set_bit(ICE_PROFID_IPV6_TCP, bm);
+		return;
+	case ICE_SW_IPV6_UDP:
+		ice_set_bit(ICE_PROFID_IPV6_UDP, bm);
+		return;
 	case ICE_SW_TUN_PPPOE:
 	case ICE_SW_TUN_PPPOE_QINQ:
 		prof_type = ICE_PROF_TUN_PPPOE;
@@ -8233,18 +8246,6 @@ ice_get_compat_fv_bitmap(struct ice_hw *hw, struct ice_adv_rule_info *rinfo,
 		return;
 	case ICE_SW_TUN_IPV4_AH:
 		ice_set_bit(ICE_PROFID_IPV4_AH, bm);
-		return;
-	case ICE_SW_IPV4_TCP:
-		ice_set_bit(ICE_PROFID_IPV4_TCP, bm);
-		return;
-	case ICE_SW_IPV4_UDP:
-		ice_set_bit(ICE_PROFID_IPV4_UDP, bm);
-		return;
-	case ICE_SW_IPV6_TCP:
-		ice_set_bit(ICE_PROFID_IPV6_TCP, bm);
-		return;
-	case ICE_SW_IPV6_UDP:
-		ice_set_bit(ICE_PROFID_IPV6_UDP, bm);
 		return;
 	case ICE_SW_TUN_IPV4_GTPU_NO_PAY:
 		ice_set_bit(ICE_PROFID_IPV4_GTPU_TEID, bm);
@@ -8725,6 +8726,34 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		}
 	}
 
+	if (tun_type == ICE_SW_IPV4_TCP) {
+		*pkt = dummy_tcp_packet;
+		*pkt_len = sizeof(dummy_tcp_packet);
+		*offsets = dummy_tcp_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_IPV4_UDP) {
+		*pkt = dummy_udp_packet;
+		*pkt_len = sizeof(dummy_udp_packet);
+		*offsets = dummy_udp_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_IPV6_TCP) {
+		*pkt = dummy_tcp_ipv6_packet;
+		*pkt_len = sizeof(dummy_tcp_ipv6_packet);
+		*offsets = dummy_tcp_ipv6_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_IPV6_UDP) {
+		*pkt = dummy_udp_ipv6_packet;
+		*pkt_len = sizeof(dummy_udp_ipv6_packet);
+		*offsets = dummy_udp_ipv6_packet_offsets;
+		return;
+	}
+
 	if (tun_type == ICE_SW_TUN_PPPOE_IPV6_QINQ) {
 		*pkt = dummy_qinq_pppoe_ipv6_packet;
 		*pkt_len = sizeof(dummy_qinq_pppoe_ipv6_packet);
@@ -8971,34 +9000,6 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		*pkt = dummy_pppoe_ipv6_udp_packet;
 		*pkt_len = sizeof(dummy_pppoe_ipv6_udp_packet);
 		*offsets = dummy_pppoe_ipv6_udp_packet_offsets;
-		return;
-	}
-
-	if (tun_type == ICE_SW_IPV4_TCP) {
-		*pkt = dummy_tcp_packet;
-		*pkt_len = sizeof(dummy_tcp_packet);
-		*offsets = dummy_tcp_packet_offsets;
-		return;
-	}
-
-	if (tun_type == ICE_SW_IPV4_UDP) {
-		*pkt = dummy_udp_packet;
-		*pkt_len = sizeof(dummy_udp_packet);
-		*offsets = dummy_udp_packet_offsets;
-		return;
-	}
-
-	if (tun_type == ICE_SW_IPV6_TCP) {
-		*pkt = dummy_tcp_ipv6_packet;
-		*pkt_len = sizeof(dummy_tcp_ipv6_packet);
-		*offsets = dummy_tcp_ipv6_packet_offsets;
-		return;
-	}
-
-	if (tun_type == ICE_SW_IPV6_UDP) {
-		*pkt = dummy_udp_ipv6_packet;
-		*pkt_len = sizeof(dummy_udp_ipv6_packet);
-		*offsets = dummy_udp_ipv6_packet_offsets;
 		return;
 	}
 
@@ -9881,6 +9882,7 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	} else {
 		adv_fltr->lkups = NULL;
 	}
+
 	if (!adv_fltr->lkups && !prof_rule) {
 		status = ICE_ERR_NO_MEMORY;
 		goto err_ice_add_adv_rule;
@@ -10169,7 +10171,7 @@ ice_rem_adv_rule_by_id(struct ice_hw *hw,
  *
  * This function is used to remove all the rules for a given VSI and as soon
  * as removing a rule fails, it will return immediately with the error code,
- * else it will return success
+ * else it will return 0.
  */
 int ice_rem_adv_rule_for_vsi(struct ice_hw *hw, u16 vsi_handle)
 {

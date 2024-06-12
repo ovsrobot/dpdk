@@ -923,12 +923,16 @@ static void ice_ptp_zero_syn_dlay(struct ice_hw *hw)
 	ice_flush(hw);
 }
 
+/* 56G PHY device functions
+ *
+ * The following functions operate on devices with the ETH 56G PHY.
+ */
+
 enum eth56g_res_type {
 	ETH56G_PHY_REG,
 	ETH56G_PHY_MEM,
 };
 
-/* 56G PHY access functions */
 static const u32 ice_eth56g_port_base[ICE_NUM_PHY_PORTS] = {
 	ICE_PHY0_BASE,
 	ICE_PHY1_BASE,
@@ -1006,10 +1010,11 @@ ice_read_phy_eth56g_raw_lp(struct ice_hw *hw, u8 phy_index, u32 reg_addr,
 }
 
 /**
- * ice_phy_port_reg_address_eth56g - Calculate a PHY port register address
+ * ice_phy_port_res_address_eth56g - Calculate a PHY port register address
  * @port: Port number to be written
  * @res_type: resource type (register/memory)
  * @offset: Offset from PHY port register base
+ *
  * @address: The result address
  */
 static int
@@ -1129,8 +1134,7 @@ ice_write_phy_reg_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 val)
 }
 
 /**
- * ice_read_phy_reg_eth56g_lp - Read a PHY port register with
- * lock parameter
+ * ice_read_phy_reg_eth56g_lp - Read a PHY port register with lock parameter
  * @hw: pointer to the HW struct
  * @port: Port number to be read
  * @offset: Offset from PHY port register base
@@ -1160,7 +1164,6 @@ ice_read_phy_reg_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 *val)
 
 /**
  * ice_phy_port_mem_read_eth56g_lp - Read a PHY port memory location
- * with lock parameter
  * @hw: pointer to the HW struct
  * @port: Port number to be read
  * @offset: Offset from PHY port register base
@@ -1176,12 +1179,13 @@ ice_phy_port_mem_read_eth56g_lp(struct ice_hw *hw, u8 port, u16 offset,
 }
 
 /**
- * ice_phy_port_mem_read_eth56g - Read a PHY port memory location with
- * sbq locked
+ * ice_phy_port_mem_read_eth56g - Read a PHY port memory location
  * @hw: pointer to the HW struct
  * @port: Port number to be read
  * @offset: Offset from PHY port register base
  * @val: Pointer to the value to read (out param)
+ *
+ * Takes the sideband queue lock.
  */
 static int
 ice_phy_port_mem_read_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 *val)
@@ -1190,8 +1194,7 @@ ice_phy_port_mem_read_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 *val)
 }
 
 /**
- * ice_phy_port_mem_write_eth56g_lp - Write a PHY port memory location with
- * lock parameter
+ * ice_phy_port_mem_write_eth56g_lp - Write a PHY port memory location
  * @hw: pointer to the HW struct
  * @port: Port number to be read
  * @offset: Offset from PHY port register base
@@ -1207,12 +1210,13 @@ ice_phy_port_mem_write_eth56g_lp(struct ice_hw *hw, u8 port, u16 offset,
 }
 
 /**
- * ice_phy_port_mem_write_eth56g - Write a PHY port memory location with
- * sbq locked
+ * ice_phy_port_mem_write_eth56g - Write a PHY port memory location
  * @hw: pointer to the HW struct
  * @port: Port number to be read
  * @offset: Offset from PHY port register base
  * @val: Pointer to the value to read (out param)
+ *
+ * Takes the sideband queue lock.
  */
 static int
 ice_phy_port_mem_write_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 val)
@@ -1553,8 +1557,8 @@ ice_ptp_prep_port_phy_time_eth56g(struct ice_hw *hw, u8 port, u64 phy_time)
 
 	/* Tx case */
 	err = ice_write_64b_phy_reg_eth56g(hw, port,
-					      PHY_REG_TX_TIMER_INC_PRE_L,
-					      phy_time);
+					   PHY_REG_TX_TIMER_INC_PRE_L,
+					   phy_time);
 	if (err)
 		return err;
 
@@ -1604,7 +1608,7 @@ ice_ptp_prep_phy_time_eth56g(struct ice_hw *hw, u32 time)
  * ice_ptp_prep_port_adj_eth56g - Prepare a single port for time adjust
  * @hw: pointer to HW struct
  * @port: Port number to be programmed
- * @time: time in cycles to adjust the port Tx and Rx clocks
+ * @time: time in cycles to adjust the port clocks
  * @lock_sbq: true to lock the sbq sq_lock (the usual case); false if the
  *            sq_lock has already been locked at a higher level
  *
@@ -1733,7 +1737,7 @@ ice_ptp_read_phy_incval_eth56g(struct ice_hw *hw, u8 port, u64 *incval)
 	int err;
 
 	err = ice_read_40b_phy_reg_eth56g(hw, port, PHY_REG_TIMETUS_L,
-					     incval);
+					  incval);
 	if (err) {
 		ice_debug(hw, ICE_DBG_PTP, "Failed to read TIMETUS_L, err %d\n",
 			  err);
@@ -2909,8 +2913,7 @@ ice_read_phy_tstamp_e822(struct ice_hw *hw, u8 quad, u8 idx, u64 *tstamp)
  * This function should only be called on an idx whose bit is set according to
  * ice_get_phy_tx_tstamp_ready().
  */
-static int
-ice_clear_phy_tstamp_e822(struct ice_hw *hw, u8 quad, u8 idx)
+static int ice_clear_phy_tstamp_e822(struct ice_hw *hw, u8 quad, u8 idx)
 {
 	int err;
 	u16 lo_addr, hi_addr;
@@ -3766,14 +3769,19 @@ ice_calc_fixed_tx_offset_e822(struct ice_hw *hw, enum ice_ptp_link_spd link_spd)
  * adjust Tx timestamps by. This is calculated by combining some known static
  * latency along with the Vernier offset computations done by hardware.
  *
- * This function must be called only after the offset registers are valid,
- * i.e. after the Vernier calibration wait has passed, to ensure that the PHY
- * has measured the offset.
+ * This function will not return successfully until the Tx offset calculations
+ * have been completed, which requires waiting until at least one packet has
+ * been transmitted by the device. It is safe to call this function
+ * periodically until calibration succeeds, as it will only program the offset
+ * once.
  *
  * To avoid overflow, when calculating the offset based on the known static
  * latency values, we use measurements in 1/100th of a nanosecond, and divide
  * the TUs per second up front. This avoids overflow while allowing
  * calculation of the adjustment using integer arithmetic.
+ *
+ * Returns zero on success, ICE_ERR_NOT_READY if the hardware vernier offset
+ * calibration has not completed, or another error code on failure.
  */
 int ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 {
@@ -3832,6 +3840,8 @@ int ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 	err = ice_write_phy_reg_e822(hw, port, P_REG_TX_OR, 1);
 	if (err)
 		return err;
+
+	ice_info(hw, "Port=%d Tx vernier offset calibration complete\n", port);
 
 	return 0;
 }
@@ -4076,6 +4086,11 @@ ice_calc_fixed_rx_offset_e822(struct ice_hw *hw, enum ice_ptp_link_spd link_spd)
  * measurements taken in hardware with some data about known fixed delay as
  * well as adjusting for multi-lane alignment delay.
  *
+ * This function will not return successfully until the Rx offset calculations
+ * have been completed, which requires waiting until at least one packet has
+ * been received by the device. It is safe to call this function periodically
+ * until calibration succeeds, as it will only program the offset once.
+ *
  * This function must be called only after the offset registers are valid,
  * i.e. after the Vernier calibration wait has passed, to ensure that the PHY
  * has measured the offset.
@@ -4084,6 +4099,9 @@ ice_calc_fixed_rx_offset_e822(struct ice_hw *hw, enum ice_ptp_link_spd link_spd)
  * latency values, we use measurements in 1/100th of a nanosecond, and divide
  * the TUs per second up front. This avoids overflow while allowing
  * calculation of the adjustment using integer arithmetic.
+ *
+ * Returns zero on success, ICE_ERR_NOT_READY if the hardware vernier offset
+ * calibration has not completed, or another error code on failure.
  */
 int ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port)
 {
@@ -4420,8 +4438,7 @@ ice_stop_phy_timer_e822(struct ice_hw *hw, u8 port, bool soft_reset)
  * timestamps. Use ice_phy_exit_bypass_e822 to exit bypass mode once hardware
  * has completed offset calculation.
  */
-int
-ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass)
+int ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass)
 {
 	u32 lo, hi, val;
 	u64 incval;
@@ -4853,8 +4870,7 @@ ice_read_phy_tstamp_e810(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
  * This function must only be called on a timestamp index whose valid bit is
  * set according to ice_get_phy_tx_tstamp_ready().
  */
-static int
-ice_clear_phy_tstamp_e810(struct ice_hw *hw, u8 lport, u8 idx)
+static int ice_clear_phy_tstamp_e810(struct ice_hw *hw, u8 lport, u8 idx)
 {
 	int err;
 	u32 lo_addr, hi_addr;
@@ -4885,8 +4901,6 @@ ice_clear_phy_tstamp_e810(struct ice_hw *hw, u8 lport, u8 idx)
  *
  * Enable the timesync PTP functionality for the external PHY connected to
  * this function.
- *
- * Note there is no equivalent function needed on E822 based devices.
  */
 int ice_ptp_init_phy_e810(struct ice_hw *hw)
 {
@@ -4966,8 +4980,7 @@ static int ice_ptp_prep_phy_time_e810(struct ice_hw *hw, u32 time)
  * the PHY timer, usually in units of nominal nanoseconds. Negative
  * adjustments are supported using 2s complement arithmetic.
  */
-static int
-ice_ptp_prep_phy_adj_e810(struct ice_hw *hw, s32 adj, bool lock_sbq)
+static int ice_ptp_prep_phy_adj_e810(struct ice_hw *hw, s32 adj, bool lock_sbq)
 {
 	u8 tmr_idx;
 	int err;
@@ -5005,8 +5018,7 @@ ice_ptp_prep_phy_adj_e810(struct ice_hw *hw, s32 adj, bool lock_sbq)
  * ETH_GLTSYN_SHADJ_L and ETH_GLTSYN_SHADJ_H registers. The actual change is
  * completed by issuing an ICE_PTP_INIT_INCVAL command.
  */
-static int
-ice_ptp_prep_phy_incval_e810(struct ice_hw *hw, u64 incval)
+static int ice_ptp_prep_phy_incval_e810(struct ice_hw *hw, u64 incval)
 {
 	u32 high, low;
 	u8 tmr_idx;
@@ -5124,9 +5136,9 @@ ice_get_phy_tx_tstamp_ready_e810(struct ice_hw *hw, u8 port, u64 *tstamp_ready)
  * @hw: pointer to the hw struct
  * @pca9575_handle: GPIO controller's handle
  *
- * Find and return the GPIO controller's handle in the netlist.
- * When found - the value will be cached in the hw structure and following calls
- * will return cached value
+ * Find and return the GPIO controller's handle by checking what drives clock
+ * mux pin. When found - the value will be cached in the hw structure and
+ * following calls will return cached value.
  */
 static int
 ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
@@ -5170,7 +5182,7 @@ ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
 	if (status)
 		return ICE_ERR_NOT_SUPPORTED;
 
-	/* Verify if we found the right IO expander type */
+	/* Verify if PCA9575 drives the pin */
 	if (node_part_number != ICE_AQC_GET_LINK_TOPO_NODE_NR_PCA9575)
 		return ICE_ERR_NOT_SUPPORTED;
 
@@ -5314,8 +5326,8 @@ ice_write_pca9575_reg_e810t(struct ice_hw *hw, u8 offset, u8 data)
  */
 bool ice_is_pca9575_present(struct ice_hw *hw)
 {
-	int status;
 	u16 handle = 0;
+	int status;
 
 	status = ice_get_pca9575_handle(hw, &handle);
 	if (!status && handle)
@@ -5955,9 +5967,9 @@ int ice_ptp_adj_clock(struct ice_hw *hw, s32 adj, bool lock_sbq)
 	tmr_idx = hw->func_caps.ts_func_info.tmr_index_owned;
 
 	/* Write the desired clock adjustment into the GLTSYN_SHADJ register.
-	 * For an ICE_PTP_ADJ_TIME command, this set of registers represents
-	 * the value to add to the clock time. It supports subtraction by
-	 * interpreting the value as a 2's complement integer.
+	 * For an ICE_PTP_ADJ_TIME command, this set of registers represents the value
+	 * to add to the clock time. It supports subtraction by interpreting
+	 * the value as a 2's complement integer.
 	 */
 	wr32(hw, GLTSYN_SHADJ_L(tmr_idx), 0);
 	wr32(hw, GLTSYN_SHADJ_H(tmr_idx), adj);
@@ -6097,8 +6109,7 @@ int ice_ptp_clear_phy_offset_ready(struct ice_hw *hw)
  * the block is the quad to read from. For E810 devices, the block is the
  * logical port to read from.
  */
-int
-ice_read_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx, u64 *tstamp)
+int ice_read_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx, u64 *tstamp)
 {
 	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
@@ -6120,12 +6131,17 @@ ice_read_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx, u64 *tstamp)
  * @block: the block to read from
  * @idx: the timestamp index to reset
  *
- * Clear a timestamp, resetting its valid bit, from the timestamp block. For
- * E822 devices, the block is the quad to clear from. For E810 devices, the
- * block is the logical port to clear from.
+ * Clear a timestamp from the timestamp block, discarding its value without
+ * returning it. This resets the memory status bit for the timestamp index
+ * allowing it to be reused for another timestamp in the future.
+ *
+ * For E822 devices, the block number is the PHY quad to clear from. For E810
+ * devices, the block number is the logical port to clear from.
+ *
+ * This function must only be called on a timestamp index whose valid bit is
+ * set according to ice_get_phy_tx_tstamp_ready().
  */
-int
-ice_clear_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx)
+int ice_clear_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx)
 {
 	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
