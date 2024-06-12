@@ -549,6 +549,9 @@ ice_dwnld_sign_and_cfg_segs(struct ice_hw *hw, struct ice_pkg_hdr *pkg_hdr,
 	start = LE32_TO_CPU(seg->signed_buf_start);
 	count = LE32_TO_CPU(seg->signed_buf_count);
 
+	if (count == 0 && seg->seg_id == SEGMENT_TYPE_ICE_E830)
+		seg->buf_tbl.buf_count = 1;
+
 	state = ice_download_pkg_sig_seg(hw, seg);
 	if (state)
 		goto exit;
