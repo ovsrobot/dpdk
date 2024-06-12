@@ -703,7 +703,7 @@ ice_aq_get_link_info(struct ice_port_info *pi, bool ena_lse,
 
 	status = ice_aq_send_cmd(hw, &desc, &link_data, sizeof(link_data), cd);
 
-	if (status != 0)
+	if (status)
 		return status;
 
 	/* save off old link status information */
@@ -3973,7 +3973,7 @@ int
 ice_aq_set_link_restart_an(struct ice_port_info *pi, bool ena_link,
 			   struct ice_sq_cd *cd)
 {
-	enum ice_status status = ICE_ERR_AQ_ERROR;
+	int status = ICE_ERR_AQ_ERROR;
 	struct ice_aqc_restart_an *cmd;
 	struct ice_aq_desc desc;
 
@@ -3997,7 +3997,7 @@ ice_aq_set_link_restart_an(struct ice_port_info *pi, bool ena_link,
 	else
 		pi->phy.curr_user_phy_cfg.caps &= ~ICE_AQC_PHY_EN_LINK;
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -5228,7 +5228,7 @@ ice_ena_vsi_txq(struct ice_port_info *pi, u16 vsi_handle, u8 tc, u16 q_handle,
 
 	/* add the LAN queue */
 	status = ice_aq_add_lan_txq(hw, num_qgrps, buf, buf_size, cd);
-	if (status != 0) {
+	if (status) {
 		ice_debug(hw, ICE_DBG_SCHED, "enable queue %d failed %d\n",
 			  LE16_TO_CPU(buf->txqs[0].txq_id),
 			  hw->adminq.sq_last_status);
@@ -5323,7 +5323,7 @@ ice_dis_vsi_txq(struct ice_port_info *pi, u16 vsi_handle, u8 tc, u8 num_queues,
 		status = ice_aq_dis_lan_txq(hw, 1, qg_list, buf_size, rst_src,
 					    vmvf_num, cd);
 
-		if (status != 0)
+		if (status)
 			break;
 		ice_free_sched_node(pi, node);
 		q_ctx->q_handle = ICE_INVAL_Q_HANDLE;
@@ -5664,7 +5664,7 @@ ice_sched_query_elem(struct ice_hw *hw, u32 node_teid,
 	buf->node_teid = CPU_TO_LE32(node_teid);
 	status = ice_aq_query_sched_elems(hw, 1, buf, buf_size, &num_elem_ret,
 					  NULL);
-	if (status != 0 || num_elem_ret != 1)
+	if (status || num_elem_ret != 1)
 		ice_debug(hw, ICE_DBG_SCHED, "query element failed\n");
 	return status;
 }

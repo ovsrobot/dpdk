@@ -3823,11 +3823,11 @@ ice_alloc_legacy_shared_recipe(struct ice_hw *hw, u16 *rid)
  * @hw: pointer to the hardware structure
  * @rid: recipe ID returned as response to AQ call
  */
-static enum ice_status
+static int
 ice_alloc_subscribable_recipe(struct ice_hw *hw, u16 *rid)
 {
 	struct ice_aqc_alloc_free_res_elem *buf;
-	enum ice_status status;
+	int status;
 	u16 buf_len;
 
 	buf_len = ice_struct_size(buf, elem, 1);
@@ -3860,7 +3860,7 @@ exit:
  * @hw: pointer to the hardware structure
  * @rid: recipe ID returned as response to AQ call
  */
-enum ice_status ice_alloc_recipe(struct ice_hw *hw, u16 *rid)
+int ice_alloc_recipe(struct ice_hw *hw, u16 *rid)
 {
 	if (hw->subscribable_recipes_supported)
 		return ice_alloc_subscribable_recipe(hw, rid);
@@ -3873,7 +3873,7 @@ enum ice_status ice_alloc_recipe(struct ice_hw *hw, u16 *rid)
  * @hw: pointer to the hardware structure
  * @rid: recipe ID to free
  */
-static enum ice_status ice_free_recipe_res(struct ice_hw *hw, u16 rid)
+static int ice_free_recipe_res(struct ice_hw *hw, u16 rid)
 {
 	return ice_free_hw_res(hw, ICE_AQC_RES_TYPE_RECIPE, 1, &rid);
 }
@@ -3883,10 +3883,10 @@ static enum ice_status ice_free_recipe_res(struct ice_hw *hw, u16 rid)
  * @hw: pointer to the hardware structure
  * @rid: recipe ID to subscribe to
  */
-static enum ice_status ice_subscribe_recipe(struct ice_hw *hw, u16 rid)
+static int ice_subscribe_recipe(struct ice_hw *hw, u16 rid)
 {
 	struct ice_aqc_alloc_free_res_elem *buf;
-	enum ice_status status;
+	int status;
 	u16 buf_len;
 
 	buf_len = ice_struct_size(buf, elem, 1);
@@ -3939,12 +3939,12 @@ static void ice_subscribable_recp_shared(struct ice_hw *hw, u16 rid)
  * @hw: pointer to the hardware structure
  * @recp: the recipe struct resource to unassociate and free
  */
-static enum ice_status ice_release_recipe_res(struct ice_hw *hw,
-					      struct ice_sw_recipe *recp)
+static int ice_release_recipe_res(struct ice_hw *hw,
+				  struct ice_sw_recipe *recp)
 {
 	ice_declare_bitmap(r_bitmap, ICE_MAX_NUM_RECIPES);
 	struct ice_switch_info *sw = hw->switch_info;
-	enum ice_status status = ICE_SUCCESS;
+	int status = 0;
 	u16 num_recp, num_prof;
 	u8 rid, prof, i, j;
 
@@ -10418,7 +10418,7 @@ ice_replay_vsi_all_fltr(struct ice_hw *hw, struct ice_port_info *pi,
 						     head);
 		else
 			status = ice_replay_vsi_adv_rule(hw, vsi_handle, head);
-		if (status != 0)
+		if (status)
 			return status;
 	}
 

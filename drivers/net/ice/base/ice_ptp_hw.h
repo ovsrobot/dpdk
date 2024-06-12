@@ -170,30 +170,30 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 int
 ice_ptp_write_port_cmd_e822(struct ice_hw *hw, u8 port,
 			    enum ice_ptp_tmr_cmd cmd, bool lock_sbq);
-enum ice_status
+int
 ice_ptp_write_port_cmd(struct ice_hw *hw, u8 port, enum ice_ptp_tmr_cmd cmd,
 		       bool lock_sbq);
-enum ice_status
+int
 ice_cfg_cgu_pll_e825c(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
 		      enum ice_clk_src *clk_src);
-enum ice_status
+int
 ice_cgu_ts_pll_lost_lock_e825c(struct ice_hw *hw, bool *lost_lock);
-enum ice_status ice_cgu_ts_pll_restart_e825c(struct ice_hw *hw);
-enum ice_status
+int ice_cgu_ts_pll_restart_e825c(struct ice_hw *hw);
+int
 ice_cgu_bypass_mux_port_active_e825c(struct ice_hw *hw, u8 port, bool *active);
-enum ice_status
+int
 ice_cfg_cgu_bypass_mux_e825c(struct ice_hw *hw, u8 port_num, bool clock_1588,
 			     unsigned int ena);
-enum ice_status ice_cfg_synce_ethdiv_e825c(struct ice_hw *hw, u8 *divider);
+int ice_cfg_synce_ethdiv_e825c(struct ice_hw *hw, u8 *divider);
 
 /* E8 Family */
-enum ice_status
+int
 ice_ptp_port_cmd_e830(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 		      bool lock_sbq);
-enum ice_status
+int
 ice_ptp_port_cmd_e810(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 		      bool lock_sbq);
-enum ice_status
+int
 ice_get_phy_tx_tstamp_ready_e830(struct ice_hw *hw, u8 port, u64 *tstamp_ready);
 int
 ice_ptp_port_cmd_eth56g(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,

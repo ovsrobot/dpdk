@@ -354,7 +354,7 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
  * Configure the Clock Generation Unit with the desired clock frequency and
  * time reference, enabling the PLL which drives the PTP hardware clock.
  */
-enum ice_status
+int
 ice_cfg_cgu_pll_e825c(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
 		      enum ice_clk_src *clk_src)
 {
@@ -364,7 +364,7 @@ ice_cfg_cgu_pll_e825c(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
 	union nac_cgu_dword22 dw22;
 	union nac_cgu_dword24 dw24;
 	union nac_cgu_dword9 dw9;
-	enum ice_status status;
+	int status;
 
 	if (*clk_freq >= NUM_ICE_TIME_REF_FREQ) {
 		ice_warn(hw, "Invalid TIME_REF frequency %u\n", *clk_freq);
@@ -492,7 +492,7 @@ ice_cfg_cgu_pll_e825c(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
 	*clk_freq = (enum ice_time_ref_freq)dw9.field.time_ref_freq_sel;
 	*clk_src = (enum ice_clk_src)dw23.field.time_ref_sel;
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -502,7 +502,7 @@ ice_cfg_cgu_pll_e825c(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
  * Configure the Clock Generation Unit TS PLL sticky bits so they don't latch on
  * losing TS PLL lock, but always show current state.
  */
-static enum ice_status ice_cfg_cgu_pll_dis_sticky_bits_e822(struct ice_hw *hw)
+static int ice_cfg_cgu_pll_dis_sticky_bits_e822(struct ice_hw *hw)
 {
 	union tspll_cntr_bist_settings cntr_bist;
 	int status;
@@ -527,10 +527,10 @@ static enum ice_status ice_cfg_cgu_pll_dis_sticky_bits_e822(struct ice_hw *hw)
  * Configure the Clock Generation Unit TS PLL sticky bits so they don't latch on
  * losing TS PLL lock, but always show current state.
  */
-static enum ice_status ice_cfg_cgu_pll_dis_sticky_bits_e825c(struct ice_hw *hw)
+static int ice_cfg_cgu_pll_dis_sticky_bits_e825c(struct ice_hw *hw)
 {
 	union tspll_bw_tdc_e825c bw_tdc;
-	enum ice_status status;
+	int status;
 
 	status = ice_read_cgu_reg_e82x(hw, TSPLL_BW_TDC_E825C,
 				       &bw_tdc.val);
@@ -549,11 +549,11 @@ static enum ice_status ice_cfg_cgu_pll_dis_sticky_bits_e825c(struct ice_hw *hw)
  * @hw: pointer to the HW struct
  * @lost_lock: output flag for reporting lost lock
  */
-enum ice_status
+int
 ice_cgu_ts_pll_lost_lock_e825c(struct ice_hw *hw, bool *lost_lock)
 {
 	union tspll_ro_lock_e825c ro_lock;
-	enum ice_status status;
+	int status;
 
 	status = ice_read_cgu_reg_e82x(hw, TSPLL_RO_LOCK_E825C, &ro_lock.val);
 	if (status)
@@ -565,17 +565,17 @@ ice_cgu_ts_pll_lost_lock_e825c(struct ice_hw *hw, bool *lost_lock)
 	else
 		*lost_lock = false;
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
  * ice_cgu_ts_pll_restart_e825c - trigger TS PLL restart
  * @hw: pointer to the HW struct
  */
-enum ice_status ice_cgu_ts_pll_restart_e825c(struct ice_hw *hw)
+int ice_cgu_ts_pll_restart_e825c(struct ice_hw *hw)
 {
 	union nac_cgu_dword23_e825c dw23;
-	enum ice_status status;
+	int status;
 
 	/* Read the initial values of DW23 */
 	status = ice_read_cgu_reg_e82x(hw, NAC_CGU_DWORD23_E825C, &dw23.val);
@@ -599,7 +599,7 @@ enum ice_status ice_cgu_ts_pll_restart_e825c(struct ice_hw *hw)
 	if (status)
 		return status;
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 #define E825C_CGU_BYPASS_MUX_OFFSET	3
@@ -620,11 +620,11 @@ static u32 cgu_bypass_mux_port(struct ice_hw *hw, u8 port)
  * @port: number of the port
  * @active: output flag showing if port is active
  */
-enum ice_status
+int
 ice_cgu_bypass_mux_port_active_e825c(struct ice_hw *hw, u8 port, bool *active)
 {
 	union nac_cgu_dword11_e825c dw11;
-	enum ice_status status;
+	int status;
 
 	status = ice_read_cgu_reg_e82x(hw, NAC_CGU_DWORD11_E825C, &dw11.val);
 	if (status)
@@ -635,7 +635,7 @@ ice_cgu_bypass_mux_port_active_e825c(struct ice_hw *hw, u8 port, bool *active)
 	else
 		*active = false;
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -645,13 +645,13 @@ ice_cgu_bypass_mux_port_active_e825c(struct ice_hw *hw, u8 port, bool *active)
  * @clock_1588: true to enable 1588 reference, false to recover from port
  * @ena: true to enable the reference, false if disable
  */
-enum ice_status
+int
 ice_cfg_cgu_bypass_mux_e825c(struct ice_hw *hw, u8 port, bool clock_1588,
 			     unsigned int ena)
 {
 	union nac_cgu_dword11_e825c dw11;
 	union nac_cgu_dword10_e825c dw10;
-	enum ice_status status;
+	int status;
 
 	status = ice_read_cgu_reg_e82x(hw, NAC_CGU_DWORD11_E825C, &dw11.val);
 	if (status)
@@ -682,7 +682,7 @@ ice_cfg_cgu_bypass_mux_e825c(struct ice_hw *hw, u8 port, bool clock_1588,
  * @link_speed: link speed of the port
  * @divider: output value, calculated divider
  */
-static enum ice_status ice_get_div_e825c(u16 link_speed, u8 *divider)
+static int ice_get_div_e825c(u16 link_speed, u8 *divider)
 {
 	switch (link_speed) {
 	case ICE_AQ_LINK_SPEED_100GB:
@@ -705,7 +705,7 @@ static enum ice_status ice_get_div_e825c(u16 link_speed, u8 *divider)
 	default:
 		return ICE_ERR_NOT_SUPPORTED;
 	}
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -713,10 +713,10 @@ static enum ice_status ice_get_div_e825c(u16 link_speed, u8 *divider)
  * @hw: pointer to the HW struct
  * @divider: output parameter, returns used divider value
  */
-enum ice_status ice_cfg_synce_ethdiv_e825c(struct ice_hw *hw, u8 *divider)
+int ice_cfg_synce_ethdiv_e825c(struct ice_hw *hw, u8 *divider)
 {
 	union nac_cgu_dword10_e825c dw10;
-	enum ice_status status;
+	int status;
 	u16 link_speed;
 
 	link_speed = hw->port_info->phy.link_info.link_speed;
@@ -742,12 +742,12 @@ enum ice_status ice_cfg_synce_ethdiv_e825c(struct ice_hw *hw, u8 *divider)
  *
  * Initialize the Clock Generation Unit of the E822/E823/E825 device.
  */
-static enum ice_status ice_init_cgu_e82x(struct ice_hw *hw)
+static int ice_init_cgu_e82x(struct ice_hw *hw)
 {
 	struct ice_ts_func_info *ts_info = &hw->func_caps.ts_func_info;
 	enum ice_time_ref_freq time_ref_freq;
 	enum ice_clk_src clk_src;
-	enum ice_status status;
+	int status;
 
 	/* Disable sticky lock detection so lock status reported is accurate */
 	if (ice_is_e825c(hw))
@@ -4904,9 +4904,8 @@ ice_ptp_prep_phy_adj_target_e810(struct ice_hw *hw, u32 target_time)
  * Prepare the external PHYs connected to this device for a timer sync
  * command.
  */
-enum ice_status
-ice_ptp_port_cmd_e810(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
-		      bool lock_sbq)
+int ice_ptp_port_cmd_e810(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
+			  bool lock_sbq)
 {
 	u32 val = ice_ptp_tmr_cmd_to_port_reg(hw, cmd);
 
@@ -5149,7 +5148,7 @@ bool ice_is_pca9575_present(struct ice_hw *hw)
  * GLTSYN_INCVAL_L and GLTSYN_INCVAL_H registers. The actual change is
  * completed by FW automatically.
  */
-static enum ice_status
+static int
 ice_ptp_write_direct_incval_e830(struct ice_hw *hw, u64 incval)
 {
 	u32 high, low;
@@ -5162,7 +5161,7 @@ ice_ptp_write_direct_incval_e830(struct ice_hw *hw, u64 incval)
 	wr32(hw, GLTSYN_INCVAL_L(tmr_idx), low);
 	wr32(hw, GLTSYN_INCVAL_H(tmr_idx), high);
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -5177,7 +5176,7 @@ ice_ptp_write_direct_incval_e830(struct ice_hw *hw, u64 incval)
  * The time value is the upper 32 bits of the PHY timer, usually in units of
  * nominal nanoseconds.
  */
-static enum ice_status
+static int
 ice_ptp_write_direct_phc_time_e830(struct ice_hw *hw, u64 time)
 {
 	u8 tmr_idx;
@@ -5188,7 +5187,7 @@ ice_ptp_write_direct_phc_time_e830(struct ice_hw *hw, u64 time)
 	wr32(hw, GLTSYN_TIME_L(tmr_idx), ICE_LO_DWORD(time));
 	wr32(hw, GLTSYN_TIME_H(tmr_idx), ICE_HI_DWORD(time));
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -5200,7 +5199,7 @@ ice_ptp_write_direct_phc_time_e830(struct ice_hw *hw, u64 time)
  * Prepare the external PHYs connected to this device for a timer sync
  * command.
  */
-enum ice_status
+int
 ice_ptp_port_cmd_e830(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 		      bool lock_sbq)
 {
@@ -5220,7 +5219,7 @@ ice_ptp_port_cmd_e830(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
  * Read a 40bit timestamp value out of the timestamp block of the external PHY
  * on the E830 device.
  */
-static enum ice_status
+static int
 ice_read_phy_tstamp_e830(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
 {
 	u32 hi_addr = E830_HIGH_TX_MEMORY_BANK(idx, lport);
@@ -5239,7 +5238,7 @@ ice_read_phy_tstamp_e830(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
 	 */
 	*tstamp = ((u64)hi) << TS_HIGH_S | ((u64)lo & TS_LOW_M);
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -5249,7 +5248,7 @@ ice_read_phy_tstamp_e830(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
  * @tstamp_ready: contents of the Tx memory status register
  *
  */
-enum ice_status
+int
 ice_get_phy_tx_tstamp_ready_e830(struct ice_hw *hw, u8 port, u64 *tstamp_ready)
 {
 	u64 hi;
@@ -5260,7 +5259,7 @@ ice_get_phy_tx_tstamp_ready_e830(struct ice_hw *hw, u8 port, u64 *tstamp_ready)
 
 	*tstamp_ready = hi | lo;
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /* Device agnostic functions
@@ -5330,9 +5329,8 @@ void ice_ptp_unlock(struct ice_hw *hw)
  * programming only a single port, instead use ice_ptp_one_port_cmd() to
  * ensure non-modified ports get properly initialized to ICE_PTP_NOP.
  */
-enum ice_status
-ice_ptp_write_port_cmd(struct ice_hw *hw, u8 port, enum ice_ptp_tmr_cmd cmd,
-		       bool lock_sbq)
+int ice_ptp_write_port_cmd(struct ice_hw *hw, u8 port,
+			   enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
 {
 	switch (hw->phy_cfg) {
 	case ICE_PHY_E822:
@@ -5353,15 +5351,14 @@ ice_ptp_write_port_cmd(struct ice_hw *hw, u8 port, enum ice_ptp_tmr_cmd cmd,
  * ports to ICE_PTP_NOP. This allows executing a command on a single port
  * while ensuring all other ports do not execute stale commands.
  */
-enum ice_status
-ice_ptp_one_port_cmd(struct ice_hw *hw, u8 configured_port,
-		     enum ice_ptp_tmr_cmd configured_cmd, bool lock_sbq)
+int ice_ptp_one_port_cmd(struct ice_hw *hw, u8 configured_port,
+			 enum ice_ptp_tmr_cmd configured_cmd, bool lock_sbq)
 {
 	u8 port;
 
 	for (port = 0; port < hw->max_phy_port; port++) {
 		enum ice_ptp_tmr_cmd cmd;
-		enum ice_status status;
+		int status;
 
 		/* Program the configured port with the configured command,
 		 * program all other ports with ICE_PTP_NOP.
@@ -5373,7 +5370,7 @@ ice_ptp_one_port_cmd(struct ice_hw *hw, u8 configured_port,
 			return status;
 	}
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -5386,8 +5383,8 @@ ice_ptp_one_port_cmd(struct ice_hw *hw, u8 configured_port,
  * some families this can be done in one shot, but for other families each
  * port must be configured individually.
  */
-static enum ice_status
-ice_ptp_port_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
+static int ice_ptp_port_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
+			    bool lock_sbq)
 {
 	u8 port;
 
@@ -5403,14 +5400,14 @@ ice_ptp_port_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
 
 	/* PHY models which require programming each port separately */
 	for (port = 0; port < hw->max_phy_port; port++) {
-		enum ice_status status;
+		int status;
 
 		status = ice_ptp_write_port_cmd(hw, port, cmd, lock_sbq);
 		if (status)
 			return status;
 	}
 
-	return ICE_SUCCESS;
+	return 0;
 }
 
 /**
@@ -5605,7 +5602,7 @@ int ice_ptp_adj_clock(struct ice_hw *hw, s32 adj, bool lock_sbq)
 		break;
 	case ICE_PHY_E830:
 		/* E830 sync PHYs automatically after setting GLTSYN_SHADJ */
-		return ICE_SUCCESS;
+		return 0;
 	case ICE_PHY_E810:
 		status = ice_ptp_prep_phy_adj_e810(hw, adj, lock_sbq);
 		break;
