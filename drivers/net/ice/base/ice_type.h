@@ -1400,6 +1400,8 @@ struct ice_hw {
 	ice_declare_bitmap(hw_ptype, ICE_FLOW_PTYPE_MAX);
 	u8 dvm_ena;
 	u16 io_expander_handle;
+
+	bool subscribable_recipes_supported;
 };
 
 /* Statistics collected by each port, VSI, VEB, and S-channel */
