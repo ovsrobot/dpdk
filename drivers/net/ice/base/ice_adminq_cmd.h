@@ -496,6 +496,7 @@ struct ice_aqc_vsi_props {
 #define ICE_AQ_VSI_SW_FLAG_RX_PRUNE_EN_S	0
 #define ICE_AQ_VSI_SW_FLAG_RX_PRUNE_EN_M	(0xF << ICE_AQ_VSI_SW_FLAG_RX_PRUNE_EN_S)
 #define ICE_AQ_VSI_SW_FLAG_RX_VLAN_PRUNE_ENA	BIT(0)
+#define ICE_AQ_VSI_SW_FLAG_RX_PASS_PRUNE_ENA	BIT(3)
 #define ICE_AQ_VSI_SW_FLAG_LAN_ENA		BIT(4)
 	u8 veb_stat_id;
 #define ICE_AQ_VSI_SW_VEB_STAT_ID_S		0
@@ -894,6 +895,8 @@ struct ice_sw_rule_lkup_rx_tx {
 #define ICE_SINGLE_ACT_PTR		0x2
 #define ICE_SINGLE_ACT_PTR_VAL_S	4
 #define ICE_SINGLE_ACT_PTR_VAL_M	(0x1FFF << ICE_SINGLE_ACT_PTR_VAL_S)
+	/* Bit 17 should be set if pointed action includes a FWD cmd */
+#define ICE_SINGLE_ACT_PTR_HAS_FWD	BIT(17)
 	/* Bit 18 should be set to 1 */
 #define ICE_SINGLE_ACT_PTR_BIT		BIT(18)
 
@@ -1289,10 +1292,11 @@ struct ice_aqc_get_phy_caps {
 	/* 18.0 - Report qualified modules */
 #define ICE_AQC_GET_PHY_RQM		BIT(0)
 	/* 18.1 - 18.3 : Report mode
-	 * 000b - Report NVM capabilities
-	 * 001b - Report topology capabilities
-	 * 010b - Report SW configured
-	 * 100b - Report default capabilities
+	 * 000b - Report topology capabilities, without media
+	 * 001b - Report topology capabilities, with media
+	 * 010b - Report Active configuration
+	 * 011b - Report PHY Type and FEC mode capabilities
+	 * 100b - Report Default capabilities
 	 */
 #define ICE_AQC_REPORT_MODE_S			1
 #define ICE_AQC_REPORT_MODE_M			(7 << ICE_AQC_REPORT_MODE_S)
@@ -1681,6 +1685,7 @@ struct ice_aqc_set_event_mask {
 #define ICE_AQ_LINK_EVENT_PORT_TX_SUSPENDED	BIT(9)
 #define ICE_AQ_LINK_EVENT_TOPO_CONFLICT		BIT(10)
 #define ICE_AQ_LINK_EVENT_MEDIA_CONFLICT	BIT(11)
+#define ICE_AQ_LINK_EVENT_PHY_FW_LOAD_FAIL	BIT(12)
 	u8	reserved1[6];
 };
 
@@ -1734,6 +1739,8 @@ struct ice_aqc_link_topo_params {
 #define ICE_AQC_LINK_TOPO_NODE_TYPE_CAGE	6
 #define ICE_AQC_LINK_TOPO_NODE_TYPE_MEZZ	7
 #define ICE_AQC_LINK_TOPO_NODE_TYPE_ID_EEPROM	8
+#define ICE_AQC_LINK_TOPO_NODE_TYPE_CLK_CTRL	9
+#define ICE_AQC_LINK_TOPO_NODE_TYPE_CLK_MUX	10
 #define ICE_AQC_LINK_TOPO_NODE_TYPE_GPS		11
 #define ICE_AQC_LINK_TOPO_NODE_CTX_S		4
 #define ICE_AQC_LINK_TOPO_NODE_CTX_M		\
@@ -1772,6 +1779,11 @@ struct ice_aqc_get_link_topo {
 	struct ice_aqc_link_topo_addr addr;
 	u8 node_part_num;
 #define ICE_AQC_GET_LINK_TOPO_NODE_NR_PCA9575			0x21
+#define ICE_AQC_GET_LINK_TOPO_NODE_NR_ZL30632_80032		0x24
+#define ICE_AQC_GET_LINK_TOPO_NODE_NR_SI5383_5384		0x25
+#define ICE_AQC_GET_LINK_TOPO_NODE_NR_E822_PHY			0x30
+#define ICE_AQC_GET_LINK_TOPO_NODE_NR_C827			0x31
+#define ICE_AQC_GET_LINK_TOPO_NODE_NR_GEN_CLK_MUX		0x47
 #define ICE_AQC_GET_LINK_TOPO_NODE_NR_GEN_GPS			0x48
 	u8 rsvd[9];
 };
@@ -1800,6 +1812,7 @@ struct ice_aqc_get_link_topo_pin {
 #define ICE_AQC_LINK_TOPO_IO_FUNC_RED_LED	12
 #define ICE_AQC_LINK_TOPO_IO_FUNC_GREEN_LED	13
 #define ICE_AQC_LINK_TOPO_IO_FUNC_BLUE_LED	14
+#define ICE_AQC_LINK_TOPO_IO_FUNC_CLK_IN	20
 #define ICE_AQC_LINK_TOPO_INPUT_IO_TYPE_S	5
 #define ICE_AQC_LINK_TOPO_INPUT_IO_TYPE_M	\
 			(0x7 << ICE_AQC_LINK_TOPO_INPUT_IO_TYPE_S)
@@ -2018,6 +2031,12 @@ struct ice_aqc_nvm {
 #define ICE_AQC_NVM_PERST_FLAG		1
 #define ICE_AQC_NVM_EMPR_FLAG		2
 #define ICE_AQC_NVM_EMPR_ENA		BIT(0) /* Write Activate reply only */
+	/* For Write Activate, several flags are sent as part of a separate
+	 * flags2 field using a separate byte. For simplicity of the software
+	 * interface, we pass the flags as a 16 bit value so these flags are
+	 * all offset by 8 bits
+	 */
+#define ICE_AQC_NVM_ACTIV_REQ_EMPR	BIT(8) /* NVM Write Activate only */
 	__le16 module_typeid;
 	__le16 length;
 #define ICE_AQC_NVM_ERASE_LEN	0xFFFF
@@ -2070,6 +2089,7 @@ struct ice_aqc_nvm {
 					     ICE_AQC_NVM_SDP_CFG_SDP_NUM_OFFSET)
 #define ICE_AQC_NVM_SDP_CFG_NA_PIN_MASK		MAKEMASK(0x1, 15)
 
+#define ICE_AQC_NVM_MINSREV_MOD_ID		0x130
 #define ICE_AQC_NVM_TX_TOPO_MOD_ID		0x14B
 #define ICE_AQC_NVM_CMPO_MOD_ID			0x153
 
@@ -2078,6 +2098,21 @@ struct ice_aqc_nvm_cmpo {
 	__le16 length;
 #define ICE_AQC_NVM_CMPO_ENABLE	BIT(8)
 	__le16 cages_cfg[8];
+};
+
+/* Used for reading and writing MinSRev using 0x0701 and 0x0703. Note that the
+ * type field is excluded from the section when reading and writing from
+ * a module using the module_typeid field with these AQ commands.
+ */
+struct ice_aqc_nvm_minsrev {
+	__le16 length;
+	__le16 validity;
+#define ICE_AQC_NVM_MINSREV_NVM_VALID		BIT(0)
+#define ICE_AQC_NVM_MINSREV_OROM_VALID		BIT(1)
+	__le16 nvm_minsrev_l;
+	__le16 nvm_minsrev_h;
+	__le16 orom_minsrev_l;
+	__le16 orom_minsrev_h;
 };
 
 struct ice_aqc_nvm_tx_topo_user_sel {
@@ -2402,6 +2437,15 @@ struct ice_aqc_clear_fd_table {
 	u8 rsvd;
 	__le16 vsi_index;
 	u8 reserved[12];
+};
+
+/* Sideband Control Interface Commands */
+/* Neighbor Device Request (indirect 0x0C00); also used for the response. */
+struct ice_aqc_neigh_dev_req {
+	__le16 sb_data_len;
+	u8 reserved[6];
+	__le32 addr_high;
+	__le32 addr_low;
 };
 
 /* Allocate ACL table (indirect 0x0C10) */
@@ -2994,6 +3038,29 @@ struct ice_aqc_get_pkg_info_resp {
 	struct ice_aqc_get_pkg_info pkg_info[STRUCT_HACK_VAR_LEN];
 };
 
+/* Configure CGU Error Reporting (direct, 0x0C60) */
+struct ice_aqc_cfg_cgu_err {
+	u8 cmd;
+#define ICE_AQC_CFG_CGU_EVENT_SHIFT	0
+#define ICE_AQC_CFG_CGU_EVENT_MASK	BIT(ICE_AQC_CFG_CGU_EVENT_SHIFT)
+#define ICE_AQC_CFG_CGU_EVENT_EN	(0 << ICE_AQC_CFG_CGU_EVENT_SHIFT)
+#define ICE_AQC_CFG_CGU_EVENT_DIS	ICE_AQC_CFG_CGU_EVENT_MASK
+#define ICE_AQC_CFG_CGU_ERR_SHIFT	1
+#define ICE_AQC_CFG_CGU_ERR_MASK	BIT(ICE_AQC_CFG_CGU_ERR_SHIFT)
+#define ICE_AQC_CFG_CGU_ERR_EN		(0 << ICE_AQC_CFG_CGU_ERR_SHIFT)
+#define ICE_AQC_CFG_CGU_ERR_DIS		ICE_AQC_CFG_CGU_ERR_MASK
+	u8 rsvd[15];
+};
+
+/* CGU Error Event (direct, 0x0C60) */
+struct ice_aqc_event_cgu_err {
+	u8 err_type;
+#define ICE_AQC_CGU_ERR_SYNCE_LOCK_LOSS		BIT(0)
+#define ICE_AQC_CGU_ERR_HOLDOVER_CHNG		BIT(1)
+#define ICE_AQC_CGU_ERR_TIMESYNC_LOCK_LOSS	BIT(2)
+	u8 rsvd[15];
+};
+
 /* Driver Shared Parameters (direct, 0x0C90) */
 struct ice_aqc_driver_shared_params {
 	u8 set_or_get_op;
@@ -3223,6 +3290,7 @@ struct ice_aq_desc {
 		struct ice_aqc_get_set_rss_lut get_set_rss_lut;
 		struct ice_aqc_get_set_rss_key get_set_rss_key;
 		struct ice_aqc_clear_fd_table clear_fd_table;
+		struct ice_aqc_neigh_dev_req neigh_dev;
 		struct ice_aqc_acl_alloc_table alloc_table;
 		struct ice_aqc_acl_tbl_actpair tbl_actpair;
 		struct ice_aqc_acl_alloc_scen alloc_scen;
@@ -3244,6 +3312,8 @@ struct ice_aq_desc {
 		struct ice_aqc_get_vsi_resp get_vsi_resp;
 		struct ice_aqc_download_pkg download_pkg;
 		struct ice_aqc_get_pkg_info_list get_pkg_info_list;
+		struct ice_aqc_cfg_cgu_err config_cgu_err;
+		struct ice_aqc_event_cgu_err cgu_err;
 		struct ice_aqc_driver_shared_params drv_shared_params;
 		struct ice_aqc_debug_dump_internals debug_dump;
 		struct ice_aqc_set_mac_lb set_mac_lb;
@@ -3461,6 +3531,8 @@ enum ice_adminq_opc {
 	ice_aqc_opc_nvm_sr_dump				= 0x0707,
 	ice_aqc_opc_nvm_save_factory_settings		= 0x0708,
 	ice_aqc_opc_nvm_update_empr			= 0x0709,
+	ice_aqc_opc_nvm_pkg_data			= 0x070A,
+	ice_aqc_opc_nvm_pass_component_tbl		= 0x070B,
 	ice_aqc_opc_nvm_sanitization			= 0x070C,
 
 	/* LLDP commands */
@@ -3483,6 +3555,8 @@ enum ice_adminq_opc {
 	ice_aqc_opc_get_rss_key				= 0x0B04,
 	ice_aqc_opc_get_rss_lut				= 0x0B05,
 	ice_aqc_opc_clear_fd_table			= 0x0B06,
+	/* Sideband Control Interface commands */
+	ice_aqc_opc_neighbour_device_request		= 0x0C00,
 	/* ACL commands */
 	ice_aqc_opc_alloc_acl_tbl			= 0x0C10,
 	ice_aqc_opc_dealloc_acl_tbl			= 0x0C11,
@@ -3516,6 +3590,10 @@ enum ice_adminq_opc {
 	ice_aqc_opc_upload_section			= 0x0C41,
 	ice_aqc_opc_update_pkg				= 0x0C42,
 	ice_aqc_opc_get_pkg_info_list			= 0x0C43,
+
+	/* 1588/SyncE commands/events */
+	ice_aqc_opc_cfg_cgu_err				= 0x0C60,
+	ice_aqc_opc_event_cgu_err			= 0x0C60,
 
 	ice_aqc_opc_driver_shared_params		= 0x0C90,
 
