@@ -3919,7 +3919,7 @@ static void ice_subscribable_recp_shared(struct ice_hw *hw, u16 rid)
 {
 	ice_declare_bitmap(sub_bitmap, ICE_MAX_NUM_RECIPES);
 	struct ice_sw_recipe *recps;
-	u8 i, cnt;
+	u16 i, cnt;
 
 	recps = hw->switch_info->recp_list;
 	ice_cp_bitmap(sub_bitmap, recps[rid].r_bitmap, ICE_MAX_NUM_RECIPES);
@@ -3944,8 +3944,9 @@ static enum ice_status ice_release_recipe_res(struct ice_hw *hw,
 {
 	ice_declare_bitmap(r_bitmap, ICE_MAX_NUM_RECIPES);
 	struct ice_switch_info *sw = hw->switch_info;
-	u8 num_recp, rid, num_prof, prof, i, j;
 	enum ice_status status = ICE_SUCCESS;
+	u16 num_recp, num_prof;
+	u8 rid, prof, i, j;
 
 	num_recp = ice_bitmap_hweight(recp->r_bitmap, ICE_MAX_NUM_RECIPES);
 	for (i = 0; i < num_recp; i++) {
@@ -7657,7 +7658,7 @@ ice_find_free_recp_res_idx(struct ice_hw *hw, const ice_bitmap_t *profiles,
 	ice_xor_bitmap(free_idx, used_idx, possible_idx, ICE_MAX_FV_WORDS);
 
 	/* return number of free indexes */
-	return (u16)ice_bitmap_hweight(free_idx, ICE_MAX_FV_WORDS);
+	return ice_bitmap_hweight(free_idx, ICE_MAX_FV_WORDS);
 }
 
 static void ice_set_recipe_index(unsigned long idx, u8 *bitmap)
@@ -8377,9 +8378,10 @@ ice_add_adv_recipe(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	struct ice_recp_grp_entry *r_tmp;
 	struct ice_sw_fv_list_entry *tmp;
 	struct ice_sw_recipe *rm;
-	u8 i, cnt, rid_tmp;
+	u8 i, rid_tmp;
 	bool is_add = true;
 	int status = ICE_SUCCESS;
+	u16 cnt;
 
 	if (!ice_is_prof_rule(rinfo->tun_type) && !lkups_cnt)
 		return ICE_ERR_PARAM;
