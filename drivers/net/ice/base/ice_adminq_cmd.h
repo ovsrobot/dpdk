@@ -131,6 +131,8 @@ struct ice_aqc_list_caps_elem {
 #define ICE_AQC_CAPS_NAC_TOPOLOGY			0x0087
 #define ICE_AQC_CAPS_OROM_RECOVERY_UPDATE		0x0090
 #define ICE_AQC_CAPS_ROCEV2_LAG				0x0092
+#define ICE_AQC_BIT_ROCEV2_LAG				0x01
+#define ICE_AQC_BIT_SRIOV_LAG				0x02
 
 	u8 major_ver;
 	u8 minor_ver;
