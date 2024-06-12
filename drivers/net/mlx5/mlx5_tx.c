@@ -213,7 +213,7 @@ mlx5_tx_handle_completion(struct mlx5_txq_data *__rte_restrict txq,
 				 * handling, we do not advance the index
 				 * here, allowing to retry on next call.
 				 */
-				return;
+				MLX5_ASSERT(ret < 0);
 			}
 			/*
 			 * We are going to fetch all entries with
