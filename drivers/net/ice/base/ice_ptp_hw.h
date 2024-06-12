@@ -255,7 +255,6 @@ int ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port);
 int ice_phy_exit_bypass_e822(struct ice_hw *hw, u8 port);
 
 /* E810 family functions */
-bool ice_is_gps_present_e810t(struct ice_hw *hw);
 int ice_ptp_init_phy_e810(struct ice_hw *hw);
 int
 ice_read_pca9575_reg_e810t(struct ice_hw *hw, u8 offset, u8 *data);

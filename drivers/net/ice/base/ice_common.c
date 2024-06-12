@@ -7,6 +7,7 @@
 #include "ice_adminq_cmd.h"
 
 #include "ice_flow.h"
+#include "ice_ptp_hw.h"
 #include "ice_switch.h"
 
 #define ICE_PF_RESET_WAIT_COUNT	300
@@ -563,106 +564,6 @@ ice_aq_get_phy_caps(struct ice_port_info *pi, bool qual_mods, u8 report_mode,
 	}
 
 	return status;
-}
-
-/**
- * ice_aq_get_netlist_node_pin
- * @hw: pointer to the hw struct
- * @cmd: get_link_topo_pin AQ structure
- * @node_handle: output node handle parameter if node found
- */
-int
-ice_aq_get_netlist_node_pin(struct ice_hw *hw,
-			    struct ice_aqc_get_link_topo_pin *cmd,
-			    u16 *node_handle)
-{
-	struct ice_aq_desc desc;
-
-	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_get_link_topo_pin);
-	desc.params.get_link_topo_pin = *cmd;
-
-	if (ice_aq_send_cmd(hw, &desc, NULL, 0, NULL))
-		return ICE_ERR_NOT_SUPPORTED;
-
-	if (node_handle)
-		*node_handle =
-			LE16_TO_CPU(desc.params.get_link_topo_pin.addr.handle);
-
-	return 0;
-}
-
-/**
- * ice_aq_get_netlist_node
- * @hw: pointer to the hw struct
- * @cmd: get_link_topo AQ structure
- * @node_part_number: output node part number if node found
- * @node_handle: output node handle parameter if node found
- */
-int
-ice_aq_get_netlist_node(struct ice_hw *hw, struct ice_aqc_get_link_topo *cmd,
-			u8 *node_part_number, u16 *node_handle)
-{
-	struct ice_aq_desc desc;
-
-	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_get_link_topo);
-	desc.params.get_link_topo = *cmd;
-
-	if (ice_aq_send_cmd(hw, &desc, NULL, 0, NULL))
-		return ICE_ERR_NOT_SUPPORTED;
-
-	if (node_handle)
-		*node_handle =
-			LE16_TO_CPU(desc.params.get_link_topo.addr.handle);
-	if (node_part_number)
-		*node_part_number = desc.params.get_link_topo.node_part_num;
-
-	return 0;
-}
-
-#define MAX_NETLIST_SIZE 10
-/**
- * ice_find_netlist_node
- * @hw: pointer to the hw struct
- * @node_type_ctx: type of netlist node to look for
- * @node_part_number: node part number to look for
- * @node_handle: output parameter if node found - optional
- *
- * Find and return the node handle for a given node type and part number in the
- * netlist. When found 0 is returned, ICE_ERR_DOES_NOT_EXIST
- * otherwise. If node_handle provided, it would be set to found node handle.
- */
-int
-ice_find_netlist_node(struct ice_hw *hw, u8 node_type_ctx, u8 node_part_number,
-		      u16 *node_handle)
-{
-	struct ice_aqc_get_link_topo cmd;
-	u8 rec_node_part_number;
-	u16 rec_node_handle;
-	u8 idx;
-
-	for (idx = 0; idx < MAX_NETLIST_SIZE; idx++) {
-		int status;
-
-		memset(&cmd, 0, sizeof(cmd));
-
-		cmd.addr.topo_params.node_type_ctx =
-			(node_type_ctx << ICE_AQC_LINK_TOPO_NODE_TYPE_S);
-		cmd.addr.topo_params.index = idx;
-
-		status = ice_aq_get_netlist_node(hw, &cmd,
-						 &rec_node_part_number,
-						 &rec_node_handle);
-		if (status)
-			return status;
-
-		if (rec_node_part_number == node_part_number) {
-			if (node_handle)
-				*node_handle = rec_node_handle;
-			return 0;
-		}
-	}
-
-	return ICE_ERR_DOES_NOT_EXIST;
 }
 
 /**
@@ -2958,6 +2859,125 @@ ice_parse_dev_caps(struct ice_hw *hw, struct ice_hw_dev_caps *dev_p,
 	}
 
 	ice_recalc_port_limited_caps(hw, &dev_p->common_cap);
+}
+
+/**
+ * ice_aq_get_netlist_node_pin
+ * @hw: pointer to the hw struct
+ * @cmd: get_link_topo_pin AQ structure
+ * @node_handle: output node handle parameter if node found
+ */
+int
+ice_aq_get_netlist_node_pin(struct ice_hw *hw,
+			    struct ice_aqc_get_link_topo_pin *cmd,
+			    u16 *node_handle)
+{
+	struct ice_aq_desc desc;
+
+	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_get_link_topo_pin);
+	desc.params.get_link_topo_pin = *cmd;
+
+	if (ice_aq_send_cmd(hw, &desc, NULL, 0, NULL))
+		return ICE_ERR_NOT_SUPPORTED;
+
+	if (node_handle)
+		*node_handle =
+			LE16_TO_CPU(desc.params.get_link_topo_pin.addr.handle);
+
+	cmd->output_io_params = desc.params.get_link_topo_pin.output_io_params;
+	cmd->output_io_flags = desc.params.get_link_topo_pin.output_io_flags;
+
+	return 0;
+}
+
+/**
+ * ice_aq_get_netlist_node
+ * @hw: pointer to the hw struct
+ * @cmd: get_link_topo AQ structure
+ * @node_part_number: output node part number if node found
+ * @node_handle: output node handle parameter if node found
+ */
+int
+ice_aq_get_netlist_node(struct ice_hw *hw, struct ice_aqc_get_link_topo *cmd,
+			u8 *node_part_number, u16 *node_handle)
+{
+	struct ice_aq_desc desc;
+
+	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_get_link_topo);
+	desc.params.get_link_topo = *cmd;
+
+	if (ice_aq_send_cmd(hw, &desc, NULL, 0, NULL))
+		return ICE_ERR_NOT_SUPPORTED;
+
+	if (node_handle)
+		*node_handle =
+			LE16_TO_CPU(desc.params.get_link_topo.addr.handle);
+	if (node_part_number)
+		*node_part_number = desc.params.get_link_topo.node_part_num;
+
+	return 0;
+}
+
+#define MAX_NETLIST_SIZE 10
+/**
+ * ice_find_netlist_node
+ * @hw: pointer to the hw struct
+ * @node_type_ctx: type of netlist node to look for
+ * @node_part_number: node part number to look for
+ * @node_handle: output parameter if node found - optional
+ *
+ * Scan the netlist for a node handle of the given node type and part number.
+ *
+ * If node_handle is non-NULL it will be modified on function exit. It is only
+ * valid if the function returns zero, and should be ignored on any non-zero
+ * return value.
+ *
+ * Returns: 0 if the node is found, ICE_ERR_DOES_NOT_EXIST if no handle was
+ * found, and an error code on failure to access the AQ.
+ */
+int
+ice_find_netlist_node(struct ice_hw *hw, u8 node_type_ctx, u8 node_part_number,
+		      u16 *node_handle)
+{
+	u8 idx;
+
+	for (idx = 0; idx < MAX_NETLIST_SIZE; idx++) {
+		struct ice_aqc_get_link_topo cmd;
+		u8 rec_node_part_number;
+		int status;
+
+		memset(&cmd, 0, sizeof(cmd));
+
+		cmd.addr.topo_params.node_type_ctx =
+			(node_type_ctx << ICE_AQC_LINK_TOPO_NODE_TYPE_S);
+		cmd.addr.topo_params.index = idx;
+
+		status = ice_aq_get_netlist_node(hw, &cmd,
+						 &rec_node_part_number,
+						 node_handle);
+		if (status)
+			return status;
+
+		if (rec_node_part_number == node_part_number)
+			return 0;
+	}
+
+	return ICE_ERR_DOES_NOT_EXIST;
+}
+
+/**
+ * ice_is_gps_in_netlist
+ * @hw: pointer to the hw struct
+ *
+ * Check if the GPS generic device is present in the netlist
+ */
+bool ice_is_gps_in_netlist(struct ice_hw *hw)
+{
+	if (ice_find_netlist_node(hw, ICE_AQC_LINK_TOPO_NODE_TYPE_GPS,
+				  ICE_AQC_GET_LINK_TOPO_NODE_NR_GEN_GPS, NULL))
+		return false;
+
+	return true;
 }
 
 /**
