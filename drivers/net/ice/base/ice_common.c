@@ -4143,6 +4143,8 @@ static u16 ice_lut_type_to_size(u16 lut_type)
 		return ICE_LUT_GLOBAL_SIZE;
 	case ICE_LUT_PF:
 		return ICE_LUT_PF_SIZE;
+	case ICE_LUT_PF_SMALL:
+		return ICE_LUT_PF_SMALL_SIZE;
 	default:
 		return 0;
 	}
@@ -4174,6 +4176,8 @@ int ice_lut_size_to_type(int lut_size)
 		return ICE_LUT_GLOBAL;
 	case ICE_LUT_PF_SIZE:
 		return ICE_LUT_PF;
+	case ICE_LUT_PF_SMALL_SIZE:
+		return ICE_LUT_PF_SMALL;
 	default:
 		return -1;
 	}
@@ -4201,10 +4205,10 @@ __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params
 
 	vsi_handle = params->vsi_handle;
 	lut = params->lut;
-	lut_type = params->lut_type;
-	lut_size = ice_lut_type_to_size(lut_type);
+	lut_size = ice_lut_type_to_size(params->lut_type);
+	lut_type = params->lut_type & ICE_LUT_TYPE_MASK;
 	cmd_resp = &desc.params.get_set_rss_lut;
-	if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL)
+	if (lut_type == ICE_LUT_GLOBAL)
 		glob_lut_idx = params->global_lut_id;
 
 	if (!lut || !lut_size || !ice_is_vsi_valid(hw, vsi_handle))

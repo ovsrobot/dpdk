@@ -3468,7 +3468,7 @@ static int ice_init_rss(struct ice_pf *pf)
 
 	lut_params.vsi_handle = vsi->idx;
 	lut_params.lut_size = vsi->rss_lut_size;
-	lut_params.lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF;
+	lut_params.lut_type = ICE_LUT_PF;
 	lut_params.lut = vsi->rss_lut;
 	lut_params.global_lut_id = 0;
 	ret = ice_aq_set_rss_lut(hw, &lut_params);
@@ -4928,7 +4928,7 @@ ice_get_rss_lut(struct ice_vsi *vsi, uint8_t *lut, uint16_t lut_size)
 	if (pf->flags & ICE_FLAG_RSS_AQ_CAPABLE) {
 		lut_params.vsi_handle = vsi->idx;
 		lut_params.lut_size = lut_size;
-		lut_params.lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF;
+		lut_params.lut_type = ICE_LUT_PF;
 		lut_params.lut = lut;
 		lut_params.global_lut_id = 0;
 		ret = ice_aq_get_rss_lut(hw, &lut_params);
@@ -4964,7 +4964,7 @@ ice_set_rss_lut(struct ice_vsi *vsi, uint8_t *lut, uint16_t lut_size)
 	if (pf->flags & ICE_FLAG_RSS_AQ_CAPABLE) {
 		lut_params.vsi_handle = vsi->idx;
 		lut_params.lut_size = lut_size;
-		lut_params.lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF;
+		lut_params.lut_type = ICE_LUT_PF;
 		lut_params.lut = lut;
 		lut_params.global_lut_id = 0;
 		ret = ice_aq_set_rss_lut(hw, &lut_params);
@@ -4996,9 +4996,9 @@ ice_rss_reta_update(struct rte_eth_dev *dev,
 	uint8_t *lut;
 	int ret;
 
-	if (reta_size != ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_128 &&
-	    reta_size != ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512 &&
-	    reta_size != ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K) {
+	if (reta_size != ICE_LUT_PF_SMALL_SIZE  &&
+	    reta_size != ICE_LUT_GLOBAL_SIZE  &&
+	    reta_size != ICE_LUT_PF_SIZE) {
 		PMD_DRV_LOG(ERR,
 			    "The size of hash lookup table configured (%d)"
 			    "doesn't match the number hardware can "
