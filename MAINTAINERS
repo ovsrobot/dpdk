@@ -1063,6 +1063,11 @@ F: drivers/net/memif/
 F: doc/guides/nics/memif.rst
 F: doc/guides/nics/features/memif.ini
 
+Realtek r8126
+M: Realtek NIC SW <pro_nic_dpdk@realtek.com>
+F: drivers/net/r8126
+F: doc/guides/nics/r8126.rst
+F: doc/guides/nics/features/r8126.ini
 
 Crypto Drivers
 --------------
