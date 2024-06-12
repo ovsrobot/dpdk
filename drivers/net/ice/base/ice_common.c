@@ -1139,7 +1139,7 @@ void ice_deinit_hw(struct ice_hw *hw)
  */
 int ice_check_reset(struct ice_hw *hw)
 {
-	u32 cnt, reg = 0, grst_timeout, uld_mask;
+	u32 cnt, reg = 0, grst_timeout, uld_mask, reset_wait_cnt;
 
 	/* Poll for Device Active state in case a recent CORER, GLOBR,
 	 * or EMPR has occurred. The grst delay value is in 100ms units.
@@ -1170,8 +1170,10 @@ int ice_check_reset(struct ice_hw *hw)
 
 	uld_mask = ICE_RESET_DONE_MASK;
 
+	reset_wait_cnt = ICE_PF_RESET_WAIT_COUNT;
+
 	/* Device is Active; check Global Reset processes are done */
-	for (cnt = 0; cnt < ICE_PF_RESET_WAIT_COUNT; cnt++) {
+	for (cnt = 0; cnt < reset_wait_cnt; cnt++) {
 		reg = rd32(hw, GLNVM_ULD) & uld_mask;
 		if (reg == uld_mask) {
 			ice_debug(hw, ICE_DBG_INIT, "Global reset processes done. %d\n", cnt);
@@ -1180,7 +1182,7 @@ int ice_check_reset(struct ice_hw *hw)
 		ice_msec_delay(10, true);
 	}
 
-	if (cnt == ICE_PF_RESET_WAIT_COUNT) {
+	if (cnt == reset_wait_cnt) {
 		ice_debug(hw, ICE_DBG_INIT, "Wait for Reset Done timed out. GLNVM_ULD = 0x%x\n",
 			  reg);
 		return ICE_ERR_RESET_FAILED;
