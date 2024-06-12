@@ -7340,6 +7340,12 @@ static u16 ice_find_recp(struct ice_hw *hw, struct ice_prot_lkup_ext *lkup_exts,
 						hw->switch_info->recp_list, i,
 						&refresh_required, is_add))
 				continue;
+		} else {
+			if (!recp[i].recp_created)
+				if (ice_get_recp_frm_fw(hw,
+							hw->switch_info->recp_list, i,
+							&refresh_required, is_add))
+					continue;
 		}
 
 		/* Skip inverse action recipes */
