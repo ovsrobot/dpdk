@@ -9483,7 +9483,7 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 		goto err_ice_add_adv_rule;
 	}
 
-	/* set the rule LOOKUP type based on caller specified 'Rx'
+	/* Set the rule LOOKUP type based on caller specified 'Rx'
 	 * instead of hardcoding it to be either LOOKUP_TX/RX
 	 *
 	 * for 'Rx' set the source to be the port number
