@@ -846,7 +846,7 @@ static u32 ice_ptp_tmr_cmd_to_port_reg(struct ice_hw *hw,
 	/* Certain hardware families share the same register values for the
 	 * port register and source timer register.
 	 */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 	case ICE_PHY_E830:
 		return ice_ptp_tmr_cmd_to_src_reg(hw, cmd) & TS_CMD_MASK_E810;
@@ -2274,11 +2274,13 @@ ice_ptp_read_tx_hwtstamp_status_eth56g(struct ice_hw *hw, u32 *ts_err)
 }
 
 /**
- * ice_ptp_init_phy_cfg - Get the current TX timestamp err
- * mask. Returns the mask of ports where TX timestamps are available
- * @hw: pointer to the HW struct
+ * ice_ptp_init_phy_model - Initialize hw->phy_model based on device type
+  * @hw: pointer to the HW struct
+ *
+ * Determine the PHY configuration for the device, and initialize hw->phy_model
+ * for use by other functions.
  */
-int ice_ptp_init_phy_cfg(struct ice_hw *hw)
+int ice_ptp_init_phy_model(struct ice_hw *hw)
 {
 	int err;
 	u32 phy_rev;
@@ -2289,14 +2291,14 @@ int ice_ptp_init_phy_cfg(struct ice_hw *hw)
 		return err;
 
 	if (phy_rev == PHY_REVISION_ETH56G) {
-		hw->phy_cfg = ICE_PHY_ETH56G;
+		hw->phy_model = ICE_PHY_ETH56G;
 		return 0;
 	}
 
 	if (ice_is_e810(hw))
-		hw->phy_cfg = ICE_PHY_E810;
+		hw->phy_model = ICE_PHY_E810;
 	else
-		hw->phy_cfg = ICE_PHY_E822;
+		hw->phy_model = ICE_PHY_E822;
 	hw->phy_ports = ICE_NUM_EXTERNAL_PORTS;
 	hw->max_phy_port = ICE_NUM_EXTERNAL_PORTS;
 
@@ -5497,7 +5499,7 @@ void ice_ptp_unlock(struct ice_hw *hw)
 int ice_ptp_write_port_cmd(struct ice_hw *hw, u8 port,
 			   enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
 {
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E822:
 		return ice_ptp_write_port_cmd_e822(hw, port, cmd, lock_sbq);
 	default:
@@ -5554,7 +5556,7 @@ static int ice_ptp_port_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 	u8 port;
 
 	/* PHY models which can program all ports simultaneously */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E830:
 		return ice_ptp_port_cmd_e830(hw, cmd, lock_sbq);
 	case ICE_PHY_E810:
@@ -5632,7 +5634,7 @@ int ice_ptp_init_time(struct ice_hw *hw, u64 time)
 
 	/* Source timers */
 	/* For E830 we don't need to use shadow registers, its automatic */
-	if (hw->phy_cfg == ICE_PHY_E830)
+	if (hw->phy_model == ICE_PHY_E830)
 		return ice_ptp_write_direct_phc_time_e830(hw, time);
 
 	wr32(hw, GLTSYN_SHTIME_L(tmr_idx), ICE_LO_DWORD(time));
@@ -5641,7 +5643,7 @@ int ice_ptp_init_time(struct ice_hw *hw, u64 time)
 
 	/* PHY Clks */
 	/* Fill Rx and Tx ports and send msg to PHY */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_ptp_prep_phy_time_eth56g(hw, time & 0xFFFFFFFF);
 		break;
@@ -5683,14 +5685,14 @@ int ice_ptp_write_incval(struct ice_hw *hw, u64 incval)
 	tmr_idx = hw->func_caps.ts_func_info.tmr_index_owned;
 
 	/* For E830 we don't need to use shadow registers, its automatic */
-	if (hw->phy_cfg == ICE_PHY_E830)
+	if (hw->phy_model == ICE_PHY_E830)
 		return ice_ptp_write_direct_incval_e830(hw, incval);
 
 	/* Shadow Adjust */
 	wr32(hw, GLTSYN_SHADJ_L(tmr_idx), ICE_LO_DWORD(incval));
 	wr32(hw, GLTSYN_SHADJ_H(tmr_idx), ICE_HI_DWORD(incval));
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_ptp_prep_phy_incval_eth56g(hw, incval);
 		break;
@@ -5761,7 +5763,7 @@ int ice_ptp_adj_clock(struct ice_hw *hw, s32 adj, bool lock_sbq)
 	wr32(hw, GLTSYN_SHADJ_L(tmr_idx), 0);
 	wr32(hw, GLTSYN_SHADJ_H(tmr_idx), adj);
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_ptp_prep_phy_adj_eth56g(hw, adj, lock_sbq);
 		break;
@@ -5825,7 +5827,7 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
 	wr32(hw, GLTSYN_SHTIME_H(tmr_idx), time_hi);
 
 	/* Prepare PHY port adjustments */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_ptp_prep_phy_adj_eth56g(hw, adj, true);
 		break;
@@ -5843,7 +5845,7 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
 		return err;
 
 	/* Set target time for each PHY port */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_ptp_prep_phy_adj_target_eth56g(hw, time_lo);
 		break;
@@ -5872,7 +5874,7 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
  */
 int ice_ptp_clear_phy_offset_ready(struct ice_hw *hw)
 {
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		return ice_ptp_clear_phy_offset_ready_eth56g(hw);
 	case ICE_PHY_E830:
@@ -5901,7 +5903,7 @@ ice_read_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx, u64 *tstamp)
 {
 	int err;
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_read_phy_tstamp_eth56g(hw, block, idx, tstamp);
 		break;
@@ -5935,7 +5937,7 @@ ice_clear_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx)
 {
 	int err;
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_clear_phy_tstamp_eth56g(hw, block, idx);
 		break;
@@ -5969,7 +5971,7 @@ int ice_ptp_init_phc(struct ice_hw *hw)
 	/* Clear event status indications for auxiliary pins */
 	(void)rd32(hw, GLTSYN_STAT(src_idx));
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_ETH56G:
 		err = ice_ptp_init_phc_eth56g(hw);
 		break;
