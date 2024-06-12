@@ -1672,11 +1672,12 @@ ice_sbq_send_cmd_nolock(struct ice_hw *hw, struct ice_sbq_cmd_desc *desc,
  * ice_sbq_rw_reg_lp - Fill Sideband Queue command, with lock parameter
  * @hw: pointer to the HW struct
  * @in: message info to be filled in descriptor
+ * @flag: flag to fill desc structure
  * @lock: true to lock the sq_lock (the usual case); false if the sq_lock has
  *        already been locked at a higher level
  */
-int ice_sbq_rw_reg_lp(struct ice_hw *hw,
-				  struct ice_sbq_msg_input *in, bool lock)
+int ice_sbq_rw_reg_lp(struct ice_hw *hw, struct ice_sbq_msg_input *in,
+		      u16 flag, bool lock)
 {
 	struct ice_sbq_cmd_desc desc = {0};
 	struct ice_sbq_msg_req msg = {0};
@@ -1700,7 +1701,7 @@ int ice_sbq_rw_reg_lp(struct ice_hw *hw,
 		 */
 		msg_len -= sizeof(msg.data);
 
-	desc.flags = CPU_TO_LE16(ICE_AQ_FLAG_RD);
+	desc.flags = CPU_TO_LE16(flag);
 	desc.opcode = CPU_TO_LE16(ice_sbq_opc_neigh_dev_req);
 	desc.param0.cmd_len = CPU_TO_LE16(msg_len);
 	if (lock)
@@ -1718,10 +1719,11 @@ int ice_sbq_rw_reg_lp(struct ice_hw *hw,
  * ice_sbq_rw_reg - Fill Sideband Queue command
  * @hw: pointer to the HW struct
  * @in: message info to be filled in descriptor
+ * @flag: flag to fill desc structure
  */
-int ice_sbq_rw_reg(struct ice_hw *hw, struct ice_sbq_msg_input *in)
+int ice_sbq_rw_reg(struct ice_hw *hw, struct ice_sbq_msg_input *in, u16 flag)
 {
-	return ice_sbq_rw_reg_lp(hw, in, true);
+	return ice_sbq_rw_reg_lp(hw, in, flag, true);
 }
 
 /**
