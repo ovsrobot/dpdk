@@ -1041,7 +1041,7 @@ ice_write_phy_port_eth56g_lp(struct ice_hw *hw, u8 port, u32 reg_offs, u32 val,
 	int err;
 	u32 reg_addr;
 
-	if (port >= hw->phy_ports)
+	if (port >= hw->max_phy_port)
 		return ICE_ERR_OUT_OF_RANGE;
 
 	err = ice_phy_port_res_address_eth56g(phy_port, res_type, reg_offs,
@@ -1072,7 +1072,7 @@ ice_read_phy_port_eth56g_lp(struct ice_hw *hw, u8 port, u32 reg_offs, u32 *val,
 	int err;
 	u32 reg_addr;
 
-	if (port >= hw->phy_ports)
+	if (port >= hw->max_phy_port)
 		return ICE_ERR_OUT_OF_RANGE;
 
 	err = ice_phy_port_res_address_eth56g(phy_port, res_type, reg_offs,
@@ -1489,7 +1489,7 @@ static void ice_ptp_reset_ts_memory_eth56g(struct ice_hw *hw)
 {
 	unsigned int port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		if (!(hw->ena_lports & BIT(port)))
 			continue;
 
@@ -1547,7 +1547,7 @@ ice_ptp_prep_phy_time_eth56g(struct ice_hw *hw, u32 time)
 	 */
 	phy_time = (u64)time << 32;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		int err;
 		if (!(hw->ena_lports & BIT(port)))
 			continue;
@@ -1644,7 +1644,7 @@ ice_ptp_prep_phy_adj_eth56g(struct ice_hw *hw, s32 adj, bool lock_sbq)
 	 */
 	cycles = (s64)adj << 32;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		if (!(hw->ena_lports & BIT(port)))
 			continue;
 
@@ -1670,7 +1670,7 @@ ice_ptp_prep_phy_incval_eth56g(struct ice_hw *hw, u64 incval)
 {
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		int err;
 		if (!(hw->ena_lports & BIT(port)))
 			continue;
@@ -1732,7 +1732,7 @@ ice_ptp_prep_phy_adj_target_eth56g(struct ice_hw *hw, u32 target_time)
 	int err;
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		if (!(hw->ena_lports & BIT(port)))
 			continue;
 
@@ -1919,7 +1919,7 @@ ice_ptp_port_cmd_eth56g(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 	int err;
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		if (!(hw->ena_lports & BIT(port)))
 			continue;
 
@@ -2043,7 +2043,7 @@ static int ice_ptp_clear_phy_offset_ready_eth56g(struct ice_hw *hw)
 {
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->max_phy_port; port++) {
 		int err;
 
 		err = ice_write_phy_reg_eth56g(hw, port,
@@ -3058,7 +3058,7 @@ int ice_ptp_set_vernier_wl(struct ice_hw *hw)
 {
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->phy_ports; port++) {
 		int err;
 
 		err = ice_write_phy_reg_e822_lp(hw, port, P_REG_WL,
@@ -3123,7 +3123,7 @@ ice_ptp_prep_phy_time_e822(struct ice_hw *hw, u32 time)
 	 */
 	phy_time = (u64)time << 32;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->phy_ports; port++) {
 
 		/* Tx case */
 		err = ice_write_64b_phy_reg_e822(hw, port,
@@ -3232,7 +3232,7 @@ ice_ptp_prep_phy_adj_e822(struct ice_hw *hw, s32 adj, bool lock_sbq)
 	else
 		cycles = -(((s64)-adj) << 32);
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->phy_ports; port++) {
 		int err;
 
 		err = ice_ptp_prep_port_adj_e822(hw, port, cycles, lock_sbq);
@@ -3258,7 +3258,7 @@ ice_ptp_prep_phy_incval_e822(struct ice_hw *hw, u64 incval)
 	int err;
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->phy_ports; port++) {
 		err = ice_write_40b_phy_reg_e822(hw, port, P_REG_TIMETUS_L,
 						 incval);
 		if (err)
@@ -3319,7 +3319,7 @@ ice_ptp_prep_phy_adj_target_e822(struct ice_hw *hw, u32 target_time)
 	int err;
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->phy_ports; port++) {
 
 		/* Tx case */
 		/* No sub-nanoseconds data */
@@ -4254,7 +4254,7 @@ static int ice_ptp_clear_phy_offset_ready_e822(struct ice_hw *hw)
 {
 	u8 port;
 
-	for (port = 0; port < ICE_NUM_EXTERNAL_PORTS; port++) {
+	for (port = 0; port < hw->phy_ports; port++) {
 		int err;
 
 		err = ice_write_phy_reg_e822(hw, port, P_REG_TX_OR, 0);
