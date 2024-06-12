@@ -1814,6 +1814,8 @@ ice_ptp_init_phy_cfg(struct ice_hw *hw)
 		hw->phy_cfg = ICE_PHY_E810;
 	else
 		hw->phy_cfg = ICE_PHY_E822;
+	hw->phy_ports = ICE_NUM_EXTERNAL_PORTS;
+	hw->max_phy_port = ICE_NUM_EXTERNAL_PORTS;
 
 	return 0;
 }
