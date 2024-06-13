@@ -56,8 +56,6 @@ class NodeConfigDict(TypedDict):
     #:
     password: str
     #:
-    arch: str
-    #:
     os: str
     #:
     lcores: str

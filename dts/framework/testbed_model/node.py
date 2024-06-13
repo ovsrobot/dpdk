@@ -18,6 +18,7 @@ from typing import Any, Callable, Type, Union
 
 from framework.config import (
     OS,
+    Architecture,
     BuildTargetConfiguration,
     ExecutionConfiguration,
     NodeConfiguration,
@@ -61,6 +62,7 @@ class Node(ABC):
     main_session: OSSession
     config: NodeConfiguration
     name: str
+    arch: Architecture
     lcores: list[LogicalCore]
     ports: list[Port]
     _logger: DTSLogger
@@ -84,6 +86,7 @@ class Node(ABC):
         self.name = node_config.name
         self._logger = get_dts_logger(self.name)
         self.main_session = create_session(self.config, self.name, self._logger)
+        self.arch = Architecture(self.main_session.get_arch_info())
 
         self._logger.info(f"Connected to node: {self.name}")
 

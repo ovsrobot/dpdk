@@ -542,8 +542,6 @@ involved in the testing. These can be defined with the following mappings:
    |                       |                                                                                       |
    |                       | **NB**: Use only as last resort. SSH keys are **strongly** preferred.                 |
    +-----------------------+---------------------------------------------------------------------------------------+
-   | ``arch``              | The architecture of this node. See `ARCH`_ for supported values.                      |
-   +-----------------------+---------------------------------------------------------------------------------------+
    | ``os``                | The operating system of this node. See `OS`_ for supported values.                    |
    +-----------------------+---------------------------------------------------------------------------------------+
    | ``lcores``            | | (*optional*, defaults to 1 if not used) *string* – Comma-separated list of logical  |
