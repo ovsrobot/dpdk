@@ -716,7 +716,6 @@ F: doc/guides/nics/octeontx.rst
 F: doc/guides/nics/features/octeontx.ini
 
 Chelsio cxgbe
-M: Rahul Lakkireddy <rahul.lakkireddy@chelsio.com>
 F: drivers/net/cxgbe/
 F: doc/guides/nics/cxgbe.rst
 F: doc/guides/nics/features/cxgbe.ini
