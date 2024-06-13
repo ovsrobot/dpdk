@@ -546,14 +546,11 @@ involved in the testing. These can be defined with the following mappings:
    +-----------------------+---------------------------------------------------------------------------------------+
    | ``os``                | The operating system of this node. See `OS`_ for supported values.                    |
    +-----------------------+---------------------------------------------------------------------------------------+
-   | ``lcores``            | | (*optional*, defaults to 1) *string* – Comma-separated list of logical              |
-   |                       | | cores to use. An empty string means use all lcores.                                 |
+   | ``lcores``            | | (*optional*, defaults to 1 if not used) *string* – Comma-separated list of logical  |
+   |                       | | cores to use. An empty string means use all lcores except core 0. core 0 is used    |
+   |                       | | only when explicitly specified                                                      |
    |                       |                                                                                       |
    |                       | **Example**: ``1,2,3,4,5,18-22``                                                      |
-   +-----------------------+---------------------------------------------------------------------------------------+
-   | ``use_first_core``    | (*optional*, defaults to ``false``) *boolean*                                         |
-   |                       |                                                                                       |
-   |                       | Indicates whether DPDK should use only the first physical core or not.                |
    +-----------------------+---------------------------------------------------------------------------------------+
    | ``memory_channels``   | (*optional*, defaults to 1) *integer*                                                 |
    |                       |                                                                                       |
