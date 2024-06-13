@@ -210,6 +210,8 @@ class LogicalCoreCountFilter(LogicalCoreFilter):
         Returns:
             The filtered cores.
         """
+        if 0 in self._lcores_to_filter:
+            self._lcores_to_filter = self._lcores_to_filter[1:]
         sockets_to_filter = self._filter_sockets(self._lcores_to_filter)
         filtered_lcores = []
         for socket_to_filter in sockets_to_filter:
@@ -328,6 +330,9 @@ class LogicalCoreListFilter(LogicalCoreFilter):
         Return:
             The filtered logical CPU cores.
         """
+        if 0 not in self._filter_specifier.lcore_list:
+            self._lcores_to_filter = self._lcores_to_filter[1:]
+
         if not len(self._filter_specifier.lcore_list):
             return self._lcores_to_filter
 

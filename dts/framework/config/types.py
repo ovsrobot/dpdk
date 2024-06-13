@@ -33,6 +33,15 @@ class TrafficGeneratorConfigDict(TypedDict):
     type: str
 
 
+class DPDKConfigDict(TypedDict):
+    """Allowed keys and values."""
+
+    #:
+    memory_channels: int
+    #:
+    lcores: str
+
+
 class HugepageConfigurationDict(TypedDict):
     """Allowed keys and values."""
 
@@ -58,15 +67,11 @@ class NodeConfigDict(TypedDict):
     #:
     os: str
     #:
-    lcores: str
-    #:
-    use_first_core: bool
-    #:
     ports: list[PortConfigDict]
     #:
-    memory_channels: int
-    #:
     traffic_generator: TrafficGeneratorConfigDict
+    #:
+    dpdk_config: DPDKConfigDict
 
 
 class BuildTargetConfigDict(TypedDict):
@@ -87,15 +92,6 @@ class TestSuiteConfigDict(TypedDict):
     cases: list[str]
 
 
-class ExecutionSUTConfigDict(TypedDict):
-    """Allowed keys and values."""
-
-    #:
-    node_name: str
-    #:
-    vdevs: list[str]
-
-
 class ExecutionConfigDict(TypedDict):
     """Allowed keys and values."""
 
@@ -110,9 +106,11 @@ class ExecutionConfigDict(TypedDict):
     #:
     test_suites: TestSuiteConfigDict
     #:
-    system_under_test_node: ExecutionSUTConfigDict
+    system_under_test_node: str
     #:
     traffic_generator_node: str
+    #:
+    vdevs: list[str]
 
 
 class ConfigurationDict(TypedDict):

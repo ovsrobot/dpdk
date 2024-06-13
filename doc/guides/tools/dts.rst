@@ -544,6 +544,8 @@ involved in the testing. These can be defined with the following mappings:
    +-----------------------+---------------------------------------------------------------------------------------+
    | ``os``                | The operating system of this node. See `OS`_ for supported values.                    |
    +-----------------------+---------------------------------------------------------------------------------------+
+   | ``dpdk_config``       | Configuration relating to DPDK (to be specified on SUT Nodes)                         |
+   +-----------------------+---------------------------------------------------------------------------------------+
    | ``lcores``            | | (*optional*, defaults to 1 if not used) *string* – Comma-separated list of logical  |
    |                       | | cores to use. An empty string means use all lcores except core 0. core 0 is used    |
    |                       | | only when explicitly specified                                                      |

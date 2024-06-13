@@ -27,7 +27,7 @@ from framework.remote_session import CommandResult
 from framework.settings import SETTINGS
 from framework.utils import MesonArgs
 
-from .cpu import LogicalCoreCount, LogicalCoreList
+from .cpu import LogicalCore, LogicalCoreCount, LogicalCoreList, LogicalCoreListFilter
 from .node import Node
 from .os_session import InteractiveShellType, OSSession
 from .port import Port
@@ -131,6 +131,19 @@ class SutNode(Node):
             node_config: The SUT node's test run configuration.
         """
         super(SutNode, self).__init__(node_config)
+        self.lcores = LogicalCoreListFilter(
+            self.lcores, LogicalCoreList(self.config.dpdk_config.lcores)
+        ).filter()
+        if LogicalCore(lcore=0, core=0, socket=0, node=0) in self.lcores:
+            self._logger.info(
+                """
+                WARNING: First core being used;
+                using the first core is considered risky and should only
+                be done by advanced users.
+                """
+            )
+        else:
+            self._logger.info("Not using first core")
         self._dpdk_prefix_list = []
         self._build_target_config = None
         self._env_vars = {}
@@ -395,7 +408,7 @@ class SutNode(Node):
 
         return EalParameters(
             lcore_list=lcore_list,
-            memory_channels=self.config.memory_channels,
+            memory_channels=self.config.dpdk_config.memory_channels,
             prefix=prefix,
             no_pci=no_pci,
             vdevs=vdevs,
