@@ -31,12 +31,9 @@ from types import MethodType
 from typing import Union
 
 from .config import (
-    OS,
-    Architecture,
     BuildTargetConfiguration,
     BuildTargetInfo,
     Compiler,
-    CPUType,
     ExecutionConfiguration,
     NodeInfo,
     TestSuiteConfig,
@@ -223,7 +220,7 @@ class DTSResult(BaseResult):
     """Stores environment information and test results from a DTS run.
 
         * Execution level information, such as testbed and the test suite list,
-        * Build target level information, such as compiler, target OS and cpu,
+        * Build target level compiler information
         * Test suite and test case results,
         * All errors that are caught and recorded during DTS execution.
 
@@ -403,17 +400,11 @@ class BuildTargetResult(BaseResult):
     The internal list stores the results of all test suites in a given build target.
 
     Attributes:
-        arch: The DPDK build target architecture.
-        os: The DPDK build target operating system.
-        cpu: The DPDK build target CPU.
         compiler: The DPDK build target compiler.
         compiler_version: The DPDK build target compiler version.
         dpdk_version: The built DPDK version.
     """
 
-    arch: Architecture
-    os: OS
-    cpu: CPUType
     compiler: Compiler
     compiler_version: str | None
     dpdk_version: str | None
@@ -431,9 +422,6 @@ class BuildTargetResult(BaseResult):
             build_target: The build target's test run configuration.
         """
         super(BuildTargetResult, self).__init__()
-        self.arch = build_target.arch
-        self.os = build_target.os
-        self.cpu = build_target.cpu
         self.compiler = build_target.compiler
         self.compiler_version = None
         self.dpdk_version = None

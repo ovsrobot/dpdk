@@ -75,12 +75,6 @@ class BuildTargetConfigDict(TypedDict):
     """Allowed keys and values."""
 
     #:
-    arch: str
-    #:
-    os: str
-    #:
-    cpu: str
-    #:
     compiler: str
     #:
     compiler_wrapper: str

@@ -425,14 +425,6 @@ _`Node name`
    *string* – A unique identifier for a node.
    **Examples**: ``SUT1``, ``TG1``.
 
-_`ARCH`
-   *string* – The CPU architecture.
-   **Supported values**: ``x86_64``, ``arm64``, ``ppc64le``.
-
-_`CPU`
-   *string* – The CPU microarchitecture. Use ``native`` for x86.
-   **Supported values**: ``native``, ``armv8a``, ``dpaa2``, ``thunderx``, ``xgene1``.
-
 _`OS`
    *string* – The operating system. **Supported values**: ``linux``.
 
@@ -444,9 +436,6 @@ _`Build target`
    *mapping* – Build targets supported by DTS for building DPDK, described as:
 
    ==================== =================================================================
-   ``arch``             See `ARCH`_
-   ``os``               See `OS`_
-   ``cpu``              See `CPU`_
    ``compiler``         See `Compiler`_
    ``compiler_wrapper`` *string* – Value prepended to the CC variable for the DPDK build.
 
