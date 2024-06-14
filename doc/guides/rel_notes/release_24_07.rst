@@ -79,6 +79,10 @@ New Features
 
   * Added SSE/NEON vector datapath.
 
+* **Updated NVIDIA mlx5 crypto driver.**
+
+  * Added AES-GCM IPsec operation optimization.
+
 
 Removed Items
 -------------
