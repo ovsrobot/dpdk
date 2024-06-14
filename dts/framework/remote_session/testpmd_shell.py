@@ -225,6 +225,170 @@ class TestPmdShell(InteractiveShell):
                 f"Test pmd failed to set fwd mode to {mode.value}"
             )
 
+    def vlan_filter_set_on(self, port: int = 0, verify: bool = True):
+        """Set vlan filter on.
+
+        Args:
+            port: The port number to use, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                vlan filtering was enabled successfully. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        filter_cmd_output = self.send_command(f"vlan set filter on {port}")
+        if verify:
+            if "Invalid port" in filter_cmd_output:
+                self._logger.debug(f"Failed to enable vlan filter: \n{filter_cmd_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to enable vlan filter.")
+
+    def vlan_filter_set_off(self, port: int = 0, verify: bool = True):
+        """Set vlan filter off.
+
+        Args:
+            port: The port number to use, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                vlan filtering was disabled successfully. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        filter_cmd_output = self.send_command(f"vlan set filter off {port}")
+        if verify:
+            if "Invalid port" in filter_cmd_output:
+                self._logger.debug(f"Failed to disable vlan filter: \n{filter_cmd_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to disable vlan filter.")
+
+    def rx_vlan_add(self, vlan: int = 0, port: int = 0, verify: bool = True):
+        """Add specified vlan tag to the filter list on a port.
+
+        Args:
+            vlan: The vlan tag to add, should be within 1-4094.
+            port: The port number to add the tag on, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                the vlan tag was added to the filter list on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        vlan_add_output = self.send_command(f"rx_vlan add {vlan} {port}")
+        if verify:
+            if "VLAN-filtering disabled" in vlan_add_output or "Invalid vlan_id" in vlan_add_output:
+                self._logger.debug(f"Failed to add vlan tag: \n{vlan_add_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to add vlan tag.")
+
+    def rx_vlan_rm(self, vlan: int = 0, port: int = 0, verify: bool = True):
+        """Remove specified vlan tag from filter list on a port.
+
+        Args:
+            vlan: The vlan tag to remove, should be within 1-4094.
+            port: The port number to remove the tag from, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                the vlan tag was removed from the filter list on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        vlan_rm_output = self.send_command(f"rx_vlan rm {vlan} {port}")
+        if verify:
+            if "VLAN-filtering disabled" in vlan_rm_output or "Invalid vlan_id" in vlan_rm_output:
+                self._logger.debug(f"Failed to add vlan tag: \n{vlan_rm_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to add vlan tag.")
+
+    def vlan_strip_set_on(self, port: int = 0, verify: bool = True):
+        """Enable vlan stripping on the specified port.
+
+        Args:
+            port: The port number to use, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                vlan stripping was enabled on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        vlan_strip_output = self.send_command(f"vlan set strip on {port}")
+        if verify:
+            if "Invalid port" in vlan_strip_output:
+                self._logger.debug(f"Failed to add vlan tag: \n{vlan_strip_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to add vlan tag.")
+
+    def vlan_strip_set_off(self, port: int = 0, verify: bool = True):
+        """Disable vlan stripping on the specified port.
+
+        Args:
+            port: The port number to use, should be within 0-32
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                vlan stripping was disabled on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        vlan_strip_output = self.send_command(f"vlan set strip off {port}")
+        if verify:
+            if "Invalid port" in vlan_strip_output:
+                self._logger.debug(f"Failed to enable stripping: \n{vlan_strip_output}")
+                raise InteractiveCommandExecutionError(f"Testpmd failed to enable stripping on port {port}.")
+
+    def port_stop_all(self):
+        """Stop all ports."""
+        self.send_command("port stop all")
+
+    def port_start_all(self):
+        """Start all ports."""
+        self.send_command("port start all")
+
+    def tx_vlan_set(self, port: int = 0, vlan: int = 0, verify: bool = True):
+        """Set hardware insertion of vlan tags in packets sent on a port.
+
+        Args:
+            port: The port number to use, should be within 0-32.
+            vlan: The vlan tag to insert, should be within 1-4094.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                vlan insertion was enabled on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        vlan_insert_output = self.send_command(f"tx_vlan set {port} {vlan}")
+        if verify:
+            if ("Please stop port" in vlan_insert_output or "Invalid vlan_id" in vlan_insert_output
+            or "Invalid port" in vlan_insert_output):
+                self._logger.debug(f"Failed to set vlan insertion tag: \n{vlan_insert_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to set vlan insertion tag.")
+
+    def tx_vlan_reset(self, port: int = 0, verify: bool = True):
+        """Disable hardware insertion of vlan tags in packets sent on a port.
+
+        Args:
+            port: The port number to use, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                vlan insertion was disabled on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        vlan_insert_output = self.send_command(f"tx_vlan set {port}")
+        if verify:
+            if "Please stop port" in vlan_insert_output or "Invalid port" in vlan_insert_output:
+                self._logger.debug(f"Failed to reset vlan insertion: \n{vlan_insert_output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to reset vlan insertion.")
+
     def close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
         self.send_command("quit", "")
