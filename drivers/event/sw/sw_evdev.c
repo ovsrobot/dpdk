@@ -230,7 +230,7 @@ qid_init(struct sw_evdev *sw, unsigned int idx, int type,
 	unsigned int i;
 	int dev_id = sw->data->dev_id;
 	int socket_id = sw->data->socket_id;
-	char buf[IQ_ROB_NAMESIZE];
+	char buf[64];
 	struct sw_qid *qid = &sw->qids[idx];
 
 	/* Initialize the FID structures to no pinning (-1), and zero packets */
