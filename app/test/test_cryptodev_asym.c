@@ -3294,6 +3294,14 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 			ut_setup_asym, ut_teardown_asym,
 			modular_exponentiation, &modex_test_cases[0]),
 		TEST_CASE_NAMED_WITH_DATA(
+			"Modex test for zero padding",
+			ut_setup_asym, ut_teardown_asym,
+			modular_exponentiation, &modex_test_cases[1]),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Modex test for zero padding (2)",
+			ut_setup_asym, ut_teardown_asym,
+			modular_exponentiation, &modex_test_cases[2]),
+		TEST_CASE_NAMED_WITH_DATA(
 			"Modex Group 5 test",
 			ut_setup_asym, ut_teardown_asym,
 			modular_exponentiation, &modex_group_test_cases[0]),
@@ -3371,6 +3379,14 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 			"Modex test",
 			ut_setup_asym, ut_teardown_asym,
 			modular_exponentiation, &modex_test_cases[0]),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Modex test for zero padding",
+			ut_setup_asym, ut_teardown_asym,
+			modular_exponentiation, &modex_test_cases[1]),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Modex test for zero padding (2)",
+			ut_setup_asym, ut_teardown_asym,
+			modular_exponentiation, &modex_test_cases[2]),
 		TEST_CASE_NAMED_WITH_DATA(
 			"Modex Group 5 test",
 			ut_setup_asym, ut_teardown_asym,
