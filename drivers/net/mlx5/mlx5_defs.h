@@ -84,6 +84,9 @@
 #define MLX5_RX_DEFAULT_BURST 64U
 #define MLX5_TX_DEFAULT_BURST 64U
 
+/* Maximum number of descriptors in an RX/TX ring */
+#define MLX5_MAX_RING_DESC 8192
+
 /* Number of packets vectorized Rx can simultaneously process in a loop. */
 #define MLX5_VPMD_DESCS_PER_LOOP      4
 

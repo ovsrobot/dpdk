@@ -22,6 +22,7 @@
 
 #include <mlx5_malloc.h>
 
+#include "mlx5_defs.h"
 #include "mlx5_rxtx.h"
 #include "mlx5_rx.h"
 #include "mlx5_tx.h"
@@ -345,6 +346,8 @@ mlx5_dev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *info)
 	info->flow_type_rss_offloads = ~MLX5_RSS_HF_MASK;
 	mlx5_set_default_params(dev, info);
 	mlx5_set_txlimit_params(dev, info);
+	info->rx_desc_lim.nb_max = MLX5_MAX_RING_DESC;
+	info->tx_desc_lim.nb_max = MLX5_MAX_RING_DESC;
 	if (priv->sh->cdev->config.hca_attr.mem_rq_rmp &&
 	    priv->obj_ops.rxq_obj_new == devx_obj_ops.rxq_obj_new)
 		info->dev_capa |= RTE_ETH_DEV_CAPA_RXQ_SHARE;
@@ -774,7 +777,7 @@ mlx5_hairpin_cap_get(struct rte_eth_dev *dev, struct rte_eth_hairpin_cap *cap)
 	cap->max_nb_queues = UINT16_MAX;
 	cap->max_rx_2_tx = 1;
 	cap->max_tx_2_rx = 1;
-	cap->max_nb_desc = 8192;
+	cap->max_nb_desc = MLX5_MAX_RING_DESC;
 	hca_attr = &priv->sh->cdev->config.hca_attr;
 	cap->rx_cap.locked_device_memory = hca_attr->hairpin_data_buffer_locked;
 	cap->rx_cap.rte_memory = 0;
