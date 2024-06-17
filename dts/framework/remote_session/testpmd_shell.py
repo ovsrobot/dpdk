@@ -147,13 +147,16 @@ class TestPmdShell(InteractiveShell):
                         "Not all ports came up after starting packet forwarding in testpmd."
                     )
 
-    def stop(self, verify: bool = True) -> None:
+    def stop(self, verify: bool = True) -> str:
         """Stop packet forwarding.
 
         Args:
             verify: If :data:`True` , the output of the stop command is scanned to verify that
                 forwarding was stopped successfully or not started. If neither is found, it is
                 considered an error.
+
+        Returns:
+            Output gathered from sending the stop command.
 
         Raises:
             InteractiveCommandExecutionError: If `verify` is :data:`True` and the command to stop
@@ -167,6 +170,7 @@ class TestPmdShell(InteractiveShell):
             ):
                 self._logger.debug(f"Failed to stop packet forwarding: \n{stop_cmd_output}")
                 raise InteractiveCommandExecutionError("Testpmd failed to stop packet forwarding.")
+        return stop_cmd_output
 
     def get_devices(self) -> list[TestPmdDevice]:
         """Get a list of device names that are known to testpmd.
@@ -224,6 +228,179 @@ class TestPmdShell(InteractiveShell):
             raise InteractiveCommandExecutionError(
                 f"Test pmd failed to set fwd mode to {mode.value}"
             )
+
+    def stop_port_queue(
+        self,
+        port_id: int,
+        queue_id: int,
+        is_rx_queue: bool,
+        verify: bool = True
+    ) -> None:
+        """Stops a given queue on a port.
+
+        Args:
+            port_id: ID of the port that the queue belongs to.
+            queue_id: ID of the queue to stop.
+            is_rx_queue: Type of queue to stop. If :data:`True` an RX queue will be stopped,
+                otherwise a TX queue will be stopped.
+            verify: If :data:`True` an additional command will be sent to verify the queue stopped.
+                Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the queue fails
+                to stop.
+        """
+        port_type = "rxq" if is_rx_queue else "txq"
+        stop_cmd_output = self.send_command(f"port {port_id} {port_type} {queue_id} stop")
+        if verify:
+            if (
+                # Rx/Tx queue state: ...
+                f"{port_type.capitalize()[:-1]} queue state: stopped" not in
+                self.send_command(f"show {port_type} info {port_id} {queue_id}")
+            ):
+                self._logger.debug(
+                    f"Failed to stop {port_type} {queue_id} on port {port_id}:\n{stop_cmd_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    f"Test pmd failed to stop {port_type} {queue_id} on port {port_id}"
+                )
+
+    def start_port_queue(
+        self,
+        port_id: int,
+        queue_id: int,
+        is_rx_queue: bool,
+        verify: bool = True
+    ) -> None:
+        """Starts a given RX queue on a port.
+
+        Args:
+            port_id: ID of the port that the queue belongs to.
+            queue_id: ID of the queue to start.
+            is_rx_queue: Type of queue to start. If :data:`True` an RX queue will be started,
+                otherwise a TX queue will be started.
+            verify: if :data:`True` an additional command will be sent to verify that the queue was
+                started. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the queue fails to
+                start.
+        """
+        port_type = "rxq" if is_rx_queue else "txq"
+        self.setup_port_queue(port_id, queue_id, port_type)
+        start_cmd_output = self.send_command(f"port {port_id} {port_type} {queue_id} start")
+        if verify:
+            if (
+                # Rx/Tx queue state: ...
+                f"{port_type.capitalize()[:-1]} queue state: started" not in
+                self.send_command(f"show {port_type} info {port_id} {queue_id}")
+            ):
+                self._logger.debug(
+                    f"Failed to start {port_type} {queue_id} on port {port_id}:\n{start_cmd_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    f"Test pmd failed to start {port_type} {queue_id} on port {port_id}"
+                )
+
+    def setup_port_queue(self, port_id: int, queue_id: int, is_rx_queue: bool) -> None:
+        """Setup a given queue on a port.
+
+        This functionality cannot be verified because the setup action only takes effect when the
+        queue is started.
+
+        Args:
+            port_id: ID of the port where the queue resides.
+            queue_id: ID of the queue to setup.
+            is_rx_queue: Type of queue to setup. If :data:`True` an RX queue will be setup,
+                otherwise a TX queue will be setup.
+        """
+        self.send_command(f"port {port_id} {'rxq' if is_rx_queue else 'txq'} {queue_id} setup")
+
+    def change_queue_ring_size(
+            self,
+            port_id: int,
+            queue_id: int,
+            size: int,
+            is_rx_queue: bool,
+            verify: bool = True,
+        ) -> None:
+            """Update the ring size of an RX/TX queue on a given port.
+
+            Args:
+                port_id: The port that the queue resides on.
+                queue_id: The ID of the queue on the port.
+                size: The size to update the ring size to.
+                is_rx_queue: Whether to modify an RX or TX queue. If :data:`True` an RX queue will be
+                    updated, otherwise a TX queue will be updated.
+                verify: If :data:`True` an additional command will be sent to check the ring size of
+                    the queue in an attempt to validate that the size was changes properly.
+
+            Raises:
+                InteractiveCommandExecutionError: If `verify` is :data:`True` and there is a failure
+                    when updating ring size.
+            """
+            queue_type = "rxq" if is_rx_queue else "txq"
+            self.send_command(f"port config {port_id} {queue_type} {queue_id} ring_size {size}")
+            self.setup_port_queue(port_id, queue_id, is_rx_queue)
+            if verify:
+                queue_info = self.send_command(f"show {queue_type} info {port_id} {queue_id}")
+                if f"Number of RXDs: {size}" not in queue_info:
+                    self._logger.debug(
+                        f"Failed up update ring size of queue {queue_id} on port {port_id}:"
+                        f"\n{queue_info}"
+                    )
+                    raise InteractiveCommandExecutionError(
+                        f"Failed to update ring size of queue {queue_id} on port {port_id}"
+                    )
+
+    def set_promisc_on(self, port: int, on: bool, verify: bool = True):
+        """Turns promiscuous mode on/off for the specified port
+
+        Args:
+            port: port number to use, should be within 0-32.
+            on: if :data:`True`, turn promisc mode on, otherwise turn off.
+            verify: if :data:`True` an additional command will be sent to verify that promisc mode
+                is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and promisc mode
+            is not correctly set.
+        """
+        if on:
+            promisc_output = self.send_command(f"set promisc {port} on")
+        else:
+            promisc_output = self.send_command(f"set promisc {port} off")
+        if verify:
+            if (on and "Promiscuous mode: enabled" not in
+            self.send_command(f"show port info {port}")):
+                self._logger.debug(f"Failed to set promisc mode on port {port}: \n{promisc_output}")
+                raise InteractiveCommandExecutionError(f"Testpmd failed to set promisc mode on port {port}.")
+            elif (not on and "Promiscuous mode: disabled" not in
+            self.send_command(f"show port info {port}")):
+                self._logger.debug(f"Failed to set promisc mode on port {port}: \n{promisc_output}")
+                raise InteractiveCommandExecutionError(f"Testpmd failed to set promisc mode on port {port}.")
+
+
+    def set_verbose(self, level: int, verify: bool = True):
+        """Set debug verbosity level.
+
+        Args:
+            level: 0 - silent except for error
+            1 - fully verbose except for Tx packets
+            2 - fully verbose except for Rx packets
+            >2 - fully verbose
+            verify: if :data:`True` an additional command will be sent to verify that verbose level
+                is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and verbose level
+            is not correctly set.
+        """
+        verbose_output = self.send_command(f"set verbose {level}")
+        if verify:
+            if "Change verbose level" not in verbose_output:
+                self._logger.debug(f"Failed to set verbose level to {level}: \n{verbose_output}")
+                raise InteractiveCommandExecutionError(f"Testpmd failed to set verbose level to {level}.")
 
     def close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
