@@ -1253,6 +1253,10 @@ extern int flow_parse(const char *src, void *result, unsigned int size,
 		      struct rte_flow_item **pattern,
 		      struct rte_flow_action **actions);
 
+void show_speed_lanes_capability(uint32_t num,
+				 struct rte_eth_speed_lanes_capa *speed_lanes_capa);
+int parse_speed_lanes(uint32_t lane, uint32_t *speed_lane);
+
 uint64_t str_to_rsstypes(const char *str);
 const char *rsstypes_to_str(uint64_t rss_type);
 
