@@ -125,4 +125,8 @@ elif (dpdk_conf.has('RTE_ARCH_ARM64') and
         cc.get_define('__ARM_FEATURE_CRYPTO', args: machine_args) != '')
     sources += files('net_crc_neon.c')
     cflags += ['-DCC_ARM64_NEON_PMULL_SUPPORT']
+elif (dpdk_conf.has('RTE_ARCH_RISCV') and dpdk_conf.has('RTE_RISCV_ZBC') and
+	dpdk_conf.get('RTE_RISCV_ZBC'))
+    sources += files('net_crc_zbc.c')
+    cflags += ['-DCC_RISCV64_ZBC_CLMUL_SUPPORT']
 endif

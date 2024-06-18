@@ -168,6 +168,15 @@ test_crc(void)
 		return ret;
 	}
 
+	/* set CRC riscv mode */
+	rte_net_crc_set_alg(RTE_NET_CRC_ZBC);
+
+	ret = test_crc_calc();
+	if (ret < 0) {
+		printf("test crc (riscv64 zbc clmul): failed (%d)\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
