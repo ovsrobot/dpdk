@@ -524,7 +524,21 @@ rte_ipv4_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
  * IPv6 Header
  */
 struct rte_ipv6_hdr {
-	rte_be32_t vtc_flow;	/**< IP version, traffic class & flow label. */
+	__extension__
+	union {
+		rte_be32_t vtc_flow;        /**< IP version, traffic class & flow label. */
+		struct {
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+			uint32_t flow_label:24; /**< flow label */
+			uint32_t tc:4;     /**< traffic class */
+			uint32_t version:4; /**< version */
+#elif RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+			uint8_t version:4; /**< version */
+			uint8_t tc:4;     /**< traffic class */
+			uint32_t flow_label:24; /**< flow label */
+#endif
+		};
+	};
 	rte_be16_t payload_len;	/**< IP payload size, including ext. headers */
 	uint8_t  proto;		/**< Protocol, next header. */
 	uint8_t  hop_limits;	/**< Hop limits. */
