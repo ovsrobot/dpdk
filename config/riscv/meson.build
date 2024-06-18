@@ -26,6 +26,13 @@ flags_common = [
     # read from /proc/device-tree/cpus/timebase-frequency. This property is
     # guaranteed on Linux, as riscv time_init() requires it.
     ['RTE_RISCV_TIME_FREQ', 0],
+
+    # Use RISC-V Carry-less multiplication extension (Zbc) for hardware
+    # implementations of CRC-32C (lib/hash/rte_crc_riscv64.h), CRC-32 and CRC-16
+    # (lib/net/net_crc_zbc.c). Requires intrinsics available in GCC 14.1.0+ and
+    # Clang 18.1.0+
+    # Make sure to add '_zbc' to your target's -march below
+    ['RTE_RISCV_ZBC', false],
 ]
 
 ## SoC-specific options.
