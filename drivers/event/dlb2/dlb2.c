@@ -879,8 +879,11 @@ dlb2_hw_reset_sched_domain(const struct rte_eventdev *dev, bool reconfig)
 	dlb2_iface_domain_reset(dlb2);
 
 	/* Free all dynamically allocated port memory */
-	for (i = 0; i < dlb2->num_ports; i++)
+	for (i = 0; i < dlb2->num_ports; i++) {
 		dlb2_free_qe_mem(&dlb2->ev_ports[i].qm_port);
+		if (!reconfig)
+			memset(&dlb2->ev_ports[i], 0, sizeof(struct dlb2_eventdev_port));
+	}
 
 	/* If reconfiguring, mark the device's queues and ports as "previously
 	 * configured." If the user doesn't reconfigure them, the PMD will
@@ -1525,7 +1528,7 @@ dlb2_hw_create_ldb_port(struct dlb2_eventdev *dlb2,
 	struct dlb2_hw_dev *handle = &dlb2->qm_instance;
 	struct dlb2_create_ldb_port_args cfg = { {0} };
 	int ret;
-	struct dlb2_port *qm_port = NULL;
+	struct dlb2_port *qm_port = &ev_port->qm_port;
 	char mz_name[RTE_MEMZONE_NAMESIZE];
 	uint32_t qm_port_id;
 	uint16_t ldb_credit_high_watermark = 0;
@@ -1553,6 +1556,11 @@ dlb2_hw_create_ldb_port(struct dlb2_eventdev *dlb2,
 	/* We round up to the next power of 2 if necessary */
 	cfg.cq_depth = rte_align32pow2(dequeue_depth);
 	cfg.cq_depth_threshold = 1;
+
+	if (dlb2->version == DLB2_HW_V2_5 && qm_port->enable_inflight_ctrl) {
+		cfg.enable_inflight_ctrl = 1;
+		cfg.inflight_threshold = qm_port->inflight_threshold;
+	}
 
 	cfg.cq_history_list_size = cfg.cq_depth;
 
@@ -4319,6 +4327,51 @@ dlb2_get_queue_depth(struct dlb2_eventdev *dlb2,
 		return dlb2_get_dir_queue_depth(dlb2, queue);
 	else
 		return dlb2_get_ldb_queue_depth(dlb2, queue);
+}
+
+int
+dlb2_set_port_params(struct dlb2_eventdev *dlb2,
+		    int port_id,
+		    uint64_t param_flags,
+		    struct  rte_pmd_dlb2_port_params *params)
+{
+	struct dlb2_port *port = &dlb2->ev_ports[port_id].qm_port;
+	struct dlb2_hw_dev *handle = &dlb2->qm_instance;
+	int ret = 0, bit = 0;
+
+	while (param_flags) {
+		uint64_t param = rte_bit_relaxed_test_and_clear64(bit++, &param_flags);
+
+		if (!param)
+			continue;
+		switch (param) {
+		case RTE_PMD_DLB2_FLOW_MIGRATION_THRESHOLD:
+			if (dlb2->version == DLB2_HW_V2_5) {
+				struct dlb2_cq_inflight_ctrl_args args;
+				args.enable = true;
+				args.port_id = port->id;
+				args.threshold = params->inflight_threshold;
+
+				if (dlb2->ev_ports[port_id].setup_done)
+					ret = dlb2_iface_set_cq_inflight_ctrl(handle, &args);
+				if (ret < 0) {
+					DLB2_LOG_ERR("dlb2: can not set port parameters\n");
+					return -EINVAL;
+				}
+				port->enable_inflight_ctrl = true;
+				port->inflight_threshold = args.threshold;
+			} else {
+				DLB2_LOG_ERR("dlb2: FLOW_MIGRATION_THRESHOLD is only supported for 2.5 HW\n");
+				return -EINVAL;
+			}
+			break;
+		default:
+			DLB2_LOG_ERR("dlb2: Unsupported flag\n");
+			return -EINVAL;
+		}
+	}
+
+	return ret;
 }
 
 static bool
