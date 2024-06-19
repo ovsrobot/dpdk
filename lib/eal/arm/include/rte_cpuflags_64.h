@@ -36,6 +36,7 @@ enum rte_cpu_flag_t {
 	RTE_CPUFLAG_SVEF64MM,
 	RTE_CPUFLAG_SVEBF16,
 	RTE_CPUFLAG_AARCH64,
+	RTE_CPUFLAG_WFXT,
 };
 
 #include "generic/rte_cpuflags.h"

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2017 Cavium, Inc
- * Copyright(c) 2019 Arm Limited
+ * Copyright(c) 2024 Arm Limited
  */
 
 #ifndef _RTE_PAUSE_ARM64_H_
@@ -24,16 +24,27 @@ static inline void rte_pause(void)
 	asm volatile("yield" ::: "memory");
 }
 
-#ifdef RTE_WAIT_UNTIL_EQUAL_ARCH_DEFINED
 
-/* Send a local event to quit WFE. */
+/* Send a local event to quit WFE/WFxT. */
 #define __RTE_ARM_SEVL() { asm volatile("sevl" : : : "memory"); }
 
-/* Send a global event to quit WFE for all cores. */
+/* Send a global event to quit WFE/WFxT for all cores. */
 #define __RTE_ARM_SEV() { asm volatile("sev" : : : "memory"); }
 
 /* Put processor into low power WFE(Wait For Event) state. */
 #define __RTE_ARM_WFE() { asm volatile("wfe" : : : "memory"); }
+
+/* Put processor into low power WFET (WFE with Timeout) state. */
+#ifdef RTE_ARM_FEATURE_WFXT
+#define __RTE_ARM_WFET(t) {                              \
+	asm volatile("wfet %x[to]"                        \
+			:                                 \
+			: [to] "r" (t)                    \
+			: "memory");                      \
+	}
+#else
+#define __RTE_ARM_WFET(t) { RTE_SET_USED(t); }
+#endif
 
 /*
  * Atomic exclusive load from addr, it returns the 8-bit content of
@@ -147,6 +158,8 @@ static inline void rte_pause(void)
 	else if (size == 128)                              \
 		__RTE_ARM_LOAD_EXC_128(src, dst, memorder) \
 }
+
+#ifdef RTE_WAIT_UNTIL_EQUAL_ARCH_DEFINED
 
 static __rte_always_inline void
 rte_wait_until_equal_16(volatile uint16_t *addr, uint16_t expected,
