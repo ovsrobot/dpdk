@@ -12,6 +12,8 @@ option('disable_drivers', type: 'string', value: '', description:
        'Comma-separated list of drivers to explicitly disable.')
 option('disable_libs', type: 'string', value: '', description:
        'Comma-separated list of optional libraries to explicitly disable. [NOTE: mandatory libs cannot be disabled]')
+option('dlb_pmd_args', type: 'string', value: '', description:
+       'Comma-separated list of DLB PMD arguments in option:value format')
 option('drivers_install_subdir', type: 'string', value: 'dpdk/pmds-<VERSION>', description:
        'Subdirectory of libdir where to install PMDs. Defaults to using a versioned subdirectory.')
 option('enable_docs', type: 'boolean', value: false, description:
