@@ -144,6 +144,38 @@ New Features
 
   Added an API that allows the user to reclaim the defer queue with RCU.
 
+* **Added API to support HW delayed token feature for DLB 2.5 device.**
+
+  * Added API ``rte_pmd_dlb2_set_port_params`` to support delayed token
+    feature for DLB 2.5 device. The feature will resume CQ scheduling
+    when the number of pending completions fall below a configured
+    threshold.
+
+* **Introduced dynamic HL (History List) feature for DLB device.**
+
+  * Users can configure history list entries dynamically by passing
+    parameters ``use_default_hl`` and ``alloc_hl_entries``.
+
+  * When 'use_default_hl = 1', Per port HL is set to
+    DLB2_FIXED_CQ_HL_SIZE (32) and command line parameter
+    alloc_hl_entries is ignored.
+
+  * When 'use_default_hl = 0', Per LDB port HL = 2 * CQ depth and per
+    port HL is set to 2 * DLB2_FIXED_CQ_HL_SIZE.
+
+* **DLB credit handling scenario improvements.**
+
+  * When ports hold on to credits but can't release them due to insufficient
+    accumulation (less than 2 * credit quanta) deadlocks may occur.
+    Improvement made for worker ports to release all accumulated credits when
+    back-to-back zero poll count reaches preset threshold and producer ports
+    release all accumulated credits if enqueue fails for a consecutive number
+    of retries.
+
+  * New meson options are provided for handling credits. Valid options
+    are ``bypass_fence``, ``hw_credits_checks``, ``sw_credits_checks`` and
+    ``type_check``. These options need to be provided in meson in comma
+    separated form.
 
 Removed Items
 -------------
