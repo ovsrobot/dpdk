@@ -456,6 +456,66 @@ Example command to enable QE Weight feature:
 
        --allow ea:00.0,enable_cq_weight=<y/Y>
 
+Dynamic History List Entries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+DLB has 64 LDB ports and 2048 HL entries. If all LDB ports are used,
+possible HL entries per LDB port equals 2048 / 64 = 32. So, the
+maximum CQ depth possible is 16, if all 64 LB ports are needed in a
+high-performance setting.
+
+In case all CQs are configured to have HL = 2* CQ Depth as a
+performance option, then the calculation of HL at the time of domain
+creation will be based on maximum possible dequeue depth. This could
+result in allocating too many HL  entries to the domain as DLB only
+has a limited number of HL entries to be allocated. Hence, it is best
+to allow application to specify HL entries as a command line argument
+and override default allocation. A summary of usage is listed below:
+
+When 'use_default_hl = 1', Per port HL is set to
+DLB2_FIXED_CQ_HL_SIZE (32) and command line parameter
+alloc_hl_entries is ignored.
+
+When 'use_default_hl = 0', Per LDB port HL = 2 * CQ depth and per
+port HL is set to 2 * DLB2_FIXED_CQ_HL_SIZE.
+
+Users should calculate needed HL entries based on CQ depths the
+application will use and specify it as command line parameter
+'alloc_hl_entries'. This will be used to allocate HL entries.
+Hence, alloc_hl_entries = (Sum of all LDB ports CQ depths * 2).
+
+If alloc_hl_entries is not specified, then Total HL entries for the
+vdev = num_ldb_ports * 64
+
+Example command to use dynamic history list entries feature:
+
+    .. code-block:: console
+
+       --allow ea:00.0,use_default_hl=0,alloc_hl_entries=1024
+
+Credit Handling Scenario Improvements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When ports hold on to credits but can't release them due to insufficient
+accumulation (less than 2 * credit quanta) deadlocks may occur. Improvement
+made for worker ports to release all accumulated credits when back-to-back
+zero poll count reaches preset threshold and producer ports release all
+accumulated credits if enqueue fails for a consecutive number of retries.
+
+New meson options are provided for handling credits. Valid options are
+are ``bypass_fence``, ``hw_credits_checks``, ``sw_credits_checks`` and
+``type_check``. These options need to be provided in meson in comma
+separated form.
+
+The default behavior for ``bypass_fence`` is disabled and all others are
+enabled.
+
+Example command to use as meson option for credit handling:
+
+    .. code-block:: console
+
+       meson configure -Ddlb_pmd_args=bypass_fence:0,hw_credits_checks:1
+
 Running Eventdev Applications with DLB Device
 ---------------------------------------------
 
