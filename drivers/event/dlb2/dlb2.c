@@ -180,10 +180,7 @@ dlb2_hw_query_resources(struct dlb2_eventdev *dlb2)
 	 * The capabilities (CAPs) were set at compile time.
 	 */
 
-	if (dlb2->max_cq_depth != DLB2_DEFAULT_CQ_DEPTH)
-		num_ldb_ports = DLB2_MAX_HL_ENTRIES / dlb2->max_cq_depth;
-	else
-		num_ldb_ports = dlb2->hw_rsrc_query_results.num_ldb_ports;
+	num_ldb_ports = dlb2->hw_rsrc_query_results.num_ldb_ports;
 
 	evdev_dlb2_default_info.max_event_queues =
 		dlb2->hw_rsrc_query_results.num_ldb_queues;
@@ -631,6 +628,52 @@ set_enable_cq_weight(const char *key __rte_unused,
 	return 0;
 }
 
+static int set_hl_override(const char *key __rte_unused,
+		const char *value,
+		void *opaque)
+{
+	bool *default_hl = opaque;
+
+	if (value == NULL || opaque == NULL) {
+		DLB2_LOG_ERR("NULL pointer\n");
+		return -EINVAL;
+	}
+
+	if ((*value == 'n') || (*value == 'N') || (*value == '0'))
+		*default_hl = false;
+	else
+		*default_hl = true;
+
+	return 0;
+}
+
+static int set_hl_entries(const char *key __rte_unused,
+		const char *value,
+		void *opaque)
+{
+	int hl_entries = 0;
+	int ret;
+
+	if (value == NULL || opaque == NULL) {
+		DLB2_LOG_ERR("NULL pointer\n");
+		return -EINVAL;
+	}
+
+	ret = dlb2_string_to_int(&hl_entries, value);
+	if (ret < 0)
+		return ret;
+
+	if ((uint32_t)hl_entries > DLB2_MAX_HL_ENTRIES) {
+		DLB2_LOG_ERR(
+		    "alloc_hl_entries %u out of range, must be in [1 - %d]\n",
+		    hl_entries, DLB2_MAX_HL_ENTRIES);
+		return -EINVAL;
+	}
+	*(uint32_t *)opaque = hl_entries;
+
+	return 0;
+}
+
 static int
 set_qid_depth_thresh(const char *key __rte_unused,
 		     const char *value,
@@ -828,8 +871,19 @@ dlb2_hw_create_sched_domain(struct dlb2_eventdev *dlb2,
 		DLB2_NUM_ATOMIC_INFLIGHTS_PER_QUEUE *
 		cfg->num_ldb_queues;
 
-	cfg->num_hist_list_entries = resources_asked->num_ldb_ports *
-		evdev_dlb2_default_info.max_event_port_dequeue_depth;
+	/* If hl_entries is non-zero then user specified command line option.
+	 * Else compute using default_port_hl that has been set earlier based
+	 * on use_default_hl option
+	 */
+	if (dlb2->hl_entries) {
+		cfg->num_hist_list_entries = dlb2->hl_entries;
+		if (resources_asked->num_ldb_ports)
+			dlb2->default_port_hl = cfg->num_hist_list_entries /
+						resources_asked->num_ldb_ports;
+	} else {
+		cfg->num_hist_list_entries =
+		    resources_asked->num_ldb_ports * dlb2->default_port_hl;
+	}
 
 	if (device_version == DLB2_HW_V2_5) {
 		DLB2_LOG_DBG("sched domain create - ldb_qs=%d, ldb_ports=%d, dir_ports=%d, atomic_inflights=%d, hist_list_entries=%d, credits=%d\n",
@@ -1041,7 +1095,7 @@ dlb2_eventdev_port_default_conf_get(struct rte_eventdev *dev,
 	struct dlb2_eventdev *dlb2 = dlb2_pmd_priv(dev);
 
 	port_conf->new_event_threshold = dlb2->new_event_limit;
-	port_conf->dequeue_depth = 32;
+	port_conf->dequeue_depth = dlb2->default_port_hl / 2;
 	port_conf->enqueue_depth = DLB2_MAX_ENQUEUE_DEPTH;
 	port_conf->event_port_cfg = 0;
 }
@@ -1560,9 +1614,18 @@ dlb2_hw_create_ldb_port(struct dlb2_eventdev *dlb2,
 	if (dlb2->version == DLB2_HW_V2_5 && qm_port->enable_inflight_ctrl) {
 		cfg.enable_inflight_ctrl = 1;
 		cfg.inflight_threshold = qm_port->inflight_threshold;
+		if (!qm_port->hist_list)
+			qm_port->hist_list = cfg.cq_depth;
 	}
 
-	cfg.cq_history_list_size = cfg.cq_depth;
+	if (qm_port->hist_list)
+		cfg.cq_history_list_size = qm_port->hist_list;
+	else if (cfg.enable_inflight_ctrl)
+		cfg.cq_history_list_size = RTE_MIN(cfg.cq_depth, dlb2->default_port_hl);
+	else if (dlb2->default_port_hl == DLB2_FIXED_CQ_HL_SIZE)
+		cfg.cq_history_list_size = DLB2_FIXED_CQ_HL_SIZE;
+	else
+		cfg.cq_history_list_size = cfg.cq_depth * 2;
 
 	cfg.cos_id = ev_port->cos_id;
 	cfg.cos_strict = 0;/* best effots */
@@ -4365,6 +4428,13 @@ dlb2_set_port_params(struct dlb2_eventdev *dlb2,
 				return -EINVAL;
 			}
 			break;
+		case RTE_PMD_DLB2_SET_PORT_HL:
+			if (dlb2->ev_ports[port_id].setup_done) {
+				DLB2_LOG_ERR("DLB2_SET_PORT_HL must be called before setting up port\n");
+				return -EINVAL;
+			}
+			port->hist_list = params->port_hl;
+			break;
 		default:
 			DLB2_LOG_ERR("dlb2: Unsupported flag\n");
 			return -EINVAL;
@@ -4683,6 +4753,28 @@ dlb2_primary_eventdev_probe(struct rte_eventdev *dev,
 		return err;
 	}
 
+	if (dlb2_args->use_default_hl) {
+		dlb2->default_port_hl = DLB2_FIXED_CQ_HL_SIZE;
+		if (dlb2_args->alloc_hl_entries)
+			DLB2_LOG_ERR(": Ignoring 'alloc_hl_entries' and using "
+				     "default history list sizes for eventdev:"
+				     " %s\n", dev->data->name);
+		dlb2->hl_entries = 0;
+	} else {
+		dlb2->default_port_hl = 2 * DLB2_FIXED_CQ_HL_SIZE;
+
+		if (dlb2_args->alloc_hl_entries >
+		    dlb2->hw_rsrc_query_results.num_hist_list_entries) {
+			DLB2_LOG_ERR(": Insufficient HL entries asked=%d "
+				     "available=%d for eventdev: %s\n",
+				     dlb2->hl_entries,
+				     dlb2->hw_rsrc_query_results.num_hist_list_entries,
+				     dev->data->name);
+			return -EINVAL;
+		}
+		dlb2->hl_entries = dlb2_args->alloc_hl_entries;
+	}
+
 	dlb2_iface_hardware_init(&dlb2->qm_instance);
 
 	/* configure class of service */
@@ -4790,6 +4882,8 @@ dlb2_parse_params(const char *params,
 					     DLB2_PRODUCER_COREMASK,
 					     DLB2_DEFAULT_LDB_PORT_ALLOCATION_ARG,
 					     DLB2_ENABLE_CQ_WEIGHT_ARG,
+					     DLB2_USE_DEFAULT_HL,
+					     DLB2_ALLOC_HL_ENTRIES,
 					     NULL };
 
 	if (params != NULL && params[0] != '\0') {
@@ -4988,6 +5082,26 @@ dlb2_parse_params(const char *params,
 						 &dlb2_args->enable_cq_weight);
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing enable_cq_weight arg",
+					     name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
+
+			ret = rte_kvargs_process(kvlist, DLB2_USE_DEFAULT_HL,
+						 set_hl_override,
+						 &dlb2_args->use_default_hl);
+			if (ret != 0) {
+				DLB2_LOG_ERR("%s: Error parsing use_default_hl arg",
+					     name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
+
+			ret = rte_kvargs_process(kvlist, DLB2_ALLOC_HL_ENTRIES,
+						 set_hl_entries,
+						 &dlb2_args->alloc_hl_entries);
+			if (ret != 0) {
+				DLB2_LOG_ERR("%s: Error parsing hl_override arg",
 					     name);
 				rte_kvargs_free(kvlist);
 				return ret;

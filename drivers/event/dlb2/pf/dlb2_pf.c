@@ -422,6 +422,8 @@ dlb2_pf_dir_port_create(struct dlb2_hw_dev *handle,
 				      cfg,
 				      cq_base,
 				      &response);
+
+	cfg->response = response;
 	if (ret)
 		goto create_port_err;
 
@@ -437,7 +439,6 @@ dlb2_pf_dir_port_create(struct dlb2_hw_dev *handle,
 
 	dlb2_list_init_head(&port_memory.list);
 
-	cfg->response = response;
 
 	return 0;
 
@@ -731,7 +732,9 @@ dlb2_eventdev_pci_init(struct rte_eventdev *eventdev)
 		.hw_credit_quanta = DLB2_SW_CREDIT_BATCH_SZ,
 		.default_depth_thresh = DLB2_DEPTH_THRESH_DEFAULT,
 		.max_cq_depth = DLB2_DEFAULT_CQ_DEPTH,
-		.max_enq_depth = DLB2_MAX_ENQUEUE_DEPTH
+		.max_enq_depth = DLB2_MAX_ENQUEUE_DEPTH,
+		.use_default_hl = true,
+		.alloc_hl_entries = 0
 	};
 	struct dlb2_eventdev *dlb2;
 	int q;
