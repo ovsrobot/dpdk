@@ -5,12 +5,11 @@
 #include <stdint.h>
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
+#include <rte_vect.h>
 
 #include "iavf.h"
 #include "iavf_rxtx.h"
 #include "iavf_rxtx_vec_common.h"
-
-#include <tmmintrin.h>
 
 #ifndef __INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wcast-qual"
