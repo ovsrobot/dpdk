@@ -5,12 +5,11 @@
 
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
+#include <rte_vect.h>
 
 #include "txgbe_ethdev.h"
 #include "txgbe_rxtx.h"
 #include "txgbe_rxtx_vec_common.h"
-
-#include <tmmintrin.h>
 
 static inline void
 txgbe_rxq_rearm(struct txgbe_rx_queue *rxq)
