@@ -9,6 +9,7 @@
 #include <rte_debug.h>
 #include <rte_malloc.h>
 #include <rte_errno.h>
+#include <rte_vect.h>
 
 #include <rte_rib6.h>
 #include <rte_fib6.h>
