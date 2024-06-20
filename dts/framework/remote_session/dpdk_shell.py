@@ -81,6 +81,7 @@ class DPDKShell(InteractiveShell, ABC):
         append_prefix_timestamp: bool = True,
         start_on_init: bool = True,
         app_params: EalParams = EalParams(),
+        name: str | None = None,
     ) -> None:
         """Extends :meth:`~.interactive_shell.InteractiveShell.__init__`.
 
@@ -95,7 +96,7 @@ class DPDKShell(InteractiveShell, ABC):
             append_prefix_timestamp,
         )
 
-        super().__init__(node, privileged, timeout, start_on_init, app_params)
+        super().__init__(node, privileged, timeout, start_on_init, app_params, name)
 
     def _update_real_path(self, path: PurePath) -> None:
         """Extends :meth:`~.interactive_shell.InteractiveShell._update_real_path`.

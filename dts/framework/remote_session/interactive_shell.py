@@ -25,7 +25,7 @@ from framework.exception import (
     InteractiveSSHSessionDeadError,
     InteractiveSSHTimeoutError,
 )
-from framework.logger import DTSLogger
+from framework.logger import DTSLogger, get_dts_logger
 from framework.params import Params
 from framework.settings import SETTINGS
 from framework.testbed_model.node import Node
@@ -73,6 +73,7 @@ class InteractiveShell(ABC):
         timeout: float = SETTINGS.timeout,
         start_on_init: bool = True,
         app_params: Params = Params(),
+        name: str | None = None,
     ) -> None:
         """Create an SSH channel during initialization.
 
@@ -84,9 +85,13 @@ class InteractiveShell(ABC):
                 and no output is gathered within the timeout, an exception is thrown.
             start_on_init: Start interactive shell automatically after object initialisation.
             app_params: The command line parameters to be passed to the application on startup.
+            name: Name for the interactive shell to use for logging. This name will be appended to
+                the name of the underlying node which it is running on.
         """
         self._node = node
-        self._logger = node._logger
+        if name is None:
+            name = type(self).__name__
+        self._logger = get_dts_logger(f"{node.name}.{name}")
         self._app_params = app_params
         self._privileged = privileged
         self._timeout = timeout

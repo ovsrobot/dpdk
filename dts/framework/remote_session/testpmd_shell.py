@@ -605,6 +605,7 @@ class TestPmdShell(DPDKShell):
         ascending_cores: bool = True,
         append_prefix_timestamp: bool = True,
         start_on_init: bool = True,
+        name: str | None = None,
         **app_params: Unpack[TestPmdParamsDict],
     ) -> None:
         """Overrides :meth:`~.dpdk_shell.DPDKShell.__init__`. Changes app_params to kwargs."""
@@ -617,6 +618,7 @@ class TestPmdShell(DPDKShell):
             append_prefix_timestamp,
             start_on_init,
             TestPmdParams(**app_params),
+            name,
         )
 
     def start(self, verify: bool = True) -> None:
