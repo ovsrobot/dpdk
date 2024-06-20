@@ -5,13 +5,12 @@
 
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
+#include <rte_vect.h>
 
 #include "ngbe_type.h"
 #include "ngbe_ethdev.h"
 #include "ngbe_rxtx.h"
 #include "ngbe_rxtx_vec_common.h"
-
-#include <tmmintrin.h>
 
 static inline void
 ngbe_rxq_rearm(struct ngbe_rx_queue *rxq)
