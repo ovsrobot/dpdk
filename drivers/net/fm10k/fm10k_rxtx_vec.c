@@ -10,6 +10,7 @@
 #include "base/fm10k_type.h"
 
 #include <tmmintrin.h>
+#include <emmintrin.h>
 
 #ifndef __INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wcast-qual"
