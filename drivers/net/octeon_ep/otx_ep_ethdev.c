@@ -5,6 +5,8 @@
 #include <inttypes.h>
 #include <ethdev_pci.h>
 
+#include <rte_vect.h>
+
 #include "otx_ep_common.h"
 #include "otx_ep_vf.h"
 #include "otx2_ep_vf.h"
