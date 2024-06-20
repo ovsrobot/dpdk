@@ -8,8 +8,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <tmmintrin.h>
-
 #include <rte_byteorder.h>
 #include <rte_branch_prediction.h>
 #include <rte_cycles.h>
@@ -22,6 +20,7 @@
 #include <rte_mbuf.h>
 #include <rte_prefetch.h>
 #include <rte_string_fns.h>
+#include <rte_vect.h>
 
 #include "virtio_rxtx_simple.h"
 
