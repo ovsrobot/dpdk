@@ -6,10 +6,9 @@
 
 #include <ethdev_driver.h>
 #include <rte_common.h>
+#include <rte_vect.h>
 #include "fm10k.h"
 #include "base/fm10k_type.h"
-
-#include <tmmintrin.h>
 
 #ifndef __INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wcast-qual"
