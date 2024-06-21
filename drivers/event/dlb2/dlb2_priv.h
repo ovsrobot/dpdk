@@ -387,8 +387,23 @@ struct dlb2_port {
 	bool use_scalar; /* force usage of scalar code */
 	uint16_t hw_credit_quanta;
 	bool use_avx512;
-	uint32_t cq_weight;
 	bool is_producer; /* True if port is of type producer */
+	uint8_t reorder_id; /* id used for reordering events coming back into the scheduler */
+	bool reorder_en;
+	struct dlb2_reorder *order; /* For ordering enqueues */
+};
+
+struct dlb2_reorder {
+	/* a reorder buffer for events coming back in different order from dequeue
+	 * We use UINT8_MAX + 1 elements, but add on three no-ops to make movdirs easier at the end
+	 */
+	union {
+		__m128i m128;
+		struct dlb2_enqueue_qe qe;
+		uint64_t u64[2];
+	} enq_reorder[UINT8_MAX + 4];
+	/* id of the next entry in the reorder enqueue ring to send in */
+	uint8_t next_to_enqueue;
 };
 
 /* Per-process per-port mmio and memory pointers */
@@ -642,10 +657,6 @@ struct dlb2_qid_depth_thresholds {
 	int val[DLB2_MAX_NUM_QUEUES_ALL];
 };
 
-struct dlb2_cq_weight {
-	int limit[DLB2_MAX_NUM_PORTS_ALL];
-};
-
 struct dlb2_port_cos {
 	int cos_id[DLB2_MAX_NUM_PORTS_ALL];
 };
@@ -667,7 +678,6 @@ struct dlb2_devargs {
 	bool vector_opts_enabled;
 	int max_cq_depth;
 	int max_enq_depth;
-	struct dlb2_cq_weight cq_weight;
 	struct dlb2_port_cos port_cos;
 	struct dlb2_cos_bw cos_bw;
 	const char *producer_coremask;

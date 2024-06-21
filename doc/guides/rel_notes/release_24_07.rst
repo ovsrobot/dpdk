@@ -144,6 +144,10 @@ New Features
 
   Added an API that allows the user to reclaim the defer queue with RCU.
 
+* **Updated DLB2 Driver for enqueue reordering feature**
+  * Added support for DLB reordering feature. Applications should use
+    ``RTE_EVENT_PORT_CFG_RESTORE_DEQ_ORDER`` to enable the feature.
+
 
 Removed Items
 -------------
