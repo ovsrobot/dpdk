@@ -6,25 +6,24 @@
 Poll Mode Driver
 ================
 
-The DPDK includes 1 Gigabit, 10 Gigabit and 40 Gigabit and para virtualized virtio Poll Mode Drivers.
+The DPDK includes 1 Gigabit, 10 Gigabit, 40 Gigabit and para virtualized virtio Poll Mode Drivers.
 
-A Poll Mode Driver (PMD) consists of APIs, provided through the BSD driver running in user space,
-to configure the devices and their respective queues.
+A Poll Mode Driver (PMD) consists of APIs (provided through the BSD driver running in user space) to configure the devices and their respective queues.
 In addition, a PMD accesses the RX and TX descriptors directly without any interrupts
 (with the exception of Link Status Change interrupts) to quickly receive,
 process and deliver packets in the user's application.
-This section describes the requirements of the PMDs,
-their global design principles and proposes a high-level architecture and a generic external API for the Ethernet PMDs.
+This section describes the requirements of the PMDs and
+their global design principles. It also proposes a high-level architecture and a generic external API for the Ethernet PMDs.
 
 Requirements and Assumptions
 ----------------------------
 
 The DPDK environment for packet processing applications allows for two models, run-to-completion and pipe-line:
 
-*   In the *run-to-completion*  model, a specific port's RX descriptor ring is polled for packets through an API.
-    Packets are then processed on the same core and placed on a port's TX descriptor ring through an API for transmission.
+*   In the *run-to-completion*  model, a specific port's Rx descriptor ring is polled for packets through an API.
+    Packets are then processed on the same core and placed on a port's Tx descriptor ring through an API for transmission.
 
-*   In the *pipe-line*  model, one core polls one or more port's RX descriptor ring through an API.
+*   In the *pipe-line*  model, one core polls one or more port's Rx descriptor ring through an API.
     Packets are received and passed to another core via a ring.
     The other core continues to process the packet which then may be placed on a port's TX descriptor ring through an API for transmission.
 
@@ -50,14 +49,14 @@ The loop for packet processing includes the following steps:
 
 *   Retrieve the received packet from the packet queue
 
-*   Process the received packet, up to its retransmission if forwarded
+*   Process the received packet up to its retransmission if forwarded
 
 To avoid any unnecessary interrupt processing overhead, the execution environment must not use any asynchronous notification mechanisms.
 Whenever needed and appropriate, asynchronous communication should be introduced as much as possible through the use of rings.
 
 Avoiding lock contention is a key issue in a multi-core environment.
-To address this issue, PMDs are designed to work with per-core private resources as much as possible.
-For example, a PMD maintains a separate transmit queue per-core, per-port, if the PMD is not ``RTE_ETH_TX_OFFLOAD_MT_LOCKFREE`` capable.
+To address this issue, PMDs are designed to work with per core private resources as much as possible.
+For example, a PMD maintains a separate transmit queue per core, per port, if the PMD is not ``RTE_ETH_TX_OFFLOAD_MT_LOCKFREE`` capable.
 In the same way, every receive queue of a port is assigned to and polled by a single logical core (lcore).
 
 To comply with Non-Uniform Memory Access (NUMA), memory management is designed to assign to each logical core
@@ -101,9 +100,9 @@ However, an rte_eth_tx_burst function is effectively implemented by the PMD to m
 
 *   Apply burst-oriented software optimization techniques to remove operations that would otherwise be unavoidable, such as ring index wrap back management.
 
-Burst-oriented functions are also introduced via the API for services that are intensively used by the PMD.
+Burst-oriented functions are also introduced via the API for services that are extensively used by the PMD.
 This applies in particular to buffer allocators used to populate NIC rings, which provide functions to allocate/free several buffers at a time.
-For example, an mbuf_multiple_alloc function returning an array of pointers to rte_mbuf buffers which speeds up the receive poll function of the PMD when
+An example of this would be an mbuf_multiple_alloc function returning an array of pointers to rte_mbuf buffers which speeds up the receive poll function of the PMD when
 replenishing multiple descriptors of the receive ring.
 
 Logical Cores, Memory and NIC Queues Relationships
@@ -111,7 +110,7 @@ Logical Cores, Memory and NIC Queues Relationships
 
 The DPDK supports NUMA allowing for better performance when a processor's logical cores and interfaces utilize its local memory.
 Therefore, mbuf allocation associated with local PCIe* interfaces should be allocated from memory pools created in the local memory.
-The buffers should, if possible, remain on the local processor to obtain the best performance results and RX and TX buffer descriptors
+The buffers should, if possible, remain on the local processor to obtain the best performance results and Rx and Tx buffer descriptors
 should be populated with mbufs allocated from a mempool allocated from local memory.
 
 The run-to-completion model also performs better if packet or data manipulation is in local memory instead of a remote processors memory.
@@ -120,12 +119,11 @@ This is also true for the pipe-line model provided all logical cores used are lo
 Multiple logical cores should never share receive or transmit queues for interfaces since this would require global locks and hinder performance.
 
 If the PMD is ``RTE_ETH_TX_OFFLOAD_MT_LOCKFREE`` capable, multiple threads can invoke ``rte_eth_tx_burst()``
-concurrently on the same tx queue without SW lock. This PMD feature found in some NICs and useful in the following use cases:
+concurrently on the same Tx queue without an SW lock. This PMD feature found in some NICs is useful for:
 
-*  Remove explicit spinlock in some applications where lcores are not mapped to Tx queues with 1:1 relation.
+*  Removing explicit spinlock in some applications where lcores are not mapped to Tx queues with 1:1 relation.
 
-*  In the eventdev use case, avoid dedicating a separate TX core for transmitting and thus
-   enables more scaling as all workers can send the packets.
+*  Enabling greater scalability by removing the requirement to have a dedicated Tx core
 
 See `Hardware Offload`_ for ``RTE_ETH_TX_OFFLOAD_MT_LOCKFREE`` capability probing details.
 
@@ -135,8 +133,8 @@ Device Identification, Ownership and Configuration
 Device Identification
 ~~~~~~~~~~~~~~~~~~~~~
 
-Each NIC port is uniquely designated by its (bus/bridge, device, function) PCI
-identifiers assigned by the PCI probing/enumeration function executed at DPDK initialization.
+Each NIC port is uniquely designated by its PCI
+identifiers (bus/bridge, device, function) assigned by the PCI probing/enumeration function executed at DPDK initialization.
 Based on their PCI identifier, NIC ports are assigned two other identifiers:
 
 *   A port index used to designate the NIC port in all functions exported by the PMD API.
@@ -149,14 +147,13 @@ Port Ownership
 
 The Ethernet devices ports can be owned by a single DPDK entity (application, library, PMD, process, etc).
 The ownership mechanism is controlled by ethdev APIs and allows to set/remove/get a port owner by DPDK entities.
-It prevents Ethernet ports to be managed by different entities.
+This prevents Ethernet ports from being managed by different entities.
 
 .. note::
 
-    It is the DPDK entity responsibility to set the port owner before using it and to manage the port usage synchronization between different threads or processes.
+    It is the DPDK entity responsibility to set the port owner before using the port and to manage the port usage synchronization between different threads or processes.
 
-It is recommended to set port ownership early,
-like during the probing notification ``RTE_ETH_EVENT_NEW``.
+It is recommended to set port ownership early. For instance, during the probing notification ``RTE_ETH_EVENT_NEW``.
 
 Device Configuration
 ~~~~~~~~~~~~~~~~~~~~
@@ -165,7 +162,7 @@ The configuration of each NIC port includes the following operations:
 
 *   Allocate PCI resources
 
-*   Reset the hardware (issue a Global Reset) to a well-known default state
+*   Reset the hardware to a well-known default state (issue a Global Reset)
 
 *   Set up the PHY and the link
 
@@ -174,7 +171,7 @@ The configuration of each NIC port includes the following operations:
 The PMD API must also export functions to start/stop the all-multicast feature of a port and functions to set/unset the port in promiscuous mode.
 
 Some hardware offload features must be individually configured at port initialization through specific configuration parameters.
-This is the case for the Receive Side Scaling (RSS) and Data Center Bridging (DCB) features for example.
+This is the case for the Receive Side Scaling (RSS) and Data Center Bridging (DCB) features.
 
 On-the-Fly Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,7 +207,7 @@ Each transmit queue is independently configured with the following information:
 
 *   The *minimum* transmit packets to free threshold (tx_free_thresh).
     When the number of descriptors used to transmit packets exceeds this threshold, the network adaptor should be checked to see if it has written back descriptors.
-    A value of 0 can be passed during the TX queue configuration to indicate the default value should be used.
+    A value of 0 can be passed during the Tx queue configuration to indicate the default value should be used.
     The default value for tx_free_thresh is 32.
     This ensures that the PMD does not search for completed descriptors until at least 32 have been processed by the NIC for this queue.
 
@@ -222,7 +219,7 @@ Each transmit queue is independently configured with the following information:
     A value of 0 can be passed during the TX queue configuration to indicate that the default value should be used.
     The default value for tx_rs_thresh is 32.
     This ensures that at least 32 descriptors are used before the network adapter writes back the most recently used descriptor.
-    This saves upstream PCIe* bandwidth resulting from TX descriptor write-backs.
+    This saves upstream PCIe* bandwidth resulting from Tx descriptor write-backs.
     It is important to note that the TX Write-back threshold (TX wthresh) should be set to 0 when tx_rs_thresh is greater than 1.
     Refer to the Intel® 82599 10 Gigabit Ethernet Controller Datasheet for more details.
 
@@ -244,7 +241,7 @@ One descriptor in the TX ring is used as a sentinel to avoid a hardware race con
 
 .. note::
 
-    When configuring for DCB operation, at port initialization, both the number of transmit queues and the number of receive queues must be set to 128.
+    When configuring for DCB operation at port initialization, both the number of transmit queues and the number of receive queues must be set to 128.
 
 Free Tx mbuf on Demand
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -265,7 +262,7 @@ There are two scenarios when an application may want the mbuf released immediate
   One option is to make a copy of the packet or a copy of the header portion that needs to be manipulated.
   A second option is to transmit the packet and then poll the ``rte_eth_tx_done_cleanup()`` API
   until the reference count on the packet is decremented.
-  Then the same packet can be transmitted to the next destination interface.
+  Then, the same packet can be transmitted to the next destination interface.
   The application is still responsible for managing any packet manipulations needed
   between the different destination interfaces, but a packet copy can be avoided.
   This API is independent of whether the packet was transmitted or dropped,
@@ -288,13 +285,13 @@ Hardware Offload
 Depending on driver capabilities advertised by
 ``rte_eth_dev_info_get()``, the PMD may support hardware offloading
 feature like checksumming, TCP segmentation, VLAN insertion or
-lockfree multithreaded TX burst on the same TX queue.
+lockfree multithreaded Tx burst on the same Tx queue.
 
 The support of these offload features implies the addition of dedicated
 status bit(s) and value field(s) into the rte_mbuf data structure, along
 with their appropriate handling by the receive/transmit functions
 exported by each PMD. The list of flags and their precise meaning is
-described in the mbuf API documentation and in the in :ref:`Mbuf Library
+described in the mbuf API documentation and in the :ref:`Mbuf Library
 <Mbuf_Library>`, section "Meta Information".
 
 Per-Port and Per-Queue Offloads
@@ -303,14 +300,14 @@ Per-Port and Per-Queue Offloads
 In the DPDK offload API, offloads are divided into per-port and per-queue offloads as follows:
 
 * A per-queue offloading can be enabled on a queue and disabled on another queue at the same time.
-* A pure per-port offload is the one supported by device but not per-queue type.
-* A pure per-port offloading can't be enabled on a queue and disabled on another queue at the same time.
+* A pure per-port offload is supported by a device but not per-queue type.
+* A pure per-port offloading cannot be enabled on a queue and disabled on another queue at the same time.
 * A pure per-port offloading must be enabled or disabled on all queues at the same time.
-* Any offloading is per-queue or pure per-port type, but can't be both types at same devices.
+* Offloading is per-queue or pure per-port type, but cannot be both types on the same devices.
 * Port capabilities = per-queue capabilities + pure per-port capabilities.
 * Any supported offloading can be enabled on all queues.
 
-The different offloads capabilities can be queried using ``rte_eth_dev_info_get()``.
+The different offload capabilities can be queried using ``rte_eth_dev_info_get()``.
 The ``dev_info->[rt]x_queue_offload_capa`` returned from ``rte_eth_dev_info_get()`` includes all per-queue offloading capabilities.
 The ``dev_info->[rt]x_offload_capa`` returned from ``rte_eth_dev_info_get()`` includes all pure per-port and per-queue offloading capabilities.
 Supported offloads can be either per-port or per-queue.
@@ -329,8 +326,8 @@ per-port type and no matter whether it is set or cleared in
 If a per-queue offloading hasn't been enabled in ``rte_eth_dev_configure()``,
 it can be enabled or disabled in ``rte_eth_[rt]x_queue_setup()`` for individual queue.
 A newly added offloads in ``[rt]x_conf->offloads`` to ``rte_eth_[rt]x_queue_setup()`` input by application
-is the one which hasn't been enabled in ``rte_eth_dev_configure()`` and is requested to be enabled
-in ``rte_eth_[rt]x_queue_setup()``. It must be per-queue type, otherwise trigger an error log.
+is the one that hasn't been enabled in ``rte_eth_dev_configure()`` and is requested to be enabled
+in ``rte_eth_[rt]x_queue_setup()``. It must be per-queue type, otherwise an error log will be triggered.
 
 Poll Mode Driver API
 --------------------
@@ -340,8 +337,8 @@ Generalities
 
 By default, all functions exported by a PMD are lock-free functions that are assumed
 not to be invoked in parallel on different logical cores to work on the same target object.
-For instance, a PMD receive function cannot be invoked in parallel on two logical cores to poll the same RX queue of the same port.
-Of course, this function can be invoked in parallel by different logical cores on different RX queues.
+For instance, a PMD receive function cannot be invoked in parallel on two logical cores to poll the same Rx queue of the same port.
+This function can be invoked in parallel by different logical cores on different Rx queues.
 It is the responsibility of the upper-level application to enforce this rule.
 
 If needed, parallel accesses by multiple logical cores to shared queues can be explicitly protected by dedicated inline lock-aware functions
@@ -357,7 +354,7 @@ The rte_mbuf data structure includes specific fields to represent, in a generic 
 For an input packet, most fields of the rte_mbuf structure are filled in by the PMD receive function with the information contained in the receive descriptor.
 Conversely, for output packets, most fields of rte_mbuf structures are used by the PMD transmit function to initialize transmit descriptors.
 
-The mbuf structure is fully described in the :ref:`Mbuf Library <Mbuf_Library>` chapter.
+The mbuf structure is described in depth in the :ref:`Mbuf Library <Mbuf_Library>` chapter.
 
 Ethernet Device API
 ~~~~~~~~~~~~~~~~~~~
@@ -370,12 +367,12 @@ Ethernet Device Standard Device Arguments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Standard Ethernet device arguments allow for a set of commonly used arguments/
-parameters which are applicable to all Ethernet devices to be available to for
-specification of specific device and for passing common configuration
+parameters applicable to all Ethernet devices. These arguments/parameters are available for
+specification of specific devices and passing common configuration
 parameters to those ports.
 
-* ``representor`` for a device which supports the creation of representor ports
-  this argument allows user to specify which switch ports to enable port
+* Use ``representor`` for a device which supports the creation of representor ports.
+  This argument allows user to specify which switch ports to enable port
   representors for::
 
    -a DBDF,representor=vf0
@@ -392,7 +389,7 @@ parameters to those ports.
    -a DBDF,representor=[pf[0-1],pf2vf[0-2],pf3[3,5-8]]
    (Multiple representors in one device argument can be represented as a list)
 
-Note: PMDs are not required to support the standard device arguments and users
+Note: PMDs are not required to support the standard device arguments. Users
 should consult the relevant PMD documentation to see support devargs.
 
 Extended Statistics API
@@ -402,9 +399,9 @@ The extended statistics API allows a PMD to expose all statistics that are
 available to it, including statistics that are unique to the device.
 Each statistic has three properties ``name``, ``id`` and ``value``:
 
-* ``name``: A human readable string formatted by the scheme detailed below.
+* ``name``: A human-readable string formatted by the scheme detailed below.
 * ``id``: An integer that represents only that statistic.
-* ``value``: A unsigned 64-bit integer that is the value of the statistic.
+* ``value``: An unsigned 64-bit integer that is the value of the statistic.
 
 Note that extended statistic identifiers are
 driver-specific, and hence might not be the same for different ports.
@@ -439,7 +436,7 @@ associated with the receive side of the NIC.  The second component ``packets``
 indicates that the unit of measure is packets.
 
 A more complicated example: ``tx_size_128_to_255_packets``. In this example,
-``tx`` indicates transmission, ``size``  is the first detail, ``128`` etc are
+``tx`` indicates transmission, ``size``  is the first detail, ``128`` etc., are
 more details, and ``packets`` indicates that this is a packet counter.
 
 Some additions in the metadata scheme are as follows:
@@ -466,8 +463,8 @@ lookup of specific statistics. Performant lookup means two things;
 The API ensures these requirements are met by mapping the ``name`` of the
 statistic to a unique ``id``, which is used as a key for lookup in the fast-path.
 The API allows applications to request an array of ``id`` values, so that the
-PMD only performs the required calculations. Expected usage is that the
-application scans the ``name`` of each statistic, and caches the ``id``
+PMD only performs the required calculations. The expected usage is that the
+application scans the ``name`` of each statistic and caches the ``id``
 if it has an interest in that statistic. On the fast-path, the integer can be used
 to retrieve the actual ``value`` of the statistic that the ``id`` represents.
 
@@ -486,7 +483,7 @@ statistics.
 
 * ``rte_eth_xstats_get_by_id()``: Fills in an array of ``uint64_t`` values
   with matching the provided ``ids`` array. If the ``ids`` array is NULL, it
-  returns all statistics that are available.
+  returns all available statistics.
 
 
 Application Usage
@@ -496,10 +493,10 @@ Imagine an application that wants to view the dropped packet count. If no
 packets are dropped, the application does not read any other metrics for
 performance reasons. If packets are dropped, the application has a particular
 set of statistics that it requests. This "set" of statistics allows the app to
-decide what next steps to perform. The following code-snippets show how the
+decide what next steps to perform. The following code snippets show how the
 xstats API can be used to achieve this goal.
 
-First step is to get all statistics names and list them:
+The first step is to get all statistics names and list them:
 
 .. code-block:: c
 
@@ -545,7 +542,7 @@ First step is to get all statistics names and list them:
 
 The application has access to the names of all of the statistics that the PMD
 exposes. The application can decide which statistics are of interest, cache the
-ids of those statistics by looking up the name as follows:
+IDs of those statistics by looking up the name as follows:
 
 .. code-block:: c
 
@@ -564,8 +561,7 @@ ids of those statistics by looking up the name as follows:
 
 The API provides flexibility to the application so that it can look up multiple
 statistics using an array containing multiple ``id`` numbers. This reduces the
-function call overhead of retrieving statistics, and makes lookup of multiple
-statistics simpler for the application.
+function call overhead of retrieving statistics and simplifies the application's lookup of multiple statistics.
 
 .. code-block:: c
 
@@ -585,8 +581,8 @@ statistics simpler for the application.
 
 This array lookup API for xstats allows the application create multiple
 "groups" of statistics, and look up the values of those IDs using a single API
-call. As an end result, the application is able to achieve its goal of
-monitoring a single statistic ("rx_errors" in this case), and if that shows
+call. As an end result, the application can achieve its goal of
+monitoring a single statistic (in this case,"rx_errors"). If that shows
 packets being dropped, it can easily retrieve a "set" of statistics using the
 IDs array parameter to ``rte_eth_xstats_get_by_id`` function.
 
@@ -597,23 +593,23 @@ NIC Reset API
 
     int rte_eth_dev_reset(uint16_t port_id);
 
-Sometimes a port has to be reset passively. For example when a PF is
+There are times when a port has to be reset passively. For example, when a PF is
 reset, all its VFs should also be reset by the application to make them
-consistent with the PF. A DPDK application also can call this function
-to trigger a port reset. Normally, a DPDK application would invokes this
+consistent with the PF. A DPDK application can also call this function
+to trigger a port reset. Normally, a DPDK application would invoke this
 function when an RTE_ETH_EVENT_INTR_RESET event is detected.
 
-It is the duty of the PMD to trigger RTE_ETH_EVENT_INTR_RESET events and
-the application should register a callback function to handle these
+The PMD's duty is to trigger RTE_ETH_EVENT_INTR_RESET events.
+The application should register a callback function to handle these
 events. When a PMD needs to trigger a reset, it can trigger an
 RTE_ETH_EVENT_INTR_RESET event. On receiving an RTE_ETH_EVENT_INTR_RESET
-event, applications can handle it as follows: Stop working queues, stop
+event, applications can do as follows: Stop working queues, stop
 calling Rx and Tx functions, and then call rte_eth_dev_reset(). For
 thread safety all these operations should be called from the same thread.
 
 For example when PF is reset, the PF sends a message to notify VFs of
-this event and also trigger an interrupt to VFs. Then in the interrupt
-service routine the VFs detects this notification message and calls
+this event and also trigger an interrupt to VFs. Then, in the interrupt
+service routine, the VFs detects this notification message and calls
 rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_RESET, NULL).
 This means that a PF reset triggers an RTE_ETH_EVENT_INTR_RESET
 event within VFs. The function rte_eth_dev_callback_process() will
@@ -621,13 +617,12 @@ call the registered callback function. The callback function can trigger
 the application to handle all operations the VF reset requires including
 stopping Rx/Tx queues and calling rte_eth_dev_reset().
 
-The rte_eth_dev_reset() itself is a generic function which only does
-some hardware reset operations through calling dev_unint() and
-dev_init(), and itself does not handle synchronization, which is handled
+The rte_eth_dev_reset() is a generic function that only does hardware reset operations through calling dev_unint() and
+dev_init(). It does not handle synchronization, which is handled
 by application.
 
 The PMD itself should not call rte_eth_dev_reset(). The PMD can trigger
-the application to handle reset event. It is duty of application to
+the application to handle reset event. It is duty of the application to
 handle all synchronization before it calls rte_eth_dev_reset().
 
 The above error handling mode is known as ``RTE_ETH_ERROR_HANDLE_MODE_PASSIVE``.
@@ -635,15 +630,15 @@ The above error handling mode is known as ``RTE_ETH_ERROR_HANDLE_MODE_PASSIVE``.
 Proactive Error Handling Mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This mode is known as ``RTE_ETH_ERROR_HANDLE_MODE_PROACTIVE``,
-different from the application invokes recovery in PASSIVE mode,
-the PMD automatically recovers from error in PROACTIVE mode,
+This mode is known as ``RTE_ETH_ERROR_HANDLE_MODE_PROACTIVE``, which is
+different from the application invokes recovery in PASSIVE mode.
+The PMD automatically recovers from error in PROACTIVE mode,
 and only a small amount of work is required for the application.
 
 During error detection and automatic recovery,
 the PMD sets the data path pointers to dummy functions
 (which will prevent the crash),
-and also make sure the control path operations fail with a return code ``-EBUSY``.
+and ensures sure the control path operations fail with a return code ``-EBUSY``.
 
 Because the PMD recovers automatically,
 the application can only sense that the data flow is disconnected for a while
@@ -655,9 +650,9 @@ three events are available:
 
 ``RTE_ETH_EVENT_ERR_RECOVERING``
    Notify the application that an error is detected
-   and the recovery is being started.
+   and the recovery is beginning.
    Upon receiving the event, the application should not invoke
-   any control path function until receiving
+   any control path function until receiving the
    ``RTE_ETH_EVENT_RECOVERY_SUCCESS`` or ``RTE_ETH_EVENT_RECOVERY_FAILED`` event.
 
 .. note::
@@ -667,7 +662,7 @@ three events are available:
    because a larger error may occur during the recovery.
 
 ``RTE_ETH_EVENT_RECOVERY_SUCCESS``
-   Notify the application that the recovery from error is successful,
+   Notify the application that the recovery from the error was successful,
    the PMD already re-configures the port,
    and the effect is the same as a restart operation.
 
