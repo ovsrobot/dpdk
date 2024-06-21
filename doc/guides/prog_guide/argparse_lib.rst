@@ -4,30 +4,31 @@
 Argparse Library
 ================
 
-The argparse library provides argument parsing functionality,
-this library makes it easy to write user-friendly command-line program.
+The argparse library provides argument parsing functionality and makes it easy to write user-friendly command-line programming.
 
 Features and Capabilities
 -------------------------
 
-- Support parsing optional argument (which could take with no-value,
-  required-value and optional-value).
+- Supports parsing of optional arguments (which can contain no-value,
+  required-value and optional-values).
 
-- Support parsing positional argument (which must take with required-value).
+- Supports parsing of positional arguments (which must contain required-values).
 
-- Support automatic generate usage information.
+- Supports automatic generation of usage information.
 
-- Support issue errors when provide with invalid arguments.
+- Provides issue errors when an argument is invalid
 
-- Support parsing argument by two ways:
+- Supports parsing arguments in two ways:
+
 
   #. autosave: used for parsing known value types;
   #. callback: will invoke user callback to parse.
 
+
 Usage Guide
 -----------
 
-The following code demonstrates how to use:
+The following code demonstrates how to use the following:
 
 .. code-block:: C
 
@@ -89,12 +90,12 @@ The following code demonstrates how to use:
       ...
    }
 
-In this example, the arguments which start with a hyphen (-) are optional
-arguments (they're "--aaa"/"--bbb"/"--ccc"/"--ddd"/"--eee"/"--fff"); and the
-arguments which don't start with a hyphen (-) are positional arguments
-(they're "ooo"/"ppp").
+In this example, the arguments thhat start with a hyphen (-) are optional
+arguments ("--aaa"/"--bbb"/"--ccc"/"--ddd"/"--eee"/"--fff").
+The arguments that do not start with a hyphen (-) are positional arguments
+("ooo"/"ppp").
 
-Every argument must be set whether to carry a value (one of
+Every argument must set whether it carries a value (one of
 ``RTE_ARGPARSE_ARG_NO_VALUE``, ``RTE_ARGPARSE_ARG_REQUIRED_VALUE`` and
 ``RTE_ARGPARSE_ARG_OPTIONAL_VALUE``).
 
@@ -105,26 +106,26 @@ Every argument must be set whether to carry a value (one of
 User Input Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-For optional arguments which take no-value,
+For optional arguments which have no-value,
 the following mode is supported (take above "--aaa" as an example):
 
 - The single mode: "--aaa" or "-a".
 
-For optional arguments which take required-value,
+For optional arguments which have required-value,
 the following two modes are supported (take above "--bbb" as an example):
 
 - The kv mode: "--bbb=1234" or "-b=1234".
 
 - The split mode: "--bbb 1234" or "-b 1234".
 
-For optional arguments which take optional-value,
+For optional arguments which have optional-value,
 the following two modes are supported (take above "--ccc" as an example):
 
 - The single mode: "--ccc" or "-c".
 
 - The kv mode: "--ccc=123" or "-c=123".
 
-For positional arguments which must take required-value,
+For positional arguments which must have required-value,
 their values are parsing in the order defined.
 
 .. note::
@@ -132,15 +133,15 @@ their values are parsing in the order defined.
    The compact mode is not supported.
    Take above "-a" and "-d" as an example, don't support "-ad" input.
 
-Parsing by autosave way
-~~~~~~~~~~~~~~~~~~~~~~~
+Parsing the Autosave Method
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Argument of known value type (e.g. ``RTE_ARGPARSE_ARG_VALUE_INT``)
-could be parsed using this autosave way,
-and its result will save in the ``val_saver`` field.
+Arguments of a known value type (e.g. ``RTE_ARGPARSE_ARG_VALUE_INT``)
+can be parsed using the autosave method,
+The result will save in the ``val_saver`` field.
 
 In the above example, the arguments "--aaa"/"--bbb"/"--ccc" and "ooo"
-both use this way, the parsing is as follows:
+both use this method. The parsing is as follows:
 
 - For argument "--aaa", it is configured as no-value,
   so the ``aaa_val`` will be set to ``val_set`` field
@@ -150,28 +151,28 @@ both use this way, the parsing is as follows:
   so the ``bbb_val`` will be set to user input's value
   (e.g. will be set to 1234 with input "--bbb 1234").
 
-- For argument "--ccc", it is configured as optional-value,
-  if user only input "--ccc" then the ``ccc_val`` will be set to ``val_set`` field
+- For argument "--ccc", it is configured as optional-value.
+  If user only input "--ccc", then the ``ccc_val`` will be set to ``val_set`` field
   which is 200 in the above example;
-  if user input "--ccc=123", then the ``ccc_val`` will be set to 123.
+  If user input "--ccc=123", then the ``ccc_val`` will be set to 123.
 
 - For argument "ooo", it is positional argument,
   the ``ooo_val`` will be set to user input's value.
 
-Parsing by callback way
+Parsing by Callback Method
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You may choose to use the callback method to parse.
+To do so, define a unique index for the argument
+and make the ``val_save`` field to be NULL as a zero value-type.
+
+In the above example, the arguments "--ddd"/"--eee"/"--fff" and "ppp" both use this method.
+
+Multiple Times Argument
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-It could also choose to use callback to parse,
-just define a unique index for the argument
-and make the ``val_save`` field to be NULL also zero value-type.
-
-In the above example, the arguments "--ddd"/"--eee"/"--fff" and "ppp" both use this way.
-
-Multiple times argument
-~~~~~~~~~~~~~~~~~~~~~~~
-
-If want to support the ability to enter the same argument multiple times,
-then should mark ``RTE_ARGPARSE_ARG_SUPPORT_MULTI`` in the ``flags`` field.
+If you want to support the ability to enter the same argument multiple times,
+then you should mark ``RTE_ARGPARSE_ARG_SUPPORT_MULTI`` in the ``flags`` field.
 For example:
 
 .. code-block:: C
@@ -182,5 +183,5 @@ Then the user input could contain multiple "--xyz" arguments.
 
 .. note::
 
-   The multiple times argument only support with optional argument
+   The multiple times argument is only supported with optional argument
    and must be parsed by callback way.
