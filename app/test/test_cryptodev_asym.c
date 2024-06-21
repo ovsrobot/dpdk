@@ -988,7 +988,8 @@ error_exit:
 	return status;
 }
 
-static int
+/* Below function is in use by cryptodev doc */
+static int __rte_unused
 test_mod_inv(void)
 {
 	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
@@ -1100,7 +1101,8 @@ error_exit:
 	return status;
 }
 
-static int
+/* Below function is in use by cryptodev doc */
+static int __rte_unused
 test_mod_exp(void)
 {
 	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
@@ -3508,8 +3510,14 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 				test_rsa_enc_dec_crt),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_inv),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_exp),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Modinv test",
+			ut_setup_asym, ut_teardown_asym,
+			modular_multiplicative_inverse, &modinv_test_cases[0]),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Modex test",
+			ut_setup_asym, ut_teardown_asym,
+			modular_exponentiation, &modex_test_cases[0]),
 		TEST_CASE_NAMED_WITH_DATA(
 			"Modex Group 5 test",
 			ut_setup_asym, ut_teardown_asym,
@@ -3584,7 +3592,10 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 				test_rsa_enc_dec_crt),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_exp),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Modex test",
+			ut_setup_asym, ut_teardown_asym,
+			modular_exponentiation, &modex_test_cases[0]),
 		TEST_CASE_NAMED_WITH_DATA(
 			"Modex Group 5 test",
 			ut_setup_asym, ut_teardown_asym,
