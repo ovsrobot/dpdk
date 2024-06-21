@@ -1073,6 +1073,14 @@ rte_event_queue_attr_set(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
  *  @see rte_event_port_setup()
  */
 
+#define RTE_EVENT_PORT_CFG_RESTORE_DEQ_ORDER   (1ULL << 5)
+/**< Flag to enable feature enqueue reordering to dequeue.
+ * The feature restores dequeue order on enqueue if applications
+ * happen to change the order.
+ *
+ *  @see rte_event_port_setup()
+ */
+
 /** Event port configuration structure */
 struct rte_event_port_conf {
 	int32_t new_event_threshold;
