@@ -44,8 +44,8 @@ Lock-free Stack
 
 The lock-free stack consists of a linked list of elements, each containing a
 data pointer and a next pointer, and an atomic stack depth counter. The
-lock-free property means that multiple threads can push and pop simultaneously,
-and one thread being preempted/delayed in a push or pop operation will not
+lock-free property means that multiple threads can push and pop simultaneously.
+One thread being preempted/delayed in a push or pop operation will not
 impede the forward progress of any other thread.
 
 The lock-free push operation enqueues a linked list of pointers by pointing the
