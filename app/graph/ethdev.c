@@ -671,7 +671,8 @@ cmd_ethdev_parsed(void *parsed_result, __rte_unused struct cmdline *cl, void *da
 	memset(&config, 0, sizeof(struct ethdev_config));
 	config.rx.n_queues = res->nb_rxq;
 	config.rx.queue_size = ETHDEV_RX_DESC_DEFAULT;
-	memcpy(config.rx.mempool_name, res->mempool, strlen(res->mempool));
+	memcpy(config.rx.mempool_name, res->mempool,
+		RTE_MIN(sizeof(config.rx.mempool_name), strlen(res->mempool)));
 
 	config.tx.n_queues = res->nb_txq;
 	config.tx.queue_size = ETHDEV_TX_DESC_DEFAULT;
