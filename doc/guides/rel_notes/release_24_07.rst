@@ -92,6 +92,8 @@ New Features
   * Added support disabling custom meta aura
     and separately use custom SA action support.
 
+  * Added MTU update for port representor.
+
 * **Updated NVIDIA mlx5 driver.**
 
   * Added match with Tx queue.
