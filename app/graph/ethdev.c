@@ -16,6 +16,7 @@
 
 #include "ethdev_priv.h"
 #include "module_api.h"
+#include "rte_string_fns.h"
 
 static const char
 cmd_ethdev_mtu_help[] = "ethdev <ethdev_name> mtu <mtu_sz>";
@@ -671,7 +672,7 @@ cmd_ethdev_parsed(void *parsed_result, __rte_unused struct cmdline *cl, void *da
 	memset(&config, 0, sizeof(struct ethdev_config));
 	config.rx.n_queues = res->nb_rxq;
 	config.rx.queue_size = ETHDEV_RX_DESC_DEFAULT;
-	memcpy(config.rx.mempool_name, res->mempool, strlen(res->mempool));
+	strlcpy(config.rx.mempool_name, res->mempool, sizeof(config.rx.mempool_name));
 
 	config.tx.n_queues = res->nb_txq;
 	config.tx.queue_size = ETHDEV_TX_DESC_DEFAULT;
