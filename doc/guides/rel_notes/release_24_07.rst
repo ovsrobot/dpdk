@@ -94,6 +94,8 @@ New Features
 
   * Added MTU update for port representor.
 
+  * Added multi segment support for port representor.
+
 * **Updated NVIDIA mlx5 driver.**
 
   * Added match with Tx queue.
