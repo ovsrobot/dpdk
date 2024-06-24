@@ -144,6 +144,10 @@ New Features
 
   Added an API that allows the user to reclaim the defer queue with RCU.
 
+* **Updated NVIDIA mlx5 crypto driver.**
+
+  * Added AES-GCM IPsec operation optimization.
+
 
 Removed Items
 -------------
