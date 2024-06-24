@@ -199,7 +199,7 @@ rte_vmbus_probe(void)
 	char ubuf[RTE_UUID_STRLEN];
 
 	FOREACH_DEVICE_ON_VMBUS(dev) {
-		probed++;
+		dev->device_order = probed++;
 
 		rte_uuid_unparse(dev->device_id, ubuf, sizeof(ubuf));
 

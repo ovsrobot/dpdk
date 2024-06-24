@@ -37,6 +37,7 @@ struct rte_vmbus_device {
 	rte_uuid_t device_id;		       /**< VMBUS device id */
 	rte_uuid_t class_id;		       /**< VMBUS device type */
 	uint32_t relid;			       /**< id for primary */
+	uint16_t device_order;		       /**< Device order after probing */
 	uint8_t monitor_id;		       /**< monitor page */
 	int uio_num;			       /**< UIO device number */
 	uint32_t *int_page;		       /**< VMBUS interrupt page */
