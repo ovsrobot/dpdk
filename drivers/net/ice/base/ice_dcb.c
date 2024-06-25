@@ -1559,12 +1559,11 @@ ice_aq_query_port_ets(struct ice_port_info *pi,
 	struct ice_aq_desc desc;
 	int status;
 
-	if (!pi)
+	if (!pi || !pi->root)
 		return ICE_ERR_PARAM;
 	cmd = &desc.params.port_ets;
 	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_query_port_ets);
-	if (pi->root)
-		cmd->port_teid = pi->root->info.node_teid;
+	cmd->port_teid = pi->root->info.node_teid;
 
 	status = ice_aq_send_cmd(pi->hw, &desc, buf, buf_size, cd);
 	return status;
