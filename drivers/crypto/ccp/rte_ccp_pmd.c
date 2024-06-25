@@ -22,6 +22,7 @@
 static unsigned int ccp_pmd_init_done;
 uint8_t ccp_cryptodev_driver_id;
 uint8_t cryptodev_cnt;
+int crypto_ccp_logtype;
 
 struct ccp_pmd_init_params {
 	struct rte_cryptodev_pmd_init_params def_p;
@@ -320,3 +321,4 @@ RTE_PMD_REGISTER_PARAM_STRING(CRYPTODEV_NAME_CCP_PMD,
 	"ccp_auth_opt=<int>");
 RTE_PMD_REGISTER_CRYPTO_DRIVER(ccp_crypto_drv, cryptodev_ccp_pmd_drv.driver,
 			       ccp_cryptodev_driver_id);
+RTE_LOG_REGISTER_DEFAULT(crypto_ccp_logtype, NOTICE);
