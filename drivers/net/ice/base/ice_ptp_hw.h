@@ -217,9 +217,6 @@ ice_ptp_port_cmd_e810(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 		      bool lock_sbq);
 int
 ice_get_phy_tx_tstamp_ready_e830(struct ice_hw *hw, u8 port, u64 *tstamp_ready);
-int
-ice_ptp_port_cmd_eth56g(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
-			bool lock_sbq);
 
 /**
  * ice_e822_time_ref - Get the current TIME_REF from capabilities
@@ -311,9 +308,6 @@ ice_ptp_read_phy_incval_eth56g(struct ice_hw *hw, u8 port, u64 *incval);
 int
 ice_ptp_read_port_capture_eth56g(struct ice_hw *hw, u8 port,
 				 u64 *tx_ts, u64 *rx_ts);
-int
-ice_ptp_one_port_cmd_eth56g(struct ice_hw *hw, u8 port,
-			    enum ice_ptp_tmr_cmd cmd, bool lock_sbq);
 int
 ice_ptp_read_tx_hwtstamp_status_eth56g(struct ice_hw *hw, u32 *ts_status);
 int

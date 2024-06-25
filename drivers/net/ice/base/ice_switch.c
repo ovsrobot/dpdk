@@ -6286,6 +6286,9 @@ int
 ice_get_vsi_vlan_promisc(struct ice_hw *hw, u16 vsi_handle,
 			 ice_bitmap_t *promisc_mask, u16 *vid)
 {
+	if (!hw || !promisc_mask || !vid)
+		return ICE_ERR_PARAM;
+
 	return _ice_get_vsi_promisc(hw, vsi_handle, promisc_mask,
 				    vid, hw->switch_info,
 				    ICE_SW_LKUP_PROMISC_VLAN);
