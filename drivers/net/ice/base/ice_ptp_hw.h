@@ -482,7 +482,9 @@ int ice_ptp_init_phy_cfg(struct ice_hw *hw);
 #define ETH_GLTSYN_SHADJ_H(_i)		(0x0300037C + ((_i) * 32))
 
 /* E810 timer command register */
-#define ETH_GLTSYN_CMD			0x03000344
+#define E810_ETH_GLTSYN_CMD		0x03000344
+/* E830 timer command register */
+#define E830_ETH_GLTSYN_CMD		0x00088814
 
 /* Source timer incval macros */
 #define INCVAL_HIGH_M			0xFF
@@ -521,6 +523,11 @@ int ice_ptp_init_phy_cfg(struct ice_hw *hw);
 
 #define LOW_TX_MEMORY_BANK_START	0x03090000
 #define HIGH_TX_MEMORY_BANK_START	0x03090004
+
+#define E830_LOW_TX_MEMORY_BANK(slot, port) \
+				(E830_PRTTSYN_TXTIME_L(slot) + 0x8 * (port))
+#define E830_HIGH_TX_MEMORY_BANK(slot, port) \
+				(E830_PRTTSYN_TXTIME_H(slot) + 0x8 * (port))
 
 /* E810T PCA9575 IO controller registers */
 #define ICE_PCA9575_P0_IN	0x0
