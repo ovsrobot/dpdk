@@ -5151,7 +5151,7 @@ ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
 		return ICE_ERR_NOT_SUPPORTED;
 
 	/* Verify if we found the right IO expander type */
-	if (node_part_number != ICE_ACQ_GET_LINK_TOPO_NODE_NR_PCA9575)
+	if (node_part_number != ICE_AQC_GET_LINK_TOPO_NODE_NR_PCA9575)
 		return ICE_ERR_NOT_SUPPORTED;
 
 	/* If present save the handle and return it */
@@ -5159,21 +5159,6 @@ ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
 	*pca9575_handle = hw->io_expander_handle;
 
 	return 0;
-}
-
-/**
- * ice_is_gps_present_e810t
- * @hw: pointer to the hw struct
- *
- * Check if the GPS generic device is present in the netlist
- */
-bool ice_is_gps_present_e810t(struct ice_hw *hw)
-{
-	if (ice_find_netlist_node(hw, ICE_AQC_LINK_TOPO_NODE_TYPE_GPS,
-				  ICE_ACQ_GET_LINK_TOPO_NODE_NR_GEN_GPS, NULL))
-		return false;
-
-	return true;
 }
 
 /**
