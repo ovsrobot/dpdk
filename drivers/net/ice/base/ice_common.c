@@ -5,7 +5,6 @@
 #include "ice_common.h"
 #include "ice_sched.h"
 #include "ice_adminq_cmd.h"
-
 #include "ice_flow.h"
 #include "ice_ptp_hw.h"
 #include "ice_switch.h"
@@ -598,6 +597,7 @@ ice_aq_get_phy_caps(struct ice_port_info *pi, bool qual_mods, u8 report_mode,
 		cmd->param0 |= CPU_TO_LE16(ICE_AQC_GET_PHY_RQM);
 
 	cmd->param0 |= CPU_TO_LE16(report_mode);
+
 	status = ice_aq_send_cmd(hw, &desc, pcaps, pcaps_size, cd);
 
 	ice_debug(hw, ICE_DBG_LINK, "get phy caps dump\n");
@@ -694,6 +694,7 @@ ice_aq_get_link_info(struct ice_port_info *pi, bool ena_lse,
 	if (!pi)
 		return ICE_ERR_PARAM;
 	hw = pi->hw;
+
 	li_old = &pi->phy.link_info_old;
 	li = &pi->phy.link_info;
 	hw_fc_info = &pi->fc;
@@ -1130,6 +1131,7 @@ int ice_init_hw(struct ice_hw *hw)
 		goto err_unroll_sched;
 
 	/* Get MAC information */
+
 	/* A single port can report up to two (LAN and WoL) addresses */
 	mac_buf = ice_calloc(hw, 2,
 			     sizeof(struct ice_aqc_manage_mac_read_resp));
@@ -1156,6 +1158,7 @@ int ice_init_hw(struct ice_hw *hw)
 	status = ice_alloc_fd_res_cntr(hw, &hw->fd_ctr_base);
 	if (status)
 		goto err_unroll_fltr_mgmt_struct;
+
 	status = ice_init_hw_tbls(hw);
 	if (status)
 		goto err_unroll_fltr_mgmt_struct;
@@ -2084,7 +2087,7 @@ int ice_aq_q_shutdown(struct ice_hw *hw, bool unloading)
  * When attempting to acquire the Global Config Lock, the driver can
  * learn of three states:
  *  1) 0 - acquired lock, and can perform download package
- *  2) ICE_ERR_AQ_ERROR -   did not get lock, driver should fail to load
+ *  2) ICE_ERR_AQ_ERROR - did not get lock, driver should fail to load
  *  3) ICE_ERR_AQ_NO_WORK - did not get lock, but another driver has
  *                          successfully downloaded the package; the driver does
  *                          not have to download the package and can continue
@@ -3345,7 +3348,7 @@ void ice_clear_pxe_mode(struct ice_hw *hw)
 }
 
 /**
- * ice_aq_set_port_params - set physical port parameters.
+ * ice_aq_set_port_params - set physical port parameters
  * @pi: pointer to the port info struct
  * @bad_frame_vsi: defines the VSI to which bad frames are forwarded
  * @save_bad_pac: if set packets with errors are forwarded to the bad frames VSI
@@ -3359,7 +3362,6 @@ int
 ice_aq_set_port_params(struct ice_port_info *pi, u16 bad_frame_vsi,
 		       bool save_bad_pac, bool pad_short_pac, bool double_vlan,
 		       struct ice_sq_cd *cd)
-
 {
 	struct ice_aqc_set_port_params *cmd;
 	struct ice_hw *hw = pi->hw;

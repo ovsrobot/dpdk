@@ -109,7 +109,6 @@ struct ice_aqc_list_caps {
 struct ice_aqc_list_caps_elem {
 	__le16 cap;
 #define ICE_AQC_CAPS_VALID_FUNCTIONS			0x0005
-#define ICE_AQC_MAX_VALID_FUNCTIONS			0x8
 #define ICE_AQC_CAPS_VSI				0x0017
 #define ICE_AQC_CAPS_DCB				0x0018
 #define ICE_AQC_CAPS_RSS				0x0040
@@ -758,7 +757,7 @@ struct ice_aqc_recipe_content {
 #define ICE_AQ_RECIPE_ID_S		0
 #define ICE_AQ_RECIPE_ID_M		(0x3F << ICE_AQ_RECIPE_ID_S)
 #define ICE_AQ_RECIPE_ID_IS_ROOT	BIT(7)
-#define	ICE_AQ_SW_ID_LKUP_IDX		0
+#define ICE_AQ_SW_ID_LKUP_IDX		0
 	u8 lkup_indx[5];
 #define ICE_AQ_RECIPE_LKUP_DATA_S	0
 #define ICE_AQ_RECIPE_LKUP_DATA_M	(0x3F << ICE_AQ_RECIPE_LKUP_DATA_S)
@@ -1000,25 +999,6 @@ struct ice_sw_rule_vsi_list {
 };
 #pragma pack()
 
-#pragma pack(1)
-/* Query VSI list command/response entry */
-struct ice_sw_rule_vsi_list_query {
-	__le16 index;
-	u8 vsi_list[DIVIDE_AND_ROUND_UP(ICE_MAX_VSI, BITS_PER_BYTE)];
-};
-#pragma pack()
-
-/* PFC Ignore (direct 0x0301)
- * The command and response use the same descriptor structure
- */
-struct ice_aqc_pfc_ignore {
-	u8	tc_bitmap;
-	u8	cmd_flags; /* unused in response */
-#define ICE_AQC_PFC_IGNORE_SET		BIT(7)
-#define ICE_AQC_PFC_IGNORE_CLEAR	0
-	u8	reserved[14];
-};
-
 /* Query PFC Mode (direct 0x0302)
  * Set PFC Mode (direct 0x0303)
  */
@@ -1031,17 +1011,6 @@ struct ice_aqc_set_query_pfc_mode {
 #define ICE_AQC_PFC_VLAN_BASED_PFC	1
 #define ICE_AQC_PFC_DSCP_BASED_PFC	2
 	u8	rsvd[15];
-};
-
-/* Set DCB Parameters (direct 0x0306) */
-struct ice_aqc_set_dcb_params {
-	u8 cmd_flags; /* unused in response */
-#define ICE_AQC_LINK_UP_DCB_CFG    BIT(0)
-#define ICE_AQC_PERSIST_DCB_CFG    BIT(1)
-	u8 valid_flags; /* unused in response */
-#define ICE_AQC_LINK_UP_DCB_CFG_VALID    BIT(0)
-#define ICE_AQC_PERSIST_DCB_CFG_VALID    BIT(1)
-	u8 rsvd[14];
 };
 
 /* Get Default Topology (indirect 0x0400) */
@@ -1123,9 +1092,9 @@ struct ice_aqc_txsched_elem {
 	u8 generic;
 #define ICE_AQC_ELEM_GENERIC_MODE_M		0x1
 #define ICE_AQC_ELEM_GENERIC_PRIO_S		0x1
-#define ICE_AQC_ELEM_GENERIC_PRIO_M	(0x7 << ICE_AQC_ELEM_GENERIC_PRIO_S)
+#define ICE_AQC_ELEM_GENERIC_PRIO_M		(0x7 << ICE_AQC_ELEM_GENERIC_PRIO_S)
 #define ICE_AQC_ELEM_GENERIC_SP_S		0x4
-#define ICE_AQC_ELEM_GENERIC_SP_M	(0x1 << ICE_AQC_ELEM_GENERIC_SP_S)
+#define ICE_AQC_ELEM_GENERIC_SP_M		(0x1 << ICE_AQC_ELEM_GENERIC_SP_S)
 #define ICE_AQC_ELEM_GENERIC_ADJUST_VAL_S	0x5
 #define ICE_AQC_ELEM_GENERIC_ADJUST_VAL_M	\
 	(0x3 << ICE_AQC_ELEM_GENERIC_ADJUST_VAL_S)
@@ -2039,10 +2008,11 @@ struct ice_aqc_nvm {
 #define ICE_AQC_NVM_REVERT_LAST_ACTIV	BIT(6) /* Write Activate only */
 #define ICE_AQC_NVM_ACTIV_SEL_MASK	MAKEMASK(0x7, 3)
 #define ICE_AQC_NVM_FLASH_ONLY		BIT(7)
-#define ICE_AQC_NVM_POR_FLAG	0	/* Used by NVM Write completion on ARQ */
-#define ICE_AQC_NVM_PERST_FLAG	1
-#define ICE_AQC_NVM_EMPR_FLAG	2
-#define ICE_AQC_NVM_EMPR_ENA		BIT(0)
+#define ICE_AQC_NVM_RESET_LVL_M		MAKEMASK(0x3, 0) /* Write reply only */
+#define ICE_AQC_NVM_POR_FLAG		0
+#define ICE_AQC_NVM_PERST_FLAG		1
+#define ICE_AQC_NVM_EMPR_FLAG		2
+#define ICE_AQC_NVM_EMPR_ENA		BIT(0) /* Write Activate reply only */
 	__le16 module_typeid;
 	__le16 length;
 #define ICE_AQC_NVM_ERASE_LEN	0xFFFF
@@ -2914,7 +2884,6 @@ struct ice_aqc_dis_txq_item {
 			(1 << ICE_AQC_Q_DIS_BUF_ELEM_TYPE_S)
 	__le16 q_id[STRUCT_HACK_VAR_LEN];
 };
-
 #pragma pack()
 
 /* Tx LAN Queues Cleanup Event (0x0C31) */
@@ -2994,7 +2963,7 @@ struct ice_pkg_ver {
 };
 
 #define ICE_PKG_NAME_SIZE	32
-#define ICE_SEG_ID_SIZE	28
+#define ICE_SEG_ID_SIZE		28
 #define ICE_SEG_NAME_SIZE	28
 
 struct ice_aqc_get_pkg_info {
@@ -3228,10 +3197,8 @@ struct ice_aq_desc {
 		struct ice_aqc_nvm nvm;
 		struct ice_aqc_nvm_cfg nvm_cfg;
 		struct ice_aqc_nvm_checksum nvm_checksum;
-		struct ice_aqc_pfc_ignore pfc_ignore;
 		struct ice_aqc_nvm_sanitization sanitization;
 		struct ice_aqc_set_query_pfc_mode set_query_pfc_mode;
-		struct ice_aqc_set_dcb_params set_dcb_params;
 		struct ice_aqc_lldp_get_mib lldp_get_mib;
 		struct ice_aqc_lldp_set_mib_change lldp_set_event;
 		struct ice_aqc_lldp_add_delete_tlv lldp_add_delete_tlv;
