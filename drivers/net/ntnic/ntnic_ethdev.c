@@ -19,6 +19,9 @@
 #include "ntnic_mod_reg.h"
 #include "nt_util.h"
 
+#define HW_MAX_PKT_LEN (10000)
+#define MAX_MTU (HW_MAX_PKT_LEN - RTE_ETHER_HDR_LEN - RTE_ETHER_CRC_LEN)
+
 #define EXCEPTION_PATH_HID 0
 
 /* Global static variables: */
@@ -108,6 +111,16 @@ eth_dev_infos_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *dev_info
 
 	dev_info->if_index = internals->if_index;
 	dev_info->driver_name = internals->name;
+	dev_info->max_mac_addrs = NUM_MAC_ADDRS_PER_PORT;
+	dev_info->max_rx_pktlen = HW_MAX_PKT_LEN;
+	dev_info->max_mtu = MAX_MTU;
+
+	if (internals->p_drv) {
+		dev_info->max_rx_queues = internals->nb_rx_queues;
+		dev_info->max_tx_queues = internals->nb_tx_queues;
+
+		dev_info->min_rx_bufsize = 64;
+	}
 
 	return 0;
 }
@@ -142,8 +155,8 @@ eth_dev_stop(struct rte_eth_dev *eth_dev)
 {
 	struct pmd_internals *internals = (struct pmd_internals *)eth_dev->data->dev_private;
 
-	NT_LOG_DBGX(DEBUG, NTNIC, "Port %u, %u\n",
-		internals->n_intf_no, internals->if_index);
+	NT_LOG_DBGX(DEBUG, NTNIC, "Port %u, %u, type %u\n",
+		internals->n_intf_no, internals->if_index, internals->type);
 
 	eth_dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 	return 0;
@@ -211,6 +224,9 @@ static int
 eth_fw_version_get(struct rte_eth_dev *eth_dev, char *fw_version, size_t fw_size)
 {
 	struct pmd_internals *internals = (struct pmd_internals *)eth_dev->data->dev_private;
+
+	if (internals->type == PORT_TYPE_VIRTUAL || internals->type == PORT_TYPE_OVERRIDE)
+		return 0;
 
 	fpga_info_t *fpga_info = &internals->p_drv->ntdrv.adapter_info.fpga_info;
 	const int length = snprintf(fw_version, fw_size, "%03d-%04d-%02d-%02d",
@@ -384,6 +400,12 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 		internals->pci_dev = pci_dev;
 		internals->n_intf_no = n_intf_no;
 		internals->if_index = n_intf_no;
+		internals->min_tx_pkt_size = 64;
+		internals->max_tx_pkt_size = 10000;
+		internals->type = PORT_TYPE_PHYSICAL;
+		internals->vhid = -1;
+		internals->nb_rx_queues = nb_rx_queues;
+		internals->nb_tx_queues = nb_tx_queues;
 
 
 		/* Setup queue_ids */
@@ -397,6 +419,18 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 			NT_LOG(DBG, NTNIC,
 				"(%i) NTNIC configured with Tx multi queues. %i queues\n",
 				0 /*port*/, nb_tx_queues);
+		}
+
+		/* Set MAC address (but only if the MAC address is permitted) */
+		if (n_intf_no < fpga_info->nthw_hw_info.vpd_info.mn_mac_addr_count) {
+			const uint64_t mac =
+				fpga_info->nthw_hw_info.vpd_info.mn_mac_addr_value + n_intf_no;
+			internals->eth_addrs[0].addr_bytes[0] = (mac >> 40) & 0xFFu;
+			internals->eth_addrs[0].addr_bytes[1] = (mac >> 32) & 0xFFu;
+			internals->eth_addrs[0].addr_bytes[2] = (mac >> 24) & 0xFFu;
+			internals->eth_addrs[0].addr_bytes[3] = (mac >> 16) & 0xFFu;
+			internals->eth_addrs[0].addr_bytes[4] = (mac >> 8) & 0xFFu;
+			internals->eth_addrs[0].addr_bytes[5] = (mac >> 0) & 0xFFu;
 		}
 
 		eth_dev = rte_eth_dev_allocate(name);	/* TODO: name */
@@ -413,6 +447,7 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 		/* connect structs */
 		internals->p_drv = p_drv;
 		eth_dev->data->dev_private = internals;
+		eth_dev->data->mac_addrs = internals->eth_addrs;
 
 		internals->port_id = eth_dev->data->port_id;
 
