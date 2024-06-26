@@ -118,6 +118,18 @@ struct crypto_unittest_params {
 	for (j = index; j < index + num_blk_types; j++)				\
 		free_blockcipher_test_suite(parent_ts.unit_test_suites[j])
 
+#define TEST_SKIP_LOG(cond, msg, ...) do {				\
+	if ((cond)) {							\
+		RTE_LOG(ERR, CRYPTODEV, "%s line %d: "			\
+			msg "\n", __func__, __LINE__, ##__VA_ARGS__);	\
+		RTE_TEST_TRACE_FAILURE(__FILE__, __LINE__, __func__);	\
+		return TEST_SKIPPED;					\
+	}								\
+} while (0)
+
+#define TEST_SKIP(a, b, msg, ...) \
+	TEST_SKIP_LOG(a == b, msg, ##__VA_ARGS__)
+
 /*
  * Forward declarations.
  */
@@ -14754,7 +14766,7 @@ test_enq_callback_setup(void)
 
 	struct rte_cryptodev_cb *cb;
 	uint16_t qp_id = 0;
-	int j = 0;
+	int j = 0, ret;
 
 	/* Verify the crypto capabilities for which enqueue/dequeue is done. */
 	cap_idx.type = RTE_CRYPTO_SYM_XFORM_AUTH;
@@ -14794,6 +14806,7 @@ test_enq_callback_setup(void)
 	/* Test with invalid crypto device */
 	cb = rte_cryptodev_add_enq_callback(RTE_CRYPTO_MAX_DEVS,
 			qp_id, test_enq_callback, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NULL(cb, "Add callback on qp %u on "
 			"cryptodev %u did not fail",
 			qp_id, RTE_CRYPTO_MAX_DEVS);
@@ -14802,6 +14815,7 @@ test_enq_callback_setup(void)
 	cb = rte_cryptodev_add_enq_callback(ts_params->valid_devs[0],
 			dev_info.max_nb_queue_pairs + 1,
 			test_enq_callback, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NULL(cb, "Add callback on qp %u on "
 			"cryptodev %u did not fail",
 			dev_info.max_nb_queue_pairs + 1,
@@ -14810,6 +14824,7 @@ test_enq_callback_setup(void)
 	/* Test with NULL callback */
 	cb = rte_cryptodev_add_enq_callback(ts_params->valid_devs[0],
 			qp_id, NULL, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NULL(cb, "Add callback on qp %u on "
 			"cryptodev %u did not fail",
 			qp_id, ts_params->valid_devs[0]);
@@ -14817,6 +14832,7 @@ test_enq_callback_setup(void)
 	/* Test with valid configuration */
 	cb = rte_cryptodev_add_enq_callback(ts_params->valid_devs[0],
 			qp_id, test_enq_callback, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NOT_NULL(cb, "Failed test to add callback on "
 			"qp %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
@@ -14830,24 +14846,35 @@ test_enq_callback_setup(void)
 		rte_delay_ms(10);
 
 	/* Test with invalid crypto device */
-	TEST_ASSERT_FAIL(rte_cryptodev_remove_enq_callback(
-			RTE_CRYPTO_MAX_DEVS, qp_id, cb),
+	ret = rte_cryptodev_remove_enq_callback(RTE_CRYPTO_MAX_DEVS,
+					qp_id,
+					cb);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_FAIL(ret,
 			"Expected call to fail as crypto device is invalid");
 
 	/* Test with invalid queue pair */
-	TEST_ASSERT_FAIL(rte_cryptodev_remove_enq_callback(
-			ts_params->valid_devs[0],
-			dev_info.max_nb_queue_pairs + 1, cb),
+	ret = rte_cryptodev_remove_enq_callback(ts_params->valid_devs[0],
+					dev_info.max_nb_queue_pairs + 1,
+					cb);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_FAIL(ret,
 			"Expected call to fail as queue pair is invalid");
 
 	/* Test with NULL callback */
-	TEST_ASSERT_FAIL(rte_cryptodev_remove_enq_callback(
-			ts_params->valid_devs[0], qp_id, NULL),
+	ret = rte_cryptodev_remove_enq_callback(ts_params->valid_devs[0],
+					qp_id,
+					NULL);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_FAIL(ret,
 			"Expected call to fail as callback is NULL");
 
 	/* Test with valid configuration */
-	TEST_ASSERT_SUCCESS(rte_cryptodev_remove_enq_callback(
-			ts_params->valid_devs[0], qp_id, cb),
+	ret = rte_cryptodev_remove_enq_callback(ts_params->valid_devs[0],
+					qp_id,
+					cb);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_SUCCESS(ret,
 			"Failed test to remove callback on "
 			"qp %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
@@ -14869,7 +14896,7 @@ test_deq_callback_setup(void)
 
 	struct rte_cryptodev_cb *cb;
 	uint16_t qp_id = 0;
-	int j = 0;
+	int j = 0, ret;
 
 	/* Verify the crypto capabilities for which enqueue/dequeue is done. */
 	cap_idx.type = RTE_CRYPTO_SYM_XFORM_AUTH;
@@ -14909,6 +14936,7 @@ test_deq_callback_setup(void)
 	/* Test with invalid crypto device */
 	cb = rte_cryptodev_add_deq_callback(RTE_CRYPTO_MAX_DEVS,
 			qp_id, test_deq_callback, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NULL(cb, "Add callback on qp %u on "
 			"cryptodev %u did not fail",
 			qp_id, RTE_CRYPTO_MAX_DEVS);
@@ -14917,6 +14945,7 @@ test_deq_callback_setup(void)
 	cb = rte_cryptodev_add_deq_callback(ts_params->valid_devs[0],
 			dev_info.max_nb_queue_pairs + 1,
 			test_deq_callback, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NULL(cb, "Add callback on qp %u on "
 			"cryptodev %u did not fail",
 			dev_info.max_nb_queue_pairs + 1,
@@ -14925,6 +14954,7 @@ test_deq_callback_setup(void)
 	/* Test with NULL callback */
 	cb = rte_cryptodev_add_deq_callback(ts_params->valid_devs[0],
 			qp_id, NULL, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NULL(cb, "Add callback on qp %u on "
 			"cryptodev %u did not fail",
 			qp_id, ts_params->valid_devs[0]);
@@ -14932,6 +14962,7 @@ test_deq_callback_setup(void)
 	/* Test with valid configuration */
 	cb = rte_cryptodev_add_deq_callback(ts_params->valid_devs[0],
 			qp_id, test_deq_callback, NULL);
+	TEST_SKIP(rte_errno, ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_NOT_NULL(cb, "Failed test to add callback on "
 			"qp %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
@@ -14945,24 +14976,36 @@ test_deq_callback_setup(void)
 		rte_delay_ms(10);
 
 	/* Test with invalid crypto device */
+	ret = rte_cryptodev_remove_deq_callback(RTE_CRYPTO_MAX_DEVS,
+					qp_id,
+					cb);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
 	TEST_ASSERT_FAIL(rte_cryptodev_remove_deq_callback(
 			RTE_CRYPTO_MAX_DEVS, qp_id, cb),
 			"Expected call to fail as crypto device is invalid");
 
 	/* Test with invalid queue pair */
-	TEST_ASSERT_FAIL(rte_cryptodev_remove_deq_callback(
-			ts_params->valid_devs[0],
-			dev_info.max_nb_queue_pairs + 1, cb),
+	ret = rte_cryptodev_remove_deq_callback(ts_params->valid_devs[0],
+					dev_info.max_nb_queue_pairs + 1,
+					cb);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_FAIL(ret,
 			"Expected call to fail as queue pair is invalid");
 
 	/* Test with NULL callback */
-	TEST_ASSERT_FAIL(rte_cryptodev_remove_deq_callback(
-			ts_params->valid_devs[0], qp_id, NULL),
+	ret = rte_cryptodev_remove_deq_callback(ts_params->valid_devs[0],
+					qp_id,
+					NULL);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_FAIL(ret,
 			"Expected call to fail as callback is NULL");
 
 	/* Test with valid configuration */
-	TEST_ASSERT_SUCCESS(rte_cryptodev_remove_deq_callback(
-			ts_params->valid_devs[0], qp_id, cb),
+	ret = rte_cryptodev_remove_deq_callback(ts_params->valid_devs[0],
+					qp_id,
+					cb);
+	TEST_SKIP(ret, -ENOTSUP, "Not supported, skipped");
+	TEST_ASSERT_SUCCESS(ret,
 			"Failed test to remove callback on "
 			"qp %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
