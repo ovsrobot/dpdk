@@ -23,6 +23,7 @@ includes = [
 sources = files(
     'ntlog/ntlog.c',
     'ntutil/nt_util.c',
+    'ntnic_vfio.c',
     'ntnic_ethdev.c',
 )
 # END
