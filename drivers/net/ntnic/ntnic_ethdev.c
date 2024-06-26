@@ -25,6 +25,16 @@
 static rte_spinlock_t hwlock = RTE_SPINLOCK_INITIALIZER;
 
 /*
+ * The set of PCI devices this driver supports
+ */
+static const struct rte_pci_id nthw_pci_id_map[] = {
+	{ RTE_PCI_DEVICE(NT_HW_PCI_VENDOR_ID, NT_HW_PCI_DEVICE_ID_NT200A02) },
+	{
+		.vendor_id = 0,
+	},	/* sentinel */
+};
+
+/*
  * Store and get adapter info
  */
 
@@ -514,10 +524,12 @@ static struct rte_pci_driver rte_nthw_pmd = {
 		.name = "net_ntnic",
 	},
 
+	.id_table = nthw_pci_id_map,
 	.drv_flags = RTE_PCI_DRV_NEED_MAPPING,
 	.probe = nthw_pci_probe,
 	.remove = nthw_pci_remove,
 };
 
 RTE_PMD_REGISTER_PCI(net_ntnic, rte_nthw_pmd);
+RTE_PMD_REGISTER_PCI_TABLE(net_ntnic, nthw_pci_id_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ntnic, "* vfio-pci");
