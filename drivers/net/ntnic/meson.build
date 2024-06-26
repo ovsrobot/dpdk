@@ -18,10 +18,12 @@ includes = [
     include_directories('include'),
     include_directories('ntlog/include'),
     include_directories('ntutil/include'),
+    include_directories('nthw'),
 ]
 
 # all sources
 sources = files(
+    'nthw/nthw_platform.c',
     'ntlog/ntlog.c',
     'ntutil/nt_util.c',
     'ntnic_vfio.c',
