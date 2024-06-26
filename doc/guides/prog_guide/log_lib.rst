@@ -32,17 +32,19 @@ or by the user passing the ``--log-level`` parameter to the EAL via the applicat
 Setting Global Log Level
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-To adjust the global log level for an application,
-just pass a numeric level or a level name to the ``--log-level`` EAL parameter.
+By default, the global log level is set to ``RTE_LOG_DEBUG``.
+
+To reduce the verbosity of an application globally,
+adjust the global log level by passing a numeric level or a level name to the ``--log-level`` EAL parameter.
 For example::
 
 	/path/to/app --log-level=error
 
-	/path/to/app --log-level=debug
-
 	/path/to/app --log-level=5   # warning
 
 Within an application, the log level can be similarly set using the ``rte_log_set_global_level`` API.
+
+For setting per component log levels, see below.
 
 Setting Log Level for a Component
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
