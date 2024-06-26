@@ -10,6 +10,8 @@ DPDK_24 {
 	rte_bbdev_dec_op_free_bulk;
 	rte_bbdev_dequeue_dec_ops;
 	rte_bbdev_dequeue_enc_ops;
+	rte_bbdev_dequeue_ldpc_dec_ops;
+	rte_bbdev_dequeue_ldpc_enc_ops;
 	rte_bbdev_dequeue_fft_ops;
 	rte_bbdev_device_status_str;
 	rte_bbdev_devices;
@@ -17,6 +19,8 @@ DPDK_24 {
 	rte_bbdev_enc_op_free_bulk;
 	rte_bbdev_enqueue_dec_ops;
 	rte_bbdev_enqueue_enc_ops;
+	rte_bbdev_enqueue_ldpc_dec_ops;
+	rte_bbdev_enqueue_ldpc_enc_ops;
 	rte_bbdev_enqueue_fft_ops;
 	rte_bbdev_enqueue_status_str;
 	rte_bbdev_fft_op_alloc_bulk;
