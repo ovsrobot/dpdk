@@ -14,6 +14,8 @@
 
 #include "ntlog.h"
 
+#include "nt_util.h"
+
 /* Global static variables: */
 
 static int
