@@ -1120,6 +1120,9 @@ static inline void
 rte_mbuf_dynfield_copy(struct rte_mbuf *mdst, const struct rte_mbuf *msrc)
 {
 	memcpy(&mdst->dynfield1, msrc->dynfield1, sizeof(mdst->dynfield1));
+#if !RTE_IOVA_IN_MBUF
+	mdst->dynfield2 = msrc->dynfield2;
+#endif
 }
 
 /* internal */
