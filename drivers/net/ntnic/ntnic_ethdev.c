@@ -12,6 +12,8 @@
 #include <rte_bus_pci.h>
 #include <ethdev_pci.h>
 
+#include "ntlog.h"
+
 /* Global static variables: */
 
 static int
