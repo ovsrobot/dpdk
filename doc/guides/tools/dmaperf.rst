@@ -104,6 +104,7 @@ Configuration Parameters
 .. note::
 
    The mapping of lcore to DMA must be one-to-one and cannot be duplicated.
+   For idxd device (Device 0b25), add queue_id (lcore_dma=lcore10@0000:00:04.2-q0)
 
 ``lcore``
   Specifies the lcore for CPU testing.
