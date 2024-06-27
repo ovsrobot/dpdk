@@ -15,6 +15,7 @@ cflags += [
 # includes
 includes = [
     include_directories('.'),
+    include_directories('include'),
     include_directories('ntlog/include'),
     include_directories('ntutil/include'),
 ]
