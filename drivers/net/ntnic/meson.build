@@ -18,6 +18,7 @@ includes = [
     include_directories('include'),
     include_directories('ntlog/include'),
     include_directories('ntutil/include'),
+    include_directories('nthw/core/include'),
     include_directories('nthw'),
     include_directories('nthw/supported'),
 ]
