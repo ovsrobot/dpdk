@@ -200,7 +200,8 @@ class Driver:
 def load_drivers(image):
     drivers = []
     for symbol in image.find_by_prefix("this_pmd_name"):
-        drivers.append(Driver.load(image, symbol))
+        if len(symbol.string_value) != 0:
+            drivers.append(Driver.load(image, symbol))
     return drivers
 
 
