@@ -16,11 +16,13 @@ cflags += [
 includes = [
     include_directories('.'),
     include_directories('ntlog/include'),
+    include_directories('ntutil/include'),
 ]
 
 # all sources
 sources = files(
     'ntlog/ntlog.c',
+    'ntutil/nt_util.c',
     'ntnic_ethdev.c',
 )
 # END
