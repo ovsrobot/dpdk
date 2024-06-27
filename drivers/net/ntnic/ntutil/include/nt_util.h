@@ -24,5 +24,20 @@ void nt_os_wait_usec(int val);
 
 uint64_t nt_util_align_size(uint64_t size);
 
+struct nt_dma_s {
+	uint64_t iova;
+	uint64_t addr;
+	uint64_t size;
+};
+
+struct nt_dma_s *nt_dma_alloc(uint64_t size, uint64_t align, int numa);
+void nt_dma_free(struct nt_dma_s *vfio_addr);
+
+struct nt_util_vfio_impl {
+	int (*vfio_dma_map)(int vf_num, void *virt_addr, uint64_t *iova_addr, uint64_t size);
+	int (*vfio_dma_unmap)(int vf_num, void *virt_addr, uint64_t iova_addr, uint64_t size);
+};
+
+void nt_util_vfio_init(struct nt_util_vfio_impl *impl);
 
 #endif	/* NTOSS_SYSTEM_NT_UTIL_H */
