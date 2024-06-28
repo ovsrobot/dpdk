@@ -106,14 +106,14 @@ pci_uio_map_resource(struct rte_pci_device *dev)
 	if (rte_intr_dev_fd_set(dev->intr_handle, -1))
 		return -1;
 
-	/* secondary processes - use already recorded details */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
-		return pci_uio_map_secondary(dev);
-
 	/* allocate uio resource */
 	ret = pci_uio_alloc_resource(dev, &uio_res);
 	if (ret)
 		return ret;
+
+	/* secondary processes - use already recorded details */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return pci_uio_map_secondary(dev);
 
 	/* Map all BARs */
 	for (i = 0; i != PCI_MAX_RESOURCE; i++) {
