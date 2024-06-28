@@ -279,13 +279,13 @@ F: lib/eal/common/rte_random.c
 F: app/test/test_rand_perf.c
 
 ARM v7
-M: Ruifeng Wang <ruifeng.wang@arm.com>
+M: Wathsala Vithanage <wathsala.vithanage@arm.com>
 F: config/arm/
 F: lib/eal/arm/
 X: lib/eal/arm/include/*_64.h
 
 ARM v8
-M: Ruifeng Wang <ruifeng.wang@arm.com>
+M: Wathsala Vithanage <wathsala.vithanage@arm.com>
 F: config/arm/
 F: doc/guides/linux_gsg/cross_build_dpdk_for_arm64.rst
 F: lib/eal/arm/
