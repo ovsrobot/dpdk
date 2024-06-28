@@ -247,7 +247,7 @@ F: examples/service_cores/
 F: doc/guides/sample_app_ug/service_cores.rst
 
 Bitops
-M: Joyce Kong <joyce.kong@arm.com>
+M: Jack Bond-Preston <jack.bond-preston@foss.arm.com>
 F: lib/eal/include/rte_bitops.h
 F: app/test/test_bitops.c
 
@@ -268,7 +268,7 @@ F: lib/eal/include/rte_seqlock.h
 F: app/test/test_seqlock.c
 
 Ticketlock
-M: Joyce Kong <joyce.kong@arm.com>
+M: Jack Bond-Preston <jack.bond-preston@foss.arm.com>
 F: lib/eal/include/rte_ticketlock.h
 F: app/test/test_ticketlock.c
 
@@ -1083,7 +1083,7 @@ F: doc/guides/cryptodevs/ionic.rst
 F: doc/guides/cryptodevs/features/ionic.ini
 
 ARMv8 Crypto
-M: Ruifeng Wang <ruifeng.wang@arm.com>
+M: Jack Bond-Preston <jack.bond-preston@foss.arm.com>
 F: drivers/crypto/armv8/
 F: doc/guides/cryptodevs/armv8.rst
 F: doc/guides/cryptodevs/features/armv8.ini
