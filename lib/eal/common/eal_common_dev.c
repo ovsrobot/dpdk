@@ -107,11 +107,12 @@ struct dev_next_ctx {
 #define CLSCTX(ptr) \
 	(((struct dev_next_ctx *)(intptr_t)ptr)->cls_str)
 
-static int cmp_dev_name(const struct rte_device *dev, const void *_name)
+int rte_cmp_dev_name(const struct rte_device *dev1, const void *name2)
 {
-	const char *name = _name;
+	if (dev1->bus->cmp_name)
+		return dev1->bus->cmp_name(dev1, name2);
 
-	return strcmp(dev->name, name);
+	return strcmp(dev1->name, (const char *)name2);
 }
 
 int
@@ -197,7 +198,7 @@ local_dev_probe(const char *devargs, struct rte_device **new_dev)
 	if (ret)
 		goto err_devarg;
 
-	dev = da->bus->find_device(NULL, cmp_dev_name, da->name);
+	dev = da->bus->find_device(NULL, rte_cmp_dev_name, da->name);
 	if (dev == NULL) {
 		EAL_LOG(ERR, "Cannot find device (%s)",
 			da->name);
@@ -335,7 +336,7 @@ rte_eal_hotplug_remove(const char *busname, const char *devname)
 		return -ENOENT;
 	}
 
-	dev = bus->find_device(NULL, cmp_dev_name, devname);
+	dev = bus->find_device(NULL, rte_cmp_dev_name, devname);
 	if (dev == NULL) {
 		EAL_LOG(ERR, "Cannot find plugged device (%s)", devname);
 		return -EINVAL;

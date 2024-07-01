@@ -21,6 +21,7 @@ extern "C" {
 
 #include <rte_config.h>
 #include <rte_common.h>
+#include <rte_compat.h>
 #include <rte_log.h>
 
 struct rte_bus;
@@ -169,6 +170,21 @@ int rte_dev_is_probed(const struct rte_device *dev);
  */
 int rte_eal_hotplug_add(const char *busname, const char *devname,
 			const char *drvargs);
+
+/**
+ * General device name comparison. Will compare by using the specific bus
+ * compare function or by comparing the names directly.
+ *
+ * @param dev
+ *   Device handle.
+ * @param name
+ *   Name to compare against.
+ * @return
+ *   0 if the device matches the name. Nonzero otherwise.
+ */
+__rte_experimental
+int
+rte_cmp_dev_name(const struct rte_device *dev, const void *name);
 
 /**
  * Add matching devices.

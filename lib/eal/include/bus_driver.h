@@ -119,6 +119,23 @@ typedef int (*rte_bus_unplug_t)(struct rte_device *dev);
 typedef int (*rte_bus_parse_t)(const char *name, void *addr);
 
 /**
+ * Bus specific device name comparison function.
+ *
+ * This type of function is used to compare a bus name with an arbitrary
+ * name.
+ *
+ * @param dev
+ *	Device handle.
+ *
+ * @param name
+ *	Name to compare against.
+ *
+ * @return
+ *	0 if the device matches the name. Nonzero otherwise.
+ */
+typedef int (*rte_bus_cmp_name_t)(const struct rte_device *dev, const void *name);
+
+/**
  * Parse bus part of the device arguments.
  *
  * The field name of the struct rte_devargs will be set.
@@ -258,6 +275,7 @@ struct rte_bus {
 	rte_bus_plug_t plug;         /**< Probe single device for drivers */
 	rte_bus_unplug_t unplug;     /**< Remove single device from driver */
 	rte_bus_parse_t parse;       /**< Parse a device name */
+	rte_bus_cmp_name_t cmp_name; /**< Compare device name */
 	rte_bus_devargs_parse_t devargs_parse; /**< Parse bus devargs */
 	rte_dev_dma_map_t dma_map;   /**< DMA map for device in the bus */
 	rte_dev_dma_unmap_t dma_unmap; /**< DMA unmap for device in the bus */
