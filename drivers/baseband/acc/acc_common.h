@@ -149,6 +149,8 @@
 #define VRB2_VF_ID_SHIFT     6
 
 #define ACC_MAX_FFT_WIN      16
+#define ACC_MAX_LOGLEN    256
+#define ACC_MAX_BUFFERLEN 256
 
 extern int acc_common_logtype;
 
@@ -646,7 +648,42 @@ struct __rte_cache_aligned acc_queue {
 	rte_iova_t fcw_ring_addr_iova;
 	int8_t *derm_buffer; /* interim buffer for de-rm in SDK */
 	struct acc_device *d;
+	char error_bufs[ACC_MAX_BUFFERLEN][ACC_MAX_LOGLEN]; /**< Buffer for error log. */
+	uint16_t error_head;  /**< Head - Buffer for error log. */
+	uint16_t  error_wrap; /**< Wrap Counter - Buffer for error log. */
 };
+
+/**
+ * @brief Report error both through RTE logging and into internal driver memory.
+ *
+ * This function is used to log an error for a specific ACC queue and operation.
+ *
+ * @param q   Pointer to the ACC queue.
+ * @param op  Pointer to the operation.
+ * @param fmt Format string for the error message.
+ * @param ... Additional arguments for the format string.
+ */
+__rte_format_printf(3, 4)
+static inline void
+acc_error_log(struct acc_queue *q, void *op, const char *fmt, ...)
+{
+	va_list args, args2;
+
+	va_start(args, fmt);
+	va_copy(args2, args);
+	rte_vlog(RTE_LOG_ERR, acc_common_logtype, fmt, args);
+	vsnprintf(q->error_bufs[q->error_head], ACC_MAX_LOGLEN, fmt, args2);
+	q->error_head++;
+	snprintf(q->error_bufs[q->error_head], ACC_MAX_LOGLEN,
+			"%s", rte_bbdev_ops_param_string(op, q->op_type));
+	q->error_head++;
+	if (q->error_head == ACC_MAX_LOGLEN) {
+		q->error_head = 0;
+		q->error_wrap++;
+	}
+	va_end(args);
+	va_end(args2);
+}
 
 /* Write to MMIO register address */
 static inline void
