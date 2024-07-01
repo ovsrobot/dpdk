@@ -6,6 +6,7 @@
 import argparse
 import ctypes
 import json
+import re
 import sys
 import tempfile
 
@@ -70,7 +71,7 @@ class ELFImage:
         prefix = prefix.encode("utf-8") if self._legacy_elftools else prefix
         for i in range(self._symtab.num_symbols()):
             symbol = self._symtab.get_symbol(i)
-            if symbol.name.startswith(prefix):
+            if re.match(prefix, symbol.name):
                 yield ELFSymbol(self._image, symbol)
 
 
@@ -199,7 +200,7 @@ class Driver:
 
 def load_drivers(image):
     drivers = []
-    for symbol in image.find_by_prefix("this_pmd_name"):
+    for symbol in image.find_by_prefix("^this_pmd_name[0-9]+$"):
         drivers.append(Driver.load(image, symbol))
     return drivers
 
