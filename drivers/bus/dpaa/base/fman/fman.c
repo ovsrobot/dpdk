@@ -425,7 +425,7 @@ fman_if_init(const struct device_node *dpa_node)
 		char_prop = of_get_property(mac_node, "phy-connection-type",
 					    NULL);
 		if (!char_prop) {
-			printf("memac: unknown MII type assuming 1G\n");
+			FMAN_ERR(-EINVAL, "memac: unknown MII type assuming 1G\n");
 			/* Right now forcing memac to 1g in case of error*/
 			__if->__if.mac_type = fman_mac_1g;
 		} else {
@@ -723,10 +723,8 @@ fman_finish(void)
 		/* release the mapping */
 		_errno = munmap(__if->ccsr_map, __if->regs_size);
 		if (unlikely(_errno < 0))
-			fprintf(stderr, "%s:%d:%s(): munmap() = %d (%s)\n",
-				__FILE__, __LINE__, __func__,
-				-errno, strerror(errno));
-		printf("Tearing down %s\n", __if->node_path);
+			FMAN_ERR(_errno, "munmap() = (%s)\n", strerror(errno));
+		DPAA_BUS_INFO("Tearing down %s\n", __if->node_path);
 		list_del(&__if->__if.node);
 		rte_free(__if);
 	}
