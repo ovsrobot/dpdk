@@ -461,7 +461,7 @@ caam_jr_prep_cdb(struct caam_jr_session *ses)
 	}
 
 #if CAAM_JR_DBG
-	SEC_DUMP_DESC(cdb->sh_desc);
+	SEC_DUMP_DESC(cdb->sh_desc, stdout);
 #endif
 
 	cdb->sh_hdr.hi.field.idlen = shared_desc_len;
@@ -1410,9 +1410,9 @@ err1:
 			rte_pktmbuf_mtod(op->sym->m_src, void *),
 			rte_pktmbuf_data_len(op->sym->m_src));
 
-	printf("\n JD before conversion\n");
+	fprintf(stdout, "\n JD before conversion\n");
 	for (i = 0; i < 12; i++)
-		printf("\n 0x%08x", ctx->jobdes.desc[i]);
+		fprintf(stdout, "\n 0x%08x", ctx->jobdes.desc[i]);
 #endif
 
 	CAAM_JR_DP_DEBUG("Jr[%p] pi[%d] ci[%d].Before sending desc",
