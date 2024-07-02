@@ -26,7 +26,7 @@ EAL_REGISTER_TAILQ(rte_uio_tailq)
 static int
 pci_uio_map_secondary(struct rte_pci_device *dev)
 {
-	int fd, i, map_idx;
+	int fd, i, map_idx = 0, res_idx;
 	struct mapped_pci_resource *uio_res;
 	struct mapped_pci_res_list *uio_res_list =
 			RTE_TAILQ_CAST(rte_uio_tailq.head, mapped_pci_res_list);
@@ -37,7 +37,15 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 		if (rte_pci_addr_cmp(&uio_res->pci_addr, &dev->addr))
 			continue;
 
-		for (map_idx = 0; map_idx != uio_res->nb_maps; map_idx++) {
+		/* Map all BARs */
+		for (res_idx = 0; res_idx != PCI_MAX_RESOURCE; res_idx++) {
+			 /* skip empty BAR */
+			if (dev->mem_resource[res_idx].phys_addr == 0)
+				continue;
+
+			if (map_idx >= uio_res->nb_maps)
+				return -1;
+
 			/*
 			 * open devname, to mmap it
 			 */
@@ -71,7 +79,9 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 				}
 				return -1;
 			}
-			dev->mem_resource[map_idx].addr = mapaddr;
+			dev->mem_resource[res_idx].addr = mapaddr;
+
+			map_idx++;
 		}
 		return 0;
 	}
