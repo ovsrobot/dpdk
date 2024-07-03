@@ -211,192 +211,192 @@
       "additionalProperties": false
     }
   },
-  "type": "object",
-  "properties": {
-    "nodes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "A unique identifier for this node"
-          },
-          "hostname": {
-            "type": "string",
-            "description": "A hostname from which the node running DTS can access this node. This can also be an IP address."
-          },
-          "user": {
-            "type": "string",
-            "description": "The user to access this node with."
-          },
-          "password": {
-            "type": "string",
-            "description": "The password to use on this node. Use only as a last resort. SSH keys are STRONGLY preferred."
-          },
-          "arch": {
-            "$ref": "#/definitions/ARCH"
-          },
-          "os": {
-            "$ref": "#/definitions/OS"
-          },
-          "lcores": {
-            "type": "string",
-            "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$",
-            "description": "Optional comma-separated list of logical cores to use, e.g.: 1,2,3,4,5,18-22. Defaults to 1. An empty string means use all lcores."
-          },
-          "use_first_core": {
-            "type": "boolean",
-            "description": "Indicate whether DPDK should use the first physical core. It won't be used by default."
-          },
-          "memory_channels": {
-            "type": "integer",
-            "description": "How many memory channels to use. Optional, defaults to 1."
-          },
-          "hugepages_2mb": {
-            "$ref": "#/definitions/hugepages_2mb"
-          },
-          "ports": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "description": "Each port should be described on both sides of the connection. This makes configuration slightly more verbose but greatly simplifies implementation. If there are inconsistencies, then DTS will not run until that issue is fixed. An example inconsistency would be port 1, node 1 says it is connected to port 1, node 2, but port 1, node 2 says it is connected to port 2, node 1.",
-              "properties": {
-                "pci": {
-                  "$ref": "#/definitions/pci_address",
-                  "description": "The local PCI address of the port"
-                },
-                "os_driver_for_dpdk": {
-                  "type": "string",
-                  "description": "The driver that the kernel should bind this device to for DPDK to use it. (ex: vfio-pci)"
-                },
-                "os_driver": {
-                  "type": "string",
-                  "description": "The driver normally used by this port (ex: i40e)"
-                },
-                "peer_node": {
-                  "type": "string",
-                  "description": "The name of the node the peer port is on"
-                },
-                "peer_pci": {
-                  "$ref": "#/definitions/pci_address",
-                  "description": "The PCI address of the peer port"
-                }
-              },
-              "additionalProperties": false,
-              "required": [
-                "pci",
-                "os_driver_for_dpdk",
-                "os_driver",
-                "peer_node",
-                "peer_pci"
-              ]
-            },
-            "minimum": 1
-          },
-          "traffic_generator": {
-            "oneOf": [
-              {
-                "type": "object",
-                "description": "Scapy traffic generator. Used for functional testing.",
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "SCAPY"
-                    ]
-                  }
-                }
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "hostname",
-          "user",
-          "arch",
-          "os"
-        ]
-      },
-      "minimum": 1
-    },
-    "test_runs": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "build_targets": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/build_target"
-            },
-            "minimum": 1
-          },
-          "perf": {
-            "type": "boolean",
-            "description": "Enable performance testing."
-          },
-          "func": {
-            "type": "boolean",
-            "description": "Enable functional testing."
-          },
-          "test_suites": {
-            "type": "array",
-            "items": {
-              "oneOf": [
-                {
-                  "$ref": "#/definitions/test_suite"
-                },
-                {
-                  "$ref": "#/definitions/test_target"
-                }
-              ]
-            }
-          },
-          "skip_smoke_tests": {
-            "description": "Optional field that allows you to skip smoke testing",
-            "type": "boolean"
-          },
-          "system_under_test_node": {
-            "type":"object",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
             "properties": {
-              "node_name": {
-                "$ref": "#/definitions/node_name"
+              "name": {
+                "type": "string",
+                "description": "A unique identifier for this node"
               },
-              "vdevs": {
-                "description": "Optional list of names of vdevs to be used in the test run",
+              "hostname": {
+                "type": "string",
+                "description": "A hostname from which the node running DTS can access this node. This can also be an IP address."
+              },
+              "user": {
+                "type": "string",
+                "description": "The user to access this node with."
+              },
+              "password": {
+                "type": "string",
+                "description": "The password to use on this node. Use only as a last resort. SSH keys are STRONGLY preferred."
+              },
+              "arch": {
+                "$ref": "#/definitions/ARCH"
+              },
+              "os": {
+                "$ref": "#/definitions/OS"
+              },
+              "lcores": {
+                "type": "string",
+                "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$",
+                "description": "Optional comma-separated list of logical cores to use, e.g.: 1,2,3,4,5,18-22. Defaults to 1. An empty string means use all lcores."
+              },
+              "use_first_core": {
+                "type": "boolean",
+                "description": "Indicate whether DPDK should use the first physical core. It won't be used by default."
+              },
+              "memory_channels": {
+                "type": "integer",
+                "description": "How many memory channels to use. Optional, defaults to 1."
+              },
+              "hugepages_2mb": {
+                "$ref": "#/definitions/hugepages_2mb"
+              },
+              "ports": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                }
+                  "type": "object",
+                  "description": "Each port should be described on both sides of the connection. This makes configuration slightly more verbose but greatly simplifies implementation. If there are inconsistencies, then DTS will not run until that issue is fixed. An example inconsistency would be port 1, node 1 says it is connected to port 1, node 2, but port 1, node 2 says it is connected to port 2, node 1.",
+                  "properties": {
+                    "pci": {
+                      "$ref": "#/definitions/pci_address",
+                      "description": "The local PCI address of the port"
+                    },
+                    "os_driver_for_dpdk": {
+                      "type": "string",
+                      "description": "The driver that the kernel should bind this device to for DPDK to use it. (ex: vfio-pci)"
+                    },
+                    "os_driver": {
+                      "type": "string",
+                      "description": "The driver normally used by this port (ex: i40e)"
+                    },
+                    "peer_node": {
+                      "type": "string",
+                      "description": "The name of the node the peer port is on"
+                    },
+                    "peer_pci": {
+                      "$ref": "#/definitions/pci_address",
+                      "description": "The PCI address of the peer port"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "pci",
+                    "os_driver_for_dpdk",
+                    "os_driver",
+                    "peer_node",
+                    "peer_pci"
+                  ]
+                },
+                "minimum": 1
+              },
+              "traffic_generator": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "description": "Scapy traffic generator. Used for functional testing.",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "SCAPY"
+                        ]
+                      }
+                    }
+                  }
+                ]
               }
             },
+            "additionalProperties": false,
             "required": [
-              "node_name"
+              "name",
+              "hostname",
+              "user",
+              "arch",
+              "os"
             ]
           },
-          "traffic_generator_node": {
-            "$ref": "#/definitions/node_name"
-          }
+          "minimum": 1
         },
-        "additionalProperties": false,
-        "required": [
-          "build_targets",
-          "perf",
-          "func",
-          "test_suites",
-          "system_under_test_node",
-          "traffic_generator_node"
-        ]
+        "executions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "build_targets": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/build_target"
+                },
+                "minimum": 1
+              },
+              "perf": {
+                "type": "boolean",
+                "description": "Enable performance testing."
+              },
+              "func": {
+                "type": "boolean",
+                "description": "Enable functional testing."
+              },
+              "test_suites": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/definitions/test_suite"
+                    },
+                    {
+                      "$ref": "#/definitions/test_target"
+                    }
+                  ]
+                }
+              },
+              "skip_smoke_tests": {
+                "description": "Optional field that allows you to skip smoke testing",
+                "type": "boolean"
+              },
+              "system_under_test_node": {
+                "type":"object",
+                "properties": {
+                  "node_name": {
+                    "$ref": "#/definitions/node_name"
+                  },
+                  "vdevs": {
+                    "description": "Optional list of names of vdevs to be used in execution",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "node_name"
+                ]
+              },
+              "traffic_generator_node": {
+                "$ref": "#/definitions/node_name"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "build_targets",
+              "perf",
+              "func",
+              "test_suites",
+              "system_under_test_node",
+              "traffic_generator_node"
+            ]
+          },
+          "minimum": 1
+        }
       },
-      "minimum": 1
+      "additionalProperties": false
     }
-  },
-  "required": [
-    "test_runs",
-    "nodes"
-  ],
-  "additionalProperties": false
+  ]
 }

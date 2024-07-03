@@ -14,10 +14,15 @@ followed by the default value defined in this module.
 
 The command line arguments along with the supported environment variables are:
 
-.. option:: --config-file
-.. envvar:: DTS_CFG_FILE
+.. option:: --node-config-file
+.. envvar:: DTS_NODE_CFG_FILE
 
-    The path to the YAML test run configuration file.
+    The path to the YAML testbed configuration file.
+
+.. option:: --exec-config-file
+.. envvar:: DTS_EXEC_CFG_FILE
+
+    The path to the YAML execution configuration file.
 
 .. option:: --output-dir, --output
 .. envvar:: DTS_OUTPUT_DIR
@@ -98,7 +103,9 @@ class Settings:
     """
 
     #:
-    config_file_path: Path = Path(__file__).parent.parent.joinpath("conf.yaml")
+    node_config_file_path: Path = Path(__file__).parent.parent.joinpath("node_conf.yaml")
+    #:
+    exec_config_file_path: Path = Path(__file__).parent.parent.joinpath("execution_conf.yaml")
     #:
     output_dir: str = "output"
     #:
@@ -267,14 +274,23 @@ def _get_parser() -> _DTSArgumentParser:
     )
 
     action = parser.add_argument(
-        "--config-file",
-        default=SETTINGS.config_file_path,
+        "--node-config-file",
+        default=SETTINGS.node_config_file_path,
         type=Path,
-        help="The configuration file that describes the test cases, SUTs and targets.",
-        metavar="FILE_PATH",
-        dest="config_file_path",
+        help="[DTS_NODE_CFG_FILE] The configuration file that describes the testbed devices.",
+        metavar="NODE_FILE_PATH",
+        dest="node_config_file_path",
     )
-    _add_env_var_to_action(action, "CFG_FILE")
+    _add_env_var_to_action(action, "NODE_CFG_FILE")
+    action = parser.add_argument(
+        "--exec-config-file",
+        default=SETTINGS.exec_config_file_path,
+        type=Path,
+        help="[DTS_EXEC_CFG_FILE] The configuration file that describes the test cases.",
+        metavar="EXEC_FILE_PATH",
+        dest="exec_config_file_path",
+    )
+    _add_env_var_to_action(action, "EXEC_CFG_FILE")
 
     action = parser.add_argument(
         "--output-dir",
