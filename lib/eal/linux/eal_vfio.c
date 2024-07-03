@@ -2196,3 +2196,27 @@ rte_vfio_container_dma_unmap(int container_fd, uint64_t vaddr, uint64_t iova,
 
 	return container_dma_unmap(vfio_cfg, vaddr, iova, len);
 }
+
+int
+rte_vfio_get_fd(int iommu_group_num, int *vfio_group_fd, int *vfio_container_fd)
+{
+	struct vfio_config *vfio_cfg;
+	vfio_cfg = get_vfio_cfg_by_group_num(iommu_group_num);
+	/* do not create new container if the group has bound with one */
+	if (vfio_cfg) {
+		*vfio_container_fd = vfio_cfg->vfio_container_fd;
+	} else {
+		*vfio_container_fd = rte_vfio_container_create();
+		if (*vfio_container_fd < 0)
+			goto err;
+
+		vfio_cfg = get_vfio_cfg_by_container_fd(*vfio_container_fd);
+	}
+	*vfio_group_fd = vfio_get_group_fd(vfio_cfg, iommu_group_num);
+	if (*vfio_group_fd < 0)
+		goto err;
+
+	return 0;
+err:
+	return -1;
+}
