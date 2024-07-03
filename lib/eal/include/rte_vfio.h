@@ -407,6 +407,23 @@ int
 rte_vfio_container_dma_unmap(int container_fd, uint64_t vaddr,
 		uint64_t iova, uint64_t len);
 
+/**
+ * Get vfio group fd bound with container fd for certain iommu group.
+ *
+ * @param iommu_group_num
+ *   iommu group num
+ * @param vfio_group_fd
+ *   vfio group fd of the iommu group.
+ * @param vfio_container_fd
+ *   vfio container fd of the iommu group.
+ * @return
+ *    0 if successful
+ *   <0 if failed
+ */
+__rte_experimental
+int
+rte_vfio_get_fd(int iommu_group_num, int *vfio_group_fd, int *vfio_container_fd);
+
 #ifdef __cplusplus
 }
 #endif
