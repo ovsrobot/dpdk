@@ -87,6 +87,11 @@ New Features
 
   * Updated base code with E610 device family support.
 
+* **Updated Intel ice driver.**
+
+  * Added support for configuring the Forward Error Correction(FEC) mode, querying
+  * FEC capabilities and current FEC mode from a device.
+
 * **Updated Marvell cnxk net driver.**
 
   * Added support disabling custom meta aura
