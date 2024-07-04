@@ -60,6 +60,52 @@ err:
 	return ret;
 }
 
+static int
+cpfl_process_rx_ctlq_msg(u16 msg_opcode, u16 msg_status)
+{
+	int ret = CPFL_CFG_PKT_ERR_OK;
+
+	if (msg_status &&
+		msg_opcode == cpfl_ctlq_sem_query_rule_hash_addr)
+		return ret;
+
+	switch (msg_status) {
+	case CPFL_CFG_PKT_ERR_EEXIST:
+		PMD_INIT_LOG(ERR, "The rule has confliction with already existed one");
+		ret = CPFL_CFG_PKT_ERR_EEXIST;
+		break;
+	case CPFL_CFG_PKT_ERR_ENOSPC:
+		PMD_INIT_LOG(ERR, "No space left in the table");
+		ret = CPFL_CFG_PKT_ERR_ENOSPC;
+		break;
+	case CPFL_CFG_PKT_ERR_ESRCH:
+		PMD_INIT_LOG(ERR, "Bad opcode");
+		ret = CPFL_CFG_PKT_ERR_ESRCH;
+		break;
+	case CPFL_CFG_PKT_ERR_ERANGE:
+		PMD_INIT_LOG(ERR, "Parameter are out of");
+		ret = CPFL_CFG_PKT_ERR_ERANGE;
+		break;
+	case CPFL_CFG_PKT_ERR_ESBCOMP:
+		PMD_INIT_LOG(ERR, "Completion error");
+		ret = CPFL_CFG_PKT_ERR_ESBCOMP;
+		break;
+	case CPFL_CFG_PKT_ERR_ENOPIN:
+		PMD_INIT_LOG(ERR, "Entry cannot be pinned in the cache");
+		ret = CPFL_CFG_PKT_ERR_ENOPIN;
+		break;
+	case CPFL_CFG_PKT_ERR_ENOTFND:
+		PMD_INIT_LOG(ERR, "Entry does not exists");
+		ret = CPFL_CFG_PKT_ERR_ENOTFND;
+		break;
+	case CPFL_CFG_PKT_ERR_EMAXCOL:
+		PMD_INIT_LOG(ERR, "Maximum number of hash collisons reached");
+		ret = CPFL_CFG_PKT_ERR_EMAXCOL;
+		break;
+	}
+	return ret;
+}
+
 int
 cpfl_receive_ctlq_msg(struct idpf_hw *hw, struct idpf_ctlq_info *cq, u16 num_q_msg,
 		      struct idpf_ctlq_msg q_msg[])
@@ -92,6 +138,12 @@ cpfl_receive_ctlq_msg(struct idpf_hw *hw, struct idpf_ctlq_info *cq, u16 num_q_m
 
 		/* TODO - process rx controlq message */
 		for (i = 0; i < num_q_msg; i++) {
+			ret = cpfl_process_rx_ctlq_msg(q_msg[i].opcode, q_msg[i].status);
+			if (ret) {
+				PMD_INIT_LOG(ERR, "failed to process rx_ctrlq msg");
+				return ret;
+			}
+
 			if (q_msg[i].data_len > 0)
 				dma = q_msg[i].ctx.indirect.payload;
 			else
