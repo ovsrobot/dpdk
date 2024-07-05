@@ -6,14 +6,6 @@
       "type": "string",
       "description": "A unique identifier for a node"
     },
-    "ARCH": {
-      "type": "string",
-      "enum": [
-        "x86_64",
-        "arm64",
-        "ppc64le"
-      ]
-    },
     "OS": {
       "type": "string",
       "enum": [
@@ -155,9 +147,6 @@
             "type": "string",
             "description": "The password to use on this node. Use only as a last resort. SSH keys are STRONGLY preferred."
           },
-          "arch": {
-            "$ref": "#/definitions/ARCH"
-          },
           "os": {
             "$ref": "#/definitions/OS"
           },
@@ -233,7 +222,6 @@
           "name",
           "hostname",
           "user",
-          "arch",
           "os"
         ]
       },

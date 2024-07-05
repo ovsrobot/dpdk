@@ -208,7 +208,6 @@ class NodeConfiguration:
             the :class:`~framework.testbed_model.node.Node`.
         password: The password of the user. The use of passwords is heavily discouraged.
             Please use keys instead.
-        arch: The architecture of the :class:`~framework.testbed_model.node.Node`.
         os: The operating system of the :class:`~framework.testbed_model.node.Node`.
         lcores: A comma delimited list of logical cores to use when running DPDK.
         use_first_core: If :data:`True`, the first logical core won't be used.
@@ -220,7 +219,6 @@ class NodeConfiguration:
     hostname: str
     user: str
     password: str | None
-    arch: Architecture
     os: OS
     lcores: str
     use_first_core: bool
@@ -257,7 +255,6 @@ class NodeConfiguration:
                 hostname=d["hostname"],
                 user=d["user"],
                 password=d.get("password"),
-                arch=Architecture(d["arch"]),
                 os=OS(d["os"]),
                 lcores=lcores,
                 use_first_core=use_first_core,
@@ -271,7 +268,6 @@ class NodeConfiguration:
                 hostname=d["hostname"],
                 user=d["user"],
                 password=d.get("password"),
-                arch=Architecture(d["arch"]),
                 os=OS(d["os"]),
                 lcores=lcores,
                 use_first_core=use_first_core,

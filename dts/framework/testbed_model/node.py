@@ -17,7 +17,7 @@ from abc import ABC
 from ipaddress import IPv4Interface, IPv6Interface
 from typing import Any, Callable, Union
 
-from framework.config import OS, NodeConfiguration, TestRunConfiguration
+from framework.config import OS, Architecture, NodeConfiguration, TestRunConfiguration
 from framework.exception import ConfigurationError
 from framework.logger import DTSLogger, get_dts_logger
 from framework.settings import SETTINGS
@@ -55,6 +55,7 @@ class Node(ABC):
     main_session: OSSession
     config: NodeConfiguration
     name: str
+    arch: Architecture
     lcores: list[LogicalCore]
     ports: list[Port]
     _logger: DTSLogger
@@ -77,6 +78,7 @@ class Node(ABC):
         self.name = node_config.name
         self._logger = get_dts_logger(self.name)
         self.main_session = create_session(self.config, self.name, self._logger)
+        self.arch = Architecture(self.main_session.get_arch_info())
 
         self._logger.info(f"Connected to node: {self.name}")
 
