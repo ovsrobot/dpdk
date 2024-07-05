@@ -102,8 +102,8 @@ _get_section(struct rte_cfgfile *cfg, const char *sectionname)
 }
 
 static int
-_add_entry(struct rte_cfgfile_section *section, const char *entryname,
-		const char *entryvalue)
+_add_entry(struct rte_cfgfile *cfg, struct rte_cfgfile_section *section,
+	   const char *entryname, const char *entryvalue, bool check_dup)
 {
 	int name_len, value_len;
 
@@ -113,6 +113,14 @@ _add_entry(struct rte_cfgfile_section *section, const char *entryname,
 		CFG_LOG(ERR, "invalid entry name %s or value %s in section %s",
 			entryname, entryvalue, section->name);
 		return -EINVAL;
+	}
+
+	if (check_dup) {
+		if (rte_cfgfile_has_entry(cfg, section->name, entryname) != 0) {
+			CFG_LOG(ERR, "duplicate entry name %s in section %s",
+				entryname, section->name);
+			return -EEXIST;
+		}
 	}
 
 	/* resize entry structure if we don't have room for more entries */
@@ -264,8 +272,9 @@ rte_cfgfile_load_with_params(const char *filename, int flags,
 			if (cfg->num_sections == 0)
 				goto error1;
 
-			ret = _add_entry(&cfg->sections[cfg->num_sections - 1],
-					 split[0], split[1]);
+			ret = _add_entry(cfg, &cfg->sections[cfg->num_sections - 1],
+					 split[0], split[1],
+					 !!(flags & CFG_FLAG_STRICT_PARSE));
 			if (ret != 0)
 				goto error1;
 		}
@@ -286,7 +295,8 @@ rte_cfgfile_create(int flags)
 	struct rte_cfgfile *cfg;
 
 	/* future proof flags usage */
-	if (flags & ~(CFG_FLAG_GLOBAL_SECTION | CFG_FLAG_EMPTY_VALUES))
+	if (flags & ~(CFG_FLAG_GLOBAL_SECTION | CFG_FLAG_EMPTY_VALUES |
+		      CFG_FLAG_STRICT_PARSE))
 		return NULL;
 
 	cfg = malloc(sizeof(*cfg));
@@ -356,6 +366,13 @@ rte_cfgfile_add_section(struct rte_cfgfile *cfg, const char *sectionname)
 		return -EINVAL;
 	}
 
+	if (cfg->flags & CFG_FLAG_STRICT_PARSE) {
+		if (rte_cfgfile_has_section(cfg, sectionname) != 0) {
+			CFG_LOG(ERR, "duplicate section name %s", sectionname);
+			return -EEXIST;
+		}
+	}
+
 	/* resize overall struct if we don't have room for more	sections */
 	if (cfg->num_sections == cfg->allocated_sections) {
 
@@ -396,16 +413,13 @@ int rte_cfgfile_add_entry(struct rte_cfgfile *cfg,
 			|| (entryvalue == NULL))
 		return -EINVAL;
 
-	if (rte_cfgfile_has_entry(cfg, sectionname, entryname) != 0)
-		return -EEXIST;
-
 	/* search for section pointer by sectionname */
 	struct rte_cfgfile_section *curr_section = _get_section(cfg,
 								sectionname);
 	if (curr_section == NULL)
 		return -EINVAL;
 
-	ret = _add_entry(curr_section, entryname, entryvalue);
+	ret = _add_entry(cfg, curr_section, entryname, entryvalue, true);
 
 	return ret;
 }

@@ -56,6 +56,13 @@ enum {
 	 * be zero length (e.g., "key=").
 	 */
 	CFG_FLAG_EMPTY_VALUES = 2,
+
+	/**
+	 * Indicates that the parser will not allow for any section and entry
+	 * duplicates. If a duplicated section or entry is detected, the
+	 * operation will return error.
+	 */
+	CFG_FLAG_STRICT_PARSE = 4,
 };
 /**@} */
 
