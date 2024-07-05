@@ -246,6 +246,9 @@ class NodeConfiguration:
                 hugepage_config_dict["force_first_numa"] = False
             hugepage_config = HugepageConfiguration(**hugepage_config_dict)
 
+        lcores = "1" if "lcores" not in d else d["lcores"] if "any" not in d["lcores"] else ""
+        use_first_core = "0" in lcores
+
         # The calls here contain duplicated code which is here because Mypy doesn't
         # properly support dictionary unpacking with TypedDicts
         if "traffic_generator" in d:
@@ -256,8 +259,8 @@ class NodeConfiguration:
                 password=d.get("password"),
                 arch=Architecture(d["arch"]),
                 os=OS(d["os"]),
-                lcores=d.get("lcores", "1"),
-                use_first_core=d.get("use_first_core", False),
+                lcores=lcores,
+                use_first_core=use_first_core,
                 hugepages=hugepage_config,
                 ports=[PortConfig.from_dict(d["name"], port) for port in d["ports"]],
                 traffic_generator=TrafficGeneratorConfig.from_dict(d["traffic_generator"]),
@@ -270,8 +273,8 @@ class NodeConfiguration:
                 password=d.get("password"),
                 arch=Architecture(d["arch"]),
                 os=OS(d["os"]),
-                lcores=d.get("lcores", "1"),
-                use_first_core=d.get("use_first_core", False),
+                lcores=lcores,
+                use_first_core=use_first_core,
                 hugepages=hugepage_config,
                 ports=[PortConfig.from_dict(d["name"], port) for port in d["ports"]],
                 memory_channels=d.get("memory_channels", 1),

@@ -163,12 +163,8 @@
           },
           "lcores": {
             "type": "string",
-            "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$",
+            "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$|any",
             "description": "Optional comma-separated list of logical cores to use, e.g.: 1,2,3,4,5,18-22. Defaults to 1. An empty string means use all lcores."
-          },
-          "use_first_core": {
-            "type": "boolean",
-            "description": "Indicate whether DPDK should use the first physical core. It won't be used by default."
           },
           "memory_channels": {
             "type": "integer",
