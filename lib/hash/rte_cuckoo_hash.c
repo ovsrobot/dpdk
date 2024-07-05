@@ -33,6 +33,16 @@ RTE_LOG_REGISTER_DEFAULT(hash_logtype, INFO);
 
 #include "rte_cuckoo_hash.h"
 
+/* Enum used to select the implementation of the signature comparison function to use
+ * eg: A system supporting SVE might want to use a NEON or scalar implementation.
+ */
+enum rte_hash_sig_compare_function {
+	RTE_HASH_COMPARE_SCALAR = 0,
+	RTE_HASH_COMPARE_SSE,
+	RTE_HASH_COMPARE_NEON,
+	RTE_HASH_COMPARE_NUM
+};
+
 /* Mask of all flags supported by this version */
 #define RTE_HASH_EXTRA_FLAGS_MASK (RTE_HASH_EXTRA_FLAGS_TRANS_MEM_SUPPORT | \
 				   RTE_HASH_EXTRA_FLAGS_MULTI_WRITER_ADD | \
