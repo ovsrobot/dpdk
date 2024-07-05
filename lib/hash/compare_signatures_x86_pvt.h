@@ -6,14 +6,21 @@
 #ifndef _COMPARE_SIGNATURE_X86_PVT_H_
 #define _COMPARE_SIGNATURE_X86_PVT_H_
 
+/*
+ * x86's version uses a sparsely packed hitmask buffer:
+ * Every other bit is padding.
+ */
+
 #include <inttypes.h>
 #include <rte_common.h>
 #include <rte_vect.h>
 
 #include "rte_cuckoo_hash.h"
 
+#define DENSE_HASH_BULK_LOOKUP 0
+
 static inline void
-compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
+compare_signatures_sparse(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 			const struct rte_hash_bucket *prim_bkt,
 			const struct rte_hash_bucket *sec_bkt,
 			uint16_t sig,
