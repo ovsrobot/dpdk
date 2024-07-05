@@ -70,6 +70,9 @@ class ELFImage:
         prefix = prefix.encode("utf-8") if self._legacy_elftools else prefix
         for i in range(self._symtab.num_symbols()):
             symbol = self._symtab.get_symbol(i)
+            # Skip unspecified symbol type
+            if symbol.entry.st_info['type'] == "STT_NOTYPE":
+                continue
             if symbol.name.startswith(prefix):
                 yield ELFSymbol(self._image, symbol)
 
