@@ -23,7 +23,7 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 
 	/* For match mask the first bit of every two bits indicates the match */
 	switch (sig_cmp_fn) {
-#if defined(__SSE2__)
+#if defined(__SSE2__) && RTE_HASH_BUCKET_ENTRIES <= 8
 	case RTE_HASH_COMPARE_SSE:
 		/* Compare all signatures in the bucket */
 		*prim_hash_matches = _mm_movemask_epi8(_mm_cmpeq_epi16(_mm_load_si128(
