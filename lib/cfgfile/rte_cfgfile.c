@@ -223,12 +223,6 @@ rte_cfgfile_load_with_params(const char *filename, int flags,
 
 			split[0] = buffer;
 			split[1] = memchr(buffer, '=', len);
-			if (split[1] == NULL) {
-				CFG_LOG(ERR,
-					"line %d - no '=' character found",
-					lineno);
-				goto error1;
-			}
 			*split[1] = '\0';
 			split[1]++;
 
