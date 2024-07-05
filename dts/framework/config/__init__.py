@@ -86,22 +86,6 @@ class OS(StrEnum):
 
 
 @unique
-class CPUType(StrEnum):
-    r"""The supported CPUs of :class:`~framework.testbed_model.node.Node`\s."""
-
-    #:
-    native = auto()
-    #:
-    armv8a = auto()
-    #:
-    dpaa2 = auto()
-    #:
-    thunderx = auto()
-    #:
-    xgene1 = auto()
-
-
-@unique
 class Compiler(StrEnum):
     r"""The supported compilers of :class:`~framework.testbed_model.node.Node`\s."""
 
@@ -341,28 +325,20 @@ class BuildTargetConfiguration:
     The configuration used for building DPDK.
 
     Attributes:
-        arch: The target architecture to build for.
-        os: The target os to build for.
-        cpu: The target CPU to build for.
         compiler: The compiler executable to use.
         compiler_wrapper: This string will be put in front of the compiler when
             executing the build. Useful for adding wrapper commands, such as ``ccache``.
         name: The name of the compiler.
     """
 
-    arch: Architecture
-    os: OS
-    cpu: CPUType
     compiler: Compiler
     compiler_wrapper: str
-    name: str
 
     @classmethod
     def from_dict(cls, d: BuildTargetConfigDict) -> Self:
         r"""A convenience method that processes the inputs before creating an instance.
 
-        `arch`, `os`, `cpu` and `compiler` are converted to :class:`Enum`\s and
-        `name` is constructed from `arch`, `os`, `cpu` and `compiler`.
+        `compiler` is converted to :class:`Enum`\s
 
         Args:
             d: The configuration dictionary.
@@ -371,12 +347,8 @@ class BuildTargetConfiguration:
             The build target configuration instance.
         """
         return cls(
-            arch=Architecture(d["arch"]),
-            os=OS(d["os"]),
-            cpu=CPUType(d["cpu"]),
             compiler=Compiler(d["compiler"]),
             compiler_wrapper=d.get("compiler_wrapper", ""),
-            name=f"{d['arch']}-{d['os']}-{d['cpu']}-{d['compiler']}",
         )
 
 

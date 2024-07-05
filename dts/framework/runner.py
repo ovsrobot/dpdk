@@ -480,7 +480,7 @@ class DTSRunner:
             test_suites_with_cases: The test suites with test cases to run.
         """
         self._logger.set_stage(DtsStage.build_target_setup)
-        self._logger.info(f"Running build target '{build_target_config.name}'.")
+        self._logger.info("Running build target.")
 
         try:
             sut_node.set_up_build_target(build_target_config)

@@ -5,11 +5,8 @@
 test_runs:
   # define one test run environment
   - build_targets:
-      - arch: x86_64
-        os: linux
-        cpu: native
         # the combination of the following two makes CC="ccache gcc"
-        compiler: gcc
+     -  compiler: gcc
         compiler_wrapper: ccache
     perf: false # disable performance testing
     func: true # enable functional testing

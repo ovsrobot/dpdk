@@ -115,12 +115,7 @@ class SutNode(Node):
         This is the directory where DPDK was built.
         We assume it was built in a subdirectory of the extracted tarball.
         """
-        if self._build_target_config:
-            return self.main_session.join_remote_path(
-                self._remote_dpdk_dir, self._build_target_config.name
-            )
-        else:
-            return self.main_session.join_remote_path(self._remote_dpdk_dir, "build")
+        return self.main_session.join_remote_path(self._remote_dpdk_dir, "build")
 
     @property
     def dpdk_version(self) -> str:
@@ -217,7 +212,6 @@ class SutNode(Node):
         """Populate common environment variables and set build target config."""
         self._env_vars = {}
         self._build_target_config = build_target_config
-        self._env_vars.update(self.main_session.get_dpdk_build_env_vars(build_target_config.arch))
         self._env_vars["CC"] = build_target_config.compiler.name
         if build_target_config.compiler_wrapper:
             self._env_vars["CC"] = (
