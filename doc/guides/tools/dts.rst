@@ -437,14 +437,6 @@ _`Node name`
    *string* – A unique identifier for a node.
    **Examples**: ``SUT1``, ``TG1``.
 
-_`ARCH`
-   *string* – The CPU architecture.
-   **Supported values**: ``x86_64``, ``arm64``, ``ppc64le``.
-
-_`CPU`
-   *string* – The CPU microarchitecture. Use ``native`` for x86.
-   **Supported values**: ``native``, ``armv8a``, ``dpaa2``, ``thunderx``, ``xgene1``.
-
 _`OS`
    *string* – The operating system. **Supported values**: ``linux``.
 
@@ -456,9 +448,6 @@ _`Build target`
    *mapping* – Build targets supported by DTS for building DPDK, described as:
 
    ==================== =================================================================
-   ``arch``             See `ARCH`_
-   ``os``               See `OS`_
-   ``cpu``              See `CPU`_
    ``compiler``         See `Compiler`_
    ``compiler_wrapper`` *string* – Value prepended to the CC variable for the DPDK build.
 
@@ -565,18 +554,15 @@ involved in the testing. These can be defined with the following mappings:
    |                       |                                                                                       |
    |                       | **NB**: Use only as last resort. SSH keys are **strongly** preferred.                 |
    +-----------------------+---------------------------------------------------------------------------------------+
-   | ``arch``              | The architecture of this node. See `ARCH`_ for supported values.                      |
-   +-----------------------+---------------------------------------------------------------------------------------+
    | ``os``                | The operating system of this node. See `OS`_ for supported values.                    |
    +-----------------------+---------------------------------------------------------------------------------------+
-   | ``lcores``            | | (*optional*, defaults to 1) *string* – Comma-separated list of logical              |
-   |                       | | cores to use. An empty string means use all lcores.                                 |
+   | ``dpdk_config``       | Configuration relating to DPDK (to be specified on SUT Nodes)                         |
+   +-----------------------+---------------------------------------------------------------------------------------+
+   | ``lcores``            | | (*optional*, defaults to 1 if not used) *string* – Comma-separated list of logical  |
+   |                       | | cores to use. An empty string means use all lcores except core 0. core 0 is used    |
+   |                       | | only when explicitly specified                                                      |
    |                       |                                                                                       |
    |                       | **Example**: ``1,2,3,4,5,18-22``                                                      |
-   +-----------------------+---------------------------------------------------------------------------------------+
-   | ``use_first_core``    | (*optional*, defaults to ``false``) *boolean*                                         |
-   |                       |                                                                                       |
-   |                       | Indicates whether DPDK should use only the first physical core or not.                |
    +-----------------------+---------------------------------------------------------------------------------------+
    | ``memory_channels``   | (*optional*, defaults to 1) *integer*                                                 |
    |                       |                                                                                       |
