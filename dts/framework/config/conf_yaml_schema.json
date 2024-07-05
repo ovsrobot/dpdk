@@ -150,14 +150,21 @@
           "os": {
             "$ref": "#/definitions/OS"
           },
-          "lcores": {
-            "type": "string",
-            "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$|any",
-            "description": "Optional comma-separated list of logical cores to use, e.g.: 1,2,3,4,5,18-22. Defaults to 1. An empty string means use all lcores."
-          },
-          "memory_channels": {
-            "type": "integer",
-            "description": "How many memory channels to use. Optional, defaults to 1."
+          "dpdk_config": {
+            "type": "object",
+            "description": "EAL arguments for DPDK execution",
+            "properties": {
+              "lcores": {
+                "type": "string",
+                "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$|any",
+                "description": "Optional comma-separated list of logical cores to use, e.g.: 1,2,3,4,5,18-22. Defaults to 1. An empty string means use all lcores."
+              },
+              "memory_channels": {
+                "type": "integer",
+                "description": "How many memory channels to use. Optional, defaults to 1."
+              }
+            },
+            "minimum": 1
           },
           "hugepages_2mb": {
             "$ref": "#/definitions/hugepages_2mb"
@@ -264,23 +271,15 @@
             "description": "Optional field that allows you to skip smoke testing",
             "type": "boolean"
           },
+          "vdevs": {
+            "description": "Optional list of names of vdevs to be used in execution",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "system_under_test_node": {
-            "type":"object",
-            "properties": {
-              "node_name": {
-                "$ref": "#/definitions/node_name"
-              },
-              "vdevs": {
-                "description": "Optional list of names of vdevs to be used in the test run",
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "required": [
-              "node_name"
-            ]
+            "$ref": "#/definitions/node_name"
           },
           "traffic_generator_node": {
             "$ref": "#/definitions/node_name"

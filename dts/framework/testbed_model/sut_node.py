@@ -29,6 +29,7 @@ from framework.remote_session.remote_session import CommandResult
 from framework.settings import SETTINGS
 from framework.utils import MesonArgs
 
+from .cpu import LogicalCore, LogicalCoreList
 from .node import Node
 from .os_session import OSSession
 from .virtual_device import VirtualDevice
@@ -75,6 +76,17 @@ class SutNode(Node):
             node_config: The SUT node's test run configuration.
         """
         super().__init__(node_config)
+        self.lcores = self.filter_lcores(LogicalCoreList(self.config.dpdk_config.lcores))
+        if LogicalCore(lcore=0, core=0, socket=0, node=0) in self.lcores:
+            self._logger.info(
+                """
+                WARNING: First core being used;
+                using the first core is considered risky and should only
+                be done by advanced users.
+                """
+            )
+        else:
+            self._logger.info("Not using first core")
         self.virtual_devices = []
         self.dpdk_prefix_list = []
         self._build_target_config = None

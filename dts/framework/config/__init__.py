@@ -209,8 +209,6 @@ class NodeConfiguration:
         password: The password of the user. The use of passwords is heavily discouraged.
             Please use keys instead.
         os: The operating system of the :class:`~framework.testbed_model.node.Node`.
-        lcores: A comma delimited list of logical cores to use when running DPDK.
-        use_first_core: If :data:`True`, the first logical core won't be used.
         hugepages: An optional hugepage configuration.
         ports: The ports that can be used in testing.
     """
@@ -220,8 +218,6 @@ class NodeConfiguration:
     user: str
     password: str | None
     os: OS
-    lcores: str
-    use_first_core: bool
     hugepages: HugepageConfiguration | None
     ports: list[PortConfig]
 
@@ -244,9 +240,6 @@ class NodeConfiguration:
                 hugepage_config_dict["force_first_numa"] = False
             hugepage_config = HugepageConfiguration(**hugepage_config_dict)
 
-        lcores = "1" if "lcores" not in d else d["lcores"] if "any" not in d["lcores"] else ""
-        use_first_core = "0" in lcores
-
         # The calls here contain duplicated code which is here because Mypy doesn't
         # properly support dictionary unpacking with TypedDicts
         if "traffic_generator" in d:
@@ -256,25 +249,43 @@ class NodeConfiguration:
                 user=d["user"],
                 password=d.get("password"),
                 os=OS(d["os"]),
-                lcores=lcores,
-                use_first_core=use_first_core,
                 hugepages=hugepage_config,
                 ports=[PortConfig.from_dict(d["name"], port) for port in d["ports"]],
                 traffic_generator=TrafficGeneratorConfig.from_dict(d["traffic_generator"]),
             )
         else:
+            dpdk_config = d["dpdk_config"]
+            dpdk_config["lcores"] = (
+                "1"
+                if "lcores" not in dpdk_config
+                else dpdk_config["lcores"]
+                if "any" not in dpdk_config["lcores"]
+                else ""
+            )
+            dpdk_config["memory_channels"] = dpdk_config.get("memory_channels", 1)
             return SutNodeConfiguration(
                 name=d["name"],
                 hostname=d["hostname"],
                 user=d["user"],
                 password=d.get("password"),
                 os=OS(d["os"]),
-                lcores=lcores,
-                use_first_core=use_first_core,
+                dpdk_config=DPDKConfig(**dpdk_config),
                 hugepages=hugepage_config,
                 ports=[PortConfig.from_dict(d["name"], port) for port in d["ports"]],
-                memory_channels=d.get("memory_channels", 1),
             )
+
+
+@dataclass(slots=True, frozen=True)
+class DPDKConfig:
+    """EAL parameters for executing and running DPDK.
+
+    Attributes:
+        lcores: Logical cores to be used for DPDK execution.
+        memory_channels: Memory channels to be used for DPDK execution.
+    """
+
+    lcores: str
+    memory_channels: int
 
 
 @dataclass(slots=True, frozen=True)
@@ -282,10 +293,10 @@ class SutNodeConfiguration(NodeConfiguration):
     """:class:`~framework.testbed_model.sut_node.SutNode` specific configuration.
 
     Attributes:
-        memory_channels: The number of memory channels to use when running DPDK.
+        dpdk_config: DPDK configuration attributes to be used during execution.
     """
 
-    memory_channels: int
+    dpdk_config: DPDKConfig
 
 
 @dataclass(slots=True, frozen=True)
@@ -450,7 +461,7 @@ class TestRunConfiguration:
             map(BuildTargetConfiguration.from_dict, d["build_targets"])
         )
         test_suites: list[TestSuiteConfig] = list(map(TestSuiteConfig.from_dict, d["test_suites"]))
-        sut_name = d["system_under_test_node"]["node_name"]
+        sut_name = d["system_under_test_node"]
         skip_smoke_tests = d.get("skip_smoke_tests", False)
         assert sut_name in node_map, f"Unknown SUT {sut_name} in test run {d}"
         system_under_test_node = node_map[sut_name]
@@ -465,9 +476,7 @@ class TestRunConfiguration:
             traffic_generator_node, TGNodeConfiguration
         ), f"Invalid TG configuration {traffic_generator_node}"
 
-        vdevs = (
-            d["system_under_test_node"]["vdevs"] if "vdevs" in d["system_under_test_node"] else []
-        )
+        vdevs = d["vdevs"] if "vdevs" in d else []
         return cls(
             build_targets=build_targets,
             perf=d["perf"],
