@@ -85,7 +85,7 @@ class DTSRunner:
 
     def __init__(self):
         """Initialize the instance with configuration, logger, result and string constants."""
-        self._configuration = load_config(SETTINGS.config_file_path)
+        self._configuration = load_config(SETTINGS.config_file_path, SETTINGS.test_suites)
         self._logger = get_dts_logger()
         if not os.path.exists(SETTINGS.output_dir):
             os.makedirs(SETTINGS.output_dir)

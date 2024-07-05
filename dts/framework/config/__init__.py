@@ -553,7 +553,7 @@ class Configuration:
         return cls(test_runs=test_runs)
 
 
-def load_config(config_file_path: Path) -> Configuration:
+def load_config(config_file_path: Path, test_suites: list[TestSuiteConfig]) -> Configuration:
     """Load DTS test run configuration from a file.
 
     Load the YAML test run configuration file
@@ -576,6 +576,11 @@ def load_config(config_file_path: Path) -> Configuration:
 
     with open(schema_path, "r") as f:
         schema = json.load(f)
+    if test_suites:
+        schema["properties"]["test_runs"]["items"]["required"].remove("test_suites")
+        for test_run in config_data["test_runs"]:
+            if not hasattr(test_run, "test_suites"):
+                test_run["test_suites"] = []
     config = warlock.model_factory(schema, name="_Config")(config_data)
     config_obj: Configuration = Configuration.from_dict(dict(config))  # type: ignore[arg-type]
     return config_obj
