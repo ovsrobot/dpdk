@@ -399,11 +399,13 @@ status=0
 check () { # <patch-file> <commit>
 	local ret=0
 	local subject=''
+	local check_in_reply_to=false
 	headline_printed=false
 
 	total=$(($total + 1))
 	if [ -n "$1" ] ; then
 		tmpinput=$1
+		check_in_reply_to=true
 	else
 		tmpinput=$(mktemp -t dpdk.checkpatches.XXXXXX)
 		trap "rm -f '$tmpinput'" INT
@@ -413,12 +415,23 @@ check () { # <patch-file> <commit>
 			--no-stat --stdout -1 $commit > "$tmpinput"
 		else
 			cat > "$tmpinput"
+			check_in_reply_to=true
 		fi
 	fi
 
 	# Subject can be on 2 lines
 	subject=$(sed '/^Subject: */!d;s///;N;s,\n[[:space:]]\+, ,;s,\n.*,,;q' "$tmpinput")
 	! $verbose || print_headline "$subject"
+
+	# check In-Reply-To for version > 1
+	if [ "$check_in_reply_to" = true ] \
+		&& echo "$subject" | grep -qi 'v[2-9].*\]' \
+		&& ! grep -qi '^In-Reply-To: ' "$tmpinput"
+	then
+		echo "warning: $subject"
+		echo "warning: respins must be --in-reply-to=<v1.patch@message.id>."
+		ret=1
+	fi
 
 	! $verbose || printf 'Running checkpatch.pl:\n'
 	report=$($DPDK_CHECKPATCH_PATH $options "$tmpinput" 2>/dev/null)
