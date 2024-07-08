@@ -20,6 +20,7 @@
 #include "fd_man.h"
 #include "vduse.h"
 #include "vhost.h"
+#include "vhost_thread.h"
 #include "vhost_user.h"
 
 
@@ -456,6 +457,7 @@ vhost_user_client_reconnect(void *arg __rte_unused)
 	struct vhost_user_reconnect *reconn, *next;
 
 	while (1) {
+		vhost_thread_read_lock();
 		pthread_mutex_lock(&reconn_list.mutex);
 
 		/*
@@ -487,6 +489,7 @@ remove_fd:
 		}
 
 		pthread_mutex_unlock(&reconn_list.mutex);
+		vhost_thread_read_unlock();
 		sleep(1);
 	}
 
@@ -1067,7 +1070,7 @@ rte_vhost_driver_unregister(const char *path)
 	if (path == NULL)
 		return -1;
 
-again:
+	vhost_thread_write_lock();
 	pthread_mutex_lock(&vhost_user.mutex);
 
 	for (i = 0; i < vhost_user.vsocket_cnt; i++) {
@@ -1079,14 +1082,10 @@ again:
 			vduse_device_destroy(path);
 		} else if (vsocket->is_server) {
 			/*
-			 * If r/wcb is executing, release vhost_user's
-			 * mutex lock, and try again since the r/wcb
-			 * may use the mutex lock.
+			 * The vhost thread write lock has been acquired,
+			 * and fd must be deleted from fdset.
 			 */
-			if (fdset_try_del(vhost_user.fdset, vsocket->socket_fd) == -1) {
-				pthread_mutex_unlock(&vhost_user.mutex);
-				goto again;
-			}
+			fdset_del(vhost_user.fdset, vsocket->socket_fd);
 		} else if (vsocket->reconnect) {
 			vhost_user_remove_reconnect(vsocket);
 		}
@@ -1098,17 +1097,10 @@ again:
 			next = TAILQ_NEXT(conn, next);
 
 			/*
-			 * If r/wcb is executing, release vsocket's
-			 * conn_mutex and vhost_user's mutex locks, and
-			 * try again since the r/wcb may use the
-			 * conn_mutex and mutex locks.
+			 * The vhost thread write lock has been acquired,
+			 * and fd must be deleted from fdset.
 			 */
-			if (fdset_try_del(vhost_user.fdset,
-					  conn->connfd) == -1) {
-				pthread_mutex_unlock(&vsocket->conn_mutex);
-				pthread_mutex_unlock(&vhost_user.mutex);
-				goto again;
-			}
+			fdset_del(vhost_user.fdset, conn->connfd);
 
 			VHOST_CONFIG_LOG(path, INFO, "free connfd %d", conn->connfd);
 			close(conn->connfd);
@@ -1130,9 +1122,11 @@ again:
 		vhost_user.vsockets[i] = vhost_user.vsockets[count];
 		vhost_user.vsockets[count] = NULL;
 		pthread_mutex_unlock(&vhost_user.mutex);
+		vhost_thread_write_unlock();
 		return 0;
 	}
 	pthread_mutex_unlock(&vhost_user.mutex);
+	vhost_thread_write_unlock();
 
 	return -1;
 }
