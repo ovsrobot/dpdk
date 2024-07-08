@@ -497,6 +497,16 @@ rte_pci_dump(FILE *f)
 }
 
 static int
+pci_cmp_name(const struct rte_device *dev, const void *name2)
+{
+	struct rte_pci_addr name2_addr;
+	const struct rte_pci_device *dev1 = RTE_DEV_TO_PCI_CONST(dev);
+
+	dev->bus->parse(name2, &name2_addr);
+	return rte_pci_addr_cmp(&dev1->addr, &name2_addr);
+}
+
+static int
 pci_parse(const char *name, void *addr)
 {
 	struct rte_pci_addr *out = addr;
@@ -946,6 +956,7 @@ struct rte_pci_bus rte_pci_bus = {
 		.plug = pci_plug,
 		.unplug = pci_unplug,
 		.parse = pci_parse,
+		.cmp_name = pci_cmp_name,
 		.devargs_parse = rte_pci_devargs_parse,
 		.dma_map = pci_dma_map,
 		.dma_unmap = pci_dma_unmap,

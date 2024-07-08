@@ -21,13 +21,6 @@ struct mp_reply_bundle {
 	void *peer;
 };
 
-static int cmp_dev_name(const struct rte_device *dev, const void *_name)
-{
-	const char *name = _name;
-
-	return strcmp(dev->name, name);
-}
-
 /**
  * Secondary to primary request.
  * start from function eal_dev_hotplug_request_to_primary.
@@ -135,7 +128,7 @@ __handle_secondary_request(void *param)
 			goto finish;
 		}
 
-		dev = bus->find_device(NULL, cmp_dev_name, da.name);
+		dev = bus->find_device(NULL, rte_cmp_dev_name, da.name);
 		if (dev == NULL) {
 			EAL_LOG(ERR, "Cannot find plugged device (%s)", da.name);
 			ret = -ENOENT;
@@ -262,7 +255,7 @@ static void __handle_primary_request(void *param)
 			goto quit;
 		}
 
-		dev = bus->find_device(NULL, cmp_dev_name, da->name);
+		dev = bus->find_device(NULL, rte_cmp_dev_name, da->name);
 		if (dev == NULL) {
 			EAL_LOG(ERR, "Cannot find plugged device (%s)", da->name);
 			ret = -ENOENT;
