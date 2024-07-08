@@ -1686,8 +1686,6 @@ F: app/test/test_argparse.c
 Configuration file
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
 F: lib/cfgfile/
-F: app/test/test_cfgfile.c
-F: app/test/test_cfgfiles/
 
 Interactive command line
 F: lib/cmdline/
