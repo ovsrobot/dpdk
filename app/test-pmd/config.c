@@ -207,6 +207,32 @@ static const struct {
 	{"gtpu", RTE_ETH_FLOW_GTPU},
 };
 
+static const struct {
+	enum rte_eth_speed_lanes lane;
+	const uint32_t value;
+} speed_lane_name[] = {
+	{
+		.lane = RTE_ETH_SPEED_LANE_UNKNOWN,
+		.value = 0,
+	},
+	{
+		.lane = RTE_ETH_SPEED_LANE_1,
+		.value = 1,
+	},
+	{
+		.lane = RTE_ETH_SPEED_LANE_2,
+		.value = 2,
+	},
+	{
+		.lane = RTE_ETH_SPEED_LANE_4,
+		.value = 4,
+	},
+	{
+		.lane = RTE_ETH_SPEED_LANE_8,
+		.value = 8,
+	},
+};
+
 static void
 print_ethaddr(const char *name, struct rte_ether_addr *eth_addr)
 {
@@ -786,6 +812,7 @@ port_infos_display(portid_t port_id)
 	char name[RTE_ETH_NAME_MAX_LEN];
 	int ret;
 	char fw_version[ETHDEV_FWVERS_LEN];
+	uint32_t lanes;
 
 	if (port_id_is_invalid(port_id, ENABLED_WARN)) {
 		print_valid_ports();
@@ -828,6 +855,12 @@ port_infos_display(portid_t port_id)
 
 	printf("\nLink status: %s\n", (link.link_status) ? ("up") : ("down"));
 	printf("Link speed: %s\n", rte_eth_link_speed_to_str(link.link_speed));
+	if (rte_eth_speed_lanes_get(port_id, &lanes) == 0) {
+		if (lanes > 0)
+			printf("Active Lanes: %d\n", lanes);
+		else
+			printf("Active Lanes: %s\n", "Unknown");
+	}
 	printf("Link duplex: %s\n", (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
 	       ("full-duplex") : ("half-duplex"));
 	printf("Autoneg status: %s\n", (link.link_autoneg == RTE_ETH_LINK_AUTONEG) ?
@@ -962,7 +995,7 @@ port_summary_header_display(void)
 
 	port_number = rte_eth_dev_count_avail();
 	printf("Number of available ports: %i\n", port_number);
-	printf("%-4s %-17s %-12s %-14s %-8s %s\n", "Port", "MAC Address", "Name",
+	printf("%-4s %-17s %-12s %-14s %-8s %-8s\n", "Port", "MAC Address", "Name",
 			"Driver", "Status", "Link");
 }
 
@@ -993,7 +1026,7 @@ port_summary_display(portid_t port_id)
 	if (ret != 0)
 		return;
 
-	printf("%-4d " RTE_ETHER_ADDR_PRT_FMT " %-12s %-14s %-8s %s\n",
+	printf("%-4d " RTE_ETHER_ADDR_PRT_FMT " %-12s %-14s %-8s %-8s\n",
 		port_id, RTE_ETHER_ADDR_BYTES(&mac_addr), name,
 		dev_info.driver_name, (link.link_status) ? ("up") : ("down"),
 		rte_eth_link_speed_to_str(link.link_speed));
@@ -7242,5 +7275,37 @@ show_mcast_macs(portid_t port_id)
 
 		rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, addr);
 		printf("  %s\n", buf);
+	}
+}
+
+int
+parse_speed_lanes(uint32_t lane, uint32_t *speed_lane)
+{
+	uint8_t i;
+
+	for (i = 0; i < RTE_DIM(speed_lane_name); i++) {
+		if (speed_lane_name[i].value == lane) {
+			*speed_lane = lane;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+void
+show_speed_lanes_capability(unsigned int num, struct rte_eth_speed_lanes_capa *speed_lanes_capa)
+{
+	unsigned int i, j;
+
+	printf("\n%-15s %-10s", "Supported-speeds", "Valid-lanes");
+	printf("\n-----------------------------------\n");
+	for (i = 0; i < num; i++) {
+		printf("%-17s ", rte_eth_link_speed_to_str(speed_lanes_capa[i].speed));
+
+		for (j = 0; j < RTE_ETH_SPEED_LANE_MAX; j++) {
+			if (RTE_ETH_SPEED_LANES_TO_CAPA(j) & speed_lanes_capa[i].capa)
+				printf("%-2d ", speed_lane_name[j].value);
+		}
+		printf("\n");
 	}
 }

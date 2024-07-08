@@ -1181,6 +1181,79 @@ typedef int (*eth_rx_descriptor_dump_t)(const struct rte_eth_dev *dev,
 
 /**
  * @internal
+ * Get number of current active lanes
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param speed_lanes
+ *   Number of active lanes that the link is trained up.
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, get speed_lanes data success.
+ * @retval -ENOTSUP
+ *   Operation is not supported.
+ * @retval -EIO
+ *   Device is removed.
+ */
+typedef int (*eth_speed_lanes_get_t)(struct rte_eth_dev *dev, uint32_t *speed_lanes);
+
+/**
+ * @internal
+ * Set speed lanes
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param speed_lanes
+ *   Non-negative number of lanes
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, set lanes success.
+ * @retval -ENOTSUP
+ *   Operation is not supported.
+ * @retval -EINVAL
+ *   Unsupported mode requested.
+ * @retval -EIO
+ *   Device is removed.
+ */
+typedef int (*eth_speed_lanes_set_t)(struct rte_eth_dev *dev, uint32_t speed_lanes);
+
+/**
+ * @internal
+ * Get supported link speed lanes capability
+ *
+ * @param speed_lanes_capa
+ *   speed_lanes_capa is out only with per-speed capabilities.
+ * @param num
+ *   a number of elements in an speed_speed_lanes_capa array.
+ *
+ * @return
+ *   Negative errno value on error, positive value on success.
+ *
+ * @retval positive value
+ *   A non-negative value lower or equal to num: success. The return value
+ *   is the number of entries filled in the speed lanes array.
+ *   A non-negative value higher than num: error, the given speed lanes capa array
+ *   is too small. The return value corresponds to the num that should
+ *   be given to succeed. The entries in the speed lanes capa array are not valid
+ *   and shall not be used by the caller.
+ * @retval -ENOTSUP
+ *   Operation is not supported.
+ * @retval -EIO
+ *   Device is removed.
+ * @retval -EINVAL
+ *   *num* or *speed_lanes_capa* invalid.
+ */
+typedef int (*eth_speed_lanes_get_capability_t)(struct rte_eth_dev *dev,
+						struct rte_eth_speed_lanes_capa *speed_lanes_capa,
+						unsigned int num);
+
+/**
+ * @internal
  * Dump Tx descriptor info to a file.
  *
  * This API is used for debugging, not a dataplane API.
@@ -1247,6 +1320,10 @@ struct eth_dev_ops {
 	eth_dev_close_t            dev_close;     /**< Close device */
 	eth_dev_reset_t		   dev_reset;	  /**< Reset device */
 	eth_link_update_t          link_update;   /**< Get device link state */
+	eth_speed_lanes_get_t	   speed_lanes_get;	  /**<Get link speed active lanes */
+	eth_speed_lanes_set_t      speed_lanes_set;	  /**<set the link speeds supported lanes */
+	/** Get link speed lanes capability */
+	eth_speed_lanes_get_capability_t speed_lanes_get_capa;
 	/** Check if the device was physically removed */
 	eth_is_removed_t           is_removed;
 
