@@ -102,7 +102,7 @@ class TestPmdBufferScatter(TestSuite):
         Test:
             Start testpmd and run functional test with preset mbsize.
         """
-        testpmd = TestPmdShell(
+        testpmd_shell = TestPmdShell(
             self.sut_node,
             forward_mode=SimpleForwardingModes.mac,
             mbcache=200,
@@ -110,16 +110,20 @@ class TestPmdBufferScatter(TestSuite):
             max_pkt_len=9000,
             tx_offloads=0x00008000,
         )
-        testpmd.start()
 
-        for offset in [-1, 0, 1, 4, 5]:
-            recv_payload = self.scatter_pktgen_send_packet(mbsize + offset)
-            self._logger.debug(f"Payload of scattered packet after forwarding: \n{recv_payload}")
-            self.verify(
-                ("58 " * 8).strip() in recv_payload,
-                f"Payload of scattered packet did not match expected payload with offset {offset}.",
-            )
-        testpmd.stop()
+        with testpmd_shell as testpmd:
+            testpmd.start()
+
+            for offset in [-1, 0, 1, 4, 5]:
+                recv_payload = self.scatter_pktgen_send_packet(mbsize + offset)
+                self._logger.debug(
+                    f"Payload of scattered packet after forwarding: \n{recv_payload}"
+                )
+                self.verify(
+                    ("58 " * 8).strip() in recv_payload,
+                    "Payload of scattered packet did not match expected payload with offset "
+                    f"{offset}.",
+                )
 
     def test_scatter_mbuf_2048(self) -> None:
         """Run the :meth:`pmd_scatter` test with `mbsize` set to 2048."""
