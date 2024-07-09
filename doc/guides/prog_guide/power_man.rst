@@ -249,6 +249,30 @@ Get Num Pkgs
 Get Num Dies
   Get the number of die's on a given package.
 
+
+PM QoS
+------
+
+The deeper the idle state, the lower the power consumption, but the longer
+the resume time. Some service are delay sensitive and very except the low
+resume time, like interrupt packet receiving mode.
+
+And the "/sys/devices/system/cpu/cpuX/power/pm_qos_resume_latency_us" sysfs
+interface is used to set and get the resume latency limit on the cpuX for
+userspace. Each cpuidle governor in Linux select which idle state to enter
+based on this CPU resume latency in their idle task.
+
+The per-CPU PM QoS API can be used to set and get the CPU resume latency based
+on this sysfs.
+
+The ``rte_power_qos_set_cpu_resume_latency()`` function can control the CPU's
+idle state selection in Linux and limit just to enter the shallowest idle state
+to low the delay of resuming service after sleeping by setting strict resume
+latency (zero value).
+
+The ``rte_power_qos_get_cpu_resume_latency()`` function can get the resume
+latency on specified CPU.
+
 References
 ----------
 

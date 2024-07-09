@@ -156,6 +156,10 @@ New Features
   * Added defer queue reclamation via RCU.
   * Added SVE support for bulk lookup.
 
+* **Introduce per-CPU PM QoS interface.**
+
+  * Introduce per-CPU PM QoS interface to low the delay after sleep.
+
 
 Removed Items
 -------------
