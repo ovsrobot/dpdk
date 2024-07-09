@@ -155,6 +155,10 @@ New Features
 
   Added an API that allows the user to reclaim the defer queue with RCU.
 
+* **Introduce per-CPU PM QoS interface.**
+
+  * Introduce per-CPU PM QoS interface to low the delay after sleep.
+
 
 Removed Items
 -------------
