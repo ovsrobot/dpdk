@@ -165,6 +165,9 @@ New Features
   * Added support for independent enqueue feature. Updated Event Device and
     PMD feature list.
 
+* **Updated DSW Driver for independent enqueue feature**
+  * Added capability flag for DSW to advertise independent enqueue feature.
+
 Removed Items
 -------------
 
