@@ -446,6 +446,17 @@ struct rte_event;
  * @see RTE_SCHED_TYPE_PARALLEL
  */
 
+#define RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ  (1ULL << 16)
+/**< Event device is capable of independent enqueue.
+ * When this flag is set, the application can enqueue to PMD in any order even
+ * the underlined hardware device needs enqueues in a strict dequeue order.
+ * PMD will reorder enqueued events based on their dequeue order when the feature
+ * is enabled on an Eventdev port. The capability supports applications that sort
+ * received bursts based on criteria like flow-id or receive QID and process them
+ * in smaller groups. Each processed group is enqueued separately, changing the
+ * dequeue order.
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -1069,6 +1080,16 @@ rte_event_queue_attr_set(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
  *
  * Note that this flag is only a hint, so PMDs must operate under the
  * assumption that any port can enqueue an event with any type of op.
+ *
+ *  @see rte_event_port_setup()
+ */
+ #define RTE_EVENT_PORT_CFG_INDEPENDENT_ENQ   (1ULL << 5)
+/**< Flag to enable independent enqueue. Must not be set if the device
+ * is not RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ capable. This feature
+ * allows an application to enqueue RTE_EVENT_OP_FORWARD or
+ * RTE_EVENT_OP_RELEASE in an order different than the order the
+ * events were dequeued from the event device, while maintaining
+ * RTE_SCHED_TYPE_ATOMIC or RTE_SCHED_TYPE_ORDERED semantics.
  *
  *  @see rte_event_port_setup()
  */
