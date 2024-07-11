@@ -93,10 +93,19 @@ rte_eth_dev_pci_allocate(struct rte_pci_device *dev, size_t private_data_size)
 			return NULL;
 
 		if (private_data_size) {
+			/* Try and alloc the private-data structure on socket local to the device */
 			eth_dev->data->dev_private = rte_zmalloc_socket(name,
 				private_data_size, RTE_CACHE_LINE_SIZE,
 				dev->device.numa_node);
-			if (!eth_dev->data->dev_private) {
+
+			/* if cannot allocate memory on the socket local to the device
+			 * use rte_malloc to allocate memory on some other socket, if available.
+			 */
+			if (eth_dev->data->dev_private == NULL)
+				eth_dev->data->dev_private = rte_zmalloc(name,
+					private_data_size, RTE_CACHE_LINE_SIZE);
+
+			if (eth_dev->data->dev_private == NULL) {
 				rte_eth_dev_release_port(eth_dev);
 				return NULL;
 			}
