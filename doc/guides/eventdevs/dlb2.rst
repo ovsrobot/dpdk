@@ -456,6 +456,47 @@ Example command to enable QE Weight feature:
 
        --allow ea:00.0,enable_cq_weight=<y/Y>
 
+Independent Enqueue Capability
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+DLB2 hardware device expects all forwarded events to be enqueued in the same
+order as they are dequeued. For dropped events, their releases should come at
+the same location as the original event was expected. Hardware has this
+restriction as it uses the order to retrieve information about the original
+event that was sent to the CPU.  This contains information like atomic flow
+ID to release the flow lock and ordered events sequence number to restore the
+original order.
+
+Some applications, like those based on the DPDK dispatcher library, want
+enqueue order independence. To support this, DLB2 PMD supports the
+``RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ`` capability.
+
+This capability applies to Eventdevs supporting burst mode. On ports where
+the application is going to change enqueue order,
+``RTE_EVENT_PORT_CFG_INDEPENDENT_ENQ `` support should be enabled.
+
+Example code to inform PMD that the application plans to use independent enqueue
+order on a port:
+
+    .. code-block:: c
+
+       if (capability & RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ)
+         port_config = port_config | RTE_EVENT_PORT_CFG_INDEPENDENT_ENQ;
+
+This code example enables enqueue event reordering inside DLB2 PMD before the events
+are sent to the DLB2 hardware. If the application is not going to change the enqueue
+order, this flag should not be enabled to get better performance. DLB2 PMD saves
+ordering information inside the impl_opaque field of the event, and this field should
+be preserved for all FORWARD or RELEASE events. Following MACROs are provided to get
+and set this field inside the event in case the same event is not used for forwarding
+(e.g., a new RELEASE event is created when the original event is dropped instead of
+reusing the same event).
+
+    .. code-block:: c
+
+       #define RTE_EVENT_GET_IMPL_OPAQUE(ev)      (ev->impl_opaque)
+       #define RTE_EVENT_SET_IMPL_OPAQUE(ev, val)  (ev->impl_opaque = val)
+
 Running Eventdev Applications with DLB Device
 ---------------------------------------------
 
