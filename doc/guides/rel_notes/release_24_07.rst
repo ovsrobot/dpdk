@@ -170,6 +170,9 @@ New Features
     list entries can dynamically be configured by passing parameters
     ``use_default_hl`` and ``alloc_hl_entries``.
 
+  * Improved credit handling for DLB driver. New meson options are
+    provided through c_args for credit handling.
+
 
 Removed Items
 -------------
