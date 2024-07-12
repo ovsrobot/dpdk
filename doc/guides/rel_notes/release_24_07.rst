@@ -159,6 +159,13 @@ New Features
   * Added defer queue reclamation via RCU.
   * Added SVE support for bulk lookup.
 
+* **Updated DLB2 eventdev driver.**
+
+  * Added API ``rte_pmd_dlb2_set_port_params`` to support delayed token
+    feature for DLB 2.5 device. The feature will resume CQ scheduling
+    when the number of pending completions fall below a configured
+    threshold.
+
 
 Removed Items
 -------------

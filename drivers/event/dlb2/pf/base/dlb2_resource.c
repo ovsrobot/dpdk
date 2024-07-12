@@ -3062,10 +3062,14 @@ static void __dlb2_domain_reset_ldb_port_registers(struct dlb2_hw *hw,
 		    DLB2_CHP_LDB_CQ_DEPTH(hw->ver, port->id.phys_id),
 		    DLB2_CHP_LDB_CQ_DEPTH_RST);
 
-	if (hw->ver != DLB2_HW_V2)
+	if (hw->ver != DLB2_HW_V2) {
 		DLB2_CSR_WR(hw,
 			    DLB2_LSP_CFG_CQ_LDB_WU_LIMIT(port->id.phys_id),
 			    DLB2_LSP_CFG_CQ_LDB_WU_LIMIT_RST);
+		DLB2_CSR_WR(hw,
+			    DLB2_LSP_CQ_LDB_INFL_THRESH(port->id.phys_id),
+			    DLB2_LSP_CQ_LDB_INFL_THRESH_RST);
+	}
 
 	DLB2_CSR_WR(hw,
 		    DLB2_LSP_CQ_LDB_INFL_LIM(hw->ver, port->id.phys_id),
@@ -4446,6 +4450,20 @@ static int dlb2_ldb_port_configure_cq(struct dlb2_hw *hw,
 	reg = 0;
 	DLB2_CSR_WR(hw, DLB2_LSP_CQ2PRIOV(hw->ver, port->id.phys_id), reg);
 
+	if (hw->ver == DLB2_HW_V2_5) {
+		reg = 0;
+		DLB2_BITS_SET(reg, args->enable_inflight_ctrl,
+				DLB2_LSP_CFG_CTRL_GENERAL_0_ENAB_IF_THRESH_V2_5);
+		DLB2_CSR_WR(hw, DLB2_V2_5LSP_CFG_CTRL_GENERAL_0, reg);
+
+		if (args->enable_inflight_ctrl) {
+			reg = 0;
+			DLB2_BITS_SET(reg, args->inflight_threshold,
+					DLB2_LSP_CQ_LDB_INFL_THRESH_THRESH);
+			DLB2_CSR_WR(hw, DLB2_LSP_CQ_LDB_INFL_THRESH(port->id.phys_id), reg);
+		}
+	}
+
 	return 0;
 }
 
@@ -5443,6 +5461,35 @@ dlb2_get_domain_used_ldb_port(u32 id,
 	struct dlb2_ldb_port *port;
 	int i;
 	RTE_SET_USED(iter);
+
+	if (id >= DLB2_MAX_NUM_LDB_PORTS)
+		return NULL;
+
+	for (i = 0; i < DLB2_NUM_COS_DOMAINS; i++) {
+		DLB2_DOM_LIST_FOR(domain->used_ldb_ports[i], port, iter) {
+			if ((!vdev_req && port->id.phys_id == id) ||
+			    (vdev_req && port->id.virt_id == id))
+				return port;
+		}
+
+		DLB2_DOM_LIST_FOR(domain->avail_ldb_ports[i], port, iter) {
+			if ((!vdev_req && port->id.phys_id == id) ||
+			    (vdev_req && port->id.virt_id == id))
+				return port;
+		}
+	}
+
+	return NULL;
+}
+
+static struct dlb2_ldb_port *
+dlb2_get_domain_ldb_port(u32 id,
+			 bool vdev_req,
+			 struct dlb2_hw_domain *domain)
+{
+	struct dlb2_list_entry *iter __attribute__((unused));
+	struct dlb2_ldb_port *port;
+	int i;
 
 	if (id >= DLB2_MAX_NUM_LDB_PORTS)
 		return NULL;
@@ -6813,6 +6860,52 @@ int dlb2_hw_set_cos_bandwidth(struct dlb2_hw *hw, u32 cos_id, u8 bandwidth)
 	dlb2_log_set_cos_bandwidth(hw, cos_id, bandwidth);
 
 	hw->cos_reservation[cos_id] = bandwidth;
+
+	return 0;
+}
+
+int dlb2_hw_set_cq_inflight_ctrl(struct dlb2_hw *hw, u32 domain_id,
+		struct dlb2_cq_inflight_ctrl_args *args,
+		struct dlb2_cmd_response *resp,
+		bool vdev_req,
+		unsigned int vdev_id)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_ldb_port *port;
+	u32 reg = 0;
+	int id;
+
+	domain = dlb2_get_domain_from_id(hw, domain_id, vdev_req, vdev_id);
+	if (!domain) {
+		DLB2_HW_ERR(hw,
+			    "[%s():%d] Internal error: domain not found\n",
+			    __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	id = args->port_id;
+
+	port = dlb2_get_domain_ldb_port(id, vdev_req, domain);
+	if (!port) {
+		DLB2_HW_ERR(hw,
+			    "[%s():%d] Internal error: port not found\n",
+			    __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	DLB2_BITS_SET(reg, args->enable,
+		      DLB2_LSP_CFG_CTRL_GENERAL_0_ENAB_IF_THRESH_V2_5);
+	DLB2_CSR_WR(hw, DLB2_V2_5LSP_CFG_CTRL_GENERAL_0, reg);
+
+	if (args->enable) {
+		reg = 0;
+		DLB2_BITS_SET(reg, args->threshold,
+			      DLB2_LSP_CQ_LDB_INFL_THRESH_THRESH);
+		DLB2_CSR_WR(hw, DLB2_LSP_CQ_LDB_INFL_THRESH(port->id.phys_id),
+			    reg);
+	}
+
+	resp->status = 0;
 
 	return 0;
 }
