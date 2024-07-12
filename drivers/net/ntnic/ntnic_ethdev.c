@@ -8,9 +8,17 @@
 #include <rte_bus_pci.h>
 #include <ethdev_pci.h>
 
+#include <rte_kvargs.h>
+#include <rte_eal.h>
+#include <rte_dev.h>
+#include <rte_vfio.h>
+
 #include "ntlog.h"
 
+#include "ntnic_vfio.h"
 #include "nt_util.h"
+
+#define EXCEPTION_PATH_HID 0
 
 static const struct rte_pci_id nthw_pci_id_map[] = {
 	{
@@ -21,11 +29,23 @@ static const struct rte_pci_id nthw_pci_id_map[] = {
 static int
 nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 {
+	nt_vfio_init();
+
 	uint32_t n_port_mask = -1;	/* All ports enabled by default */
 	int n_phy_ports;
 	NT_LOG_DBGX(DEBUG, NTNIC, "Dev %s PF #%i Init : %02x:%02x:%i\n", pci_dev->name,
 		pci_dev->addr.function, pci_dev->addr.bus, pci_dev->addr.devid,
 		pci_dev->addr.function);
+
+
+	/* Setup VFIO context */
+	int vfio = nt_vfio_setup(pci_dev);
+
+	if (vfio < 0) {
+		NT_LOG_DBGX(ERR, TNIC, "%s: vfio_setup error %d\n",
+			(pci_dev->name[0] ? pci_dev->name : "NA"), -1);
+		return -1;
+	}
 
 	n_phy_ports = 0;
 
@@ -86,6 +106,8 @@ nthw_pci_dev_deinit(struct rte_eth_dev *eth_dev __rte_unused)
 				continue; /* port already released */
 			rte_eth_dev_release_port(eth_dev);
 		}
+
+		nt_vfio_remove(EXCEPTION_PATH_HID);
 		return 0;
 }
 
@@ -150,3 +172,4 @@ static struct rte_pci_driver rte_nthw_pmd = {
 };
 
 RTE_PMD_REGISTER_PCI(net_ntnic, rte_nthw_pmd);
+RTE_PMD_REGISTER_KMOD_DEP(net_ntnic, "* vfio-pci");
