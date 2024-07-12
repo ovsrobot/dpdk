@@ -159,6 +159,16 @@ New Features
   * Added defer queue reclamation via RCU.
   * Added SVE support for bulk lookup.
 
+* **Added Napatech ntnic experimental PMD driver.**
+
+  * Added the experimental PMD driver
+
+    - Ability to initialize the NIC (NT200A02)
+    - Supporting only one FPGA firmware (9563.55.39)
+    - Ability to bring up the 100G link
+    - Supporting QSFP/QSFP+/QSFP28 NIM
+    - Does not support datapath
+    - Does not support RTE flow API
 
 Removed Items
 -------------
