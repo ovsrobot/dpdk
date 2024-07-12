@@ -166,6 +166,10 @@ New Features
     when the number of pending completions fall below a configured
     threshold.
 
+  * Introduced dynamic HL (History List) feature for DLB device. History
+    list entries can dynamically be configured by passing parameters
+    ``use_default_hl`` and ``alloc_hl_entries``.
+
 
 Removed Items
 -------------

@@ -52,6 +52,8 @@
 #define DLB2_PRODUCER_COREMASK "producer_coremask"
 #define DLB2_DEFAULT_LDB_PORT_ALLOCATION_ARG "default_port_allocation"
 #define DLB2_ENABLE_CQ_WEIGHT_ARG "enable_cq_weight"
+#define DLB2_USE_DEFAULT_HL "use_default_hl"
+#define DLB2_ALLOC_HL_ENTRIES "alloc_hl_entries"
 
 /* Begin HW related defines and structs */
 
@@ -101,7 +103,8 @@
  */
 #define DLB2_MAX_HL_ENTRIES 2048
 #define DLB2_MIN_CQ_DEPTH 1
-#define DLB2_DEFAULT_CQ_DEPTH 32
+#define DLB2_DEFAULT_CQ_DEPTH 128  /* Can be overridden using max_cq_depth command line parameter */
+#define DLB2_FIXED_CQ_HL_SIZE 32  /* Used when ENABLE_FIXED_HL_SIZE is true */
 #define DLB2_MIN_HARDWARE_CQ_DEPTH 8
 #define DLB2_NUM_HIST_LIST_ENTRIES_PER_LDB_PORT \
 	DLB2_DEFAULT_CQ_DEPTH
@@ -123,7 +126,7 @@
 
 #define DLB2_NUM_QES_PER_CACHE_LINE 4
 
-#define DLB2_MAX_ENQUEUE_DEPTH 32
+#define DLB2_MAX_ENQUEUE_DEPTH 128
 #define DLB2_MIN_ENQUEUE_DEPTH 4
 
 #define DLB2_NAME_SIZE 64
@@ -391,6 +394,7 @@ struct dlb2_port {
 	bool is_producer; /* True if port is of type producer */
 	uint16_t inflight_threshold; /* DLB2.5 HW inflight threshold */
 	bool enable_inflight_ctrl; /*DLB2.5 enable HW inflight control */
+	uint16_t hist_list; /* Port history list */
 };
 
 /* Per-process per-port mmio and memory pointers */
@@ -637,6 +641,8 @@ struct dlb2_eventdev {
 	uint32_t cos_bw[DLB2_COS_NUM_VALS]; /* bandwidth per cos domain */
 	uint8_t max_cos_port; /* Max LDB port from any cos */
 	bool enable_cq_weight;
+	uint16_t hl_entries; /* Num HL entires to allocate for the domain */
+	int default_port_hl;  /* Fixed or dynamic (2*CQ Depth) HL assignment */
 };
 
 /* used for collecting and passing around the dev args */
@@ -675,6 +681,8 @@ struct dlb2_devargs {
 	const char *producer_coremask;
 	bool default_ldb_port_allocation;
 	bool enable_cq_weight;
+	bool use_default_hl;
+	uint32_t alloc_hl_entries;
 };
 
 /* End Eventdev related defines and structs */
