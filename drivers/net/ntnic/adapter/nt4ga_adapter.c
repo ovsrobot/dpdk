@@ -60,7 +60,6 @@ static int nt4ga_adapter_init(struct adapter_info_s *p_adapter_info)
 	/* ref: DN-0060 section 9 */
 	p_hw_info->hw_reserved1 = (p_hw_info->pci_device_id >> 12) & 0x000f;
 
-	/* mp_dev_name */
 	p_adapter_info->p_dev_name = p_dev_name;
 
 	if (p_dev_name) {
@@ -73,7 +72,6 @@ static int nt4ga_adapter_init(struct adapter_info_s *p_adapter_info)
 			p_adapter_info->fpga_info.pciident);
 	}
 
-	/* mp_adapter_id_str */
 	p_adapter_info->mp_adapter_id_str = p_adapter_id_str;
 
 	p_adapter_info->fpga_info.mp_adapter_id_str = p_adapter_id_str;
