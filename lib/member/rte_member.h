@@ -92,7 +92,7 @@ typedef uint16_t member_set_t;
 #define RTE_MEMBER_SKETCH_COUNT_BYTE 0x02
 
 /** @internal Hash function used by membership library. */
-#if defined(RTE_ARCH_X86) || defined(__ARM_FEATURE_CRC32)
+#if defined(RTE_ARCH_X86) || defined(__ARM_FEATURE_CRC32) || defined(RTE_RISCV_FEATURE_ZBC)
 #include <rte_hash_crc.h>
 #define MEMBER_HASH_FUNC       rte_hash_crc
 #else
