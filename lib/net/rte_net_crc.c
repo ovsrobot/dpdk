@@ -67,6 +67,12 @@ static const rte_net_crc_handler handlers_neon[] = {
 	[RTE_NET_CRC32_ETH] = rte_crc32_eth_neon_handler,
 };
 #endif
+#ifdef CC_RISCV64_ZBC_CLMUL_SUPPORT
+static const rte_net_crc_handler handlers_zbc[] = {
+	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_zbc_handler,
+	[RTE_NET_CRC32_ETH] = rte_crc32_eth_zbc_handler,
+};
+#endif
 
 static uint16_t max_simd_bitwidth;
 
@@ -244,6 +250,31 @@ neon_pmull_init(void)
 #endif
 }
 
+/* ZBC/CLMUL handling */
+
+#define ZBC_CLMUL_CPU_SUPPORTED \
+	rte_cpu_get_flag_enabled(RTE_CPUFLAG_RISCV_EXT_ZBC)
+
+static const rte_net_crc_handler *
+zbc_clmul_get_handlers(void)
+{
+#ifdef CC_RISCV64_ZBC_CLMUL_SUPPORT
+	if (ZBC_CLMUL_CPU_SUPPORTED)
+		return handlers_zbc;
+#endif
+	NET_LOG(INFO, "Requirements not met, can't use Zbc");
+	return NULL;
+}
+
+static void
+zbc_clmul_init(void)
+{
+#ifdef CC_RISCV64_ZBC_CLMUL_SUPPORT
+	if (ZBC_CLMUL_CPU_SUPPORTED)
+		rte_net_crc_zbc_init();
+#endif
+}
+
 /* Default handling */
 
 static uint32_t
@@ -260,6 +291,9 @@ rte_crc16_ccitt_default_handler(const uint8_t *data, uint32_t data_len)
 	if (handlers != NULL)
 		return handlers[RTE_NET_CRC16_CCITT](data, data_len);
 	handlers = neon_pmull_get_handlers();
+	if (handlers != NULL)
+		return handlers[RTE_NET_CRC16_CCITT](data, data_len);
+	handlers = zbc_clmul_get_handlers();
 	if (handlers != NULL)
 		return handlers[RTE_NET_CRC16_CCITT](data, data_len);
 	handlers = handlers_scalar;
@@ -281,6 +315,8 @@ rte_crc32_eth_default_handler(const uint8_t *data, uint32_t data_len)
 		return handlers[RTE_NET_CRC32_ETH](data, data_len);
 	handlers = neon_pmull_get_handlers();
 	if (handlers != NULL)
+		return handlers[RTE_NET_CRC32_ETH](data, data_len);
+	handlers = zbc_clmul_get_handlers();
 		return handlers[RTE_NET_CRC32_ETH](data, data_len);
 	handlers = handlers_scalar;
 	return handlers[RTE_NET_CRC32_ETH](data, data_len);
@@ -306,6 +342,9 @@ rte_net_crc_set_alg(enum rte_net_crc_alg alg)
 		break; /* for x86, always break here */
 	case RTE_NET_CRC_NEON:
 		handlers = neon_pmull_get_handlers();
+		break;
+	case RTE_NET_CRC_ZBC:
+		handlers = zbc_clmul_get_handlers();
 		/* fall-through */
 	case RTE_NET_CRC_SCALAR:
 		/* fall-through */
@@ -338,4 +377,5 @@ RTE_INIT(rte_net_crc_init)
 	sse42_pclmulqdq_init();
 	avx512_vpclmulqdq_init();
 	neon_pmull_init();
+	zbc_clmul_init();
 }
