@@ -1236,6 +1236,70 @@ typedef int (*eth_map_aggr_tx_affinity_t)(struct rte_eth_dev *dev, uint16_t tx_q
 					  uint8_t affinity);
 
 /**
+ * @internal
+ * Set cache stashing hint in the ethernet device.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param cpuid
+ *   ID of the targeted CPU.
+ * @param cache_level
+ *   Level of the cache to stash data.
+ * @param queue_id
+ *   List of receive queue ids used in rte_eth_rx_burst().
+ * @param queue_direction
+ *   RTE_ETH_DEV_QUEUE_TYPE_RX if queue that corresponds to queue_id is an
+ *   rx queue.
+ *   RTE_ETH_DEV_QUEUE_TYPE_TX if queue that corresponds to queue_id is a
+ *   tx queue.
+ * @param types
+ *   A vector of stashing types to apply hints on a given queue direction.
+ *   hints are applied on the types specified in types vector.
+ *   types can include queue descriptors (RTE_ETH_DEV_STASH_TYPE_DESC),
+ *   packet headers (RTE_ETH_DEV_STASH_TYPE_HEADER),
+ *   packet payloads (RTE_ETH_DEV_STASH_TYPE_PAYLOAD) or
+ *   to an offset (RTE_ETH_DEV_STASH_TYPE_OFFSET) in to a packet.
+ *   types have to be compatible with the queue_direction or an -EINVAL will
+ *   be returned.
+ * @param hints
+ *   Cache stashing hints
+ * @param offset
+ *   Offset into the packet if RTE_ETH_DEV_STASH_TYPE_OFFSET is set in hints.
+ *
+ * @return
+ *   -ENOTSUP if the device or the platform does not support cache stashing.
+ *   -ENOSYS  if the underlying PMD hasn't implemented cache stashing feature.
+ *   -EINVAL  on invalid arguments.
+ *   0 on success.
+ */
+typedef int (*eth_set_stashing_hints_t)(struct rte_eth_dev *dev, uint16_t cpuid,
+					uint8_t cache_level,
+					uint16_t queue_id, uint8_t queue_direction,
+					uint16_t types, uint8_t hints, off_t offset);
+
+/**
+ * @internal
+ * Discover cache stashing hints and object types supported in the ethernet device.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param types
+ *   Set bits for supported object types.
+ * @param hints
+ *   Set bits for supported stashing hints.
+ *
+ * @return
+ *   -ENOTSUP if the device or the platform does not support cache stashing.
+ *   -ENOSYS  if the underlying PMD hasn't implemented cache stashing feature.
+ *   -EINVAL  on NULL values for types or hints parameters.
+ *   On return, types and hints parameters will have bits set for supported
+ *   object types and hints.
+ *   0 on success.
+ */
+typedef int (*eth_discover_stashing_hints_t)(struct rte_eth_dev *dev,
+					     uint16_t *types, uint16_t *hints);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -1257,6 +1321,9 @@ struct eth_dev_ops {
 	eth_mac_addr_remove_t      mac_addr_remove; /**< Remove MAC address */
 	eth_mac_addr_add_t         mac_addr_add;  /**< Add a MAC address */
 	eth_mac_addr_set_t         mac_addr_set;  /**< Set a MAC address */
+	eth_set_stashing_hints_t   set_stashing_hints; /**< Set cache stashing*/
+	/**Discover supported stashing hints*/
+	eth_discover_stashing_hints_t discover_stashing_hints;
 	/** Set list of multicast addresses */
 	eth_set_mc_addr_list_t     set_mc_addr_list;
 	mtu_set_t                  mtu_set;       /**< Set MTU */

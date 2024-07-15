@@ -153,6 +153,7 @@ static const struct {
 	{RTE_ETH_DEV_CAPA_RXQ_SHARE, "RXQ_SHARE"},
 	{RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP, "FLOW_RULE_KEEP"},
 	{RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP, "FLOW_SHARED_OBJECT_KEEP"},
+	{RTE_ETH_DEV_CAPA_CACHE_STASHING, "CACHE_STASHING"},
 };
 
 enum {
@@ -7006,6 +7007,158 @@ int rte_eth_dev_map_aggr_tx_affinity(uint16_t port_id, uint16_t tx_queue_id,
 	rte_eth_trace_map_aggr_tx_affinity(port_id, tx_queue_id, affinity, ret);
 
 	return ret;
+}
+
+int
+rte_eth_dev_validate_stashing_hints(uint16_t port_id, uint16_t queue_id,
+				    uint8_t queue_direction, uint16_t types,
+				    uint16_t hints)
+{
+	struct rte_eth_dev *dev;
+	struct rte_eth_dev_info dev_info;
+	uint16_t nb_queues;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	/*
+	 * Check for invalid types
+	 */
+	if (!RTE_ETH_DEV_STASH_TYPE_VALID(types)) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid stashing type");
+		return -EINVAL;
+	}
+
+	/*
+	 * Ensure that hints (HOST_DONOTNEED, HOST_WILLNEED, BI_DIR_DATA, and
+	 * DEV_ONLY etc.) are not mixed incorrectly in the hint argument.
+	 * Only hints of one queue direction (Rx or Tx) can be combined in the
+	 * hint argument. If the hint argument contains hint types compatible
+	 * with both Rx and Tx directions it can be applied to any queue of the
+	 * two queue types.
+	 */
+	if (!RTE_ETH_DEV_STASH_HINT_IS_RXTX(hints)) {
+		/*
+		 * This is not a Rx and a Tx hint.
+		 * Therefore it can only be applied to single queue direction.
+		 */
+		if (RTE_ETH_DEV_STASH_HINT_IS_TX(hints) ==
+		    RTE_ETH_DEV_STASH_HINT_IS_RX(hints)) {
+			RTE_ETHDEV_LOG_LINE(ERR, "This hint is not compatible "
+					    "with both Rx and Tx paths");
+			return -EINVAL;
+		}
+		/*
+		 * Ensure that hint is compatible with the specified queue
+		 * direction in the queue_direction argument.
+		 */
+		if (((queue_direction == RTE_ETH_DEV_QUEUE_TYPE_TX) &&
+		    RTE_ETH_DEV_STASH_HINT_IS_RX(hints)) ||
+		    ((queue_direction == RTE_ETH_DEV_QUEUE_TYPE_RX) &&
+		    RTE_ETH_DEV_STASH_HINT_IS_TX(hints))) {
+			RTE_ETHDEV_LOG_LINE(ERR, "Hints are not applicable to "
+					    "this queue type");
+			return -EINVAL;
+		}
+	}
+
+	dev = &rte_eth_devices[port_id];
+
+	nb_queues = (queue_direction == RTE_ETH_DEV_QUEUE_TYPE_RX) ?
+				      dev->data->nb_rx_queues :
+				      dev->data->nb_tx_queues;
+
+	if (queue_id >= nb_queues) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid Rx queue_id=%u", queue_id);
+		return -EINVAL;
+	}
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+
+	if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_CACHE_STASHING) !=
+	    RTE_ETH_DEV_CAPA_CACHE_STASHING)
+		return -ENOTSUP;
+
+	if (*dev->dev_ops->set_stashing_hints == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Stashing hints are not implemented "
+				    "in %s for %s", dev_info.driver_name,
+				    dev_info.device->name);
+		return -ENOSYS;
+	}
+
+	return 0;
+}
+
+int
+rte_eth_dev_stashing_hints_rx(uint16_t port_id, uint16_t cpuid,
+			      uint8_t cache_level, uint16_t queue_id,
+			      uint16_t types, off_t offset,
+			      uint16_t hints)
+{
+	struct rte_eth_dev *dev;
+
+	int ret = rte_eth_dev_validate_stashing_hints(port_id, queue_id,
+						      RTE_ETH_DEV_QUEUE_TYPE_RX,
+						      types, hints);
+	if (ret < 0)
+		return ret;
+
+	dev = &rte_eth_devices[port_id];
+
+	return eth_err(port_id, (*dev->dev_ops->set_stashing_hints)(dev, cpuid,
+		       cache_level, queue_id, RTE_ETH_DEV_QUEUE_TYPE_RX,
+		       types, hints, offset));
+}
+
+int
+rte_eth_dev_stashing_hints_tx(uint16_t port_id, uint16_t cpuid,
+			      uint8_t cache_level, uint16_t queue_id,
+			      uint16_t types, off_t offset,
+			      uint16_t hints)
+{
+	struct rte_eth_dev *dev;
+
+	int ret = rte_eth_dev_validate_stashing_hints(port_id, queue_id,
+						      RTE_ETH_DEV_QUEUE_TYPE_TX,
+						      types, hints);
+	if (ret < 0)
+		return ret;
+
+	dev = &rte_eth_devices[port_id];
+
+	return eth_err(port_id,
+		       (*dev->dev_ops->set_stashing_hints) (dev, cpuid,
+		       cache_level, queue_id, RTE_ETH_DEV_QUEUE_TYPE_TX, types,
+		       hints, offset));
+}
+
+int
+rte_eth_dev_stashing_hints_discover(uint16_t port_id, uint16_t *types,
+				    uint16_t *hints)
+{
+	struct rte_eth_dev *dev;
+	struct rte_eth_dev_info dev_info;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	if (!types || !hints)
+		return -EINVAL;
+
+	dev = &rte_eth_devices[port_id];
+	rte_eth_dev_info_get(port_id, &dev_info);
+
+	if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_CACHE_STASHING) !=
+	    RTE_ETH_DEV_CAPA_CACHE_STASHING)
+		return -ENOTSUP;
+
+	if (*dev->dev_ops->discover_stashing_hints == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Stashing hints are not implemented "
+				    "in %s for %s", dev_info.driver_name,
+				    dev_info.device->name);
+		return -ENOSYS;
+	}
+	return eth_err(port_id,
+		       (*dev->dev_ops->discover_stashing_hints)
+		       (dev, types, hints));
 }
 
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
