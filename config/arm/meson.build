@@ -116,6 +116,18 @@ part_number_config_arm = {
             ['RTE_MAX_LCORE', 144],
             ['RTE_MAX_NUMA_NODES', 2]
         ]
+    },
+    '0xd8e': {
+        'march': 'armv8.7-a',
+        'march_features': ['sve2'],
+        'fallback_march': 'armv8.5-a',
+        'flags': [
+            ['RTE_MACHINE', '"neoverse-n3"'],
+            ['RTE_ARM_FEATURE_ATOMICS', true],
+            ['RTE_ARM_FEATURE_WFXT', true],
+            ['RTE_MAX_LCORE', 192],
+            ['RTE_MAX_NUMA_NODES', 2]
+        ]
     }
 }
 implementer_arm = {
@@ -572,6 +584,13 @@ soc_n2 = {
     'numa': false
 }
 
+soc_n3 = {
+    'description': 'Arm Neoverse N3',
+    'implementer': '0x41',
+    'part_number': '0xd8e',
+    'numa': false
+}
+
 soc_odyssey = {
     'description': 'Marvell Odyssey',
     'implementer': '0x41',
@@ -699,6 +718,7 @@ socs = {
     'kunpeng930': soc_kunpeng930,
     'n1sdp': soc_n1sdp,
     'n2': soc_n2,
+    'n3': soc_n3,
     'odyssey' : soc_odyssey,
     'stingray': soc_stingray,
     'thunderx2': soc_thunderx2,
@@ -852,7 +872,7 @@ if update_flags
         if part_number_config.get('force_march', false)
             candidate_march = part_number_config['march']
         else
-            supported_marchs = ['armv9-a', 'armv8.6-a', 'armv8.5-a', 'armv8.4-a', 'armv8.3-a',
+            supported_marchs = ['armv9-a', 'armv8.7-a', 'armv8.6-a', 'armv8.5-a', 'armv8.4-a', 'armv8.3-a',
                                 'armv8.2-a', 'armv8.1-a', 'armv8-a']
             check_compiler_support = false
             foreach supported_march: supported_marchs
