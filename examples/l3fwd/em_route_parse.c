@@ -65,7 +65,8 @@ em_parse_v6_rule(char *str, struct em_rule *v)
 	/* protocol. */
 	GET_CB_FIELD(in[CB_FLD_PROTO], v->v6_key.proto, 0, UINT8_MAX, 0);
 	/* out interface. */
-	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0, UINT8_MAX, 0);
+	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0,
+			(sizeof(enabled_port_mask) * CHAR_BIT) - 1, 0);
 
 	return 0;
 }
@@ -102,7 +103,8 @@ em_parse_v4_rule(char *str, struct em_rule *v)
 	/* protocol. */
 	GET_CB_FIELD(in[CB_FLD_PROTO], v->v4_key.proto, 0, UINT8_MAX, 0);
 	/* out interface. */
-	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0, UINT8_MAX, 0);
+	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0,
+			(sizeof(enabled_port_mask) * CHAR_BIT) - 1, 0);
 
 	return 0;
 }

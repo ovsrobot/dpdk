@@ -110,7 +110,8 @@ lpm_parse_v6_rule(char *str, struct lpm_route_rule *v)
 
 	rc = lpm_parse_v6_net(in[CB_FLD_DST_ADDR], v->ip_32, &v->depth);
 
-	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0, UINT8_MAX, 0);
+	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0,
+			(sizeof(enabled_port_mask) * CHAR_BIT) - 1, 0);
 
 	return rc;
 }
@@ -132,7 +133,8 @@ lpm_parse_v4_rule(char *str, struct lpm_route_rule *v)
 
 	rc = parse_ipv4_addr_mask(in[CB_FLD_DST_ADDR], &v->ip, &v->depth);
 
-	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0, UINT8_MAX, 0);
+	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0,
+			(sizeof(enabled_port_mask) * CHAR_BIT) - 1, 0);
 
 	return rc;
 }
