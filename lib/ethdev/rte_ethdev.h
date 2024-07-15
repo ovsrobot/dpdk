@@ -1648,6 +1648,9 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP RTE_BIT64(4)
 /**@}*/
 
+/** Device supports stashing to CPU/system caches. */
+#define RTE_ETH_DEV_CAPA_CACHE_STASHING RTE_BIT64(5)
+
 /*
  * Fallback default preferred Rx/Tx port parameters.
  * These are used if an application requests default parameters
@@ -1819,6 +1822,8 @@ struct rte_eth_dev_info {
 	struct rte_eth_dev_portconf default_txportconf;
 	/** Generic device capabilities (RTE_ETH_DEV_CAPA_). */
 	uint64_t dev_capa;
+	uint16_t stashing_hints_capa;
+	uint16_t stashing_types_capa;
 	/**
 	 * Switching information for ports on a device with a
 	 * embedded managed interconnect/switch.
@@ -5963,6 +5968,226 @@ int rte_eth_cman_config_set(uint16_t port_id, const struct rte_eth_cman_config *
  */
 __rte_experimental
 int rte_eth_cman_config_get(uint16_t port_id, struct rte_eth_cman_config *config);
+
+
+
+/** Queue type is RX. */
+#define RTE_ETH_DEV_QUEUE_TYPE_RX		0
+/** Queue type is TX. */
+#define RTE_ETH_DEV_QUEUE_TYPE_TX		1
+
+/**@{@name Ethernet device cache stashing hints
+ *@see rte_eth_dev_stashing_hints_discover
+ *@see rte_eth_dev_stashing_hints_rx
+ *@see rte_eth_dev_stashing_hints_tx
+ */
+/**
+ * Data read by the device could still be in a CPU local cache memory but
+ * not required by the CPU before ethernet device is done with Tx.
+ * In other words CPU does not mind evicting the relevant cache line(s)
+ * from it's local cache.
+ */
+#define RTE_ETH_DEV_STASH_HINT_HOST_DONTNEED	0x001
+
+/**
+ * Data is read and written equally by the CPU and the NIC.
+ */
+#define RTE_ETH_DEV_STASH_HINT_BI_DIR_DATA	0x100
+
+/**
+ * Data written by the device is read by a CPU immediately. CPU prefers
+ * availability of the data in it's local cache memory by the time read
+ * takes place.
+ */
+#define RTE_ETH_DEV_STASH_HINT_HOST_WILLNEED	0x010
+
+/**
+ * Data written by the device is only read by device.
+ * Host CPUs do not read this data or write to the location of the data.
+ */
+#define RTE_ETH_DEV_STASH_HINT_DEV_ONLY		0x200
+
+
+#define __RTE_ETH_DEV_STASH_HINT_TX_MASK	0x00f
+
+#define __RTE_ETH_DEV_STASH_HINT_RX_MASK	0x0f0
+
+#define __RTE_ETH_DEV_STASH_HINT_RXTX_MASK	0xf00
+
+
+/**@}*/
+
+#define RTE_ETH_DEV_STASH_HINT_IS_TX(h)				\
+	((!((h) & ~(__RTE_ETH_DEV_STASH_HINT_TX_MASK))) && (h))
+
+#define RTE_ETH_DEV_STASH_HINT_IS_RX(h)				\
+	((!((h) & ~(__RTE_ETH_DEV_STASH_HINT_RX_MASK))) && (h))
+
+#define RTE_ETH_DEV_STASH_HINT_IS_RXTX(h)		\
+	((!((h) & ~(__RTE_ETH_DEV_STASH_HINT_RXTX_MASK))) && (h))
+
+/**@{@name Stashable Rx/Tx queue object types supported by the ethernet device
+ *@see rte_eth_dev_stashing_hints_discover
+ *@see rte_eth_dev_stashing_hints_rx
+ *@see rte_eth_dev_stashing_hints_tx
+ */
+
+/**
+ * Apply stashing hint to data at a given offset from the start of a
+ * received packet.
+ */
+#define RTE_ETH_DEV_STASH_TYPE_OFFSET	0x0001
+
+/** Apply stashing hint to an rx descriptor. */
+#define RTE_ETH_DEV_STASH_TYPE_DESC	0x0002
+
+/** Apply stashing hint to a header of a received packet. */
+#define RTE_ETH_DEV_STASH_TYPE_HEADER	0x0004
+
+/** Apply stashing hint to a payload of a received packet. */
+#define RTE_ETH_DEV_STASH_TYPE_PAYLOAD	0x0008
+#define __RTE_ETH_DEV_STASH_TYPE_MASK	0x000f
+/**@}*/
+
+#define RTE_ETH_DEV_STASH_TYPE_VALID(t)				\
+	((!((t) & (~__RTE_ETH_DEV_STASH_TYPE_MASK))) && (t))
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * @internal
+ * Helper function to validate stashing hints.
+ */
+__rte_experimental
+int rte_eth_dev_validate_stashing_hints(uint16_t port_id, uint16_t queue_id,
+					uint8_t queue_direction, uint16_t type,
+					uint16_t hint);
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Provide cache stashing hints for improved memory access latencies for
+ * packets received by the NIC. Hints the underlying hardware that CPU indicated
+ * in cpuid parameter prefers to have the data specified in the type parameter
+ * at a level in the memory hierarchy specified in cache_level parameter for
+ * access pattern(s) specified in hints parameter.
+ * This feature is available only in supported NICs and platforms.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param cpuid
+ *  ID of the targeted CPU for the hint.
+ * @param cache_level
+ *  The preferred level of the cache the packets are expected at the time of
+ *  retrieval.
+ * @param queue_id
+ *  The index of the receive queue to which hints are applied.
+ * @param types
+ *  A vector of stashing types to apply hints on receive queue.
+ *  Hints are applied on the types specified in types vector.
+ *  types can include receive queue descriptors (RTE_ETH_DEV_STASH_TYPE_DESC),
+ *  packet headers (RTE_ETH_DEV_STASH_TYPE_HEADER),
+ *  packet payloads (RTE_ETH_DEV_STASH_TYPE_PAYLOAD) or
+ *  to an offset (RTE_ETH_DEV_STASH_TYPE_OFFSET) in to packet.
+ *  Types used should be compatible with RX queues, if not -EINVAL will be
+ *  returned.
+ * @param offset
+ *  Offset into the packet if RTE_ETH_DEV_STASH_TYPE_RX_OFFSET is set in hints.
+ * @param hints
+ *  A vector of stashing hints to the device and the platform.
+ * @return
+ *  - (-ENODEV) on incorrect port_ids.
+ *  - (-EINVAL) if both RX and TX types are used in conjuection in type
+ *  parameter.
+ *  - (-EINVAL) if hints are incompatible with RX queues.
+ *  - (-EINVAL) on invalid queue_id.
+ *  - (-ENOTSUP) if RTE_ETH_DEV_CAPA_CACHE_STASHING capability is unavailable.
+ *  - (-ENOSYS) if PMD does not implement cache stashing hints.
+ *  - (0) on Success.
+ */
+__rte_experimental
+int rte_eth_dev_stashing_hints_rx(uint16_t port_id, uint16_t cpuid,
+				 uint8_t cache_level, uint16_t queue_id,
+				 uint16_t types, off_t offset, uint16_t hints);
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Provide cache stashing hints for improved memory access latencies for
+ * packets being transmitted by the NIC. Hints the underlying hardware that CPU
+ * prefers to have the data specified in the type parameter at a level in the
+ * memory hierarchy specified in cache_level parameter for an access pattern
+ * specified in hints parameter.
+ * This feature is available only in supported NICs and platforms.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param cpuid
+ *  ID of the targeted CPU for the hint.
+ * @param cache_level
+ *  The preferred level of the cache the packets are expected at the time of
+ *  transmission.
+ * @param queue_id
+ *  The index of the transmit queue which hints are applied to.
+ * @param types
+ *  A vector of stashing types to apply hints on transmit queue.
+ *  hints are applied on types specified in types vector.
+ *  types can innclude transmit queue descriptors (RTE_ETH_DEV_STASH_TYPE_DESC),
+ *  packet headers (RTE_ETH_DEV_STASH_TYPE_HEADER),
+ *  packet payloads (RTE_ETH_DEV_STASH_TYPE_PAYLOAD) or
+ *  to an offset (RTE_ETH_DEV_STASH_TYPE_OFFSET) in to packet.
+ *  Types used should be compatible with TX queues, if not -EINVAL will be
+ *  returned.
+ * @param offset
+ *  Offset into the packet if RTE_ETH_DEV_STASH_TYPE_RX_OFFSET is set in hints.
+ * @param hints
+ *  A vector of stashing hints to the device and the platform.
+ * @return
+ *  - (-ENODEV) on incorrect port_ids.
+ *  - (-EINVAL) if both RX and TX types are used in conjuection in type
+ *  parameter.
+ *  - (-EINVAL) if hints are incompatible with TX queues.
+ *  - (-EINVAL) on invalid queue_id.
+ *  - (-ENOTSUP) if RTE_ETH_DEV_CAPA_CACHE_STASHING capability is unavailable.
+ *  - (-ENOSYS) if PMD does not implement cache stashing hints.
+ *  - (0) on Success.
+ */
+__rte_experimental
+int rte_eth_dev_stashing_hints_tx(uint16_t port_id, uint16_t cpuid,
+				 uint8_t cache_level, uint16_t queue_id,
+				 uint16_t types, off_t offset, uint16_t hints);
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Discover cache stashing hints and object types supported in the ethernet
+ * device.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param types
+ *  Supported types vector set by the ethernet device.
+ * @param hints
+ *  Supported hints vector set by the ethernet device.
+ * @return
+ *  On return types and hints parameters will have bits set for supported
+ *  object types.
+ *  - (-ENOTSUP) if the device or the platform does not support cache stashing.
+ *  - (-ENOSYS)  if the underlying PMD hasn't implemented cache stashing
+ *  feature.
+ *  - (-EINVAL)  on NULL values for types or hints parameters.
+ *  - (0) on success.
+ */
+__rte_experimental
+int rte_eth_dev_stashing_hints_discover(uint16_t port_id, uint16_t *types,
+					uint16_t *hints);
 
 #include <rte_ethdev_core.h>
 

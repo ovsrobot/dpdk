@@ -325,6 +325,12 @@ EXPERIMENTAL {
 	rte_flow_template_table_resizable;
 	rte_flow_template_table_resize;
 	rte_flow_template_table_resize_complete;
+
+	# added in 24.07
+	rte_eth_dev_stashing_hints_rx;
+	rte_eth_dev_stashing_hints_tx;
+	rte_eth_dev_stashing_hints_discover;
+	rte_eth_dev_validate_stashing_hints;
 };
 
 INTERNAL {
