@@ -17,6 +17,7 @@
 #include "ntdrv_4ga.h"
 #include "ntos_drv.h"
 #include "ntos_system.h"
+#include "nthw_fpga_instances.h"
 #include "ntnic_vfio.h"
 #include "ntnic_mod_reg.h"
 #include "nt_util.h"
