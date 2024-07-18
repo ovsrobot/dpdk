@@ -767,6 +767,185 @@ class TestPmdShell(DPDKShell):
 
         return TestPmdPort.parse(output)
 
+    def set_mac_addr(self, port_id: int, mac_address: str, add: bool, verify: bool = True) -> None:
+        """Add or remove a mac address on a given port's Allowlist.
+
+        Args:
+            port_id: The port ID the mac address is set on.
+            mac_address: The mac address to be added or removed to the specified port.
+            add: If :data:`True`, add the specified mac address. If :data:`False`, remove specified
+                mac address.
+            verify: If :data:'True', assert that the 'mac_addr' operation was successful. If
+                :data:'False', run the command and skip this assertion.
+
+        Raises:
+            InteractiveCommandExecutionError: If the set mac address operation fails.
+        """
+        mac_cmd = "add" if add else "remove"
+        output = self.send_command(f"mac_addr {mac_cmd} {port_id} {mac_address}")
+        if "Bad arguments" in output:
+            self._logger.debug("Invalid argument provided to mac_addr")
+            raise InteractiveCommandExecutionError("Invalid argument provided")
+
+        if verify:
+            if "mac_addr_cmd error:" in output:
+                self._logger.debug(f"Failed to {mac_cmd} {mac_address} on port {port_id}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to {mac_cmd} {mac_address} on port {port_id} \n{output}"
+                )
+
+    def set_multicast_mac_addr(
+        self, port_id: int, multi_addr: str, add: bool, verify: bool = True
+    ) -> None:
+        """Add or remove multicast mac address to a specified port's filter.
+
+        Args:
+            port_id: The port ID the multicast address is set on.
+            multi_addr: The multicast address to be added to the filter.
+            add: If :data:'True', add the specified multicast address to the port filter.
+                If :data:'False', remove the specified multicast address from the port filter.
+            verify: If :data:'True', assert that the 'mcast_addr' operations was successful.
+                If :data:'False', execute the 'mcast_addr' operation and skip the assertion.
+
+        Raises:
+            InteractiveCommandExecutionError: If either the 'add' or 'remove' operations fails.
+        """
+        mcast_cmd = "add" if add else "remove"
+        output = self.send_command(f"mcast_addr {mcast_cmd} {port_id} {multi_addr}")
+        if "Bad arguments" in output:
+            self._logger.debug("Invalid arguments provided to mcast_addr")
+            raise InteractiveCommandExecutionError("Invalid argument provided")
+
+        if verify:
+            if (
+                "Invalid multicast_addr" in output
+                or f'multicast address {"already" if add else "not"} filtered by port' in output
+            ):
+                self._logger.debug(f"Failed to {mcast_cmd} {multi_addr} on port {port_id}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to {mcast_cmd} {multi_addr} on port {port_id} \n{output}"
+                )
+
+    def rx_vlan_add(self, vlan: int, port: int, verify: bool = True) -> None:
+        """Add specified vlan tag to the filter list on a port.
+
+        Args:
+            vlan: The vlan tag to add, should be within 1-1005, 1-4094 extended.
+            port: The port number to add the tag on, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                the vlan tag was added to the filter list on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the tag
+                is not added.
+        """
+        vlan_add_output = self.send_command(f"rx_vlan add {vlan} {port}")
+        if verify:
+            if "VLAN-filtering disabled" in vlan_add_output or "Invalid vlan_id" in vlan_add_output:
+                self._logger.debug(
+                    f"Failed to add vlan tag {vlan} on port {port}: \n{vlan_add_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to add vlan tag {vlan} on port {port}."
+                )
+
+    def rx_vlan_rm(self, vlan: int, port: int, verify: bool = True) -> None:
+        """Remove specified vlan tag from filter list on a port.
+
+        Args:
+            vlan: The vlan tag to remove, should be within 1-4094.
+            port: The port number to remove the tag from, should be within 0-32.
+            verify: If :data:`True`, the output of the command is scanned to verify that
+                the vlan tag was removed from the filter list on the specified port. If not, it is
+                considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the tag
+                is not removed.
+        """
+        vlan_rm_output = self.send_command(f"rx_vlan rm {vlan} {port}")
+        if verify:
+            if "VLAN-filtering disabled" in vlan_rm_output or "Invalid vlan_id" in vlan_rm_output:
+                self._logger.debug(
+                    f"Failed to remove vlan tag {vlan} on port {port}: \n{vlan_rm_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to remove vlan tag {vlan} on port {port}."
+                )
+
+    def vlan_filter_set_on(self, port: int, verify: bool = True) -> None:
+        """Set vlan filter on.
+
+        Args:
+            port: The port number to enable VLAN filter on, should be within 0-32.
+            verify: If :data:`True`, the output of the command and show port info
+                is scanned to verify that vlan filtering was enabled successfully.
+                If not, it is considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        filter_cmd_output = self.send_command(f"vlan set filter on {port}")
+        if verify:
+            if "Invalid port" in filter_cmd_output or "filter on" not in self.send_command(
+                f"show port info {port}"
+            ):
+                self._logger.debug(
+                    f"Failed to enable vlan filter on port {port}: \n{filter_cmd_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to enable vlan filter on port {port}."
+                )
+
+    def vlan_filter_set_off(self, port: int, verify: bool = True) -> None:
+        """Set vlan filter off.
+
+        Args:
+            port: The port number to disable VLAN filter on, should be within 0-32.
+            verify: If :data:`True`, the output of the command and show port info
+                is scanned to verify that vlan filtering was disabled successfully.
+                If not, it is considered an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the filter
+                fails to update.
+        """
+        filter_cmd_output = self.send_command(f"vlan set filter off {port}")
+        if verify:
+            if "Invalid port" in filter_cmd_output or "filter off" not in self.send_command(
+                f"show port info {port}"
+            ):
+                self._logger.debug(
+                    f"Failed to disable vlan filter on port {port}: \n{filter_cmd_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to disable vlan filter on port {port}."
+                )
+
+    def set_promisc(self, port: int, on: bool, verify: bool = True) -> None:
+        """Turns promiscuous mode on/off for the specified port.
+
+        Args:
+            port: Port number to use, should be within 0-32.
+            on: If :data:`True`, turn promisc mode on, otherwise turn off.
+            verify: If :data:`True` an additional command will be sent to verify that promisc mode
+                is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and promisc mode
+                is not correctly set.
+        """
+        promisc_output = self.send_command(f"set promisc {port} {'on' if on else 'off'}")
+        if verify:
+            stats = self.show_port_info(port_id=port)
+            if on ^ stats.is_promiscuous_mode_enabled:
+                self._logger.debug(f"Failed to set promisc mode on port {port}: \n{promisc_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to set promisc mode on port {port}."
+                )
+
     def show_port_stats_all(self) -> list[TestPmdPortStats]:
         """Returns the statistics of all the ports.
 
