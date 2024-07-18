@@ -224,4 +224,4 @@ test_timer_secondary(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-REGISTER_TEST_COMMAND(timer_secondary_autotest, test_timer_secondary);
+REGISTER_FAST_TEST(timer_secondary_autotest, false, true, test_timer_secondary);
