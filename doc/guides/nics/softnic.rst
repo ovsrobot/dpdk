@@ -366,7 +366,7 @@ commands.
 
     .. code-block:: console
 
-        ./<build_dir>/app/dpdk-testpmd -c 0x7 -s 0x4 -n 4 \
+        ./<build_dir>/app/dpdk-testpmd -c 0x7 -s 0x4 \
                                     --vdev 'net_softnic0, \
                                     firmware=./drivers/net/softnic/ \
                                         firmware.cli, \

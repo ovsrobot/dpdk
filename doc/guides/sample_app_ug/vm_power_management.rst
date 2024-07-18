@@ -279,7 +279,7 @@ cores 0 and 1 on a system with four memory channels, issue the command:
 
 .. code-block:: console
 
-   ./<build_dir>/examples/dpdk-vm_power_mgr -l 0-1 -n 4
+   ./<build_dir>/examples/dpdk-vm_power_mgr -l 0-1
 
 After successful initialization, the VM Power Manager CLI prompt appears:
 
@@ -587,7 +587,7 @@ host, use a command like the following:
 
 .. code-block:: console
 
-   ./<build_dir>/examples/dpdk-guest_vm_power_mgr -l 0-3 -n 4 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
+   ./<build_dir>/examples/dpdk-guest_vm_power_mgr -l 0-3 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
 
 Once the VM Power Manager Guest CLI appears, issuing the 'send_policy now' command
 will send the policy to the host:
@@ -701,7 +701,7 @@ To start the application and configure the power policy, and send it to the host
 
 .. code-block:: console
 
- ./<build_dir>/examples/dpdk-guest_vm_power_mgr -l 0-3 -n 4 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
+ ./<build_dir>/examples/dpdk-guest_vm_power_mgr -l 0-3 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
 
 Once the VM Power Manager Guest CLI appears, issuing the 'send_policy now' command
 will send the policy to the host:

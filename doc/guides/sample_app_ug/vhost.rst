@@ -60,7 +60,7 @@ Start the vswitch example
 
 .. code-block:: console
 
-        ./dpdk-vhost -l 0-3 -n 4 --socket-mem 1024  \
+        ./dpdk-vhost -l 0-3 --socket-mem 1024  \
              -- --socket-file /tmp/sock0 --client \
              ...
 

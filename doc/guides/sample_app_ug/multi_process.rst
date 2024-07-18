@@ -41,7 +41,7 @@ passing at least two cores in the coremask/corelist, as follows:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-simple_mp -l 0-1 -n 4 --proc-type=primary
+    ./<build_dir>/examples/dpdk-simple_mp -l 0-1 --proc-type=primary
 
 For the first DPDK process run, the proc-type flag can be omitted or set to auto,
 since all DPDK processes will default to being a primary instance,
@@ -50,7 +50,7 @@ The process should start successfully and display a command prompt as follows:
 
 .. code-block:: console
 
-    $ ./<build_dir>/examples/dpdk-simple_mp -l 0-1 -n 4 --proc-type=primary
+    $ ./<build_dir>/examples/dpdk-simple_mp -l 0-1 --proc-type=primary
     EAL: coremask set to 3
     EAL: Detected lcore 0 on socket 0
     EAL: Detected lcore 1 on socket 0
@@ -77,7 +77,7 @@ again run the same binary setting at least two cores in the coremask/corelist:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-simple_mp -l 2-3 -n 4 --proc-type=secondary
+    ./<build_dir>/examples/dpdk-simple_mp -l 2-3 --proc-type=secondary
 
 When running a secondary process such as that shown above, the proc-type parameter can again be specified as auto.
 However, omitting the parameter altogether will cause the process to try and start as a primary rather than secondary process.
@@ -177,10 +177,10 @@ the following commands can be used (assuming run as root):
 
 .. code-block:: console
 
-    # ./<build_dir>/examples/dpdk-symmetric_mp -l 1 -n 4 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=0
-    # ./<build_dir>/examples/dpdk-symmetric_mp -l 2 -n 4 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=1
-    # ./<build_dir>/examples/dpdk-symmetric_mp -l 3 -n 4 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=2
-    # ./<build_dir>/examples/dpdk-symmetric_mp -l 4 -n 4 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=3
+    # ./<build_dir>/examples/dpdk-symmetric_mp -l 1 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=0
+    # ./<build_dir>/examples/dpdk-symmetric_mp -l 2 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=1
+    # ./<build_dir>/examples/dpdk-symmetric_mp -l 3 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=2
+    # ./<build_dir>/examples/dpdk-symmetric_mp -l 4 --proc-type=auto -- -p 3 --num-procs=4 --proc-id=3
 
 .. note::
 
@@ -272,9 +272,9 @@ the following commands could be used:
 
 .. code-block:: console
 
-    # ./<build_dir>/examples/dpdk-mp_server -l 1-2 -n 4 -- -p 3 -n 2
-    # ./<build_dir>/examples/dpdk-mp_client -l 3 -n 4 --proc-type=auto -- -n 0
-    # ./<build_dir>/examples/dpdk-mp_client -l 4 -n 4 --proc-type=auto -- -n 1
+    # ./<build_dir>/examples/dpdk-mp_server -l 1-2 -- -p 3 -n 2
+    # ./<build_dir>/examples/dpdk-mp_client -l 3 --proc-type=auto -- -n 0
+    # ./<build_dir>/examples/dpdk-mp_client -l 4 --proc-type=auto -- -n 1
 
 .. note::
 

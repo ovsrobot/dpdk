@@ -114,7 +114,7 @@ Copy the DPDK application binary to your target, then run the application as fol
 (assuming the platform has four memory channels per processor socket,
 and that cores 0-3 are present and are to be used for running the application)::
 
-    ./dpdk-helloworld -l 0-3 -n 4
+    ./dpdk-helloworld -l 0-3
 
 .. note::
 

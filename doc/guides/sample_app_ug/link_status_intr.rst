@@ -54,7 +54,7 @@ issue the command:
 
 .. code-block:: console
 
-    $ ./<build_dir>/examples/dpdk-link_status_interrupt -l 0-3 -n 4-- -q 8 -p ffff
+    $ ./<build_dir>/examples/dpdk-link_status_interrupt -l 0-3-- -q 8 -p ffff
 
 Refer to the *DPDK Getting Started Guide* for general information on running applications
 and the Environment Abstraction Layer (EAL) options.
