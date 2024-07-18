@@ -185,6 +185,7 @@ class TestSuite:
         packet: Packet,
         filter_config: PacketFilteringConfig = PacketFilteringConfig(),
         duration: float = 1,
+        adjust_addresses: bool = True,
     ) -> list[Packet]:
         """Send and receive `packet` using the associated TG.
 
@@ -195,11 +196,15 @@ class TestSuite:
             packet: The packet to send.
             filter_config: The filter to use when capturing packets.
             duration: Capture traffic for this amount of time after sending `packet`.
+            adjust_addresses: If :data:'True', adjust addresses of the egressing packet with
+                a default addressing scheme. If :data:'False', do not adjust the addresses of
+                egressing packet.
 
         Returns:
             A list of received packets.
         """
-        packet = self._adjust_addresses(packet)
+        if adjust_addresses:
+            packet = self._adjust_addresses(packet)
         return self.tg_node.send_packet_and_capture(
             packet,
             self._tg_port_egress,
