@@ -10,7 +10,8 @@
 
 #include "test.h"
 
-#ifndef RTE_EXEC_ENV_WINDOWS
+#define US_PER_SEC 1000000
+
 static volatile int flag;
 
 static void
@@ -19,46 +20,32 @@ test_alarm_callback(void *cb_arg)
 	flag = 1;
 	printf("Callback setting flag - OK. [cb_arg = %p]\n", cb_arg);
 }
-#endif
 
 static int
 test_alarm(void)
 {
-#ifdef RTE_EXEC_ENV_FREEBSD
-	printf("The alarm API is not supported on FreeBSD\n");
-	return 0;
-#endif
+	int ret;
 
-#ifndef RTE_EXEC_ENV_WINDOWS
-	/* check if it will fail to set alarm with wrong us value */
-	printf("check if it will fail to set alarm with wrong ms values\n");
-	if (rte_eal_alarm_set(0, test_alarm_callback,
-						NULL) >= 0) {
-		printf("should not be successful with 0 us value\n");
-		return -1;
-	}
-	if (rte_eal_alarm_set(UINT64_MAX - 1, test_alarm_callback,
-						NULL) >= 0) {
-		printf("should not be successful with (UINT64_MAX-1) us value\n");
-		return -1;
-	}
-#endif
+	ret = rte_eal_alarm_set(0, test_alarm_callback, NULL);
+	TEST_ASSERT_FAIL(ret, "should not be succeed with 0 us value");
 
-	/* check if it will fail to set alarm with null callback parameter */
-	printf("check if it will fail to set alarm with null callback parameter\n");
-	if (rte_eal_alarm_set(10 /* ms */, NULL, NULL) >= 0) {
-		printf("should not be successful to set alarm with null callback parameter\n");
-		return -1;
-	}
+	ret = rte_eal_alarm_set(UINT64_MAX - 1, test_alarm_callback, NULL);
+	TEST_ASSERT_FAIL(ret, "should not be succeed with (UINT64_MAX-1) us value");
 
-	/* check if it will fail to remove alarm with null callback parameter */
-	printf("check if it will fail to remove alarm with null callback parameter\n");
-	if (rte_eal_alarm_cancel(NULL, NULL) == 0) {
-		printf("should not be successful to remove alarm with null callback parameter");
-		return -1;
-	}
+	ret = rte_eal_alarm_set(10, NULL, NULL);
+	TEST_ASSERT_FAIL(ret, "should not succeed with null callback parameter");
+
+	ret = rte_eal_alarm_cancel(NULL, NULL);
+	TEST_ASSERT_FAIL(ret, "should not succeed to remove alarm with null callback parameter");
+
+	ret = rte_eal_alarm_set(US_PER_SEC, test_alarm_callback, NULL);
+	TEST_ASSERT_SUCCESS(ret, "could not set an alarm");
+
+	ret = rte_eal_alarm_cancel(test_alarm_callback, NULL);
+	/* return is the number of the alarm set (or 0 if none or -1 if error) */
+	TEST_ASSERT(ret > 0, "could not cancel an alarm: %d", ret);
 
 	return 0;
 }
 
-REGISTER_TEST_COMMAND(alarm_autotest, test_alarm);
+REGISTER_FAST_TEST(alarm_autotest, true, true, test_alarm);
