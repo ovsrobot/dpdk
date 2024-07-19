@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2021 NXP
+ * Copyright 2021-2024 NXP
  */
 
 #ifndef _DPAA_QDMA_H_
@@ -176,7 +176,6 @@ struct fsl_qdma_comp {
 	dma_addr_t		bus_addr;
 	dma_addr_t		desc_bus_addr;
 	void			*virt_addr;
-	int			index;
 	void			*desc_virt_addr;
 	struct fsl_qdma_chan	*qchan;
 	dma_call_back		call_back_func;
