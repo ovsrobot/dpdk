@@ -6,7 +6,8 @@ drivers = [
         'amd_pstate',
         'cppc',
         'kvm_vm',
-        'pstate'
+        'pstate',
+        'intel_uncore'
 ]
 
 std_deps = ['power']
