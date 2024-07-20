@@ -1,18 +1,18 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2021 Intel Corporation
  * Copyright(c) 2021 Arm Limited
- * Copyright(c) 2023 Amd Limited
+ * Copyright(c) 2024 Advanced Micro Devices, Inc.
  */
 
-#ifndef _POWER_AMD_PSTATE_CPUFREQ_H
-#define _POWER_AMD_PSTATE_CPUFREQ_H
+#ifndef _AMD_PSTATE_CPUFREQ_H
+#define _AMD_PSTATE_CPUFREQ_H
 
 /**
  * @file
  * RTE Power Management via userspace AMD pstate cpufreq
  */
 
-#include "rte_power.h"
+#include "rte_power_core_ops.h"
 
 /**
  * Check if amd p-state power management is supported.

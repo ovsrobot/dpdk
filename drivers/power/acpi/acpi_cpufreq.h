@@ -2,15 +2,15 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
-#ifndef _POWER_ACPI_CPUFREQ_H
-#define _POWER_ACPI_CPUFREQ_H
+#ifndef _ACPI_CPUFREQ_H
+#define _ACPI_CPUFREQ_H
 
 /**
  * @file
  * RTE Power Management via userspace ACPI cpufreq
  */
 
-#include "rte_power.h"
+#include "rte_power_core_ops.h"
 
 /**
  * Check if ACPI power management is supported.
