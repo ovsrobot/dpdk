@@ -11,7 +11,6 @@
 #include "power_intel_uncore.h"
 #include "power_common.h"
 
-#define MAX_UNCORE_FREQS 32
 #define MAX_NUMA_DIE 8
 #define BUS_FREQ     100000
 #define FILTER_LENGTH 18
@@ -32,7 +31,7 @@
 struct __rte_cache_aligned uncore_power_info {
 	unsigned int die;                  /* Core die id */
 	unsigned int pkg;                  /* Package id */
-	uint32_t freqs[MAX_UNCORE_FREQS];  /* Frequency array */
+	uint32_t freqs[RTE_MAX_UNCORE_FREQS]; /* Frequency array */
 	uint32_t nb_freqs;                 /* Number of available freqs */
 	FILE *f_cur_min;                   /* FD of scaling_min */
 	FILE *f_cur_max;                   /* FD of scaling_max */
@@ -51,9 +50,10 @@ set_uncore_freq_internal(struct uncore_power_info *ui, uint32_t idx)
 	uint32_t target_uncore_freq, curr_max_freq;
 	int ret;
 
-	if (idx >= MAX_UNCORE_FREQS || idx >= ui->nb_freqs) {
-		POWER_LOG(DEBUG, "Invalid uncore frequency index %u, which "
-				"should be less than %u", idx, ui->nb_freqs);
+	if (idx >= ui->nb_freqs) {
+		POWER_LOG(ERR,
+			  "Invalid uncore frequency index %u, which should be less than %u",
+			  idx, ui->nb_freqs);
 		return -1;
 	}
 
@@ -71,7 +71,7 @@ set_uncore_freq_internal(struct uncore_power_info *ui, uint32_t idx)
 	}
 	ret = read_core_sysfs_u32(ui->f_cur_max, &curr_max_freq);
 	if (ret < 0) {
-		POWER_LOG(DEBUG, "Failed to read %s",
+		POWER_LOG(ERR, "Failed to read %s",
 				POWER_INTEL_UNCORE_SYSFILE_MAX_FREQ);
 		fclose(ui->f_cur_max);
 		return -1;
@@ -79,14 +79,15 @@ set_uncore_freq_internal(struct uncore_power_info *ui, uint32_t idx)
 
 	/* check this value first before fprintf value to f_cur_max, so value isn't overwritten */
 	if (fprintf(ui->f_cur_min, "%u", target_uncore_freq) < 0) {
-		POWER_LOG(ERR, "Fail to write new uncore frequency for "
-				"pkg %02u die %02u", ui->pkg, ui->die);
+		POWER_LOG(ERR, "Fail to write new uncore frequency for pkg %02u die %02u",
+			  ui->pkg, ui->die);
 		return -1;
 	}
 
 	if (fprintf(ui->f_cur_max, "%u", target_uncore_freq) < 0) {
-		POWER_LOG(ERR, "Fail to write new uncore frequency for "
-				"pkg %02u die %02u", ui->pkg, ui->die);
+		POWER_LOG(ERR,
+			  "Fail to write new uncore frequency for pkg %02u die %02u",
+			  ui->pkg, ui->die);
 		return -1;
 	}
 
@@ -121,13 +122,13 @@ power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 	open_core_sysfs_file(&f_base_max, "r", POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ,
 			ui->pkg, ui->die);
 	if (f_base_max == NULL) {
-		POWER_LOG(DEBUG, "failed to open %s",
+		POWER_LOG(ERR, "failed to open %s",
 				POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ);
 		goto err;
 	}
 	ret = read_core_sysfs_u32(f_base_max, &base_max_freq);
 	if (ret < 0) {
-		POWER_LOG(DEBUG, "Failed to read %s",
+		POWER_LOG(ERR, "Failed to read %s",
 				POWER_INTEL_UNCORE_SYSFILE_BASE_MAX_FREQ);
 		goto err;
 	}
@@ -136,14 +137,14 @@ power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 	open_core_sysfs_file(&f_base_min, "r", POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ,
 		ui->pkg, ui->die);
 	if (f_base_min == NULL) {
-		POWER_LOG(DEBUG, "failed to open %s",
+		POWER_LOG(ERR, "failed to open %s",
 				POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ);
 		goto err;
 	}
 	if (f_base_min != NULL) {
 		ret = read_core_sysfs_u32(f_base_min, &base_min_freq);
 		if (ret < 0) {
-			POWER_LOG(DEBUG, "Failed to read %s",
+			POWER_LOG(ERR, "Failed to read %s",
 					POWER_INTEL_UNCORE_SYSFILE_BASE_MIN_FREQ);
 			goto err;
 		}
@@ -153,14 +154,14 @@ power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 	open_core_sysfs_file(&f_min, "rw+", POWER_INTEL_UNCORE_SYSFILE_MIN_FREQ,
 			ui->pkg, ui->die);
 	if (f_min == NULL) {
-		POWER_LOG(DEBUG, "failed to open %s",
+		POWER_LOG(ERR, "failed to open %s",
 				POWER_INTEL_UNCORE_SYSFILE_MIN_FREQ);
 		goto err;
 	}
 	if (f_min != NULL) {
 		ret = read_core_sysfs_u32(f_min, &min_freq);
 		if (ret < 0) {
-			POWER_LOG(DEBUG, "Failed to read %s",
+			POWER_LOG(ERR, "Failed to read %s",
 					POWER_INTEL_UNCORE_SYSFILE_MIN_FREQ);
 			goto err;
 		}
@@ -170,14 +171,14 @@ power_init_for_setting_uncore_freq(struct uncore_power_info *ui)
 	open_core_sysfs_file(&f_max, "rw+", POWER_INTEL_UNCORE_SYSFILE_MAX_FREQ,
 			ui->pkg, ui->die);
 	if (f_max == NULL) {
-		POWER_LOG(DEBUG, "failed to open %s",
+		POWER_LOG(ERR, "failed to open %s",
 				POWER_INTEL_UNCORE_SYSFILE_MAX_FREQ);
 		goto err;
 	}
 	if (f_max != NULL) {
 		ret = read_core_sysfs_u32(f_max, &max_freq);
 		if (ret < 0) {
-			POWER_LOG(DEBUG, "Failed to read %s",
+			POWER_LOG(ERR, "Failed to read %s",
 					POWER_INTEL_UNCORE_SYSFILE_MAX_FREQ);
 			goto err;
 		}
@@ -221,7 +222,7 @@ power_get_available_uncore_freqs(struct uncore_power_info *ui)
 	uint32_t i, num_uncore_freqs = 0;
 
 	num_uncore_freqs = (ui->init_max_freq - ui->init_min_freq) / BUS_FREQ + 1;
-	if (num_uncore_freqs >= MAX_UNCORE_FREQS) {
+	if (num_uncore_freqs >= RTE_MAX_UNCORE_FREQS) {
 		POWER_LOG(ERR, "Too many available uncore frequencies: %d",
 				num_uncore_freqs);
 		goto out;
@@ -250,7 +251,7 @@ check_pkg_die_values(unsigned int pkg, unsigned int die)
 	if (max_pkgs == 0)
 		return -1;
 	if (pkg >= max_pkgs) {
-		POWER_LOG(DEBUG, "Package number %02u can not exceed %u",
+		POWER_LOG(ERR, "Package number %02u can not exceed %u",
 				pkg, max_pkgs);
 		return -1;
 	}
@@ -259,7 +260,7 @@ check_pkg_die_values(unsigned int pkg, unsigned int die)
 	if (max_dies == 0)
 		return -1;
 	if (die >= max_dies) {
-		POWER_LOG(DEBUG, "Die number %02u can not exceed %u",
+		POWER_LOG(ERR, "Die number %02u can not exceed %u",
 				die, max_dies);
 		return -1;
 	}
@@ -282,15 +283,17 @@ power_intel_uncore_init(unsigned int pkg, unsigned int die)
 
 	/* Init for setting uncore die frequency */
 	if (power_init_for_setting_uncore_freq(ui) < 0) {
-		POWER_LOG(DEBUG, "Cannot init for setting uncore frequency for "
-				"pkg %02u die %02u", pkg, die);
+		POWER_LOG(ERR,
+			  "Cannot init for setting uncore frequency for pkg %02u die %02u",
+			  pkg, die);
 		return -1;
 	}
 
 	/* Get the available frequencies */
 	if (power_get_available_uncore_freqs(ui) < 0) {
-		POWER_LOG(DEBUG, "Cannot get available uncore frequencies of "
-				"pkg %02u die %02u", pkg, die);
+		POWER_LOG(ERR,
+			  "Cannot get available uncore frequencies of pkg %02u die %02u",
+			  pkg, die);
 		return -1;
 	}
 
@@ -451,7 +454,7 @@ power_intel_uncore_get_num_dies(unsigned int pkg)
 	if (max_pkgs == 0)
 		return 0;
 	if (pkg >= max_pkgs) {
-		POWER_LOG(DEBUG, "Invalid package number");
+		POWER_LOG(ERR, "Invalid package number");
 		return 0;
 	}
 
