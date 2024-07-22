@@ -147,3 +147,14 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* cryptodev: The struct rte_crypto_rsa_padding will be moved from
+  rte_crypto_rsa_op_param struct to rte_crypto_rsa_xform struct,
+  breaking ABI. The new location is recommended to comply with
+  virtio-crypto specification. Applications and drivers using
+  this struct will be updated.
+
+* cryptodev: The rte_crypto_rsa_xform struct member to hold private key
+  in either exponent or quintuple format is changed from union to struct
+  data type. This change is to support ASN.1 syntax (RFC 3447 Appendix A.1.2).
+  This change will not break existing applications.
