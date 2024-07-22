@@ -147,3 +147,19 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* net: A new IPv6 address structure will be introduced in DPDK 24.11.
+  It will replace all ad-hoc ``uint8_t[16]`` arrays in all public APIs and structures.
+  The following libraries are expected to be affected:
+
+  - ethdev (rte_flow)
+  - fib
+  - gro (tcp6_flow_key)
+  - hash (rte_ipv6_tuple)
+  - ipsec (rte_ipsec_sadv6_key)
+  - lpm (
+  - net (rte_ipv6_hdr)
+  - node
+  - pipeline (rte_table_action_ipv6_header)
+  - rib
+  - table (rte_table_lpm_ipv6_key)
