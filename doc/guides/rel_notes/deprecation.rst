@@ -147,3 +147,10 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* vhost: The function ``rte_vhost_crypto_create`` will accept a new parameter
+  to specify rte_mempool for asymmetric crypto session. The function
+  ``rte_vhost_crypto_finalize_requests`` will accept two new parameters,
+  where the first one is to specify vhost device id and other one is to specify
+  the virtio queue index. These two modifications are required to support
+  asymmetric crypto operation in vhost crypto and will break ABI.
