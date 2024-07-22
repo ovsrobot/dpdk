@@ -658,9 +658,9 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 	raw_spec = item->spec;
 	raw_mask = item->mask;
 
-	spec_len = strlen((char *)(uintptr_t)raw_spec->pattern);
-	if (strlen((char *)(uintptr_t)raw_mask->pattern) !=
-		spec_len)
+	spec_len = strnlen((char *)(uintptr_t)raw_spec->pattern, raw_spec->length);
+	if (strnlen((char *)(uintptr_t)raw_mask->pattern, raw_spec->length) !=
+			spec_len)
 		return -rte_errno;
 
 	pkt_len = spec_len / 2;
