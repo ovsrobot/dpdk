@@ -147,3 +147,7 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* cryptodev: The enum ``rte_crypto_asym_xform_type`` and struct ``rte_crypto_asym_op``
+  will be extended to include new values to support EDDSA. This will break
+  ABI compatibility with existing applications that use these data types.
