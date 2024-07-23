@@ -14076,7 +14076,8 @@ cmd_set_raw_parsed(const struct buffer *in)
 			upper_layer = proto;
 		}
 	}
-	if (verbose_level & 0x1)
+
+	if (verbose_level > 0)
 		printf("total data size is %zu\n", (*total_size));
 	RTE_ASSERT((*total_size) <= ACTION_RAW_ENCAP_MAX_DATA);
 	memmove(data, (data_tail - (*total_size)), *total_size);

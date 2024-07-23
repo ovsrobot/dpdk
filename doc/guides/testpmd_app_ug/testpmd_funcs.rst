@@ -676,7 +676,10 @@ Available levels are as following:
 * ``0`` silent except for error.
 * ``1`` fully verbose except for Tx packets.
 * ``2`` fully verbose except for Rx packets.
-* ``> 2`` fully verbose.
+* ``3`` fully verbose except for Tx and Rx packets.
+* ``4`` dissected protocol information for Tx and Rx packets.
+* ``5`` hex dump of packets
+
 
 set log
 ~~~~~~~

@@ -8,6 +8,7 @@
 #include <rte_bitops.h>
 #include <rte_net.h>
 #include <rte_mbuf.h>
+#include <rte_dissect.h>
 #include <rte_ether.h>
 #include <rte_vxlan.h>
 #include <rte_ethdev.h>
@@ -16,6 +17,7 @@
 #include "testpmd.h"
 
 #define MAX_STRING_LEN 8192
+#define MAX_DUMP_LEN   1024
 
 #define MKDUMPSTR(buf, buf_size, cur_len, ...) \
 do { \
@@ -67,9 +69,10 @@ get_timestamp(const struct rte_mbuf *mbuf)
 			timestamp_dynfield_offset, rte_mbuf_timestamp_t *);
 }
 
-static inline void
-dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
-	      uint16_t nb_pkts, int is_rx)
+/* More verbose older style packet decode */
+static void
+dump_pkt_verbose(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
+		 uint16_t nb_pkts, int is_rx)
 {
 	struct rte_mbuf  *mb;
 	const struct rte_ether_hdr *eth_hdr;
@@ -90,8 +93,6 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 	size_t cur_len = 0;
 	uint64_t restore_info_dynflag;
 
-	if (!nb_pkts)
-		return;
 	restore_info_dynflag = rte_flow_restore_info_dynflag();
 	MKDUMPSTR(print_buf, buf_size, cur_len,
 		  "port %u/queue %u: %s %u packets\n", port_id, queue,
@@ -297,6 +298,66 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 			printf("%s", print_buf);
 		cur_len = 0;
 	}
+}
+
+/* Brief tshark style one line output which is
+ * number time_delta Source Destination Protocol len info
+ */
+static void
+dump_pkt_brief(uint16_t queue, struct rte_mbuf *pkts[], uint16_t nb_pkts)
+{
+	static uint64_t start_cycles;
+	static uint64_t packet_count;
+	uint64_t now;
+	uint64_t count;
+	double interval;
+	uint16_t i;
+
+	now = rte_rdtsc();
+	if (start_cycles == 0)
+		start_cycles = now;
+	interval = (double)(now - start_cycles) / (double)rte_get_tsc_hz();
+
+	count = __atomic_fetch_add(&packet_count, nb_pkts, __ATOMIC_RELAXED);
+
+	for (i = 0; i < nb_pkts; i++) {
+		const struct rte_mbuf *mb = pkts[i];
+
+		printf("%6"PRIu64" %11.9f %4u:%-3u ", count + i, interval, mb->port, queue);
+		rte_dissect_mbuf(stdout, mb, 0);
+	}
+}
+
+/* Hex dump of packet data */
+static void
+dump_pkt_hex(struct rte_mbuf *pkts[], uint16_t nb_pkts)
+{
+	uint16_t i;
+
+	for (i = 0; i < nb_pkts; i++)
+		rte_pktmbuf_dump(stdout, pkts[i], MAX_DUMP_LEN);
+
+}
+
+static uint16_t
+dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
+	      uint16_t nb_pkts, int is_rx)
+{
+	if (unlikely(nb_pkts == 0))
+		return 0;
+
+	switch (verbose_level) {
+	case VERBOSE_RX ... VERBOSE_BOTH:
+		dump_pkt_verbose(port_id, queue, pkts, nb_pkts, is_rx);
+		break;
+	case VERBOSE_DISSECT:
+		dump_pkt_brief(queue, pkts, nb_pkts);
+		break;
+	case VERBOSE_HEX:
+		dump_pkt_hex(pkts, nb_pkts);
+	}
+	fflush(stdout);
+	return nb_pkts;
 }
 
 uint16_t

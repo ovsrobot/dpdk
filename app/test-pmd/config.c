@@ -6246,26 +6246,37 @@ configure_rxtx_dump_callbacks(uint16_t verbose)
 		return;
 #endif
 
-	RTE_ETH_FOREACH_DEV(portid)
-	{
-		if (verbose == 1 || verbose > 2)
-			add_rx_dump_callbacks(portid);
-		else
+	RTE_ETH_FOREACH_DEV(portid) {
+		switch (verbose) {
+		case VERBOSE_OFF:
 			remove_rx_dump_callbacks(portid);
-		if (verbose >= 2)
-			add_tx_dump_callbacks(portid);
-		else
 			remove_tx_dump_callbacks(portid);
+			break;
+		case VERBOSE_RX:
+			add_rx_dump_callbacks(portid);
+			remove_tx_dump_callbacks(portid);
+			break;
+		case VERBOSE_TX:
+			add_tx_dump_callbacks(portid);
+			remove_rx_dump_callbacks(portid);
+			break;
+		default:
+			add_rx_dump_callbacks(portid);
+			add_tx_dump_callbacks(portid);
+		}
 	}
 }
 
 void
 set_verbose_level(uint16_t vb_level)
 {
-	printf("Change verbose level from %u to %u\n",
-	       (unsigned int) verbose_level, (unsigned int) vb_level);
-	verbose_level = vb_level;
-	configure_rxtx_dump_callbacks(verbose_level);
+	if (vb_level < VERBOSE_MAX) {
+		printf("Change verbose level from %u to %u\n", verbose_level, vb_level);
+		verbose_level = vb_level;
+		configure_rxtx_dump_callbacks(verbose_level);
+	} else {
+		fprintf(stderr, "Verbose level %u is out of range\n", vb_level);
+	}
 }
 
 void
