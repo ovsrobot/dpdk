@@ -10,4 +10,5 @@ sources += files(
         'rte_mmu.c',
         'rte_spinlock.c',
         'rte_power_intrinsics.c',
+        'rte_random.c',
 )

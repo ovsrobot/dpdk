@@ -95,7 +95,7 @@ part_number_config_arm = {
     },
     '0xd49': {
         'march': 'armv9-a',
-        'march_features': ['sve2'],
+        'march_features': ['sve2', 'rng'],
         'fallback_march': 'armv8.5-a',
         'mcpu': 'neoverse-n2',
         'flags': [

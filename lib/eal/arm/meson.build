@@ -9,4 +9,5 @@ sources += files(
         'rte_hypervisor.c',
         'rte_mmu.c',
         'rte_power_intrinsics.c',
+        'rte_random.c',
 )

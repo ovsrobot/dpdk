@@ -116,6 +116,7 @@ const struct feature_entry rte_cpu_feature_table[] = {
 	FEAT_DEF(SVEF64MM,	REG_HWCAP2,   11)
 	FEAT_DEF(SVEBF16,	REG_HWCAP2,   12)
 	FEAT_DEF(AARCH64,	REG_PLATFORM,  0)
+	FEAT_DEF(RNG,		REG_HWCAP2,   16)
 };
 #endif /* RTE_ARCH */
 

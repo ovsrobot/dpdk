@@ -20,6 +20,7 @@ static volatile uint64_t vsum;
 
 enum rand_type {
 	rand_type_64,
+	rand_type_true_rand_64,
 	rand_type_float,
 	rand_type_bounded_best_case,
 	rand_type_bounded_worst_case
@@ -31,6 +32,8 @@ rand_type_desc(enum rand_type rand_type)
 	switch (rand_type) {
 	case rand_type_64:
 		return "Full 64-bit [rte_rand()]";
+	case rand_type_true_rand_64:
+		return "Full 64-bit True Random [rte_trand()]";
 	case rand_type_float:
 		return "Floating point [rte_drand()]";
 	case rand_type_bounded_best_case:
@@ -50,6 +53,9 @@ test_rand_perf_type(enum rand_type rand_type)
 	uint64_t end;
 	uint64_t sum = 0;
 	uint64_t op_latency;
+	int ret;
+	uint64_t val;
+	uint32_t fail_count = 0;
 
 	start = rte_rdtsc();
 
@@ -57,6 +63,13 @@ test_rand_perf_type(enum rand_type rand_type)
 		switch (rand_type) {
 		case rand_type_64:
 			sum += rte_rand();
+			break;
+		case rand_type_true_rand_64:
+			ret = rte_trand(&val);
+			if (ret == 0)
+				sum += val;
+			else
+				fail_count++;
 			break;
 		case rand_type_float:
 			sum += 1000. * rte_drand();
@@ -77,8 +90,15 @@ test_rand_perf_type(enum rand_type rand_type)
 
 	op_latency = (end - start) / ITERATIONS;
 
-	printf("%s: %"PRId64" TSC cycles/op\n", rand_type_desc(rand_type),
-	       op_latency);
+	if (!fail_count)
+		printf("%s: %"PRId64" TSC cycles/op\n",
+		       rand_type_desc(rand_type),
+		       op_latency);
+	else
+		printf("%s: %"PRId64" TSC cycles/op (failed %d time(s))\n",
+		       rand_type_desc(rand_type),
+		       op_latency,
+			   fail_count);
 }
 
 static int
@@ -89,6 +109,7 @@ test_rand_perf(void)
 	printf("Pseudo-random number generation latencies:\n");
 
 	test_rand_perf_type(rand_type_64);
+	test_rand_perf_type(rand_type_true_rand_64);
 	test_rand_perf_type(rand_type_float);
 	test_rand_perf_type(rand_type_bounded_best_case);
 	test_rand_perf_type(rand_type_bounded_worst_case);

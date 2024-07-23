@@ -15,6 +15,7 @@
 extern "C" {
 #endif
 
+#include <rte_compat.h>
 #include <stdint.h>
 
 /**
@@ -83,6 +84,22 @@ rte_rand_max(uint64_t upper_bound);
  *   A pseudo-random value between 0 and 1.0.
  */
 double rte_drand(void);
+
+/**
+ * Get a true random value.
+ *
+ * The generator is cryptographically secure.
+ *
+ * @param val
+ *   A pointer to store a true random value between 0 and (1<<64)-1.
+ * @return
+ *   0 on success
+ *   -ENODATA on failure
+ *   -ENOTSUP if unsupported
+ */
+__rte_experimental
+int
+rte_trand(uint64_t *val);
 
 #ifdef __cplusplus
 }
