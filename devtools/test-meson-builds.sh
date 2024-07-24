@@ -228,12 +228,14 @@ for c in gcc clang ; do
 		if [ $s = shared ] ; then
 			abicheck=ABI
 			stdatomic=-Denable_stdatomic=true
+			ccmemcpy=-Duse_cc_memcpy=true
 		else
 			abicheck=skipABI # save time and disk space
 			stdatomic=-Denable_stdatomic=false
+			ccmemcpy=-Duse_cc_memcpy=false
 		fi
 		export CC="$CCACHE $c"
-		build build-$c-$s $c $abicheck $stdatomic --default-library=$s
+		build build-$c-$s $c $abicheck $stdatomic $ccmemcpy --default-library=$s
 		unset CC
 	done
 done

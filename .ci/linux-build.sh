@@ -98,6 +98,11 @@ if [ "$STDATOMIC" = "true" ]; then
 else
 	OPTS="$OPTS -Dcheck_includes=true"
 fi
+if [ "$CCMEMCPY" = "true" ]; then
+	OPTS="$OPTS -Duse_cc_memcpy=true"
+else
+	OPTS="$OPTS -Duse_cc_memcpy=true"
+fi
 if [ "$MINI" = "true" ]; then
     OPTS="$OPTS -Denable_drivers=net/null"
     OPTS="$OPTS -Ddisable_libs=*"
