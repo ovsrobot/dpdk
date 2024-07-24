@@ -7,6 +7,7 @@
 
 #include <rte_memcpy.h>
 #include <rte_stdatomic.h>
+#include <rte_lcore.h>
 
 #include "power_cppc_cpufreq.h"
 #include "power_common.h"
@@ -338,7 +339,8 @@ int
 power_cppc_cpufreq_init(unsigned int lcore_id)
 {
 	struct cppc_power_info *pi;
-	uint32_t exp_state;
+	uint32_t exp_state, cpu;
+	rte_cpuset_t lcore_cpus;
 
 	if (lcore_id >= RTE_MAX_LCORE) {
 		POWER_LOG(ERR, "Lcore id %u can not exceeds %u",
@@ -362,7 +364,17 @@ power_cppc_cpufreq_init(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi->lcore_id = lcore_id;
+	lcore_cpus = rte_lcore_cpuset(lcore_id);
+	if (CPU_COUNT(&lcore_cpus) != 1) {
+		POWER_LOG(ERR, "Power library doesn't support lcore %u mapping "
+				"to %u cpus", lcore_id, CPU_COUNT(&lcore_cpus));
+		return -1;
+	}
+	for (cpu = 0; cpu < CPU_SETSIZE; cpu++) {
+		if (CPU_ISSET(cpu, &lcore_cpus))
+			break;
+	}
+	pi->lcore_id = cpu;
 	/* Check and set the governor */
 	if (power_set_governor_userspace(pi) < 0) {
 		POWER_LOG(ERR, "Cannot set governor of lcore %u to "
