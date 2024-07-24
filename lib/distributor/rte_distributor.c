@@ -15,6 +15,7 @@
 #include <rte_eal_memconfig.h>
 #include <rte_pause.h>
 #include <rte_tailq.h>
+#include <rte_vect.h>
 
 #include "rte_distributor.h"
 #include "rte_distributor_single.h"
