@@ -289,7 +289,11 @@ gve_start_queues(struct rte_eth_dev *dev)
 		return ret;
 	}
 	for (i = 0; i < num_queues; i++)
-		if (gve_tx_queue_start(dev, i) != 0) {
+		if (gve_is_gqi(priv))
+			ret = gve_tx_queue_start(dev, i);
+		else
+			ret = gve_tx_queue_start_dqo(dev, i);
+		if (ret != 0) {
 			PMD_DRV_LOG(ERR, "Fail to start Tx queue %d", i);
 			goto err_tx;
 		}
@@ -315,9 +319,15 @@ gve_start_queues(struct rte_eth_dev *dev)
 	return 0;
 
 err_rx:
-	gve_stop_rx_queues(dev);
+	if (gve_is_gqi(priv))
+		gve_stop_rx_queues(dev);
+	else
+		gve_stop_rx_queues_dqo(dev);
 err_tx:
-	gve_stop_tx_queues(dev);
+	if (gve_is_gqi(priv))
+		gve_stop_tx_queues(dev);
+	else
+		gve_stop_tx_queues_dqo(dev);
 	return ret;
 }
 
@@ -362,10 +372,16 @@ gve_dev_start(struct rte_eth_dev *dev)
 static int
 gve_dev_stop(struct rte_eth_dev *dev)
 {
+	struct gve_priv *priv = dev->data->dev_private;
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 
-	gve_stop_tx_queues(dev);
-	gve_stop_rx_queues(dev);
+	if (gve_is_gqi(priv)) {
+		gve_stop_tx_queues(dev);
+		gve_stop_rx_queues(dev);
+	} else {
+		gve_stop_tx_queues_dqo(dev);
+		gve_stop_rx_queues_dqo(dev);
+	}
 
 	dev->data->dev_started = 0;
 
