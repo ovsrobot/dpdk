@@ -804,7 +804,56 @@ class TestPmdShell(DPDKShell):
 
         return TestPmdPortStats.parse(output)
 
-    def _close(self) -> None:
+    def set_verbose(self, level: int, verify: bool = True):
+        """Set debug verbosity level.
+
+        Args:
+            level: 0 - silent except for error
+                1 - fully verbose except for Tx packets
+                2 - fully verbose except for Rx packets
+                >2 - fully verbose
+            verify: If :data:`True` the command output will be scanned to verify that verbose level
+                is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and verbose level
+            is not correctly set.
+        """
+        verbose_output = self.send_command(f"set verbose {level}")
+        if verify:
+            if "Change verbose level" not in verbose_output:
+                self._logger.debug(f"Failed to set verbose level to {level}: \n{verbose_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to set verbose level to {level}."
+                )
+
+    def udp_tunnel_port(
+        self, port_id: int, add: bool, udp_port: int, protocol: str, verify: bool = True
+    ):
+        """Configures a UDP tunnel on the specified port, for the specified protocol.
+
+        Args:
+            port_id: ID of the port to configure tunnel on.
+            add: If :data:`True`, adds tunnel, otherwise removes tunnel.
+            udp_port: ID of the UDP port to configure tunnel on.
+            protocol: Name of tunnelling protocol to use; options are vxlan, geneve, ecpri
+            verify: If :data:`True`, checks the output of the command to verify that
+                no errors were thrown.
+
+        Raises:
+            InteractiveCommandExecutionError: If verify is :data:`True` and command
+                output shows an error.
+        """
+        action = "add" if add else "rm"
+        cmd_output = self.send_command(
+            f"port config {port_id} udp_tunnel_port {action} {protocol} {udp_port}"
+        )
+        if verify:
+            if "Operation not supported" in cmd_output or "Bad arguments" in cmd_output:
+                self._logger.debug(f"Failed to set UDP tunnel: \n{cmd_output}")
+                raise InteractiveCommandExecutionError(f"Failed to set UDP tunnel: \n{cmd_output}")
+
+    def close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
         self.stop()
         self.send_command("quit", "Bye...")
