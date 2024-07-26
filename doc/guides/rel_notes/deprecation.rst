@@ -147,3 +147,7 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* fib: A new flags field will be introduced in rte_fib_conf structure
+  in DPDK 24.11. This field will be used to pass extra configuration
+  settings when creating rte_fib.
