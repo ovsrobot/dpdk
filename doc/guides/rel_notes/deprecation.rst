@@ -115,6 +115,13 @@ Deprecation Notices
   The legacy actions should be removed
   once ``MODIFY_FIELD`` alternative is implemented in drivers.
 
+ * ethdev,net: The flow item ``RTE_FLOW_ITEM_TYPE_VXLAN_GPE`` is replaced with ``RTE_FLOW_ITEM_TYPE_VXLAN``.
+   The struct ``rte_flow_item_vxlan_gpe``, its mask ``rte_flow_item_vxlan_gpe_mask`` are replaced with
+   ``rte_flow_item_vxlan and its mask`` and its mask ``rte_flow_item_vxlan_mask``.
+   The item ``RTE_FLOW_ITEM_TYPE_VXLAN_GPE``, the struct ``rte_flow_item_vxlan_gpe``, its mask ``rte_flow_item_vxlan_gpe_mask``,
+   and the header struct ``rte_vxlan_gpe_hdr`` with the macro ``RTE_ETHER_VXLAN_GPE_HLEN``
+   will be removed in DPDK 25.11.
+
 * cryptodev: The function ``rte_cryptodev_cb_fn`` will be updated
   to have another parameter ``qp_id`` to return the queue pair ID
   which got error interrupt to the application,
