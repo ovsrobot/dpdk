@@ -804,7 +804,25 @@ class TestPmdShell(DPDKShell):
 
         return TestPmdPortStats.parse(output)
 
-    def _close(self) -> None:
+    def configure_port_mtu(self, port_id: int, mtu_length: int) -> None:
+        """Set the MTU length on a designated port.
+
+        Args:
+            port_id: The ID of the port being configured.
+            mtu_length: The length, in bytes, of the MTU being set.
+        """
+        self.send_command(f"port config mtu {port_id} {mtu_length}")
+
+    def configure_port_mtu_all(self, mtu_length: int) -> None:
+        """Set the MTU length on all designated ports.
+
+        Args:
+            mtu_length: The MTU length to be set on all ports.
+        """
+        for port in self.show_port_info_all():
+            self.send_command(f"port config mtu {port.id} {mtu_length}")
+
+    def close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
         self.stop()
         self.send_command("quit", "Bye...")
