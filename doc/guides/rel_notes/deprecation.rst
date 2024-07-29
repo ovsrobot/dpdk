@@ -147,3 +147,8 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* dmadev: A new flag ``RTE_DMA_CAPA_QOS`` will be introduced to advertise
+  dma device's QoS capability. Also new fields will be added in ``rte_dma_info``
+  and ``rte_dma_conf`` structures to get device supported priority levels
+  and to configure the required priority level.
