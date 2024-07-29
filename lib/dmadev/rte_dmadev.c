@@ -491,6 +491,16 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 			"Device %d configure too many vchans", dev_id);
 		return -EINVAL;
 	}
+	if (dev_conf->priority &&
+	    !(dev_info.dev_capa & RTE_DMA_CAPA_QOS)) {
+		RTE_DMA_LOG(ERR, "Device %d don't support QoS", dev_id);
+		return -EINVAL;
+	}
+	if (dev_conf->priority >= dev_info.nb_priorities) {
+		RTE_DMA_LOG(ERR,
+			"Device %d configure invalid priority", dev_id);
+		return -EINVAL;
+	}
 	if (dev_conf->enable_silent &&
 	    !(dev_info.dev_capa & RTE_DMA_CAPA_SILENT)) {
 		RTE_DMA_LOG(ERR, "Device %d don't support silent", dev_id);
