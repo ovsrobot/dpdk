@@ -133,6 +133,14 @@ Deprecation Notices
   Since these functions are not called directly by the application,
   the API remains unaffected.
 
+* ipsec: The rte_ipsec library is updated to support sequence number provided
+  by application. To allow the same, two new APIs are being introduced:
+  rte_ipsec_pkt_crypto_sqn_assign and rte_ipsec_pkt_crypto_xprepare. These APIs
+  separate the seq no update functionality from the existing rte_ipsec_pkt_crypto_prepare
+  API. Corresponding configure structure changes are being made for the new APIs.
+  Additionally a new flag ``RTE_IPSEC_SAFLAG_SQN_ASSIGN_DISABLE`` is
+  introduced to disable sequence number assignment in lib IPsec.
+
 * pipeline: The pipeline library legacy API (functions rte_pipeline_*)
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new pipeline library API (functions rte_swx_pipeline_*)
