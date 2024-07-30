@@ -53,7 +53,7 @@ Compilation of the DPDK
 *   ``pyelftools`` (version 0.22+)
 
     * For Fedora systems it can be installed using ``dnf install python-pyelftools``
-    * For RHEL/CentOS systems it can be installed using ``pip3 install pyelftools``
+    * For RHEL systems it can be installed using ``pip3 install pyelftools``
     * For Ubuntu/Debian it can be installed using ``apt install python3-pyelftools``
     * For Alpine Linux, ``apk add py3-elftools``
 
@@ -110,7 +110,8 @@ System Software
 
     The kernel version required is based on the oldest long term stable kernel available
     at kernel.org when the DPDK version is in development.
-    Compatibility for recent distribution kernels will be kept, notably RHEL/CentOS 7.
+    Compatibility is maintained for currently supported enterprise distribution kernels
+    such as RHEL 8 (which uses 4.18 kernel).
 
     The kernel version in use can be checked using the command::
 

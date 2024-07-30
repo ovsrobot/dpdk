@@ -209,6 +209,12 @@ Removed Items
   The DMA for HIP09 is no longer available,
   so the support is removed from hisilicon driver for HIP09 platform.
 
+* **Removed support guarantee for CentOS 7 and 8.**
+
+  DPDK can no longer guarantee support for older CentOS releases.
+  CentOS Linux 7 reached end of life (EOL) on 30 June 2024.
+  CentOS Linux 8 stream was end of life on 31 May 2024.
+
 
 API Changes
 -----------
