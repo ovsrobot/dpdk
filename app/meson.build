@@ -76,6 +76,7 @@ foreach app:apps
 
     if build
         subdir(name)
+        run_command([log_deps_cmd, name, deps])
         if not build and require_apps
             error('Cannot build explicitly requested app "@0@".\n'.format(name)
                   + '\tReason: ' + reason)

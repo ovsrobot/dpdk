@@ -154,6 +154,7 @@ foreach subpath:subdirs
         if build
             # pull in driver directory which should update all the local variables
             subdir(drv_path)
+            run_command([log_deps_cmd, drv_path.underscorify(), deps])
 
             if dpdk_conf.get('RTE_IOVA_IN_MBUF') == 0 and require_iova_in_mbuf
                 build = false
