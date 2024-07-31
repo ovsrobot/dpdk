@@ -19,7 +19,7 @@ test_cfgfile_init(char *filename, const char *data)
 	size_t len = strlen(data);
 	int fd;
 
-	fd = mkstemps(filename, strlen(".ini"));
+	fd = mkstemp(filename);
 	if (fd < 0)
 		return fd;
 
@@ -71,7 +71,7 @@ static int
 test_cfgfile_sample1(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_sample1_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_sample1_XXXXXX";
 	int fd, ret;
 
 	fd = test_cfgfile_init(filename, sample1_ini);
@@ -87,7 +87,7 @@ test_cfgfile_sample1(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
-	unlink(filename);
+	remove(filename);
 
 	return 0;
 }
@@ -97,7 +97,7 @@ test_cfgfile_sample2(void)
 {
 	struct rte_cfgfile_parameters params;
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfgile_sample2_XXXXXX.ini";
+	char filename[] = "/tmp/cfgile_sample2_XXXXXX";
 	int fd, ret;
 
 	fd = test_cfgfile_init(filename, sample2_ini);
@@ -109,7 +109,7 @@ test_cfgfile_sample2(void)
 
 	cfgfile = rte_cfgfile_load_with_params(filename, 0, &params);
 	close(fd);
-	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse sample2.ini");
+	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse sample2");
 
 	ret = _test_cfgfile_sample(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to validate sample file: %d", ret);
@@ -117,7 +117,7 @@ test_cfgfile_sample2(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
-	unlink(filename);
+	remove(filename);
 
 	return 0;
 }
@@ -126,7 +126,7 @@ static int
 test_cfgfile_realloc_sections(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_realloc_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_realloc_XXXXXX";
 	int fd, ret;
 	const char *value;
 
@@ -161,7 +161,7 @@ test_cfgfile_realloc_sections(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
-	unlink(filename);
+	remove(filename);
 
 	return 0;
 }
@@ -170,7 +170,7 @@ static int
 test_cfgfile_invalid_section_header(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_invalid_section_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_invalid_section_XXXXXX";
 	int fd;
 
 	fd = test_cfgfile_init(filename, invalid_section_ini);
@@ -180,7 +180,7 @@ test_cfgfile_invalid_section_header(void)
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
 	close(fd);
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
@@ -189,7 +189,7 @@ test_cfgfile_invalid_comment(void)
 {
 	struct rte_cfgfile_parameters params;
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_sample2_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_sample2_XXXXXX";
 	int fd;
 
 	/* override comment character with an invalid one */
@@ -203,7 +203,7 @@ test_cfgfile_invalid_comment(void)
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
 	close(fd);
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
@@ -211,7 +211,7 @@ static int
 test_cfgfile_invalid_key_value_pair(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_empty_key_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_empty_key_XXXXXX";
 	int fd;
 
 	fd = test_cfgfile_init(filename, empty_key_value_ini);
@@ -221,7 +221,7 @@ test_cfgfile_invalid_key_value_pair(void)
 	close(fd);
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
@@ -230,7 +230,7 @@ test_cfgfile_empty_key_value_pair(void)
 {
 	struct rte_cfgfile *cfgfile;
 	const char *value;
-	char filename[] = "/tmp/cfg_empty_key_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_empty_key_XXXXXX";
 	int fd, ret;
 
 	fd = test_cfgfile_init(filename, empty_key_value_ini);
@@ -239,7 +239,7 @@ test_cfgfile_empty_key_value_pair(void)
 	cfgfile = rte_cfgfile_load(filename, CFG_FLAG_EMPTY_VALUES);
 	close(fd);
 
-	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse empty_key_value.ini");
+	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse empty_key_value");
 
 	ret = rte_cfgfile_num_sections(cfgfile, NULL, 0);
 	TEST_ASSERT(ret == 1, "Unexpected number of sections: %d", ret);
@@ -256,7 +256,7 @@ test_cfgfile_empty_key_value_pair(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
@@ -264,7 +264,7 @@ static int
 test_cfgfile_missing_section(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_missing_section_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_missing_section_XXXXXX";
 	int fd;
 
 	fd = test_cfgfile_init(filename, missing_section_ini);
@@ -274,7 +274,7 @@ test_cfgfile_missing_section(void)
 	close(fd);
 
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
@@ -283,7 +283,7 @@ test_cfgfile_global_properties(void)
 {
 	struct rte_cfgfile *cfgfile;
 	const char *value;
-	char filename[] = "/tmp/cfg_missing_section_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_missing_section_XXXXXX";
 	int fd, ret;
 
 	fd = test_cfgfile_init(filename, missing_section_ini);
@@ -309,7 +309,7 @@ test_cfgfile_global_properties(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
@@ -317,7 +317,7 @@ static int
 test_cfgfile_empty_file(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[] = "/tmp/cfg_empty_XXXXXX.ini";
+	char filename[] = "/tmp/cfg_empty_XXXXXX";
 	int fd, ret;
 
 	fd = test_cfgfile_init(filename, empty_ini);
@@ -333,7 +333,7 @@ test_cfgfile_empty_file(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
-	unlink(filename);
+	remove(filename);
 	return 0;
 }
 
