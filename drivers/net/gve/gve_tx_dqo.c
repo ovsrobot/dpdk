@@ -126,6 +126,7 @@ gve_tx_burst_dqo(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			txd->pkt.dtype = GVE_TX_PKT_DESC_DTYPE_DQO;
 			txd->pkt.compl_tag = rte_cpu_to_le_16(first_sw_id);
 			txd->pkt.buf_size = RTE_MIN(tx_pkt->data_len, GVE_TX_MAX_BUF_SIZE_DQO);
+			txd->pkt.end_of_packet = 0;
 
 			/* size of desc_ring and sw_ring could be different */
 			tx_id = (tx_id + 1) & mask;
