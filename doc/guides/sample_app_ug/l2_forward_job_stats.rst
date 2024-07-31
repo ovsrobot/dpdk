@@ -96,7 +96,7 @@ thousands  separator printing, issue the command:
 
 .. code-block:: console
 
-    $ ./<build_dir>/examples/dpdk-l2fwd-jobstats -l 0-3 -n 4 -- -q 8 -p ffff -l
+    $ ./<build_dir>/examples/dpdk-l2fwd-jobstats -l 0-3 -- -q 8 -p ffff -l
 
 Refer to the *DPDK Getting Started Guide* for general information on running applications
 and the Environment Abstraction Layer (EAL) options.

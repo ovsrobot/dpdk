@@ -86,20 +86,20 @@ issue the command:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-3 -n 4 -- -q 8 -p ffff --mode=poll
+    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-3 -- -q 8 -p ffff --mode=poll
 
 Eventdev mode with 4 lcores, 16 ports , sched method ordered and MAC address updating enabled,
 issue the command:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-3 -n 4 -- -p ffff --eventq-sched=ordered
+    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-3 -- -p ffff --eventq-sched=ordered
 
 or
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-3 -n 4 -- -q 8 -p ffff --mode=eventdev --eventq-sched=ordered
+    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-3 -- -q 8 -p ffff --mode=eventdev --eventq-sched=ordered
 
 Refer to the *DPDK Getting Started Guide* for general information on running
 applications and the Environment Abstraction Layer (EAL) options.
@@ -116,7 +116,7 @@ scheduler. Following is the sample command:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-7 -s 0-3 -n 4 --vdev event_sw0 -- -q 8 -p ffff --mode=eventdev --eventq-sched=ordered
+    ./<build_dir>/examples/dpdk-l2fwd-event -l 0-7 -s 0-3 --vdev event_sw0 -- -q 8 -p ffff --mode=eventdev --eventq-sched=ordered
 
 Explanation
 -----------
