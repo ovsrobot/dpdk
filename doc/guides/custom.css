@@ -4,6 +4,14 @@
 
 /* Override readthedocs theme */
 
+/* Set full width on a page.
+ * Usage: insert the following line in the doc.
+ *        .. rst-class:: widepage
+ */
+.wy-nav-content:has(.widepage) {
+    max-width: none !important;
+}
+
 /* Spacing before a list item must be bigger than spacing inside the item.
  * Complex list items start with a p.first element. */
 .section li > .first {
