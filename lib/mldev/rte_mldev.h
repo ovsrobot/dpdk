@@ -937,6 +937,10 @@ struct rte_ml_io_info {
 	/** Number of elements in tensor */
 	uint64_t size;
 	/** Size of tensor in bytes */
+	float scale;
+	/** Scale factor */
+	int64_t zero_point;
+	/* Zero point */
 };
 
 /** Model information structure */
