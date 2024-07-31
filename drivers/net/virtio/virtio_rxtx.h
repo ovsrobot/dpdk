@@ -35,7 +35,29 @@ struct virtnet_tx {
 };
 
 int virtio_rxq_vec_setup(struct virtnet_rx *rxvq);
-void virtio_update_packet_stats(struct virtnet_stats *stats,
-				struct rte_mbuf *mbuf);
+
+static inline void
+virtio_update_packet_stats(struct virtnet_stats *const stats, const struct rte_mbuf *const mbuf)
+{
+	uint32_t s = mbuf->pkt_len;
+	const struct rte_ether_addr *const ea = rte_pktmbuf_mtod(mbuf, const struct rte_ether_addr *);
+
+	stats->bytes += s;
+
+	if (s >= 1024) {
+		stats->size_bins[6 + (s > 1518)]++;
+	} else if (s <= 64) {
+		stats->size_bins[s >> 6]++;
+	} else {
+		/* count zeros, and offset into correct bin */
+		uint32_t bin = (sizeof(s) * 8) - rte_clz32(s) - 5;
+		stats->size_bins[bin]++;
+	}
+
+	RTE_BUILD_BUG_ON(offsetof(struct virtnet_stats, broadcast) !=
+			offsetof(struct virtnet_stats, multicast) + sizeof(uint64_t));
+	if (rte_is_multicast_ether_addr(ea))
+		(&stats->multicast)[rte_is_broadcast_ether_addr(ea)]++;
+}
 
 #endif /* _VIRTIO_RXTX_H_ */
