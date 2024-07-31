@@ -81,40 +81,6 @@ vq_ring_free_chain(struct virtqueue *vq, uint16_t desc_idx)
 	dp->next = VQ_RING_DESC_CHAIN_END;
 }
 
-void
-virtio_update_packet_stats(struct virtnet_stats *stats, struct rte_mbuf *mbuf)
-{
-	uint32_t s = mbuf->pkt_len;
-	struct rte_ether_addr *ea;
-
-	stats->bytes += s;
-
-	if (s == 64) {
-		stats->size_bins[1]++;
-	} else if (s > 64 && s < 1024) {
-		uint32_t bin;
-
-		/* count zeros, and offset into correct bin */
-		bin = (sizeof(s) * 8) - rte_clz32(s) - 5;
-		stats->size_bins[bin]++;
-	} else {
-		if (s < 64)
-			stats->size_bins[0]++;
-		else if (s < 1519)
-			stats->size_bins[6]++;
-		else
-			stats->size_bins[7]++;
-	}
-
-	ea = rte_pktmbuf_mtod(mbuf, struct rte_ether_addr *);
-	if (rte_is_multicast_ether_addr(ea)) {
-		if (rte_is_broadcast_ether_addr(ea))
-			stats->broadcast++;
-		else
-			stats->multicast++;
-	}
-}
-
 static inline void
 virtio_rx_stats_updated(struct virtnet_rx *rxvq, struct rte_mbuf *m)
 {
