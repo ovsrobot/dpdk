@@ -24,6 +24,11 @@ get_numa_count_cmd = py3 + files('get-numa-count.py')
 get_test_suites_cmd = py3 + files('get-test-suites.py')
 has_hugepages_cmd = py3 + files('has-hugepages.py')
 cmdline_gen_cmd = py3 + files('dpdk-cmdline-gen.py')
+# Visual Studio Code conf generator always requires build and source root
+vscode_conf_gen_cmd = py3 + files('gen-vscode-conf.py') + [
+        '--build-dir', dpdk_build_root,
+        '--source-dir', dpdk_source_root
+    ]
 
 # install any build tools that end-users might want also
 install_data([
