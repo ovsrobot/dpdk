@@ -125,6 +125,9 @@ Deprecation Notices
   This will effect the KASUMI, SNOW3G, ZUC, AESNI GCM, AESNI MB and CHACHAPOLY
   SW PMDs.
 
+* cryptodev: The structure ``rte_cryptodev_qp_conf`` will be updated to have
+  a new parameter to set priority of that particular queue pair.
+
 * eventdev: The single-event (non-burst) enqueue and dequeue operations,
   used by static inline burst enqueue and dequeue functions in ``rte_eventdev.h``,
   will be removed in DPDK 23.11.
