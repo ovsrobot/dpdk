@@ -9536,11 +9536,10 @@ flow_hw_tx_tag_regc_mask(struct rte_eth_dev *dev)
 	struct mlx5_priv *priv = dev->data->dev_private;
 	uint32_t mask = priv->sh->dv_regc0_mask;
 
-	/* Mask is verified during device initialization. Sanity checking here. */
+	/* Mask is verified during device initialization. */
 	MLX5_ASSERT(mask != 0);
 	/*
 	 * Availability of sufficient number of bits in REG_C_0 is verified on initialization.
-	 * Sanity checking here.
 	 */
 	MLX5_ASSERT(rte_popcount32(mask) >= rte_popcount32(priv->vport_meta_mask));
 	return mask;
@@ -9552,12 +9551,11 @@ flow_hw_tx_tag_regc_value(struct rte_eth_dev *dev)
 	struct mlx5_priv *priv = dev->data->dev_private;
 	uint32_t tag;
 
-	/* Mask is verified during device initialization. Sanity checking here. */
+	/* Mask is verified during device initialization. */
 	MLX5_ASSERT(priv->vport_meta_mask != 0);
 	tag = priv->vport_meta_tag >> (rte_bsf32(priv->vport_meta_mask));
 	/*
 	 * Availability of sufficient number of bits in REG_C_0 is verified on initialization.
-	 * Sanity checking here.
 	 */
 	MLX5_ASSERT((tag & priv->sh->dv_regc0_mask) == tag);
 	return tag;

@@ -9,7 +9,7 @@
 #include <compat.h>
 #include <fsl_qbman_base.h>
 
-/* Sanity check */
+/* Byte order check */
 #if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) && \
 	(__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__)
 #error "Unknown endianness!"

@@ -1130,7 +1130,7 @@ ixgbe_fdir_filter_program(struct rte_eth_dev *dev,
 		return -ENOTSUP;
 
 	/*
-	 * Sanity check for x550.
+	 * Check for x550.
 	 * When adding a new filter with flow type set to IPv4,
 	 * the flow director mask should be configed before,
 	 * and the L4 protocol and ports are masked.

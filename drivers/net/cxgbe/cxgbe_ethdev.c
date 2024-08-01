@@ -525,10 +525,7 @@ int cxgbe_dev_tx_queue_setup(struct rte_eth_dev *eth_dev,
 
 	eth_dev->data->tx_queues[queue_idx] = (void *)txq;
 
-	/* Sanity Checking
-	 *
-	 * nb_desc should be > 1023 and <= CXGBE_MAX_RING_DESC_SIZE
-	 */
+	/* nb_desc should be > 1023 and <= CXGBE_MAX_RING_DESC_SIZE */
 	temp_nb_desc = nb_desc;
 	if (nb_desc < CXGBE_MIN_RING_DESC_SIZE) {
 		dev_warn(adapter, "%s: number of descriptors must be >= %d. Using default [%d]\n",
@@ -649,10 +646,7 @@ int cxgbe_dev_rx_queue_setup(struct rte_eth_dev *eth_dev,
 
 	eth_dev->data->rx_queues[queue_idx] = (void *)rxq;
 
-	/* Sanity Checking
-	 *
-	 * nb_desc should be > 0 and <= CXGBE_MAX_RING_DESC_SIZE
-	 */
+	/* nb_desc should be > 0 and <= CXGBE_MAX_RING_DESC_SIZE */
 	temp_nb_desc = nb_desc;
 	if (nb_desc < CXGBE_MIN_RING_DESC_SIZE) {
 		dev_warn(adapter, "%s: number of descriptors must be >= %d. Using default [%d]\n",

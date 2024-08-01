@@ -595,13 +595,13 @@ tlv_update_partition_len_and_cks(
 
 	/*
 	 * We just modified the partition, so the total length may not be
-	 * valid. Don't use tlv_find(), which performs some sanity checks
+	 * valid. Don't use tlv_find(), which performs some checks
 	 * that may fail here.
 	 */
 	partition.data = cursor->block;
 	memcpy(&partition.tlv_cursor, cursor, sizeof (*cursor));
 	header = (struct tlv_partition_header *)partition.data;
-	/* Sanity check. */
+	/* Header check */
 	if (__LE_TO_CPU_32(header->tag) != TLV_TAG_PARTITION_HEADER) {
 		rc = EFAULT;
 		goto fail1;

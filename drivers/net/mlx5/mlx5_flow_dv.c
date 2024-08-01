@@ -9212,7 +9212,7 @@ flow_dv_prepare(struct rte_eth_dev *dev,
 
 #ifdef RTE_LIBRTE_MLX5_DEBUG
 /**
- * Sanity check for match mask and value. Similar to check_valid_spec() in
+ * Check for match mask and value. Similar to check_valid_spec() in
  * kernel driver. If unmasked bit is present in value, it returns failure.
  *
  * @param match_mask

@@ -527,7 +527,7 @@ nfp_net_flow_compile_items(const struct rte_flow_item items[],
 			break;
 		}
 
-		/* Perform basic sanity checks */
+		/* Perform basic checks */
 		ret = nfp_net_flow_item_check(item, proc);
 		if (ret != 0) {
 			PMD_DRV_LOG(ERR, "NFP flow item %d check failed", item->type);

@@ -241,7 +241,7 @@ opdl_queue_setup(struct rte_eventdev *dev,
 
 	struct opdl_evdev *device = opdl_pmd_priv(dev);
 
-	/* Extra sanity check, probably not needed */
+	/* Extra check, probably not needed */
 	if (queue_id == OPDL_INVALID_QID) {
 		PMD_DRV_LOG(ERR, "DEV_ID:[%02d] : "
 			     "Invalid queue id %u requested\n",

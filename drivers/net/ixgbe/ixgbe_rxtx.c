@@ -4983,7 +4983,7 @@ ixgbe_set_rsc(struct rte_eth_dev *dev)
 	uint32_t rdrxctl;
 	uint32_t rfctl;
 
-	/* Sanity check */
+	/* Offload check */
 	dev->dev_ops->dev_infos_get(dev, &dev_info);
 	if (dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TCP_LRO)
 		rsc_capable = true;

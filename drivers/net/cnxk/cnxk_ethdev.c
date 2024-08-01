@@ -643,7 +643,7 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 	struct rte_mempool *lpb_pool = mp;
 	struct rte_mempool *spb_pool = NULL;
 
-	/* Sanity checks */
+	/* input checks */
 	if (rx_conf->rx_deferred_start == 1) {
 		plt_err("Deferred Rx start is not supported");
 		goto fail;
@@ -1212,7 +1212,7 @@ cnxk_nix_configure(struct rte_eth_dev *eth_dev)
 
 	rc = -EINVAL;
 
-	/* Sanity checks */
+	/* baseline checks */
 	if (rte_eal_has_hugepages() == 0) {
 		plt_err("Huge page is not configured");
 		goto fail_configure;

@@ -2732,7 +2732,7 @@ nfp_flow_compile_item_proc(struct nfp_flower_representor *repr,
 			break;
 		}
 
-		/* Perform basic sanity checks */
+		/* Perform basic checks */
 		ret = nfp_flow_item_check(item, proc);
 		if (ret != 0) {
 			PMD_DRV_LOG(ERR, "nfp flow item %d check failed", item->type);

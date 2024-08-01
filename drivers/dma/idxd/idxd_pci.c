@@ -205,7 +205,7 @@ init_pci_device(struct rte_pci_device *dev, struct idxd_dmadev *idxd,
 		goto err;
 	}
 
-	/* sanity check device status */
+	/* check device status */
 	if (pci->regs->gensts & GENSTS_DEV_STATE_MASK) {
 		/* need function-level-reset (FLR) or is enabled */
 		IDXD_PMD_ERR("Device status is not disabled, cannot init");

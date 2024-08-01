@@ -646,7 +646,7 @@ fm10k_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		if (q->nb_free < mb->nb_segs)
 			break;
 
-		/* sanity check to make sure the mbuf is valid */
+		/* check to make sure the mbuf is valid */
 		if ((mb->nb_segs == 0) ||
 		    ((mb->nb_segs > 1) && (mb->next == NULL)))
 			break;

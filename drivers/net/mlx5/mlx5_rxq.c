@@ -1442,7 +1442,7 @@ mlx5_mprq_alloc_mp(struct rte_eth_dev *dev)
 	desc *= 4;
 	obj_num = desc + MLX5_MPRQ_MP_CACHE_SZ * n_ibv;
 	/*
-	 * rte_mempool_create_empty() has sanity check to refuse large cache
+	 * rte_mempool_create_empty() has basic check to refuse large cache
 	 * size compared to the number of elements.
 	 * CALC_CACHE_FLUSHTHRESH() is defined in a C file, so using a
 	 * constant number 2 instead.

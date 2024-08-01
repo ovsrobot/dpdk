@@ -458,7 +458,7 @@ npa_aura_pool_pair_alloc(struct npa_lf *lf, const uint32_t block_size,
 	char name[PLT_MEMZONE_NAMESIZE];
 	const struct plt_memzone *mz;
 
-	/* Sanity check */
+	/* argument checks */
 	if (!lf || !block_size || !block_count || !pool || !aura ||
 	    !aura_handle)
 		return NPA_ERR_PARAM;
@@ -622,7 +622,7 @@ npa_aura_alloc(struct npa_lf *lf, const uint32_t block_count, int pool_id,
 {
 	int rc, aura_id;
 
-	/* Sanity check */
+	/* parameter check */
 	if (!lf || !aura || !aura_handle)
 		return NPA_ERR_PARAM;
 
@@ -1096,7 +1096,7 @@ npa_dev_init(struct npa_lf *lf, uintptr_t base, struct mbox *mbox)
 	uint8_t aura_sz;
 	int rc;
 
-	/* Sanity checks */
+	/* Input checks */
 	if (!lf || !base || !mbox)
 		return NPA_ERR_PARAM;
 

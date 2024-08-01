@@ -137,7 +137,7 @@ static int adap_init0vf(struct adapter *adapter)
 
 	/*
 	 * Grab our Virtual Interface resource allocation, extract the
-	 * features that we're interested in and do a bit of sanity testing on
+	 * features that we're interested in and do a bit of testing on
 	 * what we discover.
 	 */
 	err = t4vf_get_vfres(adapter);
@@ -148,7 +148,7 @@ static int adap_init0vf(struct adapter *adapter)
 	}
 
 	/*
-	 * Check for various parameter sanity issues.
+	 * Check for various parameter issues.
 	 */
 	if (adapter->params.vfres.pmask == 0) {
 		dev_err(adapter->pdev_dev, "no port access configured\n"

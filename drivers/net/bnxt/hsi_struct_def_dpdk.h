@@ -56770,7 +56770,7 @@ struct hwrm_tfc_ident_alloc_output {
  * Requests the firmware to free a TFC resource identifier.
  * A resource subtype and session id are passed in.
  * An identifier (previously allocated) corresponding to all these is
- * freed, only after various sanity checks are completed.
+ * freed, only after various checks are completed.
  */
 /* hwrm_tfc_ident_free_input (size:192b/24B) */
 struct hwrm_tfc_ident_free_input {

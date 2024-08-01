@@ -538,7 +538,7 @@ static int bnxt_hwrm_send_message(struct bnxt *bp, void *msg,
 
 		done = bnxt_check_cq_hwrm_done(cpr, is_tx, is_rx,
 					       i == timeout - 1);
-		/* Sanity check on the resp->resp_len */
+		/* Input check on the resp->resp_len */
 		rte_io_rmb();
 		if (resp->resp_len && resp->resp_len <= bp->max_resp_len) {
 			/* Last byte of resp contains the valid key */
