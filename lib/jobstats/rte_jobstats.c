@@ -124,7 +124,7 @@ rte_jobstats_start(struct rte_jobstats_context *ctx, struct rte_jobstats *job)
 {
 	uint64_t now;
 
-	/* Some sanity check. */
+	/* Check validity of arguments. */
 	if (unlikely(ctx == NULL || job == NULL || job->context != NULL))
 		return -EINVAL;
 
@@ -144,7 +144,7 @@ rte_jobstats_abort(struct rte_jobstats *job)
 	struct rte_jobstats_context *ctx;
 	uint64_t now, exec_time;
 
-	/* Some sanity check. */
+	/* Check that arguments are valid */
 	if (unlikely(job == NULL || job->context == NULL))
 		return -EINVAL;
 
@@ -165,7 +165,7 @@ rte_jobstats_finish(struct rte_jobstats *job, int64_t job_value)
 	uint64_t now, exec_time;
 	int need_update;
 
-	/* Some sanity check. */
+	/* Check arguments */
 	if (unlikely(job == NULL || job->context == NULL))
 		return -EINVAL;
 

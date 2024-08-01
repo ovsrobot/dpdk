@@ -332,7 +332,7 @@ rte_graph_cluster_stats_create(const struct rte_graph_cluster_stats_param *prm)
 	const char *pattern;
 	rte_graph_t i;
 
-	/* Sanity checks */
+	/* Validate arguments */
 	if (!rte_graph_has_stats_feature())
 		SET_ERR_JMP(EINVAL, fail, "Stats feature is not enabled");
 

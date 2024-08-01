@@ -389,7 +389,7 @@ rte_graph_create(const char *name, struct rte_graph_param *prm)
 
 	graph_spinlock_lock();
 
-	/* Check arguments sanity */
+	/* Check argument validity */
 	if (prm == NULL)
 		SET_ERR_JMP(EINVAL, fail, "Param should not be NULL");
 

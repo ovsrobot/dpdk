@@ -68,7 +68,7 @@ __rte_node_register(const struct rte_node_register *reg)
 
 	graph_spinlock_lock();
 
-	/* Check sanity */
+	/* Check argument validity */
 	if (reg == NULL || reg->process == NULL) {
 		rte_errno = EINVAL;
 		goto fail;
