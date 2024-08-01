@@ -654,7 +654,7 @@ rte_malloc_heap_destroy(const char *heap_name)
 		ret = -1;
 		goto unlock;
 	}
-	/* sanity checks done, now we can destroy the heap */
+	/* checks done, now we can destroy the heap */
 	rte_spinlock_lock(&heap->lock);
 	ret = malloc_heap_destroy(heap);
 	rte_spinlock_unlock(&heap->lock);

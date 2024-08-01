@@ -468,7 +468,7 @@ __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 	struct trace_point *tp;
 	uint16_t sz;
 
-	/* Sanity checks of arguments */
+	/* Check arguments */
 	if (name == NULL || register_fn == NULL || handle == NULL) {
 		trace_err("invalid arguments");
 		rte_errno = EINVAL;
