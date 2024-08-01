@@ -5,47 +5,53 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/queue.h>
+#include <unistd.h>
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+#include <io.h>
+#endif
 
 #include <rte_cfgfile.h>
 
 #include "test.h"
-#include "resource.h"
 
-
-#define CFG_FILES_ETC "test_cfgfiles/etc"
-
-REGISTER_LINKED_RESOURCE(test_cfgfiles);
+#include "test_cfgfiles.h"
 
 static int
-test_cfgfile_setup(void)
+make_tmp_file(char *filename, const char *prefix, const char *data)
 {
-	const struct resource *r;
-	int ret;
+	size_t len = strlen(data);
+	size_t count;
+	FILE *f;
 
-	r = resource_find("test_cfgfiles");
-	TEST_ASSERT_NOT_NULL(r, "missing resource test_cfgfiles");
+#ifdef RTE_EXEC_ENV_WINDOWS
+	char tempDirName[MAX_PATH - 14];
 
-	ret = resource_untar(r);
-	TEST_ASSERT_SUCCESS(ret, "failed to untar %s", r->name);
+	if (GetTempPathA(sizeof(tempDirName), tempDirName) == 0)
+		return -1;
 
-	return 0;
+	if (GetTempFileNameA(tempDirName, prefix, 0, filename) == 0)
+		return -1;
+
+	f = fopen(filename, "wt");
+#else
+	snprintf(filename, PATH_MAX, "/tmp/%s_XXXXXXX", prefix);
+
+	int fd = mkstemp(filename);
+	if (fd < 0)
+		return -1;
+
+	f = fdopen(fd, "w");
+#endif
+	if (f == NULL)
+		return -1;
+
+	count = fwrite(data, sizeof(char), len, f);
+	fclose(f);
+
+	return (count == len) ? 0 : -1;
 }
 
-static int
-test_cfgfile_cleanup(void)
-{
-	const struct resource *r;
-	int ret;
-
-	r = resource_find("test_cfgfiles");
-	TEST_ASSERT_NOT_NULL(r, "missing resource test_cfgfiles");
-
-	ret = resource_rm_by_tar(r);
-	TEST_ASSERT_SUCCESS(ret, "Failed to delete resource %s", r->name);
-
-	return 0;
-}
 
 static int
 _test_cfgfile_sample(struct rte_cfgfile *cfgfile)
@@ -87,9 +93,13 @@ static int
 test_cfgfile_sample1(void)
 {
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
 	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/sample1.ini", 0);
+	ret = make_tmp_file(filename, "sample1", sample1_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
 	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to load config file");
 
 	ret = _test_cfgfile_sample(cfgfile);
@@ -97,6 +107,8 @@ test_cfgfile_sample1(void)
 
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
+
+	remove(filename);
 
 	return 0;
 }
@@ -106,21 +118,26 @@ test_cfgfile_sample2(void)
 {
 	struct rte_cfgfile_parameters params;
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
 	int ret;
+
+	ret = make_tmp_file(filename, "sample2", sample2_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
 
 	/* override comment character */
 	memset(&params, 0, sizeof(params));
 	params.comment_character = '#';
 
-	cfgfile = rte_cfgfile_load_with_params(CFG_FILES_ETC "/sample2.ini", 0,
-					       &params);
-	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse sample2.ini");
+	cfgfile = rte_cfgfile_load_with_params(filename, 0, &params);
+	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse sample2");
 
 	ret = _test_cfgfile_sample(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to validate sample file: %d", ret);
 
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
+
+	remove(filename);
 
 	return 0;
 }
@@ -129,10 +146,14 @@ static int
 test_cfgfile_realloc_sections(void)
 {
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
 	int ret;
 	const char *value;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/realloc_sections.ini", 0);
+	ret = make_tmp_file(filename, "realloc", realloc_sections_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
 	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to load config file");
 
 	ret = rte_cfgfile_num_sections(cfgfile, NULL, 0);
@@ -152,12 +173,14 @@ test_cfgfile_realloc_sections(void)
 	TEST_ASSERT(strcmp("value8_section9", value) == 0,
 		    "key unexpected value: %s", value);
 
-	ret = rte_cfgfile_save(cfgfile, "/tmp/cfgfile_save.ini");
+	ret = rte_cfgfile_save(cfgfile, "/tmp/cfg_save.ini");
 	TEST_ASSERT_SUCCESS(ret, "Failed to save *.ini file");
-	remove("/tmp/cfgfile_save.ini");
+	remove("/tmp/cfg_save.ini");
 
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
+
+	remove(filename);
 
 	return 0;
 }
@@ -166,10 +189,16 @@ static int
 test_cfgfile_invalid_section_header(void)
 {
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
+	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/invalid_section.ini", 0);
+	ret = make_tmp_file(filename, "invalid", invalid_section_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
+	remove(filename);
 	return 0;
 }
 
@@ -178,15 +207,20 @@ test_cfgfile_invalid_comment(void)
 {
 	struct rte_cfgfile_parameters params;
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
+	int ret;
 
 	/* override comment character with an invalid one */
 	memset(&params, 0, sizeof(params));
 	params.comment_character = '$';
 
-	cfgfile = rte_cfgfile_load_with_params(CFG_FILES_ETC "/sample2.ini", 0,
-					       &params);
+	ret = make_tmp_file(filename, "sample2", sample2_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load_with_params(filename, 0, &params);
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
+	remove(filename);
 	return 0;
 }
 
@@ -194,10 +228,16 @@ static int
 test_cfgfile_invalid_key_value_pair(void)
 {
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
+	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/empty_key_value.ini", 0);
+	ret = make_tmp_file(filename, "empty_key", empty_key_value_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
+	remove(filename);
 	return 0;
 }
 
@@ -206,11 +246,14 @@ test_cfgfile_empty_key_value_pair(void)
 {
 	struct rte_cfgfile *cfgfile;
 	const char *value;
+	char filename[PATH_MAX];
 	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/empty_key_value.ini",
-				   CFG_FLAG_EMPTY_VALUES);
-	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse empty_key_value.ini");
+	ret = make_tmp_file(filename, "empty_key_value", empty_key_value_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, CFG_FLAG_EMPTY_VALUES);
+	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to parse empty_key_value");
 
 	ret = rte_cfgfile_num_sections(cfgfile, NULL, 0);
 	TEST_ASSERT(ret == 1, "Unexpected number of sections: %d", ret);
@@ -227,6 +270,7 @@ test_cfgfile_empty_key_value_pair(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
+	remove(filename);
 	return 0;
 }
 
@@ -234,10 +278,16 @@ static int
 test_cfgfile_missing_section(void)
 {
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
+	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/missing_section.ini", 0);
+	ret = make_tmp_file(filename, "missing_section", missing_section_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
 	TEST_ASSERT_NULL(cfgfile, "Expected failure did not occur");
 
+	remove(filename);
 	return 0;
 }
 
@@ -246,10 +296,13 @@ test_cfgfile_global_properties(void)
 {
 	struct rte_cfgfile *cfgfile;
 	const char *value;
+	char filename[PATH_MAX];
 	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/missing_section.ini",
-				   CFG_FLAG_GLOBAL_SECTION);
+	ret = make_tmp_file(filename, "missing_section", missing_section_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, CFG_FLAG_GLOBAL_SECTION);
 	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to load config file");
 
 	ret = rte_cfgfile_num_sections(cfgfile, NULL, 0);
@@ -268,6 +321,7 @@ test_cfgfile_global_properties(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
+	remove(filename);
 	return 0;
 }
 
@@ -275,9 +329,13 @@ static int
 test_cfgfile_empty_file(void)
 {
 	struct rte_cfgfile *cfgfile;
+	char filename[PATH_MAX];
 	int ret;
 
-	cfgfile = rte_cfgfile_load(CFG_FILES_ETC "/empty.ini", 0);
+	ret = make_tmp_file(filename, "empty", empty_ini);
+	TEST_ASSERT_SUCCESS(ret, "Failed to setup temp file");
+
+	cfgfile = rte_cfgfile_load(filename, 0);
 	TEST_ASSERT_NOT_NULL(cfgfile, "Failed to load config file");
 
 	ret = rte_cfgfile_num_sections(cfgfile, NULL, 0);
@@ -286,15 +344,13 @@ test_cfgfile_empty_file(void)
 	ret = rte_cfgfile_close(cfgfile);
 	TEST_ASSERT_SUCCESS(ret, "Failed to close cfgfile");
 
+	remove(filename);
 	return 0;
 }
 
 static int
 test_cfgfile(void)
 {
-	if (test_cfgfile_setup())
-		return -1;
-
 	if (test_cfgfile_sample1())
 		return -1;
 
@@ -325,10 +381,7 @@ test_cfgfile(void)
 	if (test_cfgfile_empty_file())
 		return -1;
 
-	if (test_cfgfile_cleanup())
-		return -1;
-
 	return 0;
 }
 
-REGISTER_TEST_COMMAND(cfgfile_autotest, test_cfgfile);
+REGISTER_FAST_TEST(cfgfile_autotest, true, true, test_cfgfile);
