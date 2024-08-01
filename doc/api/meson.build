@@ -41,6 +41,10 @@ cdata.set('WARN_AS_ERROR', 'NO')
 if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
+# A local reference must be relative to the main index.html page
+# The path below can't be taken from the DTS meson file as that would
+# require recursive subdir traversal (doc, dts, then doc again)
+cdata.set('DTS_API_MAIN_PAGE', join_paths('..', 'dts', 'html', 'index.html'))
 
 # configure HTML Doxygen run
 html_cdata = configuration_data()
