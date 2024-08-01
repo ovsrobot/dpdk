@@ -16,10 +16,13 @@ parser.add_argument('sphinx')
 parser.add_argument('version')
 parser.add_argument('src')
 parser.add_argument('dst')
+parser.add_argument('--dts-root', default=None)
 args, extra_args = parser.parse_known_args()
 
 # set the version in environment for sphinx to pick up
 os.environ['DPDK_VERSION'] = args.version
+if args.dts_root:
+    os.environ['DTS_ROOT'] = args.dts_root
 
 sphinx_cmd = [args.sphinx] + extra_args
 
