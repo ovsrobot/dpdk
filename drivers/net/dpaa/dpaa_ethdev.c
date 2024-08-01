@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
  *   Copyright 2016 Freescale Semiconductor, Inc. All rights reserved.
- *   Copyright 2017-2020 NXP
+ *   Copyright 2017-2020,2022 NXP
  *
  */
 /* System headers */
@@ -1670,6 +1670,10 @@ static struct eth_dev_ops dpaa_devops = {
 	.rx_queue_intr_disable	  = dpaa_dev_queue_intr_disable,
 	.rss_hash_update	  = dpaa_dev_rss_hash_update,
 	.rss_hash_conf_get        = dpaa_dev_rss_hash_conf_get,
+#if defined(RTE_LIBRTE_IEEE1588)
+	.timesync_read_rx_timestamp = dpaa_timesync_read_rx_timestamp,
+	.timesync_read_tx_timestamp = dpaa_timesync_read_tx_timestamp,
+#endif
 };
 
 static bool
