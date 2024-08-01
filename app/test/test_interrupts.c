@@ -48,7 +48,7 @@ static union intr_pipefds pfds;
  * Check if the interrupt handle is valid.
  */
 static inline int
-test_interrupt_handle_sanity_check(struct rte_intr_handle *intr_handle)
+test_interrupt_handle_check(struct rte_intr_handle *intr_handle)
 {
 	if (!intr_handle || rte_intr_fd_get(intr_handle) < 0)
 		return -1;
@@ -164,7 +164,7 @@ test_interrupt_handle_compare(struct rte_intr_handle *intr_handle_l,
 #else
 /* to be implemented for bsd later */
 static inline int
-test_interrupt_handle_sanity_check(struct rte_intr_handle *intr_handle)
+test_interrupt_handle_check(struct rte_intr_handle *intr_handle)
 {
 	RTE_SET_USED(intr_handle);
 
@@ -215,7 +215,7 @@ test_interrupt_callback(void *arg)
 		return;
 	}
 
-	if (test_interrupt_handle_sanity_check(intr_handle) < 0) {
+	if (test_interrupt_handle_check(intr_handle) < 0) {
 		printf("null or invalid intr_handle for %s\n", __func__);
 		flag = -1;
 		return;
@@ -241,7 +241,8 @@ static void
 test_interrupt_callback_1(void *arg)
 {
 	struct rte_intr_handle *intr_handle = arg;
-	if (test_interrupt_handle_sanity_check(intr_handle) < 0) {
+
+	if (test_interrupt_handle_check(intr_handle) < 0) {
 		printf("null or invalid intr_handle for %s\n", __func__);
 		flag = -1;
 		return;

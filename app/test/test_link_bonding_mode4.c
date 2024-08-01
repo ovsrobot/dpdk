@@ -224,7 +224,7 @@ add_member(struct member_conf *member, uint8_t start)
 	struct rte_ether_addr addr, addr_check;
 	int retval;
 
-	/* Some sanity check */
+	/* Some basic tests. */
 	RTE_VERIFY(test_params.member_ports <= member &&
 		member - test_params.member_ports < (int)RTE_DIM(test_params.member_ports));
 	RTE_VERIFY(member->bonding == 0);
