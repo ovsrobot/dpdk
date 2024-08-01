@@ -15,6 +15,7 @@
 #include <rte_hash.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
+#include <rte_siphash.h>
 
 #include "test.h"
 
@@ -52,6 +53,42 @@ static uint32_t hash_values_crc[2][12] = {{
 }
 };
 
+static uint32_t hash_values_hsiphash[2][12] = {
+	{
+		0x8e01e473, 0xc41e3669,
+		0x813e4dbd, 0x7ebe2eea,
+		0x33a5c5b7, 0xc910629b,
+		0xba50237f, 0xbbc870c6,
+		0x95124362, 0x850f8e0d,
+		0x192ff266, 0xb41d8206,
+	}, {
+		0x66200aa0, 0x769e7201,
+		0x0e934d03, 0x96d7c892,
+		0xb4643534, 0xcb758913,
+		0x498b66e9, 0x116b4082,
+		0x603030dc, 0x644b608b,
+		0x74b29c27, 0x513f3a9c,
+	}
+};
+
+static uint64_t hash_values_siphash[2][12] = {
+	{
+		0x8b5a0baa49fbc58d, 0x62c3506f27376c25,
+		0xef7bdf3ee24abec8, 0xc72b1c24fc2f7938,
+		0xc902632ed88f897f, 0xab631e00063006f5,
+		0x7b821577565ea3a4, 0x8b19265d1c12cdc7,
+		0x610e7ab6ada60b22, 0x3c6f1970dd62f235,
+		0x4b8db19fd6940031, 0xa43827a530b08989,
+	}, {
+		0x86e1bbae2893aaf1, 0x9c05614a696cda03,
+		0x9ee31847083019c3, 0x600e860c97264e31,
+		0xda8721038e4972bc, 0xfeedeb1b8bfe5d1e,
+		0xb2d6388922af426f, 0x7d05b8e82e38cf30,
+		0x439caa6ecd0b628d, 0x6d4c4ba6f3f2aed5,
+		0x5622bb0da20658ff, 0x409d76de4adcd475,
+	}
+};
+
 /*******************************************************************************
  * Hash function performance test configuration section. Each performance test
  * will be performed HASHTEST_ITERATIONS times.
@@ -61,9 +98,14 @@ static uint32_t hash_values_crc[2][12] = {{
  */
 #define HASHTEST_ITERATIONS 1000000
 #define MAX_KEYSIZE 64
-static rte_hash_function hashtest_funcs[] = {rte_jhash, rte_hash_crc};
-static uint32_t hashtest_initvals[] = {0, 0xdeadbeef};
-static uint32_t hashtest_key_lens[] = {
+static const rte_hash_function hashtest_funcs[] = {rte_jhash, rte_hash_crc, rte_hsiphash};
+static const uint32_t hashtest_initvals[] = {0, 0xdeadbeef};
+static const uint64_t hashtest_initkeys[][2] = {
+	{ 0, 0, },
+	{ UINT64_C(0xfeedc0dedeadbeef), 0 },
+};
+
+static const uint32_t hashtest_key_lens[] = {
 	1, 2,                 /* Unusual key sizes */
 	4, 8, 16, 32, 48, 64, /* standard key sizes */
 	9,                    /* IPv4 SRC + DST + protocol, unpadded */
@@ -84,6 +126,9 @@ get_hash_name(rte_hash_function f)
 
 	if (f == rte_hash_crc)
 		return "rte_hash_crc";
+
+	if (f == rte_hsiphash)
+		return "hsiphash";
 
 	return "UnknownHash";
 }
@@ -126,6 +171,7 @@ run_hash_func_perf_tests(void)
 	printf(" Number of iterations for each test = %d\n",
 			HASHTEST_ITERATIONS);
 	printf("Hash Func.  , Key Length (bytes), Initial value, Ticks/Op.\n");
+	fflush(stdout);
 
 	for (i = 0; i < RTE_DIM(hashtest_initvals); i++) {
 		for (j = 0; j < RTE_DIM(hashtest_key_lens); j++) {
@@ -147,13 +193,15 @@ verify_precalculated_hash_func_tests(void)
 {
 	unsigned i, j;
 	uint8_t key[64];
-	uint32_t hash;
 
 	for (i = 0; i < 64; i++)
 		key[i] = (uint8_t) i;
 
 	for (i = 0; i < RTE_DIM(hashtest_key_lens); i++) {
 		for (j = 0; j < RTE_DIM(hashtest_initvals); j++) {
+			uint32_t hash;
+			uint64_t shash;
+
 			hash = rte_jhash(key, hashtest_key_lens[i],
 					 hashtest_initvals[j]);
 			if (hash != hash_values_jhash[j][i]) {
@@ -171,6 +219,25 @@ verify_precalculated_hash_func_tests(void)
 				       "Expected 0x%x, but got 0x%x\n",
 				       hashtest_key_lens[i], hashtest_initvals[j],
 				       hash_values_crc[j][i], hash);
+				return -1;
+			}
+
+			hash = rte_hsiphash(key, hashtest_key_lens[i], hashtest_initvals[j]);
+			if (hash != hash_values_hsiphash[j][i]) {
+				printf("Hsiphash for %u bytes with initial value 0x%x."
+				       "Expected 0x%x, but got 0x%x\n",
+				       hashtest_key_lens[i], hashtest_initvals[j],
+				       hash_values_hsiphash[j][i], hash);
+				return -1;
+			}
+
+			shash = rte_siphash(key, hashtest_key_lens[i], hashtest_initkeys[j]);
+			if (shash != hash_values_siphash[j][i]) {
+				printf("siphash for %u bytes initial %#"PRIx64", %#"PRIx64"."
+				       "Expected %#"PRIx64", but got %#"PRIx64"\n",
+				       hashtest_key_lens[i],
+				       hashtest_initkeys[j][0], hashtest_initkeys[j][1],
+				       hash_values_siphash[j][i], shash);
 				return -1;
 			}
 		}
