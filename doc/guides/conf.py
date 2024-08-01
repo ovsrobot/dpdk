@@ -7,8 +7,7 @@ from packaging.version import Version
 from sphinx import __version__ as sphinx_version
 from os import listdir
 from os import environ
-from os.path import basename
-from os.path import dirname
+from os.path import basename, dirname
 from os.path import join as path_join
 from sys import argv, stderr
 
@@ -35,8 +34,7 @@ else:
 html_show_copyright = False
 highlight_language = 'none'
 
-release = environ.setdefault('DPDK_VERSION', "None")
-version = release
+version = environ.setdefault('DPDK_VERSION', "None")
 
 master_doc = 'index'
 
