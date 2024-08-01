@@ -367,14 +367,21 @@ rte_pktmbuf_pool_create_extbuf(const char *name, unsigned int n,
 	return mp;
 }
 
-/* do some sanity checks on a mbuf: panic if it fails */
+/* do some checks on a mbuf: panic if it fails */
 void
-rte_mbuf_sanity_check(const struct rte_mbuf *m, int is_header)
+rte_mbuf_verify(const struct rte_mbuf *m, int is_header)
 {
 	const char *reason;
 
 	if (rte_mbuf_check(m, is_header, &reason))
 		rte_panic("%s\n", reason);
+}
+
+/* For ABI compatibility, to be removed in next release */
+void
+rte_mbuf_sanity_check(const struct rte_mbuf *m, int is_header)
+{
+	rte_mbuf_verify(m, is_header);
 }
 
 int rte_mbuf_check(const struct rte_mbuf *m, int is_header,
@@ -496,7 +503,7 @@ void rte_pktmbuf_free_bulk(struct rte_mbuf **mbufs, unsigned int count)
 		if (unlikely(m == NULL))
 			continue;
 
-		__rte_mbuf_sanity_check(m, 1);
+		__rte_mbuf_verify(m, 1);
 
 		do {
 			m_next = m->next;
@@ -546,7 +553,7 @@ rte_pktmbuf_clone(struct rte_mbuf *md, struct rte_mempool *mp)
 		return NULL;
 	}
 
-	__rte_mbuf_sanity_check(mc, 1);
+	__rte_mbuf_verify(mc, 1);
 	return mc;
 }
 
@@ -596,7 +603,7 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
 	struct rte_mbuf *mc, *m_last, **prev;
 
 	/* garbage in check */
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_verify(m, 1);
 
 	/* check for request to copy at offset past end of mbuf */
 	if (unlikely(off >= m->pkt_len))
@@ -660,7 +667,7 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
 	}
 
 	/* garbage out check */
-	__rte_mbuf_sanity_check(mc, 1);
+	__rte_mbuf_verify(mc, 1);
 	return mc;
 }
 
@@ -671,7 +678,7 @@ rte_pktmbuf_dump(FILE *f, const struct rte_mbuf *m, unsigned dump_len)
 	unsigned int len;
 	unsigned int nb_segs;
 
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_verify(m, 1);
 
 	fprintf(f, "dump mbuf at %p, iova=%#" PRIx64 ", buf_len=%u\n", m, rte_mbuf_iova_get(m),
 		m->buf_len);
@@ -689,7 +696,7 @@ rte_pktmbuf_dump(FILE *f, const struct rte_mbuf *m, unsigned dump_len)
 	nb_segs = m->nb_segs;
 
 	while (m && nb_segs != 0) {
-		__rte_mbuf_sanity_check(m, 0);
+		__rte_mbuf_verify(m, 0);
 
 		fprintf(f, "  segment at %p, data=%p, len=%u, off=%u, refcnt=%u\n",
 			m, rte_pktmbuf_mtod(m, void *),

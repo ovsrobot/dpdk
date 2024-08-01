@@ -230,3 +230,6 @@ Deprecation Notices
   The structures ``rte_node``, ``rte_node_register``
   and ``rte_graph_cluster_node_stats`` will be extended
   to include node error counters and error description.
+
+* mbuf: The function ``rte_mbuf_sanity_check`` is deprecated.
+  Use the new function ``rte_mbuf_verify`` instead.

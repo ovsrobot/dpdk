@@ -258,7 +258,7 @@ mcast_out_pkt(struct rte_mbuf *pkt, int use_clone)
 	hdr->pkt_len = (uint16_t)(hdr->data_len + pkt->pkt_len);
 	hdr->nb_segs = pkt->nb_segs + 1;
 
-	__rte_mbuf_sanity_check(hdr, 1);
+	__rte_mbuf_verify(hdr, 1);
 	return hdr;
 }
 /* >8 End of mcast_out_kt. */
