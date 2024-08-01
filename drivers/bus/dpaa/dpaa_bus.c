@@ -204,8 +204,11 @@ dpaa_create_device_list(void)
 
 		/* Create device name */
 		memset(dev->name, 0, RTE_ETH_NAME_MAX_LEN);
-		if (fman_intf->mac_type == fman_offline)
+		if (fman_intf->mac_type == fman_offline_internal)
 			sprintf(dev->name, "fm%d-oh%d",
+				(fman_intf->fman_idx + 1), fman_intf->mac_idx);
+		else if (fman_intf->mac_type == fman_onic)
+			sprintf(dev->name, "fm%d-onic%d",
 				(fman_intf->fman_idx + 1), fman_intf->mac_idx);
 		else
 			sprintf(dev->name, "fm%d-mac%d",
@@ -477,6 +480,11 @@ rte_dpaa_bus_parse(const char *name, void *out)
 				i >= 2 || j >= 16)
 			return -EINVAL;
 		max_name_len = sizeof("fm.-oh..") - 1;
+	} else if (strncmp("onic", &name[dev_delta], 4) == 0) {
+		if (sscanf(&name[delta], "fm%u-onic%u", &i, &j) != 2 ||
+				i >= 2 || j >= 16)
+			return -EINVAL;
+		max_name_len = sizeof("fm.-onic..") - 1;
 	} else {
 		if (sscanf(&name[delta], "fm%u-mac%u", &i, &j) != 2 ||
 				i >= 2 || j >= 16)

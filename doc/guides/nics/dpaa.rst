@@ -136,6 +136,8 @@ RTE framework and DPAA internal components/drivers.
   The Ethernet driver is bound to a FMAN port and implements the interfaces
   needed to connect the DPAA network interface to the network stack.
   Each FMAN Port corresponds to a DPDK network interface.
+- PMD also support OH/ONIC mode, where the port works as a HW assisted
+  virtual port without actually connecting to a Physical MAC.
 
 
 Features
@@ -149,6 +151,7 @@ Features
   - Checksum offload
   - Promiscuous mode
   - IEEE1588 PTP
+  - OH/ONIC virtual port support
 
 DPAA Mempool Driver
 ~~~~~~~~~~~~~~~~~~~
