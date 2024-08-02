@@ -19,7 +19,7 @@ sources = files(
         'cperf_test_verify.c',
         'main.c',
 )
-deps += ['cryptodev', 'net', 'security']
+deps += ['cryptodev']
 if dpdk_conf.has('RTE_CRYPTO_SCHEDULER')
     deps += 'crypto_scheduler'
 endif

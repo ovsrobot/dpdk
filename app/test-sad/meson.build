@@ -8,4 +8,4 @@ if is_windows
 endif
 
 sources = files('main.c')
-deps += ['ipsec', 'net']
+deps += ['ipsec']
