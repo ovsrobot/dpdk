@@ -10,4 +10,4 @@ endif
 sources = files('rte_argparse.c')
 headers = files('rte_argparse.h')
 
-deps += ['log']
+deps = ['log']

@@ -39,7 +39,7 @@ headers = files(
         'rte_table_lpm_ipv6.h',
         'rte_table_stub.h',
 )
-deps += ['mbuf', 'port', 'lpm', 'hash', 'acl']
+deps = ['port', 'lpm', 'acl']
 
 indirect_headers += files(
         'rte_lru_arm64.h',

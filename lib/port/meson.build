@@ -40,7 +40,7 @@ headers = files(
         'rte_swx_port_ring.h',
         'rte_swx_port_source_sink.h',
 )
-deps += ['ethdev', 'sched', 'ip_frag', 'cryptodev', 'eventdev']
+deps = ['sched', 'ip_frag', 'eventdev']
 
 if dpdk_conf.has('RTE_HAS_LIBPCAP')
     dpdk_conf.set('RTE_PORT_PCAP', 1)

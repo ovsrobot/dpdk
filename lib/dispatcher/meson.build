@@ -10,4 +10,4 @@ endif
 sources = files('rte_dispatcher.c')
 headers = files('rte_dispatcher.h')
 
-deps += ['eventdev']
+deps = ['eventdev']

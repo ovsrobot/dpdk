@@ -20,4 +20,4 @@ driver_sdk_headers += files(
         'cryptodev_pmd.h',
 )
 
-deps += ['kvargs', 'mbuf', 'rcu', 'telemetry']
+deps = ['mbuf', 'rcu']

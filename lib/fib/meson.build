@@ -10,7 +10,7 @@ endif
 
 sources = files('rte_fib.c', 'rte_fib6.c', 'dir24_8.c', 'trie.c')
 headers = files('rte_fib.h', 'rte_fib6.h')
-deps += ['rib']
+deps = ['rib']
 
 # compile AVX512 version if:
 # we are building 64-bit binary AND binutils can generate proper code

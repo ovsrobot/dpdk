@@ -10,4 +10,4 @@ sources = files(
         'rte_gso.c',
 )
 headers = files('rte_gso.h')
-deps += ['ethdev']
+deps = ['ethdev']
