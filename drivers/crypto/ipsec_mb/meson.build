@@ -45,5 +45,5 @@ sources = files(
         'pmd_snow3g.c',
         'pmd_zuc.c',
 )
-deps += ['bus_vdev', 'net', 'security']
+deps += ['bus_vdev', 'security']
 require_iova_in_mbuf = false

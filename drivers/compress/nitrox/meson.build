@@ -6,7 +6,7 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
-deps += ['common_nitrox', 'bus_pci', 'compressdev']
+deps += ['common_nitrox', 'compressdev']
 
 sources += files(
         'nitrox_comp.c',

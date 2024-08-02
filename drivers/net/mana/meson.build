@@ -7,7 +7,7 @@ if not is_linux or not dpdk_conf.has('RTE_ARCH_X86')
     subdir_done()
 endif
 
-deps += ['pci', 'bus_pci', 'net', 'eal', 'kvargs']
+deps += ['bus_pci']
 
 sources += files(
         'gdma.c',

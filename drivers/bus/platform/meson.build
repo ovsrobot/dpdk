@@ -10,7 +10,6 @@ endif
 
 require_iova_in_mbuf = false
 
-deps += ['kvargs']
 sources = files(
         'platform_params.c',
         'platform.c',

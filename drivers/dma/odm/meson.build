@@ -7,7 +7,7 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
     subdir_done()
 endif
 
-deps += ['bus_pci', 'dmadev', 'eal', 'mempool', 'pci']
+deps += ['bus_pci', 'dmadev', 'mempool']
 
 sources = files('odm_dmadev.c', 'odm.c')
 

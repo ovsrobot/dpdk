@@ -18,7 +18,7 @@ sources = files(
 
 testpmd_sources = files('ice_testpmd.c')
 
-deps += ['hash', 'net', 'common_iavf']
+deps += ['hash', 'common_iavf']
 includes += include_directories('base', '../../common/iavf')
 
 if arch_subdir == 'x86'

@@ -6,7 +6,7 @@ if not is_linux
     reason = 'only supported on linux'
 endif
 
-deps += ['dmadev', 'bus_dpaa']
+deps += ['bus_dpaa']
 sources = files('dpaa_qdma.c')
 
 if cc.has_argument('-Wno-pointer-arith')
