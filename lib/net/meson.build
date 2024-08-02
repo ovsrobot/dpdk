@@ -2,6 +2,7 @@
 # Copyright(c) 2017-2020 Intel Corporation
 
 headers = files(
+        'rte_dissect.h',
         'rte_ip.h',
         'rte_tcp.h',
         'rte_udp.h',
@@ -30,6 +31,7 @@ headers = files(
 
 sources = files(
         'rte_arp.c',
+        'rte_dissect.c',
         'rte_ether.c',
         'rte_net.c',
         'rte_net_crc.c',
