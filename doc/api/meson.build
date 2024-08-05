@@ -41,6 +41,7 @@ cdata.set('WARN_AS_ERROR', 'NO')
 if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
+cdata.set('DTS_API_MAIN_PAGE', join_paths('..', 'dts', 'html', 'index.html'))
 
 # configure HTML Doxygen run
 html_cdata = configuration_data()

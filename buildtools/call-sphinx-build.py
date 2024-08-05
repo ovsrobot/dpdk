@@ -15,6 +15,11 @@ from subprocess import run
 
 # set the version in environment for sphinx to pick up
 os.environ['DPDK_VERSION'] = version
+conf_src = src
+if src.find('dts') != -1:
+    if '-c' in extra_args:
+        conf_src = extra_args[extra_args.index('-c') + 1]
+    os.environ['DTS_BUILD'] = "y"
 
 sphinx_cmd = [sphinx] + extra_args
 
@@ -22,6 +27,9 @@ sphinx_cmd = [sphinx] + extra_args
 srcfiles = []
 for root, dirs, files in os.walk(src):
     srcfiles.extend([join(root, f) for f in files])
+
+if not os.path.exists(dst):
+    os.makedirs(dst)
 
 # run sphinx, putting the html output in a "html" directory
 with open(join(dst, 'sphinx_html.out'), 'w') as out:
@@ -34,7 +42,7 @@ with open(join(dst, '.html.d'), 'w') as d:
 
 # copy custom CSS file
 css = 'custom.css'
-src_css = join(src, css)
+src_css = join(conf_src, css)
 dst_css = join(dst, 'html', '_static', 'css', css)
 if not os.path.exists(dst_css) or not filecmp.cmp(src_css, dst_css):
     os.makedirs(os.path.dirname(dst_css), exist_ok=True)
