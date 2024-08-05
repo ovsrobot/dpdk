@@ -1511,6 +1511,11 @@ M: Gagandeep Singh <g.singh@nxp.com>
 F: drivers/raw/dpaa2_cmdif/
 F: doc/guides/rawdevs/dpaa2_cmdif.rst
 
+ZXDH
+M: Yong Zhang <zhang.yong25@zte.com.cn>
+F: drivers/raw/zxdh/
+F: doc/guides/rawdevs/zxdh.rst
+
 
 Packet processing
 -----------------
