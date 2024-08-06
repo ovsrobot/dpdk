@@ -187,7 +187,8 @@
       "enum": [
         "hello_world",
         "os_udp",
-        "pmd_buffer_scatter"
+        "pmd_buffer_scatter",
+        "l2fwd"
       ]
     },
     "test_target": {
