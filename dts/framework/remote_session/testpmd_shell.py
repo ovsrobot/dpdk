@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass, field
 from enum import Flag, auto
 from pathlib import PurePath
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 from typing_extensions import Self, Unpack
 
@@ -577,6 +577,43 @@ class TestPmdPortStats(TextParser):
     tx_bps: int = field(metadata=TextParser.find_int(r"Tx-bps:\s+(\d+)"))
 
 
+@dataclass
+class flow_func:
+    """Dataclass for setting flow rule parameters."""
+
+    #:
+    port_id: int
+    #:
+    ingress: bool
+    #:
+    pattern: str
+    #:
+    actions: str
+
+    #:
+    group_id: Optional[int] = None
+    #:
+    priority_level: Optional[int] = None
+    #:
+    user_id: Optional[int] = None
+
+    def __str__(self) -> str:
+        """Returns the string representation of a flow_func instance.
+
+        In this case, a properly formatted flow create command that can be sent to testpmd.
+        """
+        ret = []
+        ret.append(f"flow create {self.port_id} ")
+        ret.append(f"group {self.group_id} " if self.group_id is not None else "")
+        ret.append(f"priority {self.priority_level} " if self.priority_level is not None else "")
+        ret.append("ingress " if self.ingress else "egress ")
+        ret.append(f"user_id {self.user_id} " if self.user_id is not None else "")
+        ret.append(f"pattern {self.pattern} ")
+        ret.append(" / end actions ")
+        ret.append(f"{self.actions} / end")
+        return "".join(ret)
+
+
 class TestPmdShell(DPDKShell):
     """Testpmd interactive shell.
 
@@ -805,6 +842,25 @@ class TestPmdShell(DPDKShell):
             raise InteractiveCommandExecutionError("invalid port given")
 
         return TestPmdPortStats.parse(output)
+
+    def flow_create(self, cmd: flow_func, verify: bool = True) -> None:
+        """Creates a flow rule in the testpmd session.
+
+        Args:
+            cmd: String from flow_func instance to send as a flow rule.
+            verify: If :data:`True`, the output of the command is scanned
+            to ensure the flow rule was created successfully.
+
+        Raises:
+            InteractiveCommandExecutionError: If flow rule is invalid.
+        """
+        flow_output = self.send_command(str(cmd))
+        if verify:
+            if "created" not in flow_output:
+                self._logger.debug(f"Failed to create flow rule:\n{flow_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to create flow rule:\n{flow_output}"
+                )
 
     def _close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
