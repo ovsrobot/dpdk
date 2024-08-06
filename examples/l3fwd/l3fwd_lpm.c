@@ -583,10 +583,15 @@ setup_lpm(const int socketid)
 	for (i = 0; i < route_num_v4; i++) {
 		struct in_addr in;
 
-		/* skip unused ports */
-		if ((1 << route_base_v4[i].if_out &
-				enabled_port_mask) == 0)
-			continue;
+		/* Check for valid ports */
+		ret = l3fwd_validate_routes_port(L3FWD_LOOKUP_LPM, i, true);
+		if (ret) {
+			if (exit_on_failure)
+				rte_exit(EXIT_FAILURE, "IDX: %d: Port ID %d in IPv4 rule is not"
+				 " enabled\n", i, route_base_v4[i].if_out);
+			else
+				continue;
+		}
 
 		rte_eth_dev_info_get(route_base_v4[i].if_out,
 				     &dev_info);
@@ -627,10 +632,15 @@ setup_lpm(const int socketid)
 	/* populate the LPM table */
 	for (i = 0; i < route_num_v6; i++) {
 
-		/* skip unused ports */
-		if ((1 << route_base_v6[i].if_out &
-				enabled_port_mask) == 0)
-			continue;
+		/* Check for valid ports */
+		ret = l3fwd_validate_routes_port(L3FWD_LOOKUP_LPM, i, false);
+		if (ret) {
+			if (exit_on_failure)
+				rte_exit(EXIT_FAILURE, "IDX %d Port ID %d given in IPv6 rule is not"
+					" enabled\n", i, route_base_v6[i].if_out);
+			else
+				continue;
+		}
 
 		rte_eth_dev_info_get(route_base_v6[i].if_out,
 				     &dev_info);
