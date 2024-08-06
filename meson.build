@@ -87,6 +87,7 @@ subdir('app')
 
 # build docs
 subdir('doc')
+subdir('dts')
 
 # build any examples explicitly requested - useful for developers - and
 # install any example code into the appropriate install path
