@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
+doc_api_build_dir = meson.current_build_dir()
 doxygen = find_program('doxygen', required: get_option('enable_docs'))
 
 if not doxygen.found()
@@ -32,10 +33,10 @@ example = custom_target('examples.dox',
 # set up common Doxygen configuration
 cdata = configuration_data()
 cdata.set('VERSION', meson.project_version())
-cdata.set('API_EXAMPLES', join_paths(dpdk_build_root, 'doc', 'api', 'examples.dox'))
-cdata.set('OUTPUT', join_paths(dpdk_build_root, 'doc', 'api'))
+cdata.set('API_EXAMPLES', join_paths(doc_api_build_dir, 'examples.dox'))
+cdata.set('OUTPUT', doc_api_build_dir)
 cdata.set('TOPDIR', dpdk_source_root)
-cdata.set('STRIP_FROM_PATH', ' '.join([dpdk_source_root, join_paths(dpdk_build_root, 'doc', 'api')]))
+cdata.set('STRIP_FROM_PATH', ' '.join([dpdk_source_root, doc_api_build_dir]))
 cdata.set('WARN_AS_ERROR', 'NO')
 if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
