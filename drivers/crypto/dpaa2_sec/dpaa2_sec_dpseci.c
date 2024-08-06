@@ -3991,12 +3991,6 @@ dpaa2_sec_process_parallel_event(struct qbman_swp *swp,
 				 struct rte_event *ev)
 {
 	struct dpaa2_sec_qp *qp;
-	/* Prefetching mbuf */
-	rte_prefetch0((void *)(size_t)(DPAA2_GET_FD_ADDR(fd)-
-		rte_dpaa2_bpid_info[DPAA2_GET_FD_BPID(fd)].meta_data_size));
-
-	/* Prefetching ipsec crypto_op stored in priv data of mbuf */
-	rte_prefetch0((void *)(size_t)(DPAA2_GET_FD_ADDR(fd)-64));
 
 	qp = container_of(rxq, struct dpaa2_sec_qp, rx_vq);
 	ev->flow_id = rxq->ev.flow_id;
@@ -4010,6 +4004,7 @@ dpaa2_sec_process_parallel_event(struct qbman_swp *swp,
 
 	qbman_swp_dqrr_consume(swp, dq);
 }
+
 static void
 dpaa2_sec_process_atomic_event(struct qbman_swp *swp __rte_unused,
 				 const struct qbman_fd *fd,
@@ -4020,12 +4015,6 @@ dpaa2_sec_process_atomic_event(struct qbman_swp *swp __rte_unused,
 	uint8_t dqrr_index;
 	struct dpaa2_sec_qp *qp;
 	struct rte_crypto_op *crypto_op;
-	/* Prefetching mbuf */
-	rte_prefetch0((void *)(size_t)(DPAA2_GET_FD_ADDR(fd)-
-		rte_dpaa2_bpid_info[DPAA2_GET_FD_BPID(fd)].meta_data_size));
-
-	/* Prefetching ipsec crypto_op stored in priv data of mbuf */
-	rte_prefetch0((void *)(size_t)(DPAA2_GET_FD_ADDR(fd)-64));
 
 	qp = container_of(rxq, struct dpaa2_sec_qp, rx_vq);
 	ev->flow_id = rxq->ev.flow_id;
@@ -4054,13 +4043,6 @@ dpaa2_sec_process_ordered_event(struct qbman_swp *swp,
 {
 	struct rte_crypto_op *crypto_op;
 	struct dpaa2_sec_qp *qp;
-
-	/* Prefetching mbuf */
-	rte_prefetch0((void *)(size_t)(DPAA2_GET_FD_ADDR(fd)-
-		rte_dpaa2_bpid_info[DPAA2_GET_FD_BPID(fd)].meta_data_size));
-
-	/* Prefetching ipsec crypto_op stored in priv data of mbuf */
-	rte_prefetch0((void *)(size_t)(DPAA2_GET_FD_ADDR(fd)-64));
 
 	qp = container_of(rxq, struct dpaa2_sec_qp, rx_vq);
 	ev->flow_id = rxq->ev.flow_id;
