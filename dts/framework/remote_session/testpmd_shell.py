@@ -806,6 +806,52 @@ class TestPmdShell(DPDKShell):
 
         return TestPmdPortStats.parse(output)
 
+    def set_promisc(self, port: int, on: bool, verify: bool = True):
+        """Turns promiscuous mode on/off for the specified port.
+
+        Args:
+            port: Port number to use, should be within 0-32.
+            on: If :data:`True`, turn promisc mode on, otherwise turn off.
+            verify: If :data:`True` an additional command will be sent to verify that promisc mode
+                is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and promisc mode
+                is not correctly set.
+        """
+        promisc_output = self.send_command(f"set promisc {port} {'on' if on else 'off'}")
+        if verify:
+            stats = self.show_port_info(port_id=port)
+            if on ^ stats.is_promiscuous_mode_enabled:
+                self._logger.debug(f"Failed to set promisc mode on port {port}: \n{promisc_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to set promisc mode on port {port}."
+                )
+
+    def set_multicast_all(self, on: bool, verify: bool = True):
+        """Turns multicast mode on/off for the specified port.
+
+        Args:
+            on: If :data:`True`, turns multicast mode on, otherwise turns off.
+            verify: If :data:`True` an additional command will be sent to verify
+            that multicast mode is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and multicast
+                mode is not properly set.
+        """
+        multicast_output = self.send_command(f"set allmulti all {'on' if on else 'off'}")
+        if verify:
+            stats0 = self.show_port_info(port_id=0)
+            stats1 = self.show_port_info(port_id=1)
+            if on ^ (stats0.is_allmulticast_mode_enabled and stats1.is_allmulticast_mode_enabled):
+                self._logger.debug(
+                    f"Failed to set multicast mode on all ports.: \n{multicast_output}"
+                )
+                raise InteractiveCommandExecutionError(
+                    "Testpmd failed to set multicast mode on all ports."
+                )
+
     def _close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
         self.stop()
