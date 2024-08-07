@@ -593,9 +593,13 @@ def load_config(config_file_path: Path) -> Configuration:
         config_data = yaml.safe_load(f)
 
     schema_path = os.path.join(Path(__file__).parent.resolve(), "conf_yaml_schema.json")
+    allowed_values_path = os.path.join(Path(__file__).parent.resolve(), "conf_allowed_values.json")
 
     with open(schema_path, "r") as f:
         schema = json.load(f)
+    with open(allowed_values_path, "r") as f:
+        allowed_values = json.load(f)
+    schema.update(allowed_values)
     config = warlock.model_factory(schema, name="_Config")(config_data)
     config_obj: Configuration = Configuration.from_dict(dict(config))  # type: ignore[arg-type]
     return config_obj
