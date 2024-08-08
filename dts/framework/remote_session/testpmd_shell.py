@@ -31,7 +31,7 @@ from framework.remote_session.dpdk_shell import DPDKShell
 from framework.settings import SETTINGS
 from framework.testbed_model.cpu import LogicalCoreCount, LogicalCoreList
 from framework.testbed_model.sut_node import SutNode
-from framework.utils import StrEnum
+from framework.utils import REGEX_FOR_MAC_ADDRESS, StrEnum
 
 
 class TestPmdDevice:
@@ -577,6 +577,377 @@ class TestPmdPortStats(TextParser):
     tx_bps: int = field(metadata=TextParser.find_int(r"Tx-bps:\s+(\d+)"))
 
 
+class OLFlag(Flag):
+    """Flag representing the Packet Offload Features Flags in DPDK.
+
+    Values in this class are taken from the definitions in the RTE MBUF core library in DPDK.
+    """
+
+    # RX flags
+    #:
+    RTE_MBUF_F_RX_RSS_HASH = auto()
+
+    #:
+    RTE_MBUF_F_RX_L4_CKSUM_GOOD = auto()
+    #:
+    RTE_MBUF_F_RX_L4_CKSUM_BAD = auto()
+    #:
+    RTE_MBUF_F_RX_L4_CKSUM_UNKNOWN = auto()
+    #:
+    RTE_MBUF_F_RX_L4_CKSUM_NONE = auto()
+
+    #:
+    RTE_MBUF_F_RX_IP_CKSUM_GOOD = auto()
+    #:
+    RTE_MBUF_F_RX_IP_CKSUM_BAD = auto()
+    #:
+    RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN = auto()
+    #:
+    RTE_MBUF_F_RX_IP_CKSUM_NONE = auto()
+
+    #:
+    RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD = auto()
+    #:
+    RTE_MBUF_F_RX_OUTER_L4_CKSUM_BAD = auto()
+    #:
+    RTE_MBUF_F_RX_OUTER_L4_CKSUM_UNKNOWN = auto()
+    #:
+    RTE_MBUF_F_RX_OUTER_L4_CKSUM_INVALID = auto()
+
+    #:
+    RTE_MBUF_F_RX_VLAN = auto()
+    #:
+    RTE_MBUF_F_RX_FDIR = auto()
+    #:
+    RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD = auto()
+    #:
+    RTE_MBUF_F_RX_VLAN_STRIPPED = auto()
+    #: RX IEEE1588 L2 Ethernet PT Packet.
+    RTE_MBUF_F_RX_IEEE1588_PTP = auto()
+    #: RX IEEE1588 L2/L4 timestamped packet.
+    RTE_MBUF_F_RX_IEEE1588_TMST = auto()
+    #: FD id reported if FDIR match.
+    RTE_MBUF_F_RX_FDIR_ID = auto()
+    #: Flexible bytes reported if FDIR match.
+    RTE_MBUF_F_RX_FDIR_FLX = auto()
+    #:
+    RTE_MBUF_F_RX_QINQ_STRIPPED = auto()
+    #:
+    RTE_MBUF_F_RX_LRO = auto()
+    #:
+    RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED = auto()
+    #:
+    RTE_MBUF_F_RX_QINQ = auto()
+
+    # TX flags
+    #:
+    RTE_MBUF_F_TX_OUTER_UDP_CKSUM = auto()
+    #:
+    RTE_MBUF_F_TX_UDP_SEG = auto()
+    #:
+    RTE_MBUF_F_TX_SEC_OFFLOAD = auto()
+    #:
+    RTE_MBUF_F_TX_MACSEC = auto()
+
+    #:
+    RTE_MBUF_F_TX_TUNNEL_VXLAN = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_GRE = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_IPIP = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_GENEVE = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_MPLSINUDP = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_GTP = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_ESP = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_IP = auto()
+    #:
+    RTE_MBUF_F_TX_TUNNEL_UDP = auto()
+
+    #:
+    RTE_MBUF_F_TX_QINQ = auto()
+    #:
+    RTE_MBUF_F_TX_TCP_SEG = auto()
+    #: TX IEEE1588 packet to timestamp.
+    RTE_MBUF_F_TX_IEEE1588_TMST = auto()
+
+    #:
+    RTE_MBUF_F_TX_L4_NO_CKSUM = auto()
+    #:
+    RTE_MBUF_F_TX_TCP_CKSUM = auto()
+    #:
+    RTE_MBUF_F_TX_SCTP_CKSUM = auto()
+    #:
+    RTE_MBUF_F_TX_UDP_CKSUM = auto()
+    #:
+    RTE_MBUF_F_TX_L4_MASK = auto()
+    #:
+    RTE_MBUF_F_TX_IP_CKSUM = auto()
+    #:
+    RTE_MBUF_F_TX_OUTER_IP_CKSUM = auto()
+
+    #:
+    RTE_MBUF_F_TX_IPV4 = auto()
+    #:
+    RTE_MBUF_F_TX_IPV6 = auto()
+    #:
+    RTE_MBUF_F_TX_VLAN = auto()
+    #:
+    RTE_MBUF_F_TX_OUTER_IPV4 = auto()
+    #:
+    RTE_MBUF_F_TX_OUTER_IPV6 = auto()
+
+    @classmethod
+    def from_str_list(cls, arr: list[str]) -> Self:
+        """Makes an instance from a list containing the flag members.
+
+        Args:
+            arr: A list of strings containing ol_flag values.
+
+        Returns:
+            A new instance of the flag.
+        """
+        flag = cls(0)
+        for name in arr:
+            if name in cls.__members__:
+                flag |= cls[name]
+        return flag
+
+    @classmethod
+    def make_parser(cls) -> ParserFn:
+        """Makes a parser function.
+
+        Returns:
+            ParserFn: A dictionary for the `dataclasses.field` metadata argument containing a
+                parser function that makes an instance of this flag from text.
+        """
+        return TextParser.wrap(
+            TextParser.wrap(TextParser.find(r"ol_flags: ([^\n]+)"), str.split),
+            cls.from_str_list,
+        )
+
+
+class RtePTypes(Flag):
+    """Flag representing possible packet types in DPDK verbose output."""
+
+    # L2
+    #:
+    L2_ETHER = auto()
+    #:
+    L2_ETHER_TIMESYNC = auto()
+    #:
+    L2_ETHER_ARP = auto()
+    #:
+    L2_ETHER_LLDP = auto()
+    #:
+    L2_ETHER_NSH = auto()
+    #:
+    L2_ETHER_VLAN = auto()
+    #:
+    L2_ETHER_QINQ = auto()
+    #:
+    L2_ETHER_PPPOE = auto()
+    #:
+    L2_ETHER_FCOE = auto()
+    #:
+    L2_ETHER_MPLS = auto()
+    #:
+    L2_UNKNOWN = auto()
+
+    # L3
+    #:
+    L3_IPV4 = auto()
+    #:
+    L3_IPV4_EXT = auto()
+    #:
+    L3_IPV6 = auto()
+    #:
+    L3_IPV4_EXT_UNKNOWN = auto()
+    #:
+    L3_IPV6_EXT = auto()
+    #:
+    L3_IPV6_EXT_UNKNOWN = auto()
+    #:
+    L3_UNKNOWN = auto()
+
+    # L4
+    #:
+    L4_TCP = auto()
+    #:
+    L4_UDP = auto()
+    #:
+    L4_FRAG = auto()
+    #:
+    L4_SCTP = auto()
+    #:
+    L4_ICMP = auto()
+    #:
+    L4_NONFRAG = auto()
+    #:
+    L4_IGMP = auto()
+    #:
+    L4_UNKNOWN = auto()
+
+    # Tunnel
+    #:
+    TUNNEL_IP = auto()
+    #:
+    TUNNEL_GRE = auto()
+    #:
+    TUNNEL_VXLAN = auto()
+    #:
+    TUNNEL_NVGRE = auto()
+    #:
+    TUNNEL_GENEVE = auto()
+    #:
+    TUNNEL_GRENAT = auto()
+    #:
+    TUNNEL_GTPC = auto()
+    #:
+    TUNNEL_GTPU = auto()
+    #:
+    TUNNEL_ESP = auto()
+    #:
+    TUNNEL_L2TP = auto()
+    #:
+    TUNNEL_VXLAN_GPE = auto()
+    #:
+    TUNNEL_MPLS_IN_UDP = auto()
+    #:
+    TUNNEL_MPLS_IN_GRE = auto()
+    #:
+    TUNNEL_UNKNOWN = auto()
+
+    # Inner L2
+    #:
+    INNER_L2_ETHER = auto()
+    #:
+    INNER_L2_ETHER_VLAN = auto()
+    #:
+    INNER_L2_ETHER_QINQ = auto()
+    #:
+    INNER_L2_UNKNOWN = auto()
+
+    # Inner L3
+    #:
+    INNER_L3_IPV4 = auto()
+    #:
+    INNER_L3_IPV4_EXT = auto()
+    #:
+    INNER_L3_IPV6 = auto()
+    #:
+    INNER_L3_IPV4_EXT_UNKNOWN = auto()
+    #:
+    INNER_L3_IPV6_EXT = auto()
+    #:
+    INNER_L3_IPV6_EXT_UNKNOWN = auto()
+    #:
+    INNER_L3_UNKNOWN = auto()
+
+    # Inner L4
+    #:
+    INNER_L4_TCP = auto()
+    #:
+    INNER_L4_UDP = auto()
+    #:
+    INNER_L4_FRAG = auto()
+    #:
+    INNER_L4_SCTP = auto()
+    #:
+    INNER_L4_ICMP = auto()
+    #:
+    INNER_L4_NONFRAG = auto()
+    #:
+    INNER_L4_UNKNOWN = auto()
+
+    @classmethod
+    def from_str_list(cls, arr: list[str]) -> Self:
+        """Makes an instance from a list containing the flag members.
+
+        Args:
+            arr: A list of strings containing ol_flag values.
+
+        Returns:
+            A new instance of the flag.
+        """
+        flag = cls(0)
+        for name in arr:
+            if name in cls.__members__:
+                flag |= cls[name]
+        return flag
+
+    @classmethod
+    def make_parser(cls, hw: bool) -> ParserFn:
+        """Makes a parser function.
+
+        Args:
+            hw: Whether to make a parser for hardware ptypes or software ptypes. If :data:`True`
+                hardware ptypes will be collected, otherwise software pytpes will.
+
+        Returns:
+            ParserFn: A dictionary for the `dataclasses.field` metadata argument containing a
+                parser function that makes an instance of this flag from text.
+        """
+        return TextParser.wrap(
+            TextParser.wrap(TextParser.find(f"{'hw' if hw else 'sw'} ptype: ([^-]+)"), str.split),
+            cls.from_str_list,
+        )
+
+
+@dataclass
+class TestPmdVerbosePacket(TextParser):
+    """Packet information provided by verbose output in Testpmd.
+
+    This dataclass expects that packet information be prepended with the starting line of packet
+    bursts. Specifically, the line that reads "port X/queue Y: sent/received Z packets".
+    """
+
+    #: ID of the port that handled the packet.
+    port_id: int = field(metadata=TextParser.find_int(r"port (\d+)/queue \d+"))
+    #: ID of the queue that handled the packet.
+    queue_id: int = field(metadata=TextParser.find_int(r"port \d+/queue (\d+)"))
+    #: Whether the packet was received or sent by the queue/port.
+    was_received: bool = field(metadata=TextParser.find(r"received \d+ packets"))
+    #:
+    src_mac: str = field(metadata=TextParser.find(f"src=({REGEX_FOR_MAC_ADDRESS})"))
+    #:
+    dst_mac: str = field(metadata=TextParser.find(f"dst=({REGEX_FOR_MAC_ADDRESS})"))
+    #: Memory pool the packet was handled on.
+    pool: str = field(metadata=TextParser.find(r"pool=(\S+)"))
+    #: Packet type in hex.
+    p_type: int = field(metadata=TextParser.find_int(r"type=(0x[a-fA-F\d]+)"))
+    #:
+    length: int = field(metadata=TextParser.find_int(r"length=(\d+)"))
+    #: Number of segments in the packet.
+    nb_segs: int = field(metadata=TextParser.find_int(r"nb_segs=(\d+)"))
+    #: Hardware packet type.
+    hw_ptype: RtePTypes = field(metadata=RtePTypes.make_parser(hw=True))
+    #: Software packet type.
+    sw_ptype: RtePTypes = field(metadata=RtePTypes.make_parser(hw=False))
+    #:
+    l2_len: int = field(metadata=TextParser.find_int(r"l2_len=(\d+)"))
+    #:
+    ol_flags: OLFlag = field(metadata=OLFlag.make_parser())
+    #: RSS has of the packet in hex.
+    rss_hash: int | None = field(
+        default=None, metadata=TextParser.find_int(r"RSS hash=(0x[a-fA-F\d]+)")
+    )
+    #: RSS queue that handled the packet in hex.
+    rss_queue: int | None = field(
+        default=None, metadata=TextParser.find_int(r"RSS queue=(0x[a-fA-F\d]+)")
+    )
+    #:
+    l3_len: int | None = field(default=None, metadata=TextParser.find_int(r"l3_len=(\d+)"))
+    #:
+    l4_len: int | None = field(default=None, metadata=TextParser.find_int(r"l4_len=(\d+)"))
+
+
 class TestPmdShell(DPDKShell):
     """Testpmd interactive shell.
 
@@ -645,7 +1016,7 @@ class TestPmdShell(DPDKShell):
                         "Not all ports came up after starting packet forwarding in testpmd."
                     )
 
-    def stop(self, verify: bool = True) -> None:
+    def stop(self, verify: bool = True) -> str:
         """Stop packet forwarding.
 
         Args:
@@ -656,6 +1027,9 @@ class TestPmdShell(DPDKShell):
         Raises:
             InteractiveCommandExecutionError: If `verify` is :data:`True` and the command to stop
                 forwarding results in an error.
+
+        Returns:
+            Output gathered from sending the stop command.
         """
         stop_cmd_output = self.send_command("stop")
         if verify:
@@ -665,6 +1039,7 @@ class TestPmdShell(DPDKShell):
             ):
                 self._logger.debug(f"Failed to stop packet forwarding: \n{stop_cmd_output}")
                 raise InteractiveCommandExecutionError("Testpmd failed to stop packet forwarding.")
+        return stop_cmd_output
 
     def get_devices(self) -> list[TestPmdDevice]:
         """Get a list of device names that are known to testpmd.
@@ -805,6 +1180,32 @@ class TestPmdShell(DPDKShell):
             raise InteractiveCommandExecutionError("invalid port given")
 
         return TestPmdPortStats.parse(output)
+
+    @staticmethod
+    def extract_verbose_output(output: str) -> list[TestPmdVerbosePacket]:
+        """Extract the verbose information present in given testpmd output.
+
+        This method extracts sections of verbose output that begin with the line
+        "port X/queue Y: sent/received Z packets" and end with the ol_flags of a packet.
+
+        Args:
+            output: Testpmd output that contains verbose information
+
+        Returns:
+            List of parsed packet information gathered from verbose information in `output`.
+        """
+        out: list[TestPmdVerbosePacket] = []
+        prev_header: str = ""
+        iter = re.finditer(
+            r"(?P<HEADER>(?:port \d+/queue \d+: received \d packets)?)\s*"
+            r"(?P<PACKET>src=[\w\s=:-]+?ol_flags: [\w ]+)",
+            output,
+        )
+        for match in iter:
+            if match.group("HEADER"):
+                prev_header = match.group("HEADER")
+            out.append(TestPmdVerbosePacket.parse(f"{prev_header}\n{match.group('PACKET')}"))
+        return out
 
     def _close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
