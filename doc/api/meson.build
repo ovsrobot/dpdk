@@ -1,6 +1,18 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
+dts_doc_targets = []
+dts_doc_target_names = []
+subdir('dts')
+
+if dts_doc_targets.length() == 0
+    dts_message = 'No DTS docs targets found'
+else
+    dts_message = 'Building DTS docs:'
+endif
+run_target('dts-doc', command: [echo, dts_message, dts_doc_target_names],
+    depends: dts_doc_targets)
+
 doxygen = find_program('doxygen', required: get_option('enable_docs'))
 
 if not doxygen.found()
@@ -40,6 +52,7 @@ cdata.set('WARN_AS_ERROR', 'NO')
 if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
+cdata.set('DTS_API_MAIN_PAGE', join_paths('..', 'dts', 'html', 'index.html'))
 
 # configure HTML Doxygen run
 html_cdata = configuration_data()
