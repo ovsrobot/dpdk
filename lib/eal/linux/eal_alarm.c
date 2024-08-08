@@ -53,6 +53,13 @@ static struct rte_intr_handle *intr_handle;
 static int handler_registered = 0;
 static void eal_alarm_callback(void *arg);
 
+#ifndef LIST_FOREACH_SAFE
+#define LIST_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = LIST_FIRST((head));				\
+	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+#endif
+
 void
 rte_eal_alarm_cleanup(void)
 {
@@ -194,7 +201,7 @@ rte_eal_alarm_set(uint64_t us, rte_eal_alarm_callback cb_fn, void *cb_arg)
 int
 rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 {
-	struct alarm_entry *ap, *ap_prev;
+	struct alarm_entry *ap, *tmp;
 	int count = 0;
 	int err = 0;
 	int executing;
@@ -207,46 +214,26 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 	do {
 		executing = 0;
 		rte_spinlock_lock(&alarm_list_lk);
-		/* remove any matches at the start of the list */
-		while ((ap = LIST_FIRST(&alarm_list)) != NULL &&
-				cb_fn == ap->cb_fn &&
-				(cb_arg == (void *)-1 || cb_arg == ap->cb_arg)) {
 
-			if (ap->executing == 0) {
-				LIST_REMOVE(ap, next);
-				free(ap);
-				count++;
-			} else {
-				/* If calling from other context, mark that alarm is executing
-				 * so loop can spin till it finish. Otherwise we are trying to
-				 * cancel our self - mark it by EINPROGRESS */
-				if (pthread_equal(ap->executing_id, pthread_self()) == 0)
-					executing++;
-				else
-					err = EINPROGRESS;
-
-				break;
-			}
-		}
-		ap_prev = ap;
-
-		/* now go through list, removing entries not at start */
-		LIST_FOREACH(ap, &alarm_list, next) {
+		LIST_FOREACH_SAFE(ap, &alarm_list, next, tmp) {
 			/* this won't be true first time through */
 			if (cb_fn == ap->cb_fn &&
 					(cb_arg == (void *)-1 || cb_arg == ap->cb_arg)) {
-
 				if (ap->executing == 0) {
 					LIST_REMOVE(ap, next);
 					free(ap);
 					count++;
-					ap = ap_prev;
-				} else if (pthread_equal(ap->executing_id, pthread_self()) == 0)
-					executing++;
-				else
-					err = EINPROGRESS;
+				} else {
+					/* If calling from other context, mark that alarm is executing
+					 * so loop can spin till it finish. Otherwise we are trying to
+					 * cancel our self - mark it by EINPROGRESS
+					 */
+					if (pthread_equal(ap->executing_id, pthread_self()) == 0)
+						executing++;
+					else
+						err = EINPROGRESS;
+				}
 			}
-			ap_prev = ap;
 		}
 		rte_spinlock_unlock(&alarm_list_lk);
 	} while (executing != 0);
