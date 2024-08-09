@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Cisco enic driver.**
+
+  * Added SR-IOV VF support.
+
 
 Removed Items
 -------------
