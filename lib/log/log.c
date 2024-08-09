@@ -292,8 +292,10 @@ log_register(const char *name, uint32_t level)
 	int id;
 
 	id = log_lookup(name);
-	if (id >= 0)
+	if (id >= 0) {
+		logtype_set_level(id, level);
 		return id;
+	}
 
 	new_dynamic_types = realloc(rte_logs.dynamic_types,
 		sizeof(struct rte_log_dynamic_type) *
