@@ -856,7 +856,7 @@ class TestPmdShell(DPDKShell):
             InteractiveCommandExecutionError: If checksum offload is not enabled successfully.
         """
         csum_output = self.send_command(f"csum set {layer} hw {port_id}")
-        if (verify and ("Bad arguments" in csum_output or f"Please stop port {port_id} first")):
+        if (verify and ("Bad arguments" in csum_output or f"Please stop port {port_id} first" in csum_output)):
             self._logger.debug(f"Failed to set csum hw mode on port {port_id}:\n{csum_output}")
             raise InteractiveCommandExecutionError(
                 f"Failed to set csum hw mode on port {port_id}"
