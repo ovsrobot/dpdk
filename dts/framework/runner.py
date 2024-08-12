@@ -484,6 +484,7 @@ class DTSRunner:
 
         try:
             sut_node.set_up_build_target(build_target_config)
+            tg_node.set_up_build_target(build_target_config)
             self._result.dpdk_version = sut_node.dpdk_version
             build_target_result.add_build_target_info(sut_node.get_build_target_info())
             build_target_result.update_setup(Result.PASS)
@@ -498,6 +499,7 @@ class DTSRunner:
             try:
                 self._logger.set_stage(DtsStage.build_target_teardown)
                 sut_node.tear_down_build_target()
+                tg_node.tear_down_build_target()
                 build_target_result.update_teardown(Result.PASS)
             except Exception as e:
                 self._logger.exception("Build target teardown failed.")

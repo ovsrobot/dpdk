@@ -13,7 +13,6 @@ An SUT node is where this SUT runs.
 
 
 import os
-import tarfile
 import time
 from pathlib import PurePath
 
@@ -26,7 +25,6 @@ from framework.config import (
 )
 from framework.params.eal import EalParams
 from framework.remote_session.remote_session import CommandResult
-from framework.settings import SETTINGS
 from framework.utils import MesonArgs
 
 from .node import Node
@@ -59,14 +57,11 @@ class SutNode(Node):
     dpdk_timestamp: str
     _build_target_config: BuildTargetConfiguration | None
     _env_vars: dict
-    _remote_tmp_dir: PurePath
-    __remote_dpdk_dir: PurePath | None
     _app_compile_timeout: float
     _dpdk_kill_session: OSSession | None
     _dpdk_version: str | None
     _node_info: NodeInfo | None
     _compiler_version: str | None
-    _path_to_devbind_script: PurePath | None
 
     def __init__(self, node_config: SutNodeConfiguration):
         """Extend the constructor with SUT node specifics.
@@ -79,8 +74,6 @@ class SutNode(Node):
         self.dpdk_prefix_list = []
         self._build_target_config = None
         self._env_vars = {}
-        self._remote_tmp_dir = self.main_session.get_remote_tmp_dir()
-        self.__remote_dpdk_dir = None
         self._app_compile_timeout = 90
         self._dpdk_kill_session = None
         self.dpdk_timestamp = (
@@ -89,24 +82,7 @@ class SutNode(Node):
         self._dpdk_version = None
         self._node_info = None
         self._compiler_version = None
-        self._path_to_devbind_script = None
         self._logger.info(f"Created node: {self.name}")
-
-    @property
-    def _remote_dpdk_dir(self) -> PurePath:
-        """The remote DPDK dir.
-
-        This internal property should be set after extracting the DPDK tarball. If it's not set,
-        that implies the DPDK setup step has been skipped, in which case we can guess where
-        a previous build was located.
-        """
-        if self.__remote_dpdk_dir is None:
-            self.__remote_dpdk_dir = self._guess_dpdk_remote_dir()
-        return self.__remote_dpdk_dir
-
-    @_remote_dpdk_dir.setter
-    def _remote_dpdk_dir(self, value: PurePath) -> None:
-        self.__remote_dpdk_dir = value
 
     @property
     def remote_dpdk_build_dir(self) -> PurePath:
@@ -151,15 +127,6 @@ class SutNode(Node):
                 return ""
         return self._compiler_version
 
-    @property
-    def path_to_devbind_script(self) -> PurePath:
-        """The path to the dpdk-devbind.py script on the node."""
-        if self._path_to_devbind_script is None:
-            self._path_to_devbind_script = self.main_session.join_remote_path(
-                self._remote_dpdk_dir, "usertools", "dpdk-devbind.py"
-            )
-        return self._path_to_devbind_script
-
     def get_build_target_info(self) -> BuildTargetInfo:
         """Get additional build target information.
 
@@ -169,9 +136,6 @@ class SutNode(Node):
         return BuildTargetInfo(
             dpdk_version=self.dpdk_version, compiler_version=self.compiler_version
         )
-
-    def _guess_dpdk_remote_dir(self) -> PurePath:
-        return self.main_session.guess_dpdk_remote_dir(self._remote_tmp_dir)
 
     def set_up_test_run(self, test_run_config: TestRunConfiguration) -> None:
         """Extend the test run setup with vdev config.
@@ -199,19 +163,17 @@ class SutNode(Node):
             build_target_config: The build target test run configuration according to which
                 the setup steps will be taken.
         """
+        super().set_up_build_target(build_target_config)
         self._configure_build_target(build_target_config)
-        self._copy_dpdk_tarball()
         self._build_dpdk()
-        self.bind_ports_to_driver()
 
     def tear_down_build_target(self) -> None:
         """Reset DPDK variables and bind port driver to the OS driver."""
+        super().tear_down_build_target()
         self._env_vars = {}
         self._build_target_config = None
-        self.__remote_dpdk_dir = None
         self._dpdk_version = None
         self._compiler_version = None
-        self.bind_ports_to_driver(for_dpdk=False)
 
     def _configure_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
         """Populate common environment variables and set build target config."""
@@ -223,35 +185,6 @@ class SutNode(Node):
             self._env_vars["CC"] = (
                 f"'{build_target_config.compiler_wrapper} {build_target_config.compiler.name}'"
             )  # fmt: skip
-
-    @Node.skip_setup
-    def _copy_dpdk_tarball(self) -> None:
-        """Copy to and extract DPDK tarball on the SUT node."""
-        self._logger.info("Copying DPDK tarball to SUT.")
-        self.main_session.copy_to(SETTINGS.dpdk_tarball_path, self._remote_tmp_dir)
-
-        # construct remote tarball path
-        # the basename is the same on local host and on remote Node
-        remote_tarball_path = self.main_session.join_remote_path(
-            self._remote_tmp_dir, os.path.basename(SETTINGS.dpdk_tarball_path)
-        )
-
-        # construct remote path after extracting
-        with tarfile.open(SETTINGS.dpdk_tarball_path) as dpdk_tar:
-            dpdk_top_dir = dpdk_tar.getnames()[0]
-        self._remote_dpdk_dir = self.main_session.join_remote_path(
-            self._remote_tmp_dir, dpdk_top_dir
-        )
-
-        self._logger.info(
-            f"Extracting DPDK tarball on SUT: "
-            f"'{remote_tarball_path}' into '{self._remote_dpdk_dir}'."
-        )
-        # clean remote path where we're extracting
-        self.main_session.remove_remote_dir(self._remote_dpdk_dir)
-
-        # then extract to remote path
-        self.main_session.extract_remote_tarball(remote_tarball_path, self._remote_dpdk_dir)
 
     @Node.skip_setup
     def _build_dpdk(self) -> None:
@@ -335,18 +268,3 @@ class SutNode(Node):
             enable: If :data:`True`, enable the forwarding, otherwise disable it.
         """
         self.main_session.configure_ipv4_forwarding(enable)
-
-    def bind_ports_to_driver(self, for_dpdk: bool = True) -> None:
-        """Bind all ports on the SUT to a driver.
-
-        Args:
-            for_dpdk: If :data:`True`, binds ports to os_driver_for_dpdk.
-                If :data:`False`, binds to os_driver.
-        """
-        for port in self.ports:
-            driver = port.os_driver_for_dpdk if for_dpdk else port.os_driver
-            self.main_session.send_command(
-                f"{self.path_to_devbind_script} -b {driver} --force {port.pci}",
-                privileged=True,
-                verify=True,
-            )

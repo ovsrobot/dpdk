@@ -13,11 +13,19 @@ to be extended by subclasses with features specific to each node type.
 The :func:`~Node.skip_setup` decorator can be used without subclassing.
 """
 
+import os
+import tarfile
 from abc import ABC
 from ipaddress import IPv4Interface, IPv6Interface
+from pathlib import PurePath
 from typing import Any, Callable, Union
 
-from framework.config import OS, NodeConfiguration, TestRunConfiguration
+from framework.config import (
+    OS,
+    BuildTargetConfiguration,
+    NodeConfiguration,
+    TestRunConfiguration,
+)
 from framework.exception import ConfigurationError
 from framework.logger import DTSLogger, get_dts_logger
 from framework.settings import SETTINGS
@@ -58,8 +66,11 @@ class Node(ABC):
     lcores: list[LogicalCore]
     ports: list[Port]
     _logger: DTSLogger
+    _remote_tmp_dir: PurePath
+    __remote_dpdk_dir: PurePath | None
     _other_sessions: list[OSSession]
     _test_run_config: TestRunConfiguration
+    _path_to_devbind_script: PurePath | None
 
     def __init__(self, node_config: NodeConfiguration):
         """Connect to the node and gather info during initialization.
@@ -88,12 +99,43 @@ class Node(ABC):
 
         self._other_sessions = []
         self._init_ports()
+        self._remote_tmp_dir = self.main_session.get_remote_tmp_dir()
+        self.__remote_dpdk_dir = None
+        self._path_to_devbind_script = None
 
     def _init_ports(self) -> None:
         self.ports = [Port(self.name, port_config) for port_config in self.config.ports]
         self.main_session.update_ports(self.ports)
         for port in self.ports:
             self.configure_port_state(port)
+
+    def _guess_dpdk_remote_dir(self) -> PurePath:
+        return self.main_session.guess_dpdk_remote_dir(self._remote_tmp_dir)
+
+    @property
+    def _remote_dpdk_dir(self) -> PurePath:
+        """The remote DPDK dir.
+
+        This internal property should be set after extracting the DPDK tarball. If it's not set,
+        that implies the DPDK setup step has been skipped, in which case we can guess where
+        a previous build was located.
+        """
+        if self.__remote_dpdk_dir is None:
+            self.__remote_dpdk_dir = self._guess_dpdk_remote_dir()
+        return self.__remote_dpdk_dir
+
+    @_remote_dpdk_dir.setter
+    def _remote_dpdk_dir(self, value: PurePath) -> None:
+        self.__remote_dpdk_dir = value
+
+    @property
+    def path_to_devbind_script(self) -> PurePath:
+        """The path to the dpdk-devbind.py script on the node."""
+        if self._path_to_devbind_script is None:
+            self._path_to_devbind_script = self.main_session.join_remote_path(
+                self._remote_dpdk_dir, "usertools", "dpdk-devbind.py"
+            )
+        return self._path_to_devbind_script
 
     def set_up_test_run(self, test_run_config: TestRunConfiguration) -> None:
         """Test run setup steps.
@@ -113,6 +155,24 @@ class Node(ABC):
         There are currently no common execution teardown steps common to all DTS node types.
         Additional steps can be added by extending the method in subclasses with the use of super().
         """
+
+    def set_up_build_target(self, build_target_config: BuildTargetConfiguration) -> None:
+        """Set up DPDK the node and bind ports.
+
+        DPDK setup includes setting all internals needed for the build, the copying of DPDK tarball
+        and then building DPDK. The drivers are bound to those that DPDK needs.
+
+        Args:
+            build_target_config: The build target test run configuration according to which
+                the setup steps will be taken.
+        """
+        self._copy_dpdk_tarball()
+        self.bind_ports_to_driver()
+
+    def tear_down_build_target(self) -> None:
+        """Reset DPDK variables and bind port driver to the OS driver."""
+        self.__remote_dpdk_dir = None
+        self.bind_ports_to_driver(for_dpdk=False)
 
     def create_session(self, name: str) -> OSSession:
         """Create and return a new OS-aware remote session.
@@ -227,6 +287,50 @@ class Node(ABC):
             return lambda *args: None
         else:
             return func
+
+    @skip_setup
+    def _copy_dpdk_tarball(self) -> None:
+        """Copy to and extract DPDK tarball on the node."""
+        self._logger.info(f"Copying DPDK tarball to {self.name}.")
+        self.main_session.copy_to(SETTINGS.dpdk_tarball_path, self._remote_tmp_dir)
+
+        # construct remote tarball path
+        # the basename is the same on local host and on remote Node
+        remote_tarball_path = self.main_session.join_remote_path(
+            self._remote_tmp_dir, os.path.basename(SETTINGS.dpdk_tarball_path)
+        )
+
+        # construct remote path after extracting
+        with tarfile.open(SETTINGS.dpdk_tarball_path) as dpdk_tar:
+            dpdk_top_dir = dpdk_tar.getnames()[0]
+        self._remote_dpdk_dir = self.main_session.join_remote_path(
+            self._remote_tmp_dir, dpdk_top_dir
+        )
+
+        self._logger.info(
+            f"Extracting DPDK tarball on {self.name}: "
+            f"'{remote_tarball_path}' into '{self._remote_dpdk_dir}'."
+        )
+        # clean remote path where we're extracting
+        self.main_session.remove_remote_dir(self._remote_dpdk_dir)
+
+        # then extract to remote path
+        self.main_session.extract_remote_tarball(remote_tarball_path, self._remote_dpdk_dir)
+
+    def bind_ports_to_driver(self, for_dpdk: bool = True) -> None:
+        """Bind all ports on the node to a driver.
+
+        Args:
+            for_dpdk: If :data:`True`, binds ports to os_driver_for_dpdk.
+                If :data:`False`, binds to os_driver.
+        """
+        for port in self.ports:
+            driver = port.os_driver_for_dpdk if for_dpdk else port.os_driver
+            self.main_session.send_command(
+                f"{self.path_to_devbind_script} -b {driver} --force {port.pci}",
+                privileged=True,
+                verify=True,
+            )
 
 
 def create_session(node_config: NodeConfiguration, name: str, logger: DTSLogger) -> OSSession:
