@@ -102,6 +102,25 @@ struct zxdh_gdma_rawdev {
 	struct zxdh_gdma_queue vqs[ZXDH_GDMA_TOTAL_CHAN_NUM];
 };
 
+struct zxdh_gdma_rbp {
+	uint32_t use_ultrashort:1;
+	uint32_t enable:1;
+	uint32_t dportid:3;
+	uint32_t dpfid:3;
+	uint32_t dvfid:8; /*using route by port for destination */
+	uint32_t drbp:1;
+	uint32_t sportid:3;
+	uint32_t spfid:3;
+	uint32_t svfid:8;
+	uint32_t srbp:1;
+};
+
+struct zxdh_gdma_queue_config {
+	uint32_t lcore_id;
+	uint32_t flags;
+	struct zxdh_gdma_rbp *rbp;
+};
+
 static inline struct zxdh_gdma_rawdev *
 zxdh_gdma_rawdev_get_priv(const struct rte_rawdev *rawdev)
 {
