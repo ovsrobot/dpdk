@@ -21,7 +21,7 @@ hns3_tm_max_tx_queues_get(struct rte_eth_dev *dev)
 
 	memset(&dev_info, 0, sizeof(dev_info));
 	(void)hns3_dev_infos_get(dev, &dev_info);
-	return RTE_MIN(dev_info.max_tx_queues, RTE_MAX_QUEUES_PER_PORT);
+	return RTE_MIN(dev_info.max_tx_queues, RTE_MAX_ETHPORT_TX_QUEUES);
 }
 
 void
