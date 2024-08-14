@@ -1205,8 +1205,8 @@ fs_dev_infos_get(struct rte_eth_dev *dev,
 	infos->min_mtu = RTE_ETHER_MIN_MTU;
 	infos->max_mtu = UINT16_MAX;
 	infos->max_rx_pktlen = UINT32_MAX;
-	infos->max_rx_queues = RTE_MAX_QUEUES_PER_PORT;
-	infos->max_tx_queues = RTE_MAX_QUEUES_PER_PORT;
+	infos->max_rx_queues = RTE_MAX_ETHPORT_RX_QUEUES;
+	infos->max_tx_queues = RTE_MAX_ETHPORT_TX_QUEUES;
 	infos->max_mac_addrs = FAILSAFE_MAX_ETHADDR;
 	infos->max_hash_mac_addrs = UINT32_MAX;
 	infos->max_vfs = UINT16_MAX;
