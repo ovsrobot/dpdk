@@ -67,8 +67,14 @@ New Features
 
    The default max values for Rx and Tx queue limits are reduced from 1024, in previous releases,
    to 256 in this release.
-   For application that require large numbers of queues,
+   For applications that require large numbers of queues,
    these defaults can be changed via the meson configuration options described above.
+
+.. note::
+
+   The define ``RTE_MAX_QUEUES_PER_PORT`` is kept for backward compatibility.
+   Its value is no longer hard-coded,
+   but is set, at configuration time, to the maximum of the configured max Rx and Tx queue values.
 
 
 Removed Items

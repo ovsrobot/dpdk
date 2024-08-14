@@ -17,6 +17,17 @@ Other API and ABI deprecation notices are to be posted below.
 Deprecation Notices
 -------------------
 
+* config: The define ``RTE_MAX_QUEUES_PER_PORT`` should be considered deprecated
+  and may be removed in a future release.
+  Its use in apps should be replaced by ``RTE_MAX_ETHPORT_RX_QUEUES`` or ``RTE_MAX_ETHPORT_TX_QUEUES``,
+  as appropriate.
+
+* config: The ``RTE_MAX_QUEUES_PER_PORT`` value is no longer hard-coded to 1024.
+  Its value is now computed at configuration time to be the maximum of the configured max Rx and Tx queue values,
+  given by the meson options ``max_ethport_rx_queues`` and ``max_ethport_tx_queues``.
+  If these are unmodified from the defaults,
+  the value of ``RTE_MAX_QUEUES_PER_PORT`` will be 256.
+
 * build: The ``enable_kmods`` option is deprecated and will be removed in a future release.
   Setting/clearing the option has no impact on the build.
   Instead, kernel modules will be always built for OS's where out-of-tree kernel modules

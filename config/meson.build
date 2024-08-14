@@ -372,6 +372,14 @@ if get_option('mbuf_refcnt_atomic')
 endif
 dpdk_conf.set10('RTE_IOVA_IN_MBUF', get_option('enable_iova_as_pa'))
 
+# set old MAX_QUEUES_PER_PORT option for compatibility. Compute
+# value as max of Rx and Tx counts
+if get_option('max_ethport_rx_queues') > get_option('max_ethport_tx_queues')
+    dpdk_conf.set('RTE_MAX_QUEUES_PER_PORT', get_option('max_ethport_rx_queues'))
+else
+    dpdk_conf.set('RTE_MAX_QUEUES_PER_PORT', get_option('max_ethport_tx_queues'))
+endif
+
 compile_time_cpuflags = []
 subdir(arch_subdir)
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
