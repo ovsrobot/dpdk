@@ -297,7 +297,7 @@ test_bbdev_configure_stop_queue(void)
 			"Failed test for rte_bbdev_queue_stop "
 			"invalid dev_id ");
 
-	TEST_ASSERT_FAIL(rte_bbdev_queue_stop(dev_id, RTE_MAX_QUEUES_PER_PORT),
+	TEST_ASSERT_FAIL(rte_bbdev_queue_stop(dev_id, RTE_BBDEV_DEFAULT_MAX_NB_QUEUES),
 			"Failed test for rte_bbdev_queue_stop "
 			"invalid queue_id ");
 
@@ -1176,7 +1176,7 @@ test_bbdev_invalid_driver(void)
 			"invalid dev_id ");
 
 	TEST_ASSERT_FAIL(rte_bbdev_queue_info_get(dev_id,
-			RTE_MAX_QUEUES_PER_PORT, &qinfo),
+			RTE_BBDEV_DEFAULT_MAX_NB_QUEUES, &qinfo),
 			"Failed test for rte_bbdev_info_get: "
 			"invalid queue_id ");
 
