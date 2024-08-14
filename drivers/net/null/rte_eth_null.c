@@ -53,8 +53,8 @@ struct pmd_internals {
 	unsigned int no_rx;
 	uint16_t port_id;
 
-	struct null_queue rx_null_queues[RTE_MAX_QUEUES_PER_PORT];
-	struct null_queue tx_null_queues[RTE_MAX_QUEUES_PER_PORT];
+	struct null_queue rx_null_queues[RTE_MAX_ETHPORT_RX_QUEUES];
+	struct null_queue tx_null_queues[RTE_MAX_ETHPORT_TX_QUEUES];
 
 	struct rte_ether_addr eth_addr;
 	/** Bit mask of RSS offloads, the bit offset also means flow type */
