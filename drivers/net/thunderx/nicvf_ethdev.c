@@ -907,7 +907,7 @@ nicvf_configure_rss_reta(struct rte_eth_dev *dev)
 {
 	struct nicvf *nic = nicvf_pmd_priv(dev);
 	unsigned int idx, qmap_size;
-	uint8_t qmap[RTE_MAX_QUEUES_PER_PORT];
+	uint8_t qmap[RTE_MAX_ETHPORT_RX_QUEUES];
 	uint8_t default_reta[NIC_MAX_RSS_IDR_TBL_SIZE];
 
 	if (nic->cpi_alg != CPI_ALG_NONE)
