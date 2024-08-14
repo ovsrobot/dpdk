@@ -95,7 +95,7 @@ struct interface {
 	struct rte_bpf_prm *bpf_prm;
 	char name[RTE_ETH_NAME_MAX_LEN];
 
-	struct rte_rxtx_callback *rx_cb[RTE_MAX_QUEUES_PER_PORT];
+	struct rte_rxtx_callback *rx_cb[RTE_MAX_ETHPORT_RX_QUEUES];
 	const char *ifname;
 	const char *ifdescr;
 };
