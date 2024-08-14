@@ -117,8 +117,8 @@ static struct rte_eth_link pmd_link = {
 struct rte_vhost_vring_state {
 	rte_spinlock_t lock;
 
-	bool cur[RTE_MAX_QUEUES_PER_PORT * 2];
-	bool seen[RTE_MAX_QUEUES_PER_PORT * 2];
+	bool cur[RTE_MAX_ETHPORT_RX_QUEUES + RTE_MAX_ETHPORT_TX_QUEUES];
+	bool seen[RTE_MAX_ETHPORT_RX_QUEUES + RTE_MAX_ETHPORT_TX_QUEUES];
 	unsigned int index;
 	unsigned int max_vring;
 };
@@ -1648,7 +1648,8 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 	if (rte_kvargs_count(kvlist, ETH_VHOST_QUEUES_ARG) == 1) {
 		ret = rte_kvargs_process(kvlist, ETH_VHOST_QUEUES_ARG,
 					 &open_int, &queues);
-		if (ret < 0 || queues > RTE_MAX_QUEUES_PER_PORT)
+		if (ret < 0 || queues > RTE_MAX_ETHPORT_RX_QUEUES
+			    || queues > RTE_MAX_ETHPORT_TX_QUEUES)
 			goto out_free;
 
 	} else
