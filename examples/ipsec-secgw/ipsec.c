@@ -584,7 +584,7 @@ create_inline_session(struct socket_ctx *skt_ctx, struct ipsec_sa *sa,
 				.rss_key_len = sizeof(rss_key),
 			};
 			struct rte_eth_dev_info dev_info;
-			uint16_t queue[RTE_MAX_QUEUES_PER_PORT];
+			uint16_t queue[RTE_MAX_ETHPORT_RX_QUEUES];
 			struct rte_flow_action_rss action_rss;
 			unsigned int i;
 			unsigned int j;
