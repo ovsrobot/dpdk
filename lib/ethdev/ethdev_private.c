@@ -190,7 +190,8 @@ struct dummy_queue {
 	bool rx_warn_once;
 	bool tx_warn_once;
 };
-static struct dummy_queue *dummy_queues_array[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+static struct dummy_queue *dummy_rxq_array[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_RX_QUEUES];
+static struct dummy_queue *dummy_txq_array[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_TX_QUEUES];
 static struct dummy_queue per_port_queues[RTE_MAX_ETHPORTS];
 RTE_INIT(dummy_queue_init)
 {
@@ -199,8 +200,10 @@ RTE_INIT(dummy_queue_init)
 	for (port_id = 0; port_id < RTE_DIM(per_port_queues); port_id++) {
 		unsigned int q;
 
-		for (q = 0; q < RTE_DIM(dummy_queues_array[port_id]); q++)
-			dummy_queues_array[port_id][q] = &per_port_queues[port_id];
+		for (q = 0; q < RTE_DIM(dummy_rxq_array[port_id]); q++)
+			dummy_rxq_array[port_id][q] = &per_port_queues[port_id];
+		for (q = 0; q < RTE_DIM(dummy_txq_array[port_id]); q++)
+			dummy_txq_array[port_id][q] = &per_port_queues[port_id];
 	}
 }
 
@@ -245,7 +248,8 @@ dummy_eth_tx_burst(void *txq,
 void
 eth_dev_fp_ops_reset(struct rte_eth_fp_ops *fpo)
 {
-	static RTE_ATOMIC(void *) dummy_data[RTE_MAX_QUEUES_PER_PORT];
+	static RTE_ATOMIC(void *) dummy_rx_data[RTE_MAX_ETHPORT_RX_QUEUES];
+	static RTE_ATOMIC(void *) dummy_tx_data[RTE_MAX_ETHPORT_TX_QUEUES];
 	uintptr_t port_id = fpo - rte_eth_fp_ops;
 
 	per_port_queues[port_id].rx_warn_once = false;
@@ -254,12 +258,12 @@ eth_dev_fp_ops_reset(struct rte_eth_fp_ops *fpo)
 		.rx_pkt_burst = dummy_eth_rx_burst,
 		.tx_pkt_burst = dummy_eth_tx_burst,
 		.rxq = {
-			.data = (void **)&dummy_queues_array[port_id],
-			.clbk = dummy_data,
+			.data = (void **)&dummy_rxq_array[port_id],
+			.clbk = dummy_rx_data,
 		},
 		.txq = {
-			.data = (void **)&dummy_queues_array[port_id],
-			.clbk = dummy_data,
+			.data = (void **)&dummy_txq_array[port_id],
+			.clbk = dummy_tx_data,
 		},
 	};
 }
@@ -420,7 +424,7 @@ eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 	if (dev->data->rx_queues == NULL && nb_queues != 0) { /* first time configuration */
 		dev->data->rx_queues = rte_zmalloc("ethdev->rx_queues",
 				sizeof(dev->data->rx_queues[0]) *
-				RTE_MAX_QUEUES_PER_PORT,
+				RTE_MAX_ETHPORT_RX_QUEUES,
 				RTE_CACHE_LINE_SIZE);
 		if (dev->data->rx_queues == NULL) {
 			dev->data->nb_rx_queues = 0;
@@ -450,7 +454,7 @@ eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 	if (dev->data->tx_queues == NULL && nb_queues != 0) { /* first time configuration */
 		dev->data->tx_queues = rte_zmalloc("ethdev->tx_queues",
 				sizeof(dev->data->tx_queues[0]) *
-				RTE_MAX_QUEUES_PER_PORT,
+				RTE_MAX_ETHPORT_TX_QUEUES,
 				RTE_CACHE_LINE_SIZE);
 		if (dev->data->tx_queues == NULL) {
 			dev->data->nb_tx_queues = 0;

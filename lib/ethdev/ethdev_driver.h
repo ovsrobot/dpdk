@@ -84,12 +84,12 @@ struct __rte_cache_aligned rte_eth_dev {
 	 * User-supplied functions called from rx_burst to post-process
 	 * received packets before passing them to the user
 	 */
-	RTE_ATOMIC(struct rte_eth_rxtx_callback *) post_rx_burst_cbs[RTE_MAX_QUEUES_PER_PORT];
+	RTE_ATOMIC(struct rte_eth_rxtx_callback *) post_rx_burst_cbs[RTE_MAX_ETHPORT_RX_QUEUES];
 	/**
 	 * User-supplied functions called from tx_burst to pre-process
 	 * received packets before passing them to the driver for transmission
 	 */
-	RTE_ATOMIC(struct rte_eth_rxtx_callback *) pre_tx_burst_cbs[RTE_MAX_QUEUES_PER_PORT];
+	RTE_ATOMIC(struct rte_eth_rxtx_callback *) pre_tx_burst_cbs[RTE_MAX_ETHPORT_TX_QUEUES];
 
 	enum rte_eth_dev_state state; /**< Flag indicating the port state */
 	void *security_ctx; /**< Context for security ops */
@@ -165,9 +165,9 @@ struct __rte_cache_aligned rte_eth_dev_data {
 		flow_configured : 1;
 
 	/** Queues state: HAIRPIN(2) / STARTED(1) / STOPPED(0) */
-	uint8_t rx_queue_state[RTE_MAX_QUEUES_PER_PORT];
+	uint8_t rx_queue_state[RTE_MAX_ETHPORT_RX_QUEUES];
 	/** Queues state: HAIRPIN(2) / STARTED(1) / STOPPED(0) */
-	uint8_t tx_queue_state[RTE_MAX_QUEUES_PER_PORT];
+	uint8_t tx_queue_state[RTE_MAX_ETHPORT_TX_QUEUES];
 
 	uint32_t dev_flags;             /**< Capabilities */
 	int numa_node;                  /**< NUMA node connection */

@@ -1367,18 +1367,18 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 			nb_tx_q = RTE_ETH_DEV_FALLBACK_TX_NBQUEUES;
 	}
 
-	if (nb_rx_q > RTE_MAX_QUEUES_PER_PORT) {
+	if (nb_rx_q > RTE_MAX_ETHPORT_RX_QUEUES) {
 		RTE_ETHDEV_LOG_LINE(ERR,
 			"Number of Rx queues requested (%u) is greater than max supported(%d)",
-			nb_rx_q, RTE_MAX_QUEUES_PER_PORT);
+			nb_rx_q, RTE_MAX_ETHPORT_RX_QUEUES);
 		ret = -EINVAL;
 		goto rollback;
 	}
 
-	if (nb_tx_q > RTE_MAX_QUEUES_PER_PORT) {
+	if (nb_tx_q > RTE_MAX_ETHPORT_TX_QUEUES) {
 		RTE_ETHDEV_LOG_LINE(ERR,
 			"Number of Tx queues requested (%u) is greater than max supported(%d)",
-			nb_tx_q, RTE_MAX_QUEUES_PER_PORT);
+			nb_tx_q, RTE_MAX_ETHPORT_TX_QUEUES);
 		ret = -EINVAL;
 		goto rollback;
 	}
@@ -3811,11 +3811,9 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 		return eth_err(port_id, diag);
 	}
 
-	/* Maximum number of queues should be <= RTE_MAX_QUEUES_PER_PORT */
-	dev_info->max_rx_queues = RTE_MIN(dev_info->max_rx_queues,
-			RTE_MAX_QUEUES_PER_PORT);
-	dev_info->max_tx_queues = RTE_MIN(dev_info->max_tx_queues,
-			RTE_MAX_QUEUES_PER_PORT);
+	/* Maximum number of queues should be <= RTE_MAX_ETHPORT_RX/TX_QUEUES */
+	dev_info->max_rx_queues = RTE_MIN(dev_info->max_rx_queues, RTE_MAX_ETHPORT_RX_QUEUES);
+	dev_info->max_tx_queues = RTE_MIN(dev_info->max_tx_queues, RTE_MAX_ETHPORT_TX_QUEUES);
 
 	dev_info->driver_name = dev->device->driver->name;
 	dev_info->nb_rx_queues = dev->data->nb_rx_queues;
