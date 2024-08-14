@@ -99,7 +99,7 @@ struct dma_info {
 };
 
 struct dma_for_vhost {
-	struct dma_info dmas[RTE_MAX_QUEUES_PER_PORT * 2];
+	struct dma_info dmas[RTE_MAX_ETHPORT_RX_QUEUES + RTE_MAX_ETHPORT_TX_QUEUES];
 	uint32_t async_flag;
 };
 

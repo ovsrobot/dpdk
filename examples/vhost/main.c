@@ -1891,7 +1891,7 @@ reset_dma(void)
 	for (i = 0; i < RTE_MAX_VHOST_DEVICE; i++) {
 		int j;
 
-		for (j = 0; j < RTE_MAX_QUEUES_PER_PORT * 2; j++) {
+		for (j = 0; j < RTE_MAX_ETHPORT_RX_QUEUES + RTE_MAX_ETHPORT_TX_QUEUES; j++) {
 			dma_bind[i].dmas[j].dev_id = INVALID_DMA_ID;
 			dma_bind[i].dmas[j].async_enabled = false;
 		}
