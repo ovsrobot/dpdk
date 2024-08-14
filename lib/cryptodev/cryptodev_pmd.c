@@ -212,8 +212,8 @@ dummy_crypto_dequeue_burst(__rte_unused void *qp,
 void
 cryptodev_fp_ops_reset(struct rte_crypto_fp_ops *fp_ops)
 {
-	static struct rte_cryptodev_cb_rcu dummy_cb[RTE_MAX_QUEUES_PER_PORT];
-	static void *dummy_data[RTE_MAX_QUEUES_PER_PORT];
+	static struct rte_cryptodev_cb_rcu dummy_cb[RTE_CRYPTO_MAX_QPS_PER_DEV];
+	static void *dummy_data[RTE_CRYPTO_MAX_QPS_PER_DEV];
 	static const struct rte_crypto_fp_ops dummy = {
 		.enqueue_burst = dummy_crypto_enqueue_burst,
 		.dequeue_burst = dummy_crypto_dequeue_burst,
