@@ -503,7 +503,8 @@ bpf_eth_elf_load(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue,
 	ftx = NULL;
 
 	if (prm == NULL || rte_eth_dev_is_valid_port(port) == 0 ||
-			queue >= RTE_MAX_QUEUES_PER_PORT)
+			queue >= (cbh->type == BPF_ETH_RX ?
+				RTE_MAX_ETHPORT_RX_QUEUES : RTE_MAX_ETHPORT_TX_QUEUES))
 		return -EINVAL;
 
 	if (cbh->type == BPF_ETH_RX)
