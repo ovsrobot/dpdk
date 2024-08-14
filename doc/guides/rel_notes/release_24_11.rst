@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **New configuration settings for Rx and Tx Ethernet Queues.**
+
+   New defines have been added to DPDK to allow independent tracking of the maximum number of Rx and Tx queues.
+   These defines as ``RTE_MAX_ETHPORT_RX_QUEUES`` and ``RTE_MAX_ETHPORT_TX_QUEUES``,
+   and should be used in place of the older macro ``RTE_MAX_QUEUES_PER_PORT``.
+
 
 Removed Items
 -------------
