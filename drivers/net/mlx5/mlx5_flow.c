@@ -7344,7 +7344,7 @@ flow_legacy_list_create(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		struct rte_flow_item items[MLX5_MAX_SPLIT_ITEMS];
 		uint8_t buffer[2048];
 	} items_tx;
-	struct mlx5_rte_flow_item_sq sq_specs[RTE_MAX_QUEUES_PER_PORT];
+	struct mlx5_rte_flow_item_sq sq_specs[RTE_MAX_ETHPORT_RX_QUEUES];
 	struct mlx5_flow_expand_rss *buf = &expand_buffer.buf;
 	struct mlx5_flow_rss_desc *rss_desc;
 	const struct rte_flow_action *p_actions_rx;

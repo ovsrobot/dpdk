@@ -10978,7 +10978,7 @@ flow_hw_create_ctrl_rx_rss_template(struct rte_eth_dev *dev,
 	struct rte_flow_actions_template_attr attr = {
 		.ingress = 1,
 	};
-	uint16_t queue[RTE_MAX_QUEUES_PER_PORT];
+	uint16_t queue[RTE_MAX_ETHPORT_RX_QUEUES];
 	struct rte_flow_action_rss rss_conf = {
 		.func = RTE_ETH_HASH_FUNCTION_DEFAULT,
 		.level = 0,
