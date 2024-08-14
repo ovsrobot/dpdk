@@ -185,7 +185,7 @@ struct pmd_internals {
 };
 
 struct pmd_process_private {
-	int rxq_xsk_fds[RTE_MAX_QUEUES_PER_PORT];
+	int rxq_xsk_fds[RTE_MAX_ETHPORT_RX_QUEUES];
 };
 
 #define ETH_AF_XDP_IFACE_ARG			"iface"
