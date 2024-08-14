@@ -332,10 +332,10 @@ struct rte_port {
 	uint8_t                 need_reconfig_queues; /**< need reconfiguring queues or not */
 	uint8_t                 rss_flag;   /**< enable rss or not */
 	uint8_t                 dcb_flag;   /**< enable dcb */
-	uint16_t                nb_rx_desc[RTE_MAX_QUEUES_PER_PORT+1]; /**< per queue rx desc number */
-	uint16_t                nb_tx_desc[RTE_MAX_QUEUES_PER_PORT+1]; /**< per queue tx desc number */
-	struct port_rxqueue     rxq[RTE_MAX_QUEUES_PER_PORT+1]; /**< per queue Rx config and state */
-	struct port_txqueue     txq[RTE_MAX_QUEUES_PER_PORT+1]; /**< per queue Tx config and state */
+	uint16_t                nb_rx_desc[RTE_MAX_ETHPORT_RX_QUEUES+1]; /**< per queue rx desc number */
+	uint16_t                nb_tx_desc[RTE_MAX_ETHPORT_TX_QUEUES+1]; /**< per queue tx desc number */
+	struct port_rxqueue     rxq[RTE_MAX_ETHPORT_RX_QUEUES+1]; /**< per queue Rx config and state */
+	struct port_txqueue     txq[RTE_MAX_ETHPORT_TX_QUEUES+1]; /**< per queue Tx config and state */
 	struct rte_ether_addr   *mc_addr_pool; /**< pool of multicast addrs */
 	uint32_t                mc_addr_nb; /**< nb. of addr. in mc_addr_pool */
 	queueid_t               queue_nb; /**< nb. of queues for flow rules */
@@ -351,14 +351,14 @@ struct rte_port {
 	struct port_indirect_action *actions_list;
 	/**< Associated indirect actions. */
 	LIST_HEAD(, port_flow_tunnel) flow_tunnel_list;
-	const struct rte_eth_rxtx_callback *rx_dump_cb[RTE_MAX_QUEUES_PER_PORT+1];
-	const struct rte_eth_rxtx_callback *tx_dump_cb[RTE_MAX_QUEUES_PER_PORT+1];
+	const struct rte_eth_rxtx_callback *rx_dump_cb[RTE_MAX_ETHPORT_RX_QUEUES+1];
+	const struct rte_eth_rxtx_callback *tx_dump_cb[RTE_MAX_ETHPORT_TX_QUEUES+1];
 	/**< metadata value to insert in Tx packets. */
 	uint32_t		tx_metadata;
-	const struct rte_eth_rxtx_callback *tx_set_md_cb[RTE_MAX_QUEUES_PER_PORT+1];
+	const struct rte_eth_rxtx_callback *tx_set_md_cb[RTE_MAX_ETHPORT_TX_QUEUES+1];
 	/**< dynamic flags. */
 	uint64_t		mbuf_dynf;
-	const struct rte_eth_rxtx_callback *tx_set_dynf_cb[RTE_MAX_QUEUES_PER_PORT+1];
+	const struct rte_eth_rxtx_callback *tx_set_dynf_cb[RTE_MAX_ETHPORT_TX_QUEUES+1];
 	struct xstat_display_info xstats_info;
 };
 
