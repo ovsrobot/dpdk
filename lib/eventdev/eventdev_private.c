@@ -99,7 +99,7 @@ dummy_event_port_profile_switch(__rte_unused void *port, __rte_unused uint8_t pr
 void
 event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 {
-	static void *dummy_data[RTE_MAX_QUEUES_PER_PORT];
+	static void *dummy_data[RTE_EVENT_MAX_PORTS_PER_DEV];
 	static const struct rte_event_fp_ops dummy = {
 		.enqueue = dummy_event_enqueue,
 		.enqueue_burst = dummy_event_enqueue_burst,
