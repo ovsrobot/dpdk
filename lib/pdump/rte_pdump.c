@@ -61,8 +61,8 @@ static struct pdump_rxtx_cbs {
 	const struct rte_bpf *filter;
 	enum pdump_version ver;
 	uint32_t snaplen;
-} rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT],
-tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+} rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_RX_QUEUES],
+tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_TX_QUEUES];
 
 
 /*
@@ -72,8 +72,8 @@ tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
  */
 static const char MZ_RTE_PDUMP_STATS[] = "rte_pdump_stats";
 static struct {
-	struct rte_pdump_stats rx[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
-	struct rte_pdump_stats tx[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+	struct rte_pdump_stats rx[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_RX_QUEUES];
+	struct rte_pdump_stats tx[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_TX_QUEUES];
 	const struct rte_memzone *mz;
 } *pdump_stats;
 
@@ -708,8 +708,8 @@ rte_pdump_disable_by_deviceid(char *device_id, uint16_t queue,
 }
 
 static void
-pdump_sum_stats(uint16_t port, uint16_t nq,
-		struct rte_pdump_stats stats[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT],
+pdump_sum_stats(uint16_t nq,
+		struct rte_pdump_stats *stats,
 		struct rte_pdump_stats *total)
 {
 	uint64_t *sum = (uint64_t *)total;
@@ -718,7 +718,7 @@ pdump_sum_stats(uint16_t port, uint16_t nq,
 	uint16_t qid;
 
 	for (qid = 0; qid < nq; qid++) {
-		const RTE_ATOMIC(uint64_t) *perq = (const uint64_t __rte_atomic *)&stats[port][qid];
+		const RTE_ATOMIC(uint64_t) *perq = (const uint64_t __rte_atomic *)&stats[qid];
 
 		for (i = 0; i < sizeof(*total) / sizeof(uint64_t); i++) {
 			val = rte_atomic_load_explicit(&perq[i], rte_memory_order_relaxed);
@@ -762,7 +762,7 @@ rte_pdump_stats(uint16_t port, struct rte_pdump_stats *stats)
 		pdump_stats = mz->addr;
 	}
 
-	pdump_sum_stats(port, dev_info.nb_rx_queues, pdump_stats->rx, stats);
-	pdump_sum_stats(port, dev_info.nb_tx_queues, pdump_stats->tx, stats);
+	pdump_sum_stats(dev_info.nb_rx_queues, pdump_stats->rx[port], stats);
+	pdump_sum_stats(dev_info.nb_tx_queues, pdump_stats->tx[port], stats);
 	return 0;
 }
