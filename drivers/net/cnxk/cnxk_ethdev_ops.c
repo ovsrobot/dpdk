@@ -16,8 +16,8 @@ cnxk_nix_info_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *devinfo)
 
 	devinfo->min_rx_bufsize = NIX_MIN_HW_FRS + RTE_ETHER_CRC_LEN;
 	devinfo->max_rx_pktlen = max_rx_pktlen;
-	devinfo->max_rx_queues = RTE_MAX_QUEUES_PER_PORT;
-	devinfo->max_tx_queues = RTE_MAX_QUEUES_PER_PORT;
+	devinfo->max_rx_queues = RTE_MAX_ETHPORT_RX_QUEUES;
+	devinfo->max_tx_queues = RTE_MAX_ETHPORT_TX_QUEUES;
 	devinfo->max_mac_addrs = dev->max_mac_entries;
 	devinfo->max_vfs = pci_dev->max_vfs;
 	devinfo->max_mtu = devinfo->max_rx_pktlen - CNXK_NIX_L2_OVERHEAD;
