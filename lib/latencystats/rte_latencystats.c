@@ -60,8 +60,8 @@ struct rxtx_cbs {
 	const struct rte_eth_rxtx_callback *cb;
 };
 
-static struct rxtx_cbs rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
-static struct rxtx_cbs tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+static struct rxtx_cbs rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_RX_QUEUES];
+static struct rxtx_cbs tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_ETHPORT_TX_QUEUES];
 
 struct latency_stats_nameoff {
 	char name[RTE_ETH_XSTATS_NAME_SIZE];
