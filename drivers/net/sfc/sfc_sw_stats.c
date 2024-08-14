@@ -825,9 +825,11 @@ sfc_sw_xstats_alloc_queues_bitmap(struct sfc_adapter *sa)
 	struct rte_bitmap **queues_bitmap = &sa->sw_stats.queues_bitmap;
 	void **queues_bitmap_mem = &sa->sw_stats.queues_bitmap_mem;
 	uint32_t bmp_size;
+	uint32_t max_queues = RTE_MAX(RTE_MAX_ETHPORT_RX_QUEUES,
+				      RTE_MAX_ETHPORT_TX_QUEUES);
 	int rc;
 
-	bmp_size = rte_bitmap_get_memory_footprint(RTE_MAX_QUEUES_PER_PORT);
+	bmp_size = rte_bitmap_get_memory_footprint(max_queues);
 	*queues_bitmap_mem = NULL;
 	*queues_bitmap = NULL;
 
@@ -836,7 +838,7 @@ sfc_sw_xstats_alloc_queues_bitmap(struct sfc_adapter *sa)
 	if (*queues_bitmap_mem == NULL)
 		return ENOMEM;
 
-	*queues_bitmap = rte_bitmap_init(RTE_MAX_QUEUES_PER_PORT,
+	*queues_bitmap = rte_bitmap_init(max_queues,
 					 *queues_bitmap_mem, bmp_size);
 	if (*queues_bitmap == NULL) {
 		rc = EINVAL;
