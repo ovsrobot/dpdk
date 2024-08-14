@@ -352,6 +352,8 @@ endforeach
 
 # set other values pulled from the build options
 dpdk_conf.set('RTE_MAX_ETHPORTS', get_option('max_ethports'))
+dpdk_conf.set('RTE_MAX_ETHPORT_RX_QUEUES', get_option('max_ethport_rx_queues'))
+dpdk_conf.set('RTE_MAX_ETHPORT_TX_QUEUES', get_option('max_ethport_tx_queues'))
 dpdk_conf.set('RTE_LIBEAL_USE_HPET', get_option('use_hpet'))
 dpdk_conf.set('RTE_ENABLE_STDATOMIC', get_option('enable_stdatomic'))
 dpdk_conf.set('RTE_ENABLE_TRACE_FP', get_option('enable_trace_fp'))

@@ -40,6 +40,10 @@ option('machine', type: 'string', value: 'auto', description:
        'Alias of cpu_instruction_set.')
 option('max_ethports', type: 'integer', value: 32, description:
        'maximum number of Ethernet devices')
+option('max_ethport_rx_queues', type: 'integer', value: 256, description:
+       'maximum number of Rx queues on an Ethernet device')
+option('max_ethport_tx_queues', type: 'integer', value: 256, description:
+       'maximum number of Tx queues on an Ethernet device')
 option('max_lcores', type: 'string', value: 'default', description:
        'Set maximum number of cores/threads supported by EAL; "default" is different per-arch, "detect" detects the number of cores on the build machine.')
 option('max_numa_nodes', type: 'string', value: 'default', description:

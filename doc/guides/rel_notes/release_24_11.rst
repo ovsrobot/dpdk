@@ -58,8 +58,17 @@ New Features
 * **New configuration settings for Rx and Tx Ethernet Queues.**
 
    New defines have been added to DPDK to allow independent tracking of the maximum number of Rx and Tx queues.
-   These defines as ``RTE_MAX_ETHPORT_RX_QUEUES`` and ``RTE_MAX_ETHPORT_TX_QUEUES``,
-   and should be used in place of the older macro ``RTE_MAX_QUEUES_PER_PORT``.
+   These defines are ``RTE_MAX_ETHPORT_RX_QUEUES`` and ``RTE_MAX_ETHPORT_TX_QUEUES``,
+   and these new defines should be used in place of the older define ``RTE_MAX_QUEUES_PER_PORT``.
+   Unlike the older define, these new defines are build-time configurable via meson options:
+   ``max_ethport_rx_queues`` and ``max_ethport_tx_queues``.
+
+.. note::
+
+   The default max values for Rx and Tx queue limits are reduced from 1024, in previous releases,
+   to 256 in this release.
+   For application that require large numbers of queues,
+   these defaults can be changed via the meson configuration options described above.
 
 
 Removed Items
