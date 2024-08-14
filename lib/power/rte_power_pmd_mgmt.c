@@ -494,7 +494,7 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
 
-	if (queue_id >= RTE_MAX_QUEUES_PER_PORT || lcore_id >= RTE_MAX_LCORE) {
+	if (queue_id >= RTE_MAX_ETHPORT_RX_QUEUES || lcore_id >= RTE_MAX_LCORE) {
 		ret = -EINVAL;
 		goto end;
 	}
@@ -608,7 +608,7 @@ rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
 
-	if (lcore_id >= RTE_MAX_LCORE || queue_id >= RTE_MAX_QUEUES_PER_PORT)
+	if (lcore_id >= RTE_MAX_LCORE || queue_id >= RTE_MAX_ETHPORT_RX_QUEUES)
 		return -EINVAL;
 
 	/* check if the queue is stopped */
