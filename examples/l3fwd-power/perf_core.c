@@ -134,7 +134,7 @@ parse_perf_config(const char *q_arg)
 	unsigned int size;
 	unsigned int max_fld[_NUM_FLD] = {
 		RTE_MAX_ETHPORTS,
-		RTE_MAX_QUEUES_PER_PORT,
+		RTE_MAX_ETHPORT_RX_QUEUES,
 		255,
 		RTE_MAX_LCORE
 	};
