@@ -261,6 +261,8 @@ bond_ethdev_parse_balance_xmit_policy_kvarg(const char *key __rte_unused,
 		*xmit_policy = BALANCE_XMIT_POLICY_LAYER23;
 	else if (strcmp(PMD_BOND_XMIT_POLICY_LAYER34_KVARG, value) == 0)
 		*xmit_policy = BALANCE_XMIT_POLICY_LAYER34;
+	else if (strcmp(PMD_BOND_XMIT_POLICY_USER_KVARG, value) == 0)
+		*xmit_policy = BALANCE_XMIT_POLICY_USER;
 	else
 		return -1;
 

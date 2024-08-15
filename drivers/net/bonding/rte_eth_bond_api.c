@@ -15,6 +15,8 @@
 #include "eth_bond_private.h"
 #include "eth_bond_8023ad_private.h"
 
+static burst_xmit_hash_t burst_xmit_user_hash;
+
 int
 check_for_bonding_ethdev(const struct rte_eth_dev *eth_dev)
 {
@@ -973,6 +975,13 @@ rte_eth_bond_mac_address_reset(uint16_t bonding_port_id)
 }
 
 int
+rte_eth_bond_xmit_policy_cb_register(burst_xmit_hash_t cb_fn)
+{
+	burst_xmit_user_hash = cb_fn;
+	return 0;
+}
+
+int
 rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy)
 {
 	struct bond_dev_private *internals;
@@ -994,6 +1003,12 @@ rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy)
 	case BALANCE_XMIT_POLICY_LAYER34:
 		internals->balance_xmit_policy = policy;
 		internals->burst_xmit_hash = burst_xmit_l34_hash;
+		break;
+	case BALANCE_XMIT_POLICY_USER:
+		if (burst_xmit_user_hash == NULL)
+			return -1;
+		internals->balance_xmit_policy = policy;
+		internals->burst_xmit_hash = burst_xmit_user_hash;
 		break;
 
 	default:

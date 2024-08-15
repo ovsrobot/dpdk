@@ -32,6 +32,7 @@
 #define PMD_BOND_XMIT_POLICY_LAYER2_KVARG	("l2")
 #define PMD_BOND_XMIT_POLICY_LAYER23_KVARG	("l23")
 #define PMD_BOND_XMIT_POLICY_LAYER34_KVARG	("l34")
+#define PMD_BOND_XMIT_POLICY_USER_KVARG	("user")
 
 extern int bond_logtype;
 
@@ -101,9 +102,6 @@ struct rte_flow {
 	uint8_t rule_data[];
 };
 
-typedef void (*burst_xmit_hash_t)(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members);
-
 /** Link Bonding PMD device private configuration Structure */
 struct bond_dev_private {
 	uint16_t port_id;			/**< Port Id of Bonding Port */
@@ -118,7 +116,7 @@ struct bond_dev_private {
 	/**< Flag for whether primary port is user defined or not */
 
 	uint8_t balance_xmit_policy;
-	/**< Transmit policy - l2 / l23 / l34 for operation in balance mode */
+	/**< Transmit policy - l2 / l23 / l34 / user for operation in balance mode */
 	burst_xmit_hash_t burst_xmit_hash;
 	/**< Transmit policy hash function */
 
