@@ -388,11 +388,12 @@ __mlx5_hws_cnt_pool_enqueue_revert(struct rte_ring *r, unsigned int n,
 
 	MLX5_ASSERT(r->prod.sync_type == RTE_RING_SYNC_ST);
 	MLX5_ASSERT(r->cons.sync_type == RTE_RING_SYNC_ST);
-	current_head = rte_atomic_load_explicit(&r->prod.head, rte_memory_order_relaxed);
+	current_head = rte_atomic_load_explicit(&r->prod.head.val.pos,
+			rte_memory_order_relaxed);
 	MLX5_ASSERT(n <= r->capacity);
 	MLX5_ASSERT(n <= rte_ring_count(r));
 	revert2head = current_head - n;
-	r->prod.head = revert2head; /* This ring should be SP. */
+	r->prod.head.val.pos = revert2head; /* This ring should be SP. */
 	__rte_ring_get_elem_addr(r, revert2head, sizeof(cnt_id_t), n,
 			&zcd->ptr1, &zcd->n1, &zcd->ptr2);
 	/* Update tail */

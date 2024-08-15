@@ -102,7 +102,7 @@ reset_headtail(void *p)
 	switch (ht->sync_type) {
 	case RTE_RING_SYNC_MT:
 	case RTE_RING_SYNC_ST:
-		ht->head = 0;
+		ht->head.raw = 0;
 		ht->tail = 0;
 		break;
 	case RTE_RING_SYNC_MT_RTS:
@@ -373,9 +373,9 @@ rte_ring_dump(FILE *f, const struct rte_ring *r)
 	fprintf(f, "  size=%"PRIu32"\n", r->size);
 	fprintf(f, "  capacity=%"PRIu32"\n", r->capacity);
 	fprintf(f, "  ct=%"PRIu32"\n", r->cons.tail);
-	fprintf(f, "  ch=%"PRIu32"\n", r->cons.head);
+	fprintf(f, "  ch=%"PRIu32"\n", r->cons.head.val.pos);
 	fprintf(f, "  pt=%"PRIu32"\n", r->prod.tail);
-	fprintf(f, "  ph=%"PRIu32"\n", r->prod.head);
+	fprintf(f, "  ph=%"PRIu32"\n", r->prod.head.val.pos);
 	fprintf(f, "  used=%u\n", rte_ring_count(r));
 	fprintf(f, "  avail=%u\n", rte_ring_free_count(r));
 }

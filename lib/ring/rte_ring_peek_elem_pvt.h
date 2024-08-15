@@ -33,7 +33,7 @@ __rte_ring_st_get_tail(struct rte_ring_headtail *ht, uint32_t *tail,
 {
 	uint32_t h, n, t;
 
-	h = ht->head;
+	h = ht->head.val.pos;
 	t = ht->tail;
 	n = h - t;
 
@@ -58,7 +58,7 @@ __rte_ring_st_set_head_tail(struct rte_ring_headtail *ht, uint32_t tail,
 	RTE_SET_USED(enqueue);
 
 	pos = tail + num;
-	ht->head = pos;
+	ht->head.val.pos = pos;
 	rte_atomic_store_explicit(&ht->tail, pos, rte_memory_order_release);
 }
 

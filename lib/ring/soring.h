@@ -60,8 +60,8 @@ union soring_stage_tail {
 
 struct soring_stage_headtail {
 	volatile union soring_stage_tail tail;
-	enum rte_ring_sync_type unused;  /**< unused */
-	volatile RTE_ATOMIC(uint32_t) head;
+	enum rte_ring_sync_type __unused;  /**< unused */
+	union __rte_ring_head_cft head;
 };
 
 /**

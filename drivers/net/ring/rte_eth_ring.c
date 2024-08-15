@@ -325,7 +325,7 @@ eth_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
 	 */
 	pmc->addr = &rng->prod.head;
 	pmc->size = sizeof(rng->prod.head);
-	pmc->opaque[0] = rng->prod.head;
+	pmc->opaque[0] = rng->prod.head.val.pos;
 	pmc->fn = ring_monitor_callback;
 	return 0;
 }

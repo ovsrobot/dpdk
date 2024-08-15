@@ -38,17 +38,18 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 {
 	unsigned int max = n;
 	int success;
+	uint32_t tail;
+	union __rte_ring_head_cft nh, oh;
+
+	oh.raw = rte_atomic_load_explicit(&d->head.raw,
+			rte_memory_order_acquire);
 
 	do {
 		/* Reset n to the initial burst count */
 		n = max;
 
-		*old_head = d->head;
-
-		/* add rmb barrier to avoid load/load reorder in weak
-		 * memory model. It is noop on x86
-		 */
-		rte_smp_rmb();
+		*old_head = oh.val.pos;
+		tail = oh.val.cft;
 
 		/*
 		 *  The subtraction is done between two unsigned 32bits value
@@ -56,24 +57,41 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 		 * *old_head > s->tail). So 'free_entries' is always between 0
 		 * and capacity (which is < size).
 		 */
-		*entries = (capacity + s->tail - *old_head);
+		*entries = (capacity + tail - *old_head);
 
-		/* check that we have enough room in ring */
-		if (unlikely(n > *entries))
-			n = (behavior == RTE_RING_QUEUE_FIXED) ?
+		/* attempt #1: check that we have enough room with
+		 * cached-foreign-tail value.
+		 * Note that actual tail value can go forward till we cached
+		 * it, in that case we might have to update our cached value.
+		 */
+		if (unlikely(n > *entries)) {
+
+			tail = rte_atomic_load_explicit(&s->tail,
+				rte_memory_order_relaxed);
+			*entries = (capacity + tail - *old_head);
+
+			/* attempt #2: check that we have enough room in ring */
+			if (unlikely(n > *entries))
+				n = (behavior == RTE_RING_QUEUE_FIXED) ?
 					0 : *entries;
+		}
 
 		if (n == 0)
 			return 0;
 
 		*new_head = *old_head + n;
+		nh.val.pos = *new_head;
+		nh.val.cft = tail;
+
 		if (is_st) {
-			d->head = *new_head;
+			d->head.raw = nh.raw;
 			success = 1;
 		} else
-			success = rte_atomic32_cmpset(
-					(uint32_t *)(uintptr_t)&d->head,
-					*old_head, *new_head);
+			success = rte_atomic_compare_exchange_strong_explicit(
+				&d->head.raw, (uint64_t *)(uintptr_t)&oh.raw,
+				nh.raw, rte_memory_order_acquire,
+				rte_memory_order_acquire);
+
 	} while (unlikely(success == 0));
 	return n;
 }

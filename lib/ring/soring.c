@@ -90,7 +90,8 @@ __rte_soring_stage_finalize(struct soring_stage_headtail *sht,
 	 * already finished.
 	 */
 
-	head = rte_atomic_load_explicit(&sht->head, rte_memory_order_relaxed);
+	head = rte_atomic_load_explicit(&sht->head.val.pos,
+			rte_memory_order_relaxed);
 	n = RTE_MIN(head - ot.pos, maxn);
 	for (i = 0, tail = ot.pos; i < n; i += k, tail += k) {
 
@@ -213,22 +214,36 @@ __rte_soring_stage_move_head(struct soring_stage_headtail *d,
 	uint32_t *old_head, uint32_t *new_head, uint32_t *avail)
 {
 	uint32_t n, tail;
+	union __rte_ring_head_cft nh, oh;
 
-	*old_head = rte_atomic_load_explicit(&d->head,
+	oh.raw = rte_atomic_load_explicit(&d->head.raw,
 			rte_memory_order_acquire);
 
 	do {
 		n = num;
-		tail = rte_atomic_load_explicit(&s->tail,
-				rte_memory_order_relaxed);
+		*old_head = oh.val.pos;
+		tail = oh.val.cft;
 		*avail = capacity + tail - *old_head;
-		if (n > *avail)
-			n = (behavior == RTE_RING_QUEUE_FIXED) ? 0 : *avail;
+
+		if (n > *avail) {
+			tail = rte_atomic_load_explicit(&s->tail,
+				rte_memory_order_relaxed);
+			*avail = capacity + tail - *old_head;
+
+			if (n > *avail)
+				n = (behavior == RTE_RING_QUEUE_FIXED) ?
+					0 : *avail;
+		}
+
 		if (n == 0)
 			return 0;
+
 		*new_head = *old_head + n;
-	} while (rte_atomic_compare_exchange_strong_explicit(&d->head,
-			old_head, *new_head, rte_memory_order_acquire,
+		nh.val.pos = *new_head;
+		nh.val.cft = tail;
+
+	} while (rte_atomic_compare_exchange_strong_explicit(&d->head.raw,
+			&oh.raw, nh.raw, rte_memory_order_acquire,
 			rte_memory_order_acquire) == 0);
 
 	return n;

@@ -66,8 +66,17 @@ enum rte_ring_sync_type {
  * Depending on sync_type format of that structure might be different,
  * but offset for *sync_type* and *tail* values should remain the same.
  */
+union __rte_ring_head_cft {
+	/** raw 8B value to read/write *cnt* and *pos* as one atomic op */
+	alignas(sizeof(uint64_t)) RTE_ATOMIC(uint64_t) raw;
+	struct {
+		uint32_t pos; /**< head position */
+		uint32_t cft; /**< cached foreign tail value*/
+	} val;
+};
+
 struct rte_ring_headtail {
-	volatile RTE_ATOMIC(uint32_t) head;      /**< prod/consumer head. */
+	uint32_t __unused;
 	volatile RTE_ATOMIC(uint32_t) tail;      /**< prod/consumer tail. */
 	union {
 		/** sync type of prod/cons */
@@ -75,6 +84,7 @@ struct rte_ring_headtail {
 		/** deprecated -  True if single prod/cons */
 		uint32_t single;
 	};
+	union __rte_ring_head_cft head;
 };
 
 union __rte_ring_rts_poscnt {
