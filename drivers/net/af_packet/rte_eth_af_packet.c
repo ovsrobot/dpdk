@@ -36,9 +36,11 @@
 #define ETH_AF_PACKET_FRAMESIZE_ARG	"framesz"
 #define ETH_AF_PACKET_FRAMECOUNT_ARG	"framecnt"
 #define ETH_AF_PACKET_QDISC_BYPASS_ARG	"qdisc_bypass"
+#define ETH_AF_PACKET_EXPLICIT_FLUSH_ARG	"explicit_flush"
 
 #define DFLT_FRAME_SIZE		(1 << 11)
 #define DFLT_FRAME_COUNT	(1 << 9)
+#define DFLT_FRAME_BURST	(32)
 
 struct __rte_cache_aligned pkt_rx_queue {
 	int sockfd;
@@ -62,8 +64,10 @@ struct __rte_cache_aligned pkt_tx_queue {
 
 	struct iovec *rd;
 	uint8_t *map;
+	struct rte_ring *buf;
 	unsigned int framecount;
 	unsigned int framenum;
+	unsigned int explicit_flush;
 
 	volatile unsigned long tx_pkts;
 	volatile unsigned long err_pkts;
@@ -91,6 +95,7 @@ static const char *valid_arguments[] = {
 	ETH_AF_PACKET_FRAMESIZE_ARG,
 	ETH_AF_PACKET_FRAMECOUNT_ARG,
 	ETH_AF_PACKET_QDISC_BYPASS_ARG,
+	ETH_AF_PACKET_EXPLICIT_FLUSH_ARG,
 	NULL
 };
 
@@ -198,7 +203,7 @@ tx_ring_status_available(uint32_t tp_status)
  * Callback to handle sending packets through a real NIC.
  */
 static uint16_t
-eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
+eth_af_packet_tx_internal(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
 	struct tpacket2_hdr *ppd;
 	struct rte_mbuf *mbuf;
@@ -309,6 +314,59 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	pkt_q->err_pkts += i - num_tx;
 	pkt_q->tx_bytes += num_tx_bytes;
 	return i;
+}
+
+/*
+ * Callback to handle sending packets.
+ */
+static uint16_t
+eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
+{
+	struct pkt_tx_queue *pkt_q = queue;
+
+	if (unlikely(nb_pkts == 0))
+		return 0;
+
+	if (pkt_q->explicit_flush)
+		return rte_ring_enqueue_burst(pkt_q->buf,
+				(void **)bufs, nb_pkts, NULL);
+
+	return eth_af_packet_tx_internal(queue, bufs, nb_pkts);
+}
+
+/*
+ * Callback to flush previously buffer tx packets.
+ */
+static int
+eth_af_packet_tx_flush(void *queue, uint32_t free_cnt __rte_unused)
+{
+	uint16_t sent, nb_pkts;
+	uint16_t num_flushed = 0;
+
+	struct pkt_tx_queue *pkt_q = queue;
+
+	while (true) {
+		/* flush DFLT_FRAME_BURST of buffered pkts every iteration */
+		struct rte_mbuf *bufs[DFLT_FRAME_BURST];
+		nb_pkts = rte_ring_dequeue_burst_start(pkt_q->buf,
+				   (void **)bufs, DFLT_FRAME_BURST, NULL);
+
+		if (unlikely(nb_pkts == 0))
+			break;
+
+		/* If packet are dropped internally by the below
+		 * function, it okay to not include that stats in the
+		 * return of this function because err_pkts is updated
+		 * internally.
+		 */
+		sent = eth_af_packet_tx_internal(queue, bufs, nb_pkts);
+		num_flushed +=  sent;
+
+		/* commit the dequeue operation */
+		rte_ring_dequeue_finish(pkt_q->buf, sent);
+	}
+
+	return num_flushed;
 }
 
 static int
@@ -637,6 +695,7 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.tx_done_cleanup = eth_af_packet_tx_flush,
 };
 
 /*
@@ -668,6 +727,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
                        unsigned int framesize,
                        unsigned int framecnt,
 		       unsigned int qdisc_bypass,
+		       unsigned int explicit_flush,
                        struct pmd_internals **internals,
                        struct rte_eth_dev **eth_dev,
                        struct rte_kvargs *kvlist)
@@ -885,6 +945,18 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 			goto error;
 		}
 
+		char buf_name[RTE_RING_NAMESIZE];
+		snprintf(buf_name, RTE_RING_NAMESIZE, "%s:txq%u", name, q);
+		tx_queue->buf = rte_ring_create(buf_name, tx_queue->framecount,
+				  numa_node, RING_F_SP_ENQ | RING_F_SC_DEQ);
+		if (tx_queue->buf == NULL) {
+			PMD_LOG(ERR,
+				"%s: could not create ring buffer. err=%s",
+				buf_name, rte_strerror(rte_errno));
+			goto error;
+		}
+		tx_queue->explicit_flush = explicit_flush;
+
 #if defined(PACKET_FANOUT)
 		rc = setsockopt(qsockfd, SOL_PACKET, PACKET_FANOUT,
 				&fanout_arg, sizeof(fanout_arg));
@@ -962,6 +1034,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	unsigned int framecount = DFLT_FRAME_COUNT;
 	unsigned int qpairs = 1;
 	unsigned int qdisc_bypass = 1;
+	unsigned int explicit_flush = 0;
 
 	/* do some parameter checking */
 	if (*sockfd < 0)
@@ -1024,6 +1097,16 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 			}
 			continue;
 		}
+		if (strstr(pair->key, ETH_AF_PACKET_EXPLICIT_FLUSH_ARG) != NULL) {
+			explicit_flush = atoi(pair->value);
+			if (explicit_flush > 1) {
+				PMD_LOG(ERR,
+					"%s: invalid explicit_flush value",
+					name);
+				return -1;
+			}
+			continue;
+		}
 	}
 
 	if (framesize > blocksize) {
@@ -1049,7 +1132,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	if (rte_pmd_init_internals(dev, *sockfd, qpairs,
 				   blocksize, blockcount,
 				   framesize, framecount,
-				   qdisc_bypass,
+				   qdisc_bypass, explicit_flush,
 				   &internals, &eth_dev,
 				   kvlist) < 0)
 		return -1;
@@ -1146,4 +1229,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_af_packet,
 	"blocksz=<int> "
 	"framesz=<int> "
 	"framecnt=<int> "
-	"qdisc_bypass=<0|1>");
+	"qdisc_bypass=<0|1> "
+	"explicit_flush=<0|1>");
