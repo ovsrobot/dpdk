@@ -47,6 +47,7 @@
 #include "l3fwd.h"
 #include "l3fwd_event.h"
 #include "l3fwd_route.h"
+#include "l3fwd_wqp.h"
 
 #define MAX_TX_QUEUE_PER_PORT RTE_MAX_LCORE
 #define MAX_RX_QUEUE_PER_PORT 128
@@ -68,6 +69,10 @@ enum L3FWD_LOOKUP_MODE {
 	L3FWD_LOOKUP_ACL
 };
 static enum L3FWD_LOOKUP_MODE lookup_mode;
+
+struct l3fwd_wqp_param l3fwd_wqp_param = {
+	.mode = L3FWD_WORKER_POLL,
+};
 
 /* Global variables. */
 static int numa_on = 1; /**< NUMA is enabled by default. */
@@ -245,6 +250,8 @@ const struct ipv6_l3fwd_route ipv6_l3fwd_route_array[] = {
 	{{32, 1, 2, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 14},
 	{{32, 1, 2, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 15},
 };
+
+uint32_t l3fwd_lookup_iter_num = 1;
 
 /*
  * API's called during initialization to setup ACL/EM/LPM rules.
@@ -454,6 +461,23 @@ print_usage(const char *prgname)
 }
 
 static int
+parse_uint_val(const char *str, uint32_t *val, uint32_t min, uint32_t max)
+{
+	char *end = NULL;
+	unsigned long v;
+
+	errno = 0;
+	v = strtoul(str, &end, 0);
+	if (errno != 0 || end == NULL || *end != '\0')
+		return -1;
+	if (v < min || v > max)
+		return -1;
+
+	*val = v;
+	return 0;
+}
+
+static int
 parse_max_pkt_len(const char *pktlen)
 {
 	char *end = NULL;
@@ -572,16 +596,35 @@ parse_eth_dest(const char *optarg)
 }
 
 static void
-parse_mode(const char *optarg __rte_unused)
+parse_mode(const char *optarg)
 {
+	l3fwd_wqp_param.mode = L3FWD_WORKER_POLL;
+
 #ifdef RTE_LIB_EVENTDEV
 	struct l3fwd_event_resources *evt_rsrc = l3fwd_get_eventdev_rsrc();
+
+	evt_rsrc->enabled = false;
 
 	if (!strcmp(optarg, "poll"))
 		evt_rsrc->enabled = false;
 	else if (!strcmp(optarg, "eventdev"))
 		evt_rsrc->enabled = true;
+	else
 #endif
+	if (strcmp(optarg, "wqorder") == 0) {
+		l3fwd_wqp_param.mode = L3FWD_WORKER_ORQUE;
+		l3fwd_wqp_param.single = 0;
+	} else if (strcmp(optarg, "wqunorder") == 0) {
+		l3fwd_wqp_param.mode = L3FWD_WORKER_UNQUE;
+		l3fwd_wqp_param.single = 0;
+	} else if (strcmp(optarg, "wqorderS") == 0) {
+		l3fwd_wqp_param.mode = L3FWD_WORKER_ORQUE;
+		l3fwd_wqp_param.single = 1;
+	} else if (strcmp(optarg, "wqunorderS") == 0) {
+		l3fwd_wqp_param.mode = L3FWD_WORKER_UNQUE;
+		l3fwd_wqp_param.single = 1;
+	} else
+		rte_exit(EXIT_FAILURE, "unknown mode: %s\n", optarg);
 }
 
 static void
@@ -698,6 +741,8 @@ static const char short_options[] =
 #define CMD_LINE_OPT_RULE_IPV4 "rule_ipv4"
 #define CMD_LINE_OPT_RULE_IPV6 "rule_ipv6"
 #define CMD_LINE_OPT_ALG "alg"
+#define CMD_LINE_OPT_WQSIZE "wqsize"
+#define CMD_LINE_OPT_LOOKUP_ITER "lookup-iter"
 
 enum {
 	/* long options mapped to a short option */
@@ -726,7 +771,9 @@ enum {
 	CMD_LINE_OPT_LOOKUP_NUM,
 	CMD_LINE_OPT_ENABLE_VECTOR_NUM,
 	CMD_LINE_OPT_VECTOR_SIZE_NUM,
-	CMD_LINE_OPT_VECTOR_TMO_NS_NUM
+	CMD_LINE_OPT_VECTOR_TMO_NS_NUM,
+	CMD_LINE_OPT_WQSIZE_NUM,
+	CMD_LINE_OPT_LOOKUP_ITER_NUM,
 };
 
 static const struct option lgopts[] = {
@@ -753,6 +800,8 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_RULE_IPV4,   1, 0, CMD_LINE_OPT_RULE_IPV4_NUM},
 	{CMD_LINE_OPT_RULE_IPV6,   1, 0, CMD_LINE_OPT_RULE_IPV6_NUM},
 	{CMD_LINE_OPT_ALG,   1, 0, CMD_LINE_OPT_ALG_NUM},
+	{CMD_LINE_OPT_WQSIZE, 1, 0, CMD_LINE_OPT_WQSIZE_NUM},
+	{CMD_LINE_OPT_LOOKUP_ITER, 1, 0, CMD_LINE_OPT_LOOKUP_ITER_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -933,6 +982,18 @@ parse_args(int argc, char **argv)
 			break;
 		case CMD_LINE_OPT_ALG_NUM:
 			l3fwd_set_alg(optarg);
+			break;
+		case CMD_LINE_OPT_WQSIZE_NUM:
+			ret = parse_uint_val(optarg, &l3fwd_wqp_param.qsize,
+				RX_DESC_DEFAULT, UINT16_MAX);
+			if (ret < 0)
+				return ret;
+			break;
+		case CMD_LINE_OPT_LOOKUP_ITER_NUM:
+			ret = parse_uint_val(optarg, &l3fwd_lookup_iter_num,
+				1, UINT16_MAX);
+			if (ret < 0)
+				return ret;
 			break;
 		default:
 			print_usage(prgname);
@@ -1588,6 +1649,8 @@ main(int argc, char **argv)
 			l3fwd_lkp.main_loop = evt_rsrc->ops.em_event_loop;
 		else if (lookup_mode == L3FWD_LOOKUP_FIB)
 			l3fwd_lkp.main_loop = evt_rsrc->ops.fib_event_loop;
+		else if (lookup_mode == L3FWD_LOOKUP_ACL)
+			l3fwd_lkp.main_loop = evt_rsrc->ops.acl_event_loop;
 		else
 			l3fwd_lkp.main_loop = evt_rsrc->ops.lpm_event_loop;
 	} else
@@ -1639,6 +1702,12 @@ main(int argc, char **argv)
 				rte_exit(EXIT_FAILURE, "ptype check fails\n");
 		}
 	}
+
+	/* init worker queues for lcores (if any) */
+	ret = l3fwd_wqp_init(lcore_conf, &l3fwd_wqp_param);
+	if (ret != 0)
+		rte_exit(EXIT_FAILURE, "l3fwd_wqp_init: err=%d, lcore=%u\n",
+			ret, lcore_id);
 
 	check_all_ports_link_status(enabled_port_mask);
 
@@ -1694,6 +1763,8 @@ main(int argc, char **argv)
 
 	/* clean up config file routes */
 	l3fwd_lkp.free_routes();
+
+	l3fwd_wqp_fini(lcore_conf);
 
 	/* clean up the EAL */
 	rte_eal_cleanup();

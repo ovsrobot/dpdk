@@ -4,6 +4,7 @@
 
 #include "l3fwd.h"
 #include "l3fwd_route.h"
+#include "l3fwd_wqp.h"
 
 /*
  * Rule and trace formats definitions.
@@ -1003,19 +1004,21 @@ acl_process_pkts(struct rte_mbuf *pkts[MAX_PKT_BURST],
 	/* split packets burst depending on packet type (IPv4/IPv6) */
 	l3fwd_acl_prepare_acl_parameter(pkts, &acl_search, num);
 
-	if (acl_search.num_ipv4)
-		rte_acl_classify(acl_config.acx_ipv4[socketid],
+	for (i = l3fwd_lookup_iter_num; i != 0; i--) {
+		if (acl_search.num_ipv4)
+			rte_acl_classify(acl_config.acx_ipv4[socketid],
 				acl_search.data_ipv4,
 				acl_search.res_ipv4,
 				acl_search.num_ipv4,
 				DEFAULT_MAX_CATEGORIES);
 
-	if (acl_search.num_ipv6)
-		rte_acl_classify(acl_config.acx_ipv6[socketid],
+		if (acl_search.num_ipv6)
+			rte_acl_classify(acl_config.acx_ipv6[socketid],
 				acl_search.data_ipv6,
 				acl_search.res_ipv6,
 				acl_search.num_ipv6,
 				DEFAULT_MAX_CATEGORIES);
+	}
 
 	/* combine lookup results back, into one array of next hops */
 	n4 = 0;
@@ -1042,34 +1045,36 @@ acl_process_pkts(struct rte_mbuf *pkts[MAX_PKT_BURST],
 
 static inline void
 acl_send_packets(struct lcore_conf *qconf, struct rte_mbuf *pkts[],
-	uint16_t hops[], uint32_t num)
+	uint16_t hops[], uint32_t num, int step3)
 {
 #if defined ACL_SEND_MULTI
-	send_packets_multi(qconf, pkts, hops, num);
+	__send_packets_multi(qconf, pkts, hops, num, step3);
 #else
-	send_packets_single(qconf, pkts, hops, num);
+	if (step3 != 0)
+		send_packets_single(qconf, pkts, hops, num);
+	else {
+		uint32_t i;
+		for (i = 0; i != num; i++)
+			send_single_packet(qconf, pkts[i], hops[i]);
+	}
 #endif
 }
 
 /* main processing loop */
-int
-acl_main_loop(__rte_unused void *dummy)
+static int
+acl_poll_loop(struct lcore_conf *qconf, uint32_t lcore_id)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	uint16_t hops[MAX_PKT_BURST];
-	unsigned int lcore_id;
 	uint64_t prev_tsc, diff_tsc, cur_tsc;
-	int i, nb_rx;
+	uint32_t i, n, nb_rx;
 	uint16_t portid;
 	uint16_t queueid;
-	struct lcore_conf *qconf;
 	int socketid;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1)
 			/ US_PER_S * BURST_TX_DRAIN_US;
 
 	prev_tsc = 0;
-	lcore_id = rte_lcore_id();
-	qconf = &lcore_conf[lcore_id];
 	socketid = rte_lcore_to_socket_id(lcore_id);
 
 	if (qconf->n_rx_queue == 0) {
@@ -1121,16 +1126,98 @@ acl_main_loop(__rte_unused void *dummy)
 			nb_rx = rte_eth_rx_burst(portid, queueid,
 				pkts_burst, MAX_PKT_BURST);
 
-			if (nb_rx > 0) {
-				acl_process_pkts(pkts_burst, hops, nb_rx,
-					socketid);
-				acl_send_packets(qconf, pkts_burst, hops,
-					nb_rx);
+			if (nb_rx != 0) {
+				if (l3fwd_wqp_param.mode == L3FWD_WORKER_POLL) {
+					acl_process_pkts(pkts_burst, hops,
+						nb_rx, socketid);
+					acl_send_packets(qconf, pkts_burst,
+						hops, nb_rx, 1);
+				} else {
+					n = lcore_wq_submit(&qconf->wqpool, i,
+						pkts_burst, nb_rx);
+					if (n != nb_rx) {
+						/* update stats counter */
+						rte_pktmbuf_free_bulk(
+							pkts_burst + n,
+							nb_rx - n);
+					}
+				}
+			}
+			if (l3fwd_wqp_param.mode != L3FWD_WORKER_POLL) {
+				nb_rx = lcore_wq_receive(&qconf->wqpool, i,
+					pkts_burst, hops, MAX_PKT_BURST);
+				if (nb_rx != 0)
+					acl_send_packets(qconf, pkts_burst,
+						hops, nb_rx, 0);
 			}
 		}
 	}
 	return 0;
 }
+
+/* WT processing loop */
+static int
+acl_wqp_loop(struct lcore_conf *qconf, uint32_t lcore_id)
+{
+	int32_t socketid;
+	uint32_t i, k, n;
+	struct rte_mbuf *pkts[MAX_PKT_BURST];
+	uint16_t hops[MAX_PKT_BURST];
+
+	socketid = rte_lcore_to_socket_id(lcore_id);
+
+	if (qconf->wqpool.nb_queue == 0) {
+		RTE_LOG(INFO, L3FWD, "%s: lcore %u has nothing to do\n",
+			__func__, lcore_id);
+		return 0;
+	}
+
+	RTE_LOG(INFO, L3FWD, "%s: entering loop on lcore %u\n",
+		__func__, lcore_id);
+
+	while (!force_quit) {
+
+		/*
+		 * Read packet from internal queues and process them
+		 */
+		for (i = 0; i < qconf->wqpool.nb_queue; ++i) {
+
+			n = lcore_wq_pull(&qconf->wqpool, i, pkts,
+				RTE_DIM(pkts));
+			if (n == 0)
+				continue;
+
+			acl_process_pkts(pkts, hops, n, socketid);
+			process_step3_burst(pkts, hops, n);
+			k = lcore_wq_push(&qconf->wqpool, i, pkts, hops, n);
+			if (n != k) {
+				/* stats update */
+				rte_pktmbuf_free_bulk(pkts + k, n - k);
+			}
+		}
+	}
+	return 0;
+}
+
+/* main processing loop */
+int
+acl_main_loop(__rte_unused void *dummy)
+{
+	uint32_t lcore_id;
+	struct lcore_conf *qconf;
+
+	lcore_id = rte_lcore_id();
+	qconf = &lcore_conf[lcore_id];
+
+	if (qconf->n_rx_queue != 0)
+		return acl_poll_loop(qconf, lcore_id);
+	else
+		return acl_wqp_loop(qconf, lcore_id);
+}
+
+#ifdef RTE_LIB_EVENTDEV
+#include "l3fwd_acl_event.h"
+#endif
 
 /* Not used by L3fwd ACL. */
 void *

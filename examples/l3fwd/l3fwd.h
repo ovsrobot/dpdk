@@ -77,6 +77,42 @@ struct __rte_cache_aligned lcore_rx_queue {
 	uint16_t queue_id;
 };
 
+enum L3FWD_WORKER_MODE {
+	L3FWD_WORKER_POLL,
+	L3FWD_WORKER_UNQUE,
+	L3FWD_WORKER_ORQUE,
+};
+
+struct l3fwd_wqp_param {
+	enum L3FWD_WORKER_MODE mode;
+	uint32_t qsize;    /**< Number of elems in worker queue */
+	int32_t single;    /**< use single queue per I/O (poll) thread */
+};
+
+extern struct l3fwd_wqp_param l3fwd_wqp_param;
+
+enum {
+	LCORE_WQ_IN,
+	LCORE_WQ_OUT,
+	LCORE_WQ_NUM,
+};
+
+union lcore_wq {
+	struct rte_ring *r[LCORE_WQ_NUM];
+	struct {
+		struct rte_soring *sor;
+		/* used by WQ, sort of thred-local var */
+		uint32_t ftoken;
+	};
+};
+
+struct lcore_wq_pool {
+	uint32_t nb_queue;
+	uint32_t qmask;
+	union lcore_wq queue[MAX_RX_QUEUE_PER_LCORE];
+	struct l3fwd_wqp_param prm;
+};
+
 struct __rte_cache_aligned lcore_conf {
 	uint16_t n_rx_queue;
 	struct lcore_rx_queue rx_queue_list[MAX_RX_QUEUE_PER_LCORE];
@@ -86,6 +122,7 @@ struct __rte_cache_aligned lcore_conf {
 	struct mbuf_table tx_mbufs[RTE_MAX_ETHPORTS];
 	void *ipv4_lookup_struct;
 	void *ipv6_lookup_struct;
+	struct lcore_wq_pool wqpool;
 };
 
 extern volatile bool force_quit;
@@ -114,6 +151,8 @@ extern struct parm_cfg parm_config;
 extern struct acl_algorithms acl_alg[];
 
 extern uint32_t max_pkt_len;
+
+extern uint32_t l3fwd_lookup_iter_num;
 
 /* Send burst of packets on an output interface */
 static inline int
@@ -308,6 +347,22 @@ fib_event_main_loop_tx_q_vector(__rte_unused void *dummy);
 int
 fib_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy);
 
+int
+acl_event_main_loop_tx_d(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_d_burst(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_q(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_q_burst(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_d_vector(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_d_burst_vector(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_q_vector(__rte_unused void *dummy);
+int
+acl_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy);
 
 /* Return ipv4/ipv6 fwd lookup struct for ACL, LPM, EM or FIB. */
 void *
