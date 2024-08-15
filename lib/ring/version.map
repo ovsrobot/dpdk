@@ -14,3 +14,16 @@ DPDK_25 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 24.11
+	rte_soring_acquire;
+	rte_soring_count;
+	rte_soring_dequeue;
+	rte_soring_enqueue;
+	rte_soring_get_memsize;
+	rte_soring_init;
+	rte_soring_release;
+};
