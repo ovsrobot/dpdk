@@ -223,6 +223,10 @@ struct __rte_cache_aligned rte_graph_cluster_node_stats {
 
 	uint64_t realloc_count; /**< Realloc count. */
 
+	uint8_t node_error_cntrs;			   /**< Number of Node error counters. */
+	char (*node_error_desc)[RTE_NODE_ERROR_DESC_SIZE]; /**< Names of the Node error counters. */
+	uint64_t *node_error_count;			   /**< Total error count per each error. */
+
 	rte_node_t id;	/**< Node identifier of stats. */
 	uint64_t hz;	/**< Cycles per seconds. */
 	char name[RTE_NODE_NAMESIZE];	/**< Name of the node. */
