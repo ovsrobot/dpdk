@@ -29,6 +29,7 @@ extern "C" {
 
 #define RTE_GRAPH_NAMESIZE 64 /**< Max length of graph name. */
 #define RTE_NODE_NAMESIZE 64  /**< Max length of node name. */
+#define RTE_NODE_ERROR_DESC_SIZE 64  /**< Max length of node name. */
 #define RTE_GRAPH_PCAP_FILE_SZ 64 /**< Max length of pcap file name. */
 #define RTE_GRAPH_OFF_INVALID UINT32_MAX /**< Invalid graph offset. */
 #define RTE_NODE_ID_INVALID UINT32_MAX   /**< Invalid node id. */
@@ -460,6 +461,11 @@ void rte_graph_cluster_stats_get(struct rte_graph_cluster_stats *stat,
  */
 void rte_graph_cluster_stats_reset(struct rte_graph_cluster_stats *stat);
 
+struct rte_node_errors {
+	uint16_t nb_errors;				 /**< Number of errors. */
+	char err_desc[][RTE_NODE_ERROR_DESC_SIZE];	 /**< Names of errors. */
+};
+
 /**
  * Structure defines the node registration parameters.
  *
@@ -472,6 +478,7 @@ struct rte_node_register {
 	rte_node_process_t process; /**< Node process function. */
 	rte_node_init_t init;       /**< Node init function. */
 	rte_node_fini_t fini;       /**< Node fini function. */
+	struct rte_node_errors *errs; /**< Node specific errors. */
 	rte_node_t id;		    /**< Node Identifier. */
 	rte_node_t parent_id;       /**< Identifier of parent node. */
 	rte_edge_t nb_edges;        /**< Number of edges from this node. */
