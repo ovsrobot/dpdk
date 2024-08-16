@@ -74,21 +74,37 @@ def set_hugepages(path, reqpages):
                  gotpages, reqpages, filename))
 
 
+def get_numa_pages_node(node):
+    '''Read list of hugepage reservations on specific NUMA node'''
+    hp_path = f'/sys/devices/system/node/node{node}/hugepages'
+    if not os.path.exists(hp_path):
+        return
+    res = []
+    for pg_sz_dir in os.listdir(hp_path):
+        pg_sz = int(pg_sz_dir[10:-2])
+        nr_pages = get_hugepages(f'{hp_path}/{pg_sz_dir}')
+        if nr_pages > 0:
+            pg_sz_str = fmt_memsize(pg_sz)
+            total_sz_str = fmt_memsize(nr_pages * pg_sz)
+            res += [(nr_pages, pg_sz_str, total_sz_str)]
+        else:
+            res += [(0, None, None)]
+    return res
+
+
 def show_numa_pages():
     '''Show huge page reservations on Numa system'''
+    # get list of NUMA nodes and sort them by integer order
     print('Node Pages Size Total')
-    for numa_path in glob.glob('/sys/devices/system/node/node*'):
-        node = numa_path[29:]  # slice after /sys/devices/system/node/node
-        path = numa_path + '/hugepages'
-        if not os.path.exists(path):
-            continue
-        for hdir in os.listdir(path):
-            pages = get_hugepages(path + '/' + hdir)
-            if pages > 0:
-                kb = int(hdir[10:-2])  # slice out of hugepages-NNNkB
-                print('{:<4} {:<5} {:<6} {}'.format(node, pages,
-                                                    fmt_memsize(kb),
-                                                    fmt_memsize(pages * kb)))
+    nodes = sorted(int(node[29:])
+                   for node in glob.glob('/sys/devices/system/node/node*'))
+    for node in nodes:
+        pg_sz_data = get_numa_pages_node(node)
+        for nr_pages, pg_sz, total_sz in pg_sz_data:
+            if not nr_pages:
+                continue
+            print('{:<4} {:<5} {:<6} {}'
+                  .format(node, nr_pages, pg_sz, total_sz))
 
 
 def show_non_numa_pages():
