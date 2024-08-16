@@ -334,6 +334,32 @@ class DeviceCapabilitiesFlag(Flag):
         )
 
 
+class ChecksumOffloadOptions(Flag):
+    """Flag representing checksum hardware offload layer options."""
+
+    #:
+    ip = auto()
+    #:
+    udp = auto()
+    #:
+    tcp = auto()
+    #:
+    sctp = auto()
+    #:
+    outerip = auto()
+    #:
+    outerudp = auto()
+
+    def __str__(self):
+        """String method for use in csum_set_hw."""
+        if self == ChecksumOffloadOptions.outerip:
+            return "outer-ip"
+        elif self == ChecksumOffloadOptions.outerudp:
+            return "outer-udp"
+        else:
+            return f"{self.name}"
+
+
 class DeviceErrorHandlingMode(StrEnum):
     """Enum representing the device error handling mode."""
 
@@ -805,6 +831,104 @@ class TestPmdShell(DPDKShell):
             raise InteractiveCommandExecutionError("invalid port given")
 
         return TestPmdPortStats.parse(output)
+
+    def port_stop(self, port: int, verify: bool = True):
+        """Stop specified port.
+
+        Args:
+            port: Specifies the port number to use, must be between 0-32.
+            verify: If :data:`True`, the output of the command is scanned
+                to ensure specified port is stopped. If not, it is considered
+                an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the port
+                is not stopped.
+        """
+        port_output = self.send_command(f"port stop {port}")
+        if verify:
+            if "Done" not in port_output:
+                self._logger.debug(f"Failed to stop port {port}: \n{port_output}")
+                raise InteractiveCommandExecutionError(f"Testpmd failed to stop port {port}.")
+
+    def port_start(self, port: int, verify: bool = True):
+        """Start specified port.
+
+        Args:
+            port: Specifies the port number to use, must be between 0-32.
+            verify: If :data:`True`, the output of the command is scanned
+                to ensure specified port is started. If not, it is considered
+                an error.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the port
+                is not started.
+        """
+        port_output = self.send_command(f"port start {port}")
+        if verify:
+            if "Done" not in port_output:
+                self._logger.debug(f"Failed to start port {port}: \n{port_output}")
+                raise InteractiveCommandExecutionError(f"Testpmd failed to start port {port}.")
+
+    def csum_set_hw(self, layer: ChecksumOffloadOptions, port_id: int, verify: bool = True) -> None:
+        """Enables hardware checksum offloading on the specified layer.
+
+        Args:
+            layer: The layer that checksum offloading should be enabled on.
+                options: tcp, ip, udp, sctp, outer-ip, outer-udp.
+            port_id: The port number to enable checksum offloading on, should be within 0-32.
+            verify: If :data:`True` the output of the command will be scanned in an attempt to
+                verify that checksum offloading was enabled on the port.
+
+        Raises:
+            InteractiveCommandExecutionError: If checksum offload is not enabled successfully.
+        """
+        csum_output = self.send_command(f"csum set {str(layer)} hw {port_id}")
+        if verify:
+            if "Bad arguments" in csum_output or f"Please stop port {port_id} first" in csum_output:
+                self._logger.debug(f"Failed to set csum hw mode on port {port_id}:\n{csum_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to set csum hw mode on port {port_id}"
+                )
+        if verify and f"checksum offload is not supported by port {port_id}" in csum_output:
+            self._logger.debug(f"Checksum {layer} offload is not supported:\n{csum_output}")
+
+        success = False
+        if layer == ChecksumOffloadOptions.outerip:
+            if "Outer-Ip checksum offload is hw" in csum_output:
+                success = True
+        elif layer == ChecksumOffloadOptions.outerudp:
+            if "Outer-Udp checksum offload is hw" in csum_output:
+                success = True
+        else:
+            if f"{str(layer).upper} checksum offload is hw" in csum_output:
+                success = True
+        if not success and verify:
+            self._logger.debug(f"Failed to set csum hw mode on port {port_id}:\n{csum_output}")
+
+    def set_verbose(self, level: int, verify: bool = True) -> None:
+        """Set debug verbosity level.
+
+        Args:
+            level:
+                0: silent except for error.
+                1: fully verbose except for Tx packets.
+                2: fully verbose except for Rx packets.
+                >2: fully verbose.
+            verify: if :data:`True` an additional command will be sent to verify that verbose level
+                is properly set. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and verbose level
+            is not correctly set.
+        """
+        verbose_output = self.send_command(f"set verbose {level}")
+        if verify:
+            if "Change verbose level" not in verbose_output:
+                self._logger.debug(f"Failed to set verbose level to {level}: \n{verbose_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to set verbose level to {level}."
+                )
 
     def _close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
