@@ -103,6 +103,8 @@ struct graph {
 	/**< Memzone to store graph data. */
 	rte_graph_off_t nodes_start;
 	/**< Node memory start offset in graph reel. */
+	rte_graph_off_t errors_start;
+	/**< Node error memory start offset in graph reel. */
 	rte_node_t src_node_count;
 	/**< Number of source nodes in a graph. */
 	struct rte_graph *graph;
