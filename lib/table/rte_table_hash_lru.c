@@ -23,11 +23,14 @@
 	table->stats.n_pkts_in += val
 #define RTE_TABLE_HASH_LRU_STATS_PKTS_LOOKUP_MISS(table, val) \
 	table->stats.n_pkts_lookup_miss += val
+#define RTE_TABLE_HASH_LRU_STATS_PKTS_INSERT_VICTIMS_ADD(table, val) \
+	(table->stats.n_pkts_insert_victims += val)
 
 #else
 
 #define RTE_TABLE_HASH_LRU_STATS_PKTS_IN_ADD(table, val)
 #define RTE_TABLE_HASH_LRU_STATS_PKTS_LOOKUP_MISS(table, val)
+#define RTE_TABLE_HASH_LRU_STATS_PKTS_INSERT_VICTIMS_ADD(table, val)
 
 #endif
 
@@ -340,6 +343,7 @@ rte_table_hash_lru_entry_add(void *table, void *key, void *entry,
 
 	/* Bucket full */
 	{
+		RTE_TABLE_HASH_LRU_STATS_PKTS_INSERT_VICTIMS_ADD(t, 1);
 		uint64_t pos = lru_pos(bkt);
 		uint32_t bkt_key_index = bkt->key_pos[pos];
 		uint8_t *bkt_key = &t->key_mem[bkt_key_index <<

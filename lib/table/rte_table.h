@@ -33,6 +33,7 @@ struct rte_mbuf;
 struct rte_table_stats {
 	uint64_t n_pkts_in;
 	uint64_t n_pkts_lookup_miss;
+	uint64_t n_pkts_insert_victims;
 };
 
 /**

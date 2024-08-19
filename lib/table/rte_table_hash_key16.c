@@ -27,11 +27,14 @@
 	table->stats.n_pkts_in += val
 #define RTE_TABLE_HASH_KEY16_STATS_PKTS_LOOKUP_MISS(table, val) \
 	table->stats.n_pkts_lookup_miss += val
+#define RTE_TABLE_HASH_KEY16_STATS_PKTS_INSERT_VICTIMS_ADD(table, val) \
+	(table->stats.n_pkts_insert_victims += val)
 
 #else
 
 #define RTE_TABLE_HASH_KEY16_STATS_PKTS_IN_ADD(table, val)
 #define RTE_TABLE_HASH_KEY16_STATS_PKTS_LOOKUP_MISS(table, val)
+#define RTE_TABLE_HASH_KEY16_STATS_PKTS_INSERT_VICTIMS_ADD(table, val)
 
 #endif
 
@@ -304,6 +307,7 @@ rte_table_hash_entry_add_key16_lru(
 	}
 
 	/* Bucket full: replace LRU entry */
+	RTE_TABLE_HASH_KEY16_STATS_PKTS_INSERT_VICTIMS_ADD(f, 1);
 	pos = lru_pos(bucket);
 	bucket->signature[pos] = signature;
 	keycpy(&bucket->key[pos], key, f->key_mask);
