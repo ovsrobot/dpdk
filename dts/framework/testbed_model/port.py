@@ -14,43 +14,30 @@ from dataclasses import dataclass
 from framework.config import PortConfig
 
 
-@dataclass(slots=True, frozen=True)
-class PortIdentifier:
-    """The port identifier.
-
-    Attributes:
-        node: The node where the port resides.
-        pci: The PCI address of the port on `node`.
-    """
-
-    node: str
-    pci: str
-
-
 @dataclass(slots=True)
 class Port:
     """Physical port on a node.
 
-    The ports are identified by the node they're on and their PCI addresses. The port on the other
-    side of the connection is also captured here.
+    The ports are identified using a unique, user-defined name/identifier.
     Each port is serviced by a driver, which may be different for the operating system (`os_driver`)
     and for DPDK (`os_driver_for_dpdk`). For some devices, they are the same, e.g.: ``mlx5_core``.
 
     Attributes:
-        identifier: The PCI address of the port on a node.
+        node_name: Node the port exists on.
+        name: User-defined unique identifier of the port.
+        pci: The pci address assigned to the port.
         os_driver: The operating system driver name when the operating system controls the port,
             e.g.: ``i40e``.
         os_driver_for_dpdk: The operating system driver name for use with DPDK, e.g.: ``vfio-pci``.
-        peer: The identifier of a port this port is connected with.
-            The `peer` is on a different node.
         mac_address: The MAC address of the port.
         logical_name: The logical name of the port. Must be discovered.
     """
 
-    identifier: PortIdentifier
+    node: str
+    name: str
+    pci: str
     os_driver: str
     os_driver_for_dpdk: str
-    peer: PortIdentifier
     mac_address: str = ""
     logical_name: str = ""
 
@@ -61,23 +48,11 @@ class Port:
             node_name: The name of the port's node.
             config: The test run configuration of the port.
         """
-        self.identifier = PortIdentifier(
-            node=node_name,
-            pci=config.pci,
-        )
+        self.node = node_name
+        self.name = config.name
+        self.pci = config.pci
         self.os_driver = config.os_driver
         self.os_driver_for_dpdk = config.os_driver_for_dpdk
-        self.peer = PortIdentifier(node=config.peer_node, pci=config.peer_pci)
-
-    @property
-    def node(self) -> str:
-        """The node where the port resides."""
-        return self.identifier.node
-
-    @property
-    def pci(self) -> str:
-        """The PCI address of the port."""
-        return self.identifier.pci
 
 
 @dataclass(slots=True, frozen=True)
