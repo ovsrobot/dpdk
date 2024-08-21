@@ -6,6 +6,10 @@
       "type": "string",
       "description": "A unique identifier for a node"
     },
+    "port_name": {
+      "type": "string",
+      "description": "A unique identifier for a node's NIC port."
+    },
     "NIC": {
       "type": "string",
       "enum": [
@@ -190,6 +194,24 @@
         "pmd_buffer_scatter"
       ]
     },
+    "test_run_node": {
+      "type": "object",
+      "properties": {
+        "node_name": {
+          "$ref": "#/definitions/node_name"
+        },
+        "test_bed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/port_name"
+          }
+        }
+      },
+      "required": [
+        "node_name",
+        "test_bed"
+      ]
+    },
     "test_target": {
       "type": "object",
       "properties": {
@@ -260,8 +282,11 @@
             "type": "array",
             "items": {
               "type": "object",
-              "description": "Each port should be described on both sides of the connection. This makes configuration slightly more verbose but greatly simplifies implementation. If there are inconsistencies, then DTS will not run until that issue is fixed. An example inconsistency would be port 1, node 1 says it is connected to port 1, node 2, but port 1, node 2 says it is connected to port 2, node 1.",
+              "description": "A list of relevant ports on a node and its corresponding driver, dpdk driver, and pci address.",
               "properties": {
+                "name": {
+                  "$ref": "#/definitions/port_name"
+                },
                 "pci": {
                   "$ref": "#/definitions/pci_address",
                   "description": "The local PCI address of the port"
@@ -273,23 +298,14 @@
                 "os_driver": {
                   "type": "string",
                   "description": "The driver normally used by this port (ex: i40e)"
-                },
-                "peer_node": {
-                  "type": "string",
-                  "description": "The name of the node the peer port is on"
-                },
-                "peer_pci": {
-                  "$ref": "#/definitions/pci_address",
-                  "description": "The PCI address of the peer port"
                 }
               },
               "additionalProperties": false,
               "required": [
+                "name",
                 "pci",
                 "os_driver_for_dpdk",
-                "os_driver",
-                "peer_node",
-                "peer_pci"
+                "os_driver"
               ]
             },
             "minimum": 1
@@ -360,11 +376,7 @@
             "type": "boolean"
           },
           "system_under_test_node": {
-            "type":"object",
-            "properties": {
-              "node_name": {
-                "$ref": "#/definitions/node_name"
-              },
+              "$ref": "#/definitions/test_run_node",
               "vdevs": {
                 "description": "Optional list of names of vdevs to be used in the test run",
                 "type": "array",
@@ -372,13 +384,9 @@
                   "type": "string"
                 }
               }
-            },
-            "required": [
-              "node_name"
-            ]
           },
           "traffic_generator_node": {
-            "$ref": "#/definitions/node_name"
+            "$ref": "#/definitions/test_run_node"
           }
         },
         "additionalProperties": false,

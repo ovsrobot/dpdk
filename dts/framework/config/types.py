@@ -15,15 +15,13 @@ class PortConfigDict(TypedDict):
     """Allowed keys and values."""
 
     #:
+    name: str
+    #:
     pci: str
     #:
     os_driver_for_dpdk: str
     #:
     os_driver: str
-    #:
-    peer_node: str
-    #:
-    peer_pci: str
 
 
 class TrafficGeneratorConfigDict(TypedDict):
@@ -101,7 +99,18 @@ class TestRunSUTConfigDict(TypedDict):
     #:
     node_name: str
     #:
+    test_bed: list[str]
+    #:
     vdevs: list[str]
+
+
+class TestRunTGConfigDict(TypedDict):
+    """Allowed keys and values."""
+
+    #:
+    node_name: str
+    #:
+    test_bed: list[str]
 
 
 class TestRunConfigDict(TypedDict):
@@ -120,7 +129,7 @@ class TestRunConfigDict(TypedDict):
     #:
     system_under_test_node: TestRunSUTConfigDict
     #:
-    traffic_generator_node: str
+    traffic_generator_node: TestRunTGConfigDict
 
 
 class ConfigurationDict(TypedDict):

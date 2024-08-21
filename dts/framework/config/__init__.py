@@ -151,11 +151,10 @@ class PortConfig:
     """
 
     node: str
+    name: str
     pci: str
     os_driver_for_dpdk: str
     os_driver: str
-    peer_node: str
-    peer_pci: str
 
     @classmethod
     def from_dict(cls, node: str, d: PortConfigDict) -> Self:
@@ -487,12 +486,19 @@ class TestRunConfiguration:
             system_under_test_node, SutNodeConfiguration
         ), f"Invalid SUT configuration {system_under_test_node}"
 
-        tg_name = d["traffic_generator_node"]
+        tg_name = d["traffic_generator_node"]["node_name"]
         assert tg_name in node_map, f"Unknown TG {tg_name} in test run {d}"
         traffic_generator_node = node_map[tg_name]
         assert isinstance(
             traffic_generator_node, TGNodeConfiguration
         ), f"Invalid TG configuration {traffic_generator_node}"
+        assert len(traffic_generator_node.ports) == len(
+            system_under_test_node.ports
+        ), "Insufficient ports defined on nodes."
+        for port_name in d["system_under_test_node"]["test_bed"]:
+            assert port_name in {port.name: port for port in system_under_test_node.ports}
+        for port_name in d["traffic_generator_node"]["test_bed"]:
+            assert port_name in {port.name: port for port in traffic_generator_node.ports}
 
         vdevs = (
             d["system_under_test_node"]["vdevs"] if "vdevs" in d["system_under_test_node"] else []
