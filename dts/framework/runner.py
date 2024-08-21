@@ -444,6 +444,7 @@ class DTSRunner:
                     tg_node,
                     build_target_config,
                     build_target_result,
+                    test_run_config,
                     test_suites_with_cases,
                 )
 
@@ -463,6 +464,7 @@ class DTSRunner:
         tg_node: TGNode,
         build_target_config: BuildTargetConfiguration,
         build_target_result: BuildTargetResult,
+        test_run_config: TestRunConfiguration,
         test_suites_with_cases: Iterable[TestSuiteWithCases],
     ) -> None:
         """Run the given build target.
@@ -477,6 +479,7 @@ class DTSRunner:
             build_target_config: A build target's test run configuration.
             build_target_result: The build target level result object associated
                 with the current build target.
+            test_run_config: The current test run configuration to be used by test suites.
             test_suites_with_cases: The test suites with test cases to run.
         """
         self._logger.set_stage(DtsStage.build_target_setup)
@@ -492,7 +495,9 @@ class DTSRunner:
             build_target_result.update_setup(Result.FAIL, e)
 
         else:
-            self._run_test_suites(sut_node, tg_node, build_target_result, test_suites_with_cases)
+            self._run_test_suites(
+                sut_node, tg_node, build_target_result, test_suites_with_cases, test_run_config
+            )
 
         finally:
             try:
@@ -509,6 +514,7 @@ class DTSRunner:
         tg_node: TGNode,
         build_target_result: BuildTargetResult,
         test_suites_with_cases: Iterable[TestSuiteWithCases],
+        test_run_config: TestRunConfiguration,
     ) -> None:
         """Run `test_suites_with_cases` with the current build target.
 
@@ -524,12 +530,15 @@ class DTSRunner:
             build_target_result: The build target level result object associated
                 with the current build target.
             test_suites_with_cases: The test suites with test cases to run.
+            test_run_config: The current test run config running the test suites.
         """
         end_build_target = False
         for test_suite_with_cases in test_suites_with_cases:
             test_suite_result = build_target_result.add_test_suite(test_suite_with_cases)
             try:
-                self._run_test_suite(sut_node, tg_node, test_suite_result, test_suite_with_cases)
+                self._run_test_suite(
+                    sut_node, tg_node, test_suite_result, test_run_config, test_suite_with_cases
+                )
             except BlockingTestSuiteError as e:
                 self._logger.exception(
                     f"An error occurred within {test_suite_with_cases.test_suite_class.__name__}. "
@@ -546,6 +555,7 @@ class DTSRunner:
         sut_node: SutNode,
         tg_node: TGNode,
         test_suite_result: TestSuiteResult,
+        test_run_config: TestRunConfiguration,
         test_suite_with_cases: TestSuiteWithCases,
     ) -> None:
         """Set up, execute and tear down `test_suite_with_cases`.
@@ -572,7 +582,7 @@ class DTSRunner:
         self._logger.set_stage(
             DtsStage.test_suite_setup, Path(SETTINGS.output_dir, test_suite_name)
         )
-        test_suite = test_suite_with_cases.test_suite_class(sut_node, tg_node)
+        test_suite = test_suite_with_cases.test_suite_class(sut_node, tg_node, test_run_config)
         try:
             self._logger.info(f"Starting test suite setup: {test_suite_name}")
             test_suite.set_up_suite()

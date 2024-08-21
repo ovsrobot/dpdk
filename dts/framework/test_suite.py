@@ -20,6 +20,7 @@ from scapy.layers.inet import IP  # type: ignore[import-untyped]
 from scapy.layers.l2 import Ether  # type: ignore[import-untyped]
 from scapy.packet import Packet, Padding  # type: ignore[import-untyped]
 
+from framework.config import TestRunConfiguration
 from framework.testbed_model.port import Port, PortLink
 from framework.testbed_model.sut_node import SutNode
 from framework.testbed_model.tg_node import TGNode
@@ -64,6 +65,7 @@ class TestSuite:
 
     sut_node: SutNode
     tg_node: TGNode
+    test_run_config: TestRunConfiguration
     #: Whether the test suite is blocking. A failure of a blocking test suite
     #: will block the execution of all subsequent test suites in the current build target.
     is_blocking: ClassVar[bool] = False
@@ -78,11 +80,7 @@ class TestSuite:
     _tg_ip_address_ingress: Union[IPv4Interface, IPv6Interface]
     _tg_ip_address_egress: Union[IPv4Interface, IPv6Interface]
 
-    def __init__(
-        self,
-        sut_node: SutNode,
-        tg_node: TGNode,
-    ):
+    def __init__(self, sut_node: SutNode, tg_node: TGNode, test_run_config: TestRunConfiguration):
         """Initialize the test suite testbed information and basic configuration.
 
         Find links between ports and set up default IP addresses to be used when
@@ -91,9 +89,11 @@ class TestSuite:
         Args:
             sut_node: The SUT node where the test suite will run.
             tg_node: The TG node where the test suite will run.
+            test_run_config: The test run configuration that the test suite is running in.
         """
         self.sut_node = sut_node
         self.tg_node = tg_node
+        self.test_run_config = test_run_config
         self._logger = get_dts_logger(self.__class__.__name__)
         self._port_links = []
         self._process_links()
@@ -112,13 +112,22 @@ class TestSuite:
 
     def _process_links(self) -> None:
         """Construct links between SUT and TG ports."""
-        for sut_port in self.sut_node.ports:
-            for tg_port in self.tg_node.ports:
-                if (sut_port.identifier, sut_port.peer) == (
-                    tg_port.peer,
-                    tg_port.identifier,
-                ):
-                    self._port_links.append(PortLink(sut_port=sut_port, tg_port=tg_port))
+        sut_ports = []
+        for port in self.sut_node.ports:
+            if port.name in [
+                sut_port.name for sut_port in self.test_run_config.system_under_test_node.ports
+            ]:
+                sut_ports.append(port)
+        tg_ports = []
+        for port in self.tg_node.ports:
+            if port.name in [
+                tg_port.name for tg_port in self.test_run_config.traffic_generator_node.ports
+            ]:
+                tg_ports.append(port)
+
+        # Both the TG and SUT nodes will have an equal number of ports.
+        for i in range(len(sut_ports)):
+            self._port_links.append(PortLink(sut_ports[i], tg_ports[i]))
 
     def set_up_suite(self) -> None:
         """Set up test fixtures common to all test cases.
