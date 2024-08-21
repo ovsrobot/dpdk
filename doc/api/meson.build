@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
+# initialize common Doxygen configuration
+cdata = configuration_data()
+
+subdir('dts')
+
 doxygen = find_program('doxygen', required: get_option('enable_docs'))
 
 if not doxygen.found()
@@ -30,7 +35,6 @@ example = custom_target('examples.dox',
         build_by_default: get_option('enable_docs'))
 
 # set up common Doxygen configuration
-cdata = configuration_data()
 cdata.set('VERSION', meson.project_version())
 cdata.set('API_EXAMPLES', join_paths(dpdk_build_root, 'doc', 'api', 'examples.dox'))
 cdata.set('OUTPUT', join_paths(dpdk_build_root, 'doc', 'api'))
