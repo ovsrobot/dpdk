@@ -2,6 +2,7 @@
 # Copyright(c) 2010-2019 Intel Corporation
 # Copyright(c) 2022-2023 PANTHEON.tech s.r.o.
 # Copyright(c) 2022-2023 University of New Hampshire
+# Copyright(c) 2024 Arm Limited
 
 """Test suite runner module.
 
@@ -17,14 +18,11 @@ The test suite stage sets up steps common to all test cases
 and the test case stage runs test cases individually.
 """
 
-import importlib
-import inspect
 import os
-import re
 import sys
 from pathlib import Path
 from types import FunctionType
-from typing import Iterable, Sequence
+from typing import Iterable
 
 from framework.testbed_model.sut_node import SutNode
 from framework.testbed_model.tg_node import TGNode
@@ -38,12 +36,7 @@ from .config import (
     TGNodeConfiguration,
     load_config,
 )
-from .exception import (
-    BlockingTestSuiteError,
-    ConfigurationError,
-    SSHTimeoutError,
-    TestCaseVerifyError,
-)
+from .exception import BlockingTestSuiteError, SSHTimeoutError, TestCaseVerifyError
 from .logger import DTSLogger, DtsStage, get_dts_logger
 from .settings import SETTINGS
 from .test_result import (
@@ -55,7 +48,7 @@ from .test_result import (
     TestSuiteResult,
     TestSuiteWithCases,
 )
-from .test_suite import TestSuite
+from .test_suite import TestCase, TestCaseVariant, TestSuite
 
 
 class DTSRunner:
@@ -217,11 +210,10 @@ class DTSRunner:
         func: bool,
         perf: bool,
     ) -> list[TestSuiteWithCases]:
-        """Test suites with test cases discovery.
+        """Get test suites with selected cases.
 
-        The test suites with test cases defined in the user configuration are discovered
-        and stored for future use so that we don't import the modules twice and so that
-        the list of test suites with test cases is available for recording right away.
+        The test suites with test cases defined in the user configuration are selected
+        and the corresponding functions and classes are gathered.
 
         Args:
             test_suite_configs: Test suite configurations.
@@ -229,139 +221,34 @@ class DTSRunner:
             perf: Whether to include performance test cases in the final list.
 
         Returns:
-            The discovered test suites, each with test cases.
+            The test suites, each with test cases.
         """
         test_suites_with_cases = []
 
         for test_suite_config in test_suite_configs:
-            test_suite_class = self._get_test_suite_class(test_suite_config.test_suite_name)
-            test_cases = []
-            func_test_cases, perf_test_cases = self._filter_test_cases(
-                test_suite_class, test_suite_config.test_cases_names
-            )
-            if func:
-                test_cases.extend(func_test_cases)
-            if perf:
-                test_cases.extend(perf_test_cases)
+            test_suite_spec = test_suite_config.test_suite_spec
+            test_suite_class = test_suite_spec.class_type
+
+            filtered_test_cases: list[TestCase] = [
+                test_case
+                for test_case in test_suite_spec.test_cases
+                if not test_suite_config.test_cases_names
+                or test_case.name in test_suite_config.test_cases_names
+            ]
+
+            selected_test_cases: list[FunctionType] = [
+                test_case.function_type  # type: ignore[misc]
+                for test_case in filtered_test_cases
+                if (func and test_case.variant == TestCaseVariant.FUNCTIONAL)
+                or (perf and test_case.variant == TestCaseVariant.PERFORMANCE)
+            ]
 
             test_suites_with_cases.append(
-                TestSuiteWithCases(test_suite_class=test_suite_class, test_cases=test_cases)
+                TestSuiteWithCases(
+                    test_suite_class=test_suite_class, test_cases=selected_test_cases
+                )
             )
-
         return test_suites_with_cases
-
-    def _get_test_suite_class(self, module_name: str) -> type[TestSuite]:
-        """Find the :class:`TestSuite` class in `module_name`.
-
-        The full module name is `module_name` prefixed with `self._test_suite_module_prefix`.
-        The module name is a standard filename with words separated with underscores.
-        Search the `module_name` for a :class:`TestSuite` class which starts
-        with `self._test_suite_class_prefix`, continuing with CamelCase `module_name`.
-        The first matching class is returned.
-
-        The CamelCase convention applies to abbreviations, acronyms, initialisms and so on::
-
-            OS -> Os
-            TCP -> Tcp
-
-        Args:
-            module_name: The module name without prefix where to search for the test suite.
-
-        Returns:
-            The found test suite class.
-
-        Raises:
-            ConfigurationError: If the corresponding module is not found or
-                a valid :class:`TestSuite` is not found in the module.
-        """
-
-        def is_test_suite(object) -> bool:
-            """Check whether `object` is a :class:`TestSuite`.
-
-            The `object` is a subclass of :class:`TestSuite`, but not :class:`TestSuite` itself.
-
-            Args:
-                object: The object to be checked.
-
-            Returns:
-                :data:`True` if `object` is a subclass of `TestSuite`.
-            """
-            try:
-                if issubclass(object, TestSuite) and object is not TestSuite:
-                    return True
-            except TypeError:
-                return False
-            return False
-
-        testsuite_module_path = f"{self._test_suite_module_prefix}{module_name}"
-        try:
-            test_suite_module = importlib.import_module(testsuite_module_path)
-        except ModuleNotFoundError as e:
-            raise ConfigurationError(
-                f"Test suite module '{testsuite_module_path}' not found."
-            ) from e
-
-        camel_case_suite_name = "".join(
-            [suite_word.capitalize() for suite_word in module_name.split("_")]
-        )
-        full_suite_name_to_find = f"{self._test_suite_class_prefix}{camel_case_suite_name}"
-        for class_name, class_obj in inspect.getmembers(test_suite_module, is_test_suite):
-            if class_name == full_suite_name_to_find:
-                return class_obj
-        raise ConfigurationError(
-            f"Couldn't find any valid test suites in {test_suite_module.__name__}."
-        )
-
-    def _filter_test_cases(
-        self, test_suite_class: type[TestSuite], test_cases_to_run: Sequence[str]
-    ) -> tuple[list[FunctionType], list[FunctionType]]:
-        """Filter `test_cases_to_run` from `test_suite_class`.
-
-        There are two rounds of filtering if `test_cases_to_run` is not empty.
-        The first filters `test_cases_to_run` from all methods of `test_suite_class`.
-        Then the methods are separated into functional and performance test cases.
-        If a method matches neither the functional nor performance name prefix, it's an error.
-
-        Args:
-            test_suite_class: The class of the test suite.
-            test_cases_to_run: Test case names to filter from `test_suite_class`.
-                If empty, return all matching test cases.
-
-        Returns:
-            A list of test case methods that should be executed.
-
-        Raises:
-            ConfigurationError: If a test case from `test_cases_to_run` is not found
-                or it doesn't match either the functional nor performance name prefix.
-        """
-        func_test_cases = []
-        perf_test_cases = []
-        name_method_tuples = inspect.getmembers(test_suite_class, inspect.isfunction)
-        if test_cases_to_run:
-            name_method_tuples = [
-                (name, method) for name, method in name_method_tuples if name in test_cases_to_run
-            ]
-            if len(name_method_tuples) < len(test_cases_to_run):
-                missing_test_cases = set(test_cases_to_run) - {
-                    name for name, _ in name_method_tuples
-                }
-                raise ConfigurationError(
-                    f"Test cases {missing_test_cases} not found among methods "
-                    f"of {test_suite_class.__name__}."
-                )
-
-        for test_case_name, test_case_method in name_method_tuples:
-            if re.match(self._func_test_case_regex, test_case_name):
-                func_test_cases.append(test_case_method)
-            elif re.match(self._perf_test_case_regex, test_case_name):
-                perf_test_cases.append(test_case_method)
-            elif test_cases_to_run:
-                raise ConfigurationError(
-                    f"Method '{test_case_name}' matches neither "
-                    f"a functional nor a performance test case name."
-                )
-
-        return func_test_cases, perf_test_cases
 
     def _connect_nodes_and_run_test_run(
         self,
