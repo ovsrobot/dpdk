@@ -1,402 +1,502 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema",
-  "title": "DTS Config Schema",
-  "definitions": {
-    "node_name": {
-      "type": "string",
-      "description": "A unique identifier for a node"
-    },
-    "NIC": {
-      "type": "string",
+  "$defs": {
+    "Architecture": {
+      "description": "The supported architectures of :class:`~framework.testbed_model.node.Node`\\s.",
       "enum": [
-        "ALL",
-        "ConnectX3_MT4103",
-        "ConnectX4_LX_MT4117",
-        "ConnectX4_MT4115",
-        "ConnectX5_MT4119",
-        "ConnectX5_MT4121",
-        "I40E_10G-10G_BASE_T_BC",
-        "I40E_10G-10G_BASE_T_X722",
-        "I40E_10G-SFP_X722",
-        "I40E_10G-SFP_XL710",
-        "I40E_10G-X722_A0",
-        "I40E_1G-1G_BASE_T_X722",
-        "I40E_25G-25G_SFP28",
-        "I40E_40G-QSFP_A",
-        "I40E_40G-QSFP_B",
-        "IAVF-ADAPTIVE_VF",
-        "IAVF-VF",
-        "IAVF_10G-X722_VF",
-        "ICE_100G-E810C_QSFP",
-        "ICE_25G-E810C_SFP",
-        "ICE_25G-E810_XXV_SFP",
-        "IGB-I350_VF",
-        "IGB_1G-82540EM",
-        "IGB_1G-82545EM_COPPER",
-        "IGB_1G-82571EB_COPPER",
-        "IGB_1G-82574L",
-        "IGB_1G-82576",
-        "IGB_1G-82576_QUAD_COPPER",
-        "IGB_1G-82576_QUAD_COPPER_ET2",
-        "IGB_1G-82580_COPPER",
-        "IGB_1G-I210_COPPER",
-        "IGB_1G-I350_COPPER",
-        "IGB_1G-I354_SGMII",
-        "IGB_1G-PCH_LPTLP_I218_LM",
-        "IGB_1G-PCH_LPTLP_I218_V",
-        "IGB_1G-PCH_LPT_I217_LM",
-        "IGB_1G-PCH_LPT_I217_V",
-        "IGB_2.5G-I354_BACKPLANE_2_5GBPS",
-        "IGC-I225_LM",
-        "IGC-I226_LM",
-        "IXGBE_10G-82599_SFP",
-        "IXGBE_10G-82599_SFP_SF_QP",
-        "IXGBE_10G-82599_T3_LOM",
-        "IXGBE_10G-82599_VF",
-        "IXGBE_10G-X540T",
-        "IXGBE_10G-X540_VF",
-        "IXGBE_10G-X550EM_A_SFP",
-        "IXGBE_10G-X550EM_X_10G_T",
-        "IXGBE_10G-X550EM_X_SFP",
-        "IXGBE_10G-X550EM_X_VF",
-        "IXGBE_10G-X550T",
-        "IXGBE_10G-X550_VF",
-        "brcm_57414",
-        "brcm_P2100G",
-        "cavium_0011",
-        "cavium_a034",
-        "cavium_a063",
-        "cavium_a064",
-        "fastlinq_ql41000",
-        "fastlinq_ql41000_vf",
-        "fastlinq_ql45000",
-        "fastlinq_ql45000_vf",
-        "hi1822",
-        "virtio"
-      ]
-    },
-
-    "ARCH": {
-      "type": "string",
-      "enum": [
+        "i686",
         "x86_64",
+        "x86_32",
         "arm64",
         "ppc64le"
-      ]
+      ],
+      "title": "Architecture",
+      "type": "string"
     },
-    "OS": {
-      "type": "string",
-      "enum": [
-        "linux"
-      ]
+    "BuildTargetConfiguration": {
+      "additionalProperties": false,
+      "description": "DPDK build configuration.\n\nThe configuration used for building DPDK.\n\nAttributes:\n    arch: The target architecture to build for.\n    os: The target os to build for.\n    cpu: The target CPU to build for.\n    compiler: The compiler executable to use.\n    compiler_wrapper: This string will be put in front of the compiler when\n        executing the build. Useful for adding wrapper commands, such as ``ccache``.",
+      "properties": {
+        "arch": {
+          "$ref": "#/$defs/Architecture"
+        },
+        "os": {
+          "$ref": "#/$defs/OS"
+        },
+        "cpu": {
+          "$ref": "#/$defs/CPUType"
+        },
+        "compiler": {
+          "$ref": "#/$defs/Compiler"
+        },
+        "compiler_wrapper": {
+          "default": "",
+          "title": "Compiler Wrapper",
+          "type": "string"
+        }
+      },
+      "required": [
+        "arch",
+        "os",
+        "cpu",
+        "compiler"
+      ],
+      "title": "BuildTargetConfiguration",
+      "type": "object"
     },
-    "cpu": {
-      "type": "string",
-      "description": "Native should be the default on x86",
+    "CPUType": {
+      "description": "The supported CPUs of :class:`~framework.testbed_model.node.Node`\\s.",
       "enum": [
         "native",
         "armv8a",
         "dpaa2",
         "thunderx",
         "xgene1"
-      ]
+      ],
+      "title": "CPUType",
+      "type": "string"
     },
-    "compiler": {
-      "type": "string",
+    "Compiler": {
+      "description": "The supported compilers of :class:`~framework.testbed_model.node.Node`\\s.",
       "enum": [
         "gcc",
         "clang",
         "icc",
-        "mscv"
-      ]
+        "msvc"
+      ],
+      "title": "Compiler",
+      "type": "string"
     },
-    "build_target": {
-      "type": "object",
-      "description": "Targets supported by DTS",
-      "properties": {
-        "arch": {
-          "type": "string",
-          "enum": [
-            "ALL",
-            "x86_64",
-            "arm64",
-            "ppc64le",
-            "other"
-          ]
-        },
-        "os": {
-          "$ref": "#/definitions/OS"
-        },
-        "cpu": {
-          "$ref": "#/definitions/cpu"
-        },
-        "compiler": {
-          "$ref": "#/definitions/compiler"
-        },
-          "compiler_wrapper": {
-          "type": "string",
-          "description": "This will be added before compiler to the CC variable when building DPDK. Optional."
-        }
-      },
+    "HugepageConfiguration": {
       "additionalProperties": false,
-      "required": [
-        "arch",
-        "os",
-        "cpu",
-        "compiler"
-      ]
-    },
-    "hugepages_2mb": {
-      "type": "object",
-      "description": "Optional hugepage configuration. If not specified, hugepages won't be configured and DTS will use system configuration.",
+      "description": "The hugepage configuration of :class:`~framework.testbed_model.node.Node`\\s.\n\nAttributes:\n    number_of: The number of hugepages to allocate.\n    force_first_numa: If :data:`True`, the hugepages will be configured on the first NUMA node.",
       "properties": {
         "number_of": {
-          "type": "integer",
-          "description": "The number of hugepages to configure. Hugepage size will be the system default."
+          "title": "Number Of",
+          "type": "integer"
         },
         "force_first_numa": {
-          "type": "boolean",
-          "description": "Set to True to force configuring hugepages on the first NUMA node. Defaults to False."
+          "title": "Force First Numa",
+          "type": "boolean"
         }
       },
-      "additionalProperties": false,
       "required": [
-        "number_of"
-      ]
+        "number_of",
+        "force_first_numa"
+      ],
+      "title": "HugepageConfiguration",
+      "type": "object"
     },
-    "mac_address": {
-      "type": "string",
-      "description": "A MAC address",
-      "pattern": "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
-    },
-    "pci_address": {
-      "type": "string",
-      "pattern": "^[\\da-fA-F]{4}:[\\da-fA-F]{2}:[\\da-fA-F]{2}.\\d:?\\w*$"
-    },
-    "port_peer_address": {
-      "description": "Peer is a TRex port, and IXIA port or a PCI address",
-      "oneOf": [
-        {
-          "description": "PCI peer port",
-          "$ref": "#/definitions/pci_address"
-        }
-      ]
-    },
-    "test_suite": {
-      "type": "string",
+    "OS": {
+      "description": "The supported operating systems of :class:`~framework.testbed_model.node.Node`\\s.",
       "enum": [
-        "hello_world",
-        "os_udp",
-        "pmd_buffer_scatter"
-      ]
+        "linux",
+        "freebsd",
+        "windows"
+      ],
+      "title": "OS",
+      "type": "string"
     },
-    "test_target": {
-      "type": "object",
+    "PortConfig": {
+      "additionalProperties": false,
+      "description": "The port configuration of :class:`~framework.testbed_model.node.Node`\\s.\n\nAttributes:\n    pci: The PCI address of the port.\n    os_driver_for_dpdk: The operating system driver name for use with DPDK.\n    os_driver: The operating system driver name when the operating system controls the port.\n    peer_node: The :class:`~framework.testbed_model.node.Node` of the port\n        connected to this port.\n    peer_pci: The PCI address of the port connected to this port.",
       "properties": {
-        "suite": {
-          "$ref": "#/definitions/test_suite"
+        "pci": {
+          "description": "The local PCI address of the port.",
+          "pattern": "^[\\da-fA-F]{4}:[\\da-fA-F]{2}:[\\da-fA-F]{2}.\\d:?\\w*$",
+          "title": "Pci",
+          "type": "string"
         },
-        "cases": {
-          "type": "array",
-          "description": "If specified, only this subset of test suite's test cases will be run.",
+        "os_driver_for_dpdk": {
+          "description": "The driver that the kernel should bind this device to for DPDK to use it.",
+          "examples": [
+            "vfio-pci",
+            "mlx5_core"
+          ],
+          "title": "Os Driver For Dpdk",
+          "type": "string"
+        },
+        "os_driver": {
+          "description": "The driver normally used by this port",
+          "examples": [
+            "i40e",
+            "ice",
+            "mlx5_core"
+          ],
+          "title": "Os Driver",
+          "type": "string"
+        },
+        "peer_node": {
+          "description": "The name of the peer node this port is connected to.",
+          "title": "Peer Node",
+          "type": "string"
+        },
+        "peer_pci": {
+          "description": "The PCI address of the peer port this port is connected to.",
+          "pattern": "^[\\da-fA-F]{4}:[\\da-fA-F]{2}:[\\da-fA-F]{2}.\\d:?\\w*$",
+          "title": "Peer Pci",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pci",
+        "os_driver_for_dpdk",
+        "os_driver",
+        "peer_node",
+        "peer_pci"
+      ],
+      "title": "PortConfig",
+      "type": "object"
+    },
+    "ScapyTrafficGeneratorConfig": {
+      "additionalProperties": false,
+      "description": "Scapy traffic generator specific configuration.",
+      "properties": {
+        "type": {
+          "const": "SCAPY",
+          "enum": [
+            "SCAPY"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "ScapyTrafficGeneratorConfig",
+      "type": "object"
+    },
+    "SutNodeConfiguration": {
+      "additionalProperties": false,
+      "description": ":class:`~framework.testbed_model.sut_node.SutNode` specific configuration.\n\nAttributes:\n    memory_channels: The number of memory channels to use when running DPDK.",
+      "properties": {
+        "name": {
+          "description": "A unique identifier for this node.",
+          "title": "Name",
+          "type": "string"
+        },
+        "hostname": {
+          "description": "The hostname or IP address of the node.",
+          "title": "Hostname",
+          "type": "string"
+        },
+        "user": {
+          "description": "The login user to use to connect to this node.",
+          "title": "User",
+          "type": "string"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The login password to use to connect to this node. SSH keys are STRONGLY preferred, use only as last resort.",
+          "title": "Password"
+        },
+        "use_first_core": {
+          "default": false,
+          "description": "DPDK won't use the first physical core if set to False.",
+          "title": "Use First Core",
+          "type": "boolean"
+        },
+        "hugepages_2mb": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HugepageConfiguration"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/PortConfig"
+          },
+          "minItems": 1,
+          "title": "Ports",
+          "type": "array"
+        },
+        "memory_channels": {
+          "default": 1,
+          "description": "Number of memory channels to use when running DPDK.",
+          "title": "Memory Channels",
+          "type": "integer"
+        },
+        "arch": {
+          "$ref": "#/$defs/Architecture"
+        },
+        "os": {
+          "$ref": "#/$defs/OS"
+        },
+        "lcores": {
+          "default": "1",
+          "description": "Comma-separated list of logical cores to use. An empty string means use all lcores.",
+          "examples": [
+            "1,2,3,4,5,18-22",
+            "10-15"
+          ],
+          "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$",
+          "title": "Lcores",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "hostname",
+        "user",
+        "ports",
+        "arch",
+        "os"
+      ],
+      "title": "SutNodeConfiguration",
+      "type": "object"
+    },
+    "TGNodeConfiguration": {
+      "additionalProperties": false,
+      "description": ":class:`~framework.testbed_model.tg_node.TGNode` specific configuration.\n\nAttributes:\n    traffic_generator: The configuration of the traffic generator present on the TG node.",
+      "properties": {
+        "name": {
+          "description": "A unique identifier for this node.",
+          "title": "Name",
+          "type": "string"
+        },
+        "hostname": {
+          "description": "The hostname or IP address of the node.",
+          "title": "Hostname",
+          "type": "string"
+        },
+        "user": {
+          "description": "The login user to use to connect to this node.",
+          "title": "User",
+          "type": "string"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The login password to use to connect to this node. SSH keys are STRONGLY preferred, use only as last resort.",
+          "title": "Password"
+        },
+        "use_first_core": {
+          "default": false,
+          "description": "DPDK won't use the first physical core if set to False.",
+          "title": "Use First Core",
+          "type": "boolean"
+        },
+        "hugepages_2mb": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HugepageConfiguration"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/PortConfig"
+          },
+          "minItems": 1,
+          "title": "Ports",
+          "type": "array"
+        },
+        "arch": {
+          "$ref": "#/$defs/Architecture"
+        },
+        "os": {
+          "$ref": "#/$defs/OS"
+        },
+        "lcores": {
+          "default": "1",
+          "description": "Comma-separated list of logical cores to use. An empty string means use all lcores.",
+          "examples": [
+            "1,2,3,4,5,18-22",
+            "10-15"
+          ],
+          "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$",
+          "title": "Lcores",
+          "type": "string"
+        },
+        "traffic_generator": {
+          "discriminator": {
+            "mapping": {
+              "SCAPY": "#/$defs/ScapyTrafficGeneratorConfig"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ScapyTrafficGeneratorConfig"
+            }
+          ],
+          "title": "Traffic Generator"
+        }
+      },
+      "required": [
+        "name",
+        "hostname",
+        "user",
+        "ports",
+        "arch",
+        "os",
+        "traffic_generator"
+      ],
+      "title": "TGNodeConfiguration",
+      "type": "object"
+    },
+    "TestRunConfiguration": {
+      "additionalProperties": false,
+      "description": "The configuration of a test run.\n\nThe configuration contains testbed information, what tests to execute\nand with what DPDK build.\n\nAttributes:\n    build_targets: A list of DPDK builds to test.\n    perf: Whether to run performance tests.\n    func: Whether to run functional tests.\n    skip_smoke_tests: Whether to skip smoke tests.\n    test_suites: The names of test suites and/or test cases to execute.\n    system_under_test_node: The SUT node configuration to use in this test run.\n    traffic_generator_node: The TG node name to use in this test run.",
+      "properties": {
+        "perf": {
+          "description": "Enable performance testing.",
+          "title": "Perf",
+          "type": "boolean"
+        },
+        "func": {
+          "description": "Enable functional testing.",
+          "title": "Func",
+          "type": "boolean"
+        },
+        "test_suites": {
+          "items": {
+            "$ref": "#/$defs/TestSuiteConfig"
+          },
+          "minItems": 1,
+          "title": "Test Suites",
+          "type": "array"
+        },
+        "build_targets": {
+          "items": {
+            "$ref": "#/$defs/BuildTargetConfiguration"
+          },
+          "title": "Build Targets",
+          "type": "array"
+        },
+        "skip_smoke_tests": {
+          "default": false,
+          "title": "Skip Smoke Tests",
+          "type": "boolean"
+        },
+        "system_under_test_node": {
+          "$ref": "#/$defs/TestRunSUTNodeConfiguration"
+        },
+        "traffic_generator_node": {
+          "title": "Traffic Generator Node",
+          "type": "string"
+        }
+      },
+      "required": [
+        "perf",
+        "func",
+        "test_suites",
+        "build_targets",
+        "system_under_test_node",
+        "traffic_generator_node"
+      ],
+      "title": "TestRunConfiguration",
+      "type": "object"
+    },
+    "TestRunSUTNodeConfiguration": {
+      "additionalProperties": false,
+      "description": "The SUT node configuration of a test run.\n\nAttributes:\n    node_name: The SUT node to use in this test run.\n    vdevs: The names of virtual devices to test.",
+      "properties": {
+        "vdevs": {
           "items": {
             "type": "string"
           },
-          "minimum": 1
+          "title": "Vdevs",
+          "type": "array"
+        },
+        "node_name": {
+          "title": "Node Name",
+          "type": "string"
         }
       },
       "required": [
-        "suite"
+        "node_name"
       ],
-      "additionalProperties": false
-    }
-  },
-  "type": "object",
-  "properties": {
-    "nodes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "A unique identifier for this node"
-          },
-          "hostname": {
-            "type": "string",
-            "description": "A hostname from which the node running DTS can access this node. This can also be an IP address."
-          },
-          "user": {
-            "type": "string",
-            "description": "The user to access this node with."
-          },
-          "password": {
-            "type": "string",
-            "description": "The password to use on this node. Use only as a last resort. SSH keys are STRONGLY preferred."
-          },
-          "arch": {
-            "$ref": "#/definitions/ARCH"
-          },
-          "os": {
-            "$ref": "#/definitions/OS"
-          },
-          "lcores": {
-            "type": "string",
-            "pattern": "^(([0-9]+|([0-9]+-[0-9]+))(,([0-9]+|([0-9]+-[0-9]+)))*)?$",
-            "description": "Optional comma-separated list of logical cores to use, e.g.: 1,2,3,4,5,18-22. Defaults to 1. An empty string means use all lcores."
-          },
-          "use_first_core": {
-            "type": "boolean",
-            "description": "Indicate whether DPDK should use the first physical core. It won't be used by default."
-          },
-          "memory_channels": {
-            "type": "integer",
-            "description": "How many memory channels to use. Optional, defaults to 1."
-          },
-          "hugepages_2mb": {
-            "$ref": "#/definitions/hugepages_2mb"
-          },
-          "ports": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "description": "Each port should be described on both sides of the connection. This makes configuration slightly more verbose but greatly simplifies implementation. If there are inconsistencies, then DTS will not run until that issue is fixed. An example inconsistency would be port 1, node 1 says it is connected to port 1, node 2, but port 1, node 2 says it is connected to port 2, node 1.",
-              "properties": {
-                "pci": {
-                  "$ref": "#/definitions/pci_address",
-                  "description": "The local PCI address of the port"
-                },
-                "os_driver_for_dpdk": {
-                  "type": "string",
-                  "description": "The driver that the kernel should bind this device to for DPDK to use it. (ex: vfio-pci)"
-                },
-                "os_driver": {
-                  "type": "string",
-                  "description": "The driver normally used by this port (ex: i40e)"
-                },
-                "peer_node": {
-                  "type": "string",
-                  "description": "The name of the node the peer port is on"
-                },
-                "peer_pci": {
-                  "$ref": "#/definitions/pci_address",
-                  "description": "The PCI address of the peer port"
-                }
-              },
-              "additionalProperties": false,
-              "required": [
-                "pci",
-                "os_driver_for_dpdk",
-                "os_driver",
-                "peer_node",
-                "peer_pci"
-              ]
-            },
-            "minimum": 1
-          },
-          "traffic_generator": {
-            "oneOf": [
-              {
-                "type": "object",
-                "description": "Scapy traffic generator. Used for functional testing.",
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "SCAPY"
-                    ]
-                  }
-                }
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "hostname",
-          "user",
-          "arch",
-          "os"
-        ]
-      },
-      "minimum": 1
+      "title": "TestRunSUTNodeConfiguration",
+      "type": "object"
     },
-    "test_runs": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "build_targets": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/build_target"
+    "TestSuiteConfig": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "test_suite": {
+              "description": "The identifying name of the test suite.",
+              "title": "Test suite name",
+              "type": "string"
             },
-            "minimum": 1
-          },
-          "perf": {
-            "type": "boolean",
-            "description": "Enable performance testing."
-          },
-          "func": {
-            "type": "boolean",
-            "description": "Enable functional testing."
-          },
-          "test_suites": {
-            "type": "array",
-            "items": {
-              "oneOf": [
-                {
-                  "$ref": "#/definitions/test_suite"
-                },
-                {
-                  "$ref": "#/definitions/test_target"
-                }
-              ]
+            "test_cases": {
+              "description": "The identifying name of the test cases of the test suite.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Test cases by name",
+              "type": "array"
             }
           },
-          "skip_smoke_tests": {
-            "description": "Optional field that allows you to skip smoke testing",
-            "type": "boolean"
-          },
-          "system_under_test_node": {
-            "type":"object",
-            "properties": {
-              "node_name": {
-                "$ref": "#/definitions/node_name"
-              },
-              "vdevs": {
-                "description": "Optional list of names of vdevs to be used in the test run",
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "required": [
-              "node_name"
-            ]
-          },
-          "traffic_generator_node": {
-            "$ref": "#/definitions/node_name"
-          }
+          "required": [
+            "test_suite"
+          ],
+          "type": "object"
         },
-        "additionalProperties": false,
-        "required": [
-          "build_targets",
-          "perf",
-          "func",
-          "test_suites",
-          "system_under_test_node",
-          "traffic_generator_node"
+        {
+          "type": "string"
+        }
+      ],
+      "description": "Test suite configuration.\n\nInformation about a single test suite to be executed. It can be represented and validated as a\nstring type in the form of: ``TEST_SUITE [TEST_CASE, ...]``, in the configuration file.\n\nAttributes:\n    test_suite: The name of the test suite module without the starting ``TestSuite_``.\n    test_cases: The names of test cases from this test suite to execute.\n        If empty, all test cases will be executed.",
+      "title": "TestSuiteConfig"
+    }
+  },
+  "description": "DTS testbed and test configuration.\n\nAttributes:\n    test_runs: Test run configurations.\n    nodes: Node configurations.",
+  "properties": {
+    "test_runs": {
+      "items": {
+        "$ref": "#/$defs/TestRunConfiguration"
+      },
+      "minItems": 1,
+      "title": "Test Runs",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TGNodeConfiguration"
+          },
+          {
+            "$ref": "#/$defs/SutNodeConfiguration"
+          }
         ]
       },
-      "minimum": 1
+      "minItems": 1,
+      "title": "Nodes",
+      "type": "array"
     }
   },
   "required": [
     "test_runs",
     "nodes"
   ],
-  "additionalProperties": false
+  "title": "Configuration",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

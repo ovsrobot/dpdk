@@ -430,6 +430,16 @@ Refer to the script for usage: ``devtools/dts-check-format.sh -h``.
 Configuration Schema
 --------------------
 
+The configuration schema is automatically generated from Pydantic models and can be found
+at ``dts/framework/config/conf_yaml_schema.json``. Whenever the models are changed, the schema
+should be regenerated using the dedicated script at ``dts/generate-schema.py``, e.g.:
+
+.. code-block:: console
+
+   $ poetry shell
+   (dts-py3.10) $ ./generate-schema.py
+
+
 Definitions
 ~~~~~~~~~~~
 
