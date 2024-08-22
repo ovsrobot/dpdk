@@ -325,6 +325,10 @@ EXPERIMENTAL {
 	rte_flow_template_table_resizable;
 	rte_flow_template_table_resize;
 	rte_flow_template_table_resize_complete;
+
+	# added in 24.11
+	rte_flow_async_create_by_index_with_pattern;
+
 };
 
 INTERNAL {

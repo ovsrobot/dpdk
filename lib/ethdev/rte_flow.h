@@ -3262,6 +3262,24 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_action_nat64
 	 */
 	RTE_FLOW_ACTION_TYPE_NAT64,
+
+	/**
+	 * RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE,
+	 *
+	 * Redirects packets to a particular flow table.
+	 *
+	 * @see struct rte_flow_action_jump_to_table.
+	 */
+	RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE,
+
+	/**
+	 * RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE_INDEX,
+	 *
+	 * Redirects packets to a particular index in a flow table.
+	 *
+	 * @see struct rte_flow_action_jump_to_table_index.
+	 */
+	RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE_INDEX,
 };
 
 /**
@@ -4265,6 +4283,26 @@ rte_flow_dynf_metadata_set(struct rte_mbuf *m, uint32_t v)
 {
 	*RTE_FLOW_DYNF_METADATA(m) = v;
 }
+
+/**
+ * RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE
+ *
+ * Redirects packets to a particular flow table.
+ */
+struct rte_flow_action_jump_to_table {
+	struct rte_flow_template_table *table;
+};
+
+/**
+ * RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE_INDEX
+ *
+ * Redirects packets to a particular flow table.
+ */
+struct rte_flow_action_jump_to_table_index {
+	struct rte_flow_template_table *table;
+	uint32_t index;
+};
+
 
 /**
  * Definition of a single action.
@@ -5898,6 +5936,10 @@ enum rte_flow_table_insertion_type {
 	 * Index-based insertion.
 	 */
 	RTE_FLOW_TABLE_INSERTION_TYPE_INDEX,
+	/**
+	 * Index-based insertion with pattern.
+	 */
+	RTE_FLOW_TABLE_INSERTION_TYPE_INDEX_WITH_PATTERN,
 };
 
 /**
@@ -6182,6 +6224,59 @@ rte_flow_async_create_by_index(uint16_t port_id,
 			       uint8_t actions_template_index,
 			       void *user_data,
 			       struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue rule creation operation.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue_id
+ *   Flow queue used to insert the rule.
+ * @param[in] op_attr
+ *   Rule creation operation attributes.
+ * @param[in] template_table
+ *   Template table to select templates from.
+ * @param[in] rule_index
+ *   Rule index in the table.
+ *   Inserting a rule to already occupied index results in undefined behavior.
+ * @param[in] pattern
+ *   List of pattern items to be used.
+ *   The list order should match the order in the pattern template.
+ *   The spec is the only relevant member of the item that is being used.
+ * @param[in] pattern_template_index
+ *   Pattern template index in the table.
+ * @param[in] actions
+ *   List of actions to be used.
+ *   The list order should match the order in the actions template.
+ * @param[in] actions_template_index
+ *   Actions template index in the table.
+ * @param[in] user_data
+ *   The user data that will be returned on the completion events.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   Handle on success, NULL otherwise and rte_errno is set.
+ *   The rule handle doesn't mean that the rule has been populated.
+ *   Only completion result indicates that if there was success or failure.
+ */
+__rte_experimental
+struct rte_flow *
+rte_flow_async_create_by_index_with_pattern(uint16_t port_id,
+					    uint32_t queue_id,
+					    const struct rte_flow_op_attr *op_attr,
+					    struct rte_flow_template_table *template_table,
+					    uint32_t rule_index,
+					    const struct rte_flow_item pattern[],
+					    uint8_t pattern_template_index,
+					    const struct rte_flow_action actions[],
+					    uint8_t actions_template_index,
+					    void *user_data,
+					    struct rte_flow_error *error);
 
 /**
  * @warning
