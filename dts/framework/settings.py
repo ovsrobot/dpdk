@@ -85,6 +85,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from pydantic import ValidationError
+
 from .config import TestSuiteConfig
 from .exception import ConfigurationError
 from .utils import DPDKGitTarball, get_commit_id
@@ -391,11 +393,21 @@ def _process_test_suites(
     Returns:
         A list of test suite configurations to execute.
     """
-    if parser.find_action("test_suites", _is_from_env):
+    action = parser.find_action("test_suites", _is_from_env)
+    if action:
         # Environment variable in the form of "SUITE1 CASE1 CASE2, SUITE2 CASE1, SUITE3, ..."
         args = [suite_with_cases.split() for suite_with_cases in args[0][0].split(",")]
 
-    return [TestSuiteConfig(test_suite, test_cases) for [test_suite, *test_cases] in args]
+    try:
+        return [TestSuiteConfig(test_suite, test_cases) for [test_suite, *test_cases] in args]
+    except ValidationError as e:
+        print(
+            "An error has occurred while validating the test suites supplied in the "
+            f"{'environment variable' if action else 'arguments'}:",
+            file=sys.stderr,
+        )
+        print(e, file=sys.stderr)
+        sys.exit(1)
 
 
 def get_settings() -> Settings:

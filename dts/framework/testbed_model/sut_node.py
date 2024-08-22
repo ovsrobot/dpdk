@@ -181,7 +181,7 @@ class SutNode(Node):
                 the setup steps will be taken.
         """
         super().set_up_test_run(test_run_config)
-        for vdev in test_run_config.vdevs:
+        for vdev in test_run_config.system_under_test_node.vdevs:
             self.virtual_devices.append(VirtualDevice(vdev))
 
     def tear_down_test_run(self) -> None:

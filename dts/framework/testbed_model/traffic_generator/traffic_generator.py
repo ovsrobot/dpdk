@@ -39,7 +39,7 @@ class TrafficGenerator(ABC):
         """
         self._config = config
         self._tg_node = tg_node
-        self._logger = get_dts_logger(f"{self._tg_node.name} {self._config.traffic_generator_type}")
+        self._logger = get_dts_logger(f"{self._tg_node.name} {self._config.type}")
 
     def send_packet(self, packet: Packet, port: Port) -> None:
         """Send `packet` and block until it is fully sent.
