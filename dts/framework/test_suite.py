@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2010-2014 Intel Corporation
 # Copyright(c) 2023 PANTHEON.tech s.r.o.
+# Copyright(c) 2024 Arm Limited
 
 """Features common to all test suites.
 
@@ -13,12 +14,22 @@ needed by subclasses:
     * Test case verification.
 """
 
+import inspect
+import re
+from dataclasses import dataclass
+from enum import Enum, auto
+from functools import cached_property
+from importlib import import_module
 from ipaddress import IPv4Interface, IPv6Interface, ip_interface
-from typing import ClassVar, Union
+from pkgutil import iter_modules
+from types import FunctionType, ModuleType
+from typing import ClassVar, NamedTuple, Union
 
+from pydantic.alias_generators import to_pascal
 from scapy.layers.inet import IP  # type: ignore[import-untyped]
 from scapy.layers.l2 import Ether  # type: ignore[import-untyped]
 from scapy.packet import Packet, Padding  # type: ignore[import-untyped]
+from typing_extensions import Self
 
 from framework.testbed_model.port import Port, PortLink
 from framework.testbed_model.sut_node import SutNode
@@ -365,3 +376,172 @@ class TestSuite:
         if received_packet.src != expected_packet.src or received_packet.dst != expected_packet.dst:
             return False
         return True
+
+
+class TestCaseVariant(Enum):
+    """Enum representing the variant of the test case."""
+
+    #:
+    FUNCTIONAL = auto()
+    #:
+    PERFORMANCE = auto()
+
+
+class TestCase(NamedTuple):
+    """Tuple representing a test case."""
+
+    #: The name of the test case without prefix
+    name: str
+    #: The reference to the function
+    function_type: FunctionType
+    #: The test case variant
+    variant: TestCaseVariant
+
+
+@dataclass
+class TestSuiteSpec:
+    """A class defining the specification of a test suite.
+
+    Apart from defining all the specs of a test suite, a helper function :meth:`discover_all` is
+    provided to automatically discover all the available test suites.
+
+    Attributes:
+        module_name: The name of the test suite's module.
+    """
+
+    #:
+    TEST_SUITES_PACKAGE_NAME = "tests"
+    #:
+    TEST_SUITE_MODULE_PREFIX = "TestSuite_"
+    #:
+    TEST_SUITE_CLASS_PREFIX = "Test"
+    #:
+    TEST_CASE_METHOD_PREFIX = "test_"
+    #:
+    FUNC_TEST_CASE_REGEX = r"test_(?!perf_)"
+    #:
+    PERF_TEST_CASE_REGEX = r"test_perf_"
+
+    module_name: str
+
+    @cached_property
+    def name(self) -> str:
+        """The name of the test suite's module."""
+        return self.module_name[len(self.TEST_SUITE_MODULE_PREFIX) :]
+
+    @cached_property
+    def module_type(self) -> ModuleType:
+        """A reference to the test suite's module."""
+        return import_module(f"{self.TEST_SUITES_PACKAGE_NAME}.{self.module_name}")
+
+    @cached_property
+    def class_name(self) -> str:
+        """The name of the test suite's class."""
+        return f"{self.TEST_SUITE_CLASS_PREFIX}{to_pascal(self.name)}"
+
+    @cached_property
+    def class_type(self) -> type[TestSuite]:
+        """A reference to the test suite's class."""
+
+        def is_test_suite(obj) -> bool:
+            """Check whether `obj` is a :class:`TestSuite`.
+
+            The `obj` is a subclass of :class:`TestSuite`, but not :class:`TestSuite` itself.
+
+            Args:
+                obj: The object to be checked.
+
+            Returns:
+                :data:`True` if `obj` is a subclass of `TestSuite`.
+            """
+            try:
+                if issubclass(obj, TestSuite) and obj is not TestSuite:
+                    return True
+            except TypeError:
+                return False
+            return False
+
+        for class_name, class_type in inspect.getmembers(self.module_type, is_test_suite):
+            if class_name == self.class_name:
+                return class_type
+
+        raise Exception("class not found in eligible test module")
+
+    @cached_property
+    def test_cases(self) -> list[TestCase]:
+        """A list of all the available test cases."""
+        test_cases = []
+
+        functions = inspect.getmembers(self.class_type, inspect.isfunction)
+        for fn_name, fn_type in functions:
+            if prefix := re.match(self.FUNC_TEST_CASE_REGEX, fn_name):
+                variant = TestCaseVariant.FUNCTIONAL
+            elif prefix := re.match(self.PERF_TEST_CASE_REGEX, fn_name):
+                variant = TestCaseVariant.PERFORMANCE
+            else:
+                continue
+
+            name = fn_name[len(prefix.group(0)) :]
+            test_cases.append(TestCase(name, fn_type, variant))
+
+        return test_cases
+
+    @classmethod
+    def discover_all(
+        cls, package_name: str | None = None, module_prefix: str | None = None
+    ) -> list[Self]:
+        """Discover all the test suites.
+
+        The test suites are discovered in the provided `package_name`. The full module name,
+        expected under that package, is prefixed with `module_prefix`.
+        The module name is a standard filename with words separated with underscores.
+        For each module found, search for a :class:`TestSuite` class which starts
+        with `self.TEST_SUITE_CLASS_PREFIX`, continuing with the module name in PascalCase.
+
+        The PascalCase convention applies to abbreviations, acronyms, initialisms and so on::
+
+            OS -> Os
+            TCP -> Tcp
+
+        Args:
+            package_name: The name of the package where to find the test suites, if none is set the
+                constant :attr:`~TestSuiteSpec.TEST_SUITES_PACKAGE_NAME` is used instead.
+            module_prefix: The name prefix defining the test suite module, if none is set the
+                constant :attr:`~TestSuiteSpec.TEST_SUITE_MODULE_PREFIX` is used instead.
+
+        Returns:
+            A list containing all the discovered test suites.
+        """
+        if package_name is None:
+            package_name = cls.TEST_SUITES_PACKAGE_NAME
+        if module_prefix is None:
+            module_prefix = cls.TEST_SUITE_MODULE_PREFIX
+
+        test_suites = []
+
+        test_suites_pkg = import_module(package_name)
+        for _, module_name, is_pkg in iter_modules(test_suites_pkg.__path__):
+            if not module_name.startswith(module_prefix) or is_pkg:
+                continue
+
+            test_suite = cls(module_name)
+            try:
+                if test_suite.class_type:
+                    test_suites.append(test_suite)
+            except Exception:
+                pass
+
+        return test_suites
+
+
+AVAILABLE_TEST_SUITES: list[TestSuiteSpec] = TestSuiteSpec.discover_all()
+"""Constant to store all the available, discovered and imported test suites.
+
+The test suites should be gathered from this list to avoid importing more than once.
+"""
+
+
+def find_by_name(name: str) -> TestSuiteSpec | None:
+    """Find a requested test suite by name from the available ones."""
+    test_suites = filter(lambda t: t.name == name, AVAILABLE_TEST_SUITES)
+    return next(test_suites, None)
