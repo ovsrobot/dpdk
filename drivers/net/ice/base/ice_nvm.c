@@ -498,11 +498,16 @@ ice_get_pfa_module_tlv(struct ice_hw *hw, u16 *module_tlv, u16 *module_tlv_len,
 		ice_debug(hw, ICE_DBG_INIT, "Failed to read PFA length.\n");
 		return status;
 	}
-	/* Starting with first TLV after PFA length, iterate through the list
+	/* The Preserved Fields Area contains a sequence of TLVs which define
+	 * its contents. The PFA length includes all of the TLVs, plus its
+	 * initial length word itself, *and* one final word at the end of all
+	 * of the TLVs.
+	 *
+	 * Starting with first TLV after PFA length, iterate through the list
 	 * of TLVs to find the requested one.
 	 */
 	next_tlv = pfa_ptr + 1;
-	while (next_tlv < ((u32)pfa_ptr + pfa_len)) {
+	while (next_tlv < ((u32)pfa_ptr + pfa_len - 1)) {
 		u16 tlv_sub_module_type;
 		u16 tlv_len;
 
