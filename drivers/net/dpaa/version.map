@@ -6,6 +6,13 @@ DPDK_25 {
 	local: *;
 };
 
+EXPERIMENTAL {
+	global:
+
+	# added in 24.11
+	rte_pmd_dpaa_port_set_rate_limit;
+};
+
 INTERNAL {
 	global:
 
