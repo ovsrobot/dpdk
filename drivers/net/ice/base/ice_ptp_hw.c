@@ -5527,38 +5527,6 @@ ice_ptp_port_cmd_e830(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 }
 
 /**
- * ice_read_phy_tstamp_e830 - Read a PHY timestamp out of the external PHY
- * @hw: pointer to the HW struct
- * @lport: the lport to read from
- * @idx: the timestamp index to read
- * @tstamp: on return, the 40bit timestamp value
- *
- * Read a 40bit timestamp value out of the timestamp block of the external PHY
- * on the E830 device.
- */
-static int
-ice_read_phy_tstamp_e830(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
-{
-	u32 hi_addr = E830_HIGH_TX_MEMORY_BANK(idx, lport);
-	u32 lo_addr = E830_LOW_TX_MEMORY_BANK(idx, lport);
-	u32 lo_val, hi_val, lo;
-	u8 hi;
-
-	lo_val = rd32(hw, lo_addr);
-	hi_val = rd32(hw, hi_addr);
-
-	lo = lo_val;
-	hi = (u8)hi_val;
-
-	/* For E830 devices, the timestamp is reported with the lower 32 bits
-	 * in the low register, and the upper 8 bits in the high register.
-	 */
-	*tstamp = ((u64)hi) << TS_HIGH_S | ((u64)lo & TS_LOW_M);
-
-	return 0;
-}
-
-/**
  * ice_get_phy_tx_tstamp_ready_e830 - Read Tx memory status register
  * @hw: pointer to the HW struct
  * @port: the PHY port to read
@@ -5575,6 +5543,58 @@ ice_get_phy_tx_tstamp_ready_e830(struct ice_hw *hw, u8 port, u64 *tstamp_ready)
 	hi = (u64)rd32(hw, E830_PRTMAC_TS_TX_MEM_VALID_H) << 32;
 
 	*tstamp_ready = hi | lo;
+
+	return 0;
+}
+
+/**
+ * ice_read_phy_tstamp_e830 - Read a PHY timestamp out of the external PHY
+ * @hw: pointer to the HW struct
+ * @lport: the lport to read from
+ * @idx: the timestamp index to read
+ * @tstamp: on return, the 40bit timestamp value
+ *
+ * Read a 40bit timestamp value out of the timestamp block of the external PHY
+ * on the E830 device.
+ */
+static int
+ice_read_phy_tstamp_e830(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
+{
+	u32 hi_addr, lo_addr;
+	u32 lo_val, hi_val, lo;
+	u8 hi, ret;
+	u64 start_time, curr_time;
+	u64 tstamp_ready = 0;
+
+	start_time = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
+
+	/* To check the ready status of HY Timestamp register for fetching timestamp */
+	while (!(tstamp_ready & BIT_ULL(0))) {
+		ret = ice_get_phy_tx_tstamp_ready_e830(hw, lport, &tstamp_ready);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to get phy ready for timestamp");
+			return -1;
+		}
+		curr_time = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
+		if (curr_time - start_time > 1000) {
+			PMD_DRV_LOG(ERR, "Timeout to get phy ready for timestamp");
+			return -1;
+		}
+	}
+
+	hi_addr = E830_HIGH_TX_MEMORY_BANK(idx, lport);
+	lo_addr = E830_LOW_TX_MEMORY_BANK(idx, lport);
+
+	lo_val = rd32(hw, lo_addr);
+	hi_val = rd32(hw, hi_addr);
+
+	lo = lo_val;
+	hi = (u8)hi_val;
+
+	/* For E830 devices, the timestamp is reported with the lower 32 bits
+	 * in the low register, and the upper 8 bits in the high register.
+	 */
+	*tstamp = ((u64)hi) << TS_HIGH_S | ((u64)lo & TS_LOW_M);
 
 	return 0;
 }
