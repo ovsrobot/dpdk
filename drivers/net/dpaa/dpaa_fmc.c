@@ -215,8 +215,7 @@ dpaa_port_fmc_port_parse(struct fman_if *fif,
 
 	if (pport->type == e_FM_PORT_TYPE_OH_OFFLINE_PARSING &&
 	    pport->number == fif->mac_idx &&
-	    (fif->mac_type == fman_offline_internal ||
-	     fif->mac_type == fman_onic))
+	    fif->mac_type == fman_offline)
 		return current_port;
 
 	if (fif->mac_type == fman_mac_1g) {
