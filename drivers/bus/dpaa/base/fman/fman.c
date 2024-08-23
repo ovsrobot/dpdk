@@ -42,7 +42,7 @@ if_destructor(struct __fman_if *__if)
 	if (!__if)
 		return;
 
-	if (__if->__if.mac_type == fman_offline)
+	if (__if->__if.mac_type == fman_offline_internal)
 		goto cleanup;
 
 	list_for_each_entry_safe(bp, tmpbp, &__if->__if.bpool_list, node) {
