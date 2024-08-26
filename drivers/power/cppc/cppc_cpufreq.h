@@ -3,15 +3,15 @@
  * Copyright(c) 2021 Arm Limited
  */
 
-#ifndef _POWER_CPPC_CPUFREQ_H
-#define _POWER_CPPC_CPUFREQ_H
+#ifndef _CPPC_CPUFREQ_H
+#define _CPPC_CPUFREQ_H
 
 /**
  * @file
  * RTE Power Management via userspace CPPC cpufreq
  */
 
-#include "rte_power.h"
+#include "rte_power_core_ops.h"
 
 /**
  * Check if CPPC power management is supported.
@@ -215,4 +215,4 @@ int power_cppc_disable_turbo(unsigned int lcore_id);
 int power_cppc_get_capabilities(unsigned int lcore_id,
 		struct rte_power_core_capabilities *caps);
 
-#endif /* _POWER_CPPC_CPUFREQ_H */
+#endif /* _CPPC_CPUFREQ_H */
