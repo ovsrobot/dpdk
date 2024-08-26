@@ -334,6 +334,23 @@ class DeviceCapabilitiesFlag(Flag):
         )
 
 
+class ChecksumOffloadOptions(Flag):
+    """Flag representing checksum hardware offload layer options."""
+
+    #:
+    ip = auto()
+    #:
+    udp = auto()
+    #:
+    tcp = auto()
+    #:
+    sctp = auto()
+    #:
+    outer_ip = auto()
+    #:
+    outer_udp = auto()
+
+
 class DeviceErrorHandlingMode(StrEnum):
     """Enum representing the device error handling mode."""
 
@@ -805,6 +822,40 @@ class TestPmdShell(DPDKShell):
             raise InteractiveCommandExecutionError("invalid port given")
 
         return TestPmdPortStats.parse(output)
+
+    def csum_set_hw(self, layer: ChecksumOffloadOptions, port_id: int, verify: bool = True) -> None:
+        """Enables hardware checksum offloading on the specified layer.
+
+        Args:
+            layer: The layer that checksum offloading should be enabled on.
+            port_id: The port number to enable checksum offloading on, should be within 0-32.
+            verify: If :data:`True` the output of the command will be scanned in an attempt to
+                verify that checksum offloading was enabled on the port.
+
+        Raises:
+            InteractiveCommandExecutionError: If checksum offload is not enabled successfully.
+        """
+        for name, offload in ChecksumOffloadOptions.__members__.items():
+            if offload in layer:
+                name = name.replace("_", "-")
+                csum_output = self.send_command(f"csum set {name} hw {port_id}")
+            if verify:
+                if ("Bad arguments" in csum_output
+                    or f"Please stop port {port_id} first" in csum_output
+                        or f"checksum offload is not supported by port {port_id}" in csum_output):
+                    self._logger.debug(f"Csum set hw error:\n{csum_output}")
+                    raise InteractiveCommandExecutionError(
+                        f"Failed to set csum hw {name} mode on port {port_id}"
+                    )
+            success = False
+            if "-" in name:
+                name.title()
+            else:
+                name.upper()
+            if f"{name} checksum offload is hw" in csum_output:
+                success = True
+            if not success and verify:
+                self._logger.debug(f"Failed to set csum hw mode on port {port_id}:\n{csum_output}")
 
     def _close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
