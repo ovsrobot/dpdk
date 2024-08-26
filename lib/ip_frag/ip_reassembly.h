@@ -54,6 +54,8 @@ struct __rte_cache_aligned ip_frag_pkt {
 	uint32_t total_size;                   /* expected reassembled size */
 	uint32_t frag_size;                    /* size of fragments received */
 	uint32_t last_idx;                     /* index of next entry to fill */
+	uint32_t exts_len;                     /* length of extension hdrs for first fragment */
+	uint8_t *next_proto;                   /* pointer of the next_proto field */
 	struct ip_frag frags[IP_MAX_FRAG_NUM]; /* fragments */
 };
 

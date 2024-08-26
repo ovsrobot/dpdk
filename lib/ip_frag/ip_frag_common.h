@@ -169,6 +169,8 @@ ip_frag_reset(struct ip_frag_pkt *fp, uint64_t tms)
 	fp->total_size = UINT32_MAX;
 	fp->frag_size = 0;
 	fp->last_idx = IP_MIN_FRAG_NUM;
+	fp->exts_len = 0;
+	fp->next_proto = NULL;
 	fp->frags[IP_LAST_FRAG_IDX] = zero_frag;
 	fp->frags[IP_FIRST_FRAG_IDX] = zero_frag;
 }

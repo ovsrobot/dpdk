@@ -91,25 +91,58 @@ ipv6_frag_reassemble(struct ip_frag_pkt *fp)
 	/* update ipv6 header for the reassembled datagram */
 	ip_hdr = rte_pktmbuf_mtod_offset(m, struct rte_ipv6_hdr *, m->l2_len);
 
+	payload_len += fp->exts_len;
 	ip_hdr->payload_len = rte_cpu_to_be_16(payload_len);
 
 	/*
 	 * remove fragmentation header. note that per RFC2460, we need to update
 	 * the last non-fragmentable header with the "next header" field to contain
-	 * type of the first fragmentable header, but we currently don't support
-	 * other headers, so we assume there are no other headers and thus update
-	 * the main IPv6 header instead.
+	 * type of the first fragmentable header.
 	 */
-	move_len = m->l2_len + m->l3_len - sizeof(*frag_hdr);
-	frag_hdr = (struct rte_ipv6_fragment_ext *) (ip_hdr + 1);
-	ip_hdr->proto = frag_hdr->next_header;
+	frag_hdr = (struct rte_ipv6_fragment_ext *)
+		((uint8_t *) (ip_hdr + 1) + fp->exts_len);
+	*fp->next_proto = frag_hdr->next_header;
 
+	move_len = m->l2_len + m->l3_len - sizeof(*frag_hdr);
 	ip_frag_memmove(rte_pktmbuf_mtod_offset(m, char *, sizeof(*frag_hdr)),
 			rte_pktmbuf_mtod(m, char*), move_len);
 
 	rte_pktmbuf_adj(m, sizeof(*frag_hdr));
 
 	return m;
+}
+
+/*
+ * Function to crawl through the extension header stack.
+ * This function breaks as soon a the fragment header is
+ * found and returns the total length the traversed exts
+ * and the last extension before the fragment header
+ */
+static inline uint32_t
+ip_frag_get_last_exthdr(struct rte_ipv6_hdr *ip_hdr, uint8_t **last_ext)
+{
+	uint32_t total_len = 0;
+	uint8_t num_exts = 0;
+	size_t ext_len = 0;
+	*last_ext = (uint8_t *)(ip_hdr + 1);
+	int next_proto = ip_hdr->proto;
+#define MAX_NUM_IPV6_EXTS 8
+
+	while (next_proto != IPPROTO_FRAGMENT &&
+		num_exts < MAX_NUM_IPV6_EXTS &&
+		(next_proto = rte_ipv6_get_next_ext(
+		*last_ext, next_proto, &ext_len)) >= 0) {
+
+		total_len += ext_len;
+
+		if (next_proto == IPPROTO_FRAGMENT)
+			return total_len;
+
+		*last_ext += ext_len;
+		num_exts++;
+	}
+
+	return total_len;
 }
 
 /*
@@ -139,6 +172,8 @@ rte_ipv6_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 {
 	struct ip_frag_pkt *fp;
 	struct ip_frag_key key;
+	uint8_t *last_ipv6_ext;
+	uint32_t exts_len;
 	uint16_t ip_ofs;
 	int32_t ip_len;
 	int32_t trim;
@@ -154,10 +189,10 @@ rte_ipv6_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 	/*
 	 * as per RFC2460, payload length contains all extension headers
 	 * as well.
-	 * since we don't support anything but frag headers,
-	 * this is what we remove from the payload len.
+	 * so we remove the extension len from the payload len.
 	 */
-	ip_len = rte_be_to_cpu_16(ip_hdr->payload_len) - sizeof(*frag_hdr);
+	exts_len = ip_frag_get_last_exthdr(ip_hdr, &last_ipv6_ext);
+	ip_len = rte_be_to_cpu_16(ip_hdr->payload_len) - exts_len - sizeof(*frag_hdr);
 	trim = mb->pkt_len - (ip_len + mb->l3_len + mb->l2_len);
 
 	IP_FRAG_LOG(DEBUG, "%s:%d:\n"
@@ -201,6 +236,21 @@ rte_ipv6_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 	/* process the fragmented packet. */
 	mb = ip_frag_process(fp, dr, mb, ip_ofs, ip_len,
 			MORE_FRAGS(frag_hdr->frag_data));
+
+	/* store extension stack info, only for first fragment */
+	if (ip_ofs == 0) {
+		/*
+		 * fp->next_proto points to either the IP's next header
+		 * or th next header of the extension before the fragment
+		 * extension
+		 */
+		fp->next_proto = (uint8_t *)&ip_hdr->proto;
+		if (exts_len > 0) {
+			fp->exts_len = exts_len;
+			fp->next_proto = last_ipv6_ext;
+		}
+	}
+
 	ip_frag_inuse(tbl, fp);
 
 	IP_FRAG_LOG(DEBUG, "%s:%d:\n"
