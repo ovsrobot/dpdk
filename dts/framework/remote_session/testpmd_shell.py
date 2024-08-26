@@ -806,6 +806,33 @@ class TestPmdShell(DPDKShell):
 
         return TestPmdPortStats.parse(output)
 
+    @requires_stopped_ports
+    def set_port_mtu(self, port_id: int, mtu: int, verify: bool = True) -> None:
+        """Change the MTU of a port using testpmd.
+
+        Some PMDs require that the port be stopped before changing the MTU, and it does no harm to
+        stop the port before configuring in cases where it isn't required, so we first stop ports,
+        then update the MTU, then start the ports again afterwards.
+
+        Args:
+            port_id: ID of the port to adjust the MTU on.
+            mtu: Desired value for the MTU to be set to.
+            verify: If `verify` is :data:`True` then the output will be scanned in an attempt to
+                verify that the mtu was properly set on the port. Defaults to :data:`True`.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True` and the MTU was not
+                properly updated on the port matching `port_id`.
+        """
+        set_mtu_output = self.send_command(f"port config mtu {port_id} {mtu}")
+        if verify and (f"MTU: {mtu}" not in self.send_command(f"show port info {port_id}")):
+            self._logger.debug(
+                f"Failed to set mtu to {mtu} on port {port_id}." f" Output was:\n{set_mtu_output}"
+            )
+            raise InteractiveCommandExecutionError(
+                f"Test pmd failed to update mtu of port {port_id} to {mtu}"
+            )
+
     def _close(self) -> None:
         """Overrides :meth:`~.interactive_shell.close`."""
         self.stop()
