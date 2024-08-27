@@ -18,6 +18,7 @@
 #include <rte_eal.h>
 #include <rte_launch.h>
 #include <rte_thread.h>
+#include <rte_os.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -197,6 +198,21 @@ rte_cpuset_t rte_lcore_cpuset(unsigned int lcore_id);
 int rte_lcore_is_enabled(unsigned int lcore_id);
 
 /**
+ * Get the next enabled lcore ID within same llc.
+ *
+ * @param i
+ *   The current lcore (reference).
+ * @param skip_main
+ *   If true, do not return the ID of the main lcore.
+ * @param wrap
+ *   If true, go back to 0 when RTE_MAX_LCORE is reached; otherwise,
+ *   return RTE_MAX_LCORE.
+ * @return
+ *   The next lcore_id or RTE_MAX_LCORE if not found.
+ */
+unsigned int rte_get_next_llc_lcore(unsigned int i, int skip_main, int wrap);
+
+/**
  * Get the next enabled lcore ID.
  *
  * @param i
@@ -211,6 +227,11 @@ int rte_lcore_is_enabled(unsigned int lcore_id);
  */
 unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap);
 
+unsigned int rte_get_llc_lcore (unsigned int i, rte_cpuset_t *llc_cpu, unsigned int *start, unsigned int *end);
+unsigned int rte_get_llc_first_lcores (rte_cpuset_t *llc_cpu);
+unsigned int rte_get_llc_n_lcore (unsigned int i, rte_cpuset_t *llc_cpu, unsigned int *start, unsigned int *end, unsigned int n, bool skip);
+
+
 /**
  * Macro to browse all running lcores.
  */
@@ -219,6 +240,7 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap);
 	     i < RTE_MAX_LCORE;						\
 	     i = rte_get_next_lcore(i, 0, 0))
 
+
 /**
  * Macro to browse all running lcores except the main lcore.
  */
@@ -226,6 +248,73 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap);
 	for (i = rte_get_next_lcore(-1, 1, 0);				\
 	     i < RTE_MAX_LCORE;						\
 	     i = rte_get_next_lcore(i, 1, 0))
+
+/** Browse all the the cores in the provided llc domain **/
+
+#define RTE_LCORE_FOREACH_LLC_FIRST(i)	\
+	rte_cpuset_t llc_foreach_first_lcores;								\
+	CPU_ZERO(&llc_foreach_first_lcores); i = 0;							\
+	unsigned int llc_foreach_num_iter = rte_get_llc_first_lcores(&llc_foreach_first_lcores);	\
+	i = (0 == llc_foreach_num_iter) ? RTE_MAX_LCORE : i;						\
+	for (; i < RTE_MAX_LCORE; i++)									\
+		if (CPU_ISSET(i, &llc_foreach_first_lcores))
+	
+#define RTE_LCORE_FOREACH_LLC_FIRST_WORKER(i)	\
+	rte_cpuset_t llc_foreach_first_lcores;								\
+	CPU_ZERO(&llc_foreach_first_lcores); i = 0;							\
+	unsigned int llc_foreach_num_iter = rte_get_llc_first_lcores(&llc_foreach_first_lcores);	\
+	CPU_CLR(rte_get_main_lcore(), &llc_foreach_first_lcores);		\
+	i = (0 == llc_foreach_num_iter) ? RTE_MAX_LCORE : i;						\
+	for (; i < RTE_MAX_LCORE; i++)									\
+		if (CPU_ISSET(i, &llc_foreach_first_lcores))
+
+#define RTE_LCORE_FOREACH_LLC_WORKER(i)	\
+	rte_cpuset_t llc_foreach_first_lcores;								\
+	rte_cpuset_t llc_foreach_lcore;									\
+        unsigned int start,end;										\
+	CPU_ZERO(&llc_foreach_first_lcores); i = 0;							\
+	unsigned int llc_foreach_num_iter = rte_get_llc_first_lcores(&llc_foreach_first_lcores);	\
+	i = (0 == llc_foreach_num_iter) ? RTE_MAX_LCORE : i;						\
+	for (unsigned int llc_i = i; llc_i < RTE_MAX_LCORE; llc_i++)									\
+		if (CPU_ISSET(llc_i, &llc_foreach_first_lcores) && rte_get_llc_lcore (llc_i, &llc_foreach_lcore, &start, &end)) \
+			for (i = start; (i <= end); i++)						\
+				if (CPU_ISSET(i, &llc_foreach_lcore) && (i != rte_get_main_lcore()))
+
+#define RTE_LCORE_FOREACH_LLC_SKIP_FIRST_WORKER(i)	\
+	rte_cpuset_t llc_foreach_first_lcores;								\
+	rte_cpuset_t llc_foreach_lcore;									\
+        unsigned int start,end;										\
+	CPU_ZERO(&llc_foreach_first_lcores); i = 0;							\
+	unsigned int llc_foreach_num_iter = rte_get_llc_first_lcores(&llc_foreach_first_lcores);	\
+	i = (0 == llc_foreach_num_iter) ? RTE_MAX_LCORE : i;						\
+	for (unsigned int llc_i = i; llc_i < RTE_MAX_LCORE; llc_i++)									\
+		if (CPU_ISSET(llc_i, &llc_foreach_first_lcores) && rte_get_llc_lcore (llc_i, &llc_foreach_lcore, &start, &end)) \
+			for (i = start + 1; (i <= end); i++)						\
+				if (CPU_ISSET(i, &llc_foreach_lcore) && (i != rte_get_main_lcore()))
+
+#define RTE_LCORE_FOREACH_LLC_FIRST_N_WORKER(i,n)	\
+	rte_cpuset_t llc_foreach_first_lcores;	\
+	rte_cpuset_t llc_foreach_lcore;	\
+	unsigned int start,end, temp_count;	\
+	CPU_ZERO(&llc_foreach_first_lcores);	\
+	unsigned int llc_foreach_num_iter = rte_get_llc_first_lcores(&llc_foreach_first_lcores);	 \
+	i = (0 == llc_foreach_num_iter) ? RTE_MAX_LCORE : 0;	\
+	for (unsigned int llc_i = i; llc_i < RTE_MAX_LCORE; llc_i++)	\
+		if (CPU_ISSET(llc_i, &llc_foreach_first_lcores) && (rte_get_llc_n_lcore (llc_i, &llc_foreach_lcore, &start, &end, n, false) >= n))	\
+			for (i = start, temp_count = n; (i <= end) && (temp_count); i++)	\
+				if (CPU_ISSET(i, &llc_foreach_lcore) && (i != rte_get_main_lcore()) && (temp_count--))
+
+#define RTE_LCORE_FOREACH_LLC_SKIP_N_WORKER(i,n)	\
+	rte_cpuset_t llc_foreach_skip_first_lcores;	\
+	rte_cpuset_t llc_foreach_skip_lcore;	\
+	unsigned int start_skip,end_skip,llc_skip_i;	\
+	CPU_ZERO(&llc_foreach_skip_first_lcores);	\
+	unsigned int llc_foreach_skip_num_iter = rte_get_llc_first_lcores(&llc_foreach_skip_first_lcores);	\
+	i = (0 == llc_foreach_skip_num_iter) ? RTE_MAX_LCORE : 0;	\
+	for (llc_skip_i = i; llc_skip_i < RTE_MAX_LCORE; llc_skip_i++)	\
+		if (CPU_ISSET(llc_skip_i, &llc_foreach_skip_first_lcores) && (rte_get_llc_n_lcore (llc_skip_i, &llc_foreach_skip_lcore, &start_skip, &end_skip, n, true) > 0))	\
+			for (i = start_skip; (i <= end_skip); i++)	\
+				if (CPU_ISSET(i, &llc_foreach_skip_lcore) && (i != rte_get_main_lcore()))
 
 /**
  * Callback prototype for initializing lcores.
