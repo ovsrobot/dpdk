@@ -14,6 +14,7 @@
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <rte_telemetry.h>
 #endif
+#include <rte_string_fns.h>
 
 #include "eal_private.h"
 #include "eal_thread.h"
@@ -93,24 +94,278 @@ int rte_lcore_is_enabled(unsigned int lcore_id)
 	return cfg->lcore_role[lcore_id] == ROLE_RTE;
 }
 
+#define LCORE_GET_LLC   \
+		"ls -d /sys/bus/cpu/devices/cpu%u/cache/index[0-9] | sort  -r  | grep -m1 index[0-9] | awk -F '[x]' '{print $2}' "
+#define LCORE_GET_SHAREDLLC   \
+		"grep [0-9] /sys/bus/cpu/devices/cpu%u/cache/index%u/shared_cpu_list"
+
+unsigned int rte_get_llc_first_lcores (rte_cpuset_t *llc_cpu)
+{
+	CPU_ZERO((rte_cpuset_t *)llc_cpu);
+
+	char cmdline[2048] = {'\0'};
+	char output_llc[8] = {'\0'};
+	char output_threads[16] = {'\0'};
+
+	for (unsigned int lcore =0; lcore < RTE_MAX_LCORE; lcore++)
+	{
+		if (!rte_lcore_is_enabled (lcore))
+			continue;
+
+		/* get sysfs llc index */
+		snprintf(cmdline, 2047, LCORE_GET_LLC, lcore);
+		FILE *fp = popen (cmdline, "r");
+		if (fp == NULL) {
+			return -1;
+		}
+		if (fgets(output_llc, sizeof(output_llc) - 1, fp) == NULL) {
+			pclose(fp);
+			return -1;
+		}
+		pclose(fp);
+		int llc_index = atoi (output_llc);
+
+		/* get sysfs core group of the same core index*/
+		snprintf(cmdline, 2047, LCORE_GET_SHAREDLLC, lcore, llc_index);
+		fp = popen (cmdline, "r");
+		if (fp == NULL) {
+			return -1;
+		}
+		if (fgets(output_threads, sizeof(output_threads) - 1, fp) == NULL) {
+			pclose(fp);
+			return -1;
+		}
+		pclose(fp);
+
+		output_threads [strlen(output_threads) - 1] = '\0';
+	        char *smt_thrds[2];
+		int smt_threads = rte_strsplit(output_threads, sizeof(output_threads), smt_thrds, 2, ',');
+
+		for (int  index = 0; index < smt_threads; index++) {
+			char *llc[2] = {'\0'};
+			int smt_cpu = rte_strsplit(smt_thrds[index], sizeof(smt_thrds[index]), llc, 2, '-');
+			RTE_SET_USED(smt_cpu);
+	
+			unsigned int first_cpu = atoi (llc[0]);
+			unsigned int last_cpu = (NULL == llc[1]) ? atoi (llc[0]) : atoi (llc[1]);
+		
+	
+			for (unsigned int temp_cpu = first_cpu; temp_cpu <= last_cpu; temp_cpu++) {
+				if (rte_lcore_is_enabled(temp_cpu)) {
+					CPU_SET (temp_cpu, (rte_cpuset_t *) llc_cpu);
+					lcore = last_cpu;
+					break;
+				}
+			}
+		}
+	}
+
+	return CPU_COUNT((rte_cpuset_t *)llc_cpu);
+}
+
+unsigned int
+rte_get_llc_lcore (unsigned int lcore, rte_cpuset_t *llc_cpu,
+		unsigned int *first_cpu, unsigned int * last_cpu)
+{
+	CPU_ZERO((rte_cpuset_t *)llc_cpu);
+
+	char cmdline[2048] = {'\0'};
+	char output_llc[8] = {'\0'};
+	char output_threads[16] = {'\0'};
+
+	*first_cpu = *last_cpu = RTE_MAX_LCORE;
+
+	/* get sysfs llc index */
+	snprintf(cmdline, 2047, LCORE_GET_LLC, lcore);
+	FILE *fp = popen (cmdline, "r");
+	if (fp == NULL) {
+		return -1;
+	}
+	if (fgets(output_llc, sizeof(output_llc) - 1, fp) == NULL) {
+		pclose(fp);
+		return -1;
+	}
+	pclose(fp);
+	int llc_index = atoi (output_llc);
+
+	/* get sysfs core group of the same core index*/
+	snprintf(cmdline, 2047, LCORE_GET_SHAREDLLC, lcore, llc_index);
+	fp = popen (cmdline, "r");
+	if (fp == NULL) {
+		return -1;
+	}
+
+	if (fgets(output_threads, sizeof(output_threads) - 1, fp) == NULL) {
+		pclose(fp);
+		return -1;
+	}
+	pclose(fp);
+
+	output_threads [strlen(output_threads) - 1] = '\0';
+        char *smt_thrds[2];
+	int smt_threads = rte_strsplit(output_threads, sizeof(output_threads), smt_thrds, 2, ',');
+
+	bool found_first_cpu = false;
+	unsigned int first_lcore_cpu = RTE_MAX_LCORE;
+	unsigned int last_lcore_cpu = RTE_MAX_LCORE;
+
+	for (int  index = 0; index < smt_threads; index++) {
+		char *llc[2] = {'\0'};
+		int smt_cpu = rte_strsplit(smt_thrds[index], sizeof(smt_thrds[index]), llc, 2, '-');
+		RTE_SET_USED(smt_cpu);
+
+		char *end = NULL;
+		*first_cpu = strtoul (llc[0], end, 10);
+		*last_cpu = (1 == smt_cpu) ? strtoul (llc[0], end, 10) : strtoul (llc[1], end, 10);
+
+		unsigned int temp_cpu = RTE_MAX_LCORE;
+		RTE_LCORE_FOREACH(temp_cpu) {
+			if ((temp_cpu >= *first_cpu) && (temp_cpu <= *last_cpu)) {
+				CPU_SET (temp_cpu, (rte_cpuset_t *) llc_cpu);
+				//printf ("rte_get_llc_lcore: temp_cpu %u count %u \n", temp_cpu, CPU_COUNT(llc_cpu));
+
+				if (false == found_first_cpu) {
+				 	first_lcore_cpu = temp_cpu;
+					found_first_cpu = true;
+				}
+				last_lcore_cpu = temp_cpu;
+			}
+			//printf ("rte_get_llc_lcore: first %u last %u \n", first_lcore_cpu, last_lcore_cpu);
+		}
+	}
+
+	*first_cpu = first_lcore_cpu;
+	*last_cpu = last_lcore_cpu;
+
+	//printf ("rte_get_llc_lcore: first %u last %u count %u \n", *first_cpu, *last_cpu, CPU_COUNT(llc_cpu));
+	return CPU_COUNT((rte_cpuset_t *)llc_cpu);
+}
+
+unsigned int
+rte_get_llc_n_lcore (unsigned int lcore, rte_cpuset_t *llc_cpu,
+		unsigned int *first_cpu, unsigned int * last_cpu,
+		unsigned int n, bool skip)
+{
+	bool found_first_cpu = false;
+	bool found_last_cpu = false;
+	unsigned int first_lcore_cpu = RTE_MAX_LCORE;
+	unsigned int last_lcore_cpu = RTE_MAX_LCORE;
+
+	unsigned int temp_count = n;
+	unsigned int count = rte_get_llc_lcore (lcore, llc_cpu, first_cpu, last_cpu);
+
+	//printf ("rte_get_llc_n_lcore: first %u last %u count %u \n", *first_cpu, *last_cpu, CPU_COUNT(llc_cpu));
+
+	unsigned int temp_cpu = RTE_MAX_LCORE;
+	unsigned int temp_last_cpu = RTE_MAX_LCORE;
+	if (false == skip) {
+		if (count < n)
+			return 0;
+
+		RTE_LCORE_FOREACH(temp_cpu) {
+			if ((temp_cpu >= *first_cpu) && (temp_cpu <= *last_cpu)) {
+				if (CPU_ISSET(temp_cpu, llc_cpu) && (temp_count)) {
+					//printf ("rte_get_llc_n_lcore: temp - count %d cpu %u skip %u first %u last %u \n", temp_count, temp_cpu, skip, *first_cpu, *last_cpu);
+					if (false == found_first_cpu) {
+						*first_cpu = temp_cpu;
+						found_first_cpu = true;
+					}
+					temp_last_cpu = temp_cpu;
+
+					temp_count -= 1;
+					continue;
+				} 
+			}
+			CPU_CLR(temp_cpu, llc_cpu);
+		}
+		*last_cpu = temp_last_cpu;
+		//printf ("rte_get_llc_n_lcore: start %u last %u count %u\n", *first_cpu, *last_cpu, CPU_COUNT(llc_cpu));
+		return n;
+	}
+
+	int total_core = CPU_COUNT(llc_cpu) - n;
+	if (total_core <= 0)
+		return 0;
+
+	RTE_LCORE_FOREACH(temp_cpu) {
+		if ((temp_cpu >= *first_cpu) && (temp_cpu <= *last_cpu)) {
+			if (CPU_ISSET(temp_cpu, llc_cpu) && (temp_count)) {
+				if (temp_count) {
+					CPU_CLR(temp_cpu, llc_cpu);
+					temp_count -= 1;
+					continue;
+				}
+
+				if (false == found_first_cpu) {
+					*first_cpu = temp_cpu;
+					found_first_cpu = true;
+				}
+				*last_cpu = temp_cpu;
+			}
+		}
+	}
+
+	//printf ("rte_get_llc_n_lcore: start %u last %u count %u\n", *first_cpu, *last_cpu, total_core);
+	return total_core;
+#if 0
+	if (false == skip) {
+		unsigned int start = *first_cpu, end = *last_cpu, temp_last_cpu = *last_cpu;
+		for (; (start <= end); start++)
+		{
+			if (CPU_ISSET(start, llc_cpu) && (temp_count)) {
+				temp_count -= 1;
+				continue;
+			} else if (CPU_ISSET(start, llc_cpu)) {
+				temp_last_cpu = (false == is_last_cpu) ? (start - 1) : temp_last_cpu;
+				is_last_cpu = true;
+
+				CPU_CLR(start, llc_cpu);
+			}
+		}
+		*last_cpu = temp_last_cpu;
+		return n;
+	}
+
+	int total_core = CPU_COUNT(llc_cpu) - n;
+	if (total_core <= 0)
+		return 0;
+
+	bool is_first_cpu = false;
+	unsigned int temp_last_cpu = *last_cpu;
+	for (unsigned int start = *first_cpu, end = *last_cpu; (start <= end) && (temp_count); start++)
+	{
+		if (CPU_ISSET(start, llc_cpu) && (temp_count)) {
+			*first_cpu = (is_first_cpu == false) ? start : *first_cpu;
+			temp_last_cpu = start;
+			CPU_CLR(start, llc_cpu);
+			temp_count -= 1;
+		}
+	}
+
+	*last_cpu = temp_last_cpu;
+	return total_core;
+#endif
+}
+
 unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap)
 {
-	i++;
-	if (wrap)
-		i %= RTE_MAX_LCORE;
+        i++;
+        if (wrap)
+                i %= RTE_MAX_LCORE;
 
-	while (i < RTE_MAX_LCORE) {
-		if (!rte_lcore_is_enabled(i) ||
-		    (skip_main && (i == rte_get_main_lcore()))) {
-			i++;
-			if (wrap)
-				i %= RTE_MAX_LCORE;
-			continue;
-		}
-		break;
-	}
-	return i;
+        while (i < RTE_MAX_LCORE) {
+                if (!rte_lcore_is_enabled(i) ||
+                    (skip_main && (i == rte_get_main_lcore()))) {
+                        i++;
+                        if (wrap)
+                                i %= RTE_MAX_LCORE;
+                        continue;
+                }
+                break;
+        }
+        return i;
 }
+
 
 unsigned int
 rte_lcore_to_socket_id(unsigned int lcore_id)
