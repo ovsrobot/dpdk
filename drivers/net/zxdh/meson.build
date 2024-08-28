@@ -9,6 +9,9 @@ endif
 
 sources = files(
 	'zxdh_ethdev.c',
+	'zxdh_common.c',
+	'zxdh_pci.c',
 	'zxdh_msg.c',
+	'zxdh_queue.c',
 	'zxdh_npsdk.c',
 	)
