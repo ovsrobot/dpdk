@@ -51,6 +51,7 @@
 #define ICE_PKG_FILE_UPDATES "/lib/firmware/updates/intel/ice/ddp/ice.pkg"
 #define ICE_PKG_FILE_SEARCH_PATH_DEFAULT "/lib/firmware/intel/ice/ddp/"
 #define ICE_PKG_FILE_SEARCH_PATH_UPDATES "/lib/firmware/updates/intel/ice/ddp/"
+#define ICE_PKG_FILE_CUSTOMIZED_PATH "/sys/module/firmware_class/parameters/path"
 #define ICE_MAX_PKG_FILENAME_SIZE   256
 
 #define MAX_ACL_NORMAL_ENTRIES    256
@@ -568,6 +569,7 @@ struct ice_devargs {
 	/* Name of the field. */
 	char xtr_field_name[RTE_MBUF_DYN_NAMESIZE];
 	uint64_t mbuf_check;
+	const char *ddp_filename;
 };
 
 /**
