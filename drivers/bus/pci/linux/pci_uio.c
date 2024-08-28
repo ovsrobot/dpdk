@@ -232,18 +232,6 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 			loc->domain, loc->bus, loc->devid, loc->function);
 		return 1;
 	}
-	snprintf(devname, sizeof(devname), "/dev/uio%u", uio_num);
-
-	/* save fd */
-	fd = open(devname, O_RDWR);
-	if (fd < 0) {
-		PCI_LOG(ERR, "Cannot open %s: %s", devname, strerror(errno));
-		goto error;
-	}
-
-	if (rte_intr_fd_set(dev->intr_handle, fd))
-		goto error;
-
 	snprintf(cfgname, sizeof(cfgname),
 			"/sys/class/uio/uio%u/device/config", uio_num);
 
@@ -272,6 +260,19 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	/* the uio_pci_generic driver clears the bus master enable bit when the device file is
+	 * closed, so open it only in the primary process */
+	snprintf(devname, sizeof(devname), "/dev/uio%u", uio_num);
+	/* save fd */
+	fd = open(devname, O_RDWR);
+	if (fd < 0) {
+		PCI_LOG(ERR, "Cannot open %s: %s", devname, strerror(errno));
+		goto error;
+	}
+
+	if (rte_intr_fd_set(dev->intr_handle, fd))
+		goto error;
 
 	/* allocate the mapping details for secondary processes*/
 	*uio_res = rte_zmalloc("UIO_RES", sizeof(**uio_res), 0);
