@@ -108,6 +108,11 @@ Runtime Configuration
 
     -a 80:00.0,default-mac-disable=1
 
+- ``DDP Package File``
+
+  Support for customizing the firmware search path, will read the search path
+  from "/sys/module/firmware_class/parameters/path" and try to load DDP package.
+
 - ``Protocol extraction for per queue``
 
   Configure the RX queues to do protocol extraction into mbuf for protocol

@@ -1873,6 +1873,22 @@ ice_load_pkg_type(struct ice_hw *hw)
 	return package_type;
 }
 
+static int ice_read_customized_path(char *pkg_file)
+{
+	char buf[ICE_MAX_PKG_FILENAME_SIZE];
+	FILE *fp = fopen(ICE_PKG_FILE_CUSTOMIZED_PATH, "r");
+	if (fp == NULL) {
+		PMD_INIT_LOG(ERR, "Failed to read CUSTOMIZED_PATH");
+		return -EIO;
+	}
+	if (fscanf(fp, "%s\n", buf) > 0)
+		strncpy(pkg_file, buf, ICE_MAX_PKG_FILENAME_SIZE);
+	else
+		return -EIO;
+
+	return 0;
+}
+
 int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 {
 	struct ice_hw *hw = &adapter->hw;
@@ -1888,6 +1904,12 @@ int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 	memset(opt_ddp_filename, 0, ICE_MAX_PKG_FILENAME_SIZE);
 	snprintf(opt_ddp_filename, ICE_MAX_PKG_FILENAME_SIZE,
 		"ice-%016" PRIx64 ".pkg", dsn);
+
+	ice_read_customized_path(pkg_file);
+	strcat(pkg_file, opt_ddp_filename);
+	if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
+		goto load_fw;
+
 	strncpy(pkg_file, ICE_PKG_FILE_SEARCH_PATH_UPDATES,
 		ICE_MAX_PKG_FILENAME_SIZE);
 	strcat(pkg_file, opt_ddp_filename);
@@ -1901,6 +1923,10 @@ int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 		goto load_fw;
 
 no_dsn:
+	ice_read_customized_path(pkg_file);
+	if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
+		goto load_fw;
+
 	strncpy(pkg_file, ICE_PKG_FILE_UPDATES, ICE_MAX_PKG_FILENAME_SIZE);
 	if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
 		goto load_fw;
@@ -6981,6 +7007,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_PROTO_XTR_ARG "=[queue:]<vlan|ipv4|ipv6|ipv6_flow|tcp|ip_offset>"
 			      ICE_SAFE_MODE_SUPPORT_ARG "=<0|1>"
 			      ICE_DEFAULT_MAC_DISABLE "=<0|1>"
+				  ICE_DDP_FILENAME "=</path/to/file>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>");
 
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_init, init, NOTICE);
