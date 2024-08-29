@@ -23,7 +23,7 @@ from typing import ClassVar
 
 from typing_extensions import Self, Unpack
 
-from framework.exception import InteractiveCommandExecutionError
+from framework.exception import InteractiveCommandExecutionError, InternalError
 from framework.params.testpmd import SimpleForwardingModes, TestPmdParams
 from framework.params.types import TestPmdParamsDict
 from framework.parser import ParserFn, TextParser
@@ -304,6 +304,12 @@ class RSSOffloadTypesFlag(Flag):
             TextParser.find(r"Supported RSS offload flow types:((?:\r?\n?  \S+)+)", re.MULTILINE),
             RSSOffloadTypesFlag.from_list_string,
         )
+
+    def __str__(self):
+        """Stringifies the flag name."""
+        if self.name is None:
+            return ""
+        return self.name.replace("_", "-")
 
 
 class DeviceCapabilitiesFlag(Flag):
@@ -722,6 +728,82 @@ class TestPmdShell(DPDKShell):
             raise InteractiveCommandExecutionError(
                 f"Test pmd failed to set fwd mode to {mode.value}"
             )
+
+    def port_config_rss_reta(
+        self, port_id: int, hash_index: int, queue_id: int, verify: bool = True
+    ) -> None:
+        """Configures a port's RSS redirection table.
+
+        Args:
+            port_id: Port where redirection table will be configured.
+            hash_index: The index into the redirection table associated with the destination queue.
+            queue_id: The destination queue of the packet.
+            verify: If :data:`True`, it verifies if a port's redirection table
+                was correctly configured.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True`
+                Testpmd failed to config RSS reta.
+        """
+        out = self.send_command(f"port config {port_id} rss reta ({hash_index},{queue_id})")
+        if verify:
+            if f"The reta size of port {port_id} is" not in out:
+                self._logger.debug(f"Failed to config RSS reta: \n{out}")
+                raise InteractiveCommandExecutionError("Testpmd failed to config RSS reta.")
+
+    def port_config_all_rss_offload_type(
+        self, flag: RSSOffloadTypesFlag, verify: bool = True
+    ) -> None:
+        """Set the RSS mode on all ports.
+
+        Args:
+            rss_offload_type: The RSS iptype all ports will be configured to.
+            verify: If :data:`True`, it verifies if all ports RSS offload type
+                was correctly configured.
+
+        Raises:
+            InternalError: Offload Flag has contradictory values set.
+            InteractiveCommandExecutionError: If `verify` is :data:`True`
+                Testpmd failed to config the RSS mode on all ports.
+        """
+        if not flag.name:
+            raise InternalError("Offload Flag has contradictory values set")
+
+        out = self.send_command(f"port config all rss {flag.name}")
+
+        if verify:
+            if "error" in out:
+                self._logger.debug(f"Failed to config the RSS mode on all ports: \n{out}")
+                raise InteractiveCommandExecutionError(
+                    "Testpmd failed to config the RSS mode on all ports"
+                )
+
+    def port_config_rss_hash_key(
+        self, port_id: int, offload_type: RSSOffloadTypesFlag, hex_str: str, verify: bool = True
+    ) -> str:
+        """Set the RSS hash key for the specified port.
+
+        Args:
+            port_id: Port the hash key will be set.
+            offload_type: The offload type the hash key will be applied to.
+            hex_str: The new hash key.
+            verify: If :data:`True`, RSS hash key has been correctly set.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True`
+                Testpmd failed to set the RSS hash key.
+        """
+        output = self.send_command(f"port config {port_id} rss-hash-key {offload_type} {hex_str}")
+
+        if verify:
+            if (
+                "invalid - key must be a string of" in output
+                or "Bad arguments" in output
+                or "Error during getting device" in output
+            ):
+                self._logger.debug(f"Failed to set rss hash key: \n{output}")
+                raise InteractiveCommandExecutionError("Testpmd failed to set the RSS hash key.")
+        return output
 
     def show_port_info_all(self) -> list[TestPmdPort]:
         """Returns the information of all the ports.
