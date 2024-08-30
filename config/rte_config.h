@@ -108,6 +108,10 @@
 
 /****** driver defines ********/
 
+/* ZSDA device */
+/* Max. number of ZSDA devices which can be attached */
+#define RTE_PMD_ZSDA_MAX_PCI_DEVICES 256
+
 /* Packet prefetching in PMDs */
 #define RTE_PMD_PACKET_PREFETCH 1
 
