@@ -97,16 +97,38 @@
 enum zsda_service_type {
 	ZSDA_SERVICE_COMPRESSION = 0,
 	ZSDA_SERVICE_DECOMPRESSION,
+	ZSDA_SERVICE_SYMMETRIC_ENCRYPT,
+	ZSDA_SERVICE_SYMMETRIC_DECRYPT,
+	ZSDA_SERVICE_HASH_ENCODE = 6,
 	ZSDA_SERVICE_INVALID,
 };
 
 #define ZSDA_MAX_SERVICES (ZSDA_SERVICE_INVALID)
 
+#define ZSDA_OPC_EC_AES_XTS_256 0x0  /* Encry AES-XTS-256 */
+#define ZSDA_OPC_EC_AES_XTS_512 0x01 /* Encry AES-XTS-512 */
+#define ZSDA_OPC_EC_SM4_XTS_256 0x02 /* Encry SM4-XTS-256 */
+#define ZSDA_OPC_DC_AES_XTS_256 0x08 /* Decry AES-XTS-256 */
+#define ZSDA_OPC_DC_AES_XTS_512 0x09 /* Decry AES-XTS-512 */
+#define ZSDA_OPC_DC_SM4_XTS_256 0x0A /* Decry SM4-XTS-256 */
 #define ZSDA_OPC_COMP_GZIP	0x10 /* Encomp deflate-Gzip */
 #define ZSDA_OPC_COMP_ZLIB	0x11 /* Encomp deflate-Zlib */
 #define ZSDA_OPC_DECOMP_GZIP	0x18 /* Decompinfalte-Gzip */
 #define ZSDA_OPC_DECOMP_ZLIB	0x19 /* Decompinfalte-Zlib */
+#define ZSDA_OPC_HASH_SHA1	0x20 /* Hash-SHA1 */
+#define ZSDA_OPC_HASH_SHA2_224	0x21 /* Hash-SHA2-224 */
+#define ZSDA_OPC_HASH_SHA2_256	0x22 /* Hash-SHA2-256 */
+#define ZSDA_OPC_HASH_SHA2_384	0x23 /* Hash-SHA2-384 */
+#define ZSDA_OPC_HASH_SHA2_512	0x24 /* Hash-SHA2-512 */
+#define ZSDA_OPC_HASH_SM3	0x25 /* Hash-SM3 */
 #define ZSDA_OPC_INVALID	0xff
+
+#define ZSDA_DIGEST_SIZE_SHA1	  (20)
+#define ZSDA_DIGEST_SIZE_SHA2_224 (28)
+#define ZSDA_DIGEST_SIZE_SHA2_256 (32)
+#define ZSDA_DIGEST_SIZE_SHA2_384 (48)
+#define ZSDA_DIGEST_SIZE_SHA2_512 (64)
+#define ZSDA_DIGEST_SIZE_SM3	  (32)
 
 #define SET_CYCLE	  0xff
 #define SET_HEAD_INTI	  0x0
@@ -237,7 +259,32 @@ struct zsda_op_cookie {
 	uint8_t comp_head[COMP_REMOVE_SPACE_LEN];
 } __rte_packed;
 
+#define ZSDA_CIPHER_KEY_MAX_LEN 64
+struct crypto_cfg {
+	uint8_t slba_L[8];
+	uint8_t key[ZSDA_CIPHER_KEY_MAX_LEN];
+	uint8_t lbads : 4;
+	uint8_t resv1 : 4;
+	uint8_t resv2[7];
+	uint8_t slba_H[8];
+	uint8_t resv3[8];
+} __rte_packed;
+
 struct compress_cfg {
+} __rte_packed;
+
+struct zsda_wqe_crpt {
+	uint8_t valid;
+	uint8_t op_code;
+	uint16_t sid;
+	uint8_t resv[3];
+	uint8_t rx_sgl_type : 4;
+	uint8_t tx_sgl_type : 4;
+	uint64_t rx_addr;
+	uint32_t rx_length;
+	uint64_t tx_addr;
+	uint32_t tx_length;
+	struct crypto_cfg cfg;
 } __rte_packed;
 
 struct zsda_wqe_comp {
@@ -281,6 +328,9 @@ struct zsda_common_stat {
 enum zsda_algo_core {
 	ZSDA_CORE_COMP,
 	ZSDA_CORE_DECOMP,
+	ZSDA_CORE_ENCRY,
+	ZSDA_CORE_DECRY,
+	ZSDA_CORE_HASH,
 	ZSDA_CORE_INVALID,
 };
 

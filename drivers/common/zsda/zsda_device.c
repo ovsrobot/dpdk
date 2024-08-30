@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "zsda_device.h"
+#include "zsda_qp.h"
 
 /* per-process array of device data */
 struct zsda_device_info zsda_devs[RTE_PMD_ZSDA_MAX_PCI_DEVICES];
@@ -59,7 +60,7 @@ int
 zsda_admin_q_start(const struct rte_pci_device *pci_dev)
 {
 	uint8_t *mmio_base = pci_dev->mem_resource[0].addr;
-	int ret = 0;
+	int ret;
 
 	ZSDA_CSR_WRITE32(mmio_base + ZSDA_ADMIN_Q_START, 0);
 
@@ -73,7 +74,7 @@ int
 zsda_admin_q_stop(const struct rte_pci_device *pci_dev)
 {
 	uint8_t *mmio_base = pci_dev->mem_resource[0].addr;
-	int ret = 0;
+	int ret;
 
 	ZSDA_CSR_WRITE32(mmio_base + ZSDA_ADMIN_Q_STOP_RESP, ZSDA_RESP_INVALID);
 	ZSDA_CSR_WRITE32(mmio_base + ZSDA_ADMIN_Q_STOP, ZSDA_Q_STOP);
@@ -91,7 +92,7 @@ int
 zsda_admin_q_clear(const struct rte_pci_device *pci_dev)
 {
 	uint8_t *mmio_base = pci_dev->mem_resource[0].addr;
-	int ret = 0;
+	int ret;
 
 	ZSDA_CSR_WRITE32(mmio_base + ZSDA_ADMIN_Q_CLR_RESP, ZSDA_RESP_INVALID);
 	ZSDA_CSR_WRITE32(mmio_base + ZSDA_ADMIN_Q_CLR, ZSDA_RESP_VALID);
@@ -108,7 +109,7 @@ zsda_admin_q_clear(const struct rte_pci_device *pci_dev)
 static int
 zsda_queue_stop_single(uint8_t *mmio_base, const uint8_t id)
 {
-	int ret = 0;
+	int ret;
 	uint8_t *addr_stop = mmio_base + ZSDA_IO_Q_STOP + (4 * id);
 	uint8_t *addr_resp = mmio_base + ZSDA_IO_Q_STOP_RESP + (4 * id);
 
@@ -159,7 +160,7 @@ zsda_queue_start(const struct rte_pci_device *pci_dev)
 static int
 zsda_queue_clear_single(uint8_t *mmio_base, const uint8_t id)
 {
-	int ret = 0;
+	int ret;
 	uint8_t *addr_clear = mmio_base + ZSDA_IO_Q_CLR + (4 * id);
 	uint8_t *addr_resp = mmio_base + ZSDA_IO_Q_CLR_RESP + (4 * id);
 
@@ -306,7 +307,8 @@ zsda_pci_device_release(const struct rte_pci_device *pci_dev)
 		inst = &zsda_devs[zsda_pci_dev->zsda_dev_id];
 
 		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-			if (zsda_pci_dev->comp_dev != NULL) {
+			if ((zsda_pci_dev->sym_dev != NULL) ||
+			    (zsda_pci_dev->comp_dev != NULL)) {
 				ZSDA_LOG(DEBUG, "ZSDA device %s is busy", name);
 				return -EBUSY;
 			}
@@ -322,45 +324,10 @@ static int
 zsda_pci_dev_destroy(struct zsda_pci_device *zsda_pci_dev,
 		     const struct rte_pci_device *pci_dev)
 {
+	zsda_sym_dev_destroy(zsda_pci_dev);
 	zsda_comp_dev_destroy(zsda_pci_dev);
 
 	return zsda_pci_device_release(pci_dev);
-}
-
-int
-zsda_get_queue_cfg_by_id(const struct zsda_pci_device *zsda_pci_dev,
-			 const uint8_t qid, struct qinfo *qcfg)
-{
-	struct zsda_admin_req_qcfg req = {0};
-	struct zsda_admin_resp_qcfg resp = {0};
-	int ret = 0;
-	struct rte_pci_device *pci_dev =
-		zsda_devs[zsda_pci_dev->zsda_dev_id].pci_dev;
-
-	if (qid >= MAX_QPS_ON_FUNCTION) {
-		ZSDA_LOG(ERR, "qid beyond limit!");
-		return ZSDA_FAILED;
-	}
-
-	zsda_admin_msg_init(pci_dev);
-	req.msg_type = ZSDA_ADMIN_QUEUE_CFG_REQ;
-	req.qid = qid;
-
-	ret = zsda_send_admin_msg(pci_dev, &req, sizeof(req));
-	if (ret) {
-		ZSDA_LOG(ERR, "Failed! Send msg");
-		return ret;
-	}
-
-	ret = zsda_recv_admin_msg(pci_dev, &resp, sizeof(resp));
-	if (ret) {
-		ZSDA_LOG(ERR, "Failed! Receive msg");
-		return ret;
-	}
-
-	memcpy(qcfg, &resp.qcfg, sizeof(*qcfg));
-
-	return ZSDA_SUCCESS;
 }
 
 static int
@@ -396,7 +363,7 @@ static int
 zsda_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	       struct rte_pci_device *pci_dev)
 {
-	int ret = 0;
+	int ret;
 	struct zsda_pci_device *zsda_pci_dev;
 
 	zsda_pci_dev = zsda_pci_device_allocate(pci_dev);
@@ -432,6 +399,7 @@ zsda_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		return ret;
 	}
 
+	ret |= zsda_sym_dev_create(zsda_pci_dev);
 	ret |= zsda_comp_dev_create(zsda_pci_dev);
 
 	if (ret) {

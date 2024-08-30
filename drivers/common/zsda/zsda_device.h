@@ -18,6 +18,13 @@ struct zsda_device_info {
 
 	struct rte_pci_device *pci_dev;
 
+	// struct rte_device sym_rte_dev;
+	struct rte_device sym_rte_dev;
+	/**< This represents the crypto sym subset of this pci device.
+	 * Register with this rather than with the one in
+	 * pci_dev so that its driver can have a crypto-specific name
+	 */
+
 	struct rte_device comp_rte_dev;
 	/**< This represents the compression subset of this pci device.
 	 * Register with this rather than with the one in
@@ -27,6 +34,7 @@ struct zsda_device_info {
 
 extern struct zsda_device_info zsda_devs[];
 
+struct zsda_sym_dev_private;
 struct zsda_comp_dev_private;
 
 struct zsda_qp_hw_data {
@@ -64,6 +72,10 @@ struct zsda_pci_device {
 
 	struct rte_pci_device *pci_dev;
 
+	/* Data relating to symmetric crypto service */
+	struct zsda_sym_dev_private *sym_dev;
+	/**< link back to cryptodev private data */
+
 	/* Data relating to compression service */
 	struct zsda_comp_dev_private *comp_dev;
 	/**< link back to compressdev private data */
@@ -79,16 +91,16 @@ struct zsda_pci_device *
 zsda_get_zsda_dev_from_pci_dev(const struct rte_pci_device *pci_dev);
 
 __rte_weak int
-zsda_get_queue_cfg(struct zsda_pci_device *zsda_pci_dev);
+zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev);
+
+__rte_weak int
+zsda_sym_dev_destroy(struct zsda_pci_device *zsda_pci_dev);
 
 __rte_weak int
 zsda_comp_dev_create(struct zsda_pci_device *zsda_pci_dev);
 
 __rte_weak int
 zsda_comp_dev_destroy(struct zsda_pci_device *zsda_pci_dev);
-
-int zsda_get_queue_cfg_by_id(const struct zsda_pci_device *zsda_pci_dev,
-			     const uint8_t qid, struct qinfo *qcfg);
 
 int zsda_queue_start(const struct rte_pci_device *pci_dev);
 int zsda_queue_stop(const struct rte_pci_device *pci_dev);
