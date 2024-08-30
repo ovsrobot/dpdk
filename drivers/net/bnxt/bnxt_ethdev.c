@@ -105,6 +105,7 @@ static const struct rte_pci_id bnxt_pci_id_map[] = {
 #define BNXT_DEVARG_APP_ID	"app-id"
 #define BNXT_DEVARG_IEEE_1588	"ieee-1588"
 #define BNXT_DEVARG_CQE_MODE	"cqe-mode"
+#define BNXT_DEVARG_MPC		"mpc"
 
 static const char *const bnxt_dev_args[] = {
 	BNXT_DEVARG_REPRESENTOR,
@@ -119,6 +120,7 @@ static const char *const bnxt_dev_args[] = {
 	BNXT_DEVARG_APP_ID,
 	BNXT_DEVARG_IEEE_1588,
 	BNXT_DEVARG_CQE_MODE,
+	BNXT_DEVARG_MPC,
 	NULL
 };
 
@@ -126,6 +128,11 @@ static const char *const bnxt_dev_args[] = {
  * cqe-mode = an non-negative 8-bit number
  */
 #define BNXT_DEVARG_CQE_MODE_INVALID(val)		((val) > 1)
+
+/*
+ * mpc = an non-negative 8-bit number
+ */
+#define BNXT_DEVARG_MPC_INVALID(val)			((val) > 1)
 
 /*
  * app-id = an non-negative 8-bit number
@@ -174,6 +181,7 @@ static const char *const bnxt_dev_args[] = {
 #define BNXT_DEVARG_REP_FC_F2R_INVALID(rep_fc_f2r)	((rep_fc_f2r) > 1)
 
 int bnxt_cfa_code_dynfield_offset = -1;
+unsigned long mpc;
 
 /*
  * max_num_kflows must be >= 32
@@ -1687,6 +1695,10 @@ static int bnxt_dev_stop(struct rte_eth_dev *eth_dev)
 	bnxt_free_rx_mbufs(bp);
 	/* Process any remaining notifications in default completion queue */
 	bnxt_int_handler(eth_dev);
+
+	if (mpc != 0)
+		bnxt_mpc_close(bp);
+
 	bnxt_shutdown_nic(bp);
 	bnxt_hwrm_if_change(bp, false);
 
@@ -1763,6 +1775,12 @@ int bnxt_dev_start_op(struct rte_eth_dev *eth_dev)
 	rc = bnxt_start_nic(bp);
 	if (rc)
 		goto error;
+
+	if (mpc != 0) {
+		rc = bnxt_mpc_open(bp);
+		if (rc != 0)
+			PMD_DRV_LOG(DEBUG, "MPC open failed\n");
+	}
 
 	rc = bnxt_alloc_prev_ring_stats(bp);
 	if (rc)
@@ -2220,6 +2238,11 @@ static int bnxt_reta_update_op(struct rte_eth_dev *eth_dev,
 			continue;
 
 		rxq = bnxt_qid_to_rxq(bp, reta_conf[idx].reta[sft]);
+		if (!rxq) {
+			PMD_DRV_LOG(ERR, "Invalid ring in reta_conf.\n");
+			return -EINVAL;
+		}
+
 		if (BNXT_CHIP_P5_P7(bp)) {
 			vnic->rss_table[i * 2] =
 				rxq->rx_ring->rx_ring_struct->fw_ring_id;
@@ -3752,6 +3775,7 @@ bnxt_timesync_read_time(struct rte_eth_dev *dev, struct timespec *ts)
 	if (!ptp)
 		return -ENOTSUP;
 
+	/* TODO Revisit for Thor 2 */
 	if (BNXT_CHIP_P5(bp))
 		rc = bnxt_hwrm_port_ts_query(bp, BNXT_PTP_FLAGS_CURRENT_TIME,
 					     &systime_cycles);
@@ -3801,6 +3825,7 @@ bnxt_timesync_enable(struct rte_eth_dev *dev)
 	ptp->tx_tstamp_tc.cc_shift = shift;
 	ptp->tx_tstamp_tc.nsec_mask = (1ULL << shift) - 1;
 
+	/* TODO Revisit for Thor 2 */
 	if (!BNXT_CHIP_P5(bp))
 		bnxt_map_ptp_regs(bp);
 	else
@@ -3825,6 +3850,7 @@ bnxt_timesync_disable(struct rte_eth_dev *dev)
 
 	bnxt_hwrm_ptp_cfg(bp);
 
+	/* TODO Revisit for Thor 2 */
 	bp->ptp_all_rx_tstamp = 0;
 	if (!BNXT_CHIP_P5(bp))
 		bnxt_unmap_ptp_regs(bp);
@@ -3847,6 +3873,7 @@ bnxt_timesync_read_rx_timestamp(struct rte_eth_dev *dev,
 	if (!ptp)
 		return -ENOTSUP;
 
+	/* TODO Revisit for Thor 2 */
 	if (BNXT_CHIP_P5(bp))
 		rx_tstamp_cycles = ptp->rx_timestamp;
 	else
@@ -3870,6 +3897,7 @@ bnxt_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 	if (!ptp)
 		return -ENOTSUP;
 
+	/* TODO Revisit for Thor 2 */
 	if (BNXT_CHIP_P5(bp))
 		rc = bnxt_hwrm_port_ts_query(bp, BNXT_PTP_FLAGS_PATH_TX,
 					     &tx_tstamp_cycles);
@@ -5886,6 +5914,38 @@ bnxt_parse_devarg_app_id(__rte_unused const char *key,
 }
 
 static int
+bnxt_parse_devarg_mpc(__rte_unused const char *key,
+		      const char *value, __rte_unused void *opaque_arg)
+{
+	char *end = NULL;
+
+	if (!value || !opaque_arg) {
+		PMD_DRV_LOG(ERR,
+			    "Invalid parameter passed to app-id "
+			    "devargs.\n");
+		return -EINVAL;
+	}
+
+	mpc = strtoul(value, &end, 10);
+	if (end == NULL || *end != '\0' ||
+	    (mpc == ULONG_MAX && errno == ERANGE)) {
+		PMD_DRV_LOG(ERR,
+			    "Invalid parameter passed to mpc "
+			    "devargs.\n");
+		return -EINVAL;
+	}
+
+	if (BNXT_DEVARG_MPC_INVALID(mpc)) {
+		PMD_DRV_LOG(ERR, "Invalid mpc(%d) devargs.\n",
+			    (uint16_t)mpc);
+		return -EINVAL;
+	}
+
+	PMD_DRV_LOG(INFO, "MPC%d feature enabled.\n", (uint16_t)mpc);
+	return 0;
+}
+
+static int
 bnxt_parse_devarg_ieee_1588(__rte_unused const char *key,
 			    const char *value, void *opaque_arg)
 {
@@ -6189,6 +6249,13 @@ err:
 	 */
 	rte_kvargs_process(kvlist, BNXT_DEVARG_IEEE_1588,
 			   bnxt_parse_devarg_ieee_1588, bp);
+
+	/*
+	 * Handler for "mpc" devarg.
+	 * Invoked as for ex: "-a 000:00:0d.0,mpc=1"
+	 */
+	rte_kvargs_process(kvlist, BNXT_DEVARG_MPC,
+			   bnxt_parse_devarg_mpc, bp);
 
 	/*
 	 * Handler for "cqe-mode" devarg.
@@ -6817,10 +6884,30 @@ bool is_bnxt_supported(struct rte_eth_dev *dev)
 	return is_device_supported(dev, &bnxt_rte_pmd);
 }
 
-struct tf *bnxt_get_tfp_session(struct bnxt *bp, enum bnxt_session_type type)
+struct bnxt *
+bnxt_pmd_get_bp(uint16_t port)
 {
-	return (type >= BNXT_SESSION_TYPE_LAST) ?
-		&bp->tfp[BNXT_SESSION_TYPE_REGULAR] : &bp->tfp[type];
+	struct bnxt *bp;
+	struct rte_eth_dev *dev;
+
+	if (!rte_eth_dev_is_valid_port(port)) {
+		PMD_DRV_LOG(ERR, "Invalid port %d\n", port);
+		return NULL;
+	}
+
+	dev = &rte_eth_devices[port];
+	if (!is_bnxt_supported(dev)) {
+		PMD_DRV_LOG(ERR, "Device %d not supported\n", port);
+		return NULL;
+	}
+
+	bp = (struct bnxt *)dev->data->dev_private;
+	if (!BNXT_TRUFLOW_EN(bp)) {
+		PMD_DRV_LOG(ERR, "TRUFLOW not enabled\n");
+		return NULL;
+	}
+
+	return bp;
 }
 
 /* check if ULP should be enabled or not */
@@ -6830,7 +6917,7 @@ static bool bnxt_enable_ulp(struct bnxt *bp)
 	/* not enabling ulp for cli and no truflow apps */
 	if (BNXT_TRUFLOW_EN(bp) && bp->app_id != 254 &&
 	    bp->app_id != 255) {
-		if (BNXT_CHIP_P7(bp))
+		if (BNXT_CHIP_P7(bp) && !mpc)
 			return false;
 		return true;
 	}
