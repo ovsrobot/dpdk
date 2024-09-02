@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Generate Visual Studio Code configuration on build**
+
+   The Meson build system now generates Visual Studio Code configuration
+   files for configuration, compilation, and debugging tasks.
+
 
 Removed Items
 -------------

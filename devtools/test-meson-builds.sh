@@ -53,6 +53,8 @@ default_cppflags=$CPPFLAGS
 default_cflags=$CFLAGS
 default_ldflags=$LDFLAGS
 default_meson_options=$DPDK_MESON_OPTIONS
+# disable VSCode config generation
+export DPDK_DISABLE_VSCODE_CONFIG=1
 
 opt_verbose=
 opt_vverbose=
@@ -88,6 +90,7 @@ load_env () # <target compiler>
 	export CFLAGS=$default_cflags
 	export LDFLAGS=$default_ldflags
 	export DPDK_MESON_OPTIONS=$default_meson_options
+
 	# set target hint for use in the loaded config file
 	if [ -n "$target_override" ] ; then
 		DPDK_TARGET=$target_override

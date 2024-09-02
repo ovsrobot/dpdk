@@ -19,3 +19,4 @@ Contributor's Guidelines
     vulnerability
     stable
     cheatsheet
+    ide_integration

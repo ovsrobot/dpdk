@@ -114,7 +114,19 @@ foreach app:apps
         link_libs = dpdk_static_libraries + dpdk_drivers
     endif
 
-    exec = executable('dpdk-' + name,
+    # add to Visual Studio Code launch configuration
+    exe_name = 'dpdk-' + name
+    launch_path = join_paths(meson.current_build_dir(), exe_name)
+    # we also need exec env/arch, but they were not available at the time buildtools command was generated
+    cfg_args = ['--launch', launch_path, '--exec-env', exec_env, '--arch', arch_subdir]
+    # we don't want to block the build if this command fails
+    result = run_command(vscode_conf_gen_cmd + cfg_args, check: false)
+    if result.returncode() != 0
+        warning('Failed to generate Visual Studio Code launch configuration for "' + name + '"')
+        message(result.stderr())
+    endif
+
+    exec = executable(exe_name,
             sources,
             c_args: cflags,
             link_args: ldflags,
