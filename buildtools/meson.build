@@ -24,6 +24,8 @@ get_numa_count_cmd = py3 + files('get-numa-count.py')
 get_test_suites_cmd = py3 + files('get-test-suites.py')
 has_hugepages_cmd = py3 + files('has-hugepages.py')
 cmdline_gen_cmd = py3 + files('dpdk-cmdline-gen.py')
+log_deps_cmd = py3 + files('log-deps.py')
+run_command(log_deps_cmd, check: false)  # call with no parameters to reset the file
 
 # install any build tools that end-users might want also
 install_data([
