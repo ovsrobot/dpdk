@@ -2,7 +2,7 @@
 # Copyright(c) 2017-2023 Intel Corporation
 
 # the main test files [test.c and commands.c] relies on these libraries
-deps += ['cmdline', 'ring', 'mempool', 'mbuf']
+deps += ['cmdline']
 sources += files('commands.c', 'test.c')
 
 # optional dependencies: some files may use these - and so we should link them in -
