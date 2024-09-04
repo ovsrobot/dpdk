@@ -199,7 +199,7 @@ class TestSuite:
         Returns:
             A list of received packets.
         """
-        packet = self._adjust_addresses(packet)
+        packet = self._adjust_addresses([packet])[0]
         return self.tg_node.send_packet_and_capture(
             packet,
             self._tg_port_egress,
@@ -207,6 +207,18 @@ class TestSuite:
             filter_config,
             duration,
         )
+
+    def send_packets(
+        self,
+        packets: list[Packet],
+    ) -> None:
+        """Send packets using the traffic generator and do not capture received traffic.
+
+        Args:
+            packets: Packets to send.
+        """
+        packets = self._adjust_addresses(packets)
+        self.tg_node.send_packets(packets, self._tg_port_egress)
 
     def get_expected_packet(self, packet: Packet) -> Packet:
         """Inject the proper L2/L3 addresses into `packet`.
@@ -217,41 +229,74 @@ class TestSuite:
         Returns:
             `packet` with injected L2/L3 addresses.
         """
-        return self._adjust_addresses(packet, expected=True)
+        return self._adjust_addresses([packet], expected=True)[0]
 
-    def _adjust_addresses(self, packet: Packet, expected: bool = False) -> Packet:
+    def _adjust_addresses(self, packets: list[Packet], expected: bool = False) -> list[Packet]:
         """L2 and L3 address additions in both directions.
+
+        Packets in `packets` will be directly modified in this method. The returned list of packets
+        however will be copies of the modified packets in order to keep the two lists distinct.
+
+        Only missing addresses are added to packets, existing addresses will not be overridden. If
+        any packet in `packets` has multiple IP layers (using GRE, for example) only the inner-most
+        IP layer will have its addresses adjusted.
 
         Assumptions:
             Two links between SUT and TG, one link is TG -> SUT, the other SUT -> TG.
 
         Args:
-            packet: The packet to modify.
+            packets: The packets to modify.
             expected: If :data:`True`, the direction is SUT -> TG,
                 otherwise the direction is TG -> SUT.
+
+        Returns:
+            A list containing copies of all packets in `packets` after modification.
         """
-        if expected:
-            # The packet enters the TG from SUT
+        ret_packets = []
+        for packet in packets:
+            # The fields parameter of a packet does not include fields of the payload, so this can
+            # only be the Ether src/dst.
+            pkt_src_is_unset = "src" not in packet.fields
+            pkt_dst_is_unset = "dst" not in packet.fields
+            num_ip_layers = packet.layers().count(IP)
+
+            # Update the last IP layer if there are multiple to account for GRE addressing (the
+            # framework should be modifying the packet address instead of the tunnel).
+            l3_to_use = packet.getlayer(IP, num_ip_layers)
+            if num_ip_layers > 0:
+                ip_src_is_unset = "src" not in l3_to_use.fields
+                ip_dst_is_unset = "dst" not in l3_to_use.fields
+            else:
+                ip_src_is_unset = None
+                ip_dst_is_unset = None
+
             # update l2 addresses
-            packet.src = self._sut_port_egress.mac_address
-            packet.dst = self._tg_port_ingress.mac_address
+            # If `expected` is :data:`True`, the packet enters the TG from SUT, otherwise the
+            # packet leaves the TG towards the SUT
+            if pkt_src_is_unset:
+                packet.src = (
+                    self._sut_port_egress.mac_address
+                    if expected
+                    else self._tg_port_egress.mac_address
+                )
+            if pkt_dst_is_unset:
+                packet.dst = (
+                    self._tg_port_ingress.mac_address
+                    if expected
+                    else self._sut_port_ingress.mac_address
+                )
 
-            # The packet is routed from TG egress to TG ingress
             # update l3 addresses
-            packet.payload.src = self._tg_ip_address_egress.ip.exploded
-            packet.payload.dst = self._tg_ip_address_ingress.ip.exploded
-        else:
-            # The packet leaves TG towards SUT
-            # update l2 addresses
-            packet.src = self._tg_port_egress.mac_address
-            packet.dst = self._sut_port_ingress.mac_address
+            # The packet is routed from TG egress to TG ingress regardless of whether it is
+            # expected or not.
+            if ip_src_is_unset:
+                l3_to_use.src = self._tg_ip_address_egress.ip.exploded
 
-            # The packet is routed from TG egress to TG ingress
-            # update l3 addresses
-            packet.payload.src = self._tg_ip_address_egress.ip.exploded
-            packet.payload.dst = self._tg_ip_address_ingress.ip.exploded
+            if ip_dst_is_unset:
+                l3_to_use.dst = self._tg_ip_address_ingress.ip.exploded
+            ret_packets.append(Ether(packet.build()))
 
-        return Ether(packet.build())
+        return ret_packets
 
     def verify(self, condition: bool, failure_description: str) -> None:
         """Verify `condition` and handle failures.
