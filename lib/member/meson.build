@@ -16,7 +16,7 @@ sources = files(
         'rte_member_vbf.c',
 )
 
-deps += ['hash', 'ring']
+deps = ['hash']
 
 # compile AVX512 version if:
 if dpdk_conf.has('RTE_ARCH_X86_64') and binutils_ok

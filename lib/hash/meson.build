@@ -25,6 +25,4 @@ sources = files(
         'rte_thash_gfni.c',
 )
 
-deps += ['net']
-deps += ['ring']
-deps += ['rcu']
+deps = ['net', 'rcu']

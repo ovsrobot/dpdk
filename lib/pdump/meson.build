@@ -9,4 +9,4 @@ endif
 
 sources = files('rte_pdump.c')
 headers = files('rte_pdump.h')
-deps += ['ethdev', 'bpf', 'pcapng']
+deps = ['bpf', 'pcapng']
