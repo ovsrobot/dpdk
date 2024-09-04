@@ -9,15 +9,15 @@
 deps += ['power']
 
 if dpdk_conf.has('RTE_NET_BNXT')
-    deps += ['net_bnxt']
+    optional_deps += ['net_bnxt']
 endif
 
 if dpdk_conf.has('RTE_NET_I40E')
-    deps += ['net_i40e']
+    optional_deps += ['net_i40e']
 endif
 
 if dpdk_conf.has('RTE_NET_IXGBE')
-    deps += ['net_ixgbe']
+    optional_deps += ['net_ixgbe']
 endif
 
 allow_experimental_apis = true

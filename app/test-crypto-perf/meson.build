@@ -21,5 +21,5 @@ sources = files(
 )
 deps += ['cryptodev', 'net', 'security']
 if dpdk_conf.has('RTE_CRYPTO_SCHEDULER')
-    deps += 'crypto_scheduler'
+    optional_deps += 'crypto_scheduler'
 endif

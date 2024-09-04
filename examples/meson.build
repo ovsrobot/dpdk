@@ -98,11 +98,12 @@ foreach example: examples
     ext_deps = []
     includes = [include_directories(example, 'common')]
     deps = ['eal', 'mempool', 'net', 'mbuf', 'ethdev', 'cmdline']
+    optional_deps = []
     subdir(example)
 
     if build
         dep_objs = ext_deps
-        foreach d:deps
+        foreach d:deps + optional_deps
             var_name = get_option('default_library') + '_rte_' + d
             if not is_variable(var_name)
                 build = false

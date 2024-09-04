@@ -65,6 +65,7 @@ foreach app:apps
     # external package/library requirements
     ext_deps = []
     deps = []
+    optional_deps = []
 
     if not enable_apps.contains(app)
         build = false
@@ -84,7 +85,7 @@ foreach app:apps
 
     if build
         dep_objs = []
-        foreach d:deps
+        foreach d:deps + optional_deps
             var_name = get_option('default_library') + '_rte_' + d
             if not is_variable(var_name)
                 build = false
