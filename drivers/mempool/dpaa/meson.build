@@ -6,5 +6,5 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
-deps += ['bus_dpaa']
+deps = ['bus_dpaa']
 sources = files('dpaa_mempool.c')

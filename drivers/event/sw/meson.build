@@ -8,5 +8,5 @@ sources = files(
         'sw_evdev_xstats.c',
         'sw_evdev.c',
 )
-deps += ['hash', 'bus_vdev']
+deps += ['bus_vdev']
 require_iova_in_mbuf = false

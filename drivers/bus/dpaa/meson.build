@@ -6,7 +6,7 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
-deps += ['common_dpaax', 'eventdev']
+deps = ['common_dpaax', 'eventdev']
 sources = files(
         'base/fman/fman.c',
         'base/fman/fman_hw.c',

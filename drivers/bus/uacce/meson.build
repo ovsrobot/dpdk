@@ -8,5 +8,3 @@ endif
 
 sources = files('uacce.c')
 driver_sdk_headers += files('bus_uacce_driver.h')
-
-deps += ['kvargs']

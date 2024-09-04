@@ -7,7 +7,7 @@ endif
 
 includes += include_directories('../iavf')
 
-deps += ['mbuf']
+deps = ['mbuf']
 
 sources = files(
         'idpf_common_device.c',

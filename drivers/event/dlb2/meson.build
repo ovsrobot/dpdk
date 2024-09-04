@@ -67,4 +67,4 @@ endif
 
 headers = files('rte_pmd_dlb2.h')
 
-deps += ['mbuf', 'mempool', 'ring', 'pci', 'bus_pci']
+deps += ['bus_pci']

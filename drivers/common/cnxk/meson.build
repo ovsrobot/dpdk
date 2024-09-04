@@ -8,7 +8,7 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
     subdir_done()
 endif
 
-deps = ['eal', 'pci', 'bus_pci', 'mbuf', 'security']
+deps = ['bus_pci', 'security']
 sources = files(
         'roc_ae.c',
         'roc_aes.c',
@@ -91,7 +91,7 @@ sources += files('cnxk_telemetry_bphy.c',
                  'cnxk_telemetry_sso.c',
 )
 
-deps += ['bus_pci', 'net', 'telemetry']
+deps += ['bus_pci']
 
 require_iova_in_mbuf = false
 

@@ -2,7 +2,7 @@
 # Copyright(C) 2021 Marvell.
 #
 
-deps += ['bus_vdev', 'common_cnxk', 'rawdev', 'kvargs']
+deps += ['bus_vdev', 'common_cnxk', 'rawdev']
 sources = files(
         'cnxk_gpio.c',
         'cnxk_gpio_irq.c',
