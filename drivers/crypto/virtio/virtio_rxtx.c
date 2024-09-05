@@ -344,6 +344,203 @@ virtqueue_crypto_sym_enqueue_xmit(
 }
 
 static int
+virtqueue_crypto_asym_pkt_header_arrange(
+		struct rte_crypto_op *cop,
+		struct virtio_crypto_op_data_req *data,
+		struct virtio_crypto_session *session)
+{
+	struct rte_crypto_asym_op *asym_op = cop->asym;
+	struct virtio_crypto_op_data_req *req_data = data;
+	struct virtio_crypto_akcipher_session_para *para;
+	struct virtio_crypto_op_ctrl_req *ctrl = &session->ctrl;
+
+	req_data->header.session_id = session->session_id;
+	para = &ctrl->u.akcipher_create_session.para;
+
+	if (ctrl->header.algo != VIRTIO_CRYPTO_SERVICE_AKCIPHER) {
+		req_data->header.algo = VIRTIO_CRYPTO_NO_AKCIPHER;
+		return 0;
+	}
+
+	switch (para->algo)	{
+	case VIRTIO_CRYPTO_AKCIPHER_RSA:
+		req_data->header.algo = para->algo;
+		if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_SIGN) {
+			req_data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_SIGN;
+			req_data->u.akcipher_req.para.src_data_len
+				= asym_op->rsa.message.length;
+			/* qemu does not accept zero size write buffer */
+			req_data->u.akcipher_req.para.dst_data_len
+				= asym_op->rsa.sign.length;
+		} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_VERIFY) {
+			req_data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_VERIFY;
+			req_data->u.akcipher_req.para.src_data_len
+				= asym_op->rsa.sign.length;
+			/* qemu does not accept zero size write buffer */
+			req_data->u.akcipher_req.para.dst_data_len
+				= asym_op->rsa.message.length;
+		} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT) {
+			req_data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_ENCRYPT;
+			req_data->u.akcipher_req.para.src_data_len
+				= asym_op->rsa.message.length;
+			/* qemu does not accept zero size write buffer */
+			req_data->u.akcipher_req.para.dst_data_len
+				= asym_op->rsa.cipher.length;
+		} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_DECRYPT) {
+			req_data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_DECRYPT;
+			req_data->u.akcipher_req.para.src_data_len
+				= asym_op->rsa.cipher.length;
+			/* qemu does not accept zero size write buffer */
+			req_data->u.akcipher_req.para.dst_data_len
+				= asym_op->rsa.message.length;
+		} else {
+			return -EINVAL;
+		}
+
+		break;
+	default:
+		req_data->header.algo = VIRTIO_CRYPTO_NO_AKCIPHER;
+	}
+
+	return 0;
+}
+
+static int
+virtqueue_crypto_asym_enqueue_xmit(
+		struct virtqueue *txvq,
+		struct rte_crypto_op *cop)
+{
+	uint16_t idx = 0;
+	uint16_t num_entry;
+	uint16_t needed = 1;
+	uint16_t head_idx;
+	struct vq_desc_extra *dxp;
+	struct vring_desc *start_dp;
+	struct vring_desc *desc;
+	uint64_t indirect_op_data_req_phys_addr;
+	uint16_t req_data_len = sizeof(struct virtio_crypto_op_data_req);
+	uint32_t indirect_vring_addr_offset = req_data_len +
+		sizeof(struct virtio_crypto_inhdr);
+	struct rte_crypto_asym_op *asym_op = cop->asym;
+	struct virtio_crypto_session *session =
+		CRYPTODEV_GET_ASYM_SESS_PRIV(cop->asym->session);
+	struct virtio_crypto_op_data_req *op_data_req;
+	struct virtio_crypto_op_cookie *crypto_op_cookie;
+
+	if (unlikely(txvq->vq_free_cnt == 0))
+		return -ENOSPC;
+	if (unlikely(txvq->vq_free_cnt < needed))
+		return -EMSGSIZE;
+	head_idx = txvq->vq_desc_head_idx;
+	if (unlikely(head_idx >= txvq->vq_nentries))
+		return -EFAULT;
+
+	dxp = &txvq->vq_descx[head_idx];
+
+	if (rte_mempool_get(txvq->mpool, &dxp->cookie)) {
+		VIRTIO_CRYPTO_TX_LOG_ERR("can not get cookie");
+		return -EFAULT;
+	}
+	crypto_op_cookie = dxp->cookie;
+	indirect_op_data_req_phys_addr =
+		rte_mempool_virt2iova(crypto_op_cookie);
+	op_data_req = (struct virtio_crypto_op_data_req *)crypto_op_cookie;
+	if (virtqueue_crypto_asym_pkt_header_arrange(cop, op_data_req, session))
+		return -EFAULT;
+
+	/* status is initialized to VIRTIO_CRYPTO_ERR */
+	((struct virtio_crypto_inhdr *)
+		((uint8_t *)op_data_req + req_data_len))->status =
+		VIRTIO_CRYPTO_ERR;
+
+	/* point to indirect vring entry */
+	desc = (struct vring_desc *)
+		((uint8_t *)op_data_req + indirect_vring_addr_offset);
+	for (idx = 0; idx < (NUM_ENTRY_VIRTIO_CRYPTO_OP - 1); idx++)
+		desc[idx].next = idx + 1;
+	desc[NUM_ENTRY_VIRTIO_CRYPTO_OP - 1].next = VQ_RING_DESC_CHAIN_END;
+
+	idx = 0;
+
+	/* indirect vring: first part, virtio_crypto_op_data_req */
+	desc[idx].addr = indirect_op_data_req_phys_addr;
+	desc[idx].len = req_data_len;
+	desc[idx++].flags = VRING_DESC_F_NEXT;
+
+	if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_SIGN) {
+		/* indirect vring: src data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.message.data);
+		desc[idx].len = asym_op->rsa.message.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT;
+
+		/* indirect vring: dst data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.sign.data);
+		desc[idx].len = asym_op->rsa.sign.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+	} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_VERIFY) {
+		/* indirect vring: src data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.sign.data);
+		desc[idx].len = asym_op->rsa.sign.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT;
+
+		/* indirect vring: dst data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.message.data);
+		desc[idx].len = asym_op->rsa.message.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT;
+	} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT) {
+		/* indirect vring: src data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.message.data);
+		desc[idx].len = asym_op->rsa.message.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT;
+
+		/* indirect vring: dst data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.cipher.data);
+		desc[idx].len = asym_op->rsa.cipher.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+	} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_DECRYPT) {
+		/* indirect vring: src data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.cipher.data);
+		desc[idx].len = asym_op->rsa.cipher.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT;
+
+		/* indirect vring: dst data */
+		desc[idx].addr = rte_mem_virt2iova(asym_op->rsa.message.data);
+		desc[idx].len = asym_op->rsa.message.length;
+		desc[idx++].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+	} else {
+		VIRTIO_CRYPTO_TX_LOG_ERR("Invalid asym op");
+		return -EINVAL;
+	}
+
+	/* indirect vring: last part, status returned */
+	desc[idx].addr = indirect_op_data_req_phys_addr + req_data_len;
+	desc[idx].len = sizeof(struct virtio_crypto_inhdr);
+	desc[idx++].flags = VRING_DESC_F_WRITE;
+
+	num_entry = idx;
+
+	/* save the infos to use when receiving packets */
+	dxp->crypto_op = (void *)cop;
+	dxp->ndescs = needed;
+
+	/* use a single buffer */
+	start_dp = txvq->vq_ring.desc;
+	start_dp[head_idx].addr = indirect_op_data_req_phys_addr +
+		indirect_vring_addr_offset;
+	start_dp[head_idx].len = num_entry * sizeof(struct vring_desc);
+	start_dp[head_idx].flags = VRING_DESC_F_INDIRECT;
+
+	idx = start_dp[head_idx].next;
+	txvq->vq_desc_head_idx = idx;
+	if (txvq->vq_desc_head_idx == VQ_RING_DESC_CHAIN_END)
+		txvq->vq_desc_tail_idx = idx;
+	txvq->vq_free_cnt = (uint16_t)(txvq->vq_free_cnt - needed);
+	vq_update_avail_ring(txvq, head_idx);
+
+	return 0;
+}
+
+static int
 virtqueue_crypto_enqueue_xmit(struct virtqueue *txvq,
 		struct rte_crypto_op *cop)
 {
@@ -352,6 +549,9 @@ virtqueue_crypto_enqueue_xmit(struct virtqueue *txvq,
 	switch (cop->type) {
 	case RTE_CRYPTO_OP_TYPE_SYMMETRIC:
 		ret = virtqueue_crypto_sym_enqueue_xmit(txvq, cop);
+		break;
+	case RTE_CRYPTO_OP_TYPE_ASYMMETRIC:
+		ret = virtqueue_crypto_asym_enqueue_xmit(txvq, cop);
 		break;
 	default:
 		VIRTIO_CRYPTO_TX_LOG_ERR("invalid crypto op type %u",
@@ -476,27 +676,28 @@ virtio_crypto_pkt_tx_burst(void *tx_queue, struct rte_crypto_op **tx_pkts,
 	VIRTIO_CRYPTO_TX_LOG_DBG("%d packets to xmit", nb_pkts);
 
 	for (nb_tx = 0; nb_tx < nb_pkts; nb_tx++) {
-		struct rte_mbuf *txm = tx_pkts[nb_tx]->sym->m_src;
-		/* nb_segs is always 1 at virtio crypto situation */
-		int need = txm->nb_segs - txvq->vq_free_cnt;
+		if (tx_pkts[nb_tx]->type == RTE_CRYPTO_OP_TYPE_SYMMETRIC) {
+			struct rte_mbuf *txm = tx_pkts[nb_tx]->sym->m_src;
+			/* nb_segs is always 1 at virtio crypto situation */
+			int need = txm->nb_segs - txvq->vq_free_cnt;
 
-		/*
-		 * Positive value indicates it hasn't enough space in vring
-		 * descriptors
-		 */
-		if (unlikely(need > 0)) {
 			/*
-			 * try it again because the receive process may be
-			 * free some space
+			 * Positive value indicates it hasn't enough space in vring
+			 * descriptors
 			 */
-			need = txm->nb_segs - txvq->vq_free_cnt;
 			if (unlikely(need > 0)) {
-				VIRTIO_CRYPTO_TX_LOG_DBG("No free tx "
-					"descriptors to transmit");
-				break;
+				/*
+				 * try it again because the receive process may be
+				 * free some space
+				 */
+				need = txm->nb_segs - txvq->vq_free_cnt;
+				if (unlikely(need > 0)) {
+					VIRTIO_CRYPTO_TX_LOG_DBG("No free tx "
+											 "descriptors to transmit");
+					break;
+				}
 			}
 		}
-
 		txvq->packets_sent_total++;
 
 		/* Enqueue Packet buffers */
