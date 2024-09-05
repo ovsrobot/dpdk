@@ -1194,7 +1194,19 @@ static const struct rte_cryptodev_capabilities caps_sm2[] = {
 			.xform_capa = {
 				.xform_type = RTE_CRYPTO_ASYM_XFORM_SM2,
 				.op_types = ((1 << RTE_CRYPTO_ASYM_OP_SIGN) |
-					     (1 << RTE_CRYPTO_ASYM_OP_VERIFY))
+					     (1 << RTE_CRYPTO_ASYM_OP_VERIFY) |
+					     (1 << RTE_CRYPTO_ASYM_OP_ENCRYPT) |
+					     (1 << RTE_CRYPTO_ASYM_OP_DECRYPT)),
+				.op_capa = {
+					{
+					.op_type = RTE_CRYPTO_ASYM_OP_ENCRYPT,
+					.capa = ((1 << RTE_CRYPTO_SM2_PKE_KDF))
+					},
+					{
+					.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT,
+					.capa = ((1 << RTE_CRYPTO_SM2_PKE_KDF))
+					}
+				}
 			}
 		}
 		}

@@ -158,6 +158,15 @@ struct rte_cryptodev_symmetric_capability {
 };
 
 /**
+ * Asymmetric Crypto Operation Capability
+ */
+struct rte_cryptodev_asymmetric_op_capability {
+	enum rte_crypto_asym_op_type op_type;
+	uint32_t capa;
+	/**< Bitmask of capabilities supported for op_type. */
+};
+
+/**
  * Asymmetric Xform Crypto Capability
  */
 struct rte_cryptodev_asymmetric_xform_capability {
@@ -185,6 +194,9 @@ struct rte_cryptodev_asymmetric_xform_capability {
 		 * Value 0 means unavailable, and application should pass the required
 		 * random value. Otherwise, PMD would internally compute the random number.
 		 */
+
+		struct rte_cryptodev_asymmetric_op_capability op_capa[RTE_CRYPTO_ASYM_OP_LIST_END];
+		/**< Operation specific capabilities. */
 	};
 
 	uint64_t hash_algos;
@@ -358,6 +370,22 @@ bool
 rte_cryptodev_asym_xform_capability_check_hash(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
 	enum rte_crypto_auth_algorithm hash);
+
+/**
+ * Check if op capability is supported
+ *
+ * @param	capability	Description of the asymmetric crypto capability.
+ * @param	op_type		op type
+ * @param	cap		op capability
+ *
+ * @return
+ *   - Return 1 if the op capability is supported
+ *   - Return 0 if unsupported
+ */
+int
+rte_cryptodev_asym_xform_capability_check_opcap(
+	const struct rte_cryptodev_asymmetric_xform_capability *capability,
+	enum rte_crypto_asym_op_type op_type, uint8_t cap);
 
 /**
  * Provide the cipher algorithm enum, given an algorithm string
