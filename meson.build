@@ -77,6 +77,10 @@ global_inc = include_directories('.', 'config',
 subdir('buildtools')
 subdir('config')
 
+if is_linux
+    linux_uapi_inc = include_directories('linux-headers')
+endif
+
 # build libs and drivers
 subdir('lib')
 subdir('drivers')
