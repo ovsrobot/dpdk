@@ -440,10 +440,7 @@ void bnxt_stop_rxtx(struct rte_eth_dev *eth_dev)
 	eth_dev->rx_pkt_burst = rte_eth_pkt_burst_dummy;
 	eth_dev->tx_pkt_burst = rte_eth_pkt_burst_dummy;
 
-	rte_eth_fp_ops[eth_dev->data->port_id].rx_pkt_burst =
-		eth_dev->rx_pkt_burst;
-	rte_eth_fp_ops[eth_dev->data->port_id].tx_pkt_burst =
-		eth_dev->tx_pkt_burst;
+	rte_eth_fp_ops_setup(eth_dev);
 	rte_mb();
 
 	/* Allow time for threads to exit the real burst functions. */
