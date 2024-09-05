@@ -35,9 +35,6 @@ rte_crc16_ccitt_handler(const uint8_t *data, uint32_t data_len);
 static uint32_t
 rte_crc32_eth_handler(const uint8_t *data, uint32_t data_len);
 
-typedef uint32_t
-(*rte_net_crc_handler)(const uint8_t *data, uint32_t data_len);
-
 static rte_net_crc_handler handlers_default[] = {
 	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_default_handler,
 	[RTE_NET_CRC32_ETH] = rte_crc32_eth_default_handler,
@@ -329,6 +326,43 @@ rte_net_crc_calc(const void *data,
 	ret = f_handle(data, data_len);
 
 	return ret;
+}
+
+struct rte_net_crc rte_net_crc_set(enum rte_net_crc_type type,
+	enum rte_net_crc_alg alg)
+{
+	const rte_net_crc_handler *handlers = NULL;
+
+	if (max_simd_bitwidth == 0)
+		max_simd_bitwidth = rte_vect_get_max_simd_bitwidth();
+
+	switch (alg) {
+	case RTE_NET_CRC_AVX512:
+		handlers = avx512_vpclmulqdq_get_handlers();
+		if (handlers != NULL)
+			break;
+		/* fall-through */
+	case RTE_NET_CRC_SSE42:
+		handlers = sse42_pclmulqdq_get_handlers();
+		break;
+	case RTE_NET_CRC_NEON:
+		handlers = neon_pmull_get_handlers();
+		/* fall-through */
+	case RTE_NET_CRC_SCALAR:
+		/* fall-through */
+	default:
+		break;
+	}
+	if (handlers == NULL)
+		handlers = handlers_scalar;
+
+	return (struct rte_net_crc){ type, handlers[type] };
+}
+
+uint32_t rte_net_crc(const struct rte_net_crc *ctx,
+	const void *data, const uint32_t data_len)
+{
+	return ctx->crc(data, data_len);
 }
 
 /* Call initialisation helpers for all crc algorithm handlers */
