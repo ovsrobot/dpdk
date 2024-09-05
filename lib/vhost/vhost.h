@@ -494,6 +494,7 @@ struct __rte_cache_aligned virtio_net {
 
 	int			extbuf;
 	int			linearbuf;
+	rte_spinlock_t virtqueue_lock;
 	struct vhost_virtqueue	*virtqueue[VHOST_MAX_QUEUE_PAIRS * 2];
 
 	rte_rwlock_t	iotlb_pending_lock;

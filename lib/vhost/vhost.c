@@ -636,8 +636,12 @@ alloc_vring_queue(struct virtio_net *dev, uint32_t vring_idx)
 
 	/* Also allocate holes, if any, up to requested vring index. */
 	for (i = 0; i <= vring_idx; i++) {
-		if (dev->virtqueue[i])
+		rte_spinlock_lock(&dev->virtqueue_lock);
+		if (dev->virtqueue[i]) {
+			rte_spinlock_unlock(&dev->virtqueue_lock);
 			continue;
+		}
+		rte_spinlock_unlock(&dev->virtqueue_lock);
 
 		vq = rte_zmalloc(NULL, sizeof(struct vhost_virtqueue), 0);
 		if (vq == NULL) {
@@ -647,13 +651,15 @@ alloc_vring_queue(struct virtio_net *dev, uint32_t vring_idx)
 			return -1;
 		}
 
-		dev->virtqueue[i] = vq;
 		init_vring_queue(dev, vq, i);
 		rte_rwlock_init(&vq->access_lock);
 		rte_rwlock_init(&vq->iotlb_lock);
 		vq->avail_wrap_counter = 1;
 		vq->used_wrap_counter = 1;
 		vq->signalled_used_valid = false;
+		rte_spinlock_lock(&dev->virtqueue_lock);
+		dev->virtqueue[i] = vq;
+		rte_spinlock_unlock(&dev->virtqueue_lock);
 	}
 
 	dev->nr_vring = RTE_MAX(dev->nr_vring, vring_idx + 1);
@@ -740,6 +746,7 @@ vhost_new_device(struct vhost_backend_ops *ops)
 	dev->postcopy_ufd = -1;
 	rte_spinlock_init(&dev->backend_req_lock);
 	dev->backend_ops = ops;
+	rte_spinlock_init(&dev->virtqueue_lock);
 
 	return i;
 }

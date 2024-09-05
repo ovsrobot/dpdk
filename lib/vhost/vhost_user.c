@@ -456,7 +456,9 @@ vhost_user_set_features(struct virtio_net **pdev,
 			if (!vq)
 				continue;
 
+			rte_spinlock_lock(&dev->virtqueue_lock);
 			dev->virtqueue[dev->nr_vring] = NULL;
+			rte_spinlock_unlock(&dev->virtqueue_lock);
 			cleanup_vq(vq, 1);
 			cleanup_vq_inflight(dev, vq);
 			/* vhost_user_lock_all_queue_pairs locked all qps */
@@ -600,7 +602,9 @@ numa_realloc(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 
 	if (vq != dev->virtqueue[vq->index]) {
 		VHOST_CONFIG_LOG(dev->ifname, INFO, "reallocated virtqueue on node %d", node);
+		rte_spinlock_lock(&dev->virtqueue_lock);
 		dev->virtqueue[vq->index] = vq;
+		rte_spinlock_unlock(&dev->virtqueue_lock);
 	}
 
 	if (vq_is_packed(dev)) {

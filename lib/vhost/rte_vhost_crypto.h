@@ -49,8 +49,10 @@ rte_vhost_crypto_driver_start(const char *path);
  * @param cryptodev_id
  *  The identifier of DPDK Cryptodev, the same cryptodev_id can be assigned to
  *  multiple Vhost-crypto devices.
- * @param sess_pool
- *  The pointer to the created cryptodev session pool.
+ * @param sym_sess_pool
+ *  The pointer to the created cryptodev sym session pool.
+ * @param asym_sess_pool
+ *  The pointer to the created cryptodev asym session pool.
  * @param socket_id
  *  NUMA Socket ID to allocate resources on. *
  * @return
@@ -59,7 +61,7 @@ rte_vhost_crypto_driver_start(const char *path);
  */
 int
 rte_vhost_crypto_create(int vid, uint8_t cryptodev_id,
-		struct rte_mempool *sess_pool,
+		struct rte_mempool *sym_sess_pool, struct rte_mempool *asym_sess_pool,
 		int socket_id);
 
 /**
@@ -113,6 +115,10 @@ rte_vhost_crypto_fetch_requests(int vid, uint32_t qid,
  * dequeued from the cryptodev, this function shall be called to write the
  * processed data back to the vring descriptor (if no-copy is turned off).
  *
+ * @param vid
+ *  The identifier of the vhost device.
+ * @param qid
+ *  Virtio queue index.
  * @param ops
  *  The address of an array of *rte_crypto_op* structure that was dequeued
  *  from cryptodev.
@@ -127,7 +133,7 @@ rte_vhost_crypto_fetch_requests(int vid, uint32_t qid,
  *  The number of ops processed.
  */
 uint16_t
-rte_vhost_crypto_finalize_requests(struct rte_crypto_op **ops,
+rte_vhost_crypto_finalize_requests(int vid, int qid, struct rte_crypto_op **ops,
 		uint16_t nb_ops, int *callfds, uint16_t *nb_callfds);
 
 #ifdef __cplusplus
