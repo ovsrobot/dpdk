@@ -475,7 +475,7 @@ testsuite_setup(void)
 	for (qp_id = 0; qp_id < info.max_nb_queue_pairs; qp_id++) {
 		TEST_ASSERT_SUCCESS(rte_cryptodev_queue_pair_setup(
 			dev_id, qp_id, &ts_params->qp_conf,
-			rte_cryptodev_socket_id(dev_id)),
+			(int8_t)rte_cryptodev_socket_id(dev_id)),
 			"Failed to setup queue pair %u on cryptodev %u ASYM",
 			qp_id, dev_id);
 	}
@@ -538,7 +538,7 @@ ut_setup_asym(void)
 		TEST_ASSERT_SUCCESS(rte_cryptodev_queue_pair_setup(
 			ts_params->valid_devs[0], qp_id,
 			&ts_params->qp_conf,
-			rte_cryptodev_socket_id(ts_params->valid_devs[0])),
+			(int8_t)rte_cryptodev_socket_id(ts_params->valid_devs[0])),
 			"Failed to setup queue pair %u on cryptodev %u",
 			qp_id, ts_params->valid_devs[0]);
 	}
@@ -3319,7 +3319,6 @@ rsa_encrypt(const struct rsa_test_data_2 *vector, uint8_t *cipher_buf)
 	self->op->asym->rsa.cipher.data = cipher_buf;
 	self->op->asym->rsa.cipher.length = 0;
 	SET_RSA_PARAM(self->op->asym->rsa, vector, message);
-	self->op->asym->rsa.padding.type = vector->padding;
 
 	rte_crypto_op_attach_asym_session(self->op, self->sess);
 	TEST_ASSERT_SUCCESS(send_one(),
@@ -3343,7 +3342,6 @@ rsa_decrypt(const struct rsa_test_data_2 *vector, uint8_t *plaintext,
 	self->op->asym->rsa.message.data = plaintext;
 	self->op->asym->rsa.message.length = 0;
 	self->op->asym->rsa.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT;
-	self->op->asym->rsa.padding.type = vector->padding;
 	rte_crypto_op_attach_asym_session(self->op, self->sess);
 	TEST_ASSERT_SUCCESS(send_one(),
 		"Failed to process crypto op (Decryption)");
@@ -3385,6 +3383,7 @@ kat_rsa_encrypt(const void *data)
 	SET_RSA_PARAM(xform.rsa, vector, n);
 	SET_RSA_PARAM(xform.rsa, vector, e);
 	SET_RSA_PARAM(xform.rsa, vector, d);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
 	int ret = rsa_init_session(&xform);
 
@@ -3415,6 +3414,7 @@ kat_rsa_encrypt_crt(const void *data)
 	SET_RSA_PARAM_QT(xform.rsa, vector, dP);
 	SET_RSA_PARAM_QT(xform.rsa, vector, dQ);
 	SET_RSA_PARAM_QT(xform.rsa, vector, qInv);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_QT;
 	int ret = rsa_init_session(&xform);
 	if (ret) {
@@ -3440,6 +3440,7 @@ kat_rsa_decrypt(const void *data)
 	SET_RSA_PARAM(xform.rsa, vector, n);
 	SET_RSA_PARAM(xform.rsa, vector, e);
 	SET_RSA_PARAM(xform.rsa, vector, d);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
 	int ret = rsa_init_session(&xform);
 
@@ -3470,6 +3471,7 @@ kat_rsa_decrypt_crt(const void *data)
 	SET_RSA_PARAM_QT(xform.rsa, vector, dP);
 	SET_RSA_PARAM_QT(xform.rsa, vector, dQ);
 	SET_RSA_PARAM_QT(xform.rsa, vector, qInv);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_QT;
 	int ret = rsa_init_session(&xform);
 	if (ret) {
@@ -3634,6 +3636,22 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 	}
 };
 
+static struct unit_test_suite cryptodev_virtio_asym_testsuite  = {
+	.suite_name = "Crypto Device VIRTIO ASYM Unit Test Suite",
+	.setup = testsuite_setup,
+	.teardown = testsuite_teardown,
+	.unit_test_cases = {
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_capability),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+				test_rsa_sign_verify),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+				test_rsa_sign_verify_crt),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_rsa_enc_dec),
+		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_rsa_enc_dec_crt),
+		TEST_CASES_END() /**< NULL terminate unit test array */
+	}
+};
+
 static int
 test_cryptodev_openssl_asym(void)
 {
@@ -3701,6 +3719,22 @@ test_cryptodev_cn10k_asym(void)
 	/* Use test suite registered for crypto_octeontx PMD */
 	return unit_test_suite_runner(&cryptodev_octeontx_asym_testsuite);
 }
+
+static int
+test_cryptodev_virtio_asym(void)
+{
+	gbl_driver_id = rte_cryptodev_driver_id_get(
+			RTE_STR(CRYPTODEV_NAME_VIRTIO_PMD));
+	if (gbl_driver_id == -1) {
+		RTE_LOG(ERR, USER1, "virtio PMD must be loaded.\n");
+		return TEST_FAILED;
+	}
+
+	/* Use test suite registered for crypto_virtio PMD */
+	return unit_test_suite_runner(&cryptodev_virtio_asym_testsuite);
+}
+
+REGISTER_DRIVER_TEST(cryptodev_virtio_asym_autotest, test_cryptodev_virtio_asym);
 
 REGISTER_DRIVER_TEST(cryptodev_openssl_asym_autotest, test_cryptodev_openssl_asym);
 REGISTER_DRIVER_TEST(cryptodev_qat_asym_autotest, test_cryptodev_qat_asym);

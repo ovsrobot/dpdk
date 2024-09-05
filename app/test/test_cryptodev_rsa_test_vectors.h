@@ -358,6 +358,28 @@ struct rte_crypto_asym_xform rsa_xform = {
 		.d = {
 			.data = rsa_d,
 			.length = sizeof(rsa_d)
+		},
+		.qt = {
+			.p = {
+				.data = rsa_p,
+				.length = sizeof(rsa_p)
+			},
+			.q = {
+				.data = rsa_q,
+				.length = sizeof(rsa_q)
+			},
+			.dP = {
+				.data = rsa_dP,
+				.length = sizeof(rsa_dP)
+			},
+			.dQ = {
+				.data = rsa_dQ,
+				.length = sizeof(rsa_dQ)
+			},
+			.qInv = {
+				.data = rsa_qInv,
+				.length = sizeof(rsa_qInv)
+			},
 		}
 	}
 };
@@ -377,6 +399,10 @@ struct rte_crypto_asym_xform rsa_xform_crt = {
 			.length = sizeof(rsa_e)
 		},
 		.key_type = RTE_RSA_KEY_TYPE_QT,
+		.d = {
+			.data = rsa_d,
+			.length = sizeof(rsa_d)
+		},
 		.qt = {
 			.p = {
 				.data = rsa_p,
