@@ -14,6 +14,7 @@ sources = files(
         'cmd_flex_item.c',
         'config.c',
         'csumonly.c',
+        'event.c',
         'flowgen.c',
         'icmpecho.c',
         'ieee1588fwd.c',

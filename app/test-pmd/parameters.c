@@ -768,45 +768,19 @@ static int
 parse_event_printing_config(const char *optarg, int enable)
 {
 	uint32_t mask = 0;
+	int ret;
 
-	if (!strcmp(optarg, "unknown"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_UNKNOWN;
-	else if (!strcmp(optarg, "intr_lsc"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_INTR_LSC;
-	else if (!strcmp(optarg, "queue_state"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_QUEUE_STATE;
-	else if (!strcmp(optarg, "intr_reset"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_INTR_RESET;
-	else if (!strcmp(optarg, "vf_mbox"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_VF_MBOX;
-	else if (!strcmp(optarg, "ipsec"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_IPSEC;
-	else if (!strcmp(optarg, "macsec"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_MACSEC;
-	else if (!strcmp(optarg, "intr_rmv"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_INTR_RMV;
-	else if (!strcmp(optarg, "dev_probed"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_NEW;
-	else if (!strcmp(optarg, "dev_released"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_DESTROY;
-	else if (!strcmp(optarg, "flow_aged"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_FLOW_AGED;
-	else if (!strcmp(optarg, "err_recovering"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_ERR_RECOVERING;
-	else if (!strcmp(optarg, "recovery_success"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_RECOVERY_SUCCESS;
-	else if (!strcmp(optarg, "recovery_failed"))
-		mask = UINT32_C(1) << RTE_ETH_EVENT_RECOVERY_FAILED;
-	else if (!strcmp(optarg, "all"))
-		mask = ~UINT32_C(0);
-	else {
+	ret = get_event_name_mask(optarg, &mask);
+	if (ret != 0) {
 		fprintf(stderr, "Invalid event: %s\n", optarg);
 		return -1;
 	}
+
 	if (enable)
 		event_print_mask |= mask;
 	else
 		event_print_mask &= ~mask;
+
 	return 0;
 }
 
