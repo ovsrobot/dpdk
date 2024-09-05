@@ -189,14 +189,9 @@ void bnxt_handle_async_event(struct bnxt *bp,
 		PMD_DRV_LOG(INFO, "Port conn async event\n");
 		break;
 	case HWRM_ASYNC_EVENT_CMPL_EVENT_ID_RESET_NOTIFY:
-		/*
-		 * Avoid any rx/tx packet processing during firmware reset
-		 * operation.
-		 */
-		bnxt_stop_rxtx(bp->eth_dev);
-
 		/* Ignore reset notify async events when stopping the port */
 		if (!bp->eth_dev->data->dev_started) {
+			bnxt_stop_rxtx(bp->eth_dev);
 			bp->flags |= BNXT_FLAG_FATAL_ERROR;
 			return;
 		}
@@ -204,6 +199,12 @@ void bnxt_handle_async_event(struct bnxt *bp,
 		rte_eth_dev_callback_process(bp->eth_dev,
 					     RTE_ETH_EVENT_ERR_RECOVERING,
 					     NULL);
+
+		/*
+		 * Avoid any rx/tx packet processing during firmware reset
+		 * operation.
+		 */
+		bnxt_stop_rxtx(bp->eth_dev);
 
 		pthread_mutex_lock(&bp->err_recovery_lock);
 		event_data = data1;

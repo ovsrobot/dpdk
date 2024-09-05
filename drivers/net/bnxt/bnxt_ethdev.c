@@ -4738,13 +4738,13 @@ reset:
 	bp->flags |= BNXT_FLAG_FATAL_ERROR;
 	bp->flags |= BNXT_FLAG_FW_RESET;
 
-	bnxt_stop_rxtx(bp->eth_dev);
-
 	PMD_DRV_LOG(ERR, "Detected FW dead condition\n");
 
 	rte_eth_dev_callback_process(bp->eth_dev,
 				     RTE_ETH_EVENT_ERR_RECOVERING,
 				     NULL);
+
+	bnxt_stop_rxtx(bp->eth_dev);
 
 	if (bnxt_is_primary_func(bp))
 		wait_msec = info->primary_func_wait_period;
