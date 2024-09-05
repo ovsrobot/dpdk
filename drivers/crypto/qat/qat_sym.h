@@ -291,8 +291,7 @@ qat_crc_generate(struct qat_sym_session *ctx,
 		crc_data = rte_pktmbuf_mtod_offset(sym_op->m_src, uint8_t *,
 				sym_op->auth.data.offset);
 		crc = (uint32_t *)(crc_data + crc_data_len);
-		*crc = rte_net_crc_calc(crc_data, crc_data_len,
-				RTE_NET_CRC32_ETH);
+		*crc = rte_net_crc(&ctx->crc, crc_data, crc_data_len);
 	}
 }
 

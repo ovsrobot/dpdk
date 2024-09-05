@@ -3176,6 +3176,9 @@ qat_sec_session_set_docsis_parameters(struct rte_cryptodev *dev,
 		ret = qat_sym_session_configure_crc(dev, xform, session);
 		if (ret < 0)
 			return ret;
+	} else {
+		/* Initialize crc algorithm */
+		session->crc = rte_net_crc_set(RTE_NET_CRC32_ETH, RTE_NET_CRC_AVX512);
 	}
 	qat_sym_session_finalize(session);
 
