@@ -343,7 +343,9 @@ struct rte_port {
 	uint8_t                 member_flag : 1, /**< bonding member port */
 				bond_flag : 1, /**< port is bond device */
 				fwd_mac_swap : 1, /**< swap packet MAC before forward */
-				update_conf : 1; /**< need to update bonding device configuration */
+				update_conf : 1, /**< need to update bonding device configuration */
+				err_recovering : 1, /**< port is in error recovering */
+				recover_failed : 1; /**< port recover failed */
 	struct port_template    *pattern_templ_list; /**< Pattern templates. */
 	struct port_template    *actions_templ_list; /**< Actions templates. */
 	struct port_table       *table_list; /**< Flow tables. */

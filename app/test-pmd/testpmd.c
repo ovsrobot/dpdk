@@ -3938,6 +3938,77 @@ rmv_port_callback(void *arg)
 		start_packet_forwarding(0);
 }
 
+static int need_start_when_recovery_over;
+
+static bool
+has_port_in_err_recovering(void)
+{
+	struct rte_port *port;
+	portid_t pid;
+
+	RTE_ETH_FOREACH_DEV(pid) {
+		port = &ports[pid];
+		if (port->err_recovering)
+			return true;
+	}
+
+	return false;
+}
+
+static void
+err_recovering_callback(portid_t port_id)
+{
+	if (!has_port_in_err_recovering())
+		printf("Please stop executing any commands until recovery result events are received!\n");
+
+	ports[port_id].err_recovering = 1;
+	ports[port_id].recover_failed = 0;
+
+	/* To simplify implementation, stop forwarding regardless of whether the port is used. */
+	if (!test_done) {
+		printf("Stop packet forwarding because some ports are in error recovering!\n");
+		stop_packet_forwarding();
+		need_start_when_recovery_over = 1;
+	}
+}
+
+static void
+recover_success_callback(portid_t port_id)
+{
+	ports[port_id].err_recovering = 0;
+	if (has_port_in_err_recovering())
+		return;
+
+	if (need_start_when_recovery_over) {
+		printf("Recovery success! Restart packet forwarding!\n");
+		start_packet_forwarding(0);
+		need_start_when_recovery_over = 0;
+	} else {
+		printf("Recovery success!\n");
+	}
+}
+
+static void
+recover_failed_callback(portid_t port_id)
+{
+	struct rte_port *port;
+	portid_t pid;
+
+	ports[port_id].err_recovering = 0;
+	ports[port_id].recover_failed = 1;
+	if (has_port_in_err_recovering())
+		return;
+
+	need_start_when_recovery_over = 0;
+	printf("The ports:");
+	RTE_ETH_FOREACH_DEV(pid) {
+		port = &ports[pid];
+		if (port->recover_failed)
+			printf(" %u", pid);
+	}
+	printf(" recovery failed! Please remove them!\n");
+}
+
 /* This function is used by the interrupt thread */
 static int
 eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
@@ -3993,6 +4064,15 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 		}
 		break;
 	}
+	case RTE_ETH_EVENT_ERR_RECOVERING:
+		err_recovering_callback(port_id);
+		break;
+	case RTE_ETH_EVENT_RECOVERY_SUCCESS:
+		recover_success_callback(port_id);
+		break;
+	case RTE_ETH_EVENT_RECOVERY_FAILED:
+		recover_failed_callback(port_id);
+		break;
 	default:
 		break;
 	}
