@@ -72,6 +72,7 @@ enum rte_crypto_curve_id {
  * Asymmetric crypto transformation types.
  * Each xform type maps to one asymmetric algorithm
  * performing specific operation
+ * Note: Update rte_crypto_asym_xform_type_list_end() for every new type added.
  */
 enum rte_crypto_asym_xform_type {
 	RTE_CRYPTO_ASYM_XFORM_UNSPECIFIED = 0,
@@ -119,12 +120,17 @@ enum rte_crypto_asym_xform_type {
 	 * Performs Encrypt, Decrypt, Sign and Verify.
 	 * Refer to rte_crypto_asym_op_type.
 	 */
-	RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
-	/**< End of list */
 };
+
+static inline int
+rte_crypto_asym_xform_type_list_end(void)
+{
+	return RTE_CRYPTO_ASYM_XFORM_SM2 + 1;
+}
 
 /**
  * Asymmetric crypto operation type variants
+ * Note: Update rte_crypto_asym_op_list_end for every new type added.
  */
 enum rte_crypto_asym_op_type {
 	RTE_CRYPTO_ASYM_OP_ENCRYPT,
@@ -135,8 +141,13 @@ enum rte_crypto_asym_op_type {
 	/**< Signature Generation operation */
 	RTE_CRYPTO_ASYM_OP_VERIFY,
 	/**< Signature Verification operation */
-	RTE_CRYPTO_ASYM_OP_LIST_END
 };
+
+static inline int
+rte_crypto_asym_op_list_end(void)
+{
+	return RTE_CRYPTO_ASYM_OP_VERIFY + 1;
+}
 
 /**
  * Asymmetric crypto key exchange operation type
@@ -168,7 +179,6 @@ enum rte_crypto_rsa_padding_type {
 	/**< RSA PKCS#1 OAEP padding scheme */
 	RTE_CRYPTO_RSA_PADDING_PSS,
 	/**< RSA PKCS#1 PSS padding scheme */
-	RTE_CRYPTO_RSA_PADDING_TYPE_LIST_END
 };
 
 /**
