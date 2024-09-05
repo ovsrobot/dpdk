@@ -106,6 +106,7 @@ DPDK_25 {
 	rte_eth_stats_get;
 	rte_eth_stats_reset;
 	rte_eth_timesync_adjust_time;
+	rte_eth_timesync_adjust_freq;
 	rte_eth_timesync_disable;
 	rte_eth_timesync_enable;
 	rte_eth_timesync_read_rx_timestamp;
