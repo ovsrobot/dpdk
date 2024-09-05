@@ -45,7 +45,8 @@ struct lcore_option {
 struct __rte_cache_aligned vhost_crypto_info {
 	int vids[MAX_NB_SOCKETS];
 	uint32_t nb_vids;
-	struct rte_mempool *sess_pool;
+	struct rte_mempool *sym_sess_pool;
+	struct rte_mempool *asym_sess_pool;
 	struct rte_mempool *cop_pool;
 	uint8_t cid;
 	uint32_t qid;
@@ -302,7 +303,8 @@ new_device(int vid)
 		return -ENOENT;
 	}
 
-	ret = rte_vhost_crypto_create(vid, info->cid, info->sess_pool,
+	ret = rte_vhost_crypto_create(vid, info->cid, info->sym_sess_pool,
+			info->asym_sess_pool,
 			rte_lcore_to_socket_id(options.los[i].lcore_id));
 	if (ret) {
 		RTE_LOG(ERR, USER1, "Cannot create vhost crypto\n");
@@ -362,8 +364,8 @@ destroy_device(int vid)
 }
 
 static const struct rte_vhost_device_ops virtio_crypto_device_ops = {
-	.new_device =  new_device,
-	.destroy_device = destroy_device,
+	.new_connection =  new_device,
+	.destroy_connection = destroy_device,
 };
 
 static int
@@ -385,7 +387,7 @@ vhost_crypto_worker(void *arg)
 
 	for (i = 0; i < NB_VIRTIO_QUEUES; i++) {
 		if (rte_crypto_op_bulk_alloc(info->cop_pool,
-				RTE_CRYPTO_OP_TYPE_SYMMETRIC, ops[i],
+				RTE_CRYPTO_OP_TYPE_UNDEFINED, ops[i],
 				burst_size) < burst_size) {
 			RTE_LOG(ERR, USER1, "Failed to alloc cops\n");
 			ret = -1;
@@ -409,20 +411,12 @@ vhost_crypto_worker(void *arg)
 						rte_cryptodev_enqueue_burst(
 						info->cid, info->qid, ops[j],
 						fetched);
-				if (unlikely(rte_crypto_op_bulk_alloc(
-						info->cop_pool,
-						RTE_CRYPTO_OP_TYPE_SYMMETRIC,
-						ops[j], fetched) < fetched)) {
-					RTE_LOG(ERR, USER1, "Failed realloc\n");
-					return -1;
-				}
-
 				fetched = rte_cryptodev_dequeue_burst(
 						info->cid, info->qid,
 						ops_deq[j], RTE_MIN(burst_size,
 						info->nb_inflight_ops));
 				fetched = rte_vhost_crypto_finalize_requests(
-						ops_deq[j], fetched, callfds,
+						info->vids[i], j, ops_deq[j], fetched, callfds,
 						&nb_callfds);
 
 				info->nb_inflight_ops -= fetched;
@@ -455,7 +449,8 @@ free_resource(void)
 			continue;
 
 		rte_mempool_free(info->cop_pool);
-		rte_mempool_free(info->sess_pool);
+		rte_mempool_free(info->sym_sess_pool);
+		rte_mempool_free(info->asym_sess_pool);
 
 		for (j = 0; j < lo->nb_sockets; j++) {
 			rte_vhost_driver_unregister(lo->socket_files[i]);
@@ -539,21 +534,34 @@ main(int argc, char *argv[])
 			goto error_exit;
 		}
 
-		snprintf(name, 127, "SESS_POOL_%u", lo->lcore_id);
-		info->sess_pool = rte_cryptodev_sym_session_pool_create(name,
+		snprintf(name, 127, "SYM_SESS_POOL_%u", lo->lcore_id);
+		info->sym_sess_pool = rte_cryptodev_sym_session_pool_create(name,
 				SESSION_MAP_ENTRIES,
 				rte_cryptodev_sym_get_private_session_size(
 				info->cid), 0, 0,
 				rte_lcore_to_socket_id(lo->lcore_id));
 
-		if (!info->sess_pool) {
-			RTE_LOG(ERR, USER1, "Failed to create mempool");
+		if (!info->sym_sess_pool) {
+			RTE_LOG(ERR, USER1, "Failed to create sym session mempool");
+			goto error_exit;
+		}
+
+		/* TODO: storing vhost_crypto_data_req (56 bytes) in user_data,
+		 * but it needs to be moved somewhere.
+		 */
+		snprintf(name, 127, "ASYM_SESS_POOL_%u", lo->lcore_id);
+		info->asym_sess_pool = rte_cryptodev_asym_session_pool_create(name,
+				SESSION_MAP_ENTRIES, 0, 64,
+				rte_lcore_to_socket_id(lo->lcore_id));
+
+		if (!info->asym_sess_pool) {
+			RTE_LOG(ERR, USER1, "Failed to create asym session mempool");
 			goto error_exit;
 		}
 
 		snprintf(name, 127, "COPPOOL_%u", lo->lcore_id);
 		info->cop_pool = rte_crypto_op_pool_create(name,
-				RTE_CRYPTO_OP_TYPE_SYMMETRIC, NB_MEMPOOL_OBJS,
+				RTE_CRYPTO_OP_TYPE_UNDEFINED, NB_MEMPOOL_OBJS,
 				NB_CACHE_OBJS, VHOST_CRYPTO_MAX_IV_LEN,
 				rte_lcore_to_socket_id(lo->lcore_id));
 
@@ -566,7 +574,7 @@ main(int argc, char *argv[])
 		options.infos[i] = info;
 
 		qp_conf.nb_descriptors = NB_CRYPTO_DESCRIPTORS;
-		qp_conf.mp_session = info->sess_pool;
+		qp_conf.mp_session = info->sym_sess_pool;
 
 		for (j = 0; j < dev_info.max_nb_queue_pairs; j++) {
 			ret = rte_cryptodev_queue_pair_setup(info->cid, j,
