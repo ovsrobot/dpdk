@@ -1657,6 +1657,16 @@ rte_eth_dma_zone_free(const struct rte_eth_dev *eth_dev, const char *name,
 
 /**
  * @internal
+ * Setup eth fast-path API to ethdev values.
+ *
+ * @param dev
+ *  Pointer to struct rte_eth_dev.
+ */
+__rte_internal
+void rte_eth_fp_ops_setup(struct rte_eth_dev *dev);
+
+/**
+ * @internal
  * Atomically set the link status for the specific device.
  * It is for use by DPDK device driver use only.
  * User applications should not call it

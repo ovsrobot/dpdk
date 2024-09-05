@@ -4041,25 +4041,28 @@ enum rte_eth_event_type {
 	 */
 	RTE_ETH_EVENT_RX_AVAIL_THRESH,
 	/** Port recovering from a hardware or firmware error.
-	 * If PMD supports proactive error recovery,
-	 * it should trigger this event to notify application
-	 * that it detected an error and the recovery is being started.
-	 * Upon receiving the event, the application should not invoke any control path API
-	 * (such as rte_eth_dev_configure/rte_eth_dev_stop...) until receiving
-	 * RTE_ETH_EVENT_RECOVERY_SUCCESS or RTE_ETH_EVENT_RECOVERY_FAILED event.
-	 * The PMD will set the data path pointers to dummy functions,
-	 * and re-set the data path pointers to non-dummy functions
-	 * before reporting RTE_ETH_EVENT_RECOVERY_SUCCESS event.
-	 * It means that the application cannot send or receive any packets
-	 * during this period.
+	 *
+	 * If PMD supports proactive error recovery, it should trigger this
+	 * event to notify application that it detected an error and the
+	 * recovery is about to start.
+	 *
+	 * Upon receiving the event, the application should not invoke any
+	 * control and data path API until receiving
+	 * RTE_ETH_EVENT_RECOVERY_SUCCESS or RTE_ETH_EVENT_RECOVERY_FAILED
+	 * event.
+	 *
+	 * Once this event is reported, the PMD will set the data path pointers
+	 * to dummy functions, and re-set the data path pointers to valid
+	 * functions before reporting RTE_ETH_EVENT_RECOVERY_SUCCESS event.
+	 *
 	 * @note Before the PMD reports the recovery result,
 	 * the PMD may report the RTE_ETH_EVENT_ERR_RECOVERING event again,
 	 * because a larger error may occur during the recovery.
 	 */
 	RTE_ETH_EVENT_ERR_RECOVERING,
 	/** Port recovers successfully from the error.
-	 * The PMD already re-configured the port,
-	 * and the effect is the same as a restart operation.
+	 *
+	 * The PMD already re-configured the port:
 	 * a) The following operation will be retained: (alphabetically)
 	 *    - DCB configuration
 	 *    - FEC configuration
@@ -4086,6 +4089,9 @@ enum rte_eth_event_type {
 	 *      (@see RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP)
 	 * c) Any other configuration will not be stored
 	 *    and will need to be re-configured.
+	 *
+	 * The application should restore some additional configuration
+	 * (see above case b/c), and then enable data path API invocation.
 	 */
 	RTE_ETH_EVENT_RECOVERY_SUCCESS,
 	/** Port recovery failed.

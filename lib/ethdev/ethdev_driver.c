@@ -702,6 +702,14 @@ rte_eth_dma_zone_free(const struct rte_eth_dev *dev, const char *ring_name,
 	return rc;
 }
 
+void
+rte_eth_fp_ops_setup(struct rte_eth_dev *dev)
+{
+	if (dev == NULL)
+		return;
+	eth_dev_fp_ops_setup(rte_eth_fp_ops + dev->data->port_id, dev);
+}
+
 const struct rte_memzone *
 rte_eth_dma_zone_reserve(const struct rte_eth_dev *dev, const char *ring_name,
 			 uint16_t queue_id, size_t size, unsigned int align,

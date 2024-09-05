@@ -346,6 +346,7 @@ INTERNAL {
 	rte_eth_devices;
 	rte_eth_dma_zone_free;
 	rte_eth_dma_zone_reserve;
+	rte_eth_fp_ops_setup;
 	rte_eth_hairpin_queue_peer_bind;
 	rte_eth_hairpin_queue_peer_unbind;
 	rte_eth_hairpin_queue_peer_update;

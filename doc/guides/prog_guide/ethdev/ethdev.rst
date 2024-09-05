@@ -637,14 +637,9 @@ different from the application invokes recovery in PASSIVE mode,
 the PMD automatically recovers from error in PROACTIVE mode,
 and only a small amount of work is required for the application.
 
-During error detection and automatic recovery,
-the PMD sets the data path pointers to dummy functions
-(which will prevent the crash),
-and also make sure the control path operations fail with a return code ``-EBUSY``.
-
-Because the PMD recovers automatically,
-the application can only sense that the data flow is disconnected for a while
-and the control API returns an error in this period.
+During error detection and automatic recovery, the PMD sets the data path
+pointers to dummy functions and also make sure the control path operations
+failed with a return code ``-EBUSY``.
 
 In order to sense the error happening/recovering,
 as well as to restore some additional configuration,
@@ -652,9 +647,9 @@ three events are available:
 
 ``RTE_ETH_EVENT_ERR_RECOVERING``
    Notify the application that an error is detected
-   and the recovery is being started.
+   and the recovery is about to start.
    Upon receiving the event, the application should not invoke
-   any control path function until receiving
+   any control and data path API until receiving
    ``RTE_ETH_EVENT_RECOVERY_SUCCESS`` or ``RTE_ETH_EVENT_RECOVERY_FAILED`` event.
 
 .. note::
@@ -665,8 +660,9 @@ three events are available:
 
 ``RTE_ETH_EVENT_RECOVERY_SUCCESS``
    Notify the application that the recovery from error is successful,
-   the PMD already re-configures the port,
-   and the effect is the same as a restart operation.
+   the PMD already re-configures the port.
+   The application should restore some additional configuration, and then
+   enable data path API invocation.
 
 ``RTE_ETH_EVENT_RECOVERY_FAILED``
    Notify the application that the recovery from error failed,
