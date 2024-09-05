@@ -54,6 +54,11 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
+* **Added support for dumping registers with names and filtering by modules.**
+
+  * Added new API functions ``rte_eth_dev_get_reg_info_ext()`` to filter the
+    registers by module names and get the information (names, values and other
+    attributes) of the filtered registers.
 
 
 Removed Items
@@ -100,6 +105,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Added ``filter`` and ``names`` fields to ``rte_dev_reg_info``
+  structure for filtering by modules and reporting names of registers.
 
 Known Issues
 ------------
