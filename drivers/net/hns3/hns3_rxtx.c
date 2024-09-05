@@ -4389,21 +4389,6 @@ hns3_trace_rxtx_function(struct rte_eth_dev *dev)
 		 rx_mode.info, tx_mode.info);
 }
 
-static void
-hns3_eth_dev_fp_ops_config(const struct rte_eth_dev *dev)
-{
-	struct rte_eth_fp_ops *fpo = rte_eth_fp_ops;
-	uint16_t port_id = dev->data->port_id;
-
-	fpo[port_id].rx_pkt_burst = dev->rx_pkt_burst;
-	fpo[port_id].tx_pkt_burst = dev->tx_pkt_burst;
-	fpo[port_id].tx_pkt_prepare = dev->tx_pkt_prepare;
-	fpo[port_id].rx_descriptor_status = dev->rx_descriptor_status;
-	fpo[port_id].tx_descriptor_status = dev->tx_descriptor_status;
-	fpo[port_id].rxq.data = dev->data->rx_queues;
-	fpo[port_id].txq.data = dev->data->tx_queues;
-}
-
 void
 hns3_set_rxtx_function(struct rte_eth_dev *eth_dev)
 {
@@ -4426,7 +4411,7 @@ hns3_set_rxtx_function(struct rte_eth_dev *eth_dev)
 	}
 
 	hns3_trace_rxtx_function(eth_dev);
-	hns3_eth_dev_fp_ops_config(eth_dev);
+	rte_eth_fp_ops_setup(eth_dev);
 }
 
 void
@@ -4779,7 +4764,7 @@ hns3_stop_tx_datapath(struct rte_eth_dev *dev)
 {
 	dev->tx_pkt_burst = rte_eth_pkt_burst_dummy;
 	dev->tx_pkt_prepare = NULL;
-	hns3_eth_dev_fp_ops_config(dev);
+	rte_eth_fp_ops_setup(dev);
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		return;
@@ -4796,7 +4781,7 @@ hns3_start_tx_datapath(struct rte_eth_dev *dev)
 {
 	dev->tx_pkt_burst = hns3_get_tx_function(dev);
 	dev->tx_pkt_prepare = hns3_get_tx_prepare(dev);
-	hns3_eth_dev_fp_ops_config(dev);
+	rte_eth_fp_ops_setup(dev);
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		return;
