@@ -40,6 +40,35 @@ struct xsc_ioctl_hdr {
 	struct xsc_ioctl_attr attr;
 };
 
+/* ioctl */
+struct xsc_inbox_hdr {
+	__be16     opcode;
+	uint8_t    rsvd[4];
+	__be16     opmod;
+};
+
+struct xsc_outbox_hdr {
+	uint8_t     status;
+	uint8_t     rsvd[3];
+	__be32      syndrome;
+};
+
+/* ioctl mbox */
+struct xsc_ioctl_mbox_in {
+	struct xsc_inbox_hdr	hdr;
+	__be16			len;
+	__be16			rsvd;
+	uint8_t			data[];
+};
+
+struct xsc_ioctl_mbox_out {
+	struct xsc_outbox_hdr   hdr;
+	__be32                  error;
+	__be16                  len;
+	__be16                  rsvd;
+	uint8_t                 data[];
+};
+
 struct xsc_ioctl_data_tl {
 	uint16_t table;
 	uint16_t opmod;
@@ -82,5 +111,7 @@ struct xsc_ioctl_get_hwinfo {
 
 int xsc_ioctl(struct xsc_dev *dev, int cmd, int opcode,
 	      void *data_in, int in_len, void *data_out, int out_len);
+int xsc_mailbox_exec(struct xsc_dev *dev, void *data_in,
+		     int in_len, void *data_out, int out_len);
 
 #endif /* _XSC_CTRL_H_ */
