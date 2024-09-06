@@ -437,7 +437,7 @@ class TestRunConfiguration:
     and with what DPDK build.
 
     Attributes:
-        dpdk_builds: A list of DPDK builds to test.
+        dpdk_build: A DPDK build to test.
         perf: Whether to run performance tests.
         func: Whether to run functional tests.
         skip_smoke_tests: Whether to skip smoke tests.
@@ -447,7 +447,7 @@ class TestRunConfiguration:
         vdevs: The names of virtual devices to test.
     """
 
-    dpdk_builds: list[DPDKBuildConfiguration]
+    dpdk_build: DPDKBuildConfiguration
     perf: bool
     func: bool
     skip_smoke_tests: bool
@@ -475,9 +475,6 @@ class TestRunConfiguration:
         Returns:
             The test run configuration instance.
         """
-        dpdk_builds: list[DPDKBuildConfiguration] = list(
-            map(DPDKBuildConfiguration.from_dict, d["dpdk_builds"])
-        )
         test_suites: list[TestSuiteConfig] = list(map(TestSuiteConfig.from_dict, d["test_suites"]))
         sut_name = d["system_under_test_node"]["node_name"]
         skip_smoke_tests = d.get("skip_smoke_tests", False)
@@ -498,7 +495,7 @@ class TestRunConfiguration:
             d["system_under_test_node"]["vdevs"] if "vdevs" in d["system_under_test_node"] else []
         )
         return cls(
-            dpdk_builds=dpdk_builds,
+            dpdk_build=DPDKBuildConfiguration.from_dict(d["dpdk_build"]),
             perf=d["perf"],
             func=d["func"],
             skip_smoke_tests=skip_smoke_tests,
