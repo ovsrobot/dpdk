@@ -38,7 +38,7 @@ from framework.remote_session import (
 )
 from framework.remote_session.remote_session import CommandResult
 from framework.settings import SETTINGS
-from framework.utils import MesonArgs
+from framework.utils import MesonArgs, TarCompressionFormat
 
 from .cpu import LogicalCore
 from .port import Port
@@ -178,11 +178,7 @@ class OSSession(ABC):
         """
 
     @abstractmethod
-    def copy_from(
-        self,
-        source_file: str | PurePath,
-        destination_dir: str | Path,
-    ) -> None:
+    def copy_from(self, source_file: str | PurePath, destination_dir: str | Path) -> None:
         """Copy a file from the remote node to the local filesystem.
 
         Copy `source_file` from the remote node associated with this remote
@@ -195,11 +191,7 @@ class OSSession(ABC):
         """
 
     @abstractmethod
-    def copy_to(
-        self,
-        source_file: str | Path,
-        destination_dir: str | PurePath,
-    ) -> None:
+    def copy_to(self, source_file: str | Path, destination_dir: str | PurePath) -> None:
         """Copy a file from local filesystem to the remote node.
 
         Copy `source_file` from local filesystem to `destination_dir`
@@ -212,18 +204,86 @@ class OSSession(ABC):
         """
 
     @abstractmethod
+    def copy_dir_from(
+        self,
+        source_dir: str | PurePath,
+        destination_dir: str | Path,
+        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        exclude: str | list[str] | None = None,
+    ) -> None:
+        """Copy a dir from the remote node to the local filesystem.
+
+        Copy `source_dir` from the remote node associated with this remote session to
+        `destination_dir` on the local filesystem. The new local dir will be created
+        at `destination_dir` path.
+
+        Args:
+            source_dir: The dir on the remote node.
+            destination_dir: A dir path on the local filesystem.
+            compress_format: The compression format to use. Default is no compression.
+            exclude: Files or dirs to exclude before creating the tarball.
+        """
+
+    @abstractmethod
+    def copy_dir_to(
+        self,
+        source_dir: str | Path,
+        destination_dir: str | PurePath,
+        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        exclude: str | list[str] | None = None,
+    ) -> None:
+        """Copy a dir from the local filesystem to the remote node.
+
+        Copy `source_dir` from the local filesystem to `destination_dir` on the remote node
+        associated with this remote session. The new remote dir will be created at
+        `destination_dir` path.
+
+        Args:
+            source_dir: The dir on the local filesystem.
+            destination_dir: A dir path on the remote node.
+            compress_format: The compression format to use. Default is no compression.
+            exclude: Files or dirs to exclude before creating the tarball.
+        """
+
+    @abstractmethod
+    def remove_remote_file(self, remote_file_path: str | PurePath, force: bool = True) -> None:
+        """Remove remote file, by default remove forcefully.
+
+        Args:
+            remote_file_path: The path of the file to remove.
+            force: If :data:`True`, ignore all warnings and try to remove at all costs.
+        """
+
+    @abstractmethod
     def remove_remote_dir(
         self,
         remote_dir_path: str | PurePath,
         recursive: bool = True,
         force: bool = True,
     ) -> None:
-        """Remove remote directory, by default remove recursively and forcefully.
+        """Remove remote dir, by default remove recursively and forcefully.
 
         Args:
-            remote_dir_path: The path of the directory to remove.
-            recursive: If :data:`True`, also remove all contents inside the directory.
+            remote_dir_path: The path of the dir to remove.
+            recursive: If :data:`True`, also remove all contents inside the dir.
             force: If :data:`True`, ignore all warnings and try to remove at all costs.
+        """
+
+    @abstractmethod
+    def create_remote_tarball(
+        self,
+        remote_dir_path: str | PurePath,
+        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        exclude: str | list[str] | None = None,
+    ) -> None:
+        """Create a tarball from dir on the remote node.
+
+        The remote tarball will be saved in the directory of `remote_dir_path`.
+
+        Args:
+            remote_dir_path: The path of dir on the remote node.
+            compress_format: The compression format to use. Default is no compression.
+            exclude: Files or dirs to exclude before creating the tarball.
         """
 
     @abstractmethod

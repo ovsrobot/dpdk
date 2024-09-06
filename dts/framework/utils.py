@@ -15,12 +15,15 @@ Attributes:
 """
 
 import atexit
+import fnmatch
 import json
 import os
 import subprocess
+import tarfile
 from enum import Enum
 from pathlib import Path
 from subprocess import SubprocessError
+from typing import Any
 
 from scapy.packet import Packet  # type: ignore[import-untyped]
 
@@ -140,13 +143,17 @@ class MesonArgs:
         return " ".join(f"{self._default_library} {self._dpdk_args}".split())
 
 
-class _TarCompressionFormat(StrEnum):
+class TarCompressionFormat(StrEnum):
     """Compression formats that tar can use.
 
     Enum names are the shell compression commands
     and Enum values are the associated file extensions.
+
+    The 'none' member represents no compression, only archiving with tar.
+    Its value is set to 'tar' to indicate that the file is an uncompressed tar archive.
     """
 
+    none = "tar"
     gzip = "gz"
     compress = "Z"
     bzip2 = "bz2"
@@ -155,6 +162,16 @@ class _TarCompressionFormat(StrEnum):
     lzop = "lzo"
     xz = "xz"
     zstd = "zst"
+
+    @property
+    def extension(self):
+        """Return the extension associated with the compression format.
+
+        If the compression format is 'none', the extension will be in the format '.tar'.
+        For other compression formats, the extension will be in the format
+        '.tar.{compression format}'.
+        """
+        return f".{self.value}" if self == self.none else f".{self.none.value}.{self.value}"
 
 
 class DPDKGitTarball:
@@ -169,7 +186,7 @@ class DPDKGitTarball:
     """
 
     _git_ref: str
-    _tar_compression_format: _TarCompressionFormat
+    _tar_compression_format: TarCompressionFormat
     _tarball_dir: Path
     _tarball_name: str
     _tarball_path: Path | None
@@ -178,7 +195,7 @@ class DPDKGitTarball:
         self,
         git_ref: str,
         output_dir: str,
-        tar_compression_format: _TarCompressionFormat = _TarCompressionFormat.xz,
+        tar_compression_format: TarCompressionFormat = TarCompressionFormat.xz,
     ):
         """Create the tarball during initialization.
 
@@ -198,9 +215,7 @@ class DPDKGitTarball:
 
         self._create_tarball_dir()
 
-        self._tarball_name = (
-            f"dpdk-tarball-{self._git_ref}.tar.{self._tar_compression_format.value}"
-        )
+        self._tarball_name = f"dpdk-tarball-{self._git_ref}{self._tar_compression_format.extension}"
         self._tarball_path = self._check_tarball_path()
         if not self._tarball_path:
             self._create_tarball()
@@ -244,3 +259,73 @@ class DPDKGitTarball:
     def __fspath__(self) -> str:
         """The os.PathLike protocol implementation."""
         return str(self._tarball_path)
+
+
+def ensure_list_of_strings(value: Any | list[Any]) -> list[str]:
+    """Ensure the input is a list of strings.
+
+    Converting all elements to list of strings format.
+
+    Args:
+        value: A single value or a list of values.
+
+    Returns:
+        A list of strings.
+    """
+    return list(map(str, value) if isinstance(value, list) else str(value))
+
+
+def create_tarball(
+    source_path: str | Path,
+    compress_format: TarCompressionFormat = TarCompressionFormat.none,
+    arcname: str | None = None,
+    exclude: Any | list[Any] | None = None,
+):
+    """Create a tarball archive from a source dir or file.
+
+    The tarball archive will be saved in the same path as `source_path` parent path.
+
+    Args:
+        source_path: The path to the source dir or file to be included in the tarball.
+        compress_format: The compression format to use. Defaults is no compression.
+        arcname: The name under which `source_path` will be archived.
+        exclude: Files or dirs to exclude before creating the tarball.
+    """
+
+    def create_filter_function(exclude_patterns: str | list[str] | None):
+        """Create a filter function based on the provided exclude patterns.
+
+        Args:
+            exclude_patterns: The patterns to exclude from the tarball.
+
+        Returns:
+            The filter function that excludes files based on the patterns.
+        """
+        if exclude_patterns:
+            exclude_patterns = ensure_list_of_strings(exclude_patterns)
+
+            def filter_func(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo | None:
+                file_name = os.path.basename(tarinfo.name)
+                if any(fnmatch.fnmatch(file_name, pattern) for pattern in exclude_patterns):
+                    return None
+                return tarinfo
+
+            return filter_func
+        return None
+
+    with tarfile.open(
+        f"{source_path}{compress_format.extension}", f"w:{compress_format.value}"
+    ) as tar:
+        tar.add(source_path, arcname=arcname, filter=create_filter_function(exclude))
+
+
+def extract_tarball(tar_path: str | Path):
+    """Extract the contents of a tarball.
+
+    The tarball will be extracted in the same path as `tar_path` parent path.
+
+    Args:
+        tar_path: The path to the tarball file to extract.
+    """
+    with tarfile.open(tar_path, "r") as tar:
+        tar.extractall(path=Path(tar_path).parent)
