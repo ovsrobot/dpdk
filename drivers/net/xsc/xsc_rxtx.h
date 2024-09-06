@@ -85,6 +85,12 @@ struct xsc_cqe {
 	uint8_t		owner:1;
 };
 
+struct xsc_txq_stats {
+	uint64_t tx_pkts;   /* Total number of tx packets */
+	uint64_t tx_bytes;  /* Total number of tx bytes */
+	uint64_t tx_errors; /* Total number of tx error packets */
+};
+
 struct __rte_cache_aligned xsc_txq_data {
 	uint16_t idx;  /*QP idx */
 	uint16_t port_id;
@@ -116,10 +122,18 @@ struct __rte_cache_aligned xsc_txq_data {
 	volatile uint32_t *qp_db;
 	volatile uint32_t *cq_db;
 	struct xsc_ethdev_priv *priv;
+	struct xsc_txq_stats stats;
 	uint32_t socket;
 	uint8_t tso_en:1; /* TSO enable 0-off 1-on */
 	uint16_t *fcqs; /* Free completion queue. */
 	struct rte_mbuf *elts[0]; /* Storage for queued packets, for free */
+};
+
+struct xsc_rxq_stats {
+	uint64_t rx_pkts;   /* Total number of rx packets */
+	uint64_t rx_bytes;  /* Total number of rx bytes */
+	uint64_t rx_errors; /* Total number of rx error packets */
+	uint64_t rx_nombuf; /* Total number of rx mbuf alloc failed */
 };
 
 struct xsc_cqe_u64 {
@@ -158,6 +172,7 @@ struct __rte_cache_aligned xsc_rxq_data {
 	const struct rte_memzone *rq_pas;  /* Palist memory */
 	uint32_t socket;
 	struct xsc_ethdev_priv *priv;
+	struct xsc_rxq_stats stats;
 	/* attr */
 	uint32_t csum:1;  /* Checksum offloading enable */
 	uint32_t hw_timestamp:1;

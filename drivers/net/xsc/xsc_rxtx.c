@@ -62,6 +62,7 @@ xsc_rx_poll_len(struct xsc_rxq_data *rxq, volatile struct xsc_cqe *cqe)
 		ret = check_cqe_own(cqe, rxq->cqe_n, rxq->cq_ci);
 		if (unlikely(ret != XSC_CQE_OWNER_SW)) {
 			if (unlikely(ret == XSC_CQE_OWNER_ERR)) {
+				++rxq->stats.rx_errors;
 				/* TODO */
 				if (ret == XSC_CQE_OWNER_HW ||
 						ret == -1)
@@ -116,8 +117,10 @@ xsc_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		rte_prefetch0(wqe);
 
 		rep = rte_mbuf_raw_alloc(seg->pool);
-		if (unlikely(rep == NULL))
+		if (unlikely(rep == NULL)) {
+			++rxq->stats.rx_nombuf;
 			break;
+		}
 
 		if (!pkt) {
 			if (read_cqe_num) {
@@ -166,6 +169,7 @@ xsc_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		/* Fill wqe */
 		wqe->va = rte_cpu_to_le_64(rte_pktmbuf_iova(rep));
 		rte_pktmbuf_data_len(seg) = len;
+		rxq->stats.rx_bytes += rte_pktmbuf_pkt_len(pkt);
 
 		*(pkts++) = pkt;
 		pkt = NULL;
@@ -200,6 +204,7 @@ xsc_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		rxq->nb_rx_hold = 0;
 	}
 
+	rxq->stats.rx_pkts += nb_pkts;
 	return nb_pkts;
 }
 
@@ -239,6 +244,7 @@ xsc_tx_cqes_handle(struct xsc_txq_data *__rte_restrict txq)
 			++txq->cq_ci;
 			txq->cq_pi = txq->cq_ci;
 			last_cqe = NULL;
+			++txq->stats.tx_errors;
 			continue;
 		}
 
@@ -348,6 +354,7 @@ xsc_tx_wqes_fill(struct xsc_txq_data *__rte_restrict txq,
 		/* init wqe data segs */
 		xsc_tx_wqe_data_seg_init(mbuf, wqe);
 		++txq->wqe_ci;
+		txq->stats.tx_bytes += rte_pktmbuf_pkt_len(mbuf);
 	}
 
 	return wqe;
@@ -432,5 +439,7 @@ loop:
 		goto loop;
 
 exit:
+
+	txq->stats.tx_pkts += (pkts_n - remain_n);
 	return pkts_n - remain_n;
 }
