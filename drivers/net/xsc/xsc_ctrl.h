@@ -42,6 +42,12 @@ enum xsc_ioctl_opmod {
 })
 
 enum {
+	XSC_CMD_OP_MODIFY_RAW_QP = 0x81f,
+	XSC_CMD_OP_IOCTL_FLOW    = 0x900,
+	XSC_CMD_OP_MAX
+};
+
+enum {
 	XSC_IOCTL_SET_QP_STATUS = 0x200,
 	XSC_IOCTL_SET_MAX
 };
@@ -72,6 +78,22 @@ enum {
 	XSC_QUEUE_TYPE_RAW_TX     = 7,
 	XSC_QUEUE_TYPE_INVALID    = 0xFF,
 };
+enum  xsc_flow_tbl_id {
+	XSC_FLOW_TBL_IPAT = 0,
+	XSC_FLOW_TBL_PCT_V4 = 4,
+	XSC_FLOW_TBL_EPAT = 19,
+	XSC_FLOW_TBL_MAX
+};
+
+enum xsc_ioctl_op {
+	XSC_IOCTL_OP_ADD,
+	XSC_IOCTL_OP_DEL,
+	XSC_IOCTL_OP_GET,
+	XSC_IOCTL_OP_CLR,
+	XSC_IOCTL_OP_MOD,
+	XSC_IOCTL_OP_MAX
+};
+
 
 struct xsc_inbox_hdr {
 	__be16     opcode;
