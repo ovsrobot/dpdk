@@ -241,6 +241,7 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
      --revision ID, --rev ID, --git-ref ID
                            [DTS_DPDK_REVISION_ID] Git revision ID to test. Could be commit, tag, tree ID etc. To test local changes, first
                            commit them, then use their commit ID. (default: None)
+     -f, --force           [DTS_FORCE] Specify to remove an already existing dpdk tarball before copying/extracting a new one. (default: False)
      --compile-timeout SECONDS
                            [DTS_COMPILE_TIMEOUT] The timeout for compiling DPDK. (default: 1200)
      --test-suite TEST_SUITE [TEST_CASES ...]
