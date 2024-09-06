@@ -12,6 +12,8 @@ static void *gdrclib;
 static gdr_t (*sym_gdr_open)(void);
 static int (*sym_gdr_pin_buffer)(gdr_t g, unsigned long addr, size_t size,
 		uint64_t p2p_token, uint32_t va_space, gdr_mh_t *handle);
+static int (*sym_gdr_p2p_dma_map_buffer)(gdr_t g, unsigned long addr, size_t size,
+		uint64_t p2p_token, uint32_t va_space, gdr_mh_t *handle, uint64_t *paddr);
 static int (*sym_gdr_unpin_buffer)(gdr_t g, gdr_mh_t handle);
 static int (*sym_gdr_map)(gdr_t g, gdr_mh_t handle, void **va, size_t size);
 static int (*sym_gdr_unmap)(gdr_t g, gdr_mh_t handle, void *va, size_t size);
@@ -42,6 +44,13 @@ gdrcopy_loader(void)
 	sym_gdr_pin_buffer = dlsym(gdrclib, "gdr_pin_buffer");
 	if (sym_gdr_pin_buffer == NULL) {
 		rte_cuda_log(ERR, "Failed to load GDRCopy symbols\n");
+		return -1;
+	}
+
+	sym_gdr_p2p_dma_map_buffer = dlsym(gdrclib, "gdr_p2p_dma_map_buffer");
+	if (sym_gdr_p2p_dma_map_buffer == NULL) {
+		rte_cuda_log(ERR, "Failed to load GDRCopy symbol gdr_p2p_dma_map_buffer\n");
+		printf("Failed to load GDRCopy symbol gdr_p2p_dma_map_buffer\n");
 		return -1;
 	}
 
@@ -103,6 +112,47 @@ gdrcopy_pin(__rte_unused gdr_t *gdrc_h, __rte_unused gdr_mh_t *mh,
 		rte_cuda_log(ERR, "GDRCopy pin buffer error.");
 		return -1;
 	}
+
+	/* Map the buffer to user space */
+	if (sym_gdr_map(*gdrc_h, *mh, h_addr, size) != 0) {
+		rte_cuda_log(ERR, "GDRCopy map buffer error.");
+		sym_gdr_unpin_buffer(*gdrc_h, *mh);
+		return -1;
+	}
+
+	return 0;
+#else
+	rte_cuda_log(ERR,
+			"GDRCopy headers not provided at DPDK building time. Can't CPU map GPU memory.");
+	return -ENOTSUP;
+#endif
+}
+
+int
+gdrcopy_dma(__rte_unused gdr_t *gdrc_h, __rte_unused gdr_mh_t *mh,
+		__rte_unused uint64_t d_addr, __rte_unused size_t size,
+		__rte_unused void **h_addr, __rte_unused uint64_t *paddr)
+{
+#ifdef DRIVERS_GPU_CUDA_GDRCOPY_H
+	uint64_t phys;
+
+	if (*gdrc_h == NULL) {
+		if (gdrcopy_loader())
+			return -ENOTSUP;
+
+		if (gdrcopy_open(gdrc_h)) {
+			rte_cuda_log(ERR,
+					"GDRCopy gdrdrv kernel module not found. Can't CPU map GPU memory.");
+			return -EPERM;
+		}
+	}
+
+	/* Pin the device buffer */
+	if (sym_gdr_p2p_dma_map_buffer(*gdrc_h, d_addr, size, 0, 0, mh, &phys) != 0) {
+		rte_cuda_log(ERR, "GDRCopy p2p dma map buffer error.");
+		return -1;
+	}
+	*paddr = phys;
 
 	/* Map the buffer to user space */
 	if (sym_gdr_map(*gdrc_h, *mh, h_addr, size) != 0) {

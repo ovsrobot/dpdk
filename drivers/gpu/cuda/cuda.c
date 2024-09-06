@@ -960,6 +960,87 @@ cuda_mem_cpu_map(struct rte_gpu *dev, __rte_unused size_t size, void *ptr_in, vo
 }
 
 static int
+cuda_mem_dma_map(struct rte_gpu *dev, __rte_unused size_t size, void *ptr_in, void **ptr_out)
+{
+	struct mem_entry *mem_item;
+	cuda_ptr_key hk;
+	uint64_t paddr;
+
+	if (dev == NULL)
+		return -ENODEV;
+
+	hk = get_hash_from_ptr((void *)ptr_in);
+
+	mem_item = mem_list_find_item(hk);
+	if (mem_item == NULL) {
+		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	if (mem_item->mtype != GPU_MEM) {
+		rte_cuda_log(ERR, "Memory address 0x%p is not GPU memory type.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	if (mem_item->size != size)
+		rte_cuda_log(WARNING,
+				"Can't expose memory area with size (%zd) different from original size (%zd).",
+				size, mem_item->size);
+
+	if (gdrcopy_dma(&gdrc_h, &(mem_item->mh), (uint64_t)mem_item->ptr_d,
+					mem_item->size, &(mem_item->ptr_h), &paddr)) {
+		rte_cuda_log(ERR, "Error exposing GPU memory address 0x%p.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	mem_item->mtype = GPU_REGISTERED;
+	*ptr_out = (void *)paddr;
+
+	return 0;
+}
+
+static int
+cuda_mem_free(struct rte_gpu *dev, void *ptr)
+{
+	CUresult res;
+	struct mem_entry *mem_item;
+	const char *err_string;
+	cuda_ptr_key hk;
+
+	if (dev == NULL)
+		return -ENODEV;
+
+	hk = get_hash_from_ptr((void *)ptr);
+
+	mem_item = mem_list_find_item(hk);
+	if (mem_item == NULL) {
+		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory", ptr);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	if (mem_item->mtype == GPU_MEM) {
+		res = pfn_cuMemFree(mem_item->ptr_orig_d);
+		if (res != 0) {
+			pfn_cuGetErrorString(res, &(err_string));
+			rte_cuda_log(ERR, "cuMemFree current failed with %s",
+					err_string);
+			rte_errno = EPERM;
+			return -rte_errno;
+		}
+
+		return mem_list_del_item(hk);
+	}
+
+	rte_cuda_log(ERR, "Memory type %d not supported", mem_item->mtype);
+
+	return -EPERM;
+}
+
+static int
 cuda_mem_unregister(struct rte_gpu *dev, void *ptr)
 {
 	CUresult res;
@@ -1034,48 +1115,38 @@ cuda_mem_cpu_unmap(struct rte_gpu *dev, void *ptr_in)
 }
 
 static int
-cuda_mem_free(struct rte_gpu *dev, void *ptr)
+cuda_mem_dma_unmap(struct rte_gpu *dev, void *ptr_in)
 {
-	CUresult res;
 	struct mem_entry *mem_item;
-	const char *err_string;
 	cuda_ptr_key hk;
 
 	if (dev == NULL)
 		return -ENODEV;
 
-	hk = get_hash_from_ptr((void *)ptr);
+	hk = get_hash_from_ptr((void *)ptr_in);
 
 	mem_item = mem_list_find_item(hk);
 	if (mem_item == NULL) {
-		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory", ptr);
+		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory.", ptr_in);
 		rte_errno = EPERM;
 		return -rte_errno;
 	}
 
-	/*
-	 * If a GPU memory area that's CPU mapped is being freed
-	 * without calling cpu_unmap, force the unmapping.
-	 */
-	if (mem_item->mtype == GPU_REGISTERED)
-		cuda_mem_cpu_unmap(dev, ptr);
-
-	if (mem_item->mtype == GPU_MEM) {
-		res = pfn_cuMemFree(mem_item->ptr_orig_d);
-		if (res != 0) {
-			pfn_cuGetErrorString(res, &(err_string));
-			rte_cuda_log(ERR, "cuMemFree current failed with %s",
-					err_string);
+	if (mem_item->mtype == GPU_REGISTERED) {
+		if (gdrcopy_unpin(gdrc_h, mem_item->mh, (void *)mem_item->ptr_d,
+				mem_item->size)) {
+			rte_cuda_log(ERR, "Error unexposing GPU memory address 0x%p.", ptr_in);
 			rte_errno = EPERM;
 			return -rte_errno;
 		}
 
-		return mem_list_del_item(hk);
+		mem_item->mtype = GPU_MEM;
+	} else {
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
-	rte_cuda_log(ERR, "Memory type %d not supported", mem_item->mtype);
-
-	return -EPERM;
+	return 0;
 }
 
 static int
@@ -1391,7 +1462,9 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 	dev->ops.mem_register = cuda_mem_register;
 	dev->ops.mem_unregister = cuda_mem_unregister;
 	dev->ops.mem_cpu_map = cuda_mem_cpu_map;
+	dev->ops.mem_dma_map = cuda_mem_dma_map;
 	dev->ops.mem_cpu_unmap = cuda_mem_cpu_unmap;
+	dev->ops.mem_dma_unmap = cuda_mem_dma_unmap;
 	dev->ops.wmb = cuda_wmb;
 
 	rte_gpu_complete_new(dev);

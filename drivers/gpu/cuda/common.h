@@ -33,6 +33,8 @@ extern int cuda_logtype;
 
 int gdrcopy_pin(gdr_t *gdrc_h, __rte_unused gdr_mh_t *mh,
 		uint64_t d_addr, size_t size, void **h_addr);
+int gdrcopy_dma(gdr_t *gdrc_h, __rte_unused gdr_mh_t *mh,
+		uint64_t d_addr, size_t size, void **h_addr, uint64_t *paddr);
 int gdrcopy_unpin(gdr_t gdrc_h, __rte_unused gdr_mh_t mh,
 		void *d_addr, size_t size);
 
