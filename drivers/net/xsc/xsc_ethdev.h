@@ -9,6 +9,8 @@
 #define XSC_MAX_DESC_NUMBER 1024
 #define XSC_RX_FREE_THRESH 32
 
+#define XSC_CMD_OP_MODIFY_NIC_HCA 0x812
+
 struct xsc_dev_config {
 	uint8_t pph_flag;
 	unsigned int hw_csum:1;
@@ -50,5 +52,20 @@ struct xsc_ethdev_priv {
 
 #define TO_XSC_ETHDEV_PRIV(dev) \
 	((struct xsc_ethdev_priv *)(dev)->data->dev_private)
+
+enum {
+	XSC_TBM_CAP_HASH_PPH = 0,
+	XSC_TBM_CAP_RSS,
+	XSC_TBM_CAP_PP_BYPASS,
+	XSC_TBM_CAP_PCT_DROP_CONFIG,
+};
+
+enum {
+	XSC_RSS_HASH_KEY_UPDATE = 0,
+	XSC_RSS_HASH_TEMP_UPDATE,
+	XSC_RSS_HASH_FUNC_UPDATE,
+	XSC_RSS_RXQ_UPDATE,
+	XSC_RSS_RXQ_DROP,
+};
 
 #endif /* _XSC_ETHDEV_H_ */
