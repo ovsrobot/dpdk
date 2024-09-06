@@ -236,8 +236,6 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
                            [DTS_TIMEOUT] The default timeout for all DTS operations except for compiling DPDK. (default: 15)
      -v, --verbose         [DTS_VERBOSE] Specify to enable verbose output, logging all messages to the console. (default: False)
      --dpdk-tree DIR_PATH  [DTS_DPDK_TREE] Path to DPDK source code tree to test. (default: None)
-     --tarball FILE_PATH, --snapshot FILE_PATH
-                           [DTS_DPDK_TARBALL] Path to DPDK source code tarball to test. (default: None)
      --revision ID, --rev ID, --git-ref ID
                            [DTS_DPDK_REVISION_ID] Git revision ID to test. Could be commit, tag, tree ID etc. To test local changes, first
                            commit them, then use their commit ID. (default: None)
@@ -259,12 +257,6 @@ DTS is run with ``main.py`` located in the ``dts`` directory after entering Poet
 The brackets contain the names of environment variables that set the same thing.
 The minimum DTS needs is a config file and a DPDK source which can add in config
 or command line argument/environment variable option.
-
-Example command for running DTS with the template configuration and DPDK tag v23.11:
-
-.. code-block:: console
-
-   (dts-py3.10) $ ./main.py --git-ref v23.11
 
 
 DTS Results
