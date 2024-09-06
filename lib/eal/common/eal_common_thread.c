@@ -24,13 +24,13 @@
 
 RTE_DEFINE_PER_LCORE(unsigned int, _lcore_id) = LCORE_ID_ANY;
 RTE_DEFINE_PER_LCORE(int, _thread_id) = -1;
-static RTE_DEFINE_PER_LCORE(unsigned int, _socket_id) =
+static RTE_DEFINE_PER_LCORE(unsigned int, _numa_id) =
 	(unsigned int)SOCKET_ID_ANY;
 static RTE_DEFINE_PER_LCORE(rte_cpuset_t, _cpuset);
 
 unsigned rte_socket_id(void)
 {
-	return RTE_PER_LCORE(_socket_id);
+	return RTE_PER_LCORE(_numa_id);
 }
 
 static int
@@ -66,8 +66,8 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 {
 	unsigned int lcore_id = rte_lcore_id();
 
-	/* store socket_id in TLS for quick access */
-	RTE_PER_LCORE(_socket_id) =
+	/* store numa_id in TLS for quick access */
+	RTE_PER_LCORE(_numa_id) =
 		eal_cpuset_socket_id(cpusetp);
 
 	/* store cpuset in TLS for quick access */
@@ -76,7 +76,7 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 
 	if (lcore_id != (unsigned)LCORE_ID_ANY) {
 		/* EAL thread will update lcore_config */
-		lcore_config[lcore_id].socket_id = RTE_PER_LCORE(_socket_id);
+		lcore_config[lcore_id].numa_id = RTE_PER_LCORE(_numa_id);
 		memmove(&lcore_config[lcore_id].cpuset, cpusetp,
 			sizeof(rte_cpuset_t));
 	}
@@ -256,7 +256,7 @@ static int control_thread_init(void *arg)
 	/* Set control thread socket ID to SOCKET_ID_ANY
 	 * as control threads may be scheduled on any NUMA node.
 	 */
-	RTE_PER_LCORE(_socket_id) = SOCKET_ID_ANY;
+	RTE_PER_LCORE(_numa_id) = SOCKET_ID_ANY;
 	params->ret = rte_thread_set_affinity_by_id(rte_thread_self(), cpuset);
 	if (params->ret != 0) {
 		rte_atomic_store_explicit(&params->status,
