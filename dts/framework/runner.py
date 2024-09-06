@@ -419,7 +419,8 @@ class DTSRunner:
         self._logger.info(
             f"Running test run with SUT '{test_run_config.system_under_test_node.name}'."
         )
-        test_run_result.add_sut_info(sut_node.node_info)
+        test_run_result.ports = sut_node.ports
+        test_run_result.sut_info = sut_node.node_info
         try:
             dpdk_location = SETTINGS.dpdk_location or test_run_config.dpdk_location
             if not dpdk_location:
@@ -431,7 +432,7 @@ class DTSRunner:
                 )
 
             sut_node.set_up_test_run(test_run_config, dpdk_location)
-            test_run_result.add_dpdk_build_info(sut_node.get_dpdk_build_info())
+            test_run_result.dpdk_build_info = sut_node.get_dpdk_build_info()
             tg_node.set_up_test_run(test_run_config, dpdk_location)
             test_run_result.update_setup(Result.PASS)
         except Exception as e:
