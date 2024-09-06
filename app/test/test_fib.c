@@ -319,7 +319,7 @@ int32_t
 test_lookup(void)
 {
 	struct rte_fib *fib = NULL;
-	struct rte_fib_conf config;
+	struct rte_fib_conf config = { 0 };
 	uint64_t def_nh = 100;
 	int ret;
 
