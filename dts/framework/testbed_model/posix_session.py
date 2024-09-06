@@ -91,6 +91,11 @@ class PosixSession(OSSession):
         """Overrides :meth:`~.os_session.OSSession.join_remote_path`."""
         return PurePosixPath(*args)
 
+    def remote_path_exists(self, remote_path: str | PurePath) -> bool:
+        """Overrides :meth:`~.os_session.OSSession.remote_path_exists`."""
+        result = self.send_command(f"test -e {remote_path}")
+        return not result.return_code
+
     def copy_from(
         self, source_file: str | PurePath, destination_dir: str | Path, force: bool = SETTINGS.force
     ) -> None:
@@ -216,6 +221,16 @@ class PosixSession(OSSession):
         if expected_dir:
             self.send_command(f"ls {expected_dir}", verify=True)
 
+    def get_tarball_top_dir(
+        self, remote_tarball_path: str | PurePath
+    ) -> str | PurePosixPath | None:
+        """Overrides :meth:`~.os_session.OSSession.get_tarball_top_dir`."""
+        members = self.send_command(f"tar tf {remote_tarball_path}").stdout.split()
+        top_dirs = [PurePosixPath(member).parts[0] for member in members if member]
+        if len(set(top_dirs)) == 1:
+            return top_dirs[0]
+        return None
+
     def build_dpdk(
         self,
         env_vars: dict,
@@ -321,7 +336,7 @@ class PosixSession(OSSession):
         pid_regex = r"p(\d+)"
         for dpdk_runtime_dir in dpdk_runtime_dirs:
             dpdk_config_file = PurePosixPath(dpdk_runtime_dir, "config")
-            if self._remote_files_exists(dpdk_config_file):
+            if self.remote_path_exists(dpdk_config_file):
                 out = self.send_command(f"lsof -Fp {dpdk_config_file}").stdout
                 if out and "No such file or directory" not in out:
                     for out_line in out.splitlines():
@@ -329,10 +344,6 @@ class PosixSession(OSSession):
                         if match:
                             pids.append(int(match.group(1)))
         return pids
-
-    def _remote_files_exists(self, remote_path: PurePath) -> bool:
-        result = self.send_command(f"test -e {remote_path}")
-        return not result.return_code
 
     def _check_dpdk_hugepages(self, dpdk_runtime_dirs: Iterable[str | PurePath]) -> None:
         """Check there aren't any leftover hugepages.
@@ -345,7 +356,7 @@ class PosixSession(OSSession):
         """
         for dpdk_runtime_dir in dpdk_runtime_dirs:
             hugepage_info = PurePosixPath(dpdk_runtime_dir, "hugepage_info")
-            if self._remote_files_exists(hugepage_info):
+            if self.remote_path_exists(hugepage_info):
                 out = self.send_command(f"lsof -Fp {hugepage_info}").stdout
                 if out and "No such file or directory" not in out:
                     self._logger.warning("Some DPDK processes did not free hugepages.")

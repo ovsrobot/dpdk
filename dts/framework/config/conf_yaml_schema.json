@@ -110,9 +110,9 @@
         "mscv"
       ]
     },
-    "dpdk_build": {
+    "build": {
       "type": "object",
-      "description": "DPDK build configuration supported by DTS.",
+      "description": "DPDK build configuration supported by DTS. Either this or `dir_name` can be defined, but not both.",
       "properties": {
         "arch": {
           "type": "string",
@@ -144,6 +144,43 @@
         "os",
         "cpu",
         "compiler"
+      ]
+    },
+    "dpdk_build": {
+      "type":"object",
+      "description": "DPDK source and build configuration. Optional.",
+      "properties": {
+        "dpdk_tree": {
+          "type": "string",
+          "description": "Path to the DPDK source code. Either this or `tarball` can be defined, but not both."
+        },
+        "tarball": {
+          "type": "string",
+          "description": "Path to the DPDK tarball. Either this or `dpdk_tree` can be defined, but not both."
+        },
+        "remote": {
+          "type": "boolean",
+          "description": "If present, `dpdk_tree` or `tarball` is on the SUT node."
+        },
+        "dir_name": {
+          "type": "string",
+          "description": "A directory name, which would be located in the `dpdk tree` or `tarball`. Either this or `build` can be defined, but not both."
+        },
+        "build": {
+          "$ref": "#/definitions/build"
+        }
+      },
+      "allOf": [
+        {
+          "not": {
+            "required": ["dpdk_tree", "tarball"]
+          }
+        },
+        {
+          "not": {
+            "required": ["dir_name", "build"]
+          }
+        }
       ]
     },
     "hugepages_2mb": {

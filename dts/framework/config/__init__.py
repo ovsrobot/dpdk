@@ -47,6 +47,7 @@ from typing_extensions import Self
 from framework.config.types import (
     ConfigurationDict,
     DPDKBuildConfigDict,
+    DPDKSetupDict,
     NodeConfigDict,
     PortConfigDict,
     TestRunConfigDict,
@@ -381,6 +382,67 @@ class DPDKBuildConfiguration:
 
 
 @dataclass(slots=True, frozen=True)
+class DPDKLocation:
+    """DPDK location.
+
+    The path to the DPDK sources, build dir and type of location.
+
+    Attributes:
+        dpdk_tree: The path to the DPDK tree.
+        tarball: The path to the DPDK tarball.
+        remote: If :data:`True`, `dpdk_tree` or `tarball` is on the SUT node.
+        build_dir: A directory name, which would be located in the `dpdk tree` or `tarball`.
+    """
+
+    dpdk_tree: str | None
+    tarball: str | None
+    remote: bool
+    build_dir: str | None
+
+    @classmethod
+    def from_dict(cls, d: DPDKSetupDict) -> Self | None:
+        """A convenience method that processes and validate the inputs before creating an instance.
+
+        Ensures that either `dpdk_tree` or `tarball` is provided and, if local
+        (`remote` is False), verifies their existence. Constructs and returns
+        a `DPDKLocation` object with the provided parameters if validation is
+        successful, or `None` if neither `dpdk_tree` nor `tarball` is given.
+
+        Args:
+            d: The configuration dictionary.
+
+        Returns:
+            A DPDK location if construction is successful, otherwise None.
+
+        Raises:
+            ConfigurationError: If `dpdk_tree` or `tarball` not found in local filesystem.
+        """
+        dpdk_tree = d.get("dpdk_tree")
+        tarball = d.get("tarball")
+        remote = d.get("remote", False)
+
+        if dpdk_tree or tarball:
+            if not remote:
+                if dpdk_tree and not Path(dpdk_tree).is_dir():
+                    raise ConfigurationError(
+                        f"DPDK tree '{dpdk_tree}' not found in local filesystem."
+                    )
+                if tarball and not Path(tarball).is_file():
+                    raise ConfigurationError(
+                        f"DPDK tarball '{tarball}' not found in local filesystem."
+                    )
+
+            return cls(
+                dpdk_tree=dpdk_tree,
+                tarball=tarball,
+                remote=remote,
+                build_dir=d.get("dir_name"),
+            )
+
+        return None
+
+
+@dataclass(slots=True, frozen=True)
 class DPDKBuildInfo:
     """Various versions and other information about a DPDK build.
 
@@ -389,8 +451,8 @@ class DPDKBuildInfo:
         compiler_version: The version of the compiler used to build DPDK.
     """
 
-    dpdk_version: str
-    compiler_version: str
+    dpdk_version: str | None
+    compiler_version: str | None
 
 
 @dataclass(slots=True, frozen=True)
@@ -437,7 +499,8 @@ class TestRunConfiguration:
     and with what DPDK build.
 
     Attributes:
-        dpdk_build: A DPDK build to test.
+        dpdk_location: The target source of the DPDK tree.
+        dpdk_build_config: A DPDK build configuration to test.
         perf: Whether to run performance tests.
         func: Whether to run functional tests.
         skip_smoke_tests: Whether to skip smoke tests.
@@ -447,7 +510,8 @@ class TestRunConfiguration:
         vdevs: The names of virtual devices to test.
     """
 
-    dpdk_build: DPDKBuildConfiguration
+    dpdk_location: DPDKLocation | None
+    dpdk_build_config: DPDKBuildConfiguration | None
     perf: bool
     func: bool
     skip_smoke_tests: bool
@@ -475,6 +539,18 @@ class TestRunConfiguration:
         Returns:
             The test run configuration instance.
         """
+        dpdk_location = None
+        dpdk_build_config = None
+
+        dpdk_build_dct = d.get("dpdk_build")
+        if dpdk_build_dct:
+            dpdk_location = DPDKLocation.from_dict(dpdk_build_dct)
+            dpdk_build_config = (
+                DPDKBuildConfiguration.from_dict(dpdk_build_dct["build"])
+                if dpdk_build_dct.get("build")
+                else None
+            )
+
         test_suites: list[TestSuiteConfig] = list(map(TestSuiteConfig.from_dict, d["test_suites"]))
         sut_name = d["system_under_test_node"]["node_name"]
         skip_smoke_tests = d.get("skip_smoke_tests", False)
@@ -495,7 +571,8 @@ class TestRunConfiguration:
             d["system_under_test_node"]["vdevs"] if "vdevs" in d["system_under_test_node"] else []
         )
         return cls(
-            dpdk_build=DPDKBuildConfiguration.from_dict(d["dpdk_build"]),
+            dpdk_location=dpdk_location,
+            dpdk_build_config=dpdk_build_config,
             perf=d["perf"],
             func=d["func"],
             skip_smoke_tests=skip_smoke_tests,

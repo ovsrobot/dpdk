@@ -25,7 +25,7 @@ Example:
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from ipaddress import IPv4Interface, IPv6Interface
-from pathlib import Path, PurePath
+from pathlib import Path, PurePath, PurePosixPath
 from typing import Union
 
 from framework.config import Architecture, NodeConfiguration, NodeInfo
@@ -138,17 +138,6 @@ class OSSession(ABC):
         """
 
     @abstractmethod
-    def guess_dpdk_remote_dir(self, remote_dir: str | PurePath) -> PurePath:
-        """Try to find DPDK directory in `remote_dir`.
-
-        The directory is the one which is created after the extraction of the tarball. The files
-        are usually extracted into a directory starting with ``dpdk-``.
-
-        Returns:
-            The absolute path of the DPDK remote directory, empty path if not found.
-        """
-
-    @abstractmethod
     def get_remote_tmp_dir(self) -> PurePath:
         """Get the path of the temporary directory of the remote OS.
 
@@ -175,6 +164,17 @@ class OSSession(ABC):
 
         Returns:
             The resulting joined path.
+        """
+
+    @abstractmethod
+    def remote_path_exists(self, remote_path: str | PurePath) -> bool:
+        """Check whether a path exists on the remote system.
+
+        Args:
+            remote_path: The path to check.
+
+        Returns:
+            True if the path exists, False otherwise.
         """
 
     @abstractmethod
@@ -319,6 +319,25 @@ class OSSession(ABC):
             force: If :data:`True` and `expected_dir` is defined, remove an already
                 existing `expected_dir` at the directory of `remote_dir_path` before
                 extracting to prevent overwriting data.
+        """
+
+    @abstractmethod
+    def get_tarball_top_dir(
+        self, remote_tarball_path: str | PurePath
+    ) -> str | PurePosixPath | None:
+        """Get the top directory of the remote tarball.
+
+        It examines the contents of a tarball located at the given `remote_tarball_path` and
+        determines the top-level directory. If all files and directories in the tarball share
+        the same top-level directory, that directory name is returned. If the tarball contains
+        multiple top-level directories or is empty, the method return None.
+
+        Args:
+            remote_tarball_path: The path to the remote tarball.
+
+        Returns:
+           The top directory of the tarball, if there are not multiple top directories
+            otherwise None.
         """
 
     @abstractmethod

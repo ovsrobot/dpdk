@@ -29,16 +29,7 @@ from enum import Enum, auto
 from types import FunctionType
 from typing import Union
 
-from .config import (
-    OS,
-    Architecture,
-    Compiler,
-    CPUType,
-    DPDKBuildInfo,
-    NodeInfo,
-    TestRunConfiguration,
-    TestSuiteConfig,
-)
+from .config import DPDKBuildInfo, NodeInfo, TestRunConfiguration, TestSuiteConfig
 from .exception import DTSError, ErrorSeverity
 from .logger import DTSLogger
 from .settings import SETTINGS
@@ -220,8 +211,8 @@ class BaseResult:
 class DTSResult(BaseResult):
     """Stores environment information and test results from a DTS run.
 
-        * Test run level information, such as testbed, compiler, target OS and cpu and
-          the test suite list,
+        * Test run level information, such as testbed, compiler version, dpdk version
+          and the test suite list,
         * Test suite and test case results,
         * All errors that are caught and recorded during DTS execution.
 
@@ -318,10 +309,6 @@ class TestRunResult(BaseResult):
     The internal list stores the results of all test suites in a given test run.
 
     Attributes:
-        arch: The DPDK build architecture.
-        os: The DPDK build operating system.
-        cpu: The DPDK build CPU.
-        compiler: The DPDK build compiler.
         compiler_version: The DPDK build compiler version.
         dpdk_version: The built DPDK version.
         sut_os_name: The operating system of the SUT node.
@@ -329,10 +316,6 @@ class TestRunResult(BaseResult):
         sut_kernel_version: The operating system kernel version of the SUT node.
     """
 
-    arch: Architecture
-    os: OS
-    cpu: CPUType
-    compiler: Compiler
     compiler_version: str | None
     dpdk_version: str | None
     sut_os_name: str
@@ -348,10 +331,6 @@ class TestRunResult(BaseResult):
             test_run_config: A test run configuration.
         """
         super().__init__()
-        self.arch = test_run_config.dpdk_build.arch
-        self.os = test_run_config.dpdk_build.os
-        self.cpu = test_run_config.dpdk_build.cpu
-        self.compiler = test_run_config.dpdk_build.compiler
         self.compiler_version = None
         self.dpdk_version = None
         self._config = test_run_config

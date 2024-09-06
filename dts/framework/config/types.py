@@ -86,6 +86,21 @@ class DPDKBuildConfigDict(TypedDict):
     compiler_wrapper: str
 
 
+class DPDKSetupDict(TypedDict):
+    """Allowed keys and values."""
+
+    #:
+    dpdk_tree: str | None
+    #:
+    tarball: str | None
+    #:
+    remote: bool
+    #:
+    dir_name: str | None
+    #:
+    build: DPDKBuildConfigDict
+
+
 class TestSuiteConfigDict(TypedDict):
     """Allowed keys and values."""
 
@@ -108,7 +123,7 @@ class TestRunConfigDict(TypedDict):
     """Allowed keys and values."""
 
     #:
-    dpdk_build: DPDKBuildConfigDict
+    dpdk_build: DPDKSetupDict
     #:
     perf: bool
     #:

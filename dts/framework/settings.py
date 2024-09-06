@@ -39,10 +39,10 @@ The command line arguments along with the supported environment variables are:
 
     Set to any value to enable logging everything to the console.
 
-.. option:: -s, --skip-setup
-.. envvar:: DTS_SKIP_SETUP
+.. option:: --dpdk-tree
+.. envvar:: DTS_DPDK_TREE
 
-    Set to any value to skip building DPDK.
+    Path to DPDK source code tree to test.
 
 .. option:: --tarball, --snapshot
 .. envvar:: DTS_DPDK_TARBALL
@@ -55,10 +55,20 @@ The command line arguments along with the supported environment variables are:
     Git revision ID to test. Could be commit, tag, tree ID etc.
     To test local changes, first commit them, then use their commit ID.
 
+.. option:: --remote-source
+.. envvar:: DTS_REMOTE_SOURCE
+
+    Set when the DPDK source tree or tarball is located on the SUT node.
+
+.. option:: --build-dir
+.. envvar:: DTS_BUILD_DIR
+
+    A directory name, which would be located in the `dpdk tree` or `tarball`.
+
 .. option:: -f, --force
 .. envvar:: DTS_FORCE
 
-    Specify to remove an already existing dpdk tarball before copying/extracting a new one.
+    Specify to remove an already existing DPDK tarball or tree before copying/extracting a new one.
 
 .. option:: --test-suite
 .. envvar:: DTS_TEST_SUITES
@@ -90,7 +100,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from .config import TestSuiteConfig
+from .config import DPDKLocation, TestSuiteConfig
 from .exception import ConfigurationError
 from .utils import DPDKGitTarball, get_commit_id
 
@@ -111,9 +121,7 @@ class Settings:
     #:
     verbose: bool = False
     #:
-    skip_setup: bool = False
-    #:
-    dpdk_tarball_path: Path | str = ""
+    dpdk_location: DPDKLocation | None = None
     #:
     force: bool = False
     #:
@@ -241,20 +249,54 @@ class _EnvVarHelpFormatter(ArgumentDefaultsHelpFormatter):
         return help
 
 
-def _parse_tarball_path(file_path: str) -> Path:
-    """Validate whether `file_path` is valid and return a Path object."""
-    path = Path(file_path)
-    if not path.exists() or not path.is_file():
-        raise argparse.ArgumentTypeError("The file path provided is not a valid file")
-    return path
-
-
 def _parse_revision_id(rev_id: str) -> str:
     """Validate revision ID and retrieve corresponding commit ID."""
     try:
         return get_commit_id(rev_id)
     except ConfigurationError:
         raise argparse.ArgumentTypeError("The Git revision ID supplied is invalid or ambiguous")
+
+
+def _required_with_one_of(parser: _DTSArgumentParser, action: Action, *required_dests: str) -> None:
+    """Verify that `action` is listed together with `required_dests`.
+
+    Verify that a specific action is included in the command-line arguments or environment variables
+    if at least one of the required destination is already defined in the command-line arguments or
+    environment variables.
+
+    Args:
+        parser: The custom ArgumentParser object which contains `action`.
+        action: The action to be verified.
+        *required_dests: Destination variable names of the required arguments.
+
+    Raises:
+        argparse.ArgumentTypeError: If the action is not included when one
+            of the required arguments is present.
+
+    Example:
+        For etc. if the `--option1` argument is provided, then the `--option2` argument
+        must also be included too. Only one of the required_dests needs to be provided for
+        the check to be applied.
+
+        parser = _DTSArgumentParser()
+        option1_arg = parser.add_argument('--option1', dest='option1', action='store_true')
+        option2_arg = arser.add_argument('--option2', dest='option2', action='store_true')
+
+        _required_with_one_of(parser, option1_arg, 'option2')
+
+    """
+    if _is_action_in_args(action):
+        for required_dest in required_dests:
+            required_action = parser.find_action(required_dest)
+            if required_action is None:
+                continue
+
+            if _is_action_in_args(required_action):
+                return None
+
+        raise argparse.ArgumentTypeError(
+            f"The '{action.dest}' is required at least with one of '{', '.join(required_dests)}'."
+        )
 
 
 def _get_parser() -> _DTSArgumentParser:
@@ -311,21 +353,19 @@ def _get_parser() -> _DTSArgumentParser:
     )
     _add_env_var_to_action(action)
 
-    action = parser.add_argument(
-        "-s",
-        "--skip-setup",
-        action="store_true",
-        default=SETTINGS.skip_setup,
-        help="Specify to skip all setup steps on SUT and TG nodes.",
-    )
-    _add_env_var_to_action(action)
+    dpdk_source = parser.add_mutually_exclusive_group()
 
-    dpdk_source = parser.add_mutually_exclusive_group(required=True)
+    action = dpdk_source.add_argument(
+        "--dpdk-tree",
+        help="Path to DPDK source code tree to test.",
+        metavar="DIR_PATH",
+        dest="dpdk_tree_path",
+    )
+    _add_env_var_to_action(action, "DPDK_TREE")
 
     action = dpdk_source.add_argument(
         "--tarball",
         "--snapshot",
-        type=_parse_tarball_path,
         help="Path to DPDK source code tarball to test.",
         metavar="FILE_PATH",
         dest="dpdk_tarball_path",
@@ -343,6 +383,23 @@ def _get_parser() -> _DTSArgumentParser:
         dest="dpdk_revision_id",
     )
     _add_env_var_to_action(action)
+
+    action = parser.add_argument(
+        "--remote-source",
+        action="store_true",
+        default=False,
+        help="Set when the DPDK source tree or tarball is located on the SUT node.",
+    )
+    _add_env_var_to_action(action)
+    _required_with_one_of(parser, action, "dpdk_tarball_path", "dpdk_tree_path")
+
+    action = parser.add_argument(
+        "--build-dir",
+        help="A directory name, which would be located in the `dpdk tree` or `tarball`.",
+        metavar="DIR_NAME",
+    )
+    _add_env_var_to_action(action)
+    _required_with_one_of(parser, action, "dpdk_tarball_path", "dpdk_tree_path")
 
     action = parser.add_argument(
         "-f",
@@ -395,6 +452,49 @@ def _get_parser() -> _DTSArgumentParser:
     return parser
 
 
+def _process_dpdk_location(
+    dpdk_tree: str | None,
+    tarball: str | None,
+    remote: bool,
+    build_dir: str | None,
+):
+    """Process and validate DPDK build arguments.
+
+    Ensures that either `dpdk_tree` or `tarball` is provided and, if local
+    (`remote` is False), verifies their existence. Constructs and returns
+    a `DPDKLocation` object with the provided parameters if validation is
+    successful, or `None` if neither `dpdk_tree` nor `tarball` is given.
+
+    Args:
+        dpdk_tree: The path to the DPDK tree.
+        tarball: The path to the DPDK tarball.
+        remote: If :data:`True`, `dpdk_tree` or `tarball` is on the SUT node.
+        build_dir: A directory name, which would be located in the `dpdk tree` or `tarball`.
+
+    Returns:
+        A DPDK location if construction is successful, otherwise None.
+
+    Raises:
+        argparse.ArgumentTypeError: If `dpdk_tree` or `tarball` not found in local filesystem.
+    """
+    if dpdk_tree or tarball:
+        if not remote:
+            if dpdk_tree and not Path(dpdk_tree).is_dir():
+                raise argparse.ArgumentTypeError(
+                    f"DPDK tree '{dpdk_tree}' not found in local filesystem."
+                )
+            if tarball and not Path(tarball).is_file():
+                raise argparse.ArgumentTypeError(
+                    f"DPDK tarball '{tarball}' not found in local filesystem."
+                )
+
+        return DPDKLocation(
+            dpdk_tree=dpdk_tree, tarball=tarball, remote=remote, build_dir=build_dir
+        )
+
+    return None
+
+
 def _process_test_suites(
     parser: _DTSArgumentParser, args: list[list[str]]
 ) -> list[TestSuiteConfig]:
@@ -424,16 +524,14 @@ def get_settings() -> Settings:
         The new settings object.
     """
     parser = _get_parser()
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
     args = parser.parse_args()
 
     if args.dpdk_revision_id:
         args.dpdk_tarball_path = Path(DPDKGitTarball(args.dpdk_revision_id, args.output_dir))
 
+    args.dpdk_location = _process_dpdk_location(
+        args.dpdk_tree_path, args.dpdk_tarball_path, args.remote_source, args.build_dir
+    )
     args.test_suites = _process_test_suites(parser, args.test_suites)
 
     kwargs = {k: v for k, v in vars(args).items() if hasattr(SETTINGS, k)}
