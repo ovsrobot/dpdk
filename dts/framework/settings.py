@@ -55,6 +55,11 @@ The command line arguments along with the supported environment variables are:
     Git revision ID to test. Could be commit, tag, tree ID etc.
     To test local changes, first commit them, then use their commit ID.
 
+.. option:: -f, --force
+.. envvar:: DTS_FORCE
+
+    Specify to remove an already existing dpdk tarball before copying/extracting a new one.
+
 .. option:: --test-suite
 .. envvar:: DTS_TEST_SUITES
 
@@ -109,6 +114,8 @@ class Settings:
     skip_setup: bool = False
     #:
     dpdk_tarball_path: Path | str = ""
+    #:
+    force: bool = False
     #:
     compile_timeout: float = 1200
     #:
@@ -334,6 +341,16 @@ def _get_parser() -> _DTSArgumentParser:
         "To test local changes, first commit them, then use their commit ID.",
         metavar="ID",
         dest="dpdk_revision_id",
+    )
+    _add_env_var_to_action(action)
+
+    action = parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        default=SETTINGS.force,
+        help="Specify to remove an already existing dpdk tarball before copying/extracting a "
+        "new one.",
     )
     _add_env_var_to_action(action)
 

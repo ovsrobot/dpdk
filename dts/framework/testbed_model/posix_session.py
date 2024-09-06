@@ -91,12 +91,22 @@ class PosixSession(OSSession):
         """Overrides :meth:`~.os_session.OSSession.join_remote_path`."""
         return PurePosixPath(*args)
 
-    def copy_from(self, source_file: str | PurePath, destination_dir: str | Path) -> None:
+    def copy_from(
+        self, source_file: str | PurePath, destination_dir: str | Path, force: bool = SETTINGS.force
+    ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_from`."""
+        if force:
+            Path(destination_dir, PurePath(source_file).name).unlink(missing_ok=True)
+
         self.remote_session.copy_from(source_file, destination_dir)
 
-    def copy_to(self, source_file: str | Path, destination_dir: str | PurePath) -> None:
+    def copy_to(
+        self, source_file: str | Path, destination_dir: str | PurePath, force: bool = SETTINGS.force
+    ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_to`."""
+        if force:
+            self.remove_remote_file(PurePath(destination_dir, Path(source_file).name))
+
         self.remote_session.copy_to(source_file, destination_dir)
 
     def copy_dir_from(
@@ -105,13 +115,14 @@ class PosixSession(OSSession):
         destination_dir: str | Path,
         compress_format: TarCompressionFormat = TarCompressionFormat.none,
         exclude: str | list[str] | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_dir_from`."""
         tarball_name = f"{PurePath(source_dir).name}{compress_format.extension}"
         remote_tarball_path = self.join_remote_path(PurePath(source_dir).parent, tarball_name)
         self.create_remote_tarball(source_dir, compress_format, exclude)
 
-        self.copy_from(remote_tarball_path, destination_dir)
+        self.copy_from(remote_tarball_path, destination_dir, force)
         self.remove_remote_file(remote_tarball_path)
 
         tarball_path = Path(destination_dir, tarball_name)
@@ -124,6 +135,7 @@ class PosixSession(OSSession):
         destination_dir: str | PurePath,
         compress_format: TarCompressionFormat = TarCompressionFormat.none,
         exclude: str | list[str] | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_dir_to`."""
         source_dir_name = Path(source_dir).name
@@ -131,7 +143,7 @@ class PosixSession(OSSession):
         tar_path = Path(Path(source_dir).parent, tar_name)
 
         create_tarball(source_dir, compress_format, arcname=source_dir_name, exclude=exclude)
-        self.copy_to(tar_path, destination_dir)
+        self.copy_to(tar_path, destination_dir, force)
         tar_path.unlink()
 
         remote_tar_path = self.join_remote_path(destination_dir, tar_name)
@@ -158,6 +170,7 @@ class PosixSession(OSSession):
         remote_dir_path: str | PurePath,
         compress_format: TarCompressionFormat = TarCompressionFormat.none,
         exclude: str | list[str] | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.create_remote_tarball`."""
 
@@ -176,6 +189,9 @@ class PosixSession(OSSession):
             return ""
 
         target_tarball_path = f"{remote_dir_path}{compress_format.extension}"
+        if force:
+            self.remove_remote_file(target_tarball_path)
+
         self.send_command(
             f"tar caf {target_tarball_path}{generate_tar_exclude_args(exclude)} "
             f"-C {PurePath(remote_dir_path).parent} {PurePath(remote_dir_path).name}",
@@ -183,13 +199,20 @@ class PosixSession(OSSession):
         )
 
     def extract_remote_tarball(
-        self, remote_tarball_path: str | PurePath, expected_dir: str | PurePath | None = None
+        self,
+        remote_tarball_path: str | PurePath,
+        expected_dir: str | PurePath | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.extract_remote_tarball`."""
+        if force and expected_dir:
+            self.remove_remote_dir(expected_dir)
+
         self.send_command(
             f"tar xfm {remote_tarball_path} -C {PurePosixPath(remote_tarball_path).parent}",
             60,
         )
+
         if expected_dir:
             self.send_command(f"ls {expected_dir}", verify=True)
 

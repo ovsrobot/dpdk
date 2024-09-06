@@ -178,7 +178,9 @@ class OSSession(ABC):
         """
 
     @abstractmethod
-    def copy_from(self, source_file: str | PurePath, destination_dir: str | Path) -> None:
+    def copy_from(
+        self, source_file: str | PurePath, destination_dir: str | Path, force: bool = SETTINGS.force
+    ) -> None:
         """Copy a file from the remote node to the local filesystem.
 
         Copy `source_file` from the remote node associated with this remote
@@ -188,10 +190,14 @@ class OSSession(ABC):
             source_file: The file on the remote node.
             destination_dir: A dir path on the local filesystem, where the `source_file`
                 will be saved.
+            force: If :data:`True`, remove an already existing `source_file` at the
+                `destination_dir` before copying to prevent overwriting data.
         """
 
     @abstractmethod
-    def copy_to(self, source_file: str | Path, destination_dir: str | PurePath) -> None:
+    def copy_to(
+        self, source_file: str | Path, destination_dir: str | PurePath, force: bool = SETTINGS.force
+    ) -> None:
         """Copy a file from local filesystem to the remote node.
 
         Copy `source_file` from local filesystem to `destination_dir`
@@ -201,6 +207,8 @@ class OSSession(ABC):
             source_file: The file on the local filesystem.
             destination_dir: A dir path on the remote Node, where the `source_file`
                 will be saved.
+            force: If :data:`True`, remove an already existing `source_file` at the
+                `destination_dir` before copying to prevent overwriting data.
         """
 
     @abstractmethod
@@ -210,6 +218,7 @@ class OSSession(ABC):
         destination_dir: str | Path,
         compress_format: TarCompressionFormat = TarCompressionFormat.none,
         exclude: str | list[str] | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Copy a dir from the remote node to the local filesystem.
 
@@ -222,6 +231,8 @@ class OSSession(ABC):
             destination_dir: A dir path on the local filesystem.
             compress_format: The compression format to use. Default is no compression.
             exclude: Files or dirs to exclude before creating the tarball.
+            force: If :data:`True`, remove an already existing `source_dir` at the `destination_dir`
+                before copying to prevent overwriting data.
         """
 
     @abstractmethod
@@ -231,18 +242,21 @@ class OSSession(ABC):
         destination_dir: str | PurePath,
         compress_format: TarCompressionFormat = TarCompressionFormat.none,
         exclude: str | list[str] | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Copy a dir from the local filesystem to the remote node.
 
         Copy `source_dir` from the local filesystem to `destination_dir` on the remote node
-        associated with this remote session. The new remote dir will be created at
-        `destination_dir` path.
+        associated with this remote session. The new remote dir will be created
+        at `destination_dir` path.
 
         Args:
             source_dir: The dir on the local filesystem.
             destination_dir: A dir path on the remote node.
             compress_format: The compression format to use. Default is no compression.
             exclude: Files or dirs to exclude before creating the tarball.
+            force: If :data:`True`, remove an already existing `source_dir` at the `destination_dir`
+                before copying to prevent overwriting data.
         """
 
     @abstractmethod
@@ -275,6 +289,7 @@ class OSSession(ABC):
         remote_dir_path: str | PurePath,
         compress_format: TarCompressionFormat = TarCompressionFormat.none,
         exclude: str | list[str] | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
         """Create a tarball from dir on the remote node.
 
@@ -284,6 +299,8 @@ class OSSession(ABC):
             remote_dir_path: The path of dir on the remote node.
             compress_format: The compression format to use. Default is no compression.
             exclude: Files or dirs to exclude before creating the tarball.
+            force: If :data:`True`, remove an already existing tarball at the directory of
+                `remote_dir_path` before creating a new one to prevent overwriting data.
         """
 
     @abstractmethod
@@ -291,13 +308,17 @@ class OSSession(ABC):
         self,
         remote_tarball_path: str | PurePath,
         expected_dir: str | PurePath | None = None,
+        force: bool = SETTINGS.force,
     ) -> None:
-        """Extract remote tarball in its remote directory.
+        """Extract remote tarball in its remote dir.
 
         Args:
             remote_tarball_path: The path of the tarball on the remote node.
             expected_dir: If non-empty, check whether `expected_dir` exists after extracting
                 the archive.
+            force: If :data:`True` and `expected_dir` is defined, remove an already
+                existing `expected_dir` at the directory of `remote_dir_path` before
+                extracting to prevent overwriting data.
         """
 
     @abstractmethod
