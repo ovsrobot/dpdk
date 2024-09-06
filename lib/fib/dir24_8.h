@@ -10,6 +10,7 @@
 
 #include <rte_prefetch.h>
 #include <rte_branch_prediction.h>
+#include <rte_rcu_qsbr.h>
 
 /**
  * @file
@@ -30,6 +31,10 @@ struct dir24_8_tbl {
 	uint32_t	rsvd_tbl8s;	/**< Number of reserved tbl8s */
 	uint32_t	cur_tbl8s;	/**< Current number of tbl8s */
 	enum rte_fib_dir24_8_nh_sz	nh_sz;	/**< Size of nexthop entry */
+	/* RCU config. */
+	enum rte_fib_qsbr_mode rcu_mode;/* Blocking, defer queue. */
+	struct rte_rcu_qsbr *v;		/* RCU QSBR variable. */
+	struct rte_rcu_qsbr_dq *dq;	/* RCU QSBR defer queue. */
 	uint64_t	def_nh;		/**< Default next hop */
 	uint64_t	*tbl8;		/**< tbl8 table. */
 	uint64_t	*tbl8_idxes;	/**< bitmap containing free tbl8 idxes*/
@@ -249,5 +254,9 @@ dir24_8_get_lookup_fn(void *p, enum rte_fib_lookup_type type);
 int
 dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 	uint64_t next_hop, int op);
+
+int
+dir24_8_rcu_qsbr_add(struct dir24_8_tbl *dp, struct rte_fib_rcu_config *cfg,
+	const char *name);
 
 #endif /* _DIR24_8_H_ */
