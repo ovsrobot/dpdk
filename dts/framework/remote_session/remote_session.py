@@ -12,7 +12,7 @@ the structure of the result of a command execution.
 
 from abc import ABC, abstractmethod
 from dataclasses import InitVar, dataclass, field
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 from framework.config import NodeConfiguration
 from framework.exception import RemoteCommandExecutionError
@@ -199,7 +199,7 @@ class RemoteSession(ABC):
     def copy_from(
         self,
         source_file: str | PurePath,
-        destination_dir: str | PurePath,
+        destination_dir: str | Path,
     ) -> None:
         """Copy a file from the remote Node to the local filesystem.
 
@@ -215,7 +215,7 @@ class RemoteSession(ABC):
     @abstractmethod
     def copy_to(
         self,
-        source_file: str | PurePath,
+        source_file: str | Path,
         destination_dir: str | PurePath,
     ) -> None:
         """Copy a file from local filesystem to the remote Node.

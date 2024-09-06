@@ -5,7 +5,7 @@
 
 import socket
 import traceback
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 from fabric import Connection  # type: ignore[import-untyped]
 from invoke.exceptions import (  # type: ignore[import-untyped]
@@ -106,14 +106,14 @@ class SSHSession(RemoteSession):
     def copy_from(
         self,
         source_file: str | PurePath,
-        destination_dir: str | PurePath,
+        destination_dir: str | Path,
     ) -> None:
         """Overrides :meth:`~.remote_session.RemoteSession.copy_from`."""
         self.session.get(str(source_file), str(destination_dir))
 
     def copy_to(
         self,
-        source_file: str | PurePath,
+        source_file: str | Path,
         destination_dir: str | PurePath,
     ) -> None:
         """Overrides :meth:`~.remote_session.RemoteSession.copy_to`."""
