@@ -39,6 +39,8 @@ typedef int (rte_gpu_mem_unregister_t)(struct rte_gpu *dev, void *ptr);
 typedef int (rte_gpu_mem_cpu_map_t)(struct rte_gpu *dev, size_t size, void *ptr_in, void **ptr_out);
 typedef int (rte_gpu_mem_cpu_unmap_t)(struct rte_gpu *dev, void *ptr);
 typedef int (rte_gpu_wmb_t)(struct rte_gpu *dev);
+typedef int (rte_gpu_mem_dma_map_t)(struct rte_gpu *dev, size_t size, void *ptr_in, void **ptr_out);
+typedef int (rte_gpu_mem_dma_unmap_t)(struct rte_gpu *dev, void *ptr);
 
 struct rte_gpu_ops {
 	/* Get device info. If NULL, info is just copied. */
@@ -59,6 +61,10 @@ struct rte_gpu_ops {
 	rte_gpu_mem_cpu_unmap_t *mem_cpu_unmap;
 	/* Enforce GPU write memory barrier. */
 	rte_gpu_wmb_t *wmb;
+	/* DMA address of GPU memory. */
+	rte_gpu_mem_dma_map_t *mem_dma_map;
+	/* DMA unmap GPU memory. */
+	rte_gpu_mem_dma_unmap_t *mem_dma_unmap;
 };
 
 struct rte_gpu_mpshared {

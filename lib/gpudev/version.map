@@ -28,6 +28,8 @@ EXPERIMENTAL {
 	rte_gpu_mem_cpu_unmap;
 	rte_gpu_mem_unregister;
 	rte_gpu_wmb;
+	rte_gpu_mem_dma_map;
+	rte_gpu_mem_dma_unmap;
 };
 
 INTERNAL {
