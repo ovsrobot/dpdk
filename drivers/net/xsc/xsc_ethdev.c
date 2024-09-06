@@ -8,15 +8,79 @@
 #include "xsc_defs.h"
 #include "xsc_dev.h"
 #include "xsc_ethdev.h"
+#include "xsc_utils.h"
+
+#include "xsc_ctrl.h"
+
+const struct eth_dev_ops xsc_dev_ops = {
+};
 
 static int
 xsc_ethdev_init_one_representor(struct rte_eth_dev *eth_dev, void *init_params)
 {
 	struct xsc_repr_port *repr_port = (struct xsc_repr_port *)init_params;
 	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(eth_dev);
+	struct xsc_dev_config *config = &priv->config;
+	struct rte_ether_addr mac;
 
 	priv->repr_port = repr_port;
 	repr_port->drv_data = eth_dev;
+	priv->xdev = repr_port->xdev;
+	priv->mtu = RTE_ETHER_MTU;
+	priv->funcid_type = (repr_port->info.funcid & FUNCID_TYPE_MASK) >> 14;
+	priv->funcid = repr_port->info.funcid & FUNCID_MASK;
+	if (repr_port->info.port_type == XSC_PORT_TYPE_UPLINK ||
+		repr_port->info.port_type == XSC_PORT_TYPE_UPLINK_BOND)
+		priv->eth_type = RTE_ETH_REPRESENTOR_PF;
+	else
+		priv->eth_type = RTE_ETH_REPRESENTOR_VF;
+	priv->representor_id = repr_port->info.repr_id;
+	priv->dev_data = eth_dev->data;
+	priv->ifindex = repr_port->info.ifindex;
+
+	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+	eth_dev->data->mac_addrs = priv->mac;
+	if (rte_is_zero_ether_addr(eth_dev->data->mac_addrs)) {
+		if (priv->ifindex > 0) {
+			int ret  = xsc_get_mac(mac.addr_bytes, priv->ifindex);
+			if (ret != 0) {
+				PMD_DRV_LOG(ERR, "port %u cannot get MAC address",
+						eth_dev->data->port_id);
+				return -ENODEV;
+			}
+		} else {
+			rte_eth_random_addr(mac.addr_bytes);
+		}
+	}
+
+	xsc_mac_addr_add(eth_dev, &mac, 0);
+
+	if (priv->ifindex > 0)
+		xsc_get_mtu(&priv->mtu, priv->ifindex);
+
+	config->hw_csum = 1;
+
+	config->pph_flag =  priv->xdev->devargs.pph_mode;
+	if ((config->pph_flag & XSC_TX_PPH) != 0) {
+		config->tso = 0;
+	} else {
+		config->tso = 1;
+		if (config->tso)
+			config->tso_max_payload_sz = 1500;
+	}
+
+	priv->representor = !!priv->eth_type;
+	if (priv->representor) {
+		eth_dev->data->dev_flags |= RTE_ETH_DEV_REPRESENTOR;
+		eth_dev->data->representor_id = priv->representor_id;
+		eth_dev->data->backer_port_id = eth_dev->data->port_id;
+	}
+	eth_dev->dev_ops = &xsc_dev_ops;
+
+	eth_dev->rx_pkt_burst = rte_eth_pkt_burst_dummy;
+	eth_dev->tx_pkt_burst = rte_eth_pkt_burst_dummy;
+
+	rte_eth_dev_probing_finish(eth_dev);
 
 	return 0;
 }
