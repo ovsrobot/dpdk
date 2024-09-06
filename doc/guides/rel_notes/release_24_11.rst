@@ -25,35 +25,11 @@ New Features
 ------------
 
 .. This section should contain new features added in this release.
-   Sample format:
 
-   * **Add a title in the past tense with a full stop.**
+* **Added Ethernet device clock incremental rate adjustment.**
 
-     Add a short 1-2 sentence description in the past tense.
-     The description should be enough to allow someone scanning
-     the release notes to understand the new feature.
-
-     If the feature adds a lot of sub-features you can use a bullet list
-     like this:
-
-     * Added feature foo to do something.
-     * Enhanced feature bar to do something else.
-
-     Refer to the previous release notes for examples.
-
-     Suggested order in release notes items:
-     * Core libs (EAL, mempool, ring, mbuf, buses)
-     * Device abstraction libs and PMDs (ordered alphabetically by vendor name)
-       - ethdev (lib, PMDs)
-       - cryptodev (lib, PMDs)
-       - eventdev (lib, PMDs)
-       - etc
-     * Other libs
-     * Apps, Examples, Tools (if significant)
-
-     This section is a comment. Do not overwrite or remove it.
-     Also, make sure to start the actual text at the margin.
-     =======================================================
+  Added new function ``rte_eth_timesync_adjust_freq`` to
+  adjust the clock increment rate for Ethernet devices.
 
 
 Removed Items
