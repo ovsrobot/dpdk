@@ -803,11 +803,24 @@ int
 rte_thash_gen_key(uint8_t *key, int key_len, int reta_sz_log,
 	int entropy_start, int entropy_sz)
 {
-	RTE_SET_USED(key);
-	RTE_SET_USED(key_len);
-	RTE_SET_USED(reta_sz_log);
-	RTE_SET_USED(entropy_start);
-	RTE_SET_USED(entropy_sz);
+	int i, end, start;
+
+	/* define lfsr sequence range*/
+	end = entropy_start + entropy_sz + TOEPLITZ_HASH_LEN - 1;
+	start = end - (entropy_sz + reta_sz_log - 1);
+
+	if ((key == NULL) || (key_len * CHAR_BIT < entropy_start + entropy_sz) ||
+			(entropy_sz < reta_sz_log) || (reta_sz_log > TOEPLITZ_HASH_LEN))
+		return -EINVAL;
+
+	struct thash_lfsr *lfsr = alloc_lfsr(reta_sz_log);
+	if (lfsr == NULL)
+		return -ENOMEM;
+
+	for (i = start; i < end; i++)
+		set_bit(key, get_bit_lfsr(lfsr), i);
+
+	free_lfsr(lfsr);
 
 	return 0;
 }
