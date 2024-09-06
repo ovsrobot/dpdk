@@ -443,8 +443,8 @@ eal_usage(const char *prgname)
 	printf("\nUsage: %s ", prgname);
 	eal_common_usage();
 	printf("EAL Linux options:\n"
-	       "  --"OPT_SOCKET_MEM"        Memory to allocate on sockets (comma separated values)\n"
-	       "  --"OPT_SOCKET_LIMIT"      Limit memory allocation on sockets (comma separated values)\n"
+	       "  --"OPT_NUMA_MEM"        Memory to allocate on NUMA nodes (comma separated values)\n"
+	       "  --"OPT_NUMA_LIMIT"      Limit memory allocation on NUMA nodes (comma separated values)\n"
 	       "  --"OPT_HUGE_DIR"          Directory where hugetlbfs is mounted\n"
 	       "  --"OPT_FILE_PREFIX"       Prefix for hugepage filenames\n"
 	       "  --"OPT_CREATE_UIO_DEV"    Create /dev/uioX (usually done by hotplug)\n"
@@ -693,11 +693,11 @@ eal_parse_args(int argc, char **argv)
 			}
 			break;
 		}
-		case OPT_SOCKET_MEM_NUM:
+		case OPT_NUMA_MEM_NUM:
 			if (eal_parse_socket_arg(optarg,
 					internal_conf->numa_mem) < 0) {
 				EAL_LOG(ERR, "invalid parameters for --"
-						OPT_SOCKET_MEM);
+						OPT_NUMA_MEM);
 				eal_usage(prgname);
 				ret = -1;
 				goto out;
@@ -705,11 +705,11 @@ eal_parse_args(int argc, char **argv)
 			internal_conf->force_numa = 1;
 			break;
 
-		case OPT_SOCKET_LIMIT_NUM:
+		case OPT_NUMA_LIMIT_NUM:
 			if (eal_parse_socket_arg(optarg,
 					internal_conf->numa_limit) < 0) {
 				EAL_LOG(ERR, "invalid parameters for --"
-						OPT_SOCKET_LIMIT);
+						OPT_NUMA_LIMIT);
 				eal_usage(prgname);
 				ret = -1;
 				goto out;
