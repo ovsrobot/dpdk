@@ -106,18 +106,18 @@ class SSHSession(RemoteSession):
     def copy_from(
         self,
         source_file: str | PurePath,
-        destination_file: str | PurePath,
+        destination_dir: str | PurePath,
     ) -> None:
         """Overrides :meth:`~.remote_session.RemoteSession.copy_from`."""
-        self.session.get(str(destination_file), str(source_file))
+        self.session.get(str(source_file), str(destination_dir))
 
     def copy_to(
         self,
         source_file: str | PurePath,
-        destination_file: str | PurePath,
+        destination_dir: str | PurePath,
     ) -> None:
         """Overrides :meth:`~.remote_session.RemoteSession.copy_to`."""
-        self.session.put(str(source_file), str(destination_file))
+        self.session.put(str(source_file), str(destination_dir))
 
     def close(self) -> None:
         """Overrides :meth:`~.remote_session.RemoteSession.close`."""

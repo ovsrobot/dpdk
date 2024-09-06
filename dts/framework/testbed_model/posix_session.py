@@ -88,18 +88,18 @@ class PosixSession(OSSession):
     def copy_from(
         self,
         source_file: str | PurePath,
-        destination_file: str | PurePath,
+        destination_dir: str | PurePath,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_from`."""
-        self.remote_session.copy_from(source_file, destination_file)
+        self.remote_session.copy_from(source_file, destination_dir)
 
     def copy_to(
         self,
         source_file: str | PurePath,
-        destination_file: str | PurePath,
+        destination_dir: str | PurePath,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_to`."""
-        self.remote_session.copy_to(source_file, destination_file)
+        self.remote_session.copy_to(source_file, destination_dir)
 
     def remove_remote_dir(
         self,

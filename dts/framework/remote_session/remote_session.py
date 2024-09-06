@@ -199,32 +199,34 @@ class RemoteSession(ABC):
     def copy_from(
         self,
         source_file: str | PurePath,
-        destination_file: str | PurePath,
+        destination_dir: str | PurePath,
     ) -> None:
         """Copy a file from the remote Node to the local filesystem.
 
         Copy `source_file` from the remote Node associated with this remote session
-        to `destination_file` on the local filesystem.
+        to `destination_dir` on the local filesystem.
 
         Args:
             source_file: The file on the remote Node.
-            destination_file: A file or directory path on the local filesystem.
+            destination_dir: A dir path on the local filesystem, where the `source_file`
+                will be saved.
         """
 
     @abstractmethod
     def copy_to(
         self,
         source_file: str | PurePath,
-        destination_file: str | PurePath,
+        destination_dir: str | PurePath,
     ) -> None:
         """Copy a file from local filesystem to the remote Node.
 
-        Copy `source_file` from local filesystem to `destination_file` on the remote Node
+        Copy `source_file` from local filesystem to `destination_dir` on the remote Node
         associated with this remote session.
 
         Args:
             source_file: The file on the local filesystem.
-            destination_file: A file or directory path on the remote Node.
+            destination_dir: A dir path on the remote Node, where the `source_file`
+                will be saved.
         """
 
     @abstractmethod
