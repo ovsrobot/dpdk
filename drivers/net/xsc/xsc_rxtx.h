@@ -175,6 +175,15 @@ union xsc_recv_doorbell {
 	uint32_t recv_data;
 };
 
+union xsc_send_doorbell {
+	struct {
+		uint32_t next_pid : 16;
+		uint32_t qp_num : 15;
+		uint32_t rsv : 1;
+	};
+	uint32_t send_data;
+};
+
 uint16_t xsc_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n);
 uint16_t xsc_tx_burst(void *dpdk_txq, struct rte_mbuf **pkts, uint16_t pkts_n);
 
