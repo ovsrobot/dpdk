@@ -22,5 +22,6 @@ int xsc_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac, uint32
 int xsc_get_mtu(uint16_t *mtu, uint32_t ifindex);
 int xsc_set_mtu(uint16_t mtu, uint32_t ifindex);
 int xsc_get_mac(uint8_t *mac, uint32_t ifindex);
+int xsc_link_process(struct rte_eth_dev *dev, uint32_t ifindex, unsigned int flags);
 
 #endif
