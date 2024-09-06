@@ -49,12 +49,6 @@ The command line arguments along with the supported environment variables are:
 
     Path to DPDK source code tarball to test.
 
-.. option:: --revision, --rev, --git-ref
-.. envvar:: DTS_DPDK_REVISION_ID
-
-    Git revision ID to test. Could be commit, tag, tree ID etc.
-    To test local changes, first commit them, then use their commit ID.
-
 .. option:: --remote-source
 .. envvar:: DTS_REMOTE_SOURCE
 
@@ -101,8 +95,6 @@ from pathlib import Path
 from typing import Callable
 
 from .config import DPDKLocation, TestSuiteConfig
-from .exception import ConfigurationError
-from .utils import DPDKGitTarball, get_commit_id
 
 
 @dataclass(slots=True)
@@ -249,14 +241,6 @@ class _EnvVarHelpFormatter(ArgumentDefaultsHelpFormatter):
         return help
 
 
-def _parse_revision_id(rev_id: str) -> str:
-    """Validate revision ID and retrieve corresponding commit ID."""
-    try:
-        return get_commit_id(rev_id)
-    except ConfigurationError:
-        raise argparse.ArgumentTypeError("The Git revision ID supplied is invalid or ambiguous")
-
-
 def _required_with_one_of(parser: _DTSArgumentParser, action: Action, *required_dests: str) -> None:
     """Verify that `action` is listed together with `required_dests`.
 
@@ -371,18 +355,6 @@ def _get_parser() -> _DTSArgumentParser:
         dest="dpdk_tarball_path",
     )
     _add_env_var_to_action(action, "DPDK_TARBALL")
-
-    action = dpdk_source.add_argument(
-        "--revision",
-        "--rev",
-        "--git-ref",
-        type=_parse_revision_id,
-        help="Git revision ID to test. Could be commit, tag, tree ID etc. "
-        "To test local changes, first commit them, then use their commit ID.",
-        metavar="ID",
-        dest="dpdk_revision_id",
-    )
-    _add_env_var_to_action(action)
 
     action = parser.add_argument(
         "--remote-source",
@@ -525,9 +497,6 @@ def get_settings() -> Settings:
     """
     parser = _get_parser()
     args = parser.parse_args()
-
-    if args.dpdk_revision_id:
-        args.dpdk_tarball_path = Path(DPDKGitTarball(args.dpdk_revision_id, args.output_dir))
 
     args.dpdk_location = _process_dpdk_location(
         args.dpdk_tree_path, args.dpdk_tarball_path, args.remote_source, args.build_dir
