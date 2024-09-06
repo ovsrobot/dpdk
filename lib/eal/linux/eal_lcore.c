@@ -13,6 +13,7 @@
 
 #define SYS_CPU_DIR "/sys/devices/system/cpu/cpu%u"
 #define CORE_ID_FILE "topology/core_id"
+#define PACKAGE_ID_FILE "topology/physical_package_id"
 #define NUMA_NODE_PATH "/sys/devices/system/node"
 
 /* Check if a cpu is present by the presence of the cpu information for it */
@@ -50,6 +51,33 @@ eal_cpu_socket_id(unsigned lcore_id)
 		if (access(path, F_OK) == 0)
 			return socket;
 	}
+	return 0;
+}
+
+/*
+ * Get CPU package ID for a logical core.
+ *
+ * This searches each nodeX directories in /sys for the symlink for the given
+ * lcore_id and returns the numa node where the lcore is found. If lcore is not
+ * found on any numa node, returns zero.
+ */
+unsigned
+eal_cpu_package_id(unsigned lcore_id)
+{
+	char path[PATH_MAX];
+	unsigned long id;
+
+	int len = snprintf(path, sizeof(path),
+			SYS_CPU_DIR "/%s", lcore_id, PACKAGE_ID_FILE);
+	if (len <= 0 || (unsigned)len >= sizeof(path))
+		goto err;
+	if (eal_parse_sysfs_value(path, &id) != 0)
+		goto err;
+	return (unsigned)id;
+
+err:
+	EAL_LOG(ERR, "Error reading package id value from %s "
+			"for lcore %u - assuming package 0", SYS_CPU_DIR, lcore_id);
 	return 0;
 }
 

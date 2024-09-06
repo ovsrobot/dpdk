@@ -234,6 +234,13 @@ eal_cpu_socket_id(unsigned int lcore_id)
 }
 
 unsigned
+eal_cpu_package_id(unsigned int lcore_id)
+{
+	/* FIXME: Windows does support reporting Package ID */
+	return cpu_map.lcores[lcore_id].socket_id;
+}
+
+unsigned
 eal_cpu_core_id(unsigned int lcore_id)
 {
 	return cpu_map.lcores[lcore_id].core_id;

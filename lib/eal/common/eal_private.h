@@ -31,6 +31,7 @@ struct lcore_config {
 
 	volatile RTE_ATOMIC(enum rte_lcore_state_t) state; /**< lcore state */
 	unsigned int numa_id;    /**< NUMA node ID for this lcore */
+	unsigned int package_id;   /**< Physical package ID for this lcore */
 	unsigned int core_id;      /**< core number on socket for this lcore */
 	int core_index;            /**< relative index, starting from 0 */
 	uint8_t core_role;         /**< role of core eg: OFF, RTE, SERVICE */
@@ -48,6 +49,8 @@ struct rte_config {
 	uint32_t lcore_count;        /**< Number of available logical cores. */
 	uint32_t numa_node_count;    /**< Number of detected NUMA nodes. */
 	uint32_t numa_nodes[RTE_MAX_NUMA_NODES]; /**< List of detected NUMA nodes. */
+	uint32_t package_count;      /**< Number of detected physical packages. */
+	uint32_t packages[RTE_MAX_NUMA_NODES]; /**< List of detected physical packages. */
 	uint32_t service_lcore_count;/**< Number of available service cores. */
 	enum rte_lcore_role_t lcore_role[RTE_MAX_LCORE]; /**< State of cores. */
 

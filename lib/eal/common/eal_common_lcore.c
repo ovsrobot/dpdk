@@ -144,7 +144,9 @@ rte_eal_cpu_init(void)
 	unsigned lcore_id;
 	unsigned count = 0;
 	unsigned int socket_id, prev_socket_id;
+	unsigned int package_id, prev_package_id;
 	int lcore_to_socket_id[RTE_MAX_LCORE];
+	int lcore_to_package_id[RTE_MAX_LCORE];
 
 	/*
 	 * Parse the maximum set of logical cores, detect the subset of running
@@ -160,6 +162,10 @@ rte_eal_cpu_init(void)
 		socket_id = eal_cpu_socket_id(lcore_id);
 		lcore_to_socket_id[lcore_id] = socket_id;
 
+		/* find physical package ID */
+		package_id = eal_cpu_package_id(lcore_id);
+		lcore_to_package_id[lcore_id] = package_id;
+
 		if (eal_cpu_detected(lcore_id) == 0) {
 			config->lcore_role[lcore_id] = ROLE_OFF;
 			lcore_config[lcore_id].core_index = -1;
@@ -174,6 +180,7 @@ rte_eal_cpu_init(void)
 		lcore_config[lcore_id].core_role = ROLE_RTE;
 		lcore_config[lcore_id].core_id = eal_cpu_core_id(lcore_id);
 		lcore_config[lcore_id].numa_id = socket_id;
+		lcore_config[lcore_id].package_id = package_id;
 		EAL_LOG(DEBUG, "Detected lcore %u as "
 				"core %u on NUMA node %u",
 				lcore_id, lcore_config[lcore_id].core_id,
@@ -199,14 +206,25 @@ rte_eal_cpu_init(void)
 	qsort(lcore_to_socket_id, RTE_DIM(lcore_to_socket_id),
 			sizeof(lcore_to_socket_id[0]), socket_id_cmp);
 
+	/* sort all package id's in ascending order */
+	qsort(lcore_to_package_id, RTE_DIM(lcore_to_package_id),
+			sizeof(lcore_to_package_id[0]), socket_id_cmp);
+
 	prev_socket_id = -1;
+	prev_package_id = -1;
 	config->numa_node_count = 0;
+	config->package_count = 0;
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		socket_id = lcore_to_socket_id[lcore_id];
+		package_id = lcore_to_package_id[lcore_id];
 		if (socket_id != prev_socket_id)
 			config->numa_nodes[config->numa_node_count++] =
 					socket_id;
+		if (package_id != prev_package_id)
+			config->packages[config->package_count++] =
+					package_id;
 		prev_socket_id = socket_id;
+		prev_package_id = package_id;
 	}
 	EAL_LOG(INFO, "Detected NUMA nodes: %u", config->numa_node_count);
 

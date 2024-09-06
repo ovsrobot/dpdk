@@ -41,6 +41,12 @@ eal_cpu_socket_id(__rte_unused unsigned cpu_id)
 	return 0;
 }
 
+unsigned
+eal_cpu_package_id(__rte_unused unsigned cpu_id)
+{
+	return 0;
+}
+
 /* Check if a cpu is present by the presence of the
  * cpu information for it.
  */

@@ -28,6 +28,17 @@ __rte_noreturn uint32_t eal_thread_loop(void *arg);
 unsigned eal_cpu_socket_id(unsigned cpu_id);
 
 /**
+ * Get the package id from cpu id.
+ * This function is private to EAL.
+ *
+ * @param cpu_id
+ *   The logical process id.
+ * @return
+ *   socket_id or SOCKET_ID_ANY
+ */
+unsigned eal_cpu_package_id(unsigned cpu_id);
+
+/**
  * Default buffer size to use with eal_thread_dump_affinity()
  */
 #define RTE_CPU_AFFINITY_STR_LEN            256
