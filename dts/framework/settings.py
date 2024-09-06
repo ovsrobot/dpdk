@@ -85,9 +85,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from pydantic import ValidationError
-
-from .config import TestSuiteConfig
+from .config import TestSuitesConfigs
 from .exception import ConfigurationError
 from .utils import DPDKGitTarball, get_commit_id
 
@@ -114,7 +112,7 @@ class Settings:
     #:
     compile_timeout: float = 1200
     #:
-    test_suites: list[TestSuiteConfig] = field(default_factory=list)
+    test_suites: list[tuple[str, list[str]]] = field(default_factory=list)
     #:
     re_run: int = 0
 
@@ -382,7 +380,7 @@ def _get_parser() -> _DTSArgumentParser:
 
 def _process_test_suites(
     parser: _DTSArgumentParser, args: list[list[str]]
-) -> list[TestSuiteConfig]:
+) -> list[tuple[str, list[str]]]:
     """Process the given argument to a list of :class:`TestSuiteConfig` to execute.
 
     Args:
@@ -398,16 +396,17 @@ def _process_test_suites(
         # Environment variable in the form of "SUITE1 CASE1 CASE2, SUITE2 CASE1, SUITE3, ..."
         args = [suite_with_cases.split() for suite_with_cases in args[0][0].split(",")]
 
-    try:
-        return [TestSuiteConfig(test_suite, test_cases) for [test_suite, *test_cases] in args]
-    except ValidationError as e:
-        print(
-            "An error has occurred while validating the test suites supplied in the "
-            f"{'environment variable' if action else 'arguments'}:",
-            file=sys.stderr,
-        )
-        print(e, file=sys.stderr)
-        sys.exit(1)
+    available_test_suites = TestSuitesConfigs.available_test_suites()
+    for test_suite_name, *_ in args:
+        if test_suite_name not in available_test_suites:
+            print(
+                f"The test suite {test_suite_name} supplied in the "
+                f"{'environment variable' if action else 'arguments'} is invalid.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    return [(test_suite, test_cases) for test_suite, *test_cases in args]
 
 
 def get_settings() -> Settings:

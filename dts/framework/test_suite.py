@@ -23,7 +23,7 @@ from importlib import import_module
 from ipaddress import IPv4Interface, IPv6Interface, ip_interface
 from pkgutil import iter_modules
 from types import FunctionType, ModuleType
-from typing import ClassVar, NamedTuple, Union
+from typing import ClassVar, Iterable, NamedTuple, Union, get_type_hints
 
 from pydantic.alias_generators import to_pascal
 from scapy.layers.inet import IP  # type: ignore[import-untyped]
@@ -31,6 +31,7 @@ from scapy.layers.l2 import Ether  # type: ignore[import-untyped]
 from scapy.packet import Packet, Padding  # type: ignore[import-untyped]
 from typing_extensions import Self
 
+from framework.config import TestSuiteConfig
 from framework.testbed_model.port import Port, PortLink
 from framework.testbed_model.sut_node import SutNode
 from framework.testbed_model.tg_node import TGNode
@@ -38,7 +39,7 @@ from framework.testbed_model.traffic_generator.capturing_traffic_generator impor
     PacketFilteringConfig,
 )
 
-from .exception import TestCaseVerifyError
+from .exception import InternalError, TestCaseVerifyError
 from .logger import DTSLogger, get_dts_logger
 from .utils import get_packet_summaries
 
@@ -78,6 +79,7 @@ class TestSuite:
     #: Whether the test suite is blocking. A failure of a blocking test suite
     #: will block the execution of all subsequent test suites in the current build target.
     is_blocking: ClassVar[bool] = False
+    config: TestSuiteConfig
     _logger: DTSLogger
     _port_links: list[PortLink]
     _sut_port_ingress: Port
@@ -93,6 +95,7 @@ class TestSuite:
         self,
         sut_node: SutNode,
         tg_node: TGNode,
+        config: TestSuiteConfig,
     ):
         """Initialize the test suite testbed information and basic configuration.
 
@@ -102,9 +105,11 @@ class TestSuite:
         Args:
             sut_node: The SUT node where the test suite will run.
             tg_node: The TG node where the test suite will run.
+            config: The test suite configuration.
         """
         self.sut_node = sut_node
         self.tg_node = tg_node
+        self.config = config
         self._logger = get_dts_logger(self.__class__.__name__)
         self._port_links = []
         self._process_links()
@@ -468,6 +473,21 @@ class TestSuiteSpec:
         raise Exception("class not found in eligible test module")
 
     @cached_property
+    def config_type(self) -> type[TestSuiteConfig]:
+        """A reference to the test suite's configuration type."""
+        fields = get_type_hints(self.class_type)
+        config_type = fields.get("config")
+        if config_type is None:
+            raise InternalError(
+                "Test suite class {self.class_name} is missing the `config` attribute."
+            )
+        if not issubclass(config_type, TestSuiteConfig):
+            raise InternalError(
+                f"Test suite class {self.class_name} has an invalid configuration type assigned."
+            )
+        return config_type
+
+    @cached_property
     def test_cases(self) -> list[TestCase]:
         """A list of all the available test cases."""
         test_cases = []
@@ -532,6 +552,14 @@ class TestSuiteSpec:
                 pass
 
         return test_suites
+
+    def validate_test_cases(self, test_cases_names: Iterable[str]) -> None:
+        """Validate if the supplied test cases exist in the test suite."""
+        available_test_cases = map(lambda t: t.name, self.test_cases)
+        for requested_test_case in test_cases_names:
+            assert (
+                requested_test_case in available_test_cases
+            ), f"{requested_test_case} is not a valid test case for test suite {self.name}."
 
 
 AVAILABLE_TEST_SUITES: list[TestSuiteSpec] = TestSuiteSpec.discover_all()

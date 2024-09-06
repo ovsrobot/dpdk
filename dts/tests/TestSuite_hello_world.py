@@ -7,6 +7,7 @@ Run the helloworld example app and verify it prints a message for each used core
 No other EAL parameters apart from cores are used.
 """
 
+from framework.config import TestSuiteConfig
 from framework.remote_session.dpdk_shell import compute_eal_params
 from framework.test_suite import TestSuite
 from framework.testbed_model.cpu import (
@@ -16,8 +17,17 @@ from framework.testbed_model.cpu import (
 )
 
 
+class HelloWorldConfig(TestSuiteConfig):
+    """Example custom configuration for the `TestHelloWorld` test suite."""
+
+    #: Timeout for the DPDK apps
+    timeout: int = 50
+
+
 class TestHelloWorld(TestSuite):
     """DPDK hello world app test suite."""
+
+    config: HelloWorldConfig
 
     def set_up_suite(self) -> None:
         """Set up the test suite.
@@ -59,7 +69,7 @@ class TestHelloWorld(TestSuite):
         eal_para = compute_eal_params(
             self.sut_node, lcore_filter_specifier=LogicalCoreList(self.sut_node.lcores)
         )
-        result = self.sut_node.run_dpdk_app(self.app_helloworld_path, eal_para, 50)
+        result = self.sut_node.run_dpdk_app(self.app_helloworld_path, eal_para, self.config.timeout)
         for lcore in self.sut_node.lcores:
             self.verify(
                 f"hello from core {int(lcore)}" in result.stdout,

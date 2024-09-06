@@ -9,7 +9,7 @@ import os
 
 from pydantic.json_schema import GenerateJsonSchema
 
-from framework.config import ConfigurationType
+from framework.config import ConfigurationType, TestSuitesConfigs
 
 DTS_DIR = os.path.dirname(os.path.realpath(__file__))
 RELATIVE_PATH_TO_SCHEMA = "framework/config/conf_yaml_schema.json"
@@ -26,6 +26,8 @@ class GenerateSchemaWithDialect(GenerateJsonSchema):
 
 
 try:
+    TestSuitesConfigs.fix_custom_config_annotations()
+
     path = os.path.join(DTS_DIR, RELATIVE_PATH_TO_SCHEMA)
 
     with open(path, "w") as schema_file:

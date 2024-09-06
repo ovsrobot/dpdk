@@ -15,8 +15,8 @@ test_runs:
     func: true # enable functional testing
     skip_smoke_tests: false # optional
     test_suites: # the following test suites will be run in their entirety
-      - hello_world
-      - os_udp
+      hello_world: all
+      os_udp: all
     # The machine running the DPDK test executable
     system_under_test_node:
       node_name: "SUT 1"

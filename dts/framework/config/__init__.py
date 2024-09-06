@@ -35,10 +35,12 @@ All of them use slots and are frozen:
       and makes it thread safe should we ever want to move in that direction.
 """
 
+# pylama:ignore=W0611
+
 from enum import Enum, auto, unique
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple, Protocol
+from typing import Annotated, Literal, NamedTuple, Protocol
 
 import yaml
 from pydantic import (
@@ -50,15 +52,14 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic.config import JsonDict
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
 from framework.exception import ConfigurationError
 from framework.utils import StrEnum
 
-if TYPE_CHECKING:
-    from framework.test_suite import TestSuiteSpec
+from .generated import CUSTOM_CONFIG_TYPES, TestSuitesConfigs
+from .test_suite import TestSuiteConfig
 
 
 @unique
@@ -289,7 +290,7 @@ class NodeInfo:
     kernel_version: str
 
 
-@dataclass(slots=True, frozen=True, kw_only=True, config=ConfigDict(extra="forbid"))
+@dataclass(frozen=True, kw_only=True, config=ConfigDict(extra="forbid"))
 class BuildTargetConfiguration:
     """DPDK build configuration.
 
@@ -329,89 +330,6 @@ class BuildTargetInfo:
     compiler_version: str
 
 
-def make_parsable_schema(schema: JsonDict):
-    """Updates a model's JSON schema to make a string representation a valid alternative.
-
-    This utility function is required to be used with models that can be represented and validated
-    as a string instead of an object mapping. Normally the generated JSON schema will just show
-    the object mapping. This function wraps the mapping under an anyOf property sequenced with a
-    string type.
-
-    This function is a valid `Callable` for the `json_schema_extra` attribute of
-    `~pydantic.config.ConfigDict`.
-    """
-    inner_schema = schema.copy()
-    del inner_schema["title"]
-
-    title = schema.get("title")
-    description = schema.get("description")
-
-    schema.clear()
-
-    schema["title"] = title
-    schema["description"] = description
-    schema["anyOf"] = [inner_schema, {"type": "string"}]
-
-
-@dataclass(
-    frozen=True,
-    config=ConfigDict(extra="forbid", json_schema_extra=make_parsable_schema),
-)
-class TestSuiteConfig:
-    """Test suite configuration.
-
-    Information about a single test suite to be executed. It can be represented and validated as a
-    string type in the form of: ``TEST_SUITE [TEST_CASE, ...]``, in the configuration file.
-
-    Attributes:
-        test_suite: The name of the test suite module without the starting ``TestSuite_``.
-        test_cases: The names of test cases from this test suite to execute.
-            If empty, all test cases will be executed.
-    """
-
-    test_suite_name: str = Field(
-        title="Test suite name",
-        description="The identifying name of the test suite.",
-        alias="test_suite",
-    )
-    test_cases_names: list[str] = Field(
-        default_factory=list,
-        title="Test cases by name",
-        description="The identifying name of the test cases of the test suite.",
-        alias="test_cases",
-    )
-
-    @cached_property
-    def test_suite_spec(self) -> "TestSuiteSpec":
-        """The specification of the requested test suite."""
-        from framework.test_suite import find_by_name
-
-        test_suite_spec = find_by_name(self.test_suite_name)
-        assert test_suite_spec is not None, f"{self.test_suite_name} is not a valid test suite name"
-        return test_suite_spec
-
-    @model_validator(mode="before")
-    @classmethod
-    def convert_from_string(cls, data: Any) -> Any:
-        """Convert the string representation into a valid mapping."""
-        if isinstance(data, str):
-            [test_suite, *test_cases] = data.split()
-            return dict(test_suite=test_suite, test_cases=test_cases)
-        return data
-
-    @model_validator(mode="after")
-    def validate_names(self) -> Self:
-        """Validate the supplied test suite and test cases names."""
-        available_test_cases = map(lambda t: t.name, self.test_suite_spec.test_cases)
-        for requested_test_case in self.test_cases_names:
-            assert requested_test_case in available_test_cases, (
-                f"{requested_test_case} is not a valid test case "
-                f"for test suite {self.test_suite_name}"
-            )
-
-        return self
-
-
 @dataclass(slots=True, frozen=True, kw_only=True, config=ConfigDict(extra="forbid"))
 class TestRunSUTNodeConfiguration:
     """The SUT node configuration of a test run.
@@ -446,7 +364,7 @@ class TestRunConfiguration:
     perf: bool = Field(description="Enable performance testing.")
     func: bool = Field(description="Enable functional testing.")
     skip_smoke_tests: bool = False
-    test_suites: list[TestSuiteConfig] = Field(min_length=1)
+    test_suites: TestSuitesConfigs
     system_under_test_node: TestRunSUTNodeConfiguration
     traffic_generator_node: str
 
@@ -581,7 +499,7 @@ def load_config(config_file_path: Path) -> Configuration:
         config_data = yaml.safe_load(f)
 
     try:
-        ConfigurationType.json_schema()
+        TestSuitesConfigs.fix_custom_config_annotations()
         return ConfigurationType.validate_python(config_data)
     except ValidationError as e:
         raise ConfigurationError("failed to load the supplied configuration") from e

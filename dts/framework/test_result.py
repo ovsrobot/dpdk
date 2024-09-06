@@ -64,17 +64,7 @@ class TestSuiteWithCases:
 
     test_suite_class: type[TestSuite]
     test_cases: list[FunctionType]
-
-    def create_config(self) -> TestSuiteConfig:
-        """Generate a :class:`TestSuiteConfig` from the stored test suite with test cases.
-
-        Returns:
-            The :class:`TestSuiteConfig` representation.
-        """
-        return TestSuiteConfig(
-            test_suite=self.test_suite_class.__name__,
-            test_cases=[test_case.__name__ for test_case in self.test_cases],
-        )
+    config: TestSuiteConfig
 
 
 class Result(Enum):

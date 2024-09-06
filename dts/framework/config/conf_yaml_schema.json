@@ -66,6 +66,33 @@
       "title": "Compiler",
       "type": "string"
     },
+    "HelloWorldConfig": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "test_cases": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Test Cases",
+              "type": "array"
+            },
+            "timeout": {
+              "default": 50,
+              "title": "Timeout",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "Example custom configuration for the `TestHelloWorld` test suite.",
+      "title": "HelloWorldConfig"
+    },
     "HugepageConfiguration": {
       "additionalProperties": false,
       "description": "The hugepage configuration of :class:`~framework.testbed_model.node.Node`\\s.\n\nAttributes:\n    number_of: The number of hugepages to allocate.\n    force_first_numa: If :data:`True`, the hugepages will be configured on the first NUMA node.",
@@ -373,14 +400,6 @@
           "title": "Func",
           "type": "boolean"
         },
-        "test_suites": {
-          "items": {
-            "$ref": "#/$defs/TestSuiteConfig"
-          },
-          "minItems": 1,
-          "title": "Test Suites",
-          "type": "array"
-        },
         "build_targets": {
           "items": {
             "$ref": "#/$defs/BuildTargetConfiguration"
@@ -393,6 +412,9 @@
           "title": "Skip Smoke Tests",
           "type": "boolean"
         },
+        "test_suites": {
+          "$ref": "#/$defs/TestSuitesConfigs"
+        },
         "system_under_test_node": {
           "$ref": "#/$defs/TestRunSUTNodeConfiguration"
         },
@@ -404,8 +426,8 @@
       "required": [
         "perf",
         "func",
-        "test_suites",
         "build_targets",
+        "test_suites",
         "system_under_test_node",
         "traffic_generator_node"
       ],
@@ -439,31 +461,63 @@
         {
           "additionalProperties": false,
           "properties": {
-            "test_suite": {
-              "description": "The identifying name of the test suite.",
-              "title": "Test suite name",
-              "type": "string"
-            },
             "test_cases": {
-              "description": "The identifying name of the test cases of the test suite.",
               "items": {
                 "type": "string"
               },
-              "title": "Test cases by name",
+              "title": "Test Cases",
               "type": "array"
             }
           },
-          "required": [
-            "test_suite"
-          ],
           "type": "object"
         },
         {
           "type": "string"
         }
       ],
-      "description": "Test suite configuration.\n\nInformation about a single test suite to be executed. It can be represented and validated as a\nstring type in the form of: ``TEST_SUITE [TEST_CASE, ...]``, in the configuration file.\n\nAttributes:\n    test_suite: The name of the test suite module without the starting ``TestSuite_``.\n    test_cases: The names of test cases from this test suite to execute.\n        If empty, all test cases will be executed.",
+      "description": "Test suite configuration base model.\n\nBy default the configuration of a generic test suite does not contain any attributes. Any test\nsuite should inherit this class to create their own custom configuration. Finally override the\ntype of the :attr:`~TestSuite.config` to use the newly created one.\n\nAttributes:\n    test_cases_names: The names of test cases from this test suite to execute. If empty, all\n        test cases will be executed.",
       "title": "TestSuiteConfig"
+    },
+    "TestSuitesConfigs": {
+      "additionalProperties": false,
+      "description": "Configuration mapping class to select and configure the test suites.\n\nBefore using this class, the custom configuration type annotations need to be fixed.\nTo do so, you need to call the `fix_custom_config_annotations` method.",
+      "properties": {
+        "hello_world": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HelloWorldConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "os_udp": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TestSuiteConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pmd_buffer_scatter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TestSuiteConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "TestSuitesConfigs",
+      "type": "object"
     }
   },
   "description": "DTS testbed and test configuration.\n\nAttributes:\n    test_runs: Test run configurations.\n    nodes: Node configurations.",

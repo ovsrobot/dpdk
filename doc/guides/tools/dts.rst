@@ -391,6 +391,26 @@ There are four types of methods that comprise a test suite:
    should be implemented in the ``SutNode`` class (and the underlying classes that ``SutNode`` uses)
    and used by the test suite via the ``sut_node`` field.
 
+The test suites can also implement their own custom configuration fields. This can be achieved by
+creating a new test suite config file which inherits from ``TestSuiteConfig`` defined in
+``dts/framework/config/test_suite.py``. So that this new custom configuration class is used, the
+test suite class must override the ``config`` attribute annotation with your new class, for example::
+
+.. code:: python
+   class CustomConfig(TestSuiteConfig):
+      my_custom_field: int = 10
+
+   class TestMyNewTestSuite(TestSuite):
+      config: CustomConfig
+
+Finally, the test suites and the custom configuration files need to linked in the global configuration.
+This can be easily achieved by running the ``dts/generate-test-mappings.py``, e.g.:
+
+.. code-block:: console
+
+   $ poetry shell
+   (dts-py3.10) $ ./generate-test-mappings.py
+
 
 .. _dts_dev_tools:
 
@@ -510,18 +530,13 @@ _`Network port`
    ``peer_pci``           *string* – the PCI address of the peer node port. **Example**: ``000a:01:00.1``
    ====================== =================================================================================
 
-_`Test suite`
-   *string* – name of the test suite to run. **Examples**: ``hello_world``, ``os_udp``
+_`Test suites`
+   *mapping* – selects the test suites to run. Each mapping key corresponds to the test suite name.
 
-_`Test target`
-   *mapping* – selects specific test cases to run from a test suite. Mapping is described as follows:
-
-   ========= ===============================================================================================
-   ``suite`` See `Test suite`_
-   ``cases`` (*optional*) *sequence* of *string* – list of the selected test cases in the test suite to run.
-
-             Unknown test cases will be silently ignored.
-   ========= ===============================================================================================
+   The value of the mapping can either "all" to select all the test cases in that test suite, the test
+   cases names divided by a space. Or it can be another mapping to set any custom fields for the test suite.
+   In the case of a mapping, all the test cases are selected by default. In order to manually select test
+   cases, the ``test_cases`` field can be set with a list of strings, each entry being a test case name.
 
 
 Properties
@@ -542,7 +557,7 @@ involved in the testing. These can be defined with the following mappings:
    +----------------------------+-------------------------------------------------------------------+
    | ``func``                   | *boolean* – Enable functional testing.                            |
    +----------------------------+-------------------------------------------------------------------+
-   | ``test_suites``            | *sequence* of **one of** `Test suite`_ **or** `Test target`_      |
+   | ``test_suites``            | See `Test suites`_                                                |
    +----------------------------+-------------------------------------------------------------------+
    | ``skip_smoke_tests``       | (*optional*) *boolean* – Allows you to skip smoke testing         |
    |                            | if ``true``.                                                      |

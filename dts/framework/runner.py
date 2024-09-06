@@ -24,10 +24,13 @@ from pathlib import Path
 from types import FunctionType
 from typing import Iterable
 
+from pydantic import ValidationError
+
 from framework.testbed_model.sut_node import SutNode
 from framework.testbed_model.tg_node import TGNode
 
 from .config import (
+    CUSTOM_CONFIG_TYPES,
     BuildTargetConfiguration,
     Configuration,
     SutNodeConfiguration,
@@ -36,7 +39,12 @@ from .config import (
     TGNodeConfiguration,
     load_config,
 )
-from .exception import BlockingTestSuiteError, SSHTimeoutError, TestCaseVerifyError
+from .exception import (
+    BlockingTestSuiteError,
+    ConfigurationError,
+    SSHTimeoutError,
+    TestCaseVerifyError,
+)
 from .logger import DTSLogger, DtsStage, get_dts_logger
 from .settings import SETTINGS
 from .test_result import (
@@ -142,12 +150,7 @@ class DTSRunner:
                 self._logger.set_stage(DtsStage.test_run_setup)
                 self._logger.info(f"Running test run with SUT '{sut_node_config.name}'.")
                 test_run_result = self._result.add_test_run(test_run_config)
-                # we don't want to modify the original config, so create a copy
-                test_run_test_suites = list(
-                    SETTINGS.test_suites if SETTINGS.test_suites else test_run_config.test_suites
-                )
-                if not test_run_config.skip_smoke_tests:
-                    test_run_test_suites[:0] = [TestSuiteConfig("smoke_tests")]
+                test_run_test_suites = self._prepare_test_suites(test_run_config)
                 try:
                     test_suites_with_cases = self._get_test_suites_with_cases(
                         test_run_test_suites, test_run_config.func, test_run_config.perf
@@ -204,6 +207,40 @@ class DTSRunner:
             )
             self._logger.warning("Please use Python >= 3.10 instead.")
 
+    def _prepare_test_suites(self, test_run_config: TestRunConfiguration) -> list[TestSuiteConfig]:
+        if SETTINGS.test_suites:
+            test_suites_configs = []
+            for selected_test_suite, selected_test_cases in SETTINGS.test_suites:
+                if selected_test_suite in test_run_config.test_suites:
+                    config = test_run_config.test_suites[selected_test_suite].model_copy()
+                    config.test_cases_names = selected_test_cases
+                else:
+                    try:
+                        config = CUSTOM_CONFIG_TYPES[selected_test_suite].make(
+                            selected_test_suite, *selected_test_cases
+                        )
+                    except AssertionError as e:
+                        raise ConfigurationError(
+                            "Invalid test cases were selected "
+                            f"for test suite {selected_test_suite}."
+                        ) from e
+                    except ValidationError as e:
+                        raise ConfigurationError(
+                            f"Test suite {selected_test_suite} needs to be explicitly configured "
+                            "in order to be selected."
+                        ) from e
+                test_suites_configs.append(config)
+        else:
+            # we don't want to modify the original config, so create a copy
+            test_suites_configs = [
+                config.model_copy() for config in test_run_config.test_suites.get_configs()
+            ]
+
+        if not test_run_config.skip_smoke_tests:
+            test_suites_configs[:0] = [TestSuiteConfig.make("smoke_tests")]
+
+        return test_suites_configs
+
     def _get_test_suites_with_cases(
         self,
         test_suite_configs: list[TestSuiteConfig],
@@ -245,7 +282,9 @@ class DTSRunner:
 
             test_suites_with_cases.append(
                 TestSuiteWithCases(
-                    test_suite_class=test_suite_class, test_cases=selected_test_cases
+                    test_suite_class=test_suite_class,
+                    test_cases=selected_test_cases,
+                    config=test_suite_config,
                 )
             )
         return test_suites_with_cases
@@ -466,7 +505,9 @@ class DTSRunner:
         self._logger.set_stage(
             DtsStage.test_suite_setup, Path(SETTINGS.output_dir, test_suite_name)
         )
-        test_suite = test_suite_with_cases.test_suite_class(sut_node, tg_node)
+        test_suite = test_suite_with_cases.test_suite_class(
+            sut_node, tg_node, test_suite_with_cases.config
+        )
         try:
             self._logger.info(f"Starting test suite setup: {test_suite_name}")
             test_suite.set_up_suite()
