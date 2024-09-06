@@ -86,12 +86,35 @@ process_packet(struct rte_mbuf *pkt, uint16_t *dst_port)
 	_mm_storeu_si128((__m128i *)eth_hdr, te);
 }
 
+static inline void
+process_step3_burst(struct rte_mbuf *pkt[], uint16_t dst_port[], uint32_t num)
+{
+	uint32_t i, k;
+
+	k = RTE_ALIGN_FLOOR(num, FWDSTEP);
+
+	for (i = 0; i != k; i += FWDSTEP)
+		processx4_step3(pkt + i, dst_port + i);
+
+	/* Process up to last 3 packets one by one. */
+	switch (num % FWDSTEP) {
+	case 3:
+		process_packet(pkt[i + 2], dst_port + i + 2);
+		/* fall-through */
+	case 2:
+		process_packet(pkt[i + 1], dst_port + i + 1);
+		/* fall-through */
+	case 1:
+		process_packet(pkt[i], dst_port + i);
+	}
+}
+
 /**
  * Send packets burst from pkts_burst to the ports in dst_port array
  */
 static __rte_always_inline void
-send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
-		uint16_t dst_port[MAX_PKT_BURST], int nb_rx)
+__send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
+		uint16_t dst_port[MAX_PKT_BURST], int nb_rx, int step3)
 {
 	int32_t k;
 	int j = 0;
@@ -110,13 +133,15 @@ send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
 		lp = pnum;
 		lp[0] = 1;
 
-		processx4_step3(pkts_burst, dst_port);
+		if (step3 != 0)
+			processx4_step3(pkts_burst, dst_port);
 
 		/* dp1: <d[0], d[1], d[2], d[3], ... > */
 		dp1 = _mm_loadu_si128((__m128i *)dst_port);
 
 		for (j = FWDSTEP; j != k; j += FWDSTEP) {
-			processx4_step3(&pkts_burst[j], &dst_port[j]);
+			if (step3 != 0)
+				processx4_step3(&pkts_burst[j], &dst_port[j]);
 
 			/*
 			 * dp2:
@@ -155,17 +180,20 @@ send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
 	/* Process up to last 3 packets one by one. */
 	switch (nb_rx % FWDSTEP) {
 	case 3:
-		process_packet(pkts_burst[j], dst_port + j);
+		if (step3 != 0)
+			process_packet(pkts_burst[j], dst_port + j);
 		GROUP_PORT_STEP(dlp, dst_port, lp, pnum, j);
 		j++;
 		/* fall-through */
 	case 2:
-		process_packet(pkts_burst[j], dst_port + j);
+		if (step3 != 0)
+			process_packet(pkts_burst[j], dst_port + j);
 		GROUP_PORT_STEP(dlp, dst_port, lp, pnum, j);
 		j++;
 		/* fall-through */
 	case 1:
-		process_packet(pkts_burst[j], dst_port + j);
+		if (step3 != 0)
+			process_packet(pkts_burst[j], dst_port + j);
 		GROUP_PORT_STEP(dlp, dst_port, lp, pnum, j);
 		j++;
 	}
@@ -192,6 +220,13 @@ send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
 				rte_pktmbuf_free(pkts_burst[m]);
 
 	}
+}
+
+static __rte_always_inline void
+send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
+		uint16_t dst_port[MAX_PKT_BURST], int nb_rx)
+{
+	__send_packets_multi(qconf, pkts_burst, dst_port, nb_rx, 1);
 }
 
 static __rte_always_inline uint16_t

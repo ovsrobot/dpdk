@@ -58,6 +58,7 @@ struct l3fwd_event_setup_ops {
 	event_loop_cb lpm_event_loop;
 	event_loop_cb em_event_loop;
 	event_loop_cb fib_event_loop;
+	event_loop_cb acl_event_loop;
 };
 
 struct l3fwd_event_resources {
