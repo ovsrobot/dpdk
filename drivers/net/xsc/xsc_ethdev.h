@@ -5,7 +5,17 @@
 #ifndef _XSC_ETHDEV_H_
 #define _XSC_ETHDEV_H_
 
+#include "xsc_dev.h"
+#include "xsc_utils.h"
+#include "xsc_defs.h"
+
 #define XSC_RSS_HASH_KEY_LEN 52
+#define XSC_RXQ_DB_PF_OFFSET 0x4804000
+
+#define XSC_CMD_OP_DESTROY_QP 0x501
+#define XSC_CMD_OP_RTR2RTS_QP 0x504
+#define XSC_CMD_OP_QP_2RST 0x50A
+#define XSC_CMD_OP_CREATE_MULTI_QP 0x515
 #define XSC_MAX_DESC_NUMBER 1024
 #define XSC_RX_FREE_THRESH 32
 

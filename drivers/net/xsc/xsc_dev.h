@@ -5,6 +5,9 @@
 #ifndef _XSC_DEV_H_
 #define _XSC_DEV_H_
 
+#if HAVE_XSC_DV_PROVIDER
+#include <infiniband/xscdv.h>
+#endif
 #include <infiniband/verbs.h>
 
 #include "xsc_defs.h"

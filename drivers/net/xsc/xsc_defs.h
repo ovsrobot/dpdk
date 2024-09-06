@@ -11,6 +11,8 @@
 #define XSC_VFREP_BASE_LOGICAL_PORT 1081
 
 #define XSC_MAX_MAC_ADDRESSES 3
+#define XSC_SEND_WQE_DS 3
+#define XSC_ESEG_EXTRA_DATA_SIZE 48u
 
 enum xsc_nic_mode {
 	XSC_NIC_MODE_LEGACY,

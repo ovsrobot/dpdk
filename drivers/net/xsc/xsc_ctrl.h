@@ -5,7 +5,17 @@
 #ifndef _XSC_CTRL_H_
 #define _XSC_CTRL_H_
 
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <dirent.h>
+#include <net/if.h>
 #include <sys/ioctl.h>
+#include <infiniband/verbs.h>
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE	4096
+#endif
 
 #define XSC_IOCTL_CHECK_FIELD	0x01234567
 
@@ -25,6 +35,17 @@ enum xsc_ioctl_opmod {
 	XSC_IOCTL_OP_GET_LOCAL,
 };
 
+#define XSC_DIV_ROUND_UP(n, d) ({ \
+	typeof(d) _d = (d); \
+	typeof(n) _n = (n); \
+	((_n) + (_d) - 1) / (_d); \
+})
+
+enum {
+	XSC_IOCTL_SET_QP_STATUS = 0x200,
+	XSC_IOCTL_SET_MAX
+};
+
 struct xsc_ioctl_attr {
 	uint16_t opcode; /* ioctl cmd */
 	uint16_t length; /* data length */
@@ -40,7 +61,18 @@ struct xsc_ioctl_hdr {
 	struct xsc_ioctl_attr attr;
 };
 
-/* ioctl */
+enum {
+	XSC_QUEUE_TYPE_RDMA_RC    = 0,
+	XSC_QUEUE_TYPE_RDMA_MAD   = 1,
+	XSC_QUEUE_TYPE_RAW        = 2,
+	XSC_QUEUE_TYPE_VIRTIO_NET = 3,
+	XSC_QUEUE_TYPE_VIRTIO_BLK = 4,
+	XSC_QUEUE_TYPE_RAW_TPE    = 5,
+	XSC_QUEUE_TYPE_RAW_TSO    = 6,
+	XSC_QUEUE_TYPE_RAW_TX     = 7,
+	XSC_QUEUE_TYPE_INVALID    = 0xFF,
+};
+
 struct xsc_inbox_hdr {
 	__be16     opcode;
 	uint8_t    rsvd[4];
@@ -53,7 +85,6 @@ struct xsc_outbox_hdr {
 	__be32      syndrome;
 };
 
-/* ioctl mbox */
 struct xsc_ioctl_mbox_in {
 	struct xsc_inbox_hdr	hdr;
 	__be16			len;
@@ -96,6 +127,54 @@ struct xsc_cmd_modify_nic_hca_mbox_out {
 	uint8_t                 rsvd0[4];
 };
 
+struct xsc_create_qp_request {
+	__be16                  input_qpn;
+	__be16                  pa_num;
+	uint8_t                 qp_type;
+	uint8_t                 log_sq_sz;
+	uint8_t                 log_rq_sz;
+	uint8_t                 dma_direct;
+	__be32                  pdn;
+	__be16                  cqn_send;
+	__be16                  cqn_recv;
+	__be16                  glb_funcid;
+	uint8_t                 page_shift;
+	uint8_t                 rsvd;
+	__be64                  pas[];
+};
+
+struct xsc_create_multiqp_mbox_in {
+	struct xsc_inbox_hdr    hdr;
+	__be16                  qp_num;
+	uint8_t                 qp_type;
+	uint8_t                 rsvd;
+	__be32                  req_len;
+	uint8_t                 data[];
+};
+
+struct xsc_create_multiqp_mbox_out {
+	struct xsc_outbox_hdr   hdr;
+	__be32                  qpn_base;
+};
+
+
+struct xsc_destroy_qp_mbox_in {
+	struct xsc_inbox_hdr        hdr;
+	__be32                  qpn;
+	uint8_t                 rsvd[4];
+};
+
+struct xsc_destroy_qp_mbox_out {
+	struct xsc_outbox_hdr   hdr;
+	uint8_t                 rsvd[8];
+};
+
+struct xsc_ioctl_qp_range {
+	uint16_t                opcode;
+	int                     num;
+	uint32_t                qpn;
+};
+
 struct xsc_ioctl_data_tl {
 	uint16_t table;
 	uint16_t opmod;
@@ -135,6 +214,75 @@ struct xsc_ioctl_get_hwinfo {
 	uint8_t mac_bit;
 	uint8_t esw_mode;
 };
+
+/* for xscdv providers */
+#if !HAVE_XSC_DV_PROVIDER
+enum xscdv_obj_type {
+	XSCDV_OBJ_QP    = 1 << 0,
+	XSCDV_OBJ_CQ    = 1 << 1,
+	XSCDV_OBJ_SRQ   = 1 << 2,
+	XSCDV_OBJ_RWQ   = 1 << 3,
+	XSCDV_OBJ_DM    = 1 << 4,
+	XSCDV_OBJ_AH    = 1 << 5,
+	XSCDV_OBJ_PD    = 1 << 6,
+};
+
+enum xsc_qp_create_flags {
+	XSC_QP_CREATE_RAWPACKE_TSO  = 1 << 0,
+	XSC_QP_CREATE_RAWPACKET_TSO = 1 << 0,
+	XSC_QP_CREATE_RAWPACKET_TX  = 1 << 1,
+};
+
+struct xscdv_cq_init_attr {
+	uint64_t comp_mask; /* Use enum xscdv_cq_init_attr_mask */
+	uint8_t cqe_comp_res_format; /* Use enum xscdv_cqe_comp_res_format */
+	uint32_t flags;
+	uint16_t cqe_size; /* when XSCDV_CQ_INIT_ATTR_MASK_CQE_SIZE set */
+};
+
+struct xscdv_obj {
+	struct {
+		struct ibv_qp           *in;
+		struct xscdv_qp         *out;
+	} qp;
+	struct {
+		struct ibv_cq           *in;
+		struct xscdv_cq         *out;
+	} cq;
+};
+
+struct xscdv_qp {
+	__le32                  *dbrec;
+	struct {
+		void            *buf;
+		uint32_t        wqe_cnt;
+		uint32_t        stride;
+		__le32          *db;
+	} sq;
+	struct {
+		void            *buf;
+		uint32_t        wqe_cnt;
+		uint32_t        stride;
+		__le32          *db;
+	} rq;
+	uint64_t                comp_mask;
+	uint32_t                tirn;
+	uint32_t                tisn;
+	uint32_t                rqn;
+	uint32_t                sqn;
+};
+
+struct xscdv_cq {
+	void                    *buf;
+	__le32                  *dbrec;
+	__le32                  *db;
+	uint32_t                cqe_cnt;
+	uint32_t                cqe_size;
+	uint32_t                cqn;
+	uint64_t                comp_mask;
+};
+
+#endif
 
 int xsc_ioctl(struct xsc_dev *dev, int cmd, int opcode,
 	      void *data_in, int in_len, void *data_out, int out_len);
