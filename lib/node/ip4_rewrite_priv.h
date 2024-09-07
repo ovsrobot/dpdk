@@ -5,6 +5,7 @@
 #define __INCLUDE_IP4_REWRITE_PRIV_H__
 
 #include <rte_common.h>
+#include <rte_graph_feature_arc.h>
 
 #define RTE_GRAPH_IP4_REWRITE_MAX_NH 64
 #define RTE_GRAPH_IP4_REWRITE_MAX_LEN 56
@@ -15,11 +16,9 @@
  * Ipv4 rewrite next hop header data structure. Used to store port specific
  * rewrite data.
  */
-struct ip4_rewrite_nh_header {
-	uint16_t rewrite_len; /**< Header rewrite length. */
+struct __rte_cache_min_aligned ip4_rewrite_nh_header {
 	uint16_t tx_node;     /**< Tx node next index identifier. */
-	uint16_t enabled;     /**< NH enable flag */
-	uint16_t rsvd;
+	uint16_t rewrite_len; /**< Header rewrite length. */
 	union {
 		struct {
 			struct rte_ether_addr dst;
@@ -30,6 +29,8 @@ struct ip4_rewrite_nh_header {
 		uint8_t rewrite_data[RTE_GRAPH_IP4_REWRITE_MAX_LEN];
 		/**< Generic rewrite data */
 	};
+	/* used in control path */
+	uint8_t enabled;     /**< NH enable flag */
 };
 
 /**
