@@ -32,6 +32,24 @@ extern int cnxk_logtype_rvu_lf;
 	rte_log(RTE_LOG_ ## level, cnxk_logtype_rvu_lf, \
 		"%s(): " fmt "\n", __func__, ## args)
 
+/**
+ * Obtain NPA PF func
+ *
+ * @return
+ *   Returns NPA pf_func on success, 0 in case of invalid pf_func.
+ */
+__rte_experimental
+uint16_t rte_pmd_rvu_lf_npa_pf_func_get(void);
+
+/**
+ * Obtain SSO PF func
+ *
+ * @return
+ *   Returns SSO pf_func on success, 0 in case of invalid pf_func.
+ */
+__rte_experimental
+uint16_t rte_pmd_rvu_lf_sso_pf_func_get(void);
+
 #ifdef __cplusplus
 }
 #endif
