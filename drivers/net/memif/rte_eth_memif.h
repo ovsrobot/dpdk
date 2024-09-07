@@ -28,10 +28,11 @@
 #define MAX_PKT_BURST				32
 
 extern int memif_logtype;
+#define RTE_LOGTYPE_MEMIF memif_logtype
 
 #define MIF_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, memif_logtype, \
-		"%s(): " fmt "\n", __func__, ##args)
+	RTE_LOG_LINE(level, MEMIF, \
+		"%s(): " fmt, __func__, ##args)
 
 enum memif_role_t {
 	MEMIF_ROLE_SERVER,

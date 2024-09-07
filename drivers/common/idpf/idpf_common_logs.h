@@ -11,35 +11,23 @@ extern int idpf_common_logtype;
 #define RTE_LOGTYPE_IDPF_COMMON idpf_common_logtype
 
 #define DRV_LOG(level, ...)					\
-	rte_log(RTE_LOG_ ## level,				\
-		idpf_common_logtype,				\
+	RTE_LOG_LINE(level,					\
+		IDPF_COMMON,					\
 		RTE_FMT("%s(): "				\
-			RTE_FMT_HEAD(__VA_ARGS__,) "\n",	\
+			RTE_FMT_HEAD(__VA_ARGS__,),		\
 			__func__,				\
 			RTE_FMT_TAIL(__VA_ARGS__,)))
 
 #ifdef RTE_LIBRTE_IDPF_DEBUG_RX
-#define RX_LOG(level, ...) \
-	RTE_LOG(level, \
-		IDPF_COMMON, \
-		RTE_FMT("%s(): " \
-			RTE_FMT_HEAD(__VA_ARGS__,) "\n", \
-			__func__, \
-			RTE_FMT_TAIL(__VA_ARGS__,)))
+#define RX_LOG(...) DRV_LOG(__VA_ARGS__)
 #else
-#define RX_LOG(level, fmt, args...) do { } while (0)
+#define RX_LOG(...) do {} while (0)
 #endif
 
 #ifdef RTE_LIBRTE_IDPF_DEBUG_TX
-#define TX_LOG(level, ...) \
-	RTE_LOG(level, \
-		IDPF_COMMON, \
-		RTE_FMT("%s(): " \
-			RTE_FMT_HEAD(__VA_ARGS__,) "\n", \
-			__func__, \
-			RTE_FMT_TAIL(__VA_ARGS__,)))
+#define TX_LOG(...) DRV_LOG(__VA_ARGS__)
 #else
-#define TX_LOG(level, fmt, args...) do { } while (0)
+#define TX_LOG(...) do {} while (0)
 #endif
 
 #endif /* _IDPF_COMMON_LOGS_H_ */

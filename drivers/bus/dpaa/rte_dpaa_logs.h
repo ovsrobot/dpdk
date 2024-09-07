@@ -10,9 +10,10 @@
 #include <rte_log.h>
 
 extern int dpaa_logtype_bus;
+#define RTE_LOGTYPE_DPAA_BUS dpaa_logtype_bus
 
 #define DPAA_BUS_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, dpaa_logtype_bus, "dpaa: " fmt "\n", ##args)
+	RTE_LOG_LINE(level, DPAA_BUS, fmt, ## args)
 
 #ifdef RTE_LIBRTE_DPAA_DEBUG_BUS
 #define DPAA_BUS_HWWARN(cond, fmt, args...) \
@@ -25,8 +26,7 @@ extern int dpaa_logtype_bus;
 #endif
 
 #define DPAA_BUS_DEBUG(fmt, args...) \
-	rte_log(RTE_LOG_DEBUG, dpaa_logtype_bus, "dpaa: %s(): " fmt "\n", \
-		__func__, ##args)
+	RTE_LOG_LINE(DEBUG, DPAA_BUS, "%s(): " fmt, __func__, ## args)
 
 #define BUS_INIT_FUNC_TRACE() DPAA_BUS_DEBUG(" >>")
 

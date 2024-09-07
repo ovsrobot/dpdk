@@ -6,11 +6,12 @@
 #define _IFPGA_RAWDEV_H_
 
 extern int ifpga_rawdev_logtype;
+#define RTE_LOGTYPE_IFPGA_RAWDEV ifpga_rawdev_logtype
 
 #define IFPGA_RAWDEV_NAME_FMT "IFPGA:%02x:%02x.%x"
 
 #define IFPGA_RAWDEV_PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, ifpga_rawdev_logtype, "%s(): " fmt "\n", \
+	RTE_LOG_LINE(level, IFPGA_RAWDEV, "%s(): " fmt, \
 				__func__, ##args)
 
 #define IFPGA_RAWDEV_PMD_FUNC_TRACE() IFPGA_RAWDEV_PMD_LOG(DEBUG, ">>")

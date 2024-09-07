@@ -15,8 +15,9 @@
 #define DEF_MEM_LEVEL			8
 
 extern int zlib_logtype_driver;
+#define RTE_LOGTYPE_ZLIB_DRIVER zlib_logtype_driver
 #define ZLIB_PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, zlib_logtype_driver, "%s(): "fmt "\n", \
+	RTE_LOG_LINE(level, ZLIB_DRIVER, "%s(): "fmt, \
 			__func__, ##args)
 
 #define ZLIB_PMD_INFO(fmt, args...) \

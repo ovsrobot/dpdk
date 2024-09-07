@@ -6,15 +6,15 @@
 #define _QAT_LOGS_H_
 
 extern int qat_gen_logtype;
+#define RTE_LOGTYPE_QAT_GEN qat_gen_logtype
 extern int qat_dp_logtype;
+#define RTE_LOGTYPE_QAT_DP qat_dp_logtype
 
 #define QAT_LOG(level, fmt, args...)			\
-	rte_log(RTE_LOG_ ## level, qat_gen_logtype,		\
-			"%s(): " fmt "\n", __func__, ## args)
+	RTE_LOG_LINE(level, QAT_GEN, "%s(): " fmt, __func__, ## args)
 
 #define QAT_DP_LOG(level, fmt, args...)			\
-	rte_log(RTE_LOG_ ## level, qat_dp_logtype,		\
-			"%s(): " fmt "\n", __func__, ## args)
+	RTE_LOG_LINE(level, QAT_DP, "%s(): " fmt, __func__, ## args)
 
 #define QAT_DP_HEXDUMP_LOG(level, title, buf, len)		\
 	qat_hexdump_log(RTE_LOG_ ## level, qat_dp_logtype, title, buf, len)

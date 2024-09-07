@@ -6,15 +6,14 @@
 #define CDX_LOGS_H
 
 extern int cdx_logtype_bus;
+#define RTE_LOGTYPE_CDX_BUS cdx_logtype_bus
 
 #define CDX_BUS_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, cdx_logtype_bus, "cdx: " fmt "\n", \
-		##args)
+	RTE_LOG_LINE(level, CDX_BUS, fmt, ## args)
 
 /* Debug logs with Function names */
 #define CDX_BUS_DEBUG(fmt, args...) \
-	rte_log(RTE_LOG_DEBUG, cdx_logtype_bus, "cdx: %s(): " fmt "\n", \
-		__func__, ##args)
+	RTE_LOG_LINE(DEBUG, CDX_BUS, "%s(): " fmt, __func__, ## args)
 
 #define CDX_BUS_INFO(fmt, args...) \
 	CDX_BUS_LOG(INFO, fmt, ## args)

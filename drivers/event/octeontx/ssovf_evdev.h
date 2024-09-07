@@ -20,8 +20,8 @@
 #define EVENTDEV_NAME_OCTEONTX_PMD event_octeontx
 
 #define SSOVF_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, otx_logtype_ssovf, \
-			"[%s] %s() " fmt "\n", \
+	RTE_LOG_LINE(level, OTX_SSOVF, \
+			"[%s] %s() " fmt, \
 			RTE_STR(EVENTDEV_NAME_OCTEONTX_PMD), __func__, ## args)
 
 #define ssovf_log_info(fmt, ...) SSOVF_LOG(INFO, fmt, ##__VA_ARGS__)
@@ -171,6 +171,7 @@ ssovf_pmd_priv(const struct rte_eventdev *eventdev)
 }
 
 extern int otx_logtype_ssovf;
+#define RTE_LOGTYPE_OTX_SSOVF otx_logtype_ssovf
 
 uint16_t ssows_enq(void *port, const struct rte_event *ev);
 uint16_t ssows_enq_burst(void *port,

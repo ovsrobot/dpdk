@@ -13,9 +13,9 @@
 #include <netcope/txmac.h>
 
 extern int nfb_logtype;
+#define RTE_LOGTYPE_NFB nfb_logtype
 #define NFB_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, nfb_logtype, "%s(): " fmt "\n", \
-		__func__, ## args)
+	RTE_LOG_LINE(level, NFB, "%s(): " fmt, __func__, ## args)
 
 #include "nfb_rx.h"
 #include "nfb_tx.h"

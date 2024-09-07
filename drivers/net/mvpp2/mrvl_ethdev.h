@@ -200,9 +200,10 @@ extern const struct rte_tm_ops mrvl_tm_ops;
 
 /** Current log type. */
 extern int mrvl_logtype;
+#define RTE_LOGTYPE_MRVL mrvl_logtype
 
 #define MRVL_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, mrvl_logtype, "%s(): " fmt "\n", \
+	RTE_LOG_LINE(level, MRVL, "%s(): " fmt, \
 		__func__, ##args)
 
 extern struct pp2_bpool *dummy_pool[PP2_NUM_PKT_PROC];

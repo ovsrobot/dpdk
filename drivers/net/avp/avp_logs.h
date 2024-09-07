@@ -9,14 +9,14 @@
 
 #ifdef RTE_LIBRTE_AVP_DEBUG_RX
 #define PMD_RX_LOG_LINE(level, fmt, ...) \
-	RTE_LOG(level, AVP_DRIVER, "%s() rx: " fmt "\n", __func__, ## __VA_ARGS__)
+	RTE_LOG_LINE(level, AVP_DRIVER, "%s() rx: " fmt, __func__, ## __VA_ARGS__)
 #else
 #define PMD_RX_LOG_LINE(...) do { } while (0)
 #endif
 
 #ifdef RTE_LIBRTE_AVP_DEBUG_TX
 #define PMD_TX_LOG_LINE(level, fmt, ...) \
-	RTE_LOG(level, AVP_DRIVER, "%s() tx: " fmt "\n", __func__, ## __VA_ARGS__)
+	RTE_LOG_LINE(level, AVP_DRIVER, "%s() tx: " fmt, __func__, ## __VA_ARGS__)
 #else
 #define PMD_TX_LOG_LINE(...) do { } while (0)
 #endif
@@ -25,6 +25,6 @@ extern int avp_logtype_driver;
 #define RTE_LOGTYPE_AVP_DRIVER avp_logtype_driver
 
 #define PMD_DRV_LOG_LINE(level, fmt, ...) \
-	RTE_LOG(level, AVP_DRIVER, "%s(): " fmt "\n", __func__, ## __VA_ARGS__)
+	RTE_LOG_LINE(level, AVP_DRIVER, "%s(): " fmt, __func__, ## __VA_ARGS__)
 
 #endif /* _AVP_LOGS_H_ */

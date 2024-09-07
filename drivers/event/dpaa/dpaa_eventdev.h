@@ -78,7 +78,7 @@ struct dpaa_eventdev {
 };
 
 #define DPAA_EVENTDEV_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, dpaa_logtype_eventdev, "%s(): " fmt "\n", \
+	RTE_LOG_LINE(level, DPAA_EVENTDEV, "%s(): " fmt, \
 		__func__, ##args)
 
 #define EVENTDEV_INIT_FUNC_TRACE() DPAA_EVENTDEV_LOG(DEBUG, " >>")

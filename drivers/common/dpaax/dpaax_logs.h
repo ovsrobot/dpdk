@@ -21,13 +21,11 @@ extern int dpaax_logger;
 #endif
 
 #define DPAAX_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, dpaax_logger, "dpaax: " fmt "\n", \
-		##args)
+	RTE_LOG_LINE(level, DPAAX_LOGGER, fmt, ## args)
 
 /* Debug logs are with Function names */
 #define DPAAX_DEBUG(fmt, args...) \
-	rte_log(RTE_LOG_DEBUG, dpaax_logger, "dpaax: %s():	 " fmt "\n", \
-		__func__, ##args)
+	RTE_LOG_LINE(DEBUG, DPAAX_LOGGER, "%s(): " fmt, __func__, ## args)
 
 #define DPAAX_INFO(fmt, args...) \
 	DPAAX_LOG(INFO, fmt, ## args)

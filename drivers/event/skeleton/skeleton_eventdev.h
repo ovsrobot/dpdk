@@ -9,11 +9,11 @@
 #include <eventdev_pmd_vdev.h>
 
 extern int skeleton_eventdev_logtype;
+#define RTE_LOGTYPE_SKELETON_EVENTDEV skeleton_eventdev_logtype
 
 #ifdef RTE_LIBRTE_PMD_SKELETON_EVENTDEV_DEBUG
 #define PMD_DRV_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, skeleton_eventdev_logtype, \
-		"%s(): " fmt "\n", __func__, ## args)
+	RTE_LOG_LINE(level, SKELETON_EVENTDEV, "%s(): " fmt, __func__, ## args)
 #define PMD_DRV_FUNC_TRACE() PMD_DRV_LOG(DEBUG, ">>")
 #else
 #define PMD_DRV_LOG(level, fmt, args...) do { } while (0)
@@ -21,8 +21,7 @@ extern int skeleton_eventdev_logtype;
 #endif
 
 #define PMD_DRV_ERR(fmt, args...) \
-	rte_log(RTE_LOG_ERR, skeleton_eventdev_logtype, \
-		"%s(): " fmt "\n", __func__, ## args)
+	RTE_LOG_LINE(ERR, SKELETON_EVENTDEV, "%s(): " fmt, __func__, ## args)
 
 struct __rte_cache_aligned skeleton_eventdev {
 	uintptr_t reg_base;

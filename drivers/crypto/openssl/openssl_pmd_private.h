@@ -23,9 +23,10 @@
 
 /** OPENSSL PMD LOGTYPE DRIVER */
 extern int openssl_logtype_driver;
+#define RTE_LOGTYPE_OPENSSL_DRIVER openssl_logtype_driver
 #define OPENSSL_LOG(level, fmt, ...)  \
-	rte_log(RTE_LOG_ ## level, openssl_logtype_driver,  \
-			"%s() line %u: " fmt "\n", __func__, __LINE__,  \
+	RTE_LOG_LINE(level, OPENSSL_DRIVER,  \
+			"%s() line %u: " fmt, __func__, __LINE__,  \
 					## __VA_ARGS__)
 
 /* Maximum length for digest (SHA-512 needs 64 bytes) */

@@ -20,9 +20,10 @@
  */
 
 extern int idxd_pmd_logtype;
+#define RTE_LOGTYPE_IDXD_PMD idxd_pmd_logtype
 
-#define IDXD_PMD_LOG(level, fmt, args...) rte_log(RTE_LOG_ ## level, \
-		idxd_pmd_logtype, "IDXD: %s(): " fmt "\n", __func__, ##args)
+#define IDXD_PMD_LOG(level, fmt, args...) \
+	RTE_LOG_LINE(level, IDXD_PMD, "%s(): " fmt, __func__, ##args)
 
 #define IDXD_PMD_DEBUG(fmt, args...)  IDXD_PMD_LOG(DEBUG, fmt, ## args)
 #define IDXD_PMD_INFO(fmt, args...)   IDXD_PMD_LOG(INFO, fmt, ## args)

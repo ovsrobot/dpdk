@@ -76,10 +76,11 @@ static struct rte_eth_link pmd_link = {
 };
 
 RTE_LOG_REGISTER_DEFAULT(eth_null_logtype, NOTICE);
+#define RTE_LOGTYPE_ETH_NULL eth_null_logtype
 
 #define PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, eth_null_logtype, \
-		"%s(): " fmt "\n", __func__, ##args)
+	RTE_LOG_LINE(level, ETH_NULL, \
+		"%s(): " fmt, __func__, ##args)
 
 static uint16_t
 eth_null_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)

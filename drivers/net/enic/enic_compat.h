@@ -26,6 +26,7 @@
 #define __ALIGN_MASK(x, mask)    (((x)+(mask))&~(mask))
 
 extern int enic_pmd_logtype;
+#define RTE_LOGTYPE_ENIC_PMD enic_pmd_logtype
 
 #define dev_printk(level, fmt, args...)	\
 	rte_log(RTE_LOG_ ## level, enic_pmd_logtype, \
@@ -37,8 +38,8 @@ extern int enic_pmd_logtype;
 #define dev_debug(x, args...) dev_printk(DEBUG, args)
 
 #define ENICPMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, enic_pmd_logtype, \
-		"%s " fmt "\n", __func__, ##args)
+	RTE_LOG_LINE(level, ENIC_PMD, \
+		"%s " fmt, __func__, ##args)
 #define ENICPMD_FUNC_TRACE() ENICPMD_LOG(DEBUG, ">>")
 
 typedef         unsigned long long  dma_addr_t;

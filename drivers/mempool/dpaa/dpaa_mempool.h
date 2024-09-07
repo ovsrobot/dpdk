@@ -61,8 +61,7 @@ extern struct dpaa_bp_info *rte_dpaa_bpid_info;
 /* Mempool related logs */
 
 #define DPAA_MEMPOOL_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, dpaa_logtype_mempool, "%s(): " fmt "\n", \
-		__func__, ##args)
+	RTE_LOG_LINE(level, DPAA_MEMPOOL, "%s(): " fmt, __func__, ## args)
 
 #define MEMPOOL_INIT_FUNC_TRACE() DPAA_MEMPOOL_LOG(DEBUG, " >>")
 

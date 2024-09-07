@@ -4,7 +4,8 @@
  */
 
 extern int tap_logtype;
+#define RTE_LOGTYPE_TAP tap_logtype
 
 #define TAP_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, tap_logtype, "%s(): " fmt "\n", \
+	RTE_LOG_LINE(level, TAP, "%s(): " fmt, \
 		__func__, ## args)

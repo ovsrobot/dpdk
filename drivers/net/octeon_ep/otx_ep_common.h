@@ -68,18 +68,18 @@
 #define OTX_CUST_DATA_LEN 0
 
 #define otx_ep_info(fmt, args...)				\
-	rte_log(RTE_LOG_INFO, otx_net_ep_logtype,		\
-		"%s():%u " fmt "\n",				\
+	RTE_LOG_LINE(INFO, OTX_NET_EP,		\
+		"%s():%u " fmt,				\
 		__func__, __LINE__, ##args)
 
 #define otx_ep_err(fmt, args...)				\
-	rte_log(RTE_LOG_ERR, otx_net_ep_logtype,		\
-		"%s():%u " fmt "\n",				\
+	RTE_LOG_LINE(ERR, OTX_NET_EP,		\
+		"%s():%u " fmt,				\
 		__func__, __LINE__, ##args)
 
 #define otx_ep_dbg(fmt, args...)				\
-	rte_log(RTE_LOG_DEBUG, otx_net_ep_logtype,		\
-		"%s():%u " fmt "\n",				\
+	RTE_LOG_LINE(DEBUG, OTX_NET_EP,		\
+		"%s():%u " fmt,				\
 		__func__, __LINE__, ##args)
 
 /* IO Access */

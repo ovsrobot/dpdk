@@ -9,13 +9,11 @@ extern int dpaa2_logtype_mempool;
 #define RTE_LOGTYPE_DPAA2_MEMPOOL dpaa2_logtype_mempool
 
 #define DPAA2_MEMPOOL_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, dpaa2_logtype_mempool, \
-		"mempool/dpaa2: " fmt "\n", ##args)
+	RTE_LOG_LINE(level, DPAA2_MEMPOOL, fmt, ##args)
 
 /* Debug logs are with Function names */
 #define DPAA2_MEMPOOL_DEBUG(fmt, args...) \
-	rte_log(RTE_LOG_DEBUG, dpaa2_logtype_mempool, \
-		"mempool/dpaa2: %s(): " fmt "\n", __func__, ##args)
+	RTE_LOG_LINE(DEBUG, DPAA2_MEMPOOL, "%s(): " fmt, __func__, ##args)
 
 #define DPAA2_MEMPOOL_INFO(fmt, args...) \
 	DPAA2_MEMPOOL_LOG(INFO, fmt, ## args)

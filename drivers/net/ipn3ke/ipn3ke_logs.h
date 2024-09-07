@@ -8,10 +8,10 @@
 #include <rte_log.h>
 
 extern int ipn3ke_afu_logtype;
+#define RTE_LOGTYPE_IPN3KE_AFU ipn3ke_afu_logtype
 
 #define IPN3KE_AFU_PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, ipn3ke_afu_logtype, "%s(): " fmt "\n", \
-		__func__, ##args)
+	RTE_LOG_LINE(level, IPN3KE_AFU, "%s(): " fmt, __func__, ##args)
 
 #define IPN3KE_AFU_PMD_FUNC_TRACE() IPN3KE_AFU_PMD_LOG(DEBUG, ">>")
 

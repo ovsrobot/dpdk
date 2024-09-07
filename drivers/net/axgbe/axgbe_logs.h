@@ -8,9 +8,9 @@
 #include <stdio.h>
 
 extern int axgbe_logtype_init;
+#define RTE_LOGTYPE_AXGBE_INIT axgbe_logtype_init
 #define PMD_INIT_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, axgbe_logtype_init, "%s(): " fmt "\n", \
-		__func__, ##args)
+	RTE_LOG_LINE(level, AXGBE_INIT, "%s(): " fmt, __func__, ##args)
 
 #ifdef RTE_LIBRTE_AXGBE_PMD_DEBUG
 #define PMD_INIT_FUNC_TRACE() PMD_INIT_LOG(DEBUG, " >>")
@@ -21,6 +21,6 @@ extern int axgbe_logtype_init;
 extern int axgbe_logtype_driver;
 #define RTE_LOGTYPE_AXGBE_DRIVER axgbe_logtype_driver
 #define PMD_DRV_LOG_LINE(level, fmt, ...) \
-	RTE_LOG(level, AXGBE_DRIVER, "%s(): " fmt "\n", __func__, ## __VA_ARGS__)
+	RTE_LOG_LINE(level, AXGBE_DRIVER, "%s(): " fmt, __func__, ## __VA_ARGS__)
 
 #endif /* _AXGBE_LOGS_H_ */

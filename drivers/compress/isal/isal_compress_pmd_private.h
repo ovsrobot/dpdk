@@ -9,8 +9,9 @@
 /**< ISA-L comp PMD device name */
 
 extern int isal_logtype_driver;
+#define RTE_LOGTYPE_ISAL_DRIVER isal_logtype_driver
 #define ISAL_PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, isal_logtype_driver, "%s(): "fmt "\n", \
+	RTE_LOG_LINE(level, ISAL_DRIVER, "%s(): "fmt, \
 			__func__, ##args)
 
 /* private data structure for each ISA-L compression device */

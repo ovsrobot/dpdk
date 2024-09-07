@@ -17,24 +17,23 @@
  */
 #define RTE_LOGTYPE_CPT CPT_LOGTYPE
 
-#define CPT_PMD_DRV_LOG_RAW(level, fmt, args...) \
-		rte_log(RTE_LOG_ ## level, CPT_LOGTYPE, \
-			"cpt: %s(): " fmt "\n", __func__, ##args)
+#define CPT_PMD_DRV_LOG(level, fmt, args...) \
+	RTE_LOG_LINE(level, CPT, "%s(): " fmt, __func__, ## args)
 
-#define CPT_PMD_INIT_FUNC_TRACE() CPT_PMD_DRV_LOG_RAW(DEBUG, " >>")
+#define CPT_PMD_INIT_FUNC_TRACE() CPT_PMD_DRV_LOG(DEBUG, " >>")
 
 #define CPT_LOG_INFO(fmt, args...) \
-	CPT_PMD_DRV_LOG_RAW(INFO, fmt, ## args)
+	CPT_PMD_DRV_LOG(INFO, fmt, ## args)
 #define CPT_LOG_WARN(fmt, args...) \
-	CPT_PMD_DRV_LOG_RAW(WARNING, fmt, ## args)
+	CPT_PMD_DRV_LOG(WARNING, fmt, ## args)
 #define CPT_LOG_ERR(fmt, args...) \
-	CPT_PMD_DRV_LOG_RAW(ERR, fmt, ## args)
+	CPT_PMD_DRV_LOG(ERR, fmt, ## args)
 
 /*
  * DP logs, toggled out at compile time if level lower than current level.
  */
 #define CPT_LOG_DP(level, fmt, args...) \
-	RTE_LOG_DP(level, CPT, fmt "\n", ## args)
+	RTE_LOG_DP_LINE(level, CPT, fmt, ## args)
 
 #define CPT_LOG_DP_DEBUG(fmt, args...) \
 	CPT_LOG_DP(DEBUG, fmt, ## args)

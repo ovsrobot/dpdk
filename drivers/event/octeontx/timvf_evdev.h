@@ -27,8 +27,8 @@
 #include <octeontx_fpavf.h>
 
 #define timvf_log(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, otx_logtype_timvf, \
-			"[%s] %s() " fmt "\n", \
+	RTE_LOG_LINE(level, OTX_TIMVF, \
+			"[%s] %s() " fmt, \
 			RTE_STR(event_timer_octeontx), __func__, ## args)
 
 #define timvf_log_info(fmt, ...) timvf_log(INFO, fmt, ##__VA_ARGS__)
@@ -113,6 +113,7 @@
 #define TIMVF_ENABLE_STATS_ARG               ("timvf_stats")
 
 extern int otx_logtype_timvf;
+#define RTE_LOGTYPE_OTX_TIMVF otx_logtype_timvf
 static const uint16_t nb_chunk_slots = (TIM_CHUNK_SIZE / 16) - 1;
 
 enum timvf_clk_src {

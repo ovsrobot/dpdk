@@ -12,12 +12,10 @@ extern int dpaa_logtype_sec;
 #define RTE_LOGTYPE_DPAA_SEC dpaa_logtype_sec
 
 #define DPAA_SEC_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, dpaa_logtype_sec, "dpaa_sec: " \
-		fmt "\n", ##args)
+	RTE_LOG_LINE(level, DPAA_SEC, fmt, ## args)
 
 #define DPAA_SEC_DEBUG(fmt, args...) \
-	rte_log(RTE_LOG_DEBUG, dpaa_logtype_sec, "dpaa_sec: %s(): " \
-		fmt "\n", __func__, ##args)
+	RTE_LOG_LINE(DEBUG, DPAA_SEC, "%s(): " fmt, __func__, ## args)
 
 #define PMD_INIT_FUNC_TRACE() DPAA_SEC_DEBUG(" >>")
 

@@ -8,9 +8,10 @@
 #include <stdbool.h>
 
 extern int ntb_logtype;
+#define RTE_LOGTYPE_NTB ntb_logtype
 
 #define NTB_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, ntb_logtype,	"%s(): " fmt "\n", \
+	RTE_LOG_LINE(level, NTB,	"%s(): " fmt, \
 		__func__, ##args)
 
 /* Vendor ID */

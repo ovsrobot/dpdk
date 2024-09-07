@@ -19,7 +19,7 @@
 #define TEST_DEV_NAME "rawdev_skeleton"
 
 #define SKELDEV_LOGS(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, skeleton_pmd_logtype, fmt "\n", \
+	RTE_LOG_LINE(level, SKELETON_PMD, fmt, \
 		##args)
 
 #define SKELDEV_TEST_INFO(fmt, args...) \

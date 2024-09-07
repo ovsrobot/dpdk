@@ -66,7 +66,7 @@ RTE_LOG_REGISTER_DEFAULT(af_xdp_logtype, NOTICE);
 #define RTE_LOGTYPE_NET_AF_XDP af_xdp_logtype
 
 #define AF_XDP_LOG_LINE(level, fmt, args...) \
-	RTE_LOG(level, NET_AF_XDP, "%s(): " fmt "\n", __func__, ##args)
+	RTE_LOG_LINE(level, NET_AF_XDP, "%s(): " fmt, __func__, ##args)
 
 #define ETH_AF_XDP_FRAME_SIZE		2048
 #define ETH_AF_XDP_NUM_BUFFERS		4096

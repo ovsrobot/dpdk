@@ -9,10 +9,11 @@
 /**< Null crypto PMD device name */
 
 extern int null_logtype_driver;
+#define RTE_LOGTYPE_NULL_DRIVER null_logtype_driver
 
 #define NULL_LOG(level, fmt, ...)  \
-	rte_log(RTE_LOG_ ## level, null_logtype_driver,  \
-			"%s() line %u: "fmt "\n", __func__, __LINE__,  \
+	RTE_LOG_LINE(level, NULL_DRIVER,  \
+			"%s() line %u: "fmt, __func__, __LINE__,  \
 					## __VA_ARGS__)
 
 
