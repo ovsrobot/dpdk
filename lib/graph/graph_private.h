@@ -56,6 +56,7 @@ struct node {
 	unsigned int lcore_id;
 	/**< Node runs on the Lcore ID used for mcore dispatch model. */
 	rte_node_process_t process;   /**< Node process function. */
+	rte_node_process_t feat_arc_proc; /**< Node feature-arch process function. */
 	rte_node_init_t init;         /**< Node init function. */
 	rte_node_fini_t fini;	      /**< Node fini function. */
 	rte_node_t id;		      /**< Allocated identifier for the node. */
@@ -126,6 +127,8 @@ struct graph {
 	/**< Number of packets to be captured per core. */
 	char pcap_filename[RTE_GRAPH_PCAP_FILE_SZ];
 	/**< pcap file name/path. */
+	uint8_t feature_arc_enabled;
+	/**< Graph feature arc. */
 	STAILQ_HEAD(gnode_list, graph_node) node_list;
 	/**< Nodes in a graph. */
 };

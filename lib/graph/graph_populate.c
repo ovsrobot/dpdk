@@ -79,8 +79,13 @@ graph_nodes_populate(struct graph *_graph)
 		if (graph_pcap_is_enable()) {
 			node->process = graph_pcap_dispatch;
 			node->original_process = graph_node->node->process;
-		} else
+			if (_graph->feature_arc_enabled)
+				node->original_process = graph_node->node->feat_arc_proc;
+		} else {
 			node->process = graph_node->node->process;
+			if (_graph->feature_arc_enabled)
+				node->process = graph_node->node->feat_arc_proc;
+		}
 		memcpy(node->name, graph_node->node->name, RTE_GRAPH_NAMESIZE);
 		pid = graph_node->node->parent_id;
 		if (pid != RTE_NODE_ID_INVALID) { /* Cloned node */
