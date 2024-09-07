@@ -50,6 +50,24 @@ uint16_t rte_pmd_rvu_lf_npa_pf_func_get(void);
 __rte_experimental
 uint16_t rte_pmd_rvu_lf_sso_pf_func_get(void);
 
+/**
+ * Get BAR addresses for the RVU LF device.
+ *
+ * @param dev_id
+ *   device id of RVU LF device
+ * @param bar_num
+ *   BAR number for which address is required
+ * @param[out] va
+ *    Virtual address of the BAR. 0 if not mapped
+ * @param[out] mask
+ *    BAR address mask, 0 if not mapped
+ *
+ * @return
+ *   Returns 0 on success, negative error code otherwise
+ */
+__rte_experimental
+int rte_pmd_rvu_lf_bar_get(uint8_t dev_id, uint8_t bar_num, size_t *va, size_t *mask);
+
 #ifdef __cplusplus
 }
 #endif

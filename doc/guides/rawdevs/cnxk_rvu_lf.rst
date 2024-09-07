@@ -45,3 +45,10 @@ Get NPA and SSO PF FUNC
 APIs ``rte_pmd_rvu_lf_npa_pf_func_get()`` and ``rte_pmd_rvu_lf_sso_pf_func_get()``
 can be used to get the cnxk NPA PF func and SSO PF func which application
 can use for NPA/SSO specific configuration.
+
+Get BAR addresses
+-----------------
+
+Application can retrieve PCI BAR addresses of the device using the API
+``rte_pmd_rvu_lf_bar_get()``. This helps application to configure the
+registers of the hardware device.
