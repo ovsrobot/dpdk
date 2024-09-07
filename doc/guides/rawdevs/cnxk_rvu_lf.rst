@@ -52,3 +52,11 @@ Get BAR addresses
 Application can retrieve PCI BAR addresses of the device using the API
 ``rte_pmd_rvu_lf_bar_get()``. This helps application to configure the
 registers of the hardware device.
+
+Register or remove interrupt handler
+------------------------------------
+
+Application can register interrupt handlers using ``rte_pmd_rvu_lf_irq_register()``
+or remove interrupt handler using ``rte_pmd_rvu_lf_irq_unregister()``.
+The irq numbers for which the interrupts are registered is negotiated separately
+and is not in scope of the driver.

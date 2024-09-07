@@ -16,6 +16,36 @@
 #include "rte_pmd_rvu_lf.h"
 
 int
+rte_pmd_rvu_lf_irq_register(uint8_t dev_id, unsigned int irq,
+			    rte_pmd_rvu_lf_intr_callback_fn cb, void *data)
+{
+	struct rte_rawdev *rawdev = rte_rawdev_pmd_get_dev(dev_id);
+	struct roc_rvu_lf *roc_rvu_lf;
+
+	if (rawdev == NULL)
+		return -EINVAL;
+
+	roc_rvu_lf = (struct roc_rvu_lf *)rawdev->dev_private;
+
+	return roc_rvu_lf_irq_register(roc_rvu_lf, irq, (roc_rvu_lf_intr_cb_fn)cb, data);
+}
+
+int
+rte_pmd_rvu_lf_irq_unregister(uint8_t dev_id, unsigned int irq,
+			      rte_pmd_rvu_lf_intr_callback_fn cb, void *data)
+{
+	struct rte_rawdev *rawdev = rte_rawdev_pmd_get_dev(dev_id);
+	struct roc_rvu_lf *roc_rvu_lf;
+
+	if (rawdev == NULL)
+		return -EINVAL;
+
+	roc_rvu_lf = (struct roc_rvu_lf *)rawdev->dev_private;
+
+	return roc_rvu_lf_irq_unregister(roc_rvu_lf, irq, (roc_rvu_lf_intr_cb_fn)cb, data);
+}
+
+int
 rte_pmd_rvu_lf_bar_get(uint8_t dev_id, uint8_t bar_num, size_t *va, size_t *mask)
 {
 	struct roc_rvu_lf *roc_rvu_lf;
