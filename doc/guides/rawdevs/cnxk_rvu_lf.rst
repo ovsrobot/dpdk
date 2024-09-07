@@ -60,3 +60,15 @@ Application can register interrupt handlers using ``rte_pmd_rvu_lf_irq_register(
 or remove interrupt handler using ``rte_pmd_rvu_lf_irq_unregister()``.
 The irq numbers for which the interrupts are registered is negotiated separately
 and is not in scope of the driver.
+
+RVU LF RAW MESSAGE PROCESSING
+-----------------------------
+
+Once a RVU LF raw device is probed, a range of message ids can be configured for
+which mailboxes will be sent using the API ``rte_pmd_rvu_lf_msg_id_range_set``.
+
+For processing of mailboxes received on PF/VF application, application
+can register callbacks using ``rte_pmd_rvu_lf_msg_handler_register()``
+and fill required responses as per the request and message id received.
+Application can also unregister already registered message callbacks using
+``rte_pmd_rvu_lf_msg_handler_unregister()``.

@@ -33,6 +33,21 @@ extern int cnxk_logtype_rvu_lf;
 		"%s(): " fmt "\n", __func__, ## args)
 
 /**
+ * Set RVU mailbox message id range.
+ *
+ * @param dev_id
+ *   device id of RVU LF device
+ * @param from
+ *   starting message id for RVU mailbox (> 0x1FF)
+ * @param to
+ *   last message id for RVU mailbox (< 0xFFFF)
+ *
+ * @return 0 on success, -EINVAL for invalid range
+ */
+__rte_experimental
+int rte_pmd_rvu_lf_msg_id_range_set(uint8_t dev_id, uint16_t from, uint16_t to);
+
+/**
  * Signature of callback function called when a message process handler is called
  * on RVU LF device.
  *
