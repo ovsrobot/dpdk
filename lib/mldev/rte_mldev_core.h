@@ -16,16 +16,16 @@
  * These APIs are for MLDEV PMDs and library only.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 
 #include <dev_driver.h>
 #include <rte_common.h>
 #include <rte_log.h>
 #include <rte_mldev.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Device state */
 #define ML_DEV_DETACHED (0)

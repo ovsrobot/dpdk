@@ -5,10 +5,6 @@
 #ifndef _RTE_ATOMIC_X86_H_
 #define _RTE_ATOMIC_X86_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 #include <rte_common.h>
 #include <rte_config.h>
@@ -279,6 +275,10 @@ static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
 #include "rte_atomic_32.h"
 #else
 #include "rte_atomic_64.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #endif
 
 #endif

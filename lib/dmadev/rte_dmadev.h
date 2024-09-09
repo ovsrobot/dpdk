@@ -149,10 +149,6 @@
 #include <rte_bitops.h>
 #include <rte_common.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** Maximum number of devices if rte_dma_dev_max() is not called. */
 #define RTE_DMADEV_DEFAULT_MAX 64
 
@@ -774,6 +770,10 @@ struct rte_dma_sge {
 
 #include "rte_dmadev_core.h"
 #include "rte_dmadev_trace_fp.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**@{@name DMA operation flag
  * @see rte_dma_copy()

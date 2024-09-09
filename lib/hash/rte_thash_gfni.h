@@ -5,16 +5,16 @@
 #ifndef _RTE_THASH_GFNI_H_
 #define _RTE_THASH_GFNI_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <rte_compat.h>
 #include <rte_log.h>
 
 #ifdef RTE_ARCH_X86
 
 #include <rte_thash_x86_gfni.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #endif
 

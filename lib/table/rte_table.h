@@ -5,10 +5,6 @@
 #ifndef __INCLUDE_RTE_TABLE_H__
 #define __INCLUDE_RTE_TABLE_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  * RTE Table
@@ -26,6 +22,10 @@ extern "C" {
 
 #include <stdint.h>
 #include <rte_port.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct rte_mbuf;
 

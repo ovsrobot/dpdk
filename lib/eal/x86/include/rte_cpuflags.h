@@ -5,10 +5,6 @@
 #ifndef _RTE_CPUFLAGS_X86_64_H_
 #define _RTE_CPUFLAGS_X86_64_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 enum rte_cpu_flag_t {
 	/* (EAX 01h) ECX features*/
 	RTE_CPUFLAG_SSE3 = 0,               /**< SSE3 */
@@ -137,6 +133,10 @@ enum rte_cpu_flag_t {
 };
 
 #include "generic/rte_cpuflags.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __cplusplus
 }

@@ -5,10 +5,6 @@
 #ifndef _RTE_BYTEORDER_X86_H_
 #define _RTE_BYTEORDER_X86_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 #include <rte_common.h>
 #include <rte_config.h>
@@ -64,6 +60,10 @@ static inline uint32_t rte_arch_bswap32(uint32_t _x)
 #include "rte_byteorder_32.h"
 #else
 #include "rte_byteorder_64.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #endif
 #endif
 
