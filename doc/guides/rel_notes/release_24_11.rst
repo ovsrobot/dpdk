@@ -66,6 +66,10 @@ New Features
   ``RTE_EVENT_PORT_CFG_INDEPENDENT_ENQ`` to enable the feature if the capability
   ``RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ`` exists.
 
+* **Updated DSW Driver for independent enqueue feature**
+
+  * Added capability flag for DSW to advertise independent enqueue feature.
+
 
 Removed Items
 -------------
