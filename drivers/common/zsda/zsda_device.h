@@ -18,7 +18,6 @@ struct zsda_device_info {
 
 	struct rte_pci_device *pci_dev;
 
-	// struct rte_device sym_rte_dev;
 	struct rte_device sym_rte_dev;
 	/**< This represents the crypto sym subset of this pci device.
 	 * Register with this rather than with the one in

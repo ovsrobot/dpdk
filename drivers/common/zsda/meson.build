@@ -3,7 +3,7 @@
 
 config_flag_fmt = 'RTE_LIBRTE_@0@_COMMON'
 
-deps += ['bus_pci', 'compressdev']
+deps += ['bus_pci', 'cryptodev', 'compressdev']
 sources += files(
 		'zsda_common.c',
 		'zsda_logs.c',
@@ -15,11 +15,24 @@ zsda_compress = true
 zsda_compress_path = 'compress/zsda'
 zsda_compress_relpath = '../../' + zsda_compress_path
 includes += include_directories(zsda_compress_relpath)
-
 if zsda_compress
 zlib = dependency('zlib', required: false, method: 'pkg-config')
 	foreach f: ['zsda_comp_pmd.c', 'zsda_comp.c']
 		sources += files(join_paths(zsda_compress_relpath, f))
 	endforeach
 	ext_deps += zlib
+endif
+
+
+zsda_crypto = true
+zsda_crypto_path = 'crypto/zsda'
+zsda_crypto_relpath = '../../' + zsda_crypto_path
+if zsda_crypto
+libcrypto = dependency('libcrypto', required: false, method: 'pkg-config')
+	foreach f: ['zsda_sym_pmd.c', 'zsda_sym_session.c', 'zsda_sym.c']
+		sources += files(join_paths(zsda_crypto_relpath, f))
+	endforeach
+	deps += ['security']
+	ext_deps += libcrypto
+	cflags += ['-DBUILD_ZSDA_SYM']
 endif
