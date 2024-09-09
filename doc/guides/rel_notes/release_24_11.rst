@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Event Device Library for independent enqueue feature**
+
+  * Added support for independent enqueue feature. Updated Event Device and
+    PMD feature list.
+
 
 Removed Items
 -------------
