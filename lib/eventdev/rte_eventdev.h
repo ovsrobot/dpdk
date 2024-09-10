@@ -446,6 +446,30 @@ struct rte_event;
  * @see RTE_SCHED_TYPE_PARALLEL
  */
 
+#define RTE_EVENT_DEV_CAP_EVENT_PREFETCH (1ULL << 16)
+/**< Event device supports event prefetching.
+ *
+ * When this capability is available, the application can enable event prefetching on the event
+ * device to prefetch/pre-schedule events to a event port when `rte_event_dequeue_burst()`
+ * is issued.
+ * The prefetch process starts with the `rte_event_dequeue_burst()` call and the
+ * prefetched events are returned on the next `rte_event_dequeue_burst()` call.
+ *
+ * @see rte_event_dev_configure()
+ */
+
+#define RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH (1ULL << 17)
+/**< Event device supports intelligent event prefetching.
+ *
+ * When this capability is available, the application can enable intelligent prefetching
+ * on the event device where the events are prefetched/pre-scheduled when
+ * there are no forward progress constraints with the currently held flow contexts.
+ * The prefetch process starts with the `rte_event_dequeue_burst()` call and the
+ * prefetched events are returned on the next `rte_event_dequeue_burst()` call.
+ *
+ * @see rte_event_dev_configure()
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -680,6 +704,25 @@ rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
  *  @see rte_event_dequeue_timeout_ticks(), rte_event_dequeue_burst()
  */
 
+typedef enum {
+	RTE_EVENT_DEV_PREFETCH_NONE = 0,
+	/* Disable prefetch across the event device or on a given event port.
+	 * @ref rte_event_dev_config.prefetch_type
+	 */
+	RTE_EVENT_DEV_PREFETCH,
+	/* Enable prefetch always across the event device or a given event port.
+	 * @ref rte_event_dev_config.prefetch_type
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PREFETCH
+	 */
+	RTE_EVENT_DEV_PREFETCH_INTELLIGENT,
+	/* Enable intelligent prefetch across the event device or a given event port.
+	 * Delay issuing prefetch until there are no forward progress constraints with
+	 * the held flow contexts.
+	 * @ref rte_event_dev_config.prefetch_type
+	 * @see RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH
+	 */
+} rte_event_dev_prefetch_type_t;
+
 /** Event device configuration structure */
 struct rte_event_dev_config {
 	uint32_t dequeue_timeout_ns;
@@ -751,6 +794,11 @@ struct rte_event_dev_config {
 	 * *nb_event_queues*. If the device has ports and queues that are
 	 * optimized for single-link usage, this field is a hint for how many
 	 * to allocate; otherwise, regular event ports and queues will be used.
+	 */
+	rte_event_dev_prefetch_type_t prefetch_type;
+	/**< Event prefetch type to use across the event device, if supported.
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PREFETCH
+	 * @see RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH
 	 */
 };
 

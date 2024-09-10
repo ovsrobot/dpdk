@@ -1251,6 +1251,66 @@ test_eventdev_profile_switch(void)
 }
 
 static int
+prefetch_test(rte_event_dev_prefetch_type_t prefetch_type, const char *prefetch_name)
+{
+#define NB_EVENTS     1024
+	uint64_t start, total;
+	struct rte_event ev;
+	int rc, cnt;
+
+	ev.event_type = RTE_EVENT_TYPE_CPU;
+	ev.queue_id = 0;
+	ev.op = RTE_EVENT_OP_NEW;
+	ev.u64 = 0xBADF00D0;
+
+	for (cnt = 0; cnt < NB_EVENTS; cnt++) {
+		ev.flow_id = cnt;
+		rc = rte_event_enqueue_burst(TEST_DEV_ID, 0, &ev, 1);
+		TEST_ASSERT(rc == 1, "Failed to enqueue event");
+	}
+
+	RTE_SET_USED(prefetch_type);
+	total = 0;
+	while (cnt) {
+		start = rte_rdtsc_precise();
+		rc = rte_event_dequeue_burst(TEST_DEV_ID, 0, &ev, 1, 0);
+		if (rc) {
+			total += rte_rdtsc_precise() - start;
+			cnt--;
+		}
+	}
+	printf("Prefetch type : %s, avg cycles %" PRIu64 "\n", prefetch_name, total / NB_EVENTS);
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_eventdev_prefetch_configure(void)
+{
+	struct rte_event_dev_config dev_conf;
+	struct rte_event_dev_info info;
+	int rc;
+
+	rte_event_dev_info_get(TEST_DEV_ID, &info);
+
+	if ((info.event_dev_cap & RTE_EVENT_DEV_CAP_EVENT_PREFETCH) == 0)
+		return TEST_SKIPPED;
+
+	devconf_set_default_sane_values(&dev_conf, &info);
+	dev_conf.prefetch_type = RTE_EVENT_DEV_PREFETCH;
+	rc = rte_event_dev_configure(TEST_DEV_ID, &dev_conf);
+	TEST_ASSERT_SUCCESS(rc, "Failed to configure eventdev");
+
+	rc = prefetch_test(RTE_EVENT_DEV_PREFETCH_NONE, "RTE_EVENT_DEV_PREFETCH_NONE");
+	rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH, "RTE_EVENT_DEV_PREFETCH");
+	if (info.event_dev_cap & RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH)
+		rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH_INTELLIGENT,
+				    "RTE_EVENT_DEV_PREFETCH_INTELLIGENT");
+
+	return rc;
+}
+
+static int
 test_eventdev_close(void)
 {
 	rte_event_dev_stop(TEST_DEV_ID);
@@ -1310,6 +1370,8 @@ static struct unit_test_suite eventdev_common_testsuite  = {
 			test_eventdev_start_stop),
 		TEST_CASE_ST(eventdev_configure_setup, eventdev_stop_device,
 			test_eventdev_profile_switch),
+		TEST_CASE_ST(eventdev_configure_setup, NULL,
+			test_eventdev_prefetch_configure),
 		TEST_CASE_ST(eventdev_setup_device, eventdev_stop_device,
 			test_eventdev_link),
 		TEST_CASE_ST(eventdev_setup_device, eventdev_stop_device,

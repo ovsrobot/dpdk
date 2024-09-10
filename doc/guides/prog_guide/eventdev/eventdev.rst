@@ -357,6 +357,28 @@ Worker path:
        // Process the event received.
    }
 
+Event Prefetching
+~~~~~~~~~~~~~~~~~
+
+Event prefetching enhances scheduling performance by pre-scheduling events to event ports
+when dequeues are issued.
+The `rte_event_dequeue_burst` operation initiates the prefetch operation, which completes
+in parallel without affecting the dequeued event flow contexts and dequeue latency.
+On the next dequeue operation, the prefetched events are dequeued and prefetch is initiated
+again.
+
+An application can use event prefetching if the event device supports it at either device
+level or at a individual port level.
+The application can check prefetch capability by checking if ``rte_event_dev_info.event_dev_cap``
+has the bit ``RTE_EVENT_DEV_CAP_PREFETCH`` set, if present prefetching can be enabled at device
+configuration time by setting appropriate prefetch type in ``rte_event_dev_config.prefetch``.
+
+Currently, the following prefetch types are supported:
+ * ``RTE_EVENT_DEV_PREFETCH_NONE`` - No prefetching.
+ * ``RTE_EVENT_DEV_PREFETCH`` - Always issue a prefetch when dequeue is issued.
+ * ``RTE_EVENT_DEV_PREFETCH_INTELLIGENT`` - Issue prefetch when dequeue is issued and there are
+   no forward progress constraints.
+
 Starting the EventDev
 ~~~~~~~~~~~~~~~~~~~~~
 
