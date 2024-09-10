@@ -216,6 +216,39 @@ copy_maps(struct user_mem_maps *user_mem_maps, struct user_mem_map *add_maps,
 	}
 }
 
+/* *
+ * check if iova area is already mapped or overlaps with existing mapped,
+ * @return
+ *        0 if iova area is not exist
+ *        1 if iova area is already mapped
+ *       -1 if overlaps between iova area and existing mapped
+ */
+static int
+check_iova_in_map(struct user_mem_maps *user_mem_maps, uint64_t iova, uint64_t len)
+{
+	int i;
+	uint64_t iova_end = iova + len;
+	uint64_t map_iova_end;
+	uint64_t map_iova_off;
+	uint64_t map_chunk;
+
+	for (i = 0; i < user_mem_maps->n_maps; i++) {
+		map_iova_off = iova - user_mem_maps->maps[i].iova;
+		map_iova_end = user_mem_maps->maps[i].iova + user_mem_maps->maps[i].len;
+		map_chunk = user_mem_maps->maps[i].chunk;
+
+		if ((user_mem_maps->maps[i].iova >= iova_end) || (iova >= map_iova_end))
+			continue;
+
+		if ((user_mem_maps->maps[i].iova <= iova) && (iova_end <= map_iova_end) &&
+			(len == map_chunk) && ((map_iova_off % map_chunk) == 0))
+			return 1;
+
+		return -1;
+	}
+	return 0;
+}
+
 /* try merging two maps into one, return 1 if succeeded */
 static int
 merge_map(struct user_mem_map *left, struct user_mem_map *right)
@@ -1873,6 +1906,7 @@ container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 	struct user_mem_maps *user_mem_maps;
 	bool has_partial_unmap;
 	int ret = 0;
+	int iova_check = 0;
 
 	user_mem_maps = &vfio_cfg->mem_maps;
 	rte_spinlock_recursive_lock(&user_mem_maps->lock);
@@ -1882,6 +1916,22 @@ container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 		ret = -1;
 		goto out;
 	}
+
+	/* do we have partial unmap support? */
+	has_partial_unmap = vfio_cfg->vfio_iommu_type->partial_unmap;
+	/* check if we can map this region */
+	if (!has_partial_unmap) {
+		iova_check = check_iova_in_map(user_mem_maps, iova, len);
+		if (iova_check == 1) {
+			goto out;
+		} else if (iova_check < 0) {
+			EAL_LOG(ERR, "Overlapping DMA regions not allowed");
+			rte_errno = ENOTSUP;
+			ret = -1;
+			goto out;
+		}
+	}
+
 	/* map the entry */
 	if (vfio_dma_mem_map(vfio_cfg, vaddr, iova, len, 1)) {
 		/* technically, this will fail if there are currently no devices
@@ -1895,8 +1945,6 @@ container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 		ret = -1;
 		goto out;
 	}
-	/* do we have partial unmap support? */
-	has_partial_unmap = vfio_cfg->vfio_iommu_type->partial_unmap;
 
 	/* create new user mem map entry */
 	new_map = &user_mem_maps->maps[user_mem_maps->n_maps++];
