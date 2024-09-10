@@ -5298,6 +5298,26 @@ int rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 int rte_eth_timesync_adjust_time(uint16_t port_id, int64_t delta);
 
 /**
+ * Adjust the clock increment rate on an Ethernet device.
+ *
+ * This is usually used in conjunction with other Ethdev timesync functions to
+ * synchronize the device time using the IEEE1588/802.1AS protocol.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param ppm
+ *  Parts per million with 16-bit fractional field
+ *
+ * @return
+ *   - 0: Success.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -EIO: if device is removed.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ */
+__rte_experimental
+int rte_eth_timesync_adjust_freq(uint16_t port_id, int64_t ppm);
+
+/**
  * Read the time from the timesync clock on an Ethernet device.
  *
  * This is usually used in conjunction with other Ethdev timesync functions to
