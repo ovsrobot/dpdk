@@ -1221,6 +1221,9 @@ F: drivers/crypto/virtio/
 F: doc/guides/cryptodevs/virtio.rst
 F: doc/guides/cryptodevs/features/virtio.ini
 
+ZTE Storage Data Accelerator
+M: Hanxiao Li <li.hanxiao@zte.com.cn>
+F: drivers/crypto/zsda/
 
 Compression Drivers
 -------------------
