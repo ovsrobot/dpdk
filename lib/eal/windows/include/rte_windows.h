@@ -5,10 +5,6 @@
 #ifndef _RTE_WINDOWS_H_
 #define _RTE_WINDOWS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file Windows-specific facilities
  *
@@ -43,6 +39,10 @@ extern "C" {
 #include <initguid.h>
 #include <devguid.h>
 #include <rte_log.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Log GetLastError() with context, usually a Win32 API function and arguments.

@@ -4,10 +4,6 @@
 #ifndef __INCLUDE_RTE_SWX_TABLE_H__
 #define __INCLUDE_RTE_SWX_TABLE_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  * RTE SWX Table
@@ -20,6 +16,10 @@ extern "C" {
 #include <rte_os.h>
 
 #include "rte_swx_hash_func.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Match type. */
 enum rte_swx_table_match_type {

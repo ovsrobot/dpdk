@@ -5,10 +5,6 @@
 #ifndef __INCLUDE_RTE_TABLE_HASH_FUNC_H__
 #define __INCLUDE_RTE_TABLE_HASH_FUNC_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 
 #include <rte_compat.h>
@@ -17,6 +13,10 @@ extern "C" {
 #if defined(RTE_ARCH_X86_64)
 
 #include <x86intrin.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 static inline uint64_t
 rte_crc32_u64(uint64_t crc, uint64_t v)
@@ -27,6 +27,10 @@ rte_crc32_u64(uint64_t crc, uint64_t v)
 #elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
 #include "rte_table_hash_func_arm64.h"
 #else
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 static inline uint64_t
 rte_crc32_u64(uint64_t crc, uint64_t v)

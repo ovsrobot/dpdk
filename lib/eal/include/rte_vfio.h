@@ -10,10 +10,6 @@
  * RTE VFIO. This library provides various VFIO related utility functions.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -35,6 +31,10 @@ extern "C" {
 #ifdef VFIO_PRESENT
 
 #include <linux/vfio.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define VFIO_DIR "/dev/vfio"
 #define VFIO_CONTAINER_PATH "/dev/vfio/vfio"

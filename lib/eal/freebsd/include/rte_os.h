@@ -5,10 +5,6 @@
 #ifndef _RTE_OS_H_
 #define _RTE_OS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * This header should contain any definition
  * which is not supported natively or named differently in FreeBSD.
@@ -16,6 +12,10 @@ extern "C" {
 
 #include <pthread_np.h>
 #include <sys/queue.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* These macros are compatible with system's sys/queue.h. */
 #define RTE_TAILQ_HEAD(name, type) TAILQ_HEAD(name, type)

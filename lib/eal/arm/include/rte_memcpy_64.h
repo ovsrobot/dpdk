@@ -5,10 +5,6 @@
 #ifndef _RTE_MEMCPY_ARM64_H_
 #define _RTE_MEMCPY_ARM64_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 #include <string.h>
 
@@ -17,6 +13,10 @@ extern "C" {
 #ifdef RTE_ARCH_ARM64_MEMCPY
 #include <rte_common.h>
 #include <rte_branch_prediction.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * The memory copy performance differs on different AArch64 micro-architectures.

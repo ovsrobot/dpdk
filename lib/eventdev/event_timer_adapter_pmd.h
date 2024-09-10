@@ -16,11 +16,11 @@
  * versioning.
  */
 
+#include "rte_event_timer_adapter.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "rte_event_timer_adapter.h"
 
 /*
  * Definitions of functions exported by an event timer adapter implementation
