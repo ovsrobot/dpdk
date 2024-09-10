@@ -480,6 +480,15 @@ struct rte_event;
  * @see rte_event_port_prefetch_modify()
  */
 
+#define RTE_EVENT_DEV_CAP_SW_PREFETCH (1ULL << 19)
+/**< Event device supports software prefetching.
+ *
+ * When this flag is set, the application can issue prefetch request on
+ * a event port.
+ *
+ * @see rte_event_port_prefetch()
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -2977,6 +2986,46 @@ rte_event_port_prefetch_modify(uint8_t dev_id, uint8_t port_id, rte_event_dev_pr
 	return fp_ops->prefetch_modify(port, type);
 }
 
+/**
+ * Provide a hint to the event device to prefetch events to event port .
+ *
+ * Hint the event device to prefetch events to the event port.
+ * The call doesn't not guarantee that the events will be prefetched.
+ * The call doesn't release the flow context currently held by the event port.
+ * The event device should support RTE_EVENT_DEV_CAP_SW_PREFETCH capability.
+ *
+ * When prefetching is enabled at an event device or event port level, the hint
+ * is ignored.
+ *
+ * Subsequent calls to rte_event_dequeue_burst() will dequeue the prefetch events
+ * but prefetch operation is not issued again.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param type
+ *   The prefetch type to use on the event port.
+ */
+static inline void
+rte_event_port_prefetch(uint8_t dev_id, uint8_t port_id, rte_event_dev_prefetch_type_t type)
+{
+	const struct rte_event_fp_ops *fp_ops;
+	void *port;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+	port = fp_ops->data[port_id];
+
+#ifdef RTE_LIBRTE_EVENTDEV_DEBUG
+	if (dev_id >= RTE_EVENT_MAX_DEVS || port_id >= RTE_EVENT_MAX_PORTS_PER_DEV)
+		return;
+	if (port == NULL)
+		return;
+#endif
+	rte_eventdev_trace_port_prefetch(dev_id, port_id, type);
+
+	fp_ops->prefetch(port, type);
+}
 #ifdef __cplusplus
 }
 #endif

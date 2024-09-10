@@ -390,6 +390,14 @@ To enable or disable event prefetching at a given event port, the application ca
    // Disable prefetching if thread is about to be scheduled out and issue dequeue() to drain
    // pending events.
 
+Event Prefetch Hint can be used to provide a hint to the eventdev PMD to prefetch the next event
+without releasing the current flow context. Event device that support this feature advertises the
+capability using the ``RTE_EVENT_DEV_CAP_SW_PREFETCH`` capability flag.
+If prefetching is already enabled at a event device or event port level then the hint is ignored.
+
+.. code-block:: c
+
+   rte_event_port_prefetch(dev_id, port_id, RTE_EVENT_DEV_PREFETCH);
 
 Starting the EventDev
 ~~~~~~~~~~~~~~~~~~~~~

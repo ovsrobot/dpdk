@@ -52,6 +52,9 @@ typedef int (*event_profile_switch_t)(void *port, uint8_t profile);
 typedef int (*event_prefetch_modify_t)(void *port, rte_event_dev_prefetch_type_t prefetch_type);
 /**< @internal Modify prefetch type on the event port. */
 
+typedef void (*event_prefetch_t)(void *port, rte_event_dev_prefetch_type_t prefetch_type);
+/**< @internal Issue prefetch on an event port. */
+
 struct __rte_cache_aligned rte_event_fp_ops {
 	void **data;
 	/**< points to array of internal port data pointers */
@@ -81,6 +84,7 @@ struct __rte_cache_aligned rte_event_fp_ops {
 	/**< PMD Event switch profile function. */
 	event_prefetch_modify_t prefetch_modify;
 	/**< PMD Event port prefetch switch. */
+	event_prefetch_t prefetch;
 	uintptr_t reserved[4];
 };
 
