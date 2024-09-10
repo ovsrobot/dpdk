@@ -80,6 +80,9 @@ virtio_blk = {'Class': '01', 'Vendor': "1af4", 'Device': '1001,1042',
 cnxk_ml = {'Class': '08', 'Vendor': '177d', 'Device': 'a092',
            'SVendor': None, 'SDevice': None}
 
+zte_zsda = {'Class': '12', 'Vendor': '1cf2', 'Device': '8050,8051',
+                         'SVendor': None, 'SDevice': None}
+
 network_devices = [network_class, cavium_pkx, avp_vnic, ifpga_class]
 baseband_devices = [acceleration_class]
 crypto_devices = [encryption_class, intel_processor_class]
@@ -93,7 +96,7 @@ regex_devices = [cn9k_ree]
 ml_devices = [cnxk_ml]
 misc_devices = [cnxk_bphy, cnxk_bphy_cgx, cnxk_inl_dev,
                 intel_ntb_skx, intel_ntb_icx,
-                virtio_blk]
+                virtio_blk, zte_zsda]
 
 # global dict ethernet devices present. Dictionary indexed by PCI address.
 # Each device within this is itself a dictionary of device properties
