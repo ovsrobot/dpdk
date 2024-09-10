@@ -55,6 +55,20 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added EAL per-lcore static memory allocation facility.**
+
+    Added EAL API <rte_lcore_var.h> for statically allocating small,
+    frequently-accessed data structures, for which one instance should
+    exist for each lcore.
+
+    With lcore variables, data is organized spatially on a per-lcore
+    basis, rather than per library or PMD, avoiding the need for cache
+    aligning (or RTE_CACHE_GUARDing) data structures, which in turn
+    reduces CPU cache internal fragmentation, improving performance.
+
+    Lcore variables are similar to thread-local storage (TLS, e.g.,
+    C11 _Thread_local), but decoupling the values' life time from that
+    of the threads.
 
 Removed Items
 -------------
