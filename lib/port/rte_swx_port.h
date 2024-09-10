@@ -4,10 +4,6 @@
 #ifndef __INCLUDE_RTE_SWX_PORT_H__
 #define __INCLUDE_RTE_SWX_PORT_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  * RTE SWX Port
@@ -16,6 +12,10 @@ extern "C" {
  */
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Packet. */
 struct rte_swx_pkt {

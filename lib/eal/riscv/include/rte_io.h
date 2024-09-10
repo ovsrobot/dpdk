@@ -8,11 +8,11 @@
 #ifndef RTE_IO_RISCV_H
 #define RTE_IO_RISCV_H
 
+#include "generic/rte_io.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "generic/rte_io.h"
 
 #ifdef __cplusplus
 }
