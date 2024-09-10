@@ -470,6 +470,16 @@ struct rte_event;
  * @see rte_event_dev_configure()
  */
 
+#define RTE_EVENT_DEV_CAP_EVENT_PER_PORT_PREFETCH (1ULL << 18)
+/**< Event device supports event prefetching per event port.
+ *
+ * When this flag is set, the event device allows controlling the event
+ * prefetching/pre-scheduling at a event port granularity.
+ *
+ * @see rte_event_dev_configure()
+ * @see rte_event_port_prefetch_modify()
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -708,18 +718,23 @@ typedef enum {
 	RTE_EVENT_DEV_PREFETCH_NONE = 0,
 	/* Disable prefetch across the event device or on a given event port.
 	 * @ref rte_event_dev_config.prefetch_type
+	 * @ref rte_event_port_prefetch_modify()
 	 */
 	RTE_EVENT_DEV_PREFETCH,
 	/* Enable prefetch always across the event device or a given event port.
 	 * @ref rte_event_dev_config.prefetch_type
+	 * @ref rte_event_port_prefetch_modify()
 	 * @see RTE_EVENT_DEV_CAP_EVENT_PREFETCH
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PER_PORT_PREFETCH
 	 */
 	RTE_EVENT_DEV_PREFETCH_INTELLIGENT,
 	/* Enable intelligent prefetch across the event device or a given event port.
 	 * Delay issuing prefetch until there are no forward progress constraints with
 	 * the held flow contexts.
 	 * @ref rte_event_dev_config.prefetch_type
+	 * @ref rte_event_port_prefetch_modify()
 	 * @see RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PER_PORT_PREFETCH
 	 */
 } rte_event_dev_prefetch_type_t;
 
@@ -2920,6 +2935,46 @@ rte_event_port_profile_switch(uint8_t dev_id, uint8_t port_id, uint8_t profile_i
 	rte_eventdev_trace_port_profile_switch(dev_id, port_id, profile_id);
 
 	return fp_ops->profile_switch(port, profile_id);
+}
+
+/**
+ * Change the prefetch type to use on an event port.
+ *
+ * This function is used to change the current prefetch type configured
+ * on an event port, the prefetch type can be set to none to disable prefetching.
+ * This effects the subsequent ``rte_event_dequeue_burst`` call.
+ * The event device should support RTE_EVENT_DEV_CAP_PER_PORT_PREFETCH capability.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param type
+ *   The prefetch type to use on the event port.
+ * @return
+ *  - 0 on success.
+ *  - -EINVAL if *dev_id*,  *port_id*, or *type* is invalid.
+ *  - -ENOTSUP if the device doesn't support prefetch or per port prefetch.
+ */
+static inline int
+rte_event_port_prefetch_modify(uint8_t dev_id, uint8_t port_id, rte_event_dev_prefetch_type_t type)
+{
+	const struct rte_event_fp_ops *fp_ops;
+	void *port;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+	port = fp_ops->data[port_id];
+
+#ifdef RTE_LIBRTE_EVENTDEV_DEBUG
+	if (dev_id >= RTE_EVENT_MAX_DEVS || port_id >= RTE_EVENT_MAX_PORTS_PER_DEV)
+		return -EINVAL;
+
+	if (port == NULL)
+		return -EINVAL;
+#endif
+	rte_eventdev_trace_port_prefetch_modify(dev_id, port_id, type);
+
+	return fp_ops->prefetch_modify(port, type);
 }
 
 #ifdef __cplusplus

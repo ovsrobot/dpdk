@@ -49,6 +49,9 @@ typedef uint16_t (*event_dma_adapter_enqueue_t)(void *port, struct rte_event ev[
 typedef int (*event_profile_switch_t)(void *port, uint8_t profile);
 /**< @internal Switch active link profile on the event port. */
 
+typedef int (*event_prefetch_modify_t)(void *port, rte_event_dev_prefetch_type_t prefetch_type);
+/**< @internal Modify prefetch type on the event port. */
+
 struct __rte_cache_aligned rte_event_fp_ops {
 	void **data;
 	/**< points to array of internal port data pointers */
@@ -76,6 +79,8 @@ struct __rte_cache_aligned rte_event_fp_ops {
 	/**< PMD DMA adapter enqueue function. */
 	event_profile_switch_t profile_switch;
 	/**< PMD Event switch profile function. */
+	event_prefetch_modify_t prefetch_modify;
+	/**< PMD Event port prefetch switch. */
 	uintptr_t reserved[4];
 };
 

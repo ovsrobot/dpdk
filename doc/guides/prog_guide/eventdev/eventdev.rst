@@ -379,6 +379,18 @@ Currently, the following prefetch types are supported:
  * ``RTE_EVENT_DEV_PREFETCH_INTELLIGENT`` - Issue prefetch when dequeue is issued and there are
    no forward progress constraints.
 
+To enable or disable event prefetching at a given event port, the application can use
+``rte_event_port_prefetch_modify()`` API.
+
+.. code-block:: c
+
+   rte_event_port_prefetch_modify(dev_id, port_id, RTE_EVENT_DEV_PREFETCH);
+   // Dequeue events from the event port with normal dequeue() function.
+   rte_event_port_prefetch_modify(dev_id, port_id, RTE_EVENT_DEV_PREFETCH_NONE);
+   // Disable prefetching if thread is about to be scheduled out and issue dequeue() to drain
+   // pending events.
+
+
 Starting the EventDev
 ~~~~~~~~~~~~~~~~~~~~~
 

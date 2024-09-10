@@ -96,6 +96,14 @@ dummy_event_port_profile_switch(__rte_unused void *port, __rte_unused uint8_t pr
 	return -EINVAL;
 }
 
+static int
+dummy_event_port_prefetch_modify(__rte_unused void *port,
+				 __rte_unused rte_event_dev_prefetch_type_t prefetch)
+{
+	RTE_EDEV_LOG_ERR("modify prefetch requested for unconfigured event device");
+	return -EINVAL;
+}
+
 void
 event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 {
@@ -114,6 +122,7 @@ event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 		.ca_enqueue = dummy_event_crypto_adapter_enqueue,
 		.dma_enqueue = dummy_event_dma_adapter_enqueue,
 		.profile_switch = dummy_event_port_profile_switch,
+		.prefetch_modify = dummy_event_port_prefetch_modify,
 		.data = dummy_data,
 	};
 
@@ -136,5 +145,6 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 	fp_op->ca_enqueue = dev->ca_enqueue;
 	fp_op->dma_enqueue = dev->dma_enqueue;
 	fp_op->profile_switch = dev->profile_switch;
+	fp_op->prefetch_modify = dev->prefetch_modify;
 	fp_op->data = dev->data->ports;
 }

@@ -1251,7 +1251,8 @@ test_eventdev_profile_switch(void)
 }
 
 static int
-prefetch_test(rte_event_dev_prefetch_type_t prefetch_type, const char *prefetch_name)
+prefetch_test(rte_event_dev_prefetch_type_t prefetch_type, const char *prefetch_name,
+	      uint8_t modify)
 {
 #define NB_EVENTS     1024
 	uint64_t start, total;
@@ -1269,7 +1270,11 @@ prefetch_test(rte_event_dev_prefetch_type_t prefetch_type, const char *prefetch_
 		TEST_ASSERT(rc == 1, "Failed to enqueue event");
 	}
 
-	RTE_SET_USED(prefetch_type);
+	if (modify) {
+		rc = rte_event_port_prefetch_modify(TEST_DEV_ID, 0, prefetch_type);
+		TEST_ASSERT_SUCCESS(rc, "Failed to modify prefetch type");
+	}
+
 	total = 0;
 	while (cnt) {
 		start = rte_rdtsc_precise();
@@ -1301,11 +1306,55 @@ test_eventdev_prefetch_configure(void)
 	rc = rte_event_dev_configure(TEST_DEV_ID, &dev_conf);
 	TEST_ASSERT_SUCCESS(rc, "Failed to configure eventdev");
 
-	rc = prefetch_test(RTE_EVENT_DEV_PREFETCH_NONE, "RTE_EVENT_DEV_PREFETCH_NONE");
-	rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH, "RTE_EVENT_DEV_PREFETCH");
+	rc = prefetch_test(RTE_EVENT_DEV_PREFETCH_NONE, "RTE_EVENT_DEV_PREFETCH_NONE", 0);
+	rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH, "RTE_EVENT_DEV_PREFETCH", 0);
 	if (info.event_dev_cap & RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH)
 		rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH_INTELLIGENT,
-				    "RTE_EVENT_DEV_PREFETCH_INTELLIGENT");
+				    "RTE_EVENT_DEV_PREFETCH_INTELLIGENT", 0);
+
+	return rc;
+}
+
+static int
+test_eventdev_prefetch_modify(void)
+{
+	struct rte_event_dev_config dev_conf;
+	struct rte_event_queue_conf qcfg;
+	struct rte_event_port_conf pcfg;
+	struct rte_event_dev_info info;
+	int rc;
+
+	rte_event_dev_info_get(TEST_DEV_ID, &info);
+	if ((info.event_dev_cap & RTE_EVENT_DEV_CAP_EVENT_PER_PORT_PREFETCH) == 0)
+		return TEST_SKIPPED;
+
+	devconf_set_default_sane_values(&dev_conf, &info);
+	dev_conf.prefetch_type = RTE_EVENT_DEV_PREFETCH_NONE;
+	rc = rte_event_dev_configure(TEST_DEV_ID, &dev_conf);
+	TEST_ASSERT_SUCCESS(rc, "Failed to configure eventdev");
+
+	rc = rte_event_port_default_conf_get(TEST_DEV_ID, 0, &pcfg);
+	TEST_ASSERT_SUCCESS(rc, "Failed to get port0 default config");
+	rc = rte_event_port_setup(TEST_DEV_ID, 0, &pcfg);
+	TEST_ASSERT_SUCCESS(rc, "Failed to setup port0");
+
+	rc = rte_event_queue_default_conf_get(TEST_DEV_ID, 0, &qcfg);
+	TEST_ASSERT_SUCCESS(rc, "Failed to get queue0 default config");
+	rc = rte_event_queue_setup(TEST_DEV_ID, 0, &qcfg);
+	TEST_ASSERT_SUCCESS(rc, "Failed to setup queue0");
+
+	rc = rte_event_port_link(TEST_DEV_ID, 0, NULL, NULL, 0);
+	TEST_ASSERT(rc == (int)dev_conf.nb_event_queues, "Failed to link port, device %d",
+		    TEST_DEV_ID);
+
+	rc = rte_event_dev_start(TEST_DEV_ID);
+	TEST_ASSERT_SUCCESS(rc, "Failed to start event device");
+
+	rc = prefetch_test(RTE_EVENT_DEV_PREFETCH_NONE, "RTE_EVENT_DEV_PREFETCH_NONE", 1);
+	rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH, "RTE_EVENT_DEV_PREFETCH", 1);
+	if (info.event_dev_cap & RTE_EVENT_DEV_CAP_EVENT_INTELLIGENT_PREFETCH)
+		rc |= prefetch_test(RTE_EVENT_DEV_PREFETCH_INTELLIGENT,
+				    "RTE_EVENT_DEV_PREFETCH_INTELLIGENT", 1);
 
 	return rc;
 }
@@ -1372,6 +1421,8 @@ static struct unit_test_suite eventdev_common_testsuite  = {
 			test_eventdev_profile_switch),
 		TEST_CASE_ST(eventdev_configure_setup, NULL,
 			test_eventdev_prefetch_configure),
+		TEST_CASE_ST(eventdev_configure_setup, eventdev_stop_device,
+			test_eventdev_prefetch_modify),
 		TEST_CASE_ST(eventdev_setup_device, eventdev_stop_device,
 			test_eventdev_link),
 		TEST_CASE_ST(eventdev_setup_device, eventdev_stop_device,
