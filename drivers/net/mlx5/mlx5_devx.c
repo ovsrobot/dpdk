@@ -92,6 +92,30 @@ mlx5_rxq_obj_modify_rq_vlan_strip(struct mlx5_rxq_priv *rxq, int on)
 }
 
 /**
+ * Modify the q counter of a given RQ
+ *
+ * @param rxq
+ *   Rx queue.
+ * @param counter_set_id
+ *   Q counter id to set
+ *
+ * @return
+ *   0 on success, non-0 otherwise
+ */
+static int
+mlx5_rxq_obj_modify_counter(struct mlx5_rxq_priv *rxq, uint32_t counter_set_id)
+{
+	struct mlx5_devx_modify_rq_attr rq_attr;
+
+	memset(&rq_attr, 0, sizeof(rq_attr));
+	rq_attr.rq_state = MLX5_RQC_STATE_RDY;
+	rq_attr.state = MLX5_RQC_STATE_RDY;
+	rq_attr.counter_set_id = counter_set_id;
+	rq_attr.modify_bitmask = MLX5_MODIFY_RQ_IN_MODIFY_BITMASK_RQ_COUNTER_SET_ID;
+	return mlx5_devx_cmd_modify_rq(rxq->ctrl->obj->rq, &rq_attr);
+}
+
+/**
  * Modify RQ using DevX API.
  *
  * @param rxq
@@ -508,6 +532,7 @@ mlx5_rxq_create_devx_cq_resources(struct mlx5_rxq_priv *rxq)
 static uint32_t
 mlx5_set_hairpin_queue_counter_obj(struct mlx5_priv *priv)
 {
+	int ret;
 	if (priv->q_counters_hairpin != NULL)
 		return priv->q_counters_hairpin->id;
 
@@ -522,28 +547,23 @@ mlx5_set_hairpin_queue_counter_obj(struct mlx5_priv *priv)
 		return 0;
 	}
 
-	switch (priv->pci_dev->id.device_id) {
-	/* Counting out of buffer drops on hairpin queues is supported only on CX7 and up. */
-	case PCI_DEVICE_ID_MELLANOX_CONNECTX7:
-	case PCI_DEVICE_ID_MELLANOX_CONNECTXVF:
-	case PCI_DEVICE_ID_MELLANOX_BLUEFIELD3:
-	case PCI_DEVICE_ID_MELLANOX_BLUEFIELDVF:
-
-		priv->q_counters_hairpin = mlx5_devx_cmd_queue_counter_alloc(priv->sh->cdev->ctx);
-		if (priv->q_counters_hairpin == NULL) {
-			/* Failed to allocate */
-			DRV_LOG(DEBUG, "Some of the statistics of port %d "
-				"will not be available.", priv->dev_data->port_id);
-			priv->q_counters_allocation_failure = 1;
-			return 0;
-		}
-		return priv->q_counters_hairpin->id;
-	default:
+	ret = mlx5_hairpin_queue_counter_supported(priv);
+	if (ret) {
 		DRV_LOG(DEBUG, "Hairpin out of buffer counter "
 				"is not available on this NIC.");
 		priv->q_counters_allocation_failure = 1;
 		return 0;
 	}
+
+	priv->q_counters_hairpin = mlx5_devx_cmd_queue_counter_alloc(priv->sh->cdev->ctx, NULL);
+	if (priv->q_counters_hairpin == NULL) {
+		/* Failed to allocate */
+		DRV_LOG(DEBUG, "Some of the statistics of port %d "
+			"will not be available.", priv->dev_data->port_id);
+		priv->q_counters_allocation_failure = 1;
+		return 0;
+	}
+	return priv->q_counters_hairpin->id;
 }
 
 /**
@@ -1710,6 +1730,7 @@ mlx5_txq_devx_obj_release(struct mlx5_txq_obj *txq_obj)
 
 struct mlx5_obj_ops devx_obj_ops = {
 	.rxq_obj_modify_vlan_strip = mlx5_rxq_obj_modify_rq_vlan_strip,
+	.rxq_obj_modify_counter_set_id = mlx5_rxq_obj_modify_counter,
 	.rxq_obj_new = mlx5_rxq_devx_obj_new,
 	.rxq_event_get = mlx5_rx_devx_get_event,
 	.rxq_obj_modify = mlx5_devx_modify_rq,

@@ -78,7 +78,7 @@ mlx5_queue_counter_id_prepare(struct rte_eth_dev *dev)
 	struct mlx5_priv *priv = dev->data->dev_private;
 	void *ctx = priv->sh->cdev->ctx;
 
-	priv->q_counters = mlx5_devx_cmd_queue_counter_alloc(ctx);
+	priv->q_counters = mlx5_devx_cmd_queue_counter_alloc(ctx, NULL);
 	if (!priv->q_counters) {
 		DRV_LOG(ERR, "Port %d queue counter object cannot be created "
 			"by DevX - imissed counter will be unavailable",

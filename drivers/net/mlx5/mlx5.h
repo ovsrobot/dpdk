@@ -1755,6 +1755,7 @@ struct mlx5_priv;
 /* HW objects operations structure. */
 struct mlx5_obj_ops {
 	int (*rxq_obj_modify_vlan_strip)(struct mlx5_rxq_priv *rxq, int on);
+	int (*rxq_obj_modify_counter_set_id)(struct mlx5_rxq_priv *rxq, uint32_t counter_set_id);
 	int (*rxq_obj_new)(struct mlx5_rxq_priv *rxq);
 	int (*rxq_event_get)(struct mlx5_rxq_obj *rxq_obj);
 	int (*rxq_obj_modify)(struct mlx5_rxq_priv *rxq, uint8_t type);
@@ -1993,6 +1994,7 @@ struct mlx5_priv {
 	uint32_t rss_shared_actions; /* RSS shared actions. */
 	/* If true, indicates that we failed to allocate a q counter in the past. */
 	bool q_counters_allocation_failure;
+	bool per_hairpin_queue_counter_enabled;
 	struct mlx5_devx_obj *q_counters; /* DevX queue counter object. */
 	uint32_t counter_set_id; /* Queue counter ID to set in DevX objects. */
 	/* DevX queue counter object for all hairpin queues of the port. */
@@ -2203,6 +2205,9 @@ int mlx5_flow_aso_ct_mng_init(struct mlx5_dev_ctx_shared *sh);
 struct mlx5_physical_device *
 mlx5_get_locked_physical_device(struct mlx5_priv *priv);
 void mlx5_unlock_physical_device(void);
+int mlx5_hairpin_queue_counter_supported(struct mlx5_priv *priv);
+int mlx5_read_queue_counter(struct mlx5_devx_obj *q_counter, const char *ctr_name, uint64_t *stat);
+
 
 /* mlx5_ethdev.c */
 
@@ -2308,7 +2313,8 @@ int mlx5_xstats_reset(struct rte_eth_dev *dev);
 int mlx5_xstats_get_names(struct rte_eth_dev *dev __rte_unused,
 			  struct rte_eth_xstat_name *xstats_names,
 			  unsigned int n);
-
+void mlx5_reset_xstats_by_name(struct mlx5_priv *priv, const char *ctr_name);
+void mlx5_reset_xstats_rq(struct rte_eth_dev *dev);
 /* mlx5_vlan.c */
 
 int mlx5_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on);

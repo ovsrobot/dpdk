@@ -195,6 +195,19 @@ __rte_experimental
 int rte_pmd_mlx5_host_shaper_config(int port_id, uint8_t rate, uint32_t flags);
 
 /**
+ * Enable/disable per hairpin queue counter.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param on_off
+ *   1 if to enable, 0 to disable.
+ * @return
+ *   Zero if successful. Non-zero otherwise.
+ */
+__rte_experimental
+int rte_pmd_mlx5_set_per_hairpin_queue_counter(uint16_t port_id, int on_off);
+
+/**
  * Enable traffic for external SQ.
  *
  * @param[in] port_id

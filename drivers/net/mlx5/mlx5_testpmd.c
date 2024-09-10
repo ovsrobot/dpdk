@@ -164,6 +164,17 @@ mlx5_test_set_port_host_shaper(uint16_t port_id, uint16_t avail_thresh_triggered
 	return 0;
 }
 
+static void
+mlx5_set_per_hairpin_queue_counter(uint16_t port_id, uint8_t on_off)
+{
+	if (port_id_is_invalid(port_id, ENABLED_WARN)) {
+		print_valid_ports();
+		return;
+	}
+
+	rte_pmd_mlx5_set_per_hairpin_queue_counter(port_id, on_off);
+}
+
 #ifndef RTE_EXEC_ENV_WINDOWS
 static const char*
 mlx5_test_get_socket_path(char *extend)
@@ -478,6 +489,61 @@ static cmdline_parse_inst_t mlx5_test_cmd_port_host_shaper = {
 		(void *)&cmd_port_host_shaper_rate_num,
 		NULL,
 	}
+};
+
+/* *** set option to attach a q counter to each hairpin queue *** */
+struct cmd_operate_enable_hairpin_counter_result {
+	cmdline_fixed_string_t mlx5;
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t name;
+	cmdline_fixed_string_t on_off;
+	portid_t port_id;
+};
+
+static void cmd_operate_enable_hairpin_counter_parse(void *parsed_result,
+				__rte_unused struct cmdline *cl,
+				__rte_unused void *data)
+{
+	struct cmd_operate_enable_hairpin_counter_result *res = parsed_result;
+	uint16_t on_off = 0;
+
+	on_off = !strcmp(res->on_off, "on") ? 1 : 0;
+
+	if ((strcmp(res->mlx5, "mlx5") == 0) &&
+		 (strcmp(res->port, "port") == 0) &&
+		 (strcmp(res->name, "hairpin-per-queue-counter-enable") == 0))
+		mlx5_set_per_hairpin_queue_counter(res->port_id, on_off);
+}
+
+static cmdline_parse_token_string_t cmd_operate_enable_hairpin_counter_mlx5 =
+	TOKEN_STRING_INITIALIZER(struct cmd_operate_enable_hairpin_counter_result, mlx5,
+				 "mlx5");
+static cmdline_parse_token_string_t cmd_operate_enable_hairpin_counter_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_operate_enable_hairpin_counter_result,
+			port, "port");
+static cmdline_parse_token_num_t cmd_operate_enable_hairpin_counter_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_operate_enable_hairpin_counter_result,
+			port_id, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_operate_enable_hairpin_counter_name =
+	TOKEN_STRING_INITIALIZER(struct cmd_operate_enable_hairpin_counter_result,
+				 name, "hairpin-per-queue-counter-enable");
+static cmdline_parse_token_string_t cmd_operate_enable_hairpin_counter_on_off =
+	TOKEN_STRING_INITIALIZER(struct cmd_operate_enable_hairpin_counter_result,
+				 on_off, "on#off");
+
+
+static cmdline_parse_inst_t mlx5_cmd_operate_enable_hairpin_counter = {
+	.f = cmd_operate_enable_hairpin_counter_parse,
+	.data = NULL,
+	.help_str = "mlx5 port (port_id) hairpin-per-queue-counter-enable on|off",
+	.tokens = {
+		(void *)&cmd_operate_enable_hairpin_counter_mlx5,
+		(void *)&cmd_operate_enable_hairpin_counter_port,
+		(void *)&cmd_operate_enable_hairpin_counter_port_id,
+		(void *)&cmd_operate_enable_hairpin_counter_name,
+		(void *)&cmd_operate_enable_hairpin_counter_on_off,
+		NULL,
+	},
 };
 
 #ifndef RTE_EXEC_ENV_WINDOWS
@@ -1372,6 +1438,10 @@ static struct testpmd_driver_commands mlx5_driver_cmds = {
 			.help = "mlx5 set port (port_id) host_shaper avail_thresh_triggered (on|off)"
 				"rate (rate_num):\n"
 				"    Set HOST_SHAPER avail_thresh_triggered and rate with port_id\n\n",
+		},
+		{
+			.ctx = &mlx5_cmd_operate_enable_hairpin_counter,
+			.help = "mlx5 port (port_id) hairpin-per-queue-counter-enable (on|off)\n\n",
 		},
 #ifndef RTE_EXEC_ENV_WINDOWS
 		{
