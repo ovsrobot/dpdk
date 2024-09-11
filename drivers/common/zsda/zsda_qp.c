@@ -20,8 +20,11 @@ struct ring_size {
 };
 
 struct ring_size zsda_qp_hw_ring_size[ZSDA_MAX_SERVICES] = {
+	[ZSDA_SERVICE_SYMMETRIC_ENCRYPT] = {128, 16},
+	[ZSDA_SERVICE_SYMMETRIC_DECRYPT] = {128, 16},
 	[ZSDA_SERVICE_COMPRESSION] = {32, 16},
 	[ZSDA_SERVICE_DECOMPRESSION] = {32, 16},
+	[ZSDA_SERVICE_HASH_ENCODE] = {32, 16},
 };
 
 static void
@@ -36,6 +39,43 @@ zsda_set_queue_head_tail(const struct zsda_pci_device *zsda_pci_dev,
 			 SET_HEAD_INTI);
 }
 
+static int
+zsda_get_queue_cfg_by_id(const struct zsda_pci_device *zsda_pci_dev,
+			 const uint8_t qid, struct qinfo *qcfg)
+{
+	struct zsda_admin_req_qcfg req = {0};
+	struct zsda_admin_resp_qcfg resp = {0};
+	int ret = 0;
+	struct rte_pci_device *pci_dev =
+		zsda_devs[zsda_pci_dev->zsda_dev_id].pci_dev;
+
+	if (qid >= MAX_QPS_ON_FUNCTION) {
+		ZSDA_LOG(ERR, "qid beyond limit!");
+		return ZSDA_FAILED;
+	}
+
+	zsda_admin_msg_init(pci_dev);
+	req.msg_type = ZSDA_ADMIN_QUEUE_CFG_REQ;
+	req.qid = qid;
+
+	ret = zsda_send_admin_msg(pci_dev, &req, sizeof(req));
+	if (ret) {
+		ZSDA_LOG(ERR, "Failed! Send msg");
+		return ret;
+	}
+
+	ret = zsda_recv_admin_msg(pci_dev, &resp, sizeof(resp));
+	if (ret) {
+		ZSDA_LOG(ERR, "Failed! Receive msg");
+		return ret;
+	}
+
+	memcpy(qcfg, &resp.qcfg, sizeof(*qcfg));
+
+	return ZSDA_SUCCESS;
+}
+
+
 int
 zsda_get_queue_cfg(struct zsda_pci_device *zsda_pci_dev)
 {
@@ -43,7 +83,7 @@ zsda_get_queue_cfg(struct zsda_pci_device *zsda_pci_dev)
 	uint32_t index;
 	enum zsda_service_type type;
 	struct zsda_qp_hw *zsda_hw_qps = zsda_pci_dev->zsda_hw_qps;
-	struct qinfo qcfg;
+	struct qinfo qcfg = {0};
 	int ret = 0;
 
 	for (i = 0; i < zsda_num_used_qps; i++) {
@@ -115,6 +155,30 @@ zsda_comp_max_nb_qps(const struct zsda_pci_device *zsda_pci_dev)
 	return min;
 }
 
+uint16_t
+zsda_crypto_max_nb_qps(struct zsda_pci_device *zsda_pci_dev)
+{
+	uint16_t encrypt = zsda_qps_per_service(zsda_pci_dev,
+						ZSDA_SERVICE_SYMMETRIC_ENCRYPT);
+	uint16_t decrypt = zsda_qps_per_service(zsda_pci_dev,
+						ZSDA_SERVICE_SYMMETRIC_DECRYPT);
+	uint16_t hash =
+		zsda_qps_per_service(zsda_pci_dev, ZSDA_SERVICE_HASH_ENCODE);
+	uint16_t min = 0;
+
+	if ((encrypt == MAX_QPS_ON_FUNCTION) ||
+		(decrypt == MAX_QPS_ON_FUNCTION) ||
+	    (hash == MAX_QPS_ON_FUNCTION))
+		min = MAX_QPS_ON_FUNCTION;
+	else {
+		min = (encrypt < decrypt) ? encrypt : decrypt;
+		min = (min < hash) ? min : hash;
+	}
+
+	if (min == 0)
+		return MAX_QPS_ON_FUNCTION;
+	return min;
+}
 
 void
 zsda_stats_get(void **queue_pairs, const uint32_t nb_queue_pairs,
