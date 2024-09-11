@@ -918,6 +918,65 @@ xsc_ethdev_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static uint64_t
+xsc_get_rx_queue_offloads(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	struct xsc_dev_config *config = &priv->config;
+	uint64_t offloads = 0;
+
+	if (config->hw_csum)
+		offloads |= (RTE_ETH_RX_OFFLOAD_IPV4_CKSUM |
+			     RTE_ETH_RX_OFFLOAD_UDP_CKSUM |
+			     RTE_ETH_RX_OFFLOAD_TCP_CKSUM);
+
+	return offloads;
+}
+
+static uint64_t
+xsc_get_tx_port_offloads(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	uint64_t offloads = 0;
+	struct xsc_dev_config *config = &priv->config;
+
+	if (config->hw_csum)
+		offloads |= (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
+			     RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
+			     RTE_ETH_TX_OFFLOAD_TCP_CKSUM);
+	if (config->tso)
+		offloads |= RTE_ETH_TX_OFFLOAD_TCP_TSO;
+	return offloads;
+}
+
+static int
+xsc_ethdev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *info)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+
+	info->min_rx_bufsize = 64;
+	info->max_rx_pktlen = 65536;
+	info->max_lro_pkt_size = 0;
+	info->max_rx_queues = 256;
+	info->max_tx_queues = 1024;
+	info->rx_desc_lim.nb_max = 4096;
+	info->rx_desc_lim.nb_min = 16;
+	info->tx_desc_lim.nb_max = 8192;
+	info->tx_desc_lim.nb_min = 128;
+
+	info->rx_queue_offload_capa = xsc_get_rx_queue_offloads(dev);
+	info->rx_offload_capa = info->rx_queue_offload_capa;
+	info->tx_offload_capa = xsc_get_tx_port_offloads(dev);
+
+	info->if_index = priv->ifindex;
+	info->hash_key_size = XSC_RSS_HASH_KEY_LEN;
+	info->tx_desc_lim.nb_seg_max = 8;
+	info->tx_desc_lim.nb_mtu_seg_max = 8;
+	info->switch_info.name = dev->data->name;
+	info->switch_info.port_id = priv->representor_id;
+	return 0;
+}
+
 static int
 xsc_ethdev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 			  uint32_t socket, const struct rte_eth_rxconf *conf,
@@ -1045,6 +1104,7 @@ const struct eth_dev_ops xsc_dev_ops = {
 	.dev_set_link_up = xsc_ethdev_set_link_up,
 	.dev_close = xsc_ethdev_close,
 	.link_update = xsc_ethdev_link_update,
+	.dev_infos_get = xsc_ethdev_infos_get,
 	.rx_queue_setup = xsc_ethdev_rx_queue_setup,
 	.tx_queue_setup = xsc_ethdev_tx_queue_setup,
 	.rx_queue_release = xsc_ethdev_rxq_release,
