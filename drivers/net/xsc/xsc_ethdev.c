@@ -17,6 +17,45 @@ static int
 xsc_rss_modify_cmd(struct xsc_ethdev_priv *priv, uint8_t *rss_key,
 		   uint8_t rss_key_len)
 {
+	struct xsc_cmd_modify_nic_hca_mbox_in in = {};
+	struct xsc_cmd_modify_nic_hca_mbox_out out = {};
+	uint8_t rss_caps_mask = 0;
+	int ret, key_len = 0;
+
+	in.hdr.opcode = rte_cpu_to_be_16(XSC_CMD_OP_MODIFY_NIC_HCA);
+
+	key_len = RTE_MIN(rss_key_len, XSC_RSS_HASH_KEY_LEN);
+	rte_memcpy(in.rss.hash_key, rss_key, key_len);
+	rss_caps_mask |= BIT(XSC_RSS_HASH_KEY_UPDATE);
+
+	in.rss.caps_mask = rss_caps_mask;
+	in.rss.rss_en = 1;
+	in.nic.caps_mask = rte_cpu_to_be_16(BIT(XSC_TBM_CAP_RSS));
+	in.nic.caps = in.nic.caps_mask;
+
+	ret = xsc_mailbox_exec(priv->xdev, &in, sizeof(in), &out, sizeof(out));
+	if (ret != 0 || out.hdr.status != 0)
+		return -1;
+	return 0;
+}
+
+static int
+xsc_ethdev_rss_hash_conf_get(struct rte_eth_dev *dev,
+			     struct rte_eth_rss_conf *rss_conf)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+
+	if (!rss_conf) {
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
+	if (rss_conf->rss_key != NULL &&
+		rss_conf->rss_key_len >= priv->rss_conf.rss_key_len) {
+		memcpy(rss_conf->rss_key, priv->rss_conf.rss_key,
+		       priv->rss_conf.rss_key_len);
+	}
+	rss_conf->rss_key_len = priv->rss_conf.rss_key_len;
+	rss_conf->rss_hf = priv->rss_conf.rss_hf;
 	return 0;
 }
 
@@ -30,7 +69,7 @@ xsc_ethdev_rss_hash_update(struct rte_eth_dev *dev,
 	if (rss_conf->rss_key_len > XSC_RSS_HASH_KEY_LEN ||
 		rss_conf->rss_key == NULL) {
 		PMD_DRV_LOG(ERR, "Xsc pmd key len is %d bigger than %d",
-				rss_conf->rss_key_len, XSC_RSS_HASH_KEY_LEN);
+			    rss_conf->rss_key_len, XSC_RSS_HASH_KEY_LEN);
 		return -EINVAL;
 	}
 
@@ -184,6 +223,8 @@ const struct eth_dev_ops xsc_dev_ops = {
 	.dev_configure = xsc_ethdev_configure,
 	.rx_queue_setup = xsc_ethdev_rx_queue_setup,
 	.tx_queue_setup = xsc_ethdev_tx_queue_setup,
+	.rss_hash_update = xsc_ethdev_rss_hash_update,
+	.rss_hash_conf_get = xsc_ethdev_rss_hash_conf_get,
 };
 
 static int
