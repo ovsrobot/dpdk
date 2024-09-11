@@ -166,6 +166,15 @@ struct __rte_cache_aligned xsc_rxq_data {
 	uint32_t rss_hash:1; /* RSS hash enabled */
 };
 
+union xsc_cq_doorbell {
+	struct {
+		uint32_t next_cid : 16;
+		uint32_t cq_num : 15;
+		uint32_t cq_sta : 1;
+	};
+	uint32_t cq_data;
+};
+
 union xsc_recv_doorbell {
 	struct {
 		uint32_t next_pid : 13;
