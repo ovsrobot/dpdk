@@ -23,6 +23,31 @@
 #define XSC_DEV_DEF_FLOW_MODE	XSC_FLOW_MODE_NULL
 #define XSC_DEV_CTRL_FILE_FMT	"/dev/yunsilicon/port_ctrl_" PCI_PRI_FMT
 
+static int
+xsc_dev_alloc_vfos_info(struct xsc_dev *dev)
+{
+	struct xsc_hwinfo *hwinfo;
+	int vfrep_offset = 0;
+	int base_lp = 0;
+
+	hwinfo = &dev->hwinfo;
+	if (hwinfo->pcie_no == 1) {
+		vfrep_offset = hwinfo->func_id -
+		   hwinfo->pcie1_pf_funcid_base +
+		   hwinfo->pcie0_pf_funcid_top -
+		   hwinfo->pcie0_pf_funcid_base  + 1;
+	} else {
+		vfrep_offset = hwinfo->func_id - hwinfo->pcie0_pf_funcid_base;
+	}
+
+	base_lp = XSC_VFREP_BASE_LOGICAL_PORT;
+	if (dev->devargs.nic_mode == XSC_NIC_MODE_LEGACY)
+		base_lp = base_lp + vfrep_offset;
+
+	dev->vfos_logical_in_port = base_lp;
+	return 0;
+}
+
 static int xsc_hwinfo_init(struct xsc_dev *dev)
 {
 	struct {
@@ -174,6 +199,73 @@ xsc_dev_close(struct xsc_dev *dev)
 	ibv_close_device(dev->ibv_ctx);
 }
 
+static void
+xsc_repr_info_init(struct xsc_repr_info *info, enum xsc_phy_port_type port_type,
+		   enum xsc_funcid_type funcid_type, int32_t repr_id)
+{
+	info->repr_id = repr_id;
+	info->port_type = port_type;
+	if (port_type == XSC_PORT_TYPE_UPLINK_BOND) {
+		info->pf_bond = 1;
+		info->funcid = XSC_PHYPORT_LAG_FUNCID << 14;
+	} else if (port_type == XSC_PORT_TYPE_UPLINK) {
+		info->pf_bond = -1;
+		info->funcid = XSC_PHYPORT_MAC_FUNCID << 14;
+	} else if (port_type == XSC_PORT_TYPE_PFVF) {
+		info->funcid = funcid_type << 14;
+	}
+}
+
+int
+xsc_repr_ports_probe(struct xsc_dev *dev, int nb_ports, int max_nb_ports)
+{
+	int funcid_type;
+	struct xsc_repr_port *repr_port;
+	int i;
+	int ret;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ret = xsc_get_ifindex_by_pci_addr(&dev->pci_dev->addr, &dev->ifindex);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Could not get xsc dev ifindex");
+		return ret;
+	}
+
+	dev->num_repr_ports = nb_ports + 1;
+
+	dev->repr_ports = rte_zmalloc(NULL,
+				      sizeof(struct xsc_repr_port) * dev->num_repr_ports,
+				      RTE_CACHE_LINE_SIZE);
+	if (dev->repr_ports == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to allocate memory for repr_ports");
+		return -ENOMEM;
+	}
+
+	funcid_type = (dev->devargs.nic_mode == XSC_NIC_MODE_SWITCHDEV) ?
+		XSC_VF_IOCTL_FUNCID : XSC_PHYPORT_MAC_FUNCID;
+
+	repr_port = &dev->repr_ports[XSC_DEV_REPR_PORT];
+	xsc_repr_info_init(&repr_port->info,
+			   XSC_PORT_TYPE_UPLINK, XSC_FUNCID_TYPE_UNKNOWN, -1);
+	repr_port->info.ifindex = dev->ifindex;
+	repr_port->xdev = dev;
+
+	if ((dev->devargs.pph_mode & XSC_TX_PPH) == 0)
+		repr_port->info.repr_id = 510;
+	else
+		repr_port->info.repr_id = max_nb_ports - 1;
+
+	for (i = 1; i < dev->num_repr_ports; i++) {
+		repr_port = &dev->repr_ports[i];
+		xsc_repr_info_init(&repr_port->info,
+				   XSC_PORT_TYPE_PFVF, funcid_type, i - XSC_PHY_PORT_NUM);
+		repr_port->xdev = dev;
+	}
+
+	return 0;
+}
+
 int
 xsc_dev_init(struct rte_pci_device *pci_dev, struct xsc_dev **dev)
 {
@@ -199,8 +291,15 @@ xsc_dev_init(struct rte_pci_device *pci_dev, struct xsc_dev **dev)
 	ret = xsc_hwinfo_init(d);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to initialize hardware info");
+		ret = -EINVAL;
 		goto hwinfo_init_fail;
-		return ret;
+	}
+
+	ret = xsc_dev_alloc_vfos_info(d);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Alloc vfos info failed");
+		ret = -EINVAL;
+		goto hwinfo_init_fail;
 	}
 
 	d->pci_dev = pci_dev;
@@ -220,6 +319,8 @@ xsc_dev_uninit(struct xsc_dev *dev)
 {
 	PMD_INIT_FUNC_TRACE();
 
+	if (dev->repr_ports != NULL)
+		rte_free(dev->repr_ports);
 	xsc_dev_close(dev);
 	rte_free(dev);
 }
