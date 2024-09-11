@@ -15,8 +15,13 @@
 #include <net/if.h>
 #include <sys/mman.h>
 
+#include <rte_memcpy.h>
+#include <rte_ethdev.h>
+#include <ethdev_driver.h>
+
 #include "xsc_log.h"
 #include "xsc_utils.h"
+#include "xsc_defs.h"
 
 static int
 xsc_get_ibdev_pci_addr(const char *dev_path, struct rte_pci_addr *pci_addr)
@@ -214,5 +219,105 @@ xsc_get_ifindex_by_pci_addr(struct rte_pci_addr *addr, int *ifindex)
 		return ret;
 	}
 
+	return 0;
+}
+
+
+static int
+xsc_ifreq_by_ifname(const char *ifname, int req, struct ifreq *ifr)
+{
+	int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	int ret = 0;
+
+	if (sock == -1) {
+		rte_errno = errno;
+		return -rte_errno;
+	}
+	rte_strscpy(ifr->ifr_name, ifname, sizeof(ifr->ifr_name));
+	ret = ioctl(sock, req, ifr);
+	if (ret == -1) {
+		rte_errno = errno;
+		goto error;
+	}
+	close(sock);
+	return 0;
+error:
+	close(sock);
+	return -rte_errno;
+}
+
+int
+xsc_get_mac(uint8_t *mac, uint32_t ifindex)
+{
+	struct ifreq request;
+	struct ifreq *ifr = &request;
+	char ifname[sizeof(ifr->ifr_name)];
+	int ret;
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -rte_errno;
+
+	ret = xsc_ifreq_by_ifname(ifname, SIOCGIFHWADDR, &request);
+	if (ret)
+		return ret;
+
+	memcpy(mac, request.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
+	return 0;
+}
+
+int
+xsc_get_mtu(uint16_t *mtu, uint32_t ifindex)
+{
+	struct ifreq request;
+	struct ifreq *ifr = &request;
+	char ifname[sizeof(ifr->ifr_name)];
+	int ret;
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -rte_errno;
+
+	ret = xsc_ifreq_by_ifname(ifname, SIOCGIFMTU, &request);
+	if (ret)
+		return ret;
+	*mtu = request.ifr_mtu;
+	return 0;
+}
+
+int
+xsc_set_mtu(uint16_t mtu, uint32_t ifindex)
+{
+	struct ifreq request = { .ifr_mtu = mtu, };
+	struct ifreq *ifr = &request;
+	char ifname[sizeof(ifr->ifr_name)];
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -rte_errno;
+
+	return xsc_ifreq_by_ifname(ifname, SIOCSIFMTU, &request);
+}
+
+int
+xsc_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac, uint32_t index)
+{
+	int i;
+	rte_errno = EINVAL;
+
+	if (index > XSC_MAX_MAC_ADDRESSES)
+		return -rte_errno;
+
+	if (rte_is_zero_ether_addr(mac))
+		return -rte_errno;
+
+	for (i = 0; i != XSC_MAX_MAC_ADDRESSES; ++i) {
+		if (i == (int)index)
+			continue;
+		if (memcmp(&dev->data->mac_addrs[i], mac, sizeof(*mac)))
+			continue;
+		/* Address already configured elsewhere, return with error. */
+		rte_errno = EADDRINUSE;
+		return -rte_errno;
+	}
+
+	dev->data->mac_addrs[index] = *mac;
 	return 0;
 }

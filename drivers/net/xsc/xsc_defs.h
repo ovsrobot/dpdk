@@ -10,7 +10,7 @@
 
 #define XSC_VFREP_BASE_LOGICAL_PORT 1081
 
-
+#define XSC_MAX_MAC_ADDRESSES 3
 
 enum xsc_nic_mode {
 	XSC_NIC_MODE_LEGACY,
