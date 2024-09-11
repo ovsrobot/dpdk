@@ -24,7 +24,10 @@ FROM base AS runner
 # It bakes DTS into the image during the build.
 
 COPY . /dpdk/dts
-RUN poetry install --no-dev
+# Adds ~/.local/bin to PATH so that packages installed with pipx are callable. `pipx ensurepath`
+# fixes this issue, but requires the shell to be re-opened which isn't an option for this target.
+ENV PATH="$PATH:/root/.local/bin"
+RUN poetry install --only main --no-root
 
 CMD ["poetry", "run", "python", "main.py"]
 
