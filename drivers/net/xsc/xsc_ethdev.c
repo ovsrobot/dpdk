@@ -1090,6 +1090,80 @@ xsc_ethdev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 }
 
 static int
+xsc_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	uint32_t rxqs_n = priv->num_rq;
+	uint32_t txqs_n = priv->num_sq;
+	uint32_t i, idx;
+	struct xsc_rxq_data *rxq;
+	struct xsc_txq_data *txq;
+
+	memset(stats, 0, sizeof(struct rte_eth_stats));
+	for (i = 0; i < rxqs_n; ++i) {
+		rxq = xsc_rxq_get(dev, i);
+		if (unlikely(rxq == NULL))
+			continue;
+
+		idx = rxq->idx;
+		if (idx < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			stats->q_ipackets[idx] += rxq->stats.rx_pkts;
+			stats->q_ibytes[idx] += rxq->stats.rx_bytes;
+			stats->q_errors[idx] += (rxq->stats.rx_errors +
+						 rxq->stats.rx_nombuf);
+		}
+		stats->ipackets += rxq->stats.rx_pkts;
+		stats->ibytes += rxq->stats.rx_bytes;
+		stats->ierrors += rxq->stats.rx_errors;
+		stats->rx_nombuf += rxq->stats.rx_nombuf;
+	}
+
+	for (i = 0; i < txqs_n; ++i) {
+		txq = xsc_txq_get(dev, i);
+		if (unlikely(txq == NULL))
+			continue;
+
+		idx = txq->idx;
+		if (idx < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			stats->q_opackets[idx] += txq->stats.tx_pkts;
+			stats->q_obytes[idx] += txq->stats.tx_bytes;
+			stats->q_errors[idx] += txq->stats.tx_errors;
+		}
+		stats->opackets += txq->stats.tx_pkts;
+		stats->obytes += txq->stats.tx_bytes;
+		stats->oerrors += txq->stats.tx_errors;
+	}
+
+	return 0;
+}
+
+static int
+xsc_ethdev_stats_reset(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	uint32_t rxqs_n = priv->num_rq;
+	uint32_t txqs_n = priv->num_sq;
+	uint32_t i;
+	struct xsc_rxq_data *rxq;
+	struct xsc_txq_data *txq;
+
+	for (i = 0; i < rxqs_n; ++i) {
+		rxq = xsc_rxq_get(dev, i);
+		if (unlikely(rxq == NULL))
+			continue;
+		memset(&rxq->stats, 0, sizeof(struct xsc_rxq_stats));
+	}
+	for (i = 0; i < txqs_n; ++i) {
+		txq = xsc_txq_get(dev, i);
+		if (unlikely(txq == NULL))
+			continue;
+		memset(&txq->stats, 0, sizeof(struct xsc_txq_stats));
+	}
+
+	return 0;
+}
+
+static int
 xsc_ethdev_link_update(__rte_unused struct rte_eth_dev *dev,
 		       __rte_unused int wait_to_complete)
 {
@@ -1104,6 +1178,8 @@ const struct eth_dev_ops xsc_dev_ops = {
 	.dev_set_link_up = xsc_ethdev_set_link_up,
 	.dev_close = xsc_ethdev_close,
 	.link_update = xsc_ethdev_link_update,
+	.stats_get = xsc_ethdev_stats_get,
+	.stats_reset = xsc_ethdev_stats_reset,
 	.dev_infos_get = xsc_ethdev_infos_get,
 	.rx_queue_setup = xsc_ethdev_rx_queue_setup,
 	.tx_queue_setup = xsc_ethdev_tx_queue_setup,
