@@ -11,8 +11,179 @@
 #include "xsc_utils.h"
 
 #include "xsc_ctrl.h"
+#include "xsc_rxtx.h"
+
+static int
+xsc_rss_modify_cmd(struct xsc_ethdev_priv *priv, uint8_t *rss_key,
+		   uint8_t rss_key_len)
+{
+	return 0;
+}
+
+static int
+xsc_ethdev_rss_hash_update(struct rte_eth_dev *dev,
+			   struct rte_eth_rss_conf *rss_conf)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	int ret = 0;
+
+	if (rss_conf->rss_key_len > XSC_RSS_HASH_KEY_LEN ||
+		rss_conf->rss_key == NULL) {
+		PMD_DRV_LOG(ERR, "Xsc pmd key len is %d bigger than %d",
+				rss_conf->rss_key_len, XSC_RSS_HASH_KEY_LEN);
+		return -EINVAL;
+	}
+
+	ret = xsc_rss_modify_cmd(priv, rss_conf->rss_key, rss_conf->rss_key_len);
+	if (ret == 0) {
+		rte_memcpy(priv->rss_conf.rss_key, rss_conf->rss_key,
+				priv->rss_conf.rss_key_len);
+		priv->rss_conf.rss_key_len = rss_conf->rss_key_len;
+		priv->rss_conf.rss_hf = rss_conf->rss_hf;
+	}
+
+	return ret;
+}
+
+static int
+xsc_ethdev_configure(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
+	int ret;
+	struct rte_eth_rss_conf *rss_conf;
+
+	priv->num_sq = dev->data->nb_tx_queues;
+	priv->num_rq = dev->data->nb_rx_queues;
+
+	if (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)
+		dev->data->dev_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_RSS_HASH;
+
+	if (priv->rss_conf.rss_key == NULL) {
+		priv->rss_conf.rss_key = rte_zmalloc(NULL, XSC_RSS_HASH_KEY_LEN,
+						RTE_CACHE_LINE_SIZE);
+		if (priv->rss_conf.rss_key == NULL) {
+			PMD_DRV_LOG(ERR, "Failed to alloc rss_key");
+			rte_errno = ENOMEM;
+			ret = -rte_errno;
+			goto error;
+		}
+		priv->rss_conf.rss_key_len = XSC_RSS_HASH_KEY_LEN;
+	}
+
+	if (dev->data->dev_conf.rx_adv_conf.rss_conf.rss_key != NULL) {
+		rss_conf = &dev->data->dev_conf.rx_adv_conf.rss_conf;
+		ret = xsc_ethdev_rss_hash_update(dev, rss_conf);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Xsc pmd set rss key error!");
+			rte_errno = -ENOEXEC;
+			goto error;
+		}
+	}
+
+	if (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_FILTER) {
+		PMD_DRV_LOG(ERR, "xsc pmd do not support vlan filter now!");
+		rte_errno = EINVAL;
+		goto error;
+	}
+
+	if (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP) {
+		PMD_DRV_LOG(ERR, "xsc pmd do not support vlan strip now!");
+		rte_errno = EINVAL;
+		goto error;
+	}
+
+	priv->txqs = (void *)dev->data->tx_queues;
+	priv->rxqs = (void *)dev->data->rx_queues;
+	return 0;
+
+error:
+	return -rte_errno;
+}
+
+static int
+xsc_ethdev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
+			  uint32_t socket, const struct rte_eth_rxconf *conf,
+			  struct rte_mempool *mp)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	struct xsc_rxq_data *rxq_data = NULL;
+	uint16_t desc_n;
+	uint16_t rx_free_thresh;
+	uint64_t offloads = conf->offloads |
+			    dev->data->dev_conf.rxmode.offloads;
+
+	desc = (desc > XSC_MAX_DESC_NUMBER) ? XSC_MAX_DESC_NUMBER : desc;
+	desc_n = desc;
+
+	if (!rte_is_power_of_2(desc))
+		desc_n = 1 << rte_log2_u32(desc);
+
+	rxq_data = rte_malloc_socket(NULL, sizeof(*rxq_data) + desc_n * sizeof(struct rte_mbuf *),
+					RTE_CACHE_LINE_SIZE, socket);
+	if (rxq_data == NULL) {
+		PMD_DRV_LOG(ERR, "Port %u create rxq idx %d failure",
+				dev->data->port_id, idx);
+		rte_errno = ENOMEM;
+		return -rte_errno;
+	}
+	rxq_data->idx = idx;
+	rxq_data->priv = priv;
+	(*priv->rxqs)[idx] = rxq_data;
+
+	rx_free_thresh = (conf->rx_free_thresh) ? conf->rx_free_thresh : XSC_RX_FREE_THRESH;
+	rxq_data->rx_free_thresh = rx_free_thresh;
+
+	rxq_data->elts = (struct rte_mbuf *(*)[desc_n])(rxq_data + 1);
+	rxq_data->mp = mp;
+	rxq_data->socket = socket;
+
+	rxq_data->csum = !!(offloads & RTE_ETH_RX_OFFLOAD_CHECKSUM);
+	rxq_data->hw_timestamp = !!(offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP);
+	rxq_data->crc_present = 0;
+
+	rxq_data->wqe_n = rte_log2_u32(desc_n);
+	rxq_data->wqe_s = desc_n;
+	rxq_data->wqe_m = desc_n - 1;
+
+	dev->data->rx_queues[idx] = rxq_data;
+	return 0;
+}
+
+static int
+xsc_ethdev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
+			  uint32_t socket, const struct rte_eth_txconf *conf)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	struct xsc_txq_data *txq;
+	uint16_t desc_n;
+
+	desc = (desc > XSC_MAX_DESC_NUMBER) ? XSC_MAX_DESC_NUMBER : desc;
+	desc_n = desc;
+
+	if (!rte_is_power_of_2(desc))
+		desc_n = 1 << rte_log2_u32(desc);
+
+	txq = rte_malloc_socket(NULL, sizeof(*txq) + desc_n * sizeof(struct rte_mbuf *),
+					RTE_CACHE_LINE_SIZE, socket);
+	txq->offloads = conf->offloads | dev->data->dev_conf.txmode.offloads;
+	txq->priv = priv;
+	txq->socket = socket;
+
+	txq->elts_n = rte_log2_u32(desc_n);
+	txq->elts_s = desc_n;
+	txq->elts_m = desc_n - 1;
+	txq->port_id = dev->data->port_id;
+	txq->idx = idx;
+
+	(*priv->txqs)[idx] = txq;
+	return 0;
+}
 
 const struct eth_dev_ops xsc_dev_ops = {
+	.dev_configure = xsc_ethdev_configure,
+	.rx_queue_setup = xsc_ethdev_rx_queue_setup,
+	.tx_queue_setup = xsc_ethdev_tx_queue_setup,
 };
 
 static int
