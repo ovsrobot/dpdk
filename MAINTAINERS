@@ -1268,6 +1268,10 @@ F: drivers/compress/zlib/
 F: doc/guides/compressdevs/zlib.rst
 F: doc/guides/compressdevs/features/zlib.ini
 
+ZTE Storage Data Accelerator
+M: Hanxiao Li <li.hanxiao@zte.com.cn>
+F: drivers/compress/zsda/
+F: drivers/common/zsda/
 
 DMAdev Drivers
 --------------
