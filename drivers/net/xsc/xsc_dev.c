@@ -18,9 +18,63 @@
 #include "xsc_defs.h"
 #include "xsc_dev.h"
 #include "xsc_utils.h"
+#include "xsc_ctrl.h"
 
 #define XSC_DEV_DEF_FLOW_MODE	XSC_FLOW_MODE_NULL
 #define XSC_DEV_CTRL_FILE_FMT	"/dev/yunsilicon/port_ctrl_" PCI_PRI_FMT
+
+static int xsc_hwinfo_init(struct xsc_dev *dev)
+{
+	struct {
+		struct xsc_ioctl_data_tl tl;
+		struct xsc_ioctl_get_hwinfo hwinfo;
+	} data;
+	struct xsc_ioctl_get_hwinfo *info = &data.hwinfo;
+	int data_len;
+	int ret;
+
+	PMD_INIT_FUNC_TRACE();
+
+	data_len = sizeof(data);
+	data.tl.opmod = XSC_IOCTL_OP_GET_LOCAL;
+	ret = xsc_ioctl(dev, XSC_IOCTL_DRV_GET, XSC_IOCTL_GET_HW_INFO, &data, data_len,
+			&data, data_len);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to get hardware info");
+		return ret;
+	}
+
+	dev->hwinfo.valid = 1;
+	dev->hwinfo.pcie_no = info->pcie_no;
+	dev->hwinfo.func_id = info->func_id;
+	dev->hwinfo.pcie_host = info->pcie_host;
+	dev->hwinfo.mac_phy_port = info->mac_phy_port;
+	dev->hwinfo.funcid_to_logic_port_off = info->funcid_to_logic_port_off;
+	dev->hwinfo.lag_id = info->lag_id;
+	dev->hwinfo.raw_qp_id_base = info->raw_qp_id_base;
+	dev->hwinfo.raw_rss_qp_id_base = info->raw_rss_qp_id_base;
+	dev->hwinfo.pf0_vf_funcid_base = info->pf0_vf_funcid_base;
+	dev->hwinfo.pf0_vf_funcid_top = info->pf0_vf_funcid_top;
+	dev->hwinfo.pf1_vf_funcid_base = info->pf1_vf_funcid_base;
+	dev->hwinfo.pf1_vf_funcid_top = info->pf1_vf_funcid_top;
+	dev->hwinfo.pcie0_pf_funcid_base = info->pcie0_pf_funcid_base;
+	dev->hwinfo.pcie0_pf_funcid_top = info->pcie0_pf_funcid_top;
+	dev->hwinfo.pcie1_pf_funcid_base = info->pcie1_pf_funcid_base;
+	dev->hwinfo.pcie1_pf_funcid_top = info->pcie1_pf_funcid_top;
+	dev->hwinfo.lag_port_start = info->lag_port_start;
+	dev->hwinfo.raw_tpe_qp_num = info->raw_tpe_qp_num;
+	dev->hwinfo.send_seg_num = info->send_seg_num;
+	dev->hwinfo.recv_seg_num = info->recv_seg_num;
+	dev->hwinfo.on_chip_tbl_vld = info->on_chip_tbl_vld;
+	dev->hwinfo.dma_rw_tbl_vld = info->dma_rw_tbl_vld;
+	dev->hwinfo.pct_compress_vld = info->pct_compress_vld;
+	dev->hwinfo.chip_version = info->chip_version;
+	dev->hwinfo.hca_core_clock = info->hca_core_clock;
+	dev->hwinfo.mac_bit = info->mac_bit;
+	dev->hwinfo.esw_mode = info->esw_mode;
+
+	return 0;
+}
 
 static
 void xsc_dev_args_parse(struct xsc_dev *dev, struct rte_devargs *devargs)
@@ -142,11 +196,20 @@ xsc_dev_init(struct rte_pci_device *pci_dev, struct xsc_dev **dev)
 		goto dev_open_fail;
 	}
 
+	ret = xsc_hwinfo_init(d);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to initialize hardware info");
+		goto hwinfo_init_fail;
+		return ret;
+	}
+
 	d->pci_dev = pci_dev;
 	*dev = d;
 
 	return 0;
 
+hwinfo_init_fail:
+	xsc_dev_close(d);
 dev_open_fail:
 	rte_free(d);
 	return ret;
