@@ -186,6 +186,7 @@ otx_ep_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
 	struct rte_eth_dev_info devinfo;
 	int32_t ret = 0;
 
+	memset(&devinfo, 0, sizeof(devinfo));
 	if (otx_ep_dev_info_get(eth_dev, &devinfo)) {
 		otx_ep_err("Cannot set MTU to %u: failed to get device info", mtu);
 		return -EPERM;
