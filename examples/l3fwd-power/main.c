@@ -47,6 +47,7 @@
 #include <rte_telemetry.h>
 #include <rte_power_pmd_mgmt.h>
 #include <rte_power_uncore.h>
+#include <rte_power_qos.h>
 
 #include "perf_core.h"
 #include "main.h"
@@ -2260,6 +2261,22 @@ init_power_library(void)
 			return -1;
 		}
 	}
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		/*
+		 * Set the worker lcore's to have strict latency limit to allow
+		 * the CPU to enter the shallowest idle state.
+		 */
+		ret = rte_power_qos_set_cpu_resume_latency(lcore_id,
+					RTE_POWER_QOS_STRICT_LATENCY_VALUE);
+		if (ret != 0) {
+			RTE_LOG(ERR, L3FWD_POWER,
+				"Failed to set strict resume latency on core%u.\n",
+				lcore_id);
+			return ret;
+		}
+	}
+
 	return ret;
 }
 
@@ -2299,6 +2316,13 @@ deinit_power_library(void)
 			}
 		}
 	}
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		/* Restore the original value in kernel. */
+		rte_power_qos_set_cpu_resume_latency(lcore_id,
+				RTE_POWER_QOS_RESUME_LATENCY_NO_CONSTRAINT);
+	}
+
 	return ret;
 }
 
