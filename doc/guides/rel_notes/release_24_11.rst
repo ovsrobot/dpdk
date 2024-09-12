@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Introduce per-CPU PM QoS interface.**
+
+  * Add per-CPU PM QoS interface to low the delay after sleep by controlling
+    CPU idle state selection.
+
 
 Removed Items
 -------------
