@@ -297,6 +297,10 @@ struct rte_dma_info {
 	int16_t numa_node;
 	/** Number of virtual DMA channel configured. */
 	uint16_t nb_vchans;
+	/** Number of priority levels (must be > 1), if supported by DMA HW channel.
+	 * 0 otherwise.
+	 */
+	uint16_t nb_priorities;
 };
 
 /**
@@ -332,6 +336,13 @@ struct rte_dma_conf {
 	 * @see RTE_DMA_CAPA_SILENT
 	 */
 	bool enable_silent;
+	/* The prioirty of the DMA HW channel.
+	 * This value cannot be greater than or equal to the field 'nb_priorities'
+	 * of struct rte_dma_info which get from rte_dma_info_get().
+	 * Among the values between '0' and 'nb_priorities - 1', lowest value
+	 * indicates higher priority and vice-versa.
+	 */
+	uint16_t priority;
 };
 
 /**
