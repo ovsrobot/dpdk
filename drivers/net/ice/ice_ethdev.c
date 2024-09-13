@@ -1873,14 +1873,47 @@ ice_load_pkg_type(struct ice_hw *hw)
 	return package_type;
 }
 
+static int ice_read_customized_path(char *pkg_file, uint16_t buff_len)
+{
+	FILE *fp = fopen(ICE_PKG_FILE_CUSTOMIZED_PATH, "r");
+	int ret = 0;
+
+	if (fp == NULL) {
+		PMD_INIT_LOG(INFO, "Failed to read CUSTOMIZED_PATH");
+		return -EIO;
+	}
+
+	if (fgets(pkg_file, buff_len, fp) == NULL) {
+		ret = -EIO;
+		goto exit;
+	}
+
+	if (strlen(pkg_file) <= 1)
+		goto exit;
+
+	if (pkg_file[strlen(pkg_file) - 2] == '/') {
+		pkg_file[strlen(pkg_file) - 1] = '\0';
+	} else {
+		pkg_file[strlen(pkg_file) - 1] = '/';
+		pkg_file[strlen(pkg_file)] = '\0';
+	}
+
+exit:
+	fclose(fp);
+	return ret;
+}
+
 int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 {
 	struct ice_hw *hw = &adapter->hw;
 	char pkg_file[ICE_MAX_PKG_FILENAME_SIZE];
+	char customized_path[ICE_MAX_PKG_FILENAME_SIZE];
 	char opt_ddp_filename[ICE_MAX_PKG_FILENAME_SIZE];
 	void *buf;
 	size_t bufsz;
 	int err;
+
+	ice_read_customized_path(customized_path, ICE_MAX_PKG_FILENAME_SIZE);
 
 	if (!use_dsn)
 		goto no_dsn;
@@ -1888,6 +1921,12 @@ int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 	memset(opt_ddp_filename, 0, ICE_MAX_PKG_FILENAME_SIZE);
 	snprintf(opt_ddp_filename, ICE_MAX_PKG_FILENAME_SIZE,
 		"ice-%016" PRIx64 ".pkg", dsn);
+
+	strlcpy(pkg_file, customized_path, ICE_MAX_PKG_FILENAME_SIZE);
+	strlcat(pkg_file, opt_ddp_filename, ICE_MAX_PKG_FILENAME_SIZE);
+	if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
+		goto load_fw;
+
 	strncpy(pkg_file, ICE_PKG_FILE_SEARCH_PATH_UPDATES,
 		ICE_MAX_PKG_FILENAME_SIZE);
 	strcat(pkg_file, opt_ddp_filename);
@@ -1901,6 +1940,11 @@ int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 		goto load_fw;
 
 no_dsn:
+	strlcpy(pkg_file, customized_path, ICE_MAX_PKG_FILENAME_SIZE);
+	strlcat(pkg_file, "ice.pkg", ICE_MAX_PKG_FILENAME_SIZE);
+	if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
+		goto load_fw;
+
 	strncpy(pkg_file, ICE_PKG_FILE_UPDATES, ICE_MAX_PKG_FILENAME_SIZE);
 	if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
 		goto load_fw;
