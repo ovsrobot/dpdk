@@ -207,7 +207,8 @@ EXPERIMENTAL {
 	rte_flow_dev_dump;
 
 	# added in 20.05
-	__rte_ethdev_trace_rx_burst;
+	__rte_ethdev_trace_rx_burst_empty;
+	__rte_ethdev_trace_rx_burst_nonempty;
 	__rte_ethdev_trace_tx_burst;
 	rte_flow_get_aged_flows;
 
