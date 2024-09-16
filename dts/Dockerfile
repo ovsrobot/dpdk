@@ -13,8 +13,11 @@ RUN apt-get -y update && apt-get -y upgrade && \
         python3-pip \
         pipx \
         python3-cachecontrol \
+        git \
+        xz-utils \
         openssh-client && \
-    pipx install poetry>=1.8.2 && pipx ensurepath
+    pipx install poetry>=1.8.2 && pipx ensurepath && \
+    git config --global --add safe.directory /dpdk
 WORKDIR /dpdk/dts
 
 
@@ -24,9 +27,12 @@ FROM base AS runner
 # It bakes DTS into the image during the build.
 
 COPY . /dpdk/dts
-RUN poetry install --no-dev
+# Adds ~/.local/bin to PATH so that packages installed with pipx are callable. `pipx ensurepath`
+# fixes this issue, but requires the shell to be re-opened which isn't an option for this target.
+ENV PATH="$PATH:/root/.local/bin"
+RUN poetry install --only main --no-root
 
-CMD ["poetry", "run", "python", "main.py"]
+ENTRYPOINT ["poetry", "run", "python", "main.py"]
 
 FROM base AS dev
 
@@ -35,4 +41,4 @@ FROM base AS dev
 # the dependencies should be installed using Poetry.
 
 RUN apt-get -y install --no-install-recommends \
-        vim emacs git
+        vim emacs
