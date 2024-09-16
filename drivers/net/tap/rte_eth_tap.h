@@ -72,6 +72,7 @@ struct pmd_internals {
 	char name[RTE_ETH_NAME_MAX_LEN];  /* Internal Tap device name */
 	int type;                         /* Type field - TUN|TAP */
 	int persist;			  /* 1 if keep link up, else 0 */
+	int mac_pair;                     /* 1 if mac pair enabled, else 0 */
 	struct rte_ether_addr eth_addr;   /* Mac address of the device port */
 	struct ifreq remote_initial_flags;/* Remote netdevice flags on init */
 	int remote_if_index;              /* remote netdevice IF_INDEX */

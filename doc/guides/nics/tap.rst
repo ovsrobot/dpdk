@@ -71,6 +71,25 @@ But this behavior can be overridden by the use of the persist flag, example::
 
   --vdev=net_tap0,iface=tap0,persist ...
 
+Normally, the MAC address of the kernel interface is the same as in the
+interface in dpdk, as they represent the same interface. If a MAC address is set
+by the dpdk application using ``rte_eth_dev_default_mac_addr_set()`` then the
+kernel interface changes accordingly (but not vice versa).
+
+If the ``macpair`` option is given, then the MAC address of the kernel is
+initially set to a different MAC address than the dpdk one (the fourth octet is
+increamented by 1) and calling ``rte_eth_dev_default_mac_addr_set()`` no longer
+changes the MAC of the kernel interface. This allows to view the two interfaces
+as separate connected interfaces, similar to linux's veth pair interfaces. For
+instance, you can configure an IP address on the kernel interface with the ``ip``
+command in the same subnet as the one used in dpdk and use it as next gateway.
+
+The ``macpair`` options is incompatible with the ``remote`` option (see above).
+
+Example::
+
+    --vdev=net_tap0,iface=tap0,macpair
+
 
 TUN devices
 -----------
