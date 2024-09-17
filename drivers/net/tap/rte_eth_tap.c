@@ -56,6 +56,7 @@
 #define ETH_TAP_MAC_ARG         "mac"
 #define ETH_TAP_MAC_FIXED       "fixed"
 #define ETH_TAP_PERSIST_ARG     "persist"
+#define ETH_TAP_MACPAIR_ARG     "macpair"
 
 #define ETH_TAP_USR_MAC_FMT     "xx:xx:xx:xx:xx:xx"
 #define ETH_TAP_CMP_MAC_FMT     "0123456789ABCDEFabcdef"
@@ -95,6 +96,7 @@ static const char *valid_arguments[] = {
 	ETH_TAP_REMOTE_ARG,
 	ETH_TAP_MAC_ARG,
 	ETH_TAP_PERSIST_ARG,
+	ETH_TAP_MACPAIR_ARG,
 	NULL
 };
 
@@ -1391,6 +1393,12 @@ tap_mac_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 			dev->device->name);
 		return -EINVAL;
 	}
+
+	if (pmd->mac_pair) {
+		rte_ether_addr_copy(&pmd->eth_addr, mac_addr);
+		return 0;
+	}
+
 	/* Check the actual current MAC address on the tap netdevice */
 	ret = tap_ioctl(pmd, SIOCGIFHWADDR, &ifr, 0, LOCAL_ONLY);
 	if (ret < 0)
@@ -1915,7 +1923,7 @@ static const struct eth_dev_ops ops = {
 static int
 eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 		   char *remote_iface, struct rte_ether_addr *mac_addr,
-		   enum rte_tuntap_type type, int persist)
+		   enum rte_tuntap_type type, int persist, int mac_pair)
 {
 	int numa_node = rte_socket_id();
 	struct rte_eth_dev *dev;
@@ -2023,11 +2031,19 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	if (pmd->type == ETH_TUNTAP_TYPE_TAP) {
 		memset(&ifr, 0, sizeof(struct ifreq));
 		ifr.ifr_hwaddr.sa_family = AF_LOCAL;
-		rte_memcpy(ifr.ifr_hwaddr.sa_data, &pmd->eth_addr,
-				RTE_ETHER_ADDR_LEN);
+
+		if (mac_pair) {
+			rte_eth_random_addr((uint8_t *)ifr.ifr_hwaddr.sa_data);
+		} else {
+			memcpy(ifr.ifr_hwaddr.sa_data, &pmd->eth_addr,
+			       RTE_ETHER_ADDR_LEN);
+		}
+
 		if (tap_ioctl(pmd, SIOCSIFHWADDR, &ifr, 0, LOCAL_ONLY) < 0)
 			goto error_exit;
 	}
+
+	pmd->mac_pair = mac_pair;
 
 	/* Make network device persist after application exit */
 	pmd->persist = persist;
@@ -2306,7 +2322,7 @@ rte_pmd_tun_probe(struct rte_vdev_device *dev)
 	TAP_LOG(DEBUG, "Initializing pmd_tun for %s", name);
 
 	ret = eth_dev_tap_create(dev, tun_name, remote_iface, 0,
-				 ETH_TUNTAP_TYPE_TUN, 0);
+				 ETH_TUNTAP_TYPE_TUN, 0, 0);
 
 leave:
 	if (ret == -1) {
@@ -2429,6 +2445,7 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 	struct rte_eth_dev *eth_dev;
 	int tap_devices_count_increased = 0;
 	int persist = 0;
+	int mac_pair = 0;
 
 	name = rte_vdev_device_name(dev);
 	params = rte_vdev_device_args(dev);
@@ -2504,6 +2521,16 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 					goto leave;
 			}
 
+			if (rte_kvargs_count(kvlist, ETH_TAP_MACPAIR_ARG) == 1) {
+				if (strlen(remote_iface)) {
+					TAP_LOG(ERR, "mac pair not supported "
+						     "with remote interface.");
+					ret = -1;
+					goto leave;
+				}
+				mac_pair = 1;
+			}
+
 			if (rte_kvargs_count(kvlist, ETH_TAP_MAC_ARG) == 1) {
 				ret = rte_kvargs_process(kvlist,
 							 ETH_TAP_MAC_ARG,
@@ -2533,7 +2560,7 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 	tap_devices_count++;
 	tap_devices_count_increased = 1;
 	ret = eth_dev_tap_create(dev, tap_name, remote_iface, &user_mac,
-				 ETH_TUNTAP_TYPE_TAP, persist);
+				 ETH_TUNTAP_TYPE_TAP, persist, mac_pair);
 
 leave:
 	if (ret == -1) {
