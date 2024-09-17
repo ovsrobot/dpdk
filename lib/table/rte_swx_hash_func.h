@@ -4,16 +4,16 @@
 #ifndef __INCLUDE_RTE_SWX_HASH_FUNC_H__
 #define __INCLUDE_RTE_SWX_HASH_FUNC_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  * RTE SWX Hash Function
  */
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Hash function prototype
