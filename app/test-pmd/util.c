@@ -299,6 +299,143 @@ dump_pkt_verbose(FILE *outf, uint16_t port_id, uint16_t queue,
 	}
 }
 
+#ifdef RTE_HAS_JANSSON
+
+/* Encode offload flags as JSON array */
+static json_t *
+encode_ol_flags(uint64_t flags, int is_rx)
+{
+	json_t *ol_array = json_array();
+	unsigned int i;
+
+	if (is_rx)
+		flags &= ~RTE_MBUF_F_TX_OFFLOAD_MASK;
+	else
+		flags &= RTE_MBUF_F_TX_OFFLOAD_MASK;
+
+	for (i = 0; i < 64; i++) {
+		uint64_t mask = (uint64_t)1 << i;
+		const char *name;
+
+		if (!(mask & flags))
+			continue;
+
+		if (is_rx)
+			name = rte_get_rx_ol_flag_name(mask);
+		else
+			name = rte_get_tx_ol_flag_name(mask);
+		json_array_append_new(ol_array, json_string(name));
+	}
+	return ol_array;
+}
+
+/* Encode packet type fields as JSON object */
+static json_t *
+encode_ptype(uint32_t ptype)
+{
+	if ((ptype & RTE_PTYPE_ALL_MASK) == RTE_PTYPE_UNKNOWN)
+		return json_string("UNKNOWN");
+
+	json_t *ptypes = json_array();
+	if (ptype & RTE_PTYPE_L2_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_l2_name(ptype)));
+	if (ptype & RTE_PTYPE_L3_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_l3_name(ptype)));
+	if (ptype & RTE_PTYPE_L4_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_l4_name(ptype)));
+	if (ptype & RTE_PTYPE_TUNNEL_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_tunnel_name(ptype)));
+	if (ptype & RTE_PTYPE_INNER_L2_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_inner_l2_name(ptype)));
+	if (ptype & RTE_PTYPE_INNER_L3_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_inner_l3_name(ptype)));
+	if (ptype & RTE_PTYPE_INNER_L4_MASK)
+		json_array_append(ptypes, json_string(rte_get_ptype_inner_l4_name(ptype)));
+
+	return ptypes;
+}
+
+static void
+dump_pkt_json(FILE *outf, uint16_t port_id, uint16_t queue,
+	      struct rte_mbuf *pkts[], uint16_t nb_pkts, int is_rx)
+{
+	char buf[256];
+
+	for (uint16_t i = 0; i < nb_pkts; i++) {
+		const struct rte_mbuf *mb = pkts[i];
+		json_t *jobj = json_object();
+		const struct rte_ether_hdr *eth_hdr;
+		struct rte_ether_hdr _eth_hdr;
+		uint16_t eth_type;
+		uint64_t ol_flags = mb->ol_flags;
+		const char *reason = NULL;
+
+		json_object_set_new(jobj, "port", json_integer(port_id));
+		json_object_set_new(jobj, "queue", json_integer(queue));
+		json_object_set_new(jobj, "direction", json_string(is_rx ? "receive" : "send"));
+
+		if (rte_mbuf_check(mb, 1, &reason) < 0)
+			json_object_set_new(jobj, "invalid", json_string(reason));
+
+		eth_hdr = rte_pktmbuf_read(mb, 0, sizeof(_eth_hdr), &_eth_hdr);
+		eth_type = RTE_BE_TO_CPU_16(eth_hdr->ether_type);
+
+		rte_ether_format_addr(buf, sizeof(buf), &eth_hdr->dst_addr);
+		json_object_set_new(jobj, "dst", json_string(buf));
+		rte_ether_format_addr(buf, sizeof(buf), &eth_hdr->src_addr);
+		json_object_set_new(jobj, "src", json_string(buf));
+
+		snprintf(buf, sizeof(buf), "0x%04x", eth_type);
+		json_object_set_new(jobj, "type", json_string(buf));
+
+		json_object_set_new(jobj, "length", json_integer(mb->pkt_len));
+		json_object_set_new(jobj, "nb_segs", json_integer(mb->nb_segs));
+
+		if (ol_flags & RTE_MBUF_F_RX_RSS_HASH)
+			json_object_set_new(jobj, "rss_hash", json_integer(mb->hash.rss));
+
+		if (is_timestamp_enabled(mb))
+			json_object_set_new(jobj, "timestamp", json_integer(get_timestamp(mb)));
+
+		if ((is_rx && (ol_flags & RTE_MBUF_F_RX_QINQ) != 0) ||
+		    (!is_rx && (ol_flags & RTE_MBUF_F_TX_QINQ) != 0)) {
+			json_object_set_new(jobj, "vlan_tci", json_integer(mb->vlan_tci));
+			json_object_set_new(jobj, "vlan_outer_tci", json_integer(mb->vlan_tci_outer));
+		} else if ((is_rx && (ol_flags & RTE_MBUF_F_RX_VLAN) != 0) ||
+			   (!is_rx && (ol_flags & RTE_MBUF_F_TX_VLAN) != 0)) {
+			json_object_set_new(jobj, "vlan_tci", json_integer(mb->vlan_tci));
+		}
+
+		if (mb->packet_type)
+			json_object_set_new(jobj, "hw_ptype", encode_ptype(mb->packet_type));
+
+		struct rte_net_hdr_lens hdr_lens;
+		uint32_t sw_packet_type = rte_net_get_ptype(mb, &hdr_lens, RTE_PTYPE_ALL_MASK);
+		json_object_set_new(jobj, "sw_ptype", encode_ptype(sw_packet_type));
+
+		if (sw_packet_type & RTE_PTYPE_L2_MASK)
+			json_object_set_new(jobj, "l2_len", json_integer(hdr_lens.l2_len));
+		if (sw_packet_type & RTE_PTYPE_L3_MASK)
+			json_object_set_new(jobj, "l3_len", json_integer(hdr_lens.l3_len));
+		if (sw_packet_type & RTE_PTYPE_L4_MASK)
+			json_object_set_new(jobj, "l4_len", json_integer(hdr_lens.l4_len));
+		if (sw_packet_type & RTE_PTYPE_TUNNEL_MASK)
+			json_object_set_new(jobj, "tunnel_len", json_integer(hdr_lens.tunnel_len));
+		if (sw_packet_type & RTE_PTYPE_INNER_L2_MASK)
+			json_object_set_new(jobj, "inner_l2_len", json_integer(hdr_lens.inner_l2_len));
+		if (sw_packet_type & RTE_PTYPE_INNER_L3_MASK)
+			json_object_set_new(jobj, "inner_l3_len", json_integer(hdr_lens.inner_l3_len));
+		if (sw_packet_type & RTE_PTYPE_INNER_L4_MASK)
+			json_object_set_new(jobj, "inner_l4_len", json_integer(hdr_lens.inner_l4_len));
+
+		json_object_set_new(jobj, "ol_flags", encode_ol_flags(mb->ol_flags, is_rx));
+
+		json_dumpf(jobj, outf, JSON_INDENT(4));
+		json_decref(jobj);
+	}
+}
+#endif
+
 static void
 dump_pkt_hex(FILE *outf, struct rte_mbuf *pkts[], uint16_t nb_pkts)
 {
@@ -362,6 +499,11 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 	case OUTPUT_MODE_DISSECT:
 		dump_pkt_brief(outf, port_id, queue, pkts, nb_pkts, is_rx);
 		break;
+#ifdef RTE_HAS_JANSSON
+	case OUTPUT_MODE_JSON:
+		dump_pkt_json(outf, port_id, queue, pkts, nb_pkts, is_rx);
+		break;
+#endif
 	default:
 		return;
 	}
