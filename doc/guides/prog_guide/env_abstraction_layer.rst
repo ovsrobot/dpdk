@@ -429,12 +429,45 @@ with them once they're registered.
 Per-lcore and Shared Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+By default static variables, blocks allocated on the DPDK heap, and
+other type of memory is shared by all DPDK threads.
 
-    lcore refers to a logical execution unit of the processor, sometimes called a hardware *thread*.
+An application, a DPDK library or PMD may keep opt to keep per-thread
+state.
 
-Shared variables are the default behavior.
-Per-lcore variables are implemented using *Thread Local Storage* (TLS) to provide per-thread local storage.
+Per-thread data may be maintained using either *lcore variables*
+(``rte_lcore_var.h``), *thread-local storage (TLS)*
+(``rte_per_lcore.h``), or a static array of ``RTE_MAX_LCORE``
+elements, index by ``rte_lcore_id()``. These methods allows for
+per-lcore data to be a largely module-internal affair, and not
+directly visible in its API. Another possibility is to have deal
+explicitly with per-thread aspects in the API (e.g., the ports of the
+Eventdev API).
+
+Lcore varibles are suitable for small object statically allocated at
+the time of module or application initialization. An lcore variable
+take on one value for each lcore id-equipped thread (i.e., for EAL
+threads and registered non-EAL threads, in total ``RTE_MAX_LCORE``
+instances). The lifetime of lcore variables are detached from that of
+the owning threads, and may thus be initialized prior to the owner
+having been created.
+
+Variables with thread-local storage are allocated at the time of
+thread creation, and exists until the thread terminates, for every
+thread in the process. Only very small object should be allocated in
+TLS, since large TLS objects significantly slows down thread creation
+and may needlessly increase memory footprint for application that make
+extensive use of unregistered threads.
+
+A common but now largely obsolete DPDK pattern is to use a static
+array sized according to the maximum number of lcore id-equipped
+threads (i.e., with ``RTE_MAX_LCORE`` elements). To avoid *false
+sharing*, each element must both cache-aligned, and include a
+``RTE_CACHE_GUARD``. Such extensive use of padding cause internal
+fragmentation (i.e., unused space) and lower cache hit rates.
+
+For more discussions on per-lcore state, see the ``rte_lcore_var.h``
+API documentation.
 
 Logs
 ~~~~
