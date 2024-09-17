@@ -7,4 +7,10 @@ sources = files(
         'log_timestamp.c',
 )
 
+if is_windows
+    sources += files('log_stubs.c')
+else
+    sources += files('log_syslog.c')
+endif
+
 headers = files('rte_log.h')

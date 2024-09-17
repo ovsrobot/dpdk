@@ -12,17 +12,18 @@
 #include <regex.h>
 #include <fnmatch.h>
 #include <sys/queue.h>
+#include <unistd.h>
 
 #include <rte_common.h>
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
-#include "log_internal.h"
-#include "log_private.h"
-
 #ifdef RTE_EXEC_ENV_WINDOWS
 #include <rte_os_shim.h>
 #endif
+
+#include "log_internal.h"
+#include "log_private.h"
 
 struct rte_log_dynamic_type {
 	const char *name;
@@ -496,28 +497,33 @@ rte_log(uint32_t level, uint32_t logtype, const char *format, ...)
 	return ret;
 }
 
-/* Placeholder */
-int
-eal_log_syslog(const char *mode __rte_unused)
-{
-	return -1;
-}
-
 /*
  * Called by rte_eal_init
  */
 void
-eal_log_init(const char *id __rte_unused)
+eal_log_init(const char *id)
 {
+#ifdef RTE_EXEC_ENV_WINDOWS
+	RTE_SET_USED(id);
+#else
+	bool is_terminal = isatty(STDERR_FILENO);
+
+	if (log_syslog_enabled(is_terminal)) {
+		log_syslog_open(id, is_terminal);
+		goto notice;
+	}
+#endif
 	if (log_timestamp_enabled())
 		rte_logs.print_func = log_print_with_timestamp;
 	else
 		rte_logs.print_func = vfprintf;
 
+notice:
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
 		"Debug dataplane logs available - lower performance\n");
 #endif
+	return; /* needed for goto target */
 }
 
 /*
