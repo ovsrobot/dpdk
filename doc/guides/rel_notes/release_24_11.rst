@@ -56,6 +56,23 @@ New Features
      =======================================================
 
 
+* **Extended bit operations API.**
+
+  The support for bit-level operations on single 32- and 64-bit words
+  in <rte_bitops.h> has been extended with two families of
+  semantically well-defined functions.
+
+  rte_bit_[test|set|clear|assign|flip]() functions provide excellent
+  performance (by avoiding restricting the compiler and CPU), but give
+  no guarantees in regards to memory ordering or atomicity.
+
+  rte_bit_atomic_*() provides atomic bit-level operations, including
+  the possibility to specifying memory ordering constraints.
+
+  The new public API elements are polymorphic, using the _Generic-
+  based macros (for C) and function overloading (in C++ translation
+  units).
+
 Removed Items
 -------------
 
