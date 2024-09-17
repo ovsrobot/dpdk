@@ -100,6 +100,7 @@
 
 uint16_t verbose_level = 0; /**< Silent by default. */
 RTE_ATOMIC(FILE *) output_file; /**< log to console by default. */
+enum output_mode output_format; /**< default to original mode. */
 int testpmd_logtype; /**< Log type for testpmd logs */
 
 /* use main core for command line ? */

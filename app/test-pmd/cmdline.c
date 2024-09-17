@@ -305,6 +305,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set output (filename)\n"
 			"    Set the packet debug log file\n\n"
 
+			"set format (verbose|hex)\n"
+			"    Set the format of packet log\\n"
+
 			"set log global|(type) (level)\n"
 			"    Set the log level.\n\n"
 
@@ -3889,6 +3892,42 @@ static cmdline_parse_inst_t cmd_set_output = {
 		(void *)&cmd_set_output_set,
 		(void *)&cmd_set_output_output,
 		(void *)&cmd_set_output_name,
+		NULL,
+	},
+};
+
+/* *** SET FORMAT OF PACKET LOG */
+struct cmd_set_format_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t format;
+	cmdline_fixed_string_t value;
+};
+
+static void
+cmd_set_format_parsed(void *parsed_result,
+		      __rte_unused struct cmdline *cl,
+		      __rte_unused void *data)
+{
+	struct cmd_set_format_result *res = parsed_result;
+
+	set_output_format(res->value);
+}
+
+static cmdline_parse_token_string_t cmd_set_format_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_format_result, set, "set");
+static cmdline_parse_token_string_t cmd_set_format_output =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_format_result, format, "format");
+static cmdline_parse_token_string_t cmd_set_format_value =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_format_result, value, "verbose#hex");
+
+static cmdline_parse_inst_t cmd_set_format = {
+	.f = cmd_set_format_parsed,
+	.data = NULL,
+	.help_str = "set format verbose|hex",
+	.tokens = {
+		(void *)&cmd_set_format_set,
+		(void *)&cmd_set_format_output,
+		(void *)&cmd_set_format_value,
 		NULL,
 	},
 };
@@ -13207,6 +13246,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_set_numbers,
 	(cmdline_parse_inst_t *)&cmd_set_log,
 	(cmdline_parse_inst_t *)&cmd_set_output,
+	(cmdline_parse_inst_t *)&cmd_set_format,
 	(cmdline_parse_inst_t *)&cmd_set_rxoffs,
 	(cmdline_parse_inst_t *)&cmd_set_rxpkts,
 	(cmdline_parse_inst_t *)&cmd_set_rxhdrs,

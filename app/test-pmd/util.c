@@ -16,6 +16,7 @@
 #include "testpmd.h"
 
 #define MAX_STRING_LEN 8192
+#define MAX_DUMP_LEN   1024
 
 #define MKDUMPSTR(buf, buf_size, cur_len, ...) \
 do { \
@@ -67,9 +68,9 @@ get_timestamp(const struct rte_mbuf *mbuf)
 			timestamp_dynfield_offset, rte_mbuf_timestamp_t *);
 }
 
-static inline void
-dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
-	      uint16_t nb_pkts, int is_rx)
+static void
+dump_pkt_verbose(FILE *outf, uint16_t port_id, uint16_t queue,
+		 struct rte_mbuf *pkts[], uint16_t nb_pkts, int is_rx)
 {
 	struct rte_mbuf  *mb;
 	const struct rte_ether_hdr *eth_hdr;
@@ -89,14 +90,6 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 	size_t buf_size = MAX_STRING_LEN;
 	size_t cur_len = 0;
 	uint64_t restore_info_dynflag;
-	FILE *outf;
-
-	if (!nb_pkts)
-		return;
-
-	outf = rte_atomic_load_explicit(&output_file, rte_memory_order_relaxed);
-	if (!outf)
-		return;
 
 	restore_info_dynflag = rte_flow_restore_info_dynflag();
 	MKDUMPSTR(print_buf, buf_size, cur_len,
@@ -302,6 +295,39 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 		else
 			fprintf(outf, "%s", print_buf);
 		cur_len = 0;
+	}
+}
+
+static void
+dump_pkt_hex(FILE *outf, struct rte_mbuf *pkts[], uint16_t nb_pkts)
+{
+	for (uint16_t i = 0; i < nb_pkts; i++)
+		rte_pktmbuf_dump(outf, pkts[i], MAX_DUMP_LEN);
+}
+
+
+static void
+dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
+	      uint16_t nb_pkts, int is_rx)
+{
+	FILE *outf;
+
+	if (!nb_pkts)
+		return;
+
+	outf = rte_atomic_load_explicit(&output_file, rte_memory_order_relaxed);
+	if (unlikely(!outf))
+		return;
+
+	switch (output_format) {
+	case OUTPUT_MODE_VERBOSE:
+		dump_pkt_verbose(outf, port_id, queue, pkts, nb_pkts, is_rx);
+		return;
+	case OUTPUT_MODE_HEX:
+		dump_pkt_hex(outf, pkts, nb_pkts);
+		break;
+	default:
+		return;
 	}
 	fflush(outf);
 }
