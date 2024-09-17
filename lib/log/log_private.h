@@ -22,4 +22,12 @@ void log_syslog_open(const char *id, bool is_terminal);
 bool log_journal_enabled(void);
 void log_journal_open(const char *id);
 
+bool log_color_enabled(bool is_tty);
+
+__rte_format_printf(2, 0)
+int color_print(FILE *f, const char *format, va_list ap);
+
+__rte_format_printf(2, 0)
+int color_print_with_timestamp(FILE *f, const char *format, va_list ap);
+
 #endif /* LOG_PRIVATE_H */

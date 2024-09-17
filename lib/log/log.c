@@ -503,10 +503,14 @@ rte_log(uint32_t level, uint32_t logtype, const char *format, ...)
 void
 eal_log_init(const char *id)
 {
+	bool is_terminal;
+
 #ifdef RTE_EXEC_ENV_WINDOWS
 	RTE_SET_USED(id);
+
+	is_terminal = _isatty(_fileno(stderr));
 #else
-	bool is_terminal = isatty(STDERR_FILENO);
+	is_terminal = isatty(STDERR_FILENO);
 
 #ifdef RTE_EXEC_ENV_LINUX
 	if (log_journal_enabled()) {
@@ -518,11 +522,20 @@ eal_log_init(const char *id)
 		log_syslog_open(id, is_terminal);
 		goto notice;
 	}
-#endif
-	if (log_timestamp_enabled())
-		rte_logs.print_func = log_print_with_timestamp;
-	else
-		rte_logs.print_func = vfprintf;
+
+#endif /* RTE_EXEC_ENV_WINDOWS */
+
+	if (log_color_enabled(is_terminal)) {
+		if (log_timestamp_enabled())
+			rte_logs.print_func = color_print_with_timestamp;
+		else
+			rte_logs.print_func = color_print;
+	} else {
+		if (log_timestamp_enabled())
+			rte_logs.print_func = log_print_with_timestamp;
+		else
+			rte_logs.print_func = vfprintf;
+	}
 
 notice:
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
