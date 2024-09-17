@@ -12,3 +12,10 @@ DPDK_25 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 24.11
+	rte_dissect_mbuf;
+};
