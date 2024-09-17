@@ -6,6 +6,10 @@
 
 # path to local clone of https://github.com/codespell-project/codespell.git
 codespell_path=$1
+if [ ! -d "$codespell_path/codespell_lib/data" ]; then
+	echo "Usage: $0 <path_to_codespell_project>"
+	exit 1
+fi
 
 # concatenate codespell dictionaries, except GB/US one
 for suffix in .txt _code.txt _informal.txt _names.txt _rare.txt _usage.txt ; do
@@ -17,6 +21,7 @@ sed '/^..->/d' |
 sed '/^uint->/d' |
 sed "/^doesn'->/d" |
 sed '/^wasn->/d' |
+sed '/stdio->/d' |
 
 # print to stdout
 cat
