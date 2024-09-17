@@ -5,11 +5,11 @@
 #ifndef RTE_IO_LOONGARCH_H
 #define RTE_IO_LOONGARCH_H
 
+#include "generic/rte_io.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "generic/rte_io.h"
 
 #ifdef __cplusplus
 }

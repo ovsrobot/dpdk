@@ -5,15 +5,15 @@
 #ifndef __INCLUDE_RTE_LRU_H__
 #define __INCLUDE_RTE_LRU_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <rte_config.h>
 #ifdef RTE_ARCH_X86_64
 #include "rte_lru_x86.h"
 #elif defined(RTE_ARCH_ARM64)
 #include "rte_lru_arm64.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #else
 #undef RTE_TABLE_HASH_LRU_STRATEGY
 #define RTE_TABLE_HASH_LRU_STRATEGY                        1
@@ -84,10 +84,6 @@ do {									\
 
 #error "Incorrect value for RTE_TABLE_HASH_LRU_STRATEGY"
 
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

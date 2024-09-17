@@ -5,11 +5,11 @@
 #ifndef RTE_CMAN_H
 #define RTE_CMAN_H
 
+#include <rte_bitops.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <rte_bitops.h>
 
 /**
  * @file

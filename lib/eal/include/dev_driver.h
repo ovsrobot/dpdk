@@ -5,12 +5,12 @@
 #ifndef DEV_DRIVER_H
 #define DEV_DRIVER_H
 
+#include <rte_common.h>
+#include <rte_dev.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <rte_common.h>
-#include <rte_dev.h>
 
 /**
  * A structure describing a device driver.

@@ -5,10 +5,6 @@
 #ifndef __INCLUDE_RTE_PORT_H__
 #define __INCLUDE_RTE_PORT_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  * RTE Port
@@ -19,6 +15,10 @@ extern "C" {
 
 #include <stdint.h>
 #include <rte_mbuf.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**@{
  * Macros to allow accessing metadata stored in the mbuf headroom
