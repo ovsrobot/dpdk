@@ -104,6 +104,13 @@ dummy_event_port_preschedule_modify(__rte_unused void *port,
 	return -EINVAL;
 }
 
+static void
+dummy_event_port_preschedule(__rte_unused void *port,
+			     __rte_unused rte_event_dev_preschedule_type_t preschedule)
+{
+	RTE_EDEV_LOG_ERR("pre-schedule requested for unconfigured event device");
+}
+
 void
 event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 {
@@ -117,12 +124,12 @@ event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 		.dequeue_burst = dummy_event_dequeue_burst,
 		.maintain = dummy_event_maintain,
 		.txa_enqueue = dummy_event_tx_adapter_enqueue,
-		.txa_enqueue_same_dest =
-			dummy_event_tx_adapter_enqueue_same_dest,
+		.txa_enqueue_same_dest = dummy_event_tx_adapter_enqueue_same_dest,
 		.ca_enqueue = dummy_event_crypto_adapter_enqueue,
 		.dma_enqueue = dummy_event_dma_adapter_enqueue,
 		.profile_switch = dummy_event_port_profile_switch,
 		.preschedule_modify = dummy_event_port_preschedule_modify,
+		.preschedule = dummy_event_port_preschedule,
 		.data = dummy_data,
 	};
 
@@ -146,5 +153,6 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 	fp_op->dma_enqueue = dev->dma_enqueue;
 	fp_op->profile_switch = dev->profile_switch;
 	fp_op->preschedule_modify = dev->preschedule_modify;
+	fp_op->preschedule = dev->preschedule;
 	fp_op->data = dev->data->ports;
 }

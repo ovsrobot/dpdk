@@ -53,6 +53,9 @@ typedef int (*event_preschedule_modify_t)(void *port,
 					  rte_event_dev_preschedule_type_t preschedule_type);
 /**< @internal Modify pre-schedule type on the event port. */
 
+typedef void (*event_preschedule_t)(void *port, rte_event_dev_preschedule_type_t preschedule_type);
+/**< @internal Issue pre-schedule on an event port. */
+
 struct __rte_cache_aligned rte_event_fp_ops {
 	void **data;
 	/**< points to array of internal port data pointers */
@@ -82,6 +85,8 @@ struct __rte_cache_aligned rte_event_fp_ops {
 	/**< PMD Event switch profile function. */
 	event_preschedule_modify_t preschedule_modify;
 	/**< PMD Event port pre-schedule switch. */
+	event_preschedule_t preschedule;
+	/**< PMD Event port pre-schedule. */
 	uintptr_t reserved[4];
 };
 
