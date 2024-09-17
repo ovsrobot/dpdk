@@ -19,5 +19,7 @@ int log_print_with_timestamp(FILE *f, const char *format, va_list ap);
 
 bool log_syslog_enabled(bool is_tty);
 void log_syslog_open(const char *id, bool is_terminal);
+bool log_journal_enabled(void);
+void log_journal_open(const char *id);
 
 #endif /* LOG_PRIVATE_H */

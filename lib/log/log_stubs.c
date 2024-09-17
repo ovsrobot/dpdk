@@ -20,9 +20,18 @@
 #include "log_internal.h"
 #include "log_private.h"
 
-/* Stubs for Windows */
+#ifdef RTE_EXEC_ENV_WINDOWS
 int
 eal_log_syslog(const char *str __rte_unused)
 {
 	return -1;
 }
+#endif
+
+#ifndef RTE_EXEC_ENV_LINUX
+int
+eal_log_journal(const char *str __rte_unused)
+{
+	return -1;
+}
+#endif

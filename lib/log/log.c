@@ -508,6 +508,12 @@ eal_log_init(const char *id)
 #else
 	bool is_terminal = isatty(STDERR_FILENO);
 
+#ifdef RTE_EXEC_ENV_LINUX
+	if (log_journal_enabled()) {
+		log_journal_open(id);
+		goto notice;
+	}
+#endif
 	if (log_syslog_enabled(is_terminal)) {
 		log_syslog_open(id, is_terminal);
 		goto notice;
