@@ -1723,7 +1723,8 @@ eth_dev_config_restore(struct rte_eth_dev *dev,
 {
 	int ret;
 
-	if (!(*dev_info->dev_flags & RTE_ETH_DEV_NOLIVE_MAC_ADDR))
+	if ((*dev_info->dev_flags & RTE_ETH_DEV_MAC_ADDR_FORCE_RESTORE) &&
+	    !(*dev_info->dev_flags & RTE_ETH_DEV_NOLIVE_MAC_ADDR))
 		eth_dev_mac_restore(dev, dev_info);
 
 	if (*dev_info->dev_flags & RTE_ETH_DEV_PROMISC_FORCE_RESTORE) {
