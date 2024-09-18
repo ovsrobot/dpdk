@@ -34,4 +34,20 @@ bool log_syslog_enabled(bool is_tty);
 void log_syslog_open(const char *id, bool is_terminal);
 #endif
 
+#ifdef RTE_EXEC_ENV_LINUX
+bool log_journal_enabled(void);
+void log_journal_open(const char *id);
+#else
+static inline bool
+log_journal_enabled(void)
+{
+	return false;
+}
+
+static inline void
+log_journal_open(const char *id __rte_unused)
+{
+}
+#endif /* !RTE_EXEC_ENV_LINUX */
+
 #endif /* LOG_PRIVATE_H */

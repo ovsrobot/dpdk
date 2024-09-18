@@ -100,6 +100,20 @@ option. There are three possible settings for this option:
 
 If ``--syslog`` option is not specified, then only console (stderr) will be used.
 
+Messages can be redirected to systemd journal which is an enhanced version of syslog with the ``--log-journal`` option.
+
+There are three possible settings for this option:
+
+*auto*
+    If stderr is redirected to journal by ``systemd`` service
+    then use journal socket to instead of stderr for log.
+    This is the default.
+
+*never*
+    Do not try to use journal.
+
+*always*
+    Always try to direct messages to journal socket.
 
 
 Using Logging APIs to Generate Log Messages
