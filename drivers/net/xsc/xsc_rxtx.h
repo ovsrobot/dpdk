@@ -5,6 +5,61 @@
 #ifndef _XSC_RXTX_H_
 #define _XSC_RXTX_H_
 
+struct xsc_send_wqe_ctrl_seg {
+	__le32		msg_opcode:8;
+	__le32		with_immdt:1;
+	__le32		csum_en:2;
+	__le32		ds_data_num:5;
+	__le32		wqe_id:16;
+	__le32		msg_len;
+	union {
+		__le32		opcode_data;
+		struct {
+			uint8_t		has_pph:1;
+			uint8_t		so_type:1;
+			__le16		so_data_size:14;
+			uint8_t		rsv1:8;
+			uint8_t		so_hdr_len:8;
+		};
+		struct {
+			__le16		desc_id;
+			__le16		is_last_wqe:1;
+			__le16		dst_qp_id:15;
+		};
+	};
+	uint8_t		se:1;
+	uint8_t		ce:1;
+	__le32		rsv2:30;
+};
+
+struct xsc_wqe_data_seg {
+	union {
+		uint32_t		in_line : 1;
+		struct {
+			uint32_t	rsv1 : 1;
+			__le32		seg_len : 31;
+			__le32		lkey;
+			__le64		va;
+		};
+		struct {
+			uint32_t	rsv2 : 1;
+			uint32_t	len : 7;
+			uint8_t		in_line_data[15];
+		};
+	};
+} __rte_packed;
+
+struct xsc_wqe {
+	union {
+		struct xsc_send_wqe_ctrl_seg cseg;
+		uint32_t ctrl[4];
+	};
+	union {
+		struct xsc_wqe_data_seg dseg[XSC_SEND_WQE_DS];
+		uint8_t data[XSC_ESEG_EXTRA_DATA_SIZE];
+	};
+} __rte_packed;
+
 struct xsc_cqe {
 	union {
 		uint8_t		msg_opcode;
@@ -111,5 +166,16 @@ struct __rte_cache_aligned xsc_rxq_data {
 	uint32_t rss_hash:1; /* RSS hash enabled */
 };
 
-#endif /* _XSC_RXTX_H_ */
+union xsc_recv_doorbell {
+	struct {
+		uint32_t next_pid : 13;
+		uint32_t qp_num : 15;
+		uint32_t rsv : 4;
+	};
+	uint32_t recv_data;
+};
 
+uint16_t xsc_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n);
+uint16_t xsc_tx_burst(void *dpdk_txq, struct rte_mbuf **pkts, uint16_t pkts_n);
+
+#endif /* _XSC_RXTX_H_ */
