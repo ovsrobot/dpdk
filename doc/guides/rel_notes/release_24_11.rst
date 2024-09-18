@@ -55,6 +55,21 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Enhancements to logging library.**
+
+  * The log is initialized earlier in startup so all messages go through the library.
+
+  * An option is added to timestamp log messages, which is useful for debugging delays in
+    application and driver startup.
+
+  * Log messages are now in color if going to a terminal (similar to dmesg).
+    The default format shows timestamp in green, subsystem in yellow,
+    and the message is bold, boldface or normal depending on severity.
+
+  * If the application is a systemd service and the log output is being
+    sent of standard error then DPDK will switch to journal native protocol.
+
+  * On FreeBSD the log library can syslog the same as Linux.
 
 Removed Items
 -------------
