@@ -2126,6 +2126,12 @@ struct rte_eth_dev_owner {
  * after driver's dev_start() callback is called.
  */
 #define RTE_ETH_DEV_PROMISC_FORCE_RESTORE RTE_BIT32(7)
+/**
+ * If this flag is set, then device driver requires that
+ * ethdev library forcefully reapplies allmulticast configuration,
+ * after driver's dev_start() callback is called.
+ */
+#define RTE_ETH_DEV_ALLMULTI_FORCE_RESTORE RTE_BIT32(8)
 /**@}*/
 
 /**

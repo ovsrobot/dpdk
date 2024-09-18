@@ -1732,9 +1732,11 @@ eth_dev_config_restore(struct rte_eth_dev *dev,
 			return ret;
 	}
 
-	ret = eth_dev_allmulticast_restore(dev, port_id);
-	if (ret != 0)
-		return ret;
+	if (*dev_info->dev_flags & RTE_ETH_DEV_ALLMULTI_FORCE_RESTORE) {
+		ret = eth_dev_allmulticast_restore(dev, port_id);
+		if (ret != 0)
+			return ret;
+	}
 
 	return 0;
 }
