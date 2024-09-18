@@ -15,6 +15,7 @@ sources = files(
         'xsc_ethdev.c',
         'xsc_dev.c',
         'xsc_utils.c',
+        'xsc_ctrl.c',
 )
 
 libnames = ['ibverbs']
