@@ -27,6 +27,12 @@ from scapy.packet import Packet  # type: ignore[import-untyped]
 from .exception import ConfigurationError
 
 REGEX_FOR_PCI_ADDRESS: str = "/[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}.[0-9]{1}/"
+_REGEX_FOR_COLON_SEP_MAC: str = r"(?:[\da-fA-F]{2}:){5}[\da-fA-F]{2}"
+_REGEX_FOR_HYPHEN_SEP_MAC: str = r"(?:[\da-fA-F]{2}-){5,7}[\da-fA-F]{2}"
+_REGEX_FOR_DOT_SEP_MAC: str = r"(?:[\da-fA-F]{4}.){2}[\da-fA-F]{4}"
+REGEX_FOR_MAC_ADDRESS: str = (
+    rf"{_REGEX_FOR_COLON_SEP_MAC}|{_REGEX_FOR_HYPHEN_SEP_MAC}|{_REGEX_FOR_DOT_SEP_MAC}"
+)
 
 
 def expand_range(range_str: str) -> list[int]:
