@@ -212,6 +212,7 @@ bool rte_trace_point_is_enabled(rte_trace_point_t *tp);
 __rte_experimental
 rte_trace_point_t *rte_trace_point_lookup(const char *name);
 
+#ifdef RTE_TRACE
 /**
  * @internal
  *
@@ -230,6 +231,7 @@ __rte_trace_point_fp_is_enabled(void)
 	return false;
 #endif
 }
+#endif /* RTE_TRACE */
 
 /**
  * @internal
@@ -356,6 +358,8 @@ __rte_trace_point_emit_ev_header(void *mem, uint64_t in)
 	return RTE_PTR_ADD(mem, __RTE_TRACE_EVENT_HEADER_SZ);
 }
 
+#ifdef RTE_TRACE
+
 #define __rte_trace_point_emit_header_generic(t) \
 void *mem; \
 do { \
@@ -411,7 +415,7 @@ do { \
 	RTE_SET_USED(len); \
 } while (0)
 
-
+#endif /* RTE_TRACE */
 #endif /* ALLOW_EXPERIMENTAL_API */
 #endif /* _RTE_TRACE_POINT_REGISTER_H_ */
 

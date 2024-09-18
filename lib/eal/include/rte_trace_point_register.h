@@ -18,6 +18,8 @@ extern "C" {
 
 RTE_DECLARE_PER_LCORE(volatile int, trace_point_sz);
 
+#ifdef RTE_TRACE
+
 #define RTE_TRACE_POINT_REGISTER(trace, name) \
 rte_trace_point_t __rte_section("__rte_trace_point") __##trace; \
 static const char __##trace##_name[] = RTE_STR(name); \
@@ -26,6 +28,12 @@ RTE_INIT(trace##_init) \
 	__rte_trace_point_register(&__##trace, __##trace##_name, \
 		(void (*)(void)) trace); \
 }
+
+#else
+
+#define RTE_TRACE_POINT_REGISTER(trace, name)
+
+#endif /* RTE_TRACE */
 
 #define __rte_trace_point_emit_header_generic(t) \
 	RTE_PER_LCORE(trace_point_sz) = __RTE_TRACE_EVENT_HEADER_SZ
