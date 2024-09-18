@@ -74,6 +74,7 @@ eal_long_options[] = {
 	{OPT_IOVA_MODE,	        1, NULL, OPT_IOVA_MODE_NUM        },
 	{OPT_LCORES,            1, NULL, OPT_LCORES_NUM           },
 	{OPT_LOG_LEVEL,         1, NULL, OPT_LOG_LEVEL_NUM        },
+	{OPT_LOG_JOURNAL,	2, NULL, OPT_LOG_JOURNAL_NUM	  },
 	{OPT_LOG_TIMESTAMP,     2, NULL, OPT_LOG_TIMESTAMP_NUM    },
 	{OPT_TRACE,             1, NULL, OPT_TRACE_NUM            },
 	{OPT_TRACE_DIR,         1, NULL, OPT_TRACE_DIR_NUM        },
@@ -1617,6 +1618,7 @@ eal_log_level_parse(int argc, char * const argv[])
 		switch (opt) {
 		case OPT_LOG_LEVEL_NUM:
 		case OPT_SYSLOG_NUM:
+		case OPT_LOG_JOURNAL_NUM:
 		case OPT_LOG_TIMESTAMP_NUM:
 			if (eal_parse_common_option(opt, optarg, internal_conf) < 0)
 				return -1;
@@ -1840,6 +1842,16 @@ eal_parse_common_option(int opt, const char *optarg,
 		if (eal_log_syslog(optarg) < 0) {
 			EAL_LOG(ERR, "invalid parameters for --"
 					OPT_SYSLOG);
+			return -1;
+		}
+		break;
+#endif
+
+#ifdef RTE_EXEC_ENV_LINUX
+	case OPT_LOG_JOURNAL_NUM:
+		if (eal_log_journal(optarg) < 0) {
+			EAL_LOG(ERR, "invalid parameters for --"
+				OPT_LOG_JOURNAL);
 			return -1;
 		}
 		break;
@@ -2222,6 +2234,9 @@ eal_common_usage(void)
 	       "  --"OPT_PROC_TYPE"         Type of this process (primary|secondary|auto)\n"
 #ifndef RTE_EXEC_ENV_WINDOWS
 	       "  --"OPT_SYSLOG"[=<when>]   Enable use of syslog\n"
+#endif
+#ifdef RTE_EXEC_ENV_LINUX
+	       "  --"OPT_LOG_JOURNAL"[=<when>]  Enable use of systemd journal\n"
 #endif
 	       "  --"OPT_LOG_LEVEL"=<level> Set global log level\n"
 	       "  --"OPT_LOG_LEVEL"=<type-match>:<level>\n"

@@ -511,7 +511,9 @@ eal_log_init(const char *id)
 	is_terminal = isatty(STDERR_FILENO);
 #endif
 
-	if (log_syslog_enabled(is_terminal))
+	if (log_journal_enabled())
+		log_journal_open(id);
+	else if (log_syslog_enabled(is_terminal))
 		log_syslog_open(id, is_terminal);
 	else if (log_timestamp_enabled())
 		rte_logs.print_func = log_print_with_timestamp;
