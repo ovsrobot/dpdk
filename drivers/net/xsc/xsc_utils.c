@@ -10,6 +10,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include <sys/mman.h>
 
 #include "xsc_log.h"
@@ -85,4 +88,123 @@ xsc_get_ibv_device(const struct rte_pci_addr *addr)
 	}
 
 	return ibv_match;
+}
+
+int
+xsc_get_ifname_by_pci_addr(struct rte_pci_addr *addr, char *ifname)
+{
+	DIR *dir;
+	struct dirent *dent;
+	unsigned int dev_type = 0;
+	unsigned int dev_port_prev = ~0u;
+	char match[IF_NAMESIZE] = "";
+	char net_path[PATH_MAX];
+
+	snprintf(net_path, sizeof(net_path), "%s/" PCI_PRI_FMT "/net",
+		rte_pci_get_sysfs_path(), addr->domain, addr->bus,
+		addr->devid, addr->function);
+
+	dir = opendir(net_path);
+	if (dir == NULL) {
+		PMD_DRV_LOG(ERR, "Could not open %s", net_path);
+		return -ENOENT;
+	}
+
+	while ((dent = readdir(dir)) != NULL) {
+		char *name = dent->d_name;
+		FILE *file;
+		unsigned int dev_port;
+		int r;
+		char path[PATH_MAX];
+
+		if ((name[0] == '.') &&
+			((name[1] == '\0') ||
+			 ((name[1] == '.') && (name[2] == '\0'))))
+			continue;
+
+		snprintf(path, sizeof(path), "%s/%s/%s",
+			 net_path, name, (dev_type ? "dev_id" : "dev_port"));
+
+		file = fopen(path, "rb");
+		if (file == NULL) {
+			if (errno != ENOENT)
+				continue;
+			/*
+			 * Switch to dev_id when dev_port does not exist as
+			 * is the case with Linux kernel versions < 3.15.
+			 */
+try_dev_id:
+			match[0] = '\0';
+			if (dev_type)
+				break;
+			dev_type = 1;
+			dev_port_prev = ~0u;
+			rewinddir(dir);
+			continue;
+		}
+		r = fscanf(file, (dev_type ? "%x" : "%u"), &dev_port);
+		fclose(file);
+		if (r != 1)
+			continue;
+		/*
+		 * Switch to dev_id when dev_port returns the same value for
+		 * all ports. May happen when using a MOFED release older than
+		 * 3.0 with a Linux kernel >= 3.15.
+		 */
+		if (dev_port == dev_port_prev)
+			goto try_dev_id;
+		dev_port_prev = dev_port;
+		if (dev_port == 0)
+			snprintf(match, IF_NAMESIZE, "%s", name);
+	}
+	closedir(dir);
+	if (match[0] == '\0')
+		return -ENOENT;
+
+	snprintf(ifname, IF_NAMESIZE, "%s", match);
+	return 0;
+}
+
+int
+xsc_get_ifindex_by_ifname(const char *ifname, int *ifindex)
+{
+	struct ifreq ifr;
+	int sockfd;
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd == -1)
+		return -EINVAL;
+
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+	if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1) {
+		close(sockfd);
+		return -EINVAL;
+	}
+
+	*ifindex = ifr.ifr_ifindex;
+
+	close(sockfd);
+	return 0;
+}
+
+int
+xsc_get_ifindex_by_pci_addr(struct rte_pci_addr *addr, int *ifindex)
+{
+	char ifname[IF_NAMESIZE];
+	int ret;
+
+	ret = xsc_get_ifname_by_pci_addr(addr, ifname);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Could not get ifname by pci address:" PCI_PRI_FMT,
+			    addr->domain, addr->bus, addr->devid, addr->function);
+		return ret;
+	}
+
+	ret = xsc_get_ifindex_by_ifname(ifname, ifindex);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Could not get ifindex by ifname:%s", ifname);
+		return ret;
+	}
+
+	return 0;
 }

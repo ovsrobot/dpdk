@@ -7,9 +7,13 @@
 
 #include <infiniband/verbs.h>
 
+#include "xsc_defs.h"
+
 #define XSC_PPH_MODE_ARG "pph_mode"
 #define XSC_NIC_MODE_ARG "nic_mode"
 #define XSC_FLOW_MODE_ARG "flow_mode"
+
+#define XSC_DEV_REPR_PORT	0
 
 struct xsc_hwinfo {
 	uint8_t valid; /* 1: current phy info is valid, 0 : invalid */
@@ -48,10 +52,32 @@ struct xsc_devargs {
 	int pph_mode;
 };
 
+struct xsc_repr_info {
+	int32_t repr_id;
+	enum xsc_phy_port_type port_type;
+	int pf_bond;
+
+	uint32_t ifindex;
+	const char *phys_dev_name;
+	uint32_t funcid;
+};
+
+struct xsc_repr_port {
+	struct xsc_dev *xdev;
+	struct xsc_repr_info info;
+	void *drv_data;
+};
+
 struct xsc_dev {
 	struct rte_pci_device *pci_dev;
 	struct xsc_devargs devargs;
 	struct xsc_hwinfo hwinfo;
+	int vfos_logical_in_port;
+
+	struct xsc_repr_port *repr_ports;
+	int num_repr_ports;
+	int ifindex;
+
 	struct ibv_context *ibv_ctx;
 	struct ibv_pd *ibv_pd;
 	char ibv_name[IBV_SYSFS_NAME_MAX];
@@ -62,5 +88,6 @@ struct xsc_dev {
 
 int xsc_dev_init(struct rte_pci_device *pci_dev, struct xsc_dev **dev);
 void xsc_dev_uninit(struct xsc_dev *dev);
+int xsc_repr_ports_probe(struct xsc_dev *dev, int nb_port, int max_nb_ports);
 
 #endif /* _XSC_DEV_H_ */
