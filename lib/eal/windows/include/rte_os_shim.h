@@ -110,4 +110,14 @@ rte_clock_gettime(clockid_t clock_id, struct timespec *tp)
 }
 #define clock_gettime(clock_id, tp) rte_clock_gettime(clock_id, tp)
 
+static inline struct tm *
+rte_localtime_r(const time_t *timer, struct tm *buf)
+{
+	if (localtime_s(buf, timer) == 0)
+		return buf;
+	else
+		return NULL;
+}
+#define localtime_r(timer, buf) rte_localtime_r(timer, buf)
+
 #endif /* _RTE_OS_SHIM_ */
