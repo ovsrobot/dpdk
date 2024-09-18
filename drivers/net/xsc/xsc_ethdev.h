@@ -5,6 +5,10 @@
 #ifndef _XSC_ETHDEV_H_
 #define _XSC_ETHDEV_H_
 
+#define XSC_RSS_HASH_KEY_LEN 52
+#define XSC_MAX_DESC_NUMBER 1024
+#define XSC_RX_FREE_THRESH 32
+
 struct xsc_dev_config {
 	uint8_t pph_flag;
 	unsigned int hw_csum:1;
@@ -40,6 +44,8 @@ struct xsc_ethdev_priv {
 	uint16_t num_sq;
 	uint16_t num_rq;
 
+	struct xsc_txq_data *(*txqs)[];
+	struct xsc_rxq_data *(*rxqs)[];
 };
 
 #define TO_XSC_ETHDEV_PRIV(dev) \
