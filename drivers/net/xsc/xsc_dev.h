@@ -15,6 +15,9 @@
 
 #define XSC_DEV_REPR_PORT	0
 
+#define FUNCID_TYPE_MASK 0x1c000
+#define FUNCID_MASK 0x3fff
+
 struct xsc_hwinfo {
 	uint8_t valid; /* 1: current phy info is valid, 0 : invalid */
 	uint32_t pcie_no; /* pcie number , 0 or 1 */

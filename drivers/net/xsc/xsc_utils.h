@@ -14,4 +14,10 @@ int xsc_get_ifname_by_pci_addr(struct rte_pci_addr *addr, char *ifname);
 int xsc_get_ifindex_by_ifname(const char *ifname, int *ifindex);
 int xsc_get_ifindex_by_pci_addr(struct rte_pci_addr *addr, int *ifindex);
 
-#endif /* _XSC_UTILS_H_ */
+int xsc_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac, uint32_t index);
+int xsc_get_mtu(uint16_t *mtu, uint32_t ifindex);
+int xsc_set_mtu(uint16_t mtu, uint32_t ifindex);
+int xsc_get_mac(uint8_t *mac, uint32_t ifindex);
+
+
+#endif
