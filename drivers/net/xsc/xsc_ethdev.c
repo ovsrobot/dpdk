@@ -11,6 +11,7 @@
 #include "xsc_dev.h"
 #include "xsc_ethdev.h"
 #include "xsc_utils.h"
+#include "xsc_flow.h"
 #include "xsc_ctrl.h"
 #include "xsc_rxtx.h"
 
@@ -789,6 +790,43 @@ error:
 }
 
 static int
+xsc_dev_start_config_hw(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	struct xsc_hwinfo *hwinfo;
+	int peer_dstinfo = 0;
+	int peer_logicalport = 0;
+	int logical_port = 0;
+	int local_dstinfo = 0;
+	int pcie_logic_port = 0;
+	int qp_set_id = 0;
+	int rep_id;
+	struct xsc_rxq_data *rxq = xsc_rxq_get(dev, 0);
+	uint16_t rx_qpn = (uint16_t)rxq->qpn;
+	static int xsc_global_pct_priority_idx = 128;
+
+	if (priv->funcid_type != XSC_PHYPORT_MAC_FUNCID)
+		return -1;
+
+	hwinfo = &priv->xdev->hwinfo;
+	rep_id = priv->representor_id;
+	peer_dstinfo = hwinfo->mac_phy_port;
+	peer_logicalport = hwinfo->mac_phy_port;
+
+	qp_set_id = rep_id % 511 + 1;
+	logical_port = priv->xdev->vfos_logical_in_port + qp_set_id - 1;
+	local_dstinfo = logical_port;
+	pcie_logic_port = hwinfo->pcie_no + 8;
+
+	xsc_create_ipat(dev, logical_port, peer_dstinfo);
+	xsc_create_epat(dev, local_dstinfo, pcie_logic_port,
+		rx_qpn - hwinfo->raw_rss_qp_id_base, priv->num_rq);
+	xsc_create_pct(dev, logical_port, peer_dstinfo, xsc_global_pct_priority_idx++);
+	xsc_create_pct(dev, peer_logicalport, local_dstinfo, xsc_global_pct_priority_idx++);
+	return 0;
+}
+
+static int
 xsc_ethdev_start(struct rte_eth_dev *dev)
 {
 	int ret;
@@ -813,6 +851,7 @@ xsc_ethdev_start(struct rte_eth_dev *dev)
 	dev->rx_pkt_burst = xsc_rx_burst;
 	dev->tx_pkt_burst = xsc_tx_burst;
 
+	ret = xsc_dev_start_config_hw(dev);
 	return 0;
 
 error:
