@@ -55,3 +55,11 @@ xsc_ioctl(struct xsc_dev *dev, int cmd, int opcode,
 	free(hdr);
 	return ret;
 }
+
+int
+xsc_mailbox_exec(struct xsc_dev *dev, void *data_in,
+		 int in_len, void *data_out, int out_len)
+{
+	/* ignore opcode in hdr->attr when cmd = XSC_IOCTL_CMDQ_RAW */
+	return xsc_ioctl(dev, XSC_IOCTL_CMDQ_RAW, 0, data_in, in_len, data_out, out_len);
+}
