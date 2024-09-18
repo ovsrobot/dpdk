@@ -73,6 +73,7 @@ eal_long_options[] = {
 	{OPT_HUGE_UNLINK,       2, NULL, OPT_HUGE_UNLINK_NUM      },
 	{OPT_IOVA_MODE,	        1, NULL, OPT_IOVA_MODE_NUM        },
 	{OPT_LCORES,            1, NULL, OPT_LCORES_NUM           },
+	{OPT_LOG_COLOR,		2, NULL, OPT_LOG_COLOR_NUM	  },
 	{OPT_LOG_LEVEL,         1, NULL, OPT_LOG_LEVEL_NUM        },
 	{OPT_LOG_JOURNAL,	2, NULL, OPT_LOG_JOURNAL_NUM	  },
 	{OPT_LOG_TIMESTAMP,     2, NULL, OPT_LOG_TIMESTAMP_NUM    },
@@ -1620,6 +1621,7 @@ eal_log_level_parse(int argc, char * const argv[])
 		case OPT_SYSLOG_NUM:
 		case OPT_LOG_JOURNAL_NUM:
 		case OPT_LOG_TIMESTAMP_NUM:
+		case OPT_LOG_COLOR_NUM:
 			if (eal_parse_common_option(opt, optarg, internal_conf) < 0)
 				return -1;
 			break;
@@ -1865,6 +1867,14 @@ eal_parse_common_option(int opt, const char *optarg,
 		if (eal_log_timestamp(optarg) < 0) {
 			EAL_LOG(ERR, "invalid parameters for --"
 				OPT_LOG_TIMESTAMP);
+			return -1;
+		}
+		break;
+
+	case OPT_LOG_COLOR_NUM:
+		if (eal_log_color(optarg) < 0) {
+			EAL_LOG(ERR, "invalid parameters for --"
+				OPT_LOG_COLOR);
 			return -1;
 		}
 		break;
@@ -2238,6 +2248,7 @@ eal_common_usage(void)
 	       "                      Set specific log level\n"
 	       "  --"OPT_LOG_LEVEL"=help    Show log types and levels\n"
 	       "  --"OPT_LOG_TIMESTAMP"[=<format>]  Timestamp log output\n"
+	       "  --"OPT_LOG_COLOR"[=<when>] Colorize log messages\n"
 #ifndef RTE_EXEC_ENV_WINDOWS
 	       "  --"OPT_TRACE"=<regex-match>\n"
 	       "                      Enable trace based on regular expression trace name.\n"
