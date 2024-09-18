@@ -1726,9 +1726,11 @@ eth_dev_config_restore(struct rte_eth_dev *dev,
 	if (!(*dev_info->dev_flags & RTE_ETH_DEV_NOLIVE_MAC_ADDR))
 		eth_dev_mac_restore(dev, dev_info);
 
-	ret = eth_dev_promiscuous_restore(dev, port_id);
-	if (ret != 0)
-		return ret;
+	if (*dev_info->dev_flags & RTE_ETH_DEV_PROMISC_FORCE_RESTORE) {
+		ret = eth_dev_promiscuous_restore(dev, port_id);
+		if (ret != 0)
+			return ret;
+	}
 
 	ret = eth_dev_allmulticast_restore(dev, port_id);
 	if (ret != 0)

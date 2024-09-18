@@ -2120,6 +2120,12 @@ struct rte_eth_dev_owner {
  * PMDs filling the queue xstats themselves should not set this flag
  */
 #define RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS RTE_BIT32(6)
+/**
+ * If this flag is set, then device driver requires that
+ * ethdev library forcefully reapplies promiscuous mode configuration,
+ * after driver's dev_start() callback is called.
+ */
+#define RTE_ETH_DEV_PROMISC_FORCE_RESTORE RTE_BIT32(7)
 /**@}*/
 
 /**
