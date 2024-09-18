@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added strict priority capability flag in dmadev.**
+
+  Added new capability flag ``RTE_DMA_CAPA_PRI_POLICY_SP`` to check if the
+  DMA device supports assigning fixed priority to its channels, allowing
+  for better control over resource allocation and scheduling.
 
 Removed Items
 -------------
@@ -100,6 +105,9 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* dmadev: Added ``nb_priorities`` field to ``rte_dma_info`` structure and
+  ``priority`` field to ``rte_dma_conf`` structure to get device supported
+  priority levels and configure required priority from the application.
 
 Known Issues
 ------------
