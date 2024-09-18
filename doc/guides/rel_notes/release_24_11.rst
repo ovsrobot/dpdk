@@ -67,7 +67,8 @@ Removed Items
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
-
+* ethdev: Removed the __rte_ethdev_trace_rx_burst symbol, as the corresponding
+  tracepoint was split into two separate ones for empty and non-empty calls.
 
 API Changes
 -----------
