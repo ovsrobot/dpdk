@@ -59,6 +59,32 @@ For example::
 
 Within an application, the same result can be got using the ``rte_log_set_level_pattern()`` or ``rte_log_set_level_regex()`` APIs.
 
+Log timestamp
+~~~~~~~~~~~~~
+
+An optional timestamp can be added before each message
+by adding the ``--log-timestamp`` option.
+For example::
+
+	/path/to/app --log-level=lib.*:debug --log-timestamp
+
+Multiple timestamp alternative timestamp formats are available:
+
+.. csv-table:: Log time stamp format
+   :header: "Format", "Description", "Example"
+   :widths: 6, 30, 32
+
+   "ctime", "Unix ctime", "``[Wed Mar 20 07:26:12 2024]``"
+   "delta", "Offset since last", "``[<    3.162373>]``"
+   "reltime", "Seconds since last or time if minute changed", "``[  +3.001791]`` or ``[Mar20 07:26:12]``"
+   "iso", "ISO-8601", "``[2024-03-20T07:26:12−07:00]``"
+
+To prefix all console messages with ISO format time the syntax is::
+
+	/path/to/app --log-timestamp=iso
+
+
+
 Using Logging APIs to Generate Log Messages
 -------------------------------------------
 
