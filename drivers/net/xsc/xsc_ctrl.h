@@ -69,6 +69,33 @@ struct xsc_ioctl_mbox_out {
 	uint8_t                 data[];
 };
 
+struct xsc_nic_attr {
+	__be16       caps;
+	__be16       caps_mask;
+	uint8_t      mac_addr[6];
+};
+
+struct xsc_rss_modify_attr {
+	uint8_t      caps_mask;
+	uint8_t      rss_en;
+	__be16       rqn_base;
+	__be16       rqn_num;
+	uint8_t      hfunc;
+	__be32       hash_tmpl;
+	uint8_t      hash_key[52];
+};
+
+struct xsc_cmd_modify_nic_hca_mbox_in {
+	struct xsc_inbox_hdr            hdr;
+	struct xsc_nic_attr             nic;
+	struct xsc_rss_modify_attr      rss;
+};
+
+struct xsc_cmd_modify_nic_hca_mbox_out {
+	struct xsc_outbox_hdr   hdr;
+	uint8_t                 rsvd0[4];
+};
+
 struct xsc_ioctl_data_tl {
 	uint16_t table;
 	uint16_t opmod;
