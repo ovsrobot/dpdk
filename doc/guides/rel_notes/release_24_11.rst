@@ -55,6 +55,33 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Enhancements to logging library.**
+
+  * Syslog related changes
+
+    * The meaning of the *--syslog* option has changed.
+      Use of syslog is controlled by the *--syslog* option.
+      The default is now *auto* which uses syslog only if stderr
+      is not a terminal device.
+
+    * The syslog facility is now set to **LOG_USER** if stderr is a terminal
+      and **LOG_DAEMON** otherwise.
+
+    * Syslog is now supported on FreeBSD (but not on Windows).
+
+  * The log is initialized earlier in startup so all messages go through
+    the library.
+
+  * Added a new option to timestamp log messages, which is useful for
+    debugging delays in application and driver startup.
+
+  * Log messages are now in color if going to a terminal (similar to dmesg).
+    The default format shows timestamp in green, subsystem in yellow,
+    and the message is bold, boldface or normal depending on severity.
+
+  * If the application is a systemd service and the log output is being
+    sent of standard error then DPDK will switch to journal native protocol.
+
 
 Removed Items
 -------------
