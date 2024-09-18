@@ -14,10 +14,6 @@
  * asymmetric crypto operations.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <string.h>
 #include <stdint.h>
 
@@ -26,6 +22,10 @@ extern "C" {
 #include <rte_common.h>
 
 #include "rte_crypto_sym.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct rte_cryptodev_asym_session;
 

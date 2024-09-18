@@ -19,10 +19,6 @@
  * instead.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdalign.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -37,6 +33,10 @@ extern "C" {
 #include <rte_memzone.h>
 #include <rte_pause.h>
 #include <rte_debug.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define RTE_TAILQ_RING_NAME "RTE_RING"
 

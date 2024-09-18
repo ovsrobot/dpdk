@@ -4,10 +4,6 @@
 #ifndef __INCLUDE_RTE_SWX_EXTERN_H__
 #define __INCLUDE_RTE_SWX_EXTERN_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  * RTE SWX Extern objects and functions
@@ -18,6 +14,10 @@ extern "C" {
  */
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Extern type

@@ -7,10 +7,6 @@
 
 #include <assert.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifdef RTE_ENABLE_STDATOMIC
 #ifndef _MSC_VER
 #ifdef __STDC_NO_ATOMICS__
@@ -188,6 +184,7 @@ typedef int rte_memory_order;
 #endif
 
 #ifdef __cplusplus
+extern "C" {
 }
 #endif
 

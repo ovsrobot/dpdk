@@ -7,10 +7,6 @@
 #ifndef _RTE_BPF_DEF_H_
 #define _RTE_BPF_DEF_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * @file
  *
@@ -24,6 +20,10 @@ extern "C" {
  */
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /*
