@@ -610,8 +610,8 @@ eal_parse_args(int argc, char **argv)
 			goto out;
 		}
 
-		/* eal_log_level_parse() already handled this option */
-		if (opt == OPT_LOG_LEVEL_NUM)
+		/* eal_log_level_parse() already handled these options */
+		if (opt == OPT_LOG_LEVEL_NUM || opt == OPT_SYSLOG_NUM)
 			continue;
 
 		ret = eal_parse_common_option(opt, optarg, internal_conf);
@@ -1113,8 +1113,7 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
-	if (eal_log_init(program_invocation_short_name,
-			 internal_conf->syslog_facility) < 0) {
+	if (eal_log_init(program_invocation_short_name) < 0) {
 		rte_eal_init_alert("Cannot init logging.");
 		rte_errno = ENOMEM;
 		rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
