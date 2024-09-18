@@ -268,6 +268,16 @@ int16_t rte_dma_next_dev(int16_t start_dev_id);
 #define RTE_DMA_CAPA_OPS_COPY_SG	RTE_BIT64(33)
 /** Support fill operation. */
 #define RTE_DMA_CAPA_OPS_FILL		RTE_BIT64(34)
+/** Support strict prioritization at DMA HW channel level
+ *
+ * If device supports HW channel prioritization then application could
+ * assign fixed priority to the DMA HW channel using 'priority' field in
+ * struct rte_dma_conf. Number of supported prioirty levels will be known
+ * from 'nb_priorities' field in struct rte_dma_info.
+ *
+ * DMA devices which support prioritization can advertise this capability.
+ */
+#define RTE_DMA_CAPA_PRI_POLICY_SP	RTE_BIT64(35)
 /**@}*/
 
 /**
@@ -297,6 +307,10 @@ struct rte_dma_info {
 	int16_t numa_node;
 	/** Number of virtual DMA channel configured. */
 	uint16_t nb_vchans;
+	/** Number of priority levels (must be > 1), if supported by DMA HW channel.
+	 * 0 otherwise.
+	 */
+	uint16_t nb_priorities;
 };
 
 /**
@@ -332,6 +346,13 @@ struct rte_dma_conf {
 	 * @see RTE_DMA_CAPA_SILENT
 	 */
 	bool enable_silent;
+	/* The priority of the DMA HW channel.
+	 * This value cannot be greater than or equal to the field 'nb_priorities'
+	 * of struct rte_dma_info which get from rte_dma_info_get().
+	 * Among the values between '0' and 'nb_priorities - 1', lowest value
+	 * indicates higher priority and vice-versa.
+	 */
+	uint16_t priority;
 };
 
 /**
