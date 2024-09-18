@@ -188,6 +188,20 @@ error:
 }
 
 static int
+xsc_ethdev_set_link_down(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	return xsc_link_process(dev, priv->ifindex, IFF_UP);
+}
+
+static int
+xsc_ethdev_set_link_up(struct rte_eth_dev *dev)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	return xsc_link_process(dev, priv->ifindex, ~IFF_UP);
+}
+
+static int
 xsc_init_obj(struct xscdv_obj *obj, uint64_t obj_type)
 {
 #if HAVE_XSC_DV_PROVIDER
@@ -985,6 +999,39 @@ xsc_ethdev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 }
 
 static int
+xsc_ethdev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	struct xsc_ethdev_priv *priv = TO_XSC_ETHDEV_PRIV(dev);
+	uint16_t get_mtu = 0;
+	int ret = 0;
+
+	if (priv->eth_type != RTE_ETH_REPRESENTOR_PF) {
+		priv->mtu = mtu;
+		return 0;
+	}
+
+	ret = xsc_get_mtu(&priv->mtu, priv->ifindex);
+	if (ret)
+		return ret;
+
+	ret = xsc_set_mtu(mtu, priv->ifindex);
+	if (ret)
+		return ret;
+
+	ret = xsc_get_mtu(&get_mtu, priv->ifindex);
+	if (ret)
+		return ret;
+
+	if (get_mtu != mtu) {
+		PMD_DRV_LOG(ERR, "Mtu set to %u failure", mtu);
+		return -EAGAIN;
+	}
+
+	priv->mtu = mtu;
+	return 0;
+}
+
+static int
 xsc_ethdev_link_update(__rte_unused struct rte_eth_dev *dev,
 		       __rte_unused int wait_to_complete)
 {
@@ -995,12 +1042,15 @@ const struct eth_dev_ops xsc_dev_ops = {
 	.dev_configure = xsc_ethdev_configure,
 	.dev_start = xsc_ethdev_start,
 	.dev_stop = xsc_ethdev_stop,
+	.dev_set_link_down = xsc_ethdev_set_link_down,
+	.dev_set_link_up = xsc_ethdev_set_link_up,
 	.dev_close = xsc_ethdev_close,
 	.link_update = xsc_ethdev_link_update,
 	.rx_queue_setup = xsc_ethdev_rx_queue_setup,
 	.tx_queue_setup = xsc_ethdev_tx_queue_setup,
 	.rx_queue_release = xsc_ethdev_rxq_release,
 	.tx_queue_release = xsc_ethdev_txq_release,
+	.mtu_set = xsc_ethdev_set_mtu,
 	.rss_hash_update = xsc_ethdev_rss_hash_update,
 	.rss_hash_conf_get = xsc_ethdev_rss_hash_conf_get,
 };

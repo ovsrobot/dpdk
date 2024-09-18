@@ -313,3 +313,26 @@ xsc_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac, uint32_t i
 	dev->data->mac_addrs[index] = *mac;
 	return 0;
 }
+
+int
+xsc_link_process(struct rte_eth_dev *dev __rte_unused,
+		 uint32_t ifindex, unsigned int flags)
+{
+	struct ifreq request;
+	struct ifreq *ifr = &request;
+	char ifname[sizeof(ifr->ifr_name)];
+	int ret;
+	unsigned int keep = ~IFF_UP;
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -rte_errno;
+
+	ret = xsc_ifreq_by_ifname(ifname, SIOCGIFFLAGS, &request);
+	if (ret)
+		return ret;
+
+	request.ifr_flags &= keep;
+	request.ifr_flags |= flags & ~keep;
+
+	return xsc_ifreq_by_ifname(ifname, SIOCSIFFLAGS, &request);
+}
