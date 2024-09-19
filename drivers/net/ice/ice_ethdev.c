@@ -1873,21 +1873,61 @@ ice_load_pkg_type(struct ice_hw *hw)
 	return package_type;
 }
 
+static int ice_read_customized_path(char *pkg_file, uint16_t buff_len)
+{
+	FILE *fp = fopen(ICE_PKG_FILE_CUSTOMIZED_PATH, "r");
+	int ret = 0;
+
+	if (fp == NULL) {
+		PMD_INIT_LOG(INFO, "Failed to read CUSTOMIZED_PATH");
+		return -EIO;
+	}
+
+	if (fgets(pkg_file, buff_len, fp) == NULL) {
+		ret = -EIO;
+		goto exit;
+	}
+
+	if (strlen(pkg_file) <= 1)
+		goto exit;
+
+	pkg_file[strlen(pkg_file) - 1] = '\0';
+exit:
+	fclose(fp);
+	return ret;
+}
+
 int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 {
 	struct ice_hw *hw = &adapter->hw;
 	char pkg_file[ICE_MAX_PKG_FILENAME_SIZE];
+	char customized_path[ICE_MAX_PKG_FILENAME_SIZE];
 	char opt_ddp_filename[ICE_MAX_PKG_FILENAME_SIZE];
 	void *buf;
 	size_t bufsz;
 	int err;
 
-	if (!use_dsn)
-		goto no_dsn;
+	ice_read_customized_path(customized_path, ICE_MAX_PKG_FILENAME_SIZE);
 
 	memset(opt_ddp_filename, 0, ICE_MAX_PKG_FILENAME_SIZE);
 	snprintf(opt_ddp_filename, ICE_MAX_PKG_FILENAME_SIZE,
 		"ice-%016" PRIx64 ".pkg", dsn);
+
+	if (strlen(customized_path) > 1) {
+		if (use_dsn) {
+			snprintf(pkg_file, RTE_DIM(pkg_file),
+				"%s/%s", customized_path, opt_ddp_filename);
+			if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
+				goto load_fw;
+		}
+		snprintf(pkg_file, RTE_DIM(pkg_file), "%s/%s", customized_path, "ice.pkg");
+		if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0)
+			goto load_fw;
+	}
+
+	if (!use_dsn)
+		goto no_dsn;
+
 	strncpy(pkg_file, ICE_PKG_FILE_SEARCH_PATH_UPDATES,
 		ICE_MAX_PKG_FILENAME_SIZE);
 	strcat(pkg_file, opt_ddp_filename);
