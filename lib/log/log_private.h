@@ -17,4 +17,21 @@ ssize_t log_timestamp(char *tsbuf, size_t tsbuflen);
 __rte_format_printf(2, 0)
 int log_print_with_timestamp(FILE *f, const char *format, va_list ap);
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static inline bool
+log_syslog_enabled(bool is_tty __rte_unused)
+{
+	return false;
+}
+
+static inline void
+log_syslog_open(const char *id __rte_unused, bool is_terminal __rte_unused)
+{
+}
+#else
+
+bool log_syslog_enabled(bool is_tty);
+void log_syslog_open(const char *id, bool is_terminal);
+#endif
+
 #endif /* LOG_PRIVATE_H */

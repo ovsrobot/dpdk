@@ -83,6 +83,23 @@ To prefix all console messages with ISO format time the syntax is::
 
 	/path/to/app --log-timestamp=iso
 
+Log output
+~~~~~~~~~~
+
+If desired, messages can be redirected to syslog (on Linux and FreeBSD) with the ``--syslog``
+option. There are three possible settings for this option:
+
+*always*
+    Redirect all log output to syslog.
+
+*auto*
+    Use console if it is a terminal, and use syslog if is not.
+
+*both*
+    Print to both console and syslog.
+
+If ``--syslog`` option is not specified, then only console (stderr) will be used.
+
 
 
 Using Logging APIs to Generate Log Messages
