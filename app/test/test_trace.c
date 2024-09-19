@@ -12,7 +12,16 @@
 
 int app_dpdk_test_tp_count;
 
-#ifdef RTE_EXEC_ENV_WINDOWS
+#if !defined(RTE_TRACE)
+
+static int
+test_trace(void)
+{
+	printf("trace omitted at build-time, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#elif defined(RTE_EXEC_ENV_WINDOWS)
 
 static int
 test_trace(void)

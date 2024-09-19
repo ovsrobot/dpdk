@@ -42,6 +42,8 @@ typedef RTE_ATOMIC(uint64_t) rte_trace_point_t;
  */
 #define RTE_TRACE_POINT_ARGS
 
+#ifdef RTE_TRACE
+
 /** @internal Helper macro to support RTE_TRACE_POINT and RTE_TRACE_POINT_FP */
 #define __RTE_TRACE_POINT(_mode, _tp, _args, ...) \
 extern rte_trace_point_t __##_tp; \
@@ -99,6 +101,20 @@ _tp _args \
  */
 #define RTE_TRACE_POINT_FP(tp, args, ...) \
 	__RTE_TRACE_POINT(fp, tp, args, __VA_ARGS__)
+
+#else
+
+/** @internal Helper macro to support RTE_TRACE_POINT and RTE_TRACE_POINT_FP */
+#define __RTE_TRACE_POINT_VOID(_tp, ...) \
+static __rte_always_inline void \
+_tp(...) \
+{ \
+}
+
+#define RTE_TRACE_POINT(tp, args, ...) __RTE_TRACE_POINT_VOID(tp, args)
+#define RTE_TRACE_POINT_FP(tp, args, ...) __RTE_TRACE_POINT_VOID(tp, args)
+
+#endif /* RTE_TRACE */
 
 #ifdef __DOXYGEN__
 
@@ -212,6 +228,7 @@ bool rte_trace_point_is_enabled(rte_trace_point_t *tp);
 __rte_experimental
 rte_trace_point_t *rte_trace_point_lookup(const char *name);
 
+#ifdef RTE_TRACE
 /**
  * @internal
  *
@@ -230,6 +247,7 @@ __rte_trace_point_fp_is_enabled(void)
 	return false;
 #endif
 }
+#endif /* RTE_TRACE */
 
 /**
  * @internal
@@ -356,6 +374,8 @@ __rte_trace_point_emit_ev_header(void *mem, uint64_t in)
 	return RTE_PTR_ADD(mem, __RTE_TRACE_EVENT_HEADER_SZ);
 }
 
+#ifdef RTE_TRACE
+
 #define __rte_trace_point_emit_header_generic(t) \
 void *mem; \
 do { \
@@ -411,7 +431,7 @@ do { \
 	RTE_SET_USED(len); \
 } while (0)
 
-
+#endif /* RTE_TRACE */
 #endif /* ALLOW_EXPERIMENTAL_API */
 #endif /* _RTE_TRACE_POINT_REGISTER_H_ */
 
