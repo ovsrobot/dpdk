@@ -2206,9 +2206,6 @@ eal_common_usage(void)
 	       "                      (can be used multiple times)\n"
 	       "  --"OPT_VMWARE_TSC_MAP"    Use VMware TSC map instead of native RDTSC\n"
 	       "  --"OPT_PROC_TYPE"         Type of this process (primary|secondary|auto)\n"
-#ifndef RTE_EXEC_ENV_WINDOWS
-	       "  --"OPT_SYSLOG"            Set syslog facility\n"
-#endif
 	       "  --"OPT_LOG_LEVEL"=<level> Set global log level\n"
 	       "  --"OPT_LOG_LEVEL"=<type-match>:<level>\n"
 	       "                      Set specific log level\n"
