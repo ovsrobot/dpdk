@@ -511,14 +511,21 @@ eal_log_init(const char *id)
 	is_terminal = isatty(STDERR_FILENO);
 #endif
 
-	if (log_journal_enabled())
+	if (log_journal_enabled()) {
 		log_journal_open(id);
-	else if (log_syslog_enabled(is_terminal))
+	} else if (log_syslog_enabled(is_terminal)) {
 		log_syslog_open(id, is_terminal);
-	else if (log_timestamp_enabled())
-		rte_logs.print_func = log_print_with_timestamp;
-	else
-		rte_logs.print_func = vfprintf;
+	} else if (log_timestamp_enabled()) {
+		if (log_color_enabled(is_terminal))
+			rte_logs.print_func = color_print_with_timestamp;
+		else
+			rte_logs.print_func = log_print_with_timestamp;
+	} else {
+		if (log_color_enabled(is_terminal))
+			rte_logs.print_func = color_print;
+		else
+			rte_logs.print_func = vfprintf;
+	}
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
