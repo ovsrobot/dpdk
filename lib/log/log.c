@@ -21,7 +21,7 @@
 #include "log_private.h"
 
 #ifdef RTE_EXEC_ENV_WINDOWS
-#define strdup _strdup
+#include <rte_os_shim.h>
 #endif
 
 struct rte_log_dynamic_type {
@@ -509,6 +509,11 @@ eal_log_syslog(const char *mode __rte_unused)
 void
 eal_log_init(const char *id __rte_unused)
 {
+	if (log_timestamp_enabled())
+		rte_logs.print_func = log_print_with_timestamp;
+	else
+		rte_logs.print_func = vfprintf;
+
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
 		"Debug dataplane logs available - lower performance\n");
