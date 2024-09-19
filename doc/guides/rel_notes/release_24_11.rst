@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added a new insertion by index with pattern table insertion type.**
+
+  Extended rte_flow_table_insertion_type enum with new
+  RTE_FLOW_TABLE_INSERTION_TYPE_INDEX_WITH_PATTERN type.
 
 Removed Items
 -------------
