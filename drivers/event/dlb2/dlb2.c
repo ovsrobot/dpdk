@@ -25,11 +25,13 @@
 #include <rte_kvargs.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
 #include <rte_mbuf.h>
 #include <rte_power_intrinsics.h>
 #include <rte_prefetch.h>
 #include <rte_ring.h>
 #include <rte_string_fns.h>
+#include <rte_vect.h>
 
 #include "dlb2_priv.h"
 #include "dlb2_iface.h"
