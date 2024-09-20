@@ -43,8 +43,15 @@ chkextern = find_program('chkextern.py')
 missing_extern_headers = run_command(chkextern, 'missing', dpdk_chkinc_headers,
       capture: true, check: true).stdout().split()
 
+redundant_extern_headers = run_command(chkextern, 'redundant', dpdk_chkinc_headers,
+      capture: true, check: true).stdout().split()
+
 if missing_extern_headers != []
     error('Files missing C++ \'extern "C"\' guards:\n- ' + '\n- '.join(missing_extern_headers))
+endif
+
+if redundant_extern_headers != []
+    error('Redundant C++ \'extern "C"\' guards:\n- ' + '\n- '.join(redundant_extern_headers))
 endif
 
 gen_cpp_files = generator(gen_c_file_for_header,
