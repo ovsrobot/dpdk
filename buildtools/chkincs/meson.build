@@ -38,13 +38,13 @@ if not add_languages('cpp', required: false)
 endif
 
 # check for extern C in files, since this is not detected as an error by the compiler
-grep = find_program('grep', required: false)
-if grep.found()
-    errlist = run_command([grep, '--files-without-match', '^extern "C"', dpdk_chkinc_headers],
-            check: false, capture: true).stdout().split()
-    if errlist != []
-        error('Files missing C++ \'extern "C"\' guards:\n- ' + '\n- '.join(errlist))
-    endif
+chkextern = find_program('chkextern.py')
+
+missing_extern_headers = run_command(chkextern, 'missing', dpdk_chkinc_headers,
+      capture: true, check: true).stdout().split()
+
+if missing_extern_headers != []
+    error('Files missing C++ \'extern "C"\' guards:\n- ' + '\n- '.join(missing_extern_headers))
 endif
 
 gen_cpp_files = generator(gen_c_file_for_header,
