@@ -31,6 +31,7 @@ jobs:
       RISCV64: ${{ matrix.config.cross == 'riscv64' }}
       RUN_TESTS: ${{ contains(matrix.config.checks, 'tests') }}
       STDATOMIC: ${{ contains(matrix.config.checks, 'stdatomic') }}
+      CCMEMCPY: ${{ contains(matrix.config.checks, 'ccmemcpy') }}
 
     strategy:
       fail-fast: false
@@ -45,6 +46,12 @@ jobs:
           - os: ubuntu-22.04
             compiler: clang
             checks: stdatomic
+          - os: ubuntu-22.04
+            compiler: gcc
+            checks: ccmemcpy
+          - os: ubuntu-22.04
+            compiler: clang
+            checks: ccmemcpy
           - os: ubuntu-22.04
             compiler: gcc
             checks: debug+doc+examples+tests
