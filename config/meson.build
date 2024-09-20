@@ -97,7 +97,7 @@ eal_pmd_path = join_paths(get_option('prefix'), driver_install_path)
 if not is_windows
     meson.add_install_script('../buildtools/symlink-drivers-solibs.sh',
             get_option('libdir'), pmd_subdir_opt)
-elif meson.version().version_compare('>=0.55.0')
+else
     # 0.55.0 is required to use external program with add_install_script
     meson.add_install_script(py3,
             files('../buildtools/symlink-drivers-solibs.py'),
