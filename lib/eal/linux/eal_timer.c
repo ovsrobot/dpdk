@@ -5,9 +5,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 #ifdef RTE_LIBEAL_USE_HPET
 #include <fcntl.h>
-#include <inttypes.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
@@ -187,8 +187,38 @@ rte_eal_hpet_init(int make_default)
 }
 #endif
 
+/* Check if the kernel deems the arch provided TSC frequency trustworthy. */
+
+static bool
+is_tsc_known_freq(void)
+{
+	char line[2048];
+	FILE *stream;
+	bool ret = true; /* Assume tsc_known_freq */
+
+	stream = fopen("/proc/cpuinfo", "r");
+	if (!stream) {
+		EAL_LOG(WARNING, "Unable to open /proc/cpuinfo");
+		return ret;
+	}
+
+	while (fgets(line, sizeof(line), stream)) {
+		if (strncmp(line, "flags", 5) != 0)
+			continue;
+
+		if (!strstr(line, "tsc_known_freq"))
+			ret = false;
+
+		break;
+	}
+
+	fclose(stream);
+
+	return ret;
+}
+
 uint64_t
-get_tsc_freq(void)
+get_tsc_freq(uint64_t arch_hz)
 {
 #ifdef CLOCK_MONOTONIC_RAW
 #define NS_PER_SEC 1E9
@@ -198,6 +228,9 @@ get_tsc_freq(void)
 
 	struct timespec t_start, t_end;
 	uint64_t tsc_hz;
+
+	if (arch_hz && is_tsc_known_freq())
+		return arch_hz;
 
 	if (clock_gettime(CLOCK_MONOTONIC_RAW, &t_start) == 0) {
 		uint64_t ns, end, start = rte_rdtsc();
@@ -209,6 +242,17 @@ get_tsc_freq(void)
 
 		double secs = (double)ns/NS_PER_SEC;
 		tsc_hz = (uint64_t)((end - start)/secs);
+
+		if (arch_hz) {
+			/* Make sure we're within 1% for sanity check */
+			if (arch_hz - tsc_hz > arch_hz / 100)
+				return arch_hz;
+
+			EAL_LOG(DEBUG, "Refined architecture frequency %"PRIu64
+				       " to actual frequency %"PRIu64".",
+					arch_hz, tsc_hz);
+		}
+
 		/* Round up to 10Khz. 1E4 ~ 10Khz */
 		return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10KHZ);
 	}

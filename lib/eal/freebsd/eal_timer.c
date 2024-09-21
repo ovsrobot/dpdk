@@ -26,11 +26,14 @@
 enum timer_source eal_timer_source = EAL_TIMER_TSC;
 
 uint64_t
-get_tsc_freq(void)
+get_tsc_freq(uint64_t arch_hz)
 {
 	size_t sz;
 	int tmp;
 	uint64_t tsc_hz;
+
+	if (arch_hz)
+		return arch_hz;
 
 	sz = sizeof(tmp);
 	tmp = 0;
