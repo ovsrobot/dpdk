@@ -54,6 +54,10 @@ EXPERIMENTAL {
 	# added in 24.07
 	rte_mempool_get_mem_range;
 	rte_mempool_get_obj_alignment;
+
+	# added in 24.11
+	rte_mempool_do_generic_put_many;
+	rte_mempool_do_generic_get_many;
 };
 
 INTERNAL {

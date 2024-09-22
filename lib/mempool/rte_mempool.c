@@ -33,6 +33,149 @@
 
 RTE_LOG_REGISTER_DEFAULT(rte_mempool_logtype, INFO);
 
+void
+rte_mempool_do_generic_put_many(struct rte_mempool *mp, void * const *obj_table,
+		unsigned int n, struct rte_mempool_cache *cache)
+{
+	void **cache_objs;
+	unsigned int len;
+	const uint32_t cache_size = cache->size;
+
+	/* Increment stat now, adding in mempool always succeeds. */
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
+	/* Fill the cache with the first objects. */
+	cache_objs = &cache->objs[cache->len];
+	len = (cache_size - cache->len);
+	rte_memcpy(cache_objs, obj_table, sizeof(void *) * len);
+	obj_table += len;
+	n -= len;
+
+	/* Flush the entire cache to the backend. */
+	cache_objs = &cache->objs[0];
+	rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache_size);
+
+	if (unlikely(n > cache_size)) {
+		/* Push following objects, in entire cache sizes, directly to the backend. */
+		len = n - n % cache_size;
+		rte_mempool_ops_enqueue_bulk(mp, obj_table, len);
+		obj_table += len;
+		n -= len;
+	}
+
+	/* Add the remaining objects to the cache. */
+	cache->len = n;
+	rte_memcpy(cache_objs, obj_table, sizeof(void *) * n);
+}
+
+int
+rte_mempool_do_generic_get_many(struct rte_mempool *mp, void **obj_table,
+		unsigned int n, struct rte_mempool_cache *cache)
+{
+	int ret;
+	unsigned int remaining;
+	uint32_t index, len;
+	void **cache_objs;
+	const uint32_t cache_size = cache->size;
+
+	/* Serve the first part of the request from the cache to return hot objects first. */
+	cache_objs = &cache->objs[cache->len];
+	len = cache->len;
+	remaining = n - len;
+	for (index = 0; index < len; index++)
+		*obj_table++ = *--cache_objs;
+
+	/* At this point, the cache is empty. */
+
+	/* More than can be served from a full cache? */
+	if (unlikely(remaining >= cache_size)) {
+		/*
+		 * Serve the following part of the request directly from the backend
+		 * in multipla of the cache size.
+		 */
+		len = remaining - remaining % cache_size;
+		ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, len);
+		if (unlikely(ret < 0)) {
+			/*
+			 * No further action is required to roll back the request,
+			 * as objects in the cache are intact, and no objects have
+			 * been dequeued from the backend.
+			 */
+
+			RTE_MEMPOOL_STAT_ADD(mp, get_fail_bulk, 1);
+			RTE_MEMPOOL_STAT_ADD(mp, get_fail_objs, n);
+
+			return ret;
+		}
+
+		remaining -= len;
+		obj_table += len;
+
+		if (unlikely(remaining == 0)) {
+			cache->len = 0;
+
+			RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+			RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+
+			return 0;
+		}
+	}
+
+	/* Fill the entire cache from the backend. */
+	ret = rte_mempool_ops_dequeue_bulk(mp, cache->objs, cache_size);
+	if (unlikely(ret < 0)) {
+		/*
+		 * Unable to fill the cache.
+		 * Last resort: Try only the remaining part of the request,
+		 * served directly from the backend.
+		 */
+		ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, remaining);
+		if (unlikely(ret == 0)) {
+			cache->len = 0;
+
+			RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+			RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+
+			return 0;
+		}
+
+		/* Roll back. */
+		if (cache->len + remaining == n) {
+			/*
+			 * No further action is required to roll back the request,
+			 * as objects in the cache are intact, and no objects have
+			 * been dequeued from the backend.
+			 */
+		} else {
+			/* Update the state of the cache before putting back the objects. */
+			cache->len = 0;
+
+			len = n - remaining;
+			obj_table -= len;
+			rte_mempool_do_generic_put(mp, obj_table, len, cache);
+		}
+
+		RTE_MEMPOOL_STAT_ADD(mp, get_fail_bulk, 1);
+		RTE_MEMPOOL_STAT_ADD(mp, get_fail_objs, n);
+
+		return ret;
+	}
+
+	/* Increment stat now, this always succeeds. */
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+
+	/* Serve the remaining part of the request from the filled cache. */
+	cache_objs = &cache->objs[cache_size];
+	for (index = 0; index < remaining; index++)
+		*obj_table++ = *--cache_objs;
+
+	cache->len = cache_size - remaining;
+
+	return 0;
+}
+
 TAILQ_HEAD(rte_mempool_list, rte_tailq_entry);
 
 static struct rte_tailq_elem rte_mempool_tailq = {
@@ -49,11 +192,6 @@ static struct mempool_callback_tailq callback_tailq =
 static void
 mempool_event_callback_invoke(enum rte_mempool_event event,
 			      struct rte_mempool *mp);
-
-/* Note: avoid using floating point since that compiler
- * may not think that is constant.
- */
-#define CALC_CACHE_FLUSHTHRESH(c) (((c) * 3) / 2)
 
 #if defined(RTE_ARCH_X86)
 /*
@@ -746,13 +884,12 @@ rte_mempool_free(struct rte_mempool *mp)
 static void
 mempool_cache_init(struct rte_mempool_cache *cache, uint32_t size)
 {
-	/* Check that cache have enough space for flush threshold */
-	RTE_BUILD_BUG_ON(CALC_CACHE_FLUSHTHRESH(RTE_MEMPOOL_CACHE_MAX_SIZE) >
+	/* Check that cache have enough space for size */
+	RTE_BUILD_BUG_ON(RTE_MEMPOOL_CACHE_MAX_SIZE >
 			 RTE_SIZEOF_FIELD(struct rte_mempool_cache, objs) /
 			 RTE_SIZEOF_FIELD(struct rte_mempool_cache, objs[0]));
 
 	cache->size = size;
-	cache->flushthresh = CALC_CACHE_FLUSHTHRESH(size);
 	cache->len = 0;
 }
 
@@ -836,7 +973,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	/* asked cache too big */
 	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
-	    CALC_CACHE_FLUSHTHRESH(cache_size) > n) {
+	    cache_size > n) {
 		rte_errno = EINVAL;
 		return NULL;
 	}
