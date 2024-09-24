@@ -150,6 +150,11 @@ test_trace_perf(void)
 	struct test_data *data;
 	size_t sz;
 
+	if (!__rte_trace_point_generic_is_enabled()) {
+		printf("Trace omitted at build-time, skipping test\n");
+		return TEST_SKIPPED;
+	}
+
 	nb_cores = rte_lcore_count();
 	nb_workers = nb_cores - 1;
 	if (nb_cores < 2) {

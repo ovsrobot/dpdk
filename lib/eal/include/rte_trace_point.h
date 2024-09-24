@@ -215,6 +215,25 @@ rte_trace_point_t *rte_trace_point_lookup(const char *name);
 /**
  * @internal
  *
+ * Test if the tracepoint compile-time option is enabled.
+ *
+ * @return
+ *   true if tracepoint enabled, false otherwise.
+ */
+__rte_experimental
+static __rte_always_inline bool
+__rte_trace_point_generic_is_enabled(void)
+{
+#ifdef RTE_TRACE
+	return true;
+#else
+	return false;
+#endif
+}
+
+/**
+ * @internal
+ *
  * Test if the tracepoint fast path compile-time option is enabled.
  *
  * @return
@@ -359,6 +378,8 @@ __rte_trace_point_emit_ev_header(void *mem, uint64_t in)
 #define __rte_trace_point_emit_header_generic(t) \
 void *mem; \
 do { \
+	if (!__rte_trace_point_generic_is_enabled()) \
+		return; \
 	const uint64_t val = rte_atomic_load_explicit(t, rte_memory_order_acquire); \
 	if (likely(!(val & __RTE_TRACE_FIELD_ENABLE_MASK))) \
 		return; \
