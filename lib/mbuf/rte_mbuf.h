@@ -595,9 +595,9 @@ __rte_mbuf_raw_sanity_check(__rte_unused const struct rte_mbuf *m)
  */
 static inline struct rte_mbuf *rte_mbuf_raw_alloc(struct rte_mempool *mp)
 {
-	struct rte_mbuf *m;
+	void *m;
 
-	if (rte_mempool_get(mp, (void **)&m) < 0)
+	if (rte_mempool_get(mp, &m) < 0)
 		return NULL;
 	__rte_mbuf_raw_sanity_check(m);
 	return m;
