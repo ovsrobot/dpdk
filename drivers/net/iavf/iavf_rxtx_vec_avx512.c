@@ -1873,21 +1873,13 @@ iavf_tx_free_bufs_avx512(struct iavf_tx_queue *txq)
 								rte_lcore_id());
 		void **cache_objs;
 
-		if (!cache || cache->len == 0)
-			goto normal;
-
-		cache_objs = &cache->objs[cache->len];
-
-		if (n > RTE_MEMPOOL_CACHE_MAX_SIZE) {
-			rte_mempool_ops_enqueue_bulk(mp, (void *)txep, n);
+		if (!cache || unlikely(n + cache->len > cache->size)) {
+			rte_mempool_generic_put(mp, (void *)txep, n, cache);
 			goto done;
 		}
 
-		/* The cache follows the following algorithm
-		 *   1. Add the objects to the cache
-		 *   2. Anything greater than the cache min value (if it crosses the
-		 *   cache flush threshold) is flushed to the ring.
-		 */
+		cache_objs = &cache->objs[cache->len];
+
 		/* Add elements back into the cache */
 		uint32_t copied = 0;
 		/* n is multiple of 32 */
@@ -1905,16 +1897,13 @@ iavf_tx_free_bufs_avx512(struct iavf_tx_queue *txq)
 		}
 		cache->len += n;
 
-		if (cache->len >= cache->flushthresh) {
-			rte_mempool_ops_enqueue_bulk(mp,
-						     &cache->objs[cache->size],
-						     cache->len - cache->size);
-			cache->len = cache->size;
-		}
+		/* Increment stat. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
 		goto done;
 	}
 
-normal:
 	m = rte_pktmbuf_prefree_seg(txep[0].mbuf);
 	if (likely(m)) {
 		free[0] = m;
