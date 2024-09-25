@@ -86,7 +86,7 @@ enum cryptodev_api_test_type {
 
 extern enum cryptodev_api_test_type global_api_test_type;
 
-extern struct crypto_testsuite_params *p_testsuite_params;
+extern struct crypto_testsuite_params *p_ts_params;
 struct crypto_testsuite_params {
 	struct rte_mempool *mbuf_pool;
 	struct rte_mempool *large_mbuf_pool;
@@ -98,6 +98,10 @@ struct crypto_testsuite_params {
 
 	uint8_t valid_devs[RTE_CRYPTO_MAX_DEVS];
 	uint8_t valid_dev_count;
+	/* Device ID that is used in tests that require single device */
+	int dev_id;
+	/* Cryptodev device info that is used in tests that require single device */
+	struct rte_cryptodev_info dev_info;
 };
 
 /**

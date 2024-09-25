@@ -39,6 +39,7 @@ static uint8_t ccm_aad_test_2[22] = {
 };
 
 struct aead_test_data {
+	const char *description;
 	enum rte_crypto_aead_algorithm algo;
 
 	struct {

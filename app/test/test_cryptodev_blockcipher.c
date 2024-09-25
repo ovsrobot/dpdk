@@ -834,10 +834,10 @@ blockcipher_test_case_run(const void *data)
 	char test_msg[BLOCKCIPHER_TEST_MSG_LEN + 1];
 
 	status = test_blockcipher_one_case(tc_data,
-			p_testsuite_params->mbuf_pool,
-			p_testsuite_params->op_mpool,
-			p_testsuite_params->session_mpool,
-			p_testsuite_params->valid_devs[0],
+			p_ts_params->mbuf_pool,
+			p_ts_params->op_mpool,
+			p_ts_params->session_mpool,
+			p_ts_params->valid_devs[0],
 			test_msg);
 	return status;
 }
@@ -845,7 +845,7 @@ blockcipher_test_case_run(const void *data)
 static int
 aes_chain_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -888,7 +888,7 @@ aes_chain_setup(void)
 static int
 aes_cipheronly_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -929,7 +929,7 @@ aes_cipheronly_setup(void)
 static int
 aes_docsis_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -959,7 +959,7 @@ aes_docsis_setup(void)
 static int
 triple_des_chain_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -996,7 +996,7 @@ triple_des_chain_setup(void)
 static int
 triple_des_cipheronly_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -1027,7 +1027,7 @@ triple_des_cipheronly_setup(void)
 static int
 des_cipheronly_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -1057,7 +1057,7 @@ des_cipheronly_setup(void)
 static int
 des_docsis_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -1087,7 +1087,7 @@ des_docsis_setup(void)
 static int
 authonly_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_auth_algorithm auths[] = {
@@ -1131,7 +1131,7 @@ authonly_setup(void)
 static int
 sm4_chain_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
@@ -1167,7 +1167,7 @@ sm4_chain_setup(void)
 static int
 sm4_cipheronly_setup(void)
 {
-	uint8_t dev_id = p_testsuite_params->valid_devs[0];
+	uint8_t dev_id = p_ts_params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	uint64_t feat_flags;
 	const enum rte_crypto_cipher_algorithm ciphers[] = {
