@@ -59,6 +59,10 @@ New Features
 
   * Added support for HW mempool in CN20K SoC.
 
+* **Updated Marvell cnxk net driver.**
+
+  * Added support for ethdev in CN20K SoC.
+
 
 Removed Items
 -------------
