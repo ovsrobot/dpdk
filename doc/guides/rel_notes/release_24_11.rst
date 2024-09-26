@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cnxk mempool driver.**
+
+  * Added support for HW mempool in CN20K SoC.
+
 
 Removed Items
 -------------
