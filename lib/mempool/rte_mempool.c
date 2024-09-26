@@ -50,11 +50,6 @@ static void
 mempool_event_callback_invoke(enum rte_mempool_event event,
 			      struct rte_mempool *mp);
 
-/* Note: avoid using floating point since that compiler
- * may not think that is constant.
- */
-#define CALC_CACHE_FLUSHTHRESH(c) (((c) * 3) / 2)
-
 #if defined(RTE_ARCH_X86)
 /*
  * return the greatest common divisor between a and b (fast algorithm)
@@ -746,13 +741,12 @@ rte_mempool_free(struct rte_mempool *mp)
 static void
 mempool_cache_init(struct rte_mempool_cache *cache, uint32_t size)
 {
-	/* Check that cache have enough space for flush threshold */
-	RTE_BUILD_BUG_ON(CALC_CACHE_FLUSHTHRESH(RTE_MEMPOOL_CACHE_MAX_SIZE) >
+	/* Check that cache have enough space for size */
+	RTE_BUILD_BUG_ON(RTE_MEMPOOL_CACHE_MAX_SIZE >
 			 RTE_SIZEOF_FIELD(struct rte_mempool_cache, objs) /
 			 RTE_SIZEOF_FIELD(struct rte_mempool_cache, objs[0]));
 
 	cache->size = size;
-	cache->flushthresh = CALC_CACHE_FLUSHTHRESH(size);
 	cache->len = 0;
 }
 
@@ -836,7 +830,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	/* asked cache too big */
 	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
-	    CALC_CACHE_FLUSHTHRESH(cache_size) > n) {
+	    cache_size > n) {
 		rte_errno = EINVAL;
 		return NULL;
 	}
@@ -939,11 +933,9 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		RTE_PTR_ADD(mp, RTE_MEMPOOL_HEADER_SIZE(mp, 0));
 
 	/* Init all default caches. */
-	if (cache_size != 0) {
-		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++)
-			mempool_cache_init(&mp->local_cache[lcore_id],
-					   cache_size);
-	}
+	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++)
+		mempool_cache_init(&mp->local_cache[lcore_id],
+				   cache_size);
 
 	te->data = mp;
 
