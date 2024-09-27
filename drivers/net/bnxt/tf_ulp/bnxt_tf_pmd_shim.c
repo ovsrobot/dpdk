@@ -32,9 +32,17 @@ bnxt_tunnel_dst_port_alloc(struct bnxt *bp,
 			   uint16_t port,
 			   uint8_t type)
 {
-	return bnxt_hwrm_tunnel_dst_port_alloc(bp,
+	int rc = 0;
+	rc = bnxt_hwrm_tunnel_dst_port_alloc(bp,
 					       port,
 					       type);
+	if (rc) {
+		PMD_DRV_LOG(ERR, "Tunnel type:%d alloc failed for port:%d error:%s\n",
+			    type, port,
+			    (rc == HWRM_TUNNEL_DST_PORT_ALLOC_OUTPUT_ERROR_INFO_ERR_ALLOCATED) ?
+			    "already allocated" : "no resource");
+	}
+	return rc;
 }
 
 int
@@ -589,7 +597,13 @@ bnxt_pmd_global_tunnel_set(uint16_t port_id, uint8_t type,
 		}
 
 		rc = bnxt_hwrm_tunnel_dst_port_alloc(bp, udp_port, hwtype);
-		if (!rc) {
+		if (rc) {
+			PMD_DRV_LOG(ERR, "Tunnel type:%d alloc failed for port:%d error:%s\n",
+				    hwtype, udp_port,
+				    (rc ==
+				     HWRM_TUNNEL_DST_PORT_ALLOC_OUTPUT_ERROR_INFO_ERR_ALLOCATED) ?
+				    "already allocated" : "no resource");
+		} else {
 			ulp_global_tunnel_db[type].ref_cnt++;
 			ulp_global_tunnel_db[type].dport = udp_port;
 			bnxt_pmd_global_reg_data_to_hndl(port_id, bp->ecpri_upar_in_use,
