@@ -31,6 +31,22 @@ struct rte_malloc_socket_stats {
 	size_t heap_allocsz_bytes; /**< Total allocated bytes on heap */
 };
 
+
+/**
+ * Frees the memory space pointed to by the provided pointer.
+ *
+ * This pointer must have been returned by a previous call to
+ * rte_malloc(), rte_zmalloc(), rte_calloc() or rte_realloc(). The behaviour of
+ * rte_free() is undefined if the pointer does not match this requirement.
+ *
+ * If the pointer is NULL, the function does nothing.
+ *
+ * @param ptr
+ *   The pointer to memory to be freed.
+ */
+void
+rte_free(void *ptr);
+
 /**
  * This function allocates memory from the huge-page area of memory. The memory
  * is not cleared. In NUMA systems, the memory allocated resides on the same
@@ -55,7 +71,8 @@ struct rte_malloc_socket_stats {
 void *
 rte_malloc(const char *type, size_t size, unsigned align)
 	__rte_alloc_size(2)
-	__rte_alloc_align(3);
+	__rte_alloc_align(3)
+	__rte_alloc_func(rte_free);
 
 /**
  * Allocate zeroed memory from the heap.
@@ -83,7 +100,8 @@ rte_malloc(const char *type, size_t size, unsigned align)
 void *
 rte_zmalloc(const char *type, size_t size, unsigned align)
 	__rte_alloc_size(2)
-	__rte_alloc_align(3);
+	__rte_alloc_align(3)
+	__rte_alloc_func(rte_free);
 
 /**
  * Replacement function for calloc(), using huge-page memory. Memory area is
@@ -111,7 +129,8 @@ rte_zmalloc(const char *type, size_t size, unsigned align)
 void *
 rte_calloc(const char *type, size_t num, size_t size, unsigned align)
 	__rte_alloc_size(2, 3)
-	__rte_alloc_align(4);
+	__rte_alloc_align(4)
+	__rte_alloc_func(rte_free);
 
 /**
  * Replacement function for realloc(), using huge-page memory. Reserved area
@@ -136,7 +155,8 @@ rte_calloc(const char *type, size_t num, size_t size, unsigned align)
 void *
 rte_realloc(void *ptr, size_t size, unsigned int align)
 	__rte_alloc_size(2)
-	__rte_alloc_align(3);
+	__rte_alloc_align(3)
+	__rte_alloc_func(rte_free);
 
 /**
  * Replacement function for realloc(), using huge-page memory. Reserved area
@@ -163,7 +183,8 @@ rte_realloc(void *ptr, size_t size, unsigned int align)
 void *
 rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 	__rte_alloc_size(2)
-	__rte_alloc_align(3);
+	__rte_alloc_align(3)
+	__rte_alloc_func(rte_free);
 
 /**
  * This function allocates memory from the huge-page area of memory. The memory
@@ -191,7 +212,8 @@ rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 void *
 rte_malloc_socket(const char *type, size_t size, unsigned align, int socket)
 	__rte_alloc_size(2)
-	__rte_alloc_align(3);
+	__rte_alloc_align(3)
+	__rte_alloc_func(rte_free);
 
 /**
  * Allocate zeroed memory from the heap.
@@ -221,7 +243,8 @@ rte_malloc_socket(const char *type, size_t size, unsigned align, int socket)
 void *
 rte_zmalloc_socket(const char *type, size_t size, unsigned align, int socket)
 	__rte_alloc_size(2)
-	__rte_alloc_align(3);
+	__rte_alloc_align(3)
+	__rte_alloc_func(rte_free);
 
 /**
  * Replacement function for calloc(), using huge-page memory. Memory area is
@@ -251,22 +274,8 @@ rte_zmalloc_socket(const char *type, size_t size, unsigned align, int socket)
 void *
 rte_calloc_socket(const char *type, size_t num, size_t size, unsigned align, int socket)
 	__rte_alloc_size(2, 3)
-	__rte_alloc_align(4);
-
-/**
- * Frees the memory space pointed to by the provided pointer.
- *
- * This pointer must have been returned by a previous call to
- * rte_malloc(), rte_zmalloc(), rte_calloc() or rte_realloc(). The behaviour of
- * rte_free() is undefined if the pointer does not match this requirement.
- *
- * If the pointer is NULL, the function does nothing.
- *
- * @param ptr
- *   The pointer to memory to be freed.
- */
-void
-rte_free(void *ptr);
+	__rte_alloc_align(4)
+	__rte_alloc_func(rte_free);
 
 /**
  * If malloc debug is enabled, check a memory block for header
