@@ -54,4 +54,8 @@ EXPERIMENTAL {
 	rte_bbdev_enqueue_mldts_ops;
 	rte_bbdev_mldts_op_alloc_bulk;
 	rte_bbdev_mldts_op_free_bulk;
+
+	# added in 24.11
+	rte_bbdev_queue_ops_dump;
+	rte_bbdev_ops_param_string;
 };
