@@ -7,7 +7,7 @@ if is_windows
     subdir_done()
 endif
 
-deps += ['bus_pci', 'compressdev']
+deps += ['bus_pci', 'compressdev', 'cryptodev']
 sources += files(
 		'zsda_common.c',
 		'zsda_logs.c',
@@ -23,4 +23,17 @@ if zsda_compress
 	foreach f: ['zsda_comp_pmd.c', 'zsda_comp.c']
 		sources += files(join_paths(zsda_compress_relpath, f))
 	endforeach
+endif
+
+zsda_crypto = true
+zsda_crypto_path = 'crypto/zsda'
+zsda_crypto_relpath = '../../' + zsda_crypto_path
+if zsda_crypto
+	libcrypto = dependency('libcrypto', required: false, method: 'pkg-config')
+	foreach f: ['zsda_sym_pmd.c', 'zsda_sym_session.c', 'zsda_sym.c']
+		sources += files(join_paths(zsda_crypto_relpath, f))
+	endforeach
+	deps += ['security']
+	ext_deps += libcrypto
+	cflags += ['-DBUILD_ZSDA_SYM']
 endif
