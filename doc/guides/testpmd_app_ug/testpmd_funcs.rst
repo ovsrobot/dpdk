@@ -677,13 +677,14 @@ set format
 
 Chose the output format for packet debug log::
 
-   testpmd> set format dissect|hex|verbose
+   testpmd> set format dissect|hex|json|verbose
 
 Available formats are:
 
-* ``verbose`` print the packet meta data information
-* ``hex`` print the mbuf flags and data in hex
 * ``dissect`` print the packet in tshark summary format
+* ``hex`` print the mbuf flags and data in hex
+* ``json`` print the packet meta data in json
+* ``verbose`` print the packet meta data information
 
 
 set verbose

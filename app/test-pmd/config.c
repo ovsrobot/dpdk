@@ -6275,6 +6275,9 @@ set_output_format(const char *mode)
 		[OUTPUT_MODE_VERBOSE] = "verbose",
 		[OUTPUT_MODE_HEX]     = "hex",
 		[OUTPUT_MODE_DISSECT] = "dissect",
+#ifdef RTE_HAS_JANSSON
+		[OUTPUT_MODE_JSON]    = "json",
+#endif
 	};
 
 	printf("Change output format from %s to %s\n",
