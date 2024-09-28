@@ -89,9 +89,15 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 	size_t buf_size = MAX_STRING_LEN;
 	size_t cur_len = 0;
 	uint64_t restore_info_dynflag;
+	FILE *outf;
 
 	if (!nb_pkts)
 		return;
+
+	outf = rte_atomic_load_explicit(&output_file, rte_memory_order_relaxed);
+	if (!outf)
+		return;
+
 	restore_info_dynflag = rte_flow_restore_info_dynflag();
 	MKDUMPSTR(print_buf, buf_size, cur_len,
 		  "port %u/queue %u: %s %u packets\n", port_id, queue,
@@ -292,11 +298,12 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 			MKDUMPSTR(print_buf, buf_size, cur_len,
 				  "INVALID mbuf: %s\n", reason);
 		if (cur_len >= buf_size)
-			printf("%s ...\n", print_buf);
+			fprintf(outf, "%s ...\n", print_buf);
 		else
-			printf("%s", print_buf);
+			fprintf(outf, "%s", print_buf);
 		cur_len = 0;
 	}
+	fflush(outf);
 }
 
 uint16_t

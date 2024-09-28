@@ -665,6 +665,13 @@ Reset forwarding to the default configuration::
 
    testpmd> set default
 
+set output
+~~~~~~~~~~
+
+Redirect the debug log::
+
+  testpmd> set output /tmp/packet.log
+
 set verbose
 ~~~~~~~~~~~
 
