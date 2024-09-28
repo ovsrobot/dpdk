@@ -672,6 +672,19 @@ Redirect the debug log::
 
   testpmd> set output /tmp/packet.log
 
+set format
+~~~~~~~~~~
+
+Chose the output format for packet debug log::
+
+   testpmd> set format verbose|hex
+
+Available formats are:
+
+* ``verbose`` print the packet meta data information
+* ``hex`` print the mbuf flags and data in hex
+
+
 set verbose
 ~~~~~~~~~~~
 
