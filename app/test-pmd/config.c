@@ -6271,12 +6271,23 @@ set_verbose_level(uint16_t vb_level)
 void
 set_output_format(const char *mode)
 {
-	if (!strcmp(mode, "verbose"))
-		output_format = OUTPUT_MODE_VERBOSE;
-	else if (!strcmp(mode, "hex"))
-		output_format = OUTPUT_MODE_HEX;
-	else
-		fprintf(stderr, "Unknown output format '%s'\n", mode);
+	static const char * const output_formats[] = {
+		[OUTPUT_MODE_VERBOSE] = "verbose",
+		[OUTPUT_MODE_HEX]     = "hex",
+		[OUTPUT_MODE_DISSECT] = "dissect",
+	};
+
+	printf("Change output format from %s to %s\n",
+	       output_formats[output_format], mode);
+
+	for (unsigned int i = 0; i < RTE_DIM(output_formats); i++) {
+		if (strcasecmp(mode, output_formats[i]) == 0) {
+			output_format = i;
+			return;
+		}
+	}
+
+	fprintf(stderr, "Unknown output format '%s'\n", mode);
 }
 
 void

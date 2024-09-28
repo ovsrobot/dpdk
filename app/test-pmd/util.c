@@ -8,6 +8,7 @@
 #include <rte_bitops.h>
 #include <rte_net.h>
 #include <rte_mbuf.h>
+#include <rte_dissect.h>
 #include <rte_ether.h>
 #include <rte_vxlan.h>
 #include <rte_ethdev.h>
@@ -311,6 +312,38 @@ dump_pkt_hex(FILE *outf, uint16_t port_id, uint16_t queue,
 	}
 }
 
+/* Brief tshark style one line output which is
+ * number time_delta Source Destination Protocol len info
+ */
+static void
+dump_pkt_brief(FILE *outf, uint16_t port, uint16_t queue,
+	       struct rte_mbuf *pkts[], uint16_t nb_pkts, int is_rx)
+{
+	static uint64_t start_cycles;
+	static RTE_ATOMIC(uint64_t) packet_count = 1;
+	uint64_t now, count;
+	double interval;
+
+	/* Compute time interval from the first packet received */
+	now = rte_rdtsc();
+	if (start_cycles == 0) {
+		start_cycles = now;
+		printf("Seq#   Time        Port:Que R Description\n");
+	}
+	interval = (double)(now - start_cycles) / (double)rte_get_tsc_hz();
+
+	/* Packet counter needs to be thread safe */
+	count = rte_atomic_fetch_add_explicit(&packet_count, nb_pkts, rte_memory_order_relaxed);
+
+	for (uint16_t i = 0; i < nb_pkts; i++) {
+		const struct rte_mbuf *mb = pkts[i];
+		char str[256];
+
+		rte_dissect_mbuf(str, sizeof(str), mb, 0);
+		fprintf(outf, "%6"PRIu64" %11.9f %4u:%-3u %c %s\n",
+		       count + i, interval, port, queue, is_rx ? 'R' : 'T', str);
+	}
+}
 
 static void
 dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
@@ -331,6 +364,9 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 		return;
 	case OUTPUT_MODE_HEX:
 		dump_pkt_hex(outf, port_id, queue, pkts, nb_pkts, is_rx);
+		break;
+	case OUTPUT_MODE_DISSECT:
+		dump_pkt_brief(outf, port_id, queue, pkts, nb_pkts, is_rx);
 		break;
 	default:
 		return;
