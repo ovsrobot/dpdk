@@ -339,6 +339,7 @@ INTERNAL {
 	rte_eth_dev_get_by_name;
 	rte_eth_dev_is_rx_hairpin_queue;
 	rte_eth_dev_is_tx_hairpin_queue;
+	rte_eth_dev_is_used;
 	rte_eth_dev_probing_finish;
 	rte_eth_dev_release_port;
 	rte_eth_dev_internal_reset;
