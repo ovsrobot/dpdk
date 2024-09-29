@@ -228,6 +228,36 @@ typedef uint16_t unaligned_uint16_t;
 #define __rte_alloc_size(...)
 #endif
 
+/**
+ * Tells the compiler that the function returns a value that points to
+ * memory aligned by a function argument.
+ * Not enabled on clang because it warns if align argument is zero.
+ */
+#if defined(RTE_CC_GCC)
+#define __rte_alloc_align(align_arg) \
+	__attribute__((alloc_align(align_arg)))
+#else
+#define __rte_alloc_align(...)
+#endif
+
+/**
+ * Tells the compiler this is a function like malloc and that the pointer
+ * returned cannot alias any other pointer (ie new memory).
+ *
+ * Also, with recent GCC versions also able to track that proper
+ * dealloctor function is used for this pointer.
+ */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 110000)
+#define __rte_alloc_func(...) \
+	__attribute__((malloc, malloc(__VA_ARGS__)))
+
+#elif defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
+#define __rte_alloc_func(...) \
+	__attribute__((malloc))
+#else
+#define __rte_alloc_func(...)
+#endif
+
 #define RTE_PRIORITY_LOG 101
 #define RTE_PRIORITY_BUS 110
 #define RTE_PRIORITY_CLASS 120
