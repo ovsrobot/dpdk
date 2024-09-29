@@ -207,9 +207,15 @@ vdev_probe_all_drivers(struct rte_vdev_device *dev)
 		return -1;
 	}
 
+	/*
+	 * Reference rte_driver before probing so as to this pointer can
+	 * be used to get driver information in case of segment fault in
+	 * probing callback.
+	 */
+	dev->device.driver = &driver->driver;
 	ret = driver->probe(dev);
-	if (ret == 0)
-		dev->device.driver = &driver->driver;
+	if (ret != 0)
+		dev->device.driver = NULL;
 	return ret;
 }
 
