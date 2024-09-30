@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated IPsec_MB crypto driver.**
+
+  * Added support for SM3, SM3 HMAC, SM4 CBC, SM4 ECB and SM4 CTR algorithms.
+
 
 Removed Items
 -------------
