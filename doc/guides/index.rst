@@ -29,5 +29,6 @@ DPDK documentation
    mempool/index
    platform/index
    contributing/index
+   glossary/index
    rel_notes/index
    faq/index

@@ -14,7 +14,6 @@ Foundation Principles
     intro
     overview
     source_org
-    glossary
 
 
 Memory Management
