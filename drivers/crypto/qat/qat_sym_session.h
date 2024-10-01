@@ -7,6 +7,7 @@
 #include <rte_crypto.h>
 #include <cryptodev_pmd.h>
 #include <rte_security.h>
+#include <rte_net_crc.h>
 
 #include "qat_common.h"
 #include "icp_qat_hw.h"
@@ -151,6 +152,7 @@ struct qat_sym_session {
 	uint32_t slice_types;
 	enum qat_sym_proto_flag qat_proto_flag;
 	qat_sym_build_request_t build_request[2];
+	struct rte_net_crc crc;
 #ifndef RTE_QAT_OPENSSL
 	IMB_MGR *mb_mgr;
 	alignas(16) uint64_t expkey[4 * 15];

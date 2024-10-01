@@ -148,6 +148,12 @@ Limitations
   DOCSIS security protocol.
 * Multi-segment buffers are not supported for combined Crypto-CRC DOCSIS
   security protocol.
+* Max SIMD bitwidth (--force-max-simd-bitwidth) in multi-process may be ignored
+  by QAT in certain scenarios. In use cases where CRC computation is needed and
+  the device does not support it internally, the CRC context is created by the session;
+  therefore, the SIMD config used in the process that created the session will be persisant
+  across all processes. It is an undefined behavior when different process binaries are
+  compiled with different SIMD capabilities when using software CRC.
 
 Extra notes on KASUMI F9
 ~~~~~~~~~~~~~~~~~~~~~~~~
