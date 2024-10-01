@@ -446,6 +446,30 @@ struct rte_event;
  * @see RTE_SCHED_TYPE_PARALLEL
  */
 
+#define RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE (1ULL << 16)
+/**< Event device supports event pre-scheduling.
+ *
+ * When this capability is available, the application can enable event pre-scheduling on the event
+ * device to pre-schedule events to a event port when `rte_event_dequeue_burst()`
+ * is issued.
+ * The pre-schedule process starts with the `rte_event_dequeue_burst()` call and the
+ * pre-scheduled events are returned on the next `rte_event_dequeue_burst()` call.
+ *
+ * @see rte_event_dev_configure()
+ */
+
+#define RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE_ADAPTIVE (1ULL << 17)
+/**< Event device supports adaptive event pre-scheduling.
+ *
+ * When this capability is available, the application can enable adaptive pre-scheduling
+ * on the event device where the events are pre-scheduled when there are no forward
+ * progress constraints with the currently held flow contexts.
+ * The pre-schedule process starts with the `rte_event_dequeue_burst()` call and the
+ * pre-scheduled events are returned on the next `rte_event_dequeue_burst()` call.
+ *
+ * @see rte_event_dev_configure()
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -680,6 +704,25 @@ rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
  *  @see rte_event_dequeue_timeout_ticks(), rte_event_dequeue_burst()
  */
 
+typedef enum {
+	RTE_EVENT_DEV_PRESCHEDULE_NONE = 0,
+	/* Disable pre-schedule across the event device or on a given event port.
+	 * @ref rte_event_dev_config.preschedule_type
+	 */
+	RTE_EVENT_DEV_PRESCHEDULE,
+	/* Enable pre-schedule always across the event device or a given event port.
+	 * @ref rte_event_dev_config.preschedule_type
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE
+	 */
+	RTE_EVENT_DEV_PRESCHEDULE_ADAPTIVE,
+	/* Enable adaptive pre-schedule across the event device or a given event port.
+	 * Delay issuing pre-schedule until there are no forward progress constraints with
+	 * the held flow contexts.
+	 * @ref rte_event_dev_config.preschedule_type
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE_ADAPTIVE
+	 */
+} rte_event_dev_preschedule_type_t;
+
 /** Event device configuration structure */
 struct rte_event_dev_config {
 	uint32_t dequeue_timeout_ns;
@@ -751,6 +794,11 @@ struct rte_event_dev_config {
 	 * *nb_event_queues*. If the device has ports and queues that are
 	 * optimized for single-link usage, this field is a hint for how many
 	 * to allocate; otherwise, regular event ports and queues will be used.
+	 */
+	rte_event_dev_preschedule_type_t preschedule_type;
+	/**< Event pre-schedule type to use across the event device, if supported.
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE
+	 * @see RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE_ADAPTIVE
 	 */
 };
 

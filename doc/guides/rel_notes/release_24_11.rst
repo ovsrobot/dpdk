@@ -55,6 +55,14 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added event device pre-scheduling support.**
+
+  Added support for pre-scheduling of events to event ports to improve
+  scheduling performance and latency.
+
+  * Added ``rte_event_dev_config::preschedule_type`` to configure the device
+    level pre-scheduling type.
+
 
 Removed Items
 -------------
