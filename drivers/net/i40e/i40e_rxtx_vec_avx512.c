@@ -783,18 +783,14 @@ i40e_tx_free_bufs_avx512(struct i40e_tx_queue *txq)
 		struct rte_mempool_cache *cache = rte_mempool_default_cache(mp,
 				rte_lcore_id());
 
-		if (!cache || n > RTE_MEMPOOL_CACHE_MAX_SIZE) {
+		if (!cache || n > RTE_MEMPOOL_CACHE_MAX_SIZE ||
+				unlikely(n + cache->len > cache->size)) {
 			rte_mempool_generic_put(mp, (void *)txep, n, cache);
 			goto done;
 		}
 
 		cache_objs = &cache->objs[cache->len];
 
-		/* The cache follows the following algorithm
-		 *   1. Add the objects to the cache
-		 *   2. Anything greater than the cache min value (if it
-		 *   crosses the cache flush threshold) is flushed to the ring.
-		 */
 		/* Add elements back into the cache */
 		uint32_t copied = 0;
 		/* n is multiple of 32 */
@@ -812,12 +808,10 @@ i40e_tx_free_bufs_avx512(struct i40e_tx_queue *txq)
 		}
 		cache->len += n;
 
-		if (cache->len >= cache->flushthresh) {
-			rte_mempool_ops_enqueue_bulk
-				(mp, &cache->objs[cache->size],
-				cache->len - cache->size);
-			cache->len = cache->size;
-		}
+		/* Increment stat. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
 		goto done;
 	}
 
