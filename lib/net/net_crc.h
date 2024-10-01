@@ -5,40 +5,41 @@
 #ifndef _NET_CRC_H_
 #define _NET_CRC_H_
 
-/*
- * Different implementations of CRC
- */
+#include <rte_compat.h>
 
-/* SSE4.2 */
-
+__rte_internal
 void
 rte_net_crc_sse42_init(void);
 
+__rte_internal
 uint32_t
 rte_crc16_ccitt_sse42_handler(const uint8_t *data, uint32_t data_len);
 
+__rte_internal
 uint32_t
 rte_crc32_eth_sse42_handler(const uint8_t *data, uint32_t data_len);
 
-/* AVX512 */
-
+__rte_internal
 void
 rte_net_crc_avx512_init(void);
 
+__rte_internal
 uint32_t
 rte_crc16_ccitt_avx512_handler(const uint8_t *data, uint32_t data_len);
 
+__rte_internal
 uint32_t
 rte_crc32_eth_avx512_handler(const uint8_t *data, uint32_t data_len);
 
-/* NEON */
-
+__rte_internal
 void
 rte_net_crc_neon_init(void);
 
+__rte_internal
 uint32_t
 rte_crc16_ccitt_neon_handler(const uint8_t *data, uint32_t data_len);
 
+__rte_internal
 uint32_t
 rte_crc32_eth_neon_handler(const uint8_t *data, uint32_t data_len);
 
