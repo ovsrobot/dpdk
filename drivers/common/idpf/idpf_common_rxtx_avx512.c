@@ -1034,11 +1034,12 @@ idpf_tx_singleq_free_bufs_avx512(struct idpf_tx_queue *txq)
 			goto done;
 		}
 
-		/* The cache follows the following algorithm
-		 *   1. Add the objects to the cache
-		 *   2. Anything greater than the cache min value (if it crosses the
-		 *   cache flush threshold) is flushed to the ring.
-		 */
+		/* Insufficient free space in the cache? */
+		if (unlikely(n + cache->len > cache->size)) {
+			rte_mempool_generic_put(mp, (void *)txep, n, cache);
+			goto done;
+		}
+
 		/* Add elements back into the cache */
 		uint32_t copied = 0;
 		/* n is multiple of 32 */
@@ -1056,12 +1057,10 @@ idpf_tx_singleq_free_bufs_avx512(struct idpf_tx_queue *txq)
 		}
 		cache->len += n;
 
-		if (cache->len >= cache->flushthresh) {
-			rte_mempool_ops_enqueue_bulk(mp,
-						     &cache->objs[cache->size],
-						     cache->len - cache->size);
-			cache->len = cache->size;
-		}
+		/* Increment stat. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
 		goto done;
 	}
 
@@ -1345,11 +1344,12 @@ idpf_tx_splitq_free_bufs_avx512(struct idpf_tx_queue *txq)
 			goto done;
 		}
 
-		/* The cache follows the following algorithm
-		 *   1. Add the objects to the cache
-		 *   2. Anything greater than the cache min value (if it crosses the
-		 *   cache flush threshold) is flushed to the ring.
-		 */
+		/* Insufficient free space in the cache? */
+		if (unlikely(n + cache->len > cache->size)) {
+			rte_mempool_generic_put(mp, (void *)txep, n, cache);
+			goto done;
+		}
+
 		/* Add elements back into the cache */
 		uint32_t copied = 0;
 		/* n is multiple of 32 */
@@ -1367,12 +1367,10 @@ idpf_tx_splitq_free_bufs_avx512(struct idpf_tx_queue *txq)
 		}
 		cache->len += n;
 
-		if (cache->len >= cache->flushthresh) {
-			rte_mempool_ops_enqueue_bulk(mp,
-						     &cache->objs[cache->size],
-						     cache->len - cache->size);
-			cache->len = cache->size;
-		}
+		/* Increment stat. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
 		goto done;
 	}
 
