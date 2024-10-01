@@ -18,6 +18,27 @@
 #define CN10K_SET_EVDEV_ENQ_OP(dev, enq_op, enq_ops)                           \
 	enq_op = enq_ops[dev->tx_offloads & (NIX_TX_OFFLOAD_MAX - 1)]
 
+static int
+cn10k_sso_hws_preschedule_modify(void *port, rte_event_dev_preschedule_type_t type)
+{
+	struct cn10k_sso_hws *ws = port;
+
+	ws->gw_wdata &= (BIT(19) | BIT(20));
+	switch (type) {
+	default:
+	case RTE_EVENT_DEV_PRESCHEDULE_NONE:
+		break;
+	case RTE_EVENT_DEV_PRESCHEDULE:
+		ws->gw_wdata |= BIT(19);
+		break;
+	case RTE_EVENT_DEV_PRESCHEDULE_ADAPTIVE:
+		ws->gw_wdata |= BIT(19) | BIT(20);
+		break;
+	}
+
+	return 0;
+}
+
 static uint32_t
 cn10k_sso_gw_mode_wdata(struct cnxk_sso_evdev *dev)
 {
@@ -527,6 +548,7 @@ cn10k_sso_fp_fns_set(struct rte_eventdev *event_dev)
 
 	event_dev->dma_enqueue = cn10k_dma_adapter_enqueue;
 	event_dev->profile_switch = cn10k_sso_hws_profile_switch;
+	event_dev->preschedule_modify = cn10k_sso_hws_preschedule_modify;
 #else
 	RTE_SET_USED(event_dev);
 #endif
@@ -541,6 +563,9 @@ cn10k_sso_info_get(struct rte_eventdev *event_dev,
 	dev_info->driver_name = RTE_STR(EVENTDEV_NAME_CN10K_PMD);
 	cnxk_sso_info_get(dev, dev_info);
 	dev_info->max_event_port_enqueue_depth = UINT32_MAX;
+	dev_info->event_dev_cap |= RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE |
+				   RTE_EVENT_DEV_CAP_EVENT_PRESCHEDULE_ADAPTIVE |
+				   RTE_EVENT_DEV_CAP_EVENT_PER_PORT_PRESCHEDULE;
 }
 
 static int
@@ -565,6 +590,19 @@ cn10k_sso_dev_configure(const struct rte_eventdev *event_dev)
 	rc = cnxk_sso_xaq_allocate(dev);
 	if (rc < 0)
 		goto cnxk_rsrc_fini;
+
+	switch (event_dev->data->dev_conf.preschedule_type) {
+	default:
+	case RTE_EVENT_DEV_PRESCHEDULE_NONE:
+		dev->gw_mode = CN10K_GW_MODE_NONE;
+		break;
+	case RTE_EVENT_DEV_PRESCHEDULE:
+		dev->gw_mode = CN10K_GW_MODE_PREF;
+		break;
+	case RTE_EVENT_DEV_PRESCHEDULE_ADAPTIVE:
+		dev->gw_mode = CN10K_GW_MODE_PREF_WFE;
+		break;
+	}
 
 	rc = cnxk_setup_event_ports(event_dev, cn10k_sso_init_hws_mem,
 				    cn10k_sso_hws_setup);
@@ -1199,7 +1237,6 @@ cn10k_sso_init(struct rte_eventdev *event_dev)
 		return 0;
 	}
 
-	dev->gw_mode = CN10K_GW_MODE_PREF_WFE;
 	rc = cnxk_sso_init(event_dev);
 	if (rc < 0)
 		return rc;
@@ -1256,7 +1293,6 @@ RTE_PMD_REGISTER_KMOD_DEP(event_cn10k, "vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(event_cn10k, CNXK_SSO_XAE_CNT "=<int>"
 			      CNXK_SSO_GGRP_QOS "=<string>"
 			      CNXK_SSO_FORCE_BP "=1"
-			      CN10K_SSO_GW_MODE "=<int>"
 			      CN10K_SSO_STASH "=<string>"
 			      CNXK_TIM_DISABLE_NPA "=1"
 			      CNXK_TIM_CHNK_SLOTS "=<int>"
