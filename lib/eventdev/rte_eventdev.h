@@ -480,6 +480,15 @@ struct rte_event;
  * @see rte_event_port_preschedule_modify()
  */
 
+#define RTE_EVENT_DEV_CAP_SW_PRESCHEDULE (1ULL << 19)
+/**< Event device supports software prescheduling.
+ *
+ * When this flag is set, the application can issue preschedule request on
+ * a event port.
+ *
+ * @see rte_event_port_preschedule()
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -2977,6 +2986,46 @@ rte_event_port_preschedule_modify(uint8_t dev_id, uint8_t port_id,
 	return fp_ops->preschedule_modify(port, type);
 }
 
+/**
+ * Provide a hint to the event device to pre-schedule events to event port .
+ *
+ * Hint the event device to pre-schedule events to the event port.
+ * The call doesn't not guarantee that the events will be pre-scheduleed.
+ * The call doesn't release the flow context currently held by the event port.
+ * The event device should support RTE_EVENT_DEV_CAP_SW_PRESCHEDULE capability.
+ *
+ * When pre-scheduling is enabled at an event device or event port level, the
+ * hint is ignored.
+ *
+ * Subsequent calls to rte_event_dequeue_burst() will dequeue the pre-schedule
+ * events but pre-schedule operation is not issued again.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param type
+ *   The pre-schedule type to use on the event port.
+ */
+static inline void
+rte_event_port_preschedule(uint8_t dev_id, uint8_t port_id, rte_event_dev_preschedule_type_t type)
+{
+	const struct rte_event_fp_ops *fp_ops;
+	void *port;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+	port = fp_ops->data[port_id];
+
+#ifdef RTE_LIBRTE_EVENTDEV_DEBUG
+	if (dev_id >= RTE_EVENT_MAX_DEVS || port_id >= RTE_EVENT_MAX_PORTS_PER_DEV)
+		return;
+	if (port == NULL)
+		return;
+#endif
+	rte_eventdev_trace_port_preschedule(dev_id, port_id, type);
+
+	fp_ops->preschedule(port, type);
+}
 #ifdef __cplusplus
 }
 #endif

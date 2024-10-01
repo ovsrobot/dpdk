@@ -390,6 +390,14 @@ To enable or disable event pre-scheduling at a given event port, the application
    // Disable pre-scheduling if thread is about to be scheduled out and issue dequeue() to drain
    // pending events.
 
+Event Pre-schedule Hint can be used to provide a hint to the eventdev PMD to pre-schedule the next
+event without releasing the current flow context. Event device that support this feature advertises
+the capability using the ``RTE_EVENT_DEV_CAP_SW_PRESCHEDULE`` capability flag.
+If pre-scheduling is already enabled at a event device or event port level then the hint is ignored.
+
+.. code-block:: c
+
+   rte_event_port_preschedule(dev_id, port_id, RTE_EVENT_DEV_PRESCHEDULE);
 
 Starting the EventDev
 ~~~~~~~~~~~~~~~~~~~~~
