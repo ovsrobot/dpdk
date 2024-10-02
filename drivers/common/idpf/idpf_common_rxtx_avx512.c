@@ -148,8 +148,8 @@ idpf_singleq_rearm(struct idpf_rx_queue *rxq)
 	/* Can this be satisfied from the cache? */
 	if (cache->len < IDPF_RXQ_REARM_THRESH) {
 		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = IDPF_RXQ_REARM_THRESH + (cache->size -
-							cache->len);
+		uint32_t req = IDPF_RXQ_REARM_THRESH + cache->size / 2 -
+							cache->len;
 
 		/* How many do we require i.e. number to fill the cache + the request */
 		int ret = rte_mempool_ops_dequeue_bulk
@@ -618,8 +618,8 @@ idpf_splitq_rearm(struct idpf_rx_queue *rx_bufq)
 	/* Can this be satisfied from the cache? */
 	if (cache->len < IDPF_RXQ_REARM_THRESH) {
 		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = IDPF_RXQ_REARM_THRESH + (cache->size -
-							cache->len);
+		uint32_t req = IDPF_RXQ_REARM_THRESH + cache->size / 2 -
+							cache->len;
 
 		/* How many do we require i.e. number to fill the cache + the request */
 		int ret = rte_mempool_ops_dequeue_bulk
@@ -1027,19 +1027,24 @@ idpf_tx_singleq_free_bufs_avx512(struct idpf_tx_queue *txq)
 		if (cache == NULL || cache->len == 0)
 			goto normal;
 
-		cache_objs = &cache->objs[cache->len];
-
 		if (n > RTE_MEMPOOL_CACHE_MAX_SIZE) {
 			rte_mempool_ops_enqueue_bulk(mp, (void *)txep, n);
 			goto done;
 		}
 
-		/* The cache follows the following algorithm
-		 *   1. Add the objects to the cache
-		 *   2. Anything greater than the cache min value (if it crosses the
-		 *   cache flush threshold) is flushed to the ring.
-		 */
+		/* Insufficient free space in the cache? */
+		if (unlikely(n + cache->len > cache->size)) {
+			rte_mempool_generic_put(mp, (void *)txep, n, cache);
+			goto done;
+		}
+
+		/* Increment stats now, adding in mempool always succeeds. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
 		/* Add elements back into the cache */
+		cache_objs = &cache->objs[cache->len];
+		cache->len += n;
 		uint32_t copied = 0;
 		/* n is multiple of 32 */
 		while (copied < n) {
@@ -1054,14 +1059,7 @@ idpf_tx_singleq_free_bufs_avx512(struct idpf_tx_queue *txq)
 			_mm512_storeu_si512(&cache_objs[copied + 24], d);
 			copied += 32;
 		}
-		cache->len += n;
 
-		if (cache->len >= cache->flushthresh) {
-			rte_mempool_ops_enqueue_bulk(mp,
-						     &cache->objs[cache->size],
-						     cache->len - cache->size);
-			cache->len = cache->size;
-		}
 		goto done;
 	}
 
@@ -1338,19 +1336,24 @@ idpf_tx_splitq_free_bufs_avx512(struct idpf_tx_queue *txq)
 		if (!cache || cache->len == 0)
 			goto normal;
 
-		cache_objs = &cache->objs[cache->len];
-
 		if (n > RTE_MEMPOOL_CACHE_MAX_SIZE) {
 			rte_mempool_ops_enqueue_bulk(mp, (void *)txep, n);
 			goto done;
 		}
 
-		/* The cache follows the following algorithm
-		 *   1. Add the objects to the cache
-		 *   2. Anything greater than the cache min value (if it crosses the
-		 *   cache flush threshold) is flushed to the ring.
-		 */
+		/* Insufficient free space in the cache? */
+		if (unlikely(n + cache->len > cache->size)) {
+			rte_mempool_generic_put(mp, (void *)txep, n, cache);
+			goto done;
+		}
+
+		/* Increment stats now, adding in mempool always succeeds. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
 		/* Add elements back into the cache */
+		cache_objs = &cache->objs[cache->len];
+		cache->len += n;
 		uint32_t copied = 0;
 		/* n is multiple of 32 */
 		while (copied < n) {
@@ -1365,14 +1368,7 @@ idpf_tx_splitq_free_bufs_avx512(struct idpf_tx_queue *txq)
 			_mm512_storeu_si512(&cache_objs[copied + 24], d);
 			copied += 32;
 		}
-		cache->len += n;
 
-		if (cache->len >= cache->flushthresh) {
-			rte_mempool_ops_enqueue_bulk(mp,
-						     &cache->objs[cache->size],
-						     cache->len - cache->size);
-			cache->len = cache->size;
-		}
 		goto done;
 	}
 
