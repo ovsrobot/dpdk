@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <rte_kvargs.h>
+#include <rte_spinlock.h>
 #include <rte_telemetry.h>
 
 #include "rte_ethdev.h"
@@ -1403,43 +1404,61 @@ out:
 	return ret;
 }
 
+#define ETHDEV_TELEMETRY_HANDLERS \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/list", eth_dev_handle_port_list, \
+		"Returns list of available ethdev ports. Takes no parameters") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/stats", eth_dev_handle_port_stats, \
+		"Returns the common stats for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/xstats", eth_dev_handle_port_xstats, \
+		"Returns the extended stats for a port. Parameters: int port_id,hide_zero=true|false(Optional for indicates hide zero xstats)") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/dump_priv", eth_dev_handle_port_dump_priv, \
+		"Returns dump private information for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/link_status", eth_dev_handle_port_link_status, \
+		"Returns the link status for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/info", eth_dev_handle_port_info, \
+		"Returns the device info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/module_eeprom", eth_dev_handle_port_module_eeprom, \
+		"Returns module EEPROM info with SFF specs. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/macs", eth_dev_handle_port_macs, \
+		"Returns the MAC addresses for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/flow_ctrl", eth_dev_handle_port_flow_ctrl, \
+		"Returns flow ctrl info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/rx_queue", eth_dev_handle_port_rxq, \
+		"Returns Rx queue info for a port. Parameters: int port_id, int queue_id (Optional if only one queue)") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/tx_queue", eth_dev_handle_port_txq, \
+		"Returns Tx queue info for a port. Parameters: int port_id, int queue_id (Optional if only one queue)") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/dcb", eth_dev_handle_port_dcb, \
+		"Returns DCB info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/rss_info", eth_dev_handle_port_rss_info, \
+		"Returns RSS info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/fec", eth_dev_handle_port_fec, \
+		"Returns FEC info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/vlan", eth_dev_handle_port_vlan, \
+		"Returns VLAN info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/tm_capability", eth_dev_handle_port_tm_caps, \
+		"Returns TM Capabilities info for a port. Parameters: int port_id") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/tm_level_capability", eth_dev_handle_port_tm_level_caps, \
+		"Returns TM Level Capabilities info for a port. Parameters: int port_id, int level_id (see tm_capability for the max)") \
+	ETHDEV_TELEMETRY_HANDLER("/ethdev/tm_node_capability", eth_dev_handle_port_tm_node_caps, \
+		"Returns TM Node Capabilities info for a port. Parameters: int port_id, int node_id (see tm_capability for the max)")
+
+#define ETHDEV_TELEMETRY_HANDLER(command, func, usage) \
+static int func ## _locked(const char *cmd __rte_unused, const char *params, \
+	struct rte_tel_data *d) \
+{ \
+	int ret; \
+	rte_spinlock_lock(rte_mcfg_ethdev_get_lock()); \
+	ret = func(cmd, params, d); \
+	rte_spinlock_unlock(rte_mcfg_ethdev_get_lock()); \
+	return ret; \
+}
+ETHDEV_TELEMETRY_HANDLERS
+#undef ETHDEV_TELEMETRY_HANDLER
+
 RTE_INIT(ethdev_init_telemetry)
 {
-	rte_telemetry_register_cmd("/ethdev/list", eth_dev_handle_port_list,
-			"Returns list of available ethdev ports. Takes no parameters");
-	rte_telemetry_register_cmd("/ethdev/stats", eth_dev_handle_port_stats,
-			"Returns the common stats for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/xstats", eth_dev_handle_port_xstats,
-			"Returns the extended stats for a port. Parameters: int port_id,hide_zero=true|false(Optional for indicates hide zero xstats)");
-	rte_telemetry_register_cmd("/ethdev/dump_priv", eth_dev_handle_port_dump_priv,
-			"Returns dump private information for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/link_status",
-			eth_dev_handle_port_link_status,
-			"Returns the link status for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/info", eth_dev_handle_port_info,
-			"Returns the device info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/module_eeprom", eth_dev_handle_port_module_eeprom,
-			"Returns module EEPROM info with SFF specs. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/macs", eth_dev_handle_port_macs,
-			"Returns the MAC addresses for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/flow_ctrl", eth_dev_handle_port_flow_ctrl,
-			"Returns flow ctrl info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/rx_queue", eth_dev_handle_port_rxq,
-			"Returns Rx queue info for a port. Parameters: int port_id, int queue_id (Optional if only one queue)");
-	rte_telemetry_register_cmd("/ethdev/tx_queue", eth_dev_handle_port_txq,
-			"Returns Tx queue info for a port. Parameters: int port_id, int queue_id (Optional if only one queue)");
-	rte_telemetry_register_cmd("/ethdev/dcb", eth_dev_handle_port_dcb,
-			"Returns DCB info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/rss_info", eth_dev_handle_port_rss_info,
-			"Returns RSS info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/fec", eth_dev_handle_port_fec,
-			"Returns FEC info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/vlan", eth_dev_handle_port_vlan,
-			"Returns VLAN info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/tm_capability", eth_dev_handle_port_tm_caps,
-			"Returns TM Capabilities info for a port. Parameters: int port_id");
-	rte_telemetry_register_cmd("/ethdev/tm_level_capability", eth_dev_handle_port_tm_level_caps,
-			"Returns TM Level Capabilities info for a port. Parameters: int port_id, int level_id (see tm_capability for the max)");
-	rte_telemetry_register_cmd("/ethdev/tm_node_capability", eth_dev_handle_port_tm_node_caps,
-			"Returns TM Node Capabilities info for a port. Parameters: int port_id, int node_id (see tm_capability for the max)");
+#define ETHDEV_TELEMETRY_HANDLER(command, func, usage) \
+	rte_telemetry_register_cmd(command, func ## _locked, usage);
+	ETHDEV_TELEMETRY_HANDLERS
+#undef ETHDEV_TELEMETRY_HANDLER
 }
