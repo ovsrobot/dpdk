@@ -227,7 +227,15 @@ eth_dev_handle_port_dump_priv(const char *cmd __rte_unused,
 	free(buf);
 	return 0;
 }
-#endif /* !RTE_EXEC_ENV_WINDOWS */
+#else /* !RTE_EXEC_ENV_WINDOWS */
+static int
+eth_dev_handle_port_dump_priv(const char *cmd __rte_unused,
+			const char *params __rte_unused,
+			struct rte_tel_data *d __rte_unused)
+{
+	return -EINVAL;
+}
+#endif /* RTE_EXEC_ENV_WINDOWS */
 
 static int
 eth_dev_handle_port_link_status(const char *cmd __rte_unused,
@@ -1403,10 +1411,8 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns the common stats for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/xstats", eth_dev_handle_port_xstats,
 			"Returns the extended stats for a port. Parameters: int port_id,hide_zero=true|false(Optional for indicates hide zero xstats)");
-#ifndef RTE_EXEC_ENV_WINDOWS
 	rte_telemetry_register_cmd("/ethdev/dump_priv", eth_dev_handle_port_dump_priv,
 			"Returns dump private information for a port. Parameters: int port_id");
-#endif
 	rte_telemetry_register_cmd("/ethdev/link_status",
 			eth_dev_handle_port_link_status,
 			"Returns the link status for a port. Parameters: int port_id");
