@@ -663,6 +663,7 @@ M: Shai Brandes <shaibran@amazon.com>
 M: Evgeny Schemeilin <evgenys@amazon.com>
 M: Ron Beider <rbeider@amazon.com>
 M: Amit Bernstein <amitbern@amazon.com>
+M: Yosef Raisman <yraisman@amazon.com>
 M: Wajeeh Atrash <atrwajee@amazon.com>
 F: drivers/net/ena/
 F: doc/guides/nics/ena.rst
