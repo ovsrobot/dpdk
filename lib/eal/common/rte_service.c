@@ -15,7 +15,6 @@
 #include <rte_common.h>
 #include <rte_cycles.h>
 #include <rte_atomic.h>
-#include <rte_malloc.h>
 #include <rte_spinlock.h>
 #include <rte_trace_point.h>
 
@@ -76,8 +75,8 @@ struct __rte_cache_aligned core_state {
 };
 
 static uint32_t rte_service_count;
-static struct rte_service_spec_impl *rte_services;
-static struct core_state *lcore_states;
+static struct rte_service_spec_impl rte_services[RTE_SERVICE_NUM_MAX];
+static struct core_state lcore_states[RTE_MAX_LCORE];
 static uint32_t rte_service_library_initialized;
 
 int32_t
@@ -95,21 +94,6 @@ rte_service_init(void)
 		return -EALREADY;
 	}
 
-	rte_services = rte_calloc("rte_services", RTE_SERVICE_NUM_MAX,
-			sizeof(struct rte_service_spec_impl),
-			RTE_CACHE_LINE_SIZE);
-	if (!rte_services) {
-		EAL_LOG(ERR, "error allocating rte services array");
-		goto fail_mem;
-	}
-
-	lcore_states = rte_calloc("rte_service_core_states", RTE_MAX_LCORE,
-			sizeof(struct core_state), RTE_CACHE_LINE_SIZE);
-	if (!lcore_states) {
-		EAL_LOG(ERR, "error allocating core states array");
-		goto fail_mem;
-	}
-
 	int i;
 	struct rte_config *cfg = rte_eal_get_configuration();
 	for (i = 0; i < RTE_MAX_LCORE; i++) {
@@ -122,10 +106,6 @@ rte_service_init(void)
 
 	rte_service_library_initialized = 1;
 	return 0;
-fail_mem:
-	rte_free(rte_services);
-	rte_free(lcore_states);
-	return -ENOMEM;
 }
 
 void
@@ -135,10 +115,6 @@ rte_service_finalize(void)
 		return;
 
 	rte_service_lcore_reset_all();
-	rte_eal_mp_wait_lcore();
-
-	rte_free(rte_services);
-	rte_free(lcore_states);
 
 	rte_service_library_initialized = 0;
 }
