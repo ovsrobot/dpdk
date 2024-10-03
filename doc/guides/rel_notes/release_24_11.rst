@@ -72,6 +72,11 @@ New Features
   * Added support for independent enqueue feature. Updated Event Device and
     PMD feature list.
 
+  * Updated DLB2 driver for independent enqueue feature. Applications should
+    use ``RTE_EVENT_PORT_CFG_INDEPENDENT_ENQ`` to enable the feature if the
+    capability  ``RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ`` exists.
+
+
 
 Removed Items
 -------------
