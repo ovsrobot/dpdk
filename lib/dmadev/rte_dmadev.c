@@ -497,6 +497,21 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 		return -EINVAL;
 	}
 
+	if (dev_conf->priority && !(dev_info.dev_capa & RTE_DMA_CAPA_PRI_POLICY_SP)) {
+		RTE_DMA_LOG(ERR, "Device %d don't support prioritization", dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_priorities == 1) {
+		RTE_DMA_LOG(ERR, "Device %d must support more than 1 priority, or else 0", dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_priorities && (dev_conf->priority >= dev_info.nb_priorities)) {
+		RTE_DMA_LOG(ERR, "Device %d configure invalid priority", dev_id);
+		return -EINVAL;
+	}
+
 	if (*dev->dev_ops->dev_configure == NULL)
 		return -ENOTSUP;
 	ret = (*dev->dev_ops->dev_configure)(dev, dev_conf,
