@@ -67,6 +67,11 @@ New Features
 
   The new statistics are useful for debugging and profiling.
 
+* **Updated Event Device Library for independent enqueue feature**
+
+  * Added support for independent enqueue feature. Updated Event Device and
+    PMD feature list.
+
 
 Removed Items
 -------------
