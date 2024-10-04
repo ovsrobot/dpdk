@@ -80,7 +80,6 @@ queue_ops_rsa_sign_verify(void *sess)
 	asym_op->rsa.message.length = rsaplaintext.len;
 	asym_op->rsa.sign.length = RTE_DIM(rsa_n);
 	asym_op->rsa.sign.data = output_buf;
-	asym_op->rsa.padding.type = RTE_CRYPTO_RSA_PADDING_PKCS1_5;
 
 	debug_hexdump(stdout, "message", asym_op->rsa.message.data,
 		      asym_op->rsa.message.length);
@@ -112,7 +111,6 @@ queue_ops_rsa_sign_verify(void *sess)
 
 	/* Verify sign */
 	asym_op->rsa.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
-	asym_op->rsa.padding.type = RTE_CRYPTO_RSA_PADDING_PKCS1_5;
 
 	/* Process crypto operation */
 	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
@@ -171,7 +169,6 @@ queue_ops_rsa_enc_dec(void *sess)
 	asym_op->rsa.cipher.data = cipher_buf;
 	asym_op->rsa.cipher.length = RTE_DIM(rsa_n);
 	asym_op->rsa.message.length = rsaplaintext.len;
-	asym_op->rsa.padding.type = RTE_CRYPTO_RSA_PADDING_PKCS1_5;
 
 	debug_hexdump(stdout, "message", asym_op->rsa.message.data,
 		      asym_op->rsa.message.length);
@@ -203,7 +200,6 @@ queue_ops_rsa_enc_dec(void *sess)
 	asym_op = result_op->asym;
 	asym_op->rsa.message.length = RTE_DIM(rsa_n);
 	asym_op->rsa.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT;
-	asym_op->rsa.padding.type = RTE_CRYPTO_RSA_PADDING_PKCS1_5;
 
 	/* Process crypto operation */
 	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
@@ -3323,7 +3319,6 @@ rsa_encrypt(const struct rsa_test_data_2 *vector, uint8_t *cipher_buf)
 	self->op->asym->rsa.cipher.data = cipher_buf;
 	self->op->asym->rsa.cipher.length = 0;
 	SET_RSA_PARAM(self->op->asym->rsa, vector, message);
-	self->op->asym->rsa.padding.type = vector->padding;
 
 	rte_crypto_op_attach_asym_session(self->op, self->sess);
 	TEST_ASSERT_SUCCESS(send_one(),
@@ -3347,7 +3342,6 @@ rsa_decrypt(const struct rsa_test_data_2 *vector, uint8_t *plaintext,
 	self->op->asym->rsa.message.data = plaintext;
 	self->op->asym->rsa.message.length = 0;
 	self->op->asym->rsa.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT;
-	self->op->asym->rsa.padding.type = vector->padding;
 	rte_crypto_op_attach_asym_session(self->op, self->sess);
 	TEST_ASSERT_SUCCESS(send_one(),
 		"Failed to process crypto op (Decryption)");
@@ -3389,6 +3383,7 @@ kat_rsa_encrypt(const void *data)
 	SET_RSA_PARAM(xform.rsa, vector, n);
 	SET_RSA_PARAM(xform.rsa, vector, e);
 	SET_RSA_PARAM(xform.rsa, vector, d);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
 	int ret = rsa_init_session(&xform);
 
@@ -3419,6 +3414,7 @@ kat_rsa_encrypt_crt(const void *data)
 	SET_RSA_PARAM_QT(xform.rsa, vector, dP);
 	SET_RSA_PARAM_QT(xform.rsa, vector, dQ);
 	SET_RSA_PARAM_QT(xform.rsa, vector, qInv);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_QT;
 	int ret = rsa_init_session(&xform);
 	if (ret) {
@@ -3444,6 +3440,7 @@ kat_rsa_decrypt(const void *data)
 	SET_RSA_PARAM(xform.rsa, vector, n);
 	SET_RSA_PARAM(xform.rsa, vector, e);
 	SET_RSA_PARAM(xform.rsa, vector, d);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_EXP;
 	int ret = rsa_init_session(&xform);
 
@@ -3474,6 +3471,7 @@ kat_rsa_decrypt_crt(const void *data)
 	SET_RSA_PARAM_QT(xform.rsa, vector, dP);
 	SET_RSA_PARAM_QT(xform.rsa, vector, dQ);
 	SET_RSA_PARAM_QT(xform.rsa, vector, qInv);
+	xform.rsa.padding.type = vector->padding;
 	xform.rsa.key_type = RTE_RSA_KEY_TYPE_QT;
 	int ret = rsa_init_session(&xform);
 	if (ret) {
