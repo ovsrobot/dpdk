@@ -634,6 +634,18 @@ struct rte_crypto_asym_xform {
 };
 
 /**
+ * SM2 operation capabilities
+ */
+enum rte_crypto_sm2_op_capa {
+	RTE_CRYPTO_SM2_RNG,
+	/**< Random number generator supported in SM2 ops. */
+	RTE_CRYPTO_SM2_PH,
+	/**< Prehash message before crypto op. */
+	RTE_CRYPTO_SM2_PKE_KDF,
+	/**< KDF support in SM2 public key encryption */
+};
+
+/**
  * SM2 operation params.
  */
 struct rte_crypto_sm2_op_param {

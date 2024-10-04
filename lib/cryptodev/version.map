@@ -87,6 +87,9 @@ EXPERIMENTAL {
 
 	# added in 24.03
 	__rte_cryptodev_trace_qp_depth_used;
+
+	# added in 24.11
+	rte_cryptodev_asym_xform_capability_check_opcap;
 };
 
 INTERNAL {
