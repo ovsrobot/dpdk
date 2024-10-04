@@ -38,7 +38,7 @@ usage(char *progname)
 		" --desc-nb N: set number of descriptors for each crypto device\n"
 		" --devtype TYPE: set crypto device type to use\n"
 		" --optype cipher-only / auth-only / cipher-then-auth / auth-then-cipher /\n"
-		"        aead / pdcp / docsis / ipsec / modex / secp256r1 / sm2 / tls-record : set operation type\n"
+		"        aead / pdcp / docsis / ipsec / modex / secp256r1 / eddsa / sm2 / tls-record : set operation type\n"
 		" --sessionless: enable session-less crypto operations\n"
 		" --shared-session: share 1 session across all queue pairs on crypto device\n"
 		" --out-of-place: enable out-of-place crypto operations\n"
@@ -488,6 +488,10 @@ parse_op_type(struct cperf_options *opts, const char *arg)
 		{
 			cperf_op_type_strs[CPERF_ASYM_SECP256R1],
 			CPERF_ASYM_SECP256R1
+		},
+		{
+			cperf_op_type_strs[CPERF_ASYM_ED25519],
+			CPERF_ASYM_ED25519
 		},
 		{
 			cperf_op_type_strs[CPERF_ASYM_SM2],
@@ -1080,6 +1084,7 @@ cperf_options_default(struct cperf_options *opts)
 	opts->modex_data = (struct cperf_modex_test_data *)&modex_perf_data[0];
 
 	opts->secp256r1_data = &secp256r1_perf_data;
+	opts->eddsa_data = &ed25519_perf_data;
 	opts->sm2_data = &sm2_perf_data;
 	opts->asym_op_type = RTE_CRYPTO_ASYM_OP_SIGN;
 }
@@ -1513,7 +1518,7 @@ cperf_options_dump(struct cperf_options *opts)
 	printf("#\n");
 	printf("# number of queue pairs per device: %u\n", opts->nb_qps);
 	printf("# crypto operation: %s\n", cperf_op_type_strs[opts->op_type]);
-	if (opts->op_type == CPERF_ASYM_SM2 || opts->op_type == CPERF_ASYM_SECP256R1)
+	if (cperf_is_asym_test(opts))
 		printf("# asym operation type: %s\n",
 				rte_crypto_asym_op_strings[opts->asym_op_type]);
 	printf("# sessionless: %s\n", opts->sessionless ? "yes" : "no");
