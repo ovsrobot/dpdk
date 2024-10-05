@@ -73,6 +73,10 @@ New Features
     supports enqueue in any order or specifically in a different order than
     dequeue. The feature is intended for eventdevs supporting burst mode.
 
+  * Updated DLB2 driver for independent enqueue feature. Applications should
+    use ``RTE_EVENT_PORT_CFG_INDEPENDENT_ENQ`` to enable the feature if the
+    capability  ``RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ`` exists.
+
 
 Removed Items
 -------------
