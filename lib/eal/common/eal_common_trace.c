@@ -100,6 +100,16 @@ rte_trace_is_enabled(void)
 	return rte_atomic_load_explicit(&trace.status, rte_memory_order_acquire) != 0;
 }
 
+bool
+__rte_trace_feature_is_enabled(void)
+{
+#ifdef RTE_TRACE
+	return true;
+#else
+	return false;
+#endif
+}
+
 static void
 trace_mode_set(rte_trace_point_t *t, enum rte_trace_mode mode)
 {

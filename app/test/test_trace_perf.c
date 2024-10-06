@@ -8,6 +8,7 @@
 #include <rte_eal_trace.h>
 #include <rte_malloc.h>
 #include <rte_lcore.h>
+#include <rte_trace.h>
 
 #include "test.h"
 #include "test_trace.h"
@@ -149,6 +150,11 @@ test_trace_perf(void)
 	unsigned int nb_cores, nb_workers;
 	struct test_data *data;
 	size_t sz;
+
+	if (!rte_trace_feature_is_enabled()) {
+		printf("Trace omitted at build-time, skipping test\n");
+		return TEST_SKIPPED;
+	}
 
 	nb_cores = rte_lcore_count();
 	nb_workers = nb_cores - 1;
