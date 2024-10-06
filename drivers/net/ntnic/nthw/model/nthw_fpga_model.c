@@ -250,12 +250,12 @@ void nthw_fpga_mgr_log_dump(nthw_fpga_mgr_t *p)
 {
 	int i;
 
-	NT_LOG_DBGX(DEBUG, NTHW, "fpgas=%d\n", p->mn_fpgas);
+	NT_LOG_DBGX(DBG, NTHW, "fpgas=%d\n", p->mn_fpgas);
 
 	for (i = 0; i < p->mn_fpgas; i++) {
 		nthw_fpga_prod_init_s *p_init = p->mpa_fpga_prod_init[i];
 		(void)p_init;
-		NT_LOG_DBGX(DEBUG, NTHW, "fpga=%d/%d: %04d-%02d-%02d\n", i, p->mn_fpgas,
+		NT_LOG_DBGX(DBG, NTHW, "fpga=%d/%d: %04d-%02d-%02d\n", i, p->mn_fpgas,
 			p_init->fpga_product_id, p_init->fpga_version, p_init->fpga_revision);
 	}
 }
@@ -903,7 +903,7 @@ void nthw_field_init(nthw_field_t *p, nthw_register_t *p_reg, const nthw_fpga_fi
 		p->mn_tail_mask = (1 << bits_remaining) - 1;
 
 		if (p->mn_debug_mode >= 0x100) {
-			NT_LOG_DBGX(DEBUG, NTHW,
+			NT_LOG_DBGX(DBG, NTHW,
 				"fldid=%08d: [%08d:%08d] %08d/%08d: (%08d,%08d) (0x%08X,%08d,0x%08X)\n",
 				p_init->id, p_init->low, (p_init->low + p_init->bw),
 				p_init->bw, ((p_init->bw + 31) / 32), p->mn_first_word,

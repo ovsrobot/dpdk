@@ -422,11 +422,11 @@ int nthw_iic_writebyte(nthw_iic_t *p, uint8_t dev_addr, uint8_t a_reg_addr, uint
 		nthw_iic_reg_tx_fifo_write(p, *p_byte, 0, 1);
 
 		if (!nthw_iic_bus_ready(p)) {
-			NT_LOG_DBGX(WARNING, NTHW, "%s: warn: !busReady\n", p_adapter_id_str);
+			NT_LOG_DBGX(WRN, NTHW, "%s: warn: !busReady\n", p_adapter_id_str);
 
 			while (true)
 				if (nthw_iic_bus_ready(p)) {
-					NT_LOG_DBGX(DEBUG, NTHW, "%s: info: busReady\n",
+					NT_LOG_DBGX(DBG, NTHW, "%s: info: busReady\n",
 					p_adapter_id_str);
 					break;
 				}
@@ -435,7 +435,7 @@ int nthw_iic_writebyte(nthw_iic_t *p, uint8_t dev_addr, uint8_t a_reg_addr, uint
 		return 0;
 
 	} else {
-		NT_LOG_DBGX(WARNING, NTHW, "%s\n", p_adapter_id_str);
+		NT_LOG_DBGX(WRN, NTHW, "%s\n", p_adapter_id_str);
 		return -1;
 	}
 }

@@ -221,7 +221,7 @@ static int nthw_fpga_rst_nt200a0x_reset(nthw_fpga_t *p_fpga,
 	int locked;
 	int res = -1;
 
-	NT_LOG_DBGX(DEBUG, NTHW, "%s: FPGA reset sequence: FPGA %04d-%02d-%02d @ HWId%d\n",
+	NT_LOG_DBGX(DBG, NTHW, "%s: FPGA reset sequence: FPGA %04d-%02d-%02d @ HWId%d\n",
 		p_adapter_id_str, n_fpga_product_id, n_fpga_version, n_fpga_revision,
 		n_hw_id);
 	assert(n_fpga_product_id == p_fpga->mn_product_id);
@@ -505,7 +505,7 @@ static int nthw_fpga_rst_nt200a0x_reset(nthw_fpga_t *p_fpga,
 		nthw_field_clr_flush(p->mp_fld_power_pu_nseb);	/* NSEB power down */
 	}
 
-	NT_LOG_DBGX(DEBUG, NTHW, "%s END\n", p_adapter_id_str);
+	NT_LOG_DBGX(DBG, NTHW, "%s END\n", p_adapter_id_str);
 
 	return 0;
 }
@@ -523,7 +523,7 @@ static int nthw_fpga_rst_nt200a0x_init(struct fpga_info_s *p_fpga_info,
 
 	p_fpga = p_fpga_info->mp_fpga;
 
-	NT_LOG_DBGX(DEBUG, NTHW, "%s: RAB init/reset\n", p_adapter_id_str);
+	NT_LOG_DBGX(DBG, NTHW, "%s: RAB init/reset\n", p_adapter_id_str);
 	nthw_rac_rab_reset(p_fpga_info->mp_nthw_rac);
 	nthw_rac_rab_setup(p_fpga_info->mp_nthw_rac);
 
@@ -554,7 +554,7 @@ static int nthw_fpga_rst_nt200a0x_init(struct fpga_info_s *p_fpga_info,
 	p_rst->mn_si_labs_clock_synth_model = n_si_labs_clock_synth_model;
 	p_rst->mn_si_labs_clock_synth_i2c_addr = n_si_labs_clock_synth_i2c_addr;
 	p_rst->mn_hw_id = p_fpga_info->nthw_hw_info.hw_id;
-	NT_LOG_DBGX(DEBUG, NTHW, "%s: Si%04d @ 0x%02x\n", p_adapter_id_str,
+	NT_LOG_DBGX(DBG, NTHW, "%s: Si%04d @ 0x%02x\n", p_adapter_id_str,
 		p_rst->mn_si_labs_clock_synth_model, p_rst->mn_si_labs_clock_synth_i2c_addr);
 
 	return res;
@@ -568,6 +568,6 @@ static struct rst_nt200a0x_ops rst_nt200a0x_ops = { .nthw_fpga_rst_nt200a0x_init
 
 void rst_nt200a0x_ops_init(void)
 {
-	NT_LOG(INF, NTHW, "RST NT200A0X OPS INIT\n");
+	NT_LOG(DBG, NTHW, "RST NT200A0X OPS INIT\n");
 	register_rst_nt200a0x_ops(&rst_nt200a0x_ops);
 }

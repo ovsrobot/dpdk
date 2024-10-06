@@ -26,7 +26,7 @@ static int nthw_fpga_rst9563_setup(nthw_fpga_t *p_fpga, struct nthw_fpga_rst_nt2
 	p->mn_fpga_version = n_fpga_version;
 	p->mn_fpga_revision = n_fpga_revision;
 
-	NT_LOG_DBGX(DEBUG, NTHW, "%s: FPGA reset setup: FPGA %04d-%02d-%02d\n", p_adapter_id_str,
+	NT_LOG_DBGX(DBG, NTHW, "%s: FPGA reset setup: FPGA %04d-%02d-%02d\n", p_adapter_id_str,
 				n_fpga_product_id, n_fpga_version, n_fpga_revision);
 
 	p_mod_rst = nthw_fpga_query_module(p_fpga, MOD_RST9563, 0);
@@ -212,7 +212,7 @@ static int nthw_fpga_rst9563_init(struct fpga_info_s *p_fpga_info,
 	res = nthw_fpga_rst9563_periph_reset(p_fpga);
 
 	if (res) {
-		NT_LOG_DBGX(DEBUG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
+		NT_LOG_DBGX(DBG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
 		return res;
 	}
 
@@ -220,14 +220,14 @@ static int nthw_fpga_rst9563_init(struct fpga_info_s *p_fpga_info,
 			n_si_labs_clock_synth_i2c_addr);
 
 	if (res) {
-		NT_LOG_DBGX(DEBUG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
+		NT_LOG_DBGX(DBG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
 		return res;
 	}
 
 	res = nthw_fpga_rst9563_setup(p_fpga, p_rst);
 
 	if (res) {
-		NT_LOG_DBGX(DEBUG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
+		NT_LOG_DBGX(DBG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
 		return res;
 	}
 
@@ -235,7 +235,7 @@ static int nthw_fpga_rst9563_init(struct fpga_info_s *p_fpga_info,
 	res = rst_ops != NULL ? rst_ops->nthw_fpga_rst_nt200a0x_reset(p_fpga, p_rst) : -1;
 
 	if (res) {
-		NT_LOG_DBGX(DEBUG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
+		NT_LOG_DBGX(DBG, NTHW, "%s: ERROR: res=%d\n", p_adapter_id_str, res);
 		return res;
 	}
 
@@ -246,6 +246,6 @@ static struct rst9563_ops rst9563_ops = { .nthw_fpga_rst9563_init = nthw_fpga_rs
 
 void rst9563_ops_init(void)
 {
-	NT_LOG(INF, NTHW, "RST9563 OPS INIT\n");
+	NT_LOG(DBG, NTHW, "RST9563 OPS INIT\n");
 	register_rst9563_ops(&rst9563_ops);
 }

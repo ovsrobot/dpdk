@@ -174,7 +174,7 @@ eth_mac_addr_add(struct rte_eth_dev *eth_dev,
 	if (index >= NUM_MAC_ADDRS_PER_PORT) {
 		const struct pmd_internals *const internals =
 			(struct pmd_internals *)eth_dev->data->dev_private;
-		NT_LOG_DBGX(DEBUG, NTNIC, "Port %i: illegal index %u (>= %u)\n",
+		NT_LOG_DBGX(DBG, NTNIC, "Port %i: illegal index %u (>= %u)\n",
 			internals->n_intf_no, index, NUM_MAC_ADDRS_PER_PORT);
 		return -1;
 	}
@@ -204,7 +204,7 @@ eth_set_mc_addr_list(struct rte_eth_dev *eth_dev,
 	size_t i;
 
 	if (nb_mc_addr >= NUM_MULTICAST_ADDRS_PER_PORT) {
-		NT_LOG_DBGX(DEBUG, NTNIC,
+		NT_LOG_DBGX(DBG, NTNIC,
 			"Port %i: too many multicast addresses %u (>= %u)\n",
 			internals->n_intf_no, nb_mc_addr, NUM_MULTICAST_ADDRS_PER_PORT);
 		return -1;
@@ -223,7 +223,7 @@ eth_set_mc_addr_list(struct rte_eth_dev *eth_dev,
 static int
 eth_dev_configure(struct rte_eth_dev *eth_dev)
 {
-	NT_LOG_DBGX(DEBUG, NTNIC, "Called for eth_dev %p\n", eth_dev);
+	NT_LOG_DBGX(DBG, NTNIC, "Called for eth_dev %p\n", eth_dev);
 
 	/* The device is ALWAYS running promiscuous mode. */
 	eth_dev->data->promiscuous ^= ~eth_dev->data->promiscuous;
@@ -245,7 +245,7 @@ eth_dev_start(struct rte_eth_dev *eth_dev)
 	const int n_intf_no = internals->n_intf_no;
 	struct adapter_info_s *p_adapter_info = &internals->p_drv->ntdrv.adapter_info;
 
-	NT_LOG_DBGX(DEBUG, NTNIC, "Port %u\n", internals->n_intf_no);
+	NT_LOG_DBGX(DBG, NTNIC, "Port %u\n", internals->n_intf_no);
 
 	if (internals->type == PORT_TYPE_VIRTUAL || internals->type == PORT_TYPE_OVERRIDE) {
 		eth_dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
@@ -264,7 +264,7 @@ eth_dev_start(struct rte_eth_dev *eth_dev)
 		while (port_ops->get_link_status(p_adapter_info, n_intf_no) == RTE_ETH_LINK_DOWN) {
 			/* break out after 5 sec */
 			if (++loop >= 50) {
-				NT_LOG_DBGX(DEBUG, NTNIC,
+				NT_LOG_DBGX(DBG, NTNIC,
 					"TIMEOUT No link on port %i (5sec timeout)\n",
 					internals->n_intf_no);
 				break;
@@ -294,7 +294,7 @@ eth_dev_stop(struct rte_eth_dev *eth_dev)
 {
 	struct pmd_internals *internals = (struct pmd_internals *)eth_dev->data->dev_private;
 
-	NT_LOG_DBGX(DEBUG, NTNIC, "Port %u\n", internals->n_intf_no);
+	NT_LOG_DBGX(DBG, NTNIC, "Port %u\n", internals->n_intf_no);
 
 	eth_dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 	return 0;
@@ -424,7 +424,7 @@ eth_fw_version_get(struct rte_eth_dev *eth_dev, char *fw_version, size_t fw_size
 static int
 promiscuous_enable(struct rte_eth_dev __rte_unused(*dev))
 {
-	NT_LOG(DBG, NTHW, "The device always run promiscuous mode.");
+	NT_LOG(DBG, NTHW, "The device always run promiscuous mode\n");
 	return 0;
 }
 
@@ -472,7 +472,7 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 	int n_phy_ports;
 	struct port_link_speed pls_mbps[NUM_ADAPTER_PORTS_MAX] = { 0 };
 	int num_port_speeds = 0;
-	NT_LOG_DBGX(DEBUG, NTNIC, "Dev %s PF #%i Init : %02x:%02x:%i\n", pci_dev->name,
+	NT_LOG_DBGX(DBG, NTNIC, "Dev %s PF #%i Init : %02x:%02x:%i\n", pci_dev->name,
 		pci_dev->addr.function, pci_dev->addr.bus, pci_dev->addr.devid,
 		pci_dev->addr.function);
 
@@ -491,7 +491,7 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 	int vfio = nt_vfio_setup(pci_dev);
 
 	if (vfio < 0) {
-		NT_LOG_DBGX(ERR, TNIC, "%s: vfio_setup error %d\n",
+		NT_LOG_DBGX(ERR, NTNIC, "%s: vfio_setup error %d\n",
 			(pci_dev->name[0] ? pci_dev->name : "NA"), -1);
 		rte_free(p_drv);
 		return -1;
@@ -583,14 +583,14 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 		char name[32];
 
 		if ((1 << n_intf_no) & ~n_port_mask) {
-			NT_LOG_DBGX(DEBUG, NTNIC,
+			NT_LOG_DBGX(DBG, NTNIC,
 				"%s: interface #%d: skipping due to portmask 0x%02X\n",
 				p_port_id_str, n_intf_no, n_port_mask);
 			continue;
 		}
 
 		snprintf(name, sizeof(name), "ntnic%d", n_intf_no);
-		NT_LOG_DBGX(DEBUG, NTNIC, "%s: interface #%d: %s: '%s'\n", p_port_id_str,
+		NT_LOG_DBGX(DBG, NTNIC, "%s: interface #%d: %s: '%s'\n", p_port_id_str,
 			n_intf_no, (pci_dev->name[0] ? pci_dev->name : "NA"), name);
 
 		internals = rte_zmalloc_socket(name, sizeof(struct pmd_internals),
@@ -674,7 +674,7 @@ nthw_pci_dev_init(struct rte_pci_device *pci_dev)
 static int
 nthw_pci_dev_deinit(struct rte_eth_dev *eth_dev __rte_unused)
 {
-	NT_LOG_DBGX(DEBUG, NTNIC, "PCI device deinitialization\n");
+	NT_LOG_DBGX(DBG, NTNIC, "PCI device deinitialization\n");
 
 	int i;
 	char name[32];
@@ -701,13 +701,13 @@ nthw_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 {
 	int ret;
 
-	NT_LOG_DBGX(DEBUG, NTNIC, "pcidev: name: '%s'\n", pci_dev->name);
-	NT_LOG_DBGX(DEBUG, NTNIC, "devargs: name: '%s'\n", pci_dev->device.name);
+	NT_LOG_DBGX(DBG, NTNIC, "pcidev: name: '%s'\n", pci_dev->name);
+	NT_LOG_DBGX(DBG, NTNIC, "devargs: name: '%s'\n", pci_dev->device.name);
 
 	if (pci_dev->device.devargs) {
-		NT_LOG_DBGX(DEBUG, NTNIC, "devargs: args: '%s'\n",
+		NT_LOG_DBGX(DBG, NTNIC, "devargs: args: '%s'\n",
 			(pci_dev->device.devargs->args ? pci_dev->device.devargs->args : "NULL"));
-		NT_LOG_DBGX(DEBUG, NTNIC, "devargs: data: '%s'\n",
+		NT_LOG_DBGX(DBG, NTNIC, "devargs: data: '%s'\n",
 			(pci_dev->device.devargs->data ? pci_dev->device.devargs->data : "NULL"));
 	}
 
@@ -737,14 +737,14 @@ nthw_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 	ret = nthw_pci_dev_init(pci_dev);
 
-	NT_LOG_DBGX(DEBUG, NTNIC, "leave: ret=%d\n", ret);
+	NT_LOG_DBGX(DBG, NTNIC, "leave: ret=%d\n", ret);
 	return ret;
 }
 
 static int
 nthw_pci_remove(struct rte_pci_device *pci_dev)
 {
-	NT_LOG_DBGX(DEBUG, NTNIC);
+	NT_LOG_DBGX(DBG, NTNIC);
 
 	struct drv_s *p_drv = get_pdrv_from_pci(pci_dev->addr);
 	drv_deinit(p_drv);
@@ -762,3 +762,8 @@ static struct rte_pci_driver rte_nthw_pmd = {
 RTE_PMD_REGISTER_PCI(net_ntnic, rte_nthw_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ntnic, nthw_pci_id_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ntnic, "* vfio-pci");
+
+RTE_LOG_REGISTER_SUFFIX(nt_log_general, general, INFO);
+RTE_LOG_REGISTER_SUFFIX(nt_log_nthw, nthw, INFO);
+RTE_LOG_REGISTER_SUFFIX(nt_log_filter, filter, INFO);
+RTE_LOG_REGISTER_SUFFIX(nt_log_ntnic, ntnic, INFO);

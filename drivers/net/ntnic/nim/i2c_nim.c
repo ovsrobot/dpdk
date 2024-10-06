@@ -219,7 +219,7 @@ static int i2c_nim_common_construct(nim_i2c_ctx_p ctx)
 		res = -1;
 
 	if (res) {
-		NT_LOG(ERR, PMD, "Can't read NIM id.");
+		NT_LOG(ERR, NTNIC, "Can't read NIM id.");
 		return res;
 	}
 
@@ -308,7 +308,7 @@ static int qsfp_nim_state_build(nim_i2c_ctx_t *ctx, sfp_nim_state_t *state)
 		break;
 
 	default:
-		NT_LOG(INF, NIM, "nim_id = %u is not an QSFP/QSFP+/QSFP28 module\n", ctx->nim_id);
+		NT_LOG(INF, NTNIC, "nim_id = %u is not an QSFP/QSFP+/QSFP28 module\n", ctx->nim_id);
 		res = -1;
 	}
 
@@ -419,7 +419,7 @@ static int qsfpplus_read_basic_data(nim_i2c_ctx_t *ctx)
 		yes_no[ctx->avg_pwr]);
 
 	qsfp_read_vendor_info(ctx);
-	NT_LOG(DBG, PMD,
+	NT_LOG(DBG, NTNIC,
 		"Instance %d: NIM info: (Vendor: %s, PN: %s, SN: %s, Date: %s, Rev: %s)\n",
 		ctx->instance, ctx->vendor_name, ctx->prod_no, ctx->serial_no, ctx->date, ctx->rev);
 
@@ -540,7 +540,7 @@ static bool qsfp28_is_rate_selection_enabled(nim_i2c_ctx_p ctx)
 		(read_byte(ctx, enh_options_reg_addr) >> 2) & 0x03;	/* bit 3..2 */
 
 	if (rate_select_type != 2) {
-		NT_LOG(DBG, PMD, "NIM has unhandled rate select type (%d)", rate_select_type);
+		NT_LOG(DBG, NTNIC, "NIM has unhandled rate select type (%d)", rate_select_type);
 		return false;
 	}
 
@@ -548,7 +548,7 @@ static bool qsfp28_is_rate_selection_enabled(nim_i2c_ctx_p ctx)
 		read_byte(ctx, ext_rate_select_compl_reg_addr) & 0x03;	/* bit 1..0 */
 
 	if (ext_rate_select_ver != 0x02) {
-		NT_LOG(DBG, PMD, "NIM has unhandled extended rate select version (%d)",
+		NT_LOG(DBG, NTNIC, "NIM has unhandled extended rate select version (%d)",
 			ext_rate_select_ver);
 		return false;
 	}
@@ -669,7 +669,7 @@ static void qsfp28_wait_for_ready_after_reset(nim_i2c_ctx_p ctx)
 	 */
 	read_data_lin(ctx, 1, sizeof(ctx->specific_u.qsfp.specific_u.qsfp28.rev_compliance),
 		&ctx->specific_u.qsfp.specific_u.qsfp28.rev_compliance);
-	NT_LOG(DBG, NTHW, "NIM RevCompliance = %d",
+	NT_LOG(DBG, NTHW, "NIM RevCompliance = %d\n",
 		ctx->specific_u.qsfp.specific_u.qsfp28.rev_compliance);
 
 	/* Wait if lane_idx == -1 (all lanes are used) or lane_idx == 0 (the first lane) */
@@ -682,7 +682,7 @@ static void qsfp28_wait_for_ready_after_reset(nim_i2c_ctx_p ctx)
 		init_complete_flag_present = (data & (1 << 4)) != 0;
 	}
 
-	NT_LOG(DBG, NTHW, "NIM InitCompleteFlagPresent = %d", init_complete_flag_present);
+	NT_LOG(DBG, NTHW, "NIM InitCompleteFlagPresent = %d\n", init_complete_flag_present);
 
 	/*
 	 * If the init complete flag is not present then wait 500ms that together with 500ms
@@ -708,7 +708,7 @@ static void qsfp28_wait_for_ready_after_reset(nim_i2c_ctx_p ctx)
 		read_data_lin(ctx, 6, sizeof(data), &data);
 
 		if (data & 0x01) {
-			NT_LOG(DBG, NTHW, "Module ready after %dms", count * 100);
+			NT_LOG(DBG, NTHW, "Module ready after %dms\n", count * 100);
 			break;
 		}
 
