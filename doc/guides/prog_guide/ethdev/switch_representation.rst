@@ -13,8 +13,8 @@ Network adapters with multiple physical ports and/or SR-IOV capabilities
 usually support the offload of traffic steering rules between their virtual
 functions (VFs), sub functions (SFs), physical functions (PFs) and ports.
 
-Like for standard Ethernet switches, this involves a combination of
-automatic MAC learning and manual configuration. For most purposes it is
+For standard Ethernet switches, this involves a combination of
+automatic MAC learning and manual configuration. For most purposes, it is
 managed by the host system and fully transparent to users and applications.
 
 On the other hand, applications typically found on hypervisors that process
@@ -24,23 +24,23 @@ according on their own criteria.
 Without a standard software interface to manage traffic steering rules
 between VFs, SFs, PFs and the various physical ports of a given device,
 applications cannot take advantage of these offloads; software processing is
-mandatory even for traffic which ends up re-injected into the device it
+mandatory, even for traffic, which ends up re-injected into the device it
 originates from.
 
 This document describes how such steering rules can be configured through
 the DPDK flow API (**rte_flow**), with emphasis on the SR-IOV use case
-(PF/VF steering) using a single physical port for clarity, however the same
+(PF/VF steering) using a single physical port for clarity. However, the same
 logic applies to any number of ports without necessarily involving SR-IOV.
 
 Sub Function
 ------------
-Besides SR-IOV, Sub function is a portion of the PCI device, a SF netdev
-has its own dedicated queues(txq, rxq). A SF netdev supports E-Switch
+Besides SR-IOV, Sub function is a portion of the PCI device and a SF netdev
+has its own dedicated queues (txq, rxq). A SF netdev supports E-Switch
 representation offload similar to existing PF and VF representors.
 A SF shares PCI level resources with other SFs and/or with its parent PCI
 function.
 
-Sub function is created on-demand, coexists with VFs. Number of SFs is
+Sub function is created on-demand and coexists with VFs. The number of SFs is
 limited by hardware resources.
 
 Port Representors
@@ -78,7 +78,7 @@ thought as a software "patch panel" front-end for applications.
    -a pci:dbdf,representor=[pf[0-1],pf2vf[0-2],pf3[3,5]]
 
 - As virtual devices, they may be more limited than their physical
-  counterparts, for instance by exposing only a subset of device
+  counterparts. For instance, by exposing only a subset of device
   configuration callbacks and/or by not necessarily having Rx/Tx capability.
 
 - Among other things, they can be used to assign MAC addresses to the
@@ -98,7 +98,7 @@ thought as a software "patch panel" front-end for applications.
 
 - The device or group relationship of ports can be discovered using the
   switch ``domain_id`` field within the devices switch information structure. By
-  default the switch ``domain_id`` of a port will be
+  default, the switch ``domain_id`` of a port will be
   ``RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID`` to indicate that the port doesn't
   support the concept of a switch domain, but ports which do support the concept
   will be allocated a unique switch ``domain_id``, ports within the same switch
