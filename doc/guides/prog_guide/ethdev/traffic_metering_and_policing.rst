@@ -48,7 +48,7 @@ red) based on the previous history for this flow as maintained by the MTR
 object. The policer can do nothing, override the color the packet or drop the
 packet. Statistics counters are maintained for MTR object, as configured.
 
-The processing done for each input packet hitting an MTR object is:
+The processing for each input packet hitting an MTR object is:
 
 * Traffic metering: The packet is assigned a color (the meter output color)
   based on the previous traffic history reflected in the current state of the
@@ -118,7 +118,7 @@ Protocol based input color selection
 ------------------------------------
 
 The API supports selecting the input color based on the packet content.
-Following is the API usage model for the same.
+The following is the API usage model for the same purpose.
 
 #. Probe the protocol based input color selection device capabilities using
    the following parameters with ``rte_mtr_capabilities_get()`` API.
