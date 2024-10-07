@@ -468,6 +468,25 @@ out:
 	PMD_DRV_LOG(INFO, "(%s) MAC %s specified", dev->path, buf);
 }
 
+int
+virtio_user_dev_get_speed_duplex_config(struct virtio_user_dev *dev, void *dst, size_t offset,
+					int length)
+{
+	int ret = 0;
+
+	if (!(dev->device_features & (1ULL << VIRTIO_NET_F_SPEED_DUPLEX)))
+		return -ENOTSUP;
+
+	if (!dev->ops->get_config)
+		return -ENOTSUP;
+
+	ret = dev->ops->get_config(dev, dst, offset, length);
+	if (ret)
+		PMD_DRV_LOG(ERR, "(%s) Failed to get speed/duplex config in device", dev->path);
+
+	return ret;
+}
+
 static int
 virtio_user_dev_init_notify(struct virtio_user_dev *dev)
 {
@@ -726,7 +745,8 @@ virtio_user_free_vrings(struct virtio_user_dev *dev)
 	 1ULL << VIRTIO_F_RING_PACKED		|	\
 	 1ULL << VIRTIO_F_NOTIFICATION_DATA	|	\
 	 1ULL << VIRTIO_F_ORDER_PLATFORM        |       \
-	 1ULL << VIRTIO_NET_F_RSS)
+	 1ULL << VIRTIO_NET_F_RSS               |       \
+	 1ULL << VIRTIO_NET_F_SPEED_DUPLEX)
 
 int
 virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
