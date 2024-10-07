@@ -92,6 +92,7 @@ struct virtio_user_backend_ops {
 	int (*get_intr_fd)(struct virtio_user_dev *dev);
 	int (*map_notification_area)(struct virtio_user_dev *dev);
 	int (*unmap_notification_area)(struct virtio_user_dev *dev);
+	int (*set_config_call)(struct virtio_user_dev *dev, int fd);
 };
 
 extern struct virtio_user_backend_ops virtio_ops_user;
