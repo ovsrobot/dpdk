@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/eventfd.h>
 
 #include <rte_memory.h>
 
@@ -634,10 +635,21 @@ vhost_vdpa_update_link_state(struct virtio_user_dev *dev)
 }
 
 static int
-vhost_vdpa_get_intr_fd(struct virtio_user_dev *dev __rte_unused)
+vhost_vdpa_get_intr_fd(struct virtio_user_dev *dev)
 {
-	/* No link state interrupt with Vhost-vDPA */
-	return -1;
+	int fd;
+
+	if (dev->cfg_epfd)
+		return dev->cfg_epfd;
+
+	fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+	if (fd < 0) {
+		PMD_DRV_LOG(ERR, "failed to create fd error, %s", strerror(errno));
+		fd = -1;
+	}
+	dev->cfg_epfd = fd;
+
+	return fd;
 }
 
 static int

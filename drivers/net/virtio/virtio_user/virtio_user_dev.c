@@ -487,6 +487,21 @@ virtio_user_dev_get_speed_duplex_config(struct virtio_user_dev *dev, void *dst, 
 	return ret;
 }
 
+int
+virtio_user_dev_set_config_call(struct virtio_user_dev *dev, int fd)
+{
+	int ret = 0;
+
+	if (!dev->ops->set_config_call)
+		return -ENOTSUP;
+
+	ret = dev->ops->set_config_call(dev, fd);
+	if (ret)
+		PMD_DRV_LOG(ERR, "(%s) Failed to set config call in device", dev->path);
+
+	return ret;
+}
+
 static int
 virtio_user_dev_init_notify(struct virtio_user_dev *dev)
 {
@@ -769,6 +784,7 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 	dev->unsupported_features = 0;
 	dev->backend_type = backend_type;
 	dev->ifname = *ifname;
+	dev->cfg_epfd = 0;
 
 	if (virtio_user_dev_setup(dev) < 0) {
 		PMD_INIT_LOG(ERR, "(%s) backend set up fails", dev->path);
@@ -863,6 +879,15 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 		}
 	}
 
+	/* vhost vdpa register valid fd to handle config callback */
+	if (dev->cfg_epfd) {
+		struct rte_eth_dev *eth_dev = &rte_eth_devices[dev->hw.port_id];
+
+		if (rte_intr_efd_counter_size_set(eth_dev->intr_handle, 8))
+			return -rte_errno;
+		virtio_user_dev_set_config_call(dev, dev->cfg_epfd);
+	}
+
 	*ifname = NULL;
 	return 0;
 
@@ -892,6 +917,10 @@ virtio_user_dev_uninit(struct virtio_user_dev *dev)
 
 	virtio_user_free_vrings(dev);
 
+	if (dev->cfg_epfd) {
+		close(dev->cfg_epfd);
+		dev->cfg_epfd = 0;
+	}
 	free(dev->ifname);
 
 	if (dev->is_server)
