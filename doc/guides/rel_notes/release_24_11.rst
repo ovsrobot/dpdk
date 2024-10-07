@@ -67,6 +67,13 @@ New Features
 
   The new statistics are useful for debugging and profiling.
 
+* **Updated IPsec_MB crypto driver.**
+
+  * In 24.11 LTS release the Intel IPsec Multi-buffer version is bumped to a
+    minimum version of v1.4. This will effect the KASUMI, SNOW3G, ZUC,
+    AESNI GCM, AESNI MB and CHACHAPOLY SW PMDs.
+
+
 
 Removed Items
 -------------
