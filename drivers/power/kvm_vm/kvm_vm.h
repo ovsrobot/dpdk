@@ -2,15 +2,15 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
-#ifndef _POWER_KVM_VM_H
-#define _POWER_KVM_VM_H
+#ifndef _KVM_VM_H
+#define _KVM_VM_H
 
 /**
  * @file
  * RTE Power Management KVM VM
  */
 
-#include "rte_power.h"
+#include "rte_power_cpufreq_api.h"
 
 /**
  * Check if KVM power management is supported.
