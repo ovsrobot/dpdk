@@ -1029,7 +1029,7 @@ atl_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *stats,
 	unsigned int i;
 	unsigned int count = atl_dev_xstats_get_count(dev);
 
-	if (!stats)
+	if (n < count)
 		return count;
 
 	if (hw->aq_fw_ops->send_macsec_req != NULL) {
