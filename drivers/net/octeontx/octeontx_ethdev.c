@@ -1016,6 +1016,9 @@ octeontx_dev_xstats_get(struct rte_eth_dev *dev,
 	struct octeontx_nic *nic = octeontx_pmd_priv(dev);
 
 	PMD_INIT_FUNC_TRACE();
+	if (n < NUM_BGX_XSTAT)
+		return NUM_BGX_XSTAT;
+
 	return octeontx_port_xstats(nic, xstats, n);
 }
 
