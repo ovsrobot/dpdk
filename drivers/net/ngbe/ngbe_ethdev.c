@@ -1693,19 +1693,16 @@ ngbe_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 	struct ngbe_hw_stats *hw_stats = NGBE_DEV_STATS(dev);
 	unsigned int i, count;
 
-	ngbe_read_stats_registers(hw, hw_stats);
-
-	/* If this is a reset xstats is NULL, and we have cleared the
-	 * registers by reading them.
-	 */
 	count = ngbe_xstats_calc_num(dev);
-	if (xstats == NULL)
+	if (limit < count)
 		return count;
+
+	ngbe_read_stats_registers(hw, hw_stats);
 
 	limit = min(limit, ngbe_xstats_calc_num(dev));
 
 	/* Extended stats from ngbe_hw_stats */
-	for (i = 0; i < limit; i++) {
+	for (i = 0; i < count; i++) {
 		uint32_t offset = 0;
 
 		if (ngbe_get_offset_by_id(i, &offset)) {
