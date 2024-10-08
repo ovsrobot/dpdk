@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
  * Copyright(c) 2023 AMD Corporation
+ * Copyright(c) 2024 Advanced Micro Devices, Inc.
  */
 
 #include <errno.h>
@@ -10,100 +11,51 @@
 
 #include "power_common.h"
 #include "rte_power_uncore.h"
-#include "power_intel_uncore.h"
 
-enum rte_uncore_power_mgmt_env default_uncore_env = RTE_UNCORE_PM_ENV_NOT_SET;
+static enum rte_uncore_power_mgmt_env global_uncore_env = RTE_UNCORE_PM_ENV_NOT_SET;
+static struct rte_power_uncore_ops *global_uncore_ops;
 
 static rte_spinlock_t global_env_cfg_lock = RTE_SPINLOCK_INITIALIZER;
+static RTE_TAILQ_HEAD(, rte_power_uncore_ops) uncore_ops_list =
+			TAILQ_HEAD_INITIALIZER(uncore_ops_list);
 
-static uint32_t
-power_get_dummy_uncore_freq(unsigned int pkg __rte_unused,
-	       unsigned int die __rte_unused)
+const char *uncore_env_str[] = {
+	"not set",
+	"auto-detect",
+	"intel-uncore",
+	"amd-hsmp"
+};
+
+/* register the ops struct in rte_power_uncore_ops, return 0 on success. */
+int
+rte_power_register_uncore_ops(struct rte_power_uncore_ops *driver_ops)
 {
+	if (!driver_ops->init || !driver_ops->exit || !driver_ops->get_num_pkgs ||
+		!driver_ops->get_num_dies || !driver_ops->get_num_freqs ||
+		!driver_ops->get_avail_freqs || !driver_ops->get_freq ||
+		!driver_ops->set_freq || !driver_ops->freq_max ||
+		!driver_ops->freq_min) {
+		POWER_LOG(ERR, "Missing callbacks while registering power ops");
+		return -1;
+	}
+	if (driver_ops->cb)
+		driver_ops->cb();
+
+	TAILQ_INSERT_TAIL(&uncore_ops_list, driver_ops, next);
+
 	return 0;
 }
-
-static int
-power_set_dummy_uncore_freq(unsigned int pkg __rte_unused,
-	       unsigned int die __rte_unused, uint32_t index __rte_unused)
-{
-	return 0;
-}
-
-static int
-power_dummy_uncore_freq_max(unsigned int pkg __rte_unused,
-	       unsigned int die __rte_unused)
-{
-	return 0;
-}
-
-static int
-power_dummy_uncore_freq_min(unsigned int pkg __rte_unused,
-	       unsigned int die __rte_unused)
-{
-	return 0;
-}
-
-static int
-power_dummy_uncore_freqs(unsigned int pkg __rte_unused, unsigned int die __rte_unused,
-		uint32_t *freqs __rte_unused, uint32_t num __rte_unused)
-{
-	return 0;
-}
-
-static int
-power_dummy_uncore_get_num_freqs(unsigned int pkg __rte_unused,
-	       unsigned int die __rte_unused)
-{
-	return 0;
-}
-
-static unsigned int
-power_dummy_uncore_get_num_pkgs(void)
-{
-	return 0;
-}
-
-static unsigned int
-power_dummy_uncore_get_num_dies(unsigned int pkg __rte_unused)
-{
-	return 0;
-}
-
-/* function pointers */
-rte_power_get_uncore_freq_t rte_power_get_uncore_freq = power_get_dummy_uncore_freq;
-rte_power_set_uncore_freq_t rte_power_set_uncore_freq = power_set_dummy_uncore_freq;
-rte_power_uncore_freq_change_t rte_power_uncore_freq_max = power_dummy_uncore_freq_max;
-rte_power_uncore_freq_change_t rte_power_uncore_freq_min = power_dummy_uncore_freq_min;
-rte_power_uncore_freqs_t rte_power_uncore_freqs = power_dummy_uncore_freqs;
-rte_power_uncore_get_num_freqs_t rte_power_uncore_get_num_freqs = power_dummy_uncore_get_num_freqs;
-rte_power_uncore_get_num_pkgs_t rte_power_uncore_get_num_pkgs = power_dummy_uncore_get_num_pkgs;
-rte_power_uncore_get_num_dies_t rte_power_uncore_get_num_dies = power_dummy_uncore_get_num_dies;
-
-static void
-reset_power_uncore_function_ptrs(void)
-{
-	rte_power_get_uncore_freq = power_get_dummy_uncore_freq;
-	rte_power_set_uncore_freq = power_set_dummy_uncore_freq;
-	rte_power_uncore_freq_max = power_dummy_uncore_freq_max;
-	rte_power_uncore_freq_min = power_dummy_uncore_freq_min;
-	rte_power_uncore_freqs  = power_dummy_uncore_freqs;
-	rte_power_uncore_get_num_freqs = power_dummy_uncore_get_num_freqs;
-	rte_power_uncore_get_num_pkgs = power_dummy_uncore_get_num_pkgs;
-	rte_power_uncore_get_num_dies = power_dummy_uncore_get_num_dies;
-}
-
 int
 rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
 {
-	int ret;
+	int ret = -1;
+	struct rte_power_uncore_ops *ops;
 
 	rte_spinlock_lock(&global_env_cfg_lock);
 
-	if (default_uncore_env != RTE_UNCORE_PM_ENV_NOT_SET) {
+	if (global_uncore_env != RTE_UNCORE_PM_ENV_NOT_SET) {
 		POWER_LOG(ERR, "Uncore Power Management Env already set.");
-		rte_spinlock_unlock(&global_env_cfg_lock);
-		return -1;
+		goto out;
 	}
 
 	if (env == RTE_UNCORE_PM_ENV_AUTO_DETECT)
@@ -113,23 +65,20 @@ rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
 		 */
 		env = RTE_UNCORE_PM_ENV_INTEL_UNCORE;
 
-	ret = 0;
-	if (env == RTE_UNCORE_PM_ENV_INTEL_UNCORE) {
-		rte_power_get_uncore_freq = power_get_intel_uncore_freq;
-		rte_power_set_uncore_freq = power_set_intel_uncore_freq;
-		rte_power_uncore_freq_min  = power_intel_uncore_freq_min;
-		rte_power_uncore_freq_max  = power_intel_uncore_freq_max;
-		rte_power_uncore_freqs = power_intel_uncore_freqs;
-		rte_power_uncore_get_num_freqs = power_intel_uncore_get_num_freqs;
-		rte_power_uncore_get_num_pkgs = power_intel_uncore_get_num_pkgs;
-		rte_power_uncore_get_num_dies = power_intel_uncore_get_num_dies;
-	} else {
-		POWER_LOG(ERR, "Invalid Power Management Environment(%d) set", env);
-		ret = -1;
-		goto out;
-	}
+	if (env <= RTE_DIM(uncore_env_str)) {
+		RTE_TAILQ_FOREACH(ops, &uncore_ops_list, next)
+			if (strncmp(ops->name, uncore_env_str[env],
+				RTE_POWER_UNCORE_DRIVER_NAMESZ) == 0) {
+				global_uncore_env = env;
+				global_uncore_ops = ops;
+				ret = 0;
+				goto out;
+			}
+		POWER_LOG(ERR, "Power Management (%s) not supported",
+				uncore_env_str[env]);
+	} else
+		POWER_LOG(ERR, "Invalid Power Management Environment");
 
-	default_uncore_env = env;
 out:
 	rte_spinlock_unlock(&global_env_cfg_lock);
 	return ret;
@@ -139,15 +88,22 @@ void
 rte_power_unset_uncore_env(void)
 {
 	rte_spinlock_lock(&global_env_cfg_lock);
-	default_uncore_env = RTE_UNCORE_PM_ENV_NOT_SET;
-	reset_power_uncore_function_ptrs();
+	global_uncore_env = RTE_UNCORE_PM_ENV_NOT_SET;
 	rte_spinlock_unlock(&global_env_cfg_lock);
 }
 
 enum rte_uncore_power_mgmt_env
 rte_power_get_uncore_env(void)
 {
-	return default_uncore_env;
+	return global_uncore_env;
+}
+
+struct rte_power_uncore_ops *
+rte_power_get_uncore_ops(void)
+{
+	RTE_ASSERT(global_uncore_ops != NULL);
+
+	return global_uncore_ops;
 }
 
 int
@@ -155,27 +111,29 @@ rte_power_uncore_init(unsigned int pkg, unsigned int die)
 {
 	int ret = -1;
 
-	switch (default_uncore_env) {
-	case RTE_UNCORE_PM_ENV_INTEL_UNCORE:
-		return power_intel_uncore_init(pkg, die);
-	default:
-		POWER_LOG(INFO, "Uncore Env isn't set yet!");
-		break;
-	}
+	struct rte_power_uncore_ops *ops;
+	uint8_t env;
 
-	/* Auto detect Environment */
-	POWER_LOG(INFO, "Attempting to initialise Intel Uncore power mgmt...");
-	ret = power_intel_uncore_init(pkg, die);
-	if (ret == 0) {
-		rte_power_set_uncore_env(RTE_UNCORE_PM_ENV_INTEL_UNCORE);
-		goto out;
-	}
+	if ((global_uncore_env != RTE_UNCORE_PM_ENV_NOT_SET) &&
+			(global_uncore_env != RTE_UNCORE_PM_ENV_AUTO_DETECT))
+		return global_uncore_ops->init(pkg, die);
 
-	if (default_uncore_env == RTE_UNCORE_PM_ENV_NOT_SET) {
-		POWER_LOG(ERR, "Unable to set Power Management Environment "
-			"for package %u Die %u", pkg, die);
-		ret = 0;
-	}
+	/* Auto Detect Environment */
+	RTE_TAILQ_FOREACH(ops, &uncore_ops_list, next)
+		if (ops) {
+			POWER_LOG(INFO,
+				"Attempting to initialise %s power management...",
+				ops->name);
+			ret = ops->init(pkg, die);
+			if (ret == 0) {
+				for (env = 0; env < RTE_DIM(uncore_env_str); env++)
+					if (strncmp(ops->name, uncore_env_str[env],
+						RTE_POWER_UNCORE_DRIVER_NAMESZ) == 0) {
+						rte_power_set_uncore_env(env);
+						goto out;
+					}
+			}
+		}
 out:
 	return ret;
 }
@@ -183,12 +141,12 @@ out:
 int
 rte_power_uncore_exit(unsigned int pkg, unsigned int die)
 {
-	switch (default_uncore_env) {
-	case RTE_UNCORE_PM_ENV_INTEL_UNCORE:
-		return power_intel_uncore_exit(pkg, die);
-	default:
-		POWER_LOG(ERR, "Uncore Env has not been set, unable to exit gracefully");
-		break;
-	}
+	if ((global_uncore_env != RTE_UNCORE_PM_ENV_NOT_SET) &&
+			global_uncore_ops)
+		return global_uncore_ops->exit(pkg, die);
+
+	POWER_LOG(ERR,
+		"Uncore Env has not been set, unable to exit gracefully");
+
 	return -1;
 }
