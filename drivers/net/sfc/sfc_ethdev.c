@@ -833,11 +833,12 @@ sfc_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 {
 	struct sfc_adapter *sa = sfc_adapter_by_eth_dev(dev);
 	unsigned int nb_written = 0;
-	unsigned int nb_supported = 0;
+	unsigned int nb_supported;
 	int rc;
 
-	if (unlikely(xstats == NULL))
-		return sfc_xstats_get_nb_supported(sa);
+	nb_supported = sfc_xstats_get_nb_supported(sa);
+	if (xstats_count < nb_supported)
+		return nb_supported;
 
 	rc = sfc_port_get_mac_stats(sa, xstats, xstats_count, &nb_written);
 	if (rc < 0)
