@@ -13327,6 +13327,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_set_port_ptypes,
 	(cmdline_parse_inst_t *)&cmd_show_port_tm_cap,
 	(cmdline_parse_inst_t *)&cmd_show_port_tm_level_cap,
+	(cmdline_parse_inst_t *)&cmd_show_port_tm_node,
 	(cmdline_parse_inst_t *)&cmd_show_port_tm_node_cap,
 	(cmdline_parse_inst_t *)&cmd_show_port_tm_node_type,
 	(cmdline_parse_inst_t *)&cmd_show_port_tm_node_stats,
