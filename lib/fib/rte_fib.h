@@ -16,7 +16,7 @@
  */
 
 #include <stdint.h>
-
+#include <rte_rcu_qsbr.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +27,19 @@ struct rte_rib;
 
 /** Maximum depth value possible for IPv4 FIB. */
 #define RTE_FIB_MAXDEPTH	32
+
+/** @internal Default RCU defer queue entries to reclaim in one go. */
+#define RTE_FIB_RCU_DQ_RECLAIM_MAX	16
+/** @internal Default RCU defer queue size. */
+#define RTE_FIB_RCU_DQ_RECLAIM_SZ	128
+
+/** RCU reclamation modes */
+enum rte_fib_qsbr_mode {
+	/** Create defer queue for reclaim. */
+	RTE_FIB_QSBR_MODE_DQ = 0,
+	/** Use blocking mode reclaim. No defer queue created. */
+	RTE_FIB_QSBR_MODE_SYNC
+};
 
 /** Type of FIB struct */
 enum rte_fib_type {
@@ -87,6 +100,22 @@ struct rte_fib_conf {
 			uint32_t	num_tbl8;
 		} dir24_8;
 	};
+};
+
+/** FIB RCU QSBR configuration structure. */
+struct rte_fib_rcu_config {
+	struct rte_rcu_qsbr *v;	/* RCU QSBR variable. */
+	/* Mode of RCU QSBR. RTE_FIB_QSBR_MODE_xxx
+	 * '0' for default: create defer queue for reclaim.
+	 */
+	enum rte_fib_qsbr_mode mode;
+	uint32_t dq_size;	/* RCU defer queue size.
+				 * default: RTE_FIB_RCU_DQ_RECLAIM_SZ.
+				 */
+	uint32_t reclaim_thd;	/* Threshold to trigger auto reclaim. */
+	uint32_t reclaim_max;	/* Max entries to reclaim in one go.
+				 * default: RTE_FIB_RCU_DQ_RECLAIM_MAX.
+				 */
 };
 
 /**
@@ -218,6 +247,25 @@ rte_fib_get_rib(struct rte_fib *fib);
  */
 int
 rte_fib_select_lookup(struct rte_fib *fib, enum rte_fib_lookup_type type);
+
+/**
+ * Associate RCU QSBR variable with a FIB object.
+ *
+ * @param fib
+ *   the fib object to add RCU QSBR
+ * @param cfg
+ *   RCU QSBR configuration
+ * @return
+ *   On success - 0
+ *   On error - 1 with error code set in rte_errno.
+ *   Possible rte_errno codes are:
+ *   - EINVAL - invalid pointer
+ *   - EEXIST - already added QSBR
+ *   - ENOMEM - memory allocation failure
+ *   - ENOTSUP - not supported by configured dataplane algorithm
+ */
+__rte_experimental
+int rte_fib_rcu_qsbr_add(struct rte_fib *fib, struct rte_fib_rcu_config *cfg);
 
 #ifdef __cplusplus
 }

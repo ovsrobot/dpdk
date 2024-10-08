@@ -11,6 +11,7 @@ endif
 sources = files('rte_fib.c', 'rte_fib6.c', 'dir24_8.c', 'trie.c')
 headers = files('rte_fib.h', 'rte_fib6.h')
 deps += ['rib']
+deps += ['rcu']
 
 # compile AVX512 version if:
 # we are building 64-bit binary AND binutils can generate proper code
@@ -45,7 +46,7 @@ if dpdk_conf.has('RTE_ARCH_X86_64') and binutils_ok
     elif cc.has_multi_arguments('-mavx512f', '-mavx512dq')
         dir24_8_avx512_tmp = static_library('dir24_8_avx512_tmp',
                 'dir24_8_avx512.c',
-                dependencies: static_rte_eal,
+                dependencies: [static_rte_eal, static_rte_rcu],
                 c_args: cflags + ['-mavx512f', '-mavx512dq'])
         objs += dir24_8_avx512_tmp.extract_objects('dir24_8_avx512.c')
         cflags += ['-DCC_DIR24_8_AVX512_SUPPORT']
@@ -54,7 +55,7 @@ if dpdk_conf.has('RTE_ARCH_X86_64') and binutils_ok
         if cc.has_argument('-mavx512bw')
             trie_avx512_tmp = static_library('trie_avx512_tmp',
                 'trie_avx512.c',
-                dependencies: static_rte_eal,
+                dependencies: [static_rte_eal, static_rte_rcu],
                 c_args: cflags + ['-mavx512f', \
                     '-mavx512dq', '-mavx512bw'])
             objs += trie_avx512_tmp.extract_objects('trie_avx512.c')
