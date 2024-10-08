@@ -104,6 +104,8 @@ Configuration Parameters
 .. note::
 
    The mapping of lcore to DMA must be one-to-one and cannot be duplicated.
+   When using  idxd device (Device 0b25) with vfio-pci driver, add queue_id (lcore_dma=lcore10@0000:00:04.2-q0)
+   When using  idxd device (Device 0b25) with kernel driver, add work_queue (lcore_dma=lcore4@wq0.0)
 
 ``lcore``
   Specifies the lcore for CPU testing.
