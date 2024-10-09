@@ -122,6 +122,9 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* graph: Added new `feature_arc_enable` parameter in `struct rte_graph_param` to
+  allow `rte_graph_walk()` call `feat_arc_proc` node callback function, if it
+  is provided in node registration
 
 Known Issues
 ------------

@@ -172,6 +172,8 @@ struct rte_graph_param {
 			uint32_t mp_capacity; /**< Capacity of memory pool for dispatch model. */
 		} dispatch;
 	};
+
+	bool feature_arc_enable; /**< Enable Graph feature arc. */
 };
 
 /**
@@ -470,6 +472,7 @@ struct rte_node_register {
 	uint64_t flags;		      /**< Node configuration flag. */
 #define RTE_NODE_SOURCE_F (1ULL << 0) /**< Node type is source. */
 	rte_node_process_t process; /**< Node process function. */
+	rte_node_process_t feat_arc_proc; /**< Node feature-arch process function. */
 	rte_node_init_t init;       /**< Node init function. */
 	rte_node_fini_t fini;       /**< Node fini function. */
 	rte_node_t id;		    /**< Node Identifier. */
