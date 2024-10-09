@@ -96,6 +96,19 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Updated kvargs process API.**
+
+  * Introduced rte_kvargs_process_opt() API, which inherits the function
+    of rte_kvargs_process() and could handle both key=value and only-key
+    cases.
+
+  * Constraint rte_kvargs_process() API can only handle key=value cases,
+    it will return -1 when handle only-key case (that is the matched key's
+    value is NULL).
+
+  * Make sure rte_kvargs_process_opt() and rte_kvargs_process() API both
+    return -1 when the kvlist parameter is NULL.
+
 
 ABI Changes
 -----------
