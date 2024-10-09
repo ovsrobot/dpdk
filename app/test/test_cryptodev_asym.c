@@ -2611,7 +2611,8 @@ test_sm2_sign(void)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_SIGN;
-	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+	if (rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_SIGN, RTE_CRYPTO_SM2_PH))
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
 	else
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
@@ -2628,7 +2629,8 @@ test_sm2_sign(void)
 		asym_op->sm2.id.length = 0;
 	}
 
-	if (capa->internal_rng != 0) {
+	if (rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_ENCRYPT, RTE_CRYPTO_SM2_RNG)) {
 		asym_op->sm2.k.data = NULL;
 		asym_op->sm2.k.length = 0;
 	} else {
@@ -2677,7 +2679,8 @@ test_sm2_sign(void)
 	debug_hexdump(stdout, "s:",
 			asym_op->sm2.s.data, asym_op->sm2.s.length);
 
-	if (capa->internal_rng == 0) {
+	if (!rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_SIGN, RTE_CRYPTO_SM2_RNG)) {
 		/* Verify sign (by comparison). */
 		if (memcmp(input_params.sign_r.data, asym_op->sm2.r.data,
 				   asym_op->sm2.r.length) != 0) {
@@ -2802,7 +2805,8 @@ test_sm2_verify(void)
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
 
-	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+	if (rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_VERIFY, RTE_CRYPTO_SM2_PH))
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
 	else
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
@@ -2924,7 +2928,8 @@ test_sm2_enc(void)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_ENCRYPT;
-	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+	if (rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_ENCRYPT, RTE_CRYPTO_SM2_PH))
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
 	else
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
@@ -2932,7 +2937,8 @@ test_sm2_enc(void)
 	asym_op->sm2.message.data = input_params.message.data;
 	asym_op->sm2.message.length = input_params.message.length;
 
-	if (capa->internal_rng != 0) {
+	if (rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_ENCRYPT, RTE_CRYPTO_SM2_RNG)) {
 		asym_op->sm2.k.data = NULL;
 		asym_op->sm2.k.length = 0;
 	} else {
@@ -2978,7 +2984,8 @@ test_sm2_enc(void)
 	debug_hexdump(stdout, "cipher:",
 			asym_op->sm2.cipher.data, asym_op->sm2.cipher.length);
 
-	if (capa->internal_rng == 0) {
+	if (!rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_ENCRYPT, RTE_CRYPTO_SM2_RNG)) {
 		if (memcmp(input_params.cipher.data, asym_op->sm2.cipher.data,
 				   asym_op->sm2.cipher.length) != 0) {
 			status = TEST_FAILED;
@@ -3105,7 +3112,8 @@ test_sm2_dec(void)
 
 	/* Populate op with operational details */
 	asym_op->sm2.op_type = RTE_CRYPTO_ASYM_OP_DECRYPT;
-	if (rte_cryptodev_asym_xform_capability_check_hash(capa, RTE_CRYPTO_AUTH_SM3))
+	if (rte_cryptodev_asym_xform_capability_check_opcap(capa,
+			RTE_CRYPTO_ASYM_OP_DECRYPT, RTE_CRYPTO_SM2_PH))
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_SM3;
 	else
 		asym_op->sm2.hash = RTE_CRYPTO_AUTH_NULL;
