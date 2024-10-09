@@ -67,6 +67,16 @@ New Features
 
   The new statistics are useful for debugging and profiling.
 
+* **Added feature arc abstraction in graph library.**
+
+  Feature arc abstraction helps ``rte_graph`` based applications to steer
+  packets across different node path(s) based on the features (or protocols)
+  enabled on interfaces. Different feature node paths can be enabled/disabled
+  at runtime on some or on all interfaces. This abstraction also help
+  applications to hook their ``custom nodes`` in standard DPDK node paths
+  without any code changes in the later.
+
+  * Added ``ip4-output`` feature arc processing in ``ip4_rewrite`` node.
 
 Removed Items
 -------------
