@@ -119,8 +119,6 @@ enum rte_crypto_asym_xform_type {
 	 * Performs Encrypt, Decrypt, Sign and Verify.
 	 * Refer to rte_crypto_asym_op_type.
 	 */
-	RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
-	/**< End of list */
 };
 
 /**
@@ -168,7 +166,6 @@ enum rte_crypto_rsa_padding_type {
 	/**< RSA PKCS#1 OAEP padding scheme */
 	RTE_CRYPTO_RSA_PADDING_PSS,
 	/**< RSA PKCS#1 PSS padding scheme */
-	RTE_CRYPTO_RSA_PADDING_TYPE_LIST_END
 };
 
 /**
