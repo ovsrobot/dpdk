@@ -147,6 +147,7 @@ New Features
   * Update supported version of the FPGA to 9563.55.49
   * Fix Coverity issues
   * Fix issues related to release 24.07
+  * Extended and fixed the implementation of the logging
 
 Removed Items
 -------------
