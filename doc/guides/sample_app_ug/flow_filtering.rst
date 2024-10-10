@@ -4,16 +4,20 @@
 Basic RTE Flow Filtering Sample Application
 ===========================================
 
-The Basic RTE flow filtering sample application is a simple example of a
+
+Overview
+--------
+
+The Basic RTE flow filtering sample application is a simple example of
 creating a RTE flow rule.
 
-It is intended as a demonstration of the basic components RTE flow rules.
+It demonstrates the basic components of RTE flow rules.
 
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 
 Running the Application
@@ -33,7 +37,7 @@ Explanation
 -----------
 
 The example is built from 2 files,
-``main.c`` which holds the example logic and ``flow_blocks.c`` that holds the
+``main.c`` which holds the example logic and ``flow_blocks.c`` holds the
 implementation for building the flow rule.
 
 The following sections provide an explanation of the main components of the
@@ -49,7 +53,7 @@ The Main Function
 The ``main()`` function located in ``main.c`` file performs the initialization
 and runs the main loop function.
 
-The first task is to initialize the Environment Abstraction Layer (EAL).  The
+The first task is to initialize the Environment Abstraction Layer (EAL). The
 ``argc`` and ``argv`` arguments are provided to the ``rte_eal_init()``
 function. The value returned is the number of parsed arguments:
 
@@ -90,8 +94,8 @@ following code:
     :end-before: >8 End of creating flow for send packet with.
     :dedent: 1
 
-In the last part the application is ready to launch the
-``main_loop()`` function. Which is explained below.
+In the last part, the application is ready to launch the
+``main_loop()`` function, which is explained below.
 
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
@@ -100,8 +104,9 @@ In the last part the application is ready to launch the
     :end-before: >8 End of launching main_loop().
     :dedent: 1
 
-The Port Initialization  Function
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Port Initialization Function
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The main functional part of the port initialization used in the flow filtering
 application is shown below:
@@ -120,7 +125,7 @@ The Ethernet port is configured with default settings using the
     :end-before: >8 End of ethernet port configured with default settings.
     :dedent: 1
 
-For this example we are configuring number of rx and tx queues that are connected
+For this example, we are configuring a number of Rx and Tx queues that are connected
 to a single port.
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
@@ -129,8 +134,8 @@ to a single port.
     :end-before: >8 End of Configuring RX and TX queues connected to single port.
     :dedent: 1
 
-In the next step we create and apply the flow rule. which is to send packets
-with destination ip equals to 192.168.1.1 to queue number 1. The detail
+In the next step, we create and apply the flow rule to send packets
+with destination IP equal to 192.168.1.1 to queue number 1. A detailed
 explanation of the ``generate_ipv4_flow()`` appears later in this document:
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
@@ -159,8 +164,8 @@ The last step is to start the port.
 The main_loop function
 ~~~~~~~~~~~~~~~~~~~~~~
 
-As we saw above the ``main()`` function calls an application function to handle
-the main loop. For the flow filtering application the main_loop function
+As we saw above, the ``main()`` function calls an application function to handle
+the main loop. For the flow filtering application, the main_loop function
 looks like the following:
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
@@ -169,7 +174,7 @@ looks like the following:
     :end-before: >8 End of reading the packets from all queues.
 
 The main work of the application is reading the packets from all
-queues and printing for each packet the destination queue:
+queues and printing each packet from the destination queue:
 
 .. literalinclude:: ../../../examples/flow_filtering/main.c
     :language: c
@@ -178,8 +183,9 @@ queues and printing for each packet the destination queue:
 
 
 The forwarding loop can be interrupted and the application closed using
-``Ctrl-C``. Which results in closing the port and the device using
+``Ctrl-C`` which results in closing the port and the device using
 ``rte_eth_dev_stop`` and ``rte_eth_dev_close``
+
 
 The generate_ipv4_flow function
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -200,7 +206,7 @@ The first part of the function is declaring the structures that will be used.
     :end-before: >8 End of declaring structs being used.
     :dedent: 1
 
-The following part create the flow attributes, in our case ingress.
+The following part creates the flow attributes. In this case, ingress.
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_blocks.c
     :language: c
@@ -209,7 +215,7 @@ The following part create the flow attributes, in our case ingress.
     :dedent: 1
 
 The third part defines the action to be taken when a packet matches
-the rule. In this case send the packet to queue.
+the rule. In this case, send the packet to queue.
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_blocks.c
     :language: c
@@ -217,10 +223,10 @@ the rule. In this case send the packet to queue.
     :end-before: >8 End of setting the rule attribute.
 
 The fourth part is responsible for creating the pattern and is built from
-number of steps. In each step we build one level of the pattern starting with
+number of steps. In each step, we build one level of the pattern starting with
 the lowest one.
 
-Setting the first level of the pattern ETH:
+Set the first level of the pattern ETH:
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_blocks.c
     :language: c
@@ -228,7 +234,7 @@ Setting the first level of the pattern ETH:
     :end-before: >8 End of setting the first level of the pattern.
     :dedent: 1
 
-Setting the second level of the pattern IP:
+Set the second level of the pattern IP:
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_blocks.c
     :language: c
@@ -236,7 +242,7 @@ Setting the second level of the pattern IP:
     :end-before: >8 End of setting the second level of the pattern.
     :dedent: 1
 
-Closing the pattern part.
+Close the pattern part:
 
 .. literalinclude:: ../../../examples/flow_filtering/flow_blocks.c
     :language: c
