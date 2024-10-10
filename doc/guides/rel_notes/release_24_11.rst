@@ -82,6 +82,10 @@ New Features
 
   The new statistics are useful for debugging and profiling.
 
+* **Added Ethernet device clock frequency adjustment.**
+
+  Added new function ``rte_eth_timesync_adjust_freq`` to adjust the clock
+  frequency for Ethernet devices.
 
 Removed Items
 -------------
