@@ -38,7 +38,7 @@ extern "C" {
 /**
  * IPv4 Header
  */
-struct rte_ipv4_hdr {
+struct __rte_aligned(2) rte_ipv4_hdr {
 	__extension__
 	union {
 		uint8_t version_ihl;    /**< version and header length */
@@ -523,7 +523,7 @@ rte_ipv4_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
 /**
  * IPv6 Header
  */
-struct rte_ipv6_hdr {
+struct __rte_aligned(2) rte_ipv6_hdr {
 	rte_be32_t vtc_flow;	/**< IP version, traffic class & flow label. */
 	rte_be16_t payload_len;	/**< IP payload size, including ext. headers */
 	uint8_t  proto;		/**< Protocol, next header. */
@@ -538,7 +538,7 @@ struct rte_ipv6_hdr {
 /**
  * IPv6 Routing Extension Header
  */
-struct rte_ipv6_routing_ext {
+struct __rte_aligned(2) rte_ipv6_routing_ext {
 	uint8_t next_hdr;			/**< Protocol, next header. */
 	uint8_t hdr_len;			/**< Header length. */
 	uint8_t type;				/**< Extension header type. */
@@ -783,7 +783,7 @@ rte_ipv6_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
 #define RTE_IPV6_SET_FRAG_DATA(fo, mf)	\
 	(((fo) & RTE_IPV6_EHDR_FO_MASK) | ((mf) & RTE_IPV6_EHDR_MF_MASK))
 
-struct rte_ipv6_fragment_ext {
+struct __rte_aligned(2) rte_ipv6_fragment_ext {
 	uint8_t next_header;	/**< Next header type */
 	uint8_t reserved;	/**< Reserved */
 	rte_be16_t frag_data;	/**< All fragmentation data */

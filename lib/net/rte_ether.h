@@ -301,7 +301,7 @@ struct __rte_aligned(2) rte_ether_hdr {
  * Contains the 16-bit VLAN Tag Control Identifier and the Ethernet type
  * of the encapsulated frame.
  */
-struct rte_vlan_hdr {
+struct __rte_aligned(2) rte_vlan_hdr {
 	rte_be16_t vlan_tci;  /**< Priority (3) + CFI (1) + Identifier Code (12) */
 	rte_be16_t eth_proto; /**< Ethernet type of encapsulated frame. */
 } __rte_packed;
