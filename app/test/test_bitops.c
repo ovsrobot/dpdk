@@ -159,6 +159,7 @@ test_bit_atomic_parallel_assign ## size(void) \
 		return TEST_SKIPPED; \
 	} \
 	worker_lcore_id = rte_get_next_lcore(-1, 1, 0); \
+	TEST_ASSERT(worker_lcore_id < RTE_MAX_LCORE, "Failed to find a worker lcore"); \
 	lmain.bit = rte_rand_max(size); \
 	do { \
 		lworker.bit = rte_rand_max(size); \
@@ -218,6 +219,7 @@ test_bit_atomic_parallel_test_and_modify ## size(void) \
 		return TEST_SKIPPED; \
 	} \
 	worker_lcore_id = rte_get_next_lcore(-1, 1, 0); \
+	TEST_ASSERT(worker_lcore_id < RTE_MAX_LCORE, "Failed to find a worker lcore"); \
 	int rc = rte_eal_remote_launch(run_parallel_test_and_modify ## size, &lworker, \
 		worker_lcore_id); \
 	TEST_ASSERT(rc == 0, "Worker thread launch failed"); \
@@ -267,6 +269,7 @@ test_bit_atomic_parallel_flip ## size(void) \
 		return TEST_SKIPPED; \
 	} \
 	worker_lcore_id = rte_get_next_lcore(-1, 1, 0); \
+	TEST_ASSERT(worker_lcore_id < RTE_MAX_LCORE, "Failed to find a worker lcore"); \
 	int rc = rte_eal_remote_launch(run_parallel_flip ## size, &lworker, worker_lcore_id); \
 	TEST_ASSERT(rc == 0, "Worker thread launch failed"); \
 	run_parallel_flip ## size(&lmain); \
