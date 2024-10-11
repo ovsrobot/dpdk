@@ -24,6 +24,10 @@ DPDK Release 24.11
 New Features
 ------------
 
+* **Added new algorithms to cryptodev.**
+
+  * Added symmetric cipher algorithm ShangMi 4 (SM4) in XTS modes.
+
 .. This section should contain new features added in this release.
    Sample format:
 
