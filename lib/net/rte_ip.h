@@ -15,6 +15,8 @@
  * IP-related defines
  */
 
+#include <assert.h>
+#include <stdalign.h>
 #include <stdint.h>
 
 #ifdef RTE_EXEC_ENV_WINDOWS
@@ -38,7 +40,7 @@ extern "C" {
 /**
  * IPv4 Header
  */
-struct rte_ipv4_hdr {
+struct __rte_aligned(2) rte_ipv4_hdr {
 	__extension__
 	union {
 		uint8_t version_ihl;    /**< version and header length */
@@ -62,6 +64,11 @@ struct rte_ipv4_hdr {
 	rte_be32_t src_addr;		/**< source address */
 	rte_be32_t dst_addr;		/**< destination address */
 } __rte_packed;
+
+static_assert(sizeof(struct rte_ipv4_hdr) == 20,
+		"sizeof(struct rte_ipv4_hdr) == 20");
+static_assert(alignof(struct rte_ipv4_hdr) == 2,
+		"alignof(struct rte_ipv4_hdr) == 2");
 
 /** Create IPv4 address */
 #define RTE_IPV4(a, b, c, d) ((uint32_t)(((a) & 0xff) << 24) | \
@@ -523,7 +530,7 @@ rte_ipv4_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
 /**
  * IPv6 Header
  */
-struct rte_ipv6_hdr {
+struct __rte_aligned(2) rte_ipv6_hdr {
 	rte_be32_t vtc_flow;	/**< IP version, traffic class & flow label. */
 	rte_be16_t payload_len;	/**< IP payload size, including ext. headers */
 	uint8_t  proto;		/**< Protocol, next header. */
@@ -532,13 +539,18 @@ struct rte_ipv6_hdr {
 	uint8_t  dst_addr[16];	/**< IP address of destination host(s). */
 } __rte_packed;
 
+static_assert(sizeof(struct rte_ipv6_hdr) == 40,
+		"sizeof(struct rte_ipv6_hdr) == 40");
+static_assert(alignof(struct rte_ipv6_hdr) == 2,
+		"alignof(struct rte_ipv6_hdr) == 2");
+
 /* IPv6 routing extension type definition. */
 #define RTE_IPV6_SRCRT_TYPE_4 4
 
 /**
  * IPv6 Routing Extension Header
  */
-struct rte_ipv6_routing_ext {
+struct __rte_aligned(2) rte_ipv6_routing_ext {
 	uint8_t next_hdr;			/**< Protocol, next header. */
 	uint8_t hdr_len;			/**< Header length. */
 	uint8_t type;				/**< Extension header type. */
@@ -554,6 +566,11 @@ struct rte_ipv6_routing_ext {
 	};
 	/* Next are 128-bit IPv6 address fields to describe segments. */
 } __rte_packed;
+
+static_assert(sizeof(struct rte_ipv6_routing_ext) == 8,
+		"sizeof(struct rte_ipv6_routing_ext) == 8");
+static_assert(alignof(struct rte_ipv6_routing_ext) == 2,
+		"alignof(struct rte_ipv6_routing_ext) == 2");
 
 /* IPv6 vtc_flow: IPv / TC / flow_label */
 #define RTE_IPV6_HDR_FL_SHIFT 0
@@ -783,12 +800,17 @@ rte_ipv6_udptcp_cksum_mbuf_verify(const struct rte_mbuf *m,
 #define RTE_IPV6_SET_FRAG_DATA(fo, mf)	\
 	(((fo) & RTE_IPV6_EHDR_FO_MASK) | ((mf) & RTE_IPV6_EHDR_MF_MASK))
 
-struct rte_ipv6_fragment_ext {
+struct __rte_aligned(2) rte_ipv6_fragment_ext {
 	uint8_t next_header;	/**< Next header type */
 	uint8_t reserved;	/**< Reserved */
 	rte_be16_t frag_data;	/**< All fragmentation data */
 	rte_be32_t id;		/**< Packet ID */
 } __rte_packed;
+
+static_assert(sizeof(struct rte_ipv6_fragment_ext) == 8,
+		"sizeof(struct rte_ipv6_fragment_ext) == 8");
+static_assert(alignof(struct rte_ipv6_fragment_ext) == 2,
+		"alignof(struct rte_ipv6_fragment_ext) == 2");
 
 /* IPv6 fragment extension header size */
 #define RTE_IPV6_FRAG_HDR_SIZE	sizeof(struct rte_ipv6_fragment_ext)

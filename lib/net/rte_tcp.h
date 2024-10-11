@@ -14,6 +14,8 @@
  * TCP-related defines
  */
 
+#include <assert.h>
+#include <stdalign.h>
 #include <stdint.h>
 
 #include <rte_byteorder.h>
@@ -21,7 +23,7 @@
 /**
  * TCP Header
  */
-struct rte_tcp_hdr {
+struct __rte_aligned(2) rte_tcp_hdr {
 	rte_be16_t src_port; /**< TCP source port. */
 	rte_be16_t dst_port; /**< TCP destination port. */
 	rte_be32_t sent_seq; /**< TX data sequence number. */
@@ -32,6 +34,11 @@ struct rte_tcp_hdr {
 	rte_be16_t cksum;    /**< TCP checksum. */
 	rte_be16_t tcp_urp;  /**< TCP urgent pointer, if any. */
 } __rte_packed;
+
+static_assert(sizeof(struct rte_tcp_hdr) == 20,
+		"sizeof(struct rte_tcp_hdr) == 20");
+static_assert(alignof(struct rte_tcp_hdr) == 2,
+		"alignof(struct rte_tcp_hdr) == 2");
 
 /**
  * TCP Flags

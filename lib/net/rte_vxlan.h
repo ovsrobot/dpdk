@@ -11,6 +11,8 @@
  * VXLAN-related definitions
  */
 
+#include <assert.h>
+#include <stdalign.h>
 #include <stdint.h>
 
 #include <rte_byteorder.h>
@@ -27,7 +29,7 @@
  * Reserved fields (24 bits and 8 bits)
  */
 __extension__ /* no named member in struct */
-struct rte_vxlan_hdr {
+struct __rte_aligned(2) rte_vxlan_hdr {
 	union {
 		rte_be32_t vx_flags; /**< flags (8 bits) + extensions (24 bits). */
 		struct {
@@ -96,6 +98,11 @@ struct rte_vxlan_hdr {
 		} __rte_packed;
 	}; /* end of 2nd 32-bit word */
 } __rte_packed;
+
+static_assert(sizeof(struct rte_vxlan_hdr) == 8,
+		"sizeof(struct rte_vxlan_hdr) == 8");
+static_assert(alignof(struct rte_vxlan_hdr) == 2,
+		"alignof(struct rte_vxlan_hdr) == 2");
 
 /** VXLAN tunnel header length. */
 #define RTE_ETHER_VXLAN_HLEN \

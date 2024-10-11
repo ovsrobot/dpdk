@@ -14,6 +14,8 @@
  * UDP-related defines
  */
 
+#include <assert.h>
+#include <stdalign.h>
 #include <stdint.h>
 
 #include <rte_byteorder.h>
@@ -21,11 +23,16 @@
 /**
  * UDP Header
  */
-struct rte_udp_hdr {
+struct /* native alignment: __rte_aligned(2) */ rte_udp_hdr {
 	rte_be16_t src_port;    /**< UDP source port. */
 	rte_be16_t dst_port;    /**< UDP destination port. */
 	rte_be16_t dgram_len;   /**< UDP datagram length */
 	rte_be16_t dgram_cksum; /**< UDP datagram checksum */
-} __rte_packed;
+};
+
+static_assert(sizeof(struct rte_udp_hdr) == 8,
+		"sizeof(struct rte_udp_hdr) == 8");
+static_assert(alignof(struct rte_udp_hdr) == 2,
+		"alignof(struct rte_udp_hdr) == 2");
 
 #endif /* RTE_UDP_H_ */

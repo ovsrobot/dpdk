@@ -34,7 +34,7 @@
  * More-bits (optional) variable length options.
  */
 __extension__
-struct rte_geneve_hdr {
+struct __rte_aligned(2) rte_geneve_hdr {
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
 	uint8_t ver:2;		/**< Version. */
 	uint8_t opt_len:6;	/**< Options length. */
