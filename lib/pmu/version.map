@@ -6,6 +6,7 @@ EXPERIMENTAL {
 	per_lcore__event_group;
 	rte_pmu;
 	rte_pmu_add_event;
+	rte_pmu_add_events_by_pattern;
 	rte_pmu_fini;
 	rte_pmu_init;
 	rte_pmu_read;

@@ -11,6 +11,7 @@
  * API for EAL trace support
  */
 
+#include <rte_pmu.h>
 #include <rte_trace_point.h>
 
 #ifdef __cplusplus
@@ -126,6 +127,14 @@ RTE_TRACE_POINT(
 )
 
 #define RTE_EAL_TRACE_GENERIC_FUNC rte_eal_trace_generic_func(__func__)
+
+RTE_TRACE_POINT_FP(
+	rte_eal_trace_pmu_read,
+	RTE_TRACE_POINT_ARGS(unsigned int index),
+	uint64_t val;
+	val = rte_pmu_read(index);
+	rte_trace_point_emit_u64(val);
+)
 
 #ifdef __cplusplus
 }
