@@ -958,3 +958,14 @@ rte_eth_switch_domain_free(uint16_t domain_id)
 
 	return 0;
 }
+
+void
+rte_eth_get_restore_flags(struct rte_eth_dev *dev,
+			  enum rte_eth_dev_operation op,
+			  uint32_t *flags)
+{
+	if (dev->dev_ops->get_restore_flags != NULL)
+		dev->dev_ops->get_restore_flags(dev, op, flags);
+	else
+		*flags = RTE_ETH_RESTORE_ALL;
+}
