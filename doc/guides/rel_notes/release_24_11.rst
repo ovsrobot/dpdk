@@ -150,6 +150,11 @@ New Features
 
   * Added independent enqueue feature.
 
+* **Added strict priority capability for dmadev.**
+
+  Added new capability flag ``RTE_DMA_CAPA_PRI_POLICY_SP`` to check if the
+  DMA device supports assigning fixed priority, allowing for better control
+  over resource allocation and scheduling.
 
 Removed Items
 -------------
@@ -221,6 +226,9 @@ ABI Changes
 
 * eventdev: Added ``preschedule_type`` field to ``rte_event_dev_config`` structure.
 
+* dmadev: Added ``nb_priorities`` field to ``rte_dma_info`` structure and
+  ``priority`` field to ``rte_dma_conf`` structure to get device supported
+  priority levels and configure required priority from the application.
 
 Known Issues
 ------------
