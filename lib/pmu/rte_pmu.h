@@ -31,6 +31,10 @@ extern "C" {
 #include <rte_branch_prediction.h>
 #include <rte_spinlock.h>
 
+#if defined(RTE_ARCH_ARM64)
+#include "rte_pmu_pmc_arm64.h"
+#endif
+
 /** Maximum number of events in a group */
 #define RTE_MAX_NUM_GROUP_EVENTS 8
 
