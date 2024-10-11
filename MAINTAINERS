@@ -283,6 +283,12 @@ F: lib/eal/include/rte_random.h
 F: lib/eal/common/rte_random.c
 F: app/test/test_rand_perf.c
 
+Lcore Variables
+M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
+F: lib/eal/include/rte_lcore_var.h
+F: lib/eal/common/eal_common_lcore_var.c
+F: app/test/test_lcore_var.c
+
 ARM v7
 M: Wathsala Vithanage <wathsala.vithanage@arm.com>
 F: config/arm/
