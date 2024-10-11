@@ -24,6 +24,14 @@ DPDK Release 24.11
 New Features
 ------------
 
+* **Added a compressdev driver for the ZTE Storage Data Accelerator device.**
+  Added the new ``zsda`` compressdev driver for the ZTE ZSDA device.
+  See the :doc:`../compressdevs/zsda` compressdev guide for more details on this new driver.
+
+* **Added a cryptodev driver for the ZTE Storage Data Accelerator device.**
+  Added the new ``zsda`` cryptodev driver for the ZTE ZSDA device.
+  See the :doc:`../cryptodevs/zsda` cryptodev guide for more details on this new driver.
+
 .. This section should contain new features added in this release.
    Sample format:
 
