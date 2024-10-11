@@ -150,6 +150,10 @@ New Features
 
   * Added independent enqueue feature.
 
+* **Updated bonding driver.**
+
+  * Added new function ``rte_eth_bond_8023ad_dedicated_queue_size_set``
+    to set hardware dedicated Rx/Tx queue size in mode-4.
 
 Removed Items
 -------------

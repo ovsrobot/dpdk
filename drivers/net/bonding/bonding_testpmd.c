@@ -156,6 +156,85 @@ static cmdline_parse_inst_t cmd_set_lacp_dedicated_queues = {
 	}
 };
 
+/* *** SET BONDING SLOW_QUEUE HW QUEUE SIZE *** */
+struct cmd_set_bonding_hw_dedicated_queue_size_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t bonding;
+	cmdline_fixed_string_t lacp;
+	cmdline_fixed_string_t dedicated_queues;
+	portid_t port_id;
+	cmdline_fixed_string_t queue_type;
+	cmdline_fixed_string_t queue_size;
+	uint16_t size;
+};
+
+static void cmd_set_bonding_hw_dedicated_queue_size_parsed(void *parsed_result,
+	__rte_unused struct cmdline *cl, __rte_unused void *data)
+{
+	int ret;
+	struct rte_port *port;
+	struct cmd_set_bonding_hw_dedicated_queue_size_result *res = parsed_result;
+
+	port = &ports[res->port_id];
+
+	/** Check if the port is not started **/
+	if (port->port_status != RTE_PORT_STOPPED) {
+		TESTPMD_LOG(ERR, "Please stop port %u first\n", res->port_id);
+		return;
+	}
+
+	ret = rte_eth_bond_8023ad_dedicated_queue_size_set(res->port_id,
+			res->size, res->queue_type);
+	if (ret != 0)
+		TESTPMD_LOG(ERR, "Failed to set port %u hardware dedicated %s "
+				"ring size %u\n",
+				res->port_id, res->queue_type, res->size);
+}
+
+static cmdline_parse_token_string_t cmd_setbonding_hw_dedicated_queue_size_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		set, "set");
+static cmdline_parse_token_string_t cmd_setbonding_hw_dedicated_queue_size_bonding =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		bonding, "bonding");
+static cmdline_parse_token_string_t cmd_setbonding_hw_dedicated_queue_size_lacp =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		lacp, "lacp");
+static cmdline_parse_token_string_t cmd_setbonding_hw_dedicated_queue_size_dedicated =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		dedicated_queues, "dedicated_queues");
+static cmdline_parse_token_num_t cmd_setbonding_hw_dedicated_queue_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		port_id, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_setbonding_hw_dedicated_queue_queue_type =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		queue_type, "rxq#txq");
+static cmdline_parse_token_string_t cmd_setbonding_hw_dedicated_queue_queue_size =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		queue_size, "queue_size");
+static cmdline_parse_token_num_t cmd_setbonding_hw_dedicated_queue_size_size =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_bonding_hw_dedicated_queue_size_result,
+		size, RTE_UINT16);
+
+static cmdline_parse_inst_t cmd_set_lacp_dedicated_hw_queue_size = {
+	.f = cmd_set_bonding_hw_dedicated_queue_size_parsed,
+	.help_str = "set bonding lacp dedicated_queues <port_id> (rxq|txq) "
+		"queue_size <size>: "
+		"Set hardware dedicated queue size for LACP control traffic",
+	.data = NULL,
+	.tokens = {
+		(void *)&cmd_setbonding_hw_dedicated_queue_size_set,
+		(void *)&cmd_setbonding_hw_dedicated_queue_size_bonding,
+		(void *)&cmd_setbonding_hw_dedicated_queue_size_lacp,
+		(void *)&cmd_setbonding_hw_dedicated_queue_size_dedicated,
+		(void *)&cmd_setbonding_hw_dedicated_queue_port_id,
+		(void *)&cmd_setbonding_hw_dedicated_queue_queue_type,
+		(void *)&cmd_setbonding_hw_dedicated_queue_queue_size,
+		(void *)&cmd_setbonding_hw_dedicated_queue_size_size,
+		NULL
+	}
+};
+
 /* *** SET BALANCE XMIT POLICY *** */
 struct cmd_set_bonding_balance_xmit_policy_result {
 	cmdline_fixed_string_t set;
@@ -746,6 +825,11 @@ static struct testpmd_driver_commands bonding_cmds = {
 		&cmd_set_bonding_agg_mode_policy,
 		"set bonding mode IEEE802.3AD aggregator policy (port_id) (agg_name)\n"
 		"	Set Aggregation mode for IEEE802.3AD (mode 4)\n",
+	},
+	{
+		&cmd_set_lacp_dedicated_hw_queue_size,
+		"set bonding lacp dedicated_queues <port_id> (rxq|txq) queue_size <size>\n"
+		"	Set hardware dedicated queue size for LACP control traffic.\n",
 	},
 	{ NULL, NULL },
 	},

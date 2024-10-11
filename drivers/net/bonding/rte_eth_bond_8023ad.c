@@ -1254,6 +1254,8 @@ bond_mode_8023ad_conf_assign(struct mode8023ad_private *mode4,
 	mode4->dedicated_queues.enabled = 0;
 	mode4->dedicated_queues.rx_qid = UINT16_MAX;
 	mode4->dedicated_queues.tx_qid = UINT16_MAX;
+	mode4->dedicated_queues.rx_queue_size = SLOW_RX_QUEUE_HW_DEFAULT_SIZE;
+	mode4->dedicated_queues.tx_queue_size = SLOW_TX_QUEUE_HW_DEFAULT_SIZE;
 }
 
 void
@@ -1752,4 +1754,43 @@ rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 	bond_ethdev_mode_set(dev, internals->mode);
 
 	return retval;
+}
+
+int
+rte_eth_bond_8023ad_dedicated_queue_size_set(uint16_t port,
+		uint16_t queue_size,
+		const char *queue_type)
+{
+	struct rte_eth_dev *dev;
+	struct bond_dev_private *internals;
+
+	if (valid_bonding_port_id(port) != 0) {
+		RTE_BOND_LOG(ERR, "The bonding port id is invalid");
+		return -EINVAL;
+	}
+
+	dev = &rte_eth_devices[port];
+
+	/* Device must be stopped to set up slow queue */
+	if (dev->data->dev_started != 0) {
+		RTE_BOND_LOG(ERR, "Please stop the bonding port");
+		return -EINVAL;
+	}
+
+	internals = dev->data->dev_private;
+	if (internals->mode4.dedicated_queues.enabled == 0) {
+		RTE_BOND_LOG(ERR, "Please enable dedicated queue");
+		return -EINVAL;
+	}
+
+	if (strcmp(queue_type, "rxq") == 0) {
+		internals->mode4.dedicated_queues.rx_queue_size = queue_size;
+	} else if (strcmp(queue_type, "txq") == 0) {
+		internals->mode4.dedicated_queues.tx_queue_size = queue_size;
+	} else {
+		RTE_BOND_LOG(ERR, "Unknown queue type %s", queue_type);
+		return -EINVAL;
+	}
+
+	return 0;
 }

@@ -30,6 +30,7 @@ DPDK_25 {
 EXPERIMENTAL {
 	# added in 23.11
 	global:
+	rte_eth_bond_8023ad_dedicated_queue_size_set;
 	rte_eth_bond_8023ad_member_info;
 	rte_eth_bond_active_members_get;
 	rte_eth_bond_member_add;

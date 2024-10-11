@@ -35,6 +35,9 @@ extern "C" {
 #define MARKER_TLV_TYPE_INFO                0x01
 #define MARKER_TLV_TYPE_RESP                0x02
 
+#define SLOW_TX_QUEUE_HW_DEFAULT_SIZE       512
+#define SLOW_RX_QUEUE_HW_DEFAULT_SIZE       512
+
 typedef void (*rte_eth_bond_8023ad_ext_slowrx_fn)(uint16_t member_id,
 						  struct rte_mbuf *lacp_pkt);
 
@@ -309,6 +312,26 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port_id);
 int
 rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port_id);
 
+
+/**
+ * Set hardware slow queue ring size
+ *
+ * This function set bonding port hardware slow queue ring size.
+ * Bonding port must be stopped to change this configuration.
+ *
+ * @param port_id      Bonding device id
+ * @param queue_size   Slow queue ring size
+ * @param queue_type   Slow queue type, "rxq" or "txq"
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ *
+ */
+__rte_experimental
+int
+rte_eth_bond_8023ad_dedicated_queue_size_set(uint16_t port,
+		uint16_t queue_size,
+		const char *queue_type);
 /*
  * Get aggregator mode for 8023ad
  * @param port_id Bonding device id

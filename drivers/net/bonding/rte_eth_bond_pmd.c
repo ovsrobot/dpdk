@@ -1688,7 +1688,8 @@ member_configure_slow_queue(struct rte_eth_dev *bonding_eth_dev,
 		/* Configure slow Rx queue */
 
 		errval = rte_eth_rx_queue_setup(member_eth_dev->data->port_id,
-				internals->mode4.dedicated_queues.rx_qid, 128,
+				internals->mode4.dedicated_queues.rx_qid,
+				internals->mode4.dedicated_queues.rx_queue_size,
 				rte_eth_dev_socket_id(member_eth_dev->data->port_id),
 				NULL, port->slow_pool);
 		if (errval != 0) {
@@ -1701,7 +1702,8 @@ member_configure_slow_queue(struct rte_eth_dev *bonding_eth_dev,
 		}
 
 		errval = rte_eth_tx_queue_setup(member_eth_dev->data->port_id,
-				internals->mode4.dedicated_queues.tx_qid, 512,
+				internals->mode4.dedicated_queues.tx_qid,
+				internals->mode4.dedicated_queues.tx_queue_size,
 				rte_eth_dev_socket_id(member_eth_dev->data->port_id),
 				NULL);
 		if (errval != 0) {

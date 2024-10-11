@@ -637,3 +637,11 @@ in balance mode with a transmission policy of layer 2+3::
         Members (3): [1 3 4]
         Active Members (3): [1 3 4]
         Primary: [3]
+
+set bonding lacp dedicated_queue size
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Set hardware dedicated queue size for LACP control traffic in
+mode 4 (link-aggregation-802.3ad)::
+
+   testpmd> set bonding lacp dedicated_queues <port_id> (rxq|txq) queue_size <size>
