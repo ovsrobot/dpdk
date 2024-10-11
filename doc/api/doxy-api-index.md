@@ -237,7 +237,8 @@ The public API headers are grouped by topics:
   [log](@ref rte_log.h),
   [errno](@ref rte_errno.h),
   [trace](@ref rte_trace.h),
-  [trace_point](@ref rte_trace_point.h)
+  [trace_point](@ref rte_trace_point.h),
+  [pmu](@ref rte_pmu.h)
 
 - **misc**:
   [EAL config](@ref rte_eal.h),
