@@ -44,7 +44,7 @@ add_parameter_allow(char **argv, int max_capacity)
 	int count = 0;
 
 	RTE_EAL_DEVARGS_FOREACH(NULL, devargs) {
-		if (strlen(devargs->name) == 0)
+		if (strlen(devargs->name) == 0 || devargs->type != RTE_DEVTYPE_ALLOWED)
 			continue;
 
 		if (devargs->data == NULL || strlen(devargs->data) == 0) {
@@ -74,7 +74,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 {
 	int num = 0;
 	char **argv_cpy;
-	int allow_num;
+	int allow_num, block_num;
 	int argv_num;
 	int i, status;
 	char path[32];
@@ -89,7 +89,18 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	if (pid < 0)
 		return -1;
 	else if (pid == 0) {
-		allow_num = rte_devargs_type_count(RTE_DEVTYPE_ALLOWED);
+		allow_num = 0;
+		block_num = 0;
+
+		/* If block (-b) is present, allow (-a) is not added. */
+		for (i = 0; i < numargs; i++) {
+			if (strcmp(argv[i], "-b") == 0 ||
+			    strcmp(argv[i], "--block") == 0)
+				block_num++;
+		}
+		if (!block_num)
+			allow_num = rte_devargs_type_count(RTE_DEVTYPE_ALLOWED);
+
 		argv_num = numargs + allow_num + 1;
 		argv_cpy = calloc(argv_num, sizeof(char *));
 		if (!argv_cpy)
