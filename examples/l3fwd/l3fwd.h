@@ -23,7 +23,8 @@
 #define RX_DESC_DEFAULT 1024
 #define TX_DESC_DEFAULT 1024
 
-#define MAX_PKT_BURST     32
+#define DEFAULT_PKT_BURST 32
+#define MAX_PKT_BURST 512
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
 #define MEMPOOL_CACHE_SIZE 256
@@ -114,6 +115,8 @@ extern struct parm_cfg parm_config;
 extern struct acl_algorithms acl_alg[];
 
 extern uint32_t max_pkt_len;
+
+extern uint32_t nb_pkt_per_burst;
 
 /* Send burst of packets on an output interface */
 static inline int
