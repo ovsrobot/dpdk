@@ -14,7 +14,8 @@ sources = files(
 
 deps = ['bus_vdev', 'gso', 'hash']
 
-max_queues = '-DTAP_MAX_QUEUES=16'
+# TAP device is limited by RTE_MP_MAX_FD_NUM
+max_queues = '-DTAP_MAX_QUEUES=253'
 cflags += max_queues
 
 require_iova_in_mbuf = false
