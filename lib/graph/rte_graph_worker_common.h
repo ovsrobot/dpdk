@@ -112,6 +112,7 @@ struct __rte_cache_aligned rte_node {
 			uint64_t total_sched_fail; /**< Number of scheduled failure. */
 		} dispatch;
 	};
+	rte_graph_off_t err_off; /**< Offset to error counters. */
 	/* Fast path area  */
 	__extension__ struct __rte_cache_aligned {
 #define RTE_NODE_CTX_SZ 16
@@ -582,6 +583,28 @@ static __rte_always_inline
 uint8_t rte_graph_worker_model_no_check_get(struct rte_graph *graph)
 {
 	return graph->model;
+}
+
+/**
+ * Increment Node error count.
+ *
+ * Increment the error count of an error for a given node.
+ *
+ * @param node
+ *   Pointer to the node.
+ * @param err_id
+ *   Error ID.
+ * @param value
+ *   Value to increment.
+ */
+__rte_experimental
+static inline void
+rte_node_error_increment(struct rte_node *node, uint16_t err_id, uint64_t value)
+{
+	if (rte_graph_has_stats_feature()) {
+		uint64_t *errors = (uint64_t *)RTE_PTR_ADD(node, node->err_off);
+		errors[err_id] += value;
+	}
 }
 
 #ifdef __cplusplus
