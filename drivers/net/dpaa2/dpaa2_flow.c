@@ -98,13 +98,6 @@ enum rte_flow_action_type dpaa2_supported_action_type[] = {
 	RTE_FLOW_ACTION_TYPE_RSS
 };
 
-static const
-enum rte_flow_action_type dpaa2_supported_fs_action_type[] = {
-	RTE_FLOW_ACTION_TYPE_QUEUE,
-	RTE_FLOW_ACTION_TYPE_PORT_ID,
-	RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT,
-};
-
 #ifndef __cplusplus
 static const struct rte_flow_item_eth dpaa2_flow_item_eth_mask = {
 	.hdr.dst_addr.addr_bytes = "\xff\xff\xff\xff\xff\xff",
@@ -4081,21 +4074,6 @@ dpaa2_configure_flow_raw(struct dpaa2_dev_flow *flow,
 	(*device_configured) |= local_cfg;
 
 	return 0;
-}
-
-static inline int
-dpaa2_fs_action_supported(enum rte_flow_action_type action)
-{
-	int i;
-	int action_num = sizeof(dpaa2_supported_fs_action_type) /
-		sizeof(enum rte_flow_action_type);
-
-	for (i = 0; i < action_num; i++) {
-		if (action == dpaa2_supported_fs_action_type[i])
-			return true;
-	}
-
-	return false;
 }
 
 static inline int
