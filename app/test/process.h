@@ -36,6 +36,7 @@ extern uint16_t flag_for_send_pkts;
 #endif
 
 #define PREFIX_ALLOW "--allow="
+#define PREFIX_BLOCK "--block="
 
 static int
 add_parameter_allow(char **argv, int max_capacity)
@@ -44,7 +45,7 @@ add_parameter_allow(char **argv, int max_capacity)
 	int count = 0;
 
 	RTE_EAL_DEVARGS_FOREACH(NULL, devargs) {
-		if (strlen(devargs->name) == 0)
+		if (strlen(devargs->name) == 0 || devargs->type != RTE_DEVTYPE_ALLOWED)
 			continue;
 
 		if (devargs->data == NULL || strlen(devargs->data) == 0) {
@@ -52,6 +53,32 @@ add_parameter_allow(char **argv, int max_capacity)
 				break;
 		} else {
 			if (asprintf(&argv[count], PREFIX_ALLOW"%s,%s",
+					 devargs->name, devargs->data) < 0)
+				break;
+		}
+
+		if (++count == max_capacity)
+			break;
+	}
+
+	return count;
+}
+
+static int
+add_parameter_block(char **argv, int max_capacity)
+{
+	struct rte_devargs *devargs;
+	int count = 0;
+
+	RTE_EAL_DEVARGS_FOREACH(NULL, devargs) {
+		if (strlen(devargs->name) == 0 || devargs->type != RTE_DEVTYPE_BLOCKED)
+			continue;
+
+		if (devargs->data == NULL || strlen(devargs->data) == 0) {
+			if (asprintf(&argv[count], PREFIX_BLOCK"%s", devargs->name) < 0)
+				break;
+		} else {
+			if (asprintf(&argv[count], PREFIX_BLOCK"%s,%s",
 					 devargs->name, devargs->data) < 0)
 				break;
 		}
@@ -74,7 +101,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 {
 	int num = 0;
 	char **argv_cpy;
-	int allow_num;
+	int allow_num, block_num;
 	int argv_num;
 	int i, status;
 	char path[32];
@@ -89,8 +116,27 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	if (pid < 0)
 		return -1;
 	else if (pid == 0) {
-		allow_num = rte_devargs_type_count(RTE_DEVTYPE_ALLOWED);
-		argv_num = numargs + allow_num + 1;
+		allow_num = 0;
+		block_num = 0;
+
+		for (i = 0; i < numargs; i++) {
+			if (strcmp(argv[i], "-b") == 0 ||
+			    strcmp(argv[i], "--block") == 0)
+				block_num++;
+			if (strcmp(argv[i], "-a") == 0 ||
+			    strcmp(argv[i], "--allow") == 0)
+				allow_num++;
+		}
+		/* If block (-b) and allow (-a) are present, they will not be added. */
+		if (!block_num && !allow_num) {
+			allow_num = rte_devargs_type_count(RTE_DEVTYPE_ALLOWED);
+			block_num = rte_devargs_type_count(RTE_DEVTYPE_BLOCKED);
+		} else {
+			allow_num = 0;
+			block_num = 0;
+		}
+
+		argv_num = numargs + allow_num + block_num + 1;
 		argv_cpy = calloc(argv_num, sizeof(char *));
 		if (!argv_cpy)
 			rte_panic("Memory allocation failed\n");
@@ -101,8 +147,12 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 			if (argv_cpy[i] == NULL)
 				rte_panic("Error dup args\n");
 		}
+
+		/* EAL limits block (-b) and allow (-a) to not exist at the same time. */
 		if (allow_num > 0)
 			num = add_parameter_allow(&argv_cpy[i], allow_num);
+		else if (block_num > 0)
+			num = add_parameter_block(&argv_cpy[i], block_num);
 		num += numargs;
 
 #ifdef RTE_EXEC_ENV_LINUX
