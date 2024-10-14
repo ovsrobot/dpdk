@@ -28,6 +28,10 @@ struct rte_rib;
 /** Maximum depth value possible for IPv4 FIB. */
 #define RTE_FIB_MAXDEPTH	32
 
+/** If set fib lookup is expecting ipv4 in network byte order */
+#define RTE_FIB_F_NETWORK_ORDER	1
+#define RTE_FIB_ALLOWED_FLAGS	(RTE_FIB_F_NETWORK_ORDER)
+
 /** Type of FIB struct */
 enum rte_fib_type {
 	RTE_FIB_DUMMY,		/**< RIB tree based FIB */
@@ -87,6 +91,7 @@ struct rte_fib_conf {
 			uint32_t	num_tbl8;
 		} dir24_8;
 	};
+	unsigned int flags;	/**< Optional feature flags from RTE_FIB_F_* **/
 };
 
 /**
