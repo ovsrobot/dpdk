@@ -609,6 +609,22 @@ int dpdmux_dump_table(struct fsl_mc_io *mc_io,
 				 DPDMUX_ERROR_EOFHE | \
 				 DPDMUX_ERROR_KSE)
 
+#define DPDMUX_ALL_ERRORS	(DPDMUX__ERROR_L4CE | \
+				 DPDMUX__ERROR_L4CV | \
+				 DPDMUX__ERROR_L3CE | \
+				 DPDMUX__ERROR_L3CV | \
+				 DPDMUX_ERROR_BLE | \
+				 DPDMUX_ERROR_PHE | \
+				 DPDMUX_ERROR_ISP | \
+				 DPDMUX_ERROR_PTE | \
+				 DPDMUX_ERROR_FPE | \
+				 DPDMUX_ERROR_FLE | \
+				 DPDMUX_ERROR_PIEE | \
+				 DPDMUX_ERROR_TIDE | \
+				 DPDMUX_ERROR_MNLE | \
+				 DPDMUX_ERROR_EOFHE | \
+				 DPDMUX_ERROR_KSE)
+
 enum dpdmux_error_action {
 	DPDMUX_ERROR_ACTION_DISCARD = 0,
 	DPDMUX_ERROR_ACTION_CONTINUE = 1
