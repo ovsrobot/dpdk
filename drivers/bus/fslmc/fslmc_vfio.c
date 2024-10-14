@@ -347,8 +347,10 @@ add_vfio_group:
 	} else {
 		ret = fslmc_vfio_add_group(vfio_group_fd, iommu_group_num,
 			group_name);
-		if (ret)
+		if (ret) {
+			close(vfio_group_fd);
 			return ret;
+		}
 	}
 
 	return vfio_group_fd;
@@ -1480,6 +1482,8 @@ fslmc_vfio_setup_group(void)
 	if (vfio_group_fd <= 0) {
 		vfio_group_fd = fslmc_vfio_open_group_fd(group_name);
 		if (vfio_group_fd <= 0) {
+			if (!vfio_group_fd)
+				close(vfio_group_fd);
 			DPAA2_BUS_ERR("Failed to create MC VFIO group");
 			return -rte_errno;
 		}
