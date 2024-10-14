@@ -547,3 +547,291 @@ on success packet is enqueued to ``udp4_input`` node.
 
 Hash lookup is performed in ``udp4_input`` node with registered destination port
 and destination port in UDP packet , on success packet is handed to ``udp_user_node``.
+
+Feature Arc
+-----------
+`Feature arc` represents an ordered list of `protocols/features` at a given
+networking layer. It is a high level abstraction to connect various `feature`
+nodes in `rte_graph` instance and allows seamless packets steering based on the
+sequence of enabled features at runtime on each interface.
+
+`Features` (or feature nodes) are nodes which handle partial or complete
+protocol processing in a given direction. For instance, `ipv4-rewrite` and
+`IPv4 IPsec encryption` are outbound features while `ipv4-lookup` and `IPv4
+IPsec decryption` are inbound features.  Further, `ipv4-rewrite` and `IPv4
+IPsec encryption` can collectively represent a `feature arc` towards egress
+direction with ordering constraints that `IPv4 IPsec encryption` must be
+performed before `ipv4-rewrite`.  Similarly, `IPv4 IPsec decryption` and
+`ipv4-lookup` can represent a `feature arc` in an ingress direction. Both of
+these `feature arc` can co-exist at an IPv4 layer in egress and ingress
+direction respectively.
+
+A `feature` can be represented by a single node or collection of multiple nodes
+performing feature processing collectively.
+
+.. figure:: img/feature_arc-1.*
+   :alt: feature-arc-1
+   :width: 350px
+   :align: center
+
+   Feature Arc overview
+
+Each `feature arc` is associated with a `Start` node from which all features in
+a feature arc are connected.  A `start` node itself is not a `feature` node but
+it is where `first enabled feature` is checked in fast path. In above figure,
+`Node-A` represents a `start node`.  There may be a `Sink` node as well which
+is child node for every feature in an arc.  'Sink` node is responsible of
+consuming those packets which are not consumed by intermediate enabled features
+between `start` and `sink` node. `Sink` node, if present, is the last enabled
+feature in a feature arc. A `feature` node statically connected to `start` node
+must also be added via feature arc API, `rte_graph_feature_add()``. Here `Node-B`
+acts as a `sink` node which is statically linked to `Node A`. `Feature` nodes
+are connected via `rte_graph_feature_add()` which takes care of connecting
+all `feature` nodes with each other and start node.
+
+.. code-block:: bash
+   :linenos:
+   :emphasize-lines: 8
+   :caption: Node-B statically linked to Node-A
+
+   static struct rte_node_register node_A_node = {
+    .process = node_A_process_func,
+            ...
+            ...
+    .name = "Node-A",
+    .next_nodes =
+       {
+          [0] = "Node-B",
+       },
+    .nb_edges = 1,
+   };
+
+When multiple features are enabled on an interface, it may be required to steer
+packets across `features` in a given order. For instance, if `Feature 1` and
+`Feature 2` both are enabled on an interface ``X``, it may be required to send
+packets to `Feature-1` before `Feature-2`. Such ordering constraints can be
+easily expressed with `feature arc`. In this case, `Feature 1` is called as
+``First Feature`` and `Feature 2` is called as ``Next Feature`` to `Feature 1`.
+
+.. figure:: img/feature_arc-2.*
+   :alt: feature-arc-2
+   :width: 600px
+   :align: center
+
+   First and Next features and their ordering
+
+In similar manner, even application specific ``custom features`` can be hooked
+to standard nodes. It is to be noted that this `custom feature` hooking to
+`feature arc` aware node does not require any code changes.
+
+It may be obvious by now that `features` enabled on one interface does not
+affect packets on other interfaces. In above example, if no feature is
+enabled on an interface ``X``, packets destined to interface ``X`` would be
+directly sent to `Node-B` from `Node-A`.
+
+.. figure:: img/feature_arc-3.*
+   :alt: feature-arc-3
+   :width: 550px
+   :align: center
+
+   Feature-2 consumed/non-consumed packet path
+
+When a `Feature-X` node receives packets via feature arc, it may decide whether
+to ``consume packet`` or send to `next enabled feature`. A node can consume
+packet by freeing it, sending it on wire or enqueuing it to hardware queue.  If a
+packet is not consumed by a `Feature-X` node, it may send to `next enabled
+feature` on an interface. In above figure, `Feature-2` nodes are represented to
+consume packets. Classic example for a node performing consume and non-consume
+operation on packets would be IPsec policy node where all packets with
+``protect`` actions are consumed while remaining packets with ``bypass``
+actions are sent to next enabled feature.
+
+In fast path feature node may require to lookup local data structures for each
+interface. For example, retrieving policy database per interface for IPsec
+processing.  ``rte_graph_feature_enable`` API allows to set application
+specific cookie per feature per interface. `Feature data` object maintains this
+cookie in fast path for each interface.
+
+`Feature arc design` allows to enable subsequent features in a control plane
+without stopping workers which are accessing feature arc's fast path APIs in
+``rte_graph_walk()`` context. However for disabling features require RCU like
+scheme for synchronization.
+
+Programming model
+~~~~~~~~~~~~~~~~~
+Feature Arc Objects
+^^^^^^^^^^^^^^^^^^^
+Control plane and fast path APIs deals with following objects:
+
+Feature arc
+***********
+``rte_graph_feature_arc_t`` is a handle to feature arc which is created via
+``rte_graph_feature_arc_create()``. It is a `uint64_t` size object which can be
+saved in feature node's context. This object can be translated to fast path
+feature arc object ``struct rte_graph_feature_arc`` which is an input
+argument to all fast path APIs. Control plane APIs majorly takes
+`rte_graph_feature_arc_t` object as an input.
+
+Feature List
+************
+Each feature arc holds two feature lists: `active` and `passive`. While worker
+cores uses `active` list, control plane APIs uses `passive` list for
+enabling/disabling a feature on any interface with in a arc. After successful
+feature enable/disable, ``rte_graph_feature_enable()``/
+``rte_graph_feature_disable()`` atomically switches passive list to active list
+and vice-versa. Most of the fast path APIs takes active list as an argument
+(``rte_graph_feature_rt_list_t``), which feature node can obtain in start of
+it's `process_func()` via ``rte_graph_feature_arc_has_any_feature()`` (in `start`
+node) or ``rte_graph_feature_arc_has_feature()`` (in next feature nodes).
+
+Each feature list holds RTE_GRAPH_MAX_FEATURES number of features and
+associated feature data for every interface index
+
+Feature
+********
+Feature is a data structure which holds `feature data` object for every
+interface.  It is represented via ``rte_graph_feature_t`` which is a `uint8_t`
+size object. Fast path internal structure ``struct rte_graph_feature`` can be
+obtained from ``rte_graph_feature_t`` via ``rte_graph_feature_get()`` API.
+
+In `start` node `rte_graph_feature_arc_first_feature_get()` can be used to get
+first enabled `rte_graph_feature_t` object for an interface. `rte_edge` from
+`start` node to first enabled feature is provided by
+``rte_graph_feature_arc_feature_set()`` API.
+
+In `feature nodes`, next enabled feature is obtained by providing current feature
+as an input to ``rte_graph_feature_arc_next_feature_get()`` API.
+
+Feature data
+************
+Feature data object is maintained per feature per interface which holds
+following information in fast path
+
+- ``rte_edge_t`` to send packet to next enabled feature
+- ``Next enabled feature`` on current interface
+- ``User_data`` per feature per interface set by application via `rte_graph_feature_enable()`
+
+Enabling Feature Arc processing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+By default, feature arc processing is disabled in `rte_graph_create()`. To
+enable feature arc processing in fast path, `rte_graph_create()` API should be
+invoked with `feature_arc_enable` flag set as `true`
+
+.. code-block:: bash
+   :linenos:
+   :emphasize-lines: 3
+   :caption: Enabling feature are processing in rte_graph_create()
+
+    struct rte_graph_param graph_conf;
+
+    graph_conf.feature_arc_enable = true;
+    struct rte_graph *graph = rte_graph_create("graph_name", &graph_conf);
+
+Further as an optimization technique, `rte_graph_walk()` would call newly added
+``feat_arc_proc()`` node callback function (if non-NULL) instead of
+``process``
+
+.. code-block:: bash
+   :linenos:
+   :emphasize-lines: 3
+   :caption: Feature arc specific node callback function
+
+   static struct rte_node_register ip4_rewrite_node = {
+        .process = ip4_rewrite_node_process,
+        .feat_arc_proc = ip4_rewrite_feature_node_process,
+        .name = "ip4_rewrite",
+        ...
+        ...
+   };
+
+If `feat_arc_proc` is not provided in node registration, `process_func` would
+be called by `rte_graph_walk()`
+
+Sample Usage
+^^^^^^^^^^^^
+.. code-block:: bash
+   :linenos:
+   :caption: Feature arc sample usage
+
+   #define MAX_FEATURES 10
+   #define MAX_INDEXES 5
+
+   static uint16_t
+   feature2_feature_node_process (struct rte_graph *graph, struct
+                                 rte_node *node, void **objs, uint16_t nb_objs)
+   {
+       /* features may be enabled */
+   }
+   static uint16_t
+   feature2_node_process (struct rte_graph *graph, struct
+                                 rte_node *node, void **objs, uint16_t nb_objs)
+   {
+       /* Feature arc is disabled in rte_graph_create() */
+   }
+
+   static uint16_t
+   feature2_node_process (struct rte_graph *graph, struct
+                                 rte_node *node, void **objs, uint16_t nb_objs)
+   {
+       /* Feature arc may be enabled or disabled as this process_func() would
+        * be called for the case when feature arc is enabled in rte_graph_create()
+        * and also the case when it is disabled
+        */
+   }
+
+   static struct rte_node_register feature2_node = {
+        .process = feature2_node_process,
+        .feat_arc_proc = feature2_feature_node_process,
+        .name = "feature2",
+        .init = feature2_init_func,
+        ...
+        ...
+   };
+
+   static struct rte_node_register feature1_node = {
+        .process = feature1_node_process,
+        .feat_arc_proc = NULL,
+        .name = "feature1",
+        ...
+        ...
+   };
+
+   int worker_cb(void *_em)
+   {
+      rte_graph_feature_arc_t arc;
+      uint32_t user_data;
+
+      rte_graph_feature_arc_lookup_by_name("sample_arc", &arc);
+
+      /* From control thread context (like CLII):
+       * Enable feature 2 on interface index 4
+       */
+      if (rte_lcore_id() == rte_get_main_lcore) {
+                user_data = 0x1234;
+                rte_graph_feature_enable(arc, 4 /* interface index */, "feature2", user_data);
+      } else {
+                while(1)
+                    rte_graph_walk);
+      }
+   }
+
+   int main(void)
+   {
+       struct rte_graph_param graph_conf;
+       rte_graph_feature_arc_t arc;
+
+       if (rte_graph_feature_arc_create("sample_arc", MAX_FEATURES, MAX_INDEXES, &arc))
+           return -1;
+
+       rte_graph_feature_add(arc, "feature1", NULL, NULL);
+       rte_graph_feature_add(arc, "feature2", "feature1" /* add feature2 after feature 1*/, NULL);
+
+       /* create graph*/
+       ...
+       ...
+       graph_conf.feature_arc_enable = true;
+
+       struct rte_graph *graph = rte_graph_create("sample_graph", &graph_conf);
+
+       rte_eal_mp_remote_launch(worker_cb, arg, CALL_MAIN);
+   }
