@@ -19,6 +19,7 @@
 #include <rte_compat.h>
 
 #include <rte_graph.h>
+#include <rte_graph_feature_arc_worker.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,6 +67,8 @@ struct rte_node_ip4_reassembly_cfg {
 	rte_node_t node_id;
 	/**< Node identifier to configure. */
 };
+
+#define RTE_IP4_OUTPUT_FEATURE_ARC_NAME "ipv4-output"
 
 /**
  * Add ipv4 route to lookup table.

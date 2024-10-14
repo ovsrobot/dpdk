@@ -12,6 +12,9 @@
 #include <rte_mbuf.h>
 #include <rte_mbuf_dyn.h>
 
+#include <rte_graph_worker_common.h>
+#include <rte_graph_feature_arc_worker.h>
+
 extern int rte_node_logtype;
 #define RTE_LOGTYPE_NODE rte_node_logtype
 
@@ -29,14 +32,27 @@ extern int rte_node_logtype;
  */
 struct node_mbuf_priv1 {
 	union {
-		/* IP4/IP6 rewrite */
+		/**
+		 * IP4/IP6 rewrite
+		 * only used to pass lookup data from
+		 * ip4-lookup to ip4-rewrite
+		 */
 		struct {
 			uint16_t nh;
 			uint16_t ttl;
 			uint32_t cksum;
 		};
-
 		uint64_t u;
+	};
+	/**
+	 * Feature arc data
+	 */
+	struct {
+		/** interface index */
+		uint16_t if_index;
+		/** feature that current mbuf holds */
+		rte_graph_feature_t current_feature;
+		uint8_t rsvd;
 	};
 };
 
