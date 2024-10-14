@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright(c) 2023 Abdullah Ömer Yamaç.
+#
+
+---
+BasedOnStyle: LLVM
+
+# Place opening and closing parentheses on the same line for control statements
+BreakBeforeBraces: Custom
+BraceWrapping:
+        AfterFunction: true
+        AfterControlStatement: false
+
+AllowShortEnumsOnASingleLine: false
+
+# Should be declared this way:
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+        AfterForeachMacros: false
+
+# Set maximum line length to 100 characters
+ColumnLimit: 100
+
+# Use LF (line feed) as the end-of-line character
+LineEnding: LF
+
+# Insert a newline at the end of the file
+InsertNewlineAtEOF: true
+
+# Set indentation width to 8 spaces
+IndentWidth: 8
+
+# Set continuation indentation width to 16 spaces (2 tabs)
+AlignAfterOpenBracket: DontAlign
+ContinuationIndentWidth: 16
+
+# Set tab width to 8 spaces
+TabWidth: 8
+
+# Use tabs for indentation
+UseTab: Always
+
+# Preserve include blocks as they are
+IncludeBlocks: Preserve
+
+# Never sort includes
+SortIncludes: Never
+
+# Always break after return type for top-level definitions
+AlwaysBreakAfterReturnType: TopLevelDefinitions
+
+# Always break before multiline string literals
+AlignEscapedNewlines: Left
+
+# Foreach macros
+ForEachMacros:
+        [
+                "CIRBUF_FOREACH",
+                "DLB2_LIST_FOR_EACH",
+                "DLB2_LIST_FOR_EACH_SAFE",
+                "ECORE_LIST_FOR_EACH_ENTRY",
+                "ECORE_LIST_FOR_EACH_ENTRY_SAFE",
+                "FOR_EACH",
+                "FOR_EACH_BUCKET",
+                "FOR_EACH_CNIC_QUEUE",
+                "FOR_EACH_COS_IN_TX_QUEUE",
+                "FOR_EACH_ETH_QUEUE",
+                "FOR_EACH_MEMBER",
+                "FOR_EACH_NONDEFAULT_ETH_QUEUE",
+                "FOR_EACH_NONDEFAULT_QUEUE",
+                "FOR_EACH_PORT",
+                "FOR_EACH_PORT_IF",
+                "FOR_EACH_QUEUE",
+                "FOR_EACH_SUITE_TESTCASE",
+                "FOR_EACH_SUITE_TESTSUITE",
+                "FOREACH_ABS_FUNC_IN_PORT",
+                "FOREACH_DEVICE_ON_AUXILIARY_BUS",
+                "FOREACH_DEVICE_ON_CDXBUS",
+                "FOREACH_DEVICE_ON_PCIBUS",
+                "FOREACH_DEVICE_ON_PLATFORM_BUS",
+                "FOREACH_DEVICE_ON_UACCEBUS",
+                "FOREACH_DEVICE_ON_VMBUS",
+                "FOREACH_DRIVER_ON_AUXILIARY_BUS",
+                "FOREACH_DRIVER_ON_CDXBUS",
+                "FOREACH_DRIVER_ON_PCIBUS",
+                "FOREACH_DRIVER_ON_PLATFORM_BUS",
+                "FOREACH_DRIVER_ON_UACCEBUS",
+                "FOREACH_DRIVER_ON_VMBUS",
+                "FOREACH_SUBDEV",
+                "FOREACH_SUBDEV_STATE",
+                "HLIST_FOR_EACH_ENTRY",
+                "ILIST_FOREACH",
+                "LIST_FOR_EACH_ENTRY",
+                "LIST_FOR_EACH_ENTRY_SAFE",
+                "LIST_FOREACH",
+                "LIST_FOREACH_FROM",
+                "LIST_FOREACH_FROM_SAFE",
+                "LIST_FOREACH_SAFE",
+                "ML_AVG_FOREACH_QP",
+                "ML_AVG_FOREACH_QP_MVTVM",
+                "ML_AVG_RESET_FOREACH_QP",
+                "ML_MAX_FOREACH_QP",
+                "ML_MAX_FOREACH_QP_MVTVM",
+                "ML_MAX_RESET_FOREACH_QP",
+                "ML_MIN_FOREACH_QP",
+                "ML_MIN_FOREACH_QP_MVTVM",
+                "ML_MIN_RESET_FOREACH_QP",
+                "MLX5_ETH_FOREACH_DEV",
+                "MLX5_IPOOL_FOREACH",
+                "MLX5_L3T_FOREACH",
+                "OSAL_LIST_FOR_EACH_ENTRY",
+                "OSAL_LIST_FOR_EACH_ENTRY_SAFE",
+                "PLT_TAILQ_FOREACH_SAFE",
+                "RTE_BBDEV_FOREACH",
+                "RTE_DEV_FOREACH",
+                "RTE_DMA_FOREACH_DEV",
+                "RTE_EAL_DEVARGS_FOREACH",
+                "RTE_ETH_FOREACH_DEV",
+                "RTE_ETH_FOREACH_DEV_OF",
+                "RTE_ETH_FOREACH_DEV_OWNED_BY",
+                "RTE_ETH_FOREACH_DEV_SIBLING",
+                "RTE_ETH_FOREACH_MATCHING_DEV",
+                "RTE_ETH_FOREACH_VALID_DEV",
+                "RTE_GPU_FOREACH",
+                "RTE_GPU_FOREACH_CHILD",
+                "RTE_GPU_FOREACH_PARENT",
+                "RTE_LCORE_FOREACH",
+                "RTE_LCORE_FOREACH_WORKER",
+                "RTE_TAILQ_FOREACH",
+                "RTE_TAILQ_FOREACH_SAFE",
+                "SILIST_FOREACH",
+                "SLIST_FOREACH",
+                "SLIST_FOREACH_FROM",
+                "SLIST_FOREACH_FROM_SAFE",
+                "SLIST_FOREACH_PREVPTR",
+                "SLIST_FOREACH_SAFE",
+                "STAILQ_FOREACH",
+                "STAILQ_FOREACH_FROM",
+                "STAILQ_FOREACH_FROM_SAFE",
+                "STAILQ_FOREACH_SAFE",
+                "TAILQ_FOREACH",
+                "TAILQ_FOREACH_ENTRY",
+                "TAILQ_FOREACH_ENTRY_SAFE",
+                "TAILQ_FOREACH_FROM",
+                "TAILQ_FOREACH_FROM_SAFE",
+                "TAILQ_FOREACH_REVERSE",
+                "TAILQ_FOREACH_REVERSE_FROM",
+                "TAILQ_FOREACH_REVERSE_FROM_SAFE",
+                "TAILQ_FOREACH_REVERSE_SAFE",
+                "TAILQ_FOREACH_SAFE",
+        ]
+ObjCSpaceAfterProperty: true
+IndentGotoLabels: false
