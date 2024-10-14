@@ -108,4 +108,13 @@ deps += ['bus_pci', 'net', 'telemetry']
 
 require_iova_in_mbuf = false
 
+cnxk_socs = ['cn9k', 'cn10k', 'cn20k']
+
+# Enable RTE_IOVA_IN_MBUF only if enable_iova_as_pa is set explicitly, else disable it
+if meson.version().version_compare('>=1.1.0')
+    if '-Denable_iova_as_pa' not in meson.build_options() and soc_type in cnxk_socs
+        dpdk_conf.set10('RTE_IOVA_IN_MBUF', false)
+    endif
+endif
+
 annotate_locks = false
