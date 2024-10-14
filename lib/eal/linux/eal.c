@@ -45,6 +45,7 @@
 #include <telemetry_internal.h>
 #include "eal_private.h"
 #include "eal_thread.h"
+#include "eal_lcore_var.h"
 #include "eal_internal_cfg.h"
 #include "eal_filesystem.h"
 #include "eal_hugepages.h"
@@ -1387,6 +1388,7 @@ rte_eal_cleanup(void)
 	rte_eal_malloc_heap_cleanup();
 	eal_cleanup_config(internal_conf);
 	rte_eal_log_cleanup();
+	eal_lcore_var_cleanup();
 	return 0;
 }
 
