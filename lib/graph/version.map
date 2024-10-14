@@ -52,3 +52,23 @@ DPDK_25 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 24.11
+	rte_graph_feature_arc_init;
+	rte_graph_feature_arc_create;
+	rte_graph_feature_arc_lookup_by_name;
+	rte_graph_feature_add;
+	rte_graph_feature_enable;
+	rte_graph_feature_validate;
+	rte_graph_feature_disable;
+	rte_graph_feature_lookup;
+	rte_graph_feature_arc_destroy;
+	rte_graph_feature_arc_cleanup;
+	rte_graph_feature_arc_num_enabled_features;
+	rte_graph_feature_arc_num_features;
+	rte_graph_feature_arc_feature_to_name;
+	rte_graph_feature_arc_feature_to_node;
+};
