@@ -254,6 +254,13 @@ ABI Changes
 
 * eventdev: Added ``preschedule_type`` field to ``rte_event_dev_config`` structure.
 
+* graph: Added feature arc specific `feat_arc_proc` node callback function in
+  `struct rte_node_register`. If this function is not NULL and
+  `feature_arc_enable` is set to `true` in `struct rte_graph_param`,
+  rte_graph_walk() calls `feat_arc_proc` callback function instead of `process`
+
+* graph: Added `feature_arc_enable` parameter in `struct rte_graph_param` for
+  calling non-NULL `feat_arc_proc` callback function by `rte_graph_walk()`
 
 Known Issues
 ------------

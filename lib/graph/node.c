@@ -90,6 +90,7 @@ __rte_node_register(const struct rte_node_register *reg)
 		goto free;
 	node->flags = reg->flags;
 	node->process = reg->process;
+	node->feat_arc_proc = reg->feat_arc_proc;
 	node->init = reg->init;
 	node->fini = reg->fini;
 	node->nb_edges = reg->nb_edges;
@@ -137,6 +138,7 @@ node_clone(struct node *node, const char *name)
 	/* Clone the source node */
 	reg->flags = node->flags;
 	reg->process = node->process;
+	reg->feat_arc_proc = node->feat_arc_proc;
 	reg->init = node->init;
 	reg->fini = node->fini;
 	reg->nb_edges = node->nb_edges;

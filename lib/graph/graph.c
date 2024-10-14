@@ -455,6 +455,7 @@ rte_graph_create(const char *name, struct rte_graph_param *prm)
 	graph->parent_id = RTE_GRAPH_ID_INVALID;
 	graph->lcore_id = RTE_MAX_LCORE;
 	graph->num_pkt_to_capture = prm->num_pkt_to_capture;
+	graph->feature_arc_enabled = prm->feature_arc_enable;
 	if (prm->pcap_filename)
 		rte_strscpy(graph->pcap_filename, prm->pcap_filename, RTE_GRAPH_PCAP_FILE_SZ);
 
