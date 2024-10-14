@@ -162,6 +162,10 @@ New Features
 
   * Added independent enqueue feature.
 
+* **Add node error stats for rte_graph**
+
+  * Added ability for node to advertise and update multiple error counters,
+  that can be retrieved using rte_graph_cluster_stats_get.
 
 Removed Items
 -------------
@@ -244,6 +248,10 @@ ABI Changes
 
 * eventdev: Added ``preschedule_type`` field to ``rte_event_dev_config`` structure.
 
+* graph: To accommodate node specific error counters added ``error_cntrs``,
+  ``error_desc`` and ``error_count`` to ``rte_graph_cluster_node_stats``,
+  added new structure ``rte_node_errors`` to ``rte_node_register`` and
+  added ``err_off`` to ``rte_node``.
 
 Known Issues
 ------------
