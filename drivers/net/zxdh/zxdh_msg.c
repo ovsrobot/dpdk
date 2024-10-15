@@ -1,0 +1,161 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2024 ZTE Corporation
+ */
+
+#include <stdbool.h>
+
+#include <rte_common.h>
+#include <rte_memcpy.h>
+#include <pthread.h>
+#include <rte_cycles.h>
+#include <inttypes.h>
+#include <rte_malloc.h>
+
+#include "zxdh_ethdev.h"
+#include "zxdh_logs.h"
+#include "zxdh_msg.h"
+
+#define REPS_INFO_FLAG_USABLE  0x00
+#define BAR_SEQID_NUM_MAX  256
+
+#define ZXDH_BAR0_INDEX  0
+
+#define PCIEID_IS_PF_MASK   (0x0800)
+#define PCIEID_PF_IDX_MASK  (0x0700)
+#define PCIEID_VF_IDX_MASK  (0x00ff)
+#define PCIEID_EP_IDX_MASK  (0x7000)
+/* PCIEID bit field offset */
+#define PCIEID_PF_IDX_OFFSET  (8)
+#define PCIEID_EP_IDX_OFFSET  (12)
+
+#define MULTIPLY_BY_8(x)    ((x) << 3)
+#define MULTIPLY_BY_32(x)   ((x) << 5)
+#define MULTIPLY_BY_256(x)  ((x) << 8)
+
+#define MAX_EP_NUM          (4)
+#define MAX_HARD_SPINLOCK_NUM        (511)
+
+#define BAR0_SPINLOCK_OFFSET               (0x4000)
+#define FW_SHRD_OFFSET                     (0x5000)
+#define FW_SHRD_INNER_HW_LABEL_PAT         (0x800)
+#define HW_LABEL_OFFSET                    (FW_SHRD_OFFSET + FW_SHRD_INNER_HW_LABEL_PAT)
+
+struct dev_stat {
+	bool is_mpf_scanned;
+	bool is_res_init;
+	int16_t dev_cnt; /* probe cnt */
+};
+struct dev_stat g_dev_stat = {0};
+
+struct seqid_item {
+	void *reps_addr;
+	uint16_t id;
+	uint16_t buffer_len;
+	uint16_t flag;
+};
+
+struct seqid_ring {
+	uint16_t cur_id;
+	pthread_spinlock_t lock;
+	struct seqid_item reps_info_tbl[BAR_SEQID_NUM_MAX];
+};
+struct seqid_ring g_seqid_ring = {0};
+
+static uint16_t pcie_id_to_hard_lock(uint16_t src_pcieid, uint8_t dst)
+{
+	uint16_t lock_id = 0;
+	uint16_t pf_idx = (src_pcieid & PCIEID_PF_IDX_MASK) >> PCIEID_PF_IDX_OFFSET;
+	uint16_t ep_idx = (src_pcieid & PCIEID_EP_IDX_MASK) >> PCIEID_EP_IDX_OFFSET;
+
+	switch (dst) {
+	/* msg to risc */
+	case MSG_CHAN_END_RISC:
+		lock_id = MULTIPLY_BY_8(ep_idx) + pf_idx;
+		break;
+	/* msg to pf/vf */
+	case MSG_CHAN_END_VF:
+	case MSG_CHAN_END_PF:
+		lock_id = MULTIPLY_BY_8(ep_idx) + pf_idx + MULTIPLY_BY_8(1 + MAX_EP_NUM);
+		break;
+	default:
+		lock_id = 0;
+		break;
+	}
+	if (lock_id >= MAX_HARD_SPINLOCK_NUM)
+		lock_id = 0;
+
+	return lock_id;
+}
+
+static void label_write(uint64_t label_lock_addr, uint32_t lock_id, uint16_t value)
+{
+	*(volatile uint16_t *)(label_lock_addr + lock_id * 2) = value;
+}
+
+static void spinlock_write(uint64_t virt_lock_addr, uint32_t lock_id, uint8_t data)
+{
+	*(volatile uint8_t *)((uint64_t)virt_lock_addr + (uint64_t)lock_id) = data;
+}
+
+static int32_t zxdh_spinlock_unlock(uint32_t virt_lock_id, uint64_t virt_addr, uint64_t label_addr)
+{
+	label_write((uint64_t)label_addr, virt_lock_id, 0);
+	spinlock_write(virt_addr, virt_lock_id, 0);
+	return 0;
+}
+
+/**
+ * Fun: PF init hard_spinlock addr
+ */
+static int bar_chan_pf_init_spinlock(uint16_t pcie_id, uint64_t bar_base_addr)
+{
+	int lock_id = pcie_id_to_hard_lock(pcie_id, MSG_CHAN_END_RISC);
+
+	zxdh_spinlock_unlock(lock_id, bar_base_addr + BAR0_SPINLOCK_OFFSET,
+			bar_base_addr + HW_LABEL_OFFSET);
+	lock_id = pcie_id_to_hard_lock(pcie_id, MSG_CHAN_END_VF);
+	zxdh_spinlock_unlock(lock_id, bar_base_addr + BAR0_SPINLOCK_OFFSET,
+			bar_base_addr + HW_LABEL_OFFSET);
+	return 0;
+}
+
+int zxdh_msg_chan_hwlock_init(struct rte_eth_dev *dev)
+{
+	struct zxdh_hw *hw = dev->data->dev_private;
+
+	if (!hw->is_pf)
+		return 0;
+	return bar_chan_pf_init_spinlock(hw->pcie_id, (uint64_t)(hw->bar_addr[ZXDH_BAR0_INDEX]));
+}
+
+pthread_spinlock_t chan_lock;
+int zxdh_msg_chan_init(void)
+{
+	uint16_t seq_id = 0;
+
+	g_dev_stat.dev_cnt++;
+	if (g_dev_stat.is_res_init)
+		return BAR_MSG_OK;
+
+	pthread_spin_init(&chan_lock, 0);
+	g_seqid_ring.cur_id = 0;
+	pthread_spin_init(&g_seqid_ring.lock, 0);
+
+	for (seq_id = 0; seq_id < BAR_SEQID_NUM_MAX; seq_id++) {
+		struct seqid_item *reps_info = &(g_seqid_ring.reps_info_tbl[seq_id]);
+
+		reps_info->id = seq_id;
+		reps_info->flag = REPS_INFO_FLAG_USABLE;
+	}
+	g_dev_stat.is_res_init = true;
+	return BAR_MSG_OK;
+}
+
+int zxdh_bar_msg_chan_exit(void)
+{
+	if (!g_dev_stat.is_res_init || (--g_dev_stat.dev_cnt > 0))
+		return BAR_MSG_OK;
+
+	g_dev_stat.is_res_init = false;
+	return BAR_MSG_OK;
+}
