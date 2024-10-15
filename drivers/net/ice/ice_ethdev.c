@@ -37,6 +37,7 @@
 #define ICE_ONE_PPS_OUT_ARG       "pps_out"
 #define ICE_RX_LOW_LATENCY_ARG    "rx_low_latency"
 #define ICE_MBUF_CHECK_ARG       "mbuf_check"
+#define ICE_DDP_FILENAME          "ddp_pkg_file"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -53,6 +54,7 @@ static const char * const ice_valid_args[] = {
 	ICE_RX_LOW_LATENCY_ARG,
 	ICE_DEFAULT_MAC_DISABLE,
 	ICE_MBUF_CHECK_ARG,
+	ICE_DDP_FILENAME,
 	NULL
 };
 
@@ -690,6 +692,18 @@ handle_field_name_arg(__rte_unused const char *key, const char *value,
 			    name);
 		return -1;
 	}
+	return 0;
+}
+
+static int
+handle_ddp_filename_arg(__rte_unused const char *key, const char *value, void *name_args)
+{
+	const char **filename = name_args;
+	if (strlen(value) >= ICE_MAX_PKG_FILENAME_SIZE) {
+		PMD_DRV_LOG(ERR, "The DDP package filename is too long : '%s'", value);
+		return -1;
+	}
+	*filename = strdup(value);
 	return 0;
 }
 
@@ -1909,6 +1923,17 @@ int ice_load_pkg(struct ice_adapter *adapter, bool use_dsn, uint64_t dsn)
 	size_t bufsz;
 	int err;
 
+	/* first read any explicitly referenced DDP file*/
+	if (adapter->devargs.ddp_filename != NULL) {
+		strlcpy(pkg_file, adapter->devargs.ddp_filename, sizeof(pkg_file));
+		if (rte_firmware_read(pkg_file, &buf, &bufsz) == 0) {
+			goto load_fw;
+		} else {
+			PMD_INIT_LOG(ERR, "Cannot load DDP file: %s", pkg_file);
+			return -1;
+		}
+	}
+
 	memset(opt_ddp_filename, 0, ICE_MAX_PKG_FILENAME_SIZE);
 	snprintf(opt_ddp_filename, ICE_MAX_PKG_FILENAME_SIZE,
 		"ice-%016" PRIx64 ".pkg", dsn);
@@ -2256,6 +2281,13 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_RX_LOW_LATENCY_ARG,
 				 &parse_bool, &ad->devargs.rx_low_latency);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_DDP_FILENAME,
+				 &handle_ddp_filename_arg, &ad->devargs.ddp_filename);
+	if (ret)
+		goto bail;
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -2729,6 +2761,8 @@ ice_dev_close(struct rte_eth_dev *dev)
 	ice_free_hw_tbls(hw);
 	rte_free(hw->port_info);
 	hw->port_info = NULL;
+	free((void *)(uintptr_t)ad->devargs.ddp_filename);
+	ad->devargs.ddp_filename = NULL;
 	ice_shutdown_all_ctrlq(hw, true);
 	rte_free(pf->proto_xtr);
 	pf->proto_xtr = NULL;
@@ -7047,6 +7081,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_PROTO_XTR_ARG "=[queue:]<vlan|ipv4|ipv6|ipv6_flow|tcp|ip_offset>"
 			      ICE_SAFE_MODE_SUPPORT_ARG "=<0|1>"
 			      ICE_DEFAULT_MAC_DISABLE "=<0|1>"
+			      ICE_DDP_FILENAME "=</path/to/file>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>");
 
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_init, init, NOTICE);
