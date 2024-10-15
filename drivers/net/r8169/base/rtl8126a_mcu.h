@@ -12,5 +12,6 @@ void rtl_set_mac_mcu_8126a_3(struct rtl_hw *hw);
 void rtl_set_phy_mcu_8126a_1(struct rtl_hw *hw);
 void rtl_set_phy_mcu_8126a_2(struct rtl_hw *hw);
 void rtl_set_phy_mcu_8126a_3(struct rtl_hw *hw);
+
 #endif
 
