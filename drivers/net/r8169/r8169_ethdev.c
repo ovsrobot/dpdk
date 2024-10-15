@@ -72,6 +72,12 @@ rtl_dev_start(struct rte_eth_dev *dev)
 	struct rtl_hw *hw = &adapter->hw;
 	int err;
 
+	rtl_powerup_pll(hw);
+
+	rtl_hw_ephy_config(hw);
+
+	rtl_hw_phy_config(hw);
+
 	rtl_hw_config(hw);
 
 	/* Initialize transmission unit */
@@ -83,6 +89,8 @@ rtl_dev_start(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "Unable to initialize RX hardware");
 		goto error;
 	}
+
+	rtl_mdio_write(hw, 0x1F, 0x0000);
 
 	hw->adapter_stopped = 0;
 
@@ -102,6 +110,8 @@ rtl_dev_stop(struct rte_eth_dev *dev)
 
 	if (hw->adapter_stopped)
 		return 0;
+
+	rtl_powerdown_pll(hw);
 
 	hw->adapter_stopped = 1;
 	dev->data->dev_started = 0;
