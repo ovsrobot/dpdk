@@ -29,10 +29,22 @@ extern "C" {
 
 #define ZXDH_NUM_BARS    2
 
+union VPORT {
+	uint16_t vport;
+	struct {
+		uint16_t vfid:8;
+		uint16_t pfid:3;
+		uint16_t vf_flag:1;
+		uint16_t epid:3;
+		uint16_t direct_flag:1;
+	};
+};
+
 struct zxdh_hw {
 	struct rte_eth_dev *eth_dev;
 	struct zxdh_pci_common_cfg *common_cfg;
 	struct zxdh_net_config *dev_cfg;
+	union VPORT vport;
 
 	uint64_t bar_addr[ZXDH_NUM_BARS];
 	uint64_t host_features;
