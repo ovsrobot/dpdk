@@ -91,6 +91,11 @@ extern "C" {
 /**< Layer 2+3 (Ethernet MAC + IP Addresses) transmit load balancing */
 #define BALANCE_XMIT_POLICY_LAYER34		(2)
 /**< Layer 3+4 (IP Addresses + UDP Ports) transmit load balancing */
+#define BALANCE_XMIT_POLICY_USER		(3)
+/**< User callback function to transmit load balancing */
+
+typedef void (*burst_xmit_hash_t)(struct rte_mbuf **buf, uint16_t nb_pkts,
+	uint16_t member_count, uint16_t *members);
 
 /**
  * Create a bonding rte_eth_dev device
@@ -351,6 +356,18 @@ rte_eth_bond_link_up_prop_delay_set(uint16_t bonding_port_id,
 int
 rte_eth_bond_link_up_prop_delay_get(uint16_t bonding_port_id);
 
+/**
+ * Register transmit callback function for bonded device to use when it is operating in
+ * balance mode. The callback is ignored in other modes of operation.
+ *
+ * @param cb_fn           User defined callback function to determine the xmit members
+ *
+ * @return
+ *     0 on success, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_xmit_policy_cb_register(burst_xmit_hash_t cb_fn);
 
 #ifdef __cplusplus
 }

@@ -4251,7 +4251,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_bonding,
 	"member=<ifc> "
 	"primary=<ifc> "
 	"mode=[0-6] "
-	"xmit_policy=[l2 | l23 | l34] "
+	"xmit_policy=[l2 | l23 | l34 | user] "
 	"agg_mode=[count | stable | bandwidth] "
 	"socket_id=<int> "
 	"mac=<mac addr> "
