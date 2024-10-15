@@ -1105,11 +1105,9 @@ dpaa2_eventdev_create(const char *name, struct rte_vdev_device *vdev)
 	}
 
 	eventdev->dev_ops       = &dpaa2_eventdev_ops;
-	eventdev->enqueue       = dpaa2_eventdev_enqueue;
 	eventdev->enqueue_burst = dpaa2_eventdev_enqueue_burst;
 	eventdev->enqueue_new_burst = dpaa2_eventdev_enqueue_burst;
 	eventdev->enqueue_forward_burst = dpaa2_eventdev_enqueue_burst;
-	eventdev->dequeue       = dpaa2_eventdev_dequeue;
 	eventdev->dequeue_burst = dpaa2_eventdev_dequeue_burst;
 	eventdev->txa_enqueue	= dpaa2_eventdev_txa_enqueue;
 	eventdev->txa_enqueue_same_dest	= dpaa2_eventdev_txa_enqueue_same_dest;
