@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2023 ZTE Corporation
+ * Copyright(c) 2024 ZTE Corporation
  */
 
 #ifndef _ZXDH_RXTX_H_
