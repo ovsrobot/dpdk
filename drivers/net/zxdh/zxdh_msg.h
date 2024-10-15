@@ -13,9 +13,13 @@ extern "C" {
 
 #include <ethdev_driver.h>
 
+#define ZXDH_BAR0_INDEX  0
+
+#define ZXDH_CTRLCH_OFFSET         (0x2000)
+
 #define ZXDH_MSIX_INTR_MSG_VEC_BASE  1
 
-#define BAR_MSG_POLLING_SPAN     100 /* sleep us */
+#define BAR_MSG_POLLING_SPAN     100
 #define BAR_MSG_POLL_CNT_PER_MS  (1 * 1000 / BAR_MSG_POLLING_SPAN)
 #define BAR_MSG_POLL_CNT_PER_S   (1 * 1000 * 1000 / BAR_MSG_POLLING_SPAN)
 #define BAR_MSG_TIMEOUT_TH       (10 * 1000 * 1000 / BAR_MSG_POLLING_SPAN) /* 10s */
@@ -101,6 +105,27 @@ enum bar_module_id {
 	BAR_EVENT_OVS_WITH_VCB = 36,
 
 	BAR_MSG_MODULE_NUM = 100,
+};
+
+enum RES_TBL_FILED {
+	TBL_FIELD_PCIEID     = 0,
+	TBL_FIELD_BDF        = 1,
+	TBL_FIELD_MSGCH      = 2,
+	TBL_FIELD_DATACH     = 3,
+	TBL_FIELD_VPORT      = 4,
+	TBL_FIELD_PNLID      = 5,
+	TBL_FIELD_PHYPORT    = 6,
+	TBL_FIELD_SERDES_NUM = 7,
+	TBL_FIELD_NP_PORT    = 8,
+	TBL_FIELD_SPEED      = 9,
+	TBL_FIELD_HASHID     = 10,
+	TBL_FIELD_NON,
+};
+
+enum TBL_MSG_TYPE {
+	TBL_TYPE_READ,
+	TBL_TYPE_WRITE,
+	TBL_TYPE_NON,
 };
 
 struct msix_para {
