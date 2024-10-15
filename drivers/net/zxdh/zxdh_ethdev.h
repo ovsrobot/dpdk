@@ -11,6 +11,10 @@ extern "C" {
 
 #include <rte_ether.h>
 #include "ethdev_driver.h"
+#include <rte_interrupts.h>
+#include <eal_interrupts.h>
+
+#include "zxdh_queue.h"
 
 /* ZXDH PCI vendor/device ID. */
 #define PCI_VENDOR_ID_ZTE        0x1cf2
@@ -44,6 +48,9 @@ struct zxdh_hw {
 	struct rte_eth_dev *eth_dev;
 	struct zxdh_pci_common_cfg *common_cfg;
 	struct zxdh_net_config *dev_cfg;
+	struct rte_intr_handle *risc_intr;
+	struct rte_intr_handle *dtb_intr;
+	struct virtqueue **vqs;
 	union VPORT vport;
 
 	uint64_t bar_addr[ZXDH_NUM_BARS];
@@ -60,6 +67,7 @@ struct zxdh_hw {
 
 	uint8_t *isr;
 	uint8_t weak_barriers;
+	uint8_t intr_enabled;
 	uint8_t use_msix;
 	uint8_t mac_addr[RTE_ETHER_ADDR_LEN];
 	uint8_t duplex;

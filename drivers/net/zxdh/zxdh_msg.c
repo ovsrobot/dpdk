@@ -91,6 +91,12 @@
 #define BAR_SUBCHAN_INDEX_SEND  0
 #define BAR_SUBCHAN_INDEX_RECV  1
 
+#define BAR_CHAN_MSG_SYNC     0
+#define BAR_CHAN_MSG_NO_EMEC  0
+#define BAR_CHAN_MSG_EMEC     1
+#define BAR_CHAN_MSG_NO_ACK   0
+#define BAR_CHAN_MSG_ACK      1
+
 uint8_t subchan_id_tbl[BAR_MSG_SRC_NUM][BAR_MSG_DST_NUM] = {
 	{BAR_SUBCHAN_INDEX_SEND, BAR_SUBCHAN_INDEX_SEND, BAR_SUBCHAN_INDEX_SEND},
 	{BAR_SUBCHAN_INDEX_SEND, BAR_SUBCHAN_INDEX_SEND, BAR_SUBCHAN_INDEX_RECV},
@@ -129,6 +135,36 @@ struct seqid_ring {
 	struct seqid_item reps_info_tbl[BAR_SEQID_NUM_MAX];
 };
 struct seqid_ring g_seqid_ring = {0};
+
+static inline const char *module_id_name(int val)
+{
+	switch (val) {
+	case BAR_MODULE_DBG:        return "BAR_MODULE_DBG";
+	case BAR_MODULE_TBL:        return "BAR_MODULE_TBL";
+	case BAR_MODULE_MISX:       return "BAR_MODULE_MISX";
+	case BAR_MODULE_SDA:        return "BAR_MODULE_SDA";
+	case BAR_MODULE_RDMA:       return "BAR_MODULE_RDMA";
+	case BAR_MODULE_DEMO:       return "BAR_MODULE_DEMO";
+	case BAR_MODULE_SMMU:       return "BAR_MODULE_SMMU";
+	case BAR_MODULE_MAC:        return "BAR_MODULE_MAC";
+	case BAR_MODULE_VDPA:       return "BAR_MODULE_VDPA";
+	case BAR_MODULE_VQM:        return "BAR_MODULE_VQM";
+	case BAR_MODULE_NP:         return "BAR_MODULE_NP";
+	case BAR_MODULE_VPORT:      return "BAR_MODULE_VPORT";
+	case BAR_MODULE_BDF:        return "BAR_MODULE_BDF";
+	case BAR_MODULE_RISC_READY: return "BAR_MODULE_RISC_READY";
+	case BAR_MODULE_REVERSE:    return "BAR_MODULE_REVERSE";
+	case BAR_MDOULE_NVME:       return "BAR_MDOULE_NVME";
+	case BAR_MDOULE_NPSDK:      return "BAR_MDOULE_NPSDK";
+	case BAR_MODULE_NP_TODO:    return "BAR_MODULE_NP_TODO";
+	case MODULE_BAR_MSG_TO_PF:  return "MODULE_BAR_MSG_TO_PF";
+	case MODULE_BAR_MSG_TO_VF:  return "MODULE_BAR_MSG_TO_VF";
+	case MODULE_FLASH:          return "MODULE_FLASH";
+	case BAR_MODULE_OFFSET_GET: return "BAR_MODULE_OFFSET_GET";
+	case BAR_EVENT_OVS_WITH_VCB: return "BAR_EVENT_OVS_WITH_VCB";
+	default: return "NA";
+	}
+}
 
 static uint16_t pcie_id_to_hard_lock(uint16_t src_pcieid, uint8_t dst)
 {
@@ -801,5 +837,156 @@ int zxdh_bar_msg_chan_exit(void)
 		return BAR_MSG_OK;
 
 	g_dev_stat.is_res_init = false;
+	return BAR_MSG_OK;
+}
+
+static uint64_t zxdh_recv_addr_get(uint8_t src_type, uint8_t dst_type, uint64_t virt_addr)
+{
+	uint8_t src = zxdh_bar_msg_dst_index_trans(src_type);
+	uint8_t dst = zxdh_bar_msg_src_index_trans(dst_type);
+
+	if (src == BAR_MSG_SRC_ERR || dst == BAR_MSG_DST_ERR)
+		return 0;
+
+	uint8_t chan_id = chan_id_tbl[dst][src];
+	uint8_t subchan_id = 1 - subchan_id_tbl[dst][src];
+
+	return zxdh_subchan_addr_cal(virt_addr, chan_id, subchan_id);
+}
+
+static void zxdh_bar_msg_ack_async_msg_proc(struct bar_msg_header *msg_header,
+					uint8_t *receiver_buff)
+{
+	struct seqid_item *reps_info = &g_seqid_ring.reps_info_tbl[msg_header->msg_id];
+
+	if (reps_info->flag != REPS_INFO_FLAG_USED) {
+		PMD_MSG_LOG(ERR, "msg_id: %u is released", msg_header->msg_id);
+		return;
+	}
+	if (msg_header->len > reps_info->buffer_len - 4) {
+		PMD_MSG_LOG(ERR, "reps_buf_len is %u, but reps_msg_len is %u",
+				reps_info->buffer_len, msg_header->len + 4);
+		goto free_id;
+	}
+	uint8_t *reps_buffer = (uint8_t *)reps_info->reps_addr;
+
+	rte_memcpy(reps_buffer + 4, receiver_buff, msg_header->len);
+	*(uint16_t *)(reps_buffer + 1) = msg_header->len;
+	*(uint8_t *)(reps_info->reps_addr) = REPS_HEADER_REPLYED;
+
+free_id:
+	zxdh_bar_chan_msgid_free(msg_header->msg_id);
+}
+
+zxdh_bar_chan_msg_recv_callback msg_recv_func_tbl[BAR_MSG_MODULE_NUM];
+static void zxdh_bar_msg_sync_msg_proc(uint64_t reply_addr, struct bar_msg_header *msg_header,
+					uint8_t *receiver_buff, void *dev)
+{
+	uint8_t *reps_buffer = rte_malloc(NULL, BAR_MSG_PAYLOAD_MAX_LEN, 0);
+
+	if (reps_buffer == NULL)
+		return;
+
+	zxdh_bar_chan_msg_recv_callback recv_func = msg_recv_func_tbl[msg_header->module_id];
+	uint16_t reps_len = 0;
+
+	recv_func(receiver_buff, msg_header->len, reps_buffer, &reps_len, dev);
+	msg_header->ack = BAR_CHAN_MSG_ACK;
+	msg_header->len = reps_len;
+	zxdh_bar_chan_msg_header_set(reply_addr, msg_header);
+	zxdh_bar_chan_msg_payload_set(reply_addr, reps_buffer, reps_len);
+	zxdh_bar_chan_msg_valid_set(reply_addr, BAR_MSG_CHAN_USABLE);
+	rte_free(reps_buffer);
+}
+
+static uint64_t zxdh_reply_addr_get(uint8_t sync, uint8_t src_type,
+					uint8_t dst_type, uint64_t virt_addr)
+{
+	uint8_t src = zxdh_bar_msg_dst_index_trans(src_type);
+	uint8_t dst = zxdh_bar_msg_src_index_trans(dst_type);
+
+	if (src == BAR_MSG_SRC_ERR || dst == BAR_MSG_DST_ERR)
+		return 0;
+
+	uint8_t chan_id = chan_id_tbl[dst][src];
+	uint8_t subchan_id = 1 - subchan_id_tbl[dst][src];
+	uint64_t recv_rep_addr;
+
+	if (sync == BAR_CHAN_MSG_SYNC)
+		recv_rep_addr = zxdh_subchan_addr_cal(virt_addr, chan_id, subchan_id);
+	else
+		recv_rep_addr = zxdh_subchan_addr_cal(virt_addr, chan_id, 1 - subchan_id);
+
+	return recv_rep_addr;
+}
+
+static uint16_t zxdh_bar_chan_msg_header_check(struct bar_msg_header *msg_header)
+{
+	if (msg_header->valid != BAR_MSG_CHAN_USED) {
+		PMD_MSG_LOG(ERR, "recv header ERR: valid label is not used.");
+		return BAR_MSG_ERR_MODULE;
+	}
+	uint8_t module_id = msg_header->module_id;
+
+	if (module_id >= (uint8_t)BAR_MSG_MODULE_NUM) {
+		PMD_MSG_LOG(ERR, "recv header ERR: invalid module_id: %u.", module_id);
+		return BAR_MSG_ERR_MODULE;
+	}
+	uint16_t len = msg_header->len;
+
+	if (len > BAR_MSG_PAYLOAD_MAX_LEN) {
+		PMD_MSG_LOG(ERR, "recv header ERR: invalid mesg len: %u.", len);
+		return BAR_MSG_ERR_LEN;
+	}
+	if (msg_recv_func_tbl[msg_header->module_id] == NULL) {
+		PMD_MSG_LOG(ERR, "recv header ERR: module:%s(%u) doesn't register",
+				module_id_name(module_id), module_id);
+		return BAR_MSG_ERR_MODULE_NOEXIST;
+	}
+	return BAR_MSG_OK;
+}
+
+int zxdh_bar_irq_recv(uint8_t src, uint8_t dst, uint64_t virt_addr, void *dev)
+{
+	struct bar_msg_header msg_header;
+	uint64_t recv_addr = 0;
+	uint16_t ret = 0;
+
+	recv_addr = zxdh_recv_addr_get(src, dst, virt_addr);
+	if (recv_addr == 0) {
+		PMD_MSG_LOG(ERR, "invalid driver type(src:%u, dst:%u).", src, dst);
+		return -1;
+	}
+
+	zxdh_bar_chan_msg_header_get(recv_addr, &msg_header);
+	ret = zxdh_bar_chan_msg_header_check(&msg_header);
+
+	if (ret != BAR_MSG_OK) {
+		PMD_MSG_LOG(ERR, "recv msg_head err, ret: %u.", ret);
+		return -1;
+	}
+
+	uint8_t *recved_msg = rte_malloc(NULL, msg_header.len, 0);
+	if (recved_msg == NULL) {
+		PMD_MSG_LOG(ERR, "malloc temp buff failed.");
+		return -1;
+	}
+	zxdh_bar_chan_msg_payload_get(recv_addr, recved_msg, msg_header.len);
+
+	uint64_t reps_addr = zxdh_reply_addr_get(msg_header.sync, src, dst, virt_addr);
+
+	if (msg_header.sync == BAR_CHAN_MSG_SYNC) {
+		zxdh_bar_msg_sync_msg_proc(reps_addr, &msg_header, recved_msg, dev);
+		goto exit;
+	}
+	zxdh_bar_chan_msg_valid_set(recv_addr, BAR_MSG_CHAN_USABLE);
+	if (msg_header.ack == BAR_CHAN_MSG_ACK) {
+		zxdh_bar_msg_ack_async_msg_proc(&msg_header, recved_msg);
+		goto exit;
+	}
+	return 0;
+
+exit:
+	rte_free(recved_msg);
 	return BAR_MSG_OK;
 }
