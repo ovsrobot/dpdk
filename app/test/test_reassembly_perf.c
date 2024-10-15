@@ -47,6 +47,16 @@ static struct rte_mbuf *mbufs[MAX_FLOWS][MAX_FRAGMENTS];
 static uint8_t frag_per_flow[MAX_FLOWS];
 static uint32_t flow_cnt;
 
+struct ipv6_extension_routing {
+	uint8_t next_header;
+	uint8_t length;
+	uint8_t type;
+	uint8_t segments;
+	uint32_t data;
+};
+
+#define IPV6_ROUTING_HDR_SIZE sizeof(struct ipv6_extension_routing)
+
 #define FILL_MODE_LINEAR      0
 #define FILL_MODE_RANDOM      1
 #define FILL_MODE_INTERLEAVED 2
@@ -108,15 +118,15 @@ static void
 reassembly_print_banner(const char *proto_str)
 {
 	printf("+=============================================================="
-	       "============================================+\n");
-	printf("| %-32s| %-3s : %-58d|\n", proto_str, "Flow Count", MAX_FLOWS);
+	       "===========================================================+\n");
+	printf("| %-32s| %-3s : %-73d|\n", proto_str, "Flow Count", MAX_FLOWS);
 	printf("+================+================+=============+=============+"
-	       "========================+===================+\n");
-	printf("%-17s%-17s%-14s%-14s%-25s%-20s\n", "| Fragment Order",
-	       "| Fragments/Flow", "| Outstanding", "| Cycles/Flow",
+	       "========================+==================================+\n");
+	printf("%-17s%-17s%-15s%-14s%-14s%-25s%-20s\n", "| Fragment Order",
+	       "| Fragments/Flow", "| Extensions", "| Outstanding", "| Cycles/Flow",
 	       "| Cycles/Fragment insert", "| Cycles/Reassembly |");
 	printf("+================+================+=============+=============+"
-	       "========================+===================+\n");
+	       "========================+==================================+\n");
 }
 
 static void
@@ -272,9 +282,10 @@ ipv4_frag_pkt_setup(uint8_t fill_mode, uint8_t nb_frag)
 
 static void
 ipv6_frag_fill_data(struct rte_mbuf **mbuf, uint8_t nb_frags, uint32_t flow_id,
-		    uint8_t fill_mode)
+		    uint8_t fill_mode, uint8_t num_exts)
 {
 	struct ipv6_extension_fragment *frag_hdr;
+	struct ipv6_extension_routing *routing_hdr;
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_ipv6_hdr *ip_hdr;
 	struct rte_udp_hdr *udp_hdr;
@@ -303,15 +314,18 @@ ipv6_frag_fill_data(struct rte_mbuf **mbuf, uint8_t nb_frags, uint32_t flow_id,
 		eth_hdr = rte_pktmbuf_mtod(frag, struct rte_ether_hdr *);
 		ip_hdr = rte_pktmbuf_mtod_offset(frag, struct rte_ipv6_hdr *,
 						 sizeof(struct rte_ether_hdr));
+
 		udp_hdr = rte_pktmbuf_mtod_offset(
 			frag, struct rte_udp_hdr *,
 			sizeof(struct rte_ether_hdr) +
 				sizeof(struct rte_ipv6_hdr) +
+				num_exts * IPV6_ROUTING_HDR_SIZE +
 				RTE_IPV6_FRAG_HDR_SIZE);
 		frag_hdr = rte_pktmbuf_mtod_offset(
 			frag, struct ipv6_extension_fragment *,
 			sizeof(struct rte_ether_hdr) +
-				sizeof(struct rte_ipv6_hdr));
+				sizeof(struct rte_ipv6_hdr) +
+				num_exts * IPV6_ROUTING_HDR_SIZE);
 
 		rte_ether_unformat_addr("02:00:00:00:00:01",
 					&eth_hdr->dst_addr);
@@ -334,11 +348,15 @@ ipv6_frag_fill_data(struct rte_mbuf **mbuf, uint8_t nb_frags, uint32_t flow_id,
 		 * Initialize IP header.
 		 */
 		pkt_len = (uint16_t)(pkt_len + sizeof(struct rte_ipv6_hdr) +
-				     RTE_IPV6_FRAG_HDR_SIZE);
+			num_exts * IPV6_ROUTING_HDR_SIZE +
+				RTE_IPV6_FRAG_HDR_SIZE);
 		ip_hdr->vtc_flow = rte_cpu_to_be_32(IP6_VERSION << 28);
 		ip_hdr->payload_len =
 			rte_cpu_to_be_16(pkt_len - sizeof(struct rte_ipv6_hdr));
-		ip_hdr->proto = IPPROTO_FRAGMENT;
+		if (num_exts > 0)
+			ip_hdr->proto = IPPROTO_ROUTING;
+		else
+			ip_hdr->proto = IPPROTO_FRAGMENT;
 		ip_hdr->hop_limits = IP_DEFTTL;
 		memcpy(ip_hdr->src_addr, ip6_addr, sizeof(ip_hdr->src_addr));
 		memcpy(ip_hdr->dst_addr, ip6_addr, sizeof(ip_hdr->dst_addr));
@@ -352,6 +370,24 @@ ipv6_frag_fill_data(struct rte_mbuf **mbuf, uint8_t nb_frags, uint32_t flow_id,
 		ip_hdr->dst_addr[8] = (flow_id >> 8) & 0xff;
 		ip_hdr->dst_addr[9] = flow_id & 0xff;
 
+		for (uint8_t exts = 0; exts < num_exts; exts++) {
+			routing_hdr = rte_pktmbuf_mtod_offset(
+				frag, struct ipv6_extension_routing *,
+					sizeof(struct rte_ether_hdr) +
+					sizeof(struct rte_ipv6_hdr) +
+					exts * IPV6_ROUTING_HDR_SIZE);
+
+			routing_hdr->length = 0;    /* zero because extension is bare, no data */
+			routing_hdr->type = 4;
+			routing_hdr->segments = num_exts - exts - 1;
+			routing_hdr->data = 0;
+
+			if (exts == num_exts - 1)
+				routing_hdr->next_header = IPPROTO_FRAGMENT;
+			else
+				routing_hdr->next_header = IPPROTO_ROUTING;
+		}
+
 		frag_hdr->next_header = IPPROTO_UDP;
 		frag_hdr->reserved = 0;
 		frag_hdr->frag_data = rte_cpu_to_be_16(frag_offset);
@@ -361,7 +397,9 @@ ipv6_frag_fill_data(struct rte_mbuf **mbuf, uint8_t nb_frags, uint32_t flow_id,
 		frag->pkt_len = frag->data_len;
 		frag->l2_len = sizeof(struct rte_ether_hdr);
 		frag->l3_len =
-			sizeof(struct rte_ipv6_hdr) + RTE_IPV6_FRAG_HDR_SIZE;
+			sizeof(struct rte_ipv6_hdr) +
+				num_exts * IPV6_ROUTING_HDR_SIZE +
+				RTE_IPV6_FRAG_HDR_SIZE;
 	}
 
 	if (fill_mode == FILL_MODE_RANDOM)
@@ -369,7 +407,7 @@ ipv6_frag_fill_data(struct rte_mbuf **mbuf, uint8_t nb_frags, uint32_t flow_id,
 }
 
 static int
-ipv6_rand_frag_pkt_setup(uint8_t fill_mode, uint8_t max_frag)
+ipv6_rand_frag_pkt_setup(uint8_t fill_mode, uint8_t max_frag, uint8_t num_exts)
 {
 	uint8_t nb_frag;
 	int i;
@@ -379,7 +417,7 @@ ipv6_rand_frag_pkt_setup(uint8_t fill_mode, uint8_t max_frag)
 		if (rte_mempool_get_bulk(pkt_pool, (void **)mbufs[i], nb_frag) <
 		    0)
 			return TEST_FAILED;
-		ipv6_frag_fill_data(mbufs[i], nb_frag, i, fill_mode);
+		ipv6_frag_fill_data(mbufs[i], nb_frag, i, fill_mode, num_exts);
 		frag_per_flow[i] = nb_frag;
 	}
 	flow_cnt = i;
@@ -388,7 +426,7 @@ ipv6_rand_frag_pkt_setup(uint8_t fill_mode, uint8_t max_frag)
 }
 
 static int
-ipv6_frag_pkt_setup(uint8_t fill_mode, uint8_t nb_frag)
+ipv6_frag_pkt_setup(uint8_t fill_mode, uint8_t nb_frag, uint8_t num_exts)
 {
 	int i;
 
@@ -396,7 +434,7 @@ ipv6_frag_pkt_setup(uint8_t fill_mode, uint8_t nb_frag)
 		if (rte_mempool_get_bulk(pkt_pool, (void **)mbufs[i], nb_frag) <
 		    0)
 			return TEST_FAILED;
-		ipv6_frag_fill_data(mbufs[i], nb_frag, i, fill_mode);
+		ipv6_frag_fill_data(mbufs[i], nb_frag, i, fill_mode, num_exts);
 		frag_per_flow[i] = nb_frag;
 	}
 	flow_cnt = i;
@@ -414,7 +452,7 @@ frag_pkt_teardown(void)
 }
 
 static void
-reassembly_print_stats(int8_t nb_frags, uint8_t fill_order,
+reassembly_print_stats(int8_t nb_frags, uint8_t fill_order, uint8_t num_exts,
 		       uint32_t outstanding, uint64_t cyc_per_flow,
 		       uint64_t cyc_per_frag_insert,
 		       uint64_t cyc_per_reassembly)
@@ -440,12 +478,12 @@ reassembly_print_stats(int8_t nb_frags, uint8_t fill_order,
 		break;
 	}
 
-	printf("| %-14s | %-14s | %-11d | %-11" PRIu64 " | %-22" PRIu64
+	printf("| %-14s | %-14s | %-12d | %-11d | %-11" PRIu64 " | %-22" PRIu64
 	       " | %-17" PRIu64 " |\n",
-	       order_str, frag_str, outstanding, cyc_per_flow,
+	       order_str, frag_str, num_exts, outstanding, cyc_per_flow,
 	       cyc_per_frag_insert, cyc_per_reassembly);
 	printf("+================+================+=============+=============+"
-	       "========================+===================+\n");
+	       "========================+==================================+\n");
 }
 
 static void
@@ -501,7 +539,7 @@ ipv4_reassembly_perf(int8_t nb_frags, uint8_t fill_order)
 		mbufs[i][0] = buf_out;
 	}
 
-	reassembly_print_stats(nb_frags, fill_order, 0, total_cyc / flow_cnt,
+	reassembly_print_stats(nb_frags, fill_order, 0, 0, total_cyc / flow_cnt,
 			       total_empty_cyc / frag_processed,
 			       total_reassembled_cyc / flow_cnt);
 
@@ -576,7 +614,7 @@ ipv4_outstanding_reassembly_perf(int8_t nb_frags, uint8_t fill_order,
 		mbufs[i][0] = buf_out;
 	}
 
-	reassembly_print_stats(nb_frags, fill_order, outstanding,
+	reassembly_print_stats(nb_frags, fill_order, 0, outstanding,
 			       total_cyc / flow_cnt,
 			       total_empty_cyc / frag_processed,
 			       total_reassembled_cyc / flow_cnt);
@@ -642,7 +680,7 @@ ipv4_reassembly_interleaved_flows_perf(uint8_t nb_frags)
 		}
 	}
 
-	reassembly_print_stats(nb_frags, FILL_MODE_INTERLEAVED, 0,
+	reassembly_print_stats(nb_frags, FILL_MODE_INTERLEAVED, 0, 0,
 			       total_cyc / flow_cnt,
 			       total_empty_cyc / frag_processed,
 			       total_reassembled_cyc / flow_cnt);
@@ -651,7 +689,7 @@ ipv4_reassembly_interleaved_flows_perf(uint8_t nb_frags)
 }
 
 static int
-ipv6_reassembly_perf(int8_t nb_frags, uint8_t fill_order)
+ipv6_reassembly_perf(int8_t nb_frags, uint8_t fill_order, uint8_t num_exts)
 {
 	struct rte_ip_frag_death_row death_row;
 	uint64_t total_reassembled_cyc = 0;
@@ -673,8 +711,8 @@ ipv6_reassembly_perf(int8_t nb_frags, uint8_t fill_order)
 			struct ipv6_extension_fragment *frag_hdr =
 				rte_pktmbuf_mtod_offset(
 					buf, struct ipv6_extension_fragment *,
-					buf->l2_len +
-						sizeof(struct rte_ipv6_hdr));
+					buf->l2_len + sizeof(struct rte_ipv6_hdr) +
+						num_exts * IPV6_ROUTING_HDR_SIZE);
 
 			tstamp = rte_rdtsc_precise();
 			buf_out = rte_ipv6_frag_reassemble_packet(
@@ -699,7 +737,7 @@ ipv6_reassembly_perf(int8_t nb_frags, uint8_t fill_order)
 		mbufs[i][0] = buf_out;
 	}
 
-	reassembly_print_stats(nb_frags, fill_order, 0, total_cyc / flow_cnt,
+	reassembly_print_stats(nb_frags, fill_order, num_exts, 0, total_cyc / flow_cnt,
 			       total_empty_cyc / frag_processed,
 			       total_reassembled_cyc / flow_cnt);
 
@@ -708,7 +746,7 @@ ipv6_reassembly_perf(int8_t nb_frags, uint8_t fill_order)
 
 static int
 ipv6_outstanding_reassembly_perf(int8_t nb_frags, uint8_t fill_order,
-				 uint32_t outstanding)
+				 uint32_t outstanding, uint8_t num_exts)
 {
 	struct rte_ip_frag_death_row death_row;
 	uint64_t total_reassembled_cyc = 0;
@@ -731,8 +769,8 @@ ipv6_outstanding_reassembly_perf(int8_t nb_frags, uint8_t fill_order,
 			struct ipv6_extension_fragment *frag_hdr =
 				rte_pktmbuf_mtod_offset(
 					buf, struct ipv6_extension_fragment *,
-					buf->l2_len +
-						sizeof(struct rte_ipv6_hdr));
+					buf->l2_len + sizeof(struct rte_ipv6_hdr) +
+						num_exts * IPV6_ROUTING_HDR_SIZE);
 
 			tstamp = rte_rdtsc_precise();
 			buf_out = rte_ipv6_frag_reassemble_packet(
@@ -761,8 +799,8 @@ ipv6_outstanding_reassembly_perf(int8_t nb_frags, uint8_t fill_order,
 			struct ipv6_extension_fragment *frag_hdr =
 				rte_pktmbuf_mtod_offset(
 					buf, struct ipv6_extension_fragment *,
-					buf->l2_len +
-						sizeof(struct rte_ipv6_hdr));
+					buf->l2_len + sizeof(struct rte_ipv6_hdr) +
+						num_exts * IPV6_ROUTING_HDR_SIZE);
 
 			tstamp = rte_rdtsc_precise();
 			buf_out = rte_ipv6_frag_reassemble_packet(
@@ -787,7 +825,7 @@ ipv6_outstanding_reassembly_perf(int8_t nb_frags, uint8_t fill_order,
 		mbufs[i][0] = buf_out;
 	}
 
-	reassembly_print_stats(nb_frags, fill_order, outstanding,
+	reassembly_print_stats(nb_frags, fill_order, num_exts, outstanding,
 			       total_cyc / flow_cnt,
 			       total_empty_cyc / frag_processed,
 			       total_reassembled_cyc / flow_cnt);
@@ -796,7 +834,7 @@ ipv6_outstanding_reassembly_perf(int8_t nb_frags, uint8_t fill_order,
 }
 
 static int
-ipv6_reassembly_interleaved_flows_perf(int8_t nb_frags)
+ipv6_reassembly_interleaved_flows_perf(int8_t nb_frags, uint8_t num_exts)
 {
 	struct rte_ip_frag_death_row death_row;
 	uint64_t total_reassembled_cyc = 0;
@@ -830,8 +868,8 @@ ipv6_reassembly_interleaved_flows_perf(int8_t nb_frags)
 			struct ipv6_extension_fragment *frag_hdr =
 				rte_pktmbuf_mtod_offset(
 					buf, struct ipv6_extension_fragment *,
-					buf->l2_len +
-						sizeof(struct rte_ipv6_hdr));
+					buf->l2_len + sizeof(struct rte_ipv6_hdr) +
+						num_exts * IPV6_ROUTING_HDR_SIZE);
 
 			tstamp = rte_rdtsc_precise();
 			buf_out[reassembled] = rte_ipv6_frag_reassemble_packet(
@@ -859,7 +897,7 @@ ipv6_reassembly_interleaved_flows_perf(int8_t nb_frags)
 		}
 	}
 
-	reassembly_print_stats(nb_frags, FILL_MODE_INTERLEAVED, 0,
+	reassembly_print_stats(nb_frags, FILL_MODE_INTERLEAVED, num_exts, 0,
 			       total_cyc / flow_cnt,
 			       total_empty_cyc / frag_processed,
 			       total_reassembled_cyc / flow_cnt);
@@ -894,25 +932,27 @@ ipv4_reassembly_test(int8_t nb_frags, uint8_t fill_order, uint32_t outstanding)
 }
 
 static int
-ipv6_reassembly_test(int8_t nb_frags, uint8_t fill_order, uint32_t outstanding)
+ipv6_reassembly_test(int8_t nb_frags, uint8_t fill_order, uint32_t outstanding,
+			uint8_t num_exts)
 {
 	int rc;
 
 	if (nb_frags > 0)
-		rc = ipv6_frag_pkt_setup(fill_order, nb_frags);
+		rc = ipv6_frag_pkt_setup(fill_order, nb_frags, num_exts);
 	else
-		rc = ipv6_rand_frag_pkt_setup(fill_order, MAX_FRAGMENTS);
+		rc = ipv6_rand_frag_pkt_setup(fill_order, MAX_FRAGMENTS, num_exts);
+
 
 	if (rc)
 		return rc;
 
 	if (outstanding)
 		rc = ipv6_outstanding_reassembly_perf(nb_frags, fill_order,
-						      outstanding);
+						      outstanding, num_exts);
 	else if (fill_order == FILL_MODE_INTERLEAVED)
-		rc = ipv6_reassembly_interleaved_flows_perf(nb_frags);
+		rc = ipv6_reassembly_interleaved_flows_perf(nb_frags, num_exts);
 	else
-		rc = ipv6_reassembly_perf(nb_frags, fill_order);
+		rc = ipv6_reassembly_perf(nb_frags, fill_order, num_exts);
 
 	frag_pkt_teardown();
 
@@ -925,7 +965,8 @@ test_reassembly_perf(void)
 	int8_t nb_fragments[] = {2, 3, MAX_FRAGMENTS, -1 /* Random */};
 	uint8_t order_type[] = {FILL_MODE_LINEAR, FILL_MODE_RANDOM};
 	uint32_t outstanding[] = {100, 500, 1000, 2000, 3000};
-	uint32_t i, j;
+	uint8_t num_exts[] = {0, 4, 8};
+	uint32_t i, j, k;
 	int rc;
 
 	rc = reassembly_test_setup();
@@ -967,32 +1008,40 @@ test_reassembly_perf(void)
 	/* Test variable fragment count and ordering. */
 	for (i = 0; i < RTE_DIM(nb_fragments); i++) {
 		for (j = 0; j < RTE_DIM(order_type); j++) {
-			rc = ipv6_reassembly_test(nb_fragments[i],
-						  order_type[j], 0);
-			if (rc)
-				return rc;
+			for (k = 0; k < RTE_DIM(num_exts); k++) {
+				rc = ipv6_reassembly_test(nb_fragments[i],
+							  order_type[j], 0, num_exts[k]);
+				if (rc)
+					return rc;
+			}
 		}
 	}
 
 	/* Test outstanding fragments in the table. */
 	for (i = 0; i < RTE_DIM(outstanding); i++) {
-		rc = ipv6_reassembly_test(2, 0, outstanding[i]);
-		if (rc)
-			return rc;
+		for (k = 0; k < RTE_DIM(num_exts); k++) {
+			rc = ipv6_reassembly_test(2, 0, outstanding[i], num_exts[k]);
+			if (rc)
+				return rc;
+		}
 	}
 
 	for (i = 0; i < RTE_DIM(outstanding); i++) {
-		rc = ipv6_reassembly_test(MAX_FRAGMENTS, 0, outstanding[i]);
-		if (rc)
-			return rc;
+		for (k = 0; k < RTE_DIM(num_exts); k++) {
+			rc = ipv6_reassembly_test(MAX_FRAGMENTS, 0, outstanding[i], num_exts[k]);
+			if (rc)
+				return rc;
+		}
 	}
 
 	/* Test interleaved flow reassembly perf */
 	for (i = 0; i < RTE_DIM(nb_fragments); i++) {
-		rc = ipv6_reassembly_test(nb_fragments[i],
-					  FILL_MODE_INTERLEAVED, 0);
-		if (rc)
-			return rc;
+		for (k = 0; k < RTE_DIM(num_exts); k++) {
+			rc = ipv6_reassembly_test(nb_fragments[i],
+						  FILL_MODE_INTERLEAVED, 0, num_exts[k]);
+			if (rc)
+				return rc;
+		}
 	}
 	reassembly_test_teardown();
 

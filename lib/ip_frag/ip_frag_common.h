@@ -34,6 +34,8 @@ extern int ipfrag_logtype;
 #define IPV4_KEYLEN 1
 #define IPV6_KEYLEN 4
 
+#define MAX_NUM_IPV6_EXTS 8
+
 /* helper macros */
 #define	IP_FRAG_MBUF2DR(dr, mb)	((dr)->row[(dr)->cnt++] = (mb))
 
@@ -169,6 +171,8 @@ ip_frag_reset(struct ip_frag_pkt *fp, uint64_t tms)
 	fp->total_size = UINT32_MAX;
 	fp->frag_size = 0;
 	fp->last_idx = IP_MIN_FRAG_NUM;
+	fp->exts_len = 0;
+	fp->next_proto = NULL;
 	fp->frags[IP_LAST_FRAG_IDX] = zero_frag;
 	fp->frags[IP_FIRST_FRAG_IDX] = zero_frag;
 }
