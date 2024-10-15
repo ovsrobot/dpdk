@@ -177,3 +177,43 @@ RTE_PMD_REGISTER_PCI(net_r8169, rte_r8169_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_r8169, pci_id_r8169_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_r8169, "* igb_uio | uio_pci_generic | vfio-pci");
 
+int r8169_logtype_init;
+int r8169_logtype_driver;
+
+#ifdef RTE_LIBRTE_R8169_DEBUG_RX
+int r8169_logtype_rx;
+#endif
+#ifdef RTE_LIBRTE_R8169_DEBUG_TX
+int r8169_logtype_tx;
+#endif
+#ifdef RTE_LIBRTE_R8169_DEBUG_TX_FREE
+int r8169_logtype_tx_free;
+#endif
+
+RTE_INIT(r8169_init_log)
+{
+	r8169_logtype_init = rte_log_register("pmd.net.r8169.init");
+	if (r8169_logtype_init >= 0)
+		rte_log_set_level(r8169_logtype_init, RTE_LOG_NOTICE);
+	r8169_logtype_driver = rte_log_register("pmd.net.r8169.driver");
+	if (r8169_logtype_driver >= 0)
+		rte_log_set_level(r8169_logtype_driver, RTE_LOG_NOTICE);
+#ifdef RTE_LIBRTE_R8169_DEBUG_RX
+	r8169_logtype_rx = rte_log_register("pmd.net.r8169.rx");
+	if (r8169_logtype_rx >= 0)
+		rte_log_set_level(r8169_logtype_rx, RTE_LOG_DEBUG);
+#endif
+
+#ifdef RTE_LIBRTE_R8169_DEBUG_TX
+	r8169_logtype_tx = rte_log_register("pmd.net.r8169.tx");
+	if (r8169_logtype_tx >= 0)
+		rte_log_set_level(r8169_logtype_tx, RTE_LOG_DEBUG);
+#endif
+
+#ifdef RTE_LIBRTE_R8169_DEBUG_TX_FREE
+	r8169_logtype_tx_free = rte_log_register("pmd.net.r8169.tx_free");
+	if (r8169_logtype_tx_free >= 0)
+		rte_log_set_level(r8169_logtype_tx_free, RTE_LOG_DEBUG);
+#endif
+}
+
