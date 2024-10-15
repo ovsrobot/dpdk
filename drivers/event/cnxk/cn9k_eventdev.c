@@ -917,7 +917,6 @@ eventdev_fops_tstamp_update(struct rte_eventdev *event_dev)
 	struct rte_event_fp_ops *fp_op =
 		rte_event_fp_ops + event_dev->data->dev_id;
 
-	fp_op->dequeue = event_dev->dequeue;
 	fp_op->dequeue_burst = event_dev->dequeue_burst;
 }
 

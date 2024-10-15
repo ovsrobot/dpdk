@@ -514,7 +514,6 @@ cn10k_sso_fp_fns_set(struct rte_eventdev *event_dev)
 	cn10k_sso_fp_blk_fns_set(event_dev);
 	cn10k_sso_fp_tmplt_fns_set(event_dev);
 
-	event_dev->enqueue = cn10k_sso_hws_enq;
 	event_dev->enqueue_burst = cn10k_sso_hws_enq_burst;
 	event_dev->enqueue_new_burst = cn10k_sso_hws_enq_new_burst;
 	event_dev->enqueue_forward_burst = cn10k_sso_hws_enq_fwd_burst;
@@ -848,7 +847,6 @@ eventdev_fops_update(struct rte_eventdev *event_dev)
 	struct rte_event_fp_ops *fp_op =
 		rte_event_fp_ops + event_dev->data->dev_id;
 
-	fp_op->dequeue = event_dev->dequeue;
 	fp_op->dequeue_burst = event_dev->dequeue_burst;
 }
 
