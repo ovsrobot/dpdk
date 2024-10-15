@@ -60,16 +60,12 @@ typedef void (*event_preschedule_t)(void *port,
 struct __rte_cache_aligned rte_event_fp_ops {
 	void **data;
 	/**< points to array of internal port data pointers */
-	event_enqueue_t enqueue;
-	/**< PMD enqueue function. */
 	event_enqueue_burst_t enqueue_burst;
 	/**< PMD enqueue burst function. */
 	event_enqueue_burst_t enqueue_new_burst;
 	/**< PMD enqueue burst new function. */
 	event_enqueue_burst_t enqueue_forward_burst;
 	/**< PMD enqueue burst fwd function. */
-	event_dequeue_t dequeue;
-	/**< PMD dequeue function. */
 	event_dequeue_burst_t dequeue_burst;
 	/**< PMD dequeue burst function. */
 	event_maintain_t maintain;
