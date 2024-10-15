@@ -366,7 +366,6 @@ cn10k_sso_hws_get_work_empty(struct cn10k_sso_hws *ws, struct rte_event *ev,
 }
 
 /* CN10K Fastpath functions. */
-uint16_t __rte_hot cn10k_sso_hws_enq(void *port, const struct rte_event *ev);
 uint16_t __rte_hot cn10k_sso_hws_enq_burst(void *port,
 					   const struct rte_event ev[],
 					   uint16_t nb_events);
@@ -381,8 +380,6 @@ int __rte_hot cn10k_sso_hws_preschedule_modify(void *port,
 					       enum rte_event_dev_preschedule_type type);
 
 #define R(name, flags)                                                         \
-	uint16_t __rte_hot cn10k_sso_hws_deq_##name(                           \
-		void *port, struct rte_event *ev, uint64_t timeout_ticks);     \
 	uint16_t __rte_hot cn10k_sso_hws_deq_burst_##name(                     \
 		void *port, struct rte_event ev[], uint16_t nb_events,         \
 		uint64_t timeout_ticks);                                       \
@@ -421,8 +418,6 @@ int __rte_hot cn10k_sso_hws_preschedule_modify(void *port,
 	uint16_t __rte_hot cn10k_sso_hws_deq_tmo_ca_seg_burst_##name(          \
 		void *port, struct rte_event ev[], uint16_t nb_events,         \
 		uint64_t timeout_ticks);                                       \
-	uint16_t __rte_hot cn10k_sso_hws_reas_deq_##name(                      \
-		void *port, struct rte_event *ev, uint64_t timeout_ticks);     \
 	uint16_t __rte_hot cn10k_sso_hws_reas_deq_burst_##name(                \
 		void *port, struct rte_event ev[], uint16_t nb_events,         \
 		uint64_t timeout_ticks);                                       \
@@ -519,12 +514,8 @@ NIX_RX_FASTPATH_MODES
 		return fn(port, ev, timeout_ticks);                            \
 	}
 
-uint16_t __rte_hot cn10k_sso_hws_deq_all_offload(void *port, struct rte_event *ev,
-						 uint64_t timeout_ticks);
 uint16_t __rte_hot cn10k_sso_hws_deq_burst_all_offload(void *port, struct rte_event ev[],
 						       uint16_t nb_events, uint64_t timeout_ticks);
-uint16_t __rte_hot cn10k_sso_hws_deq_all_offload_tst(void *port, struct rte_event *ev,
-						     uint64_t timeout_ticks);
 uint16_t __rte_hot cn10k_sso_hws_deq_burst_all_offload_tst(void *port, struct rte_event ev[],
 							   uint16_t nb_events,
 							   uint64_t timeout_ticks);
