@@ -38,6 +38,7 @@
 #define ICE_RX_LOW_LATENCY_ARG    "rx_low_latency"
 #define ICE_MBUF_CHECK_ARG       "mbuf_check"
 #define ICE_DDP_FILENAME          "ddp_pkg_file"
+#define ICE_DDP_LOAD_SCHED        "ddp_load_sched_topo"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -55,6 +56,7 @@ static const char * const ice_valid_args[] = {
 	ICE_DEFAULT_MAC_DISABLE,
 	ICE_MBUF_CHECK_ARG,
 	ICE_DDP_FILENAME,
+	ICE_DDP_LOAD_SCHED,
 	NULL
 };
 
@@ -1979,7 +1981,7 @@ no_dsn:
 load_fw:
 	PMD_INIT_LOG(DEBUG, "DDP package name: %s", pkg_file);
 
-	err = ice_copy_and_init_pkg(hw, buf, bufsz);
+	err = ice_copy_and_init_pkg(hw, buf, bufsz, adapter->devargs.ddp_load_sched);
 	if (!ice_is_init_pkg_successful(err)) {
 		PMD_INIT_LOG(ERR, "ice_copy_and_init_hw failed: %d", err);
 		free(buf);
@@ -2012,19 +2014,18 @@ static int
 parse_bool(const char *key, const char *value, void *args)
 {
 	int *i = (int *)args;
-	char *end;
-	int num;
 
-	num = strtoul(value, &end, 10);
-
-	if (num != 0 && num != 1) {
-		PMD_DRV_LOG(WARNING, "invalid value:\"%s\" for key:\"%s\", "
-			"value must be 0 or 1",
+	if (value == NULL || value[0] == '\0') {
+		PMD_DRV_LOG(WARNING, "key:\"%s\", requires a value, which must be 0 or 1", key);
+		return -1;
+	}
+	if (value[1] != '\0' || (value[0] != '0' && value[0] != '1')) {
+		PMD_DRV_LOG(WARNING, "invalid value:\"%s\" for key:\"%s\", value must be 0 or 1",
 			value, key);
 		return -1;
 	}
 
-	*i = num;
+	*i = value[0] - '0';
 	return 0;
 }
 
@@ -2289,6 +2290,10 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
+	ret = rte_kvargs_process(kvlist, ICE_DDP_LOAD_SCHED,
+				 &parse_bool, &ad->devargs.ddp_load_sched);
+	if (ret)
+		goto bail;
 bail:
 	rte_kvargs_free(kvlist);
 	return ret;
@@ -7081,6 +7086,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_PROTO_XTR_ARG "=[queue:]<vlan|ipv4|ipv6|ipv6_flow|tcp|ip_offset>"
 			      ICE_SAFE_MODE_SUPPORT_ARG "=<0|1>"
 			      ICE_DEFAULT_MAC_DISABLE "=<0|1>"
+			      ICE_DDP_LOAD_SCHED "=<0|1>"
 			      ICE_DDP_FILENAME "=</path/to/file>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>");
 
