@@ -14,5 +14,6 @@ if not dpdk_conf.has('RTE_ARCH_X86_64') or not dpdk_conf.get('RTE_ARCH_64')
 endif
 
 sources = files(
-	'zxdh_ethdev.c',
-	)
+    'zxdh_ethdev.c',
+    'zxdh_pci.c',
+    )
