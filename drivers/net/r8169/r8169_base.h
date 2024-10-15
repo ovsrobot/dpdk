@@ -589,6 +589,13 @@ enum RTL_chipset_name {
 
 #define DMA_BIT_MASK(n) (((n) == 64) ? ~0ULL : ((1ULL << (n)) - 1))
 
+#ifndef WRITE_ONCE
+#define WRITE_ONCE(var, val) (*((volatile typeof(val) *)(&(var))) = (val))
+#endif
+#ifndef READ_ONCE
+#define READ_ONCE(var) (*((volatile typeof(var) *)(&(var))))
+#endif
+
 static inline u32
 rtl_read32(volatile void *addr)
 {
