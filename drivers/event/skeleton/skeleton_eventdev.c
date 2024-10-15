@@ -350,9 +350,7 @@ skeleton_eventdev_init(struct rte_eventdev *eventdev)
 	PMD_DRV_FUNC_TRACE();
 
 	eventdev->dev_ops       = &skeleton_eventdev_ops;
-	eventdev->enqueue       = skeleton_eventdev_enqueue;
 	eventdev->enqueue_burst = skeleton_eventdev_enqueue_burst;
-	eventdev->dequeue       = skeleton_eventdev_dequeue;
 	eventdev->dequeue_burst = skeleton_eventdev_dequeue_burst;
 
 	/* For secondary processes, the primary has done all the work */
@@ -440,9 +438,7 @@ skeleton_eventdev_create(const char *name, int socket_id, struct rte_vdev_device
 	}
 
 	eventdev->dev_ops       = &skeleton_eventdev_ops;
-	eventdev->enqueue       = skeleton_eventdev_enqueue;
 	eventdev->enqueue_burst = skeleton_eventdev_enqueue_burst;
-	eventdev->dequeue       = skeleton_eventdev_dequeue;
 	eventdev->dequeue_burst = skeleton_eventdev_dequeue_burst;
 
 	event_dev_probing_finish(eventdev);
