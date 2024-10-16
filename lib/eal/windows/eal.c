@@ -120,8 +120,8 @@ eal_parse_args(int argc, char **argv)
 			return -1;
 		}
 
-		/* eal_log_level_parse() already handled this option */
-		if (opt == OPT_LOG_LEVEL_NUM)
+		/* eal_log_level_parse() already handled these options */
+		if (opt == OPT_LOG_LEVEL_NUM || opt == OPT_SYSLOG_NUM)
 			continue;
 
 		ret = eal_parse_common_option(opt, optarg, internal_conf);
@@ -250,7 +250,7 @@ rte_eal_init(int argc, char **argv)
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_THREAD_NAME_SIZE];
 
-	eal_log_init(NULL, 0);
+	eal_log_init(NULL);
 
 	eal_log_level_parse(argc, argv);
 
