@@ -48,4 +48,8 @@ struct virtnet_tx {
 	const struct rte_memzone *mz;                 /* mem zone to populate TX ring. */
 };
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif  /* _ZXDH_RXTX_H_ */
