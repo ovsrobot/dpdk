@@ -12,6 +12,9 @@
 #include "zxdh_msg.h"
 #include "zxdh_common.h"
 
+#define ZXDH_MIN_RX_BUFSIZE     64
+#define ZXDH_MAX_RX_PKTLEN      14000U
+
 struct zxdh_hw_internal zxdh_hw_internal[RTE_MAX_ETHPORTS];
 
 uint16_t vport_to_vfid(union VPORT v)
@@ -23,6 +26,58 @@ uint16_t vport_to_vfid(union VPORT v)
 		return v.epid * 256 + v.vfid;
 	else
 		return (v.epid * 8 + v.pfid) + 1152;
+}
+
+static uint32_t zxdh_dev_speed_capa_get(uint32_t speed)
+{
+	switch (speed) {
+	case RTE_ETH_SPEED_NUM_10G:  return RTE_ETH_LINK_SPEED_10G;
+	case RTE_ETH_SPEED_NUM_20G:  return RTE_ETH_LINK_SPEED_20G;
+	case RTE_ETH_SPEED_NUM_25G:  return RTE_ETH_LINK_SPEED_25G;
+	case RTE_ETH_SPEED_NUM_40G:  return RTE_ETH_LINK_SPEED_40G;
+	case RTE_ETH_SPEED_NUM_50G:  return RTE_ETH_LINK_SPEED_50G;
+	case RTE_ETH_SPEED_NUM_56G:  return RTE_ETH_LINK_SPEED_56G;
+	case RTE_ETH_SPEED_NUM_100G: return RTE_ETH_LINK_SPEED_100G;
+	case RTE_ETH_SPEED_NUM_200G: return RTE_ETH_LINK_SPEED_200G;
+	default:                     return 0;
+	}
+}
+
+static int32_t zxdh_dev_infos_get(struct rte_eth_dev *dev,
+					struct rte_eth_dev_info *dev_info)
+{
+	struct zxdh_hw *hw = dev->data->dev_private;
+
+	dev_info->speed_capa       = zxdh_dev_speed_capa_get(hw->speed);
+	dev_info->max_rx_queues    = RTE_MIN(hw->max_queue_pairs, ZXDH_RX_QUEUES_MAX);
+	dev_info->max_tx_queues    = RTE_MIN(hw->max_queue_pairs, ZXDH_TX_QUEUES_MAX);
+	dev_info->min_rx_bufsize   = ZXDH_MIN_RX_BUFSIZE;
+	dev_info->max_rx_pktlen    = ZXDH_MAX_RX_PKTLEN;
+	dev_info->max_mac_addrs    = ZXDH_MAX_MAC_ADDRS;
+	dev_info->rx_offload_capa  = (RTE_ETH_RX_OFFLOAD_VLAN_STRIP |
+					RTE_ETH_RX_OFFLOAD_VLAN_FILTER |
+					RTE_ETH_RX_OFFLOAD_QINQ_STRIP);
+	dev_info->rx_offload_capa |= (RTE_ETH_RX_OFFLOAD_IPV4_CKSUM |
+					RTE_ETH_RX_OFFLOAD_UDP_CKSUM |
+					RTE_ETH_RX_OFFLOAD_TCP_CKSUM |
+					RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM);
+	dev_info->rx_offload_capa |= (RTE_ETH_RX_OFFLOAD_SCATTER);
+	dev_info->rx_offload_capa |=  RTE_ETH_RX_OFFLOAD_TCP_LRO;
+	dev_info->rx_offload_capa |=  RTE_ETH_RX_OFFLOAD_RSS_HASH;
+
+	dev_info->tx_offload_capa = (RTE_ETH_TX_OFFLOAD_MULTI_SEGS);
+	dev_info->tx_offload_capa |= (RTE_ETH_TX_OFFLOAD_TCP_TSO |
+					RTE_ETH_TX_OFFLOAD_UDP_TSO);
+	dev_info->tx_offload_capa |= (RTE_ETH_TX_OFFLOAD_VLAN_INSERT |
+					RTE_ETH_TX_OFFLOAD_QINQ_INSERT |
+					RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO);
+	dev_info->tx_offload_capa |= (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
+					RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
+					RTE_ETH_TX_OFFLOAD_TCP_CKSUM |
+					RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM |
+					RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM);
+
+	return 0;
 }
 
 static void zxdh_queues_unbind_intr(struct rte_eth_dev *dev)
@@ -321,6 +376,11 @@ free_intr_vec:
 	return ret;
 }
 
+/* dev_ops for zxdh, bare necessities for basic operation */
+static const struct eth_dev_ops zxdh_eth_dev_ops = {
+	.dev_infos_get			 = zxdh_dev_infos_get,
+};
+
 static int32_t zxdh_init_device(struct rte_eth_dev *eth_dev)
 {
 	struct zxdh_hw *hw = eth_dev->data->dev_private;
@@ -377,7 +437,7 @@ static int zxdh_eth_dev_init(struct rte_eth_dev *eth_dev)
 	struct zxdh_hw *hw = eth_dev->data->dev_private;
 	int ret = 0;
 
-	eth_dev->dev_ops = NULL;
+	eth_dev->dev_ops = &zxdh_eth_dev_ops;
 
 	/* Allocate memory for storing MAC addresses */
 	eth_dev->data->mac_addrs = rte_zmalloc("zxdh_mac",
