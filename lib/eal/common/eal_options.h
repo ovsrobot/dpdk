@@ -33,10 +33,12 @@ enum {
 	OPT_HUGE_UNLINK_NUM,
 #define OPT_LCORES            "lcores"
 	OPT_LCORES_NUM,
-#define OPT_LOG_LEVEL         "log-level"
-	OPT_LOG_LEVEL_NUM,
+#define OPT_LOG_COLOR	      "log-color"
+	OPT_LOG_COLOR_NUM,
 #define OPT_LOG_JOURNAL       "log-journal"
 	OPT_LOG_JOURNAL_NUM,
+#define OPT_LOG_LEVEL         "log-level"
+	OPT_LOG_LEVEL_NUM,
 #define OPT_LOG_TIMESTAMP     "log-timestamp"
 	OPT_LOG_TIMESTAMP_NUM,
 #define OPT_TRACE             "trace"
