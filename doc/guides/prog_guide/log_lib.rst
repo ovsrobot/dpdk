@@ -5,9 +5,7 @@ Log Library
 ===========
 
 The DPDK Log library provides the logging functionality for other DPDK libraries and drivers.
-By default, in a Linux application, logs are sent to syslog and also to the console.
-On FreeBSD and Windows applications, logs are sent only to the console.
-However, the log function can be overridden by the user to use a different logging mechanism.
+The messages can be sent to one or more sources controlled by the EAL command line options.
 
 Log Levels
 ----------
@@ -82,6 +80,23 @@ Multiple timestamp alternative timestamp formats are available:
 To prefix all console messages with ISO format time the syntax is::
 
 	/path/to/app --log-timestamp=iso
+
+Log output
+~~~~~~~~~~
+
+If desired, messages can be redirected to syslog (on Linux and FreeBSD) with the ``--syslog``
+option. There are three possible settings for this option:
+
+*always*
+    Redirect all log output to syslog.
+
+*auto*
+    Use console if it is a terminal, and use syslog if is not.
+
+*both*
+    Print to both console and syslog.
+
+If ``--syslog`` option is not specified, then only console (stderr) will be used.
 
 
 
