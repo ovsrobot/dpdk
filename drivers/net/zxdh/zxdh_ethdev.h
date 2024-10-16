@@ -51,6 +51,7 @@ struct zxdh_hw {
 	uint8_t mac_addr[RTE_ETHER_ADDR_LEN];
 	uint8_t duplex;
 	uint8_t is_pf;
+	uint8_t msg_chan_init;
 };
 
 #ifdef __cplusplus
