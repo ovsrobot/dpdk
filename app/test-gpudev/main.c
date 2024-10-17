@@ -96,6 +96,13 @@ alloc_gpu_memory(uint16_t gpu_id)
 		goto error;
 	}
 
+	/* GCC 11 or later, is able to detect use-after-free and calling free on no-pointer
+	 * at compilation, but want to allow these tests to still work.
+	 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+
 	ret = rte_gpu_mem_free(gpu_id, (uint8_t *)(ptr_1)+0x700);
 	if (ret < 0) {
 		printf("GPU memory 0x%p NOT freed: GPU driver didn't find this memory address internally.\n",
@@ -128,6 +135,7 @@ error:
 	rte_gpu_mem_free(gpu_id, ptr_1);
 	rte_gpu_mem_free(gpu_id, ptr_2);
 
+#pragma GCC diagnostic pop
 	printf("\n=======> TEST: FAILED\n");
 	return -1;
 }
@@ -228,12 +236,12 @@ gpu_mem_cpu_map(uint16_t gpu_id)
 	}
 	printf("GPU memory CPU unmapped, 0x%p not valid anymore\n", ptr_cpu);
 
+	printf("GPU memory 0x%p freeing\n", ptr_gpu);
 	ret = rte_gpu_mem_free(gpu_id, ptr_gpu);
 	if (ret < 0) {
 		fprintf(stderr, "rte_gpu_mem_free returned error %d\n", ret);
 		goto error;
 	}
-	printf("GPU memory 0x%p freed\n", ptr_gpu);
 
 	printf("\n=======> TEST: PASSED\n");
 	return 0;
