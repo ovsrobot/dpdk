@@ -357,6 +357,28 @@ int rte_gpu_callback_unregister(int16_t dev_id, enum rte_gpu_event event,
 __rte_experimental
 int rte_gpu_info_get(int16_t dev_id, struct rte_gpu_info *info);
 
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Deallocate a chunk of memory allocated with rte_gpu_mem_alloc().
+ *
+ * @param dev_id
+ *   Reference device ID.
+ * @param ptr
+ *   Pointer to the memory area to be deallocated.
+ *   NULL is a no-op accepted value.
+ *
+ * @return
+ *   0 on success, -rte_errno otherwise:
+ *   - ENODEV if invalid dev_id
+ *   - ENOTSUP if operation not supported by the driver
+ *   - EPERM if driver error
+ */
+__rte_experimental
+int rte_gpu_mem_free(int16_t dev_id, void *ptr);
+
 /**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
@@ -385,28 +407,8 @@ int rte_gpu_info_get(int16_t dev_id, struct rte_gpu_info *info);
  */
 __rte_experimental
 void *rte_gpu_mem_alloc(int16_t dev_id, size_t size, unsigned int align)
-__rte_alloc_size(2);
-
-/**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
- * Deallocate a chunk of memory allocated with rte_gpu_mem_alloc().
- *
- * @param dev_id
- *   Reference device ID.
- * @param ptr
- *   Pointer to the memory area to be deallocated.
- *   NULL is a no-op accepted value.
- *
- * @return
- *   0 on success, -rte_errno otherwise:
- *   - ENODEV if invalid dev_id
- *   - ENOTSUP if operation not supported by the driver
- *   - EPERM if driver error
- */
-__rte_experimental
-int rte_gpu_mem_free(int16_t dev_id, void *ptr);
+	__rte_alloc_size(2) __rte_alloc_align(3)
+	__rte_malloc __rte_dealloc(rte_gpu_mem_free, 2);
 
 /**
  * @warning
