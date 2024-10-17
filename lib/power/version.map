@@ -59,6 +59,9 @@ INTERNAL {
 	global:
 
 	rte_power_register_ops;
+	rte_power_register_uncore_ops;
+	rte_power_get_core_ops;
+	rte_power_get_uncore_ops;
 	cpufreq_check_scaling_driver;
 	power_set_governor;
 	open_core_sysfs_file;
