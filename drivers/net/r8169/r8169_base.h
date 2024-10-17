@@ -379,6 +379,7 @@ enum RTL_register_content {
 
 	/* PHY status */
 	PowerSaveStatus = 0x80,
+	_5000bpsF       = 0x1000,
 	_2500bpsF       = 0x400,
 	TxFlowCtrl      = 0x40,
 	RxFlowCtrl      = 0x20,
@@ -558,10 +559,6 @@ enum RTL_chipset_name {
 #define ADVERTISE_2500_FULL   0x0080
 #define ADVERTISE_5000_HALF   0x0100 /* NOT used, just FYI */
 #define ADVERTISE_5000_FULL   0x0200
-
-#define RTL8126_ALL_SPEED_DUPLEX (ADVERTISE_10_HALF | ADVERTISE_10_FULL | \
-        ADVERTISE_100_HALF | ADVERTISE_100_FULL | ADVERTISE_1000_FULL | \
-        ADVERTISE_2500_FULL | ADVERTISE_5000_FULL)
 
 #define MAC_ADDR_LEN    RTE_ETHER_ADDR_LEN
 
