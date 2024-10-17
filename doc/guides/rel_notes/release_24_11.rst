@@ -238,6 +238,12 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Added new ICMP message types and codes.**
+
+  New ICMP message types and codes from RFC 792 are available in ``rte_icmp.h``.
+  Message types now use the ``RTE_ICMP_TYPE_`` prefix.
+  Message codes use the ``RTE_ICMP_CODE_`` prefix.
+
 
 Removed Items
 -------------
