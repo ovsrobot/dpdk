@@ -719,8 +719,16 @@ ssovf_close(struct rte_eventdev *dev)
 static int
 ssovf_parsekv(const char *key __rte_unused, const char *value, void *opaque)
 {
-	int *flag = opaque;
-	*flag = !!atoi(value);
+	uint8_t *flag = (uint8_t *)opaque;
+	char *end;
+
+	errno = 0;
+	*flag = (uint8_t)strtol(value, &end, 2);
+	if ((errno != 0) || (value == end)) {
+		ssovf_log_err("fail to get key val ret:%d err:%d", *flag, errno);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
