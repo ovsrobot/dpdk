@@ -297,6 +297,8 @@ API Changes
     - ``rte_fib6_lookup_bulk()``
   hash
     - ``struct rte_ipv6_tuple``
+  gro
+    - ``struct tcp6_flow_key``
   ipsec
     - ``struct rte_ipsec_sadv6_key``
   lpm
