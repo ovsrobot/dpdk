@@ -295,6 +295,8 @@ API Changes
     - ``rte_fib6_add()``
     - ``rte_fib6_delete()``
     - ``rte_fib6_lookup_bulk()``
+  ipsec
+    - ``struct rte_ipsec_sadv6_key``
   lpm
     - ``rte_lpm6_add()``
     - ``rte_lpm6_delete()``
