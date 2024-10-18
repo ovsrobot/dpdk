@@ -304,6 +304,8 @@ API Changes
     - ``rte_lpm6_lookup_bulk_func()``
   net
     - ``struct rte_ipv6_hdr``
+  node
+    - ``rte_node_ip6_route_add()``
   table
     - ``struct rte_table_lpm_ipv6_key``
   rib
