@@ -140,6 +140,7 @@ uint32_t max_pkt_len;
 #ifdef RTE_LIB_EVENTDEV
 static struct rte_mempool *vector_pool[RTE_MAX_ETHPORTS];
 #endif
+static uint16_t mbuf_data_size = RTE_MBUF_DEFAULT_DATAROOM;
 static struct rte_mempool *pktmbuf_pool[RTE_MAX_ETHPORTS][NB_SOCKETS];
 static uint8_t lkp_per_socket[NB_SOCKETS];
 
@@ -448,7 +449,8 @@ print_usage(const char *prgname)
 		"                    One is ACL entry at while line leads with character '%c',\n"
 		"                    another is route entry at while line leads with character '%c'.\n"
 		"  --rule_ipv6=FILE: Specify the ipv6 rules entries file.\n"
-		"  --alg: ACL classify method to use, one of: %s.\n\n",
+		"  --alg: ACL classify method to use, one of: %s.\n"
+		"  --mbuf-size=N: Set the data size of mbuf to N bytes.\n\n",
 		prgname, RX_DESC_DEFAULT, TX_DESC_DEFAULT,
 		ACL_LEAD_CHAR, ROUTE_LEAD_CHAR, alg);
 }
@@ -667,6 +669,22 @@ parse_lookup(const char *optarg)
 	return 0;
 }
 
+static void
+parse_mbuf_data_size(const char *optarg)
+{
+	char *end = NULL;
+
+	mbuf_data_size = strtoul(optarg, &end, 10);
+	if ((optarg[0] == '\0') || (end == NULL) || (*end != '\0'))
+		rte_exit(EXIT_FAILURE, "Invalid mbuf data size: %s\n", optarg);
+
+	if (mbuf_data_size < RTE_ETHER_MIN_LEN ||
+			mbuf_data_size > 0xFFFF - RTE_PKTMBUF_HEADROOM)
+		rte_exit(EXIT_FAILURE,
+				"mbuf-size should be >= %u and <= %u\n",
+				RTE_ETHER_MIN_LEN, 0xFFFF - RTE_PKTMBUF_HEADROOM);
+}
+
 #define MAX_JUMBO_PKT_LEN  9600
 
 static const char short_options[] =
@@ -698,6 +716,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_RULE_IPV4 "rule_ipv4"
 #define CMD_LINE_OPT_RULE_IPV6 "rule_ipv6"
 #define CMD_LINE_OPT_ALG "alg"
+#define CMD_LINE_OPT_MBUF_SIZE "mbuf-size"
 
 enum {
 	/* long options mapped to a short option */
@@ -726,7 +745,8 @@ enum {
 	CMD_LINE_OPT_LOOKUP_NUM,
 	CMD_LINE_OPT_ENABLE_VECTOR_NUM,
 	CMD_LINE_OPT_VECTOR_SIZE_NUM,
-	CMD_LINE_OPT_VECTOR_TMO_NS_NUM
+	CMD_LINE_OPT_VECTOR_TMO_NS_NUM,
+	CMD_LINE_OPT_MBUF_SIZE_NUM,
 };
 
 static const struct option lgopts[] = {
@@ -753,6 +773,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_RULE_IPV4,   1, 0, CMD_LINE_OPT_RULE_IPV4_NUM},
 	{CMD_LINE_OPT_RULE_IPV6,   1, 0, CMD_LINE_OPT_RULE_IPV6_NUM},
 	{CMD_LINE_OPT_ALG,   1, 0, CMD_LINE_OPT_ALG_NUM},
+	{CMD_LINE_OPT_MBUF_SIZE, 1, 0, CMD_LINE_OPT_MBUF_SIZE_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -934,6 +955,9 @@ parse_args(int argc, char **argv)
 		case CMD_LINE_OPT_ALG_NUM:
 			l3fwd_set_alg(optarg);
 			break;
+		case CMD_LINE_OPT_MBUF_SIZE_NUM:
+			parse_mbuf_data_size(optarg);
+			break;
 		default:
 			print_usage(prgname);
 			return -1;
@@ -1034,7 +1058,8 @@ init_mem(uint16_t portid, unsigned int nb_mbuf)
 			pktmbuf_pool[portid][socketid] =
 				rte_pktmbuf_pool_create(s, nb_mbuf,
 					MEMPOOL_CACHE_SIZE, 0,
-					RTE_MBUF_DEFAULT_BUF_SIZE, socketid);
+					mbuf_data_size + RTE_PKTMBUF_HEADROOM,
+					socketid);
 			if (pktmbuf_pool[portid][socketid] == NULL)
 				rte_exit(EXIT_FAILURE,
 					"Cannot init mbuf pool on socket %d\n",

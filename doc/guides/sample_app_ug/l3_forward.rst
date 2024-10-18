@@ -143,6 +143,8 @@ Where,
 * ``--alg=<val>:`` optional, ACL classify method to use, one of:
   ``scalar|sse|avx2|neon|altivec|avx512x16|avx512x32``
 
+* ``--mbuf-size=N:`` Optional, Set the data size of mbuf to N bytes.
+
 * ``-E:`` Optional, enable exact match,
   legacy flag, please use ``--lookup=em`` instead.
 
