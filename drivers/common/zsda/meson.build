@@ -11,4 +11,5 @@ deps += ['bus_pci']
 sources += files(
 		'zsda_common.c',
 		'zsda_logs.c',
+		'zsda_device.c',
 		)
