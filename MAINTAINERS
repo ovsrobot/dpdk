@@ -987,6 +987,12 @@ F: drivers/net/sfc/
 F: doc/guides/nics/sfc_efx.rst
 F: doc/guides/nics/features/sfc.ini
 
+Linkdata sxe
+M: Jie Li <lijie@linkdatatechnology.com>
+F: drivers/net/sxe/
+F: doc/guides/nics/sxe.rst
+F: doc/guides/nics/features/sxe*.ini
+
 Wangxun ngbe
 M: Jiawen Wu <jiawenwu@trustnetic.com>
 F: drivers/net/ngbe/

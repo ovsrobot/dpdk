@@ -72,6 +72,9 @@ endif
 if dpdk_conf.has('RTE_NET_DPAA')
     deps += ['bus_dpaa', 'mempool_dpaa', 'net_dpaa']
 endif
+if dpdk_conf.has('RTE_NET_SXE')
+    deps += 'net_sxe'
+endif
 
 # Driver-specific commands are located in driver directories.
 includes = include_directories('.')
