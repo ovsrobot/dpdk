@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2021 Intel Corporation
  * Copyright(c) 2021 Arm Limited
- * Copyright(c) 2023 Amd Limited
+ * Copyright(c) 2024 Advanced Micro Devices, Inc.
  */
 
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 #include <rte_memcpy.h>
 #include <rte_stdatomic.h>
 
-#include "power_amd_pstate_cpufreq.h"
+#include "amd_pstate_cpufreq.h"
 #include "power_common.h"
 
 /* macros used for rounding frequency to nearest 1000 */
@@ -710,3 +710,23 @@ power_amd_pstate_get_capabilities(unsigned int lcore_id,
 
 	return 0;
 }
+
+static struct rte_power_core_ops amd_pstate_ops = {
+	.name = "amd-pstate",
+	.init = power_amd_pstate_cpufreq_init,
+	.exit = power_amd_pstate_cpufreq_exit,
+	.check_env_support = power_amd_pstate_cpufreq_check_supported,
+	.get_avail_freqs = power_amd_pstate_cpufreq_freqs,
+	.get_freq = power_amd_pstate_cpufreq_get_freq,
+	.set_freq = power_amd_pstate_cpufreq_set_freq,
+	.freq_down = power_amd_pstate_cpufreq_freq_down,
+	.freq_up = power_amd_pstate_cpufreq_freq_up,
+	.freq_max = power_amd_pstate_cpufreq_freq_max,
+	.freq_min = power_amd_pstate_cpufreq_freq_min,
+	.turbo_status = power_amd_pstate_turbo_status,
+	.enable_turbo = power_amd_pstate_enable_turbo,
+	.disable_turbo = power_amd_pstate_disable_turbo,
+	.get_caps = power_amd_pstate_get_capabilities
+};
+
+RTE_POWER_REGISTER_OPS(amd_pstate_ops);
