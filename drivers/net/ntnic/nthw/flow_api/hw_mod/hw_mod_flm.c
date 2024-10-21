@@ -712,6 +712,52 @@ int hw_mod_flm_rcp_set(struct flow_api_backend_s *be, enum hw_flm_e field, int i
 
 	return hw_mod_flm_rcp_mod(be, field, index, &value, 0);
 }
+
+int hw_mod_flm_buf_ctrl_update(struct flow_api_backend_s *be)
+{
+	return be->iface->flm_buf_ctrl_update(be->be_dev, &be->flm);
+}
+
+static int hw_mod_flm_buf_ctrl_mod_get(struct flow_api_backend_s *be, enum hw_flm_e field,
+	uint32_t *value)
+{
+	int get = 1;	/* Only get supported */
+
+	switch (_VER_) {
+	case 25:
+		switch (field) {
+		case HW_FLM_BUF_CTRL_LRN_FREE:
+			GET_SET(be->flm.v25.buf_ctrl->lrn_free, value);
+			break;
+
+		case HW_FLM_BUF_CTRL_INF_AVAIL:
+			GET_SET(be->flm.v25.buf_ctrl->inf_avail, value);
+			break;
+
+		case HW_FLM_BUF_CTRL_STA_AVAIL:
+			GET_SET(be->flm.v25.buf_ctrl->sta_avail, value);
+			break;
+
+		default:
+			UNSUP_FIELD_LOG;
+			return UNSUP_FIELD;
+		}
+
+		break;
+
+	default:
+		UNSUP_VER_LOG;
+		return UNSUP_VER;
+	}
+
+	return 0;
+}
+
+int hw_mod_flm_buf_ctrl_get(struct flow_api_backend_s *be, enum hw_flm_e field, uint32_t *value)
+{
+	return hw_mod_flm_buf_ctrl_mod_get(be, field, value);
+}
+
 int hw_mod_flm_stat_update(struct flow_api_backend_s *be)
 {
 	return be->iface->flm_stat_update(be->be_dev, &be->flm);
@@ -886,4 +932,33 @@ int hw_mod_flm_lrn_data_set_flush(struct flow_api_backend_s *be, enum hw_flm_e f
 	}
 
 	return ret;
+}
+
+int hw_mod_flm_inf_sta_data_update_get(struct flow_api_backend_s *be, enum hw_flm_e field,
+	uint32_t *inf_value, uint32_t inf_size,
+	uint32_t *inf_word_cnt, uint32_t *sta_value,
+	uint32_t sta_size, uint32_t *sta_word_cnt)
+{
+	switch (_VER_) {
+	case 25:
+		switch (field) {
+		case HW_FLM_FLOW_INF_STA_DATA:
+			be->iface->flm_inf_sta_data_update(be->be_dev, &be->flm, inf_value,
+				inf_size, inf_word_cnt, sta_value,
+				sta_size, sta_word_cnt);
+			break;
+
+		default:
+			UNSUP_FIELD_LOG;
+			return UNSUP_FIELD;
+		}
+
+		break;
+
+	default:
+		UNSUP_VER_LOG;
+		return UNSUP_VER;
+	}
+
+	return 0;
 }
