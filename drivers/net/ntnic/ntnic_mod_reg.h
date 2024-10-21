@@ -304,9 +304,43 @@ struct profile_inline_ops {
 		uint64_t size);
 
 	/*
+	 * NT Flow FLM Meter API
+	 */
+	int (*flow_mtr_supported)(struct flow_eth_dev *dev);
+
+	uint64_t (*flow_mtr_meter_policy_n_max)(void);
+
+	int (*flow_mtr_set_profile)(struct flow_eth_dev *dev, uint32_t profile_id,
+		uint64_t bucket_rate_a, uint64_t bucket_size_a,
+		uint64_t bucket_rate_b, uint64_t bucket_size_b);
+
+	int (*flow_mtr_set_policy)(struct flow_eth_dev *dev, uint32_t policy_id, int drop);
+
+	int (*flow_mtr_create_meter)(struct flow_eth_dev *dev, uint8_t caller_id, uint32_t mtr_id,
+		uint32_t profile_id, uint32_t policy_id, uint64_t stats_mask);
+
+	int (*flow_mtr_probe_meter)(struct flow_eth_dev *dev, uint8_t caller_id, uint32_t mtr_id);
+
+	int (*flow_mtr_destroy_meter)(struct flow_eth_dev *dev, uint8_t caller_id,
+		uint32_t mtr_id);
+
+	int (*flm_mtr_adjust_stats)(struct flow_eth_dev *dev, uint8_t caller_id, uint32_t mtr_id,
+		uint32_t adjust_value);
+
+	uint32_t (*flow_mtr_meters_supported)(struct flow_eth_dev *dev, uint8_t caller_id);
+
+	/*
 	 * NT Flow FLM queue API
 	 */
 	void (*flm_setup_queues)(void);
+	void (*flm_mtr_read_stats)(struct flow_eth_dev *dev,
+		uint8_t caller_id,
+		uint32_t id,
+		uint64_t *stats_mask,
+		uint64_t *green_pkt,
+		uint64_t *green_bytes,
+		int clear);
+
 	void (*flm_free_queues)(void);
 	uint32_t (*flm_update)(struct flow_eth_dev *dev);
 
