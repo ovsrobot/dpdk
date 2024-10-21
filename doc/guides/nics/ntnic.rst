@@ -70,6 +70,7 @@ Features
 - Exact match of 140 million flows and policies.
 - Basic stats
 - Extended stats
+- Flow metering, including meter policy API.
 
 Limitations
 ~~~~~~~~~~~
