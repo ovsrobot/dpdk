@@ -803,3 +803,15 @@ rte_pci_ioport_unmap(struct rte_pci_ioport *p)
 
 	return ret;
 }
+
+int
+rte_pci_extract_tph_st(const struct rte_pci_device *dev,
+		       const struct rte_tph_acpi__dsm_args *args,
+		       struct rte_tph_acpi__dsm_return *ret)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(args);
+	RTE_SET_USED(ret);
+	/* Linux doesn't support this feature yet! */
+	return -1;
+}

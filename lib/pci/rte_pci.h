@@ -16,6 +16,8 @@
 #include <inttypes.h>
 #include <sys/types.h>
 
+#include <rte_pci_tph.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -500,3 +500,17 @@ end:
 
 	return ret;
 }
+
+
+int
+rte_pci_extract_tph_st(const struct rte_pci_device *dev,
+		       const struct rte_tph_acpi__dsm_args *args,
+		       struct rte_tph_acpi__dsm_return *ret)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(args);
+	RTE_SET_USED(ret);
+	/* This feature is not yet implemented for windows */
+	return -1;
+}
+

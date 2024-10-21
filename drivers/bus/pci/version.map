@@ -31,6 +31,9 @@ EXPERIMENTAL {
 	rte_pci_find_capability;
 	rte_pci_find_next_capability;
 	rte_pci_has_capability_list;
+
+	# added in 24.11
+	rte_pci_extract_tph_st;
 };
 
 INTERNAL {

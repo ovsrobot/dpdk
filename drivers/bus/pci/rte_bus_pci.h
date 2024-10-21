@@ -312,6 +312,28 @@ void rte_pci_ioport_read(struct rte_pci_ioport *p,
 void rte_pci_ioport_write(struct rte_pci_ioport *p,
 		const void *data, size_t len, off_t offset);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Extract steering tag from the ACPI TPH _DSM of the root port
+ * of the device is connected to.
+ *
+ * @param device
+ *   A pointer to a rte_pci_device structure describing the device
+ *   to use.
+ * @param args
+ *   An initialized args object for the _DSM.
+ * @param ret
+ *   A pointer to a _DSM return object to store the extracted steering tag.
+ * @return
+ *   0 on success, -1 on error extracting the steeting tag.
+ */
+__rte_experimental
+int rte_pci_extract_tph_st(const struct rte_pci_device *device,
+			   const struct rte_tph_acpi__dsm_args *args,
+			   struct rte_tph_acpi__dsm_return *ret);
+
 #ifdef __cplusplus
 }
 #endif
