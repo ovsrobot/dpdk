@@ -37,6 +37,29 @@ static struct flow_nic_dev *dev_base;
 static pthread_mutex_t base_mtx = PTHREAD_MUTEX_INITIALIZER;
 
 /*
+ * Error handling
+ */
+
+static const struct {
+	const char *message;
+} err_msg[] = {
+	/* 00 */ { "Operation successfully completed" },
+	/* 01 */ { "Operation failed" },
+	/* 29 */ { "Removing flow failed" },
+};
+
+void flow_nic_set_error(enum flow_nic_err_msg_e msg, struct rte_flow_error *error)
+{
+	assert(msg < ERR_MSG_NO_MSG);
+
+	if (error) {
+		error->message = err_msg[msg].message;
+		error->type = (msg == ERR_SUCCESS) ? RTE_FLOW_ERROR_TYPE_NONE :
+			RTE_FLOW_ERROR_TYPE_UNSPECIFIED;
+	}
+}
+
+/*
  * Resources
  */
 
@@ -143,7 +166,8 @@ static struct flow_handle *flow_create(struct flow_eth_dev *dev,
 		return NULL;
 	}
 
-	return NULL;
+	return profile_inline_ops->flow_create_profile_inline(dev, attr,
+		forced_vlan_vid, caller_id,  item, action, error);
 }
 
 static int flow_destroy(struct flow_eth_dev *dev, struct flow_handle *flow,
@@ -159,7 +183,7 @@ static int flow_destroy(struct flow_eth_dev *dev, struct flow_handle *flow,
 		return -1;
 	}
 
-	return -1;
+	return profile_inline_ops->flow_destroy_profile_inline(dev, flow, error);
 }
 
 /*
