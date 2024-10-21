@@ -64,20 +64,17 @@ __rte_ring_rts_head_wait(const struct rte_ring_rts_headtail *ht,
 	}
 }
 
-/**
- * @internal This function updates the producer head for enqueue.
- */
 static __rte_always_inline uint32_t
-__rte_ring_rts_move_prod_head(struct rte_ring *r, uint32_t num,
+__rte_ring_rts_move_head(struct rte_ring_rts_headtail *d,
+	const struct rte_ring_headtail *s, uint32_t capacity, uint32_t num,
 	enum rte_ring_queue_behavior behavior, uint32_t *old_head,
-	uint32_t *free_entries)
+	uint32_t *entries)
 {
 	uint32_t n;
 	union __rte_ring_rts_poscnt nh, oh;
 
-	const uint32_t capacity = r->capacity;
-
-	oh.raw = rte_atomic_load_explicit(&r->rts_prod.head.raw, rte_memory_order_acquire);
+	oh.raw = rte_atomic_load_explicit(&d->head.raw,
+			rte_memory_order_acquire);
 
 	do {
 		/* Reset n to the initial burst count */
@@ -88,7 +85,7 @@ __rte_ring_rts_move_prod_head(struct rte_ring *r, uint32_t num,
 		 * make sure that we read prod head *before*
 		 * reading cons tail.
 		 */
-		__rte_ring_rts_head_wait(&r->rts_prod, &oh);
+		__rte_ring_rts_head_wait(d, &oh);
 
 		/*
 		 *  The subtraction is done between two unsigned 32bits value
@@ -96,12 +93,12 @@ __rte_ring_rts_move_prod_head(struct rte_ring *r, uint32_t num,
 		 * *old_head > cons_tail). So 'free_entries' is always between 0
 		 * and capacity (which is < size).
 		 */
-		*free_entries = capacity + r->cons.tail - oh.val.pos;
+		*entries = capacity + s->tail - oh.val.pos;
 
 		/* check that we have enough room in ring */
-		if (unlikely(n > *free_entries))
+		if (unlikely(n > *entries))
 			n = (behavior == RTE_RING_QUEUE_FIXED) ?
-					0 : *free_entries;
+					0 : *entries;
 
 		if (n == 0)
 			break;
@@ -114,12 +111,25 @@ __rte_ring_rts_move_prod_head(struct rte_ring *r, uint32_t num,
 	 *  - OOO reads of cons tail value
 	 *  - OOO copy of elems to the ring
 	 */
-	} while (rte_atomic_compare_exchange_strong_explicit(&r->rts_prod.head.raw,
+	} while (rte_atomic_compare_exchange_strong_explicit(&d->head.raw,
 			(uint64_t *)(uintptr_t)&oh.raw, nh.raw,
-			rte_memory_order_acquire, rte_memory_order_acquire) == 0);
+			rte_memory_order_acquire,
+			rte_memory_order_acquire) == 0);
 
 	*old_head = oh.val.pos;
 	return n;
+}
+
+/**
+ * @internal This function updates the producer head for enqueue.
+ */
+static __rte_always_inline uint32_t
+__rte_ring_rts_move_prod_head(struct rte_ring *r, uint32_t num,
+	enum rte_ring_queue_behavior behavior, uint32_t *old_head,
+	uint32_t *free_entries)
+{
+	return __rte_ring_rts_move_head(&r->rts_prod, &r->cons,
+			r->capacity, num, behavior, old_head, free_entries);
 }
 
 /**
@@ -130,51 +140,8 @@ __rte_ring_rts_move_cons_head(struct rte_ring *r, uint32_t num,
 	enum rte_ring_queue_behavior behavior, uint32_t *old_head,
 	uint32_t *entries)
 {
-	uint32_t n;
-	union __rte_ring_rts_poscnt nh, oh;
-
-	oh.raw = rte_atomic_load_explicit(&r->rts_cons.head.raw, rte_memory_order_acquire);
-
-	/* move cons.head atomically */
-	do {
-		/* Restore n as it may change every loop */
-		n = num;
-
-		/*
-		 * wait for cons head/tail distance,
-		 * make sure that we read cons head *before*
-		 * reading prod tail.
-		 */
-		__rte_ring_rts_head_wait(&r->rts_cons, &oh);
-
-		/* The subtraction is done between two unsigned 32bits value
-		 * (the result is always modulo 32 bits even if we have
-		 * cons_head > prod_tail). So 'entries' is always between 0
-		 * and size(ring)-1.
-		 */
-		*entries = r->prod.tail - oh.val.pos;
-
-		/* Set the actual entries for dequeue */
-		if (n > *entries)
-			n = (behavior == RTE_RING_QUEUE_FIXED) ? 0 : *entries;
-
-		if (unlikely(n == 0))
-			break;
-
-		nh.val.pos = oh.val.pos + n;
-		nh.val.cnt = oh.val.cnt + 1;
-
-	/*
-	 * this CAS(ACQUIRE, ACQUIRE) serves as a hoist barrier to prevent:
-	 *  - OOO reads of prod tail value
-	 *  - OOO copy of elems from the ring
-	 */
-	} while (rte_atomic_compare_exchange_strong_explicit(&r->rts_cons.head.raw,
-			(uint64_t *)(uintptr_t)&oh.raw, nh.raw,
-			rte_memory_order_acquire, rte_memory_order_acquire) == 0);
-
-	*old_head = oh.val.pos;
-	return n;
+	return __rte_ring_rts_move_head(&r->rts_cons, &r->prod,
+			0, num, behavior, old_head, entries);
 }
 
 /**
