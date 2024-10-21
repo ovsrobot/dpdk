@@ -1368,6 +1368,68 @@ typedef uint64_t (*eth_get_restore_flags_t)(struct rte_eth_dev *dev,
 					    enum rte_eth_dev_operation op);
 
 /**
+ * @internal
+ * Set cache stashing hints in Rx queue.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param queue_id
+ *   Rx queue.
+ * @param config
+ *   Stashing hints configuration for the queue.
+ *
+ * @return
+ *   -ENOTSUP if the device or the platform does not support cache stashing.
+ *   -ENOSYS  if the underlying PMD hasn't implemented cache stashing feature.
+ *   -EINVAL  on invalid arguments.
+ *   0 on success.
+ */
+typedef int (*eth_stashing_rx_hints_set_t)(struct rte_eth_dev *dev, uint16_t queue_id,
+					   struct rte_eth_stashing_config *config);
+
+/**
+ * @internal
+ * Set cache stashing hints in Tx queue.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param queue_id
+ *   Tx queue.
+ * @param config
+ *   Stashing hints configuration for the queue.
+ *
+ * @return
+ *   -ENOTSUP if the device or the platform does not support cache stashing.
+ *   -ENOSYS  if the underlying PMD hasn't implemented cache stashing feature.
+ *   -EINVAL  on invalid arguments.
+ *   0 on success.
+ */
+typedef int (*eth_stashing_tx_hints_set_t)(struct rte_eth_dev *dev, uint16_t queue_id,
+					   struct rte_eth_stashing_config *config);
+
+/**
+ * @internal
+ * Get cache stashing object types supported in the ethernet device.
+ * The return value indicates availability of stashing hints support
+ * in the hardware and the PMD.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param objects
+ *   PMD sets supported bits on return.
+ *
+ * @return
+ *   -ENOTSUP if the device or the platform does not support cache stashing.
+ *   -ENOSYS  if the underlying PMD hasn't implemented cache stashing feature.
+ *   -EINVAL  on NULL values for types or hints parameters.
+ *   On return, types and hints parameters will have bits set for supported
+ *   object types and hints.
+ *   0 on success.
+ */
+typedef int (*eth_stashing_capabilities_get_t)(struct rte_eth_dev *dev,
+					     uint16_t *objects);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -1393,6 +1455,10 @@ struct eth_dev_ops {
 	eth_mac_addr_remove_t      mac_addr_remove; /**< Remove MAC address */
 	eth_mac_addr_add_t         mac_addr_add;  /**< Add a MAC address */
 	eth_mac_addr_set_t         mac_addr_set;  /**< Set a MAC address */
+	eth_stashing_rx_hints_set_t   stashing_rx_hints_set; /**< Set Rx cache stashing*/
+	eth_stashing_tx_hints_set_t   stashing_tx_hints_set; /**< Set Tx cache stashing*/
+	/** Get supported stashing hints*/
+	eth_stashing_capabilities_get_t stashing_capabilities_get;
 	/** Set list of multicast addresses */
 	eth_set_mc_addr_list_t     set_mc_addr_list;
 	mtu_set_t                  mtu_set;       /**< Set MTU */

@@ -1653,6 +1653,9 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP RTE_BIT64(4)
 /**@}*/
 
+/** Device supports stashing to CPU/system caches. */
+#define RTE_ETH_DEV_CAPA_CACHE_STASHING RTE_BIT64(5)
+
 /*
  * Fallback default preferred Rx/Tx port parameters.
  * These are used if an application requests default parameters
@@ -1824,6 +1827,7 @@ struct rte_eth_dev_info {
 	struct rte_eth_dev_portconf default_txportconf;
 	/** Generic device capabilities (RTE_ETH_DEV_CAPA_). */
 	uint64_t dev_capa;
+	uint16_t stashing_capa;
 	/**
 	 * Switching information for ports on a device with a
 	 * embedded managed interconnect/switch.
@@ -6114,6 +6118,163 @@ int rte_eth_cman_config_set(uint16_t port_id, const struct rte_eth_cman_config *
  */
 __rte_experimental
 int rte_eth_cman_config_get(uint16_t port_id, struct rte_eth_cman_config *config);
+
+
+
+/** Queue type is RX. */
+#define RTE_ETH_DEV_RX_QUEUE		0
+/** Queue type is TX. */
+#define RTE_ETH_DEV_TX_QUEUE		1
+
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change, or be removed, without prior notice
+ *
+ * A structure used for configuring the cache stashing hints.
+ */
+struct rte_eth_stashing_config {
+	/** ID of the Processor/Container the stashing hints are
+	 *  applied to
+	 */
+	uint16_t	lcore_id;
+	/** Set if the target is a CPU containeri.lcore_id will be
+	 * used to derive container ID
+	 */
+	uint16_t	container : 1;
+	uint16_t	padding : 7;
+	/** Cache level of the CPU specified by the cpu_id the
+	 *  stashing hints are applied to
+	 */
+	uint16_t	cache_level : 8;
+	/** Object types the configuration is applied to
+	 */
+	uint16_t	objects;
+	/** The offset if RTE_ETH_DEV_STASH_OBJECT_OFFSET bit is set
+	 *  in objects
+	 */
+	off_t		offset;
+};
+
+/**@{@name Stashable Rx/Tx queue object types supported by the ethernet device
+ *@see rte_eth_dev_stashing_capabilities_get
+ *@see rte_eth_dev_stashing_rx_config_set
+ *@see rte_eth_dev_stashing_tx_config_set
+ */
+
+/**
+ * Apply stashing hint to data at a given offset from the start of a
+ * received packet.
+ */
+#define RTE_ETH_DEV_STASH_OBJECT_OFFSET		0x0001
+
+/** Apply stashing hint to an rx descriptor. */
+#define RTE_ETH_DEV_STASH_OBJECT_DESC		0x0002
+
+/** Apply stashing hint to a header of a received packet. */
+#define RTE_ETH_DEV_STASH_OBJECT_HEADER		0x0004
+
+/** Apply stashing hint to a payload of a received packet. */
+#define RTE_ETH_DEV_STASH_OBJECT_PAYLOAD	0x0008
+
+#define __RTE_ETH_DEV_STASH_OBJECT_MASK		0x000f
+/**@}*/
+
+#define RTE_ETH_DEV_STASH_OBJECTS_VALID(t)				\
+	((!((t) & (~__RTE_ETH_DEV_STASH_OBJECT_MASK))) && (t))
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * @internal
+ * Helper function to validate stashing hints configuration.
+ */
+__rte_experimental
+int rte_eth_dev_validate_stashing_config(uint16_t port_id, uint16_t queue_id,
+					 uint8_t queue_direction,
+					 struct rte_eth_stashing_config *config);
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Provide cache stashing hints for improved memory access latencies for
+ * packets received by the NIC.
+ * This feature is available only in supported NICs and platforms.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param queue_id
+ *  The index of the receive queue to which hints are applied.
+ * @param config
+ *  Stashing configuration.
+ * @return
+ *  - (-ENODEV) on incorrect port_ids.
+ *  - (-EINVAL) if both RX and TX object types used in conjuection in objects
+ *  parameter.
+ *  - (-EINVAL) on invalid queue_id.
+ *  - (-ENOTSUP) if RTE_ETH_DEV_CAPA_CACHE_STASHING capability is unavailable.
+ *  - (-ENOSYS) if PMD does not implement cache stashing hints.
+ *  - (0) on Success.
+ */
+__rte_experimental
+int rte_eth_dev_stashing_rx_config_set(uint16_t port_id, uint16_t queue_id,
+				   struct rte_eth_stashing_config *config);
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Configure cache stashing for improved memory access latencies for Tx
+ * queue completion descriptors being sent to host system by the NIC.
+ * This feature is available only in supported NICs and platforms.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param queue_id
+ *  The index of the receive queue to which hints are applied.
+ * @param config
+ *  Stashing configuration.
+ * @return
+ *  - (-ENODEV) on incorrect port_ids.
+ *  - (-EINVAL) if both RX and TX object types are used in conjuection in objects
+ *  parameter.
+ *  - (-EINVAL) if hints are incompatible with TX queues.
+ *  - (-EINVAL) on invalid queue_id.
+ *  - (-ENOTSUP) if RTE_ETH_DEV_CAPA_CACHE_STASHING capability is unavailable.
+ *  - (-ENOSYS) if PMD does not implement cache stashing hints.
+ *  - (0) on Success.
+ */
+__rte_experimental
+int rte_eth_dev_stashing_tx_config_set(uint16_t port_id, uint16_t queue_id,
+				   struct rte_eth_stashing_config *config);
+
+/**
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Discover cache stashing objects supported in the ethernet device.
+ *
+ * @param port_id
+ *  The port identifier of the Ethernet device.
+ * @param objects
+ *  Supported objects vector set by the ethernet device.
+ * @return
+ *  On return types and hints parameters will have bits set for supported
+ *  object types.
+ *  - (-ENOTSUP) if the device or the platform does not support cache stashing.
+ *  - (-ENOSYS)  if the underlying PMD hasn't implemented cache stashing
+ *  feature.
+ *  - (-EINVAL)  on NULL values for types or hints parameters.
+ *  - (0) on success.
+ */
+__rte_experimental
+int rte_eth_dev_stashing_capabilities_get(uint16_t port_id, uint16_t *objects);
 
 #include <rte_ethdev_core.h>
 
