@@ -2302,6 +2302,26 @@ static int setup_flow_flm_actions(struct flow_eth_dev *dev,
 	(void)hsh_data;
 	(void)error;
 
+	/* Setup SLC LR */
+	struct hw_db_slc_lr_idx slc_lr_idx = { .raw = 0 };
+
+	if (fd->header_strip_end_dyn != 0 || fd->header_strip_end_ofs != 0) {
+		struct hw_db_inline_slc_lr_data slc_lr_data = {
+			.head_slice_en = 1,
+			.head_slice_dyn = fd->header_strip_end_dyn,
+			.head_slice_ofs = fd->header_strip_end_ofs,
+		};
+		slc_lr_idx =
+			hw_db_inline_slc_lr_add(dev->ndev, dev->ndev->hw_db_handle, &slc_lr_data);
+		local_idxs[(*local_idx_counter)++] = slc_lr_idx.raw;
+
+		if (slc_lr_idx.error) {
+			NT_LOG(ERR, FILTER, "Could not reference SLC LR resource");
+			flow_nic_set_error(ERR_MATCH_RESOURCE_EXHAUSTION, error);
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
@@ -2469,6 +2489,9 @@ int initialize_flow_management_of_ndev_profile_inline(struct flow_nic_dev *ndev)
 		if (hw_mod_cat_cot_flush(&ndev->be, 0, 1) < 0)
 			goto err_exit0;
 
+		/* SLC LR index 0 is reserved */
+		flow_nic_mark_resource_used(ndev, RES_SLC_LR_RCP, 0);
+
 		/* Setup filter using matching all packets violating traffic policing parameters */
 		flow_nic_mark_resource_used(ndev, RES_CAT_CFN, NT_VIOLATING_MBR_CFN);
 
@@ -2516,6 +2539,10 @@ int done_flow_management_of_ndev_profile_inline(struct flow_nic_dev *ndev)
 		hw_mod_cat_cot_set(&ndev->be, HW_CAT_COT_PRESET_ALL, 0, 0);
 		hw_mod_cat_cot_flush(&ndev->be, 0, 1);
 		flow_nic_free_resource(ndev, RES_CAT_CFN, 0);
+
+		hw_mod_slc_lr_rcp_set(&ndev->be, HW_SLC_LR_RCP_PRESET_ALL, 0, 0);
+		hw_mod_slc_lr_rcp_flush(&ndev->be, 0, 1);
+		flow_nic_free_resource(ndev, RES_SLC_LR_RCP, 0);
 
 		hw_mod_tpe_reset(&ndev->be);
 		flow_nic_free_resource(ndev, RES_TPE_RCP, 0);
