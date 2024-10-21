@@ -120,6 +120,29 @@ enum {
 		}                                                                                 \
 	} while (0)
 
+static inline int is_non_zero(const void *addr, size_t n)
+{
+	size_t i = 0;
+	const uint8_t *p = (const uint8_t *)addr;
+
+	for (i = 0; i < n; i++)
+		if (p[i] != 0)
+			return 1;
+
+	return 0;
+}
+
+enum frame_offs_e {
+	DYN_L2 = 1,
+	DYN_L3 = 4,
+	DYN_L4 = 7,
+	DYN_L4_PAYLOAD = 8,
+	DYN_TUN_L3 = 13,
+	DYN_TUN_L4 = 16,
+};
+
+/* Sideband info bit indicator */
+
 enum km_flm_if_select_e {
 	KM_FLM_IF_FIRST = 0,
 	KM_FLM_IF_SECOND = 1
