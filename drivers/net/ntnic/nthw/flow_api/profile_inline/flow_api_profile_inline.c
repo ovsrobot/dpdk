@@ -941,6 +941,10 @@ static int interpret_flow_elements(const struct flow_eth_dev *dev,
 			}
 
 			break;
+
+		case RTE_FLOW_ITEM_TYPE_VOID:
+			NT_LOG(DBG, FILTER, "Adap %i, Port %i: RTE_FLOW_ITEM_TYPE_VOID",
+				dev->ndev->adapter_no, dev->port);
 			break;
 
 		default:
