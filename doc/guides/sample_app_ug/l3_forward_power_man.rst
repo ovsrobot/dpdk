@@ -8,7 +8,7 @@ Introduction
 ------------
 
 The L3 Forwarding with Power Management application is an example of power-aware packet processing using the DPDK.
-The application is based on existing L3 Forwarding sample application,
+The application is based on the existing L3 Forwarding sample application,
 with the power management algorithms to control the P-states and
 C-states of the Intel processor via a power management library.
 
@@ -77,7 +77,7 @@ instead of always running to the C0 state waiting for packets.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``l3fwd-power`` sub-directory.
 
@@ -127,7 +127,7 @@ The L3fwd-power example reuses the L3fwd command line options.
 Explanation
 -----------
 
-The following sections provide some explanation of the sample application code.
+The following sections provide explanation of the sample application code.
 As mentioned in the overview section,
 the initialization and run-time paths are identical to those of the L3 forwarding application.
 The following sections describe aspects that are specific to the L3 Forwarding with Power Management sample application.
@@ -239,7 +239,7 @@ in order to avoid a potential performance impact.
 Telemetry Mode
 --------------
 
-The telemetry mode support for ``l3fwd-power`` is a standalone mode, in this mode
+The telemetry mode support for ``l3fwd-power`` is a standalone mode. In this mode,
 ``l3fwd-power`` does simple l3fwding along with calculating empty polls, full polls,
 and busy percentage for each forwarding core. The aggregation of these
 values of all cores is reported as application level telemetry to metric
@@ -261,7 +261,7 @@ The new stats ``empty_poll`` , ``full_poll`` and ``busy_percent`` can be viewed 
 PMD power management Mode
 -------------------------
 
-The PMD power management  mode support for ``l3fwd-power`` is a standalone mode.
+The PMD power management mode support for ``l3fwd-power`` is a standalone mode.
 In this mode, ``l3fwd-power`` does simple l3fwding
 along with enabling the power saving scheme on specific port/queue/lcore.
 Main purpose for this mode is to demonstrate
