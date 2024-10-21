@@ -930,6 +930,17 @@ static int interpret_flow_elements(const struct flow_eth_dev *dev,
 			}
 
 			break;
+
+		case RTE_FLOW_ITEM_TYPE_PORT_ID:
+			NT_LOG(DBG, FILTER, "Adap %i, Port %i: RTE_FLOW_ITEM_TYPE_PORT_ID",
+				dev->ndev->adapter_no, dev->port);
+
+			if (elem[eidx].spec) {
+				*in_port_id =
+					((const struct rte_flow_item_port_id *)elem[eidx].spec)->id;
+			}
+
+			break;
 			break;
 
 		default:
