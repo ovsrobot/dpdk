@@ -2,15 +2,15 @@
  * Copyright(c) 2018 Intel Corporation
  */
 
-#ifndef _POWER_PSTATE_CPUFREQ_H
-#define _POWER_PSTATE_CPUFREQ_H
+#ifndef _PSTATE_CPUFREQ_H
+#define _PSTATE_CPUFREQ_H
 
 /**
  * @file
  * RTE Power Management via Intel Pstate driver
  */
 
-#include "rte_power.h"
+#include "power_cpufreq.h"
 
 /**
  * Check if pstate power management is supported.
