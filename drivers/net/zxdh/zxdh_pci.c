@@ -97,6 +97,24 @@ static void zxdh_set_features(struct zxdh_hw *hw, uint64_t features)
 	rte_write32(features >> 32, &hw->common_cfg->guest_feature);
 }
 
+static uint16_t zxdh_set_config_irq(struct zxdh_hw *hw, uint16_t vec)
+{
+	rte_write16(vec, &hw->common_cfg->msix_config);
+	return rte_read16(&hw->common_cfg->msix_config);
+}
+
+static uint16_t zxdh_set_queue_irq(struct zxdh_hw *hw, struct virtqueue *vq, uint16_t vec)
+{
+	rte_write16(vq->vq_queue_index, &hw->common_cfg->queue_select);
+	rte_write16(vec, &hw->common_cfg->queue_msix_vector);
+	return rte_read16(&hw->common_cfg->queue_msix_vector);
+}
+
+static uint8_t zxdh_get_isr(struct zxdh_hw *hw)
+{
+	return rte_read8(hw->isr);
+}
+
 const struct zxdh_pci_ops zxdh_dev_pci_ops = {
 	.read_dev_cfg   = zxdh_read_dev_config,
 	.write_dev_cfg  = zxdh_write_dev_config,
@@ -104,7 +122,15 @@ const struct zxdh_pci_ops zxdh_dev_pci_ops = {
 	.set_status     = zxdh_set_status,
 	.get_features   = zxdh_get_features,
 	.set_features   = zxdh_set_features,
+	.set_queue_irq  = zxdh_set_queue_irq,
+	.set_config_irq = zxdh_set_config_irq,
+	.get_isr        = zxdh_get_isr,
 };
+
+uint8_t zxdh_vtpci_isr(struct zxdh_hw *hw)
+{
+	return VTPCI_OPS(hw)->get_isr(hw);
+}
 
 uint16_t zxdh_vtpci_get_features(struct zxdh_hw *hw)
 {
@@ -287,4 +313,40 @@ int32_t zxdh_get_pci_dev_config(struct zxdh_hw *hw)
 	PMD_INIT_LOG(DEBUG, "set max queue pairs %d", hw->max_queue_pairs);
 
 	return 0;
+}
+
+enum zxdh_msix_status zxdh_vtpci_msix_detect(struct rte_pci_device *dev)
+{
+	uint8_t pos = 0;
+	int32_t ret = rte_pci_read_config(dev, &pos, 1, ZXDH_PCI_CAPABILITY_LIST);
+
+	if (ret != 1) {
+		PMD_INIT_LOG(ERR, "failed to read pci capability list, ret %d", ret);
+		return ZXDH_MSIX_NONE;
+	}
+	while (pos) {
+		uint8_t cap[2] = {0};
+
+		ret = rte_pci_read_config(dev, cap, sizeof(cap), pos);
+		if (ret != sizeof(cap)) {
+			PMD_INIT_LOG(ERR, "failed to read pci cap at pos: %x ret %d", pos, ret);
+			break;
+		}
+		if (cap[0] == ZXDH_PCI_CAP_ID_MSIX) {
+			uint16_t flags = 0;
+
+			ret = rte_pci_read_config(dev, &flags, sizeof(flags), pos + sizeof(cap));
+			if (ret != sizeof(flags)) {
+				PMD_INIT_LOG(ERR,
+					"failed to read pci cap at pos: %x ret %d", pos + 2, ret);
+				break;
+			}
+			if (flags & ZXDH_PCI_MSIX_ENABLE)
+				return ZXDH_MSIX_ENABLED;
+			else
+				return ZXDH_MSIX_DISABLED;
+		}
+		pos = cap[1];
+	}
+	return ZXDH_MSIX_NONE;
 }
