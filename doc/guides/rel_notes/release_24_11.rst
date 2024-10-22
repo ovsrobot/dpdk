@@ -406,6 +406,9 @@ ABI Changes
   added new structure ``rte_node_xstats`` to ``rte_node_register`` and
   added ``xstat_off`` to ``rte_node``.
 
+* cryptodev: The ``rte_crypto_sm2_op_param`` struct member to hold ciphertext
+  is changed to union data type. This change is to support partial SM2 calculation.
+
 
 Known Issues
 ------------
