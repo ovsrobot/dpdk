@@ -552,7 +552,7 @@ test_node_clone(void)
 	tm->test_node[0].idx = node_id;
 
 	dummy_id = rte_node_clone(node_id, "test_node00");
-	if (rte_node_is_invalid(dummy_id)) {
+	if (rte_node_is_invalid(dummy_id) && (rte_errno != EEXIST)) {
 		printf("Got invalid id when clone, Expecting fail\n");
 		return -1;
 	}
@@ -565,12 +565,14 @@ test_node_clone(void)
 	}
 
 	for (i = 1; i < MAX_NODES; i++) {
-		tm->test_node[i].idx =
-			rte_node_clone(node_id, tm->test_node[i].node.name);
-		if (rte_node_is_invalid(tm->test_node[i].idx)) {
+		dummy_id = rte_node_clone(node_id, tm->test_node[i].node.name);
+		if (rte_node_is_invalid(dummy_id) && (rte_errno != EEXIST)) {
 			printf("Got invalid node id\n");
 			return -1;
 		}
+
+		if (!rte_node_is_invalid(dummy_id))
+			tm->test_node[i].idx = dummy_id;
 	}
 
 	/* Clone from cloned node should fail */
@@ -640,7 +642,7 @@ test_create_graph(void)
 
 	node_id = rte_node_from_name("test_node00");
 	dummy_node_id = rte_node_clone(node_id, "dummy_node");
-	if (rte_node_is_invalid(dummy_node_id)) {
+	if (rte_node_is_invalid(dummy_node_id) && (rte_errno != EEXIST)) {
 		printf("Got invalid node id\n");
 		return -1;
 	}
@@ -672,7 +674,7 @@ test_graph_clone(void)
 	main_graph_id = rte_graph_from_name("worker0");
 	if (main_graph_id == RTE_GRAPH_ID_INVALID) {
 		printf("Must create main graph first\n");
-		ret = -1;
+		return -1;
 	}
 
 	graph_conf.dispatch.mp_capacity = 1024;
@@ -682,7 +684,7 @@ test_graph_clone(void)
 
 	if (cloned_graph_id == RTE_GRAPH_ID_INVALID) {
 		printf("Graph creation failed with error = %d\n", rte_errno);
-		ret = -1;
+		return -1;
 	}
 
 	if (strcmp(rte_graph_id_to_name(cloned_graph_id), "worker0-cloned-test0")) {
@@ -787,7 +789,7 @@ test_graph_model_mcore_dispatch_node_lcore_affinity_set(void)
 	cloned_graph_id = rte_graph_clone(graph_id, "cloned-test1", &graph_conf);
 	node = rte_graph_node_get(cloned_graph_id, nid);
 
-	if (node->dispatch.lcore_id != worker_lcore) {
+	if (!node || node->dispatch.lcore_id != worker_lcore) {
 		printf("set node affinity failed\n");
 		ret = -1;
 	}
@@ -859,7 +861,8 @@ test_graph_worker_model_set_get(void)
 	}
 
 	graph = rte_graph_lookup("worker0-cloned-test3");
-	if (rte_graph_worker_model_get(graph) != RTE_GRAPH_MODEL_MCORE_DISPATCH) {
+	if (!graph || rte_graph_worker_model_get(graph) !=
+		    RTE_GRAPH_MODEL_MCORE_DISPATCH) {
 		printf("Get graph worker model failed\n");
 		ret = -1;
 	}
