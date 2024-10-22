@@ -154,12 +154,15 @@ New Features
 
 * **Updated Napatech ntnic net driver [EXPERIMENTAL].**
 
-  * Updated supported version of the FPGA to 9563.55.49.
-  * Extended and fixed logging.
-  * Added NT flow filter initialization.
-  * Added NT flow backend initialization.
-  * Added initialization of FPGA modules related to flow HW offload.
-  * Added basic handling of the virtual queues.
+  * Update supported version of the FPGA to 9563.55.49
+  * Fix Coverity issues
+  * Fix issues related to release 24.07
+  * Extended and fixed the implementation of the logging
+  * Added NT flow filter init API
+  * Added NT flow backend initialization API
+  * Added initialization of FPGA modules related to flow HW offload
+  * Added basic handling of the virtual queues
+  * Added age rte flow action support
 
 * **Added cryptodev queue pair reset support.**
 
