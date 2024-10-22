@@ -16,7 +16,7 @@ extern "C" {
 #define ZXDH_BAR0_INDEX     0
 #define ZXDH_CTRLCH_OFFSET  (0x2000)
 
-#define ZXDH_MSIX_INTR_MSG_VEC_BASE  1
+#define ZXDH_MSIX_INTR_MSG_VEC_BASE   1
 
 #define ZXDH_BAR_MSG_POLLING_SPAN     100
 #define ZXDH_BAR_MSG_POLL_CNT_PER_MS  (1 * 1000 / ZXDH_BAR_MSG_POLLING_SPAN)
@@ -107,6 +107,27 @@ enum bar_module_id {
 	ZXDH_BAR_MSG_MODULE_NUM = 100,
 };
 
+enum RES_TBL_FILED {
+	ZXDH_TBL_FIELD_PCIEID     = 0,
+	ZXDH_TBL_FIELD_BDF        = 1,
+	ZXDH_TBL_FIELD_MSGCH      = 2,
+	ZXDH_TBL_FIELD_DATACH     = 3,
+	ZXDH_TBL_FIELD_VPORT      = 4,
+	ZXDH_TBL_FIELD_PNLID      = 5,
+	ZXDH_TBL_FIELD_PHYPORT    = 6,
+	ZXDH_TBL_FIELD_SERDES_NUM = 7,
+	ZXDH_TBL_FIELD_NP_PORT    = 8,
+	ZXDH_TBL_FIELD_SPEED      = 9,
+	ZXDH_TBL_FIELD_HASHID     = 10,
+	ZXDH_TBL_FIELD_NON,
+};
+
+enum TBL_MSG_TYPE {
+	ZXDH_TBL_TYPE_READ,
+	ZXDH_TBL_TYPE_WRITE,
+	ZXDH_TBL_TYPE_NON,
+};
+
 struct msix_para {
 	uint16_t pcie_id;
 	uint16_t vector_risc;
@@ -180,6 +201,7 @@ struct bar_msg_header {
 	uint16_t src_pcieid;
 	uint16_t dst_pcieid; /* used in PF-->VF */
 };
+
 
 int zxdh_msg_chan_init(void);
 int zxdh_bar_msg_chan_exit(void);
