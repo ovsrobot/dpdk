@@ -78,6 +78,8 @@ enum rte_flow_item_type dpaa2_hp_supported_pattern_type[] = {
 	RTE_FLOW_ITEM_TYPE_SCTP,
 	RTE_FLOW_ITEM_TYPE_GRE,
 	RTE_FLOW_ITEM_TYPE_GTP,
+	RTE_FLOW_ITEM_TYPE_ESP,
+	RTE_FLOW_ITEM_TYPE_AH,
 	RTE_FLOW_ITEM_TYPE_RAW
 };
 
@@ -152,6 +154,17 @@ static const struct rte_flow_item_sctp dpaa2_flow_item_sctp_mask = {
 		.src_port = RTE_BE16(0xffff),
 		.dst_port = RTE_BE16(0xffff),
 	},
+};
+
+static const struct rte_flow_item_esp dpaa2_flow_item_esp_mask = {
+	.hdr = {
+		.spi = RTE_BE32(0xffffffff),
+		.seq = RTE_BE32(0xffffffff),
+	},
+};
+
+static const struct rte_flow_item_ah dpaa2_flow_item_ah_mask = {
+	.spi = RTE_BE32(0xffffffff),
 };
 
 static const struct rte_flow_item_gre dpaa2_flow_item_gre_mask = {
@@ -255,8 +268,16 @@ dpaa2_prot_field_string(uint32_t prot, uint32_t field,
 			strcat(string, ".teid");
 		else
 			strcat(string, ".unknown field");
+	} else if (prot == NET_PROT_IPSEC_ESP) {
+		rte_strscpy(string, "esp", DPAA2_PROT_FIELD_STRING_SIZE);
+		if (field == NH_FLD_IPSEC_ESP_SPI)
+			strcat(string, ".spi");
+		else if (field == NH_FLD_IPSEC_ESP_SEQUENCE_NUM)
+			strcat(string, ".seq");
+		else
+			strcat(string, ".unknown field");
 	} else {
-		strcpy(string, "unknown protocol");
+		sprintf(string, "unknown protocol(%d)", prot);
 	}
 }
 
@@ -1654,6 +1675,14 @@ dpaa2_flow_extract_support(const uint8_t *mask_src,
 		mask_support = (const char *)&dpaa2_flow_item_tcp_mask;
 		size = sizeof(struct rte_flow_item_tcp);
 		break;
+	case RTE_FLOW_ITEM_TYPE_ESP:
+		mask_support = (const char *)&dpaa2_flow_item_esp_mask;
+		size = sizeof(struct rte_flow_item_esp);
+		break;
+	case RTE_FLOW_ITEM_TYPE_AH:
+		mask_support = (const char *)&dpaa2_flow_item_ah_mask;
+		size = sizeof(struct rte_flow_item_ah);
+		break;
 	case RTE_FLOW_ITEM_TYPE_SCTP:
 		mask_support = (const char *)&dpaa2_flow_item_sctp_mask;
 		size = sizeof(struct rte_flow_item_sctp);
@@ -1684,7 +1713,7 @@ dpaa2_flow_extract_support(const uint8_t *mask_src,
 		mask[i] = (mask[i] | mask_src[i]);
 
 	if (memcmp(mask, mask_support, size))
-		return -1;
+		return -ENOTSUP;
 
 	return 0;
 }
@@ -2088,11 +2117,12 @@ dpaa2_configure_flow_tunnel_eth(struct dpaa2_dev_flow *flow,
 	if (!spec)
 		return 0;
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_ETH)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_ETH);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of ethernet failed");
 
-		return -EINVAL;
+		return ret;
 	}
 
 	if (memcmp((const char *)&mask->src,
@@ -2304,11 +2334,12 @@ dpaa2_configure_flow_eth(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_ETH)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_ETH);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of ethernet failed");
 
-		return -EINVAL;
+		return ret;
 	}
 
 	if (memcmp((const char *)&mask->src,
@@ -2409,11 +2440,12 @@ dpaa2_configure_flow_tunnel_vlan(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_VLAN)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_VLAN);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of vlan not support.");
 
-		return -EINVAL;
+		return ret;
 	}
 
 	if (!mask->tci)
@@ -2471,14 +2503,14 @@ dpaa2_configure_flow_vlan(struct dpaa2_dev_flow *flow,
 
 	if (!spec) {
 		ret = dpaa2_flow_identify_by_faf(priv, flow, FAF_VLAN_FRAM,
-						 DPAA2_FLOW_QOS_TYPE, group,
-						 &local_cfg);
+				DPAA2_FLOW_QOS_TYPE, group,
+				&local_cfg);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow, FAF_VLAN_FRAM,
-						 DPAA2_FLOW_FS_TYPE, group,
-						 &local_cfg);
+				DPAA2_FLOW_FS_TYPE, group,
+				&local_cfg);
 		if (ret)
 			return ret;
 
@@ -2486,27 +2518,28 @@ dpaa2_configure_flow_vlan(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-				       RTE_FLOW_ITEM_TYPE_VLAN)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+			RTE_FLOW_ITEM_TYPE_VLAN);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of vlan not support.");
-		return -EINVAL;
+		return ret;
 	}
 
 	if (!mask->tci)
 		return 0;
 
 	ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_VLAN,
-					      NH_FLD_VLAN_TCI, &spec->tci,
-					      &mask->tci, sizeof(rte_be16_t),
-					      priv, group, &local_cfg, DPAA2_FLOW_QOS_TYPE);
+			NH_FLD_VLAN_TCI, &spec->tci,
+			&mask->tci, sizeof(rte_be16_t),
+			priv, group, &local_cfg, DPAA2_FLOW_QOS_TYPE);
 	if (ret)
 		return ret;
 
 	ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_VLAN,
-					      NH_FLD_VLAN_TCI, &spec->tci,
-					      &mask->tci, sizeof(rte_be16_t),
-					      priv, group, &local_cfg,
-					      DPAA2_FLOW_FS_TYPE);
+			NH_FLD_VLAN_TCI, &spec->tci,
+			&mask->tci, sizeof(rte_be16_t),
+			priv, group, &local_cfg,
+			DPAA2_FLOW_FS_TYPE);
 	if (ret)
 		return ret;
 
@@ -2515,12 +2548,13 @@ dpaa2_configure_flow_vlan(struct dpaa2_dev_flow *flow,
 }
 
 static int
-dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
-			  const struct rte_flow_attr *attr,
-			  const struct rte_dpaa2_flow_item *dpaa2_pattern,
-			  const struct rte_flow_action actions[] __rte_unused,
-			  struct rte_flow_error *error __rte_unused,
-			  int *device_configured)
+dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow,
+	struct rte_eth_dev *dev,
+	const struct rte_flow_attr *attr,
+	const struct rte_dpaa2_flow_item *dpaa2_pattern,
+	const struct rte_flow_action actions[] __rte_unused,
+	struct rte_flow_error *error __rte_unused,
+	int *device_configured)
 {
 	int ret, local_cfg = 0;
 	uint32_t group;
@@ -2544,16 +2578,16 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		}
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_IPV4_FRAM,
-						 DPAA2_FLOW_QOS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_IPV4_FRAM,
+				DPAA2_FLOW_QOS_TYPE, group,
+				&local_cfg);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_IPV4_FRAM,
-						 DPAA2_FLOW_FS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_IPV4_FRAM,
+				DPAA2_FLOW_FS_TYPE, group,
+				&local_cfg);
 		return ret;
 	}
 
@@ -2562,13 +2596,13 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 	flow->tc_index = attr->priority;
 
 	ret = dpaa2_flow_identify_by_faf(priv, flow, FAF_IPV4_FRAM,
-					 DPAA2_FLOW_QOS_TYPE, group,
-					 &local_cfg);
+			DPAA2_FLOW_QOS_TYPE, group,
+			&local_cfg);
 	if (ret)
 		return ret;
 
 	ret = dpaa2_flow_identify_by_faf(priv, flow, FAF_IPV4_FRAM,
-					 DPAA2_FLOW_FS_TYPE, group, &local_cfg);
+			DPAA2_FLOW_FS_TYPE, group, &local_cfg);
 	if (ret)
 		return ret;
 
@@ -2577,10 +2611,11 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask_ipv4,
-				       RTE_FLOW_ITEM_TYPE_IPV4)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask_ipv4,
+			RTE_FLOW_ITEM_TYPE_IPV4);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of IPv4 not support.");
-		return -EINVAL;
+		return ret;
 	}
 
 	if (mask_ipv4->hdr.src_addr) {
@@ -2589,18 +2624,18 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		size = sizeof(rte_be32_t);
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV4,
-							 NH_FLD_IPV4_SRC_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_QOS_TYPE);
+				NH_FLD_IPV4_SRC_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_QOS_TYPE);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV4,
-							 NH_FLD_IPV4_SRC_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_FS_TYPE);
+				NH_FLD_IPV4_SRC_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
 	}
@@ -2611,17 +2646,17 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		size = sizeof(rte_be32_t);
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV4,
-							 NH_FLD_IPV4_DST_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_QOS_TYPE);
+				NH_FLD_IPV4_DST_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_QOS_TYPE);
 		if (ret)
 			return ret;
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV4,
-							 NH_FLD_IPV4_DST_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_FS_TYPE);
+				NH_FLD_IPV4_DST_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
 	}
@@ -2632,18 +2667,18 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		size = sizeof(uint8_t);
 
 		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IP,
-						      NH_FLD_IP_PROTO, key,
-						      mask, size, priv, group,
-						      &local_cfg,
-						      DPAA2_FLOW_QOS_TYPE);
+				NH_FLD_IP_PROTO, key,
+				mask, size, priv, group,
+				&local_cfg,
+				DPAA2_FLOW_QOS_TYPE);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IP,
-						      NH_FLD_IP_PROTO, key,
-						      mask, size, priv, group,
-						      &local_cfg,
-						      DPAA2_FLOW_FS_TYPE);
+				NH_FLD_IP_PROTO, key,
+				mask, size, priv, group,
+				&local_cfg,
+				DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
 	}
@@ -2653,12 +2688,13 @@ dpaa2_configure_flow_ipv4(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 }
 
 static int
-dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
-			  const struct rte_flow_attr *attr,
-			  const struct rte_dpaa2_flow_item *dpaa2_pattern,
-			  const struct rte_flow_action actions[] __rte_unused,
-			  struct rte_flow_error *error __rte_unused,
-			  int *device_configured)
+dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow,
+	struct rte_eth_dev *dev,
+	const struct rte_flow_attr *attr,
+	const struct rte_dpaa2_flow_item *dpaa2_pattern,
+	const struct rte_flow_action actions[] __rte_unused,
+	struct rte_flow_error *error __rte_unused,
+	int *device_configured)
 {
 	int ret, local_cfg = 0;
 	uint32_t group;
@@ -2686,27 +2722,27 @@ dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		}
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_IPV6_FRAM,
-						 DPAA2_FLOW_QOS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_IPV6_FRAM,
+				DPAA2_FLOW_QOS_TYPE, group,
+				&local_cfg);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_IPV6_FRAM,
-						 DPAA2_FLOW_FS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_IPV6_FRAM,
+				DPAA2_FLOW_FS_TYPE, group,
+				&local_cfg);
 		return ret;
 	}
 
 	ret = dpaa2_flow_identify_by_faf(priv, flow, FAF_IPV6_FRAM,
-					 DPAA2_FLOW_QOS_TYPE, group,
-					 &local_cfg);
+			DPAA2_FLOW_QOS_TYPE, group,
+			&local_cfg);
 	if (ret)
 		return ret;
 
 	ret = dpaa2_flow_identify_by_faf(priv, flow, FAF_IPV6_FRAM,
-					 DPAA2_FLOW_FS_TYPE, group, &local_cfg);
+			DPAA2_FLOW_FS_TYPE, group, &local_cfg);
 	if (ret)
 		return ret;
 
@@ -2715,10 +2751,11 @@ dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask_ipv6,
-				       RTE_FLOW_ITEM_TYPE_IPV6)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask_ipv6,
+			RTE_FLOW_ITEM_TYPE_IPV6);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of IPv6 not support.");
-		return -EINVAL;
+		return ret;
 	}
 
 	if (memcmp((const char *)&mask_ipv6->hdr.src_addr, zero_cmp, NH_FLD_IPV6_ADDR_SIZE)) {
@@ -2727,18 +2764,18 @@ dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		size = NH_FLD_IPV6_ADDR_SIZE;
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV6,
-							 NH_FLD_IPV6_SRC_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_QOS_TYPE);
+				NH_FLD_IPV6_SRC_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_QOS_TYPE);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV6,
-							 NH_FLD_IPV6_SRC_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_FS_TYPE);
+				NH_FLD_IPV6_SRC_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
 	}
@@ -2749,18 +2786,18 @@ dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		size = NH_FLD_IPV6_ADDR_SIZE;
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV6,
-							 NH_FLD_IPV6_DST_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_QOS_TYPE);
+				NH_FLD_IPV6_DST_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_QOS_TYPE);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_add_ipaddr_extract_rule(flow, NET_PROT_IPV6,
-							 NH_FLD_IPV6_DST_IP,
-							 key, mask, size, priv,
-							 group, &local_cfg,
-							 DPAA2_FLOW_FS_TYPE);
+				NH_FLD_IPV6_DST_IP,
+				key, mask, size, priv,
+				group, &local_cfg,
+				DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
 	}
@@ -2771,18 +2808,18 @@ dpaa2_configure_flow_ipv6(struct dpaa2_dev_flow *flow, struct rte_eth_dev *dev,
 		size = sizeof(uint8_t);
 
 		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IP,
-						      NH_FLD_IP_PROTO, key,
-						      mask, size, priv, group,
-						      &local_cfg,
-						      DPAA2_FLOW_QOS_TYPE);
+				NH_FLD_IP_PROTO, key,
+				mask, size, priv, group,
+				&local_cfg,
+				DPAA2_FLOW_QOS_TYPE);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IP,
-						      NH_FLD_IP_PROTO, key,
-						      mask, size, priv, group,
-						      &local_cfg,
-						      DPAA2_FLOW_FS_TYPE);
+				NH_FLD_IP_PROTO, key,
+				mask, size, priv, group,
+				&local_cfg,
+				DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
 	}
@@ -2839,11 +2876,12 @@ dpaa2_configure_flow_icmp(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_ICMP)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_ICMP);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of ICMP not support.");
 
-		return -EINVAL;
+		return ret;
 	}
 
 	if (mask->hdr.icmp_type) {
@@ -2916,16 +2954,16 @@ dpaa2_configure_flow_udp(struct dpaa2_dev_flow *flow,
 		}
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_UDP_FRAM,
-						 DPAA2_FLOW_QOS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_UDP_FRAM,
+				DPAA2_FLOW_QOS_TYPE, group,
+				&local_cfg);
 		if (ret)
 			return ret;
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_UDP_FRAM,
-						 DPAA2_FLOW_FS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_UDP_FRAM,
+				DPAA2_FLOW_FS_TYPE, group,
+				&local_cfg);
 		return ret;
 	}
 
@@ -2946,11 +2984,12 @@ dpaa2_configure_flow_udp(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_UDP)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_UDP);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of UDP not support.");
 
-		return -EINVAL;
+		return ret;
 	}
 
 	if (mask->hdr.src_port) {
@@ -3023,9 +3062,9 @@ dpaa2_configure_flow_tcp(struct dpaa2_dev_flow *flow,
 		}
 
 		ret = dpaa2_flow_identify_by_faf(priv, flow,
-						 FAFE_VXLAN_IN_TCP_FRAM,
-						 DPAA2_FLOW_QOS_TYPE, group,
-						 &local_cfg);
+				FAFE_VXLAN_IN_TCP_FRAM,
+				DPAA2_FLOW_QOS_TYPE, group,
+				&local_cfg);
 		if (ret)
 			return ret;
 
@@ -3053,11 +3092,12 @@ dpaa2_configure_flow_tcp(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_TCP)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_TCP);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of TCP not support.");
 
-		return -EINVAL;
+		return ret;
 	}
 
 	if (mask->hdr.src_port) {
@@ -3090,6 +3130,183 @@ dpaa2_configure_flow_tcp(struct dpaa2_dev_flow *flow,
 			priv, group, &local_cfg, DPAA2_FLOW_FS_TYPE);
 		if (ret)
 			return ret;
+	}
+
+	(*device_configured) |= local_cfg;
+
+	return 0;
+}
+
+static int
+dpaa2_configure_flow_esp(struct dpaa2_dev_flow *flow,
+	struct rte_eth_dev *dev,
+	const struct rte_flow_attr *attr,
+	const struct rte_dpaa2_flow_item *dpaa2_pattern,
+	const struct rte_flow_action actions[] __rte_unused,
+	struct rte_flow_error *error __rte_unused,
+	int *device_configured)
+{
+	int ret, local_cfg = 0;
+	uint32_t group;
+	const struct rte_flow_item_esp *spec, *mask;
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	const struct rte_flow_item *pattern =
+		&dpaa2_pattern->generic_item;
+
+	group = attr->group;
+
+	/* Parse pattern list to get the matching parameters */
+	spec = pattern->spec;
+	mask = pattern->mask ?
+		pattern->mask : &dpaa2_flow_item_esp_mask;
+
+	/* Get traffic class index and flow id to be configured */
+	flow->tc_id = group;
+	flow->tc_index = attr->priority;
+
+	if (dpaa2_pattern->in_tunnel) {
+		DPAA2_PMD_ERR("Tunnel-ESP distribution not support");
+		return -ENOTSUP;
+	}
+
+	ret = dpaa2_flow_identify_by_faf(priv, flow,
+			FAF_IPSEC_ESP_FRAM, DPAA2_FLOW_QOS_TYPE,
+			group, &local_cfg);
+	if (ret)
+		return ret;
+
+	ret = dpaa2_flow_identify_by_faf(priv, flow,
+			FAF_IPSEC_ESP_FRAM, DPAA2_FLOW_FS_TYPE,
+			group, &local_cfg);
+	if (ret)
+		return ret;
+
+	if (!spec) {
+		(*device_configured) |= local_cfg;
+		return 0;
+	}
+
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_ESP);
+	if (ret) {
+		DPAA2_PMD_WARN("Extract field(s) of ESP not support.");
+
+		return ret;
+	}
+
+	if (mask->hdr.spi) {
+		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IPSEC_ESP,
+			NH_FLD_IPSEC_ESP_SPI, &spec->hdr.spi,
+			&mask->hdr.spi, sizeof(rte_be32_t),
+			priv, group, &local_cfg, DPAA2_FLOW_QOS_TYPE);
+		if (ret)
+			return ret;
+
+		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IPSEC_ESP,
+			NH_FLD_IPSEC_ESP_SPI, &spec->hdr.spi,
+			&mask->hdr.spi, sizeof(rte_be32_t),
+			priv, group, &local_cfg, DPAA2_FLOW_FS_TYPE);
+		if (ret)
+			return ret;
+	}
+
+	if (mask->hdr.seq) {
+		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IPSEC_ESP,
+			NH_FLD_IPSEC_ESP_SEQUENCE_NUM, &spec->hdr.seq,
+			&mask->hdr.seq, sizeof(rte_be32_t),
+			priv, group, &local_cfg, DPAA2_FLOW_QOS_TYPE);
+		if (ret)
+			return ret;
+
+		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IPSEC_ESP,
+			NH_FLD_IPSEC_ESP_SEQUENCE_NUM, &spec->hdr.seq,
+			&mask->hdr.seq, sizeof(rte_be32_t),
+			priv, group, &local_cfg, DPAA2_FLOW_FS_TYPE);
+		if (ret)
+			return ret;
+	}
+
+	(*device_configured) |= local_cfg;
+
+	return 0;
+}
+
+static int
+dpaa2_configure_flow_ah(struct dpaa2_dev_flow *flow,
+	struct rte_eth_dev *dev,
+	const struct rte_flow_attr *attr,
+	const struct rte_dpaa2_flow_item *dpaa2_pattern,
+	const struct rte_flow_action actions[] __rte_unused,
+	struct rte_flow_error *error __rte_unused,
+	int *device_configured)
+{
+	int ret, local_cfg = 0;
+	uint32_t group;
+	const struct rte_flow_item_ah *spec, *mask;
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	const struct rte_flow_item *pattern =
+		&dpaa2_pattern->generic_item;
+
+	group = attr->group;
+
+	/* Parse pattern list to get the matching parameters */
+	spec = pattern->spec;
+	mask = pattern->mask ?
+		pattern->mask : &dpaa2_flow_item_ah_mask;
+
+	/* Get traffic class index and flow id to be configured */
+	flow->tc_id = group;
+	flow->tc_index = attr->priority;
+
+	if (dpaa2_pattern->in_tunnel) {
+		DPAA2_PMD_ERR("Tunnel-AH distribution not support");
+		return -ENOTSUP;
+	}
+
+	ret = dpaa2_flow_identify_by_faf(priv, flow,
+			FAF_IPSEC_AH_FRAM, DPAA2_FLOW_QOS_TYPE,
+			group, &local_cfg);
+	if (ret)
+		return ret;
+
+	ret = dpaa2_flow_identify_by_faf(priv, flow,
+			FAF_IPSEC_AH_FRAM, DPAA2_FLOW_FS_TYPE,
+			group, &local_cfg);
+	if (ret)
+		return ret;
+
+	if (!spec) {
+		(*device_configured) |= local_cfg;
+		return 0;
+	}
+
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_AH);
+	if (ret) {
+		DPAA2_PMD_WARN("Extract field(s) of AH not support.");
+
+		return ret;
+	}
+
+	if (mask->spi) {
+		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IPSEC_AH,
+			NH_FLD_IPSEC_AH_SPI, &spec->spi,
+			&mask->spi, sizeof(rte_be32_t),
+			priv, group, &local_cfg, DPAA2_FLOW_QOS_TYPE);
+		if (ret)
+			return ret;
+
+		ret = dpaa2_flow_add_hdr_extract_rule(flow, NET_PROT_IPSEC_AH,
+			NH_FLD_IPSEC_AH_SPI, &spec->spi,
+			&mask->spi, sizeof(rte_be32_t),
+			priv, group, &local_cfg, DPAA2_FLOW_FS_TYPE);
+		if (ret)
+			return ret;
+	}
+
+	if (mask->seq_num) {
+		DPAA2_PMD_ERR("AH seq distribution not support");
+		return -ENOTSUP;
 	}
 
 	(*device_configured) |= local_cfg;
@@ -3145,11 +3362,12 @@ dpaa2_configure_flow_sctp(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_SCTP)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_SCTP);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of SCTP not support.");
 
-		return -1;
+		return ret;
 	}
 
 	if (mask->hdr.src_port) {
@@ -3237,11 +3455,12 @@ dpaa2_configure_flow_gre(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_GRE)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_GRE);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of GRE not support.");
 
-		return -1;
+		return ret;
 	}
 
 	if (!mask->protocol)
@@ -3314,11 +3533,12 @@ dpaa2_configure_flow_vxlan(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_VXLAN)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_VXLAN);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of VXLAN not support.");
 
-		return -1;
+		return ret;
 	}
 
 	if (mask->flags) {
@@ -3418,17 +3638,18 @@ dpaa2_configure_flow_ecpri(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_ECPRI)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_ECPRI);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of ECPRI not support.");
 
-		return -1;
+		return ret;
 	}
 
 	if (mask->hdr.common.type != 0xff) {
 		DPAA2_PMD_WARN("ECPRI header type not specified.");
 
-		return -1;
+		return -EINVAL;
 	}
 
 	if (spec->hdr.common.type == RTE_ECPRI_MSG_TYPE_IQ_DATA) {
@@ -3729,11 +3950,12 @@ dpaa2_configure_flow_gtp(struct dpaa2_dev_flow *flow,
 		return 0;
 	}
 
-	if (dpaa2_flow_extract_support((const uint8_t *)mask,
-		RTE_FLOW_ITEM_TYPE_GTP)) {
+	ret = dpaa2_flow_extract_support((const uint8_t *)mask,
+		RTE_FLOW_ITEM_TYPE_GTP);
+	if (ret) {
 		DPAA2_PMD_WARN("Extract field(s) of GTP not support.");
 
-		return -1;
+		return ret;
 	}
 
 	if (!mask->teid)
@@ -4367,6 +4589,26 @@ dpaa2_generic_flow_set(struct dpaa2_dev_flow *flow,
 					&is_keycfg_configured);
 			if (ret) {
 				DPAA2_PMD_ERR("SCTP flow config failed!");
+				goto end_flow_set;
+			}
+			break;
+		case RTE_FLOW_ITEM_TYPE_ESP:
+			ret = dpaa2_configure_flow_esp(flow,
+					dev, attr, &dpaa2_pattern[i],
+					actions, error,
+					&is_keycfg_configured);
+			if (ret) {
+				DPAA2_PMD_ERR("ESP flow config failed!");
+				goto end_flow_set;
+			}
+			break;
+		case RTE_FLOW_ITEM_TYPE_AH:
+			ret = dpaa2_configure_flow_ah(flow,
+					dev, attr, &dpaa2_pattern[i],
+					actions, error,
+					&is_keycfg_configured);
+			if (ret) {
+				DPAA2_PMD_ERR("AH flow config failed!");
 				goto end_flow_set;
 			}
 			break;
