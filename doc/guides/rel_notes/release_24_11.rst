@@ -247,6 +247,9 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Updated Marvell cnxk event device driver.**
+
+  * Added eventdev driver support for CN20K SoC.
 
 Removed Items
 -------------
