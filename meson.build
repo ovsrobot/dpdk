@@ -82,8 +82,10 @@ subdir('drivers')
 subdir('usertools')
 subdir('app')
 
-# build docs
-subdir('doc')
+if get_option('enable_docs')
+    # build docs
+    subdir('doc')
+endif
 
 # build any examples explicitly requested - useful for developers - and
 # install any example code into the appropriate install path

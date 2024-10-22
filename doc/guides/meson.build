@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Intel Corporation
 
-sphinx = find_program('sphinx-build', required: get_option('enable_docs'))
+sphinx = find_program('sphinx-build', required: true)
 
 if not sphinx.found()
     subdir_done()
@@ -20,8 +20,8 @@ html_guides = custom_target('html_guides',
             meson.current_source_dir(), meson.current_build_dir(),
             extra_sphinx_args],
         depfile: '.html.d',
-        build_by_default: get_option('enable_docs'),
-        install: get_option('enable_docs'),
+        build_by_default: true,
+        install: true,
         install_dir: htmldir)
 
 doc_targets += html_guides

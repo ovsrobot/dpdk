@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
-doxygen = find_program('doxygen', required: get_option('enable_docs'))
+doxygen = find_program('doxygen', required: true)
 
 if not doxygen.found()
   # process DTS API doc build even if DPDK API doc build can't be done
@@ -28,9 +28,9 @@ example = custom_target('examples.dox',
         output: 'examples.dox',
         command: [generate_examples, join_paths(dpdk_source_root, 'examples'), '@OUTPUT@'],
         depfile: 'examples.dox.d',
-        install: get_option('enable_docs'),
+        install: true,
         install_dir: htmldir,
-        build_by_default: get_option('enable_docs'))
+        build_by_default: true)
 
 # set up common Doxygen configuration
 cdata = configuration_data()
@@ -76,9 +76,9 @@ doxy_html_build = custom_target('doxygen-html',
         output: 'html',
         depfile: 'html.d',
         command: [generate_doxygen, '@OUTPUT@', doxygen, '@INPUT@'],
-        install: get_option('enable_docs'),
+        install: true,
         install_dir: htmldir,
-        build_by_default: get_option('enable_docs'))
+        build_by_default: true)
 
 doc_targets += doxy_html_build
 doc_target_names += 'Doxygen_API(HTML)'
@@ -90,9 +90,9 @@ doxy_man_build = custom_target('doxygen-man',
         output: 'man',
         depfile: 'man.d',
         command: [generate_doxygen, '@OUTPUT@', doxygen, '@INPUT@'],
-        install: get_option('enable_docs'),
+        install: true,
         install_dir: get_option('datadir'),
-        build_by_default: get_option('enable_docs'))
+        build_by_default: true)
 
 doc_targets += doxy_man_build
 doc_target_names += 'Doxygen_API(Manpage)'
@@ -100,7 +100,7 @@ doc_target_names += 'Doxygen_API(Manpage)'
 # refresh the manpage database on install
 # if DPDK manpages are installed to a staging directory, not in MANPATH, this has no effect
 mandb = find_program('mandb', required: false)
-if mandb.found() and get_option('enable_docs')
+if mandb.found()
     meson.add_install_script(mandb)
 endif
 

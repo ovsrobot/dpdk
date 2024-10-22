@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2023 PANTHEON.tech s.r.o.
 
-sphinx = find_program('sphinx-build', required: get_option('enable_docs'))
+sphinx = find_program('sphinx-build', required: true)
 if not sphinx.found()
     subdir_done()
 endif
@@ -23,8 +23,8 @@ dts_api_html = custom_target('dts_api_html',
         output: 'html',
         command: [sphinx_wrapper, sphinx, meson.project_version(),
             meson.current_source_dir(), meson.current_build_dir(), extra_sphinx_args],
-        build_by_default: get_option('enable_docs'),
-        install: get_option('enable_docs'),
+        build_by_default: true,
+        install: true,
         install_dir: htmldir)
 
 doc_targets += dts_api_html
