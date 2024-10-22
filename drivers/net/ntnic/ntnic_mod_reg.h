@@ -280,6 +280,12 @@ struct profile_inline_ops {
 		uint16_t caller_id,
 		struct rte_flow_error *error);
 
+	int (*flow_get_aged_flows_profile_inline)(struct flow_eth_dev *dev,
+		uint16_t caller_id,
+		void **context,
+		uint32_t nb_contexts,
+		struct rte_flow_error *error);
+
 	int (*flow_dev_dump_profile_inline)(struct flow_eth_dev *dev,
 		struct flow_handle *flow,
 		uint16_t caller_id,
@@ -348,6 +354,23 @@ struct flow_filter_ops {
 		struct rte_flow_error *error);
 
 	int (*flow_get_flm_stats)(struct flow_nic_dev *ndev, uint64_t *data, uint64_t size);
+	int (*flow_get_aged_flows)(struct flow_eth_dev *dev,
+		uint16_t caller_id,
+		void **context,
+		uint32_t nb_contexts,
+		struct rte_flow_error *error);
+
+	/*
+	 * NT Flow asynchronous operations API
+	 */
+	int (*flow_info_get)(struct flow_eth_dev *dev, uint8_t caller_id,
+		struct rte_flow_port_info *port_info, struct rte_flow_queue_info *queue_info,
+		struct rte_flow_error *error);
+
+	int (*flow_configure)(struct flow_eth_dev *dev, uint8_t caller_id,
+		const struct rte_flow_port_attr *port_attr, uint16_t nb_queue,
+		const struct rte_flow_queue_attr *queue_attr[],
+		struct rte_flow_error *error);
 
 	/*
 	 * Other
