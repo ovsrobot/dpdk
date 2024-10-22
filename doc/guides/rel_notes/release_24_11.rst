@@ -163,6 +163,7 @@ New Features
   * Added initialization of FPGA modules related to flow HW offload
   * Added basic handling of the virtual queues
   * Added age rte flow action support
+  * Added meter flow metering and flow policy support
 
 * **Added cryptodev queue pair reset support.**
 
