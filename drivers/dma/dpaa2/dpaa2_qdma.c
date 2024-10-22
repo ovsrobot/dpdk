@@ -10,6 +10,7 @@
 
 #include <mc/fsl_dpdmai.h>
 
+#include <dpaa2_hw_dpio.h>
 #include "rte_pmd_dpaa2_qdma.h"
 #include "dpaa2_qdma.h"
 #include "dpaa2_qdma_logs.h"
