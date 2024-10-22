@@ -8,6 +8,7 @@
 
 #include "hw_mod_backend.h"
 #include "flm_age_queue.h"
+#include "flm_evt_queue.h"
 #include "flm_lrn_queue.h"
 #include "flow_api.h"
 #include "flow_api_engine.h"
@@ -19,6 +20,13 @@
 #include "flow_api_profile_inline.h"
 #include "ntnic_mod_reg.h"
 #include <rte_common.h>
+
+#define DMA_BLOCK_SIZE 256
+#define DMA_OVERHEAD 20
+#define WORDS_PER_STA_DATA (sizeof(struct flm_v25_sta_data_s) / sizeof(uint32_t))
+#define MAX_STA_DATA_RECORDS_PER_READ ((DMA_BLOCK_SIZE - DMA_OVERHEAD) / WORDS_PER_STA_DATA)
+#define WORDS_PER_INF_DATA (sizeof(struct flm_v25_inf_data_s) / sizeof(uint32_t))
+#define MAX_INF_DATA_RECORDS_PER_READ ((DMA_BLOCK_SIZE - DMA_OVERHEAD) / WORDS_PER_INF_DATA)
 
 #define NT_FLM_MISS_FLOW_TYPE 0
 #define NT_FLM_UNHANDLED_FLOW_TYPE 1
@@ -71,13 +79,126 @@ static uint32_t flm_lrn_update(struct flow_eth_dev *dev, uint32_t *inf_word_cnt,
 	return r.num;
 }
 
+static inline bool is_remote_caller(uint8_t caller_id, uint8_t *port)
+{
+	if (caller_id < MAX_VDPA_PORTS + 1) {
+		*port = caller_id;
+		return true;
+	}
+
+	*port = caller_id - MAX_VDPA_PORTS - 1;
+	return false;
+}
+
+static void flm_mtr_read_inf_records(struct flow_eth_dev *dev, uint32_t *data, uint32_t records)
+{
+	for (uint32_t i = 0; i < records; ++i) {
+		struct flm_v25_inf_data_s *inf_data =
+			(struct flm_v25_inf_data_s *)&data[i * WORDS_PER_INF_DATA];
+		uint8_t caller_id;
+		uint8_t type;
+		union flm_handles flm_h;
+		ntnic_id_table_find(dev->ndev->id_table_handle, inf_data->id, &flm_h, &caller_id,
+			&type);
+
+		/* Check that received record hold valid meter statistics */
+	if (type == 1) {
+		switch (inf_data->cause) {
+		case INF_DATA_CAUSE_TIMEOUT_FLOW_DELETED:
+		case INF_DATA_CAUSE_TIMEOUT_FLOW_KEPT: {
+			struct flow_handle *fh = (struct flow_handle *)flm_h.p;
+			struct flm_age_event_s age_event;
+			uint8_t port;
+
+			age_event.context = fh->context;
+
+			is_remote_caller(caller_id, &port);
+
+			flm_age_queue_put(caller_id, &age_event);
+			flm_age_event_set(port);
+		}
+		break;
+
+		case INF_DATA_CAUSE_SW_UNLEARN:
+		case INF_DATA_CAUSE_NA:
+		case INF_DATA_CAUSE_PERIODIC_FLOW_INFO:
+		case INF_DATA_CAUSE_SW_PROBE:
+		default:
+			break;
+			}
+		}
+	}
+}
+
+static void flm_mtr_read_sta_records(struct flow_eth_dev *dev, uint32_t *data, uint32_t records)
+{
+	for (uint32_t i = 0; i < records; ++i) {
+		struct flm_v25_sta_data_s *sta_data =
+			(struct flm_v25_sta_data_s *)&data[i * WORDS_PER_STA_DATA];
+		uint8_t caller_id;
+		uint8_t type;
+		union flm_handles flm_h;
+		ntnic_id_table_find(dev->ndev->id_table_handle, sta_data->id, &flm_h, &caller_id,
+			&type);
+
+		if (type == 1) {
+			uint8_t port;
+			bool remote_caller = is_remote_caller(caller_id, &port);
+
+			pthread_mutex_lock(&dev->ndev->mtx);
+			((struct flow_handle *)flm_h.p)->learn_ignored = 1;
+			pthread_mutex_unlock(&dev->ndev->mtx);
+			struct flm_status_event_s data = {
+				.flow = flm_h.p,
+				.learn_ignore = sta_data->lis,
+				.learn_failed = sta_data->lfs,
+			};
+
+			flm_sta_queue_put(port, remote_caller, &data);
+		}
+	}
+}
+
 static uint32_t flm_update(struct flow_eth_dev *dev)
 {
 	static uint32_t inf_word_cnt;
 	static uint32_t sta_word_cnt;
 
+	uint32_t inf_data[DMA_BLOCK_SIZE];
+	uint32_t sta_data[DMA_BLOCK_SIZE];
+
+	if (inf_word_cnt >= WORDS_PER_INF_DATA || sta_word_cnt >= WORDS_PER_STA_DATA) {
+		uint32_t inf_records = inf_word_cnt / WORDS_PER_INF_DATA;
+
+		if (inf_records > MAX_INF_DATA_RECORDS_PER_READ)
+			inf_records = MAX_INF_DATA_RECORDS_PER_READ;
+
+		uint32_t sta_records = sta_word_cnt / WORDS_PER_STA_DATA;
+
+		if (sta_records > MAX_STA_DATA_RECORDS_PER_READ)
+			sta_records = MAX_STA_DATA_RECORDS_PER_READ;
+
+		hw_mod_flm_inf_sta_data_update_get(&dev->ndev->be, HW_FLM_FLOW_INF_STA_DATA,
+			inf_data, inf_records * WORDS_PER_INF_DATA,
+			&inf_word_cnt, sta_data,
+			sta_records * WORDS_PER_STA_DATA,
+			&sta_word_cnt);
+
+		if (inf_records > 0)
+			flm_mtr_read_inf_records(dev, inf_data, inf_records);
+
+		if (sta_records > 0)
+			flm_mtr_read_sta_records(dev, sta_data, sta_records);
+
+		return 1;
+	}
+
 	if (flm_lrn_update(dev, &inf_word_cnt, &sta_word_cnt) != 0)
 		return 1;
+
+	hw_mod_flm_buf_ctrl_update(&dev->ndev->be);
+	hw_mod_flm_buf_ctrl_get(&dev->ndev->be, HW_FLM_BUF_CTRL_INF_AVAIL, &inf_word_cnt);
+	hw_mod_flm_buf_ctrl_get(&dev->ndev->be, HW_FLM_BUF_CTRL_STA_AVAIL, &sta_word_cnt);
 
 	return inf_word_cnt + sta_word_cnt;
 }
