@@ -108,7 +108,7 @@ struct vmbus_bufring {
 	 * !!! DO NOT place any fields below this !!!
 	 */
 	uint8_t data[];
-} __rte_packed;
+};
 
 /*
  * Channel packets
