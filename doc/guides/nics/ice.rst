@@ -303,6 +303,13 @@ Runtime Configuration
   * ``segment``: Check number of mbuf segments does not exceed HW limits.
   * ``offload``: Check for use of an unsupported offload flag.
 
+- ``Cycle link update`` (default ``not enabled``)
+
+  Cyclic link update is enabled when the PMD status changes to STARTED. Setting
+  the ``devargs`` parameter ``link_period`` adjusts the link update period in
+  microseconds, and is disabled when the value set is less than or equal to 0.
+  For example ``-a 81:00.0,link_period=5000`` or ``-a 81:00.0,link_period=0``.
+
 Driver compilation and testing
 ------------------------------
 
