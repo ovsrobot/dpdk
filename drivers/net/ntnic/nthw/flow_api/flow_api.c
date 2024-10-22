@@ -7,6 +7,7 @@
 
 #include "flow_api_engine.h"
 #include "flow_api_nic_setup.h"
+#include "ntlog.h"
 #include "ntnic_mod_reg.h"
 
 #include "flow_api.h"
