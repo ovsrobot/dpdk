@@ -11,7 +11,7 @@
 struct cn9k_eth_txq {
 	uint64_t send_hdr_w0;
 	int64_t fc_cache_pkts;
-	uint64_t *fc_mem;
+	uint64_t __rte_atomic *fc_mem;
 	void *lmt_addr;
 	rte_iova_t io_addr;
 	uint64_t lso_tun_fmt;
