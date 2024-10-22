@@ -15,6 +15,7 @@
 
 #include <rte_tailq.h>
 #include <rte_os_shim.h>
+#include <rte_alarm.h>
 
 #include "eal_firmware.h"
 
@@ -38,6 +39,7 @@
 #define ICE_ONE_PPS_OUT_ARG       "pps_out"
 #define ICE_RX_LOW_LATENCY_ARG    "rx_low_latency"
 #define ICE_MBUF_CHECK_ARG       "mbuf_check"
+#define ICE_LINK_UPDATE_ARG       "link_period"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -54,6 +56,7 @@ static const char * const ice_valid_args[] = {
 	ICE_RX_LOW_LATENCY_ARG,
 	ICE_DEFAULT_MAC_DISABLE,
 	ICE_MBUF_CHECK_ARG,
+	ICE_LINK_UPDATE_ARG,
 	NULL
 };
 
@@ -1389,6 +1392,44 @@ ice_handle_aq_msg(struct rte_eth_dev *dev)
 }
 #endif
 
+static void
+ice_link_cycle_update(void *cb_arg)
+{
+	int ret;
+	struct rte_eth_dev *dev = cb_arg;
+	struct ice_adapter *adapter =
+		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+
+	ret = ice_link_update(dev, 0);
+	if (!ret)
+		rte_eth_dev_callback_process
+			(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+
+	if (dev->data->dev_started) {
+		/* re-alarm link update */
+		if (rte_eal_alarm_set(adapter->devargs.link_update_period,
+					&ice_link_cycle_update, (void *)adapter))
+			PMD_DRV_LOG(ERR, "Failed to enable cycle link update");
+	}
+}
+
+static void
+ice_link_cycle_update_init(struct rte_eth_dev *dev)
+{
+	struct ice_adapter *adapter =
+		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+
+	if (adapter->devargs.link_update_period <= 0) {
+		PMD_DRV_LOG(INFO, "Device cycle link update is disabled");
+	} else {
+		PMD_DRV_LOG(INFO, "Enabling cycle link update, period is %dμs",
+					adapter->devargs.link_update_period);
+		if (rte_eal_alarm_set(adapter->devargs.link_update_period,
+					&ice_link_cycle_update, (void *)dev))
+			PMD_DRV_LOG(ERR, "Failed to enable cycle link update");
+	}
+}
+
 /**
  * Interrupt handler triggered by NIC for handling
  * specific interrupt.
@@ -2196,6 +2237,26 @@ err_end:
 	return ret;
 }
 
+static int
+ice_parse_clean_subtask_period(__rte_unused const char *key,
+		const char *value, void *args)
+{
+	int *num = (int *)args;
+	int tmp;
+
+	errno = 0;
+	tmp = atoi(value);
+	if (tmp < 0) {
+		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not greater than or equal to zero",
+						key, value);
+		return -1;
+	}
+
+	*num = tmp;
+
+	return 0;
+}
+
 static int ice_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct ice_adapter *ad =
@@ -2254,6 +2315,12 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_MBUF_CHECK_ARG,
 				 &ice_parse_mbuf_check, &ad->devargs.mbuf_check);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_LINK_UPDATE_ARG,
+				 &ice_parse_clean_subtask_period,
+				 &ad->devargs.link_update_period);
 	if (ret)
 		goto bail;
 
@@ -2597,6 +2664,8 @@ ice_dev_init(struct rte_eth_dev *dev)
 
 	/* reset all stats of the device, including pf and main vsi */
 	ice_stats_reset(dev);
+
+	ice_link_cycle_update_init(dev);
 
 	return 0;
 
