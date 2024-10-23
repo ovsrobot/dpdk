@@ -310,7 +310,7 @@ rte_bpf_elf_load(const struct rte_bpf_prm *prm, const char *fname,
 	if (fd < 0) {
 		rc = errno;
 		RTE_BPF_LOG_LINE(ERR, "%s(%s) error code: %d(%s)",
-			__func__, fname, rc, strerror(rc));
+			__func__, fname, rc, rte_strerror(rc));
 		rte_errno = EINVAL;
 		return NULL;
 	}
