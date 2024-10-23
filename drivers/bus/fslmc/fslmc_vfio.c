@@ -481,7 +481,7 @@ fslmc_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 	if (ret) {
 		DPAA2_BUS_ERR("  %s cannot get group status, "
 				"error %i (%s)", dev_addr,
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 		close(vfio_group_fd);
 		rte_vfio_clear_group(vfio_group_fd);
 		return -1;
@@ -504,7 +504,7 @@ fslmc_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		if (ret) {
 			DPAA2_BUS_ERR("  %s cannot add VFIO group to container, "
 					"error %i (%s)", dev_addr,
-					errno, strerror(errno));
+					errno, rte_strerror(errno));
 			close(vfio_group_fd);
 			close(vfio_container_fd);
 			rte_vfio_clear_group(vfio_group_fd);
@@ -551,7 +551,7 @@ fslmc_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 	ret = ioctl(*vfio_dev_fd, VFIO_DEVICE_GET_INFO, device_info);
 	if (ret) {
 		DPAA2_BUS_ERR("  %s cannot get device info, error %i (%s)",
-				dev_addr, errno, strerror(errno));
+				dev_addr, errno, rte_strerror(errno));
 		close(*vfio_dev_fd);
 		close(vfio_group_fd);
 		close(vfio_container_fd);
@@ -617,7 +617,7 @@ int rte_dpaa2_intr_enable(struct rte_intr_handle *intr_handle, int index)
 	if (ret) {
 		DPAA2_BUS_ERR("Error:dpaa2 SET IRQs fd=%d, err = %d(%s)",
 			      rte_intr_fd_get(intr_handle), errno,
-			      strerror(errno));
+			      rte_strerror(errno));
 		return ret;
 	}
 
@@ -667,7 +667,7 @@ rte_dpaa2_vfio_setup_intr(struct rte_intr_handle *intr_handle,
 		ret = ioctl(vfio_dev_fd, VFIO_DEVICE_GET_IRQ_INFO, &irq_info);
 		if (ret < 0) {
 			DPAA2_BUS_ERR("Cannot get IRQ(%d) info, error %i (%s)",
-				      i, errno, strerror(errno));
+				      i, errno, rte_strerror(errno));
 			return -1;
 		}
 
@@ -682,7 +682,7 @@ rte_dpaa2_vfio_setup_intr(struct rte_intr_handle *intr_handle,
 		fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 		if (fd < 0) {
 			DPAA2_BUS_ERR("Cannot set up eventfd, error %i (%s)",
-				      errno, strerror(errno));
+				      errno, rte_strerror(errno));
 			return -1;
 		}
 
