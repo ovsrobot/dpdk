@@ -437,7 +437,7 @@ vdev_action(const struct rte_mp_msg *mp_msg, const void *peer)
 			strlcpy(ou->name, devname, RTE_DEV_NAME_MAX_LEN);
 			if (rte_mp_sendmsg(&mp_resp) < 0)
 				VDEV_LOG(ERR, "send vdev, %s, failed, %s",
-					 devname, strerror(rte_errno));
+					 devname, rte_strerror(rte_errno));
 			num++;
 		}
 		rte_spinlock_recursive_unlock(&vdev_device_list_lock);
