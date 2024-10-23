@@ -51,7 +51,7 @@ tf_create_tbl_pool_external(enum tf_dir dir,
 
 	if (tfp_calloc(&parms) != 0) {
 		TFP_DRV_LOG(ERR, "%s: TBL: external pool failure %s\n",
-			    tf_dir_2_str(dir), strerror(ENOMEM));
+			    tf_dir_2_str(dir), rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -61,7 +61,7 @@ tf_create_tbl_pool_external(enum tf_dir dir,
 
 	if (rc != 0) {
 		TFP_DRV_LOG(ERR, "%s: TBL: stack init failure %s\n",
-			    tf_dir_2_str(dir), strerror(-rc));
+			    tf_dir_2_str(dir), rte_strerror(-rc));
 		goto cleanup;
 	}
 
@@ -78,7 +78,7 @@ tf_create_tbl_pool_external(enum tf_dir dir,
 		rc = stack_push(pool, j);
 		if (rc != 0) {
 			TFP_DRV_LOG(ERR, "%s TBL: stack failure %s\n",
-				    tf_dir_2_str(dir), strerror(-rc));
+				    tf_dir_2_str(dir), rte_strerror(-rc));
 			goto cleanup;
 		}
 
@@ -93,7 +93,7 @@ tf_create_tbl_pool_external(enum tf_dir dir,
 	if (!stack_is_full(pool)) {
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR, "%s TBL: stack failure %s\n",
-			    tf_dir_2_str(dir), strerror(-rc));
+			    tf_dir_2_str(dir), rte_strerror(-rc));
 		goto cleanup;
 	}
 	return 0;
@@ -921,7 +921,7 @@ tf_em_ext_common_bind(struct tf *tfp,
 	cparms.alignment = 0;
 	if (tfp_calloc(&cparms) != 0) {
 		TFP_DRV_LOG(ERR, "em_ext_db alloc error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -980,7 +980,7 @@ tf_em_ext_common_unbind(struct tf *tfp)
 	rc = tf_session_get_session_internal(tfp, &tfs);
 	if (rc) {
 		TFP_DRV_LOG(ERR, "Failed to get tf_session, rc:%s\n",
-		strerror(-rc));
+		rte_strerror(-rc));
 		return rc;
 	}
 
@@ -989,7 +989,7 @@ tf_em_ext_common_unbind(struct tf *tfp)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -997,7 +997,7 @@ tf_em_ext_common_unbind(struct tf *tfp)
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to get em_ext_db from session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1157,7 +1157,7 @@ int tf_em_ext_map_tbl_scope(struct tf *tfp,
 		rc = -EOPNOTSUPP;
 		TFP_DRV_LOG(ERR,
 			    "Map table scope operation not supported, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1167,14 +1167,14 @@ int tf_em_ext_map_tbl_scope(struct tf *tfp,
 
 	if (tfp_calloc(&aparms) != 0) {
 		TFP_DRV_LOG(ERR, "Map tbl scope alloc data error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 	data = aparms.mem_va;
 
 	if (tfp_calloc(&aparms) != 0) {
 		TFP_DRV_LOG(ERR, "Map tbl scope alloc mask error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		rc = -ENOMEM;
 		goto clean;
 	}
@@ -1188,7 +1188,7 @@ int tf_em_ext_map_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Map table scope config failure, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		goto cleaner;
 	}
 
@@ -1203,7 +1203,7 @@ int tf_em_ext_map_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Map tbl scope, set failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 cleaner:
 	tfp_free(mask);

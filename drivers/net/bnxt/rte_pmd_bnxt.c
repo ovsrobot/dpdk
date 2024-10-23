@@ -149,7 +149,7 @@ int rte_pmd_bnxt_set_vf_mac_addr(uint16_t port, uint16_t vf,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -191,7 +191,7 @@ int rte_pmd_bnxt_set_vf_rate_limit(uint16_t port, uint16_t vf,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -249,7 +249,7 @@ int rte_pmd_bnxt_set_vf_mac_anti_spoof(uint16_t port, uint16_t vf, uint8_t on)
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -308,7 +308,7 @@ int rte_pmd_bnxt_set_vf_vlan_anti_spoof(uint16_t port, uint16_t vf, uint8_t on)
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -365,7 +365,7 @@ rte_pmd_bnxt_set_vf_vlan_stripq(uint16_t port, uint16_t vf, uint8_t on)
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -409,7 +409,7 @@ int rte_pmd_bnxt_set_vf_rxmode(uint16_t port, uint16_t vf,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -600,7 +600,7 @@ int rte_pmd_bnxt_get_vf_stats(uint16_t port,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -636,7 +636,7 @@ int rte_pmd_bnxt_reset_vf_stats(uint16_t port,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -670,7 +670,7 @@ int rte_pmd_bnxt_get_vf_rx_status(uint16_t port, uint16_t vf_id)
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -705,7 +705,7 @@ int rte_pmd_bnxt_get_vf_tx_drop_count(uint16_t port, uint16_t vf_id,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -744,7 +744,7 @@ int rte_pmd_bnxt_mac_addr_add(uint16_t port, struct rte_ether_addr *addr,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -827,7 +827,7 @@ rte_pmd_bnxt_set_vf_vlan_insert(uint16_t port, uint16_t vf,
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}
@@ -871,7 +871,7 @@ int rte_pmd_bnxt_set_vf_persist_stats(uint16_t port, uint16_t vf, uint8_t on)
 	if (rc != 0) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Error during getting device (port %u) info: %s",
-			port, strerror(-rc));
+			port, rte_strerror(-rc));
 
 		return rc;
 	}

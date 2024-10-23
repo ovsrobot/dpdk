@@ -205,7 +205,7 @@ int tf_insert_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -215,7 +215,7 @@ int tf_insert_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -232,7 +232,7 @@ int tf_insert_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: EM insert failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -261,7 +261,7 @@ int tf_delete_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -271,7 +271,7 @@ int tf_delete_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -285,7 +285,7 @@ int tf_delete_em_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: EM delete failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -313,7 +313,7 @@ int tf_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -323,7 +323,7 @@ int tf_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -338,7 +338,7 @@ int tf_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -347,7 +347,7 @@ int tf_get_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Global Cfg get failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -375,7 +375,7 @@ int tf_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -385,7 +385,7 @@ int tf_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -400,7 +400,7 @@ int tf_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -409,7 +409,7 @@ int tf_set_global_cfg(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Global Cfg set failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -437,7 +437,7 @@ tf_alloc_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -447,7 +447,7 @@ tf_alloc_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -456,7 +456,7 @@ tf_alloc_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -468,7 +468,7 @@ tf_alloc_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Identifier allocation failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -497,7 +497,7 @@ tf_free_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -507,7 +507,7 @@ tf_free_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -516,7 +516,7 @@ tf_free_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -529,7 +529,7 @@ tf_free_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Identifier free failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -556,7 +556,7 @@ tf_search_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -566,7 +566,7 @@ tf_search_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -575,7 +575,7 @@ tf_search_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -589,7 +589,7 @@ tf_search_identifier(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Identifier search failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -615,7 +615,7 @@ tf_search_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -625,7 +625,7 @@ tf_search_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -634,7 +634,7 @@ tf_search_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -656,7 +656,7 @@ tf_search_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM allocation failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -688,7 +688,7 @@ tf_alloc_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -698,7 +698,7 @@ tf_alloc_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -707,7 +707,7 @@ tf_alloc_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -720,7 +720,7 @@ tf_alloc_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM allocation failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -748,7 +748,7 @@ tf_set_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -758,7 +758,7 @@ tf_set_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -768,7 +768,7 @@ tf_set_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -786,7 +786,7 @@ tf_set_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM set failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	TFP_DRV_LOG(DEBUG,
@@ -816,7 +816,7 @@ tf_get_tcam_entry(struct tf *tfp __rte_unused,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -826,7 +826,7 @@ tf_get_tcam_entry(struct tf *tfp __rte_unused,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -835,7 +835,7 @@ tf_get_tcam_entry(struct tf *tfp __rte_unused,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -853,7 +853,7 @@ tf_get_tcam_entry(struct tf *tfp __rte_unused,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM get failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	parms->key_sz_in_bits = gparms.key_size * 8;
@@ -881,7 +881,7 @@ tf_free_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -891,7 +891,7 @@ tf_free_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -900,7 +900,7 @@ tf_free_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -912,7 +912,7 @@ tf_free_tcam_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM free failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -935,7 +935,7 @@ tf_move_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -945,7 +945,7 @@ tf_move_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -954,7 +954,7 @@ tf_move_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -963,7 +963,7 @@ tf_move_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM shared entries move failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -986,7 +986,7 @@ tf_clear_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -996,7 +996,7 @@ tf_clear_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1005,7 +1005,7 @@ tf_clear_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1014,7 +1014,7 @@ tf_clear_tcam_shared_entries(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: TCAM shared entries clear failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1042,7 +1042,7 @@ tf_alloc_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1052,7 +1052,7 @@ tf_alloc_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1067,7 +1067,7 @@ tf_alloc_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Operation not supported, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return -EOPNOTSUPP;
 		}
 
@@ -1076,7 +1076,7 @@ tf_alloc_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: External table allocation failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	} else if (dev->ops->tf_dev_is_sram_managed(tfp, parms->type)) {
@@ -1085,7 +1085,7 @@ tf_alloc_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: SRAM table allocation failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	} else {
@@ -1094,7 +1094,7 @@ tf_alloc_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Table allocation failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}
@@ -1124,7 +1124,7 @@ tf_free_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1134,7 +1134,7 @@ tf_free_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1149,7 +1149,7 @@ tf_free_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Operation not supported, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return -EOPNOTSUPP;
 		}
 
@@ -1158,7 +1158,7 @@ tf_free_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Table free failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	} else if (dev->ops->tf_dev_is_sram_managed(tfp, parms->type)) {
@@ -1167,7 +1167,7 @@ tf_free_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: SRAM table free failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	} else {
@@ -1177,7 +1177,7 @@ tf_free_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Table free failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}
@@ -1204,7 +1204,7 @@ tf_set_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1214,7 +1214,7 @@ tf_set_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1231,7 +1231,7 @@ tf_set_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Operation not supported, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return -EOPNOTSUPP;
 		}
 
@@ -1240,7 +1240,7 @@ tf_set_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Table set failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}  else if (dev->ops->tf_dev_is_sram_managed(tfp, parms->type)) {
@@ -1249,7 +1249,7 @@ tf_set_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: SRAM table set failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	} else {
@@ -1258,7 +1258,7 @@ tf_set_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Operation not supported, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return -EOPNOTSUPP;
 		}
 
@@ -1267,7 +1267,7 @@ tf_set_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Table set failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}
@@ -1295,7 +1295,7 @@ tf_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1305,7 +1305,7 @@ tf_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	gparms.dir = parms->dir;
@@ -1320,7 +1320,7 @@ tf_get_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: SRAM table get failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	} else {
@@ -1329,7 +1329,7 @@ tf_get_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Operation not supported, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return -EOPNOTSUPP;
 		}
 
@@ -1338,7 +1338,7 @@ tf_get_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: Table get failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}
@@ -1366,7 +1366,7 @@ tf_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1376,7 +1376,7 @@ tf_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1393,7 +1393,7 @@ tf_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s, External table type not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 
 		return rc;
 	} else if (dev->ops->tf_dev_is_sram_managed(tfp, parms->type)) {
@@ -1402,7 +1402,7 @@ tf_bulk_get_tbl_entry(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s: SRAM table bulk get failed, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 		}
 		return rc;
 	}
@@ -1412,7 +1412,7 @@ tf_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -1421,7 +1421,7 @@ tf_bulk_get_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Table get bulk failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	return rc;
@@ -1442,7 +1442,7 @@ int tf_get_shared_tbl_increment(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1452,7 +1452,7 @@ int tf_get_shared_tbl_increment(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1463,7 +1463,7 @@ int tf_get_shared_tbl_increment(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -1472,7 +1472,7 @@ int tf_get_shared_tbl_increment(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Get table increment not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1494,7 +1494,7 @@ tf_alloc_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1503,7 +1503,7 @@ tf_alloc_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1532,7 +1532,7 @@ tf_map_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1541,7 +1541,7 @@ tf_map_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1571,7 +1571,7 @@ tf_free_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1580,7 +1580,7 @@ tf_free_tbl_scope(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1612,7 +1612,7 @@ tf_set_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1622,7 +1622,7 @@ tf_set_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1631,7 +1631,7 @@ tf_set_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1646,7 +1646,7 @@ tf_set_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: If_tbl set failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1670,7 +1670,7 @@ tf_get_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1680,7 +1680,7 @@ tf_get_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup device, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1689,7 +1689,7 @@ tf_get_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1704,7 +1704,7 @@ tf_get_if_tbl_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: If_tbl get failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1725,7 +1725,7 @@ int tf_get_session_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1734,7 +1734,7 @@ int tf_get_session_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup device, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1744,7 +1744,7 @@ int tf_get_session_info(struct tf *tfp,
 		rc = -EOPNOTSUPP;
 		TFP_DRV_LOG(ERR,
 			    "Operation not supported, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1752,14 +1752,14 @@ int tf_get_session_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Ident get resc info failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	if (dev->ops->tf_dev_get_tbl_resc_info == NULL) {
 		rc = -EOPNOTSUPP;
 		TFP_DRV_LOG(ERR,
 			    "Operation not supported, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1767,14 +1767,14 @@ int tf_get_session_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Tbl get resc info failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	if (dev->ops->tf_dev_get_tcam_resc_info == NULL) {
 		rc = -EOPNOTSUPP;
 		TFP_DRV_LOG(ERR,
 			    "Operation not supported, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1782,14 +1782,14 @@ int tf_get_session_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "TCAM get resc info failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	if (dev->ops->tf_dev_get_em_resc_info == NULL) {
 		rc = -EOPNOTSUPP;
 		TFP_DRV_LOG(ERR,
 			    "Operation not supported, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1797,7 +1797,7 @@ int tf_get_session_info(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "EM get resc info failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return 0;
@@ -1861,7 +1861,7 @@ int tf_query_sram_resources(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -1870,7 +1870,7 @@ int tf_query_sram_resources(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Get SRAM resc info failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1901,7 +1901,7 @@ int tf_query_sram_resources(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EOPNOTSUPP;
 	}
 
@@ -1911,7 +1911,7 @@ int tf_query_sram_resources(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Get SRAM resc info failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1943,7 +1943,7 @@ int tf_set_sram_policy(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1952,7 +1952,7 @@ int tf_set_sram_policy(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: SRAM policy set failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1984,7 +1984,7 @@ int tf_get_sram_policy(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Operation not supported, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1993,7 +1993,7 @@ int tf_get_sram_policy(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: SRAM policy get failed, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 

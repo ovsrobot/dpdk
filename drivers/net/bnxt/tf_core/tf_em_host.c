@@ -182,7 +182,7 @@ tf_em_alloc_page_table(struct hcapi_cfa_em_table *tbl)
 			TFP_DRV_LOG(WARNING,
 				"Failed to allocate page table: lvl: %d, rc:%s\n",
 				i,
-				strerror(-rc));
+				rte_strerror(-rc));
 			goto cleanup;
 		}
 
@@ -379,7 +379,7 @@ tf_em_ext_alloc(struct tf *tfp,
 	rc = tf_session_get_session_internal(tfp, &tfs);
 	if (rc) {
 		TFP_DRV_LOG(ERR, "Failed to get tf_session, rc:%s\n",
-		strerror(-rc));
+		rte_strerror(-rc));
 		return rc;
 	}
 
@@ -387,7 +387,7 @@ tf_em_ext_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			"Failed to get em_ext_db from session, rc:%s\n",
-			strerror(-rc));
+			rte_strerror(-rc));
 		return rc;
 	}
 	ext_db = (struct em_ext_db *)ext_ptr;
@@ -396,7 +396,7 @@ tf_em_ext_alloc(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "EEM: PF query error rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		goto cleanup;
 	}
 
@@ -420,7 +420,7 @@ tf_em_ext_alloc(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			"Failed to allocate session table scope, rc:%s\n",
-			strerror(-rc));
+			rte_strerror(-rc));
 		goto cleanup;
 	}
 
@@ -436,7 +436,7 @@ tf_em_ext_alloc(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "EEM: Unable to query for EEM capability,"
 				    " rc:%s\n",
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			goto cleanup_ts;
 		}
 	}
@@ -456,7 +456,7 @@ tf_em_ext_alloc(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "EEM: Unable to register for EEM ctx,"
 				    " rc:%s\n",
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			goto cleanup_ts;
 		}
 
@@ -473,7 +473,7 @@ tf_em_ext_alloc(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "TBL: Unable to configure EEM in firmware"
 				    " rc:%s\n",
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			goto cleanup_full;
 		}
 
@@ -485,7 +485,7 @@ tf_em_ext_alloc(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "EEM: Unable to enable EEM in firmware"
 				    " rc:%s\n",
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			goto cleanup_full;
 		}
 
@@ -501,7 +501,7 @@ tf_em_ext_alloc(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "%s TBL: Unable to allocate idx pools %s\n",
 				    tf_dir_2_str(dir),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			goto cleanup_full;
 		}
 	}
@@ -547,7 +547,7 @@ tf_em_ext_free(struct tf *tfp,
 	rc = tf_session_get_session_internal(tfp, &tfs);
 	if (rc) {
 		TFP_DRV_LOG(ERR, "Failed to get tf_session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return -EINVAL;
 	}
 
@@ -555,7 +555,7 @@ tf_em_ext_free(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			"Failed to get em_ext_db from session, rc:%s\n",
-			strerror(-rc));
+			rte_strerror(-rc));
 		return rc;
 	}
 	ext_db = (struct em_ext_db *)ext_ptr;

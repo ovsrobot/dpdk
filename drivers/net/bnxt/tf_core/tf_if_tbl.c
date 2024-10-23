@@ -65,7 +65,7 @@ tf_if_tbl_bind(struct tf *tfp,
 	cparms.alignment = 0;
 	if (tfp_calloc(&cparms) != 0) {
 		TFP_DRV_LOG(ERR, "if_tbl_rm_db alloc error %s\n",
-			    strerror(ENOMEM));
+			    rte_strerror(ENOMEM));
 		return -ENOMEM;
 	}
 
@@ -143,7 +143,7 @@ tf_if_tbl_set(struct tf *tfp,
 			    "%s, If Tbl set failed, type:%d, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    parms->type,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return 0;
@@ -187,7 +187,7 @@ tf_if_tbl_get(struct tf *tfp,
 			    "%s, If Tbl get failed, type:%d, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
 			    parms->type,
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return 0;

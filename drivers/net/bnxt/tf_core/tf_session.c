@@ -78,11 +78,11 @@ tf_session_create(struct tf *tfp,
 		if (rc == -EEXIST)
 			TFP_DRV_LOG(ERR,
 				    "Session is already open, rc:%s\n",
-				    strerror(-rc));
+				    rte_strerror(-rc));
 		else
 			TFP_DRV_LOG(ERR,
 				    "Open message send failed, rc:%s\n",
-				    strerror(-rc));
+				    rte_strerror(-rc));
 
 		parms->open_cfg->session_id.id = TF_FW_SESSION_ID_INVALID;
 		return rc;
@@ -97,7 +97,7 @@ tf_session_create(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Failed to allocate session info, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		goto cleanup;
 	}
 	tfp->session = (struct tf_session_info *)cparms.mem_va;
@@ -111,7 +111,7 @@ tf_session_create(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Failed to allocate session data, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		goto cleanup;
 	}
 	tfp->session->core_data = cparms.mem_va;
@@ -154,7 +154,7 @@ tf_session_create(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Failed to allocate session client, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		goto cleanup;
 	}
 	client = cparms.mem_va;
@@ -226,7 +226,7 @@ tf_session_create(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "FW Session close failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 	if (tfp->session) {
 		tfp_free(tfp->session->core_data);
@@ -268,7 +268,7 @@ tf_session_client_create(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -289,7 +289,7 @@ tf_session_client_create(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to create client on session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -303,7 +303,7 @@ tf_session_client_create(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to allocate session client, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		goto cleanup;
 	}
 	client = cparms.mem_va;
@@ -320,7 +320,7 @@ tf_session_client_create(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Session Firmware id lookup failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -373,7 +373,7 @@ tf_session_client_destroy(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Failed to lookup session, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -405,7 +405,7 @@ tf_session_client_destroy(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Client destroy on FW Failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	ll_delete(&tfs->client_ll, &client->ll_entry);
@@ -435,7 +435,7 @@ tf_session_open_session(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "Failed to create session, ctrl_chan_name:%s, rc:%s\n",
 				    parms->open_cfg->ctrl_chan_name,
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 
@@ -457,7 +457,7 @@ tf_session_open_session(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 			      "Failed to create client on session 0x%x, rc:%s\n",
 			      parms->open_cfg->session_id.id,
-			      strerror(-rc));
+			      rte_strerror(-rc));
 			return rc;
 		}
 
@@ -480,7 +480,7 @@ tf_session_attach_session(struct tf *tfp __rte_unused,
 
 	TFP_DRV_LOG(ERR,
 		    "Attach not yet supported, rc:%s\n",
-		    strerror(-rc));
+		    rte_strerror(-rc));
 	return rc;
 }
 
@@ -503,7 +503,7 @@ tf_session_close_session(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Session lookup failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -511,7 +511,7 @@ tf_session_close_session(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Invalid session id, unable to close, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -531,7 +531,7 @@ tf_session_close_session(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Client not part of the session, unable to close, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -556,7 +556,7 @@ tf_session_close_session(struct tf *tfp,
 			TFP_DRV_LOG(ERR,
 				    "Failed to unregister Client %d, rc:%s\n",
 				    client->session_client_id.id,
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 
@@ -576,7 +576,7 @@ tf_session_close_session(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Device lookup failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -586,7 +586,7 @@ tf_session_close_session(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Unable to lookup FW id, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -596,7 +596,7 @@ tf_session_close_session(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Device unbind failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	rc = tf_msg_session_close(tfp, fw_session_id, mailbox);
@@ -604,7 +604,7 @@ tf_session_close_session(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "FW Session close failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	/* Final cleanup as we're last user of the session thus we
@@ -658,7 +658,7 @@ tf_session_get_session_internal(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Session not created, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -689,7 +689,7 @@ tf_session_get_session(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Internal FID lookup\n, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -698,7 +698,7 @@ tf_session_get_session(struct tf *tfp,
 		TFP_DRV_LOG
 			(ERR,
 			"Ctrl channel not registered with session\n, rc:%s\n",
-			strerror(-rc));
+			rte_strerror(-rc));
 		return -EINVAL;
 	}
 
@@ -810,7 +810,7 @@ tf_session_get_fw_session_id(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Session not created, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -818,7 +818,7 @@ tf_session_get_fw_session_id(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Invalid Argument(s), rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -842,7 +842,7 @@ tf_session_get_session_id(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Session not created, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -850,7 +850,7 @@ tf_session_get_session_id(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Invalid Argument(s), rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1152,7 +1152,7 @@ tf_session_set_hotup_state(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Session lookup failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1160,7 +1160,7 @@ tf_session_set_hotup_state(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Only shared session able to set state, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1169,7 +1169,7 @@ tf_session_set_hotup_state(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Set session hot upgrade state failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return rc;
@@ -1186,7 +1186,7 @@ tf_session_get_hotup_state(struct tf *tfp,
 	if (rc) {
 		TFP_DRV_LOG(ERR,
 			    "Session lookup failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1194,7 +1194,7 @@ tf_session_get_hotup_state(struct tf *tfp,
 		rc = -EINVAL;
 		TFP_DRV_LOG(ERR,
 			    "Only shared session able to get state, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -1203,7 +1203,7 @@ tf_session_get_hotup_state(struct tf *tfp,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Get session hot upgrade state failed, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 	}
 
 	return rc;

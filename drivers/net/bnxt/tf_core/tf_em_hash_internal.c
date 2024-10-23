@@ -130,7 +130,7 @@ tf_em_hash_delete_int_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -165,7 +165,7 @@ tf_em_move_int_entry(struct tf *tfp,
 		TFP_DRV_LOG(ERR,
 			    "%s: Failed to lookup session, rc:%s\n",
 			    tf_dir_2_str(parms->dir),
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 

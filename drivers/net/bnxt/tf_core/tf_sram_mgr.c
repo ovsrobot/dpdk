@@ -494,7 +494,7 @@ static struct tf_sram_block
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Failed to allocate block, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return NULL;
 	}
 	block = (struct tf_sram_block *)cparms.mem_va;
@@ -588,7 +588,7 @@ tf_sram_mgr_bind(void **sram_handle)
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "Failed to allocate SRAM mgmt data, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 	sram = (struct tf_sram *)cparms.mem_va;
@@ -628,7 +628,7 @@ tf_sram_mgr_unbind(void *sram_handle)
 					/* Log error */
 					TFP_DRV_LOG(ERR,
 						  "No SRAM slice list, rc:%s\n",
-						  strerror(-rc));
+						  rte_strerror(-rc));
 					return rc;
 				}
 				if (tf_sram_get_block_cnt(slice_list))
@@ -670,7 +670,7 @@ int tf_sram_mgr_alloc(void *sram_handle,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "No SRAM slice list, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -759,7 +759,7 @@ tf_sram_mgr_free(void *sram_handle,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "No SRAM slice list, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 
@@ -781,7 +781,7 @@ tf_sram_mgr_free(void *sram_handle,
 	rc = tf_sram_free_slice(parms->slice_size, slice_offset,
 				block, &block_is_empty);
 	if (rc) {
-		TFP_DRV_LOG(ERR, "Error freeing slice (%s)\n", strerror(-rc));
+		TFP_DRV_LOG(ERR, "Error freeing slice (%s)\n", rte_strerror(-rc));
 		return rc;
 	}
 #if (STATS_CLEAR_ON_READ_SUPPORT == 0)
@@ -805,7 +805,7 @@ tf_sram_mgr_free(void *sram_handle,
 				    "%s, Failed type lookup, type:%s, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
 				    tf_tbl_type_2_str(parms->tbl_type),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 		/* Clear the counter
@@ -821,7 +821,7 @@ tf_sram_mgr_free(void *sram_handle,
 				    "%s, Set failed, type:%s, rc:%s\n",
 				    tf_dir_2_str(parms->dir),
 				    tf_tbl_type_2_str(parms->tbl_type),
-				    strerror(-rc));
+				    rte_strerror(-rc));
 			return rc;
 		}
 	}
@@ -836,14 +836,14 @@ tf_sram_mgr_free(void *sram_handle,
 
 		if (rc) {
 			TFP_DRV_LOG(ERR, "Free block_id(%d) failed error(%s)\n",
-				    block_id, strerror(-rc));
+				    block_id, rte_strerror(-rc));
 		}
 		fparms.index = block_id + 1;
 		rc = tf_rm_free(&fparms);
 
 		if (rc) {
 			TFP_DRV_LOG(ERR, "Free next block_id(%d) failed error(%s)\n",
-				    block_id + 1, strerror(-rc));
+				    block_id + 1, rte_strerror(-rc));
 		}
 		/* Free local entry regardless */
 		tf_sram_free_block(slice_list, block);
@@ -937,7 +937,7 @@ int tf_sram_mgr_is_allocated(void *sram_handle,
 		/* Log error */
 		TFP_DRV_LOG(ERR,
 			    "No SRAM slice list, rc:%s\n",
-			    strerror(-rc));
+			    rte_strerror(-rc));
 		return rc;
 	}
 

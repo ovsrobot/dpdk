@@ -1187,7 +1187,7 @@ int bnxt_dev_xstats_reset_op(struct rte_eth_dev *eth_dev)
 	ret = bnxt_hwrm_port_clr_stats(bp);
 	if (ret != 0)
 		PMD_DRV_LOG_LINE(ERR, "Failed to reset xstats: %s",
-			    strerror(-ret));
+			    rte_strerror(-ret));
 
 	bnxt_clear_prev_stat(bp);
 
