@@ -1397,7 +1397,7 @@ sfc_flow_parse_pattern(struct sfc_adapter *sa,
 		rc = item->parse(pattern, parse_ctx, error);
 		if (rc != 0) {
 			sfc_err(sa, "failed to parse item %s: %s",
-				item->name, strerror(-rc));
+				item->name, rte_strerror(-rc));
 			return rc;
 		}
 

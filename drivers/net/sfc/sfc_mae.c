@@ -428,7 +428,7 @@ sfc_mae_outer_rule_enable(struct sfc_adapter *sa,
 					       &fw_rsrc->rule_id);
 		if (rc != 0) {
 			sfc_err(sa, "failed to enable outer_rule=%p: %s",
-				rule, strerror(rc));
+				rule, rte_strerror(rc));
 			return rc;
 		}
 	}
@@ -445,7 +445,7 @@ sfc_mae_outer_rule_enable(struct sfc_adapter *sa,
 			fw_rsrc->rule_id.id = EFX_MAE_RSRC_ID_INVALID;
 		}
 
-		sfc_err(sa, "can't match on outer rule ID: %s", strerror(rc));
+		sfc_err(sa, "can't match on outer rule ID: %s", rte_strerror(rc));
 
 		return rc;
 	}
@@ -484,7 +484,7 @@ sfc_mae_outer_rule_disable(struct sfc_adapter *sa,
 						  &invalid_rule_id);
 	if (rc != 0) {
 		sfc_err(sa, "cannot restore match on invalid outer rule ID: %s",
-			strerror(rc));
+			rte_strerror(rc));
 		return;
 	}
 
@@ -503,7 +503,7 @@ skip_action_rule:
 				rule, fw_rsrc->rule_id.id);
 		} else {
 			sfc_err(sa, "failed to disable outer_rule=%p with OR_ID=0x%08x: %s",
-				rule, fw_rsrc->rule_id.id, strerror(rc));
+				rule, fw_rsrc->rule_id.id, rte_strerror(rc));
 		}
 		fw_rsrc->rule_id.id = EFX_MAE_RSRC_ID_INVALID;
 	}
@@ -616,7 +616,7 @@ sfc_mae_mac_addr_enable(struct sfc_adapter *sa,
 					    &fw_rsrc->mac_id);
 		if (rc != 0) {
 			sfc_err(sa, "failed to enable mac_addr=%p: %s",
-				mac_addr, strerror(rc));
+				mac_addr, rte_strerror(rc));
 			return rc;
 		}
 	}
@@ -642,7 +642,7 @@ sfc_mae_mac_addr_enable(struct sfc_adapter *sa,
 		}
 
 		sfc_err(sa, "cannot fill in MAC address entry ID: %s",
-			strerror(rc));
+			rte_strerror(rc));
 
 		return rc;
 	}
@@ -685,7 +685,7 @@ sfc_mae_mac_addr_disable(struct sfc_adapter *sa,
 				mac_addr, fw_rsrc->mac_id.id);
 		} else {
 			sfc_err(sa, "failed to disable mac_addr=%p with MAC_ID=0x%08x: %s",
-				mac_addr, fw_rsrc->mac_id.id, strerror(rc));
+				mac_addr, fw_rsrc->mac_id.id, rte_strerror(rc));
 		}
 		fw_rsrc->mac_id.id = EFX_MAE_RSRC_ID_INVALID;
 	}
@@ -818,7 +818,7 @@ sfc_mae_encap_header_update(struct sfc_adapter *sa,
 						  bounce_eh->size);
 		if (ret != 0) {
 			sfc_err(sa, "failed to update encap_header=%p: %s",
-				encap_header, strerror(ret));
+				encap_header, rte_strerror(ret));
 			rte_free(buf);
 			return ret;
 		}
@@ -859,7 +859,7 @@ sfc_mae_encap_header_enable(struct sfc_adapter *sa,
 						&fw_rsrc->eh_id);
 		if (rc != 0) {
 			sfc_err(sa, "failed to enable encap_header=%p: %s",
-				encap_header, strerror(rc));
+				encap_header, rte_strerror(rc));
 			return rc;
 		}
 	}
@@ -873,7 +873,7 @@ sfc_mae_encap_header_enable(struct sfc_adapter *sa,
 			fw_rsrc->eh_id.id = EFX_MAE_RSRC_ID_INVALID;
 		}
 
-		sfc_err(sa, "can't fill in encap. header ID: %s", strerror(rc));
+		sfc_err(sa, "can't fill in encap. header ID: %s", rte_strerror(rc));
 
 		return rc;
 	}
@@ -916,7 +916,7 @@ sfc_mae_encap_header_disable(struct sfc_adapter *sa,
 				encap_header, fw_rsrc->eh_id.id);
 		} else {
 			sfc_err(sa, "failed to disable encap_header=%p with EH_ID=0x%08x: %s",
-				encap_header, fw_rsrc->eh_id.id, strerror(rc));
+				encap_header, fw_rsrc->eh_id.id, rte_strerror(rc));
 		}
 		fw_rsrc->eh_id.id = EFX_MAE_RSRC_ID_INVALID;
 	}
@@ -1023,7 +1023,7 @@ sfc_mae_counter_enable(struct sfc_adapter *sa, struct sfc_mae_counter *counter,
 			}
 
 			sfc_err(sa, "cannot fill in counter ID: %s",
-				strerror(rc));
+				rte_strerror(rc));
 			return rc;
 		}
 	}
@@ -1067,7 +1067,7 @@ sfc_mae_counter_disable(struct sfc_adapter *sa, struct sfc_mae_counter *counter)
 				counter, counter->type, counter_id);
 		} else {
 			sfc_err(sa, "failed to disable counter=%p with COUNTER_ID=0x%x-#%u: %s",
-				counter, counter->type, counter_id, strerror(rc));
+				counter, counter->type, counter_id, rte_strerror(rc));
 		}
 
 		fw_rsrc->counter_id.id = EFX_MAE_RSRC_ID_INVALID;
@@ -1241,7 +1241,7 @@ sfc_mae_action_set_enable(struct sfc_adapter *sa,
 					      &fw_rsrc->aset_id);
 		if (rc != 0) {
 			sfc_err(sa, "failed to enable action_set=%p: %s",
-				action_set, strerror(rc));
+				action_set, rte_strerror(rc));
 
 			sfc_mae_encap_header_disable(sa, encap_header);
 			sfc_mae_mac_addr_disable(sa, src_mac_addr);
@@ -1289,7 +1289,7 @@ sfc_mae_action_set_disable(struct sfc_adapter *sa,
 				action_set, fw_rsrc->aset_id.id);
 		} else {
 			sfc_err(sa, "failed to disable action_set=%p with AS_ID=0x%08x: %s",
-				action_set, fw_rsrc->aset_id.id, strerror(rc));
+				action_set, fw_rsrc->aset_id.id, rte_strerror(rc));
 		}
 		fw_rsrc->aset_id.id = EFX_MAE_RSRC_ID_INVALID;
 
@@ -1445,7 +1445,7 @@ sfc_mae_action_set_list_enable(struct sfc_adapter *sa,
 						&fw_rsrc->aset_list_id);
 		if (rc != 0) {
 			sfc_err(sa, "failed to enable action_set_list=%p: %s",
-				action_set_list, strerror(rc));
+				action_set_list, rte_strerror(rc));
 			goto fail_action_set_list_alloc;
 		}
 
@@ -1498,7 +1498,7 @@ sfc_mae_action_set_list_disable(struct sfc_adapter *sa,
 		} else {
 			sfc_err(sa, "failed to disable action_set_list=%p with ASL_ID=0x%08x: %s",
 				action_set_list, fw_rsrc->aset_list_id.id,
-				strerror(rc));
+				rte_strerror(rc));
 		}
 		fw_rsrc->aset_list_id.id = EFX_MAE_RSRC_ID_INVALID;
 
@@ -1708,7 +1708,7 @@ sfc_mae_action_rule_enable(struct sfc_adapter *sa,
 					as_idp, &fw_rsrc->rule_id);
 	if (rc != 0) {
 		sfc_err(sa, "failed to enable action_rule=%p: %s",
-			rule, strerror(rc));
+			rule, rte_strerror(rc));
 		goto fail_action_rule_insert;
 	}
 
@@ -1759,7 +1759,7 @@ sfc_mae_action_rule_disable(struct sfc_adapter *sa,
 				rule, fw_rsrc->rule_id.id);
 		} else {
 			sfc_err(sa, "failed to disable action_rule=%p with AR_ID=0x%08x: %s",
-				rule, fw_rsrc->rule_id.id, strerror(rc));
+				rule, fw_rsrc->rule_id.id, rte_strerror(rc));
 		}
 
 		fw_rsrc->rule_id.id = EFX_MAE_RSRC_ID_INVALID;
@@ -4396,7 +4396,7 @@ sfc_mae_rule_parse_action_mark(struct sfc_adapter *sa,
 
 	rc = efx_mae_action_set_populate_mark(spec, conf->id);
 	if (rc != 0)
-		sfc_err(sa, "failed to request action MARK: %s", strerror(rc));
+		sfc_err(sa, "failed to request action MARK: %s", rte_strerror(rc));
 
 	return rc;
 }
@@ -4570,14 +4570,14 @@ sfc_mae_rule_parse_action_pf_vf(struct sfc_adapter *sa,
 	if (rc != 0) {
 		sfc_err(sa, "failed to convert PF %u VF %d to m-port: %s",
 			encp->enc_pf, (vf != EFX_PCI_VF_INVALID) ? (int)vf : -1,
-			strerror(rc));
+			rte_strerror(rc));
 		return rc;
 	}
 
 	rc = efx_mae_action_set_populate_deliver(spec, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to request action DELIVER with m-port selector 0x%08x: %s",
-			mport.sel, strerror(rc));
+			mport.sel, rte_strerror(rc));
 	}
 
 	return rc;
@@ -4606,14 +4606,14 @@ sfc_mae_rule_parse_action_port_id(struct sfc_adapter *sa,
 					     port_id, type_mask, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to get m-port for the given ethdev (port_id=%u): %s",
-			port_id, strerror(rc));
+			port_id, rte_strerror(rc));
 		return rc;
 	}
 
 	rc = efx_mae_action_set_populate_deliver(spec, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to request action DELIVER with m-port selector 0x%08x: %s",
-			mport.sel, strerror(rc));
+			mport.sel, rte_strerror(rc));
 	}
 
 	return rc;
@@ -4632,14 +4632,14 @@ sfc_mae_rule_parse_action_port_representor(struct sfc_adapter *sa,
 					     conf->port_id, type_mask, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to get m-port for the given ethdev (port_id=%u): %s",
-			conf->port_id, strerror(rc));
+			conf->port_id, rte_strerror(rc));
 		return rc;
 	}
 
 	rc = efx_mae_action_set_populate_deliver(spec, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to request action DELIVER with m-port selector 0x%08x: %s",
-			mport.sel, strerror(rc));
+			mport.sel, rte_strerror(rc));
 	}
 
 	return rc;
@@ -4658,14 +4658,14 @@ sfc_mae_rule_parse_action_represented_port(struct sfc_adapter *sa,
 					     conf->port_id, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to get m-port for the given ethdev (port_id=%u): %s",
-			conf->port_id, strerror(rc));
+			conf->port_id, rte_strerror(rc));
 		return rc;
 	}
 
 	rc = efx_mae_action_set_populate_deliver(spec, &mport);
 	if (rc != 0) {
 		sfc_err(sa, "failed to request action DELIVER with m-port selector 0x%08x: %s",
-			mport.sel, strerror(rc));
+			mport.sel, rte_strerror(rc));
 	}
 
 	return rc;
@@ -4758,7 +4758,7 @@ sfc_mae_rule_parse_action_rc(struct sfc_adapter *sa,
 
 			if (action_name != NULL) {
 				sfc_err(sa, "action %s was rejected: %s",
-					action_name, strerror(rc));
+					action_name, rte_strerror(rc));
 			}
 		}
 		rc = rte_flow_error_set(error, rc, RTE_FLOW_ERROR_TYPE_ACTION,
