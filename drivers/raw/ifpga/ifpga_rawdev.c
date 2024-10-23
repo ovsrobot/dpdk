@@ -848,7 +848,7 @@ rte_fpga_do_pr(struct rte_rawdev *rawdev, int port_id,
 	if (file_fd < 0) {
 		IFPGA_RAWDEV_PMD_ERR("%s: open file error: %s",
 				__func__, file_name);
-		IFPGA_RAWDEV_PMD_ERR("Message : %s", strerror(errno));
+		IFPGA_RAWDEV_PMD_ERR("Message : %s", rte_strerror(errno));
 		return -EINVAL;
 	}
 	ret = stat(file_name, &file_stat);

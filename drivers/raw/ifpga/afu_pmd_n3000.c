@@ -21,6 +21,7 @@
 #include <bus_pci_driver.h>
 #include <bus_ifpga_driver.h>
 #include <rte_rawdev.h>
+#include <rte_errno.h>
 
 #include "afu_pmd_core.h"
 #include "afu_pmd_n3000.h"
@@ -693,7 +694,7 @@ static int poll_interrupt(struct dma_afu_ctx *ctx)
 	pfd.events = POLLIN;
 	poll_ret = poll(&pfd, 1, DMA_TIMEOUT_MSEC);
 	if (poll_ret < 0) {
-		IFPGA_RAWDEV_PMD_ERR("Error %s", strerror(errno));
+		IFPGA_RAWDEV_PMD_ERR("Error %s", rte_strerror(errno));
 		ret = -EFAULT;
 		goto out;
 	} else if (poll_ret == 0) {
@@ -708,7 +709,7 @@ static int poll_interrupt(struct dma_afu_ctx *ctx)
 			ret = 0;
 		} else {
 			IFPGA_RAWDEV_PMD_ERR("Failed %s", bytes_read > 0 ?
-				strerror(errno) : "zero bytes read");
+				rte_strerror(errno) : "zero bytes read");
 			ret = -EIO;
 		}
 	}

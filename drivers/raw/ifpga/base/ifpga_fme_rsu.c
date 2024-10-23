@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include "ifpga_sec_mgr.h"
 
+#include <rte_errno.h>
+
 static struct ifpga_sec_mgr *sec_mgr;
 
 static void set_rsu_control(struct ifpga_sec_mgr *smgr, uint32_t ctrl)
@@ -112,7 +114,7 @@ static int write_flash_image(struct ifpga_sec_mgr *smgr, const char *image,
 	if (fd < 0) {
 		dev_err(smgr,
 			"Failed to open \'%s\' for RD [e:%s]\n",
-			image, strerror(errno));
+			image, rte_strerror(errno));
 		return -EIO;
 	}
 
@@ -130,14 +132,14 @@ static int write_flash_image(struct ifpga_sec_mgr *smgr, const char *image,
 			IFPGA_RSU_DATA_BLK_SIZE : length;
 		if (lseek(fd, offset, SEEK_SET) < 0) {
 			dev_err(smgr, "Failed to seek in \'%s\' [e:%s]\n",
-				image, strerror(errno));
+				image, rte_strerror(errno));
 			ret = -EIO;
 			goto end;
 		}
 		read_size = read(fd, buf, to_transfer);
 		if (read_size < 0) {
 			dev_err(smgr, "Failed to read from \'%s\' [e:%s]\n",
-				image, strerror(errno));
+				image, rte_strerror(errno));
 			ret = -EIO;
 			goto end;
 		}
@@ -316,7 +318,7 @@ int fpga_update_flash(struct ifpga_fme_hw *fme, const char *image,
 	if (fd < 0) {
 		dev_err(smgr,
 			"Failed to open \'%s\' for RD [e:%s]\n",
-			image, strerror(errno));
+			image, rte_strerror(errno));
 		return -EIO;
 	}
 	len = lseek(fd, 0, SEEK_END);
@@ -325,7 +327,7 @@ int fpga_update_flash(struct ifpga_fme_hw *fme, const char *image,
 	if (len < 0) {
 		dev_err(smgr,
 			"Failed to get file length of \'%s\' [e:%s]\n",
-			image, strerror(errno));
+			image, rte_strerror(errno));
 		return -EIO;
 	}
 	if (len == 0) {
