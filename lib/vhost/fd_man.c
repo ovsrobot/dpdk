@@ -13,6 +13,7 @@
 #include <rte_malloc.h>
 #include <rte_string_fns.h>
 #include <rte_thread.h>
+#include <rte_errno.h>
 
 #include "fd_man.h"
 
@@ -238,7 +239,7 @@ fdset_add(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat)
 	ret = epoll_ctl(pfdset->epfd, EPOLL_CTL_ADD, fd, &ev);
 	if (ret < 0) {
 		VHOST_FDMAN_LOG(ERR, "could not add %d fd to %d epfd: %s",
-			fd, pfdset->epfd, strerror(errno));
+			fd, pfdset->epfd, rte_strerror(errno));
 		goto out_remove;
 	}
 
@@ -259,10 +260,10 @@ fdset_del_locked(struct fdset *pfdset, struct fdentry *pfdentry)
 	if (epoll_ctl(pfdset->epfd, EPOLL_CTL_DEL, pfdentry->fd, NULL) == -1) {
 		if (errno == EBADF) /* File might have already been closed. */
 			VHOST_FDMAN_LOG(DEBUG, "could not remove %d fd from %d epfd: %s",
-				pfdentry->fd, pfdset->epfd, strerror(errno));
+				pfdentry->fd, pfdset->epfd, rte_strerror(errno));
 		else
 			VHOST_FDMAN_LOG(ERR, "could not remove %d fd from %d epfd: %s",
-				pfdentry->fd, pfdset->epfd, strerror(errno));
+				pfdentry->fd, pfdset->epfd, rte_strerror(errno));
 	}
 
 	fdset_remove_entry(pfdset, pfdentry);

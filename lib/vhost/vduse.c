@@ -17,6 +17,7 @@
 
 #include <rte_common.h>
 #include <rte_thread.h>
+#include <rte_errno.h>
 
 #include "fd_man.h"
 #include "iotlb.h"
@@ -126,7 +127,7 @@ vduse_control_queue_event(int fd, void *arg, int *remove __rte_unused)
 	ret = read(fd, &buf, sizeof(buf));
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to read control queue event: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return;
 	}
 
@@ -148,7 +149,7 @@ vduse_vring_setup(struct virtio_net *dev, unsigned int index, bool reconnect)
 	ret = ioctl(dev->vduse_dev_fd, VDUSE_VQ_GET_INFO, &vq_info);
 	if (ret) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to get VQ %u info: %s",
-				index, strerror(errno));
+				index, rte_strerror(errno));
 		return;
 	}
 
@@ -179,7 +180,7 @@ vduse_vring_setup(struct virtio_net *dev, unsigned int index, bool reconnect)
 	vq->kickfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if (vq->kickfd < 0) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to init kickfd for VQ %u: %s",
-				index, strerror(errno));
+				index, rte_strerror(errno));
 		vq->kickfd = VIRTIO_INVALID_EVENTFD;
 		return;
 	}
@@ -211,7 +212,7 @@ vduse_vring_setup(struct virtio_net *dev, unsigned int index, bool reconnect)
 	ret = ioctl(dev->vduse_dev_fd, VDUSE_VQ_SETUP_KICKFD, &vq_efd);
 	if (ret) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to setup kickfd for VQ %u: %s",
-				index, strerror(errno));
+				index, rte_strerror(errno));
 		close(vq->kickfd);
 		vq->kickfd = VIRTIO_UNINITIALIZED_EVENTFD;
 		return;
@@ -222,7 +223,7 @@ vduse_vring_setup(struct virtio_net *dev, unsigned int index, bool reconnect)
 		if (ret) {
 			VHOST_CONFIG_LOG(dev->ifname, ERR,
 					"Failed to setup kickfd handler for VQ %u: %s",
-					index, strerror(errno));
+					index, rte_strerror(errno));
 			vq_efd.fd = VDUSE_EVENTFD_DEASSIGN;
 			ioctl(dev->vduse_dev_fd, VDUSE_VQ_SETUP_KICKFD, &vq_efd);
 			close(vq->kickfd);
@@ -249,7 +250,7 @@ vduse_vring_cleanup(struct virtio_net *dev, unsigned int index)
 	ret = ioctl(dev->vduse_dev_fd, VDUSE_VQ_SETUP_KICKFD, &vq_efd);
 	if (ret)
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to cleanup kickfd for VQ %u: %s",
-				index, strerror(errno));
+				index, rte_strerror(errno));
 
 	close(vq->kickfd);
 	vq->kickfd = VIRTIO_UNINITIALIZED_EVENTFD;
@@ -288,7 +289,7 @@ vduse_device_start(struct virtio_net *dev, bool reconnect)
 	ret = ioctl(dev->vduse_dev_fd, VDUSE_DEV_GET_FEATURES, &dev->features);
 	if (ret) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to get features: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return;
 	}
 
@@ -364,7 +365,7 @@ vduse_events_handler(int fd, void *arg, int *remove __rte_unused)
 	ret = read(fd, &req, sizeof(req));
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to read request: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return;
 	} else if (ret < (int)sizeof(req)) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Incomplete to read request %d", ret);
@@ -407,7 +408,7 @@ vduse_events_handler(int fd, void *arg, int *remove __rte_unused)
 	ret = write(dev->vduse_dev_fd, &resp, sizeof(resp));
 	if (ret != sizeof(resp)) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to write response %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return;
 	}
 
@@ -455,7 +456,7 @@ vduse_reconnect_path_init(void)
 	ret = mkdir(vduse_reconnect_dir, 0700);
 	if (ret < 0 && errno != EEXIST) {
 		VHOST_CONFIG_LOG("vduse", ERR, "Error creating '%s': %s",
-				vduse_reconnect_dir, strerror(errno));
+				vduse_reconnect_dir, rte_strerror(errno));
 		return -1;
 	}
 
@@ -516,13 +517,13 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 	control_fd = open(VDUSE_CTRL_PATH, O_RDWR);
 	if (control_fd < 0) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to open %s: %s",
-				VDUSE_CTRL_PATH, strerror(errno));
+				VDUSE_CTRL_PATH, rte_strerror(errno));
 		return -1;
 	}
 
 	if (ioctl(control_fd, VDUSE_SET_API_VERSION, &ver)) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to set API version: %" PRIu64 ": %s",
-				ver, strerror(errno));
+				ver, rte_strerror(errno));
 		ret = -1;
 		goto out_ctrl_close;
 	}
@@ -558,7 +559,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 						reconnect_file);
 			else
 				VHOST_CONFIG_LOG(name, ERR, "Failed to open reconnect file %s (%s)",
-						reconnect_file, strerror(errno));
+						reconnect_file, rte_strerror(errno));
 			ret = -1;
 			goto out_ctrl_close;
 		}
@@ -568,7 +569,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 		close(reco_fd);
 		if (reconnect_log == MAP_FAILED) {
 			VHOST_CONFIG_LOG(name, ERR, "Failed to mmap reconnect file %s (%s)",
-					reconnect_file, strerror(errno));
+					reconnect_file, rte_strerror(errno));
 			ret = -1;
 			goto out_ctrl_close;
 		}
@@ -602,7 +603,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 						reconnect_file);
 			} else {
 				VHOST_CONFIG_LOG(name, ERR, "Failed to open reconnect file %s (%s)",
-						reconnect_file, strerror(errno));
+						reconnect_file, rte_strerror(errno));
 			}
 			ret = -1;
 			goto out_ctrl_close;
@@ -611,7 +612,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 		ret = ftruncate(reco_fd, sizeof(*reconnect_log));
 		if (ret < 0) {
 			VHOST_CONFIG_LOG(name, ERR, "Failed to truncate reconnect file %s (%s)",
-					reconnect_file, strerror(errno));
+					reconnect_file, rte_strerror(errno));
 			close(reco_fd);
 			goto out_ctrl_close;
 		}
@@ -621,7 +622,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 		close(reco_fd);
 		if (reconnect_log == MAP_FAILED) {
 			VHOST_CONFIG_LOG(name, ERR, "Failed to mmap reconnect file %s (%s)",
-					reconnect_file, strerror(errno));
+					reconnect_file, rte_strerror(errno));
 			ret = -1;
 			goto out_ctrl_close;
 		}
@@ -651,7 +652,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 		ret = ioctl(control_fd, VDUSE_CREATE_DEV, dev_config);
 		if (ret < 0) {
 			VHOST_CONFIG_LOG(name, ERR, "Failed to create VDUSE device: %s",
-					strerror(errno));
+					rte_strerror(errno));
 			goto out_free;
 		}
 
@@ -664,7 +665,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 	dev_fd = open(path, O_RDWR);
 	if (dev_fd < 0) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to open device %s: %s",
-				path, strerror(errno));
+				path, rte_strerror(errno));
 		ret = -1;
 		goto out_dev_close;
 	}
@@ -672,7 +673,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 	ret = fcntl(dev_fd, F_SETFL, O_NONBLOCK);
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to set chardev as non-blocking: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		goto out_dev_close;
 	}
 
@@ -741,7 +742,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 		reco_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 		if (reco_fd < 0) {
 			VHOST_CONFIG_LOG(name, ERR, "Failed to create reco_fd: %s",
-					strerror(errno));
+					rte_strerror(errno));
 			ret = -1;
 			goto out_dev_destroy;
 		}
@@ -814,7 +815,7 @@ vduse_device_destroy(const char *path)
 		ret = ioctl(dev->vduse_ctrl_fd, VDUSE_DESTROY_DEV, name);
 		if (ret) {
 			VHOST_CONFIG_LOG(name, ERR, "Failed to destroy VDUSE device: %s",
-					strerror(errno));
+					rte_strerror(errno));
 		} else {
 			/*
 			 * VDUSE device was no more attached to the vDPA bus,

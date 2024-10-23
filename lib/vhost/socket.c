@@ -16,6 +16,7 @@
 
 #include <rte_thread.h>
 #include <rte_log.h>
+#include <rte_errno.h>
 
 #include "fd_man.h"
 #include "vduse.h"
@@ -124,7 +125,7 @@ read_fd_message(char *ifname, int sockfd, char *buf, int buflen, int *fds, int m
 	if (ret <= 0) {
 		if (ret)
 			VHOST_CONFIG_LOG(ifname, ERR, "recvmsg failed on fd %d (%s)",
-				sockfd, strerror(errno));
+				sockfd, rte_strerror(errno));
 		return ret;
 	}
 
@@ -195,7 +196,7 @@ send_fd_message(char *ifname, int sockfd, char *buf, int buflen, int *fds, int f
 
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(ifname, ERR, "sendmsg error on fd %d (%s)",
-			sockfd, strerror(errno));
+			sockfd, rte_strerror(errno));
 		return ret;
 	}
 
@@ -352,7 +353,7 @@ create_unix_socket(struct vhost_user_socket *vsocket)
 	if (!vsocket->is_server && fcntl(fd, F_SETFL, O_NONBLOCK)) {
 		VHOST_CONFIG_LOG(vsocket->path, ERR,
 			"vhost-user: can't set nonblocking mode for socket, fd: %d (%s)",
-			fd, strerror(errno));
+			fd, rte_strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -386,7 +387,7 @@ vhost_user_start_server(struct vhost_user_socket *vsocket)
 	ret = bind(fd, (struct sockaddr *)&vsocket->un, sizeof(vsocket->un));
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(path, ERR, "failed to bind: %s; remove it and try again",
-			strerror(errno));
+			rte_strerror(errno));
 		goto err;
 	}
 	VHOST_CONFIG_LOG(path, INFO, "binding succeeded");
@@ -439,7 +440,7 @@ vhost_user_connect_nonblock(char *path, int fd, struct sockaddr *un, size_t sz)
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0) {
 		VHOST_CONFIG_LOG(path, ERR, "can't get flags for connfd %d (%s)",
-			fd, strerror(errno));
+			fd, rte_strerror(errno));
 		return -2;
 	}
 	if ((flags & O_NONBLOCK) && fcntl(fd, F_SETFL, flags & ~O_NONBLOCK)) {
@@ -534,7 +535,7 @@ vhost_user_start_client(struct vhost_user_socket *vsocket)
 			return 0;
 		}
 
-		VHOST_CONFIG_LOG(path, WARNING, "failed to connect: %s", strerror(errno));
+		VHOST_CONFIG_LOG(path, WARNING, "failed to connect: %s", rte_strerror(errno));
 
 		if (ret == -2 || !vsocket->reconnect) {
 			close(fd);
