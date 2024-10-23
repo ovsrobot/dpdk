@@ -136,7 +136,7 @@ vhost_user_write(int fd, struct vhost_user_msg *msg, int *fds, int fd_num)
 	} while (r < 0 && errno == EINTR);
 
 	if (r < 0)
-		PMD_DRV_LOG(ERR, "Failed to send msg: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "Failed to send msg: %s", rte_strerror(errno));
 
 	return r;
 }
@@ -149,7 +149,7 @@ vhost_user_read(int fd, struct vhost_user_msg *msg)
 
 	ret = recv(fd, (void *)msg, sz_hdr, 0);
 	if (ret < 0) {
-		PMD_DRV_LOG(ERR, "Failed to recv msg header: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "Failed to recv msg header: %s", rte_strerror(errno));
 		return -1;
 	} else if (ret < sz_hdr) {
 		PMD_DRV_LOG(ERR, "Failed to recv msg hdr: %d instead of %d.",
@@ -175,7 +175,7 @@ vhost_user_read(int fd, struct vhost_user_msg *msg)
 	if (sz_payload) {
 		ret = recv(fd, (void *)((char *)msg + sz_hdr), sz_payload, 0);
 		if (ret < 0) {
-			PMD_DRV_LOG(ERR, "Failed to recv msg payload: %s", strerror(errno));
+			PMD_DRV_LOG(ERR, "Failed to recv msg payload: %s", rte_strerror(errno));
 			return -1;
 		} else if (ret < sz_payload) {
 			PMD_DRV_LOG(ERR, "Failed to recv msg payload: %d instead of %u.",
@@ -750,7 +750,7 @@ vhost_user_start_server(struct virtio_user_dev *dev, struct sockaddr_un *un)
 	ret = bind(fd, (struct sockaddr *)un, sizeof(*un));
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "failed to bind to %s: %s; remove it and try again",
-			    dev->path, strerror(errno));
+			    dev->path, rte_strerror(errno));
 		return -1;
 	}
 	ret = listen(fd, MAX_VIRTIO_USER_BACKLOG);
@@ -761,13 +761,13 @@ vhost_user_start_server(struct virtio_user_dev *dev, struct sockaddr_un *un)
 	data->vhostfd = accept(fd, NULL, NULL);
 	if (data->vhostfd < 0) {
 		PMD_DRV_LOG(ERR, "Failed to accept initial client connection (%s)",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
 	flag = fcntl(fd, F_GETFL);
 	if (fcntl(fd, F_SETFL, flag | O_NONBLOCK) < 0) {
-		PMD_DRV_LOG(ERR, "fcntl failed, %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "fcntl failed, %s", rte_strerror(errno));
 		return -1;
 	}
 
@@ -835,15 +835,15 @@ vhost_user_setup(struct virtio_user_dev *dev)
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {
-		PMD_DRV_LOG(ERR, "socket() error, %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "socket() error, %s", rte_strerror(errno));
 		goto err_data;
 	}
 
 	flag = fcntl(fd, F_GETFD);
 	if (flag == -1)
-		PMD_DRV_LOG(WARNING, "fcntl get fd failed, %s", strerror(errno));
+		PMD_DRV_LOG(WARNING, "fcntl get fd failed, %s", rte_strerror(errno));
 	else if (fcntl(fd, F_SETFD, flag | FD_CLOEXEC) < 0)
-		PMD_DRV_LOG(WARNING, "fcntl set fd failed, %s", strerror(errno));
+		PMD_DRV_LOG(WARNING, "fcntl set fd failed, %s", rte_strerror(errno));
 
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
@@ -857,7 +857,7 @@ vhost_user_setup(struct virtio_user_dev *dev)
 		}
 	} else {
 		if (connect(fd, (struct sockaddr *)&un, sizeof(un)) < 0) {
-			PMD_DRV_LOG(ERR, "connect error, %s", strerror(errno));
+			PMD_DRV_LOG(ERR, "connect error, %s", rte_strerror(errno));
 			goto err_socket;
 		}
 		data->vhostfd = fd;

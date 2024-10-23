@@ -60,13 +60,13 @@ virtio_user_init_notify_queue(struct virtio_user_dev *dev, uint32_t queue_sel)
 	dev->callfds[queue_sel] = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 	if (dev->callfds[queue_sel] < 0) {
 		PMD_DRV_LOG(ERR, "(%s) Failed to setup callfd for queue %u: %s",
-				dev->path, queue_sel, strerror(errno));
+				dev->path, queue_sel, rte_strerror(errno));
 		return -1;
 	}
 	dev->kickfds[queue_sel] = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 	if (dev->kickfds[queue_sel] < 0) {
 		PMD_DRV_LOG(ERR, "(%s) Failed to setup kickfd for queue %u: %s",
-				dev->path, queue_sel, strerror(errno));
+				dev->path, queue_sel, rte_strerror(errno));
 		return -1;
 	}
 
@@ -1113,7 +1113,7 @@ virtio_user_control_queue_notify(struct virtqueue *vq, void *cookie)
 	if (!dev->notify_area) {
 		if (write(dev->kickfds[vq->vq_queue_index], &notify_data, sizeof(notify_data)) < 0)
 			PMD_DRV_LOG(ERR, "failed to kick backend: %s",
-				    strerror(errno));
+				    rte_strerror(errno));
 		return;
 	} else if (!virtio_with_feature(&dev->hw, VIRTIO_F_NOTIFICATION_DATA)) {
 		rte_write16(vq->vq_queue_index, vq->notify_addr);
@@ -1358,7 +1358,7 @@ virtio_user_dev_server_reconnect(struct virtio_user_dev *dev)
 
 	if (dev->ops->get_features(dev, &dev->device_features) < 0) {
 		PMD_INIT_LOG(ERR, "get_features failed: %s",
-			     strerror(errno));
+			     rte_strerror(errno));
 		return -1;
 	}
 

@@ -13,6 +13,7 @@
 #include <limits.h>
 
 #include <rte_ether.h>
+#include <rte_errno.h>
 
 #include "vhost_kernel_tap.h"
 #include "../virtio_logs.h"
@@ -27,12 +28,12 @@ tap_support_features(unsigned int *tap_features)
 	tapfd = open(PATH_NET_TUN, O_RDWR);
 	if (tapfd < 0) {
 		PMD_DRV_LOG(ERR, "fail to open %s: %s",
-			    PATH_NET_TUN, strerror(errno));
+			    PATH_NET_TUN, rte_strerror(errno));
 		return -1;
 	}
 
 	if (ioctl(tapfd, TUNGETFEATURES, tap_features) == -1) {
-		PMD_DRV_LOG(ERR, "TUNGETFEATURES failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "TUNGETFEATURES failed: %s", rte_strerror(errno));
 		close(tapfd);
 		return -1;
 	}
@@ -49,11 +50,11 @@ tap_open(const char *ifname, unsigned int r_flags, bool multi_queue)
 
 	tapfd = open(PATH_NET_TUN, O_RDWR);
 	if (tapfd < 0) {
-		PMD_DRV_LOG(ERR, "fail to open %s: %s", PATH_NET_TUN, strerror(errno));
+		PMD_DRV_LOG(ERR, "fail to open %s: %s", PATH_NET_TUN, rte_strerror(errno));
 		return -1;
 	}
 	if (fcntl(tapfd, F_SETFL, O_NONBLOCK) < 0) {
-		PMD_DRV_LOG(ERR, "fcntl tapfd failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "fcntl tapfd failed: %s", rte_strerror(errno));
 		close(tapfd);
 		return -1;
 	}
@@ -68,12 +69,12 @@ retry_mono_q:
 		if (multi_queue) {
 			PMD_DRV_LOG(DEBUG,
 				"TUNSETIFF failed (will retry without IFF_MULTI_QUEUE): %s",
-				strerror(errno));
+				rte_strerror(errno));
 			multi_queue = false;
 			goto retry_mono_q;
 		}
 
-		PMD_DRV_LOG(ERR, "TUNSETIFF failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "TUNSETIFF failed: %s", rte_strerror(errno));
 		close(tapfd);
 		tapfd = -1;
 	}
@@ -88,7 +89,7 @@ tap_get_name(int tapfd, char **name)
 
 	memset(&ifr, 0, sizeof(ifr));
 	if (ioctl(tapfd, TUNGETIFF, (void *)&ifr) == -1) {
-		PMD_DRV_LOG(ERR, "TUNGETIFF failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "TUNGETIFF failed: %s", rte_strerror(errno));
 		return -1;
 	}
 	ret = asprintf(name, "%s", ifr.ifr_name);
@@ -104,7 +105,7 @@ tap_get_flags(int tapfd, unsigned int *tap_flags)
 
 	memset(&ifr, 0, sizeof(ifr));
 	if (ioctl(tapfd, TUNGETIFF, (void *)&ifr) == -1) {
-		PMD_DRV_LOG(ERR, "TUNGETIFF failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "TUNGETIFF failed: %s", rte_strerror(errno));
 		return -1;
 	}
 	*tap_flags = ifr.ifr_flags;
@@ -120,7 +121,7 @@ tap_set_mac(int tapfd, uint8_t *mac)
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	memcpy(ifr.ifr_hwaddr.sa_data, mac, RTE_ETHER_ADDR_LEN);
 	if (ioctl(tapfd, SIOCSIFHWADDR, (void *)&ifr) == -1) {
-		PMD_DRV_LOG(ERR, "SIOCSIFHWADDR failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "SIOCSIFHWADDR failed: %s", rte_strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -155,7 +156,7 @@ vhost_kernel_tap_set_offload(int fd, uint64_t features)
 		offload &= ~TUN_F_UFO;
 		if (ioctl(fd, TUNSETOFFLOAD, offload) != 0) {
 			PMD_DRV_LOG(ERR, "TUNSETOFFLOAD ioctl() failed: %s",
-				strerror(errno));
+				rte_strerror(errno));
 			return -1;
 		}
 	}
@@ -175,12 +176,12 @@ vhost_kernel_tap_setup(int tapfd, int hdr_size, uint64_t features)
 	 * max_mem_regions, supported in newer version linux kernel
 	 */
 	if (ioctl(tapfd, TUNSETVNETHDRSZ, &hdr_size) < 0) {
-		PMD_DRV_LOG(ERR, "TUNSETVNETHDRSZ failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "TUNSETVNETHDRSZ failed: %s", rte_strerror(errno));
 		return -1;
 	}
 
 	if (ioctl(tapfd, TUNSETSNDBUF, &sndbuf) < 0) {
-		PMD_DRV_LOG(ERR, "TUNSETSNDBUF failed: %s", strerror(errno));
+		PMD_DRV_LOG(ERR, "TUNSETSNDBUF failed: %s", rte_strerror(errno));
 		return -1;
 	}
 
