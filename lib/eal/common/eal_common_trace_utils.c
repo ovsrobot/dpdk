@@ -245,7 +245,7 @@ eal_trace_dir_args_save(char const *val)
 	int rc;
 
 	if (asprintf(&dir_path, "%s/", val) == -1) {
-		trace_err("failed to copy directory: %s", strerror(errno));
+		trace_err("failed to copy directory: %s", rte_strerror(errno));
 		return -ENOMEM;
 	}
 
@@ -329,7 +329,7 @@ trace_mkdir(void)
 	/* Create the path if it t exist, no "mkdir -p" available here */
 	rc = mkdir(trace->dir, 0700);
 	if (rc < 0 && errno != EEXIST) {
-		trace_err("mkdir %s failed [%s]", trace->dir, strerror(errno));
+		trace_err("mkdir %s failed [%s]", trace->dir, rte_strerror(errno));
 		rte_errno = errno;
 		return -rte_errno;
 	}
@@ -344,7 +344,7 @@ trace_mkdir(void)
 
 	rc = mkdir(trace->dir, 0700);
 	if (rc < 0) {
-		trace_err("mkdir %s failed [%s]", trace->dir, strerror(errno));
+		trace_err("mkdir %s failed [%s]", trace->dir, rte_strerror(errno));
 		rte_errno = errno;
 		return -rte_errno;
 	}

@@ -186,7 +186,7 @@ rte_intr_callback_register(const struct rte_intr_handle *intr_handle,
 			else
 				EAL_LOG(ERR, "Error adding fd %d kevent, %s",
 					rte_intr_fd_get(src->intr_handle),
-					strerror(errno));
+					rte_strerror(errno));
 			ret = -errno;
 			goto fail;
 		}
@@ -323,7 +323,7 @@ rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
 		if (kevent(kq, &ke, 1, NULL, 0, NULL) < 0) {
 			EAL_LOG(ERR, "Error removing fd %d kevent, %s",
 				rte_intr_fd_get(src->intr_handle),
-				strerror(errno));
+				rte_strerror(errno));
 			/* removing non-existent even is an expected condition
 			 * in some circumstances (e.g. oneshot events).
 			 */
@@ -516,7 +516,7 @@ eal_intr_process_interrupts(struct kevent *events, int nfds)
 				EAL_LOG(ERR, "Error reading from file "
 					"descriptor %d: %s",
 					event_fd,
-					strerror(errno));
+					rte_strerror(errno));
 			} else if (bytes_read == 0)
 				EAL_LOG(ERR, "Read nothing from file "
 					"descriptor %d", event_fd);
@@ -567,7 +567,7 @@ eal_intr_process_interrupts(struct kevent *events, int nfds)
 				if (kevent(kq, &ke, 1, NULL, 0, NULL) < 0) {
 					EAL_LOG(ERR, "Error removing fd %d kevent, %s",
 						rte_intr_fd_get(src->intr_handle),
-						strerror(errno));
+						rte_strerror(errno));
 					/* removing non-existent even is an expected
 					 * condition in some circumstances
 					 * (e.g. oneshot events).

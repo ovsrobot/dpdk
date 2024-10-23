@@ -304,7 +304,7 @@ rte_thread_key_create(rte_thread_key *key, void (*destructor)(void *))
 	err = pthread_key_create(&((*key)->thread_index), destructor);
 	if (err) {
 		EAL_LOG(DEBUG, "pthread_key_create failed: %s",
-			strerror(err));
+			rte_strerror(err));
 		free(*key);
 		rte_errno = ENOEXEC;
 		return -1;
@@ -325,7 +325,7 @@ rte_thread_key_delete(rte_thread_key key)
 	err = pthread_key_delete(key->thread_index);
 	if (err) {
 		EAL_LOG(DEBUG, "pthread_key_delete failed: %s",
-			strerror(err));
+			rte_strerror(err));
 		free(key);
 		rte_errno = ENOEXEC;
 		return -1;
@@ -347,7 +347,7 @@ rte_thread_value_set(rte_thread_key key, const void *value)
 	err = pthread_setspecific(key->thread_index, value);
 	if (err) {
 		EAL_LOG(DEBUG, "pthread_setspecific failed: %s",
-			strerror(err));
+			rte_strerror(err));
 		rte_errno = ENOEXEC;
 		return -1;
 	}

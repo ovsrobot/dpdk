@@ -460,7 +460,7 @@ uio_intr_disable(const struct rte_intr_handle *intr_handle)
 	if (rte_intr_fd_get(intr_handle) < 0 ||
 	    write(rte_intr_fd_get(intr_handle), &value, sizeof(value)) < 0) {
 		EAL_LOG(ERR, "Error disabling interrupts for fd %d (%s)",
-			rte_intr_fd_get(intr_handle), strerror(errno));
+			rte_intr_fd_get(intr_handle), rte_strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -474,7 +474,7 @@ uio_intr_enable(const struct rte_intr_handle *intr_handle)
 	if (rte_intr_fd_get(intr_handle) < 0 ||
 	    write(rte_intr_fd_get(intr_handle), &value, sizeof(value)) < 0) {
 		EAL_LOG(ERR, "Error enabling interrupts for fd %d (%s)",
-			rte_intr_fd_get(intr_handle), strerror(errno));
+			rte_intr_fd_get(intr_handle), rte_strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -975,7 +975,7 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 				EAL_LOG(ERR, "Error reading from file "
 					"descriptor %d: %s",
 					events[n].data.fd,
-					strerror(errno));
+					rte_strerror(errno));
 				/*
 				 * The device is unplugged or buggy, remove
 				 * it as an interrupt source and return to
@@ -1130,7 +1130,7 @@ eal_intr_thread_main(__rte_unused void *arg)
 		if (epoll_ctl(pfd, EPOLL_CTL_ADD, intr_pipe.readfd,
 						&pipe_event) < 0) {
 			rte_panic("Error adding fd to %d epoll_ctl, %s\n",
-					intr_pipe.readfd, strerror(errno));
+					intr_pipe.readfd, rte_strerror(errno));
 		}
 		numfds++;
 
@@ -1153,7 +1153,7 @@ eal_intr_thread_main(__rte_unused void *arg)
 					rte_intr_fd_get(src->intr_handle), &ev) < 0) {
 				rte_panic("Error adding fd %d epoll_ctl, %s\n",
 					rte_intr_fd_get(src->intr_handle),
-					strerror(errno));
+					rte_strerror(errno));
 			}
 			else
 				numfds++;
@@ -1244,7 +1244,7 @@ eal_intr_proc_rxtx_intr(int fd, const struct rte_intr_handle *intr_handle)
 				continue;
 			EAL_LOG(ERR,
 				"Error reading from fd %d: %s",
-				fd, strerror(errno));
+				fd, rte_strerror(errno));
 		} else if (nbytes == 0)
 			EAL_LOG(ERR, "Read nothing from fd %d", fd);
 		return;
@@ -1343,7 +1343,7 @@ eal_epoll_wait(int epfd, struct rte_epoll_event *events,
 			}
 			/* epoll_wait fail */
 			EAL_LOG(ERR, "epoll_wait returns with fail %s",
-				strerror(errno));
+				rte_strerror(errno));
 			rc = -1;
 			break;
 		} else {
@@ -1412,7 +1412,7 @@ rte_epoll_ctl(int epfd, int op, int fd,
 	ev.events = event->epdata.event;
 	if (epoll_ctl(epfd, op, fd, &ev) < 0) {
 		EAL_LOG(ERR, "Error op %d fd %d epoll_ctl, %s",
-			op, fd, strerror(errno));
+			op, fd, rte_strerror(errno));
 		if (op == EPOLL_CTL_ADD)
 			/* rollback status when CTL_ADD fail */
 			rte_atomic_store_explicit(&event->status, RTE_EPOLL_INVALID,
@@ -1525,7 +1525,7 @@ rte_intr_efd_enable(struct rte_intr_handle *intr_handle, uint32_t nb_efd)
 			if (fd < 0) {
 				EAL_LOG(ERR,
 					"can't setup eventfd, error %i (%s)",
-					errno, strerror(errno));
+					errno, rte_strerror(errno));
 				return -errno;
 			}
 

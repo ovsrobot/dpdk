@@ -203,7 +203,7 @@ rte_eal_config_attach(void)
 		close(mem_cfg_fd);
 		mem_cfg_fd = -1;
 		EAL_LOG(ERR, "Cannot mmap memory for rte_config! error %i (%s)",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -250,7 +250,7 @@ rte_eal_config_reattach(void)
 			return -1;
 		}
 		EAL_LOG(ERR, "Cannot mmap memory for rte_config! error %i (%s)",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 

@@ -44,6 +44,7 @@
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include "eal_trace.h"
 #endif
+#include <rte_errno.h>
 
 #define BITS_PER_HEX 4
 #define LCORE_OPT_LST 1
@@ -411,7 +412,7 @@ eal_plugindir_init(const char *path)
 	d = opendir(path);
 	if (d == NULL) {
 		EAL_LOG(ERR, "failed to open directory %s: %s",
-			path, strerror(errno));
+			path, rte_strerror(errno));
 		return -1;
 	}
 
@@ -463,7 +464,7 @@ verify_perms(const char *dirpath)
 	/* call stat to check for permissions and ensure not world writable */
 	if (stat(dirpath, &st) != 0) {
 		EAL_LOG(ERR, "Error with stat on %s, %s",
-				dirpath, strerror(errno));
+				dirpath, rte_strerror(errno));
 		return -1;
 	}
 	if (st.st_mode & S_IWOTH) {
@@ -491,7 +492,7 @@ eal_dlopen(const char *pathname)
 	}
 	if (realp == NULL) {
 		EAL_LOG(ERR, "Error with realpath for %s, %s",
-				pathname, strerror(errno));
+				pathname, rte_strerror(errno));
 		goto out;
 	}
 	if (strnlen(realp, PATH_MAX) == PATH_MAX) {

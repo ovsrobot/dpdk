@@ -23,6 +23,7 @@
 #include <rte_log.h>
 #include <rte_common.h>
 #include "rte_string_fns.h"
+#include <rte_errno.h>
 
 #include "eal_private.h"
 #include "eal_internal_cfg.h"
@@ -378,7 +379,7 @@ error:
 		closedir(dir);
 
 	EAL_LOG(ERR, "Error while walking hugepage dir: %s",
-		strerror(errno));
+		rte_strerror(errno));
 
 	return -1;
 }
@@ -404,7 +405,7 @@ inspect_hugedir_cb(const struct walk_hugedir_data *whd)
 
 	if (fstat(whd->file_fd, &st) < 0)
 		EAL_LOG(DEBUG, "%s(): stat(\"%s\") failed: %s",
-				__func__, whd->file_name, strerror(errno));
+				__func__, whd->file_name, rte_strerror(errno));
 	else
 		(*total_size) += st.st_size;
 }

@@ -15,6 +15,7 @@
 #include <rte_memory.h>
 #include <rte_eal.h>
 #include <rte_debug.h>
+#include <rte_errno.h>
 
 #include "eal_private.h"
 #include "eal_internal_cfg.h"
@@ -36,20 +37,20 @@ get_tsc_freq(uint64_t arch_hz)
 	tmp = 0;
 
 	if (sysctlbyname("kern.timecounter.smp_tsc", &tmp, &sz, NULL, 0))
-		EAL_LOG(WARNING, "%s", strerror(errno));
+		EAL_LOG(WARNING, "%s", rte_strerror(errno));
 	else if (tmp != 1)
 		EAL_LOG(WARNING, "TSC is not safe to use in SMP mode");
 
 	tmp = 0;
 
 	if (sysctlbyname("kern.timecounter.invariant_tsc", &tmp, &sz, NULL, 0))
-		EAL_LOG(WARNING, "%s", strerror(errno));
+		EAL_LOG(WARNING, "%s", rte_strerror(errno));
 	else if (tmp != 1)
 		EAL_LOG(WARNING, "TSC is not invariant");
 
 	sz = sizeof(tsc_hz);
 	if (sysctlbyname("machdep.tsc_freq", &tsc_hz, &sz, NULL, 0)) {
-		EAL_LOG(WARNING, "%s", strerror(errno));
+		EAL_LOG(WARNING, "%s", rte_strerror(errno));
 		return arch_hz;
 	}
 

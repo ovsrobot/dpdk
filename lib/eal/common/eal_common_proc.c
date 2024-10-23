@@ -291,7 +291,7 @@ retry:
 		if (errno == EINTR)
 			goto retry;
 
-		EAL_LOG(ERR, "recvmsg failed, %s", strerror(errno));
+		EAL_LOG(ERR, "recvmsg failed, %s", rte_strerror(errno));
 		return -1;
 	}
 
@@ -583,7 +583,7 @@ open_socket_fd(void)
 
 	if (bind(mp_fd, (struct sockaddr *)&un, sizeof(un)) < 0) {
 		EAL_LOG(ERR, "failed to bind %s: %s",
-			un.sun_path, strerror(errno));
+			un.sun_path, rte_strerror(errno));
 		close(mp_fd);
 		return -1;
 	}
@@ -631,13 +631,13 @@ rte_mp_channel_init(void)
 	dir_fd = open(mp_dir_path, O_RDONLY);
 	if (dir_fd < 0) {
 		EAL_LOG(ERR, "failed to open %s: %s",
-			mp_dir_path, strerror(errno));
+			mp_dir_path, rte_strerror(errno));
 		return -1;
 	}
 
 	if (flock(dir_fd, LOCK_EX)) {
 		EAL_LOG(ERR, "failed to lock %s: %s",
-			mp_dir_path, strerror(errno));
+			mp_dir_path, rte_strerror(errno));
 		close(dir_fd);
 		return -1;
 	}
@@ -650,7 +650,7 @@ rte_mp_channel_init(void)
 	if (rte_thread_create_internal_control(&mp_handle_tid, "mp-msg",
 			mp_handle, NULL) < 0) {
 		EAL_LOG(ERR, "failed to create mp thread: %s",
-			strerror(errno));
+			rte_strerror(errno));
 		close(dir_fd);
 		close(rte_atomic_exchange_explicit(&mp_fd, -1, rte_memory_order_relaxed));
 		return -1;
@@ -733,7 +733,7 @@ send_msg(const char *dst_path, struct rte_mp_msg *msg, int type)
 			return 0;
 		}
 		EAL_LOG(ERR, "failed to send to (%s) due to %s",
-			dst_path, strerror(errno));
+			dst_path, rte_strerror(errno));
 		return -1;
 	}
 

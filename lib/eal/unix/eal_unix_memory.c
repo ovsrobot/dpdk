@@ -32,7 +32,7 @@ mem_map(void *requested_addr, size_t size, int prot, int flags,
 		EAL_LOG(DEBUG,
 		    "Cannot mmap(%p, 0x%zx, 0x%x, 0x%x, %d, 0x%"PRIx64"): %s",
 		    requested_addr, size, prot, flags, fd, offset,
-		    strerror(errno));
+		    rte_strerror(errno));
 		rte_errno = errno;
 		return NULL;
 	}
@@ -45,7 +45,7 @@ mem_unmap(void *virt, size_t size)
 	int ret = munmap(virt, size);
 	if (ret < 0) {
 		EAL_LOG(DEBUG, "Cannot munmap(%p, 0x%zx): %s",
-			virt, size, strerror(errno));
+			virt, size, rte_strerror(errno));
 		rte_errno = errno;
 	}
 	return ret;
@@ -84,7 +84,7 @@ eal_mem_set_dump(void *virt, size_t size, bool dump)
 	int ret = madvise(virt, size, flags);
 	if (ret) {
 		EAL_LOG(DEBUG, "madvise(%p, %#zx, %d) failed: %s",
-				virt, size, flags, strerror(rte_errno));
+				virt, size, flags, rte_strerror(rte_errno));
 		rte_errno = errno;
 	}
 	return ret;

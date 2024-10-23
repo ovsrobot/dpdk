@@ -85,7 +85,7 @@ rte_eal_hugepage_init(void)
 				MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		if (addr == MAP_FAILED) {
 			EAL_LOG(ERR, "%s: mmap() failed: %s", __func__,
-					strerror(errno));
+					rte_strerror(errno));
 			return -1;
 		}
 

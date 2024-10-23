@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <rte_log.h>
+#include <rte_errno.h>
 
 #include "eal_private.h"
 #include "eal_filesystem.h"
@@ -59,14 +60,14 @@ int eal_create_runtime_dir(void)
 	ret = mkdir(tmp, 0700);
 	if (ret < 0 && errno != EEXIST) {
 		EAL_LOG(ERR, "Error creating '%s': %s",
-			tmp, strerror(errno));
+			tmp, rte_strerror(errno));
 		return -1;
 	}
 
 	ret = mkdir(run_dir, 0700);
 	if (ret < 0 && errno != EEXIST) {
 		EAL_LOG(ERR, "Error creating '%s': %s",
-			run_dir, strerror(errno));
+			run_dir, rte_strerror(errno));
 		return -1;
 	}
 

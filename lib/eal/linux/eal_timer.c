@@ -146,7 +146,7 @@ rte_eal_hpet_init(int make_default)
 	fd = open(DEV_HPET, O_RDONLY);
 	if (fd < 0) {
 		EAL_LOG(ERR, "ERROR: Cannot open "DEV_HPET": %s!",
-			strerror(errno));
+			rte_strerror(errno));
 		internal_conf->no_hpet = 1;
 		return -1;
 	}
