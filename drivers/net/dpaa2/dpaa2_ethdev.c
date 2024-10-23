@@ -1170,7 +1170,7 @@ dpaa2_eth_setup_irqs(struct rte_eth_dev *dev, int enable)
 				irq_index, mask);
 	if (err < 0) {
 		DPAA2_PMD_ERR("Error: dpni_set_irq_mask():%d (%s)", err,
-			      strerror(-err));
+			      rte_strerror(-err));
 		return err;
 	}
 
@@ -1178,7 +1178,7 @@ dpaa2_eth_setup_irqs(struct rte_eth_dev *dev, int enable)
 				  irq_index, enable);
 	if (err < 0)
 		DPAA2_PMD_ERR("Error: dpni_set_irq_enable():%d (%s)", err,
-			      strerror(-err));
+			      rte_strerror(-err));
 
 	return err;
 }
