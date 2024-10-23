@@ -137,7 +137,7 @@ sfc_vdpa_enable_vfio_intr(struct sfc_vdpa_ops_data *ops_data)
 	if (rc) {
 		sfc_vdpa_err(ops_data->dev_handle,
 			     "error enabling MSI-X interrupts: %s",
-			     strerror(errno));
+			     rte_strerror(errno));
 		return -1;
 	}
 
@@ -165,7 +165,7 @@ sfc_vdpa_disable_vfio_intr(struct sfc_vdpa_ops_data *ops_data)
 	if (rc) {
 		sfc_vdpa_err(ops_data->dev_handle,
 			     "error disabling MSI-X interrupts: %s",
-			     strerror(errno));
+			     rte_strerror(errno));
 		return -1;
 	}
 
@@ -841,7 +841,7 @@ sfc_vdpa_get_notify_area(int vid, int qid, uint64_t *offset, uint64_t *size)
 	ret = ioctl(vfio_dev_fd, VFIO_DEVICE_GET_REGION_INFO, &reg);
 	if (ret != 0) {
 		sfc_vdpa_err(dev, "could not get device region info: %s",
-			     strerror(errno));
+			     rte_strerror(errno));
 		return ret;
 	}
 
