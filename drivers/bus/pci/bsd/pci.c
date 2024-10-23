@@ -122,7 +122,7 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 	}
 
 	if (rte_intr_fd_get(dev->intr_handle) < 0) {
-		PCI_LOG(ERR, "Cannot open %s: %s", devname, strerror(errno));
+		PCI_LOG(ERR, "Cannot open %s: %s", devname, rte_strerror(errno));
 		goto error;
 	}
 
@@ -164,7 +164,7 @@ pci_uio_map_resource_by_index(struct rte_pci_device *dev, int res_idx,
 	/* allocate memory to keep path */
 	maps[map_idx].path = rte_malloc(NULL, strlen(devname) + 1, 0);
 	if (maps[map_idx].path == NULL) {
-		PCI_LOG(ERR, "Cannot allocate memory for path: %s", strerror(errno));
+		PCI_LOG(ERR, "Cannot allocate memory for path: %s", rte_strerror(errno));
 		return -1;
 	}
 
@@ -173,7 +173,7 @@ pci_uio_map_resource_by_index(struct rte_pci_device *dev, int res_idx,
 	 */
 	fd = open(devname, O_RDWR);
 	if (fd < 0) {
-		PCI_LOG(ERR, "Cannot open %s: %s", devname, strerror(errno));
+		PCI_LOG(ERR, "Cannot open %s: %s", devname, rte_strerror(errno));
 		goto error;
 	}
 
@@ -347,7 +347,7 @@ rte_pci_scan(void)
 		unsigned i;
 		if (ioctl(fd, PCIOCGETCONF, &conf_io) < 0) {
 			PCI_LOG(ERR, "%s(): error with ioctl on /dev/pci: %s",
-				__func__, strerror(errno));
+				__func__, rte_strerror(errno));
 			goto error;
 		}
 

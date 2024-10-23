@@ -15,6 +15,7 @@
 #include <rte_tailq.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
+#include <rte_errno.h>
 
 #include "private.h"
 
@@ -52,7 +53,7 @@ pci_uio_map_secondary(struct rte_pci_device *dev)
 			fd = open(uio_res->maps[i].path, O_RDWR);
 			if (fd < 0) {
 				PCI_LOG(ERR, "Cannot open %s: %s",
-					uio_res->maps[i].path, strerror(errno));
+					uio_res->maps[i].path, rte_strerror(errno));
 				return -1;
 			}
 

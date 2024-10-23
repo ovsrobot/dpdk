@@ -12,6 +12,7 @@
 #include <rte_devargs.h>
 #include <rte_memcpy.h>
 #include <rte_vfio.h>
+#include <rte_errno.h>
 
 #include "eal_filesystem.h"
 
@@ -449,7 +450,7 @@ rte_pci_scan(void)
 
 	dir = opendir(rte_pci_get_sysfs_path());
 	if (dir == NULL) {
-		PCI_LOG(ERR, "%s(): opendir failed: %s", __func__, strerror(errno));
+		PCI_LOG(ERR, "%s(): opendir failed: %s", __func__, rte_strerror(errno));
 		return -1;
 	}
 
@@ -500,7 +501,7 @@ pci_device_iommu_support_va(const struct rte_pci_device *dev)
 			return true;
 
 		PCI_LOG(ERR, "%s(): can't open %s: %s",
-			__func__, filename, strerror(errno));
+			__func__, filename, rte_strerror(errno));
 		return false;
 	}
 
@@ -551,7 +552,7 @@ pci_device_iommu_support_va(__rte_unused const struct rte_pci_device *dev)
 
 	if (fp == NULL) {
 		PCI_LOG(ERR, "%s(): can't open %s: %s",
-			__func__, filename, strerror(errno));
+			__func__, filename, rte_strerror(errno));
 		return ret;
 	}
 

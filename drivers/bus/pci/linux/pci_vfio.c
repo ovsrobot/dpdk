@@ -21,6 +21,7 @@
 #include <bus_driver.h>
 #include <rte_spinlock.h>
 #include <rte_tailq.h>
+#include <rte_errno.h>
 
 #include "eal_filesystem.h"
 
@@ -223,7 +224,7 @@ pci_vfio_setup_interrupts(struct rte_pci_device *dev, int vfio_dev_fd)
 		ret = ioctl(vfio_dev_fd, VFIO_DEVICE_GET_IRQ_INFO, &irq);
 		if (ret < 0) {
 			PCI_LOG(ERR, "Cannot get VFIO IRQ info, error %i (%s)",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			return -1;
 		}
 
@@ -249,7 +250,7 @@ pci_vfio_setup_interrupts(struct rte_pci_device *dev, int vfio_dev_fd)
 		fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 		if (fd < 0) {
 			PCI_LOG(ERR, "Cannot set up eventfd, error %i (%s)",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			return -1;
 		}
 
@@ -330,7 +331,7 @@ pci_vfio_enable_notifier(struct rte_pci_device *dev, int vfio_dev_fd)
 	fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if (fd < 0) {
 		PCI_LOG(ERR, "Cannot set up eventfd, error %i (%s)",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -451,7 +452,7 @@ pci_rte_vfio_setup_device(struct rte_pci_device *dev, int vfio_dev_fd)
 	 * then it updates errno as EINVAL.
 	 */
 	if (ioctl(vfio_dev_fd, VFIO_DEVICE_RESET) && errno != EINVAL) {
-		PCI_LOG(ERR, "Unable to reset device! Error: %d (%s)", errno, strerror(errno));
+		PCI_LOG(ERR, "Unable to reset device! Error: %d (%s)", errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -724,7 +725,7 @@ pci_vfio_fill_regions(struct rte_pci_device *dev, int vfio_dev_fd,
 		ret = pci_vfio_get_region_info(vfio_dev_fd, &reg, i);
 		if (ret < 0) {
 			PCI_LOG(DEBUG, "%s cannot get device region info error %i (%s)",
-				dev->name, errno, strerror(errno));
+				dev->name, errno, rte_strerror(errno));
 			return -1;
 		}
 
@@ -792,7 +793,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 		VFIO_PCI_CONFIG_REGION_INDEX);
 	if (ret < 0) {
 		PCI_LOG(ERR, "%s cannot get device region info error %i (%s)",
-			dev->name, errno, strerror(errno));
+			dev->name, errno, rte_strerror(errno));
 		goto err_vfio_res;
 	}
 	pdev->region[VFIO_PCI_CONFIG_REGION_INDEX].size = reg->size;
@@ -830,7 +831,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 		ret = pci_vfio_get_region_info(vfio_dev_fd, &reg, i);
 		if (ret < 0) {
 			PCI_LOG(ERR, "%s cannot get device region info error %i (%s)",
-				pci_addr, errno, strerror(errno));
+				pci_addr, errno, rte_strerror(errno));
 			goto err_map;
 		}
 
@@ -891,7 +892,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 			ret = pci_vfio_sparse_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
 			if (ret < 0) {
 				PCI_LOG(ERR, "%s sparse mapping BAR%i failed: %s",
-					pci_addr, i, strerror(errno));
+					pci_addr, i, rte_strerror(errno));
 				free(reg);
 				goto err_map;
 			}
@@ -899,7 +900,7 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 			ret = pci_vfio_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
 			if (ret < 0) {
 				PCI_LOG(ERR, "%s mapping BAR%i failed: %s",
-					pci_addr, i, strerror(errno));
+					pci_addr, i, rte_strerror(errno));
 				free(reg);
 				goto err_map;
 			}
@@ -995,14 +996,14 @@ pci_vfio_map_resource_secondary(struct rte_pci_device *dev)
 			ret = pci_vfio_sparse_mmap_bar(vfio_dev_fd, vfio_res, i, MAP_FIXED);
 			if (ret < 0) {
 				PCI_LOG(ERR, "%s sparse mapping BAR%i failed: %s",
-					pci_addr, i, strerror(errno));
+					pci_addr, i, rte_strerror(errno));
 				goto err_vfio_dev_fd;
 			}
 		} else {
 			ret = pci_vfio_mmap_bar(vfio_dev_fd, vfio_res, i, MAP_FIXED);
 			if (ret < 0) {
 				PCI_LOG(ERR, "%s mapping BAR%i failed: %s",
-					pci_addr, i, strerror(errno));
+					pci_addr, i, rte_strerror(errno));
 				goto err_vfio_dev_fd;
 			}
 		}
