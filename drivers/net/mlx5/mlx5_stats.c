@@ -247,7 +247,7 @@ mlx5_xstats_reset(struct rte_eth_dev *dev)
 	ret = mlx5_os_get_stats_n(dev, bond_master, &stats_n, &stats_n_2nd);
 	if (ret < 0) {
 		DRV_LOG(ERR, "port %u cannot get stats: %s", dev->data->port_id,
-			strerror(-ret));
+			rte_strerror(-ret));
 		return ret;
 	}
 	if (xstats_ctrl->stats_n != stats_n ||
@@ -265,7 +265,7 @@ mlx5_xstats_reset(struct rte_eth_dev *dev)
 	ret = mlx5_os_read_dev_counters(dev, bond_master, counters);
 	if (ret) {
 		DRV_LOG(ERR, "port %u cannot read device counters: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		mlx5_free(counters);
 		return ret;
 	}

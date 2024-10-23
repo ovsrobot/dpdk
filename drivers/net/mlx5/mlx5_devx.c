@@ -174,7 +174,7 @@ mlx5_txq_devx_modify(struct mlx5_txq_obj *obj, enum mlx5_txq_modify_type type,
 		ret = mlx5_devx_cmd_modify_sq(obj->sq_obj.sq, &msq_attr);
 		if (ret) {
 			DRV_LOG(ERR, "Cannot change the Tx SQ state to RESET"
-				" %s", strerror(errno));
+				" %s", rte_strerror(errno));
 			rte_errno = errno;
 			return ret;
 		}
@@ -186,7 +186,7 @@ mlx5_txq_devx_modify(struct mlx5_txq_obj *obj, enum mlx5_txq_modify_type type,
 		ret = mlx5_devx_cmd_modify_sq(obj->sq_obj.sq, &msq_attr);
 		if (ret) {
 			DRV_LOG(ERR, "Cannot change the Tx SQ state to READY"
-				" %s", strerror(errno));
+				" %s", rte_strerror(errno));
 			rte_errno = errno;
 			return ret;
 		}

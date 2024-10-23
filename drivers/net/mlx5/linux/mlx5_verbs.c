@@ -100,7 +100,7 @@ mlx5_ibv_modify_qp(struct mlx5_txq_obj *obj, enum mlx5_txq_modify_type type,
 		ret = mlx5_glue->modify_qp(obj->qp, &mod, IBV_QP_STATE);
 		if (ret) {
 			DRV_LOG(ERR, "Cannot change Tx QP state to RESET %s",
-				strerror(errno));
+				rte_strerror(errno));
 			rte_errno = errno;
 			return ret;
 		}
@@ -111,7 +111,7 @@ mlx5_ibv_modify_qp(struct mlx5_txq_obj *obj, enum mlx5_txq_modify_type type,
 	ret = mlx5_glue->modify_qp(obj->qp, &mod, IBV_QP_STATE | IBV_QP_PORT);
 	if (ret) {
 		DRV_LOG(ERR, "Cannot change Tx QP state to INIT %s",
-			strerror(errno));
+			rte_strerror(errno));
 		rte_errno = errno;
 		return ret;
 	}
@@ -119,7 +119,7 @@ mlx5_ibv_modify_qp(struct mlx5_txq_obj *obj, enum mlx5_txq_modify_type type,
 	ret = mlx5_glue->modify_qp(obj->qp, &mod, IBV_QP_STATE);
 	if (ret) {
 		DRV_LOG(ERR, "Cannot change Tx QP state to RTR %s",
-			strerror(errno));
+			rte_strerror(errno));
 		rte_errno = errno;
 		return ret;
 	}
@@ -127,7 +127,7 @@ mlx5_ibv_modify_qp(struct mlx5_txq_obj *obj, enum mlx5_txq_modify_type type,
 	ret = mlx5_glue->modify_qp(obj->qp, &mod, IBV_QP_STATE);
 	if (ret) {
 		DRV_LOG(ERR, "Cannot change Tx QP state to RTS %s",
-			strerror(errno));
+			rte_strerror(errno));
 		rte_errno = errno;
 		return ret;
 	}

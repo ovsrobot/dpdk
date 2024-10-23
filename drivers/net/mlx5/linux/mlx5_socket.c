@@ -61,13 +61,13 @@ mlx5_pmd_socket_handle(void *cb __rte_unused)
 	/* Accept the connection from the client. */
 	conn_sock = accept(server_socket, NULL, NULL);
 	if (conn_sock < 0) {
-		DRV_LOG(WARNING, "connection failed: %s", strerror(errno));
+		DRV_LOG(WARNING, "connection failed: %s", rte_strerror(errno));
 		return;
 	}
 	ret = recvmsg(conn_sock, &msg, MSG_WAITALL);
 	if (ret != sizeof(struct mlx5_flow_dump_req)) {
 		DRV_LOG(WARNING, "wrong message received: %s",
-			strerror(errno));
+			rte_strerror(errno));
 		goto error;
 	}
 
@@ -138,7 +138,7 @@ mlx5_pmd_socket_handle(void *cb __rte_unused)
 	} while (ret < 0 && errno == EINTR);
 	if (ret < 0)
 		DRV_LOG(WARNING, "failed to send response %s",
-			strerror(errno));
+			rte_strerror(errno));
 error:
 	if (conn_sock >= 0)
 		close(conn_sock);
@@ -167,7 +167,7 @@ mlx5_pmd_socket_init(void)
 	ret = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (ret < 0) {
 		DRV_LOG(WARNING, "Failed to open mlx5 socket: %s",
-			strerror(errno));
+			rte_strerror(errno));
 		goto error;
 	}
 	server_socket = ret;
@@ -183,13 +183,13 @@ mlx5_pmd_socket_init(void)
 	ret = bind(server_socket, (const struct sockaddr *)&sun, sizeof(sun));
 	if (ret < 0) {
 		DRV_LOG(WARNING,
-			"cannot bind mlx5 socket: %s", strerror(errno));
+			"cannot bind mlx5 socket: %s", rte_strerror(errno));
 		goto remove;
 	}
 	ret = listen(server_socket, 0);
 	if (ret < 0) {
 		DRV_LOG(WARNING, "cannot listen on mlx5 socket: %s",
-			strerror(errno));
+			rte_strerror(errno));
 		goto remove;
 	}
 	server_intr_handle = mlx5_os_interrupt_handler_create
@@ -197,7 +197,7 @@ mlx5_pmd_socket_init(void)
 		 server_socket, mlx5_pmd_socket_handle, NULL);
 	if (server_intr_handle == NULL) {
 		DRV_LOG(WARNING, "cannot register interrupt handler for mlx5 socket: %s",
-			strerror(errno));
+			rte_strerror(errno));
 		goto remove;
 	}
 	return 0;
@@ -207,7 +207,7 @@ close:
 	claim_zero(close(server_socket));
 	server_socket = -1;
 error:
-	DRV_LOG(ERR, "Cannot initialize socket: %s", strerror(errno));
+	DRV_LOG(ERR, "Cannot initialize socket: %s", rte_strerror(errno));
 	return -errno;
 }
 

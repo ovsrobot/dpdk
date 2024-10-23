@@ -100,7 +100,7 @@ mlx5_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 		ret = mlx5_traffic_restart(dev);
 		if (ret)
 			DRV_LOG(ERR, "port %u cannot restart traffic: %s",
-				dev->data->port_id, strerror(rte_errno));
+				dev->data->port_id, rte_strerror(rte_errno));
 	}
 }
 

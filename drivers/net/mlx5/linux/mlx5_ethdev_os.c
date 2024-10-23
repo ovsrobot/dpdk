@@ -314,7 +314,7 @@ mlx5_link_update_unlocked_gset(struct rte_eth_dev *dev,
 	ret = mlx5_ifreq(dev, SIOCGIFFLAGS, &ifr);
 	if (ret) {
 		DRV_LOG(WARNING, "port %u ioctl(SIOCGIFFLAGS) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return ret;
 	}
 	dev_link = (struct rte_eth_link) {
@@ -351,7 +351,7 @@ mlx5_link_update_unlocked_gset(struct rte_eth_dev *dev,
 			DRV_LOG(WARNING,
 				"port %u ioctl(SIOCETHTOOL,"
 				" ETHTOOL_GSET) failed: %s",
-				dev->data->port_id, strerror(rte_errno));
+				dev->data->port_id, rte_strerror(rte_errno));
 			return ret;
 		}
 	}
@@ -395,7 +395,7 @@ mlx5_link_update_unlocked_gs(struct rte_eth_dev *dev,
 	ret = mlx5_ifreq(dev, SIOCGIFFLAGS, &ifr);
 	if (ret) {
 		DRV_LOG(WARNING, "port %u ioctl(SIOCGIFFLAGS) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return ret;
 	}
 	dev_link = (struct rte_eth_link) {
@@ -430,7 +430,7 @@ mlx5_link_update_unlocked_gs(struct rte_eth_dev *dev,
 			DRV_LOG(DEBUG,
 				"port %u ioctl(SIOCETHTOOL,"
 				" ETHTOOL_GLINKSETTINGS) failed: %s",
-				dev->data->port_id, strerror(rte_errno));
+				dev->data->port_id, rte_strerror(rte_errno));
 			return ret;
 		}
 	}
@@ -448,7 +448,7 @@ mlx5_link_update_unlocked_gs(struct rte_eth_dev *dev,
 		DRV_LOG(DEBUG,
 			"port %u ioctl(SIOCETHTOOL,"
 			"ETHTOOL_GLINKSETTINGS) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return ret;
 	}
 
@@ -538,7 +538,7 @@ mlx5_dev_get_flow_ctrl(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 		DRV_LOG(DEBUG,
 			"port %u ioctl(SIOCETHTOOL, ETHTOOL_GPAUSEPARAM) failed:"
 			" %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return ret;
 	}
 	fc_conf->autoneg = ethpause.autoneg;
@@ -591,7 +591,7 @@ mlx5_dev_set_flow_ctrl(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 		DRV_LOG(WARNING,
 			"port %u ioctl(SIOCETHTOOL, ETHTOOL_SPAUSEPARAM)"
 			" failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return ret;
 	}
 	return 0;
@@ -666,7 +666,7 @@ mlx5_link_update_bond(struct rte_eth_dev *dev)
 	ret = mlx5_ifreq_by_ifname(bond->ifname, SIOCGIFFLAGS, &ifr);
 	if (ret) {
 		DRV_LOG(WARNING, "ifname %s ioctl(SIOCGIFFLAGS) failed: %s",
-			bond->ifname, strerror(rte_errno));
+			bond->ifname, rte_strerror(rte_errno));
 		return;
 	}
 	dev->data->dev_link.link_status =
@@ -1118,7 +1118,7 @@ mlx5_get_module_info(struct rte_eth_dev *dev,
 	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
 	if (ret) {
 		DRV_LOG(WARNING, "port %u ioctl(SIOCETHTOOL) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return ret;
 	}
 	modinfo->type = info.type;
@@ -1167,7 +1167,7 @@ int mlx5_get_module_eeprom(struct rte_eth_dev *dev,
 	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
 	if (ret)
 		DRV_LOG(WARNING, "port %u ioctl(SIOCETHTOOL) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 	else
 		rte_memcpy(info->data, eeprom->data, info->length);
 	mlx5_free(eeprom);
@@ -1725,7 +1725,7 @@ mlx5_os_stats_init(struct rte_eth_dev *dev)
 	ret = mlx5_os_read_dev_counters(dev, bond_master, xstats_ctrl->base);
 	if (ret)
 		DRV_LOG(ERR, "port %u cannot read device counters: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 	mlx5_os_read_dev_stat(priv, "out_of_buffer", &stats_ctrl->imissed_base);
 	stats_ctrl->imissed = 0;
 free:

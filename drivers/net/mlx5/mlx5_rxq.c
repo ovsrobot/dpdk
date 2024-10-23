@@ -488,7 +488,7 @@ mlx5_rx_queue_stop_primary(struct rte_eth_dev *dev, uint16_t idx)
 	ret = priv->obj_ops.rxq_obj_modify(rxq, MLX5_RXQ_MOD_RDY2RST);
 	if (ret) {
 		DRV_LOG(ERR, "Cannot change Rx WQ state to RESET:  %s",
-			strerror(errno));
+			rte_strerror(errno));
 		rte_errno = errno;
 		return ret;
 	}
@@ -587,7 +587,7 @@ mlx5_rx_queue_start_primary(struct rte_eth_dev *dev, uint16_t idx)
 	ret = priv->obj_ops.rxq_obj_modify(rxq, MLX5_RXQ_MOD_RST2RDY);
 	if (ret) {
 		DRV_LOG(ERR, "Cannot change Rx WQ state to READY:  %s",
-			strerror(errno));
+			rte_strerror(errno));
 		rte_errno = errno;
 		return ret;
 	}

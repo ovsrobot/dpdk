@@ -402,7 +402,7 @@ mlx5_queue_state_modify_primary(struct rte_eth_dev *dev,
 		ret = priv->obj_ops.rxq_obj_modify(rxq, sm->state);
 		if (ret) {
 			DRV_LOG(ERR, "Cannot change Rx WQ state to %u  - %s",
-					sm->state, strerror(errno));
+					sm->state, rte_strerror(errno));
 			rte_errno = errno;
 			return ret;
 		}

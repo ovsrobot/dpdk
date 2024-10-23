@@ -1516,7 +1516,7 @@ mlx5dr_match_template_create(const struct rte_flow_item items[],
 	if (ret <= 0) {
 		DR_LOG(ERR, "Unable to process items (%s): %s",
 		       error.message ? error.message : "unspecified",
-		       strerror(rte_errno));
+		       rte_strerror(rte_errno));
 		goto free_template;
 	}
 

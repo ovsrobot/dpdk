@@ -382,7 +382,7 @@ mlx5_dev_spawn(struct rte_device *dpdk_dev,
 	err = mlx5_glue->devx_init_showdown_event(sh->cdev->ctx);
 	if (err) {
 		DRV_LOG(ERR, "failed to init showdown event: %s",
-			strerror(errno));
+			rte_strerror(errno));
 		goto error;
 	}
 	/* Allocate private eth device data. */
@@ -430,7 +430,7 @@ mlx5_dev_spawn(struct rte_device *dpdk_dev,
 		if (err) {
 			err = rte_errno;
 			DRV_LOG(ERR, "unable to allocate switch domain: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			goto error;
 		}
 		own_domain_id = 1;
@@ -440,7 +440,7 @@ mlx5_dev_spawn(struct rte_device *dpdk_dev,
 	if (err) {
 		err = rte_errno;
 		DRV_LOG(ERR, "Failed to process port configure: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		goto error;
 	}
 	eth_dev = rte_eth_dev_allocate(name);
@@ -483,7 +483,7 @@ mlx5_dev_spawn(struct rte_device *dpdk_dev,
 		DRV_LOG(ERR,
 			"port %u cannot get MAC address, is mlx5_en"
 			" loaded? (errno: %s).",
-			eth_dev->data->port_id, strerror(rte_errno));
+			eth_dev->data->port_id, rte_strerror(rte_errno));
 		err = ENODEV;
 		goto error;
 	}
@@ -737,7 +737,7 @@ mlx5_os_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac,
 		DRV_LOG(ERR,
 			"port %u cannot get MAC address, is mlx5_en"
 			" loaded? (errno: %s)",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 		return rte_errno;
 	}
 	if (!rte_is_same_ether_addr(&lmac, mac)) {
@@ -856,7 +856,7 @@ mlx5_os_net_probe(struct mlx5_common_device *cdev,
 	ret = mlx5_init_once();
 	if (ret) {
 		DRV_LOG(ERR, "unable to init PMD global data: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	spawn.eth_dev = mlx5_dev_spawn(cdev->dev, &spawn, mkvlist);
