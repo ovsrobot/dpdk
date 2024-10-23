@@ -551,7 +551,7 @@ static void cmd_set_bond_mac_addr_parsed(void *parsed_result,
 	/* check the return value and print it if is < 0 */
 	if (ret < 0)
 		fprintf(stderr, "set_bond_mac_addr error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 }
 
 static cmdline_parse_token_string_t cmd_set_bond_mac_addr_set =
@@ -604,7 +604,7 @@ static void cmd_set_bond_mon_period_parsed(void *parsed_result,
 	/* check the return value and print it if is < 0 */
 	if (ret < 0)
 		fprintf(stderr, "set_bond_mac_addr error: (%s)\n",
-			strerror(-ret));
+			rte_strerror(-ret));
 }
 
 static cmdline_parse_token_string_t cmd_set_bond_mon_period_set =

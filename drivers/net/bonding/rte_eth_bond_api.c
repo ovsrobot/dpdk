@@ -483,7 +483,7 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 	if (ret != 0) {
 		RTE_BOND_LOG(ERR,
 			"%s: Error during getting device (port %u) info: %s",
-			__func__, member_port_id, strerror(-ret));
+			__func__, member_port_id, rte_strerror(-ret));
 
 		return ret;
 	}
