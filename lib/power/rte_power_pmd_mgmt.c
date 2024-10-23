@@ -575,7 +575,7 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 	ret = queue_list_add(lcore_cfg, &qdata);
 	if (ret < 0) {
 		POWER_LOG(DEBUG, "Failed to add queue to list: %s",
-				strerror(-ret));
+				rte_strerror(-ret));
 		goto end;
 	}
 	/* new queue is always added last */

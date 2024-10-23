@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <rte_log.h>
+#include <rte_errno.h>
 
 #include "rte_power_guest_channel.h"
 #include "guest_channel.h"
@@ -83,7 +84,7 @@ send_msg(unsigned int lcore_id, uint32_t scale_direction)
 	if (ret == 0)
 		return 1;
 	POWER_LOG(DEBUG, "Error sending message: %s",
-			ret > 0 ? strerror(ret) : "channel not connected");
+			ret > 0 ? rte_strerror(ret) : "channel not connected");
 	return -1;
 }
 

@@ -13,6 +13,7 @@
 
 #include <rte_memcpy.h>
 #include <rte_stdatomic.h>
+#include <rte_errno.h>
 
 #include "rte_power_pmd_mgmt.h"
 #include "power_pstate_cpufreq.h"
@@ -83,7 +84,7 @@ power_read_turbo_pct(uint64_t *outVal)
 
 	if (fd < 0) {
 		POWER_LOG(ERR, "Error opening '%s': %s", POWER_SYSFILE_TURBO_PCT,
-				 strerror(errno));
+				 rte_strerror(errno));
 		return fd;
 	}
 
@@ -91,7 +92,7 @@ power_read_turbo_pct(uint64_t *outVal)
 
 	if (ret < 0) {
 		POWER_LOG(ERR, "Error reading '%s': %s", POWER_SYSFILE_TURBO_PCT,
-				 strerror(errno));
+				 rte_strerror(errno));
 		goto out;
 	}
 
@@ -99,7 +100,7 @@ power_read_turbo_pct(uint64_t *outVal)
 	*outVal = (uint64_t) strtol(val, &endptr, 10);
 	if (errno != 0 || (*endptr != 0 && *endptr != '\n')) {
 		POWER_LOG(ERR, "Error converting str to digits, read from %s: %s",
-				 POWER_SYSFILE_TURBO_PCT, strerror(errno));
+				 POWER_SYSFILE_TURBO_PCT, rte_strerror(errno));
 		ret = -1;
 		goto out;
 	}
