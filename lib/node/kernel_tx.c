@@ -36,7 +36,7 @@ kernel_tx_process_mbuf(struct rte_node *node, struct rte_mbuf **mbufs, uint16_t 
 		sin.sin_addr.s_addr = ip4->dst_addr;
 
 		if (sendto(ctx->sock, buf, len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0)
-			node_err("kernel_tx", "Unable to send packets: %s", strerror(errno));
+			node_err("kernel_tx", "Unable to send packets: %s", rte_strerror(errno));
 	}
 }
 
