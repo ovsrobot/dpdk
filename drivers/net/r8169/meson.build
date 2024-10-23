@@ -3,5 +3,6 @@
 
 sources = files(
 		'r8169_ethdev.c',
+		'r8169_hw.c',
 )
 

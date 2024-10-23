@@ -15,6 +15,7 @@
 
 struct rtl_hw {
 	u8 adapter_stopped;
+	u8 *mmio_addr;
 };
 
 struct rtl_sw_stats {
