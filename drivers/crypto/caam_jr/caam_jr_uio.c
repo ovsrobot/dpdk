@@ -17,6 +17,7 @@
 #include <rte_malloc.h>
 #include <rte_crypto.h>
 #include <rte_security.h>
+#include <rte_errno.h>
 
 #include <caam_jr_config.h>
 #include <caam_jr_hw_specific.h>
@@ -355,7 +356,7 @@ free_job_ring(int uio_fd)
 	if (munmap(job_ring->register_base_addr, job_ring->map_size)) {
 		CAAM_JR_INFO("cannot munmap(%p, 0x%lx): %s",
 			job_ring->register_base_addr,
-			(unsigned long)job_ring->map_size, strerror(errno));
+			(unsigned long)job_ring->map_size, rte_strerror(errno));
 	} else
 		CAAM_JR_DEBUG("JR UIO memory is unmapped");
 
@@ -419,7 +420,7 @@ sec_configure(void)
 	d = opendir(SEC_UIO_DEVICE_SYS_ATTR_PATH);
 	if (d == NULL) {
 		CAAM_JR_ERR("Error opening directory '%s': %s",
-			SEC_UIO_DEVICE_SYS_ATTR_PATH, strerror(errno));
+			SEC_UIO_DEVICE_SYS_ATTR_PATH, rte_strerror(errno));
 		return -1;
 	}
 
