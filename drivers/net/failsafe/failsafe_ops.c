@@ -452,7 +452,7 @@ fs_rx_queue_setup(struct rte_eth_dev *dev,
 #ifdef RTE_EXEC_ENV_LINUX
 	rxq->event_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if (rxq->event_fd < 0) {
-		ERROR("Failed to create an eventfd: %s", strerror(errno));
+		ERROR("Failed to create an eventfd: %s", rte_strerror(errno));
 		fs_unlock(dev, 0);
 		return -errno;
 	}

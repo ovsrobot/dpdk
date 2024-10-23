@@ -407,14 +407,14 @@ fs_lock(struct rte_eth_dev *dev, unsigned int is_alarm)
 		ret = pthread_mutex_trylock(&PRIV(dev)->hotplug_mutex);
 		if (ret) {
 			DEBUG("Hot-plug mutex lock trying failed(%s), will try"
-			      " again later...", strerror(ret));
+			      " again later...", rte_strerror(ret));
 			return ret;
 		}
 		PRIV(dev)->alarm_lock = 1;
 	} else {
 		ret = pthread_mutex_lock(&PRIV(dev)->hotplug_mutex);
 		if (ret) {
-			ERROR("Cannot lock mutex(%s)", strerror(ret));
+			ERROR("Cannot lock mutex(%s)", rte_strerror(ret));
 			return ret;
 		}
 	}
@@ -436,7 +436,7 @@ fs_unlock(struct rte_eth_dev *dev, unsigned int is_alarm)
 	}
 	ret = pthread_mutex_unlock(&PRIV(dev)->hotplug_mutex);
 	if (ret)
-		ERROR("Cannot unlock hot-plug mutex(%s)", strerror(ret));
+		ERROR("Cannot unlock hot-plug mutex(%s)", rte_strerror(ret));
 }
 
 /*

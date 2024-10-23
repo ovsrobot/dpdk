@@ -92,7 +92,7 @@ failsafe_hotplug_alarm_cancel(struct rte_eth_dev *dev)
 	rte_eal_alarm_cancel(fs_hotplug_alarm, dev);
 	if (rte_errno) {
 		ERROR("rte_eal_alarm_cancel failed (errno: %s)",
-		      strerror(rte_errno));
+		      rte_strerror(rte_errno));
 		ret = -rte_errno;
 	} else {
 		PRIV(dev)->pending_alarm = 0;
@@ -138,18 +138,18 @@ fs_mutex_init(struct fs_priv *priv)
 
 	ret = pthread_mutexattr_init(&attr);
 	if (ret) {
-		ERROR("Cannot initiate mutex attributes - %s", strerror(ret));
+		ERROR("Cannot initiate mutex attributes - %s", rte_strerror(ret));
 		return ret;
 	}
 	/* Allow mutex relocks for the thread holding the mutex. */
 	ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	if (ret) {
-		ERROR("Cannot set mutex type - %s", strerror(ret));
+		ERROR("Cannot set mutex type - %s", rte_strerror(ret));
 		return ret;
 	}
 	ret = pthread_mutex_init(&priv->hotplug_mutex, &attr);
 	if (ret) {
-		ERROR("Cannot initiate mutex - %s", strerror(ret));
+		ERROR("Cannot initiate mutex - %s", rte_strerror(ret));
 		return ret;
 	}
 	return 0;
