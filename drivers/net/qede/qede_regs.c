@@ -221,7 +221,7 @@ qede_write_fwdump(const char *dump_file, void *dump, size_t len)
 
 	if (!f) {
 		fprintf(stderr, "Can't open file %s: %s\n",
-			dump_file, strerror(errno));
+			dump_file, rte_strerror(errno));
 		return 1;
 	}
 	bytes = fwrite(dump, 1, len, f);
@@ -234,7 +234,7 @@ qede_write_fwdump(const char *dump_file, void *dump, size_t len)
 
 	if (fclose(f)) {
 		fprintf(stderr, "Can't close file %s: %s\n",
-			dump_file, strerror(errno));
+			dump_file, rte_strerror(errno));
 		err = 1;
 	}
 
