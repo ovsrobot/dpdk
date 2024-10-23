@@ -23,6 +23,7 @@
 #include <rte_log.h>
 #include <rte_kvargs.h>
 #include <rte_devargs.h>
+#include <rte_errno.h>
 
 #include "base/ifcvf.h"
 
@@ -446,7 +447,7 @@ vdpa_enable_vfio_intr(struct ifcvf_internal *internal, bool m_rx)
 			fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 			if (fd < 0) {
 				DRV_LOG(ERR, "can't setup eventfd: %s",
-					strerror(errno));
+					rte_strerror(errno));
 				return -1;
 			}
 			internal->intr_fd[i] = fd;
@@ -457,7 +458,7 @@ vdpa_enable_vfio_intr(struct ifcvf_internal *internal, bool m_rx)
 	ret = ioctl(internal->vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
 	if (ret) {
 		DRV_LOG(ERR, "Error enabling MSI-X interrupts: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -489,7 +490,7 @@ vdpa_disable_vfio_intr(struct ifcvf_internal *internal)
 	ret = ioctl(internal->vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
 	if (ret) {
 		DRV_LOG(ERR, "Error disabling MSI-X interrupts: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
@@ -526,7 +527,7 @@ notify_relay(void *arg)
 		rte_vhost_get_vhost_vring(internal->vid, qid, &vring);
 		ev.data.u64 = qid | (uint64_t)vring.kickfd << 32;
 		if (epoll_ctl(epfd, EPOLL_CTL_ADD, vring.kickfd, &ev) < 0) {
-			DRV_LOG(ERR, "epoll add error: %s", strerror(errno));
+			DRV_LOG(ERR, "epoll add error: %s", rte_strerror(errno));
 			return 1;
 		}
 	}
@@ -552,7 +553,7 @@ notify_relay(void *arg)
 						continue;
 					DRV_LOG(INFO, "Error reading "
 						"kickfd: %s",
-						strerror(errno));
+						rte_strerror(errno));
 				}
 				break;
 			} while (1);
@@ -628,7 +629,7 @@ intr_relay(void *arg)
 	ev.data.fd = rte_intr_fd_get(internal->pdev->intr_handle);
 	if (epoll_ctl(csc_epfd, EPOLL_CTL_ADD,
 		rte_intr_fd_get(internal->pdev->intr_handle), &ev) < 0) {
-		DRV_LOG(ERR, "epoll add error: %s", strerror(errno));
+		DRV_LOG(ERR, "epoll add error: %s", rte_strerror(errno));
 		goto out;
 	}
 
@@ -653,7 +654,7 @@ intr_relay(void *arg)
 					continue;
 				DRV_LOG(ERR, "Error reading from file descriptor %d: %s",
 					csc_event.data.fd,
-					strerror(errno));
+					rte_strerror(errno));
 				goto out;
 			} else if (nbytes == 0) {
 				DRV_LOG(ERR, "Read nothing from file descriptor %d",
@@ -947,7 +948,7 @@ vring_relay(void *arg)
 		rte_vhost_get_vhost_vring(vid, qid, &vring);
 		ev.data.u64 = qid << 1 | (uint64_t)vring.kickfd << 32;
 		if (epoll_ctl(epfd, EPOLL_CTL_ADD, vring.kickfd, &ev) < 0) {
-			DRV_LOG(ERR, "epoll add error: %s", strerror(errno));
+			DRV_LOG(ERR, "epoll add error: %s", rte_strerror(errno));
 			return 1;
 		}
 	}
@@ -961,7 +962,7 @@ vring_relay(void *arg)
 			(uint64_t)internal->intr_fd[qid] << 32;
 		if (epoll_ctl(epfd, EPOLL_CTL_ADD, internal->intr_fd[qid], &ev)
 				< 0) {
-			DRV_LOG(ERR, "epoll add error: %s", strerror(errno));
+			DRV_LOG(ERR, "epoll add error: %s", rte_strerror(errno));
 			return 1;
 		}
 		update_used_ring(internal, qid);
@@ -992,7 +993,7 @@ vring_relay(void *arg)
 						continue;
 					DRV_LOG(INFO, "Error reading "
 						"kickfd: %s",
-						strerror(errno));
+						rte_strerror(errno));
 				}
 				break;
 			} while (1);
@@ -1265,7 +1266,7 @@ ifcvf_get_notify_area(int vid, int qid, uint64_t *offset, uint64_t *size)
 	ret = ioctl(internal->vfio_dev_fd, VFIO_DEVICE_GET_REGION_INFO, &reg);
 	if (ret) {
 		DRV_LOG(ERR, "Get not get device region info: %s",
-				strerror(errno));
+				rte_strerror(errno));
 		return -1;
 	}
 
