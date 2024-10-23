@@ -632,7 +632,7 @@ static int rte_dpaa_setup_intr(struct rte_intr_handle *intr_handle)
 	fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if (fd < 0) {
 		DPAA_BUS_ERR("Cannot set up eventfd, error %i (%s)",
-			     errno, strerror(errno));
+			     errno, rte_strerror(errno));
 		return errno;
 	}
 

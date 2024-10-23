@@ -1154,7 +1154,7 @@ fman_finish(void)
 		/* release the mapping */
 		_errno = munmap(__if->ccsr_map, __if->regs_size);
 		if (unlikely(_errno < 0))
-			FMAN_ERR(_errno, "munmap() = (%s)", strerror(errno));
+			FMAN_ERR(_errno, "munmap() = (%s)", rte_strerror(errno));
 		DPAA_BUS_INFO("Tearing down %s", __if->node_path);
 		list_del(&__if->__if.node);
 		rte_free(__if);
