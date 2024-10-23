@@ -1191,7 +1191,7 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 				&rxq->fq, &rxq->cq, &usr_config);
 		if (ret) {
 			AF_XDP_LOG_LINE(ERR, "Failed to create umem [%d]: [%s]",
-				   errno, strerror(errno));
+				   errno, rte_strerror(errno));
 			goto err;
 		}
 		umem->buffer = aligned_addr;
@@ -1408,7 +1408,7 @@ init_uds_sock(struct sockaddr_un *server, const char *dp_path)
 	if (connect(sock, (struct sockaddr *)server, sizeof(struct sockaddr_un)) < 0) {
 		close(sock);
 		AF_XDP_LOG_LINE(ERR, "Error connecting stream socket errno = [%d]: [%s]",
-			   errno, strerror(errno));
+			   errno, rte_strerror(errno));
 		return -1;
 	}
 
@@ -1492,7 +1492,7 @@ read_msg(int sock, char *response, struct sockaddr_un *s, int *fd)
 		return 0;
 
 	if (msglen < 0) {
-		AF_XDP_LOG_LINE(ERR, "recvmsg failed, %s", strerror(errno));
+		AF_XDP_LOG_LINE(ERR, "recvmsg failed, %s", rte_strerror(errno));
 		return -1;
 	}
 
@@ -1527,7 +1527,7 @@ make_request_dp(int sock, struct sockaddr_un *server, char *request,
 		rval = send_msg(sock, request, req_fd, dp_path);
 
 	if (rval < 0) {
-		AF_XDP_LOG_LINE(ERR, "Write error %s", strerror(errno));
+		AF_XDP_LOG_LINE(ERR, "Write error %s", rte_strerror(errno));
 		return -1;
 	}
 
@@ -2023,7 +2023,7 @@ parse_prog_arg(const char *key __rte_unused,
 
 	if (access(value, F_OK) != 0) {
 		AF_XDP_LOG_LINE(ERR, "Error accessing %s: %s",
-			   value, strerror(errno));
+			   value, rte_strerror(errno));
 		return -EINVAL;
 	}
 
@@ -2518,7 +2518,7 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		ret = rte_mp_action_register(ETH_AF_XDP_MP_KEY, afxdp_mp_send_fds);
 		if (ret < 0 && rte_errno != ENOTSUP) {
 			AF_XDP_LOG_LINE(ERR, "%s: Failed to register multi-process IPC callback: %s",
-				   name, strerror(rte_errno));
+				   name, rte_strerror(rte_errno));
 			return -1;
 		}
 	}
