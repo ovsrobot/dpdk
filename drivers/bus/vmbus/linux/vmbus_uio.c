@@ -18,6 +18,7 @@
 #include <rte_malloc.h>
 #include <rte_bus_vmbus.h>
 #include <rte_string_fns.h>
+#include <rte_errno.h>
 
 #include "private.h"
 
@@ -34,7 +35,7 @@ void vmbus_uio_irq_control(struct rte_vmbus_device *dev, int32_t onoff)
 		  sizeof(onoff)) < 0) {
 		VMBUS_LOG(ERR, "cannot write to %d:%s",
 			  rte_intr_fd_get(dev->intr_handle),
-			  strerror(errno));
+			  rte_strerror(errno));
 	}
 }
 
@@ -51,7 +52,7 @@ int vmbus_uio_irq_read(struct rte_vmbus_device *dev)
 	if (cc < (int)sizeof(count)) {
 		if (cc < 0) {
 			VMBUS_LOG(ERR, "IRQ read failed %s",
-				  strerror(errno));
+				  rte_strerror(errno));
 			return -errno;
 		}
 		VMBUS_LOG(ERR, "can't read IRQ count");
@@ -91,7 +92,7 @@ vmbus_uio_alloc_resource(struct rte_vmbus_device *dev,
 	fd = open(devname, O_RDWR);
 	if (fd < 0) {
 		VMBUS_LOG(ERR, "Cannot open %s: %s",
-			devname, strerror(errno));
+			devname, rte_strerror(errno));
 		goto error;
 	}
 
@@ -158,7 +159,7 @@ vmbus_uio_map_resource_by_index(struct rte_vmbus_device *dev, int idx,
 	fd = open(uio_res->path, O_RDWR);
 	if (fd < 0) {
 		VMBUS_LOG(ERR, "Cannot open %s: %s",
-			  uio_res->path, strerror(errno));
+			  uio_res->path, rte_strerror(errno));
 		return -1;
 	}
 
@@ -256,13 +257,13 @@ static int vmbus_uio_map_subchan(const struct rte_vmbus_device *dev,
 	fd = open(ring_path, O_RDWR);
 	if (fd < 0) {
 		VMBUS_LOG(ERR, "Cannot open %s: %s",
-			  ring_path, strerror(errno));
+			  ring_path, rte_strerror(errno));
 		return -errno;
 	}
 
 	if (fstat(fd, &sb) < 0) {
 		VMBUS_LOG(ERR, "Cannot state %s: %s",
-			  ring_path, strerror(errno));
+			  ring_path, rte_strerror(errno));
 		close(fd);
 		return -errno;
 	}
@@ -342,7 +343,7 @@ static int vmbus_uio_sysfs_read(const char *dir, const char *name,
 	f = fopen(path, "r");
 	if (!f) {
 		VMBUS_LOG(ERR, "can't open %s:%s",
-			  path, strerror(errno));
+			  path, rte_strerror(errno));
 		return -errno;
 	}
 
@@ -404,7 +405,7 @@ int vmbus_uio_get_subchan(struct vmbus_channel *primary,
 	chan_dir = opendir(chan_path);
 	if (!chan_dir) {
 		VMBUS_LOG(ERR, "cannot open %s: %s",
-			  chan_path, strerror(errno));
+			  chan_path, rte_strerror(errno));
 		return -errno;
 	}
 
@@ -441,7 +442,7 @@ int vmbus_uio_get_subchan(struct vmbus_channel *primary,
 					   &subid, UINT16_MAX);
 		if (err) {
 			VMBUS_LOG(NOTICE, "no subchannel_id in %s:%s",
-				  subchan_path, strerror(-err));
+				  subchan_path, rte_strerror(-err));
 			goto fail;
 		}
 
@@ -452,7 +453,7 @@ int vmbus_uio_get_subchan(struct vmbus_channel *primary,
 					   &monid, UINT8_MAX);
 		if (err) {
 			VMBUS_LOG(NOTICE, "no monitor_id in %s:%s",
-				  subchan_path, strerror(-err));
+				  subchan_path, rte_strerror(-err));
 			goto fail;
 		}
 

@@ -38,7 +38,7 @@ vmbus_map_resource(void *requested_addr, int fd, off_t offset, size_t size,
 		VMBUS_LOG(ERR,
 			  "mmap(%d, %p, %zu, %ld) failed: %s",
 			  fd, requested_addr, size, (long)offset,
-			  strerror(errno));
+			  rte_strerror(errno));
 	} else {
 		VMBUS_LOG(DEBUG, "  VMBUS memory mapped at %p",
 			  mapaddr);
@@ -57,7 +57,7 @@ vmbus_unmap_resource(void *requested_addr, size_t size)
 	if (munmap(requested_addr, size)) {
 		VMBUS_LOG(ERR, "munmap(%p, 0x%lx) failed: %s",
 			requested_addr, (unsigned long)size,
-			strerror(errno));
+			rte_strerror(errno));
 	} else {
 		VMBUS_LOG(DEBUG, "  VMBUS memory unmapped at %p",
 			  requested_addr);
