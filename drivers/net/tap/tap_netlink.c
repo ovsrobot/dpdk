@@ -14,6 +14,7 @@
 #include <rte_malloc.h>
 #include <tap_netlink.h>
 #include <rte_random.h>
+#include <rte_errno.h>
 
 #include "tap_log.h"
 
@@ -98,7 +99,7 @@ tap_nl_final(int nlsk_fd)
 {
 	if (close(nlsk_fd)) {
 		TAP_LOG(ERR, "Failed to close netlink socket: %s (%d)",
-			strerror(errno), errno);
+			rte_strerror(errno), errno);
 		return -1;
 	}
 	return 0;
@@ -130,7 +131,7 @@ retry:
 			goto retry;
 
 		TAP_LOG(ERR, "Failed to send netlink message: %s (%d)",
-			strerror(errno), errno);
+			rte_strerror(errno), errno);
 		return -1;
 	}
 	return send_bytes;

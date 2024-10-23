@@ -1317,7 +1317,7 @@ tap_flow_create(struct rte_eth_dev *dev,
 	if (err < 0) {
 		TAP_LOG(ERR,
 			"Kernel refused TC filter rule creation (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		rte_flow_error_set(error, EEXIST, RTE_FLOW_ERROR_TYPE_HANDLE,
 				   NULL,
 				   "overlapping rules or Kernel too old for flower support");
@@ -1362,7 +1362,7 @@ tap_flow_create(struct rte_eth_dev *dev,
 		if (err < 0) {
 			TAP_LOG(ERR,
 				"Kernel refused TC filter rule creation (%d): %s",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			rte_flow_error_set(
 				error, ENOMEM, RTE_FLOW_ERROR_TYPE_HANDLE,
 				NULL,
@@ -1416,7 +1416,7 @@ tap_flow_destroy_pmd(struct pmd_internals *pmd,
 	if (ret < 0) {
 		TAP_LOG(ERR,
 			"Kernel refused TC filter rule deletion (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		rte_flow_error_set(
 			error, ENOTSUP, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"couldn't receive kernel ack to our request");
@@ -1440,7 +1440,7 @@ tap_flow_destroy_pmd(struct pmd_internals *pmd,
 		if (ret < 0) {
 			TAP_LOG(ERR,
 				"Kernel refused TC filter rule deletion (%d): %s",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			rte_flow_error_set(
 				error, ENOMEM, RTE_FLOW_ERROR_TYPE_HANDLE,
 				NULL, "Failure trying to receive nl ack");
@@ -1664,7 +1664,7 @@ int tap_flow_implicit_create(struct pmd_internals *pmd,
 			goto success;
 		TAP_LOG(ERR,
 			"Kernel refused TC filter rule creation (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		goto fail;
 	}
 	LIST_INSERT_HEAD(&pmd->implicit_flows, remote_flow, next);
@@ -1754,7 +1754,7 @@ static int rss_enable(struct pmd_internals *pmd, struct rte_flow_error *error)
 	/* Load the BPF program (defined in tap_bpf.h from skeleton) */
 	pmd->rss = tap_rss__open_and_load();
 	if (pmd->rss == NULL) {
-		TAP_LOG(ERR, "Failed to load BPF object: %s", strerror(errno));
+		TAP_LOG(ERR, "Failed to load BPF object: %s", rte_strerror(errno));
 		rte_flow_error_set(error, errno, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"BPF object could not be loaded");
 		return -errno;
@@ -1885,7 +1885,7 @@ static int rss_add_actions(struct rte_flow *flow, struct pmd_internals *pmd,
 	if (err) {
 		TAP_LOG(ERR,
 			"Failed to update BPF map entry %#x (%d): %s",
-			handle,  errno, strerror(errno));
+			handle,  errno, rte_strerror(errno));
 		rte_flow_error_set(
 			error, ENOTSUP, RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"Kernel too old or not configured "

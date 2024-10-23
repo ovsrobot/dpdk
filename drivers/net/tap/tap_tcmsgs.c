@@ -8,6 +8,8 @@
 #include <net/if.h>
 #include <string.h>
 
+#include <rte_errno.h>
+
 #include <rte_log.h>
 #include <tap_tcmsgs.h>
 #include "tap_log.h"
@@ -263,7 +265,7 @@ qdisc_create_multiq(int nlsk_fd, unsigned int ifindex)
 	err = qdisc_add_multiq(nlsk_fd, ifindex);
 	if (err < 0 && errno != -EEXIST) {
 		TAP_LOG(ERR, "Could not add multiq qdisc (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -289,7 +291,7 @@ qdisc_create_ingress(int nlsk_fd, unsigned int ifindex)
 	err = qdisc_add_ingress(nlsk_fd, ifindex);
 	if (err < 0 && errno != -EEXIST) {
 		TAP_LOG(ERR, "Could not add ingress qdisc (%d): %s",
-			errno, strerror(errno));
+			errno, rte_strerror(errno));
 		return -1;
 	}
 	return 0;
