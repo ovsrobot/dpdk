@@ -1087,6 +1087,8 @@ M: ChunHao Lin <hau@realtek.com>
 M: Xing Wang <xing_wang@realsil.com.cn>
 M: Realtek NIC SW <pro_nic_dpdk@realtek.com>
 F: drivers/net/r8169
+F: doc/guides/nics/r8169.rst
+F: doc/guides/nics/features/r8169.ini
 
 
 Crypto Drivers
