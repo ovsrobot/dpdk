@@ -103,7 +103,7 @@ fm_get_api_version(t_handle h_fm, ioc_fm_api_version_t *p_version)
 	ret = ioctl(p_dev->fd, FM_IOC_GET_API_VERSION, p_version);
 	if (ret) {
 		DPAA_PMD_ERR("cannot get API version, error %i (%s)",
-			     errno, strerror(errno));
+			     errno, rte_strerror(errno));
 		RETURN_ERROR(MINOR, E_INVALID_OPERATION, NO_MSG);
 	}
 	_fml_dbg("Finishing.");
@@ -276,7 +276,7 @@ fm_pcd_kg_scheme_set(t_handle h_fm_pcd,
 	ret = ioctl(p_pcd_dev->fd, FM_PCD_IOC_KG_SCHEME_SET, params);
 	if (ret) {
 		DPAA_PMD_ERR("  cannot set kg scheme, error %i (%s)",
-			     errno, strerror(errno));
+			     errno, rte_strerror(errno));
 		return NULL;
 	}
 
@@ -310,7 +310,7 @@ fm_pcd_kg_scheme_delete(t_handle h_scheme)
 
 	if (ioctl(p_pcd_dev->fd, FM_PCD_IOC_KG_SCHEME_DELETE, &id)) {
 		DPAA_PMD_WARN("cannot delete kg scheme, error %i (%s)",
-			      errno, strerror(errno));
+			      errno, rte_strerror(errno));
 		RETURN_ERROR(MINOR, E_INVALID_OPERATION, NO_MSG);
 	}
 
