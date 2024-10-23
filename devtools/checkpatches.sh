@@ -209,6 +209,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# refrain from using strerror() for drivers and libs
+	awk -v FOLDERS="lib drivers" \
+		-v EXPRESSIONS="\\\sstrerror\\\(" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Using strerror, prefer rte_strerror' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# refrain from using RTE_LOG_REGISTER for drivers and libs
 	awk -v FOLDERS='lib drivers' \
 		-v EXPRESSIONS='\\<RTE_LOG_REGISTER\\>' \
