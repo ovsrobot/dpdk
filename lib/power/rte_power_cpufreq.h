@@ -3,8 +3,8 @@
  * Copyright(c) 2024 Advanced Micro Devices, Inc.
  */
 
-#ifndef _RTE_POWER_H
-#define _RTE_POWER_H
+#ifndef _RTE_POWER_CPUFREQ_H
+#define _RTE_POWER_CPUFREQ_H
 
 /**
  * @file
