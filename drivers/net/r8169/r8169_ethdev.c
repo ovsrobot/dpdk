@@ -143,6 +143,9 @@ rtl_dev_init(struct rte_eth_dev *dev)
 
 	rte_eth_copy_pci_info(dev, pci_dev);
 
+	if (rtl_set_hw_ops(hw))
+		return -ENOTSUP;
+
 	return 0;
 }
 
