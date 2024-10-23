@@ -2,6 +2,8 @@
  * Copyright(C) 2021 Marvell.
  */
 
+#include <rte_errno.h>
+
 #include "roc_api.h"
 #include "roc_priv.h"
 
@@ -245,7 +247,7 @@ roc_error_msg_get(int errorcode)
 		 * Handle general error (as defined in linux errno.h)
 		 */
 		if (abs(errorcode) < 300)
-			err_msg = strerror(abs(errorcode));
+			err_msg = rte_strerror(abs(errorcode));
 		else
 			err_msg = "Unknown error code";
 		break;

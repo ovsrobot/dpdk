@@ -8,6 +8,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <rte_errno.h>
+
 #include "roc_api.h"
 #include "roc_priv.h"
 
@@ -1323,7 +1325,7 @@ cn20k_pfvf_mbox_alloc(struct dev *dev, uint16_t max_vfs)
 
 	mz = plt_memzone_reserve_aligned(name, vf_mbox_region, 0, MBOX_SIZE);
 	if (!mz) {
-		plt_err("Memory alloc failed: %s", strerror(errno));
+		plt_err("Memory alloc failed: %s", rte_strerror(errno));
 		goto fail;
 	}
 
@@ -1445,7 +1447,7 @@ dev_lmt_setup(struct dev *dev)
 	 */
 	mz = plt_lmt_region_reserve_aligned(name, LMT_REGION_SIZE, LMT_REGION_SIZE);
 	if (!mz) {
-		plt_err("Memory alloc failed: %s", strerror(errno));
+		plt_err("Memory alloc failed: %s", rte_strerror(errno));
 		goto fail;
 	}
 

@@ -6,6 +6,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <rte_errno.h>
+
 #include "roc_api.h"
 #include "roc_priv.h"
 
@@ -157,7 +159,7 @@ cn10k_part_pass_get(uint32_t *part, uint32_t *pass)
 	dir = opendir(SYSFS_PCI_DEVICES);
 	if (dir == NULL) {
 		plt_err("%s(): opendir failed: %s", __func__,
-			strerror(errno));
+			rte_strerror(errno));
 		return -errno;
 	}
 
