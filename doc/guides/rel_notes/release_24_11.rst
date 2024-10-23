@@ -247,6 +247,10 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Updated the QuickAssist Technology (QAT) Crypto PMD.**
+
+  * Added SM2 encryption and decryption algorithms.
+
 
 Removed Items
 -------------
