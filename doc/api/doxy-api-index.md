@@ -99,6 +99,7 @@ The public API headers are grouped by topics:
   [interrupts](@ref rte_interrupts.h),
   [launch](@ref rte_launch.h),
   [lcore](@ref rte_lcore.h),
+  [lcore variables](@ref rte_lcore_var.h),
   [per-lcore](@ref rte_per_lcore.h),
   [service cores](@ref rte_service.h),
   [keepalive](@ref rte_keepalive.h),
