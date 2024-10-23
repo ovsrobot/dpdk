@@ -133,6 +133,39 @@ enum km_flm_if_select_e {
 	unsigned int alloced_size;                                                                \
 	int debug
 
+enum {
+	PROT_OTHER = 0,
+	PROT_L2_ETH2 = 1,
+};
+
+enum {
+	PROT_L3_IPV4 = 1,
+};
+
+enum {
+	PROT_L4_ICMP = 4
+};
+
+enum {
+	PROT_TUN_L3_OTHER = 0,
+	PROT_TUN_L3_IPV4 = 1,
+};
+
+enum {
+	PROT_TUN_L4_OTHER = 0,
+	PROT_TUN_L4_ICMP = 4
+};
+
+
+enum {
+	CPY_SELECT_DSCP_IPV4 = 0,
+	CPY_SELECT_DSCP_IPV6 = 1,
+	CPY_SELECT_RQI_QFI = 2,
+	CPY_SELECT_IPV4 = 3,
+	CPY_SELECT_PORT = 4,
+	CPY_SELECT_TEID = 5,
+};
+
 struct common_func_s {
 	COMMON_FUNC_INFO_S;
 };
