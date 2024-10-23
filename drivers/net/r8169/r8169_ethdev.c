@@ -72,6 +72,8 @@ rtl_dev_start(struct rte_eth_dev *dev)
 	struct rtl_hw *hw = &adapter->hw;
 	int err;
 
+	rtl_hw_config(hw);
+
 	/* Initialize transmission unit */
 	rtl_tx_init(dev);
 
