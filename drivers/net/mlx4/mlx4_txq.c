@@ -411,7 +411,7 @@ mlx4_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	if (!txq->cq) {
 		rte_errno = ENOMEM;
 		ERROR("%p: CQ creation failure: %s",
-		      (void *)dev, strerror(rte_errno));
+		      (void *)dev, rte_strerror(rte_errno));
 		goto error;
 	}
 	qp_init_attr = (struct ibv_qp_init_attr){
@@ -431,7 +431,7 @@ mlx4_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	if (!txq->qp) {
 		rte_errno = errno ? errno : EINVAL;
 		ERROR("%p: QP creation failure: %s",
-		      (void *)dev, strerror(rte_errno));
+		      (void *)dev, rte_strerror(rte_errno));
 		goto error;
 	}
 	txq->max_inline = qp_init_attr.cap.max_inline_data;
@@ -445,7 +445,7 @@ mlx4_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	if (ret) {
 		rte_errno = ret;
 		ERROR("%p: QP state to IBV_QPS_INIT failed: %s",
-		      (void *)dev, strerror(rte_errno));
+		      (void *)dev, rte_strerror(rte_errno));
 		goto error;
 	}
 	ret = mlx4_glue->modify_qp
@@ -457,7 +457,7 @@ mlx4_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	if (ret) {
 		rte_errno = ret;
 		ERROR("%p: QP state to IBV_QPS_RTR failed: %s",
-		      (void *)dev, strerror(rte_errno));
+		      (void *)dev, rte_strerror(rte_errno));
 		goto error;
 	}
 	ret = mlx4_glue->modify_qp
@@ -469,7 +469,7 @@ mlx4_tx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	if (ret) {
 		rte_errno = ret;
 		ERROR("%p: QP state to IBV_QPS_RTS failed: %s",
-		      (void *)dev, strerror(rte_errno));
+		      (void *)dev, rte_strerror(rte_errno));
 		goto error;
 	}
 	/* Retrieve device queue information. */
