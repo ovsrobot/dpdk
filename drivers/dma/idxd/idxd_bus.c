@@ -16,6 +16,7 @@
 #include <rte_log.h>
 #include <rte_dmadev_pmd.h>
 #include <rte_string_fns.h>
+#include <rte_errno.h>
 
 #include "idxd_internal.h"
 
@@ -145,7 +146,7 @@ read_wq_string(struct rte_dsa_device *dev, const char *filename,
 	fd = open(sysfs_node, O_RDONLY);
 	if (fd < 0) {
 		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
-				__func__, sysfs_node, strerror(errno));
+				__func__, sysfs_node, rte_strerror(errno));
 		return -1;
 	}
 
@@ -153,7 +154,7 @@ read_wq_string(struct rte_dsa_device *dev, const char *filename,
 	close(fd);
 	if (len < 0) {
 		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
-				__func__, sysfs_node, strerror(errno));
+				__func__, sysfs_node, rte_strerror(errno));
 		return -1;
 	}
 	value[len] = '\0';
@@ -173,13 +174,13 @@ read_wq_int(struct rte_dsa_device *dev, const char *filename,
 	f = fopen(sysfs_node, "r");
 	if (f == NULL) {
 		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
-				__func__, sysfs_node, strerror(errno));
+				__func__, sysfs_node, rte_strerror(errno));
 		return -1;
 	}
 
 	if (fscanf(f, "%d", value) != 1) {
 		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
-				__func__, sysfs_node, strerror(errno));
+				__func__, sysfs_node, rte_strerror(errno));
 		ret = -1;
 	}
 
@@ -200,13 +201,13 @@ read_device_int(struct rte_dsa_device *dev, const char *filename,
 	f = fopen(sysfs_node, "r");
 	if (f == NULL) {
 		IDXD_PMD_ERR("%s(): opening file '%s' failed: %s",
-				__func__, sysfs_node, strerror(errno));
+				__func__, sysfs_node, rte_strerror(errno));
 		return -1;
 	}
 
 	if (fscanf(f, "%d", value) != 1) {
 		IDXD_PMD_ERR("%s(): error reading file '%s': %s",
-				__func__, sysfs_node, strerror(errno));
+				__func__, sysfs_node, rte_strerror(errno));
 		ret = -1;
 	}
 
@@ -323,7 +324,7 @@ dsa_scan(void)
 		if (errno == ENOENT)
 			return 0; /* no bus, return without error */
 		IDXD_PMD_ERR("%s(): opendir '%s' failed: %s",
-				__func__, path, strerror(errno));
+				__func__, path, rte_strerror(errno));
 		return -1;
 	}
 
