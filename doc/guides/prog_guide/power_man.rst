@@ -107,6 +107,25 @@ User Cases
 The power management mechanism is used to save power when performing L3 forwarding.
 
 
+PM QoS
+------
+
+The "/sys/devices/system/cpu/cpuX/power/pm_qos_resume_latency_us" sysfs
+interface is used to set and get the resume latency limit on the cpuX for
+userspace. Each cpuidle governor in Linux select which idle state to enter
+based on this CPU resume latency in their idle task.
+
+The deeper the idle state, the lower the power consumption, but the longer
+the resume time. Some service are latency sensitive and very except the low
+resume time, like interrupt packet receiving mode.
+
+Applications can set and get the CPU resume latency by the
+``rte_power_qos_set_cpu_resume_latency()`` and ``rte_power_qos_get_cpu_resume_latency()``
+respectively. Applications can set a strict resume latency (zero value) by
+the ``rte_power_qos_set_cpu_resume_latency()`` to low the resume latency and
+get better performance (instead, the power consumption of platform may increase).
+
+
 Ethernet PMD Power Management API
 ---------------------------------
 
