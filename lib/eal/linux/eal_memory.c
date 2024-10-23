@@ -659,6 +659,7 @@ unmap_unneeded_hugepages(struct hugepage_file *hugepg_tbl,
 static int
 remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 {
+	const struct internal_config *internal_conf = eal_get_internal_configuration();
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
@@ -668,10 +669,9 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 	uint64_t page_sz;
 	size_t memseg_len;
 	int socket_id;
-#ifndef RTE_ARCH_64
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-#endif
+	void *map_addr;
+	size_t map_len;
+
 	page_sz = hugepages[seg_start].size;
 	socket_id = hugepages[seg_start].socket_id;
 	seg_len = seg_end - seg_start;
@@ -720,6 +720,9 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 			"RTE_MAX_MEMSEG_PER_TYPE and/or RTE_MAX_MEM_MB_PER_TYPE in configuration.");
 		return -1;
 	}
+
+	map_addr = RTE_PTR_ADD(msl->base_va, ms_idx * page_sz);
+	map_len = page_sz * seg_len;
 
 #ifdef RTE_ARCH_PPC_64
 	/* for PPC64 we go through the list backwards */
@@ -793,6 +796,14 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 			EAL_LOG(ERR, "Could not store segment fd: %s",
 				rte_strerror(rte_errno));
 	}
+
+	if (internal_conf->huge_dump) {
+		if (eal_mem_set_dump(map_addr, map_len, true) < 0)
+			EAL_LOG(WARNING,
+				"Failed to include hugepages in core dump (address %p, size %zu): %s",
+				map_addr, map_len, rte_strerror(rte_errno));
+	}
+
 	EAL_LOG(DEBUG, "Allocated %" PRIu64 "M on socket %i",
 			(seg_len * page_sz) >> 20, socket_id);
 	return seg_len;
@@ -1241,6 +1252,13 @@ eal_legacy_hugepage_init(void)
 					__func__);
 			goto fail;
 		}
+
+		if (internal_conf->huge_dump) {
+			if (eal_mem_set_dump(prealloc_addr, mem_sz, true) < 0)
+				EAL_LOG(WARNING, "Failed to include pages in core dump (address %p, size %zu): %s",
+					prealloc_addr, mem_sz, rte_strerror(rte_errno));
+		}
+
 		return 0;
 	}
 
@@ -1518,6 +1536,7 @@ getFileSize(int fd)
 static int
 eal_legacy_hugepage_attach(void)
 {
+	struct internal_config *internal_conf = eal_get_internal_configuration();
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct hugepage_file *hp = NULL;
 	unsigned int num_hp = 0;
@@ -1616,6 +1635,12 @@ eal_legacy_hugepage_attach(void)
 		if (eal_memalloc_set_seg_fd(msl_idx, ms_idx, fd) < 0)
 			EAL_LOG(ERR, "Could not store segment fd: %s",
 				rte_strerror(rte_errno));
+
+		if (internal_conf->huge_dump) {
+			if (eal_mem_set_dump(map_addr, map_sz, true) < 0)
+				EAL_LOG(WARNING, "Failed to include hugepage in core dump (address %p, size %zu): %s",
+					map_addr, map_sz, rte_strerror(rte_errno));
+		}
 	}
 	/* unmap the hugepage config file, since we are done using it */
 	munmap(hp, size);
@@ -1650,11 +1675,64 @@ eal_hugepage_attach(void)
 	return 0;
 }
 
+static int
+enable_shared_hugepage_coredump(void)
+{
+	const char *path = "/proc/self/coredump_filter";
+	const unsigned long shared_hugepage_flag = RTE_BIT64(6);
+
+	FILE *f;
+	uint64_t coredump_filter;
+
+	f = fopen(path, "r");
+	if (f == NULL) {
+		rte_errno = errno;
+		EAL_LOG(ERR, "Failed to open %s for reading: %s", path, strerror(errno));
+		return -1;
+	}
+
+	if (fscanf(f, "%"SCNx64, &coredump_filter) != 1) {
+		rte_errno = errno;
+		EAL_LOG(ERR, "Failed to parse %s: %s", path, strerror(errno));
+		fclose(f);
+		return -1;
+	}
+
+	fclose(f);
+
+	if (coredump_filter & shared_hugepage_flag)
+		return 0;
+
+	f = fopen(path, "w");
+	if (f == NULL) {
+		rte_errno = errno;
+		EAL_LOG(ERR, "Failed to open %s for writing: %s", path, strerror(errno));
+		return -1;
+	}
+
+	coredump_filter |= shared_hugepage_flag;
+	if (fprintf(f, "%"PRIx64, coredump_filter) <= 0) {
+		rte_errno = EIO;
+		EAL_LOG(ERR, "Failed to write %"PRIx64" to %s", coredump_filter, path);
+		fclose(f);
+		return -1;
+	}
+
+	fclose(f);
+	return 0;
+}
+
 int
 rte_eal_hugepage_init(void)
 {
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+
+	if (internal_conf->huge_dump && enable_shared_hugepage_coredump() < 0) {
+		EAL_LOG(ERR, "Failed to enable shared hugepage core dump: %s",
+			rte_strerror(rte_errno));
+		return -1;
+	}
 
 	return internal_conf->legacy_mem ?
 			eal_legacy_hugepage_init() :

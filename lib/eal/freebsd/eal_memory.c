@@ -94,6 +94,12 @@ rte_eal_hugepage_init(void)
 
 		eal_memseg_list_populate(msl, addr, n_segs);
 
+		if (internal_conf->huge_dump) {
+			if (eal_mem_set_dump(addr, mem_sz, true) < 0)
+				EAL_LOG(WARNING, "Failed to include pages in core dump (address %p, size %zu): %s",
+					addr, mem_sz, rte_strerror(rte_errno));
+		}
+
 		return 0;
 	}
 
@@ -205,6 +211,12 @@ rte_eal_hugepage_init(void)
 
 			rte_fbarray_set_used(arr, ms_idx);
 
+			if (internal_conf->huge_dump) {
+				if (eal_mem_set_dump(addr, page_sz, true) < 0)
+					EAL_LOG(WARNING, "Failed to include hugepage in core dump (address %p, size %zu): %s",
+						addr, page_sz, rte_strerror(rte_errno));
+			}
+
 			EAL_LOG(INFO, "Mapped memory segment %u @ %p: physaddr:0x%"
 					PRIx64", len %zu",
 					seg_idx++, addr, physaddr, page_sz);
@@ -232,6 +244,7 @@ static int
 attach_segment(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 		void *arg)
 {
+	struct internal_config *internal_conf = eal_get_internal_configuration();
 	struct attach_walk_args *wa = arg;
 	void *addr;
 
@@ -244,6 +257,12 @@ attach_segment(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 	if (addr == MAP_FAILED || addr != ms->addr)
 		return -1;
 	wa->seg_idx++;
+
+	if (internal_conf->huge_dump) {
+		if (eal_mem_set_dump(addr, ms->len, true) < 0)
+			EAL_LOG(WARNING, "Failed to include hugepage in core dump (address %p, size %zu): %s",
+				addr, ms->len, rte_strerror(rte_errno));
+	}
 
 	return 0;
 }

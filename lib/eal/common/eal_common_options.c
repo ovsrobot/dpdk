@@ -105,6 +105,7 @@ eal_long_options[] = {
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
 	{OPT_FORCE_MAX_SIMD_BITWIDTH, 1, NULL, OPT_FORCE_MAX_SIMD_BITWIDTH_NUM},
 	{OPT_HUGE_WORKER_STACK, 2, NULL, OPT_HUGE_WORKER_STACK_NUM     },
+	{OPT_HUGE_DUMP,         0, NULL, OPT_HUGE_DUMP_NUM        },
 
 	{0,                     0, NULL, 0                        }
 };
@@ -1942,6 +1943,11 @@ eal_parse_common_option(int opt, const char *optarg,
 			return -1;
 		}
 		break;
+	case OPT_HUGE_DUMP_NUM:
+		conf->huge_dump = 1;
+		EAL_LOG(WARNING, "Using --"OPT_HUGE_DUMP
+			" may result in core dump files which are large or contain sensitive data.");
+		break;
 
 	/* don't know what to do, leave this to caller */
 	default:
@@ -2250,6 +2256,7 @@ eal_common_usage(void)
 	       "  --"OPT_IN_MEMORY"   Operate entirely in memory. This will\n"
 	       "                      disable secondary process support\n"
 	       "  --"OPT_BASE_VIRTADDR"     Base virtual address\n"
+	       "  --"OPT_HUGE_DUMP"   Include hugepages in core dump.\n"
 	       "  --"OPT_TELEMETRY"   Enable telemetry support (on by default)\n"
 	       "  --"OPT_NO_TELEMETRY"   Disable telemetry support\n"
 	       "  --"OPT_FORCE_MAX_SIMD_BITWIDTH" Force the max SIMD bitwidth\n"

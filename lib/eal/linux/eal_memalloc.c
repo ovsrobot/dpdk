@@ -28,6 +28,7 @@
 #include <linux/mman.h> /* for hugetlb-related mmap flags */
 
 #include <rte_common.h>
+#include <rte_errno.h>
 #include <rte_log.h>
 #include <rte_eal.h>
 #include <rte_memory.h>
@@ -687,6 +688,13 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	ms->iova = iova;
 	ms->socket_id = socket_id;
 	ms->flags = dirty ? RTE_MEMSEG_FLAG_DIRTY : 0;
+
+	if (internal_conf->huge_dump) {
+		if (eal_mem_set_dump(addr, alloc_sz, true) < 0)
+			EAL_LOG(WARNING,
+				"Failed to include hugepage in coredump (address %p, size %zu): %s",
+				addr, alloc_sz, rte_strerror(rte_errno));
+	}
 
 	return 0;
 

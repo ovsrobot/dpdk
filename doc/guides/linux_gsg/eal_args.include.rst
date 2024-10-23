@@ -122,6 +122,14 @@ Memory-related options
     to system pthread stack size unless the optional size (in kbytes) is
     specified.
 
+*   ``--huge-dump``
+
+    Include in code dump all hugepages mapped by DPDK either at startup or later,
+    and ordirary pages mapped by DPDK at startup when ``--no-huge`` is given.
+    Hugepages increase core dumps size roughly by the amount of memory used.
+    Dumped memory often contains processed data, which may be sensitive.
+    Primary and secondary processes can use this option independently.
+
 Debugging options
 ~~~~~~~~~~~~~~~~~
 

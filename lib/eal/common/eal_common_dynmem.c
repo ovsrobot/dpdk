@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <rte_errno.h>
 #include <rte_log.h>
 #include <rte_string_fns.h>
 

@@ -103,6 +103,8 @@ struct internal_config {
 	struct simd_bitwidth max_simd_bitwidth;
 	/**< max simd bitwidth path to use */
 	size_t huge_worker_stack_size; /**< worker thread stack size */
+	/** True to include mapped hugepages in coredump. */
+	unsigned int huge_dump;
 };
 
 void eal_reset_internal_config(struct internal_config *internal_cfg);
