@@ -20,6 +20,7 @@
 #include <rte_eal_paging.h>
 #include <rte_malloc.h>
 #include <rte_vfio.h>
+#include <rte_errno.h>
 
 #include "bus_cdx_driver.h"
 #include "cdx_logs.h"
@@ -204,7 +205,7 @@ cdx_vfio_setup_interrupts(struct rte_cdx_device *dev, int vfio_dev_fd,
 		ret = ioctl(vfio_dev_fd, VFIO_DEVICE_GET_IRQ_INFO, &irq);
 		if (ret < 0) {
 			CDX_BUS_ERR("Cannot get VFIO IRQ info, error %i (%s)",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			return -1;
 		}
 
@@ -222,7 +223,7 @@ cdx_vfio_setup_interrupts(struct rte_cdx_device *dev, int vfio_dev_fd,
 		fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 		if (fd < 0) {
 			CDX_BUS_ERR("Cannot set up eventfd, error %i (%s)",
-				errno, strerror(errno));
+				errno, rte_strerror(errno));
 			return -1;
 		}
 
@@ -255,7 +256,7 @@ cdx_vfio_setup_device(struct rte_cdx_device *dev, int vfio_dev_fd,
 	 */
 	if (ioctl(vfio_dev_fd, VFIO_DEVICE_RESET) && errno != EINVAL) {
 		CDX_BUS_ERR("Unable to reset device! Error: %d (%s)", errno,
-			strerror(errno));
+			rte_strerror(errno));
 		return -1;
 	}
 
@@ -423,7 +424,7 @@ cdx_vfio_map_resource_primary(struct rte_cdx_device *dev)
 		ret = cdx_vfio_get_region_info(vfio_dev_fd, &reg, i);
 		if (ret < 0) {
 			CDX_BUS_ERR("%s cannot get device region info error %i (%s)",
-				dev_name, errno, strerror(errno));
+				dev_name, errno, rte_strerror(errno));
 			goto err_vfio_res;
 		}
 
@@ -451,7 +452,7 @@ cdx_vfio_map_resource_primary(struct rte_cdx_device *dev)
 		ret = cdx_vfio_mmap_resource(vfio_dev_fd, vfio_res, i, 0);
 		if (ret < 0) {
 			CDX_BUS_ERR("%s mapping region %i failed: %s",
-				cdx_addr, i, strerror(errno));
+				cdx_addr, i, rte_strerror(errno));
 			free(reg);
 			goto err_vfio_res;
 		}
@@ -519,7 +520,7 @@ cdx_vfio_map_resource_secondary(struct rte_cdx_device *dev)
 		ret = cdx_vfio_mmap_resource(vfio_dev_fd, vfio_res, i, MAP_FIXED);
 		if (ret < 0) {
 			CDX_BUS_ERR("%s mapping MMIO region %i failed: %s",
-				dev_name, i, strerror(errno));
+				dev_name, i, rte_strerror(errno));
 			goto err_vfio_dev_fd;
 		}
 

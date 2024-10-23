@@ -271,7 +271,7 @@ cdx_scan(void)
 	dir = opendir(RTE_CDX_BUS_DEVICES_PATH);
 	if (dir == NULL) {
 		CDX_BUS_INFO("%s(): opendir failed: %s", __func__,
-			strerror(errno));
+			rte_strerror(errno));
 		return 0;
 	}
 
