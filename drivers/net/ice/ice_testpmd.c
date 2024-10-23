@@ -61,7 +61,7 @@ cmd_ddp_dump_parsed(void *parsed_result,
 		default:
 			fprintf(stderr,
 				"Failed to dump DDP runtime configure,"
-				" error: (%s)\n", strerror(-ret));
+				" error: (%s)\n", rte_strerror(-ret));
 		}
 	}
 	free(buff);
@@ -128,7 +128,7 @@ cmd_ddp_dump_switch_parsed(void *parsed_result,
 		default:
 			fprintf(stderr,
 				"Failed to dump DDP switch runtime configure,"
-				" error: (%s)\n", strerror(-ret));
+				" error: (%s)\n", rte_strerror(-ret));
 		}
 	}
 	free(buff);
