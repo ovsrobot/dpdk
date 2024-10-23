@@ -205,8 +205,7 @@ static void done_resource_elements(struct flow_nic_dev *ndev, enum res_type_e re
 {
 	assert(ndev);
 
-	if (ndev->res[res_type].alloc_bm)
-		free(ndev->res[res_type].alloc_bm);
+	free(ndev->res[res_type].alloc_bm);
 }
 
 static void list_insert_flow_nic(struct flow_nic_dev *ndev)
