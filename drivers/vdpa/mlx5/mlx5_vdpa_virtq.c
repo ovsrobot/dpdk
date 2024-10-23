@@ -44,7 +44,7 @@ mlx5_vdpa_virtq_kick_handler(void *cb_arg)
 			    errno == EAGAIN)
 				continue;
 			DRV_LOG(ERR,  "Failed to read kickfd of virtq %d: %s.",
-				virtq->index, strerror(errno));
+				virtq->index, rte_strerror(errno));
 		}
 		break;
 	}
