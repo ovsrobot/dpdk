@@ -11,8 +11,6 @@ if python_ver_satisfied != 0
     subdir_done()
 endif
 
-cdata.set('DTS_API_MAIN_PAGE', join_paths('..', 'dts', 'html', 'index.html'))
-
 extra_sphinx_args = ['-E', '-c', join_paths(doc_source_dir, 'guides')]
 if get_option('werror')
     extra_sphinx_args += '-W'

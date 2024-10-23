@@ -40,6 +40,7 @@ cdata.set('OUTPUT', join_paths(dpdk_build_root, 'doc', 'api'))
 cdata.set('TOPDIR', dpdk_source_root)
 cdata.set('STRIP_FROM_PATH', ' '.join([dpdk_source_root, join_paths(dpdk_build_root, 'doc', 'api')]))
 cdata.set('WARN_AS_ERROR', 'NO')
+cdata.set('DTS_API_MAIN_PAGE', join_paths(dpdk_build_root, 'doc', 'api', 'dts', 'html', 'index.html'))
 if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
