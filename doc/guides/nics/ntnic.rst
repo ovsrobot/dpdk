@@ -40,6 +40,36 @@ Features
 - Unicast MAC filter
 - Multicast MAC filter
 - Promiscuous mode (Enable only. The device always run promiscuous mode)
+- Multiple TX and RX queues.
+- Scattered and gather for TX and RX.
+- RSS hash
+- RSS key update
+- RSS based on VLAN or 5-tuple.
+- RSS using different combinations of fields: L3 only, L4 only or both, and
+    source only, destination only or both.
+- Several RSS hash keys, one for each flow type.
+- Default RSS operation with no hash key specification.
+- VLAN filtering.
+- RX VLAN stripping via raw decap.
+- TX VLAN insertion via raw encap.
+- Flow API.
+- Multiple process.
+- Tunnel types: GTP.
+- Tunnel HW offload: Packet type, inner/outer RSS, IP and UDP checksum
+    verification.
+- Support for multiple rte_flow groups.
+- Encapsulation and decapsulation of GTP data.
+- Packet modification: NAT, TTL decrement, DSCP tagging
+- Traffic mirroring.
+- Jumbo frame support.
+- Port and queue statistics.
+- RMON statistics in extended stats.
+- Flow metering, including meter policy API.
+- Link state information.
+- CAM and TCAM based matching.
+- Exact match of 140 million flows and policies.
+- Basic stats
+- Extended stats
 
 Limitations
 ~~~~~~~~~~~
