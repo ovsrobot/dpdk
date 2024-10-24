@@ -247,6 +247,11 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Added Marvell cnxk RVU LF rawdev driver.**
+
+  Added a new raw device driver for Marvell cnxk based devices to allow
+  applications to communicate using mailboxes and notify for the interrupts.
+
 
 Removed Items
 -------------

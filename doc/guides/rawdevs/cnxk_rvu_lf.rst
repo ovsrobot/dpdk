@@ -65,3 +65,11 @@ can register callbacks using ``rte_pmd_rvu_lf_msg_handler_register()``
 and fill required responses as per the request and message id received.
 Application can also unregister already registered message callbacks using
 ``rte_pmd_rvu_lf_msg_handler_unregister()``.
+
+A PMD API ``rte_pmd_rvu_lf_msg_process()`` is created to send a request and
+receive corresponding response from the other side(PF/VF).
+It accepts an opaque pointer of a request and its size which can be defined by application
+and provides an opaque pointer for a response and its length.
+PF and VF application can define its own request and response based on the message id
+of the mailbox.
+For sample usage of the APIs, please refer to ``rvu_lf_rawdev_selftest()``.
