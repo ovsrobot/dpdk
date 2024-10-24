@@ -50,6 +50,17 @@ extern "C" {
 #define __rte_constant(e) __extension__(__builtin_constant_p(e))
 #endif
 
+/**
+ * Hint to the optimizer.
+ */
+#if defined(RTE_TOOLCHAIN_GCC)
+#define __rte_assume(e) __attribute__((assume(e)))
+#elif defined(RTE_TOOLCHAIN_CLANG)
+#define __rte_assume(e) __extension__(__builtin_assume(e))
+#else
+#define __rte_assume(e) do {} while (0)
+#endif
+
 /*
  * RTE_TOOLCHAIN_GCC is defined if the target is built with GCC,
  * while a host application (like pmdinfogen) may have another compiler.
