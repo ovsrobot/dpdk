@@ -508,13 +508,14 @@ eal_log_init(const char *id)
 {
 	FILE *logf = NULL;
 
-	if (log_syslog_enabled())
+	if (log_journal_enabled())
+		logf = log_journal_open(id);
+	else if (log_syslog_enabled())
 		logf = log_syslog_open(id);
 
 	if (logf)
 		rte_openlog_stream(logf);
-
-	if (log_timestamp_enabled())
+	else if (log_timestamp_enabled())
 		rte_logs.print_func = log_print_with_timestamp;
 	else
 		rte_logs.print_func = vfprintf;
