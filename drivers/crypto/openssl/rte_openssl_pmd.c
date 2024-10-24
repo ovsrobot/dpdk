@@ -2,6 +2,7 @@
  * Copyright(c) 2016-2017 Intel Corporation
  */
 
+#include <rte_byteorder.h>
 #include <rte_common.h>
 #include <rte_hexdump.h>
 #include <rte_cryptodev.h>
@@ -110,9 +111,9 @@ ctr_inc(uint8_t *ctr)
 {
 	uint64_t *ctr64 = (uint64_t *)ctr;
 
-	*ctr64 = __builtin_bswap64(*ctr64);
+	*ctr64 = rte_be_to_cpu_64(*ctr64);
 	(*ctr64)++;
-	*ctr64 = __builtin_bswap64(*ctr64);
+	*ctr64 = rte_cpu_to_be_64(*ctr64);
 }
 
 /*
