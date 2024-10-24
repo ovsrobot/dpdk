@@ -103,6 +103,10 @@ fs_dev_configure(struct rte_eth_dev *dev)
 	return 0;
 }
 
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC push_options
+#pragma GCC optimize("no-peel-loops")
+#endif
 static void
 fs_set_queues_state_start(struct rte_eth_dev *dev)
 {
@@ -123,6 +127,9 @@ fs_set_queues_state_start(struct rte_eth_dev *dev)
 						RTE_ETH_QUEUE_STATE_STARTED;
 	}
 }
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC pop_options
+#endif
 
 static int
 fs_dev_start(struct rte_eth_dev *dev)
@@ -171,6 +178,10 @@ fs_dev_start(struct rte_eth_dev *dev)
 	return 0;
 }
 
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC push_options
+#pragma GCC optimize("no-peel-loops")
+#endif
 static void
 fs_set_queues_state_stop(struct rte_eth_dev *dev)
 {
@@ -185,6 +196,9 @@ fs_set_queues_state_stop(struct rte_eth_dev *dev)
 			dev->data->tx_queue_state[i] =
 						RTE_ETH_QUEUE_STATE_STOPPED;
 }
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC pop_options
+#endif
 
 static int
 fs_dev_stop(struct rte_eth_dev *dev)

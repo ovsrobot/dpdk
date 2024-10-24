@@ -1299,6 +1299,10 @@ hns3_init_queues(struct hns3_adapter *hns, bool reset_queue)
 	return ret;
 }
 
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC push_options
+#pragma GCC optimize("no-peel-loops")
+#endif
 void
 hns3_start_tqps(struct hns3_hw *hw)
 {
@@ -1322,6 +1326,9 @@ hns3_start_tqps(struct hns3_hw *hw)
 				RTE_ETH_QUEUE_STATE_STARTED;
 	}
 }
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC pop_options
+#endif
 
 void
 hns3_stop_tqps(struct hns3_hw *hw)
