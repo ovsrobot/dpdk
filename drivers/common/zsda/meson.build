@@ -30,7 +30,7 @@ zsda_crypto_path = 'crypto/zsda'
 zsda_crypto_relpath = '../../' + zsda_crypto_path
 if zsda_crypto
 	libcrypto = dependency('libcrypto', required: false, method: 'pkg-config')
-	foreach f: ['zsda_sym_session.c', 'zsda_sym.c']
+	foreach f: ['zsda_sym_session.c', 'zsda_sym.c', 'zsda_sym_pmd.c']
 		sources += files(join_paths(zsda_crypto_relpath, f))
 	endforeach
 	deps += ['security']
