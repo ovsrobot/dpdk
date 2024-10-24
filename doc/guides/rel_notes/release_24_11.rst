@@ -247,6 +247,8 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Updated NVIDIA MLX5 net driver.**
+  * Added rte_flow_async_create_by_index_with_pattern() support.
 
 Removed Items
 -------------
