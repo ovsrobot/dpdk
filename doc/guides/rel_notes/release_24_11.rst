@@ -247,6 +247,9 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Added RSS hash key generating API.**
+  A new function ``rte_thash_gen_key`` is provided to modify the RSS hash key
+  to achieve better traffic distribution with RSS.
 
 Removed Items
 -------------
