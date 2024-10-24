@@ -515,10 +515,22 @@ eal_log_init(const char *id)
 
 	if (logf)
 		rte_openlog_stream(logf);
-	else if (log_timestamp_enabled())
-		rte_logs.print_func = log_print_with_timestamp;
-	else
-		rte_logs.print_func = vfprintf;
+	else {
+		bool is_terminal = isatty(fileno(stderr));
+		bool use_color = log_color_enabled(is_terminal);
+
+		if (log_timestamp_enabled()) {
+			if (use_color)
+				rte_logs.print_func = color_print_with_timestamp;
+			else
+				rte_logs.print_func = log_print_with_timestamp;
+		} else {
+			if (use_color)
+				rte_logs.print_func = color_print;
+			else
+				rte_logs.print_func = vfprintf;
+		}
+	}
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
