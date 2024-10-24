@@ -249,6 +249,7 @@ New Features
 
 * **Updated NVIDIA MLX5 net driver.**
   * Added rte_flow_async_create_by_index_with_pattern() support.
+  * Added RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE_INDEX support.
 
 Removed Items
 -------------
