@@ -81,18 +81,16 @@ static cookie_io_functions_t log_syslog_func = {
  * set the log to default function, called during eal init process,
  * once memzones are available.
  */
-int
+void
 eal_log_init(const char *id)
 {
 	FILE *log_stream;
 
-	log_stream = fopencookie(NULL, "w+", log_syslog_func);
-	if (log_stream == NULL)
-		return -1;
-
 	openlog(id, LOG_NDELAY | LOG_PID | LOG_PERROR, log_facility);
 
-	eal_log_set_default(log_stream);
-
-	return 0;
+	log_stream = fopencookie(NULL, "w+", log_syslog_func);
+	if (log_stream != NULL)
+		eal_log_set_default(log_stream);
+	else
+		eal_log_set_default(stderr);
 }
