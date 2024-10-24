@@ -108,30 +108,3 @@ Memory-related options
 *   ``--match-allocations``
 
     Free hugepages back to system exactly as they were originally allocated.
-
-Other options
-~~~~~~~~~~~~~
-
-*   ``--syslog <syslog facility>``
-
-    Set syslog facility. Valid syslog facilities are::
-
-        auth
-        cron
-        daemon
-        ftp
-        kern
-        lpr
-        mail
-        news
-        syslog
-        user
-        uucp
-        local0
-        local1
-        local2
-        local3
-        local4
-        local5
-        local6
-        local7

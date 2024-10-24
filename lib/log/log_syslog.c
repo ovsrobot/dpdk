@@ -5,12 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include <syslog.h>
 
 #include <rte_common.h>
 #include <rte_log.h>
 
 #include "log_internal.h"
+#include "log_private.h"
 
 static int log_facility = LOG_DAEMON;
 
@@ -77,20 +81,11 @@ static cookie_io_functions_t log_syslog_func = {
 	.close = log_syslog_close,
 };
 
-/*
- * set the log to default function, called during eal init process,
- * once memzones are available.
- */
-void
-eal_log_init(const char *id)
+FILE *
+log_syslog_open(const char *id)
 {
-	FILE *log_stream;
-
 	openlog(id, LOG_NDELAY | LOG_PID | LOG_PERROR, log_facility);
 
-	log_stream = fopencookie(NULL, "w+", log_syslog_func);
-	if (log_stream != NULL)
-		eal_log_set_default(log_stream);
-	else
-		eal_log_set_default(stderr);
+	/* redirect other log messages to syslog as well */
+	return fopencookie(NULL, "w", log_syslog_func);
 }

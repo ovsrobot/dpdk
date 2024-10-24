@@ -91,7 +91,7 @@ eal_long_options[] = {
 	{OPT_SOCKET_MEM,        1, NULL, OPT_SOCKET_MEM_NUM       },
 	{OPT_SOCKET_LIMIT,      1, NULL, OPT_SOCKET_LIMIT_NUM     },
 #ifndef RTE_EXEC_ENV_WINDOWS
-	{OPT_SYSLOG,            1, NULL, OPT_SYSLOG_NUM           },
+	{OPT_SYSLOG,            2, NULL, OPT_SYSLOG_NUM           },
 #endif
 	{OPT_VDEV,              1, NULL, OPT_VDEV_NUM             },
 	{OPT_VFIO_INTR,         1, NULL, OPT_VFIO_INTR_NUM        },
@@ -2209,7 +2209,7 @@ eal_common_usage(void)
 	       "  --"OPT_VMWARE_TSC_MAP"    Use VMware TSC map instead of native RDTSC\n"
 	       "  --"OPT_PROC_TYPE"         Type of this process (primary|secondary|auto)\n"
 #ifndef RTE_EXEC_ENV_WINDOWS
-	       "  --"OPT_SYSLOG"            Set syslog facility\n"
+	       "  --"OPT_SYSLOG"[=<when>]   Enable use of syslog\n"
 #endif
 	       "  --"OPT_LOG_LEVEL"=<level> Set global log level\n"
 	       "  --"OPT_LOG_LEVEL"=<type-match>:<level>\n"
