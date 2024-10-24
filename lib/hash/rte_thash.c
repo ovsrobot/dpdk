@@ -856,3 +856,16 @@ rte_thash_adjust_tuple(struct rte_thash_ctx *ctx,
 
 	return ret;
 }
+
+int
+rte_thash_gen_key(uint8_t *key, size_t key_len, size_t reta_sz_log,
+	uint32_t entropy_start, size_t entropy_sz)
+{
+	RTE_SET_USED(key);
+	RTE_SET_USED(key_len);
+	RTE_SET_USED(reta_sz_log);
+	RTE_SET_USED(entropy_start);
+	RTE_SET_USED(entropy_sz);
+
+	return 0;
+}
