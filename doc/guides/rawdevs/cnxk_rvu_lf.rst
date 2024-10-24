@@ -80,3 +80,21 @@ Get BAR addresses
 Application can retrieve PCI BAR addresses of the device using the API
 ``rte_pmd_rvu_lf_bar_get()``. This helps application to configure the
 registers of the hardware device.
+
+Self test
+---------
+
+On EAL initialization RVU_LF devices will be probed and populated into
+the raw devices. The rawdev ID of the device can be obtained using invocation
+of ``rte_rawdev_get_dev_id("NAME:x")`` from the test application, where:
+
+- NAME is the desired subsystem: use "RVU_LF".
+- x is the device's bus id specified in "bus:device.func" (BDF) format. BDF follows convention
+  used by lspci i.e bus, device and func are specified using respectively two, two and one hex
+  digit(s).
+
+Use this identifier for further rawdev function calls.
+
+Selftest rawdev API can be used to verify the mailbox communication between
+PF and VF devices based applications. There can be multiple VFs for a particular PF.
+Each VF can send mailboxes to PF and PF can broadcast message to all VFs.
