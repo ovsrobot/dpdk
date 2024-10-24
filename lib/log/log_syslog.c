@@ -16,8 +16,12 @@
 #include "log_internal.h"
 #include "log_private.h"
 
-static int log_facility = LOG_DAEMON;
+static int log_facility;
 
+/*
+ * Usable list of facilities
+ * Skip kern, mark, and security
+ */
 static const struct {
 	const char *name;
 	int value;
@@ -48,6 +52,11 @@ eal_log_syslog(const char *name)
 {
 	unsigned int i;
 
+	if (name == NULL) {
+		log_facility = LOG_DAEMON;
+		return 0;
+	}
+
 	for (i = 0; i < RTE_DIM(facilitys); i++) {
 		if (!strcmp(name, facilitys[i].name)) {
 			log_facility = facilitys[i].value;
@@ -55,6 +64,12 @@ eal_log_syslog(const char *name)
 		}
 	}
 	return -1;
+}
+
+/* syslog is enabled if facility is set */
+bool log_syslog_enabled(void)
+{
+	return log_facility != 0; /* LOG_KERN is 0 */
 }
 
 /*
