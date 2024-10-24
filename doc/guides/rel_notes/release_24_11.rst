@@ -231,6 +231,10 @@ New Features
 
   * Added independent enqueue feature.
 
+* **Updated Marvell CNXK DMA driver.**
+
+  Added support for DMA queue priority configuration.
+
 * **Added IPv4 network order lookup in the FIB library.**
 
   A new flag field is introduced in ``rte_fib_conf`` structure.
