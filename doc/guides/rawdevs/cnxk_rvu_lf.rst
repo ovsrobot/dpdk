@@ -73,3 +73,10 @@ and provides an opaque pointer for a response and its length.
 PF and VF application can define its own request and response based on the message id
 of the mailbox.
 For sample usage of the APIs, please refer to ``rvu_lf_rawdev_selftest()``.
+
+Get BAR addresses
+-----------------
+
+Application can retrieve PCI BAR addresses of the device using the API
+``rte_pmd_rvu_lf_bar_get()``. This helps application to configure the
+registers of the hardware device.
