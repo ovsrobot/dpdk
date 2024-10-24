@@ -1868,6 +1868,9 @@ igb_dev_clear_queues(struct rte_eth_dev *dev)
 	struct igb_rx_queue *rxq;
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		txq = dev->data->tx_queues[i];
 		if (txq != NULL) {
 			igb_tx_queue_release_mbufs(txq);
@@ -1877,6 +1880,9 @@ igb_dev_clear_queues(struct rte_eth_dev *dev)
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		rxq = dev->data->rx_queues[i];
 		if (rxq != NULL) {
 			igb_rx_queue_release_mbufs(rxq);

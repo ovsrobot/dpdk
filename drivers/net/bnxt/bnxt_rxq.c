@@ -584,6 +584,9 @@ int bnxt_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 		return -EINVAL;
 	}
 
+#if defined(RTE_TOOLCHAIN_GCC)
+	__attribute__((assume(q_id < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 	dev->data->rx_queue_state[q_id] = RTE_ETH_QUEUE_STATE_STOPPED;
 	rxq->rx_started = false;
 	PMD_DRV_LOG_LINE(DEBUG, "Rx queue stopped");

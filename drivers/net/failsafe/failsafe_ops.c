@@ -111,12 +111,18 @@ fs_set_queues_state_start(struct rte_eth_dev *dev)
 	uint16_t i;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		rxq = dev->data->rx_queues[i];
 		if (rxq != NULL && !rxq->info.conf.rx_deferred_start)
 			dev->data->rx_queue_state[i] =
 						RTE_ETH_QUEUE_STATE_STARTED;
 	}
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		txq = dev->data->tx_queues[i];
 		if (txq != NULL && !txq->info.conf.tx_deferred_start)
 			dev->data->tx_queue_state[i] =
@@ -176,14 +182,22 @@ fs_set_queues_state_stop(struct rte_eth_dev *dev)
 {
 	uint16_t i;
 
-	for (i = 0; i < dev->data->nb_rx_queues; i++)
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		if (dev->data->rx_queues[i] != NULL)
 			dev->data->rx_queue_state[i] =
 						RTE_ETH_QUEUE_STATE_STOPPED;
-	for (i = 0; i < dev->data->nb_tx_queues; i++)
+	}
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		if (dev->data->tx_queues[i] != NULL)
 			dev->data->tx_queue_state[i] =
 						RTE_ETH_QUEUE_STATE_STOPPED;
+	}
 }
 
 static int

@@ -154,6 +154,9 @@ mana_start_tx_queues(struct rte_eth_dev *dev)
 			txq->gdma_cq.count, txq->gdma_cq.size,
 			txq->gdma_cq.head);
 
+#if defined(RTE_TOOLCHAIN_GCC)
+		__attribute__((assume(i < RTE_MAX_QUEUES_PER_PORT)));
+#endif
 		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
