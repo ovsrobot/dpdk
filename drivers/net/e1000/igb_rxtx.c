@@ -1860,6 +1860,8 @@ eth_igb_tx_descriptor_status(void *tx_queue, uint16_t offset)
 	return RTE_ETH_TX_DESC_FULL;
 }
 
+#pragma GCC push_options
+#pragma GCC optimize("no-peel-loops")
 void
 igb_dev_clear_queues(struct rte_eth_dev *dev)
 {
@@ -1885,6 +1887,7 @@ igb_dev_clear_queues(struct rte_eth_dev *dev)
 		}
 	}
 }
+#pragma GCC pop_options
 
 void
 igb_dev_free_queues(struct rte_eth_dev *dev)

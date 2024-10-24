@@ -842,6 +842,8 @@ error:
 	return -ENOMEM;
 }
 
+#pragma GCC push_options
+#pragma GCC optimize("no-peel-loops")
 static int bnxt_start_nic(struct bnxt *bp)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(bp->eth_dev);
@@ -1006,6 +1008,7 @@ err_out:
 
 	return rc;
 }
+#pragma GCC pop_options
 
 static int bnxt_shutdown_nic(struct bnxt *bp)
 {
