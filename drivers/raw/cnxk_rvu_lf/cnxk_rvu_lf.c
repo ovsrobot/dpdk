@@ -5,8 +5,6 @@
 #include <bus_pci_driver.h>
 #include <rte_common.h>
 #include <dev_driver.h>
-#include <rte_eal.h>
-#include <rte_lcore.h>
 #include <rte_pci.h>
 #include <rte_rawdev.h>
 #include <rte_rawdev_pmd.h>
@@ -155,7 +153,7 @@ rte_pmd_rvu_lf_pf_func_get(uint8_t dev_id)
 }
 
 static const struct rte_rawdev_ops rvu_lf_rawdev_ops = {
-	.dev_selftest = NULL,
+	.dev_selftest = rvu_lf_rawdev_selftest,
 };
 
 static void
