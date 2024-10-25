@@ -247,6 +247,13 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Added PMU library.**
+
+  Added a new performance monitoring unit (PMU) library which allows applications
+  to perform self monitoring activities without depending on external utilities like perf.
+  After integration with :doc:`../prog_guide/trace_lib` data gathered from hardware counters
+  can be stored in CTF format for further analysis.
+
 
 Removed Items
 -------------

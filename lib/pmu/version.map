@@ -1,0 +1,13 @@
+EXPERIMENTAL {
+	global:
+
+	# added in 24.11
+	__rte_pmu_enable_group;
+	rte_pmu;
+	rte_pmu_add_event;
+	rte_pmu_fini;
+	rte_pmu_init;
+	rte_pmu_read;
+
+	local: *;
+};
