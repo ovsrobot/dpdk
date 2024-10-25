@@ -257,3 +257,75 @@ rtl_set_pcie_phy_bit(struct rtl_hw *hw, u8 addr, u16 mask)
 {
 	rtl_clear_and_set_pcie_phy_bit(hw, addr, 0, mask);
 }
+
+bool
+rtl_set_phy_mcu_patch_request(struct rtl_hw *hw)
+{
+	u16 gphy_val;
+	u16 wait_cnt;
+	bool bool_success = TRUE;
+
+	rtl_set_eth_phy_ocp_bit(hw, 0xB820, BIT_4);
+
+	wait_cnt = 0;
+	do {
+		gphy_val = rtl_mdio_direct_read_phy_ocp(hw, 0xB800);
+		rte_delay_us(100);
+		wait_cnt++;
+	} while (!(gphy_val & BIT_6) && (wait_cnt < 1000));
+
+	if (!(gphy_val & BIT_6) && wait_cnt == 1000)
+		bool_success = FALSE;
+
+	if (!bool_success)
+		PMD_INIT_LOG(NOTICE, "rtl_set_phy_mcu_patch_request fail.");
+
+	return bool_success;
+}
+
+bool
+rtl_clear_phy_mcu_patch_request(struct rtl_hw *hw)
+{
+	u16 gphy_val;
+	u16 wait_cnt;
+	bool bool_success = TRUE;
+
+	rtl_clear_eth_phy_ocp_bit(hw, 0xB820, BIT_4);
+
+	wait_cnt = 0;
+	do {
+		gphy_val = rtl_mdio_direct_read_phy_ocp(hw, 0xB800);
+		rte_delay_us(100);
+		wait_cnt++;
+	} while ((gphy_val & BIT_6) && (wait_cnt < 1000));
+
+	if ((gphy_val & BIT_6) && wait_cnt == 1000)
+		bool_success = FALSE;
+
+	if (!bool_success)
+		PMD_INIT_LOG(NOTICE, "rtl_clear_phy_mcu_patch_request fail.");
+
+	return bool_success;
+}
+
+void
+rtl_set_phy_mcu_ram_code(struct rtl_hw *hw, const u16 *ramcode, u16 codesize)
+{
+	u16 i;
+	u16 addr;
+	u16 val;
+
+	if (ramcode == NULL || codesize % 2)
+		goto out;
+
+	for (i = 0; i < codesize; i += 2) {
+		addr = ramcode[i];
+		val = ramcode[i + 1];
+		if (addr == 0xFFFF && val == 0xFFFF)
+			break;
+		rtl_mdio_direct_write_phy_ocp(hw, addr, val);
+	}
+
+out:
+	return;
+}

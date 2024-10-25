@@ -35,4 +35,10 @@ void rtl_clear_and_set_pcie_phy_bit(struct rtl_hw *hw, u8 addr, u16 clearmask,
 void rtl_clear_pcie_phy_bit(struct rtl_hw *hw, u8 addr, u16 mask);
 void rtl_set_pcie_phy_bit(struct rtl_hw *hw, u8 addr, u16 mask);
 
+bool rtl_set_phy_mcu_patch_request(struct rtl_hw *hw);
+bool rtl_clear_phy_mcu_patch_request(struct rtl_hw *hw);
+
+void rtl_set_phy_mcu_ram_code(struct rtl_hw *hw, const u16 *ramcode,
+			      u16 codesize);
+
 #endif
