@@ -33,6 +33,14 @@ struct zsda_wqe_comp {
 	struct compress_cfg cfg;
 } __rte_packed;
 
+/* For situations where err0 are reported but the results are correct */
+#define DECOMP_RIGHT_ERR0_0 0xc710
+#define DECOMP_RIGHT_ERR0_1 0xc727
+#define DECOMP_RIGHT_ERR0_2 0xc729
+#define CQE_ERR0_RIGHT(value)                                                  \
+	(value == DECOMP_RIGHT_ERR0_0 || value == DECOMP_RIGHT_ERR0_1 ||       \
+	 value == DECOMP_RIGHT_ERR0_2)
+
 int zsda_comp_match(const void *op_in);
 int zsda_build_comp_request(void *op_in, const struct zsda_queue *queue,
 		       void **op_cookies, const uint16_t new_tail);
