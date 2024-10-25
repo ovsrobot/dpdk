@@ -17,6 +17,10 @@
 
 static int log_facility;
 
+/*
+ * Usable list of facilities
+ * Skip kern, mark, and security
+ */
 static const struct {
 	const char *name;
 	int value;
@@ -46,6 +50,11 @@ int
 eal_log_syslog(const char *name)
 {
 	unsigned int i;
+
+	if (name == NULL) {
+		log_facility = LOG_DAEMON;
+		return 0;
+	}
 
 	for (i = 0; i < RTE_DIM(facilitys); i++) {
 		if (!strcmp(name, facilitys[i].name)) {
