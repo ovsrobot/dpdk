@@ -27,6 +27,7 @@ Memory Management
     mempool_lib
     mbuf_lib
     multi_proc_support
+    lcore_var
 
 
 CPU Management
