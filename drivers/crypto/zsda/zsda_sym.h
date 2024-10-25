@@ -44,4 +44,6 @@ int zsda_encry_match(const void *op_in);
 int zsda_decry_match(const void *op_in);
 int zsda_hash_match(const void *op_in);
 
+int zsda_crypto_callback(void *cookie_in, struct zsda_cqe *cqe);
+
 #endif /* _ZSDA_SYM_H_ */
