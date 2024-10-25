@@ -18,6 +18,7 @@ struct rtl_hw {
 	u8  *mmio_addr;
 	u32 mcfg;
 	u8  HwSuppIntMitiVer;
+	u16 cur_page;
 
 	/* Enable Tx No Close */
 	u8 EnableTxNoClose;
