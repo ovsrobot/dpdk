@@ -29,6 +29,7 @@
 #include "r8169_base.h"
 #include "r8169_logs.h"
 #include "r8169_hw.h"
+#include "r8169_dash.h"
 
 static int rtl_dev_configure(struct rte_eth_dev *dev __rte_unused);
 static int rtl_dev_start(struct rte_eth_dev *dev);
@@ -594,6 +595,9 @@ rtl_dev_close(struct rte_eth_dev *dev)
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	if (HW_DASH_SUPPORT_DASH(hw))
+		rtl8125_driver_stop(hw);
 
 	ret_stp = rtl_dev_stop(dev);
 
