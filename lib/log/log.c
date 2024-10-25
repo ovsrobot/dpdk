@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -12,13 +13,16 @@
 #include <fnmatch.h>
 #include <sys/queue.h>
 
+#include <rte_common.h>
 #include <rte_log.h>
 #include <rte_per_lcore.h>
+
 #ifdef RTE_EXEC_ENV_WINDOWS
 #include <rte_os_shim.h>
 #endif
 
 #include "log_internal.h"
+#include "log_private.h"
 
 struct rte_log_dynamic_type {
 	const char *name;
@@ -54,9 +58,6 @@ TAILQ_HEAD(rte_eal_opt_loglevel_list, rte_eal_opt_loglevel);
 static struct rte_eal_opt_loglevel_list opt_loglevel_list =
 	TAILQ_HEAD_INITIALIZER(opt_loglevel_list);
 
-/* Stream to use for logging if rte_logs.file is NULL */
-static FILE *default_log_stream;
-
 /**
  * This global structure stores some information about the message
  * that is currently being processed by one lcore
@@ -68,8 +69,6 @@ struct log_cur_msg {
 
  /* per core log */
 static RTE_DEFINE_PER_LCORE(struct log_cur_msg, log_cur_msg);
-
-/* default logs */
 
 /* Change the stream that will be used by logging system */
 int
@@ -84,17 +83,7 @@ rte_log_get_stream(void)
 {
 	FILE *f = rte_logs.file;
 
-	if (f == NULL) {
-		/*
-		 * Grab the current value of stderr here, rather than
-		 * just initializing default_log_stream to stderr. This
-		 * ensures that we will always use the current value
-		 * of stderr, even if the application closes and
-		 * reopens it.
-		 */
-		return default_log_stream != NULL ? default_log_stream : stderr;
-	}
-	return f;
+	return (f == NULL) ? stderr : f;
 }
 
 /* Set global log level */
@@ -505,12 +494,18 @@ rte_log(uint32_t level, uint32_t logtype, const char *format, ...)
 }
 
 /*
- * Called by environment-specific initialization functions.
+ * Called by rte_eal_init
  */
 void
-eal_log_set_default(FILE *default_log)
+eal_log_init(const char *id)
 {
-	default_log_stream = default_log;
+	FILE *logf = NULL;
+
+	if (log_syslog_enabled())
+		logf = log_syslog_open(id);
+
+	if (logf)
+		rte_openlog_stream(logf);
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	RTE_LOG(NOTICE, EAL,
@@ -524,8 +519,11 @@ eal_log_set_default(FILE *default_log)
 void
 rte_eal_log_cleanup(void)
 {
-	if (default_log_stream) {
-		fclose(default_log_stream);
-		default_log_stream = NULL;
-	}
+	FILE *log_stream = rte_logs.file;
+
+	/* don't close stderr on the application */
+	if (log_stream != NULL)
+		fclose(log_stream);
+
+	rte_logs.file = NULL;
 }
