@@ -307,3 +307,132 @@ static struct rte_cryptodev_ops crypto_zsda_ops = {
 	.sym_session_configure = zsda_sym_session_configure,
 	.sym_session_clear = zsda_sym_session_clear,
 };
+
+static uint16_t
+zsda_sym_pmd_enqueue_op_burst(void *qp, struct rte_crypto_op **ops,
+			      uint16_t nb_ops)
+{
+	return zsda_enqueue_op_burst((struct zsda_qp *)qp, (void **)ops,
+				     nb_ops);
+}
+
+static uint16_t
+zsda_sym_pmd_dequeue_op_burst(void *qp, struct rte_crypto_op **ops,
+			      uint16_t nb_ops)
+{
+	return zsda_dequeue_op_burst((struct zsda_qp *)qp, (void **)ops,
+				     nb_ops);
+}
+
+static const char zsda_sym_drv_name[] = RTE_STR(CRYPTODEV_NAME_ZSDA_SYM_PMD);
+static const struct rte_driver cryptodev_zsda_sym_driver = {
+	.name = zsda_sym_drv_name, .alias = zsda_sym_drv_name};
+
+int
+zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
+{
+	struct zsda_device_info *dev_info =
+		&zsda_devs[zsda_pci_dev->zsda_dev_id];
+
+	struct rte_cryptodev_pmd_init_params init_params = {
+		.name = "",
+		.socket_id = (int)rte_socket_id(),
+		.private_data_size = sizeof(struct zsda_sym_dev_private)};
+
+	char name[RTE_CRYPTODEV_NAME_MAX_LEN];
+	char capa_memz_name[RTE_CRYPTODEV_NAME_MAX_LEN];
+	struct rte_cryptodev *cryptodev;
+	struct zsda_sym_dev_private *sym_priv;
+	const struct rte_cryptodev_capabilities *capabilities;
+	uint64_t capa_size;
+
+	init_params.max_nb_queue_pairs = zsda_sym_max_nb_qps();
+	snprintf(name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s", zsda_pci_dev->name,
+		 "sym_encrypt");
+	ZSDA_LOG(DEBUG, "Creating ZSDA SYM device %s", name);
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return ZSDA_SUCCESS;
+
+	dev_info->sym_rte_dev.driver = &cryptodev_zsda_sym_driver;
+	dev_info->sym_rte_dev.numa_node = dev_info->pci_dev->device.numa_node;
+	dev_info->sym_rte_dev.devargs = NULL;
+
+	cryptodev = rte_cryptodev_pmd_create(name, &(dev_info->sym_rte_dev),
+					     &init_params);
+
+	if (cryptodev == NULL)
+		return -ENODEV;
+
+	dev_info->sym_rte_dev.name = cryptodev->data->name;
+	cryptodev->driver_id = zsda_sym_driver_id;
+
+	cryptodev->dev_ops = &crypto_zsda_ops;
+
+	cryptodev->enqueue_burst = zsda_sym_pmd_enqueue_op_burst;
+	cryptodev->dequeue_burst = zsda_sym_pmd_dequeue_op_burst;
+
+	cryptodev->feature_flags = RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO |
+				   RTE_CRYPTODEV_FF_SYM_SESSIONLESS |
+				   RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT |
+				   RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT |
+				   RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT |
+				   RTE_CRYPTODEV_FF_OOP_SGL_IN_SGL_OUT |
+				   RTE_CRYPTODEV_FF_HW_ACCELERATED;
+
+	sym_priv = cryptodev->data->dev_private;
+	sym_priv->zsda_pci_dev = zsda_pci_dev;
+	capabilities = zsda_crypto_sym_capabilities;
+	capa_size = sizeof(zsda_crypto_sym_capabilities);
+
+	snprintf(capa_memz_name, RTE_CRYPTODEV_NAME_MAX_LEN, "ZSDA_SYM_CAPA");
+
+	sym_priv->capa_mz = rte_memzone_lookup(capa_memz_name);
+	if (sym_priv->capa_mz == NULL)
+		sym_priv->capa_mz = rte_memzone_reserve(
+			capa_memz_name, capa_size, rte_socket_id(), 0);
+
+	if (sym_priv->capa_mz == NULL) {
+		ZSDA_LOG(ERR, E_MALLOC);
+		goto error;
+	}
+
+	memcpy(sym_priv->capa_mz->addr, capabilities, capa_size);
+	sym_priv->zsda_dev_capabilities = sym_priv->capa_mz->addr;
+
+	zsda_pci_dev->sym_dev = sym_priv;
+
+	return ZSDA_SUCCESS;
+
+error:
+
+	rte_cryptodev_pmd_destroy(cryptodev);
+	memset(&dev_info->sym_rte_dev, 0, sizeof(dev_info->sym_rte_dev));
+
+	return -EFAULT;
+}
+
+int
+zsda_sym_dev_destroy(struct zsda_pci_device *zsda_pci_dev)
+{
+	struct rte_cryptodev *cryptodev;
+
+	if (zsda_pci_dev == NULL)
+		return -ENODEV;
+	if (zsda_pci_dev->sym_dev == NULL)
+		return ZSDA_SUCCESS;
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_memzone_free(zsda_pci_dev->sym_dev->capa_mz);
+
+	cryptodev = rte_cryptodev_pmd_get_dev(zsda_pci_dev->zsda_dev_id);
+
+	rte_cryptodev_pmd_destroy(cryptodev);
+	zsda_devs[zsda_pci_dev->zsda_dev_id].sym_rte_dev.name = NULL;
+	zsda_pci_dev->sym_dev = NULL;
+
+	return ZSDA_SUCCESS;
+}
+
+static struct cryptodev_driver zsda_crypto_drv;
+RTE_PMD_REGISTER_CRYPTO_DRIVER(zsda_crypto_drv, cryptodev_zsda_sym_driver,
+			       zsda_sym_driver_id);
