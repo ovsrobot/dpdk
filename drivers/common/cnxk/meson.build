@@ -108,4 +108,10 @@ deps += ['bus_pci', 'net', 'telemetry']
 
 require_iova_in_mbuf = false
 
+cnxk_socs = ['cn9k', 'cn10k', 'cn20k']
+
+if dpdk_conf.get('RTE_IOVA_IN_MBUF') == 1 and soc_type in cnxk_socs
+    warning('IOVA in mbuf is not required on platform ' + soc_type)
+endif
+
 annotate_locks = false
