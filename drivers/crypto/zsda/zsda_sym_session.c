@@ -279,3 +279,234 @@ zsda_aes_key_expansion(uint8_t *round_key, uint32_t round_num,
 		round_key[j + 3] = round_key[k + 3] ^ tempa[3];
 	}
 }
+
+void
+zsda_reverse_memcpy(uint8_t *dst, const uint8_t *src, size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < n; ++i)
+		dst[n - 1 - i] = src[i];
+}
+
+static void
+zsda_decry_set_key(uint8_t key[64], const uint8_t *key1_ptr, uint8_t skey_len,
+	      enum rte_crypto_cipher_algorithm algo)
+{
+	uint8_t round_num;
+	uint8_t dec_key1[ZSDA_AES_MAX_KEY_BYTE_LEN] = {0};
+	uint8_t aes_round_key[ZSDA_AES_MAX_EXP_BYTE_SIZE] = {0};
+	uint32_t sm4_round_key[ZSDA_SM4_MAX_EXP_DWORD_SIZE] = {0};
+
+	switch (algo) {
+	case RTE_CRYPTO_CIPHER_AES_XTS:
+		round_num = (skey_len == ZSDA_SYM_XTS_256_SKEY_LEN)
+				    ? ZSDA_AES256_ROUND_NUM
+				    : ZSDA_AES512_ROUND_NUM;
+		zsda_aes_key_expansion(aes_round_key, round_num, key1_ptr,
+				       skey_len);
+		rte_memcpy(dec_key1,
+			   ((uint8_t *)aes_round_key + (16 * round_num)), 16);
+
+		if (skey_len == ZSDA_SYM_XTS_512_SKEY_LEN &&
+			(16 * round_num) <= ZSDA_AES_MAX_EXP_BYTE_SIZE) {
+			for (int i = 0; i < 16; i++) {
+				dec_key1[i + 16] =
+					aes_round_key[(16 * (round_num - 1)) + i];
+			}
+		}
+		break;
+	case RTE_CRYPTO_CIPHER_SM4_XTS:
+		zsda_sm4_key_expansion(sm4_round_key, key1_ptr);
+		for (size_t i = 0; i < 4; i++)
+			u32_to_u8((uint32_t *)sm4_round_key +
+					  ZSDA_SM4_MAX_EXP_DWORD_SIZE - 1 - i,
+				  dec_key1 + (4 * i));
+		break;
+	default:
+		ZSDA_LOG(ERR, "unknown cipher algo!");
+		return;
+	}
+
+	if (skey_len == ZSDA_SYM_XTS_256_SKEY_LEN) {
+		zsda_reverse_memcpy((uint8_t *)key + ZSDA_SYM_XTS_256_KEY2_OFF,
+			       key1_ptr + skey_len, skey_len);
+		zsda_reverse_memcpy((uint8_t *)key + ZSDA_SYM_XTS_256_KEY1_OFF,
+			       dec_key1, skey_len);
+	} else {
+		zsda_reverse_memcpy(key, key1_ptr + skey_len, skey_len);
+		zsda_reverse_memcpy((uint8_t *)key + ZSDA_SYM_XTS_512_KEY1_OFF,
+			       dec_key1, skey_len);
+	}
+}
+
+static uint8_t
+zsda_sym_lbads(uint32_t dataunit_len)
+{
+	uint8_t lbads;
+
+	switch (dataunit_len) {
+	case ZSDA_AES_LBADS_512:
+		lbads = ZSDA_AES_LBADS_INDICATE_512;
+		break;
+	case ZSDA_AES_LBADS_4096:
+		lbads = ZSDA_AES_LBADS_INDICATE_4096;
+		break;
+	case ZSDA_AES_LBADS_8192:
+		lbads = ZSDA_AES_LBADS_INDICATE_8192;
+		break;
+	case ZSDA_AES_LBADS_0:
+		lbads = ZSDA_AES_LBADS_INDICATE_0;
+		break;
+	default:
+		ZSDA_LOG(ERR, "dataunit_len should be 0/512/4096/8192 - %d.",
+			 dataunit_len);
+		lbads = ZSDA_AES_LBADS_INDICATE_INVALID;
+		break;
+	}
+	return lbads;
+}
+
+static int
+zsda_set_session_cipher(struct zsda_sym_session *sess,
+				   struct rte_crypto_cipher_xform *cipher_xform)
+{
+	uint8_t skey_len = 0;
+	const uint8_t *key1_ptr = NULL;
+
+	if (cipher_xform->key.length > ZSDA_CIPHER_KEY_MAX_LEN) {
+		ZSDA_LOG(ERR, "key length not supported");
+		return -EINVAL;
+	}
+
+	sess->chain_order = ZSDA_SYM_CHAIN_ONLY_CIPHER;
+	sess->cipher.iv.offset = cipher_xform->iv.offset;
+	sess->cipher.iv.length = cipher_xform->iv.length;
+	sess->cipher.op = cipher_xform->op;
+	sess->cipher.algo = cipher_xform->algo;
+	sess->cipher.dataunit_len = cipher_xform->dataunit_len;
+	sess->cipher.lbads = zsda_sym_lbads(cipher_xform->dataunit_len);
+	if (sess->cipher.lbads == 0xff) {
+		ZSDA_LOG(ERR, "dataunit_len wrong!");
+		return -EINVAL;
+	}
+
+	skey_len = (cipher_xform->key.length / 2) & 0xff;
+
+	/* key set */
+	if (sess->cipher.op == RTE_CRYPTO_CIPHER_OP_ENCRYPT) {
+		sess->cipher.key_encry.length = cipher_xform->key.length;
+		if (skey_len == ZSDA_SYM_XTS_256_SKEY_LEN) {
+			zsda_reverse_memcpy((uint8_t *)sess->cipher.key_encry.data +
+					       ZSDA_SYM_XTS_256_KEY2_OFF,
+				       (cipher_xform->key.data + skey_len),
+				       skey_len);
+			zsda_reverse_memcpy(((uint8_t *)sess->cipher.key_encry.data +
+					ZSDA_SYM_XTS_256_KEY1_OFF),
+				       cipher_xform->key.data, skey_len);
+		} else
+			zsda_reverse_memcpy((uint8_t *)sess->cipher.key_encry.data,
+				       cipher_xform->key.data,
+				       cipher_xform->key.length);
+	} else if (sess->cipher.op == RTE_CRYPTO_CIPHER_OP_DECRYPT) {
+		sess->cipher.key_decry.length = cipher_xform->key.length;
+		key1_ptr = cipher_xform->key.data;
+		zsda_decry_set_key(sess->cipher.key_decry.data, key1_ptr, skey_len,
+			      sess->cipher.algo);
+	}
+
+	return ZSDA_SUCCESS;
+}
+
+static void
+zsda_set_session_auth(struct zsda_sym_session *sess,
+				 struct rte_crypto_auth_xform *xform)
+{
+	sess->auth.op = xform->op;
+	sess->auth.algo = xform->algo;
+	sess->auth.digest_length = xform->digest_length;
+	sess->chain_order = ZSDA_SYM_CHAIN_ONLY_AUTH;
+}
+
+static struct rte_crypto_auth_xform *
+zsda_get_auth_xform(struct rte_crypto_sym_xform *xform)
+{
+	do {
+		if (xform->type == RTE_CRYPTO_SYM_XFORM_AUTH)
+			return &xform->auth;
+
+		xform = xform->next;
+	} while (xform);
+
+	return NULL;
+}
+
+static struct rte_crypto_cipher_xform *
+zsda_get_cipher_xform(struct rte_crypto_sym_xform *xform)
+{
+	do {
+		if (xform->type == RTE_CRYPTO_SYM_XFORM_CIPHER)
+			return &xform->cipher;
+
+		xform = xform->next;
+	} while (xform);
+
+	return NULL;
+}
+
+/** Configure the session from a crypto xform chain */
+static enum zsda_sym_chain_order
+zsda_crypto_get_chain_order(const struct rte_crypto_sym_xform *xform)
+{
+	enum zsda_sym_chain_order res = ZSDA_SYM_CHAIN_NOT_SUPPORTED;
+
+	if (xform != NULL) {
+		if (xform->type == RTE_CRYPTO_SYM_XFORM_AUTH) {
+			if (xform->next == NULL)
+				res = ZSDA_SYM_CHAIN_ONLY_AUTH;
+			else if (xform->next->type ==
+					RTE_CRYPTO_SYM_XFORM_CIPHER)
+				res = ZSDA_SYM_CHAIN_AUTH_CIPHER;
+		}
+		if (xform->type == RTE_CRYPTO_SYM_XFORM_CIPHER) {
+			if (xform->next == NULL)
+				res = ZSDA_SYM_CHAIN_ONLY_CIPHER;
+			else if (xform->next->type == RTE_CRYPTO_SYM_XFORM_AUTH)
+				res = ZSDA_SYM_CHAIN_CIPHER_AUTH;
+		}
+	}
+
+	return res;
+}
+
+/* Set session cipher parameters */
+int
+zsda_crypto_set_session_parameters(void *sess_priv,
+			 struct rte_crypto_sym_xform *xform)
+{
+
+	struct zsda_sym_session *sess = sess_priv;
+	struct rte_crypto_cipher_xform *cipher_xform =
+			zsda_get_cipher_xform(xform);
+	struct rte_crypto_auth_xform *auth_xform =
+			zsda_get_auth_xform(xform);
+
+	int ret = ZSDA_SUCCESS;
+
+	sess->chain_order = zsda_crypto_get_chain_order(xform);
+	switch (sess->chain_order) {
+	case ZSDA_SYM_CHAIN_ONLY_CIPHER:
+		zsda_set_session_cipher(sess, cipher_xform);
+		break;
+	case ZSDA_SYM_CHAIN_ONLY_AUTH:
+		zsda_set_session_auth(sess, auth_xform);
+		break;
+
+	default:
+		ZSDA_LOG(ERR, "Invalid chain order");
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
