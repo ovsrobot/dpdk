@@ -349,6 +349,26 @@ API Changes
   and replaced it with a new shared devarg ``llq_policy`` that keeps the same logic.
 
 
+* **Logging library changes**
+
+  * The log is initialized earlier in startup so all messages go through the library.
+
+  * Added a new option to timestamp log messages, which is useful for
+    debugging delays in application and driver startup.
+
+  * If the application is a systemd service and the log output is being
+    sent to standard error then DPDK will switch to journal native protocol.
+    This allows the more data such as severity to be sent.
+
+  * The syslog option has changed. By default, messages are no longer sent
+    to syslog unless the *--syslog* option is specified.
+    Syslog is also now now supported on FreeBSD (but not on Windows).
+
+  * Log messages can be timestamped with *--log-timestamp* option.
+
+  * Log messages can be colorized with the *--log-color* option.
+
+
 ABI Changes
 -----------
 
