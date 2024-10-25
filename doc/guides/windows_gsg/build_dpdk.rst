@@ -72,10 +72,9 @@ A good option to choose is the MSI installer for both meson and ninja together::
 
 	http://mesonbuild.com/Getting-meson.html#installing-meson-and-ninja-with-the-msi-installer%22
 
-Required version is Meson 0.57.
-
-Versions starting from 0.58 are unusable with LLVM toolchain
-because of a `Meson issue <https://github.com/mesonbuild/meson/issues/8981>`_.
+Meson version 0.58 was unusable with LLVM toolchain
+because of an `issue <https://github.com/mesonbuild/meson/issues/8981>`_, but
+more recent versions are working fine.
 
 
 Install the Backend
@@ -129,10 +128,17 @@ Depending on the distribution, paths in this file may need adjustments.
 Option 3. Native Build on Windows using MSVC
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Open a 'Developer PowerShell for VS 2022' prompt from the start menu.
+Open a 'Visual Studio Developer Command Prompt'. When doing so, it's recommended
+to specify the Target Architecture (-arch) and the Host Architecture (-host_arch).
 The developer prompt will configure the environment
 to select the appropriate compiler, linker and SDK paths
 required to build with Visual Studio 2022.
+
+.. code-block:: console
+
+    "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -host_arch=amd64 -arch=amd64
+
+Compile the code from the developer prompt.
 
 .. code-block:: console
 
