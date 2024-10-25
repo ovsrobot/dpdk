@@ -47,6 +47,7 @@
 #include <rte_telemetry.h>
 #include <rte_power_pmd_mgmt.h>
 #include <rte_power_uncore.h>
+#include <rte_power_qos.h>
 
 #include "perf_core.h"
 #include "main.h"
@@ -264,6 +265,9 @@ static uint32_t max_empty_polls = 512;
 static uint32_t pause_duration = 1;
 static uint32_t scale_freq_min;
 static uint32_t scale_freq_max;
+
+static int cpu_resume_latency = -1;
+static int resume_latency_bk[RTE_MAX_LCORE];
 
 static struct rte_mempool * pktmbuf_pool[NB_SOCKETS];
 
@@ -1501,6 +1505,8 @@ print_usage(const char *prgname)
 		"  -U: set min/max frequency for uncore to maximum value\n"
 		"  -i (frequency index): set min/max frequency for uncore to specified frequency index\n"
 		"  --config (port,queue,lcore): rx queues configuration\n"
+		"  --cpu-resume-latency LATENCY: set CPU resume latency to control C-state selection,"
+		" 0 : just allow to enter C0-state\n"
 		"  --high-perf-cores CORELIST: list of high performance cores\n"
 		"  --perf-config: similar as config, cores specified as indices"
 		" for bins containing high or regular performance cores\n"
@@ -1541,6 +1547,42 @@ parse_uint32(const char *opt, uint32_t *res)
 	}
 
 	*res = val;
+
+	return 0;
+}
+
+static int
+parse_int(const char *opt, int *res)
+{
+	char *end = NULL;
+	signed long val;
+
+	/* parse integer string */
+	val = strtol(opt, &end, 10);
+	if ((opt[0] == '\0') || (end == NULL) || (*end != '\0'))
+		return -1;
+
+	if (val < INT_MIN || val > INT_MAX) {
+		RTE_LOG(ERR, L3FWD_POWER, "parameter should be range from %d to %d.\n",
+			INT_MIN, INT_MAX);
+		return -1;
+	}
+
+	*res = val;
+
+	return 0;
+}
+
+static int
+parse_cpu_resume_latency(const char *opt, int *val)
+{
+	if (parse_int(opt, val) != 0)
+		return -1;
+
+	if (*val < 0) {
+		RTE_LOG(ERR, L3FWD_POWER, "CPU resume latency should be >= 0.\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -1734,6 +1776,7 @@ parse_pmd_mgmt_config(const char *name)
 #define CMD_LINE_OPT_PAUSE_DURATION "pause-duration"
 #define CMD_LINE_OPT_SCALE_FREQ_MIN "scale-freq-min"
 #define CMD_LINE_OPT_SCALE_FREQ_MAX "scale-freq-max"
+#define CMD_LINE_OPT_CPU_RESUME_LATENCY "cpu-resume-latency"
 
 /* Parse the argument given in the command line of the application */
 static int
@@ -1748,6 +1791,7 @@ parse_args(int argc, char **argv)
 		{"perf-config", 1, 0, 0},
 		{"high-perf-cores", 1, 0, 0},
 		{"no-numa", 0, 0, 0},
+		{CMD_LINE_OPT_CPU_RESUME_LATENCY, 1, 0, 0},
 		{CMD_LINE_OPT_MAX_PKT_LEN, 1, 0, 0},
 		{CMD_LINE_OPT_PARSE_PTYPE, 0, 0, 0},
 		{CMD_LINE_OPT_LEGACY, 0, 0, 0},
@@ -1931,6 +1975,15 @@ parse_args(int argc, char **argv)
 				if (parse_uint32(optarg, &scale_freq_max) != 0)
 					return -1;
 				printf("Scaling frequency maximum configured\n");
+			}
+
+			if (!strncmp(lgopts[option_index].name,
+					CMD_LINE_OPT_CPU_RESUME_LATENCY,
+					sizeof(CMD_LINE_OPT_CPU_RESUME_LATENCY))) {
+				if (parse_cpu_resume_latency(optarg,
+							&cpu_resume_latency) != 0)
+					return -1;
+				printf("PM QoS configured\n");
 			}
 
 			break;
@@ -2256,6 +2309,35 @@ init_power_library(void)
 			return -1;
 		}
 	}
+
+	if (cpu_resume_latency != -1) {
+		RTE_LCORE_FOREACH(lcore_id) {
+			/* Back old CPU resume latency. */
+			ret = rte_power_qos_get_cpu_resume_latency(lcore_id);
+			if (ret < 0) {
+				RTE_LOG(ERR, L3FWD_POWER,
+					"Failed to get cpu resume latency on lcore-%u, ret=%d.\n",
+					lcore_id, ret);
+			}
+			resume_latency_bk[lcore_id] = ret;
+
+			/*
+			 * Set the cpu resume latency of the worker lcore based
+			 * on user's request. If set strict latency (0), just
+			 * allow the CPU to enter the shallowest idle state to
+			 * improve performance.
+			 */
+			ret = rte_power_qos_set_cpu_resume_latency(lcore_id,
+							cpu_resume_latency);
+			if (ret != 0) {
+				RTE_LOG(ERR, L3FWD_POWER,
+					"Failed to set cpu resume latency on lcore-%u, ret=%d.\n",
+					lcore_id, ret);
+				return ret;
+			}
+		}
+	}
+
 	return ret;
 }
 
@@ -2295,6 +2377,15 @@ deinit_power_library(void)
 			}
 		}
 	}
+
+	if (cpu_resume_latency != -1) {
+		RTE_LCORE_FOREACH(lcore_id) {
+			/* Restore the original value. */
+			rte_power_qos_set_cpu_resume_latency(lcore_id,
+						resume_latency_bk[lcore_id]);
+		}
+	}
+
 	return ret;
 }
 
