@@ -17,6 +17,12 @@ __rte_internal
 void eal_log_init(const char *id);
 
 /*
+ * Determine where log data is written when no call to rte_openlog_stream.
+ */
+__rte_internal
+void eal_log_set_default(FILE *default_log);
+
+/*
  * Save a log option for later.
  */
 __rte_internal
