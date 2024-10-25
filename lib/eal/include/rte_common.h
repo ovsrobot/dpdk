@@ -367,6 +367,15 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #endif
 
 /**
+ * Hint point in program never reached
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_unreachable() __assume(0)
+#else
+#define __rte_unreachable() __extension__(__builtin_unreachable())
+#endif
+
+/**
  * Issue a warning in case the function's return value is ignored.
  *
  * The use of this attribute should be restricted to cases where
@@ -421,6 +430,21 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define __rte_cold
 #else
 #define __rte_cold __attribute__((cold))
+#endif
+
+/**
+ * Hint precondition to the optimizer
+ */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 130000)
+#define __rte_assume(condition) __attribute__((assume(condition)))
+#elif defined(RTE_TOOLCHAIN_GCC)
+#define __rte_assume(condition) do { if (!(condition)) __rte_unreachable(); } while (0)
+#elif defined(RTE_TOOLCHAIN_CLANG)
+#define __rte_assume(condition) __extension__(__builtin_assume(condition))
+#elif defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_assume(condition) __assume(condition)
+#else
+#define __rte_assume(condition) do {} while (0)
 #endif
 
 /**
