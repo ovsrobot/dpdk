@@ -27,4 +27,8 @@ struct zsda_comp_dev_private {
 	/* Shared memzone for storing capabilities */
 };
 
+int zsda_comp_dev_create(struct zsda_pci_device *zsda_pci_dev);
+
+int zsda_comp_dev_destroy(struct zsda_pci_device *zsda_pci_dev);
+
 #endif /* _ZSDA_COMP_PMD_H_ */
