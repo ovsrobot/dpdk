@@ -31,6 +31,11 @@ New Features
 
     See the :doc:`../compressdevs/zsda` guide for more details on the new driver.
 
+  * Added a new crypto driver for ZSDA devices to support
+    different algorithm of encryption, decryption and hash.
+
+    See the :doc:`../cryptodevs/zsda` guide for more details on the new driver.
+
 .. This section should contain new features added in this release.
    Sample format:
 

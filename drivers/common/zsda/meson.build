@@ -24,3 +24,15 @@ if zsda_compress
 		sources += files(join_paths(zsda_compress_relpath, f))
 	endforeach
 endif
+
+zsda_crypto = true
+zsda_crypto_path = 'crypto/zsda'
+zsda_crypto_relpath = '../../' + zsda_crypto_path
+if zsda_crypto
+	libcrypto = dependency('libcrypto', required: false, method: 'pkg-config')
+	foreach f: ['zsda_sym_pmd.c']
+		sources += files(join_paths(zsda_crypto_relpath, f))
+	endforeach
+	ext_deps += libcrypto
+	cflags += ['-DBUILD_ZSDA_SYM']
+endif
