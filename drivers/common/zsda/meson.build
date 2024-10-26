@@ -12,4 +12,5 @@ sources += files(
 		'zsda_logs.c',
 		'zsda_common.c',
 		'zsda_device.c',
+		'zsda_qp.c',
 		)
