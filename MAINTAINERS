@@ -1233,6 +1233,11 @@ F: drivers/crypto/virtio/
 F: doc/guides/cryptodevs/virtio.rst
 F: doc/guides/cryptodevs/features/virtio.ini
 
+ZTE Storage Data Accelerator(ZSDA)
+M: Hanxiao Li <li.hanxiao@zte.com.cn>
+F: drivers/common/zsda/
+F: doc/guides/cryptodevs/zsda.rst
+F: doc/guides/cryptodevs/features/zsda.ini
 
 Compression Drivers
 -------------------
@@ -1280,6 +1285,10 @@ F: drivers/compress/zlib/
 F: doc/guides/compressdevs/zlib.rst
 F: doc/guides/compressdevs/features/zlib.ini
 
+ZTE Storage Data Accelerator(ZSDA)
+M: Hanxiao Li <li.hanxiao@zte.com.cn>
+F: doc/guides/compressdevs/zsda.rst
+F: doc/guides/compressdevs/features/zsda.ini
 
 DMAdev Drivers
 --------------
