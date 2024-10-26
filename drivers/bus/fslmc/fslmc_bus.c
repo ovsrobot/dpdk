@@ -132,6 +132,7 @@ scan_one_fslmc_device(char *dev_name)
 {
 	char *dup_dev_name, *t_ptr;
 	struct rte_dpaa2_device *dev = NULL;
+	char *sp = NULL;
 	int ret = -1;
 
 	if (!dev_name)
@@ -169,7 +170,7 @@ scan_one_fslmc_device(char *dev_name)
 	}
 
 	/* Parse the device name and ID */
-	t_ptr = strtok(dup_dev_name, ".");
+	t_ptr = strtok_r(dup_dev_name, ".", &sp);
 	if (!t_ptr) {
 		DPAA2_BUS_ERR("Invalid device found: (%s)", dup_dev_name);
 		ret = -EINVAL;
@@ -200,7 +201,7 @@ scan_one_fslmc_device(char *dev_name)
 	else
 		dev->dev_type = DPAA2_UNKNOWN;
 
-	t_ptr = strtok(NULL, ".");
+	t_ptr = strtok_r(NULL, ".", &sp);
 	if (!t_ptr) {
 		DPAA2_BUS_ERR("Skipping invalid device (%s)", dup_dev_name);
 		ret = 0;
