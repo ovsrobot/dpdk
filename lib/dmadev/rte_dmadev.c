@@ -1016,7 +1016,7 @@ dmadev_handle_dev_stats(const char *cmd __rte_unused,
 	struct rte_dma_info dma_info;
 	struct rte_dma_stats dma_stats;
 	int dev_id, ret, vchan_id;
-	char *end_param;
+	char *end_param, *sp = NULL;
 	const char *vchan_param;
 
 	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
@@ -1035,7 +1035,7 @@ dmadev_handle_dev_stats(const char *cmd __rte_unused,
 	if (dma_info.nb_vchans == 1 && *end_param == '\0')
 		vchan_id = 0;
 	else {
-		vchan_param = strtok(end_param, ",");
+		vchan_param = strtok_r(end_param, ",", &sp);
 		if (!vchan_param || strlen(vchan_param) == 0 || !isdigit(*vchan_param))
 			return -EINVAL;
 
