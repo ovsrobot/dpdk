@@ -398,6 +398,7 @@ static void *
 client_handler(void *sock_id)
 {
 	int s = (int)(uintptr_t)sock_id;
+	char *sp = NULL;
 	char buffer[1024];
 	char info_str[1024];
 	snprintf(info_str, sizeof(info_str),
@@ -412,8 +413,8 @@ client_handler(void *sock_id)
 	int bytes = read(s, buffer, sizeof(buffer) - 1);
 	while (bytes > 0) {
 		buffer[bytes] = 0;
-		const char *cmd = strtok(buffer, ",");
-		const char *param = strtok(NULL, "\0");
+		const char *cmd = strtok_r(buffer, ",", &sp);
+		const char *param = strtok_r(NULL, "\0", &sp);
 		struct cmd_callback cb = {.fn = unknown_command};
 		int i;
 
