@@ -249,9 +249,13 @@ rte_eal_init(int argc, char **argv)
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_THREAD_NAME_SIZE];
 
-	eal_log_init(NULL);
+	if (eal_log_level_parse(argc, argv) < 0) {
+		rte_eal_init_alert("invalid log arguments.");
+		rte_errno = EINVAL;
+		return -1;
+	}
 
-	eal_log_level_parse(argc, argv);
+	eal_log_init(NULL);
 
 	if (eal_create_cpu_map() < 0) {
 		rte_eal_init_alert("Cannot discover CPU and NUMA.");
