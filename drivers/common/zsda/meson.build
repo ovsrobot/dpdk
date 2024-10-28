@@ -10,5 +10,6 @@ endif
 deps += ['bus_pci', 'mbuf']
 sources += files(
 		'zsda_logs.c',
+		'zsda_common.c',
 		'zsda_device.c',
 		)

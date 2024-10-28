@@ -309,4 +309,23 @@ zsda_modulo_8(uint8_t data, uint8_t modulo_mask)
 	return (data) & (modulo_mask);
 }
 
+#define CQE_VALID(value) (value & 0x8000)
+#define CQE_ERR0(value) (value & 0xffff)
+#define CQE_ERR1(value) (value & 0x7fff)
+
+uint32_t zsda_set_reg_8(void *addr, const uint8_t val0, const uint8_t val1,
+		   const uint8_t val2, const uint8_t val3);
+uint8_t zsda_get_reg_8(void *addr, const int offset);
+
+int zsda_admin_msg_init(const struct rte_pci_device *pci_dev);
+int zsda_send_admin_msg(const struct rte_pci_device *pci_dev, void *req,
+			const uint32_t len);
+
+int zsda_recv_admin_msg(const struct rte_pci_device *pci_dev, void *resp,
+			const uint32_t len);
+
+int zsda_fill_sgl(const struct rte_mbuf *buf, uint32_t offset,
+		  struct zsda_sgl *sgl, const phys_addr_t sgl_phy_addr,
+		  uint32_t remain_len, struct comp_head_info *comp_head_info);
+
 #endif /* _ZSDA_COMMON_H_ */
