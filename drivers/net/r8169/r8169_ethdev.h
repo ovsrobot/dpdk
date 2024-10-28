@@ -14,8 +14,19 @@
 #include "r8169_base.h"
 
 struct rtl_hw {
-	u8 adapter_stopped;
-	u8 *mmio_addr;
+	u8  adapter_stopped;
+	u8  *mmio_addr;
+	u32 mcfg;
+	u8  HwSuppIntMitiVer;
+
+	/* Enable Tx No Close */
+	u8 EnableTxNoClose;
+
+	/* Dash */
+	u8 HwSuppDashVer;
+	u8 DASH;
+	u8 HwSuppOcpChannelVer;
+	u8 AllowAccessDashOcp;
 };
 
 struct rtl_sw_stats {
