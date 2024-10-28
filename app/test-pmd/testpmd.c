@@ -99,6 +99,7 @@
 #define EXTBUF_ZONE_SIZE (RTE_PGSIZE_2M - 4 * RTE_CACHE_LINE_SIZE)
 
 uint16_t verbose_level = 0; /**< Silent by default. */
+RTE_ATOMIC(FILE *) output_file; /**< log to console by default. */
 int testpmd_logtype; /**< Log type for testpmd logs */
 
 /* use main core for command line ? */
@@ -4542,6 +4543,8 @@ main(int argc, char** argv)
 	if (testpmd_logtype < 0)
 		rte_exit(EXIT_FAILURE, "Cannot register log type");
 	rte_log_set_level(testpmd_logtype, RTE_LOG_DEBUG);
+
+	output_file = stdout;
 
 	diag = rte_eal_init(argc, argv);
 	if (diag < 0)

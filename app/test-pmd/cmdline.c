@@ -315,6 +315,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set verbose (level)\n"
 			"    Set the debug verbosity level X.\n\n"
 
+			"set output (filename)\n"
+			"    Set the packet debug log file\n\n"
+
 			"set log global|(type) (level)\n"
 			"    Set the log level.\n\n"
 
@@ -4106,6 +4109,43 @@ static cmdline_parse_inst_t cmd_set_numbers = {
 		(void *)&cmd_set_set,
 		(void *)&cmd_set_what,
 		(void *)&cmd_set_value,
+		NULL,
+	},
+};
+
+
+/* *** SET OUTPUT FILENAME *** */
+struct cmd_set_output_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t output;
+	cmdline_fixed_string_t filename;
+};
+
+static void
+cmd_set_output_parsed(void *parsed_result,
+		   __rte_unused struct cmdline *cl,
+		   __rte_unused void *data)
+{
+	struct cmd_set_output_result *res = parsed_result;
+
+	set_output_file(res->filename);
+}
+
+static cmdline_parse_token_string_t cmd_set_output_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_output_result, set, "set");
+static cmdline_parse_token_string_t cmd_set_output_output =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_output_result, output, "output");
+static cmdline_parse_token_string_t cmd_set_output_name =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_output_result, filename, NULL);
+
+static cmdline_parse_inst_t cmd_set_output = {
+	.f = cmd_set_output_parsed,
+	.data = NULL,
+	.help_str = "set output <filename>",
+	.tokens = {
+		(void *)&cmd_set_output_set,
+		(void *)&cmd_set_output_output,
+		(void *)&cmd_set_output_name,
 		NULL,
 	},
 };
@@ -13650,6 +13690,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_set_xstats_hide_zero,
 	&cmd_set_record_core_cycles,
 	&cmd_set_record_burst_stats,
+	&cmd_set_output,
 	&cmd_operate_port,
 	&cmd_operate_specific_port,
 	&cmd_operate_attach_port,

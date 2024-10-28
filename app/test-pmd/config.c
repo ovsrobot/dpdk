@@ -6341,6 +6341,29 @@ set_verbose_level(uint16_t vb_level)
 }
 
 void
+set_output_file(const char *filename)
+{
+	FILE *outf, *oldf;
+
+	if (!strcmp(filename, "-")) {
+		outf = stdout;
+	} else {
+		outf = fopen(filename, "a");
+		if (outf == NULL) {
+			perror(filename);
+			return;
+		}
+	}
+
+	oldf = rte_atomic_exchange_explicit(&output_file, outf, rte_memory_order_seq_cst);
+	if (oldf != NULL && oldf != stdout) {
+		/* make sure other threads are not mid print */
+		rte_delay_us_sleep(US_PER_S/10);
+		fclose(oldf);
+	}
+}
+
+void
 vlan_extend_set(portid_t port_id, int on)
 {
 	int diag;

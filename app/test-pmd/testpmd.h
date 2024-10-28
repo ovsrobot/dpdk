@@ -17,6 +17,7 @@
 #include <rte_ethdev.h>
 #include <rte_flow.h>
 #include <rte_mbuf_dyn.h>
+#include <rte_stdatomic.h>
 
 #include <cmdline.h>
 #include <cmdline_parse.h>
@@ -493,6 +494,7 @@ extern uint8_t xstats_hide_zero; /**< Hide zero values for xstats display */
 extern uint8_t record_core_cycles; /**< Enables measurement of CPU cycles */
 extern uint8_t record_burst_stats; /**< Enables display of RX and TX bursts */
 extern uint16_t verbose_level; /**< Drives messages being displayed, if any. */
+extern RTE_ATOMIC(FILE *) output_file; /**< Where packet data is written */
 extern int testpmd_logtype; /**< Log type for testpmd logs */
 extern uint8_t  interactive;
 extern uint8_t  auto_start;
@@ -1105,6 +1107,7 @@ void set_xstats_hide_zero(uint8_t on_off);
 void set_record_core_cycles(uint8_t on_off);
 void set_record_burst_stats(uint8_t on_off);
 void set_verbose_level(uint16_t vb_level);
+void set_output_file(const char *filename);
 void set_rx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs);
 void set_rx_pkt_hdrs(unsigned int *seg_protos, unsigned int nb_segs);
 void show_rx_pkt_hdrs(void);
