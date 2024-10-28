@@ -136,6 +136,7 @@ int zsda_get_queue_cfg(struct zsda_pci_device *zsda_pci_dev);
 int zsda_queue_pair_release(struct zsda_qp **qp_addr);
 
 uint16_t zsda_enqueue_op_burst(struct zsda_qp *qp, void **ops, const uint16_t nb_ops);
+uint16_t zsda_dequeue_op_burst(struct zsda_qp *qp, void **ops, const uint16_t nb_ops);
 
 int zsda_common_setup_qp(uint32_t dev_id, struct zsda_qp **qp_addr,
 		    const uint16_t queue_pair_id,
