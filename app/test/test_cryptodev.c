@@ -20020,6 +20020,12 @@ test_cryptodev_dpaa_sec_raw_api(void)
 	return run_cryptodev_raw_testsuite(RTE_STR(CRYPTODEV_NAME_DPAA_SEC_PMD));
 }
 
+static int
+test_cryptodev_zsda(void)
+{
+	return run_cryptodev_testsuite(RTE_STR(CRYPTODEV_NAME_ZSDA_SYM_PMD));
+}
+
 REGISTER_DRIVER_TEST(cryptodev_cn10k_raw_api_autotest,
 		test_cryptodev_cn10k_raw_api);
 REGISTER_DRIVER_TEST(cryptodev_dpaa2_sec_raw_api_autotest,
@@ -20056,3 +20062,4 @@ REGISTER_DRIVER_TEST(cryptodev_nitrox_autotest, test_cryptodev_nitrox);
 REGISTER_DRIVER_TEST(cryptodev_bcmfs_autotest, test_cryptodev_bcmfs);
 REGISTER_DRIVER_TEST(cryptodev_cn9k_autotest, test_cryptodev_cn9k);
 REGISTER_DRIVER_TEST(cryptodev_cn10k_autotest, test_cryptodev_cn10k);
+REGISTER_DRIVER_TEST(cryptodev_zsda_autotest, test_cryptodev_zsda);
