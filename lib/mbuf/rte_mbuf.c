@@ -678,11 +678,25 @@ rte_pktmbuf_dump(FILE *f, const struct rte_mbuf *m, unsigned dump_len)
 	fprintf(f, "  pkt_len=%u, ol_flags=%#"PRIx64", nb_segs=%u, port=%u",
 		m->pkt_len, m->ol_flags, m->nb_segs, m->port);
 
+	if (m->port != RTE_MBUF_PORT_INVALID)
+		fprintf(f, ", port=%u", m->port);
+
 	if (m->ol_flags & (RTE_MBUF_F_RX_QINQ | RTE_MBUF_F_TX_QINQ))
 		fprintf(f, ", vlan_tci_outer=%u", m->vlan_tci_outer);
 
 	if (m->ol_flags & (RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_TX_VLAN))
 		fprintf(f, ", vlan_tci=%u", m->vlan_tci);
+
+	if (m->ol_flags & RTE_MBUF_F_RX_RSS_HASH)
+		fprintf(f, ", rss=%#x", m->hash.rss);
+	else if (m->ol_flags & RTE_MBUF_F_RX_FDIR) {
+		if (m->ol_flags & RTE_MBUF_F_RX_FDIR_ID)
+			fprintf(f, ", fdir id=%u", m->hash.fdir.id);
+		else if (m->ol_flags & RTE_MBUF_F_RX_FDIR_FLX)
+			fprintf(f, ", fdir flex=%#x %x", m->hash.fdir.hi, m->hash.fdir.lo);
+		else
+			fprintf(f, " fdir hash=%#x id=%#x ", m->hash.fdir.hash, m->hash.fdir.id);
+	}
 
 	fprintf(f, ", ptype=%#"PRIx32"\n", m->packet_type);
 
