@@ -2,16 +2,15 @@
  * Copyright(c) 2022 Intel Corporation
  */
 
-#ifndef POWER_INTEL_UNCORE_H
-#define POWER_INTEL_UNCORE_H
+#ifndef _INTEL_UNCORE_H
+#define _INTEL_UNCORE_H
 
 /**
  * @file
  * RTE Intel Uncore Frequency Management
  */
 
-#include "rte_power.h"
-#include "rte_power_uncore.h"
+#include "power_uncore_ops.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -223,4 +222,4 @@ power_intel_uncore_get_num_dies(unsigned int pkg);
 }
 #endif
 
-#endif /* POWER_INTEL_UNCORE_H */
+#endif /* _INTEL_UNCORE_H */
