@@ -1091,6 +1091,13 @@ F: drivers/net/memif/
 F: doc/guides/nics/memif.rst
 F: doc/guides/nics/features/memif.ini
 
+Realtek r8169
+M: Howard Wang <howard_wang@realsil.com.cn>
+M: ChunHao Lin <hau@realtek.com>
+M: Xing Wang <xing_wang@realsil.com.cn>
+M: Realtek NIC SW <pro_nic_dpdk@realtek.com>
+F: drivers/net/r8169
+
 
 Crypto Drivers
 --------------

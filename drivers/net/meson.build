@@ -53,6 +53,7 @@ drivers = [
         'pfe',
         'qede',
         'ring',
+        'r8169',
         'sfc',
         'softnic',
         'tap',
