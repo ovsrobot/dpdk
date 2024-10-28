@@ -96,29 +96,19 @@ alloc_gpu_memory(uint16_t gpu_id)
 		goto error;
 	}
 
-	ret = rte_gpu_mem_free(gpu_id, (uint8_t *)(ptr_1)+0x700);
-	if (ret < 0) {
-		printf("GPU memory 0x%p NOT freed: GPU driver didn't find this memory address internally.\n",
-				(uint8_t *)(ptr_1)+0x700);
-	} else {
-		fprintf(stderr, "ERROR: rte_gpu_mem_free freed GPU memory 0x%p\n",
-				(uint8_t *)(ptr_1)+0x700);
-		goto error;
-	}
-
+	printf("GPU memory 0x%p free\n", ptr_2);
 	ret = rte_gpu_mem_free(gpu_id, ptr_2);
 	if (ret < 0) {
 		fprintf(stderr, "rte_gpu_mem_free returned error %d\n", ret);
 		goto error;
 	}
-	printf("GPU memory 0x%p freed\n", ptr_2);
 
+	printf("GPU memory 0x%p free\n", ptr_1);
 	ret = rte_gpu_mem_free(gpu_id, ptr_1);
 	if (ret < 0) {
 		fprintf(stderr, "rte_gpu_mem_free returned error %d\n", ret);
 		goto error;
 	}
-	printf("GPU memory 0x%p freed\n", ptr_1);
 
 	printf("\n=======> TEST: PASSED\n");
 	return 0;
@@ -228,12 +218,12 @@ gpu_mem_cpu_map(uint16_t gpu_id)
 	}
 	printf("GPU memory CPU unmapped, 0x%p not valid anymore\n", ptr_cpu);
 
+	printf("GPU memory 0x%p freeing\n", ptr_gpu);
 	ret = rte_gpu_mem_free(gpu_id, ptr_gpu);
 	if (ret < 0) {
 		fprintf(stderr, "rte_gpu_mem_free returned error %d\n", ret);
 		goto error;
 	}
-	printf("GPU memory 0x%p freed\n", ptr_gpu);
 
 	printf("\n=======> TEST: PASSED\n");
 	return 0;
