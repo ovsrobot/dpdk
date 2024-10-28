@@ -3,6 +3,7 @@
 
 headers = files(
         'rte_cksum.h',
+        'rte_dissect.h',
         'rte_ip.h',
         'rte_ip4.h',
         'rte_ip6.h',
@@ -33,6 +34,7 @@ headers = files(
 
 sources = files(
         'rte_arp.c',
+        'rte_dissect.c',
         'rte_ether.c',
         'rte_net.c',
         'rte_net_crc.c',
