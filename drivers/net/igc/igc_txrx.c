@@ -347,6 +347,8 @@ igc_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 
 		rxm->data_off = RTE_PKTMBUF_HEADROOM;
 		data_len = rte_le_to_cpu_16(rxd.wb.upper.length) - rxq->crc_len;
+		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+			data_len -= IGC_TS_HDR_LEN;
 		rxm->data_len = data_len;
 		rxm->pkt_len = data_len;
 		rxm->nb_segs = 1;
@@ -509,6 +511,12 @@ next_desc:
 		 */
 		rxm->data_off = RTE_PKTMBUF_HEADROOM;
 		data_len = rte_le_to_cpu_16(rxd.wb.upper.length);
+		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
+			if (first_seg == NULL)
+				data_len -= IGC_TS_HDR_LEN;
+			else
+				rxm->data_off -= IGC_TS_HDR_LEN;
+		}
 		rxm->data_len = data_len;
 
 		/*
@@ -557,6 +565,7 @@ next_desc:
 				last_seg->data_len = last_seg->data_len -
 					 (RTE_ETHER_CRC_LEN - data_len);
 				last_seg->next = NULL;
+				rxm = last_seg;
 			} else {
 				rxm->data_len = (uint16_t)
 					(data_len - RTE_ETHER_CRC_LEN);
