@@ -2649,3 +2649,51 @@ Destroy GENEVE TLV parser for specific port::
 
 This command doesn't destroy the global list,
 For releasing options, ``flush`` command should be used.
+
+
+Extended statistics counters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Send scheduling related xstats counters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The mlx5 PMD provides the set of tx_pp feature related counters to provide debug and diagnostics
+on send packet scheduling. These counters are applicable only if port was probed with ``tx_pp``
+devarg and reflect the status of PMD scheduling infrastructure based on Clock and Rearm Queues.
+This infrastructure provedies the Send Scheduling capability on CX6DX NICs as temporary workaround
+and should not be engaged on the newer hardware.
+
+- ``tx_pp_missed_interrupt_errors`` - the Rearm Queue interrupt was not serviced in time. EAL handles
+  interrupts in dedicated thread and, possible, there were another time-consuming actions were taken.
+
+- ``tx_pp_rearm_queue_errors`` - hardware errors occurred on Rearm Queue, usually it is caused by not
+  servicing interrupts in time
+
+- ``tx_pp_clock_queue_errors`` - hardware errors occurred on Clock Queue, usually it indicates some
+  configuration or internal NIC hardware or firmware issues
+
+- ``tx_pp_timestamp_past_errors`` - application tried to send packet(s) with specifying timestamp in the past.
+  This counter is useful to check and debug the application code, it does not indicate PMD malfunction.
+
+- ``tx_pp_timestamp_future_errors`` - application tried to send packet(s) with specifying timestamp
+  in the too distant future, beyond the hardware capabilities to schedule the sending
+  This counter is useful to check and debug the application code, it does not indicate PMD malfunction.
+
+- ``tx_pp_jitter`` - this counter exposes the internal NIC realtime clock jitter estimation between two
+  neighbour Clock Queue completions in nanoseconds. Significant jitter might alert about clock
+  synchronization issues (say, some system PTP agent might adjust NIC clock in inappropriate way)
+
+- ``tx_pp_wander`` - the counter exposes the longterm internal NUC realtime clock stability - tx_pp_wander
+  for 2^24 completions, in nanoseconds. Significant wander might indicate clock synchronization issues.
+
+- ``tx_pp_sync_lost`` - the general operating indicator, the non-zero value says the driver lost
+  the Clock Queue synchronization and scheduling does not operate correctly. The port must be restarted
+  to restore the correct scheduling functioning.
+
+The following counters are extremely useful for application code check and debug, these ones do not
+indicate driver or hardware mulfunctions, and are also applicable for the newer hardware (with direct
+on time scheduling capabilities - ConnectX-7 and above):
+
+- ``tx_pp_timestamp_order_errors`` - application tried to send packet(s) with timestamps in not
+  strictly ascending order. Because of PMD does not reorder packets in the hardware queues, scheduling
+  timestamps order violation causes sending packets in wrong moments of time.
