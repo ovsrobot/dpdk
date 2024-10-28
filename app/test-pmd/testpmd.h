@@ -492,6 +492,7 @@ enum output_mode {
 	OUTPUT_MODE_VERBOSE = 0,
 	OUTPUT_MODE_HEX,
 	OUTPUT_MODE_DISSECT,
+	OUTPUT_MODE_JSON,
 };
 
 extern uint8_t xstats_hide_zero; /**< Hide zero values for xstats display */

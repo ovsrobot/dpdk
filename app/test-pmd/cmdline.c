@@ -318,7 +318,7 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set output (filename)\n"
 			"    Set the packet debug log file\n\n"
 
-			"set format (dissect|hex|verbose)\n"
+			"set format (dissect|hex|json|verbose)\n"
 			"    Set the format of packet log\\n"
 
 			"set log global|(type) (level)\n"
@@ -4175,12 +4175,12 @@ static cmdline_parse_token_string_t cmd_set_format_set =
 static cmdline_parse_token_string_t cmd_set_format_output =
 	TOKEN_STRING_INITIALIZER(struct cmd_set_format_result, format, "format");
 static cmdline_parse_token_string_t cmd_set_format_value =
-	TOKEN_STRING_INITIALIZER(struct cmd_set_format_result, value, "dissect#hex#verbose");
+	TOKEN_STRING_INITIALIZER(struct cmd_set_format_result, value, "dissect#hex#json#verbose");
 
 static cmdline_parse_inst_t cmd_set_format = {
 	.f = cmd_set_format_parsed,
 	.data = NULL,
-	.help_str = "set format dissect|hex|verbose",
+	.help_str = "set format dissect|hex|json|verbose",
 	.tokens = {
 		(void *)&cmd_set_format_set,
 		(void *)&cmd_set_format_output,
