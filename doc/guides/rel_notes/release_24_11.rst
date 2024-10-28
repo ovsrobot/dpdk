@@ -251,6 +251,20 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Updated NVIDIA mlx5 driver.**
+
+  Optimized port probe in large scale.
+  In previous release, it would take long time to probe one VF/SF if
+  hundreds of VF/SF were created in the system. With this newly introduced
+  feature optimization, the time to probe a VF/SF will be reduced greatly in
+  large scale, eg hundreds of VF/SFs. This feature is controlled through the
+  ``probe_opt_en`` device argument. Setting it to a non-zero value indicates
+  the application will enable this functionality when probing a device. This
+  feature relies on a feature of RDMA driver to be release in incoming
+  upstream kernel 6.13 or the equivalent in OFED 24.10, ie. RDMA monitor.
+  For further information on the devargs limitation, see
+  "doc/guides/nics/mlx5.rst".
+
 
 Removed Items
 -------------
