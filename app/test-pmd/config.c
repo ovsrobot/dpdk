@@ -6341,6 +6341,17 @@ set_verbose_level(uint16_t vb_level)
 }
 
 void
+set_output_format(const char *mode)
+{
+	if (!strcmp(mode, "verbose"))
+		output_format = OUTPUT_MODE_VERBOSE;
+	else if (!strcmp(mode, "hex"))
+		output_format = OUTPUT_MODE_HEX;
+	else
+		fprintf(stderr, "Unknown output format '%s'\n", mode);
+}
+
+void
 set_output_file(const char *filename)
 {
 	FILE *outf, *oldf;
