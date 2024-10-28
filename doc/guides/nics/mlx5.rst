@@ -191,6 +191,13 @@ Limitations
     - IPv4/TCP with CVLAN filtering
     - L4 steering rules for port RSS of UDP, TCP and IP
 
+- PCI Virtual Function MTU:
+
+  Configuring MTU for PCI Virtual Function has no meaning.
+  The actual maximal packet size in VF's receiving is limited by MTU configured
+  on the related PCI Physical Function, the DPDK datapath running over VF should be
+  prepared to handle packets of this maximal size.
+
 - For secondary process:
 
   - Forked secondary process not supported.
