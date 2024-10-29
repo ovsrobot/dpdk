@@ -72,6 +72,7 @@ Features
 - Extended stats
 - Flow metering, including meter policy API.
 - Flow update. Update of the action list for specific flow
+- Asynchronous flow API
 
 Limitations
 ~~~~~~~~~~~
