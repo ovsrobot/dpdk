@@ -11,7 +11,7 @@
 /* In QLEN must be whole number of 32 descriptors. */
 #define CPFL_ALIGN_RING_DESC	32
 #define CPFL_MIN_RING_DESC	32
-#define CPFL_MAX_RING_DESC	4096
+#define CPFL_MAX_RING_DESC	32768
 #define CPFL_DMA_MEM_ALIGN	4096
 
 #define CPFL_MAX_HAIRPINQ_RX_2_TX	1

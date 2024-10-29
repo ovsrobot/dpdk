@@ -107,7 +107,7 @@
  * (num_ring_desc * sizeof(struct e1000_rx/tx_desc)) % 128 == 0
  */
 #define	E1000_MIN_RING_DESC	32
-#define	E1000_MAX_RING_DESC	4096
+#define	E1000_MAX_RING_DESC	32768
 
 /*
  * TDBA/RDBA should be aligned on 16 byte boundary. But TDLEN/RDLEN should be

@@ -11,7 +11,7 @@
 /* In QLEN must be whole number of 32 descriptors. */
 #define IDPF_ALIGN_RING_DESC	32
 #define IDPF_MIN_RING_DESC	32
-#define IDPF_MAX_RING_DESC	4096
+#define IDPF_MAX_RING_DESC	32768
 #define IDPF_DMA_MEM_ALIGN	4096
 /* Base address of the HW descriptor ring should be 128B aligned. */
 #define IDPF_RING_BASE_ALIGN	128
