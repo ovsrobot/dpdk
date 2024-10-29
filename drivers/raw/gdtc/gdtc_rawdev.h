@@ -104,6 +104,12 @@ struct zxdh_gdma_rawdev {
 	struct zxdh_gdma_queue vqs[ZXDH_GDMA_TOTAL_CHAN_NUM];
 };
 
+struct zxdh_gdma_config {
+	uint16_t max_hw_queues_per_core;
+	uint16_t max_vqs;
+	int queue_pool_cnt;
+};
+
 struct zxdh_gdma_rbp {
 	uint32_t use_ultrashort:1;
 	uint32_t enable:1;
@@ -121,6 +127,10 @@ struct zxdh_gdma_queue_config {
 	uint32_t lcore_id;
 	uint32_t flags;
 	struct zxdh_gdma_rbp *rbp;
+};
+
+struct zxdh_gdma_attr {
+	uint16_t num_hw_queues;
 };
 
 static inline struct zxdh_gdma_rawdev *
