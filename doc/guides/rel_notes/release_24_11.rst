@@ -162,6 +162,7 @@ New Features
   * Added basic handling of the virtual queues.
   * Added flow handling API
   * Added statistics API
+  * Added age rte flow action support
 
 * **Added cryptodev queue pair reset support.**
 
