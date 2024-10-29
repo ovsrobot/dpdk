@@ -305,3 +305,133 @@ Example output:
 
    Done
    testpmd>
+
+ENA Histogram Support
+=====================
+
+This framework computes the differences between specified start and end points in the code, providing insights into performance by outputting a histogram of the time intervals. The histogram can be used to track metrics like packet processing latency in network drivers.
+
+
+Use Case
+--------
+
+The histogram framework is helpful for performance monitoring by capturing and analyzing intervals between events. For instance, in network packet processing, it can measure the time spent processing packets and present a distribution of processing latencies. By dumping the histogram, developers can analyze these intervals and optimize system performance.
+
+
+Overall Flow
+------------
+
+* Include the histogram header file:
+    * In the relevant source file, conditionally include the histogram functionality by defining INCLUDE_ENA_HISTOGRAM:
+
+        #ifdef INCLUDE_ENA_HISTOGRAM
+
+        #include "ena_histogram.h"
+
+        #endif
+
+* Add the INCLUDE_ENA_HISTOGRAM definition to the Meson build system:
+   * In your build configuration (e.g., meson.build), add the following flag to enable histogram support:
+
+        flags += '-DINCLUDE_ENA_HISTOGRAM'
+
+* Define and initialize the histogram:
+    * Use ENA_HISTOGRAM to declare the histogram structure.
+    * Use ENA_HISTOGRAM_INIT to initialize the histogram.
+* Capture start and stop points:
+    * Mark the start of a capture using ENA_HISTOGRAM_CAPTURE_START.
+    * Mark the stop point using ENA_HISTOGRAM_CAPTURE_STOP.
+* Reset the histogram:
+    * Clear or reset the histogram data at any point using ENA_HISTOGRAM_RESET.
+* Dump the histogram:
+    * Dump all captured data using ENA_HISTOGRAM_DUMP.
+
+
+API
+---
+
+**Histogram Struct Definition:** ENA_HISTOGRAM(name, bins_count)
+
+* What it does: This macro defines the histogram structure.
+* Parameters:
+* name: The name of the histogram (used to identify the specific histogram).
+    * bins_count: The number of bins (or slots) in the histogram. Bins are used to group data into ranges, max = UINT16_MAX (65536)
+* Purpose: This defines the histogram's metadata, particularly how many bins will be used to collect data. The histogram will store data in these bins based on defined ranges or intervals.
+     * Histogram structure doesn't include any lock to avoid affecting the flow, make sure the flow is protected.
+
+
+**Initialize Histogram:** ENA_HISTOGRAM_INIT(histogram, histogram_id)
+
+* What it does: This macro initializes the histogram.
+* Parameters:
+    * histogram: The histogram variable defined in ENA_HISTOGRAM
+    * histogram_id: a unique ID of the histogram, will be used for histogram dump
+* Purpose: This prepares the histogram for capturing data by setting up necessary parameters and getting it ready for use.
+
+
+**Capture Starting Point:** ENA_HISTOGRAM_CAPTURE_START(histogram, capture)
+
+* What it does: Marks the starting point of data capture for the histogram.
+* Parameters:
+    * histogram: The histogram variable defined in ENA_HISTOGRAM
+    * capture: Starting capture value
+* Purpose: This function begins measuring at a specific capture point, which will later be compared to the stop point in order to calculate the difference and update the appropriate histogram bin.
+    * Start capture following start capture will increment histogram error statistic
+
+
+**Capture Ending Point:** ENA_HISTOGRAM_CAPTURE_STOP(histogram, capture, rate)
+
+* What it does: Marks the ending point of data capture for the histogram.
+* Parameters:
+    * histogram: The histogram variable defined in ENA_HISTOGRAM
+    * capture: Ending capture point
+    * rate: frequency of captured events
+* Purpose: This completes the capture process. It calculates the difference between the start and stop points and stores the result in the appropriate histogram bin
+    * Histogram bin is chosen according to the start/stop capture difference and divided by rate
+    * Histogram is incremented by rate.
+    * Zero rate doesn't change the histogram
+    * Stop capture not following start capture will increment histogram error statistic
+    * Last bin also consist all bins above
+
+
+**Reset Histogram Statistics:** ENA_HISTOGRAM_RESET(histogram)
+
+* What it does: Resets the histogram statistics.
+* Parameters:
+    * histogram: The histogram variable defined in ENA_HISTOGRAM
+* Purpose: Resets all stored statistics and errors. This might be used after dumping the data or when starting a new capture session.
+
+
+**Dump Histogram:** ENA_HISTOGRAM_DUMP(histogram, percent)
+
+* What it does: Outputs the data from the histogram.
+* Parameters:
+    * histogram: The histogram variable defined in ENA_HISTOGRAM
+    * percent: A percentage threshold (float), dump histogram above this value
+* Purpose: This outputs all histogram bins with its rate.
+
+
+
+Example Usage
+-------------
+
+* **Define and initialize the histogram:**
+
+   `ENA_HISTOGRAM(my_histogram, 8);`
+   `ENA_HISTOGRAM_INIT(&my_histogram, 1);`
+
+* **Capture an event:**
+
+   `uint64_t start_time = rte_rdtsc();  // Capture start time`
+   `ENA_HISTOGRAM_CAPTURE_START(&my_histogram, start_time); // add start time to my_histogram`
+
+
+   `// Process something...`
+
+   `uint64_t end_time = rte_rdtsc();  // Capture end time`
+   `ENA_HISTOGRAM_CAPTURE_STOP(&my_histogram, end_time, 1); // add 1 captured event with its captured end time to my_histogram`
+
+
+* **Dump the histogram:**
+
+   `ENA_HISTOGRAM_DUMP(&my_histogram, 1);  // Dump all bins with more than 1%`

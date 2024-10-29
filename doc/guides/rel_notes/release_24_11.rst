@@ -142,6 +142,8 @@ New Features
   * Modified the PMD API that controls the LLQ header policy.
   * Replaced ``enable_llq``, ``normal_llq_hdr`` and ``large_llq_hdr`` devargs
     with a new shared devarg ``llq_policy`` that keeps the same logic.
+  * Added a framework that computes the differences between specified start and end points in the code, generating a histogram of the intervals.
+    This framework requires enablement via a compilation flag and is excluded in release builds by default.
 
 * **Updated Cisco enic driver.**
 
