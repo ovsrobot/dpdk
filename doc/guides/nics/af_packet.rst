@@ -29,6 +29,8 @@ Some of these, in turn, will be used to configure the PACKET_MMAP settings.
 *   ``framesz`` - PACKET_MMAP frame size (optional, default 2048B; Note: multiple
     of 16B);
 *   ``framecnt`` - PACKET_MMAP frame count (optional, default 512).
+*   ``rollover`` - disable(0)/enable(1) PACKET_FANOUT_ROLLOVER (optional, default 1).
+*   ``defrag`` - disable(0)/enable(1) PACKET_FANOUT_FLAG_DEFRAG (optional, default 1).
 
 Because this implementation is based on PACKET_MMAP, and PACKET_MMAP has its
 own pre-requisites, it should be noted that the inner workings of PACKET_MMAP
@@ -46,6 +48,8 @@ inside of a "block". And although multiple "frames" can fit inside of a single
 For the full details behind PACKET_MMAP's structures and settings, consider
 reading the `PACKET_MMAP documentation in the Kernel
 <https://www.kernel.org/doc/Documentation/networking/packet_mmap.txt>`_.
+
+For details of ``rollover`` anb ``defrag`` refer to the *packet(7)* man page.
 
 Prerequisites
 -------------
