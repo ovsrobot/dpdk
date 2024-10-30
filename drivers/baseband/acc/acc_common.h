@@ -800,7 +800,7 @@ alloc_sw_rings_min_mem(struct rte_bbdev *dev, struct acc_device *d,
 		/* Check if the end of the sw ring memory block is before the
 		 * start of next 64MB aligned mem address
 		 */
-		if (sw_ring_iova_end_addr < next_64mb_align_addr_iova) {
+		if (sw_ring_iova_end_addr <= next_64mb_align_addr_iova) {
 			d->sw_rings_iova = sw_rings_base_iova;
 			d->sw_rings = sw_rings_base;
 			d->sw_rings_base = sw_rings_base;
