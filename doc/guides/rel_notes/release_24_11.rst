@@ -166,6 +166,7 @@ New Features
   * Added age rte flow action support
   * Added meter flow metering and flow policy support
   * Added flow actions update support
+  * Added asynchronous flow support
 
 * **Added cryptodev queue pair reset support.**
 
