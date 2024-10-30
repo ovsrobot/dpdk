@@ -390,6 +390,186 @@ test_ctrl_thread(void)
 }
 
 static int
+test_topology_macro(void)
+{
+	unsigned int total_lcores = 0;
+	unsigned int total_wrkr_lcores = 0;
+
+	unsigned int total_lcore_io = 0;
+	unsigned int total_lcore_l3 = 0;
+	unsigned int total_lcore_l2 = 0;
+	unsigned int total_lcore_l1 = 0;
+
+	unsigned int total_wrkr_lcore_io = 0;
+	unsigned int total_wrkr_lcore_l3 = 0;
+	unsigned int total_wrkr_lcore_l2 = 0;
+	unsigned int total_wrkr_lcore_l1 = 0;
+
+	unsigned int lcore;
+
+	/* get topology core count */
+	lcore = -1;
+	RTE_LCORE_FOREACH(lcore)
+		total_lcores += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_DOMAIN(lcore, RTE_LCORE_DOMAIN_IO)
+		total_lcore_io += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_DOMAIN(lcore, RTE_LCORE_DOMAIN_L3)
+		total_lcore_l3 += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_DOMAIN(lcore, RTE_LCORE_DOMAIN_L2)
+		total_lcore_l2 += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_DOMAIN(lcore, RTE_LCORE_DOMAIN_L1)
+		total_lcore_l1 += 1;
+
+	printf("INFO: lcore count topology: none (%u), io (%u), l3 (%u), l2 (%u), l1 (%u).\n",
+		total_lcores, total_lcore_io,
+		total_lcore_l3, total_lcore_l2,
+		total_lcore_l1);
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_WORKER(lcore)
+		total_wrkr_lcores += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_WORKER_DOMAIN(lcore, RTE_LCORE_DOMAIN_IO)
+		total_wrkr_lcore_io += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_WORKER_DOMAIN(lcore, RTE_LCORE_DOMAIN_L3)
+		total_wrkr_lcore_l3 += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_WORKER_DOMAIN(lcore, RTE_LCORE_DOMAIN_L2)
+		total_wrkr_lcore_l2 += 1;
+
+	lcore = -1;
+	RTE_LCORE_FOREACH_WORKER_DOMAIN(lcore, RTE_LCORE_DOMAIN_L1)
+		total_wrkr_lcore_l1 += 1;
+
+	printf("INFO: worker lcore count topology: none (%u), io (%u), l3 (%u), l2 (%u), l1 (%u).\n",
+		total_wrkr_lcores, total_wrkr_lcore_io,
+		total_wrkr_lcore_l3, total_wrkr_lcore_l2,
+		total_wrkr_lcore_l1);
+
+	if ((total_wrkr_lcores + 1) != total_lcores) {
+		printf("ERR: failed in MACRO for RTE_LCORE_FOREACH\n");
+		return -2;
+	}
+
+	if ((total_wrkr_lcore_io) > total_lcore_io) {
+		printf("ERR: failed in MACRO for RTE_LCORE_FOREACH_DOMAIN for IO\n");
+		return -2;
+	}
+
+	if ((total_wrkr_lcore_l3) > total_lcore_l3) {
+		printf("ERR: failed in MACRO for RTE_LCORE_FOREACH_DOMAIN for L3\n");
+		return -2;
+	}
+
+	if ((total_wrkr_lcore_l2) > total_lcore_l2) {
+		printf("ERR: failed in MACRO for RTE_LCORE_FOREACH_DOMAIN for L2\n");
+		return -2;
+	}
+
+	if ((total_wrkr_lcore_l1) > total_lcore_l1) {
+		printf("ERR: failed in MACRO for RTE_LCORE_FOREACH_DOMAIN for L1\n");
+		return -2;
+	}
+
+	printf("INFO: lcore DOMAIN macro: success!\n");
+
+	return 0;
+}
+
+static int
+test_lcore_count_from_domain(void)
+{
+	unsigned int total_lcores = 0;
+	unsigned int total_lcore_io = 0;
+	unsigned int total_lcore_l3 = 0;
+	unsigned int total_lcore_l2 = 0;
+	unsigned int total_lcore_l1 = 0;
+
+	unsigned int domain_count;
+	unsigned int i;
+
+	/* get topology core count */
+	total_lcores = rte_lcore_count();
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_IO);
+	for (i = 0; i < domain_count; i++)
+		total_lcore_io += rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_IO, i);
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_L3);
+	for (i = 0; i < domain_count; i++)
+		total_lcore_l3 += rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_L3, i);
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_L2);
+	for (i = 0; i < domain_count; i++)
+		total_lcore_l2 += rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_L2, i);
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_L1);
+	for (i = 0; i < domain_count; i++)
+		total_lcore_l1 += rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_L1, i);
+
+	printf("INFO: lcore count: none (%u), io (%u), l3 (%u), l2 (%u), l1 (%u).\n",
+		total_lcores, total_lcore_io, total_lcore_l3, total_lcore_l2, total_lcore_l1);
+
+	if ((total_lcores != total_lcore_l1) ||
+		(total_lcores != total_lcore_l2) ||
+		(total_lcores != total_lcore_l3) ||
+		(total_lcores != total_lcore_io)) {
+		printf("ERR: failed in domain API\n");
+		return -2;
+	}
+
+	printf("INFO: lcore count domain API: success\n");
+
+	return 0;
+}
+
+static int
+test_lcore_from_domain_negative(void)
+{
+	unsigned int domain_count;
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_IO);
+	if (rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_IO, domain_count)) {
+		printf("ERR: domain API inconsistent for IO\n");
+		return -1;
+	}
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_L3);
+	if (rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_L3, domain_count)) {
+		printf("ERR: domain API inconsistent for L3\n");
+		return -1;
+	}
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_L2);
+	if (rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_L2, domain_count)) {
+		printf("ERR: domain API inconsistent for L2\n");
+		return -1;
+	}
+
+	domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_L1);
+	if (rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_L1, domain_count)) {
+		printf("ERR: domain API inconsistent for L1\n");
+		return -1;
+	}
+
+	printf("INFO: lcore domain API: success!\n");
+
+	return 0;
+}
+
+static int
 test_lcores(void)
 {
 	unsigned int eal_threads_count = 0;
@@ -417,6 +597,15 @@ test_lcores(void)
 		return TEST_FAILED;
 
 	if (test_ctrl_thread() < 0)
+		return TEST_FAILED;
+
+	if (test_topology_macro() < 0)
+		return TEST_FAILED;
+
+	if (test_lcore_count_from_domain() < 0)
+		return TEST_FAILED;
+
+	if (test_lcore_from_domain_negative() < 0)
 		return TEST_FAILED;
 
 	return TEST_SUCCESS;
