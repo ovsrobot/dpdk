@@ -163,6 +163,7 @@ New Features
   * Added flow handling support
   * Enable virtual queues
   * Added statistics support
+  * Added age rte flow action support
 
 * **Added cryptodev queue pair reset support.**
 
