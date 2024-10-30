@@ -66,6 +66,7 @@ Features
 - Port and queue statistics.
 - RMON statistics in extended stats.
 - Link state information.
+- Flow statistics
 
 Limitations
 ~~~~~~~~~~~
