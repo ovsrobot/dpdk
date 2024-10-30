@@ -102,4 +102,8 @@ struct zxdh_virtqueue {
 	struct zxdh_vq_desc_extra vq_descx[];
 } __rte_packed;
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* ZXDH_QUEUE_H */

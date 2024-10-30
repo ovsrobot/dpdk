@@ -133,7 +133,9 @@ struct zxdh_seqid_ring {
 };
 struct zxdh_seqid_ring g_seqid_ring = {0};
 
-static uint16_t pcie_id_to_hard_lock(uint16_t src_pcieid, uint8_t dst)
+static uint8_t tmp_msg_header[ZXDH_BAR_MSG_ADDR_CHAN_INTERVAL];
+
+static uint16_t zxdh_pcie_id_to_hard_lock(uint16_t src_pcieid, uint8_t dst)
 {
 	uint16_t lock_id = 0;
 	uint16_t pf_idx = (src_pcieid & ZXDH_PCIEID_PF_IDX_MASK) >> ZXDH_PCIEID_PF_IDX_OFFSET;
@@ -209,11 +211,11 @@ static int32_t zxdh_spinlock_unlock(uint32_t virt_lock_id, uint64_t virt_addr, u
  */
 static int bar_chan_pf_init_spinlock(uint16_t pcie_id, uint64_t bar_base_addr)
 {
-	int lock_id = pcie_id_to_hard_lock(pcie_id, ZXDH_MSG_CHAN_END_RISC);
+	int lock_id = zxdh_pcie_id_to_hard_lock(pcie_id, ZXDH_MSG_CHAN_END_RISC);
 
 	zxdh_spinlock_unlock(lock_id, bar_base_addr + ZXDH_BAR0_SPINLOCK_OFFSET,
 			bar_base_addr + ZXDH_HW_LABEL_OFFSET);
-	lock_id = pcie_id_to_hard_lock(pcie_id, ZXDH_MSG_CHAN_END_VF);
+	lock_id = zxdh_pcie_id_to_hard_lock(pcie_id, ZXDH_MSG_CHAN_END_VF);
 	zxdh_spinlock_unlock(lock_id, bar_base_addr + ZXDH_BAR0_SPINLOCK_OFFSET,
 			bar_base_addr + ZXDH_HW_LABEL_OFFSET);
 	return 0;
@@ -409,7 +411,7 @@ static uint16_t zxdh_bar_chan_subchan_addr_get(struct zxdh_pci_bar_msg *in, uint
 static int zxdh_bar_hard_lock(uint16_t src_pcieid, uint8_t dst, uint64_t virt_addr)
 {
 	int ret = 0;
-	uint16_t lockid = pcie_id_to_hard_lock(src_pcieid, dst);
+	uint16_t lockid = zxdh_pcie_id_to_hard_lock(src_pcieid, dst);
 
 	PMD_MSG_LOG(DEBUG, "dev pcieid: 0x%x lock, get hardlockid: %u", src_pcieid, lockid);
 	if (dst == ZXDH_MSG_CHAN_END_RISC)
@@ -426,7 +428,7 @@ static int zxdh_bar_hard_lock(uint16_t src_pcieid, uint8_t dst, uint64_t virt_ad
 
 static void zxdh_bar_hard_unlock(uint16_t src_pcieid, uint8_t dst, uint64_t virt_addr)
 {
-	uint16_t lockid = pcie_id_to_hard_lock(src_pcieid, dst);
+	uint16_t lockid = zxdh_pcie_id_to_hard_lock(src_pcieid, dst);
 
 	PMD_MSG_LOG(DEBUG, "dev pcieid: 0x%x unlock, get hardlockid: %u", src_pcieid, lockid);
 	if (dst == ZXDH_MSG_CHAN_END_RISC)
@@ -586,7 +588,6 @@ static uint16_t zxdh_bar_chan_msg_valid_set(uint64_t subchan_addr, uint8_t valid
 	return ZXDH_BAR_MSG_OK;
 }
 
-static uint8_t temp_msg[ZXDH_BAR_MSG_ADDR_CHAN_INTERVAL];
 static uint16_t zxdh_bar_chan_msg_send(uint64_t subchan_addr,
 					void *payload_addr,
 					uint16_t payload_len,
@@ -596,13 +597,13 @@ static uint16_t zxdh_bar_chan_msg_send(uint64_t subchan_addr,
 	ret = zxdh_bar_chan_msg_header_set(subchan_addr, msg_header);
 
 	ret = zxdh_bar_chan_msg_header_get(subchan_addr,
-				(struct zxdh_bar_msg_header *)temp_msg);
+				(struct zxdh_bar_msg_header *)tmp_msg_header);
 
 	ret = zxdh_bar_chan_msg_payload_set(subchan_addr,
 				(uint8_t *)(payload_addr), payload_len);
 
 	ret = zxdh_bar_chan_msg_payload_get(subchan_addr,
-				temp_msg, payload_len);
+				tmp_msg_header, payload_len);
 
 	ret = zxdh_bar_chan_msg_valid_set(subchan_addr, ZXDH_BAR_MSG_CHAN_USED);
 	return ret;
