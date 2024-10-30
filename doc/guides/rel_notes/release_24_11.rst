@@ -167,6 +167,7 @@ New Features
   * Added meter flow metering and flow policy support
   * Added flow actions update support
   * Added asynchronous flow support
+  * Added MTU update
 
 * **Added cryptodev queue pair reset support.**
 
