@@ -176,6 +176,11 @@ main(int argc, char *argv[])
 	unsigned nb_ports;
 	uint16_t portid;
 
+	uint16_t ports_socket_domain[RTE_MAX_ETHPORTS] = {0};
+	uint16_t sel_io_socket = 0;
+	uint16_t sel_io_indx = 0;
+	uint16_t core_count_from_io = 0;
+
 	/* Initializion the Environment Abstraction Layer (EAL). 8< */
 	int ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -189,6 +194,20 @@ main(int argc, char *argv[])
 	nb_ports = rte_eth_dev_count_avail();
 	if (nb_ports < 2 || (nb_ports & 1))
 		rte_exit(EXIT_FAILURE, "Error: number of ports must be even\n");
+
+	/* get the socekt of each port */
+	RTE_ETH_FOREACH_DEV(portid) {
+		ports_socket_domain[rte_eth_dev_socket_id(portid)] += 1;
+
+		if (ports_socket_domain[rte_eth_dev_socket_id(portid)] > sel_io_socket) {
+			sel_io_socket = ports_socket_domain[rte_eth_dev_socket_id(portid)];
+			sel_io_indx = rte_eth_dev_socket_id(portid);
+		}
+	}
+
+	core_count_from_io = rte_lcore_count_from_domain(RTE_LCORE_DOMAIN_IO, sel_io_indx);
+	if (core_count_from_io == 0)
+		printf("\nWARNING: select main_lcore from IO domain (%u)\n", sel_io_indx);
 
 	/* Creates a new mempool in memory to hold the mbufs. */
 
@@ -209,6 +228,9 @@ main(int argc, char *argv[])
 
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
+
+	if (rte_lcore_to_socket_id(rte_lcore_id()) != sel_io_indx)
+		printf("\nWARNING: please use lcore from IO domain %u.\n", sel_io_indx);
 
 	/* Call lcore_main on the main core only. Called on single lcore. 8< */
 	lcore_main();
