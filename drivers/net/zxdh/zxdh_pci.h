@@ -22,6 +22,13 @@ enum zxdh_msix_status {
 	ZXDH_MSIX_ENABLED  = 2
 };
 
+/* The bit of the ISR which indicates a device has an interrupt. */
+#define ZXDH_PCI_ISR_INTR    0x1
+/* The bit of the ISR which indicates a device configuration change. */
+#define ZXDH_PCI_ISR_CONFIG  0x2
+/* Vector value used to disable MSI for queue. */
+#define ZXDH_MSI_NO_VECTOR   0x7F
+
 #define ZXDH_PCI_CAPABILITY_LIST          0x34
 #define ZXDH_PCI_CAP_ID_VNDR              0x09
 #define ZXDH_PCI_CAP_ID_MSIX              0x11
@@ -124,6 +131,9 @@ struct zxdh_pci_ops {
 
 	uint64_t (*get_features)(struct zxdh_hw *hw);
 	void     (*set_features)(struct zxdh_hw *hw, uint64_t features);
+	uint16_t (*set_queue_irq)(struct zxdh_hw *hw, struct zxdh_virtqueue *vq, uint16_t vec);
+	uint16_t (*set_config_irq)(struct zxdh_hw *hw, uint16_t vec);
+	uint8_t  (*get_isr)(struct zxdh_hw *hw);
 };
 
 struct zxdh_hw_internal {
@@ -143,6 +153,8 @@ int32_t zxdh_read_pci_caps(struct rte_pci_device *dev, struct zxdh_hw *hw);
 int32_t zxdh_get_pci_dev_config(struct zxdh_hw *hw);
 
 uint16_t zxdh_vtpci_get_features(struct zxdh_hw *hw);
+uint8_t zxdh_vtpci_isr(struct zxdh_hw *hw);
+enum zxdh_msix_status zxdh_vtpci_msix_detect(struct rte_pci_device *dev);
 
 #ifdef __cplusplus
 }
