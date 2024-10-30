@@ -16,7 +16,7 @@ sfc_vdpa_get_eth_addr(const char *key __rte_unused,
 {
 	struct rte_ether_addr *mac_addr = extra_args;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	/* Convert string with Ethernet address to an ether_addr */

@@ -376,7 +376,7 @@ static int
 get_string_arg(const char *key __rte_unused,
 	       const char *value, void *extra_args)
 {
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	*(char **)extra_args = strdup(value);
@@ -392,7 +392,7 @@ get_integer_arg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
 	uint64_t integer = 0;
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 	errno = 0;
 	integer = strtoull(value, NULL, 0);

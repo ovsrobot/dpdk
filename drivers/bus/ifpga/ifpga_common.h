@@ -16,7 +16,7 @@ static inline int
 ifpga_get_string_arg(const char *key __rte_unused, const char *value,
 	void *extra_args)
 {
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	*(char **)extra_args = strdup(value);
@@ -31,7 +31,7 @@ static inline int
 ifpga_get_integer32_arg(const char *key __rte_unused, const char *value,
 	void *extra_args)
 {
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	*(int *)extra_args = strtoull(value, NULL, 0);

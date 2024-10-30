@@ -345,8 +345,6 @@ parse_coremask_arg(const char *key __rte_unused,
 
 	params->nb_wc = 0;
 
-	if (value == NULL)
-		return -1;
 	/* Remove all blank characters ahead and after .
 	 * Remove 0x/0X if exists.
 	 */

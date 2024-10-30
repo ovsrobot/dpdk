@@ -69,7 +69,7 @@ struct cn10k_ml_error_db ml_etype_db[] = {
 static int
 parse_string_arg(const char *key __rte_unused, const char *value, void *extra_args)
 {
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	*(char **)extra_args = strdup(value);

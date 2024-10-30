@@ -333,7 +333,7 @@ pmd_ethdev_register(struct rte_vdev_device *vdev,
 static int
 get_string(const char *key __rte_unused, const char *value, void *extra_args)
 {
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	*(char **)extra_args = strdup(value);
@@ -347,7 +347,7 @@ get_string(const char *key __rte_unused, const char *value, void *extra_args)
 static int
 get_uint32(const char *key __rte_unused, const char *value, void *extra_args)
 {
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	*(uint32_t *)extra_args = strtoull(value, NULL, 0);
@@ -358,7 +358,7 @@ get_uint32(const char *key __rte_unused, const char *value, void *extra_args)
 static int
 get_uint16(const char *key __rte_unused, const char *value, void *extra_args)
 {
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	*(uint16_t *)extra_args = strtoull(value, NULL, 0);

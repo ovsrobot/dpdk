@@ -22,7 +22,7 @@ rte_cryptodev_pmd_parse_name_arg(const char *key __rte_unused,
 	struct rte_cryptodev_pmd_init_params *params = extra_args;
 	int n;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	n = strlcpy(params->name, value, RTE_CRYPTODEV_NAME_MAX_LEN);
@@ -42,7 +42,7 @@ rte_cryptodev_pmd_parse_uint_arg(const char *key __rte_unused,
 	int i;
 	char *end;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	errno = 0;

@@ -1572,9 +1572,6 @@ open_iface(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	const char **iface_name = extra_args;
 
-	if (value == NULL)
-		return -1;
-
 	*iface_name = value;
 
 	return 0;
@@ -1585,7 +1582,7 @@ open_int(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	uint16_t *n = extra_args;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	*n = (uint16_t)strtoul(value, NULL, 0);

@@ -664,7 +664,7 @@ skeldev_get_selftest(const char *key __rte_unused,
 		     void *opaque)
 {
 	int *flag = opaque;
-	if (value == NULL || opaque == NULL)
+	if (opaque == NULL)
 		return -EINVAL;
 	*flag = atoi(value);
 	return 0;

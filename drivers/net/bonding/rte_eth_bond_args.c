@@ -114,7 +114,7 @@ bond_ethdev_parse_member_port_kvarg(const char *key,
 {
 	struct bond_ethdev_member_ports *member_ports;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	member_ports = extra_args;
@@ -139,7 +139,7 @@ bond_ethdev_parse_member_mode_kvarg(const char *key __rte_unused,
 	uint8_t *mode;
 	char *endptr;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	mode = extra_args;
@@ -171,7 +171,7 @@ bond_ethdev_parse_member_agg_mode_kvarg(const char *key __rte_unused,
 {
 	uint8_t *agg_mode;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	agg_mode = extra_args;
@@ -204,7 +204,7 @@ bond_ethdev_parse_socket_id_kvarg(const char *key __rte_unused,
 	long socket_id;
 	char *endptr;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	errno = 0;
@@ -232,7 +232,7 @@ bond_ethdev_parse_primary_member_port_id_kvarg(const char *key __rte_unused,
 {
 	int primary_member_port_id;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	primary_member_port_id = parse_port_id(value);
@@ -250,7 +250,7 @@ bond_ethdev_parse_balance_xmit_policy_kvarg(const char *key __rte_unused,
 {
 	uint8_t *xmit_policy;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	xmit_policy = extra_args;
@@ -271,7 +271,7 @@ int
 bond_ethdev_parse_bond_mac_addr_kvarg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	/* Parse MAC */
@@ -285,7 +285,7 @@ bond_ethdev_parse_time_ms_kvarg(const char *key __rte_unused,
 	uint32_t time_ms;
 	char *endptr;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -1;
 
 	errno = 0;

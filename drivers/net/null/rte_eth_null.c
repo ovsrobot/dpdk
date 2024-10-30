@@ -613,7 +613,7 @@ get_packet_size_arg(const char *key __rte_unused,
 	const char *a = value;
 	unsigned int *packet_size = extra_args;
 
-	if ((value == NULL) || (extra_args == NULL))
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	*packet_size = (unsigned int)strtoul(a, NULL, 0);
@@ -630,7 +630,7 @@ get_packet_copy_arg(const char *key __rte_unused,
 	const char *a = value;
 	unsigned int *packet_copy = extra_args;
 
-	if ((value == NULL) || (extra_args == NULL))
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	*packet_copy = (unsigned int)strtoul(a, NULL, 0);
@@ -647,7 +647,7 @@ get_packet_no_rx_arg(const char *key __rte_unused,
 	const char *a = value;
 	unsigned int no_rx;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	no_rx = (unsigned int)strtoul(a, NULL, 0);

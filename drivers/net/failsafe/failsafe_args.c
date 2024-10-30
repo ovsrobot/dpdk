@@ -352,7 +352,7 @@ fs_get_u64_arg(const char *key __rte_unused,
 	uint64_t *u64 = out;
 	char *endptr = NULL;
 
-	if ((value == NULL) || (out == NULL))
+	if (out == NULL)
 		return -EINVAL;
 	errno = 0;
 	*u64 = strtoull(value, &endptr, 0);
@@ -369,7 +369,7 @@ fs_get_mac_addr_arg(const char *key __rte_unused,
 {
 	struct rte_ether_addr *ea = out;
 
-	if ((value == NULL) || (out == NULL))
+	if (out == NULL)
 		return -EINVAL;
 
 	return rte_ether_unformat_addr(value, ea);

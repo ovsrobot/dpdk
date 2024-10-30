@@ -2236,7 +2236,7 @@ iavf_handle_proto_xtr_arg(__rte_unused const char *key, const char *value,
 {
 	struct iavf_devargs *devargs = extra_args;
 
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	if (iavf_parse_queue_proto_xtr(value, devargs) < 0) {

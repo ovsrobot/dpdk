@@ -644,7 +644,7 @@ skeldma_parse_lcore(const char *key __rte_unused,
 {
 	int lcore_id;
 
-	if (value == NULL || opaque == NULL)
+	if (opaque == NULL)
 		return -EINVAL;
 
 	lcore_id = atoi(value);

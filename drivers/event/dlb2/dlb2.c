@@ -264,7 +264,7 @@ set_producer_coremask(const char *key __rte_unused,
 {
 	const char **mask_str = opaque;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -298,7 +298,7 @@ set_max_cq_depth(const char *key __rte_unused,
 	int *max_cq_depth = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -327,7 +327,7 @@ set_max_enq_depth(const char *key __rte_unused,
 	int *max_enq_depth = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -356,7 +356,7 @@ set_max_num_events(const char *key __rte_unused,
 	int *max_num_events = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -383,7 +383,7 @@ set_num_dir_credits(const char *key __rte_unused,
 	int *num_dir_credits = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -410,7 +410,7 @@ set_dev_id(const char *key __rte_unused,
 	int *dev_id = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -430,7 +430,7 @@ set_poll_interval(const char *key __rte_unused,
 	int *poll_interval = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -450,7 +450,7 @@ set_port_cos(const char *key __rte_unused,
 	struct dlb2_port_cos *port_cos = opaque;
 	int first, last, cos_id, i;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -520,7 +520,7 @@ set_sw_credit_quanta(const char *key __rte_unused,
 	int *sw_credit_quanta = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -545,7 +545,7 @@ set_hw_credit_quanta(const char *key __rte_unused,
 	int *hw_credit_quanta = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -565,7 +565,7 @@ set_default_depth_thresh(const char *key __rte_unused,
 	int *default_depth_thresh = opaque;
 	int ret;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -584,7 +584,7 @@ set_vector_opts_enab(const char *key __rte_unused,
 {
 	bool *dlb2_vector_opts_enabled = opaque;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -604,7 +604,7 @@ set_default_ldb_port_allocation(const char *key __rte_unused,
 {
 	bool *default_ldb_port_allocation = opaque;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -624,7 +624,7 @@ set_enable_cq_weight(const char *key __rte_unused,
 {
 	bool *enable_cq_weight = opaque;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -645,7 +645,7 @@ set_qid_depth_thresh(const char *key __rte_unused,
 	struct dlb2_qid_depth_thresholds *qid_thresh = opaque;
 	int first, last, thresh, i;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}
@@ -693,7 +693,7 @@ set_qid_depth_thresh_v2_5(const char *key __rte_unused,
 	struct dlb2_qid_depth_thresholds *qid_thresh = opaque;
 	int first, last, thresh, i;
 
-	if (value == NULL || opaque == NULL) {
+	if (opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer");
 		return -EINVAL;
 	}

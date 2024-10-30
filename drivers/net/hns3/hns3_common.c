@@ -169,7 +169,7 @@ hns3_parse_io_hint_func(const char *key, const char *value, void *extra_args)
 
 	RTE_SET_USED(key);
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return 0;
 
 	if (strcmp(value, "vec") == 0)
@@ -212,7 +212,7 @@ hns3_parse_dev_caps_mask(const char *key, const char *value, void *extra_args)
 
 	RTE_SET_USED(key);
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return 0;
 
 	val = strtoull(value, NULL, HNS3_CONVERT_TO_HEXADECIMAL);
@@ -228,7 +228,7 @@ hns3_parse_mbx_time_limit(const char *key, const char *value, void *extra_args)
 
 	RTE_SET_USED(key);
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return 0;
 
 	val = strtoul(value, NULL, HNS3_CONVERT_TO_DECIMAL);
@@ -250,11 +250,6 @@ hns3_parse_vlan_match_mode(const char *key, const char *value, void *args)
 	uint8_t mode;
 
 	RTE_SET_USED(key);
-
-	if (value == NULL) {
-		PMD_INIT_LOG(WARNING, "no value for key:\"%s\"", key);
-		return -1;
-	}
 
 	if (strcmp(value, "strict") == 0) {
 		mode = HNS3_FDIR_VLAN_STRICT_MATCH;

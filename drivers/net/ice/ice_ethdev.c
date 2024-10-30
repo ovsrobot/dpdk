@@ -646,7 +646,7 @@ handle_proto_xtr_arg(__rte_unused const char *key, const char *value,
 {
 	struct ice_devargs *devargs = extra_args;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	if (parse_queue_proto_xtr(value, devargs) < 0) {
@@ -665,7 +665,7 @@ handle_field_offs_arg(__rte_unused const char *key, const char *value,
 {
 	uint8_t *offset = offs_args;
 
-	if (value == NULL || offs_args == NULL)
+	if (offs_args == NULL)
 		return -EINVAL;
 
 	if (!isdigit(*value))
@@ -2171,7 +2171,7 @@ handle_pps_out_arg(__rte_unused const char *key, const char *value,
 {
 	struct ice_devargs *devargs = extra_args;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	if (parse_pps_out_parameter(value, devargs) < 0) {

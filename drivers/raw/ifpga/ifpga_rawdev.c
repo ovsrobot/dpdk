@@ -1706,7 +1706,7 @@ static int ifpga_rawdev_get_string_arg(const char *key __rte_unused,
 	const char *value, void *extra_args)
 {
 	int size;
-	if (!value || !extra_args)
+	if (!extra_args)
 		return -EINVAL;
 
 	size = strlen(value) + 1;

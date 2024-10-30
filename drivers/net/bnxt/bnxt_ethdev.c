@@ -5901,7 +5901,7 @@ bnxt_parse_devarg_flow_xstat(__rte_unused const char *key,
 	unsigned long flow_xstat;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to flow_xstat devarg.");
 		return -EINVAL;
@@ -5936,7 +5936,7 @@ bnxt_parse_devarg_max_num_kflows(__rte_unused const char *key,
 	unsigned long max_num_kflows;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			"Invalid parameter passed to max_num_kflows devarg.");
 		return -EINVAL;
@@ -5972,7 +5972,7 @@ bnxt_parse_devarg_cqe_mode(__rte_unused const char *key,
 	unsigned long cqe_mode;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to cqe-mode "
 			    "devargs.");
@@ -6009,7 +6009,7 @@ bnxt_parse_devarg_app_id(__rte_unused const char *key,
 	unsigned long app_id;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to app-id "
 			    "devargs.");
@@ -6045,7 +6045,7 @@ bnxt_parse_devarg_ieee_1588(__rte_unused const char *key,
 	unsigned long ieee_1588;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to ieee-1588 "
 			    "devargs.");
@@ -6081,7 +6081,7 @@ bnxt_parse_devarg_rep_is_pf(__rte_unused const char *key,
 	unsigned long rep_is_pf;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_is_pf devargs.");
 		return -EINVAL;
@@ -6118,7 +6118,7 @@ bnxt_parse_devarg_rep_based_pf(__rte_unused const char *key,
 	unsigned long rep_based_pf;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_based_pf "
 			    "devargs.");
@@ -6156,7 +6156,7 @@ bnxt_parse_devarg_rep_q_r2f(__rte_unused const char *key,
 	unsigned long rep_q_r2f;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_q_r2f "
 			    "devargs.");
@@ -6193,7 +6193,7 @@ bnxt_parse_devarg_rep_q_f2r(__rte_unused const char *key,
 	unsigned long rep_q_f2r;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_q_f2r "
 			    "devargs.");
@@ -6230,7 +6230,7 @@ bnxt_parse_devarg_rep_fc_r2f(__rte_unused const char *key,
 	unsigned long rep_fc_r2f;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_fc_r2f "
 			    "devargs.");
@@ -6267,7 +6267,7 @@ bnxt_parse_devarg_rep_fc_f2r(__rte_unused const char *key,
 	unsigned long rep_fc_f2r;
 	char *end = NULL;
 
-	if (!value || !opaque_arg) {
+	if (!opaque_arg) {
 		PMD_DRV_LOG_LINE(ERR,
 			    "Invalid parameter passed to rep_fc_f2r "
 			    "devargs.");

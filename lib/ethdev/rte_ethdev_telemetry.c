@@ -79,9 +79,6 @@ eth_dev_parse_hide_zero(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 
-	if (value == NULL)
-		return -1;
-
 	if (strcmp(value, "true") == 0)
 		*(bool *)extra_args = true;
 	else if (strcmp(value, "false") == 0)

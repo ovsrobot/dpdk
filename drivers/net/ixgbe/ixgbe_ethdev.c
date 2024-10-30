@@ -1555,7 +1555,7 @@ devarg_handle_int(__rte_unused const char *key, const char *value,
 {
 	uint16_t *n = extra_args;
 
-	if (value == NULL || extra_args == NULL)
+	if (extra_args == NULL)
 		return -EINVAL;
 
 	*n = (uint16_t)strtoul(value, NULL, 0);

@@ -918,7 +918,7 @@ parse_u16_arg(const char *key, const char *value, void *extra_args)
 	uint16_t *u16 = extra_args;
 
 	uint64_t result;
-	if ((value == NULL) || (extra_args == NULL))
+	if (extra_args == NULL)
 		return -EINVAL;
 	errno = 0;
 	result = strtoul(value, NULL, 0);

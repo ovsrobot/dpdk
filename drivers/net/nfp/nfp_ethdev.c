@@ -56,9 +56,6 @@ nfp_devarg_handle_int(const char *key,
 	char *end_ptr;
 	uint64_t *num = extra_args;
 
-	if (value == NULL)
-		return -EPERM;
-
 	*num = strtoul(value, &end_ptr, 10);
 	if (*num == ULONG_MAX) {
 		PMD_DRV_LOG(ERR, "%s: '%s' is not a valid param.", key, value);

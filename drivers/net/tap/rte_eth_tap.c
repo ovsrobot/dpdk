@@ -2484,19 +2484,19 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 			}
 
 			if (rte_kvargs_count(kvlist, ETH_TAP_REMOTE_ARG) == 1) {
-				ret = rte_kvargs_process(kvlist,
-							 ETH_TAP_REMOTE_ARG,
-							 &set_remote_iface,
-							 remote_iface);
+				ret = rte_kvargs_process_opt(kvlist,
+							     ETH_TAP_REMOTE_ARG,
+							     &set_remote_iface,
+							     remote_iface);
 				if (ret == -1)
 					goto leave;
 			}
 
 			if (rte_kvargs_count(kvlist, ETH_TAP_MAC_ARG) == 1) {
-				ret = rte_kvargs_process(kvlist,
-							 ETH_TAP_MAC_ARG,
-							 &set_mac_type,
-							 &user_mac);
+				ret = rte_kvargs_process_opt(kvlist,
+							     ETH_TAP_MAC_ARG,
+							     &set_mac_type,
+							     &user_mac);
 				if (ret == -1)
 					goto leave;
 			}
