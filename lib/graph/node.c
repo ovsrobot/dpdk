@@ -156,7 +156,7 @@ node_clone(struct node *node, const char *name)
 				     (node->xstats->nb_xstats * RTE_NODE_XSTAT_DESC_SIZE));
 		if (reg->xstats == NULL) {
 			rte_errno = ENOMEM;
-			goto fail;
+			goto free;
 		}
 
 		for (i = 0; i < node->xstats->nb_xstats; i++)
