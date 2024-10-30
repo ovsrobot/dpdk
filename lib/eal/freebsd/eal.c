@@ -73,6 +73,8 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 /* used by rte_rdtsc() */
 int rte_cycles_vmware_tsc_map;
 
+/* holds topology information */
+struct topology_config topo_cnfg;
 
 int
 eal_clean_runtime_dir(void)
@@ -912,6 +914,12 @@ rte_eal_init(int argc, char **argv)
 			return -1;
 	}
 
+	if (rte_eal_topology_init()) {
+		rte_eal_init_alert("Cannot invoke topology!!!");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
 	eal_mcfg_complete();
 
 	return fctret;
@@ -932,6 +940,8 @@ rte_eal_cleanup(void)
 
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+
+	rte_eal_topology_release();
 	rte_service_finalize();
 	rte_mp_channel_cleanup();
 	eal_bus_cleanup();

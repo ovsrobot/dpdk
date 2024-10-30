@@ -40,6 +40,10 @@ static int mem_cfg_fd = -1;
 /* internal configuration (per-core) */
 struct lcore_config lcore_config[RTE_MAX_LCORE];
 
+/* holds topology information */
+struct topology_config topo_cnfg;
+
+
 /* Detect if we are a primary or a secondary process */
 enum rte_proc_type_t
 eal_proc_type_detect(void)
@@ -261,6 +265,8 @@ rte_eal_cleanup(void)
 {
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+
+	rte_eal_topology_release();
 
 	eal_intr_thread_cancel();
 	eal_mem_virt2iova_cleanup();
@@ -504,6 +510,12 @@ rte_eal_init(int argc, char **argv)
 	 */
 	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
 	rte_eal_mp_wait_lcore();
+
+	if (rte_eal_topology_init()) {
+		rte_eal_init_alert("Cannot invoke topology!!!");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
 
 	eal_mcfg_complete();
 

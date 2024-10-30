@@ -17,6 +17,10 @@
 
 #include "eal_internal_cfg.h"
 
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+#include <hwloc.h>
+#endif
+
 /**
  * Structure storing internal configuration (per-lcore)
  */
@@ -39,6 +43,36 @@ struct lcore_config {
 };
 
 extern struct lcore_config lcore_config[RTE_MAX_LCORE];
+
+struct core_domain_mapping {
+	uint16_t core_count;
+	uint16_t *cores;
+};
+
+struct topology_config {
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	hwloc_topology_t topology;
+#endif
+
+	/* domain count */
+	uint16_t l1_count;
+	uint16_t l2_count;
+	uint8_t l3_count;
+	uint8_t io_count;
+
+	/* total cores under all domain */
+	uint16_t l1_core_count;
+	uint16_t l2_core_count;
+	uint16_t l3_core_count;
+	uint16_t io_core_count;
+
+	/* two dimensional array for each domain */
+	struct core_domain_mapping **l1;
+	struct core_domain_mapping **l2;
+	struct core_domain_mapping **l3;
+	struct core_domain_mapping **io;
+};
+extern struct topology_config topo_cnfg;
 
 /**
  * The global RTE configuration structure.
@@ -80,6 +114,20 @@ struct rte_config *rte_eal_get_configuration(void);
  *   - Negative on error
  */
 int rte_eal_memzone_init(void);
+
+
+/**
+ * Initialize the topology structure using HWLOC Library
+ */
+__rte_internal
+int rte_eal_topology_init(void);
+
+/**
+ * Release the memory held by Topology structure
+ */
+__rte_internal
+int rte_eal_topology_release(void);
+
 
 /**
  * Fill configuration with number of physical and logical processors
