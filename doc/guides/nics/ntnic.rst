@@ -56,6 +56,13 @@ Features
 - Exact match of 140 million flows and policies.
 - Tunnel HW offload: Packet type, inner/outer RSS, IP and UDP checksum
    verification.
+- RSS hash
+- RSS key update
+- RSS based on VLAN or 5-tuple.
+- RSS using different combinations of fields: L3 only, L4 only or both, and
+   source only, destination only or both.
+- Several RSS hash keys, one for each flow type.
+- Default RSS operation with no hash key specification.
 
 Limitations
 ~~~~~~~~~~~
