@@ -5,7 +5,6 @@
 
 #include <errno.h>
 #include <pthread.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,14 +18,9 @@ struct eal_tls_key {
 	pthread_key_t thread_index;
 };
 
-struct thread_start_context {
+struct thread_routine_ctx {
 	rte_thread_func thread_func;
-	void *thread_args;
-	const rte_thread_attr_t *thread_attr;
-	pthread_mutex_t wrapper_mutex;
-	pthread_cond_t wrapper_cond;
-	int wrapper_ret;
-	bool wrapper_done;
+	void *routine_args;
 };
 
 static int
@@ -89,29 +83,13 @@ thread_map_os_priority_to_eal_priority(int policy, int os_pri,
 }
 
 static void *
-thread_start_wrapper(void *arg)
+thread_func_wrapper(void *arg)
 {
-	struct thread_start_context *ctx = (struct thread_start_context *)arg;
-	rte_thread_func thread_func = ctx->thread_func;
-	void *thread_args = ctx->thread_args;
-	int ret = 0;
+	struct thread_routine_ctx ctx = *(struct thread_routine_ctx *)arg;
 
-	if (ctx->thread_attr != NULL && CPU_COUNT(&ctx->thread_attr->cpuset) > 0) {
-		ret = rte_thread_set_affinity_by_id(rte_thread_self(), &ctx->thread_attr->cpuset);
-		if (ret != 0)
-			EAL_LOG(DEBUG, "rte_thread_set_affinity_by_id failed");
-	}
+	free(arg);
 
-	pthread_mutex_lock(&ctx->wrapper_mutex);
-	ctx->wrapper_ret = ret;
-	ctx->wrapper_done = true;
-	pthread_cond_signal(&ctx->wrapper_cond);
-	pthread_mutex_unlock(&ctx->wrapper_mutex);
-
-	if (ret != 0)
-		return NULL;
-
-	return (void *)(uintptr_t)thread_func(thread_args);
+	return (void *)(uintptr_t)ctx.thread_func(ctx.routine_args);
 }
 
 int
@@ -122,18 +100,20 @@ rte_thread_create(rte_thread_t *thread_id,
 	int ret = 0;
 	pthread_attr_t attr;
 	pthread_attr_t *attrp = NULL;
+	struct thread_routine_ctx *ctx;
 	struct sched_param param = {
 		.sched_priority = 0,
 	};
 	int policy = SCHED_OTHER;
-	struct thread_start_context ctx = {
-		.thread_func = thread_func,
-		.thread_args = args,
-		.thread_attr = thread_attr,
-		.wrapper_done = false,
-		.wrapper_mutex = PTHREAD_MUTEX_INITIALIZER,
-		.wrapper_cond = PTHREAD_COND_INITIALIZER,
-	};
+
+	ctx = calloc(1, sizeof(*ctx));
+	if (ctx == NULL) {
+		RTE_LOG(DEBUG, EAL, "Insufficient memory for thread context allocations\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+	ctx->routine_args = args;
+	ctx->thread_func = thread_func;
 
 	if (thread_attr != NULL) {
 		ret = pthread_attr_init(&attr);
@@ -154,6 +134,7 @@ rte_thread_create(rte_thread_t *thread_id,
 			EAL_LOG(DEBUG, "pthread_attr_setinheritsched failed");
 			goto cleanup;
 		}
+
 
 		if (thread_attr->priority ==
 				RTE_THREAD_PRIORITY_REALTIME_CRITICAL) {
@@ -179,22 +160,24 @@ rte_thread_create(rte_thread_t *thread_id,
 	}
 
 	ret = pthread_create((pthread_t *)&thread_id->opaque_id, attrp,
-		thread_start_wrapper, &ctx);
+		thread_func_wrapper, ctx);
 	if (ret != 0) {
 		EAL_LOG(DEBUG, "pthread_create failed");
 		goto cleanup;
 	}
 
-	pthread_mutex_lock(&ctx.wrapper_mutex);
-	while (!ctx.wrapper_done)
-		pthread_cond_wait(&ctx.wrapper_cond, &ctx.wrapper_mutex);
-	ret = ctx.wrapper_ret;
-	pthread_mutex_unlock(&ctx.wrapper_mutex);
+	if (thread_attr != NULL && CPU_COUNT(&thread_attr->cpuset) > 0) {
+		ret = rte_thread_set_affinity_by_id(*thread_id,
+			&thread_attr->cpuset);
+		if (ret != 0) {
+			EAL_LOG(DEBUG, "rte_thread_set_affinity_by_id failed");
+			goto cleanup;
+		}
+	}
 
-	if (ret != 0)
-		rte_thread_join(*thread_id, NULL);
-
+	ctx = NULL;
 cleanup:
+	free(ctx);
 	if (attrp != NULL)
 		pthread_attr_destroy(&attr);
 
