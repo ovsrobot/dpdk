@@ -112,6 +112,302 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap)
 	return i;
 }
 
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+static struct core_domain_mapping *
+get_domain_lcore_mapping(unsigned int domain_sel, unsigned int domain_indx)
+{
+	struct core_domain_mapping *ptr =
+		(domain_sel & RTE_LCORE_DOMAIN_IO) ? topo_cnfg.io[domain_indx] :
+		(domain_sel & RTE_LCORE_DOMAIN_L3) ? topo_cnfg.l3[domain_indx] :
+		(domain_sel & RTE_LCORE_DOMAIN_L2) ? topo_cnfg.l2[domain_indx] :
+		(domain_sel & RTE_LCORE_DOMAIN_L1) ? topo_cnfg.l1[domain_indx] : NULL;
+
+	return ptr;
+}
+#endif
+
+unsigned int rte_get_domain_count(unsigned int domain_sel __rte_unused)
+{
+	unsigned int domain_cnt = 0;
+
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	if (domain_sel & RTE_LCORE_DOMAIN_ALL) {
+		domain_cnt =
+			(domain_sel & RTE_LCORE_DOMAIN_IO) ? topo_cnfg.io_count :
+			(domain_sel & RTE_LCORE_DOMAIN_L3) ? topo_cnfg.l3_count :
+			(domain_sel & RTE_LCORE_DOMAIN_L2) ? topo_cnfg.l2_count :
+			(domain_sel & RTE_LCORE_DOMAIN_L1) ? topo_cnfg.l1_count : 0;
+	}
+#endif
+
+	return domain_cnt;
+}
+
+unsigned int
+rte_lcore_count_from_domain(unsigned int domain_sel __rte_unused,
+unsigned int domain_indx __rte_unused)
+{
+	unsigned int core_cnt = 0;
+
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	unsigned int domain_cnt = 0;
+
+	if ((domain_sel & RTE_LCORE_DOMAIN_ALL) == 0)
+		return core_cnt;
+
+	domain_cnt = rte_get_domain_count(domain_sel);
+	if ((domain_indx != RTE_LCORE_DOMAIN_LCORES_ALL) && (domain_indx >= domain_cnt))
+		return core_cnt;
+
+	core_cnt = (domain_sel & RTE_LCORE_DOMAIN_IO) ? topo_cnfg.io_core_count :
+			(domain_sel & RTE_LCORE_DOMAIN_L3) ? topo_cnfg.l3_core_count :
+			(domain_sel & RTE_LCORE_DOMAIN_L2) ? topo_cnfg.l2_core_count :
+			(domain_sel & RTE_LCORE_DOMAIN_L1) ? topo_cnfg.l1_core_count : 0;
+
+	if ((domain_indx != RTE_LCORE_DOMAIN_LCORES_ALL) && (core_cnt)) {
+		struct core_domain_mapping *ptr = get_domain_lcore_mapping(domain_sel, domain_indx);
+		core_cnt = ptr->core_count;
+	}
+#endif
+
+	return core_cnt;
+}
+
+unsigned int
+rte_get_lcore_in_domain(unsigned int domain_sel __rte_unused,
+unsigned int domain_indx __rte_unused, unsigned int lcore_pos __rte_unused)
+{
+	uint16_t sel_core = RTE_MAX_LCORE;
+
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	unsigned int domain_cnt = 0;
+	unsigned int core_cnt = 0;
+
+	if (domain_sel & RTE_LCORE_DOMAIN_ALL) {
+		domain_cnt = rte_get_domain_count(domain_sel);
+		if (domain_cnt == 0)
+			return sel_core;
+
+		core_cnt = rte_lcore_count_from_domain(domain_sel, RTE_LCORE_DOMAIN_LCORES_ALL);
+		if (core_cnt == 0)
+			return sel_core;
+
+		struct core_domain_mapping *ptr = get_domain_lcore_mapping(domain_sel, domain_indx);
+		if ((ptr) && (ptr->core_count)) {
+			if (lcore_pos < ptr->core_count)
+				sel_core = ptr->cores[lcore_pos];
+		}
+	}
+#endif
+
+	return sel_core;
+}
+
+unsigned int
+rte_get_next_lcore_from_domain(unsigned int indx __rte_unused,
+int skip_main __rte_unused, int wrap __rte_unused, uint32_t flag __rte_unused)
+{
+	if (indx >= RTE_MAX_LCORE) {
+		indx = rte_get_next_lcore(-1, skip_main, wrap);
+		return indx;
+	}
+	uint16_t usr_lcore = indx % RTE_MAX_LCORE;
+	uint16_t sel_domain_core = RTE_MAX_LCORE;
+
+	EAL_LOG(DEBUG, "lcore (%u), skip main lcore (%d), wrap (%d), flag (%u)",
+		usr_lcore, skip_main, wrap, flag);
+
+	/* check the input lcore indx */
+	if (!rte_lcore_is_enabled(indx)) {
+		EAL_LOG(ERR, "User input lcore (%u) is not enabled!!!", indx);
+		return sel_domain_core;
+	}
+
+	if ((rte_lcore_count() == 1)) {
+		EAL_LOG(DEBUG, "1 lcore only in dpdk process!!!");
+		sel_domain_core = wrap ? indx : sel_domain_core;
+		return sel_domain_core;
+	}
+
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	uint16_t main_lcore = rte_get_main_lcore();
+	uint16_t sel_domain = 0xffff;
+	uint16_t sel_domain_core_index = 0xffff;
+	uint16_t sel_domain_core_count = 0;
+
+	struct core_domain_mapping *ptr = NULL;
+	uint16_t domain_count = 0;
+	uint16_t domain_core_count = 0;
+	uint16_t *domain_core_list = NULL;
+
+
+	domain_count = rte_get_domain_count(flag);
+	if (domain_count == 0) {
+		EAL_LOG(ERR, "No cores found for the flag (%u)!!!", flag);
+		return sel_domain_core;
+	}
+
+	/* identify the lcore to get the domain to start from */
+	for (int i = 0; (i < domain_count) && (sel_domain_core_index == 0xffff); i++) {
+		ptr = get_domain_lcore_mapping(flag, i);
+
+		domain_core_count = ptr->core_count;
+		domain_core_list = ptr->cores;
+
+		for (int j = 0; j < domain_core_count; j++) {
+			if (usr_lcore == domain_core_list[j]) {
+				sel_domain_core_index = j;
+				sel_domain_core_count = domain_core_count;
+				sel_domain = i;
+				break;
+			}
+		}
+	}
+
+	if (sel_domain_core_count == 1) {
+		EAL_LOG(DEBUG, "there is no more lcore in the domain!!!");
+		return sel_domain_core;
+	}
+
+	EAL_LOG(DEBUG, "selected: domain (%u), core: count %u, index %u, core: current %u",
+		sel_domain, sel_domain_core_count, sel_domain_core_index,
+		domain_core_list[sel_domain_core_index]);
+
+	/* get next lcore from the selected domain */
+	/* next lcore is always `sel_domain_core_index + 1`, but needs boundary check */
+	bool lcore_found = false;
+	uint16_t next_domain_lcore_index = sel_domain_core_index + 1;
+	while (false == lcore_found) {
+
+		if (next_domain_lcore_index >= sel_domain_core_count) {
+			if (wrap) {
+				next_domain_lcore_index = 0;
+				continue;
+			}
+			break;
+		}
+
+		/* check if main lcore skip */
+		if ((domain_core_list[next_domain_lcore_index] == main_lcore) && (skip_main)) {
+			next_domain_lcore_index += 1;
+			continue;
+		}
+
+		lcore_found = true;
+	}
+	if (true == lcore_found)
+		sel_domain_core = domain_core_list[next_domain_lcore_index];
+#endif
+
+	EAL_LOG(DEBUG, "Selected core (%u)", sel_domain_core);
+	return sel_domain_core;
+}
+
+unsigned int
+rte_get_next_lcore_from_next_domain(unsigned int indx __rte_unused,
+int skip_main __rte_unused, int wrap __rte_unused,
+uint32_t flag __rte_unused, int cores_to_skip __rte_unused)
+{
+	uint16_t sel_domain_core = RTE_MAX_LCORE;
+	uint16_t usr_lcore = indx % RTE_MAX_LCORE;
+
+	if (indx >= RTE_MAX_LCORE) {
+		indx = rte_get_next_lcore(-1, skip_main, wrap);
+		return indx;
+	}
+
+	EAL_LOG(DEBUG, "lcore (%u), skip main lcore (%d), wrap (%d), flag (%u)",
+		usr_lcore, skip_main, wrap, flag);
+
+	/* check the input lcore indx */
+	if (!rte_lcore_is_enabled(indx)) {
+		EAL_LOG(ERR, "User input lcore (%u) is not enabled!!!", indx);
+		return sel_domain_core;
+	}
+
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	uint16_t main_lcore = rte_get_main_lcore();
+
+	uint16_t sel_domain = 0xffff;
+	uint16_t sel_domain_core_index = 0xffff;
+
+	uint16_t domain_count = 0;
+	uint16_t domain_core_count = 0;
+	uint16_t *domain_core_list = NULL;
+
+	domain_count = rte_get_domain_count(flag);
+	if (domain_count == 0) {
+		EAL_LOG(ERR, "No Domains found for the flag (%u)!!!", flag);
+		return sel_domain_core;
+	}
+
+	/* identify the lcore to get the domain to start from */
+	struct core_domain_mapping *ptr = NULL;
+	for (int i = 0; (i < domain_count) && (sel_domain_core_index == 0xffff); i++) {
+		ptr = get_domain_lcore_mapping(flag, i);
+		domain_core_count = ptr->core_count;
+		domain_core_list = ptr->cores;
+
+		for (int j = 0; j < domain_core_count; j++) {
+			if (usr_lcore == domain_core_list[j]) {
+				sel_domain_core_index = j;
+				sel_domain = i;
+				break;
+			}
+		}
+	}
+
+	if (sel_domain_core_index == 0xffff) {
+		EAL_LOG(ERR, "Invalid lcore %u for the flag (%u)!!!", indx, flag);
+		return sel_domain_core;
+	}
+
+	EAL_LOG(DEBUG, "Selected - core_index (%u); domain (%u), core_count (%u), cores (%p)",
+		sel_domain_core_index, sel_domain, domain_core_count, domain_core_list);
+
+	uint16_t skip_cores = (cores_to_skip >= 0) ? cores_to_skip : (0 - cores_to_skip);
+
+	/* get the next domain & valid lcore */
+	sel_domain = (((1 + sel_domain) == domain_count) && (wrap)) ? 0 : (1 + sel_domain);
+	sel_domain_core_index = 0xffff;
+
+	bool iter_loop = false;
+	for (int i = sel_domain; (i < domain_count) && (sel_domain_core == RTE_MAX_LCORE); i++) {
+		ptr = (flag & RTE_LCORE_DOMAIN_L1) ? topo_cnfg.l1[i] :
+			(flag & RTE_LCORE_DOMAIN_L2) ? topo_cnfg.l2[i] :
+			(flag & RTE_LCORE_DOMAIN_L3) ? topo_cnfg.l3[i] :
+			(flag & RTE_LCORE_DOMAIN_IO) ? topo_cnfg.io[i] : NULL;
+
+		domain_core_count = ptr->core_count;
+		domain_core_list = ptr->cores;
+
+		/* check if we have cores to iterate from this domain */
+		if (skip_cores >= domain_core_count)
+			continue;
+
+		if (((1 + sel_domain) == domain_count) && (wrap)) {
+			if (iter_loop == true)
+				break;
+
+			iter_loop = true;
+		}
+
+		sel_domain_core_index = (cores_to_skip >= 0) ? skip_cores :
+					(domain_core_count - skip_cores);
+		sel_domain_core = domain_core_list[sel_domain_core_index];
+
+		if ((skip_main) && (sel_domain_core == main_lcore)) {
+			sel_domain_core_index = 0xffff;
+			sel_domain_core = RTE_MAX_LCORE;
+			continue;
+		}
+	}
+#endif
+
+	EAL_LOG(DEBUG, "Selected core (%u)", sel_domain_core);
+	return sel_domain_core;
+}
+
 unsigned int
 rte_lcore_to_socket_id(unsigned int lcore_id)
 {
@@ -128,6 +424,290 @@ socket_id_cmp(const void *a, const void *b)
 		return -1;
 	if (*lcore_id_a > *lcore_id_b)
 		return 1;
+	return 0;
+}
+
+
+
+/*
+ * Use HWLOC library to parse L1|L2|L3|NUMA-IO on the running target machine.
+ * Store the topology structure in memory.
+ */
+int
+rte_eal_topology_init(void)
+{
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	memset(&topo_cnfg, 0, sizeof(struct topology_config));
+
+	hwloc_topology_init(&topo_cnfg.topology);
+	hwloc_topology_load(topo_cnfg.topology);
+
+	int l1_depth = hwloc_get_type_depth(topo_cnfg.topology, HWLOC_OBJ_L1CACHE);
+	int l2_depth = hwloc_get_type_depth(topo_cnfg.topology, HWLOC_OBJ_L2CACHE);
+	int l3_depth = hwloc_get_type_depth(topo_cnfg.topology, HWLOC_OBJ_L3CACHE);
+	int io_depth = hwloc_get_type_depth(topo_cnfg.topology, HWLOC_OBJ_NUMANODE);
+
+	if (l1_depth) {
+		topo_cnfg.l1_count = hwloc_get_nbobjs_by_depth(topo_cnfg.topology, l1_depth);
+		topo_cnfg.l1 = (struct core_domain_mapping **)
+			malloc(sizeof(struct core_domain_mapping *) * topo_cnfg.l1_count);
+		if (topo_cnfg.l1 == NULL) {
+			rte_eal_topology_release();
+			return -1;
+		}
+
+		for (int j = 0; j < topo_cnfg.l1_count; j++) {
+			hwloc_obj_t obj = hwloc_get_obj_by_depth(topo_cnfg.topology, l1_depth, j);
+			unsigned int first_cpu = hwloc_bitmap_first(obj->cpuset);
+			unsigned int cpu_count = hwloc_bitmap_weight(obj->cpuset);
+
+			topo_cnfg.l1[j] = (struct core_domain_mapping *)
+					malloc(sizeof(struct core_domain_mapping));
+			if (topo_cnfg.l1[j] == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			topo_cnfg.l1[j]->core_count = 0;
+			topo_cnfg.l1[j]->cores = (uint16_t *)
+						malloc(sizeof(uint16_t) * cpu_count);
+			if (topo_cnfg.l1[j]->cores == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			signed int cpu_id = first_cpu;
+			unsigned int cpu_index = 0;
+			do {
+				if (rte_lcore_is_enabled(cpu_id)) {
+					EAL_LOG(DEBUG, " L1|SMT domain (%u) lcore %u", j, cpu_id);
+					topo_cnfg.l1[j]->cores[cpu_index] = cpu_id;
+					cpu_index++;
+
+					topo_cnfg.l1[j]->core_count += 1;
+					topo_cnfg.l1_core_count += 1;
+				}
+				cpu_id = hwloc_bitmap_next(obj->cpuset, cpu_id);
+				cpu_count -= 1;
+			} while ((cpu_id != -1) && (cpu_count));
+		}
+	}
+
+	if (l2_depth) {
+		topo_cnfg.l2_count = hwloc_get_nbobjs_by_depth(topo_cnfg.topology, l2_depth);
+		topo_cnfg.l2 = (struct core_domain_mapping **)
+				malloc(sizeof(struct core_domain_mapping *) * topo_cnfg.l2_count);
+		if (topo_cnfg.l2 == NULL) {
+			rte_eal_topology_release();
+			return -1;
+		}
+
+		for (int j = 0; j < topo_cnfg.l2_count; j++) {
+			hwloc_obj_t obj = hwloc_get_obj_by_depth(topo_cnfg.topology, l2_depth, j);
+			unsigned int first_cpu = hwloc_bitmap_first(obj->cpuset);
+			unsigned int cpu_count = hwloc_bitmap_weight(obj->cpuset);
+
+			topo_cnfg.l2[j] = (struct core_domain_mapping *)
+					malloc(sizeof(struct core_domain_mapping));
+			if (topo_cnfg.l2[j] == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			topo_cnfg.l2[j]->core_count = 0;
+			topo_cnfg.l2[j]->cores = (uint16_t *)
+						malloc(sizeof(uint16_t) * cpu_count);
+			if (topo_cnfg.l2[j]->cores == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			signed int cpu_id = first_cpu;
+			unsigned int cpu_index = 0;
+			do {
+				if (rte_lcore_is_enabled(cpu_id)) {
+					EAL_LOG(DEBUG, " L2 domain (%u) lcore %u", j, cpu_id);
+					topo_cnfg.l2[j]->cores[cpu_index] = cpu_id;
+					cpu_index++;
+
+					topo_cnfg.l2[j]->core_count += 1;
+					topo_cnfg.l2_core_count += 1;
+				}
+				cpu_id = hwloc_bitmap_next(obj->cpuset, cpu_id);
+				cpu_count -= 1;
+			} while ((cpu_id != -1) && (cpu_count));
+		}
+	}
+	if (l3_depth) {
+		topo_cnfg.l3_count = hwloc_get_nbobjs_by_depth(topo_cnfg.topology, l3_depth);
+		topo_cnfg.l3 = (struct core_domain_mapping **)
+				malloc(sizeof(struct core_domain_mapping *) * topo_cnfg.l3_count);
+		if (topo_cnfg.l3 == NULL) {
+			rte_eal_topology_release();
+			return -1;
+		}
+
+		for (int j = 0; j < topo_cnfg.l3_count; j++) {
+			hwloc_obj_t obj = hwloc_get_obj_by_depth(topo_cnfg.topology, l3_depth, j);
+			unsigned int first_cpu = hwloc_bitmap_first(obj->cpuset);
+			unsigned int cpu_count = hwloc_bitmap_weight(obj->cpuset);
+
+			topo_cnfg.l3[j] = (struct core_domain_mapping *)
+					malloc(sizeof(struct core_domain_mapping));
+			if (topo_cnfg.l3[j] == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			topo_cnfg.l3[j]->core_count = 0;
+			topo_cnfg.l3[j]->cores = (uint16_t *)
+						malloc(sizeof(uint16_t) * cpu_count);
+			if (topo_cnfg.l3[j]->cores == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			signed int cpu_id = first_cpu;
+			unsigned int cpu_index = 0;
+			do {
+				if (rte_lcore_is_enabled(cpu_id)) {
+					EAL_LOG(DEBUG, " L3 domain (%u) lcore %u", j, cpu_id);
+					topo_cnfg.l3[j]->cores[cpu_index] = cpu_id;
+					cpu_index++;
+
+					topo_cnfg.l3[j]->core_count += 1;
+					topo_cnfg.l3_core_count += 1;
+				}
+				cpu_id = hwloc_bitmap_next(obj->cpuset, cpu_id);
+				cpu_count -= 1;
+			} while ((cpu_id != -1) && (cpu_count));
+		}
+	}
+	if (io_depth) {
+		topo_cnfg.io_count = hwloc_get_nbobjs_by_depth(topo_cnfg.topology, io_depth);
+		topo_cnfg.io = (struct core_domain_mapping **)
+				malloc(sizeof(struct core_domain_mapping *) * topo_cnfg.io_count);
+		if (topo_cnfg.io == NULL) {
+			rte_eal_topology_release();
+			return -1;
+		}
+
+		for (int j = 0; j < topo_cnfg.io_count; j++) {
+			hwloc_obj_t obj = hwloc_get_obj_by_depth(topo_cnfg.topology, io_depth, j);
+			unsigned int first_cpu = hwloc_bitmap_first(obj->cpuset);
+			unsigned int cpu_count = hwloc_bitmap_weight(obj->cpuset);
+
+			topo_cnfg.io[j] = (struct core_domain_mapping *)
+					malloc(sizeof(struct core_domain_mapping));
+			if (topo_cnfg.io[j] == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			topo_cnfg.io[j]->core_count = 0;
+			topo_cnfg.io[j]->cores = (uint16_t *)
+						malloc(sizeof(uint16_t) * cpu_count);
+			if (topo_cnfg.io[j]->cores == NULL) {
+				rte_eal_topology_release();
+				return -1;
+			}
+
+			signed int cpu_id = first_cpu;
+			unsigned int cpu_index = 0;
+			do {
+				if (rte_lcore_is_enabled(cpu_id)) {
+					EAL_LOG(DEBUG, " IO domain (%u) lcore %u", j, cpu_id);
+					topo_cnfg.io[j]->cores[cpu_index] = cpu_id;
+					cpu_index++;
+
+					topo_cnfg.io[j]->core_count += 1;
+					topo_cnfg.io_core_count += 1;
+				}
+				cpu_id = hwloc_bitmap_next(obj->cpuset, cpu_id);
+				cpu_count -= 1;
+			} while ((cpu_id != -1) && (cpu_count));
+		}
+	}
+
+	hwloc_topology_destroy(topo_cnfg.topology);
+	topo_cnfg.topology = NULL;
+
+	EAL_LOG(INFO, "Details of Topology:");
+	EAL_LOG(INFO, " - domain count: l1 %u, l2, %u, l3 %u, io %u",
+		topo_cnfg.l1_count, topo_cnfg.l2_count,
+		topo_cnfg.l3_count, topo_cnfg.io_count);
+	EAL_LOG(INFO, " - core count: l1 %u, l2 %u, l3 %u, io %u",
+		topo_cnfg.l1_core_count, topo_cnfg.l2_core_count,
+		topo_cnfg.l3_core_count, topo_cnfg.io_core_count);
+#endif
+
+	return 0;
+}
+
+/*
+ * release HWLOC topology structure memory
+ */
+int
+rte_eal_topology_release(void)
+{
+#ifdef RTE_EAL_HWLOC_TOPOLOGY_PROBE
+	EAL_LOG(DEBUG, "release l1 domain memory!");
+	for (int i = 0; i < topo_cnfg.l1_count; i++) {
+		if (topo_cnfg.l1[i]->cores) {
+			free(topo_cnfg.l1[i]->cores);
+			topo_cnfg.l1[i]->core_count = 0;
+		}
+	}
+
+	if (topo_cnfg.l1) {
+		free(topo_cnfg.l1);
+		topo_cnfg.l1 = NULL;
+	}
+	topo_cnfg.l1_count = 0;
+
+	EAL_LOG(DEBUG, "release l2 domain memory!");
+	for (int i = 0; i < topo_cnfg.l2_count; i++) {
+		if (topo_cnfg.l2[i]->cores) {
+			free(topo_cnfg.l2[i]->cores);
+			topo_cnfg.l2[i]->core_count = 0;
+		}
+	}
+
+	if (topo_cnfg.l2) {
+		free(topo_cnfg.l2);
+		topo_cnfg.l2 = NULL;
+	}
+	topo_cnfg.l2_count = 0;
+
+	EAL_LOG(DEBUG, "release l3 domain memory!");
+	for (int i = 0; i < topo_cnfg.l3_count; i++) {
+		if (topo_cnfg.l3[i]->cores) {
+			free(topo_cnfg.l3[i]->cores);
+			topo_cnfg.l3[i]->core_count = 0;
+		}
+	}
+
+	if (topo_cnfg.l3) {
+		free(topo_cnfg.l3);
+		topo_cnfg.l3 = NULL;
+	}
+	topo_cnfg.l3_count = 0;
+
+	EAL_LOG(DEBUG, "release IO domain memory!");
+	for (int i = 0; i < topo_cnfg.io_count; i++) {
+		if (topo_cnfg.io[i]->cores) {
+			free(topo_cnfg.io[i]->cores);
+			topo_cnfg.io[i]->core_count = 0;
+		}
+	}
+
+	if (topo_cnfg.io) {
+		free(topo_cnfg.io);
+		topo_cnfg.io = NULL;
+	}
+	topo_cnfg.io_count = 0;
+#endif
+
 	return 0;
 }
 

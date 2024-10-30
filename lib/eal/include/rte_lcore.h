@@ -18,6 +18,7 @@
 #include <rte_eal.h>
 #include <rte_launch.h>
 #include <rte_thread.h>
+#include <rte_bitset.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +37,39 @@ enum rte_lcore_role_t {
 	ROLE_SERVICE,
 	ROLE_NON_EAL,
 };
+
+/**
+ * The lcore grouping with in the L1 Domain.
+ */
+#define RTE_LCORE_DOMAIN_L1  RTE_BIT32(0)
+/**
+ * The lcore grouping with in the L2 Domain.
+ */
+#define RTE_LCORE_DOMAIN_L2  RTE_BIT32(1)
+/**
+ * The lcore grouping with in the L3 Domain.
+ */
+#define RTE_LCORE_DOMAIN_L3  RTE_BIT32(2)
+/**
+ * The lcore grouping with in the IO Domain.
+ */
+#define RTE_LCORE_DOMAIN_IO  RTE_BIT32(3)
+/**
+ * The lcore grouping with in the SMT Domain (Like L1 Domain).
+ */
+#define RTE_LCORE_DOMAIN_SMT RTE_LCORE_DOMAIN_L1
+/**
+ * The lcore grouping based on Domains (L1|L2|L3|IO).
+ */
+#define RTE_LCORE_DOMAIN_ALL (RTE_LCORE_DOMAIN_L1 |     \
+				RTE_LCORE_DOMAIN_L2 |   \
+				RTE_LCORE_DOMAIN_L3 |   \
+				RTE_LCORE_DOMAIN_IO)
+/**
+ * The mask for getting all cores under same topology.
+ */
+#define RTE_LCORE_DOMAIN_LCORES_ALL RTE_GENMASK32(31, 0)
+
 
 /**
  * Get a lcore's role.
@@ -212,6 +246,108 @@ int rte_lcore_is_enabled(unsigned int lcore_id);
 unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap);
 
 /**
+ * Get count for selected domain.
+ *
+ * @param domain_sel
+ *   Domain selection, RTE_LCORE_DOMAIN_[L1|L2|L3|IO].
+ * @return
+ *   total count for selected domain.
+ *
+ * @note valid for EAL args of lcore and coremask.
+ *
+ */
+__rte_experimental
+unsigned int rte_get_domain_count(unsigned int domain_sel);
+
+/**
+ * Get count for lcores for a domain.
+ *
+ * @param domain_sel
+ *   Domain selection, RTE_LCORE_DOMAIN_[L1|L2|L3|IO].
+ * @param domain_indx
+ *   Domain Index, valid range from 0 to (rte_get_domain_count - 1).
+ * @return
+ *   total count for lcore in a selected index of a domain.
+ *
+ * @note valid for EAL args of lcore and coremask.
+ *
+ */
+__rte_experimental
+unsigned int
+rte_lcore_count_from_domain(unsigned int domain_sel, unsigned int domain_indx);
+
+/**
+ * Get n'th lcore from a selected domain.
+ *
+ * @param domain_sel
+ *   Domain selection, RTE_LCORE_DOMAIN_[L1|L2|L3|IO].
+ * @param domain_indx
+ *   Domain Index, valid range from 0 to (rte_get_domain_count - 1).
+ * @param lcore_pos
+ *   lcore position, valid range from 0 to (dpdk_enabled_lcores in the domain -1)
+ * @return
+ *   lcore from the list for the selected domain.
+ *
+ * @note valid for EAL args of lcore and coremask.
+ *
+ */
+__rte_experimental
+unsigned int
+rte_get_lcore_in_domain(unsigned int domain_sel,
+unsigned int domain_indx, unsigned int lcore_pos);
+
+/**
+ * Get the enabled lcores from next domain based on extended flag.
+ *
+ * @param i
+ *   The current lcore (reference).
+ * @param skip_main
+ *   If true, do not return the ID of the main lcore.
+ * @param wrap
+ *   If true, go back to first core of flag based domain when last core is reached.
+ *   If false, return RTE_MAX_LCORE when no more cores are available.
+ * @param flag
+ *   Allows user to select various domain as specified under RTE_LCORE_DOMAIN_[L1|L2|L3|IO]
+ *
+ * @return
+ *   The next lcore_id or RTE_MAX_LCORE if not found.
+ *
+ * @note valid for EAL args of lcore and coremask.
+ *
+ */
+__rte_experimental
+unsigned int
+rte_get_next_lcore_from_domain(unsigned int i, int skip_main, int wrap,
+uint32_t flag);
+
+/**
+ * Get the Nth (first|last) lcores from next domain based on extended flag.
+ *
+ * @param i
+ *   The current lcore (reference).
+ * @param skip_main
+ *   If true, do not return the ID of the main lcore.
+ * @param wrap
+ *   If true, go back to first core of flag based domain when last core is reached.
+ *   If false, return RTE_MAX_LCORE when no more cores are available.
+ * @param flag
+ *   Allows user to select various domain as specified under RTE_LCORE_DOMAIN_(L1|L2|L3|IO)
+ * @param cores_to_skip
+ *   If set to positive value, will skip to Nth lcore from start.
+ *   If set to negative value, will skipe to Nth lcore from last.
+ *
+ * @return
+ *   The next lcore_id or RTE_MAX_LCORE if not found.
+ *
+ * @note valid for EAL args of lcore and coremask.
+ *
+ */
+__rte_experimental
+unsigned int
+rte_get_next_lcore_from_next_domain(unsigned int i,
+int skip_main, int wrap, uint32_t flag, int cores_to_skip);
+
+/**
  * Macro to browse all running lcores.
  */
 #define RTE_LCORE_FOREACH(i)						\
@@ -226,6 +362,38 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap);
 	for (i = rte_get_next_lcore(-1, 1, 0);				\
 	     i < RTE_MAX_LCORE;						\
 	     i = rte_get_next_lcore(i, 1, 0))
+
+/**
+ * Macro to browse all running lcores in a domain.
+ */
+#define RTE_LCORE_FOREACH_DOMAIN(i, flag)				\
+	for (i = rte_get_next_lcore_from_domain(-1, 0, 0, flag);	\
+	     i < RTE_MAX_LCORE;						\
+	     i = rte_get_next_lcore_from_domain(i, 0, 0, flag))
+
+/**
+ * Macro to browse all running lcores except the main lcore in domain.
+ */
+#define RTE_LCORE_FOREACH_WORKER_DOMAIN(i, flag)				\
+	for (i = rte_get_next_lcore_from_domain(-1, 1, 0, flag);	\
+	     i < RTE_MAX_LCORE;						\
+	     i = rte_get_next_lcore_from_domain(i, 1, 0, flag))
+
+/**
+ * Macro to browse Nth lcores on each domain.
+ */
+#define RTE_LCORE_FORN_NEXT_DOMAIN(i, flag, n)				\
+	for (i = rte_get_next_lcore_from_next_domain(-1, 0, 0, flag, n);\
+	     i < RTE_MAX_LCORE;						\
+	     i = rte_get_next_lcore_from_next_domain(i, 0, 0, flag, n))
+
+/**
+ * Macro to browse all Nth lcores except the main lcore on each domain.
+ */
+#define RTE_LCORE_FORN_WORKER_NEXT_DOMAIN(i, flag, n)			\
+	for (i = rte_get_next_lcore_from_next_domain(-1, 1, 0, flag, n);\
+	     i < RTE_MAX_LCORE;						\
+	     i = rte_get_next_lcore_from_next_domain(i, 1, 0, flag, n))
 
 /**
  * Callback prototype for initializing lcores.

@@ -65,6 +65,9 @@
  * duration of the program, as we hold a write lock on it in the primary proc */
 static int mem_cfg_fd = -1;
 
+/* holds topology information */
+struct topology_config topo_cnfg;
+
 static struct flock wr_lock = {
 		.l_type = F_WRLCK,
 		.l_whence = SEEK_SET,
@@ -1311,6 +1314,12 @@ rte_eal_init(int argc, char **argv)
 			return -1;
 	}
 
+	if (rte_eal_topology_init()) {
+		rte_eal_init_alert("Cannot invoke topology!!!");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
 	eal_mcfg_complete();
 
 	return fctret;
@@ -1351,6 +1360,8 @@ rte_eal_cleanup(void)
 	 */
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+
+	rte_eal_topology_release();
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
 			internal_conf->hugepage_file.unlink_existing)
