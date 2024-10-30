@@ -54,6 +54,8 @@ Features
 - TX VLAN insertion via raw encap.
 - CAM and TCAM based matching.
 - Exact match of 140 million flows and policies.
+- Tunnel HW offload: Packet type, inner/outer RSS, IP and UDP checksum
+   verification.
 
 Limitations
 ~~~~~~~~~~~
