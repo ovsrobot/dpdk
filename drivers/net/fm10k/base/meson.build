@@ -10,9 +10,9 @@ sources = [
         'fm10k_vf.c',
 ]
 
-error_cflags = ['-Wno-unused-parameter', '-Wno-unused-value',
-    '-Wno-strict-aliasing', '-Wno-format-extra-args',
-    '-Wno-unused-variable',
+error_cflags = [
+    '-Wno-unused-parameter',
+    '-Wno-unused-value',
     '-Wno-implicit-fallthrough'
 ]
 c_args = cflags
