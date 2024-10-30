@@ -164,6 +164,7 @@ New Features
   * Enable virtual queues
   * Added statistics support
   * Added age rte flow action support
+  * Added meter flow metering and flow policy support
 
 * **Added cryptodev queue pair reset support.**
 
