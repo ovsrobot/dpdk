@@ -63,6 +63,7 @@ Features
    source only, destination only or both.
 - Several RSS hash keys, one for each flow type.
 - Default RSS operation with no hash key specification.
+- Port and queue statistics.
 
 Limitations
 ~~~~~~~~~~~

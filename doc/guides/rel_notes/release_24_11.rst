@@ -162,6 +162,7 @@ New Features
   * Added basic handling of the virtual queues.
   * Added flow handling support
   * Enable virtual queues
+  * Added statistics support
 
 * **Added cryptodev queue pair reset support.**
 
