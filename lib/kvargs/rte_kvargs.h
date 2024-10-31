@@ -21,6 +21,8 @@
  * ethernet devices at initialization for arguments parsing.
  */
 
+#include <rte_common.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,6 +65,22 @@ struct rte_kvargs {
 };
 
 /**
+ * Functions that expect return value to be freed with rte_kvargs_free()
+ */
+#define __rte_dealloc_kvargs_free __rte_dealloc(rte_kvargs_free, 1)
+
+/**
+ * Free a rte_kvargs structure
+ *
+ * Free a rte_kvargs structure previously allocated with
+ * rte_kvargs_parse().
+ *
+ * @param kvlist
+ *   The rte_kvargs structure. No error if NULL.
+ */
+void rte_kvargs_free(struct rte_kvargs *kvlist);
+
+/**
  * Allocate a rte_kvargs and store key/value associations from a string
  *
  * The function allocates and fills a rte_kvargs structure from a given
@@ -80,8 +98,9 @@ struct rte_kvargs {
  *   - A pointer to an allocated rte_kvargs structure on success
  *   - NULL on error
  */
-struct rte_kvargs *rte_kvargs_parse(const char *args,
-		const char *const valid_keys[]);
+struct rte_kvargs *
+rte_kvargs_parse(const char *args, const char *const valid_keys[])
+	__rte_malloc __rte_dealloc_kvargs_free;
 
 /**
  * Allocate a rte_kvargs and store key/value associations from a string.
@@ -108,20 +127,9 @@ struct rte_kvargs *rte_kvargs_parse(const char *args,
  *   - A pointer to an allocated rte_kvargs structure on success
  *   - NULL on error
  */
-struct rte_kvargs *rte_kvargs_parse_delim(const char *args,
-		const char *const valid_keys[],
-		const char *valid_ends);
-
-/**
- * Free a rte_kvargs structure
- *
- * Free a rte_kvargs structure previously allocated with
- * rte_kvargs_parse().
- *
- * @param kvlist
- *   The rte_kvargs structure. No error if NULL.
- */
-void rte_kvargs_free(struct rte_kvargs *kvlist);
+struct rte_kvargs *
+rte_kvargs_parse_delim(const char *args, const char *const valid_keys[], const char *valid_ends)
+	__rte_malloc __rte_dealloc_kvargs_free;
 
 /**
  * Get the value associated with a given key.

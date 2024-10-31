@@ -249,6 +249,13 @@ rte_kvargs_get(const struct rte_kvargs *kvlist, const char *key)
 	return rte_kvargs_get_with_value(kvlist, key, NULL);
 }
 
+/* Helper function to get a pointer with kvargs_free attribute */
+static __rte_dealloc_kvargs_free struct rte_kvargs *
+rte_kvargs_alloc(void)
+{
+	return calloc(1, sizeof(struct rte_kvargs));
+}
+
 /*
  * Parse the arguments "key=value,key=value,..." string and return
  * an allocated structure that contains a key/value list. Also
@@ -259,10 +266,9 @@ rte_kvargs_parse(const char *args, const char * const valid_keys[])
 {
 	struct rte_kvargs *kvlist;
 
-	kvlist = malloc(sizeof(*kvlist));
+	kvlist = rte_kvargs_alloc();
 	if (kvlist == NULL)
 		return NULL;
-	memset(kvlist, 0, sizeof(*kvlist));
 
 	if (rte_kvargs_tokenize(kvlist, args) < 0) {
 		rte_kvargs_free(kvlist);
