@@ -4170,8 +4170,12 @@ port_flow_aged(portid_t port_id, uint8_t destroy)
 			       ctx.pf->rule.attr->ingress ? 'i' : '-',
 			       ctx.pf->rule.attr->egress ? 'e' : '-',
 			       ctx.pf->rule.attr->transfer ? 't' : '-');
+			/* use local copy of id as ctx.pf is freed by
+			 * port_flow_destroy() during processing
+			 */
+			uint64_t flow_id = ctx.pf->id;
 			if (destroy && !port_flow_destroy(port_id, 1,
-							  &ctx.pf->id, false))
+							  &flow_id, false))
 				total++;
 			break;
 		case ACTION_AGE_CONTEXT_TYPE_INDIRECT_ACTION:
