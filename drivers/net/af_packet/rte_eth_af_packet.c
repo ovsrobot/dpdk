@@ -36,6 +36,8 @@
 #define ETH_AF_PACKET_FRAMESIZE_ARG	"framesz"
 #define ETH_AF_PACKET_FRAMECOUNT_ARG	"framecnt"
 #define ETH_AF_PACKET_QDISC_BYPASS_ARG	"qdisc_bypass"
+#define ETH_AF_PACKET_ROLLOVER		"rollover"
+#define ETH_AF_PACKET_DEFRAG		"defrag"
 
 #define DFLT_FRAME_SIZE		(1 << 11)
 #define DFLT_FRAME_COUNT	(1 << 9)
@@ -96,6 +98,8 @@ static const char *valid_arguments[] = {
 	ETH_AF_PACKET_FRAMESIZE_ARG,
 	ETH_AF_PACKET_FRAMECOUNT_ARG,
 	ETH_AF_PACKET_QDISC_BYPASS_ARG,
+	ETH_AF_PACKET_ROLLOVER,
+	ETH_AF_PACKET_DEFRAG,
 	NULL
 };
 
@@ -701,6 +705,20 @@ open_packet_iface(const char *key __rte_unused,
 }
 
 static int
+uint_arg_parse(const char *arg_str, unsigned int *arg_val)
+{
+	unsigned long val;
+	char *endptr;
+
+	val = strtoul(arg_str, &endptr, 10);
+	if (*arg_str == '\0' || *endptr != '\0')
+		return -EINVAL;
+
+	*arg_val = val;
+	return 0;
+}
+
+static int
 rte_pmd_init_internals(struct rte_vdev_device *dev,
                        const int sockfd,
                        const unsigned nb_queues,
@@ -717,6 +735,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 	const unsigned int numa_node = dev->device.numa_node;
 	struct rte_eth_dev_data *data = NULL;
 	struct rte_kvargs_pair *pair = NULL;
+	const char *ifname = NULL;
 	struct ifreq ifr;
 	size_t ifnamelen;
 	unsigned k_idx;
@@ -727,6 +746,8 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 	int rc, tpver, discard;
 	int qsockfd = -1;
 	unsigned int i, q, rdsize;
+	unsigned int rollover = 1;
+	unsigned int defrag = 1;
 #if defined(PACKET_FANOUT)
 	int fanout_arg;
 #endif
@@ -734,9 +755,30 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 	for (k_idx = 0; k_idx < kvlist->count; k_idx++) {
 		pair = &kvlist->pairs[k_idx];
 		if (strstr(pair->key, ETH_AF_PACKET_IFACE_ARG) != NULL)
-			break;
+			ifname = pair->value;
+		if (strcmp(pair->key, ETH_AF_PACKET_ROLLOVER) == 0) {
+			rc = uint_arg_parse(pair->value, &rollover);
+			if (rc || rollover > 1) {
+				PMD_LOG(ERR,
+					"%s: invalid rollover value: %s",
+					name, pair->value);
+				return -1;
+			}
+			continue;
+		}
+		if (strcmp(pair->key, ETH_AF_PACKET_DEFRAG) == 0) {
+			rc = uint_arg_parse(pair->value, &defrag);
+			if (rc || defrag > 1) {
+				PMD_LOG(ERR,
+					"%s: invalid defrag value: %s",
+					name, pair->value);
+				return -1;
+			}
+			continue;
+		}
 	}
-	if (pair == NULL) {
+
+	if (ifname == NULL) {
 		PMD_LOG(ERR,
 			"%s: no interface specified for AF_PACKET ethdev",
 		        name);
@@ -779,21 +821,21 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 	req->tp_frame_size = framesize;
 	req->tp_frame_nr = framecnt;
 
-	ifnamelen = strlen(pair->value);
+	ifnamelen = strlen(ifname);
 	if (ifnamelen < sizeof(ifr.ifr_name)) {
-		memcpy(ifr.ifr_name, pair->value, ifnamelen);
+		memcpy(ifr.ifr_name, ifname, ifnamelen);
 		ifr.ifr_name[ifnamelen] = '\0';
 	} else {
 		PMD_LOG(ERR,
 			"%s: I/F name too long (%s)",
-			name, pair->value);
+			name, ifname);
 		goto free_internals;
 	}
 	if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1) {
 		PMD_LOG_ERRNO(ERR, "%s: ioctl failed (SIOCGIFINDEX)", name);
 		goto free_internals;
 	}
-	(*internals)->if_name = strdup(pair->value);
+	(*internals)->if_name = strdup(ifname);
 	if ((*internals)->if_name == NULL)
 		goto free_internals;
 	(*internals)->if_index = ifr.ifr_ifindex;
@@ -811,9 +853,12 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 
 #if defined(PACKET_FANOUT)
 	fanout_arg = (getpid() ^ (*internals)->if_index) & 0xffff;
-	fanout_arg |= (PACKET_FANOUT_HASH | PACKET_FANOUT_FLAG_DEFRAG) << 16;
+	fanout_arg |= PACKET_FANOUT_HASH << 16;
+	if (defrag)
+		fanout_arg |= PACKET_FANOUT_FLAG_DEFRAG << 16;
 #if defined(PACKET_FANOUT_FLAG_ROLLOVER)
-	fanout_arg |= PACKET_FANOUT_FLAG_ROLLOVER << 16;
+	if (rollover)
+		fanout_arg |= PACKET_FANOUT_FLAG_ROLLOVER << 16;
 #endif
 #endif
 
@@ -833,7 +878,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rc == -1) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: could not set PACKET_VERSION on AF_PACKET socket for %s",
-				name, pair->value);
+				name, ifname);
 			goto error;
 		}
 
@@ -843,7 +888,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rc == -1) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: could not set PACKET_LOSS on AF_PACKET socket for %s",
-				name, pair->value);
+				name, ifname);
 			goto error;
 		}
 
@@ -854,7 +899,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 			if (rc == -1) {
 				PMD_LOG_ERRNO(ERR,
 					"%s: could not set PACKET_QDISC_BYPASS on AF_PACKET socket for %s",
-					name, pair->value);
+					name, ifname);
 				goto error;
 			}
 #endif
@@ -864,7 +909,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rc == -1) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: could not set PACKET_RX_RING on AF_PACKET socket for %s",
-				name, pair->value);
+				name, ifname);
 			goto error;
 		}
 
@@ -872,7 +917,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rc == -1) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: could not set PACKET_TX_RING on AF_PACKET "
-				"socket for %s", name, pair->value);
+				"socket for %s", name, ifname);
 			goto error;
 		}
 
@@ -885,7 +930,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rx_queue->map == MAP_FAILED) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: call to mmap failed on AF_PACKET socket for %s",
-				name, pair->value);
+				name, ifname);
 			goto error;
 		}
 
@@ -922,7 +967,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rc == -1) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: could not bind AF_PACKET socket to %s",
-				name, pair->value);
+				name, ifname);
 			goto error;
 		}
 
@@ -932,7 +977,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		if (rc == -1) {
 			PMD_LOG_ERRNO(ERR,
 				"%s: could not set PACKET_FANOUT on AF_PACKET socket for %s",
-				name, pair->value);
+				name, ifname);
 			goto error;
 		}
 #endif
