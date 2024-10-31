@@ -1346,6 +1346,46 @@ err:
 	return ret;
 }
 
+static int
+session_set_ecdsa(struct qat_asym_session *qat_session,
+			struct rte_crypto_asym_xform *xform)
+{
+	uint8_t *pkey = xform->ec.pkey.data;
+	uint8_t *q_x = xform->ec.q.x.data;
+	uint8_t *q_y = xform->ec.q.y.data;
+
+	qat_session->xform.ec.pkey.data =
+		rte_malloc(NULL, xform->ec.pkey.length, 0);
+	if (qat_session->xform.ec.pkey.data == NULL)
+		return -ENOMEM;
+	qat_session->xform.ec.q.x.data = rte_malloc(NULL,
+		xform->ec.q.x.length, 0);
+	if (qat_session->xform.ec.q.x.data == NULL) {
+		rte_free(qat_session->xform.ec.pkey.data);
+		return -ENOMEM;
+	}
+	qat_session->xform.ec.q.y.data = rte_malloc(NULL,
+		xform->ec.q.y.length, 0);
+	if (qat_session->xform.ec.q.y.data == NULL) {
+		rte_free(qat_session->xform.ec.pkey.data);
+		rte_free(qat_session->xform.ec.q.x.data);
+		return -ENOMEM;
+	}
+
+	rte_memcpy(qat_session->xform.ec.pkey.data, pkey,
+		xform->ec.pkey.length);
+	qat_session->xform.ec.pkey.length = xform->ec.pkey.length;
+	rte_memcpy(qat_session->xform.ec.q.x.data, q_x,
+		xform->ec.q.x.length);
+	qat_session->xform.ec.q.x.length = xform->ec.q.x.length;
+	rte_memcpy(qat_session->xform.ec.q.y.data, q_y,
+		xform->ec.q.y.length);
+	qat_session->xform.ec.q.y.length = xform->ec.q.y.length;
+	qat_session->xform.ec.curve_id = xform->ec.curve_id;
+
+	return 0;
+}
+
 static void
 session_set_ec(struct qat_asym_session *qat_session,
 			struct rte_crypto_asym_xform *xform)
@@ -1384,6 +1424,8 @@ qat_asym_session_configure(struct rte_cryptodev *dev __rte_unused,
 		}
 		break;
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
+		ret = session_set_ecdsa(qat_session, xform);
+		break;
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
 	case RTE_CRYPTO_ASYM_XFORM_ECDH:
 		session_set_ec(qat_session, xform);
