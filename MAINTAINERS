@@ -1051,6 +1051,12 @@ F: drivers/net/virtio/
 F: doc/guides/nics/virtio.rst
 F: doc/guides/nics/features/virtio*.ini
 
+ZTE zxdh
+M: Lijie Shan <shan.lijie@zte.com.cn>
+F: drivers/net/zxdh/
+F: doc/guides/nics/zxdh.rst
+F: doc/guides/nics/features/zxdh.ini
+
 Wind River AVP
 M: Steven Webster <steven.webster@windriver.com>
 M: Matt Peters <matt.peters@windriver.com>
