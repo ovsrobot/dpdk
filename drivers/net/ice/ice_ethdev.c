@@ -1922,8 +1922,11 @@ static int ice_read_customized_path(char *pkg_file, uint16_t buff_len)
 		return -EIO;
 	}
 
-	if (pkg_file[n - 1] == '\n')
+	if (pkg_file[n - 1] == '\n') {
 		n--;
+		if (n == 0)
+			return -EINVAL;
+	}
 
 	pkg_file[n] = '\0';
 
