@@ -4,6 +4,7 @@
  */
 
 #include <errno.h>
+#include <features.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -19,6 +20,7 @@ struct eal_tls_key {
 	pthread_key_t thread_index;
 };
 
+#ifndef __USE_GNU
 struct thread_start_context {
 	rte_thread_func thread_func;
 	void *thread_args;
@@ -28,6 +30,7 @@ struct thread_start_context {
 	int wrapper_ret;
 	bool wrapper_done;
 };
+#endif
 
 static int
 thread_map_priority_to_os_value(enum rte_thread_priority eal_pri, int *os_pri,
@@ -88,6 +91,7 @@ thread_map_os_priority_to_eal_priority(int policy, int os_pri,
 	return 0;
 }
 
+#ifndef __USE_GNU
 static void *
 thread_start_wrapper(void *arg)
 {
@@ -113,6 +117,7 @@ thread_start_wrapper(void *arg)
 
 	return (void *)(uintptr_t)thread_func(thread_args);
 }
+#endif
 
 int
 rte_thread_create(rte_thread_t *thread_id,
@@ -126,6 +131,7 @@ rte_thread_create(rte_thread_t *thread_id,
 		.sched_priority = 0,
 	};
 	int policy = SCHED_OTHER;
+#ifndef __USE_GNU
 	struct thread_start_context ctx = {
 		.thread_func = thread_func,
 		.thread_args = args,
@@ -134,6 +140,7 @@ rte_thread_create(rte_thread_t *thread_id,
 		.wrapper_mutex = PTHREAD_MUTEX_INITIALIZER,
 		.wrapper_cond = PTHREAD_COND_INITIALIZER,
 	};
+#endif
 
 	if (thread_attr != NULL) {
 		ret = pthread_attr_init(&attr);
@@ -144,6 +151,16 @@ rte_thread_create(rte_thread_t *thread_id,
 
 		attrp = &attr;
 
+#ifdef __USE_GNU
+		if (CPU_COUNT(&thread_attr->cpuset) > 0) {
+			ret = pthread_attr_setaffinity_np(attrp, sizeof(thread_attr->cpuset),
+				&thread_attr->cpuset);
+			if (ret != 0) {
+				EAL_LOG(DEBUG, "pthread_attr_setaffinity_np failed");
+				goto cleanup;
+			}
+		}
+#endif
 		/*
 		 * Set the inherit scheduler parameter to explicit,
 		 * otherwise the priority attribute is ignored.
@@ -178,6 +195,14 @@ rte_thread_create(rte_thread_t *thread_id,
 		}
 	}
 
+#ifdef __USE_GNU
+	ret = pthread_create((pthread_t *)&thread_id->opaque_id, attrp,
+		(void *)(void *)thread_func, args);
+	if (ret != 0) {
+		EAL_LOG(DEBUG, "pthread_create failed");
+		goto cleanup;
+	}
+#else /* !__USE_GNU */
 	ret = pthread_create((pthread_t *)&thread_id->opaque_id, attrp,
 		thread_start_wrapper, &ctx);
 	if (ret != 0) {
@@ -193,6 +218,7 @@ rte_thread_create(rte_thread_t *thread_id,
 
 	if (ret != 0)
 		rte_thread_join(*thread_id, NULL);
+#endif /* __USE_GNU */
 
 cleanup:
 	if (attrp != NULL)
