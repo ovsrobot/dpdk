@@ -161,6 +161,12 @@ New Features
   * Added initialization of FPGA modules related to flow HW offload.
   * Added basic handling of the virtual queues.
 
+* **Updated ZTE zxdh net driver [EXPERIMENTAL].**
+
+  * Added ethdev driver support for zxdh NX Series Ethernet Controller.
+    - Ability to initialize the NIC
+    - Does not support datapath
+
 * **Added cryptodev queue pair reset support.**
 
   A new API ``rte_cryptodev_queue_pair_reset`` is added
