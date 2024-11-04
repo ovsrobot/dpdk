@@ -832,9 +832,32 @@ zxdh_dev_configure(struct rte_eth_dev *dev)
 	return ret;
 }
 
+static int
+zxdh_dev_close(struct rte_eth_dev *dev)
+{
+	struct zxdh_hw *hw = dev->data->dev_private;
+	int ret = 0;
+
+	zxdh_intr_release(dev);
+	zxdh_pci_reset(hw);
+
+	zxdh_dev_free_mbufs(dev);
+	zxdh_free_queues(dev);
+
+	zxdh_bar_msg_chan_exit();
+
+	if (dev->data->mac_addrs != NULL) {
+		rte_free(dev->data->mac_addrs);
+		dev->data->mac_addrs = NULL;
+	}
+
+	return ret;
+}
+
 /* dev_ops for zxdh, bare necessities for basic operation */
 static const struct eth_dev_ops zxdh_eth_dev_ops = {
 	.dev_configure			 = zxdh_dev_configure,
+	.dev_close				 = zxdh_dev_close,
 	.dev_infos_get			 = zxdh_dev_infos_get,
 };
 
@@ -975,14 +998,6 @@ zxdh_eth_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	return rte_eth_dev_pci_generic_probe(pci_dev,
 						sizeof(struct zxdh_hw),
 						zxdh_eth_dev_init);
-}
-
-static int
-zxdh_dev_close(struct rte_eth_dev *dev __rte_unused)
-{
-	int ret = 0;
-
-	return ret;
 }
 
 static int
