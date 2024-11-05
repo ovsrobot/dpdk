@@ -3556,7 +3556,8 @@ static int ixgbe_dev_xstats_get_names_by_id(
 
 	uint16_t i;
 	uint16_t size = ixgbe_xstats_calc_num();
-	struct rte_eth_xstat_name xstats_names_copy[size];
+	struct rte_eth_xstat_name *xstats_names_copy =
+	    alloca(sizeof(struct rte_eth_xstat_name) * size);
 
 	ixgbe_dev_xstats_get_names_by_id(dev, NULL, xstats_names_copy,
 			size);
@@ -3739,7 +3740,7 @@ ixgbe_dev_xstats_get_by_id(struct rte_eth_dev *dev, const uint64_t *ids,
 
 	uint16_t i;
 	uint16_t size = ixgbe_xstats_calc_num();
-	uint64_t values_copy[size];
+	uint64_t *values_copy = alloca(sizeof(uint64_t) * size);
 
 	ixgbe_dev_xstats_get_by_id(dev, NULL, values_copy, size);
 
