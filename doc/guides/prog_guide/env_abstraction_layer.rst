@@ -1188,3 +1188,25 @@ will not be deallocated.
 
 Any successful deallocation event will trigger a callback, for which user
 applications and other DPDK subsystems can register.
+
+Topology
+--------
+
+During `rte_eal_init`, an internal topology structure is created to group DPDK enabled
+lcores into various topology. Using HWLOC library, lcores are categorized into multiple
+domains based on topology groups such as
+
+*   L1 cache
+*   L2 cache
+*   L3 cache
+*   L4 cache
+*   IO
+
+Using `rte_lcore_` extended API, user can retrieve lcores from groups using topology flag and
+domain index. Refer to the API documentation for details.
+
+.. note::
+
+    Topology API are tested on HWLOC library version `2.7.0`.
+    In absence of HWLOC library, initialization of topology objects is skipped.
+    For cross compile, please ensure appropriate path for `pkg-config` is enabled.
