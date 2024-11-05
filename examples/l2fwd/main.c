@@ -46,6 +46,9 @@ static int mac_updating = 1;
 /* Ports set in promiscuous mode off by default. */
 static int promiscuous_on;
 
+/* select lcores based on ports numa (RTE_LCORE_DOMAIN_IO). */
+static bool select_port_from_io_domain;
+
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define MAX_PKT_BURST 32
@@ -314,6 +317,7 @@ l2fwd_usage(const char *prgname)
 	       "  -P : Enable promiscuous mode\n"
 	       "  -q NQ: number of queue (=ports) per lcore (default is 1)\n"
 	       "  -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default, 86400 maximum)\n"
+	       "  -t : Enable IO domain lcores mapping to Ports\n"
 	       "  --no-mac-updating: Disable MAC addresses updating (enabled by default)\n"
 	       "      When enabled:\n"
 	       "       - The source MAC address is replaced by the TX port MAC address\n"
@@ -431,6 +435,7 @@ static const char short_options[] =
 	"P"   /* promiscuous */
 	"q:"  /* number of queues */
 	"T:"  /* timer period */
+	"t"  /* lcore from port io numa */
 	;
 
 #define CMD_LINE_OPT_NO_MAC_UPDATING "no-mac-updating"
@@ -500,6 +505,11 @@ l2fwd_parse_args(int argc, char **argv)
 				return -1;
 			}
 			timer_period = timer_secs;
+			break;
+
+		/* lcores from port io numa */
+		case 't':
+			select_port_from_io_domain = true;
 			break;
 
 		/* long options */
@@ -654,7 +664,7 @@ main(int argc, char **argv)
 	uint16_t nb_ports;
 	uint16_t nb_ports_available = 0;
 	uint16_t portid, last_port;
-	unsigned lcore_id, rx_lcore_id;
+	uint16_t lcore_id, rx_lcore_id;
 	unsigned nb_ports_in_mask = 0;
 	unsigned int nb_lcores = 0;
 	unsigned int nb_mbufs;
@@ -738,18 +748,48 @@ main(int argc, char **argv)
 	qconf = NULL;
 
 	/* Initialize the port/queue configuration of each logical core */
+	if (rte_get_domain_count(RTE_LCORE_DOMAIN_IO) == 0)
+		rte_exit(EXIT_FAILURE, "we do not have enough cores in IO numa!\n");
+
+	uint16_t coreindx_io_domain[RTE_MAX_ETHPORTS] = {0};
+	uint16_t lcore_io_domain[RTE_MAX_ETHPORTS] = {RTE_MAX_LCORE};
+	uint16_t l3_domain_count = rte_get_domain_count(RTE_LCORE_DOMAIN_IO);
+
+	for (int i = 0; i < l3_domain_count; i++)
+		lcore_io_domain[i] = rte_get_lcore_in_domain(RTE_LCORE_DOMAIN_IO, i, 0);
+
 	RTE_ETH_FOREACH_DEV(portid) {
 		/* skip ports that are not enabled */
 		if ((l2fwd_enabled_port_mask & (1 << portid)) == 0)
 			continue;
 
-		/* get the lcore_id for this port */
-		while (rte_lcore_is_enabled(rx_lcore_id) == 0 ||
-		       lcore_queue_conf[rx_lcore_id].n_rx_port ==
-		       l2fwd_rx_queue_per_lcore) {
-			rx_lcore_id++;
-			if (rx_lcore_id >= RTE_MAX_LCORE)
-				rte_exit(EXIT_FAILURE, "Not enough cores\n");
+		/* get IO NUMA for the port */
+		int port_socket = rte_eth_dev_socket_id(portid);
+
+		if (select_port_from_io_domain == false) {
+			/* get the lcore_id for this port */
+			while ((rte_lcore_is_enabled(rx_lcore_id) == 0) ||
+			       (lcore_queue_conf[rx_lcore_id].n_rx_port ==
+				l2fwd_rx_queue_per_lcore)) {
+				rx_lcore_id++;
+				if (rx_lcore_id >= RTE_MAX_LCORE)
+					rte_exit(EXIT_FAILURE, "Not enough cores\n");
+			}
+		} else {
+			/* get lcore from IO numa for this port */
+			rx_lcore_id = lcore_io_domain[port_socket];
+
+			if (lcore_queue_conf[rx_lcore_id].n_rx_port == l2fwd_rx_queue_per_lcore) {
+				coreindx_io_domain[port_socket] += 1;
+				rx_lcore_id = rte_get_lcore_in_domain(RTE_LCORE_DOMAIN_IO,
+						port_socket, coreindx_io_domain[port_socket]);
+			}
+
+			if (rx_lcore_id == RTE_MAX_LCORE)
+				rte_exit(EXIT_FAILURE, "unable find IO (%u) numa lcore for port (%u)\n",
+					 port_socket, portid);
+
+			lcore_io_domain[port_socket] = rx_lcore_id;
 		}
 
 		if (qconf != &lcore_queue_conf[rx_lcore_id]) {
