@@ -397,6 +397,15 @@ EXPERIMENTAL {
 
 	# added in 24.11
 	rte_bitset_to_str;
+
+	# added in 25.03
+	rte_get_domain_count;
+	rte_get_lcore_in_domain;
+	rte_get_next_lcore_from_domain;
+	rte_get_next_lcore_from_next_domain;
+	rte_lcore_count_from_domain;
+	rte_lcore_cpuset_in_domain;
+	rte_lcore_is_main_in_domain;
 };
 
 INTERNAL {
@@ -406,6 +415,8 @@ INTERNAL {
 	rte_bus_unregister;
 	rte_eal_get_baseaddr;
 	rte_eal_parse_coremask;
+	rte_eal_topology_init;
+	rte_eal_topology_release;
 	rte_firmware_read;
 	rte_intr_allow_others;
 	rte_intr_cap_multiple;

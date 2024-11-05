@@ -31,3 +31,7 @@ endif
 if is_freebsd
     annotate_locks = false
 endif
+
+if has_libhwloc
+    dpdk_conf.set10('RTE_EAL_HWLOC_TOPOLOGY_PROBE', true)
+endif
