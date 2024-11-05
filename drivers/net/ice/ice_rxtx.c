@@ -1873,7 +1873,7 @@ ice_rx_alloc_bufs(struct ice_rx_queue *rxq)
 	uint64_t dma_addr;
 	int diag, diag_pay;
 	uint64_t pay_addr;
-	struct rte_mbuf *mbufs_pay[rxq->rx_free_thresh];
+	struct rte_mbuf **mbufs_pay = alloca(sizeof(struct rte_mbuf *) * rxq->rx_free_thresh);
 
 	/* Allocate buffers in bulk */
 	alloc_idx = (uint16_t)(rxq->rx_free_trigger -
