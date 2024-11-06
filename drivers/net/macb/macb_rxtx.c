@@ -1355,6 +1355,11 @@ int __rte_cold eth_macb_rx_init(struct rte_eth_dev *dev)
 	return 0;
 }
 
+/* Stubs needed for linkage when RTE_ARCH_PPC_64, RTE_ARCH_RISCV or
+ * RTE_ARCH_LOONGARCH is set.
+ */
+#if defined(RTE_ARCH_PPC_64) || defined(RTE_ARCH_RISCV) || \
+	defined(RTE_ARCH_LOONGARCH) || defined(RTE_ARCH_X86)
 uint16_t
 eth_macb_recv_pkts_vec(void __rte_unused *rx_queue,
 		       struct rte_mbuf __rte_unused **rx_pkts,
@@ -1378,3 +1383,4 @@ eth_macb_xmit_pkts_vec(void __rte_unused *tx_queue,
 {
 	return 0;
 }
+#endif
