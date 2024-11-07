@@ -17,6 +17,7 @@ sed '/^..->/d' |
 sed '/^uint->/d' |
 sed "/^doesn'->/d" |
 sed '/^wasn->/d' |
+sed '/^soring->/d' |
 
 # print to stdout
 cat
