@@ -1308,14 +1308,18 @@ hns3_start_tqps(struct hns3_hw *hw)
 
 	hns3_enable_all_queues(hw, true);
 
+	__rte_assume(hw->data->nb_tx_queues <= RTE_MAX_QUEUES_PER_PORT);
 	for (i = 0; i < hw->data->nb_tx_queues; i++) {
+		/* __rte_assume(i < RTE_MAX_QUEUES_PER_PORT); */
 		txq = hw->data->tx_queues[i];
 		if (txq->enabled)
 			hw->data->tx_queue_state[i] =
 				RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
+	__rte_assume(hw->data->nb_rx_queues <= RTE_MAX_QUEUES_PER_PORT);
 	for (i = 0; i < hw->data->nb_rx_queues; i++) {
+		/* __rte_assume(i < RTE_MAX_QUEUES_PER_PORT); */
 		rxq = hw->data->rx_queues[i];
 		if (rxq->enabled)
 			hw->data->rx_queue_state[i] =

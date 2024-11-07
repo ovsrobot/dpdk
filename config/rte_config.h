@@ -65,8 +65,8 @@
 #define RTE_MBUF_DEFAULT_MEMPOOL_OPS "ring_mp_mc"
 
 /* ether defines */
-#define RTE_MAX_QUEUES_PER_PORT 1024
-#define RTE_ETHDEV_QUEUE_STAT_CNTRS 16 /* max 256 */
+#define RTE_MAX_QUEUES_PER_PORT 1 /* default 1024 */
+#define RTE_ETHDEV_QUEUE_STAT_CNTRS 1 /* max 256, default 16 */
 #define RTE_ETHDEV_RXTX_CALLBACKS 1
 #define RTE_MAX_MULTI_HOST_CTRLS 4
 

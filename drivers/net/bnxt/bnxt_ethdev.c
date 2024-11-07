@@ -906,10 +906,12 @@ skip_cosq_cfg:
 		goto err_out;
 	}
 
+	__rte_assume(bp->rx_nr_rings <= RTE_MAX_QUEUES_PER_PORT);
 	for (j = 0; j < bp->rx_nr_rings; j++) {
 		struct bnxt_rx_queue *rxq = bp->rx_queues[j];
 
 		if (!rxq->rx_deferred_start) {
+			/* __rte_assume(j < RTE_MAX_QUEUES_PER_PORT); */
 			bp->eth_dev->data->rx_queue_state[j] =
 				RTE_ETH_QUEUE_STATE_STARTED;
 			rxq->rx_started = true;
@@ -926,10 +928,12 @@ skip_cosq_cfg:
 			goto err_out;
 	}
 
+	__rte_assume(bp->tx_nr_rings <= RTE_MAX_QUEUES_PER_PORT);
 	for (j = 0; j < bp->tx_nr_rings; j++) {
 		struct bnxt_tx_queue *txq = bp->tx_queues[j];
 
 		if (!txq->tx_deferred_start) {
+			/* __rte_assume(j < RTE_MAX_QUEUES_PER_PORT); */
 			bp->eth_dev->data->tx_queue_state[j] =
 				RTE_ETH_QUEUE_STATE_STARTED;
 			txq->tx_started = true;

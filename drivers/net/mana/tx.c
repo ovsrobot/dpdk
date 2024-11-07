@@ -74,6 +74,7 @@ mana_start_tx_queues(struct rte_eth_dev *dev)
 		if (dev->data->tx_queue_state[i] == RTE_ETH_QUEUE_STATE_STARTED)
 			return -EINVAL;
 
+	__rte_assume(priv->num_queues <= RTE_MAX_QUEUES_PER_PORT);
 	for (i = 0; i < priv->num_queues; i++) {
 		struct mana_txq *txq;
 		struct ibv_qp_init_attr qp_attr = { 0 };
@@ -154,6 +155,7 @@ mana_start_tx_queues(struct rte_eth_dev *dev)
 			txq->gdma_cq.count, txq->gdma_cq.size,
 			txq->gdma_cq.head);
 
+		/* __rte_assume(i < RTE_MAX_QUEUES_PER_PORT); */
 		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
