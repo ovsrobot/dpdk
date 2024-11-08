@@ -18,6 +18,7 @@
 #include <rte_lcore.h>
 #include <rte_dmadev.h>
 #include <rte_kvargs.h>
+#include <rte_os_shim.h>
 
 #include "main.h"
 
@@ -183,6 +184,7 @@ parse_lcore(struct test_configure *test_case, const char *value)
 	uint16_t len;
 	char *input;
 	struct lcore_dma_map_t *lcore_dma_map;
+	char *sp = NULL;
 
 	if (test_case == NULL || value == NULL)
 		return -1;
@@ -194,7 +196,7 @@ parse_lcore(struct test_configure *test_case, const char *value)
 
 	memset(lcore_dma_map, 0, sizeof(struct lcore_dma_map_t));
 
-	char *token = strtok(input, ", ");
+	char *token = strtok_r(input, ", ", &sp);
 	while (token != NULL) {
 		if (lcore_dma_map->cnt >= MAX_WORKER_NB) {
 			free(input);
@@ -204,7 +206,7 @@ parse_lcore(struct test_configure *test_case, const char *value)
 		uint16_t lcore_id = atoi(token);
 		lcore_dma_map->lcores[lcore_dma_map->cnt++] = lcore_id;
 
-		token = strtok(NULL, ", ");
+		token = strtok_r(NULL, ", ", &sp);
 	}
 
 	free(input);
@@ -220,6 +222,7 @@ parse_lcore_dma(struct test_configure *test_case, const char *value)
 	char *start, *end, *substr;
 	uint16_t lcore_id;
 	int ret = 0;
+	char *sp = NULL;
 
 	if (test_case == NULL || value == NULL)
 		return -1;
@@ -237,7 +240,7 @@ parse_lcore_dma(struct test_configure *test_case, const char *value)
 		goto out;
 	}
 
-	substr = strtok(addrs, ",");
+	substr = strtok_r(addrs, ",", &sp);
 	if (substr == NULL) {
 		fprintf(stderr, "No input DMA address\n");
 		ret = -1;
@@ -279,7 +282,7 @@ parse_lcore_dma(struct test_configure *test_case, const char *value)
 		strlcpy(lcore_dma_map->dma_names[lcore_dma_map->cnt], ptrs[1],
 				RTE_DEV_NAME_MAX_LEN);
 		lcore_dma_map->cnt++;
-		substr = strtok(NULL, ",");
+		substr = strtok_r(NULL, ",", &sp);
 	} while (substr != NULL);
 
 out:
@@ -625,6 +628,7 @@ main(int argc, char *argv[])
 	char *rst_path_ptr = NULL;
 	char rst_path[PATH_MAX];
 	int new_argc;
+	char *sp = NULL;
 
 	memset(args, 0, sizeof(args));
 
@@ -643,7 +647,7 @@ main(int argc, char *argv[])
 	}
 	if (rst_path_ptr == NULL) {
 		strlcpy(rst_path, cfg_path_ptr, PATH_MAX);
-		char *token = strtok(basename(rst_path), ".");
+		char *token = strtok_r(basename(rst_path), ".", &sp);
 		if (token == NULL) {
 			printf("Config file error.\n");
 			return -1;
