@@ -29,6 +29,7 @@
 #include <rte_dmadev.h>
 #include <rte_vhost_async.h>
 #include <rte_thread.h>
+#include <rte_os_shim.h>
 
 #include "main.h"
 
@@ -259,6 +260,7 @@ open_dma(const char *value)
 	uint16_t i = 0;
 	char *dma_arg[RTE_MAX_VHOST_DEVICE];
 	int args_nr;
+	char *sp = NULL;
 
 	if (input == NULL)
 		return -1;
@@ -272,7 +274,7 @@ open_dma(const char *value)
 
 	/* process DMA devices within bracket. */
 	addrs++;
-	substr = strtok(addrs, ";]");
+	substr = strtok_r(addrs, ";]", &sp);
 	if (!substr) {
 		ret = -1;
 		goto out;
