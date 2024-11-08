@@ -36,6 +36,7 @@
 #include <rte_ethdev.h>
 #include <rte_flow.h>
 #include <rte_mtr.h>
+#include <rte_os_shim.h>
 
 #include "config.h"
 #include "actions_gen.h"
@@ -602,6 +603,7 @@ read_meter_policy(char *prog, char *arg)
 {
 	char *token;
 	size_t i, j, k;
+	char *sp = NULL;
 
 	j = 0;
 	k = 0;
@@ -612,9 +614,9 @@ read_meter_policy(char *prog, char *arg)
 		token = strsep(&arg, ":\0");
 	}
 	j = 0;
-	token = strtok(actions_str[0], ",\0");
+	token = strtok_r(actions_str[0], ",\0", &sp);
 	while (token == NULL && j < RTE_COLORS - 1)
-		token = strtok(actions_str[++j], ",\0");
+		token = strtok_r(actions_str[++j], ",\0", &sp);
 	while (j < RTE_COLORS && token != NULL) {
 		for (i = 0; i < RTE_DIM(flow_options); i++) {
 			if (!strcmp(token, flow_options[i].str)) {
@@ -628,9 +630,9 @@ read_meter_policy(char *prog, char *arg)
 			usage(prog);
 			rte_exit(EXIT_SUCCESS, "Invalid colored actions\n");
 		}
-		token = strtok(NULL, ",\0");
+		token = strtok_r(NULL, ",\0", &sp);
 		while (!token && j < RTE_COLORS - 1) {
-			token = strtok(actions_str[++j], ",\0");
+			token = strtok_r(actions_str[++j], ",\0", &sp);
 			k = 0;
 		}
 	}
@@ -641,6 +643,7 @@ args_parse(int argc, char **argv)
 {
 	uint64_t pm, seed;
 	uint64_t hp_conf;
+	char *sp = NULL;
 	char **argvopt;
 	uint32_t prio;
 	char *token;
@@ -804,7 +807,7 @@ args_parse(int argc, char **argv)
 						RTE_FLOW_ACTION_TYPE_RAW_ENCAP
 					);
 
-				token = strtok(optarg, ",");
+				token = strtok_r(optarg, ",", &sp);
 				while (token != NULL) {
 					for (i = 0; i < RTE_DIM(flow_options); i++) {
 						if (strcmp(flow_options[i].str, token) == 0) {
@@ -817,7 +820,7 @@ args_parse(int argc, char **argv)
 							rte_exit(EXIT_FAILURE,
 								"Invalid encap item: %s\n", token);
 					}
-					token = strtok(NULL, ",");
+					token = strtok_r(NULL, ",", &sp);
 				}
 				printf(" / ");
 			}
@@ -828,7 +831,7 @@ args_parse(int argc, char **argv)
 						RTE_FLOW_ACTION_TYPE_RAW_DECAP
 					);
 
-				token = strtok(optarg, ",");
+				token = strtok_r(optarg, ",", &sp);
 				while (token != NULL) {
 					for (i = 0; i < RTE_DIM(flow_options); i++) {
 						if (strcmp(flow_options[i].str, token) == 0) {
@@ -841,7 +844,7 @@ args_parse(int argc, char **argv)
 							rte_exit(EXIT_FAILURE,
 								"Invalid decap item %s\n", token);
 					}
-					token = strtok(NULL, ",");
+					token = strtok_r(NULL, ",", &sp);
 				}
 				printf(" / ");
 			}
@@ -910,10 +913,10 @@ args_parse(int argc, char **argv)
 				uint16_t port_idx = 0;
 				char *token;
 
-				token = strtok(optarg, ",");
+				token = strtok_r(optarg, ",", &sp);
 				while (token != NULL) {
 					dst_ports[port_idx++] = atoi(token);
-					token = strtok(NULL, ",");
+					token = strtok_r(NULL, ",", &sp);
 				}
 			}
 			if (strcmp(lgopts[opt_idx].name, "rxq") == 0) {
