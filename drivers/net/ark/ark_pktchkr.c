@@ -7,6 +7,7 @@
 
 #include <rte_string_fns.h>
 #include <rte_malloc.h>
+#include <rte_os_shim.h>
 
 #include "ark_pktchkr.h"
 #include "ark_logs.h"
@@ -359,14 +360,14 @@ set_arg(char *arg, char *val)
 void
 ark_pktchkr_parse(char *args)
 {
-	char *argv, *v;
+	char *argv, *v, *sp = NULL;
 	const char toks[] = "=\n\t\v\f \r";
-	argv = strtok(args, toks);
-	v = strtok(NULL, toks);
+	argv = strtok_r(args, toks, &sp);
+	v = strtok_r(NULL, toks, &sp);
 	while (argv && v) {
 		set_arg(argv, v);
-		argv = strtok(NULL, toks);
-		v = strtok(NULL, toks);
+		argv = strtok_r(NULL, toks, &sp);
+		v = strtok_r(NULL, toks, &sp);
 	}
 }
 
