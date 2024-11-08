@@ -11,6 +11,7 @@
 #include <rte_cryptodev.h>
 #include <dev_driver.h>
 #include <rte_telemetry.h>
+#include <rte_os_shim.h>
 #include "rte_security.h"
 #include "rte_security_driver.h"
 
@@ -497,13 +498,14 @@ security_handle_cryptodev_crypto_caps(const char *cmd __rte_unused, const char *
 	int dev_id, capa_id;
 	int crypto_caps_n;
 	char *end_param;
+	char *sp = NULL;
 	int rc;
 
 	if (!params || strlen(params) == 0 || !isdigit(*params))
 		return -EINVAL;
 
 	dev_id = strtoul(params, &end_param, 0);
-	capa_param = strtok(end_param, ",");
+	capa_param = strtok_r(end_param, ",", &sp);
 	if (!capa_param || strlen(capa_param) == 0 || !isdigit(*capa_param))
 		return -EINVAL;
 
