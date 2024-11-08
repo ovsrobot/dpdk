@@ -145,6 +145,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# refrain from using some non-reentrant functions
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS="strtok\\\(" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Using non-reentrant function strtok, prefer strtok_r' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# refrain from using some pthread functions
 	awk -v FOLDERS="lib drivers app examples" \
 		-v EXPRESSIONS="pthread_(create|join|detach|set(_?name_np|affinity_np)|attr_set(inheritsched|schedpolicy))\\\(" \
