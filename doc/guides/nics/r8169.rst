@@ -24,4 +24,5 @@ Features
 Features of the R8169 PMD are:
 
 * Checksum offload
+* TCP segmentation offload
 * Jumbo frames supported
