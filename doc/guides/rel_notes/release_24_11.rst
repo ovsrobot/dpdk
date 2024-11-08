@@ -223,6 +223,11 @@ New Features
 
   * Added support for DMA queue priority configuration.
 
+* **Added Realtek network PMD.**
+
+  Added a new network PMD which supports Realtek 2.5 and 5 Gigabit
+  Ethernet NICs.
+
 * **Added event device pre-scheduling support.**
 
   Added support for pre-scheduling of events to event ports
