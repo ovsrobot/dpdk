@@ -24,8 +24,8 @@
 #define MII_EXPANSION		0x06	/* Expansion register          */
 #define MII_CTRL1000		0x09	/* 1000BASE-T control          */
 #define MII_STAT1000		0x0a	/* 1000BASE-T status           */
-#define MII_MMD_CTRL		0x0d	/* MMD Access Control Register */
-#define MII_MMD_DATA		0x0e	/* MMD Access Data Register    */
+#define	MII_MMD_CTRL		0x0d	/* MMD Access Control Register */
+#define	MII_MMD_DATA		0x0e	/* MMD Access Data Register    */
 #define MII_ESTATUS		0x0f	/* Extended Status             */
 #define MII_DCOUNTER		0x12	/* Disconnect counter          */
 #define MII_FCSCOUNTER		0x13	/* False carrier counter       */
@@ -80,7 +80,7 @@
 #define ADVERTISE_100HALF	0x0080	/* Try for 100mbps half-duplex */
 #define ADVERTISE_1000XPAUSE	0x0080	/* Try for 1000BASE-X pause    */
 #define ADVERTISE_100FULL	0x0100	/* Try for 100mbps full-duplex */
-#define ADVERTISE_1000XPSE_ASYM 0x0100	/* Try for 1000BASE-X asym pause */
+#define ADVERTISE_1000XPSE_ASYM	0x0100	/* Try for 1000BASE-X asym pause */
 #define ADVERTISE_100BASE4	0x0200	/* Try for 100mbps 4k packets  */
 #define ADVERTISE_PAUSE_CAP	0x0400	/* Try for pause               */
 #define ADVERTISE_PAUSE_ASYM	0x0800	/* Try for asymetric pause     */

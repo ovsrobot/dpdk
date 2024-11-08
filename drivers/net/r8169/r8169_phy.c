@@ -14,7 +14,6 @@
 #include "r8169_phy.h"
 #include "r8169_logs.h"
 
-
 static void
 rtl_clear_set_mac_ocp_bit(struct rtl_hw *hw, u16 addr, u16 clearmask,
 			  u16 setmask)
