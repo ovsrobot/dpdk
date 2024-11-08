@@ -33,4 +33,10 @@ struct rtl_adapter {
 #define RTL_DEV_PRIVATE(eth_dev) \
 	((struct rtl_adapter *)((eth_dev)->data->dev_private))
 
+int rtl_rx_init(struct rte_eth_dev *dev);
+int rtl_tx_init(struct rte_eth_dev *dev);
+
+uint16_t rtl_xmit_pkts(void *txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
+uint16_t rtl_recv_pkts(void *rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
+
 #endif
