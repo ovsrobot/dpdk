@@ -3,6 +3,7 @@
  */
 
 #include <math.h>
+#include <rte_os_shim.h>
 
 #include "roc_npa.h"
 
@@ -420,7 +421,8 @@ cnxk_tim_parse_ring_param(char *value, void *opaque)
 {
 	struct cnxk_tim_evdev *dev = opaque;
 	struct cnxk_tim_ctl ring_ctl = {0};
-	char *tok = strtok(value, "-");
+	char *sp = NULL;
+	char *tok = strtok_r(value, "-", &sp);
 	struct cnxk_tim_ctl *old_ptr;
 	uint16_t *val;
 
@@ -431,7 +433,7 @@ cnxk_tim_parse_ring_param(char *value, void *opaque)
 
 	while (tok != NULL) {
 		*val = atoi(tok);
-		tok = strtok(NULL, "-");
+		tok = strtok_r(NULL, "-", &sp);
 		val++;
 	}
 
@@ -507,16 +509,16 @@ cnxk_tim_parse_clk_list(const char *value, void *opaque)
 				      ROC_TIM_CLK_SRC_INVALID};
 	struct cnxk_tim_evdev *dev = opaque;
 	char *str = strdup(value);
-	char *tok;
+	char *tok, *sp = NULL;
 	int i = 0;
 
 	if (str == NULL || !strlen(str))
 		goto free;
 
-	tok = strtok(str, "-");
+	tok = strtok_r(str, "-", &sp);
 	while (tok != NULL && src[i] != ROC_TIM_CLK_SRC_INVALID) {
 		dev->ext_clk_freq[src[i]] = strtoull(tok, NULL, 10);
-		tok = strtok(NULL, "-");
+		tok = strtok_r(NULL, "-", &sp);
 		i++;
 	}
 
