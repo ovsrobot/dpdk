@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <rte_malloc.h>
+#include <rte_os_shim.h>
 
 #include "test_bbdev_vector.h"
 
@@ -63,8 +64,9 @@ parse_values(char *tokens, uint32_t **data, uint32_t *data_length)
 
 	uint32_t *values, *values_resized;
 	char *tok, *error = NULL;
+	char *sp = NULL;
 
-	tok = strtok(tokens, VALUE_DELIMITER);
+	tok = strtok_r(tokens, VALUE_DELIMITER, &sp);
 	if (tok == NULL)
 		return -1;
 
@@ -98,7 +100,7 @@ parse_values(char *tokens, uint32_t **data, uint32_t *data_length)
 
 		*data_length = *data_length + (strlen(tok) - strlen("0x"))/2;
 
-		tok = strtok(NULL, VALUE_DELIMITER);
+		tok = strtok_r(NULL, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			break;
 
@@ -324,8 +326,9 @@ parse_turbo_flags(char *tokens, uint32_t *op_flags,
 {
 	char *tok = NULL;
 	uint32_t op_flag_value = 0;
+	char *sp = NULL;
 
-	tok = strtok(tokens, VALUE_DELIMITER);
+	tok = strtok_r(tokens, VALUE_DELIMITER, &sp);
 	if (tok == NULL)
 		return -1;
 
@@ -359,7 +362,7 @@ parse_turbo_flags(char *tokens, uint32_t *op_flags,
 
 		*op_flags = *op_flags | op_flag_value;
 
-		tok = strtok(NULL, VALUE_DELIMITER);
+		tok = strtok_r(NULL, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			break;
 	}
@@ -399,9 +402,10 @@ static int
 parse_expected_status(char *tokens, int *status, enum rte_bbdev_op_type op_type)
 {
 	char *tok = NULL;
+	char *sp = NULL;
 	bool status_ok = false;
 
-	tok = strtok(tokens, VALUE_DELIMITER);
+	tok = strtok_r(tokens, VALUE_DELIMITER, &sp);
 	if (tok == NULL)
 		return -1;
 
@@ -432,7 +436,7 @@ parse_expected_status(char *tokens, int *status, enum rte_bbdev_op_type op_type)
 			return -1;
 		}
 
-		tok = strtok(NULL, VALUE_DELIMITER);
+		tok = strtok_r(NULL, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			break;
 	}
@@ -932,6 +936,7 @@ parse_fft_params(const char *key_token, char *token,
 	int ret = 0, status = 0, i, shift;
 	uint32_t op_flags = 0;
 	char *tok, *err = NULL;
+	char *sp = NULL;
 
 	struct rte_bbdev_op_fft *fft = &vector->fft;
 
@@ -964,7 +969,7 @@ parse_fft_params(const char *key_token, char *token,
 		fft->output_leading_depadding = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "window_index")) {
-		tok = strtok(token, VALUE_DELIMITER);
+		tok = strtok_r(token, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			return -1;
 		for (i = 0; i < FFT_WIN_SIZE; i++) {
@@ -972,7 +977,7 @@ parse_fft_params(const char *key_token, char *token,
 			fft->window_index[i / 2] |= (uint32_t) strtoul(tok, &err, 0)
 					<< shift;
 			if (i < (FFT_WIN_SIZE - 1)) {
-				tok = strtok(NULL, VALUE_DELIMITER);
+				tok = strtok_r(NULL, VALUE_DELIMITER, &sp);
 				if (tok == NULL)
 					return -1;
 			}
@@ -1016,53 +1021,53 @@ parse_fft_params(const char *key_token, char *token,
 		fft->output_depadded_size = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "cs_theta_0")) {
-		tok = strtok(token, VALUE_DELIMITER);
+		tok = strtok_r(token, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			return -1;
 		for (i = 0; i < FFT_WIN_SIZE; i++) {
 			fft->cs_theta_0[i] = (uint32_t) strtoul(tok, &err, 0);
 			if (i < (FFT_WIN_SIZE - 1)) {
-				tok = strtok(NULL, VALUE_DELIMITER);
+				tok = strtok_r(token, VALUE_DELIMITER, &sp);
 				if (tok == NULL)
 					return -1;
 			}
 		}
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "cs_theta_d")) {
-		tok = strtok(token, VALUE_DELIMITER);
+		tok = strtok_r(token, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			return -1;
 		for (i = 0; i < FFT_WIN_SIZE; i++) {
 			fft->cs_theta_d[i] = (uint32_t) strtoul(tok, &err, 0);
 			if (i < (FFT_WIN_SIZE - 1)) {
-				tok = strtok(NULL, VALUE_DELIMITER);
+				tok = strtok_r(token, VALUE_DELIMITER, &sp);
 				if (tok == NULL)
 					return -1;
 			}
 		}
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "time_offset")) {
-		tok = strtok(token, VALUE_DELIMITER);
+		tok = strtok_r(token, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			return -1;
 		for (i = 0; i < FFT_WIN_SIZE; i++) {
 			fft->time_offset[i] = (uint32_t) strtoul(tok, &err, 0);
 			if (i < (FFT_WIN_SIZE - 1)) {
-				tok = strtok(NULL, VALUE_DELIMITER);
+				tok = strtok_r(token, VALUE_DELIMITER, &sp);
 				if (tok == NULL)
 					return -1;
 			}
 		}
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "fft_window_width")) {
-		tok = strtok(token, VALUE_DELIMITER);
+		tok = strtok_r(token, VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			return -1;
 		for (i = 0; i < FFT_WIN_SIZE; i++) {
 			if (i == 0)
 				vector->fft_window_width_vec = (uint32_t) strtoul(tok, &err, 0);
 			if (i < (FFT_WIN_SIZE - 1)) {
-				tok = strtok(NULL, VALUE_DELIMITER);
+				tok = strtok_r(token, VALUE_DELIMITER, &sp);
 				if (tok == NULL)
 					return -1;
 			}
@@ -1163,6 +1168,7 @@ static int
 parse_entry(char *entry, struct test_bbdev_vector *vector)
 {
 	int ret = 0;
+	char *sp = NULL;
 	char *token, *key_token;
 	enum rte_bbdev_op_type op_type = RTE_BBDEV_OP_NONE;
 
@@ -1172,10 +1178,10 @@ parse_entry(char *entry, struct test_bbdev_vector *vector)
 	}
 
 	/* get key */
-	token = strtok(entry, ENTRY_DELIMITER);
+	token = strtok_r(entry, ENTRY_DELIMITER, &sp);
 	key_token = token;
 	/* get values for key */
-	token = strtok(NULL, ENTRY_DELIMITER);
+	token = strtok_r(NULL, ENTRY_DELIMITER, &sp);
 
 	if (key_token == NULL || token == NULL) {
 		printf("Expected 'key = values' but was '%.40s'..\n", entry);
