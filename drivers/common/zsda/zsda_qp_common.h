@@ -52,10 +52,23 @@ struct zsda_queue {
 	uint16_t sid;
 };
 
+struct zsda_qp_stat {
+	/**< Count of all operations enqueued */
+	uint64_t enqueued_count;
+	/**< Count of all operations dequeued */
+	uint64_t dequeued_count;
+
+	/**< Total error count on operations enqueued */
+	uint64_t enqueue_err_count;
+	/**< Total error count on operations dequeued */
+	uint64_t dequeue_err_count;
+};
+
 struct qp_srv {
 	bool used;
 	struct zsda_queue tx_q;
 	struct zsda_queue rx_q;
+	struct zsda_qp_stat stats;
 	struct rte_mempool *op_cookie_pool;
 	void **op_cookies;
 	uint16_t nb_descriptors;
@@ -66,5 +79,8 @@ struct zsda_qp {
 };
 
 int zsda_queue_pair_release(struct zsda_qp **qp_addr);
+void zsda_stats_get(void **queue_pairs, const uint32_t nb_queue_pairs,
+	      struct zsda_qp_stat *stats);
+void zsda_stats_reset(void **queue_pairs, const uint32_t nb_queue_pairs);
 
 #endif /* _ZSDA_QP_COMMON_H_ */
