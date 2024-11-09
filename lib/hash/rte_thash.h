@@ -109,6 +109,14 @@ union rte_thash_tuple {
 };
 
 /**
+ * maximum length in dwords of input tuple to
+ * calculate hash of ipv(4|6) header +
+ * transport header
+ */
+#define RTE_THASH_MAX_L4_LEN	\
+	((sizeof(union rte_thash_tuple)) / sizeof(uint32_t))
+
+/**
  * Prepare special converted key to use with rte_softrss_be()
  * @param orig
  *   pointer to original RSS key
