@@ -4,7 +4,7 @@
 
 #include "zsda_qp_common.h"
 
-static void
+void
 zsda_queue_delete(const struct zsda_queue *queue)
 {
 	const struct rte_memzone *mz;
