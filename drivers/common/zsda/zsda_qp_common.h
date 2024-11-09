@@ -13,7 +13,6 @@
 #include <rte_mbuf.h>
 
 #include "zsda_logs.h"
-#include "zsda_device.h"
 
 #define ZSDA_SUCCESS			0
 #define ZSDA_FAILED				(-1)
