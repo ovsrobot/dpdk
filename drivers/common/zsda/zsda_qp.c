@@ -3,14 +3,11 @@
  */
 
 #include <stdint.h>
-
-#include <rte_malloc.h>
+#include <rte_mempool.h>
 
 #include "zsda_logs.h"
-#include "zsda_device.h"
 #include "zsda_qp.h"
 #include "zsda_qp_common.h"
-
 
 #define MAGIC_SEND 0xab
 #define MAGIC_RECV 0xcd
@@ -400,7 +397,8 @@ zsda_get_queue_cfg_by_id(const struct zsda_pci_device *zsda_pci_dev,
 }
 
 static struct ring_size zsda_qp_hw_ring_size[ZSDA_MAX_SERVICES] = {
-
+	[ZSDA_SERVICE_ENCOMPRESSION] = {32, 16},
+	[ZSDA_SERVICE_DECOMPRESSION] = {32, 16},
 };
 
 static int
@@ -468,6 +466,26 @@ zsda_unmask_flr(const struct zsda_pci_device *zsda_pci_dev)
 	return ZSDA_SUCCESS;
 }
 
+static uint16_t
+zsda_qps_per_service(const struct zsda_pci_device *zsda_pci_dev,
+		     const enum zsda_service_type service)
+{
+	uint16_t qp_hw_num = 0;
+
+	if (service < ZSDA_SERVICE_INVALID)
+		qp_hw_num = zsda_pci_dev->zsda_qp_hw_num[service];
+	return qp_hw_num;
+}
+
+struct zsda_num_qps zsda_nb_qps;
+static void
+zsda_get_nb_qps(const struct zsda_pci_device *zsda_pci_dev)
+{
+	zsda_nb_qps.encomp =
+		zsda_qps_per_service(zsda_pci_dev, ZSDA_SERVICE_ENCOMPRESSION);
+	zsda_nb_qps.decomp =
+		zsda_qps_per_service(zsda_pci_dev, ZSDA_SERVICE_DECOMPRESSION);
+}
 
 int
 zsda_queue_init(struct zsda_pci_device *zsda_pci_dev)
@@ -500,6 +518,8 @@ zsda_queue_init(struct zsda_pci_device *zsda_pci_dev)
 		ZSDA_LOG(ERR, "Failed! zsda_unmask_flr");
 		return ret;
 	}
+
+	zsda_get_nb_qps(zsda_pci_dev);
 
 	return ret;
 }

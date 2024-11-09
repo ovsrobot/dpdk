@@ -7,10 +7,10 @@
 
 #include <rte_memzone.h>
 #include "bus_pci_driver.h"
+#include "zsda_qp_common.h"
 
 #define MAX_QPS_ON_FUNCTION		128
 #define ZSDA_DEV_NAME_MAX_LEN	64
-#define ZSDA_MAX_SERVICES (0)
 #define ZSDA_MAX_DEV RTE_PMD_ZSDA_MAX_PCI_DEVICES
 
 struct zsda_device_info {
@@ -18,7 +18,11 @@ struct zsda_device_info {
 	/**< mz to store the：  struct zsda_pci_device ,    so it can be
 	 * shared across processes
 	 */
-
+	struct rte_device comp_rte_dev;
+	/**< This represents the compression subset of this pci device.
+	 * Register with this rather than with the one in
+	 * pci_dev so that its driver can have a compression-specific name
+	 */
 	struct rte_pci_device *pci_dev;
 };
 
@@ -45,6 +49,10 @@ struct zsda_pci_device {
 	/**< Id of device instance for this zsda pci device */
 
 	struct rte_pci_device *pci_dev;
+
+	/* Data relating to compression service */
+	struct zsda_comp_dev_private *comp_dev;
+	/**< link back to compressdev private data */
 
 	struct zsda_qp_hw zsda_hw_qps[ZSDA_MAX_SERVICES];
 	uint16_t zsda_qp_hw_num[ZSDA_MAX_SERVICES];

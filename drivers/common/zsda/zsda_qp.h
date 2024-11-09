@@ -5,6 +5,8 @@
 #ifndef _ZSDA_QP_H_
 #define _ZSDA_QP_H_
 
+#include "zsda_device.h"
+
 #define ZSDA_ADMIN_Q_START		0x100
 #define ZSDA_ADMIN_Q_STOP		0x100
 #define ZSDA_ADMIN_Q_STOP_RESP	0x104
@@ -72,10 +74,6 @@ enum zsda_admin_msg_id {
 	ZSDA_ADMIN_INT_TEST
 };
 
-enum zsda_service_type {
-	ZSDA_SERVICE_INVALID,
-};
-
 struct ring_size {
 	uint16_t tx_msg_size;
 	uint16_t rx_msg_size;
@@ -118,7 +116,15 @@ struct zsda_admin_resp_qcfg {
 	uint8_t data[14];
 } __rte_packed;
 
+struct zsda_num_qps {
+	uint16_t encomp;
+	uint16_t decomp;
+	uint16_t encrypt;
+	uint16_t decrypt;
+	uint16_t hash;
+};
 
+extern struct zsda_num_qps zsda_nb_qps;
 
 int zsda_queue_start(const struct rte_pci_device *pci_dev);
 int zsda_queue_stop(const struct rte_pci_device *pci_dev);
