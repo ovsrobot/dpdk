@@ -9,6 +9,7 @@
 #include <rte_bus_pci.h>
 
 #include "zsda_device.h"
+#include "zsda_logs.h"
 
 /* per-process array of device data */
 struct zsda_device_info zsda_devs[RTE_PMD_ZSDA_MAX_PCI_DEVICES];
@@ -32,9 +33,10 @@ zsda_pci_get_named_dev(const char *name)
 {
 	unsigned int i;
 
-	if (name == NULL)
+	if (name == NULL) {
+		ZSDA_LOG(ERR, "Failed! name is NULL.");
 		return NULL;
-
+	}
 	for (i = 0; i < RTE_PMD_ZSDA_MAX_PCI_DEVICES; i++) {
 		if (zsda_devs[i].mz &&
 		    (strcmp(((struct zsda_pci_device *)zsda_devs[i].mz->addr)
@@ -81,8 +83,10 @@ zsda_pci_device_allocate(struct rte_pci_device *pci_dev)
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 		const struct rte_memzone *mz = rte_memzone_lookup(name);
 
-		if (mz == NULL)
+		if (mz == NULL) {
+			ZSDA_LOG(ERR, "Secondary can't find %s mz", name);
 			return NULL;
+		}
 		zsda_pci_dev = mz->addr;
 		zsda_devs[zsda_pci_dev->zsda_dev_id].mz = mz;
 		zsda_devs[zsda_pci_dev->zsda_dev_id].pci_dev = pci_dev;
@@ -90,8 +94,10 @@ zsda_pci_device_allocate(struct rte_pci_device *pci_dev)
 		return zsda_pci_dev;
 	}
 
-	if (zsda_pci_get_named_dev(name) != NULL)
+	if (zsda_pci_get_named_dev(name) != NULL) {
+		ZSDA_LOG(ERR, "Failed! config");
 		return NULL;
+	}
 
 	zsda_dev_id = zsda_pci_find_free_device_index();
 
@@ -102,9 +108,10 @@ zsda_pci_device_allocate(struct rte_pci_device *pci_dev)
 		rte_memzone_reserve(name, sizeof(struct zsda_pci_device),
 				    (int)(socket_id & 0xfff), 0);
 
-	if (zsda_devs[zsda_dev_id].mz == NULL)
+	if (zsda_devs[zsda_dev_id].mz == NULL) {
+		ZSDA_LOG(ERR, "Failed! malloc");
 		return NULL;
-
+	}
 	zsda_pci_dev = zsda_devs[zsda_dev_id].mz->addr;
 	memset(zsda_pci_dev, 0, sizeof(*zsda_pci_dev));
 	memcpy(zsda_pci_dev->name, name, ZSDA_DEV_NAME_MAX_LEN);
@@ -158,8 +165,10 @@ zsda_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	struct zsda_pci_device *zsda_pci_dev;
 
 	zsda_pci_dev = zsda_pci_device_allocate(pci_dev);
-	if (zsda_pci_dev == NULL)
+	if (zsda_pci_dev == NULL) {
+		ZSDA_LOG(ERR, "Failed! zsda_pci_dev is NULL");
 		return -ENODEV;
+	}
 
 	return ret;
 }
