@@ -31,6 +31,52 @@ enum zsda_service_type {
 #define ZSDA_CSR_READ8(addr)	      rte_read8((addr))
 #define ZSDA_CSR_WRITE8(addr, value)  rte_write8_relaxed((value), (addr))
 
+#define NB_DES					512
+#define ZSDA_SGL_MAX_NUMBER		512
+#define COMP_REMOVE_SPACE_LEN 16
+
+#define ZSDA_MAX_DESC		512
+#define ZSDA_MAX_CYCLE		256
+#define ZSDA_MAX_DEV		RTE_PMD_ZSDA_MAX_PCI_DEVICES
+#define MAX_NUM_OPS			0x1FF
+
+struct zsda_admin_req {
+	uint16_t msg_type;
+	uint8_t data[26];
+} __rte_packed;
+
+struct zsda_admin_resp {
+	uint16_t msg_type;
+	uint8_t data[26];
+} __rte_packed;
+
+struct zsda_admin_req_qcfg {
+	uint16_t msg_type;
+	uint8_t qid;
+	uint8_t data[25];
+} __rte_packed;
+
+struct zsda_test_msg {
+	uint32_t msg_type;
+	uint32_t data_in;
+	uint8_t data[20];
+} __rte_packed;
+
+struct qinfo {
+	uint16_t q_type;
+	uint16_t wq_tail;
+	uint16_t wq_head;
+	uint16_t cq_tail;
+	uint16_t cq_head;
+	uint16_t cycle;
+} __rte_packed;
+
+struct zsda_admin_resp_qcfg {
+	uint16_t msg_type;
+	struct qinfo qcfg;
+	uint8_t data[14];
+} __rte_packed;
+
 struct zsda_queue {
 	char memz_name[RTE_MEMZONE_NAMESIZE];
 	uint8_t *io_addr;
@@ -64,10 +110,30 @@ struct zsda_qp_stat {
 	uint64_t dequeue_err_count;
 };
 
+struct zsda_cqe {
+	uint8_t valid; /* cqe_cycle */
+	uint8_t op_code;
+	uint16_t sid;
+	uint8_t state;
+	uint8_t result;
+	uint16_t zsda_wq_id;
+	uint32_t tx_real_length;
+	uint16_t err0;
+	uint16_t err1;
+} __rte_packed;
+
+typedef int (*rx_callback)(void *cookie_in, struct zsda_cqe *cqe);
+typedef int (*tx_callback)(void *op_in, const struct zsda_queue *queue,
+			   void **op_cookies, const uint16_t new_tail);
+typedef int (*srv_match)(const void *op_in);
+
 struct qp_srv {
 	bool used;
 	struct zsda_queue tx_q;
 	struct zsda_queue rx_q;
+	rx_callback rx_cb;
+	tx_callback tx_cb;
+	srv_match match;
 	struct zsda_qp_stat stats;
 	struct rte_mempool *op_cookie_pool;
 	void **op_cookies;
@@ -82,5 +148,6 @@ int zsda_queue_pair_release(struct zsda_qp **qp_addr);
 void zsda_stats_get(void **queue_pairs, const uint32_t nb_queue_pairs,
 	      struct zsda_qp_stat *stats);
 void zsda_stats_reset(void **queue_pairs, const uint32_t nb_queue_pairs);
+void zsda_queue_delete(const struct zsda_queue *queue);
 
 #endif /* _ZSDA_QP_COMMON_H_ */

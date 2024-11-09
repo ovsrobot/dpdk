@@ -5,13 +5,12 @@
 #ifndef _ZSDA_DEVICE_H_
 #define _ZSDA_DEVICE_H_
 
-#include <rte_memzone.h>
 #include "bus_pci_driver.h"
+
 #include "zsda_qp_common.h"
 
 #define MAX_QPS_ON_FUNCTION		128
 #define ZSDA_DEV_NAME_MAX_LEN	64
-#define ZSDA_MAX_DEV RTE_PMD_ZSDA_MAX_PCI_DEVICES
 
 struct zsda_device_info {
 	const struct rte_memzone *mz;
