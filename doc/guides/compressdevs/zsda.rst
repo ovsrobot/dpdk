@@ -13,6 +13,29 @@ support for the following hardware accelerator devices:
 Features
 --------
 
+ZSDA compression PMD has support for:
+
+Compression/Decompression algorithm:
+
+    * DEFLATE - using Fixed and Dynamic Huffman encoding
+
+Checksum generation:
+
+    * CRC32, Adler32
+
+Huffman code type:
+
+* FIXED
+* DYNAMIC
+
+
+Limitations
+-----------
+
+* Compressdev level 0, no compression, is not supported.
+* No BSD support as BSD ZSDA kernel driver not available.
+* Stateful is not supported.
+
 
 
 Limitations
@@ -193,24 +216,7 @@ ZSDA compression PMD can be tested by running the test application::
 Debugging
 ~~~~~~~~~
 
-There are 2 sets of trace available via the dynamic logging feature:
+ZSDA logging feature can be enabled using the log-level option (where 8=maximum
+log level) on the process cmdline, e.g. using any of the following::
 
-* pmd.zsda.dp exposes trace on the data-path.
-* pmd.zsda.general exposes all other trace.
-
-pmd.zsda exposes both sets of traces.
-They can be enabled using the log-level option (where 8=maximum log level) on
-the process cmdline, e.g. using any of the following::
-
-    --log-level="pmd.zsda.general,8"
-    --log-level="pmd.zsda.dp,8"
-
-.. Note::
-
-    The global RTE_LOG_DP_LEVEL overrides data-path trace so must be set to
-    RTE_LOG_DEBUG to see all the trace. This variable is in config/rte_config.h
-    for meson build.
-    Also the dynamic global log level overrides both sets of trace, so e.g. no
-    ZSDA trace would display in this case::
-
-	--log-level="pmd.zsda.general,8" --log-level="pmd.zsda,8"
+    --log-level="gen,8"
