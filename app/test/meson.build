@@ -249,6 +249,11 @@ foreach d:optional_deps
     endif
 endforeach
 
+# Bugzilla ID: 678
+if (toolchain == 'gcc' and cc.version().version_compare('>=11.0.0'))
+    cflags += '-Wno-array-bounds'
+endif
+
 if cc.has_argument('-Wno-format-truncation')
     cflags += '-Wno-format-truncation'
 endif
