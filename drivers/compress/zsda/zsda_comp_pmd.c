@@ -229,7 +229,7 @@ zsda_setup_comp_queue(struct zsda_pci_device *zsda_pci_dev, const uint16_t qp_id
 	conf.service_str = "comp";
 
 	ret = zsda_common_setup_qp(zsda_pci_dev->zsda_dev_id, &qp, qp_id, &conf);
-	qp->srv[type].rx_cb = NULL;
+	qp->srv[type].rx_cb = zsda_comp_callback;
 	qp->srv[type].tx_cb = zsda_build_comp_request;
 	qp->srv[type].match = zsda_comp_match;
 
@@ -254,7 +254,7 @@ zsda_setup_decomp_queue(struct zsda_pci_device *zsda_pci_dev, const uint16_t qp_
 	conf.service_str = "decomp";
 
 	ret = zsda_common_setup_qp(zsda_pci_dev->zsda_dev_id, &qp, qp_id, &conf);
-	qp->srv[type].rx_cb = NULL;
+	qp->srv[type].rx_cb = zsda_comp_callback;
 	qp->srv[type].tx_cb = zsda_build_decomp_request;
 	qp->srv[type].match = zsda_decomp_match;
 
@@ -348,6 +348,14 @@ zsda_comp_pmd_enqueue_op_burst(void *qp, struct rte_comp_op **ops,
 				     nb_ops);
 }
 
+static uint16_t
+zsda_comp_pmd_dequeue_op_burst(void *qp, struct rte_comp_op **ops,
+			       uint16_t nb_ops)
+{
+	return zsda_dequeue_op_burst((struct zsda_qp *)qp, (void **)ops,
+				     nb_ops);
+}
+
 int
 zsda_comp_dev_create(struct zsda_pci_device *zsda_pci_dev)
 {
@@ -386,7 +394,7 @@ zsda_comp_dev_create(struct zsda_pci_device *zsda_pci_dev)
 	compressdev->dev_ops = &compress_zsda_ops;
 
 	compressdev->enqueue_burst = zsda_comp_pmd_enqueue_op_burst;
-	compressdev->dequeue_burst = NULL;
+	compressdev->dequeue_burst = zsda_comp_pmd_dequeue_op_burst;
 
 	compressdev->feature_flags = RTE_COMPDEV_FF_HW_ACCELERATED;
 
