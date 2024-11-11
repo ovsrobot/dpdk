@@ -11,7 +11,6 @@
 #include "zsda_device.h"
 #include "zsda_logs.h"
 #include "zsda_qp.h"
-
 /* per-process array of device data */
 struct zsda_device_info zsda_devs[RTE_PMD_ZSDA_MAX_PCI_DEVICES];
 static int zsda_nb_pci_devices;

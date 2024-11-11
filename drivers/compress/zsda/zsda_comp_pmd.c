@@ -210,6 +210,109 @@ zsda_comp_private_xform_free(struct rte_compressdev *dev __rte_unused,
 	return -EINVAL;
 }
 
+static int
+zsda_setup_comp_queue(struct zsda_pci_device *zsda_pci_dev, const uint16_t qp_id,
+		 struct zsda_qp *qp, uint16_t nb_des, int socket_id)
+{
+	enum zsda_service_type type = ZSDA_SERVICE_ENCOMPRESSION;
+	struct zsda_qp_config conf;
+	int ret;
+	struct zsda_qp_hw *qp_hw;
+
+	qp_hw = zsda_qps_hw_per_service(zsda_pci_dev, type);
+	conf.hw = qp_hw->data + qp_id;
+	conf.service_type = type;
+	conf.cookie_size = sizeof(struct zsda_op_cookie);
+	conf.nb_descriptors = nb_des;
+	conf.socket_id = socket_id;
+	conf.service_str = "comp";
+
+	ret = zsda_common_setup_qp(zsda_pci_dev->zsda_dev_id, &qp, qp_id, &conf);
+	qp->srv[type].rx_cb = NULL;
+	qp->srv[type].tx_cb = NULL;
+	qp->srv[type].match = NULL;
+
+	return ret;
+}
+
+static int
+zsda_setup_decomp_queue(struct zsda_pci_device *zsda_pci_dev, const uint16_t qp_id,
+		   struct zsda_qp *qp, uint16_t nb_des, int socket_id)
+{
+	enum zsda_service_type type = ZSDA_SERVICE_DECOMPRESSION;
+	struct zsda_qp_config conf;
+	int ret;
+	struct zsda_qp_hw *qp_hw;
+
+	qp_hw = zsda_qps_hw_per_service(zsda_pci_dev, type);
+	conf.hw = qp_hw->data + qp_id;
+	conf.service_type = type;
+	conf.cookie_size = sizeof(struct zsda_op_cookie);
+	conf.nb_descriptors = nb_des;
+	conf.socket_id = socket_id;
+	conf.service_str = "decomp";
+
+	ret = zsda_common_setup_qp(zsda_pci_dev->zsda_dev_id, &qp, qp_id, &conf);
+	qp->srv[type].rx_cb = NULL;
+	qp->srv[type].tx_cb = NULL;
+	qp->srv[type].match = NULL;
+
+	return ret;
+}
+
+static int
+zsda_comp_qp_setup(struct rte_compressdev *dev, uint16_t qp_id,
+		   uint32_t max_inflight_ops, int socket_id)
+{
+	int ret = ZSDA_SUCCESS;
+	struct zsda_qp *qp_new;
+
+	struct zsda_qp **qp_addr =
+		(struct zsda_qp **)&(dev->data->queue_pairs[qp_id]);
+	struct zsda_comp_dev_private *comp_priv = dev->data->dev_private;
+	struct zsda_pci_device *zsda_pci_dev = comp_priv->zsda_pci_dev;
+	uint16_t num_qps_comp = zsda_nb_qps.encomp;
+	uint16_t num_qps_decomp = zsda_nb_qps.decomp;
+	uint16_t nb_des = max_inflight_ops & 0xffff;
+
+	nb_des = (nb_des == NB_DES) ? nb_des : NB_DES;
+
+	if (*qp_addr != NULL) {
+		ret = zsda_comp_qp_release(dev, qp_id);
+		if (ret)
+			return ret;
+	}
+
+	qp_new = rte_zmalloc_socket("zsda PMD qp metadata", sizeof(*qp_new),
+				    RTE_CACHE_LINE_SIZE, socket_id);
+	if (qp_new == NULL) {
+		ZSDA_LOG(ERR, "Failed! qp_new is NULL");
+		return -ENOMEM;
+	}
+
+	if (num_qps_comp == MAX_QPS_ON_FUNCTION)
+		ret = zsda_setup_comp_queue(zsda_pci_dev, qp_id, qp_new, nb_des,
+					socket_id);
+	else if (num_qps_decomp == MAX_QPS_ON_FUNCTION)
+		ret = zsda_setup_decomp_queue(zsda_pci_dev, qp_id, qp_new, nb_des,
+					  socket_id);
+	else {
+		ret = zsda_setup_comp_queue(zsda_pci_dev, qp_id, qp_new, nb_des,
+					socket_id);
+		ret |= zsda_setup_decomp_queue(zsda_pci_dev, qp_id, qp_new, nb_des,
+					  socket_id);
+	}
+
+	if (ret) {
+		rte_free(qp_new);
+		return ret;
+	}
+
+	*qp_addr = qp_new;
+
+	return ret;
+}
+
 static struct rte_compressdev_ops compress_zsda_ops = {
 
 	.dev_configure = zsda_comp_dev_config,
@@ -220,8 +323,8 @@ static struct rte_compressdev_ops compress_zsda_ops = {
 
 	.stats_get = zsda_comp_stats_get,
 	.stats_reset = zsda_comp_stats_reset,
-	.queue_pair_setup = NULL,
-	.queue_pair_release = NULL,
+	.queue_pair_setup = zsda_comp_qp_setup,
+	.queue_pair_release = zsda_comp_qp_release,
 
 	.private_xform_create = zsda_comp_private_xform_create,
 	.private_xform_free = zsda_comp_private_xform_free,
