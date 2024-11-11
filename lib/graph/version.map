@@ -59,3 +59,10 @@ EXPERIMENTAL {
 	# added in 24.11
 	rte_node_xstat_increment;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 25.03
+	rte_node_free;
+};
