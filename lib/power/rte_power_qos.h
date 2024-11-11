@@ -24,7 +24,7 @@ extern "C" {
  * https://www.kernel.org/doc/html/latest/admin-guide/abi-testing.html?highlight=pm_qos_resume_latency_us#abi-sys-devices-power-pm-qos-resume-latency-us
  *
  * The deeper the idle state, the lower the power consumption, but the
- * longer the resume time. Some service are delay sensitive and very except the
+ * longer the resume time. Some service are delay sensitive and request the
  * low resume time, like interrupt packet receiving mode.
  *
  * In these case, per-CPU PM QoS API can be used to control this CPU's idle
