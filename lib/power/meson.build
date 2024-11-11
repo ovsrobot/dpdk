@@ -16,6 +16,7 @@ sources = files(
         'rte_power_cpufreq.c',
         'rte_power_uncore.c',
         'rte_power_pmd_mgmt.c',
+        'rte_power_qos.c',
 )
 headers = files(
         'power_cpufreq.h',
@@ -24,6 +25,7 @@ headers = files(
         'rte_power_guest_channel.h',
         'rte_power_pmd_mgmt.h',
         'rte_power_uncore.h',
+        'rte_power_qos.h',
 )
 
 deps += ['timer', 'ethdev']
