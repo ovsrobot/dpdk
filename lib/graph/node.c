@@ -476,3 +476,24 @@ rte_node_max_count(void)
 	}
 	return node_id;
 }
+
+int
+rte_node_free(rte_node_t id)
+{
+	struct node *node;
+
+	if (node_from_id(id) == NULL)
+		goto fail;
+
+	STAILQ_FOREACH(node, &node_list, next) {
+		if (id == node->id) {
+			if (graph_is_node_active_in_graph(node))
+				return -1;
+			STAILQ_REMOVE(&node_list, node, node, next);
+			free(node);
+			return 0;
+		}
+	}
+fail:
+	return -1;
+}
