@@ -245,7 +245,8 @@ rte_rcu_qsbr_dq_create(const struct rte_rcu_qsbr_dq_parameters *params)
 	if (params == NULL || params->free_fn == NULL ||
 		params->v == NULL || params->name == NULL ||
 		params->size == 0 || params->esize == 0 ||
-		(params->esize % 4 != 0)) {
+		(params->esize % 4 != 0) ||
+		params->esize > RTE_QSBR_ESIZE_MAX) {
 		RCU_LOG(ERR, "Invalid input parameter");
 		rte_errno = EINVAL;
 
@@ -323,7 +324,7 @@ int rte_rcu_qsbr_dq_enqueue(struct rte_rcu_qsbr_dq *dq, void *e)
 		return 1;
 	}
 
-	char data[dq->esize];
+	char data[RTE_QSBR_ESIZE_MAX + __RTE_QSBR_TOKEN_SIZE];
 	dq_elem = (__rte_rcu_qsbr_dq_elem_t *)data;
 	/* Start the grace period */
 	dq_elem->token = rte_rcu_qsbr_start(dq->v);
@@ -386,7 +387,7 @@ rte_rcu_qsbr_dq_reclaim(struct rte_rcu_qsbr_dq *dq, unsigned int n,
 
 	cnt = 0;
 
-	char data[dq->esize];
+	char data[RTE_QSBR_ESIZE_MAX + __RTE_QSBR_TOKEN_SIZE];
 	/* Check reader threads quiescent state and reclaim resources */
 	while (cnt < n &&
 		rte_ring_dequeue_bulk_elem_start(dq->r, &data,
