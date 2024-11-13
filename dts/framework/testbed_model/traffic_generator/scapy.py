@@ -188,22 +188,24 @@ class ScapyTrafficGenerator(PythonShell, CapturingTrafficGenerator):
                 when set to an empty string.
         """
         self._shell_set_packet_list(packets_to_send)
+        # We need to introduce a short delay in the sniffer sendp() for i40e NICs.
+        self.send_command("import time")
         sniffer_commands = [
             f"{self._sniffer_name} = AsyncSniffer(",
             f"iface='{recv_port.logical_name}',",
             "store=True,",
             # *args is used in the arguments of the lambda since Scapy sends parameters to the
             # callback function which we do not need for our purposes.
-            "started_callback=lambda *args: sendp(",
+            "started_callback=lambda *args: (time.sleep(1), sendp(",
             (
                 # Additional indentation is added to this line only for readability of the logs.
                 f"{self._python_indentation}{self._send_packet_list_name},"
-                f" iface='{send_port.logical_name}'),"
+                f" iface='{send_port.logical_name}')),"
             ),
             ")",
         ]
         if filter_config:
-            sniffer_commands.insert(-1, f"filter='{filter_config}'")
+            sniffer_commands.insert(-2, f"filter='{filter_config}'")
 
         self.send_command(f"\n{self._python_indentation}".join(sniffer_commands))
 
@@ -223,7 +225,8 @@ class ScapyTrafficGenerator(PythonShell, CapturingTrafficGenerator):
         """
         sniffed_packets_name = "gathered_packets"
         self.send_command(f"{self._sniffer_name}.start()")
-        time.sleep(duration)
+        # Insert a one second delay to prevent timeout errors from occurring
+        time.sleep(duration + 1)
         self.send_command(f"{sniffed_packets_name} = {self._sniffer_name}.stop(join=True)")
         # An extra newline is required here due to the nature of interactive Python shells
         packet_strs = self.send_command(
