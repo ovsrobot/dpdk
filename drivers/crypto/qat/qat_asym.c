@@ -103,7 +103,7 @@ static const struct rte_driver cryptodev_qat_asym_driver = {
 
 #define PARAM_CLR(what) \
 	do { \
-		memset(what.data, 0, what.length); \
+		memset_s(what.data, 0, what.length); \
 		rte_free(what.data);	\
 	} while (0)
 
