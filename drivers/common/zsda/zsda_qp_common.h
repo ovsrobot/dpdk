@@ -68,4 +68,40 @@ struct zsda_admin_resp_qcfg {
 	uint8_t data[14];
 } __rte_packed;
 
+struct zsda_queue {
+	char memz_name[RTE_MEMZONE_NAMESIZE];
+	uint8_t *io_addr;
+	uint8_t *base_addr;	   /* Base address */
+	rte_iova_t base_phys_addr; /* Queue physical address */
+	uint16_t head;		   /* Shadow copy of the head */
+	uint16_t tail;		   /* Shadow copy of the tail */
+	uint16_t modulo_mask;
+	uint16_t msg_size;
+	uint16_t queue_size;
+	uint16_t cycle_size;
+	uint16_t pushed_wqe;
+
+	uint8_t hw_queue_number;
+	uint32_t csr_head; /* last written head value */
+	uint32_t csr_tail; /* last written tail value */
+
+	uint8_t valid;
+	uint16_t sid;
+};
+
+struct qp_srv {
+	bool used;
+	struct zsda_queue tx_q;
+	struct zsda_queue rx_q;
+	struct rte_mempool *op_cookie_pool;
+	void **op_cookies;
+	uint16_t nb_descriptors;
+};
+
+struct zsda_qp {
+	struct qp_srv srv[ZSDA_MAX_SERVICES];
+};
+
+int zsda_queue_pair_release(struct zsda_qp **qp_addr);
+
 #endif /* _ZSDA_QP_COMMON_H_ */
