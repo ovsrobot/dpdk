@@ -177,5 +177,6 @@ int zsda_common_setup_qp(uint32_t dev_id, struct zsda_qp **qp_addr,
 		const uint16_t queue_pair_id, const struct zsda_qp_config *conf);
 
 uint16_t zsda_enqueue_op_burst(struct zsda_qp *qp, void **ops, const uint16_t nb_ops);
+uint16_t zsda_dequeue_op_burst(struct zsda_qp *qp, void **ops, const uint16_t nb_ops);
 
 #endif /* _ZSDA_QP_H_ */
