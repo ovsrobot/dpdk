@@ -48,7 +48,6 @@
 #define SET_CYCLE			0xff
 #define SET_HEAD_INTI		0x0
 
-
 #define ZSDA_TIME_SLEEP_US	100
 #define ZSDA_TIME_NUM		500
 
@@ -94,6 +93,15 @@
 		ZSDA_CSR_WR(csr_base_addr, (ring << 3) + CQ_CSR_UBASE,         \
 			    u_base);                                           \
 	} while (0)
+
+#define READ_CSR_WQ_HEAD(csr_base_addr, ring)                                  \
+	ZSDA_CSR_RD(csr_base_addr, WQ_TAIL + (ring << 3))
+#define WRITE_CSR_WQ_TAIL(csr_base_addr, ring, value)                          \
+	ZSDA_CSR_WC_WR(csr_base_addr, WQ_TAIL + (ring << 3), value)
+#define READ_CSR_CQ_HEAD(csr_base_addr, ring)                                  \
+	ZSDA_CSR_RD(csr_base_addr, WQ_TAIL + (ring << 3))
+#define WRITE_CSR_CQ_HEAD(csr_base_addr, ring, value)                          \
+	ZSDA_CSR_WC_WR(csr_base_addr, CQ_HEAD + (ring << 3), value)
 
 extern struct zsda_num_qps zsda_nb_qps;
 
@@ -141,17 +149,6 @@ struct zsda_qp_config {
 	const char *service_str;
 };
 
-struct zsda_buf {
-	uint64_t addr;
-	uint32_t len;
-	uint8_t resrvd[3];
-	uint8_t type;
-} __rte_packed;
-
-struct __rte_cache_aligned zsda_sgl {
-	struct zsda_buf buffers[ZSDA_SGL_MAX_NUMBER];
-};
-
 struct zsda_op_cookie {
 	struct zsda_sgl sgl_src;
 	struct zsda_sgl sgl_dst;
@@ -178,5 +175,7 @@ zsda_qps_hw_per_service(struct zsda_pci_device *zsda_pci_dev,
 
 int zsda_common_setup_qp(uint32_t dev_id, struct zsda_qp **qp_addr,
 		const uint16_t queue_pair_id, const struct zsda_qp_config *conf);
+
+uint16_t zsda_enqueue_op_burst(struct zsda_qp *qp, void **ops, const uint16_t nb_ops);
 
 #endif /* _ZSDA_QP_H_ */
