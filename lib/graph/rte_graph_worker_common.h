@@ -110,6 +110,7 @@ struct __rte_cache_aligned rte_node {
 			unsigned int lcore_id;  /**< Node running lcore. */
 			uint64_t total_sched_objs; /**< Number of objects scheduled. */
 			uint64_t total_sched_fail; /**< Number of scheduled failure. */
+			struct rte_graph *graph;  /**< Graph corresponding to lcore_id. */
 		} dispatch;
 	};
 	rte_graph_off_t xstat_off; /**< Offset to xstat counters. */
