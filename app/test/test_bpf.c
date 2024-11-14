@@ -3225,7 +3225,7 @@ run_test(const struct bpf_test *tst)
 	bpf = rte_bpf_load(&tst->prm);
 	if (bpf == NULL) {
 		printf("%s@%d: failed to load bpf code, error=%d(%s);\n",
-			__func__, __LINE__, rte_errno, strerror(rte_errno));
+			__func__, __LINE__, rte_errno, rte_strerror(rte_errno));
 		return -1;
 	}
 
@@ -3321,14 +3321,14 @@ test_bpf_match(pcap_t *pcap, const char *str,
 	prm = rte_bpf_convert(&fcode);
 	if (prm == NULL) {
 		printf("%s@%d: bpf_convert('%s') failed,, error=%d(%s);\n",
-		       __func__, __LINE__, str, rte_errno, strerror(rte_errno));
+		       __func__, __LINE__, str, rte_errno, rte_strerror(rte_errno));
 		goto error;
 	}
 
 	bpf = rte_bpf_load(prm);
 	if (bpf == NULL) {
 		printf("%s@%d: failed to load bpf code, error=%d(%s);\n",
-			__func__, __LINE__, rte_errno, strerror(rte_errno));
+			__func__, __LINE__, rte_errno, rte_strerror(rte_errno));
 		goto error;
 	}
 
@@ -3444,7 +3444,7 @@ test_bpf_filter(pcap_t *pcap, const char *s)
 	prm = rte_bpf_convert(&fcode);
 	if (prm == NULL) {
 		printf("%s@%d: bpf_convert('%s') failed,, error=%d(%s);\n",
-		       __func__, __LINE__, s, rte_errno, strerror(rte_errno));
+		       __func__, __LINE__, s, rte_errno, rte_strerror(rte_errno));
 		goto error;
 	}
 
@@ -3454,7 +3454,7 @@ test_bpf_filter(pcap_t *pcap, const char *s)
 	bpf = rte_bpf_load(prm);
 	if (bpf == NULL) {
 		printf("%s@%d: failed to load bpf code, error=%d(%s);\n",
-			__func__, __LINE__, rte_errno, strerror(rte_errno));
+			__func__, __LINE__, rte_errno, rte_strerror(rte_errno));
 		goto error;
 	}
 
