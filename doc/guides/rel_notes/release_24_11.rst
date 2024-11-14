@@ -493,6 +493,9 @@ ABI Changes
 
 * graph: added ``graph`` field to the ``dispatch`` structure in the ``rte_node`` structure.
 
+* graph: The members ``dispatch`` and ``xstat_off`` of the structure ``rte_node`` have been
+  marked as RTE_CACHE_LINE_MIN_SIZE bytes aligned.
+
 Known Issues
 ------------
 
