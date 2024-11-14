@@ -548,7 +548,7 @@ mlx5_nl_mac_addr_list(int nlsk_fd, unsigned int iface_idx,
 	return 0;
 error:
 	DRV_LOG(DEBUG, "Interface %u cannot retrieve MAC address list %s",
-		iface_idx, strerror(rte_errno));
+		iface_idx, rte_strerror(rte_errno));
 	return -rte_errno;
 }
 
@@ -618,7 +618,7 @@ error:
 		DRV_LOG(DEBUG,
 			"Interface %u cannot %s MAC address %s %s",
 			iface_idx,
-			add ? "add" : "remove", m, strerror(rte_errno));
+			add ? "add" : "remove", m, rte_strerror(rte_errno));
 	}
 #endif
 	return -rte_errno;
@@ -705,7 +705,7 @@ error:
 		RTE_ETHER_ADDR_PRT_FMT " : %s",
 		vf_index,
 		RTE_ETHER_ADDR_BYTES(mac),
-		strerror(rte_errno));
+		rte_strerror(rte_errno));
 	return -rte_errno;
 }
 
@@ -930,7 +930,7 @@ mlx5_nl_promisc(int nlsk_fd, unsigned int iface_idx, int enable)
 		DRV_LOG(DEBUG,
 			"Interface %u cannot %s promisc mode: Netlink error %s",
 			iface_idx, enable ? "enable" : "disable",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 	return ret;
 }
 
@@ -957,7 +957,7 @@ mlx5_nl_allmulti(int nlsk_fd, unsigned int iface_idx, int enable)
 		DRV_LOG(DEBUG,
 			"Interface %u cannot %s allmulti : Netlink error %s",
 			iface_idx, enable ? "enable" : "disable",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 	return ret;
 }
 
