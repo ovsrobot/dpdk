@@ -1271,7 +1271,7 @@ err_secondary:
 			spawn->phys_port);
 		if (err < 0) {
 			DRV_LOG(INFO, "Failed to get netlink port state: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			err = -rte_errno;
 			goto error;
 		}
@@ -1431,7 +1431,7 @@ err_secondary:
 		if (err) {
 			err = rte_errno;
 			DRV_LOG(ERR, "unable to allocate switch domain: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			goto error;
 		}
 		own_domain_id = 1;
@@ -1522,7 +1522,7 @@ err_secondary:
 	if (err) {
 		err = rte_errno;
 		DRV_LOG(ERR, "Failed to process port configure: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		goto error;
 	}
 	eth_dev = rte_eth_dev_allocate(name);
@@ -1568,7 +1568,7 @@ err_secondary:
 		DRV_LOG(ERR,
 			"port %u cannot get MAC address, is mlx5_en"
 			" loaded? (errno: %s)",
-			eth_dev->data->port_id, strerror(rte_errno));
+			eth_dev->data->port_id, rte_strerror(rte_errno));
 		err = ENODEV;
 		goto error;
 	}
@@ -2039,7 +2039,7 @@ mlx5_device_bond_pci_match(const char *ibdev_name,
 					   bond_info->ifname);
 		if (ret)
 			DRV_LOG(ERR, "unable to get bond info: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 		else
 			DRV_LOG(INFO, "PF device %u, bond device %u(%s)",
 				ifindex, bond_info->ifindex, bond_info->ifname);
@@ -2746,7 +2746,7 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 			" encountering an error: %s",
 			owner_pci.domain, owner_pci.bus,
 			owner_pci.devid, owner_pci.function,
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		ret = -rte_errno;
 		/* Roll back. */
 		while (i--) {
@@ -2926,13 +2926,13 @@ mlx5_os_net_probe(struct mlx5_common_device *cdev,
 	ret = mlx5_init_once();
 	if (ret) {
 		DRV_LOG(ERR, "Unable to init PMD global data: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	ret = mlx5_probe_again_args_validate(cdev, mkvlist);
 	if (ret) {
 		DRV_LOG(ERR, "Probe again parameters are not compatible : %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	if (mlx5_dev_is_pci(cdev->dev))

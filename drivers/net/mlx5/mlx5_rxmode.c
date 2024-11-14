@@ -44,7 +44,7 @@ mlx5_promiscuous_enable(struct rte_eth_dev *dev)
 	ret = mlx5_traffic_restart(dev);
 	if (ret)
 		DRV_LOG(ERR, "port %u cannot enable promiscuous mode: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 
 	/*
 	 * rte_eth_dev_promiscuous_enable() rollback
@@ -77,7 +77,7 @@ mlx5_promiscuous_disable(struct rte_eth_dev *dev)
 	ret = mlx5_traffic_restart(dev);
 	if (ret)
 		DRV_LOG(ERR, "port %u cannot disable promiscuous mode: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 
 	/*
 	 * rte_eth_dev_promiscuous_disable() rollback
@@ -117,7 +117,7 @@ mlx5_allmulticast_enable(struct rte_eth_dev *dev)
 	ret = mlx5_traffic_restart(dev);
 	if (ret)
 		DRV_LOG(ERR, "port %u cannot enable allmulicast mode: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 error:
 	/*
 	 * rte_eth_allmulticast_enable() rollback
@@ -150,7 +150,7 @@ mlx5_allmulticast_disable(struct rte_eth_dev *dev)
 	ret = mlx5_traffic_restart(dev);
 	if (ret)
 		DRV_LOG(ERR, "port %u cannot disable allmulicast mode: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 error:
 	/*
 	 * rte_eth_allmulticast_disable() rollback

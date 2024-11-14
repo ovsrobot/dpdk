@@ -1108,7 +1108,7 @@ mlx5_cmd_apply_tlv_options_parsed(void *parsed_result,
 	if (handle == NULL) {
 		fprintf(stderr,
 			"Fail to create GENEVE TLV parser, nb_option=%u: %s\n",
-			tlv_mng.nb_options, strerror(rte_errno));
+			tlv_mng.nb_options, rte_strerror(rte_errno));
 		return;
 	}
 
@@ -1259,10 +1259,10 @@ mlx5_cmd_dump_sq_context_options_parsed(void *parsed_result,
 		fprintf(stderr, "invalid port_id %u\n", res->port_id);
 		break;
 	case -EIO:
-		fprintf(stderr, "File Access Error (%s)\n", strerror(rte_errno));
+		fprintf(stderr, "File Access Error (%s)\n", rte_strerror(rte_errno));
 		break;
 	default:
-		fprintf(stderr, "Unable to dump SQ/CQ HW Context (%s)\n", strerror(rte_errno));
+		fprintf(stderr, "Unable to dump SQ/CQ HW Context (%s)\n", rte_strerror(rte_errno));
 	}
 }
 
@@ -1341,10 +1341,10 @@ mlx5_cmd_dump_rq_context_options_parsed(void *parsed_result,
 		fprintf(stderr, "invalid port_id %u\n", res->port_id);
 		break;
 	case -EIO:
-		fprintf(stderr, "File Access Error (%s)\n", strerror(rte_errno));
+		fprintf(stderr, "File Access Error (%s)\n", rte_strerror(rte_errno));
 		break;
 	default:
-		fprintf(stderr, "Unable to dump RQ/CQ HW Context (%s)\n", strerror(rte_errno));
+		fprintf(stderr, "Unable to dump RQ/CQ HW Context (%s)\n", rte_strerror(rte_errno));
 	}
 }
 

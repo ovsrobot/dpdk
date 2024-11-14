@@ -1506,7 +1506,7 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 					  mlx5_dev_args_check_handler, config);
 		if (ret) {
 			DRV_LOG(ERR, "Failed to process device arguments: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			return -rte_errno;
 		}
 	}
@@ -1835,7 +1835,7 @@ mlx5_alloc_shared_dev_ctx(const struct mlx5_dev_spawn_data *spawn,
 	err = mlx5_shared_dev_ctx_args_config(sh, mkvlist, &sh->config);
 	if (err) {
 		DRV_LOG(ERR, "Failed to process device configure: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		goto error;
 	}
 	sh->refcnt = 1;
@@ -2837,7 +2837,7 @@ mlx5_port_args_config(struct mlx5_priv *priv, struct mlx5_kvargs_ctrl *mkvlist,
 					  mlx5_port_args_check_handler, config);
 		if (ret) {
 			DRV_LOG(ERR, "Failed to process port arguments: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			return -rte_errno;
 		}
 	}
@@ -3068,7 +3068,7 @@ mlx5_probe_again_args_validate(struct mlx5_common_device *cdev,
 	ret = mlx5_shared_dev_ctx_args_config(sh, mkvlist, config);
 	if (ret) {
 		DRV_LOG(ERR, "Failed to process device configure: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 		mlx5_free(config);
 		return ret;
 	}

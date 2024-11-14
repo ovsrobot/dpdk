@@ -221,7 +221,7 @@ mlx5_os_stats_init(struct rte_eth_dev *dev)
 	ret = mlx5_os_read_dev_stat(priv, "out_of_buffer", &stats_ctrl->imissed_base);
 	if (ret)
 		DRV_LOG(ERR, "port %u cannot read device counters: %s",
-			dev->data->port_id, strerror(rte_errno));
+			dev->data->port_id, rte_strerror(rte_errno));
 	stats_ctrl->imissed = 0;
 }
 
