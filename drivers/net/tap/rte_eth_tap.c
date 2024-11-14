@@ -2453,7 +2453,7 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 			ret = rte_mp_action_register(TAP_MP_REQ_START_RXTX, tap_mp_req_start_rxtx);
 			if (ret < 0 && rte_errno != ENOTSUP) {
 				TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
-					strerror(rte_errno));
+					rte_strerror(rte_errno));
 				return -1;
 			}
 		}
@@ -2513,7 +2513,7 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 		ret = rte_mp_action_register(TAP_MP_KEY, tap_mp_sync_queues);
 		if (ret < 0 && rte_errno != ENOTSUP) {
 			TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
-				strerror(rte_errno));
+				rte_strerror(rte_errno));
 			goto leave;
 		}
 	}
