@@ -92,7 +92,7 @@ failsafe_hotplug_alarm_cancel(struct rte_eth_dev *dev)
 	rte_eal_alarm_cancel(fs_hotplug_alarm, dev);
 	if (rte_errno) {
 		ERROR("rte_eal_alarm_cancel failed (errno: %s)",
-		      strerror(rte_errno));
+		      rte_strerror(rte_errno));
 		ret = -rte_errno;
 	} else {
 		PRIV(dev)->pending_alarm = 0;
