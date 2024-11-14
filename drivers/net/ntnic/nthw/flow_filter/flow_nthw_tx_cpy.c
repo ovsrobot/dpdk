@@ -31,7 +31,6 @@ void tx_cpy_nthw_delete(struct tx_cpy_nthw *p)
 {
 	if (p) {
 		free(p->m_writers);
-		memset(p, 0, sizeof(*p));
 		free(p);
 	}
 }
