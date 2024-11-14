@@ -882,13 +882,13 @@ mlx4_rx_queue_setup(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 			rte_errno = ENOMEM;
 			ERROR("%p: Rx interrupt completion channel creation"
 			      " failure: %s",
-			      (void *)dev, strerror(rte_errno));
+			      (void *)dev, rte_strerror(rte_errno));
 			goto error;
 		}
 		if (mlx4_fd_set_non_blocking(rxq->channel->fd) < 0) {
 			ERROR("%p: unable to make Rx interrupt completion"
 			      " channel non-blocking: %s",
-			      (void *)dev, strerror(rte_errno));
+			      (void *)dev, rte_strerror(rte_errno));
 			goto error;
 		}
 	}

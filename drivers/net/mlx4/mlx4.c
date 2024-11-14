@@ -793,7 +793,7 @@ mlx4_pci_probe(struct rte_pci_driver *pci_drv, struct rte_pci_device *pci_dev)
 	err = mlx4_init_once();
 	if (err) {
 		ERROR("unable to init PMD global data: %s",
-		      strerror(rte_errno));
+		      rte_strerror(rte_errno));
 		return -rte_errno;
 	}
 	MLX4_ASSERT(pci_drv == &mlx4_driver);
