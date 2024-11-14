@@ -31,7 +31,7 @@ bond_flow_alloc(int numa_node, const struct rte_flow_attr *attr,
 	if (ret < 0) {
 		RTE_BOND_LOG(ERR, "Unable to process flow rule (%s): %s",
 			     error.message ? error.message : "unspecified",
-			     strerror(rte_errno));
+			     rte_strerror(rte_errno));
 		return NULL;
 	}
 	flow = rte_zmalloc_socket(NULL, offsetof(struct rte_flow, rule) + ret,
@@ -45,7 +45,7 @@ bond_flow_alloc(int numa_node, const struct rte_flow_attr *attr,
 	if (ret < 0) {
 		RTE_BOND_LOG(ERR, "Failed to copy flow rule (%s): %s",
 			     error.message ? error.message : "unspecified",
-			     strerror(rte_errno));
+			     rte_strerror(rte_errno));
 		rte_free(flow);
 		return NULL;
 	}
