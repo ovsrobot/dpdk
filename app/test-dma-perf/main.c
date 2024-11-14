@@ -217,19 +217,18 @@ parse_lcore_dma(struct test_configure *test_case, const char *value)
 	struct lcore_dma_map_t *lcore_dma_map;
 	char *input, *addrs;
 	char *ptrs[2];
-	char *start, *end, *substr;
+	char *start, *end, *substr, *saveptr;
 	uint16_t lcore_id;
 	int ret = 0;
 
 	if (test_case == NULL || value == NULL)
 		return -1;
 
-	input = strndup(value, strlen(value) + 1);
+	input = strdup(value);
 	if (input == NULL)
 		return -1;
 	addrs = input;
-
-	while (*addrs == '\0')
+	while (*addrs == '\0' && isspace(*addrs))
 		addrs++;
 	if (*addrs == '\0') {
 		fprintf(stderr, "No input DMA addresses\n");
@@ -237,7 +236,7 @@ parse_lcore_dma(struct test_configure *test_case, const char *value)
 		goto out;
 	}
 
-	substr = strtok(addrs, ",");
+	substr = strtok_r(addrs, ",", &saveptr);
 	if (substr == NULL) {
 		fprintf(stderr, "No input DMA address\n");
 		ret = -1;
