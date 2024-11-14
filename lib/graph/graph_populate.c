@@ -94,7 +94,14 @@ graph_nodes_populate(struct graph *_graph)
 		memcpy(node->name, graph_node->node->name, RTE_GRAPH_NAMESIZE);
 		pid = graph_node->node->parent_id;
 		if (pid != RTE_NODE_ID_INVALID) { /* Cloned node */
-			parent = rte_node_id_to_name(pid);
+			struct node *pnode;
+
+			STAILQ_FOREACH(pnode, node_list_head_get(), next) {
+				if (pnode->id == pid) {
+					parent = pnode->name;
+					break;
+				}
+			}
 			memcpy(node->parent, parent, RTE_GRAPH_NAMESIZE);
 		}
 		node->id = graph_node->node->id;
