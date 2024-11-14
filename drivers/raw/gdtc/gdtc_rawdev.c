@@ -88,6 +88,8 @@
 #define LOW32_MASK                              0xffffffff
 #define LOW16_MASK                              0xffff
 
+#define ZXDH_GDMA_TC_CNT_MAX                    0x10000
+
 #define IDX_TO_ADDR(addr, idx, t) \
 	((t)((uintptr_t)(addr) + (idx) * sizeof(struct zxdh_gdma_buff_desc)))
 
@@ -114,6 +116,19 @@ zxdh_gdma_get_queue(struct rte_rawdev *dev, uint16_t queue_id)
 	}
 
 	return &(gdmadev->vqs[queue_id]);
+}
+
+static uint32_t
+zxdh_gdma_read_reg(struct rte_rawdev *dev, uint16_t queue_id, uint32_t offset)
+{
+	struct zxdh_gdma_rawdev *gdmadev = zxdh_gdma_rawdev_get_priv(dev);
+	uint32_t addr = 0;
+	uint32_t val = 0;
+
+	addr = offset + queue_id * ZXDH_GDMA_CHAN_SHIFT;
+	val = *(uint32_t *)(gdmadev->base_addr + addr);
+
+	return val;
 }
 
 static void
@@ -264,11 +279,11 @@ zxdh_gdma_rawdev_queue_setup(struct rte_rawdev *dev,
 
 		if (rbp->svfid != 0)
 			src_user |= (ZXDH_GDMA_VF_EN |
-						 ((rbp->svfid - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
+					((rbp->svfid - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
 
 		ZXDH_PMD_LOG(DEBUG, "rxq->qidx:%d setup src_user(ep:%d pf:%d vf:%d) success",
-					queue_id, (uint8_t)rbp->sportid, (uint8_t)rbp->spfid,
-					(uint8_t)rbp->svfid);
+				queue_id, (uint8_t)rbp->sportid, (uint8_t)rbp->spfid,
+				(uint8_t)rbp->svfid);
 	} else if ((rbp->srbp == 0) && (rbp->drbp != 0)) {
 		is_txq = 1;
 		src_user = ZXDH_GDMA_ZF_USER;
@@ -277,11 +292,11 @@ zxdh_gdma_rawdev_queue_setup(struct rte_rawdev *dev,
 
 		if (rbp->dvfid != 0)
 			dst_user |= (ZXDH_GDMA_VF_EN |
-						 ((rbp->dvfid - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
+					((rbp->dvfid - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
 
 		ZXDH_PMD_LOG(DEBUG, "txq->qidx:%d setup dst_user(ep:%d pf:%d vf:%d) success",
-					queue_id, (uint8_t)rbp->dportid, (uint8_t)rbp->dpfid,
-					(uint8_t)rbp->dvfid);
+				queue_id, (uint8_t)rbp->dportid, (uint8_t)rbp->dpfid,
+				(uint8_t)rbp->dvfid);
 	} else {
 		ZXDH_PMD_LOG(ERR, "Failed to setup queue, srbp/drbp is invalid");
 		return -EINVAL;
@@ -353,7 +368,7 @@ zxdh_gdma_user_get(struct zxdh_gdma_queue *queue, struct zxdh_gdma_job *job)
 
 	if ((job->flags & ZXDH_GDMA_JOB_DIR_MASK) == 0) {
 		ZXDH_PMD_LOG(DEBUG, "job flags:0x%x default user:0x%x",
-							job->flags, queue->user);
+				job->flags, queue->user);
 		return queue->user;
 	} else if ((job->flags & ZXDH_GDMA_JOB_DIR_TX) != 0) {
 		src_user = ZXDH_GDMA_ZF_USER;
@@ -362,7 +377,7 @@ zxdh_gdma_user_get(struct zxdh_gdma_queue *queue, struct zxdh_gdma_job *job)
 
 		if (job->vf_id != 0)
 			dst_user |= (ZXDH_GDMA_VF_EN |
-						 ((job->vf_id - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
+					((job->vf_id - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
 	} else {
 		dst_user = ZXDH_GDMA_ZF_USER;
 		src_user = ((job->pf_id << ZXDH_GDMA_PF_NUM_SHIFT) |
@@ -370,11 +385,11 @@ zxdh_gdma_user_get(struct zxdh_gdma_queue *queue, struct zxdh_gdma_job *job)
 
 		if (job->vf_id != 0)
 			src_user |= (ZXDH_GDMA_VF_EN |
-						 ((job->vf_id - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
+					((job->vf_id - 1) << ZXDH_GDMA_VF_NUM_SHIFT));
 	}
 	ZXDH_PMD_LOG(DEBUG, "job flags:0x%x ep_id:%u, pf_id:%u, vf_id:%u, user:0x%x",
-						job->flags, job->ep_id, job->pf_id, job->vf_id,
-						(src_user & LOW16_MASK) | (dst_user << 16));
+			job->flags, job->ep_id, job->pf_id, job->vf_id,
+			(src_user & LOW16_MASK) | (dst_user << 16));
 
 	return (src_user & LOW16_MASK) | (dst_user << 16);
 }
@@ -395,8 +410,8 @@ zxdh_gdma_fill_bd(struct zxdh_gdma_queue *queue, struct zxdh_gdma_job *job)
 	if (job != NULL) {
 		zxdh_gdma_control_cal(&val, 1);
 		next_bd_addr   = IDX_TO_ADDR(queue->ring.ring_mem,
-							(avail_idx + 1) % ZXDH_GDMA_RING_SIZE,
-							uint64_t);
+						(avail_idx + 1) % ZXDH_GDMA_RING_SIZE,
+						uint64_t);
 		bd->SrcAddr_L  = job->src & LOW32_MASK;
 		bd->DstAddr_L  = job->dest & LOW32_MASK;
 		bd->SrcAddr_H  = (job->src >> 32) & LOW32_MASK;
@@ -473,8 +488,8 @@ zxdh_gdma_rawdev_enqueue_bufs(struct rte_rawdev *dev,
 	free_cnt = queue->sw_ring.free_cnt;
 	if (free_cnt == 0) {
 		ZXDH_PMD_LOG(ERR, "queue %u is full, enq_idx:%u deq_idx:%u used_idx:%u",
-						   queue_id, queue->sw_ring.enq_idx,
-						   queue->sw_ring.deq_idx, queue->sw_ring.used_idx);
+				queue_id, queue->sw_ring.enq_idx,
+				queue->sw_ring.deq_idx, queue->sw_ring.used_idx);
 		return 0;
 	} else if (free_cnt < count) {
 		ZXDH_PMD_LOG(DEBUG, "job num %u > free_cnt, change to %u", count, free_cnt);
@@ -519,6 +534,116 @@ zxdh_gdma_rawdev_enqueue_bufs(struct rte_rawdev *dev,
 
 	return count;
 }
+
+static inline void
+zxdh_gdma_used_idx_update(struct zxdh_gdma_queue *queue, uint16_t cnt, uint8_t data_bd_err)
+{
+	uint16_t idx = 0;
+
+	if (queue->sw_ring.used_idx + cnt < queue->queue_size)
+		queue->sw_ring.used_idx += cnt;
+	else
+		queue->sw_ring.used_idx = queue->sw_ring.used_idx + cnt - queue->queue_size;
+
+	if (data_bd_err == 1) {
+		/* Update job status, the last job status is error */
+		if (queue->sw_ring.used_idx == 0)
+			idx = queue->queue_size - 1;
+		else
+			idx = queue->sw_ring.used_idx - 1;
+
+		queue->sw_ring.job[idx]->status = 1;
+	}
+}
+
+static int
+zxdh_gdma_rawdev_dequeue_bufs(struct rte_rawdev *dev,
+				__rte_unused struct rte_rawdev_buf **buffers,
+				uint32_t count,
+				rte_rawdev_obj_t context)
+{
+	struct zxdh_gdma_queue *queue = NULL;
+	struct zxdh_gdma_enqdeq *e_context = NULL;
+	uint16_t queue_id = 0;
+	uint32_t val = 0;
+	uint16_t tc_cnt = 0;
+	uint16_t diff_cnt = 0;
+	uint16_t i = 0;
+	uint16_t bd_idx = 0;
+	uint64_t next_bd_addr = 0;
+	uint8_t data_bd_err = 0;
+
+	if ((dev == NULL) || (context == NULL))
+		return -EINVAL;
+
+	e_context = (struct zxdh_gdma_enqdeq *)context;
+	queue_id = e_context->vq_id;
+	queue = zxdh_gdma_get_queue(dev, queue_id);
+	if ((queue == NULL) || (queue->enable == 0))
+		return -EINVAL;
+
+	if (queue->sw_ring.pend_cnt == 0)
+		goto deq_job;
+
+	/* Get data transmit count */
+	val = zxdh_gdma_read_reg(dev, queue_id, ZXDH_GDMA_TC_CNT_OFFSET);
+	tc_cnt = val & LOW16_MASK;
+	if (tc_cnt >= queue->tc_cnt)
+		diff_cnt = tc_cnt - queue->tc_cnt;
+	else
+		diff_cnt = tc_cnt + ZXDH_GDMA_TC_CNT_MAX - queue->tc_cnt;
+
+	queue->tc_cnt = tc_cnt;
+
+	/* Data transmit error, channel stopped */
+	if ((val & ZXDH_GDMA_ERR_STATUS) != 0) {
+		next_bd_addr  = zxdh_gdma_read_reg(dev, queue_id, ZXDH_GDMA_LLI_L_OFFSET);
+		next_bd_addr |= ((uint64_t)zxdh_gdma_read_reg(dev, queue_id,
+							ZXDH_GDMA_LLI_H_OFFSET) << 32);
+		next_bd_addr  = next_bd_addr << 6;
+		bd_idx = (next_bd_addr - queue->ring.ring_mem) / sizeof(struct zxdh_gdma_buff_desc);
+		if ((val & ZXDH_GDMA_SRC_DATA_ERR) || (val & ZXDH_GDMA_DST_ADDR_ERR)) {
+			diff_cnt++;
+			data_bd_err = 1;
+		}
+		ZXDH_PMD_LOG(INFO, "queue%d is err(0x%x) next_bd_idx:%u ll_addr:0x%"PRIx64" def user:0x%x",
+				queue_id, val, bd_idx, next_bd_addr, queue->user);
+
+		ZXDH_PMD_LOG(INFO, "Clean up error status");
+		val = ZXDH_GDMA_ERR_STATUS | ZXDH_GDMA_ERR_INTR_ENABLE;
+		zxdh_gdma_write_reg(dev, queue_id, ZXDH_GDMA_TC_CNT_OFFSET, val);
+
+		ZXDH_PMD_LOG(INFO, "Restart channel");
+		zxdh_gdma_write_reg(dev, queue_id, ZXDH_GDMA_XFERSIZE_OFFSET, 0);
+		zxdh_gdma_control_cal(&val, 0);
+		zxdh_gdma_write_reg(dev, queue_id, ZXDH_GDMA_CONTROL_OFFSET, val);
+	}
+
+	if (diff_cnt != 0) {
+		zxdh_gdma_used_idx_update(queue, diff_cnt, data_bd_err);
+		queue->sw_ring.deq_cnt += diff_cnt;
+		queue->sw_ring.pend_cnt -= diff_cnt;
+	}
+
+deq_job:
+	if (queue->sw_ring.deq_cnt == 0)
+		return 0;
+	else if (queue->sw_ring.deq_cnt < count)
+		count = queue->sw_ring.deq_cnt;
+
+	queue->sw_ring.deq_cnt -= count;
+
+	for (i = 0; i < count; i++) {
+		e_context->job[i] = queue->sw_ring.job[queue->sw_ring.deq_idx];
+		queue->sw_ring.job[queue->sw_ring.deq_idx] = NULL;
+		if (++queue->sw_ring.deq_idx >= queue->queue_size)
+			queue->sw_ring.deq_idx -= queue->queue_size;
+	}
+	queue->sw_ring.free_cnt += count;
+
+	return count;
+}
+
 static const struct rte_rawdev_ops zxdh_gdma_rawdev_ops = {
 	.dev_info_get = zxdh_gdma_rawdev_info_get,
 	.dev_configure = zxdh_gdma_rawdev_configure,
@@ -533,6 +658,7 @@ static const struct rte_rawdev_ops zxdh_gdma_rawdev_ops = {
 	.attr_get = zxdh_gdma_rawdev_get_attr,
 
 	.enqueue_bufs = zxdh_gdma_rawdev_enqueue_bufs,
+	.dequeue_bufs = zxdh_gdma_rawdev_dequeue_bufs,
 };
 
 static int
@@ -573,7 +699,7 @@ zxdh_gdma_queue_init(struct rte_rawdev *dev, uint16_t queue_id)
 	snprintf(name, RTE_MEMZONE_NAMESIZE, "gdma_vq%d_ring", queue_id);
 	size = ZXDH_GDMA_RING_SIZE * sizeof(struct zxdh_gdma_buff_desc);
 	mz = rte_memzone_reserve_aligned(name, size, rte_socket_id(),
-							RTE_MEMZONE_IOVA_CONTIG, size);
+						RTE_MEMZONE_IOVA_CONTIG, size);
 	if (mz == NULL) {
 		if (rte_errno == EEXIST)
 			mz = rte_memzone_lookup(name);
@@ -589,7 +715,7 @@ zxdh_gdma_queue_init(struct rte_rawdev *dev, uint16_t queue_id)
 	queue->ring.ring_mem  = mz->iova;
 	queue->ring.avail_idx = 0;
 	ZXDH_PMD_LOG(INFO, "queue%u ring phy addr:0x%"PRIx64" virt addr:%p",
-						queue_id, mz->iova, mz->addr);
+			queue_id, mz->iova, mz->addr);
 
 	/* Configure the hardware channel to the initial state */
 	zxdh_gdma_write_reg(dev, queue_id, ZXDH_GDMA_CONTROL_OFFSET,
@@ -689,7 +815,7 @@ zxdh_gdma_unmap_resource(void *requested_addr, size_t size)
 	/* Unmap the PCI memory resource of device */
 	if (rte_mem_unmap(requested_addr, size))
 		ZXDH_PMD_LOG(ERR, "cannot mem unmap(%p, %#zx): %s",
-			requested_addr, size, rte_strerror(rte_errno));
+				requested_addr, size, rte_strerror(rte_errno));
 	else
 		ZXDH_PMD_LOG(DEBUG, "PCI memory unmapped at %p", requested_addr);
 }
@@ -715,8 +841,8 @@ zxdh_gdma_rawdev_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		return -1;
 	}
 	ZXDH_PMD_LOG(INFO, "%s bar0 0x%"PRIx64" mapped at %p",
-				pci_dev->name, pci_dev->mem_resource[0].phys_addr,
-				pci_dev->mem_resource[0].addr);
+			pci_dev->name, pci_dev->mem_resource[0].phys_addr,
+			pci_dev->mem_resource[0].addr);
 
 	dev = rte_rawdev_pmd_allocate(dev_name, sizeof(struct zxdh_gdma_rawdev), rte_socket_id());
 	if (dev == NULL) {
@@ -747,7 +873,7 @@ zxdh_gdma_rawdev_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 err_out:
 	zxdh_gdma_unmap_resource(pci_dev->mem_resource[0].addr,
-		(size_t)pci_dev->mem_resource[0].len);
+				(size_t)pci_dev->mem_resource[0].len);
 	return -1;
 }
 
