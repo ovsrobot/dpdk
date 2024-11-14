@@ -491,6 +491,7 @@ ABI Changes
   added new structure ``rte_node_xstats`` to ``rte_node_register`` and
   added ``xstat_off`` to ``rte_node``.
 
+* graph: added ``graph`` field to the ``dispatch`` structure in the ``rte_node`` structure.
 
 Known Issues
 ------------
