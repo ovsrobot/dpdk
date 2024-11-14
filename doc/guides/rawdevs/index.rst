@@ -17,3 +17,4 @@ application through rawdev API.
     dpaa2_cmdif
     ifpga
     ntb
+    gdtc
