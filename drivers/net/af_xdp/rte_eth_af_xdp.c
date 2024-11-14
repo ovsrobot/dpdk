@@ -2518,7 +2518,7 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		ret = rte_mp_action_register(ETH_AF_XDP_MP_KEY, afxdp_mp_send_fds);
 		if (ret < 0 && rte_errno != ENOTSUP) {
 			AF_XDP_LOG_LINE(ERR, "%s: Failed to register multi-process IPC callback: %s",
-				   name, strerror(rte_errno));
+				   name, rte_strerror(rte_errno));
 			return -1;
 		}
 	}
