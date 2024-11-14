@@ -3,6 +3,7 @@
  */
 
 #include <rte_log.h>
+#include <rte_trace_point_register.h>
 
 #include "roc_api.h"
 
@@ -84,6 +85,14 @@ roc_plt_init(void)
 
 	return 0;
 }
+
+/* ROC trace points */
+RTE_TRACE_POINT_REGISTER(cnxk_trace_mbox_region, cnxk.mbox.region)
+RTE_TRACE_POINT_REGISTER(cnxk_trace_mbox_process, cnxk.mbox.process)
+RTE_TRACE_POINT_REGISTER(cnxk_trace_mbox_interrupt, cnxk.mbox.interrupt)
+RTE_TRACE_POINT_REGISTER(cnxk_trace_mbox_vf_flr, cnxk.mbox.vf.flr)
+RTE_TRACE_POINT_REGISTER(cnxk_trace_mbox_vf_pf_handle, cnxk.mbox.vf.pf.handle)
+RTE_TRACE_POINT_REGISTER(cnxk_trace_mbox_error, cnxk.mbox.error)
 
 RTE_LOG_REGISTER_SUFFIX(cnxk_logtype_base, base, INFO);
 RTE_LOG_REGISTER_SUFFIX(cnxk_logtype_mbox, mbox, NOTICE);
