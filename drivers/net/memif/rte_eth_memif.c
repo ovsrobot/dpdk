@@ -1993,7 +1993,7 @@ rte_pmd_memif_probe(struct rte_vdev_device *vdev)
 	 */
 	if (ret < 0 && rte_errno != EEXIST)
 		MIF_LOG(WARNING, "Failed to register mp action callback: %s",
-			strerror(rte_errno));
+			rte_strerror(rte_errno));
 
 	/* use abstract address by default */
 	flags |= ETH_MEMIF_FLAG_SOCKET_ABSTRACT;
