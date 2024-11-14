@@ -407,7 +407,7 @@ pdump_server(const struct rte_mp_msg *mp_msg, const void *peer)
 	mp_resp.num_fds = 0;
 	if (rte_mp_reply(&mp_resp, peer) < 0) {
 		PDUMP_LOG_LINE(ERR, "failed to send to client:%s",
-			  strerror(rte_errno));
+			  rte_strerror(rte_errno));
 		return -1;
 	}
 
