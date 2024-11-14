@@ -271,7 +271,7 @@ static inline int
 ree_enqueue(struct roc_ree_qp *qp, struct rte_regex_ops *op,
 		 struct roc_ree_pending_queue *pend_q)
 {
-	union roc_ree_inst inst;
+	union roc_ree_inst inst = {0};
 	union ree_res *res;
 	uint32_t offset;
 
