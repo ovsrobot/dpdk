@@ -796,7 +796,7 @@ static dumpcap_out_t create_output(void)
 					   version(), capture_comment);
 		if (ret.pcapng == NULL)
 			rte_exit(EXIT_FAILURE, "pcapng_fdopen failed: %s\n",
-				 strerror(rte_errno));
+				 rte_strerror(rte_errno));
 		free(os);
 
 		TAILQ_FOREACH(intf, &interfaces, next) {
