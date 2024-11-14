@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <inttypes.h>
 #ifdef F_ADD_SEALS /* if file sealing is supported, so is memfd */
 #include <linux/memfd.h>
 #define MEMFD_SUPPORTED
@@ -1430,6 +1431,17 @@ eal_memalloc_sync_with_primary(void)
 	return 0;
 }
 
+static uint64_t 
+current_time(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts) == -1) {
+        EAL_LOG(ERR, "Fail to get current time");
+		return -1ULL;
+    }
+    uint64_t time_ns = (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+    return time_ns;
+}
+
 static int
 secondary_msl_create_walk(const struct rte_memseg_list *msl,
 		void *arg __rte_unused)
@@ -1447,8 +1459,8 @@ secondary_msl_create_walk(const struct rte_memseg_list *msl,
 	local_msl = &local_memsegs[msl_idx];
 
 	/* create distinct fbarrays for each secondary */
-	snprintf(name, RTE_FBARRAY_NAME_LEN, "%s_%i",
-		primary_msl->memseg_arr.name, getpid());
+	snprintf(name, RTE_FBARRAY_NAME_LEN, "%s_%i_%"PRIx64,
+		primary_msl->memseg_arr.name, getpid(), current_time());
 
 	ret = rte_fbarray_init(&local_msl->memseg_arr, name,
 		primary_msl->memseg_arr.len,
