@@ -229,8 +229,8 @@ parse_lcore_dma(struct test_configure *test_case, const char *value)
 		return -1;
 	addrs = input;
 
-	while (*addrs == '\0')
-		addrs++;
+	while (isspace(*addrs))
+		++addrs;
 	if (*addrs == '\0') {
 		fprintf(stderr, "No input DMA addresses\n");
 		ret = -1;
