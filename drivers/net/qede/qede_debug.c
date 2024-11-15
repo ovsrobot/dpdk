@@ -5614,6 +5614,8 @@ static const char * const s_status_str[] = {
 	/* DBG_STATUS_INVALID_FILTER_TRIGGER_DWORDS */
 	"The filter/trigger constraint dword offsets are not enabled for recording",
 
+	/* DBG_STATUS_NO_MATCHING_FRAMING_MODE */
+	"No matching frame mode",
 
 	/* DBG_STATUS_VFC_READ_ERROR */
 	"Error reading from VFC",
@@ -5759,6 +5761,7 @@ static const char * const s_status_str[] = {
 	/* DBG_STATUS_MISSING_TRIGGER_STATE_STORM */
 	"When triggering on Storm data, the Storm to trigger on must be specified"
 };
+static_assert(MAX_DBG_STATUS == RTE_DIM(s_status_str), "status string table mismatch");
 
 /* Idle check severity names array */
 static const char * const s_idle_chk_severity_str[] = {
