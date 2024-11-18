@@ -1854,6 +1854,11 @@ M: Nithin Dabilpuram <ndabilpuram@marvell.com>
 M: Pavan Nikhilesh <pbhagavatula@marvell.com>
 F: lib/node/
 
+PMU - EXPERIMENTAL
+M: Tomasz Duszynski <tduszynski@marvell.com>
+F: lib/pmu/
+F: app/test/test_pmu*
+
 
 Test Applications
 -----------------
