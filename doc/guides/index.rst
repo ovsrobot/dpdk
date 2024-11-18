@@ -13,6 +13,7 @@ DPDK documentation
    sample_app_ug/index
    prog_guide/index
    howto/index
+   security/index
    tools/index
    testpmd_app_ug/index
    nics/index
