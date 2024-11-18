@@ -187,7 +187,8 @@
       "enum": [
         "hello_world",
         "os_udp",
-        "pmd_buffer_scatter"
+        "pmd_buffer_scatter",
+        "queue_start_stop"
       ]
     },
     "test_target": {
