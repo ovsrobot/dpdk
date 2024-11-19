@@ -45,6 +45,7 @@ extern "C" {
  * A structure describing a memzone, which is a contiguous portion of
  * physical memory identified by a name.
  */
+__rte_msvc_pack
 struct rte_memzone {
 
 #define RTE_MEMZONE_NAMESIZE 32       /**< Maximum length of memory zone name.*/
