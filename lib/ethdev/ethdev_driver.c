@@ -156,6 +156,7 @@ rte_eth_dev_attach_secondary(const char *name)
 	uint16_t i;
 	struct rte_eth_dev *eth_dev = NULL;
 
+
 	/* Synchronize port attachment to primary port creation and release. */
 	rte_spinlock_lock(rte_mcfg_ethdev_get_lock());
 
@@ -164,6 +165,11 @@ rte_eth_dev_attach_secondary(const char *name)
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		if (strcmp(eth_dev_shared_data->data[i].name, name) == 0)
+			break;
+
+		/* for PCI devices, allow specifying name without a leading "0000:" */
+		if (strncmp(name, "0000:", 5) == 0 && /* is PCI address */
+				strcmp(eth_dev_shared_data->data[i].name, &name[5]) == 0)
 			break;
 	}
 	if (i == RTE_MAX_ETHPORTS) {
