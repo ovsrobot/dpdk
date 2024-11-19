@@ -79,6 +79,7 @@ static uint32_t hashtest_key_lens[] = {0, 2, 4, 5, 6, 7, 8, 10, 11, 15, 16, 21, 
  * Should be packed to avoid holes with potentially
  * undefined content in the middle.
  */
+__rte_msvc_pack
 struct flow_key {
 	uint32_t ip_src;
 	uint32_t ip_dst;
