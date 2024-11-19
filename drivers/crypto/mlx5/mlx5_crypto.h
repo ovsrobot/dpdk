@@ -32,6 +32,7 @@ enum mlx5_crypto_mode {
 	MLX5_CRYPTO_IPSEC_OPT,
 };
 
+__rte_msvc_pack
 struct mlx5_crypto_ipsec_mem {
 	uint8_t mem[MLX5_CRYPTO_GCM_IPSEC_IV_SIZE];
 } __rte_packed;
@@ -108,6 +109,7 @@ struct mlx5_crypto_devarg_params {
 	enum mlx5_crypto_mode crypto_mode;
 };
 
+__rte_msvc_pack
 struct mlx5_crypto_session {
 	union {
 		/**< AES-XTS configuration. */
