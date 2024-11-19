@@ -76,6 +76,7 @@ enum otx_ep_link_autoneg {
 #define OTX_EP_MBOX_MORE_FRAG_FLAG 1
 #define OTX_EP_MBOX_WRITE_WAIT_TIME msecs_to_jiffies(1)
 
+__rte_msvc_pack
 union otx_ep_mbox_word {
 	uint64_t u64;
 	struct {
