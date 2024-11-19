@@ -323,6 +323,7 @@ enum mlx5_mpw_mode {
 };
 
 /* WQE Control segment. */
+__rte_msvc_pack
 struct __rte_aligned(MLX5_WSEG_SIZE) mlx5_wqe_cseg {
 	uint32_t opcode;
 	uint32_t sq_ds;
@@ -340,10 +341,12 @@ struct __rte_aligned(MLX5_WSEG_SIZE) mlx5_wqe_cseg {
 #define WQE_CSEG_WQE_INDEX_OFFSET	 8
 
 /* Header of data segment. Minimal size Data Segment */
+__rte_msvc_pack
 struct mlx5_wqe_dseg {
 	uint32_t bcount;
 	union {
 		uint8_t inline_data[MLX5_DSEG_MIN_INLINE_SIZE];
+		__rte_msvc_pack
 		struct {
 			uint32_t lkey;
 			uint64_t pbuf;
@@ -352,8 +355,10 @@ struct mlx5_wqe_dseg {
 } __rte_packed;
 
 /* Subset of struct WQE Ethernet Segment. */
+__rte_msvc_pack
 struct mlx5_wqe_eseg {
 	union {
+		__rte_msvc_pack
 		struct {
 			uint32_t swp_offs;
 			uint8_t	cs_flags;
@@ -366,6 +371,7 @@ struct mlx5_wqe_eseg {
 				uint16_t vlan_tag;
 			};
 		} __rte_packed;
+		__rte_msvc_pack
 		struct {
 			uint32_t offsets;
 			uint32_t flags;
@@ -375,6 +381,7 @@ struct mlx5_wqe_eseg {
 	};
 } __rte_packed;
 
+__rte_msvc_pack
 struct mlx5_wqe_qseg {
 	uint32_t reserved0;
 	uint32_t reserved1;
@@ -382,6 +389,7 @@ struct mlx5_wqe_qseg {
 	uint32_t qpn_cqn;
 } __rte_packed;
 
+__rte_msvc_pack
 struct mlx5_wqe_wseg {
 	uint32_t operation;
 	uint32_t lkey;
@@ -392,6 +400,7 @@ struct mlx5_wqe_wseg {
 } __rte_packed;
 
 /* The title WQEBB, header of WQE. */
+__rte_msvc_pack
 struct mlx5_wqe {
 	union {
 		struct mlx5_wqe_cseg cseg;
@@ -464,6 +473,7 @@ struct mlx5_cqe {
 	uint8_t lro_num_seg;
 	union {
 		uint8_t user_index_bytes[3];
+		__rte_msvc_pack
 		struct {
 			uint8_t user_index_hi;
 			uint16_t user_index_low;
@@ -487,6 +497,7 @@ struct mlx5_cqe_ts {
 	uint8_t op_own;
 };
 
+__rte_msvc_pack
 struct mlx5_wqe_rseg {
 	uint64_t raddr;
 	uint32_t rkey;
@@ -506,6 +517,7 @@ struct mlx5_wqe_rseg {
 #define MLX5_UMR_KLM_NUM_ALIGN \
 	(MLX5_UMR_KLM_PTR_ALIGN / sizeof(struct mlx5_klm))
 
+__rte_msvc_pack
 struct mlx5_wqe_umr_cseg {
 	uint32_t if_cf_toe_cq_res;
 	uint32_t ko_to_bs;
@@ -513,6 +525,7 @@ struct mlx5_wqe_umr_cseg {
 	uint32_t rsvd1[8];
 } __rte_packed;
 
+__rte_msvc_pack
 struct mlx5_wqe_mkey_cseg {
 	uint32_t fr_res_af_sf;
 	uint32_t qpn_mkey;
@@ -576,6 +589,7 @@ enum {
 #define MLX5_CRYPTO_MMO_TYPE_OFFSET 24
 #define MLX5_CRYPTO_MMO_OP_OFFSET 20
 
+__rte_msvc_pack
 struct mlx5_wqe_umr_bsf_seg {
 	/*
 	 * bs_bpt_eo_es contains:
@@ -609,6 +623,7 @@ struct mlx5_wqe_umr_bsf_seg {
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
+__rte_msvc_pack
 struct mlx5_umr_wqe {
 	struct mlx5_wqe_cseg ctr;
 	struct mlx5_wqe_umr_cseg ucseg;
@@ -619,18 +634,21 @@ struct mlx5_umr_wqe {
 	};
 } __rte_packed;
 
+__rte_msvc_pack
 struct mlx5_rdma_write_wqe {
 	struct mlx5_wqe_cseg ctr;
 	struct mlx5_wqe_rseg rseg;
 	struct mlx5_wqe_dseg dseg[];
 } __rte_packed;
 
+__rte_msvc_pack
 struct mlx5_wqe_send_en_seg {
 	uint32_t reserve[2];
 	uint32_t sqnpc;
 	uint32_t qpn;
 } __rte_packed;
 
+__rte_msvc_pack
 struct mlx5_wqe_send_en_wqe {
 	struct mlx5_wqe_cseg ctr;
 	struct mlx5_wqe_send_en_seg sseg;
@@ -677,6 +695,7 @@ struct mlx5_wqe_metadata_seg {
 	uint64_t addr;
 };
 
+__rte_msvc_pack
 struct mlx5_gga_wqe {
 	uint32_t opcode;
 	uint32_t sq_ds;
@@ -690,16 +709,19 @@ struct mlx5_gga_wqe {
 } __rte_packed;
 
 union mlx5_gga_compress_opaque {
+	__rte_msvc_pack
 	struct {
 		uint32_t syndrome;
 		uint32_t reserved0;
 		uint32_t scattered_length;
 		union {
+			__rte_msvc_pack
 			struct {
 				uint32_t reserved1[5];
 				uint32_t crc32;
 				uint32_t adler32;
 			} v1 __rte_packed;
+			__rte_msvc_pack
 			struct {
 				uint32_t crc32;
 				uint32_t adler32;
@@ -712,9 +734,11 @@ union mlx5_gga_compress_opaque {
 };
 
 union mlx5_gga_crypto_opaque {
+	__rte_msvc_pack
 	struct {
 		uint32_t syndrome;
 		uint32_t reserved0[2];
+		__rte_msvc_pack
 		struct {
 			uint32_t iv[3];
 			uint32_t tag_size;
@@ -931,6 +955,7 @@ mlx5_regc_value(uint8_t regc_ix)
 
 /* Modification sub command. */
 struct mlx5_modification_cmd {
+	__rte_msvc_pack
 	union {
 		uint32_t data0;
 		struct {
@@ -942,6 +967,7 @@ struct mlx5_modification_cmd {
 			unsigned int action_type:4;
 		};
 	} __rte_packed;
+	__rte_msvc_pack
 	union {
 		uint32_t data1;
 		uint8_t data[4];
@@ -4191,6 +4217,7 @@ enum mlx5_aso_op {
 #define MLX5_ASO_CSEG_READ_ENABLE 1
 
 /* ASO WQE CTRL segment. */
+__rte_msvc_pack
 struct mlx5_aso_cseg {
 	uint32_t va_h;
 	uint32_t va_l_r;
@@ -4207,6 +4234,7 @@ struct mlx5_aso_cseg {
 #define MLX5_MTR_MAX_TOKEN_VALUE INT32_MAX
 
 /* A meter data segment - 2 per ASO WQE. */
+__rte_msvc_pack
 struct mlx5_aso_mtr_dseg {
 	uint32_t v_bo_sc_bbog_mm;
 	/*
@@ -4248,6 +4276,7 @@ struct mlx5_aso_mtr_dseg {
 #define MLX5_ASO_MTRS_PER_POOL 128
 
 /* ASO WQE data segment. */
+__rte_msvc_pack
 struct mlx5_aso_dseg {
 	union {
 		uint8_t data[MLX5_ASO_WQE_DSEG_SIZE];
@@ -4256,6 +4285,7 @@ struct mlx5_aso_dseg {
 } __rte_packed;
 
 /* ASO WQE. */
+__rte_msvc_pack
 struct mlx5_aso_wqe {
 	struct mlx5_wqe_cseg general_cseg;
 	struct mlx5_aso_cseg aso_cseg;

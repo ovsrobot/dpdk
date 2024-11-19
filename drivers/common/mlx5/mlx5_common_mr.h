@@ -49,6 +49,7 @@ struct mlx5_mr {
 };
 
 /* Cache entry for Memory Region. */
+__rte_msvc_pack
 struct mr_cache_entry {
 	uintptr_t start; /* Start address of MR. */
 	uintptr_t end; /* End address of MR. */
@@ -56,6 +57,7 @@ struct mr_cache_entry {
 } __rte_packed;
 
 /* MR Cache table for Binary search. */
+__rte_msvc_pack
 struct mlx5_mr_btree {
 	uint32_t len; /* Number of entries. */
 	uint32_t size; /* Total number of entries. */
@@ -65,6 +67,7 @@ struct mlx5_mr_btree {
 struct mlx5_common_device;
 
 /* Per-queue MR control descriptor. */
+__rte_msvc_pack
 struct mlx5_mr_ctrl {
 	uint32_t *dev_gen_ptr; /* Generation number of device to poll. */
 	uint32_t cur_gen; /* Generation number saved to flush caches. */
@@ -78,6 +81,7 @@ LIST_HEAD(mlx5_mr_list, mlx5_mr);
 LIST_HEAD(mlx5_mempool_reg_list, mlx5_mempool_reg);
 
 /* Global per-device MR cache. */
+__rte_msvc_pack
 struct mlx5_mr_share_cache {
 	uint32_t dev_gen; /* Generation number to flush local caches. */
 	rte_rwlock_t rwlock; /* MR cache Lock. */
