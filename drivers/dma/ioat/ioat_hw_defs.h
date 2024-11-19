@@ -52,6 +52,7 @@ extern "C" {
 #define	IOAT_DMACAP_PQ		(1 << 9)
 #define	IOAT_DMACAP_DMA_DIF	(1 << 10)
 
+__rte_msvc_pack
 struct ioat_registers {
 	uint8_t		chancnt;
 	uint8_t		xfercap;
