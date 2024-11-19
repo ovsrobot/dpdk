@@ -191,6 +191,8 @@ static uint32_t ulp_stats_cache_main_loop(void *arg)
 	uint8_t *data;
 	int rc;
 
+	memset(&batch_info, 0, sizeof(batch_info));
+
 	while (true) {
 		ctxt = NULL;
 		while (!ctxt) {
