@@ -180,6 +180,7 @@ static inline uint64_t idpf_read_addr64(volatile void *addr)
 #define BITS_PER_BYTE       8
 
 /* memory allocation tracking */
+__rte_msvc_pack
 struct idpf_dma_mem {
 	void *va;
 	u64 pa;
@@ -187,6 +188,7 @@ struct idpf_dma_mem {
 	const void *zone;
 } __rte_packed;
 
+__rte_msvc_pack
 struct idpf_virt_mem {
 	void *va;
 	u32 size;
