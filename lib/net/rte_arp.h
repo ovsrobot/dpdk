@@ -21,6 +21,7 @@ extern "C" {
 /**
  * ARP header IPv4 payload.
  */
+__rte_msvc_pack
 struct __rte_aligned(2) rte_arp_ipv4 {
 	struct rte_ether_addr arp_sha;  /**< sender hardware address */
 	rte_be32_t            arp_sip;  /**< sender IP address */
@@ -31,6 +32,7 @@ struct __rte_aligned(2) rte_arp_ipv4 {
 /**
  * ARP header.
  */
+__rte_msvc_pack
 struct __rte_aligned(2) rte_arp_hdr {
 	rte_be16_t arp_hardware; /**< format of hardware address */
 #define RTE_ARP_HRD_ETHER     1  /**< ARP Ethernet address format */

@@ -21,6 +21,7 @@
 /**
  * SCTP Header
  */
+__rte_msvc_pack
 struct rte_sctp_hdr {
 	rte_be16_t src_port; /**< Source port. */
 	rte_be16_t dst_port; /**< Destin port. */

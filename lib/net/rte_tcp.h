@@ -21,6 +21,7 @@
 /**
  * TCP Header
  */
+__rte_msvc_pack
 struct rte_tcp_hdr {
 	rte_be16_t src_port; /**< TCP source port. */
 	rte_be16_t dst_port; /**< TCP destination port. */

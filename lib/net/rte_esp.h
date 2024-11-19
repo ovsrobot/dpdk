@@ -16,6 +16,7 @@
 /**
  * ESP Header
  */
+__rte_msvc_pack
 struct rte_esp_hdr {
 	rte_be32_t spi;  /**< Security Parameters Index */
 	rte_be32_t seq;  /**< packet sequence number */
@@ -24,6 +25,7 @@ struct rte_esp_hdr {
 /**
  * ESP Trailer
  */
+__rte_msvc_pack
 struct rte_esp_tail {
 	uint8_t pad_len;     /**< number of pad bytes (0-255) */
 	uint8_t next_proto;  /**< IPv4 or IPv6 or next layer header */

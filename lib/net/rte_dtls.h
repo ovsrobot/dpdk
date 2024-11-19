@@ -30,6 +30,7 @@
  * DTLS Header
  */
 __extension__
+__rte_msvc_pack
 struct rte_dtls_hdr {
 	/** Content type of DTLS packet. Defined as RTE_DTLS_TYPE_*. */
 	uint8_t type;

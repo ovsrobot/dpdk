@@ -28,6 +28,7 @@
  * TLS Header
  */
 __extension__
+__rte_msvc_pack
 struct rte_tls_hdr {
 	/** Content type of TLS packet. Defined as RTE_TLS_TYPE_*. */
 	uint8_t type;

@@ -27,12 +27,15 @@
  * Reserved fields (24 bits and 8 bits)
  */
 __extension__ /* no named member in struct */
+__rte_msvc_pack
 struct rte_vxlan_hdr {
 	union {
 		rte_be32_t vx_flags; /**< flags (8 bits) + extensions (24 bits). */
+		__rte_msvc_pack
 		struct {
 			union {
 				uint8_t flags; /**< Default is I bit, others are extensions. */
+				__rte_msvc_pack
 				struct {
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
 					uint8_t flag_g:1,     /**< GBP bit. */
@@ -55,6 +58,7 @@ struct rte_vxlan_hdr {
 			}; /* end of 1st byte */
 			union {
 				uint8_t rsvd0[3]; /* Reserved for extensions. */
+				__rte_msvc_pack
 				struct {
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
 					uint8_t rsvd0_gbp1:1, /*   Reserved. */
@@ -71,6 +75,7 @@ struct rte_vxlan_hdr {
 #endif
 					union {
 						uint16_t policy_id; /**< GBP Identifier. */
+						__rte_msvc_pack
 						struct {
 							uint8_t rsvd0_gpe; /* Reserved. */
 							uint8_t proto; /**< GPE Next protocol. */
@@ -87,6 +92,7 @@ struct rte_vxlan_hdr {
 	}; /* end of 1st 32-bit word */
 	union {
 		rte_be32_t vx_vni; /**< VNI (24 bits) + reserved (8 bits). */
+		__rte_msvc_pack
 		struct {
 			uint8_t    vni[3];   /**< VXLAN Identifier. */
 			union {
@@ -111,6 +117,7 @@ struct rte_vxlan_hdr {
  * Identifier and Reserved fields (16 bits and 8 bits).
  */
 __extension__ /* no named member in struct */
+__rte_msvc_pack
 struct rte_vxlan_gpe_hdr {
 	union {
 		struct {

@@ -39,6 +39,7 @@ extern "C" {
 /**
  * IPv4 Header
  */
+__rte_msvc_pack
 struct __rte_aligned(2) rte_ipv4_hdr {
 	__extension__
 	union {

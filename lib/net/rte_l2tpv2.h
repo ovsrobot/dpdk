@@ -125,6 +125,7 @@ struct rte_l2tpv2_common_hdr {
  * L2TPv2 message Header contains all options(length, ns, nr,
  * offset size, offset padding).
  */
+__rte_msvc_pack
 struct rte_l2tpv2_msg_with_all_options {
 	rte_be16_t length;		/**< length(16) */
 	rte_be16_t tunnel_id;		/**< tunnel ID(16) */
@@ -139,6 +140,7 @@ struct rte_l2tpv2_msg_with_all_options {
  * L2TPv2 message Header contains all options except length(ns, nr,
  * offset size, offset padding).
  */
+__rte_msvc_pack
 struct rte_l2tpv2_msg_without_length {
 	rte_be16_t tunnel_id;		/**< tunnel ID(16) */
 	rte_be16_t session_id;		/**< session ID(16) */
@@ -176,6 +178,7 @@ struct rte_l2tpv2_msg_without_offset {
 /**
  * L2TPv2 message Header contains options offset size and offset padding.
  */
+__rte_msvc_pack
 struct rte_l2tpv2_msg_with_offset {
 	rte_be16_t tunnel_id;		/**< tunnel ID(16) */
 	rte_be16_t session_id;		/**< session ID(16) */
@@ -213,6 +216,7 @@ struct rte_l2tpv2_msg_without_all_options {
 /**
  * L2TPv2 Combined Message Header Format: Common Header + Options
  */
+__rte_msvc_pack
 struct rte_l2tpv2_combined_msg_hdr {
 	struct rte_l2tpv2_common_hdr common; /**< common header */
 	union {

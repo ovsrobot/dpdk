@@ -17,6 +17,7 @@
 /**
  * PPP Header
  */
+__rte_msvc_pack
 struct rte_ppp_hdr {
 	uint8_t addr; /**< PPP address(8) */
 	uint8_t ctrl; /**< PPP control(8) */

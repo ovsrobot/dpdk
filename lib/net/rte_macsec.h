@@ -25,6 +25,7 @@
  * MACsec Header (SecTAG)
  */
 __extension__
+__rte_msvc_pack
 struct rte_macsec_hdr {
 	/**
 	 * Tag control information and Association number of secure channel.
@@ -48,6 +49,7 @@ struct rte_macsec_hdr {
  * MACsec SCI header (8 bytes) after the MACsec header
  * which is present if SC bit is set in tci_an.
  */
+__rte_msvc_pack
 struct rte_macsec_sci_hdr {
 	uint8_t sci[RTE_MACSEC_SCI_LEN]; /**< Optional secure channel ID. */
 } __rte_packed;

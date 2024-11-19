@@ -56,6 +56,7 @@ enum rte_pdcp_pdu_type {
  * 6.2.2.1 Data PDU for SRBs
  */
 __extension__
+__rte_msvc_pack
 struct rte_pdcp_cp_data_pdu_sn_12_hdr {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint8_t sn_11_8 : 4;	/**< Sequence number bits 8-11 */
@@ -71,6 +72,7 @@ struct rte_pdcp_cp_data_pdu_sn_12_hdr {
  * 6.2.2.2 Data PDU for DRBs and MRBs with 12 bits PDCP SN
  */
 __extension__
+__rte_msvc_pack
 struct rte_pdcp_up_data_pdu_sn_12_hdr {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint8_t sn_11_8 : 4;	/**< Sequence number bits 8-11 */
@@ -88,6 +90,7 @@ struct rte_pdcp_up_data_pdu_sn_12_hdr {
  * 6.2.2.3 Data PDU for DRBs and MRBs with 18 bits PDCP SN
  */
 __extension__
+__rte_msvc_pack
 struct rte_pdcp_up_data_pdu_sn_18_hdr {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint8_t sn_17_16 : 2;	/**< Sequence number bits 16-17 */
@@ -106,6 +109,7 @@ struct rte_pdcp_up_data_pdu_sn_18_hdr {
  * 6.2.3.1 Control PDU for PDCP status report
  */
 __extension__
+__rte_msvc_pack
 struct rte_pdcp_up_ctrl_pdu_hdr {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint8_t r : 4;		/**< Reserved */
