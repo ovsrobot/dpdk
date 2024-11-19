@@ -133,6 +133,7 @@ enum {
 };
 
 /* HWS counter age parameter. */
+__rte_msvc_pack
 struct __rte_cache_aligned mlx5_hws_age_param {
 	RTE_ATOMIC(uint32_t) timeout; /* Aging timeout in seconds (atomically accessed). */
 	RTE_ATOMIC(uint32_t) sec_since_last_hit;

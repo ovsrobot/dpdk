@@ -235,6 +235,7 @@ mlx5_is_probed_port_on_mpesw_device(struct mlx5_dev_spawn_data *spawn)
 }
 
 /** Data associated with socket messages. */
+__rte_msvc_pack
 struct mlx5_flow_dump_req  {
 	uint32_t port_id; /**< There are plans in DPDK to extend port_id. */
 	uint64_t flow_id;

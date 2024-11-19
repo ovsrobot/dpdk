@@ -328,6 +328,7 @@ union mlx5dr_crc_encap_entropy_hash_ip_field {
 	};
 };
 
+__rte_msvc_pack
 struct mlx5dr_crc_encap_entropy_hash_fields {
 	union mlx5dr_crc_encap_entropy_hash_ip_field dst;
 	union mlx5dr_crc_encap_entropy_hash_ip_field src;
