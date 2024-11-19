@@ -282,7 +282,8 @@ static struct rte_mempool * pktmbuf_pool[NB_SOCKETS];
 #define DEFAULT_HASH_FUNC       rte_jhash
 #endif
 
-struct ipv4_5tuple {
+__rte_msvc_pack
+__rte_msvc_packstruct ipv4_5tuple {
 	uint32_t ip_dst;
 	uint32_t ip_src;
 	uint16_t port_dst;
@@ -290,6 +291,7 @@ struct ipv4_5tuple {
 	uint8_t  proto;
 } __rte_packed;
 
+__rte_msvc_pack
 struct ipv6_5tuple {
 	uint8_t  ip_dst[IPV6_ADDR_LEN];
 	uint8_t  ip_src[IPV6_ADDR_LEN];

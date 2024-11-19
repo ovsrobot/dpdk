@@ -36,6 +36,7 @@ struct ipv6_l3fwd_route {
 	uint8_t if_out;
 };
 
+__rte_msvc_pack
 struct ipv4_5tuple {
 	uint32_t ip_dst;
 	uint32_t ip_src;
@@ -44,6 +45,7 @@ struct ipv4_5tuple {
 	uint8_t  proto;
 } __rte_packed;
 
+__rte_msvc_pack
 struct ipv6_5tuple {
 	uint8_t  ip_dst[IPV6_ADDR_LEN];
 	uint8_t  ip_src[IPV6_ADDR_LEN];

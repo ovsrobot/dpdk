@@ -73,6 +73,7 @@ struct vhost_memory_padded {
 	struct vhost_memory_region regions[VHOST_USER_MEMORY_MAX_NREGIONS];
 };
 
+__rte_msvc_pack
 struct vhost_user_msg {
 	enum vhost_user_request request;
 

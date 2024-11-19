@@ -21,6 +21,7 @@ static inline uint16_t *
 port_groupx4(uint16_t pn[FWDSTEP + 1], uint16_t *lp, uint16x8_t dp1,
 		  uint16x8_t dp2)
 {
+	__rte_msvc_pack
 	union {
 		uint16_t u16[FWDSTEP + 1];
 		uint64_t u64;

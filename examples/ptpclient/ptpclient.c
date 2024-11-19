@@ -85,6 +85,7 @@ static const struct rte_ether_addr ether_multicast = {
 };
 
 /* Structs used for PTP handling. */
+__rte_msvc_pack
 struct tstamp {
 	uint16_t   sec_msb;
 	uint32_t   sec_lsb;
@@ -95,11 +96,13 @@ struct clock_id {
 	uint8_t id[8];
 };
 
+__rte_msvc_pack
 struct port_id {
 	struct clock_id        clock_id;
 	uint16_t               port_number;
 }  __rte_packed;
 
+__rte_msvc_pack
 struct ptp_header {
 	uint8_t              msg_type;
 	uint8_t              ver;
@@ -115,22 +118,26 @@ struct ptp_header {
 	int8_t               log_message_interval;
 } __rte_packed;
 
+__rte_msvc_pack
 struct sync_msg {
 	struct ptp_header   hdr;
 	struct tstamp       origin_tstamp;
 } __rte_packed;
 
+__rte_msvc_pack
 struct follow_up_msg {
 	struct ptp_header   hdr;
 	struct tstamp       precise_origin_tstamp;
 	uint8_t             suffix[];
 } __rte_packed;
 
+__rte_msvc_pack
 struct delay_req_msg {
 	struct ptp_header   hdr;
 	struct tstamp       origin_tstamp;
 } __rte_packed;
 
+__rte_msvc_pack
 struct delay_resp_msg {
 	struct ptp_header    hdr;
 	struct tstamp        rx_tstamp;
@@ -139,6 +146,7 @@ struct delay_resp_msg {
 } __rte_packed;
 
 struct ptp_message {
+	__rte_msvc_pack
 	union {
 		struct ptp_header          header;
 		struct sync_msg            sync;

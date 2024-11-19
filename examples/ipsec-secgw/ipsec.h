@@ -274,6 +274,7 @@ struct socket_ctx {
 	struct rte_mempool *session_pool;
 };
 
+__rte_msvc_pack
 struct cnt_blk {
 	uint32_t salt;
 	uint64_t iv;
