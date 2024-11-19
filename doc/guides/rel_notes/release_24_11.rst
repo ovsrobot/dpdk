@@ -345,6 +345,12 @@ Removed Items
 * ethdev: Removed the __rte_ethdev_trace_rx_burst symbol, as the corresponding
   tracepoint was split into two separate ones for empty and non-empty calls.
 
+* **Removed support guarantee for CentOS 7 and 8.**
+
+  DPDK can no longer guarantee support for older CentOS releases.
+  CentOS Linux 7 reached end of life (EOL) on 30 June 2024
+  and CentOS Linux 8 stream EOL was 31 May 2024.
+
 
 API Changes
 -----------
