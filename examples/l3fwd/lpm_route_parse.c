@@ -183,7 +183,7 @@ lpm_add_rules(const char *rule_path,
 	char buff[LINE_MAX];
 	FILE *fh;
 	unsigned int i = 0, rule_size = sizeof(*next);
-	int val;
+	int val, rc;
 
 	*proute_base = NULL;
 	fh = fopen(rule_path, "rb");
@@ -236,13 +236,14 @@ lpm_add_rules(const char *rule_path,
 			return -EINVAL;
 		}
 
-		if (parser(buff + 1, next) != 0) {
+		rc = parser(buff + 1, next);
+		if (rc != 0) {
 			RTE_LOG(ERR, L3FWD,
-				"%s Line %u: parse rules error\n",
-				rule_path, i);
+				"%s Line %u: parse rules error code = %d\n",
+				rule_path, i, rc);
 			fclose(fh);
 			free(route_rules);
-			return -EINVAL;
+			return rc;
 		}
 
 		route_cnt++;
