@@ -10,8 +10,8 @@
 #include "l3fwd.h"
 #include "l3fwd_route.h"
 
-static struct em_rule *em_route_base_v4;
-static struct em_rule *em_route_base_v6;
+struct em_rule *em_route_base_v4;
+struct em_rule *em_route_base_v6;
 
 enum {
 	CB_FLD_DST_ADDR,

@@ -63,14 +63,6 @@ uint32_t mb_mempool_cache_size = MEMPOOL_CACHE_SIZE;
 /**< Ports set in promiscuous mode off by default. */
 static int promiscuous_on;
 
-/* Select Longest-Prefix, Exact match, Forwarding Information Base or Access Control. */
-enum L3FWD_LOOKUP_MODE {
-	L3FWD_LOOKUP_DEFAULT,
-	L3FWD_LOOKUP_LPM,
-	L3FWD_LOOKUP_EM,
-	L3FWD_LOOKUP_FIB,
-	L3FWD_LOOKUP_ACL
-};
 static enum L3FWD_LOOKUP_MODE lookup_mode;
 
 /* Global variables. */
@@ -92,7 +84,8 @@ xmm_t val_eth[RTE_MAX_ETHPORTS];
 
 /* mask of enabled ports */
 uint32_t enabled_port_mask;
-
+bool exit_on_failure; /**< Skip the route rule with invalid or */
+			      /**< disabled port ID */
 /* Used only in exact match mode. */
 int ipv6; /**< ipv6 is false by default. */
 
@@ -271,6 +264,43 @@ l3fwd_set_alg(const char *optarg)
 	parm_config.alg = parse_acl_alg(optarg);
 }
 
+/* This function will work only after read_config_files step */
+int
+l3fwd_validate_routes_port(enum L3FWD_LOOKUP_MODE mode, uint32_t i,
+			   bool is_ipv4)
+{
+	uint32_t max_port_count = (sizeof(enabled_port_mask) * CHAR_BIT);
+
+	if (mode == L3FWD_LOOKUP_LPM ||
+			mode == L3FWD_LOOKUP_FIB) {
+		if (is_ipv4) {
+			if (route_base_v4[i].if_out >= max_port_count ||
+				((1 << route_base_v4[i].if_out &
+				  enabled_port_mask) == 0))
+				return -1;
+		} else {
+			if (route_base_v6[i].if_out >= max_port_count ||
+				((1 << route_base_v6[i].if_out &
+				  enabled_port_mask) == 0))
+				return -1;
+		}
+	} else if (mode == L3FWD_LOOKUP_EM) {
+		if (is_ipv4) {
+			if (em_route_base_v4[i].if_out >= max_port_count ||
+				((1 << em_route_base_v4[i].if_out &
+				  enabled_port_mask) == 0))
+				return -1;
+		} else {
+			if (em_route_base_v6[i].if_out >= max_port_count ||
+				((1 << em_route_base_v6[i].if_out &
+				  enabled_port_mask) == 0))
+				return -1;
+		}
+	}
+
+	return 0;
+}
+
 /*
  * Setup lookup methods for forwarding.
  * Currently exact-match, longest-prefix-match and forwarding information
@@ -408,6 +438,7 @@ print_usage(const char *prgname)
 		" [--parse-ptype]"
 		" [--per-port-pool]"
 		" [--mode]"
+		" [--exit-on-failure]"
 #ifdef RTE_LIB_EVENTDEV
 		" [--eventq-sched]"
 		" [--event-vector [--event-vector-size SIZE] [--event-vector-tmo NS]]"
@@ -438,6 +469,8 @@ print_usage(const char *prgname)
 		"  --per-port-pool: Use separate buffer pool per port\n"
 		"  --mode: Packet transfer mode for I/O, poll or eventdev\n"
 		"          Default mode = poll\n"
+		"  --exit-on-failure: Exit on invalid/disabled port ID given in route rule\n"
+		"          Default action is skip the rule\n"
 #ifdef RTE_LIB_EVENTDEV
 		"  --eventq-sched: Event queue synchronization method\n"
 		"                  ordered, atomic or parallel.\n"
@@ -758,6 +791,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_RELAX_RX_OFFLOAD "relax-rx-offload"
 #define CMD_LINE_OPT_PER_PORT_POOL "per-port-pool"
 #define CMD_LINE_OPT_MODE "mode"
+#define CMD_LINE_OPT_EXIT_ON_FAILURE "exit-on-failure"
 #define CMD_LINE_OPT_EVENTQ_SYNC "eventq-sched"
 #define CMD_LINE_OPT_EVENT_ETH_RX_QUEUES "event-eth-rxqs"
 #define CMD_LINE_OPT_LOOKUP "lookup"
@@ -800,6 +834,7 @@ enum {
 	CMD_LINE_OPT_VECTOR_TMO_NS_NUM,
 	CMD_LINE_OPT_PKT_BURST_NUM,
 	CMD_LINE_OPT_MB_CACHE_SIZE_NUM,
+	CMD_LINE_OPT_EXIT_ON_FAILURE_NUM
 };
 
 static const struct option lgopts[] = {
@@ -816,6 +851,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_DISABLE_RSS, 0, 0, CMD_LINE_OPT_DISABLE_RSS_NUM},
 	{CMD_LINE_OPT_PER_PORT_POOL, 0, 0, CMD_LINE_OPT_PARSE_PER_PORT_POOL},
 	{CMD_LINE_OPT_MODE, 1, 0, CMD_LINE_OPT_MODE_NUM},
+	{CMD_LINE_OPT_EXIT_ON_FAILURE, 0, 0, CMD_LINE_OPT_EXIT_ON_FAILURE_NUM},
 	{CMD_LINE_OPT_EVENTQ_SYNC, 1, 0, CMD_LINE_OPT_EVENTQ_SYNC_NUM},
 	{CMD_LINE_OPT_EVENT_ETH_RX_QUEUES, 1, 0,
 					CMD_LINE_OPT_EVENT_ETH_RX_QUEUES_NUM},
@@ -966,6 +1002,10 @@ parse_args(int argc, char **argv)
 
 		case CMD_LINE_OPT_MODE_NUM:
 			parse_mode(optarg);
+			break;
+
+		case CMD_LINE_OPT_EXIT_ON_FAILURE_NUM:
+			exit_on_failure = true;
 			break;
 
 #ifdef RTE_LIB_EVENTDEV

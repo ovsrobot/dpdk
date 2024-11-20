@@ -81,6 +81,8 @@ struct em_rule {
 
 extern struct lpm_route_rule *route_base_v4;
 extern struct lpm_route_rule *route_base_v6;
+extern struct em_rule *em_route_base_v4;
+extern struct em_rule *em_route_base_v6;
 extern int route_num_v4;
 extern int route_num_v6;
 

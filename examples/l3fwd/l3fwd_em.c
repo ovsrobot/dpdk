@@ -384,9 +384,14 @@ populate_ipv4_flow_into_table(const struct rte_hash *h)
 		struct in_addr src;
 		struct in_addr dst;
 
-		if ((1 << em_route_base_v4[i].if_out &
-				enabled_port_mask) == 0)
-			continue;
+		ret = l3fwd_validate_routes_port(L3FWD_LOOKUP_EM, i, true);
+		if (ret) {
+			if (exit_on_failure)
+				rte_exit(EXIT_FAILURE, "IDX: %d: Port ID %d in IPv4 rule is not"
+					 " enabled\n", i, em_route_base_v4[i].if_out);
+			else
+				continue;
+		}
 
 		entry = &em_route_base_v4[i];
 		convert_ipv4_5tuple(&(entry->v4_key), &newkey);
@@ -436,9 +441,14 @@ populate_ipv6_flow_into_table(const struct rte_hash *h)
 		struct em_rule *entry;
 		union ipv6_5tuple_host newkey;
 
-		if ((1 << em_route_base_v6[i].if_out &
-				enabled_port_mask) == 0)
-			continue;
+		ret = l3fwd_validate_routes_port(L3FWD_LOOKUP_EM, i, false);
+		if (ret) {
+			if (exit_on_failure)
+				rte_exit(EXIT_FAILURE, "IDX %d: Port ID %d given in IPv6 rule is not"
+					 " enabled\n", i, em_route_base_v6[i].if_out);
+			else
+				continue;
+		}
 
 		entry = &em_route_base_v6[i];
 		convert_ipv6_5tuple(&(entry->v6_key), &newkey);

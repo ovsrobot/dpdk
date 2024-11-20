@@ -57,6 +57,15 @@
 #define L3FWD_HASH_ENTRIES		(1024*1024*1)
 #endif
 
+/* Select Longest-Prefix, Exact match, Forwarding Information Base or Access Control. */
+enum L3FWD_LOOKUP_MODE {
+	L3FWD_LOOKUP_DEFAULT,
+	L3FWD_LOOKUP_LPM,
+	L3FWD_LOOKUP_EM,
+	L3FWD_LOOKUP_FIB,
+	L3FWD_LOOKUP_ACL
+};
+
 struct parm_cfg {
 	const char *rule_ipv4_name;
 	const char *rule_ipv6_name;
@@ -101,6 +110,9 @@ extern struct rte_ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
 
 /* mask of enabled ports */
 extern uint32_t enabled_port_mask;
+
+/* Skip or exit on invalid route */
+extern bool exit_on_failure;
 
 /* Used only in exact match mode. */
 extern int ipv6; /**< ipv6 is false by default. */
@@ -221,6 +233,10 @@ init_mem(uint16_t portid, unsigned int nb_mbuf);
 
 int config_port_max_pkt_len(struct rte_eth_conf *conf,
 			    struct rte_eth_dev_info *dev_info);
+
+int
+l3fwd_validate_routes_port(enum L3FWD_LOOKUP_MODE mode, uint32_t i,
+			   bool is_ipv4);
 
 /* Function pointers for ACL, LPM, EM or FIB functionality. */
 void
