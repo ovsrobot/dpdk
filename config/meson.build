@@ -342,6 +342,10 @@ if cc.get_id() == 'intel'
         warning_flags += '-diag-disable=@0@'.format(i)
     endforeach
 endif
+# no VLAs in code built on Windows
+if is_windows
+    warning_flags += '-Wvla'
+endif
 foreach arg: warning_flags
     if cc.has_argument(arg)
         add_project_arguments(arg, language: 'c')
