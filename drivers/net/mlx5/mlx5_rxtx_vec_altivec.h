@@ -452,6 +452,7 @@ cycle:
 				(uint32_t)t_pkt->ol_flags,
 				(uint32_t)t_pkt->ol_flags,
 				(uint32_t)t_pkt->ol_flags};
+			const uint32_t hash_rss = t_pkt->hash.rss;
 
 			ol_flags_mask = (__vector unsigned char)
 				vec_or((__vector unsigned long)ol_flags_mask,
@@ -470,10 +471,10 @@ cycle:
 				((__vector unsigned int)ol_flags)[2];
 			elts[pos + 3]->ol_flags =
 				((__vector unsigned int)ol_flags)[3];
-			elts[pos]->hash.rss = 0;
-			elts[pos + 1]->hash.rss = 0;
-			elts[pos + 2]->hash.rss = 0;
-			elts[pos + 3]->hash.rss = 0;
+			elts[pos]->hash.rss = hash_rss;
+			elts[pos + 1]->hash.rss = hash_rss;
+			elts[pos + 2]->hash.rss = hash_rss;
+			elts[pos + 3]->hash.rss = hash_rss;
 		}
 		if (rxq->dynf_meta) {
 			int32_t offs = rxq->flow_meta_offset;

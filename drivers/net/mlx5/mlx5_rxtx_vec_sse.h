@@ -314,6 +314,7 @@ cycle:
 				_mm_set1_epi32(RTE_MBUF_F_RX_RSS_HASH);
 			const __m128i rearm_flags =
 				_mm_set1_epi32((uint32_t)t_pkt->ol_flags);
+			const uint32_t hash_rss = t_pkt->hash.rss;
 
 			ol_flags_mask = _mm_or_si128(ol_flags_mask, hash_flags);
 			ol_flags = _mm_or_si128(ol_flags,
@@ -326,10 +327,10 @@ cycle:
 				_mm_extract_epi32(ol_flags, 2);
 			elts[pos + 3]->ol_flags =
 				_mm_extract_epi32(ol_flags, 3);
-			elts[pos]->hash.rss = 0;
-			elts[pos + 1]->hash.rss = 0;
-			elts[pos + 2]->hash.rss = 0;
-			elts[pos + 3]->hash.rss = 0;
+			elts[pos]->hash.rss = hash_rss;
+			elts[pos + 1]->hash.rss = hash_rss;
+			elts[pos + 2]->hash.rss = hash_rss;
+			elts[pos + 3]->hash.rss = hash_rss;
 		}
 		if (rxq->dynf_meta) {
 			int32_t offs = rxq->flow_meta_offset;

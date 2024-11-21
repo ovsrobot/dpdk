@@ -330,6 +330,7 @@ cycle:
 				vdupq_n_u32(RTE_MBUF_F_RX_RSS_HASH);
 			const uint32x4_t rearm_flags =
 				vdupq_n_u32((uint32_t)t_pkt->ol_flags);
+			const uint32_t hash_rss = t_pkt->hash.rss;
 
 			ol_flags_mask = vorrq_u32(ol_flags_mask, hash_flags);
 			ol_flags = vorrq_u32(ol_flags,
@@ -338,10 +339,10 @@ cycle:
 			elts[pos + 1]->ol_flags = vgetq_lane_u32(ol_flags, 2);
 			elts[pos + 2]->ol_flags = vgetq_lane_u32(ol_flags, 1);
 			elts[pos + 3]->ol_flags = vgetq_lane_u32(ol_flags, 0);
-			elts[pos]->hash.rss = 0;
-			elts[pos + 1]->hash.rss = 0;
-			elts[pos + 2]->hash.rss = 0;
-			elts[pos + 3]->hash.rss = 0;
+			elts[pos]->hash.rss = hash_rss;
+			elts[pos + 1]->hash.rss = hash_rss;
+			elts[pos + 2]->hash.rss = hash_rss;
+			elts[pos + 3]->hash.rss = hash_rss;
 		}
 		if (rxq->dynf_meta) {
 			int32_t offs = rxq->flow_meta_offset;
