@@ -42,7 +42,6 @@ struct ieth_tx_queue {
 		struct ieth_tx_entry *sw_ring; /* virtual address of SW ring */
 		struct ieth_vec_tx_entry *sw_ring_v;
 	};
-	rte_iova_t tx_ring_dma;        /* TX ring DMA address */
 	uint16_t nb_tx_desc;           /* number of TX descriptors */
 	uint16_t tx_tail; /* current value of tail register */
 	uint16_t nb_tx_used; /* number of TX desc used since RS bit set */
@@ -56,16 +55,14 @@ struct ieth_tx_queue {
 	uint16_t tx_free_thresh;
 	/* Number of TX descriptors to use before RS bit is set. */
 	uint16_t tx_rs_thresh;
-	uint8_t pthresh;   /**< Prefetch threshold register. */
-	uint8_t hthresh;   /**< Host threshold register. */
-	uint8_t wthresh;   /**< Write-back threshold reg. */
 	uint16_t port_id;  /* Device port identifier. */
 	uint16_t queue_id; /* TX queue index. */
 	uint16_t reg_idx;
-	uint64_t offloads;
 	uint16_t tx_next_dd;
 	uint16_t tx_next_rs;
+	uint64_t offloads;
 	uint64_t mbuf_errors;
+	rte_iova_t tx_ring_dma;        /* TX ring DMA address */
 	_Bool tx_deferred_start; /* don't start this queue in dev start */
 	_Bool q_set;             /* indicate if tx queue has been configured */
 	union {                  /* the VSI this queue belongs to */
@@ -97,9 +94,10 @@ struct ieth_tx_queue {
 			const struct ixgbe_txq_ops *ops;
 			struct ixgbe_advctx_info *ctx_cache;
 			uint32_t ctx_curr;
-#ifdef RTE_LIB_SECURITY
+			uint8_t pthresh;   /**< Prefetch threshold register. */
+			uint8_t hthresh;   /**< Host threshold register. */
+			uint8_t wthresh;   /**< Write-back threshold reg. */
 			uint8_t using_ipsec;  /**< indicates that IPsec TX feature is in use */
-#endif
 		};
 	};
 };
