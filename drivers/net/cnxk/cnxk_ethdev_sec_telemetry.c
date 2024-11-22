@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #include <rte_telemetry.h>
+#include <rte_os_shim.h>
 
 #include <roc_api.h>
 
@@ -214,6 +215,7 @@ parse_params(const char *params, uint32_t *vals, size_t n_vals)
 	char dlim[2] = ",";
 	char *params_args;
 	size_t count = 0;
+	char *sp = NULL;
 	char *token;
 
 	if (vals == NULL || params == NULL || strlen(params) == 0)
@@ -226,10 +228,10 @@ parse_params(const char *params, uint32_t *vals, size_t n_vals)
 	if (params_args == NULL)
 		return -1;
 
-	token = strtok(params_args, dlim);
+	token = strtok_r(params_args, dlim, &sp);
 	while (token && isdigit(*token) && count < n_vals) {
 		vals[count++] = strtoul(token, NULL, 10);
-		token = strtok(NULL, dlim);
+		token = strtok_r(NULL, dlim, &sp);
 	}
 
 	free(params_args);
