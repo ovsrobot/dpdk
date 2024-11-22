@@ -11,6 +11,7 @@
 #include <rte_kvargs.h>
 #include <rte_lcore.h>
 #include <rte_rawdev_pmd.h>
+#include <rte_os_shim.h>
 
 #include <roc_api.h>
 
@@ -192,7 +193,7 @@ static int
 cnxk_gpio_parse_allowlist(struct cnxk_gpiochip *gpiochip, char *allowlist)
 {
 	int i, ret, val, queue = 0;
-	char *token;
+	char *token, *sp = NULL;
 	int *list;
 
 	list = rte_calloc(NULL, gpiochip->num_gpios, sizeof(*list), 0);
@@ -210,7 +211,7 @@ cnxk_gpio_parse_allowlist(struct cnxk_gpiochip *gpiochip, char *allowlist)
 	allowlist[strlen(allowlist) - 1] = ' ';
 
 	/* quiesce -Wcast-qual */
-	token = strtok((char *)(uintptr_t)allowlist, ",");
+	token = strtok_r((char *)(uintptr_t)allowlist, ",", &sp);
 	do {
 		errno = 0;
 		val = strtol(token, NULL, 10);
@@ -236,7 +237,7 @@ cnxk_gpio_parse_allowlist(struct cnxk_gpiochip *gpiochip, char *allowlist)
 		}
 		if (i == queue)
 			list[queue++] = val;
-	} while ((token = strtok(NULL, ",")));
+	} while ((token = strtok_r(NULL, ",", &sp)));
 
 	free(allowlist);
 	gpiochip->allowlist = list;
