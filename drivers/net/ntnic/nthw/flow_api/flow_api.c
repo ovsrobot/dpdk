@@ -81,6 +81,20 @@ static const struct {
 	/* 27 */ { "Internal creation of a tunnel end point port failed" },
 	/* 28 */ { "Unknown or unsupported flow action received" },
 	/* 29 */ { "Removing flow failed" },
+	/* 30 */ { "No output queue specified. Ignore this flow offload and uses default queue"},
+	/* 31 */ { "No output queue found"},
+	/* 32 */ { "Unsupported EtherType or rejected caused by offload policy"},
+	/* 33 */ { "Destination port specified is invalid or not reachable from this NIC"},
+	/* 34 */ { "Partial offload is not supported in this configuration"},
+	/* 35 */ { "Match failed because of CAT CAM exhausted"},
+	/* 36 */ { "Match failed because of CAT CAM Key clashed with an existing KCC Key"},
+	/* 37 */ { "Match failed because of CAT CAM write failed"},
+	/* 38 */ { "Partial flow mark too big for device"},
+	/* 39 */ { "Invalid priority value"},
+	/* 40 */ { "Multiple port_id actions for one flow is not supported"},
+	/* 41 */ { "Too long hash key for RSS"},
+	/* 42 */ { "Action AGE is not supported for flow in group 0"},
+	/* 43 */ { "Unknown error"},
 };
 
 void flow_nic_set_error(enum flow_nic_err_msg_e msg, struct rte_flow_error *error)
