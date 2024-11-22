@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <rte_mbuf.h>
+#include "ieth_rxtx.h"
 
 #define IETH_RX_BURST 32
 
@@ -78,4 +79,10 @@ ieth_rx_reassemble_packets(struct rte_mbuf **rx_bufs,
 	return pkt_idx;
 }
 
+static __rte_always_inline void
+ieth_tx_backlog_entry(struct ieth_tx_entry *txep, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
+{
+	for (uint16_t i = 0; i < (int)nb_pkts; ++i)
+		txep[i].mbuf = tx_pkts[i];
+}
 #endif /* IETH_RXTX_VEC_COMMON_H_ */
