@@ -858,7 +858,7 @@ ice_xmit_fixed_burst_vec_avx2(void *tx_queue, struct rte_mbuf **tx_pkts,
 {
 	struct ieth_tx_queue *txq = (struct ieth_tx_queue *)tx_queue;
 	volatile struct ice_tx_desc *txdp;
-	struct ieth_tx_entry *txep;
+	struct ieth_vec_tx_entry *txep;
 	uint16_t n, nb_commit, tx_id;
 	uint64_t flags = ICE_TD_CMD;
 	uint64_t rs = ICE_TX_DESC_CMD_RS | ICE_TD_CMD;
@@ -867,7 +867,7 @@ ice_xmit_fixed_burst_vec_avx2(void *tx_queue, struct rte_mbuf **tx_pkts,
 	nb_pkts = RTE_MIN(nb_pkts, txq->tx_rs_thresh);
 
 	if (txq->nb_tx_free < txq->tx_free_thresh)
-		ice_tx_free_bufs_vec(txq);
+		ieth_tx_free_bufs_vector(txq, ice_tx_desc_done, false);
 
 	nb_commit = nb_pkts = (uint16_t)RTE_MIN(txq->nb_tx_free, nb_pkts);
 	if (unlikely(nb_pkts == 0))
@@ -875,13 +875,13 @@ ice_xmit_fixed_burst_vec_avx2(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 	tx_id = txq->tx_tail;
 	txdp = &txq->ice_tx_ring[tx_id];
-	txep = &txq->sw_ring[tx_id];
+	txep = &txq->sw_ring_v[tx_id];
 
 	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free - nb_pkts);
 
 	n = (uint16_t)(txq->nb_tx_desc - tx_id);
 	if (nb_commit >= n) {
-		ieth_tx_backlog_entry(txep, tx_pkts, n);
+		ieth_tx_backlog_entry_vec(txep, tx_pkts, n);
 
 		ice_vtx(txdp, tx_pkts, n - 1, flags, offload);
 		tx_pkts += (n - 1);
@@ -896,10 +896,10 @@ ice_xmit_fixed_burst_vec_avx2(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		/* avoid reach the end of ring */
 		txdp = &txq->ice_tx_ring[tx_id];
-		txep = &txq->sw_ring[tx_id];
+		txep = &txq->sw_ring_v[tx_id];
 	}
 
-	ieth_tx_backlog_entry(txep, tx_pkts, nb_commit);
+	ieth_tx_backlog_entry_vec(txep, tx_pkts, nb_commit);
 
 	ice_vtx(txdp, tx_pkts, nb_commit, flags, offload);
 
