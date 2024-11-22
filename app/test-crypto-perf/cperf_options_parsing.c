@@ -9,6 +9,7 @@
 #include <rte_cryptodev.h>
 #include <rte_malloc.h>
 #include <rte_ether.h>
+#include <rte_os_shim.h>
 
 #include "cperf_options.h"
 #include "cperf_test_common.h"
@@ -166,6 +167,7 @@ parse_range(const char *arg, uint32_t *min, uint32_t *max, uint32_t *inc)
 {
 	char *token;
 	uint32_t number;
+	char *sp = NULL;
 
 	char *copy_arg = strdup(arg);
 
@@ -173,7 +175,7 @@ parse_range(const char *arg, uint32_t *min, uint32_t *max, uint32_t *inc)
 		return -1;
 
 	errno = 0;
-	token = strtok(copy_arg, ":");
+	token = strtok_r(copy_arg, ":", &sp);
 
 	/* Parse minimum value */
 	if (token != NULL) {
@@ -187,7 +189,7 @@ parse_range(const char *arg, uint32_t *min, uint32_t *max, uint32_t *inc)
 	} else
 		goto err_range;
 
-	token = strtok(NULL, ":");
+	token = strtok_r(NULL, ":", &sp);
 
 	/* Parse increment value */
 	if (token != NULL) {
@@ -201,7 +203,7 @@ parse_range(const char *arg, uint32_t *min, uint32_t *max, uint32_t *inc)
 	} else
 		goto err_range;
 
-	token = strtok(NULL, ":");
+	token = strtok_r(NULL, ":", &sp);
 
 	/* Parse maximum value */
 	if (token != NULL) {
@@ -216,7 +218,7 @@ parse_range(const char *arg, uint32_t *min, uint32_t *max, uint32_t *inc)
 	} else
 		goto err_range;
 
-	if (strtok(NULL, ":") != NULL)
+	if (strtok_r(NULL, ":", &sp) != NULL)
 		goto err_range;
 
 	free(copy_arg);
@@ -235,6 +237,7 @@ parse_list(const char *arg, uint32_t *list, uint32_t *min, uint32_t *max)
 	uint8_t count = 0;
 	uint32_t temp_min;
 	uint32_t temp_max;
+	char *sp = NULL;
 
 	char *copy_arg = strdup(arg);
 
@@ -242,7 +245,7 @@ parse_list(const char *arg, uint32_t *list, uint32_t *min, uint32_t *max)
 		return -1;
 
 	errno = 0;
-	token = strtok(copy_arg, ",");
+	token = strtok_r(copy_arg, ",", &sp);
 
 	/* Parse first value */
 	if (token != NULL) {
@@ -258,7 +261,7 @@ parse_list(const char *arg, uint32_t *list, uint32_t *min, uint32_t *max)
 	} else
 		goto err_list;
 
-	token = strtok(NULL, ",");
+	token = strtok_r(NULL, ",", &sp);
 
 	while (token != NULL) {
 		if (count == MAX_LIST) {
@@ -280,7 +283,7 @@ parse_list(const char *arg, uint32_t *list, uint32_t *min, uint32_t *max)
 		if (number > temp_max)
 			temp_max = number;
 
-		token = strtok(NULL, ",");
+		token = strtok_r(NULL, ",", &sp);
 	}
 
 	if (min)

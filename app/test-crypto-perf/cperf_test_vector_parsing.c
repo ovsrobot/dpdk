@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include <rte_malloc.h>
+#include <rte_os_shim.h>
 
 #include "cperf_options.h"
 #include "cperf_test_vectors.h"
@@ -220,8 +221,9 @@ parse_values(char *tokens, uint8_t **data, uint32_t *data_length)
 
 	uint8_t *values, *values_resized;
 	char *tok, *error = NULL;
+	char *sp = NULL;
 
-	tok = strtok(tokens, CPERF_VALUE_DELIMITER);
+	tok = strtok_r(tokens, CPERF_VALUE_DELIMITER, &sp);
 	if (tok == NULL)
 		return -1;
 
@@ -252,7 +254,7 @@ parse_values(char *tokens, uint8_t **data, uint32_t *data_length)
 			return -1;
 		}
 
-		tok = strtok(NULL, CPERF_VALUE_DELIMITER);
+		tok = strtok_r(NULL, CPERF_VALUE_DELIMITER, &sp);
 		if (tok == NULL)
 			break;
 
@@ -283,6 +285,7 @@ parse_entry(char *entry, struct cperf_test_vector *vector,
 
 	uint8_t *data = NULL;
 	char *token, *key_token;
+	char *sp = NULL;
 
 	if (entry == NULL) {
 		printf("Expected entry value\n");
@@ -290,10 +293,10 @@ parse_entry(char *entry, struct cperf_test_vector *vector,
 	}
 
 	/* get key */
-	token = strtok(entry, CPERF_ENTRY_DELIMITER);
+	token = strtok_r(entry, CPERF_ENTRY_DELIMITER, &sp);
 	key_token = token;
 	/* get values for key */
-	token = strtok(NULL, CPERF_ENTRY_DELIMITER);
+	token = strtok_r(NULL, CPERF_ENTRY_DELIMITER, &sp);
 
 	if (key_token == NULL || token == NULL) {
 		printf("Expected 'key = values' but was '%.40s'..\n", entry);
