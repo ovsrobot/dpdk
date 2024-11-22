@@ -83,7 +83,6 @@ struct ieth_tx_queue {
 		};
 		struct { /* iavf driver specific values */
 			uint16_t ipsec_crypto_pkt_md_offset;
-			uint8_t rel_mbufs_type;
 #define IAVF_TX_FLAGS_VLAN_TAG_LOC_L2TAG1 BIT(0)
 #define IAVF_TX_FLAGS_VLAN_TAG_LOC_L2TAG2 BIT(1)
 			uint8_t vlan_flag;
@@ -103,23 +102,23 @@ struct ieth_tx_queue {
 	};
 };
 
-#define IETH_FREE_BUFS_LOOP(txq, swr, start) do { \
+#define IETH_FREE_BUFS_LOOP(swr, nb_desc, start, end) do { \
 		uint16_t i = start; \
-		if (txq->tx_tail < i) { \
-			for (; i < txq->nb_tx_desc; i++) { \
+		if (end < i) { \
+			for (; i < nb_desc; i++) { \
 				rte_pktmbuf_free_seg(swr[i].mbuf); \
 				swr[i].mbuf = NULL; \
 			} \
 			i = 0; \
 		} \
-		for (; i < txq->tx_tail; i++) { \
+		for (; i < end; i++) { \
 			rte_pktmbuf_free_seg(swr[i].mbuf); \
 			swr[i].mbuf = NULL; \
 		} \
 } while(0)
 
 static inline void
-ieth_txq_release_all_mbufs(struct ieth_tx_queue *txq)
+ieth_txq_release_all_mbufs(struct ieth_tx_queue *txq, bool use_ctx)
 {
 	if (unlikely(!txq || !txq->sw_ring))
 		return;
@@ -138,14 +137,16 @@ ieth_txq_release_all_mbufs(struct ieth_tx_queue *txq)
 	 *  vPMD tx will not set sw_ring's mbuf to NULL after free,
 	 *  so need to free remains more carefully.
 	 */
-	const uint16_t start = txq->tx_next_dd - txq->tx_rs_thresh + 1;
+	const uint16_t start = (txq->tx_next_dd - txq->tx_rs_thresh + 1) >> use_ctx;
+	const uint16_t nb_desc = txq->nb_tx_desc >> use_ctx;
+	const uint16_t end = txq->tx_tail >> use_ctx;
 
 	if (txq->vector_sw_ring) {
 		struct ieth_vec_tx_entry *swr = txq->sw_ring_v;
-		IETH_FREE_BUFS_LOOP(txq, swr, start);
+		IETH_FREE_BUFS_LOOP(swr, nb_desc, start, end);
 	} else {
 		struct ieth_tx_entry *swr = txq->sw_ring;
-		IETH_FREE_BUFS_LOOP(txq, swr, start);
+		IETH_FREE_BUFS_LOOP(swr, nb_desc, start, end);
 	}
 }
 
