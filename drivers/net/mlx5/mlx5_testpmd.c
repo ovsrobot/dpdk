@@ -353,6 +353,7 @@ mlx5_test_parse_geneve_option_data(const char *buff, uint8_t data_len,
 				   rte_be32_t **match_data_mask)
 {
 	rte_be32_t *data;
+	char *sp = NULL;
 	char *buff2;
 	char *token;
 	uint8_t i = 0;
@@ -377,7 +378,7 @@ mlx5_test_parse_geneve_option_data(const char *buff, uint8_t data_len,
 		return -ENOMEM;
 	}
 
-	token = strtok(buff2, SPACE_DELIMITER);
+	token = strtok_r(buff2, SPACE_DELIMITER, &sp);
 	while (token != NULL) {
 		if (i == data_len) {
 			TESTPMD_LOG(ERR,
@@ -393,7 +394,7 @@ mlx5_test_parse_geneve_option_data(const char *buff, uint8_t data_len,
 		else
 			data[i] = 0x0;
 
-		token = strtok(NULL, SPACE_DELIMITER);
+		token = strtok_r(NULL, SPACE_DELIMITER, &sp);
 		i++;
 	}
 
