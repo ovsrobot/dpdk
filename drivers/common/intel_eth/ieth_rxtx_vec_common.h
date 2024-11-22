@@ -158,7 +158,7 @@ done:
 }
 
 static __rte_always_inline int
-ieth_tx_free_bufs_vector(struct ieth_tx_queue *txq, ieth_desc_done_fn desc_done)
+ieth_tx_free_bufs_vector(struct ieth_tx_queue *txq, ieth_desc_done_fn desc_done, bool ctx_descs)
 {
 	int nb_free = 0;
 	struct rte_mbuf *free[IETH_VPMD_TX_MAX_FREE_BUF];
@@ -168,13 +168,13 @@ ieth_tx_free_bufs_vector(struct ieth_tx_queue *txq, ieth_desc_done_fn desc_done)
 	if (!desc_done(txq, txq->tx_next_dd))
 		return 0;
 
-	const uint32_t n = txq->tx_rs_thresh;
+	const uint32_t n = txq->tx_rs_thresh >> ctx_descs;
 
 	/* first buffer to free from S/W ring is at index
 	 * tx_next_dd - (tx_rs_thresh - 1)
 	 */
 	struct ieth_vec_tx_entry *txep = txq->sw_ring_v;
-	txep += txq->tx_next_dd - (n - 1);
+	txep += (txq->tx_next_dd >> ctx_descs) - (n - 1);
 
 	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE && (n & 31) == 0) {
 		struct rte_mempool *mp = txep[0].mbuf->pool;
