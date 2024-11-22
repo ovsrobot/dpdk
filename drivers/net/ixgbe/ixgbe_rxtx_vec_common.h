@@ -12,7 +12,7 @@
 #include "ixgbe_rxtx.h"
 
 static __rte_always_inline int
-ixgbe_tx_free_bufs(struct ixgbe_tx_queue *txq)
+ixgbe_tx_free_bufs(struct ieth_tx_queue *txq)
 {
 	struct ieth_vec_tx_entry *txep;
 	uint32_t status;
@@ -79,7 +79,7 @@ tx_backlog_entry(struct ieth_vec_tx_entry *txep,
 }
 
 static inline void
-_ixgbe_tx_queue_release_mbufs_vec(struct ixgbe_tx_queue *txq)
+_ixgbe_tx_queue_release_mbufs_vec(struct ieth_tx_queue *txq)
 {
 	unsigned int i;
 	struct ieth_vec_tx_entry *txe;
@@ -134,7 +134,7 @@ _ixgbe_rx_queue_release_mbufs_vec(struct ixgbe_rx_queue *rxq)
 }
 
 static inline void
-_ixgbe_tx_free_swring_vec(struct ixgbe_tx_queue *txq)
+_ixgbe_tx_free_swring_vec(struct ieth_tx_queue *txq)
 {
 	if (txq == NULL)
 		return;
@@ -146,7 +146,7 @@ _ixgbe_tx_free_swring_vec(struct ixgbe_tx_queue *txq)
 }
 
 static inline void
-_ixgbe_reset_tx_queue_vec(struct ixgbe_tx_queue *txq)
+_ixgbe_reset_tx_queue_vec(struct ieth_tx_queue *txq)
 {
 	static const union ixgbe_adv_tx_desc zeroed_desc = { { 0 } };
 	struct ieth_vec_tx_entry *txe = txq->sw_ring_v;
@@ -199,7 +199,7 @@ ixgbe_rxq_vec_setup_default(struct ixgbe_rx_queue *rxq)
 }
 
 static inline int
-ixgbe_txq_vec_setup_default(struct ixgbe_tx_queue *txq,
+ixgbe_txq_vec_setup_default(struct ieth_tx_queue *txq,
 			    const struct ixgbe_txq_ops *txq_ops)
 {
 	if (txq->sw_ring_v == NULL)
