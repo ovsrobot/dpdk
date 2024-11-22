@@ -36,7 +36,7 @@ sources = files(
 testpmd_sources = files('i40e_testpmd.c')
 
 deps += ['hash']
-includes += include_directories('base')
+includes += include_directories('base', '../../common/intel_eth')
 
 if arch_subdir == 'x86'
     sources += files('i40e_rxtx_vec_sse.c')
