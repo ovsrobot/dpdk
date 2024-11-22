@@ -65,6 +65,8 @@ struct ieth_tx_queue {
 	rte_iova_t tx_ring_dma;        /* TX ring DMA address */
 	_Bool tx_deferred_start; /* don't start this queue in dev start */
 	_Bool q_set;             /* indicate if tx queue has been configured */
+	_Bool vector_tx;         /* port is using vector TX */
+	_Bool vector_sw_ring;    /* port is using vectorized SW ring (ieth_vec_tx_entry) */
 	union {                  /* the VSI this queue belongs to */
 		struct i40e_vsi *i40e_vsi;
 		struct iavf_vsi *iavf_vsi;
@@ -74,7 +76,6 @@ struct ieth_tx_queue {
 
 	union {
 		struct { /* ICE driver specific values */
-			ice_tx_release_mbufs_t tx_rel_mbufs;
 			uint32_t q_teid; /* TX schedule node id. */
 		};
 		struct { /* I40E driver specific values */
@@ -101,5 +102,51 @@ struct ieth_tx_queue {
 		};
 	};
 };
+
+#define IETH_FREE_BUFS_LOOP(txq, swr, start) do { \
+		uint16_t i = start; \
+		if (txq->tx_tail < i) { \
+			for (; i < txq->nb_tx_desc; i++) { \
+				rte_pktmbuf_free_seg(swr[i].mbuf); \
+				swr[i].mbuf = NULL; \
+			} \
+			i = 0; \
+		} \
+		for (; i < txq->tx_tail; i++) { \
+			rte_pktmbuf_free_seg(swr[i].mbuf); \
+			swr[i].mbuf = NULL; \
+		} \
+} while(0)
+
+static inline void
+ieth_txq_release_all_mbufs(struct ieth_tx_queue *txq)
+{
+	if (unlikely(!txq || !txq->sw_ring))
+		return;
+
+	if (!txq->vector_tx) {
+		for (uint16_t i = 0; i < txq->nb_tx_desc; i++) {
+			if (txq->sw_ring[i].mbuf != NULL) {
+				rte_pktmbuf_free_seg(txq->sw_ring[i].mbuf);
+				txq->sw_ring[i].mbuf = NULL;
+			}
+		}
+		return;
+	}
+
+	/**
+	 *  vPMD tx will not set sw_ring's mbuf to NULL after free,
+	 *  so need to free remains more carefully.
+	 */
+	const uint16_t start = txq->tx_next_dd - txq->tx_rs_thresh + 1;
+
+	if (txq->vector_sw_ring) {
+		struct ieth_vec_tx_entry *swr = txq->sw_ring_v;
+		IETH_FREE_BUFS_LOOP(txq, swr, start);
+	} else {
+		struct ieth_tx_entry *swr = txq->sw_ring;
+		IETH_FREE_BUFS_LOOP(txq, swr, start);
+	}
+}
 
 #endif /* IETH_RXTX_H_ */

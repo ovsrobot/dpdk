@@ -793,12 +793,10 @@ ice_rxq_vec_setup(struct ice_rx_queue *rxq)
 }
 
 int __rte_cold
-ice_txq_vec_setup(struct ieth_tx_queue __rte_unused *txq)
+ice_txq_vec_setup(struct ieth_tx_queue *txq)
 {
 	if (!txq)
 		return -1;
-
-	txq->tx_rel_mbufs = _ice_tx_queue_release_mbufs_vec;
 	return 0;
 }
 
