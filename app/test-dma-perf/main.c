@@ -18,6 +18,7 @@
 #include <rte_lcore.h>
 #include <rte_dmadev.h>
 #include <rte_kvargs.h>
+#include <rte_os_shim.h>
 
 #include "main.h"
 
@@ -183,6 +184,7 @@ parse_lcore(struct test_configure *test_case, const char *value)
 	uint16_t len;
 	char *input;
 	struct lcore_dma_map_t *lcore_dma_map;
+	char *sp = NULL;
 
 	if (test_case == NULL || value == NULL)
 		return -1;
@@ -191,7 +193,7 @@ parse_lcore(struct test_configure *test_case, const char *value)
 	input = (char *)malloc((len + 1) * sizeof(char));
 	strlcpy(input, value, len + 1);
 
-	char *token = strtok(input, ", ");
+	char *token = strtok_r(input, ", ", &sp);
 	while (token != NULL) {
 		lcore_dma_map = &(test_case->dma_config[test_case->num_worker++].lcore_dma_map);
 		memset(lcore_dma_map, 0, sizeof(struct lcore_dma_map_t));
@@ -203,7 +205,7 @@ parse_lcore(struct test_configure *test_case, const char *value)
 		uint16_t lcore_id = atoi(token);
 		lcore_dma_map->lcore = lcore_id;
 
-		token = strtok(NULL, ", ");
+		token = strtok_r(NULL, ", ", &sp);
 	}
 
 	free(input);
@@ -532,6 +534,7 @@ main(int argc, char *argv[])
 	char *rst_path_ptr = NULL;
 	char rst_path[PATH_MAX];
 	int new_argc;
+	char *sp = NULL;
 
 	memset(args, 0, sizeof(args));
 
@@ -550,7 +553,7 @@ main(int argc, char *argv[])
 	}
 	if (rst_path_ptr == NULL) {
 		strlcpy(rst_path, cfg_path_ptr, PATH_MAX);
-		char *token = strtok(basename(rst_path), ".");
+		char *token = strtok_r(basename(rst_path), ".", &sp);
 		if (token == NULL) {
 			printf("Config file error.\n");
 			return -1;
