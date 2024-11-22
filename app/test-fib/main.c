@@ -17,6 +17,7 @@
 #include <rte_lpm6.h>
 #include <rte_fib.h>
 #include <rte_fib6.h>
+#include <rte_os_shim.h>
 
 #define	PRINT_USAGE_START	"%s [EAL options] --\n"
 
@@ -204,9 +205,9 @@ parse_distrib(uint8_t depth_lim, const uint32_t n)
 	uint32_t nrpd[128 + 1] = {0}; /* number of routes per depth */
 	uint32_t n_routes;
 	uint8_t depth, ratio, ratio_acc = 0;
-	char *in;
+	char *in, *sp = NULL;
 
-	in = strtok(distrib_string, ",");
+	in = strtok_r(distrib_string, ",", &sp);
 
 	/*parse configures routes percentage ratios*/
 	while (in != NULL) {
@@ -246,7 +247,7 @@ parse_distrib(uint8_t depth_lim, const uint32_t n)
 		}
 
 		/*number of configured depths in*/
-		in = strtok(NULL, ",");
+		in = strtok_r(NULL, ",", &sp);
 	}
 
 	if (ratio_acc > 100) {
@@ -522,10 +523,10 @@ parse_lookup(FILE *f, int af)
 	int ret, i = 0;
 	uint8_t *tbl = (uint8_t *)config.lookup_tbl;
 	int step = (af == AF_INET) ? 4 : 16;
-	char *s;
+	char *s, *sp = NULL;
 
 	while (fgets(line, sizeof(line), f) != NULL) {
-		s = strtok(line, " \t\n");
+		s = strtok_r(line, " \t\n", &sp);
 		if (s == NULL)
 			return -EINVAL;
 		ret = inet_pton(af, s, &tbl[i]);
