@@ -9,6 +9,7 @@
 #include <rte_memory.h>
 #include <rte_mldev.h>
 #include <rte_string_fns.h>
+#include <rte_os_shim.h>
 
 #include "ml_common.h"
 #include "ml_test.h"
@@ -76,12 +77,12 @@ ml_parse_models(struct ml_options *opt, const char *arg)
 {
 	const char *delim = ",";
 	char models[PATH_MAX];
-	char *token;
+	char *token, *sp = NULL;
 	int ret = 0;
 
 	strlcpy(models, arg, PATH_MAX);
 
-	token = strtok(models, delim);
+	token = strtok_r(models, delim, &sp);
 	while (token != NULL) {
 		if (opt->nb_filelist >= ML_TEST_MAX_MODELS) {
 			ml_err("Exceeded model count, max = %d\n", ML_TEST_MAX_MODELS);
@@ -92,7 +93,7 @@ ml_parse_models(struct ml_options *opt, const char *arg)
 		strlcpy(opt->filelist[opt->nb_filelist].model, token, PATH_MAX);
 		opt->nb_filelist++;
 
-		token = strtok(NULL, delim);
+		token = strtok_r(NULL, delim, &sp);
 	}
 
 	if (opt->nb_filelist == 0) {
@@ -108,7 +109,7 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 {
 	const char *delim = ",";
 	char filelist[PATH_MAX];
-	char *token;
+	char *token, *sp = NULL;
 
 	if (opt->nb_filelist >= ML_TEST_MAX_MODELS) {
 		ml_err("Exceeded filelist count, max = %d\n", ML_TEST_MAX_MODELS);
@@ -118,7 +119,7 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 	strlcpy(filelist, arg, PATH_MAX);
 
 	/* model */
-	token = strtok(filelist, delim);
+	token = strtok_r(filelist, delim, &sp);
 	if (token == NULL) {
 		ml_err("Invalid filelist, model not specified = %s\n", arg);
 		return -EINVAL;
@@ -126,7 +127,7 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 	strlcpy(opt->filelist[opt->nb_filelist].model, token, PATH_MAX);
 
 	/* input */
-	token = strtok(NULL, delim);
+	token = strtok_r(NULL, delim, &sp);
 	if (token == NULL) {
 		ml_err("Invalid filelist, input not specified = %s\n", arg);
 		return -EINVAL;
@@ -134,7 +135,7 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 	strlcpy(opt->filelist[opt->nb_filelist].input, token, PATH_MAX);
 
 	/* output */
-	token = strtok(NULL, delim);
+	token = strtok_r(NULL, delim, &sp);
 	if (token == NULL) {
 		ml_err("Invalid filelist, output not specified = %s\n", arg);
 		return -EINVAL;
@@ -142,14 +143,14 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 	strlcpy(opt->filelist[opt->nb_filelist].output, token, PATH_MAX);
 
 	/* reference - optional */
-	token = strtok(NULL, delim);
+	token = strtok_r(NULL, delim, &sp);
 	if (token != NULL)
 		strlcpy(opt->filelist[opt->nb_filelist].reference, token, PATH_MAX);
 	else
 		memset(opt->filelist[opt->nb_filelist].reference, 0, PATH_MAX);
 
 	/* check for extra tokens */
-	token = strtok(NULL, delim);
+	token = strtok_r(NULL, delim, &sp);
 	if (token != NULL) {
 		ml_err("Invalid filelist. Entries > 4\n.");
 		return -EINVAL;
