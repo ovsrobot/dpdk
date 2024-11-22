@@ -35,7 +35,7 @@
 /*
  * Try to avoid TX buffering if we have at least MAX_TX_BURST packets to send.
  */
-#define	MAX_TX_BURST	  (MAX_PKT_BURST / 2)
+#define	MAX_TX_BURST DEFAULT_PKT_BURST
 
 #define NB_SOCKETS        8
 
@@ -56,6 +56,8 @@
 /* 32-bit has less address-space for hugepage memory, limit to 1M entries */
 #define L3FWD_HASH_ENTRIES		(1024*1024*1)
 #endif
+
+static_assert(MAX_TX_BURST <= MAX_PKT_BURST, "MAX_TX_BURST should be at most MAX_PKT_BURST");
 
 struct parm_cfg {
 	const char *rule_ipv4_name;
@@ -152,8 +154,8 @@ send_single_packet(struct lcore_conf *qconf,
 	len++;
 
 	/* enough pkts to be sent */
-	if (unlikely(len == MAX_PKT_BURST)) {
-		send_burst(qconf, MAX_PKT_BURST, port);
+	if (unlikely(len == MAX_TX_BURST)) {
+		send_burst(qconf, MAX_TX_BURST, port);
 		len = 0;
 	}
 
