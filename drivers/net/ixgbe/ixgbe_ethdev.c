@@ -6920,6 +6920,12 @@ ixgbe_timesync_enable(struct rte_eth_dev *dev)
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t tsync_ctl;
 	uint32_t tsauxc;
+	struct timespec ts;
+
+	memset(&ts, 0, sizeof(struct timespec));
+
+	/* get current system time */
+	clock_gettime(CLOCK_REALTIME, &ts);
 
 	/* Stop the timesync system time. */
 	IXGBE_WRITE_REG(hw, IXGBE_TIMINCA, 0x0);
@@ -6951,6 +6957,9 @@ ixgbe_timesync_enable(struct rte_eth_dev *dev)
 	IXGBE_WRITE_REG(hw, IXGBE_TSYNCTXCTL, tsync_ctl);
 
 	IXGBE_WRITE_FLUSH(hw);
+
+	/* ixgbe uses zero-based timestamping so only adjust timecounter */
+	ixgbe_timesync_write_time(dev, &ts);
 
 	return 0;
 }
