@@ -655,6 +655,7 @@ edma_ops_enqueue_burst(struct event_dma_adapter *adapter, struct rte_event_dma_a
 	nb_ev = 0;
 	retry = 0;
 	nb_enqueued = 0;
+	memset(events, 0, sizeof(events));
 	num = RTE_MIN(num, DMA_BATCH_SIZE);
 	for (i = 0; i < num; i++) {
 		struct rte_event *ev = &events[nb_ev++];
