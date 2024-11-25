@@ -439,7 +439,7 @@ static int alloc_link_pbl(struct tfc_ts_mem_cfg *mem_cfg, uint32_t page_size,
 	char mz_name[RTE_MEMZONE_NAMESIZE];
 	int mz_size;
 	uint64_t total_size;
-	uint32_t total_pages;
+	uint32_t total_pages = 0;
 
 	/* tf_em_size_page_tbl_lvl */
 	rc = num_pages_get(mem_cfg, page_size);
