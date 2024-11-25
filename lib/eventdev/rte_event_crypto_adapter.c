@@ -685,6 +685,7 @@ eca_ops_enqueue_burst(struct event_crypto_adapter *adapter,
 	nb_ev = 0;
 	retry = 0;
 	nb_enqueued = 0;
+	memset(events, 0, sizeof(events));
 	num = RTE_MIN(num, BATCH_SIZE);
 	for (i = 0; i < num; i++) {
 		struct rte_event *ev = &events[nb_ev++];
