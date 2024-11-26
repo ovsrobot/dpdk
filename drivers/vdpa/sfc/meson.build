@@ -16,7 +16,7 @@ foreach flag: extra_flags
     endif
 endforeach
 
-deps += ['common_sfc_efx', 'bus_pci']
+deps += ['common_sfc_efx']
 sources = files(
         'sfc_vdpa.c',
         'sfc_vdpa_hw.c',

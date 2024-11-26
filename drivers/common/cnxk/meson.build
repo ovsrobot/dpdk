@@ -8,7 +8,7 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
     subdir_done()
 endif
 
-deps = ['eal', 'pci', 'bus_pci', 'mbuf', 'security']
+deps = ['bus_pci', 'security']
 sources = files(
         'roc_ae.c',
         'roc_aes.c',
@@ -105,7 +105,7 @@ elif soc_type == 'cn20k'
     dpdk_conf.set('ROC_PLATFORM_CN20K', 1)
 endif
 
-deps += ['bus_pci', 'net', 'telemetry']
+deps += ['bus_pci']
 
 require_iova_in_mbuf = false
 

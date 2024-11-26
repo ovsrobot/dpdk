@@ -9,7 +9,7 @@ includes += include_directories('../../common/iavf')
 
 testpmd_sources = files('iavf_testpmd.c')
 
-deps += ['common_iavf', 'security', 'cryptodev']
+deps += ['common_iavf', 'security']
 
 sources = files(
         'iavf_ethdev.c',
