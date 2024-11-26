@@ -11,5 +11,5 @@ drivers = [
         'nfp',
         'sfc',
 ]
-std_deps = ['bus_pci', 'kvargs']
+std_deps = ['bus_pci']
 std_deps += ['vhost']
