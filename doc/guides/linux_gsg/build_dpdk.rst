@@ -149,6 +149,32 @@ When `-Dexamples=all` is set as a meson option, meson will check each example ap
 and add all which can be built to the list of tasks in the ninja build configuration file.
 
 
+Text Interface for DPDK Build Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is also possible to use a Text User Interface (TUI) to configure the DPDK build. To run TUI setup script, the following
+command may be used::
+
+  devtools/dpdk-setup.py
+
+This will show a TUI dialog which will allow the user to pick which applications, drivers, example apps, and libraries they with to build.
+Additionally, there are command-line options for the script that can be useful, such as:
+
+* ``-B <build dir>`` - specify the build directory to use (defaults to `./build`)
+* ``-S <src dir>`` - specify the source directory to use (defaults to wherever the script is run from)
+* ``--no-ui`` - non-interactive mode, useful for automation
+* ``--minimal`` - attempt to produce the most minimal build possible (i.e. don't build unnecessary libraries)
+* ``--dry-run`` - show which Meson command will be run as a result, but do not run it
+* ``--configure`` - run the Meson configure instead of Meson setup (useful for existing build directories)
+* ``-a <app1,app2,...>`` - specify which applications to build
+* ``-e <example1,example2,...>`` - specify which example applications to build
+* ``-d <driver1,driver2,...>`` - specify which drivers to build
+* ``-l <lib1,lib2,...>`` - specify which libraries to build
+* ``--meson-args <args>`` - specify additional arguments to pass to Meson (e.g. debug build etc.)
+
+This script will also track all dependencies between components automatically. Note that command-line options for enabling drivers, apps, examples, and libraries
+are used as *default* selections, and the user will still be able to change them in the TUI dialog (unless ``--no-ui`` is specified).
+
 Building 32-bit DPDK on 64-bit Systems
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
