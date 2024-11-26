@@ -31,4 +31,4 @@ else
     sources += files('cmdline_os_unix.c')
 endif
 
-deps += ['net']
+deps = ['net']

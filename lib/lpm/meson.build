@@ -18,6 +18,5 @@ indirect_headers += files(
         'rte_lpm_sse.h',
         'rte_lpm_sve.h',
 )
-deps += ['hash']
+deps = ['hash']
 deps += ['rcu']
-deps += ['net']

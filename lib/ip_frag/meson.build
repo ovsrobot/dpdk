@@ -10,4 +10,4 @@ sources = files(
         'ip_frag_internal.c',
 )
 headers = files('rte_ip_frag.h')
-deps += ['ethdev', 'hash']
+deps = ['ethdev', 'hash']

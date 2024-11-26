@@ -25,4 +25,4 @@ headers = files(
         'rte_swx_extern.h',
         'rte_swx_ctl.h',
 )
-deps += ['port', 'table', 'meter', 'sched', 'cryptodev', 'ipsec']
+deps = ['table', 'ipsec']
