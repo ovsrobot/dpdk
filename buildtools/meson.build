@@ -26,6 +26,11 @@ header_gen_cmd = py3 + files('gen-header.py')
 has_hugepages_cmd = py3 + files('has-hugepages.py')
 cmdline_gen_cmd = py3 + files('dpdk-cmdline-gen.py')
 check_dts_requirements = py3 + files('check-dts-requirements.py')
+# Visual Studio Code conf generator always requires build/source roots
+vscode_conf_gen_cmd = py3 + files('gen-vscode-conf.py') + [
+        '--build-dir', dpdk_build_root,
+        '--source-dir', dpdk_source_root
+    ]
 
 # install any build tools that end-users might want also
 install_data([

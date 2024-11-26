@@ -329,6 +329,11 @@ New Features
   Added ability for node to advertise and update multiple xstat counters,
   that can be retrieved using ``rte_graph_cluster_stats_get``.
 
+* **Generate Visual Studio Code configuration on build**
+
+   The Meson build system now generates Visual Studio Code configuration
+   files for configuration, compilation, and debugging tasks.
+
 
 Removed Items
 -------------

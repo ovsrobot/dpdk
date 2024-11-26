@@ -124,7 +124,20 @@ foreach example: examples
     if allow_experimental_apis
         cflags += '-DALLOW_EXPERIMENTAL_API'
     endif
-    executable('dpdk-' + name, sources,
+
+    # add to Visual Studio Code launch configuration
+    exe_name = 'dpdk-' + name
+    launch_path = join_paths(meson.current_build_dir(), exe_name)
+    # we also need exec env/arch, but they were not available at the time buildtools command was generated
+    cfg_args = ['--launch', launch_path, '--exec-env', exec_env, '--arch', arch_subdir]
+    # we don't want to block the build if this command fails
+    result = run_command(vscode_conf_gen_cmd + ['--launch', launch_path], check: false)
+    if result.returncode() != 0
+        warning('Failed to generate Visual Studio Code launch configuration for "' + name + '"')
+        message(result.stderr())
+    endif
+
+    executable(exe_name, sources,
             include_directories: includes,
             link_whole: link_whole_libs,
             link_args: ldflags,
