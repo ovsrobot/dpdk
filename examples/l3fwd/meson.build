@@ -19,5 +19,5 @@ sources = files(
         'main.c',
 )
 if dpdk_conf.has('RTE_LIB_EVENTDEV')
-    deps += 'eventdev'
+    optional_deps += 'eventdev'
 endif

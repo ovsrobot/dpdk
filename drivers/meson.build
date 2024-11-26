@@ -132,6 +132,7 @@ foreach subpath:subdirs
         includes = [include_directories(drv_path)]
         # set up internal deps. Drivers can append/override as necessary
         deps = std_deps
+        optional_deps = []
         # ext_deps: Stores external library dependency got
         # using dependency() (preferred) or find_library().
         # For the find_library() case (but not with dependency()) we also
@@ -173,7 +174,7 @@ foreach subpath:subdirs
             # get dependency objs from strings
             shared_deps = ext_deps
             static_deps = ext_deps
-            foreach d:deps
+            foreach d:deps + optional_deps
                 if not build
                     break
                 endif

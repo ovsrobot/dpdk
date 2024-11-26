@@ -134,6 +134,7 @@ foreach l:libraries
     # external package/library requirements
     ext_deps = []
     deps = []
+    optional_deps = []
     # eal is standard dependency once built
     if dpdk_conf.has('RTE_LIB_EAL')
         deps += ['eal']
@@ -171,7 +172,7 @@ foreach l:libraries
 
     shared_deps = ext_deps
     static_deps = ext_deps
-    foreach d:deps
+    foreach d:deps + optional_deps
         if not build
             break
         endif
