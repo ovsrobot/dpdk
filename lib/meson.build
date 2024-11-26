@@ -161,6 +161,11 @@ foreach l:libraries
 
     if build
         subdir(l)
+        type_cmd = '--type=lib'
+        run_command([log_deps_cmd, type_cmd, l, deps], check: false)
+        if optional_deps.length() > 0
+            run_command([log_deps_cmd, '--optional', type_cmd, l, optional_deps], check: false)
+        endif
         if not build and require_libs
             error('Cannot build explicitly requested lib "@0@".\n'.format(name)
                     +'\tReason: ' + reason)

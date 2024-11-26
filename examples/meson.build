@@ -101,8 +101,14 @@ foreach example: examples
     optional_deps = []
     subdir(example)
 
+    example_name = 'dpdk-' + name
     if build
         dep_objs = ext_deps
+        type_cmd = '--type=examples'
+        run_command([log_deps_cmd, type_cmd, example_name, deps], check: false)
+        if optional_deps.length() > 0
+            run_command([log_deps_cmd, '--optional', type_cmd, example_name, optional_deps], check: false)
+        endif
         foreach d:deps + optional_deps
             var_name = get_option('default_library') + '_rte_' + d
             if not is_variable(var_name)
@@ -125,7 +131,7 @@ foreach example: examples
     if allow_experimental_apis
         cflags += '-DALLOW_EXPERIMENTAL_API'
     endif
-    executable('dpdk-' + name, sources,
+    executable(example_name, sources,
             include_directories: includes,
             link_whole: link_whole_libs,
             link_args: ldflags,

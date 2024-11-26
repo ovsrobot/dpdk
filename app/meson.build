@@ -76,8 +76,14 @@ foreach app:apps
         reason = 'explicitly disabled via build config'
     endif
 
+    app_name = 'dpdk-' + name
     if build
         subdir(name)
+        type_cmd = '--type=app'
+        run_command([log_deps_cmd, type_cmd, app_name, deps], check: false)
+        if optional_deps.length() > 0
+            run_command([log_deps_cmd, '--optional', type_cmd, app_name, optional_deps], check: false)
+        endif
         if not build and require_apps
             error('Cannot build explicitly requested app "@0@".\n'.format(name)
                   + '\tReason: ' + reason)
@@ -116,7 +122,7 @@ foreach app:apps
         link_libs = dpdk_static_libraries + dpdk_drivers
     endif
 
-    exec = executable('dpdk-' + name,
+    exec = executable(app_name,
             [ sources, resources ],
             c_args: cflags,
             link_args: ldflags,

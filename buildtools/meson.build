@@ -26,6 +26,8 @@ header_gen_cmd = py3 + files('gen-header.py')
 has_hugepages_cmd = py3 + files('has-hugepages.py')
 cmdline_gen_cmd = py3 + files('dpdk-cmdline-gen.py')
 check_dts_requirements = py3 + files('check-dts-requirements.py')
+log_deps_cmd = py3 + files('log-deps.py')
+run_command(log_deps_cmd, check: false)  # call with no parameters to reset the file
 
 # install any build tools that end-users might want also
 install_data([
