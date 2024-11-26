@@ -8,6 +8,8 @@ import os
 import subprocess
 import argparse
 import platform
+import grp
+import pwd
 
 from glob import glob
 from os.path import exists, basename
@@ -108,6 +110,8 @@ b_flag = None
 status_flag = False
 force_flag = False
 noiommu_flag = False
+vfio_uid = ""
+vfio_gid = ""
 args = []
 
 
@@ -458,6 +462,22 @@ def bind_one(dev_id, driver, force):
                      % (dev_id, filename, err))
 
 
+def own_one(dev_id, uid, gid):
+    """Set the IOMMU group ownership for a device"""
+    # find IOMMU group for a particular device
+    iommu_grp_base_path = os.path.join("/sys/bus/pci/devices", dev_id, "iommu_group")
+    try:
+        iommu_grp = os.path.basename(os.readlink(iommu_grp_base_path))
+        # we found IOMMU group, now find the device
+        dev_path = os.path.join("/dev/vfio", iommu_grp)
+        # set the ownership
+        _uid = pwd.getpwnam(uid).pw_uid if uid else -1
+        _gid = grp.getgrnam(gid).gr_gid if gid else -1
+        os.chown(dev_path, _uid, _gid)
+    except OSError as err:
+        print(f"Error: failed to read IOMMU group for {dev_id}: {err}")
+
+
 def unbind_all(dev_list, force=False):
     """Unbind method, takes a list of device locations"""
 
@@ -507,7 +527,7 @@ def check_noiommu_mode():
     print("Warning: enabling unsafe no IOMMU mode for VFIO drivers")
 
 
-def bind_all(dev_list, driver, force=False):
+def bind_all(dev_list, driver, uid, gid, force=False):
     """Bind method, takes a list of device locations"""
     global devices
 
@@ -539,6 +559,9 @@ def bind_all(dev_list, driver, force=False):
 
     for d in dev_list:
         bind_one(d, driver, force)
+        # if we're binding to vfio-pci, set the IOMMU user/group ownership if one was specified
+        if driver == "vfio-pci" and (uid or gid):
+            own_one(d, uid, gid)
 
     # For kernels < 3.15 when binding devices to a generic driver
     # (i.e. one that doesn't have a PCI ID table) using new_id, some devices
@@ -684,6 +707,8 @@ def parse_args():
     global force_flag
     global noiommu_flag
     global args
+    global vfio_uid
+    global vfio_gid
 
     parser = argparse.ArgumentParser(
         description='Utility to bind and unbind devices from Linux kernel',
@@ -734,6 +759,12 @@ To bind 0000:02:00.0 and 0000:02:00.1 to the ixgbe kernel driver
         action='store_true',
         help="If IOMMU is not available, enable no IOMMU mode for VFIO drivers")
     parser.add_argument(
+        "-U", "--uid", help="For VFIO, specify the UID to set IOMMU group ownership"
+    )
+    parser.add_argument(
+        "-G", "--gid", help="For VFIO, specify the GID to set IOMMU group ownership"
+    )
+    parser.add_argument(
         '--force',
         action='store_true',
         help="""
@@ -765,6 +796,10 @@ For devices bound to Linux kernel drivers, they may be referred to by interface 
         b_flag = opt.bind
     elif opt.unbind:
         b_flag = "none"
+    if opt.uid:
+        vfio_uid = opt.uid
+    if opt.gid:
+        vfio_gid = opt.gid
     args = opt.devices
 
     if not b_flag and not status_flag:
@@ -792,11 +827,13 @@ def do_arg_actions():
     global status_flag
     global force_flag
     global args
+    global vfio_uid
+    global vfio_gid
 
     if b_flag in ["none", "None"]:
         unbind_all(args, force_flag)
     elif b_flag is not None:
-        bind_all(args, b_flag, force_flag)
+        bind_all(args, b_flag, vfio_uid, vfio_gid, force_flag)
     if status_flag:
         if b_flag is not None:
             clear_data()
