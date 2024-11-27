@@ -24,6 +24,7 @@
  * No optional fields and next extension header.
  */
 __extension__
+__rte_packed_begin
 struct rte_gtp_hdr {
 	union {
 		uint8_t gtp_hdr_info; /**< GTP header info */
@@ -48,20 +49,22 @@ struct rte_gtp_hdr {
 	uint8_t msg_type;     /**< GTP message type */
 	rte_be16_t plen;      /**< Total payload length */
 	rte_be32_t teid;      /**< Tunnel endpoint ID */
-} __rte_packed;
+} __rte_packed_end;
 
 /* Optional word of GTP header, present if any of E, S, PN is set. */
+__rte_packed_begin
 struct rte_gtp_hdr_ext_word {
 	rte_be16_t sqn;	      /**< Sequence Number. */
 	uint8_t npdu;	      /**< N-PDU number. */
 	uint8_t next_ext;     /**< Next Extension Header Type. */
-}  __rte_packed;
+}  __rte_packed_end;
 
 /**
  * Optional extension for GTP with next_ext set to 0x85
  * defined based on RFC 38415-g30.
  */
 __extension__
+__rte_packed_begin
 struct rte_gtp_psc_generic_hdr {
 	uint8_t ext_hdr_len;	/**< PDU ext hdr len in multiples of 4 bytes */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
@@ -78,13 +81,14 @@ struct rte_gtp_psc_generic_hdr {
 	uint8_t spare:2;	/**< type specific spare bits */
 #endif
 	uint8_t data[0];	/**< variable length data fields */
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * Optional extension for GTP with next_ext set to 0x85
  * type0 defined based on RFC 38415-g30
  */
 __extension__
+__rte_packed_begin
 struct rte_gtp_psc_type0_hdr {
 	uint8_t ext_hdr_len;	/**< PDU ext hdr len in multiples of 4 bytes */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
@@ -105,13 +109,14 @@ struct rte_gtp_psc_type0_hdr {
 	uint8_t ppp:1;		/**< Paging policy presence */
 #endif
 	uint8_t data[0];	/**< variable length data fields */
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * Optional extension for GTP with next_ext set to 0x85
  * type1 defined based on RFC 38415-g30
  */
 __extension__
+__rte_packed_begin
 struct rte_gtp_psc_type1_hdr {
 	uint8_t ext_hdr_len;	/**< PDU ext hdr len in multiples of 4 bytes */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
@@ -134,7 +139,7 @@ struct rte_gtp_psc_type1_hdr {
 	uint8_t n_delay_ind:1;	/**< N3/N9 delay result presence */
 #endif
 	uint8_t data[0];	/**< variable length data fields */
-} __rte_packed;
+} __rte_packed_end;
 
 /** GTP header length */
 #define RTE_ETHER_GTP_HLEN \
