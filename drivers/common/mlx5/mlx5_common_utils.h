@@ -27,6 +27,7 @@ struct mlx5_list;
  * Structure of the entry in the mlx5 list, user should define its own struct
  * that contains this in order to store the data.
  */
+__rte_packed_begin
 struct mlx5_list_entry {
 	LIST_ENTRY(mlx5_list_entry) next; /* Entry pointers in the list. */
 	alignas(8) RTE_ATOMIC(uint32_t) ref_cnt; /* 0 means, entry is invalid. */
@@ -35,7 +36,7 @@ struct mlx5_list_entry {
 		struct mlx5_list_entry *gentry;
 		uint32_t bucket_idx;
 	};
-} __rte_packed;
+} __rte_packed_end;
 
 struct __rte_cache_aligned mlx5_list_cache {
 	LIST_HEAD(mlx5_list_head, mlx5_list_entry) h;
