@@ -32,9 +32,10 @@ enum mlx5_crypto_mode {
 	MLX5_CRYPTO_IPSEC_OPT,
 };
 
+__rte_packed_begin
 struct mlx5_crypto_ipsec_mem {
 	uint8_t mem[MLX5_CRYPTO_GCM_IPSEC_IV_SIZE];
-} __rte_packed;
+} __rte_packed_end;
 
 struct mlx5_crypto_priv {
 	TAILQ_ENTRY(mlx5_crypto_priv) next;
@@ -108,6 +109,7 @@ struct mlx5_crypto_devarg_params {
 	enum mlx5_crypto_mode crypto_mode;
 };
 
+__rte_packed_begin
 struct mlx5_crypto_session {
 	union {
 		/**< AES-XTS configuration. */
@@ -145,7 +147,7 @@ struct mlx5_crypto_session {
 	/**< Initialisation Vector length. */
 	struct mlx5_crypto_dek *dek; /**< Pointer to dek struct. */
 	uint32_t dek_id; /**< DEK ID */
-} __rte_packed;
+} __rte_packed_end;
 
 struct mlx5_crypto_dek_ctx {
 	struct rte_crypto_sym_xform *xform;
