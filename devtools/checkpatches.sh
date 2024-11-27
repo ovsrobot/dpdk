@@ -362,6 +362,21 @@ check_aligned_attributes() { # <patch>
 	return $res
 }
 
+check_packed_attributes() { # <patch>
+	res=0
+
+	begin_count=$(grep '__rte_packed_begin' "$1" | \
+			wc -l)
+	end_count=$(grep '__rte_packed_end' "$1" | \
+			wc -l)
+	if [ $begin_count != $end_count ]; then
+		echo "__rte_packed_begin and __rte_packed_end mismatch. They should always be used in pairs."
+		res=1
+	fi
+
+	return $res
+}
+
 check_release_notes() { # <patch>
 	rel_notes_prefix=doc/guides/rel_notes/release_
 	IFS=. read year month release < VERSION
@@ -473,6 +488,14 @@ check () { # <patch-file> <commit>
 
 	! $verbose || printf '\nChecking alignment attributes:\n'
 	report=$(check_aligned_attributes "$tmpinput")
+	if [ $? -ne 0 ] ; then
+		$headline_printed || print_headline "$subject"
+		printf '%s\n' "$report"
+		ret=1
+	fi
+
+	! $verbose || printf '\nChecking packed attributes:\n'
+	report=$(check_packed_attributes "$tmpinput")
 	if [ $? -ne 0 ] ; then
 		$headline_printed || print_headline "$subject"
 		printf '%s\n' "$report"
