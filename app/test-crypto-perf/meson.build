@@ -19,5 +19,5 @@ sources = files(
         'cperf_test_verify.c',
         'main.c',
 )
-deps += ['cryptodev', 'net', 'security']
+deps += ['cryptodev']
 optional_deps += 'crypto_scheduler'
