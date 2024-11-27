@@ -19,4 +19,4 @@ headers = files(
         'rte_mempool.h',
         'rte_mempool_trace_fp.h',
 )
-deps += ['ring', 'telemetry']
+deps = ['ring']

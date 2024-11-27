@@ -53,7 +53,7 @@ if is_linux
     )
 endif
 
-deps += ['net', 'kvargs', 'meter', 'telemetry']
+deps = ['net', 'meter']
 
 if is_freebsd
     annotate_locks = false

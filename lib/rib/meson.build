@@ -4,4 +4,4 @@
 
 sources = files('rte_rib.c', 'rte_rib6.c')
 headers = files('rte_rib.h', 'rte_rib6.h')
-deps += ['net', 'mempool']
+deps = ['net']
