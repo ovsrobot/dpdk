@@ -1030,6 +1030,38 @@ test_keygen(void)
 	return TEST_SUCCESS;
 }
 
+#ifdef RTE_ARCH_X86
+#ifndef RTE_TOOLCHAIN_MSVC
+static int
+test_init_m128i(void)
+{
+	/* When initializing __m128i with two constant values like below
+	 * MSVC issues warning C4305:
+	 *     'initializing': truncation from 'unsigned __int64' to 'char'
+	 */
+	static const __m128i a = {
+			0x0405060700010203ULL, 0x0C0D0E0F08090A0BULL};
+
+	/* Using compiler intrinsics to initialize __m128i is therefore
+	 * preferred, like below
+	 */
+	static const uint8_t b_bytes[] = {
+			0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04,
+			0x0B, 0x0A, 0x09, 0x08, 0x0F, 0x0E, 0x0D, 0x0C};
+	const __m128i b =
+			_mm_loadu_si128((const __m128i *)&b_bytes);
+
+	if (memcmp(&a, &b, sizeof(a)) != 0) {
+		printf("Same value was expected when initializing data "
+				"type using compiler intrinsic\n");
+		return -1;
+	}
+
+	return TEST_SUCCESS;
+}
+#endif
+#endif
+
 static struct unit_test_suite thash_tests = {
 	.suite_name = "thash autotest",
 	.setup = NULL,
@@ -1052,6 +1084,11 @@ static struct unit_test_suite thash_tests = {
 	TEST_CASE(test_adjust_tuple),
 	TEST_CASE(test_adjust_tuple_mult_reta),
 	TEST_CASE(test_keygen),
+#ifdef RTE_ARCH_X86
+#ifndef RTE_TOOLCHAIN_MSVC
+	TEST_CASE(test_init_m128i),
+#endif
+#endif
 	TEST_CASES_END()
 	}
 };
