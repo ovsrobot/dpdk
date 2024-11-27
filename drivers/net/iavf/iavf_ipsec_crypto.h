@@ -11,12 +11,14 @@
 
 
 
+__rte_packed_begin
 struct iavf_tx_ipsec_desc {
 	union {
 		struct {
 			__le64 qw0;
 			__le64 qw1;
 		};
+		__rte_packed_begin
 		struct {
 			__le16 l4payload_length;
 			__le32 esn;
@@ -28,9 +30,9 @@ struct iavf_tx_ipsec_desc {
 			u8 next_header;
 			__le16 ipv6_ext_hdr_length;
 			__le32 said;
-		} __rte_packed;
+		} __rte_packed_end;
 	};
-} __rte_packed;
+} __rte_packed_end;
 
 #define IAVF_IPSEC_TX_DESC_QW0_L4PAYLEN_SHIFT    0
 #define IAVF_IPSEC_TX_DESC_QW0_L4PAYLEN_MASK     (0x3FFFULL << \
@@ -97,7 +99,7 @@ struct iavf_ipsec_crypto_pkt_metadata {
 	uint8_t next_proto;		/* Next Protocol (8b/1B) */
 
 	uint32_t esn;		        /* Extended Sequence Number (32b/4B) */
-} __rte_packed;
+};
 
 /**
  * Inline IPsec Crypto offload is supported

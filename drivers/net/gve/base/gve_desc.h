@@ -22,7 +22,7 @@
  * rings.
  */
 
-struct gve_tx_pkt_desc {
+__rte_packed_begin struct gve_tx_pkt_desc {
 	u8	type_flags;  /* desc type is lower 4 bits, flags upper */
 	u8	l4_csum_offset;  /* relative offset of L4 csum word */
 	u8	l4_hdr_offset;  /* Offset of start of L4 headers in packet */
@@ -30,24 +30,24 @@ struct gve_tx_pkt_desc {
 	__be16	len;  /* Total length of this packet (in bytes) */
 	__be16	seg_len;  /* Length of this descriptor's segment */
 	__be64	seg_addr;  /* Base address (see note) of this segment */
-} __packed;
+} __rte_packed_end;
 
-struct gve_tx_mtd_desc {
+__rte_packed_begin struct gve_tx_mtd_desc {
 	u8      type_flags;     /* type is lower 4 bits, subtype upper  */
 	u8      path_state;     /* state is lower 4 bits, hash type upper */
 	__be16  reserved0;
 	__be32  path_hash;
 	__be64  reserved1;
-} __packed;
+} __rte_packed_end;
 
-struct gve_tx_seg_desc {
+__rte_packed_begin struct gve_tx_seg_desc {
 	u8	type_flags;	/* type is lower 4 bits, flags upper	*/
 	u8	l3_offset;	/* TSO: 2 byte units to start of IPH	*/
 	__be16	reserved;
 	__be16	mss;		/* TSO MSS				*/
 	__be16	seg_len;
 	__be64	seg_addr;
-} __packed;
+} __rte_packed_end;
 
 /* GVE Transmit Descriptor Types */
 #define	GVE_TXD_STD		(0x0 << 4) /* Std with Host Address	*/
@@ -80,7 +80,7 @@ struct gve_tx_seg_desc {
  */
 #define GVE_RX_PAD 2
 
-struct gve_rx_desc {
+__rte_packed_begin struct gve_rx_desc {
 	u8	padding[48];
 	__be32	rss_hash;  /* Receive-side scaling hash (Toeplitz for gVNIC) */
 	__be16	mss;
@@ -90,7 +90,7 @@ struct gve_rx_desc {
 	__sum16	csum;  /* 1's-complement partial checksum of L3+ bytes */
 	__be16	len;  /* Length of the received packet */
 	__be16	flags_seq;  /* Flags [15:3] and sequence number [2:0] (1-7) */
-} __packed;
+} __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(64, gve_rx_desc);
 
 /* If the device supports raw dma addressing then the addr in data slot is
