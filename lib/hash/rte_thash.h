@@ -34,8 +34,9 @@ extern "C" {
 /* Byte swap mask used for converting IPv6 address
  * 4-byte chunks to CPU byte order
  */
-static const __m128i rte_thash_ipv6_bswap_mask = {
-		0x0405060700010203ULL, 0x0C0D0E0F08090A0BULL};
+static const uint8_t rte_thash_ipv6_bswap_mask[] = {
+		0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04,
+		0x0B, 0x0A, 0x09, 0x08, 0x0F, 0x0E, 0x0D, 0x0C};
 #endif
 
 /**
@@ -152,12 +153,14 @@ rte_thash_load_v6_addrs(const struct rte_ipv6_hdr *orig,
 			union rte_thash_tuple *targ)
 {
 #ifdef RTE_ARCH_X86
+	const __m128i ipv6_bswap_mask =
+			_mm_loadu_si128((const __m128i*)&rte_thash_ipv6_bswap_mask);
 	__m128i ipv6 = _mm_loadu_si128((const __m128i *)&orig->src_addr);
 	*(__m128i *)&targ->v6.src_addr =
-			_mm_shuffle_epi8(ipv6, rte_thash_ipv6_bswap_mask);
+			_mm_shuffle_epi8(ipv6, ipv6_bswap_mask);
 	ipv6 = _mm_loadu_si128((const __m128i *)&orig->dst_addr);
 	*(__m128i *)&targ->v6.dst_addr =
-			_mm_shuffle_epi8(ipv6, rte_thash_ipv6_bswap_mask);
+			_mm_shuffle_epi8(ipv6, ipv6_bswap_mask);
 #elif defined(__ARM_NEON)
 	uint8x16_t ipv6 = vld1q_u8(orig->src_addr.a);
 	vst1q_u8(targ->v6.src_addr.a, vrev32q_u8(ipv6));
