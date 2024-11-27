@@ -154,6 +154,7 @@ To define classification for the IPv6 2-tuple: <protocol, IPv6 source address> o
 
 .. code-block:: c
 
+    __rte_packed_begin
     struct rte_ipv6_hdr {
         uint32_t vtc_flow;     /* IP version, traffic class & flow label. */
         uint16_t payload_len;  /* IP packet length - includes sizeof(ip_header). */
@@ -161,7 +162,7 @@ To define classification for the IPv6 2-tuple: <protocol, IPv6 source address> o
         uint8_t hop_limits;    /* Hop limits. */
         uint8_t src_addr[16];  /* IP address of source host. */
         uint8_t dst_addr[16];  /* IP address of destination host(s). */
-    } __rte_packed;
+    } __rte_packed_end;
 
 The following array of field definitions can be used:
 
