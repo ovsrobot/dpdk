@@ -123,7 +123,7 @@ enum timvf_clk_src {
 };
 
 /* TIM_MEM_BUCKET */
-struct __rte_aligned(8) tim_mem_bucket {
+__rte_packed_begin struct __rte_aligned(8) tim_mem_bucket {
 	uint64_t first_chunk;
 	union {
 		RTE_ATOMIC(uint64_t) w1;
@@ -139,19 +139,19 @@ struct __rte_aligned(8) tim_mem_bucket {
 	};
 	uint64_t current_chunk;
 	uint64_t pad;
-} __rte_packed;
+} __rte_packed_end;
 
-struct tim_mem_entry {
+__rte_packed_begin struct tim_mem_entry {
 	uint64_t w0;
 	uint64_t wqe;
-} __rte_packed;
+} __rte_packed_end;
 
-struct timvf_ctrl_reg {
+__rte_packed_begin struct timvf_ctrl_reg {
 	uint64_t rctrl0;
 	uint64_t rctrl1;
 	uint64_t rctrl2;
 	uint8_t use_pmu;
-} __rte_packed;
+} __rte_packed_end;
 
 struct timvf_ring;
 
