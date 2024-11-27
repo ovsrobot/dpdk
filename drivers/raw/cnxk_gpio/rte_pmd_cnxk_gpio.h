@@ -261,6 +261,7 @@ rte_pmd_gpio_get_pin_value(uint16_t dev_id, int gpio, int *val)
 {
 	struct cnxk_gpio_msg msg = {
 		.type = CNXK_GPIO_MSG_TYPE_GET_PIN_VALUE,
+		.data = NULL,
 	};
 
 	return __rte_pmd_gpio_enq_deq(dev_id, gpio, &msg, val, sizeof(*val));
@@ -285,6 +286,7 @@ rte_pmd_gpio_get_pin_edge(uint16_t dev_id, int gpio,
 {
 	struct cnxk_gpio_msg msg = {
 		.type = CNXK_GPIO_MSG_TYPE_GET_PIN_EDGE,
+		.data = NULL,
 	};
 
 	return __rte_pmd_gpio_enq_deq(dev_id, gpio, &msg, edge, sizeof(*edge));
@@ -308,6 +310,7 @@ rte_pmd_gpio_get_pin_dir(uint16_t dev_id, int gpio, enum cnxk_gpio_pin_dir *dir)
 {
 	struct cnxk_gpio_msg msg = {
 		.type = CNXK_GPIO_MSG_TYPE_GET_PIN_DIR,
+		.data = NULL,
 	};
 
 	return __rte_pmd_gpio_enq_deq(dev_id, gpio, &msg, dir, sizeof(*dir));

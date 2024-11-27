@@ -391,6 +391,7 @@ rte_pmd_bphy_intr_init(uint16_t dev_id)
 {
 	struct cnxk_bphy_irq_msg msg = {
 		.type = CNXK_BPHY_IRQ_MSG_TYPE_INIT,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, CNXK_BPHY_DEF_QUEUE, &msg,
@@ -411,6 +412,7 @@ rte_pmd_bphy_intr_fini(uint16_t dev_id)
 {
 	struct cnxk_bphy_irq_msg msg = {
 		.type = CNXK_BPHY_IRQ_MSG_TYPE_FINI,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, CNXK_BPHY_DEF_QUEUE, &msg,
@@ -470,6 +472,9 @@ rte_pmd_bphy_intr_unregister(uint16_t dev_id, int irq_num)
 {
 	struct cnxk_bphy_irq_info info = {
 		.irq_num = irq_num,
+		.handler = NULL,
+		.data = NULL,
+		.cpu = -1,
 	};
 	struct cnxk_bphy_irq_msg msg = {
 		.type = CNXK_BPHY_IRQ_MSG_TYPE_UNREGISTER,
@@ -496,6 +501,7 @@ rte_pmd_bphy_intr_mem_get(uint16_t dev_id, struct cnxk_bphy_mem *mem)
 {
 	struct cnxk_bphy_irq_msg msg = {
 		.type = CNXK_BPHY_IRQ_MSG_TYPE_MEM_GET,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, CNXK_BPHY_DEF_QUEUE, &msg,
@@ -518,6 +524,7 @@ rte_pmd_bphy_npa_pf_func_get(uint16_t dev_id, uint16_t *pf_func)
 {
 	struct cnxk_bphy_irq_msg msg = {
 		.type = CNXK_BPHY_MSG_TYPE_NPA_PF_FUNC,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, CNXK_BPHY_DEF_QUEUE, &msg,
@@ -540,6 +547,7 @@ rte_pmd_bphy_sso_pf_func_get(uint16_t dev_id, uint16_t *pf_func)
 {
 	struct cnxk_bphy_irq_msg msg = {
 		.type = CNXK_BPHY_MSG_TYPE_SSO_PF_FUNC,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, CNXK_BPHY_DEF_QUEUE, &msg,
@@ -565,6 +573,7 @@ rte_pmd_bphy_cgx_get_link_info(uint16_t dev_id, uint16_t lmac,
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_GET_LINKINFO,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, info, sizeof(*info));
@@ -586,6 +595,7 @@ rte_pmd_bphy_cgx_intlbk_disable(uint16_t dev_id, uint16_t lmac)
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_INTLBK_DISABLE,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, NULL, 0);
@@ -607,6 +617,7 @@ rte_pmd_bphy_cgx_intlbk_enable(uint16_t dev_id, uint16_t lmac)
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_INTLBK_ENABLE,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, NULL, 0);
@@ -628,6 +639,7 @@ rte_pmd_bphy_cgx_ptp_rx_disable(uint16_t dev_id, uint16_t lmac)
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_PTP_RX_DISABLE,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, NULL, 0);
@@ -649,6 +661,7 @@ rte_pmd_bphy_cgx_ptp_rx_enable(uint16_t dev_id, uint16_t lmac)
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_PTP_RX_ENABLE,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, NULL, 0);
@@ -720,6 +733,7 @@ rte_pmd_bphy_cgx_start_rxtx(uint16_t dev_id, uint16_t lmac)
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_START_RXTX,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, NULL, 0);
@@ -741,6 +755,7 @@ rte_pmd_bphy_cgx_stop_rxtx(uint16_t dev_id, uint16_t lmac)
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_STOP_RXTX,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, NULL, 0);
@@ -765,6 +780,7 @@ rte_pmd_bphy_cgx_get_supported_fec(uint16_t dev_id, uint16_t lmac,
 {
 	struct cnxk_bphy_cgx_msg msg = {
 		.type = CNXK_BPHY_CGX_MSG_TYPE_GET_SUPPORTED_FEC,
+		.data = NULL,
 	};
 
 	return __rte_pmd_bphy_enq_deq(dev_id, lmac, &msg, fec, sizeof(*fec));
