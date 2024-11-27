@@ -71,7 +71,7 @@ if not cc.links(atomic_check_code)
     ext_deps += libatomic_dep
 endif
 
-deps += ['common_sfc_efx', 'bus_pci', 'hash']
+deps += ['common_sfc_efx', 'hash']
 sources = files(
         'sfc_ethdev.c',
         'sfc_kvargs.c',

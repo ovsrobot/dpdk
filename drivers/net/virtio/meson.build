@@ -21,7 +21,7 @@ sources += files(
         'virtio_rxtx_simple.c',
         'virtqueue.c',
 )
-deps += ['kvargs', 'bus_pci']
+deps += ['bus_pci']
 
 if arch_subdir == 'x86'
     if cc_has_avx512

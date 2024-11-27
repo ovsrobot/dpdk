@@ -71,7 +71,7 @@ else
     endif
 endif
 
-deps += ['bus_pci', 'cryptodev', 'net', 'compressdev']
+deps += ['bus_pci']
 sources += files(
         'qat_common.c',
         'qat_qp.c',
@@ -101,6 +101,7 @@ if qat_compress
         ]
         sources += files(join_paths(qat_compress_relpath, f))
     endforeach
+    deps += ['compressdev']
 endif
 
 if qat_crypto

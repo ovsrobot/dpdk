@@ -320,9 +320,7 @@ sources += files(
 endif
 endif
 
-
-deps += ['bus_pci', 'cryptodev', 'eventdev', 'security']
-deps += ['common_cnxk', 'mempool_cnxk']
+deps = ['eventdev', 'mempool_cnxk']
 
 # Allow implicit vector conversions and strict aliasing warning
 extra_flags = ['-flax-vector-conversions', '-Wno-strict-aliasing']

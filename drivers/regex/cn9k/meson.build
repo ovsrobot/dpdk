@@ -13,4 +13,4 @@ sources = files(
 )
 
 deps += ['bus_pci']
-deps += ['common_cnxk', 'mempool_cnxk']
+deps += ['mempool_cnxk']
