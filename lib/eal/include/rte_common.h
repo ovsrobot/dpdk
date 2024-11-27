@@ -103,15 +103,6 @@ typedef uint16_t unaligned_uint16_t;
  * Force a structure to be packed
  */
 #ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_packed
-#else
-#define __rte_packed __attribute__((__packed__))
-#endif
-
-/**
- * Force a structure to be packed
- */
-#ifdef RTE_TOOLCHAIN_MSVC
 #define __rte_packed_begin __pragma(pack(push, 1))
 #define __rte_packed_end __pragma(pack(pop))
 #else
