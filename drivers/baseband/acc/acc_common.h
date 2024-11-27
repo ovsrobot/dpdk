@@ -160,6 +160,7 @@ extern int acc_common_logtype;
 	RTE_LOG_LINE(level, ACC_COMMON, __VA_ARGS__)
 
 /* ACC100 DMA Descriptor triplet */
+__rte_packed_begin
 struct acc_dma_triplet {
 	uint64_t address;
 	uint32_t blen:20,
@@ -168,7 +169,7 @@ struct acc_dma_triplet {
 		dma_ext:1,
 		res1:2,
 		blkid:4;
-} __rte_packed;
+} __rte_packed_end;
 
 
 /* ACC100 Queue Manager Enqueue PCI Register */
@@ -183,7 +184,8 @@ union acc_enqueue_reg_fmt {
 };
 
 /* FEC 4G Uplink Frame Control Word */
-struct __rte_packed acc_fcw_td {
+__rte_packed_begin
+struct acc_fcw_td {
 	uint8_t fcw_ver:4,
 		num_maps:4; /* Unused in ACC100 */
 	uint8_t filler:6, /* Unused in ACC100 */
@@ -220,10 +222,11 @@ struct __rte_packed acc_fcw_td {
 				rsrvd4:10;
 		};
 	};
-};
+} __rte_packed_end;
 
 /* FEC 4G Downlink Frame Control Word */
-struct __rte_packed acc_fcw_te {
+__rte_packed_begin
+struct acc_fcw_te {
 	uint16_t k_neg;
 	uint16_t k_pos;
 	uint8_t c_neg;
@@ -251,10 +254,11 @@ struct __rte_packed acc_fcw_te {
 	uint8_t code_block_mode:1,
 		rsrvd8:7;
 	uint64_t rsrvd9;
-};
+} __rte_packed_end;
 
 /* FEC 5GNR Downlink Frame Control Word */
-struct __rte_packed acc_fcw_le {
+__rte_packed_begin
+struct acc_fcw_le {
 	uint32_t FCWversion:4,
 		qm:4,
 		nfiller:11,
@@ -279,10 +283,11 @@ struct __rte_packed acc_fcw_le {
 	uint32_t res6;
 	uint32_t res7;
 	uint32_t res8;
-};
+} __rte_packed_end;
 
 /* FEC 5GNR Uplink Frame Control Word */
-struct __rte_packed acc_fcw_ld {
+__rte_packed_begin
+struct acc_fcw_ld {
 	uint32_t FCWversion:4,
 		qm:4,
 		nfiller:11,
@@ -326,10 +331,11 @@ struct __rte_packed acc_fcw_ld {
 		tb_crc_select:2, /* Not supported in ACC100 */
 		dec_llrclip:2,  /* Not supported in VRB1 */
 		tb_trailer_size:20; /* Not supported in ACC100 */
-};
+} __rte_packed_end;
 
 /* FFT Frame Control Word */
-struct __rte_packed acc_fcw_fft {
+__rte_packed_begin
+struct acc_fcw_fft {
 	uint32_t in_frame_size:16,
 		leading_pad_size:16;
 	uint32_t out_frame_size:16,
@@ -351,10 +357,11 @@ struct __rte_packed acc_fcw_fft {
 		power_shift:4,
 		power_en:1,
 		res:19;
-};
+} __rte_packed_end;
 
 /* FFT Frame Control Word. */
-struct __rte_packed acc_fcw_fft_3 {
+__rte_packed_begin
+struct acc_fcw_fft_3 {
 	uint32_t in_frame_size:16,
 		leading_pad_size:16;
 	uint32_t out_frame_size:16,
@@ -381,11 +388,12 @@ struct __rte_packed acc_fcw_fft_3 {
 	uint16_t cs_theta_0[ACC_MAX_CS];
 	uint32_t cs_theta_d[ACC_MAX_CS];
 	int8_t cs_time_offset[ACC_MAX_CS];
-};
+} __rte_packed_end;
 
 
 /* MLD-TS Frame Control Word */
-struct __rte_packed acc_fcw_mldts {
+__rte_packed_begin
+struct acc_fcw_mldts {
 	uint32_t fcw_version:4,
 		res0:12,
 		nrb:13, /* 1 to 1925 */
@@ -409,7 +417,7 @@ struct __rte_packed acc_fcw_mldts {
 	uint32_t pad2;
 	uint32_t pad3;
 	uint32_t pad4;
-};
+} __rte_packed_end;
 
 /* DMA Response Descriptor */
 union acc_dma_rsp_desc {
@@ -435,7 +443,8 @@ union acc_dma_rsp_desc {
 };
 
 /* DMA Request Descriptor */
-struct __rte_packed acc_dma_req_desc {
+__rte_packed_begin
+struct acc_dma_req_desc {
 	union {
 		struct{
 			uint32_t type:4,
@@ -496,7 +505,7 @@ struct __rte_packed acc_dma_req_desc {
 		};
 		uint64_t pad3[ACC_DMA_DESC_PADDINGS]; /* pad to 64 bits */
 	};
-};
+} __rte_packed_end;
 
 /* ACC100 DMA Descriptor */
 union acc_dma_desc {
@@ -506,6 +515,7 @@ union acc_dma_desc {
 };
 
 /* Union describing Info Ring entry */
+__rte_packed_begin
 union acc_info_ring_data {
 	uint32_t val;
 	struct {
@@ -534,25 +544,28 @@ union acc_info_ring_data {
 		uint32_t loop_vrb2: 1;
 		uint32_t valid_vrb2: 1;
 	};
-} __rte_packed;
+} __rte_packed_end;
 
-struct __rte_packed acc_pad_ptr {
+__rte_packed_begin
+struct acc_pad_ptr {
 	void *op_addr;
 	uint64_t pad1;  /* pad to 64 bits */
-};
+} __rte_packed_end;
 
-struct __rte_packed acc_ptrs {
+__rte_packed_begin
+struct acc_ptrs {
 	struct acc_pad_ptr ptr[ACC_COMPANION_PTRS];
-};
+} __rte_packed_end;
 
 /* Union describing Info Ring entry */
+__rte_packed_begin
 union acc_harq_layout_data {
 	uint32_t val;
 	struct {
 		uint16_t offset;
 		uint16_t size0;
 	};
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * Structure with details about RTE_BBDEV_EVENT_DEQUEUE event. It's passed to
