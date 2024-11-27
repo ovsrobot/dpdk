@@ -134,6 +134,7 @@ foreach l:libraries
     # external package/library requirements
     ext_deps = []
     deps = []
+    optional_deps = []
     # eal is standard dependency once built
     if dpdk_conf.has('RTE_LIB_EAL')
         deps += ['eal']
@@ -171,11 +172,21 @@ foreach l:libraries
 
     shared_deps = ext_deps
     static_deps = ext_deps
+
+    # resolve any optional internal dependencies
+    def_lib = get_option('default_library')
+    foreach d: optional_deps
+        # if optional dependency is defined, add it to the deps list
+        if is_variable(def_lib + '_rte_' + d)
+            deps += [d]
+        endif
+    endforeach
+
     foreach d:deps
         if not build
             break
         endif
-        if not is_variable('shared_rte_' + d)
+        if not is_variable(def_lib + '_rte_' + d)
             build = false
             reason = 'missing internal dependency, "@0@"'.format(d)
             if dpdk_libs_deprecated.contains(d)

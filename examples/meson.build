@@ -98,12 +98,23 @@ foreach example: examples
     ext_deps = []
     includes = [include_directories(example, 'common')]
     deps = ['eal', 'mempool', 'net', 'mbuf', 'ethdev', 'cmdline']
+    optional_deps = []
     subdir(example)
 
     if build
         dep_objs = ext_deps
+
+        # resolve any optional internal dependencies
+        def_lib = get_option('default_library')
+        foreach d: optional_deps
+            # if optional dependency is defined, add it to the deps list
+            if is_variable(def_lib + '_rte_' + d)
+                deps += [d]
+            endif
+        endforeach
+
         foreach d:deps
-            var_name = get_option('default_library') + '_rte_' + d
+            var_name = def_lib + '_rte_' + d
             if not is_variable(var_name)
                 build = false
                 message('Missing dependency "@0@" for example "@1@"'.format(d, name))

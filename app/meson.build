@@ -66,6 +66,7 @@ foreach app:apps
     # external package/library requirements
     ext_deps = []
     deps = []
+    optional_deps = []
 
     if not enable_apps.contains(app)
         build = false
@@ -83,10 +84,19 @@ foreach app:apps
         endif
     endif
 
+    # resolve any optional internal dependencies
+    def_lib = get_option('default_library')
+    foreach d: optional_deps
+        # if optional dependency is defined, add it to the deps list
+        if is_variable(def_lib + '_rte_' + d)
+            deps += [d]
+        endif
+    endforeach
+
     if build
         dep_objs = []
         foreach d:deps
-            var_name = get_option('default_library') + '_rte_' + d
+            var_name = def_lib + '_rte_' + d
             if not is_variable(var_name)
                 build = false
                 reason = 'missing internal dependency, "@0@"'.format(d)
@@ -111,7 +121,7 @@ foreach app:apps
 
     dpdk_apps_enabled += app
     link_libs = []
-    if get_option('default_library') == 'static'
+    if def_lib == 'static'
         link_libs = dpdk_static_libraries + dpdk_drivers
     endif
 

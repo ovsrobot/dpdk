@@ -34,47 +34,29 @@ sources = files(
 if dpdk_conf.has('RTE_HAS_JANSSON')
     ext_deps += jansson_dep
 endif
-
-deps += ['ethdev', 'cmdline']
-if dpdk_conf.has('RTE_CRYPTO_SCHEDULER')
-    deps += 'crypto_scheduler'
-endif
-if dpdk_conf.has('RTE_LIB_BITRATESTATS')
-    deps += 'bitratestats'
-endif
 if dpdk_conf.has('RTE_LIB_BPF')
     sources += files('bpf_cmd.c')
-    deps += 'bpf'
 endif
-if dpdk_conf.has('RTE_LIB_GRO')
-    deps += 'gro'
-endif
-if dpdk_conf.has('RTE_LIB_GSO')
-    deps += 'gso'
-endif
-if dpdk_conf.has('RTE_LIB_LATENCYSTATS')
-    deps += 'latencystats'
-endif
-if dpdk_conf.has('RTE_LIB_METRICS')
-    deps += 'metrics'
-endif
-if dpdk_conf.has('RTE_LIB_PDUMP')
-    deps += 'pdump'
-endif
-if dpdk_conf.has('RTE_NET_BNXT')
-    deps += 'net_bnxt'
-endif
-if dpdk_conf.has('RTE_NET_I40E')
-    deps += 'net_i40e'
-endif
-if dpdk_conf.has('RTE_NET_IXGBE')
-    deps += 'net_ixgbe'
-endif
-if dpdk_conf.has('RTE_NET_DPAA')
-    deps += ['bus_dpaa', 'mempool_dpaa', 'net_dpaa']
-endif
+
+deps += ['ethdev', 'cmdline']
+optional_deps += [
+    'crypto_scheduler',
+    'bitratestats',
+    'bpf',
+    'gro',
+    'gso',
+    'latencystats',
+    'metrics',
+    'pdump',
+    'net_bnxt',
+    'net_i40e',
+    'net_ixgbe',
+    'bus_dpaa',
+    'mempool_dpaa',
+    'net_dpaa'
+]
 
 # Driver-specific commands are located in driver directories.
 includes = include_directories('.')
 sources += testpmd_drivers_sources
-deps += testpmd_drivers_deps
+optional_deps += testpmd_drivers_deps

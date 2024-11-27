@@ -8,17 +8,11 @@
 
 deps += ['power', 'power_kvm_vm']
 
-if dpdk_conf.has('RTE_NET_BNXT')
-    deps += ['net_bnxt']
-endif
-
-if dpdk_conf.has('RTE_NET_I40E')
-    deps += ['net_i40e']
-endif
-
-if dpdk_conf.has('RTE_NET_IXGBE')
-    deps += ['net_ixgbe']
-endif
+optional_deps += [
+    'net_bnxt',
+    'net_i40e',
+    'net_ixgbe'
+]
 
 allow_experimental_apis = true
 sources = files(

@@ -132,6 +132,7 @@ foreach subpath:subdirs
         includes = [include_directories(drv_path)]
         # set up internal deps. Drivers can append/override as necessary
         deps = std_deps
+        optional_deps = []
         # ext_deps: Stores external library dependency got
         # using dependency() (preferred) or find_library().
         # For the find_library() case (but not with dependency()) we also
@@ -173,11 +174,21 @@ foreach subpath:subdirs
             # get dependency objs from strings
             shared_deps = ext_deps
             static_deps = ext_deps
+
+            # resolve any optional internal dependencies
+            def_lib = get_option('default_library')
+            foreach d: optional_deps
+                # if optional dependency is defined, add it to the deps list
+                if is_variable(def_lib + '_rte_' + d)
+                    deps += [d]
+                endif
+            endforeach
+
             foreach d:deps
                 if not build
                     break
                 endif
-                if not is_variable('shared_rte_' + d)
+                if not is_variable(def_lib + '_rte_' + d)
                     build = false
                     reason = 'missing internal dependency, "@0@"'.format(d)
                     if dpdk_libs_deprecated.contains(d)
