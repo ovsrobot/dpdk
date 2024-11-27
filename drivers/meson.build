@@ -157,6 +157,8 @@ foreach subpath:subdirs
         endif
 
         if build
+            # call into subdir may update name so record it here
+            display_name = '@0@/@1@'.format(class, name)
             # pull in driver directory which should update all the local variables
             subdir(drv_path)
 
@@ -169,6 +171,18 @@ foreach subpath:subdirs
             if not build and require_drivers and get_option('enable_drivers').contains(drv_path)
                 error('Cannot build explicitly requested driver "@0@".\n'.format(drv_path)
                         +'\tReason: ' + reason)
+            endif
+
+            # log mandatory dependencies
+            cmds = ['--type', 'drivers']
+            cmds += ['--display-name', display_name]
+            drv_name = class + '_' + name
+            run_command([log_deps_cmd, cmds, drv_name, deps], check: false)
+
+            # log optional dependencies, if any
+            if optional_deps.length() > 0
+                cmds += ['--optional']
+                run_command([log_deps_cmd, cmds, drv_name, optional_deps], check: false)
             endif
 
             # get dependency objs from strings

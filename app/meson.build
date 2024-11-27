@@ -77,7 +77,22 @@ foreach app:apps
     endif
 
     if build
+        # call into subdir may update name so record it here
+        display_name = name
+
         subdir(name)
+        app_name = 'dpdk-' + name
+
+        # log mandatory dependencies
+        cmds = ['--type', 'app']
+        cmds += ['--display-name', display_name]
+        run_command([log_deps_cmd, cmds, app_name, deps], check: false)
+
+        # log optional dependencies, if any
+        if optional_deps.length() > 0
+            cmds += ['--optional']
+            run_command([log_deps_cmd, cmds, app_name, optional_deps], check: false)
+        endif
         if not build and require_apps
             error('Cannot build explicitly requested app "@0@".\n'.format(name)
                   + '\tReason: ' + reason)
@@ -125,7 +140,7 @@ foreach app:apps
         link_libs = dpdk_static_libraries + dpdk_drivers
     endif
 
-    exec = executable('dpdk-' + name,
+    exec = executable(app_name,
             [ sources, resources ],
             c_args: cflags,
             link_args: ldflags,
