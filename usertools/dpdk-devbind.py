@@ -113,7 +113,16 @@ args = []
 
 # check if this system has NUMA support
 def is_numa():
-    return os.path.exists('/sys/devices/system/node')
+    if not os.path.exists("/sys/devices/system/node"):
+        return False
+    # occasionally, system may report NUMA support but lspci will not, so we
+    # want to go through all devices and see if any of them do not have NUMANode
+    # property - this will mean it is not safe to try to access it
+    for device_dict in devices.values():
+        if "NUMANode" not in device_dict:
+            return False
+    # all checks passed
+    return True
 
 
 # check if a specific kernel module is loaded
