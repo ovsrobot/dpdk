@@ -1320,7 +1320,8 @@ rte_eal_cleanup(void)
 	vfio_mp_sync_cleanup();
 #endif
 	rte_mp_channel_cleanup();
-	eal_bus_cleanup();
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		eal_bus_cleanup();
 	rte_trace_save();
 	eal_trace_fini();
 	eal_mp_dev_hotplug_cleanup();
