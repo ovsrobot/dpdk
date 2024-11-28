@@ -30,8 +30,10 @@ os.makedirs(dst, exist_ok=True)
 
 # run sphinx, putting the html output in a "html" directory
 with open(join(dst, 'sphinx_html.out'), 'w') as out:
-    process = run(sphinx_cmd + ['-b', 'html', src, join(dst, 'html')],
-                  stdout=out)
+    # don't append html dir if dst is already nested in a html dir
+    top_2_dirs = os.path.join(*os.path.normpath(dst).split(os.path.sep)[-2:])
+    html_dst = dst if 'html' in top_2_dirs else join(dst, 'html')
+    process = run(sphinx_cmd + ['-b', 'html', src, html_dst], stdout=out)
 
 # create a gcc format .d file giving all the dependencies of this doc build
 with open(join(dst, '.html.d'), 'w') as d:
