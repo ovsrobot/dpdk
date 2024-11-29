@@ -82,6 +82,8 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		(void *)&(cq + !rxq->cqe_comp_layout)->pkt_info;
 	/* Title packet is pre-built. */
 	struct rte_mbuf *t_pkt = rxq->cqe_comp_layout ? &rxq->title_pkt : elts[0];
+	const uint32_t hash_rss = t_pkt->hash.rss * rxq->rss_hash;
+	const uint32_t flow_tag = t_pkt->hash.fdir.hi;
 	const __vector unsigned char zero = (__vector unsigned char){0};
 	/* Mask to shuffle from extracted mini CQE to mbuf. */
 	const __vector unsigned char shuf_mask1 = (__vector unsigned char){
@@ -266,8 +268,6 @@ cycle:
 		if (rxq->mark) {
 			if (rxq->mcqe_format !=
 			    MLX5_CQE_RESP_FORMAT_FTAG_STRIDX) {
-				const uint32_t flow_tag = t_pkt->hash.fdir.hi;
-
 				/* E.1 store flow tag (rte_flow mark). */
 				elts[pos]->hash.fdir.hi = flow_tag;
 				elts[pos + 1]->hash.fdir.hi = flow_tag;
@@ -442,10 +442,10 @@ cycle:
 			}
 			const __vector unsigned char hash_mask =
 				(__vector unsigned char)(__vector unsigned int) {
-					RTE_MBUF_F_RX_RSS_HASH,
-					RTE_MBUF_F_RX_RSS_HASH,
-					RTE_MBUF_F_RX_RSS_HASH,
-					RTE_MBUF_F_RX_RSS_HASH};
+					rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH,
+					rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH,
+					rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH,
+					rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH};
 			const __vector unsigned char rearm_flags =
 				(__vector unsigned char)(__vector unsigned int) {
 				(uint32_t)t_pkt->ol_flags,
@@ -455,6 +455,9 @@ cycle:
 
 			ol_flags_mask = (__vector unsigned char)
 				vec_or((__vector unsigned long)ol_flags_mask,
+				(__vector unsigned long)hash_mask);
+			ol_flags = (__vector unsigned char)
+				vec_or((__vector unsigned long)ol_flags,
 				(__vector unsigned long)hash_mask);
 			ol_flags = (__vector unsigned char)
 				vec_or((__vector unsigned long)ol_flags,
@@ -470,10 +473,10 @@ cycle:
 				((__vector unsigned int)ol_flags)[2];
 			elts[pos + 3]->ol_flags =
 				((__vector unsigned int)ol_flags)[3];
-			elts[pos]->hash.rss = 0;
-			elts[pos + 1]->hash.rss = 0;
-			elts[pos + 2]->hash.rss = 0;
-			elts[pos + 3]->hash.rss = 0;
+			elts[pos]->hash.rss = hash_rss;
+			elts[pos + 1]->hash.rss = hash_rss;
+			elts[pos + 2]->hash.rss = hash_rss;
+			elts[pos + 3]->hash.rss = hash_rss;
 		}
 		if (rxq->dynf_meta) {
 			int32_t offs = rxq->flow_meta_offset;

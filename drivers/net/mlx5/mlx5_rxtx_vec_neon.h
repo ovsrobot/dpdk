@@ -78,6 +78,8 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		(void *)&(cq + !rxq->cqe_comp_layout)->pkt_info;
 	/* Title packet is pre-built. */
 	struct rte_mbuf *t_pkt = rxq->cqe_comp_layout ? &rxq->title_pkt : elts[0];
+	const uint32_t hash_rss = t_pkt->hash.rss * rxq->rss_hash;
+	const uint32_t flow_tag = t_pkt->hash.fdir.hi;
 	unsigned int pos;
 	unsigned int i;
 	unsigned int inv = 0;
@@ -211,8 +213,6 @@ cycle:
 		if (rxq->mark) {
 			if (rxq->mcqe_format !=
 			    MLX5_CQE_RESP_FORMAT_FTAG_STRIDX) {
-				const uint32_t flow_tag = t_pkt->hash.fdir.hi;
-
 				/* E.1 store flow tag (rte_flow mark). */
 				elts[pos]->hash.fdir.hi = flow_tag;
 				elts[pos + 1]->hash.fdir.hi = flow_tag;
@@ -327,21 +327,22 @@ cycle:
 				}
 			}
 			const uint32x4_t hash_flags =
-				vdupq_n_u32(RTE_MBUF_F_RX_RSS_HASH);
+				vdupq_n_u32(rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH);
 			const uint32x4_t rearm_flags =
 				vdupq_n_u32((uint32_t)t_pkt->ol_flags);
 
 			ol_flags_mask = vorrq_u32(ol_flags_mask, hash_flags);
+			ol_flags = vorrq_u32(ol_flags, hash_flags);
 			ol_flags = vorrq_u32(ol_flags,
 					vbicq_u32(rearm_flags, ol_flags_mask));
 			elts[pos]->ol_flags = vgetq_lane_u32(ol_flags, 3);
 			elts[pos + 1]->ol_flags = vgetq_lane_u32(ol_flags, 2);
 			elts[pos + 2]->ol_flags = vgetq_lane_u32(ol_flags, 1);
 			elts[pos + 3]->ol_flags = vgetq_lane_u32(ol_flags, 0);
-			elts[pos]->hash.rss = 0;
-			elts[pos + 1]->hash.rss = 0;
-			elts[pos + 2]->hash.rss = 0;
-			elts[pos + 3]->hash.rss = 0;
+			elts[pos]->hash.rss = hash_rss;
+			elts[pos + 1]->hash.rss = hash_rss;
+			elts[pos + 2]->hash.rss = hash_rss;
+			elts[pos + 3]->hash.rss = hash_rss;
 		}
 		if (rxq->dynf_meta) {
 			int32_t offs = rxq->flow_meta_offset;
