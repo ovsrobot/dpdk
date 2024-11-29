@@ -249,6 +249,38 @@ Additionally, the EPYC System Management Interface In-band Library for Linux
 offers essential API, enabling user-space software
 to effectively manage system functions.
 
+E-SMI Installation
+------------------
+
+To build DPDK with AMD EPYC Uncore the user is required to download the e-smi
+library from `here <https://github.com/amd/esmi_ib_library>`_
+and compile it on their user system before building DPDK.
+
+.. code-block:: console
+
+    cd esmi_ib_library
+    cmake .
+    sudo make install
+    cp /opt/e-sms/e_smi/lib/* /usr/local/lib/*
+    cp /opt/e-sms/e_smi/include/* /usr/local/include/*
+
+Library file, header and tool are installed at /opt/e-sms.
+
+Note: Library is dependent on amd_hsmp.h header and without this, compilation will break.
+
+The library requires CMake (v3.5.0) to be built.
+
+As a reference, the following table shows a mapping between the DPDK versions
+and the E-SMI library and kernel version supported by them:
+
+.. table:: DPDK and E-SMI library and kernel version compatibility
+
+   ==============  ==============   =====================
+   DPDK version    E-SMI version    Linux Kernel version
+   ==============  ==============   =====================
+    24.11+          4.0.0            6.7+
+   ==============  ==============   =====================
+
 Uncore API Overview
 ~~~~~~~~~~~~~~~~~~~
 
