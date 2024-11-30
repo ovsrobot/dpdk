@@ -78,6 +78,7 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	volatile struct mlx5_mini_cqe8 *mcq = (void *)(cq + !rxq->cqe_comp_layout);
 	/* Title packet is pre-built. */
 	struct rte_mbuf *t_pkt = rxq->cqe_comp_layout ? &rxq->title_pkt : elts[0];
+	const uint32_t hash_rss = rxq->rss_hash * t_pkt->hash.rss;
 	unsigned int pos;
 	unsigned int i;
 	unsigned int inv = 0;
@@ -108,8 +109,10 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 			      0,
 			      rxq->crc_present * RTE_ETHER_CRC_LEN,
 			      0, 0);
-	__m128i ol_flags = _mm_setzero_si128();
-	__m128i ol_flags_mask = _mm_setzero_si128();
+	__m128i ol_flags =
+		_mm_set1_epi32(rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH);
+	__m128i ol_flags_mask =
+		_mm_set1_epi32(rxq->rss_hash * RTE_MBUF_F_RX_RSS_HASH);
 #ifdef MLX5_PMD_SOFT_COUNTERS
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i ones = _mm_cmpeq_epi32(zero, zero);
@@ -310,12 +313,9 @@ cycle:
 						pkt_info) & (1 << 6));
 				}
 			}
-			const __m128i hash_flags =
-				_mm_set1_epi32(RTE_MBUF_F_RX_RSS_HASH);
 			const __m128i rearm_flags =
 				_mm_set1_epi32((uint32_t)t_pkt->ol_flags);
 
-			ol_flags_mask = _mm_or_si128(ol_flags_mask, hash_flags);
 			ol_flags = _mm_or_si128(ol_flags,
 				_mm_andnot_si128(ol_flags_mask, rearm_flags));
 			elts[pos]->ol_flags =
@@ -326,10 +326,10 @@ cycle:
 				_mm_extract_epi32(ol_flags, 2);
 			elts[pos + 3]->ol_flags =
 				_mm_extract_epi32(ol_flags, 3);
-			elts[pos]->hash.rss = 0;
-			elts[pos + 1]->hash.rss = 0;
-			elts[pos + 2]->hash.rss = 0;
-			elts[pos + 3]->hash.rss = 0;
+			elts[pos]->hash.rss = hash_rss;
+			elts[pos + 1]->hash.rss = hash_rss;
+			elts[pos + 2]->hash.rss = hash_rss;
+			elts[pos + 3]->hash.rss = hash_rss;
 		}
 		if (rxq->dynf_meta) {
 			int32_t offs = rxq->flow_meta_offset;
