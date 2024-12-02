@@ -1368,14 +1368,14 @@ iavf_xmit_fixed_burst_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 {
 	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 	volatile struct iavf_tx_desc *txdp;
-	struct ci_tx_entry *txep;
+	struct ci_tx_entry_vec *txep;
 	uint16_t n, nb_commit, tx_id;
 	uint64_t flags = IAVF_TX_DESC_CMD_EOP | 0x04;  /* bit 2 must be set */
 	uint64_t rs = IAVF_TX_DESC_CMD_RS | flags;
 	int i;
 
 	if (txq->nb_tx_free < txq->tx_free_thresh)
-		iavf_tx_free_bufs(txq);
+		ci_tx_free_bufs_vec(txq, iavf_tx_desc_done, false);
 
 	nb_pkts = (uint16_t)RTE_MIN(txq->nb_tx_free, nb_pkts);
 	if (unlikely(nb_pkts == 0))
@@ -1384,13 +1384,13 @@ iavf_xmit_fixed_burst_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 	tx_id = txq->tx_tail;
 	txdp = &txq->iavf_tx_ring[tx_id];
-	txep = &txq->sw_ring[tx_id];
+	txep = &txq->sw_ring_vec[tx_id];
 
 	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free - nb_pkts);
 
 	n = (uint16_t)(txq->nb_tx_desc - tx_id);
 	if (nb_commit >= n) {
-		ci_tx_backlog_entry(txep, tx_pkts, n);
+		ci_tx_backlog_entry_vec(txep, tx_pkts, n);
 
 		for (i = 0; i < n - 1; ++i, ++tx_pkts, ++txdp)
 			vtx1(txdp, *tx_pkts, flags);
@@ -1404,10 +1404,10 @@ iavf_xmit_fixed_burst_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		/* avoid reach the end of ring */
 		txdp = &txq->iavf_tx_ring[tx_id];
-		txep = &txq->sw_ring[tx_id];
+		txep = &txq->sw_ring_vec[tx_id];
 	}
 
-	ci_tx_backlog_entry(txep, tx_pkts, nb_commit);
+	ci_tx_backlog_entry_vec(txep, tx_pkts, nb_commit);
 
 	iavf_vtx(txdp, tx_pkts, nb_commit, flags);
 
@@ -1462,7 +1462,7 @@ int __rte_cold
 iavf_txq_vec_setup(struct ci_tx_queue *txq)
 {
 	txq->vector_tx = true;
-	txq->vector_sw_ring = false;
+	txq->vector_sw_ring = txq->vector_tx;
 	return 0;
 }
 
