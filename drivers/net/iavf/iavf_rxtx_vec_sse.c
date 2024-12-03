@@ -1462,7 +1462,6 @@ int __rte_cold
 iavf_txq_vec_setup(struct ci_tx_queue *txq)
 {
 	txq->vector_tx = true;
-	txq->vector_sw_ring = txq->vector_tx;
 	return 0;
 }
 
