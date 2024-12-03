@@ -860,7 +860,7 @@ ice_recv_scattered_pkts_vec_avx512_offload(void *rx_queue,
 }
 
 static __rte_always_inline int
-ice_tx_free_bufs_avx512(struct ice_tx_queue *txq)
+ice_tx_free_bufs_avx512(struct ci_tx_queue *txq)
 {
 	struct ci_tx_entry_vec *txep;
 	uint32_t n;
@@ -1053,7 +1053,7 @@ static __rte_always_inline uint16_t
 ice_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 				uint16_t nb_pkts, bool do_offload)
 {
-	struct ice_tx_queue *txq = (struct ice_tx_queue *)tx_queue;
+	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 	volatile struct ice_tx_desc *txdp;
 	struct ci_tx_entry_vec *txep;
 	uint16_t n, nb_commit, tx_id;
@@ -1122,7 +1122,7 @@ ice_xmit_pkts_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 			 uint16_t nb_pkts)
 {
 	uint16_t nb_tx = 0;
-	struct ice_tx_queue *txq = (struct ice_tx_queue *)tx_queue;
+	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 
 	while (nb_pkts) {
 		uint16_t ret, num;
@@ -1144,7 +1144,7 @@ ice_xmit_pkts_vec_avx512_offload(void *tx_queue, struct rte_mbuf **tx_pkts,
 				 uint16_t nb_pkts)
 {
 	uint16_t nb_tx = 0;
-	struct ice_tx_queue *txq = (struct ice_tx_queue *)tx_queue;
+	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 
 	while (nb_pkts) {
 		uint16_t ret, num;
