@@ -14,8 +14,8 @@
 
 #define DMA_BIT_MASK(n)    ((1ULL << (n)) - 1)
 
-#define BITS_PER_LONG      (__SIZEOF_LONG__ * 8)
-#define BITS_PER_LONG_LONG (__SIZEOF_LONG_LONG__ * 8)
+#define BITS_PER_LONG      (sizeof(long) * 8)
+#define BITS_PER_LONG_LONG (sizeof(long long) * 8)
 
 #define GENMASK(h, l) \
 	((~0UL << (l)) & (~0UL >> (BITS_PER_LONG - (h) - 1)))
