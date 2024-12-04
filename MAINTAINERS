@@ -28,8 +28,8 @@ M: David Marchand <david.marchand@redhat.com>
 T: git://dpdk.org/dpdk
 
 Next-net Tree
+M: Stephen Hemminger <stephen@networkplumber.org>
 M: Ferruh Yigit <ferruh.yigit@amd.com>
-M: Andrew Rybchenko <andrew.rybchenko@oktetlabs.ru>
 T: git://dpdk.org/next/dpdk-next-net
 
 Next-net-brcm Tree
