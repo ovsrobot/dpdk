@@ -29,7 +29,7 @@
 #define le32_to_cpu	rte_le_to_cpu_32
 #define le16_to_cpu	rte_le_to_cpu_16
 
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
+#define BITS_PER_LONG	(sizeof(long) * 8)
 #define GENMASK(h, l) \
 		(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 
