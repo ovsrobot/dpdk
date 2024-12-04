@@ -14,7 +14,7 @@
 #define RETRIES	5
 
 #ifndef GENMASK
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
+#define BITS_PER_LONG	(sizeof(long) * 8)
 #define GENMASK(h, l) \
 		(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 #endif
