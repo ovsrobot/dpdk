@@ -22,7 +22,15 @@ from dataclasses import dataclass, field
 from enum import Flag, auto
 from os import environ
 from pathlib import PurePath
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, TypeAlias
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Concatenate,
+    Literal,
+    ParamSpec,
+    TypeAlias,
+)
 
 if TYPE_CHECKING or environ.get("DTS_DOC_BUILD"):
     from enum import Enum as NoAliasEnum
@@ -1877,6 +1885,55 @@ class TestPmdShell(DPDKShell):
                         f"""Failed to set csum hw mode on port
                                                            {port_id}:\n{csum_output}"""
                     )
+
+    def flow_create(self, flow_rule: FlowRule, port_id: int, verify: bool = True) -> int:
+        """Creates a flow rule in the testpmd session.
+
+        Args:
+            flow_rule: :class:`FlowRule` object used for creating testpmd flow rule.
+            verify: If :data:`True`, the output of the command is scanned
+            to ensure the flow rule was created successfully.
+
+        Raises:
+            InteractiveCommandExecutionError: If flow rule is invalid.
+
+        Returns:
+            Id of created flow rule as an integer.
+        """
+        flow_output = self.send_command(f"flow create {port_id} {flow_rule}")
+        if verify:
+            if "created" not in flow_output:
+                self._logger.debug(f"Failed to create flow rule:\n{flow_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to create flow rule:\n{flow_output}"
+                )
+        match = re.search(r"#(\d+)", flow_output)
+        if match is not None:
+            match_str = match.group(1)
+            flow_id = int(match_str)
+            return flow_id
+        else:
+            self._logger.debug(f"Failed to create flow rule:\n{flow_output}")
+            raise InteractiveCommandExecutionError(f"Failed to create flow rule:\n{flow_output}")
+
+    def flow_delete(self, flow_id: int, port_id: int, verify: bool = True) -> None:
+        """Deletes the specified flow rule from the testpmd session.
+
+        Args:
+            flow_id: :class:`FlowRule` id used for deleting testpmd flow rule.
+            verify: If :data:`True`, the output of the command is scanned
+            to ensure the flow rule was deleted successfully.
+
+        Raises:
+            InteractiveCommandExectuionError: If flow rule is invalid.
+        """
+        flow_output = self.send_command(f"flow destroy {port_id} rule {flow_id}")
+        if verify:
+            if "destroyed" not in flow_output:
+                self._logger.debug(f"Failed to delete flow rule:\n{flow_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to delete flow rule:\n{flow_output}"
+                )
 
     @requires_stopped_ports
     def set_port_mtu(self, port_id: int, mtu: int, verify: bool = True) -> None:
