@@ -12,7 +12,7 @@
 #include <rte_dmadev_pmd.h>
 
 #define BIT(x)	(1ul << (x))
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
+#define BITS_PER_LONG	(sizeof(long) * 8)
 #define GENMASK(h, l) \
 		(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 #define BF_SHF(x) rte_bsf64(x)
