@@ -13,7 +13,7 @@
 #endif
 
 #ifndef BITS_PER_LONG
-#define BITS_PER_LONG (__SIZEOF_LONG__ * 8)
+#define BITS_PER_LONG (sizeof(long) * 8)
 #endif
 
 #ifndef GENMASK_U32
