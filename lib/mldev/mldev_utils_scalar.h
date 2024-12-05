@@ -12,12 +12,8 @@
 #define BIT(nr) (1UL << (nr))
 #endif
 
-#ifndef BITS_PER_LONG
-#define BITS_PER_LONG (__SIZEOF_LONG__ * 8)
-#endif
-
 #ifndef GENMASK_U32
-#define GENMASK_U32(h, l) (((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#define GENMASK_U32(h, l) (((~0UL) << (l)) & (~0UL >> (RTE_BITS_PER_LONG - 1 - (h))))
 #endif
 
 /* float32: bit index of MSB & LSB of sign, exponent and mantissa */
