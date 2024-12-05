@@ -22,8 +22,6 @@ struct power_wait_status {
 
 RTE_LCORE_VAR_HANDLE(struct power_wait_status, wait_status);
 
-RTE_LCORE_VAR_INIT(wait_status);
-
 /*
  * This function uses UMONITOR/UMWAIT instructions and will enter C0.2 state.
  * For more information about usage of these instructions, please refer to
@@ -177,6 +175,9 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	if (pmc->fn == NULL)
 		return -EINVAL;
 
+	if (wait_status == NULL)
+		RTE_LCORE_VAR_ALLOC(wait_status);
+
 	s = RTE_LCORE_VAR_LCORE(lcore_id, wait_status);
 
 	/* update sleep address */
@@ -269,6 +270,9 @@ rte_power_monitor_wakeup(const unsigned int lcore_id)
 	if (lcore_id >= RTE_MAX_LCORE)
 		return -EINVAL;
 
+	if (wait_status == NULL)
+		RTE_LCORE_VAR_ALLOC(wait_status);
+
 	s = RTE_LCORE_VAR_LCORE(lcore_id, wait_status);
 
 	/*
@@ -308,7 +312,7 @@ int
 rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 		const uint32_t num, const uint64_t tsc_timestamp)
 {
-	struct power_wait_status *s = RTE_LCORE_VAR(wait_status);
+	struct power_wait_status *s;
 	uint32_t i, rc;
 
 	/* check if supported */
@@ -317,6 +321,11 @@ rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 
 	if (pmc == NULL || num == 0)
 		return -EINVAL;
+
+	if (wait_status == NULL)
+		RTE_LCORE_VAR_ALLOC(wait_status);
+
+	s = RTE_LCORE_VAR(wait_status);
 
 	/* we are already inside transaction region, return */
 	if (rte_xtest() != 0)
