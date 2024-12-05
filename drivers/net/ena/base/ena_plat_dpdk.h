@@ -97,14 +97,12 @@ extern int ena_logtype_com;
 #define ENA_MIN16(x, y) ENA_MIN_T(uint16_t, (x), (y))
 #define ENA_MIN8(x, y) ENA_MIN_T(uint8_t, (x), (y))
 
-#define BITS_PER_LONG_LONG (__SIZEOF_LONG_LONG__ * 8)
 #define U64_C(x) x ## ULL
 #define BIT(nr)	RTE_BIT32(nr)
 #define BIT64(nr)	RTE_BIT64(nr)
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
-#define GENMASK(h, l)	(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#define GENMASK(h, l)	(((~0UL) << (l)) & (~0UL >> (RTE_BITS_PER_LONG - 1 - (h))))
 #define GENMASK_ULL(h, l) (((~0ULL) - (1ULL << (l)) + 1) &		       \
-			  (~0ULL >> (BITS_PER_LONG_LONG - 1 - (h))))
+			  (~0ULL >> (RTE_BITS_PER_LONG_LONG - 1 - (h))))
 
 #define ena_trc_log(dev, level, fmt, arg...)				       \
 	(								       \
