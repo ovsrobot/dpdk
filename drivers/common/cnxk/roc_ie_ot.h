@@ -168,8 +168,8 @@ roc_ie_ot_ucc_is_success(uint8_t ucc)
 
 /* u64 array size to fit anti replay window bits */
 #define ROC_AR_WINBITS_SZ                                                      \
-	(PLT_ALIGN_CEIL(ROC_AR_WIN_SIZE_MAX, BITS_PER_LONG_LONG) /             \
-	 BITS_PER_LONG_LONG)
+	(PLT_ALIGN_CEIL(ROC_AR_WIN_SIZE_MAX, PLT_BITS_PER_LONG_LONG) /             \
+	 PLT_BITS_PER_LONG_LONG)
 
 #define ROC_IPSEC_ERR_RING_MAX_ENTRY 65536
 
