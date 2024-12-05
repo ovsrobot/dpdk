@@ -958,6 +958,28 @@ rte_popcount64(uint64_t v)
 	return (unsigned int)__popcnt64(v);
 }
 
+static inline unsigned int
+rte_ffs32(uint32_t v)
+{
+	unsigned long rv;
+
+	if (_BitScanForward(&rv, v) == 0)
+		return 0;
+
+	return (unsigned int)rv + 1;
+}
+
+static inline unsigned int
+rte_ffs64(uint64_t v)
+{
+	unsigned long rv;
+
+	if (_BitScanForward64(&rv, v) == 0)
+		return 0;
+
+	return (unsigned int)rv + 1;
+}
+
 #else
 
 /**
@@ -1042,6 +1064,18 @@ static inline unsigned int
 rte_popcount64(uint64_t v)
 {
 	return (unsigned int)__builtin_popcountll(v);
+}
+
+static inline unsigned int
+rte_ffs32(uint32_t v)
+{
+	return (unsigned int)__builtin_ffs(v);
+}
+
+static inline unsigned int
+rte_ffs64(uint64_t v)
+{
+	return (unsigned int)__builtin_ffsll(v);
 }
 
 #endif
