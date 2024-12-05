@@ -406,6 +406,42 @@ test_bit_relaxed_test_set_clear(void)
 	return TEST_SUCCESS;
 }
 
+static int
+test_bit_scan_forward(void)
+{
+	unsigned int bit_nr;
+
+	TEST_ASSERT((bit_nr = rte_ffs32(0)) == 0,
+		"rte_ffs32 returned unexpected %d", bit_nr);
+
+	for (int i = 0; i < 32; ++i) {
+		uint32_t n = RTE_BIT32(i);
+
+		TEST_ASSERT((bit_nr = rte_ffs32(n)) == (unsigned int)(i+1),
+			"rte_ffs32 returned unexpected %d", bit_nr);
+	}
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_bit_scan_forward64(void)
+{
+	unsigned int bit_nr;
+
+	TEST_ASSERT((bit_nr = rte_ffs64(0)) == 0,
+		"rte_ffs64 returned unexpected %d", bit_nr);
+
+	for (int i = 0; i < 64; ++i) {
+		uint64_t n = RTE_BIT64(i);
+
+		TEST_ASSERT((bit_nr = rte_ffs64(n)) == (unsigned int)(i+1),
+			"rte_ffs64 returned unexpected %d", bit_nr);
+	}
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite test_suite = {
 	.suite_name = "Bitops test suite",
 	.unit_test_cases = {
@@ -428,6 +464,8 @@ static struct unit_test_suite test_suite = {
 		TEST_CASE(test_bit_relaxed_set),
 		TEST_CASE(test_bit_relaxed_clear),
 		TEST_CASE(test_bit_relaxed_test_set_clear),
+		TEST_CASE(test_bit_scan_forward),
+		TEST_CASE(test_bit_scan_forward64),
 		TEST_CASES_END()
 	}
 };
