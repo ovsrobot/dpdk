@@ -603,6 +603,11 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
  */
 #define RTE_BUILD_BUG_ON(condition) do { static_assert(!(condition), #condition); } while (0)
 
+/*********** Data type size related macros ********/
+
+#define RTE_BITS_PER_LONG (sizeof(long) * 8)
+#define RTE_BITS_PER_LONG_LONG (sizeof(long long) * 8)
+
 /*********** Cache line related macros ********/
 
 /** Cache line mask. */
