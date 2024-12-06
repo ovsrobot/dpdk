@@ -54,6 +54,8 @@
 #define ZXDH_ACL_TBL_ID_MAX             (7)
 #define ZXDH_ACL_TBL_ID_NUM             (8U)
 #define ZXDH_ACL_BLOCK_NUM              (8U)
+#define ZXDH_SDT_H_TBL_TYPE_BT_POS      (29)
+#define ZXDH_SDT_H_TBL_TYPE_BT_LEN      (3)
 
 #define ZXDH_SMMU0_READ_REG_MAX_NUM              (4)
 
@@ -507,9 +509,16 @@ typedef struct zxdh_dtb_user_entry_t {
 	void *p_entry_data;
 } ZXDH_DTB_USER_ENTRY_T;
 
+typedef struct zxdh_sdt_tbl_data_t {
+	uint32_t data_high32;
+	uint32_t data_low32;
+} ZXDH_SDT_TBL_DATA_T;
+
 int zxdh_np_host_init(uint32_t dev_id, ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl);
 int zxdh_np_online_uninit(uint32_t dev_id, char *port_name, uint32_t queue_id);
 int zxdh_np_dtb_table_entry_write(uint32_t dev_id, uint32_t queue_id,
 			uint32_t entrynum, ZXDH_DTB_USER_ENTRY_T *down_entries);
+int zxdh_np_dtb_table_entry_delete(uint32_t dev_id, uint32_t queue_id,
+			 uint32_t entrynum, ZXDH_DTB_USER_ENTRY_T *delete_entries);
 
 #endif /* ZXDH_NP_H */
