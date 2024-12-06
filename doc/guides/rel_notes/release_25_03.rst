@@ -55,6 +55,14 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Add Staged-Ordered-Ring (SORING) API to the rte_ring library.**
+
+     New API to the ring library to provide a SW abstraction for
+     'ordered' queues with multiple processing 'stages'.
+     It is based on conventional DPDK rte_ring, re-uses many of its concepts,
+     and even substantial part of its code.
+     It can be viewed as an 'extension' of rte_ring functionality.
+
 
 Removed Items
 -------------
