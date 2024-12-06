@@ -861,6 +861,11 @@ zxdh_tables_uninit(struct rte_eth_dev *dev)
 		PMD_DRV_LOG(ERR, "zxdh_port_attr_uninit failed");
 		return ret;
 	}
+	ret = zxdh_promisc_table_uninit(dev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "del promisc_table failed, code:%d", ret);
+		return ret;
+	}
 	return ret;
 }
 
@@ -1057,6 +1062,10 @@ static const struct eth_dev_ops zxdh_eth_dev_ops = {
 	.mac_addr_add			 = zxdh_dev_mac_addr_add,
 	.mac_addr_remove		 = zxdh_dev_mac_addr_remove,
 	.mac_addr_set			 = zxdh_dev_mac_addr_set,
+	.promiscuous_enable		 = zxdh_dev_promiscuous_enable,
+	.promiscuous_disable	 = zxdh_dev_promiscuous_disable,
+	.allmulticast_enable	 = zxdh_dev_allmulticast_enable,
+	.allmulticast_disable	 = zxdh_dev_allmulticast_disable,
 };
 
 static int32_t
@@ -1310,6 +1319,12 @@ zxdh_tables_init(struct rte_eth_dev *dev)
 		PMD_DRV_LOG(ERR, " panel table init failed");
 		return ret;
 	}
+	ret = zxdh_promisc_table_init(dev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "promisc_table_init failed");
+		return ret;
+	}
+
 	return ret;
 }
 
