@@ -509,6 +509,11 @@ typedef struct zxdh_dtb_user_entry_t {
 	void *p_entry_data;
 } ZXDH_DTB_USER_ENTRY_T;
 
+typedef struct zxdh_dtb_hash_entry_info_t {
+	uint8_t *p_actu_key;
+	uint8_t *p_rst;
+} ZXDH_DTB_HASH_ENTRY_INFO_T;
+
 typedef struct zxdh_sdt_tbl_data_t {
 	uint32_t data_high32;
 	uint32_t data_low32;
