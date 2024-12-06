@@ -1354,6 +1354,7 @@ int __rte_cold eth_macb_rx_init(struct rte_eth_dev *dev)
 	return 0;
 }
 
+#if !defined(RTE_ARCH_ARM64)
 uint16_t
 eth_macb_recv_pkts_vec(void __rte_unused *rx_queue,
 		       struct rte_mbuf __rte_unused **rx_pkts,
@@ -1377,3 +1378,4 @@ eth_macb_xmit_pkts_vec(void __rte_unused *tx_queue,
 {
 	return 0;
 }
+#endif
