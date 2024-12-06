@@ -13,6 +13,11 @@ extern struct zxdh_dtb_shared_data g_dtb_data;
 #define ZXDH_PORT_BASE_QID_FLAG           10
 #define ZXDH_PORT_ATTR_IS_UP_FLAG         35
 
+#define ZXDH_MTU_STATS_EGRESS_BASE        0x8481
+#define ZXDH_MTU_STATS_INGRESS_BASE       0x8981
+#define ZXDH_BROAD_STATS_EGRESS_BASE      0xC902
+#define ZXDH_BROAD_STATS_INGRESS_BASE     0xD102
+
 struct zxdh_port_attr_table {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint8_t byte4_rsv1: 1;
