@@ -167,6 +167,11 @@ New Features
   Added a new network PMD which supports Realtek 2.5 and 5 Gigabit
   Ethernet NICs.
 
+* **Added Phytium macb net driver.**
+
+  Added a new network PMD which supports Phytium 1 and 10 Gigabit
+  Ethernet NICs.
+
 * **Added ZTE zxdh net driver [EXPERIMENTAL].**
 
   Added ethdev driver support for the zxdh NX Series Ethernet Controller.
