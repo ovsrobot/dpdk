@@ -2425,14 +2425,14 @@ static enum ice_sw_tunnel_type ice_get_tun_type_for_recipe(u8 rid, bool vlan)
  * @recps: struct that we need to populate
  * @rid: recipe ID that we are populating
  * @refresh_required: true if we should get recipe to profile mapping from FW
+ * @is_add: flag of adding recipe
  *
- * This function is used to populate all the necessary entries into our
- * bookkeeping so that we have a current list of all the recipes that are
- * programmed in the firmware.
+ * Populate all the necessary entries into SW bookkeeping so that we have a
+ * current list of all the recipes that are programmed in the firmware.
  */
 static int
 ice_get_recp_frm_fw(struct ice_hw *hw, struct ice_sw_recipe *recps, u8 rid,
-		    bool *refresh_required)
+		    bool *refresh_required, bool *is_add)
 {
 	ice_declare_bitmap(result_bm, ICE_MAX_FV_WORDS);
 	struct ice_aqc_recipe_data_elem *tmp;
@@ -2556,8 +2556,12 @@ ice_get_recp_frm_fw(struct ice_hw *hw, struct ice_sw_recipe *recps, u8 rid,
 			recps[idx].chain_idx = ICE_INVAL_CHAIN_IND;
 		}
 
-		if (!is_root)
+		if (!is_root) {
+			if (hw->subscribable_recipes_supported && *is_add)
+				recps[idx].recp_created = true;
+
 			continue;
+		}
 
 		/* Only do the following for root recipes entries */
 		ice_memcpy(recps[idx].r_bitmap, root_bufs.recipe_bitmap,
@@ -2583,7 +2587,8 @@ ice_get_recp_frm_fw(struct ice_hw *hw, struct ice_sw_recipe *recps, u8 rid,
 
 	/* Copy result indexes */
 	ice_cp_bitmap(recps[rid].res_idxs, result_bm, ICE_MAX_FV_WORDS);
-	recps[rid].recp_created = true;
+	if (!hw->subscribable_recipes_supported || (hw->subscribable_recipes_supported && *is_add))
+		recps[rid].recp_created = true;
 
 err_unroll:
 	ice_free(hw, tmp);
@@ -3772,11 +3777,26 @@ ice_aq_get_recipe_to_profile(struct ice_hw *hw, u32 profile_id, u8 *r_bitmap,
 }
 
 /**
- * ice_alloc_recipe - add recipe resource
+ * ice_init_chk_subscribable_recipe_support - are subscribable recipes available
+ * @hw: pointer to the hardware structure
+ */
+void ice_init_chk_subscribable_recipe_support(struct ice_hw *hw)
+{
+	struct ice_nvm_info *nvm = &hw->flash.nvm;
+
+	if ((nvm->major >= 0x04 && nvm->minor >= 0x30) ||
+		hw->mac_type == ICE_MAC_GENERIC_3K_E825)
+		hw->subscribable_recipes_supported = true;
+	else
+		hw->subscribable_recipes_supported = false;
+}
+
+/**
+ * ice_alloc_legacy_shared_recipe - alloc legacy shared recipe
  * @hw: pointer to the hardware structure
  * @rid: recipe ID returned as response to AQ call
  */
-int ice_alloc_recipe(struct ice_hw *hw, u16 *rid)
+static int ice_alloc_legacy_shared_recipe(struct ice_hw *hw, u16 *rid)
 {
 	struct ice_aqc_alloc_free_res_elem *sw_buf;
 	u16 buf_len;
@@ -3797,6 +3817,175 @@ int ice_alloc_recipe(struct ice_hw *hw, u16 *rid)
 		*rid = LE16_TO_CPU(sw_buf->elem[0].e.sw_resp);
 	ice_free(hw, sw_buf);
 
+	return status;
+}
+
+/**
+ * ice_alloc_subscribable_recipe - alloc shared recipe that can be subscribed to
+ * @hw: pointer to the hardware structure
+ * @rid: recipe ID returned as response to AQ call
+ */
+static enum ice_status
+ice_alloc_subscribable_recipe(struct ice_hw *hw, u16 *rid)
+{
+	struct ice_aqc_alloc_free_res_elem *buf;
+	enum ice_status status;
+	u16 buf_len;
+
+	buf_len = ice_struct_size(buf, elem, 1);
+	buf = (struct ice_aqc_alloc_free_res_elem *)ice_malloc(hw, buf_len);
+	if (!buf)
+		return ICE_ERR_NO_MEMORY;
+
+	/* Prepare buffer to allocate resource */
+	buf->num_elems = CPU_TO_LE16(1);
+	buf->res_type = CPU_TO_LE16((ICE_AQC_RES_TYPE_RECIPE <<
+				     ICE_AQC_RES_TYPE_S) |
+				    ICE_AQC_RES_TYPE_FLAG_SUBSCRIBE_SHARED);
+
+	status = ice_aq_alloc_free_res(hw, 1, buf, buf_len,
+				       ice_aqc_opc_alloc_res, NULL);
+
+	if (status)
+		goto exit;
+
+	ice_memcpy(rid, buf->elem, sizeof(*buf->elem) * 1,
+		   ICE_NONDMA_TO_NONDMA);
+
+exit:
+	ice_free(hw, buf);
+	return status;
+}
+
+/**
+ * ice_alloc_recipe - add recipe resource
+ * @hw: pointer to the hardware structure
+ * @rid: recipe ID returned as response to AQ call
+ */
+int ice_alloc_recipe(struct ice_hw *hw, u16 *rid)
+{
+	if (hw->subscribable_recipes_supported)
+		return ice_alloc_subscribable_recipe(hw, rid);
+	else
+		return ice_alloc_legacy_shared_recipe(hw, rid);
+}
+
+/**
+ * ice_free_recipe_res - free recipe resource
+ * @hw: pointer to the hardware structure
+ * @rid: recipe ID to free
+ */
+static int ice_free_recipe_res(struct ice_hw *hw, u16 rid)
+{
+	return ice_free_hw_res(hw, ICE_AQC_RES_TYPE_RECIPE, 1, &rid);
+}
+
+/*
+ * ice_subscribe_recipe - subscribe to an existing recipe
+ * @hw: pointer to the hardware structure
+ * @rid: recipe ID to subscribe to
+ */
+static int ice_subscribe_recipe(struct ice_hw *hw, u16 rid)
+{
+	struct ice_aqc_alloc_free_res_elem *buf;
+	int status;
+	u16 buf_len;
+
+	buf_len = ice_struct_size(buf, elem, 1);
+	buf = (struct ice_aqc_alloc_free_res_elem *)ice_malloc(hw, buf_len);
+	if (!buf)
+		return ICE_ERR_NO_MEMORY;
+
+	/* Prepare buffer to allocate resource */
+	buf->num_elems = CPU_TO_LE16(1);
+	buf->res_type = CPU_TO_LE16((ICE_AQC_RES_TYPE_RECIPE <<
+				     ICE_AQC_RES_TYPE_S) |
+				    ICE_AQC_RES_TYPE_FLAG_SUBSCRIBE_SHARED |
+				    ICE_AQC_RES_TYPE_FLAG_SUBSCRIBE_CTL);
+
+	buf->elem[0].e.flu_resp = CPU_TO_LE16(rid);
+
+	status = ice_aq_alloc_free_res(hw, 1, buf, buf_len,
+				       ice_aqc_opc_alloc_res, NULL);
+
+	ice_free(hw, buf);
+	return status;
+}
+
+/**
+ * ice_subscribable_recp_shared - share an existing subscribable recipe
+ * @hw: pointer to the hardware structure
+ * @rid: recipe ID to subscribe to
+ */
+static void ice_subscribable_recp_shared(struct ice_hw *hw, u16 rid)
+{
+	ice_declare_bitmap(sub_bitmap, ICE_MAX_NUM_RECIPES);
+	struct ice_sw_recipe *recps;
+	u8 i, cnt;
+
+	recps = hw->switch_info->recp_list;
+	ice_cp_bitmap(sub_bitmap, recps[rid].r_bitmap, ICE_MAX_NUM_RECIPES);
+	cnt = ice_bitmap_hweight(sub_bitmap, ICE_MAX_NUM_RECIPES);
+	for (i = 0; i < cnt; i++) {
+		u8 sub_rid;
+
+		sub_rid = (u8)ice_find_first_bit(sub_bitmap,
+						 ICE_MAX_NUM_RECIPES);
+		ice_subscribe_recipe(hw, sub_rid);
+		ice_clear_bit(sub_rid, sub_bitmap);
+	}
+}
+
+/**
+ * ice_release_recipe_res - disassociate and free recipe resource
+ * @hw: pointer to the hardware structure
+ * @recp: the recipe struct resource to unassociate and free
+ */
+static enum ice_status ice_release_recipe_res(struct ice_hw *hw,
+					      struct ice_sw_recipe *recp)
+{
+	ice_declare_bitmap(r_bitmap, ICE_MAX_NUM_RECIPES);
+	struct ice_switch_info *sw = hw->switch_info;
+	u8 num_recp, rid, num_prof, prof, i, j;
+	enum ice_status status = ICE_SUCCESS;
+
+	num_recp = ice_bitmap_hweight(recp->r_bitmap, ICE_MAX_NUM_RECIPES);
+	for (i = 0; i < num_recp; i++) {
+		rid = (u8)ice_find_first_bit(recp->r_bitmap,
+					     ICE_MAX_NUM_RECIPES);
+		num_prof = ice_bitmap_hweight(recipe_to_profile[rid],
+					      ICE_MAX_NUM_PROFILES);
+		for (j = 0; j < num_prof; j++) {
+			prof = (u8)ice_find_first_bit(recipe_to_profile[rid],
+						      ICE_MAX_NUM_PROFILES);
+			status = ice_aq_get_recipe_to_profile(hw, prof,
+							      (u8 *)r_bitmap,
+							      NULL);
+			if (status)
+				goto exit;
+
+			ice_andnot_bitmap(r_bitmap, r_bitmap,
+					  recp->r_bitmap, ICE_MAX_NUM_RECIPES);
+
+			ice_aq_map_recipe_to_profile(hw, prof,
+						     (u8 *)r_bitmap, NULL);
+
+			ice_clear_bit(rid, profile_to_recipe[prof]);
+			ice_clear_bit(prof, recipe_to_profile[rid]);
+		}
+
+		status = ice_free_recipe_res(hw, rid);
+		if (status)
+			goto exit;
+
+		sw->recp_list[rid].recp_created = false;
+		sw->recp_list[rid].adv_rule = false;
+		memset(&sw->recp_list[rid].lkup_exts, 0,
+		       sizeof(struct ice_prot_lkup_ext));
+		ice_clear_bit(rid, recp->r_bitmap);
+	}
+
+exit:
 	return status;
 }
 
@@ -7133,11 +7322,12 @@ static struct ice_protocol_entry ice_prot_id_tbl[ICE_PROTOCOL_LAST] = {
  * ice_find_recp - find a recipe
  * @hw: pointer to the hardware structure
  * @lkup_exts: extension sequence to match
+ * @is_add: flag of adding recipe
  *
  * Returns index of matching recipe, or ICE_MAX_NUM_RECIPES if not found.
  */
 static u16 ice_find_recp(struct ice_hw *hw, struct ice_prot_lkup_ext *lkup_exts,
-			 enum ice_sw_tunnel_type tun_type, u32 priority)
+			 enum ice_sw_tunnel_type tun_type, u32 priority, bool *is_add)
 {
 	bool refresh_required = true;
 	struct ice_sw_recipe *recp;
@@ -7151,11 +7341,18 @@ static u16 ice_find_recp(struct ice_hw *hw, struct ice_prot_lkup_ext *lkup_exts,
 		 * entry update it in our SW bookkeeping and continue with the
 		 * matching.
 		 */
-		if (!recp[i].recp_created)
+		if (hw->subscribable_recipes_supported) {
 			if (ice_get_recp_frm_fw(hw,
 						hw->switch_info->recp_list, i,
-						&refresh_required))
+						&refresh_required, is_add))
 				continue;
+		} else {
+			if (!recp[i].recp_created)
+				if (ice_get_recp_frm_fw(hw,
+							hw->switch_info->recp_list, i,
+							&refresh_required, is_add))
+					continue;
+		}
 
 		/* Skip inverse action recipes */
 		if (recp[i].root_buf && recp[i].root_buf->content.act_ctrl &
@@ -7521,6 +7718,7 @@ ice_add_sw_recipe(struct ice_hw *hw, struct ice_sw_recipe *rm,
 	ice_zero_bitmap(result_idx_bm, ICE_MAX_FV_WORDS);
 	free_res_idx = ice_find_free_recp_res_idx(hw, profiles, result_idx_bm);
 
+	hw->debug_mask |= ICE_DBG_SW;
 	ice_debug(hw, ICE_DBG_SW, "Result idx slots: %d, need %d\n",
 		  free_res_idx, rm->n_grp_count);
 
@@ -8189,6 +8387,7 @@ ice_add_adv_recipe(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	struct ice_sw_fv_list_entry *tmp;
 	struct ice_sw_recipe *rm;
 	u8 i;
+	bool is_add = true;
 	int status = ICE_SUCCESS;
 	u16 cnt;
 
@@ -8292,10 +8491,14 @@ ice_add_adv_recipe(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	}
 
 	/* Look for a recipe which matches our requested fv / mask list */
-	*rid = ice_find_recp(hw, lkup_exts, rinfo->tun_type, rinfo->priority);
-	if (*rid < ICE_MAX_NUM_RECIPES)
+	*rid = ice_find_recp(hw, lkup_exts, rinfo->tun_type, rinfo->priority, &is_add);
+	if (*rid < ICE_MAX_NUM_RECIPES) {
 		/* Success if found a recipe that match the existing criteria */
+		if (hw->subscribable_recipes_supported)
+			ice_subscribable_recp_shared(hw, *rid);
+
 		goto err_unroll;
+	}
 
 	rm->tun_type = rinfo->tun_type;
 	/* Recipe we need does not exist, add a recipe */
@@ -9817,7 +10020,7 @@ ice_rem_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	if (status)
 		return status;
 
-	rid = ice_find_recp(hw, &lkup_exts, rinfo->tun_type, rinfo->priority);
+	rid = ice_find_recp(hw, &lkup_exts, rinfo->tun_type, rinfo->priority, &is_add);
 	/* If did not find a recipe that match the existing criteria */
 	if (rid == ICE_MAX_NUM_RECIPES)
 		return ICE_ERR_PARAM;
@@ -9864,14 +10067,19 @@ ice_rem_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 					 ice_aqc_opc_remove_sw_rules, NULL);
 		if (status == ICE_SUCCESS || status == ICE_ERR_DOES_NOT_EXIST) {
 			struct ice_switch_info *sw = hw->switch_info;
+			struct ice_sw_recipe *r_list = sw->recp_list;
 
 			ice_acquire_lock(rule_lock);
 			LIST_DEL(&list_elem->list_entry);
 			ice_free(hw, list_elem->lkups);
 			ice_free(hw, list_elem);
 			ice_release_lock(rule_lock);
-			if (LIST_EMPTY(&sw->recp_list[rid].filt_rules))
+			if (LIST_EMPTY(&sw->recp_list[rid].filt_rules)) {
 				sw->recp_list[rid].adv_rule = false;
+
+				if (hw->subscribable_recipes_supported)
+					ice_release_recipe_res(hw, &r_list[rid]);
+			}
 		}
 		ice_free(hw, s_rule);
 	}

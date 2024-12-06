@@ -1458,6 +1458,8 @@ struct ice_hw {
 	u8 dvm_ena;
 	u16 io_expander_handle;
 
+	bool subscribable_recipes_supported;
+
 	bool skip_clear_pf;
 };
 

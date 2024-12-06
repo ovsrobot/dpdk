@@ -1087,6 +1087,8 @@ int ice_init_hw(struct ice_hw *hw)
 		goto err_unroll_fltr_mgmt_struct;
 	ice_init_lock(&hw->tnl_lock);
 
+	ice_init_chk_subscribable_recipe_support(hw);
+
 	return 0;
 
 err_unroll_fltr_mgmt_struct:

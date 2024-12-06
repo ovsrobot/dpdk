@@ -606,6 +606,8 @@ int
 ice_aq_get_recipe_to_profile(struct ice_hw *hw, u32 profile_id, u8 *r_bitmap,
 			     struct ice_sq_cd *cd);
 
+void ice_init_chk_subscribable_recipe_support(struct ice_hw *hw);
+
 int ice_alloc_recipe(struct ice_hw *hw, u16 *recipe_id);
 int
 ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
