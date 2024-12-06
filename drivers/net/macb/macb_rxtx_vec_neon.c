@@ -70,8 +70,6 @@ static inline void macb_rxq_rearm(struct macb_rx_queue *rxq)
 	struct macb *bp;
 	register int i = 0;
 	struct macb_rx_entry *rxe;
-
-	uint32x2_t zero = vdup_n_u32(0);
 	uint8x8_t rearm_data_vec;
 
 	bp = rxq->bp;
@@ -85,14 +83,7 @@ static inline void macb_rxq_rearm(struct macb_rx_queue *rxq)
 	/* Pull 'n' more MBUFs into the software ring */
 	if (unlikely(rte_mempool_get_bulk(rxq->mb_pool, (void *)rxe,
 						MACB_RXQ_REARM_THRESH) < 0)) {
-		if (rxq->rxrearm_nb + (unsigned int)MACB_RXQ_REARM_THRESH >=
-			rxq->nb_rx_desc) {
-			MACB_LOG(ERR, "allocate mbuf fail!\n");
-			for (i = 0; i < MACB_DESCS_PER_LOOP; i++) {
-				rxe[i].mbuf = &rxq->fake_mbuf;
-				vst1_u32((uint32_t *)&desc[MACB_DESC_ADDR_INTERVAL * i], zero);
-			}
-		}
+		MACB_LOG(ERR, "allocate mbuf fail!\n");
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
 							MACB_RXQ_REARM_THRESH;
 		return;
@@ -173,15 +164,15 @@ static uint16_t macb_recv_raw_pkts_vec(struct macb_rx_queue *rxq,
 	};
 	uint16x8_t crc_adjust = {0, 0, rxq->crc_len, 0, rxq->crc_len, 0, 0, 0};
 
-	/* nb_pkts shall be less equal than MACB_MAX_RX_BURST */
-	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, MACB_DESCS_PER_LOOP);
-	nb_pkts = RTE_MIN(nb_pkts, MACB_MAX_RX_BURST);
-
 	desc = rxq->rx_ring + rxq->rx_tail * MACB_DESC_ADDR_INTERVAL;
 	rte_prefetch_non_temporal(desc);
 
 	if (rxq->rxrearm_nb >= MACB_RXQ_REARM_THRESH)
 		macb_rxq_rearm(rxq);
+
+	nb_pkts = RTE_MIN(nb_pkts, rxq->nb_rx_desc - rxq->rxrearm_nb);
+	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, MACB_DESCS_PER_LOOP);
+	nb_pkts = RTE_MIN(nb_pkts, MACB_MAX_RX_BURST);
 
 	/* Make hw descriptor updates visible to CPU */
 	rte_rmb();
