@@ -80,6 +80,7 @@ struct zxdh_hw {
 	uint16_t queue_num;
 	uint16_t mc_num;
 	uint16_t uc_num;
+	uint16_t *rss_reta;
 
 	uint8_t *isr;
 	uint8_t weak_barriers;

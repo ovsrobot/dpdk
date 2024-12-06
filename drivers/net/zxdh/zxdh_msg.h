@@ -181,6 +181,11 @@ enum zxdh_msg_type {
 	ZXDH_VF_PORT_UNINIT = 2,
 	ZXDH_MAC_ADD = 3,
 	ZXDH_MAC_DEL = 4,
+	ZXDH_RSS_ENABLE = 7,
+	ZXDH_RSS_RETA_SET = 8,
+	ZXDH_RSS_RETA_GET = 9,
+	ZXDH_RSS_HF_SET = 15,
+	ZXDH_RSS_HF_GET = 16,
 	ZXDH_VLAN_FILTER_SET = 17,
 	ZXDH_VLAN_FILTER_ADD = 18,
 	ZXDH_VLAN_FILTER_DEL = 19,
@@ -290,6 +295,14 @@ struct zxdh_link_info_msg {
 	uint32_t speed;
 } __rte_packed;
 
+struct zxdh_rss_reta {
+	uint32_t reta[RTE_ETH_RSS_RETA_SIZE_256];
+};
+
+struct zxdh_rss_hf {
+	uint32_t rss_hf;
+};
+
 
 struct zxdh_msg_reply_head {
 	uint8_t flag;
@@ -307,6 +320,8 @@ struct zxdh_msg_reply_body {
 	union {
 		uint8_t reply_data[ZXDH_MSG_REPLY_BODY_MAX_LEN - sizeof(enum zxdh_reps_flag)];
 		struct zxdh_link_info_msg link_msg;
+		struct zxdh_rss_hf rss_hf;
+		struct zxdh_rss_reta rss_reta;
 	} __rte_packed;
 } __rte_packed;
 
@@ -362,6 +377,10 @@ struct zxdh_vlan_offload {
 	uint8_t type;
 } __rte_packed;
 
+struct zxdh_rss_enable {
+	uint8_t enable;
+};
+
 struct zxdh_msg_head {
 	enum zxdh_msg_type msg_type;
 	uint16_t  vport;
@@ -385,6 +404,9 @@ struct zxdh_msg_info {
 		struct zxdh_vlan_filter vlan_filter_msg;
 		struct zxdh_vlan_filter_set vlan_filter_set_msg;
 		struct zxdh_vlan_offload vlan_offload_msg;
+		struct zxdh_rss_reta rss_reta;
+		struct zxdh_rss_enable rss_enable;
+		struct zxdh_rss_hf rss_hf;
 	} __rte_packed data;
 } __rte_packed;
 
