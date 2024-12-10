@@ -366,6 +366,61 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 }
 
 static int
+eth_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+{
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		const struct rx_queue *rxq = dev->data->rx_queues[i];
+
+		stats->ipackets += rxq->rx_packets;
+		stats->ibytes += rxq->rx_bytes;
+		stats->ierrors += rxq->rx_errors;
+		stats->rx_nombuf += rxq->rx_nombuf;
+
+		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			stats->q_ipackets[i] = rxq->rx_packets;
+			stats->q_ibytes[i] = rxq->rx_bytes;
+		}
+	}
+
+	for (uint16_t i = 0; i < dev->data->nb_tx_queues; i++) {
+		const struct tx_queue *txq = dev->data->tx_queues[i];
+
+		stats->opackets += txq->tx_packets;
+		stats->obytes += txq->tx_bytes;
+		stats->oerrors += txq->tx_errors;
+
+		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			stats->q_opackets[i] = txq->tx_packets;
+			stats->q_obytes[i] = txq->tx_bytes;
+		}
+	}
+
+	return 0;
+}
+
+static int
+eth_dev_stats_reset(struct rte_eth_dev *dev)
+{
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct rx_queue *rxq = dev->data->rx_queues[i];
+
+		rxq->rx_packets = 0;
+		rxq->rx_bytes = 0;
+		rxq->rx_nombuf = 0;
+		rxq->rx_errors = 0;
+	}
+
+	for (uint16_t i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct tx_queue *txq = dev->data->tx_queues[i];
+
+		txq->tx_packets = 0;
+		txq->tx_bytes = 0;
+		txq->tx_errors = 0;
+	}
+	return 0;
+}
+
+static int
 eth_dev_close(struct rte_eth_dev *dev)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
@@ -734,6 +789,8 @@ static const struct eth_dev_ops ops = {
 	.promiscuous_disable	= eth_dev_promiscuous_disable,
 	.allmulticast_enable	= eth_dev_allmulticast_enable,
 	.allmulticast_disable	= eth_dev_allmulticast_disable,
+	.stats_get              = eth_dev_stats_get,
+	.stats_reset            = eth_dev_stats_reset,
 	.rx_queue_setup		= eth_rx_queue_setup,
 	.rx_queue_release	= eth_rx_queue_release,
 	.tx_queue_setup		= eth_tx_queue_setup,
