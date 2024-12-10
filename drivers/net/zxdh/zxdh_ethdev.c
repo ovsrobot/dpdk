@@ -61,6 +61,9 @@ zxdh_dev_infos_get(struct rte_eth_dev *dev,
 	dev_info->rx_offload_capa |=  RTE_ETH_RX_OFFLOAD_TCP_LRO;
 	dev_info->rx_offload_capa |=  RTE_ETH_RX_OFFLOAD_RSS_HASH;
 
+	dev_info->reta_size = RTE_ETH_RSS_RETA_SIZE_256;
+	dev_info->flow_type_rss_offloads = ZXDH_RSS_HF;
+
 	dev_info->tx_offload_capa = (RTE_ETH_TX_OFFLOAD_MULTI_SEGS);
 	dev_info->tx_offload_capa |= (RTE_ETH_TX_OFFLOAD_TCP_TSO |
 					RTE_ETH_TX_OFFLOAD_UDP_TSO);
@@ -781,11 +784,50 @@ zxdh_dev_conf_offload(struct rte_eth_dev *dev)
 
 	ret = zxdh_vlan_offload_configure(dev);
 	if (ret) {
-		PMD_DRV_LOG(ERR, "zxdh_vlan_offload_configure failed");
+		PMD_DRV_LOG(ERR, "vlan offload configure failed");
+		return ret;
+	}
+
+	ret = zxdh_rss_configure(dev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "rss configure failed");
 		return ret;
 	}
 
 	return 0;
+}
+
+static int
+zxdh_rss_qid_config(struct rte_eth_dev *dev)
+{
+	struct zxdh_hw *hw = dev->data->dev_private;
+	struct zxdh_port_attr_table port_attr = {0};
+	struct zxdh_msg_info msg_info = {0};
+	int ret = 0;
+
+	if (hw->is_pf) {
+		ret = zxdh_get_port_attr(hw->vport.vfid, &port_attr);
+		port_attr.port_base_qid = hw->channel_context[0].ph_chno & 0xfff;
+
+		ret = zxdh_set_port_attr(hw->vport.vfid, &port_attr);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "PF:%d port_base_qid insert failed", hw->vfid);
+			return ret;
+		}
+	} else {
+		struct zxdh_port_attr_set_msg *attr_msg = &msg_info.data.port_attr_msg;
+
+		zxdh_msg_head_build(hw, ZXDH_PORT_ATTRS_SET, &msg_info);
+		attr_msg->mode = ZXDH_PORT_BASE_QID_FLAG;
+		attr_msg->value = hw->channel_context[0].ph_chno & 0xfff;
+		ret = zxdh_vf_send_msg_to_pf(dev, &msg_info, sizeof(msg_info), NULL, 0);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to send msg: port 0x%x msg type %d ",
+					hw->vport.vport, ZXDH_PORT_BASE_QID_FLAG);
+			return ret;
+		}
+	}
+	return ret;
 }
 
 static int32_t
@@ -874,6 +916,11 @@ zxdh_dev_configure(struct rte_eth_dev *dev)
 		return -1;
 	}
 
+	ret = zxdh_rss_qid_config(dev);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Failed to configure base qid!");
+		return -1;
+	}
 	zxdh_pci_reinit_complete(hw);
 
 end:
@@ -1100,6 +1147,10 @@ static const struct eth_dev_ops zxdh_eth_dev_ops = {
 	.allmulticast_disable	 = zxdh_dev_allmulticast_disable,
 	.vlan_filter_set		 = zxdh_dev_vlan_filter_set,
 	.vlan_offload_set		 = zxdh_dev_vlan_offload_set,
+	.reta_update			 = zxdh_dev_rss_reta_update,
+	.reta_query				 = zxdh_dev_rss_reta_query,
+	.rss_hash_update		 = zxdh_rss_hash_update,
+	.rss_hash_conf_get		 = zxdh_rss_hash_conf_get,
 };
 
 static int32_t
