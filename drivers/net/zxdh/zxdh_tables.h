@@ -44,7 +44,7 @@ struct zxdh_port_attr_table {
 	uint8_t rdma_offload_enable: 1;
 	uint8_t vlan_filter_enable: 1;
 	uint8_t vlan_strip_offload: 1;
-	uint8_t qinq_valn_strip_offload: 1;
+	uint8_t qinq_strip_offload: 1;
 	uint8_t rss_enable: 1;
 	uint8_t mtu_enable: 1;
 	uint8_t hit_flag: 1;
@@ -74,7 +74,7 @@ struct zxdh_port_attr_table {
 	uint8_t rdma_offload_enable: 1;
 	uint8_t vlan_filter_enable: 1;
 	uint8_t vlan_strip_offload: 1;
-	uint8_t qinq_valn_strip_offload: 1;
+	uint8_t qinq_strip_offload: 1;
 	uint8_t rss_enable: 1;
 	uint8_t mtu_enable: 1;
 	uint8_t hit_flag: 1;
@@ -195,6 +195,10 @@ struct zxdh_multicast_table {
 	uint32_t bitmap[2];
 };
 
+struct zxdh_vlan_filter_table {
+	uint32_t vlans[4];
+};
+
 int zxdh_port_attr_init(struct rte_eth_dev *dev);
 int zxdh_panel_table_init(struct rte_eth_dev *dev);
 int zxdh_set_port_attr(uint16_t vfid, struct zxdh_port_attr_table *port_attr);
@@ -206,5 +210,7 @@ int zxdh_set_mac_table(uint16_t vport, struct rte_ether_addr *addr,  uint8_t has
 int zxdh_del_mac_table(uint16_t vport, struct rte_ether_addr *addr,  uint8_t hash_search_idx);
 int zxdh_dev_unicast_table_set(struct zxdh_hw *hw, uint16_t vport, bool enable);
 int zxdh_dev_multicast_table_set(struct zxdh_hw *hw, uint16_t vport, bool enable);
+int zxdh_vlan_filter_table_init(struct rte_eth_dev *dev);
+int zxdh_vlan_filter_table_set(uint16_t vport, uint16_t vlan_id, uint8_t enable);
 
 #endif /* ZXDH_TABLES_H */
