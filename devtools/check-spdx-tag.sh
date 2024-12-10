@@ -4,7 +4,8 @@
 #
 # Produce a list of files with incorrect license tags
 
-errors=0
+missing_spdx=0
+wrong_license=0
 warnings=0
 quiet=false
 verbose=false
@@ -14,23 +15,44 @@ print_usage () {
     exit 1
 }
 
+no_license_list=\
+':^.git* :^.mailmap :^.ci/* :^README :^MAINTAINERS :^VERSION :^ABI_VERSION :^*/Kbuild '\
+':^*/README* :^license/ :^config/ :^buildtools/ :^*/poetry.lock '\
+':^kernel/linux/uapi/.gitignore :^kernel/linux/uapi/version :^*.cocci :^*.abignore '\
+':^*.map :^*.ini :^*.data :^*.json :^*.cfg :^*.txt :^*.svg :^*.png'
+
 check_spdx() {
-    if  $verbose;  then
+    if $verbose ; then
 	echo "Files without SPDX License"
 	echo "--------------------------"
     fi
-    git grep -L SPDX-License-Identifier -- \
-	':^.git*' ':^.mailmap' ':^.ci/*' \
-	':^README' ':^MAINTAINERS' ':^VERSION' ':^ABI_VERSION' \
-	':^*/Kbuild' ':^*/README*' \
-	':^license/' ':^config/' ':^buildtools/' ':^*/poetry.lock' \
-	':^kernel/linux/uapi/.gitignore' ':^kernel/linux/uapi/version' \
-	':^*.cocci' ':^*.abignore' \
-	':^*.map' ':^*.ini' ':^*.data' ':^*.json' ':^*.cfg' ':^*.txt' \
-	':^*.svg' ':^*.png' \
-	> $tmpfile
+    git grep -L SPDX-License-Identifier -- $no_license_list > $tmpfile
 
-    errors=$(wc -l < $tmpfile)
+    missing_spdx=$(wc -l < $tmpfile)
+    $quiet || cat $tmpfile
+}
+
+build_exceptions_list() {
+    grep '.*|.*|.*|.*' license/exceptions.txt | grep -v 'TB Approval Date' |
+    while IFS='|' read license tb_date gb_date pattern ; do
+        unset IFS
+        license=${license## *}
+        license=${license%% *}
+        git grep -l "SPDX-License-Identifier:[[:space:]]*$license" $pattern |
+        sed -e 's/^/:^/'
+    done
+}
+
+check_licenses() {
+    if $verbose ; then
+	echo "Files with wrong license and no exception"
+	echo "-----------------------------------------"
+    fi
+    exceptions=$(build_exceptions_list)
+    git grep -l SPDX-License-Identifier: -- $no_license_list $exceptions |
+    xargs grep -L -E 'SPDX-License-Identifier:[[:space:]]*\(?BSD-3-Clause' > $tmpfile
+
+    wrong_license=$(wc -l < $tmpfile)
     $quiet || cat $tmpfile
 }
 
@@ -64,8 +86,11 @@ trap 'rm -f -- "$tmpfile"' INT TERM HUP EXIT
 check_spdx
 $quiet || echo
 
-check_boilerplate
-
+check_licenses
 $quiet || echo
-echo "total: $errors errors, $warnings warnings"
-exit $errors
+
+check_boilerplate
+$quiet || echo
+
+echo "total: $missing_spdx missing SPDX errors, $wrong_license license errors, $warnings warnings"
+exit $((missing_spdx + wrong_license))
