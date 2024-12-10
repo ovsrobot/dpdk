@@ -20,6 +20,7 @@
 
 #include "test.h"
 
+#ifndef RTE_TOOLCHAIN_MSVC
 /*
  * Atomic Variables
  * ================
@@ -441,9 +442,41 @@ test_atomic_exchange(__rte_unused void *arg)
 
 	return 0;
 }
+#endif /* RTE_TOOLCHAIN_MSVC */
+
+#if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_ARM64)
+static rte_int128_t big_int;
+
+/*
+ * This function atomically performs:
+ *     big_int.val[1] += big_int.val[0]
+ *     big_int.val[0] += 1
+ */
+static void
+test_atomic_128_bit_compare_and_swap_basic_test(void)
+{
+	rte_int128_t comparand = big_int;
+
+	rte_int128_t src;
+	src.val[0] = big_int.val[0] + 1;
+	src.val[1] = big_int.val[0] + big_int.val[1];
+
+	do {
+		; /* nothing */
+	} while (rte_atomic128_cmp_exchange(&big_int,
+										&comparand,
+										&src,
+										1,
+										0,
+										0
+										));
+}
+#endif
+
 static int
 test_atomic(void)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	rte_atomic16_init(&a16);
 	rte_atomic32_init(&a32);
 	rte_atomic64_init(&a64);
@@ -628,6 +661,32 @@ test_atomic(void)
 		printf("Atomic exchange test failed\n");
 		return -1;
 	}
+#endif /* RTE_TOOLCHAIN_MSVC */
+
+#if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_ARM64)
+	/*
+	 * This is a basic test case for rte_atomic128_cmp_exchange.
+	 * On MSVC this test provides the confirmation that
+	 * rte_atomic128_cmp_exchange passes the parameters correctly
+	 * to the underlying intrinsic function responsible for the
+	 * operation.
+	 *
+	 * The test atomically performs:
+	 *     big_int.val[1] += big_int.val[0]
+	 *     big_int.val[0] += 1
+	 */
+	printf("128-bit compare and swap basic test\n");
+
+	big_int.val[1] = 23; /* should become 34 */
+	big_int.val[0] = 11; /* should become 12 */
+
+	test_atomic_128_bit_compare_and_swap_basic_test();
+
+	if (big_int.val[1] != 34 || big_int.val[0] != 12) {
+		printf("128-bit compare and swap basic test failed\n");
+		return -1;
+	}
+#endif
 
 	return 0;
 }
