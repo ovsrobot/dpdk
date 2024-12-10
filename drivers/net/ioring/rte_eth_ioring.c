@@ -28,6 +28,7 @@
 #include <rte_log.h>
 
 #define IORING_DEFAULT_IFNAME	"enio%d"
+#define IORING_MP_KEY		"ioring_mp_send_fds"
 
 RTE_LOG_REGISTER_DEFAULT(ioring_logtype, NOTICE);
 #define RTE_LOGTYPE_IORING ioring_logtype
@@ -400,6 +401,84 @@ parse_iface_arg(const char *key __rte_unused, const char *value, void *extra_arg
 	return 0;
 }
 
+/* Secondary process requests rxq fds from primary. */
+static int
+ioring_request_fds(const char *name, struct rte_eth_dev *dev)
+{
+	struct rte_mp_msg request = { };
+
+	strlcpy(request.name, IORING_MP_KEY, sizeof(request.name));
+	strlcpy((char *)request.param, name, RTE_MP_MAX_PARAM_LEN);
+	request.len_param = strlen(name);
+
+	/* Send the request and receive the reply */
+	PMD_LOG(DEBUG, "Sending multi-process IPC request for %s", name);
+
+	struct timespec timeout = {.tv_sec = 1, .tv_nsec = 0};
+	struct rte_mp_reply replies;
+	int ret = rte_mp_request_sync(&request, &replies, &timeout);
+	if (ret < 0 || replies.nb_received != 1) {
+		PMD_LOG(ERR, "Failed to request fds from primary: %s",
+			rte_strerror(rte_errno));
+		return -1;
+	}
+
+	struct rte_mp_msg *reply = replies.msgs;
+	PMD_LOG(DEBUG, "Received multi-process IPC reply for %s", name);
+	if (dev->data->nb_rx_queues != reply->num_fds) {
+		PMD_LOG(ERR, "Incorrect number of fds received: %d != %d",
+			reply->num_fds, dev->data->nb_rx_queues);
+		return -EINVAL;
+	}
+
+	int *fds = dev->process_private;
+	for (int i = 0; i < reply->num_fds; i++)
+		fds[i] = reply->fds[i];
+
+	free(reply);
+	return 0;
+}
+
+/* Primary process sends rxq fds to secondary. */
+static int
+ioring_mp_send_fds(const struct rte_mp_msg *request, const void *peer)
+{
+	const char *request_name = (const char *)request->param;
+
+	PMD_LOG(DEBUG, "Received multi-process IPC request for %s", request_name);
+
+	/* Find the requested port */
+	struct rte_eth_dev *dev = rte_eth_dev_get_by_name(request_name);
+	if (!dev) {
+		PMD_LOG(ERR, "Failed to get port id for %s", request_name);
+		return -1;
+	}
+
+	/* Populate the reply with the xsk fd for each queue */
+	struct rte_mp_msg reply = { };
+	if (dev->data->nb_rx_queues > RTE_MP_MAX_FD_NUM) {
+		PMD_LOG(ERR, "Number of rx queues (%d) exceeds max number of fds (%d)",
+			   dev->data->nb_rx_queues, RTE_MP_MAX_FD_NUM);
+		return -EINVAL;
+	}
+
+	int *fds = dev->process_private;
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++)
+		reply.fds[reply.num_fds++] = fds[i];
+
+	/* Send the reply */
+	strlcpy(reply.name, request->name, sizeof(reply.name));
+	strlcpy((char *)reply.param, request_name, RTE_MP_MAX_PARAM_LEN);
+	reply.len_param = strlen(request_name);
+
+	PMD_LOG(DEBUG, "Sending multi-process IPC reply for %s", request_name);
+	if (rte_mp_reply(&reply, peer) < 0) {
+		PMD_LOG(ERR, "Failed to reply to multi-process IPC request");
+		return -1;
+	}
+	return 0;
+}
+
 static int
 ioring_probe(struct rte_vdev_device *vdev)
 {
@@ -407,14 +486,43 @@ ioring_probe(struct rte_vdev_device *vdev)
 	const char *params = rte_vdev_device_args(vdev);
 	struct rte_kvargs *kvlist = NULL;
 	struct rte_eth_dev *eth_dev = NULL;
+	int *fds = NULL;
 	char tap_name[IFNAMSIZ] = IORING_DEFAULT_IFNAME;
 	uint8_t persist = 0;
 	int ret;
 
 	PMD_LOG(INFO, "Initializing %s", name);
 
-	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
-		return -1; /* TODO */
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+		struct rte_eth_dev *eth_dev;
+
+		eth_dev = rte_eth_dev_attach_secondary(name);
+		if (!eth_dev) {
+			PMD_LOG(ERR, "Failed to probe %s", name);
+			return -1;
+		}
+		eth_dev->dev_ops = &ops;
+		eth_dev->device = &vdev->device;
+
+		if (!rte_eal_primary_proc_alive(NULL)) {
+			PMD_LOG(ERR, "Primary process is missing");
+			return -1;
+		}
+
+		fds  = calloc(RTE_MAX_QUEUES_PER_PORT, sizeof(int));
+		if (fds == NULL) {
+			PMD_LOG(ERR, "Failed to alloc memory for process private");
+			return -1;
+		}
+
+		eth_dev->process_private = fds;
+
+		if (ioring_request_fds(name, eth_dev))
+			return -1;
+
+		rte_eth_dev_probing_finish(eth_dev);
+		return 0;
+	}
 
 	if (params != NULL) {
 		kvlist = rte_kvargs_parse(params, valid_arguments);
@@ -432,21 +540,45 @@ ioring_probe(struct rte_vdev_device *vdev)
 			persist = 1;
 	}
 
+	/* Per-queue tap fd's (for primary process) */
+	fds = calloc(RTE_MAX_QUEUES_PER_PORT, sizeof(int));
+	if (fds == NULL) {
+		PMD_LOG(ERR, "Unable to allocate fd array");
+		return -1;
+	}
+	for (unsigned int i = 0; i < RTE_MAX_QUEUES_PER_PORT; i++)
+		fds[i] = -1;
+
 	eth_dev = rte_eth_vdev_allocate(vdev, sizeof(struct pmd_internals));
 	if (eth_dev == NULL) {
 		PMD_LOG(ERR, "%s Unable to allocate device struct", tap_name);
 		goto error;
 	}
 
+	eth_dev->data->dev_flags = RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+	eth_dev->dev_ops = &ops;
+	eth_dev->process_private = fds;
+
 	if (ioring_create(eth_dev, tap_name, persist) < 0)
 		goto error;
 
+	/* register the MP server on the first device */
+	static unsigned int ioring_dev_count;
+	if (ioring_dev_count == 0) {
+		if (rte_mp_action_register(IORING_MP_KEY, ioring_mp_send_fds) < 0) {
+			PMD_LOG(ERR, "Failed to register multi-process callback: %s",
+				rte_strerror(rte_errno));
+			goto error;
+		}
+	}
+	++ioring_dev_count;
 	rte_eth_dev_probing_finish(eth_dev);
 	return 0;
 
 error:
 	if (eth_dev != NULL)
 		rte_eth_dev_release_port(eth_dev);
+	free(fds);
 	rte_kvargs_free(kvlist);
 	return -1;
 }
