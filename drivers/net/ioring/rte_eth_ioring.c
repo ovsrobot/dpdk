@@ -34,6 +34,8 @@
 #define IORING_NUM_BUFFERS	1024
 #define IORING_MAX_QUEUES	128
 
+#define IORING_TX_OFFLOAD	RTE_ETH_TX_OFFLOAD_VLAN_INSERT
+#define IORING_RX_OFFLOAD	RTE_ETH_RX_OFFLOAD_VLAN_STRIP
 
 static_assert(IORING_MAX_QUEUES <= RTE_MP_MAX_FD_NUM, "Max queues exceeds MP fd limit");
 
@@ -70,6 +72,7 @@ static const char * const valid_arguments[] = {
 struct rx_queue {
 	struct rte_mempool *mb_pool;	/* rx buffer pool */
 	struct io_uring io_ring;	/* queue of posted read's */
+	uint64_t offloads;
 	uint16_t port_id;
 	uint16_t queue_id;
 
@@ -81,6 +84,7 @@ struct rx_queue {
 
 struct tx_queue {
 	struct io_uring io_ring;
+	uint64_t offloads;
 
 	uint16_t port_id;
 	uint16_t queue_id;
@@ -471,6 +475,9 @@ eth_ioring_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			goto resubmit;
 		}
 
+		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+			rte_vlan_strip(mb);
+
 		mb->pkt_len = len;
 		mb->data_len = len;
 		mb->port = rxq->port_id;
@@ -495,8 +502,7 @@ resubmit:
 
 static int
 eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id, uint16_t nb_rx_desc,
-		   unsigned int socket_id,
-		   const struct rte_eth_rxconf *rx_conf __rte_unused,
+		   unsigned int socket_id, const struct rte_eth_rxconf *rx_conf,
 		   struct rte_mempool *mb_pool)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
@@ -515,6 +521,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id, uint16_t nb_rx_de
 		return -1;
 	}
 
+	rxq->offloads = rx_conf->offloads;
 	rxq->mb_pool = mb_pool;
 	rxq->port_id = dev->data->port_id;
 	rxq->queue_id = queue_id;
@@ -582,6 +589,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id,
 
 	txq->port_id = dev->data->port_id;
 	txq->queue_id = queue_id;
+	txq->offloads = tx_conf->offloads;
 	txq->free_thresh = tx_conf->tx_free_thresh;
 	dev->data->tx_queues[queue_id] = txq;
 
@@ -634,6 +642,38 @@ eth_ioring_tx_cleanup(struct tx_queue *txq)
 
 	txq->tx_packets += tx_done;
 	txq->tx_bytes += tx_bytes;
+}
+
+static uint16_t
+eth_ioring_tx_prepare(void *tx_queue __rte_unused, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
+{
+	uint16_t nb_tx;
+	int error;
+
+	for (nb_tx = 0; nb_tx < nb_pkts; nb_tx++) {
+		struct rte_mbuf *m = tx_pkts[nb_tx];
+
+#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+		error = rte_validate_tx_offload(m);
+		if (unlikely(error)) {
+			rte_errno = -error;
+			break;
+		}
+#endif
+		/* Do VLAN tag insertion */
+		if (unlikely(m->ol_flags & RTE_MBUF_F_TX_VLAN)) {
+			error = rte_vlan_insert(&m);
+			/* rte_vlan_insert() may change pointer */
+			tx_pkts[nb_tx] = m;
+
+			if (unlikely(error)) {
+				rte_errno = -error;
+				break;
+			}
+		}
+	}
+
+	return nb_tx;
 }
 
 static uint16_t
@@ -739,6 +779,7 @@ ioring_create(struct rte_eth_dev *dev, const char *tap_name, uint8_t persist)
 	PMD_LOG(DEBUG, "%s setup", ifr.ifr_name);
 
 	dev->rx_pkt_burst = eth_ioring_rx;
+	dev->tx_pkt_prepare = eth_ioring_tx_prepare;
 	dev->tx_pkt_burst = eth_ioring_tx;
 
 	return 0;
