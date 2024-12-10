@@ -212,12 +212,16 @@ static int
 eth_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
 	struct ifreq ifr = { .ifr_mtu = mtu };
-	int ret;
 
 	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
 
-	ret = ioctl(pmd->ctl_sock, SIOCSIFMTU, &ifr);
+	int ret = ioctl(sock, SIOCSIFMTU, &ifr);
 	if (ret < 0) {
 		PMD_LOG(ERR, "ioctl(SIOCSIFMTU) failed: %s", strerror(errno));
 		ret = -errno;
@@ -230,20 +234,73 @@ static int
 eth_dev_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
-	struct ifreq ifr = { };
-	int ret;
 
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
+	struct ifreq ifr = { };
 	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	memcpy(ifr.ifr_hwaddr.sa_data, addr, sizeof(*addr));
 
-	ret = ioctl(pmd->ctl_sock, SIOCSIFHWADDR, &ifr);
+	int ret = ioctl(sock, SIOCSIFHWADDR, &ifr);
 	if (ret < 0) {
 		PMD_LOG(ERR, "ioctl(SIOCSIFHWADDR) failed: %s", strerror(errno));
 		ret = -errno;
 	}
 
 	return ret;
+}
+
+static int
+eth_dev_start(struct rte_eth_dev *dev)
+{
+	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	eth_dev_set_link_up(dev);
+
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+	}
+
+	return 0;
+}
+
+static int
+eth_dev_stop(struct rte_eth_dev *dev)
+{
+	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+	eth_dev_set_link_down(dev);
+
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+
+	return 0;
+}
+
+static int
+eth_dev_configure(struct rte_eth_dev *dev)
+{
+	/* rx/tx must be paired */
+	if (dev->data->nb_rx_queues != dev->data->nb_tx_queues)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int
+eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
+{
+	struct pmd_internals *pmd = dev->data->dev_private;
+
+	dev_info->if_index = if_nametoindex(pmd->ifname);
+	dev_info->max_mac_addrs = 1;
+	dev_info->max_rx_pktlen = RTE_ETHER_MAX_LEN;
+
+	return 0;
 }
 
 static int
@@ -263,11 +320,14 @@ eth_dev_close(struct rte_eth_dev *dev)
 		close(pmd->keep_fd);
 		pmd->keep_fd = -1;
 	}
-
 	return 0;
 }
 
 static const struct eth_dev_ops ops = {
+	.dev_start		= eth_dev_start,
+	.dev_stop		= eth_dev_stop,
+	.dev_configure		= eth_dev_configure,
+	.dev_infos_get		= eth_dev_info,
 	.dev_close		= eth_dev_close,
 	.link_update		= eth_link_update,
 	.dev_set_link_up	= eth_dev_set_link_up,
