@@ -33,6 +33,7 @@ drivers = [
         'idpf',
         'igc',
         'ionic',
+        'ioring',
         'ipn3ke',
         'ixgbe',
         'mana',
