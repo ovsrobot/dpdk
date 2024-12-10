@@ -182,6 +182,23 @@ static inline void rte_atomic64_clear(rte_atomic64_t *v)
 
 /*------------------------ 128 bit atomic operations -------------------------*/
 
+#ifdef RTE_TOOLCHAIN_MSVC
+static inline int
+rte_atomic128_cmp_exchange(rte_int128_t *dst,
+			   rte_int128_t *exp,
+			   const rte_int128_t *src,
+			   unsigned int weak,
+			   int success,
+			   int failure)
+{
+	return (int)_InterlockedCompareExchange128(
+		(int64_t volatile *) dst,
+		src->val[1], /* exchange high */
+		src->val[0], /* exchange low */
+		(int64_t *) exp /* comparand result */
+	);
+}
+#else
 static inline int
 rte_atomic128_cmp_exchange(rte_int128_t *dst,
 			   rte_int128_t *exp,
@@ -212,5 +229,6 @@ rte_atomic128_cmp_exchange(rte_int128_t *dst,
 
 	return res;
 }
+#endif /* RTE_TOOLCHAIN_MSVC */
 
 #endif /* _RTE_ATOMIC_X86_64_H_ */
