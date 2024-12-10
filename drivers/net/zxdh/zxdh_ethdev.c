@@ -982,6 +982,23 @@ zxdh_set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 }
 
 static int
+zxdh_mac_config(struct rte_eth_dev *eth_dev)
+{
+	struct zxdh_hw *hw = eth_dev->data->dev_private;
+	int ret = 0;
+
+	if (hw->is_pf) {
+		ret = zxdh_set_mac_table(hw->vport.vport,
+				&eth_dev->data->mac_addrs[0], hw->hash_search_index);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to add mac: port 0x%x", hw->vport.vport);
+			return ret;
+		}
+	}
+	return ret;
+}
+
+static int
 zxdh_dev_start(struct rte_eth_dev *dev)
 {
 	struct zxdh_hw *hw = dev->data->dev_private;
@@ -1016,6 +1033,9 @@ zxdh_dev_start(struct rte_eth_dev *dev)
 		zxdh_queue_notify(vq);
 	}
 	zxdh_dev_set_link_up(dev);
+	ret = zxdh_mac_config(hw->eth_dev);
+	if (ret)
+		PMD_DRV_LOG(ERR, " mac config failed");
 
 	return 0;
 }
@@ -1034,6 +1054,9 @@ static const struct eth_dev_ops zxdh_eth_dev_ops = {
 	.link_update			 = zxdh_dev_link_update,
 	.dev_set_link_up		 = zxdh_dev_set_link_up,
 	.dev_set_link_down		 = zxdh_dev_set_link_down,
+	.mac_addr_add			 = zxdh_dev_mac_addr_add,
+	.mac_addr_remove		 = zxdh_dev_mac_addr_remove,
+	.mac_addr_set			 = zxdh_dev_mac_addr_set,
 };
 
 static int32_t
@@ -1075,15 +1098,20 @@ zxdh_agent_comm(struct rte_eth_dev *eth_dev, struct zxdh_hw *hw)
 		PMD_DRV_LOG(ERR, "Failed to get phyport");
 		return -1;
 	}
-	PMD_DRV_LOG(INFO, "Get phyport success: 0x%x", hw->phyport);
+	PMD_DRV_LOG(DEBUG, "Get phyport success: 0x%x", hw->phyport);
 
 	hw->vfid = zxdh_vport_to_vfid(hw->vport);
+
+	if (zxdh_hashidx_get(eth_dev, &hw->hash_search_index) != 0) {
+		PMD_DRV_LOG(ERR, "Failed to get hash idx");
+		return -1;
+	}
 
 	if (zxdh_panelid_get(eth_dev, &hw->panel_id) != 0) {
 		PMD_DRV_LOG(ERR, "Failed to get panel_id");
 		return -1;
 	}
-	PMD_DRV_LOG(INFO, "Get panel id success: 0x%x", hw->panel_id);
+	PMD_DRV_LOG(DEBUG, "Get panel id success: 0x%x", hw->panel_id);
 
 	return 0;
 }

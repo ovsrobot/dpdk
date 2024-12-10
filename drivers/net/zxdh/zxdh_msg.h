@@ -42,9 +42,12 @@
 #define ZXDH_MSG_REPLY_BODY_MAX_LEN  \
 		(ZXDH_MSG_PAYLOAD_MAX_LEN - sizeof(struct zxdh_msg_reply_head))
 
-#define ZXDH_MSG_HEAD_LEN 8
+#define ZXDH_MSG_HEAD_LEN          8
 #define ZXDH_MSG_REQ_BODY_MAX_LEN  \
 		(ZXDH_MSG_PAYLOAD_MAX_LEN - ZXDH_MSG_HEAD_LEN)
+
+#define ZXDH_MAC_FILTER            0xaa
+#define ZXDH_MAC_UNFILTER          0xff
 
 enum ZXDH_DRIVER_TYPE {
 	ZXDH_MSG_CHAN_END_MPF = 0,
@@ -173,6 +176,8 @@ enum zxdh_msg_type {
 	ZXDH_NULL = 0,
 	ZXDH_VF_PORT_INIT = 1,
 	ZXDH_VF_PORT_UNINIT = 2,
+	ZXDH_MAC_ADD = 3,
+	ZXDH_MAC_DEL = 4,
 
 	ZXDH_PORT_ATTRS_SET = 25,
 
@@ -314,6 +319,12 @@ struct zxdh_port_attr_set_msg {
 	uint8_t allmulti_follow;
 } __rte_packed;
 
+struct zxdh_mac_filter {
+	uint8_t mac_flag;
+	uint8_t filter_flag;
+	struct rte_ether_addr mac;
+} __rte_packed;
+
 struct zxdh_msg_head {
 	enum zxdh_msg_type msg_type;
 	uint16_t  vport;
@@ -341,6 +352,7 @@ struct zxdh_msg_info {
 		struct zxdh_vf_init_msg vf_init_msg;
 		struct zxdh_port_attr_set_msg port_attr_msg;
 		struct zxdh_link_info_msg link_msg;
+		struct zxdh_mac_filter mac_filter_msg;
 	} __rte_packed data;
 } __rte_packed;
 
