@@ -20,7 +20,7 @@ extern int rte_power_logtype;
 #define POWER_DEBUG_LOG(...) \
 	RTE_LOG_LINE_PREFIX(ERR, POWER, "%s: ", __func__, __VA_ARGS__)
 #else
-#define POWER_DEBUG_LOG(...)
+#define POWER_DEBUG_LOG(...) do { } while (0)
 #endif
 
 /* check if scaling driver matches one we want */
