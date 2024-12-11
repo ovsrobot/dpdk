@@ -35,6 +35,6 @@ elif arch_subdir == 'arm'
     sources += files('ixgbe_recycle_mbufs_vec_common.c')
 endif
 
-includes += include_directories('base')
+includes += include_directories('base', '..')
 
 headers = files('rte_pmd_ixgbe.h')
