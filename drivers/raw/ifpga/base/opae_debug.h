@@ -6,9 +6,9 @@
 #define _OPAE_DEBUG_H_
 
 #ifdef OPAE_HW_DEBUG
-#define opae_log(fmt, args...) printf(fmt, ## args)
+#define opae_log(fmt, ...) printf(fmt, ## __VA_ARGS__)
 #else
-#define opae_log(fme, args...) do {} while (0)
+#define opae_log(fme, ...) do {} while (0)
 #endif
 
 void opae_manager_dump(struct opae_manager *mgr);
