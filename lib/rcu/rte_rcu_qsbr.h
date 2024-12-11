@@ -52,7 +52,7 @@ extern int rte_rcu_log_type;
 		RTE_LOG_LINE_PREFIX(level, RCU, "%s(): ", __func__, __VA_ARGS__); \
 } while (0)
 #else
-#define __RTE_RCU_IS_LOCK_CNT_ZERO(v, thread_id, level, ...)
+#define __RTE_RCU_IS_LOCK_CNT_ZERO(v, thread_id, level, ...) do { } while (0)
 #endif
 
 /* Registered thread IDs are stored as a bitmap of 64b element array.
