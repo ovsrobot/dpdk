@@ -364,7 +364,7 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 	static_assert(!__builtin_strchr(fmt, '\n'), \
 		"This log format string contains a \\n")
 #else
-#define RTE_LOG_CHECK_NO_NEWLINE(...)
+#define RTE_LOG_CHECK_NO_NEWLINE(...) do { } while (0)
 #endif
 
 /**
