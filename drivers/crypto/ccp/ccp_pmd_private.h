@@ -24,8 +24,8 @@ extern int crypto_ccp_logtype;
 	RTE_LOG_LINE_PREFIX(DEBUG, CRYPTO_CCP, "%s() line %u: ", \
 		__func__ RTE_LOG_COMMA __LINE__, __VA_ARGS__)
 #else
-#define CCP_LOG_INFO(...)
-#define CCP_LOG_DBG(...)
+#define CCP_LOG_INFO(...)	do { } while (0)
+#define CCP_LOG_DBG(...)	do { } while (0)
 #endif
 
 /**< Maximum queue pairs supported by CCP PMD */
