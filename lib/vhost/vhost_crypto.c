@@ -33,7 +33,7 @@ RTE_LOG_REGISTER_SUFFIX(vhost_crypto_logtype, crypto, INFO);
 	RTE_LOG_LINE_PREFIX(DEBUG, VHOST_CRYPTO, "%s() line %u: ", \
 		__func__ RTE_LOG_COMMA __LINE__, __VA_ARGS__)
 #else
-#define VC_LOG_DBG(...)
+#define VC_LOG_DBG(...) do { } while (0)
 #endif
 
 #define VIRTIO_CRYPTO_FEATURES ((1ULL << VIRTIO_F_NOTIFY_ON_EMPTY) |	\
