@@ -18,7 +18,7 @@
 #if TRACE_LEVEL
 #define TRACE(...) printf(__VA_ARGS__)
 #else
-#define TRACE(...)
+#define TRACE(...) do { } while (0)
 #endif
 
 /*
