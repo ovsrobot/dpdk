@@ -20,7 +20,7 @@
 #define rte_bbdev_log_debug(...) \
 	rte_bbdev_log(DEBUG, __VA_ARGS__)
 #else
-#define rte_bbdev_log_debug(...)
+#define rte_bbdev_log_debug(...) do { } while (0)
 #endif
 
 /* VRB1 PF and VF driver names */
