@@ -19,7 +19,7 @@
 static __rte_always_inline int
 iavf_tx_free_bufs(struct iavf_tx_queue *txq)
 {
-	struct iavf_tx_entry *txep;
+	struct ci_tx_entry *txep;
 	uint32_t n;
 	uint32_t i;
 	int nb_free = 0;
@@ -74,7 +74,7 @@ iavf_tx_free_bufs(struct iavf_tx_queue *txq)
 }
 
 static __rte_always_inline void
-tx_backlog_entry(struct iavf_tx_entry *txep,
+tx_backlog_entry(struct ci_tx_entry *txep,
 		 struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 {
 	int i;
