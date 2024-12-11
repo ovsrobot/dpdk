@@ -106,28 +106,28 @@ extern int ena_logtype_com;
 #define GENMASK_ULL(h, l) (((~0ULL) - (1ULL << (l)) + 1) &		       \
 			  (~0ULL >> (BITS_PER_LONG_LONG - 1 - (h))))
 
-#define ena_trc_log(dev, level, fmt, arg...)				       \
+#define ena_trc_log(dev, level, fmt, ...)				       \
 	(								       \
 		ENA_TOUCH(dev),						       \
 		rte_log(RTE_LOG_ ## level, ena_logtype_com,		       \
-			"[ENA_COM: %s]" fmt, __func__, ##arg)		       \
+			"[ENA_COM: %s]" fmt, __func__, ##__VA_ARGS__)		       \
 	)
 
 #if (defined RTE_ETHDEV_DEBUG_TX) || (defined RTE_ETHDEV_DEBUG_RX)
 #define ena_trc_dbg(dev, format, ...) ena_trc_log(dev, DEBUG, format, ##__VA_ARGS__)
 #else
-#define ena_trc_dbg(dev, format, ...)
+#define ena_trc_dbg(dev, format, ...) do { } while (0)
 #endif
-#define ena_trc_info(dev, format, arg...) ena_trc_log(dev, INFO, format, ##arg)
-#define ena_trc_warn(dev, format, arg...) ena_trc_log(dev, WARNING, format, ##arg)
-#define ena_trc_err(dev, format, arg...) ena_trc_log(dev, ERR, format, ##arg)
+#define ena_trc_info(dev, format, ...) ena_trc_log(dev, INFO, format, ##__VA_ARGS__)
+#define ena_trc_warn(dev, format, ...) ena_trc_log(dev, WARNING, format, ##__VA_ARGS__)
+#define ena_trc_err(dev, format, ...) ena_trc_log(dev, ERR, format, ##__VA_ARGS__)
 
-#define ENA_WARN(cond, dev, format, arg...)				       \
+#define ENA_WARN(cond, dev, format, ...)				       \
 	do {								       \
 		if (unlikely(cond)) {					       \
 			ena_trc_err(dev,				       \
 				"Warn failed on %s:%s:%d:" format,	       \
-				__FILE__, __func__, __LINE__, ##arg);	       \
+				__FILE__, __func__, __LINE__, ##__VA_ARGS__);	\
 		}							       \
 	} while (0)
 

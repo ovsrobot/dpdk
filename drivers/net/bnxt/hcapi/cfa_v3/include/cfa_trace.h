@@ -91,8 +91,8 @@
 #define CFA_TRACE_DBG_FL(function, line, format, ...)                          \
 	CFA_LOG_FL(function, line, CFA_DEBUG_LEVEL_DBG, format, ##__VA_ARGS__)
 #else
-#define CFA_TRACE_DBG(format, ...)
-#define CFA_TRACE_DBG_FL(format, ...)
+#define CFA_TRACE_DBG(format, ...)		do { } while (0)
+#define CFA_TRACE_DBG_FL(format, ...)	do { } while (0)
 #endif
 #if CFA_COMP_DBG_LEVEL(COMP_ID) <= CFA_DEBUG_LEVEL_INFO
 #define CFA_TRACE_INFO(format, ...)                                            \
@@ -100,8 +100,8 @@
 #define CFA_TRACE_INFO_FL(function, line, format, ...)                         \
 	CFA_LOG_FL(function, line, CFA_DEBUG_LEVEL_INFO, format, ##__VA_ARGS__)
 #else
-#define CFA_TRACE_INFO(format, ...)
-#define CFA_TRACE_INFO_FL(function, line, format, ...)
+#define CFA_TRACE_INFO(format, ...)		do { } while (0)
+#define CFA_TRACE_INFO_FL(function, line, format, ...)	do { } while (0)
 #endif
 #if CFA_COMP_DBG_LEVEL(COMP_ID) <= CFA_DEBUG_LEVEL_WARN
 #define CFA_TRACE_WARN(format, ...)                                            \
@@ -119,8 +119,8 @@
 	CFA_LOG_FL(function, line, CFA_DEBUG_LEVEL_CRITICAL, format,           \
 		   ##__VA_ARGS__)
 #else
-#define CFA_TRACE_ERR(format, ...)
-#define CFA_TRACE_ERR_FL(function, line, format, ...)
+#define CFA_TRACE_ERR(format, ...)		do { } while (0)
+#define CFA_TRACE_ERR_FL(function, line, format, ...)	do { } while (0)
 #endif
 #define CFA_TRACE_FATAL(format, ...)                                           \
 	CFA_LOG(CFA_DEBUG_LEVEL_FATAL, format, ##__VA_ARGS__)
