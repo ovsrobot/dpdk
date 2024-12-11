@@ -34,15 +34,15 @@
 
 #define DEBUGFUNC(F)            DEBUGOUT(F "\n");
 #define DEBUGOUT(S, ...)        RTE_LOG(DEBUG, IXGBE_DRIVER, "%s(): " S, __func__, ## __VA_ARGS__)
-#define DEBUGOUT1(S, args...)   DEBUGOUT(S, ##args)
-#define DEBUGOUT2(S, args...)   DEBUGOUT(S, ##args)
-#define DEBUGOUT3(S, args...)   DEBUGOUT(S, ##args)
-#define DEBUGOUT6(S, args...)   DEBUGOUT(S, ##args)
-#define DEBUGOUT7(S, args...)   DEBUGOUT(S, ##args)
+#define DEBUGOUT1(S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
+#define DEBUGOUT2(S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
+#define DEBUGOUT3(S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
+#define DEBUGOUT6(S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
+#define DEBUGOUT7(S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
 
-#define ERROR_REPORT1(e, S, args...)   DEBUGOUT(S, ##args)
-#define ERROR_REPORT2(e, S, args...)   DEBUGOUT(S, ##args)
-#define ERROR_REPORT3(e, S, args...)   DEBUGOUT(S, ##args)
+#define ERROR_REPORT1(e, S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
+#define ERROR_REPORT2(e, S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
+#define ERROR_REPORT3(e, S, ...)   DEBUGOUT(S, ##__VA_ARGS__)
 
 #define FALSE               0
 #define TRUE                1
@@ -50,19 +50,19 @@
 #define false               0
 #define true                1
 #ifndef RTE_EXEC_ENV_WINDOWS
-#define min(a,b)	RTE_MIN(a,b) 
+#define min(a, b)	RTE_MIN(a, b)
 #endif
 
-#define EWARN(hw, S, args...)     DEBUGOUT1(S, ##args)
+#define EWARN(hw, S, ...)     DEBUGOUT1(S, ##__VA_ARGS__)
 
 /* Bunch of defines for shared code bogosity */
 #ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(_p)  
+#define UNREFERENCED_PARAMETER(_p)
 #endif
-#define UNREFERENCED_1PARAMETER(_p) 
+#define UNREFERENCED_1PARAMETER(_p)
 #define UNREFERENCED_2PARAMETER(_p, _q)
-#define UNREFERENCED_3PARAMETER(_p, _q, _r) 
-#define UNREFERENCED_4PARAMETER(_p, _q, _r, _s) 
+#define UNREFERENCED_3PARAMETER(_p, _q, _r)
+#define UNREFERENCED_4PARAMETER(_p, _q, _r, _s)
 #define UNREFERENCED_5PARAMETER(_p, _q, _r, _s, _t)
 
 /* Shared code error reporting */
@@ -130,7 +130,7 @@ static inline uint32_t ixgbe_read_addr(volatile void* addr)
 	IXGBE_PCI_REG_ADDR((hw), (reg) + ((index) << 2))
 
 /* Not implemented !! */
-#define IXGBE_READ_PCIE_WORD(hw, reg) 0	
+#define IXGBE_READ_PCIE_WORD(hw, reg) 0
 #define IXGBE_WRITE_PCIE_WORD(hw, reg, value) do { } while(0)
 
 #define IXGBE_WRITE_FLUSH(a) IXGBE_READ_REG(a, IXGBE_STATUS)
