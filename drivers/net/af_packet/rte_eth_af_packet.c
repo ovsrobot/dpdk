@@ -36,6 +36,7 @@
 #define ETH_AF_PACKET_FRAMESIZE_ARG	"framesz"
 #define ETH_AF_PACKET_FRAMECOUNT_ARG	"framecnt"
 #define ETH_AF_PACKET_QDISC_BYPASS_ARG	"qdisc_bypass"
+#define ETH_AF_PACKET_PACKET_FANOUT_ARG	"packet_fanout"
 
 #define DFLT_FRAME_SIZE		(1 << 11)
 #define DFLT_FRAME_COUNT	(1 << 9)
@@ -96,6 +97,7 @@ static const char *valid_arguments[] = {
 	ETH_AF_PACKET_FRAMESIZE_ARG,
 	ETH_AF_PACKET_FRAMECOUNT_ARG,
 	ETH_AF_PACKET_QDISC_BYPASS_ARG,
+	ETH_AF_PACKET_PACKET_FANOUT_ARG,
 	NULL
 };
 
@@ -709,6 +711,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
                        unsigned int framesize,
                        unsigned int framecnt,
 		       unsigned int qdisc_bypass,
+		       unsigned int packet_fanout,
                        struct pmd_internals **internals,
                        struct rte_eth_dev **eth_dev,
                        struct rte_kvargs *kvlist)
@@ -926,14 +929,17 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 			goto error;
 		}
 
+		if (packet_fanout) {
 #if defined(PACKET_FANOUT)
-		rc = setsockopt(qsockfd, SOL_PACKET, PACKET_FANOUT,
-				&fanout_arg, sizeof(fanout_arg));
-		if (rc == -1) {
-			PMD_LOG_ERRNO(ERR,
-				"%s: could not set PACKET_FANOUT on AF_PACKET socket for %s",
-				name, pair->value);
-			goto error;
+			rc = setsockopt(qsockfd, SOL_PACKET, PACKET_FANOUT,
+					&fanout_arg, sizeof(fanout_arg));
+			if (rc == -1) {
+				PMD_LOG_ERRNO(ERR,
+					"%s: could not set PACKET_FANOUT "
+					"on AF_PACKET socket for %s",
+					name, pair->value);
+				goto error;
+			}
 		}
 #endif
 	}
@@ -1003,6 +1009,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	unsigned int framecount = DFLT_FRAME_COUNT;
 	unsigned int qpairs = 1;
 	unsigned int qdisc_bypass = 1;
+	unsigned int packet_fanout = 1;
 
 	/* do some parameter checking */
 	if (*sockfd < 0)
@@ -1065,6 +1072,16 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 			}
 			continue;
 		}
+		if (strstr(pair->key, ETH_AF_PACKET_PACKET_FANOUT_ARG) != NULL) {
+			packet_fanout = atoi(pair->value);
+			if (packet_fanout > 1) {
+				PMD_LOG(ERR,
+					"%s: invalid packet fanout value",
+					name);
+				return -1;
+			}
+			continue;
+		}
 	}
 
 	if (framesize > blocksize) {
@@ -1091,6 +1108,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 				   blocksize, blockcount,
 				   framesize, framecount,
 				   qdisc_bypass,
+				   packet_fanout,
 				   &internals, &eth_dev,
 				   kvlist) < 0)
 		return -1;

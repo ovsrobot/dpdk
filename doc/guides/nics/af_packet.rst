@@ -25,6 +25,8 @@ Some of these, in turn, will be used to configure the PACKET_MMAP settings.
 *   ``qpairs`` - number of Rx and Tx queues (optional, default 1);
 *   ``qdisc_bypass`` - set PACKET_QDISC_BYPASS option in AF_PACKET (optional,
     disabled by default);
+*   ``packet_fanout`` - set PACKET_FANOUT option in AF_PACKET (optional,
+    enabled by default);
 *   ``blocksz`` - PACKET_MMAP block size (optional, default 4096);
 *   ``framesz`` - PACKET_MMAP frame size (optional, default 2048B; Note: multiple
     of 16B);
@@ -64,7 +66,7 @@ framecnt=512):
 
 .. code-block:: console
 
-    --vdev=eth_af_packet0,iface=tap0,blocksz=4096,framesz=2048,framecnt=512,qpairs=1,qdisc_bypass=0
+    --vdev=eth_af_packet0,iface=tap0,blocksz=4096,framesz=2048,framecnt=512,qpairs=1,qdisc_bypass=0,packet_fanout=0
 
 Features and Limitations
 ------------------------
