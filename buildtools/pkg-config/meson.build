@@ -27,12 +27,18 @@ endif
 # are skipped in the case of static linkage thanks to the flag --as-needed.
 
 
+subdirs = ['.', 'internal']
+if get_option('include_subdir_arch') != ''
+    subdirs += [get_option('include_subdir_arch')]
+    subdirs += [join_paths(get_option('include_subdir_arch'), 'internal')]
+endif
+
 pkg.generate(name: 'dpdk-libs',
         filebase: 'libdpdk-libs',
         description: '''Internal-only DPDK pkgconfig file. Not for direct use.
 Use libdpdk.pc instead of this file to query DPDK compile/link arguments''',
         version: meson.project_version(),
-        subdirs: [get_option('include_subdir_arch'), '.'],
+        subdirs: subdirs,
         extra_cflags: pkg_extra_cflags,
         libraries: ['-Wl,--as-needed'] + dpdk_libraries,
         libraries_private: dpdk_extra_ldflags)

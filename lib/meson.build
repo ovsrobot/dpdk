@@ -202,7 +202,7 @@ foreach l:libraries
     dpdk_libs_enabled += name
     dpdk_conf.set('RTE_LIB_' + name.to_upper(), 1)
     install_headers(headers)
-    install_headers(indirect_headers)
+    install_headers(indirect_headers, subdir: 'internal')
     if get_option('enable_driver_sdk')
         install_headers(driver_sdk_headers)
     endif

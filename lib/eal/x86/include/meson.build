@@ -22,5 +22,6 @@ arch_indirect_headers = files(
         'rte_byteorder_32.h',
         'rte_byteorder_64.h',
 )
-install_headers(arch_headers + arch_indirect_headers, subdir: get_option('include_subdir_arch'))
+install_headers(arch_headers, subdir: get_option('include_subdir_arch'))
+install_headers(arch_indirect_headers, subdir: join_paths(get_option('include_subdir_arch'), 'internal'))
 dpdk_chkinc_headers += arch_headers
