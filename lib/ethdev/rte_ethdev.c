@@ -2264,6 +2264,11 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	if (rx_conf != NULL)
 		rx_offloads |= rx_conf->offloads;
 
+	/* Deferred start requires that device supports queue start */
+	if (rx_conf != NULL && rx_conf->rx_deferred_start &&
+	    *dev->dev_ops->rx_queue_start == NULL)
+		return -ENOTSUP;
+
 	/* Ensure that we have one and only one source of Rx buffers */
 	if ((mp != NULL) +
 	    (rx_conf != NULL && rx_conf->rx_nseg > 0) +
@@ -2574,6 +2579,11 @@ rte_eth_tx_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 		RTE_ETHDEV_LOG_LINE(ERR, "Tx conf reserved fields not zero");
 		return -EINVAL;
 	}
+
+	/* Deferred start requires that device supports queue start */
+	if (tx_conf != NULL && tx_conf->tx_deferred_start &&
+	    *dev->dev_ops->tx_queue_start == NULL)
+		return -ENOTSUP;
 
 	ret = rte_eth_dev_info_get(port_id, &dev_info);
 	if (ret != 0)
