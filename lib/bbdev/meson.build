@@ -8,7 +8,6 @@ if is_windows
 endif
 
 sources = files('rte_bbdev.c')
-headers = files('rte_bbdev.h',
-        'rte_bbdev_pmd.h',
-        'rte_bbdev_op.h')
+headers = files('rte_bbdev.h', 'rte_bbdev_op.h')
+driver_sdk_headers = files('rte_bbdev_pmd.h')
 deps += ['mbuf']
