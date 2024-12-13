@@ -208,7 +208,6 @@ test_bitmap_all_clear(void)
 	if (test_bitmap_scan_operations(bmp) < 0)
 		return TEST_FAILED;
 
-	rte_bitmap_free(bmp);
 	rte_free(mem);
 
 	return TEST_SUCCESS;
@@ -254,7 +253,6 @@ test_bitmap_all_set(void)
 		return TEST_FAILED;
 	}
 
-	rte_bitmap_free(bmp);
 	rte_free(mem);
 
 	return TEST_SUCCESS;
