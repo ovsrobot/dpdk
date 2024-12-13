@@ -248,7 +248,7 @@ generic_isa='nehalem'
 if ! check_cc_flags "-march=$generic_isa" ; then
 	generic_isa='corei7'
 fi
-build build-x86-generic cc skipABI -Dcheck_includes=true \
+build build-x86-generic cc skipABI \
 	-Dlibdir=lib -Dcpu_instruction_set=$generic_isa $use_shared
 
 # 32-bit with default compiler
@@ -318,9 +318,11 @@ if [ "$examples" = 'all' ]; then
 	done | sort -u |
 	tr '\n' ' ')
 fi
-# if pkg-config defines the necessary flags, test building some examples
+# if pkg-config defines the necessary flags, check headers and test building some examples
 if pkg-config --define-prefix libdpdk >/dev/null 2>&1; then
 	export PKGCONF="pkg-config --define-prefix"
+	echo "## Checking exported headers"
+	$MAKE -C buildtools/chkincs O=$build_path/buildtools/chkincs -j
 	for example in $examples; do
 		echo "## Building $example"
 		[ $example = helloworld ] && static=static || static= # save disk space

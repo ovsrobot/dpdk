@@ -95,8 +95,6 @@ OPTS="$OPTS -Ddefault_library=$DEF_LIB"
 OPTS="$OPTS -Dbuildtype=$buildtype"
 if [ "$STDATOMIC" = "true" ]; then
 	OPTS="$OPTS -Denable_stdatomic=true"
-else
-	OPTS="$OPTS -Dcheck_includes=true"
 fi
 if [ "$MINI" = "true" ]; then
     OPTS="$OPTS -Denable_drivers=net/null"
@@ -176,13 +174,16 @@ if [ "$RUN_TESTS" = "true" ]; then
     [ "$failed" != "true" ]
 fi
 
-# Test examples compilation with an installed dpdk
+# Test headers and examples compilation with an installed dpdk
 if [ "$BUILD_EXAMPLES" = "true" ]; then
     [ -d install ] || DESTDIR=$(pwd)/install meson install -C build
     export LD_LIBRARY_PATH=$(dirname $(find $(pwd)/install -name librte_eal.so)):$LD_LIBRARY_PATH
     export PATH=$(dirname $(find $(pwd)/install -name dpdk-devbind.py)):$PATH
     export PKG_CONFIG_PATH=$(dirname $(find $(pwd)/install -name libdpdk.pc)):$PKG_CONFIG_PATH
     export PKGCONF="pkg-config --define-prefix"
+
+    make -C buildtools/chkincs O=build/buildtools/chkincs
+
     find build/examples -maxdepth 1 -type f -name "dpdk-*" |
     while read target; do
         target=${target%%:*}
