@@ -12,6 +12,7 @@
 #include <rte_prefetch.h>
 #include <rte_common.h>
 #include <rte_branch_prediction.h>
+#include <rte_eal.h>
 #include <rte_ether.h>
 #include <rte_cycles.h>
 #include <rte_flow.h>
@@ -311,7 +312,7 @@ mlx5_set_swp_types_table(void)
 	}
 }
 
-#define MLX5_SYSTEM_LOG_DIR "/var/log"
+#define MLX5_SYSTEM_LOG_DIR rte_eal_get_runtime_dir()
 /**
  * Dump debug information to log file.
  *
