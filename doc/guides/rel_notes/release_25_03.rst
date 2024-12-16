@@ -102,6 +102,8 @@ ABI Changes
 
 * No ABI change that would break compatibility with 24.11.
 
+* graph: Added ``graph`` field to the ``dispatch`` structure in the ``rte_node`` structure.
+
 
 Known Issues
 ------------

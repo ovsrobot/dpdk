@@ -33,3 +33,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Temporary exceptions till next major ABI version ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+[suppress_type]
+       name = rte_node
+       has_size_change = no
+       has_data_member_inserted_between =
+{offset_of(total_sched_fail), offset_of(xstat_off)}
