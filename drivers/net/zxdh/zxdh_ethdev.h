@@ -82,7 +82,7 @@ struct zxdh_hw {
 	uint16_t queue_num;
 	uint16_t mc_num;
 	uint16_t uc_num;
-
+	uint16_t *rss_reta;
 	uint8_t *isr;
 	uint8_t weak_barriers;
 	uint8_t intr_enabled;
@@ -100,6 +100,8 @@ struct zxdh_hw {
 	uint8_t admin_status;
 	uint8_t promisc_status;
 	uint8_t allmulti_status;
+	uint8_t rss_enable;
+	uint8_t rss_init;
 };
 
 struct zxdh_dtb_shared_data {
