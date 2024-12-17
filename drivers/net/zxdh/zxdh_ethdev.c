@@ -63,6 +63,10 @@ zxdh_dev_infos_get(struct rte_eth_dev *dev,
 	dev_info->reta_size = RTE_ETH_RSS_RETA_SIZE_256;
 	dev_info->flow_type_rss_offloads = ZXDH_RSS_HF;
 
+	dev_info->max_mtu = ZXDH_MAX_RX_PKTLEN - RTE_ETHER_HDR_LEN -
+		RTE_VLAN_HLEN - ZXDH_DL_NET_HDR_SIZE;
+	dev_info->min_mtu = ZXDH_ETHER_MIN_MTU;
+
 	dev_info->tx_offload_capa = (RTE_ETH_TX_OFFLOAD_MULTI_SEGS);
 	dev_info->tx_offload_capa |= (RTE_ETH_TX_OFFLOAD_TCP_TSO |
 					RTE_ETH_TX_OFFLOAD_UDP_TSO);
@@ -1152,6 +1156,7 @@ static const struct eth_dev_ops zxdh_eth_dev_ops = {
 	.rss_hash_conf_get		 = zxdh_rss_hash_conf_get,
 	.stats_get				 = zxdh_dev_stats_get,
 	.stats_reset			 = zxdh_dev_stats_reset,
+	.mtu_set				 = zxdh_dev_mtu_set,
 };
 
 static int32_t
