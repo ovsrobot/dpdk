@@ -239,35 +239,36 @@ enum virtchnl2_cap_rsc {
 	VIRTCHNL2_CAP_RSC_IPV6_SCTP		= BIT(3),
 };
 
-/* Other capability flags */
-enum virtchnl2_cap_other {
-	VIRTCHNL2_CAP_RDMA			= BIT_ULL(0),
-	VIRTCHNL2_CAP_SRIOV			= BIT_ULL(1),
-	VIRTCHNL2_CAP_MACFILTER			= BIT_ULL(2),
-	VIRTCHNL2_CAP_FLOW_DIRECTOR		= BIT_ULL(3),
-	VIRTCHNL2_CAP_SPLITQ_QSCHED		= BIT_ULL(4),
-	VIRTCHNL2_CAP_CRC			= BIT_ULL(5),
-	VIRTCHNL2_CAP_FLOW_STEER		= BIT_ULL(6),
-	VIRTCHNL2_CAP_WB_ON_ITR			= BIT_ULL(7),
-	VIRTCHNL2_CAP_PROMISC			= BIT_ULL(8),
-	VIRTCHNL2_CAP_LINK_SPEED		= BIT_ULL(9),
-	VIRTCHNL2_CAP_INLINE_IPSEC		= BIT_ULL(10),
-	VIRTCHNL2_CAP_LARGE_NUM_QUEUES		= BIT_ULL(11),
-	/* Require additional info */
-	VIRTCHNL2_CAP_VLAN			= BIT_ULL(12),
-	VIRTCHNL2_CAP_PTP			= BIT_ULL(13),
-	VIRTCHNL2_CAP_ADV_RSS			= BIT_ULL(15),
-	VIRTCHNL2_CAP_FDIR			= BIT_ULL(16),
-	VIRTCHNL2_CAP_RX_FLEX_DESC		= BIT_ULL(17),
-	VIRTCHNL2_CAP_PTYPE			= BIT_ULL(18),
-	VIRTCHNL2_CAP_LOOPBACK			= BIT_ULL(19),
-	/* Enable miss completion types plus ability to detect a miss completion
-	 * if a reserved bit is set in a standard completion's tag.
-	 */
-	VIRTCHNL2_CAP_MISS_COMPL_TAG		= BIT_ULL(20),
-	/* This must be the last capability */
-	VIRTCHNL2_CAP_OEM			= BIT_ULL(63),
-};
+/* Other capability flags.
+ * Note: Not using an enum for these flags because these are 64-bit numbers,
+ * which might not fit in an int the enum maps to.
+ */
+#define VIRTCHNL2_CAP_RDMA			RTE_BIT64(0)
+#define VIRTCHNL2_CAP_SRIOV			RTE_BIT64(1)
+#define VIRTCHNL2_CAP_MACFILTER			RTE_BIT64(2)
+#define VIRTCHNL2_CAP_FLOW_DIRECTOR		RTE_BIT64(3)
+#define VIRTCHNL2_CAP_SPLITQ_QSCHED		RTE_BIT64(4)
+#define VIRTCHNL2_CAP_CRC			RTE_BIT64(5)
+#define VIRTCHNL2_CAP_FLOW_STEER		RTE_BIT64(6)
+#define VIRTCHNL2_CAP_WB_ON_ITR			RTE_BIT64(7)
+#define VIRTCHNL2_CAP_PROMISC			RTE_BIT64(8)
+#define VIRTCHNL2_CAP_LINK_SPEED		RTE_BIT64(9)
+#define VIRTCHNL2_CAP_INLINE_IPSEC		RTE_BIT64(10)
+#define VIRTCHNL2_CAP_LARGE_NUM_QUEUES		RTE_BIT64(11)
+/* Require additional info */
+#define VIRTCHNL2_CAP_VLAN			RTE_BIT64(12)
+#define VIRTCHNL2_CAP_PTP			RTE_BIT64(13)
+#define VIRTCHNL2_CAP_ADV_RSS			RTE_BIT64(15)
+#define VIRTCHNL2_CAP_FDIR			RTE_BIT64(16)
+#define VIRTCHNL2_CAP_RX_FLEX_DESC		RTE_BIT64(17)
+#define VIRTCHNL2_CAP_PTYPE			RTE_BIT64(18)
+#define VIRTCHNL2_CAP_LOOPBACK			RTE_BIT64(19)
+/* Enable miss completion types plus ability to detect a miss completion
+ * if a reserved bit is set in a standard completion's tag.
+ */
+#define VIRTCHNL2_CAP_MISS_COMPL_TAG		RTE_BIT64(20)
+/* This must be the last capability */
+#define VIRTCHNL2_CAP_OEM			RTE_BIT64(63)
 
 /**
  * enum virtchnl2_action_types - Available actions for sideband flow steering
