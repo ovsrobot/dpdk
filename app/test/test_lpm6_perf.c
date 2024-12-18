@@ -10,6 +10,7 @@
 
 #include <rte_cycles.h>
 #include <rte_random.h>
+#include <rte_malloc.h>
 #include <rte_memory.h>
 #include <rte_lpm6.h>
 
@@ -117,8 +118,13 @@ test_lpm6_perf(void)
 	total_time = 0;
 	count = 0;
 
-	struct rte_ipv6_addr ip_batch[NUM_IPS_ENTRIES];
-	int32_t next_hops[NUM_IPS_ENTRIES];
+	struct rte_ipv6_addr *ip_batch = rte_calloc("ip_batch",
+			NUM_IPS_ENTRIES, sizeof(struct rte_ipv6_addr), 0);
+	TEST_LPM_ASSERT(ip_batch != NULL);
+
+	int32_t *next_hops = rte_calloc("next_hops",
+			NUM_IPS_ENTRIES, sizeof(int32_t), 0);
+	TEST_LPM_ASSERT(next_hops != NULL);
 
 	for (i = 0; i < NUM_IPS_ENTRIES; i++)
 		ip_batch[i] = large_ips_table[i].ip;
@@ -152,6 +158,9 @@ test_lpm6_perf(void)
 
 	printf("Average LPM Delete: %g cycles\n",
 			(double)total_time / NUM_ROUTE_ENTRIES);
+
+	rte_free(next_hops);
+	rte_free(ip_batch);
 
 	rte_lpm6_delete_all(lpm);
 	rte_lpm6_free(lpm);
