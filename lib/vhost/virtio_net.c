@@ -2914,10 +2914,12 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 			 * in a contiguous virtual area.
 			 */
 			copy_vnet_hdr_from_desc(&tmp_hdr, buf_vec);
-			hdr = &tmp_hdr;
 		} else {
-			hdr = (struct virtio_net_hdr *)((uintptr_t)buf_vec[0].buf_addr);
+			rte_memcpy((void *)(uintptr_t)&tmp_hdr,
+				(void *)(uintptr_t)buf_vec[0].buf_addr,
+				sizeof(struct virtio_net_hdr));
 		}
+		hdr = &tmp_hdr;
 	}
 
 	for (vec_idx = 0; vec_idx < nr_vec; vec_idx++) {
@@ -3363,7 +3365,7 @@ virtio_dev_tx_batch_packed(struct virtio_net *dev,
 {
 	uint16_t avail_idx = vq->last_avail_idx;
 	uint32_t buf_offset = sizeof(struct virtio_net_hdr_mrg_rxbuf);
-	struct virtio_net_hdr *hdr;
+	struct virtio_net_hdr hdr;
 	uintptr_t desc_addrs[PACKED_BATCH_SIZE];
 	uint16_t ids[PACKED_BATCH_SIZE];
 	uint16_t i;
@@ -3382,8 +3384,9 @@ virtio_dev_tx_batch_packed(struct virtio_net *dev,
 
 	if (virtio_net_with_host_offload(dev)) {
 		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
-			hdr = (struct virtio_net_hdr *)(desc_addrs[i]);
-			vhost_dequeue_offload(dev, hdr, pkts[i], legacy_ol_flags);
+			rte_memcpy((void *)(uintptr_t)&hdr,
+				(void *)(uintptr_t)desc_addrs[i], sizeof(struct virtio_net_hdr));
+			vhost_dequeue_offload(dev, &hdr, pkts[i], legacy_ol_flags);
 		}
 	}
 
