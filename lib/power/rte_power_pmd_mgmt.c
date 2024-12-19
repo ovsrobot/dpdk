@@ -97,7 +97,7 @@ queue_list_find(const struct pmd_core_cfg *cfg, const union queue *q)
 }
 
 static int
-queue_list_add(struct pmd_core_cfg *cfg, const union queue *q)
+queue_list_add(struct pmd_core_cfg *cfg, const union queue *q, unsigned int lcore_id)
 {
 	struct queue_list_entry *qle;
 
@@ -105,10 +105,10 @@ queue_list_add(struct pmd_core_cfg *cfg, const union queue *q)
 	if (queue_list_find(cfg, q) != NULL)
 		return -EEXIST;
 
-	qle = malloc(sizeof(*qle));
+	qle = rte_zmalloc_socket(NULL, sizeof(*qle), RTE_CACHE_LINE_SIZE,
+				 rte_lcore_to_socket_id(lcore_id));
 	if (qle == NULL)
 		return -ENOMEM;
-	memset(qle, 0, sizeof(*qle));
 
 	queue_copy(&qle->queue, q);
 	TAILQ_INSERT_TAIL(&cfg->head, qle, next);
@@ -570,7 +570,7 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 		goto end;
 	}
 	/* add this queue to the list */
-	ret = queue_list_add(lcore_cfg, &qdata);
+	ret = queue_list_add(lcore_cfg, &qdata, lcore_id);
 	if (ret < 0) {
 		POWER_LOG(DEBUG, "Failed to add queue to list: %s",
 				strerror(-ret));
@@ -664,7 +664,7 @@ rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
 	 * callbacks can be freed. we're intentionally casting away const-ness.
 	 */
 	rte_free((void *)(uintptr_t)queue_cfg->cb);
-	free(queue_cfg);
+	rte_free(queue_cfg);
 
 	return 0;
 }
