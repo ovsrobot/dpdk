@@ -2896,8 +2896,8 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	uint32_t hdr_remain = dev->vhost_hlen;
 	uint32_t cpy_len;
 	struct rte_mbuf *cur = m, *prev = m;
-	struct virtio_net_hdr tmp_hdr;
-	struct virtio_net_hdr *hdr = NULL;
+	bool has_vnet_hdr = false;
+	struct virtio_net_hdr hdr;
 	uint16_t vec_idx;
 	struct vhost_async *async = vq->async;
 	struct async_inflight_info *pkts_info;
@@ -2913,11 +2913,11 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 			 * No luck, the virtio-net header doesn't fit
 			 * in a contiguous virtual area.
 			 */
-			copy_vnet_hdr_from_desc(&tmp_hdr, buf_vec);
-			hdr = &tmp_hdr;
+			copy_vnet_hdr_from_desc(&hdr, buf_vec);
 		} else {
-			hdr = (struct virtio_net_hdr *)((uintptr_t)buf_vec[0].buf_addr);
+			hdr = *(struct virtio_net_hdr *)((uintptr_t)buf_vec[0].buf_addr);
 		}
+		has_vnet_hdr = true;
 	}
 
 	for (vec_idx = 0; vec_idx < nr_vec; vec_idx++) {
@@ -2953,7 +2953,7 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 			if (async_fill_seg(dev, vq, cur, mbuf_offset,
 					   buf_iova + buf_offset, cpy_len, false) < 0)
 				goto error;
-		} else if (likely(hdr && cur == m)) {
+		} else if (likely(has_vnet_hdr && cur == m)) {
 			rte_memcpy(rte_pktmbuf_mtod_offset(cur, void *, mbuf_offset),
 				(void *)((uintptr_t)(buf_addr + buf_offset)),
 				cpy_len);
@@ -3013,10 +3013,10 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 
 	if (is_async) {
 		async_iter_finalize(async);
-		if (hdr)
-			pkts_info[slot_idx].nethdr = *hdr;
-	} else if (hdr) {
-		vhost_dequeue_offload(dev, hdr, m, legacy_ol_flags);
+		if (has_vnet_hdr)
+			pkts_info[slot_idx].nethdr = hdr;
+	} else if (has_vnet_hdr) {
+		vhost_dequeue_offload(dev, &hdr, m, legacy_ol_flags);
 	}
 
 	return 0;
@@ -3363,7 +3363,6 @@ virtio_dev_tx_batch_packed(struct virtio_net *dev,
 {
 	uint16_t avail_idx = vq->last_avail_idx;
 	uint32_t buf_offset = sizeof(struct virtio_net_hdr_mrg_rxbuf);
-	struct virtio_net_hdr *hdr;
 	uintptr_t desc_addrs[PACKED_BATCH_SIZE];
 	uint16_t ids[PACKED_BATCH_SIZE];
 	uint16_t i;
@@ -3381,9 +3380,11 @@ virtio_dev_tx_batch_packed(struct virtio_net *dev,
 			   pkts[i]->pkt_len);
 
 	if (virtio_net_with_host_offload(dev)) {
+		struct virtio_net_hdr hdr;
+
 		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
-			hdr = (struct virtio_net_hdr *)(desc_addrs[i]);
-			vhost_dequeue_offload(dev, hdr, pkts[i], legacy_ol_flags);
+			hdr = *(struct virtio_net_hdr *)(desc_addrs[i]);
+			vhost_dequeue_offload(dev, &hdr, pkts[i], legacy_ol_flags);
 		}
 	}
 
