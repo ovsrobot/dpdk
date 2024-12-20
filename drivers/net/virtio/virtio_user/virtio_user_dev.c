@@ -735,8 +735,13 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 		     enum virtio_user_backend_type backend_type)
 {
 	uint64_t backend_features;
+	int ret;
 
-	pthread_mutex_init(&dev->mutex, NULL);
+	ret = pthread_mutex_init(&dev->mutex, NULL);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "(%s) init dev mutex failed", dev->path);
+		return ret;
+	}
 	strlcpy(dev->path, path, PATH_MAX);
 
 	dev->started = 0;
