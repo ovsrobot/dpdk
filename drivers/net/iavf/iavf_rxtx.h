@@ -5,6 +5,7 @@
 #ifndef _IAVF_RXTX_H_
 #define _IAVF_RXTX_H_
 
+#include <_common_intel/rx.h>
 #include <_common_intel/tx.h>
 
 /* In QLEN must be whole number of 32 descriptors. */
