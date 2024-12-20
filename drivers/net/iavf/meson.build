@@ -5,7 +5,7 @@ if dpdk_conf.get('RTE_IOVA_IN_MBUF') == 0
     subdir_done()
 endif
 
-includes += include_directories('../../common/iavf')
+includes += include_directories('../../common/iavf', '..')
 
 testpmd_sources = files('iavf_testpmd.c')
 
