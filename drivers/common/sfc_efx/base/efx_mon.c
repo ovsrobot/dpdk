@@ -80,9 +80,6 @@ efx_mon_init(
 		goto fail2;
 	}
 
-	emp->em_emop = emop;
-	return (0);
-
 fail2:
 	EFSYS_PROBE(fail2);
 
