@@ -2243,7 +2243,6 @@ bond_ethdev_close(struct rte_eth_dev *dev)
 
 	bond_ethdev_free_queues(dev);
 	rte_bitmap_reset(internals->vlan_filter_bmp);
-	rte_bitmap_free(internals->vlan_filter_bmp);
 	rte_free(internals->vlan_filter_bmpmem);
 
 	/* Try to release mempool used in mode6. If the bond
