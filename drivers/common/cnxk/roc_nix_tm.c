@@ -2030,11 +2030,6 @@ void
 nix_tm_conf_fini(struct roc_nix *roc_nix)
 {
 	struct nix *nix = roc_nix_to_nix_priv(roc_nix);
-	uint16_t hw_lvl;
 
-	for (hw_lvl = 0; hw_lvl < NIX_TXSCH_LVL_CNT; hw_lvl++) {
-		plt_bitmap_free(nix->schq_bmp[hw_lvl]);
-		plt_bitmap_free(nix->schq_contig_bmp[hw_lvl]);
-	}
 	plt_free(nix->schq_bmp_mem);
 }

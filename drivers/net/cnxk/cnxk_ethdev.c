@@ -311,7 +311,6 @@ nix_security_release(struct cnxk_eth_dev *dev)
 			plt_err("Failed to cleanup nix inline outb, rc=%d", rc);
 		ret |= rc;
 
-		plt_bitmap_free(dev->outb.sa_bmap);
 		plt_free(dev->outb.sa_bmap_mem);
 		dev->outb.sa_bmap = NULL;
 		dev->outb.sa_bmap_mem = NULL;

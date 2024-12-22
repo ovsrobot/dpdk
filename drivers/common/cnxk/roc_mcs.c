@@ -719,13 +719,9 @@ mcs_alloc_bmap(uint16_t entries, void **mem, struct plt_bitmap **bmap)
 static void
 rsrc_bmap_free(struct mcs_rsrc *rsrc)
 {
-	plt_bitmap_free(rsrc->tcam_bmap);
 	plt_free(rsrc->tcam_bmap_mem);
-	plt_bitmap_free(rsrc->secy_bmap);
 	plt_free(rsrc->secy_bmap_mem);
-	plt_bitmap_free(rsrc->sc_bmap);
 	plt_free(rsrc->sc_bmap_mem);
-	plt_bitmap_free(rsrc->sa_bmap);
 	plt_free(rsrc->sa_bmap_mem);
 }
 

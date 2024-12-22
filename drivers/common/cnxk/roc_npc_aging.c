@@ -43,7 +43,6 @@ npc_aged_flows_bitmap_free(struct roc_npc *roc_npc)
 	struct roc_npc_flow_age *flow_age;
 
 	flow_age = &roc_npc->flow_age;
-	plt_bitmap_free(flow_age->aged_flows);
 	if (flow_age->age_mem)
 		plt_free(roc_npc->flow_age.age_mem);
 }

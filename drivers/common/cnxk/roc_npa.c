@@ -1227,7 +1227,6 @@ npa_dev_init(struct npa_lf *lf, uintptr_t base, struct mbox *mbox)
 	lf->npa_qint_mem = plt_zmalloc(sizeof(struct npa_qint) * nr_pools, 0);
 	if (lf->npa_qint_mem == NULL) {
 		rc = NPA_ERR_ALLOC;
-		goto bmap_free;
 	}
 
 	/* Allocate memory for nap_aura_lim memory */
@@ -1256,8 +1255,6 @@ lim_free:
 	plt_free(lf->aura_lim);
 qint_free:
 	plt_free(lf->npa_qint_mem);
-bmap_free:
-	plt_bitmap_free(lf->npa_bmp);
 bmap_mem_free:
 	plt_free(lf->npa_bmp_mem);
 lf_free:
@@ -1274,7 +1271,6 @@ npa_dev_fini(struct npa_lf *lf)
 
 	plt_free(lf->aura_lim);
 	plt_free(lf->npa_qint_mem);
-	plt_bitmap_free(lf->npa_bmp);
 	plt_free(lf->npa_bmp_mem);
 	plt_free(lf->aura_attr);
 
