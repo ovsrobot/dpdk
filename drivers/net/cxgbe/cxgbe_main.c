@@ -465,7 +465,6 @@ void cxgbe_insert_tid(struct tid_info *t, void *data, unsigned int tid,
 static void tid_free(struct tid_info *t)
 {
 	if (t->tid_tab) {
-		rte_bitmap_free(t->ftid_bmap);
 
 		if (t->ftid_bmap_array)
 			t4_os_free(t->ftid_bmap_array);
