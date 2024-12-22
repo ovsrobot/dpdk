@@ -3387,6 +3387,50 @@ int rte_eth_xstats_get_id_by_name(uint16_t port_id, const char *xstat_name,
 		uint64_t *id);
 
 /**
+ * Enable the xstat counter of the given id.
+ *
+ * @param port_id The port to look up statistics from
+ * @param id The ID of the counter to enable
+ * @return
+ *    - (0) on success
+ *    - (-EEXIST) counter already enabled
+ *    - (-ENOTSUP) enable is not implemented
+ *    - (-EINVAL) xstat id is invalid
+ *    - (-EPERM) enabling this counter is not permitted
+ *    - (-ENOSPC) no resources
+ */
+__rte_experimental
+int rte_eth_xstats_enable_counter(uint16_t port_id, uint64_t id);
+
+/**
+ * Disable the xstat counter of the given id.
+ *
+ * @param port_id The port to look up statistics from
+ * @param id The ID of the counter to disable
+ * @return
+ *    - (0) disabled successfully or already disabled
+ *    - (-ENOTSUP) enable is not implemented
+ *    - (-EINVAL) xstat id is invalid
+ *    - (-EPERM) disabling this counter is not permitted
+ */
+__rte_experimental
+int rte_eth_xstats_disable_counter(uint16_t port_id, uint64_t id);
+
+/**
+ * Query the state of the xstat counter.
+ *
+ * @param port_id The port to look up statistics from
+ * @param id The ID of the counter to query
+ * @return
+ *    - (0) xstat is enabled
+ *    - (1) xstat is disabled
+ *    - (-ENOTSUP) enable/disabling is not implemented
+ *    - (-EINVAL) xstat id is invalid
+ */
+__rte_experimental
+int rte_eth_xstats_query_state(uint16_t port_id, uint64_t id);
+
+/**
  * Reset extended statistics of an Ethernet device.
  *
  * @param port_id
