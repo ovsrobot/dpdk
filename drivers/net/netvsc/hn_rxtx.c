@@ -183,7 +183,6 @@ hn_chim_uninit(struct rte_eth_dev *dev)
 {
 	struct hn_data *hv = dev->data->dev_private;
 
-	rte_bitmap_free(hv->chim_bmap);
 	rte_free(hv->chim_bmem);
 	hv->chim_bmem = NULL;
 }
