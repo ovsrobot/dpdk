@@ -124,7 +124,6 @@
 #define plt_bitmap			rte_bitmap
 #define plt_bitmap_init			rte_bitmap_init
 #define plt_bitmap_reset		rte_bitmap_reset
-#define plt_bitmap_free			rte_bitmap_free
 #define plt_bitmap_clear		rte_bitmap_clear
 #define plt_bitmap_set			rte_bitmap_set
 #define plt_bitmap_get			rte_bitmap_get
