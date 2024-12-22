@@ -815,7 +815,6 @@ fail_reset_vals:
 static void
 sfc_sw_xstats_free_queues_bitmap(struct sfc_adapter *sa)
 {
-	rte_bitmap_free(sa->sw_stats.queues_bitmap);
 	rte_free(sa->sw_stats.queues_bitmap_mem);
 }
 
