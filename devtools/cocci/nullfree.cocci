@@ -16,9 +16,6 @@ expression E;
 - if (E != NULL) rte_acl_free(E);
 + rte_acl_free(E);
 |
-- if (E != NULL) rte_bitmap_free(E);
-+ rte_bitmap_free(E);
-|
 - if (E != NULL) rte_comp_op_free(E);
 + rte_comp_op_free(E);
 |
