@@ -814,7 +814,6 @@ iocpt_free_objs(struct iocpt_dev *dev)
 	}
 
 	if (dev->sess_bm != NULL) {
-		rte_bitmap_free(dev->sess_bm);
 		rte_free(dev->sess_bm);
 		dev->sess_bm = NULL;
 	}
