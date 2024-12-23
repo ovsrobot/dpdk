@@ -33,13 +33,14 @@ test_efd(void)
 static unsigned int test_socket_id;
 
 /* 5-tuple key type */
+__rte_packed_begin
 struct flow_key {
 	uint32_t ip_src;
 	uint32_t ip_dst;
 	uint16_t port_src;
 	uint16_t port_dst;
 	uint8_t proto;
-} __rte_packed;
+} __rte_packed_end;
 
 RTE_LOG_REGISTER(efd_logtype_test, test.efd, INFO);
 
