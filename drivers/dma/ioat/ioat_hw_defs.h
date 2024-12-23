@@ -52,6 +52,7 @@ extern "C" {
 #define	IOAT_DMACAP_PQ		(1 << 9)
 #define	IOAT_DMACAP_DMA_DIF	(1 << 10)
 
+__rte_packed_begin
 struct ioat_registers {
 	uint8_t		chancnt;
 	uint8_t		xfercap;
@@ -75,7 +76,7 @@ struct ioat_registers {
 	uint8_t		reserved2[0x8];	/* 0xA0 */
 	uint32_t	chanerr;	/* 0xA8 */
 	uint32_t	chanerrmask;	/* 0xAC */
-} __rte_packed;
+} __rte_packed_end;
 
 #define IOAT_CHANCMD_RESET	0x20
 #define IOAT_CHANCMD_SUSPEND	0x04
