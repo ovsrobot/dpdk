@@ -13,6 +13,7 @@
 #include "zxdh_logs.h"
 #include "zxdh_rxtx.h"
 #include "zxdh_np.h"
+#include "zxdh_queue.h"
 
 #define ZXDH_VLAN_FILTER_GROUPS       64
 #define ZXDH_INVALID_LOGIC_QID        0xFFFFU
@@ -1504,5 +1505,69 @@ int zxdh_dev_stats_reset(struct rte_eth_dev *dev)
 	if (hw->is_pf)
 		zxdh_hw_stats_reset(dev, ZXDH_MAC_STATS_RESET);
 
+	return 0;
+}
+
+int zxdh_dev_mtu_set(struct rte_eth_dev *dev, uint16_t new_mtu)
+{
+	struct zxdh_hw *hw = dev->data->dev_private;
+	struct zxdh_panel_table panel = {0};
+	struct zxdh_port_attr_table vport_att = {0};
+	uint16_t vfid = zxdh_vport_to_vfid(hw->vport);
+	int ret;
+
+	if (hw->is_pf) {
+		ret = zxdh_get_panel_attr(dev, &panel);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "get_panel_attr ret:%d", ret);
+			return -1;
+		}
+
+		ret = zxdh_get_port_attr(vfid, &vport_att);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR,
+				"[vfid:%d] zxdh_dev_mtu, get vport dpp_ret:%d", vfid, ret);
+			return -1;
+		}
+
+		panel.mtu = new_mtu;
+		panel.mtu_enable = 1;
+		ret = zxdh_set_panel_attr(dev, &panel);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "set zxdh_dev_mtu failed, ret:%u", ret);
+			return ret;
+		}
+
+		vport_att.mtu_enable = 1;
+		vport_att.mtu = new_mtu;
+		ret = zxdh_set_port_attr(vfid, &vport_att);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR,
+				"[vfid:%d] zxdh_dev_mtu, set vport dpp_ret:%d", vfid, ret);
+			return ret;
+		}
+	} else {
+		struct zxdh_msg_info msg_info = {0};
+		struct zxdh_port_attr_set_msg *attr_msg = &msg_info.data.port_attr_msg;
+
+		zxdh_msg_head_build(hw, ZXDH_PORT_ATTRS_SET, &msg_info);
+		attr_msg->mode = ZXDH_PORT_MTU_EN_FLAG;
+		attr_msg->value = 1;
+		ret = zxdh_vf_send_msg_to_pf(dev, &msg_info, sizeof(msg_info), NULL, 0);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to send msg: port 0x%x msg type %d ",
+				hw->vport.vport, ZXDH_PORT_MTU_EN_FLAG);
+			return ret;
+		}
+		attr_msg->mode = ZXDH_PORT_MTU_FLAG;
+		attr_msg->value = new_mtu;
+		ret = zxdh_vf_send_msg_to_pf(dev, &msg_info, sizeof(msg_info), NULL, 0);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to send msg: port 0x%x msg type %d ",
+				hw->vport.vport, ZXDH_PORT_MTU_FLAG);
+			return ret;
+		}
+	}
+	dev->data->mtu = new_mtu;
 	return 0;
 }
