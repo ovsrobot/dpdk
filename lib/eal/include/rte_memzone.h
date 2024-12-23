@@ -45,6 +45,7 @@ extern "C" {
  * A structure describing a memzone, which is a contiguous portion of
  * physical memory identified by a name.
  */
+__rte_packed_begin
 struct rte_memzone {
 
 #define RTE_MEMZONE_NAMESIZE 32       /**< Maximum length of memory zone name.*/
@@ -62,7 +63,7 @@ struct rte_memzone {
 	int32_t socket_id;                /**< NUMA socket ID. */
 
 	uint32_t flags;                   /**< Characteristics of this memzone. */
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * Set the maximum number of memzones.
