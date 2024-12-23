@@ -274,11 +274,12 @@ struct socket_ctx {
 	struct rte_mempool *session_pool;
 };
 
+__rte_packed_begin
 struct cnt_blk {
 	uint32_t salt;
 	uint64_t iv;
 	uint32_t cnt;
-} __rte_packed;
+} __rte_packed_end;
 
 struct __rte_cache_aligned lcore_rx_queue {
 	uint16_t port_id;
