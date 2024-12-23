@@ -1524,6 +1524,12 @@ for an additional list of options shared with other mlx5 drivers.
 
   By default, the PMD will set this value to 0.
 
+  .. note::
+
+    There is a race condition in probing port if probe_opt_en is set to 1.
+    Port probe may fail with wrong ifindex in cache while the interrupt
+    thread is updating the cache. Please try again if port probe failed.
+
 - ``lacp_by_user`` parameter [int]
 
   A nonzero value enables the control of LACP traffic by the user application.
