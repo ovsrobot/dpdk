@@ -63,6 +63,7 @@ struct gve_queue_page_list {
 	uint32_t num_entries;
 	dma_addr_t *page_buses; /* the dma addrs of the pages */
 	const struct rte_memzone *mz;
+	void **qpl_bufs; /* qpl-buffer list */
 };
 
 /* A TX desc ring entry */
