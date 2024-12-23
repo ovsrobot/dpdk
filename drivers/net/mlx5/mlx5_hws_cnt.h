@@ -133,6 +133,7 @@ enum {
 };
 
 /* HWS counter age parameter. */
+__rte_packed_begin
 struct __rte_cache_aligned mlx5_hws_age_param {
 	RTE_ATOMIC(uint32_t) timeout; /* Aging timeout in seconds (atomically accessed). */
 	RTE_ATOMIC(uint32_t) sec_since_last_hit;
@@ -149,7 +150,7 @@ struct __rte_cache_aligned mlx5_hws_age_param {
 	cnt_id_t own_cnt_index;
 	/* Counter action created specifically for this AGE action. */
 	void *context; /* Flow AGE context. */
-} __rte_packed;
+} __rte_packed_end;
 
 
 /**

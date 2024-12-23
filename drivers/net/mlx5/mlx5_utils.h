@@ -115,6 +115,7 @@ struct mlx5_l3t_level_tbl {
 };
 
 /* L3 word entry table data structure. */
+__rte_packed_begin
 struct mlx5_l3t_entry_word {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
@@ -122,9 +123,10 @@ struct mlx5_l3t_entry_word {
 		uint16_t data;
 		uint32_t ref_cnt;
 	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
-} __rte_packed;
+} __rte_packed_end;
 
 /* L3 double word entry table data structure. */
+__rte_packed_begin
 struct mlx5_l3t_entry_dword {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
@@ -132,9 +134,10 @@ struct mlx5_l3t_entry_dword {
 		uint32_t data;
 		int32_t ref_cnt;
 	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
-} __rte_packed;
+} __rte_packed_end;
 
 /* L3 quad word entry table data structure. */
+__rte_packed_begin
 struct mlx5_l3t_entry_qword {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
@@ -142,9 +145,10 @@ struct mlx5_l3t_entry_qword {
 		uint64_t data;
 		uint32_t ref_cnt;
 	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
-} __rte_packed;
+} __rte_packed_end;
 
 /* L3 pointer entry table data structure. */
+__rte_packed_begin
 struct mlx5_l3t_entry_ptr {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
@@ -152,7 +156,7 @@ struct mlx5_l3t_entry_ptr {
 		void *data;
 		uint32_t ref_cnt;
 	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
-} __rte_packed;
+} __rte_packed_end;
 
 /* L3 table data structure. */
 struct mlx5_l3t_tbl {

@@ -136,9 +136,6 @@ writeq(uint64_t value, volatile void *addr)
 #ifndef __maybe_unused
 #define __maybe_unused  __rte_unused
 #endif
-#ifndef __packed
-#define __packed  __rte_packed
-#endif
 
 #ifndef BIT_ULL
 #define BIT_ULL(a) (1ULL << (a))
@@ -187,17 +184,19 @@ do {									\
 #define BITS_PER_BYTE       8
 
 /* memory allocation tracking */
+__rte_packed_begin
 struct ice_dma_mem {
 	void *va;
 	u64 pa;
 	u32 size;
 	const void *zone;
-} __rte_packed;
+} __rte_packed_end;
 
+__rte_packed_begin
 struct ice_virt_mem {
 	void *va;
 	u32 size;
-} __rte_packed;
+} __rte_packed_end;
 
 #define ice_malloc(h, s)    rte_zmalloc(NULL, s, 0)
 #define ice_calloc(h, c, s) rte_calloc(NULL, c, s, 0)
