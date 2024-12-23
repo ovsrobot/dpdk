@@ -1517,6 +1517,13 @@ for an additional list of options shared with other mlx5 drivers.
 
   By default, the PMD will set this value to 1.
 
+- ``probe_opt_en`` parameter [int]
+
+  A non-zero value optimizes the probe process, especially for large scale.
+  PMD will hold the IB device information internally and reuse it.
+
+  By default, the PMD will set this value to 0.
+
 - ``lacp_by_user`` parameter [int]
 
   A nonzero value enables the control of LACP traffic by the user application.
