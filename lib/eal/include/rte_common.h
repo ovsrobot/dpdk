@@ -100,12 +100,27 @@ typedef uint16_t unaligned_uint16_t;
 #endif
 
 /**
+ * @deprecated
+ * @see __rte_packed_begin
+ * @see __rte_packed_end
+ *
  * Force a structure to be packed
  */
 #ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_packed
+#define __rte_packed RTE_DEPRECATED(__rte_packed)
 #else
-#define __rte_packed __attribute__((__packed__))
+#define __rte_packed (RTE_DEPRECATED(__rte_packed) __attribute__((__packed__)))
+#endif
+
+/**
+ * Force a structure to be packed
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_packed_begin __pragma(pack(push, 1))
+#define __rte_packed_end __pragma(pack(pop))
+#else
+#define __rte_packed_begin
+#define __rte_packed_end __attribute__((__packed__))
 #endif
 
 /**
