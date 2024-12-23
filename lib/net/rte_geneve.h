@@ -34,6 +34,7 @@
  * More-bits (optional) variable length options.
  */
 __extension__
+__rte_packed_begin
 struct rte_geneve_hdr {
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
 	uint8_t ver:2;		/**< Version. */
@@ -52,7 +53,7 @@ struct rte_geneve_hdr {
 	uint8_t vni[3];		/**< Virtual network identifier. */
 	uint8_t reserved2;	/**< Reserved. */
 	uint32_t opts[];	/**< Variable length options. */
-} __rte_packed;
+} __rte_packed_end;
 
 /* GENEVE ETH next protocol types */
 #define RTE_GENEVE_TYPE_ETH	0x6558 /**< Ethernet Protocol. */

@@ -125,6 +125,7 @@ struct rte_l2tpv2_common_hdr {
  * L2TPv2 message Header contains all options(length, ns, nr,
  * offset size, offset padding).
  */
+__rte_packed_begin
 struct rte_l2tpv2_msg_with_all_options {
 	rte_be16_t length;		/**< length(16) */
 	rte_be16_t tunnel_id;		/**< tunnel ID(16) */
@@ -133,12 +134,13 @@ struct rte_l2tpv2_msg_with_all_options {
 	rte_be16_t nr;			/**< Nr(16) */
 	rte_be16_t offset_size;		/**< offset size(16) */
 	uint8_t   *offset_padding;	/**< offset padding(variable length) */
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * L2TPv2 message Header contains all options except length(ns, nr,
  * offset size, offset padding).
  */
+__rte_packed_begin
 struct rte_l2tpv2_msg_without_length {
 	rte_be16_t tunnel_id;		/**< tunnel ID(16) */
 	rte_be16_t session_id;		/**< session ID(16) */
@@ -146,7 +148,7 @@ struct rte_l2tpv2_msg_without_length {
 	rte_be16_t nr;			/**< Nr(16) */
 	rte_be16_t offset_size;		/**< offset size(16) */
 	uint8_t   *offset_padding;	/**< offset padding(variable length) */
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * L2TPv2 message Header contains all options except ns_nr(length,
@@ -176,12 +178,13 @@ struct rte_l2tpv2_msg_without_offset {
 /**
  * L2TPv2 message Header contains options offset size and offset padding.
  */
+__rte_packed_begin
 struct rte_l2tpv2_msg_with_offset {
 	rte_be16_t tunnel_id;		/**< tunnel ID(16) */
 	rte_be16_t session_id;		/**< session ID(16) */
 	rte_be16_t offset_size;		/**< offset size(16) */
 	uint8_t   *offset_padding;	/**< offset padding(variable length) */
-} __rte_packed;
+} __rte_packed_end;
 
 /**
  * L2TPv2 message Header contains options ns and nr.
@@ -213,6 +216,7 @@ struct rte_l2tpv2_msg_without_all_options {
 /**
  * L2TPv2 Combined Message Header Format: Common Header + Options
  */
+__rte_packed_begin
 struct rte_l2tpv2_combined_msg_hdr {
 	struct rte_l2tpv2_common_hdr common; /**< common header */
 	union {
@@ -233,6 +237,6 @@ struct rte_l2tpv2_combined_msg_hdr {
 		/** header without all options */
 		struct rte_l2tpv2_msg_without_all_options type7;
 	};
-} __rte_packed;
+} __rte_packed_end;
 
 #endif /* _RTE_L2TPV2_H_ */

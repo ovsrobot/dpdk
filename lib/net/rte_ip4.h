@@ -39,6 +39,7 @@ extern "C" {
 /**
  * IPv4 Header
  */
+__rte_packed_begin
 struct __rte_aligned(2) rte_ipv4_hdr {
 	__extension__
 	union {
@@ -62,7 +63,7 @@ struct __rte_aligned(2) rte_ipv4_hdr {
 	rte_be16_t hdr_checksum;	/**< header checksum */
 	rte_be32_t src_addr;		/**< source address */
 	rte_be32_t dst_addr;		/**< destination address */
-} __rte_packed;
+} __rte_packed_end;
 
 /** Create IPv4 address */
 #define RTE_IPV4(a, b, c, d) ((uint32_t)(((a) & 0xff) << 24) | \

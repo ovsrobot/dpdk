@@ -21,11 +21,12 @@
 /**
  * UDP Header
  */
+__rte_packed_begin
 struct rte_udp_hdr {
 	rte_be16_t src_port;    /**< UDP source port. */
 	rte_be16_t dst_port;    /**< UDP destination port. */
 	rte_be16_t dgram_len;   /**< UDP datagram length */
 	rte_be16_t dgram_cksum; /**< UDP datagram checksum */
-} __rte_packed;
+} __rte_packed_end;
 
 #endif /* RTE_UDP_H_ */

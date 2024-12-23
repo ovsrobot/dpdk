@@ -30,6 +30,7 @@
  * DTLS Header
  */
 __extension__
+__rte_packed_begin
 struct rte_dtls_hdr {
 	/** Content type of DTLS packet. Defined as RTE_DTLS_TYPE_*. */
 	uint8_t type;
@@ -48,6 +49,6 @@ struct rte_dtls_hdr {
 #endif
 	/** The length (in bytes) of the following DTLS packet. */
 	rte_be16_t length;
-} __rte_packed;
+} __rte_packed_end;
 
 #endif /* RTE_DTLS_H */
