@@ -563,14 +563,19 @@ vduse_reconnect_log_check(struct virtio_net *dev, uint64_t features, uint32_t to
 }
 
 static void
-vduse_reconnect_handler(int fd, void *arg, int *remove)
+vduse_reconnect_handler(int fd __rte_unused, void *arg, int *remove)
 {
 	struct virtio_net *dev = arg;
 
 	vduse_device_start(dev, true);
 
-	close(fd);
 	*remove = 1;
+}
+
+static void
+vduse_reconnect_handler_cleanup(int fd, void *arg __rte_unused)
+{
+	close(fd);
 }
 
 static int
@@ -590,7 +595,8 @@ vduse_reconnect_start_device(struct virtio_net *dev)
 		goto out_err;
 	}
 
-	ret = fdset_add(vduse.fdset, fd, vduse_reconnect_handler, NULL, NULL, dev);
+	ret = fdset_add(vduse.fdset, fd, vduse_reconnect_handler, NULL,
+			vduse_reconnect_handler_cleanup, dev);
 	if (ret) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to add reconnect efd %d to vduse fdset",
 				fd);
