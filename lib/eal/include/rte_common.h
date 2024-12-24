@@ -138,9 +138,21 @@ typedef uint16_t unaligned_uint16_t;
 #endif
 
 /**
+ * @deprecated
+ * @see RTE_WEAK
+ */
+#define __rte_weak (RTE_DEPRECATED(__rte_weak) __attribute__((__weak__)))
+
+/**
  * Mark a function or variable to a weak reference.
  */
-#define __rte_weak __attribute__((__weak__))
+#ifdef RTE_TOOLCHAIN_MSVC
+#define RTE_WEAK(FUNC_NAME) \
+	(__pragma(comment(linker, "/alternatename:" #FUNC_NAME "=rte_weak_" \
+	#FUNC_NAME)) rte_weak_ ## FUNC_NAME)
+#else
+#define RTE_WEAK(FUNC_NAME) (__attribute__((__weak__)) FUNC_NAME)
+#endif
 
 /**
  * Mark a function to be pure.
