@@ -5,8 +5,8 @@
 
 #include "nfp_nfdk_vec.h"
 
-uint16_t __rte_weak
-nfp_net_nfdk_vec_avx2_xmit_pkts(__rte_unused void *tx_queue,
+uint16_t
+RTE_WEAK(nfp_net_nfdk_vec_avx2_xmit_pkts)(__rte_unused void *tx_queue,
 		__rte_unused struct rte_mbuf **tx_pkts,
 		__rte_unused uint16_t nb_pkts)
 {
