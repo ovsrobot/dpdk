@@ -263,7 +263,7 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 	conn->vsocket = vsocket;
 	conn->vid = vid;
 	ret = fdset_add(vhost_user.fdset, fd, vhost_user_read_cb,
-			NULL, conn);
+			NULL, NULL, conn);
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(vsocket->path, ERR,
 			"failed to add fd %d into vhost server fdset",
@@ -396,7 +396,7 @@ vhost_user_start_server(struct vhost_user_socket *vsocket)
 		goto err;
 
 	ret = fdset_add(vhost_user.fdset, fd, vhost_user_server_new_connection,
-		  NULL, vsocket);
+		  NULL, NULL, vsocket);
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(path, ERR, "failed to add listen fd %d to vhost server fdset",
 			fd);

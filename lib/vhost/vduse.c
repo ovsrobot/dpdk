@@ -218,7 +218,7 @@ vduse_vring_setup(struct virtio_net *dev, unsigned int index, bool reconnect)
 	}
 
 	if (vq == dev->cvq) {
-		ret = fdset_add(vduse.fdset, vq->kickfd, vduse_control_queue_event, NULL, dev);
+		ret = fdset_add(vduse.fdset, vq->kickfd, vduse_control_queue_event, NULL, NULL, dev);
 		if (ret) {
 			VHOST_CONFIG_LOG(dev->ifname, ERR,
 					"Failed to setup kickfd handler for VQ %u: %s",
@@ -590,7 +590,7 @@ vduse_reconnect_start_device(struct virtio_net *dev)
 		goto out_err;
 	}
 
-	ret = fdset_add(vduse.fdset, fd, vduse_reconnect_handler, NULL, dev);
+	ret = fdset_add(vduse.fdset, fd, vduse_reconnect_handler, NULL, NULL, dev);
 	if (ret) {
 		VHOST_CONFIG_LOG(dev->ifname, ERR, "Failed to add reconnect efd %d to vduse fdset",
 				fd);
@@ -787,7 +787,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags)
 
 	dev->cvq = dev->virtqueue[max_queue_pairs * 2];
 
-	ret = fdset_add(vduse.fdset, dev->vduse_dev_fd, vduse_events_handler, NULL, dev);
+	ret = fdset_add(vduse.fdset, dev->vduse_dev_fd, vduse_events_handler, NULL, NULL, dev);
 	if (ret) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to add fd %d to vduse fdset",
 				dev->vduse_dev_fd);

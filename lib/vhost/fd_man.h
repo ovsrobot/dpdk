@@ -13,11 +13,12 @@ struct fdset;
 #define MAX_FDS 1024
 
 typedef void (*fd_cb)(int fd, void *dat, int *remove);
+typedef void (*cleanup_cb)(int fd, void *dat);
 
 struct fdset *fdset_init(const char *name);
 
 int fdset_add(struct fdset *pfdset, int fd,
-	fd_cb rcb, fd_cb wcb, void *dat);
+	fd_cb rcb, fd_cb wcb, cleanup_cb ccb, void *dat);
 
 void fdset_del(struct fdset *pfdset, int fd);
 int fdset_try_del(struct fdset *pfdset, int fd);

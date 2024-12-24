@@ -25,6 +25,8 @@ struct fdentry {
 	int fd;		/* -1 indicates this entry is empty */
 	fd_cb rcb;	/* callback when this fd is readable. */
 	fd_cb wcb;	/* callback when this fd is writeable.*/
+	cleanup_cb ccb; /* callback when cleanup after entry
+			   removal from the fdset is needed */
 	void *dat;	/* fd context */
 	int busy;	/* whether this entry is being used in cb. */
 	LIST_ENTRY(fdentry) next;
@@ -150,7 +152,7 @@ err_unlock:
 }
 
 static int
-fdset_insert_entry(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat)
+fdset_insert_entry(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, cleanup_cb ccb, void *dat)
 {
 	struct fdentry *pfdentry;
 
@@ -161,6 +163,7 @@ fdset_insert_entry(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat
 	pfdentry->fd  = fd;
 	pfdentry->rcb = rcb;
 	pfdentry->wcb = wcb;
+	pfdentry->ccb = ccb;
 	pfdentry->dat = dat;
 
 	LIST_INSERT_HEAD(&pfdset->fdlist, pfdentry, next);
@@ -210,7 +213,7 @@ fdset_find_entry_locked(struct fdset *pfdset, int fd)
  * Register the fd in the fdset with read/write handler and context.
  */
 int
-fdset_add(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat)
+fdset_add(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, cleanup_cb ccb, void *dat)
 {
 	struct epoll_event ev;
 	struct fdentry *pfdentry;
@@ -222,7 +225,7 @@ fdset_add(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat)
 	}
 
 	pthread_mutex_lock(&pfdset->fd_mutex);
-	ret = fdset_insert_entry(pfdset, fd, rcb, wcb, dat);
+	ret = fdset_insert_entry(pfdset, fd, rcb, wcb, ccb, dat);
 	if (ret < 0) {
 		VHOST_FDMAN_LOG(ERR, "failed to insert fdset entry");
 		pthread_mutex_unlock(&pfdset->fd_mutex);
@@ -331,6 +334,7 @@ fdset_event_dispatch(void *arg)
 {
 	int i;
 	fd_cb rcb, wcb;
+	cleanup_cb ccb;
 	void *dat;
 	int fd, numfds;
 	int remove1, remove2;
@@ -361,6 +365,7 @@ fdset_event_dispatch(void *arg)
 
 			rcb = pfdentry->rcb;
 			wcb = pfdentry->wcb;
+			ccb = pfdentry->ccb;
 			dat = pfdentry->dat;
 			pfdentry->busy = 1;
 
@@ -381,8 +386,11 @@ fdset_event_dispatch(void *arg)
 			 * fdentry not to be busy, so we can't call
 			 * fdset_del_locked().
 			 */
-			if (remove1 || remove2)
+			if (remove1 || remove2) {
 				fdset_del(pfdset, fd);
+				if (ccb)
+					ccb(fd, dat);
+			}
 		}
 
 		if (pfdset->destroy)
