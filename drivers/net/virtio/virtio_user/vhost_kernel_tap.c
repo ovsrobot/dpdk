@@ -14,8 +14,9 @@
 
 #include <rte_ether.h>
 
+#include "virtio_net_logs.h"
+
 #include "vhost_kernel_tap.h"
-#include "../virtio_logs.h"
 #include "../virtio.h"
 
 

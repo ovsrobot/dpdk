@@ -29,9 +29,10 @@
 #include <rte_cycles.h>
 #include <rte_kvargs.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtio_ethdev.h"
 #include "virtio.h"
-#include "virtio_logs.h"
 #include "virtqueue.h"
 #include "virtio_cvq.h"
 #include "virtio_rxtx.h"

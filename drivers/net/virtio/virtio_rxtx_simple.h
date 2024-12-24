@@ -7,7 +7,8 @@
 
 #include <stdint.h>
 
-#include "virtio_logs.h"
+#include "virtio_net_logs.h"
+
 #include "virtio_ethdev.h"
 #include "virtqueue.h"
 #include "virtio_rxtx.h"

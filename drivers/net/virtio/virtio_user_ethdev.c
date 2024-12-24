@@ -20,8 +20,9 @@
 #include <rte_cycles.h>
 #include <rte_io.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtio_ethdev.h"
-#include "virtio_logs.h"
 #include "virtio.h"
 #include "virtqueue.h"
 #include "virtio_rxtx.h"

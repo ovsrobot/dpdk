@@ -9,8 +9,9 @@
 #include <rte_mbuf.h>
 #include <rte_memzone.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtqueue.h"
-#include "virtio_logs.h"
 #include "virtio.h"
 #include "virtio_rxtx_simple.h"
 

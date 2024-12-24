@@ -22,6 +22,7 @@ sources += files(
         'virtqueue.c',
 )
 deps += ['kvargs', 'bus_pci']
+includes += include_directories('../../common/virtio')
 
 if arch_subdir == 'x86'
     if cc_has_avx512
@@ -56,5 +57,5 @@ if is_linux
         'virtio_user/vhost_user.c',
         'virtio_user/vhost_vdpa.c',
         'virtio_user/virtio_user_dev.c')
-    deps += ['bus_vdev']
+    deps += ['bus_vdev', 'common_virtio']
 endif

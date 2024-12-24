@@ -8,6 +8,7 @@ if is_windows
 endif
 
 includes += include_directories('../../../lib/vhost')
+includes += include_directories('../../common/virtio')
 deps += 'bus_pci'
 sources = files(
         'virtio_cryptodev.c',

@@ -12,9 +12,10 @@
 #include <rte_mempool.h>
 #include <rte_net.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtio.h"
 #include "virtio_ring.h"
-#include "virtio_logs.h"
 #include "virtio_rxtx.h"
 #include "virtio_cvq.h"
 

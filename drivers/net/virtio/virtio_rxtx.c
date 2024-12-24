@@ -26,7 +26,8 @@
 #include <rte_udp.h>
 #include <rte_tcp.h>
 
-#include "virtio_logs.h"
+#include "virtio_net_logs.h"
+
 #include "virtio_ethdev.h"
 #include "virtio.h"
 #include "virtqueue.h"

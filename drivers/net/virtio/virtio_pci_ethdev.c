@@ -19,10 +19,11 @@
 #include <dev_driver.h>
 #include <rte_kvargs.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtio.h"
 #include "virtio_ethdev.h"
 #include "virtio_pci.h"
-#include "virtio_logs.h"
 
 /*
  * The set of PCI devices this driver supports

@@ -10,7 +10,8 @@
 
 #include <rte_net.h>
 
-#include "virtio_logs.h"
+#include "virtio_net_logs.h"
+
 #include "virtio_ethdev.h"
 #include "virtio.h"
 #include "virtio_rxtx_packed.h"

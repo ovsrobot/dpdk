@@ -12,8 +12,7 @@
 
 #include <rte_memory.h>
 
-#include "vhost.h"
-#include "virtio_user_dev.h"
+#include "../virtio_net_logs.h"
 
 struct vhost_vdpa_data {
 	int vhostfd;

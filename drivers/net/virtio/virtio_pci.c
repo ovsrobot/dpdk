@@ -11,8 +11,9 @@
 #include <rte_io.h>
 #include <bus_driver.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtio_pci.h"
-#include "virtio_logs.h"
 #include "virtqueue.h"
 
 /*

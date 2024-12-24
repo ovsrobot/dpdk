@@ -5,8 +5,9 @@
 
 #include <unistd.h>
 
+#include "virtio_net_logs.h"
+
 #include "virtio.h"
-#include "virtio_logs.h"
 
 uint64_t
 virtio_negotiate_features(struct virtio_hw *hw, uint64_t host_features)
