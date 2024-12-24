@@ -122,6 +122,7 @@ struct virtio_user_dev {
 #define VIRTIO_NET_F_CTRL_VQ   17
 #define VIRTIO_F_IOMMU_PLATFORM        33
 #define VIRTIO_ID_NETWORK  0x01
+#define VIRTIO_ID_CRYPTO   0x20
 
 static int
 vhost_vdpa_set_owner(struct virtio_user_dev *dev)
@@ -560,7 +561,7 @@ vhost_vdpa_setup(struct virtio_user_dev *dev)
 	}
 
 	if (ioctl(data->vhostfd, VHOST_VDPA_GET_DEVICE_ID, &did) < 0 ||
-			did != VIRTIO_ID_NETWORK) {
+			(did != VIRTIO_ID_NETWORK) || (did != VIRTIO_ID_CRYPTO)) {
 		PMD_DRV_LOG(ERR, "Invalid vdpa device ID: %u", did);
 		close(data->vhostfd);
 		free(data);
