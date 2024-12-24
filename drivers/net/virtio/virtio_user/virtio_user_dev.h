@@ -25,26 +25,36 @@ struct virtio_user_queue {
 };
 
 struct virtio_user_dev {
-	struct virtio_hw hw;
+	union {
+		struct virtio_hw hw;
+		uint8_t dummy[256];
+	};
+
+	void		*backend_data;
+	uint16_t	**notify_area;
+	char		path[PATH_MAX];
+	bool		hw_cvq;
+	uint16_t	max_queue_pairs;
+	uint64_t	device_features; /* supported features by device */
+	bool		*qp_enabled;
+
 	enum virtio_user_backend_type backend_type;
 	bool		is_server;  /* server or client mode */
 
 	int		*callfds;
 	int		*kickfds;
 	int		mac_specified;
-	uint16_t	max_queue_pairs;
+
 	uint16_t	queue_pairs;
 	uint32_t	queue_size;
 	uint64_t	features; /* the negotiated features with driver,
 				   * and will be sync with device
 				   */
-	uint64_t	device_features; /* supported features by device */
 	uint64_t	frontend_features; /* enabled frontend features */
 	uint64_t	unsupported_features; /* unsupported features mask */
 	uint8_t		status;
 	uint16_t	net_status;
 	uint8_t		mac_addr[RTE_ETHER_ADDR_LEN];
-	char		path[PATH_MAX];
 	char		*ifname;
 
 	union {
@@ -54,18 +64,12 @@ struct virtio_user_dev {
 	} vrings;
 
 	struct virtio_user_queue *packed_queues;
-	bool		*qp_enabled;
 
 	struct virtio_user_backend_ops *ops;
 	pthread_mutex_t	mutex;
 	bool		started;
 
-	bool			hw_cvq;
 	struct virtqueue	*scvq;
-
-	void *backend_data;
-
-	uint16_t **notify_area;
 };
 
 int virtio_user_dev_set_features(struct virtio_user_dev *dev);

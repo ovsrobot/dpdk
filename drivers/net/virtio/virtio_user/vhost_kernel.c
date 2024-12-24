@@ -11,9 +11,11 @@
 
 #include <rte_memory.h>
 
-#include "vhost.h"
+#include "virtio_user/vhost.h"
+
 #include "virtio_user_dev.h"
 #include "vhost_kernel_tap.h"
+#include "../virtqueue.h"
 
 struct vhost_kernel_data {
 	int *vhostfds;

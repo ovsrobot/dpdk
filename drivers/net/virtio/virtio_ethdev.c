@@ -2712,5 +2712,3 @@ __rte_unused uint8_t is_rx)
 	return 0;
 }
 
-RTE_LOG_REGISTER_SUFFIX(virtio_logtype_init, init, NOTICE);
-RTE_LOG_REGISTER_SUFFIX(virtio_logtype_driver, driver, NOTICE);

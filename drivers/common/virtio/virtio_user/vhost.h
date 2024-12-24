@@ -11,9 +11,7 @@
 
 #include <rte_errno.h>
 
-#include "../virtio.h"
 #include "../virtio_logs.h"
-#include "../virtqueue.h"
 
 struct vhost_vring_state {
 	unsigned int index;

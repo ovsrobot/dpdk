@@ -21,13 +21,13 @@
 #include <rte_io.h>
 
 #include "virtio_net_logs.h"
+#include "virtio_user/vhost.h"
 
 #include "virtio_ethdev.h"
 #include "virtio.h"
 #include "virtqueue.h"
 #include "virtio_rxtx.h"
 #include "virtio_user/virtio_user_dev.h"
-#include "virtio_user/vhost.h"
 
 #define virtio_user_get_dev(hwp) container_of(hwp, struct virtio_user_dev, hw)
 

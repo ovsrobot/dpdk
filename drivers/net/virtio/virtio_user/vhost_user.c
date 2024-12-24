@@ -16,7 +16,7 @@
 #include <rte_string_fns.h>
 #include <rte_fbarray.h>
 
-#include "vhost.h"
+#include "virtio_user/vhost.h"
 #include "virtio_user_dev.h"
 
 struct vhost_user_data {

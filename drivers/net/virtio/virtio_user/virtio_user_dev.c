@@ -20,10 +20,12 @@
 #include <rte_malloc.h>
 #include <rte_io.h>
 
-#include "vhost.h"
-#include "virtio.h"
+#include "virtio_user/vhost.h"
+
 #include "virtio_user_dev.h"
+#include "../virtqueue.h"
 #include "../virtio_ethdev.h"
+#include "../virtio_net_logs.h"
 
 #define VIRTIO_USER_MEM_EVENT_CLB_NAME "virtio_user_mem_event_clb"
 

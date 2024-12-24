@@ -9,7 +9,7 @@ endif
 
 includes += include_directories('../../../lib/vhost')
 includes += include_directories('../../common/virtio')
-deps += 'bus_pci'
+deps += ['bus_pci', 'common_virtio']
 sources = files(
         'virtio_cryptodev.c',
         'virtio_cvq.c',

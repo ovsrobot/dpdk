@@ -12,7 +12,8 @@
 
 #include <rte_memory.h>
 
-#include "../virtio_net_logs.h"
+#include "vhost.h"
+#include "../virtio_logs.h"
 
 struct vhost_vdpa_data {
 	int vhostfd;
@@ -98,6 +99,29 @@ vhost_vdpa_ioctl(int fd, uint64_t request, void *arg)
 
 	return 0;
 }
+
+struct virtio_hw {
+	struct virtqueue **vqs;
+};
+
+struct virtio_user_dev {
+	union {
+		struct virtio_hw hw;
+		uint8_t dummy[256];
+	};
+
+	void		*backend_data;
+	uint16_t	**notify_area;
+	char		path[PATH_MAX];
+	bool		hw_cvq;
+	uint16_t	max_queue_pairs;
+	uint64_t	device_features;
+	bool		*qp_enabled;
+};
+
+#define VIRTIO_NET_F_CTRL_VQ   17
+#define VIRTIO_F_IOMMU_PLATFORM        33
+#define VIRTIO_ID_NETWORK  0x01
 
 static int
 vhost_vdpa_set_owner(struct virtio_user_dev *dev)
@@ -714,3 +738,6 @@ struct virtio_user_backend_ops virtio_ops_vdpa = {
 	.map_notification_area = vhost_vdpa_map_notification_area,
 	.unmap_notification_area = vhost_vdpa_unmap_notification_area,
 };
+
+RTE_LOG_REGISTER_SUFFIX(virtio_logtype_init, init, NOTICE);
+RTE_LOG_REGISTER_SUFFIX(virtio_logtype_driver, driver, NOTICE);
