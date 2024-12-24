@@ -133,29 +133,29 @@ static struct rte_pci_driver nitrox_pmd = {
 	.remove         = nitrox_pci_remove,
 };
 
-__rte_weak int
-nitrox_sym_pmd_create(struct nitrox_device *ndev)
+int
+RTE_WEAK(nitrox_sym_pmd_create)(struct nitrox_device *ndev)
 {
 	RTE_SET_USED(ndev);
 	return 0;
 }
 
-__rte_weak int
-nitrox_sym_pmd_destroy(struct nitrox_device *ndev)
+int
+RTE_WEAK(nitrox_sym_pmd_destroy)(struct nitrox_device *ndev)
 {
 	RTE_SET_USED(ndev);
 	return 0;
 }
 
-__rte_weak int
-nitrox_comp_pmd_create(struct nitrox_device *ndev)
+int
+RTE_WEAK(nitrox_comp_pmd_create)(struct nitrox_device *ndev)
 {
 	RTE_SET_USED(ndev);
 	return 0;
 }
 
-__rte_weak int
-nitrox_comp_pmd_destroy(struct nitrox_device *ndev)
+int
+RTE_WEAK(nitrox_comp_pmd_destroy)(struct nitrox_device *ndev)
 {
 	RTE_SET_USED(ndev);
 	return 0;
