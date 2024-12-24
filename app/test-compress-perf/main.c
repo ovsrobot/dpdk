@@ -522,8 +522,8 @@ end:
 	return ret;
 }
 
-__rte_weak void *
-cperf_cyclecount_test_constructor(uint8_t dev_id __rte_unused,
+void *
+RTE_WEAK(cperf_cyclecount_test_constructor)(uint8_t dev_id __rte_unused,
 				 uint16_t qp_id __rte_unused,
 				 struct comp_test_data *options __rte_unused)
 {
@@ -531,20 +531,20 @@ cperf_cyclecount_test_constructor(uint8_t dev_id __rte_unused,
 	return NULL;
 }
 
-__rte_weak void
-cperf_cyclecount_test_destructor(void *arg __rte_unused)
+void
+RTE_WEAK(cperf_cyclecount_test_destructor)(void *arg __rte_unused)
 {
 	RTE_LOG(INFO, USER1, "Something wrong happened!!!\n");
 }
 
-__rte_weak int
-cperf_cyclecount_test_runner(void *test_ctx __rte_unused)
+int
+RTE_WEAK(cperf_cyclecount_test_runner)(void *test_ctx __rte_unused)
 {
 	return 0;
 }
 
-__rte_weak void *
-cperf_throughput_test_constructor(uint8_t dev_id __rte_unused,
+void *
+RTE_WEAK(cperf_throughput_test_constructor)(uint8_t dev_id __rte_unused,
 				 uint16_t qp_id __rte_unused,
 				 struct comp_test_data *options __rte_unused)
 {
@@ -552,19 +552,19 @@ cperf_throughput_test_constructor(uint8_t dev_id __rte_unused,
 	return NULL;
 }
 
-__rte_weak void
-cperf_throughput_test_destructor(void *arg __rte_unused)
+void
+RTE_WEAK(cperf_throughput_test_destructor)(void *arg __rte_unused)
 {
 
 }
 
-__rte_weak int
-cperf_throughput_test_runner(void *test_ctx __rte_unused)
+int
+RTE_WEAK(cperf_throughput_test_runner)(void *test_ctx __rte_unused)
 {
 	return 0;
 }
-__rte_weak void *
-cperf_verify_test_constructor(uint8_t dev_id __rte_unused,
+void *
+RTE_WEAK(cperf_verify_test_constructor)(uint8_t dev_id __rte_unused,
 				 uint16_t qp_id __rte_unused,
 				 struct comp_test_data *options __rte_unused)
 {
@@ -572,14 +572,14 @@ cperf_verify_test_constructor(uint8_t dev_id __rte_unused,
 	return NULL;
 }
 
-__rte_weak void
-cperf_verify_test_destructor(void *arg __rte_unused)
+void
+RTE_WEAK(cperf_verify_test_destructor)(void *arg __rte_unused)
 {
 
 }
 
-__rte_weak int
-cperf_verify_test_runner(void *test_ctx __rte_unused)
+int
+RTE_WEAK(cperf_verify_test_runner)(void *test_ctx __rte_unused)
 {
 	return 0;
 }
