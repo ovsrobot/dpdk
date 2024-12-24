@@ -86,6 +86,7 @@ struct vhost_user {
 
 static void vhost_user_server_new_connection(int fd, void *data, int *remove);
 static void vhost_user_read_cb(int fd, void *dat, int *remove);
+static void vhost_user_cleanup_cb(int fd, void *dat);
 static int create_unix_socket(struct vhost_user_socket *vsocket);
 static int vhost_user_start_client(struct vhost_user_socket *vsocket);
 
@@ -263,7 +264,7 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 	conn->vsocket = vsocket;
 	conn->vid = vid;
 	ret = fdset_add(vhost_user.fdset, fd, vhost_user_read_cb,
-			NULL, NULL, conn);
+			NULL, vhost_user_cleanup_cb, conn);
 	if (ret < 0) {
 		VHOST_CONFIG_LOG(vsocket->path, ERR,
 			"failed to add fd %d into vhost server fdset",
@@ -306,35 +307,40 @@ static void
 vhost_user_read_cb(int connfd, void *dat, int *remove)
 {
 	struct vhost_user_connection *conn = dat;
-	struct vhost_user_socket *vsocket = conn->vsocket;
 	int ret;
 
 	ret = vhost_user_msg_handler(conn->vid, connfd);
-	if (ret < 0) {
-		struct virtio_net *dev = get_device(conn->vid);
-
-		close(connfd);
+	if (ret < 0)
 		*remove = 1;
+}
 
-		if (dev)
-			vhost_destroy_device_notify(dev);
+static void
+vhost_user_cleanup_cb(int connfd, void *dat)
+{
+	struct vhost_user_connection *conn = dat;
+	struct vhost_user_socket *vsocket = conn->vsocket;
+	struct virtio_net *dev = get_device(conn->vid);
 
-		if (vsocket->notify_ops->destroy_connection)
-			vsocket->notify_ops->destroy_connection(conn->vid);
+	close(connfd);
 
-		vhost_destroy_device(conn->vid);
+	if (dev)
+		vhost_destroy_device_notify(dev);
 
-		if (vsocket->reconnect) {
-			create_unix_socket(vsocket);
-			vhost_user_start_client(vsocket);
-		}
+	if (vsocket->notify_ops->destroy_connection)
+		vsocket->notify_ops->destroy_connection(conn->vid);
 
-		pthread_mutex_lock(&vsocket->conn_mutex);
-		TAILQ_REMOVE(&vsocket->conn_list, conn, next);
-		pthread_mutex_unlock(&vsocket->conn_mutex);
+	vhost_destroy_device(conn->vid);
 
-		free(conn);
+	if (vsocket->reconnect) {
+		create_unix_socket(vsocket);
+		vhost_user_start_client(vsocket);
 	}
+
+	pthread_mutex_lock(&vsocket->conn_mutex);
+	TAILQ_REMOVE(&vsocket->conn_list, conn, next);
+	pthread_mutex_unlock(&vsocket->conn_mutex);
+
+	free(conn);
 }
 
 static int
