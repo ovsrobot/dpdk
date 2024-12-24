@@ -41,8 +41,8 @@ auxiliary_devargs_lookup(const char *name)
  *
  * Stub for OS not supporting auxiliary bus.
  */
-__rte_weak bool
-auxiliary_dev_exists(const char *name)
+bool
+RTE_WEAK(auxiliary_dev_exists)(const char *name)
 {
 	RTE_SET_USED(name);
 	return false;
@@ -53,8 +53,8 @@ auxiliary_dev_exists(const char *name)
  *
  * Stub for OS not supporting auxiliary bus.
  */
-__rte_weak int
-auxiliary_scan(void)
+int
+RTE_WEAK(auxiliary_scan)(void)
 {
 	return 0;
 }
