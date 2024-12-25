@@ -91,53 +91,21 @@ l3fwd_lpm_process_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	const int32_t k = RTE_ALIGN_FLOOR(nb_rx, FWDSTEP);
 	const int32_t m = nb_rx % FWDSTEP;
 
-	if (k) {
-		for (i = 0; i < FWDSTEP; i++) {
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i],
-							void *));
-		}
-		for (j = 0; j != k - FWDSTEP; j += FWDSTEP) {
-			for (i = 0; i < FWDSTEP; i++) {
-				rte_prefetch0(rte_pktmbuf_mtod(
-						pkts_burst[j + i + FWDSTEP],
-						void *));
-			}
+	/* The number of packets is small. Prefetch all packets. */
+	for (i = 0; i < nb_rx; i++)
+		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i], void *));
 
+	if (k) {
+		for (j = 0; j != k; j += FWDSTEP) {
 			processx4_step1(&pkts_burst[j], &dip, &ipv4_flag);
 			processx4_step2(qconf, dip, ipv4_flag, portid,
 					&pkts_burst[j], &dst_port[j]);
 			if (do_step3)
 				processx4_step3(&pkts_burst[j], &dst_port[j]);
 		}
-
-		processx4_step1(&pkts_burst[j], &dip, &ipv4_flag);
-		processx4_step2(qconf, dip, ipv4_flag, portid, &pkts_burst[j],
-				&dst_port[j]);
-		if (do_step3)
-			processx4_step3(&pkts_burst[j], &dst_port[j]);
-
-		j += FWDSTEP;
 	}
 
 	if (m) {
-		/* Prefetch last up to 3 packets one by one */
-		switch (m) {
-		case 3:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
-							void *));
-			j++;
-			/* fallthrough */
-		case 2:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
-							void *));
-			j++;
-			/* fallthrough */
-		case 1:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
-							void *));
-			j++;
-		}
-		j -= m;
 		/* Classify last up to 3 packets one by one */
 		switch (m) {
 		case 3:
