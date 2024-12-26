@@ -31,11 +31,17 @@ sources = [
         'ice_vf_mbx.c',
 ]
 
-error_cflags = [
-        '-Wno-unused-but-set-variable',
-        '-Wno-unused-variable',
-        '-Wno-unused-parameter',
-]
+if is_ms_compiler
+    error_cflags = [
+            '/wd4101', # unreferenced local variable
+    ]
+else
+    error_cflags = [
+            '-Wno-unused-but-set-variable',
+            '-Wno-unused-variable',
+            '-Wno-unused-parameter',
+    ]
+endif
 
 # Bugzilla ID: 678
 if (toolchain == 'gcc' and cc.version().version_compare('>=11.0.0'))

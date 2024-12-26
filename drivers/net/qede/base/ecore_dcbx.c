@@ -421,8 +421,6 @@ ecore_dcbx_get_priority_info(struct ecore_hwfn *p_hwfn,
 			     struct ecore_dcbx_app_prio *p_prio,
 			     struct ecore_dcbx_results *p_results)
 {
-	u8 val;
-
 	if (p_results->arr[DCBX_PROTOCOL_ETH].update &&
 	    p_results->arr[DCBX_PROTOCOL_ETH].enable)
 		p_prio->eth = p_results->arr[DCBX_PROTOCOL_ETH].priority;
