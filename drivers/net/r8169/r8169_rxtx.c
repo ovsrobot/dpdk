@@ -1012,8 +1012,21 @@ rtl_tx_init(struct rte_eth_dev *dev)
 
 	/* Set TDFNR: TX Desc Fetch NumbeR */
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		RTL_W8(hw, TDFNR, 0x10);
 		break;
 	}
@@ -1187,7 +1200,13 @@ rtl_xmit_pkt(struct rtl_hw *hw, struct rtl_tx_queue *txq,
 		rtl_setup_csum_offload(tx_pkt, tx_ol_flags, opts);
 
 		switch (hw->mcfg) {
-		case CFG_METHOD_48 ... CFG_METHOD_53:
+		/* CFG_METHOD_48 ... CFG_METHOD_53 */
+		case CFG_METHOD_48:
+		case CFG_METHOD_49:
+		case CFG_METHOD_50:
+		case CFG_METHOD_51:
+		case CFG_METHOD_52:
+		case CFG_METHOD_53:
 			rtl8125_ptp_patch(tx_pkt);
 			break;
 		}

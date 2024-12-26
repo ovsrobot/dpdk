@@ -377,8 +377,21 @@ rtl_wait_phy_ups_resume(struct rtl_hw *hw, u16 PhyState)
 	int i = 0;
 
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		do {
 			tmp_phy_state = rtl_mdio_direct_read_phy_ocp(hw, 0xA420);
 			tmp_phy_state &= 0x7;
@@ -399,8 +412,21 @@ rtl_phy_power_up(struct rtl_hw *hw)
 
 	/* Wait ups resume (phy state 3) */
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_wait_phy_ups_resume(hw, 3);
 	}
 }
@@ -409,8 +435,21 @@ void
 rtl_powerup_pll(struct rtl_hw *hw)
 {
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		RTL_W8(hw, PMCH, RTL_R8(hw, PMCH) | BIT_7 | BIT_6);
 	}
 
@@ -433,8 +472,21 @@ rtl_powerdown_pll(struct rtl_hw *hw)
 	rtl_phy_power_down(hw);
 
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		RTL_W8(hw, PMCH, RTL_R8(hw, PMCH) & ~BIT_7);
 		break;
 	}
@@ -516,8 +568,21 @@ rtl_get_hw_phy_mcu_code_ver(struct rtl_hw *hw)
 	u16 hw_ram_code_ver = ~0;
 
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_mdio_direct_write_phy_ocp(hw, 0xA436, 0x801E);
 		hw_ram_code_ver = rtl_mdio_direct_read_phy_ocp(hw, 0xA438);
 		break;
@@ -547,8 +612,21 @@ static void
 rtl_write_hw_phy_mcu_code_ver(struct rtl_hw *hw)
 {
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_mdio_direct_write_phy_ocp(hw, 0xA436, 0x801E);
 		rtl_mdio_direct_write_phy_ocp(hw, 0xA438, hw->sw_ram_code_ver);
 		hw->hw_ram_code_ver = hw->sw_ram_code_ver;
@@ -633,8 +711,19 @@ static bool
 rtl_is_adv_eee_enabled(struct rtl_hw *hw)
 {
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_55:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_55 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		if (rtl_mdio_direct_read_phy_ocp(hw, 0xA430) & BIT_15)
 			return true;
 		break;
@@ -712,7 +801,12 @@ rtl_disable_eee(struct rtl_hw *hw)
 		break;
 	case CFG_METHOD_50:
 	case CFG_METHOD_51:
-	case CFG_METHOD_53 ... CFG_METHOD_57:
+	/* CFG_METHOD_53 ... CFG_METHOD_57 */
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
 		rtl_clear_mac_ocp_bit(hw, 0xE040, (BIT_1 | BIT_0));
 
 		rtl_set_eth_phy_ocp_bit(hw, 0xA432, BIT_4);
@@ -723,7 +817,10 @@ rtl_disable_eee(struct rtl_hw *hw)
 		rtl_clear_eth_phy_ocp_bit(hw, 0xA428, BIT_7);
 		rtl_clear_eth_phy_ocp_bit(hw, 0xA4A2, BIT_9);
 		break;
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_clear_mac_ocp_bit(hw, 0xE040, (BIT_1 | BIT_0));
 
 		rtl_clear_eth_phy_ocp_bit(hw, 0xA5D0, (MDIO_EEE_100TX | MDIO_EEE_1000T));
@@ -756,16 +853,42 @@ rtl_hw_phy_config(struct rtl_hw *hw)
 	hw->hw_ops.hw_phy_config(hw);
 
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_disable_aldps(hw);
 		break;
 	}
 
 	/* Legacy force mode (chap 22) */
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 	default:
 		rtl_clear_eth_phy_ocp_bit(hw, 0xA5B4, BIT_15);
 		break;
