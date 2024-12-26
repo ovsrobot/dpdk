@@ -208,7 +208,7 @@ u16 ice_xlt_kb_flag_get(struct ice_xlt_kb *kb, u64 pkt_flag)
 		/* only check first entry */
 		u16 idx = (u16)(entry->flg0_14_sel[i] & 0x3f);
 
-		if (pkt_flag & (1ul << idx))
+		if (pkt_flag & RTE_BIT64(idx))
 			flg |=  (u16)(1u << i);
 	}
 

@@ -68,8 +68,8 @@ u64 ice_flg_redirect(struct ice_flg_rd_item *table, u64 psr_flg)
 		if (!item->expose)
 			continue;
 
-		if (psr_flg & (1ul << item->intr_flg_id))
-			flg |= (1ul << i);
+		if (psr_flg & RTE_BIT64(item->intr_flg_id))
+			flg |= RTE_BIT64(i);
 	}
 
 	return flg;
