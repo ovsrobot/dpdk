@@ -7,9 +7,7 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 static __rte_always_inline void
 ice_rxq_rearm(struct ice_rx_queue *rxq)

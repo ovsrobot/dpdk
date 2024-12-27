@@ -7,9 +7,7 @@
 
 #include "ice_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 static inline uint16_t
 ice_rx_reassemble_packets(struct ice_rx_queue *rxq, struct rte_mbuf **rx_bufs,

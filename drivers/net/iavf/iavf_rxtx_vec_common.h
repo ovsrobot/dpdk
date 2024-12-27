@@ -11,9 +11,7 @@
 #include "iavf.h"
 #include "iavf_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 static __rte_always_inline uint16_t
 reassemble_packets(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_bufs,

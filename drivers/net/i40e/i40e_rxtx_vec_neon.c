@@ -16,8 +16,7 @@
 #include "i40e_rxtx.h"
 #include "i40e_rxtx_vec_common.h"
 
-
-#pragma GCC diagnostic ignored "-Wcast-qual"
+__rte_diagnostic_ignored_wcast_qual
 
 static inline void
 i40e_rxq_rearm(struct i40e_rx_queue *rxq)

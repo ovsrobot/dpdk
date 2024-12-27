@@ -15,9 +15,7 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 #define RTE_I40E_DESCS_PER_LOOP_AVX 8
 

@@ -10,7 +10,7 @@
 #include "i40e_ethdev.h"
 #include "i40e_rxtx.h"
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
+__rte_diagnostic_ignored_wcast_qual
 
 void
 i40e_recycle_rx_descriptors_refill_vec(void *rx_queue, uint16_t nb_mbufs)

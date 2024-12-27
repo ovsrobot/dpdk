@@ -11,9 +11,7 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 static void
 fm10k_reset_tx_queue(struct fm10k_tx_queue *txq);

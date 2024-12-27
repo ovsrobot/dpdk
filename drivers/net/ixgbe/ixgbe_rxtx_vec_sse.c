@@ -12,9 +12,7 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 static inline void
 ixgbe_rxq_rearm(struct ixgbe_rx_queue *rxq)

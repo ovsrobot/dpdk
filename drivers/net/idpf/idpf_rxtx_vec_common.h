@@ -11,9 +11,7 @@
 #include "idpf_ethdev.h"
 #include "idpf_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 #define IDPF_SCALAR_PATH		0
 #define IDPF_VECTOR_PATH		1

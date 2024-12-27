@@ -11,7 +11,7 @@
 #include "ixgbe_rxtx.h"
 #include "ixgbe_rxtx_vec_common.h"
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
+__rte_diagnostic_ignored_wcast_qual
 
 static inline void
 ixgbe_rxq_rearm(struct ixgbe_rx_queue *rxq)

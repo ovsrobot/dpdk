@@ -25,10 +25,8 @@
 #include "mlx5_rxtx_vec.h"
 #include "mlx5_autoconf.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
+__rte_diagnostic_ignored_wcast_qual
+__rte_diagnostic_ignored_wstrict_aliasing
 
 /**
  * Store free buffers to RX SW ring.

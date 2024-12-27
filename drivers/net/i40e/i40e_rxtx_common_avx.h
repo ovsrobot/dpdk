@@ -11,9 +11,7 @@
 #include "i40e_ethdev.h"
 #include "i40e_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 #ifdef __AVX2__
 static __rte_always_inline void

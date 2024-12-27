@@ -6,9 +6,7 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 static inline __m128i
 ice_flex_rxd_to_fdir_flags_vec(const __m128i fdir_id0_3)
