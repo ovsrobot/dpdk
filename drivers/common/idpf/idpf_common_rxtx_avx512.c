@@ -6,9 +6,7 @@
 #include "idpf_common_device.h"
 #include "idpf_common_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+__rte_diagnostic_ignored_wcast_qual
 
 #define IDPF_DESCS_PER_LOOP_AVX 8
 #define PKTLEN_SHIFT 10
