@@ -15,8 +15,6 @@
 
 #include <rte_altivec.h>
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
 static inline void
 i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 {
@@ -286,7 +284,10 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		mbp1 = *(__vector unsigned long *)&sw_ring[pos];
 		/* Read desc statuses backwards to avoid race condition */
 		/* A.1 load desc[3] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] = *(__vector unsigned long *)(rxdp + 3);
+__rte_diagnostic_pop
 		rte_compiler_barrier();
 
 		/* B.2 copy 2 mbuf point into rx_pkts  */
@@ -296,11 +297,14 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		mbp2 = *(__vector unsigned long *)&sw_ring[pos + 2];
 
 		/* A.1 load desc[2-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[2] = *(__vector unsigned long *)(rxdp + 2);
 		rte_compiler_barrier();
 		descs[1] = *(__vector unsigned long *)(rxdp + 1);
 		rte_compiler_barrier();
 		descs[0] = *(__vector unsigned long *)(rxdp);
+__rte_diagnostic_pop
 
 		/* B.2 copy 2 mbuf point into rx_pkts  */
 		*(__vector unsigned long *)&rx_pkts[pos + 2] =  mbp2;
@@ -534,7 +538,10 @@ vtx1(volatile struct i40e_tx_desc *txdp,
 
 	__vector unsigned long descriptor = (__vector unsigned long){
 		pkt->buf_iova + pkt->data_off, high_qw};
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	*(__vector unsigned long *)txdp = descriptor;
+__rte_diagnostic_pop
 }
 
 static inline void

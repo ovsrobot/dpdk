@@ -16,9 +16,6 @@
 #include "i40e_rxtx.h"
 #include "i40e_rxtx_vec_common.h"
 
-
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
 static inline void
 i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 {
@@ -421,6 +418,8 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *__rte_restrict rxq,
 		int32x4_t len_shl = {0, 0, 0, PKTLEN_SHIFT};
 
 		/* A.1 load desc[3-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] =  vld1q_u64((uint64_t *)(rxdp + 3));
 		descs[2] =  vld1q_u64((uint64_t *)(rxdp + 2));
 		descs[1] =  vld1q_u64((uint64_t *)(rxdp + 1));
@@ -433,6 +432,7 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *__rte_restrict rxq,
 		descs[2] = vld1q_lane_u64((uint64_t *)(rxdp + 2), descs[2], 0);
 		descs[1] = vld1q_lane_u64((uint64_t *)(rxdp + 1), descs[1], 0);
 		descs[0] = vld1q_lane_u64((uint64_t *)(rxdp), descs[0], 0);
+__rte_diagnostic_pop
 
 		/* B.1 load 4 mbuf point */
 		mbp1 = vld1q_u64((uint64_t *)&sw_ring[pos]);
@@ -662,7 +662,10 @@ vtx1(volatile struct i40e_tx_desc *txdp,
 			((uint64_t)pkt->data_len << I40E_TXD_QW1_TX_BUF_SZ_SHIFT));
 
 	uint64x2_t descriptor = {pkt->buf_iova + pkt->data_off, high_qw};
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	vst1q_u64((uint64_t *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static inline void

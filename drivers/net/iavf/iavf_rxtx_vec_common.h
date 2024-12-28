@@ -11,10 +11,6 @@
 #include "iavf.h"
 #include "iavf_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 static __rte_always_inline uint16_t
 reassemble_packets(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_bufs,
 		   uint16_t nb_bufs, uint8_t *split_flags)
@@ -422,8 +418,11 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 			dma_addr0 = _mm_setzero_si128();
 			for (i = 0; i < IAVF_VPMD_DESCS_PER_LOOP; i++) {
 				rxp[i] = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
+__rte_diagnostic_pop
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
@@ -458,8 +457,11 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 		dma_addr1 = _mm_add_epi64(dma_addr1, hdr_room);
 
 		/* flush desc with pa dma_addr */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
+__rte_diagnostic_pop
 	}
 #else
 #ifdef CC_AVX512_SUPPORT
