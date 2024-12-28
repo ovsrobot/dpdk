@@ -9,8 +9,6 @@
 
 #include <arm_neon.h>
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
 static inline void
 hns3_vec_tx(volatile struct hns3_desc *desc, struct rte_mbuf *pkt)
 {

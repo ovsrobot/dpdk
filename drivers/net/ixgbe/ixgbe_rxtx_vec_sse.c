@@ -12,10 +12,6 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 static inline void
 ixgbe_rxq_rearm(struct ixgbe_rx_queue *rxq)
 {
@@ -41,8 +37,11 @@ ixgbe_rxq_rearm(struct ixgbe_rx_queue *rxq)
 			dma_addr0 = _mm_setzero_si128();
 			for (i = 0; i < RTE_IXGBE_DESCS_PER_LOOP; i++) {
 				rxep[i].mbuf = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
+__rte_diagnostic_pop
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
@@ -76,8 +75,11 @@ ixgbe_rxq_rearm(struct ixgbe_rx_queue *rxq)
 		dma_addr1 =  _mm_and_si128(dma_addr1, hba_msk);
 
 		/* flush desc with pa dma_addr */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
+__rte_diagnostic_pop
 	}
 
 	rxq->rxrearm_start += RTE_IXGBE_RXQ_REARM_THRESH;
@@ -466,7 +468,10 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* Read desc statuses backwards to avoid race condition */
 		/* A.1 load desc[3] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] = _mm_loadu_si128((__m128i *)(rxdp + 3));
+__rte_diagnostic_pop
 		rte_compiler_barrier();
 
 		/* B.2 copy 2 64 bit or 4 32 bit mbuf point into rx_pkts */
@@ -478,11 +483,14 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 #endif
 
 		/* A.1 load desc[2-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[2] = _mm_loadu_si128((__m128i *)(rxdp + 2));
 		rte_compiler_barrier();
 		descs[1] = _mm_loadu_si128((__m128i *)(rxdp + 1));
 		rte_compiler_barrier();
 		descs[0] = _mm_loadu_si128((__m128i *)(rxdp));
+__rte_diagnostic_pop
 
 #if defined(RTE_ARCH_X86_64)
 		/* B.2 copy 2 mbuf point into rx_pkts  */
@@ -676,7 +684,10 @@ vtx1(volatile union ixgbe_adv_tx_desc *txdp,
 	__m128i descriptor = _mm_set_epi64x((uint64_t)pkt->pkt_len << 46 |
 			flags | pkt->data_len,
 			pkt->buf_iova + pkt->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_store_si128((__m128i *)&txdp->read, descriptor);
+__rte_diagnostic_pop
 }
 
 static inline void

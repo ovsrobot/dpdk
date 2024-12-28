@@ -15,8 +15,6 @@
 
 #include <rte_altivec.h>
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
 static inline void
 i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 {
