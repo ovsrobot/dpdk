@@ -1011,6 +1011,59 @@ service_may_be_active(void)
 	return unregister_all();
 }
 
+static uint64_t busy_loops;
+static uint64_t idle_loops;
+
+static void maint_callback(bool work_done)
+{
+	if (work_done)
+		busy_loops++;
+	else
+		idle_loops++;
+}
+
+/* test registering and unregistering of service maint callback*/
+static int
+service_maintenance(void)
+{
+	const uint32_t sid = 0;
+	busy_loops = 0;
+	idle_loops = 0;
+	/* expected failure cases */
+	TEST_ASSERT_EQUAL(-EINVAL, rte_service_may_be_active(10000),
+			"Invalid service may be active check did not fail");
+
+	/* start the service */
+	TEST_ASSERT_EQUAL(0, rte_service_runstate_set(sid, 1),
+			"Starting valid service failed");
+	TEST_ASSERT_EQUAL(0, rte_service_lcore_add(slcore_id),
+			"Add service core failed when not in use before");
+	TEST_ASSERT_EQUAL(0, rte_service_map_lcore_set(sid, slcore_id, 1),
+			"Enabling valid service on valid core failed");
+	TEST_ASSERT_EQUAL(0, rte_service_maint_callback_register(maint_callback, slcore_id),
+			"Registering maintenance callback failed");
+	TEST_ASSERT_EQUAL(0, rte_service_lcore_start(slcore_id),
+			"Service core start after add failed");
+
+	/* ensures core really is running the service function */
+	TEST_ASSERT_EQUAL(1, service_lcore_running_check(),
+			"Service core expected to poll service but it didn't");
+
+	/* ensures service maintenance callback received information about work done */
+	TEST_ASSERT(busy_loops > 0, "No busy loops detected");
+	TEST_ASSERT(idle_loops > 0, "No idle loops detected");
+
+	/* stop the service, and wait for not-active with timeout */
+	TEST_ASSERT_EQUAL(0, rte_service_runstate_set(sid, 0),
+			"Error: Service stop returned non-zero");
+	TEST_ASSERT_EQUAL(0, service_ensure_stopped_with_timeout(sid),
+			"Error: Service not stopped after timeout period.");
+	TEST_ASSERT_EQUAL(0, rte_service_maint_callback_unregister(slcore_id),
+			"Unregistering service maintenance callback failed");
+
+	return unregister_all();
+}
+
 /* check service may be active when service is running on a second lcore */
 static int
 service_active_two_cores(void)
@@ -1071,6 +1124,7 @@ static struct unit_test_suite service_tests  = {
 		TEST_CASE_ST(dummy_register, NULL, service_mt_unsafe_poll),
 		TEST_CASE_ST(dummy_register, NULL, service_mt_safe_poll),
 		TEST_CASE_ST(dummy_register, NULL, service_may_be_active),
+		TEST_CASE_ST(dummy_register, NULL, service_maintenance),
 		TEST_CASE_ST(dummy_register, NULL, service_active_two_cores),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
