@@ -24,10 +24,6 @@
 #include "mlx5_rxtx_vec.h"
 #include "mlx5_autoconf.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 /**
  * Store free buffers to RX SW ring.
  *
@@ -75,7 +71,8 @@ static inline uint16_t
 rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		    struct rte_mbuf **elts, bool keep)
 {
-	volatile struct mlx5_mini_cqe8 *mcq = (void *)(cq + !rxq->cqe_comp_layout);
+	volatile struct mlx5_mini_cqe8 *mcq =
+		(volatile void *)(cq + !rxq->cqe_comp_layout);
 	/* Title packet is pre-built. */
 	struct rte_mbuf *t_pkt = rxq->cqe_comp_layout ? &rxq->title_pkt : elts[0];
 	unsigned int pos;
@@ -129,8 +126,11 @@ rxq_cq_decompress_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 	 * E. store flow tag (rte_flow mark).
 	 */
 cycle:
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	if (rxq->cqe_comp_layout)
 		rte_prefetch0((void *)(cq + mcqe_n));
+__rte_diagnostic_pop
 	for (pos = 0; pos < mcqe_n; ) {
 		__m128i mcqe1, mcqe2;
 		__m128i rxdf1, rxdf2;
@@ -138,6 +138,8 @@ cycle:
 		__m128i byte_cnt, invalid_mask;
 #endif
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		if (!rxq->cqe_comp_layout)
 			for (i = 0; i < MLX5_VPMD_DESCS_PER_LOOP; ++i)
 				if (likely(pos + i < mcqe_n))
@@ -145,6 +147,7 @@ cycle:
 		/* A.1 load mCQEs into a 128bit register. */
 		mcqe1 = _mm_loadu_si128((__m128i *)&mcq[pos % 8]);
 		mcqe2 = _mm_loadu_si128((__m128i *)&mcq[pos % 8 + 2]);
+__rte_diagnostic_pop
 		/* B.1 store rearm data to mbuf. */
 		_mm_storeu_si128((__m128i *)&elts[pos]->rearm_data, rearm);
 		_mm_storeu_si128((__m128i *)&elts[pos + 1]->rearm_data, rearm);
@@ -354,9 +357,12 @@ cycle:
 		/* Move to next CQE and invalidate consumed CQEs. */
 		if (!rxq->cqe_comp_layout) {
 			if (!(pos & 0x7) && pos < mcqe_n) {
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				if (pos + 8 < mcqe_n)
 					rte_prefetch0((void *)(cq + pos + 8));
-				mcq = (void *)(cq + pos);
+__rte_diagnostic_pop
+				mcq = (volatile void *)(cq + pos);
 				for (i = 0; i < 8; ++i)
 					cq[inv++].op_own = MLX5_CQE_INVALIDATE;
 			}
@@ -371,7 +377,7 @@ cycle:
 		    MLX5_CQE_FORMAT(cq->op_own) == MLX5_COMPRESSED) {
 			pos = 0;
 			elts = &elts[mcqe_n];
-			mcq = (void *)cq;
+			mcq = (volatile void *)cq;
 			mcqe_n = MLX5_CQE_NUM_MINIS(cq->op_own) + 1;
 			pkts_n += mcqe_n;
 			goto cycle;
@@ -651,6 +657,8 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		p = _mm_andnot_si128(mask, p);
 		/* A.1 load cqes. */
 		p3 = _mm_extract_epi16(p, 3);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		cqes[3] = _mm_loadl_epi64((__m128i *)
 					   &cq[pos + p3].sop_drop_qpn);
 		rte_compiler_barrier();
@@ -683,6 +691,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		cqes[2] = _mm_blend_epi16(cqes[2], cqe_tmp1, 0x30);
 		cqe_tmp2 = _mm_loadl_epi64((__m128i *)&cq[pos + p3].rsvd4[2]);
 		cqe_tmp1 = _mm_loadl_epi64((__m128i *)&cq[pos + p2].rsvd4[2]);
+__rte_diagnostic_pop
 		cqes[3] = _mm_blend_epi16(cqes[3], cqe_tmp2, 0x04);
 		cqes[2] = _mm_blend_epi16(cqes[2], cqe_tmp1, 0x04);
 		/* C.2 generate final structure for mbuf with swapping bytes. */
@@ -700,6 +709,8 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		/* E.1 extract op_own field. */
 		op_own_tmp2 = _mm_unpacklo_epi32(cqes[2], cqes[3]);
 		/* C.1 load remained CQE data and extract necessary fields. */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		cqe_tmp2 = _mm_load_si128((__m128i *)&cq[pos + p1]);
 		cqe_tmp1 = _mm_load_si128((__m128i *)&cq[pos]);
 		cqes[1] = _mm_blendv_epi8(cqes[1], cqe_tmp2, blend_mask);
@@ -710,6 +721,7 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 		cqes[0] = _mm_blend_epi16(cqes[0], cqe_tmp1, 0x30);
 		cqe_tmp2 = _mm_loadl_epi64((__m128i *)&cq[pos + p1].rsvd4[2]);
 		cqe_tmp1 = _mm_loadl_epi64((__m128i *)&cq[pos].rsvd4[2]);
+__rte_diagnostic_pop
 		cqes[1] = _mm_blend_epi16(cqes[1], cqe_tmp2, 0x04);
 		cqes[0] = _mm_blend_epi16(cqes[0], cqe_tmp1, 0x04);
 		/* C.2 generate final structure for mbuf with swapping bytes. */
