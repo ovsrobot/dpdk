@@ -74,6 +74,7 @@ struct __rte_cache_aligned core_state {
 	RTE_BITSET_DECLARE(service_active_on_lcore, RTE_SERVICE_NUM_MAX);
 	RTE_ATOMIC(uint64_t) loops;
 	RTE_ATOMIC(uint64_t) cycles;
+	rte_maint_func maint_callback;
 	struct service_stats service_stats[RTE_SERVICE_NUM_MAX];
 };
 
@@ -318,6 +319,30 @@ rte_service_component_runstate_set(uint32_t id, uint32_t runstate)
 }
 
 int32_t
+rte_service_maint_callback_register(rte_maint_func callback, uint32_t lcore)
+{
+	struct core_state *cs =	RTE_LCORE_VAR_LCORE(lcore, lcore_states);
+	if (lcore >= RTE_MAX_LCORE || !cs->is_service_core
+			|| callback == NULL)
+		return -EINVAL;
+
+	cs->maint_callback = callback;
+	return 0;
+}
+
+int32_t
+rte_service_maint_callback_unregister(uint32_t lcore)
+{
+	struct core_state *cs =	RTE_LCORE_VAR_LCORE(lcore, lcore_states);
+	if (lcore >= RTE_MAX_LCORE || !cs->is_service_core
+			|| !cs->maint_callback)
+		return -EINVAL;
+
+	cs->maint_callback = NULL;
+	return 0;
+}
+
+int32_t
 rte_service_runstate_set(uint32_t id, uint32_t runstate)
 {
 	struct rte_service_spec_impl *s;
@@ -378,16 +403,17 @@ service_counter_add(RTE_ATOMIC(uint64_t) *counter, uint64_t operand)
 				  rte_memory_order_relaxed);
 }
 
-static inline void
+static inline int32_t
 service_runner_do_callback(struct rte_service_spec_impl *s,
 			   struct core_state *cs, uint32_t service_idx)
 {
 	rte_eal_trace_service_run_begin(service_idx, rte_lcore_id());
 	void *userdata = s->spec.callback_userdata;
+	int32_t rc;
 
 	if (service_stats_enabled(s)) {
 		uint64_t start = rte_rdtsc();
-		int rc = s->spec.callback(userdata);
+		rc = s->spec.callback(userdata);
 
 		struct service_stats *service_stats =
 			&cs->service_stats[service_idx];
@@ -407,9 +433,10 @@ service_runner_do_callback(struct rte_service_spec_impl *s,
 			service_counter_add(&service_stats->cycles, cycles);
 		}
 	} else {
-		s->spec.callback(userdata);
+		rc = s->spec.callback(userdata);
 	}
 	rte_eal_trace_service_run_end(service_idx, rte_lcore_id());
+	return rc;
 }
 
 
@@ -436,16 +463,17 @@ service_run(uint32_t i, struct core_state *cs, const uint64_t *mapped_services,
 
 	rte_bitset_set(cs->service_active_on_lcore, i);
 
+	int32_t ret;
 	if ((service_mt_safe(s) == 0) && (serialize_mt_unsafe == 1)) {
 		if (!rte_spinlock_trylock(&s->execute_lock))
 			return -EBUSY;
 
-		service_runner_do_callback(s, cs, i);
+		ret = service_runner_do_callback(s, cs, i);
 		rte_spinlock_unlock(&s->execute_lock);
 	} else
-		service_runner_do_callback(s, cs, i);
+		ret = service_runner_do_callback(s, cs, i);
 
-	return 0;
+	return ret;
 }
 
 int32_t
@@ -488,6 +516,10 @@ rte_service_run_iter_on_app_lcore(uint32_t id, uint32_t serialize_mt_unsafe)
 
 	rte_atomic_fetch_sub_explicit(&s->num_mapped_cores, 1, rte_memory_order_relaxed);
 
+	/* Ignore service specific error codes */
+	if ((ret != -EINVAL) && (ret != -EBUSY) && (ret != -ENOEXEC))
+		ret = 0;
+
 	return ret;
 }
 
@@ -505,12 +537,18 @@ service_runner_func(void *arg)
 	 */
 	while (rte_atomic_load_explicit(&cs->runstate, rte_memory_order_acquire) ==
 			RUNSTATE_RUNNING) {
+		bool work_done = false;
 		ssize_t id;
 
 		RTE_BITSET_FOREACH_SET(id, cs->mapped_services, RTE_SERVICE_NUM_MAX) {
 			/* return value ignored as no change to code flow */
-			service_run(id, cs, cs->mapped_services, service_get(id), 1);
+			int32_t ret = service_run(id, cs, cs->mapped_services, service_get(id), 1);
+			if ((ret != -EAGAIN) && (ret != -EINVAL) && (ret != -ENOEXEC))
+				work_done = true;
 		}
+
+		if (cs->maint_callback != NULL)
+			cs->maint_callback(work_done);
 
 		rte_atomic_store_explicit(&cs->loops, cs->loops + 1, rte_memory_order_relaxed);
 	}

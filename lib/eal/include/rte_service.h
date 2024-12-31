@@ -337,6 +337,40 @@ int32_t rte_service_lcore_reset_all(void);
 int32_t rte_service_set_stats_enable(uint32_t id, int32_t enable);
 
 /**
+ * Signature of callback function to run after all services are done
+ *
+ * If registered, service framework will execute the callback
+ * indicating if any of the services run on the core was performing work.
+ * This may be used e.g. for maintenance or power saving when no work done.
+ */
+typedef void (*rte_maint_func)(bool work_done);
+
+/**
+ * Register service maintenance callback.
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * @param callback Function callback to register
+ * @param lcore Id of the service core.
+ * @retval 0 Successfully registered the callback.
+ *         -EINVAL Attempted to register an invalid callback or the
+ *          lcore is not registered as service lcore
+ */
+__rte_experimental
+int32_t rte_service_maint_callback_register(rte_maint_func callback, uint32_t lcore);
+
+/**
+ * Unregister service maintenance callback.
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * @param lcore Id of the service core.
+ * @retval 0 Successfully unregistered the callback.
+ *         -EINVAL Attempted to unregister a callback from a core which
+ *	   is not a service lcore or for which no maint callback was registered
+ */
+__rte_experimental
+int32_t rte_service_maint_callback_unregister(uint32_t lcore);
+
+/**
  * Retrieve the list of currently enabled service cores.
  *
  * This function fills in an application supplied array, with each element
