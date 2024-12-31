@@ -25,8 +25,6 @@
 #include "mlx5_rxtx_vec.h"
 #include "mlx5_autoconf.h"
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
 /**
  * Store free buffers to RX SW ring.
  *

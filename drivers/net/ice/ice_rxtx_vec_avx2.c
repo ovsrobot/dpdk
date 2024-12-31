@@ -7,10 +7,6 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 static __rte_always_inline void
 ice_rxq_rearm(struct ice_rx_queue *rxq)
 {
@@ -254,6 +250,8 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			 _mm256_loadu_si256((void *)&sw_ring[i + 4]));
 #endif
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		const __m128i raw_desc7 = _mm_load_si128((void *)(rxdp + 7));
 		rte_compiler_barrier();
 		const __m128i raw_desc6 = _mm_load_si128((void *)(rxdp + 6));
@@ -269,6 +267,7 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		const __m128i raw_desc1 = _mm_load_si128((void *)(rxdp + 1));
 		rte_compiler_barrier();
 		const __m128i raw_desc0 = _mm_load_si128((void *)(rxdp + 0));
+__rte_diagnostic_pop
 
 		const __m256i raw_desc6_7 =
 			_mm256_inserti128_si256(_mm256_castsi128_si256(raw_desc6), raw_desc7, 1);
@@ -444,6 +443,8 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			if (rxq->vsi->adapter->pf.dev_data->dev_conf.rxmode.offloads &
 					RTE_ETH_RX_OFFLOAD_RSS_HASH) {
 				/* load bottom half of every 32B desc */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				const __m128i raw_desc_bh7 =
 					_mm_load_si128
 						((void *)(&rxdp[7].wb.status_error1));
@@ -475,6 +476,7 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 				const __m128i raw_desc_bh0 =
 					_mm_load_si128
 						((void *)(&rxdp[0].wb.status_error1));
+__rte_diagnostic_pop
 
 				__m256i raw_desc_bh6_7 =
 					_mm256_inserti128_si256
@@ -790,7 +792,10 @@ ice_vtx1(volatile struct ice_tx_desc *txdp,
 		ice_txd_enable_offload(pkt, &high_qw);
 
 	__m128i descriptor = _mm_set_epi64x(high_qw, rte_pktmbuf_iova(pkt));
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_store_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static __rte_always_inline void
@@ -841,8 +846,11 @@ ice_vtx(volatile struct ice_tx_desc *txdp,
 			_mm256_set_epi64x
 				(hi_qw1, rte_pktmbuf_iova(pkt[1]),
 				 hi_qw0, rte_pktmbuf_iova(pkt[0]));
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm256_store_si256((void *)(txdp + 2), desc2_3);
 		_mm256_store_si256((void *)txdp, desc0_1);
+__rte_diagnostic_pop
 	}
 
 	/* do any last ones */

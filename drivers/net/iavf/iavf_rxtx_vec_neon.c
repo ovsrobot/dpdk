@@ -269,6 +269,8 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *__rte_restrict rxq,
 		int32x4_t len_shl = {0, 0, 0, PKTLEN_SHIFT};
 
 		/* A.1 load desc[3-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] =  vld1q_u64((uint64_t *)(rxdp + 3));
 		descs[2] =  vld1q_u64((uint64_t *)(rxdp + 2));
 		descs[1] =  vld1q_u64((uint64_t *)(rxdp + 1));
@@ -281,6 +283,7 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *__rte_restrict rxq,
 		descs[2] = vld1q_lane_u64((uint64_t *)(rxdp + 2), descs[2], 0);
 		descs[1] = vld1q_lane_u64((uint64_t *)(rxdp + 1), descs[1], 0);
 		descs[0] = vld1q_lane_u64((uint64_t *)(rxdp), descs[0], 0);
+__rte_diagnostic_pop
 
 		/* B.1 load 4 mbuf point */
 		mbp1 = vld1q_u64((uint64_t *)&sw_ring[pos]);

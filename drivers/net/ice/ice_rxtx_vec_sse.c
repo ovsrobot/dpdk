@@ -6,10 +6,6 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 static inline __m128i
 ice_flex_rxd_to_fdir_flags_vec(const __m128i fdir_id0_3)
 {
@@ -52,8 +48,11 @@ ice_rxq_rearm(struct ice_rx_queue *rxq)
 			dma_addr0 = _mm_setzero_si128();
 			for (i = 0; i < ICE_DESCS_PER_LOOP; i++) {
 				rxep[i].mbuf = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
+__rte_diagnostic_pop
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
@@ -91,8 +90,11 @@ ice_rxq_rearm(struct ice_rx_queue *rxq)
 		dma_addr1 = _mm_add_epi64(dma_addr1, hdr_room);
 
 		/* flush desc with pa dma_addr */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
+__rte_diagnostic_pop
 	}
 
 	rxq->rxrearm_start += ICE_RXQ_REARM_THRESH;
@@ -425,7 +427,10 @@ _ice_recv_raw_pkts_vec(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		mbp1 = _mm_loadu_si128((__m128i *)&sw_ring[pos]);
 		/* Read desc statuses backwards to avoid race condition */
 		/* A.1 load desc[3] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] = _mm_loadu_si128((__m128i *)(rxdp + 3));
+__rte_diagnostic_pop
 		rte_compiler_barrier();
 
 		/* B.2 copy 2 64 bit or 4 32 bit mbuf point into rx_pkts */
@@ -437,11 +442,14 @@ _ice_recv_raw_pkts_vec(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 #endif
 
 		/* A.1 load desc[2-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[2] = _mm_loadu_si128((__m128i *)(rxdp + 2));
 		rte_compiler_barrier();
 		descs[1] = _mm_loadu_si128((__m128i *)(rxdp + 1));
 		rte_compiler_barrier();
 		descs[0] = _mm_loadu_si128((__m128i *)(rxdp));
+__rte_diagnostic_pop
 
 #if defined(RTE_ARCH_X86_64)
 		/* B.2 copy 2 mbuf point into rx_pkts  */
@@ -489,6 +497,8 @@ _ice_recv_raw_pkts_vec(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		if (rxq->vsi->adapter->pf.dev_data->dev_conf.rxmode.offloads &
 				RTE_ETH_RX_OFFLOAD_RSS_HASH) {
 			/* load bottom half of every 32B desc */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 			const __m128i raw_desc_bh3 =
 				_mm_load_si128
 					((void *)(&rxdp[3].wb.status_error1));
@@ -504,6 +514,7 @@ _ice_recv_raw_pkts_vec(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			const __m128i raw_desc_bh0 =
 				_mm_load_si128
 					((void *)(&rxdp[0].wb.status_error1));
+__rte_diagnostic_pop
 
 			/**
 			 * to shift the 32b RSS hash value to the
@@ -680,7 +691,10 @@ ice_vtx1(volatile struct ice_tx_desc *txdp, struct rte_mbuf *pkt,
 		 ((uint64_t)pkt->data_len << ICE_TXD_QW1_TX_BUF_SZ_S));
 
 	__m128i descriptor = _mm_set_epi64x(high_qw, rte_pktmbuf_iova(pkt));
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_store_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static inline void
