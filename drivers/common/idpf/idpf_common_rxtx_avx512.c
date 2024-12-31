@@ -6,10 +6,6 @@
 #include "idpf_common_device.h"
 #include "idpf_common_rxtx.h"
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 #define IDPF_DESCS_PER_LOOP_AVX 8
 #define PKTLEN_SHIFT 10
 
@@ -34,8 +30,11 @@ idpf_singleq_rearm_common(struct idpf_rx_queue *rxq)
 			dma_addr0 = _mm_setzero_si128();
 			for (i = 0; i < IDPF_VPMD_DESCS_PER_LOOP; i++) {
 				rxp[i] = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
+__rte_diagnostic_pop
 			}
 		}
 		rte_atomic_fetch_add_explicit(&rxq->rx_stats.mbuf_alloc_failed,
@@ -108,8 +107,11 @@ idpf_singleq_rearm_common(struct idpf_rx_queue *rxq)
 		dma_addr4_7 = _mm512_add_epi64(dma_addr4_7, hdr_room);
 
 		/* flush desc with pa dma_addr */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm512_store_si512((__m512i *)&rxdp->read, dma_addr0_3);
 		_mm512_store_si512((__m512i *)&(rxdp + 4)->read, dma_addr4_7);
+__rte_diagnostic_pop
 	}
 
 	rxq->rxrearm_start += IDPF_RXQ_REARM_THRESH;
@@ -164,8 +166,11 @@ idpf_singleq_rearm(struct idpf_rx_queue *rxq)
 				dma_addr0 = _mm_setzero_si128();
 				for (i = 0; i < IDPF_VPMD_DESCS_PER_LOOP; i++) {
 					rxp[i] = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 					_mm_storeu_si128((__m128i *)&rxdp[i].read,
 							 dma_addr0);
+__rte_diagnostic_pop
 				}
 			}
 			rte_atomic_fetch_add_explicit(&rxq->rx_stats.mbuf_alloc_failed,
@@ -216,10 +221,13 @@ idpf_singleq_rearm(struct idpf_rx_queue *rxq)
 				 iovas1);
 		const __m512i desc6_7 = _mm512_bsrli_epi128(desc4_5, 8);
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm512_storeu_si512((void *)rxdp, desc0_1);
 		_mm512_storeu_si512((void *)(rxdp + 2), desc2_3);
 		_mm512_storeu_si512((void *)(rxdp + 4), desc4_5);
 		_mm512_storeu_si512((void *)(rxdp + 6), desc6_7);
+__rte_diagnostic_pop
 
 		rxp += IDPF_DESCS_PER_LOOP_AVX;
 		rxdp += IDPF_DESCS_PER_LOOP_AVX;
@@ -336,6 +344,8 @@ _idpf_singleq_recv_raw_pkts_avx512(struct idpf_rx_queue *rxq,
 #endif
 
 		__m512i raw_desc0_3, raw_desc4_7;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		const __m128i raw_desc7 =
 			_mm_load_si128((void *)(rxdp + 7));
 		rte_compiler_barrier();
@@ -359,6 +369,7 @@ _idpf_singleq_recv_raw_pkts_avx512(struct idpf_rx_queue *rxq,
 		rte_compiler_barrier();
 		const __m128i raw_desc0 =
 			_mm_load_si128((void *)(rxdp + 0));
+__rte_diagnostic_pop
 
 		raw_desc4_7 = _mm512_broadcast_i32x4(raw_desc4);
 		raw_desc4_7 = _mm512_inserti32x4(raw_desc4_7, raw_desc5, 1);
@@ -560,8 +571,11 @@ idpf_splitq_rearm_common(struct idpf_rx_queue *rx_bufq)
 			dma_addr0 = _mm_setzero_si128();
 			for (i = 0; i < IDPF_VPMD_DESCS_PER_LOOP; i++) {
 				rxp[i] = &rx_bufq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				_mm_store_si128((__m128i *)&rxdp[i],
 						dma_addr0);
+__rte_diagnostic_pop
 			}
 		}
 	rte_atomic_fetch_add_explicit(&rx_bufq->rx_stats.mbuf_alloc_failed,
@@ -634,8 +648,11 @@ idpf_splitq_rearm(struct idpf_rx_queue *rx_bufq)
 				dma_addr0 = _mm_setzero_si128();
 				for (i = 0; i < IDPF_VPMD_DESCS_PER_LOOP; i++) {
 					rxp[i] = &rx_bufq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 					_mm_storeu_si128((__m128i *)&rxdp[i],
 							 dma_addr0);
+__rte_diagnostic_pop
 				}
 			}
 		rte_atomic_fetch_add_explicit(&rx_bufq->rx_stats.mbuf_alloc_failed,
@@ -797,6 +814,8 @@ _idpf_splitq_recv_raw_pkts_avx512(struct idpf_rx_queue *rxq,
 #endif
 
 		__m512i raw_desc0_3, raw_desc4_7;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		const __m128i raw_desc7 =
 			_mm_load_si128((void *)(rxdp + 7));
 		rte_compiler_barrier();
@@ -820,6 +839,7 @@ _idpf_splitq_recv_raw_pkts_avx512(struct idpf_rx_queue *rxq,
 		rte_compiler_barrier();
 		const __m128i raw_desc0 =
 			_mm_load_si128((void *)(rxdp + 0));
+__rte_diagnostic_pop
 
 		raw_desc4_7 = _mm512_broadcast_i32x4(raw_desc4);
 		raw_desc4_7 = _mm512_inserti32x4(raw_desc4_7, raw_desc5, 1);
@@ -1131,7 +1151,10 @@ idpf_singleq_vtx1(volatile struct idpf_base_tx_desc *txdp,
 
 	__m128i descriptor = _mm_set_epi64x(high_qw,
 					    pkt->buf_iova + pkt->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_storeu_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 #define IDPF_TX_LEN_MASK 0xAA
@@ -1178,7 +1201,10 @@ idpf_singleq_vtx(volatile struct idpf_base_tx_desc *txdp,
 				 pkt[1]->buf_iova + pkt[1]->data_off,
 				 hi_qw0,
 				 pkt[0]->buf_iova + pkt[0]->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm512_storeu_si512((void *)txdp, desc0_3);
+__rte_diagnostic_pop
 	}
 
 	/* do any last ones */
@@ -1435,7 +1461,10 @@ idpf_splitq_vtx1(volatile struct idpf_flex_tx_sched_desc *txdp,
 
 	__m128i descriptor = _mm_set_epi64x(high_qw,
 					    pkt->buf_iova + pkt->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_storeu_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static __rte_always_inline void
@@ -1480,7 +1509,10 @@ idpf_splitq_vtx(volatile struct idpf_flex_tx_sched_desc *txdp,
 				 pkt[1]->buf_iova + pkt[1]->data_off,
 				 hi_qw0,
 				 pkt[0]->buf_iova + pkt[0]->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm512_storeu_si512((void *)txdp, desc0_3);
+__rte_diagnostic_pop
 	}
 
 	/* do any last ones */
@@ -1521,11 +1553,14 @@ idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkt
 	if (nb_commit >= n) {
 		tx_backlog_entry_avx512(txep, tx_pkts, n);
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		idpf_splitq_vtx((void *)txdp, tx_pkts, n - 1, cmd_dtype);
 		tx_pkts += (n - 1);
 		txdp += (n - 1);
 
 		idpf_splitq_vtx1((void *)txdp, *tx_pkts++, cmd_dtype);
+__rte_diagnostic_pop
 
 		nb_commit = (uint16_t)(nb_commit - n);
 
@@ -1540,7 +1575,10 @@ idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkt
 
 	tx_backlog_entry_avx512(txep, tx_pkts, nb_commit);
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	idpf_splitq_vtx((void *)txdp, tx_pkts, nb_commit, cmd_dtype);
+__rte_diagnostic_pop
 
 	tx_id = (uint16_t)(tx_id + nb_commit);
 	if (tx_id > txq->next_rs)
