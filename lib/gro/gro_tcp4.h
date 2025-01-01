@@ -8,6 +8,7 @@
 #include "gro_tcp.h"
 
 #define GRO_TCP4_TBL_MAX_ITEM_NUM (1024UL * 1024UL)
+#define GRO_TCP4_HASH_BUCKET_SIZE 32
 
 /* Header fields representing common fields in TCP flow */
 struct tcp4_flow_key {
@@ -23,6 +24,7 @@ struct gro_tcp4_flow {
 	 * INVALID_ARRAY_INDEX indicates an empty flow.
 	 */
 	uint32_t start_index;
+	STAILQ_ENTRY(gro_tcp4_flow) next;
 };
 
 /*
@@ -33,6 +35,8 @@ struct gro_tcp4_tbl {
 	struct gro_tcp_item *items;
 	/* flow array */
 	struct gro_tcp4_flow *flows;
+	/* Collision list for the flows following the same hash */
+	STAILQ_HEAD(, gro_tcp4_flow) collision_list[GRO_TCP4_HASH_BUCKET_SIZE];
 	/* current item number */
 	uint32_t item_num;
 	/* current flow num */

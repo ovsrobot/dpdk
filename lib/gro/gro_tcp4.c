@@ -57,6 +57,9 @@ gro_tcp4_tbl_create(uint16_t socket_id,
 		tbl->flows[i].start_index = INVALID_ARRAY_INDEX;
 	tbl->max_flow_num = entries_num;
 
+	for (i = 0; i < GRO_TCP4_HASH_BUCKET_SIZE; i++)
+		STAILQ_INIT(&tbl->collision_list[i]);
+
 	return tbl;
 }
 
@@ -84,17 +87,18 @@ find_an_empty_flow(struct gro_tcp4_tbl *tbl)
 	return INVALID_ARRAY_INDEX;
 }
 
-static inline uint32_t
+static inline int
 insert_new_flow(struct gro_tcp4_tbl *tbl,
 		struct tcp4_flow_key *src,
-		uint32_t item_idx)
+		uint32_t item_idx,
+		uint32_t flow_hash)
 {
 	struct tcp4_flow_key *dst;
 	uint32_t flow_idx;
 
 	flow_idx = find_an_empty_flow(tbl);
 	if (unlikely(flow_idx == INVALID_ARRAY_INDEX))
-		return INVALID_ARRAY_INDEX;
+		return -1;
 
 	dst = &(tbl->flows[flow_idx].key);
 
@@ -106,7 +110,28 @@ insert_new_flow(struct gro_tcp4_tbl *tbl,
 	tbl->flows[flow_idx].start_index = item_idx;
 	tbl->flow_num++;
 
-	return flow_idx;
+	if (STAILQ_EMPTY(&tbl->collision_list[flow_hash]))
+		STAILQ_INSERT_HEAD(&tbl->collision_list[flow_hash],
+			&(tbl->flows[flow_idx]), next);
+	else
+		STAILQ_INSERT_TAIL(&tbl->collision_list[flow_hash],
+			&(tbl->flows[flow_idx]), next);
+	return 0;
+}
+
+static inline struct gro_tcp4_flow*
+gro_tcp4_flow_search(struct gro_tcp4_tbl *tbl,
+		struct tcp4_flow_key *key,
+		uint32_t flow_hash)
+{
+	struct gro_tcp4_flow *flow;
+
+	STAILQ_FOREACH(flow, &tbl->collision_list[flow_hash], next) {
+		if (memcmp(&(flow->key), key, sizeof(struct tcp4_flow_key)) == 0)
+			return flow;
+	}
+
+	return NULL;
 }
 
 int32_t
@@ -124,9 +149,8 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 
 	struct tcp4_flow_key key;
 	uint32_t item_idx;
-	uint32_t i, max_flow_num, remaining_flow_num;
-	uint8_t find;
-	uint32_t item_start_idx;
+	uint32_t flow_hash;
+	struct gro_tcp4_flow *flow;
 
 	/*
 	 * Don't process the packet whose TCP header length is greater
@@ -173,22 +197,15 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	is_atomic = (frag_off & RTE_IPV4_HDR_DF_FLAG) == RTE_IPV4_HDR_DF_FLAG;
 	ip_id = is_atomic ? 0 : rte_be_to_cpu_16(ipv4_hdr->packet_id);
 
-	/* Search for a matched flow. */
-	max_flow_num = tbl->max_flow_num;
-	remaining_flow_num = tbl->flow_num;
-	find = 0;
-	for (i = 0; i < max_flow_num && remaining_flow_num; i++) {
-		if (tbl->flows[i].start_index != INVALID_ARRAY_INDEX) {
-			if (is_same_tcp4_flow(tbl->flows[i].key, key)) {
-				find = 1;
-				item_start_idx = tbl->flows[i].start_index;
-				break;
-			}
-			remaining_flow_num--;
-		}
+	if (pkt->ol_flags & RTE_MBUF_F_RX_RSS_HASH) {
+		flow_hash = pkt->hash.rss % GRO_TCP4_HASH_BUCKET_SIZE;
+	} else {
+		flow_hash = ipv4_hdr->src_addr ^ ipv4_hdr->dst_addr ^
+				tcp_hdr->src_port ^ tcp_hdr->dst_port;
+		flow_hash = flow_hash % GRO_TCP4_HASH_BUCKET_SIZE;
 	}
-
-	if (find == 1) {
+	flow = gro_tcp4_flow_search(tbl, &key, flow_hash);
+	if (flow != NULL) {
 		/*
 		 * Any packet with additional flags like PSH,FIN should be processed
 		 * and flushed immediately.
@@ -197,9 +214,9 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 		 */
 		if (tcp_hdr->tcp_flags & (RTE_TCP_ACK_FLAG | RTE_TCP_PSH_FLAG | RTE_TCP_FIN_FLAG)) {
 			if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG)
-				tbl->items[item_start_idx].start_time = 0;
+				tbl->items[flow->start_index].start_time = 0;
 			return process_tcp_item(pkt, tcp_hdr, tcp_dl, tbl->items,
-						tbl->flows[i].start_index, &tbl->item_num,
+						flow->start_index, &tbl->item_num,
 						tbl->max_item_num, ip_id, is_atomic, start_time);
 		} else {
 			return -1;
@@ -217,8 +234,7 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 						is_atomic);
 		if (item_idx == INVALID_ARRAY_INDEX)
 			return -1;
-		if (insert_new_flow(tbl, &key, item_idx) ==
-			INVALID_ARRAY_INDEX) {
+		if (insert_new_flow(tbl, &key, item_idx, flow_hash) != 0) {
 			/*
 			 * Fail to insert a new flow, so delete the
 			 * stored packet.
@@ -255,36 +271,39 @@ gro_tcp4_tbl_timeout_flush(struct gro_tcp4_tbl *tbl,
 {
 	uint16_t k = 0;
 	uint32_t i, j;
-	uint32_t max_flow_num = tbl->max_flow_num;
+	struct gro_tcp4_flow *flow;
 
-	for (i = 0; i < max_flow_num; i++) {
-		if (unlikely(tbl->flow_num == 0))
-			return k;
+	for (i = 0; i < GRO_TCP4_HASH_BUCKET_SIZE; i++) {
+		STAILQ_FOREACH(flow, &tbl->collision_list[i], next) {
+			j = flow->start_index;
+			while (j != INVALID_ARRAY_INDEX) {
+				if (tbl->items[j].start_time <= flush_timestamp) {
+					out[k++] = tbl->items[j].firstseg;
+					if (tbl->items[j].nb_merged > 1)
+						update_header(&(tbl->items[j]));
+					/*
+					 * Delete the packet and get the next
+					 * packet in the flow.
+					 */
+					j = delete_tcp_item(tbl->items, j,
+								&tbl->item_num,
+								INVALID_ARRAY_INDEX);
+					flow->start_index = j;
+					if (j == INVALID_ARRAY_INDEX) {
+						tbl->flow_num--;
+						STAILQ_REMOVE(&tbl->collision_list[i],
+								flow, gro_tcp4_flow, next);
+					}
 
-		j = tbl->flows[i].start_index;
-		while (j != INVALID_ARRAY_INDEX) {
-			if (tbl->items[j].start_time <= flush_timestamp) {
-				out[k++] = tbl->items[j].firstseg;
-				if (tbl->items[j].nb_merged > 1)
-					update_header(&(tbl->items[j]));
-				/*
-				 * Delete the packet and get the next
-				 * packet in the flow.
-				 */
-				j = delete_tcp_item(tbl->items, j,
-							&tbl->item_num, INVALID_ARRAY_INDEX);
-				tbl->flows[i].start_index = j;
-				if (j == INVALID_ARRAY_INDEX)
-					tbl->flow_num--;
-
-				if (unlikely(k == nb_out))
-					return k;
-			} else
-				/*
-				 * The left packets in this flow won't be
-				 * timeout. Go to check other flows.
-				 */
-				break;
+					if (unlikely(k == nb_out))
+						return k;
+				} else
+					/*
+					 * The left packets in this flow won't be
+					 * timeout. Go to check other flows.
+					 */
+					break;
+			}
 		}
 	}
 	return k;
