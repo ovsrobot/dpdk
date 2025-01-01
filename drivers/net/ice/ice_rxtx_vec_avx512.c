@@ -7,10 +7,6 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 #define ICE_DESCS_PER_LOOP_AVX 8
 
 static __rte_always_inline void
@@ -243,6 +239,8 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 		__m256i raw_desc0_1, raw_desc2_3, raw_desc4_5, raw_desc6_7;
 
 		/* load in descriptors, in reverse order */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		const __m128i raw_desc7 =
 			_mm_load_si128((void *)(rxdp + 7));
 		rte_compiler_barrier();
@@ -266,6 +264,7 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 		rte_compiler_barrier();
 		const __m128i raw_desc0 =
 			_mm_load_si128((void *)(rxdp + 0));
+__rte_diagnostic_pop
 
 		raw_desc6_7 =
 			_mm256_inserti128_si256
@@ -474,6 +473,8 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 			if (rxq->vsi->adapter->pf.dev_data->dev_conf.rxmode.offloads &
 					RTE_ETH_RX_OFFLOAD_RSS_HASH) {
 				/* load bottom half of every 32B desc */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				const __m128i raw_desc_bh7 =
 					_mm_load_si128
 						((void *)(&rxdp[7].wb.status_error1));
@@ -505,6 +506,7 @@ _ice_recv_raw_pkts_vec_avx512(struct ice_rx_queue *rxq,
 				const __m128i raw_desc_bh0 =
 					_mm_load_si128
 						((void *)(&rxdp[0].wb.status_error1));
+__rte_diagnostic_pop
 
 				__m256i raw_desc_bh6_7 =
 					_mm256_inserti128_si256
@@ -987,7 +989,10 @@ ice_vtx1(volatile struct ice_tx_desc *txdp,
 		ice_txd_enable_offload(pkt, &high_qw);
 
 	__m128i descriptor = _mm_set_epi64x(high_qw, rte_pktmbuf_iova(pkt));
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_store_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static __rte_always_inline void
@@ -1029,7 +1034,10 @@ ice_vtx(volatile struct ice_tx_desc *txdp, struct rte_mbuf **pkt,
 				 hi_qw2, rte_pktmbuf_iova(pkt[2]),
 				 hi_qw1, rte_pktmbuf_iova(pkt[1]),
 				 hi_qw0, rte_pktmbuf_iova(pkt[0]));
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm512_storeu_si512((void *)txdp, desc0_3);
+__rte_diagnostic_pop
 	}
 
 	/* do any last ones */

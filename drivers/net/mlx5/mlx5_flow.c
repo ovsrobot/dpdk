@@ -7287,10 +7287,10 @@ flow_tunnel_from_rule(const struct mlx5_flow *flow)
 {
 	struct mlx5_flow_tunnel *tunnel;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	tunnel = (typeof(tunnel))flow->tunnel;
-#pragma GCC diagnostic pop
+__rte_diagnostic_pop
 
 	return tunnel;
 }

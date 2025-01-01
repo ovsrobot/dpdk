@@ -34,7 +34,10 @@ txgbe_rxq_rearm(struct txgbe_rx_queue *rxq)
 		    rxq->nb_rx_desc) {
 			for (i = 0; i < RTE_TXGBE_DESCS_PER_LOOP; i++) {
 				rxep[i].mbuf = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				vst1q_u64((uint64_t *)(uintptr_t)&rxdp[i], zero);
+__rte_diagnostic_pop
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
@@ -57,12 +60,15 @@ txgbe_rxq_rearm(struct txgbe_rx_queue *rxq)
 		paddr = mb0->buf_iova + RTE_PKTMBUF_HEADROOM;
 		dma_addr0 = vsetq_lane_u64(paddr, zero, 0);
 		/* flush desc with pa dma_addr */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		vst1q_u64((uint64_t *)(uintptr_t)rxdp++, dma_addr0);
 
 		vst1_u8((uint8_t *)&mb1->rearm_data, p);
 		paddr = mb1->buf_iova + RTE_PKTMBUF_HEADROOM;
 		dma_addr1 = vsetq_lane_u64(paddr, zero, 0);
 		vst1q_u64((uint64_t *)(uintptr_t)rxdp++, dma_addr1);
+__rte_diagnostic_pop
 	}
 
 	rxq->rxrearm_start += RTE_TXGBE_RXQ_REARM_THRESH;
@@ -484,7 +490,10 @@ vtx1(volatile struct txgbe_tx_desc *txdp,
 	uint64x2_t descriptor = {pkt->buf_iova + pkt->data_off,
 				(uint64_t)pkt_len << 45 | flags | pkt_len};
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	vst1q_u64((uint64_t *)(uintptr_t)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static inline void
