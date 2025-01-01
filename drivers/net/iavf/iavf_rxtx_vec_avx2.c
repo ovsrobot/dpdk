@@ -6,10 +6,6 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 static __rte_always_inline void
 iavf_rxq_rearm(struct iavf_rx_queue *rxq)
 {
@@ -193,6 +189,8 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 			 _mm256_loadu_si256((void *)&sw_ring[i + 4]));
 #endif
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		const __m128i raw_desc7 = _mm_load_si128((void *)(rxdp + 7));
 		rte_compiler_barrier();
 		const __m128i raw_desc6 = _mm_load_si128((void *)(rxdp + 6));
@@ -208,6 +206,7 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 		const __m128i raw_desc1 = _mm_load_si128((void *)(rxdp + 1));
 		rte_compiler_barrier();
 		const __m128i raw_desc0 = _mm_load_si128((void *)(rxdp + 0));
+__rte_diagnostic_pop
 
 		const __m256i raw_desc6_7 =
 			_mm256_inserti128_si256(_mm256_castsi128_si256(raw_desc6), raw_desc7, 1);
@@ -509,7 +508,7 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 			0, rxq->mbuf_initializer);
 	struct rte_mbuf **sw_ring = &rxq->sw_ring[rxq->rx_tail];
 	volatile union iavf_rx_flex_desc *rxdp =
-		(union iavf_rx_flex_desc *)rxq->rx_ring + rxq->rx_tail;
+		(volatile union iavf_rx_flex_desc *)rxq->rx_ring + rxq->rx_tail;
 
 	rte_prefetch0(rxdp);
 
@@ -742,6 +741,8 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 
 		__m256i raw_desc0_1, raw_desc2_3, raw_desc4_5, raw_desc6_7;
 
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		const __m128i raw_desc7 =
 			_mm_load_si128((void *)(rxdp + 7));
 		rte_compiler_barrier();
@@ -765,6 +766,7 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 		rte_compiler_barrier();
 		const __m128i raw_desc0 =
 			_mm_load_si128((void *)(rxdp + 0));
+__rte_diagnostic_pop
 
 		raw_desc6_7 =
 			_mm256_inserti128_si256
@@ -959,6 +961,8 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 				offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP ||
 			    rxq->rx_flags & IAVF_RX_FLAGS_VLAN_TAG_LOC_L2TAG2_2) {
 				/* load bottom half of every 32B desc */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				const __m128i raw_desc_bh7 =
 					_mm_load_si128
 						((void *)(&rxdp[7].wb.status_error1));
@@ -990,6 +994,7 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 				const __m128i raw_desc_bh0 =
 					_mm_load_si128
 						((void *)(&rxdp[0].wb.status_error1));
+__rte_diagnostic_pop
 
 				__m256i raw_desc_bh6_7 =
 					_mm256_inserti128_si256
@@ -1664,7 +1669,10 @@ iavf_vtx1(volatile struct iavf_tx_desc *txdp,
 
 	__m128i descriptor = _mm_set_epi64x(high_qw,
 				pkt->buf_iova + pkt->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_store_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static __rte_always_inline void
@@ -1719,8 +1727,11 @@ iavf_vtx(volatile struct iavf_tx_desc *txdp,
 				 pkt[1]->buf_iova + pkt[1]->data_off,
 				 hi_qw0,
 				 pkt[0]->buf_iova + pkt[0]->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm256_store_si256((void *)(txdp + 2), desc2_3);
 		_mm256_store_si256((void *)txdp, desc0_1);
+__rte_diagnostic_pop
 	}
 
 	/* do any last ones */
