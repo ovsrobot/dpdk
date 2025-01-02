@@ -118,6 +118,7 @@ source_file_deps = {
     'test_lpm_perf.c': ['net', 'lpm'],
     'test_malloc.c': [],
     'test_malloc_perf.c': [],
+    'test_math.c': [],
     'test_mbuf.c': ['net'],
     'test_mcslock.c': [],
     'test_member.c': ['member', 'net'],
