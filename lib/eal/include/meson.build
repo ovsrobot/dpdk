@@ -31,6 +31,7 @@ headers += files(
         'rte_lcore_var.h',
         'rte_lock_annotations.h',
         'rte_malloc.h',
+        'rte_math.h',
         'rte_mcslock.h',
         'rte_memory.h',
         'rte_memzone.h',
