@@ -789,7 +789,7 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 	if (!packed_vq)
 		dev->unsupported_features |= (1ull << VIRTIO_F_RING_PACKED);
 
-	if (dev->mac_specified)
+	if (dev->mac_specified || (dev->device_features & (1ull << VIRTIO_NET_F_MAC)))
 		dev->frontend_features |= (1ull << VIRTIO_NET_F_MAC);
 	else
 		dev->unsupported_features |= (1ull << VIRTIO_NET_F_MAC);

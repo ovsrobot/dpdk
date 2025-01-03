@@ -12,6 +12,7 @@
 #include <rte_memory.h>
 
 #include "vhost.h"
+#include "virtio.h"
 #include "virtio_user_dev.h"
 #include "vhost_kernel_tap.h"
 
@@ -151,6 +152,9 @@ vhost_kernel_get_features(struct virtio_user_dev *dev, uint64_t *features)
 	 */
 	if (tap_flags & IFF_MULTI_QUEUE)
 		*features |= (1ull << VIRTIO_NET_F_MQ);
+
+	/* vhost_kernel supports setting tap MAC address. */
+	*features |= (1ull << VIRTIO_NET_F_MAC);
 
 	return 0;
 }
@@ -368,6 +372,24 @@ vhost_kernel_get_status(struct virtio_user_dev *dev __rte_unused, uint8_t *statu
 static int
 vhost_kernel_set_status(struct virtio_user_dev *dev __rte_unused, uint8_t status __rte_unused)
 {
+	return -ENOTSUP;
+}
+
+static int
+vhost_kernel_set_config(struct virtio_user_dev *dev,
+			const uint8_t *data, uint32_t off, uint32_t len)
+{
+	struct vhost_kernel_data *backend_data = dev->backend_data;
+
+	if (off == offsetof(struct virtio_net_config, mac)) {
+		if (len != RTE_ETHER_ADDR_LEN) {
+			PMD_DRV_LOG(ERR, "Invalid MAC address length");
+			return -EINVAL;
+		}
+
+		return tap_set_mac(backend_data->tapfds[0], data);
+	}
+
 	return -ENOTSUP;
 }
 
@@ -613,6 +635,7 @@ struct virtio_user_backend_ops virtio_ops_kernel = {
 	.set_vring_addr = vhost_kernel_set_vring_addr,
 	.get_status = vhost_kernel_get_status,
 	.set_status = vhost_kernel_set_status,
+	.set_config = vhost_kernel_set_config,
 	.enable_qp = vhost_kernel_enable_queue_pair,
 	.update_link_state = vhost_kernel_update_link_state,
 	.get_intr_fd = vhost_kernel_get_intr_fd,

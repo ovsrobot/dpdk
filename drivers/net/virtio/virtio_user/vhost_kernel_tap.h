@@ -40,6 +40,6 @@ int tap_support_features(unsigned int *tap_features);
 int tap_open(const char *ifname, unsigned int r_flags, bool multi_queue);
 int tap_get_name(int tapfd, char **ifname);
 int tap_get_flags(int tapfd, unsigned int *tap_flags);
-int tap_set_mac(int tapfd, uint8_t *mac);
+int tap_set_mac(int tapfd, const uint8_t *mac);
 
 #endif

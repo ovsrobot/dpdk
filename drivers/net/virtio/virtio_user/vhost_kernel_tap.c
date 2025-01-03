@@ -112,7 +112,7 @@ tap_get_flags(int tapfd, unsigned int *tap_flags)
 }
 
 int
-tap_set_mac(int tapfd, uint8_t *mac)
+tap_set_mac(int tapfd, const uint8_t *mac)
 {
 	struct ifreq ifr;
 
