@@ -12,10 +12,6 @@
 
 #include <rte_vect.h>
 
-#ifndef __INTEL_COMPILER
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-
 static inline void
 iavf_rxq_rearm(struct iavf_rx_queue *rxq)
 {
@@ -38,8 +34,11 @@ iavf_rxq_rearm(struct iavf_rx_queue *rxq)
 			dma_addr0 = _mm_setzero_si128();
 			for (i = 0; i < IAVF_VPMD_DESCS_PER_LOOP; i++) {
 				rxp[i] = &rxq->fake_mbuf;
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
+__rte_diagnostic_pop
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
@@ -69,8 +68,11 @@ iavf_rxq_rearm(struct iavf_rx_queue *rxq)
 		dma_addr1 = _mm_add_epi64(dma_addr1, hdr_room);
 
 		/* flush desc with pa dma_addr */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
+__rte_diagnostic_pop
 	}
 
 	rxq->rxrearm_start += rxq->rx_free_thresh;
@@ -578,7 +580,10 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		mbp1 = _mm_loadu_si128((__m128i *)&sw_ring[pos]);
 		/* Read desc statuses backwards to avoid race condition */
 		/* A.1 load desc[3] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] = _mm_loadu_si128((__m128i *)(rxdp + 3));
+__rte_diagnostic_pop
 		rte_compiler_barrier();
 
 		/* B.2 copy 2 64 bit or 4 32 bit mbuf point into rx_pkts */
@@ -590,11 +595,14 @@ _recv_raw_pkts_vec(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 #endif
 
 		/* A.1 load desc[2-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[2] = _mm_loadu_si128((__m128i *)(rxdp + 2));
 		rte_compiler_barrier();
 		descs[1] = _mm_loadu_si128((__m128i *)(rxdp + 1));
 		rte_compiler_barrier();
 		descs[0] = _mm_loadu_si128((__m128i *)(rxdp));
+__rte_diagnostic_pop
 
 #if defined(RTE_ARCH_X86_64)
 		/* B.2 copy 2 mbuf point into rx_pkts  */
@@ -783,7 +791,7 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 	/* Just the act of getting into the function from the application is
 	 * going to cost about 7 cycles
 	 */
-	rxdp = (union iavf_rx_flex_desc *)rxq->rx_ring + rxq->rx_tail;
+	rxdp = (volatile union iavf_rx_flex_desc *)rxq->rx_ring + rxq->rx_tail;
 
 	rte_prefetch0(rxdp);
 
@@ -864,7 +872,10 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 		mbp1 = _mm_loadu_si128((__m128i *)&sw_ring[pos]);
 		/* Read desc statuses backwards to avoid race condition */
 		/* A.1 load desc[3] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[3] = _mm_loadu_si128((__m128i *)(rxdp + 3));
+__rte_diagnostic_pop
 		rte_compiler_barrier();
 
 		/* B.2 copy 2 64 bit or 4 32 bit mbuf point into rx_pkts */
@@ -876,11 +887,14 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 #endif
 
 		/* A.1 load desc[2-0] */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 		descs[2] = _mm_loadu_si128((__m128i *)(rxdp + 2));
 		rte_compiler_barrier();
 		descs[1] = _mm_loadu_si128((__m128i *)(rxdp + 1));
 		rte_compiler_barrier();
 		descs[0] = _mm_loadu_si128((__m128i *)(rxdp));
+__rte_diagnostic_pop
 
 #if defined(RTE_ARCH_X86_64)
 		/* B.2 copy 2 mbuf point into rx_pkts  */
@@ -927,6 +941,8 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 			offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP ||
 			rxq->rx_flags & IAVF_RX_FLAGS_VLAN_TAG_LOC_L2TAG2_2) {
 			/* load bottom half of every 32B desc */
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 			descs_bh[3] = _mm_load_si128
 					((void *)(&rxdp[3].wb.status_error1));
 			rte_compiler_barrier();
@@ -938,6 +954,7 @@ _recv_raw_pkts_vec_flex_rxd(struct iavf_rx_queue *rxq,
 			rte_compiler_barrier();
 			descs_bh[0] = _mm_load_si128
 					((void *)(&rxdp[0].wb.status_error1));
+__rte_diagnostic_pop
 		}
 
 		if (offloads & RTE_ETH_RX_OFFLOAD_RSS_HASH) {
@@ -1349,7 +1366,10 @@ vtx1(volatile struct iavf_tx_desc *txdp, struct rte_mbuf *pkt, uint64_t flags)
 
 	__m128i descriptor = _mm_set_epi64x(high_qw,
 					    pkt->buf_iova + pkt->data_off);
+__rte_diagnostic_push
+__rte_diagnostic_ignored_wcast_qual
 	_mm_store_si128((__m128i *)txdp, descriptor);
+__rte_diagnostic_pop
 }
 
 static inline void
