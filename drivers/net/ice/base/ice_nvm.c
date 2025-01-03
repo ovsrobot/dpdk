@@ -3,6 +3,7 @@
  */
 
 #include "ice_common.h"
+#include <rte_math.h>
 
 #define GL_MNG_DEF_DEVID 0x000B611C
 
@@ -469,8 +470,6 @@ int ice_read_sr_word(struct ice_hw *hw, u16 offset, u16 *data)
 	return status;
 }
 
-#define check_add_overflow __builtin_add_overflow
-
 /**
  * ice_get_pfa_module_tlv - Reads sub module TLV from NVM PFA
  * @hw: pointer to hardware structure
@@ -500,7 +499,7 @@ ice_get_pfa_module_tlv(struct ice_hw *hw, u16 *module_tlv, u16 *module_tlv_len,
 		return status;
 	}
 
-	if (check_add_overflow(pfa_ptr, (u16)(pfa_len - 1), &max_tlv)) {
+	if (rte_add_overflow(pfa_ptr, (u16)(pfa_len - 1), &max_tlv)) {
 		ice_debug(hw, ICE_DBG_INIT, "PFA starts at offset %u. PFA length of %u caused 16-bit arithmetic overflow.\n",
 				  pfa_ptr, pfa_len);
 		return ICE_ERR_INVAL_SIZE;
@@ -541,8 +540,8 @@ ice_get_pfa_module_tlv(struct ice_hw *hw, u16 *module_tlv, u16 *module_tlv_len,
 			return ICE_ERR_INVAL_SIZE;
 		}
 
-		if (check_add_overflow(next_tlv, (u16)2, &next_tlv) ||
-		    check_add_overflow(next_tlv, tlv_len, &next_tlv)) {
+		if (rte_add_overflow(next_tlv, (u16)2, &next_tlv) ||
+		    rte_add_overflow(next_tlv, tlv_len, &next_tlv)) {
 			ice_debug(hw, ICE_DBG_INIT, "TLV of type %u and length 0x%04x caused 16-bit arithmetic overflow. The PFA starts at 0x%04x and has length of 0x%04x\n",
 					  tlv_sub_module_type, tlv_len, pfa_ptr, pfa_len);
 			return ICE_ERR_INVAL_SIZE;
