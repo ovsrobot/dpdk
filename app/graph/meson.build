@@ -24,6 +24,8 @@ sources = files(
         'mempool.c',
         'neigh.c',
         'utils.c',
+        'feature.c',
+        'ip4_output_hook.c'
 )
 
 cmd_h = custom_target('commands_hdr',
