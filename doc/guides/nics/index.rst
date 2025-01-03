@@ -71,3 +71,4 @@ Network Interface Controller Drivers
     virtio
     vmxnet3
     zxdh
+    sxe
