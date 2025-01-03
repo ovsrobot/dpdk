@@ -179,6 +179,7 @@ F: app/test/test_devargs.c
 F: app/test/test_eal*
 F: app/test/test_errno.c
 F: app/test/test_lcores.c
+F: app/test/test_math.c
 F: app/test/test_memcpy*
 F: app/test/test_per_lcore.c
 F: app/test/test_pflock.c
