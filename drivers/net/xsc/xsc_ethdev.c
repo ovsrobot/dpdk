@@ -337,6 +337,7 @@ xsc_ethdev_start(struct rte_eth_dev *dev)
 
 	rte_wmb();
 	dev->rx_pkt_burst = xsc_rx_burst;
+	dev->tx_pkt_burst = xsc_tx_burst;
 
 	ret = xsc_ethdev_enable(dev);
 
