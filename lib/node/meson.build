@@ -24,6 +24,7 @@ sources = files(
         'pkt_cls.c',
         'pkt_drop.c',
         'udp4_input.c',
+        'interface_tx_feature.c'
 )
 headers = files(
         'rte_node_eth_api.h',
