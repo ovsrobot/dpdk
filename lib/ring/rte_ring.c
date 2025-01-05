@@ -43,7 +43,8 @@ EAL_REGISTER_TAILQ(rte_ring_tailq)
 /* mask of all valid flag values to ring_create() */
 #define RING_F_MASK (RING_F_SP_ENQ | RING_F_SC_DEQ | RING_F_EXACT_SZ | \
 		     RING_F_MP_RTS_ENQ | RING_F_MC_RTS_DEQ |	       \
-		     RING_F_MP_HTS_ENQ | RING_F_MC_HTS_DEQ)
+		     RING_F_MP_HTS_ENQ | RING_F_MC_HTS_DEQ |	       \
+		     RING_F_MP_RTS_V2_ENQ | RING_F_MC_RTS_V2_DEQ)
 
 /* true if x is a power of 2 */
 #define POWEROF2(x) ((((x)-1) & (x)) == 0)
@@ -106,6 +107,7 @@ reset_headtail(void *p)
 		ht->tail = 0;
 		break;
 	case RTE_RING_SYNC_MT_RTS:
+	case RTE_RING_SYNC_MT_RTS_V2:
 		ht_rts->head.raw = 0;
 		ht_rts->tail.raw = 0;
 		break;
@@ -135,9 +137,11 @@ get_sync_type(uint32_t flags, enum rte_ring_sync_type *prod_st,
 	enum rte_ring_sync_type *cons_st)
 {
 	static const uint32_t prod_st_flags =
-		(RING_F_SP_ENQ | RING_F_MP_RTS_ENQ | RING_F_MP_HTS_ENQ);
+		(RING_F_SP_ENQ | RING_F_MP_RTS_ENQ | RING_F_MP_HTS_ENQ |
+		RING_F_MP_RTS_V2_ENQ);
 	static const uint32_t cons_st_flags =
-		(RING_F_SC_DEQ | RING_F_MC_RTS_DEQ | RING_F_MC_HTS_DEQ);
+		(RING_F_SC_DEQ | RING_F_MC_RTS_DEQ | RING_F_MC_HTS_DEQ |
+		RING_F_MC_RTS_V2_DEQ);
 
 	switch (flags & prod_st_flags) {
 	case 0:
@@ -151,6 +155,9 @@ get_sync_type(uint32_t flags, enum rte_ring_sync_type *prod_st,
 		break;
 	case RING_F_MP_HTS_ENQ:
 		*prod_st = RTE_RING_SYNC_MT_HTS;
+		break;
+	case RING_F_MP_RTS_V2_ENQ:
+		*prod_st = RTE_RING_SYNC_MT_RTS_V2;
 		break;
 	default:
 		return -EINVAL;
@@ -168,6 +175,9 @@ get_sync_type(uint32_t flags, enum rte_ring_sync_type *prod_st,
 		break;
 	case RING_F_MC_HTS_DEQ:
 		*cons_st = RTE_RING_SYNC_MT_HTS;
+		break;
+	case RING_F_MC_RTS_V2_DEQ:
+		*cons_st = RTE_RING_SYNC_MT_RTS_V2;
 		break;
 	default:
 		return -EINVAL;
@@ -239,6 +249,28 @@ rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
 	if (flags & RING_F_MC_RTS_DEQ)
 		rte_ring_set_cons_htd_max(r, r->capacity / HTD_MAX_DEF);
 
+	/* set default values for head-tail distance and allocate memory to cache */
+	if (flags & RING_F_MP_RTS_V2_ENQ) {
+		rte_ring_set_prod_htd_max(r, r->capacity / HTD_MAX_DEF);
+		r->rts_prod.rts_cache = (struct rte_ring_rts_cache *)rte_zmalloc(
+			"RTS_PROD_CACHE", sizeof(struct rte_ring_rts_cache) * r->size, 0);
+		if (r->rts_prod.rts_cache == NULL) {
+			RING_LOG(ERR, "Cannot reserve memory for rts prod cache");
+			return -ENOMEM;
+		}
+	}
+	if (flags & RING_F_MC_RTS_V2_DEQ) {
+		rte_ring_set_cons_htd_max(r, r->capacity / HTD_MAX_DEF);
+		r->rts_cons.rts_cache = (struct rte_ring_rts_cache *)rte_zmalloc(
+			"RTS_CONS_CACHE", sizeof(struct rte_ring_rts_cache) * r->size, 0);
+		if (r->rts_cons.rts_cache == NULL) {
+			if (flags & RING_F_MP_RTS_V2_ENQ)
+				rte_free(r->rts_prod.rts_cache);
+			RING_LOG(ERR, "Cannot reserve memory for rts cons cache");
+			return -ENOMEM;
+		}
+	}
+
 	return 0;
 }
 
@@ -293,9 +325,13 @@ rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
 					 mz_flags, alignof(typeof(*r)));
 	if (mz != NULL) {
 		r = mz->addr;
-		/* no need to check return value here, we already checked the
-		 * arguments above */
-		rte_ring_init(r, name, requested_count, flags);
+
+		if (rte_ring_init(r, name, requested_count, flags)) {
+			rte_free(te);
+			if (rte_memzone_free(mz) != 0)
+				RING_LOG(ERR, "Cannot free memory for ring");
+			return NULL;
+		}
 
 		te->data = (void *) r;
 		r->memzone = mz;
@@ -357,6 +393,11 @@ rte_ring_free(struct rte_ring *r)
 	TAILQ_REMOVE(ring_list, te, next);
 
 	rte_mcfg_tailq_write_unlock();
+
+	if (r->flags & RING_F_MP_RTS_V2_ENQ)
+		rte_free(r->rts_prod.rts_cache);
+	if (r->flags & RING_F_MC_RTS_V2_DEQ)
+		rte_free(r->rts_cons.rts_cache);
 
 	if (rte_memzone_free(r->memzone) != 0)
 		RING_LOG(ERR, "Cannot free memory");

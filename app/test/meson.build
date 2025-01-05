@@ -166,6 +166,7 @@ source_file_deps = {
     'test_ring_mt_peek_stress_zc.c': ['ptr_compress'],
     'test_ring_perf.c': ['ptr_compress'],
     'test_ring_rts_stress.c': ['ptr_compress'],
+    'test_ring_rts_v2_stress.c': ['ptr_compress'],
     'test_ring_st_peek_stress.c': ['ptr_compress'],
     'test_ring_st_peek_stress_zc.c': ['ptr_compress'],
     'test_ring_stress.c': ['ptr_compress'],

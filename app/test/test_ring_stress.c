@@ -43,6 +43,9 @@ test_ring_stress(void)
 	n += test_ring_rts_stress.nb_case;
 	k += run_test(&test_ring_rts_stress);
 
+	n += test_ring_rts_v2_stress.nb_case;
+	k += run_test(&test_ring_rts_v2_stress);
+
 	n += test_ring_hts_stress.nb_case;
 	k += run_test(&test_ring_hts_stress);
 
