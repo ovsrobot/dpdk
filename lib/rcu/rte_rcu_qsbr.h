@@ -86,6 +86,11 @@ struct __rte_cache_aligned rte_rcu_qsbr_cnt {
 #define __RTE_QSBR_CNT_MAX ((uint64_t)~0)
 #define __RTE_QSBR_TOKEN_SIZE sizeof(uint64_t)
 
+/**
+ * Max allowable size (in bytes) of each element in the defer queue
+ */
+#define RTE_QSBR_ESIZE_MAX	(2 * RTE_CACHE_LINE_MIN_SIZE)
+
 /* RTE Quiescent State variable structure.
  * This structure has two elements that vary in size based on the
  * 'max_threads' parameter.
