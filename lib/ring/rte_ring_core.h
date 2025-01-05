@@ -55,6 +55,7 @@ enum rte_ring_sync_type {
 	RTE_RING_SYNC_ST,     /**< single thread only */
 	RTE_RING_SYNC_MT_RTS, /**< multi-thread relaxed tail sync */
 	RTE_RING_SYNC_MT_HTS, /**< multi-thread head/tail sync */
+	RTE_RING_SYNC_MT_RTS_V2, /**< multi-thread relaxed tail sync v2 */
 };
 
 /**
@@ -82,11 +83,16 @@ union __rte_ring_rts_poscnt {
 	} val;
 };
 
+struct rte_ring_rts_cache {
+	volatile RTE_ATOMIC(uint32_t) num;      /**< Number of objs. */
+};
+
 struct rte_ring_rts_headtail {
 	volatile union __rte_ring_rts_poscnt tail;
 	enum rte_ring_sync_type sync_type;  /**< sync type of prod/cons */
 	uint32_t htd_max;   /**< max allowed distance between head/tail */
 	volatile union __rte_ring_rts_poscnt head;
+	struct rte_ring_rts_cache *rts_cache; /**< Cache of prod/cons */
 };
 
 union __rte_ring_hts_pos {
@@ -162,5 +168,8 @@ struct rte_ring {
 
 #define RING_F_MP_HTS_ENQ 0x0020 /**< The default enqueue is "MP HTS". */
 #define RING_F_MC_HTS_DEQ 0x0040 /**< The default dequeue is "MC HTS". */
+
+#define RING_F_MP_RTS_V2_ENQ 0x0080 /**< The default enqueue is "MP RTS V2". */
+#define RING_F_MC_RTS_V2_DEQ 0x0100 /**< The default dequeue is "MC RTS V2". */
 
 #endif /* _RTE_RING_CORE_H_ */

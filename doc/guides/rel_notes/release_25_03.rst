@@ -102,6 +102,8 @@ ABI Changes
 
 * No ABI change that would break compatibility with 24.11.
 
+* ring: Added ``rte_ring_rts_cache`` structure and ``rts_cache`` field to the
+  ``rte_ring_rts_headtail`` structure.
 
 Known Issues
 ------------
