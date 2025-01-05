@@ -285,6 +285,19 @@ static const struct {
 		},
 	},
 	{
+		.desc = "MP_RTS/MC_RTS V2 sync mode",
+		.api_type = TEST_RING_ELEM_BULK | TEST_RING_THREAD_DEF,
+		.create_flags = RING_F_MP_RTS_V2_ENQ | RING_F_MC_RTS_V2_DEQ,
+		.enq = {
+			.flegacy = rte_ring_enqueue_bulk,
+			.felem = rte_ring_enqueue_bulk_elem,
+		},
+		.deq = {
+			.flegacy = rte_ring_dequeue_bulk,
+			.felem = rte_ring_dequeue_bulk_elem,
+		},
+	},
+	{
 		.desc = "MP_HTS/MC_HTS sync mode",
 		.api_type = TEST_RING_ELEM_BULK | TEST_RING_THREAD_DEF,
 		.create_flags = RING_F_MP_HTS_ENQ | RING_F_MC_HTS_DEQ,
@@ -340,6 +353,19 @@ static const struct {
 		.desc = "MP_RTS/MC_RTS sync mode",
 		.api_type = TEST_RING_ELEM_BURST | TEST_RING_THREAD_DEF,
 		.create_flags = RING_F_MP_RTS_ENQ | RING_F_MC_RTS_DEQ,
+		.enq = {
+			.flegacy = rte_ring_enqueue_burst,
+			.felem = rte_ring_enqueue_burst_elem,
+		},
+		.deq = {
+			.flegacy = rte_ring_dequeue_burst,
+			.felem = rte_ring_dequeue_burst_elem,
+		},
+	},
+	{
+		.desc = "MP_RTS/MC_RTS V2 sync mode",
+		.api_type = TEST_RING_ELEM_BURST | TEST_RING_THREAD_DEF,
+		.create_flags = RING_F_MP_RTS_V2_ENQ | RING_F_MC_RTS_V2_DEQ,
 		.enq = {
 			.flegacy = rte_ring_enqueue_burst,
 			.felem = rte_ring_enqueue_burst_elem,

@@ -47,6 +47,92 @@ __rte_ring_rts_update_tail(struct rte_ring_rts_headtail *ht)
 }
 
 /**
+ * @file rte_ring_rts_elem_pvt.h
+ * It is not recommended to include this file directly,
+ * include <rte_ring.h> instead.
+ * Contains internal helper functions for Relaxed Tail Sync (RTS) ring mode.
+ * For more information please refer to <rte_ring_rts.h>.
+ */
+
+/**
+ * @internal This function updates tail values.
+ */
+static __rte_always_inline void
+__rte_ring_rts_v2_update_tail(struct rte_ring_rts_headtail *ht,
+	uint32_t old_tail, uint32_t num, uint32_t mask)
+{
+	union __rte_ring_rts_poscnt ot, nt;
+
+	ot.val.cnt = nt.val.cnt = 0;
+	ot.val.pos = old_tail;
+	nt.val.pos = old_tail + num;
+
+	/*
+	 * If the tail is equal to the current enqueues/dequeues, update
+	 * the tail with new value and then continue to try to update the
+	 * tail until the num of the cache is 0, otherwise write the num of
+	 * the current enqueues/dequeues to the cache.
+	 */
+
+	if (rte_atomic_compare_exchange_strong_explicit(&ht->tail.raw,
+				(uint64_t *)(uintptr_t)&ot.raw, nt.raw,
+				rte_memory_order_release, rte_memory_order_acquire) == 0) {
+		ot.val.pos = old_tail;
+
+		/*
+		 * Write the num of the current enqueues/dequeues to the
+		 * corresponding cache.
+		 */
+		rte_atomic_store_explicit(&ht->rts_cache[ot.val.pos & mask].num,
+			num, rte_memory_order_release);
+
+		/*
+		 * There may be competition with another enqueues/dequeues
+		 * for the update tail. The winner continues to try to update
+		 * the tail, and the loser exits.
+		 */
+		if (rte_atomic_compare_exchange_strong_explicit(&ht->tail.raw,
+					(uint64_t *)(uintptr_t)&ot.raw, nt.raw,
+					rte_memory_order_release, rte_memory_order_acquire) == 0)
+			return;
+
+		/*
+		 * Set the corresponding cache to 0 for next use.
+		 */
+		rte_atomic_store_explicit(&ht->rts_cache[ot.val.pos & mask].num,
+			0, rte_memory_order_release);
+	}
+
+	/*
+	 * Try to update the tail until the num of the corresponding cache is 0.
+	 * Getting here means that the current enqueues/dequeues is trying to update
+	 * the tail of another enqueues/dequeues.
+	 */
+	while (1) {
+		num = rte_atomic_load_explicit(&ht->rts_cache[nt.val.pos & mask].num,
+			rte_memory_order_acquire);
+		if (num == 0)
+			break;
+
+		ot.val.pos = nt.val.pos;
+		nt.val.pos += num;
+
+		/*
+		 * There may be competition with another enqueues/dequeues
+		 * for the update tail. The winner continues to try to update
+		 * the tail, and the loser exits.
+		 */
+		if (rte_atomic_compare_exchange_strong_explicit(&ht->tail.raw,
+					(uint64_t *)(uintptr_t)&ot.raw, nt.raw,
+					rte_memory_order_release, rte_memory_order_acquire) == 0)
+			return;
+
+		rte_atomic_store_explicit(&ht->rts_cache[ot.val.pos & mask].num,
+			0, rte_memory_order_release);
+	};
+}
+
+/**
  * @internal This function waits till head/tail distance wouldn't
  * exceed pre-defined max value.
  */
@@ -219,6 +305,47 @@ __rte_ring_do_rts_enqueue_elem(struct rte_ring *r, const void *obj_table,
 }
 
 /**
+ * @internal Enqueue several objects on the RTS ring.
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param obj_table
+ *   A pointer to a table of objects.
+ * @param esize
+ *   The size of ring element, in bytes. It must be a multiple of 4.
+ *   This must be the same value used while creating the ring. Otherwise
+ *   the results are undefined.
+ * @param n
+ *   The number of objects to add in the ring from the obj_table.
+ * @param behavior
+ *   RTE_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
+ *   RTE_RING_QUEUE_VARIABLE: Enqueue as many items as possible from ring
+ * @param free_space
+ *   returns the amount of space after the enqueue operation has finished
+ * @return
+ *   Actual number of objects enqueued.
+ *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
+ */
+static __rte_always_inline unsigned int
+__rte_ring_do_rts_v2_enqueue_elem(struct rte_ring *r, const void *obj_table,
+	uint32_t esize, uint32_t n, enum rte_ring_queue_behavior behavior,
+	uint32_t *free_space)
+{
+	uint32_t free, head;
+
+	n =  __rte_ring_rts_move_prod_head(r, n, behavior, &head, &free);
+
+	if (n != 0) {
+		__rte_ring_enqueue_elems(r, head, obj_table, esize, n);
+		__rte_ring_rts_v2_update_tail(&r->rts_prod, head, n, r->mask);
+	}
+
+	if (free_space != NULL)
+		*free_space = free - n;
+	return n;
+}
+
+/**
  * @internal Dequeue several objects from the RTS ring.
  *
  * @param r
@@ -252,6 +379,47 @@ __rte_ring_do_rts_dequeue_elem(struct rte_ring *r, void *obj_table,
 	if (n != 0) {
 		__rte_ring_dequeue_elems(r, head, obj_table, esize, n);
 		__rte_ring_rts_update_tail(&r->rts_cons);
+	}
+
+	if (available != NULL)
+		*available = entries - n;
+	return n;
+}
+
+/**
+ * @internal Dequeue several objects from the RTS ring.
+ *
+ * @param r
+ *   A pointer to the ring structure.
+ * @param obj_table
+ *   A pointer to a table of objects.
+ * @param esize
+ *   The size of ring element, in bytes. It must be a multiple of 4.
+ *   This must be the same value used while creating the ring. Otherwise
+ *   the results are undefined.
+ * @param n
+ *   The number of objects to pull from the ring.
+ * @param behavior
+ *   RTE_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
+ *   RTE_RING_QUEUE_VARIABLE: Dequeue as many items as possible from ring
+ * @param available
+ *   returns the number of remaining ring entries after the dequeue has finished
+ * @return
+ *   - Actual number of objects dequeued.
+ *     If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
+ */
+static __rte_always_inline unsigned int
+__rte_ring_do_rts_v2_dequeue_elem(struct rte_ring *r, void *obj_table,
+	uint32_t esize, uint32_t n, enum rte_ring_queue_behavior behavior,
+	uint32_t *available)
+{
+	uint32_t entries, head;
+
+	n = __rte_ring_rts_move_cons_head(r, n, behavior, &head, &entries);
+
+	if (n != 0) {
+		__rte_ring_dequeue_elems(r, head, obj_table, esize, n);
+		__rte_ring_rts_v2_update_tail(&r->rts_cons, head, n, r->mask);
 	}
 
 	if (available != NULL)

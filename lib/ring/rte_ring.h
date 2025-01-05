@@ -89,6 +89,9 @@ ssize_t rte_ring_get_memsize(unsigned int count);
  *      - RING_F_MP_RTS_ENQ: If this flag is set, the default behavior when
  *        using ``rte_ring_enqueue()`` or ``rte_ring_enqueue_bulk()``
  *        is "multi-producer RTS mode".
+ *      - RING_F_MP_RTS_V2_ENQ: If this flag is set, the default behavior when
+ *        using ``rte_ring_enqueue()`` or ``rte_ring_enqueue_bulk()``
+ *        is "multi-producer RTS V2 mode".
  *      - RING_F_MP_HTS_ENQ: If this flag is set, the default behavior when
  *        using ``rte_ring_enqueue()`` or ``rte_ring_enqueue_bulk()``
  *        is "multi-producer HTS mode".
@@ -101,6 +104,9 @@ ssize_t rte_ring_get_memsize(unsigned int count);
  *      - RING_F_MC_RTS_DEQ: If this flag is set, the default behavior when
  *        using ``rte_ring_dequeue()`` or ``rte_ring_dequeue_bulk()``
  *        is "multi-consumer RTS mode".
+ *      - RING_F_MC_RTS_V2_DEQ: If this flag is set, the default behavior when
+ *        using ``rte_ring_dequeue()`` or ``rte_ring_dequeue_bulk()``
+ *        is "multi-consumer RTS V2 mode".
  *      - RING_F_MC_HTS_DEQ: If this flag is set, the default behavior when
  *        using ``rte_ring_dequeue()`` or ``rte_ring_dequeue_bulk()``
  *        is "multi-consumer HTS mode".
@@ -149,6 +155,9 @@ int rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
  *      - RING_F_MP_RTS_ENQ: If this flag is set, the default behavior when
  *        using ``rte_ring_enqueue()`` or ``rte_ring_enqueue_bulk()``
  *        is "multi-producer RTS mode".
+ *      - RING_F_MP_RTS_V2_ENQ: If this flag is set, the default behavior when
+ *        using ``rte_ring_enqueue()`` or ``rte_ring_enqueue_bulk()``
+ *        is "multi-producer RTS V2 mode".
  *      - RING_F_MP_HTS_ENQ: If this flag is set, the default behavior when
  *        using ``rte_ring_enqueue()`` or ``rte_ring_enqueue_bulk()``
  *        is "multi-producer HTS mode".
@@ -161,6 +170,9 @@ int rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
  *      - RING_F_MC_RTS_DEQ: If this flag is set, the default behavior when
  *        using ``rte_ring_dequeue()`` or ``rte_ring_dequeue_bulk()``
  *        is "multi-consumer RTS mode".
+ *      - RING_F_MC_RTS_V2_DEQ: If this flag is set, the default behavior when
+ *        using ``rte_ring_dequeue()`` or ``rte_ring_dequeue_bulk()``
+ *        is "multi-consumer RTS V2 mode".
  *      - RING_F_MC_HTS_DEQ: If this flag is set, the default behavior when
  *        using ``rte_ring_dequeue()`` or ``rte_ring_dequeue_bulk()``
  *        is "multi-consumer HTS mode".
