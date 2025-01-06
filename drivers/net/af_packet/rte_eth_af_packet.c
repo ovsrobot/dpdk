@@ -36,6 +36,7 @@
 #define ETH_AF_PACKET_FRAMESIZE_ARG	"framesz"
 #define ETH_AF_PACKET_FRAMECOUNT_ARG	"framecnt"
 #define ETH_AF_PACKET_QDISC_BYPASS_ARG	"qdisc_bypass"
+#define ETH_AF_PACKET_FANOUT_MODE_ARG	"fanout_mode"
 
 #define DFLT_FRAME_SIZE		(1 << 11)
 #define DFLT_FRAME_COUNT	(1 << 9)
@@ -96,6 +97,7 @@ static const char *valid_arguments[] = {
 	ETH_AF_PACKET_FRAMESIZE_ARG,
 	ETH_AF_PACKET_FRAMECOUNT_ARG,
 	ETH_AF_PACKET_QDISC_BYPASS_ARG,
+	ETH_AF_PACKET_FANOUT_MODE_ARG,
 	NULL
 };
 
@@ -700,6 +702,61 @@ open_packet_iface(const char *key __rte_unused,
 	return 0;
 }
 
+#if defined(PACKET_FANOUT)
+#define PACKET_FANOUT_INVALID -1
+
+static int
+get_fanout_group_id(int if_index)
+{
+	return (getpid() ^ if_index) & 0xffff;
+}
+
+static int
+get_fanout_mode(const char *fanout_mode)
+{
+	int mode = PACKET_FANOUT_FLAG_DEFRAG;
+
+#if defined(PACKET_FANOUT_FLAG_ROLLOVER)
+	mode |= PACKET_FANOUT_FLAG_ROLLOVER;
+#endif
+
+	if (!fanout_mode) {
+		/* Default */
+		mode |= PACKET_FANOUT_HASH;
+	} else if (!strcmp(fanout_mode, "hash")) {
+		mode |= PACKET_FANOUT_HASH;
+	} else if (!strcmp(fanout_mode, "lb")) {
+		mode |= PACKET_FANOUT_LB;
+	} else if (!strcmp(fanout_mode, "cpu")) {
+		mode |= PACKET_FANOUT_CPU;
+	} else if (!strcmp(fanout_mode, "rollover")) {
+		mode |= PACKET_FANOUT_ROLLOVER;
+	} else if (!strcmp(fanout_mode, "rnd")) {
+		mode |= PACKET_FANOUT_RND;
+	} else if (!strcmp(fanout_mode, "qm")) {
+		mode |= PACKET_FANOUT_QM;
+	} else {
+		/* Invalid Fanout Mode */
+		mode = PACKET_FANOUT_INVALID;
+	}
+
+	return mode;
+}
+
+static int
+get_fanout(const char *fanout_mode, int if_index)
+{
+	int group_id = get_fanout_group_id(if_index);
+	int mode = get_fanout_mode(fanout_mode);
+	int fanout = PACKET_FANOUT_INVALID;
+
+	if (mode != PACKET_FANOUT_INVALID)
+		fanout = group_id | (mode << 16);
+
+	return fanout;
+}
+#endif
+
 static int
 rte_pmd_init_internals(struct rte_vdev_device *dev,
                        const int sockfd,
@@ -709,6 +766,7 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
                        unsigned int framesize,
                        unsigned int framecnt,
 		       unsigned int qdisc_bypass,
+		       const char *fanout_mode,
                        struct pmd_internals **internals,
                        struct rte_eth_dev **eth_dev,
                        struct rte_kvargs *kvlist)
@@ -810,11 +868,12 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 	sockaddr.sll_ifindex = (*internals)->if_index;
 
 #if defined(PACKET_FANOUT)
-	fanout_arg = (getpid() ^ (*internals)->if_index) & 0xffff;
-	fanout_arg |= (PACKET_FANOUT_HASH | PACKET_FANOUT_FLAG_DEFRAG) << 16;
-#if defined(PACKET_FANOUT_FLAG_ROLLOVER)
-	fanout_arg |= PACKET_FANOUT_FLAG_ROLLOVER << 16;
-#endif
+	fanout_arg = get_fanout(fanout_mode, (*internals)->if_index);
+
+	if (fanout_arg == PACKET_FANOUT_INVALID) {
+		PMD_LOG(ERR, "Invalid fanout mode: %s", fanout_mode);
+		goto error;
+	}
 #endif
 
 	for (q = 0; q < nb_queues; q++) {
@@ -927,13 +986,16 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		}
 
 #if defined(PACKET_FANOUT)
-		rc = setsockopt(qsockfd, SOL_PACKET, PACKET_FANOUT,
-				&fanout_arg, sizeof(fanout_arg));
-		if (rc == -1) {
-			PMD_LOG_ERRNO(ERR,
-				"%s: could not set PACKET_FANOUT on AF_PACKET socket for %s",
-				name, pair->value);
-			goto error;
+		if (nb_queues > 1) {
+			rc = setsockopt(qsockfd, SOL_PACKET, PACKET_FANOUT,
+					&fanout_arg, sizeof(fanout_arg));
+			if (rc == -1) {
+				PMD_LOG_ERRNO(ERR,
+					"%s: could not set PACKET_FANOUT "
+					"on AF_PACKET socket for %s",
+					name, pair->value);
+				goto error;
+			}
 		}
 #endif
 	}
@@ -1003,6 +1065,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	unsigned int framecount = DFLT_FRAME_COUNT;
 	unsigned int qpairs = 1;
 	unsigned int qdisc_bypass = 1;
+	const char *fanout_mode = NULL;
 
 	/* do some parameter checking */
 	if (*sockfd < 0)
@@ -1065,6 +1128,10 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 			}
 			continue;
 		}
+		if (strstr(pair->key, ETH_AF_PACKET_FANOUT_MODE_ARG) != NULL) {
+			fanout_mode = pair->value;
+			continue;
+		}
 	}
 
 	if (framesize > blocksize) {
@@ -1091,6 +1158,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 				   blocksize, blockcount,
 				   framesize, framecount,
 				   qdisc_bypass,
+				   fanout_mode,
 				   &internals, &eth_dev,
 				   kvlist) < 0)
 		return -1;
