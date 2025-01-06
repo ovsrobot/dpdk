@@ -186,14 +186,14 @@ static inline uint8_t
 vmxnet3_get_ring_idx(struct vmxnet3_hw *hw, uint32 rqID)
 {
 	return (rqID >= hw->num_rx_queues &&
-		rqID < 2 * hw->num_rx_queues) ? 1 : 0;
+		rqID < (uint32)2 * hw->num_rx_queues) ? 1 : 0;
 }
 
 static inline bool
 vmxnet3_rx_data_ring(struct vmxnet3_hw *hw, uint32 rqID)
 {
-	return (rqID >= 2 * hw->num_rx_queues &&
-		rqID < 3 * hw->num_rx_queues);
+	return (rqID >= (uint32)2 * hw->num_rx_queues &&
+		rqID < (uint32)3 * hw->num_rx_queues);
 }
 
 /*

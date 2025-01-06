@@ -90,7 +90,7 @@ void ice_parser_rt_reset(struct ice_parser_rt *rt)
 	rt->psr = psr;
 
 	for (i = 0; i < 64; i++) {
-		if ((mi->flags & (1ul << i)) != 0ul)
+		if ((mi->flags & RTE_BIT64(i)) != 0ul)
 			_rt_flag_set(rt, i, true);
 	}
 }
@@ -399,11 +399,11 @@ static void _pg_exe(struct ice_parser_rt *rt)
 
 static void _flg_add(struct ice_parser_rt *rt, int idx, bool val)
 {
-	rt->pu.flg_msk |= (1ul << idx);
+	rt->pu.flg_msk |= RTE_BIT64(idx);
 	if (val)
-		rt->pu.flg_val |= (1ul << idx);
+		rt->pu.flg_val |= RTE_BIT64(idx);
 	else
-		rt->pu.flg_val &= ~(1ul << idx);
+		rt->pu.flg_val &= ~RTE_BIT64(idx);
 
 	ice_debug(rt->psr->hw, ICE_DBG_PARSER, "Pending update for flag %d value %d\n",
 		  idx, val);
@@ -468,9 +468,9 @@ static void _err_add(struct ice_parser_rt *rt, int idx, bool val)
 {
 	rt->pu.err_msk |= (u16)(1 << idx);
 	if (val)
-		rt->pu.flg_val |= (1ULL << idx);
+		rt->pu.flg_val |= RTE_BIT64(idx);
 	else
-		rt->pu.flg_val &= ~(1ULL << idx);
+		rt->pu.flg_val &= ~RTE_BIT64(idx);
 
 	ice_debug(rt->psr->hw, ICE_DBG_PARSER, "Pending update for error %d value %d\n",
 		  idx, val);
@@ -600,8 +600,8 @@ static void _pu_exe(struct ice_parser_rt *rt)
 	}
 
 	for (i = 0; i < 64; i++) {
-		if (pu->flg_msk & (1ul << i))
-			_rt_flag_set(rt, i, pu->flg_val & (1ul << i));
+		if (pu->flg_msk & RTE_BIT64(i))
+			_rt_flag_set(rt, i, pu->flg_val & RTE_BIT64(i));
 	}
 
 	for (i = 0; i < 16; i++) {
