@@ -17,17 +17,6 @@
 #include <rte_crypto.h>
 #include <rte_cryptodev.h>
 #include <rte_lcore.h>
-
-#ifdef RTE_EXEC_ENV_WINDOWS
-static int
-test_ipsec(void)
-{
-	printf("ipsec not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-#else
-
 #include <rte_ipsec.h>
 #include <rte_random.h>
 #include <rte_esp.h>
@@ -1185,9 +1174,9 @@ destroy_session(struct ipsec_unitest_params *ut,
 	uint8_t crypto_dev, uint32_t j)
 {
 	if (ut->ss[j].type == RTE_SECURITY_ACTION_TYPE_NONE)
-		return destroy_crypto_session(ut, crypto_dev, j);
+		destroy_crypto_session(ut, crypto_dev, j);
 	else
-		return destroy_dummy_sec_session(ut, j);
+		destroy_dummy_sec_session(ut, j);
 }
 
 static void
@@ -2614,7 +2603,5 @@ test_ipsec(void)
 {
 	return unit_test_suite_runner(&ipsec_testsuite);
 }
-
-#endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_FAST_TEST(ipsec_autotest, true, true, test_ipsec);

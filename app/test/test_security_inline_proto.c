@@ -14,30 +14,6 @@
 #include "test_security_inline_proto_vectors.h"
 #include "test_security_proto.h"
 
-#ifdef RTE_EXEC_ENV_WINDOWS
-static int
-test_inline_ipsec(void)
-{
-	printf("Inline ipsec not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-static int
-test_event_inline_ipsec(void)
-{
-	printf("Event inline ipsec not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-static int
-test_inline_ipsec_sg(void)
-{
-	printf("Inline ipsec SG not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-#else
-
 #include <rte_eventdev.h>
 #include <rte_event_eth_rx_adapter.h>
 #include <rte_event_eth_tx_adapter.h>
@@ -3618,8 +3594,6 @@ test_event_inline_ipsec(void)
 	inline_ipsec_testsuite.teardown = event_inline_ipsec_testsuite_teardown;
 	return unit_test_suite_runner(&inline_ipsec_testsuite);
 }
-
-#endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_TEST_COMMAND(inline_ipsec_autotest, test_inline_ipsec);
 REGISTER_TEST_COMMAND(inline_ipsec_sg_autotest, test_inline_ipsec_sg);

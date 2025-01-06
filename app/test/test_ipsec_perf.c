@@ -10,17 +10,6 @@
 #include <rte_ring.h>
 #include <rte_mbuf.h>
 #include <rte_cycles.h>
-
-#ifdef RTE_EXEC_ENV_WINDOWS
-static int
-test_libipsec_perf(void)
-{
-	printf("ipsec_perf not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-#else
-
 #include <rte_ipsec.h>
 #include <rte_random.h>
 
@@ -628,7 +617,5 @@ test_libipsec_perf(void)
 
 	return TEST_SUCCESS;
 }
-
-#endif /* !RTE_EXEC_ENV_WINDOWS */
 
 REGISTER_PERF_TEST(ipsec_perf_autotest, test_libipsec_perf);
