@@ -7,6 +7,7 @@
 #include <rte_ip.h>
 #include <rte_udp.h>
 #include <rte_errno.h>
+#include <rte_os_shim.h>
 
 #include "sa.h"
 #include "ipsec_sqn.h"
@@ -655,8 +656,9 @@ pkt_flag_process(const struct rte_ipsec_session *ss,
 		struct rte_mbuf *mb[], uint16_t num)
 {
 	uint32_t i, k, bytes;
-	uint32_t dr[num];
+	uint32_t *dr;
 
+	dr = alloca(sizeof(uint32_t) * num);
 	RTE_SET_USED(ss);
 
 	k = 0;

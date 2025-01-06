@@ -299,10 +299,11 @@ esp_outb_tun_prepare_helper(const struct rte_ipsec_session *ss, struct rte_mbuf 
 	struct rte_cryptodev_sym_session *cs;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
-	uint32_t dr[n];
+	uint32_t *dr;
 
 	sa = ss->sa;
 	cs = ss->crypto.ses;
+	dr = alloca(sizeof(uint32_t) * n);
 
 	k = 0;
 	for (i = 0; i != n; i++) {
@@ -468,10 +469,11 @@ esp_outb_trs_prepare(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
 	struct rte_cryptodev_sym_session *cs;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
-	uint32_t dr[num];
+	uint32_t *dr;
 
 	sa = ss->sa;
 	cs = ss->crypto.ses;
+	dr = alloca(sizeof(uint32_t) * num);
 
 	n = num;
 	sqn = esn_outb_update_sqn(sa, &n);
@@ -558,15 +560,26 @@ cpu_outb_pkt_prepare_helper(const struct rte_ipsec_session *ss,
 	uint32_t i, k;
 	uint32_t l2, l3;
 	union sym_op_data icv;
-	struct rte_crypto_va_iova_ptr iv[n];
-	struct rte_crypto_va_iova_ptr aad[n];
-	struct rte_crypto_va_iova_ptr dgst[n];
-	uint32_t dr[n];
-	uint32_t l4ofs[n];
-	uint32_t clen[n];
-	uint64_t ivbuf[n][IPSEC_MAX_IV_QWORD];
+	struct rte_crypto_va_iova_ptr *iv;
+	struct rte_crypto_va_iova_ptr *aad;
+	struct rte_crypto_va_iova_ptr *dgst;
+	uint32_t *dr;
+	uint32_t *l4ofs;
+	uint32_t *clen;
+	uint64_t **ivbuf;
 
 	sa = ss->sa;
+	iv = alloca(sizeof(struct rte_crypto_va_iova_ptr) * n);
+	aad = alloca(sizeof(struct rte_crypto_va_iova_ptr) * n);
+	dgst = alloca(sizeof(struct rte_crypto_va_iova_ptr) * n);
+	dr = alloca(sizeof(uint32_t) * n);
+	l4ofs = alloca(sizeof(uint32_t) * n);
+	clen = alloca(sizeof(uint32_t) * n);
+
+	ivbuf = alloca(sizeof(uint64_t *) * n);
+	for (i = 0; i < n; i++)
+		ivbuf[i] = alloca(sizeof(uint64_t) * IPSEC_MAX_IV_QWORD);
+
 
 	for (i = 0, k = 0; i != n; i++) {
 
@@ -665,13 +678,14 @@ esp_outb_sqh_process(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
 	uint32_t i, k, icv_len, *icv, bytes;
 	struct rte_mbuf *ml;
 	struct rte_ipsec_sa *sa;
-	uint32_t dr[num];
+	uint32_t *dr;
 
 	sa = ss->sa;
 
 	k = 0;
 	icv_len = sa->icv_len;
 	bytes = 0;
+	dr = alloca(sizeof(uint32_t) * num);
 
 	for (i = 0; i != num; i++) {
 		if ((mb[i]->ol_flags & RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED) == 0) {
@@ -764,8 +778,11 @@ inline_outb_tun_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_ipsec_sa *sa;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
-	uint32_t dr[num];
-	uint16_t nb_segs[num];
+	uint32_t *dr;
+	uint16_t *nb_segs;
+
+	dr = alloca(sizeof(uint32_t) * num);
+	nb_segs = alloca(sizeof(uint16_t) * num);
 
 	sa = ss->sa;
 	nb_segs_total = 0;
@@ -832,8 +849,11 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_ipsec_sa *sa;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
-	uint32_t dr[num];
-	uint16_t nb_segs[num];
+	uint32_t *dr;
+	uint16_t *nb_segs;
+
+	dr = alloca(sizeof(uint32_t) * num);
+	nb_segs = alloca(sizeof(uint16_t) * num);
 
 	sa = ss->sa;
 	nb_segs_total = 0;

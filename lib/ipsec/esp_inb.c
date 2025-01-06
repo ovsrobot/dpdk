@@ -370,8 +370,9 @@ esp_inb_pkt_prepare(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
 	struct rte_cryptodev_sym_session *cs;
 	struct replay_sqn *rsn;
 	union sym_op_data icv;
-	uint32_t dr[num];
+	uint32_t *dr;
 
+	dr = alloca(sizeof(uint32_t) * num);
 	sa = ss->sa;
 	cs = ss->crypto.ses;
 	rsn = rsn_acquire(sa);
@@ -576,12 +577,16 @@ tun_process(struct rte_ipsec_sa *sa, struct rte_mbuf *mb[],
 	    uint32_t sqn[], uint32_t dr[], uint16_t num, uint8_t sqh_len)
 {
 	uint32_t adj, i, k, tl, bytes;
-	uint32_t hl[num], to[num];
-	struct rte_esp_tail espt[num];
-	struct rte_mbuf *ml[num];
+	uint32_t *hl, *to;
+	struct rte_esp_tail *espt;
+	struct rte_mbuf **ml;
 	const void *outh;
 	void *inh;
 
+	hl = alloca(sizeof(uint32_t) * num);
+	to = alloca(sizeof(uint32_t) * num);
+	espt = alloca(sizeof(struct rte_esp_tail) * num);
+	ml = alloca(sizeof(struct rte_mbuf *) * num);
 	/*
 	 * remove icv, esp trailer and high-order
 	 * 32 bits of esn from packet length
@@ -640,10 +645,14 @@ trs_process(struct rte_ipsec_sa *sa, struct rte_mbuf *mb[],
 {
 	char *np;
 	uint32_t i, k, l2, tl, bytes;
-	uint32_t hl[num], to[num];
-	struct rte_esp_tail espt[num];
-	struct rte_mbuf *ml[num];
+	uint32_t *hl, *to;
+	struct rte_esp_tail *espt;
+	struct rte_mbuf **ml;
 
+	hl = alloca(sizeof(uint32_t) * num);
+	to = alloca(sizeof(uint32_t) * num);
+	espt = alloca(sizeof(struct rte_esp_tail) * num);
+	ml = alloca(sizeof(struct rte_mbuf *) * num);
 	/*
 	 * remove icv, esp trailer and high-order
 	 * 32 bits of esn from packet length
@@ -724,8 +733,11 @@ esp_inb_pkt_process(struct rte_ipsec_sa *sa, struct rte_mbuf *mb[],
 	uint16_t num, uint8_t sqh_len, esp_inb_process_t process)
 {
 	uint32_t k, n;
-	uint32_t sqn[num];
-	uint32_t dr[num];
+	uint32_t *sqn;
+	uint32_t *dr;
+
+	sqn = alloca(sizeof(uint32_t) * num);
+	dr = alloca(sizeof(uint32_t) * num);
 
 	/* process packets, extract seq numbers */
 	k = process(sa, mb, sqn, dr, num, sqh_len);
@@ -760,13 +772,24 @@ cpu_inb_pkt_prepare(const struct rte_ipsec_session *ss,
 	struct rte_ipsec_sa *sa;
 	struct replay_sqn *rsn;
 	union sym_op_data icv;
-	struct rte_crypto_va_iova_ptr iv[num];
-	struct rte_crypto_va_iova_ptr aad[num];
-	struct rte_crypto_va_iova_ptr dgst[num];
-	uint32_t dr[num];
-	uint32_t l4ofs[num];
-	uint32_t clen[num];
-	uint64_t ivbuf[num][IPSEC_MAX_IV_QWORD];
+	struct rte_crypto_va_iova_ptr *iv;
+	struct rte_crypto_va_iova_ptr *aad;
+	struct rte_crypto_va_iova_ptr *dgst;
+	uint32_t *dr;
+	uint32_t *l4ofs;
+	uint32_t *clen;
+	uint64_t **ivbuf;
+
+	iv = alloca(sizeof(struct rte_crypto_va_iova_ptr) * num);
+	aad = alloca(sizeof(struct rte_crypto_va_iova_ptr) * num);
+	dgst = alloca(sizeof(struct rte_crypto_va_iova_ptr) * num);
+	dr = alloca(sizeof(uint32_t) * num);
+	l4ofs = alloca(sizeof(uint32_t) * num);
+	clen = alloca(sizeof(uint32_t) * num);
+
+	ivbuf = alloca(sizeof(uint64_t *) * num);
+	for (i = 0; i < num; i++)
+		ivbuf[i] = alloca(sizeof(uint64_t) * IPSEC_MAX_IV_QWORD);
 
 	sa = ss->sa;
 

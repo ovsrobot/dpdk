@@ -3,6 +3,7 @@
  */
 
 #include <stdlib.h>
+#include <sys/queue.h>
 #include <rte_ipsec.h>
 #include <rte_telemetry.h>
 #include <rte_malloc.h>

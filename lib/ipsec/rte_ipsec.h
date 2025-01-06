@@ -134,12 +134,9 @@ rte_ipsec_session_prepare(struct rte_ipsec_session *ss);
  * @return
  *   Number of successfully processed packets, with error code set in rte_errno.
  */
-static inline uint16_t
+uint16_t
 rte_ipsec_pkt_crypto_prepare(const struct rte_ipsec_session *ss,
-	struct rte_mbuf *mb[], struct rte_crypto_op *cop[], uint16_t num)
-{
-	return ss->pkt_func.prepare.async(ss, mb, cop, num);
-}
+	struct rte_mbuf *mb[], struct rte_crypto_op *cop[], uint16_t num);
 
 static inline uint16_t
 rte_ipsec_pkt_cpu_prepare(const struct rte_ipsec_session *ss,
@@ -231,13 +228,9 @@ rte_ipsec_pkt_cpu_prepare_stateless(const struct rte_ipsec_session *ss,
  * @return
  *   Number of successfully processed packets, with error code set in rte_errno.
  */
-static inline uint16_t
+uint16_t
 rte_ipsec_pkt_process(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
-	uint16_t num)
-{
-	return ss->pkt_func.process(ss, mb, num);
-}
-
+	uint16_t num);
 
 /**
  * Enable per SA telemetry for a specific SA.

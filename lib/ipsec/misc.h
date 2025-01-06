@@ -20,10 +20,11 @@ move_bad_mbufs(struct rte_mbuf *mb[], const uint32_t bad_idx[], uint32_t nb_mb,
 	uint32_t nb_bad)
 {
 	uint32_t i, j, k;
-	struct rte_mbuf *drb[nb_bad];
+	struct rte_mbuf **drb;
 
 	j = 0;
 	k = 0;
+	drb = alloca(sizeof(struct rte_mbuf *) * nb_bad);
 
 	/* copy bad ones into a temp place */
 	for (i = 0; i != nb_mb; i++) {
@@ -119,8 +120,8 @@ cpu_crypto_bulk(const struct rte_ipsec_session *ss,
 {
 	uint32_t i, j, n;
 	int32_t vcnt, vofs;
-	int32_t st[num];
-	struct rte_crypto_sgl vecpkt[num];
+	int32_t *st;
+	struct rte_crypto_sgl *vecpkt;
 	struct rte_crypto_vec vec[UINT8_MAX];
 	struct rte_crypto_sym_vec symvec;
 
@@ -128,6 +129,9 @@ cpu_crypto_bulk(const struct rte_ipsec_session *ss,
 
 	j = 0, n = 0;
 	vofs = 0;
+	st = alloca(sizeof(int32_t) * num);
+	vecpkt = alloca(sizeof(struct rte_crypto_sgl) * num);
+
 	for (i = 0; i != num; i++) {
 
 		vcnt = rte_crypto_mbuf_to_vec(mb[i], l4ofs[i], clen[i],
