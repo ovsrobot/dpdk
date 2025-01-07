@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Yunsilicon xsc net driver [EXPERIMENTAL].**
+
+  * Added the PMD for Yunsilicon metaScale serials NICs.
+
 
 Removed Items
 -------------
