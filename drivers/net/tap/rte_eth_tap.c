@@ -1905,7 +1905,7 @@ static const struct eth_dev_ops ops = {
 
 static int
 eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
-		   char *remote_iface, struct rte_ether_addr *mac_addr,
+		   char *remote_iface __rte_unused, struct rte_ether_addr *mac_addr,
 		   enum rte_tuntap_type type, int persist)
 {
 	int numa_node = rte_socket_id();
@@ -2109,6 +2109,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	rte_eth_dev_probing_finish(dev);
 	return 0;
 
+#ifdef HAVE_TCA_FLOWER
 disable_rte_flow:
 	TAP_LOG(ERR, " Disabling rte flow support: %s(%d)",
 		strerror(errno), errno);
@@ -2118,6 +2119,7 @@ disable_rte_flow:
 	}
 	rte_eth_dev_probing_finish(dev);
 	return 0;
+#endif
 
 #ifdef HAVE_TCA_FLOWER
 error_remote:
