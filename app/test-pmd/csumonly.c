@@ -124,14 +124,59 @@ parse_ipv4(struct rte_ipv4_hdr *ipv4_hdr, struct testpmd_offload_info *info)
 		info->l4_len = 0;
 }
 
+static uint16_t
+parse_ipv6_ext(struct rte_ipv6_hdr *ipv6_hdr, uint32_t *off)
+{
+	struct ext_hdr {
+		uint8_t next_hdr;
+		uint8_t len;
+	};
+	struct ext_hdr *xh;
+	uint16_t proto;
+	char *xh_fst;
+	uint16_t i;
+
+	proto = ipv6_hdr->proto;
+	xh_fst = (char *)ipv6_hdr + sizeof(*ipv6_hdr);
+#define MAX_EXT_HDRS 9
+	for (i = 0; i < MAX_EXT_HDRS; i++) {
+		switch (proto) {
+		case IPPROTO_HOPOPTS:
+		case IPPROTO_ROUTING:
+		case IPPROTO_DSTOPTS:
+			xh = (struct ext_hdr *)(xh_fst + *off);
+			*off += (xh->len + 1) * 8;
+			proto = xh->next_hdr;
+			break;
+		case IPPROTO_AH:
+			xh = (struct ext_hdr *)(xh_fst + *off);
+			*off += (xh->len + 2) * 4;
+			proto = xh->next_hdr;
+			break;
+		case IPPROTO_FRAGMENT:
+			xh = (struct ext_hdr *)(xh_fst + *off);
+			*off += 8;
+			proto = xh->next_hdr;
+			return proto; /* this is always the last ext hdr */
+		case IPPROTO_NONE:
+			return proto;
+		default:
+			return proto;
+		}
+	}
+	return proto;
+}
+
 /* Parse an IPv6 header to fill l3_len, l4_len, and l4_proto */
 static void
 parse_ipv6(struct rte_ipv6_hdr *ipv6_hdr, struct testpmd_offload_info *info)
 {
 	struct rte_tcp_hdr *tcp_hdr;
+	uint32_t off = 0;
 
 	info->l3_len = sizeof(struct rte_ipv6_hdr);
-	info->l4_proto = ipv6_hdr->proto;
+	info->l4_proto = parse_ipv6_ext(ipv6_hdr, &off);
+	info->l3_len += off;
 
 	/* only fill l4_len for TCP, it's useful for TSO */
 	if (info->l4_proto == IPPROTO_TCP) {
