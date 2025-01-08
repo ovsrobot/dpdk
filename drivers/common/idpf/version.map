@@ -14,6 +14,7 @@ INTERNAL {
 	idpf_dp_splitq_recv_pkts_avx512;
 	idpf_dp_splitq_xmit_pkts;
 	idpf_dp_splitq_xmit_pkts_avx512;
+	idpf_dp_singleq_recv_pkts_avx2;
 
 	idpf_qc_rx_thresh_check;
 	idpf_qc_rx_queue_release;

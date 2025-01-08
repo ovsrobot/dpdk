@@ -16,6 +16,21 @@ sources = files(
 )
 
 if arch_subdir == 'x86'
+    # compile AVX2 version if either:
+    # a. we have AVX supported in minimum instruction set baseline
+    # b. it's not minimum instruction set, but supported by compiler
+    if cc.get_define('__AVX2__', args: machine_args) != ''
+        cflags += ['-DCC_AVX2_SUPPORT']
+        sources += files('idpf_common_rxtx_avx2.c')
+    elif cc.has_argument('-mavx2')
+       cflags += ['-DCC_AVX2_SUPPORT']
+        idpf_avx2_lib = static_library('idpf_avx2_lib',
+                'idpf_common_rxtx_avx2.c',
+               dependencies: [static_rte_ethdev, static_rte_kvargs, static_rte_hash],
+                include_directories: includes,
+                c_args: [cflags, '-mavx2'])
+       objs += idpf_avx2_lib.extract_objects('idpf_common_rxtx_avx2.c')
+    endif
     if cc_has_avx512
         cflags += ['-DCC_AVX512_SUPPORT']
         avx512_args = cflags + cc_avx512_flags
