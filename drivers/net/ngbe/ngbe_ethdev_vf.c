@@ -20,6 +20,8 @@
 static int ngbevf_dev_info_get(struct rte_eth_dev *dev,
 				 struct rte_eth_dev_info *dev_info);
 static int ngbevf_dev_close(struct rte_eth_dev *dev);
+static int ngbevf_dev_link_update(struct rte_eth_dev *dev,
+				   int wait_to_complete);
 static void ngbevf_intr_disable(struct rte_eth_dev *dev);
 static void ngbevf_intr_enable(struct rte_eth_dev *dev);
 static int ngbevf_vlan_offload_config(struct rte_eth_dev *dev, int mask);
@@ -346,6 +348,12 @@ ngbevf_dev_info_get(struct rte_eth_dev *dev,
 	dev_info->tx_desc_lim = tx_desc_lim;
 
 	return 0;
+}
+
+static int
+ngbevf_dev_link_update(struct rte_eth_dev *dev, int wait_to_complete)
+{
+	return ngbe_dev_link_update_share(dev, wait_to_complete);
 }
 
 static void
@@ -938,6 +946,7 @@ ngbevf_dev_interrupt_handler(void *param)
  */
 static const struct eth_dev_ops ngbevf_eth_dev_ops = {
 	.dev_configure        = ngbevf_dev_configure,
+	.link_update          = ngbevf_dev_link_update,
 	.promiscuous_enable   = ngbevf_dev_promiscuous_enable,
 	.promiscuous_disable  = ngbevf_dev_promiscuous_disable,
 	.allmulticast_enable  = ngbevf_dev_allmulticast_enable,
