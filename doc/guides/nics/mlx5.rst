@@ -497,9 +497,12 @@ Limitations
   cannot be used in conjunction with MPRQ
   since packets may be already attached to PMD-managed external buffers.
 
-- If Multi-Packet Rx queue is configured (``mprq_en``) and Rx CQE compression is
+- RSS hash result is only fully supported when the Hash RSS format is selected
+  as the current CQE compression format on the RX side (``rxq_cqe_comp_en``).
+  Any other format leads to no RTE_MBUF_F_RX_RSS_HASH flag for some Rx packets.
+  If a Multi-Packet Rx queue is configured (``mprq_en``) and Rx CQE compression is
   enabled (``rxq_cqe_comp_en``) at the same time, RSS hash result is not fully
-  supported. Some Rx packets may not have RTE_MBUF_F_RX_RSS_HASH.
+  supported, as the Checksum format is selected by default in this case.
 
 - IPv6 Multicast messages are not supported on VM, while promiscuous mode
   and allmulticast mode are both set to off.
