@@ -1906,6 +1906,7 @@ class TestPmdShell(DPDKShell):
             out.append(TestPmdVerbosePacket.parse(f"{prev_header}\n{match.group('PACKET')}"))
         return out
 
+    @requires_stopped_ports
     def set_vlan_filter(self, port: int, enable: bool, verify: bool = True) -> None:
         """Set vlan filter on.
 
@@ -1932,6 +1933,7 @@ class TestPmdShell(DPDKShell):
                     filter on port {port}"""
                 )
 
+    @requires_stopped_ports
     def rx_vlan(self, vlan: int, port: int, add: bool, verify: bool = True) -> None:
         """Add specified vlan tag to the filter list on a port. Requires vlan filter to be on.
 
@@ -1961,6 +1963,7 @@ class TestPmdShell(DPDKShell):
                     f"Testpmd failed to {'add' if add else 'remove'} tag {vlan} on port {port}."
                 )
 
+    @requires_stopped_ports
     def set_vlan_strip(self, port: int, enable: bool, verify: bool = True) -> None:
         """Enable or disable vlan stripping on the specified port.
 
