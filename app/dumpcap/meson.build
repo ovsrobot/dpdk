@@ -15,3 +15,11 @@ endif
 ext_deps += pcap_dep
 sources = files('main.c')
 deps += ['ethdev', 'pdump', 'pcapng', 'bpf']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
