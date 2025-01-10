@@ -48,3 +48,11 @@ if get_option('buildtype').contains('debug')
 else
         cflags += [ '-URTE_LIBRTE_ML_DEV_DEBUG' ]
 endif
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
