@@ -11,3 +11,11 @@ sources = files(
 )
 headers = files('rte_gro.h')
 deps += ['ethdev']
+
+warning_flags = ['-Wvla']
+
+foreach arg: warning_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
