@@ -11,3 +11,11 @@ sources = files('rte_rcu_qsbr.c')
 headers = files('rte_rcu_qsbr.h')
 
 deps += ['ring']
+
+warning_flags = ['-Wvla']
+
+foreach arg: warning_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
