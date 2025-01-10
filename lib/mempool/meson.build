@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation
 
-extra_flags = []
+extra_flags = ['-Wvla']
 
 foreach flag: extra_flags
     if cc.has_argument(flag)
