@@ -9,3 +9,11 @@ endif
 
 sources = files('main.c')
 deps = ['regexdev']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
