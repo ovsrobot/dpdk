@@ -33,3 +33,11 @@ cmd_h = custom_target('commands_hdr',
         command: [cmdline_gen_cmd, '--context-name=modules_ctx', '@INPUT@']
 )
 sources += cmd_h
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
