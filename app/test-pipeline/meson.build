@@ -19,3 +19,11 @@ sources = files(
         'runtime.c',
 )
 deps += ['pipeline', 'pci']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
