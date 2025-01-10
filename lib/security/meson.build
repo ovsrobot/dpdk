@@ -4,3 +4,11 @@
 sources = files('rte_security.c')
 headers = files('rte_security.h', 'rte_security_driver.h')
 deps += ['mempool', 'cryptodev', 'net']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
