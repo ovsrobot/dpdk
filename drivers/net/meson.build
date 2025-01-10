@@ -68,3 +68,11 @@ drivers = [
 std_deps = ['ethdev', 'kvargs'] # 'ethdev' also pulls in mbuf, net, eal etc
 std_deps += ['bus_pci']         # very many PMDs depend on PCI, so make std
 std_deps += ['bus_vdev']        # same with vdev bus
+
+warning_flags = ['-Wvla']
+
+foreach arg: warning_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
