@@ -13,3 +13,11 @@ sources = files(
         '../test/test_security_proto.c',
 )
 deps += ['security', 'cmdline']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
