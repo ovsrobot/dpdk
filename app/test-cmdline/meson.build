@@ -9,3 +9,11 @@ endif
 
 sources = files('commands.c', 'cmdline_test.c')
 deps += 'cmdline'
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
