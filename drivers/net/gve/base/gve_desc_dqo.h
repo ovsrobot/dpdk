@@ -14,7 +14,7 @@
 #define GVE_TX_MIN_TSO_MSS_DQO 88
 
 /* Basic TX descriptor (DTYPE 0x0C) */
-struct gve_tx_pkt_desc_dqo {
+struct __rte_packed_begin gve_tx_pkt_desc_dqo {
 	__le64 buf_addr;
 
 	/* Must be GVE_TX_PKT_DESC_DTYPE_DQO (0xc) */
@@ -34,7 +34,7 @@ struct gve_tx_pkt_desc_dqo {
 	__le16 compl_tag;
 	u16 buf_size: 14;
 	u16 reserved2: 2;
-} __packed;
+} __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(16, gve_tx_pkt_desc_dqo);
 
 #define GVE_TX_PKT_DESC_DTYPE_DQO 0xc
@@ -66,7 +66,7 @@ GVE_CHECK_STRUCT_LEN(2, gve_tx_context_cmd_dtype);
  *
  * "flex" fields allow the driver to send additional packet context to HW.
  */
-struct gve_tx_tso_context_desc_dqo {
+struct __rte_packed_begin gve_tx_tso_context_desc_dqo {
 	/* The L4 payload bytes that should be segmented. */
 	u32 tso_total_len: 24;
 	u32 flex10: 8;
@@ -84,13 +84,13 @@ struct gve_tx_tso_context_desc_dqo {
 	u8 flex7;
 	u8 flex8;
 	u8 flex9;
-} __packed;
+} __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(16, gve_tx_tso_context_desc_dqo);
 
 #define GVE_TX_TSO_CTX_DESC_DTYPE_DQO 0x5
 
 /* General context descriptor for sending metadata. */
-struct gve_tx_general_context_desc_dqo {
+struct __rte_packed_begin gve_tx_general_context_desc_dqo {
 	u8 flex4;
 	u8 flex5;
 	u8 flex6;
@@ -105,7 +105,7 @@ struct gve_tx_general_context_desc_dqo {
 	u8 flex1;
 	u8 flex2;
 	u8 flex3;
-} __packed;
+} __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(16, gve_tx_general_context_desc_dqo);
 
 #define GVE_TX_GENERAL_CTX_DESC_DTYPE_DQO 0x4
@@ -113,9 +113,9 @@ GVE_CHECK_STRUCT_LEN(16, gve_tx_general_context_desc_dqo);
 /* Logical structure of metadata which is packed into context descriptor flex
  * fields.
  */
-struct gve_tx_metadata_dqo {
+struct __rte_packed_begin gve_tx_metadata_dqo {
 	union {
-		struct {
+		struct __rte_packed_begin {
 			u8 version;
 
 			/* If `skb->l4_hash` is set, this value should be
@@ -130,16 +130,16 @@ struct gve_tx_metadata_dqo {
 			 * skb had a rehash from the TCP stack.
 			 */
 			u16 rehash_event: 1;
-		}  __packed;
+		}  __rte_packed_end;
 		u8 bytes[12];
 	};
-}  __packed;
+}  __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(12, gve_tx_metadata_dqo);
 
 #define GVE_TX_METADATA_VERSION_DQO 0
 
 /* TX completion descriptor */
-struct gve_tx_compl_desc {
+struct __rte_packed_begin gve_tx_compl_desc {
 	/* For types 0-4 this is the TX queue ID associated with this
 	 * completion.
 	 */
@@ -163,7 +163,7 @@ struct gve_tx_compl_desc {
 		__le16 completion_tag;
 	};
 	__le32 reserved1;
-} __packed;
+} __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(8, gve_tx_compl_desc);
 
 #define GVE_COMPL_TYPE_DQO_PKT 0x2 /* Packet completion */
@@ -172,18 +172,18 @@ GVE_CHECK_STRUCT_LEN(8, gve_tx_compl_desc);
 #define GVE_COMPL_TYPE_DQO_REINJECTION 0x3 /* Re-injection completion */
 
 /* Descriptor to post buffers to HW on buffer queue. */
-struct gve_rx_desc_dqo {
+struct __rte_packed_begin gve_rx_desc_dqo {
 	__le16 buf_id; /* ID returned in Rx completion descriptor */
 	__le16 reserved0;
 	__le32 reserved1;
 	__le64 buf_addr; /* DMA address of the buffer */
 	__le64 header_buf_addr;
 	__le64 reserved2;
-} __packed;
+} __rte_packed_end;
 GVE_CHECK_STRUCT_LEN(32, gve_rx_desc_dqo);
 
 /* Descriptor for HW to notify SW of new packets received on RX queue. */
-struct gve_rx_compl_desc_dqo {
+struct __rte_packed_begin gve_rx_compl_desc_dqo {
 	/* Must be 1 */
 	u8 rxdid: 4;
 	u8 reserved0: 4;
@@ -238,7 +238,7 @@ struct gve_rx_compl_desc_dqo {
 	__le32 hash;
 	__le32 reserved6;
 	__le64 reserved7;
-} __packed;
+} __rte_packed_end;
 
 GVE_CHECK_STRUCT_LEN(32, gve_rx_compl_desc_dqo);
 

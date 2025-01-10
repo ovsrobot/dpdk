@@ -95,9 +95,6 @@
 #ifndef ____cacheline_aligned
 #define ____cacheline_aligned	__rte_cache_aligned
 #endif
-#ifndef __packed
-#define __packed		__rte_packed
-#endif
 #define __iomem
 
 #define msleep(ms)		rte_delay_ms(ms)
