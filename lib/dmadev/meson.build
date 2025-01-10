@@ -13,3 +13,11 @@ indirect_headers += files('rte_dmadev_core.h', 'rte_dmadev_trace_fp.h')
 driver_sdk_headers += files('rte_dmadev_pmd.h')
 
 deps += ['telemetry']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
