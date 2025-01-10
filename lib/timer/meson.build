@@ -5,3 +5,11 @@ sources = files('rte_timer.c')
 headers = files('rte_timer.h')
 
 annotate_locks = false
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
