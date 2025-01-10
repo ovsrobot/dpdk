@@ -14,6 +14,14 @@ deps += ['rib']
 deps += ['rcu']
 deps += ['net']
 
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
+
 if dpdk_conf.has('RTE_ARCH_X86_64')
     if target_has_avx512
         cflags += ['-DCC_DIR24_8_AVX512_SUPPORT', '-DCC_TRIE_AVX512_SUPPORT']
