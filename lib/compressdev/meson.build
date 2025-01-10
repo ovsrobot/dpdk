@@ -17,3 +17,11 @@ driver_sdk_headers = files(
         'rte_compressdev_internal.h',
     )
 deps += ['kvargs', 'mbuf']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
