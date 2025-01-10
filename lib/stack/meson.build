@@ -17,3 +17,11 @@ indirect_headers += files(
         'rte_stack_lf_c11.h',
         'rte_stack_lf_stubs.h',
 )
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
