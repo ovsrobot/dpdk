@@ -5,3 +5,11 @@ sources = files('rte_argparse.c')
 headers = files('rte_argparse.h')
 
 deps += ['log']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
