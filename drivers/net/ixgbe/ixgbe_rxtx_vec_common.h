@@ -14,10 +14,12 @@ static inline uint16_t
 reassemble_packets(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_bufs,
 		   uint16_t nb_bufs, uint8_t *split_flags)
 {
-	struct rte_mbuf *pkts[nb_bufs]; /*finished pkts*/
+	struct rte_mbuf *pkts[RTE_IXGBE_MAX_RX_BURST]; /*finished pkts*/
 	struct rte_mbuf *start = rxq->pkt_first_seg;
 	struct rte_mbuf *end =  rxq->pkt_last_seg;
 	unsigned int pkt_idx, buf_idx;
+
+	RTE_ASSERT(nb_bufs <= RTE_DIM(pkts));
 
 	for (buf_idx = 0, pkt_idx = 0; buf_idx < nb_bufs; buf_idx++) {
 		if (end != NULL) {
