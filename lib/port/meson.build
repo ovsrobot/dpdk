@@ -46,3 +46,11 @@ if dpdk_conf.has('RTE_HAS_LIBPCAP')
     dpdk_conf.set('RTE_PORT_PCAP', 1)
     ext_deps += pcap_dep # dependency provided in config/meson.build
 endif
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
