@@ -12,3 +12,11 @@ headers = files('rte_bbdev.h',
         'rte_bbdev_pmd.h',
         'rte_bbdev_op.h')
 deps += ['mbuf']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
