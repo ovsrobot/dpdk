@@ -26,6 +26,7 @@ sources += files(
 
 cflags_options = [
         '-std=c11',
+        '-Wvla',
         '-Wno-strict-prototypes',
         '-D_BSD_SOURCE',
         '-D_DEFAULT_SOURCE',
