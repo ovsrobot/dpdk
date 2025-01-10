@@ -19,3 +19,11 @@ indirect_headers += files (
         'rte_ring_rts_elem_pvt.h',
 )
 deps += ['telemetry']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
