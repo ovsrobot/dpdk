@@ -17,3 +17,11 @@ if is_linux
 endif
 
 headers = files('rte_log.h')
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
