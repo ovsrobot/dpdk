@@ -39,8 +39,7 @@
 
 #define NB_SOCKETS        8
 
-/* Configure how many packets ahead to prefetch, when reading packets */
-#define PREFETCH_OFFSET	  3
+#define DEFAULT_PREFECH_OFFSET 4
 
 /* Used to mark destination port as 'invalid'. */
 #define	BAD_PORT ((uint16_t)-1)
@@ -118,6 +117,9 @@ extern uint32_t max_pkt_len;
 
 extern uint32_t nb_pkt_per_burst;
 extern uint32_t mb_mempool_cache_size;
+
+/* Prefetch offset of packets processed by the main loop. */
+extern uint16_t prefetch_offset;
 
 /* Send burst of packets on an output interface */
 static inline int

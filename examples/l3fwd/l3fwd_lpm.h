@@ -82,13 +82,13 @@ l3fwd_lpm_no_opt_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	int32_t j;
 
 	/* Prefetch first packets */
-	for (j = 0; j < PREFETCH_OFFSET && j < nb_rx; j++)
+	for (j = 0; j < prefetch_offset && j < nb_rx; j++)
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j], void *));
 
 	/* Prefetch and forward already prefetched packets. */
-	for (j = 0; j < (nb_rx - PREFETCH_OFFSET); j++) {
+	for (j = 0; j < (nb_rx - prefetch_offset); j++) {
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[
-				j + PREFETCH_OFFSET], void *));
+				j + prefetch_offset], void *));
 		l3fwd_lpm_simple_forward(pkts_burst[j], portid, qconf);
 	}
 

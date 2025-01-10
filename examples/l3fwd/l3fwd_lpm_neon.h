@@ -85,23 +85,20 @@ l3fwd_lpm_process_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 			  uint16_t portid, uint16_t *dst_port,
 			  struct lcore_conf *qconf, const uint8_t do_step3)
 {
-	int32_t i = 0, j = 0;
+	int32_t i = 0, j = 0, pos = 0;
 	int32x4_t dip;
 	uint32_t ipv4_flag;
 	const int32_t k = RTE_ALIGN_FLOOR(nb_rx, FWDSTEP);
 	const int32_t m = nb_rx % FWDSTEP;
 
 	if (k) {
-		for (i = 0; i < FWDSTEP; i++) {
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i],
-							void *));
-		}
-		for (j = 0; j != k - FWDSTEP; j += FWDSTEP) {
-			for (i = 0; i < FWDSTEP; i++) {
-				rte_prefetch0(rte_pktmbuf_mtod(
-						pkts_burst[j + i + FWDSTEP],
-						void *));
-			}
+		for (i = 0; i < prefetch_offset && i < k; i++)
+			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i], void *));
+
+		for (j = 0; j != k; j += FWDSTEP) {
+			for (i = 0, pos = j + prefetch_offset;
+			     i < FWDSTEP && pos < k; i++, pos++)
+				rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[pos], void *));
 
 			processx4_step1(&pkts_burst[j], &dip, &ipv4_flag);
 			processx4_step2(qconf, dip, ipv4_flag, portid,
@@ -109,35 +106,9 @@ l3fwd_lpm_process_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 			if (do_step3)
 				processx4_step3(&pkts_burst[j], &dst_port[j]);
 		}
-
-		processx4_step1(&pkts_burst[j], &dip, &ipv4_flag);
-		processx4_step2(qconf, dip, ipv4_flag, portid, &pkts_burst[j],
-				&dst_port[j]);
-		if (do_step3)
-			processx4_step3(&pkts_burst[j], &dst_port[j]);
-
-		j += FWDSTEP;
 	}
 
 	if (m) {
-		/* Prefetch last up to 3 packets one by one */
-		switch (m) {
-		case 3:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
-							void *));
-			j++;
-			/* fallthrough */
-		case 2:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
-							void *));
-			j++;
-			/* fallthrough */
-		case 1:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
-							void *));
-			j++;
-		}
-		j -= m;
 		/* Classify last up to 3 packets one by one */
 		switch (m) {
 		case 3:

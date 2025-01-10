@@ -72,14 +72,14 @@ l3fwd_acl_prepare_acl_parameter(struct rte_mbuf **pkts_in, struct acl_search_t *
 	acl->num_ipv6 = 0;
 
 	/* Prefetch first packets */
-	for (i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
+	for (i = 0; i < prefetch_offset && i < nb_rx; i++) {
 		rte_prefetch0(rte_pktmbuf_mtod(
 				pkts_in[i], void *));
 	}
 
-	for (i = 0; i < (nb_rx - PREFETCH_OFFSET); i++) {
+	for (i = 0; i < (nb_rx - prefetch_offset); i++) {
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_in[
-				i + PREFETCH_OFFSET], void *));
+				i + prefetch_offset], void *));
 		l3fwd_acl_prepare_one_packet(pkts_in, acl, i);
 	}
 

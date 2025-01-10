@@ -190,7 +190,7 @@ l3fwd_em_process_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	 */
 	int32_t n = RTE_ALIGN_FLOOR(nb_rx, EM_HASH_LOOKUP_COUNT);
 
-	for (j = 0; j < EM_HASH_LOOKUP_COUNT && j < nb_rx; j++) {
+	for (j = 0; j < prefetch_offset && j < nb_rx; j++) {
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
 					       struct rte_ether_hdr *) + 1);
 	}
@@ -207,7 +207,7 @@ l3fwd_em_process_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 		l3_type = pkt_type & RTE_PTYPE_L3_MASK;
 		tcp_or_udp = pkt_type & (RTE_PTYPE_L4_TCP | RTE_PTYPE_L4_UDP);
 
-		for (i = 0, pos = j + EM_HASH_LOOKUP_COUNT;
+		for (i = 0, pos = j + prefetch_offset;
 		     i < EM_HASH_LOOKUP_COUNT && pos < nb_rx; i++, pos++) {
 			rte_prefetch0(rte_pktmbuf_mtod(
 					pkts_burst[pos],
@@ -277,6 +277,9 @@ l3fwd_em_process_events(int nb_rx, struct rte_event **ev,
 	for (j = 0; j < nb_rx; j++)
 		pkts_burst[j] = ev[j]->mbuf;
 
+	for (i = 0; i < prefetch_offset && i < nb_rx; i++)
+		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i], struct rte_ether_hdr *) + 1);
+
 	for (j = 0; j < n; j += EM_HASH_LOOKUP_COUNT) {
 
 		uint32_t pkt_type = RTE_PTYPE_L3_MASK |
@@ -289,7 +292,7 @@ l3fwd_em_process_events(int nb_rx, struct rte_event **ev,
 		l3_type = pkt_type & RTE_PTYPE_L3_MASK;
 		tcp_or_udp = pkt_type & (RTE_PTYPE_L4_TCP | RTE_PTYPE_L4_UDP);
 
-		for (i = 0, pos = j + EM_HASH_LOOKUP_COUNT;
+		for (i = 0, pos = j + prefetch_offset;
 		     i < EM_HASH_LOOKUP_COUNT && pos < nb_rx; i++, pos++) {
 			rte_prefetch0(rte_pktmbuf_mtod(
 					pkts_burst[pos],

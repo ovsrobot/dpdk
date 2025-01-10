@@ -81,19 +81,18 @@ l3fwd_em_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	int32_t i, j;
 	uint16_t dst_port[SENDM_PORT_OVERHEAD(MAX_PKT_BURST)];
 
-	if (nb_rx > 0) {
-		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[0],
+	for (i = 0; i < prefetch_offset && i < nb_rx; i++)
+		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i],
 					       struct rte_ether_hdr *) + 1);
-	}
 
-	for (i = 1, j = 0; j < nb_rx; i++, j++) {
-		if (i < nb_rx) {
-			rte_prefetch0(rte_pktmbuf_mtod(
-					pkts_burst[i],
-					struct rte_ether_hdr *) + 1);
-		}
+	for (j = 0; j < nb_rx - prefetch_offset; j++) {
+		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j + prefetch_offset],
+					       struct rte_ether_hdr *) + 1);
 		dst_port[j] = em_get_dst_port(qconf, pkts_burst[j], portid);
 	}
+
+	for (; j < nb_rx; j++)
+		dst_port[j] = em_get_dst_port(qconf, pkts_burst[j], portid);
 
 	send_packets_multi(qconf, pkts_burst, dst_port, nb_rx);
 }
@@ -106,20 +105,26 @@ static inline void
 l3fwd_em_process_events(int nb_rx, struct rte_event **events,
 		     struct lcore_conf *qconf)
 {
+	struct rte_mbuf *mbuf;
+	uint16_t port;
 	int32_t i, j;
 
-	rte_prefetch0(rte_pktmbuf_mtod(events[0]->mbuf,
-		      struct rte_ether_hdr *) + 1);
+	for (i = 0; i < prefetch_offset && i < nb_rx; i++)
+		rte_prefetch0(rte_pktmbuf_mtod(events[i]->mbuf, struct rte_ether_hdr *) + 1);
 
-	for (i = 1, j = 0; j < nb_rx; i++, j++) {
-		struct rte_mbuf *mbuf = events[j]->mbuf;
-		uint16_t port;
+	for (j = 0; j < nb_rx - prefetch_offset; j++) {
+		rte_prefetch0(rte_pktmbuf_mtod(events[j + prefetch_offset]->mbuf,
+					       struct rte_ether_hdr *) + 1);
+		mbuf = events[j]->mbuf;
+		port = mbuf->port;
+		mbuf->port = em_get_dst_port(qconf, mbuf, mbuf->port);
+		process_packet(mbuf, &mbuf->port);
+		if (mbuf->port == BAD_PORT)
+			mbuf->port = port;
+	}
 
-		if (i < nb_rx) {
-			rte_prefetch0(rte_pktmbuf_mtod(
-					events[i]->mbuf,
-					struct rte_ether_hdr *) + 1);
-		}
+	for (; j < nb_rx; j++) {
+		mbuf = events[j]->mbuf;
 		port = mbuf->port;
 		mbuf->port = em_get_dst_port(qconf, mbuf, mbuf->port);
 		process_packet(mbuf, &mbuf->port);
@@ -136,17 +141,22 @@ l3fwd_em_process_event_vector(struct rte_event_vector *vec,
 	struct rte_mbuf **mbufs = vec->mbufs;
 	int32_t i, j;
 
-	rte_prefetch0(rte_pktmbuf_mtod(mbufs[0], struct rte_ether_hdr *) + 1);
+	for (i = 0; i < prefetch_offset && i < vec->nb_elem; i++)
+		rte_prefetch0(rte_pktmbuf_mtod(mbufs[i], struct rte_ether_hdr *) + 1);
 
-	for (i = 0, j = 1; i < vec->nb_elem; i++, j++) {
-		if (j < vec->nb_elem)
-			rte_prefetch0(rte_pktmbuf_mtod(mbufs[j],
-						       struct rte_ether_hdr *) +
-				      1);
+	for (i = 0; i < vec->nb_elem - prefetch_offset; i++) {
+		rte_prefetch0(rte_pktmbuf_mtod(mbufs[i + prefetch_offset],
+					       struct rte_ether_hdr *) + 1);
 		dst_ports[i] = em_get_dst_port(qconf, mbufs[i],
 					       attr_valid ? vec->port :
 							    mbufs[i]->port);
 	}
+
+	for (; i < vec->nb_elem; i++)
+		dst_ports[i] = em_get_dst_port(qconf, mbufs[i],
+					       attr_valid ? vec->port :
+							    mbufs[i]->port);
+
 	j = RTE_ALIGN_FLOOR(vec->nb_elem, FWDSTEP);
 
 	for (i = 0; i != j; i += FWDSTEP)

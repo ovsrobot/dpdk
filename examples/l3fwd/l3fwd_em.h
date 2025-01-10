@@ -132,16 +132,16 @@ l3fwd_em_no_opt_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	int32_t j;
 
 	/* Prefetch first packets */
-	for (j = 0; j < PREFETCH_OFFSET && j < nb_rx; j++)
+	for (j = 0; j < prefetch_offset && j < nb_rx; j++)
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j], void *));
 
 	/*
 	 * Prefetch and forward already prefetched
 	 * packets.
 	 */
-	for (j = 0; j < (nb_rx - PREFETCH_OFFSET); j++) {
+	for (j = 0; j < (nb_rx - prefetch_offset); j++) {
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[
-				j + PREFETCH_OFFSET], void *));
+				j + prefetch_offset], void *));
 		l3fwd_em_simple_forward(pkts_burst[j], portid, qconf);
 	}
 
@@ -161,16 +161,16 @@ l3fwd_em_no_opt_process_events(int nb_rx, struct rte_event **events,
 	int32_t j;
 
 	/* Prefetch first packets */
-	for (j = 0; j < PREFETCH_OFFSET && j < nb_rx; j++)
+	for (j = 0; j < prefetch_offset && j < nb_rx; j++)
 		rte_prefetch0(rte_pktmbuf_mtod(events[j]->mbuf, void *));
 
 	/*
 	 * Prefetch and forward already prefetched
 	 * packets.
 	 */
-	for (j = 0; j < (nb_rx - PREFETCH_OFFSET); j++) {
+	for (j = 0; j < (nb_rx - prefetch_offset); j++) {
 		rte_prefetch0(rte_pktmbuf_mtod(events[
-				j + PREFETCH_OFFSET]->mbuf, void *));
+				j + prefetch_offset]->mbuf, void *));
 		l3fwd_em_simple_process(events[j]->mbuf, qconf);
 	}
 
@@ -188,15 +188,15 @@ l3fwd_em_no_opt_process_event_vector(struct rte_event_vector *vec,
 	int32_t i;
 
 	/* Prefetch first packets */
-	for (i = 0; i < PREFETCH_OFFSET && i < vec->nb_elem; i++)
+	for (i = 0; i < prefetch_offset && i < vec->nb_elem; i++)
 		rte_prefetch0(rte_pktmbuf_mtod(mbufs[i], void *));
 
 	/*
 	 * Prefetch and forward already prefetched packets.
 	 */
-	for (i = 0; i < (vec->nb_elem - PREFETCH_OFFSET); i++) {
+	for (i = 0; i < (vec->nb_elem - prefetch_offset); i++) {
 		rte_prefetch0(
-			rte_pktmbuf_mtod(mbufs[i + PREFETCH_OFFSET], void *));
+			rte_pktmbuf_mtod(mbufs[i + prefetch_offset], void *));
 		dst_ports[i] = l3fwd_em_simple_process(mbufs[i], qconf);
 	}
 

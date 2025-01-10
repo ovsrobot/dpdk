@@ -24,9 +24,6 @@
 #include "l3fwd_event.h"
 #include "l3fwd_route.h"
 
-/* Configure how many packets ahead to prefetch for fib. */
-#define FIB_PREFETCH_OFFSET 4
-
 /* A non-existent portid is needed to denote a default hop for fib. */
 #define FIB_DEFAULT_HOP 999
 
@@ -130,14 +127,14 @@ fib_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	int32_t i;
 
 	/* Prefetch first packets. */
-	for (i = 0; i < FIB_PREFETCH_OFFSET && i < nb_rx; i++)
+	for (i = 0; i < prefetch_offset && i < nb_rx; i++)
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i], void *));
 
 	/* Parse packet info and prefetch. */
-	for (i = 0; i < (nb_rx - FIB_PREFETCH_OFFSET); i++) {
+	for (i = 0; i < (nb_rx - prefetch_offset); i++) {
 		/* Prefetch packet. */
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[
-				i + FIB_PREFETCH_OFFSET], void *));
+				i + prefetch_offset], void *));
 		fib_parse_packet(pkts_burst[i],
 				&ipv4_arr[ipv4_cnt], &ipv4_cnt,
 				&ipv6_arr[ipv6_cnt], &ipv6_cnt,
@@ -302,11 +299,11 @@ fib_event_loop(struct l3fwd_event_resources *evt_rsrc,
 		ipv6_arr_assem = 0;
 
 		/* Prefetch first packets. */
-		for (i = 0; i < FIB_PREFETCH_OFFSET && i < nb_deq; i++)
+		for (i = 0; i < prefetch_offset && i < nb_deq; i++)
 			rte_prefetch0(rte_pktmbuf_mtod(events[i].mbuf, void *));
 
 		/* Parse packet info and prefetch. */
-		for (i = 0; i < (nb_deq - FIB_PREFETCH_OFFSET); i++) {
+		for (i = 0; i < (nb_deq - prefetch_offset); i++) {
 			if (flags & L3FWD_EVENT_TX_ENQ) {
 				events[i].queue_id = tx_q_id;
 				events[i].op = RTE_EVENT_OP_FORWARD;
@@ -318,7 +315,7 @@ fib_event_loop(struct l3fwd_event_resources *evt_rsrc,
 
 			/* Prefetch packet. */
 			rte_prefetch0(rte_pktmbuf_mtod(events[
-					i + FIB_PREFETCH_OFFSET].mbuf,
+					i + prefetch_offset].mbuf,
 					void *));
 
 			fib_parse_packet(events[i].mbuf,
@@ -455,12 +452,12 @@ fib_process_event_vector(struct rte_event_vector *vec, uint8_t *type_arr,
 	ipv6_arr_assem = 0;
 
 	/* Prefetch first packets. */
-	for (i = 0; i < FIB_PREFETCH_OFFSET && i < vec->nb_elem; i++)
+	for (i = 0; i < prefetch_offset && i < vec->nb_elem; i++)
 		rte_prefetch0(rte_pktmbuf_mtod(mbufs[i], void *));
 
 	/* Parse packet info and prefetch. */
-	for (i = 0; i < (vec->nb_elem - FIB_PREFETCH_OFFSET); i++) {
-		rte_prefetch0(rte_pktmbuf_mtod(mbufs[i + FIB_PREFETCH_OFFSET],
+	for (i = 0; i < (vec->nb_elem - prefetch_offset); i++) {
+		rte_prefetch0(rte_pktmbuf_mtod(mbufs[i + prefetch_offset],
 					       void *));
 		fib_parse_packet(mbufs[i], &ipv4_arr[ipv4_cnt], &ipv4_cnt,
 				 &ipv6_arr[ipv6_cnt], &ipv6_cnt, &type_arr[i]);

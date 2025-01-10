@@ -59,6 +59,7 @@ uint16_t nb_rxd = RX_DESC_DEFAULT;
 uint16_t nb_txd = TX_DESC_DEFAULT;
 uint32_t nb_pkt_per_burst = DEFAULT_PKT_BURST;
 uint32_t mb_mempool_cache_size = MEMPOOL_CACHE_SIZE;
+uint16_t prefetch_offset = DEFAULT_PREFECH_OFFSET;
 
 /**< Ports set in promiscuous mode off by default. */
 static int promiscuous_on;
@@ -769,6 +770,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_ALG "alg"
 #define CMD_LINE_OPT_PKT_BURST "burst"
 #define CMD_LINE_OPT_MB_CACHE_SIZE "mbcache"
+#define CMD_PREFETCH_OFFSET "prefetch-offset"
 
 enum {
 	/* long options mapped to a short option */
@@ -800,6 +802,7 @@ enum {
 	CMD_LINE_OPT_VECTOR_TMO_NS_NUM,
 	CMD_LINE_OPT_PKT_BURST_NUM,
 	CMD_LINE_OPT_MB_CACHE_SIZE_NUM,
+	CMD_PREFETCH_OFFSET_NUM,
 };
 
 static const struct option lgopts[] = {
@@ -828,6 +831,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_ALG,   1, 0, CMD_LINE_OPT_ALG_NUM},
 	{CMD_LINE_OPT_PKT_BURST,   1, 0, CMD_LINE_OPT_PKT_BURST_NUM},
 	{CMD_LINE_OPT_MB_CACHE_SIZE,   1, 0, CMD_LINE_OPT_MB_CACHE_SIZE_NUM},
+	{CMD_PREFETCH_OFFSET,   1, 0, CMD_PREFETCH_OFFSET_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -1017,6 +1021,9 @@ parse_args(int argc, char **argv)
 		case CMD_LINE_OPT_ALG_NUM:
 			l3fwd_set_alg(optarg);
 			break;
+		case CMD_PREFETCH_OFFSET_NUM:
+			prefetch_offset = strtol(optarg, NULL, 10);
+			break;
 		default:
 			print_usage(prgname);
 			return -1;
@@ -1053,6 +1060,13 @@ parse_args(int argc, char **argv)
 			evt_rsrc->vector_tmo_ns);
 	}
 #endif
+
+	if (prefetch_offset > nb_pkt_per_burst) {
+		fprintf(stderr, "Prefetch offset (%u) cannot be greater than burst size (%u). "
+			"Using burst size %u.\n",
+			prefetch_offset, nb_pkt_per_burst, nb_pkt_per_burst);
+		prefetch_offset = nb_pkt_per_burst;
+	}
 
 	/*
 	 * Nothing is selected, pick longest-prefix match
