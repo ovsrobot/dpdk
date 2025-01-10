@@ -15,3 +15,11 @@ drivers = [
 ]
 
 std_deps = ['compressdev'] # compressdev pulls in all other needed deps
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
