@@ -913,6 +913,32 @@ out:
 	return ret;
 }
 
+static void
+eal_worker_thread_cleanup(void)
+{
+	unsigned int lcore_id;
+	int ret = 0;
+
+	/* Cancel all the worker pthreads */
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
+		/* Check for non zero id */
+		if (!lcore_config[lcore_id].thread_id.opaque_id)
+			continue;
+
+		ret = pthread_cancel((pthread_t)lcore_config[lcore_id].thread_id.opaque_id);
+		if (ret != 0) {
+			EAL_LOG(WARNING, "Pthread cancel fails for lcore %d",
+					lcore_id);
+		}
+		ret = pthread_join((pthread_t)lcore_config[lcore_id].thread_id.opaque_id, NULL);
+		if (ret != 0) {
+			EAL_LOG(WARNING, "Pthread join fails for lcore %d",
+					lcore_id);
+		}
+	}
+	EAL_LOG(DEBUG, "Worker thread clean up done");
+}
+
 /* Launch threads, called at application init(). */
 int
 rte_eal_init(int argc, char **argv)
@@ -1321,6 +1347,7 @@ rte_eal_cleanup(void)
 #endif
 	rte_mp_channel_cleanup();
 	eal_bus_cleanup();
+	eal_worker_thread_cleanup();
 	rte_trace_save();
 	eal_trace_fini();
 	eal_mp_dev_hotplug_cleanup();
