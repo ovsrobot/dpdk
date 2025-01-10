@@ -21,3 +21,11 @@ headers = files(
         'rte_mbuf_dyn.h',
 )
 deps += ['mempool']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
