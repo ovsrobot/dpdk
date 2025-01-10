@@ -9,3 +9,11 @@ endif
 
 sources = files('rte_jobstats.c')
 headers = files('rte_jobstats.h')
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
