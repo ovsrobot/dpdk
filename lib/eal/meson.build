@@ -31,3 +31,11 @@ endif
 if is_freebsd
     annotate_locks = false
 endif
+
+warning_flags = ['-Wvla']
+
+foreach arg: warning_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
