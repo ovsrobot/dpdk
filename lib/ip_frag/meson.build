@@ -11,3 +11,11 @@ sources = files(
 )
 headers = files('rte_ip_frag.h')
 deps += ['ethdev', 'hash']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
