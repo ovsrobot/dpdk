@@ -3,3 +3,11 @@
 
 sources = files('rte_cfgfile.c')
 headers = files('rte_cfgfile.h')
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
