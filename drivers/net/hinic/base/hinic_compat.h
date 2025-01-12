@@ -200,13 +200,9 @@ static inline u16 ilog2(u32 n)
 static inline int hinic_mutex_init(pthread_mutex_t *pthreadmutex,
 					const pthread_mutexattr_t *mattr)
 {
-	int err;
+	pthread_mutex_init(pthreadmutex, mattr);
 
-	err = pthread_mutex_init(pthreadmutex, mattr);
-	if (unlikely(err))
-		PMD_DRV_LOG(ERR, "Fail to initialize mutex, error: %d", err);
-
-	return err;
+	return 0;
 }
 
 static inline int hinic_mutex_destroy(pthread_mutex_t *pthreadmutex)
