@@ -147,11 +147,7 @@ fs_mutex_init(struct fs_priv *priv)
 		ERROR("Cannot set mutex type - %s", strerror(ret));
 		return ret;
 	}
-	ret = pthread_mutex_init(&priv->hotplug_mutex, &attr);
-	if (ret) {
-		ERROR("Cannot initiate mutex - %s", strerror(ret));
-		return ret;
-	}
+	pthread_mutex_init(&priv->hotplug_mutex, &attr);
 	return 0;
 }
 
