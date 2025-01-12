@@ -507,11 +507,7 @@ struct spi_transaction_dev *spi_transaction_init(struct altera_spi_device *dev,
 	if (!spi_tran_dev->buffer)
 		goto err;
 
-	ret = pthread_mutex_init(&spi_tran_dev->lock, NULL);
-	if (ret) {
-		dev_err(spi_tran_dev, "fail to init mutex lock\n");
-		goto err;
-	}
+	pthread_mutex_init(&spi_tran_dev->lock, NULL);
 	if (dev->mutex) {
 		dev_info(NULL, "use multi-process mutex in spi\n");
 		spi_tran_dev->mutex = dev->mutex;
@@ -521,10 +517,6 @@ struct spi_transaction_dev *spi_transaction_init(struct altera_spi_device *dev,
 	}
 
 	return spi_tran_dev;
-
-err:
-	opae_free(spi_tran_dev);
-	return NULL;
 }
 
 void spi_transaction_remove(struct spi_transaction_dev *dev)
