@@ -1109,7 +1109,7 @@ eth_ionic_dev_uninit(struct rte_eth_dev *eth_dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	if (eth_dev->state != RTE_ETH_DEV_UNUSED)
+	if (rte_eth_dev_is_used(eth_dev->state))
 		ionic_dev_close(eth_dev);
 
 	eth_dev->dev_ops = NULL;

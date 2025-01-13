@@ -6706,7 +6706,7 @@ bnxt_dev_uninit(struct rte_eth_dev *eth_dev)
 
 	PMD_DRV_LOG_LINE(DEBUG, "Calling Device uninit");
 
-	if (eth_dev->state != RTE_ETH_DEV_UNUSED)
+	if (rte_eth_dev_is_used(eth_dev->state))
 		bnxt_dev_close_op(eth_dev);
 
 	return 0;

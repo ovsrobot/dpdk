@@ -328,7 +328,7 @@ cpfl_get_itf_by_port_id(uint16_t port_id)
 	}
 
 	dev = &rte_eth_devices[port_id];
-	if (dev->state == RTE_ETH_DEV_UNUSED) {
+	if (!rte_eth_dev_is_used(dev->state)) {
 		PMD_DRV_LOG(ERR, "eth_dev[%d] is unused.", port_id);
 		return NULL;
 	}

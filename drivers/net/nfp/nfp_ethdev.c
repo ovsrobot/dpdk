@@ -754,11 +754,11 @@ nfp_net_close(struct rte_eth_dev *dev)
 	/*
 	 * In secondary process, a released eth device can be found by its name
 	 * in shared memory.
-	 * If the state of the eth device is RTE_ETH_DEV_UNUSED, it means the
+	 * If the state of the eth device isn't used, it means the
 	 * eth device has been released.
 	 */
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
-		if (dev->state == RTE_ETH_DEV_UNUSED)
+		if (!rte_eth_dev_is_used(dev->state))
 			return 0;
 
 		nfp_pf_secondary_uninit(hw_priv);
