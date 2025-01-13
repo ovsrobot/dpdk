@@ -26,4 +26,11 @@ enum zsda_service_type {
 };
 #define ZSDA_MAX_SERVICES (0)
 
+#define ZSDA_CSR_READ32(addr)	      rte_read32((addr))
+#define ZSDA_CSR_WRITE32(addr, value) rte_write32((value), (addr))
+#define ZSDA_CSR_READ16(addr)	      rte_read16((addr))
+#define ZSDA_CSR_WRITE16(addr, value) rte_write16((value), (addr))
+#define ZSDA_CSR_READ8(addr)	      rte_read8((addr))
+#define ZSDA_CSR_WRITE8(addr, value)  rte_write8_relaxed((value), (addr))
+
 #endif /* _ZSDA_QP_COMMON_H_ */
