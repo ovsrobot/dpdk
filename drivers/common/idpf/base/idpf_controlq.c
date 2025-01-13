@@ -248,9 +248,10 @@ int idpf_ctlq_init(struct idpf_hw *hw, u8 num_q,
 	return 0;
 
 init_destroy_qs:
-	LIST_FOR_EACH_ENTRY_SAFE(cq, tmp, &hw->cq_list_head,
-				 idpf_ctlq_info, cq_list)
+	while (!LIST_EMPTY(&hw->cq_list_head)) {
+		cq = LIST_FIRST(&hw->cq_list_head);
 		idpf_ctlq_remove(hw, cq);
+	}
 
 	return err;
 }
@@ -263,9 +264,10 @@ void idpf_ctlq_deinit(struct idpf_hw *hw)
 {
 	struct idpf_ctlq_info *cq = NULL, *tmp = NULL;
 
-	LIST_FOR_EACH_ENTRY_SAFE(cq, tmp, &hw->cq_list_head,
-				 idpf_ctlq_info, cq_list)
+	while (!LIST_EMPTY(&hw->cq_list_head)) {
+		cq = LIST_FIRST(&hw->cq_list_head);
 		idpf_ctlq_remove(hw, cq);
+	}
 }
 
 /**
