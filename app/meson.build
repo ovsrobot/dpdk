@@ -45,6 +45,15 @@ if get_option('tests')
 endif
 
 default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        default_cflags += arg
+    endif
+endforeach
+
 default_ldflags = []
 if get_option('default_library') == 'static' and not is_windows
     default_ldflags += ['-Wl,--export-dynamic']
