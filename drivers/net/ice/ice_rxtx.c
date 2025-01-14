@@ -1186,7 +1186,7 @@ ice_rx_queue_setup(struct rte_eth_dev *dev,
 	struct ice_vsi *vsi = pf->main_vsi;
 	struct ice_rx_queue *rxq;
 	const struct rte_memzone *rz;
-	uint32_t ring_size;
+	uint32_t ring_size, tlen;
 	uint16_t len;
 	int use_def_burst_func = 1;
 	uint64_t offloads;
@@ -1294,9 +1294,14 @@ ice_rx_queue_setup(struct rte_eth_dev *dev,
 	/* always reserve more for bulk alloc */
 	len = (uint16_t)(nb_desc + ICE_RX_MAX_BURST);
 
+	/* allocate extra entries for SW split buffer */
+	tlen = ((rxq->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) != 0) ?
+		rxq->rx_free_thresh : 0;
+	tlen += len;
+
 	/* Allocate the software ring. */
 	rxq->sw_ring = rte_zmalloc_socket(NULL,
-					  sizeof(struct ice_rx_entry) * len,
+					  sizeof(struct ice_rx_entry) * tlen,
 					  RTE_CACHE_LINE_SIZE,
 					  socket_id);
 	if (!rxq->sw_ring) {
@@ -1304,6 +1309,8 @@ ice_rx_queue_setup(struct rte_eth_dev *dev,
 		PMD_INIT_LOG(ERR, "Failed to allocate memory for SW ring");
 		return -ENOMEM;
 	}
+
+	rxq->sw_split_buf = (tlen == len) ? NULL : rxq->sw_ring + len;
 
 	ice_reset_rx_queue(rxq);
 	rxq->q_set = true;
@@ -1883,7 +1890,6 @@ ice_rx_alloc_bufs(struct ice_rx_queue *rxq)
 	uint64_t dma_addr;
 	int diag, diag_pay;
 	uint64_t pay_addr;
-	struct rte_mbuf *mbufs_pay[rxq->rx_free_thresh];
 
 	/* Allocate buffers in bulk */
 	alloc_idx = (uint16_t)(rxq->rx_free_trigger -
@@ -1898,7 +1904,7 @@ ice_rx_alloc_bufs(struct ice_rx_queue *rxq)
 
 	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
 		diag_pay = rte_mempool_get_bulk(rxq->rxseg[1].mp,
-				(void *)mbufs_pay, rxq->rx_free_thresh);
+				(void *)rxq->sw_split_buf, rxq->rx_free_thresh);
 		if (unlikely(diag_pay != 0)) {
 			PMD_RX_LOG(ERR, "Failed to get payload mbufs in bulk");
 			return -ENOMEM;
@@ -1923,8 +1929,8 @@ ice_rx_alloc_bufs(struct ice_rx_queue *rxq)
 			rxdp[i].read.hdr_addr = 0;
 			rxdp[i].read.pkt_addr = dma_addr;
 		} else {
-			mb->next = mbufs_pay[i];
-			pay_addr = rte_cpu_to_le_64(rte_mbuf_data_iova_default(mbufs_pay[i]));
+			mb->next = rxq->sw_split_buf[i].mbuf;
+			pay_addr = rte_cpu_to_le_64(rte_mbuf_data_iova_default(mb->next));
 			rxdp[i].read.hdr_addr = dma_addr;
 			rxdp[i].read.pkt_addr = pay_addr;
 		}
