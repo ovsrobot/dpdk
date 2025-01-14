@@ -7,6 +7,14 @@ if is_windows
     subdir_done()
 endif
 
+extra_flags = ['-Wno-vla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
+
 sources = files('esp_inb.c', 'esp_outb.c',
                 'sa.c', 'ses.c', 'ipsec_sad.c',
                 'ipsec_telemetry.c')
