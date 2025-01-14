@@ -111,9 +111,13 @@ default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
 default_cflags += ['-DALLOW_INTERNAL_API']
 
-if cc.has_argument('-Wno-format-truncation')
-    default_cflags += '-Wno-format-truncation'
-endif
+extra_flags = ['-Wno-format-truncation', '-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        default_cflags += arg
+    endif
+endforeach
 
 foreach l:libraries
     build = true
