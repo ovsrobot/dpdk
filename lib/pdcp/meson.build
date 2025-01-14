@@ -7,6 +7,14 @@ if is_windows
     subdir_done()
 endif
 
+extra_flags = ['-Wno-vla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
+
 sources = files(
         'pdcp_cnt.c',
         'pdcp_crypto.c',
