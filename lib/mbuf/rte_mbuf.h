@@ -568,6 +568,10 @@ __rte_mbuf_raw_sanity_check(__rte_unused const struct rte_mbuf *m)
 	RTE_ASSERT(rte_mbuf_refcnt_read(m) == 1);
 	RTE_ASSERT(m->next == NULL);
 	RTE_ASSERT(m->nb_segs == 1);
+	RTE_ASSERT(!RTE_MBUF_CLONED(m));
+	RTE_ASSERT(!RTE_MBUF_HAS_EXTBUF(m) ||
+			(RTE_MBUF_HAS_PINNED_EXTBUF(m) &&
+			rte_mbuf_ext_refcnt_read(m->shinfo) == 1));
 	__rte_mbuf_sanity_check(m, 0);
 }
 
@@ -623,10 +627,41 @@ static inline struct rte_mbuf *rte_mbuf_raw_alloc(struct rte_mempool *mp)
 static __rte_always_inline void
 rte_mbuf_raw_free(struct rte_mbuf *m)
 {
-	RTE_ASSERT(!RTE_MBUF_CLONED(m) &&
-		  (!RTE_MBUF_HAS_EXTBUF(m) || RTE_MBUF_HAS_PINNED_EXTBUF(m)));
 	__rte_mbuf_raw_sanity_check(m);
 	rte_mempool_put(m->pool, m);
+}
+
+/**
+ * Put a bulk of mbufs allocated from the same mempool back into the mempool.
+ *
+ * The caller must ensure that the mbufs come from the specified mempool,
+ * are direct and properly reinitialized (refcnt=1, next=NULL, nb_segs=1), as done by
+ * rte_pktmbuf_prefree_seg().
+ *
+ * This function should be used with care, when optimization is
+ * required. For standard needs, prefer rte_pktmbuf_free_bulk().
+ *
+ * @see RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE
+ *
+ * @param mp
+ *   The mempool to which the mbufs belong.
+ * @param mbufs
+ *   Array of pointers to packet mbufs.
+ *   The array must not contain NULL pointers.
+ * @param count
+ *   Array size.
+ */
+static __rte_always_inline void
+rte_mbuf_fast_free_bulk(struct rte_mempool *mp, struct rte_mbuf **mbufs, unsigned int count)
+{
+	for (unsigned int idx = 0; idx < count; idx++) {
+		const struct rte_mbuf *m = mbufs[idx];
+		RTE_ASSERT(m != NULL);
+		RTE_ASSERT(m->pool == mp);
+		__rte_mbuf_raw_sanity_check(m);
+	}
+
+	rte_mempool_put_bulk(mp, (void **)mbufs, count);
 }
 
 /**
