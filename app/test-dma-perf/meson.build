@@ -13,3 +13,11 @@ sources = files(
         'main.c',
         'benchmark.c',
 )
+
+extra_flags = ['-Wno-vla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
