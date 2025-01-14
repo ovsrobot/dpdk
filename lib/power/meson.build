@@ -11,6 +11,15 @@ if not is_linux
     build = false
     reason = 'only supported on Linux'
 endif
+
+extra_flags = ['-Wno-vla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
+
 sources = files(
         'power_common.c',
         'rte_power_cpufreq.c',
