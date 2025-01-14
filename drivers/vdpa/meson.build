@@ -13,3 +13,11 @@ drivers = [
 ]
 std_deps = ['bus_pci', 'kvargs']
 std_deps += ['vhost']
+
+extra_flags = ['-Wvla']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
