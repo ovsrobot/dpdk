@@ -4128,7 +4128,14 @@ enum rte_eth_event_type {
 	RTE_ETH_EVENT_VF_MBOX,  /**< message from the VF received by PF */
 	RTE_ETH_EVENT_MACSEC,   /**< MACsec offload related event */
 	RTE_ETH_EVENT_INTR_RMV, /**< device removal event */
-	RTE_ETH_EVENT_NEW,      /**< port is probed */
+	/** Port is probed and application's event callback will be called.
+	 * In this moment, the port is not fully probed and is just in allocated
+	 * state. When application receive this event, application doesn't need
+	 * to verify the validity of the port id because it is definitely valid.
+	 * What's more, application shouldn't do something like configuring this
+	 * port or querying some information of this port by ethdev ops.
+	 */
+	RTE_ETH_EVENT_NEW,
 	RTE_ETH_EVENT_DESTROY,  /**< port is released */
 	RTE_ETH_EVENT_IPSEC,    /**< IPsec offload related event */
 	RTE_ETH_EVENT_FLOW_AGED,/**< New aged-out flows is detected */
