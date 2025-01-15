@@ -2224,6 +2224,7 @@ VIRTCHNL_CHECK_STRUCT_LEN(12, virtchnl_quanta_cfg);
 #define VIRTCHNL_1588_PTP_CAP_PHC_REGS		BIT(4)
 #define VIRTCHNL_1588_PTP_CAP_SYNCE			BIT(6)
 #define VIRTCHNL_1588_PTP_CAP_GNSS			BIT(7)
+#define VIRTCHNL_1588_PTP_CAP_HARDWARE_CLOCK_ID	BIT(8)
 
 struct virtchnl_phc_regs {
 	u32 clock_hi;
@@ -2248,7 +2249,8 @@ struct virtchnl_ptp_caps {
 	u8 n_per_out;
 	u8 n_pins;
 	u8 tx_tstamp_format;
-	u8 rsvd[11];
+	u8 hardware_clock_id;
+	u8 rsvd[10];
 };
 
 VIRTCHNL_CHECK_STRUCT_LEN(48, virtchnl_ptp_caps);
