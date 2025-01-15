@@ -6,7 +6,7 @@ Intel® I40E driver
 ==================
 
 This directory contains source code of i40e base driver generated on
-2024-08-30 released by the team which develops
+2025-01-15 released by the team which develops
 basic drivers for any i40e NIC. The directory of base/ contains the
 original source package.
 This driver is valid for the product(s) listed below
