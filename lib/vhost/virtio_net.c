@@ -3662,21 +3662,23 @@ rte_vhost_dequeue_burst(int vid, uint16_t queue_id,
 		 * learning table will get updated first.
 		 */
 		pkts[0] = rarp_mbuf;
-		vhost_queue_stats_update(dev, vq, pkts, 1);
-		pkts++;
-		count -= 1;
+		nb_rx += 1;
 	}
 
 	if (vq_is_packed(dev)) {
 		if (dev->flags & VIRTIO_DEV_LEGACY_OL_FLAGS)
-			nb_rx = virtio_dev_tx_packed_legacy(dev, vq, mbuf_pool, pkts, count);
+			nb_rx += virtio_dev_tx_packed_legacy(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx);
 		else
-			nb_rx = virtio_dev_tx_packed_compliant(dev, vq, mbuf_pool, pkts, count);
+			nb_rx += virtio_dev_tx_packed_compliant(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx);
 	} else {
 		if (dev->flags & VIRTIO_DEV_LEGACY_OL_FLAGS)
-			nb_rx = virtio_dev_tx_split_legacy(dev, vq, mbuf_pool, pkts, count);
+			nb_rx += virtio_dev_tx_split_legacy(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx);
 		else
-			nb_rx = virtio_dev_tx_split_compliant(dev, vq, mbuf_pool, pkts, count);
+			nb_rx += virtio_dev_tx_split_compliant(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx);
 	}
 
 	vhost_queue_stats_update(dev, vq, pkts, nb_rx);
@@ -3686,9 +3688,6 @@ out:
 
 out_access_unlock:
 	rte_rwlock_read_unlock(&vq->access_lock);
-
-	if (unlikely(rarp_mbuf != NULL))
-		nb_rx += 1;
 
 out_no_unlock:
 	return nb_rx;
@@ -4285,25 +4284,23 @@ rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
 		 * learning table will get updated first.
 		 */
 		pkts[0] = rarp_mbuf;
-		vhost_queue_stats_update(dev, vq, pkts, 1);
-		pkts++;
-		count -= 1;
+		nb_rx += 1;
 	}
 
 	if (vq_is_packed(dev)) {
 		if (dev->flags & VIRTIO_DEV_LEGACY_OL_FLAGS)
-			nb_rx = virtio_dev_tx_async_packed_legacy(dev, vq, mbuf_pool,
-					pkts, count, dma_id, vchan_id);
+			nb_rx += virtio_dev_tx_async_packed_legacy(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx, dma_id, vchan_id);
 		else
-			nb_rx = virtio_dev_tx_async_packed_compliant(dev, vq, mbuf_pool,
-					pkts, count, dma_id, vchan_id);
+			nb_rx += virtio_dev_tx_async_packed_compliant(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx, dma_id, vchan_id);
 	} else {
 		if (dev->flags & VIRTIO_DEV_LEGACY_OL_FLAGS)
-			nb_rx = virtio_dev_tx_async_split_legacy(dev, vq, mbuf_pool,
-					pkts, count, dma_id, vchan_id);
+			nb_rx += virtio_dev_tx_async_split_legacy(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx, dma_id, vchan_id);
 		else
-			nb_rx = virtio_dev_tx_async_split_compliant(dev, vq, mbuf_pool,
-					pkts, count, dma_id, vchan_id);
+			nb_rx += virtio_dev_tx_async_split_compliant(dev, vq, mbuf_pool,
+					pkts + nb_rx, count - nb_rx, dma_id, vchan_id);
 	}
 
 	*nr_inflight = vq->async->pkts_inflight_n;
@@ -4314,9 +4311,6 @@ out:
 
 out_access_unlock:
 	rte_rwlock_read_unlock(&vq->access_lock);
-
-	if (unlikely(rarp_mbuf != NULL))
-		nb_rx += 1;
 
 out_no_unlock:
 	return nb_rx;
