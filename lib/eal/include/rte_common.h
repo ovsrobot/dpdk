@@ -156,6 +156,35 @@ typedef uint16_t unaligned_uint16_t;
 #define RTE_DEPRECATED(x)
 #endif
 
+/*
+ * Macros to cause the compiler to remember the state of the diagnostics as of
+ * each push, and restore to that point at each pop.
+ */
+#if !defined(__INTEL_COMPILER) && !defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_diagnostic_push _Pragma("GCC diagnostic push")
+#define __rte_diagnostic_pop  _Pragma("GCC diagnostic pop")
+#else
+#define __rte_diagnostic_push
+#define __rte_diagnostic_pop
+#endif
+
+/*
+ * Macro to disable compiler warnings about removing a type
+ * qualifier from the target type.
+ */
+#if !defined(__INTEL_COMPILER) && !defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_diagnostic_ignored_wcast_qual \
+		_Pragma("GCC diagnostic ignored \"-Wcast-qual\"")
+#else
+#define __rte_diagnostic_ignored_wcast_qual
+#endif
+
+/*
+ * Macro to disable compiler warnings about removing a type
+ * qualifier from a pointer.
+ */
+#define RTE_PTR_DROP_QUALIFIERS(X) ((void *)(uintptr_t)(X))
+
 /**
  * Mark a function or variable to a weak reference.
  */
