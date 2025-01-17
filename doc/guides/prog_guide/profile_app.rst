@@ -40,6 +40,11 @@ Current implementation imposes certain limitations:
 
 * Each EAL lcore measures same group of events
 
+Alternatively tracing library can be used which offers dedicated tracepoint
+``rte_pmu_trace_read()``.
+
+Refer to :doc:`../prog_guide/trace_lib` for more details.
+
 
 Profiling on x86
 ----------------
