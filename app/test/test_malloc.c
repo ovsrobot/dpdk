@@ -272,6 +272,30 @@ test_multi_alloc_statistics(void)
 	size_t size = 2048;
 	int align = 1024;
 	int overhead = 0;
+#ifndef RTE_EXEC_ENV_WINDOWS
+	const size_t heap_size = (1 << 21);
+
+	if (rte_malloc_heap_create(__func__) != 0) {
+		printf("Failed to create test malloc heap\n");
+		return -1;
+	}
+	/* allocate some memory using malloc and add it to our test heap. */
+	void *memory = mmap(NULL, heap_size, PROT_READ | PROT_WRITE,
+			MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (memory == MAP_FAILED) {
+		printf("Failed to allocate memory\n");
+		return -1;
+	}
+	if (rte_malloc_heap_memory_add(__func__, memory, heap_size, NULL, 1, heap_size) != 0) {
+		printf("Failed to add memory to heap\n");
+		return -1;
+	}
+	socket = rte_malloc_heap_get_socket(__func__);
+	if (socket < 0) {
+		printf("Failed to get socket for test malloc heap.\n");
+		return -1;
+	}
+#endif
 
 	/* Dynamically calculate the overhead by allocating one cacheline and
 	 * then comparing what was allocated from the heap.
@@ -371,6 +395,13 @@ test_multi_alloc_statistics(void)
 		printf("Malloc statistics are incorrect - freed alloc\n");
 		return -1;
 	}
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	/* cleanup */
+	rte_malloc_heap_memory_remove(__func__, memory, heap_size);
+	rte_malloc_heap_destroy(__func__);
+	munmap(memory, heap_size);
+#endif
 	return 0;
 }
 
