@@ -63,6 +63,13 @@ New Features
   and even substantial part of its code.
   It can be viewed as an extension of rte_ring functionality.
 
+* **Added PMU library.**
+
+  Added a new performance monitoring unit (PMU) library which allows applications
+  to perform self monitoring activities without depending on external utilities like perf.
+  After integration with :doc:`../prog_guide/trace_lib` data gathered from hardware counters
+  can be stored in CTF format for further analysis.
+
 
 Removed Items
 -------------

@@ -18,6 +18,9 @@ deps += ['log', 'kvargs']
 if not is_windows
     deps += ['telemetry']
 endif
+if dpdk_conf.has('RTE_LIB_PMU')
+    deps += ['pmu']
+endif
 if dpdk_conf.has('RTE_USE_LIBBSD')
     ext_deps += libbsd
 endif
