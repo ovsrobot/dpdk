@@ -25,6 +25,7 @@
 #include <rte_malloc.h>
 #include <rte_cycles.h>
 #include <rte_random.h>
+#include <rte_eal_paging.h>
 #include <rte_string_fns.h>
 
 #define N 10000
@@ -272,6 +273,34 @@ test_multi_alloc_statistics(void)
 	size_t size = 2048;
 	int align = 1024;
 	int overhead = 0;
+	const size_t pgsz = rte_mem_page_size();
+	const size_t heap_size = (1 << 21);
+
+	if (pgsz < heap_size) {
+		printf("Page size is smaller than heap size\n");
+		return TEST_SKIPPED;
+	}
+
+	if (rte_malloc_heap_create(__func__) != 0) {
+		printf("Failed to create test malloc heap\n");
+		return -1;
+	}
+	/* Allocate some memory using malloc and add it to our test heap. */
+	void *unaligned_memory = malloc(heap_size + pgsz);
+	if (unaligned_memory == NULL) {
+		printf("Failed to allocate memory\n");
+		return -1;
+	}
+	void *memory = RTE_PTR_ALIGN(unaligned_memory, pgsz);
+	if (rte_malloc_heap_memory_add(__func__, memory, heap_size, NULL, 1, heap_size) != 0) {
+		printf("Failed to add memory to heap\n");
+		return -1;
+	}
+	socket = rte_malloc_heap_get_socket(__func__);
+	if (socket < 0) {
+		printf("Failed to get socket for test malloc heap.\n");
+		return -1;
+	}
 
 	/* Dynamically calculate the overhead by allocating one cacheline and
 	 * then comparing what was allocated from the heap.
@@ -371,6 +400,12 @@ test_multi_alloc_statistics(void)
 		printf("Malloc statistics are incorrect - freed alloc\n");
 		return -1;
 	}
+
+	/* cleanup */
+	rte_malloc_heap_memory_remove(__func__, memory, heap_size);
+	rte_malloc_heap_destroy(__func__);
+	free(unaligned_memory);
+
 	return 0;
 }
 
