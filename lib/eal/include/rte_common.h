@@ -157,6 +157,56 @@ typedef uint16_t unaligned_uint16_t;
 #endif
 
 /**
+ * Macros to cause the compiler to remember the state of the diagnostics as of
+ * each push, and restore to that point at each pop.
+ */
+#if !defined(__INTEL_COMPILER) && !defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_diagnostic_push _Pragma("GCC diagnostic push")
+#define __rte_diagnostic_pop  _Pragma("GCC diagnostic pop")
+#else
+#define __rte_diagnostic_push
+#define __rte_diagnostic_pop
+#endif
+
+/**
+ * Macro to disable compiler warnings about removing a type
+ * qualifier from the target type.
+ */
+#if !defined(__INTEL_COMPILER) && !defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_diagnostic_ignored_wcast_qual \
+		_Pragma("GCC diagnostic ignored \"-Wcast-qual\"")
+#else
+#define __rte_diagnostic_ignored_wcast_qual
+#endif
+
+/**
+ * Workaround to discard qualifiers (such as const, volatile, restrict) from a pointer,
+ * without the compiler emitting a warning.
+ *
+ * Once the project uses C23, the definition below can be used instead
+ * (-Wcast-qual will emit a warning with this new definition though)
+ * #define RTE_PTR_UNQUAL(X) ((typeof_unqual(*X)*)(X))
+ */
+#define RTE_PTR_UNQUAL(X) ((void *)(uintptr_t)(X))
+
+/**
+ * Workaround to discard qualifiers (such as const, volatile, restrict) from a pointer
+ * and cast it to a specific type, without the compiler emitting a warning.
+ *
+ * @warning
+ * Although this macro can be abused for casting a pointer to point to a different type,
+ * alignment may be incorrect when casting to point to a larger type. E.g.:
+ *   struct s {
+ *       uint16_t a;
+ *       uint8_t  b;
+ *       uint8_t  c;
+ *       uint8_t  d;
+ *   } v;
+ *   uint16_t * p = RTE_CAST_PTR(uint16_t *, &v.c); // "p" is not 16 bit aligned!
+ */
+#define RTE_CAST_PTR(type, ptr) ((type)(uintptr_t)(ptr))
+
+/**
  * Mark a function or variable to a weak reference.
  */
 #define __rte_weak __attribute__((__weak__))
