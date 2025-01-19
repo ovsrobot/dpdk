@@ -169,8 +169,10 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 	unsigned i;
 
 	/* too late, the mempool is already populated. */
-	if (mp->flags & RTE_MEMPOOL_F_POOL_CREATED)
-		return -EEXIST;
+	if (mp->flags & RTE_MEMPOOL_F_POOL_CREATED) {
+		rte_errno = EEXIST;
+		return -rte_errno;
+	}
 
 	for (i = 0; i < rte_mempool_ops_table.num_ops; i++) {
 		if (!strcmp(name,
@@ -180,8 +182,10 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 		}
 	}
 
-	if (ops == NULL)
-		return -EINVAL;
+	if (ops == NULL) {
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
 
 	mp->ops_index = i;
 	mp->pool_config = pool_config;
