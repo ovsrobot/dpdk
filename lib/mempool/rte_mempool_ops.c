@@ -33,7 +33,9 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 		rte_spinlock_unlock(&rte_mempool_ops_table.sl);
 		RTE_MEMPOOL_LOG(ERR,
 			"Maximum number of mempool ops structs exceeded");
-		return -ENOSPC;
+		rte_errno = ENOSPC;
+		ops_index = -rte_errno;
+		goto out;
 	}
 
 	if (h->alloc == NULL || h->enqueue == NULL ||
@@ -41,7 +43,9 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 		rte_spinlock_unlock(&rte_mempool_ops_table.sl);
 		RTE_MEMPOOL_LOG(ERR,
 			"Missing callback while registering mempool ops");
-		return -EINVAL;
+		rte_errno = -EINVAL;
+		ops_index = -rte_errno;
+		goto out;
 	}
 
 	if (strlen(h->name) >= sizeof(ops->name) - 1) {
@@ -49,7 +53,8 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 		RTE_MEMPOOL_LOG(DEBUG, "%s(): mempool_ops <%s>: name too long",
 				__func__, h->name);
 		rte_errno = EEXIST;
-		return -EEXIST;
+		ops_index = -rte_errno;
+		goto out;
 	}
 
 	ops_index = rte_mempool_ops_table.num_ops++;
@@ -67,6 +72,7 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 
 	rte_spinlock_unlock(&rte_mempool_ops_table.sl);
 
+out:
 	return ops_index;
 }
 
@@ -151,12 +157,19 @@ rte_mempool_ops_get_info(const struct rte_mempool *mp,
 			 struct rte_mempool_info *info)
 {
 	struct rte_mempool_ops *ops;
+	int ret;
 
 	ops = rte_mempool_get_ops(mp->ops_index);
 
-	if (ops->get_info == NULL)
-		return -ENOTSUP;
-	return ops->get_info(mp, info);
+	if (ops->get_info == NULL) {
+		rte_errno = ENOTSUP;
+		ret = -rte_errno;
+		goto out;
+	}
+	ret = ops->get_info(mp, info);
+
+out:
+	return ret;
 }
 
 
@@ -166,12 +179,14 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 	void *pool_config)
 {
 	struct rte_mempool_ops *ops = NULL;
+	int ret = 0;
 	unsigned i;
 
 	/* too late, the mempool is already populated. */
 	if (mp->flags & RTE_MEMPOOL_F_POOL_CREATED) {
 		rte_errno = EEXIST;
-		return -rte_errno;
+		ret = -rte_errno;
+		goto out;
 	}
 
 	for (i = 0; i < rte_mempool_ops_table.num_ops; i++) {
@@ -182,13 +197,16 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 		}
 	}
 
-	if (ops == NULL) {
+	if (!ops) {
 		rte_errno = EINVAL;
-		return -rte_errno;
+		ret = -rte_errno;
+		goto out;
 	}
 
 	mp->ops_index = i;
 	mp->pool_config = pool_config;
 	rte_mempool_trace_set_ops_byname(mp, name, pool_config);
-	return 0;
+
+out:
+	return ret;
 }
