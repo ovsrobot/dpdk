@@ -79,6 +79,10 @@ bad=$(for commit in $commits ; do
 	[ -z "$(echo "$files" | grep -v '^\(drivers\|doc\|config\)/')" ] ||
 		continue
 	drv=$(echo "$files" | grep '^drivers/' | cut -d "/" -f 2,3 | sort -u)
+	# for drivers/net/intel/* use 2nd and 4th fields not 2nd and 3rd
+	if [ "$drv" = "net/intel" ] ; then
+		drv=$(echo "$files" | grep '^drivers/' | cut -d "/" -f 2,4 | sort -u)
+	fi
 	drvgrp=$(echo "$drv" | cut -d "/" -f 1 | uniq)
 	if [ $(echo "$drvgrp" | wc -l) -gt 1 ] ; then
 		echo "$headline" | grep -v '^drivers:'
