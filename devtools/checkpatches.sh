@@ -384,8 +384,8 @@ check_packed_attributes() { # <patch>
 		res=1
 	fi
 
-	begin_count=$(grep '__rte_packed_begin' "$1" | wc -l)
-	end_count=$(grep '__rte_packed_end' "$1" | wc -l)
+	begin_count=$(grep -E '^\+.*__rte_packed_begin' "$1" | wc -l)
+	end_count=$(grep -E '^\+.*__rte_packed_end' "$1" | wc -l)
 	if [ $begin_count != $end_count ]; then
 		echo "__rte_packed_begin and __rte_packed_end should always be used in pairs."
 		res=1
