@@ -831,20 +831,20 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	/* asked for zero items */
 	if (n == 0) {
 		rte_errno = EINVAL;
-		return NULL;
+		goto exit;
 	}
 
 	/* asked cache too big */
 	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
 	    CALC_CACHE_FLUSHTHRESH(cache_size) > n) {
 		rte_errno = EINVAL;
-		return NULL;
+		goto exit;
 	}
 
 	/* enforce only user flags are passed by the application */
 	if ((flags & ~RTE_MEMPOOL_VALID_USER_FLAGS) != 0) {
 		rte_errno = EINVAL;
-		return NULL;
+		goto exit;
 	}
 
 	/*
@@ -860,7 +860,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	/* calculate mempool object sizes. */
 	if (!rte_mempool_calc_obj_size(elt_size, flags, &objsz)) {
 		rte_errno = EINVAL;
-		return NULL;
+		goto exit;
 	}
 
 	rte_mcfg_mempool_write_lock();
@@ -877,7 +877,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
 	if (te == NULL) {
 		RTE_MEMPOOL_LOG(ERR, "Cannot allocate tailq entry!");
-		goto exit_unlock;
+		goto unlock;
 	}
 
 	mempool_size = RTE_MEMPOOL_HEADER_SIZE(mp, cache_size);
@@ -887,12 +887,12 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	ret = snprintf(mz_name, sizeof(mz_name), RTE_MEMPOOL_MZ_FORMAT, name);
 	if (ret < 0 || ret >= (int)sizeof(mz_name)) {
 		rte_errno = ENAMETOOLONG;
-		goto exit_unlock;
+		goto unlock;
 	}
 
 	mz = rte_memzone_reserve(mz_name, mempool_size, socket_id, mz_flags);
 	if (mz == NULL)
-		goto exit_unlock;
+		goto unlock;
 
 	/* init the mempool structure */
 	mp = mz->addr;
@@ -900,7 +900,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	ret = strlcpy(mp->name, name, sizeof(mp->name));
 	if (ret < 0 || ret >= (int)sizeof(mp->name)) {
 		rte_errno = ENAMETOOLONG;
-		goto exit_unlock;
+		goto unlock;
 	}
 	mp->mz = mz;
 	mp->size = n;
@@ -930,7 +930,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	if (ret) {
 		rte_errno = -ret;
-		goto exit_unlock;
+		goto unlock;
 	}
 
 	/*
@@ -956,13 +956,16 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	rte_mempool_trace_create_empty(name, n, elt_size, cache_size,
 		private_data_size, flags, mp);
-	return mp;
+	goto exit;
 
-exit_unlock:
+unlock:
 	rte_mcfg_mempool_write_unlock();
 	rte_free(te);
 	rte_mempool_free(mp);
-	return NULL;
+	mp = NULL;
+
+exit:
+	return mp;
 }
 
 /* create the mempool */
