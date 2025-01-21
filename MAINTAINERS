@@ -890,7 +890,7 @@ F: drivers/net/octeon_ep/
 F: doc/guides/nics/features/octeon_ep.ini
 F: doc/guides/nics/octeon_ep.rst
 
-Napatech ntnic - EXPERIMENTAL
+Napatech ntnic
 M: Christian Koue Muf <ckm@napatech.com>
 M: Serhii Iliushyk <sil-plv@napatech.com>
 F: drivers/net/ntnic/
