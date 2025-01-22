@@ -24,6 +24,13 @@ DPDK Release 25.03
 New Features
 ------------
 
+* **Added ZTE Storage Data Accelerator(ZSDA) device driver.**
+
+  Added a new compress driver for ZSDA devices to support
+  the deflate compression and decompression algorithm.
+
+  See the :doc:`../compressdevs/zsda` guide for more details on the new driver.
+
 .. This section should contain new features added in this release.
    Sample format:
 
