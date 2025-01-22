@@ -17,7 +17,6 @@ extern "C" {
  */
 struct rte_stats_bitrates;
 
-
 /**
  * Allocate a bitrate statistics structure
  *
@@ -25,7 +24,8 @@ struct rte_stats_bitrates;
  *   - Pointer to structure on success
  *   - NULL on error (zmalloc failure)
  */
-struct rte_stats_bitrates *rte_stats_bitrate_create(void);
+struct rte_stats_bitrates *rte_stats_bitrate_create(void)
+	__rte_malloc __rte_dealloc(rte_stats_bitrate_free, 1);
 
 /**
  * Free bitrate statistics structure
