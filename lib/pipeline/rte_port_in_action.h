@@ -165,18 +165,6 @@ struct rte_port_in_action_lb_params {
 struct rte_port_in_action_profile;
 
 /**
- * Input port action profile create.
- *
- * @param[in] socket_id
- *   CPU socket ID for the internal data structures memory allocation.
- * @return
- *   Input port action profile handle on success, NULL otherwise.
- */
-__rte_experimental
-struct rte_port_in_action_profile *
-rte_port_in_action_profile_create(uint32_t socket_id);
-
-/**
  * Input port action profile free.
  *
  * @param[in] profile
@@ -188,6 +176,19 @@ rte_port_in_action_profile_create(uint32_t socket_id);
 __rte_experimental
 int
 rte_port_in_action_profile_free(struct rte_port_in_action_profile *profile);
+
+/**
+ * Input port action profile create.
+ *
+ * @param[in] socket_id
+ *   CPU socket ID for the internal data structures memory allocation.
+ * @return
+ *   Input port action profile handle on success, NULL otherwise.
+ */
+__rte_experimental
+struct rte_port_in_action_profile *
+rte_port_in_action_profile_create(uint32_t socket_id)
+	__rte_malloc __rte_dealloc(rte_port_in_action_profile_free, 1);
 
 /**
  * Input port action profile action register.
@@ -237,6 +238,19 @@ rte_port_in_action_profile_freeze(struct rte_port_in_action_profile *profile);
 struct rte_port_in_action;
 
 /**
+ * Input port action free.
+ *
+ * @param[in] action
+ *   Handle to input port action object (needs to be valid).
+ *   If action is NULL, no operation is performed.
+ * @return
+ *   Always zero.
+ */
+__rte_experimental
+int
+rte_port_in_action_free(struct rte_port_in_action *action);
+
+/**
  * Input port action create.
  *
  * Instantiates the given input port action profile to create an input port
@@ -252,21 +266,8 @@ struct rte_port_in_action;
  */
 __rte_experimental
 struct rte_port_in_action *
-rte_port_in_action_create(struct rte_port_in_action_profile *profile,
-	uint32_t socket_id);
-
-/**
- * Input port action free.
- *
- * @param[in] action
- *   Handle to input port action object (needs to be valid).
- *   If action is NULL, no operation is performed.
- * @return
- *   Always zero.
- */
-__rte_experimental
-int
-rte_port_in_action_free(struct rte_port_in_action *action);
+rte_port_in_action_create(struct rte_port_in_action_profile *profile, uint32_t socket_id)
+	__rte_malloc __rte_dealloc(rte_port_in_action_free, 1);
 
 /**
  * Input port params get.
