@@ -330,6 +330,9 @@ warning_flags = [
         # globally disabled warnings
         '-Wno-packed-not-aligned',
         '-Wno-missing-field-initializers',
+
+        # guarantee that everything is zero when using initialization
+        '-fzero-init-padding-bits=all',
 ]
 
 if not dpdk_conf.get('RTE_ARCH_64')
