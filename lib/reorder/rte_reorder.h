@@ -45,6 +45,16 @@ rte_reorder_seqn(struct rte_mbuf *mbuf)
 }
 
 /**
+ * Free reorder buffer instance.
+ *
+ * @param b
+ *   Pointer to reorder buffer instance.
+ *   If b is NULL, no operation is performed.
+ */
+void
+rte_reorder_free(struct rte_reorder_buffer *b);
+
+/**
  * Create a new reorder buffer instance
  *
  * Allocate memory and initialize a new reorder buffer in that
@@ -64,7 +74,8 @@ rte_reorder_seqn(struct rte_mbuf *mbuf)
  *    - EINVAL - invalid parameters
  */
 struct rte_reorder_buffer *
-rte_reorder_create(const char *name, unsigned socket_id, unsigned int size);
+rte_reorder_create(const char *name, unsigned int socket_id, unsigned int size)
+	__rte_malloc __rte_dealloc(rte_reorder_free, 1);
 
 /**
  * Initializes given reorder buffer instance
@@ -110,16 +121,6 @@ rte_reorder_find_existing(const char *name);
  */
 void
 rte_reorder_reset(struct rte_reorder_buffer *b);
-
-/**
- * Free reorder buffer instance.
- *
- * @param b
- *   Pointer to reorder buffer instance.
- *   If b is NULL, no operation is performed.
- */
-void
-rte_reorder_free(struct rte_reorder_buffer *b);
 
 /**
  * Insert given mbuf in reorder buffer in its correct position
