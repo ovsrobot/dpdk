@@ -152,6 +152,8 @@
 #define ACC_MAX_FFT_WIN      16
 #define ACC_MAX_RING_BUFFER  64
 #define VRB2_MAX_Q_PER_OP 256
+#define ACC_MAX_LOGLEN    256
+#define ACC_MAX_BUFFERLEN 256
 
 extern int acc_common_logtype;
 #define RTE_LOGTYPE_ACC_COMMON acc_common_logtype
@@ -652,6 +654,9 @@ struct __rte_cache_aligned acc_queue {
 	rte_iova_t fcw_ring_addr_iova;
 	int8_t *derm_buffer; /* interim buffer for de-rm in SDK */
 	struct acc_device *d;
+	char error_bufs[ACC_MAX_BUFFERLEN][ACC_MAX_LOGLEN]; /**< Buffer for error log. */
+	uint16_t error_head;  /**< Head - Buffer for error log. */
+	uint16_t  error_wrap; /**< Wrap Counter - Buffer for error log. */
 };
 
 /* These strings for rte_trace must be limited to RTE_TRACE_EMIT_STRING_LEN_MAX. */
@@ -690,11 +695,21 @@ __rte_format_printf(4, 5)
 static inline void
 acc_error_log(struct acc_queue *q, void *op, uint8_t acc_error_idx, const char *fmt, ...)
 {
-	va_list args;
-	RTE_SET_USED(op);
-	va_start(args, fmt);
-	rte_vlog(RTE_LOG_ERR, acc_common_logtype, fmt, args);
+	va_list args, args2;
+	static char str[1024];
 
+	va_start(args, fmt);
+	va_copy(args2, args);
+	rte_vlog(RTE_LOG_ERR, acc_common_logtype, fmt, args);
+	vsnprintf(q->error_bufs[q->error_head], ACC_MAX_LOGLEN, fmt, args2);
+	q->error_head++;
+	snprintf(q->error_bufs[q->error_head], ACC_MAX_LOGLEN,
+			"%s", rte_bbdev_ops_param_string(op, q->op_type, str, sizeof(str)));
+	q->error_head++;
+	if (q->error_head == ACC_MAX_LOGLEN) {
+		q->error_head = 0;
+		q->error_wrap++;
+	}
 	if (acc_error_idx > ACC_ERR_MAX)
 		acc_error_idx = ACC_ERR_MAX;
 
@@ -702,6 +717,7 @@ acc_error_log(struct acc_queue *q, void *op, uint8_t acc_error_idx, const char *
 			acc_error_string[acc_error_idx]);
 
 	va_end(args);
+	va_end(args2);
 }
 
 /* Write to MMIO register address */

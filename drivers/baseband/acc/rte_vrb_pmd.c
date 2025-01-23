@@ -1135,6 +1135,10 @@ vrb_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	q->mmio_reg_enqueue = RTE_PTR_ADD(d->mmio_base,
 			d->queue_offset(d->pf_device, q->vf_id, q->qgrp_id, q->aq_id));
 
+	/** initialize the error buffer. */
+	q->error_head = 0;
+	q->error_wrap = 0;
+
 	rte_bbdev_log_debug(
 			"Setup dev%u q%u: qgrp_id=%u, vf_id=%u, aq_id=%u, aq_depth=%u, mmio_reg_enqueue=%p base %p",
 			dev->data->dev_id, queue_id, q->qgrp_id, q->vf_id,
@@ -1516,7 +1520,7 @@ vrb_queue_ops_dump(struct rte_bbdev *dev, uint16_t queue_id, FILE *f)
 {
 	struct acc_queue *q = dev->data->queues[queue_id].queue_private;
 	struct rte_bbdev_dec_op *op;
-	uint16_t i, int_nb;
+	uint16_t start_err, end_err, i, int_nb;
 	volatile union acc_info_ring_data *ring_data;
 	uint16_t info_ring_head = q->d->info_ring_head;
 	static char str[1024];
@@ -1532,6 +1536,18 @@ vrb_queue_ops_dump(struct rte_bbdev *dev, uint16_t queue_id, FILE *f)
 	fprintf(f, "    AQ Enqueued %d Dequeued %d Depth %d - Available Enq %d Deq %d\n",
 			q->aq_enqueued, q->aq_dequeued, q->aq_depth,
 			acc_ring_avail_enq(q), acc_ring_avail_deq(q));
+
+	/** Print information captured in the error buffer. */
+	if (q->error_wrap == 0) {
+		start_err = 0;
+		end_err = q->error_head;
+	} else {
+		start_err = q->error_head;
+		end_err = q->error_head + ACC_MAX_BUFFERLEN;
+	}
+	fprintf(f, "Error Buffer - Head %d Wrap %d\n", q->error_head, q->error_wrap);
+	for (i = start_err; i < end_err; ++i)
+		fprintf(f, "  %d\t%s", i, q->error_bufs[i % ACC_MAX_BUFFERLEN]);
 
 	/** Print information captured in the info ring. */
 	if (q->d->info_ring != NULL) {
