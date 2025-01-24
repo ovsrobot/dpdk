@@ -771,7 +771,7 @@ const char *rte_get_rx_ol_flag_name(uint64_t mask)
 	case RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD: return "RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD";
 	case RTE_MBUF_F_RX_OUTER_L4_CKSUM_INVALID:
 		return "RTE_MBUF_F_RX_OUTER_L4_CKSUM_INVALID";
-
+	case RTE_MBUF_F_RX_KEEP_CRC: return "RTE_MBUF_F_RX_KEEP_CRC";
 	default: return NULL;
 	}
 }
@@ -818,6 +818,7 @@ rte_get_rx_ol_flag_list(uint64_t mask, char *buf, size_t buflen)
 		  NULL },
 		{ RTE_MBUF_F_RX_OUTER_L4_CKSUM_UNKNOWN, RTE_MBUF_F_RX_OUTER_L4_CKSUM_MASK,
 		  "RTE_MBUF_F_RX_OUTER_L4_CKSUM_UNKNOWN" },
+		{ RTE_MBUF_F_RX_KEEP_CRC, RTE_MBUF_F_RX_KEEP_CRC, NULL },
 	};
 	const char *name;
 	unsigned int i;

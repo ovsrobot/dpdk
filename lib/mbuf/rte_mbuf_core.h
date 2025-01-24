@@ -180,9 +180,15 @@ extern "C" {
 #define RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD	(1ULL << 22)
 #define RTE_MBUF_F_RX_OUTER_L4_CKSUM_INVALID	((1ULL << 21) | (1ULL << 22))
 
+/**
+ * Indicates that there is CRC data at the end of the mbuf chain.
+ * Note: pkt_len and date_len fields are not adjusted for CRC data.
+ */
+#define RTE_MBUF_F_RX_KEEP_CRC	(1ULL << 23)
+
 /* add new RX flags here, don't forget to update RTE_MBUF_F_FIRST_FREE */
 
-#define RTE_MBUF_F_FIRST_FREE (1ULL << 23)
+#define RTE_MBUF_F_FIRST_FREE (1ULL << 24)
 #define RTE_MBUF_F_LAST_FREE (1ULL << 40)
 
 /* add new TX flags here, don't forget to update RTE_MBUF_F_LAST_FREE  */
