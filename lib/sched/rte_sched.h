@@ -310,16 +310,7 @@ struct rte_sched_port_params {
  * Configuration
  */
 
-/**
- * Hierarchical scheduler port configuration
- *
- * @param params
- *   Port scheduler configuration parameter structure
- * @return
- *   Handle to port scheduler instance upon success or NULL otherwise.
- */
-struct rte_sched_port *
-rte_sched_port_config(struct rte_sched_port_params *params);
+struct rte_sched_port;
 
 /**
  * Hierarchical scheduler port free
@@ -330,6 +321,18 @@ rte_sched_port_config(struct rte_sched_port_params *params);
  */
 void
 rte_sched_port_free(struct rte_sched_port *port);
+
+/**
+ * Hierarchical scheduler port configuration
+ *
+ * @param params
+ *   Port scheduler configuration parameter structure
+ * @return
+ *   Handle to port scheduler instance upon success or NULL otherwise.
+ */
+struct rte_sched_port *
+rte_sched_port_config(struct rte_sched_port_params *params)
+	__rte_malloc __rte_dealloc(rte_sched_port_free, 1);
 
 /**
  * Hierarchical scheduler pipe profile add
