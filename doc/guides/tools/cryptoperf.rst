@@ -175,6 +175,7 @@ The following are the application command-line options:
            pdcp
            docsis
            modex
+           rsa
            ecdsa_p256r1
            eddsa_25519
            sm2
@@ -357,6 +358,11 @@ The following are the application command-line options:
         Set Asymmetric crypto operation mode.
         To be used with SM2 asymmetric crypto ops.
         Default is ``sign``.
+
+* ``--rsa-priv-keytype <exp/qt>``
+
+        Set RSA private key format as exponent or quin-tuple.
+        If not set, key would be public exponent key.
 
 * ``--tls-version <TLS1.2/TLS1.3/DTLS1.2>``
 
