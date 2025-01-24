@@ -17,7 +17,9 @@
 
 #include <stdint.h>
 
+#include <rte_common.h>
 #include <rte_rcu_qsbr.h>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -128,6 +130,17 @@ struct rte_fib_rcu_config {
 	uint32_t reclaim_max;
 };
 
+
+/**
+ * Free an FIB object.
+ *
+ * @param fib
+ *   FIB object handle created by rte_fib_create().
+ *   If fib is NULL, no operation is performed.
+ */
+void
+rte_fib_free(struct rte_fib *fib);
+
 /**
  * Create FIB
  *
@@ -142,7 +155,8 @@ struct rte_fib_rcu_config {
  *  NULL otherwise with rte_errno set to an appropriate values.
  */
 struct rte_fib *
-rte_fib_create(const char *name, int socket_id, struct rte_fib_conf *conf);
+rte_fib_create(const char *name, int socket_id, struct rte_fib_conf *conf)
+	__rte_malloc __rte_dealloc(rte_fib_free, 1);
 
 /**
  * Find an existing FIB object and return a pointer to it.
@@ -156,16 +170,6 @@ rte_fib_create(const char *name, int socket_id, struct rte_fib_conf *conf);
  */
 struct rte_fib *
 rte_fib_find_existing(const char *name);
-
-/**
- * Free an FIB object.
- *
- * @param fib
- *   FIB object handle created by rte_fib_create().
- *   If fib is NULL, no operation is performed.
- */
-void
-rte_fib_free(struct rte_fib *fib);
 
 /**
  * Add a route to the FIB.
