@@ -17,7 +17,7 @@
 #endif
 
 static __rte_always_inline int
-iavf_tx_free_bufs(struct iavf_tx_queue *txq)
+iavf_tx_free_bufs(struct ci_tx_queue *txq)
 {
 	struct ci_tx_entry *txep;
 	uint32_t n;
@@ -104,7 +104,7 @@ _iavf_rx_queue_release_mbufs_vec(struct iavf_rx_queue *rxq)
 }
 
 static inline void
-_iavf_tx_queue_release_mbufs_vec(struct iavf_tx_queue *txq)
+_iavf_tx_queue_release_mbufs_vec(struct ci_tx_queue *txq)
 {
 	unsigned i;
 	const uint16_t max_desc = (uint16_t)(txq->nb_tx_desc - 1);
@@ -164,7 +164,7 @@ iavf_rx_vec_queue_default(struct iavf_rx_queue *rxq)
 }
 
 static inline int
-iavf_tx_vec_queue_default(struct iavf_tx_queue *txq)
+iavf_tx_vec_queue_default(struct ci_tx_queue *txq)
 {
 	if (!txq)
 		return -1;
@@ -227,7 +227,7 @@ static inline int
 iavf_tx_vec_dev_check_default(struct rte_eth_dev *dev)
 {
 	int i;
-	struct iavf_tx_queue *txq;
+	struct ci_tx_queue *txq;
 	int ret;
 	int result = 0;
 
