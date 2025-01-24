@@ -81,12 +81,13 @@ bad=$(for commit in $commits ; do
 	drv=$(echo "$files" | grep '^drivers/' | cut -d "/" -f 2,3 | sort -u)
 	drvgrp=$(echo "$drv" | cut -d "/" -f 1 | uniq)
 	if [ $(echo "$drvgrp" | wc -l) -gt 1 ] ; then
-		echo "$headline" | grep -v '^drivers:'
+		prefix='drivers:'
 	elif [ $(echo "$drv" | wc -l) -gt 1 ] ; then
-		echo "$headline" | grep -v "^drivers/$drvgrp"
+		prefix="drivers/$drvgrp:"
 	else
-		echo "$headline" | grep -v "^$drv"
+		prefix="$drv"
 	fi
+	echo "$headline (expected prefix \"$prefix\")" | grep -v "^$prefix"
 done | sed 's,^,\t,')
 [ -z "$bad" ] || { printf "Wrong headline prefix:\n$bad\n" && failure=true;}
 
