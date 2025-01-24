@@ -119,6 +119,16 @@ ssize_t rte_ring_get_memsize(unsigned int count);
 int rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
 	unsigned int flags);
 
+
+/**
+ * De-allocate all memory used by the ring.
+ *
+ * @param r
+ *   Ring to free.
+ *   If NULL then, the function does nothing.
+ */
+void rte_ring_free(struct rte_ring *r);
+
 /**
  * Create a new ring named *name* in memory.
  *
@@ -183,16 +193,8 @@ int rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
 struct rte_ring *rte_ring_create(const char *name, unsigned int count,
-				 int socket_id, unsigned int flags);
-
-/**
- * De-allocate all memory used by the ring.
- *
- * @param r
- *   Ring to free.
- *   If NULL then, the function does nothing.
- */
-void rte_ring_free(struct rte_ring *r);
+				 int socket_id, unsigned int flags)
+	__rte_malloc __rte_dealloc(rte_ring_free, 1);
 
 /**
  * Dump the status of the ring to a file.
