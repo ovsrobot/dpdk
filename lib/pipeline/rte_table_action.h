@@ -54,6 +54,7 @@
 
 #include <stdint.h>
 
+#include <rte_common.h>
 #include <rte_compat.h>
 #include <rte_ether.h>
 #include <rte_ip6.h>
@@ -812,17 +813,6 @@ struct rte_table_action_decap_params {
  */
 struct rte_table_action_profile;
 
-/**
- * Table action profile create.
- *
- * @param[in] common
- *   Common action configuration.
- * @return
- *   Table action profile handle on success, NULL otherwise.
- */
-__rte_experimental
-struct rte_table_action_profile *
-rte_table_action_profile_create(struct rte_table_action_common_config *common);
 
 /**
  * Table action profile free.
@@ -835,6 +825,19 @@ rte_table_action_profile_create(struct rte_table_action_common_config *common);
 __rte_experimental
 int
 rte_table_action_profile_free(struct rte_table_action_profile *profile);
+
+/**
+ * Table action profile create.
+ *
+ * @param[in] common
+ *   Common action configuration.
+ * @return
+ *   Table action profile handle on success, NULL otherwise.
+ */
+__rte_experimental
+struct rte_table_action_profile *
+rte_table_action_profile_create(struct rte_table_action_common_config *common)
+	__rte_malloc __rte_dealloc(rte_table_action_profile_free, 1);
 
 /**
  * Table action profile action register.
@@ -882,6 +885,18 @@ rte_table_action_profile_freeze(struct rte_table_action_profile *profile);
 struct rte_table_action;
 
 /**
+ * Table action free.
+ *
+ * @param[in] action
+ *   Handle to table action object (needs to be valid).
+ * @return
+ *   Zero on success, non-zero error code otherwise.
+ */
+__rte_experimental
+int
+rte_table_action_free(struct rte_table_action *action);
+
+/**
  * Table action create.
  *
  * Instantiates the given table action profile to create a table action object.
@@ -898,20 +913,8 @@ struct rte_table_action;
  */
 __rte_experimental
 struct rte_table_action *
-rte_table_action_create(struct rte_table_action_profile *profile,
-	uint32_t socket_id);
-
-/**
- * Table action free.
- *
- * @param[in] action
- *   Handle to table action object (needs to be valid).
- * @return
- *   Zero on success, non-zero error code otherwise.
- */
-__rte_experimental
-int
-rte_table_action_free(struct rte_table_action *action);
+rte_table_action_create(struct rte_table_action_profile *profile, uint32_t socket_id)
+	__rte_malloc __rte_dealloc(rte_table_action_free, 1);
 
 /**
  * Table action table params get.
