@@ -63,6 +63,36 @@ New Features
   and even substantial part of its code.
   It can be viewed as an extension of rte_ring functionality.
 
+* **Hardened of more allocation functions.**
+
+  Added allocation attributes to functions that allocate data:
+  * ``rte_stats_bitrate_create()``
+  * ``rte_sched_port_config()``
+  * ``rte_ring_create()``
+  * ``rte_tel_data_alloc()``
+  * ``rte_rib_create()``
+  * ``rte_rib6_create()``
+  * ``rte_reorder_create()``
+  * ``rte_mempool_create()``
+  * ``rte_member_create()``
+  * ``rte_acl_create()``
+  * ``rte_comp_op_pool_create()``
+  * ``rte_event_ring_create()``
+  * ``rte_fib_create()``
+  * ``rte_fib6_create()``
+  * ``rte_lpm_create()``
+  * ``rte_lpm6_create()``
+  * ``rte_fbk_hash_create()``
+  * ``rte_hash_create()``
+  * ``rte_port_in_action_profile_create()``
+  * ``rte_port_in_action_create()``
+  * ``rte_table_in_action_profile_create()``
+  * ``rte_table_in_action_create()``
+
+  This can catch some obvious bugs at compile time (with GCC 11.0 or later).
+  For example, calling ``free`` on a pointer that was allocated with one
+  of those functions (and vice versa); freeing the same pointer twice
+  in the same routine or freeing an object that was not created by allocation.
 
 Removed Items
 -------------
