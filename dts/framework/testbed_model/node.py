@@ -94,6 +94,7 @@ class Node(ABC):
     def _init_ports(self) -> None:
         self.ports = [Port(self.name, port_config) for port_config in self.config.ports]
         self.main_session.update_ports(self.ports)
+        self.main_session.bring_up_link(self.ports)
 
     def set_up_test_run(
         self,
