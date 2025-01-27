@@ -11,6 +11,7 @@
 
 #ifdef RTE_LIB_EAL
 #include "osdep_rte/osdep_generic.h"
+#include <rte_queue.h>
 #else
 #include "osdep_raw/osdep_generic.h"
 #endif
