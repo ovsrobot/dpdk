@@ -15,7 +15,6 @@
 #include <signal.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include <sys/queue.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -27,6 +26,7 @@
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
+#include <rte_queue.h>
 #include <rte_string_fns.h>
 #include <rte_cycles.h>
 #include <rte_kvargs.h>
@@ -403,6 +403,7 @@ dpaa2_create_dpio_device(int vdev_fd,
 	struct rte_dpaa2_device *obj)
 {
 	struct dpaa2_dpio_dev *dpio_dev = NULL;
+	struct dpaa2_dpio_dev *dpio_tmp;
 	struct vfio_region_info reg_info = { .argsz = sizeof(reg_info)};
 	struct qbman_swp_desc p_des;
 	struct dpio_attr attr;
@@ -588,7 +589,7 @@ err:
 	rte_free(dpio_dev);
 
 	/* For each element in the list, cleanup */
-	TAILQ_FOREACH(dpio_dev, &dpio_dev_list, next) {
+	TAILQ_FOREACH_SAFE(dpio_dev, &dpio_dev_list, next, dpio_tmp) {
 		if (dpio_dev->dpio) {
 			dpio_disable(dpio_dev->dpio, CMD_PRI_LOW,
 				dpio_dev->token);
