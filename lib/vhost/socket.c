@@ -10,10 +10,10 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/queue.h>
 #include <errno.h>
 #include <fcntl.h>
 
+#include <rte_queue.h>
 #include <rte_thread.h>
 #include <rte_log.h>
 
@@ -458,14 +458,7 @@ vhost_user_client_reconnect(void *arg __rte_unused)
 	while (1) {
 		pthread_mutex_lock(&reconn_list.mutex);
 
-		/*
-		 * An equal implementation of TAILQ_FOREACH_SAFE,
-		 * which does not exist on all platforms.
-		 */
-		for (reconn = TAILQ_FIRST(&reconn_list.head);
-		     reconn != NULL; reconn = next) {
-			next = TAILQ_NEXT(reconn, next);
-
+		TAILQ_FOREACH_SAFE(reconn, &reconn_list.head, next, next) {
 			ret = vhost_user_connect_nonblock(reconn->vsocket->path, reconn->fd,
 						(struct sockaddr *)&reconn->un,
 						sizeof(reconn->un));
