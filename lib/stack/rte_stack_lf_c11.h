@@ -8,6 +8,64 @@
 #include <rte_branch_prediction.h>
 #include <rte_prefetch.h>
 
+/**
+ * The maximum lock-free data size that can be manipulated atomically using C11
+ * standard is limited to 8 bytes.
+ *
+ * This implementation for __rte_atomic128_cmp_exchange operates on 16-byte
+ * data types and is made available here so that it can be used without the
+ * need to unnecessarily expose other non-C11 atomics present in
+ * rte_atomic_64.h.
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+static inline int
+__rte_atomic128_cmp_exchange(rte_int128_t *dst,
+			     rte_int128_t *exp,
+			     const rte_int128_t *src,
+			     unsigned int weak,
+			     int success,
+			     int failure)
+{
+	return (int)_InterlockedCompareExchange128(
+		(int64_t volatile *) dst,
+		src->val[1], /* exchange high */
+		src->val[0], /* exchange low */
+		(int64_t *) exp /* comparand result */
+	);
+}
+#else
+static inline int
+__rte_atomic128_cmp_exchange(rte_int128_t *dst,
+			     rte_int128_t *exp,
+			     const rte_int128_t *src,
+			     unsigned int weak,
+			     int success,
+			     int failure)
+{
+	RTE_SET_USED(weak);
+	RTE_SET_USED(success);
+	RTE_SET_USED(failure);
+	uint8_t res;
+
+	asm volatile (
+		      MPLOCKED
+		      "cmpxchg16b %[dst];"
+		      " sete %[res]"
+		      : [dst] "=m" (dst->val[0]),
+			"=a" (exp->val[0]),
+			"=d" (exp->val[1]),
+			[res] "=r" (res)
+		      : "b" (src->val[0]),
+			"c" (src->val[1]),
+			"a" (exp->val[0]),
+			"d" (exp->val[1]),
+			"m" (dst->val[0])
+		      : "memory");
+
+	return res;
+}
+#endif /* RTE_TOOLCHAIN_MSVC */
+
 static __rte_always_inline unsigned int
 __rte_stack_lf_count(struct rte_stack *s)
 {
@@ -55,7 +113,7 @@ __rte_stack_lf_push_elems(struct rte_stack_lf_list *list,
 		/* Use the release memmodel to ensure the writes to the LF LIFO
 		 * elements are visible before the head pointer write.
 		 */
-		success = rte_atomic128_cmp_exchange(
+		success = __rte_atomic128_cmp_exchange(
 				(rte_int128_t *)&list->head,
 				(rte_int128_t *)&old_head,
 				(rte_int128_t *)&new_head,
@@ -155,7 +213,7 @@ __rte_stack_lf_pop_elems(struct rte_stack_lf_list *list,
 		 * length is visible before the head update, but
 		 * acquire semantics on the length update is enough.
 		 */
-		success = rte_atomic128_cmp_exchange(
+		success = __rte_atomic128_cmp_exchange(
 				(rte_int128_t *)&list->head,
 				(rte_int128_t *)&old_head,
 				(rte_int128_t *)&new_head,
