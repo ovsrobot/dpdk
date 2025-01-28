@@ -536,13 +536,80 @@ kick_tx(struct pkt_tx_queue *txq, struct xsk_ring_cons *cq)
 		}
 }
 
+static inline uint64_t
+update_addr(struct rte_mbuf *mbuf, struct xsk_umem_info *umem)
+{
+	return (uint64_t)mbuf - (uint64_t)umem->buffer
+		- umem->mb_pool->header_size;
+}
+
+static inline uint64_t
+update_offset(struct rte_mbuf *mbuf, struct xsk_umem_info *umem)
+{
+	uint64_t offset;
+
+	offset = rte_pktmbuf_mtod(mbuf, uint64_t) - (uint64_t)mbuf
+		+ umem->mb_pool->header_size;
+	return offset << XSK_UNALIGNED_BUF_OFFSET_SHIFT;
+}
+
+static struct rte_mbuf *
+maybe_kick_tx(struct pkt_tx_queue *txq, uint32_t *idx_tx, struct rte_mbuf *mbuf)
+{
+	struct rte_mbuf *ret = mbuf;
+
+	if (!xsk_ring_prod__reserve(&txq->tx, 1, idx_tx)) {
+		kick_tx(txq, &txq->pair->cq);
+		if (!xsk_ring_prod__reserve(&txq->tx, 1, idx_tx))
+			ret = NULL;
+	}
+
+	return ret;
+}
+
+static struct rte_mbuf *
+maybe_create_mbuf(struct pkt_tx_queue *txq, uint32_t *idx_tx,
+		  struct xsk_umem_info *umem) {
+	struct rte_mbuf *local_mbuf = rte_pktmbuf_alloc(umem->mb_pool);
+
+	if (local_mbuf == NULL)
+		goto out;
+
+	if (!xsk_ring_prod__reserve(&txq->tx, 1, idx_tx)) {
+		rte_pktmbuf_free(local_mbuf);
+		local_mbuf = NULL;
+		goto out;
+	}
+
+out:
+	return local_mbuf;
+}
+
+static void
+maybe_cpy_pkt(bool is_mbuf_equal, struct xsk_umem_info *umem,
+	      uint64_t addr_plus_offset, struct rte_mbuf *mbuf,
+	      struct xdp_desc *desc)
+{
+	void *pkt;
+
+	if(is_mbuf_equal)
+		goto out;
+
+	pkt = xsk_umem__get_data(umem->buffer, addr_plus_offset);
+	rte_memcpy(pkt, rte_pktmbuf_mtod(mbuf, void *), desc->len);
+	rte_pktmbuf_free(mbuf);
+
+out:
+	return;
+}
+
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
 static uint16_t
 af_xdp_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
 	struct pkt_tx_queue *txq = queue;
 	struct xsk_umem_info *umem = txq->umem;
-	struct rte_mbuf *mbuf;
+	struct rte_mbuf *mbuf, *local_mbuf;
 	unsigned long tx_bytes = 0;
 	int i;
 	uint32_t idx_tx;
@@ -551,61 +618,31 @@ af_xdp_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	uint64_t addr, offset;
 	struct xsk_ring_cons *cq = &txq->pair->cq;
 	uint32_t free_thresh = cq->size >> 1;
+	bool is_true;
 
 	if (xsk_cons_nb_avail(cq, free_thresh) >= free_thresh)
 		pull_umem_cq(umem, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
 	for (i = 0; i < nb_pkts; i++) {
 		mbuf = bufs[i];
+		is_true = mbuf->pool == umem->mb_pool;
 
-		if (mbuf->pool == umem->mb_pool) {
-			if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx)) {
-				kick_tx(txq, cq);
-				if (!xsk_ring_prod__reserve(&txq->tx, 1,
-							    &idx_tx))
-					goto out;
-			}
-			desc = xsk_ring_prod__tx_desc(&txq->tx, idx_tx);
-			desc->len = mbuf->pkt_len;
-			addr = (uint64_t)mbuf - (uint64_t)umem->buffer -
-					umem->mb_pool->header_size;
-			offset = rte_pktmbuf_mtod(mbuf, uint64_t) -
-					(uint64_t)mbuf +
-					umem->mb_pool->header_size;
-			offset = offset << XSK_UNALIGNED_BUF_OFFSET_SHIFT;
-			desc->addr = addr | offset;
-			tx_bytes += desc->len;
-			count++;
-		} else {
-			struct rte_mbuf *local_mbuf =
-					rte_pktmbuf_alloc(umem->mb_pool);
-			void *pkt;
+		if (is_true)
+			local_mbuf = maybe_kick_tx(txq, &idx_tx, mbuf);
+		else
+			local_mbuf = maybe_create_mbuf(txq, &idx_tx, umem);
 
-			if (local_mbuf == NULL)
-				goto out;
+		if (!local_mbuf)
+		  goto out;
 
-			if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx)) {
-				rte_pktmbuf_free(local_mbuf);
-				goto out;
-			}
-
-			desc = xsk_ring_prod__tx_desc(&txq->tx, idx_tx);
-			desc->len = mbuf->pkt_len;
-
-			addr = (uint64_t)local_mbuf - (uint64_t)umem->buffer -
-					umem->mb_pool->header_size;
-			offset = rte_pktmbuf_mtod(local_mbuf, uint64_t) -
-					(uint64_t)local_mbuf +
-					umem->mb_pool->header_size;
-			pkt = xsk_umem__get_data(umem->buffer, addr + offset);
-			offset = offset << XSK_UNALIGNED_BUF_OFFSET_SHIFT;
-			desc->addr = addr | offset;
-			rte_memcpy(pkt, rte_pktmbuf_mtod(mbuf, void *),
-					desc->len);
-			tx_bytes += desc->len;
-			rte_pktmbuf_free(mbuf);
-			count++;
-		}
+		desc = xsk_ring_prod__tx_desc(&txq->tx, idx_tx);
+		desc->len = mbuf->pkt_len;
+		addr = update_addr(local_mbuf, umem);
+		offset = update_offset(local_mbuf, umem);
+		desc->addr = addr | offset;
+		maybe_cpy_pkt(is_true, umem, addr + offset, mbuf, desc);
+		tx_bytes += desc->len;
+		count++;
 	}
 
 out:
