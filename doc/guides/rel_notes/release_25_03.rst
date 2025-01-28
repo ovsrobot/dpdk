@@ -76,6 +76,10 @@ New Features
 
   * Added support for virtual function (VF).
 
+* **Added Yunsilicon xsc net driver [EXPERIMENTAL].**
+
+  * Added the PMD for Yunsilicon metaScale serials NICs.
+
 
 Removed Items
 -------------
