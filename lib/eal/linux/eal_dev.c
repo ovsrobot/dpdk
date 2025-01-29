@@ -91,14 +91,6 @@ static void sigbus_handler(int signum, siginfo_t *info,
 	EAL_LOG(DEBUG, "Success to handle SIGBUS for hot-unplug!");
 }
 
-static int cmp_dev_name(const struct rte_device *dev,
-	const void *_name)
-{
-	const char *name = _name;
-
-	return strcmp(dev->name, name);
-}
-
 static int
 dev_uev_socket_fd_create(void)
 {
@@ -280,7 +272,7 @@ dev_uev_handler(__rte_unused void *param)
 				goto failure_handle_err;
 			}
 
-			dev = bus->find_device(NULL, cmp_dev_name,
+			dev = bus->find_device(NULL, rte_cmp_dev_name,
 					       uevent.devname);
 			if (dev == NULL) {
 				EAL_LOG(ERR, "Cannot find device (%s) on "

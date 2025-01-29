@@ -47,7 +47,7 @@ static int dsa_probe(void);
 static struct rte_device *dsa_find_device(const struct rte_device *start,
 		rte_dev_cmp_t cmp,  const void *data);
 static enum rte_iova_mode dsa_get_iommu_class(void);
-static int dsa_addr_parse(const char *name, void *addr);
+static int dsa_addr_parse(const char *name, void *addr, int *size);
 
 /** List of devices */
 TAILQ_HEAD(dsa_device_list, rte_dsa_device);
@@ -345,7 +345,7 @@ dsa_scan(void)
 			closedir(dev_dir);
 			return -ENOMEM;
 		}
-		if (dsa_addr_parse(wq->d_name, &dev->addr) < 0) {
+		if (dsa_addr_parse(wq->d_name, &dev->addr, NULL) < 0) {
 			IDXD_PMD_ERR("Error parsing WQ name: %s", wq->d_name);
 			free(dev);
 			continue;
@@ -391,10 +391,13 @@ dsa_get_iommu_class(void)
 }
 
 static int
-dsa_addr_parse(const char *name, void *addr)
+dsa_addr_parse(const char *name, void *addr, int *size)
 {
 	struct dsa_wq_addr *wq = addr;
 	unsigned int device_id, wq_id;
+
+	if (size != NULL)
+		*size = sizeof(struct dsa_wq_addr);
 
 	if (sscanf(name, "wq%u.%u", &device_id, &wq_id) != 2) {
 		IDXD_PMD_DEBUG("Parsing WQ name failed: %s", name);

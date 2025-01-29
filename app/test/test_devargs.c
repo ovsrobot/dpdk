@@ -12,7 +12,9 @@
 #include <rte_kvargs.h>
 #include <bus_driver.h>
 #include <rte_class.h>
+#include <rte_bus_vdev.h>
 
+#include "virtual_pmd.h"
 #include "test.h"
 
 /* Check layer arguments. */
@@ -171,7 +173,7 @@ test_valid_devargs(void)
 	int ret;
 
 	ret = test_valid_devargs_cases(list, RTE_DIM(list));
-	if (vdev_bus != NULL && vdev_bus->parse("net_ring0", NULL) == 0)
+	if (vdev_bus != NULL && vdev_bus->parse("net_ring0", NULL, NULL) == 0)
 		/* Ring vdev driver enabled. */
 		ret |= test_valid_devargs_cases(legacy_ring_list,
 						RTE_DIM(legacy_ring_list));
@@ -302,6 +304,119 @@ test_invalid_devargs_parsing(void)
 	return fail;
 }
 
+static struct rte_device *
+create_pci_dev(const char *name)
+{
+	int port_id;
+	uint8_t slave_mac1[] = {0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00 };
+	struct rte_ether_addr *mac_addr = (struct rte_ether_addr *)slave_mac1;
+	char pmd_name[RTE_ETH_NAME_MAX_LEN];
+
+	mac_addr->addr_bytes[RTE_ETHER_ADDR_LEN - 1] = 0;
+	strlcpy(pmd_name, name, RTE_ETH_NAME_MAX_LEN);
+
+	port_id = virtual_ethdev_create(pmd_name,
+			mac_addr, rte_socket_id(), 1);
+
+	if (port_id < 0)
+		return NULL;
+
+	return (&rte_eth_devices[port_id])->device;
+}
+
+static int
+test_pci(struct rte_bus *pci_bus, const char *dev_name, const char *name2)
+{
+	struct rte_device *pci_dev = create_pci_dev(dev_name);
+
+	if (pci_dev == NULL)
+		return -1;
+
+	pci_dev->bus = pci_bus;
+
+	if (rte_cmp_dev_name(pci_dev, name2) != 0) {
+		printf("rte_cmp_dev_name(%s, %s) device name (%s) not expected (%s)\n",
+			       pci_dev->name, name2, pci_dev->name, name2);
+		return -1;
+	}
+	return 0;
+}
+
+static int
+test_vdev(struct rte_bus *vdev_bus, const char *dev_name, const char *name2)
+{
+	/* create vdev */
+	if (rte_vdev_init(dev_name, "") < 0) {
+		printf("Failed to create vdev %s\n", dev_name);
+		return -1;
+	}
+
+	struct rte_device *vdev_dev = vdev_bus->find_device(NULL, rte_cmp_dev_name, dev_name);
+	if (vdev_dev == NULL) {
+		printf("Cannot find %s vdev\n", dev_name);
+		rte_vdev_uninit(dev_name);
+		return -1;
+	}
+	int ret = rte_cmp_dev_name(vdev_dev, name2);
+	if (ret != 0) {
+		printf("rte_cmp_dev_name(%s, %s) device name (%s) not expected (%s)\n",
+			       vdev_dev->name, name2, vdev_dev->name, name2);
+		return -1;
+	}
+
+	if (vdev_dev != vdev_bus->find_device(NULL, rte_cmp_dev_name, name2)) {
+		printf("rte_cmp_dev_name(%s, %s) device name (%s) not expected (%s)\n",
+			       vdev_dev->name, name2, vdev_dev->name, name2);
+		return -1;
+	}
+
+	rte_vdev_uninit(dev_name);
+	return 0;
+}
+
+static int
+test_valid_cmp_dev_name(void)
+{
+	struct rte_bus *pci_bus = rte_bus_find_by_name("pci");
+	struct rte_bus *vdev_bus = rte_bus_find_by_name("vdev");
+
+	if (pci_bus) {
+		if ((test_pci(pci_bus, "0000:08:11.0", "08:11.0") != 0) ||
+			(test_pci(pci_bus, "08:12.0",  "0000:08:12.0") != 0) ||
+			(test_pci(pci_bus, "08:13.0",  "08:13.0") != 0) ||
+			(test_pci(pci_bus, "0000:08:14.0",  "0000:08:14.0") != 0))
+			return -1;
+	}
+
+	if (vdev_bus) {
+		if (test_vdev(vdev_bus, "net_null_test0", "net_null_test0") != 0)
+			return -1;
+	}
+	return 0;
+}
+
+static int
+test_invalid_cmp_dev_name(void)
+{
+	struct rte_bus *pci_bus = rte_bus_find_by_name("pci");
+	struct rte_bus *vdev_bus = rte_bus_find_by_name("vdev");
+
+	if (pci_bus) {
+		if ((test_pci(pci_bus, "0000:08:15.0", "08:00.0") == 0) ||
+			(test_pci(pci_bus, "08:16.0",  "0000:08:15.0") == 0) ||
+			(test_pci(pci_bus, "08:17.0",  "08:13.0") == 0) ||
+			(test_pci(pci_bus, "0000:08:18.0",  "0000:08:14.0") == 0))
+			return -1;
+	}
+
+	if (vdev_bus) {
+		if ((test_vdev(vdev_bus, "net_null_test0", "net_null_test") == 0) ||
+			(test_vdev(vdev_bus, "net_null_test1", "net_null_test2") == 0))
+			return -1;
+	}
+	return 0;
+}
+
 static int
 test_devargs(void)
 {
@@ -316,6 +431,12 @@ test_devargs(void)
 		return -1;
 	printf("== test devargs parsing invalid case ==\n");
 	if (test_invalid_devargs_parsing() < 0)
+		return -1;
+	printf("== test find device valid case ==\n");
+	if (test_valid_cmp_dev_name() < 0)
+		return -1;
+	printf("== test find device invalid case ==\n");
+	if (test_invalid_cmp_dev_name() < 0)
 		return -1;
 	return 0;
 }

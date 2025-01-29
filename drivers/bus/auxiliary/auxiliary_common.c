@@ -237,10 +237,9 @@ auxiliary_probe(void)
 }
 
 static int
-auxiliary_parse(const char *name, void *addr)
+auxiliary_parse(const char *name, void *addr, int *size)
 {
 	struct rte_auxiliary_driver *drv = NULL;
-	const char **out = addr;
 
 	/* Allow empty device name "auxiliary:" to bypass entire bus scan. */
 	if (strlen(name) == 0)
@@ -250,9 +249,17 @@ auxiliary_parse(const char *name, void *addr)
 		if (drv->match(name))
 			break;
 	}
-	if (drv != NULL && addr != NULL)
-		*out = name;
-	return drv != NULL ? 0 : -1;
+
+	if (drv == NULL)
+		return -1;
+
+	if (size != NULL)
+		*size = strlen(name) + 1;
+
+	if (addr != NULL)
+		rte_strscpy(addr, name, strlen(name) + 1);
+
+	return 0;
 }
 
 /* Register a driver */

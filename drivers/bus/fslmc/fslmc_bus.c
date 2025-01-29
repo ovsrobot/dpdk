@@ -103,7 +103,7 @@ fslmc_devargs_lookup(struct rte_dpaa2_device *dev)
 	char dev_name[32];
 
 	RTE_EAL_DEVARGS_FOREACH("fslmc", devargs) {
-		devargs->bus->parse(devargs->name, &dev_name);
+		devargs->bus->parse(devargs->name, &dev_name, NULL);
 		if (strcmp(dev_name, dev->device.name) == 0) {
 			DPAA2_BUS_INFO("**Devargs matched %s", dev_name);
 			return devargs;
@@ -235,7 +235,7 @@ cleanup:
 }
 
 static int
-rte_fslmc_parse(const char *name, void *addr)
+rte_fslmc_parse(const char *name, void *addr, int *size)
 {
 	uint16_t dev_id;
 	char *t_ptr;
@@ -298,7 +298,10 @@ jump_out:
 		goto err_out;
 	}
 
-	if (addr)
+	if (size != NULL)
+		*size = strlen(sep) + 1;
+
+	if (addr != NULL)
 		strcpy(addr, sep);
 
 	ret = 0;

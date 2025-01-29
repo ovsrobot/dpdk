@@ -84,7 +84,7 @@ pci_devargs_lookup(const struct rte_pci_addr *pci_addr)
 	struct rte_pci_addr addr;
 
 	RTE_EAL_DEVARGS_FOREACH("pci", devargs) {
-		devargs->bus->parse(devargs->name, &addr);
+		devargs->bus->parse(devargs->name, &addr, NULL);
 		if (!rte_pci_addr_cmp(pci_addr, &addr))
 			return devargs;
 	}
@@ -99,20 +99,10 @@ pci_common_set(struct rte_pci_device *dev)
 	/* Each device has its internal, canonical name set. */
 	rte_pci_device_name(&dev->addr,
 			dev->name, sizeof(dev->name));
+	dev->device.name = dev->name;
+
 	devargs = pci_devargs_lookup(&dev->addr);
 	dev->device.devargs = devargs;
-
-	/* When using a blocklist, only blocked devices will have
-	 * an rte_devargs. Allowed devices won't have one.
-	 */
-	if (devargs != NULL)
-		/* If an rte_devargs exists, the generic rte_device uses the
-		 * given name as its name.
-		 */
-		dev->device.name = dev->device.devargs->name;
-	else
-		/* Otherwise, it uses the internal, canonical form. */
-		dev->device.name = dev->name;
 
 	if (dev->bus_info != NULL ||
 			asprintf(&dev->bus_info, "vendor_id=%"PRIx16", device_id=%"PRIx16,
@@ -497,15 +487,19 @@ rte_pci_dump(FILE *f)
 }
 
 static int
-pci_parse(const char *name, void *addr)
+pci_parse(const char *name, void *addr, int *size)
 {
 	struct rte_pci_addr *out = addr;
 	struct rte_pci_addr pci_addr;
 	bool parse;
 
+	if (size != NULL)
+		*size = sizeof(struct rte_pci_addr);
+
 	parse = (rte_pci_addr_parse(name, &pci_addr) == 0);
 	if (parse && addr != NULL)
 		*out = pci_addr;
+
 	return parse == false;
 }
 

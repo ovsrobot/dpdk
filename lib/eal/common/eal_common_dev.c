@@ -107,11 +107,42 @@ struct dev_next_ctx {
 #define CLSCTX(ptr) \
 	(((struct dev_next_ctx *)(intptr_t)ptr)->cls_str)
 
-static int cmp_dev_name(const struct rte_device *dev, const void *_name)
+int
+rte_cmp_dev_name(const struct rte_device *dev1, const void *name2)
 {
-	const char *name = _name;
+	void *parsed_name1;
+	void *parsed_name2;
+	int size1 = 0;
+	int size2 = 0;
+	int ret;
 
-	return strcmp(dev->name, name);
+	if (dev1->bus->parse(dev1->name, NULL, &size1) != 0 ||
+		dev1->bus->parse(name2, NULL, &size2) != 0)
+		return 1;
+
+	if (size1 != size2)
+		return 1;
+
+	parsed_name1 = malloc(size1);
+	if (parsed_name1 == NULL)
+		return 1;
+
+	parsed_name2 = malloc(size2);
+	if (parsed_name2 == NULL) {
+		free(parsed_name1);
+		return 1;
+	}
+
+	memset(parsed_name1, 0, size1);
+	memset(parsed_name2, 0, size2);
+
+	dev1->bus->parse(dev1->name, parsed_name1, NULL);
+	dev1->bus->parse(name2, parsed_name2, NULL);
+
+	ret = memcmp(parsed_name1, parsed_name2, size1);
+	free(parsed_name1);
+	free(parsed_name2);
+	return ret;
 }
 
 int
@@ -197,7 +228,7 @@ local_dev_probe(const char *devargs, struct rte_device **new_dev)
 	if (ret)
 		goto err_devarg;
 
-	dev = da->bus->find_device(NULL, cmp_dev_name, da->name);
+	dev = da->bus->find_device(NULL, rte_cmp_dev_name, da->name);
 	if (dev == NULL) {
 		EAL_LOG(ERR, "Cannot find device (%s)",
 			da->name);
@@ -335,7 +366,7 @@ rte_eal_hotplug_remove(const char *busname, const char *devname)
 		return -ENOENT;
 	}
 
-	dev = bus->find_device(NULL, cmp_dev_name, devname);
+	dev = bus->find_device(NULL, rte_cmp_dev_name, devname);
 	if (dev == NULL) {
 		EAL_LOG(ERR, "Cannot find plugged device (%s)", devname);
 		return -EINVAL;
