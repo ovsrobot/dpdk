@@ -675,3 +675,143 @@ cnxk_dma_adapter_dequeue(uintptr_t get_work1)
 
 	return (uintptr_t)op;
 }
+
+uint16_t
+cnxk_dma_ops_enqueue(void *dev_private, uint16_t vchan, struct rte_dma_op **ops, uint16_t nb_ops)
+{
+	struct cnxk_dpi_vf_s *dpivf = dev_private;
+	struct cnxk_dpi_conf *dpi_conf = &dpivf->conf[vchan];
+	const struct rte_dma_sge *fptr, *lptr;
+	uint16_t src, dst, nwords = 0;
+	struct rte_dma_op *op;
+	uint16_t space, i;
+	uint8_t *comp_ptr;
+	uint64_t hdr[4];
+	int rc;
+
+	space = (dpi_conf->c_desc.max_cnt + 1) -
+		((dpi_conf->c_desc.tail - dpi_conf->c_desc.head) & dpi_conf->c_desc.max_cnt);
+	space = RTE_MIN(space, nb_ops);
+
+	for (i = 0; i < space; i++) {
+		op = ops[i];
+		comp_ptr =
+			&dpi_conf->c_desc.compl_ptr[dpi_conf->c_desc.tail * CNXK_DPI_COMPL_OFFSET];
+		dpi_conf->c_desc.ops[dpi_conf->c_desc.tail] = op;
+		CNXK_DPI_STRM_INC(dpi_conf->c_desc, tail);
+
+		hdr[1] = dpi_conf->cmd.u | ((op->flags & RTE_DMA_OP_FLAG_AUTO_FREE) << 37);
+		hdr[2] = (uint64_t)comp_ptr;
+
+		src = op->nb_src;
+		dst = op->nb_dst;
+		/*
+		 * For inbound case, src pointers are last pointers.
+		 * For all other cases, src pointers are first pointers.
+		 */
+		if (((dpi_conf->cmd.u >> 48) & DPI_HDR_XTYPE_MASK) == DPI_XTYPE_INBOUND) {
+			fptr = &op->src_dst_seg[src];
+			lptr = &op->src_dst_seg[0];
+			RTE_SWAP(src, dst);
+		} else {
+			fptr = &op->src_dst_seg[0];
+			lptr = &op->src_dst_seg[src];
+		}
+		hdr[0] = ((uint64_t)dst << 54) | (uint64_t)src << 48;
+
+		rc = __dpi_queue_write_sg(dpivf, hdr, fptr, lptr, src, dst);
+		if (rc) {
+			CNXK_DPI_STRM_DEC(dpi_conf->c_desc, tail);
+			goto done;
+		}
+		nwords += CNXK_DPI_CMD_LEN(src, dst);
+	}
+
+done:
+	if (nwords) {
+		rte_wmb();
+		plt_write64(nwords, dpivf->rdpi.rbase + DPI_VDMA_DBELL);
+		dpi_conf->stats.submitted += i;
+	}
+
+	return i;
+}
+
+uint16_t
+cn10k_dma_ops_enqueue(void *dev_private, uint16_t vchan, struct rte_dma_op **ops, uint16_t nb_ops)
+{
+	struct cnxk_dpi_vf_s *dpivf = dev_private;
+	struct cnxk_dpi_conf *dpi_conf = &dpivf->conf[vchan];
+	uint16_t space, i, nwords = 0;
+	struct rte_dma_op *op;
+	uint16_t src, dst;
+	uint8_t *comp_ptr;
+	uint64_t hdr[4];
+	int rc;
+
+	space = (dpi_conf->c_desc.max_cnt + 1) -
+		((dpi_conf->c_desc.tail - dpi_conf->c_desc.head) & dpi_conf->c_desc.max_cnt);
+	space = RTE_MIN(space, nb_ops);
+
+	for (i = 0; i < space; i++) {
+		op = ops[i];
+		src = op->nb_src;
+		dst = op->nb_dst;
+		comp_ptr =
+			&dpi_conf->c_desc.compl_ptr[dpi_conf->c_desc.tail * CNXK_DPI_COMPL_OFFSET];
+		dpi_conf->c_desc.ops[dpi_conf->c_desc.tail] = op;
+		CNXK_DPI_STRM_INC(dpi_conf->c_desc, tail);
+
+		hdr[0] = dpi_conf->cmd.u | (dst << 6) | src;
+		hdr[1] = (uint64_t)comp_ptr;
+		hdr[2] = (1UL << 47) | ((op->flags & RTE_DMA_OP_FLAG_AUTO_FREE) << 43);
+
+		rc = __dpi_queue_write_sg(dpivf, hdr, &op->src_dst_seg[0], &op->src_dst_seg[src],
+					  src, dst);
+		if (rc) {
+			CNXK_DPI_STRM_DEC(dpi_conf->c_desc, tail);
+			goto done;
+		}
+		nwords += CNXK_DPI_CMD_LEN(src, dst);
+	}
+
+done:
+	if (nwords) {
+		rte_wmb();
+		plt_write64(nwords, dpivf->rdpi.rbase + DPI_VDMA_DBELL);
+		dpi_conf->stats.submitted += i;
+	}
+
+	return i;
+}
+
+uint16_t
+cnxk_dma_ops_dequeue(void *dev_private, uint16_t vchan, struct rte_dma_op **ops, uint16_t nb_ops)
+{
+	struct cnxk_dpi_vf_s *dpivf = dev_private;
+	struct cnxk_dpi_conf *dpi_conf = &dpivf->conf[vchan];
+	struct cnxk_dpi_cdesc_data_s *c_desc = &dpi_conf->c_desc;
+	struct rte_dma_op *op;
+	uint16_t space, cnt;
+	uint8_t status;
+
+	space = (c_desc->tail - c_desc->head) & c_desc->max_cnt;
+	space = RTE_MIN(nb_ops, space);
+	for (cnt = 0; cnt < space; cnt++) {
+		status = c_desc->compl_ptr[c_desc->head * CNXK_DPI_COMPL_OFFSET];
+		op = c_desc->ops[c_desc->head];
+		op->status = status;
+		ops[cnt] = op;
+		if (status) {
+			if (status == CNXK_DPI_REQ_CDATA)
+				break;
+			dpi_conf->stats.errors++;
+		}
+		c_desc->compl_ptr[c_desc->head * CNXK_DPI_COMPL_OFFSET] = CNXK_DPI_REQ_CDATA;
+		CNXK_DPI_STRM_INC(*c_desc, head);
+	}
+
+	dpi_conf->stats.completed += cnt;
+
+	return cnt;
+}
