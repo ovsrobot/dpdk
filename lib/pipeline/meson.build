@@ -7,6 +7,8 @@ if is_windows
     subdir_done()
 endif
 
+cflags += no_vla_cflag
+
 sources = files(
         'rte_pipeline.c',
         'rte_port_in_action.c',
