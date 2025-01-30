@@ -17,3 +17,4 @@ sources = files(
         'main.c',
         'stats.c',
 )
+cflags += no_vla_cflag

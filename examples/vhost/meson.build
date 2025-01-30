@@ -18,3 +18,4 @@ sources = files(
         'main.c',
         'virtio_net.c',
 )
+cflags += no_vla_cflag

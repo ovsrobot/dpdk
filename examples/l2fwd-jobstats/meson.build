@@ -11,3 +11,4 @@ deps += ['jobstats', 'timer']
 sources = files(
         'main.c',
 )
+cflags += no_vla_cflag

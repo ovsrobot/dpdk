@@ -11,3 +11,4 @@ deps +=  ['ip_frag', 'lpm']
 sources = files(
         'main.c',
 )
+cflags += no_vla_cflag

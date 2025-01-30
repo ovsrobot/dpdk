@@ -12,3 +12,4 @@ sources = files(
         'main.c',
         'perf_core.c',
 )
+cflags += no_vla_cflag
