@@ -115,6 +115,12 @@ API Changes
   but to enable/disable these drivers via Meson option requires use of the new paths.
   For example, ``-Denable_drivers=/net/i40e`` becomes ``-Denable_drivers=/net/intel/i40e``.
 
+* The driver ``common/idpf`` has been merged into the ``net/intel/idpf`` driver.
+  This change should have no impact to end applications, but,
+  when specifying the ``idpf`` or ``cpfl`` net drivers to meson via ``-Denable_drivers`` option,
+  there is no longer any need to also specify the ``common/idpf`` driver.
+  Note, however, ``net/intel/cpfl`` driver now depends upon the ``net/intel/idpf`` driver.
+
 
 ABI Changes
 -----------
