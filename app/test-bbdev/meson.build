@@ -26,3 +26,5 @@ endif
 if dpdk_conf.has('RTE_BASEBAND_LA12XX')
     deps += ['baseband_la12xx']
 endif
+
+cflags += no_vla_cflag

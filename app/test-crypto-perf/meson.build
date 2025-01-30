@@ -23,3 +23,5 @@ deps += ['cryptodev', 'net', 'security']
 if dpdk_conf.has('RTE_CRYPTO_SCHEDULER')
     deps += 'crypto_scheduler'
 endif
+
+cflags += no_vla_cflag
