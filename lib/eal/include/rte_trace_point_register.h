@@ -37,7 +37,7 @@ RTE_INIT(trace##_init) \
 
 #define __rte_trace_point_emit(in, type) \
 do { \
-	RTE_BUILD_BUG_ON(sizeof(type) != sizeof(typeof(in))); \
+	RTE_SET_USED(in); \
 	__rte_trace_point_emit_field(sizeof(type), RTE_STR(in), \
 		RTE_STR(type)); \
 } while (0)
