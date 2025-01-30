@@ -175,6 +175,19 @@ class SutNode(Node):
             )
         return self._path_to_devbind_script
 
+    def cleanup_sut(self, dpdk_build_location, remote_tree: str | PurePath | None) -> None:
+        """Removes the DPDK tree and/or build directory/tarball depending on the configuration."""
+        match dpdk_build_location:
+            case LocalDPDKTreeLocation(dpdk_tree=dpdk_tree):
+                tree_path = self.main_session.join_remote_path(self._remote_tmp_dir, dpdk_tree.name)
+                self.main_session.remove_remote_dir(tree_path)
+            case LocalDPDKTarballLocation(tarball=tarball):
+                self.main_session.remove_remote_dir(str(remote_tree))
+                tarball_path = self.main_session.join_remote_path(
+                    self._remote_tmp_dir, tarball.name
+                )
+                self.main_session.remove_remote_file(tarball_path)
+
     def get_dpdk_build_info(self) -> DPDKBuildInfo:
         """Get additional DPDK build information.
 
@@ -203,11 +216,11 @@ class SutNode(Node):
             self.virtual_devices.append(VirtualDevice(vdev))
         self._set_up_dpdk(dpdk_build_config)
 
-    def tear_down_test_run(self) -> None:
+    def tear_down_test_run(self, dpdk_build_location=None) -> None:
         """Extend the test run teardown with virtual device teardown and DPDK teardown."""
         super().tear_down_test_run()
         self.virtual_devices = []
-        self._tear_down_dpdk()
+        self._tear_down_dpdk(dpdk_build_location)
 
     def _set_up_dpdk(
         self,
@@ -243,14 +256,16 @@ class SutNode(Node):
 
         self.bind_ports_to_driver()
 
-    def _tear_down_dpdk(self) -> None:
+    def _tear_down_dpdk(self, dpdk_build_location) -> None:
         """Reset DPDK variables and bind port driver to the OS driver."""
         self._env_vars = {}
+        remote_tree = self.__remote_dpdk_tree_path
         self.__remote_dpdk_tree_path = None
         self._remote_dpdk_build_dir = None
         self._dpdk_version = None
         self.compiler_version = None
         self.bind_ports_to_driver(for_dpdk=False)
+        self.cleanup_sut(dpdk_build_location, remote_tree)
 
     def _set_remote_dpdk_tree_path(self, dpdk_tree: PurePath):
         """Set the path to the remote DPDK source tree based on the provided DPDK location.

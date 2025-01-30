@@ -340,7 +340,7 @@ class DTSRunner:
         finally:
             try:
                 self._logger.set_stage(DtsStage.test_run_teardown)
-                sut_node.tear_down_test_run()
+                sut_node.tear_down_test_run(test_run_config.dpdk_config.dpdk_location)
                 tg_node.tear_down_test_run()
                 test_run_result.update_teardown(Result.PASS)
             except Exception as e:
