@@ -32,3 +32,5 @@ includes += include_directories('../../common/octeontx')
 includes += include_directories('../../event/octeontx')
 includes += include_directories('../../mempool/octeontx')
 includes += include_directories('../../net/octeontx')
+
+cflags += no_vla_cflag

@@ -22,3 +22,5 @@ sources = files(
 )
 
 ext_deps += dep
+
+cflags += no_vla_cflag

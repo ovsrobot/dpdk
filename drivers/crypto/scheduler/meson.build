@@ -22,3 +22,5 @@ headers = files(
         'rte_cryptodev_scheduler.h',
         'rte_cryptodev_scheduler_operations.h',
 )
+
+cflags += no_vla_cflag

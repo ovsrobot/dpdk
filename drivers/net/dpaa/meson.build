@@ -17,6 +17,8 @@ sources = files(
         'dpaa_ptp.c',
 )
 
+cflags += no_vla_cflag
+
 if cc.has_argument('-Wno-pointer-arith')
     cflags += '-Wno-pointer-arith'
 endif
