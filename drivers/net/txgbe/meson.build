@@ -24,6 +24,8 @@ sources = files(
 
 deps += ['hash', 'security']
 
+cflags += no_vla_cflag
+
 if arch_subdir == 'x86'
     sources += files('txgbe_rxtx_vec_sse.c')
 elif arch_subdir == 'arm'

@@ -23,3 +23,5 @@ sources = files(
         'base/t4vf_hw.c',
 )
 includes += include_directories('base')
+
+cflags += no_vla_cflag

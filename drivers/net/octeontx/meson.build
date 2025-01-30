@@ -19,3 +19,5 @@ sources = files(
 deps += ['mempool_octeontx', 'eventdev']
 
 includes += include_directories('base')
+
+cflags += no_vla_cflag

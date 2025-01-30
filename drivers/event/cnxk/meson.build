@@ -299,6 +299,8 @@ sources += files(
 endif
 endif
 
+cflags += no_vla_cflag
+
 extra_flags = ['-flax-vector-conversions', '-Wno-strict-aliasing']
 if cc.get_id() == 'clang'
         extra_flags += ['-Wno-asm-operand-widths']

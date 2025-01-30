@@ -18,3 +18,5 @@ sources = files(
         'gve_rss.c',
 )
 includes += include_directories('base')
+
+cflags += no_vla_cflag
