@@ -3,7 +3,15 @@
 
 # override default name to drop the hyphen
 name = 'testpmd'
-cflags += '-Wno-deprecated-declarations'
+
+extra_flags = ['-Wno-deprecated-declarations']
+
+foreach arg: extra_flags
+    if cc.has_argument(arg)
+        cflags += arg
+    endif
+endforeach
+
 sources = files(
         '5tswap.c',
         'cmdline.c',

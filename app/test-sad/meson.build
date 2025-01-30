@@ -9,3 +9,5 @@ endif
 
 sources = files('main.c')
 deps += ['ipsec', 'net']
+
+cflags += no_vla_cflag

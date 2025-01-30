@@ -15,3 +15,5 @@ sources = files(
 )
 
 deps += ['ethdev']
+
+cflags += no_vla_cflag
