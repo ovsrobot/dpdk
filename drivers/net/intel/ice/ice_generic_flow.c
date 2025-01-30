@@ -2295,21 +2295,22 @@ ice_flow_process_filter(struct rte_eth_dev *dev,
 		return 0;
 	}
 
-	parser = get_flow_parser(attr->group);
-	if (parser == NULL) {
-		rte_flow_error_set(error, EINVAL,
-				   RTE_FLOW_ERROR_TYPE_ATTR,
-				   NULL, "NULL attribute.");
-		return -rte_errno;
+	for (int i = 0; i < 3; i++) {
+		parser = get_flow_parser(i);
+		if (parser == NULL) {
+			rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ATTR,
+					NULL, "NULL attribute.");
+			return -rte_errno;
+		}
+		if (ice_parse_engine(ad, flow, parser, attr->priority,
+				pattern, actions, error)) {
+			*engine = parser->engine;
+			return 0;
+		}
 	}
 
-	if (ice_parse_engine(ad, flow, parser, attr->priority,
-			     pattern, actions, error)) {
-		*engine = parser->engine;
-		return 0;
-	} else {
-		return -rte_errno;
-	}
+	return -rte_errno;
 }
 
 static int
