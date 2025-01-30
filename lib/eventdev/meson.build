@@ -7,6 +7,8 @@ if is_windows
     subdir_done()
 endif
 
+cflags += no_vla_cflag
+
 sources = files(
         'eventdev_private.c',
         'eventdev_trace_points.c',

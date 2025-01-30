@@ -7,6 +7,8 @@ if is_windows
     subdir_done()
 endif
 
+cflags += no_vla_cflag
+
 sources = files('esp_inb.c', 'esp_outb.c',
                 'sa.c', 'ses.c', 'ipsec_sad.c',
                 'ipsec_telemetry.c')
