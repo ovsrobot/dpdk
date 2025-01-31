@@ -39,6 +39,9 @@ STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw)
 	/* link info */
 	mac->ops.get_link_up_info = e1000_get_speed_and_duplex_copper_generic;
 
+	/* Allow a single clear of the SW semaphore on I225 */
+	mac->ops.setup_physical_interface = e1000_setup_copper_link_i225;
+
 	/* Set if part includes ASF firmware */
 	mac->asf_firmware_present = true;
 
@@ -73,6 +76,8 @@ STATIC s32 e1000_init_phy_params_i225(struct e1000_hw *hw)
 	phy->ops.power_up   = e1000_power_up_phy_copper;
 	phy->ops.power_down = e1000_power_down_phy_copper_base;
 
+	phy->autoneg_mask = AUTONEG_ADVERTISE_SPEED_DEFAULT_2500;
+
 	phy->reset_delay_us	= 100;
 
 	phy->ops.acquire	= e1000_acquire_phy_base;
@@ -93,6 +98,20 @@ STATIC s32 e1000_init_phy_params_i225(struct e1000_hw *hw)
 		goto out;
 
 	E1000_WRITE_REG(hw, E1000_CTRL_EXT, ctrl_ext);
+
+	ret_val = e1000_get_phy_id(hw);
+
+	/*
+	 * IGC/IGB merge note: in base code, there was a PHY ID check for I225
+	 * at this point. However, in DPDK version of IGC this check was
+	 * removed because it interfered with some i225-based NICs, and it was
+	 * deemed unnecessary because only the i225 NIC would've called this
+	 * code anyway because it was in the IGC driver.
+	 *
+	 * In merged IGB/IGC, this code is still only called by i225-based NICs,
+	 * so the previous fix is applicable.
+	 */
+	phy->type = e1000_phy_i225;
 
 out:
 	return ret_val;
@@ -153,6 +172,36 @@ STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw)
 	return ret_val;
 }
 
+/*
+ * e1000_setup_copper_link_i225 - Configure copper link settings
+ * @hw: pointer to the HW structure
+ *
+ * Configures the link for auto-neg or forced speed and duplex.  Then we check
+ * for link, once link is established calls to configure collision distance
+ * and flow control are called.
+ */
+s32 e1000_setup_copper_link_i225(struct e1000_hw *hw)
+{
+	u32 phpm_reg;
+	s32 ret_val;
+	u32 ctrl;
+
+	DEBUGFUNC("e1000_setup_copper_link_i225");
+
+	ctrl = E1000_READ_REG(hw, E1000_CTRL);
+	ctrl |= E1000_CTRL_SLU;
+	ctrl &= ~(E1000_CTRL_FRCSPD | E1000_CTRL_FRCDPX);
+	E1000_WRITE_REG(hw, E1000_CTRL, ctrl);
+
+	phpm_reg = E1000_READ_REG(hw, E1000_I225_PHPM);
+	phpm_reg &= ~E1000_I225_PHPM_GO_LINKD;
+	E1000_WRITE_REG(hw, E1000_I225_PHPM, phpm_reg);
+
+	ret_val = e1000_setup_copper_link_generic(hw);
+
+	return ret_val;
+}
+
 /* e1000_init_function_pointers_i225 - Init func ptrs.
  * @hw: pointer to the HW structure
  *
@@ -208,4 +257,62 @@ s32 e1000_init_hw_i225(struct e1000_hw *hw)
 	hw->phy.ops.get_cfg_done = e1000_get_cfg_done_i225;
 	ret_val = e1000_init_hw_base(hw);
 	return ret_val;
+}
+
+/*
+ * e1000_set_d0_lplu_state_i225 - Set Low-Power-Link-Up (LPLU) D0 state
+ * @hw: pointer to the HW structure
+ * @active: true to enable LPLU, false to disable
+ *
+ * Note: since I225 does not actually support LPLU, this function
+ * simply enables/disables 1G and 2.5G speeds in D0.
+ */
+s32 e1000_set_d0_lplu_state_i225(struct e1000_hw *hw, bool active)
+{
+	u32 data;
+
+	DEBUGFUNC("e1000_set_d0_lplu_state_i225");
+
+	data = E1000_READ_REG(hw, E1000_I225_PHPM);
+
+	if (active) {
+		data |= E1000_I225_PHPM_DIS_1000;
+		data |= E1000_I225_PHPM_DIS_2500;
+	} else {
+		data &= ~E1000_I225_PHPM_DIS_1000;
+		data &= ~E1000_I225_PHPM_DIS_2500;
+	}
+
+	E1000_WRITE_REG(hw, E1000_I225_PHPM, data);
+	return E1000_SUCCESS;
+}
+
+/*
+ * e1000_set_d3_lplu_state_i225 - Set Low-Power-Link-Up (LPLU) D3 state
+ * @hw: pointer to the HW structure
+ * @active: true to enable LPLU, false to disable
+ *
+ * Note: since I225 does not actually support LPLU, this function
+ * simply enables/disables 100M, 1G and 2.5G speeds in D3.
+ */
+s32 e1000_set_d3_lplu_state_i225(struct e1000_hw *hw, bool active)
+{
+	u32 data;
+
+	DEBUGFUNC("e1000_set_d3_lplu_state_i225");
+
+	data = E1000_READ_REG(hw, E1000_I225_PHPM);
+
+	if (active) {
+		data |= E1000_I225_PHPM_DIS_100_D3;
+		data |= E1000_I225_PHPM_DIS_1000_D3;
+		data |= E1000_I225_PHPM_DIS_2500_D3;
+	} else {
+		data &= ~E1000_I225_PHPM_DIS_100_D3;
+		data &= ~E1000_I225_PHPM_DIS_1000_D3;
+		data &= ~E1000_I225_PHPM_DIS_2500_D3;
+	}
+
+	E1000_WRITE_REG(hw, E1000_I225_PHPM, data);
+	return E1000_SUCCESS;
 }

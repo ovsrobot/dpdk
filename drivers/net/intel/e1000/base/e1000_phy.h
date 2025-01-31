@@ -120,6 +120,17 @@ s32 e1000_write_xmdio_reg(struct e1000_hw *hw, u16 addr, u8 dev_addr,
 #define GS40G_MAC_SPEED_1G		0X0006
 #define GS40G_COPPER_SPEC		0x0010
 
+#define E1000_I225_PHPM			0x0E14 /* I225 PHY Power Management */
+#define E1000_I225_PHPM_DIS_1000_D3	0x0008 /* Disable 1G in D3 */
+#define E1000_I225_PHPM_LINK_ENERGY	0x0010 /* Link Energy Detect */
+#define E1000_I225_PHPM_GO_LINKD	0x0020 /* Go Link Disconnect */
+#define E1000_I225_PHPM_DIS_1000	0x0040 /* Disable 1G globally */
+#define E1000_I225_PHPM_SPD_B2B_EN	0x0080 /* Smart Power Down Back2Back */
+#define E1000_I225_PHPM_RST_COMPL	0x0100 /* PHY Reset Completed */
+#define E1000_I225_PHPM_DIS_100_D3	0x0200 /* Disable 100M in D3 */
+#define E1000_I225_PHPM_ULP		0x0400 /* Ultra Low-Power Mode */
+#define E1000_I225_PHPM_DIS_2500	0x0800 /* Disable 2.5G globally */
+#define E1000_I225_PHPM_DIS_2500_D3	0x1000 /* Disable 2.5G in D3 */
 /* BM/HV Specific Registers */
 #define BM_PORT_CTRL_PAGE		769
 #define BM_WUC_PAGE			800
