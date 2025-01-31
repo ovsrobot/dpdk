@@ -34,13 +34,26 @@
 #define DEBUGOUT6(S, ...)       DEBUGOUT(S, ##__VA_ARGS__)
 #define DEBUGOUT7(S, ...)       DEBUGOUT(S, ##__VA_ARGS__)
 
-#ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(_p)
-#endif
-#define UNREFERENCED_1PARAMETER(_p)
-#define UNREFERENCED_2PARAMETER(_p, _q)
-#define UNREFERENCED_3PARAMETER(_p, _q, _r)
-#define UNREFERENCED_4PARAMETER(_p, _q, _r, _s)
+#define UNREFERENCED_PARAMETER(_p)	(void)(_p)
+#define UNREFERENCED_1PARAMETER(_p)	(void)(_p)
+#define UNREFERENCED_2PARAMETER(_p, _q)	\
+	do {				\
+		(void)(_p);		\
+		(void)(_q);		\
+	} while (0)
+#define UNREFERENCED_3PARAMETER(_p, _q, _r)	\
+	do {					\
+		(void)(_p);			\
+		(void)(_q);			\
+		(void)(_r);			\
+	} while (0)
+#define UNREFERENCED_4PARAMETER(_p, _q, _r, _s)	\
+	do {					\
+		(void)(_p);			\
+		(void)(_q);			\
+		(void)(_r);			\
+		(void)(_s);			\
+	} while (0)
 
 #define FALSE			0
 #define TRUE			1
@@ -117,8 +130,14 @@ static inline uint16_t e1000_read_addr16(volatile void *addr)
 #define E1000_READ_REG(hw, reg) \
 	e1000_read_addr(E1000_PCI_REG_ADDR((hw), (reg)))
 
+#define E1000_READ_REG_LE_VALUE(hw, reg) \
+	rte_read32(E1000_PCI_REG_ADDR((hw), (reg)))
+
 #define E1000_WRITE_REG(hw, reg, value) \
 	E1000_PCI_REG_WRITE(E1000_PCI_REG_ADDR((hw), (reg)), (value))
+
+#define E1000_WRITE_REG_LE_VALUE(hw, reg, value) \
+	rte_write32(value, E1000_PCI_REG_ADDR((hw), (reg)))
 
 #define E1000_READ_REG_ARRAY(hw, reg, index) \
 	E1000_PCI_REG(E1000_PCI_REG_ARRAY_ADDR((hw), (reg), (index)))
