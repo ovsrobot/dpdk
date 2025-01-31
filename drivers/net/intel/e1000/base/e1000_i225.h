@@ -27,6 +27,8 @@ s32 e1000_init_hw_i225(struct e1000_hw *hw);
 s32 e1000_setup_copper_link_i225(struct e1000_hw *hw);
 s32 e1000_set_d0_lplu_state_i225(struct e1000_hw *hw, bool active);
 s32 e1000_set_d3_lplu_state_i225(struct e1000_hw *hw, bool active);
+s32 e1000_set_eee_i225(struct e1000_hw *hw, bool adv2p5G, bool adv1G,
+		       bool adv100M);
 
 #define ID_LED_DEFAULT_I225		((ID_LED_OFF1_ON2  << 8) | \
 					 (ID_LED_DEF1_DEF2 <<  4) | \

@@ -688,6 +688,7 @@
 #define E1000_LTRC	0x01A0 /* Latency Tolerance Reporting Control */
 #define E1000_EEER	0x0E30 /* Energy Efficient Ethernet "EEE"*/
 #define E1000_EEE_SU	0x0E34 /* EEE Setup */
+#define E1000_EEE_SU_2P5	0x0E3C /* EEE 2.5G Setup */
 #define E1000_TLPIC	0x4148 /* EEE Tx LPI Count - TLPIC */
 #define E1000_RLPIC	0x414C /* EEE Rx LPI Count - RLPIC */
 
