@@ -168,6 +168,22 @@ struct e1000_hw;
 #define E1000_DEV_ID_I210_SERDES_FLASHLESS	0x157C
 #define E1000_DEV_ID_I210_SGMII_FLASHLESS	0x15F6
 #define E1000_DEV_ID_I211_COPPER		0x1539
+#define E1000_DEV_ID_I225_LM			0x15F2
+#define E1000_DEV_ID_I225_V			0x15F3
+#define E1000_DEV_ID_I225_K			0x3100
+#define E1000_DEV_ID_I225_K2			0x3101
+#define E1000_DEV_ID_I225_LMVP			0x5502
+#define E1000_DEV_ID_I225_IT			0x0D9F
+#define E1000_DEV_ID_I225_I			0x15F8
+#define E1000_DEV_ID_I220_V			0x15F7
+#define E1000_DEV_ID_I225_BLANK_NVM		0x15FD
+#define E1000_DEV_ID_I226_LM			0x125B
+#define E1000_DEV_ID_I226_V			0x125C
+#define E1000_DEV_ID_I226_IT			0x125D
+#define E1000_DEV_ID_I226_K			0x3102
+#define E1000_DEV_ID_I221_V			0x125E
+#define E1000_DEV_ID_I226_LMVP			0x5503
+#define E1000_DEV_ID_I226_BLANK_NVM		0x125F
 #define E1000_DEV_ID_I354_BACKPLANE_1GBPS	0x1F40
 #define E1000_DEV_ID_I354_SGMII			0x1F41
 #define E1000_DEV_ID_I354_BACKPLANE_2_5GBPS	0x1F45
@@ -229,6 +245,7 @@ enum e1000_mac_type {
 	e1000_i354,
 	e1000_i210,
 	e1000_i211,
+	e1000_i225,
 	e1000_vfadapt,
 	e1000_vfadapt_i350,
 	e1000_num_macs  /* List is 1-based, so subtract 1 for true count. */
@@ -277,6 +294,7 @@ enum e1000_phy_type {
 	e1000_phy_82580,
 	e1000_phy_vf,
 	e1000_phy_i210,
+	e1000_phy_i225,
 };
 
 enum e1000_bus_type {
@@ -1019,6 +1037,7 @@ struct e1000_hw {
 #include "e1000_ich8lan.h"
 #include "e1000_82575.h"
 #include "e1000_i210.h"
+#include "e1000_i225.h"
 #include "e1000_base.h"
 
 /* These functions must be implemented by drivers */
