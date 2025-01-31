@@ -4,9 +4,75 @@
 
 #include "e1000_api.h"
 
+STATIC s32 e1000_init_nvm_params_i225(struct e1000_hw *hw);
 STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw);
 STATIC s32 e1000_init_phy_params_i225(struct e1000_hw *hw);
 STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw);
+STATIC s32 e1000_acquire_nvm_i225(struct e1000_hw *hw);
+STATIC void e1000_release_nvm_i225(struct e1000_hw *hw);
+STATIC s32 e1000_get_hw_semaphore_i225(struct e1000_hw *hw);
+STATIC s32 __e1000_write_nvm_srwr(struct e1000_hw *hw, u16 offset, u16 words,
+				  u16 *data);
+STATIC s32 e1000_pool_flash_update_done_i225(struct e1000_hw *hw);
+STATIC s32 e1000_valid_led_default_i225(struct e1000_hw *hw, u16 *data);
+
+/**
+ *  e1000_init_nvm_params_i225 - Init NVM func ptrs.
+ *  @hw: pointer to the HW structure
+ **/
+STATIC s32 e1000_init_nvm_params_i225(struct e1000_hw *hw)
+{
+	struct e1000_nvm_info *nvm = &hw->nvm;
+	u32 eecd = E1000_READ_REG(hw, E1000_EECD);
+	u16 size;
+
+	DEBUGFUNC("e1000_init_nvm_params_i225");
+
+	size = (u16)((eecd & E1000_EECD_SIZE_EX_MASK) >>
+		     E1000_EECD_SIZE_EX_SHIFT);
+	/*
+	 * Added to a constant, "size" becomes the left-shift value
+	 * for setting word_size.
+	 */
+	size += NVM_WORD_SIZE_BASE_SHIFT;
+
+	/* Just in case size is out of range, cap it to the largest
+	 * EEPROM size supported
+	 */
+	if (size > 15)
+		size = 15;
+
+	nvm->word_size = 1 << size;
+	nvm->opcode_bits = 8;
+	nvm->delay_usec = 1;
+	nvm->type = e1000_nvm_eeprom_spi;
+
+
+	nvm->page_size = eecd & E1000_EECD_ADDR_BITS ? 32 : 8;
+	nvm->address_bits = eecd & E1000_EECD_ADDR_BITS ?
+			    16 : 8;
+
+	if (nvm->word_size == (1 << 15))
+		nvm->page_size = 128;
+
+	nvm->ops.acquire = e1000_acquire_nvm_i225;
+	nvm->ops.release = e1000_release_nvm_i225;
+	nvm->ops.valid_led_default = e1000_valid_led_default_i225;
+	if (e1000_get_flash_presence_i225(hw)) {
+		hw->nvm.type = e1000_nvm_flash_hw;
+		nvm->ops.read    = e1000_read_nvm_srrd_i225;
+		nvm->ops.write   = e1000_write_nvm_srwr_i225;
+		nvm->ops.validate = e1000_validate_nvm_checksum_i225;
+		nvm->ops.update   = e1000_update_nvm_checksum_i225;
+	} else {
+		hw->nvm.type = e1000_nvm_none;
+		nvm->ops.write    = e1000_null_write_nvm;
+		nvm->ops.validate = e1000_null_ops_generic;
+		nvm->ops.update   = e1000_null_ops_generic;
+	}
+
+	return E1000_SUCCESS;
+}
 
 /**
  *  e1000_init_mac_params_i225 - Init MAC func ptrs.
@@ -15,6 +81,7 @@ STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw);
 STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw)
 {
 	struct e1000_mac_info *mac = &hw->mac;
+	struct e1000_dev_spec_i225 *dev_spec = &hw->dev_spec._i225;
 
 	DEBUGFUNC("e1000_init_mac_params_i225");
 
@@ -38,8 +105,13 @@ STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw)
 	mac->ops.check_for_link = e1000_check_for_copper_link_generic;
 	/* link info */
 	mac->ops.get_link_up_info = e1000_get_speed_and_duplex_copper_generic;
+	/* acquire SW_FW sync */
+	mac->ops.acquire_swfw_sync = e1000_acquire_swfw_sync_i225;
+	/* release SW_FW sync */
+	mac->ops.release_swfw_sync = e1000_release_swfw_sync_i225;
 
 	/* Allow a single clear of the SW semaphore on I225 */
+	dev_spec->clear_semaphore_once = true;
 	mac->ops.setup_physical_interface = e1000_setup_copper_link_i225;
 
 	/* Set if part includes ASF firmware */
@@ -103,6 +175,8 @@ STATIC s32 e1000_init_phy_params_i225(struct e1000_hw *hw)
 		goto out;
 
 	E1000_WRITE_REG(hw, E1000_CTRL_EXT, ctrl_ext);
+	phy->ops.read_reg = e1000_read_phy_reg_gpy;
+	phy->ops.write_reg = e1000_write_phy_reg_gpy;
 
 	ret_val = e1000_get_phy_id(hw);
 
@@ -177,6 +251,118 @@ STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw)
 	return ret_val;
 }
 
+/* e1000_acquire_nvm_i225 - Request for access to EEPROM
+ * @hw: pointer to the HW structure
+ *
+ * Acquire the necessary semaphores for exclusive access to the EEPROM.
+ * Set the EEPROM access request bit and wait for EEPROM access grant bit.
+ * Return successful if access grant bit set, else clear the request for
+ * EEPROM access and return -E1000_ERR_NVM (-1).
+ */
+STATIC s32 e1000_acquire_nvm_i225(struct e1000_hw *hw)
+{
+	s32 ret_val;
+
+	DEBUGFUNC("e1000_acquire_nvm_i225");
+
+	ret_val = e1000_acquire_swfw_sync_i225(hw, E1000_SWFW_EEP_SM);
+
+	return ret_val;
+}
+
+/* e1000_release_nvm_i225 - Release exclusive access to EEPROM
+ * @hw: pointer to the HW structure
+ *
+ * Stop any current commands to the EEPROM and clear the EEPROM request bit,
+ * then release the semaphores acquired.
+ */
+STATIC void e1000_release_nvm_i225(struct e1000_hw *hw)
+{
+	DEBUGFUNC("e1000_release_nvm_i225");
+
+	e1000_release_swfw_sync_i225(hw, E1000_SWFW_EEP_SM);
+}
+
+/* e1000_acquire_swfw_sync_i225 - Acquire SW/FW semaphore
+ * @hw: pointer to the HW structure
+ * @mask: specifies which semaphore to acquire
+ *
+ * Acquire the SW/FW semaphore to access the PHY or NVM.  The mask
+ * will also specify which port we're acquiring the lock for.
+ */
+s32 e1000_acquire_swfw_sync_i225(struct e1000_hw *hw, u16 mask)
+{
+	u32 swfw_sync;
+	u32 swmask = mask;
+	u32 fwmask = mask << 16;
+	s32 ret_val = E1000_SUCCESS;
+	s32 i = 0, timeout = 200; /* FIXME: find real value to use here */
+
+	DEBUGFUNC("e1000_acquire_swfw_sync_i225");
+
+	while (i < timeout) {
+		if (e1000_get_hw_semaphore_i225(hw)) {
+			ret_val = -E1000_ERR_SWFW_SYNC;
+			goto out;
+		}
+
+		swfw_sync = E1000_READ_REG(hw, E1000_SW_FW_SYNC);
+		if (!(swfw_sync & (fwmask | swmask)))
+			break;
+
+		/* Firmware currently using resource (fwmask)
+		 * or other software thread using resource (swmask)
+		 */
+		e1000_put_hw_semaphore_generic(hw);
+		msec_delay_irq(5);
+		i++;
+	}
+
+	if (i == timeout) {
+		DEBUGOUT("Driver can't access resource, SW_FW_SYNC timeout.\n");
+		ret_val = -E1000_ERR_SWFW_SYNC;
+		goto out;
+	}
+
+	swfw_sync |= swmask;
+	E1000_WRITE_REG(hw, E1000_SW_FW_SYNC, swfw_sync);
+
+	e1000_put_hw_semaphore_generic(hw);
+
+out:
+	return ret_val;
+}
+
+/* e1000_release_swfw_sync_i225 - Release SW/FW semaphore
+ * @hw: pointer to the HW structure
+ * @mask: specifies which semaphore to acquire
+ *
+ * Release the SW/FW semaphore used to access the PHY or NVM.  The mask
+ * will also specify which port we're releasing the lock for.
+ */
+void e1000_release_swfw_sync_i225(struct e1000_hw *hw, u16 mask)
+{
+	u32 swfw_sync;
+
+	DEBUGFUNC("e1000_release_swfw_sync_i225");
+
+	/* Releasing the resource requires first getting the HW semaphore.
+	 * If we fail to get the semaphore, there is nothing we can do,
+	 * except log an error and quit. We are not allowed to hang here
+	 * indefinitely, as it may cause denial of service or system crash.
+	 */
+	if (e1000_get_hw_semaphore_i225(hw) != E1000_SUCCESS) {
+		DEBUGOUT("Failed to release SW_FW_SYNC.\n");
+		return;
+	}
+
+	swfw_sync = E1000_READ_REG(hw, E1000_SW_FW_SYNC);
+	swfw_sync &= ~(u32)mask;
+	E1000_WRITE_REG(hw, E1000_SW_FW_SYNC, swfw_sync);
+
+	e1000_put_hw_semaphore_generic(hw);
+}
+
 /*
  * e1000_setup_copper_link_i225 - Configure copper link settings
  * @hw: pointer to the HW structure
@@ -207,6 +393,520 @@ s32 e1000_setup_copper_link_i225(struct e1000_hw *hw)
 	return ret_val;
 }
 
+/* e1000_get_hw_semaphore_i225 - Acquire hardware semaphore
+ * @hw: pointer to the HW structure
+ *
+ * Acquire the HW semaphore to access the PHY or NVM
+ */
+STATIC s32 e1000_get_hw_semaphore_i225(struct e1000_hw *hw)
+{
+	u32 swsm;
+	s32 timeout = E1000_SWSM_TIMEOUT;
+	s32 i = 0;
+
+	DEBUGFUNC("e1000_get_hw_semaphore_i225");
+
+	/* Get the SW semaphore */
+	while (i < timeout) {
+		swsm = E1000_READ_REG(hw, E1000_SWSM);
+		if (!(swsm & E1000_SWSM_SMBI))
+			break;
+
+		usec_delay(50);
+		i++;
+	}
+
+	if (i == timeout) {
+		/* In rare circumstances, the SW semaphore may already be held
+		 * unintentionally. Clear the semaphore once before giving up.
+		 */
+		if (hw->dev_spec._i225.clear_semaphore_once) {
+			hw->dev_spec._i225.clear_semaphore_once = false;
+			e1000_put_hw_semaphore_generic(hw);
+			for (i = 0; i < timeout; i++) {
+				swsm = E1000_READ_REG(hw, E1000_SWSM);
+				if (!(swsm & E1000_SWSM_SMBI))
+					break;
+
+				usec_delay(50);
+			}
+		}
+
+		/* If we do not have the semaphore here, we have to give up. */
+		if (i == timeout) {
+			DEBUGOUT("Driver can't access device -\n");
+			DEBUGOUT("SMBI bit is set.\n");
+			return -E1000_ERR_NVM;
+		}
+	}
+
+	/* Get the FW semaphore. */
+	for (i = 0; i < timeout; i++) {
+		swsm = E1000_READ_REG(hw, E1000_SWSM);
+		E1000_WRITE_REG(hw, E1000_SWSM, swsm | E1000_SWSM_SWESMBI);
+
+		/* Semaphore acquired if bit latched */
+		if (E1000_READ_REG(hw, E1000_SWSM) & E1000_SWSM_SWESMBI)
+			break;
+
+		usec_delay(50);
+	}
+
+	if (i == timeout) {
+		/* Release semaphores */
+		e1000_put_hw_semaphore_generic(hw);
+		DEBUGOUT("Driver can't access the NVM\n");
+		return -E1000_ERR_NVM;
+	}
+
+	return E1000_SUCCESS;
+}
+
+/* e1000_read_nvm_srrd_i225 - Reads Shadow Ram using EERD register
+ * @hw: pointer to the HW structure
+ * @offset: offset of word in the Shadow Ram to read
+ * @words: number of words to read
+ * @data: word read from the Shadow Ram
+ *
+ * Reads a 16 bit word from the Shadow Ram using the EERD register.
+ * Uses necessary synchronization semaphores.
+ */
+s32 e1000_read_nvm_srrd_i225(struct e1000_hw *hw, u16 offset, u16 words,
+			     u16 *data)
+{
+	s32 status = E1000_SUCCESS;
+	u16 i, count;
+
+	DEBUGFUNC("e1000_read_nvm_srrd_i225");
+
+	/* We cannot hold synchronization semaphores for too long,
+	 * because of forceful takeover procedure. However it is more efficient
+	 * to read in bursts than synchronizing access for each word.
+	 */
+	for (i = 0; i < words; i += E1000_EERD_EEWR_MAX_COUNT) {
+		count = (words - i) / E1000_EERD_EEWR_MAX_COUNT > 0 ?
+			E1000_EERD_EEWR_MAX_COUNT : (words - i);
+		if (hw->nvm.ops.acquire(hw) == E1000_SUCCESS) {
+			status = e1000_read_nvm_eerd(hw, offset, count,
+						     data + i);
+			hw->nvm.ops.release(hw);
+		} else {
+			status = E1000_ERR_SWFW_SYNC;
+		}
+
+		if (status != E1000_SUCCESS)
+			break;
+	}
+
+	return status;
+}
+
+/* e1000_write_nvm_srwr_i225 - Write to Shadow RAM using EEWR
+ * @hw: pointer to the HW structure
+ * @offset: offset within the Shadow RAM to be written to
+ * @words: number of words to write
+ * @data: 16 bit word(s) to be written to the Shadow RAM
+ *
+ * Writes data to Shadow RAM at offset using EEWR register.
+ *
+ * If e1000_update_nvm_checksum is not called after this function , the
+ * data will not be committed to FLASH and also Shadow RAM will most likely
+ * contain an invalid checksum.
+ *
+ * If error code is returned, data and Shadow RAM may be inconsistent - buffer
+ * partially written.
+ */
+s32 e1000_write_nvm_srwr_i225(struct e1000_hw *hw, u16 offset, u16 words,
+			      u16 *data)
+{
+	s32 status = E1000_SUCCESS;
+	u16 i, count;
+
+	DEBUGFUNC("e1000_write_nvm_srwr_i225");
+
+	/* We cannot hold synchronization semaphores for too long,
+	 * because of forceful takeover procedure. However it is more efficient
+	 * to write in bursts than synchronizing access for each word.
+	 */
+	for (i = 0; i < words; i += E1000_EERD_EEWR_MAX_COUNT) {
+		count = (words - i) / E1000_EERD_EEWR_MAX_COUNT > 0 ?
+			E1000_EERD_EEWR_MAX_COUNT : (words - i);
+		if (hw->nvm.ops.acquire(hw) == E1000_SUCCESS) {
+			status = __e1000_write_nvm_srwr(hw, offset, count,
+							data + i);
+			hw->nvm.ops.release(hw);
+		} else {
+			status = E1000_ERR_SWFW_SYNC;
+		}
+
+		if (status != E1000_SUCCESS)
+			break;
+	}
+
+	return status;
+}
+
+/* __e1000_write_nvm_srwr - Write to Shadow Ram using EEWR
+ * @hw: pointer to the HW structure
+ * @offset: offset within the Shadow Ram to be written to
+ * @words: number of words to write
+ * @data: 16 bit word(s) to be written to the Shadow Ram
+ *
+ * Writes data to Shadow Ram at offset using EEWR register.
+ *
+ * If e1000_update_nvm_checksum is not called after this function , the
+ * Shadow Ram will most likely contain an invalid checksum.
+ */
+STATIC s32 __e1000_write_nvm_srwr(struct e1000_hw *hw, u16 offset, u16 words,
+				  u16 *data)
+{
+	struct e1000_nvm_info *nvm = &hw->nvm;
+	u32 i, k, eewr = 0;
+	u32 attempts = 100000;
+	s32 ret_val = E1000_SUCCESS;
+
+	DEBUGFUNC("__e1000_write_nvm_srwr");
+
+	/* A check for invalid values:  offset too large, too many words,
+	 * too many words for the offset, and not enough words.
+	 */
+	if ((offset >= nvm->word_size) || (words > (nvm->word_size - offset)) ||
+	    (words == 0)) {
+		DEBUGOUT("nvm parameter(s) out of bounds\n");
+		ret_val = -E1000_ERR_NVM;
+		goto out;
+	}
+
+	for (i = 0; i < words; i++) {
+		ret_val = -E1000_ERR_NVM;
+		eewr = ((offset + i) << E1000_NVM_RW_ADDR_SHIFT) |
+			(data[i] << E1000_NVM_RW_REG_DATA) |
+			E1000_NVM_RW_REG_START;
+
+		E1000_WRITE_REG(hw, E1000_SRWR, eewr);
+
+		for (k = 0; k < attempts; k++) {
+			if (E1000_NVM_RW_REG_DONE &
+			    E1000_READ_REG(hw, E1000_SRWR)) {
+				ret_val = E1000_SUCCESS;
+				break;
+			}
+			usec_delay(5);
+		}
+
+		if (ret_val != E1000_SUCCESS) {
+			DEBUGOUT("Shadow RAM write EEWR timed out\n");
+			break;
+		}
+	}
+
+out:
+	return ret_val;
+}
+
+/* e1000_validate_nvm_checksum_i225 - Validate EEPROM checksum
+ * @hw: pointer to the HW structure
+ *
+ * Calculates the EEPROM checksum by reading/adding each word of the EEPROM
+ * and then verifies that the sum of the EEPROM is equal to 0xBABA.
+ */
+s32 e1000_validate_nvm_checksum_i225(struct e1000_hw *hw)
+{
+	s32 status = E1000_SUCCESS;
+	s32 (*read_op_ptr)(struct e1000_hw *, u16, u16, u16 *);
+
+	DEBUGFUNC("e1000_validate_nvm_checksum_i225");
+
+	if (hw->nvm.ops.acquire(hw) == E1000_SUCCESS) {
+		/* Replace the read function with semaphore grabbing with
+		 * the one that skips this for a while.
+		 * We have semaphore taken already here.
+		 */
+		read_op_ptr = hw->nvm.ops.read;
+		hw->nvm.ops.read = e1000_read_nvm_eerd;
+
+		status = e1000_validate_nvm_checksum_generic(hw);
+
+		/* Revert original read operation. */
+		hw->nvm.ops.read = read_op_ptr;
+
+		hw->nvm.ops.release(hw);
+	} else {
+		status = E1000_ERR_SWFW_SYNC;
+	}
+
+	return status;
+}
+
+/* e1000_update_nvm_checksum_i225 - Update EEPROM checksum
+ * @hw: pointer to the HW structure
+ *
+ * Updates the EEPROM checksum by reading/adding each word of the EEPROM
+ * up to the checksum.  Then calculates the EEPROM checksum and writes the
+ * value to the EEPROM. Next commit EEPROM data onto the Flash.
+ */
+s32 e1000_update_nvm_checksum_i225(struct e1000_hw *hw)
+{
+	s32 ret_val;
+	u16 checksum = 0;
+	u16 i, nvm_data;
+
+	DEBUGFUNC("e1000_update_nvm_checksum_i225");
+
+	/* Read the first word from the EEPROM. If this times out or fails, do
+	 * not continue or we could be in for a very long wait while every
+	 * EEPROM read fails
+	 */
+	ret_val = e1000_read_nvm_eerd(hw, 0, 1, &nvm_data);
+	if (ret_val != E1000_SUCCESS) {
+		DEBUGOUT("EEPROM read failed\n");
+		goto out;
+	}
+
+	if (hw->nvm.ops.acquire(hw) == E1000_SUCCESS) {
+		/* Do not use hw->nvm.ops.write, hw->nvm.ops.read
+		 * because we do not want to take the synchronization
+		 * semaphores twice here.
+		 */
+
+		for (i = 0; i < NVM_CHECKSUM_REG; i++) {
+			ret_val = e1000_read_nvm_eerd(hw, i, 1, &nvm_data);
+			if (ret_val) {
+				hw->nvm.ops.release(hw);
+				DEBUGOUT("NVM Read Error while updating\n");
+				DEBUGOUT("checksum.\n");
+				goto out;
+			}
+			checksum += nvm_data;
+		}
+		checksum = (u16)NVM_SUM - checksum;
+		ret_val = __e1000_write_nvm_srwr(hw, NVM_CHECKSUM_REG, 1,
+						 &checksum);
+		if (ret_val != E1000_SUCCESS) {
+			hw->nvm.ops.release(hw);
+			DEBUGOUT("NVM Write Error while updating checksum.\n");
+			goto out;
+		}
+
+		hw->nvm.ops.release(hw);
+
+		ret_val = e1000_update_flash_i225(hw);
+	} else {
+		ret_val = E1000_ERR_SWFW_SYNC;
+	}
+out:
+	return ret_val;
+}
+
+/* e1000_get_flash_presence_i225 - Check if flash device is detected.
+ * @hw: pointer to the HW structure
+ */
+bool e1000_get_flash_presence_i225(struct e1000_hw *hw)
+{
+	u32 eec = 0;
+	bool ret_val = false;
+
+	DEBUGFUNC("e1000_get_flash_presence_i225");
+
+	eec = E1000_READ_REG(hw, E1000_EECD);
+
+	if (eec & E1000_EECD_FLASH_DETECTED_I225)
+		ret_val = true;
+
+	return ret_val;
+}
+
+/* e1000_set_flsw_flash_burst_counter_i225 - sets FLSW NVM Burst
+ * Counter in FLSWCNT register.
+ *
+ * @hw: pointer to the HW structure
+ * @burst_counter: size in bytes of the Flash burst to read or write
+ */
+s32 e1000_set_flsw_flash_burst_counter_i225(struct e1000_hw *hw,
+					    u32 burst_counter)
+{
+	s32 ret_val = E1000_SUCCESS;
+
+	DEBUGFUNC("e1000_set_flsw_flash_burst_counter_i225");
+
+	/* Validate input data */
+	if (burst_counter < E1000_I225_SHADOW_RAM_SIZE) {
+		/* Write FLSWCNT - burst counter */
+		E1000_WRITE_REG(hw, E1000_I225_FLSWCNT, burst_counter);
+	} else {
+		ret_val = E1000_ERR_INVALID_ARGUMENT;
+	}
+
+	return ret_val;
+}
+
+/* e1000_write_erase_flash_command_i225 - write/erase to a sector
+ * region on a given address.
+ *
+ * @hw: pointer to the HW structure
+ * @opcode: opcode to be used for the write command
+ * @address: the offset to write into the FLASH image
+ */
+s32 e1000_write_erase_flash_command_i225(struct e1000_hw *hw, u32 opcode,
+					 u32 address)
+{
+	u32 flswctl = 0;
+	s32 timeout = E1000_NVM_GRANT_ATTEMPTS;
+	s32 ret_val = E1000_SUCCESS;
+
+	DEBUGFUNC("e1000_write_erase_flash_command_i225");
+
+	flswctl = E1000_READ_REG(hw, E1000_I225_FLSWCTL);
+	/* Polling done bit on FLSWCTL register */
+	while (timeout) {
+		if (flswctl & E1000_FLSWCTL_DONE)
+			break;
+		usec_delay(5);
+		flswctl = E1000_READ_REG(hw, E1000_I225_FLSWCTL);
+		timeout--;
+	}
+
+	if (!timeout) {
+		DEBUGOUT("Flash transaction was not done\n");
+		return -E1000_ERR_NVM;
+	}
+
+	/* Build and issue command on FLSWCTL register */
+	flswctl = address | opcode;
+	E1000_WRITE_REG(hw, E1000_I225_FLSWCTL, flswctl);
+
+	/* Check if issued command is valid on FLSWCTL register */
+	flswctl = E1000_READ_REG(hw, E1000_I225_FLSWCTL);
+	if (!(flswctl & E1000_FLSWCTL_CMDV)) {
+		DEBUGOUT("Write flash command failed\n");
+		ret_val = E1000_ERR_INVALID_ARGUMENT;
+	}
+
+	return ret_val;
+}
+
+/* e1000_update_flash_i225 - Commit EEPROM to the flash
+ * if fw_valid_bit is set, FW is active. setting FLUPD bit in EEC
+ * register makes the FW load the internal shadow RAM into the flash.
+ * Otherwise, fw_valid_bit is 0. if FL_SECU.block_prtotected_sw = 0
+ * then FW is not active so the SW is responsible shadow RAM dump.
+ *
+ * @hw: pointer to the HW structure
+ */
+s32 e1000_update_flash_i225(struct e1000_hw *hw)
+{
+	u16 current_offset_data = 0;
+	u32 block_sw_protect = 1;
+	u16 base_address = 0x0;
+	u32 i, fw_valid_bit;
+	u16 current_offset;
+	s32 ret_val = 0;
+	u32 flup;
+
+	DEBUGFUNC("e1000_update_flash_i225");
+
+	block_sw_protect = E1000_READ_REG(hw, E1000_I225_FLSECU) &
+					  E1000_FLSECU_BLK_SW_ACCESS_I225;
+	fw_valid_bit = E1000_READ_REG(hw, E1000_FWSM) &
+				      E1000_FWSM_FW_VALID_I225;
+	if (fw_valid_bit) {
+		ret_val = e1000_pool_flash_update_done_i225(hw);
+		if (ret_val == -E1000_ERR_NVM) {
+			DEBUGOUT("Flash update time out\n");
+			goto out;
+		}
+
+		flup = E1000_READ_REG(hw, E1000_EECD) | E1000_EECD_FLUPD_I225;
+		E1000_WRITE_REG(hw, E1000_EECD, flup);
+
+		ret_val = e1000_pool_flash_update_done_i225(hw);
+		if (ret_val == E1000_SUCCESS)
+			DEBUGOUT("Flash update complete\n");
+		else
+			DEBUGOUT("Flash update time out\n");
+	} else if (!block_sw_protect) {
+		/* FW is not active and security protection is disabled.
+		 * therefore, SW is in charge of shadow RAM dump.
+		 * Check which sector is valid. if sector 0 is valid,
+		 * base address remains 0x0. otherwise, sector 1 is
+		 * valid and it's base address is 0x1000
+		 */
+		if (E1000_READ_REG(hw, E1000_EECD) & E1000_EECD_SEC1VAL_I225)
+			base_address = 0x1000;
+
+		/* Valid sector erase */
+		ret_val = e1000_write_erase_flash_command_i225(hw,
+						  E1000_I225_ERASE_CMD_OPCODE,
+						  base_address);
+		if (!ret_val) {
+			DEBUGOUT("Sector erase failed\n");
+			goto out;
+		}
+
+		current_offset = base_address;
+
+		/* Write */
+		for (i = 0; i < E1000_I225_SHADOW_RAM_SIZE / 2; i++) {
+			/* Set burst write length */
+			ret_val = e1000_set_flsw_flash_burst_counter_i225(hw,
+									  0x2);
+			if (ret_val != E1000_SUCCESS)
+				break;
+
+			/* Set address and opcode */
+			ret_val = e1000_write_erase_flash_command_i225(hw,
+						E1000_I225_WRITE_CMD_OPCODE,
+						2 * current_offset);
+			if (ret_val != E1000_SUCCESS)
+				break;
+
+			ret_val = e1000_read_nvm_eerd(hw, current_offset,
+						      1, &current_offset_data);
+			if (ret_val) {
+				DEBUGOUT("Failed to read from EEPROM\n");
+				goto out;
+			}
+
+			/* Write CurrentOffseData to FLSWDATA register */
+			E1000_WRITE_REG(hw, E1000_I225_FLSWDATA,
+					current_offset_data);
+			current_offset++;
+
+			/* Wait till operation has finished */
+			ret_val = e1000_poll_eerd_eewr_done(hw,
+						E1000_NVM_POLL_READ);
+			if (ret_val)
+				break;
+
+			usec_delay(1000);
+		}
+	}
+out:
+	return ret_val;
+}
+
+/* e1000_pool_flash_update_done_i225 - Pool FLUDONE status.
+ * @hw: pointer to the HW structure
+ */
+s32 e1000_pool_flash_update_done_i225(struct e1000_hw *hw)
+{
+	s32 ret_val = -E1000_ERR_NVM;
+	u32 i, reg;
+
+	DEBUGFUNC("e1000_pool_flash_update_done_i225");
+
+	for (i = 0; i < E1000_FLUDONE_ATTEMPTS; i++) {
+		reg = E1000_READ_REG(hw, E1000_EECD);
+		if (reg & E1000_EECD_FLUDONE_I225) {
+			ret_val = E1000_SUCCESS;
+			break;
+		}
+		usec_delay(5);
+	}
+
+	return ret_val;
+}
+
 /* e1000_init_function_pointers_i225 - Init func ptrs.
  * @hw: pointer to the HW structure
  *
@@ -216,8 +916,44 @@ void e1000_init_function_pointers_i225(struct e1000_hw *hw)
 {
 	e1000_init_mac_ops_generic(hw);
 	e1000_init_phy_ops_generic(hw);
+	e1000_init_nvm_ops_generic(hw);
 	hw->mac.ops.init_params = e1000_init_mac_params_i225;
+	hw->nvm.ops.init_params = e1000_init_nvm_params_i225;
 	hw->phy.ops.init_params = e1000_init_phy_params_i225;
+}
+
+/* e1000_valid_led_default_i225 - Verify a valid default LED config
+ * @hw: pointer to the HW structure
+ * @data: pointer to the NVM (EEPROM)
+ *
+ * Read the EEPROM for the current default LED configuration.  If the
+ * LED configuration is not valid, set to a valid LED configuration.
+ */
+STATIC s32 e1000_valid_led_default_i225(struct e1000_hw *hw, u16 *data)
+{
+	s32 ret_val;
+
+	DEBUGFUNC("e1000_valid_led_default_i225");
+
+	ret_val = hw->nvm.ops.read(hw, NVM_ID_LED_SETTINGS, 1, data);
+	if (ret_val) {
+		DEBUGOUT("NVM Read Error\n");
+		goto out;
+	}
+
+	if (*data == ID_LED_RESERVED_0000 || *data == ID_LED_RESERVED_FFFF) {
+		switch (hw->phy.media_type) {
+		case e1000_media_type_internal_serdes:
+			*data = ID_LED_DEFAULT_I225_SERDES;
+			break;
+		case e1000_media_type_copper:
+		default:
+			*data = ID_LED_DEFAULT_I225;
+			break;
+		}
+	}
+out:
+	return ret_val;
 }
 
 /* e1000_get_cfg_done_i225 - Read config done bit

@@ -86,6 +86,8 @@ s32  e1000_phy_force_speed_duplex_82577(struct e1000_hw *hw);
 s32  e1000_get_cable_length_82577(struct e1000_hw *hw);
 s32  e1000_write_phy_reg_gs40g(struct e1000_hw *hw, u32 offset, u16 data);
 s32  e1000_read_phy_reg_gs40g(struct e1000_hw *hw, u32 offset, u16 *data);
+s32  e1000_write_phy_reg_gpy(struct e1000_hw *hw, u32 offset, u16 data);
+s32  e1000_read_phy_reg_gpy(struct e1000_hw *hw, u32 offset, u16 *data);
 s32 e1000_read_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 *data);
 s32 e1000_write_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 data,
 			     bool line_override);
@@ -131,6 +133,10 @@ s32 e1000_write_xmdio_reg(struct e1000_hw *hw, u16 addr, u8 dev_addr,
 #define E1000_I225_PHPM_ULP		0x0400 /* Ultra Low-Power Mode */
 #define E1000_I225_PHPM_DIS_2500	0x0800 /* Disable 2.5G globally */
 #define E1000_I225_PHPM_DIS_2500_D3	0x1000 /* Disable 2.5G in D3 */
+/* GPY211 - I225 defines */
+#define GPY_MMD_MASK			0xFFFF0000
+#define GPY_MMD_SHIFT			16
+#define GPY_REG_MASK			0x0000FFFF
 /* BM/HV Specific Registers */
 #define BM_PORT_CTRL_PAGE		769
 #define BM_WUC_PAGE			800

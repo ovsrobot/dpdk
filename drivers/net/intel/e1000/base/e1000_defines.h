@@ -1055,6 +1055,15 @@
 /* Firmware code revision field word offset*/
 #define E1000_I210_FW_VER_OFFSET	328
 
+#define E1000_EECD_FLUPD_I225		0x00800000 /* Update FLASH */
+#define E1000_EECD_FLUDONE_I225		0x04000000 /* Update FLASH done */
+#define E1000_EECD_FLASH_DETECTED_I225	0x00080000 /* FLASH detected */
+#define E1000_FLUDONE_ATTEMPTS		20000
+#define E1000_EERD_EEWR_MAX_COUNT	512 /* buffered EEPROM words rw */
+#define E1000_EECD_SEC1VAL_I225		0x02000000 /* Sector One Valid */
+#define E1000_FLSECU_BLK_SW_ACCESS_I225	0x00000004 /* Block SW access */
+#define E1000_FWSM_FW_VALID_I225	0x8000 /* FW valid bit */
+
 #define E1000_NVM_RW_REG_DATA	16  /* Offset to data in NVM read/write regs */
 #define E1000_NVM_RW_REG_DONE	2   /* Offset to READ/WRITE done bit */
 #define E1000_NVM_RW_REG_START	1   /* Start operation */
@@ -1481,6 +1490,37 @@
 #define E1000_TXPB0S_SIZE_I210_MASK	0x0000003F /* Tx packet buffer 0 size */
 #define I210_RXPBSIZE_DEFAULT		0x000000A2 /* RXPBSIZE default */
 #define I210_TXPBSIZE_DEFAULT		0x04000014 /* TXPBSIZE default */
+
+#define E1000_STM_OPCODE		0xDB00
+#define E1000_EEPROM_FLASH_SIZE_WORD	0x11
+#define INVM_DWORD_TO_RECORD_TYPE(invm_dword) \
+	(u8)((invm_dword) & 0x7)
+#define INVM_DWORD_TO_WORD_ADDRESS(invm_dword) \
+	(u8)(((invm_dword) & 0x0000FE00) >> 9)
+#define INVM_DWORD_TO_WORD_DATA(invm_dword) \
+	(u16)(((invm_dword) & 0xFFFF0000) >> 16)
+#define E1000_INVM_RSA_KEY_SHA256_DATA_SIZE_IN_DWORDS	8
+#define E1000_INVM_CSR_AUTOLOAD_DATA_SIZE_IN_DWORDS	1
+#define E1000_INVM_ULT_BYTES_SIZE		8
+#define E1000_INVM_RECORD_SIZE_IN_BYTES	4
+#define E1000_INVM_VER_FIELD_ONE		0x1FF8
+#define E1000_INVM_VER_FIELD_TWO		0x7FE000
+#define E1000_INVM_IMGTYPE_FIELD		0x1F800000
+
+#define E1000_INVM_MAJOR_MASK	0x3F0
+#define E1000_INVM_MINOR_MASK	0xF
+#define E1000_INVM_MAJOR_SHIFT	4
+
+/* PLL Defines */
+#define E1000_PCI_PMCSR		0x44
+#define E1000_PCI_PMCSR_D3		0x03
+#define E1000_MAX_PLL_TRIES		5
+#define E1000_PHY_PLL_UNCONF		0xFF
+#define E1000_PHY_PLL_FREQ_PAGE	0xFC0000
+#define E1000_PHY_PLL_FREQ_REG		0x000E
+#define E1000_INVM_DEFAULT_AL		0x202F
+#define E1000_INVM_AUTOLOAD		0x0A
+#define E1000_INVM_PLL_WO_VAL		0x0010
 
 
 /* Proxy Filter Control */

@@ -381,6 +381,15 @@ enum e1000_serdes_link_state {
 	e1000_serdes_link_forced_up
 };
 
+enum e1000_invm_structure_type {
+	e1000_invm_unitialized_structure		= 0x00,
+	e1000_invm_word_autoload_structure		= 0x01,
+	e1000_invm_csr_autoload_structure		= 0x02,
+	e1000_invm_phy_register_autoload_structure	= 0x03,
+	e1000_invm_rsa_key_sha256_structure		= 0x04,
+	e1000_invm_invalidated_structure		= 0x0f,
+};
+
 #define __le16 u16
 #define __le32 u32
 #define __le64 u64
@@ -996,6 +1005,16 @@ struct e1000_dev_spec_vf {
 	u32 v2p_mailbox;
 };
 
+struct e1000_dev_spec_i225 {
+	bool global_device_reset;
+	bool eee_disable;
+	bool clear_semaphore_once;
+	bool module_plugged;
+	u8 media_port;
+	bool mas_capable;
+	u32 mtu;
+};
+
 struct e1000_hw {
 	void *back;
 
@@ -1020,6 +1039,7 @@ struct e1000_hw {
 		struct e1000_dev_spec_ich8lan ich8lan;
 		struct e1000_dev_spec_82575 _82575;
 		struct e1000_dev_spec_vf vf;
+		struct e1000_dev_spec_i225 _i225;
 	} dev_spec;
 
 	u16 device_id;
