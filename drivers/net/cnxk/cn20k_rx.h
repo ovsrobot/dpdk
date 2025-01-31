@@ -616,7 +616,6 @@ cn20k_nix_flush_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t pk
 	if (flags & NIX_RX_OFFLOAD_SECURITY_F) {
 		sa_base = rxq->sa_base;
 		sa_base &= ~(ROC_NIX_INL_SA_BASE_ALIGN - 1);
-		ROC_LMT_BASE_ID_GET(lbase, lmt_id);
 	}
 
 	while (packets < nb_pkts) {
@@ -755,15 +754,14 @@ cn20k_nix_recv_pkts_vector(void *args, struct rte_mbuf **mbufs, uint16_t pkts, c
 	uint64x2_t rearm3 = vdupq_n_u64(mbuf_initializer);
 	struct rte_mbuf *mbuf0, *mbuf1, *mbuf2, *mbuf3;
 	uint8_t loff = 0, lnum = 0, shft = 0;
+	uint64_t lbase, laddr, buf_sz;
 	uint8x16_t f0, f1, f2, f3;
 	uint16_t lmt_id, d_off;
-	uint64_t lbase, laddr;
 	uintptr_t sa_base = 0;
 	uint16_t packets = 0;
 	uint16_t pkts_left;
 	uint32_t head;
 	uintptr_t cq0;
-	uint64_t buf_sz = rxq->mp_buf_sz;
 
 	if (!(flags & NIX_RX_VWQE_F)) {
 		lookup_mem = rxq->lookup_mem;
@@ -814,6 +812,7 @@ cn20k_nix_recv_pkts_vector(void *args, struct rte_mbuf **mbufs, uint16_t pkts, c
 			d_off = rxq->data_off;
 			sa_base = rxq->sa_base;
 			lbase = rxq->lmt_base;
+			buf_sz = rxq->mp_buf_sz;
 		}
 
 		sa_base &= ~(ROC_NIX_INL_SA_BASE_ALIGN - 1);
