@@ -271,6 +271,8 @@
 				 (0x054E0 + ((_i - 16) * 8)))
 #define E1000_RAH(_i)		(((_i) <= 15) ? (0x05404 + ((_i) * 8)) : \
 				 (0x054E4 + ((_i - 16) * 8)))
+#define E1000_VLANPQF		0x055B0  /* VLAN Priority Queue Filter VLANPQF */
+
 #define E1000_SHRAL(_i)		(0x05438 + ((_i) * 8))
 #define E1000_SHRAH(_i)		(0x0543C + ((_i) * 8))
 #define E1000_IP4AT_REG(_i)	(0x05840 + ((_i) * 8))
@@ -492,6 +494,17 @@
 #define E1000_IP6AT	0x05880  /* IPv6 Address Table - RW Array */
 #define E1000_WUPL	0x05900  /* Wakeup Packet Length - RW */
 #define E1000_WUPM	0x05A00  /* Wakeup Packet Memory - RO A */
+#define E1000_WUPM_EXT	0x0B800  /* Wakeup Packet Memory Extended - RO Array */
+#define E1000_WUFC_EXT	0x0580C  /* Wakeup Filter Control Extended - RW */
+#define E1000_WUS_EXT	0x05814  /* Wakeup Status Extended - RW1C */
+#define E1000_FHFTSL	0x05804  /* Flex Filter Indirect Table Select - RW */
+#define E1000_PROXYFCEX	0x05590  /* Proxy Filter Control Extended - RW1C */
+#define E1000_PROXYEXS	0x05594  /* Proxy Extended Status - RO */
+#define E1000_WFUTPF	0x05500  /* Wake Flex UDP TCP Port Filter - RW Array */
+#define E1000_RFUTPF	0x05580  /* Range Flex UDP TCP Port Filter - RW */
+#define E1000_RWPFC	0x05584  /* Range Wake Port Filter Control - RW */
+#define E1000_WFUTPS	0x05588  /* Wake Filter UDP TCP Status - RW1C */
+#define E1000_WCS	0x0558C  /* Wake Control Status - RW1C */
 /* MSI-X Table Register Descriptions */
 #define E1000_PBACL	0x05B68  /* MSIx PBA Clear - Read/Write 1's to clear */
 #define E1000_FFLT	0x05F00  /* Flexible Filter Length Table - RW Array */
@@ -603,6 +616,14 @@
 #define E1000_RXMTRL	0x0B634 /* Time sync Rx EtherType and Msg Type - RW */
 #define E1000_RXUDP	0x0B638 /* Time Sync Rx UDP Port - RW */
 
+#define E1000_QBVCYCLET	0x331C
+#define E1000_QBVCYCLET_S 0x3320
+#define E1000_STQT(_n)	(0x3324 + 0x4 * (_n))
+#define E1000_ENDQT(_n)	(0x3334 + 0x4 * (_n))
+#define E1000_TXQCTL(_n)	(0x3344 + 0x4 * (_n))
+#define E1000_BASET_L	0x3314
+#define E1000_BASET_H	0x3318
+
 /* Filtering Registers */
 #define E1000_SAQF(_n)	(0x05980 + (4 * (_n))) /* Source Address Queue Fltr */
 #define E1000_DAQF(_n)	(0x059A0 + (4 * (_n))) /* Dest Address Queue Fltr */
@@ -700,5 +721,14 @@
 
 #define E1000_LTRMINV	0x5BB0 /* LTR Minimum Value */
 #define E1000_LTRMAXV	0x5BB4 /* LTR Maximum Value */
+
+/* IEEE 1588 TIMESYNCH */
+#define E1000_TRGTTIML0	0x0B644 /* Target Time Register 0 Low  - RW */
+#define E1000_TRGTTIMH0	0x0B648 /* Target Time Register 0 High - RW */
+#define E1000_TRGTTIML1	0x0B64C /* Target Time Register 1 Low  - RW */
+#define E1000_TRGTTIMH1	0x0B650 /* Target Time Register 1 High - RW */
+#define E1000_FREQOUT0	0x0B654 /* Frequency Out 0 Control Register - RW */
+#define E1000_FREQOUT1	0x0B658 /* Frequency Out 1 Control Register - RW */
+#define E1000_TSSDP	0x0003C  /* Time Sync SDP Configuration Register - RW */
 
 #endif
