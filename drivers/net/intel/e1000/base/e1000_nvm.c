@@ -30,7 +30,7 @@ void e1000_init_nvm_ops_generic(struct e1000_hw *hw)
 }
 
 /**
- *  e1000_null_nvm_read - No-op function, return 0
+ *  e1000_null_read_nvm - No-op function, return 0
  *  @hw: pointer to the HW structure
  *  @a: dummy variable
  *  @b: dummy variable

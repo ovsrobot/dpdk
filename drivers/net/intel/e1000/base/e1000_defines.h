@@ -1117,9 +1117,7 @@
 /* NVM Addressing bits based on type 0=small, 1=large */
 #define E1000_EECD_ADDR_BITS	0x00000400
 #define E1000_EECD_TYPE		0x00002000 /* NVM Type (1-SPI, 0-Microwire) */
-#ifndef E1000_NVM_GRANT_ATTEMPTS
 #define E1000_NVM_GRANT_ATTEMPTS	1000 /* NVM # attempts to gain grant */
-#endif
 #define E1000_EECD_AUTO_RD		0x00000200  /* NVM Auto Read done */
 #define E1000_EECD_SIZE_EX_MASK		0x00007800  /* NVM Size */
 #define E1000_EECD_SIZE_EX_SHIFT	11
