@@ -697,6 +697,7 @@
 #define E1000_O2BGPTC	0x08FE4 /* OS2BMC packets received by BMC */
 #define E1000_O2BSPC	0x0415C /* OS2BMC packets transmitted by host */
 
-
+#define E1000_LTRMINV	0x5BB0 /* LTR Minimum Value */
+#define E1000_LTRMAXV	0x5BB4 /* LTR Maximum Value */
 
 #endif

@@ -102,7 +102,8 @@ STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw)
 	mac->ops.init_hw = e1000_init_hw_i225;
 	/* link setup */
 	mac->ops.setup_link = e1000_setup_link_generic;
-	mac->ops.check_for_link = e1000_check_for_copper_link_generic;
+	/* check for link */
+	mac->ops.check_for_link = e1000_check_for_link_i225;
 	/* link info */
 	mac->ops.get_link_up_info = e1000_get_speed_and_duplex_copper_generic;
 	/* acquire SW_FW sync */
@@ -903,6 +904,191 @@ s32 e1000_pool_flash_update_done_i225(struct e1000_hw *hw)
 		}
 		usec_delay(5);
 	}
+
+	return ret_val;
+}
+
+/* e1000_set_ltr_i225 - Set Latency Tolerance Reporting thresholds.
+ * @hw: pointer to the HW structure
+ * @link: bool indicating link status
+ *
+ * Set the LTR thresholds based on the link speed (Mbps), EEE, and DMAC
+ * settings, otherwise specify that there is no LTR requirement.
+ */
+s32 e1000_set_ltr_i225(struct e1000_hw *hw, bool link)
+{
+	u16 speed, duplex;
+	u32 tw_system, ltrc, ltrv, ltr_min, ltr_max, scale_min, scale_max;
+	s32 size;
+
+	DEBUGFUNC("e1000_set_ltr_i225");
+
+	/* If we do not have link, LTR thresholds are zero. */
+	if (link) {
+		hw->mac.ops.get_link_up_info(hw, &speed, &duplex);
+
+		/* Check if using copper interface with EEE enabled or if the
+		 * link speed is 10 Mbps.
+		 */
+		if ((hw->phy.media_type == e1000_media_type_copper) &&
+		    !(hw->dev_spec._i225.eee_disable) &&
+		     (speed != SPEED_10)) {
+			/* EEE enabled, so send LTRMAX threshold. */
+			ltrc = E1000_READ_REG(hw, E1000_LTRC) |
+				E1000_LTRC_EEEMS_EN;
+			E1000_WRITE_REG(hw, E1000_LTRC, ltrc);
+
+			/* Calculate tw_system (nsec). */
+			if (speed == SPEED_100) {
+				tw_system = ((E1000_READ_REG(hw, E1000_EEE_SU) &
+					     E1000_TW_SYSTEM_100_MASK) >>
+					     E1000_TW_SYSTEM_100_SHIFT) * 500;
+			} else {
+				tw_system = (E1000_READ_REG(hw, E1000_EEE_SU) &
+					     E1000_TW_SYSTEM_1000_MASK) * 500;
+				}
+		} else {
+			tw_system = 0;
+			}
+
+		/* Get the Rx packet buffer size. */
+		size = E1000_READ_REG(hw, E1000_RXPBS) &
+			E1000_RXPBS_SIZE_I225_MASK;
+
+		/* Calculations vary based on DMAC settings. */
+		if (E1000_READ_REG(hw, E1000_DMACR) & E1000_DMACR_DMAC_EN) {
+			size -= (E1000_READ_REG(hw, E1000_DMACR) &
+				 E1000_DMACR_DMACTHR_MASK) >>
+				 E1000_DMACR_DMACTHR_SHIFT;
+			/* Convert size to bits. */
+			size *= 1024 * 8;
+		} else {
+			/* Convert size to bytes, subtract the MTU, and then
+			 * convert the size to bits.
+			 */
+			size *= 1024;
+			size -= hw->dev_spec._i225.mtu;
+			size *= 8;
+		}
+
+		if (size < 0) {
+			DEBUGOUT1("Invalid effective Rx buffer size %d\n",
+				  size);
+			return -E1000_ERR_CONFIG;
+		}
+
+		/* Calculate the thresholds. Since speed is in Mbps, simplify
+		 * the calculation by multiplying size/speed by 1000 for result
+		 * to be in nsec before dividing by the scale in nsec. Set the
+		 * scale such that the LTR threshold fits in the register.
+		 */
+		ltr_min = (1000 * size) / speed;
+		ltr_max = ltr_min + tw_system;
+		scale_min = (ltr_min / 1024) < 1024 ? E1000_LTRMINV_SCALE_1024 :
+			    E1000_LTRMINV_SCALE_32768;
+		scale_max = (ltr_max / 1024) < 1024 ? E1000_LTRMAXV_SCALE_1024 :
+			    E1000_LTRMAXV_SCALE_32768;
+		ltr_min /= scale_min == E1000_LTRMINV_SCALE_1024 ? 1024 : 32768;
+		ltr_min -= 1;
+		ltr_max /= scale_max == E1000_LTRMAXV_SCALE_1024 ? 1024 : 32768;
+		ltr_max -= 1;
+
+		/* Only write the LTR thresholds if they differ from before. */
+		ltrv = E1000_READ_REG(hw, E1000_LTRMINV);
+		if (ltr_min != (ltrv & E1000_LTRMINV_LTRV_MASK)) {
+			ltrv = E1000_LTRMINV_LSNP_REQ | ltr_min |
+			      (scale_min << E1000_LTRMINV_SCALE_SHIFT);
+			E1000_WRITE_REG(hw, E1000_LTRMINV, ltrv);
+		}
+
+		ltrv = E1000_READ_REG(hw, E1000_LTRMAXV);
+		if (ltr_max != (ltrv & E1000_LTRMAXV_LTRV_MASK)) {
+			ltrv = E1000_LTRMAXV_LSNP_REQ | ltr_max |
+			      (scale_max << E1000_LTRMAXV_SCALE_SHIFT);
+			E1000_WRITE_REG(hw, E1000_LTRMAXV, ltrv);
+		}
+	}
+
+	return E1000_SUCCESS;
+}
+
+/* e1000_check_for_link_i225 - Check for link
+ * @hw: pointer to the HW structure
+ *
+ * Checks to see of the link status of the hardware has changed.  If a
+ * change in link status has been detected, then we read the PHY registers
+ * to get the current speed/duplex if link exists.
+ */
+s32 e1000_check_for_link_i225(struct e1000_hw *hw)
+{
+	struct e1000_mac_info *mac = &hw->mac;
+	s32 ret_val;
+	bool link = false;
+
+	DEBUGFUNC("e1000_check_for_link_i225");
+
+	/* We only want to go out to the PHY registers to see if
+	 * Auto-Neg has completed and/or if our link status has
+	 * changed.  The get_link_status flag is set upon receiving
+	 * a Link Status Change or Rx Sequence Error interrupt.
+	 */
+	if (!mac->get_link_status)
+		goto out;
+
+	/* First we want to see if the MII Status Register reports
+	 * link.  If so, then we want to get the current speed/duplex
+	 * of the PHY.
+	 */
+	ret_val = e1000_phy_has_link_generic(hw, 1, 0, &link);
+	if (ret_val)
+		goto out;
+
+	if (!link)
+		goto out; /* No link detected */
+
+	/* First we want to see if the MII Status Register reports
+	 * link.  If so, then we want to get the current speed/duplex
+	 * of the PHY.
+	 */
+	ret_val = e1000_phy_has_link_generic(hw, 1, 0, &link);
+	if (ret_val)
+		goto out;
+
+	if (!link)
+		goto out; /* No link detected */
+
+	mac->get_link_status = false;
+
+	/* Check if there was DownShift, must be checked
+	 * immediately after link-up
+	 */
+	e1000_check_downshift_generic(hw);
+
+	/* If we are forcing speed/duplex, then we simply return since
+	 * we have already determined whether we have link or not.
+	 */
+	if (!mac->autoneg)
+		goto out;
+
+	/* Auto-Neg is enabled.  Auto Speed Detection takes care
+	 * of MAC speed/duplex configuration.  So we only need to
+	 * configure Collision Distance in the MAC.
+	 */
+	mac->ops.config_collision_dist(hw);
+
+	/* Configure Flow Control now that Auto-Neg has completed.
+	 * First, we need to restore the desired flow control
+	 * settings because we may have had to re-autoneg with a
+	 * different link partner.
+	 */
+	ret_val = e1000_config_fc_after_link_up_generic(hw);
+	if (ret_val)
+		DEBUGOUT("Error configuring flow control\n");
+out:
+	/* Now that we are aware of our link settings, we can set the LTR
+	 * thresholds.
+	 */
+	ret_val = e1000_set_ltr_i225(hw, link);
 
 	return ret_val;
 }
