@@ -76,6 +76,13 @@ New Features
 
   * Added support for virtual function (VF).
 
+* **Added support of AVX2 instructions on IDPF.**
+
+   Support for AVX2 instructions in IDPF single queue RX and TX path
+   added.The single queue model processes all packets in order within
+   one RX queue, while the split queue model separates packet data and
+   metadata into different queues for parallel processing and improved performance.
+
 
 Removed Items
 -------------
