@@ -342,6 +342,14 @@ if cc.get_id() == 'intel'
         warning_flags += '-diag-disable=@0@'.format(i)
     endforeach
 endif
+
+no_wvla_cflag = []
+if cc.has_argument('-Wvla')
+    if not is_windows
+        no_wvla_cflag = '-Wno-vla'
+    endif
+endif
+
 foreach arg: warning_flags
     if cc.has_argument(arg)
         add_project_arguments(arg, language: 'c')
