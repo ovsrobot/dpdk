@@ -29,9 +29,8 @@
 #define le32_to_cpu	rte_le_to_cpu_32
 #define le16_to_cpu	rte_le_to_cpu_16
 
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
 #define GENMASK(h, l) \
-		(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+		(((~0UL) << (l)) & (~0UL >> (RTE_BITS_PER_LONG - 1 - (h))))
 
 struct mc_cmd_header {
 	union {
