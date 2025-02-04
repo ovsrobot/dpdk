@@ -4193,8 +4193,6 @@ s32 e1000_write_phy_reg_gpy(struct e1000_hw *hw, u32 offset, u16 data)
 		if (ret_val)
 			return ret_val;
 		ret_val = e1000_write_phy_reg_mdic(hw, offset, data);
-		if (ret_val)
-			return ret_val;
 		hw->phy.ops.release(hw);
 	} else {
 		ret_val = e1000_write_xmdio_reg(hw, (u16)offset, dev_addr,
@@ -4227,8 +4225,6 @@ s32 e1000_read_phy_reg_gpy(struct e1000_hw *hw, u32 offset, u16 *data)
 		if (ret_val)
 			return ret_val;
 		ret_val = e1000_read_phy_reg_mdic(hw, offset, data);
-		if (ret_val)
-			return ret_val;
 		hw->phy.ops.release(hw);
 	} else {
 		ret_val = e1000_read_xmdio_reg(hw, (u16)offset, dev_addr,
