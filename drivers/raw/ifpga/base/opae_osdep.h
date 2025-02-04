@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#include <rte_common.h>
+
 #ifdef RTE_LIB_EAL
 #include "osdep_rte/osdep_generic.h"
 #else
@@ -30,12 +32,6 @@ struct uuid {
 };
 
 #ifndef LINUX_MACROS
-#ifndef BITS_PER_LONG
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
-#endif
-#ifndef BITS_PER_LONG_LONG
-#define BITS_PER_LONG_LONG  (__SIZEOF_LONG_LONG__ * 8)
-#endif
 #ifndef BIT
 #define BIT(a) (1UL << (a))
 #endif /* BIT */
@@ -43,11 +39,11 @@ struct uuid {
 #define BIT_ULL(a) (1ULL << (a))
 #endif /* BIT_ULL */
 #ifndef GENMASK
-#define GENMASK(h, l)	(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#define GENMASK(h, l)	(((~0UL) << (l)) & (~0UL >> (RTE_BITS_PER_LONG - 1 - (h))))
 #endif /* GENMASK */
 #ifndef GENMASK_ULL
 #define GENMASK_ULL(h, l) \
-	(((~0ULL) << (l)) & (~0ULL >> (BITS_PER_LONG_LONG - 1 - (h))))
+	(((~0ULL) << (l)) & (~0ULL >> (RTE_BITS_PER_LONG_LONG - 1 - (h))))
 #endif /* GENMASK_ULL */
 #endif /* LINUX_MACROS */
 
