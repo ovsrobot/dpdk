@@ -340,8 +340,15 @@ void e1000_release_swfw_sync_i225(struct e1000_hw *hw, u16 mask)
 
 	DEBUGFUNC("e1000_release_swfw_sync_i225");
 
-	while (e1000_get_hw_semaphore_i225(hw) != E1000_SUCCESS)
-		; /* Empty */
+	/* Releasing the resource requires first getting the HW semaphore.
+	 * If we fail to get the semaphore, there is nothing we can do,
+	 * except log an error and quit. We are not allowed to hang here
+	 * indefinitely, as it may cause denial of service or system crash.
+	 */
+	if (e1000_get_hw_semaphore_i225(hw) != E1000_SUCCESS) {
+		DEBUGOUT("Failed to release SW_FW_SYNC.\n");
+		return;
+	}
 
 	swfw_sync = E1000_READ_REG(hw, E1000_SW_FW_SYNC);
 	swfw_sync &= ~mask;
