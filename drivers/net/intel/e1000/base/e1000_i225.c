@@ -997,7 +997,7 @@ static s32 e1000_set_ltr_i225(struct e1000_hw *hw, bool link)
 		ltrv = E1000_READ_REG(hw, E1000_LTRMAXV);
 		if (ltr_max != (ltrv & E1000_LTRMAXV_LTRV_MASK)) {
 			ltrv = E1000_LTRMAXV_LSNP_REQ | ltr_max |
-			      (scale_min << E1000_LTRMAXV_SCALE_SHIFT);
+			      (scale_max << E1000_LTRMAXV_SCALE_SHIFT);
 			E1000_WRITE_REG(hw, E1000_LTRMAXV, ltrv);
 		}
 	}
