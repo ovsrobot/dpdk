@@ -395,7 +395,7 @@ s32 e1000_setup_copper_link_i225(struct e1000_hw *hw)
 static s32 e1000_get_hw_semaphore_i225(struct e1000_hw *hw)
 {
 	u32 swsm;
-	s32 timeout = hw->nvm.word_size + 1;
+	s32 timeout = E1000_SWSM_TIMEOUT;
 	s32 i = 0;
 
 	DEBUGFUNC("e1000_get_hw_semaphore_i225");
