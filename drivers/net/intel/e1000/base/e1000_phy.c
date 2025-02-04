@@ -3568,6 +3568,7 @@ void e1000_power_up_phy_copper(struct e1000_hw *hw)
 	hw->phy.ops.read_reg(hw, PHY_CONTROL, &mii_reg);
 	mii_reg &= ~MII_CR_POWER_DOWN;
 	hw->phy.ops.write_reg(hw, PHY_CONTROL, mii_reg);
+	usec_delay(300);
 }
 
 /**
