@@ -345,6 +345,7 @@ endif
 
 no_wvla_cflag = []
 if cc.has_argument('-Wvla')
+    add_project_arguments('-Wvla', language: 'c')
     if not is_windows
         no_wvla_cflag = '-Wno-vla'
     endif
