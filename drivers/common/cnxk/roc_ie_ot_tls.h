@@ -13,8 +13,9 @@
 #define ROC_IE_OT_TLS_LOG_MIN_AR_WIN_SIZE_M1 5
 
 /* u64 array size to fit anti replay window bits */
-#define ROC_IE_OT_TLS_AR_WINBITS_SZ                                                                \
-	(PLT_ALIGN_CEIL(ROC_IE_OT_TLS_AR_WIN_SIZE_MAX, BITS_PER_LONG_LONG) / BITS_PER_LONG_LONG)
+#define ROC_IE_OT_TLS_AR_WINBITS_SZ                                               \
+	(PLT_ALIGN_CEIL(ROC_IE_OT_TLS_AR_WIN_SIZE_MAX, PLT_BITS_PER_LONG_LONG) /  \
+	PLT_BITS_PER_LONG_LONG)
 
 /* CN10K TLS opcodes */
 #define ROC_IE_OT_TLS_MAJOR_OP_RECORD_ENC   0x16UL
