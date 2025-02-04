@@ -982,7 +982,9 @@ static s32 e1000_set_ltr_i225(struct e1000_hw *hw, bool link)
 		scale_max = (ltr_max / 1024) < 1024 ? E1000_LTRMAXV_SCALE_1024 :
 			    E1000_LTRMAXV_SCALE_32768;
 		ltr_min /= scale_min == E1000_LTRMINV_SCALE_1024 ? 1024 : 32768;
+		ltr_min -= 1;
 		ltr_max /= scale_max == E1000_LTRMAXV_SCALE_1024 ? 1024 : 32768;
+		ltr_max -= 1;
 
 		/* Only write the LTR thresholds if they differ from before. */
 		ltrv = E1000_READ_REG(hw, E1000_LTRMINV);
