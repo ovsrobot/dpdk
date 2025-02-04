@@ -14,9 +14,8 @@
 #define RETRIES	5
 
 #ifndef GENMASK
-#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
 #define GENMASK(h, l) \
-		(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+		(((~0UL) << (l)) & (~0UL >> (RTE_BITS_PER_LONG - 1 - (h))))
 #endif
 
 #define QDMA_CTRL_REGION_OFFSET 0
