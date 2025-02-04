@@ -43,11 +43,17 @@ void rte_dump_stack(void);
 #define rte_panic(...) rte_panic_(__func__, __VA_ARGS__, "dummy")
 #define rte_panic_(func, format, ...) __rte_panic(func, format "%.0s", __VA_ARGS__)
 
+/* RTE_ASSERT is optional checks that only get evaluted if RTE_ENABLE_ASSERT is enabled. */
 #ifdef RTE_ENABLE_ASSERT
 #define RTE_ASSERT(exp)	RTE_VERIFY(exp)
 #else
-#define RTE_ASSERT(exp) do {} while (0)
+#define RTE_ASSERT(exp)					\
+	/* Evaluate expression to trigger warnings */	\
+	do {						\
+		(void)sizeof((exp) ? 1 : 0);		\
+	} while (0)
 #endif
+
 #define	RTE_VERIFY(exp)	do {                                                  \
 	if (unlikely(!(exp)))                                                           \
 		rte_panic("line %d\tassert \"%s\" failed\n", __LINE__, #exp); \
