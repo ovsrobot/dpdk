@@ -66,4 +66,9 @@ __attribute__((section(".text.internal")))
 
 #endif
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __SIZEOF_LONG__		(sizeof(long))
+#define __SIZEOF_LONG_LONG__	(sizeof(long long))
+#endif
+
 #endif /* _RTE_COMPAT_H_ */
