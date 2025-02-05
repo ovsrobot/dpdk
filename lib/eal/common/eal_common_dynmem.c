@@ -510,7 +510,6 @@ eal_dynmem_calc_num_pages_per_socket(
 		/* if we didn't satisfy all memory requirements per socket */
 		if (memory[socket] > 0 &&
 				internal_conf->socket_mem[socket] != 0) {
-			/* to prevent icc errors */
 			requested = (unsigned int)(
 				internal_conf->socket_mem[socket] / 0x100000);
 			available = requested -

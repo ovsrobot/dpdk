@@ -116,8 +116,6 @@ class Compiler(StrEnum):
     #:
     clang = auto()
     #:
-    icc = auto()
-    #:
     msvc = auto()
 
 

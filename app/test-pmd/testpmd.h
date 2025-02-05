@@ -1292,10 +1292,6 @@ RTE_INIT(__##c) \
 	testpmd_add_driver_commands(&c); \
 }
 
-/*
- * Work-around of a compilation error with ICC on invocations of the
- * rte_be_to_cpu_16() function.
- */
 #ifdef __GCC__
 #define RTE_BE_TO_CPU_16(be_16_v)  rte_be_to_cpu_16((be_16_v))
 #define RTE_CPU_TO_BE_16(cpu_16_v) rte_cpu_to_be_16((cpu_16_v))
