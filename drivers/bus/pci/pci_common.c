@@ -84,7 +84,7 @@ pci_devargs_lookup(const struct rte_pci_addr *pci_addr)
 	struct rte_pci_addr addr;
 
 	RTE_EAL_DEVARGS_FOREACH("pci", devargs) {
-		devargs->bus->parse(devargs->name, &addr);
+		devargs->bus->parse(devargs->name, &addr, NULL);
 		if (!rte_pci_addr_cmp(pci_addr, &addr))
 			return devargs;
 	}
@@ -487,11 +487,14 @@ rte_pci_dump(FILE *f)
 }
 
 static int
-pci_parse(const char *name, void *addr)
+pci_parse(const char *name, void *addr, int *size)
 {
 	struct rte_pci_addr *out = addr;
 	struct rte_pci_addr pci_addr;
 	bool parse;
+
+	if (size != NULL)
+		*size = sizeof(struct rte_pci_addr);
 
 	parse = (rte_pci_addr_parse(name, &pci_addr) == 0);
 	if (parse && addr != NULL)

@@ -200,7 +200,7 @@ bus_can_parse(const struct rte_bus *bus, const void *_name)
 {
 	const char *name = _name;
 
-	return !(bus->parse && bus->parse(name, NULL) == 0);
+	return !(bus->parse && bus->parse(name, NULL, NULL) == 0);
 }
 
 struct rte_bus *

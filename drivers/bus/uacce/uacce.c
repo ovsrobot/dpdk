@@ -20,6 +20,7 @@
 #include <rte_errno.h>
 #include <rte_log.h>
 #include <rte_kvargs.h>
+#include <rte_string_fns.h>
 #include <bus_driver.h>
 
 #include "bus_uacce_driver.h"
@@ -529,15 +530,20 @@ uacce_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,  const void
 }
 
 static int
-uacce_parse(const char *name, void *addr)
+uacce_parse(const char *name, void *addr, int *size)
 {
-	const char **out = addr;
 	int ret;
 
 	ret = strncmp(name, UACCE_DEV_PREFIX, strlen(UACCE_DEV_PREFIX));
 
-	if (ret == 0 && addr)
-		*out = name;
+	if (ret != 0)
+		return ret;
+
+	if (size != NULL)
+		*size = strlen(name) + 1;
+
+	if (addr != NULL)
+		rte_strscpy(addr, name, strlen(name) + 1);
 
 	return ret;
 }

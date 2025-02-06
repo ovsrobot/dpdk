@@ -245,13 +245,16 @@ rte_vmbus_cleanup(void)
 }
 
 static int
-vmbus_parse(const char *name, void *addr)
+vmbus_parse(const char *name, void *addr, int *size)
 {
 	rte_uuid_t guid;
 	int ret;
 
+	if (size != NULL)
+		*size = sizeof(guid);
+
 	ret = rte_uuid_parse(name, guid);
-	if (ret == 0 && addr)
+	if (ret == 0 && addr != NULL)
 		memcpy(addr, &guid, sizeof(guid));
 
 	return ret;
@@ -269,7 +272,7 @@ vmbus_devargs_lookup(struct rte_vmbus_device *dev)
 	rte_uuid_t addr;
 
 	RTE_EAL_DEVARGS_FOREACH("vmbus", devargs) {
-		vmbus_parse(devargs->name, &addr);
+		vmbus_parse(devargs->name, &addr, NULL);
 
 		if (rte_uuid_compare(dev->device_id, addr) == 0)
 			return devargs;

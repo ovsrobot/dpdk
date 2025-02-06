@@ -459,9 +459,8 @@ ifpga_find_device(const struct rte_device *start,
 	return NULL;
 }
 static int
-ifpga_parse(const char *name, void *addr)
+ifpga_parse(const char *name, void *addr, int *size)
 {
-	int *out = addr;
 	struct rte_rawdev *rawdev = NULL;
 	char rawdev_name[RTE_RAWDEV_NAME_MAX_LEN];
 	char *c1 = NULL;
@@ -491,9 +490,14 @@ ifpga_parse(const char *name, void *addr)
 	rawdev = rte_rawdev_pmd_get_named_dev(rawdev_name);
 
 	if ((port < IFPGA_BUS_DEV_PORT_MAX) &&
-		rawdev &&
-		(addr != NULL))
-		*out = port;
+		rawdev) {
+		if (size != NULL)
+			*size = sizeof(port);
+
+		if (addr != NULL)
+			*(int *)addr = port;
+		}
+
 
 	if ((port < IFPGA_BUS_DEV_PORT_MAX) &&
 		rawdev)
