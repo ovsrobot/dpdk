@@ -12,3 +12,8 @@ DPDK_25 {
 
 	local: *;
 };
+
+DPDK_26 {
+	rte_net_crc_calc;
+	rte_net_crc_set_alg;
+} DPDK_25;

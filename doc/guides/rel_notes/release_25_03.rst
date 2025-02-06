@@ -132,6 +132,9 @@ API Changes
   but to enable/disable these drivers via Meson option requires use of the new paths.
   For example, ``-Denable_drivers=/net/i40e`` becomes ``-Denable_drivers=/net/intel/i40e``.
 
+* net: A thread/process-safe API was introduced. Old and new APIs share the same
+  function names, but the old one is versioned. Replaced functions are:
+  ``rte_net_crc_calc`` and ``rte_net_crc_set_alg``. The new one is ``rte_net_crc_free``.
 
 ABI Changes
 -----------
