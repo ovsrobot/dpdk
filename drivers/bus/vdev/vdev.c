@@ -113,7 +113,7 @@ rte_vdev_remove_custom_scan(rte_vdev_scan_callback callback, void *user_arg)
 }
 
 static int
-vdev_parse(const char *name, void *addr)
+vdev_find_driver(const char *name, void *addr)
 {
 	struct rte_vdev_driver **out = addr;
 	struct rte_vdev_driver *driver = NULL;
@@ -197,7 +197,7 @@ vdev_probe_all_drivers(struct rte_vdev_device *dev)
 	name = rte_vdev_device_name(dev);
 	VDEV_LOG(DEBUG, "Search driver to probe device %s", name);
 
-	if (vdev_parse(name, &driver))
+	if (vdev_find_driver(name, &driver))
 		return -1;
 
 	iova_mode = rte_eal_iova_mode();
@@ -230,6 +230,23 @@ find_vdev(const char *name)
 	}
 
 	return NULL;
+}
+
+static int
+vdev_parse(const char *name, void *addr, int *size)
+{
+	struct rte_vdev_driver *driver;
+
+	if (vdev_find_driver(name, &driver))
+		return 1;
+
+	if (size != NULL)
+		*size = strlen(name) + 1;
+
+	if (addr != NULL)
+		rte_strscpy(addr, name, strlen(name) + 1);
+
+	return 0;
 }
 
 static struct rte_devargs *
@@ -647,7 +664,7 @@ vdev_get_iommu_class(void)
 
 	TAILQ_FOREACH(dev, &vdev_device_list, next) {
 		name = rte_vdev_device_name(dev);
-		if (vdev_parse(name, &driver))
+		if (vdev_find_driver(name, &driver))
 			continue;
 
 		if (driver->drv_flags & RTE_VDEV_DRV_NEED_IOVA_AS_VA)
