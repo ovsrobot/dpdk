@@ -540,7 +540,7 @@ rte_pci_remove_device(struct rte_pci_device *pci_dev)
 
 static struct rte_device *
 pci_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		const void *data)
+		const struct rte_bus_address *data)
 {
 	const struct rte_pci_device *pstart;
 	struct rte_pci_device *pdev;

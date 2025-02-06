@@ -473,7 +473,8 @@ platform_bus_probe(void)
 }
 
 static struct rte_device *
-platform_bus_find_device(const struct rte_device *start, rte_dev_cmp_t cmp, const void *data)
+platform_bus_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
+		const struct rte_bus_address *data)
 {
 	struct rte_platform_device *pdev;
 

@@ -500,7 +500,7 @@ rte_cdx_unregister(struct rte_cdx_driver *driver)
 
 static struct rte_device *
 cdx_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		const void *data)
+		const struct rte_bus_address *data)
 {
 	const struct rte_cdx_device *cdx_start;
 	struct rte_cdx_device *cdx_dev;
@@ -613,9 +613,9 @@ cdx_get_iommu_class(void)
 
 static int
 cdx_dev_match(const struct rte_device *dev,
-		const void *_kvlist)
+		const struct rte_bus_address *_kvlist)
 {
-	const struct rte_kvargs *kvlist = _kvlist;
+	const struct rte_kvargs *kvlist = _kvlist->addr;
 	const char *key = cdx_params_keys[RTE_CDX_PARAM_NAME];
 	const char *name;
 
@@ -649,7 +649,11 @@ cdx_dev_iterate(const void *start,
 		}
 	}
 	find_device = rte_cdx_bus.bus.find_device;
-	dev = find_device(start, cdx_dev_match, kvargs);
+	struct rte_bus_address dev_addr = {
+		.addr = kvargs,
+		.size = sizeof(struct rte_kvargs),
+	};
+	dev = find_device(start, cdx_dev_match, &dev_addr);
 	rte_kvargs_free(kvargs);
 	return dev;
 }

@@ -300,7 +300,7 @@ rte_auxiliary_remove_device(struct rte_auxiliary_device *auxiliary_dev)
 
 static struct rte_device *
 auxiliary_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		      const void *data)
+		      const struct rte_bus_address *data)
 {
 	const struct rte_auxiliary_device *pstart;
 	struct rte_auxiliary_device *adev;

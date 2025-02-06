@@ -272,8 +272,12 @@ dev_uev_handler(__rte_unused void *param)
 				goto failure_handle_err;
 			}
 
+			const struct rte_bus_address dev_addr = {
+				.addr = uevent.devname,
+				.size = strlen(uevent.devname)
+			};
 			dev = bus->find_device(NULL, rte_cmp_dev_name,
-					       uevent.devname);
+					       &dev_addr);
 			if (dev == NULL) {
 				EAL_LOG(ERR, "Cannot find device (%s) on "
 					"bus (%s)", uevent.devname, busname);

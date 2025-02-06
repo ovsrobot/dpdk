@@ -497,7 +497,7 @@ rte_fslmc_probe(void)
 
 static struct rte_device *
 rte_fslmc_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		      const void *data)
+		      const struct rte_bus_address *data)
 {
 	const struct rte_dpaa2_device *dstart;
 	struct rte_dpaa2_device *dev;

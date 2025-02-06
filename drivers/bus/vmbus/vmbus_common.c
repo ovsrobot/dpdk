@@ -323,7 +323,7 @@ vmbus_remove_device(struct rte_vmbus_device *vmbus_dev)
 /* VMBUS doesn't support hotplug */
 static struct rte_device *
 vmbus_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		  const void *data)
+		  const struct rte_bus_address *data)
 {
 	struct rte_vmbus_device *dev;
 
