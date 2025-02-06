@@ -621,7 +621,7 @@ free:
 
 struct rte_device *
 rte_vdev_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		     const void *data)
+		     const struct rte_bus_address *data)
 {
 	const struct rte_vdev_device *vstart;
 	struct rte_vdev_device *dev;

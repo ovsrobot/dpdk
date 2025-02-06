@@ -70,7 +70,7 @@ typedef int (*rte_bus_probe_t)(void);
  */
 typedef struct rte_device *
 (*rte_bus_find_device_t)(const struct rte_device *start, rte_dev_cmp_t cmp,
-			 const void *data);
+			 const struct rte_bus_address *data);
 
 /**
  * Implementation specific probe function which is responsible for linking

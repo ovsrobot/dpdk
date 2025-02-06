@@ -1868,7 +1868,11 @@ ifpga_cfg_remove(struct rte_vdev_device *vdev)
 		args.port, args.bdf);
 	bus = rte_bus_find_by_name(RTE_STR(IFPGA_BUS_NAME));
 	if (bus) {
-		if (bus->find_device(NULL, rte_cmp_dev_name, dev_name)) {
+		struct rte_bus_address dev_addr = {
+			.addr = dev_name,
+			.size = RTE_RAWDEV_NAME_MAX_LEN
+		};
+		if (bus->find_device(NULL, rte_cmp_dev_name, &dev_addr)) {
 			ret = rte_eal_hotplug_remove(RTE_STR(IFPGA_BUS_NAME),
 				dev_name);
 		}

@@ -171,19 +171,24 @@ int rte_dev_is_probed(const struct rte_device *dev);
 int rte_eal_hotplug_add(const char *busname, const char *devname,
 			const char *drvargs);
 
+struct rte_bus_address {
+	const void *addr;
+	size_t size;
+};
+
 /**
  * General device name comparison. Will compare by using the specific bus
  * compare function or by comparing the names directly.
  *
  * @param dev
  *   Device handle.
- * @param name
- *   Name to compare against.
+ * @param addr
+ *   Address to compare against.
  * @return
- *   0 if the device matches the name. Nonzero otherwise.
+ *   0 if the device matches the address. Nonzero otherwise.
  */
 __rte_internal
-int rte_cmp_dev_name(const struct rte_device *dev, const void *name);
+int rte_cmp_dev_name(const struct rte_device *dev, const struct rte_bus_address *addr);
 
 /**
  * Add matching devices.
@@ -245,7 +250,7 @@ int rte_dev_remove(struct rte_device *dev);
  *   <0 if ordering is possible and the device is lower than the data.
  *   >0 if ordering is possible and the device is greater than the data.
  */
-typedef int (*rte_dev_cmp_t)(const struct rte_device *dev, const void *data);
+typedef int (*rte_dev_cmp_t)(const struct rte_device *dev, const struct rte_bus_address *data);
 
 #define RTE_PMD_EXPORT_NAME_ARRAY(n, idx) n##idx[]
 

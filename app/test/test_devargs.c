@@ -333,7 +333,12 @@ test_pci(struct rte_bus *pci_bus, const char *dev_name, const char *name2)
 
 	pci_dev->bus = pci_bus;
 
-	if (rte_cmp_dev_name(pci_dev, name2) != 0) {
+	struct rte_bus_address addr = {
+		.addr = name2,
+		.size = strlen(name2)
+	};
+
+	if (rte_cmp_dev_name(pci_dev, &addr) != 0) {
 		printf("rte_cmp_dev_name(%s, %s) device name (%s) not expected (%s)\n",
 			       pci_dev->name, name2, pci_dev->name, name2);
 		return -1;
@@ -350,20 +355,30 @@ test_vdev(struct rte_bus *vdev_bus, const char *dev_name, const char *name2)
 		return -1;
 	}
 
-	struct rte_device *vdev_dev = vdev_bus->find_device(NULL, rte_cmp_dev_name, dev_name);
+	struct rte_bus_address dev_addr = {
+		.addr = dev_name,
+		.size = strlen(dev_name)
+	};
+
+	struct rte_device *vdev_dev = vdev_bus->find_device(NULL, rte_cmp_dev_name, &dev_addr);
 	if (vdev_dev == NULL) {
 		printf("Cannot find %s vdev\n", dev_name);
 		rte_vdev_uninit(dev_name);
 		return -1;
 	}
-	int ret = rte_cmp_dev_name(vdev_dev, name2);
+
+	struct rte_bus_address dev_addr2 = {
+		.addr = name2,
+		.size = strlen(name2)
+	};
+	int ret = rte_cmp_dev_name(vdev_dev, &dev_addr2);
 	if (ret != 0) {
 		printf("rte_cmp_dev_name(%s, %s) device name (%s) not expected (%s)\n",
 			       vdev_dev->name, name2, vdev_dev->name, name2);
 		return -1;
 	}
 
-	if (vdev_dev != vdev_bus->find_device(NULL, rte_cmp_dev_name, name2)) {
+	if (vdev_dev != vdev_bus->find_device(NULL, rte_cmp_dev_name, &dev_addr2)) {
 		printf("rte_cmp_dev_name(%s, %s) device name (%s) not expected (%s)\n",
 			       vdev_dev->name, name2, vdev_dev->name, name2);
 		return -1;

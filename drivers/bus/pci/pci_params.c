@@ -41,9 +41,9 @@ pci_addr_kv_cmp(const char *key __rte_unused,
 
 static int
 pci_dev_match(const struct rte_device *dev,
-	      const void *_kvlist)
+	      const struct rte_bus_address *_kvlist)
 {
-	const struct rte_kvargs *kvlist = _kvlist;
+	const struct rte_kvargs *kvlist = _kvlist->addr;
 	const struct rte_pci_device *pdev;
 
 	if (kvlist == NULL)
@@ -76,7 +76,11 @@ rte_pci_dev_iterate(const void *start,
 		}
 	}
 	find_device = rte_pci_bus.bus.find_device;
-	dev = find_device(start, pci_dev_match, kvargs);
+	struct rte_bus_address dev_addr = {
+		.addr = kvargs,
+		.size = sizeof(struct rte_kvargs),
+	};
+	dev = find_device(start, pci_dev_match, &dev_addr);
 	rte_kvargs_free(kvargs);
 	return dev;
 }

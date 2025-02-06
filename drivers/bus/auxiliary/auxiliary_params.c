@@ -22,9 +22,9 @@ static const char * const auxiliary_params_keys[] = {
 
 static int
 auxiliary_dev_match(const struct rte_device *dev,
-	      const void *_kvlist)
+	      const struct rte_bus_address *_kvlist)
 {
-	const struct rte_kvargs *kvlist = _kvlist;
+	const struct rte_kvargs *kvlist = _kvlist->addr;
 	const char *key = auxiliary_params_keys[RTE_AUXILIARY_PARAM_NAME];
 	const char *name;
 
@@ -59,7 +59,11 @@ auxiliary_dev_iterate(const void *start,
 		}
 	}
 	find_device = auxiliary_bus.bus.find_device;
-	dev = find_device(start, auxiliary_dev_match, kvargs);
+	struct rte_bus_address dev_addr = {
+		.addr = kvargs,
+		.size = sizeof(struct rte_kvargs),
+	};
+	dev = find_device(start, auxiliary_dev_match, &dev_addr);
 	rte_kvargs_free(kvargs);
 	return dev;
 }

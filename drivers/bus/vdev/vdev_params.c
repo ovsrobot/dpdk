@@ -24,9 +24,9 @@ static const char * const vdev_params_keys[] = {
 
 static int
 vdev_dev_match(const struct rte_device *dev,
-	       const void *_kvlist)
+	       const struct rte_bus_address *_kvlist)
 {
-	const struct rte_kvargs *kvlist = _kvlist;
+	const struct rte_kvargs *kvlist = _kvlist->addr;
 	const char *key = vdev_params_keys[RTE_VDEV_PARAM_NAME];
 	const char *name;
 
@@ -58,7 +58,11 @@ rte_vdev_dev_iterate(const void *start,
 			return NULL;
 		}
 	}
-	dev = rte_vdev_find_device(start, vdev_dev_match, kvargs);
+	struct rte_bus_address dev_addr = {
+		.addr = kvargs,
+		.size = sizeof(struct rte_kvargs),
+	};
+	dev = rte_vdev_find_device(start, vdev_dev_match, &dev_addr);
 	rte_kvargs_free(kvargs);
 	return dev;
 }

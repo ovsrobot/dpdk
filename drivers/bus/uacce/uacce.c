@@ -508,7 +508,8 @@ uacce_unplug(struct rte_device *dev)
 }
 
 static struct rte_device *
-uacce_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,  const void *data)
+uacce_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
+		const struct rte_bus_address *data)
 {
 	const struct rte_uacce_device *uacce_start;
 	struct rte_uacce_device *uacce_dev;
@@ -549,10 +550,10 @@ uacce_parse(const char *name, void *addr, int *size)
 }
 
 static int
-uacce_dev_match(const struct rte_device *dev, const void *_kvlist)
+uacce_dev_match(const struct rte_device *dev, const struct rte_bus_address *_kvlist)
 {
 	const char *key = uacce_params_keys[RTE_UACCE_PARAM_NAME];
-	const struct rte_kvargs *kvlist = _kvlist;
+	const struct rte_kvargs *kvlist = _kvlist->addr;
 	const char *name;
 
 	/* no kvlist arg, all devices match. */
@@ -583,7 +584,11 @@ uacce_dev_iterate(const void *start, const char *str,
 		}
 	}
 	find_device = uacce_bus.bus.find_device;
-	dev = find_device(start, uacce_dev_match, kvargs);
+	struct rte_bus_address dev_addr = {
+		.addr = kvargs,
+		.size = sizeof(struct rte_kvargs),
+	};
+	dev = find_device(start, uacce_dev_match, &dev_addr);
 	rte_kvargs_free(kvargs);
 	return dev;
 }

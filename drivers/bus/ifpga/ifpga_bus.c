@@ -443,7 +443,7 @@ ifpga_unplug(struct rte_device *dev)
 
 static struct rte_device *
 ifpga_find_device(const struct rte_device *start,
-	rte_dev_cmp_t cmp, const void *data)
+	rte_dev_cmp_t cmp, const struct rte_bus_address *data)
 {
 	struct rte_afu_device *afu_dev;
 

@@ -45,7 +45,7 @@ struct dsa_bus;
 static int dsa_scan(void);
 static int dsa_probe(void);
 static struct rte_device *dsa_find_device(const struct rte_device *start,
-		rte_dev_cmp_t cmp,  const void *data);
+		rte_dev_cmp_t cmp,  const struct rte_bus_address *data);
 static enum rte_iova_mode dsa_get_iommu_class(void);
 static int dsa_addr_parse(const char *name, void *addr, int *size);
 
@@ -366,7 +366,7 @@ dsa_scan(void)
 
 static struct rte_device *
 dsa_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-			 const void *data)
+			 const struct rte_bus_address *data)
 {
 	struct rte_dsa_device *dev = TAILQ_FIRST(&dsa_bus.device_list);
 
