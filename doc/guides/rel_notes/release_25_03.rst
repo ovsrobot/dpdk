@@ -161,6 +161,11 @@ API Changes
   but to enable/disable these drivers via Meson option requires use of the new paths.
   For example, ``-Denable_drivers=/net/i40e`` becomes ``-Denable_drivers=/net/intel/i40e``.
 
+* net: Changed the API for CRC calculation to be thread safe.
+  An opaque context argument was introduced to the net CRC API containing
+  the algorithim type and length. This argument is added to
+  to ``rte_net_crc_calc``, ``rte_net_crc_set_alg`` and freed with ``rte_net_crc_free``.
+  These functions are versioned to retain binary compatiabilty until the next LTS release.
 
 ABI Changes
 -----------
