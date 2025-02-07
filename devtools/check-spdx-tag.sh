@@ -22,9 +22,9 @@ check_spdx() {
     git grep -L SPDX-License-Identifier -- \
 	':^.git*' ':^.mailmap' ':^.ci/*' \
 	':^README' ':^MAINTAINERS' ':^VERSION' ':^ABI_VERSION' \
-	':^*/Kbuild' ':^*/README*' \
+	':^*/README*' ':^*/.gitignore' \
 	':^license/' ':^config/' ':^buildtools/' ':^*/poetry.lock' \
-	':^kernel/linux/uapi/.gitignore' ':^kernel/linux/uapi/version' \
+	':^kernel/linux/uapi/version' \
 	':^*.cocci' ':^*.abignore' \
 	':^*.map' ':^*.ini' ':^*.data' ':^*.json' ':^*.cfg' ':^*.txt' \
 	':^*.svg' ':^*.png' \
