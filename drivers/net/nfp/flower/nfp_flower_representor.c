@@ -318,7 +318,7 @@ nfp_flower_repr_stats_get(struct rte_eth_dev *ethdev,
 	struct nfp_flower_representor *repr;
 
 	repr = ethdev->data->dev_private;
-	rte_memcpy(stats, &repr->repr_stats, sizeof(struct rte_eth_stats));
+	*stats = repr->repr_stats;
 
 	return 0;
 }
