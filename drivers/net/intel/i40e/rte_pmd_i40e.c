@@ -2961,8 +2961,7 @@ i40e_queue_region_get_all_info(struct i40e_pf *pf,
 {
 	struct i40e_queue_regions *info = &pf->queue_region;
 
-	rte_memcpy(regions_ptr, info,
-			sizeof(struct i40e_queue_regions));
+	*regions_ptr = *info;
 
 	return 0;
 }
