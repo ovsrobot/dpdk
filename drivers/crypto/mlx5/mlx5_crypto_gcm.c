@@ -554,7 +554,15 @@ mlx5_crypto_gcm_build_mbuf_chain_klms(struct mlx5_crypto_qp *qp,
 	uint32_t klm_n = 0;
 
 	/* mbuf seg num should be less than max_segs_num. */
-	MLX5_ASSERT(nb_segs <= qp->priv->max_segs_num);
+	if (nb_segs > qp->priv->max_segs_num) {
+		DRV_LOG(WARNING, "Segment count exceeds limit. "
+				"Current segments: %d, Maximum allowed: %d. "
+				"To resolve, either increase the segment size "
+				"or set a higher value for the devargs max_segs_num parameter.",
+			nb_segs, qp->priv->max_segs_num);
+		RTE_VERIFY(nb_segs <= qp->priv->max_segs_num);
+		return 0;
+	}
 	/* First mbuf needs to take the data offset. */
 	if (unlikely(_mlx5_crypto_gcm_umr_build_mbuf_klm(qp, mbuf, klm,
 		     op->sym->aead.data.offset, &remain_len) == UINT32_MAX)) {
