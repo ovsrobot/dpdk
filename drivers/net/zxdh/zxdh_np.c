@@ -3421,6 +3421,37 @@ zxdh_np_reg_read(uint32_t dev_id, uint32_t reg_no,
 }
 
 static uint32_t
+zxdh_np_reg_read32(uint32_t dev_id, uint32_t reg_no,
+	uint32_t m_offset, uint32_t n_offset, uint32_t *p_data)
+{
+	uint32_t rc = 0;
+	uint32_t addr = 0;
+	uint32_t reg_type = 0;
+	uint32_t reg_module = 0;
+	ZXDH_REG_T *p_reg_info = NULL;
+	uint32_t p_buff[ZXDH_REG_DATA_MAX] = {0};
+	uint32_t reg_real_no = 0;
+
+	p_reg_info = &g_dpp_reg_info[reg_no];
+	reg_module = p_reg_info->module_no;
+	reg_type = p_reg_info->flags;
+	reg_real_no = p_reg_info->reg_no;
+
+	addr = zxdh_np_reg_get_reg_addr(reg_no, m_offset, n_offset);
+
+	if (reg_module == DTB4K) {
+		rc = p_reg_info->p_read_fun(dev_id, addr, p_data);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "p_reg_info->p_read_fun");
+	} else {
+		rc = zxdh_np_agent_channel_reg_read(dev_id, reg_type, reg_real_no, 4, addr, p_buff);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_reg_read");
+		*p_data = p_buff[0];
+	}
+
+	return rc;
+}
+
+static uint32_t
 zxdh_np_dtb_queue_vm_info_get(uint32_t dev_id,
 		uint32_t queue_id,
 		ZXDH_DTB_QUEUE_VM_INFO_T *p_vm_info)
@@ -10675,6 +10706,319 @@ zxdh_np_dtb_hash_offline_delete(uint32_t dev_id,
 
 	rc = zxdh_np_dtb_hash_offline_zcam_delete(dev_id, queue_id, sdt_no);
 	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dtb_hash_offline_zcam_delete");
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_se_done_status_check(uint32_t dev_id, uint32_t reg_no, uint32_t pos)
+{
+	uint32_t rc = ZXDH_OK;
+
+	uint32_t data = 0;
+	uint32_t rd_cnt = 0;
+	uint32_t done_flag = 0;
+
+	while (!done_flag) {
+		rc = zxdh_np_reg_read32(dev_id, reg_no, 0, 0, &data);
+		if (rc != ZXDH_OK) {
+			PMD_DRV_LOG(ERR, " [ErrorCode:0x%x] !-- zxdh_np_reg_read32 Fail!", rc);
+			return rc;
+		}
+
+		done_flag = (data >> pos) & 0x1;
+
+		if (done_flag)
+			break;
+
+		if (rd_cnt > ZXDH_RD_CNT_MAX * ZXDH_RD_CNT_MAX)
+			return ZXDH_ERR;
+
+		rd_cnt++;
+	}
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
+						uint32_t base_addr,
+						uint32_t index,
+						uint32_t rd_mode,
+						uint32_t rd_clr_mode,
+						uint32_t *p_data)
+{
+	uint32_t rc = ZXDH_OK;
+	uint32_t i = 0;
+	uint32_t row_index = 0;
+	uint32_t col_index = 0;
+	uint32_t temp_data[4] = {0};
+	uint32_t *p_temp_data = NULL;
+	ZXDH_SMMU0_SMMU0_CPU_IND_CMD_T cpu_ind_cmd = {0};
+	ZXDH_MUTEX_T *p_ind_mutex = NULL;
+
+	rc = zxdh_np_dev_opr_mutex_get(dev_id, ZXDH_DEV_MUTEX_T_SMMU0, &p_ind_mutex);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dev_opr_mutex_get");
+
+	rc = zxdh_np_comm_mutex_lock(p_ind_mutex);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_lock");
+
+	rc = zxdh_np_se_done_status_check(dev_id, ZXDH_SMMU0_SMMU0_WR_ARB_CPU_RDYR, 0);
+	ZXDH_COMM_CHECK_DEV_RC_UNLOCK(dev_id, rc, "zxdh_np_se_done_status_check", p_ind_mutex);
+
+	if (rd_clr_mode == ZXDH_RD_MODE_HOLD) {
+		cpu_ind_cmd.cpu_ind_rw = ZXDH_SE_OPR_RD;
+		cpu_ind_cmd.cpu_ind_rd_mode = ZXDH_RD_MODE_HOLD;
+		cpu_ind_cmd.cpu_req_mode = ZXDH_ERAM128_OPR_128b;
+
+		switch (rd_mode) {
+		case ZXDH_ERAM128_OPR_128b:
+		{
+			if ((0xFFFFFFFF - (base_addr)) < (index)) {
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				PMD_DRV_LOG(ERR, "%s : index 0x%x is invalid!", __func__, index);
+				return ZXDH_PAR_CHK_INVALID_INDEX;
+			}
+			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = (index << 7) & ZXDH_ERAM128_BADDR_MASK;
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_64b:
+		{
+			if ((base_addr + (index >> 1)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = (index << 6) & ZXDH_ERAM128_BADDR_MASK;
+			col_index = index & 0x1;
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_32b:
+		{
+			if ((base_addr + (index >> 2)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = (index << 5) & ZXDH_ERAM128_BADDR_MASK;
+			col_index = index & 0x3;
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_1b:
+		{
+			if ((base_addr + (index >> 7)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = index & ZXDH_ERAM128_BADDR_MASK;
+			col_index = index & 0x7F;
+			break;
+		}
+		}
+
+		cpu_ind_cmd.cpu_ind_addr = ((base_addr << 7) & ZXDH_ERAM128_BADDR_MASK) + row_index;
+	} else {
+		cpu_ind_cmd.cpu_ind_rw = ZXDH_SE_OPR_RD;
+		cpu_ind_cmd.cpu_ind_rd_mode = ZXDH_RD_MODE_CLEAR;
+
+		switch (rd_mode) {
+		case ZXDH_ERAM128_OPR_128b:
+		{
+			if ((0xFFFFFFFF - (base_addr)) < (index)) {
+				PMD_DRV_LOG(ERR, "%s : index 0x%x is invalid!", __func__, index);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_PAR_CHK_INVALID_INDEX;
+			}
+
+			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = (index << 7);
+			cpu_ind_cmd.cpu_req_mode = ZXDH_ERAM128_OPR_128b;
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_64b:
+		{
+			if ((base_addr + (index >> 1)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = (index << 6);
+			cpu_ind_cmd.cpu_req_mode = 2;
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_32b:
+		{
+			if ((base_addr + (index >> 2)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
+				rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+				ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+				return ZXDH_ERR;
+			}
+
+			row_index = (index << 5);
+			cpu_ind_cmd.cpu_req_mode = 1;
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_1b:
+		{
+			PMD_DRV_LOG(ERR, "rd_clr_mode[%d] or rd_mode[%d] error! ",
+				rd_clr_mode, rd_mode);
+			rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+			ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+			RTE_ASSERT(0);
+			return ZXDH_ERR;
+		}
+		}
+
+		cpu_ind_cmd.cpu_ind_addr = ((base_addr << 7) & ZXDH_ERAM128_BADDR_MASK) + row_index;
+	}
+
+	rc = zxdh_np_reg_write(dev_id,
+						ZXDH_SMMU0_SMMU0_CPU_IND_CMDR,
+						0,
+						0,
+						&cpu_ind_cmd);
+	ZXDH_COMM_CHECK_DEV_RC_UNLOCK(dev_id, rc, "zxdh_np_reg_write", p_ind_mutex);
+
+	rc = zxdh_np_se_done_status_check(dev_id, ZXDH_SMMU0_SMMU0_CPU_IND_RD_DONER, 0);
+	ZXDH_COMM_CHECK_DEV_RC_UNLOCK(dev_id, rc,
+		"zxdh_np_se_done_status_check", p_ind_mutex);
+
+	p_temp_data = temp_data;
+	for (i = 0; i < 4; i++) {
+		rc = zxdh_np_reg_read(dev_id,
+							ZXDH_SMMU0_SMMU0_CPU_IND_RDAT0R + i,
+							0,
+							0,
+							p_temp_data + 3 - i);
+		ZXDH_COMM_CHECK_DEV_RC_UNLOCK(dev_id, rc, "zxdh_np_reg_read", p_ind_mutex);
+	}
+
+	if (rd_clr_mode == ZXDH_RD_MODE_HOLD) {
+		switch (rd_mode) {
+		case ZXDH_ERAM128_OPR_128b:
+		{
+			rte_memcpy(p_data, p_temp_data, (128 / 8));
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_64b:
+		{
+			rte_memcpy(p_data, p_temp_data + ((1 - col_index) << 1), (64 / 8));
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_32b:
+		{
+			rte_memcpy(p_data, p_temp_data + ((3 - col_index)), (32 / 8));
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_1b:
+		{
+			ZXDH_COMM_UINT32_GET_BITS(p_data[0],
+				*(p_temp_data + (3 - col_index / 32)), (col_index % 32), 1);
+			break;
+		}
+		}
+	} else {
+		switch (rd_mode) {
+		case ZXDH_ERAM128_OPR_128b:
+		{
+			rte_memcpy(p_data, p_temp_data, (128 / 8));
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_64b:
+		{
+			rte_memcpy(p_data, p_temp_data, (64 / 8));
+			break;
+		}
+
+		case ZXDH_ERAM128_OPR_32b:
+		{
+			rte_memcpy(p_data, p_temp_data, (64 / 8));
+			break;
+		}
+		}
+	}
+
+	rc = zxdh_np_comm_mutex_unlock(p_ind_mutex);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
+
+	return rc;
+}
+
+uint32_t
+zxdh_np_stat_ppu_cnt_get_ex(uint32_t dev_id,
+				ZXDH_STAT_CNT_MODE_E rd_mode,
+				uint32_t index,
+				uint32_t clr_mode,
+				uint32_t *p_data)
+{
+	uint32_t rc = ZXDH_OK;
+	uint32_t ppu_eram_baddr = 0;
+	uint32_t ppu_eram_depth = 0;
+	uint32_t eram_rd_mode   = 0;
+	uint32_t eram_clr_mode  = 0;
+	ZXDH_PPU_STAT_CFG_T stat_cfg = {0};
+
+	zxdh_np_stat_cfg_soft_get(dev_id, &stat_cfg);
+
+	ppu_eram_depth = stat_cfg.eram_depth;
+	ppu_eram_baddr = stat_cfg.eram_baddr;
+
+	if ((index >> (ZXDH_STAT_128_MODE - rd_mode)) < ppu_eram_depth) {
+		if (rd_mode == ZXDH_STAT_128_MODE)
+			eram_rd_mode = ZXDH_ERAM128_OPR_128b;
+		else
+			eram_rd_mode = ZXDH_ERAM128_OPR_64b;
+
+		if (clr_mode == ZXDH_STAT_RD_CLR_MODE_UNCLR)
+			eram_clr_mode = ZXDH_RD_MODE_HOLD;
+		else
+			eram_clr_mode = ZXDH_RD_MODE_CLEAR;
+
+		rc = zxdh_np_se_smmu0_ind_read(dev_id,
+									ppu_eram_baddr,
+									index,
+									eram_rd_mode,
+									eram_clr_mode,
+									p_data);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_se_smmu0_ind_read");
+	} else {
+		PMD_DRV_LOG(ERR, "DPDK DONT HAVE DDR STAT.");
+	}
 
 	return rc;
 }
