@@ -19,6 +19,7 @@ Features
 - MTU update
 - Jumbo frames
 - Scatter-Gather IO support
+- Port hardware statistic
 
 Prerequisites
 -------------

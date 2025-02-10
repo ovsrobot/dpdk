@@ -10,7 +10,7 @@
 #include "base/rnp_hw.h"
 
 #define PCI_VENDOR_ID_MUCSE	(0x8848)
-#define RNP_DEV_ID_N10G		(0x1000)
+#define RNP_DEV_ID_N10G		(0x1020)
 #define RNP_MAX_VF_NUM		(64)
 #define RNP_MISC_VEC_ID		RTE_INTR_VEC_ZERO_OFFSET
 /* maximum frame size supported */
@@ -105,6 +105,11 @@ struct rnp_proc_priv {
 	const struct rnp_mbx_ops *mbx_ops;
 };
 
+struct rnp_hw_eth_stats {
+	uint64_t rx_trans_drop;         /* rx eth to dma fifo full drop */
+	uint64_t rx_trunc_drop;         /* rx mac to eth to host copy fifo full drop */
+};
+
 struct rnp_eth_port {
 	struct rnp_proc_priv *proc_priv;
 	struct rte_ether_addr mac_addr;
@@ -112,6 +117,9 @@ struct rnp_eth_port {
 	struct rnp_port_attr attr;
 	struct rnp_tx_queue *tx_queues[RNP_MAX_RX_QUEUE_NUM];
 	struct rnp_hw *hw;
+
+	struct rnp_hw_eth_stats eth_stats_old;
+	struct rnp_hw_eth_stats eth_stats;
 
 	struct rte_eth_rss_conf rss_conf;
 	uint16_t last_rx_num;
