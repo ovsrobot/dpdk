@@ -27,6 +27,7 @@ ZXDH_PPU_STAT_CFG_T g_ppu_stat_cfg;
 static uint64_t g_np_fw_compat_addr[ZXDH_DEV_CHANNEL_MAX];
 static ZXDH_VERSION_COMPATIBLE_REG_T g_np_sdk_version = {
 	ZXDH_NPSDK_COMPAT_ITEM_ID, 1, 0, 0, 0, {0} };
+uint32_t hardware_ep_id[5] = {5, 6, 7, 8, 9};
 
 ZXDH_FIELD_T g_smmu0_smmu0_cpu_ind_cmd_reg[] = {
 	{"cpu_ind_rw", ZXDH_FIELD_FLAG_RW, 31, 1, 0x0, 0x0},
@@ -540,6 +541,33 @@ zxdh_np_dev_opr_mutex_get(uint32_t dev_id, uint32_t type, ZXDH_MUTEX_T **p_mutex
 }
 
 static uint32_t
+zxdh_np_dev_dtb_opr_mutex_get(uint32_t dev_id, uint32_t type,
+			uint32_t index, ZXDH_MUTEX_T **p_mutex_out)
+{
+	ZXDH_DEV_MGR_T *p_dev_mgr = NULL;
+	ZXDH_DEV_CFG_T *p_dev_info = NULL;
+
+	p_dev_mgr = &g_dev_mgr;
+	p_dev_info = p_dev_mgr->p_dev_array[dev_id];
+
+	switch (type) {
+	case ZXDH_DEV_MUTEX_T_DTB:
+	{
+		*p_mutex_out = &p_dev_info->dtb_queue_mutex[index];
+	}
+	break;
+
+	default:
+	{
+		PMD_DRV_LOG(ERR, "mutex type is invalid!");
+		return ZXDH_ERR;
+	}
+	}
+
+	return ZXDH_OK;
+}
+
+static uint32_t
 zxdh_np_dev_read_channel(uint32_t dev_id, uint32_t addr, uint32_t size, uint32_t *p_data)
 {
 	ZXDH_DEV_CFG_T *p_dev_info = NULL;
@@ -871,6 +899,7 @@ zxdh_np_dev_add(uint32_t  dev_id, ZXDH_DEV_TYPE_E dev_type,
 	uint32_t rtn = ZXDH_OK;
 	ZXDH_DEV_CFG_T *p_dev_info = NULL;
 	ZXDH_DEV_MGR_T *p_dev_mgr  = NULL;
+	uint32_t i = 0;
 
 	p_dev_mgr = &g_dev_mgr;
 	if (!p_dev_mgr->is_init) {
@@ -907,6 +936,11 @@ zxdh_np_dev_add(uint32_t  dev_id, ZXDH_DEV_TYPE_E dev_type,
 
 	rtn = zxdh_np_comm_mutex_create(&p_dev_info->dtb_mutex);
 	ZXDH_COMM_CHECK_DEV_RC(dev_id, rtn, "zxdh_np_comm_mutex_create");
+
+	for (i = 0; i < ZXDH_DTB_QUEUE_NUM_MAX; i++) {
+		rtn = zxdh_np_comm_mutex_create(&p_dev_info->dtb_queue_mutex[i]);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rtn, "zxdh_np_comm_mutex_create");
+	}
 
 	return rtn;
 }
@@ -1271,6 +1305,88 @@ zxdh_np_agent_channel_reg_write(uint32_t dev_id,
 	return ret;
 }
 
+static uint32_t
+zxdh_np_agent_channel_dtb_sync_send(uint32_t dev_id,
+							ZXDH_AGENT_CHANNEL_DTB_MSG_T *p_msg,
+							uint32_t *p_data,
+							uint32_t rep_len)
+{
+	uint32_t ret = ZXDH_OK;
+
+	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {0};
+	agent_msg.msg = (void *)p_msg;
+	agent_msg.msg_len = sizeof(ZXDH_AGENT_CHANNEL_DTB_MSG_T);
+
+	ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, p_data, rep_len);
+	if (ret != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "zxdh_np_agent_channel_sync_send failed");
+		return ZXDH_ERR;
+	}
+
+	return ZXDH_OK;
+}
+
+static uint32_t
+zxdh_np_agent_channel_dtb_queue_request(uint32_t dev_id,
+									char p_name[32],
+									uint32_t vport_info,
+									uint32_t *p_queue_id)
+{
+	uint32_t rc = ZXDH_OK;
+
+	uint32_t rsp_buff[2] = {0};
+	uint32_t msg_result = 0;
+	uint32_t queue_id = 0;
+	ZXDH_AGENT_CHANNEL_DTB_MSG_T msgcfg = {0};
+
+	msgcfg.dev_id = 0;
+	msgcfg.type = ZXDH_DTB_MSG;
+	msgcfg.oper = ZXDH_QUEUE_REQUEST;
+	memcpy(msgcfg.name, p_name, strnlen(p_name, ZXDH_PORT_NAME_MAX));
+	msgcfg.vport = vport_info;
+
+	PMD_DRV_LOG(DEBUG, "msgcfg.name=%s", msgcfg.name);
+
+	rc = zxdh_np_agent_channel_dtb_sync_send(dev_id, &msgcfg, rsp_buff, sizeof(rsp_buff));
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_dtb_sync_send");
+
+	msg_result = rsp_buff[0];
+	queue_id = rsp_buff[1];
+
+	PMD_DRV_LOG(DEBUG, "dev_id: %d, msg_result: %d", dev_id, msg_result);
+	PMD_DRV_LOG(DEBUG, "dev_id: %d, queue_id: %d", dev_id, queue_id);
+
+	*p_queue_id = queue_id;
+
+	return msg_result;
+}
+
+static uint32_t
+zxdh_np_agent_channel_dtb_queue_release(uint32_t dev_id,
+								char p_name[32],
+								__rte_unused uint32_t queue_id)
+{
+	uint32_t rc = ZXDH_OK;
+
+	uint32_t msg_result = 0;
+	uint32_t rsp_buff[2] = {0};
+	ZXDH_AGENT_CHANNEL_DTB_MSG_T msgcfg = {0};
+
+	msgcfg.dev_id = 0;
+	msgcfg.type = ZXDH_DTB_MSG;
+	msgcfg.oper = ZXDH_QUEUE_RELEASE;
+	msgcfg.queue_id = queue_id;
+	memcpy(msgcfg.name, p_name, strnlen(p_name, ZXDH_PORT_NAME_MAX));
+
+	rc = zxdh_np_agent_channel_dtb_sync_send(dev_id, &msgcfg, rsp_buff, sizeof(rsp_buff));
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_dtb_sync_send");
+
+	msg_result = rsp_buff[0];
+	PMD_DRV_LOG(DEBUG, "msg_result: %d", msg_result);
+
+	return msg_result;
+}
+
 static ZXDH_DTB_MGR_T *
 zxdh_np_dtb_mgr_get(uint32_t dev_id)
 {
@@ -1503,48 +1619,6 @@ zxdh_np_pcie_bar_msg_num_get(uint32_t dev_id, uint32_t *p_bar_msg_num)
 	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_comm_mutex_unlock");
 
 	return rc;
-}
-
-static ZXDH_RISCV_DTB_MGR *
-zxdh_np_riscv_dtb_queue_mgr_get(uint32_t dev_id)
-{
-	if (dev_id >= ZXDH_DEV_CHANNEL_MAX)
-		return NULL;
-	else
-		return p_riscv_dtb_queue_mgr[dev_id];
-}
-
-static uint32_t
-zxdh_np_riscv_dtb_mgr_queue_info_delete(uint32_t dev_id, uint32_t queue_id)
-{
-	ZXDH_RISCV_DTB_MGR *p_riscv_dtb_mgr = NULL;
-
-	p_riscv_dtb_mgr = zxdh_np_riscv_dtb_queue_mgr_get(dev_id);
-	if (p_riscv_dtb_mgr == NULL)
-		return 1;
-
-	p_riscv_dtb_mgr->queue_alloc_count--;
-	p_riscv_dtb_mgr->queue_user_info[queue_id].alloc_flag = 0;
-	p_riscv_dtb_mgr->queue_user_info[queue_id].queue_id = 0xFF;
-	p_riscv_dtb_mgr->queue_user_info[queue_id].vport = 0;
-	memset(p_riscv_dtb_mgr->queue_user_info[queue_id].user_name, 0, ZXDH_PORT_NAME_MAX);
-
-	return 0;
-}
-
-static uint32_t
-zxdh_np_dev_get_dev_type(uint32_t dev_id)
-{
-	ZXDH_DEV_MGR_T *p_dev_mgr = NULL;
-	ZXDH_DEV_CFG_T *p_dev_info = NULL;
-
-	p_dev_mgr = &g_dev_mgr;
-	p_dev_info = p_dev_mgr->p_dev_array[dev_id];
-
-	if (p_dev_info == NULL)
-		return 0xffff;
-
-	return p_dev_info->dev_type;
 }
 
 static uint32_t
@@ -1854,52 +1928,6 @@ zxdh_np_dtb_queue_vm_info_set(uint32_t dev_id,
 }
 
 static uint32_t
-zxdh_np_dtb_queue_enable_set(uint32_t dev_id,
-		uint32_t queue_id,
-		uint32_t enable)
-{
-	ZXDH_DTB_QUEUE_VM_INFO_T vm_info = {0};
-	uint32_t rc;
-
-	rc = zxdh_np_dtb_queue_vm_info_get(dev_id, queue_id, &vm_info);
-	ZXDH_COMM_CHECK_RC_NO_ASSERT(rc, "zxdh_dtb_queue_vm_info_get");
-
-	vm_info.queue_en = enable;
-	rc = zxdh_np_dtb_queue_vm_info_set(dev_id, queue_id, &vm_info);
-	ZXDH_COMM_CHECK_RC_NO_ASSERT(rc, "zxdh_dtb_queue_vm_info_set");
-
-	return rc;
-}
-
-static uint32_t
-zxdh_np_riscv_dpp_dtb_queue_id_release(uint32_t dev_id,
-			char name[ZXDH_PORT_NAME_MAX], uint32_t queue_id)
-{
-	ZXDH_RISCV_DTB_MGR *p_riscv_dtb_mgr = NULL;
-
-	p_riscv_dtb_mgr = zxdh_np_riscv_dtb_queue_mgr_get(dev_id);
-	if (p_riscv_dtb_mgr == NULL)
-		return 1;
-
-	if (zxdh_np_dev_get_dev_type(dev_id) == ZXDH_DEV_TYPE_SIM)
-		return 0;
-
-	if (p_riscv_dtb_mgr->queue_user_info[queue_id].alloc_flag != 1) {
-		PMD_DRV_LOG(ERR, "queue %d not alloc!", queue_id);
-		return 2;
-	}
-
-	if (strcmp(p_riscv_dtb_mgr->queue_user_info[queue_id].user_name, name) != 0) {
-		PMD_DRV_LOG(ERR, "queue %d name %s error!", queue_id, name);
-		return 3;
-	}
-	zxdh_np_dtb_queue_enable_set(dev_id, queue_id, 0);
-	zxdh_np_riscv_dtb_mgr_queue_info_delete(dev_id, queue_id);
-
-	return 0;
-}
-
-static uint32_t
 zxdh_np_dtb_queue_unused_item_num_get(uint32_t dev_id,
 						uint32_t queue_id,
 						uint32_t *p_item_num)
@@ -1934,19 +1962,75 @@ zxdh_np_dtb_queue_id_free(uint32_t dev_id,
 }
 
 static uint32_t
+zxdh_np_dtb_queue_request(uint32_t dev_id, char p_name[32],
+					uint16_t vport, uint32_t *p_queue_id)
+{
+	uint32_t rc = ZXDH_OK;
+	uint32_t queue_id = 0xFF;
+	ZXDH_MUTEX_T *p_dtb_mutex = NULL;
+	ZXDH_DEV_MUTEX_TYPE_E mutex = 0;
+	uint32_t vport_info = (uint32_t)vport;
+
+	mutex = ZXDH_DEV_MUTEX_T_DTB;
+	rc = zxdh_np_dev_opr_mutex_get(dev_id, (uint32_t)mutex, &p_dtb_mutex);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dev_opr_mutex_get");
+
+	zxdh_np_comm_mutex_lock(p_dtb_mutex);
+
+	rc = zxdh_np_agent_channel_dtb_queue_request(dev_id, p_name, vport_info, &queue_id);
+	if (rc == ZXDH_RC_DTB_QUEUE_RES_EMPTY) {
+		PMD_DRV_LOG(ERR, "dtb queue is locked full.");
+		zxdh_np_comm_mutex_unlock(p_dtb_mutex);
+		return ZXDH_RC_DTB_QUEUE_RES_EMPTY;
+	}
+
+	zxdh_np_comm_mutex_unlock(p_dtb_mutex);
+
+	PMD_DRV_LOG(DEBUG, "dtb request queue is %d.", queue_id);
+
+	*p_queue_id = queue_id;
+
+	PMD_DRV_LOG(INFO, "%s:dev_id %d vport 0x%x name %s queue_id %d done.",
+		__func__, dev_id, vport_info, p_name, queue_id);
+
+	return rc;
+}
+
+static uint32_t
 zxdh_np_dtb_queue_release(uint32_t devid,
 		char pname[32],
 		uint32_t queueid)
 {
-	uint32_t rc;
+	uint32_t rc = ZXDH_OK;
+	ZXDH_MUTEX_T *p_dtb_mutex = NULL;
+	ZXDH_DEV_MUTEX_TYPE_E mutex = 0;
 
-	ZXDH_COMM_CHECK_DEV_POINT(devid, pname);
+	mutex = ZXDH_DEV_MUTEX_T_DTB;
+	rc = zxdh_np_dev_opr_mutex_get(devid, (uint32_t)mutex, &p_dtb_mutex);
+	ZXDH_COMM_CHECK_DEV_RC(devid, rc, "zxdh_np_dev_opr_mutex_get");
 
-	rc = zxdh_np_riscv_dpp_dtb_queue_id_release(devid, pname, queueid);
-	ZXDH_COMM_CHECK_RC_NO_ASSERT(rc, "zxdh_riscv_dpp_dtb_queue_id_release");
+	zxdh_np_comm_mutex_lock(p_dtb_mutex);
+
+	rc = zxdh_np_agent_channel_dtb_queue_release(devid, pname, queueid);
+
+	if (rc == ZXDH_RC_DTB_QUEUE_NOT_ALLOC) {
+		PMD_DRV_LOG(ERR, "dtb queue id %d not request.", queueid);
+		zxdh_np_comm_mutex_unlock(p_dtb_mutex);
+		return ZXDH_RC_DTB_QUEUE_NOT_ALLOC;
+	}
+
+	if (rc == ZXDH_RC_DTB_QUEUE_NAME_ERROR) {
+		PMD_DRV_LOG(ERR, "dtb queue %d name error.", queueid);
+		zxdh_np_comm_mutex_unlock(p_dtb_mutex);
+		return ZXDH_RC_DTB_QUEUE_NAME_ERROR;
+	}
+
+	zxdh_np_comm_mutex_unlock(p_dtb_mutex);
 
 	rc = zxdh_np_dtb_queue_id_free(devid, queueid);
-	ZXDH_COMM_CHECK_RC_NO_ASSERT(rc, "zxdh_dtb_queue_id_free");
+	ZXDH_COMM_CHECK_DEV_RC(devid, rc, "zxdh_np_dtb_queue_id_free");
+
+	PMD_DRV_LOG(INFO, "%s:queueid %d", __func__, queueid);
 
 	return rc;
 }
@@ -1982,12 +2066,17 @@ zxdh_np_dev_del(uint32_t dev_id)
 {
 	ZXDH_DEV_CFG_T *p_dev_info = NULL;
 	ZXDH_DEV_MGR_T *p_dev_mgr  = NULL;
+	uint32_t i = 0;
 
 	p_dev_mgr = &g_dev_mgr;
 	p_dev_info = p_dev_mgr->p_dev_array[dev_id];
 
 	if (p_dev_info != NULL) {
 		zxdh_np_comm_mutex_destroy(&p_dev_info->dtb_mutex);
+
+		for (i = 0; i < ZXDH_DTB_QUEUE_NUM_MAX; i++)
+			zxdh_np_comm_mutex_destroy(&p_dev_info->dtb_queue_mutex[i]);
+
 		rte_free(p_dev_info);
 		p_dev_mgr->p_dev_array[dev_id] = NULL;
 		p_dev_mgr->device_num--;
@@ -2417,24 +2506,34 @@ zxdh_np_dtb_tab_down_info_set(uint32_t dev_id,
 	uint32_t item_index;
 	uint32_t i;
 	uint32_t rc;
+	ZXDH_MUTEX_T *p_mutex = NULL;
+
+	zxdh_np_dev_dtb_opr_mutex_get(dev_id, ZXDH_DEV_MUTEX_T_DTB, queue_id, &p_mutex);
+	zxdh_np_comm_mutex_lock(p_mutex);
 
 	if (ZXDH_DTB_QUEUE_INIT_FLAG_GET(dev_id, queue_id) == 0) {
-		PMD_DRV_LOG(ERR, "dtb queue %d is not init", queue_id);
+		PMD_DRV_LOG(ERR, "dtb queue %d is not init.", queue_id);
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_IS_NOT_INIT;
 	}
 
-	if (data_len % 4 != 0)
+	if (data_len % 4 != 0) {
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_PARA_INVALID;
+	}
 
 	rc = zxdh_np_dtb_queue_enable_get(dev_id, queue_id, &queue_en);
 	if (!queue_en) {
 		PMD_DRV_LOG(ERR, "the queue %d is not enable!,rc=%d", queue_id, rc);
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_NOT_ENABLE;
 	}
 
 	rc = zxdh_np_dtb_queue_unused_item_num_get(dev_id, queue_id, &unused_item_num);
-	if (unused_item_num == 0)
+	if (unused_item_num == 0) {
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_ITEM_HW_EMPTY;
+	}
 
 	for (i = 0; i < ZXDH_DTB_QUEUE_ITEM_NUM_MAX; i++) {
 		item_index = ZXDH_DTB_TAB_DOWN_WR_INDEX_GET(dev_id, queue_id) %
@@ -2449,8 +2548,10 @@ zxdh_np_dtb_tab_down_info_set(uint32_t dev_id,
 			break;
 	}
 
-	if (i == ZXDH_DTB_QUEUE_ITEM_NUM_MAX)
+	if (i == ZXDH_DTB_QUEUE_ITEM_NUM_MAX) {
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_ITEM_SW_EMPTY;
+	}
 
 	rc = zxdh_np_dtb_item_buff_wr(dev_id, queue_id, 0,
 		item_index, 0, data_len, p_data);
@@ -2469,6 +2570,8 @@ zxdh_np_dtb_tab_down_info_set(uint32_t dev_id,
 
 	rc = zxdh_np_dtb_queue_item_info_set(dev_id, queue_id, &item_info);
 	*p_item_index = item_index;
+
+	zxdh_np_comm_mutex_unlock(p_mutex);
 
 	return rc;
 }
@@ -2860,20 +2963,28 @@ zxdh_np_dtb_tab_up_info_set(uint32_t dev_id,
 	ZXDH_DTB_QUEUE_ITEM_INFO_T item_info = {0};
 	uint32_t queue_en = 0;
 	uint32_t rc;
+	ZXDH_MUTEX_T *p_mutex = NULL;
+
+	zxdh_np_dev_dtb_opr_mutex_get(dev_id, ZXDH_DEV_MUTEX_T_DTB, queue_id, &p_mutex);
+	zxdh_np_comm_mutex_lock(p_mutex);
 
 	zxdh_np_dtb_queue_enable_get(dev_id, queue_id, &queue_en);
 	if (!queue_en) {
 		PMD_DRV_LOG(ERR, "the queue %d is not enable!", queue_id);
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_NOT_ENABLE;
 	}
 
 	if (ZXDH_DTB_QUEUE_INIT_FLAG_GET(dev_id, queue_id) == 0) {
-		PMD_DRV_LOG(ERR, "dtb queue %d is not init", queue_id);
+		PMD_DRV_LOG(ERR, "dtb queue %d is not init.", queue_id);
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_IS_NOT_INIT;
 	}
 
-	if (desc_len % 4 != 0)
+	if (desc_len % 4 != 0) {
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_PARA_INVALID;
+	}
 
 	zxdh_np_dtb_item_buff_wr(dev_id, queue_id, ZXDH_DTB_DIR_UP_TYPE,
 		item_index, 0, desc_len, p_desc_data);
@@ -2885,10 +2996,9 @@ zxdh_np_dtb_tab_up_info_set(uint32_t dev_id,
 	item_info.int_en = int_flag;
 	item_info.data_len = desc_len / 4;
 
-	if (zxdh_np_dev_get_dev_type(dev_id) == ZXDH_DEV_TYPE_SIM)
-		return 0;
-
 	rc = zxdh_np_dtb_queue_item_info_set(dev_id, queue_id, &item_info);
+
+	zxdh_np_comm_mutex_unlock(p_mutex);
 
 	return rc;
 }
@@ -2932,16 +3042,23 @@ zxdh_np_dtb_tab_up_free_item_get(uint32_t dev_id,
 	uint32_t item_index = 0;
 	uint32_t unused_item_num = 0;
 	uint32_t i;
+	ZXDH_MUTEX_T *p_mutex = NULL;
+
+	zxdh_np_dev_dtb_opr_mutex_get(dev_id, ZXDH_DEV_MUTEX_T_DTB, queue_id, &p_mutex);
+	zxdh_np_comm_mutex_lock(p_mutex);
 
 	if (ZXDH_DTB_QUEUE_INIT_FLAG_GET(dev_id, queue_id) == 0) {
-		PMD_DRV_LOG(ERR, "dtb queue %d is not init", queue_id);
+		PMD_DRV_LOG(ERR, "dtb queue %d is not init.", queue_id);
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_IS_NOT_INIT;
 	}
 
 	zxdh_np_dtb_queue_unused_item_num_get(dev_id, queue_id, &unused_item_num);
 
-	if (unused_item_num == 0)
+	if (unused_item_num == 0) {
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_ITEM_HW_EMPTY;
+	}
 
 	for (i = 0; i < ZXDH_DTB_QUEUE_ITEM_NUM_MAX; i++) {
 		item_index = ZXDH_DTB_TAB_UP_WR_INDEX_GET(dev_id, queue_id) %
@@ -2956,14 +3073,17 @@ zxdh_np_dtb_tab_up_free_item_get(uint32_t dev_id,
 			break;
 	}
 
-	if (i == ZXDH_DTB_QUEUE_ITEM_NUM_MAX)
+	if (i == ZXDH_DTB_QUEUE_ITEM_NUM_MAX) {
+		zxdh_np_comm_mutex_unlock(p_mutex);
 		return ZXDH_RC_DTB_QUEUE_ITEM_SW_EMPTY;
+	}
 
 	zxdh_np_dtb_item_ack_wr(dev_id, queue_id, ZXDH_DTB_DIR_UP_TYPE, item_index,
 		0, ZXDH_DTB_TAB_ACK_IS_USING_MASK);
 
 	*p_item_index = item_index;
 
+	zxdh_np_comm_mutex_unlock(p_mutex);
 
 	return 0;
 }
@@ -3164,6 +3284,183 @@ zxdh_np_dtb_stats_get(uint32_t dev_id,
 	return rc;
 }
 
+static uint32_t
+zxdh_np_dtb_queue_down_init(uint32_t dev_id,
+							uint32_t queue_id,
+							ZXDH_DTB_QUEUE_CFG_T *p_queue_cfg)
+{
+	uint32_t rc = 0;
+	uint32_t i = 0;
+	uint32_t ack_vale = 0;
+	uint32_t tab_down_item_size = 0;
+	ZXDH_DTB_MGR_T *p_dtb_mgr = NULL;
+
+	p_dtb_mgr = zxdh_np_dtb_mgr_get(dev_id);
+	p_dtb_mgr->queue_info[queue_id].init_flag = 1;
+
+	tab_down_item_size = (p_queue_cfg->down_item_size == 0) ?
+		ZXDH_DTB_ITEM_SIZE : p_queue_cfg->down_item_size;
+
+	p_dtb_mgr->queue_info[queue_id].tab_down.item_size = tab_down_item_size;
+	p_dtb_mgr->queue_info[queue_id].tab_down.start_phy_addr = p_queue_cfg->down_start_phy_addr;
+	p_dtb_mgr->queue_info[queue_id].tab_down.start_vir_addr = p_queue_cfg->down_start_vir_addr;
+	p_dtb_mgr->queue_info[queue_id].tab_down.wr_index = 0;
+	p_dtb_mgr->queue_info[queue_id].tab_down.rd_index = 0;
+
+	for (i = 0; i < ZXDH_DTB_QUEUE_ITEM_NUM_MAX; i++) {
+		rc = zxdh_np_dtb_item_ack_wr(dev_id, queue_id,
+			ZXDH_DTB_DIR_DOWN_TYPE, i, 0, ZXDH_DTB_TAB_ACK_CHECK_VALUE);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dtb_item_ack_wr");
+	}
+
+	for (i = 0; i < ZXDH_DTB_QUEUE_ITEM_NUM_MAX; i++) {
+		rc = zxdh_np_dtb_item_ack_rd(dev_id, queue_id,
+			ZXDH_DTB_DIR_DOWN_TYPE, i, 0, &ack_vale);
+		if (ack_vale != ZXDH_DTB_TAB_ACK_CHECK_VALUE) {
+			PMD_DRV_LOG(ERR, "dtb queue [%d] down init failed!", queue_id);
+			return ZXDH_RC_DTB_MEMORY_ALLOC_ERR;
+		}
+	}
+
+	memset((uint8_t *)(p_queue_cfg->down_start_vir_addr), 0,
+		tab_down_item_size * ZXDH_DTB_QUEUE_ITEM_NUM_MAX);
+
+	PMD_DRV_LOG(INFO, "dtb queue [%d] down init success!!!", queue_id);
+
+	return ZXDH_OK;
+}
+
+static uint32_t
+zxdh_np_dtb_queue_dump_init(uint32_t dev_id,
+					uint32_t queue_id,
+					ZXDH_DTB_QUEUE_CFG_T *p_queue_cfg)
+{
+	uint32_t i = 0;
+	uint32_t ack_vale = 0;
+	uint32_t tab_up_item_size = 0;
+	ZXDH_DTB_MGR_T *p_dtb_mgr = NULL;
+
+	p_dtb_mgr = zxdh_np_dtb_mgr_get(dev_id);
+	p_dtb_mgr->queue_info[queue_id].init_flag = 1;
+
+	tab_up_item_size = (p_queue_cfg->up_item_size == 0) ?
+		ZXDH_DTB_ITEM_SIZE : p_queue_cfg->up_item_size;
+
+	p_dtb_mgr->queue_info[queue_id].tab_up.item_size = tab_up_item_size;
+	p_dtb_mgr->queue_info[queue_id].tab_up.start_phy_addr = p_queue_cfg->up_start_phy_addr;
+	p_dtb_mgr->queue_info[queue_id].tab_up.start_vir_addr = p_queue_cfg->up_start_vir_addr;
+	p_dtb_mgr->queue_info[queue_id].tab_up.wr_index = 0;
+	p_dtb_mgr->queue_info[queue_id].tab_up.rd_index = 0;
+
+	for (i = 0; i < ZXDH_DTB_QUEUE_ITEM_NUM_MAX; i++) {
+		zxdh_np_dtb_item_ack_wr(dev_id, queue_id,
+			ZXDH_DTB_DIR_UP_TYPE, i, 0, ZXDH_DTB_TAB_ACK_CHECK_VALUE);
+	}
+
+	for (i = 0; i < ZXDH_DTB_QUEUE_ITEM_NUM_MAX; i++) {
+		zxdh_np_dtb_item_ack_rd(dev_id, queue_id,
+			ZXDH_DTB_DIR_UP_TYPE, i, 0, &ack_vale);
+		if (ack_vale != ZXDH_DTB_TAB_ACK_CHECK_VALUE) {
+			PMD_DRV_LOG(ERR, "dtb queue [%d] dump init failed!!!", queue_id);
+			return ZXDH_RC_DTB_MEMORY_ALLOC_ERR;
+		}
+	}
+
+	memset((uint8_t *)(p_queue_cfg->up_start_vir_addr), 0,
+		tab_up_item_size * ZXDH_DTB_QUEUE_ITEM_NUM_MAX);
+
+	PMD_DRV_LOG(INFO, "dtb queue [%d] up init success!!!", queue_id);
+
+	return ZXDH_OK;
+}
+
+static void
+zxdh_np_dtb_down_channel_addr_set(uint32_t dev_id,
+								uint32_t channel_id,
+								uint64_t phy_addr,
+								uint64_t vir_addr,
+								uint32_t size)
+{
+	ZXDH_DTB_QUEUE_CFG_T down_queue_cfg = {0};
+
+	down_queue_cfg.down_start_phy_addr = phy_addr;
+	down_queue_cfg.down_start_vir_addr = vir_addr;
+	down_queue_cfg.down_item_size = size;
+
+	zxdh_np_dtb_queue_down_init(dev_id, channel_id, &down_queue_cfg);
+}
+
+static void
+zxdh_np_dtb_dump_channel_addr_set(uint32_t dev_id,
+								uint32_t channel_id,
+								uint64_t phy_addr,
+								uint64_t vir_addr,
+								uint32_t size)
+{
+	ZXDH_DTB_QUEUE_CFG_T dump_queue_cfg = {0};
+
+	dump_queue_cfg.up_start_phy_addr = phy_addr;
+	dump_queue_cfg.up_start_vir_addr = vir_addr;
+	dump_queue_cfg.up_item_size = size;
+
+	zxdh_np_dtb_queue_dump_init(dev_id, channel_id, &dump_queue_cfg);
+}
+
+static uint32_t
+zxdh_np_dtb_user_info_set(uint32_t dev_id, uint32_t queue_id, uint16_t vport, uint32_t vector)
+{
+	uint32_t rc = ZXDH_OK;
+
+	ZXDH_DTB_QUEUE_VM_INFO_T vm_info = {0};
+	ZXDH_DTB_MGR_T *p_dtb_mgr = NULL;
+
+	p_dtb_mgr = zxdh_np_dtb_mgr_get(dev_id);
+
+	rc = zxdh_np_dtb_queue_vm_info_get(dev_id, queue_id, &vm_info);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dtb_queue_vm_info_get");
+
+	vm_info.dbi_en = 1;
+	vm_info.epid = hardware_ep_id[ZXDH_EPID_BY(vport)];
+	vm_info.vfunc_num = ZXDH_VFUNC_NUM(vport);
+	vm_info.func_num = ZXDH_FUNC_NUM(vport);
+	vm_info.vfunc_active = ZXDH_VF_ACTIVE(vport);
+	vm_info.vector = vector;
+
+	p_dtb_mgr->queue_info[queue_id].vport = vport;
+	p_dtb_mgr->queue_info[queue_id].vector = vector;
+
+	rc = zxdh_np_dtb_queue_vm_info_set(dev_id, queue_id, &vm_info);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dtb_queue_vm_info_set");
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_apt_dtb_res_init(uint32_t dev_id, ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl)
+{
+	uint32_t rc = ZXDH_OK;
+
+	uint32_t queue_id = 0;
+
+	rc = zxdh_np_dtb_queue_request(dev_id, p_dev_init_ctrl->port_name,
+		p_dev_init_ctrl->vport, &queue_id);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dtb_queue_request");
+
+	p_dev_init_ctrl->queue_id = queue_id;
+
+	rc = zxdh_np_dtb_user_info_set(dev_id, queue_id,
+		p_dev_init_ctrl->vport, p_dev_init_ctrl->vector);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dtb_user_info_set");
+
+	zxdh_np_dtb_down_channel_addr_set(dev_id, queue_id,
+		p_dev_init_ctrl->down_phy_addr, p_dev_init_ctrl->down_vir_addr, 0);
+
+	zxdh_np_dtb_dump_channel_addr_set(dev_id, queue_id,
+		p_dev_init_ctrl->dump_phy_addr, p_dev_init_ctrl->dump_vir_addr, 0);
+
+	return ZXDH_OK;
+}
+
 int
 zxdh_np_host_init(uint32_t dev_id,
 		ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl)
@@ -3197,6 +3494,12 @@ zxdh_np_host_init(uint32_t dev_id,
 	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_pcie_bar_msg_num_get");
 
 	zxdh_np_dev_fw_bar_msg_num_set(dev_id, bar_msg_num);
+
+	rc = zxdh_np_apt_dtb_res_init(dev_id, p_dev_init_ctrl);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_apt_dtb_res_init");
+
+	PMD_DRV_LOG(INFO, "%s done, queue_id = %u",
+		__func__, p_dev_init_ctrl->queue_id);
 
 	return 0;
 }
