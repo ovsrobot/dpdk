@@ -7,6 +7,11 @@ RNP Poll Mode driver
 The RNP ETHDEV PMD (**librte_net_rnp**) provides poll mode ethdev
 driver support for the inbuilt network device found in the **Mucse RNP**
 
+Features
+--------
+
+- Promiscuous mode
+
 Prerequisites
 -------------
 More information can be found at `Mucse, Official Website
