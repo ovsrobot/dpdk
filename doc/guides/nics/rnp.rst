@@ -23,6 +23,7 @@ Features
 - Port hardware statistic
 - Packet type parsing
 - Checksum offload
+- VLAN stripping and VLAN/QINQ insertion
 
 Prerequisites
 -------------
