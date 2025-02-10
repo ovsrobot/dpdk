@@ -394,6 +394,15 @@ rnp_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	return 0;
 }
 
+static int
+rnp_vlan_filter_set(struct rte_eth_dev *dev,
+		uint16_t vlan_id, int on)
+{
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+
+	return rnp_update_vlan_filter(port, vlan_id, on);
+}
+
 static int rnp_dev_start(struct rte_eth_dev *eth_dev)
 {
 	struct rnp_eth_port *port = RNP_DEV_TO_PORT(eth_dev);
@@ -1479,6 +1488,7 @@ static const struct eth_dev_ops rnp_eth_dev_ops = {
 	/* vlan offload */
 	.vlan_offload_set             = rnp_vlan_offload_set,
 	.vlan_strip_queue_set         = rnp_vlan_strip_queue_set,
+	.vlan_filter_set              = rnp_vlan_filter_set,
 };
 
 static void
