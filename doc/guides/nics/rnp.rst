@@ -21,6 +21,7 @@ Features
 - Jumbo frames
 - Scatter-Gather IO support
 - Port hardware statistic
+- Packet type parsing
 
 Prerequisites
 -------------
