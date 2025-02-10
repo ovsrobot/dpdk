@@ -377,6 +377,7 @@ char *trace_metadata_fixup_field(const char *field)
 		".",
 		"->",
 		"*",
+		" ",
 	};
 	const char *ctf_reserved_words[] = {
 		"align",
