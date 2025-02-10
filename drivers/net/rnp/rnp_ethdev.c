@@ -651,6 +651,17 @@ static int rnp_dev_infos_get(struct rte_eth_dev *eth_dev,
 	dev_info->speed_capa = rnp_get_speed_caps(eth_dev);
 	/* rx support offload cap */
 	dev_info->rx_offload_capa = RNP_RX_CHECKSUM_SUPPORT;
+	/* tx support offload cap */
+	dev_info->tx_offload_capa = 0 |
+				     RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
+				     RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
+				     RTE_ETH_TX_OFFLOAD_TCP_CKSUM |
+				     RTE_ETH_TX_OFFLOAD_SCTP_CKSUM |
+				     RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM |
+				     RTE_ETH_TX_OFFLOAD_TCP_TSO |
+				     RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO |
+				     RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO |
+				     RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 	dev_info->default_rxconf = (struct rte_eth_rxconf) {
 		.rx_drop_en = 0,
 		.rx_thresh = {
@@ -1084,13 +1095,18 @@ rnp_dev_stats_get(struct rte_eth_dev *dev,
 					(data->tx_queues))[i]->stats.opackets;
 			stats->q_obytes[i] = ((struct rnp_tx_queue **)
 					(data->tx_queues))[i]->stats.obytes;
+			stats->oerrors += ((struct rnp_tx_queue **)
+					(data->tx_queues))[i]->stats.errors;
 			stats->opackets += stats->q_opackets[i];
 			stats->obytes += stats->q_obytes[i];
+
 		} else {
 			stats->opackets += ((struct rnp_tx_queue **)
 					(data->tx_queues))[i]->stats.opackets;
 			stats->obytes += ((struct rnp_tx_queue **)
 					(data->tx_queues))[i]->stats.obytes;
+			stats->oerrors += ((struct rnp_tx_queue **)
+					(data->tx_queues))[i]->stats.errors;
 		}
 	}
 	stats->imissed = eth_stats->rx_trans_drop + eth_stats->rx_trunc_drop;
