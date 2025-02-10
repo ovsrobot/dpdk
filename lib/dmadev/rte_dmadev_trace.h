@@ -86,18 +86,14 @@ RTE_TRACE_POINT(
 	int src_port_type = conf->src_port.port_type;
 	int dst_port_type = conf->dst_port.port_type;
 	int direction = conf->direction;
-	uint64_t src_pcie_cfg;
-	uint64_t dst_pcie_cfg;
 	rte_trace_point_emit_i16(dev_id);
 	rte_trace_point_emit_u16(vchan);
 	rte_trace_point_emit_int(direction);
 	rte_trace_point_emit_u16(conf->nb_desc);
 	rte_trace_point_emit_int(src_port_type);
-	memcpy(&src_pcie_cfg, &conf->src_port.pcie, sizeof(uint64_t));
-	rte_trace_point_emit_u64(src_pcie_cfg);
-	memcpy(&dst_pcie_cfg, &conf->dst_port.pcie, sizeof(uint64_t));
+	rte_trace_point_emit_blob(&conf->src_port.pcie, sizeof(uint64_t));
 	rte_trace_point_emit_int(dst_port_type);
-	rte_trace_point_emit_u64(dst_pcie_cfg);
+	rte_trace_point_emit_blob(&conf->dst_port.pcie, sizeof(uint64_t));
 	rte_trace_point_emit_ptr(conf->auto_free.m2d.pool);
 	rte_trace_point_emit_int(ret);
 )
