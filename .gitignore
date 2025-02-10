@@ -43,6 +43,8 @@ TAGS
 
 # DTS results
 dts/output
+dts/nodes.yaml
+dts/test_rund.yaml
 
 # ignore default build directory, and directories from test-meson-builds.sh
 build
@@ -50,3 +52,7 @@ build-*
 # ignore other build directory patterns
 *-gcc*
 *-clang*
+
+# ignore Linux UAPI kernel headers
+kernel/linux/uapi/version
+kernel/linux/uapi/**/*.h
