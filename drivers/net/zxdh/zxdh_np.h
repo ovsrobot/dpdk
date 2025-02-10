@@ -111,9 +111,16 @@
 		(ZXDH_SE_SMMU0_ERAM_BLOCK_NUM * ZXDH_SE_SMMU0_ERAM_ADDR_NUM_PER_BLOCK)
 
 #define ZXDH_SE_OPR_RD                          (1)
+#define ZXDH_CHANNEL_REPS_LEN                   (4)
 
 #define ZXDH_NPSDK_COMPAT_ITEM_ID               (10)
 #define ZXDH_DPU_NO_DEBUG_PF_COMPAT_REG_OFFSET  (0x5400)
+
+#define ZXDH_VF_ACTIVE(VPORT)                   (((VPORT) & 0x0800) >> 11)
+#define ZXDH_EPID_BY(VPORT)                     (((VPORT) & 0x7000) >> 12)
+#define ZXDH_FUNC_NUM(VPORT)                    (((VPORT) & 0x0700) >> 8)
+#define ZXDH_VFUNC_NUM(VPORT)                   (((VPORT) & 0x00FF))
+#define ZXDH_IS_PF(VPORT)                       (!ZXDH_VF_ACTIVE(VPORT))
 
 /**errco code */
 #define ZXDH_RC_BASE                            (0x1000U)
@@ -126,6 +133,12 @@
 #define ZXDH_PAR_CHK_INVALID_RANGE              (ZXDH_PARAMETER_CHK_BASE | 0x006)
 #define ZXDH_PAR_CHK_INVALID_DEV_ID             (ZXDH_PARAMETER_CHK_BASE | 0x007)
 #define ZXDH_PAR_CHK_INVALID_PARA               (ZXDH_PARAMETER_CHK_BASE | 0x008)
+
+#define ZXDH_MUTEX_LOCK_BASE                    (ZXDH_RC_BASE            | 0x300)
+#define ZXDH_MUTEX_LOCK_INIT_FAIL               (ZXDH_MUTEX_LOCK_BASE    | 0x001)
+#define ZXDH_MUTEX_LOCK_LOCK_FAIL               (ZXDH_MUTEX_LOCK_BASE    | 0x002)
+#define ZXDH_MUTEX_LOCK_ULOCK_FAIL              (ZXDH_MUTEX_LOCK_BASE    | 0X003)
+#define ZXDH_MUTEX_LOCK_DESTROY_FAIL            (ZXDH_MUTEX_LOCK_BASE    | 0X004)
 
 #define ZXDH_ERAM128_BADDR_MASK                 (0x3FFFF80)
 
@@ -163,6 +176,13 @@
 #define ZXDH_RC_DTB_DUMP_SIZE_SMALL             (ZXDH_RC_DTB_BASE | 0x16)
 #define ZXDH_RC_DTB_SEARCH_VPORT_QUEUE_ZERO     (ZXDH_RC_DTB_BASE | 0x17)
 #define ZXDH_RC_DTB_QUEUE_NOT_ENABLE            (ZXDH_RC_DTB_BASE | 0x18)
+
+#define ZXDH_RC_CTRLCH_BASE                     (0xf00)
+#define ZXDH_RC_CTRLCH_MSG_LEN_ZERO             (ZXDH_RC_CTRLCH_BASE | 0x0)
+#define ZXDH_RC_CTRLCH_MSG_PRO_ERR              (ZXDH_RC_CTRLCH_BASE | 0x1)
+#define ZXDH_RC_CTRLCH_MSG_TYPE_NOT_SUPPORT     (ZXDH_RC_CTRLCH_BASE | 0x2)
+#define ZXDH_RC_CTRLCH_MSG_OPER_NOT_SUPPORT     (ZXDH_RC_CTRLCH_BASE | 0x3)
+#define ZXDH_RC_CTRLCH_MSG_DROP                 (ZXDH_RC_CTRLCH_BASE | 0x4)
 
 typedef enum zxdh_module_base_addr_e {
 	ZXDH_MODULE_SE_SMMU0_BASE_ADDR = 0x00000000,
@@ -349,6 +369,7 @@ typedef struct dpp_dev_cfg_t {
 	uint32_t access_type;
 	uint32_t agent_flag;
 	uint32_t vport;
+	uint32_t fw_bar_msg_num;
 	uint64_t pcie_addr;
 	uint64_t riscv_addr;
 	uint64_t dma_vir_addr;
@@ -357,6 +378,7 @@ typedef struct dpp_dev_cfg_t {
 	uint32_t init_flags[ZXDH_MODULE_INIT_MAX];
 	ZXDH_DEV_WRITE_FUNC p_pcie_write_fun;
 	ZXDH_DEV_READ_FUNC  p_pcie_read_fun;
+	ZXDH_MUTEX_T dtb_mutex;
 } ZXDH_DEV_CFG_T;
 
 typedef struct zxdh_dev_mngr_t {
@@ -631,6 +653,38 @@ typedef enum zxdh_stat_cnt_mode_e {
 	ZXDH_STAT_MAX_MODE,
 } ZXDH_STAT_CNT_MODE_E;
 
+typedef enum zxdh_np_agent_msg_type_e {
+	ZXDH_REG_MSG = 0,
+	ZXDH_DTB_MSG,
+	ZXDH_TM_MSG,
+	ZXDH_PLCR_MSG,
+	ZXDH_PKTRX_IND_REG_RW_MSG,
+	ZXDH_PCIE_BAR_MSG,
+	ZXDH_RESET_MSG,
+	ZXDH_PXE_MSG,
+	ZXDH_TM_FLOW_SHAPE,
+	ZXDH_TM_TD,
+	ZXDH_TM_SE_SHAPE,
+	ZXDH_TM_PP_SHAPE,
+	ZXDH_PLCR_CAR_RATE,
+	ZXDH_PLCR_CAR_PKT_RATE,
+	ZXDH_PPU_THASH_RSK,
+	ZXDH_ACL_MSG,
+	ZXDH_STAT_MSG,
+	ZXDH_RES_MSG,
+	ZXDH_MSG_MAX
+} MSG_TYPE_E;
+typedef enum  zxdh_agent_pcie_bar_e {
+	ZXDH_BAR_MSG_NUM_REQ = 0,
+	ZXDH_PCIE_BAR_MAX
+} ZXDH_MSG_PCIE_BAR_E;
+
+typedef enum zxdh_agent_msg_oper_e {
+	ZXDH_WR = 0,
+	ZXDH_RD,
+	ZXDH_WR_RD_MAX
+} ZXDH_MSG_OPER_E;
+
 typedef struct __rte_aligned(2) zxdh_version_compatible_reg_t {
 	uint8_t version_compatible_item;
 	uint8_t major;
@@ -639,6 +693,29 @@ typedef struct __rte_aligned(2) zxdh_version_compatible_reg_t {
 	uint16_t patch;
 	uint8_t rsv[2];
 } ZXDH_VERSION_COMPATIBLE_REG_T;
+
+typedef struct __rte_aligned(2) zxdh_agent_channel_pcie_bar_msg_t {
+	uint8_t dev_id;
+	uint8_t type;
+	uint8_t oper;
+	uint8_t rsv;
+} ZXDH_AGENT_PCIE_BAR_MSG_T;
+
+typedef struct __rte_aligned(2) zxdh_agent_channel_reg_msg {
+	uint8_t dev_id;
+	uint8_t type;
+	uint8_t subtype;
+	uint8_t oper;
+	uint32_t reg_no;
+	uint32_t addr;
+	uint32_t val_len;
+	uint32_t val[32];
+} ZXDH_AGENT_CHANNEL_REG_MSG_T;
+
+typedef struct __rte_aligned(2) zxdh_agent_channel_msg_t {
+	uint32_t msg_len;
+	void *msg;
+} ZXDH_AGENT_CHANNEL_MSG_T;
 
 int zxdh_np_host_init(uint32_t dev_id, ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl);
 int zxdh_np_online_uninit(uint32_t dev_id, char *port_name, uint32_t queue_id);
