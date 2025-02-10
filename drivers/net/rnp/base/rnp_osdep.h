@@ -14,6 +14,7 @@
 #include <rte_bitops.h>
 #include <rte_cycles.h>
 #include <rte_byteorder.h>
+#include <rte_spinlock.h>
 #include <rte_common.h>
 #include <rte_memcpy.h>
 #include <rte_memzone.h>
@@ -33,16 +34,28 @@ typedef rte_iova_t dma_addr_t;
 
 #define mb()	rte_mb()
 #define wmb()	rte_wmb()
+#define rmb()	rte_rmb()
 
 #define udelay(x) rte_delay_us(x)
 #define mdelay(x) rte_delay_ms(x)
 #define memcpy rte_memcpy
+
+#ifndef upper_32_bits
+#define upper_32_bits(n) ((u32)(((n) >> 16) >> 16))
+#define lower_32_bits(n) ((u32)((n) & 0xffffffff))
+#endif
+
+#ifndef cpu_to_le32
+#define cpu_to_le16(v)	rte_cpu_to_le_16((u16)(v))
+#define cpu_to_le32(v)	rte_cpu_to_le_32((u32)(v))
+#endif
 
 #define spinlock_t			rte_spinlock_t
 #define spin_lock_init(spinlock_v)	rte_spinlock_init(spinlock_v)
 #define spin_lock(spinlock_v)		rte_spinlock_lock(spinlock_v)
 #define spin_unlock(spinlock_v)		rte_spinlock_unlock(spinlock_v)
 
+#define _RING_(off)	((off) + (0x08000))
 #define _ETH_(off)	((off) + (0x10000))
 #define _NIC_(off)	((off) + (0x30000))
 #define _MAC_(off)	((off) + (0x60000))
