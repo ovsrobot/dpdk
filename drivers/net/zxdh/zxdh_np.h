@@ -129,6 +129,13 @@
 #define ZXDH_LISTSTACK_INVALID_INDEX	        (0)
 #define ZXDH_LISTSTACK_MAX_ELEMENT		        (0x0ffffffe)
 
+#define ZXDH_HASH_FUNC_MAX_NUM                  (4)
+#define ZXDH_HASH_BULK_MAX_NUM                  (32)
+#define ZXDH_HASH_TABLE_MAX_NUM                 (38)
+#define ZXDH_ERAM_MAX_NUM                       (60)
+#define ZXDH_ETCAM_MAX_NUM                      (8)
+#define ZXDH_ETCAM_BLOCK_NUM                    (8)
+
 /**errco code */
 #define ZXDH_RC_BASE                            (0x1000U)
 #define ZXDH_PARAMETER_CHK_BASE                 (ZXDH_RC_BASE            | 0x200)
@@ -434,6 +441,174 @@ typedef struct dpp_sdt_soft_table_t {
 	ZXDH_SDT_ITEM_T  sdt_array[ZXDH_DEV_SDT_ID_MAX];
 } ZXDH_SDT_SOFT_TABLE_T;
 
+typedef enum zxdh_hash_srh_mode {
+	ZXDH_HASH_SRH_MODE_SOFT = 1,
+	ZXDH_HASH_SRH_MODE_HDW  = 2,
+} ZXDH_HASH_SRH_MODE;
+
+typedef struct zxdh_hash_entry {
+	uint8_t *p_key;
+	uint8_t *p_rst;
+} ZXDH_HASH_ENTRY;
+
+typedef struct zxdh_acl_entry_ex_t {
+	uint32_t  idx_val;
+	ZXDH_D_HEAD  idx_list;
+	uint32_t  pri;
+	uint8_t    *key_data;
+	uint8_t    *key_mask;
+	uint8_t    *p_as_rslt;
+} ZXDH_ACL_ENTRY_EX_T;
+
+typedef uint32_t (*ZXDH_APT_ACL_ENTRY_SET_FUNC)(void *p_data, ZXDH_ACL_ENTRY_EX_T *acl_entry);
+typedef uint32_t (*ZXDH_APT_ACL_ENTRY_GET_FUNC)(void *p_data, ZXDH_ACL_ENTRY_EX_T *acl_entry);
+typedef uint32_t (*ZXDH_APT_ERAM_SET_FUNC)(void *p_data, uint32_t buf[4]);
+typedef uint32_t (*ZXDH_APT_ERAM_GET_FUNC)(void *p_data, uint32_t buf[4]);
+typedef uint32_t (*ZXDH_APT_HASH_ENTRY_SET_FUNC)(void *p_data, ZXDH_HASH_ENTRY *p_entry);
+typedef uint32_t (*ZXDH_APT_HASH_ENTRY_GET_FUNC)(void *p_data, ZXDH_HASH_ENTRY *p_entry);
+typedef int32_t (*ZXDH_KEY_CMP_FUNC)(void *p_new_key, void *p_old_key, uint32_t key_len);
+
+typedef struct zxdh_sdt_tbl_eram_t {
+	uint32_t table_type;
+	uint32_t eram_mode;
+	uint32_t eram_base_addr;
+	uint32_t eram_table_depth;
+	uint32_t eram_clutch_en;
+} ZXDH_SDT_TBL_ERAM_T;
+
+typedef struct zxdh_sdt_tbl_etcam_t {
+	uint32_t table_type;
+	uint32_t etcam_id;
+	uint32_t etcam_key_mode;
+	uint32_t etcam_table_id;
+	uint32_t no_as_rsp_mode;
+	uint32_t as_en;
+	uint32_t as_eram_baddr;
+	uint32_t as_rsp_mode;
+	uint32_t etcam_table_depth;
+	uint32_t etcam_clutch_en;
+} ZXDH_SDT_TBL_ETCAM_T;
+
+typedef struct zxdh_sdt_tbl_hash_t {
+	uint32_t table_type;
+	uint32_t hash_id;
+	uint32_t hash_table_width;
+	uint32_t key_size;
+	uint32_t hash_table_id;
+	uint32_t learn_en;
+	uint32_t keep_alive;
+	uint32_t keep_alive_baddr;
+	uint32_t rsp_mode;
+	uint32_t hash_clutch_en;
+} ZXDH_SDT_TBL_HASH_T;
+
+typedef enum zxdh_hash_ddr_width_mode_e {
+	ZXDH_DDR_WIDTH_INVALID = 0,
+	ZXDH_DDR_WIDTH_256b,
+	ZXDH_DDR_WIDTH_512b,
+} ZXDH_HASH_DDR_WIDTH_MODE;
+
+typedef struct zxdh_apt_acl_res_t {
+	uint32_t pri_mode;
+	uint32_t entry_num;
+	uint32_t block_num;
+	uint32_t block_index[ZXDH_ETCAM_BLOCK_NUM];
+} ZXDH_APT_ACL_RES_T;
+
+typedef struct zxdh_apt_hash_bulk_res_t {
+	uint32_t func_id;
+	uint32_t bulk_id;
+	uint32_t zcell_num;
+	uint32_t zreg_num;
+	uint32_t ddr_baddr;
+	uint32_t ddr_item_num;
+	ZXDH_HASH_DDR_WIDTH_MODE ddr_width_mode;
+	uint32_t ddr_crc_sel;
+	uint32_t ddr_ecc_en;
+} ZXDH_APT_HASH_BULK_RES_T;
+
+typedef struct zxdh_apt_hash_func_res_t {
+	uint32_t func_id;
+	uint32_t zblk_num;
+	uint32_t zblk_bitmap;
+	uint32_t ddr_dis;
+} ZXDH_APT_HASH_FUNC_RES_T;
+
+typedef struct zxdh_apt_eram_table_t {
+	uint32_t sdt_no;
+	ZXDH_SDT_TBL_ERAM_T eram_sdt;
+	uint32_t opr_mode;
+	uint32_t rd_mode;
+	ZXDH_APT_ERAM_SET_FUNC  eram_set_func;
+	ZXDH_APT_ERAM_GET_FUNC  eram_get_func;
+} ZXDH_APT_ERAM_TABLE_T;
+
+typedef struct zxdh_apt_acl_table_t {
+	uint32_t sdt_no;
+	uint32_t sdt_partner;
+	ZXDH_SDT_TBL_ETCAM_T acl_sdt;
+	ZXDH_APT_ACL_RES_T acl_res;
+	ZXDH_APT_ACL_ENTRY_SET_FUNC  acl_set_func;
+	ZXDH_APT_ACL_ENTRY_GET_FUNC  acl_get_func;
+} ZXDH_APT_ACL_TABLE_T;
+
+typedef struct zxdh_apt_hash_table_t {
+	uint32_t sdt_no;
+	uint32_t sdt_partner;
+	ZXDH_SDT_TBL_HASH_T hash_sdt;
+	uint32_t tbl_flag;
+	ZXDH_APT_HASH_ENTRY_SET_FUNC hash_set_func;
+	ZXDH_APT_HASH_ENTRY_GET_FUNC hash_get_func;
+} ZXDH_APT_HASH_TABLE_T;
+
+typedef struct zxdh_apt_eram_res_init_t {
+	uint32_t tbl_num;
+	ZXDH_APT_ERAM_TABLE_T *eram_res;
+} ZXDH_APT_ERAM_RES_INIT_T;
+
+typedef struct zxdh_apt_hash_res_init_t {
+	uint32_t func_num;
+	uint32_t bulk_num;
+	uint32_t tbl_num;
+	ZXDH_APT_HASH_FUNC_RES_T *func_res;
+	ZXDH_APT_HASH_BULK_RES_T *bulk_res;
+	ZXDH_APT_HASH_TABLE_T  *tbl_res;
+} ZXDH_APT_HASH_RES_INIT_T;
+
+typedef struct zxdh_apt_acl_res_init_t {
+	uint32_t tbl_num;
+	ZXDH_APT_ACL_TABLE_T *acl_res;
+} ZXDH_APT_ACL_RES_INIT_T;
+
+typedef struct zxdh_apt_stat_res_init_t {
+	uint32_t eram_baddr;
+	uint32_t eram_depth;
+	uint32_t ddr_baddr;
+	uint32_t ppu_ddr_offset;
+} ZXDH_APT_STAT_RES_INIT_T;
+
+typedef struct zxdh_apt_se_res_t {
+	uint32_t valid;
+	uint32_t hash_func_num;
+	uint32_t hash_bulk_num;
+	uint32_t hash_tbl_num;
+	uint32_t eram_num;
+	uint32_t acl_num;
+	uint32_t lpm_num;
+	uint32_t ddr_num;
+	ZXDH_APT_HASH_FUNC_RES_T  hash_func[ZXDH_HASH_FUNC_MAX_NUM];
+	ZXDH_APT_HASH_BULK_RES_T  hash_bulk[ZXDH_HASH_BULK_MAX_NUM];
+	ZXDH_APT_HASH_TABLE_T     hash_tbl[ZXDH_HASH_TABLE_MAX_NUM];
+	ZXDH_APT_ERAM_TABLE_T     eram_tbl[ZXDH_ERAM_MAX_NUM];
+	ZXDH_APT_ACL_TABLE_T      acl_tbl[ZXDH_ETCAM_MAX_NUM];
+	ZXDH_APT_STAT_RES_INIT_T  stat_cfg;
+} ZXDH_APT_SE_RES_T;
+
+typedef struct zxdh_dev_apt_se_tbl_res_t {
+	ZXDH_APT_SE_RES_T   std_nic_res;
+	ZXDH_APT_SE_RES_T   offload_res;
+} ZXDH_DEV_APT_SE_TBL_RES_T;
+
 typedef struct zxdh_mutex_t {
 	pthread_mutex_t mutex;
 } ZXDH_MUTEX_T;
@@ -474,6 +649,7 @@ typedef struct dpp_dev_cfg_t {
 	ZXDH_DEV_READ_FUNC  p_pcie_read_fun;
 	ZXDH_MUTEX_T dtb_mutex;
 	ZXDH_MUTEX_T dtb_queue_mutex[ZXDH_DTB_QUEUE_NUM_MAX];
+	ZXDH_DEV_APT_SE_TBL_RES_T dev_apt_se_tbl_res;
 } ZXDH_DEV_CFG_T;
 
 typedef struct zxdh_dev_mngr_t {
@@ -742,14 +918,6 @@ typedef struct zxdh_etcam_dump_info_t {
 	uint32_t tb_width;
 } ZXDH_ETCAM_DUMP_INFO_T;
 
-typedef struct zxdh_sdt_tbl_eram_t {
-	uint32_t table_type;
-	uint32_t eram_mode;
-	uint32_t eram_base_addr;
-	uint32_t eram_table_depth;
-	uint32_t eram_clutch_en;
-} ZXDH_SDT_TBL_ERAM_T;
-
 typedef union zxdh_endian_u {
 	unsigned int     a;
 	unsigned char    b;
@@ -800,19 +968,6 @@ typedef struct zxdh_sdt_tbl_data_t {
 	uint32_t data_high32;
 	uint32_t data_low32;
 } ZXDH_SDT_TBL_DATA_T;
-
-typedef struct zxdh_sdt_tbl_etcam_t {
-	uint32_t table_type;
-	uint32_t etcam_id;
-	uint32_t etcam_key_mode;
-	uint32_t etcam_table_id;
-	uint32_t no_as_rsp_mode;
-	uint32_t as_en;
-	uint32_t as_eram_baddr;
-	uint32_t as_rsp_mode;
-	uint32_t etcam_table_depth;
-	uint32_t etcam_clutch_en;
-} ZXDH_SDT_TBL_ETCAM_T;
 
 typedef struct zxdh_sdt_tbl_porttbl_t {
 	uint32_t table_type;
@@ -874,6 +1029,29 @@ typedef enum zxdh_msg_dtb_oper_e {
 	ZXDH_QUEUE_RELEASE = 1,
 } ZXDH_MSG_DTB_OPER_E;
 
+typedef enum zxdh_se_res_oper_e {
+	ZXDH_HASH_FUNC_BULK_REQ    = 0,
+	ZXDH_HASH_TBL_REQ          = 1,
+	ZXDH_ERAM_TBL_REQ          = 2,
+	ZXDH_ACL_TBL_REQ           = 3,
+	ZXDH_LPM_TBL_REQ           = 4,
+	ZXDH_DDR_TBL_REQ           = 5,
+	ZXDH_STAT_CFG_REQ          = 6,
+	ZXDH_RES_REQ_MAX
+} ZXDH_MSG_SE_RES_OPER_E;
+
+typedef enum zxdh_agent_msg_res_e {
+	ZXDH_RES_STD_NIC_MSG = 0,
+	ZXDH_RES_OFFLOAD_MSG,
+	ZXDH_RES_MAX_MSG
+} MSG_RES_TYPE_E;
+
+typedef enum zxdh_se_res_type_e {
+	ZXDH_SE_STD_NIC_RES_TYPE      = 0,
+	ZXDH_SE_NON_STD_NIC_RES_TYPE  = 1,
+	ZXDH_SE_RES_TYPE_BUTT
+} ZXDH_SE_RES_TYPE_E;
+
 typedef struct __rte_aligned(2) zxdh_version_compatible_reg_t {
 	uint8_t version_compatible_item;
 	uint8_t major;
@@ -916,6 +1094,123 @@ typedef struct __rte_aligned(2) zxdh_agent_channel_dtb_msg_t {
 	uint32_t queue_id;
 } ZXDH_AGENT_CHANNEL_DTB_MSG_T;
 
+typedef struct __rte_aligned(2) zxdh_agent_se_res_msg_t {
+	uint8_t dev_id;
+	uint8_t type;
+	uint8_t sub_type;
+	uint8_t oper;
+} ZXDH_AGENT_SE_RES_MSG_T;
+
+typedef struct __rte_aligned(2) sdt_tbl_eram_t {
+	uint32_t table_type;
+	uint32_t eram_mode;
+	uint32_t eram_base_addr;
+	uint32_t eram_table_depth;
+	uint32_t eram_clutch_en;
+} ZXDH_NP_SDTTBL_ERAM_T;
+
+typedef struct __rte_aligned(2) sdt_tbl_hash_t {
+	uint32_t table_type;
+	uint32_t hash_id;
+	uint32_t hash_table_width;
+	uint32_t key_size;
+	uint32_t hash_table_id;
+	uint32_t learn_en;
+	uint32_t keep_alive;
+	uint32_t keep_alive_baddr;
+	uint32_t rsp_mode;
+	uint32_t hash_clutch_en;
+} ZXDH_NP_SDTTBL_HASH_T;
+
+typedef struct __rte_aligned(2) sdt_tbl_etcam_t {
+	uint32_t table_type;
+	uint32_t etcam_id;
+	uint32_t etcam_key_mode;
+	uint32_t etcam_table_id;
+	uint32_t no_as_rsp_mode;
+	uint32_t as_en;
+	uint32_t as_eram_baddr;
+	uint32_t as_rsp_mode;
+	uint32_t etcam_table_depth;
+	uint32_t etcam_clutch_en;
+} ZXDH_NP_SDTTBL_ETCAM_T;
+
+typedef struct __rte_aligned(2) hash_table_t {
+	uint32_t sdt_no;
+	uint32_t sdt_partner;
+	ZXDH_NP_SDTTBL_HASH_T hash_sdt;
+	uint32_t tbl_flag;
+} ZXDH_NP_HASH_TABLE_T;
+
+typedef struct __rte_aligned(2) zxdh_np_eram_table_t {
+	uint32_t sdt_no;
+	ZXDH_NP_SDTTBL_ERAM_T eram_sdt;
+	uint32_t opr_mode;
+	uint32_t rd_mode;
+} ZXDH_NP_ERAM_TABLE_T;
+
+typedef struct __rte_aligned(2) zxdh_np_acl_res_t {
+	uint32_t pri_mode;
+	uint32_t entry_num;
+	uint32_t block_num;
+	uint32_t block_index[ZXDH_ETCAM_BLOCK_NUM];
+} ZXDH_NP_ACL_RES_T;
+
+typedef struct __rte_aligned(2) zxdh_np_acl_table_t {
+	uint32_t sdt_no;
+	uint32_t sdt_partner;
+	ZXDH_NP_SDTTBL_ETCAM_T acl_sdt;
+	ZXDH_NP_ACL_RES_T acl_res;
+} ZXDH_NP_ACL_TABLE_T;
+
+typedef struct __rte_aligned(2) hash_func_res_t {
+	uint32_t func_id;
+	uint32_t zblk_num;
+	uint32_t zblk_bitmap;
+	uint32_t ddr_dis;
+} ZXDH_NP_HASH_FUNC_RES_T;
+
+typedef struct __rte_aligned(2) hash_bulk_res_t {
+	uint32_t func_id;
+	uint32_t bulk_id;
+	uint32_t zcell_num;
+	uint32_t zreg_num;
+	uint32_t ddr_baddr;
+	uint32_t ddr_item_num;
+	uint32_t ddr_width_mode;
+	uint32_t ddr_crc_sel;
+	uint32_t ddr_ecc_en;
+} ZXDH_NP_HASH_BULK_RES_T;
+
+typedef struct __rte_aligned(2) zxdh_se_hash_func_bulk_t {
+	uint32_t func_num;
+	uint32_t bulk_num;
+	ZXDH_NP_HASH_FUNC_RES_T fun[ZXDH_HASH_FUNC_MAX_NUM];
+	ZXDH_NP_HASH_BULK_RES_T bulk[ZXDH_HASH_BULK_MAX_NUM];
+} ZXDH_NP_SE_HASH_FUNC_BULK_T;
+
+typedef struct __rte_aligned(2) zxdh_se_hash_tbl_t {
+	uint32_t tbl_num;
+	ZXDH_NP_HASH_TABLE_T table[ZXDH_HASH_TABLE_MAX_NUM];
+} ZXDH_NP_SE_HASH_TBL_T;
+
+typedef struct __rte_aligned(2) zxdh_se_eram_tbl_t {
+	uint32_t tbl_num;
+	ZXDH_NP_ERAM_TABLE_T eram[ZXDH_ERAM_MAX_NUM];
+} ZXDH_NP_SE_ERAM_TBL_T;
+
+typedef struct __rte_aligned(2) zxdh_se_acl_tbl_t {
+	uint32_t tbl_num;
+	ZXDH_NP_ACL_TABLE_T acl[ZXDH_ETCAM_MAX_NUM];
+} ZXDH_NP_SE_ACL_TBL_T;
+
+typedef struct __rte_aligned(2) zxdh_se_stat_cfg_t {
+	uint32_t eram_baddr;
+	uint32_t eram_depth;
+	uint32_t ddr_baddr;
+	uint32_t ppu_ddr_offset;
+} ZXDH_NP_SE_STAT_CFG_T;
+
 int zxdh_np_host_init(uint32_t dev_id, ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl);
 int zxdh_np_online_uninit(uint32_t dev_id, char *port_name, uint32_t queue_id);
 int zxdh_np_dtb_table_entry_write(uint32_t dev_id, uint32_t queue_id,
@@ -929,5 +1224,6 @@ int zxdh_np_dtb_stats_get(uint32_t dev_id,
 			ZXDH_STAT_CNT_MODE_E rd_mode,
 			uint32_t index,
 			uint32_t *p_data);
+uint32_t zxdh_np_se_res_get_and_init(uint32_t dev_id, uint32_t type);
 
 #endif /* ZXDH_NP_H */
