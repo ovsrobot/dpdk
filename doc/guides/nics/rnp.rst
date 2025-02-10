@@ -15,6 +15,7 @@ Features
   Receiver Side Steering (RSS) on IPv4, IPv6, IPv4-TCP/UDP/SCTP, IPv6-TCP/UDP/SCTP
   Inner RSS is only support for vxlan/nvgre
 - Promiscuous mode
+- Link state information
 
 Prerequisites
 -------------
