@@ -1468,6 +1468,8 @@ static const struct eth_dev_ops rnp_eth_dev_ops = {
 	.tx_queue_release             = rnp_dev_tx_queue_release,
 	.rxq_info_get                 = rnp_rx_queue_info_get,
 	.txq_info_get                 = rnp_tx_queue_info_get,
+	.rx_burst_mode_get            = rnp_rx_burst_mode_get,
+	.tx_burst_mode_get            = rnp_tx_burst_mode_get,
 	/* rss impl */
 	.reta_update                  = rnp_dev_rss_reta_update,
 	.reta_query                   = rnp_dev_rss_reta_query,
