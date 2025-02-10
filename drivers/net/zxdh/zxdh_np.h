@@ -10,6 +10,8 @@
 
 #define ZXDH_OK                               (0)
 #define ZXDH_ERR                              (1)
+#define ZXDH_TRUE	                          (1)
+#define ZXDH_FALSE	                          (0)
 #define ZXDH_DISABLE                          (0)
 #define ZXDH_ENABLE                           (1)
 #define ZXDH_PORT_NAME_MAX                    (32)
@@ -92,6 +94,7 @@
 #define ZXDH_DTB_LEN_POS_SETP                    (16)
 #define ZXDH_DTB_ITEM_ADD_OR_UPDATE              (0)
 #define ZXDH_DTB_ITEM_DELETE                     (1)
+#define ZXDH_DTB_ZCAM_LEN_SIZE                   (5)
 
 #define ZXDH_ETCAM_LEN_SIZE            (6)
 #define ZXDH_ETCAM_BLOCK_NUM           (8)
@@ -537,6 +540,14 @@ typedef enum zxdh_hash_key_type_e {
 	ZXDH_HASH_KEY_256b,
 	ZXDH_HASH_KEY_512b,
 } ZXDH_HASH_KEY_TYPE;
+
+typedef enum zxdh_se_item_type_e {
+	ZXDH_ITEM_INVALID = 0,
+	ZXDH_ITEM_RAM,
+	ZXDH_ITEM_DDR_256,
+	ZXDH_ITEM_DDR_512,
+	ZXDH_ITEM_REG,
+} ZXDH_SE_ITEM_TYPE;
 
 typedef struct zxdh_avl_node_t {
 	void                    *p_key;
@@ -1096,6 +1107,7 @@ typedef struct dpp_dev_cfg_t {
 	ZXDH_DEV_READ_FUNC  p_pcie_read_fun;
 	ZXDH_MUTEX_T dtb_mutex;
 	ZXDH_MUTEX_T dtb_queue_mutex[ZXDH_DTB_QUEUE_NUM_MAX];
+	ZXDH_MUTEX_T hash_mutex[ZXDH_HASH_FUNC_ID_NUM];
 	ZXDH_DEV_APT_SE_TBL_RES_T dev_apt_se_tbl_res;
 } ZXDH_DEV_CFG_T;
 
