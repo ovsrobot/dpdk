@@ -373,6 +373,11 @@ rte_trace_metadata_dump(FILE *f)
 
 char *trace_metadata_fixup_field(const char *field)
 {
+	static const char * const tokens[] = {
+		".",
+		"->",
+		"*",
+	};
 	const char *ctf_reserved_words[] = {
 		"align",
 		"event",
@@ -390,23 +395,29 @@ char *trace_metadata_fixup_field(const char *field)
 		return out;
 	}
 
-	/* nothing to replace, return early */
-	if (strstr(field, ".") == NULL && strstr(field, "->") == NULL)
-		return NULL;
+	for (i = 0; i < RTE_DIM(tokens); i++) {
+		if (strstr(field, tokens[i]) == NULL)
+			continue;
+		goto fixup;
+	}
 
+	/* nothing to replace, return early */
+	return NULL;
+
+fixup:
 	out = strdup(field);
 	if (out == NULL)
 		return NULL;
-	p = out;
-	while ((p = strstr(p, ".")) != NULL) {
-		p[0] = '_';
-		p++;
-	}
-	p = out;
-	while ((p = strstr(p, "->")) != NULL) {
-		p[0] = '_';
-		p++;
-		memmove(p, p + 1, strlen(p));
+	for (i = 0; i < RTE_DIM(tokens); i++) {
+		p = out;
+		while ((p = strstr(p, tokens[i])) != NULL) {
+			p[0] = '_';
+			p++;
+			if (strlen(tokens[i]) != 1) {
+				memmove(p, p + (strlen(tokens[i]) - 1),
+					strlen(p) - (strlen(tokens[i]) - 2));
+			}
+		}
 	}
 	return out;
 }
