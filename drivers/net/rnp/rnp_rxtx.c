@@ -741,6 +741,8 @@ rnp_recv_pkts(void *_rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 			nmb->packet_type = 0;
 			nmb->ol_flags = 0;
 			nmb->nb_segs = 1;
+
+			rxq->stats.ibytes += nmb->data_len;
 		}
 		for (j = 0; j < nb_dd; ++j) {
 			rx_pkts[i + j] = rx_swbd[j].mbuf;
@@ -752,6 +754,7 @@ rnp_recv_pkts(void *_rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		if (nb_dd != RNP_CACHE_FETCH_RX)
 			break;
 	}
+	rxq->stats.ipackets += nb_rx;
 	rxq->rx_tail = (rxq->rx_tail + nb_rx) & rxq->attr.nb_desc_mask;
 	rxq->rxrearm_nb = rxq->rxrearm_nb + nb_rx;
 
@@ -821,6 +824,7 @@ rnp_xmit_simple(void *_txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 		txbd->d.blen = tx_swbd->mbuf->data_len;
 		txbd->d.cmd = RNP_CMD_EOP;
 
+		txq->stats.obytes += txbd->d.blen;
 		i = (i + 1) & txq->attr.nb_desc_mask;
 	}
 	txq->nb_tx_free -= start;
@@ -832,6 +836,7 @@ rnp_xmit_simple(void *_txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 		if (txq->tx_next_rs > txq->attr.nb_desc)
 			txq->tx_next_rs = txq->tx_rs_thresh - 1;
 	}
+	txq->stats.opackets += start;
 	txq->tx_tail = i;
 
 	rte_wmb();
@@ -936,6 +941,7 @@ rnp_scattered_rx(void *rx_queue, struct rte_mbuf **rx_pkts,
 		}
 		rxm->next = NULL;
 		first_seg->port = rxq->attr.port_id;
+		rxq->stats.ibytes += first_seg->pkt_len;
 		/* this the end of packet the large pkt has been recv finish */
 		rte_prefetch0(RTE_PTR_ADD(first_seg->buf_addr,
 					first_seg->data_off));
@@ -944,6 +950,7 @@ rnp_scattered_rx(void *rx_queue, struct rte_mbuf **rx_pkts,
 	}
 	if (!nb_rx)
 		return 0;
+	rxq->stats.ipackets += nb_rx;
 	/* update sw record point */
 	rxq->rx_tail = rx_id;
 	rxq->pkt_first_seg = first_seg;
@@ -1033,6 +1040,7 @@ rnp_multiseg_xmit_pkts(void *_txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			tx_id = txe->next_id;
 			txe = txn;
 		} while (m_seg != NULL);
+		txq->stats.obytes += tx_pkt->pkt_len;
 		txbd->d.cmd |= RNP_CMD_EOP;
 		txq->nb_tx_used = (uint16_t)txq->nb_tx_used + nb_used_bd;
 		txq->nb_tx_free = (uint16_t)txq->nb_tx_free - nb_used_bd;
@@ -1044,6 +1052,7 @@ rnp_multiseg_xmit_pkts(void *_txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	}
 	if (!send_pkts)
 		return 0;
+	txq->stats.opackets += send_pkts;
 	txq->tx_tail = tx_id;
 
 	rte_wmb();
