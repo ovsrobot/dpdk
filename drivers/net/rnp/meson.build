@@ -6,6 +6,11 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
+subdir('base')
+objs = [base_objs]
+
+includes += include_directories('base')
+
 sources = files(
                 'rnp_ethdev.c',
 )
