@@ -794,12 +794,126 @@ static const struct rte_rnp_xstats_name_off rte_rnp_rx_eth_stats_str[] = {
 			rx_trans_drop), RNP_ETH_RXTRANS_DROP, false},
 	{"eth_rx_fifo_drop", offsetof(struct rnp_hw_eth_stats,
 			rx_trunc_drop), RNP_ETH_RXTRUNC_DROP, false},
+	{"eth rx pkts bigger than mtu", offsetof(struct rnp_hw_eth_stats,
+			rx_glen_drop), RNP_ETH_RXGLAN_DROP, false},
+	{"eth rx cksum error drop", offsetof(struct rnp_hw_eth_stats,
+			rx_cksum_e_drop), RNP_ETH_RXCKSUM_E_DROP, false},
+	{"eth rx iph error drop", offsetof(struct rnp_hw_eth_stats,
+			rx_iph_e_drop), RNP_ETH_RXIPH_E_DROP, false},
 };
+
+static const struct rte_rnp_xstats_name_off rte_rnp_rx_mac_stats_str[] = {
+	{"Rx good bad Pkts", offsetof(struct rnp_hw_mac_stats,
+			rx_all_pkts), RNP_MMC_RX_GBFRMB, true},
+	{"Rx good bad bytes", offsetof(struct rnp_hw_mac_stats,
+			rx_all_bytes), RNP_MMC_RX_GBOCTGB, true},
+	{"Rx good Pkts", offsetof(struct rnp_hw_mac_stats,
+			rx_good_pkts), 0, false},
+	{"RX good Bytes", offsetof(struct rnp_hw_mac_stats,
+			rx_good_bytes), RNP_MMC_RX_GOCTGB, true},
+	{"Rx Broadcast Pkts", offsetof(struct rnp_hw_mac_stats,
+			rx_broadcast), RNP_MMC_RX_BCASTGB, true},
+	{"Rx Multicast Pkts", offsetof(struct rnp_hw_mac_stats,
+			rx_multicast), RNP_MMC_RX_MCASTGB, true},
+	{"Rx Crc Frames Err Pkts", offsetof(struct rnp_hw_mac_stats,
+			rx_crc_err), RNP_MMC_RX_CRCERB, true},
+	{"Rx len Err with Crc err", offsetof(struct rnp_hw_mac_stats,
+			rx_runt_err), RNP_MMC_RX_RUNTERB, false},
+	{"Rx jabber Error ", offsetof(struct rnp_hw_mac_stats,
+			rx_jabber_err), RNP_MMC_RX_JABBER_ERR, false},
+	{"Rx len Err Without Other Error", offsetof(struct rnp_hw_mac_stats,
+			rx_undersize_err), RNP_MMC_RX_USIZEGB, false},
+	{"Rx Len Shorter 64Bytes Without Err", offsetof(struct rnp_hw_mac_stats,
+			rx_undersize_err), RNP_MMC_RX_USIZEGB, false},
+	{"Rx Len Oversize 9K", offsetof(struct rnp_hw_mac_stats,
+			rx_oversize_err), RNP_MMC_RX_OSIZEGB, false},
+	{"Rx 64Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_64octes_pkts), RNP_MMC_RX_64_BYTESB, true},
+	{"Rx 65Bytes To 127Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_65to127_octes_pkts), RNP_MMC_RX_65TO127_BYTESB, true},
+	{"Rx 128Bytes To 255Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_128to255_octes_pkts), RNP_MMC_RX_128TO255_BYTESB, true},
+	{"Rx 256Bytes To 511Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_256to511_octes_pkts), RNP_MMC_RX_256TO511_BYTESB, true},
+	{"Rx 512Bytes To 1023Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_512to1023_octes_pkts), RNP_MMC_RX_512TO1203_BYTESB, true},
+	{"Rx Bigger 1024Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_1024tomax_octes_pkts), RNP_MMC_RX_1024TOMAX_BYTESB, true},
+	{"Rx Unicast Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_unicast), RNP_MMC_RX_UCASTGB, true},
+	{"Rx Len Err Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_len_err), RNP_MMC_RX_LENERRB, true},
+	{"Rx Len Not Equal Real data_len", offsetof(struct rnp_hw_mac_stats,
+			rx_len_invalid), RNP_MMC_RX_OUTOF_RANGE, true},
+	{"Rx Pause Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_pause), RNP_MMC_RX_PAUSEB, true},
+	{"Rx Vlan Frame Num", offsetof(struct rnp_hw_mac_stats,
+			rx_vlan), RNP_MMC_RX_VLANGB, true},
+	{"Rx Hw Watchdog Frame Err", offsetof(struct rnp_hw_mac_stats,
+			rx_watchdog_err), RNP_MMC_RX_WDOGERRB, true},
+};
+
+static const struct rte_rnp_xstats_name_off rte_rnp_tx_mac_stats_str[] = {
+	{"Tx Good Bad Pkts Num", offsetof(struct rnp_hw_mac_stats,
+			tx_all_pkts), RNP_MMC_TX_GBFRMB, true},
+	{"Tx Good Bad Bytes", offsetof(struct rnp_hw_mac_stats,
+			tx_all_bytes), RNP_MMC_TX_GBOCTGB, true},
+	{"Tx Good Broadcast Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_broadcast), RNP_MMC_TX_BCASTB, true},
+	{"Tx Good Multicast Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_multicast), RNP_MMC_TX_MCASTB, true},
+	{"Tx 64Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_64octes_pkts), RNP_MMC_TX_64_BYTESB, true},
+	{"Tx 65 To 127 Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_65to127_octes_pkts), RNP_MMC_TX_65TO127_BYTESB, true},
+	{"Tx 128 To 255 Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_128to255_octes_pkts), RNP_MMC_TX_128TO255_BYTEB, true},
+	{"Tx 256 To 511 Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_256to511_octes_pkts), RNP_MMC_TX_256TO511_BYTEB, true},
+	{"Tx 512 To 1023 Bytes Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_512to1023_octes_pkts), RNP_MMC_TX_512TO1023_BYTEB, true},
+	{"Tx Bigger Than 1024 Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_1024tomax_octes_pkts), RNP_MMC_TX_1024TOMAX_BYTEB, true},
+	{"Tx Good And Bad Unicast Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_all_unicast), RNP_MMC_TX_GBUCASTB, true},
+	{"Tx Good And Bad Multicast Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_all_multicase), RNP_MMC_TX_GBMCASTB, true},
+	{"Tx Good And Bad Broadcast Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_all_broadcast), RNP_MMC_TX_GBBCASTB, true},
+	{"Tx Underflow Frame Err Num", offsetof(struct rnp_hw_mac_stats,
+			tx_underflow_err), RNP_MMC_TX_UNDRFLWB, true},
+	{"Tx Good Frame Bytes", offsetof(struct rnp_hw_mac_stats,
+			tx_good_bytes), RNP_MMC_TX_GBYTESB, true},
+	{"Tx Good Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_good_pkts), RNP_MMC_TX_GBFRMB, true},
+	{"Tx Pause Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_pause_pkts), RNP_MMC_TX_PAUSEB, true},
+	{"Tx Vlan Frame Num", offsetof(struct rnp_hw_mac_stats,
+			tx_vlan_pkts), RNP_MMC_TX_VLANB, true},
+};
+
+#define RNP_NB_RX_HW_MAC_STATS (RTE_DIM(rte_rnp_rx_mac_stats_str))
+#define RNP_NB_TX_HW_MAC_STATS (RTE_DIM(rte_rnp_tx_mac_stats_str))
 #define RNP_NB_RX_HW_ETH_STATS (RTE_DIM(rte_rnp_rx_eth_stats_str))
 #define RNP_GET_E_HW_COUNT(stats, offset)            \
 	((uint64_t *)(((char *)stats) + (offset)))
 #define RNP_ADD_INCL_COUNT(stats, offset, val)       \
 	((*(RNP_GET_E_HW_COUNT(stats, (offset)))) += val)
+static inline void
+rnp_store_hw_stats(struct rnp_hw_mac_stats *stats,
+		   uint32_t offset, uint64_t val)
+{
+	*(uint64_t *)(((char *)stats) + offset) = val;
+}
+
+static uint32_t rnp_dev_cal_xstats_num(void)
+{
+	uint32_t cnt = RNP_NB_RX_HW_MAC_STATS + RNP_NB_TX_HW_MAC_STATS;
+
+	cnt += RNP_NB_RX_HW_ETH_STATS;
+
+	return cnt;
+}
 
 static inline void
 rnp_update_eth_stats_32bit(struct rnp_hw_eth_stats *new,
@@ -830,11 +944,33 @@ static void rnp_get_eth_count(struct rnp_hw *hw,
 	}
 }
 
+static void
+rnp_get_mmc_info(struct rnp_hw *hw,
+		 uint16_t lane,
+		 struct rnp_hw_mac_stats *stats,
+		 const struct rte_rnp_xstats_name_off *ptr)
+{
+	uint64_t count = 0;
+	uint32_t offset;
+	uint64_t hi_reg;
+
+	if (ptr->reg_base) {
+		count = RNP_MAC_REG_RD(hw, lane, ptr->reg_base);
+		if (ptr->hi_addr_en) {
+			offset = ptr->reg_base + 4;
+			hi_reg = RNP_MAC_REG_RD(hw, lane, offset);
+			count += (hi_reg << 32);
+		}
+		rnp_store_hw_stats(stats, ptr->offset, count);
+	}
+}
+
 static void rnp_get_hw_stats(struct rte_eth_dev *dev)
 {
 	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
 	struct rnp_hw_eth_stats *old = &port->eth_stats_old;
 	struct rnp_hw_eth_stats *new = &port->eth_stats;
+	struct rnp_hw_mac_stats *stats = &port->mac_stats;
 	const struct rte_rnp_xstats_name_off *ptr;
 	uint16_t lane = port->attr.nr_lane;
 	struct rnp_hw *hw = port->hw;
@@ -844,6 +980,19 @@ static void rnp_get_hw_stats(struct rte_eth_dev *dev)
 		ptr = &rte_rnp_rx_eth_stats_str[i];
 		rnp_get_eth_count(hw, lane, new, old, ptr);
 	}
+	for (i = 0; i < RNP_NB_RX_HW_MAC_STATS; i++) {
+		ptr = &rte_rnp_rx_mac_stats_str[i];
+		rnp_get_mmc_info(hw, lane, stats, ptr);
+	}
+	for (i = 0; i < RNP_NB_TX_HW_MAC_STATS; i++) {
+		ptr = &rte_rnp_tx_mac_stats_str[i];
+		rnp_get_mmc_info(hw, lane, stats, ptr);
+	}
+	stats->rx_good_pkts = stats->rx_all_pkts - stats->rx_crc_err -
+		stats->rx_len_err - stats->rx_watchdog_err;
+	stats->rx_bad_pkts = stats->rx_crc_err + stats->rx_len_err +
+		stats->rx_watchdog_err;
+	stats->tx_bad_pkts = stats->tx_underflow_err;
 }
 
 static int
@@ -926,6 +1075,97 @@ rnp_dev_stats_reset(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+rnp_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
+		   unsigned int n __rte_unused)
+{
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	struct rnp_hw_eth_stats *eth_stats = &port->eth_stats;
+	struct rnp_hw_mac_stats *mac_stats = &port->mac_stats;
+	uint32_t count = 0;
+	uint16_t i;
+
+	if (xstats != NULL) {
+		rnp_get_hw_stats(dev);
+		for (i = 0; i < RNP_NB_RX_HW_MAC_STATS; i++) {
+			xstats[count].value = *(uint64_t *)(((char *)mac_stats) +
+					rte_rnp_rx_mac_stats_str[i].offset);
+			xstats[count].id = count;
+			count++;
+		}
+		for (i = 0; i < RNP_NB_TX_HW_MAC_STATS; i++) {
+			xstats[count].value = *(uint64_t *)(((char *)mac_stats) +
+					rte_rnp_tx_mac_stats_str[i].offset);
+			xstats[count].id = count;
+			count++;
+		}
+		for (i = 0; i < RNP_NB_RX_HW_ETH_STATS; i++) {
+			xstats[count].value = *(uint64_t *)(((char *)eth_stats) +
+					rte_rnp_rx_eth_stats_str[i].offset);
+			xstats[count].id = count;
+			count++;
+		}
+	} else {
+		return rnp_dev_cal_xstats_num();
+	}
+
+	return count;
+}
+
+static int
+rnp_dev_xstats_reset(struct rte_eth_dev *dev)
+{
+	struct rnp_eth_port *port = RNP_DEV_TO_PORT(dev);
+	uint16_t lane = port->attr.nr_lane;
+	struct rnp_hw *hw = port->hw;
+	uint32_t reg;
+
+	/* set MMC reset hw counter when read event */
+	reg = RNP_MAC_REG_RD(hw, lane, RNP_MMC_CTRL);
+	RNP_MAC_REG_WR(hw, lane, RNP_MMC_CTRL, RNP_MMC_RSTONRD);
+
+	rnp_dev_stats_reset(dev);
+	rnp_get_hw_stats(dev);
+	reg = RNP_MAC_REG_RD(hw, lane, RNP_MMC_CTRL);
+	reg &= ~RNP_MMC_RSTONRD;
+	RNP_MAC_REG_WR(hw, lane, RNP_MMC_CTRL, reg);
+
+	return 0;
+}
+
+static int
+rnp_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
+			 struct rte_eth_xstat_name *xstats_names,
+			 __rte_unused unsigned int size)
+{
+	uint32_t xstats_cnt = rnp_dev_cal_xstats_num();
+	uint32_t i, count = 0;
+
+	if (xstats_names != NULL) {
+		for (i = 0; i < RNP_NB_RX_HW_MAC_STATS; i++) {
+			strlcpy(xstats_names[count].name,
+					rte_rnp_rx_mac_stats_str[i].name,
+					sizeof(xstats_names[count].name));
+			count++;
+		}
+
+		for (i = 0; i < RNP_NB_TX_HW_MAC_STATS; i++) {
+			strlcpy(xstats_names[count].name,
+					rte_rnp_tx_mac_stats_str[i].name,
+					sizeof(xstats_names[count].name));
+			count++;
+		}
+		for (i = 0; i < RNP_NB_RX_HW_ETH_STATS; i++) {
+			strlcpy(xstats_names[count].name,
+					rte_rnp_rx_eth_stats_str[i].name,
+					sizeof(xstats_names[count].name));
+			count++;
+		}
+	}
+
+	return xstats_cnt;
+}
+
 /* Features supported by this driver */
 static const struct eth_dev_ops rnp_eth_dev_ops = {
 	.dev_configure                = rnp_dev_configure,
@@ -952,6 +1192,9 @@ static const struct eth_dev_ops rnp_eth_dev_ops = {
 	/* stats */
 	.stats_get                    = rnp_dev_stats_get,
 	.stats_reset                  = rnp_dev_stats_reset,
+	.xstats_get                   = rnp_dev_xstats_get,
+	.xstats_reset                 = rnp_dev_xstats_reset,
+	.xstats_get_names             = rnp_dev_xstats_get_names,
 	/* link impl */
 	.link_update                  = rnp_dev_link_update,
 	.dev_set_link_up              = rnp_dev_set_link_up,

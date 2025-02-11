@@ -108,6 +108,56 @@ struct rnp_proc_priv {
 struct rnp_hw_eth_stats {
 	uint64_t rx_trans_drop;         /* rx eth to dma fifo full drop */
 	uint64_t rx_trunc_drop;         /* rx mac to eth to host copy fifo full drop */
+	uint64_t rx_glen_drop;          /* pkts length bigger than hw limit */
+	uint64_t rx_cksum_e_drop;       /* rx cksum error pkts drop */
+	uint64_t rx_iph_e_drop;         /* rx ip header error drop */
+};
+
+struct rnp_hw_mac_stats {
+	uint64_t rx_all_pkts;     /* Include Good And Bad Frame Num */
+	uint64_t rx_all_bytes;    /* Include Good And Bad Pkts octes */
+	uint64_t rx_good_pkts;
+	uint64_t rx_good_bytes;
+	uint64_t rx_broadcast;
+	uint64_t rx_multicast;
+	uint64_t rx_crc_err;
+	uint64_t rx_runt_err;     /* Frame Less-than-64-byte with a CRC error*/
+	uint64_t rx_jabber_err;   /* Jumbo Frame Crc Error */
+	uint64_t rx_undersize_err;/* Frame Less Than 64 bytes Error */
+	uint64_t rx_oversize_err; /* Bigger Than Max Support Length Frame */
+	uint64_t rx_64octes_pkts;
+	uint64_t rx_65to127_octes_pkts;
+	uint64_t rx_128to255_octes_pkts;
+	uint64_t rx_256to511_octes_pkts;
+	uint64_t rx_512to1023_octes_pkts;
+	uint64_t rx_1024tomax_octes_pkts;
+	uint64_t rx_unicast;
+	uint64_t rx_len_err;     /* Bigger Or Less Than Len Support */
+	uint64_t rx_len_invalid; /* Frame Len Isn't equal real Len */
+	uint64_t rx_pause; /* Rx Pause Frame Num */
+	uint64_t rx_vlan;  /* Rx Vlan Frame Num */
+	uint64_t rx_watchdog_err; /* Rx with a watchdog time out error */
+	uint64_t rx_bad_pkts;
+
+	uint64_t tx_all_pkts;     /* Include Good And Bad Frame Num */
+	uint64_t tx_all_bytes;    /* Include Good And Bad Pkts octes */
+	uint64_t tx_broadcast;
+	uint64_t tx_multicast;
+	uint64_t tx_64octes_pkts;
+	uint64_t tx_65to127_octes_pkts;
+	uint64_t tx_128to255_octes_pkts;
+	uint64_t tx_256to511_octes_pkts;
+	uint64_t tx_512to1023_octes_pkts;
+	uint64_t tx_1024tomax_octes_pkts;
+	uint64_t tx_all_unicast;
+	uint64_t tx_all_multicase;
+	uint64_t tx_all_broadcast;
+	uint64_t tx_underflow_err;
+	uint64_t tx_good_pkts;
+	uint64_t tx_good_bytes;
+	uint64_t tx_pause_pkts;
+	uint64_t tx_vlan_pkts;
+	uint64_t tx_bad_pkts;
 };
 
 struct rnp_eth_port {
@@ -120,6 +170,7 @@ struct rnp_eth_port {
 
 	struct rnp_hw_eth_stats eth_stats_old;
 	struct rnp_hw_eth_stats eth_stats;
+	struct rnp_hw_mac_stats mac_stats;
 
 	struct rte_eth_rss_conf rss_conf;
 	uint16_t last_rx_num;
