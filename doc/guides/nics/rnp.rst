@@ -24,6 +24,7 @@ Features
 - Packet type parsing
 - Checksum offload
 - TSO offload
+- VLAN stripping and VLAN/QINQ insertion
 
 Prerequisites
 -------------
