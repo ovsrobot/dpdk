@@ -3,6 +3,10 @@
 
 sources = [
         'rnp_mbx.c',
+        'rnp_fw_cmd.c',
+        'rnp_mbx_fw.c',
+        'rnp_common.c',
+        'rnp_mac.c',
 ]
 
 error_cflags = ['-Wno-unused-value',

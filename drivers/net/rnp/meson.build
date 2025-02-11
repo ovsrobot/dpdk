@@ -9,6 +9,7 @@ endif
 subdir('base')
 objs = [base_objs]
 
+deps += ['net']
 includes += include_directories('base')
 
 sources = files(
