@@ -44,6 +44,7 @@ typedef rte_iova_t dma_addr_t;
 
 #define _ETH_(off)	((off) + (0x10000))
 #define _NIC_(off)	((off) + (0x30000))
+#define _MAC_(off)	((off) + (0x60000))
 #define _MSI_(off)	((off) + (0xA0000))
 
 #ifndef _PACKED_ALIGN4
@@ -139,5 +140,9 @@ rnp_dma_mem_free(__rte_unused struct rnp_hw *hw,
 #define RNP_REG_WR(base, offset, val)	rnp_reg_write32(base, offset, val)
 #define RNP_E_REG_WR(hw, off, value)	rnp_reg_write32((hw)->e_ctrl, (off), (value))
 #define RNP_E_REG_RD(hw, off)		rnp_reg_read32((hw)->e_ctrl, (off))
+#define RNP_MAC_REG_WR(hw, lane, off, value) \
+	rnp_reg_write32((hw)->mac_base[lane], (off), (value))
+#define RNP_MAC_REG_RD(hw, lane, off) \
+	rnp_reg_read32((hw)->mac_base[lane], (off))
 
 #endif /* _RNP_OSDEP_H_ */
