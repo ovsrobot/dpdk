@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <rte_atomic.h>
 #include <rte_common.h>
 #include <rte_compat.h>
 
@@ -147,6 +148,32 @@ rte_str_skip_leading_spaces(const char *src)
 		p++;
 
 	return p;
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Fill memory with constant byte but can not be optimized away.
+ * Use as a replacement for memset() for sensitive information.
+ *
+ * @param dst
+ *   target buffer
+ * @param ch
+ *   byte to fill
+ * @param sz
+ *   number of bytes to fill
+ *
+ * @return
+ *  like memset() returns a pointer th the memory area dst.
+ */
+__rte_experimental
+static inline void *
+rte_memset_sensitive(void *dst, int ch, size_t sz)
+{
+	void *ret = memset(dst, ch, sz);
+	rte_compiler_barrier();
+	return ret;
 }
 
 #ifdef __cplusplus
