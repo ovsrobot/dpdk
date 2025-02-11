@@ -14,4 +14,5 @@ includes += include_directories('base')
 
 sources = files(
                 'rnp_ethdev.c',
+                'rnp_rxtx.c',
 )
