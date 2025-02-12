@@ -21,9 +21,9 @@ static const char * const valid_keys[] = {
 };
 
 static int
-cmp_dev_match(const struct rte_device *dev, const void *_kvlist)
+cmp_dev_match(const struct rte_device *dev, const struct rte_bus_address *_kvlist)
 {
-	const struct rte_kvargs *kvlist = _kvlist;
+	const struct rte_kvargs *kvlist = _kvlist->addr;
 	const char *key = TEST_VDEV_KEY_NAME;
 	const char *name;
 
@@ -54,7 +54,11 @@ get_matching_vdev(const char *match_str)
 		}
 	}
 
-	dev = vdev_bus->find_device(NULL, cmp_dev_match, kvargs);
+	struct rte_bus_address dev_addr = {
+		.addr = kvargs,
+		.size = sizeof(struct rte_kvargs),
+	};
+	dev = vdev_bus->find_device(NULL, cmp_dev_match, &dev_addr);
 	rte_kvargs_free(kvargs);
 
 	return dev;
@@ -76,7 +80,12 @@ test_vdev_bus(void)
 		printf("Failed to create vdev net_null_test0\n");
 		goto fail;
 	}
-	dev0 = vdev_bus->find_device(NULL, rte_cmp_dev_name, "net_null_test0");
+
+	struct rte_bus_address dev0_addr = {
+		.addr = "net_null_test0",
+		.size = strlen("net_null_test0")
+	};
+	dev0 = vdev_bus->find_device(NULL, rte_cmp_dev_name, &dev0_addr);
 	if (dev0 == NULL) {
 		printf("Cannot find net_null_test0 vdev\n");
 		goto fail;
@@ -87,7 +96,11 @@ test_vdev_bus(void)
 		printf("Failed to create vdev net_null_test1\n");
 		goto fail;
 	}
-	dev1 = vdev_bus->find_device(NULL, rte_cmp_dev_name, "net_null_test1");
+	struct rte_bus_address dev1_addr = {
+		.addr = "net_null_test1",
+		.size = strlen("net_null_test1")
+	};
+	dev1 = vdev_bus->find_device(NULL, rte_cmp_dev_name, &dev1_addr);
 	if (dev1 == NULL) {
 		printf("Cannot find net_null_test1 vdev\n");
 		goto fail;

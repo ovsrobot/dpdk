@@ -14,7 +14,7 @@ extern "C" {
 struct rte_device *
 rte_vdev_find_device(const struct rte_device *start,
 		     rte_dev_cmp_t cmp,
-		     const void *data);
+		     const struct rte_bus_address *data);
 
 void *
 rte_vdev_dev_iterate(const void *start,

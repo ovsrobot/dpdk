@@ -771,7 +771,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_vdev_netvsc,
 /** Compare function for vdev find device operation. */
 static int
 vdev_netvsc_cmp_rte_device(const struct rte_device *dev1,
-			   __rte_unused const void *_dev2)
+			   __rte_unused const struct rte_bus_address *_dev2)
 {
 	return strncmp(dev1->devargs->name, VDEV_NETVSC_DRIVER_NAME,
 		       VDEV_NETVSC_DRIVER_NAME_LEN);
@@ -794,8 +794,12 @@ vdev_netvsc_scan_callback(__rte_unused void *arg)
 			     VDEV_NETVSC_DRIVER_NAME_LEN))
 			return;
 
+	struct rte_bus_address dev_addr = {
+		.addr = VDEV_NETVSC_DRIVER_NAME,
+		.size = VDEV_NETVSC_DRIVER_NAME_LEN,
+	};
 	dev = vbus->find_device(NULL, vdev_netvsc_cmp_rte_device,
-				VDEV_NETVSC_DRIVER_NAME);
+				&dev_addr);
 	if (dev)
 		return;
 	if (rte_devargs_add(RTE_DEVTYPE_VIRTUAL, VDEV_NETVSC_DRIVER_NAME))

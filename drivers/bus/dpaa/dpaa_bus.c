@@ -745,7 +745,7 @@ rte_dpaa_bus_probe(void)
 
 static struct rte_device *
 rte_dpaa_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
-		     const void *data)
+		     const struct rte_bus_address *data)
 {
 	struct rte_dpaa_device *dev;
 	const struct rte_dpaa_device *dstart;
