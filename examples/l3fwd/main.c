@@ -59,6 +59,7 @@ uint16_t nb_rxd = RX_DESC_DEFAULT;
 uint16_t nb_txd = TX_DESC_DEFAULT;
 uint32_t nb_pkt_per_burst = DEFAULT_PKT_BURST;
 uint32_t mb_mempool_cache_size = MEMPOOL_CACHE_SIZE;
+uint32_t max_tx_burst = MAX_TX_BURST;
 
 /**< Ports set in promiscuous mode off by default. */
 static int promiscuous_on;
@@ -733,6 +734,7 @@ parse_pkt_burst(const char *optarg)
 		return;
 	}
 	nb_pkt_per_burst = burst_size;
+	max_tx_burst = burst_size / 2;
 	RTE_LOG(INFO, L3FWD, "Using PMD-provided burst value %d\n", burst_size);
 }
 
