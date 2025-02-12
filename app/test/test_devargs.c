@@ -171,7 +171,7 @@ test_valid_devargs(void)
 	int ret;
 
 	ret = test_valid_devargs_cases(list, RTE_DIM(list));
-	if (vdev_bus != NULL && vdev_bus->parse("net_ring0", NULL) == 0)
+	if (vdev_bus != NULL && vdev_bus->parse("net_ring0", NULL, 0, NULL) == 0)
 		/* Ring vdev driver enabled. */
 		ret |= test_valid_devargs_cases(legacy_ring_list,
 						RTE_DIM(legacy_ring_list));

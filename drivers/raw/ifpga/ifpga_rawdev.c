@@ -1833,12 +1833,6 @@ ifpga_cfg_probe(struct rte_vdev_device *vdev)
 	return ret;
 }
 
-static int cmp_dev_name(const struct rte_device *dev, const void *_name)
-{
-	const char *name = _name;
-	return strcmp(dev->name, name);
-}
-
 static int
 ifpga_cfg_remove(struct rte_vdev_device *vdev)
 {
@@ -1874,7 +1868,7 @@ ifpga_cfg_remove(struct rte_vdev_device *vdev)
 		args.port, args.bdf);
 	bus = rte_bus_find_by_name(RTE_STR(IFPGA_BUS_NAME));
 	if (bus) {
-		if (bus->find_device(NULL, cmp_dev_name, dev_name)) {
+		if (bus->find_device(NULL, rte_cmp_dev_name, dev_name)) {
 			ret = rte_eal_hotplug_remove(RTE_STR(IFPGA_BUS_NAME),
 				dev_name);
 		}

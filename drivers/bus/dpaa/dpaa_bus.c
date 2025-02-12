@@ -153,7 +153,7 @@ dpaa_devargs_lookup(struct rte_dpaa_device *dev)
 	char dev_name[32];
 
 	RTE_EAL_DEVARGS_FOREACH("dpaa_bus", devargs) {
-		devargs->bus->parse(devargs->name, &dev_name);
+		devargs->bus->parse(devargs->name, &dev_name, sizeof(dev_name), NULL);
 		if (strcmp(dev_name, dev->device.name) == 0) {
 			DPAA_BUS_INFO("**Devargs matched %s", dev_name);
 			return devargs;
@@ -447,7 +447,7 @@ dpaa_portal_finish(void *arg)
 }
 
 static int
-rte_dpaa_bus_parse(const char *name, void *out)
+rte_dpaa_bus_parse(const char *name, void *out, int addr_size, int *out_size)
 {
 	unsigned int i, j;
 	size_t delta, dev_delta;
@@ -494,6 +494,9 @@ rte_dpaa_bus_parse(const char *name, void *out)
 		max_name_len = sizeof("fm.-mac..") - 1;
 	}
 
+	if (out_size != NULL)
+		*out_size = max_name_len + 1;
+
 	if (out != NULL) {
 		char *out_name = out;
 
@@ -502,7 +505,7 @@ rte_dpaa_bus_parse(const char *name, void *out)
 		 * will be a ',' instead. Not copying past this comma is not an
 		 * error.
 		 */
-		strlcpy(out_name, &name[delta], max_name_len + 1);
+		strlcpy(out_name, &name[delta], addr_size);
 
 		/* Second digit of mac%u could instead be ','. */
 		if ((strlen(out_name) == max_name_len) &&

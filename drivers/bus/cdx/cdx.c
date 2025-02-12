@@ -464,15 +464,20 @@ cdx_probe(void)
 }
 
 static int
-cdx_parse(const char *name, void *addr)
+cdx_parse(const char *name, void *addr, int addr_size, int *out_size)
 {
-	const char **out = addr;
 	int ret;
 
 	ret = strncmp(name, CDX_DEV_PREFIX, strlen(CDX_DEV_PREFIX));
 
-	if (ret == 0 && addr)
-		*out = name;
+	if (ret != 0)
+		return ret;
+
+	if (out_size != NULL)
+		*out_size = strlen(name) + 1;
+
+	if (addr != NULL)
+		rte_strscpy(addr, name, addr_size);
 
 	return ret;
 }

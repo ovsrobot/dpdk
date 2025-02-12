@@ -542,11 +542,10 @@ platform_bus_unplug(struct rte_device *dev)
 }
 
 static int
-platform_bus_parse(const char *name, void *addr)
+platform_bus_parse(const char *name, void *addr, int addr_size, int *out_size)
 {
 	struct rte_platform_device pdev = { };
 	struct rte_platform_driver *pdrv;
-	const char **out = addr;
 
 	rte_strscpy(pdev.name, name, sizeof(pdev.name));
 
@@ -555,10 +554,16 @@ platform_bus_parse(const char *name, void *addr)
 			break;
 	}
 
-	if (pdrv != NULL && addr != NULL)
-		*out = name;
+	if (pdrv == NULL)
+		return -ENODEV;
 
-	return pdrv != NULL ? 0 : -ENODEV;
+	if (out_size != NULL)
+		*out_size = strlen(name) + 1;
+
+	if (addr != NULL)
+		rte_strscpy(addr, name, addr_size);
+
+	return 0;
 }
 
 static int
