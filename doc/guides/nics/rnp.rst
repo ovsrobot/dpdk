@@ -10,6 +10,7 @@ driver support for the inbuilt network device found in the **Mucse RNP**
 Features
 --------
 
+- Multiple queues for TX and RX
 - Promiscuous mode
 
 Prerequisites
