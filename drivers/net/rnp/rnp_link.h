@@ -10,7 +10,7 @@
 #define RNP_LINK_NOCHANGED(lane_bit, change_lane) \
 	(!((RTE_BIT32(lane_bit)) & (change_lane)))
 #define RNP_LINK_DUPLEX_ATTR_EN		(0xA0000000)
-#define RNP_SPEED_META_VALID(magic)	(!!(magic) == 0xA0000000)
+#define RNP_SPEED_META_VALID(magic)	(!!((magic) == 0xA0000000))
 #define RNP_LINK_STATE(n)		RTE_BIT32(n)
 #define RNP_LINK_SPEED_CODE(sp, n) \
 	(((sp) & RTE_GENMASK32((11) + ((4) * (n)), \
