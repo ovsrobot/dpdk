@@ -17,7 +17,7 @@ Features
 - Promiscuous mode
 - Link state information
 - MTU update
-- MAC filtering
+- MAC/VLAN filtering
 - Jumbo frames
 - Scatter-Gather IO support
 - Port hardware statistic
