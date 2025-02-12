@@ -326,6 +326,7 @@ static int rnp_dev_start(struct rte_eth_dev *eth_dev)
 	rnp_mbx_fw_lane_link_event_en(port, lsc);
 	if (!lsc)
 		rnp_run_link_poll_task(port);
+	rnp_dev_set_link_up(eth_dev);
 	/* enable eth rx flow */
 	RNP_RX_ETH_ENABLE(hw, lane);
 	port->port_stopped = 0;
@@ -411,6 +412,7 @@ static int rnp_dev_stop(struct rte_eth_dev *eth_dev)
 	/* clear the recorded link status */
 	memset(&link, 0, sizeof(link));
 	rte_eth_linkstatus_set(eth_dev, &link);
+	rnp_dev_set_link_down(eth_dev);
 	rnp_disable_all_tx_queue(eth_dev);
 	rnp_disable_all_rx_queue(eth_dev);
 	rnp_mac_tx_disable(eth_dev);
@@ -647,6 +649,8 @@ static const struct eth_dev_ops rnp_eth_dev_ops = {
 	.rss_hash_conf_get            = rnp_dev_rss_hash_conf_get,
 	/* link impl */
 	.link_update                  = rnp_dev_link_update,
+	.dev_set_link_up              = rnp_dev_set_link_up,
+	.dev_set_link_down            = rnp_dev_set_link_down,
 };
 
 static void
