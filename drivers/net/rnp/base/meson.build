@@ -3,6 +3,10 @@
 
 sources = [
         'rnp_mbx.c',
+        'rnp_fw_cmd.c',
+        'rnp_mbx_fw.c',
+        'rnp_common.c',
+        'rnp_mac.c',
 ]
 
 base_lib = static_library('rnp_base', sources,
