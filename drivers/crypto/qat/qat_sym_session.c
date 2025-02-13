@@ -26,6 +26,7 @@
 #include <rte_crypto_sym.h>
 #include <rte_security_driver.h>
 #include <rte_ether.h>
+#include <rte_string_fns.h>
 
 #include "qat_logs.h"
 #include "qat_sym_session.h"
@@ -1621,7 +1622,7 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 
 			if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
 				&enc_key) != 0) {
-				rte_free(in);
+				rte_free_sensitive(in);
 				return -EFAULT;
 			}
 
@@ -1633,9 +1634,9 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 			aes_cmac_key_derive(k0, k1);
 			aes_cmac_key_derive(k1, k2);
 
-			memset(k0, 0, ICP_QAT_HW_AES_128_KEY_SZ);
+			rte_memzero_explicit(k0, ICP_QAT_HW_AES_128_KEY_SZ);
 			*p_state_len = ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ;
-			rte_free(in);
+			rte_free_sensitive(in);
 			goto out;
 		} else {
 			static uint8_t qat_aes_xcbc_key_seed[
@@ -1666,11 +1667,11 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 				if (AES_set_encrypt_key(auth_key,
 							auth_keylen << 3,
 							&enc_key) != 0) {
-					rte_free(in -
-					  (x * ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ));
-					memset(out -
-					   (x * ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ),
-					  0, ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ);
+					rte_free_sensitive(in -
+							   (x * ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ));
+					rte_memzero_explicit(out -
+							     (x * ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ),
+							     ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ);
 					return -EFAULT;
 				}
 				AES_encrypt(in, out, &enc_key);
@@ -1678,7 +1679,7 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 				out += ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ;
 			}
 			*p_state_len = ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ;
-			rte_free(in - x*ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ);
+			rte_free_sensitive(in - x*ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ);
 			goto out;
 		}
 
@@ -1698,7 +1699,7 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 			return -ENOMEM;
 		}
 
-		memset(in, 0, ICP_QAT_HW_GALOIS_H_SZ);
+		rte_memzero_explicit(in, ICP_QAT_HW_GALOIS_H_SZ);
 		if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
 			&enc_key) != 0) {
 			return -EFAULT;
@@ -1707,7 +1708,7 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 		*p_state_len = ICP_QAT_HW_GALOIS_H_SZ +
 				ICP_QAT_HW_GALOIS_LEN_A_SZ +
 				ICP_QAT_HW_GALOIS_E_CTR0_SZ;
-		rte_free(in);
+		rte_free_sensitive(in);
 		return 0;
 	}
 
@@ -1757,8 +1758,8 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 	}
 
 	/*  don't leave data lying around */
-	memset(ipad, 0, block_size);
-	memset(opad, 0, block_size);
+	rte_memzero_explicit(ipad, block_size);
+	rte_memzero_explicit(opad, block_size);
 out:
 	return 0;
 }
@@ -2006,8 +2007,8 @@ static int qat_sym_do_precomputes_ipsec_mb(enum icp_qat_hw_auth_algo hash_alg,
 
 out:
 	/*  don't leave data lying around */
-	memset(ipad, 0, block_size);
-	memset(opad, 0, block_size);
+	rte_memzero_explicit(ipad, block_size);
+	rte_memzero_explicit(opad, block_size);
 	free_mb_mgr(m);
 	return ret;
 }
@@ -3240,7 +3241,7 @@ qat_security_session_destroy(void *dev __rte_unused,
 		if (s->mb_mgr)
 			free_mb_mgr(s->mb_mgr);
 #endif
-		memset(s, 0, qat_sym_session_get_private_size(dev));
+		rte_memzero_explicit(s, qat_sym_session_get_private_size(dev));
 	}
 
 	return 0;
