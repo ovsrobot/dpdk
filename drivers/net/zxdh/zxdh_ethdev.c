@@ -1666,6 +1666,7 @@ zxdh_eth_dev_init(struct rte_eth_dev *eth_dev)
 		goto err_zxdh_init;
 
 	zxdh_queue_res_get(eth_dev);
+	zxdh_msg_cb_reg(hw);
 	ret = zxdh_configure_intr(eth_dev);
 	if (ret != 0)
 		goto err_zxdh_init;
