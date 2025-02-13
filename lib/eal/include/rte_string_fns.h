@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <rte_atomic.h>
 #include <rte_common.h>
 #include <rte_compat.h>
 
@@ -147,6 +148,29 @@ rte_str_skip_leading_spaces(const char *src)
 		p++;
 
 	return p;
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Fill memory with with zero's (e.g. sensitive keys)
+ * Normally using memset() is fine. But in cases where clearing
+ * out local data before going out of scope or freeing,
+ * use rte_memzero_explicit() to preven the compiler from optimizing
+ * away the zeroing.
+ *
+ * @param dst
+ *   target buffer
+ * @param sz
+ *   number of bytes to fill
+ */
+__rte_experimental
+static inline void
+rte_memzero_explicit(void *dst, size_t sz)
+{
+	memset(dst, 0, sz);
+	rte_compiler_barrier();
 }
 
 #ifdef __cplusplus
