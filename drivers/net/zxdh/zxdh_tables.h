@@ -64,6 +64,9 @@
 
 #define ZXDH_FLOW_STATS_INGRESS_BASE         0xADC1
 
+#define ZXDH_MTR_STATS_EGRESS_BASE           0x7481
+#define ZXDH_MTR_STATS_INGRESS_BASE          0x7C81
+
 extern struct zxdh_dtb_shared_data g_dtb_data;
 
 struct zxdh_port_vlan_table {

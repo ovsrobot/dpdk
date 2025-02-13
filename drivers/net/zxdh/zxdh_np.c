@@ -11,6 +11,7 @@
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
 
+#include "zxdh_msg.h"
 #include "zxdh_np.h"
 #include "zxdh_logs.h"
 
@@ -141,6 +142,46 @@ do {\
 
 #define ZXDH_DTB_QUEUE_INIT_FLAG_GET(DEV_ID, QUEUE_ID)       \
 		(p_dpp_dtb_mgr[(DEV_ID)]->queue_info[(QUEUE_ID)].init_flag)
+
+ZXDH_FIELD_T g_stat_car0_cara_queue_ram0_159_0_reg[] = {
+	{"cara_drop", ZXDH_FIELD_FLAG_RW, 147, 1, 0x0, 0x0},
+	{"cara_plcr_en", ZXDH_FIELD_FLAG_RW, 146, 1, 0x0, 0x0},
+	{"cara_profile_id", ZXDH_FIELD_FLAG_RW, 145, 9, 0x0, 0x0},
+	{"cara_tq_h", ZXDH_FIELD_FLAG_RO, 136, 13, 0x0, 0x0},
+	{"cara_tq_l", ZXDH_FIELD_FLAG_RO, 123, 32, 0x0, 0x0},
+	{"cara_ted", ZXDH_FIELD_FLAG_RO, 91, 19, 0x0, 0x0},
+	{"cara_tcd", ZXDH_FIELD_FLAG_RO, 72, 19, 0x0, 0x0},
+	{"cara_tei", ZXDH_FIELD_FLAG_RO, 53, 27, 0x0, 0x0},
+	{"cara_tci", ZXDH_FIELD_FLAG_RO, 26, 27, 0x0, 0x0},
+};
+
+ZXDH_FIELD_T g_stat_car0_carb_queue_ram0_159_0_reg[] = {
+	{"carb_drop", ZXDH_FIELD_FLAG_RW, 147, 1, 0x0, 0x0},
+	{"carb_plcr_en", ZXDH_FIELD_FLAG_RW, 146, 1, 0x0, 0x0},
+	{"carb_profile_id", ZXDH_FIELD_FLAG_RW, 145, 9, 0x0, 0x0},
+	{"carb_tq_h", ZXDH_FIELD_FLAG_RO, 136, 13, 0x0, 0x0},
+	{"carb_tq_l", ZXDH_FIELD_FLAG_RO, 123, 32, 0x0, 0x0},
+	{"carb_ted", ZXDH_FIELD_FLAG_RO, 91, 19, 0x0, 0x0},
+	{"carb_tcd", ZXDH_FIELD_FLAG_RO, 72, 19, 0x0, 0x0},
+	{"carb_tei", ZXDH_FIELD_FLAG_RO, 53, 27, 0x0, 0x0},
+	{"carb_tci", ZXDH_FIELD_FLAG_RO, 26, 27, 0x0, 0x0},
+};
+
+ZXDH_FIELD_T g_stat_car0_carc_queue_ram0_159_0_reg[] = {
+	{"carc_drop", ZXDH_FIELD_FLAG_RW, 147, 1, 0x0, 0x0},
+	{"carc_plcr_en", ZXDH_FIELD_FLAG_RW, 146, 1, 0x0, 0x0},
+	{"carc_profile_id", ZXDH_FIELD_FLAG_RW, 145, 9, 0x0, 0x0},
+	{"carc_tq_h", ZXDH_FIELD_FLAG_RO, 136, 13, 0x0, 0x0},
+	{"carc_tq_l", ZXDH_FIELD_FLAG_RO, 123, 32, 0x0, 0x0},
+	{"carc_ted", ZXDH_FIELD_FLAG_RO, 91, 19, 0x0, 0x0},
+	{"carc_tcd", ZXDH_FIELD_FLAG_RO, 72, 19, 0x0, 0x0},
+	{"carc_tei", ZXDH_FIELD_FLAG_RO, 53, 27, 0x0, 0x0},
+	{"carc_tci", ZXDH_FIELD_FLAG_RO, 26, 27, 0x0, 0x0},
+};
+
+ZXDH_FIELD_T g_nppu_pktrx_cfg_pktrx_glbal_cfg_0_reg[] = {
+	{"pktrx_glbal_cfg_0", ZXDH_FIELD_FLAG_RW, 31, 32, 0x0, 0x0},
+};
 
 static uint32_t
 zxdh_np_comm_is_big_endian(void)
@@ -2317,6 +2358,430 @@ zxdh_np_stat_ppu_cnt_get_ex(uint32_t dev_id,
 		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_se_smmu0_ind_read");
 	} else {
 		PMD_DRV_LOG(ERR, "DPDK DONT HAVE DDR STAT.");
+	}
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_agent_channel_sync_send(ZXDH_AGENT_CHANNEL_MSG_T *p_msg,
+				uint32_t *p_data,
+				uint32_t rep_len)
+{
+	uint32_t ret = 0;
+	uint32_t vport = 0;
+	struct zxdh_pci_bar_msg in = {0};
+	struct zxdh_msg_recviver_mem result = {0};
+	uint32_t *recv_buffer = NULL;
+	uint8_t *reply_ptr = NULL;
+	uint16_t reply_msg_len = 0;
+	uint64_t agent_addr = 0;
+
+	if (ZXDH_IS_PF(vport))
+		in.src = ZXDH_MSG_CHAN_END_PF;
+	else
+		in.src = ZXDH_MSG_CHAN_END_VF;
+
+	in.virt_addr = agent_addr;
+	in.payload_addr = p_msg->msg;
+	in.payload_len = p_msg->msg_len;
+	in.dst = ZXDH_MSG_CHAN_END_RISC;
+	in.module_id = ZXDH_BAR_MDOULE_NPSDK;
+
+	recv_buffer = (uint32_t *)rte_zmalloc(NULL, rep_len + ZXDH_CHANNEL_REPS_LEN, 0);
+	if (recv_buffer == NULL) {
+		PMD_DRV_LOG(ERR, "%s point null!", __func__);
+		return ZXDH_PAR_CHK_POINT_NULL;
+	}
+
+	result.buffer_len = rep_len + ZXDH_CHANNEL_REPS_LEN;
+	result.recv_buffer = recv_buffer;
+
+	ret = zxdh_bar_chan_sync_msg_send(&in, &result);
+	if (ret == ZXDH_BAR_MSG_OK) {
+		reply_ptr = (uint8_t *)(result.recv_buffer);
+		if (*reply_ptr == 0XFF) {
+			reply_msg_len = *(uint16_t *)(reply_ptr + 1);
+			rte_memcpy(p_data, reply_ptr + 4,
+				((reply_msg_len > rep_len) ? rep_len : reply_msg_len));
+		} else {
+			PMD_DRV_LOG(ERR, "Message not replied");
+		}
+	} else {
+		PMD_DRV_LOG(ERR, "Error[0x%x], %s failed!", ret, __func__);
+	}
+
+	rte_free(recv_buffer);
+	return ret;
+}
+
+static uint32_t
+zxdh_np_agent_channel_plcr_sync_send(ZXDH_AGENT_CHANNEL_PLCR_MSG_T *p_msg,
+		uint32_t *p_data, uint32_t rep_len)
+{
+	uint32_t ret = 0;
+	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {0};
+
+	agent_msg.msg = (void *)p_msg;
+	agent_msg.msg_len = sizeof(ZXDH_AGENT_CHANNEL_PLCR_MSG_T);
+
+	ret = zxdh_np_agent_channel_sync_send(&agent_msg, p_data, rep_len);
+	if (ret != 0)	{
+		PMD_DRV_LOG(ERR, "%s: agent_channel_sync_send failed.", __func__);
+		return 1;
+	}
+
+	return 0;
+}
+
+static uint32_t
+zxdh_np_agent_channel_plcr_profileid_request(uint32_t vport,
+	uint32_t car_type, uint32_t *p_profileid)
+{
+	uint32_t ret = 0;
+	uint32_t resp_buffer[2] = {0};
+
+	ZXDH_AGENT_CHANNEL_PLCR_MSG_T msgcfg = {0};
+
+	msgcfg.dev_id = 0;
+	msgcfg.type = ZXDH_PLCR_MSG;
+	msgcfg.oper = ZXDH_PROFILEID_REQUEST;
+	msgcfg.vport = vport;
+	msgcfg.car_type = car_type;
+	msgcfg.profile_id = 0xFFFF;
+
+	ret = zxdh_np_agent_channel_plcr_sync_send(&msgcfg,
+		resp_buffer, sizeof(resp_buffer));
+	if (ret != 0)	{
+		PMD_DRV_LOG(ERR, "%s: agent_channel_plcr_sync_send failed.", __func__);
+		return 1;
+	}
+
+	rte_memcpy(p_profileid, resp_buffer, sizeof(uint32_t) * ZXDH_SCHE_RSP_LEN);
+
+	return ret;
+}
+
+static uint32_t
+zxdh_np_agent_channel_plcr_car_rate(uint32_t car_type,
+		uint32_t pkt_sign,
+		uint32_t profile_id __rte_unused,
+		void *p_car_profile_cfg)
+{
+	uint32_t ret = 0;
+	uint32_t resp_buffer[2] = {0};
+	uint32_t resp_len = 8;
+	uint32_t i = 0;
+	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {0};
+	ZXDH_AGENT_CAR_PKT_PROFILE_MSG_T msgpktcfg = {0};
+	ZXDH_AGENT_CAR_PROFILE_MSG_T msgcfg = {0};
+	ZXDH_STAT_CAR_PROFILE_CFG_T *p_stat_car_profile_cfg = NULL;
+	ZXDH_STAT_CAR_PKT_PROFILE_CFG_T *p_stat_pkt_car_profile_cfg = NULL;
+
+	if (car_type == ZXDH_STAT_CAR_A_TYPE && pkt_sign == 1) {
+		p_stat_pkt_car_profile_cfg = (ZXDH_STAT_CAR_PKT_PROFILE_CFG_T *)p_car_profile_cfg;
+		msgpktcfg.dev_id = 0;
+		msgpktcfg.type = ZXDH_PLCR_CAR_PKT_RATE;
+		msgpktcfg.car_level = car_type;
+		msgpktcfg.cir = p_stat_pkt_car_profile_cfg->cir;
+		msgpktcfg.cbs = p_stat_pkt_car_profile_cfg->cbs;
+		msgpktcfg.profile_id = p_stat_pkt_car_profile_cfg->profile_id;
+		msgpktcfg.pkt_sign = p_stat_pkt_car_profile_cfg->pkt_sign;
+		for (i = 0; i < ZXDH_CAR_PRI_MAX; i++)
+			msgpktcfg.pri[i] = p_stat_pkt_car_profile_cfg->pri[i];
+
+		agent_msg.msg = (void *)&msgpktcfg;
+		agent_msg.msg_len = sizeof(ZXDH_AGENT_CAR_PKT_PROFILE_MSG_T);
+
+		ret = zxdh_np_agent_channel_sync_send(&agent_msg, resp_buffer, resp_len);
+		if (ret != 0)	{
+			PMD_DRV_LOG(ERR, "%s: stat_car_a_type failed.", __func__);
+			return 1;
+		}
+
+		ret = *(uint8_t *)resp_buffer;
+	} else {
+		p_stat_car_profile_cfg = (ZXDH_STAT_CAR_PROFILE_CFG_T *)p_car_profile_cfg;
+		msgcfg.dev_id = 0;
+		msgcfg.type = ZXDH_PLCR_CAR_RATE;
+		msgcfg.car_level = car_type;
+		msgcfg.cir = p_stat_car_profile_cfg->cir;
+		msgcfg.cbs = p_stat_car_profile_cfg->cbs;
+		msgcfg.profile_id = p_stat_car_profile_cfg->profile_id;
+		msgcfg.pkt_sign = p_stat_car_profile_cfg->pkt_sign;
+		msgcfg.cd = p_stat_car_profile_cfg->cd;
+		msgcfg.cf = p_stat_car_profile_cfg->cf;
+		msgcfg.cm = p_stat_car_profile_cfg->cm;
+		msgcfg.cir = p_stat_car_profile_cfg->cir;
+		msgcfg.cbs = p_stat_car_profile_cfg->cbs;
+		msgcfg.eir = p_stat_car_profile_cfg->eir;
+		msgcfg.ebs = p_stat_car_profile_cfg->ebs;
+		msgcfg.random_disc_e = p_stat_car_profile_cfg->random_disc_e;
+		msgcfg.random_disc_c = p_stat_car_profile_cfg->random_disc_c;
+		for (i = 0; i < ZXDH_CAR_PRI_MAX; i++) {
+			msgcfg.c_pri[i] = p_stat_car_profile_cfg->c_pri[i];
+			msgcfg.e_green_pri[i] = p_stat_car_profile_cfg->e_green_pri[i];
+			msgcfg.e_yellow_pri[i] = p_stat_car_profile_cfg->e_yellow_pri[i];
+		}
+
+		agent_msg.msg = (void *)&msgcfg;
+		agent_msg.msg_len = sizeof(ZXDH_AGENT_CAR_PROFILE_MSG_T);
+
+		ret = zxdh_np_agent_channel_sync_send(&agent_msg, resp_buffer, resp_len);
+		if (ret != 0)	{
+			PMD_DRV_LOG(ERR, "%s: stat_car_b_type failed.", __func__);
+			return 1;
+		}
+
+		ret = *(uint8_t *)resp_buffer;
+	}
+
+	return ret;
+}
+
+static uint32_t
+zxdh_np_agent_channel_plcr_profileid_release(uint32_t vport,
+		uint32_t car_type __rte_unused,
+		uint32_t profileid)
+{
+	uint32_t ret = 0;
+	uint32_t resp_buffer[2] = {0};
+
+	ZXDH_AGENT_CHANNEL_PLCR_MSG_T msgcfg = {0};
+
+	msgcfg.dev_id = 0;
+	msgcfg.type = ZXDH_PLCR_MSG;
+	msgcfg.oper = ZXDH_PROFILEID_RELEASE;
+	msgcfg.vport = vport;
+	msgcfg.profile_id = profileid;
+
+	ret = zxdh_np_agent_channel_plcr_sync_send(&msgcfg,
+		resp_buffer, sizeof(resp_buffer));
+	if (ret != 0)	{
+		PMD_DRV_LOG(ERR, "%s: agent_channel_plcr_sync_send failed.", __func__);
+		return 1;
+	}
+
+	ret = *(uint8_t *)resp_buffer;
+
+	return ret;
+}
+
+static uint32_t
+zxdh_np_stat_cara_queue_cfg_set(uint32_t dev_id,
+		uint32_t flow_id,
+		uint32_t drop_flag,
+		uint32_t plcr_en,
+		uint32_t profile_id)
+{
+	uint32_t rc = 0;
+
+	ZXDH_STAT_CAR0_CARA_QUEUE_RAM0_159_0_T queue_cfg = {0};
+
+	queue_cfg.cara_drop = drop_flag;
+	queue_cfg.cara_plcr_en = plcr_en;
+	queue_cfg.cara_profile_id = profile_id;
+
+	rc = zxdh_np_reg_write(dev_id,
+				ZXDH_STAT_CAR0_CARA_QUEUE_RAM0,
+				0,
+				flow_id,
+				&queue_cfg);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_reg_write");
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_stat_carb_queue_cfg_set(uint32_t dev_id,
+		uint32_t flow_id,
+		uint32_t drop_flag,
+		uint32_t plcr_en,
+		uint32_t profile_id)
+{
+	uint32_t rc = 0;
+
+	ZXDH_STAT_CAR0_CARB_QUEUE_RAM0_159_0_T queue_cfg = {0};
+
+	queue_cfg.carb_drop = drop_flag;
+	queue_cfg.carb_plcr_en = plcr_en;
+	queue_cfg.carb_profile_id = profile_id;
+
+	rc = zxdh_np_reg_write(dev_id,
+				ZXDH_STAT_CAR0_CARB_QUEUE_RAM0,
+				0,
+				flow_id,
+				&queue_cfg);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_reg_write");
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_stat_carc_queue_cfg_set(uint32_t dev_id,
+		uint32_t flow_id,
+		uint32_t drop_flag,
+		uint32_t plcr_en,
+		uint32_t profile_id)
+{
+	uint32_t rc = 0;
+
+	ZXDH_STAT_CAR0_CARC_QUEUE_RAM0_159_0_T queue_cfg = {0};
+
+	queue_cfg.carc_drop = drop_flag;
+	queue_cfg.carc_plcr_en = plcr_en;
+	queue_cfg.carc_profile_id = profile_id;
+
+	rc = zxdh_np_reg_write(dev_id,
+						ZXDH_STAT_CAR0_CARC_QUEUE_RAM0,
+						0,
+						flow_id,
+						&queue_cfg);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_reg_write");
+
+	return rc;
+}
+
+uint32_t
+zxdh_np_car_profile_id_add(uint32_t vport_id,
+		uint32_t flags,
+		uint64_t *p_profile_id)
+{
+	uint32_t ret = 0;
+	uint32_t *profile_id = NULL;
+	uint32_t profile_id_h = 0;
+	uint32_t profile_id_l = 0;
+	uint64_t temp_profile_id = 0;
+
+	profile_id = (uint32_t *)rte_zmalloc(NULL, ZXDH_G_PROFILE_ID_LEN, 0);
+	if (profile_id == NULL) {
+		PMD_DRV_LOG(ERR, "%s: profile_id point null!", __func__);
+		return ZXDH_PAR_CHK_POINT_NULL;
+	}
+
+	ret = zxdh_np_agent_channel_plcr_profileid_request(vport_id, flags, profile_id);
+
+	profile_id_h = *(profile_id + 1);
+	profile_id_l = *profile_id;
+	rte_free(profile_id);
+
+	temp_profile_id = (((uint64_t)profile_id_l) << 32) | ((uint64_t)profile_id_h);
+	if (0 != (uint32_t)(temp_profile_id >> 56))	{
+		PMD_DRV_LOG(ERR, "%s: profile_id is overflow!", __func__);
+		return 1;
+	}
+
+	*p_profile_id = temp_profile_id;
+
+	return ret;
+}
+
+uint32_t
+zxdh_np_car_profile_cfg_set(uint32_t vport_id __rte_unused,
+		uint32_t car_type,
+		uint32_t pkt_sign,
+		uint32_t profile_id,
+		void *p_car_profile_cfg)
+{
+	uint32_t ret = 0;
+
+	ret = zxdh_np_agent_channel_plcr_car_rate(car_type,
+		pkt_sign, profile_id, p_car_profile_cfg);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "%s: plcr_car_rate set failed!", __func__);
+		return 1;
+	}
+
+	return ret;
+}
+
+uint32_t
+zxdh_np_car_profile_id_delete(uint32_t vport_id,
+	uint32_t flags, uint64_t profile_id)
+{
+	uint32_t ret = 0;
+	uint32_t profileid = 0;
+
+	profileid = profile_id & 0xFFFF;
+
+	ret = zxdh_np_agent_channel_plcr_profileid_release(vport_id, flags, profileid);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "%s: plcr profiled id release failed!", __func__);
+		return 1;
+	}
+
+	return 0;
+}
+
+uint32_t
+zxdh_np_stat_car_queue_cfg_set(uint32_t dev_id,
+		uint32_t car_type,
+		uint32_t flow_id,
+		uint32_t drop_flag,
+		uint32_t plcr_en,
+		uint32_t profile_id)
+{
+	uint32_t rc = 0;
+
+	if (car_type == ZXDH_STAT_CAR_A_TYPE) {
+		if (flow_id > ZXDH_CAR_A_FLOW_ID_MAX)	{
+			PMD_DRV_LOG(ERR, "%s: stat car a type flow_id invalid!", __func__);
+			return ZXDH_PAR_CHK_INVALID_INDEX;
+		}
+
+		if (profile_id > ZXDH_CAR_A_PROFILE_ID_MAX) {
+			PMD_DRV_LOG(ERR, "%s: stat car a type profile_id invalid!", __func__);
+			return ZXDH_PAR_CHK_INVALID_INDEX;
+		}
+	} else if (car_type == ZXDH_STAT_CAR_B_TYPE) {
+		if (flow_id > ZXDH_CAR_B_FLOW_ID_MAX) {
+			PMD_DRV_LOG(ERR, "%s: stat car b type flow_id invalid!", __func__);
+			return ZXDH_PAR_CHK_INVALID_INDEX;
+		}
+
+		if (profile_id > ZXDH_CAR_B_PROFILE_ID_MAX) {
+			PMD_DRV_LOG(ERR, "%s: stat car b type profile_id invalid!", __func__);
+			return ZXDH_PAR_CHK_INVALID_INDEX;
+		}
+	} else {
+		if (flow_id > ZXDH_CAR_C_FLOW_ID_MAX) {
+			PMD_DRV_LOG(ERR, "%s: stat car c type flow_id invalid!", __func__);
+			return ZXDH_PAR_CHK_INVALID_INDEX;
+		}
+
+		if (profile_id > ZXDH_CAR_C_PROFILE_ID_MAX) {
+			PMD_DRV_LOG(ERR, "%s: stat car c type profile_id invalid!", __func__);
+			return ZXDH_PAR_CHK_INVALID_INDEX;
+		}
+	}
+
+	switch (car_type) {
+	case ZXDH_STAT_CAR_A_TYPE:
+		rc = zxdh_np_stat_cara_queue_cfg_set(dev_id,
+					flow_id,
+					drop_flag,
+					plcr_en,
+					profile_id);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "stat_cara_queue_cfg_set");
+	break;
+
+	case ZXDH_STAT_CAR_B_TYPE:
+		rc = zxdh_np_stat_carb_queue_cfg_set(dev_id,
+					flow_id,
+					drop_flag,
+					plcr_en,
+					profile_id);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "stat_carb_queue_cfg_set");
+	break;
+
+	case ZXDH_STAT_CAR_C_TYPE:
+		rc = zxdh_np_stat_carc_queue_cfg_set(dev_id,
+					flow_id,
+					drop_flag,
+					plcr_en,
+					profile_id);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "stat_carc_queue_cfg_set");
+	break;
 	}
 
 	return rc;

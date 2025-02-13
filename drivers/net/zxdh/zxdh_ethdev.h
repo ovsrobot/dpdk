@@ -10,6 +10,8 @@
 #include <rte_interrupts.h>
 #include <eal_interrupts.h>
 
+#include "zxdh_mtr.h"
+
 /* ZXDH PCI vendor/device ID. */
 #define ZXDH_PCI_VENDOR_ID        0x1cf2
 
@@ -113,7 +115,10 @@ struct zxdh_hw {
 	uint8_t use_msix;
 
 	uint8_t duplex;
-	uint8_t is_pf;
+	uint8_t is_pf         : 1,
+			rsv : 1,
+			i_mtr_en      : 1,
+			e_mtr_en      : 1;
 	uint8_t msg_chan_init;
 	uint8_t phyport;
 	uint8_t panel_id;
@@ -157,6 +162,13 @@ struct zxdh_shared_data {
 	int32_t np_init_done;
 	uint32_t dev_refcnt;
 	struct zxdh_dtb_shared_data *dtb_data;
+
+	struct rte_mempool *mtr_mp;
+	struct rte_mempool *mtr_profile_mp;
+	struct rte_mempool *mtr_policy_mp;
+	struct zxdh_mtr_profile_list meter_profile_list;
+	struct zxdh_mtr_list mtr_list;
+	struct zxdh_mtr_policy_list mtr_policy_list;
 };
 
 struct zxdh_dev_shared_data {
