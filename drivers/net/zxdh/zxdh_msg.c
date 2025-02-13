@@ -1233,6 +1233,24 @@ zxdh_bar_chan_msg_recv_register(uint8_t module_id, zxdh_bar_chan_msg_recv_callba
 }
 
 static int
+zxdh_vf_promisc_init(struct zxdh_hw *hw, union zxdh_virport_num vport)
+{
+	int16_t ret;
+
+	ret = zxdh_dev_broadcast_set(hw, vport.vport, true);
+	return ret;
+}
+
+static int
+zxdh_vf_promisc_uninit(struct zxdh_hw *hw, union zxdh_virport_num vport)
+{
+	int16_t ret;
+
+	ret = zxdh_dev_broadcast_set(hw, vport.vport, false);
+	return ret;
+}
+
+static int
 zxdh_vf_port_init(struct zxdh_hw *pf_hw, uint16_t vport, void *cfg_data,
 		struct zxdh_msg_reply_body *res_info __rte_unused,
 		uint16_t *res_len __rte_unused)
@@ -1257,6 +1275,12 @@ zxdh_vf_port_init(struct zxdh_hw *pf_hw, uint16_t vport, void *cfg_data,
 	ret = zxdh_set_port_attr(pf_hw, vfid, &port_attr);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "set vport attr failed, code:%d", ret);
+		goto proc_end;
+	}
+
+	ret = zxdh_vf_promisc_init(pf_hw, port);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "vf_promisc_table_init failed, code:%d", ret);
 		goto proc_end;
 	}
 
@@ -1315,6 +1339,12 @@ zxdh_vf_port_uninit(struct zxdh_hw *pf_hw,
 	ret = zxdh_mac_clear(pf_hw, vport_num);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "zxdh_mac_clear failed, code:%d", ret);
+		goto proc_end;
+	}
+
+	ret = zxdh_vf_promisc_uninit(pf_hw, vport_num);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "vf_promisc_table_uninit failed, code:%d", ret);
 		goto proc_end;
 	}
 
