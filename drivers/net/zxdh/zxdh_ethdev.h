@@ -126,13 +126,13 @@ struct zxdh_hw {
 	uint8_t rss_enable;
 	uint8_t rss_init;
 	uint16_t slot_id;
-
 	uint8_t que_set_flag;
+
+	uint32_t dev_id;
 	uint16_t queue_pool_count;
 	uint16_t queue_pool_start;
 	struct zxdh_vlan_offload_cfg vlan_offload_cfg;
 	uint8_t dl_net_hdr_len;
-	uint8_t rsv[2];
 };
 
 struct zxdh_dtb_shared_data {
