@@ -13,6 +13,7 @@
 #include <rte_byteorder.h>
 #include <rte_common.h>
 #include <rte_os_shim.h>
+#include <rte_queue.h>
 
 #include <rte_debug.h>
 #include <rte_alarm.h>
@@ -51,13 +52,6 @@ struct iavf_event_handler {
 static struct iavf_event_handler event_handler = {
 	.fd = {-1, -1},
 };
-
-#ifndef TAILQ_FOREACH_SAFE
-#define TAILQ_FOREACH_SAFE(var, head, field, tvar) \
-	for ((var) = TAILQ_FIRST((head)); \
-		(var) && ((tvar) = TAILQ_NEXT((var), field), 1); \
-	(var) = (tvar))
-#endif
 
 static uint32_t
 iavf_dev_event_handle(void *param __rte_unused)
