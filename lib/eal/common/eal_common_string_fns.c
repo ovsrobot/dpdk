@@ -7,8 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 #include <rte_string_fns.h>
 #include <rte_errno.h>
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+#include <rte_windows.h>
+#endif
 
 /* split string into tokens */
 int
@@ -97,4 +102,14 @@ rte_str_to_size(const char *str)
 		break;
 	}
 	return size;
+}
+
+void
+rte_memzero_explicit(void *dst, size_t sz)
+{
+#ifdef RTE_EXEC_ENV_WINDOWS
+	SecureZeroMemory(dst, sz);
+#else
+	explicit_bzero(dst, sz);
+#endif
 }
