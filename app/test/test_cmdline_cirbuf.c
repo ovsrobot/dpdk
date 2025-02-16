@@ -251,11 +251,9 @@ test_cirbuf_string_add_del_reverse(void)
 {
 	struct cirbuf cb;
 	char buf[CMDLINE_TEST_BUFSIZE];
-	char tmp[CMDLINE_TEST_BUFSIZE];
 
 	/* initialize buffers */
 	memset(buf, 0, sizeof(buf));
-	memset(tmp, 0, sizeof(tmp));
 
 	/*
 	 * initialize circular buffer
