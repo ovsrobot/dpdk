@@ -2710,6 +2710,8 @@ process_openssl_rsa_op_evp(struct rte_crypto_op *cop,
 		return ret;
 	}
 
+	cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
+
 	switch (op->rsa.op_type) {
 	case RTE_CRYPTO_ASYM_OP_ENCRYPT:
 		if (EVP_PKEY_encrypt_init(rsa_ctx) != 1)
@@ -2807,6 +2809,7 @@ process_openssl_rsa_op_evp(struct rte_crypto_op *cop,
 				op->rsa.sign.data,
 				op->rsa.sign.length) <= 0) {
 			OPENSSL_free(tmp);
+			ret = 0;
 			goto err_rsa;
 		}
 
