@@ -8,6 +8,10 @@
 #include <errno.h>
 #include <string.h>
 
+#include <rte_debug.h>
+#include <rte_launch.h>
+#include <rte_lcore.h>
+#include <rte_random.h>
 #include <rte_string_fns.h>
 
 #include "test.h"
@@ -205,12 +209,64 @@ test_rte_str_skip_leading_spaces(void)
 	return 0;
 }
 
+/*
+ * This test does a variation of what OpenBSD regression suite does to test explicit bzero.
+ * One thread creates a buffer then zeros it but does not touch after that.
+ * Other thread checks that buffer has been cleared.
+ * A broken implementation would get optimized away.
+ */
+#define TEST_DATA_SIZE	123
+static int
+run_memzero_explicit(void *arg)
+{
+	uint8_t *data = arg;
+
+	for (unsigned int i = 0; i < TEST_DATA_SIZE; i++)
+		data[i] = rte_rand_max(256);
+
+	rte_memzero_explicit(data, TEST_DATA_SIZE);
+	return 0;
+}
+
+static unsigned int
+get_worker_lcore(void)
+{
+	unsigned int lcore_id = rte_get_next_lcore(-1, 1, 0);
+
+	/* avoid checkers (like Coverity) false positives */
+	RTE_VERIFY(lcore_id < RTE_MAX_LCORE);
+
+	return lcore_id;
+}
+
+static int
+test_rte_memzero_explicit(void)
+{
+	if (rte_lcore_count() < 2) {
+		printf("Need multiple cores to run memzero explicit test.\n");
+		return TEST_SKIPPED;
+	}
+
+	uint8_t test_data[TEST_DATA_SIZE] = { 1 };
+	unsigned int worker_lcore_id = get_worker_lcore();
+	int rc = rte_eal_remote_launch(run_memzero_explicit, test_data, worker_lcore_id);
+	TEST_ASSERT(rc == 0, "Worker thread launch failed");
+
+	rte_eal_mp_wait_lcore();
+
+	for (unsigned int i = 0; i < TEST_DATA_SIZE; i++)
+		TEST_ASSERT(test_data[i] == 0, "rte_memset_explicit did not zero");
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite test_suite = {
 	.suite_name = "String functions tests",
 	.unit_test_cases = {
 		TEST_CASE(test_rte_strsplit),
 		TEST_CASE(test_rte_strlcat),
 		TEST_CASE(test_rte_str_skip_leading_spaces),
+		TEST_CASE(test_rte_memzero_explicit),
 		TEST_CASES_END()
 	}
 };
