@@ -1739,8 +1739,8 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 
 	/* do partial hash of ipad and copy to state1 */
 	if (partial_hash_compute(hash_alg, ipad, p_state_buf)) {
-		memset(ipad, 0, block_size);
-		memset(opad, 0, block_size);
+		rte_memzero_explicit(ipad, block_size);
+		rte_memzero_explicit(opad, block_size);
 		QAT_LOG(ERR, "ipad precompute failed");
 		return -EFAULT;
 	}
@@ -1751,8 +1751,8 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 	 */
 	*p_state_len = qat_hash_get_state1_size(hash_alg);
 	if (partial_hash_compute(hash_alg, opad, p_state_buf + *p_state_len)) {
-		memset(ipad, 0, block_size);
-		memset(opad, 0, block_size);
+		rte_memzero_explicit(ipad, block_size);
+		rte_memzero_explicit(opad, block_size);
 		QAT_LOG(ERR, "opad precompute failed");
 		return -EFAULT;
 	}
