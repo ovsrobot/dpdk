@@ -205,16 +205,20 @@ test_rte_str_skip_leading_spaces(void)
 	return 0;
 }
 
+static struct unit_test_suite test_suite = {
+	.suite_name = "String functions tests",
+	.unit_test_cases = {
+		TEST_CASE(test_rte_strsplit),
+		TEST_CASE(test_rte_strlcat),
+		TEST_CASE(test_rte_str_skip_leading_spaces),
+		TEST_CASES_END()
+	}
+};
+
 static int
 test_string_fns(void)
 {
-	if (test_rte_strsplit() < 0)
-		return -1;
-	if (test_rte_strlcat() < 0)
-		return -1;
-	if (test_rte_str_skip_leading_spaces() < 0)
-		return -1;
-	return 0;
+	return unit_test_suite_runner(&test_suite);
 }
 
 REGISTER_FAST_TEST(string_autotest, true, true, test_string_fns);
