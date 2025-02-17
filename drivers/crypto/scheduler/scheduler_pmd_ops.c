@@ -195,10 +195,9 @@ scheduler_session_size_get(struct scheduler_ctx *sched_ctx,
 		uint32_t priv_sess_size = 0;
 
 		if (session_type == RTE_CRYPTO_OP_WITH_SESSION) {
-			priv_sess_size =
-				(*dev->dev_ops->sym_session_get_size)(dev);
+			priv_sess_size = dev->dev_ops->sym_session_get_size(dev);
 		} else {
-			priv_sess_size = (*sec_ctx->ops->session_get_size)(dev);
+			priv_sess_size = sec_ctx->ops->session_get_size(dev);
 		}
 
 		max_priv_sess_size = RTE_MAX(max_priv_sess_size, priv_sess_size);
