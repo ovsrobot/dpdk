@@ -99,10 +99,26 @@ foreach example: examples
     includes = [include_directories(example, 'common')]
     deps = ['eal', 'mempool', 'net', 'mbuf', 'ethdev', 'cmdline']
     optional_deps = []
+
+    # call into subdir may update name so record it here
+    display_name = example
+
     subdir(example)
+    example_name = 'dpdk-' + name
 
     if build
         dep_objs = ext_deps
+
+        # log mandatory dependencies
+        cmds = ['--type', 'examples']
+        cmds += ['--display-name', display_name]
+        run_command([log_deps_cmd, cmds, example_name, deps], check: false)
+
+        # log optional dependencies, if any
+        if optional_deps.length() > 0
+            cmds += ['--optional']
+            run_command([log_deps_cmd, cmds, example_name, optional_deps], check: false)
+        endif
 
         # resolve any optional internal dependencies
         def_lib = get_option('default_library')
@@ -135,7 +151,7 @@ foreach example: examples
     if allow_experimental_apis
         cflags += '-DALLOW_EXPERIMENTAL_API'
     endif
-    executable('dpdk-' + name, sources,
+    executable(example_name, sources,
             include_directories: includes,
             link_whole: link_whole_libs,
             link_args: ldflags,
