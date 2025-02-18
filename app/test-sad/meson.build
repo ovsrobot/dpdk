@@ -8,6 +8,6 @@ if is_windows
 endif
 
 sources = files('main.c')
-deps += ['ipsec', 'net']
+deps += ['ipsec']
 
 cflags += no_wvla_cflag
