@@ -9011,6 +9011,7 @@ static void cmd_dump_parsed(void *parsed_result,
 }
 
 static cmdline_parse_token_string_t cmd_dump_dump =
+#ifdef RTE_EXEC_ENV_WINDOWS
 	TOKEN_STRING_INITIALIZER(struct cmd_dump_result, dump,
 		"dump_physmem#"
 		"dump_memzone#"
@@ -9020,10 +9021,20 @@ static cmdline_parse_token_string_t cmd_dump_dump =
 		"dump_mempool#"
 		"dump_devargs#"
 		"dump_lcores#"
-#ifndef RTE_EXEC_ENV_WINDOWS
-		"dump_trace#"
-#endif
 		"dump_log_types");
+#else
+	TOKEN_STRING_INITIALIZER(struct cmd_dump_result, dump,
+		"dump_physmem#"
+		"dump_memzone#"
+		"dump_socket_mem#"
+		"dump_struct_sizes#"
+		"dump_ring#"
+		"dump_mempool#"
+		"dump_devargs#"
+		"dump_lcores#"
+		"dump_trace#"
+		"dump_log_types");
+#endif
 
 static cmdline_parse_inst_t cmd_dump = {
 	.f = cmd_dump_parsed,  /* function to call */
