@@ -6,7 +6,7 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
-deps += ['common_dpaax', 'eventdev', 'kvargs']
+deps = ['common_dpaax', 'eventdev']
 sources = files(
         'fslmc_bus.c',
         'fslmc_vfio.c',

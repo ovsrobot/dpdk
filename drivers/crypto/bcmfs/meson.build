@@ -9,7 +9,7 @@ if is_windows
     subdir_done()
 endif
 
-deps += ['eal', 'bus_vdev']
+deps += ['bus_vdev']
 sources = files(
         'bcmfs_logs.c',
         'bcmfs_device.c',

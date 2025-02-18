@@ -322,9 +322,7 @@ sources += files(
 endif
 endif
 
-
-deps += ['bus_pci', 'cryptodev', 'eventdev', 'security']
-deps += ['common_cnxk', 'mempool_cnxk']
+deps = ['eventdev', 'mempool_cnxk']
 
 cflags += no_wvla_cflag
 

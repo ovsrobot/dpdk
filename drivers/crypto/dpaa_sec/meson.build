@@ -6,7 +6,7 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
-deps += ['bus_dpaa', 'mempool_dpaa', 'security']
+deps += ['mempool_dpaa', 'security']
 sources = files('dpaa_sec.c', 'dpaa_sec_raw_dp.c')
 
 includes += include_directories('../../bus/dpaa/include')

@@ -21,7 +21,7 @@ sources += files(
         'virtio_rxtx_simple.c',
         'virtqueue.c',
 )
-deps += ['kvargs', 'bus_pci']
+deps += ['bus_pci']
 
 cflags += no_wvla_cflag
 

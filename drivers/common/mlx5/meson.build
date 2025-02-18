@@ -12,7 +12,7 @@ if is_windows and not is_ms_linker and not meson.is_cross_build()
     subdir_done()
 endif
 
-deps += ['hash', 'pci', 'bus_pci', 'bus_auxiliary', 'net', 'eal', 'kvargs']
+deps += ['hash', 'bus_pci', 'bus_auxiliary']
 sources += files(
         'mlx5_devx_cmds.c',
         'mlx5_common.c',

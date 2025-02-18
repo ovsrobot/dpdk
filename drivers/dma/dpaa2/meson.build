@@ -8,7 +8,7 @@ endif
 
 build = dpdk_conf.has('RTE_MEMPOOL_DPAA2')
 reason = 'missing dependency, DPDK DPAA2 mempool driver'
-deps += ['dmadev', 'bus_fslmc', 'mempool_dpaa2', 'ring', 'kvargs']
+deps += ['mempool_dpaa2']
 sources = files('dpaa2_qdma.c')
 
 if cc.has_argument('-Wno-pointer-arith')

@@ -7,6 +7,6 @@ if is_windows
     subdir_done()
 endif
 
-deps += ['pci', 'kvargs', 'rawdev']
+deps = ['pci', 'rawdev']
 driver_sdk_headers += files('bus_ifpga_driver.h')
 sources = files('ifpga_bus.c')

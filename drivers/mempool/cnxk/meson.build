@@ -18,5 +18,5 @@ sources = files(
 )
 
 headers = files('rte_pmd_cnxk_mempool.h')
-deps += ['eal', 'mbuf', 'kvargs', 'bus_pci', 'common_cnxk', 'mempool']
+deps = ['common_cnxk']
 require_iova_in_mbuf = false
