@@ -50,6 +50,18 @@ extern "C" {
 #define __rte_constant(e) __extension__(__builtin_constant_p(e))
 #endif
 
+/**
+ * Determine if an expression's value is constant at compile time.
+ * All compilers except MSVC will return 1 if the first argument is a
+ * compile-time constant, and 0 otherwise. MSVC will just return the second
+ * argument as a default value.
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_constant_with_default(e, def) def
+#else
+#define __rte_constant_with_default(e, def) __extension__(__builtin_constant_p(e))
+#endif
+
 /*
  * RTE_TOOLCHAIN_GCC is defined if the target is built with GCC,
  * while a host application (like pmdinfogen) may have another compiler.
