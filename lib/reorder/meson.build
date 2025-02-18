@@ -3,4 +3,4 @@
 
 sources = files('rte_reorder.c')
 headers = files('rte_reorder.h')
-deps += ['mbuf']
+deps = ['mbuf']

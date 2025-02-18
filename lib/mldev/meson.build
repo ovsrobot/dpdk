@@ -41,7 +41,7 @@ driver_sdk_headers += files(
         'mldev_utils.h',
 )
 
-deps += ['mempool', 'mbuf']
+deps = ['mbuf']
 
 if get_option('buildtype').contains('debug')
         cflags += [ '-DRTE_LIBRTE_ML_DEV_DEBUG' ]

@@ -4,4 +4,4 @@
 sources = files('rte_pcapng.c')
 headers = files('rte_pcapng.h')
 
-deps += ['ethdev']
+deps = ['ethdev']

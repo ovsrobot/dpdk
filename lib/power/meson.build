@@ -29,5 +29,4 @@ headers = files(
         'rte_power_qos.h',
         'rte_power_uncore.h',
 )
-
-deps += ['timer', 'ethdev']
+deps = ['timer', 'ethdev']

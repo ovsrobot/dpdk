@@ -37,7 +37,7 @@ sources = files(
         'rte_net.c',
         'rte_net_crc.c',
 )
-deps += ['mbuf']
+deps = ['mbuf']
 
 use_function_versioning = true
 

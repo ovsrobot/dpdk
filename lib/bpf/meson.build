@@ -33,7 +33,7 @@ headers = files('bpf_def.h',
         'rte_bpf.h',
         'rte_bpf_ethdev.h')
 
-deps += ['mbuf', 'net', 'ethdev']
+deps = ['ethdev']
 
 dep = dependency('libelf', required: false, method: 'pkg-config')
 if dep.found()

@@ -16,4 +16,4 @@ driver_sdk_headers = files(
         'rte_compressdev_pmd.h',
         'rte_compressdev_internal.h',
     )
-deps += ['kvargs', 'mbuf']
+deps = ['mbuf']

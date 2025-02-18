@@ -26,6 +26,4 @@ sources = files(
         'rte_thash_gf2_poly_math.c',
 )
 
-deps += ['net']
-deps += ['ring']
-deps += ['rcu']
+deps = ['net', 'rcu']
