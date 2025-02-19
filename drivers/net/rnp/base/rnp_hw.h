@@ -124,7 +124,7 @@ struct rnp_hw {
 
 	spinlock_t rxq_reset_lock; /* reset op isn't thread safe */
 	spinlock_t txq_reset_lock; /* reset op isn't thread safe */
-
+	spinlock_t link_sync; /* link info update must be one user */
 };
 
 #endif /* _RNP_HW_H_ */
