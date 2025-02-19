@@ -151,6 +151,11 @@ New Features
 
   See the :doc:`../compressdevs/zsda` guide for more details on the new driver.
 
+* **Added Mucse rnp net driver.**
+
+  Added a new network PMD which supports Mucse 10 Gigabit Ethernet NICs.
+  See the :doc:`../nics/rnp` for more details.
+
 
 Removed Items
 -------------
