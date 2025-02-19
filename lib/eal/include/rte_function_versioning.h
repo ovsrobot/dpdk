@@ -82,6 +82,13 @@
  */
 #define MAP_STATIC_SYMBOL(f, p)
 
+/*
+ * MAP_STATIC_BASE_SYMBOL
+ * Has the same purpose as MAP_STATIC_SYMBOL, but takes a base function name
+ * instead of the whole function prototype. It is used to support MSVC.
+ */
+#define MAP_STATIC_BASE_SYMBOL(b, p)
+
 #else
 /*
  * No symbol versioning in use
@@ -90,7 +97,19 @@
 #define VERSION_SYMBOL_EXPERIMENTAL(b, e)
 #define __vsym
 #define BIND_DEFAULT_SYMBOL(b, e, n)
+
+#ifdef RTE_TOOLCHAIN_MSVC
+#define MAP_STATIC_SYMBOL(f, p)
+#define MAP_STATIC_BASE_SYMBOL(b, p) __pragma(comment(linker, "/alternatename:" #b "=" #p))
+/*
+ * version.map file should also be updated with "b=p;", like
+ *     rte_net_crc_set_alg=rte_net_crc_set_alg_v26;
+ */
+#else
 #define MAP_STATIC_SYMBOL(f, p) f __attribute__((alias(RTE_STR(p))))
+#define MAP_STATIC_BASE_SYMBOL(b, p)
+#endif
+
 /*
  * RTE_BUILD_SHARED_LIB=n
  */
