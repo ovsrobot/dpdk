@@ -160,7 +160,21 @@ foreach l:libraries
     endif
 
     if build
+        # as per warning below, directory name should match library name but it is not considered an error
+        display_name = name
+
         subdir(l)
+
+        # log mandatory dependencies
+        cmds = ['--type', 'lib']
+        cmds += ['--display-name', display_name]
+        run_command([log_deps_cmd, cmds, name, deps], check: false)
+
+        # log optional dependencies, if any
+        if optional_deps.length() > 0
+            cmds += ['--optional']
+            run_command([log_deps_cmd, cmds, name, optional_deps], check: false)
+        endif
         if not build and require_libs
             error('Cannot build explicitly requested lib "@0@".\n'.format(name)
                     +'\tReason: ' + reason)
