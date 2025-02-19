@@ -418,6 +418,7 @@ BIND_DEFAULT_SYMBOL(rte_net_crc_set_alg, _v26, 26);
 MAP_STATIC_SYMBOL(struct rte_net_crc *rte_net_crc_set_alg(
 	enum rte_net_crc_alg alg, enum rte_net_crc_type type),
 	rte_net_crc_set_alg_v26);
+MAP_STATIC_BASE_SYMBOL(rte_net_crc_set_alg, rte_net_crc_set_alg_v26)
 
 void rte_net_crc_free(struct rte_net_crc *crc)
 {
@@ -449,6 +450,7 @@ BIND_DEFAULT_SYMBOL(rte_net_crc_calc, _v26, 26);
 MAP_STATIC_SYMBOL(uint32_t rte_net_crc_calc(const struct rte_net_crc *ctx,
 	const void *data, const uint32_t data_len),
 	rte_net_crc_calc_v26);
+MAP_STATIC_BASE_SYMBOL(rte_net_crc_calc, rte_net_crc_calc_v26)
 
 /* Call initialisation helpers for all crc algorithm handlers */
 RTE_INIT(rte_net_crc_init)
