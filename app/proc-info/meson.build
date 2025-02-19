@@ -8,7 +8,7 @@ if is_windows
 endif
 
 sources = files('main.c')
-deps += ['ethdev', 'security', 'eventdev']
+deps += ['security', 'eventdev']
 optional_deps += 'metrics'
 
 cflags += no_wvla_cflag
