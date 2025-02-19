@@ -14,5 +14,3 @@ if is_linux
 endif
 
 require_iova_in_mbuf = false
-
-deps += ['kvargs']

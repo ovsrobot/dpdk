@@ -18,7 +18,7 @@ sources = files(
 
 testpmd_sources = files('ice_testpmd.c')
 
-deps += ['hash', 'net']
+deps += ['hash']
 includes += include_directories('base')
 
 if dpdk_conf.has('RTE_NET_IAVF')

@@ -6,7 +6,7 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
-deps += ['bus_fslmc']
+deps = ['bus_fslmc']
 sources = files('dpaa2_hw_mempool.c')
 
 headers = files('rte_dpaa2_mempool.h')

@@ -55,7 +55,7 @@ sources = files(
         'cnxk_ml_utils.c',
 )
 
-deps += ['mldev', 'common_cnxk', 'kvargs', 'hash']
+deps += ['mldev', 'common_cnxk', 'hash']
 
 if enable_mvtvm
 

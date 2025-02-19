@@ -7,7 +7,7 @@ if not is_linux
     subdir_done()
 endif
 
-deps += ['hash', 'common_mlx5', 'vhost', 'pci', 'eal', 'sched']
+deps += ['common_mlx5', 'vhost', 'sched']
 if not dpdk_conf.has('RTE_COMMON_MLX5')
     # avoid referencing undefined variables from common/mlx5
     subdir_done()

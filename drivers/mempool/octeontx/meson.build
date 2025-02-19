@@ -12,6 +12,6 @@ sources = files(
         'rte_mempool_octeontx.c',
 )
 
-deps += ['mbuf', 'bus_pci', 'common_octeontx']
+deps = ['mbuf', 'bus_pci', 'common_octeontx']
 
 require_iova_in_mbuf = false

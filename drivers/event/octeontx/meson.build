@@ -17,5 +17,4 @@ sources = files(
         'timvf_probe.c',
 )
 
-deps += ['common_octeontx', 'mempool_octeontx', 'bus_vdev', 'net_octeontx']
-deps += ['crypto_octeontx']
+deps = ['net_octeontx', 'crypto_octeontx']

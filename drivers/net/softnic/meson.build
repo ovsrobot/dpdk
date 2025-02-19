@@ -15,5 +15,5 @@ sources = files(
         'rte_eth_softnic_swq.c',
         'rte_eth_softnic_thread.c',
 )
-deps += ['pipeline', 'port', 'table']
+deps += ['pipeline']
 cflags += no_wvla_cflag

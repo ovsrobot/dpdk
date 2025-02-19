@@ -7,7 +7,7 @@ endif
 
 testpmd_sources = files('iavf_testpmd.c')
 
-deps += ['security', 'cryptodev']
+deps += ['security']
 
 sources = files(
         'base/iavf_adminq.c',

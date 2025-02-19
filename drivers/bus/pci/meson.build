@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation
 
-deps += ['pci']
+deps = ['pci']
 headers = files('rte_bus_pci.h')
 driver_sdk_headers = files('bus_pci_driver.h')
 sources = files('pci_common.c',
@@ -31,5 +31,3 @@ if is_windows
 endif
 
 require_iova_in_mbuf = false
-
-deps += ['kvargs']

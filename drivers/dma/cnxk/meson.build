@@ -12,7 +12,7 @@ driver_sdk_headers = files(
         'cnxk_dma_event_dp.h',
 )
 
-deps += ['bus_pci', 'common_cnxk', 'dmadev', 'eventdev']
+deps += ['common_cnxk', 'eventdev']
 
 includes += include_directories('../../event/cnxk')
 

@@ -7,7 +7,7 @@ if is_windows
     subdir_done()
 endif
 
-deps += ['bus_pci', 'mbuf', 'compressdev']
+deps += ['bus_pci', 'compressdev']
 sources += files(
         'zsda_device.c',
         'zsda_logs.c',
