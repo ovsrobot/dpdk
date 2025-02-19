@@ -3,4 +3,4 @@
 
 sources = files('rte_latencystats.c')
 headers = files('rte_latencystats.h')
-deps += ['metrics', 'ethdev']
+deps = ['metrics']

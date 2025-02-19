@@ -14,10 +14,7 @@ subdir(exec_env)
 
 subdir(arch_subdir)
 
-deps += ['log', 'kvargs']
-if not is_windows
-    deps += ['telemetry']
-endif
+deps = ['kvargs', 'telemetry']
 if dpdk_conf.has('RTE_USE_LIBBSD')
     ext_deps += libbsd
 endif

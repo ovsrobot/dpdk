@@ -8,6 +8,6 @@ if dpdk_conf.has('RTE_HAS_JANSSON')
     ext_deps += jansson_dep
 endif
 
-deps += ['ethdev', 'telemetry']
+deps = ['ethdev']
 
 cflags += no_wvla_cflag

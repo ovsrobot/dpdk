@@ -10,9 +10,7 @@ endif
 
 sources = files('rte_fib.c', 'rte_fib6.c', 'dir24_8.c', 'trie.c')
 headers = files('rte_fib.h', 'rte_fib6.h')
-deps += ['rib']
-deps += ['rcu']
-deps += ['net']
+deps = ['rib', 'rcu']
 
 if dpdk_conf.has('RTE_ARCH_X86_64')
     if target_has_avx512
