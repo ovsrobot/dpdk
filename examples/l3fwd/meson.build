@@ -18,7 +18,5 @@ sources = files(
         'l3fwd_lpm.c',
         'main.c',
 )
-if dpdk_conf.has('RTE_LIB_EVENTDEV')
-    deps += 'eventdev'
-endif
+optional_deps += 'eventdev'
 cflags += no_wvla_cflag

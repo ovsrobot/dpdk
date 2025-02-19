@@ -20,8 +20,6 @@ sources = files(
         'main.c',
 )
 deps += ['cryptodev', 'net', 'security']
-if dpdk_conf.has('RTE_CRYPTO_SCHEDULER')
-    deps += 'crypto_scheduler'
-endif
+optional_deps += 'crypto_scheduler'
 
 cflags += no_wvla_cflag
