@@ -21,6 +21,21 @@ find_orphan_symbols ()
                 symsrc=${sym#per_lcore_}
             elif echo $sym | grep -q '^__rte_.*_trace_' ; then
                 symsrc=${sym#__}
+            elif echo $map | grep -Eq '_ms_linker.map$' ; then
+                if echo $sym | grep -q '=' ; then
+                    symsrc=$(echo $sym | awk '
+                        {
+                            idx = index($0, "=")
+                            if (idx > 0) {
+                                # Use only what is on the left side of "="
+                                s = substr($0, 0, idx-1)
+                                print s
+                            } else {
+                                print $0
+                            }
+                        }
+                    ')
+                fi
             else
                 symsrc=$sym
             fi
@@ -79,14 +94,32 @@ find_bad_format_maps ()
     abi_version=$(cut -d'.' -f 1 ABI_VERSION)
     next_abi_version=$((abi_version + 1))
     for map in $@ ; do
-        cat $map | awk '
-            /^(DPDK_('$abi_version'|'$next_abi_version')|EXPERIMENTAL|INTERNAL) \{$/ { next; } # start of a section
-            /^}( DPDK_'$abi_version')?;$/ { next; } # end of a section
-            /^$/ { next; } # empty line
-            /^\t(global:|local: \*;)$/ { next; } # qualifiers
-            /^\t[a-zA-Z_0-9]*;( # WINDOWS_NO_EXPORT)?$/ { next; } # symbols
-            /^\t# added in [0-9]*\.[0-9]*$/ { next; } # version comments
-            { print $0; }' || echo $map
+        if echo $map | grep -Eq '_ms_linker.map$';
+        then
+            # ms linker maps are only used for Windows, so there's no reason for
+            # them to allow WINDOWS_NO_EXPORT.
+            # These .map files accept alias function names, like
+            # rte_net_crc_set_alg=rte_net_crc_set_alg_v26;
+            # Note that alias function names are not allowed in normal .map files.
+            cat $map | awk '
+                /^(DPDK_('$abi_version'|'$next_abi_version')|EXPERIMENTAL|INTERNAL) \{$/ { next; } # start of a section
+                /^}( DPDK_'$abi_version')?;$/ { next; } # end of a section
+                /^$/ { next; } # empty line
+                /^\t(global:|local: \*;)$/ { next; } # qualifiers
+                /^\t[a-zA-Z_0-9]*;$/ { next; } # symbols
+                /^\t[a-zA-Z_0-9]*=[a-zA-Z_0-9]*;$/ { next; } # symbols with aliases
+                /^\t# added in [0-9]*\.[0-9]*$/ { next; } # version comments
+                { print $0; }' || echo $map
+        else
+            cat $map | awk '
+                /^(DPDK_('$abi_version'|'$next_abi_version')|EXPERIMENTAL|INTERNAL) \{$/ { next; } # start of a section
+                /^}( DPDK_'$abi_version')?;$/ { next; } # end of a section
+                /^$/ { next; } # empty line
+                /^\t(global:|local: \*;)$/ { next; } # qualifiers
+                /^\t[a-zA-Z_0-9]*;( # WINDOWS_NO_EXPORT)?$/ { next; } # symbols
+                /^\t# added in [0-9]*\.[0-9]*$/ { next; } # version comments
+                { print $0; }' || echo $map
+        fi
     done
 }
 
