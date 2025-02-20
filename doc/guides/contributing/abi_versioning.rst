@@ -151,6 +151,11 @@ The macros exported are:
   fully qualified function ``p``, so that if a symbol becomes versioned, it
   can still be mapped back to the public symbol name.
 
+* ``MAP_STATIC_BASE_SYMBOL(b, p)``: Declare the base symbol ``b``, and map it
+  to the fully qualified function ``p``, so that if a symbol becomes versioned,
+  it can still be mapped back to the public symbol name. Used for compatibility
+  with MSVC.
+
 * ``__vsym``:  Annotation to be used in a declaration of the internal symbol
   ``be`` to signal that it is being used as an implementation of a particular
   version of symbol ``b``.
@@ -397,6 +402,7 @@ defined, we add this
         ...
    }
    MAP_STATIC_SYMBOL(struct rte_acl_ctx *rte_acl_create(const struct rte_acl_param *param, int debug), rte_acl_create_v22);
+   MAP_STATIC_BASE_SYMBOL(rte_acl_create, rte_acl_create_v22);
 
 That tells the compiler that, when building a static library, any calls to the
 symbol ``rte_acl_create`` should be linked to ``rte_acl_create_v22``
