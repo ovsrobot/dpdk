@@ -873,8 +873,7 @@ zxdh_np_sdt_mgr_destroy(uint32_t dev_id)
 	p_sdt_tbl_temp = ZXDH_SDT_SOFT_TBL_GET(dev_id);
 	p_sdt_mgr = ZXDH_SDT_MGR_PTR_GET();
 
-	if (p_sdt_tbl_temp != NULL)
-		free(p_sdt_tbl_temp);
+	free(p_sdt_tbl_temp);
 
 	ZXDH_SDT_SOFT_TBL_GET(dev_id) = NULL;
 

@@ -945,8 +945,7 @@ zxdh_np_dtb_data_res_free(struct zxdh_hw *hw)
 		if (ret)
 			PMD_DRV_LOG(ERR, "%s dpp_np_online_uninstall failed", dev->data->name);
 
-		if (g_dtb_data.dtb_table_conf_mz)
-			rte_memzone_free(g_dtb_data.dtb_table_conf_mz);
+		rte_memzone_free(g_dtb_data.dtb_table_conf_mz);
 
 		if (g_dtb_data.dtb_table_dump_mz) {
 			rte_memzone_free(g_dtb_data.dtb_table_dump_mz);
