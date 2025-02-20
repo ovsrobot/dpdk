@@ -400,6 +400,7 @@ EXPERIMENTAL {
 	rte_lcore_var_alloc;
 
 	# added in 25.03
+	rte_free_sensitive;
 	rte_memzero_explicit;
 };
 
