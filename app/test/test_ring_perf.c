@@ -34,7 +34,7 @@ struct lcore_pair {
 	unsigned c1, c2;
 };
 
-static volatile unsigned lcore_count = 0;
+static RTE_ATOMIC(unsigned int) lcore_count;
 
 static void
 test_ring_print_test_string(unsigned int api_type, int esize,
@@ -193,11 +193,7 @@ enqueue_dequeue_bulk_helper(const unsigned int flag, struct thread_params *p)
 	unsigned int n_remaining;
 	const unsigned int bulk_n = bulk_sizes[p->ring_params->bulk_sizes_i];
 
-#ifdef RTE_USE_C11_MEM_MODEL
 	if (rte_atomic_fetch_add_explicit(&lcore_count, 1, rte_memory_order_relaxed) + 1 != 2)
-#else
-	if (__sync_add_and_fetch(&lcore_count, 1) != 2)
-#endif
 		while(lcore_count != 2)
 			rte_pause();
 
