@@ -45,7 +45,7 @@ extern "C" {
 #endif
 
 #ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_constant(e) 0
+#define __rte_constant(e) _Generic((1 ? (void *) ((e) * 0ll) : (int *) 0), int * : 1, void * : 0)
 #else
 #define __rte_constant(e) __extension__(__builtin_constant_p(e))
 #endif
