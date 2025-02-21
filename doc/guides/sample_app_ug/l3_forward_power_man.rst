@@ -293,6 +293,11 @@ and has three available power management schemes:
 ``monitor``
   This will use ``rte_power_monitor()`` function to enter
   a power-optimized state (subject to platform support).
+  On recent Gen 4 Xeon Scalable Processors the umonitor instruction
+  is disabled by default.
+  An additional step is required to enable the umonitor instruction.
+  Writing 0 to bit 6 of register 0x123 will enable umonitor.
+  `More details are available via Monitor and Umonitor Performance Guidance <https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/technical-documentation/monitor-umonitor-performance-guidance.html>`_
 
 ``pause``
   This will use ``rte_power_pause()`` or ``rte_pause()``
