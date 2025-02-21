@@ -791,7 +791,7 @@ rte_mempool_ops_dequeue_bulk(struct rte_mempool *mp,
 	rte_mempool_trace_ops_dequeue_bulk(mp, obj_table, n);
 	ops = rte_mempool_get_ops(mp->ops_index);
 	ret = ops->dequeue(mp, obj_table, n);
-	if (ret == 0) {
+	if (likely(ret == 0)) {
 		RTE_MEMPOOL_STAT_ADD(mp, get_common_pool_bulk, 1);
 		RTE_MEMPOOL_STAT_ADD(mp, get_common_pool_objs, n);
 	}
@@ -1044,7 +1044,7 @@ rte_mempool_free(struct rte_mempool *mp);
  *   If cache_size is non-zero, the rte_mempool library will try to
  *   limit the accesses to the common lockless pool, by maintaining a
  *   per-lcore object cache. This argument must be lower or equal to
- *   RTE_MEMPOOL_CACHE_MAX_SIZE and n / 1.5. It is advised to choose
+ *   RTE_MEMPOOL_CACHE_MAX_SIZE and n. It is advised to choose
  *   cache_size to have "n modulo cache_size == 0": if this is
  *   not the case, some elements will always stay in the pool and will
  *   never be used. The access to the per-lcore table is of course
@@ -1333,10 +1333,10 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache);
 static __rte_always_inline struct rte_mempool_cache *
 rte_mempool_default_cache(struct rte_mempool *mp, unsigned lcore_id)
 {
-	if (mp->cache_size == 0)
+	if (unlikely(mp->cache_size == 0))
 		return NULL;
 
-	if (lcore_id >= RTE_MAX_LCORE)
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
 		return NULL;
 
 	rte_mempool_trace_default_cache(mp, lcore_id,
@@ -1383,32 +1383,30 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 {
 	void **cache_objs;
 
-	/* No cache provided */
+	/* No cache provided? */
 	if (unlikely(cache == NULL))
 		goto driver_enqueue;
 
-	/* increment stat now, adding in mempool always success */
+	/* Increment stats now, adding in mempool always succeeds. */
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
 
-	/* The request itself is too big for the cache */
-	if (unlikely(n > cache->flushthresh))
-		goto driver_enqueue_stats_incremented;
-
-	/*
-	 * The cache follows the following algorithm:
-	 *   1. If the objects cannot be added to the cache without crossing
-	 *      the flush threshold, flush the cache to the backend.
-	 *   2. Add the objects to the cache.
-	 */
-
-	if (cache->len + n <= cache->flushthresh) {
+	if (likely(cache->len + n <= cache->size)) {
+		/* Sufficient room in the cache for the objects. */
 		cache_objs = &cache->objs[cache->len];
 		cache->len += n;
-	} else {
+	} else if (n <= cache->size) {
+		/*
+		 * The cache is big enough for the objects, but - as detected by
+		 * the comparison above - has insufficient room for them.
+		 * Flush the cache to make room for the objects.
+		 */
 		cache_objs = &cache->objs[0];
 		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
 		cache->len = n;
+	} else {
+		/* The request itself is too big for the cache. */
+		goto driver_enqueue_stats_incremented;
 	}
 
 	/* Add the objects to the cache. */
@@ -1512,10 +1510,10 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 {
 	int ret;
 	unsigned int remaining;
-	uint32_t index, len;
+	uint32_t index;
 	void **cache_objs;
 
-	/* No cache provided */
+	/* No cache provided? */
 	if (unlikely(cache == NULL)) {
 		remaining = n;
 		goto driver_dequeue;
@@ -1524,11 +1522,11 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	/* The cache is a stack, so copy will be in reverse order. */
 	cache_objs = &cache->objs[cache->len];
 
-	if (__rte_constant(n) && n <= cache->len) {
+	if (likely(n <= cache->len)) {
 		/*
-		 * The request size is known at build time, and
-		 * the entire request can be satisfied from the cache,
-		 * so let the compiler unroll the fixed length copy loop.
+		 * The entire request can be satisfied from the cache.
+		 * Note: If the request size is known at build time,
+		 * the compiler will unroll the fixed length copy loop.
 		 */
 		cache->len -= n;
 		for (index = 0; index < n; index++)
@@ -1540,54 +1538,34 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 		return 0;
 	}
 
-	/*
-	 * Use the cache as much as we have to return hot objects first.
-	 * If the request size 'n' is known at build time, the above comparison
-	 * ensures that n > cache->len here, so omit RTE_MIN().
-	 */
-	len = __rte_constant(n) ? cache->len : RTE_MIN(n, cache->len);
-	cache->len -= len;
-	remaining = n - len;
-	for (index = 0; index < len; index++)
+	/* Use the cache as much as we have to return hot objects first. */
+	for (index = 0; index < cache->len; index++)
 		*obj_table++ = *--cache_objs;
+	remaining = n - cache->len;
+	cache->len = 0;
 
-	/*
-	 * If the request size 'n' is known at build time, the case
-	 * where the entire request can be satisfied from the cache
-	 * has already been handled above, so omit handling it here.
-	 */
-	if (!__rte_constant(n) && remaining == 0) {
-		/* The entire request is satisfied from the cache. */
-
-		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
-		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
-
-		return 0;
-	}
-
-	/* if dequeue below would overflow mem allocated for cache */
-	if (unlikely(remaining > RTE_MEMPOOL_CACHE_MAX_SIZE))
+	/* The remaining request is too big for the cache? */
+	if (unlikely(remaining > cache->size))
 		goto driver_dequeue;
 
-	/* Fill the cache from the backend; fetch size + remaining objects. */
+	/* Fill the cache from the backend; fetch remaining objects + size / 2. */
 	ret = rte_mempool_ops_dequeue_bulk(mp, cache->objs,
-			cache->size + remaining);
+			remaining + cache->size / 2);
 	if (unlikely(ret < 0)) {
 		/*
-		 * We are buffer constrained, and not able to allocate
-		 * cache + remaining.
+		 * We are buffer constrained, and not able to fetch all that.
 		 * Do not fill the cache, just satisfy the remaining part of
 		 * the request directly from the backend.
 		 */
 		goto driver_dequeue;
 	}
 
+	cache->len = cache->size / 2;
+
 	/* Satisfy the remaining part of the request from the filled cache. */
-	cache_objs = &cache->objs[cache->size + remaining];
+	cache_objs = &cache->objs[cache->len + remaining];
 	for (index = 0; index < remaining; index++)
 		*obj_table++ = *--cache_objs;
-
-	cache->len = cache->size;
 
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
@@ -1599,7 +1577,7 @@ driver_dequeue:
 	/* Get remaining objects directly from the backend. */
 	ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, remaining);
 
-	if (ret < 0) {
+	if (unlikely(ret < 0)) {
 		if (likely(cache != NULL)) {
 			cache->len = n - remaining;
 			/*
@@ -1650,7 +1628,7 @@ rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
 {
 	int ret;
 	ret = rte_mempool_do_generic_get(mp, obj_table, n, cache);
-	if (ret == 0)
+	if (likely(ret == 0))
 		RTE_MEMPOOL_CHECK_COOKIES(mp, obj_table, n, 1);
 	rte_mempool_trace_generic_get(mp, obj_table, n, cache);
 	return ret;
@@ -1741,7 +1719,7 @@ rte_mempool_get_contig_blocks(struct rte_mempool *mp,
 	int ret;
 
 	ret = rte_mempool_ops_dequeue_contig_blocks(mp, first_obj_table, n);
-	if (ret == 0) {
+	if (likely(ret == 0)) {
 		RTE_MEMPOOL_STAT_ADD(mp, get_success_bulk, 1);
 		RTE_MEMPOOL_STAT_ADD(mp, get_success_blks, n);
 		RTE_MEMPOOL_CONTIG_BLOCKS_CHECK_COOKIES(mp, first_obj_table, n,
