@@ -50,10 +50,9 @@ static void
 mempool_event_callback_invoke(enum rte_mempool_event event,
 			      struct rte_mempool *mp);
 
-/* Note: avoid using floating point since that compiler
- * may not think that is constant.
+/* Note: This is no longer 1.5 * size, but simply 1 * size.
  */
-#define CALC_CACHE_FLUSHTHRESH(c) (((c) * 3) / 2)
+#define CALC_CACHE_FLUSHTHRESH(c) (c)
 
 #if defined(RTE_ARCH_X86)
 /*
