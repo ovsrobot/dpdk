@@ -236,6 +236,10 @@
 #define ZXDH_SDT_L_CLUTCH_EN_BT_POS             (0)
 #define ZXDH_SDT_L_CLUTCH_EN_BT_LEN             (1)
 
+/* hash */
+#define ZXDH_SDT_L2_ENTRY_TABLE0                (64)
+#define ZXDH_SDT_MC_TABLE0                      (76)
+
 /**errco code */
 #define ZXDH_RC_BASE                            (0x1000U)
 #define ZXDH_PARAMETER_CHK_BASE                 (ZXDH_RC_BASE            | 0x200)
@@ -1687,6 +1691,11 @@ typedef struct __rte_aligned(2) zxdh_se_stat_cfg_t {
 	uint32_t ppu_ddr_offset;
 } ZXDH_NP_SE_STAT_CFG_T;
 
+typedef struct zxdh_dtb_dump_index_t {
+	uint32_t index;
+	uint32_t index_type;
+} ZXDH_DTB_DUMP_INDEX_T;
+
 int zxdh_np_host_init(uint32_t dev_id, ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl);
 int zxdh_np_online_uninit(uint32_t dev_id, char *port_name, uint32_t queue_id);
 int zxdh_np_dtb_table_entry_write(uint32_t dev_id, uint32_t queue_id,
@@ -1701,5 +1710,10 @@ int zxdh_np_dtb_stats_get(uint32_t dev_id,
 			uint32_t index,
 			uint32_t *p_data);
 uint32_t zxdh_np_se_res_get_and_init(uint32_t dev_id, uint32_t type);
+uint32_t zxdh_np_dtb_hash_online_delete(uint32_t dev_id, uint32_t queue_id, uint32_t sdt_no);
+uint32_t zxdh_np_dtb_hash_offline_delete(uint32_t dev_id,
+						uint32_t queue_id,
+						uint32_t sdt_no,
+						__rte_unused uint32_t flush_mode);
 
 #endif /* ZXDH_NP_H */
