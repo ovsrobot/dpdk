@@ -1500,10 +1500,14 @@ static int zxdh_hw_stats_reset(struct rte_eth_dev *dev, enum zxdh_agent_msg_type
 int zxdh_dev_stats_reset(struct rte_eth_dev *dev)
 {
 	struct zxdh_hw *hw = dev->data->dev_private;
+	uint64_t stats_data;
 
 	zxdh_hw_stats_reset(dev, ZXDH_VQM_DEV_STATS_RESET);
 	if (hw->is_pf)
 		zxdh_hw_stats_reset(dev, ZXDH_MAC_STATS_RESET);
+
+	zxdh_np_stat_ppu_cnt_get_ex(0, ZXDH_STAT_64_MODE, 0,
+		ZXDH_STAT_RD_CLR_MODE_CLR, (uint32_t *)&stats_data);
 
 	return 0;
 }

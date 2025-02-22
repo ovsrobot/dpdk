@@ -1193,6 +1193,12 @@ typedef struct zxdh_dtb4k_dtb_enq_cfg_epid_v_func_num_0_127_t {
 	uint32_t cfg_vfunc_active;
 } ZXDH_DTB4K_DTB_ENQ_CFG_EPID_V_FUNC_NUM_0_127_T;
 
+typedef struct zxdh_smmu0_smmu0_cpu_ind_cmd_t {
+	uint32_t cpu_ind_rw;
+	uint32_t cpu_ind_rd_mode;
+	uint32_t cpu_req_mode;
+	uint32_t cpu_ind_addr;
+} ZXDH_SMMU0_SMMU0_CPU_IND_CMD_T;
 
 typedef uint32_t (*ZXDH_REG_WRITE)(uint32_t dev_id, uint32_t addr, uint32_t *p_data);
 typedef uint32_t (*ZXDH_REG_READ)(uint32_t dev_id, uint32_t addr, uint32_t *p_data);
@@ -1503,6 +1509,17 @@ typedef enum zxdh_stat_cnt_mode_e {
 	ZXDH_STAT_MAX_MODE,
 } ZXDH_STAT_CNT_MODE_E;
 
+typedef enum zxdh_stat_rd_clr_mode_e {
+	ZXDH_STAT_RD_CLR_MODE_UNCLR = 0,
+	ZXDH_STAT_RD_CLR_MODE_CLR   = 1,
+	ZXDH_STAT_RD_CLR_MODE_MAX,
+} STAT_RD_CLR_MODE_E;
+
+typedef enum zxdh_eram128_rd_clr_mode_e {
+	ZXDH_RD_MODE_HOLD   = 0,
+	ZXDH_RD_MODE_CLEAR  = 1,
+} ZXDH_ERAM128_RD_CLR_MODE_E;
+
 typedef enum zxdh_np_agent_msg_type_e {
 	ZXDH_REG_MSG = 0,
 	ZXDH_DTB_MSG,
@@ -1746,5 +1763,9 @@ uint32_t zxdh_np_dtb_hash_offline_delete(uint32_t dev_id,
 						uint32_t queue_id,
 						uint32_t sdt_no,
 						__rte_unused uint32_t flush_mode);
-
+uint32_t zxdh_np_stat_ppu_cnt_get_ex(uint32_t dev_id,
+						ZXDH_STAT_CNT_MODE_E rd_mode,
+						uint32_t index,
+						uint32_t clr_mode,
+						uint32_t *p_data);
 #endif /* ZXDH_NP_H */
