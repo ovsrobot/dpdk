@@ -101,6 +101,10 @@
 #define ZXDH_ETCAM_WR_MASK_MAX         (((uint32_t)1 << ZXDH_ETCAM_RAM_NUM) - 1)
 #define ZXDH_ETCAM_WIDTH_MIN           (ZXDH_ETCAM_RAM_WIDTH)
 #define ZXDH_ETCAM_WIDTH_MAX           (ZXDH_ETCAM_RAM_NUM * ZXDH_ETCAM_RAM_WIDTH)
+#define ZXDH_ETCAM_RAM_DEPTH           (512)
+#define ZXDH_ACL_FLAG_ETCAM0_EN        (1 << 0)
+#define ZXDH_BLOCK_IDXBASE_BIT_OFF     (9)
+#define ZXDH_BLOCK_IDXBASE_BIT_MASK    (0x7f)
 
 #define ZXDH_DTB_TABLE_DATA_BUFF_SIZE           (16384)
 #define ZXDH_DTB_TABLE_CMD_SIZE_BIT             (128)
@@ -172,6 +176,57 @@
 
 #define ZXDH_COMM_PTR_TO_VAL(p)                 ((uint64_t)(p))
 #define ZXDH_COMM_VAL_TO_PTR(v)                 ((void *)((uint64_t)(v)))
+
+#define ZXDH_SDT_CFG_LEN                        (2)
+#define ZXDH_SDT_VALID                          (1)
+#define ZXDH_SDT_INVALID                        (0)
+#define ZXDH_SDT_OPER_ADD                       (0)
+#define ZXDH_SDT_H_TBL_TYPE_BT_POS              (29)
+#define ZXDH_SDT_H_TBL_TYPE_BT_LEN              (3)
+#define ZXDH_SDT_H_ERAM_MODE_BT_POS             (26)
+#define ZXDH_SDT_H_ERAM_MODE_BT_LEN             (3)
+#define ZXDH_SDT_H_ERAM_BASE_ADDR_BT_POS        (7)
+#define ZXDH_SDT_H_ERAM_BASE_ADDR_BT_LEN        (19)
+#define ZXDH_SDT_L_ERAM_TABLE_DEPTH_BT_POS      (1)
+#define ZXDH_SDT_L_ERAM_TABLE_DEPTH_BT_LEN      (22)
+#define ZXDH_SDT_H_HASH_ID_BT_POS               (27)
+#define ZXDH_SDT_H_HASH_ID_BT_LEN               (2)
+#define ZXDH_SDT_H_HASH_TABLE_WIDTH_BT_POS      (25)
+#define ZXDH_SDT_H_HASH_TABLE_WIDTH_BT_LEN      (2)
+#define ZXDH_SDT_H_HASH_KEY_SIZE_BT_POS         (19)
+#define ZXDH_SDT_H_HASH_KEY_SIZE_BT_LEN         (6)
+#define ZXDH_SDT_H_HASH_TABLE_ID_BT_POS         (14)
+#define ZXDH_SDT_H_HASH_TABLE_ID_BT_LEN         (5)
+#define ZXDH_SDT_H_LEARN_EN_BT_POS              (13)
+#define ZXDH_SDT_H_LEARN_EN_BT_LEN              (1)
+#define ZXDH_SDT_H_KEEP_ALIVE_BT_POS            (12)
+#define ZXDH_SDT_H_KEEP_ALIVE_BT_LEN            (1)
+#define ZXDH_SDT_H_KEEP_ALIVE_BADDR_BT_POS      (0)
+#define ZXDH_SDT_H_KEEP_ALIVE_BADDR_BT_LEN      (12)
+#define ZXDH_SDT_L_KEEP_ALIVE_BADDR_BT_POS      (25)
+#define ZXDH_SDT_L_KEEP_ALIVE_BADDR_BT_LEN      (7)
+#define ZXDH_SDT_L_RSP_MODE_BT_POS              (23)
+#define ZXDH_SDT_L_RSP_MODE_BT_LEN              (2)
+#define ZXDH_SDT_H_ETCAM_ID_BT_POS              (27)
+#define ZXDH_SDT_H_ETCAM_ID_BT_LEN              (1)
+#define ZXDH_SDT_H_ETCAM_KEY_MODE_BT_POS        (25)
+#define ZXDH_SDT_H_ETCAM_KEY_MODE_BT_LEN        (2)
+#define ZXDH_SDT_H_ETCAM_TABLE_ID_BT_POS        (21)
+#define ZXDH_SDT_H_ETCAM_TABLE_ID_BT_LEN        (4)
+#define ZXDH_SDT_H_ETCAM_NOAS_RSP_MODE_BT_POS   (19)
+#define ZXDH_SDT_H_ETCAM_NOAS_RSP_MODE_BT_LEN   (2)
+#define ZXDH_SDT_H_ETCAM_AS_EN_BT_POS           (18)
+#define ZXDH_SDT_H_ETCAM_AS_EN_BT_LEN           (1)
+#define ZXDH_SDT_H_ETCAM_AS_ERAM_BADDR_BT_POS   (0)
+#define ZXDH_SDT_H_ETCAM_AS_ERAM_BADDR_BT_LEN   (18)
+#define ZXDH_SDT_L_ETCAM_AS_ERAM_BADDR_BT_POS   (31)
+#define ZXDH_SDT_L_ETCAM_AS_ERAM_BADDR_BT_LEN   (1)
+#define ZXDH_SDT_L_ETCAM_AS_RSP_MODE_BT_POS     (28)
+#define ZXDH_SDT_L_ETCAM_AS_RSP_MODE_BT_LEN     (3)
+#define ZXDH_SDT_L_ETCAM_TABLE_DEPTH_BT_POS     (1)
+#define ZXDH_SDT_L_ETCAM_TABLE_DEPTH_BT_LEN     (20)
+#define ZXDH_SDT_L_CLUTCH_EN_BT_POS             (0)
+#define ZXDH_SDT_L_CLUTCH_EN_BT_LEN             (1)
 
 /**errco code */
 #define ZXDH_RC_BASE                            (0x1000U)
@@ -294,6 +349,28 @@
 #define ZXDH_SE_RC_ZBLK_FULL                    (ZXDH_SE_RC_CFG_BASE | 0x1)
 #define ZXDH_SE_RC_FUN_INVALID                  (ZXDH_SE_RC_CFG_BASE | 0x2)
 #define ZXDH_SE_RC_PARA_INVALID                 (ZXDH_SE_RC_CFG_BASE | 0x3)
+
+#define ZXDH_RC_TABLE_BASE                      (0x800)
+#define ZXDH_RC_TABLE_PARA_INVALID              (ZXDH_RC_TABLE_BASE | 0x0)
+#define ZXDH_RC_TABLE_RANGE_INVALID             (ZXDH_RC_TABLE_BASE | 0x1)
+#define ZXDH_RC_TABLE_CALL_FUNC_FAIL            (ZXDH_RC_TABLE_BASE | 0x2)
+#define ZXDH_RC_TABLE_SDT_MSG_INVALID           (ZXDH_RC_TABLE_BASE | 0x3)
+#define ZXDH_RC_TABLE_SDT_MGR_INVALID           (ZXDH_RC_TABLE_BASE | 0x4)
+#define ZXDH_RC_TABLE_IF_VALUE_FAIL             (ZXDH_RC_TABLE_BASE | 0x5)
+
+#define ZXDH_ACL_RC_BASE                        (0x60000)
+#define ZXDH_ACL_RC_INVALID_TBLID               (ZXDH_ACL_RC_BASE | 0x0)
+#define ZXDH_ACL_RC_INVALID_BLOCKNUM            (ZXDH_ACL_RC_BASE | 0x1)
+#define ZXDH_ACL_RC_INVALID_BLOCKID             (ZXDH_ACL_RC_BASE | 0x2)
+#define ZXDH_ACL_RC_TBL_NOT_INIT                (ZXDH_ACL_RC_BASE | 0x3)
+#define ZXDH_ACL_RC_ETCAMID_NOT_INIT            (ZXDH_ACL_RC_BASE | 0x4)
+#define ZXDH_ACL_RC_AS_ERAM_NOT_ENOUGH          (ZXDH_ACL_RC_BASE | 0x5)
+#define ZXDH_ACL_RC_RB_TREE_FULL                (ZXDH_ACL_RC_BASE | 0x6)
+#define ZXDH_ACL_RC_TABLE_FULL                  (ZXDH_ACL_RC_BASE | 0x7)
+#define ZXDH_ACL_RC_INVALID_PARA                (ZXDH_ACL_RC_BASE | 0x8)
+#define ZXDH_ACL_RC_DEL_SRHFAIL                 (ZXDH_ACL_RC_BASE | 0x9)
+#define ZXDH_ACL_RC_TABLE_UPDATE                (ZXDH_ACL_RC_BASE | 0xa)
+#define ZXDH_ACL_RC_SRH_FAIL                    (ZXDH_ACL_RC_BASE | 0xb)
 
 typedef enum zxdh_module_base_addr_e {
 	ZXDH_MODULE_SE_SMMU0_BASE_ADDR = 0x00000000,
@@ -449,6 +526,21 @@ typedef enum zxdh_se_fun_type_e {
 	ZXDH_FUN_ACL,
 	ZXDH_FUN_MAX
 } ZXDH_SE_FUN_TYPE;
+
+typedef enum zxdh_acl_as_mode_e {
+	ZXDH_ACL_AS_MODE_16b  = 0,
+	ZXDH_ACL_AS_MODE_32b  = 1,
+	ZXDH_ACL_AS_MODE_64b  = 2,
+	ZXDH_ACL_AS_MODE_128b = 3,
+	ZXDH_ACL_AS_MODE_INVALID,
+} ZXDH_ACL_AS_MODE_E;
+
+typedef enum zxdh_hash_key_type_e {
+	ZXDH_HASH_KEY_INVALID = 0,
+	ZXDH_HASH_KEY_128b,
+	ZXDH_HASH_KEY_256b,
+	ZXDH_HASH_KEY_512b,
+} ZXDH_HASH_KEY_TYPE;
 
 typedef struct zxdh_avl_node_t {
 	void                    *p_key;
@@ -872,6 +964,101 @@ typedef struct zxdh_dev_apt_se_tbl_res_t {
 	ZXDH_APT_SE_RES_T   std_nic_res;
 	ZXDH_APT_SE_RES_T   offload_res;
 } ZXDH_DEV_APT_SE_TBL_RES_T;
+
+typedef struct se_apt_eram_func_t {
+	uint32_t opr_mode;
+	uint32_t rd_mode;
+	ZXDH_APT_ERAM_SET_FUNC  eram_set_func;
+	ZXDH_APT_ERAM_GET_FUNC  eram_get_func;
+} ZXDH_SE_APT_ERAM_FUNC_T;
+
+typedef struct se_apt_acl_func_t {
+	uint32_t sdt_partner;
+	ZXDH_APT_ACL_ENTRY_SET_FUNC  acl_set_func;
+	ZXDH_APT_ACL_ENTRY_GET_FUNC  acl_get_func;
+} ZXDH_SE_APT_ACL_FUNC_T;
+
+typedef struct se_apt_hash_func_t {
+	uint32_t sdt_partner;
+	ZXDH_APT_HASH_ENTRY_SET_FUNC  hash_set_func;
+	ZXDH_APT_HASH_ENTRY_GET_FUNC  hash_get_func;
+} ZXDH_SE_APT_HASH_FUNC_T;
+
+typedef struct se_apt_callback_t {
+	uint32_t sdt_no;
+	uint32_t table_type;
+	union {
+		ZXDH_SE_APT_ERAM_FUNC_T eram_func;
+		ZXDH_SE_APT_ACL_FUNC_T  acl_func;
+		ZXDH_SE_APT_HASH_FUNC_T hash_func;
+	} se_func_info;
+} SE_APT_CALLBACK_T;
+
+typedef struct zxdh_acl_block_info_t {
+	uint32_t is_used;
+	uint32_t tbl_id;
+	uint32_t idx_base;
+} ZXDH_ACL_BLOCK_INFO_T;
+
+typedef struct zxdh_acl_etcamid_cfg_t {
+	uint32_t is_valid;
+	uint32_t as_enable;
+	uint32_t as_idx_offset;
+	uint32_t as_eram_base;
+	ZXDH_D_HEAD tbl_list;
+} ZXDH_ACL_ETCAMID_CFG_T;
+
+typedef struct zxdh_acl_key_info_t {
+	uint32_t handle;
+	uint32_t pri;
+	uint8_t   key[0];
+} ZXDH_ACL_KEY_INFO_T;
+
+typedef uint32_t (*ZXDH_ACL_TBL_AS_DDR_WR_FUN)(uint32_t dev_id, uint32_t tbl_type,
+		uint32_t tbl_id, uint32_t dir_tbl_share_type, uint32_t dir_tbl_base_addr,
+		uint32_t ecc_en, uint32_t index, uint32_t as_mode, uint8_t *p_data);
+typedef uint32_t (*ZXDH_ACL_TBL_AS_DDR_RD_FUN)(uint32_t dev_id, uint32_t base_addr,
+		uint32_t index, uint32_t as_mode, uint8_t *p_data);
+typedef uint32_t (*ZXDH_ACL_AS_RSLT_WRT_FUNCTION)(uint32_t dev_id,
+		uint32_t base_addr, uint32_t index, uint32_t as_mode, uint8_t *p_data);
+
+typedef struct zxdh_acl_tbl_cfg_t {
+	uint32_t tbl_type;
+	uint32_t table_id;
+	uint8_t  is_as_ddr;
+	uint8_t  ddr_bankcp_info;
+	uint32_t dir_tbl_share_type;
+	uint8_t  ddr_ecc_en;
+	uint32_t pri_mode;
+	uint32_t key_mode;
+	uint32_t entry_num;
+	uint32_t block_num;
+	uint32_t *block_array;
+	uint32_t is_used;
+	uint32_t as_mode;
+	uint32_t as_idx_base;
+	uint32_t as_enable;
+	uint32_t as_eram_base;
+	uint32_t ddr_baddr;
+	uint32_t idx_offset;
+	ZXDH_ACL_TBL_AS_DDR_WR_FUN p_as_ddr_wr_fun;
+	ZXDH_ACL_TBL_AS_DDR_RD_FUN p_as_ddr_rd_fun;
+	ZXDH_D_NODE entry_dn;
+	ZXDH_RB_CFG acl_rb;
+	ZXDH_ACL_KEY_INFO_T **acl_key_buff;
+	uint8_t *as_rslt_buff;
+} ZXDH_ACL_TBL_CFG_T;
+
+typedef struct zxdh_acl_cfg_ex_t {
+	void *p_client;
+	uint32_t dev_id;
+	uint32_t flags;
+	ZXDH_ACL_AS_RSLT_WRT_FUNCTION p_as_rslt_write_fun;
+	ZXDH_ACL_AS_RSLT_WRT_FUNCTION p_as_rslt_read_fun;
+	ZXDH_ACL_BLOCK_INFO_T acl_blocks[ZXDH_ACL_BLOCK_NUM];
+	ZXDH_ACL_ETCAMID_CFG_T acl_etcamids;
+	ZXDH_ACL_TBL_CFG_T acl_tbls[ZXDH_ACL_TBL_ID_NUM];
+} ZXDH_ACL_CFG_EX_T;
 
 typedef struct zxdh_spin_lock_t {
 	rte_spinlock_t spinlock;
