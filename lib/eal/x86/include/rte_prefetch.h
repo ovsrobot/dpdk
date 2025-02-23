@@ -22,7 +22,11 @@ static inline void rte_prefetch0(const volatile void *p)
 #ifdef RTE_TOOLCHAIN_MSVC
 	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_T0);
 #else
-	asm volatile ("prefetcht0 %[p]" : : [p] "m" (*(const volatile char *)p));
+	/* 0 indicates intention to read, 3 sets target cache level to L1. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 3);
 #endif
 }
 
@@ -31,7 +35,11 @@ static inline void rte_prefetch1(const volatile void *p)
 #ifdef RTE_TOOLCHAIN_MSVC
 	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_T1);
 #else
-	asm volatile ("prefetcht1 %[p]" : : [p] "m" (*(const volatile char *)p));
+	/* 0 indicates intention to read, 2 sets target cache level to L2. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 2);
 #endif
 }
 
@@ -40,7 +48,11 @@ static inline void rte_prefetch2(const volatile void *p)
 #ifdef RTE_TOOLCHAIN_MSVC
 	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_T2);
 #else
-	asm volatile ("prefetcht2 %[p]" : : [p] "m" (*(const volatile char *)p));
+	/* 0 indicates intention to read, 1 sets target cache level to L3. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 1);
 #endif
 }
 
@@ -49,7 +61,11 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 #ifdef RTE_TOOLCHAIN_MSVC
 	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_NTA);
 #else
-	asm volatile ("prefetchnta %[p]" : : [p] "m" (*(const volatile char *)p));
+	/* 0 indicates intention to read, 1 sets target cache level to L3. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 0);
 #endif
 }
 
