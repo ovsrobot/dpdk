@@ -716,6 +716,9 @@ fail:
 void
 rte_pcapng_close(rte_pcapng_t *self)
 {
+	if (!self)
+		rte_errno = EINVAL;
+
 	close(self->outfd);
 	free(self);
 }

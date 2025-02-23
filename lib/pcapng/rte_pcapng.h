@@ -60,6 +60,8 @@ rte_pcapng_fdopen(int fd,
  *
  * @param self
  *  handle to library
+
+ * If self is NULL, rte_errno is set to EINVAL.
  */
 void
 rte_pcapng_close(rte_pcapng_t *self);
