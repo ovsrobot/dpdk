@@ -237,7 +237,7 @@ struct vhost_crypto_data_req {
 
 static int
 transform_cipher_param(struct rte_crypto_sym_xform *xform,
-		VhostUserCryptoSessionParam *param)
+		VhostUserCryptoSymSessionParam *param)
 {
 	int ret;
 
@@ -273,7 +273,7 @@ transform_cipher_param(struct rte_crypto_sym_xform *xform,
 
 static int
 transform_chain_param(struct rte_crypto_sym_xform *xforms,
-		VhostUserCryptoSessionParam *param)
+		VhostUserCryptoSymSessionParam *param)
 {
 	struct rte_crypto_sym_xform *xform_cipher, *xform_auth;
 	int ret;
@@ -341,10 +341,10 @@ vhost_crypto_create_sess(struct vhost_crypto *vcrypto,
 	struct rte_cryptodev_sym_session *session;
 	int ret;
 
-	switch (sess_param->op_type) {
+	switch (sess_param->u.sym_sess.op_type) {
 	case VIRTIO_CRYPTO_SYM_OP_NONE:
 	case VIRTIO_CRYPTO_SYM_OP_CIPHER:
-		ret = transform_cipher_param(&xform1, sess_param);
+		ret = transform_cipher_param(&xform1, &sess_param->u.sym_sess);
 		if (unlikely(ret)) {
 			VC_LOG_ERR("Error transform session msg (%i)", ret);
 			sess_param->session_id = ret;
@@ -352,7 +352,7 @@ vhost_crypto_create_sess(struct vhost_crypto *vcrypto,
 		}
 		break;
 	case VIRTIO_CRYPTO_SYM_OP_ALGORITHM_CHAINING:
-		if (unlikely(sess_param->hash_mode !=
+		if (unlikely(sess_param->u.sym_sess.hash_mode !=
 				VIRTIO_CRYPTO_SYM_HASH_MODE_AUTH)) {
 			sess_param->session_id = -VIRTIO_CRYPTO_NOTSUPP;
 			VC_LOG_ERR("Error transform session message (%i)",
@@ -362,7 +362,7 @@ vhost_crypto_create_sess(struct vhost_crypto *vcrypto,
 
 		xform1.next = &xform2;
 
-		ret = transform_chain_param(&xform1, sess_param);
+		ret = transform_chain_param(&xform1, &sess_param->u.sym_sess);
 		if (unlikely(ret)) {
 			VC_LOG_ERR("Error transform session message (%i)", ret);
 			sess_param->session_id = ret;
