@@ -2671,6 +2671,127 @@ class TestPmdShell(DPDKShell):
         else:
             unsupported_capabilities.add(NicCapability.FLOW_CTRL)
 
+    def get_capabilities_xor_rss_hash_algorithms(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get simple_xor rss hash algorithm capability and check for testpmd failure.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self.get_capabilities_rss_hash_algorithms(
+            "simple_xor",
+            NicCapability.RSS_HASH_XOR,
+            supported_capabilities,
+            unsupported_capabilities,
+        )
+
+    def get_capabilities_symmetric_toeplitz_rss_hash_algorithms(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get symmetric_toeplitz rss hash algorithm capability and check for testpmd failure.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self.get_capabilities_rss_hash_algorithms(
+            "symmetric Toeplitz",
+            NicCapability.RSS_HASH_SYMMETRIC_TOEPLITZ,
+            supported_capabilities,
+            unsupported_capabilities,
+        )
+
+    def get_capabilities_toeplitz_rss_hash_algorithms(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get toeplitz rss hash algorithm capability and check for testpmd failure.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self.get_capabilities_rss_hash_algorithms(
+            "toeplitz",
+            NicCapability.RSS_HASH_TOEPLITZ,
+            supported_capabilities,
+            unsupported_capabilities,
+        )
+
+    def get_capabilities_default_rss_hash_algorithms(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get default rss hash algorithm capability and check for testpmd failure.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self.get_capabilities_rss_hash_algorithms(
+            "default",
+            NicCapability.RSS_HASH_DEFAULT,
+            supported_capabilities,
+            unsupported_capabilities,
+        )
+
+    def get_capabilities_symmetric_toeplitz_sort_rss_hash_algorithms(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get symmetric_toeplitz_sort rss hash algorithm capability and check for testpmd failure.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self.get_capabilities_rss_hash_algorithms(
+            "symmetric_toeplitz_sort",
+            NicCapability.RSS_HASH_SYMMETRIC_TOEPLITZ_SORT,
+            supported_capabilities,
+            unsupported_capabilities,
+        )
+
+    def get_capabilities_rss_hash_algorithms(
+        self,
+        algorithm: str,
+        NicCapability,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ):
+        """Get algorithm and check for capability.
+
+        Args:
+            algorithm: The rss algorithm that is being tested.
+            NicCapability: The nic capability constant to be added to one of the MutableSets.
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+
+        """
+        self._logger.debug(f"Getting hash capabilities for {algorithm} algorithm.")
+        self.send_command("port stop all")
+        self.send_command("port config all rxq 16")
+        self.send_command("port config all txq 16")
+        self.send_command("port start all")
+        command = f"show port {self.ports[0].id} rss-hash algorithm"
+        output = self.send_command(command)
+        if algorithm in output:
+            supported_capabilities.add(NicCapability)
+        else:
+            unsupported_capabilities.add(NicCapability)
+        self.send_command("port stop all")
+        self.send_command("port config all rxq 0")
+        self.send_command("port config all txq 0")
+
 
 class NicCapability(NoAliasEnum):
     """A mapping between capability names and the associated :class:`TestPmdShell` methods.
@@ -2835,6 +2956,31 @@ class NicCapability(NoAliasEnum):
     #: Device supports flow ctrl.
     FLOW_CTRL: TestPmdShellNicCapability = (
         TestPmdShell.get_capabilities_flow_ctrl,
+        None,
+    )
+    #: Device supports simple_xor algorithm.
+    RSS_HASH_XOR: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_xor_rss_hash_algorithms,
+        None,
+    )
+    #: Device supports symmetric_toeplitz algorithm.
+    RSS_HASH_SYMMETRIC_TOEPLITZ: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_symmetric_toeplitz_rss_hash_algorithms,
+        None,
+    )
+    #: Device supports toeplitz algorithm.
+    RSS_HASH_TOEPLITZ: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_toeplitz_rss_hash_algorithms,
+        None,
+    )
+    #: Device supports default algorithm.
+    RSS_HASH_DEFAULT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_default_rss_hash_algorithms,
+        None,
+    )
+    #: Device supports symmetric_toeplitz_sort algorithm.
+    RSS_HASH_SYMMETRIC_TOEPLITZ_SORT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_symmetric_toeplitz_sort_rss_hash_algorithms,
         None,
     )
 

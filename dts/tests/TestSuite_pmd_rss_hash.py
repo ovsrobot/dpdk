@@ -69,6 +69,7 @@ class TestPmdRssHash(TestSuite):
             parsed_output = SendTestPackets(self, testpmd, is_symmetric)
             VerifyHashQueue(self, reta, parsed_output, is_symmetric)
 
+    @requires(NicCapability.RSS_HASH_DEFAULT)
     @func_test
     def TestDefaultHashAlgorithm(self) -> None:
         """Default hashing algorithm test.
@@ -81,6 +82,7 @@ class TestPmdRssHash(TestSuite):
         """
         self.VerifyHashFunction(HashAlgorithm.DEFAULT)
 
+    @requires(NicCapability.RSS_HASH_TOEPLITZ)
     @func_test
     def TestToeplitzHashAlgorithm(self) -> None:
         """Toeplitz hashing algorithm test.
@@ -92,6 +94,7 @@ class TestPmdRssHash(TestSuite):
         """
         self.VerifyHashFunction(HashAlgorithm.TOEPLITZ)
 
+    @requires(NicCapability.RSS_HASH_SYMMETRIC_TOEPLITZ)
     @func_test
     def TestSymmetricToeplitzHashAlgorithm(self) -> None:
         """Symmetric toeplitz hashing algorithm test.
@@ -104,7 +107,7 @@ class TestPmdRssHash(TestSuite):
         """
         self.VerifyHashFunction(HashAlgorithm.SYMMETRIC_TOEPLITZ)
 
-    @requires(NicCapability.XOR_SUPPORT)
+    @requires(NicCapability.RSS_HASH_XOR)
     @func_test
     def TestSimpleXorHashAlgorithm(self) -> None:
         """Simple xor hashing algorithm test.
