@@ -50,6 +50,7 @@ Features
   Inner RSS is only support for vxlan/nvgre
 - Promiscuous mode
 - Link state information
+- MTU update
 
 Prerequisites and Pre-conditions
 --------------------------------
