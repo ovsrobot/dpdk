@@ -1,6 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017-2020 Intel Corporation
 
+if is_ms_compiler
+    cc_avx2_flags = ['/arch:AVX2']
+else
+    cc_avx2_flags = ['-mavx2']
+endif
+
 # get binutils version for the workaround of Bug 97
 binutils_ok = true
 if is_linux or cc.get_id() == 'gcc'
