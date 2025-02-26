@@ -152,6 +152,10 @@ New Features
   See the :doc:`../compressdevs/zsda` guide for more details on the new driver.
 
 
+* **Updated virtio crypto driver.**
+
+  Updated virtio crypto driver to support RSA crypto operations.
+
 Removed Items
 -------------
 
