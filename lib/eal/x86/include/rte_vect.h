@@ -79,7 +79,16 @@ __extension__ ({                \
 #define RTE_X86_ZMM_SIZE	(sizeof(__m512i))
 #define RTE_X86_ZMM_MASK	(RTE_X86_ZMM_SIZE - 1)
 
-typedef union __rte_aligned(RTE_X86_ZMM_SIZE) __rte_x86_zmm {
+/*
+ * MSVC does not allow __rte_aligned(RTE_X86_ZMM_SIZE). It only accepts
+ * numbers that are power of 2. So, even though RTE_X86_ZMM_SIZE represents a
+ * number that is a power of two it cannot be used directly.
+ * Ref: https://learn.microsoft.com/en-us/cpp/cpp/align-cpp?view=msvc-170
+ * The static assert below ensures that RTE_X86_ZMM_SIZE is equal to what is
+ * used in the __rte_aligned() expression.
+ */
+static_assert(RTE_X86_ZMM_SIZE == 64, "Unexpected size of __m512i");
+typedef union __rte_aligned(64) __rte_x86_zmm {
 	__m512i	 z;
 	ymm_t    y[RTE_X86_ZMM_SIZE / sizeof(ymm_t)];
 	xmm_t    x[RTE_X86_ZMM_SIZE / sizeof(xmm_t)];
