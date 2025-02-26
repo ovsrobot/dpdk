@@ -279,6 +279,14 @@ Limitations
        which results in L3 encap.
     d. Only in transfer (switchdev) mode.
 
+  - MPLS:
+
+    - RTE_FLOW_ITEM_TYPE_MPLS matching is not supported for mlxcfg ``FLEX_PARSER_PROFILE_ENABLE`` = 1.
+    - RTE_FLOW_ITEM_TYPE_MPLS matching is not supported on group 0.
+    - Testpmd commands "set mplsoudp_encap" and "set mplsoudp_decap" support only one MPLS.
+    - For non relaxed pattern template, MPLSoUDP match is assumed when trying to match MPLS w/o former
+      protocol match.
+
 - When using Verbs flow engine (``dv_flow_en`` = 0), flow pattern without any
   specific VLAN will match for VLAN packets as well:
 
