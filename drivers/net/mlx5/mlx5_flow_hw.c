@@ -9636,21 +9636,18 @@ _create_send_to_kernel_actions(struct mlx5_priv *priv, int type)
 }
 
 static void
-flow_hw_create_send_to_kernel_actions(struct mlx5_priv *priv)
+flow_hw_create_send_to_kernel_actions(struct mlx5_priv *priv, bool is_proxy)
 {
 #ifdef HAVE_MLX5DV_DR_ACTION_CREATE_DEST_ROOT_TABLE
 	int i, from, to;
-	bool is_vf_sf_dev = priv->sh->dev_cap.vf || priv->sh->dev_cap.sf;
 	bool unified_fdb = is_unified_fdb(priv);
 
 	for (i = MLX5DR_TABLE_TYPE_NIC_RX; i <= MLX5DR_TABLE_TYPE_NIC_TX; i++)
 		_create_send_to_kernel_actions(priv, i);
 
-	if (priv->sh->config.dv_esw_en && !is_vf_sf_dev) {
-		from = unified_fdb ? MLX5DR_TABLE_TYPE_FDB_RX :
-					MLX5DR_TABLE_TYPE_FDB;
-		to = unified_fdb ? MLX5DR_TABLE_TYPE_FDB_UNIFIED :
-				      MLX5DR_TABLE_TYPE_FDB;
+	if (is_proxy) {
+		from = unified_fdb ? MLX5DR_TABLE_TYPE_FDB_RX : MLX5DR_TABLE_TYPE_FDB;
+		to = unified_fdb ? MLX5DR_TABLE_TYPE_FDB_UNIFIED : MLX5DR_TABLE_TYPE_FDB;
 		for (i = from; i <= to; i++)
 			_create_send_to_kernel_actions(priv, i);
 	}
@@ -9661,6 +9658,7 @@ static void
 flow_hw_destroy_send_to_kernel_action(struct mlx5_priv *priv)
 {
 	int i;
+
 	for (i = MLX5DR_TABLE_TYPE_NIC_RX; i < MLX5DR_TABLE_TYPE_MAX; i++) {
 		if (priv->hw_send_to_kernel[i]) {
 			mlx5dr_action_destroy(priv->hw_send_to_kernel[i]);
@@ -12158,7 +12156,7 @@ __flow_hw_configure(struct rte_eth_dev *dev,
 		}
 	}
 	if (!priv->shared_host)
-		flow_hw_create_send_to_kernel_actions(priv);
+		flow_hw_create_send_to_kernel_actions(priv, is_proxy);
 	if (port_attr->nb_conn_tracks || (host_priv && host_priv->hws_ctpool)) {
 		if (mlx5_flow_ct_init(dev, port_attr->nb_conn_tracks, nb_q_updated))
 			goto err;
