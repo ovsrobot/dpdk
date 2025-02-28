@@ -14,7 +14,7 @@ if is_linux or cc.get_id() == 'gcc'
     endif
 endif
 
-cc_avx512_flags = ['-mavx512f', '-mavx512vl', '-mavx512dq', '-mavx512bw']
+cc_avx512_flags = ['-mavx512f', '-mavx512vl', '-mavx512dq', '-mavx512bw', '-mavx512cd']
 cc_has_avx512 = false
 target_has_avx512 = false
 if (binutils_ok and cc.has_multi_arguments(cc_avx512_flags)
