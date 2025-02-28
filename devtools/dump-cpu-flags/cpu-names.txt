@@ -1,0 +1,120 @@
+# This file is consumed by dump-cpu-flags.py. It should contain CPU names,
+# one per line. When the given CPU has a 32 bit architecture, it must be
+# indicated so by appending ", 32" to the line.
+# Always use the latest compiler available, otherwise it might not know
+# about some CPUs listed here.
+# The latest CPU names can be obtained from:
+# https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
+#
+
+x86-64
+x86-64-v2
+x86-64-v3
+x86-64-v4
+i386, 32
+i486, 32
+i586, 32
+pentium, 32
+lakemont, 32
+pentium-mmx, 32
+pentiumpro, 32
+i686, 32
+pentium2, 32
+pentium3, 32
+pentium3m, 32
+pentium-m, 32
+pentium4, 32
+pentium4m, 32
+prescott, 32
+nocona
+core2
+nehalem
+corei7
+westmere
+sandybridge
+corei7-avx
+ivybridge
+core-avx-i
+haswell
+core-avx2
+broadwell
+skylake
+skylake-avx512
+cascadelake
+cannonlake
+cooperlake
+icelake-client
+icelake-server
+tigerlake
+rocketlake
+alderlake
+raptorlake,
+meteorlake,
+gracemont
+arrowlake
+arrowlake-s
+lunarlake
+pantherlake
+sapphirerapids
+emeraldrapids
+graniterapids
+graniterapids-d
+diamondrapids
+bonnell
+atom
+silvermont
+slm
+goldmont
+goldmont-plus
+tremont
+sierraforest
+grandridge
+clearwaterforest
+k6, 32
+k6-2, 32
+k6-3, 32
+athlon, 32
+athlon-tbird, 32
+athlon-4, 32
+athlon-xp, 32
+athlon-mp, 32
+k8
+opteron
+athlon64
+athlon-fx
+k8-sse3
+opteron-sse3
+athlon64-sse3
+amdfam10
+barcelona
+bdver1
+bdver2
+bdver3
+bdver4
+znver1
+znver2
+znver3
+znver4
+znver5
+btver1
+btver2
+winchip-c6, 32
+winchip2, 32
+c3, 32
+c3-2, 32
+c7, 32
+samuel-2, 32
+nehemiah, 32
+esther, 32
+eden-x2
+eden-x4
+nano
+nano-1000
+nano-2000
+nano-3000
+nano-x2
+nano-x4
+lujiazui
+yongfeng
+shijidadao
+geode, 32
