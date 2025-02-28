@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/resource.h>
+#include <sys/personality.h>
 #include <unistd.h>
 #include <limits.h>
 #include <signal.h>
@@ -26,7 +27,6 @@
 #include <numa.h>
 #include <numaif.h>
 #endif
-
 #include <rte_errno.h>
 #include <rte_log.h>
 #include <rte_memory.h>
@@ -200,6 +200,14 @@ static int
 aslr_enabled(void)
 {
 	char c;
+
+	/*
+	 * check whether the current process is executed with command line
+	 * "setarch ... --addr-no-randomize ...".
+	 */
+	if ((personality(0xffffffff) & ADDR_NO_RANDOMIZE) == ADDR_NO_RANDOMIZE)
+		return 0;
+
 	int retval, fd = open(RANDOMIZE_VA_SPACE_FILE, O_RDONLY);
 	if (fd < 0)
 		return -errno;
