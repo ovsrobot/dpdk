@@ -104,7 +104,6 @@ epyc_zen_cores = {
     '__znver1__':128
     }
 
-cpu_instruction_set = get_option('cpu_instruction_set')
 if cpu_instruction_set == 'native'
     foreach m:epyc_zen_cores.keys()
         if cc.get_define(m, args: machine_args) != ''
