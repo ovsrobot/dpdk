@@ -2239,11 +2239,11 @@ static struct ice_flow_parser *get_flow_parser(uint32_t group)
 {
 	switch (group) {
 	case 0:
-		return &ice_switch_parser;
+		return &ice_fdir_parser;
 	case 1:
 		return &ice_acl_parser;
 	case 2:
-		return &ice_fdir_parser;
+		return &ice_switch_parser;
 	default:
 		return NULL;
 	}
@@ -2298,6 +2298,13 @@ ice_flow_process_filter(struct rte_eth_dev *dev,
 	}
 
 	for (int i = 0; i < ICE_FLOW_ENGINE_NB; i++) {
+		/**
+		 * Evaluate parsers in the following order:
+		 * FDIR - for exact match rules
+		 * ACL - for some subset of wildcard matching rules
+		 * Switch - for the rest. This engine is placed after ACL
+		 * because it scales worse than ACL for different wildcard masks.
+		 **/
 		parser = get_flow_parser(i);
 		if (parser == NULL) {
 			rte_flow_error_set(error, EINVAL,
