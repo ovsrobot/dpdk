@@ -6,6 +6,7 @@
 
 #include "zsda_sym_pmd.h"
 #include "zsda_sym_session.h"
+#include "zsda_sym.h"
 
 uint8_t zsda_sym_driver_id;
 
@@ -147,20 +148,20 @@ zsda_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 
 	task_q_info.type = ZSDA_SERVICE_SYMMETRIC_ENCRYPT;
 	task_q_info.service_str = "sym_encrypt";
-	task_q_info.tx_cb = NULL;
-	task_q_info.match = NULL;
+	task_q_info.tx_cb = zsda_cipher_wqe_build;
+	task_q_info.match = zsda_encry_match;
 	ret = zsda_task_queue_setup(zsda_pci_dev, qp_new, &task_q_info);
 
 	task_q_info.type = ZSDA_SERVICE_SYMMETRIC_DECRYPT;
 	task_q_info.service_str = "sym_decrypt";
-	task_q_info.tx_cb = NULL;
-	task_q_info.match = NULL;
+	task_q_info.tx_cb = zsda_cipher_wqe_build;
+	task_q_info.match = zsda_decry_match;
 	ret |= zsda_task_queue_setup(zsda_pci_dev, qp_new, &task_q_info);
 
 	task_q_info.type = ZSDA_SERVICE_HASH_ENCODE;
 	task_q_info.service_str = "sym_hash";
-	task_q_info.tx_cb = NULL;
-	task_q_info.match = NULL;
+	task_q_info.tx_cb = zsda_hash_wqe_build;
+	task_q_info.match = zsda_hash_match;
 	ret |= zsda_task_queue_setup(zsda_pci_dev, qp_new, &task_q_info);
 
 	if (ret) {
@@ -232,6 +233,14 @@ static const char zsda_sym_drv_name[] = RTE_STR(CRYPTODEV_NAME_ZSDA_SYM_PMD);
 static const struct rte_driver cryptodev_zsda_sym_driver = {
 	.name = zsda_sym_drv_name, .alias = zsda_sym_drv_name};
 
+static uint16_t
+zsda_sym_pmd_enqueue_op_burst(void *qp, struct rte_crypto_op **ops,
+			      uint16_t nb_ops)
+{
+	return zsda_enqueue_burst((struct zsda_qp *)qp, (void **)ops,
+				     nb_ops);
+}
+
 int
 zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
 {
@@ -270,7 +279,7 @@ zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
 
 	cryptodev->dev_ops = &crypto_zsda_ops;
 
-	cryptodev->enqueue_burst = NULL;
+	cryptodev->enqueue_burst = zsda_sym_pmd_enqueue_op_burst;
 	cryptodev->dequeue_burst = NULL;
 	cryptodev->feature_flags = 0;
 
