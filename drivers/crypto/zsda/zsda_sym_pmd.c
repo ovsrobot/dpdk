@@ -8,13 +8,95 @@
 
 uint8_t zsda_sym_driver_id;
 
+static int
+zsda_sym_dev_config(__rte_unused struct rte_cryptodev *dev,
+		    __rte_unused struct rte_cryptodev_config *config)
+{
+	return ZSDA_SUCCESS;
+}
+
+static int
+zsda_sym_dev_start(struct rte_cryptodev *dev)
+{
+	struct zsda_sym_dev_private *sym_dev = dev->data->dev_private;
+	int ret;
+
+	ret = zsda_queue_start(sym_dev->zsda_pci_dev->pci_dev);
+
+	return ret;
+}
+
+static void
+zsda_sym_dev_stop(struct rte_cryptodev *dev)
+{
+	struct zsda_sym_dev_private *sym_dev = dev->data->dev_private;
+
+	zsda_queue_stop(sym_dev->zsda_pci_dev->pci_dev);
+}
+
+static int
+zsda_sym_qp_release(struct rte_cryptodev *dev, uint16_t queue_pair_id)
+{
+	return zsda_queue_pair_release(
+		(struct zsda_qp **)&(dev->data->queue_pairs[queue_pair_id]));
+}
+
+static int
+zsda_sym_dev_close(struct rte_cryptodev *dev)
+{
+	int ret = ZSDA_SUCCESS;
+	uint16_t i;
+
+	for (i = 0; i < dev->data->nb_queue_pairs; i++)
+		ret |= zsda_sym_qp_release(dev, i);
+
+	return ret;
+}
+
+static uint16_t
+zsda_sym_max_nb_qps(void)
+{
+	uint16_t encrypt = zsda_nb_qps.encrypt;
+	uint16_t decrypt = zsda_nb_qps.decrypt;
+	uint16_t hash = zsda_nb_qps.hash;
+	uint16_t min = 0;
+
+	if ((encrypt == MAX_QPS_ON_FUNCTION) ||
+		(decrypt == MAX_QPS_ON_FUNCTION) ||
+	    (hash == MAX_QPS_ON_FUNCTION))
+		min = MAX_QPS_ON_FUNCTION;
+	else {
+		min = (encrypt < decrypt) ? encrypt : decrypt;
+		min = (min < hash) ? min : hash;
+	}
+
+	if (min == 0)
+		return MAX_QPS_ON_FUNCTION;
+	return min;
+}
+
+static void
+zsda_sym_dev_info_get(struct rte_cryptodev *dev,
+		      struct rte_cryptodev_info *info)
+{
+	struct zsda_sym_dev_private *sym_dev_priv = dev->data->dev_private;
+
+	if (info != NULL) {
+		info->max_nb_queue_pairs = zsda_sym_max_nb_qps();
+		info->feature_flags = dev->feature_flags;
+		info->capabilities = sym_dev_priv->zsda_dev_capabilities;
+		info->driver_id = zsda_sym_driver_id;
+		info->sym.max_nb_sessions = 0;
+	}
+}
+
 static struct rte_cryptodev_ops crypto_zsda_ops = {
 
-	.dev_configure = NULL,
-	.dev_start = NULL,
-	.dev_stop = NULL,
-	.dev_close = NULL,
-	.dev_infos_get = NULL,
+	.dev_configure = zsda_sym_dev_config,
+	.dev_start = zsda_sym_dev_start,
+	.dev_stop = zsda_sym_dev_stop,
+	.dev_close = zsda_sym_dev_close,
+	.dev_infos_get = zsda_sym_dev_info_get,
 
 	.stats_get = NULL,
 	.stats_reset = NULL,
@@ -103,6 +185,8 @@ zsda_sym_dev_destroy(struct zsda_pci_device *zsda_pci_dev)
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
 		rte_memzone_free(sym_dev_priv->capa_mz);
+
+	zsda_sym_dev_close(sym_dev_priv->cryptodev);
 
 	rte_cryptodev_pmd_destroy(sym_dev_priv->cryptodev);
 	zsda_devs[zsda_pci_dev->zsda_dev_id].sym_rte_dev.name = NULL;
