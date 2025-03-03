@@ -7,6 +7,7 @@
 #include "zsda_sym_pmd.h"
 #include "zsda_sym_session.h"
 #include "zsda_sym.h"
+#include "zsda_sym_capabilities.h"
 
 uint8_t zsda_sym_driver_id;
 
@@ -261,8 +262,11 @@ zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
 		.private_data_size = sizeof(struct zsda_sym_dev_private)};
 
 	char name[RTE_CRYPTODEV_NAME_MAX_LEN];
+	char capa_memz_name[RTE_COMPRESSDEV_NAME_MAX_LEN];
 	struct rte_cryptodev *cryptodev;
 	struct zsda_sym_dev_private *sym_dev_priv;
+	const struct rte_cryptodev_capabilities *capabilities;
+	uint64_t capa_size;
 
 	snprintf(name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s", zsda_pci_dev->name,
 		 "sym_encrypt");
@@ -289,11 +293,34 @@ zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
 
 	cryptodev->enqueue_burst = zsda_sym_pmd_enqueue_op_burst;
 	cryptodev->dequeue_burst = zsda_sym_pmd_dequeue_op_burst;
-	cryptodev->feature_flags = 0;
+	cryptodev->feature_flags = RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO |
+				   RTE_CRYPTODEV_FF_SYM_SESSIONLESS |
+				   RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT |
+				   RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT |
+				   RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT |
+				   RTE_CRYPTODEV_FF_OOP_SGL_IN_SGL_OUT |
+				   RTE_CRYPTODEV_FF_HW_ACCELERATED;
+	capabilities = zsda_crypto_sym_capabilities;
 
 	sym_dev_priv = cryptodev->data->dev_private;
 	sym_dev_priv->zsda_pci_dev = zsda_pci_dev;
 	sym_dev_priv->cryptodev = cryptodev;
+	capa_size = sizeof(zsda_crypto_sym_capabilities);
+
+	snprintf(capa_memz_name, RTE_CRYPTODEV_NAME_MAX_LEN, "ZSDA_SYM_CAPA");
+
+	sym_dev_priv->capa_mz = rte_memzone_lookup(capa_memz_name);
+	if (sym_dev_priv->capa_mz == NULL)
+		sym_dev_priv->capa_mz = rte_memzone_reserve(
+			capa_memz_name, capa_size, rte_socket_id(), 0);
+
+	if (sym_dev_priv->capa_mz == NULL) {
+		ZSDA_LOG(ERR, "Failed! sym_dev_priv->capa_mz");
+		goto error;
+	}
+
+	memcpy(sym_dev_priv->capa_mz->addr, capabilities, capa_size);
+	sym_dev_priv->zsda_dev_capabilities = sym_dev_priv->capa_mz->addr;
 
 	zsda_pci_dev->sym_dev_priv = sym_dev_priv;
 
