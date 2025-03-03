@@ -174,6 +174,15 @@ e.g. for the 1cf2 device::
 Use ``modprobe vfio-pci disable_denylist=1`` from kernel 5.9 onwards.
 
 
+Building DPDK
+-------------
+
+The following commands can be used to build DPDK on a system::
+
+  meson setup build
+  ninja -C build
+
+
 Testing
 -------
 

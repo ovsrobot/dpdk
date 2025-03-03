@@ -24,9 +24,12 @@
 enum zsda_service_type {
 	ZSDA_SERVICE_COMPRESSION = 0,
 	ZSDA_SERVICE_DECOMPRESSION = 1,
+	ZSDA_SERVICE_SYMMETRIC_ENCRYPT = 2,
+	ZSDA_SERVICE_SYMMETRIC_DECRYPT = 3,
+	ZSDA_SERVICE_HASH_ENCODE = 6,
 	ZSDA_SERVICE_INVALID,
 };
-#define ZSDA_MAX_SERVICES (2)
+#define ZSDA_MAX_SERVICES (ZSDA_SERVICE_INVALID)
 
 #define ZSDA_CSR_READ32(addr)	      rte_read32((addr))
 #define ZSDA_CSR_WRITE32(addr, value) rte_write32((value), (addr))
@@ -43,10 +46,22 @@ enum zsda_service_type {
 #define MAX_NUM_OPS			0x1FF
 #define ZSDA_SGL_FRAGMENT_SIZE	32
 
+#define ZSDA_OPC_EC_AES_XTS_256 0x0  /* Encry AES-XTS-256 */
+#define ZSDA_OPC_EC_AES_XTS_512 0x01 /* Encry AES-XTS-512 */
+#define ZSDA_OPC_EC_SM4_XTS_256 0x02 /* Encry SM4-XTS-256 */
+#define ZSDA_OPC_DC_AES_XTS_256 0x08 /* Decry AES-XTS-256 */
+#define ZSDA_OPC_DC_AES_XTS_512 0x09 /* Decry AES-XTS-512 */
+#define ZSDA_OPC_DC_SM4_XTS_256 0x0A /* Decry SM4-XTS-256 */
 #define ZSDA_OPC_COMP_GZIP		0x10 /* Encomp deflate-Gzip */
 #define ZSDA_OPC_COMP_ZLIB		0x11 /* Encomp deflate-Zlib */
 #define ZSDA_OPC_DECOMP_GZIP	0x18 /* Decomp inflate-Gzip */
 #define ZSDA_OPC_DECOMP_ZLIB	0x19 /* Decomp inflate-Zlib */
+#define ZSDA_OPC_HASH_SHA1		0x20 /* Hash-SHA1 */
+#define ZSDA_OPC_HASH_SHA2_224	0x21 /* Hash-SHA2-224 */
+#define ZSDA_OPC_HASH_SHA2_256	0x22 /* Hash-SHA2-256 */
+#define ZSDA_OPC_HASH_SHA2_384	0x23 /* Hash-SHA2-384 */
+#define ZSDA_OPC_HASH_SHA2_512	0x24 /* Hash-SHA2-512 */
+#define ZSDA_OPC_HASH_SM3		0x25 /* Hash-SM3 */
 #define ZSDA_OPC_INVALID		0xff
 
 #define CQE_VALID(value) (value & 0x8000)
