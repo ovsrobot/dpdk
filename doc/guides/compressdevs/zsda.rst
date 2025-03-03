@@ -192,6 +192,12 @@ ZSDA compression PMD can be tested by running the test application::
    ./dpdk-test -l1 -n1 -a <your zsda BDF>
    RTE>>compressdev_autotest
 
+ZSDA SYM crypto PMD can be tested by running the test application::
+
+    cd ./<build_dir>/app/test
+    ./dpdk-test -l1 -n1 -a <your zsda bdf>
+    RTE>>cryptodev_zsda_autotest
+
 
 Debugging
 ---------
