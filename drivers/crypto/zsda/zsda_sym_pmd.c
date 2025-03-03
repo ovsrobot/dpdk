@@ -109,6 +109,70 @@ zsda_sym_stats_reset(struct rte_cryptodev *dev)
 	zsda_stats_reset(dev->data->queue_pairs, dev->data->nb_queue_pairs);
 }
 
+
+static int
+zsda_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
+		  const struct rte_cryptodev_qp_conf *qp_conf,
+		  int socket_id)
+{
+	int ret = ZSDA_SUCCESS;
+	struct zsda_qp *qp_new;
+	struct zsda_qp **qp_addr =
+		(struct zsda_qp **)&(dev->data->queue_pairs[qp_id]);
+	struct zsda_sym_dev_private *sym_dev_priv = dev->data->dev_private;
+	struct zsda_pci_device *zsda_pci_dev = sym_dev_priv->zsda_pci_dev;
+	uint32_t nb_des = qp_conf->nb_descriptors;
+	struct task_queue_info task_q_info;
+
+	nb_des = (nb_des == NB_DES) ? nb_des : NB_DES;
+
+	if (*qp_addr != NULL) {
+		ret = zsda_sym_qp_release(dev, qp_id);
+		if (ret)
+			return ret;
+	}
+
+	qp_new = rte_zmalloc_socket("zsda PMD qp metadata", sizeof(*qp_new),
+				    RTE_CACHE_LINE_SIZE, socket_id);
+	if (qp_new == NULL) {
+		ZSDA_LOG(ERR, "Failed to alloc mem for qp struct");
+		return -ENOMEM;
+	}
+
+	task_q_info.nb_des = nb_des;
+	task_q_info.socket_id = socket_id;
+	task_q_info.qp_id = qp_id;
+	task_q_info.rx_cb = NULL;
+
+	task_q_info.type = ZSDA_SERVICE_SYMMETRIC_ENCRYPT;
+	task_q_info.service_str = "sym_encrypt";
+	task_q_info.tx_cb = NULL;
+	task_q_info.match = NULL;
+	ret = zsda_task_queue_setup(zsda_pci_dev, qp_new, &task_q_info);
+
+	task_q_info.type = ZSDA_SERVICE_SYMMETRIC_DECRYPT;
+	task_q_info.service_str = "sym_decrypt";
+	task_q_info.tx_cb = NULL;
+	task_q_info.match = NULL;
+	ret |= zsda_task_queue_setup(zsda_pci_dev, qp_new, &task_q_info);
+
+	task_q_info.type = ZSDA_SERVICE_HASH_ENCODE;
+	task_q_info.service_str = "sym_hash";
+	task_q_info.tx_cb = NULL;
+	task_q_info.match = NULL;
+	ret |= zsda_task_queue_setup(zsda_pci_dev, qp_new, &task_q_info);
+
+	if (ret) {
+		ZSDA_LOG(ERR, " sym_zsda_task_queue_setup is failed!");
+		rte_free(qp_new);
+		return ret;
+	}
+
+	*qp_addr = qp_new;
+
+	return ret;
+}
+
 static struct rte_cryptodev_ops crypto_zsda_ops = {
 
 	.dev_configure = zsda_sym_dev_config,
@@ -119,8 +183,8 @@ static struct rte_cryptodev_ops crypto_zsda_ops = {
 
 	.stats_get = zsda_sym_stats_get,
 	.stats_reset = zsda_sym_stats_reset,
-	.queue_pair_setup = NULL,
-	.queue_pair_release = NULL,
+	.queue_pair_setup = zsda_sym_qp_setup,
+	.queue_pair_release = zsda_sym_qp_release,
 
 	.sym_session_get_size = NULL,
 	.sym_session_configure = NULL,
