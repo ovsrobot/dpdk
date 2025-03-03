@@ -7,7 +7,7 @@ if is_windows
     subdir_done()
 endif
 
-deps += ['bus_pci', 'mbuf', 'compressdev']
+deps += ['bus_pci', 'compressdev', 'cryptodev']
 sources += files(
         'zsda_device.c',
         'zsda_logs.c',
@@ -23,4 +23,14 @@ if zsda_compress
     foreach f: ['zsda_comp_pmd.c', 'zsda_comp.c']
         sources += files(join_paths(zsda_compress_relpath, f))
     endforeach
+endif
+
+zsda_crypto = true
+zsda_crypto_path = 'crypto/zsda'
+zsda_crypto_relpath = '../../' + zsda_crypto_path
+includes += include_directories(zsda_crypto_relpath)
+if zsda_crypto
+	foreach f: ['zsda_sym_pmd.c']
+		sources += files(join_paths(zsda_crypto_relpath, f))
+	endforeach
 endif
