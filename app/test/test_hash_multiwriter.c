@@ -68,7 +68,7 @@ test_hash_multiwriter_worker(void *arg)
 	 */
 	offset = pos_core * tbl_multiwriter_test_params.nb_tsx_insertion;
 
-	printf("Core #%d inserting %d: %'"PRId64" - %'"PRId64"\n",
+	printf("Core #%d inserting %d: %" PRId64 " - %" PRId64 "\n",
 	       lcore_id, tbl_multiwriter_test_params.nb_tsx_insertion,
 	       offset,
 	       offset + tbl_multiwriter_test_params.nb_tsx_insertion - 1);
