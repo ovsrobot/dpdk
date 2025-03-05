@@ -2287,6 +2287,8 @@ zxdh_np_dev_add(uint32_t  dev_id, ZXDH_DEV_TYPE_E dev_type,
 
 	rte_spinlock_init(&p_dev_info->dtb_spinlock.spinlock);
 
+	rte_spinlock_init(&p_dev_info->smmu0_spinlock.spinlock);
+
 	for (i = 0; i < ZXDH_DTB_QUEUE_NUM_MAX; i++)
 		rte_spinlock_init(&p_dev_info->dtb_queue_spinlock[i].spinlock);
 
@@ -3323,6 +3325,32 @@ zxdh_np_reg_read(uint32_t dev_id, uint32_t reg_no,
 								p_field_info[i].len);
 		ZXDH_COMM_CHECK_RC_NO_ASSERT(rc, "zxdh_np_comm_read_bits_ex");
 		PMD_DRV_LOG(ERR, "dev_id %d(%d)(%d)is ok!", dev_id, m_offset, n_offset);
+	}
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_reg_read32(uint32_t dev_id, uint32_t reg_no,
+	uint32_t m_offset, uint32_t n_offset, uint32_t *p_data)
+{
+	uint32_t rc = 0;
+	uint32_t addr = 0;
+	ZXDH_REG_T *p_reg_info = &g_dpp_reg_info[reg_no];
+	uint32_t p_buff[ZXDH_REG_DATA_MAX] = {0};
+	uint32_t reg_real_no = p_reg_info->reg_no;
+	uint32_t reg_type = p_reg_info->flags;
+	uint32_t reg_module = p_reg_info->module_no;
+
+	addr = zxdh_np_reg_get_reg_addr(reg_no, m_offset, n_offset);
+
+	if (reg_module == DTB4K) {
+		rc = p_reg_info->p_read_fun(dev_id, addr, p_data);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "p_reg_info->p_read_fun");
+	} else {
+		rc = zxdh_np_agent_channel_reg_read(dev_id, reg_type, reg_real_no, 4, addr, p_buff);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_reg_read");
+		*p_data = p_buff[0];
 	}
 
 	return rc;
@@ -10374,9 +10402,9 @@ zxdh_np_se_done_status_check(uint32_t dev_id, uint32_t reg_no, uint32_t pos)
 	uint32_t done_flag = 0;
 
 	while (!done_flag) {
-		rc = zxdh_np_reg_read(dev_id, reg_no, 0, 0, &data);
+		rc = zxdh_np_reg_read32(dev_id, reg_no, 0, 0, &data);
 		if (rc != 0) {
-			PMD_DRV_LOG(ERR, " [ErrorCode:0x%x] !-- zxdh_np_reg_read Fail!", rc);
+			PMD_DRV_LOG(ERR, "[ErrorCode:0x%x]!-- zxdh_np_reg_read32 Fail!", rc);
 			return rc;
 		}
 
@@ -10402,15 +10430,26 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 						uint32_t rd_clr_mode,
 						uint32_t *p_data)
 {
-	uint32_t rc = 0;
+	uint32_t rc = ZXDH_OK;
 	uint32_t i = 0;
 	uint32_t row_index = 0;
 	uint32_t col_index = 0;
 	uint32_t temp_data[4] = {0};
 	uint32_t *p_temp_data = NULL;
 	ZXDH_SMMU0_SMMU0_CPU_IND_CMD_T cpu_ind_cmd = {0};
+	ZXDH_SPINLOCK_T *p_ind_spinlock = NULL;
+
+	rc = zxdh_np_dev_opr_spinlock_get(dev_id, ZXDH_DEV_SPINLOCK_T_SMMU0, &p_ind_spinlock);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dev_opr_spinlock_get");
+
+	rte_spinlock_lock(&p_ind_spinlock->spinlock);
 
 	rc = zxdh_np_se_done_status_check(dev_id, ZXDH_SMMU0_SMMU0_WR_ARB_CPU_RDYR, 0);
+	if (rc != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "se done status check failed, rc=0x%x.", rc);
+		rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+		return ZXDH_ERR;
+	}
 
 	if (rd_clr_mode == ZXDH_RD_MODE_HOLD) {
 		cpu_ind_cmd.cpu_ind_rw = ZXDH_SE_OPR_RD;
@@ -10419,41 +10458,46 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 
 		switch (rd_mode) {
 		case ZXDH_ERAM128_OPR_128b:
-			if ((0xFFFFFFFF - (base_addr)) < (index))
+			if ((0xFFFFFFFF - (base_addr)) < (index)) {
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				PMD_DRV_LOG(ERR, "index 0x%x is invalid!", index);
 				return ZXDH_PAR_CHK_INVALID_INDEX;
-
-			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
 			}
-
+			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
+			}
 			row_index = (index << 7) & ZXDH_ERAM128_BADDR_MASK;
 			break;
 		case ZXDH_ERAM128_OPR_64b:
 			if ((base_addr + (index >> 1)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
 			}
-
 			row_index = (index << 6) & ZXDH_ERAM128_BADDR_MASK;
 			col_index = index & 0x1;
 			break;
 		case ZXDH_ERAM128_OPR_32b:
 			if ((base_addr + (index >> 2)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
 			}
-
 			row_index = (index << 5) & ZXDH_ERAM128_BADDR_MASK;
 			col_index = index & 0x3;
 			break;
 		case ZXDH_ERAM128_OPR_1b:
 			if ((base_addr + (index >> 7)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
 			}
 			row_index = index & ZXDH_ERAM128_BADDR_MASK;
 			col_index = index & 0x7F;
+			break;
+		default:
 			break;
 		}
 
@@ -10465,56 +10509,77 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		switch (rd_mode) {
 		case ZXDH_ERAM128_OPR_128b:
 			if ((0xFFFFFFFF - (base_addr)) < (index)) {
-				PMD_DRV_LOG(ERR, "%s : index 0x%x is invalid!", __func__, index);
+				PMD_DRV_LOG(ERR, "index 0x%x is invalid!", index);
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_PAR_CHK_INVALID_INDEX;
 			}
 			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
 			}
 			row_index = (index << 7);
 			cpu_ind_cmd.cpu_req_mode = ZXDH_ERAM128_OPR_128b;
 			break;
 		case ZXDH_ERAM128_OPR_64b:
 			if ((base_addr + (index >> 1)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
 			}
-
 			row_index = (index << 6);
 			cpu_ind_cmd.cpu_req_mode = 2;
 			break;
 		case ZXDH_ERAM128_OPR_32b:
 			if ((base_addr + (index >> 2)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
-				PMD_DRV_LOG(ERR, "%s : index out of range !", __func__);
-				return -1;
+				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+				return ZXDH_ERR;
 			}
 			row_index = (index << 5);
 			cpu_ind_cmd.cpu_req_mode = 1;
 			break;
 		case ZXDH_ERAM128_OPR_1b:
-			PMD_DRV_LOG(ERR, "rd_clr_mode[%d] or rd_mode[%d] error! ",
+			PMD_DRV_LOG(ERR, "rd_clr_mode[%d] or rd_mode[%d] error!",
 				rd_clr_mode, rd_mode);
-			return -1;
+			rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+			return ZXDH_ERR;
+		default:
+			break;
 		}
 		cpu_ind_cmd.cpu_ind_addr = ((base_addr << 7) & ZXDH_ERAM128_BADDR_MASK) + row_index;
 	}
 
 	rc = zxdh_np_reg_write(dev_id,
-						ZXDH_SMMU0_SMMU0_CPU_IND_CMDR,
-						0,
-						0,
-						&cpu_ind_cmd);
+			ZXDH_SMMU0_SMMU0_CPU_IND_CMDR,
+			0,
+			0,
+			&cpu_ind_cmd);
+	if (rc != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "zxdh_np_reg_write failed, rc=0x%x.", rc);
+		rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+		return ZXDH_ERR;
+	}
 
 	rc = zxdh_np_se_done_status_check(dev_id, ZXDH_SMMU0_SMMU0_CPU_IND_RD_DONER, 0);
+	if (rc != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "se done status check failed, rc=0x%x.", rc);
+		rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+		return ZXDH_ERR;
+	}
 
 	p_temp_data = temp_data;
 	for (i = 0; i < 4; i++) {
 		rc = zxdh_np_reg_read(dev_id,
-							ZXDH_SMMU0_SMMU0_CPU_IND_RDAT0R + i,
-							0,
-							0,
-							p_temp_data + 3 - i);
+			ZXDH_SMMU0_SMMU0_CPU_IND_RDAT0R + i,
+			0,
+			0,
+			p_temp_data + 3 - i);
+		if (rc != ZXDH_OK) {
+			PMD_DRV_LOG(ERR, "zxdh_np_reg_write failed, rc=0x%x.", rc);
+			rte_spinlock_unlock(&p_ind_spinlock->spinlock);
+			return ZXDH_ERR;
+		}
 	}
 
 	if (rd_clr_mode == ZXDH_RD_MODE_HOLD) {
@@ -10532,6 +10597,8 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 			ZXDH_COMM_UINT32_GET_BITS(p_data[0],
 				*(p_temp_data + (3 - col_index / 32)), (col_index % 32), 1);
 			break;
+		default:
+			break;
 		}
 	} else {
 		switch (rd_mode) {
@@ -10544,8 +10611,12 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_32b:
 			memcpy(p_data, p_temp_data, (64 / 8));
 			break;
+		default:
+			break;
 		}
 	}
+
+	rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 
 	return rc;
 }
@@ -10599,14 +10670,14 @@ zxdh_np_agent_channel_plcr_sync_send(uint32_t dev_id, ZXDH_AGENT_CHANNEL_PLCR_MS
 		uint32_t *p_data, uint32_t rep_len)
 {
 	uint32_t ret = 0;
-	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {0};
-
-	agent_msg.msg = (void *)p_msg;
-	agent_msg.msg_len = sizeof(ZXDH_AGENT_CHANNEL_PLCR_MSG_T);
+	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {
+		.msg = (void *)&p_msg,
+		.msg_len = sizeof(ZXDH_AGENT_CHANNEL_PLCR_MSG_T),
+	};
 
 	ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, p_data, rep_len);
 	if (ret != 0)	{
-		PMD_DRV_LOG(ERR, "%s: agent_channel_sync_send failed.", __func__);
+		PMD_DRV_LOG(ERR, "agent_channel_sync_send failed.");
 		return 1;
 	}
 
@@ -10620,19 +10691,19 @@ zxdh_np_agent_channel_plcr_profileid_request(uint32_t dev_id, uint32_t vport,
 	uint32_t ret = 0;
 	uint32_t resp_buffer[2] = {0};
 
-	ZXDH_AGENT_CHANNEL_PLCR_MSG_T msgcfg = {0};
-
-	msgcfg.dev_id = 0;
-	msgcfg.type = ZXDH_PLCR_MSG;
-	msgcfg.oper = ZXDH_PROFILEID_REQUEST;
-	msgcfg.vport = vport;
-	msgcfg.car_type = car_type;
-	msgcfg.profile_id = 0xFFFF;
+	ZXDH_AGENT_CHANNEL_PLCR_MSG_T msgcfg = {
+		.dev_id = 0,
+		.type = ZXDH_PLCR_MSG,
+		.oper = ZXDH_PROFILEID_REQUEST,
+		.vport = vport,
+		.car_type = car_type,
+		.profile_id = 0xFFFF,
+	};
 
 	ret = zxdh_np_agent_channel_plcr_sync_send(dev_id, &msgcfg,
 		resp_buffer, sizeof(resp_buffer));
 	if (ret != 0)	{
-		PMD_DRV_LOG(ERR, "%s: agent_channel_plcr_sync_send failed.", __func__);
+		PMD_DRV_LOG(ERR, "agent_channel_plcr_sync_send failed.");
 		return 1;
 	}
 
@@ -10675,7 +10746,7 @@ zxdh_np_agent_channel_plcr_car_rate(uint32_t dev_id,
 
 		ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, resp_buffer, resp_len);
 		if (ret != 0)	{
-			PMD_DRV_LOG(ERR, "%s: stat_car_a_type failed.", __func__);
+			PMD_DRV_LOG(ERR, "stat_car_a_type failed.");
 			return 1;
 		}
 
@@ -10709,7 +10780,7 @@ zxdh_np_agent_channel_plcr_car_rate(uint32_t dev_id,
 
 		ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, resp_buffer, resp_len);
 		if (ret != 0)	{
-			PMD_DRV_LOG(ERR, "%s: stat_car_b_type failed.", __func__);
+			PMD_DRV_LOG(ERR, "stat_car_b_type failed.");
 			return 1;
 		}
 
@@ -10727,18 +10798,18 @@ zxdh_np_agent_channel_plcr_profileid_release(uint32_t dev_id, uint32_t vport,
 	uint32_t ret = 0;
 	uint32_t resp_buffer[2] = {0};
 
-	ZXDH_AGENT_CHANNEL_PLCR_MSG_T msgcfg = {0};
-
-	msgcfg.dev_id = 0;
-	msgcfg.type = ZXDH_PLCR_MSG;
-	msgcfg.oper = ZXDH_PROFILEID_RELEASE;
-	msgcfg.vport = vport;
-	msgcfg.profile_id = profileid;
+	ZXDH_AGENT_CHANNEL_PLCR_MSG_T msgcfg = {
+		.dev_id = 0,
+		.type = ZXDH_PLCR_MSG,
+		.oper = ZXDH_PROFILEID_RELEASE,
+		.vport = vport,
+		.profile_id = profileid,
+	};
 
 	ret = zxdh_np_agent_channel_plcr_sync_send(dev_id, &msgcfg,
 		resp_buffer, sizeof(resp_buffer));
 	if (ret != 0)	{
-		PMD_DRV_LOG(ERR, "%s: agent_channel_plcr_sync_send failed.", __func__);
+		PMD_DRV_LOG(ERR, "agent_channel_plcr_sync_send failed.");
 		return 1;
 	}
 
@@ -10756,11 +10827,12 @@ zxdh_np_stat_cara_queue_cfg_set(uint32_t dev_id,
 {
 	uint32_t rc = 0;
 
-	ZXDH_STAT_CAR0_CARA_QUEUE_RAM0_159_0_T queue_cfg = {0};
+	ZXDH_STAT_CAR0_CARA_QUEUE_RAM0_159_0_T queue_cfg = {
+		.cara_drop = drop_flag,
+		.cara_plcr_en = plcr_en,
+		.cara_profile_id = profile_id,
+	};
 
-	queue_cfg.cara_drop = drop_flag;
-	queue_cfg.cara_plcr_en = plcr_en;
-	queue_cfg.cara_profile_id = profile_id;
 	rc = zxdh_np_reg_write(dev_id,
 				ZXDH_STAT_CAR0_CARA_QUEUE_RAM0,
 				0,
@@ -10780,11 +10852,11 @@ zxdh_np_stat_carb_queue_cfg_set(uint32_t dev_id,
 {
 	uint32_t rc = 0;
 
-	ZXDH_STAT_CAR0_CARB_QUEUE_RAM0_159_0_T queue_cfg = {0};
-
-	queue_cfg.carb_drop = drop_flag;
-	queue_cfg.carb_plcr_en = plcr_en;
-	queue_cfg.carb_profile_id = profile_id;
+	ZXDH_STAT_CAR0_CARB_QUEUE_RAM0_159_0_T queue_cfg = {
+		.carb_drop = drop_flag,
+		.carb_plcr_en = plcr_en,
+		.carb_profile_id = profile_id,
+	};
 
 	rc = zxdh_np_reg_write(dev_id,
 				ZXDH_STAT_CAR0_CARB_QUEUE_RAM0,
@@ -10805,10 +10877,11 @@ zxdh_np_stat_carc_queue_cfg_set(uint32_t dev_id,
 {
 	uint32_t rc = 0;
 
-	ZXDH_STAT_CAR0_CARC_QUEUE_RAM0_159_0_T queue_cfg = {0};
-	queue_cfg.carc_drop = drop_flag;
-	queue_cfg.carc_plcr_en = plcr_en;
-	queue_cfg.carc_profile_id = profile_id;
+	ZXDH_STAT_CAR0_CARC_QUEUE_RAM0_159_0_T queue_cfg = {
+		.carc_drop = drop_flag,
+		.carc_plcr_en = plcr_en,
+		.carc_profile_id = profile_id,
+	};
 
 	rc = zxdh_np_reg_write(dev_id,
 						ZXDH_STAT_CAR0_CARC_QUEUE_RAM0,
@@ -10821,7 +10894,8 @@ zxdh_np_stat_carc_queue_cfg_set(uint32_t dev_id,
 }
 
 uint32_t
-zxdh_np_car_profile_id_add(uint32_t vport_id,
+zxdh_np_car_profile_id_add(uint32_t dev_id,
+		uint32_t vport_id,
 		uint32_t flags,
 		uint64_t *p_profile_id)
 {
@@ -10833,10 +10907,10 @@ zxdh_np_car_profile_id_add(uint32_t vport_id,
 
 	profile_id = (uint32_t *)rte_zmalloc(NULL, ZXDH_G_PROFILE_ID_LEN, 0);
 	if (profile_id == NULL) {
-		PMD_DRV_LOG(ERR, "%s: profile_id point null!", __func__);
+		PMD_DRV_LOG(ERR, "profile_id point null!");
 		return ZXDH_PAR_CHK_POINT_NULL;
 	}
-	ret = zxdh_np_agent_channel_plcr_profileid_request(0, vport_id, flags, profile_id);
+	ret = zxdh_np_agent_channel_plcr_profileid_request(dev_id, vport_id, flags, profile_id);
 
 	profile_id_h = *(profile_id + 1);
 	profile_id_l = *profile_id;
@@ -10844,7 +10918,7 @@ zxdh_np_car_profile_id_add(uint32_t vport_id,
 
 	temp_profile_id = (((uint64_t)profile_id_l) << 32) | ((uint64_t)profile_id_h);
 	if (0 != (uint32_t)(temp_profile_id >> 56)) {
-		PMD_DRV_LOG(ERR, "%s: profile_id is overflow!", __func__);
+		PMD_DRV_LOG(ERR, "profile_id is overflow!");
 		return 1;
 	}
 
@@ -10854,19 +10928,19 @@ zxdh_np_car_profile_id_add(uint32_t vport_id,
 }
 
 uint32_t
-zxdh_np_car_profile_cfg_set(uint32_t vport_id __rte_unused,
+zxdh_np_car_profile_cfg_set(uint32_t dev_id,
+		uint32_t vport_id __rte_unused,
 		uint32_t car_type,
 		uint32_t pkt_sign,
 		uint32_t profile_id,
 		void *p_car_profile_cfg)
 {
 	uint32_t ret = 0;
-	uint32_t dev_id = 0;
 
 	ret = zxdh_np_agent_channel_plcr_car_rate(dev_id, car_type,
 		pkt_sign, profile_id, p_car_profile_cfg);
 	if (ret != 0) {
-		PMD_DRV_LOG(ERR, "%s: plcr_car_rate set failed!", __func__);
+		PMD_DRV_LOG(ERR, "plcr_car_rate set failed!");
 		return 1;
 	}
 
@@ -10874,18 +10948,15 @@ zxdh_np_car_profile_cfg_set(uint32_t vport_id __rte_unused,
 }
 
 uint32_t
-zxdh_np_car_profile_id_delete(uint32_t vport_id,
+zxdh_np_car_profile_id_delete(uint32_t dev_id, uint32_t vport_id,
 	uint32_t flags, uint64_t profile_id)
 {
 	uint32_t ret = 0;
-	uint32_t profileid = 0;
-	uint32_t dev_id = 0;
-
-	profileid = profile_id & 0xFFFF;
+	uint32_t profileid = profile_id & 0xFFFF;
 
 	ret = zxdh_np_agent_channel_plcr_profileid_release(dev_id, vport_id, flags, profileid);
 	if (ret != 0) {
-		PMD_DRV_LOG(ERR, "%s: plcr profiled id release failed!", __func__);
+		PMD_DRV_LOG(ERR, "plcr profiled id release failed!");
 		return 1;
 	}
 
@@ -10904,32 +10975,32 @@ zxdh_np_stat_car_queue_cfg_set(uint32_t dev_id,
 
 	if (car_type == ZXDH_STAT_CAR_A_TYPE) {
 		if (flow_id > ZXDH_CAR_A_FLOW_ID_MAX) {
-			PMD_DRV_LOG(ERR, "%s: stat car a type flow_id invalid!", __func__);
+			PMD_DRV_LOG(ERR, "stat car a type flow_id invalid!");
 			return ZXDH_PAR_CHK_INVALID_INDEX;
 		}
 
 		if (profile_id > ZXDH_CAR_A_PROFILE_ID_MAX) {
-			PMD_DRV_LOG(ERR, "%s: stat car a type profile_id invalid!", __func__);
+			PMD_DRV_LOG(ERR, "stat car a type profile_id invalid!");
 			return ZXDH_PAR_CHK_INVALID_INDEX;
 		}
 	} else if (car_type == ZXDH_STAT_CAR_B_TYPE) {
 		if (flow_id > ZXDH_CAR_B_FLOW_ID_MAX) {
-			PMD_DRV_LOG(ERR, "%s: stat car b type flow_id invalid!", __func__);
+			PMD_DRV_LOG(ERR, "stat car b type flow_id invalid!");
 			return ZXDH_PAR_CHK_INVALID_INDEX;
 		}
 
 		if (profile_id > ZXDH_CAR_B_PROFILE_ID_MAX) {
-			PMD_DRV_LOG(ERR, "%s: stat car b type profile_id invalid!", __func__);
+			PMD_DRV_LOG(ERR, "stat car b type profile_id invalid!");
 			return ZXDH_PAR_CHK_INVALID_INDEX;
 		}
 	} else {
 		if (flow_id > ZXDH_CAR_C_FLOW_ID_MAX) {
-			PMD_DRV_LOG(ERR, "%s: stat car c type flow_id invalid!", __func__);
+			PMD_DRV_LOG(ERR, "stat car c type flow_id invalid!");
 			return ZXDH_PAR_CHK_INVALID_INDEX;
 		}
 
 		if (profile_id > ZXDH_CAR_C_PROFILE_ID_MAX) {
-			PMD_DRV_LOG(ERR, "%s: stat car c type profile_id invalid!", __func__);
+			PMD_DRV_LOG(ERR, "stat car c type profile_id invalid!");
 			return ZXDH_PAR_CHK_INVALID_INDEX;
 		}
 	}

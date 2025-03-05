@@ -1934,15 +1934,17 @@ uint32_t zxdh_np_stat_ppu_cnt_get_ex(uint32_t dev_id,
 			uint32_t clr_mode,
 			uint32_t *p_data);
 uint32_t
-zxdh_np_car_profile_id_add(uint32_t vport_id,
+zxdh_np_car_profile_id_add(uint32_t dev_id,
+			uint32_t vport_id,
 			uint32_t flags,
 			uint64_t *p_profile_id);
-uint32_t zxdh_np_car_profile_cfg_set(uint32_t vport_id,
+uint32_t zxdh_np_car_profile_cfg_set(uint32_t dev_id,
+			uint32_t vport_id,
 			uint32_t car_type,
 			uint32_t pkt_sign,
 			uint32_t profile_id,
 			void *p_car_profile_cfg);
-uint32_t zxdh_np_car_profile_id_delete(uint32_t vport_id,
+uint32_t zxdh_np_car_profile_id_delete(uint32_t dev_id, uint32_t vport_id,
 			uint32_t flags, uint64_t profile_id);
 uint32_t zxdh_np_stat_car_queue_cfg_set(uint32_t dev_id,
 			uint32_t car_type,
