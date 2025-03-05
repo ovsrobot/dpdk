@@ -41,11 +41,8 @@ static rte_spinlock_t mana_shared_data_lock = RTE_SPINLOCK_INITIALIZER;
 
 /* Allocate a buffer on the stack and fill it with a printf format string. */
 #define MANA_MKSTR(name, ...) \
-	int mkstr_size_##name = snprintf(NULL, 0, "" __VA_ARGS__); \
-	char name[mkstr_size_##name + 1]; \
-	\
-	memset(name, 0, mkstr_size_##name + 1); \
-	snprintf(name, sizeof(name), "" __VA_ARGS__)
+	char name[PATH_MAX]; \
+	snprintf(name, PATH_MAX, "" __VA_ARGS__)
 
 int mana_logtype_driver;
 int mana_logtype_init;
