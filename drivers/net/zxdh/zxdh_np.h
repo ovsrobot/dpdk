@@ -112,6 +112,9 @@
 #define ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL  \
 		(ZXDH_SE_SMMU0_ERAM_BLOCK_NUM * ZXDH_SE_SMMU0_ERAM_ADDR_NUM_PER_BLOCK)
 
+#define ZXDH_NPSDK_COMPAT_ITEM_ID               (10)
+#define ZXDH_DPU_NO_DEBUG_PF_COMPAT_REG_OFFSET  (0x5400)
+
 /**errco code */
 #define ZXDH_RC_BASE                            (0x1000U)
 #define ZXDH_PARAMETER_CHK_BASE                 (ZXDH_RC_BASE            | 0x200)
@@ -846,6 +849,14 @@ typedef enum zxdh_profile_type {
 	CAR_MAX
 } ZXDH_PROFILE_TYPE;
 
+typedef struct __rte_aligned(2) zxdh_version_compatible_reg_t {
+	uint8_t version_compatible_item;
+	uint8_t major;
+	uint8_t fw_minor;
+	uint8_t drv_minor;
+	uint16_t patch;
+	uint8_t rsv[2];
+} ZXDH_VERSION_COMPATIBLE_REG_T;
 
 int zxdh_np_host_init(uint32_t dev_id, ZXDH_DEV_INIT_CTRL_T *p_dev_init_ctrl);
 int zxdh_np_online_uninit(uint32_t dev_id, char *port_name, uint32_t queue_id);
