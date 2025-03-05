@@ -394,6 +394,70 @@ zxdh_np_dev_init(void)
 	return 0;
 }
 
+static void
+zxdh_np_dev_vport_get(uint32_t dev_id, uint32_t *vport)
+{
+	ZXDH_DEV_MGR_T *p_dev_mgr = &g_dev_mgr;
+	ZXDH_DEV_CFG_T *p_dev_info = p_dev_mgr->p_dev_array[dev_id];
+
+	*vport = p_dev_info->vport;
+}
+
+static void
+zxdh_np_dev_agent_addr_get(uint32_t dev_id, uint64_t *agent_addr)
+{
+	ZXDH_DEV_MGR_T *p_dev_mgr = &g_dev_mgr;
+	ZXDH_DEV_CFG_T *p_dev_info = p_dev_mgr->p_dev_array[dev_id];
+
+	*agent_addr = p_dev_info->agent_addr;
+}
+
+static void
+zxdh_np_dev_fw_bar_msg_num_set(uint32_t dev_id, uint32_t bar_msg_num)
+{
+	ZXDH_DEV_MGR_T *p_dev_mgr = &g_dev_mgr;
+	ZXDH_DEV_CFG_T *p_dev_info = p_dev_mgr->p_dev_array[dev_id];
+
+	p_dev_info->fw_bar_msg_num = bar_msg_num;
+
+	PMD_DRV_LOG(INFO, "fw_bar_msg_num_set:fw support agent msg num = %u!", bar_msg_num);
+}
+
+static void
+zxdh_np_dev_fw_bar_msg_num_get(uint32_t dev_id, uint32_t *bar_msg_num)
+{
+	ZXDH_DEV_MGR_T *p_dev_mgr = &g_dev_mgr;
+	ZXDH_DEV_CFG_T *p_dev_info = p_dev_mgr->p_dev_array[dev_id];
+
+	*bar_msg_num = p_dev_info->fw_bar_msg_num;
+}
+
+static uint32_t
+zxdh_np_dev_opr_spinlock_get(uint32_t dev_id, uint32_t type, ZXDH_SPINLOCK_T **p_spinlock_out)
+{
+	ZXDH_DEV_MGR_T *p_dev_mgr = &g_dev_mgr;
+	ZXDH_DEV_CFG_T *p_dev_info = p_dev_mgr->p_dev_array[dev_id];
+
+	if (p_dev_info == NULL) {
+		PMD_DRV_LOG(ERR, "Get dev_info[ %d ] fail!", dev_id);
+		return ZXDH_DEV_TYPE_INVALID;
+	}
+
+	switch (type) {
+	case ZXDH_DEV_SPINLOCK_T_DTB:
+		*p_spinlock_out = &p_dev_info->dtb_spinlock;
+		break;
+	case ZXDH_DEV_SPINLOCK_T_SMMU0:
+		*p_spinlock_out = &p_dev_info->smmu0_spinlock;
+		break;
+	default:
+		PMD_DRV_LOG(ERR, "spinlock type is invalid!");
+		return ZXDH_ERR;
+	}
+
+	return ZXDH_OK;
+}
+
 static uint32_t
 zxdh_np_dev_read_channel(uint32_t dev_id, uint32_t addr, uint32_t size, uint32_t *p_data)
 {
@@ -827,6 +891,9 @@ zxdh_np_dev_add(uint32_t  dev_id, ZXDH_DEV_TYPE_E dev_type,
 	p_dev_info->p_pcie_write_fun = zxdh_np_dev_pcie_default_write;
 	p_dev_info->p_pcie_read_fun  = zxdh_np_dev_pcie_default_read;
 
+	rte_spinlock_init(&p_dev_info->dtb_spinlock.spinlock);
+	rte_spinlock_init(&p_dev_info->smmu0_spinlock.spinlock);
+
 	return 0;
 }
 
@@ -916,6 +983,269 @@ zxdh_np_ppu_parse_cls_bitmap(uint32_t dev_id,
 		instr_mem = (bitmap >> (mem_id * 2)) & 0x3;
 		g_ppu_cls_bit_map[dev_id].instr_mem[mem_id] = ((instr_mem > 0) ? 1 : 0);
 	}
+}
+
+static void
+zxdh_np_agent_msg_prt(uint8_t type, uint32_t rtn)
+{
+	switch (rtn) {
+	case ZXDH_RC_CTRLCH_MSG_LEN_ZERO:
+		PMD_DRV_LOG(ERR, "type[%u]:msg len is zero!", type);
+		break;
+	case ZXDH_RC_CTRLCH_MSG_PRO_ERR:
+		PMD_DRV_LOG(ERR, "type[%u]:msg process error!", type);
+		break;
+	case ZXDH_RC_CTRLCH_MSG_TYPE_NOT_SUPPORT:
+		PMD_DRV_LOG(ERR, "type[%u]:fw not support the msg!", type);
+		break;
+	case ZXDH_RC_CTRLCH_MSG_OPER_NOT_SUPPORT:
+		PMD_DRV_LOG(ERR, "type[%u]:fw not support opr of the msg!", type);
+		break;
+	case ZXDH_RC_CTRLCH_MSG_DROP:
+		PMD_DRV_LOG(ERR, "type[%u]:fw not support,drop msg!", type);
+		break;
+	default:
+		break;
+	}
+}
+
+static uint32_t
+zxdh_np_agent_bar_msg_check(uint32_t dev_id, ZXDH_AGENT_CHANNEL_MSG_T *p_msg)
+{
+	uint8_t type = 0;
+	uint32_t bar_msg_num = 0;
+
+	type = *((uint8_t *)(p_msg->msg) + 1);
+	if (type != ZXDH_PCIE_BAR_MSG) {
+		zxdh_np_dev_fw_bar_msg_num_get(dev_id, &bar_msg_num);
+		if (type >= bar_msg_num) {
+			PMD_DRV_LOG(ERR, "type[%u] > fw_bar_msg_num[%u]!", type, bar_msg_num);
+			return ZXDH_RC_CTRLCH_MSG_TYPE_NOT_SUPPORT;
+		}
+	}
+
+	return ZXDH_OK;
+}
+
+static uint32_t
+zxdh_np_agent_channel_sync_send(uint32_t dev_id,
+				ZXDH_AGENT_CHANNEL_MSG_T *p_msg,
+				uint32_t *p_data,
+				uint32_t rep_len)
+{
+	uint32_t ret = ZXDH_OK;
+	uint32_t vport = 0;
+	struct zxdh_pci_bar_msg in = {0};
+	struct zxdh_msg_recviver_mem result = {0};
+	uint32_t *recv_buffer = NULL;
+	uint8_t *reply_ptr = NULL;
+	uint16_t reply_msg_len = 0;
+	uint64_t agent_addr = 0;
+
+	ret = zxdh_np_agent_bar_msg_check(dev_id, p_msg);
+	if (ret != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "zxdh_np_agent_bar_msg_check failed!");
+		return ret;
+	}
+
+	zxdh_np_dev_vport_get(dev_id, &vport);
+	zxdh_np_dev_agent_addr_get(dev_id, &agent_addr);
+
+	if (ZXDH_IS_PF(vport))
+		in.src = ZXDH_MSG_CHAN_END_PF;
+	else
+		in.src = ZXDH_MSG_CHAN_END_VF;
+
+	in.virt_addr = agent_addr;
+	in.payload_addr = p_msg->msg;
+	in.payload_len = p_msg->msg_len;
+	in.dst = ZXDH_MSG_CHAN_END_RISC;
+	in.module_id = ZXDH_BAR_MDOULE_NPSDK;
+
+	recv_buffer = (uint32_t *)rte_zmalloc(NULL, rep_len + ZXDH_CHANNEL_REPS_LEN, 0);
+	if (recv_buffer == NULL) {
+		PMD_DRV_LOG(ERR, "malloc memory failed");
+		return ZXDH_PAR_CHK_POINT_NULL;
+	}
+
+	result.buffer_len = rep_len + ZXDH_CHANNEL_REPS_LEN;
+	result.recv_buffer = recv_buffer;
+
+	ret = zxdh_bar_chan_sync_msg_send(&in, &result);
+	if (ret == ZXDH_BAR_MSG_OK) {
+		reply_ptr = (uint8_t *)(result.recv_buffer);
+		if (*reply_ptr == 0XFF) {
+			reply_msg_len = *(uint16_t *)(reply_ptr + 1);
+			memcpy(p_data, reply_ptr + 4,
+				((reply_msg_len > rep_len) ? rep_len : reply_msg_len));
+		} else {
+			PMD_DRV_LOG(ERR, "Message not replied");
+		}
+	} else {
+		PMD_DRV_LOG(ERR, "Error[0x%x], bar msg send failed!", ret);
+	}
+
+	rte_free(recv_buffer);
+	return ret;
+}
+
+static uint32_t
+zxdh_np_agent_channel_reg_sync_send(uint32_t dev_id,
+	ZXDH_AGENT_CHANNEL_REG_MSG_T *p_msg, uint32_t *p_data, uint32_t rep_len)
+{
+	uint32_t ret = ZXDH_OK;
+	ZXDH_COMM_CHECK_DEV_POINT(dev_id, p_msg);
+	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {
+		.msg = (void *)p_msg,
+		.msg_len = sizeof(ZXDH_AGENT_CHANNEL_REG_MSG_T),
+	};
+
+	ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, p_data, rep_len);
+	if (ret != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "zxdh_np_agent_channel_sync_send failed");
+		return ZXDH_ERR;
+	}
+
+	ret = *p_data;
+	if (ret != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "zxdh_np_agent_channel_sync_send failed in buffer");
+		return ZXDH_ERR;
+	}
+
+	return ret;
+}
+
+static uint32_t
+zxdh_np_agent_channel_pcie_bar_request(uint32_t dev_id,
+									uint32_t *p_bar_msg_num)
+{
+	uint32_t rc = ZXDH_OK;
+	uint32_t rsp_buff[2] = {0};
+	uint32_t msg_result = 0;
+	uint32_t bar_msg_num = 0;
+	ZXDH_AGENT_PCIE_BAR_MSG_T msgcfg = {
+		.dev_id = 0,
+		.type   = ZXDH_PCIE_BAR_MSG,
+		.oper   = ZXDH_BAR_MSG_NUM_REQ,
+	};
+	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {
+		.msg = (void *)&msgcfg,
+		.msg_len = sizeof(ZXDH_AGENT_PCIE_BAR_MSG_T),
+	};
+
+	rc = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, rsp_buff, sizeof(rsp_buff));
+	if (rc != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "zxdh_np_agent_channel_sync_send failed!");
+		return rc;
+	}
+
+	msg_result = rsp_buff[0];
+	bar_msg_num = rsp_buff[1];
+
+	zxdh_np_agent_msg_prt(msgcfg.type, msg_result);
+
+	*p_bar_msg_num = bar_msg_num;
+
+	return msg_result;
+}
+
+static uint32_t
+zxdh_np_agent_channel_reg_read(uint32_t dev_id,
+							uint32_t reg_type,
+							uint32_t reg_no,
+							uint32_t reg_width,
+							uint32_t addr,
+							uint32_t *p_data)
+{
+	uint32_t ret = 0;
+	ZXDH_AGENT_CHANNEL_REG_MSG_T msgcfg = {
+		.dev_id  = 0,
+		.type    = ZXDH_REG_MSG,
+		.subtype = reg_type,
+		.oper    = ZXDH_RD,
+		.reg_no  = reg_no,
+		.addr	 = addr,
+		.val_len = reg_width / 4,
+	};
+
+	uint32_t resp_len = reg_width + 4;
+	uint8_t *resp_buffer = (uint8_t *)rte_zmalloc(NULL, resp_len, 0);
+	if (resp_buffer == NULL) {
+		PMD_DRV_LOG(ERR, "malloc memory failed");
+		return ZXDH_PAR_CHK_POINT_NULL;
+	}
+
+	ret = zxdh_np_agent_channel_reg_sync_send(dev_id,
+		&msgcfg, (uint32_t *)resp_buffer, resp_len);
+	if (ret != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "dev id %d reg_no %d send agent read failed.", dev_id, reg_no);
+		rte_free(resp_buffer);
+		return ZXDH_ERR;
+	}
+
+	if (*((uint32_t *)resp_buffer) != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "dev id %d reg_no %d agent read resp err %d .",
+			dev_id, reg_no, *((uint32_t *)resp_buffer));
+		rte_free(resp_buffer);
+		return ZXDH_ERR;
+	}
+
+	memcpy(p_data, resp_buffer + 4, reg_width);
+
+	rte_free(resp_buffer);
+
+	return ret;
+}
+
+static uint32_t
+zxdh_np_agent_channel_reg_write(uint32_t dev_id,
+							uint32_t reg_type,
+							uint32_t reg_no,
+							uint32_t reg_width,
+							uint32_t addr,
+							uint32_t *p_data)
+{
+	uint32_t ret = ZXDH_OK;
+	ZXDH_AGENT_CHANNEL_REG_MSG_T msgcfg = {
+		.dev_id  = 0,
+		.type    = ZXDH_REG_MSG,
+		.subtype = reg_type,
+		.oper    = ZXDH_WR,
+		.reg_no  = reg_no,
+		.addr	 = addr,
+		.val_len = reg_width / 4,
+	};
+
+	memcpy(msgcfg.val, p_data, reg_width);
+
+	uint32_t resp_len = reg_width + 4;
+	uint8_t *resp_buffer = (uint8_t *)rte_zmalloc(NULL, resp_len, 0);
+	if (resp_buffer == NULL) {
+		PMD_DRV_LOG(ERR, "malloc memory failed");
+		return ZXDH_PAR_CHK_POINT_NULL;
+	}
+
+	ret = zxdh_np_agent_channel_reg_sync_send(dev_id,
+		&msgcfg, (uint32_t *)resp_buffer, resp_len);
+
+	if (ret != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "dev id %d reg_no %d send agent write failed.", dev_id, reg_no);
+		rte_free(resp_buffer);
+		return ZXDH_ERR;
+	}
+
+	if (*((uint32_t *)resp_buffer) != ZXDH_OK) {
+		PMD_DRV_LOG(ERR, "dev id %d reg_no %d agent write resp err %d .",
+			dev_id, reg_no, *((uint32_t *)resp_buffer));
+		rte_free(resp_buffer);
+		return ZXDH_ERR;
+	}
+
+	memcpy(p_data, resp_buffer + 4, reg_width);
+
+	rte_free(resp_buffer);
+
+	return ret;
 }
 
 static ZXDH_DTB_MGR_T *
@@ -1128,6 +1458,24 @@ zxdh_np_np_sdk_version_compatible_check(uint32_t dev_id)
 	return ZXDH_OK;
 }
 
+static uint32_t
+zxdh_np_pcie_bar_msg_num_get(uint32_t dev_id, uint32_t *p_bar_msg_num)
+{
+	uint32_t rc = ZXDH_OK;
+	ZXDH_SPINLOCK_T *p_dtb_spinlock = NULL;
+	ZXDH_DEV_SPINLOCK_TYPE_E spinlock = ZXDH_DEV_SPINLOCK_T_DTB;
+
+	rc = zxdh_np_dev_opr_spinlock_get(dev_id, (uint32_t)spinlock, &p_dtb_spinlock);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dev_opr_spinlock_get");
+
+	rte_spinlock_lock(&p_dtb_spinlock->spinlock);
+	rc = zxdh_np_agent_channel_pcie_bar_request(dev_id, p_bar_msg_num);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_pcie_bar_request");
+	rte_spinlock_unlock(&p_dtb_spinlock->spinlock);
+
+	return rc;
+}
+
 static ZXDH_RISCV_DTB_MGR *
 zxdh_np_riscv_dtb_queue_mgr_get(uint32_t dev_id)
 {
@@ -1246,12 +1594,19 @@ zxdh_np_reg_read(uint32_t dev_id, uint32_t reg_no,
 	uint32_t i;
 	uint32_t addr = 0;
 	uint32_t reg_module = p_reg_info->module_no;
+	uint32_t reg_width = p_reg_info->width;
+	uint32_t reg_real_no = p_reg_info->reg_no;
+	uint32_t reg_type = p_reg_info->flags;
 
 	addr = zxdh_np_reg_get_reg_addr(reg_no, m_offset, n_offset);
 
 	if (reg_module == DTB4K) {
 		rc = p_reg_info->p_read_fun(dev_id, addr, p_buff);
 		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "p_reg_info->p_read_fun");
+	} else {
+		rc = zxdh_np_agent_channel_reg_read(dev_id,
+			reg_type, reg_real_no, reg_width, addr, p_buff);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_reg_read");
 	}
 
 	if (!zxdh_np_comm_is_big_endian()) {
@@ -1383,6 +1738,9 @@ zxdh_np_reg_write(uint32_t dev_id, uint32_t reg_no,
 	uint32_t i;
 	uint32_t addr = 0;
 	uint32_t reg_module = p_reg_info->module_no;
+	uint32_t reg_width = p_reg_info->width;
+	uint32_t reg_type = p_reg_info->flags;
+	uint32_t reg_real_no = p_reg_info->reg_no;
 
 	for (i = 0; i < p_reg_info->field_num; i++) {
 		if (p_field_info[i].len <= 32) {
@@ -1417,6 +1775,10 @@ zxdh_np_reg_write(uint32_t dev_id, uint32_t reg_no,
 	if (reg_module == DTB4K) {
 		rc = p_reg_info->p_write_fun(dev_id, addr, p_buff);
 		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "p_reg_info->p_write_fun");
+	} else {
+		rc = zxdh_np_agent_channel_reg_write(dev_id,
+			reg_type, reg_real_no, reg_width, addr, p_buff);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_reg_write");
 	}
 
 	return rc;
@@ -1790,7 +2152,7 @@ zxdh_np_dtb_eram_one_entry(uint32_t dev_id,
 	uint32_t base_addr;
 	uint32_t index;
 	uint32_t opr_mode;
-	uint32_t rc;
+	uint32_t rc = ZXDH_OK;
 
 	ZXDH_COMM_CHECK_POINT(pdata);
 	ZXDH_COMM_CHECK_POINT(p_dtb_one_entry);
@@ -2687,6 +3049,7 @@ zxdh_np_host_init(uint32_t dev_id,
 	ZXDH_SYS_INIT_CTRL_T sys_init_ctrl = {0};
 	uint32_t rc;
 	uint64_t agent_addr;
+	uint32_t bar_msg_num = 0;
 
 	ZXDH_COMM_CHECK_DEV_POINT(dev_id, p_dev_init_ctrl);
 
@@ -2707,6 +3070,11 @@ zxdh_np_host_init(uint32_t dev_id,
 
 	rc = zxdh_np_np_sdk_version_compatible_check(dev_id);
 	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_np_sdk_version_compatible_check");
+
+	rc = zxdh_np_pcie_bar_msg_num_get(dev_id, &bar_msg_num);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_pcie_bar_msg_num_get");
+
+	zxdh_np_dev_fw_bar_msg_num_set(dev_id, bar_msg_num);
 
 	return 0;
 }
@@ -2942,59 +3310,7 @@ zxdh_np_stat_ppu_cnt_get_ex(uint32_t dev_id,
 }
 
 static uint32_t
-zxdh_np_agent_channel_sync_send(ZXDH_AGENT_CHANNEL_MSG_T *p_msg,
-				uint32_t *p_data,
-				uint32_t rep_len)
-{
-	uint32_t ret = 0;
-	uint32_t vport = 0;
-	struct zxdh_pci_bar_msg in = {0};
-	struct zxdh_msg_recviver_mem result = {0};
-	uint32_t *recv_buffer;
-	uint8_t *reply_ptr = NULL;
-	uint16_t reply_msg_len = 0;
-	uint64_t agent_addr = 0;
-
-	if (ZXDH_IS_PF(vport))
-		in.src = ZXDH_MSG_CHAN_END_PF;
-	else
-		in.src = ZXDH_MSG_CHAN_END_VF;
-
-	in.virt_addr = agent_addr;
-	in.payload_addr = p_msg->msg;
-	in.payload_len = p_msg->msg_len;
-	in.dst = ZXDH_MSG_CHAN_END_RISC;
-	in.module_id = ZXDH_BAR_MDOULE_NPSDK;
-
-	recv_buffer = (uint32_t *)rte_zmalloc(NULL, rep_len + ZXDH_CHANNEL_REPS_LEN, 0);
-	if (recv_buffer == NULL) {
-		PMD_DRV_LOG(ERR, "%s point null!", __func__);
-		return ZXDH_PAR_CHK_POINT_NULL;
-	}
-
-	result.buffer_len = rep_len + ZXDH_CHANNEL_REPS_LEN;
-	result.recv_buffer = recv_buffer;
-
-	ret = zxdh_bar_chan_sync_msg_send(&in, &result);
-	if (ret == ZXDH_BAR_MSG_OK) {
-		reply_ptr = (uint8_t *)(result.recv_buffer);
-		if (*reply_ptr == 0XFF) {
-			reply_msg_len = *(uint16_t *)(reply_ptr + 1);
-			memcpy(p_data, reply_ptr + 4,
-				((reply_msg_len > rep_len) ? rep_len : reply_msg_len));
-		} else {
-			PMD_DRV_LOG(ERR, "Message not replied");
-		}
-	} else {
-		PMD_DRV_LOG(ERR, "Error[0x%x], %s failed!", ret, __func__);
-	}
-
-	rte_free(recv_buffer);
-	return ret;
-}
-
-static uint32_t
-zxdh_np_agent_channel_plcr_sync_send(ZXDH_AGENT_CHANNEL_PLCR_MSG_T *p_msg,
+zxdh_np_agent_channel_plcr_sync_send(uint32_t dev_id, ZXDH_AGENT_CHANNEL_PLCR_MSG_T *p_msg,
 		uint32_t *p_data, uint32_t rep_len)
 {
 	uint32_t ret = 0;
@@ -3003,7 +3319,7 @@ zxdh_np_agent_channel_plcr_sync_send(ZXDH_AGENT_CHANNEL_PLCR_MSG_T *p_msg,
 	agent_msg.msg = (void *)p_msg;
 	agent_msg.msg_len = sizeof(ZXDH_AGENT_CHANNEL_PLCR_MSG_T);
 
-	ret = zxdh_np_agent_channel_sync_send(&agent_msg, p_data, rep_len);
+	ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, p_data, rep_len);
 	if (ret != 0)	{
 		PMD_DRV_LOG(ERR, "%s: agent_channel_sync_send failed.", __func__);
 		return 1;
@@ -3013,7 +3329,7 @@ zxdh_np_agent_channel_plcr_sync_send(ZXDH_AGENT_CHANNEL_PLCR_MSG_T *p_msg,
 }
 
 static uint32_t
-zxdh_np_agent_channel_plcr_profileid_request(uint32_t vport,
+zxdh_np_agent_channel_plcr_profileid_request(uint32_t dev_id, uint32_t vport,
 	uint32_t car_type, uint32_t *p_profileid)
 {
 	uint32_t ret = 0;
@@ -3028,7 +3344,7 @@ zxdh_np_agent_channel_plcr_profileid_request(uint32_t vport,
 	msgcfg.car_type = car_type;
 	msgcfg.profile_id = 0xFFFF;
 
-	ret = zxdh_np_agent_channel_plcr_sync_send(&msgcfg,
+	ret = zxdh_np_agent_channel_plcr_sync_send(dev_id, &msgcfg,
 		resp_buffer, sizeof(resp_buffer));
 	if (ret != 0)	{
 		PMD_DRV_LOG(ERR, "%s: agent_channel_plcr_sync_send failed.", __func__);
@@ -3041,7 +3357,8 @@ zxdh_np_agent_channel_plcr_profileid_request(uint32_t vport,
 }
 
 static uint32_t
-zxdh_np_agent_channel_plcr_car_rate(uint32_t car_type,
+zxdh_np_agent_channel_plcr_car_rate(uint32_t dev_id,
+		uint32_t car_type,
 		uint32_t pkt_sign,
 		uint32_t profile_id __rte_unused,
 		void *p_car_profile_cfg)
@@ -3071,7 +3388,7 @@ zxdh_np_agent_channel_plcr_car_rate(uint32_t car_type,
 		agent_msg.msg = (void *)&msgpktcfg;
 		agent_msg.msg_len = sizeof(ZXDH_AGENT_CAR_PKT_PROFILE_MSG_T);
 
-		ret = zxdh_np_agent_channel_sync_send(&agent_msg, resp_buffer, resp_len);
+		ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, resp_buffer, resp_len);
 		if (ret != 0)	{
 			PMD_DRV_LOG(ERR, "%s: stat_car_a_type failed.", __func__);
 			return 1;
@@ -3105,7 +3422,7 @@ zxdh_np_agent_channel_plcr_car_rate(uint32_t car_type,
 		agent_msg.msg = (void *)&msgcfg;
 		agent_msg.msg_len = sizeof(ZXDH_AGENT_CAR_PROFILE_MSG_T);
 
-		ret = zxdh_np_agent_channel_sync_send(&agent_msg, resp_buffer, resp_len);
+		ret = zxdh_np_agent_channel_sync_send(dev_id, &agent_msg, resp_buffer, resp_len);
 		if (ret != 0)	{
 			PMD_DRV_LOG(ERR, "%s: stat_car_b_type failed.", __func__);
 			return 1;
@@ -3118,7 +3435,7 @@ zxdh_np_agent_channel_plcr_car_rate(uint32_t car_type,
 }
 
 static uint32_t
-zxdh_np_agent_channel_plcr_profileid_release(uint32_t vport,
+zxdh_np_agent_channel_plcr_profileid_release(uint32_t dev_id, uint32_t vport,
 		uint32_t car_type __rte_unused,
 		uint32_t profileid)
 {
@@ -3133,7 +3450,7 @@ zxdh_np_agent_channel_plcr_profileid_release(uint32_t vport,
 	msgcfg.vport = vport;
 	msgcfg.profile_id = profileid;
 
-	ret = zxdh_np_agent_channel_plcr_sync_send(&msgcfg,
+	ret = zxdh_np_agent_channel_plcr_sync_send(dev_id, &msgcfg,
 		resp_buffer, sizeof(resp_buffer));
 	if (ret != 0)	{
 		PMD_DRV_LOG(ERR, "%s: agent_channel_plcr_sync_send failed.", __func__);
@@ -3234,7 +3551,7 @@ zxdh_np_car_profile_id_add(uint32_t vport_id,
 		PMD_DRV_LOG(ERR, "%s: profile_id point null!", __func__);
 		return ZXDH_PAR_CHK_POINT_NULL;
 	}
-	ret = zxdh_np_agent_channel_plcr_profileid_request(vport_id, flags, profile_id);
+	ret = zxdh_np_agent_channel_plcr_profileid_request(0, vport_id, flags, profile_id);
 
 	profile_id_h = *(profile_id + 1);
 	profile_id_l = *profile_id;
@@ -3259,8 +3576,9 @@ zxdh_np_car_profile_cfg_set(uint32_t vport_id __rte_unused,
 		void *p_car_profile_cfg)
 {
 	uint32_t ret = 0;
+	uint32_t dev_id = 0;
 
-	ret = zxdh_np_agent_channel_plcr_car_rate(car_type,
+	ret = zxdh_np_agent_channel_plcr_car_rate(dev_id, car_type,
 		pkt_sign, profile_id, p_car_profile_cfg);
 	if (ret != 0) {
 		PMD_DRV_LOG(ERR, "%s: plcr_car_rate set failed!", __func__);
@@ -3276,10 +3594,11 @@ zxdh_np_car_profile_id_delete(uint32_t vport_id,
 {
 	uint32_t ret = 0;
 	uint32_t profileid = 0;
+	uint32_t dev_id = 0;
 
 	profileid = profile_id & 0xFFFF;
 
-	ret = zxdh_np_agent_channel_plcr_profileid_release(vport_id, flags, profileid);
+	ret = zxdh_np_agent_channel_plcr_profileid_release(dev_id, vport_id, flags, profileid);
 	if (ret != 0) {
 		PMD_DRV_LOG(ERR, "%s: plcr profiled id release failed!", __func__);
 		return 1;
