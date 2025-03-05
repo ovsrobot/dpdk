@@ -644,6 +644,37 @@ environment) by the person named.
 person.
 
 
+Frequency and volume of patches
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please allow at least 24 hours to pass between posting patch revisions.
+This ensures reviewers from different geographical regions have time to
+provide feedback.
+Additionally, please do not wait too long (read: weeks) between revisions
+as this makes it harder for reviewers and maintainers to recall the context
+of the previous posting.
+
+Please do not post new revisions without addressing all feedback.
+Make sure that all outstanding items have been addressed before posting a new
+revision for review.
+Do not post a new version of a patch while there is ongoing discussion unless
+a reviewer has specifically requested it.
+
+Do not post your patches to the list in lieu of running tests.
+**YOU MUST ENSURE** that your patches are ready by testing them locally before
+posting to the mailing list.
+The infrastructure running the tests is a shared resource among all developers
+on the project, and many frequent reposts will result in delays for all
+developers.
+We do our best to include CI and self-test infrastructure that can be used on
+an individual developer basis.
+
+Your changes are expected to pass on an x86/x86-64 linux system.
+
+Keep all patch sets to a reasonable length.
+Too many or too large patches and series can quickly become very difficult
+for a reasonable review.
+
 
 Steps to getting your patch merged
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
