@@ -1327,6 +1327,24 @@ typedef enum zxdh_dtb_dump_zcam_width_e {
 	ZXDH_DTB_DUMP_ZCAM_RSV  = 3,
 } ZXDH_DTB_DUMP_ZCAM_WIDTH_E;
 
+typedef enum zxdh_etcam_opr_type_e {
+	ZXDH_ETCAM_OPR_DM = 0,
+	ZXDH_ETCAM_OPR_XY = 1,
+} ZXDH_ETCAM_OPR_TYPE_E;
+
+typedef enum zxdh_etcam_data_type_e {
+	ZXDH_ETCAM_DTYPE_MASK = 0,
+	ZXDH_ETCAM_DTYPE_DATA = 1,
+} ZXDH_ETCAM_DATA_TYPE_E;
+
+typedef enum zxdh_etcam_entry_mode_e {
+	ZXDH_ETCAM_KEY_640b = 0,
+	ZXDH_ETCAM_KEY_320b = 1,
+	ZXDH_ETCAM_KEY_160b = 2,
+	ZXDH_ETCAM_KEY_80b  = 3,
+	ZXDH_ETCAM_KEY_INVALID,
+} ZXDH_ETCAM_ENTRY_MODE_E;
+
 typedef struct zxdh_dtb_lpm_entry_t {
 	uint32_t dtb_len0;
 	uint8_t *p_data_buff0;
@@ -1340,6 +1358,19 @@ typedef struct zxdh_dtb_entry_t {
 	uint32_t data_in_cmd_flag;
 	uint32_t data_size;
 } ZXDH_DTB_ENTRY_T;
+
+typedef struct zxdh_etcam_entry_t {
+	uint32_t mode;
+	uint8_t *p_data;
+	uint8_t *p_mask;
+} ZXDH_ETCAM_ENTRY_T;
+
+typedef struct zxdh_dtb_acl_entry_info_t {
+	uint32_t handle;
+	uint8_t *key_data;
+	uint8_t *key_mask;
+	uint8_t *p_as_rslt;
+} ZXDH_DTB_ACL_ENTRY_INFO_T;
 
 typedef struct zxdh_dtb_eram_table_form_t {
 	uint32_t valid;
