@@ -417,6 +417,7 @@ void rte_net_crc_free(struct rte_net_crc *crc)
 {
 	rte_free(crc);
 }
+RTE_EXPORT_SYMBOL(rte_net_crc_free)
 
 RTE_VERSION_SYMBOL(25, uint32_t, rte_net_crc_calc, (const void *data, uint32_t data_len,
 	enum rte_net_crc_type type)

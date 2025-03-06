@@ -47,3 +47,4 @@ rte_net_make_rarp_packet(struct rte_mempool *mpool,
 
 	return mbuf;
 }
+RTE_EXPORT_SYMBOL(rte_net_make_rarp_packet)

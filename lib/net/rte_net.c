@@ -306,6 +306,7 @@ rte_net_skip_ip6_ext(uint16_t proto, const struct rte_mbuf *m, uint32_t *off,
 	}
 	return -1;
 }
+RTE_EXPORT_SYMBOL(rte_net_skip_ip6_ext)
 
 /* parse mbuf data to get packet type */
 uint32_t rte_net_get_ptype(const struct rte_mbuf *m,
@@ -601,3 +602,4 @@ l3:
 
 	return pkt_type;
 }
+RTE_EXPORT_SYMBOL(rte_net_get_ptype)

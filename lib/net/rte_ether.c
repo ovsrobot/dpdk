@@ -17,6 +17,7 @@ rte_eth_random_addr(uint8_t *addr)
 	addr[0] &= (uint8_t)~RTE_ETHER_GROUP_ADDR;	/* clear multicast bit */
 	addr[0] |= RTE_ETHER_LOCAL_ADMIN_ADDR;	/* set local assignment bit */
 }
+RTE_EXPORT_SYMBOL(rte_eth_random_addr)
 
 void
 rte_ether_format_addr(char *buf, uint16_t size,
@@ -25,6 +26,7 @@ rte_ether_format_addr(char *buf, uint16_t size,
 	snprintf(buf, size, RTE_ETHER_ADDR_PRT_FMT,
 		RTE_ETHER_ADDR_BYTES(eth_addr));
 }
+RTE_EXPORT_SYMBOL(rte_ether_format_addr)
 
 static int8_t get_xdigit(char ch)
 {
@@ -153,3 +155,4 @@ rte_ether_unformat_addr(const char *s, struct rte_ether_addr *ea)
 	rte_errno = EINVAL;
 	return -1;
 }
+RTE_EXPORT_SYMBOL(rte_ether_unformat_addr)

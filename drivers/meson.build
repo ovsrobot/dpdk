@@ -5,8 +5,6 @@ if is_ms_compiler
     subdir_done()
 endif
 
-fs = import('fs')
-
 # Defines the order of dependencies evaluation
 subdirs = [
         'common',
