@@ -345,8 +345,7 @@ handlers_init(enum rte_net_crc_alg alg)
 
 /* Public API */
 
-void
-rte_net_crc_set_alg_v25(enum rte_net_crc_alg alg)
+RTE_VERSION_SYMBOL(25, void, rte_net_crc_set_alg, (enum rte_net_crc_alg alg)
 {
 	handlers = NULL;
 	if (max_simd_bitwidth == 0)
@@ -372,10 +371,9 @@ rte_net_crc_set_alg_v25(enum rte_net_crc_alg alg)
 
 	if (handlers == NULL)
 		handlers = handlers_scalar;
-}
-VERSION_SYMBOL(rte_net_crc_set_alg, _v25, 25);
+})
 
-struct rte_net_crc *rte_net_crc_set_alg_v26(enum rte_net_crc_alg alg,
+RTE_DEFAULT_SYMBOL(26, struct rte_net_crc *, rte_net_crc_set_alg, (enum rte_net_crc_alg alg,
 	enum rte_net_crc_type type)
 {
 	uint16_t max_simd_bitwidth;
@@ -413,20 +411,14 @@ struct rte_net_crc *rte_net_crc_set_alg_v26(enum rte_net_crc_alg alg,
 		break;
 	}
 	return crc;
-}
-BIND_DEFAULT_SYMBOL(rte_net_crc_set_alg, _v26, 26);
-MAP_STATIC_SYMBOL(struct rte_net_crc *rte_net_crc_set_alg(
-	enum rte_net_crc_alg alg, enum rte_net_crc_type type),
-	rte_net_crc_set_alg_v26);
+})
 
 void rte_net_crc_free(struct rte_net_crc *crc)
 {
 	rte_free(crc);
 }
 
-uint32_t
-rte_net_crc_calc_v25(const void *data,
-	uint32_t data_len,
+RTE_VERSION_SYMBOL(25, uint32_t, rte_net_crc_calc, (const void *data, uint32_t data_len,
 	enum rte_net_crc_type type)
 {
 	uint32_t ret;
@@ -436,19 +428,13 @@ rte_net_crc_calc_v25(const void *data,
 	ret = f_handle(data, data_len);
 
 	return ret;
-}
-VERSION_SYMBOL(rte_net_crc_calc, _v25, 25);
+})
 
-uint32_t
-rte_net_crc_calc_v26(const struct rte_net_crc *ctx,
+RTE_DEFAULT_SYMBOL(26, uint32_t, rte_net_crc_calc, (const struct rte_net_crc *ctx,
 	const void *data, const uint32_t data_len)
 {
 	return handlers_dpdk26[ctx->alg].f[ctx->type](data, data_len);
-}
-BIND_DEFAULT_SYMBOL(rte_net_crc_calc, _v26, 26);
-MAP_STATIC_SYMBOL(uint32_t rte_net_crc_calc(const struct rte_net_crc *ctx,
-	const void *data, const uint32_t data_len),
-	rte_net_crc_calc_v26);
+})
 
 /* Call initialisation helpers for all crc algorithm handlers */
 RTE_INIT(rte_net_crc_init)

@@ -277,86 +277,49 @@ list of exported symbols when DPDK is compiled as a shared library.
 
 Next, we need to specify in the code which function maps to the rte_acl_create
 symbol at which versions.  First, at the site of the initial symbol definition,
-we need to update the function so that it is uniquely named, and not in conflict
-with the public symbol name
+we wrap the function with ``RTE_VERSION_SYMBOL``, passing the current ABI version,
+the function return type, and the function name, then the full implementation of the
+function.
 
 .. code-block:: c
 
  -struct rte_acl_ctx *
  -rte_acl_create(const struct rte_acl_param *param)
- +struct rte_acl_ctx * __vsym
- +rte_acl_create_v21(const struct rte_acl_param *param)
+ +RTE_VERSION_SYMBOL(21, struct rte_acl_ctx *, rte_acl_create, (const struct rte_acl_param *param)
  {
         size_t sz;
         struct rte_acl_ctx *ctx;
         ...
-
-Note that the base name of the symbol was kept intact, as this is conducive to
-the macros used for versioning symbols and we have annotated the function as
-``__vsym``, an implementation of a versioned symbol . That is our next step,
-mapping this new symbol name to the initial symbol name at version node 21.
-Immediately after the function, we add the VERSION_SYMBOL macro.
-
-.. code-block:: c
-
-   #include <rte_function_versioning.h>
-
-   ...
-   VERSION_SYMBOL(rte_acl_create, _v21, 21);
+ -}
+ +})
 
 Remembering to also add the rte_function_versioning.h header to the requisite c
 file where these changes are being made. The macro instructs the linker to
 create a new symbol ``rte_acl_create@DPDK_21``, which matches the symbol created
-in older builds, but now points to the above newly named function. We have now
-mapped the original rte_acl_create symbol to the original function (but with a
-new name).
+in older builds, but now points to the above newly named function ``rte_acl_create_v21``.
+We have now mapped the original rte_acl_create symbol to the original function
+(but with a new name).
 
 Please see the section :ref:`Enabling versioning macros
 <enabling_versioning_macros>` to enable this macro in the meson/ninja build.
-Next, we need to create the new ``v22`` version of the symbol. We create a new
-function name, with the ``v22`` suffix, and implement it appropriately.
+Next, we need to create the new version of the symbol. We create a new
+function name and implement it appropriately, then wrap it in a call to ``RTE_DEFAULT_SYMBOL``.
 
 .. code-block:: c
 
-   struct rte_acl_ctx * __vsym
-   rte_acl_create_v22(const struct rte_acl_param *param, int debug);
+   RTE_DEFAULT_SYMBOL(22, struct rte_acl_ctx *, rte_acl_create, (const struct rte_acl_param *param,
+        int debug);
    {
         struct rte_acl_ctx *ctx = rte_acl_create_v21(param);
 
         ctx->debug = debug;
 
         return ctx;
-   }
-
-This code serves as our new API call. Its the same as our old call, but adds the
-new parameter in place. Next we need to map this function to the new default
-symbol ``rte_acl_create@DPDK_22``. To do this, immediately after the function,
-we add the BIND_DEFAULT_SYMBOL macro.
-
-.. code-block:: c
-
-   #include <rte_function_versioning.h>
-
-   ...
-   BIND_DEFAULT_SYMBOL(rte_acl_create, _v22, 22);
+   })
 
 The macro instructs the linker to create the new default symbol
-``rte_acl_create@DPDK_22``, which points to the above newly named function.
-
-We finally modify the prototype of the call in the public header file,
-such that it contains both versions of the symbol and the public API.
-
-.. code-block:: c
-
-   struct rte_acl_ctx *
-   rte_acl_create(const struct rte_acl_param *param);
-
-   struct rte_acl_ctx * __vsym
-   rte_acl_create_v21(const struct rte_acl_param *param);
-
-   struct rte_acl_ctx * __vsym
-   rte_acl_create_v22(const struct rte_acl_param *param, int debug);
-
+``rte_acl_create@DPDK_22``, which points to the function named ``rte_acl_create_v22``
+(declared by the macro).
 
 And that's it, on the next shared library rebuild, there will be two versions of
 rte_acl_create, an old DPDK_21 version, used by previously built applications,
@@ -365,41 +328,8 @@ and a new DPDK_22 version, used by future built applications.
 .. note::
 
    **Before you leave**, please take care reviewing the sections on
-   :ref:`mapping static symbols <mapping_static_symbols>`,
    :ref:`enabling versioning macros <enabling_versioning_macros>`,
    and :ref:`ABI deprecation <abi_deprecation>`.
-
-
-.. _mapping_static_symbols:
-
-Mapping static symbols
-______________________
-
-Now we've taken what was a public symbol, and duplicated it into two uniquely
-and differently named symbols. We've then mapped each of those back to the
-public symbol ``rte_acl_create`` with different version tags. This only applies
-to dynamic linking, as static linking has no notion of versioning. That leaves
-this code in a position of no longer having a symbol simply named
-``rte_acl_create`` and a static build will fail on that missing symbol.
-
-To correct this, we can simply map a function of our choosing back to the public
-symbol in the static build with the ``MAP_STATIC_SYMBOL`` macro.  Generally the
-assumption is that the most recent version of the symbol is the one you want to
-map.  So, back in the C file where, immediately after ``rte_acl_create_v22`` is
-defined, we add this
-
-
-.. code-block:: c
-
-   struct rte_acl_ctx * __vsym
-   rte_acl_create_v22(const struct rte_acl_param *param, int debug)
-   {
-        ...
-   }
-   MAP_STATIC_SYMBOL(struct rte_acl_ctx *rte_acl_create(const struct rte_acl_param *param, int debug), rte_acl_create_v22);
-
-That tells the compiler that, when building a static library, any calls to the
-symbol ``rte_acl_create`` should be linked to ``rte_acl_create_v22``
 
 
 .. _enabling_versioning_macros:
@@ -519,26 +449,17 @@ and ``DPDK_22`` version nodes.
     * Create an acl context object for apps to
     * manipulate
     */
-   struct rte_acl_ctx *
-   rte_acl_create(const struct rte_acl_param *param)
+   RTE_DEFAULT_SYMBOL(22, struct rte_acl_ctx *, rte_acl_create,
+        (const struct rte_acl_param *param)
    {
    ...
-   }
+   })
 
-   __rte_experimental
-   struct rte_acl_ctx *
-   rte_acl_create_e(const struct rte_acl_param *param)
+   RTE_VERSION_EXPERIMENTAL_SYMBOL(struct rte_acl_ctx *, rte_acl_create,
+        (const struct rte_acl_param *param)
    {
       return rte_acl_create(param);
-   }
-   VERSION_SYMBOL_EXPERIMENTAL(rte_acl_create, _e);
-
-   struct rte_acl_ctx *
-   rte_acl_create_v22(const struct rte_acl_param *param)
-   {
-      return rte_acl_create(param);
-   }
-   BIND_DEFAULT_SYMBOL(rte_acl_create, _v22, 22);
+   })
 
 In the map file, we map the symbol to both the ``EXPERIMENTAL``
 and ``DPDK_22`` version nodes.
@@ -563,13 +484,6 @@ and ``DPDK_22`` version nodes.
 
         rte_acl_create;
    };
-
-.. note::
-
-   Please note, similar to :ref:`symbol versioning <example_abi_macro_usage>`,
-   when aliasing to experimental you will also need to take care of
-   :ref:`mapping static symbols <mapping_static_symbols>`.
-
 
 .. _abi_deprecation:
 
