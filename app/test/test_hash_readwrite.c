@@ -70,7 +70,7 @@ test_hash_readwrite_worker(__rte_unused void *arg)
 	}
 	offset = tbl_rw_test_param.num_insert * i;
 
-	printf("Core #%d inserting and reading %d: %'"PRId64" - %'"PRId64"\n",
+	printf("Core #%d inserting and reading %d: %" PRId64 " - %" PRId64 "\n",
 	       lcore_id, tbl_rw_test_param.num_insert,
 	       offset, offset + tbl_rw_test_param.num_insert - 1);
 
