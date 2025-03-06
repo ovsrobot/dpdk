@@ -49,6 +49,7 @@ endif
 dpdk_conf.set('RTE_MAX_NUMA_NODES', 32)
 
 if is_ms_compiler
+    subdir('msvc')
     subdir_done()
 endif
 
