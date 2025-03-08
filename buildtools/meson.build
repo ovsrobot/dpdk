@@ -50,3 +50,7 @@ else
     pmdinfo += 'ar'
     pmdinfogen += 'elf'
 endif
+
+if get_option('enable_rust')
+    meson.add_install_script(['rust-env.sh', get_option('libdir')])
+endif
