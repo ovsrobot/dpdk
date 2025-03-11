@@ -18,6 +18,7 @@
 #include <linux/if.h>
 #include <linux/if_arp.h>
 #include <linux/if_tun.h>
+#include <linux/virtio_net.h>
 
 #include <bus_vdev_driver.h>
 #include <ethdev_driver.h>
@@ -35,8 +36,11 @@
 #define IORING_MAX_QUEUES	128
 static_assert(IORING_MAX_QUEUES <= RTE_MP_MAX_FD_NUM, "Max queues exceeds MP fd limit");
 
-#define IORING_TX_OFFLOAD	RTE_ETH_TX_OFFLOAD_VLAN_INSERT
-#define IORING_RX_OFFLOAD	RTE_ETH_RX_OFFLOAD_VLAN_STRIP
+#define IORING_TX_OFFLOAD	(RTE_ETH_TX_OFFLOAD_VLAN_INSERT | \
+				 RTE_ETH_TX_OFFLOAD_MULTI_SEGS)
+
+#define IORING_RX_OFFLOAD	(RTE_ETH_RX_OFFLOAD_VLAN_STRIP | \
+				 RTE_ETH_RX_OFFLOAD_SCATTER)
 
 #define IORING_DEFAULT_IFNAME	"itap%d"
 #define IORING_MP_KEY		"ioring_mp_send_fds"
@@ -166,7 +170,7 @@ tap_open(const char *name, struct ifreq *ifr, uint8_t persist)
 		goto error;
 	}
 
-	int flags = IFF_TAP | IFF_MULTI_QUEUE | IFF_NO_PI;
+	int flags = IFF_TAP | IFF_MULTI_QUEUE | IFF_NO_PI | IFF_VNET_HDR;
 	if ((features & flags) != flags) {
 		PMD_LOG(ERR, "TUN features %#x missing support for %#x",
 			features, features & flags);
@@ -354,6 +358,8 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->max_rx_queues = IORING_MAX_QUEUES;
 	dev_info->max_tx_queues = IORING_MAX_QUEUES;
 	dev_info->min_rx_bufsize = 0;
+	dev_info->tx_queue_offload_capa = IORING_TX_OFFLOAD;
+	dev_info->tx_offload_capa = dev_info->tx_queue_offload_capa;
 
 	dev_info->default_rxportconf = (struct rte_eth_dev_portconf) {
 		.burst_size = IORING_DEFAULT_BURST,
@@ -487,13 +493,44 @@ eth_rx_submit(struct rx_queue *rxq, int fd, struct rte_mbuf *mb)
 		PMD_LOG(DEBUG, "io_uring no rx sqe");
 		rxq->rx_errors++;
 		rte_pktmbuf_free(mb);
-	} else {
-		void *base = rte_pktmbuf_mtod(mb, void *);
-		size_t len = mb->buf_len;
-
-		io_uring_prep_read(sqe, fd, base, len, 0);
-		io_uring_sqe_set_data(sqe, mb);
+		return;
 	}
+
+	RTE_VERIFY(mb->nb_segs < IOV_MAX);
+	struct iovec iovs[IOV_MAX];
+
+	for (uint16_t i = 0; i < mb->nb_segs; i++) {
+		iovs[i].iov_base = rte_pktmbuf_mtod(mb, void *);
+		iovs[i].iov_len = rte_pktmbuf_tailroom(mb);
+		mb = mb->next;
+	}
+	io_uring_sqe_set_data(sqe, mb);
+	io_uring_prep_readv(sqe, fd, iovs, mb->nb_segs, 0);
+}
+
+static struct rte_mbuf *
+eth_ioring_rx_alloc(struct rx_queue *rxq)
+{
+	const struct rte_eth_dev *dev = &rte_eth_devices[rxq->port_id];
+	int buf_size = dev->data->mtu + sizeof(struct virtio_net_hdr);
+	struct rte_mbuf *m = NULL;
+	struct rte_mbuf **tail = &m;
+
+	do {
+		struct rte_mbuf *seg = rte_pktmbuf_alloc(rxq->mb_pool);
+		if (unlikely(seg == NULL)) {
+			rte_pktmbuf_free(m);
+			return NULL;
+		}
+		*tail = seg;
+		tail = &seg->next;
+		if (seg != m)
+			++m->nb_segs;
+
+		buf_size -= rte_pktmbuf_tailroom(seg);
+	} while (buf_size > 0);
+
+	return m;
 }
 
 static uint16_t
@@ -513,7 +550,8 @@ eth_ioring_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		PMD_RX_LOG(DEBUG, "cqe %u len %zd", num_cqe, len);
 		num_cqe++;
 
-		if (unlikely(len < RTE_ETHER_HDR_LEN)) {
+		struct virtio_net_hdr *hdr;
+		if (unlikely(len < (ssize_t)(sizeof(*hdr) + RTE_ETHER_HDR_LEN))) {
 			if (len < 0)
 				PMD_LOG(ERR, "io_uring_read: %s", strerror(-len));
 			else
@@ -523,19 +561,31 @@ eth_ioring_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			goto resubmit;
 		}
 
-		struct rte_mbuf *nmb = rte_pktmbuf_alloc(rxq->mb_pool);
-		if (unlikely(nmb == 0)) {
-			PMD_LOG(DEBUG, "Rx mbuf alloc failed");
+		hdr = rte_pktmbuf_mtod(mb, struct virtio_net_hdr *);
+
+		struct rte_mbuf *nmb = eth_ioring_rx_alloc(rxq);
+		if (!nmb) {
 			++rxq->rx_nombuf;
 			goto resubmit;
 		}
 
+		len -= sizeof(*hdr);
+		mb->data_off += sizeof(*hdr);
+
+		mb->pkt_len = len;
+		mb->port = rxq->port_id;
+		struct rte_mbuf *seg = mb;
+		for (;;) {
+			seg->data_len = RTE_MIN(len, mb->buf_len);
+			seg = seg->next;
+			len -= seg->data_len;
+		} while (len > 0 && seg != NULL);
+
+		RTE_VERIFY(!(seg == NULL && len > 0));
+
 		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
 			rte_vlan_strip(mb);
 
-		mb->pkt_len = len;
-		mb->data_len = len;
-		mb->port = rxq->port_id;
 		__rte_mbuf_sanity_check(mb, 1);
 
 		num_bytes += len;
@@ -554,6 +604,7 @@ resubmit:
 	rxq->rx_bytes += num_bytes;
 	return num_rx;
 }
+
 
 static int
 eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id, uint16_t nb_rx_desc,
@@ -587,20 +638,17 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id, uint16_t nb_rx_de
 		return -1;
 	}
 
-	struct rte_mbuf **mbufs = alloca(nb_rx_desc * sizeof(struct rte_mbuf *));
-	if (mbufs == NULL) {
-		PMD_LOG(ERR, "alloca for %u failed", nb_rx_desc);
-		return -1;
-	}
-
-	if (rte_pktmbuf_alloc_bulk(mb_pool, mbufs, nb_rx_desc) < 0) {
-		PMD_LOG(ERR, "Rx mbuf alloc %u bufs failed", nb_rx_desc);
-		return -1;
-	}
-
 	int fd = eth_queue_fd(rxq->port_id, rxq->queue_id);
-	for (uint16_t i = 0; i < nb_rx_desc; i++)
-		eth_rx_submit(rxq, fd, mbufs[i]);
+
+	for (uint16_t i = 0; i < nb_rx_desc; i++) {
+		struct rte_mbuf *mb = eth_ioring_rx_alloc(rxq);
+		if (mb == NULL) {
+			PMD_LOG(ERR, "Rx mbuf alloc buf failed");
+			return -1;
+		}
+
+		eth_rx_submit(rxq, fd, mb);
+	}
 
 	io_uring_submit(&rxq->io_ring);
 	return 0;
@@ -740,31 +788,47 @@ eth_ioring_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	PMD_TX_LOG(DEBUG, "%d packets to xmit", nb_pkts);
 
-	if (io_uring_sq_space_left(&txq->io_ring) < txq->free_thresh)
+	if (likely(io_uring_sq_space_left(&txq->io_ring) < txq->free_thresh))
 		eth_ioring_tx_cleanup(txq);
 
 	int fd = eth_queue_fd(txq->port_id, txq->queue_id);
 
 	for (num_tx = 0; num_tx < nb_pkts; num_tx++) {
 		struct rte_mbuf *mb = bufs[num_tx];
+		struct virtio_net_hdr *hdr;
 
 		struct io_uring_sqe *sqe = io_uring_get_sqe(&txq->io_ring);
 		if (sqe == NULL)
 			break;	/* submit ring is full */
 
+		if (rte_mbuf_refcnt_read(mb) == 1 && RTE_MBUF_DIRECT(mb) &&
+		    rte_pktmbuf_headroom(mb) >= sizeof(*hdr)) {
+			hdr = (struct virtio_net_hdr *)rte_pktmbuf_prepend(mb, sizeof(*hdr));
+		} else {
+			struct rte_mbuf *mh = rte_pktmbuf_alloc(mb->pool);
+			if (unlikely(mh == NULL))
+				break;
+			hdr = (struct virtio_net_hdr *)rte_pktmbuf_append(mh, sizeof(*hdr));
+
+			mh->next = mb;
+			mh->nb_segs = mb->nb_segs + 1;
+			mh->pkt_len += mb->pkt_len;
+			mh->ol_flags = mb->ol_flags & RTE_MBUF_F_TX_OFFLOAD_MASK;
+			mb = mh;
+		}
+		memset(hdr, 0, sizeof(*hdr));
+
 		io_uring_sqe_set_data(sqe, mb);
 
-		if (rte_mbuf_refcnt_read(mb) == 1 &&
-		    RTE_MBUF_DIRECT(mb) && mb->nb_segs == 1) {
-			void *base = rte_pktmbuf_mtod(mb, void *);
-			io_uring_prep_write(sqe, fd, base, mb->pkt_len, 0);
-
-			PMD_TX_LOG(DEBUG, "tx mbuf: %p submit", mb);
-		} else {
-			PMD_LOG(ERR, "Can't do mbuf without space yet!");
-			++txq->tx_errors;
-			continue;
+		struct iovec iovs[RTE_MBUF_MAX_NB_SEGS + 1];
+		unsigned int niov = mb->nb_segs;
+		for (unsigned int i = 0; i < niov; i++) {
+			iovs[i].iov_base = rte_pktmbuf_mtod(mb, char *);
+			iovs[i].iov_len = mb->data_len;
+			mb = mb->next;
 		}
+
+		io_uring_prep_writev(sqe, fd, iovs, niov, 0);
 	}
 	if (num_tx > 0)
 		io_uring_submit(&txq->io_ring);
