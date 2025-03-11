@@ -16,6 +16,7 @@
 #include <rte_lcore.h>
 #include <rte_spinlock.h>
 #include <rte_interrupts.h>
+#include <sys/queue.h>
 
 #include "rte_bbdev_op.h"
 #include "rte_bbdev.h"
