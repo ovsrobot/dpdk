@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <linux/if.h>
+#include <linux/if_arp.h>
 #include <linux/if_tun.h>
 
 #include <bus_vdev_driver.h>
@@ -164,6 +165,30 @@ eth_dev_set_link_down(struct rte_eth_dev *dev)
 }
 
 static int
+eth_dev_promiscuous_enable(struct rte_eth_dev *dev)
+{
+	return eth_dev_change_flags(dev, IFF_PROMISC, ~0);
+}
+
+static int
+eth_dev_promiscuous_disable(struct rte_eth_dev *dev)
+{
+	return eth_dev_change_flags(dev, 0, ~IFF_PROMISC);
+}
+
+static int
+eth_dev_allmulticast_enable(struct rte_eth_dev *dev)
+{
+	return eth_dev_change_flags(dev, IFF_ALLMULTI, ~0);
+}
+
+static int
+eth_dev_allmulticast_disable(struct rte_eth_dev *dev)
+{
+	return eth_dev_change_flags(dev, 0, ~IFF_ALLMULTI);
+}
+
+static int
 eth_link_update(struct rte_eth_dev *dev, int wait_to_complete __rte_unused)
 {
 	struct rte_eth_link *eth_link = &dev->data->dev_link;
@@ -182,6 +207,44 @@ eth_link_update(struct rte_eth_dev *dev, int wait_to_complete __rte_unused)
 	};
 	return 0;
 };
+
+static int
+eth_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	struct pmd_internals *pmd = dev->data->dev_private;
+	struct ifreq ifr = { .ifr_mtu = mtu };
+	int ret;
+
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+
+	ret = ioctl(pmd->ctl_sock, SIOCSIFMTU, &ifr);
+	if (ret < 0) {
+		PMD_LOG(ERR, "ioctl(SIOCSIFMTU) failed: %s", strerror(errno));
+		ret = -errno;
+	}
+
+	return ret;
+}
+
+static int
+eth_dev_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
+{
+	struct pmd_internals *pmd = dev->data->dev_private;
+	struct ifreq ifr = { };
+	int ret;
+
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+	memcpy(ifr.ifr_hwaddr.sa_data, addr, sizeof(*addr));
+
+	ret = ioctl(pmd->ctl_sock, SIOCSIFHWADDR, &ifr);
+	if (ret < 0) {
+		PMD_LOG(ERR, "ioctl(SIOCSIFHWADDR) failed: %s", strerror(errno));
+		ret = -errno;
+	}
+
+	return ret;
+}
 
 static int
 eth_dev_close(struct rte_eth_dev *dev)
@@ -209,6 +272,12 @@ static const struct eth_dev_ops ops = {
 	.link_update		= eth_link_update,
 	.dev_set_link_up	= eth_dev_set_link_up,
 	.dev_set_link_down	= eth_dev_set_link_down,
+	.mac_addr_set		= eth_dev_macaddr_set,
+	.mtu_set		= eth_dev_mtu_set,
+	.promiscuous_enable	= eth_dev_promiscuous_enable,
+	.promiscuous_disable	= eth_dev_promiscuous_disable,
+	.allmulticast_enable	= eth_dev_allmulticast_enable,
+	.allmulticast_disable	= eth_dev_allmulticast_disable,
 };
 
 
