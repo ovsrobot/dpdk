@@ -58,12 +58,12 @@ persists over multiple releases.
 
 .. code-block:: none
 
- $ head ./lib/acl/version.map
+ $ head ./build/lib/librte_acl_exports.map
  DPDK_21 {
         global:
  ...
 
- $ head ./lib/eal/version.map
+ $ head ./build/lib/librte_eal_exports.map
  DPDK_21 {
         global:
  ...
@@ -77,7 +77,7 @@ that library.
 
 .. code-block:: none
 
- $ head ./lib/acl/version.map
+ $ head ./build/lib/librte_acl_exports.map
  DPDK_21 {
         global:
  ...
@@ -88,7 +88,7 @@ that library.
  } DPDK_21;
  ...
 
- $ head ./lib/eal/version.map
+ $ head ./build/lib/librte_eal_exports.map
  DPDK_21 {
         global:
  ...
@@ -100,12 +100,12 @@ how this may be done.
 
 .. code-block:: none
 
- $ head ./lib/acl/version.map
+ $ head ./build/lib/librte_acl_exports.map
  DPDK_22 {
         global:
  ...
 
- $ head ./lib/eal/version.map
+ $ head ./build/lib/librte_eal_exports.map
  DPDK_22 {
         global:
  ...
@@ -134,8 +134,7 @@ linked to the DPDK.
 
 To support backward compatibility the ``rte_function_versioning.h``
 header file provides macros to use when updating exported functions. These
-macros are used in conjunction with the ``version.map`` file for
-a given library to allow multiple versions of a symbol to exist in a shared
+macros allow multiple versions of a symbol to exist in a shared
 library so that older binaries need not be immediately recompiled.
 
 The macros are:
@@ -169,6 +168,7 @@ Assume we have a function as follows
   * Create an acl context object for apps to
   * manipulate
   */
+ RTE_EXPORT_SYMBOL(rte_acl_create)
  struct rte_acl_ctx *
  rte_acl_create(const struct rte_acl_param *param)
  {
@@ -187,6 +187,7 @@ private, is safe), but it also requires modifying the code as follows
   * Create an acl context object for apps to
   * manipulate
   */
+ RTE_EXPORT_SYMBOL(rte_acl_create)
  struct rte_acl_ctx *
  rte_acl_create(const struct rte_acl_param *param, int debug)
  {
@@ -203,78 +204,16 @@ The addition of a parameter to the function is ABI breaking as the function is
 public, and existing application may use it in its current form. However, the
 compatibility macros in DPDK allow a developer to use symbol versioning so that
 multiple functions can be mapped to the same public symbol based on when an
-application was linked to it. To see how this is done, we start with the
-requisite libraries version map file. Initially the version map file for the acl
-library looks like this
+application was linked to it.
 
-.. code-block:: none
-
-   DPDK_21 {
-        global:
-
-        rte_acl_add_rules;
-        rte_acl_build;
-        rte_acl_classify;
-        rte_acl_classify_alg;
-        rte_acl_classify_scalar;
-        rte_acl_create;
-        rte_acl_dump;
-        rte_acl_find_existing;
-        rte_acl_free;
-        rte_acl_ipv4vlan_add_rules;
-        rte_acl_ipv4vlan_build;
-        rte_acl_list_dump;
-        rte_acl_reset;
-        rte_acl_reset_rules;
-        rte_acl_set_ctx_classify;
-
-        local: *;
-   };
-
-This file needs to be modified as follows
-
-.. code-block:: none
-
-   DPDK_21 {
-        global:
-
-        rte_acl_add_rules;
-        rte_acl_build;
-        rte_acl_classify;
-        rte_acl_classify_alg;
-        rte_acl_classify_scalar;
-        rte_acl_create;
-        rte_acl_dump;
-        rte_acl_find_existing;
-        rte_acl_free;
-        rte_acl_ipv4vlan_add_rules;
-        rte_acl_ipv4vlan_build;
-        rte_acl_list_dump;
-        rte_acl_reset;
-        rte_acl_reset_rules;
-        rte_acl_set_ctx_classify;
-
-        local: *;
-   };
-
-   DPDK_22 {
-        global:
-        rte_acl_create;
-
-   } DPDK_21;
-
-The addition of the new block tells the linker that a new version node
-``DPDK_22`` is available, which contains the symbol rte_acl_create, and inherits
-the symbols from the DPDK_21 node. This list is directly translated into a
-list of exported symbols when DPDK is compiled as a shared library.
-
-Next, we need to specify in the code which function maps to the rte_acl_create
+We need to specify in the code which function maps to the rte_acl_create
 symbol at which versions.  First, at the site of the initial symbol definition,
 we wrap the function with ``RTE_VERSION_SYMBOL``, passing the current ABI version,
-the function return type, and the function name and its arguments.
+the function return type, the function name and its arguments.
 
 .. code-block:: c
 
+ -RTE_EXPORT_SYMBOL(rte_acl_create)
  -struct rte_acl_ctx *
  -rte_acl_create(const struct rte_acl_param *param)
  +RTE_VERSION_SYMBOL(21, struct rte_acl_ctx *, rte_acl_create, (const struct rte_acl_param *param))
@@ -293,6 +232,7 @@ We have now mapped the original rte_acl_create symbol to the original function
 
 Please see the section :ref:`Enabling versioning macros
 <enabling_versioning_macros>` to enable this macro in the meson/ninja build.
+
 Next, we need to create the new version of the symbol. We create a new
 function name and implement it appropriately, then wrap it in a call to ``RTE_DEFAULT_SYMBOL``.
 
@@ -312,9 +252,9 @@ The macro instructs the linker to create the new default symbol
 ``rte_acl_create@DPDK_22``, which points to the function named ``rte_acl_create_v22``
 (declared by the macro).
 
-And that's it, on the next shared library rebuild, there will be two versions of
-rte_acl_create, an old DPDK_21 version, used by previously built applications,
-and a new DPDK_22 version, used by future built applications.
+And that's it. On the next shared library rebuild, there will be two versions of rte_acl_create,
+an old DPDK_21 version, used by previously built applications, and a new DPDK_22 version,
+used by future built applications.
 
 .. note::
 
@@ -364,6 +304,7 @@ Assume we have an experimental function ``rte_acl_create`` as follows:
     * Create an acl context object for apps to
     * manipulate
     */
+   RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_acl_create)
    __rte_experimental
    struct rte_acl_ctx *
    rte_acl_create(const struct rte_acl_param *param)
@@ -371,27 +312,8 @@ Assume we have an experimental function ``rte_acl_create`` as follows:
    ...
    }
 
-In the map file, experimental symbols are listed as part of the ``EXPERIMENTAL``
-version node.
-
-.. code-block:: none
-
-   DPDK_21 {
-        global:
-        ...
-
-        local: *;
-   };
-
-   EXPERIMENTAL {
-        global:
-
-        rte_acl_create;
-   };
-
 When we promote the symbol to the stable ABI, we simply strip the
-``__rte_experimental`` annotation from the function and move the symbol from the
-``EXPERIMENTAL`` node, to the node of the next major ABI version as follow.
+``__rte_experimental`` annotation from the function.
 
 .. code-block:: c
 
@@ -399,30 +321,12 @@ When we promote the symbol to the stable ABI, we simply strip the
     * Create an acl context object for apps to
     * manipulate
     */
+   RTE_EXPORT_SYMBOL(rte_acl_create)
    struct rte_acl_ctx *
    rte_acl_create(const struct rte_acl_param *param)
    {
           ...
    }
-
-We then update the map file, adding the symbol ``rte_acl_create``
-to the ``DPDK_22`` version node.
-
-.. code-block:: none
-
-   DPDK_21 {
-        global:
-        ...
-
-        local: *;
-   };
-
-   DPDK_22 {
-        global:
-
-        rte_acl_create;
-   } DPDK_21;
-
 
 Although there are strictly no guarantees or commitments associated with
 :ref:`experimental symbols <experimental_apis>`, a maintainer may wish to offer
@@ -452,30 +356,6 @@ and ``DPDK_22`` version nodes.
       return rte_acl_create(param);
    }
 
-In the map file, we map the symbol to both the ``EXPERIMENTAL``
-and ``DPDK_22`` version nodes.
-
-.. code-block:: none
-
-   DPDK_21 {
-        global:
-        ...
-
-        local: *;
-   };
-
-   DPDK_22 {
-        global:
-
-        rte_acl_create;
-   } DPDK_21;
-
-   EXPERIMENTAL {
-        global:
-
-        rte_acl_create;
-   };
-
 .. _abi_deprecation:
 
 Deprecating part of a public API
@@ -484,38 +364,7 @@ ________________________________
 Lets assume that you've done the above updates, and in preparation for the next
 major ABI version you decide you would like to retire the old version of the
 function. After having gone through the ABI deprecation announcement process,
-removal is easy. Start by removing the symbol from the requisite version map
-file:
-
-.. code-block:: none
-
-   DPDK_21 {
-        global:
-
-        rte_acl_add_rules;
-        rte_acl_build;
-        rte_acl_classify;
-        rte_acl_classify_alg;
-        rte_acl_classify_scalar;
-        rte_acl_dump;
- -      rte_acl_create
-        rte_acl_find_existing;
-        rte_acl_free;
-        rte_acl_ipv4vlan_add_rules;
-        rte_acl_ipv4vlan_build;
-        rte_acl_list_dump;
-        rte_acl_reset;
-        rte_acl_reset_rules;
-        rte_acl_set_ctx_classify;
-
-        local: *;
-   };
-
-   DPDK_22 {
-        global:
-        rte_acl_create;
-   } DPDK_21;
-
+removal is easy.
 
 Next remove the corresponding versioned export.
 
@@ -539,36 +388,7 @@ of a major ABI version. If a version node completely specifies an API, then
 removing part of it, typically makes it incomplete. In those cases it is better
 to remove the entire node.
 
-To do this, start by modifying the version map file, such that all symbols from
-the node to be removed are merged into the next node in the map.
-
-In the case of our map above, it would transform to look as follows
-
-.. code-block:: none
-
-   DPDK_22 {
-        global:
-
-        rte_acl_add_rules;
-        rte_acl_build;
-        rte_acl_classify;
-        rte_acl_classify_alg;
-        rte_acl_classify_scalar;
-        rte_acl_dump;
-        rte_acl_create
-        rte_acl_find_existing;
-        rte_acl_free;
-        rte_acl_ipv4vlan_add_rules;
-        rte_acl_ipv4vlan_build;
-        rte_acl_list_dump;
-        rte_acl_reset;
-        rte_acl_reset_rules;
-        rte_acl_set_ctx_classify;
-
-        local: *;
- };
-
-Then any uses of RTE_DEFAULT_SYMBOL that pointed to the old node should be
+Any uses of RTE_DEFAULT_SYMBOL that pointed to the old node should be
 updated to point to the new version node in any header files for all affected
 symbols.
 
