@@ -258,6 +258,7 @@ auxiliary_parse(const char *name, void *addr)
 }
 
 /* Register a driver */
+RTE_EXPORT_INTERNAL_SYMBOL(rte_auxiliary_register)
 void
 rte_auxiliary_register(struct rte_auxiliary_driver *driver)
 {
@@ -265,6 +266,7 @@ rte_auxiliary_register(struct rte_auxiliary_driver *driver)
 }
 
 /* Unregister a driver */
+RTE_EXPORT_INTERNAL_SYMBOL(rte_auxiliary_unregister)
 void
 rte_auxiliary_unregister(struct rte_auxiliary_driver *driver)
 {

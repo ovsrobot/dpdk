@@ -34,6 +34,7 @@ static const struct rte_afu_uuid afu_uuid_ipn3ke_map[] = {
 	{ 0, 0 /* sentinel */ },
 };
 
+RTE_EXPORT_INTERNAL_SYMBOL(ipn3ke_bridge_func)
 struct ipn3ke_pub_func ipn3ke_bridge_func;
 
 static int

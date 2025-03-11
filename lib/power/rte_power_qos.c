@@ -17,6 +17,7 @@
 
 #define PM_QOS_CPU_RESUME_LATENCY_BUF_LEN	32
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_qos_set_cpu_resume_latency, 24.11)
 int
 rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency)
 {
@@ -70,6 +71,7 @@ rte_power_qos_set_cpu_resume_latency(uint16_t lcore_id, int latency)
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_qos_get_cpu_resume_latency, 24.11)
 int
 rte_power_qos_get_cpu_resume_latency(uint16_t lcore_id)
 {

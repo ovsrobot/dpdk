@@ -3205,3 +3205,12 @@ RTE_LOG_REGISTER_SUFFIX(iavf_logtype_rx, rx, DEBUG);
 #ifdef RTE_ETHDEV_DEBUG_TX
 RTE_LOG_REGISTER_SUFFIX(iavf_logtype_tx, tx, DEBUG);
 #endif
+
+/* Export all base symbols */
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_init_adminq)
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_shutdown_adminq)
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_clean_arq_element)
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_set_mac_type)
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_aq_send_msg_to_pf)
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_vf_parse_hw_config)
+RTE_EXPORT_INTERNAL_SYMBOL(iavf_vf_reset)

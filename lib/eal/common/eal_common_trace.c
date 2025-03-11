@@ -16,7 +16,9 @@
 
 #include "eal_trace.h"
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_point_sz, 20.05)
 RTE_DEFINE_PER_LCORE(volatile int, trace_point_sz);
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_mem, 20.05)
 RTE_DEFINE_PER_LCORE(void *, trace_mem);
 static RTE_DEFINE_PER_LCORE(char *, ctf_field);
 
@@ -94,6 +96,7 @@ eal_trace_fini(void)
 	eal_trace_args_free();
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_is_enabled, 20.05)
 bool
 rte_trace_is_enabled(void)
 {
@@ -111,6 +114,7 @@ trace_mode_set(rte_trace_point_t *t, enum rte_trace_mode mode)
 			rte_memory_order_release);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_mode_set, 20.05)
 void
 rte_trace_mode_set(enum rte_trace_mode mode)
 {
@@ -122,6 +126,7 @@ rte_trace_mode_set(enum rte_trace_mode mode)
 	trace.mode = mode;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_mode_get, 20.05)
 enum
 rte_trace_mode rte_trace_mode_get(void)
 {
@@ -134,6 +139,7 @@ trace_point_is_invalid(rte_trace_point_t *t)
 	return (t == NULL) || (trace_id_get(t) >= trace.nb_trace_points);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_point_is_enabled, 20.05)
 bool
 rte_trace_point_is_enabled(rte_trace_point_t *t)
 {
@@ -146,6 +152,7 @@ rte_trace_point_is_enabled(rte_trace_point_t *t)
 	return (val & __RTE_TRACE_FIELD_ENABLE_MASK) != 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_point_enable, 20.05)
 int
 rte_trace_point_enable(rte_trace_point_t *t)
 {
@@ -161,6 +168,7 @@ rte_trace_point_enable(rte_trace_point_t *t)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_point_disable, 20.05)
 int
 rte_trace_point_disable(rte_trace_point_t *t)
 {
@@ -176,6 +184,7 @@ rte_trace_point_disable(rte_trace_point_t *t)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_pattern, 20.05)
 int
 rte_trace_pattern(const char *pattern, bool enable)
 {
@@ -200,6 +209,7 @@ rte_trace_pattern(const char *pattern, bool enable)
 	return rc | found;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_regexp, 20.05)
 int
 rte_trace_regexp(const char *regex, bool enable)
 {
@@ -229,6 +239,7 @@ rte_trace_regexp(const char *regex, bool enable)
 	return rc | found;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_point_lookup, 20.05)
 rte_trace_point_t *
 rte_trace_point_lookup(const char *name)
 {
@@ -279,6 +290,7 @@ out:
 	rte_spinlock_unlock(&trace->lock);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_dump, 20.05)
 void
 rte_trace_dump(FILE *f)
 {
@@ -314,6 +326,7 @@ thread_get_name(rte_thread_t id, char *name, size_t len)
 	RTE_SET_USED(len);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_mem_per_thread_alloc, 20.05)
 void
 __rte_trace_mem_per_thread_alloc(void)
 {
@@ -435,6 +448,7 @@ trace_mem_free(void)
 	rte_spinlock_unlock(&trace->lock);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_point_emit_field, 20.05)
 void
 __rte_trace_point_emit_field(size_t sz, const char *in, const char *datatype)
 {
@@ -461,6 +475,7 @@ __rte_trace_point_emit_field(size_t sz, const char *in, const char *datatype)
 	RTE_PER_LCORE(ctf_field) = field;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_point_register, 20.05)
 int
 __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 		void (*register_fn)(void))

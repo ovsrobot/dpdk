@@ -201,6 +201,7 @@ source_stats_read(void *port, struct rte_swx_port_in_stats *stats)
 	memcpy(stats, &p->stats, sizeof(p->stats));
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_port_source_ops, 20.11)
 struct rte_swx_port_in_ops rte_swx_port_source_ops = {
 	.create = source_create,
 	.free = source_free,
@@ -210,6 +211,7 @@ struct rte_swx_port_in_ops rte_swx_port_source_ops = {
 
 #else
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_port_source_ops, 20.11)
 struct rte_swx_port_in_ops rte_swx_port_source_ops = {
 	.create = NULL,
 	.free = NULL,
@@ -380,6 +382,7 @@ sink_stats_read(void *port, struct rte_swx_port_out_stats *stats)
 /*
  * Summary of port operations
  */
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_port_sink_ops, 20.11)
 struct rte_swx_port_out_ops rte_swx_port_sink_ops = {
 	.create = sink_create,
 	.free = sink_free,

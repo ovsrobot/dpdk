@@ -121,6 +121,7 @@ struct_type_field_find(struct struct_type *st, const char *name)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_struct_type_register, 20.11)
 int
 rte_swx_pipeline_struct_type_register(struct rte_swx_pipeline *p,
 				      const char *name,
@@ -252,6 +253,7 @@ port_in_type_find(struct rte_swx_pipeline *p, const char *name)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_port_in_type_register, 20.11)
 int
 rte_swx_pipeline_port_in_type_register(struct rte_swx_pipeline *p,
 				       const char *name,
@@ -295,6 +297,7 @@ port_in_find(struct rte_swx_pipeline *p, uint32_t port_id)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_port_in_config, 20.11)
 int
 rte_swx_pipeline_port_in_config(struct rte_swx_pipeline *p,
 				uint32_t port_id,
@@ -413,6 +416,7 @@ port_out_type_find(struct rte_swx_pipeline *p, const char *name)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_port_out_type_register, 20.11)
 int
 rte_swx_pipeline_port_out_type_register(struct rte_swx_pipeline *p,
 					const char *name,
@@ -458,6 +462,7 @@ port_out_find(struct rte_swx_pipeline *p, uint32_t port_id)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_port_out_config, 20.11)
 int
 rte_swx_pipeline_port_out_config(struct rte_swx_pipeline *p,
 				 uint32_t port_id,
@@ -564,6 +569,7 @@ port_out_free(struct rte_swx_pipeline *p)
 /*
  * Packet mirroring.
  */
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_mirroring_config, 20.11)
 int
 rte_swx_pipeline_mirroring_config(struct rte_swx_pipeline *p,
 				  struct rte_swx_pipeline_mirroring_params *params)
@@ -760,6 +766,7 @@ extern_obj_mailbox_field_parse(struct rte_swx_pipeline *p,
 	return f;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_extern_type_register, 20.11)
 int
 rte_swx_pipeline_extern_type_register(struct rte_swx_pipeline *p,
 	const char *name,
@@ -800,6 +807,7 @@ rte_swx_pipeline_extern_type_register(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_extern_type_member_func_register, 20.11)
 int
 rte_swx_pipeline_extern_type_member_func_register(struct rte_swx_pipeline *p,
 	const char *extern_type_name,
@@ -837,6 +845,7 @@ rte_swx_pipeline_extern_type_member_func_register(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_extern_object_config, 20.11)
 int
 rte_swx_pipeline_extern_object_config(struct rte_swx_pipeline *p,
 				      const char *extern_type_name,
@@ -1053,6 +1062,7 @@ extern_func_mailbox_field_parse(struct rte_swx_pipeline *p,
 	return f;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_extern_func_register, 20.11)
 int
 rte_swx_pipeline_extern_func_register(struct rte_swx_pipeline *p,
 				      const char *name,
@@ -1181,6 +1191,7 @@ hash_func_find(struct rte_swx_pipeline *p, const char *name)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_hash_func_register, 22.07)
 int
 rte_swx_pipeline_hash_func_register(struct rte_swx_pipeline *p,
 				    const char *name,
@@ -1281,6 +1292,7 @@ rss_find_by_id(struct rte_swx_pipeline *p, uint32_t rss_obj_id)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_rss_config, 23.03)
 int
 rte_swx_pipeline_rss_config(struct rte_swx_pipeline *p, const char *name)
 {
@@ -1458,6 +1470,7 @@ header_field_parse(struct rte_swx_pipeline *p,
 	return f;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_packet_header_register, 20.11)
 int
 rte_swx_pipeline_packet_header_register(struct rte_swx_pipeline *p,
 					const char *name,
@@ -1596,6 +1609,7 @@ metadata_field_parse(struct rte_swx_pipeline *p, const char *name)
 	return struct_type_field_find(p->metadata_st, &name[2]);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_packet_metadata_register, 20.11)
 int
 rte_swx_pipeline_packet_metadata_register(struct rte_swx_pipeline *p,
 					  const char *struct_type_name)
@@ -7855,6 +7869,7 @@ action_does_learning(struct action *a)
 	return 0; /* FALSE */
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_action_config, 20.11)
 int
 rte_swx_pipeline_action_config(struct rte_swx_pipeline *p,
 			       const char *name,
@@ -8219,6 +8234,7 @@ table_find_by_id(struct rte_swx_pipeline *p, uint32_t id)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_table_type_register, 20.11)
 int
 rte_swx_pipeline_table_type_register(struct rte_swx_pipeline *p,
 				     const char *name,
@@ -8388,6 +8404,7 @@ end:
 	return status;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_table_config, 20.11)
 int
 rte_swx_pipeline_table_config(struct rte_swx_pipeline *p,
 			      const char *name,
@@ -8891,6 +8908,7 @@ selector_fields_check(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_selector_config, 21.08)
 int
 rte_swx_pipeline_selector_config(struct rte_swx_pipeline *p,
 				 const char *name,
@@ -9363,6 +9381,7 @@ learner_action_learning_check(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_learner_config, 21.11)
 int
 rte_swx_pipeline_learner_config(struct rte_swx_pipeline *p,
 			      const char *name,
@@ -9936,6 +9955,7 @@ regarray_find_by_id(struct rte_swx_pipeline *p, uint32_t id)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_regarray_config, 21.05)
 int
 rte_swx_pipeline_regarray_config(struct rte_swx_pipeline *p,
 			      const char *name,
@@ -10074,6 +10094,7 @@ metarray_find_by_id(struct rte_swx_pipeline *p, uint32_t id)
 	return NULL;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_metarray_config, 21.05)
 int
 rte_swx_pipeline_metarray_config(struct rte_swx_pipeline *p,
 				 const char *name,
@@ -10224,6 +10245,7 @@ static struct rte_tailq_elem rte_swx_pipeline_tailq = {
 
 EAL_REGISTER_TAILQ(rte_swx_pipeline_tailq)
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_find, 22.11)
 struct rte_swx_pipeline *
 rte_swx_pipeline_find(const char *name)
 {
@@ -10303,6 +10325,7 @@ pipeline_unregister(struct rte_swx_pipeline *p)
 	rte_mcfg_tailq_write_unlock();
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_free, 20.11)
 void
 rte_swx_pipeline_free(struct rte_swx_pipeline *p)
 {
@@ -10448,6 +10471,7 @@ hash_funcs_register(struct rte_swx_pipeline *p)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_config, 20.11)
 int
 rte_swx_pipeline_config(struct rte_swx_pipeline **p, const char *name, int numa_node)
 {
@@ -10524,6 +10548,7 @@ error:
 	return status;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_instructions_config, 20.11)
 int
 rte_swx_pipeline_instructions_config(struct rte_swx_pipeline *p,
 				     const char **instructions,
@@ -10546,6 +10571,7 @@ rte_swx_pipeline_instructions_config(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_build, 20.11)
 int
 rte_swx_pipeline_build(struct rte_swx_pipeline *p)
 {
@@ -10664,6 +10690,7 @@ error:
 	return status;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_run, 20.11)
 void
 rte_swx_pipeline_run(struct rte_swx_pipeline *p, uint32_t n_instructions)
 {
@@ -10673,6 +10700,7 @@ rte_swx_pipeline_run(struct rte_swx_pipeline *p, uint32_t n_instructions)
 		instr_exec(p);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_flush, 20.11)
 void
 rte_swx_pipeline_flush(struct rte_swx_pipeline *p)
 {
@@ -10689,6 +10717,7 @@ rte_swx_pipeline_flush(struct rte_swx_pipeline *p)
 /*
  * Control.
  */
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_info_get, 20.11)
 int
 rte_swx_ctl_pipeline_info_get(struct rte_swx_pipeline *p,
 			      struct rte_swx_ctl_pipeline_info *pipeline)
@@ -10722,6 +10751,7 @@ rte_swx_ctl_pipeline_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_numa_node_get, 20.11)
 int
 rte_swx_ctl_pipeline_numa_node_get(struct rte_swx_pipeline *p, int *numa_node)
 {
@@ -10732,6 +10762,7 @@ rte_swx_ctl_pipeline_numa_node_get(struct rte_swx_pipeline *p, int *numa_node)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_action_info_get, 20.11)
 int
 rte_swx_ctl_action_info_get(struct rte_swx_pipeline *p,
 			    uint32_t action_id,
@@ -10751,6 +10782,7 @@ rte_swx_ctl_action_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_action_arg_info_get, 20.11)
 int
 rte_swx_ctl_action_arg_info_get(struct rte_swx_pipeline *p,
 				uint32_t action_id,
@@ -10775,6 +10807,7 @@ rte_swx_ctl_action_arg_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_table_info_get, 20.11)
 int
 rte_swx_ctl_table_info_get(struct rte_swx_pipeline *p,
 			   uint32_t table_id,
@@ -10799,6 +10832,7 @@ rte_swx_ctl_table_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_table_match_field_info_get, 20.11)
 int
 rte_swx_ctl_table_match_field_info_get(struct rte_swx_pipeline *p,
 	uint32_t table_id,
@@ -10824,6 +10858,7 @@ rte_swx_ctl_table_match_field_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_table_action_info_get, 20.11)
 int
 rte_swx_ctl_table_action_info_get(struct rte_swx_pipeline *p,
 	uint32_t table_id,
@@ -10847,6 +10882,7 @@ rte_swx_ctl_table_action_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_table_ops_get, 20.11)
 int
 rte_swx_ctl_table_ops_get(struct rte_swx_pipeline *p,
 			  uint32_t table_id,
@@ -10873,6 +10909,7 @@ rte_swx_ctl_table_ops_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_selector_info_get, 21.08)
 int
 rte_swx_ctl_selector_info_get(struct rte_swx_pipeline *p,
 			      uint32_t selector_id,
@@ -10896,6 +10933,7 @@ rte_swx_ctl_selector_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_selector_group_id_field_info_get, 21.08)
 int
 rte_swx_ctl_selector_group_id_field_info_get(struct rte_swx_pipeline *p,
 	 uint32_t selector_id,
@@ -10918,6 +10956,7 @@ rte_swx_ctl_selector_group_id_field_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_selector_field_info_get, 21.08)
 int
 rte_swx_ctl_selector_field_info_get(struct rte_swx_pipeline *p,
 	 uint32_t selector_id,
@@ -10943,6 +10982,7 @@ rte_swx_ctl_selector_field_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_selector_member_id_field_info_get, 21.08)
 int
 rte_swx_ctl_selector_member_id_field_info_get(struct rte_swx_pipeline *p,
 	 uint32_t selector_id,
@@ -10965,6 +11005,7 @@ rte_swx_ctl_selector_member_id_field_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_learner_info_get, 21.11)
 int
 rte_swx_ctl_learner_info_get(struct rte_swx_pipeline *p,
 			     uint32_t learner_id,
@@ -10990,6 +11031,7 @@ rte_swx_ctl_learner_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_learner_match_field_info_get, 21.11)
 int
 rte_swx_ctl_learner_match_field_info_get(struct rte_swx_pipeline *p,
 					 uint32_t learner_id,
@@ -11015,6 +11057,7 @@ rte_swx_ctl_learner_match_field_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_learner_action_info_get, 21.11)
 int
 rte_swx_ctl_learner_action_info_get(struct rte_swx_pipeline *p,
 				    uint32_t learner_id,
@@ -11041,6 +11084,7 @@ rte_swx_ctl_learner_action_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_timeout_get, 22.07)
 int
 rte_swx_ctl_pipeline_learner_timeout_get(struct rte_swx_pipeline *p,
 					 uint32_t learner_id,
@@ -11060,6 +11104,7 @@ rte_swx_ctl_pipeline_learner_timeout_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_timeout_set, 22.07)
 int
 rte_swx_ctl_pipeline_learner_timeout_set(struct rte_swx_pipeline *p,
 					 uint32_t learner_id,
@@ -11091,6 +11136,7 @@ rte_swx_ctl_pipeline_learner_timeout_set(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_table_state_get, 20.11)
 int
 rte_swx_pipeline_table_state_get(struct rte_swx_pipeline *p,
 				 struct rte_swx_table_state **table_state)
@@ -11102,6 +11148,7 @@ rte_swx_pipeline_table_state_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_table_state_set, 20.11)
 int
 rte_swx_pipeline_table_state_set(struct rte_swx_pipeline *p,
 				 struct rte_swx_table_state *table_state)
@@ -11113,6 +11160,7 @@ rte_swx_pipeline_table_state_set(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_port_in_stats_read, 20.11)
 int
 rte_swx_ctl_pipeline_port_in_stats_read(struct rte_swx_pipeline *p,
 					uint32_t port_id,
@@ -11131,6 +11179,7 @@ rte_swx_ctl_pipeline_port_in_stats_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_port_out_stats_read, 20.11)
 int
 rte_swx_ctl_pipeline_port_out_stats_read(struct rte_swx_pipeline *p,
 					 uint32_t port_id,
@@ -11149,6 +11198,7 @@ rte_swx_ctl_pipeline_port_out_stats_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_stats_read, 21.05)
 int
 rte_swx_ctl_pipeline_table_stats_read(struct rte_swx_pipeline *p,
 				      const char *table_name,
@@ -11176,6 +11226,7 @@ rte_swx_ctl_pipeline_table_stats_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_stats_read, 21.08)
 int
 rte_swx_ctl_pipeline_selector_stats_read(struct rte_swx_pipeline *p,
 	const char *selector_name,
@@ -11195,6 +11246,7 @@ rte_swx_ctl_pipeline_selector_stats_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_stats_read, 21.11)
 int
 rte_swx_ctl_pipeline_learner_stats_read(struct rte_swx_pipeline *p,
 					const char *learner_name,
@@ -11228,6 +11280,7 @@ rte_swx_ctl_pipeline_learner_stats_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_regarray_info_get, 21.05)
 int
 rte_swx_ctl_regarray_info_get(struct rte_swx_pipeline *p,
 			      uint32_t regarray_id,
@@ -11247,6 +11300,7 @@ rte_swx_ctl_regarray_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_regarray_read, 21.05)
 int
 rte_swx_ctl_pipeline_regarray_read(struct rte_swx_pipeline *p,
 				   const char *regarray_name,
@@ -11268,6 +11322,7 @@ rte_swx_ctl_pipeline_regarray_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_regarray_write, 21.05)
 int
 rte_swx_ctl_pipeline_regarray_write(struct rte_swx_pipeline *p,
 				   const char *regarray_name,
@@ -11289,6 +11344,7 @@ rte_swx_ctl_pipeline_regarray_write(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_metarray_info_get, 21.05)
 int
 rte_swx_ctl_metarray_info_get(struct rte_swx_pipeline *p,
 			      uint32_t metarray_id,
@@ -11308,6 +11364,7 @@ rte_swx_ctl_metarray_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_profile_add, 21.05)
 int
 rte_swx_ctl_meter_profile_add(struct rte_swx_pipeline *p,
 			      const char *name,
@@ -11340,6 +11397,7 @@ rte_swx_ctl_meter_profile_add(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_profile_delete, 21.05)
 int
 rte_swx_ctl_meter_profile_delete(struct rte_swx_pipeline *p,
 				 const char *name)
@@ -11360,6 +11418,7 @@ rte_swx_ctl_meter_profile_delete(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_reset, 21.05)
 int
 rte_swx_ctl_meter_reset(struct rte_swx_pipeline *p,
 			const char *metarray_name,
@@ -11388,6 +11447,7 @@ rte_swx_ctl_meter_reset(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_set, 21.05)
 int
 rte_swx_ctl_meter_set(struct rte_swx_pipeline *p,
 		      const char *metarray_name,
@@ -11424,6 +11484,7 @@ rte_swx_ctl_meter_set(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_stats_read, 21.05)
 int
 rte_swx_ctl_meter_stats_read(struct rte_swx_pipeline *p,
 			     const char *metarray_name,
@@ -11452,6 +11513,7 @@ rte_swx_ctl_meter_stats_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_mirroring_session_set, 20.11)
 int
 rte_swx_ctl_pipeline_mirroring_session_set(struct rte_swx_pipeline *p,
 					   uint32_t session_id,
@@ -11658,6 +11720,7 @@ rte_swx_ctl_pipeline_table_entry_id_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_regarray_read_with_key, 22.11)
 int
 rte_swx_ctl_pipeline_regarray_read_with_key(struct rte_swx_pipeline *p,
 					    const char *regarray_name,
@@ -11675,6 +11738,7 @@ rte_swx_ctl_pipeline_regarray_read_with_key(struct rte_swx_pipeline *p,
 	return rte_swx_ctl_pipeline_regarray_read(p, regarray_name, entry_id, value);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_regarray_write_with_key, 22.11)
 int
 rte_swx_ctl_pipeline_regarray_write_with_key(struct rte_swx_pipeline *p,
 					     const char *regarray_name,
@@ -11692,6 +11756,7 @@ rte_swx_ctl_pipeline_regarray_write_with_key(struct rte_swx_pipeline *p,
 	return rte_swx_ctl_pipeline_regarray_write(p, regarray_name, entry_id, value);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_reset_with_key, 22.11)
 int
 rte_swx_ctl_meter_reset_with_key(struct rte_swx_pipeline *p,
 				 const char *metarray_name,
@@ -11708,6 +11773,7 @@ rte_swx_ctl_meter_reset_with_key(struct rte_swx_pipeline *p,
 	return rte_swx_ctl_meter_reset(p, metarray_name, entry_id);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_set_with_key, 22.11)
 int
 rte_swx_ctl_meter_set_with_key(struct rte_swx_pipeline *p,
 			       const char *metarray_name,
@@ -11725,6 +11791,7 @@ rte_swx_ctl_meter_set_with_key(struct rte_swx_pipeline *p,
 	return rte_swx_ctl_meter_set(p, metarray_name, entry_id, profile_name);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_meter_stats_read_with_key, 22.11)
 int
 rte_swx_ctl_meter_stats_read_with_key(struct rte_swx_pipeline *p,
 				      const char *metarray_name,
@@ -11742,6 +11809,7 @@ rte_swx_ctl_meter_stats_read_with_key(struct rte_swx_pipeline *p,
 	return rte_swx_ctl_meter_stats_read(p, metarray_name, entry_id, stats);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_rss_info_get, 23.03)
 int
 rte_swx_ctl_rss_info_get(struct rte_swx_pipeline *p,
 			 uint32_t rss_obj_id,
@@ -11762,6 +11830,7 @@ rte_swx_ctl_rss_info_get(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_rss_key_size_read, 23.03)
 int
 rte_swx_ctl_pipeline_rss_key_size_read(struct rte_swx_pipeline *p,
 				       const char *rss_name,
@@ -11786,6 +11855,7 @@ rte_swx_ctl_pipeline_rss_key_size_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_rss_key_read, 23.03)
 int
 rte_swx_ctl_pipeline_rss_key_read(struct rte_swx_pipeline *p,
 				  const char *rss_name,
@@ -11810,6 +11880,7 @@ rte_swx_ctl_pipeline_rss_key_read(struct rte_swx_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_rss_key_write, 23.03)
 int
 rte_swx_ctl_pipeline_rss_key_write(struct rte_swx_pipeline *p,
 				   const char *rss_name,
@@ -14512,6 +14583,7 @@ pipeline_adjust(struct rte_swx_pipeline *p, struct instruction_group_list *igl)
 	instr_jmp_resolve(p->instructions, p->instruction_data, p->n_instructions);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_codegen, 22.11)
 int
 rte_swx_pipeline_codegen(FILE *spec_file,
 			 FILE *code_file,
@@ -14605,6 +14677,7 @@ free:
 	return status;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_pipeline_build_from_lib, 22.11)
 int
 rte_swx_pipeline_build_from_lib(struct rte_swx_pipeline **pipeline,
 				const char *name,

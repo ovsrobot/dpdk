@@ -40,6 +40,7 @@ static struct {
 } log_time;
 
 /* Set the log timestamp format */
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_timestamp)
 int
 eal_log_timestamp(const char *str)
 {

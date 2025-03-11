@@ -325,6 +325,7 @@ uint16_t qbman_fq_attr_get_opridsz(struct qbman_fq_query_rslt *r)
 	return r->opridsz;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_fq_query_state)
 int qbman_fq_query_state(struct qbman_swp *s, uint32_t fqid,
 			 struct qbman_fq_query_np_rslt *r)
 {
@@ -382,6 +383,7 @@ int qbman_fq_state_overflow_error(const struct qbman_fq_query_np_rslt *r)
 	return (int)((r->st1 & 0x40) >> 6);
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_fq_state_frame_count)
 uint32_t qbman_fq_state_frame_count(const struct qbman_fq_query_np_rslt *r)
 {
 	return (r->frm_cnt & 0x00FFFFFF);

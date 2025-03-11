@@ -189,6 +189,7 @@ rte_pipeline_check_params(struct rte_pipeline_params *params)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_create)
 struct rte_pipeline *
 rte_pipeline_create(struct rte_pipeline_params *params)
 {
@@ -231,6 +232,7 @@ rte_pipeline_create(struct rte_pipeline_params *params)
 	return p;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_free)
 int
 rte_pipeline_free(struct rte_pipeline *p)
 {
@@ -324,6 +326,7 @@ rte_table_check_params(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_create)
 int
 rte_pipeline_table_create(struct rte_pipeline *p,
 		struct rte_pipeline_table_params *params,
@@ -395,6 +398,7 @@ rte_pipeline_table_free(struct rte_table *table)
 	rte_free(table->default_entry);
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_default_entry_add)
 int
 rte_pipeline_table_default_entry_add(struct rte_pipeline *p,
 	uint32_t table_id,
@@ -445,6 +449,7 @@ rte_pipeline_table_default_entry_add(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_default_entry_delete)
 int
 rte_pipeline_table_default_entry_delete(struct rte_pipeline *p,
 		uint32_t table_id,
@@ -478,6 +483,7 @@ rte_pipeline_table_default_entry_delete(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_entry_add)
 int
 rte_pipeline_table_entry_add(struct rte_pipeline *p,
 		uint32_t table_id,
@@ -539,6 +545,7 @@ rte_pipeline_table_entry_add(struct rte_pipeline *p,
 		key_found, (void **) entry_ptr);
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_entry_delete)
 int
 rte_pipeline_table_entry_delete(struct rte_pipeline *p,
 		uint32_t table_id,
@@ -578,6 +585,7 @@ rte_pipeline_table_entry_delete(struct rte_pipeline *p,
 	return (table->ops.f_delete)(table->h_table, key, key_found, entry);
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_entry_add_bulk)
 int rte_pipeline_table_entry_add_bulk(struct rte_pipeline *p,
 	uint32_t table_id,
 	void **keys,
@@ -644,6 +652,7 @@ int rte_pipeline_table_entry_add_bulk(struct rte_pipeline *p,
 		n_keys, key_found, (void **) entries_ptr);
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_entry_delete_bulk)
 int rte_pipeline_table_entry_delete_bulk(struct rte_pipeline *p,
 	uint32_t table_id,
 	void **keys,
@@ -801,6 +810,7 @@ rte_pipeline_port_out_check_params(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_in_create)
 int
 rte_pipeline_port_in_create(struct rte_pipeline *p,
 		struct rte_pipeline_port_in_params *params,
@@ -851,6 +861,7 @@ rte_pipeline_port_in_free(struct rte_port_in *port)
 		port->ops.f_free(port->h_port);
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_out_create)
 int
 rte_pipeline_port_out_create(struct rte_pipeline *p,
 		struct rte_pipeline_port_out_params *params,
@@ -898,6 +909,7 @@ rte_pipeline_port_out_free(struct rte_port_out *port)
 		port->ops.f_free(port->h_port);
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_in_connect_to_table)
 int
 rte_pipeline_port_in_connect_to_table(struct rte_pipeline *p,
 		uint32_t port_id,
@@ -932,6 +944,7 @@ rte_pipeline_port_in_connect_to_table(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_in_enable)
 int
 rte_pipeline_port_in_enable(struct rte_pipeline *p, uint32_t port_id)
 {
@@ -979,6 +992,7 @@ rte_pipeline_port_in_enable(struct rte_pipeline *p, uint32_t port_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_in_disable)
 int
 rte_pipeline_port_in_disable(struct rte_pipeline *p, uint32_t port_id)
 {
@@ -1034,6 +1048,7 @@ rte_pipeline_port_in_disable(struct rte_pipeline *p, uint32_t port_id)
 /*
  * Pipeline run-time
  */
+RTE_EXPORT_SYMBOL(rte_pipeline_check)
 int
 rte_pipeline_check(struct rte_pipeline *p)
 {
@@ -1307,6 +1322,7 @@ rte_pipeline_action_handler_drop(struct rte_pipeline *p, uint64_t pkts_mask)
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_run)
 int
 rte_pipeline_run(struct rte_pipeline *p)
 {
@@ -1446,6 +1462,7 @@ rte_pipeline_run(struct rte_pipeline *p)
 	return (int) n_pkts;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_flush)
 int
 rte_pipeline_flush(struct rte_pipeline *p)
 {
@@ -1468,6 +1485,7 @@ rte_pipeline_flush(struct rte_pipeline *p)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_out_packet_insert)
 int
 rte_pipeline_port_out_packet_insert(struct rte_pipeline *p,
 	uint32_t port_id, struct rte_mbuf *pkt)
@@ -1479,6 +1497,7 @@ rte_pipeline_port_out_packet_insert(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_ah_packet_hijack)
 int rte_pipeline_ah_packet_hijack(struct rte_pipeline *p,
 	uint64_t pkts_mask)
 {
@@ -1488,6 +1507,7 @@ int rte_pipeline_ah_packet_hijack(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_ah_packet_drop)
 int rte_pipeline_ah_packet_drop(struct rte_pipeline *p,
 	uint64_t pkts_mask)
 {
@@ -1499,6 +1519,7 @@ int rte_pipeline_ah_packet_drop(struct rte_pipeline *p,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_in_stats_read)
 int rte_pipeline_port_in_stats_read(struct rte_pipeline *p, uint32_t port_id,
 	struct rte_pipeline_port_in_stats *stats, int clear)
 {
@@ -1536,6 +1557,7 @@ int rte_pipeline_port_in_stats_read(struct rte_pipeline *p, uint32_t port_id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_port_out_stats_read)
 int rte_pipeline_port_out_stats_read(struct rte_pipeline *p, uint32_t port_id,
 	struct rte_pipeline_port_out_stats *stats, int clear)
 {
@@ -1570,6 +1592,7 @@ int rte_pipeline_port_out_stats_read(struct rte_pipeline *p, uint32_t port_id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pipeline_table_stats_read)
 int rte_pipeline_table_stats_read(struct rte_pipeline *p, uint32_t table_id,
 	struct rte_pipeline_table_stats *stats, int clear)
 {

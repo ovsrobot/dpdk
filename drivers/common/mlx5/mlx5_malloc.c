@@ -161,6 +161,7 @@ mlx5_alloc_align(size_t size, unsigned int align, unsigned int zero)
 	return buf;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_malloc)
 void *
 mlx5_malloc(uint32_t flags, size_t size, unsigned int align, int socket)
 {
@@ -205,6 +206,7 @@ mlx5_malloc(uint32_t flags, size_t size, unsigned int align, int socket)
 	return addr;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_realloc)
 void *
 mlx5_realloc(void *addr, uint32_t flags, size_t size, unsigned int align,
 	     int socket)
@@ -252,6 +254,7 @@ mlx5_realloc(void *addr, uint32_t flags, size_t size, unsigned int align,
 	return new_addr;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_free)
 void
 mlx5_free(void *addr)
 {
@@ -272,6 +275,7 @@ mlx5_free(void *addr)
 	}
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_memory_stat_dump)
 void
 mlx5_memory_stat_dump(void)
 {

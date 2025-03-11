@@ -27,9 +27,11 @@
 #include "mlx5_glue.h"
 
 #ifdef MLX5_GLUE
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_glue)
 const struct mlx5_glue *mlx5_glue;
 #endif
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_get_pci_addr)
 int
 mlx5_get_pci_addr(const char *dev_path, struct rte_pci_addr *pci_addr)
 {
@@ -89,6 +91,7 @@ exit:
  * @return
  *   port_name field set according to recognized name format.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_translate_port_name)
 void
 mlx5_translate_port_name(const char *port_name_in,
 			 struct mlx5_switch_info *port_info_out)
@@ -155,6 +158,7 @@ mlx5_translate_port_name(const char *port_name_in,
 	port_info_out->name_type = MLX5_PHYS_PORT_NAME_TYPE_UNKNOWN;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_get_ifname_sysfs)
 int
 mlx5_get_ifname_sysfs(const char *ibdev_path, char *ifname)
 {
@@ -873,6 +877,7 @@ mlx5_os_open_device(struct mlx5_common_device *cdev, uint32_t classes)
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_get_device_guid)
 int
 mlx5_get_device_guid(const struct rte_pci_addr *dev, uint8_t *guid, size_t len)
 {
@@ -918,6 +923,7 @@ mlx5_get_device_guid(const struct rte_pci_addr *dev, uint8_t *guid, size_t len)
  * indirect mkey created by the DevX API.
  * This mkey should be used for DevX commands requesting mkey as a parameter.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_wrapped_mkey_create)
 int
 mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 			    size_t length, struct mlx5_pmd_wrapped_mr *pmd_mr)
@@ -957,6 +963,7 @@ mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_wrapped_mkey_destroy)
 void
 mlx5_os_wrapped_mkey_destroy(struct mlx5_pmd_wrapped_mr *pmd_mr)
 {
@@ -988,6 +995,7 @@ mlx5_os_wrapped_mkey_destroy(struct mlx5_pmd_wrapped_mr *pmd_mr)
  *  - Interrupt handle on success.
  *  - NULL on failure, with rte_errno set.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_interrupt_handler_create)
 struct rte_intr_handle *
 mlx5_os_interrupt_handler_create(int mode, bool set_fd_nonblock, int fd,
 				 rte_intr_callback_fn cb, void *cb_arg)
@@ -1089,6 +1097,7 @@ mlx5_intr_callback_unregister(const struct rte_intr_handle *handle,
  *   Callback argument for cb.
  *
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_interrupt_handler_destroy)
 void
 mlx5_os_interrupt_handler_destroy(struct rte_intr_handle *intr_handle,
 				  rte_intr_callback_fn cb, void *cb_arg)

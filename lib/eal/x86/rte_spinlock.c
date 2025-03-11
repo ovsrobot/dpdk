@@ -6,6 +6,7 @@
 
 #include "rte_cpuflags.h"
 
+RTE_EXPORT_SYMBOL(rte_rtm_supported)
 uint8_t rte_rtm_supported; /* cache the flag to avoid the overhead
 			      of the rte_cpu_get_flag_enabled function */
 

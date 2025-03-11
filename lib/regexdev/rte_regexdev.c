@@ -13,12 +13,14 @@
 #include "rte_regexdev_driver.h"
 
 static const char *MZ_RTE_REGEXDEV_DATA = "rte_regexdev_data";
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regex_devices, 22.03)
 struct rte_regexdev rte_regex_devices[RTE_MAX_REGEXDEV_DEVS];
 /* Shared memory between primary and secondary processes. */
 static struct {
 	struct rte_regexdev_data data[RTE_MAX_REGEXDEV_DEVS];
 } *rte_regexdev_shared_data;
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_logtype, 22.03)
 RTE_LOG_REGISTER_DEFAULT(rte_regexdev_logtype, INFO);
 
 static uint16_t
@@ -89,6 +91,7 @@ regexdev_check_name(const char *name)
 
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_register)
 struct rte_regexdev *
 rte_regexdev_register(const char *name)
 {
@@ -126,12 +129,14 @@ rte_regexdev_register(const char *name)
 	return dev;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_unregister)
 void
 rte_regexdev_unregister(struct rte_regexdev *dev)
 {
 	dev->state = RTE_REGEXDEV_UNUSED;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_get_device_by_name)
 struct rte_regexdev *
 rte_regexdev_get_device_by_name(const char *name)
 {
@@ -140,6 +145,7 @@ rte_regexdev_get_device_by_name(const char *name)
 	return regexdev_allocated(name);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_count, 20.08)
 uint8_t
 rte_regexdev_count(void)
 {
@@ -153,6 +159,7 @@ rte_regexdev_count(void)
 	return count;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_get_dev_id, 20.08)
 int
 rte_regexdev_get_dev_id(const char *name)
 {
@@ -171,6 +178,7 @@ rte_regexdev_get_dev_id(const char *name)
 	return id;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_is_valid_dev, 22.03)
 int
 rte_regexdev_is_valid_dev(uint16_t dev_id)
 {
@@ -195,12 +203,14 @@ regexdev_info_get(uint8_t dev_id, struct rte_regexdev_info *dev_info)
 
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_info_get, 20.08)
 int
 rte_regexdev_info_get(uint8_t dev_id, struct rte_regexdev_info *dev_info)
 {
 	return regexdev_info_get(dev_id, dev_info);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_configure, 20.08)
 int
 rte_regexdev_configure(uint8_t dev_id, const struct rte_regexdev_config *cfg)
 {
@@ -295,6 +305,7 @@ rte_regexdev_configure(uint8_t dev_id, const struct rte_regexdev_config *cfg)
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_queue_pair_setup, 20.08)
 int
 rte_regexdev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 			   const struct rte_regexdev_qp_conf *qp_conf)
@@ -327,6 +338,7 @@ rte_regexdev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 	return dev->dev_ops->dev_qp_setup(dev, queue_pair_id, qp_conf);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_start, 20.08)
 int
 rte_regexdev_start(uint8_t dev_id)
 {
@@ -343,6 +355,7 @@ rte_regexdev_start(uint8_t dev_id)
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_stop, 20.08)
 int
 rte_regexdev_stop(uint8_t dev_id)
 {
@@ -357,6 +370,7 @@ rte_regexdev_stop(uint8_t dev_id)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_close, 20.08)
 int
 rte_regexdev_close(uint8_t dev_id)
 {
@@ -372,6 +386,7 @@ rte_regexdev_close(uint8_t dev_id)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_attr_get, 20.08)
 int
 rte_regexdev_attr_get(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
 		      void *attr_value)
@@ -390,6 +405,7 @@ rte_regexdev_attr_get(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
 	return dev->dev_ops->dev_attr_get(dev, attr_id, attr_value);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_attr_set, 20.08)
 int
 rte_regexdev_attr_set(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
 		      const void *attr_value)
@@ -408,6 +424,7 @@ rte_regexdev_attr_set(uint8_t dev_id, enum rte_regexdev_attr_id attr_id,
 	return dev->dev_ops->dev_attr_set(dev, attr_id, attr_value);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_rule_db_update, 20.08)
 int
 rte_regexdev_rule_db_update(uint8_t dev_id,
 			    const struct rte_regexdev_rule *rules,
@@ -427,6 +444,7 @@ rte_regexdev_rule_db_update(uint8_t dev_id,
 	return dev->dev_ops->dev_rule_db_update(dev, rules, nb_rules);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_rule_db_compile_activate, 20.08)
 int
 rte_regexdev_rule_db_compile_activate(uint8_t dev_id)
 {
@@ -439,6 +457,7 @@ rte_regexdev_rule_db_compile_activate(uint8_t dev_id)
 	return dev->dev_ops->dev_rule_db_compile_activate(dev);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_rule_db_import, 20.08)
 int
 rte_regexdev_rule_db_import(uint8_t dev_id, const char *rule_db,
 			    uint32_t rule_db_len)
@@ -457,6 +476,7 @@ rte_regexdev_rule_db_import(uint8_t dev_id, const char *rule_db,
 	return dev->dev_ops->dev_db_import(dev, rule_db, rule_db_len);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_rule_db_export, 20.08)
 int
 rte_regexdev_rule_db_export(uint8_t dev_id, char *rule_db)
 {
@@ -469,6 +489,7 @@ rte_regexdev_rule_db_export(uint8_t dev_id, char *rule_db)
 	return dev->dev_ops->dev_db_export(dev, rule_db);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_xstats_names_get, 20.08)
 int
 rte_regexdev_xstats_names_get(uint8_t dev_id,
 			      struct rte_regexdev_xstats_map *xstats_map)
@@ -487,6 +508,7 @@ rte_regexdev_xstats_names_get(uint8_t dev_id,
 	return dev->dev_ops->dev_xstats_names_get(dev, xstats_map);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_xstats_get, 20.08)
 int
 rte_regexdev_xstats_get(uint8_t dev_id, const uint16_t *ids,
 			uint64_t *values, uint16_t n)
@@ -508,6 +530,7 @@ rte_regexdev_xstats_get(uint8_t dev_id, const uint16_t *ids,
 	return dev->dev_ops->dev_xstats_get(dev, ids, values, n);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_xstats_by_name_get, 20.08)
 int
 rte_regexdev_xstats_by_name_get(uint8_t dev_id, const char *name,
 				uint16_t *id, uint64_t *value)
@@ -533,6 +556,7 @@ rte_regexdev_xstats_by_name_get(uint8_t dev_id, const char *name,
 	return dev->dev_ops->dev_xstats_by_name_get(dev, name, id, value);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_xstats_reset, 20.08)
 int
 rte_regexdev_xstats_reset(uint8_t dev_id, const uint16_t *ids,
 			  uint16_t nb_ids)
@@ -550,6 +574,7 @@ rte_regexdev_xstats_reset(uint8_t dev_id, const uint16_t *ids,
 	return dev->dev_ops->dev_xstats_reset(dev, ids, nb_ids);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_selftest, 20.08)
 int
 rte_regexdev_selftest(uint8_t dev_id)
 {
@@ -562,6 +587,7 @@ rte_regexdev_selftest(uint8_t dev_id)
 	return dev->dev_ops->dev_selftest(dev);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_regexdev_dump, 20.08)
 int
 rte_regexdev_dump(uint8_t dev_id, FILE *f)
 {

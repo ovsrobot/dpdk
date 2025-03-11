@@ -2518,6 +2518,7 @@ rxa_config_params_validate(struct rte_event_eth_rx_adapter_params *rxa_params,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_create_ext)
 int
 rte_event_eth_rx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 				rte_event_eth_rx_adapter_conf_cb conf_cb,
@@ -2532,6 +2533,7 @@ rte_event_eth_rx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 	return rxa_create(id, dev_id, &rxa_params, conf_cb, conf_arg);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_create_with_params)
 int
 rte_event_eth_rx_adapter_create_with_params(uint8_t id, uint8_t dev_id,
 			struct rte_event_port_conf *port_config,
@@ -2564,6 +2566,7 @@ rte_event_eth_rx_adapter_create_with_params(uint8_t id, uint8_t dev_id,
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_create_ext_with_params, 23.11)
 int
 rte_event_eth_rx_adapter_create_ext_with_params(uint8_t id, uint8_t dev_id,
 			rte_event_eth_rx_adapter_conf_cb conf_cb,
@@ -2580,6 +2583,7 @@ rte_event_eth_rx_adapter_create_ext_with_params(uint8_t id, uint8_t dev_id,
 	return rxa_create(id, dev_id, &temp_params, conf_cb, conf_arg);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_create)
 int
 rte_event_eth_rx_adapter_create(uint8_t id, uint8_t dev_id,
 		struct rte_event_port_conf *port_config)
@@ -2605,6 +2609,7 @@ rte_event_eth_rx_adapter_create(uint8_t id, uint8_t dev_id,
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_free)
 int
 rte_event_eth_rx_adapter_free(uint8_t id)
 {
@@ -2637,6 +2642,7 @@ rte_event_eth_rx_adapter_free(uint8_t id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_queue_add)
 int
 rte_event_eth_rx_adapter_queue_add(uint8_t id,
 		uint16_t eth_dev_id,
@@ -2790,6 +2796,7 @@ rte_event_eth_rx_adapter_queue_add(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_queues_add, 25.03)
 int
 rte_event_eth_rx_adapter_queues_add(uint8_t id, uint16_t eth_dev_id, int32_t rx_queue_id[],
 				    const struct rte_event_eth_rx_adapter_queue_conf queue_conf[],
@@ -2961,6 +2968,7 @@ rxa_sw_vector_limits(struct rte_event_eth_rx_adapter_vector_limits *limits)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_queue_del)
 int
 rte_event_eth_rx_adapter_queue_del(uint8_t id, uint16_t eth_dev_id,
 				int32_t rx_queue_id)
@@ -3089,6 +3097,7 @@ unlock_ret:
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_vector_limits_get)
 int
 rte_event_eth_rx_adapter_vector_limits_get(
 	uint8_t dev_id, uint16_t eth_port_id,
@@ -3130,6 +3139,7 @@ rte_event_eth_rx_adapter_vector_limits_get(
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_start)
 int
 rte_event_eth_rx_adapter_start(uint8_t id)
 {
@@ -3137,6 +3147,7 @@ rte_event_eth_rx_adapter_start(uint8_t id)
 	return rxa_ctrl(id, 1);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_stop)
 int
 rte_event_eth_rx_adapter_stop(uint8_t id)
 {
@@ -3153,6 +3164,7 @@ rxa_queue_stats_reset(struct eth_rx_queue_info *queue_info)
 	memset(q_stats, 0, sizeof(*q_stats));
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_stats_get)
 int
 rte_event_eth_rx_adapter_stats_get(uint8_t id,
 			       struct rte_event_eth_rx_adapter_stats *stats)
@@ -3227,6 +3239,7 @@ rte_event_eth_rx_adapter_stats_get(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_queue_stats_get)
 int
 rte_event_eth_rx_adapter_queue_stats_get(uint8_t id,
 		uint16_t eth_dev_id,
@@ -3291,6 +3304,7 @@ rte_event_eth_rx_adapter_queue_stats_get(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_stats_reset)
 int
 rte_event_eth_rx_adapter_stats_reset(uint8_t id)
 {
@@ -3338,6 +3352,7 @@ rte_event_eth_rx_adapter_stats_reset(uint8_t id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_queue_stats_reset)
 int
 rte_event_eth_rx_adapter_queue_stats_reset(uint8_t id,
 		uint16_t eth_dev_id,
@@ -3392,6 +3407,7 @@ rte_event_eth_rx_adapter_queue_stats_reset(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_service_id_get)
 int
 rte_event_eth_rx_adapter_service_id_get(uint8_t id, uint32_t *service_id)
 {
@@ -3414,6 +3430,7 @@ rte_event_eth_rx_adapter_service_id_get(uint8_t id, uint32_t *service_id)
 	return rx_adapter->service_inited ? 0 : -ESRCH;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_event_port_get)
 int
 rte_event_eth_rx_adapter_event_port_get(uint8_t id, uint8_t *event_port_id)
 {
@@ -3436,6 +3453,7 @@ rte_event_eth_rx_adapter_event_port_get(uint8_t id, uint8_t *event_port_id)
 	return rx_adapter->service_inited ? 0 : -ESRCH;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_cb_register)
 int
 rte_event_eth_rx_adapter_cb_register(uint8_t id,
 					uint16_t eth_dev_id,
@@ -3484,6 +3502,7 @@ rte_event_eth_rx_adapter_cb_register(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_queue_conf_get)
 int
 rte_event_eth_rx_adapter_queue_conf_get(uint8_t id,
 			uint16_t eth_dev_id,
@@ -3585,6 +3604,7 @@ rxa_is_queue_added(struct event_eth_rx_adapter *rx_adapter,
 #define rxa_dev_instance_get(rx_adapter) \
 		rxa_evdev((rx_adapter))->dev_ops->eth_rx_adapter_instance_get
 
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_instance_get)
 int
 rte_event_eth_rx_adapter_instance_get(uint16_t eth_dev_id,
 				      uint16_t rx_queue_id,
@@ -3663,6 +3683,7 @@ rxa_caps_check(struct event_eth_rx_adapter *rxa)
 	return -ENOTSUP;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_init, 23.03)
 int
 rte_event_eth_rx_adapter_runtime_params_init(
 		struct rte_event_eth_rx_adapter_runtime_params *params)
@@ -3676,6 +3697,7 @@ rte_event_eth_rx_adapter_runtime_params_init(
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_set, 23.03)
 int
 rte_event_eth_rx_adapter_runtime_params_set(uint8_t id,
 		struct rte_event_eth_rx_adapter_runtime_params *params)
@@ -3704,6 +3726,7 @@ rte_event_eth_rx_adapter_runtime_params_set(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_get, 23.03)
 int
 rte_event_eth_rx_adapter_runtime_params_get(uint8_t id,
 		struct rte_event_eth_rx_adapter_runtime_params *params)

@@ -20,42 +20,49 @@
 #include "eal_private.h"
 #include "hotplug_mp.h"
 
+RTE_EXPORT_SYMBOL(rte_driver_name)
 const char *
 rte_driver_name(const struct rte_driver *driver)
 {
 	return driver->name;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_bus)
 const struct rte_bus *
 rte_dev_bus(const struct rte_device *dev)
 {
 	return dev->bus;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_bus_info)
 const char *
 rte_dev_bus_info(const struct rte_device *dev)
 {
 	return dev->bus_info;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_devargs)
 const struct rte_devargs *
 rte_dev_devargs(const struct rte_device *dev)
 {
 	return dev->devargs;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_driver)
 const struct rte_driver *
 rte_dev_driver(const struct rte_device *dev)
 {
 	return dev->driver;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_name)
 const char *
 rte_dev_name(const struct rte_device *dev)
 {
 	return dev->name;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_numa_node)
 int
 rte_dev_numa_node(const struct rte_device *dev)
 {
@@ -114,6 +121,7 @@ static int cmp_dev_name(const struct rte_device *dev, const void *_name)
 	return strcmp(dev->name, name);
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_is_probed)
 int
 rte_dev_is_probed(const struct rte_device *dev)
 {
@@ -146,6 +154,7 @@ build_devargs(const char *busname, const char *devname,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_eal_hotplug_add)
 int
 rte_eal_hotplug_add(const char *busname, const char *devname,
 		    const char *drvargs)
@@ -230,6 +239,7 @@ err_devarg:
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_probe)
 int
 rte_dev_probe(const char *devargs)
 {
@@ -323,6 +333,7 @@ rollback:
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_eal_hotplug_remove)
 int
 rte_eal_hotplug_remove(const char *busname, const char *devname)
 {
@@ -366,6 +377,7 @@ local_dev_remove(struct rte_device *dev)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_remove)
 int
 rte_dev_remove(struct rte_device *dev)
 {
@@ -463,6 +475,7 @@ rollback:
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_event_callback_register)
 int
 rte_dev_event_callback_register(const char *device_name,
 				rte_dev_event_cb_fn cb_fn,
@@ -531,6 +544,7 @@ error:
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_event_callback_unregister)
 int
 rte_dev_event_callback_unregister(const char *device_name,
 				  rte_dev_event_cb_fn cb_fn,
@@ -584,6 +598,7 @@ rte_dev_event_callback_unregister(const char *device_name,
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_event_callback_process)
 void
 rte_dev_event_callback_process(const char *device_name,
 			       enum rte_dev_event_type event)
@@ -610,6 +625,7 @@ rte_dev_event_callback_process(const char *device_name,
 	rte_spinlock_unlock(&dev_event_lock);
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_iterator_init)
 int
 rte_dev_iterator_init(struct rte_dev_iterator *it,
 		      const char *dev_str)
@@ -762,6 +778,7 @@ end:
 	it->device = dev;
 	return dev == NULL;
 }
+RTE_EXPORT_SYMBOL(rte_dev_iterator_next)
 struct rte_device *
 rte_dev_iterator_next(struct rte_dev_iterator *it)
 {
@@ -806,6 +823,7 @@ out:
 	return it->device;
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_dma_map)
 int
 rte_dev_dma_map(struct rte_device *dev, void *addr, uint64_t iova,
 		size_t len)
@@ -823,6 +841,7 @@ rte_dev_dma_map(struct rte_device *dev, void *addr, uint64_t iova,
 	return dev->bus->dma_map(dev, addr, iova, len);
 }
 
+RTE_EXPORT_SYMBOL(rte_dev_dma_unmap)
 int
 rte_dev_dma_unmap(struct rte_device *dev, void *addr, uint64_t iova,
 		  size_t len)

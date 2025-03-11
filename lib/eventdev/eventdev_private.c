@@ -106,6 +106,7 @@ dummy_event_port_preschedule_hint(__rte_unused void *port,
 {
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(event_dev_fp_ops_reset)
 void
 event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 {
@@ -129,6 +130,7 @@ event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 	*fp_op = dummy;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(event_dev_fp_ops_set)
 void
 event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 		     const struct rte_eventdev *dev)

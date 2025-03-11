@@ -25,6 +25,7 @@
 #include "eal_thread.h"
 
 /* require calling thread tid by gettid() */
+RTE_EXPORT_SYMBOL(rte_sys_gettid)
 int rte_sys_gettid(void)
 {
 	long lwpid;
@@ -32,6 +33,7 @@ int rte_sys_gettid(void)
 	return (int)lwpid;
 }
 
+RTE_EXPORT_SYMBOL(rte_thread_set_name)
 void rte_thread_set_name(rte_thread_t thread_id, const char *thread_name)
 {
 	char truncated[RTE_THREAD_NAME_SIZE];

@@ -1038,6 +1038,7 @@ txa_service_stop(uint8_t id)
 }
 
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_create)
 int
 rte_event_eth_tx_adapter_create(uint8_t id, uint8_t dev_id,
 				struct rte_event_port_conf *port_conf)
@@ -1082,6 +1083,7 @@ rte_event_eth_tx_adapter_create(uint8_t id, uint8_t dev_id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_create_ext)
 int
 rte_event_eth_tx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 				rte_event_eth_tx_adapter_conf_cb conf_cb,
@@ -1126,6 +1128,7 @@ rte_event_eth_tx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 }
 
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_event_port_get)
 int
 rte_event_eth_tx_adapter_event_port_get(uint8_t id, uint8_t *event_port_id)
 {
@@ -1136,6 +1139,7 @@ rte_event_eth_tx_adapter_event_port_get(uint8_t id, uint8_t *event_port_id)
 	return txa_service_event_port_get(id, event_port_id);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_free)
 int
 rte_event_eth_tx_adapter_free(uint8_t id)
 {
@@ -1155,6 +1159,7 @@ rte_event_eth_tx_adapter_free(uint8_t id)
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_queue_add)
 int
 rte_event_eth_tx_adapter_queue_add(uint8_t id,
 				uint16_t eth_dev_id,
@@ -1188,6 +1193,7 @@ rte_event_eth_tx_adapter_queue_add(uint8_t id,
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_queue_del)
 int
 rte_event_eth_tx_adapter_queue_del(uint8_t id,
 				uint16_t eth_dev_id,
@@ -1220,6 +1226,7 @@ rte_event_eth_tx_adapter_queue_del(uint8_t id,
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_service_id_get)
 int
 rte_event_eth_tx_adapter_service_id_get(uint8_t id, uint32_t *service_id)
 {
@@ -1228,6 +1235,7 @@ rte_event_eth_tx_adapter_service_id_get(uint8_t id, uint32_t *service_id)
 	return txa_service_id_get(id, service_id);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_start)
 int
 rte_event_eth_tx_adapter_start(uint8_t id)
 {
@@ -1242,6 +1250,7 @@ rte_event_eth_tx_adapter_start(uint8_t id)
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_stats_get)
 int
 rte_event_eth_tx_adapter_stats_get(uint8_t id,
 				struct rte_event_eth_tx_adapter_stats *stats)
@@ -1278,6 +1287,7 @@ rte_event_eth_tx_adapter_stats_get(uint8_t id,
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_stats_reset)
 int
 rte_event_eth_tx_adapter_stats_reset(uint8_t id)
 {
@@ -1295,6 +1305,7 @@ rte_event_eth_tx_adapter_stats_reset(uint8_t id)
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_tx_adapter_runtime_params_init, 23.03)
 int
 rte_event_eth_tx_adapter_runtime_params_init(
 		struct rte_event_eth_tx_adapter_runtime_params *txa_params)
@@ -1321,6 +1332,7 @@ txa_caps_check(struct txa_service_data *txa)
 	return -ENOTSUP;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_tx_adapter_runtime_params_set, 23.03)
 int
 rte_event_eth_tx_adapter_runtime_params_set(uint8_t id,
 		struct rte_event_eth_tx_adapter_runtime_params *txa_params)
@@ -1352,6 +1364,7 @@ rte_event_eth_tx_adapter_runtime_params_set(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_tx_adapter_runtime_params_get, 23.03)
 int
 rte_event_eth_tx_adapter_runtime_params_get(uint8_t id,
 		struct rte_event_eth_tx_adapter_runtime_params *txa_params)
@@ -1383,6 +1396,7 @@ rte_event_eth_tx_adapter_runtime_params_get(uint8_t id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_stop)
 int
 rte_event_eth_tx_adapter_stop(uint8_t id)
 {
@@ -1397,6 +1411,7 @@ rte_event_eth_tx_adapter_stop(uint8_t id)
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_instance_get)
 int
 rte_event_eth_tx_adapter_instance_get(uint16_t eth_dev_id,
 				      uint16_t tx_queue_id,
@@ -1530,6 +1545,7 @@ txa_queue_start_state_set(uint16_t eth_dev_id, uint16_t tx_queue_id,
 					    start_state, txa);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_queue_start)
 int
 rte_event_eth_tx_adapter_queue_start(uint16_t eth_dev_id, uint16_t tx_queue_id)
 {
@@ -1538,6 +1554,7 @@ rte_event_eth_tx_adapter_queue_start(uint16_t eth_dev_id, uint16_t tx_queue_id)
 	return txa_queue_start_state_set(eth_dev_id, tx_queue_id, true);
 }
 
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_queue_stop)
 int
 rte_event_eth_tx_adapter_queue_stop(uint16_t eth_dev_id, uint16_t tx_queue_id)
 {

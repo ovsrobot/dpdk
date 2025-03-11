@@ -23,6 +23,7 @@ static struct rte_tailq_elem rte_member_tailq = {
 };
 EAL_REGISTER_TAILQ(rte_member_tailq)
 
+RTE_EXPORT_SYMBOL(rte_member_find_existing)
 struct rte_member_setsum *
 rte_member_find_existing(const char *name)
 {
@@ -47,6 +48,7 @@ rte_member_find_existing(const char *name)
 	return setsum;
 }
 
+RTE_EXPORT_SYMBOL(rte_member_free)
 void
 rte_member_free(struct rte_member_setsum *setsum)
 {
@@ -85,6 +87,7 @@ rte_member_free(struct rte_member_setsum *setsum)
 	rte_free(te);
 }
 
+RTE_EXPORT_SYMBOL(rte_member_create)
 struct rte_member_setsum *
 rte_member_create(const struct rte_member_parameters *params)
 {
@@ -188,6 +191,7 @@ error_unlock_exit:
 	return NULL;
 }
 
+RTE_EXPORT_SYMBOL(rte_member_add)
 int
 rte_member_add(const struct rte_member_setsum *setsum, const void *key,
 			member_set_t set_id)
@@ -207,6 +211,7 @@ rte_member_add(const struct rte_member_setsum *setsum, const void *key,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_add_byte_count)
 int
 rte_member_add_byte_count(const struct rte_member_setsum *setsum,
 			  const void *key, uint32_t byte_count)
@@ -222,6 +227,7 @@ rte_member_add_byte_count(const struct rte_member_setsum *setsum,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_lookup)
 int
 rte_member_lookup(const struct rte_member_setsum *setsum, const void *key,
 			member_set_t *set_id)
@@ -241,6 +247,7 @@ rte_member_lookup(const struct rte_member_setsum *setsum, const void *key,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_lookup_bulk)
 int
 rte_member_lookup_bulk(const struct rte_member_setsum *setsum,
 				const void **keys, uint32_t num_keys,
@@ -261,6 +268,7 @@ rte_member_lookup_bulk(const struct rte_member_setsum *setsum,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_lookup_multi)
 int
 rte_member_lookup_multi(const struct rte_member_setsum *setsum, const void *key,
 				uint32_t match_per_key, member_set_t *set_id)
@@ -280,6 +288,7 @@ rte_member_lookup_multi(const struct rte_member_setsum *setsum, const void *key,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_lookup_multi_bulk)
 int
 rte_member_lookup_multi_bulk(const struct rte_member_setsum *setsum,
 			const void **keys, uint32_t num_keys,
@@ -302,6 +311,7 @@ rte_member_lookup_multi_bulk(const struct rte_member_setsum *setsum,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_query_count)
 int
 rte_member_query_count(const struct rte_member_setsum *setsum,
 		       const void *key, uint64_t *output)
@@ -317,6 +327,7 @@ rte_member_query_count(const struct rte_member_setsum *setsum,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_report_heavyhitter)
 int
 rte_member_report_heavyhitter(const struct rte_member_setsum *setsum,
 				void **key, uint64_t *count)
@@ -332,6 +343,7 @@ rte_member_report_heavyhitter(const struct rte_member_setsum *setsum,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_delete)
 int
 rte_member_delete(const struct rte_member_setsum *setsum, const void *key,
 			member_set_t set_id)
@@ -351,6 +363,7 @@ rte_member_delete(const struct rte_member_setsum *setsum, const void *key,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_member_reset)
 void
 rte_member_reset(const struct rte_member_setsum *setsum)
 {

@@ -113,6 +113,7 @@ add_specific(struct rte_ipsec_sad *sad, const void *key,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_ipsec_sad_add)
 int
 rte_ipsec_sad_add(struct rte_ipsec_sad *sad,
 		const union rte_ipsec_sad_key *key,
@@ -212,6 +213,7 @@ del_specific(struct rte_ipsec_sad *sad, const void *key, int key_type)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_ipsec_sad_del)
 int
 rte_ipsec_sad_del(struct rte_ipsec_sad *sad,
 		const union rte_ipsec_sad_key *key,
@@ -251,6 +253,7 @@ rte_ipsec_sad_del(struct rte_ipsec_sad *sad,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_ipsec_sad_create)
 struct rte_ipsec_sad *
 rte_ipsec_sad_create(const char *name, const struct rte_ipsec_sad_conf *conf)
 {
@@ -380,6 +383,7 @@ rte_ipsec_sad_create(const char *name, const struct rte_ipsec_sad_conf *conf)
 	return sad;
 }
 
+RTE_EXPORT_SYMBOL(rte_ipsec_sad_find_existing)
 struct rte_ipsec_sad *
 rte_ipsec_sad_find_existing(const char *name)
 {
@@ -414,6 +418,7 @@ rte_ipsec_sad_find_existing(const char *name)
 	return sad;
 }
 
+RTE_EXPORT_SYMBOL(rte_ipsec_sad_destroy)
 void
 rte_ipsec_sad_destroy(struct rte_ipsec_sad *sad)
 {
@@ -536,6 +541,7 @@ __ipsec_sad_lookup(const struct rte_ipsec_sad *sad,
 	return found;
 }
 
+RTE_EXPORT_SYMBOL(rte_ipsec_sad_lookup)
 int
 rte_ipsec_sad_lookup(const struct rte_ipsec_sad *sad,
 		const union rte_ipsec_sad_key *keys[], void *sa[], uint32_t n)

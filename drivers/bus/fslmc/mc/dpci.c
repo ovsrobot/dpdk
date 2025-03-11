@@ -315,6 +315,7 @@ int dpci_get_attributes(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(dpci_set_rx_queue)
 int dpci_set_rx_queue(struct fsl_mc_io *mc_io,
 		      uint32_t cmd_flags,
 		      uint16_t token,
@@ -477,6 +478,7 @@ int dpci_get_api_version(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(dpci_set_opr)
 int dpci_set_opr(struct fsl_mc_io *mc_io,
 		 uint32_t cmd_flags,
 		 uint16_t token,
@@ -515,6 +517,7 @@ int dpci_set_opr(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(dpci_get_opr)
 int dpci_get_opr(struct fsl_mc_io *mc_io,
 		 uint32_t cmd_flags,
 		 uint16_t token,

@@ -294,6 +294,7 @@ bpf_load_elf(const struct rte_bpf_prm *prm, int32_t fd, const char *section)
 	return bpf;
 }
 
+RTE_EXPORT_SYMBOL(rte_bpf_elf_load)
 struct rte_bpf *
 rte_bpf_elf_load(const struct rte_bpf_prm *prm, const char *fname,
 	const char *sname)
