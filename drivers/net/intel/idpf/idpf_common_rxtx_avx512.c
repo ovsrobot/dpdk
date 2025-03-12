@@ -996,28 +996,28 @@ idpf_dp_splitq_recv_pkts_avx512(void *rx_queue, struct rte_mbuf **rx_pkts,
 }
 
 static __rte_always_inline int
-idpf_tx_singleq_free_bufs_avx512(struct idpf_tx_queue *txq)
+idpf_tx_singleq_free_bufs_avx512(struct ci_tx_queue *txq)
 {
 	struct idpf_tx_vec_entry *txep;
 	uint32_t n;
 	uint32_t i;
 	int nb_free = 0;
 	struct rte_mbuf *m;
-	struct rte_mbuf **free = alloca(sizeof(struct rte_mbuf *) * txq->rs_thresh);
+	struct rte_mbuf **free = alloca(sizeof(struct rte_mbuf *) * txq->tx_rs_thresh);
 
 	/* check DD bits on threshold descriptor */
-	if ((txq->tx_ring[txq->next_dd].qw1 &
+	if ((txq->idpf_tx_ring[txq->tx_next_dd].qw1 &
 			rte_cpu_to_le_64(IDPF_TXD_QW1_DTYPE_M)) !=
 			rte_cpu_to_le_64(IDPF_TX_DESC_DTYPE_DESC_DONE))
 		return 0;
 
-	n = txq->rs_thresh;
+	n = txq->tx_rs_thresh;
 
 	 /* first buffer to free from S/W ring is at index
 	  * tx_next_dd - (tx_rs_thresh-1)
 	  */
 	txep = (void *)txq->sw_ring;
-	txep += txq->next_dd - (n - 1);
+	txep += txq->tx_next_dd - (n - 1);
 
 	if (txq->offloads & IDPF_TX_OFFLOAD_MBUF_FAST_FREE && (n & 31) == 0) {
 		struct rte_mempool *mp = txep[0].mbuf->pool;
@@ -1103,12 +1103,12 @@ normal:
 
 done:
 	/* buffers were freed, update counters */
-	txq->nb_free = (uint16_t)(txq->nb_free + txq->rs_thresh);
-	txq->next_dd = (uint16_t)(txq->next_dd + txq->rs_thresh);
-	if (txq->next_dd >= txq->nb_tx_desc)
-		txq->next_dd = (uint16_t)(txq->rs_thresh - 1);
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free + txq->tx_rs_thresh);
+	txq->tx_next_dd = (uint16_t)(txq->tx_next_dd + txq->tx_rs_thresh);
+	if (txq->tx_next_dd >= txq->nb_tx_desc)
+		txq->tx_next_dd = (uint16_t)(txq->tx_rs_thresh - 1);
 
-	return txq->rs_thresh;
+	return txq->tx_rs_thresh;
 }
 
 static __rte_always_inline void
@@ -1193,7 +1193,7 @@ static __rte_always_inline uint16_t
 idpf_singleq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 					 uint16_t nb_pkts)
 {
-	struct idpf_tx_queue *txq = tx_queue;
+	struct ci_tx_queue *txq = tx_queue;
 	volatile struct idpf_base_tx_desc *txdp;
 	struct idpf_tx_vec_entry *txep;
 	uint16_t n, nb_commit, tx_id;
@@ -1201,22 +1201,22 @@ idpf_singleq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pk
 	uint64_t rs = IDPF_TX_DESC_CMD_RS | flags;
 
 	/* cross rx_thresh boundary is not allowed */
-	nb_pkts = RTE_MIN(nb_pkts, txq->rs_thresh);
+	nb_pkts = RTE_MIN(nb_pkts, txq->tx_rs_thresh);
 
-	if (txq->nb_free < txq->free_thresh)
+	if (txq->nb_tx_free < txq->tx_free_thresh)
 		idpf_tx_singleq_free_bufs_avx512(txq);
 
-	nb_pkts = (uint16_t)RTE_MIN(txq->nb_free, nb_pkts);
+	nb_pkts = (uint16_t)RTE_MIN(txq->nb_tx_free, nb_pkts);
 	nb_commit = nb_pkts;
 	if (unlikely(nb_pkts == 0))
 		return 0;
 
 	tx_id = txq->tx_tail;
-	txdp = &txq->tx_ring[tx_id];
+	txdp = &txq->idpf_tx_ring[tx_id];
 	txep = (void *)txq->sw_ring;
 	txep += tx_id;
 
-	txq->nb_free = (uint16_t)(txq->nb_free - nb_pkts);
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free - nb_pkts);
 
 	n = (uint16_t)(txq->nb_tx_desc - tx_id);
 	if (nb_commit >= n) {
@@ -1231,10 +1231,10 @@ idpf_singleq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pk
 		nb_commit = (uint16_t)(nb_commit - n);
 
 		tx_id = 0;
-		txq->next_rs = (uint16_t)(txq->rs_thresh - 1);
+		txq->tx_next_rs = (uint16_t)(txq->tx_rs_thresh - 1);
 
 		/* avoid reach the end of ring */
-		txdp = &txq->tx_ring[tx_id];
+		txdp = &txq->idpf_tx_ring[tx_id];
 		txep = (void *)txq->sw_ring;
 		txep += tx_id;
 	}
@@ -1244,12 +1244,12 @@ idpf_singleq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pk
 	idpf_singleq_vtx(txdp, tx_pkts, nb_commit, flags);
 
 	tx_id = (uint16_t)(tx_id + nb_commit);
-	if (tx_id > txq->next_rs) {
-		txq->tx_ring[txq->next_rs].qw1 |=
+	if (tx_id > txq->tx_next_rs) {
+		txq->idpf_tx_ring[txq->tx_next_rs].qw1 |=
 			rte_cpu_to_le_64(((uint64_t)IDPF_TX_DESC_CMD_RS) <<
 					 IDPF_TXD_QW1_CMD_S);
-		txq->next_rs =
-			(uint16_t)(txq->next_rs + txq->rs_thresh);
+		txq->tx_next_rs =
+			(uint16_t)(txq->tx_next_rs + txq->tx_rs_thresh);
 	}
 
 	txq->tx_tail = tx_id;
@@ -1264,12 +1264,12 @@ idpf_singleq_xmit_pkts_vec_avx512_cmn(void *tx_queue, struct rte_mbuf **tx_pkts,
 			      uint16_t nb_pkts)
 {
 	uint16_t nb_tx = 0;
-	struct idpf_tx_queue *txq = tx_queue;
+	struct ci_tx_queue *txq = tx_queue;
 
 	while (nb_pkts) {
 		uint16_t ret, num;
 
-		num = (uint16_t)RTE_MIN(nb_pkts, txq->rs_thresh);
+		num = (uint16_t)RTE_MIN(nb_pkts, txq->tx_rs_thresh);
 		ret = idpf_singleq_xmit_fixed_burst_vec_avx512(tx_queue, &tx_pkts[nb_tx],
 						       num);
 		nb_tx += ret;
@@ -1289,10 +1289,10 @@ idpf_dp_singleq_xmit_pkts_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 }
 
 static __rte_always_inline void
-idpf_splitq_scan_cq_ring(struct idpf_tx_queue *cq)
+idpf_splitq_scan_cq_ring(struct ci_tx_queue *cq)
 {
 	struct idpf_splitq_tx_compl_desc *compl_ring;
-	struct idpf_tx_queue *txq;
+	struct ci_tx_queue *txq;
 	uint16_t genid, txq_qid, cq_qid, i;
 	uint8_t ctype;
 
@@ -1321,22 +1321,22 @@ idpf_splitq_scan_cq_ring(struct idpf_tx_queue *cq)
 }
 
 static __rte_always_inline int
-idpf_tx_splitq_free_bufs_avx512(struct idpf_tx_queue *txq)
+idpf_tx_splitq_free_bufs_avx512(struct ci_tx_queue *txq)
 {
 	struct idpf_tx_vec_entry *txep;
 	uint32_t n;
 	uint32_t i;
 	int nb_free = 0;
 	struct rte_mbuf *m;
-	struct rte_mbuf **free = alloca(sizeof(struct rte_mbuf *) * txq->rs_thresh);
+	struct rte_mbuf **free = alloca(sizeof(struct rte_mbuf *) * txq->tx_rs_thresh);
 
-	n = txq->rs_thresh;
+	n = txq->tx_rs_thresh;
 
 	 /* first buffer to free from S/W ring is at index
 	  * tx_next_dd - (tx_rs_thresh-1)
 	  */
 	txep = (void *)txq->sw_ring;
-	txep += txq->next_dd - (n - 1);
+	txep += txq->tx_next_dd - (n - 1);
 
 	if (txq->offloads & IDPF_TX_OFFLOAD_MBUF_FAST_FREE && (n & 31) == 0) {
 		struct rte_mempool *mp = txep[0].mbuf->pool;
@@ -1415,13 +1415,13 @@ normal:
 
 done:
 	/* buffers were freed, update counters */
-	txq->nb_free = (uint16_t)(txq->nb_free + txq->rs_thresh);
-	txq->next_dd = (uint16_t)(txq->next_dd + txq->rs_thresh);
-	if (txq->next_dd >= txq->nb_tx_desc)
-		txq->next_dd = (uint16_t)(txq->rs_thresh - 1);
-	txq->ctype[IDPF_TXD_COMPLT_RS] -= txq->rs_thresh;
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free + txq->tx_rs_thresh);
+	txq->tx_next_dd = (uint16_t)(txq->tx_next_dd + txq->tx_rs_thresh);
+	if (txq->tx_next_dd >= txq->nb_tx_desc)
+		txq->tx_next_dd = (uint16_t)(txq->tx_rs_thresh - 1);
+	txq->ctype[IDPF_TXD_COMPLT_RS] -= txq->tx_rs_thresh;
 
-	return txq->rs_thresh;
+	return txq->tx_rs_thresh;
 }
 
 #define IDPF_TXD_FLEX_QW1_TX_BUF_SZ_S	48
@@ -1496,7 +1496,7 @@ static __rte_always_inline uint16_t
 idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 					uint16_t nb_pkts)
 {
-	struct idpf_tx_queue *txq = (struct idpf_tx_queue *)tx_queue;
+	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 	volatile struct idpf_flex_tx_sched_desc *txdp;
 	struct idpf_tx_vec_entry *txep;
 	uint16_t n, nb_commit, tx_id;
@@ -1506,9 +1506,9 @@ idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkt
 	tx_id = txq->tx_tail;
 
 	/* cross rx_thresh boundary is not allowed */
-	nb_pkts = RTE_MIN(nb_pkts, txq->rs_thresh);
+	nb_pkts = RTE_MIN(nb_pkts, txq->tx_rs_thresh);
 
-	nb_commit = nb_pkts = (uint16_t)RTE_MIN(txq->nb_free, nb_pkts);
+	nb_commit = nb_pkts = (uint16_t)RTE_MIN(txq->nb_tx_free, nb_pkts);
 	if (unlikely(nb_pkts == 0))
 		return 0;
 
@@ -1517,7 +1517,7 @@ idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkt
 	txep = (void *)txq->sw_ring;
 	txep += tx_id;
 
-	txq->nb_free = (uint16_t)(txq->nb_free - nb_pkts);
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free - nb_pkts);
 
 	n = (uint16_t)(txq->nb_tx_desc - tx_id);
 	if (nb_commit >= n) {
@@ -1532,7 +1532,7 @@ idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkt
 		nb_commit = (uint16_t)(nb_commit - n);
 
 		tx_id = 0;
-		txq->next_rs = (uint16_t)(txq->rs_thresh - 1);
+		txq->tx_next_rs = (uint16_t)(txq->tx_rs_thresh - 1);
 
 		/* avoid reach the end of ring */
 		txdp = &txq->desc_ring[tx_id];
@@ -1545,9 +1545,9 @@ idpf_splitq_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkt
 	idpf_splitq_vtx(txdp, tx_pkts, nb_commit, cmd_dtype);
 
 	tx_id = (uint16_t)(tx_id + nb_commit);
-	if (tx_id > txq->next_rs)
-		txq->next_rs =
-			(uint16_t)(txq->next_rs + txq->rs_thresh);
+	if (tx_id > txq->tx_next_rs)
+		txq->tx_next_rs =
+			(uint16_t)(txq->tx_next_rs + txq->tx_rs_thresh);
 
 	txq->tx_tail = tx_id;
 
@@ -1560,7 +1560,7 @@ static __rte_always_inline uint16_t
 idpf_splitq_xmit_pkts_vec_avx512_cmn(void *tx_queue, struct rte_mbuf **tx_pkts,
 				     uint16_t nb_pkts)
 {
-	struct idpf_tx_queue *txq = (struct idpf_tx_queue *)tx_queue;
+	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 	uint16_t nb_tx = 0;
 
 	while (nb_pkts) {
@@ -1568,10 +1568,10 @@ idpf_splitq_xmit_pkts_vec_avx512_cmn(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		idpf_splitq_scan_cq_ring(txq->complq);
 
-		if (txq->ctype[IDPF_TXD_COMPLT_RS] > txq->free_thresh)
+		if (txq->ctype[IDPF_TXD_COMPLT_RS] > txq->tx_free_thresh)
 			idpf_tx_splitq_free_bufs_avx512(txq);
 
-		num = (uint16_t)RTE_MIN(nb_pkts, txq->rs_thresh);
+		num = (uint16_t)RTE_MIN(nb_pkts, txq->tx_rs_thresh);
 		ret = idpf_splitq_xmit_fixed_burst_vec_avx512(tx_queue,
 							      &tx_pkts[nb_tx],
 							      num);
@@ -1592,16 +1592,16 @@ idpf_dp_splitq_xmit_pkts_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 }
 
 static inline void
-idpf_tx_release_mbufs_avx512(struct idpf_tx_queue *txq)
+idpf_tx_release_mbufs_avx512(struct ci_tx_queue *txq)
 {
 	unsigned int i;
 	const uint16_t max_desc = (uint16_t)(txq->nb_tx_desc - 1);
 	struct idpf_tx_vec_entry *swr = (void *)txq->sw_ring;
 
-	if (txq->sw_ring == NULL || txq->nb_free == max_desc)
+	if (txq->sw_ring == NULL || txq->nb_tx_free == max_desc)
 		return;
 
-	i = txq->next_dd - txq->rs_thresh + 1;
+	i = txq->tx_next_dd - txq->tx_rs_thresh + 1;
 	if (txq->tx_tail < i) {
 		for (; i < txq->nb_tx_desc; i++) {
 			rte_pktmbuf_free_seg(swr[i].mbuf);
@@ -1620,11 +1620,11 @@ static const struct idpf_txq_ops avx512_tx_vec_ops = {
 };
 
 int __rte_cold
-idpf_qc_tx_vec_avx512_setup(struct idpf_tx_queue *txq)
+idpf_qc_tx_vec_avx512_setup(struct ci_tx_queue *txq)
 {
 	if (!txq)
 		return 0;
 
-	txq->ops = &avx512_tx_vec_ops;
+	txq->idpf_ops = &avx512_tx_vec_ops;
 	return 0;
 }

@@ -1074,7 +1074,7 @@ int idpf_vc_rxq_config_by_info(struct idpf_vport *vport, struct virtchnl2_rxq_in
 }
 
 int
-idpf_vc_txq_config(struct idpf_vport *vport, struct idpf_tx_queue *txq)
+idpf_vc_txq_config(struct idpf_vport *vport, struct ci_tx_queue *txq)
 {
 	struct idpf_adapter *adapter = vport->adapter;
 	struct virtchnl2_config_tx_queues *vc_txqs = NULL;
@@ -1101,7 +1101,7 @@ idpf_vc_txq_config(struct idpf_vport *vport, struct idpf_tx_queue *txq)
 
 	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
 		txq_info = &vc_txqs->qinfo[0];
-		txq_info->dma_ring_addr = txq->tx_ring_phys_addr;
+		txq_info->dma_ring_addr = txq->tx_ring_dma;
 		txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX;
 		txq_info->queue_id = txq->queue_id;
 		txq_info->model = VIRTCHNL2_QUEUE_MODEL_SINGLE;
@@ -1110,7 +1110,7 @@ idpf_vc_txq_config(struct idpf_vport *vport, struct idpf_tx_queue *txq)
 	} else {
 		/* txq info */
 		txq_info = &vc_txqs->qinfo[0];
-		txq_info->dma_ring_addr = txq->tx_ring_phys_addr;
+		txq_info->dma_ring_addr = txq->tx_ring_dma;
 		txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX;
 		txq_info->queue_id = txq->queue_id;
 		txq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
@@ -1121,7 +1121,7 @@ idpf_vc_txq_config(struct idpf_vport *vport, struct idpf_tx_queue *txq)
 
 		/* tx completion queue info */
 		txq_info = &vc_txqs->qinfo[1];
-		txq_info->dma_ring_addr = txq->complq->tx_ring_phys_addr;
+		txq_info->dma_ring_addr = txq->complq->tx_ring_dma;
 		txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
 		txq_info->queue_id = txq->complq->queue_id;
 		txq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;

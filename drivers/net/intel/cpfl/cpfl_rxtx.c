@@ -11,7 +11,7 @@
 #include "cpfl_rxtx_vec_common.h"
 
 static inline void
-cpfl_tx_hairpin_descq_reset(struct idpf_tx_queue *txq)
+cpfl_tx_hairpin_descq_reset(struct ci_tx_queue *txq)
 {
 	uint32_t i, size;
 
@@ -26,7 +26,7 @@ cpfl_tx_hairpin_descq_reset(struct idpf_tx_queue *txq)
 }
 
 static inline void
-cpfl_tx_hairpin_complq_reset(struct idpf_tx_queue *cq)
+cpfl_tx_hairpin_complq_reset(struct ci_tx_queue *cq)
 {
 	uint32_t i, size;
 
@@ -249,7 +249,7 @@ cpfl_rx_split_bufq_setup(struct rte_eth_dev *dev, struct idpf_rx_queue *rxq,
 	idpf_qc_split_rx_bufq_reset(bufq);
 	bufq->qrx_tail = hw->hw_addr + (vport->chunks_info.rx_buf_qtail_start +
 			 queue_idx * vport->chunks_info.rx_buf_qtail_spacing);
-	bufq->ops = &def_rxq_ops;
+	bufq->idpf_ops = &def_rxq_ops;
 	bufq->q_set = true;
 
 	if (bufq_id == IDPF_RX_SPLIT_BUFQ1_ID) {
@@ -310,7 +310,7 @@ cpfl_rx_queue_release(void *rxq)
 	}
 
 	/* Single queue */
-	q->ops->release_mbufs(q);
+	q->idpf_ops->release_mbufs(q);
 	rte_free(q->sw_ring);
 	rte_memzone_free(q->mz);
 	rte_free(cpfl_rxq);
@@ -320,7 +320,7 @@ static void
 cpfl_tx_queue_release(void *txq)
 {
 	struct cpfl_tx_queue *cpfl_txq = txq;
-	struct idpf_tx_queue *q = NULL;
+	struct ci_tx_queue *q = NULL;
 
 	if (cpfl_txq == NULL)
 		return;
@@ -332,7 +332,7 @@ cpfl_tx_queue_release(void *txq)
 		rte_free(q->complq);
 	}
 
-	q->ops->release_mbufs(q);
+	q->idpf_ops->release_mbufs(q);
 	rte_free(q->sw_ring);
 	rte_memzone_free(q->mz);
 	rte_free(cpfl_txq);
@@ -426,7 +426,7 @@ cpfl_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		idpf_qc_single_rx_queue_reset(rxq);
 		rxq->qrx_tail = hw->hw_addr + (vport->chunks_info.rx_qtail_start +
 				queue_idx * vport->chunks_info.rx_qtail_spacing);
-		rxq->ops = &def_rxq_ops;
+		rxq->idpf_ops = &def_rxq_ops;
 	} else {
 		idpf_qc_split_rx_descq_reset(rxq);
 
@@ -468,18 +468,18 @@ err_rxq_alloc:
 }
 
 static int
-cpfl_tx_complq_setup(struct rte_eth_dev *dev, struct idpf_tx_queue *txq,
+cpfl_tx_complq_setup(struct rte_eth_dev *dev, struct ci_tx_queue *txq,
 		     uint16_t queue_idx, uint16_t nb_desc,
 		     unsigned int socket_id)
 {
 	struct cpfl_vport *cpfl_vport = dev->data->dev_private;
 	struct idpf_vport *vport = &cpfl_vport->base;
 	const struct rte_memzone *mz;
-	struct idpf_tx_queue *cq;
+	struct ci_tx_queue *cq;
 	int ret;
 
 	cq = rte_zmalloc_socket("cpfl splitq cq",
-				sizeof(struct idpf_tx_queue),
+				sizeof(struct ci_tx_queue),
 				RTE_CACHE_LINE_SIZE,
 				socket_id);
 	if (cq == NULL) {
@@ -501,7 +501,7 @@ cpfl_tx_complq_setup(struct rte_eth_dev *dev, struct idpf_tx_queue *txq,
 		ret = -ENOMEM;
 		goto err_mz_reserve;
 	}
-	cq->tx_ring_phys_addr = mz->iova;
+	cq->tx_ring_dma = mz->iova;
 	cq->compl_ring = mz->addr;
 	cq->mz = mz;
 	idpf_qc_split_tx_complq_reset(cq);
@@ -528,7 +528,7 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	struct cpfl_tx_queue *cpfl_txq;
 	struct idpf_hw *hw = &base->hw;
 	const struct rte_memzone *mz;
-	struct idpf_tx_queue *txq;
+	struct ci_tx_queue *txq;
 	uint64_t offloads;
 	uint16_t len;
 	bool is_splitq;
@@ -565,8 +565,8 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	is_splitq = !!(vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT);
 
 	txq->nb_tx_desc = nb_desc;
-	txq->rs_thresh = tx_rs_thresh;
-	txq->free_thresh = tx_free_thresh;
+	txq->tx_rs_thresh = tx_rs_thresh;
+	txq->tx_free_thresh = tx_free_thresh;
 	txq->queue_id = vport->chunks_info.tx_start_qid + queue_idx;
 	txq->port_id = dev->data->port_id;
 	txq->offloads = cpfl_tx_offload_convert(offloads);
@@ -585,11 +585,11 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		ret = -ENOMEM;
 		goto err_mz_reserve;
 	}
-	txq->tx_ring_phys_addr = mz->iova;
+	txq->tx_ring_dma = mz->iova;
 	txq->mz = mz;
 
 	txq->sw_ring = rte_zmalloc_socket("cpfl tx sw ring",
-					  sizeof(struct idpf_tx_entry) * len,
+					  sizeof(struct ci_tx_entry) * len,
 					  RTE_CACHE_LINE_SIZE, socket_id);
 	if (txq->sw_ring == NULL) {
 		PMD_INIT_LOG(ERR, "Failed to allocate memory for SW TX ring");
@@ -598,7 +598,7 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	}
 
 	if (!is_splitq) {
-		txq->tx_ring = mz->addr;
+		txq->idpf_tx_ring = mz->addr;
 		idpf_qc_single_tx_queue_reset(txq);
 	} else {
 		txq->desc_ring = mz->addr;
@@ -613,7 +613,7 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 
 	txq->qtx_tail = hw->hw_addr + (vport->chunks_info.tx_qtail_start +
 			queue_idx * vport->chunks_info.tx_qtail_spacing);
-	txq->ops = &def_txq_ops;
+	txq->idpf_ops = &def_txq_ops;
 	cpfl_vport->nb_data_txq++;
 	txq->q_set = true;
 	dev->data->tx_queues[queue_idx] = cpfl_txq;
@@ -663,7 +663,7 @@ cpfl_rx_hairpin_bufq_setup(struct rte_eth_dev *dev, struct idpf_rx_queue *bufq,
 	bufq->rx_buf_len = CPFL_P2P_MBUF_SIZE - RTE_PKTMBUF_HEADROOM;
 
 	bufq->q_set = true;
-	bufq->ops = &def_rxq_ops;
+	bufq->idpf_ops = &def_rxq_ops;
 
 	return 0;
 }
@@ -789,7 +789,7 @@ cpfl_tx_hairpin_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	struct cpfl_txq_hairpin_info *hairpin_info;
 	struct idpf_hw *hw = &adapter_base->hw;
 	struct cpfl_tx_queue *cpfl_txq;
-	struct idpf_tx_queue *txq, *cq;
+	struct ci_tx_queue *txq, *cq;
 	const struct rte_memzone *mz;
 	uint32_t ring_size;
 	uint16_t peer_port, peer_q;
@@ -860,7 +860,7 @@ cpfl_tx_hairpin_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		goto err_txq_mz_rsv;
 	}
 
-	txq->tx_ring_phys_addr = mz->iova;
+	txq->tx_ring_dma = mz->iova;
 	txq->desc_ring = mz->addr;
 	txq->mz = mz;
 
@@ -868,11 +868,11 @@ cpfl_tx_hairpin_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	txq->qtx_tail = hw->hw_addr +
 		cpfl_hw_qtail_get(cpfl_vport->p2p_q_chunks_info->tx_qtail_start,
 				  logic_qid, cpfl_vport->p2p_q_chunks_info->tx_qtail_spacing);
-	txq->ops = &def_txq_ops;
+	txq->idpf_ops = &def_txq_ops;
 
 	if (cpfl_vport->p2p_tx_complq == NULL) {
 		cq = rte_zmalloc_socket("cpfl hairpin cq",
-					sizeof(struct idpf_tx_queue),
+					sizeof(struct ci_tx_queue),
 					RTE_CACHE_LINE_SIZE,
 					dev->device->numa_node);
 		if (!cq) {
@@ -898,7 +898,7 @@ cpfl_tx_hairpin_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 			ret = -ENOMEM;
 			goto err_cq_mz_rsv;
 		}
-		cq->tx_ring_phys_addr = mz->iova;
+		cq->tx_ring_dma = mz->iova;
 		cq->compl_ring = mz->addr;
 		cq->mz = mz;
 
@@ -974,12 +974,12 @@ cpfl_hairpin_rxq_config(struct idpf_vport *vport, struct cpfl_rx_queue *cpfl_rxq
 int
 cpfl_hairpin_tx_complq_config(struct cpfl_vport *cpfl_vport)
 {
-	struct idpf_tx_queue *tx_complq = cpfl_vport->p2p_tx_complq;
+	struct ci_tx_queue *tx_complq = cpfl_vport->p2p_tx_complq;
 	struct virtchnl2_txq_info txq_info;
 
 	memset(&txq_info, 0, sizeof(txq_info));
 
-	txq_info.dma_ring_addr = tx_complq->tx_ring_phys_addr;
+	txq_info.dma_ring_addr = tx_complq->tx_ring_dma;
 	txq_info.type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
 	txq_info.queue_id = tx_complq->queue_id;
 	txq_info.ring_len = tx_complq->nb_tx_desc;
@@ -993,12 +993,12 @@ cpfl_hairpin_tx_complq_config(struct cpfl_vport *cpfl_vport)
 int
 cpfl_hairpin_txq_config(struct idpf_vport *vport, struct cpfl_tx_queue *cpfl_txq)
 {
-	struct idpf_tx_queue *txq = &cpfl_txq->base;
+	struct ci_tx_queue *txq = &cpfl_txq->base;
 	struct virtchnl2_txq_info txq_info;
 
 	memset(&txq_info, 0, sizeof(txq_info));
 
-	txq_info.dma_ring_addr = txq->tx_ring_phys_addr;
+	txq_info.dma_ring_addr = txq->tx_ring_dma;
 	txq_info.type = VIRTCHNL2_QUEUE_TYPE_TX;
 	txq_info.queue_id = txq->queue_id;
 	txq_info.ring_len = txq->nb_tx_desc;
@@ -1296,12 +1296,12 @@ cpfl_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	rxq = &cpfl_rxq->base;
 	rxq->q_started = false;
 	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
-		rxq->ops->release_mbufs(rxq);
+		rxq->idpf_ops->release_mbufs(rxq);
 		idpf_qc_single_rx_queue_reset(rxq);
 	} else {
-		rxq->bufq1->ops->release_mbufs(rxq->bufq1);
+		rxq->bufq1->idpf_ops->release_mbufs(rxq->bufq1);
 		if (rxq->bufq2)
-			rxq->bufq2->ops->release_mbufs(rxq->bufq2);
+			rxq->bufq2->idpf_ops->release_mbufs(rxq->bufq2);
 		if (cpfl_rxq->hairpin_info.hairpin_q) {
 			cpfl_rx_hairpin_descq_reset(rxq);
 			cpfl_rx_hairpin_bufq_reset(rxq->bufq1);
@@ -1321,7 +1321,7 @@ cpfl_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	struct cpfl_vport *cpfl_vport = dev->data->dev_private;
 	struct idpf_vport *vport = &cpfl_vport->base;
 	struct cpfl_tx_queue *cpfl_txq;
-	struct idpf_tx_queue *txq;
+	struct ci_tx_queue *txq;
 	int err;
 
 	if (tx_queue_id >= dev->data->nb_tx_queues)
@@ -1344,7 +1344,7 @@ cpfl_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 
 	txq = &cpfl_txq->base;
 	txq->q_started = false;
-	txq->ops->release_mbufs(txq);
+	txq->idpf_ops->release_mbufs(txq);
 	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
 		idpf_qc_single_tx_queue_reset(txq);
 	} else {

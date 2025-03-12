@@ -36,6 +36,7 @@ struct ci_tx_queue {
 		volatile struct iavf_tx_desc *iavf_tx_ring;
 		volatile struct ice_tx_desc *ice_tx_ring;
 		volatile union ixgbe_adv_tx_desc *ixgbe_tx_ring;
+		volatile struct idpf_base_tx_desc *idpf_tx_ring;
 	};
 	volatile uint8_t *qtx_tail;               /* register address of tail */
 	union {
@@ -51,7 +52,7 @@ struct ci_tx_queue {
 	uint16_t nb_tx_free;
 	/* Start freeing TX buffers if there are less free descriptors than
 	 * this value.
-	 */
+	*/
 	uint16_t tx_free_thresh;
 	/* Number of TX descriptors to use before RS bit is set. */
 	uint16_t tx_rs_thresh;
@@ -97,6 +98,24 @@ struct ci_tx_queue {
 			uint8_t hthresh;   /**< Host threshold register. */
 			uint8_t wthresh;   /**< Write-back threshold reg. */
 			uint8_t using_ipsec;  /**< indicates that IPsec TX feature is in use */
+		};
+		struct { /* idpf specific values */
+			volatile union {
+				struct idpf_flex_tx_sched_desc *desc_ring;
+				struct idpf_splitq_tx_compl_desc *compl_ring;
+			};
+			bool q_started;
+			const struct idpf_txq_ops *idpf_ops;
+			/* only valid for split queue mode */
+			uint16_t sw_nb_desc;
+			uint16_t sw_tail;
+			void **txqs;
+			uint32_t tx_start_qid;
+			uint8_t expected_gen_id;
+			struct ci_tx_queue *complq;
+#define IDPF_TX_CTYPE_NUM	8
+			uint16_t ctype[IDPF_TX_CTYPE_NUM];
+
 		};
 	};
 };
