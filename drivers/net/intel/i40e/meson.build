@@ -41,7 +41,7 @@ includes += include_directories('base')
 if arch_subdir == 'x86'
     sources += files('i40e_rxtx_vec_sse.c')
 
-    if is_windows and cc.get_id() != 'clang'
+    if is_windows and cc.get_id() == 'gcc'
         cflags += ['-fno-asynchronous-unwind-tables']
     endif
 

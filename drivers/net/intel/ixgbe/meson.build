@@ -27,7 +27,7 @@ deps += ['hash', 'security']
 if arch_subdir == 'x86'
     sources += files('ixgbe_rxtx_vec_sse.c')
     sources += files('ixgbe_recycle_mbufs_vec_common.c')
-    if is_windows and cc.get_id() != 'clang'
+    if is_windows and cc.get_id() == 'gcc'
         cflags += ['-fno-asynchronous-unwind-tables']
     endif
 elif arch_subdir == 'arm'

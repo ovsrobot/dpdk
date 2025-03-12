@@ -289,7 +289,11 @@ foreach subpath:subdirs
                         output: '@0@_exports.def'.format(lib_name))
                 lk_deps += [def_file]
 
-                lk_args = ['-Wl,/def:' + def_file.full_path()]
+                if is_ms_compiler
+                    lk_args = ['/def:' + def_file.full_path()]
+                else
+                    lk_args = ['-Wl,/def:' + def_file.full_path()]
+                endif
             else
                 mingw_map = custom_target(lib_name + '_mingw',
                         command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
