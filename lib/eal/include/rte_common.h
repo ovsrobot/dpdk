@@ -14,9 +14,11 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdalign.h>
 
+#include <rte_compat.h>
 #include <rte_config.h>
 
 /* OS specific include */
@@ -886,6 +888,35 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
  */
 uint64_t
 rte_str_to_size(const char *str);
+
+/**
+ * Converts the uint64_t value provided to a human-readable string.
+ * It null-terminates the string, truncating the data if needed.
+ *
+ * Sample outputs with "use_iec" disabled and enabled:
+ * 0 : "0 ", "0 "
+ * 700 : "700 ", "700 "
+ * 1000 : "1.00 k", "1000 "
+ * 1024 : "1.02 k", "1.00 ki"
+ * 21474836480 : "21.5 G", "20.0 Gi"
+ * 109951162777600 : "110 T", "100 Ti"
+ *
+ * @param buf
+ *     Buffer to write the string to.
+ * @param buf_size
+ *     Size of the buffer.
+ * @param count
+ *     Number to convert.
+ * @param use_iec
+ *     If true, use IEC units (1024-based), otherwise use SI units (1000-based).
+ * @return
+ *     Number of characters written (not including the null-terminator),
+ *     or that would have been required when the buffer is too small.
+ */
+__rte_experimental
+int
+rte_size_to_str(char *buf, int buf_size,
+		uint64_t count, bool use_iec);
 
 /**
  * Function to terminate the application immediately, printing an error
