@@ -25,6 +25,8 @@
 #define NUM_TEST 3
 unsigned int core_cnt[NUM_TEST] = {2, 4, 8};
 
+#define OFFSET_STR_LEN 16
+
 unsigned int worker_core_ids[RTE_MAX_LCORE];
 struct perf {
 	uint32_t single_read;
@@ -57,10 +59,13 @@ static RTE_ATOMIC(uint64_t) gwrites;
 static int
 test_hash_readwrite_worker(__rte_unused void *arg)
 {
+	char offset_start[OFFSET_STR_LEN];
+	char offset_end[OFFSET_STR_LEN];
 	uint64_t i, offset;
 	uint32_t lcore_id = rte_lcore_id();
 	uint64_t begin, cycles;
 	int *ret;
+	const bool use_iec = true;
 
 	ret = rte_malloc(NULL, sizeof(int) *
 				tbl_rw_test_param.num_insert, 0);
@@ -70,9 +75,13 @@ test_hash_readwrite_worker(__rte_unused void *arg)
 	}
 	offset = tbl_rw_test_param.num_insert * i;
 
-	printf("Core #%d inserting and reading %d: %'"PRId64" - %'"PRId64"\n",
+	rte_size_to_str(offset_start, sizeof(offset_start), offset, use_iec);
+	rte_size_to_str(offset_end, sizeof(offset_end),
+			offset + tbl_rw_test_param.num_insert - 1, use_iec);
+
+	printf("Core #%u inserting and reading %u: %s - %s\n",
 	       lcore_id, tbl_rw_test_param.num_insert,
-	       offset, offset + tbl_rw_test_param.num_insert - 1);
+	       offset_start, offset_end);
 
 	begin = rte_rdtsc_precise();
 
