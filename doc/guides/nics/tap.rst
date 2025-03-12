@@ -166,10 +166,8 @@ The port attached in a secondary process will give access to the
 statistics and the queues.
 Therefore it can be used for monitoring or Rx/Tx processing.
 
-The IPC synchronization of Rx/Tx queues is currently limited:
-
-  - Maximum 8 queues shared
-  - Synchronized on probing, but not on later port update
+The IPC synchronization of Rx/Tx queues is done when when
+port is probed.
 
 
 RSS specifics
