@@ -14,6 +14,7 @@
 #include <stdbool.h>
 
 #include <rte_common.h>
+#include <rte_math.h>
 #include <rte_memcpy.h>
 #include <rte_malloc.h>
 #include <rte_memzone.h>
@@ -127,6 +128,10 @@ writeq(uint64_t value, volatile void *addr)
 #define rd32(a, reg)        readl((a)->hw_addr + (reg))
 #define wr64(a, reg, value) writeq((value), (a)->hw_addr + (reg))
 #define rd64(a, reg)        readq((a)->hw_addr + (reg))
+
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __builtin_add_overflow rte_add_overflow
+#endif
 
 #endif /* __INTEL_NET_BASE_OSDEP__ */
 
