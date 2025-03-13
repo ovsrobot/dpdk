@@ -691,33 +691,6 @@ eal_parse_service_coremask(const char *coremask)
 }
 
 static int
-update_lcore_config(int *cores)
-{
-	struct rte_config *cfg = rte_eal_get_configuration();
-	unsigned int count = 0;
-	unsigned int i;
-	int ret = 0;
-
-	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		if (cores[i] != -1) {
-			if (eal_cpu_detected(i) == 0) {
-				EAL_LOG(ERR, "lcore %u unavailable", i);
-				ret = -1;
-				continue;
-			}
-			cfg->lcore_role[i] = ROLE_RTE;
-			count++;
-		} else {
-			cfg->lcore_role[i] = ROLE_OFF;
-		}
-		lcore_config[i].core_index = cores[i];
-	}
-	if (!ret)
-		cfg->lcore_count = count;
-	return ret;
-}
-
-static int
 check_core_list(int *lcores, unsigned int count)
 {
 	char lcorestr[RTE_MAX_LCORE * 10];
@@ -759,7 +732,6 @@ int
 rte_eal_parse_coremask(const char *coremask, int *cores)
 {
 	const char *coremask_orig = coremask;
-	int lcores[RTE_MAX_LCORE];
 	unsigned int count = 0;
 	int i, j, idx;
 	int val;
@@ -803,30 +775,19 @@ rte_eal_parse_coremask(const char *coremask, int *cores)
 						RTE_MAX_LCORE);
 					return -1;
 				}
-				lcores[count++] = idx;
+				cores[count++] = idx;
 			}
 		}
 	}
 	if (count == 0) {
-		EAL_LOG(ERR, "No lcores in coremask: [%s]",
-			coremask_orig);
+		EAL_LOG(ERR, "No lcores in coremask: [%s]", coremask_orig);
 		return -1;
 	}
 
-	if (check_core_list(lcores, count))
+	if (check_core_list(cores, count) != 0)
 		return -1;
 
-	/*
-	 * Now that we've got a list of cores no longer than RTE_MAX_LCORE,
-	 * and no lcore in that list is greater than RTE_MAX_LCORE, populate
-	 * the cores array.
-	 */
-	do {
-		count--;
-		cores[lcores[count]] = count;
-	} while (count != 0);
-
-	return 0;
+	return count;
 }
 
 static int
@@ -911,7 +872,6 @@ static int
 eal_parse_corelist(const char *corelist, int *cores)
 {
 	unsigned int count = 0, i;
-	int lcores[RTE_MAX_LCORE];
 	char *end = NULL;
 	int min, max;
 	int idx;
@@ -949,7 +909,7 @@ eal_parse_corelist(const char *corelist, int *cores)
 
 				/* Check if this idx is already present */
 				for (i = 0; i < count; i++) {
-					if (lcores[i] == idx)
+					if (cores[i] == idx)
 						dup = true;
 				}
 				if (dup)
@@ -959,7 +919,7 @@ eal_parse_corelist(const char *corelist, int *cores)
 						RTE_MAX_LCORE);
 					return -1;
 				}
-				lcores[count++] = idx;
+				cores[count++] = idx;
 			}
 			min = -1;
 		} else
@@ -967,23 +927,15 @@ eal_parse_corelist(const char *corelist, int *cores)
 		corelist = end + 1;
 	} while (*end != '\0');
 
-	if (count == 0)
+	if (count == 0) {
+		EAL_LOG(ERR, "No lcores in corelist");
+		return -1;
+	}
+
+	if (check_core_list(cores, count))
 		return -1;
 
-	if (check_core_list(lcores, count))
-		return -1;
-
-	/*
-	 * Now that we've got a list of cores no longer than RTE_MAX_LCORE,
-	 * and no lcore in that list is greater than RTE_MAX_LCORE, populate
-	 * the cores array.
-	 */
-	do {
-		count--;
-		cores[lcores[count]] = count;
-	} while (count != 0);
-
-	return 0;
+	return count;
 }
 
 /* Changes the lcore id of the main thread */
@@ -1500,75 +1452,6 @@ eal_parse_base_virtaddr(const char *arg)
 	return 0;
 }
 
-/* caller is responsible for freeing the returned string */
-static char *
-available_cores(void)
-{
-	char *str = NULL;
-	int previous;
-	int sequence;
-	char *tmp;
-	int idx;
-
-	/* find the first available cpu */
-	for (idx = 0; idx < RTE_MAX_LCORE; idx++) {
-		if (eal_cpu_detected(idx) == 0)
-			continue;
-		break;
-	}
-	if (idx >= RTE_MAX_LCORE)
-		return NULL;
-
-	/* first sequence */
-	if (asprintf(&str, "%d", idx) < 0)
-		return NULL;
-	previous = idx;
-	sequence = 0;
-
-	for (idx++ ; idx < RTE_MAX_LCORE; idx++) {
-		if (eal_cpu_detected(idx) == 0)
-			continue;
-
-		if (idx == previous + 1) {
-			previous = idx;
-			sequence = 1;
-			continue;
-		}
-
-		/* finish current sequence */
-		if (sequence) {
-			if (asprintf(&tmp, "%s-%d", str, previous) < 0) {
-				free(str);
-				return NULL;
-			}
-			free(str);
-			str = tmp;
-		}
-
-		/* new sequence */
-		if (asprintf(&tmp, "%s,%d", str, idx) < 0) {
-			free(str);
-			return NULL;
-		}
-		free(str);
-		str = tmp;
-		previous = idx;
-		sequence = 0;
-	}
-
-	/* finish last sequence */
-	if (sequence) {
-		if (asprintf(&tmp, "%s-%d", str, previous) < 0) {
-			free(str);
-			return NULL;
-		}
-		free(str);
-		str = tmp;
-	}
-
-	return str;
-}
-
 #define HUGE_UNLINK_NEVER "never"
 
 static int
@@ -1981,43 +1864,43 @@ eal_adjust_config(struct internal_config *internal_cfg)
 		return -1;
 	}
 
-	if (lcore_options.core_mask_opt) {
+
+	if (lcore_options.core_mask_opt || lcore_options.core_list_opt) {
 		int lcore_indexes[RTE_MAX_LCORE];
+		int nb_indexes = lcore_options.core_list_opt ?
+				eal_parse_corelist(lcore_options.core_list_opt, lcore_indexes) :
+				rte_eal_parse_coremask(lcore_options.core_mask_opt, lcore_indexes);
 
-		if (rte_eal_parse_coremask(lcore_options.core_mask_opt, lcore_indexes) < 0) {
-			EAL_LOG(ERR, "invalid coremask syntax");
+		if (nb_indexes < 0)
 			return -1;
-		}
-		if (update_lcore_config(lcore_indexes) < 0) {
-			char *available = available_cores();
 
-			EAL_LOG(ERR,
-				"invalid coremask, please check specified cores are part of %s",
-				available);
-			free(available);
-			return -1;
+		char *core_map_opt = malloc(RTE_MAX_LCORE * 10);
+		size_t core_map_len = 0;
+		for (i = 0; i < nb_indexes; i++) {
+			if (!eal_cpu_detected(lcore_indexes[i])) {
+				EAL_LOG(ERR, "core %d not present", lcore_indexes[i]);
+				return -1;
+			}
+			int n = snprintf(core_map_opt + core_map_len,
+					(RTE_MAX_LCORE * 10) - core_map_len,
+					"%s%d", i == 0 ? "" : ",", lcore_indexes[i]);
+			if (n < 0 || (size_t)n >= (RTE_MAX_LCORE * 10) - core_map_len) {
+				EAL_LOG(ERR, "core map string too long");
+				return -1;
+			}
+			core_map_len += n;
 		}
-	} else if (lcore_options.core_list_opt) {
-		int lcore_indexes[RTE_MAX_LCORE];
+		lcore_options.core_map_opt = core_map_opt;
+		printf("Generated core map: %s\n", lcore_options.core_map_opt);
+	}
 
-		if (eal_parse_corelist(lcore_options.core_list_opt, lcore_indexes) < 0) {
-			EAL_LOG(ERR, "invalid core list syntax");
-			return -1;
-		}
-		if (update_lcore_config(lcore_indexes) < 0) {
-			char *available = available_cores();
-
-			EAL_LOG(ERR,
-				"invalid core list, please check specified cores are part of %s",
-				available);
-			free(available);
-			return -1;
-		}
-	} else if (lcore_options.core_map_opt) {
+	if (lcore_options.core_map_opt) {
 		if (eal_parse_lcores(lcore_options.core_map_opt) < 0) {
 			EAL_LOG(ERR, "invalid parameter for --"	OPT_LCORES);
 			return -1;
 		}
+		if (lcore_options.core_mask_opt || lcore_options.core_list_opt)
+			free(RTE_CAST_PTR(void *,lcore_options.core_map_opt));
 	} else {
 		eal_auto_detect_cores(cfg);
 	}

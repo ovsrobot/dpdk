@@ -922,49 +922,31 @@ dlb2_resource_probe(struct dlb2_hw *hw, const void *probe_args)
 {
 	const struct dlb2_devargs *args = (const struct dlb2_devargs *)probe_args;
 	const char *mask = args ? args->producer_coremask : NULL;
-	int cpu = 0, cnt = 0, cores[RTE_MAX_LCORE], i;
+	int cpu = 0;
 
 	if (args) {
 		mask = (const char *)args->producer_coremask;
 	}
 
-	if (mask && rte_eal_parse_coremask(mask, cores)) {
-		DLB2_HW_ERR(hw, ": Invalid producer coremask=%s\n", mask);
-		return -1;
-	}
-
+	cpu = rte_get_next_lcore(-1, 1, 0);
 	hw->num_prod_cores = 0;
-	for (i = 0; i < RTE_MAX_LCORE; i++) {
-		bool is_pcore = (mask && cores[i] != -1);
-
-		if (rte_lcore_is_enabled(i)) {
-			if (is_pcore) {
-				/*
-				 * Populate the producer cores from parsed
-				 * coremask
-				 */
-				hw->prod_core_list[cores[i]] = i;
-				hw->num_prod_cores++;
-
-			} else if ((++cnt == DLB2_EAL_PROBE_CORE ||
-			   rte_lcore_count() < DLB2_EAL_PROBE_CORE)) {
-				/*
-				 * If no producer coremask is provided, use the
-				 * second EAL core to probe
-				 */
-				cpu = i;
-				break;
-			}
-		} else if (is_pcore) {
-			DLB2_HW_ERR(hw, "Producer coremask(%s) must be a subset of EAL coremask\n",
-				     mask);
+	if (mask) {
+		int n = rte_eal_parse_coremask(mask, hw->prod_core_list);
+		if (n <= 0) {
+			DLB2_HW_ERR(hw, ": Invalid producer coremask=%s\n", mask);
 			return -1;
 		}
-
-	}
-	/* Use the first core in producer coremask to probe */
-	if (hw->num_prod_cores)
+		hw->num_prod_cores = n;
 		cpu = hw->prod_core_list[0];
+
+		for (u8 i = 0; i < hw->num_prod_cores; i++) {
+			if (!rte_lcore_is_enabled(hw->prod_core_list[i])) {
+				DLB2_HW_ERR(hw, "Producer coremask(%s) must be a subset of EAL coremask\n",
+					     mask);
+				return -1;
+			}
+		}
+	}
 
 	dlb2_get_pp_allocation(hw, cpu, DLB2_LDB_PORT);
 	dlb2_get_pp_allocation(hw, cpu, DLB2_DIR_PORT);
