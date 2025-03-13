@@ -508,7 +508,7 @@ rte_eal_get_runtime_dir(void);
  */
 __rte_internal
 int
-rte_eal_parse_coremask(const char *coremask, int *cores);
+rte_eal_parse_coremask(const char *coremask, int *cores, bool nocheck);
 
 #ifdef __cplusplus
 }

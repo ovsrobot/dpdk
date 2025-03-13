@@ -106,6 +106,7 @@ eal_long_options[] = {
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
 	{OPT_FORCE_MAX_SIMD_BITWIDTH, 1, NULL, OPT_FORCE_MAX_SIMD_BITWIDTH_NUM},
 	{OPT_HUGE_WORKER_STACK, 2, NULL, OPT_HUGE_WORKER_STACK_NUM     },
+	{OPT_MAP_LCORE_IDS,     0, NULL, OPT_MAP_LCORE_IDS_NUM    },
 
 	{0,                     0, NULL, 0                        }
 };
@@ -152,6 +153,7 @@ TAILQ_HEAD_INITIALIZER(devopt_list);
 static int main_lcore_parsed;
 static int mem_parsed;
 static struct lcore_options {
+	bool map_lcore_ids;
 	const char *core_mask_opt;
 	const char *core_list_opt;
 	const char *core_map_opt;
@@ -723,13 +725,14 @@ check_core_list(int *lcores, unsigned int count)
 	if (len > 0)
 		lcorestr[len - 1] = 0;
 	EAL_LOG(ERR, "To use high physical core ids, "
-		"please use --lcores to map them to lcore ids below RTE_MAX_LCORE, "
+		"please use --map-lcore-ids flag to map core ids automatically, "
+		"or use --lcores to map them manually to lcore ids below RTE_MAX_LCORE, "
 		"e.g. --lcores %s", lcorestr);
 	return -1;
 }
 
 int
-rte_eal_parse_coremask(const char *coremask, int *cores)
+rte_eal_parse_coremask(const char *coremask, int *cores, bool no_check)
 {
 	const char *coremask_orig = coremask;
 	unsigned int count = 0;
@@ -784,7 +787,7 @@ rte_eal_parse_coremask(const char *coremask, int *cores)
 		return -1;
 	}
 
-	if (check_core_list(cores, count) != 0)
+	if (!no_check && check_core_list(cores, count) != 0)
 		return -1;
 
 	return count;
@@ -869,7 +872,7 @@ eal_parse_service_corelist(const char *corelist)
 }
 
 static int
-eal_parse_corelist(const char *corelist, int *cores)
+eal_parse_corelist(const char *corelist, int *cores, bool no_check)
 {
 	unsigned int count = 0, i;
 	char *end = NULL;
@@ -932,7 +935,7 @@ eal_parse_corelist(const char *corelist, int *cores)
 		return -1;
 	}
 
-	if (check_core_list(cores, count))
+	if (!no_check && check_core_list(cores, count))
 		return -1;
 
 	return count;
@@ -1767,6 +1770,9 @@ eal_parse_common_option(int opt, const char *optarg,
 			return -1;
 		}
 		break;
+	case OPT_MAP_LCORE_IDS_NUM:
+		lcore_options.map_lcore_ids = true;
+		break;
 
 	/* don't know what to do, leave this to caller */
 	default:
@@ -1866,10 +1872,11 @@ eal_adjust_config(struct internal_config *internal_cfg)
 
 
 	if (lcore_options.core_mask_opt || lcore_options.core_list_opt) {
-		int lcore_indexes[RTE_MAX_LCORE];
+		bool map_ids = lcore_options.map_lcore_ids;
+		int idxs[RTE_MAX_LCORE];
 		int nb_indexes = lcore_options.core_list_opt ?
-				eal_parse_corelist(lcore_options.core_list_opt, lcore_indexes) :
-				rte_eal_parse_coremask(lcore_options.core_mask_opt, lcore_indexes);
+				eal_parse_corelist(lcore_options.core_list_opt, idxs, map_ids) :
+				rte_eal_parse_coremask(lcore_options.core_mask_opt, idxs, map_ids);
 
 		if (nb_indexes < 0)
 			return -1;
@@ -1877,13 +1884,16 @@ eal_adjust_config(struct internal_config *internal_cfg)
 		char *core_map_opt = malloc(RTE_MAX_LCORE * 10);
 		size_t core_map_len = 0;
 		for (i = 0; i < nb_indexes; i++) {
-			if (!eal_cpu_detected(lcore_indexes[i])) {
-				EAL_LOG(ERR, "core %d not present", lcore_indexes[i]);
+			if (!eal_cpu_detected(idxs[i])) {
+				EAL_LOG(ERR, "core %d not present", idxs[i]);
 				return -1;
 			}
 			int n = snprintf(core_map_opt + core_map_len,
 					(RTE_MAX_LCORE * 10) - core_map_len,
-					"%s%d", i == 0 ? "" : ",", lcore_indexes[i]);
+					"%s%d@%d",
+					i == 0 ? "" : ",",
+					map_ids ? i: idxs[i],
+					idxs[i]);
 			if (n < 0 || (size_t)n >= (RTE_MAX_LCORE * 10) - core_map_len) {
 				EAL_LOG(ERR, "core map string too long");
 				return -1;
