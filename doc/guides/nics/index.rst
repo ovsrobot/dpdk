@@ -41,6 +41,7 @@ Network Interface Controller Drivers
     igc
     intel_vf
     ionic
+    ioring
     ipn3ke
     ixgbe
     mana
