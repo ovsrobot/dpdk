@@ -30,6 +30,7 @@
 #include <rte_ether.h>
 #include <rte_kvargs.h>
 #include <rte_log.h>
+#include <rte_net.h>
 
 static_assert(RTE_PKTMBUF_HEADROOM >= sizeof(struct virtio_net_hdr));
 
@@ -44,7 +45,10 @@ static_assert(IORING_MAX_QUEUES <= RTE_MP_MAX_FD_NUM, "Max queues exceeds MP fd 
 				 RTE_ETH_TX_OFFLOAD_TCP_CKSUM | \
 				 RTE_ETH_TX_OFFLOAD_TCP_TSO)
 
-#define IORING_RX_OFFLOAD	RTE_ETH_RX_OFFLOAD_SCATTER
+#define IORING_RX_OFFLOAD	(RTE_ETH_RX_OFFLOAD_UDP_CKSUM | \
+				 RTE_ETH_RX_OFFLOAD_TCP_CKSUM | \
+				 RTE_ETH_RX_OFFLOAD_TCP_LRO | \
+				 RTE_ETH_RX_OFFLOAD_SCATTER)
 
 #define IORING_DEFAULT_IFNAME	"itap%d"
 #define IORING_MP_KEY		"ioring_mp_send_fds"
@@ -349,9 +353,30 @@ eth_dev_stop(struct rte_eth_dev *dev)
 static int
 eth_dev_configure(struct rte_eth_dev *dev)
 {
+	struct pmd_internals *pmd = dev->data->dev_private;
+
 	/* rx/tx must be paired */
 	if (dev->data->nb_rx_queues != dev->data->nb_tx_queues)
 		return -EINVAL;
+
+	/*
+	 * Set offload flags visible on the kernel network interface.
+	 * This controls whether kernel will use checksum offload etc.
+	 * Note: kernel transmit is DPDK receive.
+	 */
+	const struct rte_eth_rxmode *rx_mode = &dev->data->dev_conf.rxmode;
+	unsigned int offload = 0;
+	if (rx_mode->offloads & RTE_ETH_RX_OFFLOAD_CHECKSUM) {
+		offload |= TUN_F_CSUM;
+
+		if (rx_mode->offloads & RTE_ETH_RX_OFFLOAD_TCP_LRO)
+			offload |= TUN_F_TSO4 | TUN_F_TSO6 | TUN_F_TSO_ECN;
+	}
+
+	if (ioctl(pmd->keep_fd, TUNSETOFFLOAD, offload) != 0) {
+		PMD_LOG(ERR, "ioctl(TUNSETOFFLOAD) failed: %s", strerror(errno));
+		return -1;
+	}
 
 	return 0;
 }
@@ -558,7 +583,6 @@ eth_ioring_rx_alloc(struct rx_queue *rxq)
 	return m;
 }
 
-
 /* set length of received mbuf segments */
 static inline void
 eth_ioring_rx_adjust(struct rte_mbuf *mb, size_t len)
@@ -580,6 +604,69 @@ eth_ioring_rx_adjust(struct rte_mbuf *mb, size_t len)
 		rte_pktmbuf_free(seg->next);
 		seg->next = NULL;
 	}
+}
+
+static int
+eth_ioring_rx_offload(struct rte_mbuf *m, const struct virtio_net_hdr *hdr)
+{
+	uint32_t ptype;
+	bool l4_supported = false;
+	struct rte_net_hdr_lens hdr_lens;
+
+	/* nothing to do */
+	if (hdr->flags == 0 && hdr->gso_type == VIRTIO_NET_HDR_GSO_NONE)
+		return 0;
+
+	m->ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN;
+
+	ptype = rte_net_get_ptype(m, &hdr_lens, RTE_PTYPE_ALL_MASK);
+	m->packet_type = ptype;
+	if ((ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_TCP ||
+	    (ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_UDP ||
+	    (ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_SCTP)
+		l4_supported = true;
+
+	if (hdr->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+		uint32_t hdrlen = hdr_lens.l2_len + hdr_lens.l3_len + hdr_lens.l4_len;
+		if (hdr->csum_start <= hdrlen && l4_supported) {
+			m->ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_NONE;
+		} else {
+			/* Unknown proto or tunnel, do sw cksum. */
+			uint16_t csum = 0, off;
+
+			if (rte_raw_cksum_mbuf(m, hdr->csum_start,
+					       rte_pktmbuf_pkt_len(m) - hdr->csum_start,
+					       &csum) < 0)
+				return -EINVAL;
+			if (likely(csum != 0xffff))
+				csum = ~csum;
+			off = hdr->csum_offset + hdr->csum_start;
+			if (rte_pktmbuf_data_len(m) >= off + 1)
+				*rte_pktmbuf_mtod_offset(m, uint16_t *, off) = csum;
+		}
+	} else if ((hdr->flags & VIRTIO_NET_HDR_F_DATA_VALID) && l4_supported) {
+		m->ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_GOOD;
+	}
+
+	/* GSO request, save required information in mbuf */
+	if (hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
+		/* Check unsupported modes */
+		if ((hdr->gso_type & VIRTIO_NET_HDR_GSO_ECN) || hdr->gso_size == 0)
+			return -EINVAL;
+
+		/* Update mss lengths in mbuf */
+		m->tso_segsz = hdr->gso_size;
+		switch (hdr->gso_type & ~VIRTIO_NET_HDR_GSO_ECN) {
+		case VIRTIO_NET_HDR_GSO_TCPV4:
+		case VIRTIO_NET_HDR_GSO_TCPV6:
+			m->ol_flags |= RTE_MBUF_F_RX_LRO | RTE_MBUF_F_RX_L4_CKSUM_NONE;
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return 0;
 }
 
 static uint16_t
@@ -626,6 +713,13 @@ eth_ioring_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		else
 			eth_ioring_rx_adjust(mb, len);
 
+		if (unlikely(eth_ioring_rx_offload(mb, hdr) < 0)) {
+			PMD_RX_LOG(ERR, "invalid rx offload");
+			++rxq->rx_errors;
+			goto resubmit;
+		}
+
+		__rte_mbuf_sanity_check(mb, 1);
 		num_bytes += mb->pkt_len;
 		bufs[num_rx++] = mb;
 
