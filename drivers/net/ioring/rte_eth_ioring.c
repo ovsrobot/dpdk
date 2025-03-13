@@ -47,6 +47,53 @@ struct pmd_internals {
 	struct rte_ether_addr eth_addr; /* address assigned by kernel */
 };
 
+static int
+eth_dev_change_flags(struct rte_eth_dev *dev, uint16_t flags, uint16_t mask)
+{
+	struct pmd_internals *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
+	struct ifreq ifr = { };
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+
+	int ret = ioctl(sock, SIOCGIFFLAGS, &ifr);
+	if (ret < 0)
+		goto error;
+
+	/* NB: ifr.ifr_flags is type short */
+	ifr.ifr_flags &= mask;
+	ifr.ifr_flags |= flags;
+
+	ret = ioctl(sock, SIOCSIFFLAGS, &ifr);
+error:
+	close(sock);
+	return (ret < 0) ? -errno : 0;
+}
+
+static int
+eth_dev_get_flags(struct rte_eth_dev *dev, short *flags)
+{
+	struct pmd_internals *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
+	struct ifreq ifr = { };
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+
+	int ret = ioctl(sock, SIOCGIFFLAGS, &ifr);
+	if (ret == 0)
+		*flags = ifr.ifr_flags;
+
+	close(sock);
+	return (ret < 0) ? -errno : 0;
+}
+
+
 /* Creates a new tap device, name returned in ifr */
 static int
 tap_open(const char *name, struct ifreq *ifr, uint8_t persist)
@@ -103,6 +150,39 @@ error:
 	return -1;
 }
 
+
+static int
+eth_dev_set_link_up(struct rte_eth_dev *dev)
+{
+	return eth_dev_change_flags(dev, IFF_UP, 0);
+}
+
+static int
+eth_dev_set_link_down(struct rte_eth_dev *dev)
+{
+	return eth_dev_change_flags(dev, 0, ~IFF_UP);
+}
+
+static int
+eth_link_update(struct rte_eth_dev *dev, int wait_to_complete __rte_unused)
+{
+	struct rte_eth_link *eth_link = &dev->data->dev_link;
+	short flags = 0;
+
+	if (eth_dev_get_flags(dev, &flags) < 0) {
+		PMD_LOG(ERR, "ioctl(SIOCGIFFLAGS): %s", strerror(errno));
+		return -1;
+	}
+
+	*eth_link = (struct rte_eth_link) {
+		.link_speed = RTE_ETH_SPEED_NUM_UNKNOWN,
+		.link_duplex = RTE_ETH_LINK_FULL_DUPLEX,
+		.link_status = (flags & IFF_UP) ? RTE_ETH_LINK_UP : RTE_ETH_LINK_DOWN,
+		.link_autoneg = RTE_ETH_LINK_FIXED,
+	};
+	return 0;
+};
+
 static int
 eth_dev_close(struct rte_eth_dev *dev)
 {
@@ -126,7 +206,11 @@ eth_dev_close(struct rte_eth_dev *dev)
 
 static const struct eth_dev_ops ops = {
 	.dev_close		= eth_dev_close,
+	.link_update		= eth_link_update,
+	.dev_set_link_up	= eth_dev_set_link_up,
+	.dev_set_link_down	= eth_dev_set_link_down,
 };
+
 
 static int
 ioring_create(struct rte_eth_dev *dev, const char *tap_name, uint8_t persist)
