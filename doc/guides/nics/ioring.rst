@@ -46,12 +46,6 @@ But this behavior can be overridden by the use of the persist flag, example::
   --vdev=net_ioring0,iface=io0,persist ...
 
 
-Multi-process sharing
----------------------
-
-The IORING device does not support secondary process (yet).
-
-
 Limitations
 -----------
 
