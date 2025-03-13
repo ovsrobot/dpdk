@@ -39,7 +39,10 @@ static_assert(RTE_PKTMBUF_HEADROOM >= sizeof(struct virtio_net_hdr));
 
 static_assert(IORING_MAX_QUEUES <= RTE_MP_MAX_FD_NUM, "Max queues exceeds MP fd limit");
 
-#define IORING_TX_OFFLOAD	RTE_ETH_TX_OFFLOAD_MULTI_SEGS
+#define IORING_TX_OFFLOAD	(RTE_ETH_TX_OFFLOAD_MULTI_SEGS | \
+				 RTE_ETH_TX_OFFLOAD_UDP_CKSUM | \
+				 RTE_ETH_TX_OFFLOAD_TCP_CKSUM | \
+				 RTE_ETH_TX_OFFLOAD_TCP_TSO)
 
 #define IORING_RX_OFFLOAD	RTE_ETH_RX_OFFLOAD_SCATTER
 
@@ -780,6 +783,51 @@ eth_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id)
 	io_uring_queue_exit(&txq->io_ring);
 }
 
+/* Convert mbuf offload flags to virtio net header */
+static void
+eth_ioring_tx_offload(struct virtio_net_hdr *hdr, const struct rte_mbuf *m)
+{
+	uint64_t csum_l4 = m->ol_flags & RTE_MBUF_F_TX_L4_MASK;
+	uint16_t o_l23_len = (m->ol_flags & RTE_MBUF_F_TX_TUNNEL_MASK) ?
+			     m->outer_l2_len + m->outer_l3_len : 0;
+
+	if (m->ol_flags & RTE_MBUF_F_TX_TCP_SEG)
+		csum_l4 |= RTE_MBUF_F_TX_TCP_CKSUM;
+
+	switch (csum_l4) {
+	case RTE_MBUF_F_TX_UDP_CKSUM:
+		hdr->csum_start = o_l23_len + m->l2_len + m->l3_len;
+		hdr->csum_offset = offsetof(struct rte_udp_hdr, dgram_cksum);
+		hdr->flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
+		break;
+
+	case RTE_MBUF_F_TX_TCP_CKSUM:
+		hdr->csum_start = o_l23_len + m->l2_len + m->l3_len;
+		hdr->csum_offset = offsetof(struct rte_tcp_hdr, cksum);
+		hdr->flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
+		break;
+
+	default:
+		hdr->csum_start = 0;
+		hdr->csum_offset = 0;
+		hdr->flags = 0;
+		break;
+	}
+
+	/* TCP Segmentation Offload */
+	if (m->ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
+		hdr->gso_type = (m->ol_flags & RTE_MBUF_F_TX_IPV6) ?
+			VIRTIO_NET_HDR_GSO_TCPV6 :
+			VIRTIO_NET_HDR_GSO_TCPV4;
+		hdr->gso_size = m->tso_segsz;
+		hdr->hdr_len = o_l23_len + m->l2_len + m->l3_len + m->l4_len;
+	} else {
+		hdr->gso_type = 0;
+		hdr->gso_size = 0;
+		hdr->hdr_len = 0;
+	}
+}
+
 static uint16_t
 eth_ioring_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
@@ -823,6 +871,7 @@ eth_ioring_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		}
 
 		io_uring_sqe_set_data(sqe, mb);
+		eth_ioring_tx_offload(hdr, mb);
 
 		PMD_TX_LOG(DEBUG, "write m=%p segs=%u", mb, mb->nb_segs);
 		void *buf = rte_pktmbuf_mtod_offset(mb, void *, -sizeof(*hdr));
