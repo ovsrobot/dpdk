@@ -138,3 +138,27 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* bus/vmbus: Starting DPDK 25.11, all the vmbus APIs will be moved
+  from "DPDK" to "INTERNAL" in drivers/bus/vmbus/version.map.
+  Those APIs are used only by DPDK core and net/netvsc PMD.
+  The following APIs wil be moved:
+  rte_vmbus_chan_close
+  rte_vmbus_chan_open
+  rte_vmbus_chan_recv
+  rte_vmbus_chan_recv_raw
+  rte_vmbus_chan_rx_empty
+  rte_vmbus_chan_send
+  rte_vmbus_chan_send_sglist
+  rte_vmbus_chan_signal_read
+  rte_vmbus_chan_signal_tx
+  rte_vmbus_irq_mask
+  rte_vmbus_irq_read
+  rte_vmbus_irq_unmask
+  rte_vmbus_map_device
+  rte_vmbus_max_channels
+  rte_vmbus_probe
+  rte_vmbus_scan
+  rte_vmbus_set_latency
+  rte_vmbus_sub_channel_index
+  rte_vmbus_subchan_open
