@@ -45,6 +45,7 @@ static const struct {
 	{ "local7", LOG_LOCAL7 },
 };
 
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_syslog)
 int
 eal_log_syslog(const char *name)
 {

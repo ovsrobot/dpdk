@@ -445,6 +445,7 @@ cnxk_dma_adapter_format_event(uint64_t event)
 	return w0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(cn10k_dma_adapter_enqueue)
 uint16_t
 cn10k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 {
@@ -504,6 +505,7 @@ cn10k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 	return count;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(cn9k_dma_adapter_dual_enqueue)
 uint16_t
 cn9k_dma_adapter_dual_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 {
@@ -574,6 +576,7 @@ cn9k_dma_adapter_dual_enqueue(void *ws, struct rte_event ev[], uint16_t nb_event
 	return count;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(cn9k_dma_adapter_enqueue)
 uint16_t
 cn9k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 {
@@ -641,6 +644,7 @@ cn9k_dma_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 	return count;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_dma_adapter_dequeue)
 uintptr_t
 cnxk_dma_adapter_dequeue(uintptr_t get_work1)
 {

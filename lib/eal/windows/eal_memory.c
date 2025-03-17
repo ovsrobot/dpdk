@@ -212,6 +212,7 @@ eal_mem_virt2iova_cleanup(void)
 		CloseHandle(virt2phys_device);
 }
 
+RTE_EXPORT_SYMBOL(rte_mem_virt2phy)
 phys_addr_t
 rte_mem_virt2phy(const void *virt)
 {
@@ -232,6 +233,7 @@ rte_mem_virt2phy(const void *virt)
 	return phys.QuadPart;
 }
 
+RTE_EXPORT_SYMBOL(rte_mem_virt2iova)
 rte_iova_t
 rte_mem_virt2iova(const void *virt)
 {
@@ -247,6 +249,7 @@ rte_mem_virt2iova(const void *virt)
 }
 
 /* Always using physical addresses under Windows if they can be obtained. */
+RTE_EXPORT_SYMBOL(rte_eal_using_phys_addrs)
 int
 rte_eal_using_phys_addrs(void)
 {
@@ -518,6 +521,7 @@ eal_mem_set_dump(void *virt, size_t size, bool dump)
 	return -1;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mem_map)
 void *
 rte_mem_map(void *requested_addr, size_t size, int prot, int flags,
 	int fd, uint64_t offset)
@@ -601,6 +605,7 @@ rte_mem_map(void *requested_addr, size_t size, int prot, int flags,
 	return virt;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mem_unmap)
 int
 rte_mem_unmap(void *virt, size_t size)
 {
@@ -624,6 +629,7 @@ eal_get_baseaddr(void)
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mem_page_size)
 size_t
 rte_mem_page_size(void)
 {
@@ -635,6 +641,7 @@ rte_mem_page_size(void)
 	return info.dwPageSize;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mem_lock)
 int
 rte_mem_lock(const void *virt, size_t size)
 {

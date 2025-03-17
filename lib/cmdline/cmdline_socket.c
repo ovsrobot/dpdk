@@ -12,6 +12,7 @@
 #include "cmdline_private.h"
 #include "cmdline_socket.h"
 
+RTE_EXPORT_SYMBOL(cmdline_file_new)
 struct cmdline *
 cmdline_file_new(cmdline_parse_ctx_t *ctx, const char *prompt, const char *path)
 {
@@ -29,6 +30,7 @@ cmdline_file_new(cmdline_parse_ctx_t *ctx, const char *prompt, const char *path)
 	return cmdline_new(ctx, prompt, fd, -1);
 }
 
+RTE_EXPORT_SYMBOL(cmdline_stdin_new)
 struct cmdline *
 cmdline_stdin_new(cmdline_parse_ctx_t *ctx, const char *prompt)
 {
@@ -42,6 +44,7 @@ cmdline_stdin_new(cmdline_parse_ctx_t *ctx, const char *prompt)
 	return cl;
 }
 
+RTE_EXPORT_SYMBOL(cmdline_stdin_exit)
 void
 cmdline_stdin_exit(struct cmdline *cl)
 {

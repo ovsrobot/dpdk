@@ -13,6 +13,7 @@
 
 #include "eal_private.h"
 
+RTE_EXPORT_SYMBOL(__rte_panic)
 void
 __rte_panic(const char *funcname, const char *format, ...)
 {
@@ -30,6 +31,7 @@ __rte_panic(const char *funcname, const char *format, ...)
  * Like rte_panic this terminates the application. However, no traceback is
  * provided and no core-dump is generated.
  */
+RTE_EXPORT_SYMBOL(rte_exit)
 void
 rte_exit(int exit_code, const char *format, ...)
 {

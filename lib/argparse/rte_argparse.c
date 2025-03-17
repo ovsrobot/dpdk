@@ -737,6 +737,7 @@ show_args_help(const struct rte_argparse *obj)
 		printf("\n");
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_parse, 24.03)
 int
 rte_argparse_parse(struct rte_argparse *obj, int argc, char **argv)
 {
@@ -764,6 +765,7 @@ error:
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_parse_type, 24.03)
 int
 rte_argparse_parse_type(const char *str, uint64_t val_type, void *val)
 {

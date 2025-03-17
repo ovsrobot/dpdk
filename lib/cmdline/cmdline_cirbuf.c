@@ -11,6 +11,7 @@
 #include "cmdline_cirbuf.h"
 
 
+RTE_EXPORT_SYMBOL(cirbuf_init)
 int
 cirbuf_init(struct cirbuf *cbuf, char *buf, unsigned int start, unsigned int maxlen)
 {
@@ -26,6 +27,7 @@ cirbuf_init(struct cirbuf *cbuf, char *buf, unsigned int start, unsigned int max
 
 /* multiple add */
 
+RTE_EXPORT_SYMBOL(cirbuf_add_buf_head)
 int
 cirbuf_add_buf_head(struct cirbuf *cbuf, const char *c, unsigned int n)
 {
@@ -57,6 +59,7 @@ cirbuf_add_buf_head(struct cirbuf *cbuf, const char *c, unsigned int n)
 
 /* multiple add */
 
+RTE_EXPORT_SYMBOL(cirbuf_add_buf_tail)
 int
 cirbuf_add_buf_tail(struct cirbuf *cbuf, const char *c, unsigned int n)
 {
@@ -100,6 +103,7 @@ __cirbuf_add_head(struct cirbuf * cbuf, char c)
 	cbuf->len ++;
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_add_head_safe)
 int
 cirbuf_add_head_safe(struct cirbuf * cbuf, char c)
 {
@@ -110,6 +114,7 @@ cirbuf_add_head_safe(struct cirbuf * cbuf, char c)
 	return -EINVAL;
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_add_head)
 void
 cirbuf_add_head(struct cirbuf * cbuf, char c)
 {
@@ -129,6 +134,7 @@ __cirbuf_add_tail(struct cirbuf * cbuf, char c)
 	cbuf->len ++;
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_add_tail_safe)
 int
 cirbuf_add_tail_safe(struct cirbuf * cbuf, char c)
 {
@@ -139,6 +145,7 @@ cirbuf_add_tail_safe(struct cirbuf * cbuf, char c)
 	return -EINVAL;
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_add_tail)
 void
 cirbuf_add_tail(struct cirbuf * cbuf, char c)
 {
@@ -181,6 +188,7 @@ __cirbuf_shift_right(struct cirbuf *cbuf)
 }
 
 /* XXX we could do a better algorithm here... */
+RTE_EXPORT_SYMBOL(cirbuf_align_left)
 int
 cirbuf_align_left(struct cirbuf * cbuf)
 {
@@ -202,6 +210,7 @@ cirbuf_align_left(struct cirbuf * cbuf)
 }
 
 /* XXX we could do a better algorithm here... */
+RTE_EXPORT_SYMBOL(cirbuf_align_right)
 int
 cirbuf_align_right(struct cirbuf * cbuf)
 {
@@ -224,6 +233,7 @@ cirbuf_align_right(struct cirbuf * cbuf)
 
 /* buffer del */
 
+RTE_EXPORT_SYMBOL(cirbuf_del_buf_head)
 int
 cirbuf_del_buf_head(struct cirbuf *cbuf, unsigned int size)
 {
@@ -244,6 +254,7 @@ cirbuf_del_buf_head(struct cirbuf *cbuf, unsigned int size)
 
 /* buffer del */
 
+RTE_EXPORT_SYMBOL(cirbuf_del_buf_tail)
 int
 cirbuf_del_buf_tail(struct cirbuf *cbuf, unsigned int size)
 {
@@ -274,6 +285,7 @@ __cirbuf_del_head(struct cirbuf * cbuf)
 	}
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_del_head_safe)
 int
 cirbuf_del_head_safe(struct cirbuf * cbuf)
 {
@@ -284,6 +296,7 @@ cirbuf_del_head_safe(struct cirbuf * cbuf)
 	return -EINVAL;
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_del_head)
 void
 cirbuf_del_head(struct cirbuf * cbuf)
 {
@@ -302,6 +315,7 @@ __cirbuf_del_tail(struct cirbuf * cbuf)
 	}
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_del_tail_safe)
 int
 cirbuf_del_tail_safe(struct cirbuf * cbuf)
 {
@@ -312,6 +326,7 @@ cirbuf_del_tail_safe(struct cirbuf * cbuf)
 	return -EINVAL;
 }
 
+RTE_EXPORT_SYMBOL(cirbuf_del_tail)
 void
 cirbuf_del_tail(struct cirbuf * cbuf)
 {
@@ -320,6 +335,7 @@ cirbuf_del_tail(struct cirbuf * cbuf)
 
 /* convert to buffer */
 
+RTE_EXPORT_SYMBOL(cirbuf_get_buf_head)
 int
 cirbuf_get_buf_head(struct cirbuf *cbuf, char *c, unsigned int size)
 {
@@ -358,6 +374,7 @@ cirbuf_get_buf_head(struct cirbuf *cbuf, char *c, unsigned int size)
 
 /* convert to buffer */
 
+RTE_EXPORT_SYMBOL(cirbuf_get_buf_tail)
 int
 cirbuf_get_buf_tail(struct cirbuf *cbuf, char *c, unsigned int size)
 {
@@ -397,6 +414,7 @@ cirbuf_get_buf_tail(struct cirbuf *cbuf, char *c, unsigned int size)
 
 /* get head or get tail */
 
+RTE_EXPORT_SYMBOL(cirbuf_get_head)
 char
 cirbuf_get_head(struct cirbuf * cbuf)
 {
@@ -405,6 +423,7 @@ cirbuf_get_head(struct cirbuf * cbuf)
 
 /* get head or get tail */
 
+RTE_EXPORT_SYMBOL(cirbuf_get_tail)
 char
 cirbuf_get_tail(struct cirbuf * cbuf)
 {

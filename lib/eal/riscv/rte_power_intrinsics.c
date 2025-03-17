@@ -11,6 +11,7 @@
 /**
  * This function is not supported on RISC-V 64
  */
+RTE_EXPORT_SYMBOL(rte_power_monitor)
 int
 rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 		  const uint64_t tsc_timestamp)
@@ -24,6 +25,7 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 /**
  * This function is not supported on RISC-V 64
  */
+RTE_EXPORT_SYMBOL(rte_power_pause)
 int
 rte_power_pause(const uint64_t tsc_timestamp)
 {
@@ -35,6 +37,7 @@ rte_power_pause(const uint64_t tsc_timestamp)
 /**
  * This function is not supported on RISC-V 64
  */
+RTE_EXPORT_SYMBOL(rte_power_monitor_wakeup)
 int
 rte_power_monitor_wakeup(const unsigned int lcore_id)
 {
@@ -46,6 +49,7 @@ rte_power_monitor_wakeup(const unsigned int lcore_id)
 /**
  * This function is not supported on RISC-V 64
  */
+RTE_EXPORT_SYMBOL(rte_power_monitor_multi)
 int
 rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 			const uint32_t num, const uint64_t tsc_timestamp)

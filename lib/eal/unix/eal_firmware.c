@@ -146,6 +146,7 @@ out:
 	return ret;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_firmware_read)
 int
 rte_firmware_read(const char *name, void **buf, size_t *bufsz)
 {

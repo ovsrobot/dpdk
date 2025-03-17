@@ -516,6 +516,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_softnic,
 	PMD_PARAM_CPU_ID "=<uint32> "
 );
 
+RTE_EXPORT_SYMBOL(rte_pmd_softnic_manage)
 int
 rte_pmd_softnic_manage(uint16_t port_id)
 {

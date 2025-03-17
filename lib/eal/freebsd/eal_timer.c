@@ -23,6 +23,7 @@
 #warning HPET is not supported in FreeBSD
 #endif
 
+RTE_EXPORT_SYMBOL(eal_timer_source)
 enum timer_source eal_timer_source = EAL_TIMER_TSC;
 
 uint64_t

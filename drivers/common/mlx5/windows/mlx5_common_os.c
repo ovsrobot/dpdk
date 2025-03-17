@@ -281,6 +281,7 @@ error:
  * @return
  *   umem on successful registration, NULL and errno otherwise
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_umem_reg)
 void *
 mlx5_os_umem_reg(void *ctx, void *addr, size_t size, uint32_t access)
 {
@@ -311,6 +312,7 @@ mlx5_os_umem_reg(void *ctx, void *addr, size_t size, uint32_t access)
  * @return
  *   0 on successful release, negative number otherwise
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_umem_dereg)
 int
 mlx5_os_umem_dereg(void *pumem)
 {
@@ -411,6 +413,7 @@ mlx5_os_dereg_mr(struct mlx5_pmd_mr *pmd_mr)
  *   Pointer to dereg_mr func
  *
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_set_reg_mr_cb)
 void
 mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb, mlx5_dereg_mr_t *dereg_mr_cb)
 {
@@ -422,6 +425,7 @@ mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb, mlx5_dereg_mr_t *dereg_mr_cb)
  * In Windows, no need to wrap the MR, no known issue for it in kernel.
  * Use the regular function to create direct MR.
  */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_wrapped_mkey_create)
 int
 mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 			    size_t length, struct mlx5_pmd_wrapped_mr *wpmd_mr)
@@ -441,6 +445,7 @@ mlx5_os_wrapped_mkey_create(void *ctx, void *pd, uint32_t pdn, void *addr,
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_wrapped_mkey_destroy)
 void
 mlx5_os_wrapped_mkey_destroy(struct mlx5_pmd_wrapped_mr *wpmd_mr)
 {

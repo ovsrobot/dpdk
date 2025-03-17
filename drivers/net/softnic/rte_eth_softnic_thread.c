@@ -554,6 +554,7 @@ rte_pmd_softnic_run_internal(void *arg)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pmd_softnic_run)
 int
 rte_pmd_softnic_run(uint16_t port_id)
 {

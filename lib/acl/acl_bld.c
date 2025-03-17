@@ -1621,6 +1621,7 @@ get_first_load_size(const struct rte_acl_config *cfg)
 	return (ofs < max_ofs) ? sizeof(uint32_t) : sizeof(uint8_t);
 }
 
+RTE_EXPORT_SYMBOL(rte_acl_build)
 int
 rte_acl_build(struct rte_acl_ctx *ctx, const struct rte_acl_config *cfg)
 {

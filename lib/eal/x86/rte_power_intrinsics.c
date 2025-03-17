@@ -158,6 +158,7 @@ __check_val_size(const uint8_t sz)
  * For more information about usage of these instructions, please refer to
  * Intel(R) 64 and IA-32 Architectures Software Developer's Manual.
  */
+RTE_EXPORT_SYMBOL(rte_power_monitor)
 int
 rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 		const uint64_t tsc_timestamp)
@@ -219,6 +220,7 @@ end:
  * information about usage of this instruction, please refer to Intel(R) 64 and
  * IA-32 Architectures Software Developer's Manual.
  */
+RTE_EXPORT_SYMBOL(rte_power_pause)
 int
 rte_power_pause(const uint64_t tsc_timestamp)
 {
@@ -263,6 +265,7 @@ RTE_INIT(rte_power_intrinsics_init) {
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_power_monitor_wakeup)
 int
 rte_power_monitor_wakeup(const unsigned int lcore_id)
 {
@@ -312,6 +315,7 @@ rte_power_monitor_wakeup(const unsigned int lcore_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_power_monitor_multi)
 int
 rte_power_monitor_multi(const struct rte_power_monitor_cond pmc[],
 		const uint32_t num, const uint64_t tsc_timestamp)

@@ -44,6 +44,7 @@ static TAILQ_HEAD(, rte_afu_driver) ifpga_afu_drv_list =
 
 
 /* register a ifpga bus based driver */
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ifpga_driver_register)
 void rte_ifpga_driver_register(struct rte_afu_driver *driver)
 {
 	RTE_VERIFY(driver);
@@ -52,6 +53,7 @@ void rte_ifpga_driver_register(struct rte_afu_driver *driver)
 }
 
 /* un-register a fpga bus based driver */
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ifpga_driver_unregister)
 void rte_ifpga_driver_unregister(struct rte_afu_driver *driver)
 {
 	TAILQ_REMOVE(&ifpga_afu_drv_list, driver, next);
@@ -71,6 +73,7 @@ ifpga_find_afu_dev(const struct rte_rawdev *rdev,
 	return NULL;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ifpga_find_afu_by_name)
 struct rte_afu_device *
 rte_ifpga_find_afu_by_name(const char *name)
 {

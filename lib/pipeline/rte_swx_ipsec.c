@@ -177,6 +177,7 @@ static struct rte_tailq_elem rte_swx_ipsec_tailq = {
 
 EAL_REGISTER_TAILQ(rte_swx_ipsec_tailq)
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_find, 23.03)
 struct rte_swx_ipsec *
 rte_swx_ipsec_find(const char *name)
 {
@@ -261,6 +262,7 @@ ipsec_unregister(struct rte_swx_ipsec *ipsec)
 static void
 ipsec_session_free(struct rte_swx_ipsec *ipsec, struct rte_ipsec_session *s);
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_free, 23.03)
 void
 rte_swx_ipsec_free(struct rte_swx_ipsec *ipsec)
 {
@@ -291,6 +293,7 @@ rte_swx_ipsec_free(struct rte_swx_ipsec *ipsec)
 	env_free(ipsec, ipsec->total_size);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_create, 23.03)
 int
 rte_swx_ipsec_create(struct rte_swx_ipsec **ipsec_out,
 		     const char *name,
@@ -718,6 +721,7 @@ rte_swx_ipsec_post_crypto(struct rte_swx_ipsec *ipsec)
 	}
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_run, 23.03)
 void
 rte_swx_ipsec_run(struct rte_swx_ipsec *ipsec)
 {
@@ -1129,6 +1133,7 @@ do {                                   \
 	}                              \
 } while (0)
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_sa_read, 23.03)
 struct rte_swx_ipsec_sa_params *
 rte_swx_ipsec_sa_read(struct rte_swx_ipsec *ipsec __rte_unused,
 		      const char *string,
@@ -1762,6 +1767,7 @@ ipsec_session_free(struct rte_swx_ipsec *ipsec,
 	memset(s, 0, sizeof(*s));
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_sa_add, 23.03)
 int
 rte_swx_ipsec_sa_add(struct rte_swx_ipsec *ipsec,
 		     struct rte_swx_ipsec_sa_params *sa_params,
@@ -1801,6 +1807,7 @@ rte_swx_ipsec_sa_add(struct rte_swx_ipsec *ipsec,
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ipsec_sa_delete, 23.03)
 void
 rte_swx_ipsec_sa_delete(struct rte_swx_ipsec *ipsec,
 			uint32_t sa_id)

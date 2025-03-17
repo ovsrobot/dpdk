@@ -69,6 +69,7 @@ struct mbox_intf_ver {
 	uint32_t minor:10;
 };
 
+RTE_EXPORT_INTERNAL_SYMBOL(octeontx_logtype_mbox)
 RTE_LOG_REGISTER(octeontx_logtype_mbox, pmd.octeontx.mbox, NOTICE);
 
 static inline void
@@ -192,6 +193,7 @@ mbox_send(struct mbox *m, struct octeontx_mbox_hdr *hdr, const void *txmsg,
 	return res;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(octeontx_mbox_set_ram_mbox_base)
 int
 octeontx_mbox_set_ram_mbox_base(uint8_t *ram_mbox_base, uint16_t domain)
 {
@@ -216,6 +218,7 @@ octeontx_mbox_set_ram_mbox_base(uint8_t *ram_mbox_base, uint16_t domain)
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(octeontx_mbox_set_reg)
 int
 octeontx_mbox_set_reg(uint8_t *reg, uint16_t domain)
 {
@@ -240,6 +243,7 @@ octeontx_mbox_set_reg(uint8_t *reg, uint16_t domain)
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(octeontx_mbox_send)
 int
 octeontx_mbox_send(struct octeontx_mbox_hdr *hdr, void *txdata,
 				 uint16_t txlen, void *rxdata, uint16_t rxlen)
@@ -304,6 +308,7 @@ octeontx_check_mbox_version(struct mbox_intf_ver *app_intf_ver,
 	return result;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(octeontx_mbox_init)
 int
 octeontx_mbox_init(void)
 {
@@ -343,6 +348,7 @@ octeontx_mbox_init(void)
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(octeontx_get_global_domain)
 uint16_t
 octeontx_get_global_domain(void)
 {

@@ -149,6 +149,7 @@ deactivate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_create)
 int
 rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id)
 {
@@ -187,6 +188,7 @@ rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id)
 	return bond_dev->data->port_id;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_free)
 int
 rte_eth_bond_free(const char *name)
 {
@@ -631,6 +633,7 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_member_add)
 int
 rte_eth_bond_member_add(uint16_t bonding_port_id, uint16_t member_port_id)
 {
@@ -769,6 +772,7 @@ __eth_bond_member_remove_lock_free(uint16_t bonding_port_id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_member_remove)
 int
 rte_eth_bond_member_remove(uint16_t bonding_port_id, uint16_t member_port_id)
 {
@@ -791,6 +795,7 @@ rte_eth_bond_member_remove(uint16_t bonding_port_id, uint16_t member_port_id)
 	return retval;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_mode_set)
 int
 rte_eth_bond_mode_set(uint16_t bonding_port_id, uint8_t mode)
 {
@@ -808,6 +813,7 @@ rte_eth_bond_mode_set(uint16_t bonding_port_id, uint8_t mode)
 	return bond_ethdev_mode_set(bonding_eth_dev, mode);
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_mode_get)
 int
 rte_eth_bond_mode_get(uint16_t bonding_port_id)
 {
@@ -821,6 +827,7 @@ rte_eth_bond_mode_get(uint16_t bonding_port_id)
 	return internals->mode;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_primary_set)
 int
 rte_eth_bond_primary_set(uint16_t bonding_port_id, uint16_t member_port_id)
 {
@@ -842,6 +849,7 @@ rte_eth_bond_primary_set(uint16_t bonding_port_id, uint16_t member_port_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_primary_get)
 int
 rte_eth_bond_primary_get(uint16_t bonding_port_id)
 {
@@ -858,6 +866,7 @@ rte_eth_bond_primary_get(uint16_t bonding_port_id)
 	return internals->current_primary_port;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_members_get)
 int
 rte_eth_bond_members_get(uint16_t bonding_port_id, uint16_t members[],
 			uint16_t len)
@@ -882,6 +891,7 @@ rte_eth_bond_members_get(uint16_t bonding_port_id, uint16_t members[],
 	return internals->member_count;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_active_members_get)
 int
 rte_eth_bond_active_members_get(uint16_t bonding_port_id, uint16_t members[],
 		uint16_t len)
@@ -905,6 +915,7 @@ rte_eth_bond_active_members_get(uint16_t bonding_port_id, uint16_t members[],
 	return internals->active_member_count;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_mac_address_set)
 int
 rte_eth_bond_mac_address_set(uint16_t bonding_port_id,
 		struct rte_ether_addr *mac_addr)
@@ -931,6 +942,7 @@ rte_eth_bond_mac_address_set(uint16_t bonding_port_id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_mac_address_reset)
 int
 rte_eth_bond_mac_address_reset(uint16_t bonding_port_id)
 {
@@ -972,6 +984,7 @@ rte_eth_bond_mac_address_reset(uint16_t bonding_port_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_xmit_policy_set)
 int
 rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy)
 {
@@ -1002,6 +1015,7 @@ rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_xmit_policy_get)
 int
 rte_eth_bond_xmit_policy_get(uint16_t bonding_port_id)
 {
@@ -1015,6 +1029,7 @@ rte_eth_bond_xmit_policy_get(uint16_t bonding_port_id)
 	return internals->balance_xmit_policy;
 }
 
+RTE_EXPORT_SYMBOL(rte_eth_bond_link_monitoring_set)
 int
 rte_eth_bond_link_monitoring_set(uint16_t bonding_port_id, uint32_t internal_ms)
 {

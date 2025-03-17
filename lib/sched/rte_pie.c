@@ -9,6 +9,7 @@
 #include "rte_sched_log.h"
 #include "rte_pie.h"
 
+RTE_EXPORT_SYMBOL(rte_pie_rt_data_init)
 int
 rte_pie_rt_data_init(struct rte_pie *pie)
 {
@@ -22,6 +23,7 @@ rte_pie_rt_data_init(struct rte_pie *pie)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_pie_config_init)
 int
 rte_pie_config_init(struct rte_pie_config *pie_cfg,
 	const uint16_t qdelay_ref,

@@ -91,6 +91,7 @@ static rte_spinlock_t rte_bbdev_cb_lock = RTE_SPINLOCK_INITIALIZER;
  * Global array of all devices. This is not static because it's used by the
  * inline enqueue and dequeue functions
  */
+RTE_EXPORT_SYMBOL(rte_bbdev_devices)
 struct rte_bbdev rte_bbdev_devices[RTE_BBDEV_MAX_DEVS];
 
 /* Global array with rte_bbdev_data structures */
@@ -172,6 +173,7 @@ find_free_dev_id(void)
 	return RTE_BBDEV_MAX_DEVS;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_allocate)
 struct rte_bbdev *
 rte_bbdev_allocate(const char *name)
 {
@@ -231,6 +233,7 @@ rte_bbdev_allocate(const char *name)
 	return bbdev;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_release)
 int
 rte_bbdev_release(struct rte_bbdev *bbdev)
 {
@@ -266,6 +269,7 @@ rte_bbdev_release(struct rte_bbdev *bbdev)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_get_named_dev)
 struct rte_bbdev *
 rte_bbdev_get_named_dev(const char *name)
 {
@@ -286,12 +290,14 @@ rte_bbdev_get_named_dev(const char *name)
 	return NULL;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_count)
 uint16_t
 rte_bbdev_count(void)
 {
 	return num_devs;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_is_valid)
 bool
 rte_bbdev_is_valid(uint16_t dev_id)
 {
@@ -301,6 +307,7 @@ rte_bbdev_is_valid(uint16_t dev_id)
 	return false;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_find_next)
 uint16_t
 rte_bbdev_find_next(uint16_t dev_id)
 {
@@ -311,6 +318,7 @@ rte_bbdev_find_next(uint16_t dev_id)
 	return dev_id;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_setup_queues)
 int
 rte_bbdev_setup_queues(uint16_t dev_id, uint16_t num_queues, int socket_id)
 {
@@ -403,6 +411,7 @@ error:
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_intr_enable)
 int
 rte_bbdev_intr_enable(uint16_t dev_id)
 {
@@ -435,6 +444,7 @@ rte_bbdev_intr_enable(uint16_t dev_id)
 	return -ENOTSUP;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_configure)
 int
 rte_bbdev_queue_configure(uint16_t dev_id, uint16_t queue_id,
 		const struct rte_bbdev_queue_conf *conf)
@@ -555,6 +565,7 @@ rte_bbdev_queue_configure(uint16_t dev_id, uint16_t queue_id,
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_start)
 int
 rte_bbdev_start(uint16_t dev_id)
 {
@@ -589,6 +600,7 @@ rte_bbdev_start(uint16_t dev_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_stop)
 int
 rte_bbdev_stop(uint16_t dev_id)
 {
@@ -612,6 +624,7 @@ rte_bbdev_stop(uint16_t dev_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_close)
 int
 rte_bbdev_close(uint16_t dev_id)
 {
@@ -659,6 +672,7 @@ rte_bbdev_close(uint16_t dev_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_start)
 int
 rte_bbdev_queue_start(uint16_t dev_id, uint16_t queue_id)
 {
@@ -691,6 +705,7 @@ rte_bbdev_queue_start(uint16_t dev_id, uint16_t queue_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_stop)
 int
 rte_bbdev_queue_stop(uint16_t dev_id, uint16_t queue_id)
 {
@@ -755,6 +770,7 @@ reset_stats_in_queues(struct rte_bbdev *dev)
 	rte_bbdev_log_debug("Reset stats on %u", dev->data->dev_id);
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_stats_get)
 int
 rte_bbdev_stats_get(uint16_t dev_id, struct rte_bbdev_stats *stats)
 {
@@ -778,6 +794,7 @@ rte_bbdev_stats_get(uint16_t dev_id, struct rte_bbdev_stats *stats)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_stats_reset)
 int
 rte_bbdev_stats_reset(uint16_t dev_id)
 {
@@ -795,6 +812,7 @@ rte_bbdev_stats_reset(uint16_t dev_id)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_info_get)
 int
 rte_bbdev_info_get(uint16_t dev_id, struct rte_bbdev_info *dev_info)
 {
@@ -823,6 +841,7 @@ rte_bbdev_info_get(uint16_t dev_id, struct rte_bbdev_info *dev_info)
 	return 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_info_get)
 int
 rte_bbdev_queue_info_get(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_queue_info *queue_info)
@@ -909,6 +928,7 @@ bbdev_op_init(struct rte_mempool *mempool, void *arg, void *element,
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_op_pool_create)
 struct rte_mempool *
 rte_bbdev_op_pool_create(const char *name, enum rte_bbdev_op_type type,
 		unsigned int num_elements, unsigned int cache_size,
@@ -956,6 +976,7 @@ rte_bbdev_op_pool_create(const char *name, enum rte_bbdev_op_type type,
 	return mp;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_callback_register)
 int
 rte_bbdev_callback_register(uint16_t dev_id, enum rte_bbdev_event_type event,
 		rte_bbdev_cb_fn cb_fn, void *cb_arg)
@@ -1001,6 +1022,7 @@ rte_bbdev_callback_register(uint16_t dev_id, enum rte_bbdev_event_type event,
 	return (user_cb == NULL) ? -ENOMEM : 0;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_callback_unregister)
 int
 rte_bbdev_callback_unregister(uint16_t dev_id, enum rte_bbdev_event_type event,
 		rte_bbdev_cb_fn cb_fn, void *cb_arg)
@@ -1046,6 +1068,7 @@ rte_bbdev_callback_unregister(uint16_t dev_id, enum rte_bbdev_event_type event,
 	return ret;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_pmd_callback_process)
 void
 rte_bbdev_pmd_callback_process(struct rte_bbdev *dev,
 	enum rte_bbdev_event_type event, void *ret_param)
@@ -1088,6 +1111,7 @@ rte_bbdev_pmd_callback_process(struct rte_bbdev *dev,
 	rte_spinlock_unlock(&rte_bbdev_cb_lock);
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_intr_enable)
 int
 rte_bbdev_queue_intr_enable(uint16_t dev_id, uint16_t queue_id)
 {
@@ -1099,6 +1123,7 @@ rte_bbdev_queue_intr_enable(uint16_t dev_id, uint16_t queue_id)
 	return dev->dev_ops->queue_intr_enable(dev, queue_id);
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_intr_disable)
 int
 rte_bbdev_queue_intr_disable(uint16_t dev_id, uint16_t queue_id)
 {
@@ -1110,6 +1135,7 @@ rte_bbdev_queue_intr_disable(uint16_t dev_id, uint16_t queue_id)
 	return dev->dev_ops->queue_intr_disable(dev, queue_id);
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_queue_intr_ctl)
 int
 rte_bbdev_queue_intr_ctl(uint16_t dev_id, uint16_t queue_id, int epfd, int op,
 		void *data)
@@ -1147,6 +1173,7 @@ rte_bbdev_queue_intr_ctl(uint16_t dev_id, uint16_t queue_id, int epfd, int op,
 }
 
 
+RTE_EXPORT_SYMBOL(rte_bbdev_op_type_str)
 const char *
 rte_bbdev_op_type_str(enum rte_bbdev_op_type op_type)
 {
@@ -1167,6 +1194,7 @@ rte_bbdev_op_type_str(enum rte_bbdev_op_type op_type)
 	return NULL;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_device_status_str)
 const char *
 rte_bbdev_device_status_str(enum rte_bbdev_device_status status)
 {
@@ -1190,6 +1218,7 @@ rte_bbdev_device_status_str(enum rte_bbdev_device_status status)
 	return NULL;
 }
 
+RTE_EXPORT_SYMBOL(rte_bbdev_enqueue_status_str)
 const char *
 rte_bbdev_enqueue_status_str(enum rte_bbdev_enqueue_status status)
 {
@@ -1209,6 +1238,7 @@ rte_bbdev_enqueue_status_str(enum rte_bbdev_enqueue_status status)
 }
 
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bbdev_queue_ops_dump, 24.11)
 int
 rte_bbdev_queue_ops_dump(uint16_t dev_id, uint16_t queue_id, FILE *f)
 {
@@ -1248,6 +1278,7 @@ rte_bbdev_queue_ops_dump(uint16_t dev_id, uint16_t queue_id, FILE *f)
 	return dev->dev_ops->queue_ops_dump(dev, queue_id, f);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bbdev_ops_param_string, 24.11)
 char *
 rte_bbdev_ops_param_string(void *op, enum rte_bbdev_op_type op_type, char *str, uint32_t len)
 {

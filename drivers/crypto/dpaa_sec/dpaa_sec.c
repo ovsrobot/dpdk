@@ -3510,6 +3510,7 @@ dpaa_sec_process_atomic_event(void *event,
 	return qman_cb_dqrr_defer;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa_sec_eventq_attach)
 int
 dpaa_sec_eventq_attach(const struct rte_cryptodev *dev,
 		int qp_id,
@@ -3554,6 +3555,7 @@ dpaa_sec_eventq_attach(const struct rte_cryptodev *dev,
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa_sec_eventq_detach)
 int
 dpaa_sec_eventq_detach(const struct rte_cryptodev *dev,
 			int qp_id)
