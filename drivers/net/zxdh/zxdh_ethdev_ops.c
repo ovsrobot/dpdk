@@ -433,7 +433,7 @@ zxdh_dev_mac_addr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
 		ret = zxdh_del_mac_table(hw, hw->vport.vport, old_addr,
 			hw->hash_search_index, 0, 0);
 		if (ret) {
-			PMD_DRV_LOG(ERR, "mac_addr_add failed, code:%d", ret);
+			PMD_DRV_LOG(ERR, "mac_addr_del failed, code:%d", ret);
 			return ret;
 		}
 		hw->uc_num--;
@@ -467,6 +467,8 @@ zxdh_dev_mac_addr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
 		hw->uc_num--;
 	}
 	rte_ether_addr_copy(addr, (struct rte_ether_addr *)hw->mac_addr);
+	zxdh_pci_write_dev_config(hw, offsetof(struct zxdh_net_config, mac),
+								&hw->mac_addr, RTE_ETHER_ADDR_LEN);
 	return ret;
 }
 
@@ -566,7 +568,7 @@ zxdh_dev_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr,
 
 void zxdh_dev_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 {
-	struct zxdh_hw *hw	= dev->data->dev_private;
+	struct zxdh_hw *hw = dev->data->dev_private;
 	struct zxdh_msg_info msg_info = {0};
 	struct rte_ether_addr *mac_addr = &dev->data->mac_addrs[index];
 	uint16_t ret = 0;
@@ -2040,11 +2042,6 @@ zxdh_dev_fw_version_get(struct rte_eth_dev *dev,
 
 	zxdh_agent_msg_build(hw, ZXDH_FLASH_FIR_VERSION_GET, &msg_info);
 
-	struct zxdh_msg_recviver_mem rsp_data = {
-			.recv_buffer = (void *)&reply_info,
-			.buffer_len = sizeof(struct zxdh_msg_reply_info),
-	};
-
 	ret = zxdh_send_msg_to_riscv(dev, &msg_info, sizeof(struct zxdh_msg_info),
 				&reply_info, sizeof(struct zxdh_msg_reply_info),
 				ZXDH_MODULE_FLASH);
@@ -2053,10 +2050,8 @@ zxdh_dev_fw_version_get(struct rte_eth_dev *dev,
 				hw->vport.vport, ZXDH_FLASH_FIR_VERSION_GET);
 		return -1;
 	}
-	struct zxdh_msg_reply_body *ack_msg =
-			 &(((struct zxdh_msg_reply_info *)rsp_data.recv_buffer)->reply_body);
 
-	memcpy(fw_ver, ack_msg->flash_msg.firmware_version, ZXDH_FWVERS_LEN);
+	memcpy(fw_ver, &reply_info.reply_body.flash_msg, ZXDH_FWVERS_LEN);
 	snprintf(fw_version, ZXDH_FWVERS_LEN - 1, "%s", fw_ver);
 
 	return 0;

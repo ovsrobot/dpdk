@@ -695,7 +695,7 @@ static uint16_t
 zxdh_bar_chan_sync_msg_reps_get(uint64_t subchan_addr,
 		uint64_t recv_buffer, uint16_t buffer_len)
 {
-	struct zxdh_bar_msg_header msg_header = {0};
+	struct zxdh_bar_msg_header msg_header;
 	uint16_t msg_id = 0;
 	uint16_t msg_len = 0;
 
@@ -1147,13 +1147,9 @@ zxdh_send_msg_to_riscv(struct rte_eth_dev *dev, void *msg_req,
 		result.recv_buffer = &reply_info;
 		result.buffer_len = sizeof(reply_info);
 	}
-	struct zxdh_msg_reply_head *reply_head =
-				&(((struct zxdh_msg_reply_info *)result.recv_buffer)->reply_head);
-	struct zxdh_msg_reply_body *reply_body =
-				&(((struct zxdh_msg_reply_info *)result.recv_buffer)->reply_body);
 
 	struct zxdh_pci_bar_msg in = {
-		.payload_addr = &msg_req,
+		.payload_addr = msg_req,
 		.payload_len = msg_req_len,
 		.virt_addr = (uint64_t)(hw->bar_addr[ZXDH_BAR0_INDEX] + ZXDH_CTRLCH_OFFSET),
 		.src = hw->is_pf ? ZXDH_MSG_CHAN_END_PF : ZXDH_MSG_CHAN_END_VF,
@@ -1164,15 +1160,6 @@ zxdh_send_msg_to_riscv(struct rte_eth_dev *dev, void *msg_req,
 
 	if (zxdh_bar_chan_sync_msg_send(&in, &result) != ZXDH_BAR_MSG_OK) {
 		PMD_MSG_LOG(ERR, "Failed to send sync messages or receive response");
-		return -1;
-	}
-	if (reply_head->flag != ZXDH_MSG_REPS_OK) {
-		PMD_MSG_LOG(ERR, "vf[%d] get pf reply failed: reply_head flag : 0x%x(0xff is OK).replylen %d",
-				hw->vport.vfid, reply_head->flag, reply_head->reps_len);
-		return -1;
-	}
-	if (reply_body->flag != ZXDH_REPS_SUCC) {
-		PMD_MSG_LOG(ERR, "vf[%d] msg processing failed", hw->vfid);
 		return -1;
 	}
 
@@ -2043,7 +2030,8 @@ zxdh_vf_mtr_hw_profile_cfg(struct zxdh_hw *pf_hw __rte_unused,
 		(struct zxdh_plcr_profile_cfg *)cfg_data;
 	union zxdh_offload_profile_cfg *plcr_param = &zxdh_plcr_profile_cfg->plcr_param;
 
-	ret = zxdh_np_car_profile_cfg_set(vport,
+	ret = zxdh_np_car_profile_cfg_set(pf_hw->dev_id,
+		vport,
 		zxdh_plcr_profile_cfg->car_type,
 		zxdh_plcr_profile_cfg->packet_mode,
 		zxdh_plcr_profile_cfg->hw_profile_id,

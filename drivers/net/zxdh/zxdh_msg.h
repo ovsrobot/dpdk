@@ -384,9 +384,9 @@ struct zxdh_mtr_profile_info {
 };
 
 struct zxdh_msg_reply_body {
-	enum zxdh_reps_flag flag;
+	uint8_t flag;
 	union {
-		uint8_t reply_data[ZXDH_MSG_REPLY_BODY_MAX_LEN - sizeof(enum zxdh_reps_flag)];
+		uint8_t reply_data[ZXDH_MSG_REPLY_BODY_MAX_LEN - sizeof(uint8_t)];
 		struct zxdh_hw_np_stats np_stats;
 		struct zxdh_link_info_msg link_msg;
 		struct zxdh_rss_reta rss_reta;
@@ -412,12 +412,12 @@ struct zxdh_vf_init_msg {
 	uint8_t rss_enable;
 };
 
-struct zxdh_msg_head {
-	enum zxdh_msg_type msg_type;
+struct __rte_packed_begin zxdh_msg_head {
+	uint8_t msg_type;
 	uint16_t  vport;
 	uint16_t  vf_id;
 	uint16_t pcieid;
-};
+} __rte_packed_end;
 
 struct zxdh_port_attr_set_msg {
 	uint32_t mode;
@@ -455,7 +455,7 @@ struct zxdh_rss_enable {
 };
 
 struct zxdh_agent_msg_head {
-	enum zxdh_agent_msg_type msg_type;
+	uint8_t msg_type;
 	uint8_t panel_id;
 	uint8_t phyport;
 	uint8_t rsv;

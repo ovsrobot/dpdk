@@ -818,9 +818,14 @@ zxdh_recv_pkts_packed(void *rx_queue, struct rte_mbuf **rx_pkts,
 		seg_num  = header->type_hdr.num_buffers;
 
 		/* Private queue only handle type hdr */
-		hdr_size = ZXDH_TYPE_HDR_SIZE;
-		rxm->pkt_len = ((header->type_hdr.port & 0x7f) << 8) +
-							header->type_hdr.pd_len;
+		hdr_size = header->type_hdr.pd_len << 1;
+		if (unlikely(hdr_size > lens[i] || hdr_size < ZXDH_TYPE_HDR_SIZE)) {
+			PMD_RX_LOG(ERR, "hdr_size:%u is invalid", hdr_size);
+			rte_pktmbuf_free(rxm);
+			rxvq->stats.errors++;
+			rxvq->stats.invalid_hdr_len_err++;
+			continue;
+		}
 		rxm->data_off += hdr_size;
 		rxm->nb_segs = seg_num;
 		rxm->ol_flags = 0;

@@ -8,14 +8,7 @@
 #include "zxdh_tables.h"
 #include "zxdh_logs.h"
 
-#define ZXDH_SDT_VPORT_ATT_TABLE          1
-#define ZXDH_SDT_PANEL_ATT_TABLE          2
-#define ZXDH_SDT_RSS_ATT_TABLE            3
-#define ZXDH_SDT_VLAN_ATT_TABLE           4
-#define ZXDH_SDT_BROCAST_ATT_TABLE        6
-#define ZXDH_SDT_UNICAST_ATT_TABLE        10
-#define ZXDH_SDT_MULTICAST_ATT_TABLE      11
-#define ZXDH_SDT_PORT_VLAN_ATT_TABLE      16
+
 
 #define ZXDH_MAC_HASH_INDEX_BASE          64
 #define ZXDH_MAC_HASH_INDEX(index)        (ZXDH_MAC_HASH_INDEX_BASE + (index))
@@ -40,15 +33,16 @@ zxdh_set_port_attr(struct zxdh_hw *hw, uint16_t vport, struct zxdh_port_attr_tab
 {
 	struct zxdh_dtb_shared_data *dtb_data = &hw->dev_sd->dtb_sd;
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
+	uint16_t vfid = zxdh_vport_to_vfid(vport_num);
 	int ret = 0;
 
-	ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vport_num.vfid, (uint32_t *)port_attr};
+	ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vfid, (uint32_t *)port_attr};
 	ZXDH_DTB_USER_ENTRY_T user_entry_write = {ZXDH_SDT_VPORT_ATT_TABLE, (void *)&entry};
 
 	ret = zxdh_np_dtb_table_entry_write(hw->slot_id,
 				dtb_data->queueid, 1, &user_entry_write);
 	if (ret != 0)
-		PMD_DRV_LOG(ERR, "write vport_att failed vfid:%d failed", vport_num.vfid);
+		PMD_DRV_LOG(ERR, "write vport_att failed vfid:%d failed", vfid);
 
 	return ret;
 }
@@ -72,6 +66,7 @@ zxdh_port_attr_init(struct rte_eth_dev *dev)
 		port_attr.mtu = dev->data->mtu;
 		port_attr.mtu_enable = 1;
 		port_attr.is_up = 0;
+		port_attr.hash_search_index = hw->hash_search_index;
 		if (!port_attr.rss_enable)
 			port_attr.port_base_qid = 0;
 
@@ -144,6 +139,7 @@ int zxdh_panel_table_init(struct rte_eth_dev *dev)
 	panel.pf_vfid = zxdh_vport_to_vfid(hw->vport);
 	panel.mtu_enable = 1;
 	panel.mtu = dev->data->mtu;
+	panel.port_vfid_1588 = panel.pf_vfid;
 
 	ZXDH_DTB_ERAM_ENTRY_INFO_T panel_entry = {
 		.index = hw->phyport,
@@ -212,13 +208,14 @@ zxdh_get_port_attr(struct zxdh_hw *hw, uint16_t vport, struct zxdh_port_attr_tab
 {
 	struct zxdh_dtb_shared_data *dtb_data = &hw->dev_sd->dtb_sd;
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
-	ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vport_num.vfid, (uint32_t *)port_attr};
+	uint16_t vfid = zxdh_vport_to_vfid(vport_num);
+	ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vfid, (uint32_t *)port_attr};
 	ZXDH_DTB_USER_ENTRY_T user_entry_get = {ZXDH_SDT_VPORT_ATT_TABLE, &entry};
 	int ret;
 
 	ret = zxdh_np_dtb_table_entry_get(hw->slot_id, dtb_data->queueid, &user_entry_get, 1);
 	if (ret != 0)
-		PMD_DRV_LOG(ERR, "get port_attr vfid:%d failed, ret:%d", vport_num.vfid, ret);
+		PMD_DRV_LOG(ERR, "get port_attr vfid:%d failed, ret:%d", vfid, ret);
 
 	return ret;
 }
@@ -229,7 +226,8 @@ zxdh_delete_port_attr(struct zxdh_hw *hw, uint16_t vport,
 {
 	struct zxdh_dtb_shared_data *dtb_data = &hw->dev_sd->dtb_sd;
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
-	ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vport_num.vfid, (uint32_t *)port_attr};
+	uint16_t vfid = zxdh_vport_to_vfid(vport_num);
+	ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vfid, (uint32_t *)port_attr};
 	ZXDH_DTB_USER_ENTRY_T user_entry = {
 		.sdt_no = ZXDH_SDT_VPORT_ATT_TABLE,
 		.p_entry_data = (void *)&entry
@@ -247,9 +245,9 @@ zxdh_add_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 	struct zxdh_mac_unicast_table unicast_table = {0};
 	struct zxdh_mac_multicast_table multicast_table = {0};
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
+	uint16_t vfid = zxdh_vport_to_vfid(vport_num);
 	uint32_t ret;
 	uint16_t group_id = 0;
-	uint16_t vfid = vport_num.vfid;
 
 	if (rte_is_unicast_ether_addr(addr)) {
 		rte_memcpy(unicast_table.key.dmac_addr, addr, sizeof(struct rte_ether_addr));
@@ -351,15 +349,17 @@ zxdh_del_mac_table(struct zxdh_hw *hw, uint16_t vport, struct rte_ether_addr *ad
 	struct zxdh_mac_unicast_table unicast_table = {0};
 	struct zxdh_mac_multicast_table multicast_table = {0};
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
-	uint32_t ret, del_flag = 0;
-	uint16_t group_id = 0;
 	union zxdh_virport_num port = (union zxdh_virport_num)vport;
 	uint16_t vfid = zxdh_vport_to_vfid(port);
+	uint32_t ret, del_flag = 0;
+	uint16_t group_id = 0;
 
 	if (rte_is_unicast_ether_addr(addr)) {
 		rte_memcpy(unicast_table.key.dmac_addr, addr, sizeof(struct rte_ether_addr));
 		unicast_table.key.sriov_vlan_id = srv_vlanid;
 		unicast_table.key.sriov_vlan_tpid = srv_tpid;
+		unicast_table.entry.hit_flag = 0;
+		unicast_table.entry.vfid = rte_cpu_to_be_16(vfid & 0x7ff);
 
 		ZXDH_DTB_HASH_ENTRY_INFO_T dtb_hash_entry = {
 			.p_actu_key = (uint8_t *)&unicast_table.key,
@@ -800,6 +800,7 @@ zxdh_rss_table_set(struct zxdh_hw *hw, uint16_t vport, struct zxdh_rss_reta *rss
 	struct zxdh_dtb_shared_data *dtb_data = &hw->dev_sd->dtb_sd;
 	struct zxdh_rss_to_vqid_table rss_vqid = {0};
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
+	uint16_t vfid = zxdh_vport_to_vfid(vport_num);
 	int ret = 0;
 
 	for (uint16_t i = 0; i < RTE_ETH_RSS_RETA_SIZE_256 / 8; i++) {
@@ -820,7 +821,7 @@ zxdh_rss_table_set(struct zxdh_hw *hw, uint16_t vport, struct zxdh_rss_reta *rss
 			rss_vqid.vqm_qid[0] |= 0x8000;
 #endif
 		ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {
-			.index = vport_num.vfid * 32 + i,
+			.index = vfid * 32 + i,
 			.p_data = (uint32_t *)&rss_vqid
 		};
 		ZXDH_DTB_USER_ENTRY_T user_entry_write = {
@@ -830,7 +831,7 @@ zxdh_rss_table_set(struct zxdh_hw *hw, uint16_t vport, struct zxdh_rss_reta *rss
 		ret = zxdh_np_dtb_table_entry_write(hw->slot_id,
 					dtb_data->queueid, 1, &user_entry_write);
 		if (ret != 0) {
-			PMD_DRV_LOG(ERR, "write rss base qid failed vfid:%d", vport_num.vfid);
+			PMD_DRV_LOG(ERR, "write rss base qid failed vfid:%d", vfid);
 			return ret;
 		}
 	}
@@ -843,16 +844,17 @@ zxdh_rss_table_get(struct zxdh_hw *hw, uint16_t vport, struct zxdh_rss_reta *rss
 	struct zxdh_dtb_shared_data *dtb_data = &hw->dev_sd->dtb_sd;
 	struct zxdh_rss_to_vqid_table rss_vqid = {0};
 	union zxdh_virport_num vport_num = (union zxdh_virport_num)vport;
+	uint16_t vfid = zxdh_vport_to_vfid(vport_num);
 	int ret = 0;
 
 	for (uint16_t i = 0; i < RTE_ETH_RSS_RETA_SIZE_256 / 8; i++) {
-		ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vport_num.vfid * 32 + i, (uint32_t *)&rss_vqid};
+		ZXDH_DTB_ERAM_ENTRY_INFO_T entry = {vfid * 32 + i, (uint32_t *)&rss_vqid};
 		ZXDH_DTB_USER_ENTRY_T user_entry = {ZXDH_SDT_RSS_ATT_TABLE, &entry};
 
 		ret = zxdh_np_dtb_table_entry_get(hw->slot_id,
 					dtb_data->queueid, &user_entry, 1);
 		if (ret != 0) {
-			PMD_DRV_LOG(ERR, "get rss tbl failed, vfid:%d", vport_num.vfid);
+			PMD_DRV_LOG(ERR, "get rss tbl failed, vfid:%d", vfid);
 			return -1;
 		}
 
