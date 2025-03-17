@@ -300,11 +300,13 @@ if cc.get_id() == 'clang' and dpdk_conf.get('RTE_ARCH_64') == false
     dpdk_extra_ldflags += '-latomic'
 endif
 
-# add -include rte_config to cflags
+# add -include some headers to cflags
 if is_ms_compiler
     add_project_arguments('/FI', 'rte_config.h', language: 'c')
+    add_project_arguments('/FI', 'rte_export.h', language: 'c')
 else
     add_project_arguments('-include', 'rte_config.h', language: 'c')
+    add_project_arguments('-include', 'rte_export.h', language: 'c')
 endif
 
 # enable extra warnings and disable any unwanted warnings
