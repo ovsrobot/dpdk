@@ -11,8 +11,6 @@
 #error Use of function versioning disabled, is "use_function_versioning=true" in meson.build?
 #endif
 
-#ifdef RTE_BUILD_SHARED_LIB
-
 /*
  * Provides backwards compatibility when updating exported functions.
  * When a symbol is exported from a library to provide an API, it also provides a
@@ -20,80 +18,54 @@
  * arguments, etc.  On occasion that function may need to change to accommodate
  * new functionality, behavior, etc.  When that occurs, it is desirable to
  * allow for backwards compatibility for a time with older binaries that are
- * dynamically linked to the dpdk.  To support that, the __vsym and
- * VERSION_SYMBOL macros are created.  They, in conjunction with the
- * version.map file for a given library allow for multiple versions of
- * a symbol to exist in a shared library so that older binaries need not be
- * immediately recompiled.
- *
- * Refer to the guidelines document in the docs subdirectory for details on the
- * use of these macros
+ * dynamically linked to the dpdk.
  */
 
-/*
- * Macro Parameters:
- * b - function base name
- * e - function version extension, to be concatenated with base name
- * n - function symbol version string to be applied
- * f - function prototype
- * p - full function symbol name
- */
+#ifdef RTE_BUILD_SHARED_LIB
 
 /*
- * VERSION_SYMBOL
- * Creates a symbol version table entry binding symbol <b>@DPDK_<n> to the internal
- * function name <b><e>
+ * RTE_VERSION_SYMBOL
+ * Creates a symbol version table entry binding symbol <name>@DPDK_<ver> to the internal
+ * function name <name>_v<ver>.
  */
-#define VERSION_SYMBOL(b, e, n) __asm__(".symver " RTE_STR(b) RTE_STR(e) ", " RTE_STR(b) "@DPDK_" RTE_STR(n))
+#define RTE_VERSION_SYMBOL(ver, type, name, args) \
+__asm__(".symver " RTE_STR(name) "_v" RTE_STR(ver) ", " RTE_STR(name) "@DPDK_" RTE_STR(ver)); \
+__rte_used type name ## _v ## ver args; \
+type name ## _v ## ver args
 
 /*
- * VERSION_SYMBOL_EXPERIMENTAL
- * Creates a symbol version table entry binding the symbol <b>@EXPERIMENTAL to the internal
- * function name <b><e>. The macro is used when a symbol matures to become part of the stable ABI,
- * to provide an alias to experimental for some time.
+ * RTE_VERSION_EXPERIMENTAL_SYMBOL
+ * Similar to RTE_VERSION_SYMBOL but for experimental API symbols.
+ * This is mainly used for keeping compatibility for symbols that get promoted to stable ABI.
  */
-#define VERSION_SYMBOL_EXPERIMENTAL(b, e) __asm__(".symver " RTE_STR(b) RTE_STR(e) ", " RTE_STR(b) "@EXPERIMENTAL")
+#define RTE_VERSION_EXPERIMENTAL_SYMBOL(type, name, args) \
+__asm__(".symver " RTE_STR(name) "_exp, " RTE_STR(name) "@EXPERIMENTAL") \
+__rte_used type name ## _exp args; \
+type name ## _exp args
 
 /*
- * BIND_DEFAULT_SYMBOL
+ * RTE_DEFAULT_SYMBOL
  * Creates a symbol version entry instructing the linker to bind references to
- * symbol <b> to the internal symbol <b><e>
+ * symbol <name> to the internal symbol <name>_v<ver>.
  */
-#define BIND_DEFAULT_SYMBOL(b, e, n) __asm__(".symver " RTE_STR(b) RTE_STR(e) ", " RTE_STR(b) "@@DPDK_" RTE_STR(n))
+#define RTE_DEFAULT_SYMBOL(ver, type, name, args) \
+__asm__(".symver " RTE_STR(name) "_v" RTE_STR(ver) ", " RTE_STR(name) "@@DPDK_" RTE_STR(ver)); \
+__rte_used type name ## _v ## ver args; \
+type name ## _v ## ver args
 
-/*
- * __vsym
- * Annotation to be used in declaration of the internal symbol <b><e> to signal
- * that it is being used as an implementation of a particular version of symbol
- * <b>.
- */
-#define __vsym __rte_used
+#else /* !RTE_BUILD_SHARED_LIB */
 
-/*
- * MAP_STATIC_SYMBOL
- * If a function has been bifurcated into multiple versions, none of which
- * are defined as the exported symbol name in the map file, this macro can be
- * used to alias a specific version of the symbol to its exported name.  For
- * example, if you have 2 versions of a function foo_v1 and foo_v2, where the
- * former is mapped to foo@DPDK_1 and the latter is mapped to foo@DPDK_2 when
- * building a shared library, this macro can be used to map either foo_v1 or
- * foo_v2 to the symbol foo when building a static library, e.g.:
- * MAP_STATIC_SYMBOL(void foo(), foo_v2);
- */
-#define MAP_STATIC_SYMBOL(f, p)
+#define RTE_VERSION_SYMBOL(ver, type, name, args) \
+type name ## _v ## ver args; \
+type name ## _v ## ver args
 
-#else
-/*
- * No symbol versioning in use
- */
-#define VERSION_SYMBOL(b, e, n)
-#define VERSION_SYMBOL_EXPERIMENTAL(b, e)
-#define __vsym
-#define BIND_DEFAULT_SYMBOL(b, e, n)
-#define MAP_STATIC_SYMBOL(f, p) f __attribute__((alias(RTE_STR(p))))
-/*
- * RTE_BUILD_SHARED_LIB=n
- */
-#endif
+#define RTE_VERSION_EXPERIMENTAL_SYMBOL(type, name, args) \
+type name ## _exp args; \
+type name ## _exp args
+
+#define RTE_DEFAULT_SYMBOL(ver, type, name, args) \
+type name args
+
+#endif /* RTE_BUILD_SHARED_LIB */
 
 #endif /* _RTE_FUNCTION_VERSIONING_H_ */
