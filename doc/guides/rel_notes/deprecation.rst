@@ -138,3 +138,7 @@ Deprecation Notices
   will be deprecated and subsequently removed in DPDK 24.11 release.
   Before this, the new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status.
+
+* bus/vmbus: Starting DPDK 25.11, all the vmbus APIs defined in
+  drivers/bus/vmbus/rte_bus_vmbus.h will become internal to DPDK. Those APIs
+  are used internally by DPDK core and net/netvsc PMD.
