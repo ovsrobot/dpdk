@@ -2350,6 +2350,8 @@ zxdh_np_dev_add(uint32_t  dev_id, ZXDH_DEV_TYPE_E dev_type,
 
 	rte_spinlock_init(&p_dev_info->dtb_spinlock.spinlock);
 
+	rte_spinlock_init(&p_dev_info->smmu0_spinlock.spinlock);
+
 	for (i = 0; i < ZXDH_DTB_QUEUE_NUM_MAX; i++)
 		rte_spinlock_init(&p_dev_info->dtb_queue_spinlock[i].spinlock);
 
@@ -3386,6 +3388,32 @@ zxdh_np_reg_read(uint32_t dev_id, uint32_t reg_no,
 								p_field_info[i].len);
 		ZXDH_COMM_CHECK_RC_NO_ASSERT(rc, "zxdh_np_comm_read_bits_ex");
 		PMD_DRV_LOG(DEBUG, "dev_id %u(%u)(%u)is ok!", dev_id, m_offset, n_offset);
+	}
+
+	return rc;
+}
+
+static uint32_t
+zxdh_np_reg_read32(uint32_t dev_id, uint32_t reg_no,
+	uint32_t m_offset, uint32_t n_offset, uint32_t *p_data)
+{
+	uint32_t rc = 0;
+	uint32_t addr = 0;
+	ZXDH_REG_T *p_reg_info = &g_dpp_reg_info[reg_no];
+	uint32_t p_buff[ZXDH_REG_DATA_MAX] = {0};
+	uint32_t reg_real_no = p_reg_info->reg_no;
+	uint32_t reg_type = p_reg_info->flags;
+	uint32_t reg_module = p_reg_info->module_no;
+
+	addr = zxdh_np_reg_get_reg_addr(reg_no, m_offset, n_offset);
+
+	if (reg_module == DTB4K) {
+		rc = p_reg_info->p_read_fun(dev_id, addr, p_data);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "p_reg_info->p_read_fun");
+	} else {
+		rc = zxdh_np_agent_channel_reg_read(dev_id, reg_type, reg_real_no, 4, addr, p_buff);
+		ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_agent_channel_reg_read");
+		*p_data = p_buff[0];
 	}
 
 	return rc;
@@ -10542,9 +10570,9 @@ zxdh_np_se_done_status_check(uint32_t dev_id, uint32_t reg_no, uint32_t pos)
 	uint32_t done_flag = 0;
 
 	while (!done_flag) {
-		rc = zxdh_np_reg_read(dev_id, reg_no, 0, 0, &data);
+		rc = zxdh_np_reg_read32(dev_id, reg_no, 0, 0, &data);
 		if (rc != 0) {
-			PMD_DRV_LOG(ERR, "reg_read fail!");
+			PMD_DRV_LOG(ERR, "reg_read32 fail!");
 			return rc;
 		}
 
@@ -10577,10 +10605,17 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 	uint32_t temp_data[4] = {0};
 	uint32_t *p_temp_data = NULL;
 	ZXDH_SMMU0_SMMU0_CPU_IND_CMD_T cpu_ind_cmd = {0};
+	ZXDH_SPINLOCK_T *p_ind_spinlock = NULL;
+
+	rc = zxdh_np_dev_opr_spinlock_get(dev_id, ZXDH_DEV_SPINLOCK_T_SMMU0, &p_ind_spinlock);
+	ZXDH_COMM_CHECK_DEV_RC(dev_id, rc, "zxdh_np_dev_opr_spinlock_get");
+
+	rte_spinlock_lock(&p_ind_spinlock->spinlock);
 
 	rc = zxdh_np_se_done_status_check(dev_id, ZXDH_SMMU0_SMMU0_WR_ARB_CPU_RDYR, 0);
 	if (rc != ZXDH_OK) {
 		PMD_DRV_LOG(ERR, "se done status check failed, rc=0x%x.", rc);
+		rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 		return ZXDH_ERR;
 	}
 
@@ -10592,11 +10627,13 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		switch (rd_mode) {
 		case ZXDH_ERAM128_OPR_128b:
 			if ((0xFFFFFFFF - (base_addr)) < (index)) {
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				PMD_DRV_LOG(ERR, "index 0x%x is invalid!", index);
 				return ZXDH_PAR_CHK_INVALID_INDEX;
 			}
 			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = (index << 7) & ZXDH_ERAM128_BADDR_MASK;
@@ -10604,6 +10641,7 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_64b:
 			if ((base_addr + (index >> 1)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = (index << 6) & ZXDH_ERAM128_BADDR_MASK;
@@ -10612,6 +10650,7 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_32b:
 			if ((base_addr + (index >> 2)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = (index << 5) & ZXDH_ERAM128_BADDR_MASK;
@@ -10620,6 +10659,7 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_1b:
 			if ((base_addr + (index >> 7)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = index & ZXDH_ERAM128_BADDR_MASK;
@@ -10638,10 +10678,12 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_128b:
 			if ((0xFFFFFFFF - (base_addr)) < (index)) {
 				PMD_DRV_LOG(ERR, "index 0x%x is invalid!", index);
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_PAR_CHK_INVALID_INDEX;
 			}
 			if (base_addr + index > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = (index << 7);
@@ -10650,6 +10692,7 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_64b:
 			if ((base_addr + (index >> 1)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = (index << 6);
@@ -10658,6 +10701,7 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 		case ZXDH_ERAM128_OPR_32b:
 			if ((base_addr + (index >> 2)) > ZXDH_SE_SMMU0_ERAM_ADDR_NUM_TOTAL - 1) {
 				PMD_DRV_LOG(ERR, "index out of range!");
+				rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 				return ZXDH_ERR;
 			}
 			row_index = (index << 5);
@@ -10665,7 +10709,8 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 			break;
 		case ZXDH_ERAM128_OPR_1b:
 			PMD_DRV_LOG(ERR, "rd_clr_mode[%u] or rd_mode[%u] error!",
-			rd_clr_mode, rd_mode);
+				rd_clr_mode, rd_mode);
+			rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 			return ZXDH_ERR;
 		default:
 			break;
@@ -10680,12 +10725,14 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 			&cpu_ind_cmd);
 	if (rc != ZXDH_OK) {
 		PMD_DRV_LOG(ERR, "zxdh_np_reg_write failed, rc=0x%x.", rc);
+		rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 		return ZXDH_ERR;
 	}
 
 	rc = zxdh_np_se_done_status_check(dev_id, ZXDH_SMMU0_SMMU0_CPU_IND_RD_DONER, 0);
 	if (rc != ZXDH_OK) {
 		PMD_DRV_LOG(ERR, "se done status check failed, rc=0x%x.", rc);
+		rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 		return ZXDH_ERR;
 	}
 
@@ -10698,6 +10745,7 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 			p_temp_data + 3 - i);
 		if (rc != ZXDH_OK) {
 			PMD_DRV_LOG(ERR, "zxdh_np_reg_write failed, rc=0x%x.", rc);
+			rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 			return ZXDH_ERR;
 		}
 	}
@@ -10735,6 +10783,8 @@ zxdh_np_se_smmu0_ind_read(uint32_t dev_id,
 			break;
 		}
 	}
+
+	rte_spinlock_unlock(&p_ind_spinlock->spinlock);
 
 	return rc;
 }
@@ -10789,7 +10839,7 @@ zxdh_np_agent_channel_plcr_sync_send(uint32_t dev_id, ZXDH_AGENT_CHANNEL_PLCR_MS
 {
 	uint32_t ret = 0;
 	ZXDH_AGENT_CHANNEL_MSG_T agent_msg = {
-		.msg = (void *)&p_msg,
+		.msg = (void *)p_msg,
 		.msg_len = sizeof(ZXDH_AGENT_CHANNEL_PLCR_MSG_T),
 	};
 
@@ -11012,7 +11062,8 @@ zxdh_np_stat_carc_queue_cfg_set(uint32_t dev_id,
 }
 
 uint32_t
-zxdh_np_car_profile_id_add(uint32_t vport_id,
+zxdh_np_car_profile_id_add(uint32_t dev_id,
+		uint32_t vport_id,
 		uint32_t flags,
 		uint64_t *p_profile_id)
 {
@@ -11027,7 +11078,7 @@ zxdh_np_car_profile_id_add(uint32_t vport_id,
 		PMD_DRV_LOG(ERR, "profile_id point null!");
 		return ZXDH_PAR_CHK_POINT_NULL;
 	}
-	ret = zxdh_np_agent_channel_plcr_profileid_request(0, vport_id, flags, profile_id);
+	ret = zxdh_np_agent_channel_plcr_profileid_request(dev_id, vport_id, flags, profile_id);
 
 	profile_id_h = *(profile_id + 1);
 	profile_id_l = *profile_id;
@@ -11045,14 +11096,14 @@ zxdh_np_car_profile_id_add(uint32_t vport_id,
 }
 
 uint32_t
-zxdh_np_car_profile_cfg_set(uint32_t vport_id __rte_unused,
+zxdh_np_car_profile_cfg_set(uint32_t dev_id,
+		uint32_t vport_id __rte_unused,
 		uint32_t car_type,
 		uint32_t pkt_sign,
 		uint32_t profile_id,
 		void *p_car_profile_cfg)
 {
 	uint32_t ret = 0;
-	uint32_t dev_id = 0;
 
 	ret = zxdh_np_agent_channel_plcr_car_rate(dev_id, car_type,
 		pkt_sign, profile_id, p_car_profile_cfg);
@@ -11065,11 +11116,10 @@ zxdh_np_car_profile_cfg_set(uint32_t vport_id __rte_unused,
 }
 
 uint32_t
-zxdh_np_car_profile_id_delete(uint32_t vport_id,
+zxdh_np_car_profile_id_delete(uint32_t dev_id, uint32_t vport_id,
 	uint32_t flags, uint64_t profile_id)
 {
 	uint32_t ret = 0;
-	uint32_t dev_id = 0;
 	uint32_t profileid = profile_id & 0xFFFF;
 
 	ret = zxdh_np_agent_channel_plcr_profileid_release(dev_id, vport_id, flags, profileid);
