@@ -22,6 +22,20 @@ Supported BlueField Platforms
 - `BlueField-3 <https://docs.nvidia.com/networking/display/BlueField3DPU/Introduction>`_
 
 
+The following table highlights key differences between BlueField-2 and BlueField-3:
+
+.. table:: BlueField-2 vs BlueField-3 Comparison
+
+   =========================== =================== ===================
+   Feature                     BlueField-2         BlueField-3
+   =========================== =================== ===================
+   **Networking Speed**        Up to 200 Gb/s      Up to 400 Gb/s
+   **Processing Cores**        8 ARM Cortex-A72    16 ARM Cortex-A78
+   **Memory**                  16GB DDR4           32 GB DDR5
+   **Integrated Networking**   ConnectX-6          ConnectX-7
+   =========================== =================== ===================
+
+
 Common Offload HW Drivers
 -------------------------
 
@@ -53,6 +67,13 @@ Compile DPDK
 
 DPDK can be compiled either natively on BlueField platforms or cross-compiled on
 an x86 based platform.
+
+.. note::
+
+   Starting with DPDK 25.03, using the ``-mcpu=cortex-a78ae`` option is required for optimal performance on BlueField-3.
+   If your compiler does not support this option, you may need to use a newer GCC version or specify
+   ``-Dplatform=generic`` as a workaround for native compilation or use the
+   ``--cross-file config/arm/arm64_armv8_linux_gcc`` configuration file for cross-compilation.
 
 Native Compilation
 ~~~~~~~~~~~~~~~~~~
