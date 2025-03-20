@@ -1172,6 +1172,11 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	PMD_LOG(INFO, "%s:\tblock count %d", name, blockcount);
 	PMD_LOG(INFO, "%s:\tframe size %d", name, framesize);
 	PMD_LOG(INFO, "%s:\tframe count %d", name, framecount);
+	PMD_LOG(INFO, "%s:\tqdisc bypass %d", name, qdisc_bypass);
+	if (fanout_mode)
+		PMD_LOG(INFO, "%s:\tfanout mode %s", name, fanout_mode);
+	else
+		PMD_LOG(INFO, "%s:\tfanout mode %s", name, "default PACKET_FANOUT_HASH");
 
 	if (rte_pmd_init_internals(dev, *sockfd, qpairs,
 				   blocksize, blockcount,
@@ -1274,4 +1279,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_af_packet,
 	"blocksz=<int> "
 	"framesz=<int> "
 	"framecnt=<int> "
-	"qdisc_bypass=<0|1>");
+	"qdisc_bypass=<0|1> "
+	"fanout_mode=<hash|lb|cpu|rollover|rnd|qm>");
