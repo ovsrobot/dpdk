@@ -57,13 +57,13 @@ New Features
 
 * **Added Staged-Ordered-Ring (SORING) API to the ring library.**
 
-  New API was added to the ring library to provide a SW abstraction
+  Added new API to the ring library to provide a software abstraction
   for ordered queues with multiple processing stages.
-  It is based on conventional DPDK rte_ring, re-uses many of its concepts,
-  and even substantial part of its code.
-  It can be viewed as an extension of rte_ring functionality.
+  It is based on the conventional DPDK ``rte_ring`` and re-uses many of its concepts,
+  including substantial part of its code.
+  It can be viewed as an extension of ``rte_ring`` functionality.
 
-* **Hardened of more allocation functions.**
+* **Hardened more allocation functions.**
 
   Added allocation attributes to functions that allocate data:
 
@@ -89,12 +89,12 @@ New Features
 
   This can catch some obvious bugs at compile time (with GCC 11.0 or later).
   For example, calling ``free`` on a pointer that was allocated with one
-  of those functions (and vice versa); freeing the same pointer twice
+  of those functions (and vice versa), freeing the same pointer twice
   in the same routine or freeing an object that was not created by allocation.
 
 * **Updated af_packet net driver.**
 
-  * Added ability to option to configure receive packet fanout mode.
+  * Added ability to configure receive packet fanout mode.
   * Added statistics for failed buffer allocation and missed packets.
 
 * **Updated Amazon ENA (Elastic Network Adapter) net driver.**
@@ -129,7 +129,7 @@ New Features
 * **Updated NVIDIA mlx5 driver.**
 
   * Added support for NVIDIA ConnectX-8 adapters.
-  * Optimized port probing in large scale.
+  * Optimized large scale port probing.
     This feature enhances the efficiency of probing VF/SFs on a large scale
     by significantly reducing the probing time.
 
@@ -157,15 +157,15 @@ New Features
 
   Added network driver for the Yunsilicon metaScale serials NICs.
 
-* **Updated vhost library.**
+* **Updated vhost library for RSA crypto.**
 
   Updated vhost library to support RSA crypto operations.
 
-* **Updated virtio crypto driver.**
+* **Updated virtio crypto driver for RSA crypto.**
 
   * Added support for RSA crypto operations.
 
-* **Updated IPsec_MB crypto driver.**
+* **Updated IPsec_MB crypto driver for SM4 GCM .**
 
   * Added support for the SM4 GCM algorithm.
 
@@ -179,8 +179,8 @@ New Features
 * **Added atomic tests to the eventdev test application.**
 
   Added two atomic tests: ``atomic_queue`` and ``atomic_atq``.
-  They work in the same way as the corresponding ordered tests
-  but exclusively use atomic queues.
+  These work in the same way as the corresponding ordered tests
+  but use atomic queues exclusively.
   Atomicity is verified using spinlocks.
 
 
@@ -233,12 +233,12 @@ API Changes
   cpfl, e1000, fm10k, i40e, iavf, ice, idpf, ipn3ke and ixgbe,
   have been moved from ``drivers/net`` to a new ``drivers/net/intel`` directory.
   The resulting build output, including the driver filenames, is the same,
-  but to enable/disable these drivers via Meson option requires use of the new paths.
+  but to enable/disable these drivers via Meson option requires the use of the new paths.
   For example, ``-Denable_drivers=/net/i40e`` becomes ``-Denable_drivers=/net/intel/i40e``.
 
-* build: The Intel IGC networking driver was merged with e1000 driver
+* build: The Intel IGC networking driver was merged with the e1000 driver
   and is no longer provided as a separate driver.
-  The resulting build output will not have the ``librte_net_igc.*`` driver files any more,
+  The resulting build output will no longer have the ``librte_net_igc.*`` driver files,
   but the ``librte_net_e1000.*`` driver files will provide support
   for all of the devices and features of the old driver.
   In addition, to enable/disable the driver via Meson option,
