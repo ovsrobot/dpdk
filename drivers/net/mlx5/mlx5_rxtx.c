@@ -6,12 +6,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <rte_mbuf.h>
 #include <rte_mempool.h>
 #include <rte_prefetch.h>
 #include <rte_common.h>
 #include <rte_branch_prediction.h>
+#include <rte_eal.h>
 #include <rte_ether.h>
 #include <rte_cycles.h>
 #include <rte_flow.h>
@@ -411,20 +413,33 @@ mlx5_dump_debug_information(const char *fname, const char *hex_title,
 {
 	FILE *fd;
 
-	MKSTR(path, "%s/%s", MLX5_SYSTEM_LOG_DIR, fname);
-	fd = fopen(path, "a+");
-	if (!fd) {
-		DRV_LOG(WARNING, "cannot open %s for debug dump", path);
-		MKSTR(path2, "./%s", fname);
-		fd = fopen(path2, "a+");
-		if (!fd) {
-			DRV_LOG(ERR, "cannot open %s for debug dump", path2);
-			return;
-		}
-		DRV_LOG(INFO, "New debug dump in file %s", path2);
+	if (access(MLX5_SYSTEM_LOG_DIR, W_OK) == 0) {
+		MKSTR(path, "%s/%s", MLX5_SYSTEM_LOG_DIR, fname);
+		fd = fopen(path, "a+");
+		if (!fd)
+			DRV_LOG(WARNING, "cannot open %s for debug dump", path);
+		else
+			DRV_LOG(INFO, "New debug dump in file %s", path);
 	} else {
-		DRV_LOG(INFO, "New debug dump in file %s", path);
+		MKSTR(path2, "%s/%s", rte_eal_get_runtime_dir(), fname);
+		fd = fopen(path2, "a+");
+		if (!fd)
+			DRV_LOG(WARNING, "cannot open %s for debug dump", path2);
+		else
+			DRV_LOG(INFO, "New debug dump in file %s", path2);
 	}
+
+	if (!fd) {
+		MKSTR(path3, "./%s", fname);
+		fd = fopen(path3, "a+");
+		if (!fd) {
+			DRV_LOG(ERR, "cannot open %s for debug dump", path3);
+			return;
+		} else {
+			DRV_LOG(INFO, "New debug dump in file %s", path3);
+		}
+	}
+
 	if (hex_title)
 		rte_hexdump(fd, hex_title, buf, hex_len);
 	else
