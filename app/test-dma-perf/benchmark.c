@@ -751,7 +751,10 @@ mem_copy_benchmark(struct test_configure *cfg)
 				goto out;
 		}
 
-		rte_eal_remote_launch(get_work_function(cfg), (void *)(lcores[i]), lcore_id);
+		if (rte_eal_remote_launch(get_work_function(cfg), (void *)(lcores[i]), lcore_id)) {
+			printf("Error: Fail to start the test on lcore %d\n", lcore_id);
+			goto out;
+		}
 	}
 
 	while (1) {
