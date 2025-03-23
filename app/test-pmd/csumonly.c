@@ -468,6 +468,7 @@ get_ethertype_by_ptype(struct rte_ether_hdr *eth_hdr, uint32_t ptype)
 {
 	struct rte_vlan_hdr *vlan_hdr;
 	uint16_t ethertype;
+	uint32_t i = 0;
 
 	switch (ptype) {
 	case RTE_PTYPE_L3_IPV4:
@@ -486,10 +487,11 @@ get_ethertype_by_ptype(struct rte_ether_hdr *eth_hdr, uint32_t ptype)
 		return _htons(RTE_ETHER_TYPE_IPV6);
 	default:
 		ethertype = eth_hdr->ether_type;
-		while (eth_hdr->ether_type == _htons(RTE_ETHER_TYPE_VLAN) ||
-			eth_hdr->ether_type == _htons(RTE_ETHER_TYPE_QINQ)) {
+		while (ethertype == _htons(RTE_ETHER_TYPE_VLAN) ||
+			ethertype == _htons(RTE_ETHER_TYPE_QINQ)) {
 			vlan_hdr = (struct rte_vlan_hdr *)
-				((char *)eth_hdr + sizeof(*eth_hdr));
+				((char *)eth_hdr + sizeof(*eth_hdr) +
+				(i * sizeof(struct rte_vlan_hdr)));
 			ethertype = vlan_hdr->eth_proto;
 		}
 		return ethertype;
