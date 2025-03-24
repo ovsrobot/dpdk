@@ -10,6 +10,7 @@
 
 #include "cpfl_ethdev.h"
 #include "cpfl_rxtx.h"
+#include "../common/tx.h"
 
 #define CPFL_SCALAR_PATH		0
 #define CPFL_VECTOR_PATH		1
