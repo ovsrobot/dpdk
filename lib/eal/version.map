@@ -405,8 +405,8 @@ INTERNAL {
 
 	rte_bus_register;
 	rte_bus_unregister;
+	rte_eal_expand_coremask;
 	rte_eal_get_baseaddr;
-	rte_eal_parse_coremask;
 	rte_firmware_read;
 	rte_intr_allow_others;
 	rte_intr_cap_multiple;
