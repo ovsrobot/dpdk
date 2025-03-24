@@ -135,7 +135,7 @@ struct idpf_rx_queue {
 	bool q_set;             /* if rx queue has been configured */
 	bool q_started;         /* if rx queue has been started */
 	bool rx_deferred_start; /* don't start this queue in dev start */
-	const struct idpf_rxq_ops *ops;
+	const struct idpf_rxq_ops *idpf_ops;
 
 	struct idpf_rx_stats rx_stats;
 
