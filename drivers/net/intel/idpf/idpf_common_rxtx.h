@@ -10,6 +10,7 @@
 #include <rte_mbuf_core.h>
 
 #include "idpf_common_device.h"
+#include "../common/tx.h"
 
 #define IDPF_RX_MAX_BURST		32
 
@@ -148,12 +149,6 @@ struct idpf_rx_queue {
 	uint32_t hw_register_set;
 };
 
-struct idpf_tx_entry {
-	struct rte_mbuf *mbuf;
-	uint16_t next_id;
-	uint16_t last_id;
-};
-
 /* Offload features */
 union idpf_tx_offload {
 	uint64_t data;
@@ -164,10 +159,6 @@ union idpf_tx_offload {
 		uint64_t tso_segsz:16; /* TCP TSO segment size */
 		/* uint64_t unused : 24; */
 	};
-};
-
-struct idpf_tx_vec_entry {
-	struct rte_mbuf *mbuf;
 };
 
 union idpf_tx_desc {

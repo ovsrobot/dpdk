@@ -37,7 +37,7 @@ if arch_subdir == 'x86' and dpdk_conf.get('RTE_IOVA_IN_MBUF') == 1
         endif
         idpf_common_avx512_lib = static_library('idpf_common_avx512_lib',
                 'idpf_common_rxtx_avx512.c',
-                dependencies: static_rte_mbuf,
+                dependencies: [static_rte_mbuf,static_rte_ethdev],
                 include_directories: includes,
                 c_args: avx512_args)
         objs += idpf_common_avx512_lib.extract_objects('idpf_common_rxtx_avx512.c')
