@@ -1167,7 +1167,7 @@ cpfl_hairpin_get_peer_ports(struct rte_eth_dev *dev, uint16_t *peer_ports,
 {
 	struct cpfl_vport *cpfl_vport =
 		(struct cpfl_vport *)dev->data->dev_private;
-	struct idpf_tx_queue *txq;
+	struct ci_tx_queue *txq;
 	struct idpf_rx_queue *rxq;
 	struct cpfl_tx_queue *cpfl_txq;
 	struct cpfl_rx_queue *cpfl_rxq;
