@@ -151,7 +151,13 @@ TAILQ_HEAD_INITIALIZER(devopt_list);
 
 static int main_lcore_parsed;
 static int mem_parsed;
-static int core_parsed;
+static struct lcore_options {
+	const char *core_mask_opt;
+	const char *core_list_opt;
+	const char *core_map_opt;
+	const char *service_mask_opt;
+	const char *service_list_opt;
+} lcore_options = {0};
 
 /* Allow the application to print its usage message too if set */
 static rte_usage_hook_t rte_application_usage_hook;
@@ -674,24 +680,13 @@ eal_parse_service_coremask(const char *coremask)
 	if (count == 0)
 		return -1;
 
-	if (core_parsed && taken_lcore_count != count) {
+	if (taken_lcore_count != count) {
 		EAL_LOG(WARNING,
 			"Not all service cores are in the coremask. "
 			"Please ensure -c or -l includes service cores");
 	}
 
 	cfg->service_lcore_count = count;
-	return 0;
-}
-
-static int
-eal_service_cores_parsed(void)
-{
-	int idx;
-	for (idx = 0; idx < RTE_MAX_LCORE; idx++) {
-		if (lcore_config[idx].core_role == ROLE_SERVICE)
-			return 1;
-	}
 	return 0;
 }
 
@@ -903,7 +898,7 @@ eal_parse_service_corelist(const char *corelist)
 	if (count == 0)
 		return -1;
 
-	if (core_parsed && taken_lcore_count != count) {
+	if (taken_lcore_count != count) {
 		EAL_LOG(WARNING,
 			"Not all service cores were in the coremask. "
 			"Please ensure -c or -l includes service cores");
@@ -1673,83 +1668,20 @@ eal_parse_common_option(int opt, const char *optarg,
 		a_used = 1;
 		break;
 	/* coremask */
-	case 'c': {
-		int lcore_indexes[RTE_MAX_LCORE];
-
-		if (eal_service_cores_parsed())
-			EAL_LOG(WARNING,
-				"Service cores parsed before dataplane cores. Please ensure -c is before -s or -S");
-		if (rte_eal_parse_coremask(optarg, lcore_indexes) < 0) {
-			EAL_LOG(ERR, "invalid coremask syntax");
-			return -1;
-		}
-		if (update_lcore_config(lcore_indexes) < 0) {
-			char *available = available_cores();
-
-			EAL_LOG(ERR,
-				"invalid coremask, please check specified cores are part of %s",
-				available);
-			free(available);
-			return -1;
-		}
-
-		if (core_parsed) {
-			EAL_LOG(ERR, "Option -c is ignored, because (%s) is set!",
-				(core_parsed == LCORE_OPT_LST) ? "-l" :
-				(core_parsed == LCORE_OPT_MAP) ? "--lcores" :
-				"-c");
-			return -1;
-		}
-
-		core_parsed = LCORE_OPT_MSK;
+	case 'c':
+		lcore_options.core_mask_opt = optarg;
 		break;
-	}
 	/* corelist */
-	case 'l': {
-		int lcore_indexes[RTE_MAX_LCORE];
-
-		if (eal_service_cores_parsed())
-			EAL_LOG(WARNING,
-				"Service cores parsed before dataplane cores. Please ensure -l is before -s or -S");
-
-		if (eal_parse_corelist(optarg, lcore_indexes) < 0) {
-			EAL_LOG(ERR, "invalid core list syntax");
-			return -1;
-		}
-		if (update_lcore_config(lcore_indexes) < 0) {
-			char *available = available_cores();
-
-			EAL_LOG(ERR,
-				"invalid core list, please check specified cores are part of %s",
-				available);
-			free(available);
-			return -1;
-		}
-
-		if (core_parsed) {
-			EAL_LOG(ERR, "Option -l is ignored, because (%s) is set!",
-				(core_parsed == LCORE_OPT_MSK) ? "-c" :
-				(core_parsed == LCORE_OPT_MAP) ? "--lcores" :
-				"-l");
-			return -1;
-		}
-
-		core_parsed = LCORE_OPT_LST;
+	case 'l':
+		lcore_options.core_list_opt = optarg;
 		break;
-	}
 	/* service coremask */
 	case 's':
-		if (eal_parse_service_coremask(optarg) < 0) {
-			EAL_LOG(ERR, "invalid service coremask");
-			return -1;
-		}
+		lcore_options.service_mask_opt = optarg;
 		break;
 	/* service corelist */
 	case 'S':
-		if (eal_parse_service_corelist(optarg) < 0) {
-			EAL_LOG(ERR, "invalid service core list");
-			return -1;
-		}
+		lcore_options.service_list_opt = optarg;
 		break;
 	/* size of memory */
 	case 'm':
@@ -1918,21 +1850,7 @@ eal_parse_common_option(int opt, const char *optarg,
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 	case OPT_LCORES_NUM:
-		if (eal_parse_lcores(optarg) < 0) {
-			EAL_LOG(ERR, "invalid parameter for --"
-				OPT_LCORES);
-			return -1;
-		}
-
-		if (core_parsed) {
-			EAL_LOG(ERR, "Option --lcores is ignored, because (%s) is set!",
-				(core_parsed == LCORE_OPT_LST) ? "-l" :
-				(core_parsed == LCORE_OPT_MSK) ? "-c" :
-				"--lcores");
-			return -1;
-		}
-
-		core_parsed = LCORE_OPT_MAP;
+		lcore_options.core_map_opt = optarg;
 		break;
 	case OPT_LEGACY_MEM_NUM:
 		conf->legacy_mem = 1;
@@ -1972,6 +1890,7 @@ eal_parse_common_option(int opt, const char *optarg,
 		return 1;
 
 	}
+
 
 	return 0;
 
@@ -2046,8 +1965,74 @@ eal_adjust_config(struct internal_config *internal_cfg)
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
-	if (!core_parsed)
+	/* handle all the various core options, ignoring order of them.
+	 * First check that multiple lcore options (coremask, corelist, coremap) are
+	 * not used together. Then check that the service options (coremask, corelist)
+	 * are not both set. In both cases error out if multiple options are set.
+	 */
+	if ((lcore_options.core_mask_opt && lcore_options.core_list_opt) ||
+			(lcore_options.core_mask_opt && lcore_options.core_map_opt) ||
+			(lcore_options.core_list_opt && lcore_options.core_map_opt)) {
+		EAL_LOG(ERR, "Only one of -c, -l and --"OPT_LCORES" may be given at a time");
+		return -1;
+	}
+	if ((lcore_options.service_mask_opt && lcore_options.service_list_opt)) {
+		EAL_LOG(ERR, "Only one of -s and -S may be given at a time");
+		return -1;
+	}
+
+	if (lcore_options.core_mask_opt) {
+		int lcore_indexes[RTE_MAX_LCORE];
+
+		if (rte_eal_parse_coremask(lcore_options.core_mask_opt, lcore_indexes) < 0) {
+			EAL_LOG(ERR, "invalid coremask syntax");
+			return -1;
+		}
+		if (update_lcore_config(lcore_indexes) < 0) {
+			char *available = available_cores();
+
+			EAL_LOG(ERR,
+				"invalid coremask, please check specified cores are part of %s",
+				available);
+			free(available);
+			return -1;
+		}
+	} else if (lcore_options.core_list_opt) {
+		int lcore_indexes[RTE_MAX_LCORE];
+
+		if (eal_parse_corelist(lcore_options.core_list_opt, lcore_indexes) < 0) {
+			EAL_LOG(ERR, "invalid core list syntax");
+			return -1;
+		}
+		if (update_lcore_config(lcore_indexes) < 0) {
+			char *available = available_cores();
+
+			EAL_LOG(ERR,
+				"invalid core list, please check specified cores are part of %s",
+				available);
+			free(available);
+			return -1;
+		}
+	} else if (lcore_options.core_map_opt) {
+		if (eal_parse_lcores(lcore_options.core_map_opt) < 0) {
+			EAL_LOG(ERR, "invalid parameter for --"	OPT_LCORES);
+			return -1;
+		}
+	} else {
 		eal_auto_detect_cores(cfg);
+	}
+
+	if (lcore_options.service_mask_opt) {
+		if (eal_parse_service_coremask(lcore_options.service_mask_opt) < 0) {
+			EAL_LOG(ERR, "invalid service coremask");
+			return -1;
+		}
+	} else if (lcore_options.service_list_opt) {
+		if (eal_parse_service_corelist(lcore_options.service_list_opt) < 0) {
+			EAL_LOG(ERR, "invalid service core list");
+			return -1;
+		}
+	}
 
 	if (internal_conf->process_type == RTE_PROC_AUTO)
 		internal_conf->process_type = eal_proc_type_detect();
