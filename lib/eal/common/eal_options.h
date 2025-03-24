@@ -17,6 +17,9 @@ enum {
 	OPT_DEV_ALLOW_NUM       = 'a',
 #define OPT_DEV_BLOCK         "block"
 	OPT_DEV_BLOCK_NUM      = 'b',
+#define OPT_MAP_LCORE_IDS  "map-lcore-ids"
+	OPT_MAP_LCORE_IDS_NUM  = 'M',
+
 
 	/* first long only option value must be >= 256, so that we won't
 	 * conflict with short options */

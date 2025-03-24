@@ -13,7 +13,7 @@ Lcore-related options
     List of cores to run on
 
     The argument format is ``<c1>[-c2][,c3[-c4],...]``
-    where ``c1``, ``c2``, etc are core indexes between 0 and 128.
+    where ``c1``, ``c2``, etc are core indexes between 0 and RTE_MAX_LCORE (default 128).
 
 *   ``--lcores <core map>``
 
@@ -30,8 +30,32 @@ Lcore-related options
     The ``@`` can be omitted if cpus and lcores have the same value.
 
 .. Note::
+    When using ``--lcores`` parameter to map lcore ids to cpus,
+    the lcore ids must be in the range 0 to ``RTE_MAX_LCORE`` (default 128),
+    but the cpu ids need not be.
+
+    This allows an application to use cpus with ids greater than ``RTE_MAX_LCORE``,
+    so long as the total number of lcores is less than or equal to ``RTE_MAX_LCORE``.
+
+.. Note::
     At a given instance only one core option ``--lcores``, ``-l`` or ``-c`` can
     be used.
+
+*   ``--map-lcore-ids``, ``-M``
+
+    Automatically map the cpus given in a coremask using ``-c`` parameter,
+    or in a core list using ``-l`` parameter, to internal lcore-ids starting at 0.
+    (If ``--lcores`` parameter is provided, this parameter is ignored.)
+
+    This can provide a shorter way, compared to using ``--lcores`` parameter,
+    to use cpus with ids greater than ``RTE_MAX_LCORE`` in an application.
+
+    For example, ``-c 0x3000 --map-lcore-ids`` will cause cpus 12 and 13 to be used,
+    with application lcore ids of 0 and 1 respectively.
+    Similarly, ``-Ml 94,95,31-33`` is equivalent to ``--lcores=0@94,1@95,2@31,3@32,4@33``,
+    where the application lcore ids are 0-4,
+    mapped to the physical cpus 94, 95, 31, 32 and 33 respectively.
+
 
 *   ``--main-lcore <core ID>``
 

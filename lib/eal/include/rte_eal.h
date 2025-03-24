@@ -500,13 +500,15 @@ rte_eal_get_runtime_dir(void);
  * @param cores
  *   The output array to store the core ids.
  *   This array must be at least RTE_MAX_LCORE large.
+ * @param nocheck
+ *   If true, skip checking that the core ids are between 0..RTE_MAX_LCORE
  * @return
  *  The number of cores in the coremask, and in the returned "cores" array,
  *  -1 if the string content was invalid.
  */
 __rte_internal
 int
-rte_eal_expand_coremask(const char *coremask, int *cores);
+rte_eal_expand_coremask(const char *coremask, int *cores, bool nocheck);
 
 #ifdef __cplusplus
 }

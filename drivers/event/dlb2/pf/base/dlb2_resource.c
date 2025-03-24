@@ -931,7 +931,7 @@ dlb2_resource_probe(struct dlb2_hw *hw, const void *probe_args)
 	cpu = rte_get_next_lcore(-1, 1, 0);
 	hw->num_prod_cores = 0;
 	if (mask) {
-		int n = rte_eal_expand_coremask(mask, hw->prod_core_list);
+		int n = rte_eal_expand_coremask(mask, hw->prod_core_list, true);
 		if (n <= 0) {
 			DLB2_HW_ERR(hw, ": Invalid producer coremask=%s\n", mask);
 			return -1;
