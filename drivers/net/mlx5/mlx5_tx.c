@@ -186,6 +186,7 @@ mlx5_tx_handle_completion(struct mlx5_txq_data *__rte_restrict txq,
 	volatile struct mlx5_cqe *last_cqe = NULL;
 	bool ring_doorbell = false;
 	int ret;
+	int offset = 0;
 
 	do {
 		volatile struct mlx5_cqe *cqe;
@@ -205,8 +206,11 @@ mlx5_tx_handle_completion(struct mlx5_txq_data *__rte_restrict txq,
 			 * here, before we might perform SQ reset.
 			 */
 			rte_wmb();
+#if (RTE_CACHE_LINE_SIZE == 128)
+                        offset = 64;
+#endif
 			ret = mlx5_tx_error_cqe_handle
-				(txq, (volatile struct mlx5_error_cqe *)cqe);
+				(txq, (volatile struct mlx5_err_cqe *)(((char *)cqe) + offset));
 			if (unlikely(ret < 0)) {
 				/*
 				 * Some error occurred on queue error
