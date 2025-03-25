@@ -37,6 +37,14 @@ Compilation of the DPDK
 
 .. note::
 
+   When compiling for x86 platforms,
+   GCC version 6.1 or higher,
+   or Clang version 3.9 or higher is recommended.
+   Earlier versions of these compilers do not support the compiler flags used by DPDK for AVX-512 code.
+   As such, any builds using earlier compilers will be missing AVX-512 support.
+
+.. note::
+
    pkg-config 0.27, supplied with RHEL-7,
    does not process the Libs.private section correctly,
    resulting in statically linked applications not being linked properly.
