@@ -19,7 +19,7 @@ cnxk_dmadev_info_get(const struct rte_dma_dev *dev, struct rte_dma_info *dev_inf
 	dev_info->dev_capa = RTE_DMA_CAPA_MEM_TO_MEM | RTE_DMA_CAPA_MEM_TO_DEV |
 			     RTE_DMA_CAPA_DEV_TO_MEM | RTE_DMA_CAPA_DEV_TO_DEV |
 			     RTE_DMA_CAPA_OPS_COPY | RTE_DMA_CAPA_OPS_COPY_SG |
-			     RTE_DMA_CAPA_M2D_AUTO_FREE;
+			     RTE_DMA_CAPA_M2D_AUTO_FREE | RTE_DMA_CAPA_OPS_ENQ_DEQ;
 	if (roc_feature_dpi_has_priority()) {
 		dev_info->dev_capa |= RTE_DMA_CAPA_PRI_POLICY_SP;
 		dev_info->nb_priorities = CN10K_DPI_MAX_PRI;
@@ -113,6 +113,21 @@ cnxk_dmadev_configure(struct rte_dma_dev *dev, const struct rte_dma_conf *conf, 
 	dpivf->num_vchans = conf->nb_vchans;
 	if (roc_feature_dpi_has_priority())
 		dpivf->rdpi.priority = conf->priority;
+
+	if (conf->enable_enq_deq) {
+		dev->fp_obj->copy = NULL;
+		dev->fp_obj->fill = NULL;
+		dev->fp_obj->submit = NULL;
+		dev->fp_obj->copy_sg = NULL;
+		dev->fp_obj->completed = NULL;
+		dev->fp_obj->completed_status = NULL;
+
+		dev->fp_obj->enqueue = cnxk_dma_ops_enqueue;
+		dev->fp_obj->dequeue = cnxk_dma_ops_dequeue;
+
+		if (roc_model_is_cn10k())
+			dev->fp_obj->enqueue = cn10k_dma_ops_enqueue;
+	}
 
 	return 0;
 }
@@ -267,6 +282,14 @@ cnxk_dmadev_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 
 	if (dpi_conf->c_desc.compl_ptr == NULL) {
 		plt_err("Failed to allocate for comp_data");
+		return -ENOMEM;
+	}
+
+	size = (max_desc * sizeof(struct rte_dma_op *));
+	dpi_conf->c_desc.ops = rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
+	if (dpi_conf->c_desc.ops == NULL) {
+		plt_err("Failed to allocate for ops array");
+		rte_free(dpi_conf->c_desc.compl_ptr);
 		return -ENOMEM;
 	}
 
