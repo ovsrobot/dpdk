@@ -244,6 +244,27 @@ rte_event_dma_adapter_caps_get(uint8_t dev_id, uint8_t dma_dev_id, uint32_t *cap
 	return 0;
 }
 
+int
+rte_event_vector_adapter_caps_get(uint8_t dev_id, uint32_t *caps)
+{
+	const struct event_vector_adapter_ops *ops;
+	struct rte_eventdev *dev;
+
+	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
+
+	dev = &rte_eventdevs[dev_id];
+
+	if (caps == NULL)
+		return -EINVAL;
+
+	if (dev->dev_ops->vector_adapter_caps_get == NULL)
+		*caps = 0;
+
+	return dev->dev_ops->vector_adapter_caps_get ?
+		       dev->dev_ops->vector_adapter_caps_get(dev, caps, &ops) :
+		       0;
+}
+
 static inline int
 event_dev_queue_config(struct rte_eventdev *dev, uint8_t nb_queues)
 {
