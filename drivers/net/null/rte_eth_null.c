@@ -35,7 +35,7 @@ struct null_queue {
 	struct pmd_internals *internals;
 
 	struct rte_mempool *mb_pool;
-	struct rte_mbuf *dummy_packet;
+	void *dummy_packet;
 
 	RTE_ATOMIC(uint64_t) rx_pkts;
 	RTE_ATOMIC(uint64_t) tx_pkts;
@@ -156,14 +156,14 @@ eth_null_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 static uint16_t
 eth_null_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
-	int i;
 	struct null_queue *h = q;
-	unsigned int packet_size;
+	unsigned int i;
 
-	packet_size = h->internals->packet_size;
 	for (i = 0; i < nb_bufs; i++) {
-		rte_memcpy(h->dummy_packet, rte_pktmbuf_mtod(bufs[i], void *),
-					packet_size);
+		struct rte_mbuf *m = bufs[i];
+		unsigned int len = RTE_MIN(h->internals->packet_size, m->data_len);
+
+		rte_memcpy(h->dummy_packet, rte_pktmbuf_mtod(m, void *), len);
 		rte_pktmbuf_free(bufs[i]);
 	}
 
