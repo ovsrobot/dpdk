@@ -37,7 +37,7 @@ struct null_queue {
 	struct rte_mempool *mb_pool;
 	void *dummy_packet;
 
-	RTE_ATOMIC(uint64_t) rx_pkts;
+	uint64_t rx_pkts;
 	RTE_ATOMIC(uint64_t) tx_pkts;
 };
 
@@ -88,9 +88,6 @@ eth_null_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	struct null_queue *h = q;
 	unsigned int packet_size;
 
-	if ((q == NULL) || (bufs == NULL))
-		return 0;
-
 	packet_size = h->internals->packet_size;
 	if (rte_pktmbuf_alloc_bulk(h->mb_pool, bufs, nb_bufs) != 0)
 		return 0;
@@ -101,10 +98,8 @@ eth_null_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->port = h->internals->port_id;
 	}
 
-	/* NOTE: review for potential ordering optimization */
-	rte_atomic_fetch_add_explicit(&h->rx_pkts, i, rte_memory_order_seq_cst);
-
-	return i;
+	h->rx_pkts += nb_bufs;
+	return nb_bufs;
 }
 
 static uint16_t
@@ -113,9 +108,6 @@ eth_null_copy_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	int i;
 	struct null_queue *h = q;
 	unsigned int packet_size;
-
-	if ((q == NULL) || (bufs == NULL))
-		return 0;
 
 	packet_size = h->internals->packet_size;
 	if (rte_pktmbuf_alloc_bulk(h->mb_pool, bufs, nb_bufs) != 0)
@@ -129,10 +121,8 @@ eth_null_copy_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->port = h->internals->port_id;
 	}
 
-	/* NOTE: review for potential ordering optimization */
-	rte_atomic_fetch_add_explicit(&h->rx_pkts, i, rte_memory_order_seq_cst);
-
-	return i;
+	h->rx_pkts += nb_bufs;
+	return nb_bufs;
 }
 
 static uint16_t
@@ -326,7 +316,6 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
 			RTE_MIN(dev->data->nb_rx_queues,
 				RTE_DIM(internal->rx_null_queues)));
 	for (i = 0; i < num_stats; i++) {
-		/* NOTE: review for atomic access */
 		igb_stats->q_ipackets[i] =
 			internal->rx_null_queues[i].rx_pkts;
 		rx_total += igb_stats->q_ipackets[i];
@@ -360,7 +349,6 @@ eth_stats_reset(struct rte_eth_dev *dev)
 
 	internal = dev->data->dev_private;
 	for (i = 0; i < RTE_DIM(internal->rx_null_queues); i++)
-		/* NOTE: review for atomic access */
 		internal->rx_null_queues[i].rx_pkts = 0;
 	for (i = 0; i < RTE_DIM(internal->tx_null_queues); i++)
 		internal->tx_null_queues[i].tx_pkts = 0;
