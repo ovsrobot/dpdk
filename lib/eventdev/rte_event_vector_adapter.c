@@ -21,6 +21,10 @@
 
 #define MZ_NAME_MAX_LEN	    64
 #define DATA_MZ_NAME_FORMAT "rte_event_vector_adapter_data_%d_%d_%d"
+#define MAX_VECTOR_SIZE	    1024
+#define MIN_VECTOR_SIZE	    1
+#define MAX_VECTOR_NS	    1E9
+#define MIN_VECTOR_NS	    1E5
 
 RTE_LOG_REGISTER_SUFFIX(ev_vector_logtype, adapter.vector, NOTICE);
 #define RTE_LOGTYPE_EVVEC ev_vector_logtype
@@ -45,6 +49,9 @@ struct rte_event_vector_adapter *adapters[RTE_EVENT_MAX_DEVS][RTE_EVENT_MAX_QUEU
 			return retval;                                                             \
 		}                                                                                  \
 	} while (0)
+
+static const struct event_vector_adapter_ops sw_ops;
+static const struct rte_event_vector_adapter_info sw_info;
 
 static int
 validate_conf(const struct rte_event_vector_adapter_conf *conf,
@@ -229,6 +236,11 @@ rte_event_vector_adapter_create_ext(const struct rte_event_vector_adapter_conf *
 		}
 	}
 
+	if (adapter->ops == NULL) {
+		adapter->ops = &sw_ops;
+		info = sw_info;
+	}
+
 	rc = validate_conf(conf, &info);
 	if (rc < 0) {
 		adapter->ops = NULL;
@@ -338,6 +350,8 @@ rte_event_vector_adapter_lookup(uint32_t adapter_id)
 			return NULL;
 		}
 	}
+	if (adapter->ops == NULL)
+		adapter->ops = &sw_ops;
 
 	adapter->enqueue = adapter->ops->enqueue;
 	adapter->adapter_id = adapter_id;
@@ -384,6 +398,7 @@ rte_event_vector_adapter_info_get(uint8_t event_dev_id, struct rte_event_vector_
 	if (dev->dev_ops->vector_adapter_info_get != NULL)
 		return dev->dev_ops->vector_adapter_info_get(dev, info);
 
+	*info = sw_info;
 	return 0;
 }
 
@@ -442,3 +457,306 @@ rte_event_vector_adapter_stats_reset(struct rte_event_vector_adapter *adapter)
 
 	return 0;
 }
+
+/* Software vector adapter implementation. */
+
+struct sw_vector_adapter_service_data;
+struct sw_vector_adapter_data {
+	uint8_t dev_id;
+	uint8_t port_id;
+	uint16_t vector_sz;
+	uint64_t timestamp;
+	uint64_t event_meta;
+	uint64_t vector_tmo_ticks;
+	uint64_t fallback_event_meta;
+	struct rte_mempool *vector_mp;
+	struct rte_event_vector *vector;
+	RTE_ATOMIC(rte_mcslock_t *) lock;
+	struct rte_event_vector_adapter *adapter;
+	struct rte_event_vector_adapter_stats stats;
+	struct sw_vector_adapter_service_data *service_data;
+	RTE_TAILQ_ENTRY(sw_vector_adapter_data) next;
+};
+
+struct sw_vector_adapter_service_data {
+	uint32_t service_id;
+	RTE_ATOMIC(rte_mcslock_t *) lock;
+	RTE_TAILQ_HEAD(, sw_vector_adapter_data) adapter_list;
+};
+
+static inline struct sw_vector_adapter_data *
+sw_vector_adapter_priv(const struct rte_event_vector_adapter *adapter)
+{
+	return adapter->data->adapter_priv;
+}
+
+static int
+sw_vector_adapter_flush(struct sw_vector_adapter_data *sw)
+{
+	struct rte_event ev;
+
+	if (sw->vector == NULL)
+		return -ENOBUFS;
+
+	ev.event = sw->event_meta;
+	ev.vec = sw->vector;
+	if (rte_event_enqueue_burst(sw->dev_id, sw->port_id, &ev, 1) != 1)
+		return -ENOSPC;
+
+	sw->vector = NULL;
+	sw->timestamp = 0;
+	return 0;
+}
+
+static int
+sw_vector_adapter_service_func(void *arg)
+{
+	struct sw_vector_adapter_service_data *service_data = arg;
+	struct sw_vector_adapter_data *sw, *nextsw;
+	rte_mcslock_t me, me_adptr;
+	int ret;
+
+	rte_mcslock_lock(&service_data->lock, &me);
+	RTE_TAILQ_FOREACH_SAFE(sw, &service_data->adapter_list, next, nextsw)
+	{
+		if (!rte_mcslock_trylock(&sw->lock, &me_adptr))
+			continue;
+		if (sw->vector == NULL) {
+			TAILQ_REMOVE(&service_data->adapter_list, sw, next);
+			rte_mcslock_unlock(&sw->lock, &me_adptr);
+			continue;
+		}
+		if (rte_get_timer_cycles() - sw->timestamp < sw->vector_tmo_ticks) {
+			rte_mcslock_unlock(&sw->lock, &me_adptr);
+			continue;
+		}
+		ret = sw_vector_adapter_flush(sw);
+		if (ret) {
+			rte_mcslock_unlock(&sw->lock, &me_adptr);
+			continue;
+		}
+		sw->stats.vectors_timedout++;
+		TAILQ_REMOVE(&service_data->adapter_list, sw, next);
+		rte_mcslock_unlock(&sw->lock, &me_adptr);
+	}
+	rte_mcslock_unlock(&service_data->lock, &me);
+
+	return 0;
+}
+
+static int
+sw_vector_adapter_service_init(struct sw_vector_adapter_data *sw)
+{
+#define SW_VECTOR_ADAPTER_SERVICE_FMT "sw_vector_adapter_service"
+	struct sw_vector_adapter_service_data *service_data;
+	struct rte_service_spec service;
+	const struct rte_memzone *mz;
+	int ret;
+
+	mz = rte_memzone_lookup(SW_VECTOR_ADAPTER_SERVICE_FMT);
+	if (mz == NULL) {
+		mz = rte_memzone_reserve(SW_VECTOR_ADAPTER_SERVICE_FMT,
+					 sizeof(struct sw_vector_adapter_service_data),
+					 sw->adapter->data->socket_id, 0);
+		if (mz == NULL) {
+			EVVEC_LOG_DBG("failed to reserve memzone for service");
+			return -ENOMEM;
+		}
+		service_data = (struct sw_vector_adapter_service_data *)mz->addr;
+
+		service.callback = sw_vector_adapter_service_func;
+		service.callback_userdata = service_data;
+		service.socket_id = sw->adapter->data->socket_id;
+
+		ret = rte_service_component_register(&service, &service_data->service_id);
+		if (ret < 0) {
+			EVVEC_LOG_ERR("failed to register service");
+			return -ENOTSUP;
+		}
+		TAILQ_INIT(&service_data->adapter_list);
+	}
+	service_data = (struct sw_vector_adapter_service_data *)mz->addr;
+
+	sw->service_data = service_data;
+	sw->adapter->data->unified_service_id = service_data->service_id;
+	return 0;
+}
+
+static int
+sw_vector_adapter_create(struct rte_event_vector_adapter *adapter)
+{
+#define NSEC2TICK(__ns, __freq) (((__ns) * (__freq)) / 1E9)
+#define SW_VECTOR_ADAPTER_NAME	64
+	char name[SW_VECTOR_ADAPTER_NAME];
+	struct sw_vector_adapter_data *sw;
+	struct rte_event ev;
+
+	snprintf(name, SW_VECTOR_ADAPTER_NAME, "sw_vector_%" PRIx32, adapter->data->id);
+	sw = rte_zmalloc_socket(name, sizeof(*sw), RTE_CACHE_LINE_SIZE, adapter->data->socket_id);
+	if (sw == NULL) {
+		EVVEC_LOG_ERR("failed to allocate space for private data");
+		rte_errno = ENOMEM;
+		return -1;
+	}
+
+	/* Connect storage to adapter instance */
+	adapter->data->adapter_priv = sw;
+	sw->adapter = adapter;
+	sw->dev_id = adapter->data->event_dev_id;
+	sw->port_id = adapter->data->event_port_id;
+
+	sw->vector_sz = adapter->data->conf.vector_sz;
+	sw->vector_mp = adapter->data->conf.vector_mp;
+	sw->vector_tmo_ticks = NSEC2TICK(adapter->data->conf.vector_timeout_ns, rte_get_timer_hz());
+
+	ev = adapter->data->conf.ev;
+	ev.op = RTE_EVENT_OP_NEW;
+	sw->event_meta = ev.event;
+
+	ev = adapter->data->conf.ev_fallback;
+	ev.op = RTE_EVENT_OP_NEW;
+	ev.priority = adapter->data->conf.ev.priority;
+	ev.queue_id = adapter->data->conf.ev.queue_id;
+	ev.sched_type = adapter->data->conf.ev.sched_type;
+	sw->fallback_event_meta = ev.event;
+
+	sw_vector_adapter_service_init(sw);
+
+	return 0;
+}
+
+static int
+sw_vector_adapter_destroy(struct rte_event_vector_adapter *adapter)
+{
+	struct sw_vector_adapter_data *sw = sw_vector_adapter_priv(adapter);
+
+	rte_free(sw);
+	adapter->data->adapter_priv = NULL;
+
+	return 0;
+}
+
+static int
+sw_vector_adapter_flush_single_event(struct sw_vector_adapter_data *sw, uintptr_t ptr)
+{
+	struct rte_event ev;
+
+	ev.event = sw->fallback_event_meta;
+	ev.u64 = ptr;
+	if (rte_event_enqueue_burst(sw->dev_id, sw->port_id, &ev, 1) != 1)
+		return -ENOSPC;
+
+	return 0;
+}
+
+static int
+sw_vector_adapter_enqueue(struct rte_event_vector_adapter *adapter, uintptr_t ptrs[],
+			  uint16_t num_elem, uint64_t flags)
+{
+	struct sw_vector_adapter_data *sw = sw_vector_adapter_priv(adapter);
+	uint16_t cnt = num_elem, n;
+	rte_mcslock_t me, me_s;
+	int ret;
+
+	rte_mcslock_lock(&sw->lock, &me);
+	if (flags & RTE_EVENT_VECTOR_ENQ_FLUSH) {
+		sw_vector_adapter_flush(sw);
+		sw->stats.vectors_flushed++;
+		rte_mcslock_unlock(&sw->lock, &me);
+		return 0;
+	}
+
+	if (num_elem == 0) {
+		rte_mcslock_unlock(&sw->lock, &me);
+		return 0;
+	}
+
+	if (flags & RTE_EVENT_VECTOR_ENQ_SOV) {
+		while (sw_vector_adapter_flush(sw) != 0)
+			;
+		sw->stats.vectors_flushed++;
+	}
+
+	while (num_elem) {
+		if (sw->vector == NULL) {
+			ret = rte_mempool_get(sw->vector_mp, (void **)&sw->vector);
+			if (ret) {
+				if (sw_vector_adapter_flush_single_event(sw, *ptrs) == 0) {
+					sw->stats.alloc_failures++;
+					num_elem--;
+					ptrs++;
+					continue;
+				}
+				rte_errno = -ENOSPC;
+				goto done;
+			}
+			sw->vector->nb_elem = 0;
+			sw->vector->attr_valid = 0;
+			sw->vector->elem_offset = 0;
+		}
+		n = RTE_MIN(sw->vector_sz - sw->vector->nb_elem, num_elem);
+		memcpy(&sw->vector->u64s[sw->vector->nb_elem], ptrs, n * sizeof(uintptr_t));
+		sw->vector->nb_elem += n;
+		num_elem -= n;
+		ptrs += n;
+
+		if (sw->vector_sz == sw->vector->nb_elem) {
+			ret = sw_vector_adapter_flush(sw);
+			if (ret)
+				goto done;
+			sw->stats.vectorized++;
+		}
+	}
+
+	if (flags & RTE_EVENT_VECTOR_ENQ_EOV) {
+		while (sw_vector_adapter_flush(sw) != 0)
+			;
+		sw->stats.vectors_flushed++;
+	}
+
+	if (sw->vector != NULL && sw->vector->nb_elem) {
+		sw->timestamp = rte_get_timer_cycles();
+		rte_mcslock_lock(&sw->service_data->lock, &me_s);
+		TAILQ_INSERT_TAIL(&sw->service_data->adapter_list, sw, next);
+		rte_mcslock_unlock(&sw->service_data->lock, &me_s);
+	}
+
+done:
+	rte_mcslock_unlock(&sw->lock, &me);
+	return cnt - num_elem;
+}
+
+static int
+sw_vector_adapter_stats_get(const struct rte_event_vector_adapter *adapter,
+			    struct rte_event_vector_adapter_stats *stats)
+{
+	struct sw_vector_adapter_data *sw = sw_vector_adapter_priv(adapter);
+
+	*stats = sw->stats;
+	return 0;
+}
+
+static int
+sw_vector_adapter_stats_reset(const struct rte_event_vector_adapter *adapter)
+{
+	struct sw_vector_adapter_data *sw = sw_vector_adapter_priv(adapter);
+
+	memset(&sw->stats, 0, sizeof(sw->stats));
+	return 0;
+}
+
+static const struct event_vector_adapter_ops sw_ops = {
+	.create = sw_vector_adapter_create,
+	.destroy = sw_vector_adapter_destroy,
+	.enqueue = sw_vector_adapter_enqueue,
+	.stats_get = sw_vector_adapter_stats_get,
+	.stats_reset = sw_vector_adapter_stats_reset,
+};
+
+static const struct rte_event_vector_adapter_info sw_info = {
+	.min_vector_sz = MIN_VECTOR_SIZE,
+	.max_vector_sz = MAX_VECTOR_SIZE,
+	.min_vector_timeout_ns = MIN_VECTOR_NS,
+	.max_vector_timeout_ns = MAX_VECTOR_NS,
+	.log2_sz = 0,
+};
