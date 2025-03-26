@@ -304,31 +304,26 @@ eth_dev_info(struct rte_eth_dev *dev,
 static int
 eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
 {
-	unsigned int i, num_stats;
+	const struct pmd_internals *internal = dev->data->dev_private;
+	unsigned int i;
 	unsigned long rx_total = 0, tx_total = 0;
-	const struct pmd_internals *internal;
 
-	if ((dev == NULL) || (igb_stats == NULL))
-		return -EINVAL;
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		uint64_t pkts = internal->rx_null_queues[i].rx_pkts;
 
-	internal = dev->data->dev_private;
-	num_stats = RTE_MIN((unsigned int)RTE_ETHDEV_QUEUE_STAT_CNTRS,
-			RTE_MIN(dev->data->nb_rx_queues,
-				RTE_DIM(internal->rx_null_queues)));
-	for (i = 0; i < num_stats; i++) {
-		igb_stats->q_ipackets[i] =
-			internal->rx_null_queues[i].rx_pkts;
-		rx_total += igb_stats->q_ipackets[i];
+		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS)
+			igb_stats->q_ipackets[i] = pkts;
+
+		rx_total += pkts;
 	}
 
-	num_stats = RTE_MIN((unsigned int)RTE_ETHDEV_QUEUE_STAT_CNTRS,
-			RTE_MIN(dev->data->nb_tx_queues,
-				RTE_DIM(internal->tx_null_queues)));
-	for (i = 0; i < num_stats; i++) {
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		uint64_t pkts = rte_atomic_load_explicit(&internal->tx_null_queues[i].tx_pkts,
-						   rte_memory_order_relaxed);
+							 rte_memory_order_relaxed);
 
-		igb_stats->q_opackets[i] = pkts;
+		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS)
+			igb_stats->q_opackets[i] = pkts;
+
 		tx_total += pkts;
 	}
 
