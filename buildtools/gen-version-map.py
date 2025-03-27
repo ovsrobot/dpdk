@@ -13,10 +13,9 @@ scriptname, link_mode, abi_version_file, output, *files = sys.argv
 export_exp_sym_regexp = re.compile(r"^RTE_EXPORT_EXPERIMENTAL_SYMBOL\(([^,]+), ([0-9]+.[0-9]+)\)")
 export_int_sym_regexp = re.compile(r"^RTE_EXPORT_INTERNAL_SYMBOL\(([^)]+)\)")
 export_sym_regexp = re.compile(r"^RTE_EXPORT_SYMBOL\(([^)]+)\)")
-# From rte_function_versioning.h
-ver_sym_regexp = re.compile(r"^VERSION_SYMBOL\(([^,]+), [^,]+, ([^,]+)\)")
-ver_exp_sym_regexp = re.compile(r"^VERSION_SYMBOL_EXPERIMENTAL\([^,]+, ([^,]+)\)")
-default_sym_regexp = re.compile(r"^BIND_DEFAULT_SYMBOL\(([^,]+), [^,]+, ([^,]+)\)")
+ver_sym_regexp = re.compile(r"^RTE_VERSION_SYMBOL\(([^,]+), [^,]+, ([^,]+),")
+ver_exp_sym_regexp = re.compile(r"^RTE_VERSION_EXPERIMENTAL_SYMBOL\([^,]+, ([^,]+),")
+default_sym_regexp = re.compile(r"^RTE_DEFAULT_SYMBOL\(([^,]+), [^,]+, ([^,]+),")
 
 with open(abi_version_file) as f:
     abi = 'DPDK_{}'.format(re.match("([0-9]+).[0-9]", f.readline()).group(1))
@@ -40,14 +39,14 @@ for file in files:
                 node = abi
                 symbol = export_sym_regexp.match(ln).group(1)
             elif ver_sym_regexp.match(ln):
-                node = 'DPDK_{}'.format(ver_sym_regexp.match(ln).group(2))
-                symbol = ver_sym_regexp.match(ln).group(1)
+                node = 'DPDK_{}'.format(ver_sym_regexp.match(ln).group(1))
+                symbol = ver_sym_regexp.match(ln).group(2)
             elif ver_exp_sym_regexp.match(ln):
                 node = 'EXPERIMENTAL'
                 symbol = ver_exp_sym_regexp.match(ln).group(1)
             elif default_sym_regexp.match(ln):
-                node = 'DPDK_{}'.format(default_sym_regexp.match(ln).group(2))
-                symbol = default_sym_regexp.match(ln).group(1)
+                node = 'DPDK_{}'.format(default_sym_regexp.match(ln).group(1))
+                symbol = default_sym_regexp.match(ln).group(2)
 
             if not symbol:
                 continue

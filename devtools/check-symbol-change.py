@@ -12,10 +12,10 @@ file_header_regexp = re.compile(r"^(\-\-\-|\+\+\+) [ab]/(lib|drivers)/([^/]+)/([
 export_exp_sym_regexp = re.compile(r"^.RTE_EXPORT_EXPERIMENTAL_SYMBOL\(([^,]+),")
 export_int_sym_regexp = re.compile(r"^.RTE_EXPORT_INTERNAL_SYMBOL\(([^)]+)\)")
 export_sym_regexp = re.compile(r"^.RTE_EXPORT_SYMBOL\(([^)]+)\)")
-# TODO, handle versioned symbols from rte_function_versioning.h
-# ver_sym_regexp = re.compile(r"^VERSION_SYMBOL\(([^,]+), [^,]+, ([^,]+)\)")
-# ver_exp_sym_regexp = re.compile(r"^VERSION_SYMBOL_EXPERIMENTAL\([^,]+, ([^,]+)\)")
-# default_sym_regexp = re.compile(r"^BIND_DEFAULT_SYMBOL\(([^,]+), [^,]+, ([^,]+)\)")
+# TODO, handle versioned symbols
+# ver_sym_regexp = re.compile(r"^.RTE_VERSION_SYMBOL\(([^,]+), [^,]+, ([^,]+),")
+# ver_exp_sym_regexp = re.compile(r"^.RTE_VERSION_EXPERIMENTAL_SYMBOL\([^,]+, ([^,]+),")
+# default_sym_regexp = re.compile(r"^.RTE_DEFAULT_SYMBOL\(([^,]+), [^,]+, ([^,]+),")
 
 symbols = {}
 
