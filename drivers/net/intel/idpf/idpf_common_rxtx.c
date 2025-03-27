@@ -210,7 +210,7 @@ idpf_qc_single_rx_queue_reset(struct idpf_rx_queue *rxq)
 void
 idpf_qc_split_tx_descq_reset(struct ci_tx_queue *txq)
 {
-	struct idpf_tx_entry *txe;
+	struct ci_tx_entry *txe;
 	uint32_t i, size;
 	uint16_t prev;
 
@@ -223,7 +223,7 @@ idpf_qc_split_tx_descq_reset(struct ci_tx_queue *txq)
 	for (i = 0; i < size; i++)
 		((volatile char *)txq->desc_ring)[i] = 0;
 
-	txe = (struct idpf_tx_entry *)txq->sw_ring;
+	txe = (struct ci_tx_entry *)txq->sw_ring;
 	prev = (uint16_t)(txq->sw_nb_desc - 1);
 	for (i = 0; i < txq->sw_nb_desc; i++) {
 		txe[i].mbuf = NULL;
@@ -266,7 +266,7 @@ idpf_qc_split_tx_complq_reset(struct ci_tx_queue *cq)
 void
 idpf_qc_single_tx_queue_reset(struct ci_tx_queue *txq)
 {
-	struct idpf_tx_entry *txe;
+	struct ci_tx_entry *txe;
 	uint32_t i, size;
 	uint16_t prev;
 
@@ -275,7 +275,7 @@ idpf_qc_single_tx_queue_reset(struct ci_tx_queue *txq)
 		return;
 	}
 
-	txe = (struct idpf_tx_entry *)txq->sw_ring;
+	txe = (struct ci_tx_entry *)txq->sw_ring;
 	size = sizeof(struct idpf_base_tx_desc) * txq->nb_tx_desc;
 	for (i = 0; i < size; i++)
 		((volatile char *)txq->idpf_tx_ring)[i] = 0;
@@ -755,7 +755,7 @@ idpf_split_tx_free(struct ci_tx_queue *cq)
 	volatile struct idpf_splitq_tx_compl_desc *compl_ring = cq->compl_ring;
 	volatile struct idpf_splitq_tx_compl_desc *txd;
 	uint16_t next = cq->tx_tail;
-	struct idpf_tx_entry *txe;
+	struct ci_tx_entry *txe;
 	struct ci_tx_queue *txq;
 	uint16_t gen, qid, q_head;
 	uint16_t nb_desc_clean;
@@ -794,7 +794,7 @@ idpf_split_tx_free(struct ci_tx_queue *cq)
 		break;
 	case IDPF_TXD_COMPLT_RS:
 		/* q_head indicates sw_id when ctype is 2 */
-		txe = (struct idpf_tx_entry *)&txq->sw_ring[q_head];
+		txe = &txq->sw_ring[q_head];
 		if (txe->mbuf != NULL) {
 			rte_pktmbuf_free_seg(txe->mbuf);
 			txe->mbuf = NULL;
@@ -863,9 +863,9 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	struct ci_tx_queue *txq = (struct ci_tx_queue *)tx_queue;
 	volatile struct idpf_flex_tx_sched_desc *txr;
 	volatile struct idpf_flex_tx_sched_desc *txd;
-	struct idpf_tx_entry *sw_ring;
+	struct ci_tx_entry *sw_ring;
 	union idpf_tx_offload tx_offload = {0};
-	struct idpf_tx_entry *txe, *txn;
+	struct ci_tx_entry *txe, *txn;
 	uint16_t nb_used, tx_id, sw_id;
 	struct rte_mbuf *tx_pkt;
 	uint16_t nb_to_clean;
@@ -878,7 +878,7 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		return nb_tx;
 
 	txr = txq->desc_ring;
-	sw_ring = (struct idpf_tx_entry *)txq->sw_ring;
+	sw_ring = txq->sw_ring;
 	tx_id = txq->tx_tail;
 	sw_id = txq->sw_tail;
 	txe = &sw_ring[sw_id];
@@ -1305,7 +1305,7 @@ static inline int
 idpf_xmit_cleanup(struct ci_tx_queue *txq)
 {
 	uint16_t last_desc_cleaned = txq->last_desc_cleaned;
-	struct idpf_tx_entry *sw_ring = (struct idpf_tx_entry *)txq->sw_ring;
+	struct ci_tx_entry *sw_ring = txq->sw_ring;
 	uint16_t nb_tx_desc = txq->nb_tx_desc;
 	uint16_t desc_to_clean_to;
 	uint16_t nb_tx_to_clean;
@@ -1349,8 +1349,8 @@ idpf_dp_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	volatile struct idpf_base_tx_desc *txd;
 	volatile struct idpf_base_tx_desc *txr;
 	union idpf_tx_offload tx_offload = {0};
-	struct idpf_tx_entry *txe, *txn;
-	struct idpf_tx_entry *sw_ring;
+	struct ci_tx_entry *txe, *txn;
+	struct ci_tx_entry *sw_ring;
 	struct ci_tx_queue *txq;
 	struct rte_mbuf *tx_pkt;
 	struct rte_mbuf *m_seg;
@@ -1371,7 +1371,7 @@ idpf_dp_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	if (unlikely(txq == NULL))
 		return nb_tx;
 
-	sw_ring = (struct idpf_tx_entry *)txq->sw_ring;
+	sw_ring = txq->sw_ring;
 	txr = txq->idpf_tx_ring;
 	tx_id = txq->tx_tail;
 	txe = &sw_ring[tx_id];
