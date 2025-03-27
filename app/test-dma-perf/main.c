@@ -523,7 +523,7 @@ main(int argc, char *argv[])
 {
 	int ret;
 	uint16_t case_nb;
-	uint32_t i, nb_lcores;
+	uint32_t i, j, nb_lcores, lcore;
 	pid_t cpid, wpid;
 	int wstatus;
 	char args[MAX_EAL_PARAM_NB][MAX_EAL_PARAM_LEN];
@@ -603,6 +603,12 @@ main(int argc, char *argv[])
 			if (nb_lcores < 2)
 				rte_exit(EXIT_FAILURE,
 					"There should be at least 2 worker lcores.\n");
+			for (j = 0; j < test_cases[i].num_worker; j++) {
+				lcore = test_cases[i].dma_config[j].lcore_dma_map.lcore;
+				if (!rte_lcore_has_role(lcore, ROLE_RTE))
+					rte_exit(EXIT_FAILURE,
+						 "Worker lcore %u not enabled in EAL\n", lcore);
+			}
 
 			fd = fopen(rst_path_ptr, "a");
 			if (!fd) {
