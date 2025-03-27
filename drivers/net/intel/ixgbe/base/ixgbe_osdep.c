@@ -25,23 +25,3 @@ ixgbe_free(struct ixgbe_hw __rte_unused *hw, void *addr)
 {
 	free(addr);
 }
-
-void ixgbe_init_lock(struct ixgbe_lock *lock)
-{
-	pthread_mutex_init(&lock->mutex, NULL);
-}
-
-void ixgbe_destroy_lock(struct ixgbe_lock *lock)
-{
-	pthread_mutex_destroy(&lock->mutex);
-}
-
-void ixgbe_acquire_lock(struct ixgbe_lock *lock)
-{
-	pthread_mutex_lock(&lock->mutex);
-}
-
-void ixgbe_release_lock(struct ixgbe_lock *lock)
-{
-	pthread_mutex_unlock(&lock->mutex);
-}

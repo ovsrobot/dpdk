@@ -167,9 +167,9 @@ void *ixgbe_calloc(struct ixgbe_hw *hw, size_t count, size_t size);
 void *ixgbe_malloc(struct ixgbe_hw *hw, size_t size);
 void ixgbe_free(struct ixgbe_hw *hw, void *addr);
 
-void ixgbe_init_lock(struct ixgbe_lock *lock);
-void ixgbe_destroy_lock(struct ixgbe_lock *lock);
-void ixgbe_acquire_lock(struct ixgbe_lock *lock);
-void ixgbe_release_lock(struct ixgbe_lock *lock);
+#define ixgbe_init_lock(lock) pthread_mutex_init(&(lock)->mutex, NULL)
+#define ixgbe_destroy_lock(lock) pthread_mutex_destroy(&(lock)->mutex)
+#define ixgbe_acquire_lock(lock) pthread_mutex_lock(&(lock)->mutex)
+#define ixgbe_release_lock(lock)	pthread_mutex_unlock(&(lock)->mutex)
 
 #endif /* _IXGBE_OS_H_ */
