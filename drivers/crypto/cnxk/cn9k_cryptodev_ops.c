@@ -194,12 +194,12 @@ cn9k_cpt_enqueue_burst(void *qptr, struct rte_crypto_op **ops, uint16_t nb_ops)
 		infl_req_1->op_flags = 0;
 		infl_req_2->op_flags = 0;
 
-		__atomic_store_n(&infl_req_1->res.u64[0], res.u64[0],
-				 __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&infl_req_1->res.u64[0], res.u64[0],
+					  rte_memory_order_relaxed);
 		inst[0].res_addr = (uint64_t)&infl_req_1->res;
 
-		__atomic_store_n(&infl_req_2->res.u64[0], res.u64[0],
-				 __ATOMIC_RELAXED);
+		rte_atomic_store_explicit(&infl_req_2->res.u64[0], res.u64[0],
+					  rte_memory_order_relaxed);
 		inst[1].res_addr = (uint64_t)&infl_req_2->res;
 
 		ret = cn9k_cpt_inst_prep(qp, op_1, infl_req_1, &inst[0]);
@@ -223,7 +223,7 @@ cn9k_cpt_enqueue_burst(void *qptr, struct rte_crypto_op **ops, uint16_t nb_ops)
 		count += 2;
 	}
 
-	rte_atomic_thread_fence(__ATOMIC_RELEASE);
+	rte_atomic_thread_fence(rte_memory_order_release);
 
 	pend_q->head = head;
 	pend_q->time_out = rte_get_timer_cycles() +
@@ -385,7 +385,7 @@ cn9k_cpt_crypto_adapter_enqueue(uintptr_t base, struct rte_crypto_op *op)
 
 	const uint32_t fc_thresh = qp->lmtline.fc_thresh;
 
-	fc.u64[0] = __atomic_load_n(fc_addr, __ATOMIC_RELAXED);
+	fc.u64[0] = rte_atomic_load_explicit(fc_addr, rte_memory_order_relaxed);
 	if (unlikely(fc.s.qsize > fc_thresh)) {
 		rte_mempool_put(qp->ca.req_mp, infl_req);
 		rte_errno = EAGAIN;
@@ -604,7 +604,7 @@ cn9k_cpt_crypto_adapter_dequeue(uintptr_t get_work1)
 	cop = infl_req->cop;
 	qp = infl_req->qp;
 
-	res.u64[0] = __atomic_load_n(&infl_req->res.u64[0], __ATOMIC_RELAXED);
+	res.u64[0] = rte_atomic_load_explicit(&infl_req->res.u64[0], rte_memory_order_relaxed);
 
 	cn9k_cpt_dequeue_post_process(qp, infl_req->cop, infl_req, &res.cn9k);
 
@@ -635,13 +635,13 @@ cn9k_cpt_dequeue_burst(void *qptr, struct rte_crypto_op **ops, uint16_t nb_ops)
 	nb_ops = RTE_MIN(nb_ops, infl_cnt);
 
 	/* Ensure infl_cnt isn't read before data lands */
-	rte_atomic_thread_fence(__ATOMIC_ACQUIRE);
+	rte_atomic_thread_fence(rte_memory_order_acquire);
 
 	for (i = 0; i < nb_ops; i++) {
 		infl_req = &pend_q->req_queue[pq_tail];
 
-		res.u64[0] = __atomic_load_n(&infl_req->res.u64[0],
-					     __ATOMIC_RELAXED);
+		res.u64[0] =
+			rte_atomic_load_explicit(&infl_req->res.u64[0], rte_memory_order_relaxed);
 
 		if (unlikely(res.cn9k.compcode == CPT_COMP_NOT_DONE)) {
 			if (unlikely(rte_get_timer_cycles() >
