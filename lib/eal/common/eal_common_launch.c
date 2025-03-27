@@ -35,6 +35,9 @@ rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned int worker_id)
 {
 	int rc = -EBUSY;
 
+	if (!rte_lcore_has_role(worker_id, ROLE_RTE))
+		return -EINVAL;
+
 	/* Check if the worker is in 'WAIT' state. Use acquire order
 	 * since 'state' variable is used as the guard variable.
 	 */
