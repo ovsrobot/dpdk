@@ -1743,7 +1743,7 @@ STATIC enum i40e_status_code i40e_nvmupd_get_aq_result(struct i40e_hw *hw,
  **/
 STATIC enum i40e_status_code i40e_nvmupd_get_aq_event(struct i40e_hw *hw,
 						    struct i40e_nvm_access *cmd,
-						    u8 *bytes, int *perrno)
+						    u8 *bytes, __rte_unused int *perrno)
 {
 	u32 aq_total_len;
 	u32 aq_desc_len;
