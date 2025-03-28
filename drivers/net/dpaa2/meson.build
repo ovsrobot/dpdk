@@ -17,6 +17,7 @@ sources = files(
         'dpaa2_recycle.c',
         'dpaa2_rxtx.c',
         'dpaa2_sparser.c',
+        'dpaa2_symbols.c',
         'dpaa2_ptp.c',
         'mc/dprtc.c',
         'mc/dpkg.c',
