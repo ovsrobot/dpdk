@@ -598,6 +598,12 @@ txa_process_event_vector(struct txa_service_data *txa,
 	return nb_tx;
 }
 
+static inline void
+txa_prefetch_mbuf(struct rte_mbuf *mbuf)
+{
+	rte_mbuf_prefetch_part1(mbuf);
+}
+
 static void
 txa_service_tx(struct txa_service_data *txa, struct rte_event *ev,
 	uint32_t n)
@@ -607,6 +613,20 @@ txa_service_tx(struct txa_service_data *txa, struct rte_event *ev,
 	struct rte_event_eth_tx_adapter_stats *stats;
 
 	stats = &txa->stats;
+
+	for (i = 0; i < n; i++) {
+		struct rte_event *event = &ev[i];
+
+		if (unlikely(event->event_type & RTE_EVENT_TYPE_VECTOR)) {
+			struct rte_event_vector *vec = event->vec;
+			struct rte_mbuf **mbufs = vec->mbufs;
+			uint32_t k;
+
+			for (k = 0; k < vec->nb_elem; k++)
+				txa_prefetch_mbuf(mbufs[k]);
+		} else
+			txa_prefetch_mbuf(event->mbuf);
+	}
 
 	nb_tx = 0;
 	for (i = 0; i < n; i++) {
