@@ -15,14 +15,13 @@ It is based on the Linux Kernel coding guidelines and the FreeBSD 7.2 Kernel Dev
 General Guidelines
 ------------------
 
-The rules and guidelines given in this document cannot cover every situation, so the following general guidelines should be used as a fallback:
+This document's rules and guidelines cannot cover every scenario, so the following general principles
+should be used as a fallback.
 
-* The code style should be consistent within each individual file.
-* In the case of creating new files, the style should be consistent within each file in a given directory or module.
-* The primary reason for coding standards is to increase code readability and comprehensibility, therefore always use whatever option will make the code easiest to read.
-
-Line length is recommended to be not more than 80 characters, including comments.
-[Tab stop size should be assumed to be 8-characters wide].
+* Maintain a consistent coding style within each file.
+* When creating new files, ensure consistency with other files in the same directory or module.
+* Prioritize readability and clarity. Choose the style that makes the code easiest to read.
+* Keep line length within 80 characters, including comments. Assume a tab stop size of 8 characters.
 
 .. note::
 
@@ -36,7 +35,7 @@ Usual Comments
 ~~~~~~~~~~~~~~
 
 These comments should be used in normal cases.
-To document a public API, a doxygen-like format must be used: refer to :ref:`doxygen_guidelines`.
+To document a public API, a Doxygen-like format must be used. Refer to the :ref:`doxygen_guidelines`.
 
 .. code-block:: c
 
@@ -110,15 +109,19 @@ Headers should be protected against multiple inclusion with the usual:
 Macros
 ~~~~~~
 
-Do not ``#define`` or declare names except with the standard DPDK prefix: ``RTE_``.
-This is to ensure there are no collisions with definitions in the application itself.
+Use only the standard DPDK prefix (RTE_) when defining or declaring names
+to prevent conflicts with application definitions.
 
-The names of "unsafe" macros (ones that have side effects), and the names of macros for manifest constants, are all in uppercase.
+Macro Naming:
 
-The expansions of expression-like macros are either a single token or have outer parentheses.
-If a macro is an inline expansion of a function, the function name is all in lowercase and the macro has the same name all in uppercase.
-If the macro encapsulates a compound statement, enclose it in a do-while loop, so that it can be used safely in if statements.
-Any final statement-terminating semicolon should be supplied by the macro invocation rather than the macro, to make parsing easier for pretty-printers and editors.
+* "Unsafe" macros (those with side effects) and macros for manifest constants must be in uppercase.
+* Expression-like macros should either expand to a single token or be enclosed in outer parentheses.
+* If a macro inlines a function, use the lowercase function name and an uppercase macro name.
+
+Encapsulation:
+
+* Macros that wrap compound statements should be enclosed in a do while loop to ensure safe use in "if" statements.
+* The semicolon terminating a statement should be provided by the macro invocation, not the macro itself, to improve readability for formatters and editors.
 
 For example:
 
@@ -138,38 +141,34 @@ Conditional Compilation
 
 .. note::
 
-   Conditional compilation should be used only when absolutely necessary,
-   as it increases the number of target binaries that need to be built and tested.
-   See below for details of some utility macros/defines available
-   to allow ifdefs/macros to be replaced by C conditional in some cases.
+   Use conditional compilation only when absolutely necessary
+   as it increases the number of binaries that must be built and tested.
+   Whenever possible, replace #ifdef macros with regular C conditionals
+   using the available utility macros and defines (see below for more details).
+  
+Guidelines for Conditional Compilation:
 
-Some high-level guidelines on the use of conditional compilation:
+* If code can compile on all platforms but lacks runtime support on some,
+  use regular C conditionals instead of ``#ifdef`` or ``#if``.
 
-* If code can compile on all platforms/systems,
-  but cannot run on some due to lack of support,
-  then regular C conditionals, as described in the next section,
-  should be used instead of conditional compilation.
-* If the code in question cannot compile on all systems,
-  but constitutes only a small fragment of a file,
-  then conditional compilation should be used, as described in this section.
-* If the code for conditional compilation implements an interface in an OS
-  or platform-specific way, then create a file for each OS or platform
-  and select the appropriate file using the Meson build system.
-  In most cases, these environment-specific files should be created inside the EAL library,
-  rather than having each library implement its own abstraction layer.
+* If code cannot compile on all platforms but affects only a small fragment
+  of a file, use conditional compilation.
 
-Additional style guidance for the use of conditional compilation macros:
+* For platform specific implementations, create separate files for
+  each OS or platform and use Meson to select the appropriate one.
+  These files should generally reside in the EAL library to avoid
+  redundant abstraction layers in individual libraries.
 
-* When code is conditionally compiled using ``#ifdef`` or ``#if``, a comment may be added following the matching
-  ``#endif`` or ``#else`` to permit the reader to easily discern where conditionally compiled code regions end.
-* This comment should be used only for (subjectively) long regions, regions greater than 20 lines, or where a series of nested ``#ifdef``'s may be confusing to the reader.
-  Exceptions may be made for cases where code is conditionally not compiled for the purposes of lint(1), or other tools, even though the uncompiled region may be small.
-* The comment should be separated from the ``#endif`` or ``#else`` by a single space.
-* For short conditionally compiled regions, a closing comment should not be used.
-* The comment for ``#endif`` should match the expression used in the corresponding ``#if`` or ``#ifdef``.
-* The comment for ``#else`` and ``#elif`` should match the inverse of the expression(s) used in the preceding ``#if`` and/or ``#elif`` statements.
-* In the comments, the subexpression ``defined(FOO)`` is abbreviated as "FOO".
-  For the purposes of comments, ``#ifndef FOO`` is treated as ``#if !defined(FOO)``.
+Style Guidelines for Conditional Compilation Macros:
+
+* For long or nested conditional compilation blocks (generally over 20 lines), add a comment
+  after ``#endif`` or ``#else`` to clarify where the block ends.
+* This is not necessary for short, straightforward sections.
+* The ``#endif`` comment should match the original ``#ifdef`` or ``#if`` condition.
+* The ``#else`` and ``#elif`` comments should indicate the inverse of the preceding condition.
+* In comments, ``defined(FOO)`` can be abbreviated as "FOO". Treat ``#ifndef FOO``
+  as ``#if !defined(FOO)``
+* Separate the comment from ``#endif`` or ``else`` with a single space.
 
 .. code-block:: c
 
@@ -850,13 +849,13 @@ Examples:
 Specializations
 ~~~~~~~~~~~~~~~
 
-In addition to the above logging topic, any PMD or library can further split
-logging output by using "specializations". A specialization could be the
-difference between initialization code, and logs of events that occur at runtime.
+In addition to standard logging, PMDs and libraries can further categorize log
+output using specializations. Specializations help distinguish between different
+types of logs, such as initialization messages and runtime events.
 
-An example could be the initialization log messages getting one
-specialization, while another specialization handles mailbox command logging.
-Each PMD, library or component can create as many specializations as required.
+For example, one specialization might handle initialization logs, while another is
+used for mailbox command logging. Each PMD, library, or component can define as many
+specializations as needed.
 
 A specialization looks like this:
 
