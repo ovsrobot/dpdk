@@ -1702,7 +1702,7 @@ test_mbuf_validate_tx_offload(const char *test_name,
 	struct rte_mbuf *m = NULL;
 	int ret = 0;
 
-	/* alloc a mbuf and do sanity check */
+	/* alloc a mbuf and do some basic checks */
 	m = rte_pktmbuf_alloc(pktmbuf_pool);
 	if (m == NULL)
 		GOTO_FAIL("%s: mbuf allocation failed!\n", __func__);

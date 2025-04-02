@@ -81,7 +81,7 @@ clear_packet_count(void)
 			rte_memory_order_relaxed);
 }
 
-/* this is the basic worker function for sanity test
+/* this is the basic worker function
  * it does nothing but return packets and count them.
  */
 static int
@@ -106,7 +106,7 @@ handle_work(void *arg)
 	return 0;
 }
 
-/* do basic sanity testing of the distributor. This test tests the following:
+/* do basic testing of the distributor. This test tests the following:
  * - send 32 packets through distributor with the same tag and ensure they
  *   all go to the one worker
  * - send 32 packets through the distributor with two different tags and
@@ -118,7 +118,7 @@ handle_work(void *arg)
  *   not necessarily in the same order (as different flows).
  */
 static int
-sanity_test(struct worker_params *wp, struct rte_mempool *p)
+basic_test(struct worker_params *wp, struct rte_mempool *p)
 {
 	struct rte_distributor *db = wp->dist;
 	struct rte_mbuf *bufs[BURST];
@@ -127,7 +127,7 @@ sanity_test(struct worker_params *wp, struct rte_mempool *p)
 	unsigned int retries;
 	unsigned int processed;
 
-	printf("=== Basic distributor sanity tests ===\n");
+	printf("=== Basic distributor tests ===\n");
 	clear_packet_count();
 	if (rte_mempool_get_bulk(p, (void *)bufs, BURST) != 0) {
 		printf("line %d: Error getting mbufs from pool\n", __LINE__);
@@ -164,7 +164,7 @@ sanity_test(struct worker_params *wp, struct rte_mempool *p)
 		printf("Worker %u handled %u packets\n", i,
 			rte_atomic_load_explicit(&worker_stats[i].handled_packets,
 					rte_memory_order_relaxed));
-	printf("Sanity test with all zero hashes done.\n");
+	printf("Test with all zero hashes done.\n");
 
 	/* pick two flows and check they go correctly */
 	if (rte_lcore_count() >= 3) {
@@ -192,7 +192,7 @@ sanity_test(struct worker_params *wp, struct rte_mempool *p)
 				rte_atomic_load_explicit(
 					&worker_stats[i].handled_packets,
 					rte_memory_order_relaxed));
-		printf("Sanity test with two hash values done\n");
+		printf("Test with two hash values done\n");
 	}
 
 	/* give a different hash value to each packet,
@@ -220,11 +220,11 @@ sanity_test(struct worker_params *wp, struct rte_mempool *p)
 		printf("Worker %u handled %u packets\n", i,
 			rte_atomic_load_explicit(&worker_stats[i].handled_packets,
 					rte_memory_order_relaxed));
-	printf("Sanity test with non-zero hashes done\n");
+	printf("Test with non-zero hashes done\n");
 
 	rte_mempool_put_bulk(p, (void *)bufs, BURST);
 
-	/* sanity test with BIG_BATCH packets to ensure they all arrived back
+	/* test with BIG_BATCH packets to ensure they all arrived back
 	 * from the returned packets function */
 	clear_packet_count();
 	struct rte_mbuf *many_bufs[BIG_BATCH], *return_bufs[BIG_BATCH];
@@ -289,7 +289,7 @@ sanity_test(struct worker_params *wp, struct rte_mempool *p)
 			return -1;
 		}
 	}
-	printf("Sanity test of returned packets done\n");
+	printf("Test of returned packets done\n");
 
 	rte_mempool_put_bulk(p, (void *)many_bufs, BIG_BATCH);
 
@@ -327,20 +327,20 @@ handle_work_with_free_mbufs(void *arg)
 	return 0;
 }
 
-/* Perform a sanity test of the distributor with a large number of packets,
+/* Perform a test of the distributor with a large number of packets,
  * where we allocate a new set of mbufs for each burst. The workers then
  * free the mbufs. This ensures that we don't have any packet leaks in the
  * library.
  */
 static int
-sanity_test_with_mbuf_alloc(struct worker_params *wp, struct rte_mempool *p)
+basic_test_with_mbuf_alloc(struct worker_params *wp, struct rte_mempool *p)
 {
 	struct rte_distributor *d = wp->dist;
 	unsigned i;
 	struct rte_mbuf *bufs[BURST];
 	unsigned int processed;
 
-	printf("=== Sanity test with mbuf alloc/free (%s) ===\n", wp->name);
+	printf("=== Test with mbuf alloc/free (%s) ===\n", wp->name);
 
 	clear_packet_count();
 	for (i = 0; i < ((1<<ITER_POWER)); i += BURST) {
@@ -368,7 +368,7 @@ sanity_test_with_mbuf_alloc(struct worker_params *wp, struct rte_mempool *p)
 		return -1;
 	}
 
-	printf("Sanity test with mbuf alloc/free passed\n\n");
+	printf("Test with mbuf alloc/free passed\n\n");
 	return 0;
 }
 
@@ -434,13 +434,13 @@ handle_work_for_shutdown_test(void *arg)
 }
 
 
-/* Perform a sanity test of the distributor with a large number of packets,
+/* Perform a test of the distributor with a large number of packets,
  * where we allocate a new set of mbufs for each burst. The workers then
  * free the mbufs. This ensures that we don't have any packet leaks in the
  * library.
  */
 static int
-sanity_test_with_worker_shutdown(struct worker_params *wp,
+basic_test_with_worker_shutdown(struct worker_params *wp,
 		struct rte_mempool *p)
 {
 	struct rte_distributor *d = wp->dist;
@@ -450,7 +450,7 @@ sanity_test_with_worker_shutdown(struct worker_params *wp,
 	unsigned int failed = 0;
 	unsigned int processed = 0;
 
-	printf("=== Sanity test of worker shutdown ===\n");
+	printf("=== Test of worker shutdown ===\n");
 
 	clear_packet_count();
 
@@ -516,7 +516,7 @@ sanity_test_with_worker_shutdown(struct worker_params *wp,
 	if (failed)
 		return -1;
 
-	printf("Sanity test with worker shutdown passed\n\n");
+	printf("Test with worker shutdown passed\n\n");
 	return 0;
 }
 
@@ -612,13 +612,13 @@ handle_and_mark_work(void *arg)
 	return 0;
 }
 
-/* sanity_mark_test sends packets to workers which mark them.
+/* mark_test sends packets to workers which mark them.
  * Every packet has also encoded sequence number.
  * The returned packets are sorted and verified if they were handled
  * by proper workers.
  */
 static int
-sanity_mark_test(struct worker_params *wp, struct rte_mempool *p)
+mark_test(struct worker_params *wp, struct rte_mempool *p)
 {
 	const unsigned int buf_count = 24;
 	const unsigned int burst = 8;
@@ -899,13 +899,13 @@ test_distributor(void)
 
 		rte_eal_mp_remote_launch(handle_work,
 				&worker_params, SKIP_MAIN);
-		if (sanity_test(&worker_params, p) < 0)
+		if (basic_test(&worker_params, p) < 0)
 			goto err;
 		quit_workers(&worker_params, p);
 
 		rte_eal_mp_remote_launch(handle_work_with_free_mbufs,
 				&worker_params, SKIP_MAIN);
-		if (sanity_test_with_mbuf_alloc(&worker_params, p) < 0)
+		if (basic_test_with_mbuf_alloc(&worker_params, p) < 0)
 			goto err;
 		quit_workers(&worker_params, p);
 
@@ -913,7 +913,7 @@ test_distributor(void)
 			rte_eal_mp_remote_launch(handle_work_for_shutdown_test,
 					&worker_params,
 					SKIP_MAIN);
-			if (sanity_test_with_worker_shutdown(&worker_params,
+			if (basic_test_with_worker_shutdown(&worker_params,
 					p) < 0)
 				goto err;
 			quit_workers(&worker_params, p);
@@ -928,7 +928,7 @@ test_distributor(void)
 
 			rte_eal_mp_remote_launch(handle_and_mark_work,
 					&worker_params, SKIP_MAIN);
-			if (sanity_mark_test(&worker_params, p) < 0)
+			if (mark_test(&worker_params, p) < 0)
 				goto err;
 			quit_workers(&worker_params, p);
 

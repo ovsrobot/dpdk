@@ -498,11 +498,11 @@ timer_basic_main_loop(__rte_unused void *arg)
 }
 
 static int
-timer_sanity_check(void)
+timer_check(void)
 {
 #ifdef RTE_LIBEAL_USE_HPET
 	if (eal_timer_source != EAL_TIMER_HPET) {
-		printf("Not using HPET, can't sanity check timer sources\n");
+		printf("Not using HPET, can't check timer sources\n");
 		return 0;
 	}
 
@@ -546,9 +546,9 @@ test_timer(void)
 		return TEST_SKIPPED;
 	}
 
-	/* sanity check our timer sources and timer config values */
-	if (timer_sanity_check() < 0) {
-		printf("Timer sanity checks failed\n");
+	/* check our timer sources and timer config values */
+	if (timer_check() < 0) {
+		printf("Timer checks failed\n");
 		return TEST_FAILED;
 	}
 

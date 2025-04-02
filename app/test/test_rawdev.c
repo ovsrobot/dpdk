@@ -47,7 +47,7 @@ test_rawdev_selftests(void)
 	int ret = 0;
 	int i;
 
-	/* basic sanity on rawdev infrastructure */
+	/* basic check on rawdev infrastructure */
 	if (test_rawdev_selftest_skeleton() < 0)
 		return -1;
 

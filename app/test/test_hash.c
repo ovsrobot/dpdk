@@ -1140,7 +1140,7 @@ fbk_hash_unit_test(void)
 		.socket_id = 0,
 	};
 
-	/* this is a sanity check for "same name" test
+	/* this is a check for "same name" test
 	 * creating this hash will check if we are actually able to create
 	 * multiple hashes with different names (instead of having just one).
 	 */
