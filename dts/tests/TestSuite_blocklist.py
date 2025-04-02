@@ -22,7 +22,7 @@ class TestBlocklist(TestSuite):
             allowlisted_ports = {port.device_name for port in testpmd.show_port_info_all()}
             blocklisted_ports = {port.pci for port in ports_to_block}
 
-            # sanity check
+            # ensure at least one port is allowed
             allowed_len = len(allowlisted_ports - blocklisted_ports)
             self.verify(allowed_len > 0, "At least one port should have been allowed")
 
