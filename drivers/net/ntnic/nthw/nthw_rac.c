@@ -76,7 +76,7 @@ int nthw_rac_init(nthw_rac_t *p, nthw_fpga_t *p_fpga, struct fpga_info_s *p_fpga
 	p->mn_fld_rab_init_bw = nthw_field_get_bit_width(p->mp_fld_rab_init);
 	p->mn_fld_rab_init_mask = nthw_field_get_mask(p->mp_fld_rab_init);
 
-	/* RAC_RAB_INIT_RAB reg/field sanity checks: */
+	/* make sure RAC_RAB_INIT_RAB reg/field is valid */
 	RTE_ASSERT(p->mn_fld_rab_init_mask == ((1UL << p->mn_fld_rab_init_bw) - 1));
 	RTE_ASSERT(p->mn_fld_rab_init_bw == p->mn_param_rac_rab_interfaces);
 

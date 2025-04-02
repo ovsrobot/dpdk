@@ -1473,7 +1473,7 @@ bond_8023ad_setup_validate(uint16_t port_id,
 		return -EINVAL;
 
 	if (conf != NULL) {
-		/* Basic sanity check */
+		/* Basic input check */
 		if (conf->slow_periodic_ms == 0 ||
 				conf->fast_periodic_ms >= conf->slow_periodic_ms ||
 				conf->long_timeout_ms == 0 ||

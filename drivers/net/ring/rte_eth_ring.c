@@ -34,7 +34,7 @@ struct ring_internal_args {
 	struct rte_ring * const *tx_queues;
 	const unsigned int nb_tx_queues;
 	const unsigned int numa_node;
-	void *addr; /* self addr for sanity check */
+	void *addr; /* self addr for verification */
 };
 
 enum dev_action {
@@ -612,10 +612,7 @@ static int parse_kvlist(const char *key __rte_unused,
 	*action = '\0';
 	action++;
 
-	/*
-	 * Need to do some sanity checking here
-	 */
-
+	/* Check the command argument is valid action */
 	if (strcmp(action, ETH_RING_ACTION_ATTACH) == 0)
 		info->list[info->count].action = DEV_ATTACH;
 	else if (strcmp(action, ETH_RING_ACTION_CREATE) == 0)

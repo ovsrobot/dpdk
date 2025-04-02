@@ -59,7 +59,7 @@ struct sfc_dp_rx_qcreate_info {
 
 	/**
 	 * Maximum number of Rx descriptors completed in one Rx event.
-	 * Just for sanity checks if datapath would like to do.
+	 * Checks if datapath would like to do.
 	 */
 	unsigned int		batch_max;
 

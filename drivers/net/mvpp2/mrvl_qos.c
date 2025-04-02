@@ -260,7 +260,7 @@ get_entry_values(const char *entry, uint8_t *tab,
 			if (nb_rng_tokens != 2)
 				return -3;
 
-			/* Range and sanity checks. */
+			/* Range and input checks. */
 			if (get_val_securely(rng_tokens[0], &token_val) < 0)
 				return -4;
 			beg = (char)token_val;
