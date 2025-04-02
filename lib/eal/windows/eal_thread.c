@@ -24,6 +24,9 @@ eal_thread_wake_worker(unsigned int worker_id)
 	char c = 0;
 	int n;
 
+	if (m2w == 0 || w2m == 0)
+		return -EINVAL;
+
 	do {
 		n = _write(m2w, &c, 1);
 	} while (n == 0 || (n < 0 && errno == EINTR));
