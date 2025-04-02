@@ -247,7 +247,7 @@ get_tsc_freq(uint64_t arch_hz)
 		tsc_hz = (uint64_t)((end - start)/secs);
 
 		if (arch_hz) {
-			/* Make sure we're within 1% for sanity check */
+			/* Make sure we're within 1% */
 			if (RTE_MAX(arch_hz, tsc_hz) - RTE_MIN(arch_hz, tsc_hz) > arch_hz / 100)
 				return arch_hz;
 
