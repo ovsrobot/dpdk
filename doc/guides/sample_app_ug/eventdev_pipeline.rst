@@ -50,7 +50,7 @@ these settings is shown below:
     ./<build_dir>/examples/dpdk-eventdev_pipeline -l 0,2,8-15 --vdev event_sw0 \
     -- -r1 -t1 -e4 -w FF00 -s4 -n0 -c32 -W1000 -D
 
-The application has some sanity checking built-in, so if there is a function
+The application has some internal validation, so if there is a function
 (e.g.; the RX core) which doesn't have a cpu core mask assigned, the application
 will print an error message:
 
