@@ -264,7 +264,7 @@ create_mbuf_from_heap(int pkt_len, uint8_t pattern)
 	m->port = RTE_MBUF_PORT_INVALID;
 	m->buf_len = MBUF_SIZE - sizeof(struct rte_mbuf) - RTE_PKTMBUF_HEADROOM;
 	rte_pktmbuf_reset_headroom(m);
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_verify(m, 1);
 
 	m->buf_addr = (char *)m + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM;
 

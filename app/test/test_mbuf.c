@@ -262,8 +262,8 @@ test_one_pktmbuf(struct rte_mempool *pktmbuf_pool)
 		GOTO_FAIL("Buffer should be continuous");
 	memset(hdr, 0x55, MBUF_TEST_HDR2_LEN);
 
-	rte_mbuf_sanity_check(m, 1);
-	rte_mbuf_sanity_check(m, 0);
+	rte_mbuf_verify(m, 1);
+	rte_mbuf_verify(m, 0);
 	rte_pktmbuf_dump(stdout, m, 0);
 
 	/* this prepend should fail */
@@ -1162,7 +1162,7 @@ err:
 
 #ifdef RTE_EXEC_ENV_WINDOWS
 static int
-test_failing_mbuf_sanity_check(struct rte_mempool *pktmbuf_pool)
+test_failing_mbuf_verify(struct rte_mempool *pktmbuf_pool)
 {
 	RTE_SET_USED(pktmbuf_pool);
 	return TEST_SKIPPED;
@@ -1181,12 +1181,12 @@ mbuf_check_pass(struct rte_mbuf *buf)
 }
 
 static int
-test_failing_mbuf_sanity_check(struct rte_mempool *pktmbuf_pool)
+test_failing_mbuf_verify(struct rte_mempool *pktmbuf_pool)
 {
 	struct rte_mbuf *buf;
 	struct rte_mbuf badbuf;
 
-	printf("Checking rte_mbuf_sanity_check for failure conditions\n");
+	printf("Checking rte_mbuf_verify for failure conditions\n");
 
 	/* get a good mbuf to use to make copies */
 	buf = rte_pktmbuf_alloc(pktmbuf_pool);
@@ -1708,7 +1708,7 @@ test_mbuf_validate_tx_offload(const char *test_name,
 		GOTO_FAIL("%s: mbuf allocation failed!\n", __func__);
 	if (rte_pktmbuf_pkt_len(m) != 0)
 		GOTO_FAIL("%s: Bad packet length\n", __func__);
-	rte_mbuf_sanity_check(m, 0);
+	rte_mbuf_verify(m, 0);
 	m->ol_flags = ol_flags;
 	m->tso_segsz = segsize;
 	ret = rte_validate_tx_offload(m);
@@ -1915,7 +1915,7 @@ test_pktmbuf_read(struct rte_mempool *pktmbuf_pool)
 		GOTO_FAIL("%s: mbuf allocation failed!\n", __func__);
 	if (rte_pktmbuf_pkt_len(m) != 0)
 		GOTO_FAIL("%s: Bad packet length\n", __func__);
-	rte_mbuf_sanity_check(m, 0);
+	rte_mbuf_verify(m, 0);
 
 	data = rte_pktmbuf_append(m, MBUF_TEST_DATA_LEN2);
 	if (data == NULL)
@@ -1964,7 +1964,7 @@ test_pktmbuf_read_from_offset(struct rte_mempool *pktmbuf_pool)
 
 	if (rte_pktmbuf_pkt_len(m) != 0)
 		GOTO_FAIL("%s: Bad packet length\n", __func__);
-	rte_mbuf_sanity_check(m, 0);
+	rte_mbuf_verify(m, 0);
 
 	/* prepend an ethernet header */
 	hdr = (struct ether_hdr *)rte_pktmbuf_prepend(m, hdr_len);
@@ -2109,7 +2109,7 @@ create_packet(struct rte_mempool *pktmbuf_pool,
 			GOTO_FAIL("%s: mbuf allocation failed!\n", __func__);
 		if (rte_pktmbuf_pkt_len(pkt_seg) != 0)
 			GOTO_FAIL("%s: Bad packet length\n", __func__);
-		rte_mbuf_sanity_check(pkt_seg, 0);
+		rte_mbuf_verify(pkt_seg, 0);
 		/* Add header only for the first segment */
 		if (test_data->flags == MBUF_HEADER && seg == 0) {
 			hdr_len = sizeof(struct rte_ether_hdr);
@@ -2321,7 +2321,7 @@ test_pktmbuf_ext_shinfo_init_helper(struct rte_mempool *pktmbuf_pool)
 		GOTO_FAIL("%s: mbuf allocation failed!\n", __func__);
 	if (rte_pktmbuf_pkt_len(m) != 0)
 		GOTO_FAIL("%s: Bad packet length\n", __func__);
-	rte_mbuf_sanity_check(m, 0);
+	rte_mbuf_verify(m, 0);
 
 	ext_buf_addr = rte_malloc("External buffer", buf_len,
 			RTE_CACHE_LINE_SIZE);
@@ -2482,8 +2482,8 @@ test_pktmbuf_ext_pinned_buffer(struct rte_mempool *std_pool)
 		GOTO_FAIL("%s: test_pktmbuf_copy(pinned) failed\n",
 			  __func__);
 
-	if (test_failing_mbuf_sanity_check(pinned_pool) < 0)
-		GOTO_FAIL("%s: test_failing_mbuf_sanity_check(pinned)"
+	if (test_failing_mbuf_verify(pinned_pool) < 0)
+		GOTO_FAIL("%s: test_failing_mbuf_verify(pinned)"
 			  " failed\n", __func__);
 
 	if (test_mbuf_linearize_check(pinned_pool) < 0)
@@ -2857,8 +2857,8 @@ test_mbuf(void)
 		goto err;
 	}
 
-	if (test_failing_mbuf_sanity_check(pktmbuf_pool) < 0) {
-		printf("test_failing_mbuf_sanity_check() failed\n");
+	if (test_failing_mbuf_verify(pktmbuf_pool) < 0) {
+		printf("test_failing_mbuf_verify() failed\n");
 		goto err;
 	}
 
