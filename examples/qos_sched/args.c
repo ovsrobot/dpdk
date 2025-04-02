@@ -386,7 +386,7 @@ app_parse_args(int argc, char **argv)
 		return -1;
 	}
 
-	/* sanity check for cores assignment */
+	/* check for cores assignment */
 	for(i = 0; i < nb_pfc; i++) {
 		if (qos_conf[i].rx_core >= RTE_MAX_LCORE) {
 			RTE_LOG(ERR, APP, "pfc %u: invalid RX lcore index %u\n", i + 1,
