@@ -18,6 +18,9 @@
 int
 rte_eal_wait_lcore(unsigned worker_id)
 {
+	if (unlikely(worker_id >= RTE_MAX_LCORE))
+		return -EINVAL;
+
 	while (rte_atomic_load_explicit(&lcore_config[worker_id].state,
 			rte_memory_order_acquire) != WAIT)
 		rte_pause();
@@ -34,6 +37,9 @@ int
 rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned int worker_id)
 {
 	int rc = -EBUSY;
+
+	if (unlikely(worker_id >= RTE_MAX_LCORE))
+		return -EINVAL;
 
 	/* Check if the worker is in 'WAIT' state. Use acquire order
 	 * since 'state' variable is used as the guard variable.
@@ -93,6 +99,9 @@ rte_eal_mp_remote_launch(int (*f)(void *), void *arg,
 enum rte_lcore_state_t
 rte_eal_get_lcore_state(unsigned lcore_id)
 {
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
+		return -EINVAL;
+
 	return lcore_config[lcore_id].state;
 }
 
