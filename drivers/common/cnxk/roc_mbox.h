@@ -783,8 +783,8 @@ struct cgx_lmac_fwdata_s {
 	uint32_t __io lmac_type;
 	uint32_t __io portm_idx;
 	uint64_t __io mgmt_port : 1;
-	uint64_t __io advertised_an : 1;
-#define LMAC_FWDATA_RESERVED_MEM 1019
+	uint64_t __io port;
+#define LMAC_FWDATA_RESERVED_MEM 1018
 	uint64_t __io reserved[LMAC_FWDATA_RESERVED_MEM];
 };
 
