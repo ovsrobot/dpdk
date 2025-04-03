@@ -413,6 +413,11 @@ struct roc_nix_link_info {
 	uint64_t port : 8;
 };
 
+struct roc_nix_mac_fwdata {
+	uint64_t advertised_link_modes;
+	uint64_t supported_link_modes;
+};
+
 /** Maximum name length for extended statistics counters */
 #define ROC_NIX_XSTATS_NAME_SIZE 64
 
@@ -493,7 +498,7 @@ struct roc_nix {
 	bool reass_ena;
 	TAILQ_ENTRY(roc_nix) next;
 
-#define ROC_NIX_MEM_SZ (6 * 1112)
+#define ROC_NIX_MEM_SZ (6 * 1200)
 	uint8_t reserved[ROC_NIX_MEM_SZ] __plt_cache_aligned;
 } __plt_cache_aligned;
 
@@ -856,6 +861,7 @@ void __roc_api roc_nix_mac_link_info_get_cb_unregister(struct roc_nix *roc_nix);
 int __roc_api roc_nix_q_err_cb_register(struct roc_nix *roc_nix, q_err_get_t sq_err_handle);
 void __roc_api roc_nix_q_err_cb_unregister(struct roc_nix *roc_nix);
 int __roc_api roc_nix_mac_stats_reset(struct roc_nix *roc_nix);
+int __roc_api roc_nix_mac_fwdata_get(struct roc_nix *roc_nix, struct roc_nix_mac_fwdata *fwdata);
 
 /* Ops */
 int __roc_api roc_nix_switch_hdr_set(struct roc_nix *roc_nix,
