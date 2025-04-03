@@ -303,6 +303,9 @@ def make_test_suite_config_field(config_obj: type["BaseConfig"]):
 
 def create_test_suites_config_model(test_suites: Iterable[TestSuiteConfig]) -> type[BaseModel]:
     """Create model for the test suites configuration."""
+
+    test_suites += [TestSuiteConfig(test_suite="smoke_tests")]
+
     test_suites_kwargs = {
         t.test_suite_name: make_test_suite_config_field(t.test_suite_spec.config_obj)
         for t in test_suites
