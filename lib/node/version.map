@@ -22,4 +22,7 @@ EXPERIMENTAL {
 
 	# added in 24.03
 	rte_node_ethdev_rx_next_update;
+
+	# added in 25.07
+	rte_node_mbuf_dynfield_register;
 };
