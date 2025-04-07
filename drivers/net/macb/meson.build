@@ -16,6 +16,7 @@ if host_machine.cpu_family() == 'aarch64'
     sources += files(
         'macb_ethdev.c',
         'macb_rxtx.c',
+        'macb_rxtx_vec_neon.c',
     )
 endif
 
