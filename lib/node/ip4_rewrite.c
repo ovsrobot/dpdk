@@ -258,19 +258,16 @@ ip4_rewrite_node_process(struct rte_graph *graph, struct rte_node *node,
 static int
 ip4_rewrite_node_init(const struct rte_graph *graph, struct rte_node *node)
 {
-	static bool init_once;
+	int dyn;
 
 	RTE_SET_USED(graph);
 	RTE_BUILD_BUG_ON(sizeof(struct ip4_rewrite_node_ctx) > RTE_NODE_CTX_SZ);
 
-	if (!init_once) {
-		node_mbuf_priv1_dynfield_offset = rte_mbuf_dynfield_register(
-				&node_mbuf_priv1_dynfield_desc);
-		if (node_mbuf_priv1_dynfield_offset < 0)
-			return -rte_errno;
-		init_once = true;
-	}
-	IP4_REWRITE_NODE_PRIV1_OFF(node->ctx) = node_mbuf_priv1_dynfield_offset;
+	dyn = rte_node_mbuf_dynfield_register();
+	if (dyn < 0)
+		return -rte_errno;
+
+	IP4_REWRITE_NODE_PRIV1_OFF(node->ctx) = dyn;
 
 	node_dbg("ip4_rewrite", "Initialized ip4_rewrite node initialized");
 
