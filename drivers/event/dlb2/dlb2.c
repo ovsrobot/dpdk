@@ -90,6 +90,9 @@ static struct rte_event_dev_info evdev_dlb2_default_info = {
 struct process_local_port_data
 dlb2_port[DLB2_MAX_NUM_PORTS_ALL][DLB2_NUM_PORT_TYPES];
 
+static void (*dlb2_build_qes)(struct dlb2_enqueue_qe *qe, const struct rte_event ev[],
+			      uint16_t *cmd_weight, uint16_t *sched_word);
+
 static void
 dlb2_free_qe_mem(struct dlb2_port *qm_port)
 {
@@ -2069,9 +2072,9 @@ dlb2_eventdev_port_setup(struct rte_eventdev *dev,
 
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512VL) &&
 	    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_512)
-		ev_port->qm_port.use_avx512 = true;
+		dlb2_build_qes = dlb2_build_qes_avx512;
 	else
-		ev_port->qm_port.use_avx512 = false;
+		dlb2_build_qes = dlb2_build_qes_sse;
 
 	return 0;
 }
@@ -2885,6 +2888,77 @@ dlb2_construct_token_pop_qe(struct dlb2_port *qm_port, int idx)
 	qe[idx].tokens = num - 1;
 
 	qm_port->owed_tokens = 0;
+}
+
+static inline void
+dlb2_event_build_hcws(struct dlb2_port *qm_port,
+		      const struct rte_event ev[],
+		      int num,
+		      uint8_t *sched_type,
+		      uint8_t *queue_id)
+{
+	static uint8_t cmd_byte_map[DLB2_NUM_PORT_TYPES][DLB2_NUM_HW_SCHED_TYPES] = {
+		{
+			/* Load-balanced cmd bytes */
+			[RTE_EVENT_OP_NEW] = DLB2_NEW_CMD_BYTE,
+			[RTE_EVENT_OP_FORWARD] = DLB2_FWD_CMD_BYTE,
+			[RTE_EVENT_OP_RELEASE] = DLB2_COMP_CMD_BYTE,
+		},
+		{
+			/* Directed cmd bytes */
+			[RTE_EVENT_OP_NEW] = DLB2_NEW_CMD_BYTE,
+			[RTE_EVENT_OP_FORWARD] = DLB2_NEW_CMD_BYTE,
+			[RTE_EVENT_OP_RELEASE] = DLB2_NOOP_CMD_BYTE,
+		},
+	};
+	struct dlb2_enqueue_qe *qe = qm_port->qe4;
+	bool dir = qm_port->is_directed;
+	int i;
+
+	switch (num) {
+	case 4: {
+		uint16_t cmd_wt[4] = {
+		    cmd_byte_map[dir][ev[0].op] << 8 | RTE_PMD_DLB2_GET_QE_WEIGHT(&ev[0]) << 1,
+		    cmd_byte_map[dir][ev[1].op] << 8 | RTE_PMD_DLB2_GET_QE_WEIGHT(&ev[1]) << 1,
+		    cmd_byte_map[dir][ev[2].op] << 8 | RTE_PMD_DLB2_GET_QE_WEIGHT(&ev[2]) << 1,
+		    cmd_byte_map[dir][ev[3].op] << 8 | RTE_PMD_DLB2_GET_QE_WEIGHT(&ev[3]) << 1};
+		uint16_t sched_word[4] = {
+		    EV_TO_DLB2_PRIO(ev[0].priority) << 10 | sched_type[0] << 8 | queue_id[0],
+		    EV_TO_DLB2_PRIO(ev[1].priority) << 10 | sched_type[1] << 8 | queue_id[1],
+		    EV_TO_DLB2_PRIO(ev[2].priority) << 10 | sched_type[2] << 8 | queue_id[2],
+		    EV_TO_DLB2_PRIO(ev[3].priority) << 10 | sched_type[3] << 8 | queue_id[3]
+		};
+
+		dlb2_build_qes(qe, ev, cmd_wt, sched_word);
+		break;
+	}
+	case 3:
+	case 2:
+	case 1:
+		for (i = 0; i < num; i++) {
+			qe[i].cmd_byte =
+				cmd_byte_map[qm_port->is_directed][ev[i].op];
+			qe[i].sched_type = sched_type[i];
+			qe[i].data = ev[i].u64;
+			qe[i].qid = queue_id[i];
+			qe[i].priority = EV_TO_DLB2_PRIO(ev[i].priority);
+			qe[i].lock_id = ev[i].flow_id;
+			if (sched_type[i] == DLB2_SCHED_DIRECTED) {
+				struct dlb2_msg_info *info =
+					(struct dlb2_msg_info *)&qe[i].lock_id;
+
+				info->qid = queue_id[i];
+				info->sched_type = DLB2_SCHED_DIRECTED;
+				info->priority = qe[i].priority;
+			}
+			qe[i].u.event_type.major = ev[i].event_type;
+			qe[i].u.event_type.sub = ev[i].sub_event_type;
+			qe[i].weight = RTE_PMD_DLB2_GET_QE_WEIGHT(&ev[i]);
+		}
+		break;
+	case 0:
+		break;
+	}
 }
 
 static inline int
