@@ -899,8 +899,8 @@ rte_eal_cleanup(void)
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	rte_service_finalize();
-	rte_mp_channel_cleanup();
 	eal_bus_cleanup();
+	rte_mp_channel_cleanup();
 	rte_trace_save();
 	eal_trace_fini();
 	rte_eal_alarm_cleanup();
