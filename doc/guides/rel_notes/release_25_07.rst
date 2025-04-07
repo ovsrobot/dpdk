@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added rte_node specific global mbuf dynamic field.**
+
+  Instead each node registering mbuf dynamic field for its own purpose, a
+  global structure is added which can be used/overloaded by all nodes
+  (including out-of-tree nodes). This minimizes footprint of node specific mbuf
+  dynamic field.
 
 Removed Items
 -------------
