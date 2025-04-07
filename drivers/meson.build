@@ -126,6 +126,7 @@ foreach subpath:subdirs
         sources = []
         sources_avx2 = []
         sources_avx512 = []
+        sources_sve = []
         headers = []
         driver_sdk_headers = [] # public headers included by drivers
         objs = []
@@ -260,6 +261,32 @@ foreach subpath:subdirs
                         include_directories: includes,
                         c_args: avx512_args)
                 objs += avx512_lib.extract_objects(sources_avx512)
+            endif
+        endif
+
+        if (arch_subdir == 'arm' and sources_sve.length() > 0
+                and cc.has_argument('-march=armv8.2-a+sve')
+                and cc.check_header('arm_sve.h'))
+
+            if dpdk_conf.has('RTE_HAS_SVE_ACLE')
+                sources += sources_sve
+            else
+                cflags += ['-DRTE_HAS_SVE_ACLE=1']
+                sve_cflags = ['-march=armv8.2-a+sve']
+                foreach flag: cflags
+                    if (flag.startswith('-march=')
+                            or flag.startswith('-mcpu=')
+                            or flag.startswith('-mtune='))
+                        continue
+                    endif
+                    sve_cflags += flag
+                endforeach
+                sve_lib = static_library(libname + '_sve_lib',
+                        sources_sve,
+                        dependencies: static_deps,
+                        include_directories: includes,
+                        c_args: sve_cflags)
+                objs += sve_lib.extract_objects(sources_sve)
             endif
         endif
 
