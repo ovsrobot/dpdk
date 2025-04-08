@@ -223,6 +223,7 @@ The following are the application command-line options:
            kasumi-f8
            snow3g-uea2
            zuc-eea3
+           snow-v
 
 * ``--cipher-op <mode>``
 
@@ -287,6 +288,7 @@ The following are the application command-line options:
 
            aes-ccm
            aes-gcm
+           snow-v-aead
 
 * ``--aead-op <mode>``
 

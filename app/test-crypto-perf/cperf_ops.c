@@ -474,7 +474,8 @@ cperf_set_ops_cipher(struct rte_crypto_op **ops,
 
 		if (options->cipher_algo == RTE_CRYPTO_CIPHER_SNOW3G_UEA2 ||
 				options->cipher_algo == RTE_CRYPTO_CIPHER_KASUMI_F8 ||
-				options->cipher_algo == RTE_CRYPTO_CIPHER_ZUC_EEA3)
+				options->cipher_algo == RTE_CRYPTO_CIPHER_ZUC_EEA3 ||
+				options->cipher_algo == RTE_CRYPTO_CIPHER_SNOW_V)
 			sym_op->cipher.data.length <<= 3;
 
 		sym_op->cipher.data.offset = 0;
@@ -633,7 +634,8 @@ cperf_set_ops_cipher_auth(struct rte_crypto_op **ops,
 
 		if (options->cipher_algo == RTE_CRYPTO_CIPHER_SNOW3G_UEA2 ||
 				options->cipher_algo == RTE_CRYPTO_CIPHER_KASUMI_F8 ||
-				options->cipher_algo == RTE_CRYPTO_CIPHER_ZUC_EEA3)
+				options->cipher_algo == RTE_CRYPTO_CIPHER_ZUC_EEA3 ||
+				options->cipher_algo == RTE_CRYPTO_CIPHER_SNOW_V)
 			sym_op->cipher.data.length <<= 3;
 
 		sym_op->cipher.data.offset = 0;
