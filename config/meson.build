@@ -519,6 +519,20 @@ if get_option('b_sanitize') == 'address' or get_option('b_sanitize') == 'address
     endif
 endif
 
+if get_option('b_sanitize') == 'thread'
+    if is_windows
+        error('TSan is not supported on windows')
+    endif
+
+    if cc.get_id() == 'gcc'
+        tsan_dep = cc.find_library('tsan', required: true)
+        if (not cc.links('int main(int argc, char *argv[]) { return 0; }',
+                dependencies: tsan_dep))
+            error('broken dependency, "libtsan"')
+        endif
+    endif
+endif
+
 if get_option('default_library') == 'both'
     error( '''
  Unsupported value "both" for "default_library" option.
