@@ -387,7 +387,6 @@ struct dlb2_port {
 	struct dlb2_eventdev_port *ev_port; /* back ptr */
 	bool use_scalar; /* force usage of scalar code */
 	uint16_t hw_credit_quanta;
-	bool use_avx512;
 	bool is_producer; /* True if port is of type producer */
 	uint8_t reorder_id; /* id used for reordering events coming back into the scheduler */
 	bool reorder_en;
@@ -731,11 +730,10 @@ int dlb2_parse_params(const char *params,
 		      struct dlb2_devargs *dlb2_args,
 		      uint8_t version);
 
-void dlb2_event_build_hcws(struct dlb2_port *qm_port,
-			   const struct rte_event ev[],
-			   int num,
-			   uint8_t *sched_type,
-			   uint8_t *queue_id);
+void dlb2_build_qes_sse(struct dlb2_enqueue_qe *qe, const struct rte_event ev[],
+			uint16_t *cmd_weight, uint16_t *sched_word);
+void dlb2_build_qes_avx512(struct dlb2_enqueue_qe *qe, const struct rte_event ev[],
+			   uint16_t *cmd_weight, uint16_t *sched_word);
 
 /* Extern functions */
 extern int rte_eal_parse_coremask(const char *coremask, int *cores);
