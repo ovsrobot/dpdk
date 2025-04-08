@@ -233,7 +233,6 @@ static struct rte_pci_driver rte_virtio_net_pci_pmd = {
 
 RTE_INIT(rte_virtio_net_pci_pmd_init)
 {
-	rte_eal_iopl_init();
 	rte_pci_register(&rte_virtio_net_pci_pmd);
 }
 

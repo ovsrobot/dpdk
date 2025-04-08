@@ -15,6 +15,7 @@
 #include <time.h>
 
 #include <rte_config.h>
+#include <rte_common.h>
 #include <rte_compat.h>
 #include <rte_per_lcore.h>
 #include <rte_uuid.h>
@@ -49,12 +50,10 @@ enum rte_proc_type_t rte_eal_process_type(void);
 /**
  * Request iopl privilege for all RPL.
  *
- * This function should be called by pmds which need access to ioports.
-
- * @return
- *   - On success, returns 0.
- *   - On failure, returns -1.
+ * This function was used by pmds which need access to ioports.
+ * No longer used.
  */
+__rte_deprecated
 int rte_eal_iopl_init(void);
 
 /**

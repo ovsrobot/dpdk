@@ -142,3 +142,7 @@ Deprecation Notices
 * bus/vmbus: Starting DPDK 25.11, all the vmbus API defined in
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
+
+* eal: No devices in DPDK currently use I/O port access (inb, outb)
+  and therefore the function to enable I/O port access rte_eal_iopl_init()
+  is deprecated and will be removed in 25.11 release.

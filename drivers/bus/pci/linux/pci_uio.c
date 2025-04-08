@@ -412,19 +412,8 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 		goto error;
 
 	if (flags & IORESOURCE_IO) {
-		if (rte_eal_iopl_init()) {
-			PCI_LOG(ERR, "%s(): insufficient ioport permissions for PCI device %s",
-				__func__, dev->name);
-			goto error;
-		}
-
-		base = (unsigned long)phys_addr;
-		if (base > PIO_MAX) {
-			PCI_LOG(ERR, "%s(): %08lx too large PIO resource", __func__, base);
-			goto error;
-		}
-
-		PCI_LOG(DEBUG, "%s(): PIO BAR %08lx detected", __func__, base);
+		PCI_LOG(DEBUG, "%s(): PIO BAR %" PRIx64" ignored", __func__, phys_addr);
+		goto error;
 	} else if (flags & IORESOURCE_MEM) {
 		base = (unsigned long)dev->mem_resource[bar].addr;
 		PCI_LOG(DEBUG, "%s(): MMIO BAR %08lx detected", __func__, base);

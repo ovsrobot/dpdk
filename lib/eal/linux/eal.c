@@ -20,9 +20,6 @@
 #include <limits.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#if defined(RTE_ARCH_X86)
-#include <sys/io.h>
-#endif
 #include <linux/version.h>
 
 #include <rte_common.h>
@@ -825,10 +822,6 @@ RTE_EXPORT_SYMBOL(rte_eal_iopl_init)
 int
 rte_eal_iopl_init(void)
 {
-#if defined(RTE_ARCH_X86)
-	if (iopl(3) != 0)
-		return -1;
-#endif
 	return 0;
 }
 
