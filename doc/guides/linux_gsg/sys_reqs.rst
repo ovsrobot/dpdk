@@ -105,11 +105,18 @@ System Software
 
 **Required:**
 
-*   Kernel version >= 4.19
+*   Kernel version >= 5.4
 
-    The kernel version required is based on the oldest long term stable kernel available
-    at kernel.org when the DPDK version is in development.
-    Compatibility for recent distribution kernels will be kept, notably RHEL/CentOS 7.
+    The Linux userspace API is compatible across releases but there are some
+    restrictions. The oldest kernel tested by the DPDK testing infrastructure
+    is the oldest maintained Long Term Stable (LTS) at time of release.
+    The DPDK is likely to still work with older releases but it is not guaranteed.
+    Compatibility for recent distribution kernels will be kept, notably RHEL, and Ubuntu.
+    It may work on older distributions, past End Of Life (EOL) like RHEL7
+    but this is no longer tested or guaranteed to work.
+
+    Some drivers and hardware support may require more recent kernels, check the
+    documentation (e.g. :doc:`../nics/index`)
 
     The kernel version in use can be checked using the command::
 
