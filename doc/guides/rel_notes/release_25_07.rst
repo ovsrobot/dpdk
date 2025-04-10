@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added eventdev vector adapter.**
+
+  * Added the Event vector Adapter Library. This library extends the event-based
+    model by introducing APIs that allow applications to offload creation of
+    event vectors.
+
 
 Removed Items
 -------------
