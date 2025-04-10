@@ -61,6 +61,11 @@ New Features
     model by introducing APIs that allow applications to offload creation of
     event vectors.
 
+* **Added vector adapter producer mode in eventdev test.**
+
+  Added vector adapter producer mode to measure performance of event vector
+  adapter.
+
 
 Removed Items
 -------------
