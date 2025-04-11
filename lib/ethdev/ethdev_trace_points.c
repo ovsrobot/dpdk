@@ -266,6 +266,9 @@ RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_set_mtu,
 RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_vlan_filter,
 	lib.ethdev.vlan_filter)
 
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_vlan_filter_conf_get,
+	lib.ethdev.vlan_filter_conf_get)
+
 RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_set_vlan_strip_on_queue,
 	lib.ethdev.set_vlan_strip_on_queue)
 

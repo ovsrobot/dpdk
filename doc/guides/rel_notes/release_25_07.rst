@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added an API to retrieve VLAN filter configuration.**
+
+  Added an API ``rte_eth_dev_get_vlan_filter_conf`` to retrieve the VLAN filter
+  configuration of an Ethernet device.
+
 
 Removed Items
 -------------

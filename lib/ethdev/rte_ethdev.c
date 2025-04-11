@@ -4433,6 +4433,30 @@ rte_eth_dev_vlan_filter(uint16_t port_id, uint16_t vlan_id, int on)
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_get_vlan_filter_conf, 25.07)
+int
+rte_eth_dev_get_vlan_filter_conf(uint16_t port_id,
+		struct rte_vlan_filter_conf *vf_conf)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (vf_conf == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Cannot get ethdev port %u vlan filter configuration to NULL",
+			port_id);
+		return -EINVAL;
+	}
+
+	memcpy(vf_conf, &dev->data->vlan_filter_conf, sizeof(struct rte_vlan_filter_conf));
+
+	rte_ethdev_trace_vlan_filter_conf_get(port_id, vf_conf);
+
+	return 0;
+}
+
 RTE_EXPORT_SYMBOL(rte_eth_dev_set_vlan_strip_on_queue)
 int
 rte_eth_dev_set_vlan_strip_on_queue(uint16_t port_id, uint16_t rx_queue_id,

@@ -640,6 +640,14 @@ RTE_TRACE_POINT(
 )
 
 RTE_TRACE_POINT(
+	rte_ethdev_trace_vlan_filter_conf_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+			struct rte_vlan_filter_conf *vf_conf),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(vf_conf);
+)
+
+RTE_TRACE_POINT(
 	rte_ethdev_trace_set_vlan_strip_on_queue,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t rx_queue_id, int on),
 	rte_trace_point_emit_u16(port_id);

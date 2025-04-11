@@ -3710,6 +3710,25 @@ int rte_eth_dev_set_mtu(uint16_t port_id, uint16_t mtu);
 int rte_eth_dev_vlan_filter(uint16_t port_id, uint16_t vlan_id, int on);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Retrieve the VLAN filter configuration of an Ethernet device.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param vf_conf
+ *   Location for Ethernet device VLAN filter configuration to be filled in.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+__rte_experimental
+int rte_eth_dev_get_vlan_filter_conf(uint16_t port_id,
+		struct rte_vlan_filter_conf *vf_conf);
+
+/**
  * Enable/Disable hardware VLAN Strip by a Rx queue of an Ethernet device.
  *
  * @param port_id
