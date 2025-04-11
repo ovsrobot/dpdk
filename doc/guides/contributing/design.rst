@@ -72,17 +72,16 @@ like (non exhaustive): wide usage, performance, size.
 Runtime Information - Logging, Tracing and Telemetry
 ----------------------------------------------------
 
-It is often desirable to provide information to the end-user
-as to what is happening to the application at runtime.
-DPDK provides a number of built-in mechanisms to provide this introspection:
+Providing runtime information to end-users is often necessary to understand the
+application’s behavior. DPDK offers several mechanisms for this introspection:
 
 * :ref:`Logging <dynamic_logging>`
 * :doc:`Tracing <../prog_guide/trace_lib>`
 * :doc:`Telemetry <../prog_guide/telemetry_lib>`
 
-Each of these has its own strengths and suitabilities for use within DPDK components.
+Each of these mechanisms has its strengths and is suited for specific use cases within DPDK components.
 
-Below are some guidelines for when each should be used:
+Below are guidelines for when each should be used:
 
 * For reporting error conditions, or other abnormal runtime issues, *logging* should be used.
   Depending on the severity of the issue, the appropriate log level, for example,
