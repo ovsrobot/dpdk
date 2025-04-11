@@ -20,7 +20,8 @@ is_aead_algo(IMB_HASH_ALG hash_alg, IMB_CIPHER_MODE cipher_mode)
 {
 	return (hash_alg == IMB_AUTH_CHACHA20_POLY1305 ||
 		hash_alg == IMB_AUTH_AES_CCM ||
-		cipher_mode == IMB_CIPHER_GCM
+		cipher_mode == IMB_CIPHER_GCM ||
+		cipher_mode == IMB_CIPHER_SNOW_V_AEAD
 #if IMB_VERSION(1, 5, 0) < IMB_VERSION_NUM
 		|| cipher_mode == IMB_CIPHER_SM4_GCM
 #endif
@@ -353,6 +354,7 @@ aesni_mb_set_session_cipher_parameters(const IMB_MGR *mb_mgr,
 	uint8_t is_zuc = 0;
 	uint8_t is_snow3g = 0;
 	uint8_t is_kasumi = 0;
+	uint8_t is_snow_v = 0;
 #if IMB_VERSION(1, 5, 0) <= IMB_VERSION_NUM
 	uint8_t is_sm4 = 0;
 #endif
@@ -415,6 +417,10 @@ aesni_mb_set_session_cipher_parameters(const IMB_MGR *mb_mgr,
 	case RTE_CRYPTO_CIPHER_SNOW3G_UEA2:
 		sess->template_job.cipher_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN;
 		is_snow3g = 1;
+		break;
+	case RTE_CRYPTO_CIPHER_SNOW_V:
+		sess->template_job.cipher_mode = IMB_CIPHER_SNOW_V;
+		is_snow_v = 1;
 		break;
 	case RTE_CRYPTO_CIPHER_KASUMI_F8:
 		sess->template_job.cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN;
@@ -576,6 +582,17 @@ aesni_mb_set_session_cipher_parameters(const IMB_MGR *mb_mgr,
 					&sess->cipher.pKeySched_kasumi_cipher);
 		sess->template_job.enc_keys = &sess->cipher.pKeySched_kasumi_cipher;
 		sess->template_job.dec_keys = &sess->cipher.pKeySched_kasumi_cipher;
+	} else if (is_snow_v) {
+		if (xform->cipher.key.length != 32) {
+			IPSEC_MB_LOG(ERR, "Invalid cipher key length");
+			return -EINVAL;
+		}
+		sess->template_job.key_len_in_bytes = 32;
+		sess->template_job.iv_len_in_bytes = 16;
+		memcpy(sess->cipher.snow_v_cipher_key, xform->cipher.key.data,
+			xform->cipher.key.length);
+		sess->template_job.enc_keys = sess->cipher.snow_v_cipher_key;
+		sess->template_job.dec_keys = sess->cipher.snow_v_cipher_key;
 #if IMB_VERSION(1, 5, 0) <= IMB_VERSION_NUM
 	} else if (is_sm4) {
 		sess->template_job.key_len_in_bytes = IMB_KEY_128_BYTES;
@@ -719,6 +736,26 @@ aesni_mb_set_session_aead_parameters(IMB_MGR *mb_mgr,
 			xform->aead.key.data, 32);
 		sess->template_job.enc_keys = sess->cipher.expanded_aes_keys.encode;
 		sess->template_job.dec_keys = sess->cipher.expanded_aes_keys.decode;
+		if (sess->auth.req_digest_len != 16) {
+			IPSEC_MB_LOG(ERR, "Invalid digest size");
+			return -EINVAL;
+		}
+		break;
+	case RTE_CRYPTO_AEAD_SNOW_V:
+		sess->template_job.cipher_mode = IMB_CIPHER_SNOW_V_AEAD;
+		sess->template_job.hash_alg = IMB_AUTH_SNOW_V_AEAD;
+		sess->template_job.u.SNOW_V_AEAD.aad_len_in_bytes =
+			xform->aead.aad_length;
+
+		if (xform->aead.key.length != 32) {
+			IPSEC_MB_LOG(ERR, "Invalid key length");
+			return -EINVAL;
+		}
+		sess->template_job.key_len_in_bytes = 32;
+		memcpy(sess->cipher.snow_v_cipher_key, xform->cipher.key.data,
+			xform->cipher.key.length);
+		sess->template_job.enc_keys = sess->cipher.snow_v_cipher_key;
+		sess->template_job.dec_keys = sess->cipher.snow_v_cipher_key;
 		if (sess->auth.req_digest_len != 16) {
 			IPSEC_MB_LOG(ERR, "Invalid digest size");
 			return -EINVAL;
@@ -1056,6 +1093,10 @@ set_cpu_mb_job_params(IMB_JOB *job, struct aesni_mb_session *session,
 
 	case IMB_AUTH_CHACHA20_POLY1305:
 		job->u.CHACHA20_POLY1305.aad = aad->va;
+		break;
+
+	case IMB_AUTH_SNOW_V_AEAD:
+		job->u.SNOW_V_AEAD.aad = aad->va;
 		break;
 
 #if IMB_VERSION(1, 5, 0) < IMB_VERSION_NUM
@@ -1440,7 +1481,8 @@ aesni_mb_digest_appended_in_src(struct rte_crypto_op *op, IMB_JOB *job,
 
 	if (job->cipher_mode == IMB_CIPHER_ZUC_EEA3 ||
 		job->cipher_mode == IMB_CIPHER_SNOW3G_UEA2_BITLEN ||
-		job->cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN) {
+		job->cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN ||
+		job->cipher_mode == IMB_CIPHER_SNOW_V) {
 		cipher_size = (op->sym->cipher.data.offset >> 3) +
 			(op->sym->cipher.data.length >> 3);
 	} else {
@@ -1586,6 +1628,9 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 			imb_set_session(mb_mgr, job);
 		}
 		break;
+	case IMB_AUTH_SNOW_V_AEAD:
+		job->u.SNOW_V_AEAD.aad = op->sym->aead.aad.data;
+		break;
 #if IMB_VERSION(1, 5, 0) < IMB_VERSION_NUM
 	case IMB_AUTH_SM4_GCM:
 		job->u.GCM.aad = op->sym->aead.aad.data;
@@ -1606,6 +1651,8 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		m_offset = 0;
 	else if (cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN)
 		m_offset = 0;
+	else if (cipher_mode == IMB_CIPHER_SNOW_V)
+		m_offset >>= 3;
 
 	/* Set digest output location */
 	if (job->hash_alg != IMB_AUTH_NULL &&
@@ -1719,6 +1766,14 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		job->iv = rte_crypto_op_ctod_offset(op, uint8_t *,
 			session->iv.offset);
 		break;
+	case IMB_AUTH_SNOW_V_AEAD:
+		job->hash_start_src_offset_in_bytes =
+				op->sym->aead.data.offset;
+		job->msg_len_to_hash_in_bytes =
+				op->sym->aead.data.length;
+		job->iv = rte_crypto_op_ctod_offset(op, uint8_t *,
+				session->iv.offset);
+		break;
 #if IMB_VERSION(1, 5, 0) < IMB_VERSION_NUM
 	case IMB_AUTH_SM4_GCM:
 		job->hash_start_src_offset_in_bytes = 0;
@@ -1747,8 +1802,9 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 	}
 
 	switch (job->cipher_mode) {
-	/* ZUC requires length and offset in bytes */
+	/* ZUC and SNOW V requires length and offset in bytes */
 	case IMB_CIPHER_ZUC_EEA3:
+	case IMB_CIPHER_SNOW_V:
 		job->cipher_start_src_offset_in_bytes =
 					op->sym->cipher.data.offset >> 3;
 		job->msg_len_to_cipher_in_bytes =
@@ -1777,6 +1833,11 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 	case IMB_CIPHER_CHACHA20_POLY1305_SGL:
 		job->msg_len_to_cipher_in_bytes = 0;
 		job->cipher_start_src_offset_in_bytes = 0;
+		break;
+	case IMB_CIPHER_SNOW_V_AEAD:
+		job->cipher_start_src_offset_in_bytes =
+			op->sym->aead.data.offset;
+		job->msg_len_to_cipher_in_bytes = op->sym->aead.data.length;
 		break;
 #if IMB_VERSION(1, 5, 0) < IMB_VERSION_NUM
 	case IMB_CIPHER_SM4_GCM:
@@ -2034,7 +2095,8 @@ post_process_mb_job(struct ipsec_mb_qp *qp, IMB_JOB *job)
 					int unencrypted_bytes = 0;
 					if (job->cipher_mode == IMB_CIPHER_SNOW3G_UEA2_BITLEN ||
 						job->cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN ||
-						job->cipher_mode == IMB_CIPHER_ZUC_EEA3) {
+						job->cipher_mode == IMB_CIPHER_ZUC_EEA3 ||
+						job->cipher_mode == IMB_CIPHER_SNOW_V) {
 						cipher_size = (op->sym->cipher.data.offset >> 3) +
 							(op->sym->cipher.data.length >> 3);
 					} else {
