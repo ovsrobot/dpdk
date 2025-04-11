@@ -172,6 +172,9 @@ struct __rte_cache_aligned rte_eth_dev_data {
 	uint32_t dev_flags;             /**< Capabilities */
 	int numa_node;                  /**< NUMA node connection */
 
+	struct rte_eth_mirror *rx_mirror; /**< Port mirroring */
+	struct rte_eth_mirror *tx_mirror; /**< Port mirroring */
+
 	/** VLAN filter configuration */
 	struct rte_vlan_filter_conf vlan_filter_conf;
 

@@ -284,6 +284,9 @@ eth_dev_fp_ops_setup(struct rte_eth_fp_ops *fpo,
 
 	fpo->txq.data = dev->data->tx_queues;
 	fpo->txq.clbk = (void * __rte_atomic *)(uintptr_t)dev->pre_tx_burst_cbs;
+
+	fpo->rx_mirror = &dev->data->rx_mirror;
+	fpo->tx_mirror = &dev->data->tx_mirror;
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_call_rx_callbacks)

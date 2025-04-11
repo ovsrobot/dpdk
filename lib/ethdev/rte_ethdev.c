@@ -14,6 +14,7 @@
 #include <bus_driver.h>
 #include <eal_export.h>
 #include <rte_log.h>
+#include <rte_alarm.h>
 #include <rte_interrupts.h>
 #include <rte_kvargs.h>
 #include <rte_memcpy.h>
@@ -51,6 +52,9 @@ static rte_spinlock_t eth_dev_rx_cb_lock = RTE_SPINLOCK_INITIALIZER;
 
 /* spinlock for add/remove Tx callbacks */
 static rte_spinlock_t eth_dev_tx_cb_lock = RTE_SPINLOCK_INITIALIZER;
+
+/* spinlock for setting up mirror ports */
+static rte_spinlock_t eth_dev_mirror_lock = RTE_SPINLOCK_INITIALIZER;
 
 /* store statistics names and its offset in stats structure  */
 struct rte_eth_xstats_name_off {
@@ -7048,6 +7052,193 @@ rte_eth_dev_hairpin_capability_get(uint16_t port_id,
 	rte_ethdev_trace_hairpin_capability_get(port_id, cap, ret);
 
 	return ret;
+}
+
+
+struct rte_eth_mirror {
+	struct rte_mempool *pool;
+	uint32_t snaplen;
+	uint16_t target;
+};
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_add_mirror, 25.07)
+int
+rte_eth_add_mirror(uint16_t port_id, uint16_t target_id, const struct rte_eth_mirror_conf *conf)
+{
+#ifndef RTE_ETHDEV_MIRROR
+	return -ENOTSUP;
+#endif
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(target_id, -ENODEV);
+
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+
+	if (conf == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Missing configuration information");
+		return -EINVAL;
+	}
+
+	if (conf->mp == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR, "not a valid mempool");
+		return -EINVAL;
+	}
+
+	if (conf->direction == 0 ||
+	    conf->direction > (RTE_MIRROR_DIRECTION_INGRESS | RTE_MIRROR_DIRECTION_EGRESS)) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid direction %#x", conf->direction);
+		return -EINVAL;
+	}
+
+	if (conf->snaplen < RTE_ETHER_HDR_LEN) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid snapshot length");
+		return -EINVAL;
+	}
+
+	if (target_id == port_id) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Cannot mirror port to self");
+		return -EINVAL;
+	}
+
+	struct rte_eth_dev_info dev_info;
+	int ret = rte_eth_dev_info_get(target_id, &dev_info);
+	if (ret != 0)
+		return ret;
+
+	if (!(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE)) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Mirror needs lockfree transmit");
+		return -ENOTSUP;
+	}
+
+	struct rte_eth_mirror *mirror = rte_zmalloc(NULL, sizeof(*mirror), 0);
+	if (mirror == NULL)
+		return -ENOMEM;
+
+	mirror->pool = conf->mp;
+	mirror->target = target_id;
+	mirror->snaplen = conf->snaplen;
+
+	rte_spinlock_lock(&eth_dev_mirror_lock);
+	if (dev->data->rx_mirror != NULL || dev->data->tx_mirror != NULL)
+		ret = -EBUSY;
+	else {
+		if (conf->direction & RTE_MIRROR_DIRECTION_INGRESS)
+			rte_atomic_store_explicit(&dev->data->rx_mirror, mirror, rte_memory_order_relaxed);
+		if (conf->direction & RTE_MIRROR_DIRECTION_EGRESS)
+			rte_atomic_store_explicit(&dev->data->tx_mirror, mirror, rte_memory_order_relaxed);
+
+		rte_eth_trace_mirror_bind(port_id, conf);
+		ret = 0;
+	}
+	rte_spinlock_unlock(&eth_dev_mirror_lock);
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_remove_mirror, 25.07)
+int
+rte_eth_remove_mirror(uint16_t port_id)
+{
+#ifndef RTE_ETHDEV_MIRROR
+	return -ENOTSUP;
+#endif
+	struct rte_eth_mirror *rx_mirror, *tx_mirror;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+
+	rte_spinlock_lock(&eth_dev_mirror_lock);
+	rx_mirror = rte_atomic_exchange_explicit(&dev->data->rx_mirror, NULL,
+						 rte_memory_order_acquire);
+	tx_mirror = rte_atomic_exchange_explicit(&dev->data->tx_mirror, NULL,
+						 rte_memory_order_acquire);
+
+	rte_spinlock_unlock(&eth_dev_mirror_lock);
+
+	struct rte_eth_mirror *mirror = NULL;
+	if (rx_mirror)
+		mirror = rx_mirror;
+	else if (tx_mirror)
+		mirror = tx_mirror;
+	else
+		return -ENOENT; /* no mirror present */
+
+	/* Defer freeing the mirror until after one second
+	 * to allow for active threads that are using it.
+	 * Assumes no PMD takes more than one second to transmit a burst.
+	 * Alternative would be RCU, but RCU in DPDK is optional.
+	 */
+	rte_eal_alarm_set(US_PER_S, rte_free, mirror);
+	rte_eth_trace_mirror_unbind(port_id);
+	return 0;
+}
+
+static inline void
+eth_dev_mirror(uint16_t port_id, uint16_t queue_id, uint8_t direction,
+	       struct rte_mbuf **pkts, uint16_t nb_pkts,
+	       const struct rte_eth_mirror *mirror)
+{
+	struct rte_mbuf *tosend[RTE_MIRROR_BURST_SIZE];
+	unsigned int count = 0;
+	unsigned int i;
+
+	for (i = 0; i < nb_pkts; i++) {
+		const struct rte_mbuf *m = pkts[i];
+		struct rte_mbuf *mc;
+
+		/*
+		 * maybe use refcount to clone mbuf but lots of restrictions:
+		 *  - assumes application won't overwrite rx mbuf
+		 *  - no vlan insertion
+		 */
+		mc = rte_pktmbuf_copy(m, mirror->pool, 0, mirror->snaplen);
+		if (unlikely(mc == NULL))
+			continue;
+
+		/* if original packet has VLAN offload, then undo offload */
+		if ((direction == RTE_MIRROR_DIRECTION_INGRESS &&
+		     (m->ol_flags & RTE_MBUF_F_RX_VLAN_STRIPPED)) ||
+		    (direction == RTE_MIRROR_DIRECTION_EGRESS &&
+		     (m->ol_flags & RTE_MBUF_F_TX_VLAN))) {
+			if (unlikely(rte_vlan_insert(&mc) != 0)) {
+				rte_pktmbuf_free(mc);
+				continue;
+			}
+		}
+
+		mc->port = port_id;
+		mc->hash.mirror = (struct rte_mbuf_mirror) {
+			.orig_len = m->pkt_len,
+			.queue_id = queue_id,
+			.direction = direction,
+		};
+
+		tosend[count++] = mc;
+	}
+
+	uint16_t nsent = rte_eth_tx_burst(mirror->target, 0, tosend, count);
+	if (unlikely(nsent < count)) {
+		uint16_t drop = count - nsent;
+
+		/* TODO: need some stats here? */
+		rte_pktmbuf_free_bulk(pkts + nsent, drop);
+	}
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_mirror_burst, 25.07)
+void
+rte_eth_mirror_burst(uint16_t port_id, uint16_t queue_id, uint8_t direction,
+		     struct rte_mbuf **pkts, uint16_t nb_pkts,
+		     const struct rte_eth_mirror *mirror)
+{
+	unsigned int i;
+
+	for (i = 0; i < nb_pkts; i += RTE_MIRROR_BURST_SIZE) {
+		uint16_t left  = nb_pkts - i;
+		uint16_t burst = RTE_MIN(left, RTE_MIRROR_BURST_SIZE);
+
+		eth_dev_mirror(port_id, queue_id, direction,
+			       pkts + i, burst, mirror);
+	}
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_dev_pool_ops_supported)

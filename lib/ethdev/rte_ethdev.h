@@ -1464,6 +1464,66 @@ enum rte_eth_tunnel_type {
 	RTE_ETH_TUNNEL_TYPE_MAX,
 };
 
+/* Definitions for mirror direction */
+#define RTE_MIRROR_DIRECTION_INGRESS 1
+#define RTE_MIRROR_DIRECTION_EGRESS 2
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Structure used to configure port mirroring.
+ */
+struct rte_eth_mirror_conf {
+	struct rte_mempool *mp;	/**< Memory pool to allocate from */
+	uint32_t snaplen;	/**< Amount of data to copy */
+	uint8_t direction;	/**< bitmask of RTE_MIRROR_DIRECTION_XXX */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Create a port mirror.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param target_id
+ *   The port identifier of the mirror port.
+ * @param conf
+ *   Settings for the mirror.
+ * @return
+ *   Negative errno value on error, 0 on success.
+ */
+__rte_experimental
+int
+rte_eth_add_mirror(uint16_t port_id, uint16_t target_id,
+		   const struct rte_eth_mirror_conf *conf);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Break port mirroring. After this call no more packets will be sent
+ * the target port.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @return
+ *   Negative errno value on error, 0 on success.
+ */
+__rte_experimental
+int rte_eth_remove_mirror(uint16_t port_id);
+
+/**
+ * @internal
+ * Helper routine for rte_eth_rx_burst() and rte_eth_tx_burst().
+ */
+struct rte_eth_mirror;
+__rte_experimental
+void rte_eth_mirror_burst(uint16_t port_id, uint16_t queue_id, uint8_t dir,
+			  struct rte_mbuf **pkts, uint16_t nb_pkts,
+			  const struct rte_eth_mirror *mirror);
 #ifdef __cplusplus
 }
 #endif
@@ -6331,6 +6391,17 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 
 	nb_rx = p->rx_pkt_burst(qd, rx_pkts, nb_pkts);
 
+#ifdef RTE_ETHDEV_MIRROR
+	if (p->rx_mirror) {
+		const struct rte_eth_mirror *mirror;
+
+		mirror = rte_atomic_load_explicit(p->rx_mirror, rte_memory_order_relaxed);
+		if (unlikely(mirror != NULL))
+			rte_eth_mirror_burst(port_id, queue_id, RTE_MIRROR_DIRECTION_INGRESS,
+					     rx_pkts, nb_rx, mirror);
+	}
+#endif
+
 #ifdef RTE_ETHDEV_RXTX_CALLBACKS
 	{
 		void *cb;
@@ -6689,6 +6760,16 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 	}
 #endif
 
+#ifdef RTE_ETHDEV_MIRROR
+	if (p->tx_mirror) {
+		const struct rte_eth_mirror *mirror;
+
+		mirror = rte_atomic_load_explicit(p->tx_mirror, rte_memory_order_relaxed);
+		if (unlikely(mirror != NULL))
+			rte_eth_mirror_burst(port_id, queue_id, RTE_MIRROR_DIRECTION_EGRESS,
+					     tx_pkts, nb_pkts, mirror);
+	}
+#endif
 	nb_pkts = p->tx_pkt_burst(qd, tx_pkts, nb_pkts);
 
 	rte_ethdev_trace_tx_burst(port_id, queue_id, (void **)tx_pkts, nb_pkts);
