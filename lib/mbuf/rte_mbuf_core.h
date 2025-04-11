@@ -589,6 +589,14 @@ struct __rte_cache_aligned rte_mbuf {
 						 * @see rte_event_eth_tx_adapter_txq_set()
 						 */
 					} txadapter; /**< Eventdev ethdev Tx adapter */
+					struct rte_mbuf_mirror {
+						uint32_t orig_len;
+						uint16_t queue_id;
+						uint16_t direction;
+						/**< Port mirroring uses this to store origin
+						 * @see rte_eth_mirror()
+						 */
+					} mirror;
 					uint32_t usr;
 					/**< User defined tags. See rte_distributor_process() */
 				} hash;                   /**< hash information */
