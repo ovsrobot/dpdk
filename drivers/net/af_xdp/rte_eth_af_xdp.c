@@ -2559,7 +2559,7 @@ static struct rte_vdev_driver pmd_af_xdp_drv = {
 	.remove = rte_pmd_af_xdp_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_af_xdp, pmd_af_xdp_drv);
+RTE_PMD_REGISTER_VDEV(net_af_xdp, pmd_af_xdp_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(net_af_xdp,
 			      "iface=<string> "
 			      "start_queue=<int> "

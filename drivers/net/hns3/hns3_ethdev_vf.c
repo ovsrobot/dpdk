@@ -2360,7 +2360,7 @@ static struct rte_pci_driver rte_hns3vf_pmd = {
 	.remove = eth_hns3vf_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_hns3_vf, rte_hns3vf_pmd);
+RTE_PMD_REGISTER_PCI(net_hns3_vf, rte_hns3vf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_hns3_vf, pci_id_hns3vf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_hns3_vf, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_hns3_vf,

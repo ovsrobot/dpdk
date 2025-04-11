@@ -203,7 +203,7 @@ static struct rte_pci_driver rte_zsda_pmd = {
 	.probe = zsda_pci_probe,
 	.remove = zsda_pci_remove };
 
-RTE_PMD_REGISTER_PCI(ZSDA_PCI_NAME, rte_zsda_pmd);
+RTE_PMD_REGISTER_PCI(ZSDA_PCI_NAME, rte_zsda_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(ZSDA_PCI_NAME, pci_id_zsda_map);
 RTE_PMD_REGISTER_KMOD_DEP(ZSDA_PCI_NAME,
 			  "* igb_uio | uio_pci_generic | vfio-pci");

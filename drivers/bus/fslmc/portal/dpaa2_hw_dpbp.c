@@ -153,4 +153,4 @@ static struct rte_dpaa2_object rte_dpaa2_dpbp_obj = {
 	.close = dpaa2_close_dpbp_device,
 };
 
-RTE_PMD_REGISTER_DPAA2_OBJECT(dpbp, rte_dpaa2_dpbp_obj);
+RTE_PMD_REGISTER_DPAA2_OBJECT(dpbp, rte_dpaa2_dpbp_obj, __LINE__);

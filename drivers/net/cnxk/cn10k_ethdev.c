@@ -1017,6 +1017,6 @@ static struct rte_pci_driver cn10k_pci_nix = {
 	.remove = cn10k_nix_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_cn10k, cn10k_pci_nix);
+RTE_PMD_REGISTER_PCI(net_cn10k, cn10k_pci_nix, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_cn10k, cn10k_pci_nix_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_cn10k, "vfio-pci");

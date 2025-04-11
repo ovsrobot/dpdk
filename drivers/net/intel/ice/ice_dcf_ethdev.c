@@ -2152,7 +2152,7 @@ static struct rte_pci_driver rte_ice_dcf_pmd = {
 	.remove = eth_ice_dcf_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_ice_dcf, rte_ice_dcf_pmd);
+RTE_PMD_REGISTER_PCI(net_ice_dcf, rte_ice_dcf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ice_dcf, pci_id_ice_dcf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ice_dcf, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_ice_dcf, "cap=dcf");

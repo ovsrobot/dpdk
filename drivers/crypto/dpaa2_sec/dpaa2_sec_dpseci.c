@@ -4492,7 +4492,7 @@ static struct rte_dpaa2_driver rte_dpaa2_sec_driver = {
 
 static struct cryptodev_driver dpaa2_sec_crypto_drv;
 
-RTE_PMD_REGISTER_DPAA2(CRYPTODEV_NAME_DPAA2_SEC_PMD, rte_dpaa2_sec_driver);
+RTE_PMD_REGISTER_DPAA2(CRYPTODEV_NAME_DPAA2_SEC_PMD, rte_dpaa2_sec_driver, __LINE__);
 RTE_PMD_REGISTER_CRYPTO_DRIVER(dpaa2_sec_crypto_drv,
 		rte_dpaa2_sec_driver.driver, cryptodev_driver_id);
 RTE_PMD_REGISTER_PARAM_STRING(CRYPTODEV_NAME_DPAA2_SEC_PMD,

@@ -930,5 +930,5 @@ static struct rte_pci_driver cn9k_regexdev_pmd = {
 };
 
 
-RTE_PMD_REGISTER_PCI(REGEXDEV_NAME_CN9K_PMD, cn9k_regexdev_pmd);
+RTE_PMD_REGISTER_PCI(REGEXDEV_NAME_CN9K_PMD, cn9k_regexdev_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(REGEXDEV_NAME_CN9K_PMD, pci_id_ree_table);

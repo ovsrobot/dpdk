@@ -197,7 +197,7 @@ static struct rte_pci_driver npa_pci = {
 	.remove = npa_remove,
 };
 
-RTE_PMD_REGISTER_PCI(mempool_cnxk, npa_pci);
+RTE_PMD_REGISTER_PCI(mempool_cnxk, npa_pci, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(mempool_cnxk, npa_pci_map);
 RTE_PMD_REGISTER_KMOD_DEP(mempool_cnxk, "vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(mempool_cnxk,

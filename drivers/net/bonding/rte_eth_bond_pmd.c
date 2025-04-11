@@ -4272,7 +4272,7 @@ struct rte_vdev_driver pmd_bond_drv = {
 	.remove = bond_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_bonding, pmd_bond_drv);
+RTE_PMD_REGISTER_VDEV(net_bonding, pmd_bond_drv, __LINE__);
 RTE_PMD_REGISTER_ALIAS(net_bonding, eth_bond);
 
 RTE_PMD_REGISTER_PARAM_STRING(net_bonding,

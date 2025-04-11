@@ -1348,6 +1348,6 @@ static const struct eth_dev_ops ngbevf_eth_dev_ops = {
 	.tx_done_cleanup      = ngbe_dev_tx_done_cleanup,
 };
 
-RTE_PMD_REGISTER_PCI(net_ngbe_vf, rte_ngbevf_pmd);
+RTE_PMD_REGISTER_PCI(net_ngbe_vf, rte_ngbevf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ngbe_vf, pci_id_ngbevf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ngbe_vf, "* igb_uio | vfio-pci");

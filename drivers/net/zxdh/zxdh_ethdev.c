@@ -2051,7 +2051,7 @@ static struct rte_pci_driver zxdh_pmd = {
 	.remove = zxdh_eth_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_zxdh, zxdh_pmd);
+RTE_PMD_REGISTER_PCI(net_zxdh, zxdh_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_zxdh, pci_id_zxdh_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_zxdh, "* vfio-pci");
 RTE_LOG_REGISTER_SUFFIX(zxdh_logtype_driver, driver, NOTICE);

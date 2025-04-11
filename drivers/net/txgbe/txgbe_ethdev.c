@@ -5665,7 +5665,7 @@ static const struct eth_dev_ops txgbe_eth_dev_ops = {
 	.tx_done_cleanup            = txgbe_dev_tx_done_cleanup,
 };
 
-RTE_PMD_REGISTER_PCI(net_txgbe, rte_txgbe_pmd);
+RTE_PMD_REGISTER_PCI(net_txgbe, rte_txgbe_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_txgbe, pci_id_txgbe_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_txgbe, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_txgbe,

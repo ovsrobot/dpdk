@@ -510,7 +510,7 @@ static struct rte_vdev_driver pmd_softnic_drv = {
 	.remove = pmd_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_softnic, pmd_softnic_drv);
+RTE_PMD_REGISTER_VDEV(net_softnic, pmd_softnic_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(net_softnic,
 	PMD_PARAM_FIRMWARE "=<string> "
 	PMD_PARAM_CONN_PORT "=<uint16> "

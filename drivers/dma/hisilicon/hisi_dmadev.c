@@ -964,6 +964,6 @@ static struct rte_pci_driver hisi_dma_pmd_drv = {
 	.remove    = hisi_dma_remove,
 };
 
-RTE_PMD_REGISTER_PCI(dma_hisilicon, hisi_dma_pmd_drv);
+RTE_PMD_REGISTER_PCI(dma_hisilicon, hisi_dma_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(dma_hisilicon, pci_id_hisi_dma_map);
 RTE_PMD_REGISTER_KMOD_DEP(dma_hisilicon, "vfio-pci");

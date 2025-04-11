@@ -919,7 +919,7 @@ static struct rte_pci_driver xsc_ethdev_pci_driver = {
 	.remove = xsc_ethdev_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_xsc, xsc_ethdev_pci_driver);
+RTE_PMD_REGISTER_PCI(net_xsc, xsc_ethdev_pci_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_xsc, xsc_ethdev_pci_id_map);
 RTE_PMD_REGISTER_PARAM_STRING(net_xsc,
 			      XSC_PPH_MODE_ARG "=<x>"

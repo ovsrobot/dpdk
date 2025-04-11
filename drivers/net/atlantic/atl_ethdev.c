@@ -1906,7 +1906,7 @@ is_atlantic_supported(struct rte_eth_dev *dev)
 	return is_device_supported(dev, &rte_atl_pmd);
 }
 
-RTE_PMD_REGISTER_PCI(net_atlantic, rte_atl_pmd);
+RTE_PMD_REGISTER_PCI(net_atlantic, rte_atl_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_atlantic, pci_id_atl_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_atlantic, "* igb_uio | uio_pci_generic");
 RTE_LOG_REGISTER_SUFFIX(atl_logtype_init, init, NOTICE);

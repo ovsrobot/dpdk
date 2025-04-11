@@ -379,6 +379,6 @@ static struct rte_pci_driver bphy_cgx_rawdev_pmd = {
 	.remove = cnxk_bphy_cgx_rawdev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(cnxk_bphy_cgx_rawdev_pci_driver, bphy_cgx_rawdev_pmd);
+RTE_PMD_REGISTER_PCI(cnxk_bphy_cgx_rawdev_pci_driver, bphy_cgx_rawdev_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(cnxk_bphy_cgx_rawdev_pci_driver, cnxk_bphy_cgx_map);
 RTE_PMD_REGISTER_KMOD_DEP(cnxk_bphy_cgx_rawdev_pci_driver, "vfio-pci");

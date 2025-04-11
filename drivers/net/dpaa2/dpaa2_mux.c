@@ -606,4 +606,4 @@ static struct rte_dpaa2_object rte_dpaa2_dpdmux_obj = {
 	.close = dpaa2_close_dpdmux_device,
 };
 
-RTE_PMD_REGISTER_DPAA2_OBJECT(dpdmux, rte_dpaa2_dpdmux_obj);
+RTE_PMD_REGISTER_DPAA2_OBJECT(dpdmux, rte_dpaa2_dpdmux_obj, __LINE__);

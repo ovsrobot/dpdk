@@ -1648,7 +1648,7 @@ static struct rte_pci_driver mana_pci_driver = {
 	.drv_flags = RTE_PCI_DRV_INTR_RMV,
 };
 
-RTE_PMD_REGISTER_PCI(net_mana, mana_pci_driver);
+RTE_PMD_REGISTER_PCI(net_mana, mana_pci_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_mana, mana_pci_id_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_mana, "* ib_uverbs & mana_ib");
 RTE_LOG_REGISTER_SUFFIX(mana_logtype_init, init, NOTICE);

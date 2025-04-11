@@ -2628,7 +2628,7 @@ static struct rte_dpaa_driver rte_dpaa_pmd = {
 	.remove = rte_dpaa_remove,
 };
 
-RTE_PMD_REGISTER_DPAA(net_dpaa, rte_dpaa_pmd);
+RTE_PMD_REGISTER_DPAA(net_dpaa, rte_dpaa_pmd, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(net_dpaa,
 		DRIVER_IEEE1588 "=<int>");
 RTE_LOG_REGISTER_DEFAULT(dpaa_logtype_pmd, NOTICE);

@@ -774,5 +774,5 @@ static struct rte_vdev_driver skeleton_pmd_drv = {
 	.remove = skeleton_rawdev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(SKELETON_PMD_RAWDEV_NAME, skeleton_pmd_drv);
+RTE_PMD_REGISTER_VDEV(SKELETON_PMD_RAWDEV_NAME, skeleton_pmd_drv, __LINE__);
 RTE_LOG_REGISTER_DEFAULT(skeleton_pmd_logtype, INFO);

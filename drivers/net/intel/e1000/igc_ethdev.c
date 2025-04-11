@@ -3000,6 +3000,6 @@ static struct rte_pci_driver rte_igc_pmd = {
 	.remove = eth_igc_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_igc, rte_igc_pmd);
+RTE_PMD_REGISTER_PCI(net_igc, rte_igc_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_igc, pci_id_igc_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_igc, "* igb_uio | uio_pci_generic | vfio-pci");

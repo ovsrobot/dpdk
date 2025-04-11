@@ -1145,6 +1145,6 @@ struct rte_vdev_driver pmd_pfe_drv = {
 	.remove = pmd_pfe_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(PFE_NAME_PMD, pmd_pfe_drv);
+RTE_PMD_REGISTER_VDEV(PFE_NAME_PMD, pmd_pfe_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(PFE_NAME_PMD, PFE_VDEV_GEM_ID_ARG "=<int> ");
 RTE_LOG_REGISTER_DEFAULT(pfe_logtype_pmd, NOTICE);

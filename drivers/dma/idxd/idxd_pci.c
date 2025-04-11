@@ -453,7 +453,7 @@ struct rte_pci_driver idxd_pmd_drv_pci = {
 	.remove = idxd_dmadev_remove_pci,
 };
 
-RTE_PMD_REGISTER_PCI(IDXD_PMD_DMADEV_NAME_PCI, idxd_pmd_drv_pci);
+RTE_PMD_REGISTER_PCI(IDXD_PMD_DMADEV_NAME_PCI, idxd_pmd_drv_pci, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(IDXD_PMD_DMADEV_NAME_PCI, pci_id_idxd_map);
 RTE_PMD_REGISTER_KMOD_DEP(IDXD_PMD_DMADEV_NAME_PCI, "vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(dmadev_idxd_pci, "max_queues=0");

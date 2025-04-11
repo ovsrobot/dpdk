@@ -8607,12 +8607,12 @@ ixgbe_dev_macsec_register_disable(struct rte_eth_dev *dev)
 	ixgbe_enable_sec_tx_path_generic(hw);
 }
 
-RTE_PMD_REGISTER_PCI(net_ixgbe, rte_ixgbe_pmd);
+RTE_PMD_REGISTER_PCI(net_ixgbe, rte_ixgbe_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ixgbe, pci_id_ixgbe_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ixgbe, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_ixgbe,
 			      IXGBE_DEVARG_FIBER_SDP3_NOT_TX_DISABLE "=<0|1>");
-RTE_PMD_REGISTER_PCI(net_ixgbe_vf, rte_ixgbevf_pmd);
+RTE_PMD_REGISTER_PCI(net_ixgbe_vf, rte_ixgbevf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ixgbe_vf, pci_id_ixgbevf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ixgbe_vf, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_ixgbe_vf,

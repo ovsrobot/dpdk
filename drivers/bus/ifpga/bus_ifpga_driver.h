@@ -146,7 +146,7 @@ void rte_ifpga_driver_register(struct rte_afu_driver *driver);
 __rte_internal
 void rte_ifpga_driver_unregister(struct rte_afu_driver *driver);
 
-#define RTE_PMD_REGISTER_AFU(nm, afudrv)\
+#define RTE_PMD_REGISTER_AFU(nm, afudrv, idx)\
 static const char *afudrvinit_ ## nm ## _alias;\
 RTE_INIT(afudrvinitfn_ ##afudrv)\
 {\
@@ -154,7 +154,7 @@ RTE_INIT(afudrvinitfn_ ##afudrv)\
 	(afudrv).driver.alias = afudrvinit_ ## nm ## _alias;\
 	rte_ifpga_driver_register(&afudrv);\
 } \
-RTE_PMD_EXPORT_NAME(nm, __COUNTER__)
+RTE_PMD_EXPORT_NAME(nm, idx)
 
 #define RTE_PMD_REGISTER_AFU_ALIAS(nm, alias)\
 static const char *afudrvinit_ ## nm ## _alias = RTE_STR(alias)

@@ -4460,9 +4460,9 @@ static struct rte_pci_driver vrb_pci_vf_driver = {
 		.drv_flags = RTE_PCI_DRV_NEED_MAPPING
 };
 
-RTE_PMD_REGISTER_PCI(VRB_PF_DRIVER_NAME, vrb_pci_pf_driver);
+RTE_PMD_REGISTER_PCI(VRB_PF_DRIVER_NAME, vrb_pci_pf_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(VRB_PF_DRIVER_NAME, pci_id_vrb_pf_map);
-RTE_PMD_REGISTER_PCI(VRB_VF_DRIVER_NAME, vrb_pci_vf_driver);
+RTE_PMD_REGISTER_PCI(VRB_VF_DRIVER_NAME, vrb_pci_vf_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(VRB_VF_DRIVER_NAME, pci_id_vrb_vf_map);
 
 /* Initial configuration of a VRB1 device prior to running configure(). */

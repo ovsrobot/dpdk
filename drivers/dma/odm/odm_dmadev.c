@@ -711,7 +711,7 @@ static struct rte_pci_driver odm_dmadev = {
 	.remove = odm_dmadev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(PCI_DRIVER_NAME, odm_dmadev);
+RTE_PMD_REGISTER_PCI(PCI_DRIVER_NAME, odm_dmadev, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(PCI_DRIVER_NAME, odm_dma_pci_map);
 RTE_PMD_REGISTER_KMOD_DEP(PCI_DRIVER_NAME, "vfio-pci");
 RTE_LOG_REGISTER_DEFAULT(odm_logtype, NOTICE);

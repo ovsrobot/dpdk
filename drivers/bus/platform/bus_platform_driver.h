@@ -130,7 +130,7 @@ struct rte_platform_driver {
 	container_of(ptr, const struct rte_platform_device, device)
 
 /** Helper for platform driver registration. */
-#define RTE_PMD_REGISTER_PLATFORM(nm, platform_drv) \
+#define RTE_PMD_REGISTER_PLATFORM(nm, platform_drv, idx) \
 static const char *pdrvinit_ ## nm ## _alias; \
 RTE_INIT(pdrvinitfn_ ##nm) \
 { \
@@ -138,7 +138,7 @@ RTE_INIT(pdrvinitfn_ ##nm) \
 	(platform_drv).driver.alias = pdrvinit_ ## nm ## _alias; \
 	rte_platform_register(&(platform_drv)); \
 } \
-RTE_PMD_EXPORT_NAME(nm, __COUNTER__)
+RTE_PMD_EXPORT_NAME(nm, idx)
 
 /** Helper for setting platform driver alias. */
 #define RTE_PMD_REGISTER_ALIAS(nm, alias) \

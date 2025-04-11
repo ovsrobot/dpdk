@@ -432,5 +432,5 @@ static struct rte_vdev_driver uadk_compress_pmd = {
 };
 
 #define UADK_COMPRESS_DRIVER_NAME compress_uadk
-RTE_PMD_REGISTER_VDEV(UADK_COMPRESS_DRIVER_NAME, uadk_compress_pmd);
+RTE_PMD_REGISTER_VDEV(UADK_COMPRESS_DRIVER_NAME, uadk_compress_pmd, __LINE__);
 RTE_LOG_REGISTER_DEFAULT(uadk_compress_logtype, INFO);

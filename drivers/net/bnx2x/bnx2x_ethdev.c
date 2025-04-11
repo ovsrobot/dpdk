@@ -817,10 +817,11 @@ static struct rte_pci_driver rte_bnx2xvf_pmd = {
 	.remove = eth_bnx2x_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_bnx2x, rte_bnx2x_pmd);
+/* Blank line to force unique __LINE__ */
+RTE_PMD_REGISTER_PCI(net_bnx2x, rte_bnx2x_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_bnx2x, pci_id_bnx2x_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_bnx2x, "* igb_uio | uio_pci_generic | vfio-pci");
-RTE_PMD_REGISTER_PCI(net_bnx2xvf, rte_bnx2xvf_pmd);
+RTE_PMD_REGISTER_PCI(net_bnx2xvf, rte_bnx2xvf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_bnx2xvf, pci_id_bnx2xvf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_bnx2xvf, "* igb_uio | vfio-pci");
 RTE_LOG_REGISTER_SUFFIX(bnx2x_logtype_init, init, NOTICE);

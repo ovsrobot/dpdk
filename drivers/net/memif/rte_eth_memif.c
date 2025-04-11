@@ -2083,7 +2083,7 @@ static struct rte_vdev_driver pmd_memif_drv = {
 	.remove = rte_pmd_memif_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_memif, pmd_memif_drv);
+RTE_PMD_REGISTER_VDEV(net_memif, pmd_memif_drv, __LINE__);
 
 RTE_PMD_REGISTER_PARAM_STRING(net_memif,
 			      ETH_MEMIF_ID_ARG "=<int>"

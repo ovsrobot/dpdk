@@ -131,7 +131,7 @@ void rte_vdev_register(struct rte_vdev_driver *driver);
 __rte_internal
 void rte_vdev_unregister(struct rte_vdev_driver *driver);
 
-#define RTE_PMD_REGISTER_VDEV(nm, vdrv)\
+#define RTE_PMD_REGISTER_VDEV(nm, vdrv, idx)\
 static const char *vdrvinit_ ## nm ## _alias;\
 RTE_INIT(vdrvinitfn_ ##vdrv)\
 {\
@@ -139,7 +139,7 @@ RTE_INIT(vdrvinitfn_ ##vdrv)\
 	(vdrv).driver.alias = vdrvinit_ ## nm ## _alias;\
 	rte_vdev_register(&vdrv);\
 } \
-RTE_PMD_EXPORT_NAME(nm, __COUNTER__)
+RTE_PMD_EXPORT_NAME(nm, idx)
 
 #define RTE_PMD_REGISTER_ALIAS(nm, alias)\
 static const char *vdrvinit_ ## nm ## _alias = RTE_STR(alias)

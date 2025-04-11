@@ -4014,7 +4014,7 @@ static struct rte_pci_driver rte_ena_pmd = {
 	.remove = eth_ena_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_ena, rte_ena_pmd);
+RTE_PMD_REGISTER_PCI(net_ena, rte_ena_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ena, pci_id_ena_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ena, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_ena,

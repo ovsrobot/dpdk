@@ -1111,7 +1111,7 @@ static struct rte_vdev_driver bbdev_la12xx_pmd_drv = {
 	.remove = la12xx_bbdev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(DRIVER_NAME, bbdev_la12xx_pmd_drv);
+RTE_PMD_REGISTER_VDEV(DRIVER_NAME, bbdev_la12xx_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(DRIVER_NAME,
 	LA12XX_MAX_NB_QUEUES_ARG"=<int>"
 	LA12XX_VDEV_MODEM_ID_ARG "=<int> ");
