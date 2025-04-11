@@ -43,6 +43,7 @@
 #include "test_cryptodev_kasumi_hash_test_vectors.h"
 #include "test_cryptodev_snow3g_test_vectors.h"
 #include "test_cryptodev_snow3g_hash_test_vectors.h"
+#include "test_cryptodev_snow_v_test_vectors.h"
 #include "test_cryptodev_zuc_test_vectors.h"
 #include "test_cryptodev_aead_test_vectors.h"
 #include "test_cryptodev_hmac_test_vectors.h"
@@ -1198,6 +1199,60 @@ snow3g_testsuite_setup(void)
 			&& check_auth_capabilities_supported(auths,
 			RTE_DIM(auths)) != 0) {
 		RTE_LOG(INFO, USER1, "Capability requirements for Snow3G "
+				"testsuite not met\n");
+		return TEST_SKIPPED;
+	}
+
+	return 0;
+}
+
+static int
+snow_v_testsuite_setup(void)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_cryptodev_info dev_info;
+	const enum rte_crypto_cipher_algorithm ciphers[] = {
+		RTE_CRYPTO_CIPHER_SNOW_V,
+	};
+
+	rte_cryptodev_info_get(dev_id, &dev_info);
+
+	if (!(dev_info.feature_flags & RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO)) {
+		RTE_LOG(INFO, USER1, "Feature flag requirements for SNOW V "
+				"testsuite not met\n");
+		return TEST_SKIPPED;
+	}
+
+	if (check_cipher_capabilities_supported(ciphers, RTE_DIM(ciphers)) != 0) {
+		RTE_LOG(INFO, USER1, "Capability requirements for SNOW V "
+				"testsuite not met\n");
+		return TEST_SKIPPED;
+	}
+
+	return 0;
+}
+
+static int
+snow_v_aead_testsuite_setup(void)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_cryptodev_info dev_info;
+	const enum rte_crypto_aead_algorithm aeads[] = {
+		RTE_CRYPTO_AEAD_SNOW_V,
+	};
+
+	rte_cryptodev_info_get(dev_id, &dev_info);
+
+	if (!(dev_info.feature_flags & RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO)) {
+		RTE_LOG(INFO, USER1, "Feature flag requirements for SNOW V AEAD "
+				"testsuite not met\n");
+		return TEST_SKIPPED;
+	}
+
+	if (check_aead_capabilities_supported(aeads, RTE_DIM(aeads)) != 0) {
+		RTE_LOG(INFO, USER1, "Capability requirements for SNOW V AEAD "
 				"testsuite not met\n");
 		return TEST_SKIPPED;
 	}
@@ -8292,6 +8347,395 @@ test_zuc256_auth_cipher_verify_16b_tag_test_case_1(void)
 {
 	return test_zuc_auth_cipher(
 		&zuc256_auth_cipher_test_case_4, IN_PLACE, 1);
+}
+
+static int
+test_snow_v_encryption(const struct snow_v_test_data *tdata,
+	uint8_t mode, uint8_t sgl_in, uint8_t sgl_out)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	struct crypto_unittest_params *ut_params = &unittest_params;
+
+	int retval;
+	unsigned int plaintext_pad_len;
+	unsigned int plaintext_len;
+	uint8_t buffer[10000];
+	const uint8_t *ciphertext;
+
+	struct rte_cryptodev_info dev_info;
+
+	/* Verify the capabilities */
+	struct rte_cryptodev_sym_capability_idx cap_idx;
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
+	cap_idx.algo.cipher = RTE_CRYPTO_CIPHER_SNOW3G_UEA2;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return TEST_SKIPPED;
+
+	if (global_api_test_type == CRYPTODEV_RAW_API_TEST)
+		return TEST_SKIPPED;
+
+	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
+		return TEST_SKIPPED;
+
+	rte_cryptodev_info_get(ts_params->valid_devs[0], &dev_info);
+
+	uint64_t feat_flags = dev_info.feature_flags;
+
+	if (((sgl_in && sgl_out) && !(feat_flags & RTE_CRYPTODEV_FF_OOP_SGL_IN_SGL_OUT))
+			|| ((!sgl_in && sgl_out) &&
+			!(feat_flags & RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT))
+			|| ((sgl_in && !sgl_out) &&
+			!(feat_flags & RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT))) {
+		printf("Device doesn't support out-of-place scatter gather type. "
+				"Test Skipped.\n");
+		return TEST_SKIPPED;
+	}
+
+	if ((global_api_test_type == CRYPTODEV_RAW_API_TEST) &&
+			(!(feat_flags & RTE_CRYPTODEV_FF_SYM_RAW_DP))) {
+		printf("Device does not support RAW data-path APIs.\n");
+		return -ENOTSUP;
+	}
+
+	/* Create SNOW V session */
+	retval = create_wireless_algo_cipher_session(ts_params->valid_devs[0],
+					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
+					RTE_CRYPTO_CIPHER_SNOW_V,
+					tdata->key.data, tdata->key.len,
+					tdata->cipher_iv.len);
+	if (retval < 0)
+		return retval;
+
+	plaintext_len = ceil_byte_length(tdata->plaintext.len);
+	/* Append data which is padded to a multiple of */
+	/* the algorithms block size */
+	plaintext_pad_len = RTE_ALIGN_CEIL(plaintext_len, 16);
+
+	if (sgl_in)
+		ut_params->ibuf = create_segmented_mbuf(ts_params->mbuf_pool,
+				plaintext_pad_len, 10, 0);
+	else {
+		ut_params->ibuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
+		rte_pktmbuf_append(ut_params->ibuf, plaintext_pad_len);
+	}
+	TEST_ASSERT_NOT_NULL(ut_params->ibuf,
+		"Failed to allocate input buffer in mempool");
+
+	if (mode == OUT_OF_PLACE) {
+		if (sgl_out)
+			ut_params->obuf = create_segmented_mbuf(ts_params->mbuf_pool,
+					plaintext_pad_len, 3, 0);
+		else {
+			ut_params->obuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
+			rte_pktmbuf_append(ut_params->obuf, plaintext_pad_len);
+		}
+		TEST_ASSERT_NOT_NULL(ut_params->obuf,
+			"Failed to allocate output buffer in mempool");
+	}
+
+	pktmbuf_write(ut_params->ibuf, 0, plaintext_len, tdata->plaintext.data);
+
+	/* Create SNOW V operation */
+	if (mode == OUT_OF_PLACE) {
+		retval = create_wireless_algo_cipher_operation_oop(tdata->cipher_iv.data,
+						tdata->cipher_iv.len,
+						tdata->ciphertext.len,
+						0);
+		if (retval < 0)
+			return retval;
+	} else {
+		retval = create_wireless_algo_cipher_operation(tdata->cipher_iv.data,
+			tdata->cipher_iv.len,
+			tdata->ciphertext.len,
+			0);
+		if (retval < 0)
+			return retval;
+	}
+
+	if (global_api_test_type == CRYPTODEV_RAW_API_TEST) {
+		retval = process_sym_raw_dp_op(ts_params->valid_devs[0], 0, ut_params->op, 1, 0, 1,
+					       tdata->cipher_iv.len);
+		if (retval != TEST_SUCCESS)
+			return retval;
+	} else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+						ut_params->op);
+	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
+
+	ut_params->obuf = ut_params->op->sym->m_dst;
+	if (ut_params->obuf)
+		ciphertext = rte_pktmbuf_read(ut_params->obuf, 0,
+				plaintext_len, buffer);
+	else
+		ciphertext = rte_pktmbuf_read(ut_params->ibuf, 0,
+				plaintext_len, buffer);
+
+	debug_hexdump(stdout, "ciphertext:", ciphertext, plaintext_len);
+
+	/* Validate obuf */
+	TEST_ASSERT_BUFFERS_ARE_EQUAL_BIT(
+		ciphertext,
+		tdata->ciphertext.data,
+		tdata->ciphertext.len,
+		"SNOW V Ciphertext data not as expected");
+
+	return 0;
+}
+
+static int
+test_snow_v_decryption(const struct snow_v_test_data *tdata,
+	uint8_t mode, uint8_t sgl_in, uint8_t sgl_out)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	struct crypto_unittest_params *ut_params = &unittest_params;
+
+	int retval;
+	unsigned int ciphertext_pad_len;
+	unsigned int ciphertext_len;
+	uint8_t buffer[10000];
+	const uint8_t *plaintext;
+
+	struct rte_cryptodev_info dev_info;
+
+	/* Verify the capabilities */
+	struct rte_cryptodev_sym_capability_idx cap_idx;
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
+	cap_idx.algo.cipher = RTE_CRYPTO_CIPHER_SNOW3G_UEA2;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return TEST_SKIPPED;
+
+	if (global_api_test_type == CRYPTODEV_RAW_API_TEST)
+		return TEST_SKIPPED;
+
+	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
+		return TEST_SKIPPED;
+
+	rte_cryptodev_info_get(ts_params->valid_devs[0], &dev_info);
+
+	uint64_t feat_flags = dev_info.feature_flags;
+
+	if (((sgl_in && sgl_out) && !(feat_flags & RTE_CRYPTODEV_FF_OOP_SGL_IN_SGL_OUT))
+			|| ((!sgl_in && sgl_out) &&
+			!(feat_flags & RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT))
+			|| ((sgl_in && !sgl_out) &&
+			!(feat_flags & RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT))) {
+		printf("Device doesn't support out-of-place scatter gather type. "
+				"Test Skipped.\n");
+		return TEST_SKIPPED;
+	}
+
+	if ((global_api_test_type == CRYPTODEV_RAW_API_TEST) &&
+			(!(feat_flags & RTE_CRYPTODEV_FF_SYM_RAW_DP))) {
+		printf("Device does not support RAW data-path APIs.\n");
+		return -ENOTSUP;
+	}
+
+	/* Create SNOW V session */
+	retval = create_wireless_algo_cipher_session(ts_params->valid_devs[0],
+					RTE_CRYPTO_CIPHER_OP_DECRYPT,
+					RTE_CRYPTO_CIPHER_SNOW_V,
+					tdata->key.data, tdata->key.len,
+					tdata->cipher_iv.len);
+	if (retval < 0)
+		return retval;
+
+	ciphertext_len = ceil_byte_length(tdata->ciphertext.len);
+	/* Append data which is padded to a multiple of */
+	/* the algorithms block size */
+	ciphertext_pad_len = RTE_ALIGN_CEIL(ciphertext_len, 16);
+
+	if (sgl_in)
+		ut_params->ibuf = create_segmented_mbuf(ts_params->mbuf_pool,
+				ciphertext_pad_len, 10, 0);
+	else {
+		ut_params->ibuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
+		rte_pktmbuf_append(ut_params->ibuf, ciphertext_pad_len);
+	}
+	TEST_ASSERT_NOT_NULL(ut_params->ibuf,
+		"Failed to allocate input buffer in mempool");
+
+	if (mode == OUT_OF_PLACE) {
+		if (sgl_out)
+			ut_params->obuf = create_segmented_mbuf(ts_params->mbuf_pool,
+					ciphertext_pad_len, 3, 0);
+		else {
+			ut_params->obuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
+			rte_pktmbuf_append(ut_params->obuf, ciphertext_pad_len);
+		}
+		TEST_ASSERT_NOT_NULL(ut_params->obuf,
+			"Failed to allocate output buffer in mempool");
+	}
+
+	pktmbuf_write(ut_params->ibuf, 0, ciphertext_len, tdata->ciphertext.data);
+
+	/* Create SNOW V operation */
+	if (mode == OUT_OF_PLACE) {
+		retval = create_wireless_algo_cipher_operation_oop(tdata->cipher_iv.data,
+						tdata->cipher_iv.len,
+						tdata->ciphertext.len,
+						0);
+		if (retval < 0)
+			return retval;
+	} else {
+		retval = create_wireless_algo_cipher_operation(tdata->cipher_iv.data,
+			tdata->cipher_iv.len,
+			tdata->ciphertext.len,
+			0);
+		if (retval < 0)
+			return retval;
+	}
+
+	if (global_api_test_type == CRYPTODEV_RAW_API_TEST) {
+		retval = process_sym_raw_dp_op(ts_params->valid_devs[0], 0, ut_params->op, 1, 0, 1,
+					       tdata->cipher_iv.len);
+		if (retval != TEST_SUCCESS)
+			return retval;
+	} else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+						ut_params->op);
+	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
+
+	ut_params->obuf = ut_params->op->sym->m_dst;
+	if (ut_params->obuf)
+		plaintext = rte_pktmbuf_read(ut_params->obuf, 0,
+				ciphertext_len, buffer);
+	else
+		plaintext = rte_pktmbuf_read(ut_params->ibuf, 0,
+				ciphertext_len, buffer);
+
+	debug_hexdump(stdout, "plaintext:", plaintext, ciphertext_len);
+
+	/* Validate obuf */
+	TEST_ASSERT_BUFFERS_ARE_EQUAL_BIT(
+		plaintext,
+		tdata->plaintext.data,
+		tdata->plaintext.len,
+		"SNOW V Plaintext data not as expected");
+
+	return 0;
+}
+
+static int
+test_snow_v_encryption_test_case_1(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_1, IN_PLACE, 0, 0);
+}
+static int
+test_snow_v_encryption_test_case_1_oop(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_1, OUT_OF_PLACE, 0, 0);
+}
+static int
+test_snow_v_encryption_test_case_1_sgl(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_1, IN_PLACE, 1, 1);
+}
+static int
+test_snow_v_encryption_test_case_1_oop_sgl(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_1, OUT_OF_PLACE, 1, 1);
+}
+static int
+test_snow_v_encryption_test_case_2(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_2, IN_PLACE, 0, 0);
+}
+static int
+test_snow_v_encryption_test_case_2_oop(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_2, OUT_OF_PLACE, 0, 0);
+}
+static int
+test_snow_v_encryption_test_case_2_sgl(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_2, IN_PLACE, 1, 1);
+}
+static int
+test_snow_v_encryption_test_case_2_oop_sgl(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_2, OUT_OF_PLACE, 1, 1);
+}
+static int
+test_snow_v_encryption_test_case_3(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_3, IN_PLACE, 0, 0);
+}
+static int
+test_snow_v_encryption_test_case_3_oop(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_3, OUT_OF_PLACE, 0, 0);
+}
+static int
+test_snow_v_encryption_test_case_3_sgl(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_3, IN_PLACE, 1, 1);
+}
+static int
+test_snow_v_encryption_test_case_3_oop_sgl(void)
+{
+	return test_snow_v_encryption(&snow_v_test_case_3, OUT_OF_PLACE, 1, 1);
+}
+static int
+test_snow_v_decryption_test_case_1(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_1, IN_PLACE, 0, 0);
+}
+static int
+test_snow_v_decryption_test_case_1_oop(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_1, OUT_OF_PLACE, 0, 0);
+}
+static int
+test_snow_v_decryption_test_case_1_sgl(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_1, IN_PLACE, 1, 1);
+}
+static int
+test_snow_v_decryption_test_case_1_oop_sgl(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_1, OUT_OF_PLACE, 1, 1);
+}
+static int
+test_snow_v_decryption_test_case_2(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_2, IN_PLACE, 0, 0);
+}
+static int
+test_snow_v_decryption_test_case_2_oop(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_2, OUT_OF_PLACE, 0, 0);
+}
+static int
+test_snow_v_decryption_test_case_2_sgl(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_2, IN_PLACE, 1, 1);
+}
+static int
+test_snow_v_decryption_test_case_2_oop_sgl(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_2, OUT_OF_PLACE, 1, 1);
+}
+static int
+test_snow_v_decryption_test_case_3(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_3, IN_PLACE, 0, 0);
+}
+static int
+test_snow_v_decryption_test_case_3_oop(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_3, OUT_OF_PLACE, 0, 0);
+}
+static int
+test_snow_v_decryption_test_case_3_sgl(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_3, IN_PLACE, 1, 1);
+}
+static int
+test_snow_v_decryption_test_case_3_oop_sgl(void)
+{
+	return test_snow_v_decryption(&snow_v_test_case_3, OUT_OF_PLACE, 1, 1);
 }
 
 static int
@@ -17652,6 +18096,66 @@ test_SM4_GCM_case_15(void)
 	return test_authenticated_encryption(&sm4_gcm_case_15);
 }
 
+static int
+test_snow_v_aead_enc_test_case_1(void)
+{
+	return test_authenticated_encryption(&snow_v_aead_case_1);
+}
+static int
+test_snow_v_aead_enc_test_case_2(void)
+{
+	return test_authenticated_encryption(&snow_v_aead_case_2);
+}
+static int
+test_snow_v_aead_enc_test_case_3(void)
+{
+	return test_authenticated_encryption(&snow_v_aead_case_3);
+}
+static int
+test_snow_v_aead_enc_test_case_4(void)
+{
+	return test_authenticated_encryption(&snow_v_aead_case_4);
+}
+static int
+test_snow_v_aead_enc_test_case_5(void)
+{
+	return test_authenticated_encryption(&snow_v_aead_case_5);
+}
+static int
+test_snow_v_aead_enc_test_case_6(void)
+{
+	return test_authenticated_encryption(&snow_v_aead_case_6);
+}
+static int
+test_snow_v_aead_dec_test_case_1(void)
+{
+	return test_authenticated_decryption(&snow_v_aead_case_1);
+}
+static int
+test_snow_v_aead_dec_test_case_2(void)
+{
+	return test_authenticated_decryption(&snow_v_aead_case_2);
+}
+static int
+test_snow_v_aead_dec_test_case_3(void)
+{
+	return test_authenticated_decryption(&snow_v_aead_case_3);
+}
+static int
+test_snow_v_aead_dec_test_case_4(void)
+{
+	return test_authenticated_decryption(&snow_v_aead_case_4);
+}
+static int
+test_snow_v_aead_dec_test_case_5(void)
+{
+	return test_authenticated_decryption(&snow_v_aead_case_5);
+}
+static int
+test_snow_v_aead_dec_test_case_6(void)
+{
+	return test_authenticated_decryption(&snow_v_aead_case_6);
+}
 #ifdef RTE_CRYPTO_SCHEDULER
 
 /* global AESNI worker IDs for the scheduler test */
@@ -19300,6 +19804,98 @@ static struct unit_test_suite cryptodev_snow3g_testsuite  = {
 	}
 };
 
+static struct unit_test_suite cryptodev_snow_v_testsuite  = {
+	.suite_name = "SNOW V Test Suite",
+	.setup = snow_v_testsuite_setup,
+	.unit_test_cases = {
+		/** SNOW V encrypt only */
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_1_oop),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_1_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_1_oop_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_2),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_2_oop),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_2_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_2_oop_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_3),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_3_oop),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_3_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_encryption_test_case_3_oop_sgl),
+		/** SNOW V decrypt only */
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_1_oop),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_1_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_1_oop_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_2),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_2_oop),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_2_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_2_oop_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_3),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_3_oop),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_3_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_decryption_test_case_3_oop_sgl),
+		TEST_CASES_END()
+	}
+};
+
+static struct unit_test_suite cryptodev_snow_v_aead_testsuite  = {
+	.suite_name = "SNOW V AEAD Test Suite",
+	.setup = snow_v_aead_testsuite_setup,
+	.unit_test_cases = {
+		/** SNOW V AEAD Encryption Tests */
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_enc_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_enc_test_case_2),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_enc_test_case_3),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_enc_test_case_4),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_enc_test_case_5),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_enc_test_case_6),
+		/** SNOW V AEAD Decryption Tests */
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_dec_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_dec_test_case_2),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_dec_test_case_3),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_dec_test_case_4),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_dec_test_case_5),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow_v_aead_dec_test_case_6),
+		TEST_CASES_END()
+	}
+};
+
 static struct unit_test_suite cryptodev_zuc_testsuite  = {
 	.suite_name = "ZUC Test Suite",
 	.setup = zuc_testsuite_setup,
@@ -19820,6 +20416,8 @@ run_cryptodev_testsuite(const char *pmd_name)
 		&cryptodev_aes_gcm_auth_testsuite,
 		&cryptodev_aes_gmac_auth_testsuite,
 		&cryptodev_snow3g_testsuite,
+		&cryptodev_snow_v_testsuite,
+		&cryptodev_snow_v_aead_testsuite,
 		&cryptodev_chacha20_poly1305_testsuite,
 		&cryptodev_zuc_testsuite,
 		&cryptodev_hmac_md5_auth_testsuite,
@@ -19839,6 +20437,7 @@ run_cryptodev_testsuite(const char *pmd_name)
 		&dtls12_record_proto_testsuite,
 		&tls13_record_proto_testsuite,
 #endif
+
 		&end_testsuite
 	};
 	static struct unit_test_suite ts = {
