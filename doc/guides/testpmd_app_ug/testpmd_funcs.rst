@@ -2568,6 +2568,21 @@ where:
 * ``clear``: Flag that indicates whether the statistics counters should
   be cleared (i.e. set to zero) immediately after they have been read or not.
 
+create mirror
+-----------
+
+Create a new MIRROR port for an ethernet device::
+
+   testpmd> create port mirror (port_id) destination (port_id)
+
+delete mirror
+-----------
+
+Disable MIRROR port for an ethernet device::
+
+   testpmd> disable port mirror (port_id)
+
+
 Traffic Management
 ------------------
 

@@ -9,6 +9,7 @@ sources = files(
         'cmdline_cman.c',
         'cmdline_flow.c',
         'cmdline_mtr.c',
+        'cmdline_mirror.c',
         'cmdline_tm.c',
         'cmd_flex_item.c',
         'config.c',
