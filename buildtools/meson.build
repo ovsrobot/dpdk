@@ -6,7 +6,9 @@ check_symbols = find_program('check-symbols.sh')
 ldflags_ibverbs_static = find_program('options-ibverbs-static.sh')
 
 python3_required_modules = []
-if host_machine.system() != 'windows'
+if host_machine.system() == 'windows'
+    python3_required_modules = ['pefile']
+else
     python3_required_modules = ['elftools']
 endif
 python3 = import('python').find_installation('python3', required: false, modules: python3_required_modules)
@@ -37,7 +39,9 @@ install_data([
 pmdinfo = py3 + files('gen-pmdinfo-cfile.py') + [meson.current_build_dir()]
 pmdinfogen = py3 + files('pmdinfogen.py')
 if host_machine.system() == 'windows'
-    if cc.get_id() == 'gcc'
+    if cc.get_id() == 'msvc'
+        pmdinfo += 'lib'
+    elif cc.get_id() == 'gcc'
         pmdinfo += 'ar'
     else
         pmdinfo += 'llvm-ar'

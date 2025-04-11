@@ -10,7 +10,11 @@ import tempfile
 _, tmp_root, ar, archive, output, *pmdinfogen = sys.argv
 with tempfile.TemporaryDirectory(dir=tmp_root) as temp:
     paths = []
-    for name in subprocess.run([ar, "t", archive], stdout=subprocess.PIPE,
+    if ar == 'lib':
+        ar_options = ['/LIST', '/NOLOGO']
+    else:
+        ar_options = ['t']
+    for name in subprocess.run([ar] + ar_options + [archive], stdout=subprocess.PIPE,
                                check=True).stdout.decode().splitlines():
         if os.path.exists(name):
             paths.append(name)
