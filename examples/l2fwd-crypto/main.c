@@ -508,7 +508,8 @@ l2fwd_simple_crypto_enqueue(struct rte_mbuf *m,
 		/* For wireless algorithms, offset/length must be in bits */
 		if (cparams->cipher_algo == RTE_CRYPTO_CIPHER_SNOW3G_UEA2 ||
 				cparams->cipher_algo == RTE_CRYPTO_CIPHER_KASUMI_F8 ||
-				cparams->cipher_algo == RTE_CRYPTO_CIPHER_ZUC_EEA3) {
+				cparams->cipher_algo == RTE_CRYPTO_CIPHER_ZUC_EEA3 ||
+				cparams->cipher_algo == RTE_CRYPTO_CIPHER_SNOW_V) {
 			op->sym->cipher.data.offset = ipdata_offset << 3;
 			op->sym->cipher.data.length = data_len << 3;
 		} else {
