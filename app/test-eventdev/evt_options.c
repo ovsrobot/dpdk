@@ -224,7 +224,8 @@ cipher_alg_is_bit_mode(enum rte_crypto_cipher_algorithm alg)
 {
 	return (alg == RTE_CRYPTO_CIPHER_SNOW3G_UEA2 ||
 		alg == RTE_CRYPTO_CIPHER_ZUC_EEA3 ||
-		alg == RTE_CRYPTO_CIPHER_KASUMI_F8);
+		alg == RTE_CRYPTO_CIPHER_KASUMI_F8 ||
+		alg == RTE_CRYPTO_CIPHER_SNOW_V);
 }
 
 static int
