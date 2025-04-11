@@ -1064,6 +1064,13 @@ For example, to remove some VLAN identifiers filtered by port:
 
    testpmd> rx_vlan rm 1,3-4,7 0
 
+rx_vlan show
+~~~~~~~~~~~~
+
+Show VLAN identifiers from the set of VLAN identifiers filtered by a port::
+
+   testpmd> rx_vlan show port (port_id)
+
 rx_vlan add (for VF)
 ~~~~~~~~~~~~~~~~~~~~
 

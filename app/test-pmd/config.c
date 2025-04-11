@@ -6676,6 +6676,70 @@ rx_vft_list_parse(uint16_t *vlan_id, char *vlan_id_list)
 	return count;
 }
 
+static void
+rx_vft_dump_printf(int left, int right, int *c_count)
+{
+	if (left == right)
+		*c_count += printf("%d,", left);
+	else
+		*c_count += printf("%d-%d,", left, right);
+
+	if (*c_count >= 120) {
+		*c_count = 0;
+		printf("\n");
+	}
+}
+
+void
+rx_vft_dump(uint16_t port_id)
+{
+	int ret;
+	uint16_t vidx;
+	uint16_t vbit;
+	uint64_t vmap;
+	int left, right, c_count;
+	struct rte_vlan_filter_conf vfc;
+
+	ret = rte_eth_dev_get_vlan_filter_conf(port_id, &vfc);
+	if (ret != 0) {
+		fprintf(stderr,
+			"Get VLAN filter configuration from port %u failed, ret = %d\n",
+			port_id, ret);
+		return;
+	}
+
+	printf("VLAN filter IDs:\n");
+
+	left = -1;
+	right = -1;
+	c_count = 0;
+	for (vidx = 0; vidx < 64; vidx++) {
+		vmap = vfc.ids[vidx];
+		for (vbit = 0; vbit < 64; vbit++) {
+			if ((vmap & RTE_BIT64(vbit)) != 0) {
+				if (left == -1)
+					left = vidx * 64 + vbit;
+
+				continue;
+			}
+
+			if (left != -1) {
+				right = vidx * 64 + vbit - 1;
+				rx_vft_dump_printf(left, right, &c_count);
+				left = -1;
+				right = -1;
+			}
+		}
+	}
+
+	if (left != -1 && right == -1) {
+		right = 4095;
+		rx_vft_dump_printf(left, right, &c_count);
+	}
+
+	printf("\n");
+}
+
 void
 vlan_tpid_set(portid_t port_id, enum rte_vlan_type vlan_type, uint16_t tp_id)
 {

@@ -4718,6 +4718,51 @@ static cmdline_parse_inst_t cmd_rx_vlan_filter = {
 	},
 };
 
+/* *** SHOW VLAN IDENTIFIERS FROM A PORT VLAN RX FILTER *** */
+struct cmd_rx_vlan_filter_show_result {
+	cmdline_fixed_string_t rx_vlan;
+	cmdline_fixed_string_t show;
+	cmdline_fixed_string_t port;
+	portid_t port_id;
+};
+
+static void
+cmd_rx_vlan_filter_show_parsed(void *parsed_result,
+			       __rte_unused struct cmdline *cl,
+			       __rte_unused void *data)
+{
+	struct cmd_rx_vlan_filter_show_result *res = parsed_result;
+
+	rx_vft_dump(res->port_id);
+}
+
+static cmdline_parse_token_string_t cmd_rx_vlan_filter_show_rx_vlan =
+	TOKEN_STRING_INITIALIZER(struct cmd_rx_vlan_filter_show_result,
+				rx_vlan, "rx_vlan");
+static cmdline_parse_token_string_t cmd_rx_vlan_filter_show_show =
+	TOKEN_STRING_INITIALIZER(struct cmd_rx_vlan_filter_show_result,
+				show, "show");
+static cmdline_parse_token_string_t cmd_rx_vlan_filter_show_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_rx_vlan_filter_show_result,
+				port, "port");
+static cmdline_parse_token_num_t cmd_rx_vlan_filter_show_portid =
+	TOKEN_NUM_INITIALIZER(struct cmd_rx_vlan_filter_show_result,
+				port_id, RTE_UINT16);
+static cmdline_parse_inst_t cmd_rx_vlan_filter_show = {
+	.f = cmd_rx_vlan_filter_show_parsed,
+	.data = NULL,
+	.help_str = "rx_vlan show port <port_id>: "
+		"Show VLAN identifiers from the set of VLAN identifiers "
+		"filtered by a port",
+	.tokens = {
+		(void *)&cmd_rx_vlan_filter_show_rx_vlan,
+		(void *)&cmd_rx_vlan_filter_show_show,
+		(void *)&cmd_rx_vlan_filter_show_port,
+		(void *)&cmd_rx_vlan_filter_show_portid,
+		NULL,
+	},
+};
+
 /* *** ENABLE HARDWARE INSERTION OF VLAN HEADER IN TX PACKETS *** */
 struct cmd_tx_vlan_set_result {
 	cmdline_fixed_string_t tx_vlan;
@@ -13763,6 +13808,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_vlan_tpid,
 	&cmd_rx_vlan_filter_all,
 	&cmd_rx_vlan_filter,
+	&cmd_rx_vlan_filter_show,
 	&cmd_tx_vlan_set,
 	&cmd_tx_vlan_set_qinq,
 	&cmd_tx_vlan_reset,
