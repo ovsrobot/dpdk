@@ -477,3 +477,80 @@ eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 	dev->data->nb_tx_queues = nb_queues;
 	return 0;
 }
+
+static int
+ethdev_handle_request(const struct ethdev_mp_request *req)
+{
+	switch (req->operation) {
+	case ETH_REQ_START:
+		return rte_eth_dev_start(req->port_id);
+
+	case ETH_REQ_STOP:
+		return rte_eth_dev_stop(req->port_id);
+
+	default:
+		return -EINVAL;
+	}
+}
+
+static_assert(sizeof(struct ethdev_mp_request) <= RTE_MP_MAX_PARAM_LEN);
+
+int
+ethdev_server(const struct rte_mp_msg *mp_msg, const void *peer)
+{
+	struct rte_mp_msg mp_resp = {
+		.name = ETHDEV_MP,
+	};
+	struct ethdev_mp_response *resp
+		= (struct ethdev_mp_response *)mp_resp.param;
+	const struct ethdev_mp_request *req;
+
+	mp_resp.len_param = sizeof(*resp);
+
+	req = (const struct ethdev_mp_request *)mp_msg->param;
+
+	resp->res_op = req->operation;
+
+	/* recv client requests */
+	if (mp_msg->len_param != sizeof(*req))
+		resp->err_value = -EINVAL;
+	else
+		resp->err_value = ethdev_handle_request(req);
+
+	return rte_mp_reply(&mp_resp, peer);
+}
+
+int
+ethdev_request(enum ethdev_mp_operation operation, uint16_t port_id,
+	       uint16_t queue_id __rte_unused)
+{
+	struct rte_mp_msg mp_req = { };
+	struct rte_mp_reply mp_reply;
+	struct ethdev_mp_request *req;
+	struct timespec ts = {.tv_sec = 5, .tv_nsec = 0};
+	int ret;
+
+	req = (struct ethdev_mp_request *)mp_req.param;
+	strlcpy(mp_req.name, ETHDEV_MP, RTE_MP_MAX_NAME_LEN);
+	mp_req.len_param = sizeof(*req);
+
+	req->operation = operation;
+	req->port_id = port_id;
+
+	if (rte_mp_request_sync(&mp_req, &mp_reply, &ts) == 0) {
+		const struct rte_mp_msg *mp_rep = &mp_reply.msgs[0];
+		const struct ethdev_mp_response *resp
+			= (const struct ethdev_mp_response *)mp_rep->param;
+
+		if (resp->err_value == 0)
+			ret = 0;
+		else
+			rte_errno = -resp->err_value;
+		free(mp_reply.msgs);
+	}
+
+	if (ret < 0)
+		RTE_ETHDEV_LOG_LINE(ERR,
+		       "port %up ethdev op %u failed", port_id, operation);
+	return ret;
+}
