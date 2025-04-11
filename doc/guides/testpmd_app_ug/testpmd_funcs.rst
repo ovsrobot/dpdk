@@ -1035,9 +1035,15 @@ Set the inner or outer VLAN TPID for packet filtering on a port::
 rx_vlan add
 ~~~~~~~~~~~
 
-Add a VLAN ID, or all identifiers, to the set of VLAN identifiers filtered by port ID::
+Add a list of VLAN IDs, or all identifiers, to the set of VLAN identifiers filtered by port ID::
 
-   testpmd> rx_vlan add (vlan_id|all) (port_id)
+   testpmd> rx_vlan add (<vlan_id_list0[,vlan_id_list1]*>|all) (port_id)
+
+For example, to add some VLAN identifiers filtered by port:
+
+.. code-block:: console
+
+   testpmd> rx_vlan add 1,3-4,7 0
 
 .. note::
 
@@ -1048,9 +1054,15 @@ Add a VLAN ID, or all identifiers, to the set of VLAN identifiers filtered by po
 rx_vlan rm
 ~~~~~~~~~~
 
-Remove a VLAN ID, or all identifiers, from the set of VLAN identifiers filtered by port ID::
+Remove a list of VLAN IDs, or all identifiers, from the set of VLAN identifiers filtered by port ID::
 
-   testpmd> rx_vlan rm (vlan_id|all) (port_id)
+   testpmd> rx_vlan rm (<vlan_id_list0[,vlan_id_list1]*>|all) (port_id)
+
+For example, to remove some VLAN identifiers filtered by port:
+
+.. code-block:: console
+
+   testpmd> rx_vlan rm 1,3-4,7 0
 
 rx_vlan add (for VF)
 ~~~~~~~~~~~~~~~~~~~~

@@ -411,12 +411,12 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"    Set the VLAN TPID for Packet Filtering on"
 			" a port\n\n"
 
-			"rx_vlan add (vlan_id|all) (port_id)\n"
-			"    Add a vlan_id, or all identifiers, to the set"
+			"rx_vlan add (vlan_id_list|all) (port_id)\n"
+			"    Add a list of vlan_id, or all identifiers, to the set"
 			" of VLAN identifiers filtered by port_id.\n\n"
 
-			"rx_vlan rm (vlan_id|all) (port_id)\n"
-			"    Remove a vlan_id, or all identifiers, from the set"
+			"rx_vlan rm (vlan_id_list|all) (port_id)\n"
+			"    Remove a list of vlan_id, or all identifiers, from the set"
 			" of VLAN identifiers filtered by port_id.\n\n"
 
 			"rx_vlan add (vlan_id) port (port_id) vf (vf_mask)\n"
@@ -4653,11 +4653,11 @@ static cmdline_parse_inst_t cmd_vlan_tpid = {
 	},
 };
 
-/* *** ADD/REMOVE A VLAN IDENTIFIER TO/FROM A PORT VLAN RX FILTER *** */
+/* *** ADD/REMOVE A LIST OF VLAN IDENTIFIERS TO/FROM A PORT VLAN RX FILTER *** */
 struct cmd_rx_vlan_filter_result {
 	cmdline_fixed_string_t rx_vlan;
 	cmdline_fixed_string_t what;
-	uint16_t vlan_id;
+	cmdline_fixed_string_t vlan_id_list;
 	portid_t port_id;
 };
 
@@ -4666,12 +4666,28 @@ cmd_rx_vlan_filter_parsed(void *parsed_result,
 			  __rte_unused struct cmdline *cl,
 			  __rte_unused void *data)
 {
+	int i;
+	int on = 0;
+	int vlan_id_count;
+	uint16_t vlan_id[4096];
 	struct cmd_rx_vlan_filter_result *res = parsed_result;
 
-	if (!strcmp(res->what, "add"))
-		rx_vft_set(res->port_id, res->vlan_id, 1);
-	else
-		rx_vft_set(res->port_id, res->vlan_id, 0);
+	vlan_id_count = rx_vft_list_parse(vlan_id, res->vlan_id_list);
+	if (vlan_id_count <= 0) {
+		fprintf(stderr, "Please input correct vlan id list\n");
+		return;
+	}
+
+	if (strcmp(res->what, "add") == 0)
+		on = 1;
+
+	for (i = 0; i < vlan_id_count; i++) {
+		if (rx_vft_set(res->port_id, vlan_id[i], on) != 0) {
+			fprintf(stderr, "Failed to %s vlan id %d\n",
+					res->what, vlan_id[i]);
+			break;
+		}
+	}
 }
 
 static cmdline_parse_token_string_t cmd_rx_vlan_filter_rx_vlan =
@@ -4680,9 +4696,9 @@ static cmdline_parse_token_string_t cmd_rx_vlan_filter_rx_vlan =
 static cmdline_parse_token_string_t cmd_rx_vlan_filter_what =
 	TOKEN_STRING_INITIALIZER(struct cmd_rx_vlan_filter_result,
 				 what, "add#rm");
-static cmdline_parse_token_num_t cmd_rx_vlan_filter_vlanid =
-	TOKEN_NUM_INITIALIZER(struct cmd_rx_vlan_filter_result,
-			      vlan_id, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_rx_vlan_filter_vlanid =
+	TOKEN_STRING_INITIALIZER(struct cmd_rx_vlan_filter_result,
+				 vlan_id_list, NULL);
 static cmdline_parse_token_num_t cmd_rx_vlan_filter_portid =
 	TOKEN_NUM_INITIALIZER(struct cmd_rx_vlan_filter_result,
 			      port_id, RTE_UINT16);
@@ -4690,8 +4706,8 @@ static cmdline_parse_token_num_t cmd_rx_vlan_filter_portid =
 static cmdline_parse_inst_t cmd_rx_vlan_filter = {
 	.f = cmd_rx_vlan_filter_parsed,
 	.data = NULL,
-	.help_str = "rx_vlan add|rm <vlan_id> <port_id>: "
-		"Add/Remove a VLAN identifier to/from the set of VLAN "
+	.help_str = "rx_vlan add|rm <vlan_id_list0[,vlan_id_list1]*> <port_id>: "
+		"Add/Remove a list of VLAN identifiers to/from the set of VLAN "
 		"identifiers filtered by a port",
 	.tokens = {
 		(void *)&cmd_rx_vlan_filter_rx_vlan,

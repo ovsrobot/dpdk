@@ -6612,6 +6612,70 @@ rx_vlan_all_filter_set(portid_t port_id, int on)
 	}
 }
 
+int
+rx_vft_list_parse(uint16_t *vlan_id, char *vlan_id_list)
+{
+	int i;
+	int min;
+	int max;
+	bool dup;
+	int index;
+	int count = 0;
+	char *end = NULL;
+
+	/*
+	 * The acceptable VLAN ID list format should be like: 1,3-4,7.
+	 * Use `,` to separate VLAN ID list.
+	 * Use `-` to represent range.
+	 */
+	min = -1;
+	do {
+		while (isblank(*vlan_id_list))
+			vlan_id_list++;
+		if (*vlan_id_list == '\0')
+			return -1;
+
+		errno = 0;
+		index = strtol(vlan_id_list, &end, 10);
+		if (errno || end == NULL)
+			return -1;
+		if (index < 0)
+			return -1;
+
+		while (isblank(*end))
+			end++;
+
+		if ((*end == ',') || (*end == '\0')) {
+			max = index;
+			if (min == -1)
+				min = index;
+			for (index = min; index <= max; index++) {
+				dup = false;
+
+				for (i = 0; i < count; i++) {
+					if (vlan_id[i] == index)
+						dup = true;
+				}
+				if (dup)
+					continue;
+				if (count >= 4096)
+					return -1;
+
+				vlan_id[count++] = index;
+			}
+			min = -1;
+		} else if (*end == '-') {
+			min = index;
+		} else {
+			return -1;
+		}
+
+		vlan_id_list = end + 1;
+	} while (*end != '\0');
+
+	return count;
+}
+
 void
 vlan_tpid_set(portid_t port_id, enum rte_vlan_type vlan_type, uint16_t tp_id)
 {
