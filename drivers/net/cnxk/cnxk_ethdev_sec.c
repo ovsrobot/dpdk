@@ -673,7 +673,7 @@ static struct rte_pci_driver cnxk_nix_inl_pci = {
 	.remove = cnxk_nix_inl_dev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(cnxk_nix_inl, cnxk_nix_inl_pci);
+RTE_PMD_REGISTER_PCI(cnxk_nix_inl, cnxk_nix_inl_pci, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(cnxk_nix_inl, cnxk_nix_inl_pci_map);
 RTE_PMD_REGISTER_KMOD_DEP(cnxk_nix_inl, "vfio-pci");
 

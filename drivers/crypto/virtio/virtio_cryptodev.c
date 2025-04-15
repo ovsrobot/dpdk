@@ -1718,7 +1718,7 @@ static struct rte_pci_driver rte_virtio_crypto_driver = {
 
 static struct cryptodev_driver virtio_crypto_drv;
 
-RTE_PMD_REGISTER_PCI(CRYPTODEV_NAME_VIRTIO_PMD, rte_virtio_crypto_driver);
+RTE_PMD_REGISTER_PCI(CRYPTODEV_NAME_VIRTIO_PMD, rte_virtio_crypto_driver, __LINE__);
 RTE_PMD_REGISTER_CRYPTO_DRIVER(virtio_crypto_drv,
 	rte_virtio_crypto_driver.driver,
 	cryptodev_virtio_driver_id);

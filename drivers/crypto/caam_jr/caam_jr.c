@@ -2451,7 +2451,7 @@ static struct rte_vdev_driver cryptodev_caam_jr_drv = {
 
 static struct cryptodev_driver caam_jr_crypto_drv;
 
-RTE_PMD_REGISTER_VDEV(CRYPTODEV_NAME_CAAM_JR_PMD, cryptodev_caam_jr_drv);
+RTE_PMD_REGISTER_VDEV(CRYPTODEV_NAME_CAAM_JR_PMD, cryptodev_caam_jr_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(CRYPTODEV_NAME_CAAM_JR_PMD,
 	"max_nb_queue_pairs=<int>"
 	"socket_id=<int>");

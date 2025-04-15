@@ -210,7 +210,7 @@ static struct rte_pci_driver pci_ssowvf = {
 	.probe = ssowvf_probe,
 };
 
-RTE_PMD_REGISTER_PCI(octeontx_ssowvf, pci_ssowvf);
+RTE_PMD_REGISTER_PCI(octeontx_ssowvf, pci_ssowvf, __LINE__);
 
 /* SSOVF pcie device aka event queue probe */
 
@@ -286,4 +286,4 @@ static struct rte_pci_driver pci_ssovf = {
 	.probe = ssovf_probe,
 };
 
-RTE_PMD_REGISTER_PCI(octeontx_ssovf, pci_ssovf);
+RTE_PMD_REGISTER_PCI(octeontx_ssovf, pci_ssovf, __LINE__);

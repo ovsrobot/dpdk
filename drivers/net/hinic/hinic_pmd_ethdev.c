@@ -3255,6 +3255,6 @@ static struct rte_pci_driver rte_hinic_pmd = {
 	.remove = hinic_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_hinic, rte_hinic_pmd);
+RTE_PMD_REGISTER_PCI(net_hinic, rte_hinic_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_hinic, pci_id_hinic_map);
 RTE_LOG_REGISTER_DEFAULT(hinic_logtype, INFO);

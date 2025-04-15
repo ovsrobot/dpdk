@@ -391,7 +391,7 @@ static struct rte_afu_driver afu_pmd = {
 	.remove = afu_rawdev_remove
 };
 
-RTE_PMD_REGISTER_AFU(afu_rawdev_driver, afu_pmd);
+RTE_PMD_REGISTER_AFU(afu_rawdev_driver, afu_pmd, __LINE__);
 
 static void update_uuid_map(void)
 {

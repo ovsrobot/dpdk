@@ -1440,6 +1440,6 @@ static struct rte_pci_driver rte_cuda_driver = {
 	.remove = cuda_gpu_remove,
 };
 
-RTE_PMD_REGISTER_PCI(gpu_cuda, rte_cuda_driver);
+RTE_PMD_REGISTER_PCI(gpu_cuda, rte_cuda_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(gpu_cuda, pci_id_cuda_map);
 RTE_PMD_REGISTER_KMOD_DEP(gpu_cuda, "* nvidia & (nv_peer_mem | nvpeer_mem)");

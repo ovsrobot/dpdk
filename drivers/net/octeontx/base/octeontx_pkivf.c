@@ -236,4 +236,4 @@ static struct rte_pci_driver pci_pkivf = {
 	.probe = pkivf_probe,
 };
 
-RTE_PMD_REGISTER_PCI(octeontx_pkivf, pci_pkivf);
+RTE_PMD_REGISTER_PCI(octeontx_pkivf, pci_pkivf, __LINE__);

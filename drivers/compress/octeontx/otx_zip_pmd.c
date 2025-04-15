@@ -717,6 +717,6 @@ static struct rte_pci_driver octtx_zip_pmd = {
 	.remove      = zip_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(COMPRESSDEV_NAME_ZIP_PMD, octtx_zip_pmd);
+RTE_PMD_REGISTER_PCI(COMPRESSDEV_NAME_ZIP_PMD, octtx_zip_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(COMPRESSDEV_NAME_ZIP_PMD, pci_id_octtx_zipvf_table);
 RTE_LOG_REGISTER_DEFAULT(octtx_zip_logtype_driver, INFO);

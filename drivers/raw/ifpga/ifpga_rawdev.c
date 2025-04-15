@@ -1687,7 +1687,7 @@ static struct rte_pci_driver rte_ifpga_rawdev_pmd = {
 	.remove    = ifpga_rawdev_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(ifpga_rawdev_pci_driver, rte_ifpga_rawdev_pmd);
+RTE_PMD_REGISTER_PCI(ifpga_rawdev_pci_driver, rte_ifpga_rawdev_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(ifpga_rawdev_pci_driver, rte_ifpga_rawdev_pmd);
 RTE_PMD_REGISTER_KMOD_DEP(ifpga_rawdev_pci_driver, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_LOG_REGISTER_DEFAULT(ifpga_rawdev_logtype, NOTICE);
@@ -1897,7 +1897,7 @@ static struct rte_vdev_driver ifpga_cfg_driver = {
 	.remove = ifpga_cfg_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(ifpga_rawdev_cfg, ifpga_cfg_driver);
+RTE_PMD_REGISTER_VDEV(ifpga_rawdev_cfg, ifpga_cfg_driver, __LINE__);
 RTE_PMD_REGISTER_ALIAS(ifpga_rawdev_cfg, ifpga_cfg);
 RTE_PMD_REGISTER_PARAM_STRING(ifpga_rawdev_cfg,
 	"ifpga=<string> "

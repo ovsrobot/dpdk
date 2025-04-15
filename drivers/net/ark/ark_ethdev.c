@@ -1004,7 +1004,7 @@ free_kvlist:
 	return ret;
 }
 
-RTE_PMD_REGISTER_PCI(net_ark, rte_ark_pmd);
+RTE_PMD_REGISTER_PCI(net_ark, rte_ark_pmd, __LINE__);
 RTE_PMD_REGISTER_KMOD_DEP(net_ark, "* igb_uio | uio_pci_generic ");
 RTE_PMD_REGISTER_PCI_TABLE(net_ark, pci_id_ark_map);
 RTE_PMD_REGISTER_PARAM_STRING(net_ark,

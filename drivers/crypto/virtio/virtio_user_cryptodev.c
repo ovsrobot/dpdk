@@ -565,7 +565,7 @@ static struct cryptodev_driver virtio_crypto_drv;
 
 uint8_t cryptodev_virtio_user_driver_id;
 
-RTE_PMD_REGISTER_VDEV(crypto_virtio_user, virtio_user_driver);
+RTE_PMD_REGISTER_VDEV(crypto_virtio_user, virtio_user_driver, __LINE__);
 RTE_PMD_REGISTER_CRYPTO_DRIVER(virtio_crypto_drv,
 	virtio_user_driver.driver,
 	cryptodev_virtio_user_driver_id);

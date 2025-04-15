@@ -1387,6 +1387,6 @@ static const struct eth_dev_ops txgbevf_eth_dev_ops = {
 	.tx_done_cleanup      = txgbe_dev_tx_done_cleanup,
 };
 
-RTE_PMD_REGISTER_PCI(net_txgbe_vf, rte_txgbevf_pmd);
+RTE_PMD_REGISTER_PCI(net_txgbe_vf, rte_txgbevf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_txgbe_vf, pci_id_txgbevf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_txgbe_vf, "* igb_uio | vfio-pci");

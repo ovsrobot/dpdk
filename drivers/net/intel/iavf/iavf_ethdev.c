@@ -3194,7 +3194,7 @@ static struct rte_pci_driver rte_iavf_pmd = {
 	.remove = eth_iavf_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_iavf, rte_iavf_pmd);
+RTE_PMD_REGISTER_PCI(net_iavf, rte_iavf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_iavf, pci_id_iavf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_iavf, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_iavf, "cap=dcf");

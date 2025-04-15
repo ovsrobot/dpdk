@@ -239,13 +239,13 @@ int rte_dpaa_portal_fq_close(struct qman_fq *fq);
 void dpaa_portal_finish(void *arg);
 
 /** Helper for DPAA device registration from driver (eth, crypto) instance */
-#define RTE_PMD_REGISTER_DPAA(nm, dpaa_drv) \
+#define RTE_PMD_REGISTER_DPAA(nm, dpaa_drv, idx) \
 RTE_INIT(dpaainitfn_ ##nm) \
 {\
 	(dpaa_drv).driver.name = RTE_STR(nm);\
 	rte_dpaa_driver_register(&dpaa_drv); \
 } \
-RTE_PMD_EXPORT_NAME(nm, __COUNTER__)
+RTE_PMD_EXPORT_NAME(nm, idx)
 
 __rte_internal
 struct fm_eth_port_cfg *dpaa_get_eth_port_cfg(int dev_id);

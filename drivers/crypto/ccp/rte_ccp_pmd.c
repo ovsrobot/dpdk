@@ -312,7 +312,7 @@ static struct rte_pci_driver cryptodev_ccp_pmd_drv = {
 
 static struct cryptodev_driver ccp_crypto_drv;
 
-RTE_PMD_REGISTER_PCI(CRYPTODEV_NAME_CCP_PMD, cryptodev_ccp_pmd_drv);
+RTE_PMD_REGISTER_PCI(CRYPTODEV_NAME_CCP_PMD, cryptodev_ccp_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_KMOD_DEP(CRYPTODEV_NAME_CCP_PMD, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(CRYPTODEV_NAME_CCP_PMD,
 	"max_nb_queue_pairs=<int> "

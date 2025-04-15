@@ -35,8 +35,7 @@ struct rte_cdx_bus;
 #define RTE_CDX_ANY_ID (0xffff)
 
 #define RTE_PMD_REGISTER_CDX_TABLE(name, table) \
-static const char DRV_EXP_TAG(name, cdx_tbl_export)[] __rte_used = \
-RTE_STR(table)
+RTE_INCLUDE(const char, DRV_EXP_TAG(name, cdx_tbl_export))[] = RTE_STR(table)
 
 /** Device needs resource mapping */
 #define RTE_CDX_DRV_NEED_MAPPING 0x0001
@@ -147,13 +146,13 @@ void rte_cdx_register(struct rte_cdx_driver *driver);
 /**
  * Helper for CDX device registration from driver (eth, crypto, raw) instance.
  */
-#define RTE_PMD_REGISTER_CDX(nm, cdx_drv) \
+#define RTE_PMD_REGISTER_CDX(nm, cdx_drv, idx) \
 	RTE_INIT(cdxinitfn_ ##nm) \
 	{\
 		(cdx_drv).driver.name = RTE_STR(nm);\
 		rte_cdx_register(&cdx_drv); \
 	} \
-	RTE_PMD_EXPORT_NAME(nm, __COUNTER__)
+	RTE_PMD_EXPORT_NAME(nm, idx)
 
 /**
  * Enables VFIO Interrupts for CDX bus devices.

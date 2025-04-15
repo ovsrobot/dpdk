@@ -2547,7 +2547,7 @@ static struct rte_pci_driver rte_nthw_pmd = {
 	.remove = nthw_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_ntnic, rte_nthw_pmd);
+RTE_PMD_REGISTER_PCI(net_ntnic, rte_nthw_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ntnic, nthw_pci_id_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ntnic, "* vfio-pci");
 

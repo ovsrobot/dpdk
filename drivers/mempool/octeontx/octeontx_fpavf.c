@@ -822,4 +822,4 @@ static struct rte_pci_driver pci_fpavf = {
 	.probe = fpavf_probe,
 };
 
-RTE_PMD_REGISTER_PCI(octeontx_fpavf, pci_fpavf);
+RTE_PMD_REGISTER_PCI(octeontx_fpavf, pci_fpavf, __LINE__);

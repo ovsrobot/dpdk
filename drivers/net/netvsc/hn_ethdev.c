@@ -1485,7 +1485,7 @@ static struct rte_vmbus_driver rte_netvsc_pmd = {
 	.remove = eth_hn_remove,
 };
 
-RTE_PMD_REGISTER_VMBUS(net_netvsc, rte_netvsc_pmd);
+RTE_PMD_REGISTER_VMBUS(net_netvsc, rte_netvsc_pmd, __LINE__);
 RTE_PMD_REGISTER_KMOD_DEP(net_netvsc, "* uio_hv_generic");
 RTE_LOG_REGISTER_SUFFIX(hn_logtype_init, init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(hn_logtype_driver, driver, NOTICE);

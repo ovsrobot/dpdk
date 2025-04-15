@@ -486,5 +486,5 @@ static struct rte_vdev_driver evdev_dsw_pmd_drv = {
 	.remove = dsw_remove
 };
 
-RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_DSW_PMD, evdev_dsw_pmd_drv);
+RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_DSW_PMD, evdev_dsw_pmd_drv, __LINE__);
 RTE_LOG_REGISTER_DEFAULT(event_dsw_logtype, NOTICE);

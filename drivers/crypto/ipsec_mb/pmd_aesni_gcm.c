@@ -785,8 +785,7 @@ static struct rte_vdev_driver cryptodev_aesni_gcm_pmd_drv = {
 
 static struct cryptodev_driver aesni_gcm_crypto_drv;
 
-RTE_PMD_REGISTER_VDEV(CRYPTODEV_NAME_AESNI_GCM_PMD,
-		      cryptodev_aesni_gcm_pmd_drv);
+RTE_PMD_REGISTER_VDEV(CRYPTODEV_NAME_AESNI_GCM_PMD, cryptodev_aesni_gcm_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_ALIAS(CRYPTODEV_NAME_AESNI_GCM_PMD, cryptodev_aesni_gcm_pmd);
 RTE_PMD_REGISTER_PARAM_STRING(CRYPTODEV_NAME_AESNI_GCM_PMD,
 			      "max_nb_queue_pairs=<int> socket_id=<int>");

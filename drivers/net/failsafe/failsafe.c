@@ -396,6 +396,6 @@ static struct rte_vdev_driver failsafe_drv = {
 	.remove = rte_pmd_failsafe_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_failsafe, failsafe_drv);
+RTE_PMD_REGISTER_VDEV(net_failsafe, failsafe_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(net_failsafe, PMD_FAILSAFE_PARAM_STRING);
 RTE_LOG_REGISTER_DEFAULT(failsafe_logtype, NOTICE)

@@ -729,6 +729,6 @@ static struct rte_vdev_driver skeldma_pmd_drv = {
 	.drv_flags = RTE_VDEV_DRV_NEED_IOVA_AS_VA,
 };
 
-RTE_PMD_REGISTER_VDEV(dma_skeleton, skeldma_pmd_drv);
+RTE_PMD_REGISTER_VDEV(dma_skeleton, skeldma_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(dma_skeleton,
 		SKELDMA_ARG_LCORE "=<uint16> ");

@@ -180,5 +180,5 @@ static struct rte_dpaa2_object rte_dpaa2_dprtc_obj = {
 	.create = dpaa2_create_dprtc_device,
 };
 
-RTE_PMD_REGISTER_DPAA2_OBJECT(dprtc, rte_dpaa2_dprtc_obj);
+RTE_PMD_REGISTER_DPAA2_OBJECT(dprtc, rte_dpaa2_dprtc_obj, __LINE__);
 #endif

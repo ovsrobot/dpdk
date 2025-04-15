@@ -1886,6 +1886,6 @@ static struct rte_pci_driver rte_ifcvf_vdpa = {
 	.remove = ifcvf_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_ifcvf, rte_ifcvf_vdpa);
+RTE_PMD_REGISTER_PCI(net_ifcvf, rte_ifcvf_vdpa, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_ifcvf, pci_id_ifcvf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ifcvf, "* vfio-pci");

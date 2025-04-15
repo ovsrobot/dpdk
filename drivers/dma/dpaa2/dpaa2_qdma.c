@@ -1752,7 +1752,7 @@ static struct rte_dpaa2_driver rte_dpaa2_qdma_pmd = {
 	.remove = dpaa2_qdma_remove,
 };
 
-RTE_PMD_REGISTER_DPAA2(dpaa2_qdma, rte_dpaa2_qdma_pmd);
+RTE_PMD_REGISTER_DPAA2(dpaa2_qdma, rte_dpaa2_qdma_pmd, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(dpaa2_qdma,
 	DPAA2_QDMA_FLE_PRE_POPULATE "=<int>"
 	DPAA2_QDMA_DESC_DEBUG"=<int>"

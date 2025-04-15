@@ -1899,6 +1899,7 @@ static struct rte_vdev_driver octeontx_pmd_drv = {
 	.remove = octeontx_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(OCTEONTX_PMD, octeontx_pmd_drv);
+/* Blank line to force unique __LINE__ with RTE_PMD_REGISTER_VDEV */
+RTE_PMD_REGISTER_VDEV(OCTEONTX_PMD, octeontx_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_ALIAS(OCTEONTX_PMD, eth_octeontx);
 RTE_PMD_REGISTER_PARAM_STRING(OCTEONTX_PMD, "nr_port=<int> ");

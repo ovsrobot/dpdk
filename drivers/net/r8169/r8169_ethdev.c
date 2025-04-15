@@ -752,7 +752,7 @@ static struct rte_pci_driver rte_r8169_pmd = {
 	.remove    = rtl_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_r8169, rte_r8169_pmd);
+RTE_PMD_REGISTER_PCI(net_r8169, rte_r8169_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_r8169, pci_id_r8169_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_r8169, "* igb_uio | uio_pci_generic | vfio-pci");
 

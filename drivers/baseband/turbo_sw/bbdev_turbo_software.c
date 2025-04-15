@@ -1985,7 +1985,7 @@ static struct rte_vdev_driver bbdev_turbo_sw_pmd_drv = {
 	.remove = turbo_sw_bbdev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(DRIVER_NAME, bbdev_turbo_sw_pmd_drv);
+RTE_PMD_REGISTER_VDEV(DRIVER_NAME, bbdev_turbo_sw_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(DRIVER_NAME,
 	TURBO_SW_MAX_NB_QUEUES_ARG"=<int> "
 	TURBO_SW_SOCKET_ID_ARG"=<int>");

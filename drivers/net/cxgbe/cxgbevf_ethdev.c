@@ -206,7 +206,7 @@ static struct rte_pci_driver rte_cxgbevf_pmd = {
 	.remove = eth_cxgbevf_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_cxgbevf, rte_cxgbevf_pmd);
+RTE_PMD_REGISTER_PCI(net_cxgbevf, rte_cxgbevf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_cxgbevf, cxgb4vf_pci_tbl);
 RTE_PMD_REGISTER_KMOD_DEP(net_cxgbevf, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_cxgbevf,

@@ -1550,7 +1550,7 @@ static struct rte_pci_driver rte_ntb_pmd = {
 	.remove = ntb_remove,
 };
 
-RTE_PMD_REGISTER_PCI(raw_ntb, rte_ntb_pmd);
+RTE_PMD_REGISTER_PCI(raw_ntb, rte_ntb_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(raw_ntb, pci_id_ntb_map);
 RTE_PMD_REGISTER_KMOD_DEP(raw_ntb, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_LOG_REGISTER_DEFAULT(ntb_logtype, INFO);
