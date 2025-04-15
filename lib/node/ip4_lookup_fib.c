@@ -2,6 +2,9 @@
  * Copyright(C) 2025 Marvell.
  */
 
+#include <arpa/inet.h>
+
+#include <eal_export.h>
 #include <rte_errno.h>
 #include <rte_ether.h>
 #include <rte_fib.h>
@@ -36,6 +39,39 @@ static struct ip4_lookup_fib_node_main ip4_lookup_fib_nm;
 
 #define IP4_LOOKUP_NODE_PRIV1_OFF(ctx) \
 	(((struct ip4_lookup_fib_node_ctx *)ctx)->mbuf_priv1_off)
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip4_fib_route_add, 25.07)
+int
+rte_node_ip4_fib_route_add(uint32_t ip, uint8_t depth, uint16_t next_hop,
+			   enum rte_node_ip4_lookup_next next_node)
+{
+	char abuf[INET6_ADDRSTRLEN];
+	struct in_addr in;
+	uint8_t socket;
+	uint32_t val;
+	int ret;
+
+	in.s_addr = htonl(ip);
+	inet_ntop(AF_INET, &in, abuf, sizeof(abuf));
+	/* Embedded next node id into 24 bit next hop */
+	val = ((next_node << 16) | next_hop) & ((1ull << 24) - 1);
+	node_dbg("ip4_lookup_fib", "FIB: Adding route %s / %d nh (0x%x)", abuf, depth, val);
+
+	for (socket = 0; socket < RTE_MAX_NUMA_NODES; socket++) {
+		if (!ip4_lookup_fib_nm.fib[socket])
+			continue;
+
+		ret = rte_fib_add(ip4_lookup_fib_nm.fib[socket], ip, depth, val);
+		if (ret < 0) {
+			node_err("ip4_lookup_fib",
+				 "Unable to add entry %s / %d nh (%x) to FIB on sock %d, rc=%d",
+				 abuf, depth, val, socket, ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
 
 static int
 setup_fib(unsigned int socket)
