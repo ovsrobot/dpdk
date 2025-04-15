@@ -1425,7 +1425,7 @@ int dev_is_enic(struct rte_eth_dev *dev)
 	return dev->device->driver == &rte_enic_pmd.driver;
 }
 
-RTE_PMD_REGISTER_PCI(net_enic, rte_enic_pmd);
+RTE_PMD_REGISTER_PCI(net_enic, rte_enic_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_enic, pci_id_enic_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_enic, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_enic,

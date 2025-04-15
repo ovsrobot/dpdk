@@ -162,13 +162,13 @@ __rte_internal
 void rte_auxiliary_register(struct rte_auxiliary_driver *driver);
 
 /** Helper for auxiliary device registration from driver instance */
-#define RTE_PMD_REGISTER_AUXILIARY(nm, auxiliary_drv) \
+#define RTE_PMD_REGISTER_AUXILIARY(nm, auxiliary_drv, idx) \
 	RTE_INIT(auxiliaryinitfn_ ##nm) \
 	{ \
 		(auxiliary_drv).driver.name = RTE_STR(nm); \
 		rte_auxiliary_register(&(auxiliary_drv)); \
 	} \
-	RTE_PMD_EXPORT_NAME(nm, __COUNTER__)
+	RTE_PMD_EXPORT_NAME(nm, idx)
 
 /**
  * Unregister an auxiliary driver.

@@ -395,7 +395,7 @@ static struct rte_pci_driver pci_eventdev_skeleton_pmd = {
 	.remove = event_skeleton_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(event_skeleton_pci, pci_eventdev_skeleton_pmd);
+RTE_PMD_REGISTER_PCI(event_skeleton_pci, pci_eventdev_skeleton_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(event_skeleton_pci, pci_id_skeleton_map);
 
 /* VDEV based event device */
@@ -448,5 +448,5 @@ static struct rte_vdev_driver vdev_eventdev_skeleton_pmd = {
 	.remove = skeleton_eventdev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_SKELETON_PMD, vdev_eventdev_skeleton_pmd);
+RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_SKELETON_PMD, vdev_eventdev_skeleton_pmd, __LINE__);
 RTE_LOG_REGISTER_DEFAULT(skeleton_eventdev_logtype, INFO);

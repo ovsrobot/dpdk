@@ -795,6 +795,6 @@ static struct rte_pci_driver cnxk_eswitch_pci = {
 	.remove = cnxk_eswitch_dev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(cnxk_eswitch, cnxk_eswitch_pci);
+RTE_PMD_REGISTER_PCI(cnxk_eswitch, cnxk_eswitch_pci, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(cnxk_eswitch, cnxk_eswitch_pci_map);
 RTE_PMD_REGISTER_KMOD_DEP(cnxk_eswitch, "vfio-pci");

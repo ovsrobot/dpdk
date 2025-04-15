@@ -628,6 +628,6 @@ static struct rte_pci_driver cnxk_dmadev = {
 	.remove = cnxk_dmadev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(cnxk_dmadev_pci_driver, cnxk_dmadev);
+RTE_PMD_REGISTER_PCI(cnxk_dmadev_pci_driver, cnxk_dmadev, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(cnxk_dmadev_pci_driver, cnxk_dma_pci_map);
 RTE_PMD_REGISTER_KMOD_DEP(cnxk_dmadev_pci_driver, "vfio-pci");

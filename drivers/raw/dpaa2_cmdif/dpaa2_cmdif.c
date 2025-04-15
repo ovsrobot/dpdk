@@ -287,5 +287,5 @@ static struct rte_vdev_driver dpaa2_cmdif_drv = {
 	.remove = dpaa2_cmdif_remove
 };
 
-RTE_PMD_REGISTER_VDEV(DPAA2_CMDIF_PMD_NAME, dpaa2_cmdif_drv);
+RTE_PMD_REGISTER_VDEV(DPAA2_CMDIF_PMD_NAME, dpaa2_cmdif_drv, __LINE__);
 RTE_LOG_REGISTER(dpaa2_cmdif_logtype, pmd.raw.dpaa2.cmdif, INFO);

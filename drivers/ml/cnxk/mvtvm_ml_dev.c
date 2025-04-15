@@ -189,7 +189,7 @@ mvtvm_ml_vdev_remove(struct rte_vdev_device *vdev)
 static struct rte_vdev_driver mvtvm_mldev_pmd = {.probe = mvtvm_ml_vdev_probe,
 						 .remove = mvtvm_ml_vdev_remove};
 
-RTE_PMD_REGISTER_VDEV(MLDEV_NAME_MVTVM_PMD, mvtvm_mldev_pmd);
+RTE_PMD_REGISTER_VDEV(MLDEV_NAME_MVTVM_PMD, mvtvm_mldev_pmd, __LINE__);
 
 RTE_PMD_REGISTER_PARAM_STRING(MLDEV_NAME_MVTVM_PMD,
 			      MVTVM_ML_DEV_MAX_QPS "=<int>" MVTVM_ML_DEV_CACHE_MODEL_DATA "=<0|1>");

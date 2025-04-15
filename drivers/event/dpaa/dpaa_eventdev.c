@@ -1050,6 +1050,6 @@ static struct rte_vdev_driver vdev_eventdev_dpaa_pmd = {
 	.remove = dpaa_event_dev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_DPAA_PMD, vdev_eventdev_dpaa_pmd);
+RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_DPAA_PMD, vdev_eventdev_dpaa_pmd, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(EVENTDEV_NAME_DPAA_PMD,
 		DISABLE_INTR_MODE "=<int>");

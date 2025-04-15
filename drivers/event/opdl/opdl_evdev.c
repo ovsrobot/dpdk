@@ -763,6 +763,6 @@ static struct rte_vdev_driver evdev_opdl_pmd_drv = {
 
 RTE_LOG_REGISTER_SUFFIX(opdl_logtype_driver, driver, INFO);
 
-RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_OPDL_PMD, evdev_opdl_pmd_drv);
+RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_OPDL_PMD, evdev_opdl_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(event_opdl, NUMA_NODE_ARG "=<int>"
 			      DO_VALIDATION_ARG "=<int>" DO_TEST_ARG "=<int>");

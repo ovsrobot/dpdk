@@ -913,6 +913,6 @@ static struct rte_pci_driver zxdh_gdma_rawdev_pmd = {
 	.remove = zxdh_gdma_rawdev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(zxdh_gdma_rawdev_pci_driver, zxdh_gdma_rawdev_pmd);
+RTE_PMD_REGISTER_PCI(zxdh_gdma_rawdev_pci_driver, zxdh_gdma_rawdev_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(zxdh_gdma_rawdev_pci_driver, zxdh_gdma_rawdev_map);
 RTE_LOG_REGISTER_DEFAULT(zxdh_gdma_rawdev_logtype, NOTICE);

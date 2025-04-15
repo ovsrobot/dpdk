@@ -144,4 +144,5 @@ static struct rte_vdev_driver rte_vdev_ionic_pmd = {
 	.remove = eth_ionic_vdev_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_ionic, rte_vdev_ionic_pmd);
+/* Blank line to force unique __LINE__ */
+RTE_PMD_REGISTER_VDEV(net_ionic, rte_vdev_ionic_pmd, __LINE__);

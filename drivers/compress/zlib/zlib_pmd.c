@@ -425,5 +425,5 @@ static struct rte_vdev_driver zlib_pmd_drv = {
 	.remove = zlib_remove
 };
 
-RTE_PMD_REGISTER_VDEV(COMPRESSDEV_NAME_ZLIB_PMD, zlib_pmd_drv);
+RTE_PMD_REGISTER_VDEV(COMPRESSDEV_NAME_ZLIB_PMD, zlib_pmd_drv, __LINE__);
 RTE_LOG_REGISTER_DEFAULT(zlib_logtype_driver, INFO);

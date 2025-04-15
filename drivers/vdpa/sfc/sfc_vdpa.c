@@ -358,7 +358,7 @@ static struct rte_pci_driver rte_sfc_vdpa = {
 	.remove = sfc_vdpa_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_sfc_vdpa, rte_sfc_vdpa);
+RTE_PMD_REGISTER_PCI(net_sfc_vdpa, rte_sfc_vdpa, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_sfc_vdpa, pci_id_sfc_vdpa_efx_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_sfc_vdpa, "* vfio-pci");
 RTE_LOG_REGISTER_SUFFIX(sfc_vdpa_logtype_driver, driver, NOTICE);

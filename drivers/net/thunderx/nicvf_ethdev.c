@@ -2409,7 +2409,7 @@ static struct rte_pci_driver rte_nicvf_pmd = {
 	.remove = nicvf_eth_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(net_thunderx, rte_nicvf_pmd);
+RTE_PMD_REGISTER_PCI(net_thunderx, rte_nicvf_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_thunderx, pci_id_nicvf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_thunderx, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_thunderx, SKIP_DATA_BYTES "=<int>");

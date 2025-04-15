@@ -1087,7 +1087,7 @@ static struct rte_vdev_driver uadk_crypto_pmd = {
 static struct cryptodev_driver uadk_crypto_drv;
 
 #define UADK_CRYPTO_DRIVER_NAME crypto_uadk
-RTE_PMD_REGISTER_VDEV(UADK_CRYPTO_DRIVER_NAME, uadk_crypto_pmd);
+RTE_PMD_REGISTER_VDEV(UADK_CRYPTO_DRIVER_NAME, uadk_crypto_pmd, __LINE__);
 RTE_PMD_REGISTER_CRYPTO_DRIVER(uadk_crypto_drv, uadk_crypto_pmd.driver,
 			       uadk_cryptodev_driver_id);
 RTE_PMD_REGISTER_PARAM_STRING(UADK_CRYPTO_DRIVER_NAME,

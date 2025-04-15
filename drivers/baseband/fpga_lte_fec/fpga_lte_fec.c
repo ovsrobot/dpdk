@@ -2664,9 +2664,9 @@ static struct rte_pci_driver fpga_lte_fec_pci_vf_driver = {
 };
 
 
-RTE_PMD_REGISTER_PCI(FPGA_LTE_FEC_PF_DRIVER_NAME, fpga_lte_fec_pci_pf_driver);
+RTE_PMD_REGISTER_PCI(FPGA_LTE_FEC_PF_DRIVER_NAME, fpga_lte_fec_pci_pf_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(FPGA_LTE_FEC_PF_DRIVER_NAME,
 		pci_id_fpga_lte_fec_pf_map);
-RTE_PMD_REGISTER_PCI(FPGA_LTE_FEC_VF_DRIVER_NAME, fpga_lte_fec_pci_vf_driver);
+RTE_PMD_REGISTER_PCI(FPGA_LTE_FEC_VF_DRIVER_NAME, fpga_lte_fec_pci_vf_driver, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(FPGA_LTE_FEC_VF_DRIVER_NAME,
 		pci_id_fpga_lte_fec_vf_map);

@@ -159,7 +159,7 @@ static struct rte_pci_driver cn9k_cryptodev_pmd = {
 
 static struct cryptodev_driver cn9k_cryptodev_drv;
 
-RTE_PMD_REGISTER_PCI(CRYPTODEV_NAME_CN9K_PMD, cn9k_cryptodev_pmd);
+RTE_PMD_REGISTER_PCI(CRYPTODEV_NAME_CN9K_PMD, cn9k_cryptodev_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(CRYPTODEV_NAME_CN9K_PMD, pci_id_cpt_table);
 RTE_PMD_REGISTER_KMOD_DEP(CRYPTODEV_NAME_CN9K_PMD, "vfio-pci");
 RTE_PMD_REGISTER_CRYPTO_DRIVER(cn9k_cryptodev_drv, cn9k_cryptodev_pmd.driver,

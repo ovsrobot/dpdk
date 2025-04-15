@@ -349,7 +349,7 @@ static struct rte_vdev_driver bbdev_null_pmd_drv = {
 	.remove = null_bbdev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(DRIVER_NAME, bbdev_null_pmd_drv);
+RTE_PMD_REGISTER_VDEV(DRIVER_NAME, bbdev_null_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(DRIVER_NAME,
 	BBDEV_NULL_MAX_NB_QUEUES_ARG"=<int> "
 	BBDEV_NULL_SOCKET_ID_ARG"=<int>");

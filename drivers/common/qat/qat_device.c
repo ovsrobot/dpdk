@@ -504,6 +504,6 @@ static struct rte_pci_driver rte_qat_pmd = {
 	.remove = qat_pci_remove
 };
 
-RTE_PMD_REGISTER_PCI(QAT_PCI_NAME, rte_qat_pmd);
+RTE_PMD_REGISTER_PCI(QAT_PCI_NAME, rte_qat_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(QAT_PCI_NAME, pci_id_qat_map);
 RTE_PMD_REGISTER_KMOD_DEP(QAT_PCI_NAME, "* igb_uio | uio_pci_generic | vfio-pci");

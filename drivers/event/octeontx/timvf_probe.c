@@ -162,4 +162,4 @@ static struct rte_pci_driver pci_timvf = {
 	.remove = NULL,
 };
 
-RTE_PMD_REGISTER_PCI(octeontx_timvf, pci_timvf);
+RTE_PMD_REGISTER_PCI(octeontx_timvf, pci_timvf, __LINE__);

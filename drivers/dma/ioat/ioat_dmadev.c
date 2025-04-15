@@ -762,6 +762,6 @@ static struct rte_pci_driver ioat_pmd_drv = {
 	.remove = ioat_dmadev_remove,
 };
 
-RTE_PMD_REGISTER_PCI(IOAT_PMD_NAME, ioat_pmd_drv);
+RTE_PMD_REGISTER_PCI(IOAT_PMD_NAME, ioat_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(IOAT_PMD_NAME, pci_id_ioat_map);
 RTE_PMD_REGISTER_KMOD_DEP(IOAT_PMD_NAME, "* igb_uio | uio_pci_generic | vfio-pci");

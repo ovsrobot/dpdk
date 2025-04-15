@@ -1151,7 +1151,7 @@ static struct rte_pci_driver cn20k_pci_sso = {
 	.remove = cnxk_sso_remove,
 };
 
-RTE_PMD_REGISTER_PCI(event_cn20k, cn20k_pci_sso);
+RTE_PMD_REGISTER_PCI(event_cn20k, cn20k_pci_sso, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(event_cn20k, cn20k_pci_sso_map);
 RTE_PMD_REGISTER_KMOD_DEP(event_cn20k, "vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(event_cn20k,

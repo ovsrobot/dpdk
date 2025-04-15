@@ -692,4 +692,4 @@ static struct rte_dpaa2_object rte_dpaa2_dpio_obj = {
 	.close = dpaa2_close_dpio_device,
 };
 
-RTE_PMD_REGISTER_DPAA2_OBJECT(dpio, rte_dpaa2_dpio_obj);
+RTE_PMD_REGISTER_DPAA2_OBJECT(dpio, rte_dpaa2_dpio_obj, __LINE__);

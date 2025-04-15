@@ -123,6 +123,6 @@ static struct rte_vdev_driver rte_vdev_iocpt_pmd = {
 
 static struct cryptodev_driver rte_vdev_iocpt_drv;
 
-RTE_PMD_REGISTER_VDEV(crypto_ionic, rte_vdev_iocpt_pmd);
+RTE_PMD_REGISTER_VDEV(crypto_ionic, rte_vdev_iocpt_pmd, __LINE__);
 RTE_PMD_REGISTER_CRYPTO_DRIVER(rte_vdev_iocpt_drv, rte_vdev_iocpt_pmd.driver,
 		iocpt_vdev_driver_id);

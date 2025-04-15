@@ -1281,7 +1281,7 @@ static struct rte_vdev_driver cryptodev_mrvl_pmd_drv = {
 static struct cryptodev_driver mrvl_crypto_drv;
 
 /* Register the driver in constructor. */
-RTE_PMD_REGISTER_VDEV(CRYPTODEV_NAME_MRVL_PMD, cryptodev_mrvl_pmd_drv);
+RTE_PMD_REGISTER_VDEV(CRYPTODEV_NAME_MRVL_PMD, cryptodev_mrvl_pmd_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(CRYPTODEV_NAME_MRVL_PMD,
 	"max_nb_queue_pairs=<int> "
 	"max_nb_sessions=<int> "

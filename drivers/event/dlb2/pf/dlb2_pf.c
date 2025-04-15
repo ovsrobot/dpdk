@@ -881,8 +881,8 @@ static struct rte_pci_driver pci_eventdev_dlb2_5_pmd = {
 	.remove = event_dlb2_5_pci_remove,
 };
 
-RTE_PMD_REGISTER_PCI(event_dlb2_pf, pci_eventdev_dlb2_pmd);
+RTE_PMD_REGISTER_PCI(event_dlb2_pf, pci_eventdev_dlb2_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(event_dlb2_pf, pci_id_dlb2_map);
 
-RTE_PMD_REGISTER_PCI(event_dlb2_5_pf, pci_eventdev_dlb2_5_pmd);
+RTE_PMD_REGISTER_PCI(event_dlb2_5_pf, pci_eventdev_dlb2_5_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(event_dlb2_5_pf, pci_id_dlb2_5_map);

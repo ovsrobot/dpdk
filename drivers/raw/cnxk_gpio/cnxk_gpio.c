@@ -847,7 +847,7 @@ static struct rte_vdev_driver cnxk_gpio_drv = {
 	.remove = cnxk_gpio_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(cnxk_gpio, cnxk_gpio_drv);
+RTE_PMD_REGISTER_VDEV(cnxk_gpio, cnxk_gpio_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(cnxk_gpio,
 		"gpiochip=<int> "
 		"allowlist=<list>");

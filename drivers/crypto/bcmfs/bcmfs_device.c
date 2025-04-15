@@ -329,5 +329,4 @@ static struct rte_vdev_driver rte_bcmfs_pmd = {
 	.remove = bcmfs_vdev_remove
 };
 
-RTE_PMD_REGISTER_VDEV(bcmfs_pmd,
-		      rte_bcmfs_pmd);
+RTE_PMD_REGISTER_VDEV(bcmfs_pmd, rte_bcmfs_pmd, __LINE__);

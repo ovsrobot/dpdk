@@ -993,6 +993,6 @@ static struct rte_vdev_driver pmd_mvneta_drv = {
 	.remove = rte_pmd_mvneta_remove,
 };
 
-RTE_PMD_REGISTER_VDEV(net_mvneta, pmd_mvneta_drv);
+RTE_PMD_REGISTER_VDEV(net_mvneta, pmd_mvneta_drv, __LINE__);
 RTE_PMD_REGISTER_PARAM_STRING(net_mvneta, "iface=<ifc>");
 RTE_LOG_REGISTER_DEFAULT(mvneta_logtype, NOTICE);

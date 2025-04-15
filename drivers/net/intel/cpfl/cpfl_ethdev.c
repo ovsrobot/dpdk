@@ -2876,7 +2876,7 @@ static struct rte_pci_driver rte_cpfl_pmd = {
  * Invoked once at EAL init time.
  * Register itself as the [Poll Mode] Driver of PCI devices.
  */
-RTE_PMD_REGISTER_PCI(net_cpfl, rte_cpfl_pmd);
+RTE_PMD_REGISTER_PCI(net_cpfl, rte_cpfl_pmd, __LINE__);
 RTE_PMD_REGISTER_PCI_TABLE(net_cpfl, pci_id_cpfl_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_cpfl, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_cpfl,
