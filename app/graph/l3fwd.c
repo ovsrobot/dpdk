@@ -53,6 +53,18 @@ l3fwd_pattern_configure(void)
 	graph_conf.num_pkt_to_capture = pcap_pkts_count;
 	graph_conf.pcap_filename = strdup(pcap_file);
 
+	if (ip4_lookup_m == IP4_LOOKUP_FIB) {
+		const char *fib_n = "ip4_lookup_fib";
+		const char *lpm_n = "ip4_lookup";
+		rte_node_t pkt_cls;
+#define IP4_LKUP_ACTIVE_EDGE 1
+#define IP4_LKUP_INACTIVE_EDGE 3
+
+		pkt_cls = rte_node_from_name("pkt_cls");
+		rte_node_edge_update(pkt_cls, IP4_LKUP_ACTIVE_EDGE, &fib_n, 1);
+		rte_node_edge_update(pkt_cls, IP4_LKUP_INACTIVE_EDGE, &lpm_n, 1);
+	}
+
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		rte_graph_t graph_id;
 		rte_edge_t i;
