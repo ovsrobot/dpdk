@@ -233,6 +233,7 @@ struct rte_node_register pkt_cls_node = {
 		[PKT_CLS_NEXT_IP4_LOOKUP] = "ip4_lookup",
 		[PKT_CLS_NEXT_IP6_LOOKUP] = "ip6_lookup",
 		[PKT_CLS_NEXT_IP4_LOOKUP_FIB] = "ip4_lookup_fib",
+		[PKT_CLS_NEXT_IP6_LOOKUP_FIB] = "ip6_lookup_fib",
 	},
 };
 RTE_NODE_REGISTER(pkt_cls_node);
