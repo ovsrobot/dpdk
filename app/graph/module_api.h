@@ -32,7 +32,13 @@ enum ip4_lookup_mode {
 	IP4_LOOKUP_FIB
 };
 
+enum ip6_lookup_mode {
+	IP6_LOOKUP_LPM,
+	IP6_LOOKUP_FIB
+};
+
 extern enum ip4_lookup_mode ip4_lookup_m;
+extern enum ip6_lookup_mode ip6_lookup_m;
 
 bool app_graph_stats_enabled(void);
 bool app_graph_exit(void);

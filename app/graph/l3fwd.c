@@ -65,6 +65,18 @@ l3fwd_pattern_configure(void)
 		rte_node_edge_update(pkt_cls, IP4_LKUP_INACTIVE_EDGE, &lpm_n, 1);
 	}
 
+	if (ip6_lookup_m == IP6_LOOKUP_FIB) {
+		const char *fib6_n = "ip6_lookup_fib";
+		const char *lpm6_n = "ip6_lookup";
+		rte_node_t pkt_cls;
+#define IP6_LKUP_ACTIVE_EDGE 2
+#define IP6_LKUP_INACTIVE_EDGE 4
+
+		pkt_cls = rte_node_from_name("pkt_cls");
+		rte_node_edge_update(pkt_cls, IP6_LKUP_ACTIVE_EDGE, &fib6_n, 1);
+		rte_node_edge_update(pkt_cls, IP6_LKUP_INACTIVE_EDGE, &lpm6_n, 1);
+	}
+
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		rte_graph_t graph_id;
 		rte_edge_t i;
