@@ -7,6 +7,7 @@
 #include <cnxk_dmadev.h>
 
 static int cnxk_stats_reset(struct rte_dma_dev *dev, uint16_t vchan);
+static void cnxk_set_fp_ops(struct rte_dma_dev *dev, uint8_t enable_enq_deq);
 
 static int
 cnxk_dmadev_info_get(const struct rte_dma_dev *dev, struct rte_dma_info *dev_info, uint32_t size)
@@ -19,7 +20,7 @@ cnxk_dmadev_info_get(const struct rte_dma_dev *dev, struct rte_dma_info *dev_inf
 	dev_info->dev_capa = RTE_DMA_CAPA_MEM_TO_MEM | RTE_DMA_CAPA_MEM_TO_DEV |
 			     RTE_DMA_CAPA_DEV_TO_MEM | RTE_DMA_CAPA_DEV_TO_DEV |
 			     RTE_DMA_CAPA_OPS_COPY | RTE_DMA_CAPA_OPS_COPY_SG |
-			     RTE_DMA_CAPA_M2D_AUTO_FREE;
+			     RTE_DMA_CAPA_M2D_AUTO_FREE | RTE_DMA_CAPA_OPS_ENQ_DEQ;
 	if (roc_feature_dpi_has_priority()) {
 		dev_info->dev_capa |= RTE_DMA_CAPA_PRI_POLICY_SP;
 		dev_info->nb_priorities = CN10K_DPI_MAX_PRI;
@@ -113,6 +114,8 @@ cnxk_dmadev_configure(struct rte_dma_dev *dev, const struct rte_dma_conf *conf, 
 	dpivf->num_vchans = conf->nb_vchans;
 	if (roc_feature_dpi_has_priority())
 		dpivf->rdpi.priority = conf->priority;
+
+	cnxk_set_fp_ops(dev, conf->flags & RTE_DMA_CFG_FLAG_ENQ_DEQ);
 
 	return 0;
 }
@@ -267,6 +270,14 @@ cnxk_dmadev_vchan_setup(struct rte_dma_dev *dev, uint16_t vchan,
 
 	if (dpi_conf->c_desc.compl_ptr == NULL) {
 		plt_err("Failed to allocate for comp_data");
+		return -ENOMEM;
+	}
+
+	size = (max_desc * sizeof(struct rte_dma_op *));
+	dpi_conf->c_desc.ops = rte_zmalloc(NULL, size, RTE_CACHE_LINE_SIZE);
+	if (dpi_conf->c_desc.ops == NULL) {
+		plt_err("Failed to allocate for ops array");
+		rte_free(dpi_conf->c_desc.compl_ptr);
 		return -ENOMEM;
 	}
 
@@ -528,6 +539,37 @@ cnxk_stats_reset(struct rte_dma_dev *dev, uint16_t vchan)
 	return 0;
 }
 
+static void
+cnxk_set_fp_ops(struct rte_dma_dev *dev, uint8_t ena_enq_deq)
+{
+
+	dev->fp_obj->copy = cnxk_dmadev_copy;
+	dev->fp_obj->copy_sg = cnxk_dmadev_copy_sg;
+	dev->fp_obj->submit = cnxk_dmadev_submit;
+	dev->fp_obj->completed = cnxk_dmadev_completed;
+	dev->fp_obj->completed_status = cnxk_dmadev_completed_status;
+	dev->fp_obj->burst_capacity = cnxk_damdev_burst_capacity;
+
+	if (roc_model_is_cn10k()) {
+		dev->fp_obj->copy = cn10k_dmadev_copy;
+		dev->fp_obj->copy_sg = cn10k_dmadev_copy_sg;
+	}
+
+	if (ena_enq_deq) {
+		dev->fp_obj->copy = NULL;
+		dev->fp_obj->copy_sg = NULL;
+		dev->fp_obj->submit = NULL;
+		dev->fp_obj->completed = NULL;
+		dev->fp_obj->completed_status = NULL;
+
+		dev->fp_obj->enqueue = cnxk_dma_ops_enqueue;
+		dev->fp_obj->dequeue = cnxk_dma_ops_dequeue;
+
+		if (roc_model_is_cn10k())
+			dev->fp_obj->enqueue = cn10k_dma_ops_enqueue;
+	}
+}
+
 static const struct rte_dma_dev_ops cnxk_dmadev_ops = {
 	.dev_close = cnxk_dmadev_close,
 	.dev_configure = cnxk_dmadev_configure,
@@ -571,19 +613,7 @@ cnxk_dmadev_probe(struct rte_pci_driver *pci_drv __rte_unused, struct rte_pci_de
 	dmadev->fp_obj->dev_private = dpivf;
 	dmadev->dev_ops = &cnxk_dmadev_ops;
 
-	dmadev->fp_obj->copy = cnxk_dmadev_copy;
-	dmadev->fp_obj->copy_sg = cnxk_dmadev_copy_sg;
-	dmadev->fp_obj->submit = cnxk_dmadev_submit;
-	dmadev->fp_obj->completed = cnxk_dmadev_completed;
-	dmadev->fp_obj->completed_status = cnxk_dmadev_completed_status;
-	dmadev->fp_obj->burst_capacity = cnxk_damdev_burst_capacity;
-
-	if (roc_model_is_cn10k()) {
-		dpivf->is_cn10k = true;
-		dmadev->fp_obj->copy = cn10k_dmadev_copy;
-		dmadev->fp_obj->copy_sg = cn10k_dmadev_copy_sg;
-	}
-
+	dpivf->is_cn10k = roc_model_is_cn10k();
 	dpivf->mcs_lock = NULL;
 	rdpi = &dpivf->rdpi;
 
