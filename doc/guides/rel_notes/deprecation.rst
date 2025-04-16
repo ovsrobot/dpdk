@@ -142,3 +142,9 @@ Deprecation Notices
 * bus/vmbus: Starting DPDK 25.11, all the vmbus API defined in
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
+
+* dmadev: The ``rte_dma_conf`` structure is updated to include a new field
+  ``rte_dma_conf::flags`` that should be used to configure dmadev features.
+  The existing field ``rte_dma_conf::enable_silent`` is removed and replaced
+  with the new flag ``RTE_DMA_CFG_FLAG_SILENT``, to configure silent mode
+  the flag should be set in ``rte_dma_conf::flags`` during device configuration.
