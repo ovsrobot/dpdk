@@ -232,6 +232,12 @@ typedef uint16_t unaligned_uint16_t;
  * Force symbol to be generated even if it appears to be unused.
  */
 #ifdef RTE_TOOLCHAIN_MSVC
+#define RTE_INCLUDE(type, name) __pragma(comment(linker, "/include:" RTE_STR(name))) type name
+#else
+#define RTE_INCLUDE(type, name) __attribute__((used)) type name
+#endif
+
+#ifdef RTE_TOOLCHAIN_MSVC
 #define __rte_used
 #else
 #define __rte_used __attribute__((used))
