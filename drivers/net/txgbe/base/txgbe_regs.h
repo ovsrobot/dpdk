@@ -156,6 +156,12 @@
 #define TXGBE_LOCKPF               0x010008
 #define TXGBE_RST                  0x01000C
 #define   TXGBE_RST_SW             MS(0, 0x1)
+#define   TXGBE_RST_FW             MS(3, 0x1)
+#define   TXGBE_RST_DMA            MS(4, 0x1)
+#define   TXGBE_RST_EPHY_LAN_1     MS(16, 0x1)
+#define   TXGBE_RST_EPHY_LAN_0     MS(19, 0x1)
+#define   TXGBE_RST_MAC_LAN_1      MS(17, 0x1)
+#define   TXGBE_RST_MAC_LAN_0      MS(20, 0x1)
 #define   TXGBE_RST_LAN(i)         MS(((i) + 1), 0x1)
 #define   TXGBE_RST_FW             MS(3, 0x1)
 #define   TXGBE_RST_ETH(i)         MS(((i) + 29), 0x1)
@@ -1570,6 +1576,13 @@ enum txgbe_5tuple_protocol {
 #define     TXGBE_PORTSTAT_BW_100M      MS(3, 0x1)
 #define   TXGBE_PORTSTAT_ID(r)          RS(r, 8, 0x1)
 
+/* amlite: diff from sapphire */
+#define TXGBE_CFG_PORT_ST_AML_LINK_MASK     MS(1, 0xF)
+#define TXGBE_CFG_PORT_ST_AML_LINK_10G      MS(4, 0x1)
+#define TXGBE_CFG_PORT_ST_AML_LINK_25G      MS(3, 0x1)
+#define TXGBE_CFG_PORT_ST_AML_LINK_40G      MS(2, 0x1)
+#define TXGBE_CFG_PORT_ST_AML_LINK_50G      MS(1, 0x1)
+
 #define TXGBE_VXLAN                     0x014410
 #define TXGBE_VXLAN_GPE                 0x014414
 #define TXGBE_GENEVE                    0x014418
@@ -1594,7 +1607,10 @@ enum txgbe_5tuple_protocol {
 #define TXGBE_GPIOINTSTAT               0x014840
 #define TXGBE_GPIORAWINTSTAT            0x014844
 #define TXGBE_GPIOEOI                   0x01484C
-
+#define TXGBE_GPIOEXT                   0x014850
+#define   TXGBE_SFP1_MOD_PRST_LS        0x00000010U /* GPIO_EXT SFP ABSENT*/
+#define   TXGBE_SFP1_MOD_ABS_LS         0x00000004U /* GPIO_EXT SFP ABSENT*/
+#define   TXGBE_SFP1_RX_LOS_LS          0x00000008U /* GPIO_EXT RX LOSS */
 
 #define TXGBE_ARBPOOLIDX                0x01820C
 #define TXGBE_ARBTXRATE                 0x018404
@@ -1688,6 +1704,9 @@ enum txgbe_5tuple_protocol {
 #define   TXGBE_MACTXCFG_SPEED(v)       LS(v, 29, 0x3)
 #define   TXGBE_MACTXCFG_SPEED_10G      LS(0, 29, 0x3)
 #define   TXGBE_MACTXCFG_SPEED_1G       LS(3, 29, 0x3)
+
+#define TXGBE_EPHY_STAT                 0x13404
+#define TXGBE_EPHY_STAT_PPL_LOCK        0x3
 
 #define TXGBE_ISBADDRL                  0x000160
 #define TXGBE_ISBADDRH                  0x000164

@@ -6,10 +6,14 @@ sources = [
         'txgbe_dcb.c',
         'txgbe_eeprom.c',
         'txgbe_hw.c',
+        'txgbe_aml.c',
+        'txgbe_aml40.c',
         'txgbe_mbx.c',
         'txgbe_mng.c',
         'txgbe_phy.c',
         'txgbe_vf.c',
+        'txgbe_e56.c',
+        'txgbe_e56_bp.c',
 ]
 
 error_cflags = []

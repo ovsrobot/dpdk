@@ -214,6 +214,18 @@ enum txgbe_sfp_type {
 	txgbe_sfp_type_1g_sx_core1,
 	txgbe_sfp_type_1g_lx_core0,
 	txgbe_sfp_type_1g_lx_core1,
+	txgbe_sfp_type_25g_sr_core0,
+	txgbe_sfp_type_25g_sr_core1,
+	txgbe_sfp_type_25g_lr_core0,
+	txgbe_sfp_type_25g_lr_core1,
+	txgbe_sfp_type_25g_da_cu_core0,
+	txgbe_sfp_type_25g_da_cu_core1,
+	txgbe_sfp_type_25g_fcpi4_lmt_core0,
+	txgbe_sfp_type_25g_fcpi4_lmt_core1,
+	txgbe_sfp_type_25g_5m_da_cu_core0,
+	txgbe_sfp_type_25g_5m_da_cu_core1,
+	txgbe_sfp_type_40g_core0,
+	txgbe_sfp_type_40g_core1,
 	txgbe_sfp_type_not_present = 0xFFFE,
 	txgbe_sfp_type_not_known = 0xFFFF
 };
@@ -539,6 +551,7 @@ struct txgbe_mac_info {
 	s32 (*prot_autoc_read)(struct txgbe_hw *hw, bool *locked, u64 *value);
 	s32 (*prot_autoc_write)(struct txgbe_hw *hw, bool locked, u64 value);
 	s32 (*negotiate_api_version)(struct txgbe_hw *hw, int api);
+	void (*init_mac_link_ops)(struct txgbe_hw *hw);
 
 	/* Link */
 	void (*disable_tx_laser)(struct txgbe_hw *hw);
@@ -765,6 +778,12 @@ struct txgbe_devargs {
 	u16 sgmii;
 };
 
+#define TXGBE_PHY_FEC_RS	MS(0, 0x1)
+#define TXGBE_PHY_FEC_BASER	MS(1, 0x1)
+#define TXGBE_PHY_FEC_OFF	MS(2, 0x1)
+#define TXGBE_PHY_FEC_AUTO 	(TXGBE_PHY_FEC_OFF | TXGBE_PHY_FEC_BASER |\
+				 TXGBE_PHY_FEC_RS)
+
 struct txgbe_hw {
 	void IOMEM *hw_addr;
 	void *back;
@@ -821,6 +840,20 @@ struct txgbe_hw {
 		u64 tx_qp_bytes;
 		u64 rx_qp_mc_packets;
 	} qp_last[TXGBE_MAX_QP];
+
+	rte_spinlock_t phy_lock;
+	/*amlite: new SW-FW mbox */
+	u8 swfw_index;
+	rte_atomic32_t swfw_busy;
+	bool link_valid;
+	bool reconfig_rx;
+	/* workaround for temperature alarm */
+	bool overheat;
+	u32 fec_mode;
+	u32 cur_fec_link;
+	int temperature;
+	u32 tx_speed;
+	u32 bp_link_mode;
 };
 
 struct txgbe_backplane_ability {

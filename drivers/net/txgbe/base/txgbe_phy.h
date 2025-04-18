@@ -105,6 +105,8 @@
 #define   VR_AN_INTR_CMPLT		  MS16(0, 0x1)
 #define   VR_AN_INTR_LINK		  MS16(1, 0x1)
 #define   VR_AN_INTR_PG_RCV		  MS16(2, 0x1)
+#define   TXGBE_E56_AN_TXDIS              MS16(3, 0x1)
+#define   TXGBE_E56_AN_PG_RCV             MS16(4, 0x1)
 #define VR_AN_KR_MODE_CL                  0x078003
 #define   VR_AN_KR_MODE_CL_PDET		  MS16(0, 0x1)
 #define VR_XS_OR_PCS_MMD_DIGI_CTL1        0x038000
@@ -404,6 +406,21 @@
 #define TXGBE_BP_M_KX                        4
 #define TXGBE_BP_M_NAUTO                     0
 #define TXGBE_BP_M_AUTO                      1
+
+#define kr_read_poll(op, val, cond, sleep_us, \
+		     times, args...) \
+({ \
+	unsigned long __sleep_us = (sleep_us); \
+	u32 __times = (times); \
+	u32 i; \
+	for (i = 0; i < __times; i++) { \
+		(val) = op(args); \
+		if (cond) \
+			break; \
+		usleep(__sleep_us);\
+	} \
+	(cond) ? 0 : -1; \
+})
 
 #ifndef CL72_KRTR_PRBS_MODE_EN
 #define CL72_KRTR_PRBS_MODE_EN	0xFFFF	/* open kr prbs check */

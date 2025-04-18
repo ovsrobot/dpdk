@@ -11,6 +11,10 @@
 #include "txgbe_eeprom.h"
 #include "txgbe_mng.h"
 #include "txgbe_hw.h"
+#include "txgbe_e56.h"
+#include "txgbe_e56_bp.h"
+#include "txgbe_aml.h"
+#include "txgbe_aml40.h"
 
 #define TXGBE_RAPTOR_MAX_TX_QUEUES 128
 #define TXGBE_RAPTOR_MAX_RX_QUEUES 128
@@ -2469,9 +2473,7 @@ s32 txgbe_init_shared_code(struct txgbe_hw *hw)
 	txgbe_init_ops_dummy(hw);
 	switch (hw->mac.type) {
 	case txgbe_mac_raptor:
-	case txgbe_mac_aml:
-	case txgbe_mac_aml40:
-		status = txgbe_init_ops_pf(hw);
+		status = txgbe_init_ops_sp(hw);
 		break;
 	case txgbe_mac_raptor_vf:
 		status = txgbe_init_ops_vf(hw);
@@ -2781,7 +2783,7 @@ s32 txgbe_flash_read_dword(struct txgbe_hw *hw, u32 addr, u32 *data)
  *  Initialize the function pointers and assign the MAC type.
  *  Does not touch the hardware.
  **/
-s32 txgbe_init_ops_pf(struct txgbe_hw *hw)
+s32 txgbe_init_ops_sp(struct txgbe_hw *hw)
 {
 	struct txgbe_bus_info *bus = &hw->bus;
 	struct txgbe_mac_info *mac = &hw->mac;
