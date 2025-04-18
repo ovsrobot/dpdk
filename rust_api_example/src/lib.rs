@@ -5,20 +5,47 @@
 pub mod dpdk {
     pub mod eth {
         use super::Mempool;
+        use std::sync::Arc;
 
+        // PortHandle here is used as a refcount of "Outstanding Rx/Tx queues".
+        // This is useful, but the "runstate" of the port is also useful. They are
+        // similar, but not identical. A more elegant solution is likely possible.
+        #[derive(Debug, Clone)]
+        #[allow(unused)]
+        pub(crate) struct PortHandle(Arc<()>);
+
+        impl PortHandle {
+            fn new() -> Self {
+                PortHandle(Arc::new(()))
+            }
+            fn stop(&mut self) -> Result<(), usize> {
+                // if the count is 1, only the Port itself has a handle left.
+                // In that case, the count cannot go up, so we can stop.
+                // The strange "Arc::<()>::function()" syntax here is "Fully qualified syntax":
+                //  - https://doc.rust-lang.org/std/sync/struct.Arc.html#deref-behavior
+                let sc = Arc::<()>::strong_count(&self.0);
+                if  sc == 1 {
+                    Ok(())
+                } else {
+                    Err(sc)
+                }
+            }
+        }
+        
         #[derive(Debug)]
         pub struct TxqHandle {/* todo: but same as Rxq */}
 
         // Handle allows moving between threads, its not polling!
         #[derive(Debug)]
         pub struct RxqHandle {
+            _handle: PortHandle,
             port: u16,
             queue: u16,
         }
 
         impl RxqHandle {
-            pub(crate) fn new(port: u16, queue: u16) -> Self {
-                RxqHandle { port, queue }
+            pub(crate) fn new(handle: PortHandle, port: u16, queue: u16) -> Self {
+                RxqHandle { _handle: handle, port, queue }
             }
 
             // This function is the key to the API design: it ensures the rx_burst()
@@ -68,6 +95,7 @@ pub mod dpdk {
 
         #[derive(Debug)]
         pub struct Port {
+            handle: PortHandle,
             id: u16,
             rxqs: Vec<RxqHandle>,
             txqs: Vec<TxqHandle>,
@@ -77,6 +105,7 @@ pub mod dpdk {
             // pub(crate) here ensures outside this crate users cannot call this function
             pub(crate) fn from_u16(id: u16) -> Self {
                 Port {
+                    handle: PortHandle::new(),
                     id,
                     rxqs: Vec::new(),
                     txqs: Vec::new(),
@@ -84,10 +113,14 @@ pub mod dpdk {
             }
 
             pub fn rxqs(&mut self, rxq_count: u16, _mempool: Mempool) -> Result<(), String> {
+                // ensure no old ports remain
+                self.rxqs.clear();
+
                 for q in 0..rxq_count {
                     // call rte_eth_rx_queue_setup() here
-                    self.rxqs.push(RxqHandle::new(self.id, q));
+                    self.rxqs.push(RxqHandle::new(self.handle.clone(), self.id, q));
                 }
+                println!("{:?}", self.handle);
                 Ok(())
             }
 
@@ -97,6 +130,17 @@ pub mod dpdk {
                     std::mem::take(&mut self.rxqs),
                     std::mem::take(&mut self.txqs),
                 )
+            }
+
+            pub fn stop(&mut self) -> Result<(), String> {
+                match self.handle.stop() {
+                    Ok(_v) => {
+                        // call rte_eth_dev_stop() here
+                        println!("stopping port {}", self.id);
+                        Ok(())
+                    }
+                    Err(e) => Err(format!("Port has {} Rxq/Txq handles outstanding", e)),
+                }
             }
         }
     }
