@@ -21,9 +21,9 @@
 #include "base/hinic3_hw_comm.h"
 #include "base/hinic3_nic_cfg.h"
 #include "base/hinic3_nic_event.h"
-#include "hinic3_pmd_nic_io.h"
-#include "hinic3_pmd_tx.h"
-#include "hinic3_pmd_rx.h"
+#include "hinic3_nic_io.h"
+#include "hinic3_tx.h"
+#include "hinic3_rx.h"
 #include "hinic3_ethdev.h"
 
 #define HINIC3_MIN_RX_BUF_SIZE 1024
@@ -3336,6 +3336,9 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 
 	PMD_DRV_LOG(INFO, "Network Interface pmd driver version: %s",
 		    HINIC3_PMD_DRV_VERSION);
+
+	eth_dev->rx_pkt_burst = hinic3_recv_pkts;
+	eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
 
 	return hinic3_func_init(eth_dev);
 }
