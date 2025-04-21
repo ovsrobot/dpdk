@@ -3201,7 +3201,7 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_query_quota
 	 * @see struct rte_flow_update_quota
 	 */
-	 RTE_FLOW_ACTION_TYPE_QUOTA,
+	RTE_FLOW_ACTION_TYPE_QUOTA,
 
 	/**
 	 * Skip congestion management configuration.
@@ -3263,6 +3263,14 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_action_jump_to_table_index.
 	 */
 	RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE_INDEX,
+
+	/**
+	 * Implements POP_ETAG ("pop the outer 802.1BR Etag") as defined
+	 * by the OpenFlow Switch Specification.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_POP_ETAG,
 };
 
 /**
