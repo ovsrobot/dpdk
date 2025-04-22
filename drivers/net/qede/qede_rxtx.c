@@ -111,7 +111,7 @@ qede_calc_rx_buf_size(struct rte_eth_dev *dev, uint16_t mbufsz,
 		rx_buf_size = max_frame_size;
 
 	/* Align to cache-line size if needed */
-	return QEDE_FLOOR_TO_CACHE_LINE_SIZE(rx_buf_size);
+	return QEDE_CEIL_TO_CACHE_LINE_SIZE(rx_buf_size);
 }
 
 static struct qede_rx_queue *
@@ -237,7 +237,7 @@ qede_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid,
 	/* cache align the mbuf size to simplify rx_buf_size calculation */
 	bufsz = QEDE_FLOOR_TO_CACHE_LINE_SIZE(bufsz);
 	if ((rxmode->offloads & RTE_ETH_RX_OFFLOAD_SCATTER)	||
-	    max_rx_pktlen > bufsz) {
+	    QEDE_CEIL_TO_CACHE_LINE_SIZE(max_rx_pktlen) > bufsz) {
 		if (!dev->data->scattered_rx) {
 			DP_INFO(edev, "Forcing scatter-gather mode\n");
 			dev->data->scattered_rx = 1;
