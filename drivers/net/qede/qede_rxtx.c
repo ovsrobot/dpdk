@@ -1617,9 +1617,9 @@ qede_recv_pkts_regular(void *p_rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 					    "L4 csum failed, flags = 0x%x",
 					    parse_flag);
 				rxq->rx_hw_errors++;
-				ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
+				ol_flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_BAD;
 			} else {
-				ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_GOOD;
+				ol_flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD;
 			}
 
 			if (unlikely(qede_check_tunn_csum_l3(parse_flag))) {
@@ -1628,8 +1628,6 @@ qede_recv_pkts_regular(void *p_rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 					parse_flag);
 				rxq->rx_hw_errors++;
 				ol_flags |= RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD;
-			} else {
-				ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD;
 			}
 
 			flags = fp_cqe->tunnel_pars_flags.flags;
@@ -1887,9 +1885,9 @@ qede_recv_pkts(void *p_rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 					    "L4 csum failed, flags = 0x%x",
 					    parse_flag);
 				rxq->rx_hw_errors++;
-				ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
+				ol_flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_BAD;
 			} else {
-				ol_flags |= RTE_MBUF_F_RX_L4_CKSUM_GOOD;
+				ol_flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD;
 			}
 
 			if (unlikely(qede_check_tunn_csum_l3(parse_flag))) {
@@ -1898,8 +1896,6 @@ qede_recv_pkts(void *p_rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 					parse_flag);
 				  rxq->rx_hw_errors++;
 				ol_flags |= RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD;
-			} else {
-				ol_flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD;
 			}
 
 			if (tpa_start_flg)
