@@ -101,19 +101,14 @@ qede_calc_rx_buf_size(struct rte_eth_dev *dev, uint16_t mbufsz,
 		 * buffers can be used for single packet. So need to make sure
 		 * mbuf size is sufficient enough for this.
 		 */
-		if ((mbufsz * ETH_RX_MAX_BUFF_PER_PKT) <
-		     (max_frame_size + QEDE_ETH_OVERHEAD)) {
+		if ((mbufsz * ETH_RX_MAX_BUFF_PER_PKT) < max_frame_size) {
 			DP_ERR(edev, "mbuf %d size is not enough to hold max fragments (%d) for max rx packet length (%d)\n",
 			       mbufsz, ETH_RX_MAX_BUFF_PER_PKT, max_frame_size);
 			return -EINVAL;
 		}
-
-		rx_buf_size = RTE_MAX(mbufsz,
-				      (max_frame_size + QEDE_ETH_OVERHEAD) /
-				       ETH_RX_MAX_BUFF_PER_PKT);
-	} else {
-		rx_buf_size = max_frame_size + QEDE_ETH_OVERHEAD;
-	}
+		rx_buf_size = mbufsz;
+	} else
+		rx_buf_size = max_frame_size;
 
 	/* Align to cache-line size if needed */
 	return QEDE_FLOOR_TO_CACHE_LINE_SIZE(rx_buf_size);
@@ -235,14 +230,14 @@ qede_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid,
 		dev->data->rx_queues[qid] = NULL;
 	}
 
-	max_rx_pktlen = dev->data->mtu + RTE_ETHER_HDR_LEN;
+	max_rx_pktlen = dev->data->mtu + QEDE_MAX_ETHER_HDR_LEN;
 
 	/* Fix up RX buffer size */
 	bufsz = (uint16_t)rte_pktmbuf_data_room_size(mp) - RTE_PKTMBUF_HEADROOM;
 	/* cache align the mbuf size to simplify rx_buf_size calculation */
 	bufsz = QEDE_FLOOR_TO_CACHE_LINE_SIZE(bufsz);
 	if ((rxmode->offloads & RTE_ETH_RX_OFFLOAD_SCATTER)	||
-	    (max_rx_pktlen + QEDE_ETH_OVERHEAD) > bufsz) {
+	    max_rx_pktlen > bufsz) {
 		if (!dev->data->scattered_rx) {
 			DP_INFO(edev, "Forcing scatter-gather mode\n");
 			dev->data->scattered_rx = 1;
