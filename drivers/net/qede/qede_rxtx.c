@@ -305,7 +305,7 @@ static void qede_rx_queue_release_mbufs(struct qede_rx_queue *rxq)
 	if (rxq->sw_rx_ring) {
 		for (i = 0; i < rxq->nb_rx_desc; i++) {
 			if (rxq->sw_rx_ring[i]) {
-				rte_pktmbuf_free(rxq->sw_rx_ring[i]);
+				rte_mbuf_raw_free(rxq->sw_rx_ring[i]);
 				rxq->sw_rx_ring[i] = NULL;
 			}
 		}
