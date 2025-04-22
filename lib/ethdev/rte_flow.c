@@ -212,6 +212,7 @@ static const struct rte_flow_desc_data rte_flow_desc_action[] = {
 	MK_FLOW_ACTION(METER, sizeof(struct rte_flow_action_meter)),
 	MK_FLOW_ACTION(SECURITY, sizeof(struct rte_flow_action_security)),
 	MK_FLOW_ACTION(OF_DEC_NW_TTL, 0),
+	MK_FLOW_ACTION(OF_POP_ETAG, 0),
 	MK_FLOW_ACTION(OF_POP_VLAN, 0),
 	MK_FLOW_ACTION(OF_PUSH_VLAN,
 		       sizeof(struct rte_flow_action_of_push_vlan)),
