@@ -320,8 +320,10 @@ rxq_burst_v(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 	}
 	elts_idx = rxq->rq_pi & e_mask;
 	elts = &(*rxq->elts)[elts_idx];
+	/* Not to move past the allocated mbufs. */
+	pkts_n = RTE_MIN(pkts_n - rcvd_pkt, rxq->rq_ci - rxq->rq_pi);
 	/* Not to overflow pkts array. */
-	pkts_n = RTE_ALIGN_FLOOR(pkts_n - rcvd_pkt, MLX5_VPMD_DESCS_PER_LOOP);
+	pkts_n = RTE_ALIGN_FLOOR(pkts_n, MLX5_VPMD_DESCS_PER_LOOP);
 	/* Not to cross queue end. */
 	pkts_n = RTE_MIN(pkts_n, q_n - elts_idx);
 	pkts_n = RTE_MIN(pkts_n, q_n - cq_idx);
