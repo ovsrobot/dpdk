@@ -1116,15 +1116,27 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_int(ret);
 )
 
+#if defined(_TIME_BITS) && _TIME_BITS == 64
 RTE_TRACE_POINT(
 	rte_eth_trace_timesync_write_time,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *time,
 		int ret),
 	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u64(time->tv_sec);
+	rte_trace_point_emit_long(time->tv_nsec);
+	rte_trace_point_emit_int(ret);
+)
+#else
+RTE_TRACE_POINT(
+	rte_eth_trace_timesync_write_time,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *time,
+	  int ret),
+	rte_trace_point_emit_u16(port_id);
 	rte_trace_point_emit_size_t(time->tv_sec);
 	rte_trace_point_emit_long(time->tv_nsec);
 	rte_trace_point_emit_int(ret);
 )
+#endif
 
 RTE_TRACE_POINT(
 	rte_eth_trace_read_clock,
@@ -2146,29 +2158,65 @@ RTE_TRACE_POINT_FP(
 )
 
 /* Called in loop in examples/ptpclient */
+#if defined(_TIME_BITS) && _TIME_BITS == 64
 RTE_TRACE_POINT_FP(
 	rte_eth_trace_timesync_read_rx_timestamp,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *timestamp,
 		uint32_t flags, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u64(timestamp->tv_sec);
+	rte_trace_point_emit_long(timestamp->tv_nsec);
+	rte_trace_point_emit_u32(flags);
+	rte_trace_point_emit_int(ret);
+)
+#else
+RTE_TRACE_POINT_FP(
+	rte_eth_trace_timesync_read_rx_timestamp,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *timestamp,
+	  uint32_t flags, int ret),
 	rte_trace_point_emit_u16(port_id);
 	rte_trace_point_emit_size_t(timestamp->tv_sec);
 	rte_trace_point_emit_long(timestamp->tv_nsec);
 	rte_trace_point_emit_u32(flags);
 	rte_trace_point_emit_int(ret);
 )
+#endif
 
 /* Called in loop in examples/ptpclient */
+#if defined(_TIME_BITS) && _TIME_BITS == 64
 RTE_TRACE_POINT_FP(
 	rte_eth_trace_timesync_read_tx_timestamp,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *timestamp,
 		int ret),
 	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u64(timestamp->tv_sec);
+	rte_trace_point_emit_long(timestamp->tv_nsec);
+	rte_trace_point_emit_int(ret);
+)
+#else
+RTE_TRACE_POINT_FP(
+	rte_eth_trace_timesync_read_tx_timestamp,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *timestamp,
+	  int ret),
+	rte_trace_point_emit_u16(port_id);
 	rte_trace_point_emit_size_t(timestamp->tv_sec);
 	rte_trace_point_emit_long(timestamp->tv_nsec);
 	rte_trace_point_emit_int(ret);
 )
+#endif
 
 /* Called in loop in examples/ptpclient */
+#if defined(_TIME_BITS) && _TIME_BITS == 64
+RTE_TRACE_POINT_FP(
+	rte_eth_trace_timesync_read_time,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *time,
+		int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u64(time->tv_sec);
+	rte_trace_point_emit_long(time->tv_nsec);
+	rte_trace_point_emit_int(ret);
+)
+#else
 RTE_TRACE_POINT_FP(
 	rte_eth_trace_timesync_read_time,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, const struct timespec *time,
@@ -2178,6 +2226,7 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_long(time->tv_nsec);
 	rte_trace_point_emit_int(ret);
 )
+#endif
 
 /* Called in loop in examples/ptpclient */
 RTE_TRACE_POINT_FP(
