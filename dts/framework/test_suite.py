@@ -38,6 +38,10 @@ from framework.testbed_model.traffic_generator.capturing_traffic_generator impor
     CapturingTrafficGenerator,
     PacketFilteringConfig,
 )
+from framework.testbed_model.traffic_generator.performance_traffic_generator import (
+    PerformanceTrafficGenerator,
+    PerformanceTrafficStats,
+)
 
 from .exception import ConfigurationError, InternalError, TestCaseVerifyError
 from .logger import DTSLogger, get_dts_logger
@@ -266,6 +270,26 @@ class TestSuite(TestProtocol):
             duration,
         )
 
+    def assess_performance_by_packet(
+        self, packet: Packet, duration: int = 60
+    ) -> PerformanceTrafficStats:
+        """Send a given packet for a given duration and assess basic performance statistics.
+
+        Send `packet` and assess NIC performance for a given duration, corresponding to the test
+        suite's given topology.
+
+        Args:
+            packet: The packet to send.
+            duration: Performance test duration (in seconds)
+
+        Returns:
+            Performance statistics of the generated test.
+        """
+        assert isinstance(
+            self._ctx.perf_tg, PerformanceTrafficGenerator
+        ), "Cannot run performance tests on non-performance traffic generator."
+        return self._ctx.perf_tg.generate_traffic_and_stats(packet, duration)
+
     def send_packets(
         self,
         packets: list[Packet],
@@ -275,6 +299,9 @@ class TestSuite(TestProtocol):
         Args:
             packets: Packets to send.
         """
+        assert isinstance(
+            self._ctx.perf_tg, CapturingTrafficGenerator
+        ), "Cannot run performance tests on non-capturing traffic generator."
         packets = self._adjust_addresses(packets)
         self._ctx.func_tg.send_packets(packets, self._ctx.topology.tg_port_egress)
 
