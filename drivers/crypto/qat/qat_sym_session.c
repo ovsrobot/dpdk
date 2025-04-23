@@ -526,6 +526,12 @@ qat_sym_session_configure_cipher(struct rte_cryptodev *dev,
 		session->qat_mode = ICP_QAT_HW_CIPHER_CBC_MODE;
 		break;
 	case RTE_CRYPTO_CIPHER_ZUC_EEA3:
+		if (internals->qat_dev->options.zuc_256_disabled &&
+			cipher_xform->key.length == ICP_QAT_HW_ZUC_256_KEY_SZ) {
+			QAT_LOG(ERR, "ZUC 256 disabled on this device");
+			ret = -ENOTSUP;
+			goto error_out;
+		}
 		if (!qat_is_cipher_alg_supported(
 			cipher_xform->algo, internals)) {
 			QAT_LOG(ERR, "%s not supported on this device",

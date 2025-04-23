@@ -26,6 +26,8 @@ struct qat_options {
 	/**< Wireless Slices supported */
 	uint8_t legacy_alg;
 	/**< are legacy algorithm supported */
+	uint8_t zuc_256_disabled;
+	/**< is ZUC 256 algorithm disabled */
 };
 
 enum qat_device_gen {

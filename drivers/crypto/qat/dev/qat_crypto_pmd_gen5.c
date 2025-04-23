@@ -205,6 +205,15 @@ qat_sym_crypto_cap_get_gen5(struct qat_cryptodev_private *internals,
 
 		memcpy(addr + curr_capa, capabilities + iter,
 			sizeof(struct rte_cryptodev_capabilities));
+
+		if (check_cipher_capa(&capabilities[iter],
+				RTE_CRYPTO_CIPHER_ZUC_EEA3)) {
+			struct rte_cryptodev_capabilities *cap =
+				addr + curr_capa;
+			if (internals->qat_dev->options.zuc_256_disabled)
+				cap->sym.cipher.key_size.max = 16;
+		}
+
 		curr_capa++;
 	}
 	internals->qat_dev_capabilities = internals->capa_mz->addr;

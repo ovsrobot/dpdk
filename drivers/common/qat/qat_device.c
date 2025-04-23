@@ -169,6 +169,13 @@ wireless_slice_support(uint16_t pci_dev_id)
 			pci_dev_id == 0x4947;
 }
 
+static int
+zuc_256_disabled(uint16_t pci_dev_id)
+{
+	return pci_dev_id == 0x578b ||
+			pci_dev_id == 0x4947;
+}
+
 /* This function base on the atoi function peculiarity, non integral part
  * other than the equals sign is ignored. It will not work with other conversion
  * functions like strt*.
@@ -332,6 +339,8 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev)
 
 	if (wireless_slice_support(pci_dev->id.device_id))
 		qat_dev->options.has_wireless_slice = 1;
+	if (zuc_256_disabled(pci_dev->id.device_id))
+		qat_dev->options.zuc_256_disabled = 1;
 
 	ops_hw = qat_dev_hw_spec[qat_dev->qat_dev_gen];
 	NOT_NULL(ops_hw->qat_dev_get_misc_bar, goto error,

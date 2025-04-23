@@ -295,7 +295,10 @@ qat_sym_crypto_cap_get_gen3(struct qat_cryptodev_private *internals,
 			check_cipher_capa(&capabilities[iter],
 				RTE_CRYPTO_CIPHER_ZUC_EEA3))) {
 			cap = addr + curr_capa;
-			cap->sym.cipher.key_size.max = 32;
+			if (internals->qat_dev->options.zuc_256_disabled)
+				cap->sym.cipher.key_size.max = 16;
+			else
+				cap->sym.cipher.key_size.max = 32;
 			cap->sym.cipher.key_size.increment = 16;
 			cap->sym.cipher.iv_size.max = 25;
 			cap->sym.cipher.iv_size.increment = 1;
