@@ -13,6 +13,7 @@ from invoke.exceptions import (
     ThreadException,
     UnexpectedExit,
 )
+from invoke.runners import Promise
 from paramiko.ssh_exception import (
     AuthenticationException,
     BadHostKeyException,
@@ -98,6 +99,22 @@ class SSHSession(RemoteSession):
             raise SSHTimeoutError(command) from e
 
         return CommandResult(self.name, command, output.stdout, output.stderr, output.return_code)
+
+    def _send_async_command(self, command: str, timeout: float, env: dict | None) -> Promise:
+        try:
+            promise = self.session.run(
+                command, env=env, warn=True, hide=True, timeout=timeout, asynchronous=True
+            )
+
+        except (UnexpectedExit, ThreadException) as e:
+            self._logger.exception(e)
+            raise SSHSessionDeadError(self.hostname) from e
+
+        except CommandTimedOut as e:
+            self._logger.exception(e)
+            raise SSHTimeoutError(command) from e
+
+        return promise
 
     def is_alive(self) -> bool:
         """Overrides :meth:`~.remote_session.RemoteSession.is_alive`."""
