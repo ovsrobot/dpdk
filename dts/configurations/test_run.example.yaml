@@ -23,8 +23,14 @@ dpdk:
     # in a subdirectory of DPDK tree root directory. Otherwise, will be using the `build_options`
     # to build the DPDK from source. Either `precompiled_build_dir` or `build_options` can be
     # defined, but not both.
-traffic_generator:
+func_traffic_generator:
   type: SCAPY
+  remote_path: "" # The remote path of the traffic generator application. (Leave blank for SCAPY)
+  config: "" # Additional configuration files. (Leave blank if not required)
+perf_traffic_generator:
+  type: TREX
+  remote_path: "/opt/trex/v3.03" # The remote path of the traffic generator application. (Leave blank for SCAPY)
+  config: "trex_config.yaml" # Additional configuration files. (Leave blank if not required)
 perf: false # disable performance testing
 func: true # enable functional testing
 skip_smoke_tests: false # optional
