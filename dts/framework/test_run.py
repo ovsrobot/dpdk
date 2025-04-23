@@ -107,7 +107,7 @@ from pathlib import Path
 from types import MethodType
 from typing import ClassVar, Protocol, Union
 
-from framework.config.test_run import TestRunConfiguration
+from framework.config.test_run import TestRunConfiguration, TrafficGeneratorType
 from framework.context import Context, init_ctx
 from framework.exception import (
     InternalError,
@@ -204,10 +204,25 @@ class TestRun:
 
         dpdk_build_env = DPDKBuildEnvironment(config.dpdk.build, sut_node)
         dpdk_runtime_env = DPDKRuntimeEnvironment(config.dpdk, sut_node, dpdk_build_env)
-        traffic_generator = create_traffic_generator(config.traffic_generator, tg_node)
+        # There is definitely a better way to do this.
+        tg_dpdk_runtime_env = None
+        if (
+            config.perf_traffic_generator.type == TrafficGeneratorType.TREX
+            or config.func_traffic_generator.type == TrafficGeneratorType.TREX
+        ):
+            tg_dpdk_runtime_env = DPDKRuntimeEnvironment(config.dpdk, tg_node, None)
+        func_traffic_generator = create_traffic_generator(config.func_traffic_generator, tg_node)
+        perf_traffic_generator = create_traffic_generator(config.perf_traffic_generator, tg_node)
 
         self.ctx = Context(
-            sut_node, tg_node, topology, dpdk_build_env, dpdk_runtime_env, traffic_generator
+            sut_node,
+            tg_node,
+            topology,
+            dpdk_build_env,
+            dpdk_runtime_env,
+            tg_dpdk_runtime_env,
+            func_traffic_generator,
+            perf_traffic_generator,
         )
         self.result = result
         self.selected_tests = list(self.config.filter_tests(tests_config))
@@ -345,7 +360,9 @@ class TestRunSetup(State):
         test_run.ctx.sut_node.setup()
         test_run.ctx.tg_node.setup()
         test_run.ctx.dpdk.setup(test_run.ctx.topology.sut_ports)
-        test_run.ctx.tg.setup(test_run.ctx.topology.tg_ports)
+        test_run.ctx.tg_dpdk.setup(test_run.ctx.topology.tg_ports)
+        test_run.ctx.func_tg.setup(test_run.ctx.topology.tg_ports)
+        test_run.ctx.perf_tg.setup(test_run.ctx.topology.tg_ports)
 
         self.result.ports = test_run.ctx.topology.sut_ports + test_run.ctx.topology.tg_ports
         self.result.sut_info = test_run.ctx.sut_node.node_info
@@ -430,7 +447,8 @@ class TestRunTeardown(State):
 
     def next(self) -> State | None:
         """Next state."""
-        self.test_run.ctx.tg.teardown(self.test_run.ctx.topology.tg_ports)
+        self.test_run.ctx.func_tg.teardown(self.test_run.ctx.topology.tg_ports)
+        self.test_run.ctx.perf_tg.teardown(self.test_run.ctx.topology.tg_ports)
         self.test_run.ctx.dpdk.teardown(self.test_run.ctx.topology.sut_ports)
         self.test_run.ctx.tg_node.teardown()
         self.test_run.ctx.sut_node.teardown()
