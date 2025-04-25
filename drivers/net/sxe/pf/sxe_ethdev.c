@@ -39,6 +39,7 @@
 #include "sxe_phy.h"
 #include "sxe_pmd_hdc.h"
 #include "sxe_flow_ctrl.h"
+#include "sxe_ptp.h"
 #include "drv_msg.h"
 #include "sxe_dcb.h"
 #include "sxe_version.h"
@@ -646,6 +647,14 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 	.flow_ctrl_get		= sxe_flow_ctrl_get,
 	.flow_ctrl_set		= sxe_flow_ctrl_set,
 	.priority_flow_ctrl_set = sxe_priority_flow_ctrl_set,
+
+	.timesync_enable	= sxe_timesync_enable,
+	.timesync_disable	= sxe_timesync_disable,
+	.timesync_read_rx_timestamp = sxe_timesync_read_rx_timestamp,
+	.timesync_read_tx_timestamp = sxe_timesync_read_tx_timestamp,
+	.timesync_adjust_time	= sxe_timesync_adjust_time,
+	.timesync_read_time	= sxe_timesync_read_time,
+	.timesync_write_time	= sxe_timesync_write_time,
 
 	.vlan_filter_set	  = sxe_vlan_filter_set,
 	.vlan_tpid_set		= sxe_vlan_tpid_set,
