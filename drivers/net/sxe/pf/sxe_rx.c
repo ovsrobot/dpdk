@@ -23,6 +23,7 @@
 #include "sxe_offload.h"
 #include "sxe_dcb.h"
 #include "sxe_queue_common.h"
+#include "sxe_vf.h"
 #include "sxe_errno.h"
 #include "sxe_irq.h"
 #include "sxe_ethdev.h"

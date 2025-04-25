@@ -43,6 +43,7 @@
 #include "sxe_ptp.h"
 #include "sxe_cli.h"
 #include "drv_msg.h"
+#include "sxe_vf.h"
 #include "sxe_dcb.h"
 #include "sxe_version.h"
 #include "sxe_compat_version.h"
@@ -255,6 +256,12 @@ static s32 sxe_dev_start(struct rte_eth_dev *dev)
 
 	sxe_mac_addr_set(dev, &dev->data->mac_addrs[0]);
 
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	sxe_hw_pf_rst_done_set(hw);
+
+	/* Configure virtualization */
+	sxe_vt_configure(dev);
+#endif
 	sxe_tx_configure(dev);
 
 	ret = sxe_rx_configure(dev);
@@ -296,6 +303,7 @@ static s32 sxe_dev_start(struct rte_eth_dev *dev)
 		goto l_error;
 	}
 
+	sxe_dcb_configure(dev);
 l_end:
 	return ret;
 
@@ -401,6 +409,10 @@ static s32 sxe_dev_close(struct rte_eth_dev *dev)
 		goto l_end;
 	}
 
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	sxe_hw_pf_rst_done_set(hw);
+#endif
+
 #ifdef DPDK_19_11_6
 	sxe_dev_stop(dev);
 #else
@@ -413,6 +425,10 @@ static s32 sxe_dev_close(struct rte_eth_dev *dev)
 
 	sxe_mac_addr_set(dev, &adapter->mac_filter_ctxt.def_mac_addr);
 	sxe_irq_uninit(dev);
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	sxe_vt_uninit(dev);
+#endif
 
 l_end:
 #ifdef DPDK_19_11_6
@@ -760,6 +776,14 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 
 	.set_queue_rate_limit	= sxe_queue_rate_limit_set,
 	.fw_version_get		= sxe_fw_version_get,
+
+#ifdef ETH_DEV_MIRROR_RULE
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	.mirror_rule_set		= sxe_mirror_rule_set,
+	.mirror_rule_reset	  = sxe_mirror_rule_reset,
+#endif
+#endif
+
 #ifdef ETH_DEV_OPS_HAS_DESC_RELATE
 	.rx_queue_count	   = sxe_rx_queue_count,
 	.rx_descriptor_status = sxe_rx_descriptor_status,
@@ -811,6 +835,10 @@ static s32 sxe_hw_base_init(struct rte_eth_dev *eth_dev)
 
 	sxe_hw_fc_base_init(hw);
 
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	sxe_hw_pf_rst_done_set(hw);
+#endif
+
 l_out:
 	if (ret)
 		sxe_hw_hdc_drv_status_set(hw, (u32)false);
@@ -842,7 +870,6 @@ static void sxe_ethdev_mac_mem_free(struct rte_eth_dev *eth_dev)
 		rte_free(adapter->mac_filter_ctxt.uc_addr_table);
 		adapter->mac_filter_ctxt.uc_addr_table = NULL;
 	}
-
 }
 
 #ifdef DPDK_19_11_6
@@ -923,6 +950,10 @@ s32 sxe_ethdev_init(struct rte_eth_dev *eth_dev, void *param __rte_unused)
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 #endif
 
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	sxe_vt_init(eth_dev);
+#endif
 	adapter->mtu = RTE_ETHER_MTU;
 
 	sxe_irq_init(eth_dev);

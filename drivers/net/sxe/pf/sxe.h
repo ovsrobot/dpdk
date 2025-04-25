@@ -15,6 +15,7 @@
 #include "sxe_irq.h"
 #include "sxe_stats.h"
 #include "sxe_phy.h"
+#include "sxe_vf.h"
 #include "sxe_dcb.h"
 #include "sxe_hw.h"
 
@@ -60,8 +61,13 @@ struct sxe_adapter {
 
 	struct sxe_vlan_context vlan_ctxt;
 	struct sxe_mac_filter_context mac_filter_ctxt;
+#ifdef RTE_ADAPTER_HAVE_FNAV_CONF
+	struct rte_eth_fdir_conf fnav_conf;
+#endif
 	struct sxe_ptp_context ptp_ctxt;
 	struct sxe_phy_context phy_ctxt;
+	struct sxe_virtual_context vt_ctxt;
+
 	struct sxe_stats_info stats_info;
 	struct sxe_dcb_context dcb_ctxt;
 

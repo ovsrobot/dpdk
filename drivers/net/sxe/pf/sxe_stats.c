@@ -232,10 +232,9 @@ s32 sxe_xstats_get(struct rte_eth_dev *eth_dev,
 	u8 prio;
 
 	cnt = SXE_XSTAT_CNT;
-	PMD_LOG_INFO(DRV, "xstat size:%u. hw xstat field cnt:%u "
-			"fc xstat field cnt:%u ", cnt,
-			SXE_XSTAT_MAC_CNT,
-			SXE_XSTAT_FC_CNT);
+	PMD_LOG_INFO(DRV, "xstat size:%u. hw xstat field cnt: %" SXE_PRIU64
+			"fc xstat field cnt: %" SXE_PRIU64, cnt,
+			SXE_XSTAT_MAC_CNT, SXE_XSTAT_FC_CNT);
 
 	if (usr_cnt < cnt) {
 		ret = cnt;
@@ -346,7 +345,7 @@ s32 sxe_xstats_names_get(__rte_unused struct rte_eth_dev *dev,
 
 	if (usr_cnt < SXE_XSTAT_CNT) {
 		ret = -SXE_ERR_PARAM;
-		PMD_LOG_ERR(DRV, "max:%u usr_cnt:%u invalid.(err:%d)",
+		PMD_LOG_ERR(DRV, "max: %" SXE_PRIU64 " usr_cnt:%u invalid.(err:%d)",
 				SXE_XSTAT_CNT, usr_cnt, ret);
 		goto l_out;
 	}

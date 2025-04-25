@@ -11,6 +11,8 @@ LIB = librte_pmd_sxe.a
 CFLAGS += -DALLOW_EXPERIMENTAL_API
 CFLAGS += -DSXE_DPDK
 CFLAGS += -DSXE_HOST_DRIVER
+CFLAGS += -DSXE_DPDK_L4_FEATURES
+CFLAGS += -DSXE_DPDK_SRIOV
 CFLAGS += -DSXE_DPDK_SIMD
 CFLAGS += -O3
 CFLAGS += $(WERROR_FLAGS)
@@ -65,6 +67,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_offload_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_queue_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx_common.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_hw.c
 
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_dcb.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_ethdev.c
@@ -80,12 +83,24 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_queue.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_stats.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_vf.c
 
 ifeq ($(CONFIG_RTE_ARCH_ARM64),y)
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_vec_neon.c
 else
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_vec_sse.c
 endif
+
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_main.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_filter.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_msg.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_irq.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_ethdev.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_stats.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_rx.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_tx.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_queue.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxevf_offload.c
 
 # install this header file
 SYMLINK-$(CONFIG_RTE_LIBRTE_SXE_PMD)-include := rte_pmd_sxe.h

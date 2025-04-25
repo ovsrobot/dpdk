@@ -29,6 +29,7 @@
 #include "sxe_queue.h"
 #include "sxe_errno.h"
 #include "sxe_compat_version.h"
+#include "sxe_vf.h"
 
 #define SXE_LINK_DOWN_TIMEOUT 4000
 #define SXE_LINK_UP_TIMEOUT   1000
@@ -169,6 +170,14 @@ static s32 sxe_event_irq_action(struct rte_eth_dev *eth_dev)
 
 	PMD_LOG_DEBUG(DRV, "event irq action type %d", irq->action);
 
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	/* mailbox irq handler */
+	if (irq->action & SXE_IRQ_MAILBOX) {
+		sxe_mbx_irq_handler(eth_dev);
+		irq->action &= ~SXE_IRQ_MAILBOX;
+	}
+#endif
+
 	/* lsc irq handler */
 	if (irq->action & SXE_IRQ_LINK_UPDATE) {
 		sxe_lsc_irq_handler(eth_dev);
@@ -225,6 +234,23 @@ void sxe_irq_init(struct rte_eth_dev *eth_dev)
 				   sxe_event_irq_handler, eth_dev);
 
 	rte_spinlock_init(&adapter->irq_ctxt.event_irq_lock);
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	struct sxe_irq_context *irq = &adapter->irq_ctxt;
+	struct sxe_hw *hw = &adapter->hw;
+	u32 gpie = 0;
+
+	if (irq_handle->type == RTE_INTR_HANDLE_UIO ||
+		irq_handle->type == RTE_INTR_HANDLE_VFIO_MSIX) {
+		gpie = sxe_hw_irq_general_reg_get(hw);
+
+		gpie |= SXE_GPIE_MSIX_MODE | SXE_GPIE_OCD;
+		sxe_hw_irq_general_reg_set(hw, gpie);
+	}
+	rte_intr_enable(irq_handle);
+
+	sxe_hw_specific_irq_enable(hw, irq->enable_mask);
+#endif
 }
 
 static s32 sxe_irq_general_config(struct rte_eth_dev *dev)
