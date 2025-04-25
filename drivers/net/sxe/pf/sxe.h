@@ -46,6 +46,7 @@ struct sxe_adapter {
 
 	struct sxe_irq_context irq_ctxt;
 
+	bool rx_batch_alloc_allowed;
 	s8 name[PCI_PRI_STR_SIZE + 1];
 };
 
