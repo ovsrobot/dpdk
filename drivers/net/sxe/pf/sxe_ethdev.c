@@ -40,6 +40,7 @@
 #include "sxe_pmd_hdc.h"
 #include "sxe_flow_ctrl.h"
 #include "drv_msg.h"
+#include "sxe_dcb.h"
 #include "sxe_version.h"
 #include "sxe_compat_version.h"
 #include <rte_string_fns.h>
@@ -644,6 +645,7 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 
 	.flow_ctrl_get		= sxe_flow_ctrl_get,
 	.flow_ctrl_set		= sxe_flow_ctrl_set,
+	.priority_flow_ctrl_set = sxe_priority_flow_ctrl_set,
 
 	.vlan_filter_set	  = sxe_vlan_filter_set,
 	.vlan_tpid_set		= sxe_vlan_tpid_set,
@@ -657,6 +659,8 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 	.link_update		= sxe_link_update,
 
 	.dev_supported_ptypes_get = sxe_dev_supported_ptypes_get,
+
+	.get_dcb_info		= sxe_get_dcb_info,
 
 	.set_queue_rate_limit	= sxe_queue_rate_limit_set,
 #ifdef ETH_DEV_OPS_HAS_DESC_RELATE
@@ -750,7 +754,7 @@ static void sxe_pf_init(struct sxe_adapter *adapter)
 	memset(&adapter->vlan_ctxt, 0, sizeof(adapter->vlan_ctxt));
 	memset(&adapter->mac_filter_ctxt.uta_hash_table, 0,
 		sizeof(adapter->mac_filter_ctxt.uta_hash_table));
-
+	memset(&adapter->dcb_ctxt.config, 0, sizeof(adapter->dcb_ctxt.config));
 }
 #endif
 
@@ -808,6 +812,8 @@ s32 sxe_ethdev_init(struct rte_eth_dev *eth_dev, void *param __rte_unused)
 		PMD_LOG_ERR(INIT, "hw base init fail.(err:%d)", ret);
 		goto l_out;
 	}
+
+	sxe_dcb_init(eth_dev);
 	adapter->mtu = RTE_ETHER_MTU;
 
 	sxe_irq_init(eth_dev);

@@ -63,6 +63,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_queue_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx_common.c
 
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_dcb.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_ethdev.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_filter.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_flow_ctrl.c
@@ -77,5 +78,6 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx.c
 
 # install this header file
 SYMLINK-$(CONFIG_RTE_LIBRTE_SXE_PMD)-include := rte_pmd_sxe.h
+SYMLINK-$(CONFIG_RTE_LIBRTE_SXE_PMD)-include += sxe_dcb.h
 
 include $(RTE_SDK)/mk/rte.lib.mk

@@ -19,6 +19,7 @@ sources = files(
 	'pf/sxe_tx.c',
         'pf/sxe_pmd_hdc.c',
         'pf/sxe_phy.c',
+        'pf/sxe_dcb.c',
         'base/sxe_queue_common.c',
 	'base/sxe_rx_common.c',
 	'base/sxe_tx_common.c',

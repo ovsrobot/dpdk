@@ -21,6 +21,7 @@
 #include "sxe_hw.h"
 #include "sxe_queue.h"
 #include "sxe_offload.h"
+#include "sxe_dcb.h"
 #include "sxe_queue_common.h"
 #include "sxe_errno.h"
 #include "sxe_irq.h"
