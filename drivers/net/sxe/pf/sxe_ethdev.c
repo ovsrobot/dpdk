@@ -36,6 +36,7 @@
 #include "sxe_offload.h"
 #include "sxe_queue.h"
 #include "sxe_irq.h"
+#include "sxe_stats.h"
 #include "sxe_phy.h"
 #include "sxe_pmd_hdc.h"
 #include "sxe_flow_ctrl.h"
@@ -264,6 +265,7 @@ static s32 sxe_dev_start(struct rte_eth_dev *dev)
 
 	sxe_vlan_filter_configure(dev);
 
+	sxe_queue_stats_map_restore(dev);
 
 	sxe_txrx_start(dev);
 
@@ -641,6 +643,16 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 
 	.set_mc_addr_list	= sxe_set_mc_addr_list,
 
+	.stats_get		= sxe_eth_stats_get,
+	.stats_reset		= sxe_stats_reset,
+
+	.xstats_get		= sxe_xstats_get,
+	.xstats_reset		= sxe_xstats_reset,
+	.xstats_get_by_id	= sxe_xstats_get_by_id,
+	.xstats_get_names	= sxe_xstats_names_get,
+	.xstats_get_names_by_id	= sxe_xstats_names_get_by_id,
+	.queue_stats_mapping_set = sxe_queue_stats_mapping_set,
+
 	.get_module_info	= sxe_get_module_info,
 	.get_module_eeprom	= sxe_get_module_eeprom,
 
@@ -823,6 +835,16 @@ s32 sxe_ethdev_init(struct rte_eth_dev *eth_dev, void *param __rte_unused)
 	}
 
 	sxe_dcb_init(eth_dev);
+
+	/* Reset stats info */
+	sxe_stats_reset(eth_dev);
+
+	sxe_queue_stats_map_reset(eth_dev);
+
+#ifdef SET_AUTOFILL_QUEUE_XSTATS
+	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+#endif
+
 	adapter->mtu = RTE_ETHER_MTU;
 
 	sxe_irq_init(eth_dev);

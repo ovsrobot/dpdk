@@ -75,6 +75,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_pmd_hdc.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_ptp.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_queue.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_stats.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx.c
 
 # install this header file
