@@ -64,9 +64,12 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx_common.c
 
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_ethdev.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_filter.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_flow_ctrl.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_irq.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_main.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_offload.c
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_phy.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_pmd_hdc.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_queue.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx.c

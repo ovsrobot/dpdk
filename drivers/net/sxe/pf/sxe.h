@@ -45,9 +45,27 @@ struct sxe_adapter {
 	struct sxe_hw hw;
 
 	struct sxe_irq_context irq_ctxt;
+	struct sxe_phy_context phy_ctxt;
 
 	bool rx_batch_alloc_allowed;
 	s8 name[PCI_PRI_STR_SIZE + 1];
+
+	u32 mtu;
+
+#if defined DPDK_24_11_1
+	RTE_ATOMIC(bool)link_thread_running;
+	RTE_ATOMIC(bool)is_stopping;
+	rte_thread_t link_thread_tid;
+#elif defined DPDK_23_11_3
+	bool link_thread_running;
+	bool is_stopping;
+	rte_thread_t link_thread_tid;
+#else
+	rte_atomic32_t link_thread_running;
+	rte_atomic32_t is_stopping;
+	pthread_t link_thread_tid;
+#endif
+	bool is_stopped;
 };
 
 s32 sxe_hw_reset(struct sxe_hw *hw);
