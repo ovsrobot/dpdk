@@ -260,6 +260,9 @@ static s32 sxe_dev_start(struct rte_eth_dev *dev)
 		goto l_error;
 	}
 
+	sxe_vlan_filter_configure(dev);
+
+
 	sxe_txrx_start(dev);
 
 	irq->to_pcs_init = true;
@@ -626,6 +629,11 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 	.flow_ctrl_get		= sxe_flow_ctrl_get,
 	.flow_ctrl_set		= sxe_flow_ctrl_set,
 
+	.vlan_filter_set	  = sxe_vlan_filter_set,
+	.vlan_tpid_set		= sxe_vlan_tpid_set,
+	.vlan_offload_set	 = sxe_vlan_offload_set,
+	.vlan_strip_queue_set = sxe_vlan_strip_queue_set,
+
 	.get_reg		= sxe_get_regs,
 
 	.dev_set_link_up	= sxe_dev_set_link_up,
@@ -714,6 +722,14 @@ static void sxe_ethdev_mac_mem_free(struct rte_eth_dev *eth_dev)
 	}
 }
 
+
+#ifdef DPDK_19_11_6
+static void sxe_pf_init(struct sxe_adapter *adapter)
+{
+	memset(&adapter->vlan_ctxt, 0, sizeof(adapter->vlan_ctxt));
+}
+#endif
+
 s32 sxe_ethdev_init(struct rte_eth_dev *eth_dev, void *param __rte_unused)
 {
 	s32 ret = 0;
@@ -761,6 +777,7 @@ s32 sxe_ethdev_init(struct rte_eth_dev *eth_dev, void *param __rte_unused)
 
 #ifdef DPDK_19_11_6
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_CLOSE_REMOVE;
+	sxe_pf_init(adapter);
 #endif
 	ret = sxe_hw_base_init(eth_dev);
 	if (ret) {

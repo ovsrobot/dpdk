@@ -1072,6 +1072,9 @@ static inline void
 			rxq->crc_len = RTE_ETHER_CRC_LEN;
 		else
 			rxq->crc_len = 0;
+
+		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+			rx_conf->offloads |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
 	}
 }
 
@@ -1092,6 +1095,8 @@ static inline void
 	if (dev->data->mtu > RTE_ETHER_MTU)
 		adapter->mtu = dev->data->mtu;
 #endif
+
+	rx_conf->offloads &= ~RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
 
 	if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_SCATTER)
 		dev->data->scattered_rx = 1;
