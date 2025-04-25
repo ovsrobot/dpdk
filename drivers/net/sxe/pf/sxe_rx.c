@@ -26,6 +26,9 @@
 #include "sxe_errno.h"
 #include "sxe_irq.h"
 #include "sxe_ethdev.h"
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+#include "sxe_vec_common.h"
+#endif
 #include "sxe_rx_common.h"
 
 #define SXE_LRO_HDR_SIZE				128

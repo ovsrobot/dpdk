@@ -11,6 +11,7 @@ LIB = librte_pmd_sxe.a
 CFLAGS += -DALLOW_EXPERIMENTAL_API
 CFLAGS += -DSXE_DPDK
 CFLAGS += -DSXE_HOST_DRIVER
+CFLAGS += -DSXE_DPDK_SIMD
 CFLAGS += -O3
 CFLAGS += $(WERROR_FLAGS)
 
@@ -79,6 +80,12 @@ SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_queue.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_rx.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_stats.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_tx.c
+
+ifeq ($(CONFIG_RTE_ARCH_ARM64),y)
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_vec_neon.c
+else
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_vec_sse.c
+endif
 
 # install this header file
 SYMLINK-$(CONFIG_RTE_LIBRTE_SXE_PMD)-include := rte_pmd_sxe.h

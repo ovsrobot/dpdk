@@ -98,6 +98,11 @@ static s32 sxe_dev_configure(struct rte_eth_dev *dev)
 
 	/* Default use batch alloc  */
 	adapter->rx_batch_alloc_allowed = true;
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	adapter->rx_vec_allowed = true;
+#endif
+
 l_end:
 	return ret;
 }

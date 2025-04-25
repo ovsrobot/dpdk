@@ -2,6 +2,9 @@
 # Copyright (C), 2022, Linkdata Technology Co., Ltd.
 cflags += ['-DSXE_DPDK']
 cflags += ['-DSXE_HOST_DRIVER']
+cflags += ['-DSXE_DPDK_L4_FEATURES']
+cflags += ['-DSXE_DPDK_SRIOV']
+cflags += ['-DSXE_DPDK_SIMD']
 
 #subdir('base')
 #objs = [base_objs]
@@ -31,6 +34,12 @@ sources = files(
 )
 
 testpmd_sources = files('sxe_testpmd.c')
+
+if arch_subdir == 'x86'
+	sources += files('pf/sxe_vec_sse.c')
+elif arch_subdir == 'arm'
+	sources += files('pf/sxe_vec_neon.c')
+endif
 
 includes += include_directories('base')
 includes += include_directories('pf')

@@ -66,6 +66,9 @@ struct sxe_adapter {
 	struct sxe_dcb_context dcb_ctxt;
 
 	bool rx_batch_alloc_allowed;
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	bool rx_vec_allowed;
+#endif
 	s8 name[PCI_PRI_STR_SIZE + 1];
 
 	u32 mtu;
