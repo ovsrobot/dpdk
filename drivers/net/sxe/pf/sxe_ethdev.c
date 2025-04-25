@@ -347,6 +347,8 @@ static s32 sxe_dev_stop(struct rte_eth_dev *dev)
 	memset(&link, 0, sizeof(link));
 	rte_eth_linkstatus_set(dev, &link);
 
+	adapter->rss_reta_updated = false;
+
 	dev->data->dev_started = 0;
 	adapter->is_stopped = true;
 
@@ -463,6 +465,11 @@ static s32 sxe_dev_infos_get(struct rte_eth_dev *dev,
 
 	dev_info->rx_desc_lim = sxe_rx_desc_lim;
 	dev_info->tx_desc_lim = sxe_tx_desc_lim;
+
+	dev_info->hash_key_size = SXE_HKEY_MAX_INDEX * sizeof(u32);
+	dev_info->reta_size = RTE_ETH_RSS_RETA_SIZE_128;
+	dev_info->flow_type_rss_offloads = SXE_RSS_OFFLOAD_ALL;
+
 	dev_info->speed_capa = RTE_ETH_LINK_SPEED_1G | RTE_ETH_LINK_SPEED_10G;
 
 	dev_info->default_rxportconf.burst_size = 32;
@@ -621,7 +628,10 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 	.rx_queue_intr_disable	= sxe_rx_queue_intr_disable,
 
 	.mtu_set		= sxe_mtu_set,
-
+	.reta_update		= sxe_rss_reta_update,
+	.reta_query		= sxe_rss_reta_query,
+	.rss_hash_update	= sxe_rss_hash_update,
+	.rss_hash_conf_get	= sxe_rss_hash_conf_get,
 
 	.mac_addr_add		= sxe_mac_addr_add,
 	.mac_addr_remove	= sxe_mac_addr_remove,
