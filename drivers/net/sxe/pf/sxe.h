@@ -49,6 +49,7 @@ struct sxe_adapter {
 	struct sxe_irq_context irq_ctxt;
 
 	struct sxe_vlan_context vlan_ctxt;
+	struct sxe_mac_filter_context mac_filter_ctxt;
 	struct sxe_phy_context phy_ctxt;
 
 	bool rx_batch_alloc_allowed;

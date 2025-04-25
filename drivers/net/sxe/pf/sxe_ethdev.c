@@ -399,6 +399,7 @@ static s32 sxe_dev_close(struct rte_eth_dev *dev)
 
 	sxe_queues_free(dev);
 
+	sxe_mac_addr_set(dev, &adapter->mac_filter_ctxt.def_mac_addr);
 	sxe_irq_uninit(dev);
 
 l_end:
@@ -611,6 +612,11 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 #endif
 #endif
 
+	.promiscuous_enable	= sxe_promiscuous_enable,
+	.promiscuous_disable	= sxe_promiscuous_disable,
+	.allmulticast_enable	= sxe_allmulticast_enable,
+	.allmulticast_disable	= sxe_allmulticast_disable,
+
 	.rx_queue_intr_enable	= sxe_rx_queue_intr_enable,
 	.rx_queue_intr_disable	= sxe_rx_queue_intr_disable,
 
@@ -720,13 +726,21 @@ static void sxe_ethdev_mac_mem_free(struct rte_eth_dev *eth_dev)
 		rte_free(eth_dev->data->hash_mac_addrs);
 		eth_dev->data->hash_mac_addrs = NULL;
 	}
-}
 
+	if (adapter->mac_filter_ctxt.uc_addr_table) {
+		rte_free(adapter->mac_filter_ctxt.uc_addr_table);
+		adapter->mac_filter_ctxt.uc_addr_table = NULL;
+	}
+
+}
 
 #ifdef DPDK_19_11_6
 static void sxe_pf_init(struct sxe_adapter *adapter)
 {
 	memset(&adapter->vlan_ctxt, 0, sizeof(adapter->vlan_ctxt));
+	memset(&adapter->mac_filter_ctxt.uta_hash_table, 0,
+		sizeof(adapter->mac_filter_ctxt.uta_hash_table));
+
 }
 #endif
 
