@@ -41,6 +41,7 @@
 #include "sxe_pmd_hdc.h"
 #include "sxe_flow_ctrl.h"
 #include "sxe_ptp.h"
+#include "sxe_cli.h"
 #include "drv_msg.h"
 #include "sxe_dcb.h"
 #include "sxe_version.h"
@@ -565,6 +566,73 @@ l_end:
 	return ret;
 }
 
+static s32 sxe_led_reset(struct rte_eth_dev *dev)
+{
+	s32 ret;
+	s32 resp;
+	struct sxe_led_ctrl ctrl;
+	struct sxe_adapter *adapter = (struct sxe_adapter *)(dev->data->dev_private);
+	struct sxe_hw *hw = &adapter->hw;
+
+	ctrl.mode = SXE_IDENTIFY_LED_RESET;
+	ctrl.duration = 0;
+
+	ret = sxe_driver_cmd_trans(hw, SXE_CMD_LED_CTRL,
+				(void *)&ctrl, sizeof(ctrl),
+				(void *)&resp, sizeof(resp));
+	if (ret) {
+		LOG_ERROR_BDF("hdc trans failed ret=%d, cmd:led reset", ret);
+		ret = -EIO;
+	} else {
+		LOG_DEBUG_BDF("led reset success");
+	}
+
+	return ret;
+}
+
+static s32 sxe_led_ctrl(struct sxe_adapter *adapter, bool is_on)
+{
+	s32 ret;
+	s32 resp;
+	struct sxe_led_ctrl ctrl;
+	struct sxe_hw *hw = &adapter->hw;
+
+	ctrl.mode = is_on ? SXE_IDENTIFY_LED_ON : SXE_IDENTIFY_LED_OFF;
+	ctrl.duration = 0;
+
+	ret = sxe_driver_cmd_trans(hw, SXE_CMD_LED_CTRL,
+				(void *)&ctrl, sizeof(ctrl),
+				(void *)&resp, sizeof(resp));
+	if (ret) {
+		LOG_ERROR_BDF("hdc trans failed ret=%d, cmd:led ctrl", ret);
+		ret = -EIO;
+	}
+
+	return ret;
+}
+
+static int sxe_led_on(struct rte_eth_dev *dev)
+{
+	int ret;
+
+	struct sxe_adapter *adapter = dev->data->dev_private;
+
+	ret = sxe_led_ctrl(adapter, true);
+
+	return ret;
+}
+
+static int sxe_led_off(struct rte_eth_dev *dev)
+{
+	int ret;
+
+	struct sxe_adapter *adapter = dev->data->dev_private;
+
+	ret = sxe_led_ctrl(adapter, false);
+
+	return ret;
+}
+
 static int sxe_fw_version_get(struct rte_eth_dev *dev, char *fw_version,
 						size_t fw_size)
 {
@@ -677,6 +745,8 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 
 	.dev_set_link_up	= sxe_dev_set_link_up,
 	.dev_set_link_down	= sxe_dev_set_link_down,
+	.dev_led_on		= sxe_led_on,
+	.dev_led_off		= sxe_led_off,
 	.link_update		= sxe_link_update,
 
 	.dev_supported_ptypes_get = sxe_dev_supported_ptypes_get,
@@ -684,6 +754,7 @@ static const struct eth_dev_ops sxe_eth_dev_ops = {
 	.get_dcb_info		= sxe_get_dcb_info,
 
 	.set_queue_rate_limit	= sxe_queue_rate_limit_set,
+	.fw_version_get		= sxe_fw_version_get,
 #ifdef ETH_DEV_OPS_HAS_DESC_RELATE
 	.rx_queue_count	   = sxe_rx_queue_count,
 	.rx_descriptor_status = sxe_rx_descriptor_status,
@@ -833,6 +904,8 @@ s32 sxe_ethdev_init(struct rte_eth_dev *eth_dev, void *param __rte_unused)
 		PMD_LOG_ERR(INIT, "hw base init fail.(err:%d)", ret);
 		goto l_out;
 	}
+
+	sxe_led_reset(eth_dev);
 
 	sxe_dcb_init(eth_dev);
 
