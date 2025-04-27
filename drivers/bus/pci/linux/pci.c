@@ -624,6 +624,8 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv,
 	default:
 		if ((pdrv->drv_flags & RTE_PCI_DRV_NEED_IOVA_AS_VA) != 0)
 			iova_mode = RTE_IOVA_VA;
+		else if (pdrv->get_iova_mode)
+			iova_mode = pdrv->get_iova_mode(pdev);
 		break;
 	}
 	return iova_mode;
