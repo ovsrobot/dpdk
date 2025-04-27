@@ -126,6 +126,16 @@ typedef int (pci_dma_unmap_t)(struct rte_pci_device *dev, void *addr,
 			      uint64_t iova, size_t len);
 
 /**
+ * retrieve the required IOVA mode from the vendor driver
+ *
+ * @param dev
+ *   Pointer to the PCI device.
+ * @return
+ *   - rte_iova_mode
+ */
+typedef int (pci_get_iova_mode)(const struct rte_pci_device *pdev);
+
+/**
  * A structure describing a PCI driver.
  */
 struct rte_pci_driver {
@@ -136,6 +146,7 @@ struct rte_pci_driver {
 	pci_dma_map_t *dma_map;		   /**< device dma map function. */
 	pci_dma_unmap_t *dma_unmap;	   /**< device dma unmap function. */
 	const struct rte_pci_id *id_table; /**< ID table, NULL terminated. */
+	pci_get_iova_mode *get_iova_mode;  /**< Device get iova_mode function */
 	uint32_t drv_flags;                /**< Flags RTE_PCI_DRV_*. */
 };
 

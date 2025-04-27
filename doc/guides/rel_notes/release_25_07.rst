@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added get_iova_mode for rte_pci_driver.**
+
+  Introduce `pci_get_iova_mode` rte_pci_ops for `pci_get_iova_mode`
+  to PCI bus so that PCI drivers could get their wanted iova_mode
+
 
 Removed Items
 -------------
