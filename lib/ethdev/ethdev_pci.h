@@ -16,6 +16,20 @@
 extern "C" {
 #endif
 
+static inline void
+rte_eth_set_dummy_fops(struct rte_eth_dev *eth_dev)
+{
+	eth_dev->rx_pkt_burst = rte_eth_pkt_burst_dummy;
+	eth_dev->tx_pkt_burst = rte_eth_pkt_burst_dummy;
+	eth_dev->tx_pkt_prepare = rte_eth_tx_pkt_prepare_dummy;
+	eth_dev->rx_queue_count = rte_eth_rx_queue_count_dummy;
+	eth_dev->tx_queue_count = rte_eth_tx_queue_count_dummy;
+	eth_dev->rx_descriptor_status = rte_eth_descriptor_status_dummy;
+	eth_dev->tx_descriptor_status = rte_eth_descriptor_status_dummy;
+	eth_dev->recycle_tx_mbufs_reuse = rte_eth_recycle_tx_mbufs_reuse_dummy;
+	eth_dev->recycle_rx_descriptors_refill = rte_eth_recycle_rx_descriptors_refill_dummy;
+}
+
 /**
  * Copy pci device info to the Ethernet device data.
  * Shared memory (eth_dev->data) only updated by primary process, so it is safe
@@ -146,6 +160,11 @@ rte_eth_dev_pci_generic_probe(struct rte_pci_device *pci_dev,
 	eth_dev = rte_eth_dev_pci_allocate(pci_dev, private_data_size);
 	if (!eth_dev)
 		return -ENOMEM;
+
+	/* Update fast path ops with dummy callbacks. Driver will update
+	 * them with required callbacks in the init function.
+	 */
+	rte_eth_set_dummy_fops(eth_dev);
 
 	ret = dev_init(eth_dev);
 	if (ret)

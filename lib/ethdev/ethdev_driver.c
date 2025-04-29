@@ -847,6 +847,53 @@ rte_eth_pkt_burst_dummy(void *queue __rte_unused,
 	return 0;
 }
 
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_tx_pkt_prepare_dummy)
+uint16_t
+rte_eth_tx_pkt_prepare_dummy(void *queue __rte_unused,
+		struct rte_mbuf **pkts __rte_unused,
+		uint16_t nb_pkts)
+{
+	return nb_pkts;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_rx_queue_count_dummy)
+uint32_t
+rte_eth_rx_queue_count_dummy(void *queue __rte_unused)
+{
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_tx_queue_count_dummy)
+int
+rte_eth_tx_queue_count_dummy(void *queue __rte_unused)
+{
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_descriptor_status_dummy)
+int
+rte_eth_descriptor_status_dummy(void *queue __rte_unused,
+		uint16_t offset __rte_unused)
+{
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_recycle_tx_mbufs_reuse_dummy)
+uint16_t
+rte_eth_recycle_tx_mbufs_reuse_dummy(void *queue __rte_unused,
+		struct rte_eth_recycle_rxq_info *recycle_rxq_info __rte_unused)
+{
+	return 0;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_recycle_rx_descriptors_refill_dummy)
+void
+rte_eth_recycle_rx_descriptors_refill_dummy(void *queue __rte_unused,
+		uint16_t nb __rte_unused)
+{
+
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_representor_id_get)
 int
 rte_eth_representor_id_get(uint16_t port_id,

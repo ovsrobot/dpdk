@@ -6399,8 +6399,6 @@ rte_eth_rx_queue_count(uint16_t port_id, uint16_t queue_id)
 		return -EINVAL;
 #endif
 
-	if (p->rx_queue_count == NULL)
-		return -ENOTSUP;
 	return (int)p->rx_queue_count(qd);
 }
 
@@ -6471,8 +6469,6 @@ rte_eth_rx_descriptor_status(uint16_t port_id, uint16_t queue_id,
 	if (qd == NULL)
 		return -ENODEV;
 #endif
-	if (p->rx_descriptor_status == NULL)
-		return -ENOTSUP;
 	return p->rx_descriptor_status(qd, offset);
 }
 
@@ -6542,8 +6538,6 @@ static inline int rte_eth_tx_descriptor_status(uint16_t port_id,
 	if (qd == NULL)
 		return -ENODEV;
 #endif
-	if (p->tx_descriptor_status == NULL)
-		return -ENOTSUP;
 	return p->tx_descriptor_status(qd, offset);
 }
 
@@ -6786,9 +6780,6 @@ rte_eth_tx_prepare(uint16_t port_id, uint16_t queue_id,
 	}
 #endif
 
-	if (!p->tx_pkt_prepare)
-		return nb_pkts;
-
 	return p->tx_pkt_prepare(qd, tx_pkts, nb_pkts);
 }
 
@@ -6985,8 +6976,6 @@ rte_eth_recycle_mbufs(uint16_t rx_port_id, uint16_t rx_queue_id,
 		return 0;
 	}
 #endif
-	if (p1->recycle_tx_mbufs_reuse == NULL)
-		return 0;
 
 #ifdef RTE_ETHDEV_DEBUG_RX
 	if (rx_port_id >= RTE_MAX_ETHPORTS ||
@@ -7010,8 +6999,6 @@ rte_eth_recycle_mbufs(uint16_t rx_port_id, uint16_t rx_queue_id,
 		return 0;
 	}
 #endif
-	if (p2->recycle_rx_descriptors_refill == NULL)
-		return 0;
 
 	/* Copy used *rte_mbuf* buffer pointers from Tx mbuf ring
 	 * into Rx mbuf ring.
@@ -7131,14 +7118,11 @@ rte_eth_tx_queue_count(uint16_t port_id, uint16_t queue_id)
 		goto out;
 	}
 #endif
-	if (fops->tx_queue_count == NULL) {
-		rc = -ENOTSUP;
-		goto out;
-	}
-
 	rc = fops->tx_queue_count(qd);
 
+#ifdef RTE_ETHDEV_DEBUG_TX
 out:
+#endif
 	rte_eth_trace_tx_queue_count(port_id, queue_id, rc);
 	return rc;
 }
