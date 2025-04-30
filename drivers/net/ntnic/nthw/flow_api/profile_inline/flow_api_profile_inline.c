@@ -518,9 +518,7 @@ static void flm_mtr_read_sta_records(struct flow_eth_dev *dev, uint32_t *data, u
 			uint8_t port;
 			bool remote_caller = is_remote_caller(caller_id, &port);
 
-			rte_spinlock_lock(&dev->ndev->mtx);
 			((struct flow_handle *)flm_h.p)->learn_ignored = 1;
-			rte_spinlock_unlock(&dev->ndev->mtx);
 			struct flm_status_event_s data = {
 				.flow = flm_h.p,
 				.learn_ignore = sta_data->lis,
