@@ -19,6 +19,8 @@ enum {
 	OPT_DEV_BLOCK_NUM      = 'b',
 #define OPT_LCORES            "lcores"
 	OPT_LCORES_NUM         = 'l',
+#define OPT_LCORES_AUTOMAP    "lcores-automap"
+	OPT_LCORES_AUTOMAP_NUM = 'L',
 
 	/* first long only option value must be >= 256, so that we won't
 	 * conflict with short options */

@@ -56,6 +56,7 @@ eal_short_options[] =
 	"d:" /* driver */
 	"h"  /* help */
 	"l:" /* corelist */
+	"L:" /* corelist with auto lcore id remapping */
 	"S:" /* service corelist */
 	"m:" /* memory size */
 	"n:" /* memory channels */
@@ -1223,6 +1224,52 @@ err:
 	return ret;
 }
 
+static int
+eal_parse_remapped_lcores(const char *optarg)
+{
+	struct rte_config *cfg = rte_eal_get_configuration();
+	const size_t optarg_len = strlen(optarg);
+	rte_cpuset_t cpuset;
+
+	/* Reset lcore config */
+	for (unsigned int idx = 0; idx < RTE_MAX_LCORE; idx++) {
+		cfg->lcore_role[idx] = ROLE_OFF;
+		lcore_config[idx].core_index = -1;
+		CPU_ZERO(&lcore_config[idx].cpuset);
+	}
+
+	/* the eal_parse_set API only handles "," within (), so wrap string */
+	char *tmp_optarg = malloc(optarg_len + 3);
+	if (tmp_optarg == NULL) {
+		EAL_LOG(ERR, "Error with malloc for temporary optarg string");
+		return -1;
+	}
+	snprintf(tmp_optarg, optarg_len + 3, "(%s)", optarg);
+
+	/* parse wrapped string */
+	int parsed_chars = eal_parse_set(tmp_optarg, &cpuset);
+	free(tmp_optarg);
+	if (parsed_chars == -1 || CPU_COUNT(&cpuset) == 0) {
+		EAL_LOG(ERR, "Invalid corelist for remapping: %s", optarg);
+		return -1;
+	}
+
+	unsigned int lcore_id = 0;
+	unsigned int cpu_id = 0;
+	while (CPU_COUNT(&cpuset) > 0) {
+		if (CPU_ISSET(cpu_id, &cpuset)) {
+			cfg->lcore_role[lcore_id] = ROLE_RTE;
+			lcore_config[lcore_id].core_index = lcore_id;
+			CPU_SET(cpu_id, &lcore_config[lcore_id].cpuset);
+			CPU_CLR(cpu_id, &cpuset);
+			lcore_id++;
+		}
+		cpu_id++;
+	}
+
+	return 0;
+}
+
 static void
 eal_log_usage(void)
 {
@@ -1634,21 +1681,25 @@ eal_parse_common_option(int opt, const char *optarg,
 		break;
 	}
 	/* corelist */
+	case 'L':
 	case 'l': {
 		if (eal_service_cores_parsed())
 			EAL_LOG(WARNING,
 				"Service cores parsed before dataplane cores. Please ensure -l is before -s or -S");
 
-		if (eal_parse_lcores(optarg) < 0) {
-			EAL_LOG(ERR, "invalid parameter for -l/--" OPT_LCORES);
+		int retval = opt == 'l' ?
+			eal_parse_lcores(optarg) :
+			eal_parse_remapped_lcores(optarg);
+		if (retval < 0) {
+			EAL_LOG(ERR, "invalid parameter for lcore list option: '%s'", optarg);
 			return -1;
 		}
 
 		if (core_parsed) {
 			if (core_parsed == LCORE_OPT_LST)
-				EAL_LOG(ERR, "Core list option passed multiple times to EAL");
+				EAL_LOG(ERR, "Multiple core list options passed to EAL");
 			else
-				EAL_LOG(ERR, "Option '-l/--lcores' is ignored, because coremask option used");
+				EAL_LOG(ERR, "Core list option is ignored, because coremask option used");
 			return -1;
 		}
 
@@ -2118,6 +2169,14 @@ eal_common_usage(void)
 	       "                      ',' is used for single number separator.\n"
 	       "                      '( )' can be omitted for single element group,\n"
 	       "                      '@' can be omitted if cpus and lcores have the same value\n"
+	       "  -L, --"OPT_LCORES_AUTOMAP" CORELIST\n"
+	       "                      List of CPUs to run on, using lcore ids starting at 0.\n"
+	       "                      Argument format is as <c1>[-c2][,c3[-c4],...]\n"
+	       "                      One lcore thread will be spawned per cpu id specified,\n"
+	       "                      and pinned to the specified cpu id, but with the lowest\n"
+	       "                      available lcore id.\n"
+	       "                      This provides a convenient way to use CPU cores with ids\n"
+	       "                      greater than RTE_MAX_LCORE value (%d)\n"
 	       "  -s SERVICE COREMASK Hexadecimal bitmask of cores to be used as service cores\n"
 	       "  --"OPT_MAIN_LCORE" ID     Core ID that is used as main\n"
 	       "  --"OPT_MBUF_POOL_OPS_NAME" Pool ops name for mbuf to use\n"
@@ -2191,5 +2250,5 @@ eal_common_usage(void)
 	       "  --"OPT_NO_PCI"            Disable PCI\n"
 	       "  --"OPT_NO_HPET"           Disable HPET\n"
 	       "  --"OPT_NO_SHCONF"         No shared config (mmap'd files)\n"
-	       "\n", RTE_MAX_LCORE);
+	       "\n", RTE_MAX_LCORE, RTE_MAX_LCORE);
 }

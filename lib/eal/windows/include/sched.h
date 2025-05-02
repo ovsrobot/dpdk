@@ -31,6 +31,7 @@ typedef struct _rte_cpuset_s {
 #define RTE_HAS_CPUSET
 
 #define CPU_SET(b, s) ((s)->_bits[_WHICH_SET(b)] |= (1LL << _WHICH_BIT(b)))
+#define CPU_CLR(b, s) ((s)->_bits[_WHICH_SET(b)] &= ~(1LL << _WHICH_BIT(b)))
 
 #define CPU_ZERO(s)							\
 	do {								\

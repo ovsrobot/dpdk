@@ -34,6 +34,7 @@ Lcore-related options
 
     ``--lcores='1@31,2@32,3@33'``: Run threads having internal lcore ids of 1, 2 and 3,
     but with the threads being bound to physical CPUs 31, 32 and 33 respectively.
+    [See also the ``-L/--lcores-automap`` option below.]
 
     ``--lcores='(1-3)@(31-33)'``: Run three threads with lcore ids 1, 2 and 3.
     Unlike the previous example above,
@@ -50,9 +51,20 @@ Lcore-related options
     or deadlock when using DPDK rings or memory pools or spinlocks.
     Such a configuration should only be used with care.
 
+*   ``-L/--lcores-automap <core list>``
+
+    List of CPUs to run on, using lcore ids starting at 0.
+
+    Argument format is as <c1>[-c2][,c3[-c4],...]
+
+    One lcore thread will be spawned per cpu id specified,
+    and pinned to the specified cpu id, but with the lowest available lcore id.
+
+    This provides a convenient way to use CPU cores with ids greater than RTE_MAX_LCORE value.
+
 .. Note::
-    At a given instance only one core option ``--lcores``, ``-l`` or ``-c`` can
-    be used.
+    At a given instance only one core option ``--lcores``, ``-l``,
+    ``--lcores-automap``, ``-L`` or ``-c`` can be used.
 
 *   ``--main-lcore <core ID>``
 
