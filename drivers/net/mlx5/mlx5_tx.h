@@ -1145,7 +1145,7 @@ mlx5_tx_eseg_data(struct mlx5_txq_data *__rte_restrict txq,
 	} else {
 		/* Fill the gap in the title WQEBB with inline data. */
 		rte_mov16(pdst, psrc);
-		psrc += sizeof(rte_v128u32_t);
+		psrc += MLX5_SIZEOF_V128U32_T;
 	}
 	pdst = (uint8_t *)(es + 2);
 	MLX5_ASSERT(inlen >= MLX5_ESEG_MIN_INLINE_SIZE);
