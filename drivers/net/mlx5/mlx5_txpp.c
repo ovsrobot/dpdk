@@ -486,6 +486,20 @@ mlx5_txpp_cq_arm(struct mlx5_dev_ctx_shared *sh)
 }
 
 #if defined(RTE_ARCH_X86_64)
+#ifdef RTE_TOOLCHAIN_MSVC
+static inline int
+mlx5_atomic128_compare_exchange(rte_int128_t *dst,
+				rte_int128_t *exp,
+				const rte_int128_t *src)
+{
+	return (int)_InterlockedCompareExchange128(
+		(int64_t volatile *)dst,
+		src->val[1], /* exchange high */
+		src->val[0], /* exchange low */
+		(int64_t *)exp /* comparand result */
+	);
+}
+#else
 static inline int
 mlx5_atomic128_compare_exchange(rte_int128_t *dst,
 				rte_int128_t *exp,
@@ -509,6 +523,7 @@ mlx5_atomic128_compare_exchange(rte_int128_t *dst,
 
 	return res;
 }
+#endif
 #endif
 
 static inline void
