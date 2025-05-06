@@ -4,6 +4,7 @@
 subdir('include')
 
 sources += files(
+        'asprintf.c',
         'eal.c',
         'eal_alarm.c',
         'eal_debug.c',
