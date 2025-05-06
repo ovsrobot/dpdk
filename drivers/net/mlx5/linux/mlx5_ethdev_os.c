@@ -1253,8 +1253,10 @@ mlx5_get_module_info(struct rte_eth_dev *dev,
 	}
 	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
 	if (ret) {
-		DRV_LOG(WARNING, "port %u ioctl(SIOCETHTOOL) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
+		if (rte_errno != EIO) {
+			DRV_LOG(WARNING, "port %u ioctl(SIOCETHTOOL) failed: %s",
+				dev->data->port_id, strerror(rte_errno));
+		}
 		return ret;
 	}
 	modinfo->type = info.type;
