@@ -171,6 +171,9 @@ rte_eal_hugepage_init(void)
 				    rte_fbarray_is_used(arr, ms_idx - 1))
 					ms_idx++;
 
+				if (ms_idx == (int)arr->len)
+					continue;
+
 				break;
 			}
 			if (msl_idx == RTE_MAX_MEMSEG_LISTS) {
