@@ -9,6 +9,8 @@ __FBSDID("$FreeBSD$");
 #include <sys/bio.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
+#include <sys/ctype.h>
+#include <sys/domainset.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
@@ -53,6 +55,12 @@ static int              contigmem_num_buffers = RTE_CONTIGMEM_DEFAULT_NUM_BUFS;
 static int64_t          contigmem_buffer_size = RTE_CONTIGMEM_DEFAULT_BUF_SIZE;
 static bool             contigmem_coredump_enable;
 
+static char		contigmem_domainstr[DOMAINSET_SETSIZE * 2];
+static struct domainset contigmem_domainset = {
+	.ds_policy = DOMAINSET_POLICY_INTERLEAVE,
+	.ds_prefer = -1,
+};
+
 static eventhandler_tag contigmem_eh_tag;
 static struct contigmem_buffer contigmem_buffers[RTE_CONTIGMEM_MAX_NUM_BUFS];
 static struct cdev     *contigmem_cdev = NULL;
@@ -61,6 +69,8 @@ static int              contigmem_refcnt;
 TUNABLE_INT("hw.contigmem.num_buffers", &contigmem_num_buffers);
 TUNABLE_QUAD("hw.contigmem.buffer_size", &contigmem_buffer_size);
 TUNABLE_BOOL("hw.contigmem.coredump_enable", &contigmem_coredump_enable);
+TUNABLE_STR("hw.contigmem.domains", contigmem_domainstr,
+	sizeof(contigmem_domainstr));
 
 static SYSCTL_NODE(_hw, OID_AUTO, contigmem, CTLFLAG_RD, 0, "contigmem");
 
@@ -75,6 +85,8 @@ SYSCTL_BOOL(_hw_contigmem, OID_AUTO, coredump_enable, CTLFLAG_RD,
 
 static SYSCTL_NODE(_hw_contigmem, OID_AUTO, physaddr, CTLFLAG_RD, 0,
 	"physaddr");
+static SYSCTL_NODE(_hw_contigmem, OID_AUTO, domain, CTLFLAG_RD, 0,
+	"domain");
 
 MALLOC_DEFINE(M_CONTIGMEM, "contigmem", "contigmem(4) allocations");
 
@@ -114,9 +126,50 @@ static struct cdevsw contigmem_ops = {
 	.d_close        = contigmem_close,
 };
 
+static void
+contigmem_domains_parse(void)
+{
+	domainid_t did;
+	char *dstr;
+
+	int i = 0;
+	char name[12];
+
+	/*
+	 * If hw.contigmem.domains is not set, then evenly
+	 * distribute memory across all domains.
+	 */
+	if (*contigmem_domainstr == '\0') {
+		DOMAINSET_COPY(&all_domains, &contigmem_domainset.ds_mask);
+		return;
+	}
+
+	dstr = contigmem_domainstr;
+	while (*dstr != '\0') {
+		if (!isdigit(*dstr)) {
+			++dstr;
+			continue;
+		}
+		did = strtoul(dstr, &dstr, 0);
+		DOMAINSET_SET(did, &contigmem_domainset.ds_mask);
+
+		snprintf(name, sizeof(name), "%d", i++);
+		/* We should be adding ds_mask as a bitset. */
+		SYSCTL_ADD_INT(NULL,
+			&SYSCTL_NODE_CHILDREN(_hw_contigmem, domain), OID_AUTO,
+			name, CTLTYPE_INT | CTLFLAG_RD, SYSCTL_NULL_INT_PTR,
+			did, "Contiguous memory NUMA domain");
+	}
+	SYSCTL_ADD_INT(NULL,
+		&SYSCTL_NODE_CHILDREN(_hw, contigmem), OID_AUTO,
+		"num_domains", CTLTYPE_INT | CTLFLAG_RD, SYSCTL_NULL_INT_PTR,
+		i, "Number of contiguous memory NUMA domains");
+}
+
 static int
 contigmem_load(void)
 {
+	struct domainset *ds;
 	char index_string[8], description[32];
 	int  i, error = 0;
 	void *addr;
@@ -136,9 +189,18 @@ contigmem_load(void)
 		goto error;
 	}
 
+	contigmem_domains_parse();
+	ds = domainset_create(&contigmem_domainset);
+	if (ds == NULL) {
+		printf("invalid domain string: %s\n", contigmem_domainstr);
+		error = EINVAL;
+		goto error;
+	}
+
 	for (i = 0; i < contigmem_num_buffers; i++) {
-		addr = contigmalloc(contigmem_buffer_size, M_CONTIGMEM, M_ZERO,
-			0, BUS_SPACE_MAXADDR, contigmem_buffer_size, 0);
+		addr = contigmalloc_domainset(contigmem_buffer_size,
+			M_CONTIGMEM, ds, M_ZERO, 0, BUS_SPACE_MAXADDR,
+			contigmem_buffer_size, 0);
 		if (addr == NULL) {
 			printf("contigmalloc failed for buffer %d\n", i);
 			error = ENOMEM;
