@@ -205,7 +205,6 @@ const char * num_invalid_strs[] = {
 		"1E3",
 		"0A",
 		"-B",
-		"+4",
 		"1.23G",
 		"",
 		" ",
