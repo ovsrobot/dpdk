@@ -22,6 +22,7 @@ The DPDK command-line library supports the following features:
 
    * Strings
    * Signed/unsigned 16/32/64-bit integers
+   * Single/double precision floats
    * IP Addresses
    * Ethernet Addresses
 
@@ -67,6 +68,8 @@ The format of the list file must be:
   * ``<STRING>message``
 
   * ``<UINT16>port_id``
+
+  * ``<FLOAT_SINGLE>ratio``
 
   * ``<IP>src_ip``
 
