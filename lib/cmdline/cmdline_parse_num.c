@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <float.h>
+#include <math.h>
 #include <string.h>
 #include <eal_export.h>
 #include <rte_string_fns.h>
@@ -34,6 +36,7 @@ struct cmdline_token_ops cmdline_token_num_ops = {
 static const char * num_help[] = {
 	"UINT8", "UINT16", "UINT32", "UINT64",
 	"INT8", "INT16", "INT32", "INT64",
+	"FLOAT_SINGLE", "FLOAT_DOUBLE"
 };
 
 static inline int
@@ -69,6 +72,14 @@ check_res_size(struct cmdline_token_num_data *nd, unsigned ressize)
 	case RTE_INT64:
 	case RTE_UINT64:
 		if (ressize < sizeof(int64_t))
+			return -1;
+		break;
+	case RTE_FLOAT_SINGLE:
+		if (ressize < sizeof(float))
+			return -1;
+		break;
+	case RTE_FLOAT_DOUBLE:
+		if (ressize < sizeof(double))
 			return -1;
 		break;
 	default:
@@ -216,7 +227,7 @@ parse_bin(const char *srcbuf, uint64_t *res)
 	return buf - srcbuf;
 }
 
-/* parse an int */
+/* parse a number */
 RTE_EXPORT_SYMBOL(cmdline_parse_num)
 int
 cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
@@ -237,7 +248,7 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 		if (check_res_size(&nd, ressize) < 0)
 			return -1;
 	}
-
+	/* integer parsing */
 	if (nd.type >= RTE_UINT8 && nd.type <= RTE_INT64) {
 		int ret, neg = *srcbuf == '-';
 		uint64_t uintres;
@@ -291,6 +302,25 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 			return -1;
 		}
 		return ret;
+	/* float parsing */
+	} else if (nd.type >= RTE_FLOAT_SINGLE && nd.type <= RTE_FLOAT_DOUBLE) {
+		char *end;
+		double dres = strtod(srcbuf, &end);
+
+		if (end == srcbuf || !cmdline_isendoftoken(*end) || isinf(dres))
+			return -1;
+
+		/* we parsed something, now let's ensure it fits */
+		if (nd.type == RTE_FLOAT_SINGLE) {
+			float flt = (float)dres;
+			if (isinf(flt))
+				return -1;
+			if (res) *(float *)res = flt;
+			return end-srcbuf;
+		} else if (nd.type == RTE_FLOAT_DOUBLE) {
+			if (res) *(double *)res = dres;
+			return end-srcbuf;
+		}
 	}
 	return -1;
 }

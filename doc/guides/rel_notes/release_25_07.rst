@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added floating point numbers support to cmdline library.**
+
+  The cmdline library now supports parsing single- and double-precision
+  floating point numbers in interactive user commands.
+
 
 Removed Items
 -------------
