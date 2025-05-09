@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <float.h>
+#include <math.h>
 #include <string.h>
 #include <eal_export.h>
 #include <rte_string_fns.h>
@@ -34,6 +36,7 @@ struct cmdline_token_ops cmdline_token_num_ops = {
 static const char * num_help[] = {
 	"UINT8", "UINT16", "UINT32", "UINT64",
 	"INT8", "INT16", "INT32", "INT64",
+	"FLOAT_SINGLE", "FLOAT_DOUBLE"
 };
 
 static inline int
@@ -71,6 +74,14 @@ check_res_size(struct cmdline_token_num_data *nd, unsigned ressize)
 		if (ressize < sizeof(int64_t))
 			return -1;
 		break;
+	case RTE_FLOAT_SINGLE:
+		if (ressize < sizeof(float))
+			return -1;
+		break;
+	case RTE_FLOAT_DOUBLE:
+		if (ressize < sizeof(double))
+			return -1;
+		break;
 	default:
 		debug_printf("Wrong number type: %d\n", nd->type);
 		return -1;
@@ -81,7 +92,7 @@ check_res_size(struct cmdline_token_num_data *nd, unsigned ressize)
 static int
 validate_type(enum cmdline_numtype type)
 {
-	if (type < RTE_UINT8 || type > RTE_INT64)
+	if (type < RTE_UINT8 || type > RTE_FLOAT_DOUBLE)
 		return -1;
 	/* ensure no buffer overrun can occur */
 	if ((uint64_t) type >= RTE_DIM(num_help))
@@ -159,6 +170,26 @@ parse_num(const char *srcbuf, uint64_t *resptr)
 		return -1;
 
 	*resptr = uintres;
+	return end - srcbuf;
+}
+
+static int
+parse_float(const char *srcbuf, enum cmdline_numtype type, double *resptr)
+{
+	double dres;
+	char *end;
+
+	if (type == RTE_FLOAT_SINGLE)
+		dres = (double)strtof(srcbuf, &end);
+	else if (type == RTE_FLOAT_DOUBLE)
+		dres = strtod(srcbuf, &end);
+	else
+		return -1;
+
+	if (end == srcbuf || !cmdline_isendoftoken(*end) || isinf(dres))
+		return -1;
+
+	*resptr = dres;
 	return end - srcbuf;
 }
 
@@ -286,7 +317,24 @@ write_num(enum cmdline_numtype type, void *res, uint64_t uintres)
 	return 0;
 }
 
-/* parse an int */
+static int
+write_float(enum cmdline_numtype type, void *res, double dres)
+{
+	switch (type) {
+	case RTE_FLOAT_SINGLE:
+		*(float *)res = (float)dres;
+		break;
+	case RTE_FLOAT_DOUBLE:
+		*(double *)res = dres;
+		break;
+	default:
+		debug_printf("Wrong float type\n");
+		return -1;
+	}
+	return 0;
+}
+
+/* parse a number */
 RTE_EXPORT_SYMBOL(cmdline_parse_num)
 int
 cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
@@ -309,6 +357,7 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 	if (res && check_res_size(&nd, ressize) < 0)
 		return -1;
 
+	/* integer parsing */
 	if (nd.type >= RTE_UINT8 && nd.type <= RTE_INT64) {
 		int ret, neg = *srcbuf == '-';
 		uint64_t uintres;
@@ -328,6 +377,21 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 
 		/* parsing succeeded, write the value if necessary */
 		if (res && write_num(nd.type, res, uintres) < 0)
+			return -1;
+
+		return ret;
+	/* float parsing */
+	} else if (nd.type >= RTE_FLOAT_SINGLE && nd.type <= RTE_FLOAT_DOUBLE) {
+		double dres;
+		int ret;
+
+		/* try parsing as float */
+		ret = parse_float(srcbuf, nd.type, &dres);
+		if (ret < 0)
+			return -1;
+
+		/* parsing succeeded, write the value if necessary */
+		if (res && write_float(nd.type, res, dres))
 			return -1;
 
 		return ret;

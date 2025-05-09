@@ -17,16 +17,18 @@ PARSE_FN_BODY = """
     RTE_SET_USED(cl);
     RTE_SET_USED(data);
 """
-NUMERIC_TYPES = [
-    "UINT8",
-    "UINT16",
-    "UINT32",
-    "UINT64",
-    "INT8",
-    "INT16",
-    "INT32",
-    "INT64",
-]
+NUMERIC_TYPES = {
+    "UINT8": "uint8_t",
+    "UINT16": "uint16_t",
+    "UINT32": "uint32_t",
+    "UINT64": "uint64_t",
+    "INT8": "int8_t",
+    "INT16": "int16_t",
+    "INT32": "int32_t",
+    "INT64": "int64_t",
+    "FLOAT_SINGLE": "float",
+    "FLOAT_DOUBLE": "double",
+}
 
 
 def process_command(lineno, tokens, comment):
@@ -70,7 +72,7 @@ def process_command(lineno, tokens, comment):
                 f"\tTOKEN_STRING_INITIALIZER(struct cmd_{name}_result, {t_name}, {t_val});"
             )
         elif t_type in NUMERIC_TYPES:
-            result_struct.append(f"\t{t_type.lower()}_t {t_name};")
+            result_struct.append(f"\t{NUMERIC_TYPES[t_type]} {t_name};")
             initializers.append(
                 f"static cmdline_parse_token_num_t cmd_{name}_{t_name}_tok =\n"
                 f"\tTOKEN_NUM_INITIALIZER(struct cmd_{name}_result, {t_name}, RTE_{t_type});"
