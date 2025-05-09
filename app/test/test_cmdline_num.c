@@ -139,6 +139,9 @@ const struct num_signed_str num_valid_negative_strs[] = {
 		{"-2147483648", INT32_MIN },
 		{"-2147483649", INT32_MIN - 1LL },
 		{"-9223372036854775808", INT64_MIN },
+		{"-0x8000000000000000", INT64_MIN },
+		{"-01000000000000000000000", INT64_MIN },
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000", INT64_MIN },
 };
 
 const struct num_unsigned_str num_garbage_positive_strs[] = {
@@ -175,12 +178,40 @@ const struct num_unsigned_str num_garbage_positive_strs[] = {
 
 const struct num_signed_str num_garbage_negative_strs[] = {
 		/* valid strings with garbage on the end, should still be valid */
+		/* negative numbers */
 		{"-9223372036854775808\0garbage", INT64_MIN },
 		{"-9223372036854775808\rgarbage", INT64_MIN },
 		{"-9223372036854775808\tgarbage", INT64_MIN },
 		{"-9223372036854775808\ngarbage", INT64_MIN },
 		{"-9223372036854775808#garbage", INT64_MIN },
 		{"-9223372036854775808 garbage", INT64_MIN },
+		/* negative hex */
+		{"-0x8000000000000000\0garbage", INT64_MIN },
+		{"-0x8000000000000000\rgarbage", INT64_MIN },
+		{"-0x8000000000000000\tgarbage", INT64_MIN },
+		{"-0x8000000000000000\ngarbage", INT64_MIN },
+		{"-0x8000000000000000#garbage", INT64_MIN },
+		{"-0x8000000000000000 garbage", INT64_MIN },
+		/* negative binary */
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000\0garbage",
+			INT64_MIN },
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000\rgarbage",
+			INT64_MIN },
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000\tgarbage",
+			INT64_MIN },
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000\ngarbage",
+			INT64_MIN },
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000#garbage",
+			INT64_MIN },
+		{"-0b1000000000000000000000000000000000000000000000000000000000000000 garbage",
+			INT64_MIN },
+		/* negative octal */
+		{"-01000000000000000000000\0garbage", INT64_MIN },
+		{"-01000000000000000000000\rgarbage", INT64_MIN },
+		{"-01000000000000000000000\tgarbage", INT64_MIN },
+		{"-01000000000000000000000\ngarbage", INT64_MIN },
+		{"-01000000000000000000000#garbage", INT64_MIN },
+		{"-01000000000000000000000 garbage", INT64_MIN },
 };
 
 const char * num_invalid_strs[] = {
@@ -197,15 +228,12 @@ const char * num_invalid_strs[] = {
 		"0b01110101017001",
 		/* false negative numbers */
 		"-12345F623",
-		"-0x1234580A",
-		"-0b0111010101",
 		/* too long (128+ chars) */
 		("0b1111000011110000111100001111000011110000111100001111000011110000"
 		  "1111000011110000111100001111000011110000111100001111000011110000"),
 		"1E3",
 		"0A",
 		"-B",
-		"+4",
 		"1.23G",
 		"",
 		" ",
