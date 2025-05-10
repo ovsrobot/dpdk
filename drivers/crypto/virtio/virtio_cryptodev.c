@@ -1459,27 +1459,37 @@ tlv_encode(uint8_t *tlv, uint8_t type, uint8_t *data, size_t len)
 {
 	uint8_t *lenval = tlv;
 	size_t lenval_n = 0;
+	size_t dlen = len;
+	uint8_t off = 0;
+
+	if (data != NULL && data[0] & 0x80) {
+		dlen += 1;
+		off = 1;
+	}
 
 	if (len > 65535) {
 		goto _exit;
 	} else if (len > 255) {
-		lenval_n = 4 + len;
+		lenval_n = 4 + dlen;
 		lenval[0] = type;
 		lenval[1] = 0x82;
-		lenval[2] = (len & 0xFF00) >> 8;
-		lenval[3] = (len & 0xFF);
-		rte_memcpy(&lenval[4], data, len);
+		lenval[2] = (dlen & 0xFF00) >> 8;
+		lenval[3] = (dlen & 0xFF);
+		lenval += (4 + off);
+		rte_memcpy(lenval, data, len);
 	} else if (len > 127) {
-		lenval_n = 3 + len;
+		lenval_n = 3 + dlen;
 		lenval[0] = type;
 		lenval[1] = 0x81;
-		lenval[2] = len;
-		rte_memcpy(&lenval[3], data, len);
+		lenval[2] = dlen;
+		lenval += (3 + off);
+		rte_memcpy(lenval, data, len);
 	} else {
-		lenval_n = 2 + len;
+		lenval_n = 2 + dlen;
 		lenval[0] = type;
-		lenval[1] = len;
-		rte_memcpy(&lenval[2], data, len);
+		lenval[1] = dlen;
+		lenval += (2 + off);
+		rte_memcpy(lenval, data, len);
 	}
 
 _exit:
