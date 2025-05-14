@@ -28,7 +28,9 @@ typedef uint64_t large_int_ptr;
 #define QAT_ASYM_RSA_NUM_OUT_PARAMS		1
 #define QAT_ASYM_RSA_QT_NUM_IN_PARAMS		6
 #define QAT_ASYM_ECDSA_RS_SIGN_IN_PARAMS	1
+#define QAT_ASYM_ECDSA_RS_SIGN_IN_PARAMS_NO	9
 #define QAT_ASYM_ECDSA_RS_SIGN_OUT_PARAMS	2
+#define QAT_ASYM_ECDSA_RS_VERIFY_IN_PARAMS_NO	10
 #define QAT_ASYM_ECDSA_RS_VERIFY_IN_PARAMS	1
 #define QAT_ASYM_ECDSA_RS_VERIFY_OUT_PARAMS	0
 #define QAT_ASYM_ECPM_IN_PARAMS			7
@@ -69,6 +71,17 @@ struct __rte_aligned(8) qat_asym_op_cookie {
 		uint8_t input_buffer[MAX_PKE_PARAMS * QAT_PKE_MAX_LN_SIZE];
 	};
 	alignas(8) uint8_t output_array[MAX_PKE_PARAMS][QAT_PKE_MAX_LN_SIZE];
+	struct {
+		uint16_t bytes;
+		struct {
+			uint16_t offset;
+			uint16_t length;
+		} info_in [MAX_PKE_PARAMS];
+		struct {
+			uint16_t length;
+		} info_out [MAX_PKE_PARAMS];
+		int curve_id;
+	} cache;
 };
 
 struct qat_asym_session {

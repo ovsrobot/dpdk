@@ -79,15 +79,23 @@ static const struct rte_driver cryptodev_qat_asym_driver = {
 	} while (0)
 
 #define SET_PKE_LN(what, how, idx) \
-	rte_memcpy(cookie->input_array[idx] + how - \
-		what.length, \
-		what.data, \
-		what.length)
+	do { \
+		rte_memcpy(cookie->input_array[idx] + how - \
+			what.length, \
+			what.data, \
+			what.length);	\
+		cookie->cache.info_in[idx].length = what.length; \
+		cookie->cache.info_in[idx].offset = how - what.length; \
+	} while (0)
 
 #define SET_PKE_LN_EC(curve, p, idx) \
-	rte_memcpy(cookie->input_array[idx] + \
-		qat_func_alignsize - curve.bytesize, \
-		curve.p.data, curve.bytesize)
+	do { \
+		rte_memcpy(cookie->input_array[idx] + \
+			qat_func_alignsize - curve.bytesize, \
+			curve.p.data, curve.bytesize); \
+		cookie->cache.info_in[idx].length = curve.bytesize; \
+		cookie->cache.info_in[idx].offset = qat_func_alignsize - curve.bytesize; \
+	} while (0)
 
 #define SET_PKE_9A_IN(what, idx) \
 	rte_memcpy(&cookie->input_buffer[idx * \
@@ -118,54 +126,35 @@ request_init(struct icp_qat_fw_pke_request *qat_req)
 }
 
 static void
-cleanup_arrays(struct qat_asym_op_cookie *cookie,
-		int in_count, int out_count, int alg_size)
-{
-	int i;
-
-	for (i = 0; i < in_count; i++)
-		memset(cookie->input_array[i], 0x0, alg_size);
-	for (i = 0; i < out_count; i++)
-		memset(cookie->output_array[i], 0x0, alg_size);
-}
-
-static void
-cleanup_crt(struct qat_asym_op_cookie *cookie,
-		int alg_size)
-{
-	int i;
-
-	memset(cookie->input_array[0], 0x0, alg_size);
-	for (i = 1; i < QAT_ASYM_RSA_QT_NUM_IN_PARAMS; i++)
-		memset(cookie->input_array[i], 0x0, alg_size / 2);
-	for (i = 0; i < QAT_ASYM_RSA_NUM_OUT_PARAMS; i++)
-		memset(cookie->output_array[i], 0x0, alg_size);
-}
-
-static void
 cleanup(struct qat_asym_op_cookie *cookie,
-		const struct rte_crypto_asym_xform *xform)
+	const struct rte_crypto_asym_xform __rte_unused *xform)
 {
-	if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODEX)
-		cleanup_arrays(cookie, QAT_ASYM_MODEXP_NUM_IN_PARAMS,
-				QAT_ASYM_MODEXP_NUM_OUT_PARAMS,
-				cookie->alg_bytesize);
-	else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODINV)
-		cleanup_arrays(cookie, QAT_ASYM_MODINV_NUM_IN_PARAMS,
-				QAT_ASYM_MODINV_NUM_OUT_PARAMS,
-				cookie->alg_bytesize);
-	else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_RSA) {
-		if (xform->rsa.key_type == RTE_RSA_KEY_TYPE_QT)
-			cleanup_crt(cookie, cookie->alg_bytesize);
-		else {
-			cleanup_arrays(cookie, QAT_ASYM_RSA_NUM_IN_PARAMS,
-				QAT_ASYM_RSA_NUM_OUT_PARAMS,
-				cookie->alg_bytesize);
-		}
-	} else {
-		cleanup_arrays(cookie, QAT_ASYM_MAX_PARAMS,
-				QAT_ASYM_MAX_PARAMS,
-				QAT_PKE_MAX_LN_SIZE);
+	int i;
+
+	cookie->cache.curve_id = 0;
+	if (cookie->cache.bytes) {
+		memset(&cookie->input_buffer[0], 0, cookie->cache.bytes);
+		cookie->cache.bytes = 0;
+		return;
+	}
+
+	for (i = 0; i < MAX_PKE_PARAMS; i++) {
+		const uint16_t offset = cookie->cache.info_in[i].offset;
+		const uint16_t length = cookie->cache.info_in[i].length;
+
+		if (length == 0)
+			break;
+		memset(&cookie->input_array[i][offset], 0, length);
+		cookie->cache.info_in[i].length = 0;
+		cookie->cache.info_in[i].offset = 0;
+	}
+	for (i = 0; i < MAX_PKE_PARAMS; i++) {
+		const uint16_t length = cookie->cache.info_out[i].length;
+
+		if (length == 0)
+			break;
+		memset(&cookie->output_array[i], 0, length);
+		cookie->cache.info_out[i].length = 0;
 	}
 }
 
@@ -263,7 +252,7 @@ modexp_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 modexp_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie,
+		struct qat_asym_op_cookie *cookie,
 		const struct rte_crypto_asym_xform *xform)
 {
 	rte_crypto_param n = xform->modex.modulus;
@@ -277,6 +266,7 @@ modexp_collect(struct rte_crypto_asym_op *asym_op,
 	rte_memcpy(modexp_result,
 		cookie->output_array[0] + alg_bytesize
 		- n.length, n.length);
+	cookie->cache.info_out[0].length = alg_bytesize;
 	asym_op->modex.result.length = alg_bytesize;
 	HEXDUMP("ModExp result", cookie->output_array[0],
 			alg_bytesize);
@@ -324,7 +314,7 @@ modinv_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 modinv_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie,
+		struct qat_asym_op_cookie *cookie,
 		const struct rte_crypto_asym_xform *xform)
 {
 	rte_crypto_param n = xform->modinv.modulus;
@@ -340,6 +330,7 @@ modinv_collect(struct rte_crypto_asym_op *asym_op,
 		cookie->output_array[0] + alg_bytesize
 		- n.length, n.length);
 	asym_op->modinv.result.length = alg_bytesize;
+	cookie->cache.info_out[0].length = alg_bytesize;
 	HEXDUMP("ModInv result", cookie->output_array[0],
 			alg_bytesize);
 	return RTE_CRYPTO_OP_STATUS_SUCCESS;
@@ -391,6 +382,9 @@ rsa_set_pub_input(struct icp_qat_fw_pke_request *qat_req,
 
 	SET_PKE_LN(xform->rsa.e, alg_bytesize, 1);
 	SET_PKE_LN(xform->rsa.n, alg_bytesize, 2);
+	cookie->cache.info_out[0].length = alg_bytesize;
+	cookie->cache.info_out[1].length = alg_bytesize;
+	cookie->cache.info_out[2].length = alg_bytesize;
 
 	cookie->alg_bytesize = alg_bytesize;
 	qat_req->pke_hdr.cd_pars.func_id = func_id;
@@ -516,7 +510,7 @@ rsa_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 rsa_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie,
+		struct qat_asym_op_cookie *cookie,
 		const struct rte_crypto_asym_xform *xform)
 {
 	uint32_t alg_bytesize = cookie->alg_bytesize;
@@ -572,7 +566,8 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 			HEXDUMP("RSA Signature", cookie->output_array[0],
 				alg_bytesize);
 		}
-	}
+	}	
+	cookie->cache.info_out[0].length = alg_bytesize;
 	return RTE_CRYPTO_OP_STATUS_SUCCESS;
 }
 
@@ -612,6 +607,9 @@ ecdsa_set_input(struct icp_qat_fw_pke_request *qat_req,
 		SET_PKE_9A_EC(curve[curve_id], n, 6);
 		SET_PKE_9A_EC(curve[curve_id], y, 7);
 		SET_PKE_9A_EC(curve[curve_id], x, 8);
+		cookie->cache.bytes = QAT_ASYM_ECDSA_RS_SIGN_IN_PARAMS_NO *
+			qat_func_alignsize;
+		cookie->cache.curve_id = curve_id;
 
 		cookie->alg_bytesize = curve[curve_id].bytesize;
 		cookie->qat_func_alignsize = qat_func_alignsize;
@@ -650,6 +648,9 @@ ecdsa_set_input(struct icp_qat_fw_pke_request *qat_req,
 		SET_PKE_9A_EC(curve[curve_id], a, 2);
 		SET_PKE_9A_EC(curve[curve_id], b, 1);
 		SET_PKE_9A_EC(curve[curve_id], p, 0);
+		cookie->cache.bytes = QAT_ASYM_ECDSA_RS_VERIFY_IN_PARAMS_NO *
+			qat_func_alignsize;
+		cookie->cache.curve_id = curve_id;
 
 		cookie->alg_bytesize = curve[curve_id].bytesize;
 		cookie->qat_func_alignsize = qat_func_alignsize;
@@ -680,7 +681,7 @@ ecdsa_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 ecdsa_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie)
+		struct qat_asym_op_cookie *cookie)
 {
 	uint32_t alg_bytesize = cookie->alg_bytesize;
 	uint32_t qat_func_alignsize = cookie->qat_func_alignsize;
@@ -700,6 +701,8 @@ ecdsa_collect(struct rte_crypto_asym_op *asym_op,
 		HEXDUMP("S", cookie->output_array[1],
 			qat_func_alignsize);
 	}
+	cookie->cache.info_out[0].length = alg_bytesize;
+	cookie->cache.info_out[1].length = alg_bytesize;
 	return RTE_CRYPTO_OP_STATUS_SUCCESS;
 }
 
@@ -734,6 +737,7 @@ ecpm_set_input(struct icp_qat_fw_pke_request *qat_req,
 	SET_PKE_LN_EC(curve[curve_id], b, 4);
 	SET_PKE_LN_EC(curve[curve_id], p, 5);
 	SET_PKE_LN_EC(curve[curve_id], h, 6);
+	cookie->cache.curve_id = curve_id;
 
 	cookie->alg_bytesize = curve[curve_id].bytesize;
 	cookie->qat_func_alignsize = qat_func_alignsize;
@@ -756,7 +760,7 @@ ecpm_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 ecpm_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie)
+		struct qat_asym_op_cookie *cookie)
 {
 	uint8_t *x = asym_op->ecpm.r.x.data;
 	uint8_t *y = asym_op->ecpm.r.y.data;
@@ -768,6 +772,8 @@ ecpm_collect(struct rte_crypto_asym_op *asym_op,
 	asym_op->ecpm.r.y.length = alg_bytesize;
 	rte_memcpy(x, &cookie->output_array[0][ltrim], alg_bytesize);
 	rte_memcpy(y, &cookie->output_array[1][ltrim], alg_bytesize);
+	cookie->cache.info_out[0].length = alg_bytesize;
+	cookie->cache.info_out[1].length = alg_bytesize;
 
 	HEXDUMP("rX", cookie->output_array[0],
 		qat_func_alignsize);
@@ -813,6 +819,7 @@ ecdh_set_input(struct icp_qat_fw_pke_request *qat_req,
 	SET_PKE_LN_EC(curve[curve_id], b, 4);
 	SET_PKE_LN_EC(curve[curve_id], p, 5);
 	SET_PKE_LN_EC(curve[curve_id], h, 6);
+	cookie->cache.curve_id = curve_id;
 
 	cookie->alg_bytesize = curve[curve_id].bytesize;
 	cookie->qat_func_alignsize = qat_func_alignsize;
@@ -882,7 +889,7 @@ ecdh_verify_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 ecdh_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie)
+		struct qat_asym_op_cookie *cookie)
 {
 	uint8_t *x, *y;
 	uint32_t alg_bytesize = cookie->alg_bytesize;
@@ -906,6 +913,8 @@ ecdh_collect(struct rte_crypto_asym_op *asym_op,
 
 	rte_memcpy(x, &cookie->output_array[0][ltrim], alg_bytesize);
 	rte_memcpy(y, &cookie->output_array[1][ltrim], alg_bytesize);
+	cookie->cache.info_out[0].length = alg_bytesize;
+	cookie->cache.info_out[1].length = alg_bytesize;
 
 	HEXDUMP("X", cookie->output_array[0],
 		qat_func_alignsize);
@@ -966,7 +975,7 @@ sm2_ecdsa_verify_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 sm2_ecdsa_sign_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie)
+		struct qat_asym_op_cookie *cookie)
 {
 	uint32_t alg_bytesize = cookie->alg_bytesize;
 
@@ -977,6 +986,8 @@ sm2_ecdsa_sign_collect(struct rte_crypto_asym_op *asym_op,
 	rte_memcpy(asym_op->sm2.s.data, cookie->output_array[1], alg_bytesize);
 	asym_op->sm2.r.length = alg_bytesize;
 	asym_op->sm2.s.length = alg_bytesize;
+	cookie->cache.info_out[0].length = alg_bytesize;
+	cookie->cache.info_out[1].length = alg_bytesize;
 
 	HEXDUMP("SM2 R", cookie->output_array[0],
 		alg_bytesize);
