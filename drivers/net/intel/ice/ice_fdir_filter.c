@@ -2456,13 +2456,12 @@ ice_fdir_parse(struct ice_adapter *ad,
 	uint64_t input_set;
 	bool raw = false;
 	int ret;
+	(void)priority;
 
 	memset(filter, 0, sizeof(*filter));
 	item = ice_search_pattern_match_item(ad, pattern, array, array_len,
 					     error);
 
-	if (priority >= 1)
-		return -rte_errno;
 
 	if (!item)
 		return -rte_errno;
