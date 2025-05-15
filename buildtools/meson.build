@@ -26,6 +26,11 @@ header_gen_cmd = py3 + files('gen-header.py')
 has_hugepages_cmd = py3 + files('has-hugepages.py')
 cmdline_gen_cmd = py3 + files('dpdk-cmdline-gen.py')
 check_dts_requirements = py3 + files('check-dts-requirements.py')
+get_min_meson_version_cmd = py3 + files('get-min-meson-version.py')
+
+# check that we can correctly report minimum meson version
+min_ver = run_command(get_min_meson_version_cmd, check: true, capture: true)
+message('Minimum meson required version is ' + min_ver.stdout())
 
 # install any build tools that end-users might want also
 install_data([
