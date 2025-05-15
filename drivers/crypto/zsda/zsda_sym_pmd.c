@@ -144,7 +144,7 @@ zsda_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 	task_q_info.nb_des = nb_des;
 	task_q_info.socket_id = socket_id;
 	task_q_info.qp_id = qp_id;
-	task_q_info.rx_cb = NULL;
+	task_q_info.rx_cb = zsda_crypto_callback;
 
 	task_q_info.type = ZSDA_SERVICE_SYMMETRIC_ENCRYPT;
 	task_q_info.service_str = "sym_encrypt";
@@ -244,6 +244,14 @@ zsda_sym_pmd_enqueue_op_burst(void *qp, struct rte_crypto_op **ops,
 				     nb_ops);
 }
 
+static uint16_t
+zsda_sym_pmd_dequeue_op_burst(void *qp, struct rte_crypto_op **ops,
+			      uint16_t nb_ops)
+{
+	return zsda_dequeue_burst((struct zsda_qp *)qp, (void **)ops,
+				     nb_ops);
+}
+
 int
 zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
 {
@@ -284,7 +292,7 @@ zsda_sym_dev_create(struct zsda_pci_device *zsda_pci_dev)
 	cryptodev->dev_ops = &crypto_zsda_ops;
 
 	cryptodev->enqueue_burst = zsda_sym_pmd_enqueue_op_burst;
-	cryptodev->dequeue_burst = NULL;
+	cryptodev->dequeue_burst = zsda_sym_pmd_dequeue_op_burst;
 	cryptodev->feature_flags = 0;
 
 	sym_dev_priv = cryptodev->data->dev_private;
