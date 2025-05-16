@@ -260,7 +260,7 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 		if (unlikely(gnh == NULL))
 			return 0;
 		geneve_len = sizeof(*gnh) + gnh->opt_len * 4;
-		*off = geneve_len;
+		*off += geneve_len;
 		hdr_lens->tunnel_len = geneve_len;
 		*proto = gnh->proto;
 		if (gnh->proto == 0)
