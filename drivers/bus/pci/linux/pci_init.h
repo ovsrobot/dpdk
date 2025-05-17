@@ -76,6 +76,14 @@ int pci_vfio_ioport_unmap(struct rte_pci_ioport *p);
 int pci_vfio_map_resource(struct rte_pci_device *dev);
 int pci_vfio_unmap_resource(struct rte_pci_device *dev);
 
+/* TLP Processing Hints control functions */
+int pci_vfio_tph_enable(const struct rte_pci_device *dev, int mode);
+int pci_vfio_tph_disable(const struct rte_pci_device *dev);
+int pci_vfio_tph_st_get(const struct rte_pci_device *dev,
+			struct rte_tph_info *info, size_t ent_count);
+int pci_vfio_tph_st_set(const struct rte_pci_device *dev,
+			struct rte_tph_info *info, size_t ent_count);
+
 int pci_vfio_is_enabled(void);
 
 #endif

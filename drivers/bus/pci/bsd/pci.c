@@ -650,3 +650,42 @@ rte_pci_ioport_unmap(struct rte_pci_ioport *p)
 
 	return ret;
 }
+
+int
+rte_pci_tph_enable(const struct rte_pci_device *dev, int mode)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(mode);
+	/* This feature is not yet implemented for BSD */
+	return -1;
+}
+
+int
+rte_pci_tph_disable(const struct rte_pci_device *dev)
+{
+	RTE_SET_USED(dev);
+	/* This feature is not yet implemented for BSD */
+	return -1;
+}
+
+int
+rte_pci_tph_st_get(const struct rte_pci_device *dev,
+		   struct rte_tph_info *info, size_t count)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(info);
+	RTE_SET_USED(count);
+	/* This feature is not yet implemented for BSD */
+	return -1;
+}
+
+int
+rte_pci_tph_st_set(const struct rte_pci_device *dev,
+		   struct rte_tph_info *info, size_t count)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(info);
+	RTE_SET_USED(count);
+	/* This feature is not yet implemented for BSD */
+	return -1;
+}

@@ -335,4 +335,12 @@ rte_pci_dev_iterate(const void *start,
 int
 rte_pci_devargs_parse(struct rte_devargs *da);
 
+/*
+ * TPH Steering-Tag operation types.
+ */
+enum rte_pci_st_op {
+	RTE_PCI_TPH_ST_SET, /* Set TPH Steering - Tags */
+	RTE_PCI_TPH_ST_GET  /* Get TPH Steering - Tags */
+};
+
 #endif /* _PCI_PRIVATE_H_ */
