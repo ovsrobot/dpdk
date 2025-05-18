@@ -87,9 +87,6 @@ extern "C" {
 	fun(&(bitset)[__RTE_BITSET_WORD_IDX(bit_num)], __RTE_BITSET_BIT_OFFSET(bit_num))
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Declare a bitset.
  *
  * Declare (e.g., as a struct field) or define (e.g., as a stack
@@ -115,9 +112,6 @@ extern "C" {
 				__RTE_BITSET_FOREACH_LEFT(var, size, start_bit, len), flags) : -1)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Iterate over all bits set.
  *
  * This macro iterates over all bits set (i.e., all ones) in the
@@ -136,9 +130,6 @@ extern "C" {
 	__RTE_BITSET_FOREACH(var, bitset, size, 0, size, 0)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Iterate over all bits cleared.
  *
  * This macro iterates over all bits cleared in the bitset, in the
@@ -156,9 +147,6 @@ extern "C" {
 	__RTE_BITSET_FOREACH(var, bitset, size, 0, size, __RTE_BITSET_FIND_FLAG_FIND_CLEAR)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Iterate over all bits set within a range.
  *
  * This macro iterates over all bits set (i.e., all ones) in the
@@ -182,9 +170,6 @@ extern "C" {
 	__RTE_BITSET_FOREACH(var, bitset, size, start_bit, len, 0)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Iterate over all cleared bits within a range.
  *
  * This macro iterates over all bits cleared (i.e., all zeroes) in the
@@ -215,9 +200,6 @@ extern "C" {
 		__RTE_BITSET_FIND_FLAG_WRAP | __RTE_BITSET_FIND_FLAG_FIND_CLEAR)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Initializes a bitset.
  *
  * All bits are cleared.
@@ -231,7 +213,6 @@ extern "C" {
  * @param size
  *   The size of the bitset (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_init(uint64_t *bitset, size_t size)
 {
@@ -239,9 +220,6 @@ rte_bitset_init(uint64_t *bitset, size_t size)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Test if a bit is set.
  *
  * @param bitset
@@ -251,7 +229,6 @@ rte_bitset_init(uint64_t *bitset, size_t size)
  * @return
  *   Returns true if the bit is '1', and false if the bit is '0'.
  */
-__rte_experimental
 static inline bool
 rte_bitset_test(const uint64_t *bitset, size_t bit_num)
 {
@@ -259,9 +236,6 @@ rte_bitset_test(const uint64_t *bitset, size_t bit_num)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Set a bit in the bitset.
  *
  * Bits are numbered from 0 to (size - 1) (inclusive).
@@ -273,7 +247,6 @@ rte_bitset_test(const uint64_t *bitset, size_t bit_num)
  * @param bit_num
  *   The index of the bit to be set.
  */
-__rte_experimental
 static inline void
 rte_bitset_set(uint64_t *bitset, size_t bit_num)
 {
@@ -281,9 +254,6 @@ rte_bitset_set(uint64_t *bitset, size_t bit_num)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Clear a bit in the bitset.
  *
  * Bits are numbered 0 to (size - 1) (inclusive).
@@ -295,7 +265,6 @@ rte_bitset_set(uint64_t *bitset, size_t bit_num)
  * @param bit_num
  *   The index of the bit to be cleared.
  */
-__rte_experimental
 static inline void
 rte_bitset_clear(uint64_t *bitset, size_t bit_num)
 {
@@ -303,9 +272,6 @@ rte_bitset_clear(uint64_t *bitset, size_t bit_num)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Set or clear a bit in the bitset.
  *
  * Bits are numbered 0 to (size - 1) (inclusive).
@@ -319,7 +285,6 @@ rte_bitset_clear(uint64_t *bitset, size_t bit_num)
  * @param bit_value
  *   Control if the bit should be set or cleared.
  */
-__rte_experimental
 static inline void
 rte_bitset_assign(uint64_t *bitset, size_t bit_num, bool bit_value)
 {
@@ -327,9 +292,6 @@ rte_bitset_assign(uint64_t *bitset, size_t bit_num, bool bit_value)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Change the value of a bit in the bitset.
  *
  * Bits are numbered 0 to (size - 1) (inclusive).
@@ -341,7 +303,6 @@ rte_bitset_assign(uint64_t *bitset, size_t bit_num, bool bit_value)
  * @param bit_num
  *   The index of the bit to be flipped.
  */
-__rte_experimental
 static inline void
 rte_bitset_flip(uint64_t *bitset, size_t bit_num)
 {
@@ -349,9 +310,6 @@ rte_bitset_flip(uint64_t *bitset, size_t bit_num)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Atomically test if a bit is set.
  *
  * Atomically test if a bit in a bitset is set with the specified
@@ -366,7 +324,6 @@ rte_bitset_flip(uint64_t *bitset, size_t bit_num)
  * @return
  *   Returns true if the bit is '1', and false if the bit is '0'.
  */
-__rte_experimental
 static inline bool
 rte_bitset_atomic_test(const uint64_t *bitset, size_t bit_num, int memory_order)
 {
@@ -374,9 +331,6 @@ rte_bitset_atomic_test(const uint64_t *bitset, size_t bit_num, int memory_order)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Atomically set a bit in the bitset.
  *
  * Set a bit in a bitset as an atomic operation, with the specified
@@ -395,7 +349,6 @@ rte_bitset_atomic_test(const uint64_t *bitset, size_t bit_num, int memory_order)
  * @param memory_order
  *   The memory order to use.
  */
-__rte_experimental
 static inline void
 rte_bitset_atomic_set(uint64_t *bitset, size_t bit_num, int memory_order)
 {
@@ -403,9 +356,6 @@ rte_bitset_atomic_set(uint64_t *bitset, size_t bit_num, int memory_order)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Atomically clear a bit in the bitset.
  *
  * Clear a bit in a bitset as an atomic operation, with the specified
@@ -424,7 +374,6 @@ rte_bitset_atomic_set(uint64_t *bitset, size_t bit_num, int memory_order)
  * @param memory_order
  *   The memory order to use.
  */
-__rte_experimental
 static inline void
 rte_bitset_atomic_clear(uint64_t *bitset, size_t bit_num, int memory_order)
 {
@@ -432,9 +381,6 @@ rte_bitset_atomic_clear(uint64_t *bitset, size_t bit_num, int memory_order)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Atomically set or clear a bit in the bitset.
  *
  * Assign a value to a bit in a bitset as an atomic operation, with
@@ -455,7 +401,6 @@ rte_bitset_atomic_clear(uint64_t *bitset, size_t bit_num, int memory_order)
  * @param memory_order
  *   The memory order to use.
  */
-__rte_experimental
 static inline void
 rte_bitset_atomic_assign(uint64_t *bitset, size_t bit_num, bool bit_value, int memory_order)
 {
@@ -463,9 +408,6 @@ rte_bitset_atomic_assign(uint64_t *bitset, size_t bit_num, bool bit_value, int m
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Atomically change the value of a bit in the bitset.
  *
  * Flip a bit in a bitset as an atomic operation, with the specified
@@ -484,7 +426,6 @@ rte_bitset_atomic_assign(uint64_t *bitset, size_t bit_num, bool bit_value, int m
  * @param memory_order
  *   The memory order to use.
  */
-__rte_experimental
 static inline void
 rte_bitset_atomic_flip(uint64_t *bitset, size_t bit_num, int memory_order)
 {
@@ -492,9 +433,6 @@ rte_bitset_atomic_flip(uint64_t *bitset, size_t bit_num, int memory_order)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Set all bits in the bitset.
  *
  * @param bitset
@@ -502,7 +440,6 @@ rte_bitset_atomic_flip(uint64_t *bitset, size_t bit_num, int memory_order)
  * @param size
  *   The size of the bitset (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_set_all(uint64_t *bitset, size_t size)
 {
@@ -510,9 +447,6 @@ rte_bitset_set_all(uint64_t *bitset, size_t size)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Clear all bits in the bitset.
  *
  * @param bitset
@@ -520,7 +454,6 @@ rte_bitset_set_all(uint64_t *bitset, size_t size)
  * @param size
  *   The size of the bitset (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_clear_all(uint64_t *bitset, size_t size)
 {
@@ -528,9 +461,6 @@ rte_bitset_clear_all(uint64_t *bitset, size_t size)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Count all set bits (also known as the @e weight).
  *
  * @param bitset
@@ -540,7 +470,6 @@ rte_bitset_clear_all(uint64_t *bitset, size_t size)
  * @return
  *   Returns the number of '1' bits in the bitset.
  */
-__rte_experimental
 static inline size_t
 rte_bitset_count_set(const uint64_t *bitset, size_t size)
 {
@@ -560,9 +489,6 @@ rte_bitset_count_set(const uint64_t *bitset, size_t size)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Count all cleared bits.
  *
  * @param bitset
@@ -572,7 +498,6 @@ rte_bitset_count_set(const uint64_t *bitset, size_t size)
  * @return
  *   Returns the number of '0' bits in the bitset.
  */
-__rte_experimental
 static inline size_t
 rte_bitset_count_clear(const uint64_t *bitset, size_t size)
 {
@@ -582,7 +507,6 @@ rte_bitset_count_clear(const uint64_t *bitset, size_t size)
 #define __RTE_BITSET_FIND_FLAG_FIND_CLEAR (1U << 0)
 #define __RTE_BITSET_FIND_FLAG_WRAP (1U << 1)
 
-__rte_experimental
 static inline ssize_t
 __rte_bitset_find_nowrap(const uint64_t *bitset, size_t __rte_unused size, size_t start_bit,
 		size_t len, bool find_clear)
@@ -630,7 +554,6 @@ __rte_bitset_find_nowrap(const uint64_t *bitset, size_t __rte_unused size, size_
 
 }
 
-__rte_experimental
 static inline ssize_t
 __rte_bitset_find(const uint64_t *bitset, size_t size, size_t start_bit, size_t len,
 		unsigned int flags)
@@ -658,9 +581,6 @@ __rte_bitset_find(const uint64_t *bitset, size_t size, size_t start_bit, size_t 
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Find first bit set.
  *
  * Scans the bitset in the forward direction (i.e., starting at the
@@ -674,7 +594,6 @@ __rte_bitset_find(const uint64_t *bitset, size_t size, size_t start_bit, size_t 
  *   Returns the index of the least significant '1', or -1 if all
  *   bits are '0'.
  */
-__rte_experimental
 static inline ssize_t
 rte_bitset_find_first_set(const uint64_t *bitset, size_t size)
 {
@@ -682,9 +601,6 @@ rte_bitset_find_first_set(const uint64_t *bitset, size_t size)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Find first bit set at offset.
  *
  * Scans the bitset in the forward direction (i.e., starting at the
@@ -704,7 +620,6 @@ rte_bitset_find_first_set(const uint64_t *bitset, size_t size)
  *   Returns the index of the least significant '1', or -1 if all
  *   bits are '0'.
  */
-__rte_experimental
 static inline ssize_t
 rte_bitset_find_set(const uint64_t *bitset, size_t size, size_t start_bit, size_t len)
 {
@@ -712,9 +627,6 @@ rte_bitset_find_set(const uint64_t *bitset, size_t size, size_t start_bit, size_
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Find first bit set at offset, with wrap-around.
  *
  * Scans the bitset in the forward direction (i.e., starting at the
@@ -735,7 +647,6 @@ rte_bitset_find_set(const uint64_t *bitset, size_t size, size_t start_bit, size_
  *   Returns the index of the least significant '1', or -1 if all
  *   bits are '0'.
  */
-__rte_experimental
 static inline ssize_t
 rte_bitset_find_set_wrap(const uint64_t *bitset, size_t size, size_t start_bit, size_t len)
 {
@@ -743,9 +654,6 @@ rte_bitset_find_set_wrap(const uint64_t *bitset, size_t size, size_t start_bit, 
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Find first cleared bit.
  *
  * Scans the bitset in the forward direction (i.e., starting at the
@@ -759,7 +667,6 @@ rte_bitset_find_set_wrap(const uint64_t *bitset, size_t size, size_t start_bit, 
  *   Returns the index of the least significant '0', or -1 if all
  *   bits are '1'.
  */
-__rte_experimental
 static inline ssize_t
 rte_bitset_find_first_clear(const uint64_t *bitset, size_t size)
 {
@@ -767,9 +674,6 @@ rte_bitset_find_first_clear(const uint64_t *bitset, size_t size)
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Find first cleared bit at offset.
  *
  * Scans the bitset in the forward direction (i.e., starting at the
@@ -789,7 +693,6 @@ rte_bitset_find_first_clear(const uint64_t *bitset, size_t size)
  *   Returns the index of the least significant '0', or -1 if all
  *   bits are '1'.
  */
-__rte_experimental
 static inline ssize_t
 rte_bitset_find_clear(const uint64_t *bitset, size_t size, size_t start_bit, size_t len)
 {
@@ -797,9 +700,6 @@ rte_bitset_find_clear(const uint64_t *bitset, size_t size, size_t start_bit, siz
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Find first cleared bit at offset, with wrap-around.
  *
  * Scans the bitset in the forward direction (i.e., starting at the
@@ -820,7 +720,6 @@ rte_bitset_find_clear(const uint64_t *bitset, size_t size, size_t start_bit, siz
  *   Returns the index of the least significant '0', or -1 if all
  *   bits are '1'.
  */
-__rte_experimental
 static inline ssize_t
 rte_bitset_find_clear_wrap(const uint64_t *bitset, size_t size, size_t start_bit, size_t len)
 {
@@ -829,9 +728,6 @@ rte_bitset_find_clear_wrap(const uint64_t *bitset, size_t size, size_t start_bit
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Copy bitset.
  *
  * Copy the bits of the @c src_bitset to the @c dst_bitset.
@@ -845,7 +741,6 @@ rte_bitset_find_clear_wrap(const uint64_t *bitset, size_t size, size_t start_bit
  * @param size
  *   The size of the bitsets (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_copy(uint64_t *__rte_restrict dst_bitset, const uint64_t *__rte_restrict src_bitset,
 		size_t size)
@@ -854,9 +749,6 @@ rte_bitset_copy(uint64_t *__rte_restrict dst_bitset, const uint64_t *__rte_restr
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Bitwise or two bitsets.
  *
  * Perform a bitwise OR operation on all bits in the two equal-size
@@ -872,7 +764,6 @@ rte_bitset_copy(uint64_t *__rte_restrict dst_bitset, const uint64_t *__rte_restr
  * @param size
  *   The size of the bitsets (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_or(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t *src_bitset1,
 		size_t size)
@@ -884,9 +775,6 @@ rte_bitset_or(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t 
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Bitwise and two bitsets.
  *
  * Perform a bitwise AND operation on all bits in the two equal-size
@@ -902,7 +790,6 @@ rte_bitset_or(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t 
  * @param size
  *   The size of the bitsets (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_and(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t *src_bitset1,
 		size_t size)
@@ -914,9 +801,6 @@ rte_bitset_and(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Bitwise xor two bitsets.
  *
  * Perform a bitwise XOR operation on all bits in the two equal-size
@@ -932,7 +816,6 @@ rte_bitset_and(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t
  * @param size
  *   The size of the bitsets (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_xor(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t *src_bitset1,
 		size_t size)
@@ -944,9 +827,6 @@ rte_bitset_xor(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Compute the bitwise complement of a bitset.
  *
  * Flip every bit in the @c src_bitset, and store the result in @c
@@ -959,7 +839,6 @@ rte_bitset_xor(uint64_t *dst_bitset, const uint64_t *src_bitset0, const uint64_t
  * @param size
  *   The size of the bitsets (in bits).
  */
-__rte_experimental
 static inline void
 rte_bitset_complement(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t size)
 {
@@ -970,9 +849,6 @@ rte_bitset_complement(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t s
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Shift bitset left.
  *
  * Perform a logical shift left of (multiply) @c src_bitset, and store
@@ -987,7 +863,6 @@ rte_bitset_complement(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t s
  * @param shift_bits
  *   The number of bits to shift the bitset.
  */
-__rte_experimental
 static inline void
 rte_bitset_shift_left(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t size,
 		size_t shift_bits)
@@ -1015,9 +890,6 @@ rte_bitset_shift_left(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t s
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Shift bitset right.
  *
  * Perform a logical shift right of (divide) @c src_bitset, and store
@@ -1032,7 +904,6 @@ rte_bitset_shift_left(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t s
  * @param shift_bits
  *   The number of bits to shift the bitset.
  */
-__rte_experimental
 static inline void
 rte_bitset_shift_right(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t size,
 		size_t shift_bits)
@@ -1071,9 +942,6 @@ rte_bitset_shift_right(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t 
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Compare two bitsets.
  *
  * Compare two bitsets for equality.
@@ -1085,7 +953,6 @@ rte_bitset_shift_right(uint64_t *dst_bitset, const uint64_t *src_bitset, size_t 
  * @param size
  *   The size of the bitsets (in bits).
  */
-__rte_experimental
 static inline bool
 rte_bitset_equal(const uint64_t *bitset_a, const uint64_t *bitset_b, size_t size)
 {
@@ -1103,9 +970,6 @@ rte_bitset_equal(const uint64_t *bitset_a, const uint64_t *bitset_b, size_t size
 }
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Converts a bitset to a string.
  *
  * This function prints a string representation of the bitstring to
@@ -1127,7 +991,6 @@ rte_bitset_equal(const uint64_t *bitset_a, const uint64_t *bitset_b, size_t size
  *   Returns the number of bytes written (i.e., @c size + 1), or -EINVAL
  *   in case the buffer capacity was too small.
  */
-__rte_experimental
 ssize_t
 rte_bitset_to_str(const uint64_t *bitset, size_t size, char *buf, size_t capacity);
 
