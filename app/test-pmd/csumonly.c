@@ -670,6 +670,7 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i + 1],
 						       void *));
 
+		memset(&hdr_lens, 0, sizeof(struct rte_net_hdr_lens));
 		m = pkts_burst[i];
 		info.is_tunnel = 0;
 		info.pkt_len = rte_pktmbuf_pkt_len(m);
