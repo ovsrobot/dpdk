@@ -29,7 +29,7 @@ from framework.testbed_model.capability import NicCapability, TopologyType, requ
 class TestFlow(TestSuite):
     """RTE Flow test suite.
 
-    This suite consists of 10 test cases:
+    This suite consists of 12 test cases:
     1. Queue Action Ethernet: Verifies queue actions with ethernet patterns
     2. Queue Action IP: Verifies queue actions with IPv4 and IPv6 patterns
     3. Queue Action L4: Verifies queue actions with TCP and UDP patterns
@@ -39,7 +39,9 @@ class TestFlow(TestSuite):
     7. Drop Action L4: Verifies drop actions with TCP and UDP patterns
     8. Drop Action VLAN: Verifies drop actions with VLAN patterns
     9. Modify Field Action: Verifies packet modification patterns
-    10. Egress Rules: Verifies previously covered rules are still valid as egress.
+    10. Egress Rules: Verifies previously covered rules are still valid as egress
+    11. Jump Action: Verifies packet behavior given grouped flows
+    12. Priority Attribute: Verifies packet behavior given flows with different priorities
 
     """
 
@@ -169,14 +171,45 @@ class TestFlow(TestSuite):
                 f"MAC dst mismatch: expected {expected_mac_dst}, got {received_mac_dst}",
             )
 
+    def send_packet_and_verify_jump(
+        self,
+        packets: list[Packet],
+        flow_rules: list[FlowRule],
+        test_queues: list[int],
+        testpmd: TestPmdShell,
+    ) -> None:
+        """Create a testpmd session with every rule in the given list, verify jump behavior.
+
+        Args:
+            packets: List of packets to send.
+            flow_rules: List of flow rules to create in the same session.
+            test_queues: List of Rx queue IDs each packet should be received on.
+            testpmd: TestPmdShell instance to create flows on.
+        """
+        testpmd.set_verbose(level=1)
+        for flow in flow_rules:
+            testpmd.flow_create(flow_rule=flow, port_id=0)
+
+        for packet, test_queue in zip(packets, test_queues):
+            testpmd.start()
+            self.send_packet_and_capture(packet=packet)
+            verbose_output = testpmd.extract_verbose_output(testpmd.stop())
+            received = False
+            for testpmd_packet in verbose_output:
+                if testpmd_packet.queue_id == test_queue:
+                    received = True
+            self.verify(received, f"Expected packet was not received on queue {test_queue}")
+
     @func_test
     def test_queue_action_ETH(self) -> None:
         """Validate flow rules with queue actions and ethernet patterns.
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, capture testpmd verbose output.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is received on the appropriate queue.
@@ -214,8 +247,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, capture testpmd verbose output.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is received on the appropriate queue.
@@ -269,8 +304,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, capture testpmd verbose output.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is received on the appropriate queue.
@@ -322,8 +359,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, capture testpmd verbose output.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is received on the appropriate queue.
@@ -346,8 +385,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, check reception status.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is dropped.
@@ -387,8 +428,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, check reception status.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is dropped.
@@ -435,8 +478,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, check reception status.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is dropped.
@@ -479,8 +524,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, check reception status.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is dropped.
@@ -511,8 +558,11 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, check attributes.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
+
         Verify:
             Verify packet is received with the new attributes.
         """
@@ -552,8 +602,10 @@ class TestFlow(TestSuite):
 
         Steps:
             Create a list of packets to test, with a corresponding flow list.
-            Launch testpmd with the necessary configuration.
-            Send each packet in the list, check reception status.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
 
         Verify:
             Check that each packet is dropped.
@@ -583,3 +635,94 @@ class TestFlow(TestSuite):
             packets=packet_list,
             should_receive=False,
         )
+
+    @func_test
+    def test_jump_action(self) -> None:
+        """Validate flow rules with different group levels and jump actions.
+
+        Steps:
+            Create a list of packets to test, with a corresponding flow list.
+            Launch testpmd with the necessary configuration.
+            Create each flow rule in testpmd.
+            Send each packet in the list, check Rx queue ID.
+
+        Verify:
+            Check that each packet is received on the appropriate Rx queue.
+        """
+        packet_list = [Ether() / IP(), Ether() / IP() / TCP(), Ether() / IP() / UDP()]
+        flow_list = [
+            FlowRule(direction="ingress", group_id=0, pattern=["eth"], actions=["jump group 1"]),
+            FlowRule(direction="ingress", group_id=0, pattern=["ipv4"], actions=["jump group 2"]),
+            FlowRule(
+                direction="ingress", group_id=0, pattern=["eth / ipv4"], actions=["queue index 1"]
+            ),
+            FlowRule(
+                direction="ingress",
+                group_id=0,
+                pattern=["eth / ipv4 / tcp"],
+                actions=["queue index 2"],
+            ),
+            FlowRule(
+                direction="ingress",
+                group_id=0,
+                pattern=["eth / ipv4 / udp"],
+                actions=["queue index 3"],
+            ),
+        ]
+        expected_queue_list = [1, 2, 3]
+        with TestPmdShell(rx_queues=4, tx_queues=4) as testpmd:
+            self.send_packet_and_verify_jump(
+                packets=packet_list,
+                flow_rules=flow_list,
+                test_queues=expected_queue_list,
+                testpmd=testpmd,
+            )
+
+    @func_test
+    def test_priority_attribute(self) -> None:
+        """Validate flow rules with queue actions and ethernet patterns.
+
+        Steps:
+            Create a list of packets to test, with a corresponding flow list.
+            Launch testpmd.
+            Create first flow rule in flow list.
+            Send first packet in packet list, capture verbose output.
+            Delete flow rule, repeat for all flows/packets.
+
+        Verify:
+            Check that each packet is received on the appropriate queue.
+        """
+        test_packet = Ether() / IP() / Raw()
+        flow_list = [
+            FlowRule(
+                direction="ingress",
+                priority_level=3,
+                pattern=["eth / ipv4"],
+                actions=["queue index 1"],
+            ),
+            FlowRule(
+                direction="ingress",
+                priority_level=2,
+                pattern=["eth / ipv4"],
+                actions=["queue index 2"],
+            ),
+            FlowRule(
+                direction="ingress",
+                priority_level=1,
+                pattern=["eth / ipv4"],
+                actions=["queue index 3"],
+            ),
+        ]
+        expected_queue_list = [1, 2, 3]
+        with TestPmdShell(rx_queues=4, tx_queues=4) as testpmd:
+            testpmd.set_verbose(level=1)
+            for flow, expected_queue in zip(flow_list, expected_queue_list):
+                testpmd.flow_create(flow_rule=flow, port_id=0)
+                testpmd.start()
+                self.send_packet_and_capture(test_packet)
+                verbose_output = testpmd.extract_verbose_output(testpmd.stop())
+                received = False
+                for testpmd_packet in verbose_output:
+                    if testpmd_packet.queue_id == expected_queue:
+                        received = True
+                self.verify(received, f"Packet was not received on queue {expected_queue}")
