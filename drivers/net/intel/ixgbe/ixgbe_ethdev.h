@@ -474,6 +474,7 @@ struct ixgbe_adapter {
 	struct ixgbe_hw             hw;
 	struct ixgbe_hw_stats       stats;
 	struct ixgbe_macsec_stats   macsec_stats;
+	struct ixgbe_macsec_stats   macsec_stats_offset;
 	struct ixgbe_macsec_setting	macsec_setting;
 	struct rte_eth_fdir_conf    fdir_conf;
 	struct ixgbe_hw_fdir_info   fdir;
@@ -495,6 +496,7 @@ struct ixgbe_adapter {
 #endif
 	bool rx_bulk_alloc_allowed;
 	bool rx_vec_allowed;
+	bool offset_loaded;
 	struct rte_timecounter      systime_tc;
 	struct rte_timecounter      rx_tstamp_tc;
 	struct rte_timecounter      tx_tstamp_tc;
