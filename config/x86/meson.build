@@ -21,6 +21,7 @@ endif
 
 dpdk_conf.set('RTE_CACHE_LINE_SIZE', 64)
 dpdk_conf.set('RTE_MAX_LCORE', 128)
+dpdk_conf.set('RTE_USE_C11_MEM_MODEL', true)
 
 epyc_zen_cores = {
     '__znver5__':768,
