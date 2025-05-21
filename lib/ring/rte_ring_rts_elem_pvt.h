@@ -152,8 +152,10 @@ __rte_ring_rts_move_prod_head(struct rte_ring *r, uint32_t num,
 	enum rte_ring_queue_behavior behavior, uint32_t *old_head,
 	uint32_t *free_entries)
 {
-	return __rte_ring_rts_move_head(&r->rts_prod, &r->cons,
+	num = __rte_ring_rts_move_head(&r->rts_prod, &r->cons,
 			r->capacity, num, behavior, old_head, free_entries);
+	RTE_ASSERT(*free_entries <= r->capacity);
+	return num;
 }
 
 /**
@@ -164,8 +166,10 @@ __rte_ring_rts_move_cons_head(struct rte_ring *r, uint32_t num,
 	enum rte_ring_queue_behavior behavior, uint32_t *old_head,
 	uint32_t *entries)
 {
-	return __rte_ring_rts_move_head(&r->rts_cons, &r->prod,
+	num = __rte_ring_rts_move_head(&r->rts_cons, &r->prod,
 			0, num, behavior, old_head, entries);
+	RTE_ASSERT(*entries <= r->capacity);
+	return num;
 }
 
 /**

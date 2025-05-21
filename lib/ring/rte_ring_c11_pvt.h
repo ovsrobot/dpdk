@@ -104,10 +104,10 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 			n = (behavior == RTE_RING_QUEUE_FIXED) ?
 					0 : *entries;
 
+		*new_head = *old_head + n;
 		if (n == 0)
 			return 0;
 
-		*new_head = *old_head + n;
 		if (is_st) {
 			d->head = *new_head;
 			success = 1;

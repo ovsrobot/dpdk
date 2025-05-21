@@ -156,6 +156,7 @@ __rte_soring_move_prod_head(struct rte_soring *r, uint32_t num,
 		n = 0;
 	}
 
+	RTE_ASSERT(*free <= r->capacity);
 	return n;
 }
 
@@ -190,6 +191,7 @@ __rte_soring_move_cons_head(struct rte_soring *r, uint32_t stage, uint32_t num,
 		n = 0;
 	}
 
+	RTE_ASSERT(*avail <= r->capacity);
 	return n;
 }
 
