@@ -123,8 +123,6 @@ __rte_soring_stage_finalize(struct soring_stage_headtail *sht, uint32_t stage,
 	rte_atomic_store_explicit(&sht->tail.raw, ot.raw,
 			rte_memory_order_release);
 
-	/* make sure that new tail value is visible */
-	rte_atomic_thread_fence(rte_memory_order_release);
 	return i;
 }
 
@@ -219,9 +217,6 @@ __rte_soring_update_tail(struct __rte_ring_headtail *rht,
 		/* unsupported mode, shouldn't be here */
 		RTE_ASSERT(0);
 	}
-
-	/* make sure that new tail value is visible */
-	rte_atomic_thread_fence(rte_memory_order_release);
 }
 
 static __rte_always_inline uint32_t

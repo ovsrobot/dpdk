@@ -77,20 +77,19 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 	int success;
 	unsigned int max = n;
 
+	/* Ensure the head is read before tail */
 	*old_head = rte_atomic_load_explicit(&d->head,
-			rte_memory_order_relaxed);
+			rte_memory_order_acquire);
 	do {
 		/* Reset n to the initial burst count */
 		n = max;
 
-		/* Ensure the head is read before tail */
-		rte_atomic_thread_fence(rte_memory_order_acquire);
-
-		/* load-acquire synchronize with store-release of ht->tail
-		 * in update_tail.
+		/*
+		 * Read s->tail value. Note that it will be loaded after
+		 * d->head load, but before CAS operation for the d->head.
 		 */
 		stail = rte_atomic_load_explicit(&s->tail,
-					rte_memory_order_acquire);
+					rte_memory_order_relaxed);
 
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
@@ -112,11 +111,19 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 			d->head = *new_head;
 			success = 1;
 		} else
-			/* on failure, *old_head is updated */
+			/*
+			 * on failure, *old_head is updated.
+			 * this CAS(ACQ_REL, ACQUIRE) serves as a hoist
+			 * barrier to prevent:
+			 *  - OOO reads of cons tail value
+			 *  - OOO copy of elems from the ring
+			 *  Also RELEASE guarantees that latest tail value
+			 *  will become visible before the new head value.
+			 */
 			success = rte_atomic_compare_exchange_strong_explicit(
 					&d->head, old_head, *new_head,
-					rte_memory_order_relaxed,
-					rte_memory_order_relaxed);
+					rte_memory_order_acq_rel,
+					rte_memory_order_acquire);
 	} while (unlikely(success == 0));
 	return n;
 }
