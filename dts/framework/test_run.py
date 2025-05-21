@@ -640,6 +640,9 @@ class TestCaseExecution(TestCaseState):
                 return self
 
             self.result.update(Result.FAIL, e)
+        except SkippedTestException as e:
+            self.logger.info(f"Test case execution SKIPPED: {e}")
+            self.result.update(Result.SKIP, e)
         else:
             self.result.update(Result.PASS)
             self.logger.info(f"{self.description.capitalize()} PASSED.")

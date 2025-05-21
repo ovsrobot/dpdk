@@ -19,6 +19,7 @@ from scapy.layers.inet6 import IPv6
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.packet import Packet, Raw
 
+from framework.exception import InteractiveCommandExecutionError
 from framework.remote_session.testpmd_shell import FlowRule, TestPmdShell
 from framework.test_suite import TestSuite, func_test
 from framework.testbed_model.capability import NicCapability, TopologyType, requires
@@ -84,10 +85,17 @@ class TestFlow(TestSuite):
 
         with TestPmdShell(rx_queues=4, tx_queues=4) as testpmd:
             for flow, packet, expected_packet in zip_lists(flows, packets, expected_packets):
-                flow_id = testpmd.flow_create(flow_rule=flow, port_id=0)
+                is_valid = testpmd.flow_validate(flow_rule=flow, port_id=0)
+                self.verify_skip(is_valid, "flow rule failed validation.")
+
+                try:
+                    flow_id = testpmd.flow_create(flow_rule=flow, port_id=0)
+                except InteractiveCommandExecutionError:
+                    self.log("Flow rule validation passed, but flow creation failed.")
+                    self.verify(False, "Failed flow creation")
 
                 if verification_method == self.send_packet_and_verify:
-                    verification_method(*args, **kwargs)
+                    verification_method(packet=packet, *args, **kwargs)
 
                 elif verification_method == self.send_packet_and_verify_queue:
                     verification_method(
@@ -125,7 +133,7 @@ class TestFlow(TestSuite):
             test_queue: Represents the queue the test packet is being sent to.
             testpmd: TestPmdShell instance being used to send test packet.
         """
-        testpmd.set_verbose(level=1)
+        testpmd.set_verbose(level=8)
         testpmd.start()
         self.send_packet_and_capture(packet=packet)
         verbose_output = testpmd.extract_verbose_output(testpmd.stop())
@@ -186,9 +194,16 @@ class TestFlow(TestSuite):
             test_queues: List of Rx queue IDs each packet should be received on.
             testpmd: TestPmdShell instance to create flows on.
         """
-        testpmd.set_verbose(level=1)
+        testpmd.set_verbose(level=8)
         for flow in flow_rules:
-            testpmd.flow_create(flow_rule=flow, port_id=0)
+            is_valid = testpmd.flow_validate(flow_rule=flow, port_id=0)
+            self.verify_skip(is_valid, "flow rule failed validation.")
+
+            try:
+                testpmd.flow_create(flow_rule=flow, port_id=0)
+            except InteractiveCommandExecutionError:
+                self.log("Flow validation passed, but flow creation failed.")
+                self.verify(False, "Failed flow creation")
 
         for packet, test_queue in zip(packets, test_queues):
             testpmd.start()
@@ -397,12 +412,9 @@ class TestFlow(TestSuite):
         received under normal circumstances.
         """
         packet_list = [
-            Ether(src="02:00:00:00:00:00"),
-            Raw(load="xxxxx"),
-            Ether(dst="02:00:00:00:00:00"),
-            Raw(load="xxxxx"),
-            Ether(type=0x0800),
-            Raw(load="xxxxx"),
+            Ether(src="02:00:00:00:00:00") / Raw(load="xxxxx"),
+            Ether(dst="02:00:00:00:00:00") / Raw(load="xxxxx"),
+            Ether(type=0x0800) / Raw(load="xxxxx"),
         ]
         flow_list = [
             FlowRule(
@@ -413,8 +425,12 @@ class TestFlow(TestSuite):
             ),
             FlowRule(direction="ingress", pattern=["eth type is 0x0800"], actions=["drop"]),
         ]
-        # Verify packet reception without flow rule
-        self.send_packet_and_verify(packet=Raw(load="xxxxx"), should_receive=True)
+        # verify reception with test packet
+        packet = Ether() / IP() / Raw(load="xxxxx")
+        with TestPmdShell() as testpmd:
+            testpmd.start()
+            received = self.send_packet_and_capture(packet)
+            self.verify(received != [], "Test packet was never received.")
         self.runner(
             verification_method=self.send_packet_and_verify,
             flows=flow_list,
@@ -463,8 +479,12 @@ class TestFlow(TestSuite):
             ),
             FlowRule(direction="ingress", pattern=["eth / ipv6 proto is 17"], actions=["drop"]),
         ]
-        # Verify packet reception without flow rule
-        self.send_packet_and_verify(packet=Raw(load="xxxxx"), should_receive=True)
+        # verify reception with test packet
+        packet = Ether() / IP() / Raw(load="xxxxx")
+        with TestPmdShell() as testpmd:
+            testpmd.start()
+            received = self.send_packet_and_capture(packet)
+            self.verify(received != [], "Test packet was never received.")
         self.runner(
             verification_method=self.send_packet_and_verify,
             flows=flow_list,
@@ -509,8 +529,12 @@ class TestFlow(TestSuite):
             ),
             FlowRule(direction="ingress", pattern=["eth / ipv4 / udp dst is 53"], actions=["drop"]),
         ]
-        # Verify packet reception without flow rule
-        self.send_packet_and_verify(packet=Raw(load="xxxxx"), should_receive=True)
+        # verify reception with test packet
+        packet = Ether() / IP() / Raw(load="xxxxx")
+        with TestPmdShell() as testpmd:
+            testpmd.start()
+            received = self.send_packet_and_capture(packet)
+            self.verify(received != [], "Test packet was never received.")
         self.runner(
             verification_method=self.send_packet_and_verify,
             flows=flow_list,
@@ -543,8 +567,12 @@ class TestFlow(TestSuite):
             FlowRule(direction="ingress", pattern=["eth / vlan"], actions=["drop"]),
             FlowRule(direction="ingress", pattern=["eth / vlan"], actions=["drop"]),
         ]
-        # Verify packet reception without flow rule
-        self.send_packet_and_verify(packet=Raw(load="xxxxx"), should_receive=True)
+        # verify reception with test packet
+        packet = Ether() / IP() / Raw(load="xxxxx")
+        with TestPmdShell() as testpmd:
+            testpmd.start()
+            received = self.send_packet_and_capture(packet)
+            self.verify(received != [], "Test packet was never received.")
         self.runner(
             verification_method=self.send_packet_and_verify,
             flows=flow_list,
@@ -615,9 +643,9 @@ class TestFlow(TestSuite):
         """
         packet_list = [
             Ether(src="02:00:00:00:00:00"),
-            IP(src="192.168.1.1"),
-            TCP(sport=1234),
-            UDP(sport=5000),
+            Ether() / IP(src="192.168.1.1"),
+            IP() / TCP(sport=1234),
+            IP() / UDP(sport=5000),
         ]
         flow_list = [
             FlowRule(
@@ -627,8 +655,12 @@ class TestFlow(TestSuite):
             FlowRule(direction="egress", pattern=["tcp src is 1234"], actions=["drop"]),
             FlowRule(direction="egress", pattern=["udp src is 5000"], actions=["drop"]),
         ]
-        # Verify packet reception without flow rule
-        self.send_packet_and_verify(packet=Raw(load="xxxxx"), should_receive=True)
+        # verify reception with test packet
+        packet = Ether() / IP() / Raw(load="xxxxx")
+        with TestPmdShell() as testpmd:
+            testpmd.start()
+            received = self.send_packet_and_capture(packet)
+            self.verify(received != [], "Test packet was never received.")
         self.runner(
             verification_method=self.send_packet_and_verify,
             flows=flow_list,
@@ -715,9 +747,15 @@ class TestFlow(TestSuite):
         ]
         expected_queue_list = [1, 2, 3]
         with TestPmdShell(rx_queues=4, tx_queues=4) as testpmd:
-            testpmd.set_verbose(level=1)
+            testpmd.set_verbose(level=8)
             for flow, expected_queue in zip(flow_list, expected_queue_list):
-                testpmd.flow_create(flow_rule=flow, port_id=0)
+                is_valid = testpmd.flow_validate(flow_rule=flow, port_id=0)
+                self.verify_skip(is_valid, "flow rule failed validation.")
+                try:
+                    testpmd.flow_create(flow_rule=flow, port_id=0)
+                except InteractiveCommandExecutionError:
+                    self.log("Flow rule validation passed, but flow creation failed.")
+                    self.verify(False, "Failed flow creation")
                 testpmd.start()
                 self.send_packet_and_capture(test_packet)
                 verbose_output = testpmd.extract_verbose_output(testpmd.stop())
