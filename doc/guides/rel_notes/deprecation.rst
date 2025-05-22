@@ -17,6 +17,12 @@ Other API and ABI deprecation notices are to be posted below.
 Deprecation Notices
 -------------------
 
+* rcu: The functions ``rte_rcu_qsbr_dq_create`` and ``rte_rcu_qsbr_dq_reclaim``
+  establish no limit on the size of each element in the defer queue. With
+  DPDK 25.11 a hard limit will be set (``RTE_QSBR_ESIZE_MAX``). This will
+  allow fixed C arrays to be used in the functions' implementations,
+  avoiding VLAs and use of alloca().
+
 * build: The ``enable_kmods`` option is deprecated and will be removed in a future release.
   Setting/clearing the option has no impact on the build.
   Instead, kernel modules will be always built for OS's where out-of-tree kernel modules
