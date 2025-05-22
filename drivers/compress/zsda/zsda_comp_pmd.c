@@ -282,7 +282,6 @@ zsda_comp_qp_setup(struct rte_compressdev *dev, uint16_t qp_id,
 }
 
 static struct rte_compressdev_ops compress_zsda_ops = {
-
 	.dev_configure = zsda_comp_dev_config,
 	.dev_start = zsda_comp_dev_start,
 	.dev_stop = zsda_comp_dev_stop,
@@ -305,7 +304,9 @@ static struct rte_compressdev_ops compress_zsda_ops = {
  */
 static const char zsda_comp_drv_name[] = RTE_STR(COMPRESSDEV_NAME_ZSDA_PMD);
 static const struct rte_driver compdev_zsda_driver = {
-	.name = zsda_comp_drv_name, .alias = zsda_comp_drv_name};
+	.name = zsda_comp_drv_name,
+	.alias = zsda_comp_drv_name
+};
 
 static uint16_t
 zsda_comp_pmd_enqueue_op_burst(void *qp, struct rte_comp_op **ops,
