@@ -203,6 +203,12 @@ struct __rte_packed_begin ice_virt_mem {
 #define ice_memset(a, b, c, d) memset((a), (b), (c))
 #define ice_memcpy(a, b, c, d) rte_memcpy((a), (b), (c))
 
+/* Memory fence barrier */
+#define ice_memfence_read()
+#define ice_memfence_read_write()
+#define ice_memfence_write()
+
+
 /* SW spinlock */
 struct ice_lock {
 	rte_spinlock_t spinlock;
