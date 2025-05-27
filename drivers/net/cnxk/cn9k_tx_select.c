@@ -5,7 +5,9 @@
 #include "cn9k_ethdev.h"
 #include "cn9k_tx.h"
 
-static __rte_used void
+#if defined(RTE_ARCH_ARM64)
+#if !defined(CNXK_DIS_TMPLT_FUNC)
+static void
 pick_tx_func(struct rte_eth_dev *eth_dev,
 	     const eth_tx_burst_t tx_burst[NIX_TX_OFFLOAD_MAX])
 {
@@ -19,8 +21,8 @@ pick_tx_func(struct rte_eth_dev *eth_dev,
 		rte_eth_fp_ops[eth_dev->data->port_id].tx_pkt_burst =
 			eth_dev->tx_pkt_burst;
 }
+#endif
 
-#if defined(RTE_ARCH_ARM64)
 static int
 cn9k_nix_tx_queue_count(void *tx_queue)
 {
