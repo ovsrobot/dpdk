@@ -1,7 +1,7 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2017 Cavium, Inc
 
-.. _pmd_build_and_test:
+.. _nics_pmd_build_and_test:
 
 Compiling and testing a PMD for a NIC
 =====================================

@@ -47,7 +47,7 @@ For more detail on SR-IOV, please refer to the following documents:
 
 *   `Scalable I/O Virtualized Servers <http://www.intel.com/content/www/us/en/virtualization/server-virtualization/scalable-i-o-virtualized-servers-paper.html>`_
 
-.. _figure_single_port_nic:
+.. _linux_gsg_nics_figure_single_port_nic:
 
 .. figure:: img/single_port_nic.*
 
@@ -362,7 +362,7 @@ The expected guest operating systems in a virtualized environment are:
 
 For supported kernel versions, refer to the *DPDK Release Notes*.
 
-.. _intel_vf_kvm:
+.. _linux_gsg_nics_intel_vf_kvm:
 
 Setting Up a KVM Virtual Machine Monitor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -576,7 +576,7 @@ The setup procedure is as follows:
 
     *   The Virtual Machine Monitor (see :numref:`figure_perf_benchmark`) is equivalent to a Host OS with KVM installed as described in the instructions.
 
-.. _figure_perf_benchmark:
+.. _linux_gsg_nics_figure_perf_benchmark:
 
 .. figure:: img/perf_benchmark.*
 
@@ -599,7 +599,7 @@ DPI can be offloaded on the host fast path.
 :numref:`figure_fast_pkt_proc` shows the scenario where some VMs directly communicate externally via a VFs,
 while others connect to a virtual switch and share the same uplink bandwidth.
 
-.. _figure_fast_pkt_proc:
+.. _linux_gsg_nics_figure_fast_pkt_proc:
 
 .. figure:: img/fast_pkt_proc.*
 
@@ -626,7 +626,7 @@ that is, the packet is forwarded to the correct PF pool.
 The SR-IOV NIC switch forwards the packet to a specific VM according to the MAC destination address
 which belongs to the destination VF on the VM.
 
-.. _figure_inter_vm_comms:
+.. _linux_gsg_nics_figure_inter_vm_comms:
 
 .. figure:: img/inter_vm_comms.*
 

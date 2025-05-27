@@ -147,7 +147,7 @@ There are two areas that need to be set up on a System Under Test:
 
 #. **User with administrator privileges**
 
-.. _sut_admin_user:
+.. _dts_sut_admin_user:
 
    DTS needs administrator privileges to run DPDK applications (such as testpmd) on the SUT.
    The SUT user must be able run commands in privileged mode without asking for password.
@@ -444,7 +444,7 @@ the DTS code check and format script.
 Refer to the script for usage: ``devtools/dts-check-format.sh -h``.
 
 
-.. _building_api_docs:
+.. _dts_building_api_docs:
 
 Building DTS API docs
 ---------------------
@@ -472,7 +472,7 @@ The output is generated in ``build/doc/api/dts/html``.
 
    Make sure to fix any Sphinx warnings when adding or updating docstrings.
 
-.. _configuration_example:
+.. _dts_configuration_example:
 
 Configuration Example
 ---------------------
@@ -489,7 +489,7 @@ And they both have two network ports which are physically connected to each othe
    This example assumes that you have setup SSH keys in both the system under test
    and traffic generator nodes.
 
-.. _test_run_configuration_example:
+.. _dts_test_run_configuration_example:
 
 ``dts/test_run.example.yaml``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -498,7 +498,7 @@ And they both have two network ports which are physically connected to each othe
    :language: yaml
    :start-at: # Define
 
-.. _nodes_configuration_example:
+.. _dts_nodes_configuration_example:
 
 
 ``dts/nodes.example.yaml``

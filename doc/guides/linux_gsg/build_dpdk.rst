@@ -82,7 +82,7 @@ and the last step causing the dynamic loader `ld.so` to update its cache to take
    distributions, `/usr/local/lib` and `/usr/local/lib64` should be added
    to a file in `/etc/ld.so.conf.d/` before running `ldconfig`.
 
-.. _adjusting_build_options:
+.. _linux_gsg_adjusting_build_options:
 
 Adjusting Build Options
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -177,7 +177,7 @@ Once the build directory has been configured,
 DPDK can be compiled using ``ninja`` as described above.
 
 
-.. _building_app_using_installed_dpdk:
+.. _linux_gsg_building_app_using_installed_dpdk:
 
 Building Applications Using Installed DPDK
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

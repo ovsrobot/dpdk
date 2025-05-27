@@ -228,9 +228,9 @@ Current RDMA core package and Linux kernel (recommended)
     ninja
     ninja install
 
-.. _`RDMA core installation documentation`: https://raw.githubusercontent.com/linux-rdma/rdma-core/master/README.md
+.. _nics_`RDMA core installation documentation`: https://raw.githubusercontent.com/linux-rdma/rdma-core/master/README.md
 
-.. _OFED_as_a_fallback:
+.. _nics_OFED_as_a_fallback:
 
 NVIDIA MLNX_OFED as a fallback
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -238,7 +238,7 @@ NVIDIA MLNX_OFED as a fallback
 - `NVIDIA MLNX_OFED`_ version: **4.4, 4.5, 4.6**.
 - firmware version: **2.42.5000** and above.
 
-.. _`NVIDIA MLNX_OFED`: https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/
+.. _nics_`NVIDIA MLNX_OFED`: https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/
 
 .. note::
 
@@ -276,7 +276,7 @@ Installing NVIDIA MLNX_OFED
 
 #. Continue with :ref:`section 2 of the Quick Start Guide <QSG_2>`.
 
-.. _qsg:
+.. _nics_qsg:
 
 Quick Start Guide
 -----------------
@@ -293,7 +293,7 @@ Quick Start Guide
         to Ethernet using connectx_port_config tool provided by it.
         :ref:`OFED_as_a_fallback`:
 
-.. _QSG_2:
+.. _nics_QSG_2:
 
 #. In case of bare metal or hypervisor, configure optimized steering mode
    by adding the following line to ``/etc/modprobe.d/mlx4_core.conf``::

@@ -99,7 +99,7 @@ enabling debugging options may affect system performance.
 
   Toggle display of register reads and writes.
 
-.. _bnx2x_driver-compilation:
+.. _nics_bnx2x_driver-compilation:
 
 Driver compilation and testing
 ------------------------------

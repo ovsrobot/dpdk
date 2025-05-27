@@ -15,7 +15,7 @@ and has support for the latest Linux operating systems.
 More information can be found at `Chelsio Communications Official Website
 <http://www.chelsio.com>`_.
 
-.. _t5-nics:
+.. _nics_t5-nics:
 
 Supported Chelsio T5 NICs
 -------------------------
@@ -25,7 +25,7 @@ Supported Chelsio T5 NICs
 - 40G NICs: T580-CR, T580-LP-CR, T580-SO-CR
 - Other T5 NICs: T522-CR
 
-.. _t6-nics:
+.. _nics_t6-nics:
 
 Supported Chelsio T6 NICs
 -------------------------
@@ -319,7 +319,7 @@ CXGBE PF Only Runtime Options
 
      dpdk-testpmd -a 02:00.4,filtermode=0x88,filtermask=0x80 -- -i
 
-.. _driver-compilation:
+.. _nics_driver-compilation:
 
 Driver compilation and testing
 ------------------------------
@@ -330,7 +330,7 @@ for details.
 Linux
 -----
 
-.. _linux-installation:
+.. _nics_linux-installation:
 
 Linux Installation
 ~~~~~~~~~~~~~~~~~~
@@ -582,7 +582,7 @@ virtual functions.
 FreeBSD
 -------
 
-.. _freebsd-installation:
+.. _nics_freebsd-installation:
 
 FreeBSD Installation
 ~~~~~~~~~~~~~~~~~~~~
@@ -784,7 +784,7 @@ devices managed by librte_net_cxgbe in FreeBSD operating system.
 Sample Application Notes
 ------------------------
 
-.. _flow-control:
+.. _nics_flow-control:
 
 Enable/Disable Flow Control
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

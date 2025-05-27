@@ -23,7 +23,7 @@ Contents summary
 - Overview of DPAA2 objects
 - DPAA2 driver architecture overview
 
-.. _dpaa2_overview:
+.. _nics_dpaa2_overview:
 
 DPAA2 Overview
 ~~~~~~~~~~~~~~
@@ -555,7 +555,7 @@ Other Limitations
 - RSS hash key cannot be modified.
 - RSS RETA cannot be configured.
 
-.. _dptmapi:
+.. _nics_dptmapi:
 
 Traffic Management API
 ----------------------

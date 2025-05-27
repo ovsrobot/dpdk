@@ -64,7 +64,7 @@ For aarch32, install ``pkg-config-arm-linux-gnueabihf``::
 GNU toolchain
 -------------
 
-.. _obtain_GNU_toolchain:
+.. _linux_gsg_obtain_GNU_toolchain:
 
 Get the cross toolchain
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,7 +94,7 @@ For aarch32::
    For the host requirements and other info, refer to the release note section:
    https://releases.linaro.org/components/toolchain/binaries/
 
-.. _augment_the_gnu_toolchain_with_numa_support:
+.. _linux_gsg_augment_the_gnu_toolchain_with_numa_support:
 
 Augment the GNU toolchain with NUMA support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

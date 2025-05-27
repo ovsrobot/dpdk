@@ -23,7 +23,7 @@ Contents summary
 - DPAA driver architecture overview
 - FMAN configuration tools and library
 
-.. _dpaa_overview:
+.. _nics_dpaa_overview:
 
 DPAA Overview
 ~~~~~~~~~~~~~

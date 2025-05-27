@@ -62,7 +62,7 @@ OCTEON TX compatible board:
 
 #. Follow the DPDK :doc:`../linux_gsg/index` to setup the basic DPDK environment.
 
-.. _setup_platform_using_OCTEON_TX_SDK:
+.. _platform_setup_platform_using_OCTEON_TX_SDK:
 
 Setup Platform Using OCTEON TX SDK
 ----------------------------------

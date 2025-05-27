@@ -155,7 +155,7 @@ actions.
 
 Patterns:
 
-.. _table_qede_supported_flow_item_types:
+.. _linux_gsg_nics_table_qede_supported_flow_item_types:
 
 .. table:: Item types
 
@@ -173,7 +173,7 @@ Patterns:
 
 Actions:
 
-.. _table_qede_supported_ingress_action_types:
+.. _linux_gsg_nics_table_qede_supported_ingress_action_types:
 
 .. table:: Ingress action types
 

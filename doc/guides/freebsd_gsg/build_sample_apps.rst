@@ -1,7 +1,7 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
-.. _compiling_sample_apps:
+.. _freebsd_gsg_compiling_sample_apps:
 
 Compiling and Running Sample Applications
 =========================================
@@ -44,7 +44,7 @@ the installation of DPDK using `meson install` as described previously::
         ln -sf helloworld-shared build/helloworld
 
 
-.. _running_sample_app:
+.. _freebsd_gsg_running_sample_app:
 
 Running a Sample Application
 ----------------------------
@@ -96,7 +96,7 @@ Other options, specific to Linux and are not supported under FreeBSD are as foll
 
 The ``-c`` or ``-l`` option is mandatory; the others are optional.
 
-.. _running_non_root:
+.. _freebsd_gsg_running_non_root:
 
 Running DPDK Applications Without Root Privileges
 -------------------------------------------------

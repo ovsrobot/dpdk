@@ -135,7 +135,7 @@ For proper operation of VFIO when running DPDK applications as a non-privileged 
 For more information, please refer to :ref:`Running_Without_Root_Privileges`.
 
 
-.. _vfio_noiommu:
+.. _linux_gsg_vfio_noiommu:
 
 VFIO no-IOMMU mode
 ~~~~~~~~~~~~~~~~~~
@@ -361,7 +361,7 @@ running on these systems.
 Consult your distributions documentation to make sure that is the case.
 
 
-.. _bifurcated_driver:
+.. _linux_gsg_bifurcated_driver:
 
 Bifurcated Driver
 -----------------
@@ -386,7 +386,7 @@ More about the bifurcated driver can be found in
 NVIDIA `bifurcated PMD
 <https://www.dpdk.org/wp-content/uploads/sites/35/2016/10/Day02-Session04-RonyEfraim-Userspace2016.pdf>`_ presentation.
 
-.. _uio:
+.. _linux_gsg_uio:
 
 UIO
 ---

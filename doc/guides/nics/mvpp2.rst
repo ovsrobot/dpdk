@@ -2,7 +2,7 @@
     Copyright(c) 2017 Marvell International Ltd.
     Copyright(c) 2017 Semihalf.
 
-.. _mvpp2_poll_mode_driver:
+.. _nics_mvpp2_poll_mode_driver:
 
 MVPP2 Poll Mode Driver
 ======================
@@ -166,7 +166,7 @@ In order to run testpmd example application following command can be used:
      --burst=128 --txd=2048 --rxd=1024 --rxq=2 --txq=2  --nb-cores=2 \
      -i -a --rss-udp
 
-.. _extstats:
+.. _nics_extstats:
 
 Extended stats
 --------------
@@ -188,7 +188,7 @@ MVPP2 PMD supports the following extended statistics:
 	- ``tx_errors``: number of TX MAC errors
 
 
-.. _extconf:
+.. _nics_extconf:
 
 External Configuration
 ----------------------
@@ -393,7 +393,7 @@ Usage example
    ./dpdk-testpmd --vdev=eth_mvpp2,iface=eth0,iface=eth2,cfg=/home/user/mrvl.conf \
      -c 7 -- -i -a --disable-hw-vlan-strip --rxq=3 --txq=3
 
-.. _flowapi:
+.. _nics_flowapi:
 
 Flow API
 --------
@@ -565,7 +565,7 @@ Following limitations need to be taken into account while creating flow rules:
 For additional information about classifier please consult
 ``doc/musdk_cls_user_guide.txt``.
 
-.. _mtrapi:
+.. _nics_mtrapi:
 
 Traffic metering and policing
 -----------------------------
@@ -622,7 +622,7 @@ For a detailed usage description please refer to "Traffic Metering and Policing"
 
 
 
-.. _tmapi:
+.. _nics_tmapi:
 
 Traffic Management API
 ----------------------

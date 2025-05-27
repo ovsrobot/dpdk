@@ -26,7 +26,7 @@ Resource Virtualization Unit architecture
 The :numref:`figure_cnxk_resource_virtualization` diagram depicts the
 RVU architecture and a resource provisioning example.
 
-.. _figure_cnxk_resource_virtualization:
+.. _platform_figure_cnxk_resource_virtualization:
 
 .. figure:: img/cnxk_resource_virtualization.*
 
@@ -45,7 +45,7 @@ The :numref:`table_cnxk_rvu_dpdk_mapping` shows the various local
 functions (LFs) provided by the RVU and its functional mapping to
 DPDK subsystem.
 
-.. _table_cnxk_rvu_dpdk_mapping:
+.. _platform_table_cnxk_rvu_dpdk_mapping:
 
 .. table:: RVU managed functional blocks and its mapping to DPDK subsystem
 
@@ -148,7 +148,7 @@ cnxk packet flow
 The :numref:`figure_cnxk_packet_flow_hw_accelerators` diagram depicts
 the packet flow on cnxk SoC in conjunction with use of various HW accelerators.
 
-.. _figure_cnxk_packet_flow_hw_accelerators:
+.. _platform_figure_cnxk_packet_flow_hw_accelerators:
 
 .. figure:: img/cnxk_packet_flow_hw_accelerators.*
 
@@ -248,7 +248,7 @@ compatible board:
 Debugging Options
 -----------------
 
-.. _table_cnxk_common_debug_options:
+.. _platform_table_cnxk_common_debug_options:
 
 .. table:: cnxk common debug options
 

@@ -716,7 +716,7 @@ Port representor PMD supports following operations:
 Debugging Options
 -----------------
 
-.. _table_cnxk_ethdev_debug_options:
+.. _nics_table_cnxk_ethdev_debug_options:
 
 .. table:: cnxk ethdev debug options
 

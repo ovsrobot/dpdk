@@ -3,7 +3,7 @@
 
 .. include:: <isonum.txt>
 
-.. _building_from_source:
+.. _freebsd_gsg_building_from_source:
 
 Compiling the DPDK Target from Source
 =====================================
@@ -67,7 +67,7 @@ the next section.
         variable.
 
 
-.. _loading_contigmem:
+.. _freebsd_loading_contigmem:
 
 Loading the DPDK contigmem Module
 ---------------------------------
@@ -148,7 +148,7 @@ available and can be verified via dmesg or ``/var/log/messages``::
 
 To avoid this error, reduce the number of buffers or the buffer size.
 
-.. _loading_nic_uio:
+.. _freebsd_gsg_loading_nic_uio:
 
 Loading the DPDK nic_uio Module
 -------------------------------
@@ -185,7 +185,7 @@ already bound to a driver other than ``nic_uio``. The following sub-section desc
 how to query and modify the device ownership of the ports to be used by
 DPDK applications.
 
-.. _binding_network_ports:
+.. _freebsd_gsg_binding_network_ports:
 
 Binding Network Ports to the nic_uio Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

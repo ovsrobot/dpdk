@@ -1,7 +1,7 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
-.. _install_from_ports:
+.. _freebsd_gsg_install_from_ports:
 
 Installing DPDK from the Ports Collection
 =========================================

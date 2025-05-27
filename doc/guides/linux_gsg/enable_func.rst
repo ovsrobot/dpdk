@@ -3,12 +3,12 @@
 
 .. include:: <isonum.txt>
 
-.. _Enabling_Additional_Functionality:
+.. _linux_gsg_Enabling_Additional_Functionality:
 
 Enabling Additional Functionality
 =================================
 
-.. _Running_Without_Root_Privileges:
+.. _linux_gsg_Running_Without_Root_Privileges:
 
 Running DPDK Applications Without Root Privileges
 -------------------------------------------------
@@ -157,7 +157,7 @@ Also see
 `CPU isolation example <https://www.suse.com/c/cpu-isolation-practical-example-part-5/>`_
 and `systemd core isolation example <https://www.rcannings.com/systemd-core-isolation/>`_.
 
-.. _High_Precision_Event_Timer:
+.. _linux_gsg_High_Precision_Event_Timer:
 
 High Precision Event Timer (HPET) Functionality
 -----------------------------------------------

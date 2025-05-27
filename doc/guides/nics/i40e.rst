@@ -763,7 +763,7 @@ Mirror rule limitation for X722
 
 Due to firmware restriction of X722, the same VSI cannot have more than one mirror rule.
 
-.. _net_i40e_testpmd_commands:
+.. _nics_net_i40e_testpmd_commands:
 
 Testpmd driver specific commands
 --------------------------------
@@ -991,7 +991,7 @@ server with Intel Xeon processors and Intel Ethernet CNA XL710.
 The example scenario is to get best performance with two Intel Ethernet CNA XL710 40GbE ports.
 See :numref:`figure_intel_perf_test_setup` for the performance test setup.
 
-.. _figure_intel_perf_test_setup:
+.. _nics_figure_intel_perf_test_setup:
 
 .. figure:: img/intel_perf_test_setup.*
 

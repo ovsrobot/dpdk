@@ -412,7 +412,7 @@ Limitations
      - Supported also with ``FLEX_PARSER_PROFILE_ENABLE`` = 0 for single DW only.
      - Supported for FW version **xx.37.0142** and above.
 
-  .. _geneve_parser_api:
+  .. _nics_geneve_parser_api:
 
   - An API (``rte_pmd_mlx5_create_geneve_tlv_parser``)
     is available for the flexible parser used in HW steering:
@@ -1919,7 +1919,7 @@ There are multiple Rx burst functions with different advantages and limitations.
    |                   || RxQs >= rxqs_min_mprq |         |                 |      |       |
    +-------------------+------------------------+---------+-----------------+------+-------+
 
-.. _mlx5_offloads_support:
+.. _nics_mlx5_offloads_support:
 
 Supported hardware offloads
 ---------------------------

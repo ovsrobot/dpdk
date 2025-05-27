@@ -53,7 +53,7 @@ On Windows, DevX is the only requirement from the above list.
 See :ref:`mlx5_windows_prerequisites` for DevX SDK package installation.
 
 
-.. _mlx5_classes:
+.. _platform_mlx5_classes:
 
 Classes
 -------
@@ -88,12 +88,12 @@ Limitations
 - On Windows, only ``eth`` and ``crypto`` are supported.
 
 
-.. _mlx5_common_compilation:
+.. _platform_mlx5_common_compilation:
 
 Compilation Prerequisites
 -------------------------
 
-.. _mlx5_linux_prerequisites:
+.. _platform_mlx5_linux_prerequisites:
 
 Linux Prerequisites
 ~~~~~~~~~~~~~~~~~~~
@@ -223,7 +223,7 @@ to match the kernel modules and libraries they come with.
    Please check the "Tested Platforms" section in the :doc:`../../rel_notes/index`.
 
 
-.. _mlx5_windows_prerequisites:
+.. _platform_mlx5_windows_prerequisites:
 
 Windows Prerequisites
 ~~~~~~~~~~~~~~~~~~~~~
@@ -278,7 +278,7 @@ or::
    set CFLAGS=-I"%DEVX_INC_PATH%" && set LDFLAGS=-L"%DEVX_LIB_PATH%" && meson.exe setup ...
 
 
-.. _mlx5_common_env:
+.. _platform_mlx5_common_env:
 
 Environment Configuration
 -------------------------
@@ -331,7 +331,7 @@ If link type was changed, firmware must be reset as well::
    mlxfwreset -d <mst device> reset
 
 
-.. _mlx5_vf:
+.. _platform_mlx5_vf:
 
 SR-IOV Virtual Function with MLNX_OFED/EN
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,7 +360,7 @@ Then the virtual functions can be instantiated::
    echo [num_vfs] > /sys/class/infiniband/mlx5_0/device/sriov_numvfs
 
 
-.. _mlx5_sub_function:
+.. _platform_mlx5_sub_function:
 
 Sub-Function with MLNX_OFED/EN
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -471,7 +471,7 @@ The keys ``DevxEnabled`` and ``DevxFsRules`` must be set.
 Additional information can be found in the WinOF2 user manual.
 
 
-.. _mlx5_firmware_config:
+.. _platform_mlx5_firmware_config:
 
 Firmware Configuration
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -574,7 +574,7 @@ Below are some firmware configurations listed.
    MEMIC_SIZE_LIMIT=0
 
 
-.. _mlx5_common_driver_options:
+.. _platform_mlx5_common_driver_options:
 
 Device Arguments
 ----------------
