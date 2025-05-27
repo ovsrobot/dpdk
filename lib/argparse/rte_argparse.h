@@ -183,7 +183,8 @@ struct rte_argparse {
  *   Array of parameters points.
  *
  * @return
- *   0 on success. Otherwise negative value is returned.
+ *   number of arguments parsed (>= 0) on success.
+ *   Otherwise negative error code is returned.
  */
 __rte_experimental
 int rte_argparse_parse(struct rte_argparse *obj, int argc, char **argv);

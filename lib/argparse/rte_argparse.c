@@ -605,6 +605,12 @@ parse_args(struct rte_argparse *obj, int argc, char **argv, bool *show_help)
 
 	for (i = 1; i < argc; i++) {
 		curr_argv = argv[i];
+
+		if (strcmp(argv[i], "--") == 0) {
+			i++;
+			break;
+		}
+
 		if (curr_argv[0] != '-') {
 			/* process positional parameters. */
 			position_index++;
@@ -668,7 +674,7 @@ parse_args(struct rte_argparse *obj, int argc, char **argv, bool *show_help)
 		arg->flags |= ARG_ATTR_FLAG_PARSED_MASK;
 	}
 
-	return 0;
+	return i;
 }
 
 static uint32_t
@@ -784,7 +790,7 @@ rte_argparse_parse(struct rte_argparse *obj, int argc, char **argv)
 		goto error;
 
 	ret = parse_args(obj, argc, argv, &show_help);
-	if (ret != 0)
+	if (ret < 0)
 		goto error;
 
 	if (show_help) {
@@ -792,7 +798,7 @@ rte_argparse_parse(struct rte_argparse *obj, int argc, char **argv)
 		exit(0);
 	}
 
-	return 0;
+	return ret;
 
 error:
 	if (obj->exit_on_error)
