@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for string and boolean types to the "argparse" library.**
+
+  The "argparse" library now supports parsing of string and boolean types.
+  String values are simply saved as-is,
+  while the boolean support allows for values "true", "false", "1" or "0".
 
 Removed Items
 -------------
