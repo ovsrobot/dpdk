@@ -539,7 +539,7 @@ to a different location.
 
 Sample::
 
-   DPDK_ABI_REF_VERSION=v19.11 DPDK_ABI_REF_DIR=/tmp ./devtools/test-meson-builds.sh
+   DPDK_ABI_REF_VERSION=v24.11 DPDK_ABI_REF_DIR=/tmp ./devtools/test-meson-builds.sh
 
 
 Sending Patches
