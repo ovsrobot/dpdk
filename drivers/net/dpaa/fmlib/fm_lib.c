@@ -558,3 +558,33 @@ get_device_id(t_handle h_dev)
 
 	return (t_handle)p_dev->id;
 }
+
+uint32_t
+fm_port_delete_rate_limit(t_handle h_fm_port)
+{
+	t_device        *p_dev = (t_device *)h_fm_port;
+
+	_fml_dbg("Calling...");
+
+	if (ioctl(p_dev->fd, FM_PORT_IOC_REMOVE_RATE_LIMIT))
+		RETURN_ERROR(MINOR, E_INVALID_OPERATION, NO_MSG);
+
+	_fml_dbg("Finishing.");
+
+	return E_OK;
+}
+
+uint32_t
+fm_port_set_rate_limit(t_handle h_fm_port, t_fm_port_rate_limit *p_rate_limit)
+{
+	t_device        *p_dev = (t_device *)h_fm_port;
+
+	_fml_dbg("Calling...");
+
+	if (ioctl(p_dev->fd, FM_PORT_IOC_SET_RATE_LIMIT, p_rate_limit))
+		RETURN_ERROR(MINOR, E_INVALID_OPERATION, NO_MSG);
+
+	_fml_dbg("Finishing.");
+
+	return E_OK;
+}
