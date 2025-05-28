@@ -63,6 +63,11 @@ New Features
     * ixgbe
     * iavf
 
+* **Updated Amazon ENA (Elastic Network Adapter) net driver.**
+
+  * Added support for enabling fragment bypass mode for egress packets.
+    This mode bypasses the PPS limit enforced by EC2 for fragmented egress packets on every ENI.
+
 * **Updated virtio driver.**
 
   * Added support for Rx and Tx burst mode query.
