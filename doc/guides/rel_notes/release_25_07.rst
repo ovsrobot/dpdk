@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new RSS offload types for IB_BTH in RSS flow.**
+
+  Added ``RTE_ETH_RSS_IB_BTH`` macro so that the RoCE Infiniband base transport header
+  can be used as input set for RSS.
+
 * **Added burst mode query function to Intel drivers.**
 
   Added support for Rx and Tx burst mode query to the following drivers:
