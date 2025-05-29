@@ -78,6 +78,19 @@ New Features
 
   See the :doc:`../cryptodevs/zsda` guide for more details on the new driver.
 
+* **Added eventdev vector adapter.**
+
+  Added the Event vector Adapter Library. This library extends the event-based
+  model by introducing APIs that allow applications to offload creation of
+  event vectors, thereby reducing the scheduling latency.
+
+  Use cases for the Event Vector Adapter include:
+    * Offload CPU event vector creation overhead i.e., vector allocation and
+      aggregation.
+    * Splitting existing vectors to classify objects into different event queues
+      based on their properties.
+
+
 
 Removed Items
 -------------
