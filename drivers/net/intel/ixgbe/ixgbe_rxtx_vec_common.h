@@ -6,10 +6,19 @@
 #define _IXGBE_RXTX_VEC_COMMON_H_
 #include <stdint.h>
 #include <ethdev_driver.h>
+#include <rte_malloc.h>
 
 #include "../common/rx.h"
 #include "ixgbe_ethdev.h"
 #include "ixgbe_rxtx.h"
+
+static inline int
+ixgbe_tx_desc_done(struct ci_tx_queue *txq, uint16_t idx)
+{
+	const uint32_t status = txq->ixgbe_tx_ring[idx].wb.status;
+
+	return !!(status & rte_cpu_to_le_32(IXGBE_ADVTXD_STAT_DD));
+}
 
 static __rte_always_inline int
 ixgbe_tx_free_bufs(struct ci_tx_queue *txq)
