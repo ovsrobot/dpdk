@@ -59,7 +59,7 @@ iavf_rx_vec_queue_default(struct iavf_rx_queue *rxq)
 	if (!rte_is_power_of_2(rxq->nb_rx_desc))
 		return -1;
 
-	if (rxq->rx_free_thresh < IAVF_VPMD_RX_MAX_BURST)
+	if (rxq->rx_free_thresh < IAVF_VPMD_RX_BURST)
 		return -1;
 
 	if (rxq->nb_rx_desc % rxq->rx_free_thresh)
@@ -80,7 +80,7 @@ iavf_tx_vec_queue_default(struct ci_tx_queue *txq)
 	if (!txq)
 		return -1;
 
-	if (txq->tx_rs_thresh < IAVF_VPMD_TX_MAX_BURST ||
+	if (txq->tx_rs_thresh < IAVF_VPMD_TX_BURST ||
 	    txq->tx_rs_thresh > IAVF_VPMD_TX_MAX_FREE_BUF)
 		return -1;
 
@@ -252,8 +252,8 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 	/* Pull 'n' more MBUFs into the software ring */
 	if (rte_mempool_get_bulk(rxq->mp,
 				 (void *)rxp,
-				 IAVF_RXQ_REARM_THRESH) < 0) {
-		if (rxq->rxrearm_nb + IAVF_RXQ_REARM_THRESH >=
+				 IAVF_VPMD_RXQ_REARM_THRESH) < 0) {
+		if (rxq->rxrearm_nb + IAVF_VPMD_RXQ_REARM_THRESH >=
 		    rxq->nb_rx_desc) {
 			__m128i dma_addr0;
 
@@ -265,7 +265,7 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
-			IAVF_RXQ_REARM_THRESH;
+			IAVF_VPMD_RXQ_REARM_THRESH;
 		return;
 	}
 
@@ -275,7 +275,7 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 	__m128i hdr_room = _mm_set_epi64x(RTE_PKTMBUF_HEADROOM,
 			RTE_PKTMBUF_HEADROOM);
 	/* Initialize the mbufs in vector, process 2 mbufs in one loop */
-	for (i = 0; i < IAVF_RXQ_REARM_THRESH; i += 2, rxp += 2) {
+	for (i = 0; i < IAVF_VPMD_RXQ_REARM_THRESH; i += 2, rxp += 2) {
 		__m128i vaddr0, vaddr1;
 
 		mb0 = rxp[0];
@@ -307,7 +307,7 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 		__m512i dma_addr0_3, dma_addr4_7;
 		__m512i hdr_room = _mm512_set1_epi64(RTE_PKTMBUF_HEADROOM);
 		/* Initialize the mbufs in vector, process 8 mbufs in one loop */
-		for (i = 0; i < IAVF_RXQ_REARM_THRESH;
+		for (i = 0; i < IAVF_VPMD_RXQ_REARM_THRESH;
 				i += 8, rxp += 8, rxdp += 8) {
 			__m128i vaddr0, vaddr1, vaddr2, vaddr3;
 			__m128i vaddr4, vaddr5, vaddr6, vaddr7;
@@ -378,7 +378,7 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 		__m256i dma_addr0_1, dma_addr2_3;
 		__m256i hdr_room = _mm256_set1_epi64x(RTE_PKTMBUF_HEADROOM);
 		/* Initialize the mbufs in vector, process 4 mbufs in one loop */
-		for (i = 0; i < IAVF_RXQ_REARM_THRESH;
+		for (i = 0; i < IAVF_VPMD_RXQ_REARM_THRESH;
 				i += 4, rxp += 4, rxdp += 4) {
 			__m128i vaddr0, vaddr1, vaddr2, vaddr3;
 			__m256i vaddr0_1, vaddr2_3;
@@ -423,11 +423,11 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 
 #endif
 
-	rxq->rxrearm_start += IAVF_RXQ_REARM_THRESH;
+	rxq->rxrearm_start += IAVF_VPMD_RXQ_REARM_THRESH;
 	if (rxq->rxrearm_start >= rxq->nb_rx_desc)
 		rxq->rxrearm_start = 0;
 
-	rxq->rxrearm_nb -= IAVF_RXQ_REARM_THRESH;
+	rxq->rxrearm_nb -= IAVF_VPMD_RXQ_REARM_THRESH;
 
 	rx_id = (uint16_t)((rxq->rxrearm_start == 0) ?
 			     (rxq->nb_rx_desc - 1) : (rxq->rxrearm_start - 1));
