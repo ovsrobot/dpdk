@@ -19,7 +19,7 @@ ixgbe_tx_free_bufs(struct ci_tx_queue *txq)
 	uint32_t n;
 	uint32_t i;
 	int nb_free = 0;
-	struct rte_mbuf *m, *free[RTE_IXGBE_TX_MAX_FREE_BUF_SZ];
+	struct rte_mbuf *m, *free[IXGBE_TX_MAX_FREE_BUF_SZ];
 
 	/* check DD bit on threshold descriptor */
 	status = txq->ixgbe_tx_ring[txq->tx_next_dd].wb.status;
