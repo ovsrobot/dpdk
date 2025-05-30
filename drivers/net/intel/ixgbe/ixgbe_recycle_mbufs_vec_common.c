@@ -11,15 +11,15 @@
 void
 ixgbe_recycle_rx_descriptors_refill_vec(void *rx_queue, uint16_t nb_mbufs)
 {
-	struct ixgbe_rx_queue *rxq = rx_queue;
-	struct ixgbe_rx_entry *rxep;
+	struct ci_rx_queue *rxq = rx_queue;
+	struct ci_rx_entry *rxep;
 	volatile union ixgbe_adv_rx_desc *rxdp;
 	uint16_t rx_id;
 	uint64_t paddr;
 	uint64_t dma_addr;
 	uint16_t i;
 
-	rxdp = rxq->rx_ring + rxq->rxrearm_start;
+	rxdp = rxq->ixgbe_rx_ring + rxq->rxrearm_start;
 	rxep = &rxq->sw_ring[rxq->rxrearm_start];
 
 	for (i = 0; i < nb_mbufs; i++) {

@@ -69,7 +69,7 @@ ixgbe_tx_free_bufs(struct ci_tx_queue *txq)
 }
 
 static inline void
-_ixgbe_rx_queue_release_mbufs_vec(struct ixgbe_rx_queue *rxq)
+_ixgbe_rx_queue_release_mbufs_vec(struct ci_rx_queue *rxq)
 {
 	unsigned int i;
 
@@ -173,7 +173,7 @@ ixgbe_rx_vec_dev_conf_condition_check_default(struct rte_eth_dev *dev)
 		return -1;
 
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
-		struct ixgbe_rx_queue *rxq = dev->data->rx_queues[i];
+		struct ci_rx_queue *rxq = dev->data->rx_queues[i];
 		if (!rxq)
 			continue;
 		if (!ci_rxq_vec_capable(rxq->nb_rx_desc, rxq->rx_free_thresh, rxq->offloads))
