@@ -1260,7 +1260,7 @@ iavf_configure_queues(struct iavf_adapter *adapter,
 		vc_qp->rxq.dma_ring_addr = rxq[i]->rx_ring_phys_addr;
 		vc_qp->rxq.databuffer_size = rxq[i]->rx_buf_len;
 		vc_qp->rxq.crc_disable = rxq[i]->crc_len != 0 ? 1 : 0;
-#ifndef RTE_LIBRTE_IAVF_16BYTE_RX_DESC
+#ifndef RTE_NET_INTEL_USE_16BYTE_DESC
 		if (vf->vf_res->vf_cap_flags &
 		    VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC) {
 			if (vf->supported_rxdid & RTE_BIT64(rxq[i]->rxdid)) {

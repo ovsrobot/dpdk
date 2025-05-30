@@ -195,7 +195,7 @@ union iavf_32b_rx_flex_desc {
 };
 
 /* HW desc structure, both 16-byte and 32-byte types are supported */
-#ifdef RTE_LIBRTE_IAVF_16BYTE_RX_DESC
+#ifdef RTE_NET_INTEL_USE_16BYTE_DESC
 #define iavf_rx_desc iavf_16byte_rx_desc
 #define iavf_rx_flex_desc iavf_16b_rx_flex_desc
 #else
@@ -740,7 +740,7 @@ void iavf_dump_rx_descriptor(struct iavf_rx_queue *rxq,
 			    const volatile void *desc,
 			    uint16_t rx_id)
 {
-#ifdef RTE_LIBRTE_IAVF_16BYTE_RX_DESC
+#ifdef RTE_NET_INTEL_USE_16BYTE_DESC
 	const volatile union iavf_16byte_rx_desc *rx_desc = desc;
 
 	printf("Queue %d Rx_desc %d: QW0: 0x%016"PRIx64" QW1: 0x%016"PRIx64"\n",
