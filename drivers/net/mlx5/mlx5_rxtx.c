@@ -28,11 +28,16 @@
 #include "mlx5_tx.h"
 
 /* static asserts */
+#ifndef RTE_TOOLCHAIN_MSVC
+static_assert(sizeof(rte_v128u32_t) == MLX5_SIZEOF_V128U32_T,
+		"MLX5_SIZEOF_V128U32_T must hold sizeof(rte_v128u32_t)");
+#endif
+
 static_assert(MLX5_CQE_STATUS_HW_OWN < 0, "Must be negative value");
 static_assert(MLX5_CQE_STATUS_SW_OWN < 0, "Must be negative value");
 static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		(sizeof(uint16_t) +
-		 sizeof(rte_v128u32_t)),
+		MLX5_SIZEOF_V128U32_T),
 		"invalid Ethernet Segment data size");
 static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		(sizeof(uint16_t) +
@@ -41,7 +46,7 @@ static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		"invalid Ethernet Segment data size");
 static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		(sizeof(uint16_t) +
-		 sizeof(rte_v128u32_t)),
+		MLX5_SIZEOF_V128U32_T),
 		"invalid Ethernet Segment data size");
 static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		(sizeof(uint16_t) +
@@ -50,7 +55,7 @@ static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		"invalid Ethernet Segment data size");
 static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		(sizeof(uint16_t) +
-		 sizeof(rte_v128u32_t)),
+		MLX5_SIZEOF_V128U32_T),
 		"invalid Ethernet Segment data size");
 static_assert(MLX5_ESEG_MIN_INLINE_SIZE ==
 		(sizeof(uint16_t) +
