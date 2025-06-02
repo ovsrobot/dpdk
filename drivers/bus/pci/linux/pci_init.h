@@ -6,6 +6,7 @@
 #define EAL_PCI_INIT_H_
 
 #include <rte_vfio.h>
+#include <uapi/linux/vfio_tph.h>
 
 #include "private.h"
 
