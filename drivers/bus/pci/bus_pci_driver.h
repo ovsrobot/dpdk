@@ -46,6 +46,7 @@ struct rte_pci_device {
 	char *bus_info;                     /**< PCI bus specific info */
 	struct rte_intr_handle *vfio_req_intr_handle;
 				/**< Handler of VFIO request interrupt */
+	uint8_t tph_enabled;                /**< TPH enabled on this device */
 };
 
 /**
@@ -193,6 +194,57 @@ struct rte_pci_ioport {
 	uint64_t base;
 	uint64_t len; /* only filled for memory mapped ports */
 };
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change, or be removed, without prior
+ * notice
+ *
+ * This structure is passed into the TPH Steering-Tag set or get function as an
+ * argument by the caller. Return values are set in the same structure in st and
+ * ph_ignore fields by the calee.
+ *
+ * Refer to PCI-SIG ECN "Revised _DSM for Cache Locality TPH Features" for
+ * details.
+ */
+struct rte_tph_info {
+	/* Input */
+	uint32_t cpu_id;	/*Logical CPU id*/
+	uint32_t cache_level;	/*Cache level relative to CPU. l1d=0,l2d=1,...*/
+	uint8_t flags;		/*Memory type, procesisng hint etc.*/
+	uint16_t index;		/*Index in vector table to store the ST*/
+
+	/* Output */
+	uint16_t st;		/*Steering tag returned by the platform*/
+	uint8_t ph_ignore;	/*Platform ignores PH for the returned ST*/
+};
+
+#define RTE_PCI_TPH_MEM_TYPE_MASK		0x1
+#define RTE_PCI_TPH_MEM_TYPE_SHIFT		0
+/** Request volatile memory ST */
+#define RTE_PCI_TPH_MEM_TYPE_VMEM		0
+/** Request persistent memory ST */
+#define RTE_PCI_TPH_MEM_TYPE_PMEM		1
+
+/** TLP Processing Hints - PCIe 6.0 specification section 2.2.7.1.1 */
+#define RTE_PCI_TPH_HINT_MASK		0x3
+#define RTE_PCI_TPH_HINT_SHIFT		1
+/** Host and device access data equally */
+#define RTE_PCI_TPH_HINT_BIDIR		0
+/** Device accesses data more frequently */
+#define RTE_PCI_TPH_HINT_REQSTR		(1 << RTE_PCI_TPH_HINT_SHIFT)
+/** Host access data more frequently */
+#define RTE_PCI_TPH_HINT_TARGET		(2 << RTE_PCI_TPH_HINT_SHIFT)
+/** Host access data more frequently with a high temporal locality */
+#define RTE_PCI_TPH_HINT_TARGET_PRIO	(3 << RTE_PCI_TPH_HINT_SHIFT)
+
+#define RTE_PCI_TPH_ST_MODE_MASK   0x3
+/** TPH no ST mode */
+#define RTE_PCI_TPH_ST_NS_MODE	   0
+/** TPH interrupt vector mode */
+#define RTE_PCI_TPH_ST_IV_MODE	   1
+/** TPH device specific mode */
+#define RTE_PCI_TPH_ST_DS_MODE	   2
 
 #ifdef __cplusplus
 }

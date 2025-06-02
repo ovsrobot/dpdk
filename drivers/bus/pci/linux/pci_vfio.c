@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include <rte_log.h>
+#include <eal_export.h>
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
 #include <rte_eal_paging.h>
@@ -1314,6 +1315,175 @@ pci_vfio_mmio_write(const struct rte_pci_device *dev, int bar,
 		return -1;
 
 	return pwrite(fd, buf, len, offset + offs);
+}
+
+static int
+pci_vfio_tph_ioctl(const struct rte_pci_device *dev, struct vfio_pci_tph *pci_tph)
+{
+	const struct rte_intr_handle *intr_handle = dev->intr_handle;
+	int vfio_dev_fd = 0, ret = 0;
+
+	vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
+	if (vfio_dev_fd < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = ioctl(vfio_dev_fd, VFIO_DEVICE_PCI_TPH, pci_tph);
+out:
+	return ret;
+}
+
+static int
+pci_vfio_tph_st_op(const struct rte_pci_device *dev,
+		    struct rte_tph_info *info, size_t count,
+		    enum rte_pci_st_op op)
+{
+	int ret = 0;
+	size_t argsz = 0, i;
+	struct vfio_pci_tph *pci_tph = NULL;
+	uint8_t mem_type = 0, hint = 0;
+
+	if (!count) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	argsz = sizeof(struct vfio_pci_tph) +
+		count * sizeof(struct vfio_pci_tph_entry);
+
+	pci_tph = rte_zmalloc(NULL, argsz, 0);
+	if (!pci_tph) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	pci_tph->argsz = argsz;
+	pci_tph->count = count;
+
+	switch (op) {
+	case RTE_PCI_TPH_ST_GET:
+		pci_tph->flags = VFIO_DEVICE_TPH_GET_ST;
+		break;
+	case RTE_PCI_TPH_ST_SET:
+		pci_tph->flags = VFIO_DEVICE_TPH_SET_ST;
+		break;
+	default:
+		ret = -EINVAL;
+		goto out;
+	}
+
+	for (i = 0; i < count; i++) {
+		pci_tph->ents[i].cpu_id = info[i].cpu_id;
+		pci_tph->ents[i].cache_level = info[i].cache_level;
+
+		mem_type = info[i].flags & RTE_PCI_TPH_MEM_TYPE_MASK;
+		switch (mem_type) {
+		case RTE_PCI_TPH_MEM_TYPE_VMEM:
+			pci_tph->ents[i].flags |= VFIO_TPH_MEM_TYPE_VMEM;
+			break;
+		case RTE_PCI_TPH_MEM_TYPE_PMEM:
+			pci_tph->ents[i].flags |= VFIO_TPH_MEM_TYPE_PMEM;
+			break;
+		default:
+			ret = -EINVAL;
+			goto out;
+		}
+
+		hint = info[i].flags & RTE_PCI_TPH_HINT_MASK;
+		switch (hint) {
+		case RTE_PCI_TPH_HINT_BIDIR:
+			pci_tph->ents[i].flags |= VFIO_TPH_HINT_BIDIR;
+			break;
+		case RTE_PCI_TPH_HINT_REQSTR:
+			pci_tph->ents[i].flags |= VFIO_TPH_HINT_REQSTR;
+			break;
+		case RTE_PCI_TPH_HINT_TARGET:
+			pci_tph->ents[i].flags |= VFIO_TPH_HINT_TARGET;
+			break;
+		case RTE_PCI_TPH_HINT_TARGET_PRIO:
+			pci_tph->ents[i].flags |= VFIO_TPH_HINT_TARGET_PRIO;
+			break;
+		default:
+			ret = -EINVAL;
+			goto out;
+		}
+
+		if (op == RTE_PCI_TPH_ST_SET)
+			pci_tph->ents[i].index = info[i].index;
+	}
+
+	ret = pci_vfio_tph_ioctl(dev, pci_tph);
+	if (ret)
+		goto out;
+
+	/*
+	 * Kernel returns steering-tag and ph-ignore bits for
+	 * RTE_PCI_TPH_ST_SET too, therefore copy output for
+	 * both RTE_PCI_TPH_ST_SET and RTE_PCI_TPH_ST_GET
+	 * cases.
+	 */
+	for (i = 0; i < count; i++) {
+		info[i].st = pci_tph->ents[i].st;
+		info[i].ph_ignore = pci_tph->ents[i].ph_ignore;
+	}
+
+out:
+	if (pci_tph)
+		rte_free(pci_tph);
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(pci_vfio_tph_enable, 25.07)
+int
+pci_vfio_tph_enable(const struct rte_pci_device *dev, int mode)
+{
+	int ret;
+
+	if (!(mode ^ (mode & VFIO_TPH_ST_MODE_MASK))) {
+		ret = -EINVAL;
+		goto out;
+	} else
+		mode &= VFIO_TPH_ST_MODE_MASK;
+
+	struct vfio_pci_tph pci_tph = {
+		.argsz = sizeof(struct vfio_pci_tph),
+		.flags = VFIO_DEVICE_TPH_ENABLE | mode,
+		.count = 0
+	};
+
+	ret = pci_vfio_tph_ioctl(dev, &pci_tph);
+out:
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(pci_vfio_tph_disable, 25.07)
+int
+pci_vfio_tph_disable(const struct rte_pci_device *dev)
+{
+	struct vfio_pci_tph pci_tph = {
+		.argsz = sizeof(struct vfio_pci_tph),
+		.flags = VFIO_DEVICE_TPH_DISABLE,
+		.count = 0
+	};
+
+	return pci_vfio_tph_ioctl(dev, &pci_tph);
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(pci_vfio_tph_st_get, 25.07)
+int
+pci_vfio_tph_st_get(const struct rte_pci_device *dev,
+		    struct rte_tph_info *info, size_t count)
+{
+	return pci_vfio_tph_st_op(dev, info, count, RTE_PCI_TPH_ST_GET);
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(pci_vfio_tph_st_set, 25.07)
+int
+pci_vfio_tph_st_set(const struct rte_pci_device *dev,
+		    struct rte_tph_info *info, size_t count)
+{
+	return pci_vfio_tph_st_op(dev, info, count, RTE_PCI_TPH_ST_SET);
 }
 
 int

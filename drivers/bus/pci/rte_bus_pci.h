@@ -31,6 +31,7 @@ extern "C" {
 struct rte_pci_device;
 struct rte_pci_driver;
 struct rte_pci_ioport;
+struct rte_tph_info;
 
 struct rte_devargs;
 
@@ -311,6 +312,72 @@ void rte_pci_ioport_read(struct rte_pci_ioport *p,
  */
 void rte_pci_ioport_write(struct rte_pci_ioport *p,
 		const void *data, size_t len, off_t offset);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enable TLP Processing Hints (TPH) in the endpoint device.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device
+ *   to use.
+ * @param mode
+ *   TPH mode the device must operate in.
+ */
+__rte_experimental
+int rte_pci_tph_enable(struct rte_pci_device *dev, int mode);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Disable TLP Processing Hints (TPH) in the endpoint device.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device
+ *   to use.
+ */
+__rte_experimental
+int rte_pci_tph_disable(struct rte_pci_device *dev);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Get PCI Steering-Tags (STs) for a list of stashing targets.
+ *
+ * @param mode
+ *   TPH mode the device must operate in.
+ * @param info
+ *   An array of rte_tph_info objects, each describing the target
+ *   cpu-id, cache-level, etc. Steering-tags for each target is
+ *   eturned via info array.
+ * @param count
+ *   The number of elements in the info array.
+ */
+__rte_experimental
+int rte_pci_tph_st_get(const struct rte_pci_device *dev,
+		struct rte_tph_info *info, size_t count);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Set PCI Steering-Tags (STs) for a list of stashing targets.
+ *
+ * @param mode
+ *   TPH mode the device must operate in.
+ * @param info
+ *   An array of rte_tph_info objects, each describing the target
+ *   cpu-id, cache-level, etc. Steering-tags for each target is
+ *   eturned via info array.
+ * @param count
+ *   The number of elements in the info array.
+ */
+__rte_experimental
+int rte_pci_tph_st_set(const struct rte_pci_device *dev,
+		struct rte_tph_info *info, size_t count);
 
 #ifdef __cplusplus
 }

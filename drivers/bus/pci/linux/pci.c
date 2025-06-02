@@ -814,3 +814,103 @@ rte_pci_ioport_unmap(struct rte_pci_ioport *p)
 
 	return ret;
 }
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_enable, 25.07)
+int
+rte_pci_tph_enable(struct rte_pci_device *dev, int mode)
+{
+	int ret = 0;
+
+	switch (dev->kdrv) {
+#ifdef VFIO_PRESENT
+	case RTE_PCI_KDRV_VFIO:
+		if (pci_vfio_is_enabled())
+			ret = pci_vfio_tph_enable(dev, mode);
+		break;
+#endif
+	case RTE_PCI_KDRV_IGB_UIO:
+	case RTE_PCI_KDRV_UIO_GENERIC:
+	default:
+		ret = -ENOTSUP;
+		break;
+	}
+
+	if (!ret)
+		dev->tph_enabled = 1;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_disable, 25.07)
+int
+rte_pci_tph_disable(struct rte_pci_device *dev)
+{
+	int ret = 0;
+
+	switch (dev->kdrv) {
+#ifdef VFIO_PRESENT
+	case RTE_PCI_KDRV_VFIO:
+		if (pci_vfio_is_enabled())
+			ret = pci_vfio_tph_disable(dev);
+		break;
+#endif
+	case RTE_PCI_KDRV_IGB_UIO:
+	case RTE_PCI_KDRV_UIO_GENERIC:
+	default:
+		ret = -ENOTSUP;
+		break;
+	}
+
+	if (!ret)
+		dev->tph_enabled = 0;
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_st_get, 25.07)
+int
+rte_pci_tph_st_get(const struct rte_pci_device *dev,
+		   struct rte_tph_info *info, size_t count)
+{
+	int ret = 0;
+
+	switch (dev->kdrv) {
+#ifdef VFIO_PRESENT
+	case RTE_PCI_KDRV_VFIO:
+		if (pci_vfio_is_enabled())
+			ret = pci_vfio_tph_st_get(dev, info, count);
+		break;
+#endif
+	case RTE_PCI_KDRV_IGB_UIO:
+	case RTE_PCI_KDRV_UIO_GENERIC:
+	default:
+		ret = -ENOTSUP;
+		break;
+	}
+
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_st_set, 25.07)
+int
+rte_pci_tph_st_set(const struct rte_pci_device *dev,
+		   struct rte_tph_info *info, size_t count)
+{
+	int ret = 0;
+
+	switch (dev->kdrv) {
+#ifdef VFIO_PRESENT
+	case RTE_PCI_KDRV_VFIO:
+		if (pci_vfio_is_enabled())
+			ret = pci_vfio_tph_st_set(dev, info, count);
+		break;
+#endif
+	case RTE_PCI_KDRV_IGB_UIO:
+	case RTE_PCI_KDRV_UIO_GENERIC:
+	default:
+		ret = -ENOTSUP;
+		break;
+	}
+
+	return ret;
+}

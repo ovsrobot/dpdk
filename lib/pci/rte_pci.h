@@ -137,6 +137,21 @@ extern "C" {
 /* Process Address Space ID (RTE_PCI_EXT_CAP_ID_PASID) */
 #define RTE_PCI_PASID_CTRL		0x06    /* PASID control register */
 
+/* TPH Requester */
+#define RTE_PCI_TPH_CAP            4       /* capability register */
+#define RTE_PCI_TPH_CAP_ST_NS      0x00000001 /* No ST Mode Supported */
+#define RTE_PCI_TPH_CAP_ST_IV      0x00000002 /* Interrupt Vector Mode Supported */
+#define RTE_PCI_TPH_CAP_ST_DS      0x00000004 /* Device Specific Mode Supported */
+#define RTE_PCI_TPH_CAP_EXT_TPH    0x00000100 /* Ext TPH Requester Supported */
+#define RTE_PCI_TPH_CAP_LOC_MASK   0x00000600 /* ST Table Location */
+#define RTE_PCI_TPH_LOC_NONE       0x00000000 /* Not present */
+#define RTE_PCI_TPH_LOC_CAP        0x00000200 /* In capability */
+#define RTE_PCI_TPH_LOC_MSIX       0x00000400 /* In MSI-X */
+#define RTE_PCI_TPH_CAP_ST_MASK    0x07FF0000 /* ST Table Size */
+#define RTE_PCI_TPH_CAP_ST_SHIFT   16      /* ST Table Size shift */
+#define RTE_PCI_TPH_BASE_SIZEOF    0xc     /* Size with no ST table */
+
+
 /** Formatting string for PCI device identifier: Ex: 0000:00:01.0 */
 #define PCI_PRI_FMT "%.4" PRIx32 ":%.2" PRIx8 ":%.2" PRIx8 ".%" PRIx8
 #define PCI_PRI_STR_SIZE sizeof("XXXXXXXX:XX:XX.X")
