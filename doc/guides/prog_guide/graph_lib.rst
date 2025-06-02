@@ -458,6 +458,22 @@ On LPM lookup failure, objects are redirected to pkt_drop node.
 To achieve home run, node use ``rte_node_stream_move()`` as mentioned in above
 sections.
 
+ip4_lookup_fib
+~~~~~~~~~~~~~~
+This node is an intermediate node that does FIB lookup for the received
+ipv4 packets and the result determines each packets next node.
+
+On successful FIB lookup, the result contains the ``next_node`` id and
+``next-hop`` id with which the packet needs to be further processed.
+
+On FIB lookup failure, objects are redirected to pkt_drop node.
+``rte_node_ip4_fib_route_add()`` is control path API to add ipv4 routes.
+To achieve home run, node use ``rte_node_stream_move()`` as mentioned in above
+sections.
+
+This node is used only when lookup mode is given as FIB in the application.
+Otherwise, the ip4_lookup node is used by default which does LPM lookup.
+
 ip4_rewrite
 ~~~~~~~~~~~
 This node gets packets from ``ip4_lookup`` node with next-hop id for each
@@ -486,6 +502,22 @@ On LPM lookup failure, objects are redirected to ``pkt_drop`` node.
 ``rte_node_ip6_route_add()`` is control path API to add IPv6 routes.
 To achieve home run, node use ``rte_node_stream_move()``
 as mentioned in above sections.
+
+ip6_lookup_fib
+~~~~~~~~~~~~~~
+This node is an intermediate node that does FIB lookup for the received
+IPv6 packets and the result determines each packets next node.
+
+On successful FIB lookup, the result contains the ``next_node`` ID
+and `next-hop`` ID with which the packet needs to be further processed.
+
+On FIB lookup failure, objects are redirected to ``pkt_drop`` node.
+``rte_node_ip6_fib_route_add()`` is control path API to add IPv6 routes.
+To achieve home run, node use ``rte_node_stream_move()`` as mentioned in
+above sections.
+
+This node is used only when lookup mode is given as FIB in the application.
+Otherwise, the ip6_lookup node is used by default which does LPM lookup.
 
 ip6_rewrite
 ~~~~~~~~~~~
