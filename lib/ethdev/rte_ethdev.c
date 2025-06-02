@@ -158,6 +158,7 @@ static const struct {
 	{RTE_ETH_DEV_CAPA_RXQ_SHARE, "RXQ_SHARE"},
 	{RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP, "FLOW_RULE_KEEP"},
 	{RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP, "FLOW_SHARED_OBJECT_KEEP"},
+	{RTE_ETH_DEV_CAPA_CACHE_STASHING, "CACHE_STASHING"},
 };
 
 enum {
@@ -7416,6 +7417,154 @@ int rte_eth_dev_map_aggr_tx_affinity(uint16_t port_id, uint16_t tx_queue_id,
 
 	rte_eth_trace_map_aggr_tx_affinity(port_id, tx_queue_id, affinity, ret);
 
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_validate_stashing_config, 25.07)
+int
+rte_eth_dev_validate_stashing_config(uint16_t port_id, uint16_t queue_id,
+				     uint8_t queue_direction,
+				     struct rte_eth_stashing_config *config)
+{
+	struct rte_eth_dev *dev;
+	struct rte_eth_dev_info dev_info;
+	int ret = 0;
+	uint16_t nb_queues;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	if (!config) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid stashing configuration");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	/*
+	 * Check for invalid objects
+	 */
+	if (!RTE_ETH_DEV_STASH_OBJECTS_VALID(config->objects)) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid stashing objects");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	dev = &rte_eth_devices[port_id];
+
+	nb_queues = (queue_direction == RTE_ETH_DEV_RX_QUEUE) ?
+				      dev->data->nb_rx_queues :
+				      dev->data->nb_tx_queues;
+
+	if (queue_id >= nb_queues) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Invalid Rx queue_id=%u", queue_id);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret < 0)
+		goto out;
+
+	if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_CACHE_STASHING) !=
+	    RTE_ETH_DEV_CAPA_CACHE_STASHING) {
+		ret = -ENOTSUP;
+		goto out;
+	}
+
+	if (*dev->dev_ops->stashing_rx_hints_set == NULL ||
+	    *dev->dev_ops->stashing_tx_hints_set == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Stashing hints are not implemented "
+				    "in %s for %s", dev_info.driver_name,
+				    dev_info.device->name);
+		ret = -ENOSYS;
+	}
+
+out:
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_stashing_rx_config_set, 25.07)
+int
+rte_eth_dev_stashing_rx_config_set(uint16_t port_id, uint16_t queue_id,
+				   struct rte_eth_stashing_config *config)
+{
+	struct rte_eth_dev *dev;
+	int ret = 0;
+
+	ret = rte_eth_dev_validate_stashing_config(port_id, queue_id,
+						   RTE_ETH_DEV_RX_QUEUE,
+						   config);
+	if (ret < 0)
+		goto out;
+
+	dev = &rte_eth_devices[port_id];
+
+	ret = eth_err(port_id,
+		      (*dev->dev_ops->stashing_rx_hints_set)(dev, queue_id,
+		      config));
+out:
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_stashing_tx_config_set, 25.07)
+int
+rte_eth_dev_stashing_tx_config_set(uint16_t port_id, uint16_t queue_id,
+				   struct rte_eth_stashing_config *config)
+{
+	struct rte_eth_dev *dev;
+	int ret = 0;
+
+	ret = rte_eth_dev_validate_stashing_config(port_id, queue_id,
+						   RTE_ETH_DEV_TX_QUEUE,
+						   config);
+	if (ret < 0)
+		goto out;
+
+	dev = &rte_eth_devices[port_id];
+
+	ret = eth_err(port_id,
+		      (*dev->dev_ops->stashing_rx_hints_set) (dev, queue_id,
+		       config));
+out:
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_stashing_capabilities_get, 25.07)
+int
+rte_eth_dev_stashing_capabilities_get(uint16_t port_id, uint16_t *objects)
+{
+	struct rte_eth_dev *dev;
+	struct rte_eth_dev_info dev_info;
+	int ret = 0;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	if (!objects) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	dev = &rte_eth_devices[port_id];
+
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret < 0)
+		goto out;
+
+	if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_CACHE_STASHING) !=
+	    RTE_ETH_DEV_CAPA_CACHE_STASHING) {
+		ret = -ENOTSUP;
+		goto out;
+	}
+
+	if (*dev->dev_ops->stashing_capabilities_get == NULL) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Stashing hints are not implemented "
+				    "in %s for %s", dev_info.driver_name,
+				    dev_info.device->name);
+		ret = -ENOSYS;
+		goto out;
+	}
+	ret = eth_err(port_id,
+		      (*dev->dev_ops->stashing_capabilities_get)(dev, objects));
+out:
 	return ret;
 }
 
