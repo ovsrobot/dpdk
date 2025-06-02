@@ -18,6 +18,7 @@
 #include <rte_pci.h>
 #include <bus_pci_driver.h>
 #include <rte_ether.h>
+#include <rte_ethdev.h>
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <rte_memzone.h>
@@ -410,6 +411,11 @@ static int i40e_fec_get_capability(struct rte_eth_dev *dev,
 	struct rte_eth_fec_capa *speed_fec_capa, unsigned int num);
 static int i40e_fec_get(struct rte_eth_dev *dev, uint32_t *fec_capa);
 static int i40e_fec_set(struct rte_eth_dev *dev, uint32_t fec_capa);
+static int i40e_stashing_cap_get(struct rte_eth_dev *dev, uint16_t *objects);
+static int i40e_stashing_rx_hints_set(struct rte_eth_dev *dev, uint16_t queue_id,
+				     struct rte_eth_stashing_config *config);
+static int i40e_stashing_tx_hints_set(struct rte_eth_dev *dev, uint16_t queue_id,
+				     struct rte_eth_stashing_config *config);
 
 static const char *const valid_keys[] = {
 	ETH_I40E_FLOATING_VEB_ARG,
@@ -527,6 +533,9 @@ static const struct eth_dev_ops i40e_eth_dev_ops = {
 	.fec_get_capability           = i40e_fec_get_capability,
 	.fec_get                      = i40e_fec_get,
 	.fec_set                      = i40e_fec_set,
+	.stashing_capabilities_get    = i40e_stashing_cap_get,
+	.stashing_rx_hints_set        = i40e_stashing_rx_hints_set,
+	.stashing_tx_hints_set        = i40e_stashing_tx_hints_set,
 };
 
 /* store statistics names and its offset in stats structure */
@@ -3878,6 +3887,7 @@ i40e_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 		RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
 		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
 	dev_info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
+	dev_info->dev_capa |= RTE_ETH_DEV_CAPA_CACHE_STASHING;
 
 	dev_info->hash_key_size = (I40E_PFQF_HKEY_MAX_INDEX + 1) *
 						sizeof(uint32_t);
@@ -12542,6 +12552,124 @@ i40e_fec_set(struct rte_eth_dev *dev, uint32_t fec_capa)
 	}
 
 	return 0;
+}
+
+static int
+i40e_stashing_cap_get(struct rte_eth_dev *dev, uint16_t *objects)
+{
+	RTE_SET_USED(dev);
+
+	*objects = RTE_ETH_DEV_STASH_OBJECT_DESC |
+		   RTE_ETH_DEV_STASH_OBJECT_HEADER |
+		   RTE_ETH_DEV_STASH_OBJECT_PAYLOAD;
+
+	return 0;
+}
+
+static int
+i40e_stashing_hints_set(struct rte_eth_dev *dev, uint16_t queue_id,
+			struct rte_eth_stashing_config *config,
+			enum i40e_hmc_lan_rsrc_type hmc_type)
+{
+	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	int err = I40E_SUCCESS;
+	struct i40e_hmc_obj_rxq rxq;
+	struct i40e_hmc_obj_txq txq;
+
+	if (!config) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	struct rte_tph_info tph = {
+		.cpu_id = config->lcore_id,
+		.cache_level = config->cache_level,
+		.flags = RTE_PCI_TPH_MEM_TYPE_VMEM | RTE_PCI_TPH_HINT_BIDIR,
+		.index = 0,
+	};
+
+	if (!pci_dev->tph_enabled)
+		err = rte_pci_tph_enable(pci_dev, RTE_PCI_TPH_CAP_ST_DS);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed enabling TPH");
+		goto out;
+	}
+
+	err = rte_pci_tph_st_get(pci_dev, &tph, 1);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed ST read for lcore: %u and cache-level: %u",
+			    tph.cpu_id, tph.cache_level);
+		goto out;
+	}
+
+	switch (hmc_type) {
+	case I40E_HMC_LAN_RX:
+		err = i40e_get_lan_rx_queue_context(hw, queue_id, &rxq);
+		if (err != I40E_SUCCESS) {
+			PMD_DRV_LOG(ERR, "Failed to get LAN RX queue context");
+			goto out;
+		}
+
+		rxq.cpuid = tph.st;
+
+		if (config->objects & RTE_ETH_DEV_STASH_OBJECT_DESC) {
+			rxq.tphrdesc_ena = 1;
+			rxq.tphwdesc_ena = 1;
+		}
+
+		if (config->objects & RTE_ETH_DEV_STASH_OBJECT_PAYLOAD)
+			rxq.tphdata_ena = 1;
+
+		if (config->objects & RTE_ETH_DEV_STASH_OBJECT_HEADER)
+			rxq.tphhead_ena = 1;
+
+		err = i40e_set_lan_rx_queue_context(hw, queue_id, &rxq);
+		if (err != I40E_SUCCESS)
+			PMD_DRV_LOG(ERR, "Failed to set LAN RX queue context");
+		break;
+	case I40E_HMC_LAN_TX:
+		err = i40e_get_lan_tx_queue_context(hw, queue_id, &txq);
+		if (err != I40E_SUCCESS) {
+			PMD_DRV_LOG(ERR, "Failed to get LAN TX queue context");
+			goto out;
+		}
+
+		txq.cpuid = tph.st;
+
+		if (config->objects & RTE_ETH_DEV_STASH_OBJECT_DESC) {
+			txq.tphrdesc_ena = 1;
+			txq.tphwdesc_ena = 1;
+		}
+
+		if (config->objects & (RTE_ETH_DEV_STASH_OBJECT_PAYLOAD |
+			       RTE_ETH_DEV_STASH_OBJECT_HEADER))
+			txq.tphrpacket_ena = 1;
+
+		err = i40e_set_lan_tx_queue_context(hw, queue_id, &txq);
+		if (err != I40E_SUCCESS)
+			PMD_DRV_LOG(ERR, "Failed to set LAN TX queue context");
+		break;
+	default:
+		err = -EINVAL;
+	}
+
+out:
+	return err;
+}
+
+static int
+i40e_stashing_rx_hints_set(struct rte_eth_dev *dev, uint16_t queue_id,
+			  struct rte_eth_stashing_config *config)
+{
+	return i40e_stashing_hints_set(dev, queue_id, config, I40E_HMC_LAN_RX);
+}
+
+static int
+i40e_stashing_tx_hints_set(struct rte_eth_dev *dev, uint16_t queue_id,
+			  struct rte_eth_stashing_config *config)
+{
+	return i40e_stashing_hints_set(dev, queue_id, config, I40E_HMC_LAN_TX);
 }
 
 RTE_LOG_REGISTER_SUFFIX(i40e_logtype_init, init, NOTICE);
