@@ -83,6 +83,9 @@ New Features
 
   See the :doc:`../cryptodevs/zsda` guide for more details on the new driver.
 
+* **Updated Marvell cnxk crypto driver.**
+
+  * Added CPT PMD support for CN20K SoC.
 
 Removed Items
 -------------
