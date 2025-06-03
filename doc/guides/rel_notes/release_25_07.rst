@@ -125,7 +125,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* No ABI change that would break compatibility with 24.11.
+* All the vmbus interfaces defined in ``drivers/bus/vmbus/rte_bus_vmbus.h``
+  become internal to DPDK.
 
 
 Known Issues
