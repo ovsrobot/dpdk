@@ -83,6 +83,12 @@ New Features
 
   See the :doc:`../cryptodevs/zsda` guide for more details on the new driver.
 
+* **Added support for string and boolean types to the "argparse" library.**
+
+  The "argparse" library now supports parsing of string and boolean types.
+  String values are simply saved as-is,
+  while the boolean support allows for values "true", "false", "1" or "0".
+
 
 Removed Items
 -------------
