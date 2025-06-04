@@ -215,6 +215,7 @@ The public API headers are grouped by topics:
   * [graph](@ref rte_graph.h):
     [graph_worker](@ref rte_graph_worker.h)
     [graph_feature_arc](@ref rte_graph_feature_arc.h)
+    [graph_feature_arc_worker](@ref rte_graph_feature_arc_worker.h)
   * graph_nodes:
     [eth_node](@ref rte_node_eth_api.h),
     [ip4_node](@ref rte_node_ip4_api.h),
