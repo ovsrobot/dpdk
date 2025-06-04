@@ -87,15 +87,69 @@ extern "C" {
  *
  * A feature arc in a graph is represented via *start_node* and *end_node*.
  * Feature nodes are added between start_node and end_node. Packets enter
- * feature arc traversal via start_node while they exits from end_node. Packets
- * steering from start_node to feature nodes are controlled in control plane
- * via rte_graph_feature_enable()/rte_graph_feature_disable().
+ * feature arc traversal via start_node while they exits from end_node.
  *
  * This library facilitates rte graph based applications to implement stack
  * functionalities described above by providing "edge" to the next enabled
  * feature node in fast path
  *
+ * In order to use feature-arc APIs, applications needs to do following in
+ * control plane:
+ * - Create feature arc object using RTE_GRAPH_FEATURE_ARC_REGISTER()
+ * - New feature nodes (In-built/Out-of-tree) can be added to an arc via
+ *   RTE_GRAPH_FEATURE_REGISTER(). RTE_GRAPH_FEATURE_REGISTER() has
+ *   "runs_after" and "runs_before" fields to specify protocol ordering
+ *   constraints.
+ * - Before calling rte_graph_create(), rte_graph_feature_arc_init() API must
+ *   be called. If rte_graph_feature_arc_init() is not called by application,
+ *   feature arc library has no affect.
+ * - Feature arc can be destroyed via rte_graph_feature_arc_destroy()
+ *
+ * If a given feature likes to control number of indexes (which is higher than
+ * RTE_GRAPH_FEATURE_ARC_REGISTER::max_indexes) it can do so by using
+ * RTE_GRAPH_FEATURE_REGISTER():override_index_cb(). As part of
+ * rte_graph_feature_arc_init(), all feature's override_index_cb(), if set, are
+ * called and with maximum value returned by any of the feature is used for
+ * rte_graph_feature_arc_create()
+ *
+ * Constraints
+ * -----------
+ *  - rte_graph_feature_arc_init(), rte_graph_feature_create() and
+ *  rte_graph_feature_add() must be called before rte_graph_create().
+ *  - Not more than 63 features can be added to a feature arc. There is no
+ *  limit to number of feature arcs i.e. number of
+ *  RTE_GRAPH_FEATURE_ARC_REGISTER()
+ *  - There is also no limit for number of indexes (RTE_GRAPH_FEATURE_ARC_REGISTER():
+ *  max_indexes). There is also a provision for each
+ *  RTE_GRAPH_FEATURE_REGISTER() to override number of indexes via
+ *  override_index_cb()
+ *  - A feature node cannot be part of more than one arc due to
+ *  performance reason.
+ *
+ * Optional Usage
+ * --------------
+ * Feature arc is added as an optional functionality to the graph library hence
+ * an application may choose not to use it by skipping explicit call to
+ * rte_graph_feature_arc_init(). In that case feature arc would be a no-op for
+ * application.
  */
+
+/** Length of feature arc name */
+#define RTE_GRAPH_FEATURE_ARC_NAMELEN RTE_NODE_NAMESIZE
+
+/** Initializer values for ARC, Feature, Feature data */
+#define RTE_GRAPH_FEATURE_ARC_INITIALIZER ((rte_graph_feature_arc_t)UINT16_MAX)
+#define RTE_GRAPH_FEATURE_DATA_INVALID ((rte_graph_feature_data_t)UINT32_MAX)
+#define RTE_GRAPH_FEATURE_INVALID  ((rte_graph_feature_t)UINT8_MAX)
+
+/** rte_graph feature arc object */
+typedef uint16_t rte_graph_feature_arc_t;
+
+/** rte_graph feature object */
+typedef uint8_t rte_graph_feature_t;
+
+/** rte_graph feature data object */
+typedef uint32_t rte_graph_feature_data_t;
 
 /** feature notifier callback called when feature is enabled/disabled */
 typedef void (*rte_graph_feature_change_notifier_cb_t)(const char *arc_name,
@@ -230,6 +284,194 @@ struct rte_graph_feature_arc_register {
 	{                                                                               \
 		__rte_graph_feature_arc_register(&reg, __func__, __LINE__);             \
 	}
+/**
+ * Initialize feature arc subsystem
+ *
+ * This API
+ * - Initializes feature arc module and alloc associated memory
+ * - creates feature arc for every RTE_GRAPH_FEATURE_ARC_REGISTER()
+ * - Add feature node to a feature arc for every RTE_GRAPH_FEATURE_REGISTER()
+ * - Replaces all RTE_NODE_REGISTER()->process() functions for
+ *   - Every start_node/end_node provided in arc registration
+ *   - Every feature node provided in feature registration
+ *
+ * @param num_feature_arcs
+ *  Number of feature arcs that application wants to create by explicitly using
+ *  "rte_graph_feature_arc_create()" API.
+ *
+ *  Number of RTE_GRAPH_FEATURE_ARC_REGISTER() should be excluded from this
+ *  count as API internally calculates number of
+ *  RTE_GRAPH_FEATURE_ARC_REGISTER().
+ *
+ *  So,
+ *  total number of supported arcs = num_feature_arcs +
+ *                                   NUMBER_OF(RTE_GRAPH_FEATURE_ARC_REGISTER())
+ *
+ *  @return
+ *   0: Success
+ *   <0: Failure
+ *
+ *  rte_graph_feature_arc_init(0) is valid call which will accommodates
+ *  constructor based arc registration
+ */
+__rte_experimental
+int rte_graph_feature_arc_init(uint16_t num_feature_arcs);
+
+/**
+ * Create a feature arc.
+ *
+ * This API can be skipped if RTE_GRAPH_FEATURE_ARC_REGISTER() is used
+ *
+ * @param reg
+ *   Pointer to struct rte_graph_feature_arc_register
+ * @param[out] _arc
+ *  Feature arc object
+ *
+ * @return
+ *  0: Success
+ * <0: Failure
+ */
+__rte_experimental
+int rte_graph_feature_arc_create(struct rte_graph_feature_arc_register *reg,
+				 rte_graph_feature_arc_t *_arc);
+
+/**
+ * Get feature arc object with name
+ *
+ * @param arc_name
+ *   Feature arc name provided to successful @ref rte_graph_feature_arc_create
+ * @param[out] _arc
+ *   Feature arc object returned. Valid only when API returns SUCCESS
+ *
+ * @return
+ *  0: Success
+ * <0: Failure.
+ */
+__rte_experimental
+int rte_graph_feature_arc_lookup_by_name(const char *arc_name, rte_graph_feature_arc_t *_arc);
+
+/**
+ * Add a feature to already created feature arc.
+ *
+ * This API is not required in case RTE_GRAPH_FEATURE_REGISTER() is used
+ *
+ * @param feat_reg
+ * Pointer to struct rte_graph_feature_register
+ *
+ * <I> Must be called before rte_graph_create() </I>
+ * <I> When called by application, then feature_node_id should be appropriately set as
+ *     freg->feature_node_id = freg->feature_node->id;
+ * </I>
+ *
+ * @return
+ *  0: Success
+ * <0: Failure
+ */
+__rte_experimental
+int rte_graph_feature_add(struct rte_graph_feature_register *feat_reg);
+
+/**
+ * Get rte_graph_feature_t object from feature name
+ *
+ * @param arc
+ *   Feature arc object returned by @ref rte_graph_feature_arc_create or @ref
+ *   rte_graph_feature_arc_lookup_by_name
+ * @param feature_name
+ *   Feature name provided to @ref rte_graph_feature_add
+ * @param[out] feature
+ *   Feature object
+ *
+ * @return
+ *  0: Success
+ * <0: Failure
+ */
+__rte_experimental
+int rte_graph_feature_lookup(rte_graph_feature_arc_t arc, const char *feature_name,
+			     rte_graph_feature_t *feature);
+
+/**
+ * Delete feature_arc object
+ *
+ * @param _arc
+ *   Feature arc object returned by @ref rte_graph_feature_arc_create or @ref
+ *   rte_graph_feature_arc_lookup_by_name
+ *
+ * @return
+ *  0: Success
+ * <0: Failure
+ */
+__rte_experimental
+int rte_graph_feature_arc_destroy(rte_graph_feature_arc_t _arc);
+
+/**
+ * Cleanup all feature arcs
+ *
+ * @return
+ *  0: Success
+ * <0: Failure
+ */
+__rte_experimental
+int rte_graph_feature_arc_cleanup(void);
+
+/**
+ * Slow path API to know how many features are added (NOT enabled) within a
+ * feature arc
+ *
+ * @param _arc
+ *  Feature arc object
+ *
+ * @return: Number of added features to arc
+ */
+__rte_experimental
+uint32_t rte_graph_feature_arc_num_features(rte_graph_feature_arc_t _arc);
+
+/**
+ * Slow path API to get feature node name from rte_graph_feature_t object
+ *
+ * @param _arc
+ *   Feature arc object
+ * @param feature
+ *   Feature object
+ *
+ * @return: Name of the feature node
+ */
+__rte_experimental
+char *rte_graph_feature_arc_feature_to_name(rte_graph_feature_arc_t _arc,
+					    rte_graph_feature_t feature);
+
+/**
+ * Slow path API to get corresponding rte_node_t from
+ * rte_graph_feature_t
+ *
+ * @param _arc
+ *   Feature arc object
+ * @param feature
+ *   Feature object
+ * @param[out] node
+ *   rte_node_t of feature node, Valid only when API returns SUCCESS
+ *
+ * @return: 0 on success, < 0 on failure
+ */
+__rte_experimental
+int
+rte_graph_feature_arc_feature_to_node(rte_graph_feature_arc_t _arc,
+				      rte_graph_feature_t feature,
+				      rte_node_t *node);
+
+/**
+ * Slow path API to dump valid feature arc names
+ *
+ *  @param[out] arc_names
+ *   Buffer to copy the arc names. The NULL value is allowed in that case,
+ * the function returns the size of the array that needs to be allocated.
+ *
+ * @return
+ *   When next_nodes == NULL, it returns the size of the array else
+ *  number of item copied.
+ */
+__rte_experimental
+uint32_t
+rte_graph_feature_arc_names_get(char *arc_names[]);
 
 /**
  * @internal
