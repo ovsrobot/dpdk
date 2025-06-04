@@ -37,7 +37,9 @@ install_data([
 pmdinfo = py3 + files('gen-pmdinfo-cfile.py')
 pmdinfogen = py3 + files('pmdinfogen.py')
 if host_machine.system() == 'windows'
-    if cc.get_id() == 'gcc'
+    if cc.get_id() == 'msvc'
+        pmdinfo += 'lib'
+    elif cc.get_id() == 'gcc'
         pmdinfo += 'ar'
     else
         pmdinfo += 'llvm-ar'
