@@ -544,7 +544,7 @@ vring_translate_packed(struct virtio_net *dev, struct vhost_virtqueue *vq)
 	size = req_size;
 	vq->driver_event = (struct vring_packed_desc_event *)(uintptr_t)
 		vhost_iova_to_vva(dev, vq, vq->ring_addrs.avail_user_addr,
-				&size, VHOST_ACCESS_RW);
+				&size, VHOST_ACCESS_RO);
 	if (!vq->driver_event || size != req_size)
 		return -1;
 
