@@ -2970,12 +2970,6 @@ ixgbe_rx_queue_release_mbufs(struct ixgbe_rx_queue *rxq)
 {
 	unsigned i;
 
-	/* SSE Vector driver has a different way of releasing mbufs. */
-	if (rxq->vector_rx) {
-		ixgbe_rx_queue_release_mbufs_vec(rxq);
-		return;
-	}
-
 	if (rxq->sw_ring != NULL) {
 		for (i = 0; i < rxq->nb_rx_desc; i++) {
 			if (rxq->sw_ring[i].mbuf != NULL) {
@@ -3003,10 +2997,19 @@ ixgbe_rx_queue_release_mbufs(struct ixgbe_rx_queue *rxq)
 }
 
 static void __rte_cold
+ixgbe_rx_queue_release_mbufs_common(struct ixgbe_rx_queue *rxq)
+{
+	if (rxq->vector_rx)
+		ixgbe_rx_queue_release_mbufs_vec(rxq);
+	else
+		ixgbe_rx_queue_release_mbufs(rxq);
+}
+
+static void __rte_cold
 ixgbe_rx_queue_release(struct ixgbe_rx_queue *rxq)
 {
 	if (rxq != NULL) {
-		ixgbe_rx_queue_release_mbufs(rxq);
+		ixgbe_rx_queue_release_mbufs_common(rxq);
 		rte_free(rxq->sw_ring);
 		rte_free(rxq->sw_sc_ring);
 		rte_memzone_free(rxq->mz);
@@ -3501,7 +3504,7 @@ ixgbe_dev_clear_queues(struct rte_eth_dev *dev)
 		struct ixgbe_rx_queue *rxq = dev->data->rx_queues[i];
 
 		if (rxq != NULL) {
-			ixgbe_rx_queue_release_mbufs(rxq);
+			ixgbe_rx_queue_release_mbufs_common(rxq);
 			ixgbe_reset_rx_queue(adapter, rxq);
 			dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 		}
@@ -5701,7 +5704,7 @@ ixgbe_dev_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 
 	rte_delay_us(RTE_IXGBE_WAIT_100_US);
 
-	ixgbe_rx_queue_release_mbufs(rxq);
+	ixgbe_rx_queue_release_mbufs_common(rxq);
 	ixgbe_reset_rx_queue(adapter, rxq);
 	dev->data->rx_queue_state[rx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
 
