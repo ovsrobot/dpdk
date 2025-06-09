@@ -127,6 +127,18 @@ RTE_TRACE_POINT(
 
 #define RTE_EAL_TRACE_GENERIC_FUNC rte_eal_trace_generic_func(__func__)
 
+#ifdef ALLOW_EXPERIMENTAL_API
+#include <rte_pmu.h>
+#ifdef RTE_PMU_SUPPORTED
+RTE_TRACE_POINT_FP(
+	rte_pmu_trace_read,
+	RTE_TRACE_POINT_ARGS(unsigned int index),
+	uint64_t val = rte_pmu_read(index);
+	rte_trace_point_emit_u64(val);
+)
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -119,3 +119,8 @@ RTE_TRACE_POINT_REGISTER(rte_eal_trace_intr_enable,
 	lib.eal.intr.enable)
 RTE_TRACE_POINT_REGISTER(rte_eal_trace_intr_disable,
 	lib.eal.intr.disable)
+
+#if defined(ALLOW_EXPERIMENTAL_API) && defined(RTE_PMU_SUPPORTED)
+RTE_TRACE_POINT_REGISTER(rte_pmu_trace_read,
+	lib.pmu.read)
+#endif
