@@ -29,6 +29,7 @@
 #include <rte_reciprocal.h>
 #include <rte_time.h>
 
+#include "pcap/dlt.h"
 #include "pcapng_proto.h"
 
 /* conversion from DPDK speed to PCAPNG */
@@ -200,11 +201,10 @@ pcapng_section_block(rte_pcapng_t *self,
 }
 
 /* Write an interface block for a DPDK port */
-RTE_EXPORT_SYMBOL(rte_pcapng_add_interface)
-int
-rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
-			 const char *ifname, const char *ifdescr,
-			 const char *filter)
+RTE_DEFAULT_SYMBOL(26, int, rte_pcapng_add_interface,
+		   (rte_pcapng_t *self, uint16_t port, uint16_t link_type,
+		   const char *ifname, const char *ifdescr,
+		   const char *filter))
 {
 	struct pcapng_interface_block *hdr;
 	struct rte_eth_dev_info dev_info;
@@ -274,7 +274,7 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 	hdr = (struct pcapng_interface_block *)buf;
 	*hdr = (struct pcapng_interface_block) {
 		.block_type = PCAPNG_INTERFACE_BLOCK,
-		.link_type = 1,		/* DLT_EN10MB - Ethernet */
+		.link_type = link_type,
 		.block_length = len,
 	};
 
@@ -317,6 +317,16 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 	self->port_index[port] = self->ports++;
 
 	return write(self->outfd, buf, len);
+}
+
+RTE_VERSION_SYMBOL(25, int, rte_pcapng_add_interface,
+		   (rte_pcapng_t *self, uint16_t port,
+		   const char *ifname, const char *ifdescr,
+		   const char *filter))
+{
+	/* Call the new version with a default link_type (Ethernet) */
+	return rte_pcapng_add_interface(self, port, DLT_EN10MB,
+					ifname, ifdescr, filter);
 }
 
 /*
