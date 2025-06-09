@@ -157,7 +157,7 @@ get_min_page_size(int socket_id)
 
 	rte_memseg_list_walk(find_min_pagesz, &wa);
 
-	return wa.min == SIZE_MAX ? (size_t) rte_mem_page_size() : wa.min;
+	return wa.min == SIZE_MAX ? rte_mem_page_size() : wa.min;
 }
 
 
@@ -238,6 +238,7 @@ rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
 #endif
 
 	/* element size is 8 bytes-aligned at least */
+	RTE_VERIFY(elt_size <= UINT32_MAX - sizeof(uint64_t));
 	sz->elt_size = RTE_ALIGN_CEIL(elt_size, sizeof(uint64_t));
 
 	/* expand trailer to next cache line */
@@ -257,10 +258,13 @@ rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
 		unsigned new_size;
 		new_size = arch_mem_object_align
 			    (sz->header_size + sz->elt_size + sz->trailer_size);
+		RTE_VERIFY(new_size >=
+				(uint64_t)sz->header_size + sz->elt_size + sz->trailer_size);
 		sz->trailer_size = new_size - sz->header_size - sz->elt_size;
 	}
 
 	/* this is the size of an object, including header and trailer */
+	RTE_VERIFY((uint64_t)sz->header_size + sz->elt_size + sz->trailer_size <= UINT32_MAX);
 	sz->total_size = sz->header_size + sz->elt_size + sz->trailer_size;
 
 	return sz->total_size;
@@ -280,11 +284,13 @@ static void
 rte_mempool_free_memchunks(struct rte_mempool *mp)
 {
 	struct rte_mempool_memhdr *memhdr;
+	int ret;
 	void *elt;
 
 	while (!STAILQ_EMPTY(&mp->elt_list)) {
-		rte_mempool_ops_dequeue_bulk(mp, &elt, 1);
-		(void)elt;
+		ret = rte_mempool_ops_dequeue_bulk(mp, &elt, 1);
+		RTE_SET_USED(ret);
+		RTE_SET_USED(elt);
 		STAILQ_REMOVE_HEAD(&mp->elt_list, next);
 		mp->populated_size--;
 	}
@@ -565,7 +571,7 @@ rte_mempool_populate_default(struct rte_mempool *mp)
 			mp, n, pg_shift, &min_chunk_size, &align);
 
 		if (mem_size < 0) {
-			ret = mem_size;
+			ret = (int)mem_size;
 			goto fail;
 		}
 

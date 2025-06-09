@@ -85,7 +85,7 @@ eal_mem_set_dump(void *virt, size_t size, bool dump)
 	int ret = madvise(virt, size, flags);
 	if (ret) {
 		EAL_LOG(DEBUG, "madvise(%p, %#zx, %d) failed: %s",
-				virt, size, flags, strerror(rte_errno));
+				virt, size, flags, strerror(errno));
 		rte_errno = errno;
 	}
 	return ret;
@@ -141,8 +141,13 @@ rte_mem_page_size(void)
 {
 	static size_t page_size;
 
-	if (!page_size)
+	if (page_size == 0) {
+		errno = 0; /* man sysconf(3) */
 		page_size = sysconf(_SC_PAGESIZE);
+		if ((ssize_t)page_size < 0)
+			rte_panic("sysconf(_SC_PAGESIZE) failed: %s",
+					errno == 0 ? "Indeterminate" : strerror(errno));
+	}
 
 	return page_size;
 }
