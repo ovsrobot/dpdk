@@ -25,6 +25,9 @@
  */
 #define SENDM_PORT_OVERHEAD(x) (x)
 
+extern uint32_t nb_pkt_per_burst;
+extern uint32_t max_tx_burst;
+
 /*
  * From http://www.rfc-editor.org/rfc/rfc1812.txt section 5.2.2:
  * - The IP version number must be 4.
@@ -71,7 +74,7 @@ send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
 	 * If TX buffer for that queue is empty, and we have enough packets,
 	 * then send them straightway.
 	 */
-	if (num >= MAX_TX_BURST && len == 0) {
+	if (num >= max_tx_burst && len == 0) {
 		n = rte_eth_tx_burst(port, qconf->tx_queue_id[port], m, num);
 		if (unlikely(n < num)) {
 			do {
@@ -86,7 +89,7 @@ send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
 	 */
 
 	n = len + num;
-	n = (n > MAX_PKT_BURST) ? MAX_PKT_BURST - len : num;
+	n = (n > nb_pkt_per_burst) ? nb_pkt_per_burst - len : num;
 
 	j = 0;
 	switch (n % FWDSTEP) {
@@ -112,9 +115,9 @@ send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
 	len += n;
 
 	/* enough pkts to be sent */
-	if (unlikely(len == MAX_PKT_BURST)) {
+	if (unlikely(len == nb_pkt_per_burst)) {
 
-		send_burst(qconf, MAX_PKT_BURST, port);
+		send_burst(qconf, nb_pkt_per_burst, port);
 
 		/* copy rest of the packets into the TX buffer. */
 		len = num - n;
