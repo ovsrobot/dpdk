@@ -70,13 +70,6 @@ struct __rte_aligned(8) bm_buffer {
 	};
 };
 
-struct __rte_packed_begin bm_hw_buf_desc {
-	uint8_t rsv;
-	uint8_t bpid;
-	rte_be16_t hi_addr; /* High 16-bits of 48-bit address */
-	rte_be32_t lo_addr; /* Low 32-bits of 48-bit address */
-} __rte_packed_end;
-
 static inline u64 bm_buffer_get64(const struct bm_buffer *buf)
 {
 	return buf->addr;

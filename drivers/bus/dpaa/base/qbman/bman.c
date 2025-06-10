@@ -275,7 +275,7 @@ bman_release_fast(struct bman_pool *pool, const uint64_t *bufs,
 	struct bm_rcr_entry *r;
 	uint8_t i, avail;
 	uint64_t bpid = pool->params.bpid;
-	struct bm_hw_buf_desc bm_bufs[FSL_BM_BURST_MAX];
+	struct bm_buffer bm_bufs[FSL_BM_BURST_MAX];
 
 #ifdef RTE_LIBRTE_DPAA_HWDEBUG
 	if (!num || (num > FSL_BM_BURST_MAX))
@@ -297,11 +297,11 @@ bman_release_fast(struct bman_pool *pool, const uint64_t *bufs,
 	 * with the valid-bit
 	 */
 	bm_bufs[0].bpid = bpid;
-	bm_bufs[0].hi_addr = cpu_to_be16(HI16_OF_U48(bufs[0]));
-	bm_bufs[0].lo_addr = cpu_to_be32(LO32_OF_U48(bufs[0]));
+	bm_bufs[0].hi = cpu_to_be16(HI16_OF_U48(bufs[0]));
+	bm_bufs[0].lo = cpu_to_be32(LO32_OF_U48(bufs[0]));
 	for (i = 1; i < num; i++) {
-		bm_bufs[i].hi_addr = cpu_to_be16(HI16_OF_U48(bufs[i]));
-		bm_bufs[i].lo_addr = cpu_to_be32(LO32_OF_U48(bufs[i]));
+		bm_bufs[i].hi = cpu_to_be16(HI16_OF_U48(bufs[i]));
+		bm_bufs[i].lo = cpu_to_be32(LO32_OF_U48(bufs[i]));
 	}
 
 	rte_memcpy(r->bufs, bm_bufs, sizeof(struct bm_buffer) * num);
@@ -363,12 +363,13 @@ bman_extract_addr(struct bm_buffer *buf)
 }
 
 static inline uint64_t
-bman_hw_extract_addr(struct bm_hw_buf_desc *buf)
+bman_hw_extract_addr(struct bm_buffer *buf)
 {
 	uint64_t hi, lo;
 
-	hi = be16_to_cpu(buf->hi_addr);
-	lo = be32_to_cpu(buf->lo_addr);
+	hi = be16_to_cpu(buf->hi);
+	lo = be32_to_cpu(buf->lo);
+
 	return U48_BY_HI16_LO32(hi, lo);
 }
 
@@ -380,7 +381,7 @@ bman_acquire_fast(struct bman_pool *pool, uint64_t *bufs, uint8_t num)
 	struct bm_mc_command *mcc;
 	struct bm_mc_result *mcr;
 	uint8_t i, rst;
-	struct bm_hw_buf_desc bm_bufs[FSL_BM_BURST_MAX];
+	struct bm_buffer bm_bufs[FSL_BM_BURST_MAX];
 
 #ifdef RTE_LIBRTE_DPAA_HWDEBUG
 	if (!num || (num > FSL_BM_BURST_MAX))
