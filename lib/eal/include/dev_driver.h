@@ -30,21 +30,26 @@ struct rte_device {
 	struct rte_devargs *devargs;  /**< Arguments for latest probing */
 };
 
-#define RTE_PMD_EXPORT_NAME_ARRAY(n, idx) n##idx[]
+#define RTE_PMD_EXPORT_NAME_ARRAY(n, idx) n##idx
+
+#ifdef RTE_TOOLCHAIN_MSVC
+#define RTE_PMD_EXPORT_SYMBOL(type, name) \
+__pragma(comment(linker, "/include:" RTE_STR(name))) type name
+#else
+#define RTE_PMD_EXPORT_SYMBOL(type, name) \
+__attribute__((used)) type name
+#endif
 
 #define RTE_PMD_EXPORT_NAME(name, idx) \
-static const char RTE_PMD_EXPORT_NAME_ARRAY(this_pmd_name, idx) \
-__rte_used = RTE_STR(name)
+RTE_PMD_EXPORT_SYMBOL(const char, RTE_PMD_EXPORT_NAME_ARRAY(this_pmd_name, idx))[] = RTE_STR(name)
 
 #define DRV_EXP_TAG(name, tag) __##name##_##tag
 
 #define RTE_PMD_REGISTER_PCI_TABLE(name, table) \
-static const char DRV_EXP_TAG(name, pci_tbl_export)[] __rte_used = \
-RTE_STR(table)
+RTE_PMD_EXPORT_SYMBOL(const char, DRV_EXP_TAG(name, pci_tbl_export))[] = RTE_STR(table)
 
 #define RTE_PMD_REGISTER_PARAM_STRING(name, str) \
-static const char DRV_EXP_TAG(name, param_string_export)[] \
-__rte_used = str
+RTE_PMD_EXPORT_SYMBOL(const char, DRV_EXP_TAG(name, param_string_export))[] = str
 
 /**
  * Advertise the list of kernel modules required to run this driver
@@ -68,7 +73,6 @@ __rte_used = str
  * - "* igb_uio | uio_pci_generic | vfio"
  */
 #define RTE_PMD_REGISTER_KMOD_DEP(name, str) \
-static const char DRV_EXP_TAG(name, kmod_dep_export)[] \
-__rte_used = str
+RTE_PMD_EXPORT_SYMBOL(const char, DRV_EXP_TAG(name, kmod_dep_export))[] = str
 
 #endif /* DEV_DRIVER_H */

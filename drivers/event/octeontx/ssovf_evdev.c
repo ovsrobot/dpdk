@@ -971,4 +971,5 @@ static struct rte_vdev_driver vdev_ssovf_pmd = {
 	.remove = ssovf_vdev_remove
 };
 
+/* Blank line to get unique ID */
 RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_OCTEONTX_PMD, vdev_ssovf_pmd);

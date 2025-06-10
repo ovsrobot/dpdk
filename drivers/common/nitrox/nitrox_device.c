@@ -144,5 +144,6 @@ static struct rte_pci_driver nitrox_pmd = {
 	.remove         = nitrox_pci_remove,
 };
 
+/* Blank line to get unique ID */
 RTE_PMD_REGISTER_PCI(nitrox, nitrox_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(nitrox, pci_id_nitrox_map);
