@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2017-2019,2021-2024 NXP
+ * Copyright 2017-2019,2021-2025 NXP
  */
 
 /* System headers */
@@ -669,6 +669,22 @@ static inline int get_rx_port_type(struct fman_if *fif)
 	return e_FM_PORT_TYPE_DUMMY;
 }
 
+static inline int get_tx_port_type(struct fman_if *fif)
+{
+	if (fif->mac_type == fman_offline_internal ||
+	    fif->mac_type == fman_onic)
+		return e_FM_PORT_TYPE_OH_OFFLINE_PARSING;
+	else if (fif->mac_type == fman_mac_1g)
+		return e_FM_PORT_TYPE_TX;
+	else if (fif->mac_type == fman_mac_2_5g)
+		return e_FM_PORT_TYPE_TX_2_5G;
+	else if (fif->mac_type == fman_mac_10g)
+		return e_FM_PORT_TYPE_TX_10G;
+
+	DPAA_PMD_ERR("MAC type unsupported");
+	return e_FM_PORT_TYPE_DUMMY;
+}
+
 static inline int set_fm_port_handle(struct dpaa_if *dpaa_intf,
 				     uint64_t req_dist_set,
 				     struct fman_if *fif)
@@ -889,9 +905,9 @@ int dpaa_fm_init(void)
 	/* FM PCD Enable */
 	ret = fm_pcd_enable(pcd_handle);
 	if (ret) {
-		fm_close(fman_handle);
 		fm_pcd_close(pcd_handle);
 		DPAA_PMD_ERR("fm_pcd_enable: Failed");
+		fm_close(fman_handle);
 		return -1;
 	}
 
@@ -1072,4 +1088,71 @@ int dpaa_port_vsp_cleanup(struct dpaa_if *dpaa_intf, struct fman_if *fif)
 	}
 
 	return E_OK;
+}
+
+int rte_pmd_dpaa_port_set_rate_limit(uint16_t port_id, uint16_t burst,
+				     uint32_t rate)
+{
+	t_fm_port_rate_limit port_rate_limit;
+	bool port_handle_exists = true;
+	void *handle;
+	uint32_t ret;
+	struct rte_eth_dev *dev;
+	struct dpaa_if *dpaa_intf;
+	struct fman_if *fif;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+	dpaa_intf = dev->data->dev_private;
+	fif = dev->process_private;
+
+	memset(&port_rate_limit, 0, sizeof(port_rate_limit));
+	port_rate_limit.max_burst_size = burst;
+	port_rate_limit.rate_limit = rate;
+
+	DPAA_PMD_DEBUG("Port:%s: set max Burst =%u max Rate =%u",
+		dpaa_intf->name, burst, rate);
+
+	if (!dpaa_intf->port_handle) {
+		t_fm_port_params fm_port_params;
+
+		/* Memset FM port params */
+		memset(&fm_port_params, 0, sizeof(fm_port_params));
+
+		/* Set FM port params */
+		fm_port_params.h_fm = fm_open(0);
+		fm_port_params.port_type = get_tx_port_type(fif);
+		fm_port_params.port_id = mac_idx[fif->mac_idx];
+
+		/* FM PORT Open */
+		handle = fm_port_open(&fm_port_params);
+		fm_close(fm_port_params.h_fm);
+		if (!handle) {
+			DPAA_PMD_ERR("Can't open handle %p",
+				     fm_info.fman_handle);
+			return -ENODEV;
+		}
+
+		port_handle_exists = false;
+	} else {
+		handle = dpaa_intf->port_handle;
+	}
+
+	if (burst == 0 || rate == 0)
+		ret = fm_port_delete_rate_limit(handle);
+	else
+		ret = fm_port_set_rate_limit(handle, &port_rate_limit);
+
+	if (ret) {
+		DPAA_PMD_ERR("Failed to %s rate limit ret = %#x.",
+			(!burst || !rate) ? "del" : "set", ret);
+	} else {
+		DPAA_PMD_DEBUG("Success to %s rate limit,",
+			(!burst || !rate) ? "del" : "set");
+	}
+
+	if (!port_handle_exists)
+		fm_port_close(handle);
+
+	return -ret;
 }
