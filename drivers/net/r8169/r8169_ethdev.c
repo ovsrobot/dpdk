@@ -295,8 +295,21 @@ rtl_dev_stop(struct rte_eth_dev *dev)
 	rtl_nic_reset(hw);
 
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_mac_ocp_write(hw, 0xE00A, hw->mcu_pme_setting);
 		break;
 	}
@@ -333,8 +346,21 @@ rtl_dev_set_link_down(struct rte_eth_dev *dev)
 
 	/* mcu pme intr masks */
 	switch (hw->mcfg) {
-	case CFG_METHOD_48 ... CFG_METHOD_57:
-	case CFG_METHOD_69 ... CFG_METHOD_71:
+	/* CFG_METHOD_48 ... CFG_METHOD_57 */
+	case CFG_METHOD_48:
+	case CFG_METHOD_49:
+	case CFG_METHOD_50:
+	case CFG_METHOD_51:
+	case CFG_METHOD_52:
+	case CFG_METHOD_53:
+	case CFG_METHOD_54:
+	case CFG_METHOD_55:
+	case CFG_METHOD_56:
+	case CFG_METHOD_57:
+	/* CFG_METHOD_69 ... CFG_METHOD_71 */
+	case CFG_METHOD_69:
+	case CFG_METHOD_70:
+	case CFG_METHOD_71:
 		rtl_mac_ocp_write(hw, 0xE00A, hw->mcu_pme_setting & ~(BIT_11 | BIT_14));
 		break;
 	}
