@@ -13,7 +13,6 @@ libraries = [
         'kvargs', # eal depends on kvargs
         'argparse',
         'telemetry', # basic info querying
-        'pmu',
         'eal', # everything depends on eal
         'ptr_compress',
         'ring',
@@ -49,6 +48,7 @@ libraries = [
         'lpm',
         'member',
         'pcapng',
+        'pmu',
         'power',
         'rawdev',
         'regexdev',

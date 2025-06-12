@@ -14,6 +14,7 @@
 
 #include <eal_export.h>
 #include <rte_bitops.h>
+#include <rte_eal_paging.h>
 #include <rte_tailq.h>
 #include <rte_log.h>
 
@@ -215,13 +216,12 @@ out:
 static int
 mmap_events(struct rte_pmu_event_group *group)
 {
-	long page_size = sysconf(_SC_PAGE_SIZE);
 	unsigned int i;
 	void *addr;
 	int ret;
 
 	for (i = 0; i < rte_pmu.num_group_events; i++) {
-		addr = mmap(0, page_size, PROT_READ, MAP_SHARED, group->fds[i], 0);
+		addr = mmap(0, rte_mem_page_size(), PROT_READ, MAP_SHARED, group->fds[i], 0);
 		if (addr == MAP_FAILED) {
 			ret = -errno;
 			goto out;
@@ -233,7 +233,7 @@ mmap_events(struct rte_pmu_event_group *group)
 	return 0;
 out:
 	for (; i; i--) {
-		munmap(group->mmap_pages[i - 1], page_size);
+		munmap(group->mmap_pages[i - 1], rte_mem_page_size());
 		group->mmap_pages[i - 1] = NULL;
 	}
 
@@ -250,7 +250,7 @@ cleanup_events(struct rte_pmu_event_group *group)
 
 	for (i = 0; i < rte_pmu.num_group_events; i++) {
 		if (group->mmap_pages[i]) {
-			munmap(group->mmap_pages[i], sysconf(_SC_PAGE_SIZE));
+			munmap(group->mmap_pages[i], rte_mem_page_size());
 			group->mmap_pages[i] = NULL;
 		}
 
