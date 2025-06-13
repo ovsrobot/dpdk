@@ -11,12 +11,19 @@ buildtools_path = dirname(realpath(__file__))
 basedir = dirname(buildtools_path)
 
 with open(join(basedir, "meson.build")) as f:
+    if os.name == "nt":
+        keyword = "windows_meson_version"
+        pattern = r"windows_meson_version:\s*'>=\s*([0-9\.]+)'"
+    else:
+        keyword = "meson_version"
+        pattern = r"meson_version:\s*'>=\s*([0-9\.]+)'"
+
     for ln in f.readlines():
-        if "meson_version" not in ln:
+        if keyword not in ln:
             continue
 
         ln = ln.strip()
-        ver_match = re.search(r"meson_version:\s*'>=\s*([0-9\.]+)'", ln)
+        ver_match = re.search(pattern, ln)
         if not ver_match:
             print(
                 f"Meson version specifier not in recognised format: '{ln}'",
@@ -24,3 +31,4 @@ with open(join(basedir, "meson.build")) as f:
             )
             sys.exit(1)
         print(ver_match.group(1), end="")
+        break

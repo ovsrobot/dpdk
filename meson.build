@@ -13,6 +13,15 @@ project('DPDK', 'c',
         meson_version: '>= 0.57.2'
 )
 
+# Meson does not support dynamic/conditional values for meson_version in
+# the project section.
+# The line below contains the minimum meson version required on Windows,
+# which gets parsed by get-min-meson-version.py.
+# It is important to keep this line below the "project" section, so that
+# the script can make the correct determination according to the operating
+# system.
+# windows_meson_version: '>= 1.5.2'
+
 fs = import('fs')
 
 # check for developer mode
