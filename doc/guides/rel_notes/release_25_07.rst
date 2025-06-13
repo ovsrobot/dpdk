@@ -141,6 +141,12 @@ New Features
   String values are simply saved as-is,
   while the boolean support allows for values "true", "false", "1" or "0".
 
+* **Added event vector adapter support in CN20K event device driver.**
+
+  Added support for the event vector adapter in the CN20K event device driver.
+  This allows the CN20K to offload ``rte_event_vector`` creation and aggregation
+  of objects originating from the CPU.
+
 
 Removed Items
 -------------
