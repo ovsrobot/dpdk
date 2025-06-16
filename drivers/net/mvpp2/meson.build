@@ -29,3 +29,5 @@ sources = files(
 cflags += no_wvla_cflag
 
 deps += ['cfgfile', 'common_mvep']
+
+support_mempool_history = false

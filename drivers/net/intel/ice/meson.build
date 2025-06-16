@@ -45,3 +45,4 @@ sources += files(
 )
 
 require_iova_in_mbuf = false
+support_mempool_history = false

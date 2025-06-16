@@ -108,3 +108,5 @@ sources = files(
         'sfc_repr.c',
         'sfc_nic_dma.c',
 )
+
+support_mempool_history = false

@@ -47,3 +47,5 @@ elif arch_subdir == 'arm'
 endif
 
 headers = files('rte_pmd_i40e.h')
+
+support_mempool_history = false

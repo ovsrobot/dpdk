@@ -18,3 +18,5 @@ sources = files(
         'ark_pktgen.c',
         'ark_udm.c',
 )
+
+support_mempool_history = false

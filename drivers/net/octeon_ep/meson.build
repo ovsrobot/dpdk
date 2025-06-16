@@ -28,3 +28,5 @@ foreach flag: extra_flags
         cflags += flag
     endif
 endforeach
+
+support_mempool_history = false

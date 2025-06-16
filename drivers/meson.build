@@ -143,6 +143,7 @@ foreach subpath:subdirs
         pkgconfig_extra_libs = []
         testpmd_sources = []
         require_iova_in_mbuf = true
+        support_mempool_history = true
         # for handling base code files which may need extra cflags
         base_sources = []
         base_cflags = []
@@ -174,6 +175,12 @@ foreach subpath:subdirs
                 build = false
                 reason = 'requires IOVA in mbuf (set enable_iova_as_pa option)'
             endif
+
+            if dpdk_conf.get('RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY') == 1 and not support_mempool_history
+                build = false
+                reason = 'driver does not support mempool history tracing'
+            endif
+
             # error out if we can't build a driver and that driver was explicitly requested,
             # i.e. not via wildcard.
             if not build and require_drivers and get_option('enable_drivers').contains(drv_path)

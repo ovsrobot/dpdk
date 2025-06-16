@@ -19,3 +19,5 @@ foreach option:cflags_options
                 cflags += option
         endif
 endforeach
+
+support_mempool_history = false

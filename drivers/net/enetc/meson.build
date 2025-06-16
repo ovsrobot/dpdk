@@ -13,3 +13,5 @@ sources = files(
 )
 
 includes += include_directories('base')
+
+support_mempool_history = false

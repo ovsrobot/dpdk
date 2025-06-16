@@ -23,3 +23,5 @@ if not is_windows
                 'igc_txrx.c',
         )
 endif
+
+support_mempool_history = false

@@ -64,3 +64,5 @@ elif arch_subdir == 'arm' and dpdk_conf.get('RTE_ARCH_64')
 endif
 
 annotate_locks = false
+support_mempool_history = false
+

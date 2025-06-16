@@ -18,3 +18,5 @@ sources = files(
 deps += ['mempool_octeontx', 'eventdev']
 
 cflags += no_wvla_cflag
+
+support_mempool_history = false

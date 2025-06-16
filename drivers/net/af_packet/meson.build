@@ -7,3 +7,4 @@ if not is_linux
 endif
 sources = files('rte_eth_af_packet.c')
 require_iova_in_mbuf = false
+support_mempool_history = false

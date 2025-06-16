@@ -22,3 +22,5 @@ endif
 if cc.has_argument('-Wno-maybe-uninitialized')
     cflags += '-Wno-maybe-uninitialized'
 endif
+
+support_mempool_history = false

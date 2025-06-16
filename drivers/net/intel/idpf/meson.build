@@ -24,3 +24,5 @@ if arch_subdir == 'x86' and dpdk_conf.get('RTE_IOVA_IN_MBUF') == 1
     sources_avx2 += files('idpf_common_rxtx_avx2.c')
     sources_avx512 += files('idpf_common_rxtx_avx512.c')
 endif
+
+support_mempool_history = false

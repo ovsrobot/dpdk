@@ -19,6 +19,7 @@ cflags += max_queues
 cflags += no_wvla_cflag
 
 require_iova_in_mbuf = false
+support_mempool_history = false
 
 if cc.has_header_symbol('linux/pkt_cls.h', 'TCA_FLOWER_ACT')
     cflags += '-DHAVE_TCA_FLOWER'

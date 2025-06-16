@@ -24,3 +24,5 @@ sources = files(
 )
 
 includes += include_directories('../../common/ionic')
+
+support_mempool_history = false

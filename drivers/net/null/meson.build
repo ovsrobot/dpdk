@@ -3,3 +3,4 @@
 
 sources = files('rte_eth_null.c')
 require_iova_in_mbuf = false
+support_mempool_history = false

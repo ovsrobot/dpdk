@@ -24,3 +24,5 @@ if cc.has_argument('-Wno-pointer-arith')
 endif
 
 headers = files('rte_pmd_dpaa.h')
+
+support_mempool_history = false

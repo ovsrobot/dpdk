@@ -35,3 +35,5 @@ elif arch_subdir == 'arm'
 endif
 
 headers = files('rte_pmd_iavf.h')
+
+support_mempool_history = false

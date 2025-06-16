@@ -19,3 +19,5 @@ sources = files(
         'base/rtl8126a_mcu.c',
         'base/rtl8168kb.c',
 )
+
+support_mempool_history = false

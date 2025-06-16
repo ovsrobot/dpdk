@@ -24,3 +24,5 @@ if arch_subdir == 'x86'
 elif arch_subdir == 'arm'
     sources += files('ngbe_rxtx_vec_neon.c')
 endif
+
+support_mempool_history = false

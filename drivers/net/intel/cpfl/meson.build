@@ -35,3 +35,5 @@ if dpdk_conf.has('RTE_HAS_JANSSON')
     )
     ext_deps += jansson_dep
 endif
+
+support_mempool_history = false

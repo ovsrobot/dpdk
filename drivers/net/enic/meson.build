@@ -35,3 +35,5 @@ if dpdk_conf.has('RTE_ARCH_X86_64')
 endif
 
 annotate_locks = false
+support_mempool_history = false
+

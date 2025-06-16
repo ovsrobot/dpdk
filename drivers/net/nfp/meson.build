@@ -65,3 +65,5 @@ else
 endif
 
 deps += ['hash', 'security', 'common_nfp']
+
+support_mempool_history = false

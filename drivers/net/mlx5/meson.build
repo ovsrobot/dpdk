@@ -90,6 +90,7 @@ else
 endif
 
 require_iova_in_mbuf = false
+support_mempool_history = true
 
 testpmd_sources += files('mlx5_testpmd.c')
 

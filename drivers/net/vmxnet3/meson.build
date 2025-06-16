@@ -17,3 +17,5 @@ foreach flag: error_cflags
                 cflags += flag
         endif
 endforeach
+
+support_mempool_history = false

@@ -53,3 +53,5 @@ foreach arg:required_symbols
         subdir_done()
     endif
 endforeach
+
+support_mempool_history = false

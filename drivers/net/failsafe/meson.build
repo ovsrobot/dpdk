@@ -29,6 +29,7 @@ sources = files(
 )
 
 require_iova_in_mbuf = false
+support_mempool_history = false
 
 if is_freebsd
     annotate_locks = false

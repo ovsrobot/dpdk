@@ -32,3 +32,5 @@ elif arch_subdir == 'arm'
 endif
 
 install_headers('rte_pmd_txgbe.h')
+
+support_mempool_history = false

@@ -17,3 +17,5 @@ sources = files(
 deps += ['timer']
 
 includes += include_directories('base', 'base/ena_defs')
+
+support_mempool_history = false

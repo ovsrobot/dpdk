@@ -23,3 +23,4 @@ sources = files(
 )
 
 annotate_locks = false
+support_mempool_history = false

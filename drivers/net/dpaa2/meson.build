@@ -29,3 +29,5 @@ includes += include_directories('base', 'mc')
 headers = files('rte_pmd_dpaa2.h')
 
 cflags += no_wvla_cflag
+
+support_mempool_history = false

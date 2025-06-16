@@ -343,5 +343,6 @@ endforeach
 headers = files('rte_pmd_cnxk.h')
 
 require_iova_in_mbuf = false
+support_mempool_history = false
 
 annotate_locks = false

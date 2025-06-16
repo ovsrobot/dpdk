@@ -56,3 +56,5 @@ if is_linux
         'virtio_user/virtio_user_dev.c')
     deps += ['bus_vdev']
 endif
+
+support_mempool_history = false

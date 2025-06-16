@@ -25,3 +25,7 @@ sources = files(
         'zxdh_ethdev_ops.c',
         'zxdh_mtr.c',
 )
+
+cflags += no_wvla_cflag
+
+support_mempool_history = false

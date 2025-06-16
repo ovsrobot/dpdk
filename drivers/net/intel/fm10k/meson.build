@@ -16,3 +16,5 @@ sources += files(
 if arch_subdir == 'x86'
     sources += files('fm10k_rxtx_vec.c')
 endif
+
+support_mempool_history = false

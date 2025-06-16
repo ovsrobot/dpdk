@@ -17,3 +17,5 @@ sources = files(
 )
 
 cflags += no_wvla_cflag
+
+support_mempool_history = false

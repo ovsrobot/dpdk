@@ -19,3 +19,5 @@ if cc.has_argument('-Wno-pointer-arith')
 endif
 
 includes += include_directories('base')
+
+support_mempool_history = false

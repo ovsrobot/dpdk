@@ -20,3 +20,5 @@ cflags += '-Wno-cast-qual'
 if arch_subdir == 'x86'
     sources += files('axgbe_rxtx_vec_sse.c')
 endif
+
+support_mempool_history = false

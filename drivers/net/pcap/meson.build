@@ -17,3 +17,4 @@ if is_windows
 endif
 
 require_iova_in_mbuf = false
+support_mempool_history = false

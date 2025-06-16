@@ -21,3 +21,5 @@ includes += include_directories('base')
 if is_freebsd
     annotate_locks = false
 endif
+
+support_mempool_history = false

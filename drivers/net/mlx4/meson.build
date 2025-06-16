@@ -136,3 +136,5 @@ if dlopen_ibverbs
         install_dir: dlopen_install_dir,
     )
 endif
+
+support_mempool_history = false

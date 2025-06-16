@@ -10,3 +10,5 @@ endif
 deps += 'vhost'
 sources = files('rte_eth_vhost.c')
 headers = files('rte_eth_vhost.h')
+
+support_mempool_history = false

@@ -7,3 +7,5 @@ if not is_linux
 endif
 sources = files('avp_ethdev.c')
 headers = files('rte_avp_common.h', 'rte_avp_fifo.h')
+
+support_mempool_history = false
