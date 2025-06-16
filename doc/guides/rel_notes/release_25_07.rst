@@ -71,6 +71,8 @@ New Features
 
   Added a Performance Monitoring Unit (PMU) library which allows Linux applications
   to perform self monitoring activities without depending on external utilities like perf.
+  After integration with :doc:`../prog_guide/trace_lib`, data gathered from hardware counters
+  can be stored in CTF format for further analysis.
 
 * **Added Mucse rnp net driver.**
 

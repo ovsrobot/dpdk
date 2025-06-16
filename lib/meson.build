@@ -13,7 +13,7 @@ libraries = [
         'kvargs', # eal depends on kvargs
         'argparse',
         'telemetry', # basic info querying
-        'pmu',
+        'pmu', # trace depends on pmu
         'eal', # everything depends on eal
         'ptr_compress',
         'ring',
@@ -86,6 +86,7 @@ always_enable = [
         'ring',
         'stack',
         'telemetry',
+        'pmu',
 ]
 
 enable_deprecated_libs = []

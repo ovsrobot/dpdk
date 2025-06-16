@@ -15,6 +15,9 @@ subdir(exec_env)
 subdir(arch_subdir)
 
 deps += ['log', 'kvargs']
+if is_linux
+    deps += ['pmu']
+endif
 if not is_windows
     deps += ['telemetry']
 endif
