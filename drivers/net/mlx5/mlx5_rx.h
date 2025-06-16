@@ -516,6 +516,7 @@ mprq_buf_to_pkt(struct mlx5_rxq_data *rxq, struct rte_mbuf *pkt, uint32_t len,
 
 				if (unlikely(next == NULL))
 					return MLX5_RXQ_CODE_NOMBUF;
+				rte_mempool_history_mark(next, RTE_MEMPOOL_PMD_ALLOC);
 				NEXT(prev) = next;
 				SET_DATA_OFF(next, 0);
 				addr = RTE_PTR_ADD(addr, seg_len);
@@ -579,6 +580,7 @@ mprq_buf_to_pkt(struct mlx5_rxq_data *rxq, struct rte_mbuf *pkt, uint32_t len,
 
 			if (unlikely(seg == NULL))
 				return MLX5_RXQ_CODE_NOMBUF;
+			rte_mempool_history_mark(seg, RTE_MEMPOOL_PMD_ALLOC);
 			SET_DATA_OFF(seg, 0);
 			rte_memcpy(rte_pktmbuf_mtod(seg, void *),
 				RTE_PTR_ADD(addr, len - hdrm_overlap),

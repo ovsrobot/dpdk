@@ -553,6 +553,7 @@ mlx5_tx_free_mbuf(struct mlx5_txq_data *__rte_restrict txq,
 	if (!MLX5_TXOFF_CONFIG(MULTI) && txq->fast_free) {
 		mbuf = *pkts;
 		pool = mbuf->pool;
+		rte_mempool_history_bulk((void *)pkts, pkts_n, RTE_MEMPOOL_PMD_FREE);
 		rte_mempool_put_bulk(pool, (void *)pkts, pkts_n);
 		return;
 	}
@@ -608,6 +609,7 @@ mlx5_tx_free_mbuf(struct mlx5_txq_data *__rte_restrict txq,
 			 * Free the array of pre-freed mbufs
 			 * belonging to the same memory pool.
 			 */
+			rte_mempool_history_bulk((void *)p_free, n_free, RTE_MEMPOOL_PMD_FREE);
 			rte_mempool_put_bulk(pool, (void *)p_free, n_free);
 			if (unlikely(mbuf != NULL)) {
 				/* There is the request to start new scan. */
@@ -1223,6 +1225,7 @@ mlx5_tx_mseg_memcpy(uint8_t *pdst,
 			/* Exhausted packet, just free. */
 			mbuf = loc->mbuf;
 			loc->mbuf = mbuf->next;
+			rte_mempool_history_mark(mbuf, RTE_MEMPOOL_PMD_FREE);
 			rte_pktmbuf_free_seg(mbuf);
 			loc->mbuf_off = 0;
 			MLX5_ASSERT(loc->mbuf_nseg > 1);
@@ -1265,6 +1268,7 @@ mlx5_tx_mseg_memcpy(uint8_t *pdst,
 				/* Exhausted packet, just free. */
 				mbuf = loc->mbuf;
 				loc->mbuf = mbuf->next;
+				rte_mempool_history_mark(mbuf, RTE_MEMPOOL_PMD_FREE);
 				rte_pktmbuf_free_seg(mbuf);
 				loc->mbuf_off = 0;
 				MLX5_ASSERT(loc->mbuf_nseg >= 1);
@@ -1715,6 +1719,7 @@ mlx5_tx_mseg_build(struct mlx5_txq_data *__rte_restrict txq,
 			/* Zero length segment found, just skip. */
 			mbuf = loc->mbuf;
 			loc->mbuf = loc->mbuf->next;
+			rte_mempool_history_mark(mbuf, RTE_MEMPOOL_PMD_FREE);
 			rte_pktmbuf_free_seg(mbuf);
 			if (--loc->mbuf_nseg == 0)
 				break;
@@ -2018,6 +2023,7 @@ mlx5_tx_packet_multi_send(struct mlx5_txq_data *__rte_restrict txq,
 			wqe->cseg.sq_ds -= RTE_BE32(1);
 			mbuf = loc->mbuf;
 			loc->mbuf = mbuf->next;
+			rte_mempool_history_mark(mbuf, RTE_MEMPOOL_PMD_FREE);
 			rte_pktmbuf_free_seg(mbuf);
 			if (--nseg == 0)
 				break;
@@ -3317,6 +3323,7 @@ single_inline:
 				 * Packet data are completely inlined,
 				 * free the packet immediately.
 				 */
+				rte_mempool_history_mark(loc->mbuf, RTE_MEMPOOL_PMD_FREE);
 				rte_pktmbuf_free_seg(loc->mbuf);
 			} else if ((!MLX5_TXOFF_CONFIG(EMPW) ||
 				     MLX5_TXOFF_CONFIG(MPW)) &&

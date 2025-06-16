@@ -164,6 +164,7 @@ rxq_alloc_elts_sprq(struct mlx5_rxq_ctrl *rxq_ctrl)
 			rte_errno = ENOMEM;
 			goto error;
 		}
+		rte_mempool_history_mark(buf, RTE_MEMPOOL_PMD_ALLOC);
 		/* Only vectored Rx routines rely on headroom size. */
 		MLX5_ASSERT(!has_vec_support ||
 			    DATA_OFF(buf) >= RTE_PKTMBUF_HEADROOM);
@@ -221,8 +222,10 @@ error:
 	err = rte_errno; /* Save rte_errno before cleanup. */
 	elts_n = i;
 	for (i = 0; (i != elts_n); ++i) {
-		if ((*rxq_ctrl->rxq.elts)[i] != NULL)
+		if ((*rxq_ctrl->rxq.elts)[i] != NULL) {
+			rte_mempool_history_mark((*rxq_ctrl->rxq.elts)[i], RTE_MEMPOOL_PMD_FREE);
 			rte_pktmbuf_free_seg((*rxq_ctrl->rxq.elts)[i]);
+		}
 		(*rxq_ctrl->rxq.elts)[i] = NULL;
 	}
 	if (rxq_ctrl->share_group == 0)
@@ -324,8 +327,10 @@ rxq_free_elts_sprq(struct mlx5_rxq_ctrl *rxq_ctrl)
 		rxq->rq_pi = elts_ci;
 	}
 	for (i = 0; i != q_n; ++i) {
-		if ((*rxq->elts)[i] != NULL)
+		if ((*rxq->elts)[i] != NULL) {
+			rte_mempool_history_mark((*rxq->elts)[i], RTE_MEMPOOL_PMD_FREE);
 			rte_pktmbuf_free_seg((*rxq->elts)[i]);
+		}
 		(*rxq->elts)[i] = NULL;
 	}
 }
