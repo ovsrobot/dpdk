@@ -32,6 +32,7 @@
 #include "mempool_trace.h"
 #include "rte_mempool.h"
 
+
 RTE_EXPORT_SYMBOL(rte_mempool_logtype)
 RTE_LOG_REGISTER_DEFAULT(rte_mempool_logtype, INFO);
 
@@ -1631,4 +1632,114 @@ RTE_INIT(mempool_init_telemetry)
 		"Returns list of available mempool. Takes no parameters");
 	rte_telemetry_register_cmd("/mempool/info", mempool_handle_info,
 		"Returns mempool info. Parameters: pool_name");
+}
+
+#if RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY
+static void
+rte_mempool_get_object_history_stat(FILE *f, struct rte_mempool *mp)
+{
+	struct rte_mempool_objhdr *hdr;
+
+	uint64_t n_never = 0;   /* never been allocated. */
+	uint64_t n_free = 0;    /* returned to the pool. */
+	uint64_t n_alloc = 0;   /* allocated from the pool. */
+	uint64_t n_ref = 0;     /* freed by pmd, not returned to the pool. */
+	uint64_t n_pmd_tx = 0;  /* owned by PMD Tx. */
+	uint64_t n_pmd_rx = 0;  /* owned by PMD Rx. */
+	uint64_t n_app_rx = 0;  /* owned by Application on Rx. */
+	uint64_t n_app_alloc = 0; /* owned by Application on Alloc. */
+	uint64_t n_busy_tx = 0; /* owned by Application on Busy Tx. */
+	uint64_t n_total = 0;   /* Total amount. */
+
+	if (f == NULL)
+		return;
+
+	STAILQ_FOREACH(hdr, &mp->elt_list, next) {
+		uint64_t hs = hdr->history;
+
+		rte_rmb();
+		n_total++;
+		if (hs == 0) {
+			n_never++;
+			continue;
+		}
+		switch (hs & RTE_MEMPOOL_HISTORY_MASK) {
+		case RTE_MEMPOOL_FREE:
+			n_free++;
+			break;
+		case RTE_MEMPOOL_PMD_FREE:
+			n_alloc++;
+			n_ref++;
+			break;
+		case RTE_MEMPOOL_PMD_TX:
+			n_alloc++;
+			n_pmd_tx++;
+			break;
+		case RTE_MEMPOOL_APP_RX:
+			n_alloc++;
+			n_app_rx++;
+			break;
+		case RTE_MEMPOOL_PMD_ALLOC:
+			n_alloc++;
+			n_pmd_rx++;
+			break;
+		case RTE_MEMPOOL_ALLOC:
+			n_alloc++;
+			n_app_alloc++;
+			break;
+		case RTE_MEMPOOL_BUSY_TX:
+			n_alloc++;
+			n_busy_tx++;
+			break;
+		default:
+			break;
+		}
+		fprintf(f, "%016" PRIX64 "\n", hs);
+	}
+
+	fprintf(f, "\n"
+		"Populated:       %u\n"
+		"Never allocated: %" PRIu64 "\n"
+		"Free:            %" PRIu64 "\n"
+		"Allocated:       %" PRIu64 "\n"
+		"Referenced free: %" PRIu64 "\n"
+		"PMD owned Tx:    %" PRIu64 "\n"
+		"PMD owned Rx:    %" PRIu64 "\n"
+		"App owned alloc: %" PRIu64 "\n"
+		"App owned Rx:    %" PRIu64 "\n"
+		"App owned busy:  %" PRIu64 "\n"
+		"Counted total:   %" PRIu64 "\n",
+		mp->populated_size, n_never, n_free + n_never, n_alloc,
+		n_ref, n_pmd_tx, n_pmd_rx, n_app_alloc, n_app_rx,
+		n_busy_tx, n_total);
+}
+#endif
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_mempool_objects_dump, 24.07)
+void
+rte_mempool_objects_dump(__rte_unused FILE *f)
+{
+	#if RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY
+	if (f == NULL) {
+		RTE_MEMPOOL_LOG(ERR, "Invalid file pointer");
+		return;
+	}
+
+	struct rte_mempool *mp = NULL;
+	struct rte_tailq_entry *te;
+	struct rte_mempool_list *mempool_list;
+
+	mempool_list = RTE_TAILQ_CAST(rte_mempool_tailq.head, rte_mempool_list);
+
+	rte_mcfg_mempool_read_lock();
+
+	TAILQ_FOREACH(te, mempool_list, next) {
+		mp = (struct rte_mempool *) te->data;
+		rte_mempool_get_object_history_stat(f, mp);
+	}
+
+	rte_mcfg_mempool_read_unlock();
+#else
+	RTE_MEMPOOL_LOG(INFO, "Mempool history recorder is not supported");
+#endif
 }

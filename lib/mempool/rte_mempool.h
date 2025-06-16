@@ -60,6 +60,26 @@ extern "C" {
 #define RTE_MEMPOOL_HEADER_COOKIE2  0xf2eef2eedadd2e55ULL /**< Header cookie. */
 #define RTE_MEMPOOL_TRAILER_COOKIE  0xadd2e55badbadbadULL /**< Trailer cookie.*/
 
+/**
+ * Mempool trace operation bits and masks.
+ * Used to record the lifecycle of mempool objects through the system.
+ */
+#define RTE_MEMPOOL_HISTORY_BITS          4 /*Number of bits for history operation*/
+#define RTE_MEMPOOL_HISTORY_MASK          ((1ULL << RTE_MEMPOOL_HISTORY_BITS) - 1)
+
+/* History operation types */
+enum rte_mempool_history_op {
+	RTE_MEMPOOL_NEVER = 0,     /* Initial state - never allocated */
+	RTE_MEMPOOL_FREE = 1,      /* Freed back to mempool */
+	RTE_MEMPOOL_PMD_FREE = 2,  /* Freed by PMD back to mempool */
+	RTE_MEMPOOL_PMD_TX = 3,    /* Sent to PMD for Tx */
+	RTE_MEMPOOL_APP_RX = 4,    /* Returned to application on Rx */
+	RTE_MEMPOOL_PMD_ALLOC = 5, /* Allocated by PMD for Rx */
+	RTE_MEMPOOL_ALLOC = 6,     /* Allocated by application */
+	RTE_MEMPOOL_BUSY_TX = 7,   /* Returned to app due to Tx busy */
+	RTE_MEMPOOL_MAX = 8        /* Maximum trace operation value */
+};
+
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
 /**
  * A structure that stores the mempool statistics (per-lcore).
@@ -156,6 +176,9 @@ struct rte_mempool_objhdr {
 	rte_iova_t iova;                 /**< IO address of the object. */
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
 	uint64_t cookie;                 /**< Debug cookie. */
+#endif
+#if RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY
+	uint64_t history;                 /**< Debug object history. */
 #endif
 };
 
@@ -456,6 +479,83 @@ void rte_mempool_contig_blocks_check_cookies(const struct rte_mempool *mp,
 #endif /* RTE_LIBRTE_MEMPOOL_DEBUG */
 
 #define RTE_MEMPOOL_OPS_NAMESIZE 32 /**< Max length of ops struct name. */
+
+
+#if RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY
+/**
+ * Get the history value from a mempool object header.
+ *
+ * @param obj
+ *   Pointer to the mempool object.
+ * @return
+ *   The history value from the object header.
+ */
+static inline uint64_t rte_mempool_history_get(void *obj)
+{
+	struct rte_mempool_objhdr *hdr;
+
+	if (unlikely(obj == NULL))
+		return 0;
+
+	hdr = rte_mempool_get_header(obj);
+	return hdr->history;
+}
+
+/**
+ * Mark a mempool object with the history value.
+ *
+ * @param obj
+ *   Pointer to the mempool object.
+ * @param mark
+ *   The history mark value to add.
+ */
+static inline void rte_mempool_history_mark(void *obj, uint32_t mark)
+{
+	struct rte_mempool_objhdr *hdr;
+
+	if (unlikely(obj == NULL))
+		return;
+
+	hdr = rte_mempool_get_header(obj);
+	hdr->history = (hdr->history << RTE_MEMPOOL_HISTORY_BITS) | mark;
+}
+
+/**
+ * Mark multiple mempool objects with the history value.
+ *
+ * @param b
+ *   Array of pointers to mempool objects.
+ * @param n
+ *   Number of objects to mark.
+ * @param mark
+ *   The history mark value to add to each object.
+ */
+static inline void rte_mempool_history_bulk(void * const *b, uint32_t n, uint32_t mark)
+{
+	if (unlikely(b == NULL))
+		return;
+
+	while (n--)
+		rte_mempool_history_mark(*b++, mark);
+}
+#else
+static inline uint64_t rte_mempool_history_get(void *obj)
+{
+	RTE_SET_USED(obj);
+	return 0;
+}
+static inline void rte_mempool_history_mark(void *obj, uint32_t mark)
+{
+	RTE_SET_USED(obj);
+	RTE_SET_USED(mark);
+}
+static inline void rte_mempool_history_bulk(void * const *b, uint32_t n, uint32_t mark)
+{
+	RTE_SET_USED(b);
+	RTE_SET_USED(n);
+	RTE_SET_USED(mark);
+}
+#endif
 
 /**
  * Prototype for implementation specific data provisioning function.
@@ -1395,6 +1495,7 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	/* Increment stats now, adding in mempool always succeeds. */
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+	rte_mempool_history_bulk(obj_table, n, RTE_MEMPOOL_FREE);
 
 	__rte_assume(cache->flushthresh <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
 	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
@@ -1661,6 +1762,7 @@ rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
 	ret = rte_mempool_do_generic_get(mp, obj_table, n, cache);
 	if (likely(ret == 0))
 		RTE_MEMPOOL_CHECK_COOKIES(mp, obj_table, n, 1);
+	rte_mempool_history_bulk(obj_table, n, RTE_MEMPOOL_ALLOC);
 	rte_mempool_trace_generic_get(mp, obj_table, n, cache);
 	return ret;
 }
@@ -1875,6 +1977,10 @@ static inline void *rte_mempool_get_priv(struct rte_mempool *mp)
 	return (char *)mp +
 		RTE_MEMPOOL_HEADER_SIZE(mp, mp->cache_size);
 }
+
+__rte_experimental
+void
+rte_mempool_objects_dump(FILE *f);
 
 /**
  * Dump the status of all mempools on the console

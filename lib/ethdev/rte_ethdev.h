@@ -167,6 +167,7 @@
 #include <rte_common.h>
 #include <rte_config.h>
 #include <rte_power_intrinsics.h>
+#include <rte_mempool.h>
 
 #include "rte_ethdev_trace_fp.h"
 #include "rte_dev_info.h"
@@ -6334,6 +6335,8 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 
 	nb_rx = p->rx_pkt_burst(qd, rx_pkts, nb_pkts);
 
+	rte_mempool_history_bulk((void **)rx_pkts, nb_rx, RTE_MEMPOOL_APP_RX);
+
 #ifdef RTE_ETHDEV_RXTX_CALLBACKS
 	{
 		void *cb;
@@ -6692,7 +6695,18 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 	}
 #endif
 
+#if RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY
+	uint16_t requested_pkts = nb_pkts;
+	rte_mempool_history_bulk((void **)tx_pkts, nb_pkts, RTE_MEMPOOL_PMD_TX);
+#endif
+
 	nb_pkts = p->tx_pkt_burst(qd, tx_pkts, nb_pkts);
+
+#if RTE_MEMPOOL_DEBUG_OBJECTS_HISTORY
+	if (requested_pkts > nb_pkts)
+		rte_mempool_history_bulk((void **)tx_pkts + nb_pkts,
+				    requested_pkts - nb_pkts, RTE_MEMPOOL_BUSY_TX);
+#endif
 
 	rte_ethdev_trace_tx_burst(port_id, queue_id, (void **)tx_pkts, nb_pkts);
 	return nb_pkts;
