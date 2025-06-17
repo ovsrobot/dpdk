@@ -106,7 +106,7 @@ struct nbl_channel_mgt {
 };
 
 /* Mgt structure for each product.
- * Every indivisual mgt must have the common mgt as its first member, and contains its unique
+ * Every individual mgt must have the common mgt as its first member, and contains its unique
  * data structure in the reset of it.
  */
 struct nbl_channel_mgt_leonis {

@@ -15,5 +15,8 @@ sources = files(
         'nbl_common/nbl_common.c',
         'nbl_common/nbl_thread.c',
         'nbl_hw/nbl_channel.c',
+        'nbl_hw/nbl_resource.c',
+        'nbl_hw/nbl_txrx.c',
         'nbl_hw/nbl_hw_leonis/nbl_phy_leonis_snic.c',
+        'nbl_hw/nbl_hw_leonis/nbl_res_leonis.c',
 )
