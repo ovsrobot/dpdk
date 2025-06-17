@@ -6,6 +6,9 @@ if not is_linux
     reason = 'only supported on Linux'
 endif
 
+includes += include_directories('nbl_include')
+
 sources = files(
         'nbl_ethdev.c',
+        'nbl_core.c',
 )
