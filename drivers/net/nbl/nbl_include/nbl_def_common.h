@@ -13,6 +13,10 @@
 #  define NBL_PRIU64		"llu"
 # endif
 
+#define NBL_OPS_CALL(func, para)	\
+	({ typeof(func) _func = (func);	\
+	 (!_func) ? 0 : _func para; })
+
 struct nbl_dma_mem {
 	void *va;
 	uint64_t pa;
