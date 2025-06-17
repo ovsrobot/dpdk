@@ -53,7 +53,7 @@ struct rte_gro_param {
 	/**< max flow number */
 	uint16_t max_item_per_flow;
 	/**< max packet number per flow */
-	uint16_t socket_id;
+	int32_t socket_id;
 	/**< socket index for allocating GRO related data structures,
 	 * like reassembly tables. When use rte_gro_reassemble_burst(),
 	 * applications don't need to set this value.

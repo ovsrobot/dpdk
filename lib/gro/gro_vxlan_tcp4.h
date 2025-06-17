@@ -77,7 +77,7 @@ struct gro_vxlan_tcp4_tbl {
  *  - Return the table pointer on success.
  *  - Return NULL on failure.
  */
-void *gro_vxlan_tcp4_tbl_create(uint16_t socket_id,
+void *gro_vxlan_tcp4_tbl_create(int32_t socket_id,
 		uint16_t max_flow_num,
 		uint16_t max_item_per_flow);
 

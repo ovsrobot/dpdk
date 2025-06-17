@@ -14,7 +14,7 @@
 #include "gro_vxlan_tcp4.h"
 #include "gro_vxlan_udp4.h"
 
-typedef void *(*gro_tbl_create_fn)(uint16_t socket_id,
+typedef void *(*gro_tbl_create_fn)(int32_t socket_id,
 		uint16_t max_flow_num,
 		uint16_t max_item_per_flow);
 typedef void (*gro_tbl_destroy_fn)(void *tbl);
