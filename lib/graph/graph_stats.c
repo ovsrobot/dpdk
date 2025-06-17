@@ -29,7 +29,7 @@ struct cluster_node {
 	struct rte_node *nodes[];
 };
 
-struct __rte_cache_aligned rte_graph_cluster_stats {
+struct rte_graph_cluster_stats {
 	/* Header */
 	rte_graph_cluster_stats_cb_t fn;
 	uint32_t cluster_node_size; /* Size of struct cluster_node */

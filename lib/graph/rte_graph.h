@@ -202,7 +202,7 @@ struct rte_graph_cluster_stats_param {
  *
  * @see struct rte_graph_cluster_stats_param::fn
  */
-struct __rte_cache_aligned rte_graph_cluster_node_stats {
+struct rte_graph_cluster_node_stats {
 	uint64_t ts;	    /**< Current timestamp. */
 	uint64_t calls;	    /**< Current number of calls made. */
 	uint64_t objs;      /**< Current number of objs processed. */
