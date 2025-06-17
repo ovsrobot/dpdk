@@ -41,6 +41,13 @@ do {									\
 	NBL_DEV_NET_OPS(dev_configure,		dev_ops->dev_configure);\
 	NBL_DEV_NET_OPS(dev_start,		dev_ops->dev_start);	\
 	NBL_DEV_NET_OPS(dev_stop,		dev_ops->dev_stop);	\
+	NBL_DEV_NET_OPS(dev_infos_get,		dev_ops->dev_infos_get);\
+	NBL_DEV_NET_OPS(tx_queue_setup,		dev_ops->tx_queue_setup);\
+	NBL_DEV_NET_OPS(rx_queue_setup,		dev_ops->rx_queue_setup);\
+	NBL_DEV_NET_OPS(rx_queue_release,	dev_ops->rx_queue_release);\
+	NBL_DEV_NET_OPS(tx_queue_release,	dev_ops->tx_queue_release);\
+	NBL_DEV_NET_OPS(link_update,		dev_ops->link_update);	\
+	NBL_DEV_NET_OPS(stats_get,		dev_ops->stats_get);	\
 } while (0)
 
 static void nbl_set_eth_dev_ops(struct nbl_adapter *adapter,
