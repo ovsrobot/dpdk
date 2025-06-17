@@ -19,8 +19,12 @@ enum {
 };
 
 struct nbl_dispatch_ops {
-	int (*add_macvlan)(void *priv, u8 *mac, u16 vlan_id, u16 vsi_id);
+	int (*register_net)(void *priv,
+			    struct nbl_register_net_param *register_param,
+			    struct nbl_register_net_result *register_result);
+	int (*unregister_net)(void *priv);
 	int (*get_mac_addr)(void *priv, u8 *mac);
+	int (*add_macvlan)(void *priv, u8 *mac, u16 vlan_id, u16 vsi_id);
 	void (*del_macvlan)(void *priv, u8 *mac, u16 vlan_id, u16 vsi_id);
 	int (*add_multi_rule)(void *priv, u16 vsi);
 	void (*del_multi_rule)(void *priv, u16 vsi);
@@ -62,6 +66,7 @@ struct nbl_dispatch_ops {
 	u16 (*xmit_pkts)(void *priv, void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts);
 	u16 (*recv_pkts)(void *priv, void *rx_queue, struct rte_mbuf **rx_pkts, u16 nb_pkts);
 	u16 (*get_vsi_global_qid)(void *priv, u16 vsi_id, u16 local_qid);
+	void (*get_board_info)(void *priv, struct nbl_board_port_info *board_info);
 
 	void (*dummy_func)(void *priv);
 };
