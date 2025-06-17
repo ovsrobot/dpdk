@@ -3743,5 +3743,12 @@ mlx5_hw_create_mirror(struct rte_eth_dev *dev,
 		      const struct rte_flow_action *actions,
 		      struct rte_flow_error *error);
 
+struct rte_flow_hw *
+mlx5_flow_nta_handle_sample(struct rte_eth_dev *dev,
+			    const struct rte_flow_attr *attr,
+			    const struct rte_flow_item pattern[],
+			    const struct rte_flow_action actions[],
+			    struct rte_flow_error *error);
+
 #endif
 #endif /* RTE_PMD_MLX5_FLOW_H_ */

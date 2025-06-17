@@ -62,9 +62,6 @@ static struct rte_flow_fp_ops mlx5_flow_hw_fp_ops;
 #define MLX5_HW_VLAN_PUSH_VID_IDX 1
 #define MLX5_HW_VLAN_PUSH_PCP_IDX 2
 
-#define MLX5_MIRROR_MAX_CLONES_NUM 3
-#define MLX5_MIRROR_MAX_SAMPLE_ACTIONS_LEN 4
-
 #define MLX5_HW_PORT_IS_PROXY(priv) \
 	(!!((priv)->sh->esw_mode && (priv)->master))
 
@@ -326,18 +323,6 @@ get_mlx5dr_table_type(const struct rte_flow_attr *attr, uint32_t specialize,
 
 /* Non template default queue size used for inner ctrl queue. */
 #define MLX5_NT_DEFAULT_QUEUE_SIZE 32
-
-struct mlx5_mirror_clone {
-	enum rte_flow_action_type type;
-	void *action_ctx;
-};
-
-struct mlx5_mirror {
-	struct mlx5_indirect_list indirect;
-	uint32_t clones_num;
-	struct mlx5dr_action *mirror_action;
-	struct mlx5_mirror_clone clone[MLX5_MIRROR_MAX_CLONES_NUM];
-};
 
 static int flow_hw_flush_all_ctrl_flows(struct rte_eth_dev *dev);
 static int flow_hw_translate_group(struct rte_eth_dev *dev,
@@ -706,6 +691,9 @@ meter:
 			break;
 		case RTE_FLOW_ACTION_TYPE_JUMP_TO_TABLE_INDEX:
 			action_flags |= MLX5_FLOW_ACTION_JUMP_TO_TABLE_INDEX;
+			break;
+		case RTE_FLOW_ACTION_TYPE_SAMPLE:
+			action_flags |= MLX5_FLOW_ACTION_SAMPLE;
 			break;
 		case RTE_FLOW_ACTION_TYPE_VOID:
 		case RTE_FLOW_ACTION_TYPE_END:
@@ -14231,7 +14219,9 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 		if (ret)
 			goto free;
 	}
-
+	if (action_flags & MLX5_FLOW_ACTION_SAMPLE) {
+		mlx5_flow_nta_handle_sample(dev, attr, items, actions, error);
+	}
 	if (action_flags & MLX5_FLOW_ACTION_RSS) {
 		const struct rte_flow_action_rss
 			*rss_conf = flow_nta_locate_rss(dev, actions, error);
