@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2024 NVIDIA Corporation & Affiliates
+ * Copyright (c) 2025 NVIDIA Corporation & Affiliates
  */
 
 #include <rte_flow.h>
@@ -9,6 +9,8 @@
 #include "mlx5_flow.h"
 #include "mlx5_rx.h"
 
+SLIST_HEAD(mlx5_flow_head, rte_flow_hw);
+
 struct mlx5_nta_sample_ctx {
 	uint32_t groups_num;
 	struct mlx5_indexed_pool *group_ids;
@@ -16,6 +18,18 @@ struct mlx5_nta_sample_ctx {
 	struct mlx5_list *sample_groups; /* cache groups for sample actions */
 	struct mlx5_list *suffix_groups; /* cache groups for suffix actions */
 };
+
+static void
+release_chained_flows(struct rte_eth_dev *dev, struct mlx5_flow_head *flow_head,
+		      enum mlx5_flow_type type)
+{
+	struct rte_flow_hw *flow = SLIST_FIRST(flow_head);
+
+	if (flow) {
+		flow->nt2hws->chaned_flow = 0;
+		flow_hw_list_destroy(dev, type, (uintptr_t)flow);
+	}
+}
 
 static uint32_t
 alloc_cached_group(struct rte_eth_dev *dev)
@@ -40,7 +54,13 @@ release_cached_group(struct rte_eth_dev *dev, uint32_t group)
 	mlx5_ipool_free(sample_ctx->group_ids, group - MLX5_FLOW_TABLE_SAMPLE_BASE);
 }
 
-static void
+void
+mlx5_nta_release_sample_group(struct rte_eth_dev *dev, uint32_t group)
+{
+	release_cached_group(dev, group);
+}
+
+void
 mlx5_free_sample_context(struct rte_eth_dev *dev)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
@@ -364,42 +384,68 @@ get_registered_group(struct rte_flow_action *actions, struct mlx5_list *cache)
 	return ent ? container_of(ent, struct mlx5_nta_sample_cached_group, entry)->group : 0;
 }
 
-static struct mlx5_mirror *
-mlx5_create_nta_mirror(struct rte_eth_dev *dev,
-		       const struct rte_flow_attr *attr,
-		       struct rte_flow_action *sample_actions,
-		       struct rte_flow_action *suffix_actions,
-		       struct rte_flow_error *error)
+static int
+mlx5_nta_create_mirror_action(struct rte_eth_dev *dev,
+			      const struct rte_flow_attr *attr,
+			      struct rte_flow_action *sample_actions,
+			      struct rte_flow_action *suffix_actions,
+			      struct mlx5_rte_flow_action_mirror *mirror_conf,
+			      struct rte_flow_error *error)
 {
-	struct mlx5_mirror *mirror;
-	uint32_t sample_group, suffix_group;
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_nta_sample_ctx *ctx = priv->nta_sample_ctx;
 	struct mlx5_flow_template_table_cfg table_cfg = {
 		.external = true,
 		.attr = {
-			.flow_attr = {
-				.ingress = attr->ingress,
-				.egress = attr->egress,
-				.transfer = attr->transfer
-			}
+			.flow_attr = *attr
 		}
 	};
 
-	sample_group = get_registered_group(sample_actions, ctx->sample_groups);
-	if (sample_group == 0) {
-		rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
-					   NULL, "Failed to register sample group");
-		return NULL;
+	mirror_conf->sample_group = get_registered_group(sample_actions, ctx->sample_groups);
+	if (mirror_conf->sample_group == 0)
+		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+					  NULL, "Failed to register sample group");
+	mirror_conf->suffix_group = get_registered_group(suffix_actions, ctx->suffix_groups);
+	if (mirror_conf->suffix_group == 0)
+		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+					  NULL, "Failed to register suffix group");
+	mirror_conf->mirror = get_registered_mirror(&table_cfg, ctx->mirror_actions,
+						    mirror_conf->sample_group,
+						    mirror_conf->suffix_group);
+	return 0;
+}
+
+static void
+save_sample_group(struct rte_flow_hw *flow, uint32_t group)
+{
+	flow->nt2hws->sample_group = group;
+}
+
+static uint32_t
+generate_random_mask(uint32_t ratio)
+{
+	uint32_t i;
+	double goal = 1.0 / ratio;
+
+	/* Check if the ratio value is power of 2 */
+	if (rte_popcount32(ratio) == 1) {
+		for (i = 2; i < UINT32_WIDTH; i++) {
+			if (RTE_BIT32(i) == ratio)
+				return RTE_BIT32(i) - 1;
+		}
 	}
-	suffix_group = get_registered_group(suffix_actions, ctx->suffix_groups);
-	if (suffix_group == 0) {
-		rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
-					   NULL, "Failed to register suffix group");
-		return NULL;
+
+	/*
+	 * Find the last power of 2 with ratio larger then the goal.
+	 */
+	for (i = 2; i < UINT32_WIDTH; i++) {
+		double res = 1.0 / RTE_BIT32(i);
+
+		if (res < goal)
+			return RTE_BIT32(i - 1) - 1;
 	}
-	mirror = get_registered_mirror(&table_cfg, ctx->mirror_actions, sample_group, suffix_group);
-	return mirror;
+
+	return UINT32_MAX;
 }
 
 static void
@@ -427,18 +473,287 @@ mlx5_nta_parse_sample_actions(const struct rte_flow_action *action,
 	} while ((action++)->type != RTE_FLOW_ACTION_TYPE_END);
 }
 
+static bool
+validate_prefix_actions(const struct rte_flow_action *actions)
+{
+	uint32_t i = 0;
+
+	while (actions[i].type != RTE_FLOW_ACTION_TYPE_END)
+		i++;
+	return i < MLX5_HW_MAX_ACTS - 1;
+}
+
+static void
+action_append(struct rte_flow_action *actions, const struct rte_flow_action *last)
+{
+	uint32_t i = 0;
+
+	while (actions[i].type != RTE_FLOW_ACTION_TYPE_END)
+		i++;
+	actions[i] = *last;
+}
+
+static int
+create_mirror_aux_flows(struct rte_eth_dev *dev,
+			enum mlx5_flow_type type,
+			const struct rte_flow_attr *attr,
+			struct rte_flow_action *suffix_actions,
+			struct rte_flow_action *sample_actions,
+			struct mlx5_rte_flow_action_mirror *mirror_conf,
+			struct mlx5_flow_head *flow_head,
+			struct rte_flow_error *error)
+{
+	const struct rte_flow_attr suffix_attr = {
+		.ingress = attr->ingress,
+		.egress = attr->egress,
+		.transfer = attr->transfer,
+		.group = mirror_conf->suffix_group,
+	};
+	const struct rte_flow_attr sample_attr = {
+		.ingress = attr->ingress,
+		.egress = attr->egress,
+		.transfer = attr->transfer,
+		.group = mirror_conf->sample_group,
+	};
+	const struct rte_flow_item secondary_pattern[1] = {
+		[0] = { .type = RTE_FLOW_ITEM_TYPE_END }
+	};
+	int ret, encap_idx, actions_num;
+	uint64_t suffix_action_flags, sample_action_flags;
+	const struct rte_flow_action *qrss_action = NULL, *mark_action = NULL;
+	struct rte_flow_hw *suffix_flow = NULL, *sample_flow = NULL;
+
+	suffix_action_flags = mlx5_flow_hw_action_flags_get(suffix_actions,
+						       &qrss_action, &mark_action,
+						       &encap_idx, &actions_num, error);
+	if (qrss_action != NULL && qrss_action->type == RTE_FLOW_ACTION_TYPE_RSS)
+		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+			"RSS action is not supported in suffix sample action");
+	sample_action_flags = mlx5_flow_hw_action_flags_get(sample_actions,
+						       &qrss_action, &mark_action,
+						       &encap_idx, &actions_num, error);
+	if (qrss_action != NULL && qrss_action->type == RTE_FLOW_ACTION_TYPE_RSS)
+		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+			"RSS action is not supported in sample action");
+	ret = flow_hw_create_flow(dev, type, &suffix_attr,
+				  secondary_pattern, suffix_actions,
+				  MLX5_FLOW_LAYER_OUTER_L2, suffix_action_flags,
+				  true, &suffix_flow, error);
+	if (ret != 0)
+		return ret;
+	save_sample_group(suffix_flow, mirror_conf->suffix_group);
+	ret = flow_hw_create_flow(dev, type, &sample_attr,
+				  secondary_pattern, sample_actions,
+				  MLX5_FLOW_LAYER_OUTER_L2, sample_action_flags,
+				  true, &sample_flow, error);
+	if (ret != 0) {
+		flow_hw_destroy(dev, suffix_flow);
+		return ret;
+	}
+	save_sample_group(sample_flow, mirror_conf->sample_group);
+	suffix_flow->nt2hws->chaned_flow = 1;
+	SLIST_INSERT_HEAD(flow_head, suffix_flow, nt2hws->next);
+	sample_flow->nt2hws->chaned_flow = 1;
+	SLIST_INSERT_HEAD(flow_head, sample_flow, nt2hws->next);
+	return 0;
+}
+
+static struct rte_flow_hw *
+create_sample_flow(struct rte_eth_dev *dev,
+		   enum mlx5_flow_type type,
+		   const struct rte_flow_attr *attr,
+		   uint32_t ratio,
+		   uint32_t sample_group,
+		   struct mlx5_rte_flow_action_mirror *mirror_conf,
+		   struct rte_flow_error *error)
+{
+	struct rte_flow_hw *sample_flow = NULL;
+	uint32_t random_mask = generate_random_mask(ratio);
+	const struct rte_flow_attr sample_attr = {
+		.ingress = attr->ingress,
+		.egress = attr->egress,
+		.transfer = attr->transfer,
+		.group = sample_group,
+	};
+	const struct rte_flow_item sample_pattern[2] = {
+		[0] = {
+			.type = RTE_FLOW_ITEM_TYPE_RANDOM,
+			.mask = &(struct rte_flow_item_random) {
+				.value = random_mask
+			},
+			.spec = &(struct rte_flow_item_random) {
+				.value = 1
+			},
+		},
+		[1] = { .type = RTE_FLOW_ITEM_TYPE_END }
+	};
+	const struct rte_flow_action sample_actions[2] = {
+		[0] = {
+			.type = (enum rte_flow_action_type)MLX5_RTE_FLOW_ACTION_TYPE_MIRROR,
+			.conf = mirror_conf
+		},
+		[1] = { .type = RTE_FLOW_ACTION_TYPE_END }
+	};
+
+	if (random_mask > UINT16_MAX)
+		return NULL;
+	flow_hw_create_flow(dev, type, &sample_attr, sample_pattern, sample_actions,
+			    0, 0, true, &sample_flow, error);
+	save_sample_group(sample_flow, sample_group);
+	return sample_flow;
+}
+
+static struct rte_flow_hw *
+create_sample_miss_flow(struct rte_eth_dev *dev,
+			enum mlx5_flow_type type,
+			const struct rte_flow_attr *attr,
+			uint32_t sample_group, uint32_t suffix_group,
+			const struct rte_flow_action *miss_actions,
+			struct rte_flow_error *error)
+{
+	int ret;
+	struct rte_flow_hw *miss_flow = NULL;
+	const struct rte_flow_attr miss_attr = {
+		.ingress = attr->ingress,
+		.egress = attr->egress,
+		.transfer = attr->transfer,
+		.group = suffix_group,
+	};
+	const struct rte_flow_item miss_pattern[1] = {
+		[0] = { .type = RTE_FLOW_ITEM_TYPE_END }
+	};
+	const struct rte_flow_group_attr sample_group_attr = {
+		.ingress = attr->ingress,
+		.egress = attr->egress,
+		.transfer = attr->transfer,
+	};
+	const struct rte_flow_action sample_miss_actions[2] = {
+		[0] = {
+			.type = RTE_FLOW_ACTION_TYPE_JUMP,
+			.conf = &(struct rte_flow_action_jump) { .group = suffix_group }
+		},
+		[1] = { .type = RTE_FLOW_ACTION_TYPE_END }
+	};
+
+	ret = mlx5_flow_hw_group_set_miss_actions(dev, sample_group, &sample_group_attr,
+					     sample_miss_actions, error);
+	if (ret != 0)
+		return NULL;
+	flow_hw_create_flow(dev, type, &miss_attr, miss_pattern, miss_actions,
+			    0, 0, true, &miss_flow, error);
+	return miss_flow;
+}
+
+static struct rte_flow_hw *
+mlx5_nta_create_sample_flow(struct rte_eth_dev *dev,
+			     enum mlx5_flow_type type,
+			     const struct rte_flow_attr *attr,
+			     uint32_t sample_ratio,
+			     uint64_t item_flags, uint64_t action_flags,
+			     const struct rte_flow_item *pattern,
+			     struct rte_flow_action *prefix_actions,
+			     struct rte_flow_action *suffix_actions,
+			     struct rte_flow_action *sample_actions,
+			     struct mlx5_rte_flow_action_mirror *mirror_conf,
+			     struct rte_flow_error *error)
+{
+	int ret;
+	uint32_t sample_group = alloc_cached_group(dev);
+	struct mlx5_flow_head flow_head = SLIST_HEAD_INITIALIZER(NULL);
+	struct rte_flow_hw *base_flow = NULL, *sample_flow, *miss_flow = NULL;
+
+	if (sample_group == 0)
+		goto error;
+	ret = create_mirror_aux_flows(dev, type, attr,
+				      suffix_actions, sample_actions,
+				      mirror_conf, &flow_head, error);
+	if (ret != 0)
+		return NULL;
+	miss_flow = create_sample_miss_flow(dev, type, attr,
+					    sample_group, mirror_conf->suffix_group,
+					    suffix_actions, error);
+	if (miss_flow == NULL)
+		goto error;
+	miss_flow->nt2hws->chaned_flow = 1;
+	SLIST_INSERT_HEAD(&flow_head, miss_flow, nt2hws->next);
+	sample_flow = create_sample_flow(dev, type, attr, sample_ratio, sample_group,
+					 mirror_conf, error);
+	if (sample_flow == NULL)
+		goto error;
+	sample_flow->nt2hws->chaned_flow = 1;
+	SLIST_INSERT_HEAD(&flow_head, sample_flow, nt2hws->next);
+	action_append(prefix_actions,
+		&(struct rte_flow_action) {
+			.type = RTE_FLOW_ACTION_TYPE_JUMP,
+			.conf = &(struct rte_flow_action_jump) { .group = sample_group }
+		});
+	ret = flow_hw_create_flow(dev, type, attr, pattern, prefix_actions,
+				  item_flags, action_flags, true, &base_flow, error);
+	if (ret != 0)
+		goto error;
+	SLIST_INSERT_HEAD(&flow_head, base_flow, nt2hws->next);
+	return base_flow;
+
+error:
+	release_chained_flows(dev, &flow_head, type);
+	return NULL;
+}
+
+static struct rte_flow_hw *
+mlx5_nta_create_mirror_flow(struct rte_eth_dev *dev,
+			     enum mlx5_flow_type type,
+			     const struct rte_flow_attr *attr,
+			     uint64_t item_flags, uint64_t action_flags,
+			     const struct rte_flow_item *pattern,
+			     struct rte_flow_action *prefix_actions,
+			     struct rte_flow_action *suffix_actions,
+			     struct rte_flow_action *sample_actions,
+			     struct mlx5_rte_flow_action_mirror *mirror_conf,
+			     struct rte_flow_error *error)
+{
+	int ret;
+	struct rte_flow_hw *base_flow = NULL;
+	struct mlx5_flow_head flow_head = SLIST_HEAD_INITIALIZER(NULL);
+
+	ret = create_mirror_aux_flows(dev, type, attr,
+				      suffix_actions, sample_actions,
+				      mirror_conf, &flow_head, error);
+	if (ret != 0)
+		return NULL;
+	action_append(prefix_actions,
+		&(struct rte_flow_action) {
+			.type = (enum rte_flow_action_type)MLX5_RTE_FLOW_ACTION_TYPE_MIRROR,
+			.conf = mirror_conf
+		});
+	ret = flow_hw_create_flow(dev, type, attr, pattern, prefix_actions,
+				  item_flags, action_flags,
+				  true, &base_flow, error);
+	if (ret != 0)
+		goto error;
+	SLIST_INSERT_HEAD(&flow_head, base_flow, nt2hws->next);
+	return base_flow;
+
+error:
+	release_chained_flows(dev, &flow_head, type);
+	return NULL;
+}
+
 struct rte_flow_hw *
 mlx5_flow_nta_handle_sample(struct rte_eth_dev *dev,
+			    enum mlx5_flow_type type,
 			    const struct rte_flow_attr *attr,
-			    const struct rte_flow_item pattern[] __rte_unused,
-			    const struct rte_flow_action actions[] __rte_unused,
+			    const struct rte_flow_item pattern[],
+			    const struct rte_flow_action actions[],
+			    uint64_t item_flags, uint64_t action_flags,
 			    struct rte_flow_error *error)
 {
+	int ret;
 	struct mlx5_priv *priv = dev->data->dev_private;
-	struct mlx5_mirror *mirror;
+	struct rte_flow_hw *flow = NULL;
 	const struct rte_flow_action *sample;
 	struct rte_flow_action *sample_actions;
 	const struct rte_flow_action_sample *sample_conf;
+	struct mlx5_rte_flow_action_mirror mirror_conf = { NULL };
 	struct rte_flow_action prefix_actions[MLX5_HW_MAX_ACTS] = { 0 };
 	struct rte_flow_action suffix_actions[MLX5_HW_MAX_ACTS] = { 0 };
 
@@ -451,12 +766,26 @@ mlx5_flow_nta_handle_sample(struct rte_eth_dev *dev,
 		}
 	}
 	mlx5_nta_parse_sample_actions(actions, &sample, prefix_actions, suffix_actions);
+	if (!validate_prefix_actions(prefix_actions)) {
+		rte_flow_error_set(error, -EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+				   NULL, "Too many actions");
+		return NULL;
+	}
 	sample_conf = (const struct rte_flow_action_sample *)sample->conf;
 	sample_actions = (struct rte_flow_action *)(uintptr_t)sample_conf->actions;
-	mirror = mlx5_create_nta_mirror(dev, attr, sample_actions,
-					suffix_actions, error);
-	if (mirror == NULL)
-		goto error;
-error:
-	return NULL;
+	ret = mlx5_nta_create_mirror_action(dev, attr, sample_actions,
+					    suffix_actions, &mirror_conf, error);
+	if (ret != 0)
+		return NULL;
+	if (sample_conf->ratio == 1) {
+		flow = mlx5_nta_create_mirror_flow(dev, type, attr, item_flags, action_flags,
+						   pattern, prefix_actions, suffix_actions,
+						   sample_actions, &mirror_conf, error);
+	} else {
+		flow = mlx5_nta_create_sample_flow(dev, type, attr, sample_conf->ratio,
+						   item_flags, action_flags, pattern,
+						   prefix_actions, suffix_actions,
+						   sample_actions, &mirror_conf, error);
+	}
+	return flow;
 }

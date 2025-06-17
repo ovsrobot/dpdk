@@ -54,6 +54,8 @@ enum mlx5_rte_flow_action_type {
 
 struct mlx5_rte_flow_action_mirror {
 	struct mlx5_mirror *mirror;
+	uint32_t sample_group;
+	uint32_t suffix_group;
 };
 
 /* Private (internal) Field IDs for MODIFY_FIELD action. */
@@ -1356,6 +1358,8 @@ struct rte_flow_nt2hws {
 	struct rte_flow_hw_aux *flow_aux;
 	/** Modify header pointer. */
 	struct mlx5_flow_dv_modify_hdr_resource *modify_hdr;
+	/** Group Id used in SAMPLE flow action */
+	uint32_t sample_group;
 	/** Chain NTA flows. */
 	SLIST_ENTRY(rte_flow_hw) next;
 	/** Encap/decap index. */
@@ -3748,12 +3752,22 @@ mlx5_hw_create_mirror(struct rte_eth_dev *dev,
 		      const struct rte_flow_action *actions,
 		      struct rte_flow_error *error);
 
-struct rte_flow_hw *
-mlx5_flow_nta_handle_sample(struct rte_eth_dev *dev,
-			    const struct rte_flow_attr *attr,
-			    const struct rte_flow_item pattern[],
-			    const struct rte_flow_action actions[],
-			    struct rte_flow_error *error);
+int
+mlx5_flow_hw_group_set_miss_actions(struct rte_eth_dev *dev,
+				    uint32_t group_id,
+				    const struct rte_flow_group_attr *attr,
+				    const struct rte_flow_action actions[],
+				    struct rte_flow_error *error);
+
+uint64_t
+mlx5_flow_hw_action_flags_get(const struct rte_flow_action actions[],
+			      const struct rte_flow_action **qrss,
+			      const struct rte_flow_action **mark,
+			      int *encap_idx,
+			      int *act_cnt,
+			      struct rte_flow_error *error);
+
+#include "mlx5_nta_sample.h"
 
 #endif
 #endif /* RTE_PMD_MLX5_FLOW_H_ */

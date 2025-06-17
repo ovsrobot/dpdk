@@ -574,8 +574,8 @@ flow_hw_hashfields_set(struct mlx5_flow_rss_desc *rss_desc,
 	*hash_fields |= fields;
 }
 
-static uint64_t
-flow_hw_action_flags_get(const struct rte_flow_action actions[],
+uint64_t
+mlx5_flow_hw_action_flags_get(const struct rte_flow_action actions[],
 			 const struct rte_flow_action **qrss,
 			 const struct rte_flow_action **mark,
 			 int *encap_idx,
@@ -1987,6 +1987,7 @@ hws_table_tmpl_translate_indirect_mirror(struct rte_eth_dev *dev,
 			 action_src, action_dst,
 			 flow_hw_translate_indirect_mirror);
 	}
+
 	return ret;
 }
 
@@ -2903,6 +2904,12 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 				goto err;
 			}
 			break;
+		case MLX5_RTE_FLOW_ACTION_TYPE_MIRROR:
+			if (__flow_hw_act_data_general_append(priv, acts,
+							      actions->type,
+							      src_pos, dr_pos))
+				goto err;
+			break;
 		case RTE_FLOW_ACTION_TYPE_END:
 			actions_end = true;
 			break;
@@ -3743,6 +3750,12 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 				((const struct rte_flow_action_jump_to_table_index *)
 				action->conf)->index;
 			break;
+		case MLX5_RTE_FLOW_ACTION_TYPE_MIRROR: {
+			const struct mlx5_rte_flow_action_mirror *mirror_conf = action->conf;
+
+			rule_acts[act_data->action_dst].action = mirror_conf->mirror->mirror_action;
+		}
+			break;
 		default:
 			break;
 		}
@@ -3995,6 +4008,7 @@ flow_hw_async_flow_create_generic(struct rte_eth_dev *dev,
 		aux->matcher_selector = selector;
 		flow->flags |= MLX5_FLOW_HW_FLOW_FLAG_MATCHER_SELECTOR;
 	}
+
 	if (likely(!ret)) {
 		flow_hw_q_inc_flow_ops(priv, queue);
 		return (struct rte_flow *)flow;
@@ -5694,8 +5708,8 @@ flow_hw_group_unset_miss_group(struct rte_eth_dev *dev,
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
 
-static int
-flow_hw_group_set_miss_actions(struct rte_eth_dev *dev,
+int
+mlx5_flow_hw_group_set_miss_actions(struct rte_eth_dev *dev,
 			       uint32_t group_id,
 			       const struct rte_flow_group_attr *attr,
 			       const struct rte_flow_action actions[],
@@ -7623,6 +7637,10 @@ flow_hw_parse_flow_actions_to_dr_actions(struct rte_eth_dev *dev,
 			at->dr_off[i] = curr_off;
 			action_types[curr_off++] = MLX5DR_ACTION_TYP_JUMP_TO_MATCHER;
 			break;
+		case MLX5_RTE_FLOW_ACTION_TYPE_MIRROR:
+			at->dr_off[i] = curr_off;
+			action_types[curr_off++] = MLX5DR_ACTION_TYP_DEST_ARRAY;
+				break;
 		default:
 			type = mlx5_hw_dr_action_types[at->actions[i].type];
 			at->dr_off[i] = curr_off;
@@ -14107,6 +14125,8 @@ flow_hw_destroy(struct rte_eth_dev *dev, struct rte_flow_hw *flow)
 	}
 	if (flow->nt2hws->matcher)
 		flow_hw_unregister_matcher(dev, flow->nt2hws->matcher);
+	if (flow->nt2hws->sample_group != 0)
+		mlx5_nta_release_sample_group(dev, flow->nt2hws->sample_group);
 }
 
 #ifdef HAVE_MLX5_HWS_SUPPORT
@@ -14180,7 +14200,7 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 	const struct rte_flow_action *qrss = NULL;
 	const struct rte_flow_action *mark = NULL;
 	uint64_t item_flags = 0;
-	uint64_t action_flags = flow_hw_action_flags_get(actions, &qrss, &mark,
+	uint64_t action_flags = mlx5_flow_hw_action_flags_get(actions, &qrss, &mark,
 							 &encap_idx, &actions_n, error);
 	struct mlx5_flow_hw_split_resource resource = {
 		.suffix = {
@@ -14220,7 +14240,13 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 			goto free;
 	}
 	if (action_flags & MLX5_FLOW_ACTION_SAMPLE) {
-		mlx5_flow_nta_handle_sample(dev, attr, items, actions, error);
+		flow = mlx5_flow_nta_handle_sample(dev, type, attr, items,
+						   actions,
+						   item_flags, action_flags,
+						   error);
+		if (flow != NULL)
+			return (uintptr_t)flow;
+		goto free;
 	}
 	if (action_flags & MLX5_FLOW_ACTION_RSS) {
 		const struct rte_flow_action_rss
@@ -15378,7 +15404,7 @@ const struct mlx5_flow_driver_ops mlx5_flow_hw_drv_ops = {
 	.template_table_create = flow_hw_template_table_create,
 	.template_table_destroy = flow_hw_table_destroy,
 	.table_resize = flow_hw_table_resize,
-	.group_set_miss_actions = flow_hw_group_set_miss_actions,
+	.group_set_miss_actions = mlx5_flow_hw_group_set_miss_actions,
 	.async_flow_create = flow_hw_async_flow_create,
 	.async_flow_create_by_index = flow_hw_async_flow_create_by_index,
 	.async_flow_update = flow_hw_async_flow_update,
