@@ -203,7 +203,7 @@ stats_mem_init(struct cluster *cluster,
 	cluster_node_size += cluster->nb_graphs * sizeof(struct rte_node *);
 	cluster_node_size = RTE_ALIGN(cluster_node_size, RTE_CACHE_LINE_SIZE);
 
-	stats = realloc(NULL, sz);
+	stats = rte_malloc(NULL, sz, RTE_CACHE_LINE_SIZE);
 	if (stats) {
 		memset(stats, 0, sz);
 		stats->fn = fn;
@@ -248,7 +248,8 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 	}
 
 	/* Hey, it is a new node, allocate space for it in the reel */
-	stats = realloc(stats, stats->sz + stats->cluster_node_size);
+	stats = rte_realloc(stats, stats->sz + stats->cluster_node_size,
+		RTE_CACHE_LINE_SIZE);
 	if (stats == NULL)
 		SET_ERR_JMP(ENOMEM, err, "Realloc failed");
 	*stats_in = NULL;
@@ -301,7 +302,7 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 
 	return 0;
 free:
-	free(stats);
+	rte_free(stats);
 err:
 	return -rte_errno;
 }
@@ -309,7 +310,7 @@ err:
 static void
 stats_mem_fini(struct rte_graph_cluster_stats *stats)
 {
-	free(stats);
+	rte_free(stats);
 }
 
 static void
