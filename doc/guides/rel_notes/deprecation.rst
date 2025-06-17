@@ -142,3 +142,11 @@ Deprecation Notices
 * bus/vmbus: Starting DPDK 25.11, all the vmbus API defined in
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
+
+* lib/gro: Starting DPDK 25.11, to enable using negative socket value
+  (``SOCKET_ID_ANY`` = -1) for gro init for cross NUMA initialization support,
+  perform the next changes in API:
+
+  - In ``struct rte_gro_param``: ``socket_id`` type changed from ``uint16_t`` to ``int32_t``.
+  - Update all ``gro_xxx_create`` functions to use updated socket_id type.
+
