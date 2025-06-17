@@ -49,6 +49,11 @@ enum mlx5_rte_flow_action_type {
 	MLX5_RTE_FLOW_ACTION_TYPE_JUMP,
 	MLX5_RTE_FLOW_ACTION_TYPE_RSS,
 	MLX5_RTE_FLOW_ACTION_TYPE_METER_MARK,
+	MLX5_RTE_FLOW_ACTION_TYPE_MIRROR,
+};
+
+struct mlx5_rte_flow_action_mirror {
+	struct mlx5_mirror *mirror;
 };
 
 /* Private (internal) Field IDs for MODIFY_FIELD action. */
