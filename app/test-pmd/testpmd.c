@@ -1768,13 +1768,14 @@ init_config(void)
 	gro_param.max_flow_num = GRO_MAX_FLUSH_CYCLES;
 	gro_param.max_item_per_flow = MAX_PKT_BURST;
 	for (lc_id = 0; lc_id < nb_lcores; lc_id++) {
-		gro_param.socket_id = rte_lcore_to_socket_id(
+		if (!numa_support)
+			gro_param.socket_id = SOCKET_ID_ANY;
+		else
+			gro_param.socket_id = rte_lcore_to_socket_id(
 				fwd_lcores_cpuids[lc_id]);
 		fwd_lcores[lc_id]->gro_ctx = rte_gro_ctx_create(&gro_param);
-		if (fwd_lcores[lc_id]->gro_ctx == NULL) {
-			rte_exit(EXIT_FAILURE,
-					"rte_gro_ctx_create() failed\n");
-		}
+		if (fwd_lcores[lc_id]->gro_ctx == NULL)
+			rte_exit(EXIT_FAILURE, "rte_gro_ctx_create() failed\n");
 	}
 #endif
 }
