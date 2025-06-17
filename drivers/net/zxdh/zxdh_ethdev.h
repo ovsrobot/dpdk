@@ -11,6 +11,7 @@
 #include <eal_interrupts.h>
 
 #include "zxdh_mtr.h"
+#include "zxdh_flow.h"
 
 /* ZXDH PCI vendor/device ID. */
 #define ZXDH_PCI_VENDOR_ID        0x1cf2
@@ -54,6 +55,7 @@
 #define ZXDH_SLOT_MAX             256
 #define ZXDH_MAX_VF               256
 #define ZXDH_HASHIDX_MAX          6
+#define ZXDH_RSS_HASH_KEY_LEN     40U
 
 union zxdh_virport_num {
 	uint16_t vport;
@@ -129,7 +131,10 @@ struct zxdh_hw {
 	uint8_t is_pf         : 1,
 			rsv : 1,
 			i_mtr_en      : 1,
-			e_mtr_en      : 1;
+			e_mtr_en      : 1,
+			i_flow_en     : 1,
+			e_flow_en     : 1,
+			vxlan_flow_en : 1;
 	uint8_t msg_chan_init;
 	uint8_t phyport;
 	uint8_t panel_id;
@@ -149,7 +154,10 @@ struct zxdh_hw {
 	uint16_t queue_pool_count;
 	uint16_t queue_pool_start;
 	uint8_t dl_net_hdr_len;
-	uint8_t rsv1[3];
+	uint16_t vxlan_fd_num;
+	uint8_t rsv1[1];
+
+	struct dh_flow_list dh_flow_list;
 };
 
 struct zxdh_dtb_shared_data {
@@ -174,6 +182,7 @@ struct zxdh_shared_data {
 	int32_t np_init_done;
 	uint32_t dev_refcnt;
 	struct zxdh_dtb_shared_data *dtb_data;
+	struct rte_mempool *flow_mp;
 	struct rte_mempool *mtr_mp;
 	struct rte_mempool *mtr_profile_mp;
 	struct rte_mempool *mtr_policy_mp;
