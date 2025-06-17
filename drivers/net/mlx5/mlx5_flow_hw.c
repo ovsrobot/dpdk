@@ -14589,11 +14589,11 @@ hw_mirror_format_clone(struct rte_eth_dev *dev,
 	return 0;
 }
 
-static struct rte_flow_action_list_handle *
-mlx5_hw_mirror_handle_create(struct rte_eth_dev *dev,
-			     const struct mlx5_flow_template_table_cfg *table_cfg,
-			     const struct rte_flow_action *actions,
-			     struct rte_flow_error *error)
+struct mlx5_mirror *
+mlx5_hw_create_mirror(struct rte_eth_dev *dev,
+		      const struct mlx5_flow_template_table_cfg *table_cfg,
+		      const struct rte_flow_action *actions,
+		      struct rte_flow_error *error)
 {
 	uint32_t hws_flags;
 	int ret = 0, i, clones_num;
@@ -14656,13 +14656,24 @@ mlx5_hw_mirror_handle_create(struct rte_eth_dev *dev,
 				   actions, "Failed to create HWS mirror action");
 		goto error;
 	}
-
-	mlx5_indirect_list_add_entry(&priv->indirect_list_head, &mirror->indirect);
-	return (struct rte_flow_action_list_handle *)mirror;
-
+	return mirror;
 error:
 	mlx5_hw_mirror_destroy(dev, mirror);
 	return NULL;
+}
+
+static struct rte_flow_action_list_handle *
+mlx5_hw_mirror_handle_create(struct rte_eth_dev *dev,
+			     const struct mlx5_flow_template_table_cfg *table_cfg,
+			     const struct rte_flow_action *actions,
+			     struct rte_flow_error *error)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_mirror *mirror = mlx5_hw_create_mirror(dev, table_cfg, actions, error);
+
+	if (mirror)
+		mlx5_indirect_list_add_entry(&priv->indirect_list_head, &mirror->indirect);
+	return (struct rte_flow_action_list_handle *)mirror;
 }
 
 void
