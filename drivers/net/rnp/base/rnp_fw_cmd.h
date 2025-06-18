@@ -159,6 +159,7 @@ struct rnp_mac_addr_rep {
 #define RNP_SPEED_CAP_100M_HALF  RTE_BIT32(11)
 #define RNP_SPEED_CAP_1GB_HALF   RTE_BIT32(12)
 
+#define RNP_SPEED_VALID_MASK	RTE_GENMASK32(12, 2)
 enum rnp_pma_phy_type {
 	RNP_PHY_TYPE_NONE = 0,
 	RNP_PHY_TYPE_1G_BASE_KX,
