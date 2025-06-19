@@ -54,7 +54,7 @@ struct rte_tailq_elem {
  * Return the first tailq entry cast to the right struct.
  */
 #define RTE_TAILQ_CAST(tailq_entry, struct_name) \
-	(struct struct_name *)&(tailq_entry)->tailq_head
+	(tailq_entry == NULL ? NULL : (struct struct_name *)&(tailq_entry)->tailq_head)
 
 /**
  * Utility macro to make looking up a tailqueue for a particular struct easier.
