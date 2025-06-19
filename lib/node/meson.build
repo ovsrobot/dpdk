@@ -8,6 +8,7 @@ if is_windows
 endif
 
 sources = files(
+        'node_mbuf_dynfield.c',
         'ethdev_ctrl.c',
         'ethdev_rx.c',
         'ethdev_tx.c',
@@ -34,6 +35,7 @@ headers = files(
         'rte_node_ip6_api.h',
         'rte_node_pkt_cls_api.h',
         'rte_node_udp4_input_api.h',
+        'rte_node_mbuf_dynfield.h',
 )
 
 # Strict-aliasing rules are violated by uint8_t[] to context size casts.

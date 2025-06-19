@@ -222,6 +222,8 @@ The public API headers are grouped by topics:
     [ip4_node](@ref rte_node_ip4_api.h),
     [ip6_node](@ref rte_node_ip6_api.h),
     [udp4_input_node](@ref rte_node_udp4_input_api.h)
+  * graph_nodes_mbuf:
+    [node_mbuf_dynfield](@ref rte_node_mbuf_dynfield.h)
 
 - **basic**:
   [bitops](@ref rte_bitops.h),

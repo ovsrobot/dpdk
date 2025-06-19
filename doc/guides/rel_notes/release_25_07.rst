@@ -141,6 +141,12 @@ New Features
   String values are simply saved as-is,
   while the boolean support allows for values "true", "false", "1" or "0".
 
+* **Added rte_nodes specific shared mbuf dynamic field.**
+
+  Instead each rte_node registers its own mbuf dynamic field for its specific
+  purpose, a global/shared structure is added which can be used/overloaded by
+  any node (including out-of-tree nodes). This minimizes footprint of node
+  specific mbuf dynamic field.
 
 Removed Items
 -------------
