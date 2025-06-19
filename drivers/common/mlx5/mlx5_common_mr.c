@@ -225,9 +225,9 @@ mlx5_mr_btree_init(struct mlx5_mr_btree *bt, int n, int socket)
 	}
 	MLX5_ASSERT(!bt->table && !bt->size);
 	memset(bt, 0, sizeof(*bt));
-	bt->table = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
-				sizeof(struct mr_cache_entry) * n,
-				0, socket);
+	bt->table = mlx5_malloc_numa_tolerant(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+					      sizeof(struct mr_cache_entry) * n,
+					      0, socket);
 	if (bt->table == NULL) {
 		rte_errno = ENOMEM;
 		DRV_LOG(DEBUG,
