@@ -694,6 +694,10 @@ static uint16_t eth_dev_tx_scg(void *queue, struct rte_mbuf **bufs, uint16_t nb_
 	int pkts_sent = 0;
 	uint16_t nb_segs_arr[MAX_TX_PACKETS];
 
+	if (!tx_q->enabled)
+		NT_LOG(WRN, NTNIC, "Trying to send a burst of output packets "
+					"on a stopped transmit queue of an Ethernet device");
+
 	if (nb_pkts > MAX_TX_PACKETS)
 		nb_pkts = MAX_TX_PACKETS;
 
