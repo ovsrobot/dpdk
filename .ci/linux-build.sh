@@ -44,6 +44,13 @@ catch_coredump() {
     return 1
 }
 
+catch_ubsan() {
+    [ "$UBSAN" = "true" ] || return 0
+    grep -q UndefinedBehaviorSanitizer $2 2>/dev/null || return 0
+    grep -E "($1|UndefinedBehaviorSanitizer)" $2
+    return 1
+}
+
 check_traces() {
     which babeltrace >/dev/null || return 0
     for file in $(sudo find $HOME -name metadata); do
@@ -100,7 +107,6 @@ fi
 
 OPTS="$OPTS -Dplatform=generic"
 OPTS="$OPTS -Ddefault_library=$DEF_LIB"
-OPTS="$OPTS -Dbuildtype=$buildtype"
 if [ "$STDATOMIC" = "true" ]; then
 	OPTS="$OPTS -Denable_stdatomic=true"
 else
@@ -117,13 +123,28 @@ else
 fi
 OPTS="$OPTS -Dlibdir=lib"
 
+buildtype=debugoptimized
+sanitizer=
 if [ "$ASAN" = "true" ]; then
-    OPTS="$OPTS -Db_sanitize=address"
+    sanitizer=${sanitizer:+$sanitizer,}address
+fi
+
+if [ "$UBSAN" = "true" ]; then
+    sanitizer=${sanitizer:+$sanitizer,}undefined
+    if [ "$RUN_TESTS" = "true" ]; then
+        # UBSan takes too much memory with -O2
+        buildtype=plain
+    fi
+fi
+
+if [ -n "$sanitizer" ]; then
+    OPTS="$OPTS -Db_sanitize=$sanitizer"
     if [ "${CC%%clang}" != "$CC" ]; then
         OPTS="$OPTS -Db_lundef=false"
     fi
 fi
 
+OPTS="$OPTS -Dbuildtype=$buildtype"
 OPTS="$OPTS -Dwerror=true"
 
 if [ -d build ]; then
@@ -141,6 +162,7 @@ if [ -z "$cross_file" ]; then
     configure_coredump
     devtools/test-null.sh || failed="true"
     catch_coredump
+    catch_ubsan DPDK:fast-tests build/meson-logs/testlog.txt
     check_traces
     [ "$failed" != "true" ]
 fi
@@ -182,6 +204,7 @@ if [ "$RUN_TESTS" = "true" ]; then
     configure_coredump
     sudo meson test -C build --suite fast-tests -t 3 || failed="true"
     catch_coredump
+    catch_ubsan DPDK:fast-tests build/meson-logs/testlog.txt
     check_traces
     [ "$failed" != "true" ]
 fi
