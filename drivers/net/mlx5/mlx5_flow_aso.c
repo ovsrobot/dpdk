@@ -77,7 +77,7 @@ mlx5_aso_reg_mr(struct mlx5_common_device *cdev, size_t length,
 void
 mlx5_aso_destroy_sq(struct mlx5_aso_sq *sq)
 {
-	mlx5_devx_sq_destroy(&sq->sq_obj);
+	mlx5_devx_sq_destroy(&sq->sq_obj, false);
 	mlx5_devx_cq_destroy(&sq->cq.cq_obj);
 	memset(sq, 0, sizeof(*sq));
 }

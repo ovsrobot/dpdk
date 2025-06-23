@@ -46,6 +46,8 @@
 	!!(((bf)[((b) / (sizeof((bf)[0]) * CHAR_BIT))] & \
 		((size_t)1 << ((b) % (sizeof((bf)[0]) * CHAR_BIT)))))
 
+#define MLX5_ROUNDUP(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
+
 /*
  * Helper macros to work around __VA_ARGS__ limitations in a C99 compliant
  * manner.

@@ -149,6 +149,7 @@ struct __rte_cache_aligned mlx5_txq_data {
 	uint16_t inlen_mode; /* Minimal data length to inline. */
 	uint8_t tx_aggr_affinity; /* TxQ affinity configuration. */
 	uint32_t qp_num_8s; /* QP number shifted by 8. */
+	uint32_t sq_mem_len; /* Length of TxQ for WQEs */
 	uint64_t offloads; /* Offloads for Tx Queue. */
 	struct mlx5_mr_ctrl mr_ctrl; /* MR control descriptor. */
 	struct mlx5_wqe *wqes; /* Work queue. */
@@ -182,6 +183,7 @@ struct mlx5_txq_ctrl {
 	RTE_ATOMIC(uint32_t) refcnt; /* Reference counter. */
 	unsigned int socket; /* CPU socket ID for allocations. */
 	bool is_hairpin; /* Whether TxQ type is Hairpin. */
+	bool consec_mem; /* using consecutive memory. */
 	unsigned int max_inline_data; /* Max inline data. */
 	unsigned int max_tso_header; /* Max TSO header size. */
 	struct mlx5_txq_obj *obj; /* Verbs/DevX queue object. */

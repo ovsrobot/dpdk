@@ -61,7 +61,6 @@
 #define DR_LOG(level, ...) \
 	DRV_LOG(level, RTE_FMT("[%s]: " RTE_FMT_HEAD(__VA_ARGS__,), __func__, RTE_FMT_TAIL(__VA_ARGS__,)))
 #endif
-
 static inline void *simple_malloc(size_t size)
 {
 	return mlx5_malloc(MLX5_MEM_SYS,

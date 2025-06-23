@@ -131,7 +131,7 @@ mlx5_txpp_alloc_pp_index(struct mlx5_dev_ctx_shared *sh)
 static void
 mlx5_txpp_destroy_send_queue(struct mlx5_txpp_wq *wq)
 {
-	mlx5_devx_sq_destroy(&wq->sq_obj);
+	mlx5_devx_sq_destroy(&wq->sq_obj, false);
 	mlx5_devx_cq_destroy(&wq->cq_obj);
 	memset(wq, 0, sizeof(*wq));
 }
