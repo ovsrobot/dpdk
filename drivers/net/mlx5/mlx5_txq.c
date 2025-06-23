@@ -706,9 +706,15 @@ txq_calc_wqebb_cnt(struct mlx5_txq_ctrl *txq_ctrl)
 
 	wqe_size = MLX5_WQE_CSEG_SIZE +
 		   MLX5_WQE_ESEG_SIZE +
-		   MLX5_WSEG_SIZE -
-		   MLX5_ESEG_MIN_INLINE_SIZE +
-		   txq_ctrl->max_inline_data;
+		   MLX5_WSEG_SIZE;
+	wqe_size += txq_ctrl->txq.tso_en ?
+		    RTE_ALIGN(txq_ctrl->max_tso_header, MLX5_WSEG_SIZE) : 0;
+	if (txq_ctrl->txq.inlen_send)
+		wqe_size = RTE_MAX(wqe_size, MLX5_WQE_CSEG_SIZE +
+					     MLX5_WQE_ESEG_SIZE +
+					     RTE_ALIGN(txq_ctrl->txq.inlen_send +
+						       sizeof(uint32_t),
+						       MLX5_WSEG_SIZE));
 	return rte_align32pow2(wqe_size * desc) / MLX5_WQE_SIZE;
 }
 
