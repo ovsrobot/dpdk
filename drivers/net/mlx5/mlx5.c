@@ -185,6 +185,9 @@
 /* Device parameter to control representor matching in ingress/egress flows with HWS. */
 #define MLX5_REPR_MATCHING_EN "repr_matching_en"
 
+/* Using consecutive memory address and single MR for all Tx queues. */
+#define MLX5_TXQ_CONSEC_MEM "txq_consec_mem"
+
 /* Shared memory between primary and secondary processes. */
 struct mlx5_shared_data *mlx5_shared_data;
 
@@ -1447,6 +1450,8 @@ mlx5_dev_args_check_handler(const char *key, const char *val, void *opaque)
 		config->cnt_svc.cycle_time = tmp;
 	} else if (strcmp(MLX5_REPR_MATCHING_EN, key) == 0) {
 		config->repr_matching = !!tmp;
+	} else if (strcmp(MLX5_TXQ_CONSEC_MEM, key) == 0) {
+		config->txq_consec_mem = !!tmp;
 	}
 	return 0;
 }
@@ -1486,6 +1491,7 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 		MLX5_HWS_CNT_SERVICE_CORE,
 		MLX5_HWS_CNT_CYCLE_TIME,
 		MLX5_REPR_MATCHING_EN,
+		MLX5_TXQ_CONSEC_MEM,
 		NULL,
 	};
 	int ret = 0;
@@ -1501,6 +1507,7 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 	config->cnt_svc.cycle_time = MLX5_CNT_SVC_CYCLE_TIME_DEFAULT;
 	config->cnt_svc.service_core = rte_get_main_lcore();
 	config->repr_matching = 1;
+	config->txq_consec_mem = 1;
 	if (mkvlist != NULL) {
 		/* Process parameters. */
 		ret = mlx5_kvargs_process(mkvlist, params,
@@ -1584,6 +1591,7 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 		config->allow_duplicate_pattern);
 	DRV_LOG(DEBUG, "\"fdb_def_rule_en\" is %u.", config->fdb_def_rule);
 	DRV_LOG(DEBUG, "\"repr_matching_en\" is %u.", config->repr_matching);
+	DRV_LOG(DEBUG, "\"txq_consec_mem\" is %u.", config->txq_consec_mem);
 	return 0;
 }
 
@@ -3146,6 +3154,12 @@ mlx5_probe_again_args_validate(struct mlx5_common_device *cdev,
 	}
 	if (sh->config.tx_skew ^ config->tx_skew) {
 		DRV_LOG(ERR, "\"tx_skew\" "
+			"configuration mismatch for shared %s context.",
+			sh->ibdev_name);
+		goto error;
+	}
+	if (sh->config.txq_consec_mem ^ config->txq_consec_mem) {
+		DRV_LOG(ERR, "\"txq_consec_mem\" "
 			"configuration mismatch for shared %s context.",
 			sh->ibdev_name);
 		goto error;
