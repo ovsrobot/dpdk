@@ -36,13 +36,13 @@ __rte_stack_lf_push_elems(struct rte_stack_lf_list *list,
 			  struct rte_stack_lf_elem *last,
 			  unsigned int num)
 {
-	struct rte_stack_lf_head old_head;
+	alignas(16) struct rte_stack_lf_head old_head;
 	int success;
 
 	old_head = list->head;
 
 	do {
-		struct rte_stack_lf_head new_head;
+		alignas(16) struct rte_stack_lf_head new_head;
 
 		/* An acquire fence (or stronger) is needed for weak memory
 		 * models to establish a synchronized-with relationship between
@@ -77,7 +77,7 @@ __rte_stack_lf_pop_elems(struct rte_stack_lf_list *list,
 			 void **obj_table,
 			 struct rte_stack_lf_elem **last)
 {
-	struct rte_stack_lf_head old_head;
+	alignas(16) struct rte_stack_lf_head old_head;
 	int success = 0;
 
 	/* Reserve num elements, if available */
@@ -99,7 +99,7 @@ __rte_stack_lf_pop_elems(struct rte_stack_lf_list *list,
 
 	/* Pop num elements */
 	do {
-		struct rte_stack_lf_head new_head;
+		alignas(16) struct rte_stack_lf_head new_head;
 		struct rte_stack_lf_elem *tmp;
 		unsigned int i;
 
