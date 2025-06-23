@@ -79,7 +79,7 @@ int mlx5_devx_cq_create(void *ctx, struct mlx5_devx_cq *cq_obj,
 			struct mlx5_devx_cq_attr *attr, int socket);
 
 __rte_internal
-void mlx5_devx_sq_destroy(struct mlx5_devx_sq *sq);
+void mlx5_devx_sq_destroy(struct mlx5_devx_sq *sq, bool consec_mem);
 
 __rte_internal
 int mlx5_devx_sq_create(void *ctx, struct mlx5_devx_sq *sq_obj,

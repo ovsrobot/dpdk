@@ -10,6 +10,7 @@
 #include <rte_interrupts.h>
 #include <rte_alarm.h>
 #include <rte_cycles.h>
+#include <rte_eal_paging.h>
 
 #include <mlx5_malloc.h>
 
@@ -1135,6 +1136,53 @@ mlx5_hw_representor_port_allowed_start(struct rte_eth_dev *dev)
 
 #endif
 
+static int mlx5_dev_allocate_tx_sq_acc_mem(struct rte_eth_dev *dev)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	size_t alignment = MLX5_WQE_BUF_ALIGNMENT;
+	struct mlx5dv_devx_umem *umem_obj = NULL;
+	void *umem_buf = NULL;
+
+	if (!priv->sh->config.txq_consec_mem)
+		return 0;
+	umem_buf = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO, priv->acc_tx_wq_mem.total_size,
+			       alignment, priv->sh->numa_node);
+	if (!umem_buf) {
+		DRV_LOG(ERR, "Failed to allocate consecutive memory for SQs.");
+		rte_errno = ENOMEM;
+		return -rte_errno;
+	}
+	umem_obj = mlx5_os_umem_reg(priv->sh->cdev->ctx, (void *)(uintptr_t)umem_buf,
+				    priv->acc_tx_wq_mem.total_size, IBV_ACCESS_LOCAL_WRITE);
+	if (!umem_obj) {
+		DRV_LOG(ERR, "Failed to register unique umem for all SQs.");
+		rte_errno = errno;
+		if (umem_buf)
+			mlx5_free(umem_buf);
+		return -rte_errno;
+	}
+	priv->acc_tx_wq_mem.mem = umem_buf;
+	priv->acc_tx_wq_mem.cur_off = 0;
+	priv->acc_tx_wq_mem.umem_obj = umem_obj;
+	return 0;
+}
+
+static void mlx5_dev_free_tx_sq_acc_mem(struct rte_eth_dev *dev)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+
+	if (!priv->sh->config.txq_consec_mem)
+		return;
+	if (priv->acc_tx_wq_mem.umem_obj) {
+		mlx5_os_umem_dereg(priv->acc_tx_wq_mem.umem_obj);
+		priv->acc_tx_wq_mem.umem_obj = NULL;
+	}
+	if (priv->acc_tx_wq_mem.mem) {
+		mlx5_free(priv->acc_tx_wq_mem.mem);
+		priv->acc_tx_wq_mem.mem = NULL;
+	}
+}
+
 /**
  * DPDK callback to start the device.
  *
@@ -1224,6 +1272,12 @@ continue_dev_start:
 		ret = priv->obj_ops.lb_dummy_queue_create(dev);
 		if (ret)
 			goto error;
+	}
+	ret = mlx5_dev_allocate_tx_sq_acc_mem(dev);
+	if (ret) {
+		DRV_LOG(ERR, "port %u Tx queues memory allocation failed: %s",
+			dev->data->port_id, strerror(rte_errno));
+		goto error;
 	}
 	ret = mlx5_txq_start(dev);
 	if (ret) {
@@ -1358,6 +1412,7 @@ error:
 	mlx5_rxq_stop(dev);
 	if (priv->obj_ops.lb_dummy_queue_release)
 		priv->obj_ops.lb_dummy_queue_release(dev);
+	mlx5_dev_free_tx_sq_acc_mem(dev);
 	mlx5_txpp_stop(dev); /* Stop last. */
 	rte_errno = ret; /* Restore rte_errno. */
 	return -rte_errno;
@@ -1470,6 +1525,7 @@ continue_dev_stop:
 	priv->sh->port[priv->dev_port - 1].nl_ih_port_id = RTE_MAX_ETHPORTS;
 	mlx5_txq_stop(dev);
 	mlx5_rxq_stop(dev);
+	mlx5_dev_free_tx_sq_acc_mem(dev);
 	if (priv->obj_ops.lb_dummy_queue_release)
 		priv->obj_ops.lb_dummy_queue_release(dev);
 	mlx5_txpp_stop(dev);

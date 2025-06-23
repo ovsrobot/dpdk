@@ -483,6 +483,11 @@ struct mlx5_devx_create_sq_attr {
 	uint32_t packet_pacing_rate_limit_index:16;
 	uint32_t tis_lst_sz:16;
 	uint32_t tis_num:24;
+	bool acc_mem;
+	uint32_t offset;
+	void *mem;
+	void *umem_obj;
+	uint32_t len;
 	struct mlx5_devx_wq_attr wq_attr;
 };
 

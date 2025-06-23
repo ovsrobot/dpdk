@@ -393,7 +393,7 @@ struct mlx5_sh_config {
 	/* Allow/Prevent the duplicate rules pattern. */
 	uint32_t fdb_def_rule:1; /* Create FDB default jump rule */
 	uint32_t repr_matching:1; /* Enable implicit vport matching in HWS FDB. */
-	uint32_t txq_consec_mem:1; /**/
+	uint32_t txq_consec_mem:1; /* Using consecutive memory. */
 };
 
 /* Structure for VF VLAN workaround. */
@@ -2131,6 +2131,12 @@ struct mlx5_priv {
 	struct mlx5_indexed_pool *ptype_rss_groups;
 #endif
 	struct rte_eth_dev *shared_host; /* Host device for HW steering. */
+	struct {
+		void *umem_obj;
+		void *mem;
+		uint32_t total_size;
+		uint32_t cur_off;
+	} acc_tx_wq_mem;
 	RTE_ATOMIC(uint16_t) shared_refcnt; /* HW steering host reference counter. */
 };
 

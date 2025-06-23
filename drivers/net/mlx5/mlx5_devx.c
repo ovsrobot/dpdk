@@ -1444,11 +1444,13 @@ create_sq_on_device:
  *
  * @param txq_obj
  *   Txq object to destroy.
+ * @param consec_mem
+ *   Txq is using consecutive memory space.
  */
 static void
-mlx5_txq_release_devx_resources(struct mlx5_txq_obj *txq_obj)
+mlx5_txq_release_devx_resources(struct mlx5_txq_obj *txq_obj, bool consec_mem)
 {
-	mlx5_devx_sq_destroy(&txq_obj->sq_obj);
+	mlx5_devx_sq_destroy(&txq_obj->sq_obj, consec_mem);
 	memset(&txq_obj->sq_obj, 0, sizeof(txq_obj->sq_obj));
 	mlx5_devx_cq_destroy(&txq_obj->cq_obj);
 	memset(&txq_obj->cq_obj, 0, sizeof(txq_obj->cq_obj));
@@ -1492,11 +1494,32 @@ mlx5_txq_create_devx_sq_resources(struct rte_eth_dev *dev, uint16_t idx,
 		.ts_format =
 			mlx5_ts_format_conv(cdev->config.hca_attr.sq_ts_format),
 		.tis_num = mlx5_get_txq_tis_num(dev, idx),
+		.acc_mem = false,
+		.offset = priv->acc_tx_wq_mem.cur_off,
+		.mem = (void *)priv->acc_tx_wq_mem.mem,
+		.umem_obj = priv->acc_tx_wq_mem.umem_obj,
+		.len = txq_data->sq_mem_len,
 	};
+	int ret;
+	uint32_t act_size = MLX5_ROUNDUP(RTE_ALIGN(txq_data->sq_mem_len, MLX5_DBR_SIZE) +
+					 MLX5_DBR_SIZE, MLX5_WQE_BUF_ALIGNMENT);
 
+	if (priv->sh->config.txq_consec_mem) {
+		sq_attr.acc_mem = true;
+		if ((priv->acc_tx_wq_mem.cur_off + act_size) > priv->acc_tx_wq_mem.total_size) {
+			DRV_LOG(ERR, "Failed to get enough memory room for Tx queue %u.", idx);
+			rte_errno = ENOMEM;
+			return -rte_errno;
+		}
+	}
 	/* Create Send Queue object with DevX. */
-	return mlx5_devx_sq_create(cdev->ctx, &txq_obj->sq_obj,
-				   log_desc_n, &sq_attr, priv->sh->numa_node);
+	ret = mlx5_devx_sq_create(cdev->ctx, &txq_obj->sq_obj,
+				  log_desc_n, &sq_attr, priv->sh->numa_node);
+	if (!ret) {
+		priv->acc_tx_wq_mem.cur_off += act_size;
+	}
+	txq_ctrl->consec_mem = !!priv->sh->config.txq_consec_mem;
+	return ret;
 }
 #endif
 
@@ -1646,7 +1669,7 @@ mlx5_txq_devx_obj_new(struct rte_eth_dev *dev, uint16_t idx)
 	return 0;
 error:
 	ret = rte_errno; /* Save rte_errno before cleanup. */
-	mlx5_txq_release_devx_resources(txq_obj);
+	mlx5_txq_release_devx_resources(txq_obj, !!priv->sh->config.txq_consec_mem);
 	rte_errno = ret; /* Restore rte_errno. */
 	return -rte_errno;
 #endif
@@ -1679,7 +1702,7 @@ mlx5_txq_devx_obj_release(struct mlx5_txq_obj *txq_obj)
 		}
 #if defined(HAVE_MLX5DV_DEVX_UAR_OFFSET) || !defined(HAVE_INFINIBAND_VERBS_H)
 	} else {
-		mlx5_txq_release_devx_resources(txq_obj);
+		mlx5_txq_release_devx_resources(txq_obj, txq_obj->txq_ctrl->consec_mem);
 #endif
 	}
 }
