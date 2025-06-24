@@ -119,3 +119,23 @@ RTE_TRACE_POINT_REGISTER(rte_eal_trace_intr_enable,
 	lib.eal.intr.enable)
 RTE_TRACE_POINT_REGISTER(rte_eal_trace_intr_disable,
 	lib.eal.intr.disable)
+
+#ifdef RTE_LIB_PMU
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_pmu_trace_read, 25.07)
+RTE_TRACE_POINT_REGISTER(rte_pmu_trace_read,
+	lib.pmu.read)
+#endif
+#ifdef RTE_EXEC_ENV_IS_WINDOWS
+/* gen-version-map.py script generates export symbol maps by scanning source files without
+ * evaluating conditional compilation. Hence __rte_pmu_trace_read will be included the version map
+ * even if library is not compiled.
+ *
+ * On Windows if msvc linker is used this leads to a hard link error
+ * (LNK2001: unresolved external symbol) because msvc requires all symbols listed in the .def file
+ * to be present in the object files.
+ *
+ * Other linkers, e.g: gnu ld or mingw ld, are more forgiving. They silently ignore symbols listed
+ * in the map file if those symbols are not present in the binary.
+ */
+rte_trace_point_t __rte_pmu_trace_read;
+#endif
