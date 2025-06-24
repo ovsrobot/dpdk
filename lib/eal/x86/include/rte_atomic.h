@@ -282,10 +282,10 @@ static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
 	return ret != 0;
 }
 
-#ifdef __cplusplus
-}
 #endif
 
+#ifdef __cplusplus
+}
 #endif
 
 #ifdef RTE_ARCH_I686
