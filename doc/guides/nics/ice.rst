@@ -189,7 +189,7 @@ Runtime Configuration
 
   .. code-block:: console
 
-    dpdk-testpmd -c 0xff -- -i
+    dpdk-testpmd -l 0-7 -- -i
     port stop 0
     port detach 0
     port attach 18:00.0,proto_xtr='[(1,2-3,8-9):tcp,10-13:vlan]',field_offs=92,field_name=pmd_dyn
@@ -200,7 +200,7 @@ Runtime Configuration
 
   .. code-block:: console
 
-    dpdk-testpmd -c 0xff -- -i
+    dpdk-testpmd -l 0-7 -- -i
     port stop 0
     port detach 0
     port attach 18:00.0,proto_xtr=vlan,proto_xtr='[(1,2-3,8-9):tcp,10-23:ipv6]', \

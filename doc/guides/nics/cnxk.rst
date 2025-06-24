@@ -63,7 +63,7 @@ for details.
 
    .. code-block:: console
 
-      ./<build_dir>/app/dpdk-testpmd -c 0xc -a 0002:02:00.0 -- --portmask=0x1 --nb-cores=1 --port-topology=loop --rxq=1 --txq=1
+      ./<build_dir>/app/dpdk-testpmd -l 2,3 -a 0002:02:00.0 -- --portmask=0x1 --nb-cores=1 --port-topology=loop --rxq=1 --txq=1
       EAL: Detected 4 lcore(s)
       EAL: Detected 1 NUMA nodes
       EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
