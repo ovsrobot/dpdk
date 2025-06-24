@@ -62,6 +62,11 @@ struct ci_tx_queue {
 	uint16_t tx_next_dd;
 	uint16_t tx_next_rs;
 	uint64_t offloads;
+	/* Mempool pointer for fast release of mbufs.
+	 * NULL if disabled, UINTPTR_MAX if enabled and not yet known.
+	 * Initialized at first use.
+	 */
+	struct rte_mempool *fast_free_mp;
 	uint64_t mbuf_errors;
 	rte_iova_t tx_ring_dma;        /* TX ring DMA address */
 	bool tx_deferred_start; /* don't start this queue in dev start */

@@ -106,7 +106,9 @@ i40e_recycle_tx_mbufs_reuse_vec(void *tx_queue,
 	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
 		/* Avoid txq contains buffers from unexpected mempool. */
 		if (unlikely(recycle_rxq_info->mp
-					!= txep[0].mbuf->pool))
+				!= (likely(txq->fast_free_mp != (void *)UINTPTR_MAX) ?
+				txq->fast_free_mp :
+				(txq->fast_free_mp = txep[0].mbuf->pool))))
 			return 0;
 
 		/* Directly put mbufs from Tx to Rx. */
