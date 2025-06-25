@@ -25,7 +25,7 @@
 
 #include "../gve_logs.h"
 
-#ifdef RTE_EXEC_ENV_LINUX
+#if defined(RTE_EXEC_ENV_LINUX) || defined(RTE_EXEC_ENV_FREEBSD)
 #include <sys/utsname.h>
 #endif
 

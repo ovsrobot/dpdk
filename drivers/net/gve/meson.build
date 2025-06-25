@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(C) 2022 Intel Corporation
 
-if not is_linux
+if not is_linux and not is_freebsd
     build = false
-    reason = 'only supported on Linux'
+    reason = 'only supported on Linux and FreeBSD'
     subdir_done()
 endif
 
