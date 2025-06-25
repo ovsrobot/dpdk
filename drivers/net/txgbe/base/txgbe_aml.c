@@ -131,20 +131,36 @@ u32 txgbe_get_media_type_aml(struct txgbe_hw *hw)
 	return media_type;
 }
 
+static void txgbe_wait_for_link_up_aml(struct txgbe_hw *hw, u32 speed)
+{
+	u32 link_speed = TXGBE_LINK_SPEED_UNKNOWN;
+	bool link_up = false;
+	int cnt = 0;
+	int i;
+
+	if (speed == TXGBE_LINK_SPEED_25GB_FULL)
+		cnt = 4;
+	else
+		cnt = 1;
+
+	for (i = 0; i < (4 * cnt); i++) {
+		hw->mac.check_link(hw, &link_speed, &link_up, false);
+		if (link_up)
+			break;
+		msleep(250);
+	}
+}
+
 s32 txgbe_setup_mac_link_aml(struct txgbe_hw *hw,
 			       u32 speed,
 			       bool autoneg_wait_to_complete)
 {
 	bool autoneg = false;
 	s32 status = 0;
-	s32 ret_status = 0;
 	u32 link_speed = TXGBE_LINK_SPEED_UNKNOWN;
 	bool link_up = false;
-	int i;
 	u32 link_capabilities = TXGBE_LINK_SPEED_UNKNOWN;
 	u32 value = 0;
-
-	UNREFERENCED_PARAMETER(autoneg_wait_to_complete);
 
 	if (hw->phy.sfp_type == txgbe_sfp_type_not_present) {
 		DEBUGOUT("SFP not detected, skip setup mac link");
@@ -165,30 +181,20 @@ s32 txgbe_setup_mac_link_aml(struct txgbe_hw *hw,
 	if (value & (TXGBE_SFP1_MOD_ABS_LS | TXGBE_SFP1_RX_LOS_LS))
 		return status;
 
-	for (i = 0; i < 4; i++) {
-		txgbe_e56_check_phy_link(hw, &link_speed, &link_up);
-		if (link_up)
-			break;
-		msleep(250);
-	}
+	status = hw->mac.check_link(hw, &link_speed, &link_up,
+				    autoneg_wait_to_complete);
 
-	if (link_speed == speed && link_up &&
-	   !(speed == TXGBE_LINK_SPEED_25GB_FULL))
+	if (link_speed == speed && link_up)
 		return status;
 
-	rte_spinlock_lock(&hw->phy_lock);
-	ret_status = 0;
-	rte_spinlock_unlock(&hw->phy_lock);
+	if (speed & TXGBE_LINK_SPEED_25GB_FULL)
+		speed = 0x10;
+	else if (speed & TXGBE_LINK_SPEED_10GB_FULL)
+		speed = 0x08;
 
-	if (ret_status == TXGBE_ERR_PHY_INIT_NOT_DONE)
-		return status;
+	status = hw->phy.set_link_hostif(hw, (u8)speed, autoneg, true);
 
-	for (i = 0; i < 4; i++) {
-		txgbe_e56_check_phy_link(hw, &link_speed, &link_up);
-		if (link_up)
-			return status;
-		msleep(250);
-		}
+	txgbe_wait_for_link_up_aml(hw, speed);
 
 	return status;
 }
