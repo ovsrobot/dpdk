@@ -141,6 +141,10 @@ New Features
   String values are simply saved as-is,
   while the boolean support allows for values "true", "false", "1" or "0".
 
+* **Added Huawei hinic3 net driver.**
+
+  * Added network driver for the Huawei SPx series Network Adapters.
+
 
 Removed Items
 -------------
