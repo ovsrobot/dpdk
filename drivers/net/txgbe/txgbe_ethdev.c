@@ -516,6 +516,7 @@ txgbe_parse_devargs(struct txgbe_hw *hw, struct rte_devargs *devargs)
 	/* New devargs for amberlite config */
 	u16 tx_headwb = 1;
 	u16 tx_headwb_size = 16;
+	u16 rx_desc_merge = 1;
 
 	if (devargs == NULL)
 		goto null;
@@ -544,6 +545,8 @@ txgbe_parse_devargs(struct txgbe_hw *hw, struct rte_devargs *devargs)
 			   &txgbe_handle_devarg, &tx_headwb);
 	rte_kvargs_process(kvlist, TXGBE_DEVARG_TX_HEAD_WB_SIZE,
 			   &txgbe_handle_devarg, &tx_headwb_size);
+	rte_kvargs_process(kvlist, TXGBE_DEVARG_RX_DESC_MERGE,
+			   &txgbe_handle_devarg, &rx_desc_merge);
 	rte_kvargs_free(kvlist);
 
 null:
@@ -553,6 +556,7 @@ null:
 	hw->devarg.sgmii = sgmii;
 	hw->devarg.tx_headwb = tx_headwb;
 	hw->devarg.tx_headwb_size = tx_headwb_size;
+	hw->devarg.rx_desc_merge = rx_desc_merge;
 	hw->phy.ffe_set = ffe_set;
 	hw->phy.ffe_main = ffe_main;
 	hw->phy.ffe_pre = ffe_pre;
