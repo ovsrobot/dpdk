@@ -45,17 +45,6 @@ txgbe_hic_unlocked(struct txgbe_hw *hw, u32 *buffer, u32 length, u32 timeout)
 	u32 value, loop;
 	u16 i, dword_len;
 
-	if (!length || length > TXGBE_PMMBX_BSIZE) {
-		DEBUGOUT("Buffer length failure buffersize=%d.", length);
-		return TXGBE_ERR_HOST_INTERFACE_COMMAND;
-	}
-
-	/* Calculate length in DWORDs. We must be DWORD aligned */
-	if (length % sizeof(u32)) {
-		DEBUGOUT("Buffer length failure, not aligned to dword");
-		return TXGBE_ERR_INVALID_ARGUMENT;
-	}
-
 	dword_len = length >> 2;
 
 	txgbe_flush(hw);
@@ -113,54 +102,148 @@ txgbe_host_interface_command(struct txgbe_hw *hw, u32 *buffer,
 {
 	u32 hdr_size = sizeof(struct txgbe_hic_hdr);
 	struct txgbe_hic_hdr *resp = (struct txgbe_hic_hdr *)buffer;
+	struct txgbe_hic_hdr *recv_hdr;
 	u16 buf_len;
-	s32 err;
-	u32 bi;
+	s32 err = 0;
+	u32 bi, i;
 	u32 dword_len;
+	u8 send_cmd;
 
 	if (length == 0 || length > TXGBE_PMMBX_BSIZE) {
 		DEBUGOUT("Buffer length failure buffersize=%d.", length);
 		return TXGBE_ERR_HOST_INTERFACE_COMMAND;
 	}
 
-	/* Take management host interface semaphore */
-	err = hw->mac.acquire_swfw_sync(hw, TXGBE_MNGSEM_SWMBX);
-	if (err)
-		return err;
-
-	err = txgbe_hic_unlocked(hw, buffer, length, timeout);
-	if (err)
-		goto rel_out;
-
-	if (!return_data)
-		goto rel_out;
-
-	/* Calculate length in DWORDs */
-	dword_len = hdr_size >> 2;
-
-	/* first pull in the header so we know the buffer length */
-	for (bi = 0; bi < dword_len; bi++)
-		buffer[bi] = rd32a(hw, TXGBE_MNGMBX, bi);
-
-	buf_len = resp->buf_len;
-	if (!buf_len)
-		goto rel_out;
-
-	if (length < buf_len + hdr_size) {
-		DEBUGOUT("Buffer not large enough for reply message.");
-		err = TXGBE_ERR_HOST_INTERFACE_COMMAND;
-		goto rel_out;
+	/* Calculate length in DWORDs. We must be DWORD aligned */
+	if (length % sizeof(u32)) {
+		DEBUGOUT("Buffer length failure, not aligned to dword");
+		return TXGBE_ERR_INVALID_ARGUMENT;
 	}
 
-	/* Calculate length in DWORDs, add 3 for odd lengths */
-	dword_len = (buf_len + 3) >> 2;
+	if (hw->mac.type == txgbe_mac_aml || hw->mac.type == txgbe_mac_aml40) {
+		/* try to get lock */
+		while (rte_atomic32_test_and_set(&hw->swfw_busy)) {
+			timeout--;
+			if (!timeout)
+				return TXGBE_ERR_TIMEOUT;
+			usec_delay(1000);
+		}
 
-	/* Pull in the rest of the buffer (bi is where we left off) */
-	for (; bi <= dword_len; bi++)
-		buffer[bi] = rd32a(hw, TXGBE_MNGMBX, bi);
+		/* index to unique seq id for each mbox message */
+		resp->cksum_or_index.index = hw->swfw_index;
+		send_cmd = resp->cmd;
 
+		/* Calculate length in DWORDs */
+		dword_len = length >> 2;
+
+		/* write data to SW-FW mbox array */
+		for (i = 0; i < dword_len; i++) {
+			wr32a(hw, TXGBE_AML_MNG_MBOX_SW2FW,
+					i, rte_cpu_to_le_32(buffer[i]));
+			/* write flush */
+			rd32a(hw, TXGBE_AML_MNG_MBOX_SW2FW, i);
+		}
+
+		/* amlite: generate interrupt to notify FW */
+		wr32m(hw, TXGBE_AML_MNG_MBOX_CTL_SW2FW,
+				  TXGBE_AML_MNG_MBOX_NOTIFY, 0);
+		wr32m(hw, TXGBE_AML_MNG_MBOX_CTL_SW2FW,
+				  TXGBE_AML_MNG_MBOX_NOTIFY, TXGBE_AML_MNG_MBOX_NOTIFY);
+
+		/* Calculate length in DWORDs */
+		dword_len = hdr_size >> 2;
+
+		/* polling reply from FW */
+		timeout = 50;
+		do {
+			timeout--;
+			usec_delay(1000);
+
+			/* read hdr */
+			for (bi = 0; bi < dword_len; bi++)
+				buffer[bi] = rd32a(hw, TXGBE_AML_MNG_MBOX_FW2SW, bi);
+
+			/* check hdr */
+			recv_hdr = (struct txgbe_hic_hdr *)buffer;
+
+			if (recv_hdr->cmd == send_cmd &&
+			    recv_hdr->cksum_or_index.index == hw->swfw_index)
+				break;
+		} while (timeout);
+
+		if (!timeout) {
+			PMD_DRV_LOG(ERR, "Polling from FW messages timeout, cmd is 0x%x, index is %d",
+				send_cmd, hw->swfw_index);
+			err = TXGBE_ERR_TIMEOUT;
+			goto rel_out;
+		}
+
+		/* expect no reply from FW then return */
+		/* release lock if return */
+		if (!return_data)
+			goto rel_out;
+
+		/* If there is any thing in data position pull it in */
+		buf_len = recv_hdr->buf_len;
+		if (buf_len == 0)
+			goto rel_out;
+
+		if (length < buf_len + hdr_size) {
+			DEBUGOUT("Buffer not large enough for reply message.");
+			err = TXGBE_ERR_HOST_INTERFACE_COMMAND;
+			goto rel_out;
+		}
+
+		/* Calculate length in DWORDs, add 3 for odd lengths */
+		dword_len = (buf_len + 3) >> 2;
+		for (; bi <= dword_len; bi++)
+			buffer[bi] = rd32a(hw, TXGBE_AML_MNG_MBOX_FW2SW, bi);
+	} else {
+		/* Take management host interface semaphore */
+		err = hw->mac.acquire_swfw_sync(hw, TXGBE_MNGSEM_SWMBX);
+		if (err)
+			return err;
+
+		err = txgbe_hic_unlocked(hw, buffer, length, timeout);
+		if (err)
+			goto rel_out;
+
+		if (!return_data)
+			goto rel_out;
+
+		/* Calculate length in DWORDs */
+		dword_len = hdr_size >> 2;
+
+		/* first pull in the header so we know the buffer length */
+		for (bi = 0; bi < dword_len; bi++)
+			buffer[bi] = rd32a(hw, TXGBE_MNGMBX, bi);
+
+		buf_len = resp->buf_len;
+		if (!buf_len)
+			goto rel_out;
+
+		if (length < buf_len + hdr_size) {
+			DEBUGOUT("Buffer not large enough for reply message.");
+			err = TXGBE_ERR_HOST_INTERFACE_COMMAND;
+			goto rel_out;
+		}
+
+		/* Calculate length in DWORDs, add 3 for odd lengths */
+		dword_len = (buf_len + 3) >> 2;
+
+		/* Pull in the rest of the buffer (bi is where we left off) */
+		for (; bi <= dword_len; bi++)
+			buffer[bi] = rd32a(hw, TXGBE_MNGMBX, bi);
+	}
 rel_out:
-	hw->mac.release_swfw_sync(hw, TXGBE_MNGSEM_SWMBX);
+	if (hw->mac.type == txgbe_mac_aml || hw->mac.type == txgbe_mac_aml40) {
+		/* index++, index replace txgbe_hic_hdr.checksum */
+		hw->swfw_index = resp->cksum_or_index.index == TXGBE_HIC_HDR_INDEX_MAX ?
+					  0 : resp->cksum_or_index.index + 1;
+		rte_atomic32_clear(&hw->swfw_busy);
+	} else {
+		hw->mac.release_swfw_sync(hw, TXGBE_MNGSEM_SWMBX);
+	}
 
 	return err;
 }
@@ -179,6 +262,12 @@ s32 txgbe_hic_sr_read(struct txgbe_hw *hw, u32 addr, u8 *buf, int len)
 	struct txgbe_hic_read_shadow_ram command;
 	u32 value;
 	int err, i = 0, j = 0;
+	u32 mngmbx_addr;
+
+	if (hw->mac.type == txgbe_mac_aml || hw->mac.type == txgbe_mac_aml40)
+		mngmbx_addr = TXGBE_AML_MNG_MBOX_FW2SW;
+	else
+		mngmbx_addr = TXGBE_MNGMBX;
 
 	if (len > TXGBE_PMMBX_DATA_SIZE)
 		return TXGBE_ERR_HOST_INTERFACE_COMMAND;
@@ -187,22 +276,27 @@ s32 txgbe_hic_sr_read(struct txgbe_hw *hw, u32 addr, u8 *buf, int len)
 	command.hdr.req.cmd = FW_READ_SHADOW_RAM_CMD;
 	command.hdr.req.buf_lenh = 0;
 	command.hdr.req.buf_lenl = FW_READ_SHADOW_RAM_LEN;
-	command.hdr.req.checksum = FW_DEFAULT_CHECKSUM;
 	command.address = cpu_to_be32(addr);
 	command.length = cpu_to_be16(len);
+	if (hw->mac.type == txgbe_mac_raptor)
+		command.hdr.req.cksum_or_index.checksum = FW_DEFAULT_CHECKSUM;
 
-	err = txgbe_hic_unlocked(hw, (u32 *)&command,
-			sizeof(command), TXGBE_HI_COMMAND_TIMEOUT);
+	if (hw->mac.type == txgbe_mac_aml || hw->mac.type == txgbe_mac_aml40)
+		err = txgbe_host_interface_command(hw, (u32 *)&command,
+				sizeof(command), TXGBE_HI_COMMAND_TIMEOUT, false);
+	else
+		err = txgbe_hic_unlocked(hw, (u32 *)&command,
+				sizeof(command), TXGBE_HI_COMMAND_TIMEOUT);
 	if (err)
 		return err;
 
 	while (i < (len >> 2)) {
-		value = rd32a(hw, TXGBE_MNGMBX, FW_NVM_DATA_OFFSET + i);
+		value = rd32a(hw, mngmbx_addr, FW_NVM_DATA_OFFSET + i);
 		((u32 *)buf)[i] = value;
 		i++;
 	}
 
-	value = rd32a(hw, TXGBE_MNGMBX, FW_NVM_DATA_OFFSET + i);
+	value = rd32a(hw, mngmbx_addr, FW_NVM_DATA_OFFSET + i);
 	for (i <<= 2; i < len; i++)
 		((u8 *)buf)[i] = ((u8 *)&value)[j++];
 
@@ -230,9 +324,10 @@ s32 txgbe_hic_sr_write(struct txgbe_hw *hw, u32 addr, u8 *buf, int len)
 	command.hdr.req.cmd = FW_WRITE_SHADOW_RAM_CMD;
 	command.hdr.req.buf_lenh = 0;
 	command.hdr.req.buf_lenl = FW_WRITE_SHADOW_RAM_LEN;
-	command.hdr.req.checksum = FW_DEFAULT_CHECKSUM;
 	command.address = cpu_to_be32(addr);
 	command.length = cpu_to_be16(len);
+	if (hw->mac.type == txgbe_mac_raptor)
+		command.hdr.req.cksum_or_index.checksum = FW_DEFAULT_CHECKSUM;
 
 	while (i < (len >> 2)) {
 		value = ((u32 *)buf)[i];
@@ -259,7 +354,8 @@ s32 txgbe_close_notify(struct txgbe_hw *hw)
 	buffer.hdr.req.cmd = FW_DW_CLOSE_NOTIFY;
 	buffer.hdr.req.buf_lenh = 0;
 	buffer.hdr.req.buf_lenl = 0;
-	buffer.hdr.req.checksum = FW_DEFAULT_CHECKSUM;
+	if (hw->mac.type == txgbe_mac_raptor)
+		buffer.hdr.req.cksum_or_index.checksum = FW_DEFAULT_CHECKSUM;
 
 	/* one word */
 	buffer.length = 0;
@@ -289,7 +385,8 @@ s32 txgbe_open_notify(struct txgbe_hw *hw)
 	buffer.hdr.req.cmd = FW_DW_OPEN_NOTIFY;
 	buffer.hdr.req.buf_lenh = 0;
 	buffer.hdr.req.buf_lenl = 0;
-	buffer.hdr.req.checksum = FW_DEFAULT_CHECKSUM;
+	if (hw->mac.type == txgbe_mac_raptor)
+		buffer.hdr.req.cksum_or_index.checksum = FW_DEFAULT_CHECKSUM;
 
 	/* one word */
 	buffer.length = 0;
@@ -343,11 +440,14 @@ s32 txgbe_hic_set_drv_ver(struct txgbe_hw *hw, u8 maj, u8 min,
 	fw_cmd.ver_min = min;
 	fw_cmd.ver_build = build;
 	fw_cmd.ver_sub = sub;
-	fw_cmd.hdr.checksum = 0;
 	fw_cmd.pad = 0;
 	fw_cmd.pad2 = 0;
-	fw_cmd.hdr.checksum = txgbe_calculate_checksum((u8 *)&fw_cmd,
+	if (hw->mac.type == txgbe_mac_raptor) {
+		fw_cmd.hdr.cksum_or_index.checksum = 0;
+		fw_cmd.hdr.cksum_or_index.checksum = txgbe_calculate_checksum((u8 *)&fw_cmd,
 				(FW_CEM_HDR_LEN + fw_cmd.hdr.buf_len));
+	}
+
 
 	for (i = 0; i <= FW_CEM_MAX_RETRIES; i++) {
 		ret_val = txgbe_host_interface_command(hw, (u32 *)&fw_cmd,
@@ -390,9 +490,11 @@ txgbe_hic_reset(struct txgbe_hw *hw)
 	reset_cmd.hdr.cmd_or_resp.cmd_resv = FW_CEM_CMD_RESERVED;
 	reset_cmd.lan_id = hw->bus.lan_id;
 	reset_cmd.reset_type = (u16)hw->reset_type;
-	reset_cmd.hdr.checksum = 0;
-	reset_cmd.hdr.checksum = txgbe_calculate_checksum((u8 *)&reset_cmd,
-				(FW_CEM_HDR_LEN + reset_cmd.hdr.buf_len));
+	if (hw->mac.type == txgbe_mac_raptor) {
+		reset_cmd.hdr.cksum_or_index.checksum = 0;
+		reset_cmd.hdr.cksum_or_index.checksum = txgbe_calculate_checksum((u8 *)&reset_cmd,
+					(FW_CEM_HDR_LEN + reset_cmd.hdr.buf_len));
+	}
 
 	for (i = 0; i <= FW_CEM_MAX_RETRIES; i++) {
 		err = txgbe_host_interface_command(hw, (u32 *)&reset_cmd,
@@ -449,7 +551,8 @@ s32 txgbe_hic_get_lldp(struct txgbe_hw *hw)
 	buffer.hdr.cmd = FW_LLDP_GET_CMD;
 	buffer.hdr.buf_len = 0x1;
 	buffer.hdr.cmd_or_resp.cmd_resv = FW_CEM_CMD_RESERVED;
-	buffer.hdr.checksum = FW_DEFAULT_CHECKSUM;
+	if (hw->mac.type == txgbe_mac_raptor)
+		buffer.hdr.cksum_or_index.checksum = FW_DEFAULT_CHECKSUM;
 	buffer.func = hw->bus.lan_id;
 
 	err = txgbe_host_interface_command(hw, (u32 *)&buffer, sizeof(buffer),
@@ -480,7 +583,8 @@ s32 txgbe_hic_set_lldp(struct txgbe_hw *hw, bool on)
 		buffer.hdr.cmd = FW_LLDP_SET_CMD_OFF;
 	buffer.hdr.buf_len = 0x1;
 	buffer.hdr.cmd_or_resp.cmd_resv = FW_CEM_CMD_RESERVED;
-	buffer.hdr.checksum = FW_DEFAULT_CHECKSUM;
+	if (hw->mac.type == txgbe_mac_raptor)
+		buffer.hdr.cksum_or_index.checksum = FW_DEFAULT_CHECKSUM;
 	buffer.func = hw->bus.lan_id;
 
 	return txgbe_host_interface_command(hw, (u32 *)&buffer, sizeof(buffer),
