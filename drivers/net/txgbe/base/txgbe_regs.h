@@ -302,6 +302,17 @@
 #define   TXGBE_PORT_LINK1000M          MS(2, 0x1)
 #define   TXGBE_PORT_LINK100M           MS(3, 0x1)
 #define   TXGBE_PORT_LANID(r)           RS(r, 8, 0x1)
+#define   TXGBE_AMLITE_CFG_LED_CTL_LINK_BSY_SEL  MS(5, 0x1)
+#define   TXGBE_AMLITE_CFG_LED_CTL_LINK_10G_SEL  MS(4, 0x1)
+#define   TXGBE_AMLITE_CFG_LED_CTL_LINK_25G_SEL  MS(3, 0x1)
+#define   TXGBE_AMLITE_CFG_LED_CTL_LINK_40G_SEL  MS(2, 0x1)
+#define   TXGBE_AMLITE_CFG_LED_CTL_LINK_50G_SEL  MS(1, 0x1)
+#define   TXGBE_AMLITE_LED_LINK_ACTIVE    TXGBE_AMLITE_CFG_LED_CTL_LINK_BSY_SEL
+#define   TXGBE_AMLITE_LED_LINK_10G       TXGBE_AMLITE_CFG_LED_CTL_LINK_10G_SEL
+#define   TXGBE_AMLITE_LED_LINK_25G       TXGBE_AMLITE_CFG_LED_CTL_LINK_25G_SEL
+#define   TXGBE_AMLITE_LED_LINK_40G       TXGBE_AMLITE_CFG_LED_CTL_LINK_40G_SEL
+#define   TXGBE_AMLITE_LED_LINK_50G       TXGBE_AMLITE_CFG_LED_CTL_LINK_50G_SEL
+
 #define TXGBE_EXTAG                     0x014408
 #define   TXGBE_EXTAG_ETAG_MASK         MS(0, 0xFFFF)
 #define   TXGBE_EXTAG_ETAG(v)           LS(v, 0, 0xFFFF)
@@ -1640,6 +1651,18 @@ enum txgbe_5tuple_protocol {
 #define TXGBE_ARBTXRATE                 0x018404
 #define   TXGBE_ARBTXRATE_MIN(v)        LS(v, 0, 0x3FFF)
 #define   TXGBE_ARBTXRATE_MAX(v)        LS(v, 16, 0x3FFF)
+
+#define TXGBE_TDM_RL_QUEUE_IDX          0x018210
+#define TXGBE_TDM_RL_QUEUE_CFG          0x018214
+#define   TXGBE_TDM_FACTOR_INT_MASK     MS(16, 0xFFFF)
+#define   TXGBE_TDM_FACTOR_FRA_MASK     MS(0, 0xFFFC)
+#define   TXGBE_TDM_FACTOR_INT_SHIFT    16
+#define   TXGBE_TDM_FACTOR_FRA_SHIFT    2
+
+#define TXGBE_TDM_RL_VM_IDX             0x018218
+#define TXGBE_TDM_RL_VM_CFG             0x01821C
+#define TXGBE_TDM_RL_CFG                0x018400
+#define TXGBE_TDM_RL_EN                 MS(0, 0x1)
 
 /* qos */
 #define TXGBE_ARBTXCTL                  0x018200

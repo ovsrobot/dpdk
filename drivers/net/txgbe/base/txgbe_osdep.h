@@ -162,6 +162,8 @@ static inline u64 REVERT_BIT_MASK64(u64 mask)
 	       ((mask & 0xFFFFFFFF00000000) >> 32);
 }
 
+#define BIT(nr)         (1UL << (nr))
+
 #define IOMEM
 
 #define prefetch(x) rte_prefetch0(x)
