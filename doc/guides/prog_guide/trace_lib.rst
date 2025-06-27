@@ -46,6 +46,7 @@ DPDK tracing library features
   trace format and is compatible with ``LTTng``.
   For detailed information, refer to
   `Common Trace Format <https://diamon.org/ctf/>`_.
+- Support reading PMU events on ARM64 and x86-64 (Intel)
 
 How to add a tracepoint?
 ------------------------
@@ -138,6 +139,36 @@ the user must use ``RTE_TRACE_POINT_FP`` instead of ``RTE_TRACE_POINT``.
 
 ``RTE_TRACE_POINT_FP`` is compiled out by default and it can be enabled using
 the ``enable_trace_fp`` option for meson build.
+
+PMU tracepoint
+--------------
+
+Performance Monitoring Unit (PMU) event values can be read from hardware registers
+using the predefined ``rte_pmu_read`` tracepoint.
+
+Tracing is enabled via ``--trace`` EAL option by passing both expression
+matching PMU tracepoint name i.e ``lib.eal.pmu.read``
+and expression ``e=ev1[,ev2,...]`` matching particular events::
+
+    --trace='.*pmu.read\|e=cpu_cycles,l1d_cache'
+
+Event names are available under ``/sys/bus/event_source/devices/PMU/events`` directory,
+where ``PMU`` is a placeholder for either a ``cpu`` or a directory containing ``cpus``.
+
+In contrary to other tracepoints this does not need any extra variables
+added to source files.
+Instead, caller passes index
+which follows the order of events specified via ``--trace`` parameter.
+In the following example, index ``0`` corresponds to ``cpu_cyclces``,
+while index ``1`` corresponds to ``l1d_cache``.
+
+.. code-block:: c
+
+   rte_pmu_trace_read(0);
+   rte_pmu_trace_read(1);
+
+PMU tracing support must be explicitly enabled
+using the ``enable_trace_fp`` option for Meson build.
 
 Event record mode
 -----------------
