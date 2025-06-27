@@ -2161,6 +2161,8 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 					item, "Not supported by fdir filter");
 				return -rte_errno;
 			}
+			rule->mask.src_port_mask = 0xffff;
+			rule->mask.dst_port_mask = 0xffff;
 		}
 
 		item = next_no_fuzzy_pattern(pattern, item);
