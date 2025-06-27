@@ -9,8 +9,11 @@ python3_required_modules = []
 if host_machine.system() != 'windows'
     python3_required_modules = ['elftools']
 endif
-python3 = import('python').find_installation('python3', required: false, modules: python3_required_modules)
+python3 = import('python').find_installation('python3', required: false)
 if python3.found()
+    # If python3 is found, check that we have pyelftools installed.
+    python3 = import('python').find_installation('python3', required: true,
+            modules: python3_required_modules)
     py3 = [python3]
 else
     py3 = ['meson', 'runpython']
