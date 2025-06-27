@@ -47,7 +47,9 @@ struct nbl_dev_net_mgt {
 	u8 eth_mode;
 	u8 eth_id;
 	u16 max_mac_num;
-	bool trust;
+	u8 trust:1;
+	u8 promisc:1;
+	u8 rsv:6;
 };
 
 struct nbl_dev_mgt {
