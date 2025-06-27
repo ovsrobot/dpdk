@@ -50,8 +50,14 @@ int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev)
 	if (ret)
 		goto res_init_fail;
 
+	ret = nbl_disp_init(adapter);
+	if (ret)
+		goto disp_init_fail;
+
 	return 0;
 
+disp_init_fail:
+	product_base_ops->res_remove(adapter);
 res_init_fail:
 	product_base_ops->chan_remove(adapter);
 chan_init_fail:
@@ -66,6 +72,7 @@ void nbl_core_remove(struct nbl_adapter *adapter)
 
 	product_base_ops = nbl_core_get_product_ops(adapter->caps.product_type);
 
+	nbl_disp_remove(adapter);
 	product_base_ops->res_remove(adapter);
 	product_base_ops->chan_remove(adapter);
 	product_base_ops->phy_remove(adapter);

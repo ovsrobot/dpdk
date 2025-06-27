@@ -281,6 +281,24 @@ enum nbl_chan_msg_type {
 	NBL_CHAN_MSG_MAX,
 };
 
+struct nbl_chan_param_alloc_txrx_queues {
+	u16 vsi_id;
+	u16 queue_num;
+};
+
+struct nbl_chan_param_free_txrx_queues {
+	u16 vsi_id;
+};
+
+struct nbl_chan_param_setup_queue {
+	struct nbl_txrx_queue_param queue_param;
+	bool is_tx;
+};
+
+struct nbl_chan_param_remove_all_queues {
+	u16 vsi_id;
+};
+
 struct nbl_chan_send_info {
 	uint16_t dstid;
 	uint16_t msg_type;
