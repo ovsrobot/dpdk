@@ -31,6 +31,31 @@ struct eth_dev_ops nbl_eth_dev_ops = {
 	.dev_close = nbl_dev_close,
 };
 
+#define NBL_DEV_NET_OPS_TBL						\
+do {									\
+	NBL_DEV_NET_OPS(dev_configure,		dev_ops->dev_configure);\
+	NBL_DEV_NET_OPS(dev_start,		dev_ops->dev_start);	\
+	NBL_DEV_NET_OPS(dev_stop,		dev_ops->dev_stop);	\
+} while (0)
+
+static void nbl_set_eth_dev_ops(struct nbl_adapter *adapter,
+				struct eth_dev_ops *nbl_eth_dev_ops)
+{
+	struct nbl_dev_ops_tbl *dev_ops_tbl;
+	struct nbl_dev_ops *dev_ops;
+	static bool inited;
+
+	if (!inited) {
+		dev_ops_tbl = NBL_ADAPTER_TO_DEV_OPS_TBL(adapter);
+		dev_ops = NBL_DEV_OPS_TBL_TO_OPS(dev_ops_tbl);
+#define NBL_DEV_NET_OPS(ops, func)				\
+	do {nbl_eth_dev_ops->NBL_NAME(ops) = func; ; } while (0)
+			NBL_DEV_NET_OPS_TBL;
+#undef  NBL_DEV_NET_OPS
+		inited = true;
+	}
+}
+
 static int nbl_eth_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
@@ -50,6 +75,7 @@ static int nbl_eth_dev_init(struct rte_eth_dev *eth_dev)
 		goto eth_init_failed;
 	}
 
+	nbl_set_eth_dev_ops(adapter, &nbl_eth_dev_ops);
 	eth_dev->dev_ops = &nbl_eth_dev_ops;
 	return 0;
 
