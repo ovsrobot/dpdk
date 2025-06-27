@@ -70,43 +70,31 @@ test_argparse_callback(uint32_t index, const char *value, void *opaque)
 	return 0;
 }
 
-/* valid templater, must contain at least two args. */
-#define argparse_templater() { \
-	.prog_name = "test_argparse", \
-	.usage = "-a xx -b yy", \
-	.descriptor = NULL, \
-	.epilog = NULL, \
-	.exit_on_error = false, \
-	.callback = test_argparse_callback, \
-	.args = { \
-		{ "--abc", "-a", "abc argument", (void *)1, (void *)1, \
-			RTE_ARGPARSE_VALUE_NONE, RTE_ARGPARSE_VALUE_TYPE_NONE }, \
-		{ "--xyz", "-x", "xyz argument", (void *)1, (void *)2, \
-			RTE_ARGPARSE_VALUE_NONE, RTE_ARGPARSE_VALUE_TYPE_NONE }, \
-		ARGPARSE_ARG_END(), \
-	}, \
-}
-
-static void
-test_argparse_copy(struct rte_argparse *dst, struct rte_argparse *src)
-{
-	uint32_t i;
-	memcpy(dst, src, sizeof(*src));
-	for (i = 0; /* NULL */; i++) {
-		memcpy(&dst->args[i], &src->args[i], sizeof(src->args[i]));
-		if (src->args[i].name_long == NULL)
-			break;
-	}
-}
-
 static struct rte_argparse *
 test_argparse_init_obj(void)
 {
-	static struct rte_argparse backup = argparse_templater();
-	static struct rte_argparse obj = argparse_templater();
-	/* Because obj may be overwritten, do a deep copy. */
-	test_argparse_copy(&obj, &backup);
-	return &obj;
+	static struct {
+		struct rte_argparse cmd;
+		struct rte_argparse_arg args[3];
+	} obj;
+
+	obj.cmd = (struct rte_argparse) {
+		.prog_name = "test_argparse",
+		.usage = "-a xx -b yy",
+		.exit_on_error = false,
+		.callback = test_argparse_callback,
+	};
+	obj.args[0] = (struct rte_argparse_arg)
+		{ "--abc", "-a", "abc argument", (void *)1, (void *)1,
+			RTE_ARGPARSE_VALUE_NONE, RTE_ARGPARSE_VALUE_TYPE_NONE
+		};
+	obj.args[1] = (struct rte_argparse_arg)
+		{ "--xyz", "-x", "xyz argument", (void *)1, (void *)2,
+			RTE_ARGPARSE_VALUE_NONE, RTE_ARGPARSE_VALUE_TYPE_NONE
+		};
+	obj.args[2] = (struct rte_argparse_arg) ARGPARSE_ARG_END();
+
+	return &obj.cmd;
 }
 
 static int
