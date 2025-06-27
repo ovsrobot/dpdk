@@ -28,6 +28,7 @@ sources += files(
         'eal_common_tailqs.c',
         'eal_common_thread.c',
         'eal_common_timer.c',
+        'eal_common_trace_pmu.c',
         'eal_common_trace_points.c',
         'eal_common_uuid.c',
         'malloc_elem.c',
