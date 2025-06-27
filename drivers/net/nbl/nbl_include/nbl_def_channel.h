@@ -399,6 +399,11 @@ enum nbl_chan_state {
 	NBL_CHAN_STATE_MAX
 };
 
+struct nbl_chan_param_get_private_stat_data {
+	u32 eth_id;
+	u32 data_len;
+};
+
 struct nbl_channel_ops {
 	int (*send_msg)(void *priv, struct nbl_chan_send_info *chan_send);
 	int (*send_ack)(void *priv, struct nbl_chan_ack_info *chan_ack);

@@ -41,6 +41,8 @@ struct nbl_dev_net_mgt {
 	struct rte_eth_dev *eth_dev;
 	struct nbl_dev_ring_mgt ring_mgt;
 	struct nbl_eth_link_info eth_link_info;
+	u64 *hw_xstats_offset;
+	u32 hw_xstats_size;
 	u16 vsi_id;
 	u8 eth_mode;
 	u8 eth_id;
