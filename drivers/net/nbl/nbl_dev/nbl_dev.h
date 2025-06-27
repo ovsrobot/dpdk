@@ -17,6 +17,9 @@
 #define NBL_DEV_MGT_TO_ETH_DEV(dev_mgt)		((dev_mgt)->net_dev->eth_dev)
 #define NBL_DEV_MGT_TO_COMMON(dev_mgt)		((dev_mgt)->common)
 
+#define NBL_FRAME_SIZE_MAX		(9600)
+#define NBL_DEV_MIN_RX_BUFSIZE	2048
+
 struct nbl_dev_ring {
 	u16 index;
 	u64 dma;
@@ -37,6 +40,7 @@ struct nbl_dev_ring_mgt {
 struct nbl_dev_net_mgt {
 	struct rte_eth_dev *eth_dev;
 	struct nbl_dev_ring_mgt ring_mgt;
+	struct nbl_eth_link_info eth_link_info;
 	u16 vsi_id;
 	u8 eth_mode;
 	u8 eth_id;
@@ -49,6 +53,7 @@ struct nbl_dev_mgt {
 	struct nbl_channel_ops_tbl *chan_ops_tbl;
 	struct nbl_dev_net_mgt *net_dev;
 	struct nbl_common_info *common;
+	struct nbl_resource_pt_ops pt_ops;
 };
 
 struct nbl_product_dev_ops *nbl_dev_get_product_ops(enum nbl_product_type product_type);

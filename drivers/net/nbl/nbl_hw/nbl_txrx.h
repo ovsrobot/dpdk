@@ -18,9 +18,18 @@
 #define NBL_PACKED_DESC_F_AVAIL_USED		(NBL_PACKED_DESC_F_AVAIL_BIT | \
 						 NBL_PACKED_DESC_F_USED_BIT)
 
-#define NBL_TX_RS_THRESH			(32)
 #define NBL_TX_HEADER_LEN			(32)
 #define NBL_VQ_HDR_NAME_MAXSIZE			(32)
+
+#define NBL_VRING_DESC_F_NEXT			RTE_BIT64(0)
+#define NBL_VRING_DESC_F_WRITE			RTE_BIT64(1)
+#define NBL_FREE_DESC_THRES			16
+#define NBL_USED_DESC_THRES			32
+#define NBL_TX_TOTAL_HEADERLEN_SHIFT		24
+#define NBL_TX_FREE_THRESH			32
+#define NBL_TX_RS_THRESH			32
+
+#define NBL_RXQ_REARM_THRESH			32
 
 #define NBL_DESC_PER_LOOP_VEC_MAX		(8)
 #define NBL_BUF_LEN_16K				(16384)
@@ -114,6 +123,14 @@ union nbl_rx_extend_head {
 		u32 num_buffers :8;
 		u32 hash_value;
 	} leonis;
+
+	struct nbl_rx_ehdr_common {
+		u32 dw0;
+		u32 dw1;
+		u32 dw2:24;
+		u32 num_buffers:8;
+		u32 dw3;
+	} common;
 };
 
 #endif
