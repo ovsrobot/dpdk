@@ -9,7 +9,7 @@ RTE_LOG_REGISTER_SUFFIX(nbl_logtype_driver, driver, INFO);
 
 static int nbl_dev_release_pf(struct rte_eth_dev *eth_dev)
 {
-	const struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
+	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
 
 	if (!adapter)
 		return -EINVAL;
@@ -33,7 +33,7 @@ struct eth_dev_ops nbl_eth_dev_ops = {
 
 static int nbl_eth_dev_init(struct rte_eth_dev *eth_dev)
 {
-	const struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
+	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
