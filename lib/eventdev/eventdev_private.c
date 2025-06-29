@@ -159,6 +159,7 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 {
 	fp_op->enqueue_burst = dev->enqueue_burst;
 	fp_op->enqueue_new_burst = dev->enqueue_new_burst;
+	fp_op->enqueue_new_prealloced_burst = dev->enqueue_new_prealloced_burst;
 	fp_op->enqueue_forward_burst = dev->enqueue_forward_burst;
 	fp_op->dequeue_burst = dev->dequeue_burst;
 	fp_op->maintain = dev->maintain;

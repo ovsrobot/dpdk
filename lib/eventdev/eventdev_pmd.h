@@ -166,6 +166,8 @@ struct __rte_cache_aligned rte_eventdev {
 	/**< Pointer to PMD enqueue burst function. */
 	event_enqueue_burst_t enqueue_new_burst;
 	/**< Pointer to PMD enqueue burst function(op new variant) */
+	event_enqueue_burst_t enqueue_new_prealloced_burst;
+	/**< Pointer to PMD enqueue burst function(op new prealloced variant) */
 	event_enqueue_burst_t enqueue_forward_burst;
 	/**< Pointer to PMD enqueue burst function(op forward variant) */
 	event_dequeue_burst_t dequeue_burst;

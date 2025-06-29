@@ -63,6 +63,8 @@ struct __rte_cache_aligned rte_event_fp_ops {
 	/**< PMD enqueue burst function. */
 	event_enqueue_burst_t enqueue_new_burst;
 	/**< PMD enqueue burst new function. */
+	event_enqueue_burst_t enqueue_new_prealloced_burst;
+	/**< PMD enqueue burst new function. */
 	event_enqueue_burst_t enqueue_forward_burst;
 	/**< PMD enqueue burst fwd function. */
 	event_dequeue_burst_t dequeue_burst;

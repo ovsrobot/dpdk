@@ -507,8 +507,8 @@ struct rte_event;
 #define RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION (1ULL << 21)
 /**< Event device supports credit preallocation for new events.
  *
- * The event device supports preallocation credits, which in turn allows
- * the use of @ref RTE_EVENT_OP_NEW_PREALLOCED.
+ * The event device supports preallocating credits, which in turn allows
+ * enqueueing events with operation type @ref RTE_EVENT_OP_NEW_PREALLOCED.
  *
  * @see rte_event_credit_alloc()
  * @see rte_event_credit_free()
@@ -2735,6 +2735,64 @@ rte_event_enqueue_new_burst(uint8_t dev_id, uint8_t port_id,
 }
 
 /**
+ * Enqueue a burst of events objects of operation type
+ * @ref RTE_EVENT_OP_NEW_PREALLOCED on an event device designated by its
+ * *dev_id* through the event port specified by *port_id*.
+ *
+ * Provides the same functionality as rte_event_enqueue_burst(),
+ * expect that application can use this API when the all objects in
+ * the burst contains the enqueue operation of the type
+ * @ref RTE_EVENT_OP_NEW_PREALLOCED. This specialized function can
+ * provide the additional hint to the PMD and optimize if possible.
+ *
+ * The rte_event_enqueue_new_prealloced_burst() result is undefined if
+ * the enqueue burst has event object of operation type !=
+ * @ref RTE_EVENT_OP_NEW_PREALLOCED.
+ *
+ * This function may only be called on event devices with the
+ * @ref RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION capability.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+n * @param port_id
+ *   The identifier of the event port.
+ * @param ev
+ *   Points to an array of *nb_events* objects of type *rte_event* structure
+ *   which contain the event object enqueue operations to be processed.
+ * @param nb_events
+ *   The number of event objects to enqueue, typically number of
+ *   rte_event_port_attr_get(...RTE_EVENT_PORT_ATTR_ENQ_DEPTH...)
+ *   available for this port.
+ *
+ * @return
+ *   The number of event objects actually enqueued on the event device. The
+ *   return value can be less than the value of the *nb_events* parameter when
+ *   the event devices queue is full or if invalid parameters are specified in a
+ *   *rte_event*. If the return value is less than *nb_events*, the remaining
+ *   events at the end of ev[] are not consumed and the caller has to take care
+ *   of them, and rte_errno is set accordingly. Possible errno values include:
+ *   - EINVAL   The port ID is invalid, device ID is invalid, an event's queue
+ *              ID is invalid, or an event's sched type doesn't match the
+ *              capabilities of the destination queue.
+ *   - ENOSPC   The event port was backpressured and unable to enqueue
+ *              one or more events. This error code is only applicable to
+ *              closed systems.
+ * @see rte_event_port_attr_get(), RTE_EVENT_PORT_ATTR_ENQ_DEPTH
+ * @see rte_event_enqueue_burst()
+ */
+static inline uint16_t
+rte_event_enqueue_new_prealloced_burst(uint8_t dev_id, uint8_t port_id,
+				       const struct rte_event ev[],
+				       uint16_t nb_events)
+{
+	const struct rte_event_fp_ops *fp_ops;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+	return __rte_event_enqueue_burst(dev_id, port_id, ev, nb_events,
+					 fp_ops->enqueue_new_prealloced_burst);
+}
+
+/**
  * Enqueue a burst of events objects of operation type *RTE_EVENT_OP_FORWARD*
  * on an event device designated by its *dev_id* through the event port
  * specified by *port_id*.
@@ -2962,14 +3020,14 @@ rte_event_maintain(uint8_t dev_id, uint8_t port_id, int op)
  * The use of preallocated credits reduces the risk of enqueue
  * failures, but does not guarantee that such will not occur.
  *
- * Besides using up credits by enqueuing @ref RTE_EVENT_OP_NEW_PREALLOCAD
+ * Besides using up credits by enqueuing @ref RTE_EVENT_OP_NEW_PREALLOCED
  * events, the application may also return credits using
  * rte_event_credit_free().
  *
  * rte_event_credit_alloc() may also be used to pick a different @c
  * new_event_threshold than is configured on the event port.
  *
- * This function will only succeed for event devices which have the
+ * This function is only available on event devices which have the
  * @ref RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION flag set.
  *
  * The application may not attempt to enqueue @ref RTE_EVENT_OP_NEW_PREALLOCED
@@ -2993,7 +3051,7 @@ rte_event_maintain(uint8_t dev_id, uint8_t port_id, int op)
  *   The number of credits the application wish to acquire.
  * @return
  *  - The number of credits allocated (<= @c num_credits).
- *  - -EINVAL if *dev_id*,  *port_id*, or *op* is invalid.
+ *  - -EINVAL if *dev_id* or *port_id* is invalid.
  *  - -ENOTSUP if event device does not support credit preallocation.
  *
  * @see RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION
@@ -3028,7 +3086,7 @@ rte_event_credit_alloc(uint8_t dev_id, uint8_t port_id, unsigned int new_event_t
  *
  * Return unused credits allocated with rte_event_credit_alloc().
  *
- * This function will only succeed for event devices which have the
+ * This function is only available on event devices which have the
  * @ref RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION flag set.
  *
  * @param dev_id
@@ -3039,7 +3097,7 @@ rte_event_credit_alloc(uint8_t dev_id, uint8_t port_id, unsigned int new_event_t
  *   The number of credits the application wish to return.
  * @return
  *  - 0 on success.
- *  - -EINVAL if *dev_id*,  *port_id*, or *op* is invalid.
+ *  - -EINVAL if *dev_id* or *port_id* is invalid.
  *  - -ENOTSUP if event device does not support credit preallocation.
  *
  * @see RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION
