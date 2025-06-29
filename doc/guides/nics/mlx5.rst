@@ -1682,6 +1682,31 @@ for an additional list of options shared with other mlx5 drivers.
 
   By default, the PMD will set this value to 1.
 
+- ``txq_mem_algn`` parameter [int]
+
+  A logarithm base 2 value for the memory starting address alignment
+  for Tx queues' WQ and associated CQ.
+
+  Different CPU architectures and generations may have different cache systems.
+  The memory accessing order may impact the cache misses rate on different CPUs.
+  This devarg gives the ability to control the umem alignment for all TxQs without
+  rebuilding the application binary.
+
+  The performance can be tuned by specifying this devarg after benchmark testing
+  on a specific system and hardware.
+
+  By default, ``txq_mem_algn`` is set to log2(4K), or log2(64K) on some specific OS
+  distributions - based on the system page size configuration.
+  All Tx queues will use a unique memory region and umem area. Each TxQ will start at
+  an address right after the previous one except the 1st queue that will be aligned at
+  the given size of address boundary controlled by this devarg.
+
+  If the value is less then the page size, it will be rounded up.
+  If it is bigger than the maximal queue size, a warning message will appear, there will
+  be some waste of memory at the beginning.
+
+  0 indicates legacy per queue memory allocation and separate Memory Regions (MR).
+
 
 Multiport E-Switch
 ------------------
