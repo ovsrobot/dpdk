@@ -25,6 +25,12 @@ typedef uint16_t (*event_dequeue_burst_t)(void *port, struct rte_event ev[],
 typedef void (*event_maintain_t)(void *port, int op);
 /**< @internal Maintains a port */
 
+typedef int (*event_credit_alloc_t)(void *port, unsigned int new_event_threshold, unsigned int num_credits);
+/**< @internal Allocates credits for new events */
+
+typedef int (*event_credit_free_t)(void *port, unsigned int num_credits);
+/**< @internal Returns credits for new events */
+
 typedef uint16_t (*event_tx_adapter_enqueue_t)(void *port,
 					       struct rte_event ev[],
 					       uint16_t nb_events);
@@ -63,6 +69,10 @@ struct __rte_cache_aligned rte_event_fp_ops {
 	/**< PMD dequeue burst function. */
 	event_maintain_t maintain;
 	/**< PMD port maintenance function. */
+	event_credit_alloc_t credit_alloc;
+	/**< PMD credit pre-allocation function. */
+	event_credit_free_t credit_free;
+	/**< PMD credit return function. */
 	event_tx_adapter_enqueue_t txa_enqueue;
 	/**< PMD Tx adapter enqueue function. */
 	event_tx_adapter_enqueue_t txa_enqueue_same_dest;

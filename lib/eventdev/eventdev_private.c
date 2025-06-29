@@ -34,6 +34,25 @@ dummy_event_maintain(__rte_unused void *port, __rte_unused int op)
 		"maintenance requested for unconfigured event device");
 }
 
+static int
+dummy_event_credit_alloc(__rte_unused void *port,
+			 __rte_unused unsigned int new_event_threshold,
+			 __rte_unused unsigned int num_credits)
+{
+	RTE_EDEV_LOG_ERR(
+		"credit allocation request for unconfigured event device");
+	return 0;
+}
+
+static int
+dummy_event_credit_free(__rte_unused void *port,
+			 __rte_unused unsigned int num_credits)
+{
+	RTE_EDEV_LOG_ERR(
+		"credit return request for unconfigured event device");
+	return 0;
+}
+
 static uint16_t
 dummy_event_tx_adapter_enqueue(__rte_unused void *port,
 			       __rte_unused struct rte_event ev[],
@@ -118,6 +137,8 @@ event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 		.enqueue_forward_burst = dummy_event_enqueue_burst,
 		.dequeue_burst = dummy_event_dequeue_burst,
 		.maintain = dummy_event_maintain,
+		.credit_alloc = dummy_event_credit_alloc,
+		.credit_free = dummy_event_credit_free,
 		.txa_enqueue = dummy_event_tx_adapter_enqueue,
 		.txa_enqueue_same_dest = dummy_event_tx_adapter_enqueue_same_dest,
 		.ca_enqueue = dummy_event_crypto_adapter_enqueue,
@@ -141,6 +162,8 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 	fp_op->enqueue_forward_burst = dev->enqueue_forward_burst;
 	fp_op->dequeue_burst = dev->dequeue_burst;
 	fp_op->maintain = dev->maintain;
+	fp_op->credit_alloc = dev->credit_alloc;
+	fp_op->credit_free = dev->credit_free;
 	fp_op->txa_enqueue = dev->txa_enqueue;
 	fp_op->txa_enqueue_same_dest = dev->txa_enqueue_same_dest;
 	fp_op->ca_enqueue = dev->ca_enqueue;

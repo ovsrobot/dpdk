@@ -172,6 +172,10 @@ struct __rte_cache_aligned rte_eventdev {
 	/**< Pointer to PMD dequeue burst function. */
 	event_maintain_t maintain;
 	/**< Pointer to PMD port maintenance function. */
+	event_credit_alloc_t credit_alloc;
+	/**< Pointer to PMD credit allocation function. */
+	event_credit_free_t credit_free;
+	/**< Pointer to PMD credit release function. */
 	event_tx_adapter_enqueue_t txa_enqueue_same_dest;
 	/**< Pointer to PMD eth Tx adapter burst enqueue function with
 	 * events destined to same Eth port & Tx queue.

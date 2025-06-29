@@ -47,6 +47,25 @@ RTE_TRACE_POINT_FP(
 )
 
 RTE_TRACE_POINT_FP(
+	rte_eventdev_trace_credit_alloc,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint8_t port_id,
+		unsigned int new_event_threshold, unsigned int num_credits),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u8(port_id);
+	rte_trace_point_emit_int(new_event_threshold);
+	rte_trace_point_emit_int(num_credits);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_eventdev_trace_credit_free,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint8_t port_id,
+		unsigned int num_credits),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u8(port_id);
+	rte_trace_point_emit_int(num_credits);
+)
+
+RTE_TRACE_POINT_FP(
 	rte_eventdev_trace_port_profile_switch,
 	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint8_t port_id, uint8_t profile),
 	rte_trace_point_emit_u8(dev_id);

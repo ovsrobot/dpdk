@@ -504,6 +504,16 @@ struct rte_event;
  * @see rte_event_port_preschedule()
  */
 
+#define RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION (1ULL << 21)
+/**< Event device supports credit preallocation for new events.
+ *
+ * The event device supports preallocation credits, which in turn allows
+ * the use of @ref RTE_EVENT_OP_NEW_PREALLOCED.
+ *
+ * @see rte_event_credit_alloc()
+ * @see rte_event_credit_free()
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority level for events and queues.
@@ -1620,6 +1630,10 @@ struct __rte_aligned(16) rte_event_vector {
 /**< The @ref rte_event.op field must be set to this operation type to inject a new event,
  * i.e. one not previously dequeued, into the event device, to be scheduled
  * for processing.
+ */
+#define RTE_EVENT_OP_NEW_PREALLOCED     3
+/**< The @ref rte_event.op field must be set to this operation type to inject a new event
+ * for which a credit has already been allocated with rte_event_credit_alloc().
  */
 #define RTE_EVENT_OP_FORWARD            1
 /**< The application must set the @ref rte_event.op field to this operation type to return a
@@ -2931,6 +2945,127 @@ rte_event_maintain(uint8_t dev_id, uint8_t port_id, int op)
 		fp_ops->maintain(port, op);
 
 	return 0;
+}
+
+/**
+ * Preallocate credits for new events.
+ *
+ * Preallocate credits for use with @ref RTE_EVENT_OP_NEW_PREALLOCED
+ * events. One credit gives the right to enqueue one such event. Upon
+ * successfully enqueuing an @ref RTE_EVENT_OP_NEW_PREALLOCED type
+ * event, one credit is considered spent.
+ *
+ * The credits are tied to the event port from which it was allocated.
+ * Thus, credit allocation and the enqueue operation must happen on
+ * the same port.
+ *
+ * The use of preallocated credits reduces the risk of enqueue
+ * failures, but does not guarantee that such will not occur.
+ *
+ * Besides using up credits by enqueuing @ref RTE_EVENT_OP_NEW_PREALLOCAD
+ * events, the application may also return credits using
+ * rte_event_credit_free().
+ *
+ * rte_event_credit_alloc() may also be used to pick a different @c
+ * new_event_threshold than is configured on the event port.
+ *
+ * This function will only succeed for event devices which have the
+ * @ref RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION flag set.
+ *
+ * The application may not attempt to enqueue @ref RTE_EVENT_OP_NEW_PREALLOCED
+ * events if it does not possess any credits (for that event port).
+ *
+ * Since credits are allocated against a certain @c new_event_threshold,
+ * and the number of in-flight events may change quickly (i.e., with
+ * an incoming burst of packets), storing credits for long durations
+ * of time may impact desired backpressure behavior. Also, since a
+ * credit represent an in-flight event, allocated but unused credits
+ * reduces the number of actual in-flight events allowed.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param new_event_threshold
+ *   The @c new_event_threshold to use for this allocation. If set to 0, the
+ *   event port's @c new_event_threshold will be used.
+ * @param num_credits
+ *   The number of credits the application wish to acquire.
+ * @return
+ *  - The number of credits allocated (<= @c num_credits).
+ *  - -EINVAL if *dev_id*,  *port_id*, or *op* is invalid.
+ *  - -ENOTSUP if event device does not support credit preallocation.
+ *
+ * @see RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION
+ */
+static inline int
+rte_event_credit_alloc(uint8_t dev_id, uint8_t port_id, unsigned int new_event_threshold,
+		       unsigned int num_credits)
+{
+	const struct rte_event_fp_ops *fp_ops;
+	void *port;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+	port = fp_ops->data[port_id];
+#ifdef RTE_LIBRTE_EVENTDEV_DEBUG
+	if (dev_id >= RTE_EVENT_MAX_DEVS ||
+	    port_id >= RTE_EVENT_MAX_PORTS_PER_DEV)
+		return -EINVAL;
+
+	if (port == NULL)
+		return -EINVAL;
+#endif
+	rte_eventdev_trace_credit_alloc(dev_id, port_id, new_event_threshold, num_credits);
+
+	if (unlikely(fp_ops->credit_alloc == NULL))
+		return -ENOTSUP;
+
+	return fp_ops->credit_alloc(port, new_event_threshold, num_credits);
+}
+
+/**
+ * Return preallocated credits for new events.
+ *
+ * Return unused credits allocated with rte_event_credit_alloc().
+ *
+ * This function will only succeed for event devices which have the
+ * @ref RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION flag set.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param port_id
+ *   The identifier of the event port.
+ * @param num_credits
+ *   The number of credits the application wish to return.
+ * @return
+ *  - 0 on success.
+ *  - -EINVAL if *dev_id*,  *port_id*, or *op* is invalid.
+ *  - -ENOTSUP if event device does not support credit preallocation.
+ *
+ * @see RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION
+ */
+static inline int
+rte_event_credit_free(uint8_t dev_id, uint8_t port_id, unsigned int num_credits)
+{
+	const struct rte_event_fp_ops *fp_ops;
+	void *port;
+
+	fp_ops = &rte_event_fp_ops[dev_id];
+	port = fp_ops->data[port_id];
+#ifdef RTE_LIBRTE_EVENTDEV_DEBUG
+	if (dev_id >= RTE_EVENT_MAX_DEVS ||
+	    port_id >= RTE_EVENT_MAX_PORTS_PER_DEV)
+		return -EINVAL;
+
+	if (port == NULL)
+		return -EINVAL;
+#endif
+	rte_eventdev_trace_credit_free(dev_id, port_id, num_credits);
+
+	if (unlikely(fp_ops->credit_free == NULL))
+		return -ENOTSUP;
+
+	return fp_ops->credit_free(port, num_credits);
 }
 
 /**
