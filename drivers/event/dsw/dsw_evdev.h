@@ -277,6 +277,9 @@ uint16_t dsw_event_enqueue_burst(void *port,
 uint16_t dsw_event_enqueue_new_burst(void *port,
 				     const struct rte_event events[],
 				     uint16_t events_len);
+uint16_t dsw_event_enqueue_new_prealloced_burst(void *port,
+						const struct rte_event events[],
+						uint16_t events_len);
 uint16_t dsw_event_enqueue_forward_burst(void *port,
 					 const struct rte_event events[],
 					 uint16_t events_len);

@@ -1460,6 +1460,21 @@ dsw_event_enqueue_new_burst(void *port, const struct rte_event events[],
 }
 
 uint16_t
+dsw_event_enqueue_new_prealloced_burst(void *port,
+				       const struct rte_event events[],
+				       uint16_t events_len)
+{
+	struct dsw_port *source_port = port;
+
+	if (unlikely(events_len > source_port->enqueue_depth))
+		events_len = source_port->enqueue_depth;
+
+	return dsw_event_enqueue_burst_generic(source_port, events,
+					       events_len, true, 0, events_len,
+					       0, 0);
+}
+
+uint16_t
 dsw_event_enqueue_forward_burst(void *port, const struct rte_event events[],
 				uint16_t events_len)
 {
@@ -1629,6 +1644,9 @@ int dsw_event_credit_alloc(void *port, unsigned int new_event_threshold,
 	struct dsw_port *source_port = port;
 	struct dsw_evdev *dsw = source_port->dsw;
 	bool enough_credits;
+
+	if (new_event_threshold == 0)
+		new_event_threshold = source_port->new_event_threshold;
 
 	if (dsw_should_backpressure(dsw, new_event_threshold))
 		return 0;
