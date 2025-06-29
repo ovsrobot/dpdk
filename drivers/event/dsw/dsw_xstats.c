@@ -65,6 +65,7 @@ static struct dsw_xstat_dev dsw_dev_xstats[] = {
 	}
 
 DSW_GEN_PORT_ACCESS_FN(new_enqueued)
+DSW_GEN_PORT_ACCESS_FN(new_prealloced_enqueued)
 DSW_GEN_PORT_ACCESS_FN(forward_enqueued)
 DSW_GEN_PORT_ACCESS_FN(release_enqueued)
 
@@ -136,6 +137,8 @@ DSW_GEN_PORT_ACCESS_FN(last_bg)
 static struct dsw_xstats_port dsw_port_xstats[] = {
 	{ "port_%u_new_enqueued", dsw_xstats_port_get_new_enqueued,
 	  false },
+	{ "port_%u_new_prealloced_enqueued",
+	  dsw_xstats_port_get_new_prealloced_enqueued, false },
 	{ "port_%u_forward_enqueued", dsw_xstats_port_get_forward_enqueued,
 	  false },
 	{ "port_%u_release_enqueued", dsw_xstats_port_get_release_enqueued,

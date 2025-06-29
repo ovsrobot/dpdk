@@ -228,7 +228,8 @@ dsw_info_get(struct rte_eventdev *dev __rte_unused,
 		RTE_EVENT_DEV_CAP_NONSEQ_MODE|
 		RTE_EVENT_DEV_CAP_MULTIPLE_QUEUE_PORT|
 		RTE_EVENT_DEV_CAP_CARRY_FLOW_ID |
-		RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ
+		RTE_EVENT_DEV_CAP_INDEPENDENT_ENQ |
+		RTE_EVENT_DEV_CAP_CREDIT_PREALLOCATION
 	};
 }
 
@@ -458,6 +459,8 @@ dsw_probe(struct rte_vdev_device *vdev)
 	dev->enqueue_forward_burst = dsw_event_enqueue_forward_burst;
 	dev->dequeue_burst = dsw_event_dequeue_burst;
 	dev->maintain = dsw_event_maintain;
+	dev->credit_alloc = dsw_event_credit_alloc;
+	dev->credit_free = dsw_event_credit_free;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;

@@ -208,6 +208,7 @@ struct __rte_cache_aligned dsw_port {
 
 	uint64_t enqueue_calls;
 	uint64_t new_enqueued;
+	uint64_t new_prealloced_enqueued;
 	uint64_t forward_enqueued;
 	uint64_t release_enqueued;
 	uint64_t queue_enqueued[DSW_MAX_QUEUES];
@@ -283,6 +284,11 @@ uint16_t dsw_event_enqueue_forward_burst(void *port,
 uint16_t dsw_event_dequeue_burst(void *port, struct rte_event *events,
 				 uint16_t num, uint64_t wait);
 void dsw_event_maintain(void *port, int op);
+
+int dsw_event_credit_alloc(void *port, unsigned int new_event_threshold,
+			   unsigned int num_credits);
+
+int dsw_event_credit_free(void *port, unsigned int num_credits);
 
 int dsw_xstats_get_names(const struct rte_eventdev *dev,
 			 enum rte_event_dev_xstats_mode mode,

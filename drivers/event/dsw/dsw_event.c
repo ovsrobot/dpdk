@@ -93,9 +93,11 @@ dsw_port_return_credits(struct dsw_evdev *dsw, struct dsw_port *port,
 
 static void
 dsw_port_enqueue_stats(struct dsw_port *port, uint16_t num_new,
-		       uint16_t num_forward, uint16_t num_release)
+		       uint16_t num_new_prealloced, uint16_t num_forward,
+		       uint16_t num_release)
 {
 	port->new_enqueued += num_new;
+	port->new_prealloced_enqueued += num_new_prealloced;
 	port->forward_enqueued += num_forward;
 	port->release_enqueued += num_release;
 }
@@ -1322,12 +1324,26 @@ dsw_port_flush_out_buffers(struct dsw_evdev *dsw, struct dsw_port *source_port)
 		dsw_port_transmit_buffered(dsw, source_port, dest_port_id);
 }
 
+static inline bool
+dsw_should_backpressure(struct dsw_evdev *dsw, int32_t new_event_threshold)
+{
+	int32_t credits_on_loan;
+	bool over_threshold;
+
+	credits_on_loan = rte_atomic_load_explicit(&dsw->credits_on_loan,
+						   rte_memory_order_relaxed);
+
+	over_threshold = credits_on_loan > new_event_threshold;
+
+	return over_threshold;
+}
+
 static __rte_always_inline uint16_t
 dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 				const struct rte_event events[],
 				uint16_t events_len, bool op_types_known,
-				uint16_t num_new, uint16_t num_forward,
-				uint16_t num_release)
+				uint16_t num_new, uint16_t num_new_prealloced,
+				uint16_t num_forward, uint16_t num_release)
 {
 	struct dsw_evdev *dsw = source_port->dsw;
 	bool enough_credits;
@@ -1364,6 +1380,9 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 			case RTE_EVENT_OP_NEW:
 				num_new++;
 				break;
+			case RTE_EVENT_OP_NEW_PREALLOCED:
+				num_new_prealloced++;
+				break;
 			case RTE_EVENT_OP_FORWARD:
 				num_forward++;
 				break;
@@ -1379,9 +1398,7 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	 * above the water mark.
 	 */
 	if (unlikely(num_new > 0 &&
-		     rte_atomic_load_explicit(&dsw->credits_on_loan,
-					      rte_memory_order_relaxed) >
-		     source_port->new_event_threshold))
+		     dsw_should_backpressure(dsw, source_port->new_event_threshold)))
 		return 0;
 
 	enough_credits = dsw_port_acquire_credits(dsw, source_port, num_new);
@@ -1397,7 +1414,8 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	RTE_VERIFY(num_forward + num_release <= source_port->pending_releases);
 	source_port->pending_releases -= (num_forward + num_release);
 
-	dsw_port_enqueue_stats(source_port, num_new, num_forward, num_release);
+	dsw_port_enqueue_stats(source_port, num_new, num_new_prealloced,
+			       num_forward, num_release);
 
 	for (i = 0; i < events_len; i++) {
 		const struct rte_event *event = &events[i];
@@ -1409,9 +1427,9 @@ dsw_event_enqueue_burst_generic(struct dsw_port *source_port,
 	}
 
 	DSW_LOG_DP_PORT_LINE(DEBUG, source_port->id, "%d non-release events "
-			"accepted.", num_new + num_forward);
+			"accepted.", num_new + num_new_prealloced + num_forward);
 
-	return (num_new + num_forward + num_release);
+	return (num_new + num_new_prealloced + num_forward + num_release);
 }
 
 uint16_t
@@ -1424,7 +1442,7 @@ dsw_event_enqueue_burst(void *port, const struct rte_event events[],
 		events_len = source_port->enqueue_depth;
 
 	return dsw_event_enqueue_burst_generic(source_port, events,
-					       events_len, false, 0, 0, 0);
+					       events_len, false, 0, 0, 0, 0);
 }
 
 uint16_t
@@ -1438,7 +1456,7 @@ dsw_event_enqueue_new_burst(void *port, const struct rte_event events[],
 
 	return dsw_event_enqueue_burst_generic(source_port, events,
 					       events_len, true, events_len,
-					       0, 0);
+					       0, 0, 0);
 }
 
 uint16_t
@@ -1451,7 +1469,7 @@ dsw_event_enqueue_forward_burst(void *port, const struct rte_event events[],
 		events_len = source_port->enqueue_depth;
 
 	return dsw_event_enqueue_burst_generic(source_port, events,
-					       events_len, true, 0,
+					       events_len, true, 0, 0,
 					       events_len, 0);
 }
 
@@ -1603,4 +1621,32 @@ void dsw_event_maintain(void *port, int op)
 
 	if (op & RTE_EVENT_DEV_MAINT_OP_FLUSH)
 		dsw_port_flush_out_buffers(dsw, source_port);
+}
+
+int dsw_event_credit_alloc(void *port, unsigned int new_event_threshold,
+			   unsigned int num_credits)
+{
+	struct dsw_port *source_port = port;
+	struct dsw_evdev *dsw = source_port->dsw;
+	bool enough_credits;
+
+	if (dsw_should_backpressure(dsw, new_event_threshold))
+		return 0;
+
+	enough_credits = dsw_port_acquire_credits(dsw, source_port, num_credits);
+
+	if (!enough_credits)
+		return 0;
+
+	return num_credits;
+}
+
+int dsw_event_credit_free(void *port, unsigned int num_credits)
+{
+	struct dsw_port *source_port = port;
+	struct dsw_evdev *dsw = source_port->dsw;
+
+	dsw_port_return_credits(dsw, source_port, num_credits);
+
+	return 0;
 }
