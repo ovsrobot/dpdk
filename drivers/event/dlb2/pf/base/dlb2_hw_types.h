@@ -18,6 +18,11 @@
 #define DLB2_BIT_SET(x, mask)	((x) |= (mask))
 #define DLB2_BITS_GET(x, mask)	(((x) & (mask)) >> (mask##_LOC))
 
+#define DLB2_SYND2(y)        DLB2_BITS_GET(synd2, DLB2_SYS_ALARM_PF_SYND2_##y)
+#define DLB2_SYND1(y)        DLB2_BITS_GET(synd1, DLB2_SYS_ALARM_PF_SYND1_##y)
+#define DLB2_SYND0(y)        DLB2_BITS_GET(synd0, DLB2_SYS_ALARM_PF_SYND0_##y)
+#define DLB2_SYND(y)         DLB2_BITS_GET(synd, DLB2_SYS_ALARM_HW_SYND_##y)
+
 #define DLB2_MAX_NUM_VDEVS			16
 #define DLB2_MAX_NUM_SEQUENCE_NUMBER_GROUPS	2
 #define DLB2_NUM_ARB_WEIGHTS			8
@@ -37,6 +42,22 @@
 
 #define PCI_DEVICE_ID_INTEL_DLB2_5_PF 0x2714
 #define PCI_DEVICE_ID_INTEL_DLB2_5_VF 0x2715
+
+/* Interrupt related macros */
+#define DLB2_PF_NUM_NON_CQ_INTERRUPT_VECTORS 1
+#define DLB2_PF_NUM_CQ_INTERRUPT_VECTORS     64
+#define DLB2_PF_TOTAL_NUM_INTERRUPT_VECTORS \
+	(DLB2_PF_NUM_NON_CQ_INTERRUPT_VECTORS + \
+	DLB2_PF_NUM_CQ_INTERRUPT_VECTORS)
+#define DLB2_PF_NUM_COMPRESSED_MODE_VECTORS \
+	(DLB2_PF_NUM_NON_CQ_INTERRUPT_VECTORS + 1)
+#define DLB2_PF_NUM_PACKED_MODE_VECTORS \
+	DLB2_PF_TOTAL_NUM_INTERRUPT_VECTORS
+#define DLB2_PF_COMPRESSED_MODE_CQ_VECTOR_ID \
+	DLB2_PF_NUM_NON_CQ_INTERRUPT_VECTORS
+
+/* DLB non-CQ interrupts (alarm, mailbox, WDT) */
+#define DLB2_INT_NON_CQ 0
 
 #define DLB2_ALARM_HW_SOURCE_SYS 0
 #define DLB2_ALARM_HW_SOURCE_DLB 1
@@ -334,6 +355,49 @@ struct dlb2_sw_mbox {
 	void *pf_to_vdev_inject_arg;
 };
 
+enum dlb2_wake_reason {
+	WAKE_CQ_INTR,
+	WAKE_PORT_DISABLED,
+	WAKE_DEV_RESET
+};
+
+struct dlb2_cq_intr {
+	/*
+	 * The CQ interrupt mutex guarantees one thread is blocking on a CQ's
+	 * interrupt at a time.
+	 */
+	pthread_mutex_t mutex;
+	int efd;
+	u8 configured;
+	u8 reason;
+	/*
+	 * disabled is true if the port is disabled. In that
+	 * case, the driver doesn't allow applications to block on the
+	 * port's interrupt.
+	 */
+	u8 disabled;
+};
+
+struct dlb2_intr {
+	struct dlb2_cq_intr ldb_cq_intr[DLB2_MAX_NUM_LDB_PORTS];
+	struct dlb2_cq_intr dir_cq_intr[DLB2_MAX_NUM_DIR_PORTS_V2_5];
+};
+
+/*
+ * ISR overload is defined as more than DLB2_ISR_OVERLOAD_THRESH interrupts
+ * (of a particular type) occurring in a 1s period. If overload is detected,
+ * the driver blocks that interrupt (exact mechanism depending on the
+ * interrupt) from overloading the PF driver.
+ */
+#define DLB2_ISR_OVERLOAD_THRESH   1000
+#define DLB2_ISR_OVERLOAD_PERIOD_S 1
+
+struct dlb2_alarm {
+	struct timespec ts;
+	unsigned int enabled;
+	u32 count;
+};
+
 struct dlb2_hw {
 	uint8_t ver;
 
@@ -359,6 +423,12 @@ struct dlb2_hw {
 	int virt_mode;
 	struct dlb2_sw_mbox mbox[DLB2_MAX_NUM_VDEVS];
 	unsigned int pasid[DLB2_MAX_NUM_VDEVS];
+
+	/* Interrupts */
+	struct dlb2_intr intr;
+
+	/* Alarms*/
+	struct dlb2_alarm ingress_err;
 };
 
 #endif /* __DLB2_HW_TYPES_NEW_H */

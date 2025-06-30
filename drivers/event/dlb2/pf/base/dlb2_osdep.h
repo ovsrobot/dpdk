@@ -8,6 +8,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/eventfd.h>
+#include <pthread.h>
 
 #include <rte_string_fns.h>
 #include <rte_cycles.h>
@@ -127,6 +129,50 @@ static inline void os_fence_hcw(struct dlb2_hw *hw, u64 *pp_addr)
 	rte_mb();
 
 	*(volatile u64 *)pp_addr;
+}
+
+/**
+ * os_enqueue_four_hcws() - enqueue four HCWs to DLB
+ * @hw: dlb2_hw handle for a particular device.
+ * @hcw: pointer to the 64B-aligned contiguous HCW memory
+ * @addr: producer port address
+ */
+static inline void os_enqueue_four_hcws(struct dlb2_hw *hw,
+					struct dlb2_hcw *hcw,
+					void *addr)
+{
+	struct dlb2_dev *dlb2_dev;
+	dlb2_dev = container_of(hw, struct dlb2_dev, hw);
+
+	dlb2_dev->enqueue_four(addr, hcw);
+}
+
+/**
+ * os_notify_user_space() - notify user space
+ * @hw: dlb2_hw handle for a particular device.
+ * @domain_id: ID of domain to notify.
+ * @alert_id: alert ID.
+ * @aux_alert_data: additional alert data.
+ *
+ * This function notifies user space of an alert (such as a hardware alarm).
+ *
+ * Return:
+ * Returns 0 upon success, <0 otherwise.
+ */
+static inline int os_notify_user_space(struct dlb2_hw *hw,
+				       u32 domain_id,
+				       u64 alert_id,
+				       u64 aux_alert_data)
+{
+	RTE_SET_USED(hw);
+
+	const char *port_type = (aux_alert_data >> 8) ? "LDB" : "DIR";
+	int port_id = aux_alert_data & 0xFF;
+
+	DLB2_ERR(hw, " Domain:%d alert:%"PRIu64" %s port:%d\n",
+		domain_id, alert_id, port_type, port_id);
+
+	return 0;
 }
 
 /**

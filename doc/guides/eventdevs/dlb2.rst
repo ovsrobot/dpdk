@@ -477,6 +477,26 @@ Example command to use as meson option for credit handling:
 
        meson configure -Dc_args='-DDLB_SW_CREDITS_CHECKS=0 -DDLB_HW_CREDITS_CHECKS=1'
 
+Interrupt Mode Support
+~~~~~~~~~~~~~~~~~~~~~~
+DLB dequeue supports interrupt mode for the API rte_event_dequeue_burst().
+The default port dequeue mode is polling. Dequeue wait mode can be configured
+on per eventdev port basis using devargs argument 'port_dequeue_wait'. In
+interrupt mode, if the port queue is empty, the application thread will block
+on the interrupt until a new event arrives. It enters blocking mode only after
+any specified timeout. During the timeout, it will poll the port queue for
+events as usual. Interrupt mode uses the DPDK interrupt support framework.
+
+    .. code-block:: console
+
+       --allow ea:00.0,port_dequeue_wait=all:interrupt
+
+        port = all/<port-id>/<port-id>-<port-id>
+        mode = interrupt/polling
+
+Eventdev port interrupt and polling wait modes for dequeue can be set for all
+the ports, a single port, or a range of ports using this parameter.
+
 Running Eventdev Applications with DLB Device
 ---------------------------------------------
 

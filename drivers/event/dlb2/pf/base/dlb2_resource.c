@@ -2757,6 +2757,7 @@ dlb2_domain_disable_ldb_port_interrupts(struct dlb2_hw *hw,
 {
 	struct dlb2_list_entry *iter;
 	struct dlb2_ldb_port *port;
+	struct dlb2_cq_intr *intr;
 	u32 int_en = 0;
 	u32 wd_en = 0;
 	int i;
@@ -2773,6 +2774,10 @@ dlb2_domain_disable_ldb_port_interrupts(struct dlb2_hw *hw,
 				    DLB2_CHP_LDB_CQ_WD_ENB(hw->ver,
 						      port->id.phys_id),
 				    wd_en);
+			intr = &hw->intr.ldb_cq_intr[port->id.phys_id];
+
+			if (intr->configured)
+				close(intr->efd);
 		}
 	}
 }
@@ -2783,6 +2788,7 @@ dlb2_domain_disable_dir_port_interrupts(struct dlb2_hw *hw,
 {
 	struct dlb2_list_entry *iter;
 	struct dlb2_dir_pq_pair *port;
+	struct dlb2_cq_intr *intr;
 	u32 int_en = 0;
 	u32 wd_en = 0;
 	RTE_SET_USED(iter);
@@ -2795,6 +2801,10 @@ dlb2_domain_disable_dir_port_interrupts(struct dlb2_hw *hw,
 		DLB2_CSR_WR(hw,
 			    DLB2_CHP_DIR_CQ_WD_ENB(hw->ver, port->id.phys_id),
 			    wd_en);
+		intr = &hw->intr.ldb_cq_intr[port->id.phys_id];
+
+		if (intr->configured)
+			close(intr->efd);
 	}
 }
 
@@ -6889,4 +6899,819 @@ int dlb2_hw_set_cos_bandwidth(struct dlb2_hw *hw, u32 cos_id, u8 bandwidth)
 	hw->cos_reservation[cos_id] = bandwidth;
 
 	return 0;
+}
+
+/**
+ * dlb2_cq_empty() - determine whether a CQ is empty
+ * @cq_va: User VA pointing to next CQ entry.
+ * @cq_gen: Current CQ generation bit.
+ *
+ * Return:
+ * Returns 1 if empty, 0 if non-empty, or < 0 if an error occurs.
+ */
+static int dlb2_cq_empty(volatile void *cq_va, u8 cq_gen)
+{
+	struct dlb2_dequeue_qe qe = *(volatile struct dlb2_dequeue_qe *)cq_va;
+
+	return qe.cq_gen != cq_gen;
+}
+
+int dlb2_block_on_cq_interrupt(struct dlb2_hw *dlb2,
+			       int port_id,
+			       bool is_ldb,
+			       volatile void *cq_va,
+			       u8 cq_gen,
+			       bool arm)
+{
+	struct dlb2_cq_intr *intr;
+	bool poll = false;
+	eventfd_t val;
+	int ret;
+
+	if (is_ldb && (unsigned int)port_id >= DLB2_MAX_NUM_LDB_PORTS)
+		return -EINVAL;
+	if (!is_ldb && (unsigned int)port_id >= DLB2_MAX_NUM_DIR_PORTS(dlb2->ver))
+		return -EINVAL;
+
+	if (is_ldb)
+		intr = &dlb2->intr.ldb_cq_intr[port_id];
+	else
+		intr = &dlb2->intr.dir_cq_intr[port_id];
+
+	if (!intr->configured)
+		return -EPERM;
+
+	/*
+	 * This function requires that only one thread process the CQ at a time.
+	 * Otherwise, the wake condition could become false in the time between
+	 * the ISR calling wake_up_interruptible() and the thread checking its
+	 * wake condition.
+	 */
+	pthread_mutex_lock(&intr->mutex);
+
+	/* Return early if the port's interrupt is disabled */
+	if (intr->disabled) {
+		pthread_mutex_unlock(&intr->mutex);
+		return -EACCES;
+	}
+
+	DLB2_HW_DBG(dlb2, "Thread is blocking on %s port %d's interrupt\n",
+		    (is_ldb) ? "LDB" : "DIR", port_id);
+
+	/* Don't block if the CQ is non-empty */
+	ret = dlb2_cq_empty(cq_va, cq_gen);
+	if (ret != 1)
+		goto error;
+
+	do {
+		if (arm) {
+			ret =  dlb2_arm_cq_interrupt(dlb2, port_id, is_ldb, 0, 0);
+			if (ret)
+				goto error;
+		}
+		if (poll) {
+			struct timespec start, curr;
+			u64 diff = 0;
+
+			clock_gettime(CLOCK_MONOTONIC, &start);
+
+			while (dlb2_cq_empty(cq_va, cq_gen) && diff < 1000) {
+				clock_gettime(CLOCK_MONOTONIC, &curr);
+				diff = (curr.tv_sec - start.tv_sec) * 1e+9 +
+					curr.tv_nsec - start.tv_nsec;
+			}
+		} else {
+			ret = eventfd_read(intr->efd, &val);
+		}
+		if (ret >= 0) {
+			if (intr->reason == WAKE_DEV_RESET)
+				ret = -EINTR;
+			else if (intr->reason == WAKE_PORT_DISABLED)
+				ret = -EACCES;
+		}
+
+		/* Need to handle cases where cq is empty even after interrupt.
+		 * This can happen either if there is a spurious interrupt or
+		 * data is still in transit. The code always first assumes it is
+		 * the latter case and polls for 1us to check if cq has data.
+		 * If not, it goes back to wait till next interrupt.
+		 */
+		poll ^= true;
+		arm = !poll;
+	} while (ret >= 0 && dlb2_cq_empty(cq_va, cq_gen));
+
+	DLB2_HW_DBG(dlb2, "Thread is unblocked from %s port %d's interrupt\n",
+		    (is_ldb) ? "LDB" : "DIR", port_id);
+
+error:
+	pthread_mutex_unlock(&intr->mutex);
+
+	return ret;
+}
+
+static struct dlb2_ldb_port *dlb2_get_ldb_port_from_id(struct dlb2_hw *hw,
+						u32 id,
+						bool vdev_req,
+						unsigned int vdev_id)
+{
+	RTE_SET_USED(vdev_req);
+	RTE_SET_USED(vdev_id);
+
+	if (id >= DLB2_MAX_NUM_LDB_PORTS)
+		return NULL;
+
+	return &hw->rsrcs.ldb_ports[id];
+}
+
+
+static struct dlb2_dir_pq_pair *dlb2_get_dir_pq_from_id(struct dlb2_hw *hw,
+						u32 id,
+						bool vdev_req,
+						unsigned int vdev_id)
+{
+	RTE_SET_USED(vdev_req);
+	RTE_SET_USED(vdev_id);
+
+	if (id >= DLB2_MAX_NUM_DIR_PORTS(hw->ver))
+		return NULL;
+
+	return &hw->rsrcs.dir_pq_pairs[id];
+}
+
+/**
+ * dlb2_arm_cq_interrupt() - arm a CQ's interrupt
+ * @hw: dlb2_hw handle for a particular device.
+ * @port_id: port ID
+ * @is_ldb: true for load-balanced port, false for a directed port
+ * @vdev_req: indicates whether this request came from a vdev.
+ * @vdev_id: If vdev_req is true, this contains the vdev's ID.
+ *
+ * This function arms the CQ's interrupt. The CQ must be configured prior to
+ * calling this function.
+ *
+ * The function does no parameter validation; that is the caller's
+ * responsibility.
+ *
+ * A vdev can be either an SR-IOV virtual function or a Scalable IOV virtual
+ * device.
+ *
+ * Return: returns 0 upon success, <0 otherwise.
+ *
+ * EINVAL - Invalid port ID.
+ */
+int dlb2_arm_cq_interrupt(struct dlb2_hw *hw,
+			int port_id,
+			bool is_ldb,
+			bool vdev_req,
+			unsigned int vdev_id)
+{
+	u32 val;
+	u32 reg;
+	RTE_SET_USED(vdev_req);
+	RTE_SET_USED(vdev_id);
+
+	val = 1 << (port_id % 32);
+
+	if (is_ldb && port_id < 32)
+		reg = DLB2_CHP_LDB_CQ_INTR_ARMED0(hw->ver);
+	else if (is_ldb && port_id < 64)
+		reg = DLB2_CHP_LDB_CQ_INTR_ARMED1(hw->ver);
+	else if (!is_ldb && port_id < 32)
+		reg = DLB2_CHP_DIR_CQ_INTR_ARMED0(hw->ver);
+	else if (!is_ldb && port_id < 64)
+		reg = DLB2_CHP_DIR_CQ_INTR_ARMED1(hw->ver);
+	else
+		reg = DLB2_CHP_DIR_CQ_INTR_ARMED2;
+
+	DLB2_CSR_WR(hw, reg, val);
+
+	dlb2_flush_csr(hw);
+
+	return 0;
+}
+
+/**
+ * dlb2_configure_ldb_cq_interrupt() - configure load-balanced CQ for
+ *					interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ * @port_id: load-balanced port ID.
+ * @vector: interrupt vector ID. Should be 0 for MSI or compressed MSI-X mode,
+ *	    else a value up to 64.
+ * @mode: interrupt type (DLB2_CQ_ISR_MODE_MSI or DLB2_CQ_ISR_MODE_MSIX)
+ * @vf: If the port is VF-owned, the VF's ID. This is used for translating the
+ *	virtual port ID to a physical port ID. Ignored if mode is not MSI.
+ * @owner_vf: the VF to route the interrupt to. Ignore if mode is not MSI.
+ * @threshold: the minimum CQ depth at which the interrupt can fire. Must be
+ *	greater than 0.
+ *
+ * This function configures the DLB registers for load-balanced CQ's
+ * interrupts. This doesn't enable the CQ's interrupt; that can be done with
+ * dlb2_arm_cq_interrupt() or through an interrupt arm QE.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise.
+ *
+ * Errors:
+ * EINVAL - The port ID is invalid.
+ */
+int dlb2_configure_ldb_cq_interrupt(struct dlb2_hw *hw,
+				    int port_id,
+				    int vector,
+				    int mode,
+				    unsigned int vf,
+				    unsigned int owner_vf,
+				    u16 threshold)
+{
+	struct dlb2_ldb_port *port;
+	bool vdev_req;
+	u32 reg = 0;
+
+	vdev_req = (mode == DLB2_CQ_ISR_MODE_MSI ||
+		    mode == DLB2_CQ_ISR_MODE_ADI);
+
+	port = dlb2_get_ldb_port_from_id(hw, port_id, vdev_req, vf);
+	if (!port) {
+		DLB2_HW_ERR(hw,
+			    "[%s()]: Internal error: failed to enable LDB CQ int\n\tport_id: %u, vdev_req: %u, vdev: %u\n",
+			    __func__, port_id, vdev_req, vf);
+		return -EINVAL;
+	}
+
+	/* Trigger the interrupt when threshold or more QEs arrive in the CQ */
+	DLB2_BITS_SET(reg, threshold - 1,
+		 DLB2_CHP_LDB_CQ_INT_DEPTH_THRSH_DEPTH_THRESHOLD);
+	DLB2_CSR_WR(hw, DLB2_CHP_LDB_CQ_INT_DEPTH_THRSH(hw->ver,
+						   port->id.phys_id), reg);
+
+	reg = 0;
+	DLB2_BIT_SET(reg, DLB2_CHP_LDB_CQ_INT_ENB_EN_DEPTH);
+	DLB2_CSR_WR(hw,
+		    DLB2_CHP_LDB_CQ_INT_ENB(hw->ver, port->id.phys_id), reg);
+
+	reg = 0;
+	DLB2_BITS_SET(reg, vector, DLB2_SYS_LDB_CQ_ISR_VECTOR);
+	DLB2_BITS_SET(reg, owner_vf, DLB2_SYS_LDB_CQ_ISR_VF);
+	DLB2_BITS_SET(reg, mode, DLB2_SYS_LDB_CQ_ISR_EN_CODE);
+
+	DLB2_CSR_WR(hw, DLB2_SYS_LDB_CQ_ISR(port->id.phys_id), reg);
+
+	return 0;
+}
+/**
+ * dlb2_configure_dir_cq_interrupt() - configure directed CQ for interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ * @port_id: load-balanced port ID.
+ * @vector: interrupt vector ID. Should be 0 for MSI or compressed MSI-X mode,
+ *	    else a value up to 64.
+ * @mode: interrupt type (DLB2_CQ_ISR_MODE_MSI or DLB2_CQ_ISR_MODE_MSIX)
+ * @vf: If the port is VF-owned, the VF's ID. This is used for translating the
+ *	virtual port ID to a physical port ID. Ignored if mode is not MSI.
+ * @owner_vf: the VF to route the interrupt to. Ignore if mode is not MSI.
+ * @threshold: the minimum CQ depth at which the interrupt can fire. Must be
+ *	greater than 0.
+ *
+ * This function configures the DLB registers for directed CQ's interrupts.
+ * This doesn't enable the CQ's interrupt; that can be done with
+ * dlb2_arm_cq_interrupt() or through an interrupt arm QE.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise.
+ *
+ * Errors:
+ * EINVAL - The port ID is invalid.
+ */
+int dlb2_configure_dir_cq_interrupt(struct dlb2_hw *hw,
+				    int port_id,
+				    int vector,
+				    int mode,
+				    unsigned int vf,
+				    unsigned int owner_vf,
+				    u16 threshold)
+{
+	struct dlb2_dir_pq_pair *port;
+	bool vdev_req;
+	u32 reg = 0;
+
+	vdev_req = (mode == DLB2_CQ_ISR_MODE_MSI ||
+		    mode == DLB2_CQ_ISR_MODE_ADI);
+
+	port = dlb2_get_dir_pq_from_id(hw, port_id, vdev_req, vf);
+	if (!port) {
+		DLB2_HW_ERR(hw,
+			    "[%s()]: Internal error: failed to enable DIR CQ int\n\tport_id: %u, vdev_req: %u, vdev: %u\n",
+			    __func__, port_id, vdev_req, vf);
+		return -EINVAL;
+	}
+
+	/* Trigger the interrupt when threshold or more QEs arrive in the CQ */
+	DLB2_BITS_SET(reg, threshold - 1,
+		 DLB2_CHP_DIR_CQ_INT_DEPTH_THRSH_DEPTH_THRESHOLD);
+	DLB2_CSR_WR(hw, DLB2_CHP_DIR_CQ_INT_DEPTH_THRSH(hw->ver,
+						   port->id.phys_id), reg);
+
+	reg = 0;
+	DLB2_BIT_SET(reg, DLB2_CHP_DIR_CQ_INT_ENB_EN_DEPTH);
+	DLB2_CSR_WR(hw,
+		    DLB2_CHP_DIR_CQ_INT_ENB(hw->ver, port->id.phys_id), reg);
+
+	reg = 0;
+	DLB2_BITS_SET(reg, vector, DLB2_SYS_DIR_CQ_ISR_VECTOR);
+	DLB2_BITS_SET(reg, owner_vf, DLB2_SYS_DIR_CQ_ISR_VF);
+	DLB2_BITS_SET(reg, mode, DLB2_SYS_DIR_CQ_ISR_EN_CODE);
+
+	DLB2_CSR_WR(hw, DLB2_SYS_DIR_CQ_ISR(port->id.phys_id), reg);
+
+	return 0;
+}
+
+/**
+ * dlb2_read_compressed_cq_intr_status() - read compressed CQ interrupt status
+ * @hw: dlb2_hw handle for a particular device.
+ * @ldb_interrupts: 2-entry array of u32 bitmaps
+ * @dir_interrupts: 4-entry array of u32 bitmaps
+ *
+ * This function can be called from a compressed CQ interrupt handler to
+ * determine which CQ interrupts have fired. The caller should take appropriate
+ * (such as waking threads blocked on a CQ's interrupt) then ack the interrupts
+ * with dlb2_ack_compressed_cq_intr().
+ */
+void dlb2_read_compressed_cq_intr_status(struct dlb2_hw *hw,
+					 u32 *ldb_interrupts,
+					 u32 *dir_interrupts)
+{
+	/* Read every CQ's interrupt status */
+
+	ldb_interrupts[0] = DLB2_CSR_RD(hw, DLB2_SYS_LDB_CQ_31_0_OCC_INT_STS);
+	ldb_interrupts[1] = DLB2_CSR_RD(hw, DLB2_SYS_LDB_CQ_63_32_OCC_INT_STS);
+
+	dir_interrupts[0] = DLB2_CSR_RD(hw, DLB2_SYS_DIR_CQ_31_0_OCC_INT_STS);
+	dir_interrupts[1] = DLB2_CSR_RD(hw, DLB2_SYS_DIR_CQ_63_32_OCC_INT_STS);
+	if (hw->ver == DLB2_HW_V2_5)
+		dir_interrupts[2] = DLB2_CSR_RD(hw, DLB2_SYS_DIR_CQ_95_64_OCC_INT_STS);
+}
+
+/**
+ * dlb2_ack_msix_interrupt() - Ack an MSI-X interrupt
+ * @hw: dlb2_hw handle for a particular device.
+ * @vector: interrupt vector.
+ *
+ * Note: Only needed for PF service interrupts (vector 0). CQ interrupts are
+ * acked in dlb2_ack_compressed_cq_intr().
+ */
+void dlb2_ack_msix_interrupt(struct dlb2_hw *hw, int vector)
+{
+	u32 ack = 0;
+
+	switch (vector) {
+	case 0:
+		DLB2_BIT_SET(ack, DLB2_SYS_MSIX_ACK_MSIX_0_ACK);
+		break;
+	case 1:
+		DLB2_BIT_SET(ack, DLB2_SYS_MSIX_ACK_MSIX_1_ACK);
+		/*
+		 * CSSY-1650
+		 * workaround h/w bug for lost MSI-X interrupts
+		 *
+		 * The recommended workaround for acknowledging
+		 * vector 1 interrupts is :
+		 *   1: set   MSI-X mask
+		 *   2: set   MSIX_PASSTHROUGH
+		 *   3: clear MSIX_ACK
+		 *   4: clear MSIX_PASSTHROUGH
+		 *   5: clear MSI-X mask
+		 *
+		 * The MSIX-ACK (step 3) is cleared for all vectors
+		 * below. We handle steps 1 & 2 for vector 1 here.
+		 *
+		 * The bitfields for MSIX_ACK and MSIX_PASSTHRU are
+		 * defined the same, so we just use the MSIX_ACK
+		 * value when writing to PASSTHRU.
+		 */
+
+		/* set MSI-X mask and passthrough for vector 1 */
+		DLB2_FUNC_WR(hw, DLB2_MSIX_VECTOR_CTRL(1), 1);
+		DLB2_CSR_WR(hw, DLB2_SYS_MSIX_PASSTHRU, ack);
+		break;
+	}
+
+	/* clear MSIX_ACK (write one to clear) */
+	DLB2_CSR_WR(hw, DLB2_SYS_MSIX_ACK, ack);
+
+	if (vector == 1) {
+		/*
+		 * finish up steps 4 & 5 of the workaround -
+		 * clear pasthrough and mask
+		 */
+		DLB2_CSR_WR(hw, DLB2_SYS_MSIX_PASSTHRU, 0);
+		DLB2_FUNC_WR(hw, DLB2_MSIX_VECTOR_CTRL(1), 0);
+	}
+
+	dlb2_flush_csr(hw);
+}
+
+/**
+ * dlb2_ack_compressed_cq_intr() - ack compressed CQ interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ * @ldb_interrupts: 2-entry array of u32 bitmaps
+ * @dir_interrupts: 4-entry array of u32 bitmaps
+ *
+ * This function ACKs compressed CQ interrupts. Its arguments should be the
+ * same ones passed to dlb2_read_compressed_cq_intr_status().
+ */
+void dlb2_ack_compressed_cq_intr(struct dlb2_hw *hw,
+				 u32 *ldb_interrupts,
+				 u32 *dir_interrupts)
+{
+	/* Write back the status regs to ack the interrupts */
+	if (ldb_interrupts[0])
+		DLB2_CSR_WR(hw,
+			    DLB2_SYS_LDB_CQ_31_0_OCC_INT_STS,
+			    ldb_interrupts[0]);
+	if (ldb_interrupts[1])
+		DLB2_CSR_WR(hw,
+			    DLB2_SYS_LDB_CQ_63_32_OCC_INT_STS,
+			    ldb_interrupts[1]);
+
+	if (dir_interrupts[0])
+		DLB2_CSR_WR(hw,
+			    DLB2_SYS_DIR_CQ_31_0_OCC_INT_STS,
+			    dir_interrupts[0]);
+	if (dir_interrupts[1])
+		DLB2_CSR_WR(hw,
+			    DLB2_SYS_DIR_CQ_63_32_OCC_INT_STS,
+			    dir_interrupts[1]);
+
+	if (hw->ver == DLB2_HW_V2_5 && dir_interrupts[2])
+		DLB2_CSR_WR(hw,
+			    DLB2_SYS_DIR_CQ_95_64_OCC_INT_STS,
+			    dir_interrupts[2]);
+	dlb2_ack_msix_interrupt(hw, DLB2_PF_COMPRESSED_MODE_CQ_VECTOR_ID);
+}
+
+/**
+ * dlb2_enable_ingress_error_alarms() - enable ingress error alarm interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ */
+void dlb2_enable_ingress_error_alarms(struct dlb2_hw *hw)
+{
+	u32 en;
+
+	en = DLB2_CSR_RD(hw, DLB2_SYS_INGRESS_ALARM_ENBL);
+
+	DLB2_BIT_SET(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_HCW);
+	DLB2_BIT_SET(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_PP);
+	DLB2_BIT_SET(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_PASID);
+	DLB2_BIT_SET(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_QID);
+	DLB2_BIT_SET(en, DLB2_SYS_INGRESS_ALARM_ENBL_DISABLED_QID);
+	DLB2_BIT_SET(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_LDB_QID_CFG);
+
+	DLB2_CSR_WR(hw, DLB2_SYS_INGRESS_ALARM_ENBL, en);
+}
+
+/**
+ * dlb2_disable_ingress_error_alarms() - disable ingress error alarm interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ */
+void dlb2_disable_ingress_error_alarms(struct dlb2_hw *hw)
+{
+	u32 en;
+
+	en = DLB2_CSR_RD(hw, DLB2_SYS_INGRESS_ALARM_ENBL);
+
+	DLB2_BITS_CLR(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_HCW);
+	DLB2_BITS_CLR(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_PP);
+	DLB2_BITS_CLR(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_PASID);
+	DLB2_BITS_CLR(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_QID);
+	DLB2_BITS_CLR(en, DLB2_SYS_INGRESS_ALARM_ENBL_DISABLED_QID);
+	DLB2_BITS_CLR(en, DLB2_SYS_INGRESS_ALARM_ENBL_ILLEGAL_LDB_QID_CFG);
+
+	DLB2_CSR_WR(hw, DLB2_SYS_INGRESS_ALARM_ENBL, en);
+}
+
+static void dlb2_log_alarm_syndrome(struct dlb2_hw *hw,
+				    const char *str,
+				    u32 synd)
+{
+	DLB2_HW_ERR(hw, "%s:\n", str);
+	DLB2_HW_ERR(hw, "\tsyndrome: 0x%x\n", DLB2_SYND(SYNDROME));
+	DLB2_HW_ERR(hw, "\trtype:    0x%x\n", DLB2_SYND(RTYPE));
+	DLB2_HW_ERR(hw, "\talarm:    0x%x\n", DLB2_SYND(ALARM));
+	DLB2_HW_ERR(hw, "\tcwd:      0x%x\n", DLB2_SYND(CWD));
+	DLB2_HW_ERR(hw, "\tvf_pf_mb: 0x%x\n", DLB2_SYND(VF_PF_MB));
+	DLB2_HW_ERR(hw, "\tcls:      0x%x\n", DLB2_SYND(CLS));
+	DLB2_HW_ERR(hw, "\taid:      0x%x\n", DLB2_SYND(AID));
+	DLB2_HW_ERR(hw, "\tunit:     0x%x\n", DLB2_SYND(UNIT));
+	DLB2_HW_ERR(hw, "\tsource:   0x%x\n", DLB2_SYND(SOURCE));
+	DLB2_HW_ERR(hw, "\tmore:     0x%x\n", DLB2_SYND(MORE));
+	DLB2_HW_ERR(hw, "\tvalid:    0x%x\n", DLB2_SYND(VALID));
+}
+
+/* Note: this array's contents must match dlb2_alert_id() */
+static const char dlb2_alert_strings[NUM_DLB2_DOMAIN_ALERTS][128] = {
+	[DLB2_DOMAIN_ALERT_PP_ILLEGAL_ENQ] = "Illegal enqueue",
+	[DLB2_DOMAIN_ALERT_PP_EXCESS_TOKEN_POPS] = "Excess token pops",
+	[DLB2_DOMAIN_ALERT_ILLEGAL_HCW] = "Illegal HCW",
+	[DLB2_DOMAIN_ALERT_ILLEGAL_QID] = "Illegal QID",
+	[DLB2_DOMAIN_ALERT_DISABLED_QID] = "Disabled QID",
+};
+
+static void dlb2_log_pf_vf_syndrome(struct dlb2_hw *hw,
+				    const char *str,
+				    u32 synd0,
+				    u32 synd1,
+				    u32 synd2,
+				    u32 alert_id)
+{
+	DLB2_HW_ERR(hw, " %s:", str);
+	if (alert_id < NUM_DLB2_DOMAIN_ALERTS)
+		DLB2_HW_ERR(hw, " Alert: %s", dlb2_alert_strings[alert_id]);
+	DLB2_HW_ERR(hw, "\tsyndrome:     0x%x", DLB2_SYND0(SYNDROME));
+	DLB2_HW_ERR(hw, "\trtype:        0x%x", DLB2_SYND0(RTYPE));
+	DLB2_HW_ERR(hw, "\tis_ldb:       0x%x", DLB2_SYND0(IS_LDB));
+	DLB2_HW_ERR(hw, "\tcls:          0x%x", DLB2_SYND0(CLS));
+	DLB2_HW_ERR(hw, "\taid:          0x%x", DLB2_SYND0(AID));
+	DLB2_HW_ERR(hw, "\tunit:         0x%x", DLB2_SYND0(UNIT));
+	DLB2_HW_ERR(hw, "\tsource:       0x%x", DLB2_SYND0(SOURCE));
+	DLB2_HW_ERR(hw, "\tmore:         0x%x", DLB2_SYND0(MORE));
+	DLB2_HW_ERR(hw, "\tvalid:        0x%x", DLB2_SYND0(VALID));
+	DLB2_HW_ERR(hw, "\tdsi:          0x%x", DLB2_SYND1(DSI));
+	DLB2_HW_ERR(hw, "\tqid:          0x%x", DLB2_SYND1(QID));
+	DLB2_HW_ERR(hw, "\tqtype:        0x%x", DLB2_SYND1(QTYPE));
+	DLB2_HW_ERR(hw, "\tqpri:         0x%x", DLB2_SYND1(QPRI));
+	DLB2_HW_ERR(hw, "\tmsg_type:     0x%x", DLB2_SYND1(MSG_TYPE));
+	DLB2_HW_ERR(hw, "\tlock_id:      0x%x", DLB2_SYND2(LOCK_ID));
+	DLB2_HW_ERR(hw, "\tmeas:         0x%x", DLB2_SYND2(MEAS));
+	DLB2_HW_ERR(hw, "\tdebug:        0x%x", DLB2_SYND2(DEBUG));
+	DLB2_HW_ERR(hw, "\tcq_pop:       0x%x", DLB2_SYND2(CQ_POP));
+	DLB2_HW_ERR(hw, "\tqe_uhl:       0x%x", DLB2_SYND2(QE_UHL));
+	DLB2_HW_ERR(hw, "\tqe_orsp:      0x%x", DLB2_SYND2(QE_ORSP));
+	DLB2_HW_ERR(hw, "\tqe_valid:     0x%x", DLB2_SYND2(QE_VALID));
+	DLB2_HW_ERR(hw, "\tcq_int_rearm: 0x%x", DLB2_SYND2(CQ_INT_REARM));
+	DLB2_HW_ERR(hw, "\tdsi_error:    0x%x", DLB2_SYND2(DSI_ERROR));
+}
+
+static void dlb2_clear_syndrome_register(struct dlb2_hw *hw, u32 offset)
+{
+	u32 synd = 0;
+
+	DLB2_BIT_SET(synd, DLB2_SYS_ALARM_HW_SYND_VALID);
+	DLB2_BIT_SET(synd, DLB2_SYS_ALARM_HW_SYND_MORE);
+
+	DLB2_CSR_WR(hw, offset, synd);
+}
+
+/**
+ * dlb2_process_alarm_interrupt() - process an alarm interrupt
+ * @hw: dlb2_hw handle for a particular device.
+ *
+ * This function reads and logs the alarm syndrome, then acks the interrupt.
+ * This function should be called from the alarm interrupt handler when
+ * interrupt vector DLB2_INT_ALARM fires.
+ */
+void dlb2_process_alarm_interrupt(struct dlb2_hw *hw)
+{
+	u32 synd;
+
+	DLB2_HW_DBG(hw, "Processing alarm interrupt\n");
+
+	synd = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_HW_SYND);
+
+	dlb2_log_alarm_syndrome(hw, "HW alarm syndrome", synd);
+
+	dlb2_clear_syndrome_register(hw, DLB2_SYS_ALARM_HW_SYND);
+}
+
+/**
+ * dlb2_process_wdt_interrupt() - process watchdog timer interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ *
+ * This function reads the watchdog timer interrupt cause registers to
+ * determine which port(s) had a watchdog timeout, and notifies the
+ * application(s) that own the port(s).
+ */
+void dlb2_process_wdt_interrupt(struct dlb2_hw *hw)
+{
+	u32 alert_id = DLB2_DOMAIN_ALERT_CQ_WATCHDOG_TIMEOUT;
+	u32 dwdto_0, dwdto_1;
+	u32 lwdto_0, lwdto_1;
+	int i, ret;
+
+	dwdto_0 = DLB2_CSR_RD(hw, DLB2_CHP_CFG_DIR_WDTO_0(hw->ver));
+	dwdto_1 = DLB2_CSR_RD(hw, DLB2_CHP_CFG_DIR_WDTO_1(hw->ver));
+	lwdto_0 = DLB2_CSR_RD(hw, DLB2_CHP_CFG_LDB_WDTO_0(hw->ver));
+	lwdto_1 = DLB2_CSR_RD(hw, DLB2_CHP_CFG_LDB_WDTO_1(hw->ver));
+
+	if (dwdto_0 == 0xFFFFFFFF &&
+	    dwdto_1 == 0xFFFFFFFF &&
+	    lwdto_0 == 0xFFFFFFFF &&
+	    lwdto_1 == 0xFFFFFFFF)
+		return;
+
+	/* Alert applications for affected directed ports */
+	for (i = 0; i < DLB2_MAX_NUM_DIR_PORTS(hw->ver); i++) {
+		struct dlb2_dir_pq_pair *port;
+		int idx = i % 32;
+
+		if (i < 32 && !(dwdto_0 & (1 << idx)))
+			continue;
+		if (i >= 32 && !(dwdto_1 & (1 << idx)))
+			continue;
+
+		port = dlb2_get_dir_pq_from_id(hw, i, false, 0);
+		if (!port) {
+			DLB2_HW_ERR(hw,
+				    "[%s()]: Internal error: unable to find DIR port %u\n",
+				    __func__, i);
+			return;
+		}
+
+		ret = os_notify_user_space(hw,
+						   port->domain_id.phys_id,
+						   alert_id,
+						   i);
+		if (ret)
+			DLB2_HW_ERR(hw,
+				    "[%s()] Internal error: failed to notify\n",
+				    __func__);
+	}
+
+	/* Alert applications for affected load-balanced ports */
+	for (i = 0; i < DLB2_MAX_NUM_LDB_PORTS; i++) {
+		struct dlb2_ldb_port *port;
+		int idx = i % 32;
+
+		if (i < 32 && !(lwdto_0 & (1 << idx)))
+			continue;
+		if (i >= 32 && !(lwdto_1 & (1 << idx)))
+			continue;
+
+		port = dlb2_get_ldb_port_from_id(hw, i, false, 0);
+		if (!port) {
+			DLB2_HW_ERR(hw,
+				    "[%s()]: Internal error: unable to find LDB port %u\n",
+				    __func__, i);
+			return;
+		}
+
+		/* aux_alert_data[8] is 1 to indicate a load-balanced port */
+		ret = os_notify_user_space(hw,
+						   port->domain_id.phys_id,
+						   alert_id,
+						   (1 << 8) | i);
+		if (ret)
+			DLB2_HW_ERR(hw,
+				    "[%s()] Internal error: failed to notify\n",
+				    __func__);
+	}
+
+	/* Clear watchdog timeout flag(s) (W1CLR) */
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_DIR_WDTO_0(hw->ver), dwdto_0);
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_DIR_WDTO_1(hw->ver), dwdto_1);
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_LDB_WDTO_0(hw->ver), lwdto_0);
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_LDB_WDTO_1(hw->ver), lwdto_1);
+
+	dlb2_flush_csr(hw);
+
+	/* Re-enable watchdog timeout(s) (W1CLR) */
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_DIR_WD_DISABLE0(hw->ver), dwdto_0);
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_DIR_WD_DISABLE1(hw->ver), dwdto_1);
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_LDB_WD_DISABLE0(hw->ver), lwdto_0);
+	DLB2_CSR_WR(hw, DLB2_CHP_CFG_LDB_WD_DISABLE1(hw->ver), lwdto_1);
+}
+
+static void dlb2_process_ingress_error(struct dlb2_hw *hw,
+				       u32 synd0,
+				       u32 alert_id,
+				       bool vf_error,
+				       unsigned int vf_id)
+{
+	struct dlb2_hw_domain *domain;
+	bool is_ldb;
+	u8 port_id;
+	int ret;
+
+	port_id = DLB2_SYND0(SYNDROME) & 0x7F;
+	if (DLB2_SYND0(SOURCE) == DLB2_ALARM_HW_SOURCE_SYS)
+		is_ldb = DLB2_SYND0(IS_LDB);
+	else
+		is_ldb = (DLB2_SYND0(SYNDROME) & 0x80) != 0;
+
+	/* Get the domain ID and, if it's a VF domain, the virtual port ID */
+	if (is_ldb) {
+		struct dlb2_ldb_port *port;
+
+		port = dlb2_get_ldb_port_from_id(hw, port_id, vf_error, vf_id);
+		if (!port) {
+			DLB2_HW_ERR(hw,
+				    "[%s()]: Internal error: unable to find LDB port\n\tport: %u, vf_error: %u, vf_id: %u\n",
+				    __func__, port_id, vf_error, vf_id);
+			return;
+		}
+
+		domain = &hw->domains[port->domain_id.phys_id];
+	} else {
+		struct dlb2_dir_pq_pair *port;
+
+		port = dlb2_get_dir_pq_from_id(hw, port_id, vf_error, vf_id);
+		if (!port) {
+			DLB2_HW_ERR(hw,
+				    "[%s()]: Internal error: unable to find DIR port\n\tport: %u, vf_error: %u, vf_id: %u\n",
+				    __func__, port_id, vf_error, vf_id);
+			return;
+		}
+
+		domain = &hw->domains[port->domain_id.phys_id];
+	}
+
+	ret = os_notify_user_space(hw,
+					   domain->id.phys_id,
+					   alert_id,
+					   (is_ldb << 8) | port_id);
+	if (ret)
+		DLB2_HW_ERR(hw,
+			    "[%s()] Internal error: failed to notify\n",
+			    __func__);
+}
+
+static u32 dlb2_alert_id(u32 synd0)
+{
+	if (DLB2_SYND0(UNIT) == DLB2_ALARM_HW_UNIT_CHP &&
+	    DLB2_SYND0(AID) == DLB2_ALARM_HW_CHP_AID_ILLEGAL_ENQ)
+		return DLB2_DOMAIN_ALERT_PP_ILLEGAL_ENQ;
+	else if (DLB2_SYND0(UNIT) == DLB2_ALARM_HW_UNIT_CHP &&
+		 DLB2_SYND0(AID) == DLB2_ALARM_HW_CHP_AID_EXCESS_TOKEN_POPS)
+		return DLB2_DOMAIN_ALERT_PP_EXCESS_TOKEN_POPS;
+	else if (DLB2_SYND0(SOURCE) == DLB2_ALARM_HW_SOURCE_SYS &&
+		 DLB2_SYND0(AID) == DLB2_ALARM_SYS_AID_ILLEGAL_HCW)
+		return DLB2_DOMAIN_ALERT_ILLEGAL_HCW;
+	else if (DLB2_SYND0(SOURCE) == DLB2_ALARM_HW_SOURCE_SYS &&
+		 DLB2_SYND0(AID) == DLB2_ALARM_SYS_AID_ILLEGAL_QID)
+		return DLB2_DOMAIN_ALERT_ILLEGAL_QID;
+	else if (DLB2_SYND0(SOURCE) == DLB2_ALARM_HW_SOURCE_SYS &&
+		 DLB2_SYND0(AID) == DLB2_ALARM_SYS_AID_DISABLED_QID)
+		return DLB2_DOMAIN_ALERT_DISABLED_QID;
+	else
+		return NUM_DLB2_DOMAIN_ALERTS;
+}
+
+/**
+ * dlb2_process_ingress_error_interrupt() - process ingress error interrupts
+ * @hw: dlb2_hw handle for a particular device.
+ *
+ * This function reads the alarm syndrome, logs it, notifies user-space, and
+ * acks the interrupt. This function should be called from the alarm interrupt
+ * handler when interrupt vector DLB2_INT_INGRESS_ERROR fires.
+ *
+ * Return:
+ * Returns true if an ingress error interrupt occurred, false otherwise
+ */
+bool dlb2_process_ingress_error_interrupt(struct dlb2_hw *hw)
+{
+	u32 synd0, synd1, synd2;
+	u32 alert_id;
+	bool valid;
+	int i;
+
+	synd0 = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_PF_SYND0);
+
+	valid = DLB2_SYND0(VALID);
+
+	if (valid) {
+		synd1 = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_PF_SYND1);
+		synd2 = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_PF_SYND2);
+
+		alert_id = dlb2_alert_id(synd0);
+
+		dlb2_log_pf_vf_syndrome(hw,
+					"PF Ingress error alarm",
+					synd0, synd1, synd2, alert_id);
+
+		dlb2_clear_syndrome_register(hw, DLB2_SYS_ALARM_PF_SYND0);
+
+		dlb2_process_ingress_error(hw, synd0, alert_id, false, 0);
+	}
+
+	for (i = 0; i < DLB2_MAX_NUM_VDEVS; i++) {
+		synd0 = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_VF_SYND0(i));
+
+		valid |= DLB2_SYND0(VALID);
+
+		if (!DLB2_SYND0(VALID))
+			continue;
+
+		synd1 = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_VF_SYND1(i));
+		synd2 = DLB2_CSR_RD(hw, DLB2_SYS_ALARM_VF_SYND2(i));
+
+		alert_id = dlb2_alert_id(synd0);
+
+		dlb2_log_pf_vf_syndrome(hw,
+					"VF Ingress error alarm",
+					synd0, synd1, synd2, alert_id);
+
+		dlb2_clear_syndrome_register(hw, DLB2_SYS_ALARM_VF_SYND0(i));
+
+		dlb2_process_ingress_error(hw, synd0, alert_id, true, i);
+	}
+
+	return valid;
 }

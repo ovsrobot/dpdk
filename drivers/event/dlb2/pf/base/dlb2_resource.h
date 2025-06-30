@@ -1974,4 +1974,10 @@ int dlb2_hw_set_cq_inflight_ctrl(struct dlb2_hw *hw, u32 domain_id,
 			struct dlb2_cmd_response *resp,
 			bool vdev_request, unsigned int vdev_id);
 
+int dlb2_block_on_cq_interrupt(struct dlb2_hw *dlb2,
+			int port_id,
+			bool is_ldb,
+			volatile void *cq_va,
+			u8 cq_gen,
+			bool arm);
 #endif /* __DLB2_RESOURCE_H */

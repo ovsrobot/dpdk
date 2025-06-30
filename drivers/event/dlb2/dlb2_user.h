@@ -365,6 +365,118 @@ struct dlb2_query_cq_poll_mode_args {
 	struct dlb2_cmd_response response;
 };
 
+
+/*******************************/
+/* 'domain' device file alerts */
+/*******************************/
+
+/*
+ * Scheduling domain device files can be read to receive domain-specific
+ * notifications, for alerts such as hardware errors or device reset.
+ *
+ * Each alert is encoded in a 16B message. The first 8B contains the alert ID,
+ * and the second 8B is optional and contains additional information.
+ * Applications should cast read data to a struct dlb2_domain_alert, and
+ * interpret the struct's alert_id according to dlb2_domain_alert_id. The read
+ * length must be 16B, or the function will return -EINVAL.
+ *
+ * Reads are destructive, and in the case of multiple file descriptors for the
+ * same domain device file, an alert will be read by only one of the file
+ * descriptors.
+ *
+ * The driver stores alerts in a fixed-size alert ring until they are read. If
+ * the alert ring fills completely, subsequent alerts will be dropped. It is
+ * recommended that DLB2 applications dedicate a thread to perform blocking
+ * reads on the device file.
+ */
+enum dlb2_domain_alert_id {
+	/*
+	 * Software issued an illegal enqueue for a port in this domain. An
+	 * illegal enqueue could be:
+	 * - Illegal (excess) completion
+	 * - Illegal fragment
+	 * - Insufficient credits
+	 * aux_alert_data[7:0] contains the port ID, and aux_alert_data[15:8]
+	 * contains a flag indicating whether the port is load-balanced (1) or
+	 * directed (0).
+	 */
+	DLB2_DOMAIN_ALERT_PP_ILLEGAL_ENQ,
+	/*
+	 * Software issued excess CQ token pops for a port in this domain.
+	 * aux_alert_data[7:0] contains the port ID, and aux_alert_data[15:8]
+	 * contains a flag indicating whether the port is load-balanced (1) or
+	 * directed (0).
+	 */
+	DLB2_DOMAIN_ALERT_PP_EXCESS_TOKEN_POPS,
+	/*
+	 * A enqueue contained either an invalid command encoding or a REL,
+	 * REL_T, RLS, FWD, FWD_T, FRAG, or FRAG_T from a directed port.
+	 *
+	 * aux_alert_data[7:0] contains the port ID, and aux_alert_data[15:8]
+	 * contains a flag indicating whether the port is load-balanced (1) or
+	 * directed (0).
+	 */
+	DLB2_DOMAIN_ALERT_ILLEGAL_HCW,
+	/*
+	 * The QID must be valid and less than 128.
+	 *
+	 * aux_alert_data[7:0] contains the port ID, and aux_alert_data[15:8]
+	 * contains a flag indicating whether the port is load-balanced (1) or
+	 * directed (0).
+	 */
+	DLB2_DOMAIN_ALERT_ILLEGAL_QID,
+	/*
+	 * An enqueue went to a disabled QID.
+	 *
+	 * aux_alert_data[7:0] contains the port ID, and aux_alert_data[15:8]
+	 * contains a flag indicating whether the port is load-balanced (1) or
+	 * directed (0).
+	 */
+	DLB2_DOMAIN_ALERT_DISABLED_QID,
+	/*
+	 * The device containing this domain was reset. All applications using
+	 * the device need to exit for the driver to complete the reset
+	 * procedure.
+	 *
+	 * aux_alert_data doesn't contain any information for this alert.
+	 */
+	DLB2_DOMAIN_ALERT_DEVICE_RESET,
+	/*
+	 * User-space has enqueued an alert.
+	 *
+	 * aux_alert_data contains user-provided data.
+	 */
+	DLB2_DOMAIN_ALERT_USER,
+	/*
+	 * The watchdog timer fired for the specified port. This occurs if its
+	 * CQ was not serviced for a large amount of time, likely indicating a
+	 * hung thread.
+	 * aux_alert_data[7:0] contains the port ID, and aux_alert_data[15:8]
+	 * contains a flag indicating whether the port is load-balanced (1) or
+	 * directed (0).
+	 */
+	DLB2_DOMAIN_ALERT_CQ_WATCHDOG_TIMEOUT,
+
+	/* Number of DLB2 domain alerts */
+	NUM_DLB2_DOMAIN_ALERTS
+};
+
+static const char dlb2_domain_alert_strings[][128] = {
+	"DLB2_DOMAIN_ALERT_PP_ILLEGAL_ENQ",
+	"DLB2_DOMAIN_ALERT_PP_EXCESS_TOKEN_POPS",
+	"DLB2_DOMAIN_ALERT_ILLEGAL_HCW",
+	"DLB2_DOMAIN_ALERT_ILLEGAL_QID",
+	"DLB2_DOMAIN_ALERT_DISABLED_QID",
+	"DLB2_DOMAIN_ALERT_DEVICE_RESET",
+	"DLB2_DOMAIN_ALERT_USER",
+	"DLB2_DOMAIN_ALERT_CQ_WATCHDOG_TIMEOUT",
+};
+
+struct dlb2_domain_alert {
+	__u64 alert_id;
+	__u64 aux_alert_data;
+};
+
 /********************************/
 /* 'scheduling domain' commands */
 /********************************/

@@ -318,6 +318,206 @@ dlb2_alloc_coherent_aligned(const struct rte_memzone **mz, uintptr_t *phys,
 }
 
 static int
+dlb2_pf_enable_ldb_cq_interrupts(struct dlb2_hw *hw,
+				 int id,
+				 u16 thresh)
+{
+	int mode = DLB2_CQ_ISR_MODE_MSIX, vec = 0, efd;
+
+	efd = eventfd(0, 0);
+	if (efd < 0) {
+		DLB2_LOG_ERR("[%s()] failed to create eventfd for port %d", __func__, id);
+		return -1;
+	}
+
+	hw->intr.ldb_cq_intr[id].disabled = false;
+	hw->intr.ldb_cq_intr[id].configured = true;
+	hw->intr.ldb_cq_intr[id].efd = efd;
+
+	return  dlb2_configure_ldb_cq_interrupt(hw, id, vec, mode, 0, 0, thresh);
+}
+
+static int
+dlb2_pf_enable_dir_cq_interrupts(struct dlb2_hw *hw,
+				 int id,
+				 u16 thresh)
+{
+	int mode = DLB2_CQ_ISR_MODE_MSIX, vec = 0, efd;
+
+	efd = eventfd(0, 0);
+	if (efd < 0) {
+		DLB2_LOG_ERR("[%s()] failed to create eventfd for port %d", __func__, id);
+		return -1;
+	}
+
+	hw->intr.dir_cq_intr[id].disabled = false;
+	hw->intr.dir_cq_intr[id].configured = true;
+	hw->intr.dir_cq_intr[id].efd = efd;
+
+	return  dlb2_configure_dir_cq_interrupt(hw, id, vec, mode, 0, 0, thresh);
+}
+
+static void
+dlb2_wake_thread(struct dlb2_cq_intr *intr, enum dlb2_wake_reason reason)
+{
+	intr->reason = reason;
+	eventfd_write(intr->efd, 1);
+}
+
+static void
+dlb2_cq_interrupt_handler(void *intr_param)
+{
+	u32 dir_cq_interrupts[DLB2_MAX_NUM_DIR_PORTS_V2_5 / 32];
+	u32 ldb_cq_interrupts[DLB2_MAX_NUM_LDB_PORTS / 32];
+	struct dlb2_dev *dlb2_dev = intr_param;
+	struct dlb2_hw *hw = &dlb2_dev->hw;
+
+	dlb2_read_compressed_cq_intr_status(hw, ldb_cq_interrupts, dir_cq_interrupts);
+	dlb2_ack_compressed_cq_intr(hw, ldb_cq_interrupts, dir_cq_interrupts);
+
+	for (int i = 0; i < DLB2_MAX_NUM_LDB_PORTS; i++) {
+		u32 mask = 1 << (i % 32);
+		int idx = i / 32;
+
+		if (!(ldb_cq_interrupts[idx] & mask))
+			continue;
+
+		dlb2_wake_thread(&hw->intr.ldb_cq_intr[i], WAKE_CQ_INTR);
+	}
+
+	for (int i = 0; i < DLB2_MAX_NUM_DIR_PORTS(hw->ver); i++) {
+		u32 mask = 1 << (i % 32);
+		int idx = i / 32;
+
+		if (!(dir_cq_interrupts[idx] & mask))
+			continue;
+
+		dlb2_wake_thread(&hw->intr.dir_cq_intr[i], WAKE_CQ_INTR);
+	}
+}
+
+static void
+dlb2_detect_ingress_err_overload(struct dlb2_hw *dlb2)
+{
+	struct timespec ts;
+	u64 delta_us;
+
+	if (dlb2->ingress_err.count == 0)
+		clock_gettime(CLOCK_REALTIME, &dlb2->ingress_err.ts);
+
+	dlb2->ingress_err.count++;
+
+	/* Don't check for overload until OVERLOAD_THRESH ISRs have run */
+	if (dlb2->ingress_err.count < DLB2_ISR_OVERLOAD_THRESH)
+		return;
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+	delta_us = (ts.tv_sec - dlb2->ingress_err.ts.tv_sec) * 1000000LL +
+		   (ts.tv_nsec - dlb2->ingress_err.ts.tv_nsec) / 1000;
+
+	/* Reset stats for next measurement period */
+	dlb2->ingress_err.count = 0;
+	clock_gettime(CLOCK_REALTIME, &dlb2->ingress_err.ts);
+
+	/* Check for overload during this measurement period */
+	if (delta_us > DLB2_ISR_OVERLOAD_PERIOD_S * 1000000)
+		return;
+
+	/*
+	 * Alarm interrupt overload: disable software-generated alarms,
+	 * so only hardware problems (e.g. ECC errors) interrupt the PF.
+	 */
+	dlb2_disable_ingress_error_alarms(dlb2);
+
+	dlb2->ingress_err.enabled = false;
+
+	DLB2_HW_DBG(dlb2, "[%s()] Overloaded detected: disabling ingress error interrupts",
+		    __func__);
+}
+
+static void
+dlb2_service_intr_handler(void *intr_param)
+{
+	struct dlb2_dev *dlb2_dev = intr_param;
+	u32 synd;
+
+	rte_spinlock_lock(&dlb2_dev->resource_mutex);
+
+	synd = DLB2_CSR_RD(&dlb2_dev->hw, DLB2_SYS_ALARM_HW_SYND);
+
+	/*
+	 * Clear the MSI-X ack bit before processing the watchdog timer
+	 * interrupts. This order is necessary so that if an interrupt event
+	 * arrives after reading the corresponding bit vector, the event won't
+	 * be lost.
+	 */
+	dlb2_ack_msix_interrupt(&dlb2_dev->hw, DLB2_INT_NON_CQ);
+
+	if (DLB2_SYND(ALARM) & DLB2_SYND(VALID))
+		dlb2_process_alarm_interrupt(&dlb2_dev->hw);
+
+	if (dlb2_process_ingress_error_interrupt(&dlb2_dev->hw))
+		dlb2_detect_ingress_err_overload(&dlb2_dev->hw);
+
+	if (DLB2_SYND(CWD) & DLB2_SYND(VALID))
+		dlb2_process_wdt_interrupt(&dlb2_dev->hw);
+
+	rte_spinlock_unlock(&dlb2_dev->resource_mutex);
+}
+
+static int
+dlb2_intr_setup(struct rte_eventdev *eventdev)
+{
+	struct rte_intr_handle *dlb2_intr = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
+	struct rte_pci_device *pci_dev = RTE_DEV_TO_PCI(eventdev->dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	struct dlb2_eventdev *dlb2 = dlb2_pmd_priv(eventdev);
+	struct dlb2_dev *dlb2_dev = dlb2->qm_instance.pf_dev;
+	struct dlb2_hw *hw = &dlb2_dev->hw;
+	uint32_t intr_vector = 1;
+
+	/* Setup eventfd for VFIO-MSIX interrupts */
+	if (rte_intr_cap_multiple(intr_handle) && rte_intr_efd_enable(intr_handle, intr_vector))
+		return -1;
+
+	rte_intr_enable(intr_handle);
+
+	/* Set the dlb2 interrupt type and fd to eventfd of the VFIO-MSIX and register
+	 * the interrupt handler
+	 */
+	rte_intr_type_set(dlb2_intr, RTE_INTR_HANDLE_VFIO_MSIX);
+	rte_intr_fd_set(dlb2_intr, rte_intr_efds_index_get(intr_handle, 0));
+	rte_intr_callback_register(dlb2_intr, dlb2_cq_interrupt_handler, dlb2_dev);
+
+	/* Enable alarms and register interrupt handler*/
+	hw->ingress_err.count = 0;
+	hw->ingress_err.enabled = true;
+	dlb2_enable_ingress_error_alarms(hw);
+	rte_intr_callback_register(intr_handle, dlb2_service_intr_handler, dlb2_dev);
+
+	/* Initilaize the interrupt structures */
+	for (int i = 0; i < DLB2_MAX_NUM_LDB_PORTS; i++) {
+		if (pthread_mutex_init(&hw->intr.ldb_cq_intr[i].mutex, NULL) != 0) {
+			perror("Mutex initialization failed");
+			return EXIT_FAILURE;
+		}
+		hw->intr.ldb_cq_intr[i].configured = false;
+		hw->intr.ldb_cq_intr[i].disabled = true;
+	}
+
+	for (int i = 0; i < DLB2_MAX_NUM_DIR_PORTS(hw->ver); i++) {
+		if (pthread_mutex_init(&hw->intr.dir_cq_intr[i].mutex, NULL) != 0) {
+			perror("Mutex initialization failed");
+			return EXIT_FAILURE;
+		}
+		hw->intr.dir_cq_intr[i].configured = false;
+		hw->intr.dir_cq_intr[i].disabled = true;
+	}
+
+	return 0;
+}
+
+static int
 dlb2_pf_ldb_port_create(struct dlb2_hw_dev *handle,
 			struct dlb2_create_ldb_port_args *cfg,
 			enum dlb2_cq_poll_modes poll_mode)
@@ -368,6 +568,10 @@ dlb2_pf_ldb_port_create(struct dlb2_hw_dev *handle,
 				      cq_base,
 				      &response);
 	cfg->response = response;
+	if (ret)
+		goto create_port_err;
+
+	ret = dlb2_pf_enable_ldb_cq_interrupts(&dlb2_dev->hw, response.id, cfg->cq_depth_threshold);
 	if (ret)
 		goto create_port_err;
 
@@ -453,6 +657,10 @@ dlb2_pf_dir_port_create(struct dlb2_hw_dev *handle,
 
 	cfg->response = response;
 
+	if (ret)
+		goto create_port_err;
+
+	ret = dlb2_pf_enable_dir_cq_interrupts(&dlb2_dev->hw, response.id, cfg->cq_depth_threshold);
 	if (ret)
 		goto create_port_err;
 
@@ -722,6 +930,19 @@ dlb2_pf_set_cos_bandwidth(struct dlb2_hw_dev *handle,
 	return ret;
 }
 
+static int
+dlb2_pf_block_on_cq_interrupt(struct dlb2_hw_dev *handle,
+			      int port_id,
+			      bool is_ldb,
+			      volatile void *cq_va,
+			      u8 cq_gen,
+			      bool arm)
+{
+	struct dlb2_dev *dlb2_dev = (struct dlb2_dev *)handle->pf_dev;
+
+	return dlb2_block_on_cq_interrupt(&dlb2_dev->hw, port_id, is_ldb, cq_va, cq_gen, arm);
+}
+
 static void
 dlb2_pf_iface_fn_ptrs_init(void)
 {
@@ -749,6 +970,7 @@ dlb2_pf_iface_fn_ptrs_init(void)
 	dlb2_iface_enable_cq_weight = dlb2_pf_enable_cq_weight;
 	dlb2_iface_set_cos_bw = dlb2_pf_set_cos_bandwidth;
 	dlb2_iface_set_cq_inflight_ctrl = dlb2_pf_set_cq_inflight_ctrl;
+	dlb2_iface_block_on_cq_interrupt = dlb2_pf_block_on_cq_interrupt;
 }
 
 /* PCI DEV HOOKS */
@@ -819,6 +1041,7 @@ dlb2_eventdev_pci_init(struct rte_eventdev *eventdev)
 		ret = dlb2_primary_eventdev_probe(eventdev,
 						  event_dlb2_pf_name,
 						  &dlb2_args);
+		ret = ret ?: dlb2_intr_setup(eventdev);
 	} else {
 		dlb2 = dlb2_pmd_priv(eventdev);
 		dlb2->version = DLB2_HW_DEVICE_FROM_PCI_ID(pci_dev);

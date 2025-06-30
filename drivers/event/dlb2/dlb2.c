@@ -186,6 +186,22 @@ dlb2_init_queue_depth_thresholds(struct dlb2_eventdev *dlb2,
 }
 
 /* override defaults with value(s) provided on command line */
+static int
+dlb2_init_port_dequeue_wait(struct dlb2_eventdev *dlb2,
+					enum dlb2_port_dequeue_wait_types
+					*port_dequeue_wait_modes)
+{
+	int p;
+
+	for (p = 0; p < DLB2_MAX_NUM_PORTS(dlb2->version); p++) {
+		if (port_dequeue_wait_modes[p] != 0)
+			dlb2->ev_ports[p].qm_port.dequeue_wait =
+				port_dequeue_wait_modes[p];
+	}
+	return 0;
+}
+
+/* override defaults with value(s) provided on command line */
 static void
 dlb2_init_port_cos(struct dlb2_eventdev *dlb2, int *port_cos)
 {
@@ -865,6 +881,111 @@ set_qid_depth_thresh_v2_5(const char *key __rte_unused,
 		qid_thresh->val[i] = thresh; /* indexed by qid */
 
 	return 0;
+}
+
+static int
+set_port_dequeue_wait_ver(const char *key __rte_unused,
+			  const char *value,
+			  void *opaque,
+			  int version)
+{
+	struct dlb2_port_dequeue_wait *dequeue_wait = opaque;
+	int first, last;
+	enum dlb2_port_dequeue_wait_types wait;
+	const char *valp = value;
+	bool port_list[DLB2_MAX_NUM_PORTS_ALL] = {false};
+	int lmax = DLB2_MAX_NUM_PORTS(version);
+	int len;
+	int lc;
+
+	if (value == NULL || opaque == NULL) {
+		DLB2_LOG_ERR("NULL pointer");
+		return -EINVAL;
+	}
+
+	/* command line override may take a combination of the following forms:
+	 * port_dequeue_wait=all:<wait_mode> ... all ports
+	 * port_dequeue_wait=portA-portB:<wait_mode> ... a range of ports
+	 * port_dequeue_wait=portA:<wait_mode> ... just one port
+	 */
+
+	do {
+		do {
+			if (strncmp(valp, "all", 3) == 0) {
+				for (lc = 0; lc < lmax; lc++)
+					port_list[lc] = true;
+				valp += 3;
+			} else if (sscanf(valp, "%d-%d%n",
+					  &first,
+					  &last,
+					  &len) == 2) {
+				if ((first < 0) ||
+				    (last >= lmax) ||
+				    (first > last)) {
+					DLB2_LOG_ERR("Invalid portId");
+					return -EINVAL;
+				}
+				for (lc = first; lc <= last; lc++)
+					port_list[lc] = true;
+				valp += len;
+			} else if (sscanf(valp, "%d%n",
+					  &first,
+					  &len) == 1) {
+				if ((first < 0) ||
+				    (first >= lmax)) {
+					DLB2_LOG_ERR("Invalid portId");
+					return -EINVAL;
+				}
+				port_list[first] = true;
+				valp += len;
+			}
+		} while (strncmp(valp, "+", 1) == 0);
+
+		if (strncmp(valp++, ":", 1) == 0) {
+			if (strncmp(valp, "interrupt", 9) == 0) {
+				wait = DLB2_PORT_DEQUEUE_WAIT_INTERRUPT;
+				len = 9;
+			} else if (strncmp(valp, "polling", 7) == 0) {
+				wait = DLB2_PORT_DEQUEUE_WAIT_POLLING;
+				len = 7;
+			} else if (strncmp(valp, "umwait", 6) == 0) {
+				wait = DLB2_PORT_DEQUEUE_WAIT_UMWAIT;
+				len = 6;
+			} else {
+				DLB2_LOG_ERR("Error parsing port wait mode devarg, invalid mode");
+				return -EINVAL;
+			}
+
+			valp += len;
+
+			for (lc = 0; lc < lmax; lc++)
+				if (port_list[lc]) {
+					dequeue_wait->val[lc] = wait;
+					port_list[lc] = false;
+				}
+		} else {
+			DLB2_LOG_ERR("Error parsing port wait mode devarg. Should be all:val, portId-portId:val, or portId:val");
+			return -EINVAL;
+		}
+	} while (strncmp(valp++, "_", 1) == 0);
+
+	return 0;
+}
+
+static int
+set_port_dequeue_wait(const char *key __rte_unused,
+		      const char *value,
+		      void *opaque)
+{
+	return set_port_dequeue_wait_ver(key, value, opaque, DLB2_HW_V2);
+}
+
+static int
+set_port_dequeue_wait_v2_5(const char *key __rte_unused,
+		      const char *value,
+		      void *opaque)
+{
+	return set_port_dequeue_wait_ver(key, value, opaque, DLB2_HW_V2_5);
 }
 
 static void
@@ -3694,6 +3815,60 @@ dlb2_port_credits_inc(struct dlb2_port *qm_port, int num)
 	}
 }
 
+static inline void
+dlb2_issue_int_arm_hcw(struct dlb2_port *qm_port)
+{
+	struct process_local_port_data *port_data;
+	struct dlb2_enqueue_qe *qe;
+
+	RTE_ASSERT(qm_port->config_state == DLB2_CONFIGURED);
+
+	qe = qm_port->int_arm_qe;
+
+	/* No store fence needed since no pointer is being sent */
+
+	port_data = &dlb2_port[qm_port->id][PORT_TYPE(qm_port)];
+
+	dlb2_pp_write(port_data, qe);
+
+	DLB2_LOG_LINE_DBG("dlb2: issued interrupt_arm QE");
+
+	qm_port->int_armed = true;
+}
+
+static inline int
+dlb2_block_on_cq_interrupt(struct dlb2_hw_dev *handle,
+			   struct dlb2_port *qm_port,
+			   struct dlb2_eventdev_port *ev_port)
+{
+	struct process_local_port_data *port_data;
+	int ret;
+
+	if (!qm_port->int_armed)
+		dlb2_issue_int_arm_hcw(qm_port);
+
+	port_data = &dlb2_port[qm_port->id][PORT_TYPE(qm_port)];
+
+	/* Note: it's safe to access the per-process cq_base address here,
+	 * since the PMD won't block on the CQ until after attempting at least
+	 * one CQ dequeue.
+	 */
+	ret = dlb2_iface_block_on_cq_interrupt(handle,
+					qm_port->id,
+					!ev_port->qm_port.is_directed,
+					&port_data->cq_base[qm_port->cq_idx],
+					qm_port->gen_bit,
+					false);
+
+	if (ret == EPERM)
+		DLB2_LOG_LINE_DBG("dlb2: Not enough interrupts available (for VF)");
+
+	/* If the CQ int ioctl was unsuccessful, the interrupt remains armed */
+	qm_port->int_armed = (ret != 0);
+
+	return ret;
+}
+
 #define CLB_MASK_IDX 0
 #define CLB_VAL_IDX 1
 static int
@@ -3711,8 +3886,10 @@ dlb2_dequeue_wait(struct dlb2_eventdev *dlb2,
 		  uint64_t timeout,
 		  uint64_t start_ticks)
 {
+	struct dlb2_hw_dev *handle = &dlb2->qm_instance;
 	struct process_local_port_data *port_data;
 	uint64_t elapsed_ticks;
+	int ret;
 
 	port_data = &dlb2_port[qm_port->id][PORT_TYPE(qm_port)];
 
@@ -3720,15 +3897,30 @@ dlb2_dequeue_wait(struct dlb2_eventdev *dlb2,
 
 	/* Wait/poll time expired */
 	if (elapsed_ticks >= timeout) {
-		/* Return all credits before blocking if remaining credits in
-		 * system is less than quanta.
-		 */
-		uint32_t sw_inflights = rte_atomic_load_explicit(&dlb2->inflights,
-			rte_memory_order_seq_cst);
-		uint32_t quanta = ev_port->credit_update_quanta;
+		if (dlb2->run_state == DLB2_RUN_STATE_STARTED &&
+			qm_port->dequeue_wait == DLB2_PORT_DEQUEUE_WAIT_INTERRUPT) {
+			/* Return all credits before blocking if remaining credits in
+			 * system is less than quanta.
+			 */
+			uint32_t sw_inflights = rte_atomic_load_explicit(&dlb2->inflights,
+				rte_memory_order_seq_cst);
+			uint32_t quanta = ev_port->credit_update_quanta;
 
-		if (dlb2->new_event_limit - sw_inflights < quanta)
-			dlb2_check_and_return_credits(ev_port, true, 0);
+			if (dlb2->new_event_limit - sw_inflights < quanta)
+				dlb2_check_and_return_credits(ev_port, true, 0);
+
+			/* Block on CQ interrupt. */
+			ret = dlb2_block_on_cq_interrupt(handle, qm_port,
+					ev_port);
+			if (ret != 0) {
+				DLB2_LOG_LINE_DBG("dlb2: wait for interrupt ret=%d", ret);
+				rte_errno = ret;
+				return 1;
+			}
+
+			DLB2_INC_STAT(ev_port->stats.traffic.rx_interrupt_wait, 1);
+			return 0;
+		}
 		return 1;
 	} else if (dlb2->umwait_allowed) {
 		struct rte_power_monitor_cond pmc;
@@ -5054,6 +5246,13 @@ dlb2_primary_eventdev_probe(struct rte_eventdev *dev,
 	dlb2_init_queue_depth_thresholds(dlb2,
 					 dlb2_args->qid_depth_thresholds.val);
 
+	err = dlb2_init_port_dequeue_wait(dlb2,
+				dlb2_args->port_dequeue_wait.val);
+	if (err) {
+		DLB2_LOG_ERR("dlb2: failed to init port_dequeue_wait, err=%d", err);
+		return err;
+	}
+
 	dlb2_init_port_cos(dlb2,
 			   dlb2_args->port_cos.cos_id);
 
@@ -5199,6 +5398,7 @@ dlb2_parse_params(const char *params,
 					     DLB2_NUM_DIR_CREDITS,
 					     DEV_ID_ARG,
 					     DLB2_QID_DEPTH_THRESH_ARG,
+							 DLB2_PORT_DEQUEUE_WAIT_ARG,
 					     DLB2_POLL_INTERVAL_ARG,
 					     DLB2_SW_CREDIT_QUANTA_ARG,
 					     DLB2_HW_CREDIT_QUANTA_ARG,
@@ -5288,6 +5488,26 @@ dlb2_parse_params(const char *params,
 			}
 			if (ret != 0) {
 				DLB2_LOG_ERR("%s: Error parsing qid_depth_thresh parameter",
+					     name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
+
+			if (version == DLB2_HW_V2) {
+				ret = rte_kvargs_process(
+					kvlist,
+					DLB2_PORT_DEQUEUE_WAIT_ARG,
+					set_port_dequeue_wait,
+					&dlb2_args->port_dequeue_wait);
+			} else {
+				ret = rte_kvargs_process(
+					kvlist,
+					DLB2_PORT_DEQUEUE_WAIT_ARG,
+					set_port_dequeue_wait_v2_5,
+					&dlb2_args->port_dequeue_wait);
+			}
+			if (ret != 0) {
+				DLB2_LOG_ERR("%s: Error parsing port_dequeue_wait parameter",
 					     name);
 				rte_kvargs_free(kvlist);
 				return ret;

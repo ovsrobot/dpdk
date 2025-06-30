@@ -60,6 +60,12 @@ extern int (*dlb2_iface_map_qid)(struct dlb2_hw_dev *handle,
 extern int (*dlb2_iface_unmap_qid)(struct dlb2_hw_dev *handle,
 				   struct dlb2_unmap_qid_args *cfg);
 
+extern int (*dlb2_iface_block_on_cq_interrupt)(struct dlb2_hw_dev *handle,
+				int port_id, bool is_ldb,
+				volatile void *cq_va,
+				uint8_t cq_gen,
+				bool arm);
+
 extern int (*dlb2_iface_pending_port_unmaps)(struct dlb2_hw_dev *handle,
 				struct dlb2_pending_port_unmaps_args *args);
 
@@ -80,5 +86,7 @@ extern int (*dlb2_iface_set_cq_inflight_ctrl)(struct dlb2_hw_dev *handle,
 
 extern int (*dlb2_iface_set_cos_bw)(struct dlb2_hw_dev *handle,
 				    struct dlb2_set_cos_bw_args *args);
+
+extern int (*dlb2_iface_port_ctrl)(struct dlb2_port *qm_port, bool enable);
 
 #endif /* _DLB2_IFACE_H_ */

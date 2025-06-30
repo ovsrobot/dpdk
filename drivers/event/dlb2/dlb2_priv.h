@@ -41,6 +41,7 @@
 #define DLB2_NUM_DIR_CREDITS "num_dir_credits"
 #define DEV_ID_ARG "dev_id"
 #define DLB2_QID_DEPTH_THRESH_ARG "qid_depth_thresh"
+#define DLB2_PORT_DEQUEUE_WAIT_ARG "port_dequeue_wait"
 #define DLB2_POLL_INTERVAL_ARG "poll_interval"
 #define DLB2_SW_CREDIT_QUANTA_ARG "sw_credit_quanta"
 #define DLB2_HW_CREDIT_QUANTA_ARG "hw_credit_quanta"
@@ -95,6 +96,14 @@
 #define DLB2_MAX_LDB_SN_ALLOC 1024
 #define DLB2_MAX_QUEUE_DEPTH_THRESHOLD 8191
 #define DLB2_MAX_NUM_LDB_PORTS_PER_COS (DLB2_MAX_NUM_LDB_PORTS/DLB2_COS_NUM_VALS)
+#define DLB2_COREMASK_LEN 36
+
+enum dlb2_port_dequeue_wait_types {
+	DLB2_PORT_DEQUEUE_WAIT_POLLING,
+	DLB2_PORT_DEQUEUE_WAIT_INTERRUPT,
+	DLB2_PORT_DEQUEUE_WAIT_UMWAIT,
+	DLB2_NUM_PORT_DEQUEUE_WAIT_TYPES /* Must be last */
+};
 
 /* 2048 total hist list entries and 64 total ldb ports, which
  * makes for 2048/64 == 32 hist list entries per port. However, CQ
@@ -387,8 +396,10 @@ struct dlb2_port {
 	struct dlb2_cq_pop_qe *consume_qe;
 	struct dlb2_eventdev *dlb2; /* back ptr */
 	struct dlb2_eventdev_port *ev_port; /* back ptr */
+	enum dlb2_port_dequeue_wait_types dequeue_wait;
 	bool use_scalar; /* force usage of scalar code */
 	uint8_t reorder_id; /* id used for reordering events coming back into the scheduler */
+	uint8_t evdev_id; /* index into process-local multidev mapping array */
 	uint16_t hw_credit_quanta;
 	bool use_avx512;
 	bool enable_inflight_ctrl; /*DLB2.5 enable HW inflight control */
@@ -665,6 +676,12 @@ struct dlb2_qid_depth_thresholds {
 	int val[DLB2_MAX_NUM_QUEUES_ALL];
 };
 
+/* used for collecting and passing around the dev args */
+struct dlb2_port_dequeue_wait {
+	enum dlb2_port_dequeue_wait_types val[DLB2_MAX_NUM_PORTS_ALL];
+};
+
+
 struct dlb2_port_cos {
 	int cos_id[DLB2_MAX_NUM_PORTS_ALL];
 };
@@ -679,6 +696,7 @@ struct dlb2_devargs {
 	int num_dir_credits_override;
 	int dev_id;
 	struct dlb2_qid_depth_thresholds qid_depth_thresholds;
+	struct dlb2_port_dequeue_wait port_dequeue_wait;
 	int poll_interval;
 	int sw_credit_quanta;
 	int hw_credit_quanta;
