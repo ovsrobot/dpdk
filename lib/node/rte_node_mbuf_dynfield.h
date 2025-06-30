@@ -26,12 +26,13 @@ extern "C" {
 
 #ifndef RTE_NODE_MBUF_PERSISTENT_FIELDS_SIZE
 /** Size of persistent mbuf fields */
-#define RTE_NODE_MBUF_PERSISTENT_FIELDS_SIZE          (0)
+#define RTE_NODE_MBUF_PERSISTENT_FIELDS_SIZE      (1)  /* Must be non-zero to avoid a zero-sized
+                                                        * union, which causes C++ compat issues*/
 #endif /* !RTE_NODE_MBUF_PERSISTENT_FIELDS_SIZE */
 
 #ifndef RTE_NODE_MBUF_OVERLOADABLE_FIELDS_SIZE
 /** Size of overloadable mbuf fields */
-#define RTE_NODE_MBUF_OVERLOADABLE_FIELDS_SIZE        (8)
+#define RTE_NODE_MBUF_OVERLOADABLE_FIELDS_SIZE   (8)
 #endif /* !RTE_NODE_MBUF_OVERLOADABLE_FIELDS_SIZE */
 
 /** Size of node mbuf dynamic field */
