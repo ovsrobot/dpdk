@@ -54,6 +54,12 @@ check_traces() {
 
 cross_file=
 
+if [ "${CC%%clang}" != "$CC" ]; then
+    export CXX=clang++
+else
+    export CXX=g++
+fi
+
 if [ "$AARCH64" = "true" ]; then
     if [ "${CC%%clang}" != "$CC" ]; then
         cross_file=config/arm/arm64_armv8_linux_clang_ubuntu
