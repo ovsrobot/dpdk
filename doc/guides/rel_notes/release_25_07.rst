@@ -163,6 +163,7 @@ New Features
 * **Updated DPAA2 ethernet driver.**
 
   * Added DPBP APIs for setting mempool depletion thresholds.
+  * Enabled software taildrop for ordered queues.
 
 Removed Items
 -------------
