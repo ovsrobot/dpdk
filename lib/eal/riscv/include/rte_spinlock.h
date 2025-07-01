@@ -14,6 +14,7 @@
 
 #include <rte_common.h>
 #include "generic/rte_spinlock.h"
+#include "rte_cpuflags.h"
 
 #ifdef __cplusplus
 extern "C" {
