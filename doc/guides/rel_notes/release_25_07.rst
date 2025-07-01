@@ -160,6 +160,9 @@ New Features
   (including out-of-tree nodes).
   This minimizes footprint of node specific mbuf dynamic field.
 
+* **Updated DPAA2 ethernet driver.**
+
+  * Added DPBP APIs for setting mempool depletion thresholds.
 
 Removed Items
 -------------
