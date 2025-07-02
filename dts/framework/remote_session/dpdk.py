@@ -267,8 +267,8 @@ class DPDKBuildEnvironment:
             self.remote_dpdk_build_dir,
         )
 
-    def build_dpdk_app(self, app_name: str, **meson_dpdk_args: str | bool) -> PurePath:
-        """Build one or all DPDK apps.
+    def build_dpdk_example_app(self, app_name: str, **meson_dpdk_args: str | bool) -> PurePath:
+        """Build one or all DPDK example apps.
 
         Requires DPDK to be already built on the SUT node.
 
@@ -297,6 +297,10 @@ class DPDKBuildEnvironment:
         return self._session.join_remote_path(
             self.remote_dpdk_build_dir, "examples", f"dpdk-{app_name}"
         )
+
+    def get_app(self, app_name: str) -> PurePath:
+        """Retrieve path for a DPDK app."""
+        return self._session.join_remote_path(self.remote_dpdk_build_dir, "app", f"dpdk-{app_name}")
 
     @cached_property
     def remote_dpdk_tree_path(self) -> PurePath:
