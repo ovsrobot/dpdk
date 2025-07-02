@@ -177,7 +177,11 @@ class InteractiveShell(ABC):
         get_ctx().shell_pool.register_shell(self)
 
     def send_command(
-        self, command: str, prompt: str | None = None, skip_first_line: bool = False
+        self,
+        command: str,
+        prompt: str | None = None,
+        skip_first_line: bool = False,
+        added_timeout: int = 0,
     ) -> str:
         """Send `command` and get all output before the expected ending string.
 
@@ -195,6 +199,7 @@ class InteractiveShell(ABC):
             prompt: After sending the command, `send_command` will be expecting this string.
                 If :data:`None`, will use the class's default prompt.
             skip_first_line: Skip the first line when capturing the output.
+            added_timeout: additional duration for a given command, if needed.
 
         Returns:
             All output in the buffer before expected string.
@@ -213,6 +218,7 @@ class InteractiveShell(ABC):
         self._logger.info(f"Sending: '{command}'")
         if prompt is None:
             prompt = self._default_prompt
+        self._ssh_channel.settimeout(self._timeout + added_timeout)
         out: str = ""
         try:
             self._stdin.write(f"{command}{self._command_extra_chars}\n")
@@ -236,6 +242,7 @@ class InteractiveShell(ABC):
                 self._node.main_session.interactive_session.hostname
             ) from e
         finally:
+            self._ssh_channel.settimeout(self._timeout)
             self._logger.debug(f"Got output: {out}")
         return out
 
