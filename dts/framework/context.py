@@ -16,7 +16,7 @@ from framework.testbed_model.topology import Topology
 
 if TYPE_CHECKING:
     from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
-    from framework.testbed_model.traffic_generator.traffic_generator import TrafficGenerator
+    from framework.testbed_model.traffic_generator import TrafficGenerator
 
 P = ParamSpec("P")
 
