@@ -123,6 +123,28 @@ The instruction set will be set automatically by default according to these rule
 
 To override what instruction set will be used, set the ``cpu_instruction_set``
 parameter to the instruction set of your choice (such as ``corei7``, ``power8``, etc.).
+.. note::
+
+   **Disabling AVX-512 instructions when targeting older Intel CPUs**
+
+   On some Intel CPUs (e.g., Xeon E5 v3 "Haswell"), building with
+   ``cpu_instruction_set=native`` or not specifying it at all can cause
+   errors like::
+
+       inlining failed in call to always_inline '_mm512_maskz_broadcast_i32x4': target specific option mismatch
+
+   or::
+
+       AVX512F vector return without AVX512F enabled
+
+   This happens because the compiler tries to use AVX-512 instructions that the CPU does not support.
+
+   To avoid these errors, you can disable AVX-512 explicitly and set the architecture to Haswell by configuring with:
+
+   .. code-block:: console
+
+      meson setup build -Dc_args="-march=haswell -mno-avx512f" -Dcpu_instruction_set=haswell
+
 
 ``cpu_instruction_set`` is not used in Arm builds, as setting the instruction set
 without other parameters leads to inferior builds. The way to tailor Arm builds
