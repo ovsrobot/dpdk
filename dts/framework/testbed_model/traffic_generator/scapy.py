@@ -26,7 +26,7 @@ from scapy.layers.l2 import Ether
 from scapy.packet import Packet
 
 from framework.config.node import OS
-from framework.config.test_run import ScapyTrafficGeneratorConfig
+from framework.config.test_run import TrafficGeneratorConfig
 from framework.exception import InteractiveSSHSessionDeadError, InternalError
 from framework.remote_session.python_shell import PythonShell
 from framework.testbed_model.node import Node
@@ -285,7 +285,7 @@ class ScapyTrafficGenerator(CapturingTrafficGenerator):
     first.
     """
 
-    _config: ScapyTrafficGeneratorConfig
+    _config: TrafficGeneratorConfig
     _shell: PythonShell
     _sniffer: ScapyAsyncSniffer
 
@@ -296,7 +296,7 @@ class ScapyTrafficGenerator(CapturingTrafficGenerator):
     #: Padding to add to the start of a line for python syntax compliance.
     _python_indentation: ClassVar[str] = " " * 4
 
-    def __init__(self, tg_node: Node, config: ScapyTrafficGeneratorConfig, **kwargs):
+    def __init__(self, tg_node: Node, config: TrafficGeneratorConfig, **kwargs):
         """Extend the constructor with Scapy TG specifics.
 
         Initializes both the traffic generator and the interactive shell used to handle Scapy
@@ -331,6 +331,10 @@ class ScapyTrafficGenerator(CapturingTrafficGenerator):
         self._shell.start_application()
         self._shell.send_command("from scapy.all import *")
         self._shell.send_command("from scapy.contrib.lldp import *")
+
+    def teardown(self):
+        """Overrides :meth:`.traffic_generator.TrafficGenerator.teardown`."""
+        pass
 
     def close(self):
         """Overrides :meth:`.traffic_generator.TrafficGenerator.close`.
