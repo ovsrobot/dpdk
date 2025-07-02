@@ -103,6 +103,11 @@ New Features
 
   * Added support for AMD Solarflare X45xx adapters.
 
+* **Updated UADK crypto & compress driver.**
+
+  * Update to init2 interface which requires v2.9 of the UADK library.
+  * Update to asynchronous mode for better performance.
+
 * **Updated virtio driver.**
 
   * Added support for Rx and Tx burst mode query.
