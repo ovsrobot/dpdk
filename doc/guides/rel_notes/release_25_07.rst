@@ -160,6 +160,9 @@ New Features
   (including out-of-tree nodes).
   This minimizes footprint of node specific mbuf dynamic field.
 
+* **Updated DPAA2 ethernet driver.**
+
+  * Enabled software taildrop for ordered queues.
 
 Removed Items
 -------------
