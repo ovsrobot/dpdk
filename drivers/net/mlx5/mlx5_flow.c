@@ -7993,7 +7993,17 @@ mlx5_flow_create(struct rte_eth_dev *dev,
 	struct rte_flow_attr *new_attr = (void *)(uintptr_t)attr;
 	uint32_t prio = attr->priority;
 	uintptr_t flow_idx;
-
+	if (attr && attr->transfer) {
+		const struct rte_flow_action *act;
+		for (act = actions; act && act->type != RTE_FLOW_ACTION_TYPE_END; ++act) {
+			if (act->type == RTE_FLOW_ACTION_TYPE_METER) {
+				rte_flow_error_set(error, ENOTSUP,
+					RTE_FLOW_ERROR_TYPE_ACTION, act,
+					"Meter action is not supported in transfer flows");
+				return NULL;
+			}
+		}
+	}
 	/*
 	 * If the device is not started yet, it is not allowed to created a
 	 * flow from application. PMD default flows and traffic control flows
