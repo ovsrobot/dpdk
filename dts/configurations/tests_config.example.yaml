@@ -2,3 +2,15 @@
 
 hello_world:
   msg: A custom hello world to you!
+single_core_forward_perf:
+  test_parameters:
+    - frame_size: 64
+      num_descriptors: 128
+      expected_mpps: 30.1234
+    - frame_size: 64
+      num_descriptors: 128
+      expected_mpps: 30.2341
+    - frame_size: 512
+      num_descriptors: 128
+      expected_mpps: 19.453376
+  delta_tolerance: 0.05

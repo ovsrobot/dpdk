@@ -38,6 +38,10 @@ from framework.testbed_model.traffic_generator.capturing_traffic_generator impor
     CapturingTrafficGenerator,
     PacketFilteringConfig,
 )
+from framework.testbed_model.traffic_generator.performance_traffic_generator import (
+    PerformanceTrafficGenerator,
+    PerformanceTrafficStats,
+)
 
 from .exception import ConfigurationError, InternalError, TestCaseVerifyError
 from .logger import DTSLogger, get_dts_logger
@@ -254,17 +258,38 @@ class TestSuite(TestProtocol):
             A list of received packets.
         """
         assert isinstance(
-            self._ctx.func_tg, CapturingTrafficGenerator
+            self._ctx.tg, CapturingTrafficGenerator
         ), "Cannot capture with a non-capturing traffic generator"
         # TODO: implement @requires for types of traffic generator
         packets = self._adjust_addresses(packets)
-        return self._ctx.func_tg.send_packets_and_capture(
+        return self._ctx.tg.send_packets_and_capture(
             packets,
             self._ctx.topology.tg_port_egress,
             self._ctx.topology.tg_port_ingress,
             filter_config,
             duration,
         )
+
+    def assess_performance_by_packet(
+        self, packet: Packet, send_mpps: int, duration: int = 60
+    ) -> PerformanceTrafficStats:
+        """Send a given packet for a given duration and assess basic performance statistics.
+
+        Send `packet` and assess NIC performance for a given duration, corresponding to the test
+        suite's given topology.
+
+        Args:
+            packet: The packet to send.
+            send_mpps: The millions packets per second send rate.
+            duration: Performance test duration (in seconds).
+
+        Returns:
+            Performance statistics of the generated test.
+        """
+        assert isinstance(
+            self._ctx.tg, PerformanceTrafficGenerator
+        ), "Cannot run performance tests on non-performance traffic generator."
+        return self._ctx.tg.calculate_traffic_and_stats(packet, send_mpps, duration)
 
     def send_packets(
         self,
@@ -275,8 +300,11 @@ class TestSuite(TestProtocol):
         Args:
             packets: Packets to send.
         """
+        assert isinstance(
+            self._ctx.tg, CapturingTrafficGenerator
+        ), "Cannot run performance tests on non-capturing traffic generator."
         packets = self._adjust_addresses(packets)
-        self._ctx.func_tg.send_packets(packets, self._ctx.topology.tg_port_egress)
+        self._ctx.tg.send_packets(packets, self._ctx.topology.tg_port_egress)
 
     def get_expected_packets(
         self,
