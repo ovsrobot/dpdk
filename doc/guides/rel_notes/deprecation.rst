@@ -80,6 +80,11 @@ Deprecation Notices
   and the header struct ``rte_vxlan_gpe_hdr`` with the macro ``RTE_ETHER_VXLAN_GPE_HLEN``
   will be removed in DPDK 25.11.
 
+* net/intel: drivers that have an SSE vector path alongside other vector paths, namely
+  i40e, iavf and ice, will have their SSE vector paths removed in DPDK 25.11. This change
+  will not result in any feature loss, as the fallback scalar paths which have feature
+  parity with SSE will be used in the cases where the SSE paths would have been used.
+
 * ethdev: The flow API matching pattern structures, ``struct rte_flow_item_*``,
   should start with relevant protocol header structure from lib/net/.
   The individual protocol header fields and the protocol header struct
