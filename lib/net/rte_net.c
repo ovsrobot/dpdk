@@ -348,14 +348,19 @@ uint32_t rte_net_get_ptype(const struct rte_mbuf *m,
 	if (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN)) {
 		const struct rte_vlan_hdr *vh;
 		struct rte_vlan_hdr vh_copy;
+		uint8_t vlan_num = 1;
 
 		pkt_type = RTE_PTYPE_L2_ETHER_VLAN;
-		vh = rte_pktmbuf_read(m, off, sizeof(*vh), &vh_copy);
-		if (unlikely(vh == NULL))
-			return pkt_type;
-		off += sizeof(*vh);
-		hdr_lens->l2_len += sizeof(*vh);
-		proto = vh->eth_proto;
+		while (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN) &&
+		       vlan_num <= MAX_VLAN_STACKING_TAGS) {
+			vh = rte_pktmbuf_read(m, off, sizeof(*vh), &vh_copy);
+			if (unlikely(vh == NULL))
+				return pkt_type;
+			off += sizeof(*vh);
+			hdr_lens->l2_len += sizeof(*vh);
+			proto = vh->eth_proto;
+			vlan_num++;
+		}
 	} else if (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_QINQ)) {
 		const struct rte_vlan_hdr *vh;
 		struct rte_vlan_hdr vh_copy;
@@ -500,15 +505,20 @@ l3:
 	if (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN)) {
 		const struct rte_vlan_hdr *vh;
 		struct rte_vlan_hdr vh_copy;
+		uint8_t vlan_num = 1;
 
 		pkt_type &= ~RTE_PTYPE_INNER_L2_MASK;
 		pkt_type |= RTE_PTYPE_INNER_L2_ETHER_VLAN;
-		vh = rte_pktmbuf_read(m, off, sizeof(*vh), &vh_copy);
-		if (unlikely(vh == NULL))
-			return pkt_type;
-		off += sizeof(*vh);
-		hdr_lens->inner_l2_len += sizeof(*vh);
-		proto = vh->eth_proto;
+		while (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN) &&
+		       vlan_num <= MAX_VLAN_STACKING_TAGS) {
+			vh = rte_pktmbuf_read(m, off, sizeof(*vh), &vh_copy);
+			if (unlikely(vh == NULL))
+				return pkt_type;
+			off += sizeof(*vh);
+			hdr_lens->inner_l2_len += sizeof(*vh);
+			proto = vh->eth_proto;
+			vlan_num++;
+		}
 	} else if (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_QINQ)) {
 		const struct rte_vlan_hdr *vh;
 		struct rte_vlan_hdr vh_copy;

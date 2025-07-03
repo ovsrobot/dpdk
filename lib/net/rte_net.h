@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+#define MAX_VLAN_STACKING_TAGS	2
+
 /**
  * Structure containing header lengths associated to a packet, filled
  * by rte_net_get_ptype().
