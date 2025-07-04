@@ -95,7 +95,7 @@ practical or possible testpmd supports alternative methods for executing command
 
 
 * At run-time additional commands can be loaded in bulk by invoking the ``load FILENAME``
-  command.
+  or ``load_echo FILENAME`` command.
 
 .. code-block:: console
 
