@@ -145,6 +145,13 @@ extern "C" {
  */
 #define RTE_PTYPE_L2_ETHER_MPLS             0x0000000a
 /**
+ * Ethernet packet type for Slow Protocols.
+ *
+ * Packet format:
+ * <'ether type'=[0x8809]>
+ */
+#define RTE_PTYPE_L2_ETHER_SLOW             0x0000000b
+/**
  * Mask of layer 2 packet types.
  * It is used for outer packet for tunneling cases.
  */

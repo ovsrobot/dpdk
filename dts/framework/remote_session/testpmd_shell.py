@@ -1046,6 +1046,8 @@ class RtePTypes(Flag):
     L2_ETHER_FCOE = auto()
     #: MPLS packet type.
     L2_ETHER_MPLS = auto()
+    #: Ethernet packet type for Slow Protocols.
+    L2_ETHER_SLOW = auto()
     #: No L2 packet information.
     L2_UNKNOWN = auto()
 

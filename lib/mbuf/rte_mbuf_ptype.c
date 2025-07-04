@@ -23,6 +23,7 @@ const char *rte_get_ptype_l2_name(uint32_t ptype)
 	case RTE_PTYPE_L2_ETHER_PPPOE: return "L2_ETHER_PPPOE";
 	case RTE_PTYPE_L2_ETHER_FCOE: return "L2_ETHER_FCOE";
 	case RTE_PTYPE_L2_ETHER_MPLS: return "L2_ETHER_MPLS";
+	case RTE_PTYPE_L2_ETHER_SLOW: return "L2_ETHER_SLOW";
 	default: return "L2_UNKNOWN";
 	}
 }
