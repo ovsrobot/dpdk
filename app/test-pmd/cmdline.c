@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <libgen.h>
 #include <string.h>
 #include <unistd.h>
 #include <inttypes.h>
@@ -14195,6 +14196,7 @@ cmdline_read_from_file(const char *filename, bool echo)
 	struct cmdline *cl;
 	int fd = -1;
 	int ret = 0;
+	char *prompt = NULL;
 
 	/* cmdline_file_new does not produce any output
 	 * so when echoing is requested we open filename directly
@@ -14203,6 +14205,18 @@ cmdline_read_from_file(const char *filename, bool echo)
 	if (!echo) {
 		cl = cmdline_file_new(main_ctx, "testpmd> ", filename);
 	} else {
+		char *filename_copy = strdup(filename);
+
+		if (filename_copy == NULL) {
+			fprintf(stderr, "Failed to allocate memory for filename\n");
+			return -1;
+		}
+		if (asprintf(&prompt, "[%s] ", basename(filename_copy)) < 0) {
+			fprintf(stderr, "Failed to allocate prompt string\n");
+			return -1;
+		}
+		free(filename_copy);
+
 		fd = open(filename, O_RDONLY);
 		if (fd < 0) {
 			fprintf(stderr, "Failed to open file %s: %s\n",
@@ -14210,7 +14224,7 @@ cmdline_read_from_file(const char *filename, bool echo)
 			return -1;
 		}
 
-		cl = cmdline_new(main_ctx, "testpmd> ", fd, STDOUT_FILENO);
+		cl = cmdline_new(main_ctx, prompt, fd, STDOUT_FILENO);
 	}
 	if (cl == NULL) {
 		fprintf(stderr,
@@ -14221,15 +14235,22 @@ cmdline_read_from_file(const char *filename, bool echo)
 	}
 
 	cmdline_interact(cl);
-	cmdline_quit(cl);
+	/* when done, if we have echo, we only need to print end of file,
+	 * but if no echo, we need to use printf and include the filename.
+	 */
+	if (echo)
+		cmdline_printf(cl, "<End-Of-File>\n");
+	else
+		printf("Finished reading CLI commands from %s\n", filename);
 
+	cmdline_quit(cl);
 	cmdline_free(cl);
 
-	printf("Read CLI commands from %s\n", filename);
 
 end:
 	if (fd >= 0)
 		close(fd);
+	free(prompt);
 	return ret;
 }
 
