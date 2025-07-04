@@ -36,6 +36,9 @@
 extern uint8_t cl_quit;
 extern volatile uint8_t f_quit;
 
+/* Max number of cmdline files we can take on testpmd cmdline */
+#define MAX_CMDLINE_FILENAMES 16
+
 /*
  * It is used to allocate the memory for hash key.
  * The hash key size is NIC dependent.
@@ -509,7 +512,8 @@ extern int testpmd_logtype; /**< Log type for testpmd logs */
 extern uint8_t  interactive;
 extern uint8_t  auto_start;
 extern uint8_t  tx_first;
-extern char cmdline_filename[PATH_MAX]; /**< offline commands file */
+extern char cmdline_filenames[MAX_CMDLINE_FILENAMES][PATH_MAX]; /**< offline commands files */
+extern unsigned int cmdline_file_count; /**< number of cmdline files */
 extern bool echo_cmdline_file;  /** unset if cmdline-file-noecho is used */
 extern uint8_t  numa_support; /**< set by "--numa" parameter */
 extern uint16_t port_topology; /**< set by "--port-topology" parameter */
@@ -928,7 +932,7 @@ unsigned int parse_hdrs_list(const char *str, const char *item_name,
 			unsigned int *parsed_items);
 void launch_args_parse(int argc, char** argv);
 void cmd_reconfig_device_queue(portid_t id, uint8_t dev, uint8_t queue);
-void cmdline_read_from_file(const char *filename);
+int cmdline_read_from_file(const char *filename);
 int init_cmdline(void);
 void prompt(void);
 void prompt_exit(void);

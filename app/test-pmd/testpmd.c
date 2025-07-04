@@ -105,7 +105,8 @@ int testpmd_logtype; /**< Log type for testpmd logs */
 uint8_t interactive = 0;
 uint8_t auto_start = 0;
 uint8_t tx_first;
-char cmdline_filename[PATH_MAX] = {0};
+char cmdline_filenames[MAX_CMDLINE_FILENAMES][PATH_MAX] = {0};
+unsigned int cmdline_file_count;
 bool echo_cmdline_file;
 
 /*
@@ -4508,8 +4509,13 @@ main(int argc, char** argv)
 		rte_exit(EXIT_FAILURE,
 			"Could not initialise cmdline context.\n");
 
-	if (strlen(cmdline_filename) != 0)
-		cmdline_read_from_file(cmdline_filename);
+	for (unsigned int i = 0; i < cmdline_file_count; i++) {
+		if (cmdline_read_from_file(cmdline_filenames[i]) != 0) {
+			fprintf(stderr, "Failed to process cmdline file: %s\n",
+					cmdline_filenames[i]);
+			break;
+		}
+	}
 
 	if (interactive == 1) {
 		if (auto_start) {

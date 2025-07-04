@@ -11646,7 +11646,9 @@ cmd_load_from_file_parsed(
 {
 	struct cmd_cmdfile_result *res = parsed_result;
 
-	cmdline_read_from_file(res->filename);
+	if (cmdline_read_from_file(res->filename) != 0) {
+		fprintf(stderr, "Failed to load commands from file: %s\n", res->filename);
+	}
 }
 
 static cmdline_parse_inst_t cmd_load_from_file = {
@@ -14151,11 +14153,12 @@ init_cmdline(void)
 }
 
 /* read cmdline commands from file */
-void
+int
 cmdline_read_from_file(const char *filename)
 {
 	struct cmdline *cl;
 	int fd = -1;
+	int ret = 0;
 
 	/* cmdline_file_new does not produce any output
 	 * so when echoing is requested we open filename directly
@@ -14168,7 +14171,7 @@ cmdline_read_from_file(const char *filename)
 		if (fd < 0) {
 			fprintf(stderr, "Failed to open file %s: %s\n",
 				filename, strerror(errno));
-			return;
+			return -1;
 		}
 
 		cl = cmdline_new(main_ctx, "testpmd> ", fd, STDOUT_FILENO);
@@ -14177,6 +14180,7 @@ cmdline_read_from_file(const char *filename)
 		fprintf(stderr,
 			"Failed to create file based cmdline context: %s\n",
 			filename);
+		ret = -1;
 		goto end;
 	}
 
@@ -14190,6 +14194,7 @@ cmdline_read_from_file(const char *filename)
 end:
 	if (fd >= 0)
 		close(fd);
+	return ret;
 }
 
 void

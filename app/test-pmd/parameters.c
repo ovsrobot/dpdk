@@ -963,10 +963,17 @@ launch_args_parse(int argc, char** argv)
 			echo_cmdline_file = true;
 			/* fall-through */
 		case TESTPMD_OPT_CMDLINE_FILE_NOECHO_NUM:
-			printf("CLI commands to be read from %s\n",
-				optarg);
-			strlcpy(cmdline_filename, optarg,
-				sizeof(cmdline_filename));
+			if (cmdline_file_count >= RTE_DIM(cmdline_filenames)) {
+				fprintf(stderr, "Too many cmdline files specified (maximum %zu)\n",
+					RTE_DIM(cmdline_filenames));
+				exit(EXIT_FAILURE);
+			}
+			printf("CLI commands to be read from %s\n", optarg);
+			strlcpy(cmdline_filenames[cmdline_file_count], optarg,
+				sizeof(cmdline_filenames[cmdline_file_count]));
+			cmdline_file_count++;
+			/* reset flag for next time */
+			echo_cmdline_file = false;
 			break;
 		case TESTPMD_OPT_TX_FIRST_NUM:
 			printf("Ports to start sending a burst of "
