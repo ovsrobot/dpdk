@@ -6102,12 +6102,14 @@ int dlb2_hw_pending_port_unmaps(struct dlb2_hw *hw,
 	return 0;
 }
 
-static int dlb2_verify_start_domain_args(struct dlb2_hw *hw,
-					 u32 domain_id,
-					 struct dlb2_cmd_response *resp,
-					 bool vdev_req,
-					 unsigned int vdev_id,
-					 struct dlb2_hw_domain **out_domain)
+
+static int dlb2_verify_start_stop_domain_args(struct dlb2_hw *hw,
+					      u32 domain_id,
+					      bool start_domain,
+					      struct dlb2_cmd_response *resp,
+					      bool vdev_req,
+					      unsigned int vdev_id,
+					      struct dlb2_hw_domain **out_domain)
 {
 	struct dlb2_hw_domain *domain;
 
@@ -6123,8 +6125,8 @@ static int dlb2_verify_start_domain_args(struct dlb2_hw *hw,
 		return -EINVAL;
 	}
 
-	if (domain->started) {
-		resp->status = DLB2_ST_DOMAIN_STARTED;
+	if (!(domain->started ^ start_domain)) {
+		resp->status = start_domain ? DLB2_ST_DOMAIN_STARTED : DLB2_ST_DOMAIN_NOT_STARTED;
 		return -EINVAL;
 	}
 
@@ -6142,6 +6144,77 @@ static void dlb2_log_start_domain(struct dlb2_hw *hw,
 	if (vdev_req)
 		DLB2_HW_DBG(hw, "(Request from vdev %d)\n", vdev_id);
 	DLB2_HW_DBG(hw, "\tDomain ID: %d\n", domain_id);
+}
+
+static int
+dlb2_hw_start_stop_domain(struct dlb2_hw *hw,
+		     u32 domain_id,
+		     bool start_domain,
+		     struct dlb2_cmd_response *resp,
+		     bool vdev_req,
+		     unsigned int vdev_id)
+{
+	struct dlb2_list_entry *iter __rte_unused;
+	struct dlb2_dir_pq_pair *dir_queue;
+	struct dlb2_ldb_queue *ldb_queue;
+	struct dlb2_hw_domain *domain;
+	int ret;
+
+	dlb2_log_start_domain(hw, domain_id, vdev_req, vdev_id);
+
+	ret = dlb2_verify_start_stop_domain_args(hw,
+						 domain_id,
+						 start_domain,
+						 resp,
+						 vdev_req,
+						 vdev_id,
+						 &domain);
+	if (ret)
+		return ret;
+
+	/*
+	 * Enable load-balanced and directed queue write permissions for the
+	 * queues this domain owns. Without this, the DLB2 will drop all
+	 * incoming traffic to those queues.
+	 */
+	DLB2_DOM_LIST_FOR(domain->used_ldb_queues, ldb_queue, iter) {
+		u32 vasqid_v = 0;
+		unsigned int offs;
+
+		if (start_domain)
+			DLB2_BIT_SET(vasqid_v, DLB2_SYS_LDB_VASQID_V_VASQID_V);
+
+		offs = domain->id.phys_id * DLB2_MAX_NUM_LDB_QUEUES +
+			ldb_queue->id.phys_id;
+
+		DLB2_CSR_WR(hw, DLB2_SYS_LDB_VASQID_V(offs), vasqid_v);
+	}
+
+	DLB2_DOM_LIST_FOR(domain->used_dir_pq_pairs, dir_queue, iter) {
+		u32 vasqid_v = 0;
+		unsigned int offs;
+
+		if (start_domain)
+			DLB2_BIT_SET(vasqid_v, DLB2_SYS_DIR_VASQID_V_VASQID_V);
+
+		offs = domain->id.phys_id * DLB2_MAX_NUM_DIR_PORTS(hw->ver) +
+			dir_queue->id.phys_id;
+
+		DLB2_CSR_WR(hw, DLB2_SYS_DIR_VASQID_V(offs), vasqid_v);
+	}
+
+	dlb2_flush_csr(hw);
+
+	/* Return any pending tokens before stopping the domain. */
+	if (!start_domain) {
+		dlb2_domain_drain_ldb_cqs(hw, domain, false);
+		dlb2_domain_drain_dir_cqs(hw, domain, false);
+	}
+	domain->started = start_domain;
+
+	resp->status = 0;
+
+	return 0;
 }
 
 /**
@@ -6170,66 +6243,46 @@ static void dlb2_log_start_domain(struct dlb2_hw *hw,
 int
 dlb2_hw_start_domain(struct dlb2_hw *hw,
 		     u32 domain_id,
-		     struct dlb2_start_domain_args *args,
+		     __attribute((unused)) struct dlb2_start_domain_args *args,
 		     struct dlb2_cmd_response *resp,
 		     bool vdev_req,
 		     unsigned int vdev_id)
 {
-	struct dlb2_list_entry *iter;
-	struct dlb2_dir_pq_pair *dir_queue;
-	struct dlb2_ldb_queue *ldb_queue;
-	struct dlb2_hw_domain *domain;
-	int ret;
-	RTE_SET_USED(args);
-	RTE_SET_USED(iter);
+	return dlb2_hw_start_stop_domain(hw, domain_id, true, resp, vdev_req, vdev_id);
+}
 
-	dlb2_log_start_domain(hw, domain_id, vdev_req, vdev_id);
-
-	ret = dlb2_verify_start_domain_args(hw,
-					    domain_id,
-					    resp,
-					    vdev_req,
-					    vdev_id,
-					    &domain);
-	if (ret)
-		return ret;
-
-	/*
-	 * Enable load-balanced and directed queue write permissions for the
-	 * queues this domain owns. Without this, the DLB2 will drop all
-	 * incoming traffic to those queues.
-	 */
-	DLB2_DOM_LIST_FOR(domain->used_ldb_queues, ldb_queue, iter) {
-		u32 vasqid_v = 0;
-		unsigned int offs;
-
-		DLB2_BIT_SET(vasqid_v, DLB2_SYS_LDB_VASQID_V_VASQID_V);
-
-		offs = domain->id.phys_id * DLB2_MAX_NUM_LDB_QUEUES +
-			ldb_queue->id.phys_id;
-
-		DLB2_CSR_WR(hw, DLB2_SYS_LDB_VASQID_V(offs), vasqid_v);
-	}
-
-	DLB2_DOM_LIST_FOR(domain->used_dir_pq_pairs, dir_queue, iter) {
-		u32 vasqid_v = 0;
-		unsigned int offs;
-
-		DLB2_BIT_SET(vasqid_v, DLB2_SYS_DIR_VASQID_V_VASQID_V);
-
-		offs = domain->id.phys_id * DLB2_MAX_NUM_DIR_PORTS(hw->ver) +
-			dir_queue->id.phys_id;
-
-		DLB2_CSR_WR(hw, DLB2_SYS_DIR_VASQID_V(offs), vasqid_v);
-	}
-
-	dlb2_flush_csr(hw);
-
-	domain->started = true;
-
-	resp->status = 0;
-
-	return 0;
+/**
+ * dlb2_hw_stop_domain() - stop a scheduling domain
+ * @hw: dlb2_hw handle for a particular device.
+ * @domain_id: domain ID.
+ * @arg: stop domain arguments.
+ * @resp: response structure.
+ * @vdev_req: indicates whether this request came from a vdev.
+ * @vdev_id: If vdev_req is true, this contains the vdev's ID.
+ *
+ * This function stops a scheduling domain, which allows applications to send
+ * traffic through it. Once a domain is stopped, its resources can no longer be
+ * configured (besides QID remapping and port enable/disable).
+ *
+ * A vdev can be either an SR-IOV virtual function or a Scalable IOV virtual
+ * device.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise. If an error occurs, resp->status is
+ * assigned a detailed error code from enum dlb2_error.
+ *
+ * Errors:
+ * EINVAL - the domain is not configured, or the domain is already stopped.
+ */
+int
+dlb2_hw_stop_domain(struct dlb2_hw *hw,
+		     u32 domain_id,
+		     __attribute((unused)) struct dlb2_stop_domain_args *args,
+		     struct dlb2_cmd_response *resp,
+		     bool vdev_req,
+		     unsigned int vdev_id)
+{
+	return dlb2_hw_start_stop_domain(hw, domain_id, false, resp, vdev_req, vdev_id);
 }
 
 static void dlb2_log_get_dir_queue_depth(struct dlb2_hw *hw,
@@ -6887,6 +6940,444 @@ int dlb2_hw_set_cos_bandwidth(struct dlb2_hw *hw, u32 cos_id, u8 bandwidth)
 	dlb2_log_set_cos_bandwidth(hw, cos_id, bandwidth);
 
 	hw->cos_reservation[cos_id] = bandwidth;
+
+	return 0;
+}
+
+static int
+dlb2_verify_enable_ldb_port_args(struct dlb2_hw *hw,
+				 u32 domain_id,
+				 struct dlb2_enable_ldb_port_args *args,
+				 struct dlb2_cmd_response *resp,
+				 bool vdev_req,
+				 unsigned int vdev_id,
+				 struct dlb2_hw_domain **out_domain,
+				 struct dlb2_ldb_port **out_port)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_ldb_port *port;
+	int id;
+
+	domain = dlb2_get_domain_from_id(hw, domain_id, vdev_req, vdev_id);
+
+	if (!domain) {
+		resp->status = DLB2_ST_INVALID_DOMAIN_ID;
+		return -EINVAL;
+	}
+
+	if (!domain->configured) {
+		resp->status = DLB2_ST_DOMAIN_NOT_CONFIGURED;
+		return -EINVAL;
+	}
+
+	id = args->port_id;
+
+	port = dlb2_get_domain_used_ldb_port(id, vdev_req, domain);
+
+	if (!port || !port->configured) {
+		resp->status = DLB2_ST_INVALID_PORT_ID;
+		return -EINVAL;
+	}
+
+	*out_domain = domain;
+	*out_port = port;
+
+	return 0;
+}
+
+static int
+dlb2_verify_enable_dir_port_args(struct dlb2_hw *hw,
+				 u32 domain_id,
+				 struct dlb2_enable_dir_port_args *args,
+				 struct dlb2_cmd_response *resp,
+				 bool vdev_req,
+				 unsigned int vdev_id,
+				 struct dlb2_hw_domain **out_domain,
+				 struct dlb2_dir_pq_pair **out_port)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_dir_pq_pair *port;
+	int id;
+
+	domain = dlb2_get_domain_from_id(hw, domain_id, vdev_req, vdev_id);
+
+	if (!domain) {
+		resp->status = DLB2_ST_INVALID_DOMAIN_ID;
+		return -EINVAL;
+	}
+
+	if (!domain->configured) {
+		resp->status = DLB2_ST_DOMAIN_NOT_CONFIGURED;
+		return -EINVAL;
+	}
+
+	id = args->port_id;
+
+	port = dlb2_get_domain_used_dir_pq(hw, id, vdev_req, domain);
+
+	if (!port || !port->port_configured) {
+		resp->status = DLB2_ST_INVALID_PORT_ID;
+		return -EINVAL;
+	}
+
+	*out_domain = domain;
+	*out_port = port;
+
+	return 0;
+}
+
+static int
+dlb2_verify_disable_ldb_port_args(struct dlb2_hw *hw,
+				  u32 domain_id,
+				  struct dlb2_disable_ldb_port_args *args,
+				  struct dlb2_cmd_response *resp,
+				  bool vdev_req,
+				  unsigned int vdev_id,
+				  struct dlb2_hw_domain **out_domain,
+				  struct dlb2_ldb_port **out_port)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_ldb_port *port;
+	int id;
+
+	domain = dlb2_get_domain_from_id(hw, domain_id, vdev_req, vdev_id);
+
+	if (!domain) {
+		resp->status = DLB2_ST_INVALID_DOMAIN_ID;
+		return -EINVAL;
+	}
+
+	if (!domain->configured) {
+		resp->status = DLB2_ST_DOMAIN_NOT_CONFIGURED;
+		return -EINVAL;
+	}
+
+	id = args->port_id;
+
+	port = dlb2_get_domain_used_ldb_port(id, vdev_req, domain);
+
+	if (!port || !port->configured) {
+		resp->status = DLB2_ST_INVALID_PORT_ID;
+		return -EINVAL;
+	}
+
+	*out_domain = domain;
+	*out_port = port;
+
+	return 0;
+}
+
+static int
+dlb2_verify_disable_dir_port_args(struct dlb2_hw *hw,
+				  u32 domain_id,
+				  struct dlb2_disable_dir_port_args *args,
+				  struct dlb2_cmd_response *resp,
+				  bool vdev_req,
+				  unsigned int vdev_id,
+				  struct dlb2_hw_domain **out_domain,
+				  struct dlb2_dir_pq_pair **out_port)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_dir_pq_pair *port;
+	int id;
+
+	domain = dlb2_get_domain_from_id(hw, domain_id, vdev_req, vdev_id);
+
+	if (!domain) {
+		resp->status = DLB2_ST_INVALID_DOMAIN_ID;
+		return -EINVAL;
+	}
+
+	if (!domain->configured) {
+		resp->status = DLB2_ST_DOMAIN_NOT_CONFIGURED;
+		return -EINVAL;
+	}
+
+	id = args->port_id;
+
+	port = dlb2_get_domain_used_dir_pq(hw, id, vdev_req, domain);
+
+	if (!port || !port->port_configured) {
+		resp->status = DLB2_ST_INVALID_PORT_ID;
+		return -EINVAL;
+	}
+
+	*out_domain = domain;
+	*out_port = port;
+
+	return 0;
+}
+
+static void dlb2_log_enable_port(struct dlb2_hw *hw,
+				 u32 domain_id,
+				 u32 port_id,
+				 bool vdev_req,
+				 unsigned int vdev_id)
+{
+	DLB2_HW_DBG(hw, "DLB2 enable port arguments:\n");
+	if (vdev_req)
+		DLB2_HW_DBG(hw, "(Request from vdev %d)\n", vdev_id);
+	DLB2_HW_DBG(hw, "\tDomain ID: %d\n",
+		    domain_id);
+	DLB2_HW_DBG(hw, "\tPort ID:   %d\n",
+		    port_id);
+}
+
+/**
+ * dlb2_hw_enable_ldb_port() - enable a load-balanced port for scheduling
+ * @hw: dlb2_hw handle for a particular device.
+ * @domain_id: domain ID.
+ * @args: port enable arguments.
+ * @resp: response structure.
+ * @vdev_req: indicates whether this request came from a vdev.
+ * @vdev_id: If vdev_req is true, this contains the vdev's ID.
+ *
+ * This function configures the DLB to schedule QEs to a load-balanced port.
+ * Ports are enabled by default.
+ *
+ * A vdev can be either an SR-IOV virtual function or a Scalable IOV virtual
+ * device.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise. If an error occurs, resp->status is
+ * assigned a detailed error code from enum dlb2_error.
+ *
+ * Errors:
+ * EINVAL - The port ID is invalid or the domain is not configured.
+ * EFAULT - Internal error (resp->status not set).
+ */
+int dlb2_hw_enable_ldb_port(struct dlb2_hw *hw,
+			    u32 domain_id,
+			    struct dlb2_enable_ldb_port_args *args,
+			    struct dlb2_cmd_response *resp,
+			    bool vdev_req,
+			    unsigned int vdev_id)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_ldb_port *port;
+	int ret;
+
+	dlb2_log_enable_port(hw, domain_id, args->port_id, vdev_req, vdev_id);
+
+	/*
+	 * Verify that hardware resources are available before attempting to
+	 * satisfy the request. This simplifies the error unwinding code.
+	 */
+	ret = dlb2_verify_enable_ldb_port_args(hw,
+					       domain_id,
+					       args,
+					       resp,
+					       vdev_req,
+					       vdev_id,
+					       &domain,
+					       &port);
+	if (ret)
+		return ret;
+
+	if (!port->enabled) {
+		dlb2_ldb_port_cq_enable(hw, port);
+		port->enabled = true;
+	}
+
+	resp->status = 0;
+
+	return 0;
+}
+
+static void dlb2_log_disable_port(struct dlb2_hw *hw,
+				  u32 domain_id,
+				  u32 port_id,
+				  bool vdev_req,
+				  unsigned int vdev_id)
+{
+	DLB2_HW_DBG(hw, "DLB2 disable port arguments:\n");
+	if (vdev_req)
+		DLB2_HW_DBG(hw, "(Request from vdev %d)\n", vdev_id);
+	DLB2_HW_DBG(hw, "\tDomain ID: %d\n",
+		    domain_id);
+	DLB2_HW_DBG(hw, "\tPort ID:   %d\n",
+		    port_id);
+}
+
+/**
+ * dlb2_hw_disable_ldb_port() - disable a load-balanced port for scheduling
+ * @hw: dlb2_hw handle for a particular device.
+ * @domain_id: domain ID.
+ * @args: port disable arguments.
+ * @resp: response structure.
+ * @vdev_req: indicates whether this request came from a vdev.
+ * @vdev_id: If vdev_req is true, this contains the vdev's ID.
+ *
+ * This function configures the DLB to stop scheduling QEs to a load-balanced
+ * port. Ports are enabled by default.
+ *
+ * A vdev can be either an SR-IOV virtual function or a Scalable IOV virtual
+ * device.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise. If an error occurs, resp->status is
+ * assigned a detailed error code from enum dlb2_error.
+ *
+ * Errors:
+ * EINVAL - The port ID is invalid or the domain is not configured.
+ * EFAULT - Internal error (resp->status not set).
+ */
+int dlb2_hw_disable_ldb_port(struct dlb2_hw *hw,
+			     u32 domain_id,
+			     struct dlb2_disable_ldb_port_args *args,
+			     struct dlb2_cmd_response *resp,
+			     bool vdev_req,
+			     unsigned int vdev_id)
+{
+	struct dlb2_hw_domain *domain;
+	struct dlb2_ldb_port *port;
+	int ret;
+
+	dlb2_log_disable_port(hw, domain_id, args->port_id, vdev_req, vdev_id);
+
+	/*
+	 * Verify that hardware resources are available before attempting to
+	 * satisfy the request. This simplifies the error unwinding code.
+	 */
+	ret = dlb2_verify_disable_ldb_port_args(hw,
+						domain_id,
+						args,
+						resp,
+						vdev_req,
+						vdev_id,
+						&domain,
+						&port);
+	if (ret)
+		return ret;
+
+	if (port->enabled) {
+		dlb2_ldb_port_cq_disable(hw, port);
+		port->enabled = false;
+	}
+
+	resp->status = 0;
+
+	return 0;
+}
+
+/**
+ * dlb2_hw_enable_dir_port() - enable a directed port for scheduling
+ * @hw: dlb2_hw handle for a particular device.
+ * @domain_id: domain ID.
+ * @args: port enable arguments.
+ * @resp: response structure.
+ * @vdev_req: indicates whether this request came from a vdev.
+ * @vdev_id: If vdev_req is true, this contains the vdev's ID.
+ *
+ * This function configures the DLB to schedule QEs to a directed port.
+ * Ports are enabled by default.
+ *
+ * A vdev can be either an SR-IOV virtual function or a Scalable IOV virtual
+ * device.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise. If an error occurs, resp->status is
+ * assigned a detailed error code from enum dlb2_error.
+ *
+ * Errors:
+ * EINVAL - The port ID is invalid or the domain is not configured.
+ * EFAULT - Internal error (resp->status not set).
+ */
+int dlb2_hw_enable_dir_port(struct dlb2_hw *hw,
+			    u32 domain_id,
+			    struct dlb2_enable_dir_port_args *args,
+			    struct dlb2_cmd_response *resp,
+			    bool vdev_req,
+			    unsigned int vdev_id)
+{
+	struct dlb2_dir_pq_pair *port;
+	struct dlb2_hw_domain *domain;
+	int ret;
+
+	dlb2_log_enable_port(hw, domain_id, args->port_id, vdev_req, vdev_id);
+
+	/*
+	 * Verify that hardware resources are available before attempting to
+	 * satisfy the request. This simplifies the error unwinding code.
+	 */
+	ret = dlb2_verify_enable_dir_port_args(hw,
+					       domain_id,
+					       args,
+					       resp,
+					       vdev_req,
+					       vdev_id,
+					       &domain,
+					       &port);
+	if (ret)
+		return ret;
+
+	if (!port->enabled) {
+		dlb2_dir_port_cq_enable(hw, port);
+		port->enabled = true;
+	}
+
+	resp->status = 0;
+
+	return 0;
+}
+
+/**
+ * dlb2_hw_disable_dir_port() - disable a directed port for scheduling
+ * @hw: dlb2_hw handle for a particular device.
+ * @domain_id: domain ID.
+ * @args: port disable arguments.
+ * @resp: response structure.
+ * @vdev_req: indicates whether this request came from a vdev.
+ * @vdev_id: If vdev_req is true, this contains the vdev's ID.
+ *
+ * This function configures the DLB to stop scheduling QEs to a directed port.
+ * Ports are enabled by default.
+ *
+ * A vdev can be either an SR-IOV virtual function or a Scalable IOV virtual
+ * device.
+ *
+ * Return:
+ * Returns 0 upon success, < 0 otherwise. If an error occurs, resp->status is
+ * assigned a detailed error code from enum dlb2_error.
+ *
+ * Errors:
+ * EINVAL - The port ID is invalid or the domain is not configured.
+ * EFAULT - Internal error (resp->status not set).
+ */
+int dlb2_hw_disable_dir_port(struct dlb2_hw *hw,
+			     u32 domain_id,
+			     struct dlb2_disable_dir_port_args *args,
+			     struct dlb2_cmd_response *resp,
+			     bool vdev_req,
+			     unsigned int vdev_id)
+{
+	struct dlb2_dir_pq_pair *port;
+	struct dlb2_hw_domain *domain;
+	int ret;
+
+	dlb2_log_disable_port(hw, domain_id, args->port_id, vdev_req, vdev_id);
+
+	/*
+	 * Verify that hardware resources are available before attempting to
+	 * satisfy the request. This simplifies the error unwinding code.
+	 */
+	ret = dlb2_verify_disable_dir_port_args(hw,
+						domain_id,
+						args,
+						resp,
+						vdev_req,
+						vdev_id,
+						&domain,
+						&port);
+	if (ret)
+		return ret;
+
+	if (port->enabled) {
+		dlb2_dir_port_cq_disable(hw, port);
+		port->enabled = false;
+	}
+
+	resp->status = 0;
 
 	return 0;
 }

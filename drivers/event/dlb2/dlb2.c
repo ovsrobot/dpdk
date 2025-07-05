@@ -1025,18 +1025,28 @@ error_exit:
 	return ret;
 }
 
-static void
+static int
 dlb2_hw_reset_sched_domain(const struct rte_eventdev *dev, bool reconfig)
 {
 	struct dlb2_eventdev *dlb2 = dlb2_pmd_priv(dev);
 	enum dlb2_configuration_state config_state;
-	int i, j;
+	int i, j, ret;
 
-	dlb2_iface_domain_reset(dlb2);
+	ret = dlb2_iface_domain_reset(dlb2);
+	if (ret) {
+		DLB2_LOG_ERR("dlb2_hw_reset_domain err %d", ret);
+		return ret;
+	}
 
 	/* Free all dynamically allocated port memory */
-	for (i = 0; i < dlb2->num_ports; i++)
+	for (i = 0; i < dlb2->num_ports; i++) {
 		dlb2_free_qe_mem(&dlb2->ev_ports[i].qm_port);
+		if (!reconfig) {
+			dlb2->ev_ports[i].qm_port.enable_inflight_ctrl = 0;
+			dlb2->ev_ports[i].qm_port.token_pop_mode = 0;
+			dlb2->ev_ports[i].qm_port.hist_list = 0;
+		}
+	}
 
 	/* If reconfiguring, mark the device's queues and ports as "previously
 	 * configured." If the user doesn't reconfigure them, the PMD will
@@ -1075,6 +1085,8 @@ dlb2_hw_reset_sched_domain(const struct rte_eventdev *dev, bool reconfig)
 		dlb2->max_dir_credits = 0;
 	}
 	dlb2->configured = false;
+
+	return 0;
 }
 
 /* Note: 1 QM instance per QM device, QM instance/device == event device */
@@ -1092,7 +1104,9 @@ dlb2_eventdev_configure(const struct rte_eventdev *dev)
 	 * scheduling domain before attempting to configure a new one.
 	 */
 	if (dlb2->configured) {
-		dlb2_hw_reset_sched_domain(dev, true);
+		ret = dlb2_hw_reset_sched_domain(dev, true);
+		if (ret)
+			return ret;
 		ret = dlb2_hw_query_resources(dlb2);
 		if (ret) {
 			DLB2_LOG_ERR("get resources err=%d, devid=%d",
@@ -2819,6 +2833,27 @@ dlb2_eventdev_apply_port_links(struct rte_eventdev *dev)
 }
 
 static int
+dlb2_set_port_ctrl(struct dlb2_eventdev_port *ev_port, bool enable)
+{
+	const char *err_str = enable ? "enabled" : "disabled";
+
+	if (!ev_port->setup_done)
+		return 0;
+
+	if (!(ev_port->enq_configured ^ enable)) {
+		DLB2_LOG_INFO("dlb2: ev_port %d already %s", ev_port->id, err_str);
+		return 0;
+	}
+	if (dlb2_iface_port_ctrl(&ev_port->qm_port, enable)) {
+		DLB2_LOG_ERR("dlb2: ev_port %d could not be %s", ev_port->id, err_str);
+		return -EFAULT;
+	}
+	ev_port->enq_configured = enable;
+
+	return 0;
+}
+
+static int
 dlb2_eventdev_start(struct rte_eventdev *dev)
 {
 	struct dlb2_eventdev *dlb2 = dlb2_pmd_priv(dev);
@@ -2849,10 +2884,14 @@ dlb2_eventdev_start(struct rte_eventdev *dev)
 		return ret;
 
 	for (i = 0; i < dlb2->num_ports; i++) {
-		if (!dlb2->ev_ports[i].setup_done) {
+		struct dlb2_eventdev_port *ev_port = &dlb2->ev_ports[i];
+
+		if (!ev_port->setup_done && ev_port->qm_port.config_state != DLB2_NOT_CONFIGURED) {
 			DLB2_LOG_ERR("dlb2: port %d not setup", i);
 			return -ESTALE;
 		}
+		if (dlb2_set_port_ctrl(ev_port, true))
+			return -EFAULT;
 	}
 
 	for (i = 0; i < dlb2->num_queues; i++) {
@@ -4816,9 +4855,11 @@ static void
 dlb2_drain(struct rte_eventdev *dev)
 {
 	struct dlb2_eventdev *dlb2 = dlb2_pmd_priv(dev);
+	struct dlb2_hw_dev *handle = &dlb2->qm_instance;
 	struct dlb2_eventdev_port *ev_port = NULL;
+	struct dlb2_stop_domain_args cfg;
 	uint8_t dev_id;
-	int i;
+	int i, ret;
 
 	dev_id = dev->data->dev_id;
 
@@ -4836,7 +4877,7 @@ dlb2_drain(struct rte_eventdev *dev)
 
 	/* If the domain's queues are empty, we're done. */
 	if (dlb2_queues_empty(dlb2))
-		return;
+		goto domain_cleanup;
 
 	/* Else, there must be at least one unlinked load-balanced queue.
 	 * Select a load-balanced port with which to drain the unlinked
@@ -4896,6 +4937,17 @@ dlb2_drain(struct rte_eventdev *dev)
 			return;
 		}
 	}
+
+domain_cleanup:
+	for (i = 0; i < dlb2->num_ports; i++)
+		dlb2_set_port_ctrl(&dlb2->ev_ports[i], false);
+
+	ret = dlb2_iface_sched_domain_stop(handle, &cfg);
+	if (ret < 0) {
+		DLB2_LOG_ERR("dlb2: sched_domain_stop ret=%d (driver status: %s)",
+			     ret, dlb2_error_strings[cfg.response.status]);
+		return;
+	}
 }
 
 static void
@@ -4928,9 +4980,7 @@ dlb2_eventdev_stop(struct rte_eventdev *dev)
 static int
 dlb2_eventdev_close(struct rte_eventdev *dev)
 {
-	dlb2_hw_reset_sched_domain(dev, false);
-
-	return 0;
+	return dlb2_hw_reset_sched_domain(dev, false);
 }
 
 static void

@@ -85,6 +85,10 @@ int dlb2_pf_start_domain(struct dlb2_hw *hw,
 			 u32 domain_id,
 			 struct dlb2_start_domain_args *args,
 			 struct dlb2_cmd_response *resp);
+int dlb2_pf_stop_domain(struct dlb2_hw *hw,
+			 u32 domain_id,
+			 struct dlb2_stop_domain_args *args,
+			 struct dlb2_cmd_response *resp);
 int dlb2_pf_enable_ldb_port(struct dlb2_hw *hw,
 			    u32 domain_id,
 			    struct dlb2_enable_ldb_port_args *args,

@@ -521,6 +521,22 @@ struct dlb2_start_domain_args {
 };
 
 /*
+ * DLB2_DOMAIN_CMD_STOP_DOMAIN: Stop scheduling of a domain. Scheduling can be
+ *	resumed by calling DLB2_DOMAIN_CMD_START_DOMAIN. Sending QEs into the
+ *	device after calling this ioctl will result in undefined behavior.
+ * Input parameters:
+ * - (None)
+ *
+ * Output parameters:
+ * - response.status: Detailed error code. In certain cases, such as if the
+ *	ioctl request arg is invalid, the driver won't set status.
+ */
+struct dlb2_stop_domain_args {
+	/* Output parameters */
+	struct dlb2_cmd_response response;
+};
+
+/*
  * DLB2_DOMAIN_CMD_MAP_QID: Map a load-balanced queue to a load-balanced port.
  * Input parameters:
  * - port_id: Load-balanced port ID.

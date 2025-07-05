@@ -202,7 +202,7 @@ done:
 	return ret;
 }
 
-static void
+static int
 dlb2_pf_domain_reset(struct dlb2_eventdev *dlb2)
 {
 	struct dlb2_dev *dlb2_dev;
@@ -212,6 +212,7 @@ dlb2_pf_domain_reset(struct dlb2_eventdev *dlb2)
 	ret = dlb2_pf_reset_domain(&dlb2_dev->hw, dlb2->qm_instance.domain_id);
 	if (ret)
 		DLB2_LOG_ERR("dlb2_pf_reset_domain err %d", ret);
+	return ret;
 }
 
 static int
@@ -610,6 +611,29 @@ dlb2_pf_sched_domain_start(struct dlb2_hw_dev *handle,
 }
 
 static int
+dlb2_pf_sched_domain_stop(struct dlb2_hw_dev *handle,
+			   struct dlb2_stop_domain_args *cfg)
+{
+	struct dlb2_dev *dlb2_dev = (struct dlb2_dev *)handle->pf_dev;
+	struct dlb2_cmd_response response = {0};
+	int ret;
+
+	DLB2_INFO(dev->dlb2_device, "Entering %s()\n", __func__);
+
+	ret = dlb2_pf_stop_domain(&dlb2_dev->hw,
+				   handle->domain_id,
+				   cfg,
+				   &response);
+
+	cfg->response = response;
+
+	DLB2_INFO(dev->dlb2_device, "Exiting %s() with ret=%d\n",
+		  __func__, ret);
+
+	return ret;
+}
+
+static int
 dlb2_pf_get_ldb_queue_depth(struct dlb2_hw_dev *handle,
 			    struct dlb2_get_ldb_queue_depth_args *args)
 {
@@ -722,6 +746,47 @@ dlb2_pf_set_cos_bandwidth(struct dlb2_hw_dev *handle,
 	return ret;
 }
 
+static int dlb2_pf_port_ctrl(struct dlb2_port *qm_port, bool enable)
+{
+	struct dlb2_hw_dev *handle = &qm_port->dlb2->qm_instance;
+	struct dlb2_cmd_response response = {0};
+	struct dlb2_dev *dlb2_dev;
+	int ret = 0;
+
+	dlb2_dev = (struct dlb2_dev *)handle->pf_dev;
+
+	if (PORT_TYPE(qm_port) == DLB2_LDB_PORT) {
+		if (enable) {
+			struct dlb2_enable_ldb_port_args args = {.port_id = qm_port->id};
+
+			ret = dlb2_hw_enable_ldb_port(&dlb2_dev->hw, handle->domain_id,
+						      &args, &response, false, 0);
+		} else {
+			struct dlb2_disable_ldb_port_args args = {.port_id = qm_port->id};
+
+			ret = dlb2_hw_disable_ldb_port(&dlb2_dev->hw, handle->domain_id,
+						      &args, &response, false, 0);
+		}
+	} else {
+		if (enable) {
+			struct dlb2_enable_dir_port_args args = {.port_id = qm_port->id};
+
+			ret = dlb2_hw_enable_dir_port(&dlb2_dev->hw, handle->domain_id,
+						      &args, &response, false, 0);
+		} else {
+			struct dlb2_disable_dir_port_args args = {.port_id = qm_port->id};
+
+			ret = dlb2_hw_disable_dir_port(&dlb2_dev->hw, handle->domain_id,
+						      &args, &response, false, 0);
+		}
+	}
+
+	DLB2_INFO(dev->dlb2_device, "Exiting %s() with ret=%d\n",
+		  __func__, ret);
+
+	return ret;
+}
+
 static void
 dlb2_pf_iface_fn_ptrs_init(void)
 {
@@ -742,6 +807,7 @@ dlb2_pf_iface_fn_ptrs_init(void)
 	dlb2_iface_get_ldb_queue_depth = dlb2_pf_get_ldb_queue_depth;
 	dlb2_iface_get_dir_queue_depth = dlb2_pf_get_dir_queue_depth;
 	dlb2_iface_sched_domain_start = dlb2_pf_sched_domain_start;
+	dlb2_iface_sched_domain_stop = dlb2_pf_sched_domain_stop;
 	dlb2_iface_pending_port_unmaps = dlb2_pf_pending_port_unmaps;
 	dlb2_iface_get_sn_allocation = dlb2_pf_get_sn_allocation;
 	dlb2_iface_set_sn_allocation = dlb2_pf_set_sn_allocation;
@@ -749,6 +815,7 @@ dlb2_pf_iface_fn_ptrs_init(void)
 	dlb2_iface_enable_cq_weight = dlb2_pf_enable_cq_weight;
 	dlb2_iface_set_cos_bw = dlb2_pf_set_cos_bandwidth;
 	dlb2_iface_set_cq_inflight_ctrl = dlb2_pf_set_cq_inflight_ctrl;
+	dlb2_iface_port_ctrl = dlb2_pf_port_ctrl;
 }
 
 /* PCI DEV HOOKS */
