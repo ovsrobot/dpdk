@@ -30,7 +30,7 @@ int (*dlb2_iface_get_num_resources)(struct dlb2_hw_dev *handle,
 int (*dlb2_iface_sched_domain_create)(struct dlb2_hw_dev *handle,
 				struct dlb2_create_sched_domain_args *args);
 
-void (*dlb2_iface_domain_reset)(struct dlb2_eventdev *dlb2);
+int (*dlb2_iface_domain_reset)(struct dlb2_eventdev *dlb2);
 
 int (*dlb2_iface_ldb_queue_create)(struct dlb2_hw_dev *handle,
 				   struct dlb2_create_ldb_queue_args *cfg);
@@ -67,6 +67,9 @@ int (*dlb2_iface_pending_port_unmaps)(struct dlb2_hw_dev *handle,
 int (*dlb2_iface_sched_domain_start)(struct dlb2_hw_dev *handle,
 				     struct dlb2_start_domain_args *cfg);
 
+int (*dlb2_iface_sched_domain_stop)(struct dlb2_hw_dev *handle,
+				     struct dlb2_stop_domain_args *cfg);
+
 int (*dlb2_iface_get_ldb_queue_depth)(struct dlb2_hw_dev *handle,
 				struct dlb2_get_ldb_queue_depth_args *args);
 
@@ -82,3 +85,4 @@ int (*dlb2_iface_set_cq_inflight_ctrl)(struct dlb2_hw_dev *handle,
 int (*dlb2_iface_set_cos_bw)(struct dlb2_hw_dev *handle,
 			     struct dlb2_set_cos_bw_args *args);
 
+int (*dlb2_iface_port_ctrl)(struct dlb2_port *qm_port, bool enable);

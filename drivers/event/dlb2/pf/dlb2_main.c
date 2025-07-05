@@ -600,3 +600,13 @@ dlb2_pf_start_domain(struct dlb2_hw *hw,
 	return dlb2_hw_start_domain(hw, id, args, resp, NOT_VF_REQ,
 				    PF_ID_ZERO);
 }
+
+int
+dlb2_pf_stop_domain(struct dlb2_hw *hw,
+		     u32 id,
+		     struct dlb2_stop_domain_args *args,
+		     struct dlb2_cmd_response *resp)
+{
+	return dlb2_hw_stop_domain(hw, id, args, resp, NOT_VF_REQ,
+				    PF_ID_ZERO);
+}
