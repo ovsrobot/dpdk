@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-#include "sxe_dpdk_version.h"
 #include "sxe_stats.h"
 #include "sxe.h"
 #include "sxe_logs.h"
@@ -432,7 +431,11 @@ s32 sxe_xstats_get_by_id(struct rte_eth_dev *eth_dev,
 	s32 ret;
 	u32 size = SXE_XSTAT_CNT;
 	u32 i;
-	u64 value_all[size];
+	u64 *value_all = (u64 *)malloc(size * sizeof(u64));
+	if (value_all == NULL) {
+		perror("value_all malloc failed");
+		return -ENOMEM;
+	}
 
 	if (ids == NULL) {
 		ret = sxe_all_xstats_value_get(eth_dev, values, usr_cnt);
@@ -459,6 +462,9 @@ s32 sxe_xstats_get_by_id(struct rte_eth_dev *eth_dev,
 	ret = usr_cnt;
 
 l_out:
+	if (value_all != NULL)
+		free(value_all);
+
 	return ret;
 }
 
@@ -470,7 +476,12 @@ s32 sxe_xstats_names_get_by_id(struct rte_eth_dev *eth_dev,
 	s32 ret;
 	u32 i;
 	u32 size = SXE_XSTAT_CNT;
-	struct rte_eth_xstat_name xstat_names_all[size];
+	struct rte_eth_xstat_name *xstat_names_all =
+	(struct rte_eth_xstat_name *)malloc(size * sizeof(struct rte_eth_xstat_name));
+	if (xstat_names_all == NULL) {
+		perror("xstat_names_all malloc failed");
+		return -ENOMEM;
+	}
 
 	if (ids == NULL) {
 		ret = sxe_xstats_names_get(eth_dev, xstats_names, usr_cnt);
@@ -490,6 +501,9 @@ s32 sxe_xstats_names_get_by_id(struct rte_eth_dev *eth_dev,
 	ret = usr_cnt;
 
 l_out:
+	if (xstat_names_all != NULL)
+		free(xstat_names_all);
+
 	return ret;
 }
 
@@ -573,4 +587,3 @@ void sxe_queue_stats_map_reset(struct rte_eth_dev *eth_dev)
 		sxe_hw_rxq_stat_map_set(hw, reg_idx, 0);
 	}
 }
-

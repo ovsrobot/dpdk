@@ -9,10 +9,8 @@
 #include <rte_alarm.h>
 #include <rte_interrupts.h>
 #include <rte_malloc.h>
-#include "sxe_dpdk_version.h"
 #include <bus_pci_driver.h>
 #include <eal_interrupts.h>
-
 #include "sxevf.h"
 #include "sxe_logs.h"
 #include "sxe_errno.h"

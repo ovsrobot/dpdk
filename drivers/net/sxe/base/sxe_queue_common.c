@@ -4,7 +4,6 @@
 
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
-#include "sxe_dpdk_version.h"
 #include "sxe_compat_version.h"
 #include <ethdev_driver.h>
 #include <bus_pci_driver.h>
@@ -294,6 +293,7 @@ void __sxe_recycle_rxq_info_get(struct rte_eth_dev *dev, u16 queue_id,
 	q_info->mp = rxq->mb_pool;
 	q_info->mbuf_ring_size = rxq->ring_depth;
 	q_info->receive_tail = &rxq->processing_idx;
+
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 	if (adapter->rx_vec_allowed) {
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
@@ -308,6 +308,7 @@ void __sxe_recycle_rxq_info_get(struct rte_eth_dev *dev, u16 queue_id,
 	q_info->refill_requirement = rxq->batch_alloc_size;
 	q_info->refill_head = &rxq->batch_alloc_trigger;
 #endif
+
 	return;
 }
 

@@ -6,7 +6,6 @@
 #include <rte_ethdev.h>
 #include <rte_ether.h>
 #include <rte_memcpy.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <bus_pci_driver.h>

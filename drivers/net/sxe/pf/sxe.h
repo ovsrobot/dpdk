@@ -6,14 +6,16 @@
 
 #include <rte_pci.h>
 #include <rte_time.h>
-#include "sxe_filter.h"
+
 #include <stdbool.h>
+
 #include "sxe_types.h"
-#include "sxe_stats.h"
+#include "sxe_filter.h"
 #include "sxe_irq.h"
+#include "sxe_stats.h"
+#include "sxe_phy.h"
 #include "sxe_vf.h"
 #include "sxe_dcb.h"
-#include "sxe_phy.h"
 #include "sxe_hw.h"
 
 struct sxe_hw;
@@ -81,9 +83,6 @@ struct sxe_adapter {
 	RTE_ATOMIC(bool)link_thread_running;
 	RTE_ATOMIC(bool)is_stopping;
 	rte_thread_t link_thread_tid;
-	rte_atomic32_t link_thread_running;
-	rte_atomic32_t is_stopping;
-	pthread_t link_thread_tid;
 	bool is_stopped;
 };
 

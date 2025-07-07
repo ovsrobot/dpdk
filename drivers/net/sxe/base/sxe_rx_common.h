@@ -5,8 +5,6 @@
 #ifndef __SXE_RX_COMMON_H__
 #define __SXE_RX_COMMON_H__
 
-#include "sxe_dpdk_version.h"
-
 void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 	bool rx_batch_alloc_allowed, bool *rx_vec_allowed);
 

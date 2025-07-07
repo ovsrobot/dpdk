@@ -5,13 +5,9 @@
 #ifndef __SXE_DRV_TYPEDEF_H__
 #define __SXE_DRV_TYPEDEF_H__
 
-#ifdef SXE_DPDK
 #include "sxe_types.h"
 #ifndef bool
 #define bool _Bool
-#endif
-#else
-#include <linux/types.h>
 #endif
 
 typedef u8 U8;

@@ -8,7 +8,6 @@
 #include <rte_pci.h>
 
 #include "sxe_version.h"
-#include "sxe_dpdk_version.h"
 #include <bus_pci_driver.h>
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
@@ -245,23 +244,9 @@ RTE_LOG_REGISTER_SUFFIX(sxe_log_rx, pmd.net.sxe.rx, DEBUG);
 RTE_LOG_REGISTER_SUFFIX(sxe_log_tx, pmd.net.sxe.tx, DEBUG);
 RTE_LOG_REGISTER_SUFFIX(sxe_log_hw, pmd.net.sxe.tx_hw, DEBUG);
 #else
-#ifdef DPDK_19_11_6
-s32 sxe_log_init;
-s32 sxe_log_drv;
-RTE_INIT(sxe_init_log)
-{
-	sxe_log_init = rte_log_register("pmd.net.sxe.init");
-	if (sxe_log_init >= 0)
-		rte_log_set_level(sxe_log_init, RTE_LOG_NOTICE);
 
-	sxe_log_drv = rte_log_register("pmd.net.sxe.drv");
-	if (sxe_log_drv >= 0)
-		rte_log_set_level(sxe_log_drv, RTE_LOG_NOTICE);
-}
-#else
 RTE_LOG_REGISTER_SUFFIX(sxe_log_init, pmd.net.sxe.init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(sxe_log_drv, pmd.net.sxe.drv, NOTICE);
-#endif
 #endif
 
 int sxe_eth_dev_callback_process(struct rte_eth_dev *dev,

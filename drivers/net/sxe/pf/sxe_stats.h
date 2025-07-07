@@ -7,8 +7,6 @@
 
 #include <rte_ethdev.h>
 #include <rte_ethdev_core.h>
-
-#include "sxe_dpdk_version.h"
 #include "sxe_hw.h"
 
 #define SXE_STATS_FIELD_NAME_SIZE  50

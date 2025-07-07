@@ -6,9 +6,7 @@
 #define __SXEVF_FILTER_H__
 
 #include <rte_ether.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
-#endif
 
 #define SXEVF_MTA_ENTRY_NUM_MAX		128
 #define SXEVF_UTA_HASH_BIT_MAX		 4096
@@ -70,3 +68,5 @@ s32 sxevf_mac_addr_add(struct rte_eth_dev *dev,
 s32 sxevf_set_mc_addr_list(struct rte_eth_dev *dev,
 			  struct rte_ether_addr *mc_addr_list,
 			  u32 nb_mc_addr);
+
+#endif

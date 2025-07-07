@@ -5,7 +5,6 @@
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
 
 #include <rte_common.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 
 #include "sxe_logs.h"

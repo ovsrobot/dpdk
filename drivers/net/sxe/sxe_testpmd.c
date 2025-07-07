@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
+
 #include <ethdev_driver.h>
+#include "sxe_drv_type.h"
 #include "sxe_ethdev.h"
 #include "rte_pmd_sxe.h"
-
 #include <cmdline_parse_etheraddr.h>
 #include <cmdline_parse_num.h>
 #include <cmdline_parse_string.h>

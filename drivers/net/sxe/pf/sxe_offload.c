@@ -1,9 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
-
 #include "sxe.h"
 #include "sxe_offload.h"
 #include "sxe_logs.h"

@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <dev_driver.h>
 #include <rte_cycles.h>
@@ -58,7 +57,7 @@ static uint32_t sxe_setup_link_thread_handler(void *param)
 		PMD_LOG_ERR(INIT, "link setup failed, ret=%d", ret);
 
 	irq->action &= ~SXE_IRQ_LINK_CONFIG;
-	rte_atomic_store_explicit(&adapter->link_thread_running, 0, rte_memory_order_seq_cst);
+	rte_atomic_store_explicit(&(adapter->link_thread_running), 0, rte_memory_order_seq_cst);
 
 	return 0;
 }
@@ -69,7 +68,9 @@ void sxe_wait_setup_link_complete(struct rte_eth_dev *dev,
 	struct sxe_adapter *adapter = dev->data->dev_private;
 	uint32_t timeout = timeout_ms ? timeout_ms : SXE_WARNING_TIMEOUT;
 
-	while (rte_atomic_load_explicit(&adapter->link_thread_running, rte_memory_order_seq_cst)) {
+	while (rte_atomic_load_explicit(&(adapter->link_thread_running),
+		rte_memory_order_seq_cst)) {
+
 		rte_delay_us_sleep(1000);
 		timeout--;
 
@@ -150,7 +151,7 @@ s32 sxe_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 
 	if (!link_up) {
 		sxe_wait_setup_link_complete(dev, 0);
-		if (!rte_atomic_exchange_explicit(&adapter->link_thread_running, 1,
+		if (!rte_atomic_exchange_explicit(&(adapter->link_thread_running), 1,
 				rte_memory_order_seq_cst)) {
 			if (rte_atomic_load_explicit(&adapter->is_stopping,
 				rte_memory_order_seq_cst) ||
