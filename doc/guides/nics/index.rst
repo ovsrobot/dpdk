@@ -73,3 +73,4 @@ Network Interface Controller Drivers
     vmxnet3
     xsc
     zxdh
+    sxe
