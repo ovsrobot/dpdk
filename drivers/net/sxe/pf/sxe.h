@@ -41,6 +41,14 @@ struct sxe_vlan_context;
 #define rte_sxe_prefetch(p)   do {} while (0)
 #endif
 
+struct sxe_ptp_context {
+	struct rte_timecounter	  systime_tc;
+	struct rte_timecounter	  rx_tstamp_tc;
+	struct rte_timecounter	  tx_tstamp_tc;
+	u32 tx_hwtstamp_sec;
+	u32 tx_hwtstamp_nsec;
+};
+
 struct sxe_adapter {
 	struct sxe_hw hw;
 
@@ -51,6 +59,7 @@ struct sxe_adapter {
 #ifdef RTE_ADAPTER_HAVE_FNAV_CONF
 	struct rte_eth_fdir_conf fnav_conf;
 #endif
+	struct sxe_ptp_context ptp_ctxt;
 	struct sxe_phy_context phy_ctxt;
 	struct sxe_dcb_context dcb_ctxt;
 
