@@ -14,6 +14,9 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <sys/queue.h>
+#ifndef RTE_EXEC_ENV_WINDOWS
+#include <libgen.h>
+#endif
 
 #include <rte_common.h>
 #include <rte_byteorder.h>
@@ -14195,6 +14198,7 @@ cmdline_read_from_file(const char *filename, bool echo)
 	struct cmdline *cl;
 	int fd = -1;
 	int ret = 0;
+	char *prompt = NULL;
 
 	/* cmdline_file_new does not produce any output
 	 * so when echoing is requested we open filename directly
@@ -14203,6 +14207,38 @@ cmdline_read_from_file(const char *filename, bool echo)
 	if (!echo) {
 		cl = cmdline_file_new(main_ctx, "testpmd> ", filename);
 	} else {
+#ifndef RTE_EXEC_ENV_WINDOWS
+		/* use basename(filename) as prompt */
+		char *filename_copy = strdup(filename);
+
+		if (filename_copy == NULL) {
+			fprintf(stderr, "Failed to allocate memory for filename\n");
+			return -1;
+		}
+		if (asprintf(&prompt, "[%s] ", basename(filename_copy)) < 0) {
+			fprintf(stderr, "Failed to allocate prompt string\n");
+			return -1;
+		}
+		free(filename_copy);
+#else /* !WINDOWS */
+		/* No libgen and basename on windows, so just use short filename as prompt.
+		 * if filename is longer than N chars, copy to prompt only the
+		 * last N - 3 (since we add "...") chars, otherwise copy the whole filename.
+		 */
+#define FILE_STR_LEN 18
+		const unsigned int len = strlen(filename);
+		prompt = malloc(FILE_STR_LEN + 4); /* 4 for "[] " + '\0' */
+
+		if (prompt == NULL) {
+			fprintf(stderr, "Failed to allocate memory for prompt\n");
+			return -1;
+		}
+		if (len > FILE_STR_LEN)
+			sprintf(prompt, "[...%s] ", &filename[len - (FILE_STR_LEN - 3)]);
+		else
+			sprintf(prompt, "[%s] ", filename);
+#endif /* !WINDOWS */
+
 		fd = open(filename, O_RDONLY);
 		if (fd < 0) {
 			fprintf(stderr, "Failed to open file %s: %s\n",
@@ -14210,7 +14246,7 @@ cmdline_read_from_file(const char *filename, bool echo)
 			return -1;
 		}
 
-		cl = cmdline_new(main_ctx, "testpmd> ", fd, STDOUT_FILENO);
+		cl = cmdline_new(main_ctx, prompt, fd, STDOUT_FILENO);
 	}
 	if (cl == NULL) {
 		fprintf(stderr,
@@ -14221,15 +14257,22 @@ cmdline_read_from_file(const char *filename, bool echo)
 	}
 
 	cmdline_interact(cl);
-	cmdline_quit(cl);
+	/* when done, if we have echo, we only need to print end of file,
+	 * but if no echo, we need to use printf and include the filename.
+	 */
+	if (echo)
+		cmdline_printf(cl, "<End-Of-File>\n");
+	else
+		printf("Finished reading CLI commands from %s\n", filename);
 
+	cmdline_quit(cl);
 	cmdline_free(cl);
 
-	printf("Read CLI commands from %s\n", filename);
 
 end:
 	if (fd >= 0)
 		close(fd);
+	free(prompt);
 	return ret;
 }
 
