@@ -316,6 +316,11 @@ zxdh_link_info_get(struct rte_eth_dev *dev, struct rte_eth_link *link)
 			link->link_duplex = RTE_ETH_LINK_HALF_DUPLEX;
 	}
 	hw->speed = link->link_speed;
+	if (hw->switchoffload) {
+		link->link_speed = RTE_ETH_SPEED_NUM_25G;
+		link->link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+		link->link_autoneg = RTE_ETH_LINK_AUTONEG;
+	}
 
 	return 0;
 }
