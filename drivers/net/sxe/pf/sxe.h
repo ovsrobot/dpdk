@@ -57,6 +57,8 @@ struct sxe_adapter {
 
 	u32 mtu;
 
+	bool rss_reta_updated;
+
 	RTE_ATOMIC(bool)link_thread_running;
 	RTE_ATOMIC(bool)is_stopping;
 	rte_thread_t link_thread_tid;
