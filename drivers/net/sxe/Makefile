@@ -55,6 +55,8 @@ $(shell cp $(SRCDIR)/include/*.h $(SRCDIR))
 $(shell cp $(SRCDIR)/include/sxe/*.h $(SRCDIR))
 $(warning "file copy done")
 
+SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_testpmd.c
+
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_hw.c
 SRCS-$(CONFIG_RTE_LIBRTE_SXE_PMD) += sxe_offload_common.c
