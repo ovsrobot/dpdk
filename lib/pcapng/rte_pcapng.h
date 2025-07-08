@@ -28,6 +28,37 @@
 extern "C" {
 #endif
 
+/* pcap link types */
+#define DLT_NULL	0	/* BSD loopback encapsulation */
+#define DLT_EN10MB	1	/* Ethernet (10Mb) */
+#define DLT_EN3MB	2	/* Experimental Ethernet (3Mb) */
+#define DLT_AX25	3	/* Amateur Radio AX.25 */
+#define DLT_PRONET	4	/* Proteon ProNET Token Ring */
+#define DLT_CHAOS	5	/* Chaos */
+#define DLT_IEEE802	6	/* 802.5 Token Ring */
+#define DLT_ARCNET	7	/* ARCNET, with BSD-style header */
+#define DLT_SLIP	8	/* Serial Line IP */
+#define DLT_PPP		9	/* Point-to-point Protocol */
+#define DLT_FDDI	10	/* FDDI */
+
+/* User-defined link types */
+#define DLT_USER0		147
+#define DLT_USER1		148
+#define DLT_USER2		149
+#define DLT_USER3		150
+#define DLT_USER4		151
+#define DLT_USER5		152
+#define DLT_USER6		153
+#define DLT_USER7		154
+#define DLT_USER8		155
+#define DLT_USER9		156
+#define DLT_USER10		157
+#define DLT_USER11		158
+#define DLT_USER12		159
+#define DLT_USER13		160
+#define DLT_USER14		161
+#define DLT_USER15		162
+
 /* Opaque handle used for functions in this library. */
 typedef struct rte_pcapng rte_pcapng_t;
 
@@ -71,6 +102,8 @@ rte_pcapng_close(rte_pcapng_t *self);
  *  The handle to the packet capture file
  * @param port
  *  The Ethernet port to report stats on.
+ * @param link_type
+ *  The link type (e.g., DLT_EN10MB).
  * @param ifname (optional)
  *  Interface name to record in the file.
  *  If not specified, name will be constructed from port
@@ -84,7 +117,7 @@ rte_pcapng_close(rte_pcapng_t *self);
  * must be added.
  */
 int
-rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
+rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port, uint16_t link_type,
 			 const char *ifname, const char *ifdescr,
 			 const char *filter);
 

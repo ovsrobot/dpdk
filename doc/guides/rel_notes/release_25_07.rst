@@ -215,6 +215,10 @@ API Changes
 * argparse: The ``rte_argparse_arg`` structure used for defining arguments has been updated.
   See ABI changes in the next section for details.
 
+* pcapng: Changed the API for adding interfaces to include a link type argument.
+  The link type was previously hardcoded to the ethernet link type in the API.
+  This argument is added to ``rte_pcapng_add_interface``.
+  These functions are versioned to retain binary compatibility until the next LTS release.
 
 ABI Changes
 -----------
