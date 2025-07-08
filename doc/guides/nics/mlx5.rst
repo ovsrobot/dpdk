@@ -476,6 +476,10 @@ Limitations
   - In flex item configuration, ``next_header.field_base`` value
     must be byte aligned (multiple of 8).
   - Modify field with flex item, the offset must be byte aligned (multiple of 8).
+    .. note::
+     Some firmware versions (e.g. 24.30.1004) do not support
+     ``next_header`` with ``field_mode = FIELD_MODE_FIXED`` and zero size.
+     A newer firmware (e.g. >= 24.38.1002) is required to support this configuration.
 
 - Match on random value:
 
