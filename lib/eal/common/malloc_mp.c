@@ -148,7 +148,7 @@ get_unique_id(void)
 static int
 handle_sync(const struct rte_mp_msg *msg, const void *peer)
 {
-	struct rte_mp_msg reply;
+	alignas(8) struct rte_mp_msg reply;
 	const struct malloc_mp_req *req =
 			(const struct malloc_mp_req *)msg->param;
 	struct malloc_mp_req *resp =
@@ -330,7 +330,7 @@ handle_request(const struct rte_mp_msg *msg, const void *peer __rte_unused)
 	}
 
 	if (ret != 0) {
-		struct rte_mp_msg resp_msg;
+		alignas(8) struct rte_mp_msg resp_msg;
 		struct malloc_mp_req *resp =
 				(struct malloc_mp_req *)resp_msg.param;
 
@@ -351,7 +351,7 @@ handle_request(const struct rte_mp_msg *msg, const void *peer __rte_unused)
 		/* we did not modify the request */
 		free(entry);
 	} else {
-		struct rte_mp_msg sr_msg;
+		alignas(8) struct rte_mp_msg sr_msg;
 		struct malloc_mp_req *sr =
 				(struct malloc_mp_req *)sr_msg.param;
 		struct timespec ts;
@@ -444,7 +444,7 @@ handle_sync_response(const struct rte_mp_msg *request,
 	}
 
 	if (entry->user_req.t == REQ_TYPE_FREE) {
-		struct rte_mp_msg msg;
+		alignas(8) struct rte_mp_msg msg;
 		struct malloc_mp_req *resp = (struct malloc_mp_req *)msg.param;
 
 		memset(&msg, 0, sizeof(msg));
@@ -465,7 +465,7 @@ handle_sync_response(const struct rte_mp_msg *request,
 	} else if (entry->user_req.t == REQ_TYPE_ALLOC &&
 			result == REQ_RESULT_SUCCESS) {
 		struct malloc_heap *heap = entry->alloc_state.heap;
-		struct rte_mp_msg msg;
+		alignas(8) struct rte_mp_msg msg;
 		struct malloc_mp_req *resp =
 				(struct malloc_mp_req *)msg.param;
 
@@ -489,7 +489,7 @@ handle_sync_response(const struct rte_mp_msg *request,
 		free(entry);
 	} else if (entry->user_req.t == REQ_TYPE_ALLOC &&
 			result == REQ_RESULT_FAIL) {
-		struct rte_mp_msg rb_msg;
+		alignas(8) struct rte_mp_msg rb_msg;
 		struct malloc_mp_req *rb =
 				(struct malloc_mp_req *)rb_msg.param;
 		struct timespec ts;
@@ -551,7 +551,7 @@ static int
 handle_rollback_response(const struct rte_mp_msg *request,
 		const struct rte_mp_reply *reply __rte_unused)
 {
-	struct rte_mp_msg msg;
+	alignas(8) struct rte_mp_msg msg;
 	struct malloc_mp_req *resp = (struct malloc_mp_req *)msg.param;
 	const struct malloc_mp_req *mpreq =
 			(const struct malloc_mp_req *)request->param;
@@ -628,7 +628,7 @@ handle_response(const struct rte_mp_msg *msg, const void *peer  __rte_unused)
 int
 request_sync(void)
 {
-	struct rte_mp_msg msg;
+	alignas(8) struct rte_mp_msg msg;
 	struct rte_mp_reply reply;
 	struct malloc_mp_req *req = (struct malloc_mp_req *)msg.param;
 	struct timespec ts;
@@ -697,7 +697,7 @@ out:
 int
 request_to_primary(struct malloc_mp_req *user_req)
 {
-	struct rte_mp_msg msg;
+	alignas(8) struct rte_mp_msg msg;
 	struct malloc_mp_req *msg_req = (struct malloc_mp_req *)msg.param;
 	struct mp_request *entry;
 	struct timespec ts;

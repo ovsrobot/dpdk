@@ -62,7 +62,7 @@ enum mp_type {
 
 struct mp_msg_internal {
 	int type;
-	struct rte_mp_msg msg;
+	alignas(8) struct rte_mp_msg msg;
 };
 
 struct async_request_param {
