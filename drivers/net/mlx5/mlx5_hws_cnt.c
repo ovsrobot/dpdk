@@ -172,8 +172,13 @@ mlx5_hws_aging_check(struct mlx5_priv *priv, struct mlx5_hws_cnt_pool *cpool)
 			/*
 			 * AGE parameter with state "FREE" couldn't be pointed
 			 * by any counter since counter is destroyed first.
-			 * Fall-through.
+			 * Since this check is async, we may reach race condition
+			 * where the counter was freed, after the in_used was checked.
+			 * Fall-through in case the counter is still used and age was freed.
 			 */
+			if (!cpool->pool[i].in_used)
+				continue;
+			/* FALLTHROUGH */
 		default:
 			MLX5_ASSERT(0);
 			continue;
