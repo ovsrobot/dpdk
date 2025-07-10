@@ -152,3 +152,10 @@ Deprecation Notices
 * bus/vmbus: Starting DPDK 25.11, all the vmbus API defined in
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
+
+* dmadev: a new capability flag ``RTE_DMA_CAPA_INTER_DEV`` will be added
+  to advertise DMA device's inter-device DMA copy capability. To enable
+  this functionality, a few dmadev APIs will be added to configure the DMA
+  access groups, facilitating coordinated data communication between devices.
+  A new ``dev_idx`` field will be added to the ``struct rte_dma_vchan_conf``
+  structure to configure a vchan for data transfers between any two DMA devices.
