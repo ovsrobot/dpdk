@@ -212,6 +212,7 @@ struct ixgbe_hw_fdir_info {
 	struct ixgbe_fdir_filter **hash_map;
 	struct rte_hash *hash_handle; /* cuckoo hash handler */
 	bool mask_added; /* If already got mask from consistent filter */
+	enum ixgbe_atr_flow_type flow_type;
 };
 
 struct ixgbe_rte_flow_rss_conf {

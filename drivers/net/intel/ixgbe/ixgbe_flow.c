@@ -1641,11 +1641,6 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 	 * value. So, we need not do anything for the not provided fields later.
 	 */
 	memset(rule, 0, sizeof(struct ixgbe_fdir_rule));
-	memset(&rule->mask, 0xFF, sizeof(struct ixgbe_hw_fdir_mask));
-	rule->mask.vlan_tci_mask = 0;
-	rule->mask.flex_bytes_mask = 0;
-	rule->mask.dst_port_mask = 0;
-	rule->mask.src_port_mask = 0;
 
 	/**
 	 * The first not void item should be
@@ -2759,6 +2754,8 @@ ixgbe_parse_fdir_filter(struct rte_eth_dev *dev,
 {
 	int ret;
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_hw_fdir_info *fdir_info =
+			IXGBE_DEV_PRIVATE_TO_FDIR_INFO(dev->data->dev_private);
 	struct rte_eth_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
 	fdir_conf->drop_queue = IXGBE_FDIR_DROP_QUEUE;
 
@@ -2803,6 +2800,8 @@ step_next:
 
 	if (rule->queue >= dev->data->nb_rx_queues)
 		return -ENOTSUP;
+
+	fdir_info->flow_type = rule->ixgbe_fdir.formatted.flow_type;
 
 	return ret;
 }

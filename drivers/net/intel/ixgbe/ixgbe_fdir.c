@@ -273,7 +273,7 @@ fdir_set_input_mask_82599(struct rte_eth_dev *dev)
 	 * a VLAN of 0 is unspecified, so mask that out as well.  L4type
 	 * cannot be masked out in this implementation.
 	 */
-	if (info->mask.dst_port_mask == 0 && info->mask.src_port_mask == 0)
+	if ((info->flow_type & IXGBE_ATR_L4TYPE_MASK) == 0)
 		/* use the L4 protocol mask for raw IPv4/IPv6 traffic */
 		fdirm |= IXGBE_FDIRM_L4P;
 
@@ -1271,6 +1271,7 @@ ixgbe_fdir_flush(struct rte_eth_dev *dev)
 	info->f_remove = 0;
 	info->add = 0;
 	info->remove = 0;
+	info->flow_type = 0;
 
 	return ret;
 }

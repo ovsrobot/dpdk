@@ -1470,6 +1470,7 @@ static int ixgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
 		return -ENOMEM;
 	}
 	fdir_info->mask_added = FALSE;
+	fdir_info->flow_type = 0;
 
 	return 0;
 }
