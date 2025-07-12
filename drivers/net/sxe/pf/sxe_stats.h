@@ -7,8 +7,6 @@
 
 #include <rte_ethdev.h>
 #include <rte_ethdev_core.h>
-
-#include "sxe_dpdk_version.h"
 #include "sxe_hw.h"
 
 #define SXE_STATS_FIELD_NAME_SIZE  50
@@ -49,11 +47,11 @@ s32 sxe_xstats_names_get(__rte_unused struct rte_eth_dev *dev,
 	struct rte_eth_xstat_name *xstats_names, __rte_unused unsigned int size);
 
 s32 sxe_xstats_get_by_id(struct rte_eth_dev *eth_dev,
-					const ulong *ids,
-					ulong *values, u32 usr_cnt);
+					const u64 *ids,
+					u64 *values, u32 usr_cnt);
 
 s32 sxe_xstats_names_get_by_id(struct rte_eth_dev *eth_dev,
-	const ulong *ids,
+	const u64 *ids,
 	struct rte_eth_xstat_name *xstats_names,
 	u32 usr_cnt);
 

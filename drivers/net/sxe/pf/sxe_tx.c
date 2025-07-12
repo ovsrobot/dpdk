@@ -1,18 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-#include "sxe_dpdk_version.h"
-#if defined DPDK_20_11_5 || defined DPDK_19_11_6
-#include <rte_ethdev_driver.h>
-#include <rte_ethdev_pci.h>
-#elif defined DPDK_21_11_5
-#include <ethdev_driver.h>
-#include <rte_dev.h>
-#else
 #include <ethdev_driver.h>
 #include <dev_driver.h>
-#endif
-
 #include <rte_net.h>
 
 #include "sxe.h"
@@ -43,17 +33,10 @@ void __rte_cold sxe_tx_function_set(struct rte_eth_dev *dev,
 		dev->tx_pkt_prepare = NULL;
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 		if (txq->rs_thresh <= RTE_SXE_MAX_TX_FREE_BUF_SZ &&
-#ifndef DPDK_19_11_6
-			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128 &&
-#endif
 			(rte_eal_process_type() != RTE_PROC_PRIMARY ||
 			sxe_txq_vec_setup(txq) == 0)) {
-#if defined DPDK_23_11_3 || defined DPDK_24_11_1
-#ifndef DPDK_23_7
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
 			dev->recycle_tx_mbufs_reuse = sxe_recycle_tx_mbufs_reuse_vec;
-#endif
-#endif
 #endif
 			dev->tx_pkt_burst   = sxe_pkts_vector_xmit;
 			PMD_LOG_INFO(INIT, "using vector tx code path");
@@ -72,7 +55,7 @@ void __rte_cold sxe_tx_function_set(struct rte_eth_dev *dev,
 
 		PMD_LOG_INFO(INIT, "using full-featured tx code path");
 		PMD_LOG_INFO(INIT, " - offloads = 0x%" SXE_PRIX64,
-					(unsigned long)txq->offloads);
+							txq->offloads);
 		PMD_LOG_INFO(INIT, " - tx_rs_thresh = %d "
 				   "[RTE_PMD_SXE_MAX_TX_BURST=%d]",
 				txq->rs_thresh,
@@ -370,8 +353,6 @@ l_end:
 }
 
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
-#if defined DPDK_23_11_3 || defined DPDK_24_11_1
-#ifndef DPDK_23_7
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
 u16 sxe_recycle_tx_mbufs_reuse_vec(void *tx_queue,
 	struct rte_eth_recycle_rxq_info *recycle_rxq_info)
@@ -437,8 +418,6 @@ u16 sxe_recycle_tx_mbufs_reuse_vec(void *tx_queue,
 
 	return nb_recycle_mbufs;
 }
-#endif
-#endif
 #endif
 
 u16 sxe_pkts_vector_xmit(void *tx_queue, struct rte_mbuf **tx_pkts,
