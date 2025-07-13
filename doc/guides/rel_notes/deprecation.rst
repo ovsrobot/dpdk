@@ -152,3 +152,9 @@ Deprecation Notices
 * bus/vmbus: Starting DPDK 25.11, all the vmbus API defined in
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
+
+* ethdev: Configuring a transmit queue for fast mbuf release will
+  require specifying which mempool to free the mbufs to.
+  For this, a new field ``struct rte_mempool *mp_fast_free`` will be
+  added to ``struct rte_eth_txconf``, and must be set when the
+  ``RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE`` offload flag is set.
