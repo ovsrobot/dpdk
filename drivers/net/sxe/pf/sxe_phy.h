@@ -105,6 +105,8 @@ s32 sxe_fc_enable(struct sxe_adapter *adapter);
 
 void sxe_link_info_get(struct sxe_adapter *adapter, u32 *link_speed, bool *link_up);
 
+s32 sxe_pfc_enable(struct sxe_adapter *adapter, u8 tc_idx);
+
 void sxe_sfp_link_capabilities_get(struct sxe_adapter *adapter, u32 *speed,
 							bool *autoneg);
 
