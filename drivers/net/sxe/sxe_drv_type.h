@@ -6,9 +6,6 @@
 #define __SXE_DRV_TYPEDEF_H__
 
 #include "sxe_types.h"
-#ifndef bool
-#define bool _Bool
-#endif
 
 typedef u8 U8;
 typedef u16 U16;

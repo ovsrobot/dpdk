@@ -12,7 +12,6 @@
 #include <rte_dev.h>
 
 #include "sxe_version.h"
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <bus_pci_driver.h>

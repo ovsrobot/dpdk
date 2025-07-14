@@ -5,7 +5,6 @@
 #ifndef __SXE_VF_H__
 #define __SXE_VF_H__
 
-#include "sxe_dpdk_version.h"
 #include <rte_ethdev.h>
 #include <bus_pci_driver.h>
 

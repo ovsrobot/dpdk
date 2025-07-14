@@ -2,9 +2,9 @@
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
 #include <ethdev_driver.h>
-#include "sxe_ethdev.h"
+#include "sxe_drv_type.h"
 #include "rte_pmd_sxe.h"
-
+#include "sxe_ethdev.h"
 #include <cmdline_parse_etheraddr.h>
 #include <cmdline_parse_num.h>
 #include <cmdline_parse_string.h>

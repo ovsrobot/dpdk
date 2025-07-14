@@ -11,6 +11,7 @@
 #include "sxe_ethdev.h"
 #include "sxe_compat_version.h"
 #include "rte_pmd_sxe.h"
+#include <eal_export.h>
 
 #define DCB_RX_CONFIG  1
 #define DCB_TX_CONFIG  1
@@ -584,7 +585,7 @@ static void sxe_dcb_cee_pfc_parse(struct sxe_dcb_config *cfg,
 static s32 sxe_dcb_tc_stats_configure(struct sxe_hw *hw,
 					struct sxe_dcb_config *dcb_config)
 {
-	s32 ret;
+	s32 ret = 0;
 	u8 tc_count = 8;
 	bool vmdq_active = false;
 
@@ -862,8 +863,7 @@ void sxe_dcb_configure(struct rte_eth_dev *dev)
 }
 
 RTE_EXPORT_SYMBOL(rte_pmd_sxe_tc_bw_set)
-s32
-rte_pmd_sxe_tc_bw_set(u8 port,
+s32 rte_pmd_sxe_tc_bw_set(u8 port,
 				u8 tc_num, u8 *bw_weight)
 {
 	struct sxe_adapter *adapter;

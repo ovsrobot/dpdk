@@ -97,7 +97,7 @@ s32 sxevf_xstats_get(struct rte_eth_dev *eth_dev,
 	cnt = SXE_HW_XSTATS_CNT;
 	PMD_LOG_INFO(DRV, "xstat size:%u. hw xstat field cnt:%" SXE_PRIU64,
 			cnt,
-			SXE_HW_XSTATS_CNT);
+			(u64)SXE_HW_XSTATS_CNT);
 
 	if (usr_cnt < cnt) {
 		ret = cnt;
@@ -118,7 +118,7 @@ s32 sxevf_xstats_get(struct rte_eth_dev *eth_dev,
 	cnt = 0;
 	for (i = 0; i < SXE_HW_XSTATS_CNT; i++) {
 		sxevf_hw_xstat_offset_get(i, &offset);
-		xstats[cnt].value = *(ulong *)(((s8 *)(&stats_info->hw_stats)) + offset);
+		xstats[cnt].value = *(u_long *)(((s8 *)(&stats_info->hw_stats)) + offset);
 		xstats[cnt].id = cnt;
 		cnt++;
 	}

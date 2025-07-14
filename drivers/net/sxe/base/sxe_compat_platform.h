@@ -30,7 +30,6 @@
 #define __force
 
 #define min(a, b)	RTE_MIN(a, b)
-
 #ifndef fallthrough
 # define fallthrough do {} while (0)
 #endif

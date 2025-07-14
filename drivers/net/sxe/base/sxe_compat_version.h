@@ -6,7 +6,6 @@
 #define __SXE_COMPAT_VERSION_H__
 
 #include <stdbool.h>
-#include "sxe_dpdk_version.h"
 
 struct rte_eth_dev;
 enum rte_eth_event_type;
