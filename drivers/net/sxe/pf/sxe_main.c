@@ -20,10 +20,12 @@
 #include "sxe_ethdev.h"
 #include "sxe.h"
 #include "drv_msg.h"
+#include "sxe_cli.h"
 #include "sxe_queue.h"
 #include "sxe_errno.h"
 #include "sxe_compat_platform.h"
 #include "sxe_pmd_hdc.h"
+#include "sxe_vf.h"
 #include "sxe_queue.h"
 
 static const struct rte_pci_id sxe_pci_tbl[] = {
