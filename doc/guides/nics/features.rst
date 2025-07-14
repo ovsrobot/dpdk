@@ -483,6 +483,11 @@ VLAN offload
 ------------
 
 Supports VLAN offload to hardware.
+This includes both VLAN stripping on Rx and VLAN insertion on Tx.
+
+On Rx VLAN strip always strips one VLAN tag if available.
+If multiple VLAN tags are present, it strips the outer tag.
+The stripped VLAN TCI is saved in mbuf->vlan_tci.
 
 * **[uses]       rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_VLAN_STRIP,RTE_ETH_RX_OFFLOAD_VLAN_FILTER,RTE_ETH_RX_OFFLOAD_VLAN_EXTEND``.
 * **[uses]       rte_eth_txconf,rte_eth_txmode**: ``offloads:RTE_ETH_TX_OFFLOAD_VLAN_INSERT``.
@@ -501,6 +506,22 @@ QinQ offload
 ------------
 
 Supports QinQ (queue in queue) offload.
+This includes both QinQ stripping on Rx and QinQ insertion on Tx.
+
+On Rx, QinQ strip strips two VLAN tags if present.
+If only one tag is present, it behaves as VLAN strip.
+Specifying both VLAN strip and QinQ strip is equivalent to QinQ strip alone.
+
+Summary of VLAN and QinQ stripping behavior:
+
++----------------------+----------------------+------------------------------+
+| Input Traffic        | VLAN-strip on        | QinQ strip on                |
++======================+======================+==============================+
+| Single VLAN packets  | Tag in vlan_tci      | Tag in vlan_tci              |
++----------------------+----------------------+------------------------------+
+| Double VLAN packets  | Outer tag in vlan_tci| Outer tag in vlan_tci_outer  |
+|                      |                      | Inner tag in vlan_tci        |
++----------------------+----------------------+------------------------------+
 
 * **[uses]     rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_QINQ_STRIP``.
 * **[uses]     rte_eth_txconf,rte_eth_txmode**: ``offloads:RTE_ETH_TX_OFFLOAD_QINQ_INSERT``.

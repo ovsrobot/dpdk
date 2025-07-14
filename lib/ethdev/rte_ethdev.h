@@ -1552,11 +1552,31 @@ struct rte_eth_conf {
 /**
  * Rx offload capabilities of a device.
  */
+/**
+ * VLAN strip offload.
+ *
+ * When enabled, strips one VLAN tag if available.
+ * If multiple VLAN tags are present, it strips the outer tag.
+ * The stripped VLAN TCI is saved in mbuf->vlan_tci and RTE_MBUF_F_RX_VLAN_STRIPPED flag is set.
+ */
 #define RTE_ETH_RX_OFFLOAD_VLAN_STRIP       RTE_BIT64(0)
 #define RTE_ETH_RX_OFFLOAD_IPV4_CKSUM       RTE_BIT64(1)
 #define RTE_ETH_RX_OFFLOAD_UDP_CKSUM        RTE_BIT64(2)
 #define RTE_ETH_RX_OFFLOAD_TCP_CKSUM        RTE_BIT64(3)
 #define RTE_ETH_RX_OFFLOAD_TCP_LRO          RTE_BIT64(4)
+/**
+ * QinQ strip offload.
+ *
+ * When enabled, strips two VLAN tags if present.
+ * If only one tag is present, it behaves as VLAN strip.
+ * The stripped VLAN TCIs are saved in mbuf fields and appropriate RTE_MBUF_F_RX_* flags are set.
+ *
+ * For single VLAN packets: Tag is saved in mbuf->vlan_tci (same as VLAN strip)
+ * For double VLAN packets: Outer tag is saved in mbuf->vlan_tci_outer,
+ *                          Inner tag is saved in mbuf->vlan_tci
+ *
+ * Note: Specifying both VLAN strip and QinQ strip is equivalent to QinQ strip alone.
+ */
 #define RTE_ETH_RX_OFFLOAD_QINQ_STRIP       RTE_BIT64(5)
 #define RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM RTE_BIT64(6)
 #define RTE_ETH_RX_OFFLOAD_MACSEC_STRIP     RTE_BIT64(7)
