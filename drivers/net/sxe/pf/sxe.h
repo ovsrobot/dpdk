@@ -6,7 +6,7 @@
 
 #include <rte_pci.h>
 #include <rte_time.h>
-
+#include "sxe_filter.h"
 #include <stdbool.h>
 #include "sxe_types.h"
 #include "sxe_irq.h"
@@ -14,6 +14,7 @@
 #include "sxe_hw.h"
 
 struct sxe_hw;
+struct sxe_vlan_context;
 
 #define SXE_LPBK_DISABLED   0x0
 #define SXE_LPBK_ENABLED	0x1
@@ -41,6 +42,8 @@ struct sxe_adapter {
 	struct sxe_hw hw;
 
 	struct sxe_irq_context irq_ctxt;
+
+	struct sxe_vlan_context vlan_ctxt;
 	struct sxe_phy_context phy_ctxt;
 
 	bool rx_batch_alloc_allowed;
