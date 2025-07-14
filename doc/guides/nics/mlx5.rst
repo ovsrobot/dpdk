@@ -769,6 +769,8 @@ Limitations
       in different flows may cause a wrong age state for the age actions.
     - Creating/destroying flow rules with indirect age action when it is active
       (timeout != 0) may cause a wrong age state for the indirect age action.
+    - If strict queueing is enabled (``RTE_FLOW_PORT_FLAG_STRICT_QUEUE`` flag)
+      indirect age flow actions can be created only through asynchronous flow API.
 
     - The driver reuses counters for aging action, so for optimization
       the values in ``rte_flow_port_attr`` structure should describe:
