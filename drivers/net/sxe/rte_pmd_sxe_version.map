@@ -1,0 +1,5 @@
+EXPERIMENTAL {
+    global:
+    rte_pmd_sxe_tx_loopback_set;
+    local: *;
+};
