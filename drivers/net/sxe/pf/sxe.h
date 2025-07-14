@@ -21,8 +21,6 @@ struct sxe_hw;
 #define PCI_VENDOR_ID_STARS	  0x1FF2
 #define SXE_DEV_ID_ASIC		  0x10a1
 
-#define MAC_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
-
 #ifdef RTE_PMD_PACKET_PREFETCH
 #define rte_packet_prefetch(p)  rte_prefetch1(p)
 #else
@@ -43,9 +41,20 @@ struct sxe_adapter {
 	struct sxe_hw hw;
 
 	struct sxe_irq_context irq_ctxt;
+	struct sxe_phy_context phy_ctxt;
 
 	bool rx_batch_alloc_allowed;
 	s8 name[PCI_PRI_STR_SIZE + 1];
+
+	u32 mtu;
+
+	RTE_ATOMIC(bool) link_thread_running;
+	RTE_ATOMIC(bool) is_stopping;
+	rte_thread_t link_thread_tid;
+	rte_atomic32_t link_thread_running;
+	rte_atomic32_t is_stopping;
+	pthread_t link_thread_tid;
+	bool is_stopped;
 };
 
 s32 sxe_hw_reset(struct sxe_hw *hw);
