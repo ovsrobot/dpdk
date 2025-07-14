@@ -9,6 +9,7 @@
 #include "sxe_filter.h"
 #include <stdbool.h>
 #include "sxe_types.h"
+#include "sxe_stats.h"
 #include "sxe_irq.h"
 #include "sxe_phy.h"
 #include "sxe_dcb.h"
@@ -59,6 +60,7 @@ struct sxe_adapter {
 #endif
 	struct sxe_ptp_context ptp_ctxt;
 	struct sxe_phy_context phy_ctxt;
+	struct sxe_stats_info stats_info;
 	struct sxe_dcb_context dcb_ctxt;
 
 	bool rx_batch_alloc_allowed;
