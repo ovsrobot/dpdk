@@ -101,7 +101,7 @@ static s32 sxevf_mailbox_lock(struct sxevf_hw *hw)
 		mailbox |= SXE_VFMAILBOX_VFU;
 		sxevf_mailbox_write(hw, mailbox);
 
-		if (sxevf_mbx_reg_read(hw) && SXE_VFMAILBOX_VFU) {
+		if (sxevf_mbx_reg_read(hw) & SXE_VFMAILBOX_VFU) {
 			ret = 0;
 			break;
 		}

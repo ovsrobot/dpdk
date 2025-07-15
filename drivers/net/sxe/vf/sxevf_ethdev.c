@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <inttypes.h>
-#include "sxe_dpdk_version.h"
+
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <bus_pci_driver.h>
@@ -252,6 +252,7 @@ static void sxevf_txrx_start(struct rte_eth_dev *eth_dev)
 		txq = eth_dev->data->tx_queues[i];
 		sxevf_tx_ring_switch(hw, txq->reg_idx, true);
 		eth_dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+
 	}
 
 	for (i = 0; i < eth_dev->data->nb_rx_queues; i++) {
@@ -332,7 +333,6 @@ static s32 sxevf_dev_stop(struct rte_eth_dev *dev)
 	sxevf_irq_free(dev);
 
 l_out:
-
 	return 0;
 }
 
@@ -362,7 +362,6 @@ static s32 sxevf_dev_close(struct rte_eth_dev *dev)
 	sxevf_irq_unregister(dev);
 
 l_out:
-
 	return ret;
 }
 
@@ -470,7 +469,6 @@ static s32 sxevf_mtu_set(struct rte_eth_dev *dev, u16 mtu)
 		goto l_out;
 	}
 
-	dev->data->dev_conf.rxmode.max_rx_pkt_len = max_frame;
 	LOG_INFO_BDF("change max frame size to %u success.", max_frame);
 
 l_out:

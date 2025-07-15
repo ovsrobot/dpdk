@@ -9,7 +9,7 @@
 #include "sxe_drv_type.h"
 #endif
 
-#define SXE_VERSION_LEN				  (32)
+#define SXE_VERION_LEN				  (32)
 #define SXE_MAC_NUM					 (128)
 #define SXE_PORT_TRANSCEIVER_LEN		(32)
 #define SXE_PORT_VENDOR_LEN			 (32)
@@ -47,8 +47,8 @@ typedef enum port_link_speed {
 } port_link_speed_e;
 
 typedef struct sys_soc_info {
-	S8	 fw_ver[SXE_VERSION_LEN];
-	S8	 opt_ver[SXE_VERSION_LEN];
+	S8	 fw_ver[SXE_VERION_LEN];
+	S8	 opt_ver[SXE_VERION_LEN];
 	U8	 soc_status;
 	U8	 pad[3];
 	S32	soc_temp;

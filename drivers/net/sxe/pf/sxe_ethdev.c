@@ -8,7 +8,7 @@
 #include <rte_ethdev.h>
 #include <rte_pmd_sxe.h>
 #include <rte_alarm.h>
-
+#include <eal_export.h>
 #include "sxe_types.h"
 #include "sxe_logs.h"
 #include "sxe_compat_platform.h"
@@ -923,8 +923,7 @@ l_end:
 }
 
 RTE_EXPORT_SYMBOL(rte_pmd_sxe_tx_loopback_set)
-s32
-rte_pmd_sxe_tx_loopback_set(u16 port, u8 on)
+s32 rte_pmd_sxe_tx_loopback_set(u16 port, u8 on)
 {
 	struct rte_eth_dev *dev;
 	struct sxe_adapter *adapter;

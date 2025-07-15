@@ -6,7 +6,6 @@
 #define __SXE_FILTER_H__
 
 #include <rte_ether.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include "sxe_types.h"
 #include "sxe_hw.h"

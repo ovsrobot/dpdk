@@ -15,7 +15,6 @@
 #else
 #include "sxe_errno.h"
 #include "sxe_logs.h"
-#include "sxe_dpdk_version.h"
 #include "sxe_compat_version.h"
 #include "sxevf.h"
 #include "sxevf_hw.h"
