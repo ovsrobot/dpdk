@@ -49,7 +49,8 @@ static int test_latency_update(void)
 	int ret = 0;
 
 	ret = rte_latencystats_update();
-	TEST_ASSERT(ret >= 0, "Test Failed: rte_latencystats_update failed");
+	TEST_ASSERT(ret >= 0, "Test Failed: rte_latencystats_update failed: %d (%s)",
+		    ret, strerror(-ret));
 
 	return TEST_SUCCESS;
 }

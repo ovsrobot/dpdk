@@ -129,7 +129,7 @@ rte_latencystats_update(void)
 					latency_stats_index,
 					values, NUM_LATENCY_STATS);
 	if (ret < 0)
-		LATENCY_STATS_LOG(INFO, "Failed to push the stats");
+		LATENCY_STATS_LOG(ERR, "Failed to push the stats");
 
 	return ret;
 }
