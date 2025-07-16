@@ -11,6 +11,7 @@
 #include "sxe_types.h"
 #include "sxe_irq.h"
 #include "sxe_phy.h"
+#include "sxe_dcb.h"
 #include "sxe_hw.h"
 
 struct sxe_hw;
@@ -49,6 +50,7 @@ struct sxe_adapter {
 	struct rte_eth_fdir_conf fnav_conf;
 #endif
 	struct sxe_phy_context phy_ctxt;
+	struct sxe_dcb_context dcb_ctxt;
 
 	bool rx_batch_alloc_allowed;
 	s8 name[PCI_PRI_STR_SIZE + 1];
