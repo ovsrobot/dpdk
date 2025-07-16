@@ -47,3 +47,11 @@
         name = rte_node
         has_size_change = no
         has_data_member_inserted_between = {offset_after(original_process), offset_of(xstat_off)}
+
+;;;;;;;;;;;;;;;;;;;
+; DONT MERGE THIS ;
+;;;;;;;;;;;;;;;;;;;
+
+[suppress_type]
+	name = rte_stack_lf_list
+	has_size_change = yes
