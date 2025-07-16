@@ -55,3 +55,7 @@
 [suppress_type]
 	name = rte_stack_lf_list
 	has_size_change = yes
+
+[suppress_type]
+	name = rte_mp_msg
+	has_size_change = yes
