@@ -1,8 +1,0 @@
-diff a/drivers/net/sxe/meson.build b/drivers/net/sxe/meson.build	(rejected hunks)
-@@ -19,4 +27,4 @@ sources = files(
- includes += include_directories('base')
- includes += include_directories('pf')
- includes += include_directories('include/sxe/')
--includes += include_directories('include/')
-\ No newline at end of file
-+includes += include_directories('include/')

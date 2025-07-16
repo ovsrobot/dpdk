@@ -4,8 +4,6 @@
 
 #ifndef __SXE_IRQ_H__
 #define __SXE_IRQ_H__
-
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 
 #include "sxe_compat_platform.h"

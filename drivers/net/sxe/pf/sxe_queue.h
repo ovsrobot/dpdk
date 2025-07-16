@@ -3,8 +3,6 @@
  */
 #ifndef __SXE_QUEUE_H__
 #define __SXE_QUEUE_H__
-
-#include "sxe_dpdk_version.h"
 #include "sxe_queue_common.h"
 
 #define SXE_TXRX_RING_NUM_MAX	 64

@@ -6,11 +6,9 @@
 #include <rte_ethdev.h>
 #include <rte_ether.h>
 #include <rte_memcpy.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <ethdev_pci.h>
 #include <bus_pci_driver.h>
-
 #include "sxe_logs.h"
 #include "sxe_vf.h"
 #include "sxe_hw.h"
@@ -732,7 +730,7 @@ static s32 sxe_vf_mc_addr_sync(struct rte_eth_dev *dev,
 	struct sxe_hw *hw = &adapter->hw;
 	struct sxe_vf_info *vf_info = &adapter->vt_ctxt.vf_info[vf];
 	struct sxe_mc_sync_msg *mc_msg = (struct sxe_mc_sync_msg *)msgbuf;
-	u8 mc_cnt = min(mc_msg->mc_cnt, SXE_VF_MC_ENTRY_NUM_MAX);
+	u8 mc_cnt = RTE_MIN(mc_msg->mc_cnt, SXE_VF_MC_ENTRY_NUM_MAX);
 	u32 mta_idx;
 	u32 mta_shift;
 	u32 vm_l2_filter = sxe_hw_pool_rx_mode_get(hw, vf);

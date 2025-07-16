@@ -2,7 +2,6 @@
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
 #include <ethdev_driver.h>
-
 #include "sxe.h"
 #include "sxe_offload.h"
 #include "sxe_logs.h"

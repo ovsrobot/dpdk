@@ -1,10 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 #include <stdint.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <rte_malloc.h>
 
