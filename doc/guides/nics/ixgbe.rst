@@ -36,6 +36,8 @@ Supported Chipsets and NICs
 - Intel Ethernet Converged Network Adapter X540-T2
 - Intel Ethernet Converged Network Adapter X550-T1
 - Intel Ethernet Converged Network Adapter X550-T2
+- Intel Ethernet Network Adapter E610-XT2
+- Intel Ethernet Network Adapter E610-XT4
 
 Vector PMD for IXGBE
 --------------------
@@ -92,6 +94,25 @@ Windows Prerequisites and Pre-conditions
 
 - Loading of private Dynamic Device Personalization (DDP) package
   is not supported on Windows.
+
+Kernel driver and Firmware Matching List
+----------------------------------------
+
+It is highly recommended to upgrade the ixgbe kernel driver and firmware
+to avoid the compatibility issues with ixgbe PMD.
+The table below shows a summary of the DPDK versions
+with corresponding out-of-tree Linux kernel drivers and firmware.
+The full list of in-tree and out-of-tree Linux kernel drivers from kernel.org
+and Linux distributions that were tested and verified
+are listed in the Tested Platforms section of the Release Notes for each release.
+
+For E610,
+
+   +--------------+-----------------------+------------------+
+   | DPDK version | Kernel driver version | Firmware version |
+   +==============+=======================+==================+
+   |     25.07    |         6.1.5         |        1.0       |
+   +--------------+-----------------------+------------------+
 
 
 Feature not Supported by RX Vector PMD
