@@ -14,9 +14,6 @@ drivers = [
         'opdl',
         'skeleton',
         'sw',
+        'octeontx',
 ]
-if not (toolchain == 'gcc' and cc.version().version_compare('<4.8.6') and
-        dpdk_conf.has('RTE_ARCH_ARM64'))
-    drivers += 'octeontx'
-endif
 std_deps = ['eventdev', 'kvargs']
