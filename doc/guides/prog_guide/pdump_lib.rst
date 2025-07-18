@@ -9,6 +9,10 @@ The library does the complete copy of the Rx and Tx mbufs to a new mempool and
 hence it slows down the performance of the applications, so it is recommended
 to use this library for debugging purposes.
 
+This library is now deprecated becuase it depends on rx and tx callbacks
+which will not work if rx or tx is done by secondary process. Use the
+Port Mirroring functionality of ethdev instead.
+
 The library uses a generic multi process channel to facilitate communication
 between primary and secondary process for enabling/disabling packet capture on
 ports.

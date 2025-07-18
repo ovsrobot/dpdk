@@ -10,6 +10,8 @@ The ``dpdk-pdump`` tool is a Data Plane Development Kit (DPDK) tool that runs as
 a DPDK secondary process and is capable of enabling packet capture on dpdk ports.
 
    .. Note::
+      * The ``dpdk-pdump`` is deprecated, use ``dpdk-dumpcap`` instead.
+
       * The ``dpdk-pdump`` tool can only be used in conjunction with a primary
         application which has the packet capture framework initialized already.
         In dpdk, only the ``testpmd`` is modified to initialize packet capture
