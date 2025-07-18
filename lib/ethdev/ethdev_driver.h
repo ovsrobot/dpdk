@@ -91,6 +91,12 @@ struct __rte_cache_aligned rte_eth_dev {
 	 */
 	RTE_ATOMIC(struct rte_eth_rxtx_callback *) pre_tx_burst_cbs[RTE_MAX_QUEUES_PER_PORT];
 
+	/** Receive mirrors */
+	RTE_ATOMIC(struct rte_eth_mirror *) rx_mirror;
+
+	/** Transmit mirrors */
+	RTE_ATOMIC(struct rte_eth_mirror *) tx_mirror;
+
 	enum rte_eth_dev_state state; /**< Flag indicating the port state */
 	void *security_ctx; /**< Context for security ops */
 };
