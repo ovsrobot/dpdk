@@ -54,7 +54,7 @@ struct sxe_adapter {
 	s8 name[PCI_PRI_STR_SIZE + 1];
 
 	u32 mtu;
-
+	bool rss_reta_updated;
 	RTE_ATOMIC(bool) link_thread_running;
 	RTE_ATOMIC(bool) is_stopping;
 	rte_thread_t link_thread_tid;
