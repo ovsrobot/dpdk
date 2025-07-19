@@ -30,6 +30,8 @@ sources = files(
         'base/sxe_hw.c',
 )
 
+testpmd_sources = files('sxe_testpmd.c')
+
 includes += include_directories('base')
 includes += include_directories('pf')
 includes += include_directories('include/sxe/')
