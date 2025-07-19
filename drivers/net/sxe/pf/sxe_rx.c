@@ -10,7 +10,6 @@
 #include <rte_atomic.h>
 #include <ethdev_driver.h>
 #include "sxe_ethdev.h"
-
 #include "sxe.h"
 #include "sxe_rx.h"
 #include "sxe_logs.h"

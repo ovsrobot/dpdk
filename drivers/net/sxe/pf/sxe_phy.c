@@ -737,6 +737,40 @@ l_end:
 	return ret;
 }
 
+s32 sxe_pfc_enable(struct sxe_adapter *adapter, u8 tc_idx)
+{
+	s32 ret;
+	struct sxe_hw *hw = &adapter->hw;
+
+	if (!hw->fc.pause_time) {
+		LOG_ERROR_BDF("link fc disabled since pause time is 0");
+		ret = -SXE_ERR_INVALID_LINK_SETTINGS;
+		goto l_ret;
+	}
+
+	if (hw->fc.current_mode & SXE_FC_TX_PAUSE) {
+		if (!hw->fc.high_water[tc_idx] || !hw->fc.low_water[tc_idx]) {
+			LOG_ERROR_BDF("Invalid water mark configuration");
+			ret = SXE_ERR_INVALID_LINK_SETTINGS;
+			goto l_ret;
+		}
+
+		if (hw->fc.low_water[tc_idx] >= hw->fc.high_water[tc_idx]) {
+			LOG_ERROR_BDF("Invalid water mark configuration");
+			ret = SXE_ERR_INVALID_LINK_SETTINGS;
+			goto l_ret;
+		}
+	}
+
+	sxe_fc_autoneg(adapter);
+
+	ret = sxe_hw_pfc_enable(hw, tc_idx);
+	if (ret)
+		PMD_LOG_ERR(INIT, "link fc enable failed, ret=%d", ret);
+
+l_ret:
+	return ret;
+}
 s32 sxe_sfp_identify(struct sxe_adapter *adapter)
 {
 	s32 ret;
