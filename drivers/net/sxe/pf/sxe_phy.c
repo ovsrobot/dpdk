@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <dev_driver.h>
 #include <rte_cycles.h>
@@ -69,7 +68,8 @@ void sxe_wait_setup_link_complete(struct rte_eth_dev *dev,
 	struct sxe_adapter *adapter = dev->data->dev_private;
 	uint32_t timeout = timeout_ms ? timeout_ms : SXE_WARNING_TIMEOUT;
 
-	while (rte_atomic_load_explicit(&adapter->link_thread_running, rte_memory_order_seq_cst)) {
+	while (rte_atomic_load_explicit(&adapter->link_thread_running,
+		rte_memory_order_seq_cst)) {
 		rte_delay_us_sleep(1000);
 		timeout--;
 

@@ -11,6 +11,7 @@
 #include <dev_driver.h>
 #include <rte_malloc.h>
 #include "sxe.h"
+#include "sxe_queue.h"
 #include "sxe_rx.h"
 
 #define RTE_SXE_MAX_TX_FREE_BUF_SZ	64
@@ -77,7 +78,11 @@ static inline u16
 sxe_packets_reassemble(sxe_rx_queue_s *rxq, struct rte_mbuf **rx_bufs,
 			u16 bufs_num, u8 *split_flags)
 {
-	struct rte_mbuf *pkts[bufs_num];
+	struct rte_mbuf **pkts = (struct rte_mbuf **)malloc(bufs_num * sizeof(struct rte_mbuf *));
+	if (pkts == NULL) {
+		perror("pkts malloc failed");
+		exit(EXIT_FAILURE);
+	}
 	struct rte_mbuf *start = rxq->pkt_first_seg;
 	struct rte_mbuf *end = rxq->pkt_last_seg;
 	u32 pkt_idx, buf_idx;
@@ -129,6 +134,7 @@ sxe_packets_reassemble(sxe_rx_queue_s *rxq, struct rte_mbuf **rx_bufs,
 	rxq->pkt_last_seg = end;
 	memcpy(rx_bufs, pkts, pkt_idx * (sizeof(*pkts)));
 
+	free(pkts);
 	return pkt_idx;
 }
 

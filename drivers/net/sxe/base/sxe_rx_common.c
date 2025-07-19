@@ -5,7 +5,6 @@
 #include <rte_memory.h>
 #include <rte_memzone.h>
 #include <rte_mbuf.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include <rte_prefetch.h>
 #include <rte_malloc.h>
@@ -80,8 +79,6 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 	u16  i, is_using_sse;
 
 	if (sxe_rx_vec_condition_check(dev) ||
-		!rx_batch_alloc_allowed ||
-		rte_vect_get_max_simd_bitwidth() < RTE_VECT_SIMD_128
 		!rx_batch_alloc_allowed
 		) {
 		PMD_LOG_DEBUG(INIT, "Port[%d] doesn't meet Vector Rx "
@@ -111,6 +108,7 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
 			dev->recycle_rx_descriptors_refill = sxe_recycle_rx_descriptors_refill_vec;
+
 #endif
 			dev->rx_pkt_burst = sxe_scattered_pkts_vec_recv;
 
@@ -138,12 +136,13 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 			dev->rx_pkt_burst = sxe_single_alloc_lro_pkts_recv;
 		}
 	}
-#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 	else if (*rx_vec_allowed) {
 		PMD_LOG_DEBUG(INIT, "Vector rx enabled, please make sure RX "
 					"burst size no less than %d (port=%d).",
 				 SXE_DESCS_PER_LOOP,
 				 dev->data->port_id);
+
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
 		dev->recycle_rx_descriptors_refill = sxe_recycle_rx_descriptors_refill_vec;
 
@@ -166,6 +165,7 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 
 		dev->rx_pkt_burst = sxe_pkts_recv;
 	}
+
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 	is_using_sse =
 		(dev->rx_pkt_burst == sxe_scattered_pkts_vec_recv ||
@@ -177,6 +177,7 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 		rxq->is_using_sse = is_using_sse;
 	}
 #endif
+
 }
 
 s32 __sxe_rx_descriptor_status(void *rx_queue, u16 offset)
@@ -340,6 +341,7 @@ const u32 *__sxe_dev_supported_ptypes_get(struct rte_eth_dev *dev, size_t *no_of
 		ptypes = ptypes_arr;
 		goto l_end;
 	}
+
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 #if defined(RTE_ARCH_X86)
 	if (dev->rx_pkt_burst == sxe_pkts_vec_recv ||

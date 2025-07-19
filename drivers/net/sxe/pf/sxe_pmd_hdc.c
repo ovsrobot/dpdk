@@ -3,7 +3,6 @@
  */
 
 #include <rte_malloc.h>
-#include "sxe_dpdk_version.h"
 #include <ethdev_driver.h>
 #include "sxe_compat_version.h"
 #include <semaphore.h>

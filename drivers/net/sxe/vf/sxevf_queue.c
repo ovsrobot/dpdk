@@ -7,8 +7,6 @@
 #include <rte_byteorder.h>
 #include <rte_mbuf_core.h>
 #include <rte_ethdev.h>
-
-#include "sxe_dpdk_version.h"
 #include "sxevf_rx.h"
 #include "sxevf_tx.h"
 #include "sxe_logs.h"

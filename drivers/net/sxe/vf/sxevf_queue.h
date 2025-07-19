@@ -5,7 +5,6 @@
 #ifndef __SXEVF_QUEUEU_H__
 #define __SXEVF_QUEUEU_H__
 
-#include "sxe_dpdk_version.h"
 #include "sxe_types.h"
 #include "sxe_queue_common.h"
 

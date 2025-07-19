@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-
 #include <rte_memory.h>
 #include <rte_memzone.h>
 #include <rte_mbuf.h>
@@ -113,7 +112,6 @@
 
 
 const alignas(RTE_CACHE_LINE_SIZE) u32 sxe_ptype_table[SXE_PACKET_TYPE_MAX] = {
-
 	[SXE_PACKET_TYPE_ETHER] = RTE_PTYPE_L2_ETHER,
 	[SXE_PACKET_TYPE_IPV4] = RTE_PTYPE_L2_ETHER |
 		RTE_PTYPE_L3_IPV4,
