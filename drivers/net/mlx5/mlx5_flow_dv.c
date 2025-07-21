@@ -19652,7 +19652,10 @@ mlx5_flow_dv_discover_counter_offset_support(struct rte_eth_dev *dev)
 		.size = sizeof(value.buf),
 	};
 	struct mlx5dv_flow_matcher_attr dv_attr = {
-		.type = IBV_FLOW_ATTR_NORMAL | IBV_FLOW_ATTR_FLAGS_EGRESS,
+		/* Cast below is needed to avoid warning until bug
+		 * (https://bugs.dpdk.org/show_bug.cgi?id=1758) is fixed.
+		 */
+		.type = IBV_FLOW_ATTR_NORMAL | (enum ibv_flow_attr_type)IBV_FLOW_ATTR_FLAGS_EGRESS,
 		.priority = 0,
 		.match_criteria_enable = 0,
 		.match_mask = (void *)&mask,
