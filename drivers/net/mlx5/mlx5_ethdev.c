@@ -368,6 +368,12 @@ mlx5_dev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *info)
 	 * Since we need one CQ per QP, the limit is the minimum number
 	 * between the two values.
 	 */
+	if (priv == NULL || priv->sh == NULL) {
+		DRV_LOG(ERR,
+		"mlx5 shared data unavailable (primary process likely exited)");
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 	max = RTE_MIN(priv->sh->dev_cap.max_cq, priv->sh->dev_cap.max_qp);
 	/* max_rx_queues is uint16_t. */
 	max = RTE_MIN(max, (unsigned int)UINT16_MAX);
