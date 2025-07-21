@@ -187,6 +187,7 @@ source_file_deps = {
     'test_stack.c': ['stack'],
     'test_stack_perf.c': ['stack'],
     'test_string_fns.c': [],
+    'test_strsep.c': [],
     'test_table.c': ['table', 'pipeline', 'port'],
     'test_table_acl.c': ['net', 'table', 'pipeline', 'port'],
     'test_table_combined.c': ['table', 'pipeline', 'port'],
