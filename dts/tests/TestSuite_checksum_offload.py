@@ -89,8 +89,11 @@ class TestChecksumOffload(TestSuite):
             if testpmd_packet.l4_dport == id:
                 is_IP = PacketOffloadFlag.RTE_MBUF_F_RX_IP_CKSUM_GOOD in testpmd_packet.ol_flags
                 is_L4 = PacketOffloadFlag.RTE_MBUF_F_RX_L4_CKSUM_GOOD in testpmd_packet.ol_flags
-        self.verify(is_L4 == good_L4, "Layer 4 checksum flag did not match expected checksum flag.")
-        self.verify(is_IP == good_IP, "IP checksum flag did not match expected checksum flag.")
+        try:
+            self.verify(is_L4 == good_L4, "Layer 4 checksum flag did not match expected checksum flag.")
+            self.verify(is_IP == good_IP, "IP checksum flag did not match expected checksum flag.")
+        except NameError:
+            self.verify(False, "Test packet was dropped when it should have been received.")
 
     def setup_hw_offload(self, testpmd: TestPmdShell) -> None:
         """Sets IP, UDP, and TCP layers to hardware offload.
