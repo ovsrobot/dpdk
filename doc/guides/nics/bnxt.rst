@@ -723,7 +723,7 @@ Note that the applications cannot update the firmware using BNXT PMD.
 Multiple Processes
 ~~~~~~~~~~~~~~~~~~
 
-When two or more DPDK applications (e.g., testpmd and dpdk-pdump) share a single
+When two or more DPDK applications (e.g., testpmd and dpdk-dumpcap) share a single
 instance of DPDK, the BNXT PMD supports a single primary application and one or
 more secondary applications. Note that the DPDK-layer (not the PMD) ensures
 there is only one primary application.

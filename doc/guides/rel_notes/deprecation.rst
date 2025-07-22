@@ -175,3 +175,6 @@ Deprecation Notices
   without relying on flow API.
   Currently there is no alternative API
   providing the same functionality as with ``repr_matching_en`` set to 0.
+
+* pdump: The pdump API and application have been deprecated and will
+  be removed in a later release.

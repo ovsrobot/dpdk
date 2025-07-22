@@ -9,6 +9,10 @@ The library does the complete copy of the Rx and Tx mbufs to a new mempool and
 hence it slows down the performance of the applications, so it is recommended
 to use this library for debugging purposes.
 
+The pdump functionality will not work if secondary process sends and receives
+packets. This is not easily fixable therefore this library is now deprecated
+and replace by port mirroring functionality of ethdev.
+
 The library uses a generic multi process channel to facilitate communication
 between primary and secondary process for enabling/disabling packet capture on
 ports.

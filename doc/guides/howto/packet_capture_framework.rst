@@ -10,11 +10,11 @@ for users of DPDK who want to know more about the Packet Capture feature and
 for those who want to monitor traffic on DPDK-controlled devices.
 
 The DPDK packet capture framework was introduced in DPDK v16.07
-and enhanced in 21.11.
+and enhanced in 21.11, and deprecated in 25.11. It is superseded
+by the new port mirroring facility of ethdev.
+
 The DPDK packet capture framework consists of the libraries
-for collecting packets ``librte_pdump``
-and writing packets to a file ``librte_pcapng``.
-There are two sample applications: ``dpdk-dumpcap`` and older ``dpdk-pdump``.
+for collecting packets ``librte_pdump`` and an application ``dpdk-pdump``.
 
 Introduction
 ------------
@@ -49,10 +49,13 @@ and then to the Pcapng file.
 
 Some things to note:
 
-* All tools using ``librte_pdump`` can only be used in conjunction with a primary
+* The ``dpdk-dumpcap`` tool used the ethdev port mirror functionality
+  to transparently mirror packets to an internal ring device.
+
+* Older tools using ``librte_pdump`` can only be used in conjunction with a primary
   application which has the packet capture framework initialized already. In
   dpdk, only ``testpmd`` is modified to initialize packet capture framework,
-  other applications remain untouched. So, if the ``dpdk-dumpcap`` tool has to
+  other applications remain untouched. So, if the ``dpdk-pdump`` tool has to
   be used with any application other than the testpmd, the user needs to
   explicitly modify that application to call the packet capture framework
   initialization code. Refer to the ``app/test-pmd/testpmd.c`` code and look
