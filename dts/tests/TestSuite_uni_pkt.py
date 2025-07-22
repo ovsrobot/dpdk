@@ -30,7 +30,7 @@ from framework.test_suite import TestSuite, func_test
 from framework.testbed_model.capability import TopologyType, requires
 
 
-@requires(topology_type=TopologyType.two_links)
+@requires(topology_type=TopologyType.one_link)
 class TestUniPkt(TestSuite):
     """DPDK Unified packet test suite.
 

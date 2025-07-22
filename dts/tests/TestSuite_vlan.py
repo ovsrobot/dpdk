@@ -21,7 +21,7 @@ from framework.testbed_model.capability import NicCapability, TopologyType, requ
 
 
 @requires(NicCapability.RX_OFFLOAD_VLAN_FILTER)
-@requires(topology_type=TopologyType.two_links)
+@requires(topology_type=TopologyType.one_link)
 class TestVlan(TestSuite):
     """DPDK VLAN test suite.
 
