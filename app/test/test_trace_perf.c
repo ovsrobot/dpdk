@@ -114,6 +114,10 @@ worker_fn_##func(void *arg) \
 #define GENERIC_DOUBLE rte_eal_trace_generic_double(3.66666)
 #define GENERIC_STR rte_eal_trace_generic_str("hello world")
 #define VOID_FP app_dpdk_test_fp()
+#ifdef RTE_LIB_PMU
+/* 0 corresponds first event passed via --trace= */
+#define READ_PMU rte_pmu_trace_read(0)
+#endif
 
 WORKER_DEFINE(GENERIC_VOID)
 WORKER_DEFINE(GENERIC_U64)
@@ -122,6 +126,9 @@ WORKER_DEFINE(GENERIC_FLOAT)
 WORKER_DEFINE(GENERIC_DOUBLE)
 WORKER_DEFINE(GENERIC_STR)
 WORKER_DEFINE(VOID_FP)
+#ifdef RTE_LIB_PMU
+WORKER_DEFINE(READ_PMU)
+#endif
 
 static void
 run_test(const char *str, lcore_function_t f, struct test_data *data, size_t sz)
@@ -174,6 +181,9 @@ test_trace_perf(void)
 	run_test("double", worker_fn_GENERIC_DOUBLE, data, sz);
 	run_test("string", worker_fn_GENERIC_STR, data, sz);
 	run_test("void_fp", worker_fn_VOID_FP, data, sz);
+#ifdef RTE_LIB_PMU
+	run_test("read_pmu", worker_fn_READ_PMU, data, sz);
+#endif
 
 	rte_free(data);
 	return TEST_SUCCESS;

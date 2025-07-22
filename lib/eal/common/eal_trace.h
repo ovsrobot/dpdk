@@ -104,6 +104,10 @@ int trace_epoch_time_save(void);
 void trace_mem_free(void);
 void trace_mem_per_thread_free(void);
 
+/* PMU wrappers */
+void trace_pmu_args_apply(const char *arg);
+void trace_pmu_args_free(void);
+
 /* EAL interface */
 int eal_trace_init(void);
 void eal_trace_fini(void);
