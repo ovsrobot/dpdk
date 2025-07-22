@@ -6,12 +6,6 @@ if not dpdk_conf.has('RTE_HAS_LIBPCAP')
     reason = 'missing dependency, "libpcap"'
 endif
 
-if is_windows
-    build = false
-    reason = 'not supported on Windows'
-    subdir_done()
-endif
-
 ext_deps += pcap_dep
 sources = files('main.c')
-deps += ['ethdev', 'pdump', 'pcapng', 'bpf']
+deps += ['net_ring', 'ethdev', 'pcapng' ]
