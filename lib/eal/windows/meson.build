@@ -20,6 +20,7 @@ sources += files(
         'getline.c',
         'getopt.c',
         'rte_thread.c',
+        'strsep.c',
 )
 
 dpdk_conf.set10('RTE_EAL_NUMA_AWARE_HUGEPAGES', true)
