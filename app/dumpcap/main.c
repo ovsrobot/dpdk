@@ -541,7 +541,7 @@ monitor_primary(void *arg __rte_unused)
 		rte_eal_alarm_set(MONITOR_INTERVAL, monitor_primary, NULL);
 	} else {
 		fprintf(stderr,
-			"Primary process is no longer active, exiting...\n");
+			"\nPrimary process is no longer active, exiting...\n");
 		rte_atomic_store_explicit(&quit_signal, true, rte_memory_order_relaxed);
 	}
 }
@@ -1058,10 +1058,11 @@ int main(int argc, char **argv)
 	else
 		pcap_dump_close(out.dumper);
 
-	cleanup_pdump_resources();
-
-	rte_ring_free(r);
-	rte_mempool_free(mp);
+	if (rte_eal_primary_proc_alive(NULL)) {
+		cleanup_pdump_resources();
+		rte_ring_free(r);
+		rte_mempool_free(mp);
+	}
 
 	return rte_eal_cleanup() ? EXIT_FAILURE : 0;
 }
