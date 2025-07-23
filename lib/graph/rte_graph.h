@@ -150,6 +150,18 @@ typedef void (*rte_node_fini_t)(const struct rte_graph *graph,
 typedef int (*rte_graph_cluster_stats_cb_t)(bool is_first, bool is_last,
 	     void *cookie, const struct rte_graph_cluster_node_stats *stats);
 
+
+/**
+ * Graph dispatch enqueue notification callback.
+ *
+ * @param graph
+ *   Current graph
+ * @param cb_priv
+ *   Opaque argument given to the callback.
+ *
+ */
+typedef void (*packets_enqueued_cb)(struct rte_graph *graph, uint64_t priv);
+
 /**
  * Structure to hold configuration parameters for creating the graph.
  *
@@ -172,6 +184,8 @@ struct rte_graph_param {
 		struct {
 			uint32_t wq_size_max; /**< Maximum size of workqueue for dispatch model. */
 			uint32_t mp_capacity; /**< Capacity of memory pool for dispatch model. */
+			packets_enqueued_cb notify_cb;
+			uint64_t cb_priv;
 		} dispatch;
 	};
 };
