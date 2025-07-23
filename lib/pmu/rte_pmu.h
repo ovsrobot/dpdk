@@ -21,12 +21,17 @@
  *
  * rte_pmu_init()
  * rte_pmu_add_event()
+ * rte_pmu_add_event() [or rte_pmu_add_events_by_pattern()]
+ *
+ * Note that if -Denable_trace_fp=True was passed to Meson,
+ * rte_pmu_init() gets called automatically.
  *
  * Afterwards all threads can read events by calling rte_pmu_read().
  */
 
 #include <linux/perf_event.h>
 
+#include <eal_export.h>
 #include <rte_atomic.h>
 #include <rte_branch_prediction.h>
 #include <rte_common.h>
@@ -145,6 +150,8 @@ __rte_pmu_enable_group(struct rte_pmu_event_group *group);
  *
  * Initialize PMU library.
  *
+ * It's safe to call it multiple times.
+ *
  * @return
  *   0 in case of success, negative value otherwise.
  */
@@ -157,6 +164,9 @@ rte_pmu_init(void);
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * Finalize PMU library.
+ *
+ * Number of calls must match number of times rte_pmu_init() was called.
+ * Otherwise memory won't be freed properly.
  */
 __rte_experimental
 void
@@ -183,6 +193,21 @@ rte_pmu_add_event(const char *name);
 #define __rte_pmu_enable_group(group) ({ RTE_SET_USED(group); 0; })
 #define __rte_pmu_read_userpage(pc) ({ RTE_SET_USED(pc); 0; })
 #endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Add events matching pattern to the group of enabled events.
+ *
+ * @param pattern
+ *   Pattern e=ev1[,ev2,...] matching events
+ *   listed under /sys/bus/event_source/devices/pmu/events,
+ *   where evX and PMU are placeholders for respectively an event and an event source.
+ */
+__rte_experimental
+int
+rte_pmu_add_events_by_pattern(const char *pattern);
 
 /**
  * @warning
@@ -233,6 +258,23 @@ rte_pmu_read(unsigned int index)
 #ifndef ALLOW_EXPERIMENTAL_API
 #define rte_pmu_read(pc) ({ RTE_SET_USED(pc); 0; })
 #endif
+
+/* Typically, the symbol and its export are defined together, e.g.:
+ *
+ *   RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_pmu_trace_read, 25.07)
+ *   RTE_TRACE_POINT_REGISTER(rte_pmu_trace_read, lib.pmu.read)
+ *
+ * However, on Windows builds, this causes issues due to how gen-version-map.py script works.
+ * Script scans source files without evaluating conditional compilation, so __rte_pmu_trace_read
+ * is included in the version map even if the library is not compiled.
+ *
+ * MSVC linker (unlike GNU ld or MinGW ld) requires all symbols in the .def file to be present in
+ * object files causing an LNK2001 (unresolved external symbol) error if absent.
+ *
+ * To avoid this, symbol is exported here instead of conditionally defining it for Windows
+ * (using #ifdef RTE_EXEC_ENV_IS_WINDOWS). This approach keeps EAL files cleaner.
+ */
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_pmu_trace_read, 25.07)
 
 #ifdef __cplusplus
 }
