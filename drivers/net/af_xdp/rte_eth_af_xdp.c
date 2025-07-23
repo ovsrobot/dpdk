@@ -104,6 +104,8 @@ RTE_LOG_REGISTER_DEFAULT(af_xdp_logtype, NOTICE);
 
 static int afxdp_dev_count;
 
+static __u32 mode_flag = XDP_FLAGS_UPDATE_IF_NOEXIST;
+
 /* Message header to synchronize fds via IPC */
 struct ipc_hdr {
 	char port_name[RTE_DEV_NAME_MAX_LEN];
@@ -198,6 +200,26 @@ struct pmd_process_private {
 #define ETH_AF_XDP_USE_CNI_ARG			"use_cni"
 #define ETH_AF_XDP_USE_PINNED_MAP_ARG	"use_pinned_map"
 #define ETH_AF_XDP_DP_PATH_ARG			"dp_path"
+#define ETH_AF_XDP_MODE_ARG				"mode"
+
+/* Define different modes for af_xdp prog to attach */
+#define ETH_AF_XDP_DRV_MODE_ARG			"drv"
+#define ETH_AF_XDP_SKB_MODE_ARG			"skb"
+#define ETH_AF_XDP_HW_MODE_ARG			"hw"
+#define ETH_AF_XDP_NUM_MODE_ARG			3
+
+static const char * const mode_arguments[] = {
+	ETH_AF_XDP_DRV_MODE_ARG,
+	ETH_AF_XDP_SKB_MODE_ARG,
+	ETH_AF_XDP_HW_MODE_ARG,
+	NULL
+};
+
+static const unsigned int mode_flags[] = {
+	XDP_FLAGS_DRV_MODE,
+	XDP_FLAGS_SKB_MODE,
+	XDP_FLAGS_HW_MODE
+};
 
 static const char * const valid_arguments[] = {
 	ETH_AF_XDP_IFACE_ARG,
@@ -210,6 +232,7 @@ static const char * const valid_arguments[] = {
 	ETH_AF_XDP_USE_CNI_ARG,
 	ETH_AF_XDP_USE_PINNED_MAP_ARG,
 	ETH_AF_XDP_DP_PATH_ARG,
+	ETH_AF_XDP_MODE_ARG,
 	NULL
 };
 
@@ -950,14 +973,14 @@ remove_xdp_program(struct pmd_internals *internals)
 	uint32_t curr_prog_id = 0;
 	int ret;
 
-	ret = bpf_xdp_query_id(internals->if_index, XDP_FLAGS_UPDATE_IF_NOEXIST,
+	ret = bpf_xdp_query_id(internals->if_index, mode_flag,
 			       &curr_prog_id);
 	if (ret != 0) {
 		AF_XDP_LOG_LINE(ERR, "bpf_xdp_query_id failed");
 		return ret;
 	}
 
-	ret = bpf_xdp_detach(internals->if_index, XDP_FLAGS_UPDATE_IF_NOEXIST,
+	ret = bpf_xdp_detach(internals->if_index, mode_flag,
 			     NULL);
 	if (ret != 0)
 		AF_XDP_LOG_LINE(ERR, "bpf_xdp_detach failed");
@@ -978,14 +1001,14 @@ remove_xdp_program(struct pmd_internals *internals)
 	int ret;
 
 	ret = bpf_get_link_xdp_id(internals->if_index, &curr_prog_id,
-				  XDP_FLAGS_UPDATE_IF_NOEXIST);
+				  mode_flag);
 	if (ret != 0) {
 		AF_XDP_LOG_LINE(ERR, "bpf_get_link_xdp_id failed");
 		return ret;
 	}
 
 	ret = bpf_set_link_xdp_fd(internals->if_index, -1,
-				  XDP_FLAGS_UPDATE_IF_NOEXIST);
+				  mode_flag);
 	if (ret != 0)
 		AF_XDP_LOG_LINE(ERR, "bpf_set_link_xdp_fd failed");
 	return ret;
@@ -1328,7 +1351,7 @@ load_custom_xdp_prog(const char *prog_path, int if_index, struct bpf_map **map)
 
 	/* Link the program with the given network device */
 	ret = link_xdp_prog_with_dev(if_index, prog_fd,
-					XDP_FLAGS_UPDATE_IF_NOEXIST);
+					mode_flag);
 	if (ret) {
 		AF_XDP_LOG_LINE(ERR, "Failed to set prog fd %d on interface",
 				prog_fd);
@@ -1679,7 +1702,7 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 	cfg.rx_size = ring_size;
 	cfg.tx_size = ring_size;
 	cfg.libbpf_flags = 0;
-	cfg.xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST;
+	cfg.xdp_flags = mode_flag;
 	cfg.bind_flags = 0;
 
 	/* Force AF_XDP socket into copy mode when users want it */
@@ -2017,6 +2040,25 @@ parse_name_arg(const char *key __rte_unused,
 	return 0;
 }
 
+/** parse name argument */
+static int
+parse_mode_arg(const char *key __rte_unused,
+	       const char *value, void *extra_args)
+{
+	unsigned int *mode = extra_args;
+	unsigned int i;
+
+	for (i = 0; i < ETH_AF_XDP_NUM_MODE_ARG; i++) {
+		if (strcmp(value, mode_arguments[i]) == 0) {
+			*mode |= mode_flags[i];
+			return 0;
+		}
+	}
+
+	AF_XDP_LOG_LINE(ERR, "Invalid af_xdp mode, choose correct mode to attach af_xdp program.");
+	return -EINVAL;
+}
+
 /** parse xdp prog argument */
 static int
 parse_prog_arg(const char *key __rte_unused,
@@ -2147,6 +2189,10 @@ parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
 
 	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_DP_PATH_ARG,
 				 &parse_prog_arg, dp_path);
+
+	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_MODE_ARG,
+				 &parse_mode_arg, &mode_flag);
+
 	if (ret < 0)
 		goto free_kvlist;
 
@@ -2587,4 +2633,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_af_xdp,
 			      "force_copy=<int> "
 			      "use_cni=<int> "
 			      "use_pinned_map=<int> "
-			      "dp_path=<string> ");
+			      "dp_path=<string> "
+			      "mode=<string> ");
