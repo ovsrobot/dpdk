@@ -20,6 +20,9 @@ RTE_EXPORT_SYMBOL(rte_eal_wait_lcore)
 int
 rte_eal_wait_lcore(unsigned worker_id)
 {
+	if (unlikely(worker_id >= RTE_MAX_LCORE))
+		return -EINVAL;
+
 	while (rte_atomic_load_explicit(&lcore_config[worker_id].state,
 			rte_memory_order_acquire) != WAIT)
 		rte_pause();
@@ -37,6 +40,18 @@ int
 rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned int worker_id)
 {
 	int rc = -EBUSY;
+	uint8_t role;
+
+	if (unlikely(worker_id >= RTE_MAX_LCORE)) {
+		rc = -EINVAL;
+		goto finish;
+	}
+
+	role = lcore_config[worker_id].core_role;
+	if (role != ROLE_RTE && role != ROLE_SERVICE) {
+		rc = -EINVAL;
+		goto finish;
+	}
 
 	/* Check if the worker is in 'WAIT' state. Use acquire order
 	 * since 'state' variable is used as the guard variable.
@@ -98,6 +113,9 @@ RTE_EXPORT_SYMBOL(rte_eal_get_lcore_state)
 enum rte_lcore_state_t
 rte_eal_get_lcore_state(unsigned lcore_id)
 {
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
+		return -EINVAL;
+
 	return lcore_config[lcore_id].state;
 }
 
