@@ -4,5 +4,7 @@
 EXPERIMENTAL {
     global:
     rte_pmd_sxe_tx_loopback_set;
+    rte_pmd_sxe_tc_bw_set;
     local: *;
 };
+
