@@ -338,6 +338,7 @@ class TestRunSetup(State):
         test_run.init_random_seed()
         test_run.remaining_tests = deque(test_run.selected_tests)
 
+        test_run.ctx.sut_node.setup_hugepages()
         test_run.ctx.sut_node.setup()
         test_run.ctx.tg_node.setup()
         test_run.ctx.dpdk.setup()

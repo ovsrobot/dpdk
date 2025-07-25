@@ -166,7 +166,7 @@ class Node:
         """
         self._compiler_version = value
 
-    def _setup_hugepages(self) -> None:
+    def setup_hugepages(self) -> None:
         """Setup hugepages on the node.
 
         Configure the hugepages only if they're specified in the node's test run configuration.
