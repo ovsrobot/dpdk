@@ -3662,29 +3662,46 @@ ice_xmit_pkts_simple(void *tx_queue,
 	return nb_tx;
 }
 
-static const struct {
-	eth_rx_burst_t pkt_burst;
-	const char *info;
-} ice_rx_burst_infos[] = {
-	[ICE_RX_SCATTERED] = { ice_recv_scattered_pkts, "Scalar Scattered" },
-	[ICE_RX_BULK_ALLOC] = { ice_recv_pkts_bulk_alloc, "Scalar Bulk Alloc" },
-	[ICE_RX_DEFAULT] = { ice_recv_pkts, "Scalar" },
+static const struct ci_rx_burst_info ice_rx_burst_infos[] = {
+	[ICE_RX_SCATTERED] = {ice_recv_scattered_pkts, "Scalar Scattered",
+		{ICE_RX_SCALAR_OFFLOADS, RTE_VECT_SIMD_DISABLED, CI_RX_BURST_FEATURE_SCATTERED}},
+	[ICE_RX_BULK_ALLOC] = {ice_recv_pkts_bulk_alloc, "Scalar Bulk Alloc",
+		{ICE_RX_SCALAR_OFFLOADS, RTE_VECT_SIMD_DISABLED, CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_DEFAULT] = {ice_recv_pkts, "Scalar",
+		{ICE_RX_SCALAR_OFFLOADS, RTE_VECT_SIMD_DISABLED, CI_RX_BURST_NO_FEATURES}},
 #ifdef RTE_ARCH_X86
 #ifdef CC_AVX512_SUPPORT
-	[ICE_RX_AVX512_SCATTERED] = {
-		ice_recv_scattered_pkts_vec_avx512, "Vector AVX512 Scattered" },
+	[ICE_RX_AVX512_SCATTERED] = {ice_recv_scattered_pkts_vec_avx512, "Vector AVX512 Scattered",
+		{ICE_RX_VECTOR_OFFLOADS, RTE_VECT_SIMD_512,
+			CI_RX_BURST_FEATURE_SCATTERED | CI_RX_BURST_FEATURE_BULK_ALLOC}},
 	[ICE_RX_AVX512_SCATTERED_OFFLOAD] = {
-		ice_recv_scattered_pkts_vec_avx512_offload, "Offload Vector AVX512 Scattered" },
-	[ICE_RX_AVX512] = { ice_recv_pkts_vec_avx512, "Vector AVX512" },
-	[ICE_RX_AVX512_OFFLOAD] = { ice_recv_pkts_vec_avx512_offload, "Offload Vector AVX512" },
+		ice_recv_scattered_pkts_vec_avx512_offload, "Offload Vector AVX512 Scattered",
+		{ICE_RX_VECTOR_OFFLOAD_OFFLOADS, RTE_VECT_SIMD_512,
+			CI_RX_BURST_FEATURE_SCATTERED | CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_AVX512] = {ice_recv_pkts_vec_avx512, "Vector AVX512",
+		{ICE_RX_VECTOR_OFFLOADS, RTE_VECT_SIMD_512, CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_AVX512_OFFLOAD] = {ice_recv_pkts_vec_avx512_offload, "Offload Vector AVX512",
+		{ICE_RX_VECTOR_OFFLOAD_OFFLOADS, RTE_VECT_SIMD_512,
+			CI_RX_BURST_FEATURE_BULK_ALLOC}},
 #endif
-	[ICE_RX_AVX2_SCATTERED] = { ice_recv_scattered_pkts_vec_avx2, "Vector AVX2 Scattered" },
+	[ICE_RX_AVX2_SCATTERED] = {ice_recv_scattered_pkts_vec_avx2, "Vector AVX2 Scattered",
+		{ICE_RX_VECTOR_OFFLOADS, RTE_VECT_SIMD_256,
+			CI_RX_BURST_FEATURE_SCATTERED | CI_RX_BURST_FEATURE_BULK_ALLOC}},
 	[ICE_RX_AVX2_SCATTERED_OFFLOAD] = {
-		ice_recv_scattered_pkts_vec_avx2_offload, "Offload Vector AVX2 Scattered" },
-	[ICE_RX_AVX2] = { ice_recv_pkts_vec_avx2, "Vector AVX2" },
-	[ICE_RX_AVX2_OFFLOAD] = { ice_recv_pkts_vec_avx2_offload, "Offload Vector AVX2" },
-	[ICE_RX_SSE_SCATTERED] = { ice_recv_scattered_pkts_vec, "Vector SSE Scattered" },
-	[ICE_RX_SSE] = { ice_recv_pkts_vec, "Vector SSE" },
+		ice_recv_scattered_pkts_vec_avx2_offload, "Offload Vector AVX2 Scattered",
+		{ICE_RX_VECTOR_OFFLOAD_OFFLOADS, RTE_VECT_SIMD_256,
+			CI_RX_BURST_FEATURE_SCATTERED | CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_AVX2] = {ice_recv_pkts_vec_avx2, "Vector AVX2",
+		{ICE_RX_VECTOR_OFFLOADS, RTE_VECT_SIMD_256, CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_AVX2_OFFLOAD] = {ice_recv_pkts_vec_avx2_offload, "Offload Vector AVX2",
+		{ICE_RX_VECTOR_OFFLOAD_OFFLOADS, RTE_VECT_SIMD_256,
+			CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_SSE_SCATTERED] = {ice_recv_scattered_pkts_vec, "Vector SSE Scattered",
+		{ICE_RX_VECTOR_OFFLOAD_OFFLOADS, RTE_VECT_SIMD_128,
+			CI_RX_BURST_FEATURE_SCATTERED | CI_RX_BURST_FEATURE_BULK_ALLOC}},
+	[ICE_RX_SSE] = {ice_recv_pkts_vec, "Vector SSE",
+		{ICE_RX_VECTOR_OFFLOAD_OFFLOADS, RTE_VECT_SIMD_128,
+			CI_RX_BURST_FEATURE_BULK_ALLOC}},
 #endif
 };
 
@@ -3694,89 +3711,53 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 	PMD_INIT_FUNC_TRACE();
 	struct ice_adapter *ad =
 		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	enum rte_vect_max_simd rx_simd_width = RTE_VECT_SIMD_DISABLED;
+	struct ci_rx_burst_features req_features = {
+		.rx_offloads = dev->data->dev_conf.rxmode.offloads,
+		.simd_width = RTE_VECT_SIMD_DISABLED,
+		.other_features_mask = CI_RX_BURST_NO_FEATURES
+	};
+	int rx_func_type = ICE_RX_DEFAULT;
 
 	/* The primary process selects the rx path for all processes. */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		goto out;
 
 #ifdef RTE_ARCH_X86
-	struct ci_rx_queue *rxq;
-	int i;
-	int rx_check_ret = -1;
-	enum rte_vect_max_simd rx_simd_width = RTE_VECT_SIMD_DISABLED;
-
-	rx_check_ret = ice_rx_vec_dev_check(dev);
-	if (ad->ptp_ena)
-		rx_check_ret = -1;
-	ad->rx_vec_offload_support =
-			(rx_check_ret == ICE_VECTOR_OFFLOAD_PATH);
-	if (rx_check_ret >= 0 && ad->rx_bulk_alloc_allowed &&
-			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
-		ad->rx_vec_allowed = true;
-		for (i = 0; i < dev->data->nb_rx_queues; i++) {
-			rxq = dev->data->rx_queues[i];
-			if (rxq && ice_rxq_vec_setup(rxq)) {
-				ad->rx_vec_allowed = false;
-				break;
-			}
-		}
-		rx_simd_width = ice_get_max_simd_bitwidth();
-
+	if (ad->ptp_ena || !ad->rx_bulk_alloc_allowed) {
+		rx_simd_width = RTE_VECT_SIMD_DISABLED;
 	} else {
-		ad->rx_vec_allowed = false;
+		rx_simd_width = ice_get_max_simd_bitwidth();
+		if (rx_simd_width >= RTE_VECT_SIMD_128)
+			if (ice_rx_vec_dev_check(dev) == -1)
+				rx_simd_width = RTE_VECT_SIMD_DISABLED;
 	}
-
-	if (ad->rx_vec_allowed) {
-		if (dev->data->scattered_rx) {
-			if (rx_simd_width == RTE_VECT_SIMD_512) {
-#ifdef CC_AVX512_SUPPORT
-				if (ad->rx_vec_offload_support)
-					ad->rx_func_type = ICE_RX_AVX512_SCATTERED_OFFLOAD;
-				else
-					ad->rx_func_type = ICE_RX_AVX512_SCATTERED;
-#endif
-			} else if (rx_simd_width == RTE_VECT_SIMD_256) {
-				if (ad->rx_vec_offload_support)
-					ad->rx_func_type = ICE_RX_AVX2_SCATTERED_OFFLOAD;
-				else
-					ad->rx_func_type = ICE_RX_AVX2_SCATTERED;
-			} else {
-				ad->rx_func_type = ICE_RX_SSE_SCATTERED;
-			}
-		} else {
-			if (rx_simd_width == RTE_VECT_SIMD_512) {
-#ifdef CC_AVX512_SUPPORT
-				if (ad->rx_vec_offload_support)
-					ad->rx_func_type = ICE_RX_AVX512_OFFLOAD;
-				else
-					ad->rx_func_type = ICE_RX_AVX512;
-#endif
-			} else if (rx_simd_width == RTE_VECT_SIMD_256) {
-				if (ad->rx_vec_offload_support)
-					ad->rx_func_type = ICE_RX_AVX2_OFFLOAD;
-				else
-					ad->rx_func_type = ICE_RX_AVX2;
-			} else {
-				ad->rx_func_type = ICE_RX_SSE;
-			}
-		}
-		goto out;
-	}
-
 #endif
 
+	req_features.simd_width = rx_simd_width;
 	if (dev->data->scattered_rx)
-		/* Set the non-LRO scattered function */
-		ad->rx_func_type = ICE_RX_SCATTERED;
-	else if (ad->rx_bulk_alloc_allowed)
-		ad->rx_func_type = ICE_RX_BULK_ALLOC;
-	else
-		ad->rx_func_type = ICE_RX_DEFAULT;
+		req_features.other_features_mask |= CI_RX_BURST_FEATURE_SCATTERED;
+	if (ad->rx_bulk_alloc_allowed)
+		req_features.other_features_mask |= CI_RX_BURST_FEATURE_BULK_ALLOC;
+
+	rx_func_type = ci_rx_burst_mode_select(&ice_rx_burst_infos[0],
+						req_features,
+						RTE_DIM(ice_rx_burst_infos),
+						ICE_RX_DEFAULT);
+#ifdef RTE_ARCH_X86
+	int i;
+
+	if (ice_rx_burst_infos[rx_func_type].features.simd_width >= RTE_VECT_SIMD_128)
+		/* Vector function selected. Prepare the rxq accordingly. */
+		for (i = 0; i < dev->data->nb_rx_queues; i++)
+			if (dev->data->rx_queues[i])
+				ice_rxq_vec_setup(dev->data->rx_queues[i]);
+#endif
 
 out:
-	dev->rx_pkt_burst = ice_rx_burst_infos[ad->rx_func_type].pkt_burst;
-	PMD_DRV_LOG(NOTICE, "Using %s Rx burst function (port %d).",
-		ice_rx_burst_infos[ad->rx_func_type].info, dev->data->port_id);
+	dev->rx_pkt_burst = ice_rx_burst_infos[rx_func_type].pkt_burst;
+	PMD_DRV_LOG(NOTICE, "Using %s (port %d).",
+			ice_rx_burst_infos[rx_func_type].info, dev->data->port_id);
 }
 
 int
