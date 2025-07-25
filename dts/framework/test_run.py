@@ -103,7 +103,6 @@ from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
 from types import MethodType
 from typing import ClassVar, Protocol, Union
 
@@ -115,7 +114,6 @@ from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvir
 from framework.settings import SETTINGS
 from framework.test_result import Result, ResultNode, TestRunResult
 from framework.test_suite import BaseConfig, TestCase, TestSuite
-from framework.testbed_model.artifact import Artifact
 from framework.testbed_model.capability import (
     Capability,
     get_supported_capabilities,
@@ -259,11 +257,11 @@ class State(Protocol):
     test_run: TestRun
     result: TestRunResult | ResultNode
 
-    def before(self):
+    def before(self) -> None:
         """Hook before the state is processed."""
-        self.logger.set_stage(self.logger_name, self.log_file_path)
+        self.logger.set_stage(self.logger_name, self.get_log_file_name())
 
-    def after(self):
+    def after(self) -> None:
         """Hook after the state is processed."""
         return
 
@@ -278,13 +276,6 @@ class State(Protocol):
 
     def get_log_file_name(self) -> str | None:
         """Name of the log file for this state."""
-        return None
-
-    @property
-    def log_file_path(self) -> Path | None:
-        """Path to the log file for this state."""
-        if file_name := self.get_log_file_name():
-            return Path(SETTINGS.output_dir, file_name)
         return None
 
     def next(self) -> Union["State", None]:
@@ -604,7 +595,7 @@ class TestCaseState(State):
 
     def get_log_file_name(self) -> str | None:
         """Get the log file name."""
-        return self.test_suite.name
+        return self.test_case.name
 
 
 @dataclass
