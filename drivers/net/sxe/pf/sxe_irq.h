@@ -33,7 +33,18 @@ void sxe_event_irq_delayed_handler(void *param);
 
 void sxe_irq_init(struct rte_eth_dev *eth_dev);
 
+s32 sxe_irq_configure(struct rte_eth_dev *dev);
+
+void sxe_irq_enable(struct rte_eth_dev *eth_dev);
+
+void sxe_irq_disable(struct rte_eth_dev *eth_dev);
+
 void sxe_irq_uninit(struct rte_eth_dev *eth_dev);
 
+s32 sxe_rx_queue_intr_enable(struct rte_eth_dev *eth_dev, u16 queue_id);
+
+s32 sxe_rx_queue_intr_disable(struct rte_eth_dev *eth_dev, u16 queue_id);
+
+void sxe_irq_vec_free(struct rte_intr_handle *handle);
 
 #endif
