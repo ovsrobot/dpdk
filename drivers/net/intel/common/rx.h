@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
+#include <rte_vect.h>
 
 #include "desc.h"
 
@@ -19,6 +20,12 @@
 #define CI_VPMD_DESCS_PER_LOOP      4
 #define CI_VPMD_DESCS_PER_LOOP_WIDE 8
 #define CI_VPMD_RX_REARM_THRESH     64
+
+#define CI_RX_BURST_NO_FEATURES		0
+#define CI_RX_BURST_FEATURE_SCATTERED	RTE_BIT32(0)
+#define CI_RX_BURST_FEATURE_FLEX	RTE_BIT32(1)
+#define CI_RX_BURST_FEATURE_BULK_ALLOC	RTE_BIT32(2)
+#define CI_RX_BURST_FEATURE_IS_DISABLED	RTE_BIT32(3)
 
 struct ci_rx_queue;
 
@@ -125,6 +132,19 @@ struct ci_rx_queue {
 	};
 };
 
+
+struct ci_rx_burst_features {
+	uint32_t rx_offloads;
+	enum rte_vect_max_simd simd_width;
+	uint32_t other_features_mask;
+};
+
+struct ci_rx_burst_info {
+	eth_rx_burst_t pkt_burst;
+	const char *info;
+	struct ci_rx_burst_features features;
+};
+
 static inline uint16_t
 ci_rx_reassemble_packets(struct rte_mbuf **rx_bufs, uint16_t nb_bufs, uint8_t *split_flags,
 		struct rte_mbuf **pkt_first_seg, struct rte_mbuf **pkt_last_seg,
@@ -220,6 +240,96 @@ ci_rxq_vec_capable(uint16_t nb_desc, uint16_t rx_free_thresh, uint64_t offloads)
 		return false;
 
 	return true;
+}
+
+/**
+ * Select the best matching Rx burst mode function based on features
+ *
+ * @param req_features
+ *   The requested features for the Rx burst mode
+ *
+ * @return
+ *   The packet burst function index that best matches the requested features
+ */
+static inline int
+ci_rx_burst_mode_select(const struct ci_rx_burst_info *infos,
+			struct ci_rx_burst_features req_features,
+			int num_paths,
+			int default_path)
+{
+	int i, idx = -1;
+	const struct ci_rx_burst_features *info_features;
+	bool req_flex = req_features.other_features_mask & CI_RX_BURST_FEATURE_FLEX;
+	bool req_scattered = req_features.other_features_mask & CI_RX_BURST_FEATURE_SCATTERED;
+	bool req_bulk_alloc = req_features.other_features_mask & CI_RX_BURST_FEATURE_BULK_ALLOC;
+	bool info_flex, info_scattered, info_bulk_alloc;
+
+	for (i = 0; i < num_paths; i++) {
+		info_features =  &infos[i].features;
+
+		/* Do not select a disabled rx burst function. */
+		if (info_features->other_features_mask & CI_RX_BURST_FEATURE_IS_DISABLED)
+			continue;
+
+		/* If requested, ensure the function uses the flexible descriptor. */
+		info_flex = info_features->other_features_mask & CI_RX_BURST_FEATURE_FLEX;
+		if (info_flex != req_flex)
+			continue;
+
+		/* If requested, ensure the function supports scattered RX. */
+		info_scattered = info_features->other_features_mask & CI_RX_BURST_FEATURE_SCATTERED;
+		if (info_scattered != req_scattered)
+			continue;
+
+		/* Do not use a bulk alloc function if not requested. However if it is the only
+		 * feature requested, ensure it is supported in the selected function.
+		 */
+		info_bulk_alloc =
+			info_features->other_features_mask & CI_RX_BURST_FEATURE_BULK_ALLOC;
+		if ((info_bulk_alloc && !req_bulk_alloc) ||
+				(req_features.other_features_mask ==
+						CI_RX_BURST_FEATURE_BULK_ALLOC &&
+						!info_bulk_alloc))
+			continue;
+
+		/* Ensure the function supports the requested RX offloads. */
+		if ((info_features->rx_offloads & req_features.rx_offloads) !=
+				req_features.rx_offloads)
+			continue;
+
+		/* Ensure the function's SIMD width is compatible with the requested width. */
+		if (info_features->simd_width > req_features.simd_width)
+			continue;
+
+		/* If this is the first valid path found, select it. */
+		if (idx == -1) {
+			idx = i;
+			continue;
+		}
+
+		/* At this point, at least one path has already been found that has met the
+		 * requested criteria. Analyse the current path and select it if it is
+		 * better than the previously selected one. i.e. if it has a larger SIMD width or
+		 * if it has the same SIMD width but fewer offloads enabled.
+		 */
+
+		if (info_features->simd_width > infos[idx].features.simd_width) {
+			idx = i;
+			continue;
+		}
+
+		/* Use the path with the least offloads that satisfies the requested offloads. */
+		if (info_features->simd_width == infos[idx].features.simd_width &&
+				(rte_popcount32(info_features->rx_offloads) <
+					rte_popcount32(infos[idx].features.rx_offloads)))
+			idx = i;
+	}
+
+	/* No path was found so use the default. */
+	if (idx == -1)
+		return default_path;
+
+	return idx;
 }
 
 #endif /* _COMMON_INTEL_RX_H_ */
