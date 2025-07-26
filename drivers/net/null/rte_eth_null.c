@@ -34,6 +34,17 @@ struct pmd_internals;
 struct null_queue {
 	struct pmd_internals *internals;
 
+	/**
+	 * For RX queue:
+	 *  Mempool to allocate mbufs from.
+	 *
+	 * For TX queue:
+	 *  Mempool to free mbufs to, if fast release of mbufs is enabled.
+	 *  UINTPTR_MAX if the mempool for fast release of mbufs has not yet been detected.
+	 *  NULL if fast release of mbufs is not enabled.
+	 *
+	 *  @see RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE
+	 */
 	struct rte_mempool *mb_pool;
 	void *dummy_packet;
 
@@ -151,7 +162,16 @@ eth_null_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	for (i = 0; i < nb_bufs; i++)
 		bytes += rte_pktmbuf_pkt_len(bufs[i]);
 
-	rte_pktmbuf_free_bulk(bufs, nb_bufs);
+	if (h->mb_pool != NULL) { /* RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE */
+		if (unlikely(h->mb_pool == (void *)UINTPTR_MAX)) {
+			if (unlikely(nb_bufs == 0))
+				return 0; /* Do not dereference uninitialized bufs[0]. */
+			h->mb_pool = bufs[0]->pool;
+		}
+		rte_mbuf_raw_free_bulk(h->mb_pool, bufs, nb_bufs);
+	} else {
+		rte_pktmbuf_free_bulk(bufs, nb_bufs);
+	}
 	rte_atomic_fetch_add_explicit(&h->tx_pkts, nb_bufs, rte_memory_order_relaxed);
 	rte_atomic_fetch_add_explicit(&h->tx_bytes, bytes, rte_memory_order_relaxed);
 
@@ -259,7 +279,7 @@ static int
 eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 		uint16_t nb_tx_desc __rte_unused,
 		unsigned int socket_id __rte_unused,
-		const struct rte_eth_txconf *tx_conf __rte_unused)
+		const struct rte_eth_txconf *tx_conf)
 {
 	struct rte_mbuf *dummy_packet;
 	struct pmd_internals *internals;
@@ -284,6 +304,10 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 
 	internals->tx_null_queues[tx_queue_id].internals = internals;
 	internals->tx_null_queues[tx_queue_id].dummy_packet = dummy_packet;
+	internals->tx_null_queues[tx_queue_id].mb_pool =
+			(dev->data->dev_conf.txmode.offloads | tx_conf->offloads) &
+			RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE ?
+			(void *)UINTPTR_MAX : NULL;
 
 	return 0;
 }
@@ -309,7 +333,10 @@ eth_dev_info(struct rte_eth_dev *dev,
 	dev_info->max_rx_queues = RTE_DIM(internals->rx_null_queues);
 	dev_info->max_tx_queues = RTE_DIM(internals->tx_null_queues);
 	dev_info->min_rx_bufsize = 0;
-	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS | RTE_ETH_TX_OFFLOAD_MT_LOCKFREE;
+	dev_info->tx_queue_offload_capa = RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
+	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS |
+			RTE_ETH_TX_OFFLOAD_MT_LOCKFREE |
+			dev_info->tx_queue_offload_capa;
 
 	dev_info->reta_size = internals->reta_size;
 	dev_info->flow_type_rss_offloads = internals->flow_type_rss_offloads;
