@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
+
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 #include "sxe_compat_version.h"
@@ -11,10 +12,14 @@
 #include "sxe_tx.h"
 #include "sxe_logs.h"
 #include "sxe_regs.h"
+#include "sxevf_regs.h"
 #include "sxe.h"
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 #include "sxe_vec_common.h"
 #include <rte_vect.h>
+#endif
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+#include "sxevf.h"
 #endif
 #include "sxe_queue_common.h"
 #include "sxe_queue.h"
@@ -288,6 +293,7 @@ void __sxe_recycle_rxq_info_get(struct rte_eth_dev *dev, u16 queue_id,
 	q_info->mp = rxq->mb_pool;
 	q_info->mbuf_ring_size = rxq->ring_depth;
 	q_info->receive_tail = &rxq->processing_idx;
+
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 	if (adapter->rx_vec_allowed) {
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
@@ -302,6 +308,7 @@ void __sxe_recycle_rxq_info_get(struct rte_eth_dev *dev, u16 queue_id,
 	q_info->refill_requirement = rxq->batch_alloc_size;
 	q_info->refill_head = &rxq->batch_alloc_trigger;
 #endif
+
 	return;
 }
 

@@ -72,6 +72,15 @@ void sxe_mac_addr_remove(struct rte_eth_dev *dev, u32 rar_idx);
 s32 sxe_mac_addr_set(struct rte_eth_dev *dev,
 				 struct rte_ether_addr *mac_addr);
 
+s32 sxe_uc_hash_table_set(struct rte_eth_dev *dev,
+			struct rte_ether_addr *mac_addr, u8 on);
+
+s32 sxe_uc_all_hash_table_set(struct rte_eth_dev *dev, u8 on);
+
+s32 sxe_set_mc_addr_list(struct rte_eth_dev *dev,
+			  struct rte_ether_addr *mc_addr_list,
+			  u32 nb_mc_addr);
+
 s32 sxe_vlan_filter_set(struct rte_eth_dev *eth_dev, u16 vlan_id, s32 on);
 
 s32 sxe_vlan_tpid_set(struct rte_eth_dev *eth_dev,
@@ -90,5 +99,11 @@ s32 sxe_set_mc_addr_list(struct rte_eth_dev *dev,
 void sxe_vlan_strip_switch_set(struct rte_eth_dev *dev);
 
 void sxe_fc_mac_addr_set(struct sxe_adapter *adapter);
+
+u8 sxe_sw_uc_entry_vf_add(struct sxe_adapter *adapter,
+				u8 vf_idx, u8 *mac_addr, bool macvlan);
+
+void sxe_sw_uc_entry_vf_del(struct sxe_adapter *adapter, u8 vf_idx,
+					bool macvlan);
 
 #endif
