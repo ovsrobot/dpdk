@@ -76,6 +76,7 @@ class Node:
         self._logger = get_dts_logger(self.name)
         self.main_session = create_session(self.config, self.name, self._logger)
         self.arch = Architecture(self.main_session.get_arch_info())
+        self._setup_hugepages()
         self._logger.info(f"Connected to node: {self.name}")
         self._get_remote_cpus()
         self._other_sessions = []
