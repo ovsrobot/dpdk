@@ -198,7 +198,7 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 	case RTE_VXLAN_DEFAULT_PORT: {
 		*off += sizeof(struct rte_vxlan_hdr);
 		hdr_lens->tunnel_len = sizeof(struct rte_vxlan_hdr);
-		hdr_lens->inner_l2_len = RTE_ETHER_VXLAN_HLEN;
+		hdr_lens->inner_l2_len = sizeof(struct rte_ether_hdr);
 		*proto = RTE_VXLAN_GPE_TYPE_ETH; /* just for eth header parse. */
 		return RTE_PTYPE_TUNNEL_VXLAN;
 	}
@@ -210,7 +210,7 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 			return 0;
 		*off += sizeof(struct rte_vxlan_gpe_hdr);
 		hdr_lens->tunnel_len = sizeof(struct rte_vxlan_gpe_hdr);
-		hdr_lens->inner_l2_len = RTE_ETHER_VXLAN_GPE_HLEN;
+		hdr_lens->inner_l2_len = sizeof(struct rte_ether_hdr);
 		*proto = vgh->proto;
 
 		return RTE_PTYPE_TUNNEL_VXLAN_GPE;
@@ -244,7 +244,7 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 			*proto = 0;
 		}
 		*off += gtp_len;
-		hdr_lens->inner_l2_len = gtp_len + sizeof(struct rte_udp_hdr);
+		hdr_lens->inner_l2_len = sizeof(struct rte_ether_hdr);
 		hdr_lens->tunnel_len = gtp_len;
 		if (port_no == RTE_GTPC_UDP_PORT)
 			return RTE_PTYPE_TUNNEL_GTPC;
@@ -262,7 +262,7 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 		geneve_len = sizeof(*gnh) + gnh->opt_len * 4;
 		*off += geneve_len;
 		hdr_lens->tunnel_len = geneve_len;
-		hdr_lens->inner_l2_len = sizeof(struct rte_udp_hdr) + geneve_len;
+		hdr_lens->inner_l2_len = sizeof(struct rte_ether_hdr);
 		*proto = gnh->proto;
 		if (gnh->proto == 0)
 			*proto = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
@@ -498,7 +498,7 @@ l3:
 		pkt_type |= RTE_PTYPE_INNER_L2_ETHER;
 		proto = eh->ether_type;
 		off += sizeof(*eh);
-		hdr_lens->inner_l2_len += sizeof(*eh);
+		hdr_lens->inner_l2_len = sizeof(struct rte_ether_hdr);
 	}
 
 	if (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN)) {
@@ -511,7 +511,7 @@ l3:
 		if (unlikely(vh == NULL))
 			return pkt_type;
 		off += sizeof(*vh);
-		hdr_lens->inner_l2_len += sizeof(*vh);
+		hdr_lens->inner_l2_len += sizeof(struct rte_vlan_hdr);
 		proto = vh->eth_proto;
 	} else if (proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_QINQ)) {
 		const struct rte_vlan_hdr *vh;
@@ -524,7 +524,7 @@ l3:
 		if (unlikely(vh == NULL))
 			return pkt_type;
 		off += 2 * sizeof(*vh);
-		hdr_lens->inner_l2_len += 2 * sizeof(*vh);
+		hdr_lens->inner_l2_len += 2 * sizeof(struct rte_vlan_hdr);
 		proto = vh->eth_proto;
 	}
 
