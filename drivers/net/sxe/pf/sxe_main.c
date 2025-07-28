@@ -19,10 +19,12 @@
 #include "sxe_ethdev.h"
 #include "sxe.h"
 #include "drv_msg.h"
+#include "sxe_cli.h"
 #include "sxe_queue.h"
 #include "sxe_errno.h"
 #include "sxe_compat_platform.h"
 #include "sxe_pmd_hdc.h"
+#include "sxe_vf.h"
 #include "sxe_queue.h"
 
 static const struct rte_pci_id sxe_pci_tbl[] = {
@@ -202,6 +204,11 @@ l_end:
 void sxe_hw_start(struct sxe_hw *hw)
 {
 	sxe_hw_vlan_filter_array_clear(hw);
+
+	sxe_hw_stats_regs_clean(hw);
+
+	sxe_hw_no_snoop_disable(hw);
+
 	sxe_hw_dcb_rate_limiter_clear(hw, SXE_TXRX_RING_NUM_MAX);
 
 	sxe_fc_autoneg_localcap_set(hw);
@@ -237,6 +244,7 @@ RTE_LOG_REGISTER_SUFFIX(sxe_log_rx, pmd.net.sxe.rx, DEBUG);
 RTE_LOG_REGISTER_SUFFIX(sxe_log_tx, pmd.net.sxe.tx, DEBUG);
 RTE_LOG_REGISTER_SUFFIX(sxe_log_hw, pmd.net.sxe.tx_hw, DEBUG);
 #else
+
 RTE_LOG_REGISTER_SUFFIX(sxe_log_init, pmd.net.sxe.init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(sxe_log_drv, pmd.net.sxe.drv, NOTICE);
 #endif
