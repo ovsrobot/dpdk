@@ -731,12 +731,6 @@ main(int argc, char **argv)
 					" specified file\n");
 			goto err;
 		}
-
-		if (cperf_check_test_vector(&opts, t_vec)) {
-			RTE_LOG(ERR, USER1, "Incomplete necessary test vectors"
-					"\n");
-			goto err;
-		}
 	} else {
 		t_vec = cperf_test_vector_get_dummy(&opts);
 		if (t_vec == NULL) {
@@ -745,6 +739,12 @@ main(int argc, char **argv)
 					" specified algorithms\n");
 			goto err;
 		}
+	}
+	/* Add check for test vector data after dummy and file option. */
+	if (cperf_check_test_vector(&opts, t_vec)) {
+		RTE_LOG(ERR, USER1, "Incomplete necessary test vectors"
+				"\n");
+		goto err;
 	}
 
 	ret = cperf_get_op_functions(&opts, &op_fns);
