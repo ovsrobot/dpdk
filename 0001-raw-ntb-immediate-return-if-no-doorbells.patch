@@ -1,0 +1,32 @@
+From bd47260510660e0a0ccd0cc8d9e5c5bcdebbb175 Mon Sep 17 00:00:00 2001
+From: Tofig Aliev <tofig.aliev.02@gmail.com>
+Date: Wed, 30 Jul 2025 02:07:27 +0700
+Subject: [PATCH] raw/ntb: immediate return if no doorbells
+
+Added immediate return from ntb_dev_intr_handler()
+if no doorbells.
+
+Signed-off-by: Tofig Aliev <tofig.aliev.02@gmail.com>
+---
+ drivers/raw/ntb/ntb.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/raw/ntb/ntb.c b/drivers/raw/ntb/ntb.c
+index 0ed4c14592..e298820e5f 100644
+--- a/drivers/raw/ntb/ntb.c
++++ b/drivers/raw/ntb/ntb.c
+@@ -158,8 +158,10 @@ ntb_dev_intr_handler(void *param)
+ 	}
+ 
+ 	db_bits = (*hw->ntb_ops->db_read)(dev);
+-	if (!db_bits)
++	if (!db_bits) {
+ 		NTB_LOG(ERR, "No doorbells");
++		return;
++	}
+ 
+ 	/* Doorbell 0 is for peer device ready. */
+ 	if (db_bits & 1) {
+-- 
+2.43.0
+

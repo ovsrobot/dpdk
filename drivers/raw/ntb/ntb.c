@@ -158,8 +158,10 @@ ntb_dev_intr_handler(void *param)
 	}
 
 	db_bits = (*hw->ntb_ops->db_read)(dev);
-	if (!db_bits)
+	if (!db_bits) {
 		NTB_LOG(ERR, "No doorbells");
+		return;
+	}
 
 	/* Doorbell 0 is for peer device ready. */
 	if (db_bits & 1) {
