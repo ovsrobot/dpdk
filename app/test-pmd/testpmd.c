@@ -490,9 +490,7 @@ lcoreid_t latencystats_lcore_id = -1;
  */
 struct rte_eth_rxmode rx_mode;
 
-struct rte_eth_txmode tx_mode = {
-	.offloads = RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE,
-};
+struct rte_eth_txmode tx_mode;
 
 volatile int test_done = 1; /* stop packet forwarding when set to 1. */
 
@@ -1591,10 +1589,6 @@ init_config_port_offloads(portid_t pid, uint32_t socket_id)
 	ret = eth_dev_info_get_print_err(pid, &port->dev_info);
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE, "rte_eth_dev_info_get() failed\n");
-
-	if (!(port->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE))
-		port->dev_conf.txmode.offloads &=
-			~RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
 
 	/* Apply Rx offloads configuration */
 	for (i = 0; i < port->dev_info.max_rx_queues; i++)
@@ -2857,9 +2851,6 @@ update_bonding_port_dev_conf(portid_t bond_pid)
 		return;
 	}
 
-	if (port->dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
-		port->dev_conf.txmode.offloads |=
-				RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
 	/* Apply Tx offloads configuration */
 	for (i = 0; i < port->dev_info.max_tx_queues; i++)
 		port->txq[i].conf.offloads = port->dev_conf.txmode.offloads;
