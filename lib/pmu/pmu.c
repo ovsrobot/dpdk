@@ -291,6 +291,10 @@ cleanup_events(struct rte_pmu_event_group *group)
 	group->enabled = false;
 }
 
+/* stop propagating chkincs quiescing to prevent unintended effects */
+#ifdef __rte_pmu_enable_group
+#undef __rte_pmu_enable_group
+#endif
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_pmu_enable_group, 25.07)
 int
 __rte_pmu_enable_group(struct rte_pmu_event_group *group)
