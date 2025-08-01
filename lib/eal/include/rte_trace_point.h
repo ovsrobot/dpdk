@@ -46,6 +46,13 @@ typedef RTE_ATOMIC(uint64_t) rte_trace_point_t;
  */
 #define RTE_TRACE_POINT_ARGS
 
+/**
+ * Macro to define the tracepoint code in RTE_TRACE_POINT, RTE_TRACE_POINT_FP macros.
+
+ * @see RTE_TRACE_POINT, RTE_TRACE_POINT_FP
+ */
+#define RTE_TRACE_POINT_EMBED_CODE(...) __VA_ARGS__
+
 /** @internal Helper macro to support RTE_TRACE_POINT and RTE_TRACE_POINT_FP */
 #define __RTE_TRACE_POINT(_mode, _tp, _args, ...) \
 extern rte_trace_point_t __##_tp; \
