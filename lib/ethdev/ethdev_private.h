@@ -85,6 +85,9 @@ int eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues);
 enum ethdev_mp_operation {
 	ETH_REQ_START,
 	ETH_REQ_STOP,
+	ETH_REQ_RESET,
+	ETH_REQ_ADD_MIRROR,
+	ETH_REQ_REMOVE_MIRROR,
 };
 
 struct ethdev_mp_request {
