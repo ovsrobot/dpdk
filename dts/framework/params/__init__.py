@@ -75,7 +75,7 @@ def modify_str(*funcs: FnPtr) -> Callable[[T], T]:
         will allow ``BitMask`` to render as a hexadecimal value.
     """
 
-    def _class_decorator(original_class):
+    def _class_decorator(original_class) -> Any:
         original_class.__str__ = _reduce_functions(funcs)
         return original_class
 

@@ -237,7 +237,7 @@ class _DTSArgumentParser(argparse.ArgumentParser):
 
         return action
 
-    def error(self, message):
+    def error(self, message) -> None:
         """Augments :meth:`~argparse.ArgumentParser.error` with environment variable awareness."""
         for action in self._actions:
             if _is_from_env(action):
@@ -257,7 +257,7 @@ class _DTSArgumentParser(argparse.ArgumentParser):
 class _EnvVarHelpFormatter(ArgumentDefaultsHelpFormatter):
     """Custom formatter to add environment variables to the help page."""
 
-    def _get_help_string(self, action):
+    def _get_help_string(self, action) -> str | None:
         """Overrides :meth:`ArgumentDefaultsHelpFormatter._get_help_string`."""
         help = super()._get_help_string(action)
 
