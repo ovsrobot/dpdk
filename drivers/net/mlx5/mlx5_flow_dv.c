@@ -3290,6 +3290,11 @@ mlx5_flow_dv_validate_item_aso_ct(struct rte_eth_dev *dev,
 						  NULL,
 						  "Conflict status bits");
 	}
+	if (spec->flags > RTE_FLOW_CONNTRACK_STATE_TIME_WAIT)
+		return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM,
+					NULL,
+					"Invalid CT state matching \n");
 	/* State change also needs to be considered. */
 	*item_flags |= MLX5_FLOW_LAYER_ASO_CT;
 	return 0;
