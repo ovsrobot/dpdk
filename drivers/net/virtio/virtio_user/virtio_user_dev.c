@@ -149,7 +149,8 @@ virtio_user_kick_queue(struct virtio_user_dev *dev, uint32_t queue_sel)
 	} else {
 		desc_addr = vring->desc_iova;
 		avail_addr = desc_addr + vring->num * sizeof(struct vring_desc);
-		used_addr = RTE_ALIGN_CEIL((uintptr_t)(&vring->avail->ring[vring->num]),
+		used_addr = RTE_ALIGN_CEIL(avail_addr + offsetof(struct vring_avail,
+						ring[vring->num]),
 					   VIRTIO_VRING_ALIGN);
 
 		addr.desc_user_addr = desc_addr;
