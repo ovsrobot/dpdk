@@ -84,8 +84,7 @@ part_number_config_arm = {
         ]
     },
     '0xd42': {
-        'march': 'armv8.4-a',
-        'mcpu' : 'cortex-a78ae',
+        'mcpu' : 'mcpu_cortex-a78ae',
         'flags': [
             ['RTE_MAX_LCORE', 16],
             ['RTE_MAX_NUMA_NODES', 1]
@@ -689,6 +688,10 @@ mcpu_defs = {
         'march': 'armv8-a',
         'march_extensions': ['simd'],
     },
+    'mcpu_cortex-a78ae': {
+        'march': 'armv8.4-a',
+        'march_extensions': ['crypto']
+    }
 }
 
 '''
