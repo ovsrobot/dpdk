@@ -308,6 +308,12 @@ parse_entry(char *entry, struct cperf_test_vector *vector,
 	if (strstr(key_token, "plaintext")) {
 		rte_free(vector->plaintext.data);
 		vector->plaintext.data = data;
+
+		if (opts->test == CPERF_TEST_TYPE_VERIFY && data_length > opts->max_buffer_size) {
+			printf("Global plaintext larger than buffer_sz\n");
+			return -1;
+		}
+
 		if (tc_found)
 			vector->plaintext.length = data_length;
 		else {
