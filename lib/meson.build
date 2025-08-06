@@ -22,7 +22,8 @@ libraries = [
         'mbuf',
         'net',
         'meter',
-        'ethdev',
+        'bpf',
+        'ethdev', # ethdev depends on bpf
         'pci', # core
         'cmdline',
         'metrics', # bitrate/latency stats depends on this
@@ -31,7 +32,6 @@ libraries = [
         'acl',
         'bbdev',
         'bitratestats',
-        'bpf',
         'cfgfile',
         'compressdev',
         'cryptodev',

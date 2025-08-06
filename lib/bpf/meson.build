@@ -7,8 +7,6 @@ if is_windows
     subdir_done()
 endif
 
-cflags += no_wvla_cflag
-
 if arch_subdir == 'x86' and dpdk_conf.get('RTE_ARCH_32')
     build = false
     reason = 'not supported on 32-bit x86'
@@ -19,7 +17,6 @@ sources = files('bpf.c',
         'bpf_dump.c',
         'bpf_exec.c',
         'bpf_load.c',
-        'bpf_pkt.c',
         'bpf_stub.c',
         'bpf_validate.c')
 
@@ -29,11 +26,9 @@ elif dpdk_conf.has('RTE_ARCH_ARM64')
     sources += files('bpf_jit_arm64.c')
 endif
 
-headers = files('bpf_def.h',
-        'rte_bpf.h',
-        'rte_bpf_ethdev.h')
+headers = files('bpf_def.h', 'rte_bpf.h')
 
-deps += ['mbuf', 'net', 'ethdev']
+deps += ['mbuf', 'net']
 
 dep = dependency('libelf', required: false, method: 'pkg-config')
 if dep.found()
