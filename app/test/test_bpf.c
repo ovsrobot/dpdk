@@ -3235,6 +3235,7 @@ run_test(const struct bpf_test *tst)
 	if (ret != 0) {
 		printf("%s@%d: check_result(%s) failed, error: %d(%s);\n",
 			__func__, __LINE__, tst->name, ret, strerror(ret));
+		return -1;
 	}
 
 	/* repeat the same test with jit, when possible */
@@ -3250,10 +3251,37 @@ run_test(const struct bpf_test *tst)
 				"error: %d(%s);\n",
 				__func__, __LINE__, tst->name,
 				rv, strerror(rv));
+			return -1;
 		}
 	}
 
 	rte_bpf_destroy(bpf);
+
+	/* repeat the same test with bpf in hugepages */
+	size_t len = rte_bpf_buf_size(&tst->prm);
+	void *buf = malloc(len);
+	if (buf == NULL) {
+		printf("%s@%d: allocation of %zu failed\n",
+		       __func__, __LINE__, len);
+		return -1;
+	}
+
+	bpf = rte_bpf_buf_load(&tst->prm, buf, len);
+	if (bpf == NULL) {
+		printf("%s@%d: failed to load bpf into buf, error=%d(%s);\n",
+			__func__, __LINE__, rte_errno, strerror(rte_errno));
+		return -1;
+	}
+
+	tst->prepare(tbuf);
+	rc = rte_bpf_exec(bpf, tbuf);
+	ret = tst->check_result(rc, tbuf);
+	if (ret != 0) {
+		printf("%s@%d: check_result(%s) failed, error: %d(%s);\n",
+			__func__, __LINE__, tst->name, ret, strerror(ret));
+	}
+	free(bpf);
+
 	return ret;
 
 }
