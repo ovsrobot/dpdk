@@ -385,7 +385,7 @@ class TopologyCapability(Capability):
         """
         return self.topology_type == other.topology_type
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: Self) -> bool:
         """Compare the :attr:`~TopologyCapability.topology_type`s.
 
         Args:
@@ -396,7 +396,7 @@ class TopologyCapability(Capability):
         """
         return self.topology_type < other.topology_type
 
-    def __gt__(self, other) -> bool:
+    def __gt__(self, other: Self) -> bool:
         """Compare the :attr:`~TopologyCapability.topology_type`s.
 
         Args:
@@ -407,7 +407,7 @@ class TopologyCapability(Capability):
         """
         return other < self
 
-    def __le__(self, other) -> bool:
+    def __le__(self, other: Self) -> bool:
         """Compare the :attr:`~TopologyCapability.topology_type`s.
 
         Args:

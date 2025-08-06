@@ -19,7 +19,7 @@ import json
 import os
 import random
 import tarfile
-from enum import Enum, Flag
+from enum import Enum, Flag, auto
 from pathlib import Path
 from typing import Any, Callable
 
@@ -136,15 +136,15 @@ class TarCompressionFormat(StrEnum):
     Its value is set to 'tar' to indicate that the file is an uncompressed tar archive.
     """
 
-    none = "tar"
-    gzip = "gz"
-    compress = "Z"
-    bzip2 = "bz2"
-    lzip = "lz"
-    lzma = "lzma"
-    lzop = "lzo"
-    xz = "xz"
-    zstd = "zst"
+    tar = auto()
+    gz = auto()
+    Z = auto()
+    bz2 = auto()
+    lz = auto()
+    lzma = auto()
+    lzo = auto()
+    xz = auto()
+    zst = auto()
 
     @property
     def extension(self):
@@ -154,7 +154,7 @@ class TarCompressionFormat(StrEnum):
         For other compression formats, the extension will be in the format
         'tar.{compression format}'.
         """
-        return f"{self.value}" if self == self.none else f"{self.none.value}.{self.value}"
+        return f"{self.value}" if self == self.tar else f"{self.tar.value}.{self.value}"
 
 
 def convert_to_list_of_string(value: Any | list[Any]) -> list[str]:
@@ -164,7 +164,7 @@ def convert_to_list_of_string(value: Any | list[Any]) -> list[str]:
 
 def create_tarball(
     dir_path: Path,
-    compress_format: TarCompressionFormat = TarCompressionFormat.none,
+    compress_format: TarCompressionFormat = TarCompressionFormat.tar,
     exclude: Any | list[Any] | None = None,
 ) -> Path:
     """Create a tarball from the contents of the specified directory.
@@ -213,7 +213,7 @@ def create_tarball(
     return target_tarball_path
 
 
-def extract_tarball(tar_path: str | Path):
+def extract_tarball(tar_path: str | Path) -> None:
     """Extract the contents of a tarball.
 
     The tarball will be extracted in the same path as `tar_path` parent path.

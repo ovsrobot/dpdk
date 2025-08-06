@@ -4,12 +4,14 @@
 """Runtime contexts."""
 
 import functools
+from collections.abc import Callable
 from dataclasses import MISSING, dataclass, field, fields
-from typing import TYPE_CHECKING, ParamSpec
+from typing import TYPE_CHECKING, ParamSpec, Type
 
 from framework.exception import InternalError
 from framework.remote_session.shell_pool import ShellPool
 from framework.settings import SETTINGS
+from framework.testbed_model.capability import TestProtocol
 from framework.testbed_model.cpu import LogicalCoreCount, LogicalCoreList
 from framework.testbed_model.node import Node
 from framework.testbed_model.topology import Topology
@@ -97,12 +99,12 @@ def init_ctx(ctx: Context) -> None:
 
 def filter_cores(
     specifier: LogicalCoreCount | LogicalCoreList, ascending_cores: bool | None = None
-):
+) -> Callable[[Callable], Callable[[], Type[TestProtocol]]]:
     """Decorates functions that require a temporary update to the lcore specifier."""
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable[[], Type[TestProtocol]]:
         @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> Type[TestProtocol]:
             local_ctx = get_ctx().local
 
             old_specifier = local_ctx.lcore_filter_specifier

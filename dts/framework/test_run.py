@@ -178,7 +178,7 @@ class TestRun:
         tests_config: dict[str, BaseConfig],
         nodes: Iterable[Node],
         result: TestRunResult,
-    ):
+    ) -> None:
         """Test run constructor.
 
         Args:
@@ -258,11 +258,11 @@ class State(Protocol):
     test_run: TestRun
     result: TestRunResult | ResultNode
 
-    def before(self):
+    def before(self) -> None:
         """Hook before the state is processed."""
         self.logger.set_stage(self.logger_name, self.log_file_path)
 
-    def after(self):
+    def after(self) -> None:
         """Hook after the state is processed."""
         return
 
@@ -577,7 +577,7 @@ class TestSuiteTeardown(TestSuiteState):
         self.result.mark_step_as("teardown", Result.ERROR, ex)
         return TestRunExecution(self.test_run, self.test_run.result)
 
-    def after(self):
+    def after(self) -> None:
         """Hook after state is processed."""
         if (
             self.result.get_overall_result() in [Result.FAIL, Result.ERROR]

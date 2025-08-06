@@ -15,6 +15,7 @@ This intermediate module implements the common parts of mostly POSIX compliant d
 import re
 from collections.abc import Iterable
 from pathlib import Path, PurePath, PurePosixPath
+from typing import Any
 
 from framework.exception import DPDKBuildError, RemoteCommandExecutionError
 from framework.settings import SETTINGS
@@ -116,7 +117,7 @@ class PosixSession(OSSession):
         self,
         source_dir: str | PurePath,
         destination_dir: str | Path,
-        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        compress_format: TarCompressionFormat = TarCompressionFormat.tar,
         exclude: str | list[str] | None = None,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_dir_from`."""
@@ -135,7 +136,7 @@ class PosixSession(OSSession):
         self,
         source_dir: str | Path,
         destination_dir: str | PurePath,
-        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        compress_format: TarCompressionFormat = TarCompressionFormat.tar,
         exclude: str | list[str] | None = None,
     ) -> None:
         """Overrides :meth:`~.os_session.OSSession.copy_dir_to`."""
@@ -178,12 +179,12 @@ class PosixSession(OSSession):
     def create_remote_tarball(
         self,
         remote_dir_path: str | PurePath,
-        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        compress_format: TarCompressionFormat = TarCompressionFormat.tar,
         exclude: str | list[str] | None = None,
     ) -> PurePosixPath:
         """Overrides :meth:`~.os_session.OSSession.create_remote_tarball`."""
 
-        def generate_tar_exclude_args(exclude_patterns) -> str:
+        def generate_tar_exclude_args(exclude_patterns: Any) -> str:
             """Generate args to exclude patterns when creating a tarball.
 
             Args:

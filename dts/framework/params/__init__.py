@@ -44,7 +44,7 @@ def _reduce_functions(funcs: Iterable[FnPtr]) -> FnPtr:
         FnPtr: A function that calls the given functions from left to right.
     """
 
-    def reduced_fn(value):
+    def reduced_fn(value: Any) -> Any:
         for fn in funcs:
             value = fn(value)
         return value

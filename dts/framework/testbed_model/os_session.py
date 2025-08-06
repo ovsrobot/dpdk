@@ -115,7 +115,7 @@ class OSSession(ABC):
         node_config: NodeConfiguration,
         name: str,
         logger: DTSLogger,
-    ):
+    ) -> None:
         """Initialize the OS-aware session.
 
         Connect to the node right away and also create an interactive remote session.
@@ -266,7 +266,7 @@ class OSSession(ABC):
         self,
         source_dir: str | PurePath,
         destination_dir: str | Path,
-        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        compress_format: TarCompressionFormat = TarCompressionFormat.tar,
         exclude: str | list[str] | None = None,
     ) -> None:
         """Copy a directory from the remote node to the local filesystem.
@@ -306,7 +306,7 @@ class OSSession(ABC):
         self,
         source_dir: str | Path,
         destination_dir: str | PurePath,
-        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        compress_format: TarCompressionFormat = TarCompressionFormat.tar,
         exclude: str | list[str] | None = None,
     ) -> None:
         """Copy a directory from the local filesystem to the remote node.
@@ -375,7 +375,7 @@ class OSSession(ABC):
     def create_remote_tarball(
         self,
         remote_dir_path: str | PurePath,
-        compress_format: TarCompressionFormat = TarCompressionFormat.none,
+        compress_format: TarCompressionFormat = TarCompressionFormat.tar,
         exclude: str | list[str] | None = None,
     ) -> PurePosixPath:
         """Create a tarball from the contents of the specified remote directory.
