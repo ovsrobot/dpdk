@@ -153,6 +153,44 @@ rte_bpf_load(const struct rte_bpf_prm *prm);
 struct rte_bpf *
 rte_bpf_elf_load(const struct rte_bpf_prm *prm, const char *fname,
 		const char *sname);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Determine size of required memory area.
+ *
+ * @param prm
+ *  Parameters used to create and initialise the BPF execution context.
+ * @return
+ *   Number of bytes required or negative on error,
+ *   with error code set in rte_errno.
+ */
+__rte_experimental
+ssize_t
+rte_bpf_buf_size(const struct rte_bpf_prm *prm);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Create a new eBPF execution context into provided memory area
+ * and load given BPF code into it.
+ *
+ * @param prm
+ *  Parameters used to create and initialise the BPF execution context.
+ * @param buf
+ *  Memory area to place BPF code into.
+ * @param len
+ *  Size of the buf area.
+ * @return
+ *   BPF handle that is used in future BPF operations,
+ *   or NULL on error, with error code set in rte_errno.
+ */
+__rte_experimental
+struct rte_bpf *
+rte_bpf_buf_load(const struct rte_bpf_prm *prm, void *buf, size_t len);
+
 /**
  * Execute given BPF bytecode.
  *
