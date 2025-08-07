@@ -175,3 +175,8 @@ Deprecation Notices
   without relying on flow API.
   Currently there is no alternative API
   providing the same functionality as with ``repr_matching_en`` set to 0.
+
+* pdump: The packet dump library is deprecated and will be removed
+  in 26.11 release. The pdump library uses callbacks and therefore
+  is unable to capture packets sent or received by a secondary process.
+  It is superseded by the port mirroring API.
