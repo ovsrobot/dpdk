@@ -26,7 +26,7 @@ from framework.testbed_model.capability import TopologyType, requires
 
 
 @requires(NicCapability.PHYSICAL_FUNCTION)
-@requires(topology_type=TopologyType.two_links)
+@requires(topology_type=TopologyType.one_link)
 class TestDynamicConfig(TestSuite):
     """Dynamic config suite.
 
