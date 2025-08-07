@@ -36,7 +36,14 @@ RTE_EXPORT_SYMBOL(rte_eal_remote_launch)
 int
 rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned int worker_id)
 {
+	enum rte_lcore_role_t role;
 	int rc = -EBUSY;
+
+	role = lcore_config[worker_id].core_role;
+	if (role != ROLE_RTE && role != ROLE_SERVICE) {
+		rc = -EINVAL;
+		goto finish;
+	}
 
 	/* Check if the worker is in 'WAIT' state. Use acquire order
 	 * since 'state' variable is used as the guard variable.

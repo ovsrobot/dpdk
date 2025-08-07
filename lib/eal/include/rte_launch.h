@@ -58,11 +58,13 @@ typedef int (lcore_function_t)(void *);
  * @param arg
  *   The argument for the function.
  * @param worker_id
- *   The identifier of the lcore on which the function should be executed.
+ *   The identifier of the lcore on which the function should be executed,
+ *   which MUST be between 0 and RTE_MAX_LCORE-1.
  * @return
  *   - 0: Success. Execution of function f started on the remote lcore.
  *   - (-EBUSY): The remote lcore is not in a WAIT state.
  *   - (-EPIPE): Error reading or writing pipe to worker thread
+ *   - (-EINVAL): The role of the remote lcore is neither ROLE_RTE nor ROLE_SERVICE.
  */
 int rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned worker_id);
 
@@ -105,7 +107,7 @@ int rte_eal_mp_remote_launch(lcore_function_t *f, void *arg,
  * To be executed on the MAIN lcore only.
  *
  * @param worker_id
- *   The identifier of the lcore.
+ *   The identifier of the lcore, which MUST be between 0 and RTE_MAX_LCORE-1.
  * @return
  *   The state of the lcore.
  */
@@ -120,7 +122,7 @@ enum rte_lcore_state_t rte_eal_get_lcore_state(unsigned int worker_id);
  * the lcore finishes its job and moves to the WAIT state.
  *
  * @param worker_id
- *   The identifier of the lcore.
+ *   The identifier of the lcore, which MUST be between 0 and RTE_MAX_LCORE-1.
  * @return
  *   - 0: If the remote launch function was never called on the lcore
  *     identified by the worker_id.
