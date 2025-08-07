@@ -35,7 +35,7 @@ class TopologyType(int, Enum):
     @classmethod
     def default(cls) -> "TopologyType":
         """The default topology required by test cases if not specified otherwise."""
-        return cls.two_links
+        return cls.one_link
 
 
 class PortLink(NamedTuple):
