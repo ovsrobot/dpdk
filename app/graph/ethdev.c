@@ -663,11 +663,12 @@ cmd_ethdev_parsed(void *parsed_result, __rte_unused struct cmdline *cl, void *da
 	struct cmd_ethdev_result *res = parsed_result;
 	struct ethdev_config config;
 	int rc;
-
+	size_t len;
 	memset(&config, 0, sizeof(struct ethdev_config));
 	config.rx.n_queues = res->nb_rxq;
 	config.rx.queue_size = ETHDEV_RX_DESC_DEFAULT;
-	memcpy(config.rx.mempool_name, res->mempool, strlen(res->mempool));
+	len = strnlen(res->mempool, sizeof(config.rx.mempool_name));
+	memcpy(config.rx.mempool_name, res->mempool, len);
 
 	config.tx.n_queues = res->nb_txq;
 	config.tx.queue_size = ETHDEV_TX_DESC_DEFAULT;
