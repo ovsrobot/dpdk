@@ -14,6 +14,8 @@
 #include <bus_driver.h>
 #include <eal_export.h>
 #include <rte_log.h>
+#include <rte_cycles.h>
+#include <rte_alarm.h>
 #include <rte_interrupts.h>
 #include <rte_kvargs.h>
 #include <rte_memcpy.h>
@@ -2041,13 +2043,16 @@ rte_eth_dev_reset(uint16_t port_id)
 	if (dev->dev_ops->dev_reset == NULL)
 		return -ENOTSUP;
 
-	ret = rte_eth_dev_stop(port_id);
-	if (ret != 0) {
-		RTE_ETHDEV_LOG_LINE(ERR,
-			"Failed to stop device (port %u) before reset: %s - ignore",
-			port_id, rte_strerror(-ret));
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		ret = rte_eth_dev_stop(port_id);
+		if (ret != 0)
+			RTE_ETHDEV_LOG_LINE(ERR,
+				    "Failed to stop device (port %u) before reset: %s - ignore",
+				    port_id, rte_strerror(-ret));
+		ret = eth_err(port_id, dev->dev_ops->dev_reset(dev));
+	} else {
+		ret = ethdev_request(port_id, ETH_REQ_STOP, NULL, 0);
 	}
-	ret = eth_err(port_id, dev->dev_ops->dev_reset(dev));
 
 	rte_ethdev_trace_reset(port_id, ret);
 
