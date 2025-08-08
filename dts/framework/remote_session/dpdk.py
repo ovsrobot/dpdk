@@ -7,6 +7,7 @@
 
 import os
 import time
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
@@ -302,14 +303,83 @@ class DPDKBuildEnvironment:
         return DPDKBuildInfo(dpdk_version=self.dpdk_version, compiler_version=self.compiler_version)
 
 
-class DPDKRuntimeEnvironment:
-    """Class handling a DPDK runtime environment."""
+class DPDKRuntimeEnvironment(ABC):
+    """Shared methods between TG and SUT runtimes."""
+
+    _node: Final[Node]
+
+    def __init__(self, node: Node):
+        """DPDK runtime environment constructor.
+
+        Args:
+            node: The target node to manage a DPDK environment.
+        """
+        self._node = node
+
+    @abstractmethod
+    def _prepare_devbind_script(self):
+        """Prepare the devbind script.
+
+        This script is only available for Linux, if the detected session is not Linux then do
+        nothing.
+
+        Raises:
+            InternalError: If dpdk-devbind.py could not be found.
+        """
+
+    @abstractmethod
+    def setup(self) -> None:
+        """Set up the DPDK runtime on the target node."""
+
+
+class DPDKTGRuntimeEnvironment(DPDKRuntimeEnvironment):
+    """Class handling a DPDK runtime environment for a TG."""
+
+    def __init__(self, node: Node):
+        """DPDK TG environment constructor.
+
+        Args:
+            node: The target node to manage a DPDK environment.
+        """
+        super().__init__(node)
+
+    def setup(self) -> None:
+        """Set up the DPDK runtime on the target node."""
+        self._prepare_devbind_script()
+
+    def _prepare_devbind_script(self) -> None:
+        """Prepare the devbind script.
+
+        Copy the script build from the local repository.
+
+        This script is only available for Linux, if the detected session is not Linux then do
+        nothing.
+
+        Raises:
+            InternalError: If dpdk-devbind.py could not be found.
+        """
+        if not isinstance(self._node.main_session, LinuxSession):
+            return
+
+        local_script_path = Path("..", "usertools", "dpdk-devbind.py").resolve()
+        if not local_script_path.exists():
+            raise InternalError("Could not find dpdk-devbind.py locally.")
+
+        devbind_script_path = self._node.main_session.join_remote_path(
+            self._node.tmp_dir, local_script_path.name
+        )
+
+        self._node.main_session.copy_to(local_script_path, devbind_script_path)
+        self._node.main_session.devbind_script_path = devbind_script_path
+
+
+class DPDKSUTRuntimeEnvironment(DPDKRuntimeEnvironment):
+    """Class handling a DPDK runtime environment for a SUT."""
 
     config: Final[DPDKRuntimeConfiguration]
-    build: Final[DPDKBuildEnvironment | None]
-    _node: Final[Node]
     _logger: Final[DTSLogger]
 
+    build: Final[DPDKBuildEnvironment]
     timestamp: Final[str]
     _virtual_devices: list[VirtualDevice]
     _lcores: list[LogicalCore]
@@ -322,18 +392,18 @@ class DPDKRuntimeEnvironment:
         self,
         config: DPDKRuntimeConfiguration,
         node: Node,
-        build_env: DPDKBuildEnvironment | None = None,
+        build_env: DPDKBuildEnvironment,
     ):
-        """DPDK environment constructor.
+        """DPDK SUT environment constructor.
 
         Args:
             config: The configuration of DPDK.
             node: The target node to manage a DPDK environment.
-            build_env: The DPDK build environment, if any.
+            build_env: The DPDK build environment.
         """
-        self.config = config
+        super().__init__(node)
         self.build = build_env
-        self._node = node
+        self.config = config
         self._logger = get_dts_logger()
 
         self.timestamp = f"{str(os.getpid())}_{time.strftime('%Y%m%d%H%M%S', time.localtime())}"
@@ -354,16 +424,10 @@ class DPDKRuntimeEnvironment:
         self._ports_bound_to_dpdk = False
         self._kill_session = None
 
-    def setup(self):
+    def setup(self) -> None:
         """Set up the DPDK runtime on the target node."""
-        if self.build:
-            self.build.setup()
+        self.build.setup()
         self._prepare_devbind_script()
-
-    def teardown(self) -> None:
-        """Reset DPDK variables and bind port driver to the OS driver."""
-        if self.build:
-            self.build.teardown()
 
     def run_dpdk_app(
         self, app_path: PurePath, eal_params: EalParams, timeout: float = 30
@@ -384,38 +448,6 @@ class DPDKRuntimeEnvironment:
         return self._node.main_session.send_command(
             f"{app_path} {eal_params}", timeout, privileged=True, verify=True
         )
-
-    def _prepare_devbind_script(self) -> None:
-        """Prepare the devbind script.
-
-        If the environment has a build associated with it, then use the script within that build's
-        tree. Otherwise, copy the script from the local repository.
-
-        This script is only available for Linux, if the detected session is not Linux then do
-        nothing.
-
-        Raises:
-            InternalError: If dpdk-devbind.py could not be found.
-        """
-        if not isinstance(self._node.main_session, LinuxSession):
-            return
-
-        if self.build:
-            devbind_script_path = self._node.main_session.join_remote_path(
-                self.build.remote_dpdk_tree_path, "usertools", "dpdk-devbind.py"
-            )
-        else:
-            local_script_path = Path("..", "usertools", "dpdk-devbind.py").resolve()
-            if not local_script_path.exists():
-                raise InternalError("Could not find dpdk-devbind.py locally.")
-
-            devbind_script_path = self._node.main_session.join_remote_path(
-                self._node.tmp_dir, local_script_path.name
-            )
-
-            self._node.main_session.copy_to(local_script_path, devbind_script_path)
-
-        self._node.main_session.devbind_script_path = devbind_script_path
 
     def filter_lcores(
         self,
@@ -459,3 +491,24 @@ class DPDKRuntimeEnvironment:
     def get_virtual_devices(self) -> Iterable[VirtualDevice]:
         """The available DPDK virtual devices."""
         return (v for v in self._virtual_devices)
+
+    def _prepare_devbind_script(self) -> None:
+        """Prepare the devbind script.
+
+        Use the script within the associated build's tree.
+
+        This script is only available for Linux, if the detected session is not Linux then do
+        nothing.
+        """
+        if not isinstance(self._node.main_session, LinuxSession):
+            return
+
+        devbind_script_path = self._node.main_session.join_remote_path(
+            self.build.remote_dpdk_tree_path, "usertools", "dpdk-devbind.py"
+        )
+
+        self._node.main_session.devbind_script_path = devbind_script_path
+
+    def teardown(self) -> None:
+        """Reset DPDK variables and bind port driver to the OS driver."""
+        self.build.teardown()

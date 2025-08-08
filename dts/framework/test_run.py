@@ -111,7 +111,10 @@ from framework.config.test_run import TestRunConfiguration
 from framework.context import Context, init_ctx
 from framework.exception import InternalError, SkippedTestException, TestCaseVerifyError
 from framework.logger import DTSLogger, get_dts_logger
-from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
+from framework.remote_session.dpdk import (
+    DPDKBuildEnvironment,
+    DPDKSUTRuntimeEnvironment,
+)
 from framework.settings import SETTINGS
 from framework.test_result import Result, ResultNode, TestRunResult
 from framework.test_suite import BaseConfig, TestCase, TestSuite
@@ -199,11 +202,11 @@ class TestRun:
         )
 
         dpdk_build_env = DPDKBuildEnvironment(config.dpdk.build, sut_node)
-        dpdk_runtime_env = DPDKRuntimeEnvironment(config.dpdk, sut_node, dpdk_build_env)
+        dpdk_sut_runtime_env = DPDKSUTRuntimeEnvironment(config.dpdk, sut_node, dpdk_build_env)
         traffic_generator = create_traffic_generator(config.traffic_generator, tg_node)
 
         self.ctx = Context(
-            sut_node, tg_node, topology, dpdk_build_env, dpdk_runtime_env, traffic_generator
+            sut_node, tg_node, topology, dpdk_build_env, dpdk_sut_runtime_env, traffic_generator
         )
         self.result = result
         self.selected_tests = list(self.config.filter_tests(tests_config))
