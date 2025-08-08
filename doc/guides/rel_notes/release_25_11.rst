@@ -56,6 +56,11 @@ New Features
      =======================================================
 
 
+* **Added port mirroring API.**
+
+  Added new API to ethdev to allow monitoring and collecting packets
+  using port mirroring.
+
 Removed Items
 -------------
 

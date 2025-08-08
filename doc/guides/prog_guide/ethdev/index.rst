@@ -12,4 +12,5 @@ Ethernet Device Library
     flow_offload
     traffic_metering_and_policing
     traffic_management
+    port_mirror
     qos_framework
