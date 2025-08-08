@@ -55,6 +55,12 @@ endif
 
 deps += ['net', 'kvargs', 'meter', 'telemetry']
 
+if dpdk_conf.has('RTE_LIB_BPF')
+    deps += ['bpf']
+    headers += files('rte_bpf_ethdev.h')
+    sources += files('ethdev_bpf.c')
+endif
+
 if is_freebsd
     annotate_locks = false
 endif
