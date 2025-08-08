@@ -114,6 +114,7 @@ from framework.logger import DTSLogger, get_dts_logger
 from framework.remote_session.dpdk import (
     DPDKBuildEnvironment,
     DPDKSUTRuntimeEnvironment,
+    DPDKTGRuntimeEnvironment,
 )
 from framework.settings import SETTINGS
 from framework.test_result import Result, ResultNode, TestRunResult
@@ -169,6 +170,7 @@ class TestRun:
     ctx: Context
     result: TestRunResult
     selected_tests: list[TestScenario]
+    tg_runtime_env: DPDKTGRuntimeEnvironment
 
     blocked: bool
     remaining_tests: deque[TestScenario]
@@ -203,6 +205,7 @@ class TestRun:
 
         dpdk_build_env = DPDKBuildEnvironment(config.dpdk.build, sut_node)
         dpdk_sut_runtime_env = DPDKSUTRuntimeEnvironment(config.dpdk, sut_node, dpdk_build_env)
+        self.tg_runtime_env = DPDKTGRuntimeEnvironment(tg_node)
         traffic_generator = create_traffic_generator(config.traffic_generator, tg_node)
 
         self.ctx = Context(
@@ -343,6 +346,7 @@ class TestRunSetup(State):
 
         test_run.ctx.sut_node.setup()
         test_run.ctx.tg_node.setup()
+        test_run.tg_runtime_env.setup()
         test_run.ctx.dpdk.setup()
         test_run.ctx.topology.setup()
 
