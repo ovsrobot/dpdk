@@ -44,7 +44,7 @@ extern "C" {
 /**
  * The RX packet is a 802.1q VLAN packet, and the tci has been
  * saved in mbuf->vlan_tci.
- * If the flag RTE_MBUF_F_RX_VLAN_STRIPPED is also present, the VLAN
+ * If the flag @ref RTE_MBUF_F_RX_VLAN_STRIPPED is also present, the VLAN
  * header has been stripped from mbuf data, else it is still
  * present.
  */
@@ -66,7 +66,11 @@ extern "C" {
  * A vlan has been stripped by the hardware and its tci is saved in
  * mbuf->vlan_tci. This can only happen if vlan stripping is enabled
  * in the RX configuration of the PMD.
- * When RTE_MBUF_F_RX_VLAN_STRIPPED is set, RTE_MBUF_F_RX_VLAN must also be set.
+ * When RTE_MBUF_F_RX_VLAN_STRIPPED is set, @ref RTE_MBUF_F_RX_VLAN must also be set.
+ *
+ * Note: When @ref RTE_MBUF_F_RX_QINQ_STRIPPED is also set,
+ * the stripped tag is an inner tag, rather than a single or outer tag.
+ * @see RTE_MBUF_F_RX_QINQ_STRIPPED for more information.
  */
 #define RTE_MBUF_F_RX_VLAN_STRIPPED (1ULL << 6)
 
@@ -113,19 +117,19 @@ extern "C" {
 #define RTE_MBUF_F_RX_FDIR_FLX      (1ULL << 14)
 
 /**
- * The outer VLAN has been stripped by the hardware and its TCI is
+ * The outer QinQ Tag (ethtype=0x88a8) has been stripped by the hardware and its TCI is
  * saved in mbuf->vlan_tci_outer.
- * This can only happen if VLAN stripping is enabled in the Rx
+ * This can only happen if QinQ stripping is enabled in the Rx
  * configuration of the PMD.
- * When RTE_MBUF_F_RX_QINQ_STRIPPED is set, the flags RTE_MBUF_F_RX_VLAN
- * and RTE_MBUF_F_RX_QINQ must also be set.
+ * When RTE_MBUF_F_RX_QINQ_STRIPPED is set, the flag RTE_MBUF_F_RX_QINQ must also be set.
  *
  * - If both RTE_MBUF_F_RX_QINQ_STRIPPED and RTE_MBUF_F_RX_VLAN_STRIPPED are
  *   set, the 2 VLANs have been stripped by the hardware and their TCIs are
  *   saved in mbuf->vlan_tci (inner) and mbuf->vlan_tci_outer (outer).
  * - If RTE_MBUF_F_RX_QINQ_STRIPPED is set and RTE_MBUF_F_RX_VLAN_STRIPPED
- *   is unset, only the outer VLAN is removed from packet data, but both tci
- *   are saved in mbuf->vlan_tci (inner) and mbuf->vlan_tci_outer (outer).
+ *   is unset, only the outer VLAN is removed from packet data and
+ *   stored in mbuf->vlan_tci_outer.
+ *   The contents of mbuf->vlan_tci are undefined in this case.
  */
 #define RTE_MBUF_F_RX_QINQ_STRIPPED (1ULL << 15)
 
@@ -149,12 +153,12 @@ extern "C" {
 #define RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED	(1ULL << 19)
 
 /**
- * The RX packet is a double VLAN, and the outer tci has been
- * saved in mbuf->vlan_tci_outer. If this flag is set, RTE_MBUF_F_RX_VLAN
- * must also be set and the inner tci is saved in mbuf->vlan_tci.
- * If the flag RTE_MBUF_F_RX_QINQ_STRIPPED is also present, both VLANs
- * headers have been stripped from mbuf data, else they are still
- * present.
+ * The RX packet is a QinQ packet, and the outer tci has been
+ * saved in mbuf->vlan_tci_outer.
+ * If the flag @ref RTE_MBUF_F_RX_QINQ_STRIPPED is also present,
+ * the QinQ tag has been stripped from mbuf data.
+ *
+ * @see RTE_MBUF_F_RX_QINQ_STRIPPED, @see RTE_MBUF_F_RX_VLAN, @see RTE_MBUF_F_RX_VLAN_STRIPPED
  */
 #define RTE_MBUF_F_RX_QINQ          (1ULL << 20)
 

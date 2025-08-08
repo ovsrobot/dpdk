@@ -1552,11 +1552,39 @@ struct rte_eth_conf {
 /**
  * Rx offload capabilities of a device.
  */
+/**
+ * VLAN strip offload.
+ *
+ * When enabled, strips one VLAN tag (ethtype=0x8100) if available.
+ * If multiple VLAN tags are present, it strips the outer tag.
+ * The stripped VLAN TCI is saved in mbuf->vlan_tci
+ * and @ref RTE_MBUF_F_RX_VLAN_STRIPPED flag is set.
+ *
+ * Note: if @ref RTE_ETH_RX_OFFLOAD_QINQ_STRIP is also enabled,
+ * the stripped tag may be an inner tag present after a QinQ tag (ethtype=0x88a8).
+ * In this case, both @ref RTE_MBUF_F_RX_QINQ_STRIPPED and
+ * @ref RTE_MBUF_F_RX_VLAN_STRIPPED flags will be set in the received mbuf.
+ */
 #define RTE_ETH_RX_OFFLOAD_VLAN_STRIP       RTE_BIT64(0)
 #define RTE_ETH_RX_OFFLOAD_IPV4_CKSUM       RTE_BIT64(1)
 #define RTE_ETH_RX_OFFLOAD_UDP_CKSUM        RTE_BIT64(2)
 #define RTE_ETH_RX_OFFLOAD_TCP_CKSUM        RTE_BIT64(3)
 #define RTE_ETH_RX_OFFLOAD_TCP_LRO          RTE_BIT64(4)
+/**
+ * QinQ strip offload.
+ *
+ * When enabled, strips outer QinQ tag (ethtype=0x88a8) if present.
+ * The stripped QinQ tag is saved in mbuf field vlan_tci_outer
+ * and @ref RTE_MBUF_F_RX_QINQ_STRIPPED flag is set.
+ *
+ * If a QinQ tag is stripped and VLAN stripping is also enabled,
+ * any inner VLAN tag (ethtype=0x8100) is also stripped and
+ * stored in mbuf field vlan_tci, with the flag @ref RTE_MBUF_F_RX_VLAN_STRIPPED
+ * being set.
+ *
+ * @see RTE_ETH_RX_OFFLOAD_VLAN_STRIP, @see RTE_MBUF_F_RX_QINQ_STRIPPED,
+ * @see RTE_MBUF_F_RX_VLAN_STRIPPED
+ */
 #define RTE_ETH_RX_OFFLOAD_QINQ_STRIP       RTE_BIT64(5)
 #define RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM RTE_BIT64(6)
 #define RTE_ETH_RX_OFFLOAD_MACSEC_STRIP     RTE_BIT64(7)

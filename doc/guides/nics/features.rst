@@ -483,6 +483,11 @@ VLAN offload
 ------------
 
 Supports VLAN offload to hardware.
+This includes both VLAN stripping on Rx and VLAN insertion on Tx.
+
+On Rx, VLAN strip removes one VLAN tag (default ethertype=0x8100) if present.
+If multiple VLAN tags are present, it strips the outer tag only.
+The stripped VLAN TCI is saved in mbuf->vlan_tci.
 
 * **[uses]       rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_VLAN_STRIP,RTE_ETH_RX_OFFLOAD_VLAN_FILTER,RTE_ETH_RX_OFFLOAD_VLAN_EXTEND``.
 * **[uses]       rte_eth_txconf,rte_eth_txmode**: ``offloads:RTE_ETH_TX_OFFLOAD_VLAN_INSERT``.
@@ -501,6 +506,32 @@ QinQ offload
 ------------
 
 Supports QinQ (queue in queue) offload.
+This includes both QinQ stripping on Rx and QinQ insertion on Tx.
+
+On Rx, QinQ strip removes the outer QinQ tag (default ethertype=0x88a8) if present.
+If multiple QinQ tags are present it only strips the outer tag.
+The tag stripped is saved in mbuf->vlan_tci_outer.
+
+If an outer QinQ tag is stripped and if VLAN stripping is also enabled,
+any inner VLAN tag (default ethertype=0x8100) is also stripped.
+That tag is stored in mbuf->vlan_tci.
+
+Summary of VLAN and QinQ stripping behavior for some possible input traffic options:
+
++----------------------+-----------------------+------------------------------+------------------------------+
+| Input Traffic        | VLAN-strip on         | QinQ strip on                | Both on                      |
++======================+=======================+==============================+==============================+
+| Single Tag 0x8100    | Tag in vlan_tci       |                              | Tag in vlan_tci              |
++----------------------+-----------------------+------------------------------+------------------------------+
+| Single Tag 0x88a8    |                       | Tag in vlan_tci_outer        | Tag in vlan_tci_outer        |
++----------------------+-----------------------+------------------------------+------------------------------+
+| Tag 88a8 + Tag 8100  |                       | Outer tag in vlan_tci_outer  | Outer tag in vlan_tci_outer  |
+|                      |                       |                              |                              |
+|                      |                       |                              | Inner tag in vlan_tci        |
++----------------------+-----------------------+------------------------------+------------------------------+
+| Double Tag 0x8100    | Outer tag in vlan_tci |                              | Outer tag in vlan_tci        |
++----------------------+-----------------------+------------------------------+------------------------------+
+
 
 * **[uses]     rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_QINQ_STRIP``.
 * **[uses]     rte_eth_txconf,rte_eth_txmode**: ``offloads:RTE_ETH_TX_OFFLOAD_QINQ_INSERT``.
