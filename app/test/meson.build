@@ -132,7 +132,7 @@ source_file_deps = {
     'test_memzone.c': [],
     'test_meter.c': ['meter'],
     'test_metrics.c': ['metrics'],
-    'test_mp_secondary.c': ['hash'],
+    'test_mp_secondary.c': ['ethdev','hash'],
     'test_net_ether.c': ['net'],
     'test_net_ip6.c': ['net'],
     'test_pcapng.c': ['ethdev', 'net', 'pcapng', 'bus_vdev'],
