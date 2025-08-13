@@ -10,8 +10,8 @@ static struct nbl_product_core_ops nbl_product_core_ops[NBL_PRODUCT_MAX] = {
 		.phy_remove	= nbl_phy_remove_leonis_snic,
 		.res_init	= NULL,
 		.res_remove	= NULL,
-		.chan_init	= NULL,
-		.chan_remove	= NULL,
+		.chan_init	= nbl_chan_init_leonis,
+		.chan_remove	= nbl_chan_remove_leonis,
 	},
 };
 
@@ -42,8 +42,14 @@ int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev)
 	if (ret)
 		goto phy_init_fail;
 
+	ret = product_base_ops->chan_init(adapter);
+	if (ret)
+		goto chan_init_fail;
+
 	return 0;
 
+chan_init_fail:
+	product_base_ops->phy_remove(adapter);
 phy_init_fail:
 	return -EINVAL;
 }
@@ -54,6 +60,7 @@ void nbl_core_remove(struct nbl_adapter *adapter)
 
 	product_base_ops = nbl_core_get_product_ops(adapter->caps.product_type);
 
+	product_base_ops->chan_remove(adapter);
 	product_base_ops->phy_remove(adapter);
 }
 
