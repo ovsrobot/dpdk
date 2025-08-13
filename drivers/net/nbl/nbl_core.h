@@ -5,7 +5,8 @@
 #ifndef _NBL_CORE_H_
 #define _NBL_CORE_H_
 
-#include "nbl_include.h"
+#include "nbl_product_base.h"
+#include "nbl_def_phy.h"
 
 #define NBL_VENDOR_ID				(0x1F0F)
 #define NBL_DEVICE_ID_M18110			(0x3403)
@@ -27,14 +28,33 @@
 #define NBL_DEVICE_ID_M18100_VF			(0x3413)
 
 #define NBL_MAX_INSTANCE_CNT 516
+
+#define NBL_ADAPTER_TO_PHY_MGT(adapter)		((adapter)->core.phy_mgt)
+#define NBL_ADAPTER_TO_PHY_OPS_TBL(adapter)	((adapter)->intf.phy_ops_tbl)
+
+struct nbl_core {
+	void *phy_mgt;
+	void *res_mgt;
+	void *disp_mgt;
+	void *chan_mgt;
+	void *dev_mgt;
+};
+
+struct nbl_interface {
+	struct nbl_phy_ops_tbl *phy_ops_tbl;
+};
+
 struct nbl_adapter {
 	TAILQ_ENTRY(nbl_adapter) next;
 	struct rte_pci_device *pci_dev;
+	struct nbl_core core;
+	struct nbl_interface intf;
+	struct nbl_func_caps caps;
 };
 
-int nbl_core_init(const struct nbl_adapter *adapter, const struct rte_eth_dev *eth_dev);
-void nbl_core_remove(const struct nbl_adapter *adapter);
-int nbl_core_start(const struct nbl_adapter *adapter);
-void nbl_core_stop(const struct nbl_adapter *adapter);
+int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev);
+void nbl_core_remove(struct nbl_adapter *adapter);
+int nbl_core_start(struct nbl_adapter *adapter);
+void nbl_core_stop(struct nbl_adapter *adapter);
 
 #endif
