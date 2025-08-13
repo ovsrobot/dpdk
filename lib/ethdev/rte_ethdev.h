@@ -329,6 +329,38 @@ struct rte_eth_stats {
 #define RTE_ETH_SPEED_NUM_UNKNOWN UINT32_MAX /**< Unknown */
 /**@}*/
 
+/**@{@name PORT type
+ * Ethernet port type
+ */
+#define RTE_ETH_LINK_TYPE_NONE     0  /**< Not defined */
+#define RTE_ETH_LINK_TYPE_TP       1  /**< Twisted Pair */
+#define RTE_ETH_LINK_TYPE_AUI      2  /**< Attachment Unit Interface */
+#define RTE_ETH_LINK_TYPE_MII      3  /**< Media Independent Interface */
+#define RTE_ETH_LINK_TYPE_FIBRE    4  /**< Fibre */
+#define RTE_ETH_LINK_TYPE_BNC      5  /**< BNC */
+#define RTE_ETH_LINK_TYPE_DA       6  /**< Direct Attach copper */
+#define RTE_ETH_LINK_TYPE_SGMII    7  /**< SGMII */
+#define RTE_ETH_LINK_TYPE_QSGMII   8  /**< QSGMII */
+#define RTE_ETH_LINK_TYPE_XFI      9  /**< XFI */
+#define RTE_ETH_LINK_TYPE_SFI     10  /**< SFI */
+#define RTE_ETH_LINK_TYPE_XLAUI   11  /**< XLAUI */
+#define RTE_ETH_LINK_TYPE_GAUI    12  /**< GAUI */
+#define RTE_ETH_LINK_TYPE_XAUI    13  /**< XAUI */
+#define RTE_ETH_LINK_TYPE_GBASE   14  /**< GBASE */
+#define RTE_ETH_LINK_TYPE_CAUI    15  /**< CAUI */
+#define RTE_ETH_LINK_TYPE_LAUI    16  /**< LAUI */
+#define RTE_ETH_LINK_TYPE_SFP     17  /**< SFP */
+#define RTE_ETH_LINK_TYPE_SFP_DD  18  /**< SFP_DD */
+#define RTE_ETH_LINK_TYPE_SFP_PLUS 19  /**< SFP_PLUS */
+#define RTE_ETH_LINK_TYPE_SFP28   20  /**< SFP28 */
+#define RTE_ETH_LINK_TYPE_QSFP    21  /**< QSFP */
+#define RTE_ETH_LINK_TYPE_QSFP_PLUS 22  /**< QSFP_PLUS */
+#define RTE_ETH_LINK_TYPE_QSFP28  23  /**< QSFP28 */
+#define RTE_ETH_LINK_TYPE_QSFP56  24  /**< QSFP56 */
+#define RTE_ETH_LINK_TYPE_QSFP_DD 25  /**< QSFP_DD */
+#define RTE_ETH_LINK_TYPE_OTHER  0x1F /**< Other type */
+/**@}*/
+
 /**
  * A structure used to retrieve link-level information of an Ethernet port.
  */
@@ -341,6 +373,7 @@ struct rte_eth_link {
 			uint16_t link_duplex  : 1;  /**< RTE_ETH_LINK_[HALF/FULL]_DUPLEX */
 			uint16_t link_autoneg : 1;  /**< RTE_ETH_LINK_[AUTONEG/FIXED] */
 			uint16_t link_status  : 1;  /**< RTE_ETH_LINK_[DOWN/UP] */
+			uint16_t link_type    : 5;  /**< RTE_ETH_LINK_TYPE_XXX */
 		};
 	};
 };
@@ -3115,6 +3148,20 @@ int rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *link)
  */
 __rte_experimental
 const char *rte_eth_link_speed_to_str(uint32_t link_speed);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * This function converts an Ethernet link type to a string.
+ *
+ * @param link_type
+ *   The link type to convert.
+ * @return
+ *   The string representation of the link type.
+ */
+__rte_experimental
+const char *rte_eth_link_type_to_str(uint8_t link_type);
 
 /**
  * @warning
