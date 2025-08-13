@@ -3285,16 +3285,59 @@ rte_eth_link_to_str(char *str, size_t len, const struct rte_eth_link *eth_link)
 	if (eth_link->link_status == RTE_ETH_LINK_DOWN)
 		ret = snprintf(str, len, "Link down");
 	else
-		ret = snprintf(str, len, "Link up at %s %s %s",
+		ret = snprintf(str, len, "Link up at %s %s %s %s",
 			rte_eth_link_speed_to_str(eth_link->link_speed),
 			(eth_link->link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
 			"FDX" : "HDX",
 			(eth_link->link_autoneg == RTE_ETH_LINK_AUTONEG) ?
-			"Autoneg" : "Fixed");
+			"Autoneg" : "Fixed",
+			rte_eth_link_type_to_str(eth_link->link_type));
 
 	rte_eth_trace_link_to_str(len, eth_link, str, ret);
 
 	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_link_type_to_str, 25.11)
+const char *
+rte_eth_link_type_to_str(uint8_t link_type)
+{
+	static const char * const link_type_str[] = {
+		[RTE_ETH_LINK_TYPE_NONE] = "None",
+		[RTE_ETH_LINK_TYPE_TP] = "Twisted Pair",
+		[RTE_ETH_LINK_TYPE_AUI] = "Attachment Unit Interface",
+		[RTE_ETH_LINK_TYPE_MII] = "Media Independent Interface",
+		[RTE_ETH_LINK_TYPE_FIBRE] = "Fibre",
+		[RTE_ETH_LINK_TYPE_BNC] = "BNC",
+		[RTE_ETH_LINK_TYPE_DA] = "Direct Attach Copper",
+		[RTE_ETH_LINK_TYPE_SGMII] = "SGMII",
+		[RTE_ETH_LINK_TYPE_QSGMII] = "QSGMII",
+		[RTE_ETH_LINK_TYPE_XFI] = "XFI",
+		[RTE_ETH_LINK_TYPE_SFI] = "SFI",
+		[RTE_ETH_LINK_TYPE_XLAUI] = "XLAUI",
+		[RTE_ETH_LINK_TYPE_GAUI] = "GAUI",
+		[RTE_ETH_LINK_TYPE_XAUI] = "XAUI",
+		[RTE_ETH_LINK_TYPE_GBASE] = "GBASE",
+		[RTE_ETH_LINK_TYPE_CAUI] = "CAUI",
+		[RTE_ETH_LINK_TYPE_LAUI] = "LAUI",
+		[RTE_ETH_LINK_TYPE_SFP] = "SFP",
+		[RTE_ETH_LINK_TYPE_SFP_DD] = "SFP_DD",
+		[RTE_ETH_LINK_TYPE_SFP_PLUS] = "SFP_PLUS",
+		[RTE_ETH_LINK_TYPE_SFP28] = "SFP28",
+		[RTE_ETH_LINK_TYPE_QSFP] = "QSFP",
+		[RTE_ETH_LINK_TYPE_QSFP_PLUS] = "QSFP_PLUS",
+		[RTE_ETH_LINK_TYPE_QSFP28] = "QSFP28",
+		[RTE_ETH_LINK_TYPE_QSFP56] = "QSFP56",
+		[RTE_ETH_LINK_TYPE_QSFP_DD] = "QSFP_DD",
+		[RTE_ETH_LINK_TYPE_OTHER] = "Unknown"
+	};
+	const char *str = NULL;
+
+	if ((link_type < RTE_DIM(link_type_str)) && link_type_str[link_type])
+		str = link_type_str[link_type];
+
+	rte_eth_trace_link_type_to_str(link_type, str);
+	return str;
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_stats_get)
