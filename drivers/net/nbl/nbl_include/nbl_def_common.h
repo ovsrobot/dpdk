@@ -42,4 +42,8 @@ void nbl_free_dma_mem(struct nbl_dma_mem *mem);
 int nbl_thread_add_work(struct nbl_work *work);
 void nbl_thread_del_work(struct nbl_work *work);
 
+struct nbl_adapter;
+int nbl_pci_map_device(struct nbl_adapter *adapter);
+void nbl_pci_unmap_device(struct nbl_adapter *adapter);
+
 #endif
