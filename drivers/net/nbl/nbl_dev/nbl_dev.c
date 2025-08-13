@@ -289,6 +289,98 @@ void nbl_rx_queues_release(struct rte_eth_dev *eth_dev, uint16_t queue_id)
 	disp_ops->release_rx_ring(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), queue_id);
 }
 
+int nbl_dev_infos_get(struct rte_eth_dev *eth_dev __rte_unused, struct rte_eth_dev_info *dev_info)
+{
+	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
+	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
+	struct nbl_dev_ring_mgt *ring_mgt = &dev_mgt->net_dev->ring_mgt;
+	struct nbl_board_port_info *board_info = &dev_mgt->common->board_info;
+	u8 speed_mode = board_info->speed;
+
+	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+	dev_info->max_mtu = NBL_MAX_JUMBO_FRAME_SIZE - NBL_PKT_HDR_PAD;
+	dev_info->max_rx_pktlen = NBL_FRAME_SIZE_MAX;
+	dev_info->max_mac_addrs = dev_mgt->net_dev->max_mac_num;
+	dev_info->max_rx_queues = ring_mgt->rx_ring_num;
+	dev_info->max_tx_queues = ring_mgt->tx_ring_num;
+	/* rx buffer size must be 2KB, 4KB, 8KB or 16KB */
+	dev_info->min_rx_bufsize = NBL_DEV_MIN_RX_BUFSIZE;
+	dev_info->flow_type_rss_offloads = NBL_RSS_OFFLOAD_TYPE;
+
+	dev_info->hash_key_size = NBL_EPRO_RSS_SK_SIZE;
+
+	dev_info->tx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = 32768,
+		.nb_min = 128,
+		.nb_align = 1,
+		.nb_seg_max = 128,
+		.nb_mtu_seg_max = 128,
+	};
+
+	dev_info->rx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = 32768,
+		.nb_min = 128,
+		.nb_align = 1,
+		.nb_seg_max = 128,
+		.nb_mtu_seg_max = 128,
+	};
+
+	dev_info->speed_capa = RTE_ETH_LINK_SPEED_10G;
+	dev_info->max_rx_pktlen = NBL_FRAME_SIZE_MAX;
+
+	dev_info->default_rxportconf.nb_queues = ring_mgt->rx_ring_num;
+	dev_info->default_txportconf.nb_queues = ring_mgt->tx_ring_num;
+	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
+				    RTE_ETH_TX_OFFLOAD_TCP_CKSUM |
+				    RTE_ETH_TX_OFFLOAD_TCP_TSO |
+				    RTE_ETH_TX_OFFLOAD_UDP_TSO |
+				    RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
+	dev_info->rx_offload_capa = RTE_ETH_RX_OFFLOAD_CHECKSUM |
+				    RTE_ETH_RX_OFFLOAD_SCATTER;
+
+	switch (speed_mode) {
+	case NBL_FW_PORT_SPEED_100G:
+		dev_info->speed_capa |= RTE_ETH_LINK_SPEED_100G;
+		/* FALLTHROUGH */
+	case NBL_FW_PORT_SPEED_50G:
+		dev_info->speed_capa |= RTE_ETH_LINK_SPEED_50G;
+		/* FALLTHROUGH */
+	case NBL_FW_PORT_SPEED_25G:
+		dev_info->speed_capa |= RTE_ETH_LINK_SPEED_25G;
+		/* FALLTHROUGH */
+	case NBL_FW_PORT_SPEED_10G:
+		dev_info->speed_capa |= RTE_ETH_LINK_SPEED_10G;
+		break;
+	default:
+		dev_info->speed_capa = RTE_ETH_LINK_SPEED_25G;
+	}
+
+	return 0;
+}
+
+int nbl_link_update(struct rte_eth_dev *eth_dev, int wait_to_complete __rte_unused)
+{
+	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
+	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
+	struct rte_eth_link link = { 0 };
+
+	link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+	link.link_status = !!dev_mgt->net_dev->eth_link_info.link_status;
+	if (link.link_status)
+		link.link_speed = dev_mgt->net_dev->eth_link_info.link_speed;
+
+	return rte_eth_linkstatus_set(eth_dev, &link);
+}
+
+int nbl_stats_get(struct rte_eth_dev *eth_dev, struct rte_eth_stats *rte_stats)
+{
+	struct nbl_adapter *adapter = ETH_DEV_TO_NBL_DEV_PF_PRIV(eth_dev);
+	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
+	struct nbl_dispatch_ops *disp_ops = NBL_DEV_MGT_TO_DISP_OPS(dev_mgt);
+
+	return disp_ops->get_stats(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), rte_stats);
+}
+
 struct nbl_dev_ops dev_ops = {
 };
 
@@ -404,12 +496,17 @@ static int nbl_dev_leonis_start(void *p)
 {
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
 	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
+	struct nbl_dispatch_ops *disp_ops = NBL_DEV_MGT_TO_DISP_OPS(dev_mgt);
 	int ret = 0;
 
 	dev_mgt->common = NBL_ADAPTER_TO_COMMON(adapter);
 	ret = nbl_dev_common_start(dev_mgt);
 	if (ret)
 		return ret;
+
+	disp_ops->get_link_state(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt),
+				 dev_mgt->net_dev->eth_id,
+				 &dev_mgt->net_dev->eth_link_info);
 	return 0;
 }
 
@@ -606,7 +703,7 @@ register_net_failed:
 	return ret;
 }
 
-int nbl_dev_init(void *p, __rte_unused struct rte_eth_dev *eth_dev)
+int nbl_dev_init(void *p, struct rte_eth_dev *eth_dev)
 {
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
 	struct nbl_dev_mgt **dev_mgt;
@@ -660,6 +757,11 @@ int nbl_dev_init(void *p, __rte_unused struct rte_eth_dev *eth_dev)
 			       eth_dev->data->mac_addrs[0].addr_bytes);
 
 	adapter->state = NBL_ETHDEV_INITIALIZED;
+	disp_ops->get_resource_pt_ops(NBL_DEV_MGT_TO_DISP_PRIV(*dev_mgt),
+				      &(*dev_mgt)->pt_ops, 0);
+
+	eth_dev->tx_pkt_burst = (*dev_mgt)->pt_ops.tx_pkt_burst;
+	eth_dev->rx_pkt_burst = (*dev_mgt)->pt_ops.rx_pkt_burst;
 
 	return 0;
 

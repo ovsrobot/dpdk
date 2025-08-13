@@ -69,6 +69,13 @@ enum nbl_product_type {
 	NBL_PRODUCT_MAX,
 };
 
+enum nbl_fw_port_speed {
+	NBL_FW_PORT_SPEED_10G,
+	NBL_FW_PORT_SPEED_25G,
+	NBL_FW_PORT_SPEED_50G,
+	NBL_FW_PORT_SPEED_100G,
+};
+
 struct nbl_func_caps {
 	enum nbl_product_type product_type;
 	u32 is_vf:1;
@@ -164,6 +171,30 @@ struct nbl_register_net_result {
 	u16 vlan_tci;
 	u32 rate;
 	bool trusted;
+};
+
+struct nbl_eth_link_info {
+	u8 link_status;
+	u32 link_speed;
+};
+
+struct nbl_rxq_stats {
+	uint64_t rx_packets;
+	uint64_t rx_bytes;
+	uint64_t rx_nombuf;
+	uint64_t rx_multi_descs;
+
+	uint64_t rx_ierror;
+	uint64_t rx_drop_noport;
+	uint64_t rx_drop_proto;
+};
+
+struct nbl_txq_stats {
+	uint64_t tx_packets;
+	uint64_t tx_bytes;
+	uint64_t tx_errors;
+	uint64_t tx_descs;
+	uint64_t tx_tso_packets;
 };
 
 #endif
