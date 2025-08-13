@@ -177,7 +177,7 @@ int nbl_phy_init_leonis_snic(void *p)
 	struct nbl_phy_mgt *phy_mgt;
 	struct nbl_phy_ops_tbl **phy_ops_tbl;
 	struct nbl_adapter *adapter = (struct nbl_adapter *)p;
-	struct rte_pci_device *pci_dev = adapter->pci_dev;
+	const struct rte_pci_device *pci_dev = adapter->pci_dev;
 	int ret = 0;
 
 	phy_mgt_leonis_snic = (struct nbl_phy_mgt_leonis_snic **)&NBL_ADAPTER_TO_PHY_MGT(adapter);
