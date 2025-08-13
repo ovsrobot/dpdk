@@ -20,7 +20,7 @@ static struct nbl_product_core_ops *nbl_core_get_product_ops(enum nbl_product_ty
 	return &nbl_product_core_ops[product_type];
 }
 
-static void nbl_init_func_caps(struct rte_pci_device *pci_dev, struct nbl_func_caps *caps)
+static void nbl_init_func_caps(const struct rte_pci_device *pci_dev, struct nbl_func_caps *caps)
 {
 	if (pci_dev->id.device_id >= NBL_DEVICE_ID_M18110 &&
 	    pci_dev->id.device_id <= NBL_DEVICE_ID_M18100_VF)
@@ -29,10 +29,12 @@ static void nbl_init_func_caps(struct rte_pci_device *pci_dev, struct nbl_func_c
 
 int nbl_core_init(struct nbl_adapter *adapter, struct rte_eth_dev *eth_dev)
 {
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
-	struct nbl_product_core_ops *product_base_ops = NULL;
+	const struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	const struct nbl_product_core_ops *product_base_ops = NULL;
+	struct nbl_common_info *common = NBL_ADAPTER_TO_COMMON(adapter);
 	int ret = 0;
 
+	common->eth_dev = eth_dev;
 	nbl_init_func_caps(pci_dev, &adapter->caps);
 
 	product_base_ops = nbl_core_get_product_ops(adapter->caps.product_type);
@@ -69,12 +71,12 @@ res_init_fail:
 chan_init_fail:
 	product_base_ops->phy_remove(adapter);
 phy_init_fail:
-	return -EINVAL;
+	return ret;
 }
 
 void nbl_core_remove(struct nbl_adapter *adapter)
 {
-	struct nbl_product_core_ops *product_base_ops = NULL;
+	const struct nbl_product_core_ops *product_base_ops = NULL;
 
 	product_base_ops = nbl_core_get_product_ops(adapter->caps.product_type);
 
