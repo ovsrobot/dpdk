@@ -132,9 +132,10 @@ struct nbl_common_info {
 	/* curr_network 0 means kernel network, 1 means user network */
 	u8 curr_network:1;
 	u8 is_vf:1;
+	u8 pf_start:1;
 	u8 specific_dma:1;
 	u8 dma_set_msb:1;
-	u8 rsv:3;
+	u8 rsv:2;
 	struct nbl_board_port_info board_info;
 };
 
