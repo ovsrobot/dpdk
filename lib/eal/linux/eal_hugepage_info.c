@@ -260,6 +260,13 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 				continue;
 		}
 
+		if (access(splitstr[MOUNTPT], R_OK | W_OK) < 0) {
+			EAL_LOG(NOTICE,
+				"Skipping hugepage dir '%s': missing r/w perms",
+				splitstr[MOUNTPT]);
+			continue;
+		}
+
 		/*
 		 * If no --huge-dir option has been given, we're done.
 		 */
