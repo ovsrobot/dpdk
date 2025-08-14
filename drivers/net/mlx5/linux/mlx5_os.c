@@ -3216,6 +3216,7 @@ mlx5_os_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 		mlx5_nl_mac_addr_remove(priv->nl_socket_route,
 					mlx5_ifindex(dev), priv->mac_own,
 					&dev->data->mac_addrs[index], index);
+	BITFIELD_RESET(priv->mac_pmd, index);
 }
 
 /**
@@ -3243,6 +3244,8 @@ mlx5_os_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac,
 		ret = mlx5_nl_mac_addr_add(priv->nl_socket_route,
 					   mlx5_ifindex(dev), priv->mac_own,
 					   mac, index);
+	if (!ret)
+		BITFIELD_SET(priv->mac_pmd, index);
 	return ret;
 }
 
