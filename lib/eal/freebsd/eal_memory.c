@@ -103,7 +103,6 @@ rte_eal_hugepage_init(void)
 	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
 		struct hugepage_info *hpi;
 		rte_iova_t prev_end = 0;
-		int prev_ms_idx = -1;
 		uint64_t page_sz, mem_needed;
 		unsigned int n_pages, max_pages;
 
@@ -167,9 +166,9 @@ rte_eal_hugepage_init(void)
 				if (ms_idx < 0)
 					continue;
 
-				if (need_hole && prev_ms_idx == ms_idx - 1)
+				if (need_hole &&
+				    rte_fbarray_is_used(arr, ms_idx - 1))
 					ms_idx++;
-				prev_ms_idx = ms_idx;
 
 				break;
 			}
