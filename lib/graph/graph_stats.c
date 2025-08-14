@@ -254,7 +254,7 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 	*stats_in = NULL;
 
 	/* Clear the new struct cluster_node area */
-	cluster = RTE_PTR_ADD(stats, stats->sz),
+	cluster = RTE_PTR_ADD(stats, stats->sz);
 	memset(cluster, 0, stats->cluster_node_size);
 	memcpy(cluster->stat.name, graph_node->node->name, RTE_NODE_NAMESIZE);
 	cluster->stat.id = graph_node->node->id;
