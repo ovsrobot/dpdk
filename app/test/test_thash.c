@@ -910,7 +910,7 @@ test_adjust_tuple_mult_reta(void)
 {
 	uint32_t i, j, np, nt;
 
-	nt = 0, np = 0;
+	nt = 0; np = 0;
 	for (i = 0; i < CHAR_BIT; i++) {
 		for (j = 6; j <= RTE_THASH_RETA_SZ_MAX - i; j++) {
 			np += (test_adjust_tuple_mb(j, i) == 0);
