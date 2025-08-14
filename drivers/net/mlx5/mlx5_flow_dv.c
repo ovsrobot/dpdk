@@ -3271,7 +3271,7 @@ mlx5_flow_dv_validate_item_aso_ct(struct rte_eth_dev *dev,
 {
 	const struct rte_flow_item_conntrack *spec = item->spec;
 	const struct rte_flow_item_conntrack *mask = item->mask;
-	uint32_t flags;
+	uint32_t flags, flags_all;
 
 	if (*item_flags & MLX5_FLOW_LAYER_ASO_CT)
 		return rte_flow_error_set(error, EINVAL,
@@ -3289,6 +3289,12 @@ mlx5_flow_dv_validate_item_aso_ct(struct rte_eth_dev *dev,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  NULL,
 						  "Conflict status bits");
+		MLX5_FLOW_CONNTRACK_PKT_STATE_ALL(flags_all);
+		if (spec->flags & ~flags_all)
+			return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM,
+					NULL,
+					"Invalid CT item flags");
 	}
 	/* State change also needs to be considered. */
 	*item_flags |= MLX5_FLOW_LAYER_ASO_CT;
