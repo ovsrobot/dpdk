@@ -12,11 +12,13 @@ from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 from typing_extensions import Self
 
 from framework.exception import ConfigurationError, InternalError
+from framework.testbed_model.linux_session import LinuxSession
 from framework.testbed_model.node import Node
 
 from .port import DriverKind, Port, PortConfig
@@ -128,6 +130,7 @@ class Topology:
 
         Binds all the ports to the right kernel driver to retrieve MAC addresses and logical names.
         """
+        self._prepare_devbind_script()
         self._setup_ports("sut")
         self._setup_ports("tg")
 
@@ -249,6 +252,42 @@ class Topology:
 
         for driver_name, ports in driver_to_ports.items():
             node.main_session.bind_ports_to_driver(ports, driver_name)
+
+    def _prepare_devbind_script(self) -> None:
+        """Prepare the devbind script.
+
+        If the environment has a build associated with it, then use the script within that build's
+        tree. Otherwise, copy the script from the local repository.
+
+        This script is only available for Linux, if the detected session is not Linux then do
+        nothing.
+
+        Raises:
+            InternalError: If dpdk-devbind.py could not be found.
+        """
+        from framework.context import get_ctx
+
+        ctx = get_ctx()
+        tg = ctx.tg_node
+        sut = ctx.sut_node
+
+        def prepare_node(node: Node) -> None:
+            if not isinstance(node.main_session, LinuxSession):
+                return
+
+            local_script_path = Path("..", "usertools", "dpdk-devbind.py").resolve()
+            if not local_script_path.exists():
+                raise InternalError("Could not find dpdk-devbind.py locally.")
+
+            devbind_script_path = node.main_session.join_remote_path(
+                node.tmp_dir, local_script_path.name
+            )
+
+            node.main_session.copy_to(local_script_path, devbind_script_path)
+            node.main_session.devbind_script_path = devbind_script_path
+
+        prepare_node(tg)
+        prepare_node(sut)
 
     @property
     def sut_dpdk_ports(self) -> list[Port]:
