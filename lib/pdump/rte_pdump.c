@@ -144,17 +144,21 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 	unsigned int i;
 	int ring_enq;
 	uint16_t d_pkts = 0;
-	struct rte_mbuf *dup_bufs[nb_pkts];
+	struct rte_mbuf **dup_bufs;
 	struct rte_ring *ring;
 	struct rte_mempool *mp;
 	struct rte_mbuf *p;
-	uint64_t rcs[nb_pkts];
+	uint64_t *rcs = NULL;
 
-	if (cbs->filter)
+	if (cbs->filter) {
+		rcs = alloca(sizeof(uint64_t) * nb_pkts);
 		rte_bpf_exec_burst(cbs->filter, (void **)pkts, rcs, nb_pkts);
+	}
 
 	ring = cbs->ring;
 	mp = cbs->mp;
+	dup_bufs = alloca(sizeof(struct rte_mbuf *) * nb_pkts);
+
 	for (i = 0; i < nb_pkts; i++) {
 		/*
 		 * This uses same BPF return value convention as socket filter
@@ -162,7 +166,7 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 		 * if program returns zero
 		 * then packet doesn't match the filter (will be ignored).
 		 */
-		if (cbs->filter && rcs[i] == 0) {
+		if (rcs != NULL && rcs[i] == 0) {
 			rte_atomic_fetch_add_explicit(&stats->filtered,
 					   1, rte_memory_order_relaxed);
 			continue;
