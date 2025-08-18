@@ -4,14 +4,8 @@
 
 #include "opae_intel_max10.h"
 #include <libfdt.h>
-#include "opae_osdep.h"
 
-#ifndef TAILQ_FOREACH_SAFE
-#define TAILQ_FOREACH_SAFE(var, head, field, tvar) \
-	for ((var) = TAILQ_FIRST((head)); \
-		(var) && ((tvar) = TAILQ_NEXT((var), field), 1); \
-	(var) = (tvar))
-#endif
+#include "opae_osdep.h"
 
 int max10_sys_read(struct intel_max10_device *dev,
 	unsigned int offset, unsigned int *val)
