@@ -4,6 +4,7 @@
 includes += include_directories('.')
 
 headers += files(
+        'bsd_queue.h',
         'rte_alarm.h',
         'rte_bitmap.h',
         'rte_bitops.h',
