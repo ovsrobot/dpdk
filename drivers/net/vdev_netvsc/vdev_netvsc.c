@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/queue.h>
+#include <bsd_queue.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
