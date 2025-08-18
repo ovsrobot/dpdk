@@ -8,7 +8,6 @@
 #ifndef PMD_BNX2X_ETHDEV_H
 #define PMD_BNX2X_ETHDEV_H
 
-#include <sys/queue.h>
 #include <sys/param.h>
 #include <sys/user.h>
 #include <sys/stat.h>
