@@ -486,6 +486,7 @@ mlx5_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	struct rte_eth_link dev_link;
 	time_t start_time = time(NULL);
 	int retry = MLX5_GET_LINK_STATUS_RETRY_COUNT;
+	memset(&dev_link, 0, sizeof(dev_link));
 
 	do {
 		ret = mlx5_link_update_unlocked_gs(dev, &dev_link);
@@ -504,6 +505,7 @@ mlx5_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 				return -rte_errno;
 			}
 		} else if (ret < 0) {
+			dev->data->dev_link = dev_link;
 			return ret;
 		}
 	} while (wait_to_complete || retry-- > 0);
