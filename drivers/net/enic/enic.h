@@ -21,7 +21,6 @@
 #include "enic_res.h"
 #include "cq_enet_desc.h"
 #include <stdbool.h>
-#include <sys/queue.h>
 #include <rte_spinlock.h>
 
 #define DRV_NAME		"enic_pmd"
