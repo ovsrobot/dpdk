@@ -12,9 +12,11 @@
 
 #include <pthread_np.h>
 #include <stdlib.h>            /* Declares alloca() */
-#include <sys/queue.h>
 
-/* These macros are compatible with system's sys/queue.h. */
+/* Alternative to system's sys/queue.h which is missing some macros. */
+#include <bsd_queue.h>
+
+/* These macros are compatible with bsd_queue.h. */
 #define RTE_TAILQ_HEAD(name, type) TAILQ_HEAD(name, type)
 #define RTE_TAILQ_ENTRY(type) TAILQ_ENTRY(type)
 #define RTE_TAILQ_FOREACH(var, head, field) TAILQ_FOREACH(var, head, field)

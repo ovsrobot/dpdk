@@ -8,8 +8,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/queue.h>
 
+#include <bsd_queue.h>
 #include <dev_driver.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
