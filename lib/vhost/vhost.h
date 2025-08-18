@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <sys/queue.h>
 #include <unistd.h>
 #include <linux/virtio_net.h>
 #include <sys/socket.h>
@@ -19,6 +18,7 @@
 #include <rte_ether.h>
 #include <rte_malloc.h>
 #include <rte_dmadev.h>
+#include <rte_tailq.h>
 
 #include "rte_vhost.h"
 #include "vdpa_driver.h"

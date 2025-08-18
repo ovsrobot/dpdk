@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include <sys/queue.h>
 
+#include <bsd_queue.h>
 #include <eal_export.h>
 #include <rte_common.h>
 #include <rte_errno.h>

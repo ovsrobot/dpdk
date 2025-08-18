@@ -4,7 +4,6 @@
 
 #include <stdalign.h>
 #include <string.h>
-#include <sys/queue.h>
 
 #include <eal_export.h>
 #include <rte_string_fns.h>
