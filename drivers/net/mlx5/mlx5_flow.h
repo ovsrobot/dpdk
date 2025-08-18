@@ -8,7 +8,7 @@
 #include <stdalign.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/queue.h>
+#include <bsd_queue.h>
 
 #include <rte_alarm.h>
 #include <rte_mtr.h>

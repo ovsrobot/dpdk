@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <fcntl.h>
-#include <sys/queue.h>
+#include <bsd_queue.h>
 
 #include <eal_export.h>
 #include <rte_mbuf.h>
