@@ -80,7 +80,7 @@ class LogicalCoreList:
     _lcore_list: list[int]
     _lcore_str: str
 
-    def __init__(self, lcore_list: list[int] | list[str] | list[LogicalCore] | str):
+    def __init__(self, lcore_list: list[int] | list[str] | list[LogicalCore] | str) -> None:
         """Process `lcore_list`, then sort.
 
         There are four supported logical core list formats::
@@ -105,7 +105,7 @@ class LogicalCoreList:
 
         # the input lcores may not be sorted
         self._lcore_list.sort()
-        self._lcore_str = f'{",".join(self._get_consecutive_lcores_range(self._lcore_list))}'
+        self._lcore_str = f"{','.join(self._get_consecutive_lcores_range(self._lcore_list))}"
 
     @property
     def lcore_list(self) -> list[int]:
@@ -169,7 +169,7 @@ class LogicalCoreFilter(ABC):
         lcore_list: list[LogicalCore],
         filter_specifier: LogicalCoreCount | LogicalCoreList,
         ascending: bool = True,
-    ):
+    ) -> None:
         """Filter according to the input filter specifier.
 
         The input `lcore_list` is copied and sorted by physical core before filtering.

@@ -57,9 +57,7 @@ class CommandResult:
     def __str__(self) -> str:
         """Format the command outputs."""
         return (
-            f"stdout: '{self.stdout}'\n"
-            f"stderr: '{self.stderr}'\n"
-            f"return_code: '{self.return_code}'"
+            f"stdout: '{self.stdout}'\nstderr: '{self.stderr}'\nreturn_code: '{self.return_code}'"
         )
 
 
@@ -99,7 +97,7 @@ class RemoteSession(ABC):
         node_config: NodeConfiguration,
         session_name: str,
         logger: DTSLogger,
-    ):
+    ) -> None:
         """Connect to the node during initialization.
 
         Args:

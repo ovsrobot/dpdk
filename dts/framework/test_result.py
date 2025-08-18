@@ -77,13 +77,13 @@ class ResultLeaf(BaseModel):
     result: Result
     reason: DTSError | None = None
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """Compare another instance of the same class by :attr:`~ResultLeaf.result`."""
         if isinstance(other, ResultLeaf):
             return self.result < other.result
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Compare equality with compatible classes by :attr:`~ResultLeaf.result`."""
         match other:
             case ResultLeaf(result=result):
