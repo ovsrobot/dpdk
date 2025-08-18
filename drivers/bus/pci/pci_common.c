@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/queue.h>
 #include <eal_export.h>
 #include <rte_errno.h>
 #include <rte_interrupts.h>
