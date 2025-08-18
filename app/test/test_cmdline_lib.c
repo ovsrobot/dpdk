@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
-#include <sys/queue.h>
 
 #include <rte_common.h>
 

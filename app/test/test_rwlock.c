@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <unistd.h>
-#include <sys/queue.h>
 #include <string.h>
 
 #include <rte_common.h>

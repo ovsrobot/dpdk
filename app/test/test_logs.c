@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <sys/queue.h>
 
 #include <rte_log.h>
 #include <rte_memory.h>
