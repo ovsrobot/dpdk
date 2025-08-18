@@ -12,7 +12,6 @@
 #include <stdarg.h>
 #include <inttypes.h>
 #include <netinet/in.h>
-#include <sys/queue.h>
 
 #include <rte_alarm.h>
 #include <rte_branch_prediction.h>
