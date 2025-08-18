@@ -7,7 +7,6 @@
 #define RTE_PMD_MLX4_FLOW_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
 
 /* Verbs headers do not support -pedantic. */
 #ifdef PEDANTIC
