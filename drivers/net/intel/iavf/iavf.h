@@ -5,7 +5,6 @@
 #ifndef _IAVF_ETHDEV_H_
 #define _IAVF_ETHDEV_H_
 
-#include <sys/queue.h>
 
 #include <rte_kvargs.h>
 #include <rte_tm_driver.h>

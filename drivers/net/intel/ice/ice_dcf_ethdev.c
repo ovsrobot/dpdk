@@ -4,7 +4,6 @@
 
 #include <errno.h>
 #include <stdbool.h>
-#include <sys/queue.h>
 #include <sys/types.h>
 #include <unistd.h>
 

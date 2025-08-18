@@ -3,7 +3,6 @@
  */
 
 #include <ctype.h>
-#include <sys/queue.h>
 #include <stdalign.h>
 #include <stdio.h>
 #include <errno.h>

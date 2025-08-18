@@ -2,7 +2,6 @@
  * Copyright(c) 2010-2016 Intel Corporation
  */
 
-#include <sys/queue.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
