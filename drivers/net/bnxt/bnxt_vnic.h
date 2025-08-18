@@ -6,7 +6,6 @@
 #ifndef _BNXT_VNIC_H_
 #define _BNXT_VNIC_H_
 
-#include <sys/queue.h>
 #include <stdbool.h>
 #include <rte_hash.h>
 
