@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-#include <sys/queue.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <time.h>

@@ -3,7 +3,7 @@
  */
 
 #include <stdint.h>
-#include <sys/queue.h>
+#include <bsd_queue.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
