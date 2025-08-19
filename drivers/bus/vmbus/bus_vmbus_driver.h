@@ -21,6 +21,21 @@ extern "C" {
 struct vmbus_channel;
 struct vmbus_mon_page;
 
+#define NETVSC_ARG_LATENCY "latency"
+#define NETVSC_ARG_RXBREAK "rx_copybreak"
+#define NETVSC_ARG_TXBREAK "tx_copybreak"
+#define NETVSC_ARG_RX_EXTMBUF_ENABLE "rx_extmbuf_enable"
+#define NETVSC_ARG_NUMA "numa"
+
+static const char * const valid_keys[] = {
+	NETVSC_ARG_LATENCY,
+	NETVSC_ARG_RXBREAK,
+	NETVSC_ARG_TXBREAK,
+	NETVSC_ARG_RX_EXTMBUF_ENABLE,
+	NETVSC_ARG_NUMA,
+	NULL
+};
+
 /** Maximum number of VMBUS resources. */
 enum hv_uio_map {
 	HV_TXRX_RING_MAP = 0,

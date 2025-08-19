@@ -52,11 +52,6 @@
 			    RTE_ETH_RX_OFFLOAD_VLAN_STRIP | \
 			    RTE_ETH_RX_OFFLOAD_RSS_HASH)
 
-#define NETVSC_ARG_LATENCY "latency"
-#define NETVSC_ARG_RXBREAK "rx_copybreak"
-#define NETVSC_ARG_TXBREAK "tx_copybreak"
-#define NETVSC_ARG_RX_EXTMBUF_ENABLE "rx_extmbuf_enable"
-
 /* The max number of retry when hot adding a VF device */
 #define NETVSC_MAX_HOTADD_RETRY 10
 
@@ -189,13 +184,6 @@ static int hn_parse_args(const struct rte_eth_dev *dev)
 {
 	struct hn_data *hv = dev->data->dev_private;
 	struct rte_devargs *devargs = dev->device->devargs;
-	static const char * const valid_keys[] = {
-		NETVSC_ARG_LATENCY,
-		NETVSC_ARG_RXBREAK,
-		NETVSC_ARG_TXBREAK,
-		NETVSC_ARG_RX_EXTMBUF_ENABLE,
-		NULL
-	};
 	struct rte_kvargs *kvlist;
 	int ret;
 
