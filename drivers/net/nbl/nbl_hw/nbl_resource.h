@@ -46,6 +46,7 @@ struct nbl_res_tx_ring {
 	volatile uint8_t *notify;
 	const struct rte_eth_dev *eth_dev;
 	struct nbl_common_info *common;
+	struct nbl_txq_stats txq_stats;
 	u64 default_hdr[2];
 
 	enum nbl_product_type product;
@@ -86,6 +87,7 @@ struct nbl_res_rx_ring {
 	volatile uint8_t *notify;
 	const struct rte_eth_dev *eth_dev;
 	struct nbl_common_info *common;
+	struct nbl_rxq_stats rxq_stats;
 	uint64_t mbuf_initializer; /**< value to init mbufs */
 	struct rte_mbuf fake_mbuf;
 
@@ -131,7 +133,7 @@ struct nbl_res_info {
 };
 
 struct nbl_resource_mgt {
-	const struct rte_eth_dev *eth_dev;
+	struct rte_eth_dev *eth_dev;
 	struct nbl_channel_ops_tbl *chan_ops_tbl;
 	struct nbl_hw_ops_tbl *hw_ops_tbl;
 	struct nbl_txrx_mgt *txrx_mgt;
