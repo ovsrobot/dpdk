@@ -15,7 +15,7 @@ The module provides several additional features:
 import logging
 from logging import FileHandler, StreamHandler
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 date_fmt = "%Y/%m/%d %H:%M:%S"
 stream_fmt = "%(asctime)s - %(stage)s - %(name)s - %(levelname)s - %(message)s"
@@ -36,12 +36,12 @@ class DTSLogger(logging.Logger):
     _stage: ClassVar[str] = "pre_run"
     _extra_file_handlers: list[FileHandler] = []
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Extend the constructor with extra file handlers."""
         self._extra_file_handlers = []
         super().__init__(*args, **kwargs)
 
-    def makeRecord(self, *args, **kwargs) -> logging.LogRecord:
+    def makeRecord(self, *args: Any, **kwargs: Any) -> logging.LogRecord:
         """Generates a record with additional stage information.
 
         This is the default method for the :class:`~logging.Logger` class. We extend it
