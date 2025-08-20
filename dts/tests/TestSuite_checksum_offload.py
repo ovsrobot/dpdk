@@ -26,10 +26,9 @@ from framework.remote_session.testpmd_shell import (
     TestPmdShell,
 )
 from framework.test_suite import TestSuite, func_test
-from framework.testbed_model.capability import NicCapability, TopologyType, requires
+from framework.testbed_model.capability import NicCapability, requires
 
 
-@requires(topology_type=TopologyType.two_links)
 @requires(NicCapability.RX_OFFLOAD_IPV4_CKSUM)
 @requires(NicCapability.RX_OFFLOAD_UDP_CKSUM)
 @requires(NicCapability.RX_OFFLOAD_TCP_CKSUM)

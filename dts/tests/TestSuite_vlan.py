@@ -17,11 +17,10 @@ from scapy.packet import Raw
 
 from framework.remote_session.testpmd_shell import SimpleForwardingModes, TestPmdShell
 from framework.test_suite import TestSuite, func_test
-from framework.testbed_model.capability import NicCapability, TopologyType, requires
+from framework.testbed_model.capability import NicCapability, requires
 
 
 @requires(NicCapability.RX_OFFLOAD_VLAN_FILTER)
-@requires(topology_type=TopologyType.two_links)
 class TestVlan(TestSuite):
     """DPDK VLAN test suite.
 

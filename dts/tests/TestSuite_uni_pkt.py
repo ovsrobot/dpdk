@@ -27,10 +27,9 @@ from framework.remote_session.testpmd_shell import (
     TestPmdVerbosePacket,
 )
 from framework.test_suite import TestSuite, func_test
-from framework.testbed_model.capability import TopologyType, requires
+from framework.testbed_model.capability import requires
 
 
-@requires(topology_type=TopologyType.two_links)
 class TestUniPkt(TestSuite):
     """DPDK Unified packet test suite.
 
