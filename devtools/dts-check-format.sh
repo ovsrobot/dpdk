@@ -86,7 +86,14 @@ if $lint; then
 		ruff check --fix
 		errors=$((errors + $?))
 
+		docstring_script_path=$(dirname "$0")
+		docstring_script_path=$(cd "$docstring_script_path" && pwd)
+		docstring_script="$docstring_script_path/check-docstrings.py"
+		python "$docstring_script"
+		errors=$((errors + $?))
+
 		git update-index --refresh
+
 		retval=$?
 		if [ $retval -ne 0 ]; then
 			echo 'The "needs update" files have been fixed by the linter.'
