@@ -106,7 +106,7 @@ class TestChecksumOffload(TestSuite):
         testpmd.start_all_ports()
 
     @func_test
-    def test_insert_checksums(self) -> None:
+    def insert_checksums(self) -> None:
         """Enable checksum offload insertion and verify packet reception.
 
         Steps:
@@ -139,7 +139,7 @@ class TestChecksumOffload(TestSuite):
                 )
 
     @func_test
-    def test_no_insert_checksums(self) -> None:
+    def no_insert_checksums(self) -> None:
         """Disable checksum offload insertion and verify packet reception.
 
         Steps:
@@ -170,7 +170,7 @@ class TestChecksumOffload(TestSuite):
                 )
 
     @func_test
-    def test_l4_rx_checksum(self) -> None:
+    def l4_rx_checksum(self) -> None:
         """Tests L4 Rx checksum in a variety of scenarios.
 
         Steps:
@@ -203,7 +203,7 @@ class TestChecksumOffload(TestSuite):
                 )
 
     @func_test
-    def test_l3_rx_checksum(self) -> None:
+    def l3_rx_checksum(self) -> None:
         """Tests L3 Rx checksum hardware offload.
 
         Steps:
@@ -236,7 +236,7 @@ class TestChecksumOffload(TestSuite):
                 )
 
     @func_test
-    def test_validate_rx_checksum(self) -> None:
+    def validate_rx_checksum(self) -> None:
         """Verify verbose output of Rx packets matches expected behavior.
 
         Steps:
@@ -282,7 +282,7 @@ class TestChecksumOffload(TestSuite):
 
     @requires(NicCapability.RX_OFFLOAD_VLAN)
     @func_test
-    def test_vlan_checksum(self) -> None:
+    def vlan_checksum(self) -> None:
         """Test VLAN Rx checksum hardware offload and verify packet reception.
 
         Steps:
@@ -339,7 +339,7 @@ class TestChecksumOffload(TestSuite):
 
     @requires(NicCapability.RX_OFFLOAD_SCTP_CKSUM)
     @func_test
-    def test_validate_sctp_checksum(self) -> None:
+    def validate_sctp_checksum(self) -> None:
         """Test SCTP Rx checksum hardware offload and verify packet reception.
 
         Steps:
