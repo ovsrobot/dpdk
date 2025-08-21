@@ -957,6 +957,35 @@ static inline void rte_pktmbuf_reset_headroom(struct rte_mbuf *m)
 /**
  * Reset the fields of a packet mbuf to their default values.
  *
+ * The caller must ensure that the mbuf is direct and properly
+ * reinitialized (refcnt=1, next=NULL, nb_segs=1), as done by
+ * rte_pktmbuf_prefree_seg().
+ *
+ * This function should be used with care, when optimization is required.
+ * For standard needs, prefer rte_pktmbuf_reset().
+ *
+ * @param m
+ *   The packet mbuf to be reset.
+ */
+static inline void rte_mbuf_raw_reset(struct rte_mbuf *m)
+{
+	m->pkt_len = 0;
+	m->tx_offload = 0;
+	m->vlan_tci = 0;
+	m->vlan_tci_outer = 0;
+	m->port = RTE_MBUF_PORT_INVALID;
+
+	m->ol_flags &= RTE_MBUF_F_EXTERNAL;
+	m->packet_type = 0;
+	rte_pktmbuf_reset_headroom(m);
+
+	m->data_len = 0;
+	__rte_mbuf_sanity_check(m, 1);
+}
+
+/**
+ * Reset the fields of a packet mbuf to their default values.
+ *
  * The given mbuf must have only one segment.
  *
  * @param m
@@ -997,7 +1026,7 @@ static inline struct rte_mbuf *rte_pktmbuf_alloc(struct rte_mempool *mp)
 {
 	struct rte_mbuf *m;
 	if ((m = rte_mbuf_raw_alloc(mp)) != NULL)
-		rte_pktmbuf_reset(m);
+		rte_mbuf_raw_reset(m);
 	return m;
 }
 
@@ -1033,19 +1062,19 @@ static inline int rte_pktmbuf_alloc_bulk(struct rte_mempool *pool,
 	switch (count % 4) {
 	case 0:
 		while (idx != count) {
-			rte_pktmbuf_reset(mbufs[idx]);
+			rte_mbuf_raw_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 	case 3:
-			rte_pktmbuf_reset(mbufs[idx]);
+			rte_mbuf_raw_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 	case 2:
-			rte_pktmbuf_reset(mbufs[idx]);
+			rte_mbuf_raw_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 	case 1:
-			rte_pktmbuf_reset(mbufs[idx]);
+			rte_mbuf_raw_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 		}
