@@ -49,6 +49,11 @@ RTE_LOG_REGISTER_DEFAULT(hash_logtype, INFO);
  */
 enum cmp_jump_table_case {
 	KEY_CUSTOM = 0,
+	KEY_2_BYTES,
+	KEY_4_BYTES,
+	KEY_6_BYTES,
+	KEY_8_BYTES,
+	KEY_12_BYTES,
 	KEY_16_BYTES,
 	KEY_32_BYTES,
 	KEY_48_BYTES,
@@ -86,6 +91,50 @@ rte_hash_k32_cmp_eq(const void *key1, const void *key2, size_t key_len)
 }
 #endif
 
+static inline int
+rte_hash_k2_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const uint16_t *k1 = key1;
+	const uint16_t *k2 = key2;
+
+	return k1[0] ^ k2[0];
+}
+
+static inline int
+rte_hash_k4_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const uint32_t *k1 = key1;
+	const uint32_t *k2 = key2;
+
+	return k1[0] ^ k2[0];
+}
+
+static inline int
+rte_hash_k6_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const uint16_t *k1 = key1;
+	const uint16_t *k2 = key2;
+
+	return (k1[0] ^ k2[0]) | (k1[1] ^ k2[1]) | (k1[2] ^ k2[2]);
+}
+
+static inline int
+rte_hash_k8_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const uint64_t *k1 = key1;
+	const uint64_t *k2 = key2;
+
+	return k1[0] ^ k2[0];
+}
+
+static inline int
+rte_hash_k12_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const uint32_t *k1 = key1;
+	const uint32_t *k2 = key2;
+
+	return (k1[0] ^ k2[0]) | (k1[1] ^ k2[1]) | (k1[2] ^ k2[2]);
+}
 
 static inline int
 rte_hash_k48_cmp_eq(const void *key1, const void *key2, size_t key_len)
@@ -228,6 +277,11 @@ void rte_hash_set_cmp_func(struct rte_hash *h, rte_hash_cmp_eq_t func)
  */
 static const rte_hash_cmp_eq_t cmp_jump_table[NUM_KEY_CMP_CASES] = {
 	[KEY_CUSTOM] = NULL,
+	[KEY_2_BYTES] = rte_hash_k2_cmp_eq,
+	[KEY_4_BYTES] = rte_hash_k4_cmp_eq,
+	[KEY_6_BYTES] = rte_hash_k6_cmp_eq,
+	[KEY_8_BYTES] = rte_hash_k8_cmp_eq,
+	[KEY_12_BYTES] = rte_hash_k12_cmp_eq,
 	[KEY_16_BYTES] = rte_hash_k16_cmp_eq,
 	[KEY_32_BYTES] = rte_hash_k32_cmp_eq,
 	[KEY_48_BYTES] = rte_hash_k48_cmp_eq,
