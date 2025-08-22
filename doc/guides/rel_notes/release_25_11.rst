@@ -56,6 +56,10 @@ New Features
      =======================================================
 
 
+* **Added Nebulamatrix nbl net driver.**
+
+    * Added the PMD for Nebulamatrix NICs.
+
 Removed Items
 -------------
 
