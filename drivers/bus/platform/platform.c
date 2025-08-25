@@ -8,7 +8,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/queue.h>
 #include <unistd.h>
 
 #include <bus_driver.h>
@@ -21,6 +20,7 @@
 #include <rte_log.h>
 #include <rte_memory.h>
 #include <rte_string_fns.h>
+#include <rte_tailq.h>
 #include <rte_vfio.h>
 
 #include "private.h"
