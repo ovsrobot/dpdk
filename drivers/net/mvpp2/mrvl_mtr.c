@@ -505,13 +505,9 @@ mrvl_mtr_deinit(struct rte_eth_dev *dev)
 	struct mrvl_mtr_profile *profile, *tmp_profile;
 	struct mrvl_mtr *mtr, *tmp_mtr;
 
-	for (mtr = LIST_FIRST(&priv->mtrs);
-	     mtr && (tmp_mtr = LIST_NEXT(mtr, next), 1);
-	     mtr = tmp_mtr)
+	LIST_FOREACH_SAFE(mtr, &priv->mtrs, next, tmp_mtr)
 		mrvl_destroy(dev, mtr->mtr_id, NULL);
 
-	for (profile = LIST_FIRST(&priv->profiles);
-	     profile && (tmp_profile = LIST_NEXT(profile, next), 1);
-	     profile = tmp_profile)
+	LIST_FOREACH_SAFE(profile, &priv_profiles, next, tmp_profile)
 		mrvl_meter_profile_delete(dev, profile->profile_id, NULL);
 }
