@@ -2,7 +2,6 @@
  * Copyright 2018-2022 NXP
  */
 
-#include <sys/queue.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
