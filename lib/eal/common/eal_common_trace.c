@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <fnmatch.h>
 #include <pthread.h>
-#include <sys/queue.h>
 #include <regex.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_common.h>
 #include <rte_errno.h>
 #include <rte_lcore.h>

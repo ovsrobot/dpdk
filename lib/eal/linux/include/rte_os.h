@@ -12,7 +12,8 @@
 
 #include <alloca.h>
 #include <sched.h>
-#include <sys/queue.h>
+
+#include <rte_bsd_queue.h>
 
 /* These macros are compatible with system's sys/queue.h. */
 #define RTE_TAILQ_HEAD(name, type) TAILQ_HEAD(name, type)

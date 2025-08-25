@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* Added ``rte_queue.h`` which is clone of BSD queue.h header that is
+  portable across all OS's.
+
 
 Removed Items
 -------------

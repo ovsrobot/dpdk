@@ -8,6 +8,7 @@
 #include <stdbool.h>
 
 #include <rte_common.h>
+#include <rte_bsd_queue.h>
 
 #define MIN_DATA_SIZE (RTE_CACHE_LINE_SIZE)
 

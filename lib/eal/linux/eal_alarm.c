@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <pthread.h>
-#include <sys/queue.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
 
+#include <rte_bsd_queue.h>
 #include <eal_export.h>
 #include <eal_trace_internal.h>
 #include <rte_interrupts.h>

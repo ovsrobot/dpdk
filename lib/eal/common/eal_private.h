@@ -8,12 +8,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/queue.h>
 
 #include <dev_driver.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_memory.h>
+#include <rte_tailq.h>
 
 #include "eal_internal_cfg.h"
 

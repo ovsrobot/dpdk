@@ -6,8 +6,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_memory.h>
 #include <rte_eal.h>
 #include <rte_common.h>

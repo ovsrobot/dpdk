@@ -7,6 +7,7 @@
 
 #include <rte_common.h>
 #include <rte_dev.h>
+#include <rte_tailq.h>
 
 /**
  * A structure describing a device driver.

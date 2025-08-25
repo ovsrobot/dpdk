@@ -19,6 +19,7 @@
 #include <stdio.h>
 
 #include <rte_dev.h>
+#include <rte_tailq.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -18,6 +18,7 @@
  * cryptographic co-processor (crypto), etc.
  */
 
+#include <rte_tailq.h>
 #include <rte_dev.h>
 
 #ifdef __cplusplus

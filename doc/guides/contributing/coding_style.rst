@@ -324,12 +324,12 @@ Structure Declarations
 Queues
 ~~~~~~
 
-Use queue(3) macros rather than rolling your own lists, whenever possible.
+Use queue(3) macros defined in <rte_queue.h> rather than rolling your own lists.
 Thus, the previous example would be better written:
 
 .. code-block:: c
 
- #include <sys/queue.h>
+ #include <rte_queue.h>
 
  struct foo {
          LIST_ENTRY(foo) link;      /* Use queue macros for foo lists. */
