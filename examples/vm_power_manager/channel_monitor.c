@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/select.h>

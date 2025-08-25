@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <netinet/in.h>
 #include <setjmp.h>
 #include <stdarg.h>

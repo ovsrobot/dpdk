@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <rte_common.h>
 #include <rte_eal.h>

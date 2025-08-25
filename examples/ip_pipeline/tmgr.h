@@ -6,7 +6,7 @@
 #define _INCLUDE_TMGR_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <rte_sched.h>
 #include <rte_red.h>

@@ -12,7 +12,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <string.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <stdarg.h>
 #include <errno.h>
 #include <signal.h>

@@ -5,7 +5,7 @@
 #ifndef _INCLUDE_ACTION_H_
 #define _INCLUDE_ACTION_H_
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <rte_port_in_action.h>
 #include <rte_table_action.h>
