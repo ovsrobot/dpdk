@@ -5,8 +5,9 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/queue.h>
 #include <unistd.h>
+
+#include <rte_bsd_queue.h>
 
 #include "roc_api.h"
 #include "roc_bphy_irq.h"

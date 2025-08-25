@@ -8,10 +8,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/queue.h>
-
 
 #include <rte_compat.h>
+#include <rte_bsd_queue.h>
 #include <rte_rwlock.h>
 #include <rte_bitmap.h>
 #include <rte_mbuf.h>
