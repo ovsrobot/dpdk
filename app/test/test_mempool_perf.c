@@ -10,7 +10,6 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <sys/queue.h>
 
 #include <rte_common.h>
 #include <rte_log.h>

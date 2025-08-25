@@ -91,7 +91,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <sys/queue.h>
 #include <math.h>
 
 #include <rte_common.h>
