@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <termios.h>
 #include <ctype.h>
-#include <sys/queue.h>
 
 #include <rte_common.h>
 
