@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/queue.h>
 
 #include <rte_memory.h>
 #include <rte_memzone.h>
