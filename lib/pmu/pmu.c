@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <sys/queue.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 

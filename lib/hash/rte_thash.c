@@ -3,7 +3,6 @@
  */
 
 #include <stdalign.h>
-#include <sys/queue.h>
 
 #include <eal_export.h>
 #include <rte_thash.h>

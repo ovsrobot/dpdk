@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
-#include <sys/queue.h>
 
 #include <eal_export.h>
 #include <rte_log.h>
