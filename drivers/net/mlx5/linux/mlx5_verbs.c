@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <sys/queue.h>
 
 #include "mlx5_autoconf.h"
 

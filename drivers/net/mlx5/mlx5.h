@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <limits.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <rte_pci.h>
 #include <rte_ether.h>
