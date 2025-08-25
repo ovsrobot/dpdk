@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/queue.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <openssl/sha.h>
