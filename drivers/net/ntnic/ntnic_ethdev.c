@@ -5,7 +5,6 @@
 
 #include <stdint.h>
 #include <stdarg.h>
-
 #include <signal.h>
 
 #include <rte_eal.h>
@@ -15,8 +14,6 @@
 #include <rte_bus_pci.h>
 #include <ethdev_pci.h>
 #include <rte_kvargs.h>
-
-#include <sys/queue.h>
 
 #include "rte_spinlock.h"
 #include "ntlog.h"
