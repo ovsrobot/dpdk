@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-#include <sys/queue.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <errno.h>
