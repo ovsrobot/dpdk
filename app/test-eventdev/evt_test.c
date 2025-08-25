@@ -4,8 +4,8 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include "evt_test.h"
 
 static STAILQ_HEAD(, evt_test_entry) head = STAILQ_HEAD_INITIALIZER(head);
