@@ -8,7 +8,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <sys/queue.h>
 
 #include "testpmd.h"
 

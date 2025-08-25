@@ -21,7 +21,7 @@
 #include <cmdline.h>
 #include <cmdline_parse.h>
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #ifdef RTE_HAS_JANSSON
 #include <jansson.h>
 #endif
