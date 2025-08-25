@@ -10,9 +10,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <inttypes.h>
-#include <sys/queue.h>
 #include <stdbool.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_common.h>
 #include <rte_memcpy.h>
 #include <rte_malloc.h>

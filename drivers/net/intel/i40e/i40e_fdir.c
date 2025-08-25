@@ -2,7 +2,7 @@
  * Copyright(c) 2010-2015 Intel Corporation
  */
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>

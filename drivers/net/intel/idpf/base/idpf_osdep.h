@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <inttypes.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <stdbool.h>
 
 #include <rte_common.h>
@@ -341,13 +341,6 @@ idpf_hweight32(u32 num)
 
 #ifndef LIST_ENTRY_TYPE
 #define LIST_ENTRY_TYPE(type)	   LIST_ENTRY(type)
-#endif
-
-#ifndef LIST_FOREACH_SAFE
-#define LIST_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = LIST_FIRST((head));				\
-	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
-	    (var) = (tvar))
 #endif
 
 #ifndef LIST_FOR_EACH_ENTRY_SAFE

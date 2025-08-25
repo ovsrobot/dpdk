@@ -6,7 +6,6 @@
 #define _E1000_ETHDEV_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
 
 #include <rte_flow.h>
 #include <rte_time.h>

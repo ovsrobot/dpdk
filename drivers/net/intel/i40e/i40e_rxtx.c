@@ -10,7 +10,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <sys/queue.h>
 
 #include <rte_string_fns.h>
 #include <rte_memzone.h>
