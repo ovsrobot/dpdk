@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <pthread.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_common.h>
 #include <rte_devargs.h>
 #include <rte_errno.h>
