@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <bus_driver.h>
 #include <eal_export.h>
 #include <rte_log.h>
