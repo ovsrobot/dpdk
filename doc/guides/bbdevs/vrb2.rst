@@ -29,6 +29,8 @@ These hardware blocks provide the following features exposed by the PMD:
 - LDPC Decode in the Uplink (5GNR)
 - Turbo Encode in the Downlink (4G)
 - Turbo Decode in the Uplink (4G)
+- Support for code block level processing
+- Support for TB level processing for the LDPC Encode processing including CB concatenation.
 - FFT processing
 - MLD-TS processing
 - Single Root I/O Virtualization (SR-IOV) with 16 Virtual Functions (VFs) per Physical Function (PF)
