@@ -67,6 +67,10 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
 
+* **Updated Intel ice driver.**
+
+  * Added Flow Director (FDIR) support for L2TPv2 over UDP.
+
 * **Updated ZTE zxdh ethernet driver.**
 
   * Added support for modifying queue depth.
