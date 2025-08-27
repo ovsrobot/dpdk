@@ -86,12 +86,31 @@ parse_uint(uint64_t *value, const char *str)
 }
 
 static int
+validate_input_color_table_entries(char *str)
+{
+	char *token = strtok_r(str, PARSE_DELIMITER, &str);
+	for (int i = 0; token != NULL; i++) {
+		if (i > ((MAX_DSCP_TABLE_ENTRIES + MAX_VLAN_TABLE_ENTRIES) - 1))
+			return -1;
+		token = strtok_r(str, PARSE_DELIMITER, &str);
+	}
+	return 0;
+}
+
+static int
 parse_input_color_table_entries(char *str, enum rte_color **dscp_table,
 	enum rte_color **vlan_table)
 {
 	enum rte_color *vlan, *dscp;
 	char *token;
+	char *temp_str = strdup(str);
 	int i = 0;
+
+	if (validate_input_color_table_entries(temp_str)) {
+		free(temp_str);
+		return -1;
+	}
+	free(temp_str);
 
 	token = strtok_r(str, PARSE_DELIMITER, &str);
 	if (token == NULL)
