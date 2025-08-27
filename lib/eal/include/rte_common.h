@@ -211,6 +211,15 @@ typedef uint16_t unaligned_uint16_t;
 #endif
 
 /**
+ * Macro to disable compiler warnings about shadow declaration.
+ */
+#if !defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_diagnostic_ignored_shadow _Pragma("GCC diagnostic ignored \"-Wshadow\"")
+#else
+#define __rte_diagnostic_ignored_shadow
+#endif
+
+/**
  * Mark a function or variable to a weak reference.
  */
 #ifdef RTE_TOOLCHAIN_MSVC
@@ -791,12 +800,17 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
 
 /**
  * Macro to return the minimum of two numbers
+ * Need to disable warnings about shadowed variables to allow
+ * for nested usage.
  */
 #define RTE_MIN(a, b) \
 	__extension__ ({ \
+		__rte_diagnostic_push \
+		__rte_diagnostic_ignored_shadow \
 		typeof (a) _a = (a); \
 		typeof (b) _b = (b); \
 		_a < _b ? _a : _b; \
+		__rte_diagnostic_pop \
 	})
 
 /**
@@ -814,9 +828,12 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
  */
 #define RTE_MAX(a, b) \
 	__extension__ ({ \
+		__rte_diagnostic_push \
+		__rte_diagnostic_ignored_shadow \
 		typeof (a) _a = (a); \
 		typeof (b) _b = (b); \
 		_a > _b ? _a : _b; \
+		__rte_diagnostic_pop \
 	})
 
 /**
