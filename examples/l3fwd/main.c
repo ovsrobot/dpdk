@@ -423,6 +423,7 @@ print_usage(const char *prgname)
 		"            Accepted: em (Exact Match), lpm (Longest Prefix Match), fib (Forwarding Information Base),\n"
 		"                      acl (Access Control List)\n"
 		"  --config (port,queue,lcore): Rx queue configuration\n"
+		"  --eth-link-speed: force link speed\n"
 		"  --rx-queue-size NPKTS: Rx queue size in decimal\n"
 		"            Default: %d\n"
 		"  --tx-queue-size NPKTS: Tx queue size in decimal\n"
@@ -747,6 +748,7 @@ static const char short_options[] =
 	;
 
 #define CMD_LINE_OPT_CONFIG "config"
+#define CMD_LINK_OPT_ETH_LINK_SPEED "eth-link-speed"
 #define CMD_LINE_OPT_RX_QUEUE_SIZE "rx-queue-size"
 #define CMD_LINE_OPT_TX_QUEUE_SIZE "tx-queue-size"
 #define CMD_LINE_OPT_ETH_DEST "eth-dest"
@@ -778,6 +780,7 @@ enum {
 	 * conflict with short options */
 	CMD_LINE_OPT_MIN_NUM = 256,
 	CMD_LINE_OPT_CONFIG_NUM,
+	CMD_LINK_OPT_ETH_LINK_SPEED_NUM,
 	CMD_LINE_OPT_RX_QUEUE_SIZE_NUM,
 	CMD_LINE_OPT_TX_QUEUE_SIZE_NUM,
 	CMD_LINE_OPT_ETH_DEST_NUM,
@@ -805,6 +808,7 @@ enum {
 
 static const struct option lgopts[] = {
 	{CMD_LINE_OPT_CONFIG, 1, 0, CMD_LINE_OPT_CONFIG_NUM},
+	{CMD_LINK_OPT_ETH_LINK_SPEED, 1, 0, CMD_LINK_OPT_ETH_LINK_SPEED_NUM},
 	{CMD_LINE_OPT_RX_QUEUE_SIZE, 1, 0, CMD_LINE_OPT_RX_QUEUE_SIZE_NUM},
 	{CMD_LINE_OPT_TX_QUEUE_SIZE, 1, 0, CMD_LINE_OPT_TX_QUEUE_SIZE_NUM},
 	{CMD_LINE_OPT_ETH_DEST, 1, 0, CMD_LINE_OPT_ETH_DEST_NUM},
@@ -860,6 +864,7 @@ parse_args(int argc, char **argv)
 	uint8_t eth_rx_q = 0;
 	struct l3fwd_event_resources *evt_rsrc = l3fwd_get_eventdev_rsrc();
 #endif
+	int speed_num;
 
 	argvopt = argv;
 
@@ -908,7 +913,17 @@ parse_args(int argc, char **argv)
 			}
 			lcore_params = 1;
 			break;
-
+		case CMD_LINK_OPT_ETH_LINK_SPEED_NUM:
+			speed_num = atoi(optarg);
+			if ((speed_num == RTE_ETH_SPEED_NUM_10M) ||
+			    (speed_num == RTE_ETH_SPEED_NUM_100M)) {
+				fprintf(stderr, "Unsupported fixed speed\n");
+				print_usage(prgname);
+				return -1;
+			}
+			if (speed_num >= 0 && rte_eth_speed_bitflag(speed_num, 0) > 0)
+				port_conf.link_speeds = rte_eth_speed_bitflag(speed_num, 0);
+			break;
 		case CMD_LINE_OPT_RX_QUEUE_SIZE_NUM:
 			parse_queue_size(optarg, &nb_rxd, 1);
 			break;
