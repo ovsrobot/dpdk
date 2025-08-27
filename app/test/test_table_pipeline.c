@@ -311,14 +311,14 @@ setup_pipeline(int test_type)
 				.action_data_size = 0,
 		};
 
-		if (rte_pipeline_table_create(p, &table_params, &table_id[i])) {
+		if (rte_pipeline_table_create(p, &table_params, &table_ids[i])) {
 			rte_panic("Unable to configure table %u\n", i);
 			goto fail;
 		}
 
 		if (connect_miss_action_to_table)
 			if (rte_pipeline_table_create(p, &table_params,
-				&table_id[i+2])) {
+				&table_ids[i+2])) {
 				rte_panic("Unable to configure table %u\n", i);
 				goto fail;
 			}
@@ -326,9 +326,9 @@ setup_pipeline(int test_type)
 
 	for (i = 0; i < N_PORTS; i++)
 		if (rte_pipeline_port_in_connect_to_table(p, port_in_id[i],
-			table_id[i])) {
+			table_ids[i])) {
 			rte_panic("Unable to connect input port %u to "
-				"table %u\n", port_in_id[i],  table_id[i]);
+				"table %u\n", port_in_id[i],  table_ids[i]);
 			goto fail;
 		}
 
@@ -344,20 +344,20 @@ setup_pipeline(int test_type)
 		if (connect_miss_action_to_table) {
 			printf("Setting first table to output to next table\n");
 			default_entry.action = RTE_PIPELINE_ACTION_TABLE;
-			default_entry.table_id = table_id[i+2];
+			default_entry.table_id = table_ids[i+2];
 		}
 
 		/* Add the default action for the table. */
-		ret = rte_pipeline_table_default_entry_add(p, table_id[i],
+		ret = rte_pipeline_table_default_entry_add(p, table_ids[i],
 			&default_entry, &default_entry_ptr);
 		if (ret < 0) {
 			rte_panic("Unable to add default entry to table %u "
-				"code %d\n", table_id[i], ret);
+				"code %d\n", table_ids[i], ret);
 			goto fail;
 		} else
 			printf("Added default entry to table id %d with "
 				"action %x\n",
-				table_id[i], default_entry.action);
+				table_ids[i], default_entry.action);
 
 		if (connect_miss_action_to_table) {
 			/* We create a second table so the first can pass
@@ -370,17 +370,17 @@ setup_pipeline(int test_type)
 
 			/* Add the default action for the table. */
 			ret = rte_pipeline_table_default_entry_add(p,
-				table_id[i+2],
+				table_ids[i+2],
 				&default_entry, &default_entry_ptr);
 			if (ret < 0) {
 				rte_panic("Unable to add default entry to "
 					"table %u code %d\n",
-					table_id[i], ret);
+					table_ids[i], ret);
 				goto fail;
 			} else
 				printf("Added default entry to table id %d "
 					"with action %x\n",
-					table_id[i], default_entry.action);
+					table_ids[i], default_entry.action);
 		}
 	}
 

@@ -120,7 +120,7 @@ extern struct rte_mempool *pool;
 extern uint32_t port_in_id[N_PORTS];
 extern uint32_t port_out_id[N_PORTS];
 extern uint32_t port_out_id_type[3];
-extern uint32_t table_id[N_PORTS*2];
+extern uint32_t table_ids[N_PORTS*2];
 extern uint64_t override_hit_mask;
 extern uint64_t override_miss_mask;
 extern uint64_t non_reserved_actions_hit;

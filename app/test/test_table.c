@@ -33,7 +33,7 @@ struct rte_mempool *pool = NULL;
 uint32_t port_in_id[N_PORTS];
 uint32_t port_out_id[N_PORTS];
 uint32_t port_out_id_type[3];
-uint32_t table_id[N_PORTS*2];
+uint32_t table_ids[N_PORTS*2];
 uint64_t override_hit_mask = 0xFFFFFFFF;
 uint64_t override_miss_mask = 0xFFFFFFFF;
 uint64_t non_reserved_actions_hit = 0;

@@ -427,14 +427,14 @@ setup_acl_pipeline(void)
 		table_params.ops = &rte_table_acl_ops;
 		table_params.arg_create = &acl_params;
 
-		if (rte_pipeline_table_create(p, &table_params, &table_id[i])) {
+		if (rte_pipeline_table_create(p, &table_params, &table_ids[i])) {
 			rte_panic("Unable to configure table %u\n", i);
 			goto fail;
 		}
 
 		if (connect_miss_action_to_table) {
 			if (rte_pipeline_table_create(p, &table_params,
-				&table_id[i+2])) {
+				&table_ids[i+2])) {
 				rte_panic("Unable to configure table %u\n", i);
 				goto fail;
 			}
@@ -443,10 +443,10 @@ setup_acl_pipeline(void)
 
 	for (i = 0; i < N_PORTS; i++) {
 		if (rte_pipeline_port_in_connect_to_table(p, port_in_id[i],
-			table_id[i])) {
+			table_ids[i])) {
 			rte_panic("Unable to connect input port %u to "
 				"table %u\n",
-				port_in_id[i],  table_id[i]);
+				port_in_id[i],  table_ids[i]);
 			goto fail;
 		}
 	}
@@ -485,11 +485,11 @@ setup_acl_pipeline(void)
 			table_entries_ptr[n] = &entries_ptr[n];
 		}
 
-		ret = rte_pipeline_table_entry_add_bulk(p, table_id[i],
+		ret = rte_pipeline_table_entry_add_bulk(p, table_ids[i],
 				(void **)key_array, table_entries, 5, key_found, table_entries_ptr);
 		if (ret < 0) {
 			rte_panic("Add entry bulk to table %u failed (%d)\n",
-				table_id[i], ret);
+				table_ids[i], ret);
 			goto fail;
 		}
 	}
@@ -519,11 +519,11 @@ setup_acl_pipeline(void)
 			}
 		}
 
-		ret = rte_pipeline_table_entry_delete_bulk(p, table_id[i],
+		ret = rte_pipeline_table_entry_delete_bulk(p, table_ids[i],
 			(void **)key_array, 5, key_found, table_entries);
 		if (ret < 0) {
 			rte_panic("Delete bulk entries from table %u failed (%d)\n",
-				table_id[i], ret);
+				table_ids[i], ret);
 			goto fail;
 		} else
 			printf("Bulk deleted rules.\n");
@@ -555,12 +555,12 @@ setup_acl_pipeline(void)
 
 			rule_params.priority = RTE_ACL_MAX_PRIORITY - n;
 
-			ret = rte_pipeline_table_entry_add(p, table_id[i],
+			ret = rte_pipeline_table_entry_add(p, table_ids[i],
 				&rule_params,
 				&table_entry, &key_found, &entry_ptr);
 			if (ret < 0) {
 				rte_panic("Add entry to table %u failed (%d)\n",
-					table_id[i], ret);
+					table_ids[i], ret);
 				goto fail;
 			}
 		}
@@ -581,11 +581,11 @@ setup_acl_pipeline(void)
 			delete_params = (struct
 				rte_pipeline_table_acl_rule_delete_params *)
 				&(rule_params.field_value[0]);
-			ret = rte_pipeline_table_entry_delete(p, table_id[i],
+			ret = rte_pipeline_table_entry_delete(p, table_ids[i],
 				delete_params, &key_found, NULL);
 			if (ret < 0) {
 				rte_panic("Add entry to table %u failed (%d)\n",
-					table_id[i], ret);
+					table_ids[i], ret);
 				goto fail;
 			} else
 				printf("Deleted Rule.\n");
@@ -607,12 +607,12 @@ setup_acl_pipeline(void)
 
 			rule_params.priority = RTE_ACL_MAX_PRIORITY - n;
 
-			ret = rte_pipeline_table_entry_add(p, table_id[i],
+			ret = rte_pipeline_table_entry_add(p, table_ids[i],
 				&rule_params,
 				&table_entry, &key_found, &entry_ptr);
 			if (ret < 0) {
 				rte_panic("Add entry to table %u failed (%d)\n",
-					table_id[i], ret);
+					table_ids[i], ret);
 				goto fail;
 			}
 		}
