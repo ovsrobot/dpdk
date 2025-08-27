@@ -369,7 +369,7 @@ typedef int (*telemetry_arg_cb)(const char *cmd, const char *params, void *arg,
  * @return
  * Void.
  */
-typedef void * (*handler)(void *sock_id);
+typedef void * (*telemetry_handler)(void *sock_id);
 
 /**
  * Used when registering a command and callback function with telemetry.
