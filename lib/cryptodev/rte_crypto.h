@@ -116,6 +116,10 @@ struct rte_crypto_op {
 			 * the status is RTE_CRYPTO_OP_STATUS_SUCCESS.
 			 * In case of errors, the value of this field is undefined.
 			 *
+			 * In addition to RTE_CRYPTO_OP_AUX_FLAGS_* the PMDs can define
+			 * their own optional auxiliary flags as needed, set by the
+			 * application and to be used for driver-specific purposes.
+			 *
 			 * With TLS record offload (RTE_SECURITY_PROTOCOL_TLS_RECORD),
 			 * application may provide the extra padding required for the plaintext
 			 * provided. This field can be used for passing the same in units of 8B.
