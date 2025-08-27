@@ -1998,8 +1998,8 @@ rte_eth_devargs_parse(const char *devargs, struct rte_eth_devargs *eth_devargs,
 
 
 typedef int (*ethdev_init_t)(struct rte_eth_dev *ethdev, void *init_params);
-typedef int (*ethdev_bus_specific_init)(struct rte_eth_dev *ethdev,
-	void *bus_specific_init_params);
+typedef int (*ethdev_bus_specific_init_t)(struct rte_eth_dev *ethdev,
+					  void *bus_specific_init_params);
 
 /**
  * PMD helper function for the creation of a new ethdev ports.
@@ -2026,7 +2026,7 @@ __rte_internal
 int
 rte_eth_dev_create(struct rte_device *device, const char *name,
 	size_t priv_data_size,
-	ethdev_bus_specific_init bus_specific_init, void *bus_init_params,
+	ethdev_bus_specific_init_t bus_specific_init, void *bus_init_params,
 	ethdev_init_t ethdev_init, void *init_params);
 
 
