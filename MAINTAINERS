@@ -1366,6 +1366,7 @@ F: doc/guides/dmadevs/hisilicon.rst
 HiSilicon Accelerator DMA
 M: Chengwen Feng <fengchengwen@huawei.com>
 F: drivers/dma/acc/
+F: doc/guides/dmadevs/acc.rst
 
 Marvell CNXK DPI DMA
 M: Vamsi Attunuru <vattunuru@marvell.com>
