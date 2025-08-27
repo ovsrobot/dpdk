@@ -24,12 +24,12 @@ RTE_DEFINE_PER_LCORE(void *, trace_mem);
 static RTE_DEFINE_PER_LCORE(char *, ctf_field);
 
 static struct trace_point_head tp_list = STAILQ_HEAD_INITIALIZER(tp_list);
-static struct trace trace = { .args = STAILQ_HEAD_INITIALIZER(trace.args), };
+static struct trace tr_obj = { .args = STAILQ_HEAD_INITIALIZER(tr_obj.args), };
 
 struct trace *
 trace_obj_get(void)
 {
-	return &trace;
+	return &tr_obj;
 }
 
 struct trace_point_head *
@@ -47,12 +47,12 @@ eal_trace_init(void)
 	RTE_BUILD_BUG_ON((offsetof(struct __rte_trace_header, mem) % 8) != 0);
 
 	/* One of the trace point registration failed */
-	if (trace.register_errno) {
-		rte_errno = trace.register_errno;
+	if (tr_obj.register_errno) {
+		rte_errno = tr_obj.register_errno;
 		goto fail;
 	}
 
-	rte_spinlock_init(&trace.lock);
+	rte_spinlock_init(&tr_obj.lock);
 
 	/* Is duplicate trace name registered */
 	if (trace_has_duplicate_entry())
@@ -75,10 +75,10 @@ eal_trace_init(void)
 		goto free_meta;
 
 	/* Apply global configurations */
-	STAILQ_FOREACH(arg, &trace.args, next)
+	STAILQ_FOREACH(arg, &tr_obj.args, next)
 		trace_args_apply(arg->val);
 
-	rte_trace_mode_set(trace.mode);
+	rte_trace_mode_set(tr_obj.mode);
 
 	return 0;
 
@@ -101,7 +101,7 @@ RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_is_enabled, 20.05)
 bool
 rte_trace_is_enabled(void)
 {
-	return rte_atomic_load_explicit(&trace.status, rte_memory_order_acquire) != 0;
+	return rte_atomic_load_explicit(&tr_obj.status, rte_memory_order_acquire) != 0;
 }
 
 static void
@@ -124,20 +124,20 @@ rte_trace_mode_set(enum rte_trace_mode mode)
 	STAILQ_FOREACH(tp, &tp_list, next)
 		trace_mode_set(tp->handle, mode);
 
-	trace.mode = mode;
+	tr_obj.mode = mode;
 }
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_mode_get, 20.05)
 enum
 rte_trace_mode rte_trace_mode_get(void)
 {
-	return trace.mode;
+	return tr_obj.mode;
 }
 
 static bool
 trace_point_is_invalid(rte_trace_point_t *t)
 {
-	return (t == NULL) || (trace_id_get(t) >= trace.nb_trace_points);
+	return (t == NULL) || (trace_id_get(t) >= tr_obj.nb_trace_points);
 }
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_point_is_enabled, 20.05)
@@ -165,7 +165,7 @@ rte_trace_point_enable(rte_trace_point_t *t)
 	prev = rte_atomic_fetch_or_explicit(t, __RTE_TRACE_FIELD_ENABLE_MASK,
 		rte_memory_order_release);
 	if ((prev & __RTE_TRACE_FIELD_ENABLE_MASK) == 0)
-		rte_atomic_fetch_add_explicit(&trace.status, 1, rte_memory_order_release);
+		rte_atomic_fetch_add_explicit(&tr_obj.status, 1, rte_memory_order_release);
 	return 0;
 }
 
@@ -181,7 +181,7 @@ rte_trace_point_disable(rte_trace_point_t *t)
 	prev = rte_atomic_fetch_and_explicit(t, ~__RTE_TRACE_FIELD_ENABLE_MASK,
 		rte_memory_order_release);
 	if ((prev & __RTE_TRACE_FIELD_ENABLE_MASK) != 0)
-		rte_atomic_fetch_sub_explicit(&trace.status, 1, rte_memory_order_release);
+		rte_atomic_fetch_sub_explicit(&tr_obj.status, 1, rte_memory_order_release);
 	return 0;
 }
 
@@ -295,7 +295,7 @@ RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_dump, 20.05)
 void
 rte_trace_dump(FILE *f)
 {
-	struct trace_point_head *tp_list = trace_list_head_get();
+	struct trace_point_head *tp_head = trace_list_head_get();
 	struct trace *trace = trace_obj_get();
 	struct trace_point *tp;
 
@@ -310,7 +310,7 @@ rte_trace_dump(FILE *f)
 
 	trace_lcore_mem_dump(f);
 	fprintf(f, "\nTrace point info\n----------------\n");
-	STAILQ_FOREACH(tp, tp_list, next)
+	STAILQ_FOREACH(tp, tp_head, next)
 		trace_point_dump(f, tp);
 }
 
@@ -508,7 +508,7 @@ __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 	}
 
 	/* Are we running out of space to store trace points? */
-	if (trace.nb_trace_points > UINT16_MAX) {
+	if (tr_obj.nb_trace_points > UINT16_MAX) {
 		trace_err("trace point exceeds the max count");
 		rte_errno = ENOSPC;
 		goto fail;
@@ -534,10 +534,10 @@ __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 
 	/* Form the trace handle */
 	*handle = sz;
-	*handle |= trace.nb_trace_points << __RTE_TRACE_FIELD_ID_SHIFT;
-	trace_mode_set(handle, trace.mode);
+	*handle |= tr_obj.nb_trace_points << __RTE_TRACE_FIELD_ID_SHIFT;
+	trace_mode_set(handle, tr_obj.mode);
 
-	trace.nb_trace_points++;
+	tr_obj.nb_trace_points++;
 	tp->handle = handle;
 
 	/* Add the trace point at tail */
@@ -548,8 +548,8 @@ __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 	return 0;
 
 fail:
-	if (trace.register_errno == 0)
-		trace.register_errno = rte_errno;
+	if (tr_obj.register_errno == 0)
+		tr_obj.register_errno = rte_errno;
 
 	return -rte_errno;
 }
