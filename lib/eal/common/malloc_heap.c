@@ -1044,7 +1044,7 @@ free_unlock:
 	/* if we unmapped some memory, we need to do additional work for ASan */
 	if (unmapped) {
 		void *asan_end = RTE_PTR_ADD(asan_ptr, asan_data_len);
-		void *aligned_end = RTE_PTR_ADD(aligned_start, aligned_len);
+		void *asan_aligned = RTE_PTR_ADD(aligned_start, aligned_len);
 		void *aligned_trailer = RTE_PTR_SUB(aligned_start,
 				MALLOC_ELEM_TRAILER_LEN);
 
@@ -1064,8 +1064,8 @@ free_unlock:
 		 * unmapped space that was marked as freezone for ASan, we need
 		 * to mark the malloc header as available.
 		 */
-		if (asan_end > aligned_end)
-			asan_set_zone(aligned_end, MALLOC_ELEM_HEADER_LEN, 0x00);
+		if (asan_end > asan_aligned)
+			asan_set_zone(asan_aligned, MALLOC_ELEM_HEADER_LEN, 0x00);
 
 		/* if there's space before unmapped memory, mark as available */
 		if (asan_ptr < aligned_start)
