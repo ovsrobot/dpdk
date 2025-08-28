@@ -65,7 +65,7 @@ ndev_release(struct nitrox_device *ndev)
 TAILQ_HEAD(ndrv_list, nitrox_driver);
 static struct ndrv_list ndrv_list = TAILQ_HEAD_INITIALIZER(ndrv_list);
 
-RTE_EXPORT_INTERNAL_SYMBOL(nitrox_register_driver)
+RTE_EXPORT_INTERNAL_SYMBOL(nitrox_register_driver);
 void
 nitrox_register_driver(struct nitrox_driver *ndrv)
 {

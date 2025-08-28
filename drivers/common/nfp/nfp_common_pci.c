@@ -258,7 +258,7 @@ nfp_common_init(void)
 	nfp_common_initialized = true;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_class_driver_register)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_class_driver_register);
 void
 nfp_class_driver_register(struct nfp_class_driver *driver)
 {

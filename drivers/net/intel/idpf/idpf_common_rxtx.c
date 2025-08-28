@@ -11,7 +11,7 @@
 int idpf_timestamp_dynfield_offset = -1;
 uint64_t idpf_timestamp_dynflag;
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_rx_thresh_check)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_rx_thresh_check);
 int
 idpf_qc_rx_thresh_check(uint16_t nb_desc, uint16_t thresh)
 {
@@ -27,7 +27,7 @@ idpf_qc_rx_thresh_check(uint16_t nb_desc, uint16_t thresh)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_tx_thresh_check)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_tx_thresh_check);
 int
 idpf_qc_tx_thresh_check(uint16_t nb_desc, uint16_t tx_rs_thresh,
 			uint16_t tx_free_thresh)
@@ -76,7 +76,7 @@ idpf_qc_tx_thresh_check(uint16_t nb_desc, uint16_t tx_rs_thresh,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_rxq_mbufs_release)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_rxq_mbufs_release);
 void
 idpf_qc_rxq_mbufs_release(struct idpf_rx_queue *rxq)
 {
@@ -93,7 +93,7 @@ idpf_qc_rxq_mbufs_release(struct idpf_rx_queue *rxq)
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rx_descq_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rx_descq_reset);
 void
 idpf_qc_split_rx_descq_reset(struct idpf_rx_queue *rxq)
 {
@@ -113,7 +113,7 @@ idpf_qc_split_rx_descq_reset(struct idpf_rx_queue *rxq)
 	rxq->expected_gen_id = 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rx_bufq_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rx_bufq_reset);
 void
 idpf_qc_split_rx_bufq_reset(struct idpf_rx_queue *rxq)
 {
@@ -149,7 +149,7 @@ idpf_qc_split_rx_bufq_reset(struct idpf_rx_queue *rxq)
 	rxq->bufq2 = NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rx_queue_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rx_queue_reset);
 void
 idpf_qc_split_rx_queue_reset(struct idpf_rx_queue *rxq)
 {
@@ -158,7 +158,7 @@ idpf_qc_split_rx_queue_reset(struct idpf_rx_queue *rxq)
 	idpf_qc_split_rx_bufq_reset(rxq->bufq2);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_single_rx_queue_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_single_rx_queue_reset);
 void
 idpf_qc_single_rx_queue_reset(struct idpf_rx_queue *rxq)
 {
@@ -190,7 +190,7 @@ idpf_qc_single_rx_queue_reset(struct idpf_rx_queue *rxq)
 	rxq->rxrearm_nb = 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_tx_descq_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_tx_descq_reset);
 void
 idpf_qc_split_tx_descq_reset(struct ci_tx_queue *txq)
 {
@@ -229,7 +229,7 @@ idpf_qc_split_tx_descq_reset(struct ci_tx_queue *txq)
 	txq->tx_next_rs = txq->tx_rs_thresh - 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_tx_complq_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_tx_complq_reset);
 void
 idpf_qc_split_tx_complq_reset(struct ci_tx_queue *cq)
 {
@@ -248,7 +248,7 @@ idpf_qc_split_tx_complq_reset(struct ci_tx_queue *cq)
 	cq->expected_gen_id = 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_single_tx_queue_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_single_tx_queue_reset);
 void
 idpf_qc_single_tx_queue_reset(struct ci_tx_queue *txq)
 {
@@ -286,7 +286,7 @@ idpf_qc_single_tx_queue_reset(struct ci_tx_queue *txq)
 	txq->tx_next_rs = txq->tx_rs_thresh - 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_rx_queue_release)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_rx_queue_release);
 void
 idpf_qc_rx_queue_release(void *rxq)
 {
@@ -317,7 +317,7 @@ idpf_qc_rx_queue_release(void *rxq)
 	rte_free(q);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_tx_queue_release)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_tx_queue_release);
 void
 idpf_qc_tx_queue_release(void *txq)
 {
@@ -337,7 +337,7 @@ idpf_qc_tx_queue_release(void *txq)
 	rte_free(q);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_ts_mbuf_register)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_ts_mbuf_register);
 int
 idpf_qc_ts_mbuf_register(struct idpf_rx_queue *rxq)
 {
@@ -355,7 +355,7 @@ idpf_qc_ts_mbuf_register(struct idpf_rx_queue *rxq)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_single_rxq_mbufs_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_single_rxq_mbufs_alloc);
 int
 idpf_qc_single_rxq_mbufs_alloc(struct idpf_rx_queue *rxq)
 {
@@ -391,7 +391,7 @@ idpf_qc_single_rxq_mbufs_alloc(struct idpf_rx_queue *rxq)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rxq_mbufs_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_split_rxq_mbufs_alloc);
 int
 idpf_qc_split_rxq_mbufs_alloc(struct idpf_rx_queue *rxq)
 {
@@ -615,7 +615,7 @@ idpf_split_rx_bufq_refill(struct idpf_rx_queue *rx_bufq)
 	rx_bufq->rx_tail = next_avail;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_splitq_recv_pkts)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_splitq_recv_pkts);
 uint16_t
 idpf_dp_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			 uint16_t nb_pkts)
@@ -848,7 +848,7 @@ idpf_set_splitq_tso_ctx(struct rte_mbuf *mbuf,
 				 IDPF_TXD_FLEX_CTX_MSS_RT_M);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_splitq_xmit_pkts)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_splitq_xmit_pkts);
 uint16_t
 idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			 uint16_t nb_pkts)
@@ -1040,7 +1040,7 @@ idpf_singleq_rx_rss_offload(struct rte_mbuf *mb,
 
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_singleq_recv_pkts)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_singleq_recv_pkts);
 uint16_t
 idpf_dp_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			  uint16_t nb_pkts)
@@ -1159,7 +1159,7 @@ idpf_dp_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	return nb_rx;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_singleq_recv_scatter_pkts)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_singleq_recv_scatter_pkts);
 uint16_t
 idpf_dp_singleq_recv_scatter_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			       uint16_t nb_pkts)
@@ -1337,7 +1337,7 @@ idpf_xmit_cleanup(struct ci_tx_queue *txq)
 }
 
 /* TX function */
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_singleq_xmit_pkts)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_singleq_xmit_pkts);
 uint16_t
 idpf_dp_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			  uint16_t nb_pkts)
@@ -1505,7 +1505,7 @@ end_of_tx:
 }
 
 /* TX prep functions */
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_prep_pkts)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_dp_prep_pkts);
 uint16_t
 idpf_dp_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 		  uint16_t nb_pkts)
@@ -1607,7 +1607,7 @@ idpf_rxq_vec_setup_default(struct idpf_rx_queue *rxq)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_singleq_rx_vec_setup)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_singleq_rx_vec_setup);
 int __rte_cold
 idpf_qc_singleq_rx_vec_setup(struct idpf_rx_queue *rxq)
 {
@@ -1615,7 +1615,7 @@ idpf_qc_singleq_rx_vec_setup(struct idpf_rx_queue *rxq)
 	return idpf_rxq_vec_setup_default(rxq);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_splitq_rx_vec_setup)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_qc_splitq_rx_vec_setup);
 int __rte_cold
 idpf_qc_splitq_rx_vec_setup(struct idpf_rx_queue *rxq)
 {

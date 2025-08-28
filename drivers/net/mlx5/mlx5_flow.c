@@ -7880,7 +7880,7 @@ err:
  * @return
  *   Negative value on error, positive on success.
  */
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_flow_engine_set_mode, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_flow_engine_set_mode, 23.03);
 int
 rte_pmd_mlx5_flow_engine_set_mode(enum rte_pmd_mlx5_flow_engine_mode mode, uint32_t flags)
 {
@@ -10986,7 +10986,7 @@ error:
 	(MLX5DV_DR_DOMAIN_SYNC_FLAGS_SW | MLX5DV_DR_DOMAIN_SYNC_FLAGS_HW)
 #endif
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_sync_flow, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_sync_flow, 20.11);
 int rte_pmd_mlx5_sync_flow(uint16_t port_id, uint32_t domains)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
@@ -12263,7 +12263,7 @@ mlx5_flow_discover_ipv6_tc_support(struct rte_eth_dev *dev)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_create_geneve_tlv_parser, 24.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_create_geneve_tlv_parser, 24.03);
 void *
 rte_pmd_mlx5_create_geneve_tlv_parser(uint16_t port_id,
 				      const struct rte_pmd_mlx5_geneve_tlv tlv_list[],
@@ -12281,7 +12281,7 @@ rte_pmd_mlx5_create_geneve_tlv_parser(uint16_t port_id,
 #endif
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_destroy_geneve_tlv_parser, 24.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_destroy_geneve_tlv_parser, 24.03);
 int
 rte_pmd_mlx5_destroy_geneve_tlv_parser(void *handle)
 {

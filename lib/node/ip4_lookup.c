@@ -118,7 +118,7 @@ ip4_lookup_node_process_scalar(struct rte_graph *graph, struct rte_node *node,
 	return nb_objs;
 }
 
-RTE_EXPORT_SYMBOL(rte_node_ip4_route_add)
+RTE_EXPORT_SYMBOL(rte_node_ip4_route_add);
 int
 rte_node_ip4_route_add(uint32_t ip, uint8_t depth, uint16_t next_hop,
 		       enum rte_node_ip4_lookup_next next_node)

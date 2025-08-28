@@ -24,14 +24,14 @@ struct rte_ml_op_pool_private {
 	/*< Size of private user data with each operation. */
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_dev);
 struct rte_ml_dev *
 rte_ml_dev_pmd_get_dev(int16_t dev_id)
 {
 	return &ml_dev_globals.devs[dev_id];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_named_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_named_dev);
 struct rte_ml_dev *
 rte_ml_dev_pmd_get_named_dev(const char *name)
 {
@@ -50,7 +50,7 @@ rte_ml_dev_pmd_get_named_dev(const char *name)
 	return NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_allocate);
 struct rte_ml_dev *
 rte_ml_dev_pmd_allocate(const char *name, uint8_t socket_id)
 {
@@ -124,7 +124,7 @@ rte_ml_dev_pmd_allocate(const char *name, uint8_t socket_id)
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_release);
 int
 rte_ml_dev_pmd_release(struct rte_ml_dev *dev)
 {
@@ -160,7 +160,7 @@ rte_ml_dev_pmd_release(struct rte_ml_dev *dev)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_init, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_init, 22.11);
 int
 rte_ml_dev_init(size_t dev_max)
 {
@@ -196,14 +196,14 @@ rte_ml_dev_init(size_t dev_max)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_count, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_count, 22.11);
 uint16_t
 rte_ml_dev_count(void)
 {
 	return ml_dev_globals.nb_devs;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_is_valid_dev, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_is_valid_dev, 22.11);
 int
 rte_ml_dev_is_valid_dev(int16_t dev_id)
 {
@@ -219,7 +219,7 @@ rte_ml_dev_is_valid_dev(int16_t dev_id)
 		return 1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_socket_id, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_socket_id, 22.11);
 int
 rte_ml_dev_socket_id(int16_t dev_id)
 {
@@ -235,7 +235,7 @@ rte_ml_dev_socket_id(int16_t dev_id)
 	return dev->data->socket_id;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_info_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_info_get, 22.11);
 int
 rte_ml_dev_info_get(int16_t dev_id, struct rte_ml_dev_info *dev_info)
 {
@@ -259,7 +259,7 @@ rte_ml_dev_info_get(int16_t dev_id, struct rte_ml_dev_info *dev_info)
 	return dev->dev_ops->dev_info_get(dev, dev_info);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_configure, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_configure, 22.11);
 int
 rte_ml_dev_configure(int16_t dev_id, const struct rte_ml_dev_config *config)
 {
@@ -299,7 +299,7 @@ rte_ml_dev_configure(int16_t dev_id, const struct rte_ml_dev_config *config)
 	return dev->dev_ops->dev_configure(dev, config);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_close, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_close, 22.11);
 int
 rte_ml_dev_close(int16_t dev_id)
 {
@@ -323,7 +323,7 @@ rte_ml_dev_close(int16_t dev_id)
 	return dev->dev_ops->dev_close(dev);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_start, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_start, 22.11);
 int
 rte_ml_dev_start(int16_t dev_id)
 {
@@ -351,7 +351,7 @@ rte_ml_dev_start(int16_t dev_id)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_stop, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_stop, 22.11);
 int
 rte_ml_dev_stop(int16_t dev_id)
 {
@@ -379,7 +379,7 @@ rte_ml_dev_stop(int16_t dev_id)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_queue_pair_count, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_queue_pair_count, 22.11);
 uint16_t
 rte_ml_dev_queue_pair_count(int16_t dev_id)
 {
@@ -395,7 +395,7 @@ rte_ml_dev_queue_pair_count(int16_t dev_id)
 	return dev->data->nb_queue_pairs;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_queue_pair_setup, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_queue_pair_setup, 22.11);
 int
 rte_ml_dev_queue_pair_setup(int16_t dev_id, uint16_t queue_pair_id,
 			    const struct rte_ml_dev_qp_conf *qp_conf, int socket_id)
@@ -429,7 +429,7 @@ rte_ml_dev_queue_pair_setup(int16_t dev_id, uint16_t queue_pair_id,
 	return dev->dev_ops->dev_queue_pair_setup(dev, queue_pair_id, qp_conf, socket_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_stats_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_stats_get, 22.11);
 int
 rte_ml_dev_stats_get(int16_t dev_id, struct rte_ml_dev_stats *stats)
 {
@@ -453,7 +453,7 @@ rte_ml_dev_stats_get(int16_t dev_id, struct rte_ml_dev_stats *stats)
 	return dev->dev_ops->dev_stats_get(dev, stats);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_stats_reset, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_stats_reset, 22.11);
 void
 rte_ml_dev_stats_reset(int16_t dev_id)
 {
@@ -471,7 +471,7 @@ rte_ml_dev_stats_reset(int16_t dev_id)
 	dev->dev_ops->dev_stats_reset(dev);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_names_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_names_get, 22.11);
 int
 rte_ml_dev_xstats_names_get(int16_t dev_id, enum rte_ml_dev_xstats_mode mode, int32_t model_id,
 			    struct rte_ml_dev_xstats_map *xstats_map, uint32_t size)
@@ -490,7 +490,7 @@ rte_ml_dev_xstats_names_get(int16_t dev_id, enum rte_ml_dev_xstats_mode mode, in
 	return dev->dev_ops->dev_xstats_names_get(dev, mode, model_id, xstats_map, size);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_by_name_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_by_name_get, 22.11);
 int
 rte_ml_dev_xstats_by_name_get(int16_t dev_id, const char *name, uint16_t *stat_id, uint64_t *value)
 {
@@ -518,7 +518,7 @@ rte_ml_dev_xstats_by_name_get(int16_t dev_id, const char *name, uint16_t *stat_i
 	return dev->dev_ops->dev_xstats_by_name_get(dev, name, stat_id, value);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_get, 22.11);
 int
 rte_ml_dev_xstats_get(int16_t dev_id, enum rte_ml_dev_xstats_mode mode, int32_t model_id,
 		      const uint16_t stat_ids[], uint64_t values[], uint16_t nb_ids)
@@ -547,7 +547,7 @@ rte_ml_dev_xstats_get(int16_t dev_id, enum rte_ml_dev_xstats_mode mode, int32_t 
 	return dev->dev_ops->dev_xstats_get(dev, mode, model_id, stat_ids, values, nb_ids);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_reset, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_xstats_reset, 22.11);
 int
 rte_ml_dev_xstats_reset(int16_t dev_id, enum rte_ml_dev_xstats_mode mode, int32_t model_id,
 			const uint16_t stat_ids[], uint16_t nb_ids)
@@ -566,7 +566,7 @@ rte_ml_dev_xstats_reset(int16_t dev_id, enum rte_ml_dev_xstats_mode mode, int32_
 	return dev->dev_ops->dev_xstats_reset(dev, mode, model_id, stat_ids, nb_ids);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_dump, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_dump, 22.11);
 int
 rte_ml_dev_dump(int16_t dev_id, FILE *fd)
 {
@@ -589,7 +589,7 @@ rte_ml_dev_dump(int16_t dev_id, FILE *fd)
 	return dev->dev_ops->dev_dump(dev, fd);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_selftest, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_selftest, 22.11);
 int
 rte_ml_dev_selftest(int16_t dev_id)
 {
@@ -607,7 +607,7 @@ rte_ml_dev_selftest(int16_t dev_id)
 	return dev->dev_ops->dev_selftest(dev);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_load, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_load, 22.11);
 int
 rte_ml_model_load(int16_t dev_id, struct rte_ml_model_params *params, uint16_t *model_id)
 {
@@ -635,7 +635,7 @@ rte_ml_model_load(int16_t dev_id, struct rte_ml_model_params *params, uint16_t *
 	return dev->dev_ops->model_load(dev, params, model_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_unload, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_unload, 22.11);
 int
 rte_ml_model_unload(int16_t dev_id, uint16_t model_id)
 {
@@ -653,7 +653,7 @@ rte_ml_model_unload(int16_t dev_id, uint16_t model_id)
 	return dev->dev_ops->model_unload(dev, model_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_start, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_start, 22.11);
 int
 rte_ml_model_start(int16_t dev_id, uint16_t model_id)
 {
@@ -671,7 +671,7 @@ rte_ml_model_start(int16_t dev_id, uint16_t model_id)
 	return dev->dev_ops->model_start(dev, model_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_stop, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_stop, 22.11);
 int
 rte_ml_model_stop(int16_t dev_id, uint16_t model_id)
 {
@@ -689,7 +689,7 @@ rte_ml_model_stop(int16_t dev_id, uint16_t model_id)
 	return dev->dev_ops->model_stop(dev, model_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_info_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_info_get, 22.11);
 int
 rte_ml_model_info_get(int16_t dev_id, uint16_t model_id, struct rte_ml_model_info *model_info)
 {
@@ -713,7 +713,7 @@ rte_ml_model_info_get(int16_t dev_id, uint16_t model_id, struct rte_ml_model_inf
 	return dev->dev_ops->model_info_get(dev, model_id, model_info);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_params_update, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_model_params_update, 22.11);
 int
 rte_ml_model_params_update(int16_t dev_id, uint16_t model_id, void *buffer)
 {
@@ -736,7 +736,7 @@ rte_ml_model_params_update(int16_t dev_id, uint16_t model_id, void *buffer)
 	return dev->dev_ops->model_params_update(dev, model_id, buffer);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_quantize, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_quantize, 22.11);
 int
 rte_ml_io_quantize(int16_t dev_id, uint16_t model_id, struct rte_ml_buff_seg **dbuffer,
 		   struct rte_ml_buff_seg **qbuffer)
@@ -765,7 +765,7 @@ rte_ml_io_quantize(int16_t dev_id, uint16_t model_id, struct rte_ml_buff_seg **d
 	return dev->dev_ops->io_quantize(dev, model_id, dbuffer, qbuffer);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_dequantize, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_dequantize, 22.11);
 int
 rte_ml_io_dequantize(int16_t dev_id, uint16_t model_id, struct rte_ml_buff_seg **qbuffer,
 		     struct rte_ml_buff_seg **dbuffer)
@@ -806,7 +806,7 @@ ml_op_init(struct rte_mempool *mempool, __rte_unused void *opaque_arg, void *_op
 	op->mempool = mempool;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_op_pool_create, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_op_pool_create, 22.11);
 struct rte_mempool *
 rte_ml_op_pool_create(const char *name, unsigned int nb_elts, unsigned int cache_size,
 		      uint16_t user_size, int socket_id)
@@ -846,14 +846,14 @@ rte_ml_op_pool_create(const char *name, unsigned int nb_elts, unsigned int cache
 	return mp;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_op_pool_free, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_op_pool_free, 22.11);
 void
 rte_ml_op_pool_free(struct rte_mempool *mempool)
 {
 	rte_mempool_free(mempool);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_enqueue_burst, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_enqueue_burst, 22.11);
 uint16_t
 rte_ml_enqueue_burst(int16_t dev_id, uint16_t qp_id, struct rte_ml_op **ops, uint16_t nb_ops)
 {
@@ -890,7 +890,7 @@ rte_ml_enqueue_burst(int16_t dev_id, uint16_t qp_id, struct rte_ml_op **ops, uin
 	return dev->enqueue_burst(dev, qp_id, ops, nb_ops);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dequeue_burst, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dequeue_burst, 22.11);
 uint16_t
 rte_ml_dequeue_burst(int16_t dev_id, uint16_t qp_id, struct rte_ml_op **ops, uint16_t nb_ops)
 {
@@ -927,7 +927,7 @@ rte_ml_dequeue_burst(int16_t dev_id, uint16_t qp_id, struct rte_ml_op **ops, uin
 	return dev->dequeue_burst(dev, qp_id, ops, nb_ops);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_op_error_get, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_op_error_get, 22.11);
 int
 rte_ml_op_error_get(int16_t dev_id, struct rte_ml_op *op, struct rte_ml_op_error *error)
 {
@@ -959,5 +959,5 @@ rte_ml_op_error_get(int16_t dev_id, struct rte_ml_op *op, struct rte_ml_op_error
 	return dev->op_error_get(dev, op, error);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_logtype, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_dev_logtype, 22.11);
 RTE_LOG_REGISTER_DEFAULT(rte_ml_dev_logtype, INFO);

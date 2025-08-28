@@ -14,7 +14,7 @@
 /* See http://lwn.net/Articles/301888/ */
 #define HYPERVISOR_INFO_LEAF 0x40000000
 
-RTE_EXPORT_SYMBOL(rte_hypervisor_get)
+RTE_EXPORT_SYMBOL(rte_hypervisor_get);
 enum rte_hypervisor
 rte_hypervisor_get(void)
 {

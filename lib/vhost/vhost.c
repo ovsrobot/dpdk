@@ -861,7 +861,7 @@ vhost_enable_linearbuf(int vid)
 	dev->linearbuf = 1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_mtu)
+RTE_EXPORT_SYMBOL(rte_vhost_get_mtu);
 int
 rte_vhost_get_mtu(int vid, uint16_t *mtu)
 {
@@ -881,7 +881,7 @@ rte_vhost_get_mtu(int vid, uint16_t *mtu)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_numa_node)
+RTE_EXPORT_SYMBOL(rte_vhost_get_numa_node);
 int
 rte_vhost_get_numa_node(int vid)
 {
@@ -908,7 +908,7 @@ rte_vhost_get_numa_node(int vid)
 #endif
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_vring_num)
+RTE_EXPORT_SYMBOL(rte_vhost_get_vring_num);
 uint16_t
 rte_vhost_get_vring_num(int vid)
 {
@@ -920,7 +920,7 @@ rte_vhost_get_vring_num(int vid)
 	return dev->nr_vring;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_ifname)
+RTE_EXPORT_SYMBOL(rte_vhost_get_ifname);
 int
 rte_vhost_get_ifname(int vid, char *buf, size_t len)
 {
@@ -937,7 +937,7 @@ rte_vhost_get_ifname(int vid, char *buf, size_t len)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_negotiated_features)
+RTE_EXPORT_SYMBOL(rte_vhost_get_negotiated_features);
 int
 rte_vhost_get_negotiated_features(int vid, uint64_t *features)
 {
@@ -951,7 +951,7 @@ rte_vhost_get_negotiated_features(int vid, uint64_t *features)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_negotiated_protocol_features)
+RTE_EXPORT_SYMBOL(rte_vhost_get_negotiated_protocol_features);
 int
 rte_vhost_get_negotiated_protocol_features(int vid,
 					   uint64_t *protocol_features)
@@ -966,7 +966,7 @@ rte_vhost_get_negotiated_protocol_features(int vid,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_mem_table)
+RTE_EXPORT_SYMBOL(rte_vhost_get_mem_table);
 int
 rte_vhost_get_mem_table(int vid, struct rte_vhost_memory **mem)
 {
@@ -990,7 +990,7 @@ rte_vhost_get_mem_table(int vid, struct rte_vhost_memory **mem)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_vhost_vring)
+RTE_EXPORT_SYMBOL(rte_vhost_get_vhost_vring);
 int
 rte_vhost_get_vhost_vring(int vid, uint16_t vring_idx,
 			  struct rte_vhost_vring *vring)
@@ -1027,7 +1027,7 @@ rte_vhost_get_vhost_vring(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_vhost_ring_inflight)
+RTE_EXPORT_SYMBOL(rte_vhost_get_vhost_ring_inflight);
 int
 rte_vhost_get_vhost_ring_inflight(int vid, uint16_t vring_idx,
 				  struct rte_vhost_ring_inflight *vring)
@@ -1063,7 +1063,7 @@ rte_vhost_get_vhost_ring_inflight(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_set_inflight_desc_split)
+RTE_EXPORT_SYMBOL(rte_vhost_set_inflight_desc_split);
 int
 rte_vhost_set_inflight_desc_split(int vid, uint16_t vring_idx,
 				  uint16_t idx)
@@ -1100,7 +1100,7 @@ rte_vhost_set_inflight_desc_split(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_set_inflight_desc_packed)
+RTE_EXPORT_SYMBOL(rte_vhost_set_inflight_desc_packed);
 int
 rte_vhost_set_inflight_desc_packed(int vid, uint16_t vring_idx,
 				   uint16_t head, uint16_t last,
@@ -1169,7 +1169,7 @@ rte_vhost_set_inflight_desc_packed(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_clr_inflight_desc_split)
+RTE_EXPORT_SYMBOL(rte_vhost_clr_inflight_desc_split);
 int
 rte_vhost_clr_inflight_desc_split(int vid, uint16_t vring_idx,
 				  uint16_t last_used_idx, uint16_t idx)
@@ -1211,7 +1211,7 @@ rte_vhost_clr_inflight_desc_split(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_clr_inflight_desc_packed)
+RTE_EXPORT_SYMBOL(rte_vhost_clr_inflight_desc_packed);
 int
 rte_vhost_clr_inflight_desc_packed(int vid, uint16_t vring_idx,
 				   uint16_t head)
@@ -1258,7 +1258,7 @@ rte_vhost_clr_inflight_desc_packed(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_set_last_inflight_io_split)
+RTE_EXPORT_SYMBOL(rte_vhost_set_last_inflight_io_split);
 int
 rte_vhost_set_last_inflight_io_split(int vid, uint16_t vring_idx,
 				     uint16_t idx)
@@ -1294,7 +1294,7 @@ rte_vhost_set_last_inflight_io_split(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_set_last_inflight_io_packed)
+RTE_EXPORT_SYMBOL(rte_vhost_set_last_inflight_io_packed);
 int
 rte_vhost_set_last_inflight_io_packed(int vid, uint16_t vring_idx,
 				      uint16_t head)
@@ -1345,7 +1345,7 @@ rte_vhost_set_last_inflight_io_packed(int vid, uint16_t vring_idx,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_vring_call)
+RTE_EXPORT_SYMBOL(rte_vhost_vring_call);
 int
 rte_vhost_vring_call(int vid, uint16_t vring_idx)
 {
@@ -1382,7 +1382,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_vring_call_nonblock)
+RTE_EXPORT_SYMBOL(rte_vhost_vring_call_nonblock);
 int
 rte_vhost_vring_call_nonblock(int vid, uint16_t vring_idx)
 {
@@ -1420,7 +1420,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_avail_entries)
+RTE_EXPORT_SYMBOL(rte_vhost_avail_entries);
 uint16_t
 rte_vhost_avail_entries(int vid, uint16_t queue_id)
 {
@@ -1517,7 +1517,7 @@ vhost_enable_guest_notification(struct virtio_net *dev,
 		return vhost_enable_notify_split(dev, vq, enable);
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_enable_guest_notification)
+RTE_EXPORT_SYMBOL(rte_vhost_enable_guest_notification);
 int
 rte_vhost_enable_guest_notification(int vid, uint16_t queue_id, int enable)
 {
@@ -1551,7 +1551,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_notify_guest, 23.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_notify_guest, 23.07);
 void
 rte_vhost_notify_guest(int vid, uint16_t queue_id)
 {
@@ -1588,7 +1588,7 @@ out_unlock:
 	rte_rwlock_read_unlock(&vq->access_lock);
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_log_write)
+RTE_EXPORT_SYMBOL(rte_vhost_log_write);
 void
 rte_vhost_log_write(int vid, uint64_t addr, uint64_t len)
 {
@@ -1600,7 +1600,7 @@ rte_vhost_log_write(int vid, uint64_t addr, uint64_t len)
 	vhost_log_write(dev, addr, len);
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_log_used_vring)
+RTE_EXPORT_SYMBOL(rte_vhost_log_used_vring);
 void
 rte_vhost_log_used_vring(int vid, uint16_t vring_idx,
 			 uint64_t offset, uint64_t len)
@@ -1621,7 +1621,7 @@ rte_vhost_log_used_vring(int vid, uint16_t vring_idx,
 	vhost_log_used_vring(dev, vq, offset, len);
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_rx_queue_count)
+RTE_EXPORT_SYMBOL(rte_vhost_rx_queue_count);
 uint32_t
 rte_vhost_rx_queue_count(int vid, uint16_t qid)
 {
@@ -1659,7 +1659,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_vdpa_device)
+RTE_EXPORT_SYMBOL(rte_vhost_get_vdpa_device);
 struct rte_vdpa_device *
 rte_vhost_get_vdpa_device(int vid)
 {
@@ -1671,7 +1671,7 @@ rte_vhost_get_vdpa_device(int vid)
 	return dev->vdpa_dev;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_log_base)
+RTE_EXPORT_SYMBOL(rte_vhost_get_log_base);
 int
 rte_vhost_get_log_base(int vid, uint64_t *log_base,
 		uint64_t *log_size)
@@ -1687,7 +1687,7 @@ rte_vhost_get_log_base(int vid, uint64_t *log_base,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_vring_base)
+RTE_EXPORT_SYMBOL(rte_vhost_get_vring_base);
 int
 rte_vhost_get_vring_base(int vid, uint16_t queue_id,
 		uint16_t *last_avail_idx, uint16_t *last_used_idx)
@@ -1718,7 +1718,7 @@ rte_vhost_get_vring_base(int vid, uint16_t queue_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_set_vring_base)
+RTE_EXPORT_SYMBOL(rte_vhost_set_vring_base);
 int
 rte_vhost_set_vring_base(int vid, uint16_t queue_id,
 		uint16_t last_avail_idx, uint16_t last_used_idx)
@@ -1751,7 +1751,7 @@ rte_vhost_set_vring_base(int vid, uint16_t queue_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_vring_base_from_inflight)
+RTE_EXPORT_SYMBOL(rte_vhost_get_vring_base_from_inflight);
 int
 rte_vhost_get_vring_base_from_inflight(int vid,
 				       uint16_t queue_id,
@@ -1786,7 +1786,7 @@ rte_vhost_get_vring_base_from_inflight(int vid,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_extern_callback_register)
+RTE_EXPORT_SYMBOL(rte_vhost_extern_callback_register);
 int
 rte_vhost_extern_callback_register(int vid,
 		struct rte_vhost_user_extern_ops const * const ops, void *ctx)
@@ -1874,7 +1874,7 @@ out_free_async:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register, 20.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register, 20.08);
 int
 rte_vhost_async_channel_register(int vid, uint16_t queue_id)
 {
@@ -1908,7 +1908,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register_thread_unsafe, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register_thread_unsafe, 21.08);
 int
 rte_vhost_async_channel_register_thread_unsafe(int vid, uint16_t queue_id)
 {
@@ -1931,7 +1931,7 @@ rte_vhost_async_channel_register_thread_unsafe(int vid, uint16_t queue_id)
 	return async_channel_register(dev, vq);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister, 20.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister, 20.08);
 int
 rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
 {
@@ -1978,7 +1978,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister_thread_unsafe, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister_thread_unsafe, 21.08);
 int
 rte_vhost_async_channel_unregister_thread_unsafe(int vid, uint16_t queue_id)
 {
@@ -2013,7 +2013,7 @@ rte_vhost_async_channel_unregister_thread_unsafe(int vid, uint16_t queue_id)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_configure, 22.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_configure, 22.03);
 int
 rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 {
@@ -2090,7 +2090,7 @@ error:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight, 21.08);
 int
 rte_vhost_async_get_inflight(int vid, uint16_t queue_id)
 {
@@ -2129,7 +2129,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight_thread_unsafe, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight_thread_unsafe, 22.07);
 int
 rte_vhost_async_get_inflight_thread_unsafe(int vid, uint16_t queue_id)
 {
@@ -2158,7 +2158,7 @@ rte_vhost_async_get_inflight_thread_unsafe(int vid, uint16_t queue_id)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_get_monitor_addr)
+RTE_EXPORT_SYMBOL(rte_vhost_get_monitor_addr);
 int
 rte_vhost_get_monitor_addr(int vid, uint16_t queue_id,
 		struct rte_vhost_power_monitor_cond *pmc)
@@ -2209,7 +2209,7 @@ out_unlock:
 }
 
 
-RTE_EXPORT_SYMBOL(rte_vhost_vring_stats_get_names)
+RTE_EXPORT_SYMBOL(rte_vhost_vring_stats_get_names);
 int
 rte_vhost_vring_stats_get_names(int vid, uint16_t queue_id,
 		struct rte_vhost_stat_name *name, unsigned int size)
@@ -2237,7 +2237,7 @@ rte_vhost_vring_stats_get_names(int vid, uint16_t queue_id,
 	return VHOST_NB_VQ_STATS;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_vring_stats_get)
+RTE_EXPORT_SYMBOL(rte_vhost_vring_stats_get);
 int
 rte_vhost_vring_stats_get(int vid, uint16_t queue_id,
 		struct rte_vhost_stat *stats, unsigned int n)
@@ -2284,7 +2284,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_vring_stats_reset)
+RTE_EXPORT_SYMBOL(rte_vhost_vring_stats_reset);
 int rte_vhost_vring_stats_reset(int vid, uint16_t queue_id)
 {
 	struct virtio_net *dev = get_device(vid);
@@ -2320,7 +2320,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_unconfigure, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_unconfigure, 22.11);
 int
 rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id)
 {

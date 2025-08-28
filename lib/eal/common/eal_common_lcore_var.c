@@ -76,7 +76,7 @@ lcore_var_alloc(size_t size, size_t align)
 	return handle;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_lcore_var_alloc, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_lcore_var_alloc, 24.11);
 void *
 rte_lcore_var_alloc(size_t size, size_t align)
 {

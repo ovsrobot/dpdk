@@ -87,7 +87,7 @@ mlx5_devx_get_hca_cap(void *ctx, uint32_t *in, uint32_t *out,
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_register_read)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_register_read);
 int
 mlx5_devx_cmd_register_read(void *ctx, uint16_t reg_id, uint32_t arg,
 			    uint32_t *data, uint32_t dw_cnt)
@@ -138,7 +138,7 @@ mlx5_devx_cmd_register_read(void *ctx, uint16_t reg_id, uint32_t arg,
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_register_write)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_register_write);
 int
 mlx5_devx_cmd_register_write(void *ctx, uint16_t reg_id, uint32_t arg,
 			     uint32_t *data, uint32_t dw_cnt)
@@ -179,7 +179,7 @@ mlx5_devx_cmd_register_write(void *ctx, uint16_t reg_id, uint32_t arg,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_counter_alloc_general)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_counter_alloc_general);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_flow_counter_alloc_general(void *ctx,
 		struct mlx5_devx_counter_attr *attr)
@@ -229,7 +229,7 @@ mlx5_devx_cmd_flow_counter_alloc_general(void *ctx,
  *   Pointer to counter object on success, a negative value otherwise and
  *   rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_counter_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_counter_alloc);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_flow_counter_alloc(void *ctx, uint32_t bulk_n_128)
 {
@@ -281,7 +281,7 @@ mlx5_devx_cmd_flow_counter_alloc(void *ctx, uint32_t bulk_n_128)
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_counter_query)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_counter_query);
 int
 mlx5_devx_cmd_flow_counter_query(struct mlx5_devx_obj *dcs,
 				 int clear, uint32_t n_counters,
@@ -343,7 +343,7 @@ mlx5_devx_cmd_flow_counter_query(struct mlx5_devx_obj *dcs,
  *   Pointer to Devx mkey on success, a negative value otherwise and rte_errno
  *   is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_mkey_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_mkey_create);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_mkey_create(void *ctx,
 			  struct mlx5_devx_mkey_attr *attr)
@@ -447,7 +447,7 @@ mlx5_devx_cmd_mkey_create(void *ctx,
  * @return
  *   0 on success, non-zero value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_get_out_command_status)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_get_out_command_status);
 int
 mlx5_devx_get_out_command_status(void *out)
 {
@@ -474,7 +474,7 @@ mlx5_devx_get_out_command_status(void *out)
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_destroy);
 int
 mlx5_devx_cmd_destroy(struct mlx5_devx_obj *obj)
 {
@@ -634,7 +634,7 @@ mlx5_devx_cmd_query_hca_vdpa_attr(void *ctx,
  * @return
  *   0 on success, a negative errno otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_match_sample_info_query)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_match_sample_info_query);
 int
 mlx5_devx_cmd_match_sample_info_query(void *ctx, uint32_t sample_field_id,
 				      struct mlx5_devx_match_sample_info_query_attr *attr)
@@ -672,7 +672,7 @@ mlx5_devx_cmd_match_sample_info_query(void *ctx, uint32_t sample_field_id,
 #endif
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_parse_samples)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_parse_samples);
 int
 mlx5_devx_cmd_query_parse_samples(struct mlx5_devx_obj *flex_obj,
 				  uint32_t *ids,
@@ -727,7 +727,7 @@ mlx5_devx_cmd_query_parse_samples(struct mlx5_devx_obj *flex_obj,
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_flex_parser)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_flex_parser);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_flex_parser(void *ctx,
 				 struct mlx5_devx_graph_node_attr *data)
@@ -928,7 +928,7 @@ mlx5_devx_query_pkt_integrity_match(void *hcattr)
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_hca_attr)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_hca_attr);
 int
 mlx5_devx_cmd_query_hca_attr(void *ctx,
 			     struct mlx5_hca_attr *attr)
@@ -1438,7 +1438,7 @@ error:
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_qp_query_tis_td)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_qp_query_tis_td);
 int
 mlx5_devx_cmd_qp_query_tis_td(void *qp, uint32_t tis_num,
 			      uint32_t *tis_td)
@@ -1525,7 +1525,7 @@ devx_cmd_fill_wq_data(void *wq_ctx, struct mlx5_devx_wq_attr *wq_attr)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_rq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_rq);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_rq(void *ctx,
 			struct mlx5_devx_create_rq_attr *rq_attr,
@@ -1584,7 +1584,7 @@ mlx5_devx_cmd_create_rq(void *ctx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_rq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_rq);
 int
 mlx5_devx_cmd_modify_rq(struct mlx5_devx_obj *rq,
 			struct mlx5_devx_modify_rq_attr *rq_attr)
@@ -1638,7 +1638,7 @@ mlx5_devx_cmd_modify_rq(struct mlx5_devx_obj *rq,
  * @return
  *   0 if Query successful, else non-zero return value from devx_obj_query API
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_rq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_rq);
 int
 mlx5_devx_cmd_query_rq(struct mlx5_devx_obj *rq_obj, void *out, size_t outlen)
 {
@@ -1668,7 +1668,7 @@ mlx5_devx_cmd_query_rq(struct mlx5_devx_obj *rq_obj, void *out, size_t outlen)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_rmp)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_rmp);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_rmp(void *ctx,
 			 struct mlx5_devx_create_rmp_attr *rmp_attr,
@@ -1716,7 +1716,7 @@ mlx5_devx_cmd_create_rmp(void *ctx,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_tir)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_tir);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_tir(void *ctx,
 			 struct mlx5_devx_tir_attr *tir_attr)
@@ -1785,7 +1785,7 @@ mlx5_devx_cmd_create_tir(void *ctx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_tir)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_tir);
 int
 mlx5_devx_cmd_modify_tir(struct mlx5_devx_obj *tir,
 			 struct mlx5_devx_modify_tir_attr *modify_tir_attr)
@@ -1870,7 +1870,7 @@ mlx5_devx_cmd_modify_tir(struct mlx5_devx_obj *tir,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_rqt)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_rqt);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_rqt(void *ctx,
 			 struct mlx5_devx_rqt_attr *rqt_attr)
@@ -1925,7 +1925,7 @@ mlx5_devx_cmd_create_rqt(void *ctx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_rqt)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_rqt);
 int
 mlx5_devx_cmd_modify_rqt(struct mlx5_devx_obj *rqt,
 			 struct mlx5_devx_rqt_attr *rqt_attr)
@@ -1974,7 +1974,7 @@ mlx5_devx_cmd_modify_rqt(struct mlx5_devx_obj *rqt,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  **/
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_sq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_sq);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_sq(void *ctx,
 			struct mlx5_devx_create_sq_attr *sq_attr)
@@ -2041,7 +2041,7 @@ mlx5_devx_cmd_create_sq(void *ctx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_sq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_sq);
 int
 mlx5_devx_cmd_modify_sq(struct mlx5_devx_obj *sq,
 			struct mlx5_devx_modify_sq_attr *sq_attr)
@@ -2081,7 +2081,7 @@ mlx5_devx_cmd_modify_sq(struct mlx5_devx_obj *sq,
  * @return
  *   0 if Query successful, else non-zero return value from devx_obj_query API
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_sq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_sq);
 int
 mlx5_devx_cmd_query_sq(struct mlx5_devx_obj *sq_obj, void *out, size_t outlen)
 {
@@ -2109,7 +2109,7 @@ mlx5_devx_cmd_query_sq(struct mlx5_devx_obj *sq_obj, void *out, size_t outlen)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_tis)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_tis);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_tis(void *ctx,
 			 struct mlx5_devx_tis_attr *tis_attr)
@@ -2153,7 +2153,7 @@ mlx5_devx_cmd_create_tis(void *ctx,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_td)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_td);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_td(void *ctx)
 {
@@ -2196,7 +2196,7 @@ mlx5_devx_cmd_create_td(void *ctx)
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_dump)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_dump);
 int
 mlx5_devx_cmd_flow_dump(void *fdb_domain __rte_unused,
 			void *rx_domain __rte_unused,
@@ -2222,7 +2222,7 @@ mlx5_devx_cmd_flow_dump(void *fdb_domain __rte_unused,
 	return -ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_single_dump)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_flow_single_dump);
 int
 mlx5_devx_cmd_flow_single_dump(void *rule_info __rte_unused,
 			FILE *file __rte_unused)
@@ -2248,7 +2248,7 @@ mlx5_devx_cmd_flow_single_dump(void *rule_info __rte_unused,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_cq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_cq);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_cq(void *ctx, struct mlx5_devx_cq_attr *attr)
 {
@@ -2317,7 +2317,7 @@ mlx5_devx_cmd_create_cq(void *ctx, struct mlx5_devx_cq_attr *attr)
  * @return
  *   0 if Query successful, else non-zero return value from devx_obj_query API
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_cq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_cq);
 int
 mlx5_devx_cmd_query_cq(struct mlx5_devx_obj *cq_obj, void *out, size_t outlen)
 {
@@ -2345,7 +2345,7 @@ mlx5_devx_cmd_query_cq(struct mlx5_devx_obj *cq_obj, void *out, size_t outlen)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_virtq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_virtq);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_virtq(void *ctx,
 			   struct mlx5_devx_virtq_attr *attr)
@@ -2422,7 +2422,7 @@ mlx5_devx_cmd_create_virtq(void *ctx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_virtq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_virtq);
 int
 mlx5_devx_cmd_modify_virtq(struct mlx5_devx_obj *virtq_obj,
 			   struct mlx5_devx_virtq_attr *attr)
@@ -2521,7 +2521,7 @@ mlx5_devx_cmd_modify_virtq(struct mlx5_devx_obj *virtq_obj,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_virtq)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_virtq);
 int
 mlx5_devx_cmd_query_virtq(struct mlx5_devx_obj *virtq_obj,
 			   struct mlx5_devx_virtq_attr *attr)
@@ -2564,7 +2564,7 @@ mlx5_devx_cmd_query_virtq(struct mlx5_devx_obj *virtq_obj,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_qp)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_qp);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_qp(void *ctx,
 			struct mlx5_devx_qp_attr *attr)
@@ -2667,7 +2667,7 @@ mlx5_devx_cmd_create_qp(void *ctx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_qp_state)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_modify_qp_state);
 int
 mlx5_devx_cmd_modify_qp_state(struct mlx5_devx_obj *qp, uint32_t qp_st_mod_op,
 			      uint32_t remote_qp_id)
@@ -2745,7 +2745,7 @@ mlx5_devx_cmd_modify_qp_state(struct mlx5_devx_obj *qp, uint32_t qp_st_mod_op,
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_virtio_q_counters)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_virtio_q_counters);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_virtio_q_counters(void *ctx)
 {
@@ -2777,7 +2777,7 @@ mlx5_devx_cmd_create_virtio_q_counters(void *ctx)
 	return couners_obj;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_virtio_q_counters)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_virtio_q_counters);
 int
 mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *couners_obj,
 				   struct mlx5_devx_virtio_q_couners_attr *attr)
@@ -2827,7 +2827,7 @@ mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *couners_obj,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_flow_hit_aso_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_flow_hit_aso_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_flow_hit_aso_obj(void *ctx, uint32_t pd)
 {
@@ -2870,7 +2870,7 @@ mlx5_devx_cmd_create_flow_hit_aso_obj(void *ctx, uint32_t pd)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_alloc_pd)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_alloc_pd);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_alloc_pd(void *ctx)
 {
@@ -2911,7 +2911,7 @@ mlx5_devx_cmd_alloc_pd(void *ctx)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_flow_meter_aso_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_flow_meter_aso_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_flow_meter_aso_obj(void *ctx, uint32_t pd,
 						uint32_t log_obj_size)
@@ -2965,7 +2965,7 @@ mlx5_devx_cmd_create_flow_meter_aso_obj(void *ctx, uint32_t pd,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_conn_track_offload_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_conn_track_offload_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_conn_track_offload_obj(void *ctx, uint32_t pd,
 					    uint32_t log_obj_size)
@@ -3012,7 +3012,7 @@ mlx5_devx_cmd_create_conn_track_offload_obj(void *ctx, uint32_t pd,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_geneve_tlv_option)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_geneve_tlv_option);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_geneve_tlv_option(void *ctx,
 				  struct mlx5_devx_geneve_tlv_option_attr *attr)
@@ -3075,7 +3075,7 @@ mlx5_devx_cmd_create_geneve_tlv_option(void *ctx,
  * @return
  *   0 on success, a negative errno otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_geneve_tlv_option)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_geneve_tlv_option);
 int
 mlx5_devx_cmd_query_geneve_tlv_option(void *ctx,
 				      struct mlx5_devx_obj *geneve_tlv_opt_obj,
@@ -3113,7 +3113,7 @@ mlx5_devx_cmd_query_geneve_tlv_option(void *ctx,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_wq_query)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_wq_query);
 int
 mlx5_devx_cmd_wq_query(void *wq, uint32_t *counter_set_id)
 {
@@ -3154,7 +3154,7 @@ mlx5_devx_cmd_wq_query(void *wq, uint32_t *counter_set_id)
  *   Pointer to counter object on success, a NULL value otherwise and
  *   rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_queue_counter_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_queue_counter_alloc);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_queue_counter_alloc(void *ctx, int *syndrome)
 {
@@ -3196,7 +3196,7 @@ mlx5_devx_cmd_queue_counter_alloc(void *ctx, int *syndrome)
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_queue_counter_query)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_queue_counter_query);
 int
 mlx5_devx_cmd_queue_counter_query(struct mlx5_devx_obj *dcs, int clear,
 				  uint32_t *out_of_buffers)
@@ -3232,7 +3232,7 @@ mlx5_devx_cmd_queue_counter_query(struct mlx5_devx_obj *dcs, int clear,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_dek_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_dek_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_dek_obj(void *ctx, struct mlx5_devx_dek_attr *attr)
 {
@@ -3283,7 +3283,7 @@ mlx5_devx_cmd_create_dek_obj(void *ctx, struct mlx5_devx_dek_attr *attr)
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_import_kek_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_import_kek_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_import_kek_obj(void *ctx,
 				    struct mlx5_devx_import_kek_attr *attr)
@@ -3331,7 +3331,7 @@ mlx5_devx_cmd_create_import_kek_obj(void *ctx,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_credential_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_credential_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_credential_obj(void *ctx,
 				    struct mlx5_devx_credential_attr *attr)
@@ -3380,7 +3380,7 @@ mlx5_devx_cmd_create_credential_obj(void *ctx,
  * @return
  *   The DevX object created, NULL otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_crypto_login_obj)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_create_crypto_login_obj);
 struct mlx5_devx_obj *
 mlx5_devx_cmd_create_crypto_login_obj(void *ctx,
 				      struct mlx5_devx_crypto_login_attr *attr)
@@ -3432,7 +3432,7 @@ mlx5_devx_cmd_create_crypto_login_obj(void *ctx,
  * @return
  *   0 on success, a negative value otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_lag)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cmd_query_lag);
 int
 mlx5_devx_cmd_query_lag(void *ctx,
 			struct mlx5_devx_lag_context *lag_ctx)

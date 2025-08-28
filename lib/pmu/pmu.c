@@ -37,7 +37,7 @@ struct rte_pmu_event {
 	TAILQ_ENTRY(rte_pmu_event) next;
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_pmu)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_pmu);
 struct rte_pmu rte_pmu;
 
 /* Stubs for arch-specific functions */
@@ -291,7 +291,7 @@ cleanup_events(struct rte_pmu_event_group *group)
 	group->enabled = false;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_pmu_enable_group, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_pmu_enable_group, 25.07);
 int
 __rte_pmu_enable_group(struct rte_pmu_event_group *group)
 {
@@ -393,7 +393,7 @@ free_event(struct rte_pmu_event *event)
 	free(event);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_add_event, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_add_event, 25.07);
 int
 rte_pmu_add_event(const char *name)
 {
@@ -436,7 +436,7 @@ rte_pmu_add_event(const char *name)
 	return event->index;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_init, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_init, 25.07);
 int
 rte_pmu_init(void)
 {
@@ -468,7 +468,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_fini, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_fini, 25.07);
 void
 rte_pmu_fini(void)
 {

@@ -85,7 +85,7 @@ fill_crypto_xform(struct crypto_xform *xform, uint64_t type,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_ipsec_sa_type)
+RTE_EXPORT_SYMBOL(rte_ipsec_sa_type);
 uint64_t
 rte_ipsec_sa_type(const struct rte_ipsec_sa *sa)
 {
@@ -158,7 +158,7 @@ ipsec_sa_size(uint64_t type, uint32_t *wnd_sz, uint32_t *nb_bucket)
 	return sz;
 }
 
-RTE_EXPORT_SYMBOL(rte_ipsec_sa_fini)
+RTE_EXPORT_SYMBOL(rte_ipsec_sa_fini);
 void
 rte_ipsec_sa_fini(struct rte_ipsec_sa *sa)
 {
@@ -528,7 +528,7 @@ fill_sa_replay(struct rte_ipsec_sa *sa, uint32_t wnd_sz, uint32_t nb_bucket,
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_ipsec_sa_size)
+RTE_EXPORT_SYMBOL(rte_ipsec_sa_size);
 int
 rte_ipsec_sa_size(const struct rte_ipsec_sa_prm *prm)
 {
@@ -549,7 +549,7 @@ rte_ipsec_sa_size(const struct rte_ipsec_sa_prm *prm)
 	return ipsec_sa_size(type, &wsz, &nb);
 }
 
-RTE_EXPORT_SYMBOL(rte_ipsec_sa_init)
+RTE_EXPORT_SYMBOL(rte_ipsec_sa_init);
 int
 rte_ipsec_sa_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm,
 	uint32_t size)

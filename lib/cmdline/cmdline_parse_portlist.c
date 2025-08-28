@@ -16,7 +16,7 @@
 #include "cmdline_parse.h"
 #include "cmdline_parse_portlist.h"
 
-RTE_EXPORT_SYMBOL(cmdline_token_portlist_ops)
+RTE_EXPORT_SYMBOL(cmdline_token_portlist_ops);
 struct cmdline_token_ops cmdline_token_portlist_ops = {
 	.parse = cmdline_parse_portlist,
 	.complete_get_nb = NULL,
@@ -71,7 +71,7 @@ parse_ports(cmdline_portlist_t *pl, const char *str)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_parse_portlist)
+RTE_EXPORT_SYMBOL(cmdline_parse_portlist);
 int
 cmdline_parse_portlist(__rte_unused cmdline_parse_token_hdr_t *tk,
 	const char *buf, void *res, unsigned ressize)
@@ -108,7 +108,7 @@ cmdline_parse_portlist(__rte_unused cmdline_parse_token_hdr_t *tk,
 	return token_len;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_get_help_portlist)
+RTE_EXPORT_SYMBOL(cmdline_get_help_portlist);
 int
 cmdline_get_help_portlist(__rte_unused cmdline_parse_token_hdr_t *tk,
 		char *dstbuf, unsigned int size)

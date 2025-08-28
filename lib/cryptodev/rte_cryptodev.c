@@ -36,7 +36,7 @@ static uint8_t nb_drivers;
 
 static struct rte_cryptodev rte_crypto_devices[RTE_CRYPTO_MAX_DEVS];
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodevs)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodevs);
 struct rte_cryptodev *rte_cryptodevs = rte_crypto_devices;
 
 static struct rte_cryptodev_global cryptodev_globals = {
@@ -46,13 +46,13 @@ static struct rte_cryptodev_global cryptodev_globals = {
 };
 
 /* Public fastpath APIs. */
-RTE_EXPORT_SYMBOL(rte_crypto_fp_ops)
+RTE_EXPORT_SYMBOL(rte_crypto_fp_ops);
 struct rte_crypto_fp_ops rte_crypto_fp_ops[RTE_CRYPTO_MAX_DEVS];
 
 /* spinlock for crypto device callbacks */
 static rte_spinlock_t rte_cryptodev_cb_lock = RTE_SPINLOCK_INITIALIZER;
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_logtype)
+RTE_EXPORT_SYMBOL(rte_cryptodev_logtype);
 RTE_LOG_REGISTER_DEFAULT(rte_cryptodev_logtype, INFO);
 
 /**
@@ -109,7 +109,7 @@ crypto_cipher_algorithm_strings[] = {
  * The crypto cipher operation strings identifiers.
  * It could be used in application command line.
  */
-RTE_EXPORT_SYMBOL(rte_crypto_cipher_operation_strings)
+RTE_EXPORT_SYMBOL(rte_crypto_cipher_operation_strings);
 const char *
 rte_crypto_cipher_operation_strings[] = {
 		[RTE_CRYPTO_CIPHER_OP_ENCRYPT]	= "encrypt",
@@ -182,7 +182,7 @@ crypto_aead_algorithm_strings[] = {
  * The crypto AEAD operation strings identifiers.
  * It could be used in application command line.
  */
-RTE_EXPORT_SYMBOL(rte_crypto_aead_operation_strings)
+RTE_EXPORT_SYMBOL(rte_crypto_aead_operation_strings);
 const char *
 rte_crypto_aead_operation_strings[] = {
 	[RTE_CRYPTO_AEAD_OP_ENCRYPT]	= "encrypt",
@@ -210,7 +210,7 @@ crypto_asym_xform_strings[] = {
 /**
  * Asymmetric crypto operation strings identifiers.
  */
-RTE_EXPORT_SYMBOL(rte_crypto_asym_op_strings)
+RTE_EXPORT_SYMBOL(rte_crypto_asym_op_strings);
 const char *rte_crypto_asym_op_strings[] = {
 	[RTE_CRYPTO_ASYM_OP_ENCRYPT]	= "encrypt",
 	[RTE_CRYPTO_ASYM_OP_DECRYPT]	= "decrypt",
@@ -221,7 +221,7 @@ const char *rte_crypto_asym_op_strings[] = {
 /**
  * Asymmetric crypto key exchange operation strings identifiers.
  */
-RTE_EXPORT_SYMBOL(rte_crypto_asym_ke_strings)
+RTE_EXPORT_SYMBOL(rte_crypto_asym_ke_strings);
 const char *rte_crypto_asym_ke_strings[] = {
 	[RTE_CRYPTO_ASYM_KE_PRIV_KEY_GENERATE] = "priv_key_generate",
 	[RTE_CRYPTO_ASYM_KE_PUB_KEY_GENERATE] = "pub_key_generate",
@@ -246,7 +246,7 @@ struct rte_cryptodev_asym_session_pool_private_data {
 	/**< Session user data will be placed after sess_private_data */
 };
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_cipher_algo_enum)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_cipher_algo_enum);
 int
 rte_cryptodev_get_cipher_algo_enum(enum rte_crypto_cipher_algorithm *algo_enum,
 		const char *algo_string)
@@ -267,7 +267,7 @@ rte_cryptodev_get_cipher_algo_enum(enum rte_crypto_cipher_algorithm *algo_enum,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_auth_algo_enum)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_auth_algo_enum);
 int
 rte_cryptodev_get_auth_algo_enum(enum rte_crypto_auth_algorithm *algo_enum,
 		const char *algo_string)
@@ -288,7 +288,7 @@ rte_cryptodev_get_auth_algo_enum(enum rte_crypto_auth_algorithm *algo_enum,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_aead_algo_enum)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_aead_algo_enum);
 int
 rte_cryptodev_get_aead_algo_enum(enum rte_crypto_aead_algorithm *algo_enum,
 		const char *algo_string)
@@ -309,7 +309,7 @@ rte_cryptodev_get_aead_algo_enum(enum rte_crypto_aead_algorithm *algo_enum,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_xform_enum)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_xform_enum);
 int
 rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 		const char *xform_string)
@@ -331,7 +331,7 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_cipher_algo_string, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_cipher_algo_string, 23.03);
 const char *
 rte_cryptodev_get_cipher_algo_string(enum rte_crypto_cipher_algorithm algo_enum)
 {
@@ -345,7 +345,7 @@ rte_cryptodev_get_cipher_algo_string(enum rte_crypto_cipher_algorithm algo_enum)
 	return alg_str;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_auth_algo_string, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_auth_algo_string, 23.03);
 const char *
 rte_cryptodev_get_auth_algo_string(enum rte_crypto_auth_algorithm algo_enum)
 {
@@ -359,7 +359,7 @@ rte_cryptodev_get_auth_algo_string(enum rte_crypto_auth_algorithm algo_enum)
 	return alg_str;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_aead_algo_string, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_get_aead_algo_string, 23.03);
 const char *
 rte_cryptodev_get_aead_algo_string(enum rte_crypto_aead_algorithm algo_enum)
 {
@@ -373,7 +373,7 @@ rte_cryptodev_get_aead_algo_string(enum rte_crypto_aead_algorithm algo_enum)
 	return alg_str;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_asym_get_xform_string, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_asym_get_xform_string, 23.03);
 const char *
 rte_cryptodev_asym_get_xform_string(enum rte_crypto_asym_xform_type xform_enum)
 {
@@ -391,14 +391,14 @@ rte_cryptodev_asym_get_xform_string(enum rte_crypto_asym_xform_type xform_enum)
  * The crypto auth operation strings identifiers.
  * It could be used in application command line.
  */
-RTE_EXPORT_SYMBOL(rte_crypto_auth_operation_strings)
+RTE_EXPORT_SYMBOL(rte_crypto_auth_operation_strings);
 const char *
 rte_crypto_auth_operation_strings[] = {
 		[RTE_CRYPTO_AUTH_OP_VERIFY]	= "verify",
 		[RTE_CRYPTO_AUTH_OP_GENERATE]	= "generate"
 };
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_get);
 const struct rte_cryptodev_symmetric_capability *
 rte_cryptodev_sym_capability_get(uint8_t dev_id,
 		const struct rte_cryptodev_sym_capability_idx *idx)
@@ -468,7 +468,7 @@ param_range_check(uint16_t size, const struct rte_crypto_param_range *range)
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_capability_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_capability_get);
 const struct rte_cryptodev_asymmetric_xform_capability *
 rte_cryptodev_asym_capability_get(uint8_t dev_id,
 		const struct rte_cryptodev_asym_capability_idx *idx)
@@ -498,7 +498,7 @@ rte_cryptodev_asym_capability_get(uint8_t dev_id,
 	return asym_cap;
 };
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_check_cipher)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_check_cipher);
 int
 rte_cryptodev_sym_capability_check_cipher(
 		const struct rte_cryptodev_symmetric_capability *capability,
@@ -521,7 +521,7 @@ done:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_check_auth)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_check_auth);
 int
 rte_cryptodev_sym_capability_check_auth(
 		const struct rte_cryptodev_symmetric_capability *capability,
@@ -550,7 +550,7 @@ done:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_check_aead)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_capability_check_aead);
 int
 rte_cryptodev_sym_capability_check_aead(
 		const struct rte_cryptodev_symmetric_capability *capability,
@@ -585,7 +585,7 @@ done:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_optype)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_optype);
 int
 rte_cryptodev_asym_xform_capability_check_optype(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -602,7 +602,7 @@ rte_cryptodev_asym_xform_capability_check_optype(
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_modlen)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_modlen);
 int
 rte_cryptodev_asym_xform_capability_check_modlen(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -638,7 +638,7 @@ done:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_hash)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_xform_capability_check_hash);
 bool
 rte_cryptodev_asym_xform_capability_check_hash(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -655,7 +655,7 @@ rte_cryptodev_asym_xform_capability_check_hash(
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_asym_xform_capability_check_opcap, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_asym_xform_capability_check_opcap, 24.11);
 int
 rte_cryptodev_asym_xform_capability_check_opcap(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -789,7 +789,7 @@ cb_init_err:
 	return -ENOMEM;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_feature_name)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_feature_name);
 const char *
 rte_cryptodev_get_feature_name(uint64_t flag)
 {
@@ -853,14 +853,14 @@ rte_cryptodev_get_feature_name(uint64_t flag)
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_dev);
 struct rte_cryptodev *
 rte_cryptodev_pmd_get_dev(uint8_t dev_id)
 {
 	return &cryptodev_globals.devs[dev_id];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_named_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_named_dev);
 struct rte_cryptodev *
 rte_cryptodev_pmd_get_named_dev(const char *name)
 {
@@ -891,7 +891,7 @@ rte_cryptodev_is_valid_device_data(uint8_t dev_id)
 	return 1;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_is_valid_dev)
+RTE_EXPORT_SYMBOL(rte_cryptodev_is_valid_dev);
 unsigned int
 rte_cryptodev_is_valid_dev(uint8_t dev_id)
 {
@@ -913,7 +913,7 @@ done:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_dev_id)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_dev_id);
 int
 rte_cryptodev_get_dev_id(const char *name)
 {
@@ -940,7 +940,7 @@ rte_cryptodev_get_dev_id(const char *name)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_count)
+RTE_EXPORT_SYMBOL(rte_cryptodev_count);
 uint8_t
 rte_cryptodev_count(void)
 {
@@ -949,7 +949,7 @@ rte_cryptodev_count(void)
 	return cryptodev_globals.nb_devs;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_device_count_by_driver)
+RTE_EXPORT_SYMBOL(rte_cryptodev_device_count_by_driver);
 uint8_t
 rte_cryptodev_device_count_by_driver(uint8_t driver_id)
 {
@@ -966,7 +966,7 @@ rte_cryptodev_device_count_by_driver(uint8_t driver_id)
 	return dev_count;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_devices_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_devices_get);
 uint8_t
 rte_cryptodev_devices_get(const char *driver_name, uint8_t *devices,
 	uint8_t nb_devices)
@@ -995,7 +995,7 @@ rte_cryptodev_devices_get(const char *driver_name, uint8_t *devices,
 	return count;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_sec_ctx)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_sec_ctx);
 void *
 rte_cryptodev_get_sec_ctx(uint8_t dev_id)
 {
@@ -1011,7 +1011,7 @@ rte_cryptodev_get_sec_ctx(uint8_t dev_id)
 	return sec_ctx;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_socket_id)
+RTE_EXPORT_SYMBOL(rte_cryptodev_socket_id);
 int
 rte_cryptodev_socket_id(uint8_t dev_id)
 {
@@ -1106,7 +1106,7 @@ rte_cryptodev_find_free_device_index(void)
 	return RTE_CRYPTO_MAX_DEVS;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_allocate);
 struct rte_cryptodev *
 rte_cryptodev_pmd_allocate(const char *name, int socket_id)
 {
@@ -1166,7 +1166,7 @@ rte_cryptodev_pmd_allocate(const char *name, int socket_id)
 	return cryptodev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_release_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_release_device);
 int
 rte_cryptodev_pmd_release_device(struct rte_cryptodev *cryptodev)
 {
@@ -1196,7 +1196,7 @@ rte_cryptodev_pmd_release_device(struct rte_cryptodev *cryptodev)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_queue_pair_count)
+RTE_EXPORT_SYMBOL(rte_cryptodev_queue_pair_count);
 uint16_t
 rte_cryptodev_queue_pair_count(uint8_t dev_id)
 {
@@ -1279,7 +1279,7 @@ rte_cryptodev_queue_pairs_config(struct rte_cryptodev *dev, uint16_t nb_qpairs,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_queue_pair_reset, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_queue_pair_reset, 24.11);
 int
 rte_cryptodev_queue_pair_reset(uint8_t dev_id, uint16_t queue_pair_id,
 		const struct rte_cryptodev_qp_conf *qp_conf, int socket_id)
@@ -1304,7 +1304,7 @@ rte_cryptodev_queue_pair_reset(uint8_t dev_id, uint16_t queue_pair_id,
 	return dev->dev_ops->queue_pair_reset(dev, queue_pair_id, qp_conf, socket_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_configure)
+RTE_EXPORT_SYMBOL(rte_cryptodev_configure);
 int
 rte_cryptodev_configure(uint8_t dev_id, struct rte_cryptodev_config *config)
 {
@@ -1352,7 +1352,7 @@ rte_cryptodev_configure(uint8_t dev_id, struct rte_cryptodev_config *config)
 	return dev->dev_ops->dev_configure(dev, config);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_start)
+RTE_EXPORT_SYMBOL(rte_cryptodev_start);
 int
 rte_cryptodev_start(uint8_t dev_id)
 {
@@ -1390,7 +1390,7 @@ rte_cryptodev_start(uint8_t dev_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_stop)
+RTE_EXPORT_SYMBOL(rte_cryptodev_stop);
 void
 rte_cryptodev_stop(uint8_t dev_id)
 {
@@ -1420,7 +1420,7 @@ rte_cryptodev_stop(uint8_t dev_id)
 	dev->data->dev_started = 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_close)
+RTE_EXPORT_SYMBOL(rte_cryptodev_close);
 int
 rte_cryptodev_close(uint8_t dev_id)
 {
@@ -1463,7 +1463,7 @@ rte_cryptodev_close(uint8_t dev_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_qp_status)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_qp_status);
 int
 rte_cryptodev_get_qp_status(uint8_t dev_id, uint16_t queue_pair_id)
 {
@@ -1518,7 +1518,7 @@ rte_cryptodev_sym_is_valid_session_pool(struct rte_mempool *mp,
 	return 1;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_queue_pair_setup)
+RTE_EXPORT_SYMBOL(rte_cryptodev_queue_pair_setup);
 int
 rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 		const struct rte_cryptodev_qp_conf *qp_conf, int socket_id)
@@ -1572,7 +1572,7 @@ rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 	return dev->dev_ops->queue_pair_setup(dev, queue_pair_id, qp_conf, socket_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_add_enq_callback)
+RTE_EXPORT_SYMBOL(rte_cryptodev_add_enq_callback);
 struct rte_cryptodev_cb *
 rte_cryptodev_add_enq_callback(uint8_t dev_id,
 			       uint16_t qp_id,
@@ -1643,7 +1643,7 @@ rte_cryptodev_add_enq_callback(uint8_t dev_id,
 	return cb;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_remove_enq_callback)
+RTE_EXPORT_SYMBOL(rte_cryptodev_remove_enq_callback);
 int
 rte_cryptodev_remove_enq_callback(uint8_t dev_id,
 				  uint16_t qp_id,
@@ -1720,7 +1720,7 @@ cb_err:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_add_deq_callback)
+RTE_EXPORT_SYMBOL(rte_cryptodev_add_deq_callback);
 struct rte_cryptodev_cb *
 rte_cryptodev_add_deq_callback(uint8_t dev_id,
 			       uint16_t qp_id,
@@ -1792,7 +1792,7 @@ rte_cryptodev_add_deq_callback(uint8_t dev_id,
 	return cb;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_remove_deq_callback)
+RTE_EXPORT_SYMBOL(rte_cryptodev_remove_deq_callback);
 int
 rte_cryptodev_remove_deq_callback(uint8_t dev_id,
 				  uint16_t qp_id,
@@ -1869,7 +1869,7 @@ cb_err:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_stats_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_stats_get);
 int
 rte_cryptodev_stats_get(uint8_t dev_id, struct rte_cryptodev_stats *stats)
 {
@@ -1896,7 +1896,7 @@ rte_cryptodev_stats_get(uint8_t dev_id, struct rte_cryptodev_stats *stats)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_stats_reset)
+RTE_EXPORT_SYMBOL(rte_cryptodev_stats_reset);
 void
 rte_cryptodev_stats_reset(uint8_t dev_id)
 {
@@ -1916,7 +1916,7 @@ rte_cryptodev_stats_reset(uint8_t dev_id)
 	dev->dev_ops->stats_reset(dev);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_info_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_info_get);
 void
 rte_cryptodev_info_get(uint8_t dev_id, struct rte_cryptodev_info *dev_info)
 {
@@ -1942,7 +1942,7 @@ rte_cryptodev_info_get(uint8_t dev_id, struct rte_cryptodev_info *dev_info)
 
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_callback_register)
+RTE_EXPORT_SYMBOL(rte_cryptodev_callback_register);
 int
 rte_cryptodev_callback_register(uint8_t dev_id,
 			enum rte_cryptodev_event_type event,
@@ -1988,7 +1988,7 @@ rte_cryptodev_callback_register(uint8_t dev_id,
 	return (user_cb == NULL) ? -ENOMEM : 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_callback_unregister)
+RTE_EXPORT_SYMBOL(rte_cryptodev_callback_unregister);
 int
 rte_cryptodev_callback_unregister(uint8_t dev_id,
 			enum rte_cryptodev_event_type event,
@@ -2037,7 +2037,7 @@ rte_cryptodev_callback_unregister(uint8_t dev_id,
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_callback_process)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_callback_process);
 void
 rte_cryptodev_pmd_callback_process(struct rte_cryptodev *dev,
 	enum rte_cryptodev_event_type event)
@@ -2060,7 +2060,7 @@ rte_cryptodev_pmd_callback_process(struct rte_cryptodev *dev,
 	rte_spinlock_unlock(&rte_cryptodev_cb_lock);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_queue_pair_event_error_query, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_cryptodev_queue_pair_event_error_query, 23.03);
 int
 rte_cryptodev_queue_pair_event_error_query(uint8_t dev_id, uint16_t qp_id)
 {
@@ -2080,7 +2080,7 @@ rte_cryptodev_queue_pair_event_error_query(uint8_t dev_id, uint16_t qp_id)
 	return dev->dev_ops->queue_pair_event_error_query(dev, qp_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_pool_create)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_pool_create);
 struct rte_mempool *
 rte_cryptodev_sym_session_pool_create(const char *name, uint32_t nb_elts,
 	uint32_t elt_size, uint32_t cache_size, uint16_t user_data_size,
@@ -2119,7 +2119,7 @@ rte_cryptodev_sym_session_pool_create(const char *name, uint32_t nb_elts,
 	return mp;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_pool_create)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_pool_create);
 struct rte_mempool *
 rte_cryptodev_asym_session_pool_create(const char *name, uint32_t nb_elts,
 	uint32_t cache_size, uint16_t user_data_size, int socket_id)
@@ -2170,7 +2170,7 @@ rte_cryptodev_asym_session_pool_create(const char *name, uint32_t nb_elts,
 	return mp;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_create)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_create);
 void *
 rte_cryptodev_sym_session_create(uint8_t dev_id,
 		struct rte_crypto_sym_xform *xforms,
@@ -2238,7 +2238,7 @@ error_exit:
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_create)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_create);
 int
 rte_cryptodev_asym_session_create(uint8_t dev_id,
 		struct rte_crypto_asym_xform *xforms, struct rte_mempool *mp,
@@ -2315,7 +2315,7 @@ rte_cryptodev_asym_session_create(uint8_t dev_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_free)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_free);
 int
 rte_cryptodev_sym_session_free(uint8_t dev_id, void *_sess)
 {
@@ -2362,7 +2362,7 @@ rte_cryptodev_sym_session_free(uint8_t dev_id, void *_sess)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_free)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_free);
 int
 rte_cryptodev_asym_session_free(uint8_t dev_id, void *sess)
 {
@@ -2394,14 +2394,14 @@ rte_cryptodev_asym_session_free(uint8_t dev_id, void *sess)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_header_session_size)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_header_session_size);
 unsigned int
 rte_cryptodev_asym_get_header_session_size(void)
 {
 	return sizeof(struct rte_cryptodev_asym_session);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_get_private_session_size)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_get_private_session_size);
 unsigned int
 rte_cryptodev_sym_get_private_session_size(uint8_t dev_id)
 {
@@ -2424,7 +2424,7 @@ rte_cryptodev_sym_get_private_session_size(uint8_t dev_id)
 	return priv_sess_size;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_private_session_size)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_get_private_session_size);
 unsigned int
 rte_cryptodev_asym_get_private_session_size(uint8_t dev_id)
 {
@@ -2447,7 +2447,7 @@ rte_cryptodev_asym_get_private_session_size(uint8_t dev_id)
 	return priv_sess_size;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_set_user_data)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_set_user_data);
 int
 rte_cryptodev_sym_session_set_user_data(void *_sess, void *data,
 		uint16_t size)
@@ -2467,7 +2467,7 @@ rte_cryptodev_sym_session_set_user_data(void *_sess, void *data,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_get_user_data)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_session_get_user_data);
 void *
 rte_cryptodev_sym_session_get_user_data(void *_sess)
 {
@@ -2484,7 +2484,7 @@ rte_cryptodev_sym_session_get_user_data(void *_sess)
 	return data;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_set_user_data)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_set_user_data);
 int
 rte_cryptodev_asym_session_set_user_data(void *session, void *data, uint16_t size)
 {
@@ -2504,7 +2504,7 @@ rte_cryptodev_asym_session_set_user_data(void *session, void *data, uint16_t siz
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_get_user_data)
+RTE_EXPORT_SYMBOL(rte_cryptodev_asym_session_get_user_data);
 void *
 rte_cryptodev_asym_session_get_user_data(void *session)
 {
@@ -2529,7 +2529,7 @@ sym_crypto_fill_status(struct rte_crypto_sym_vec *vec, int32_t errnum)
 		vec->status[i] = errnum;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_sym_cpu_crypto_process)
+RTE_EXPORT_SYMBOL(rte_cryptodev_sym_cpu_crypto_process);
 uint32_t
 rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	void *_sess, union rte_crypto_sym_ofs ofs,
@@ -2556,7 +2556,7 @@ rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	return dev->dev_ops->sym_cpu_process(dev, sess, ofs, vec);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_get_raw_dp_ctx_size)
+RTE_EXPORT_SYMBOL(rte_cryptodev_get_raw_dp_ctx_size);
 int
 rte_cryptodev_get_raw_dp_ctx_size(uint8_t dev_id)
 {
@@ -2583,7 +2583,7 @@ rte_cryptodev_get_raw_dp_ctx_size(uint8_t dev_id)
 	return RTE_ALIGN_CEIL((size + priv_size), 8);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_configure_raw_dp_ctx)
+RTE_EXPORT_SYMBOL(rte_cryptodev_configure_raw_dp_ctx);
 int
 rte_cryptodev_configure_raw_dp_ctx(uint8_t dev_id, uint16_t qp_id,
 	struct rte_crypto_raw_dp_ctx *ctx,
@@ -2607,7 +2607,7 @@ rte_cryptodev_configure_raw_dp_ctx(uint8_t dev_id, uint16_t qp_id,
 			sess_type, session_ctx, is_update);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_session_event_mdata_set)
+RTE_EXPORT_SYMBOL(rte_cryptodev_session_event_mdata_set);
 int
 rte_cryptodev_session_event_mdata_set(uint8_t dev_id, void *sess,
 	enum rte_crypto_op_type op_type,
@@ -2651,7 +2651,7 @@ skip_pmd_op:
 		return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_raw_enqueue_burst)
+RTE_EXPORT_SYMBOL(rte_cryptodev_raw_enqueue_burst);
 uint32_t
 rte_cryptodev_raw_enqueue_burst(struct rte_crypto_raw_dp_ctx *ctx,
 	struct rte_crypto_sym_vec *vec, union rte_crypto_sym_ofs ofs,
@@ -2661,7 +2661,7 @@ rte_cryptodev_raw_enqueue_burst(struct rte_crypto_raw_dp_ctx *ctx,
 			ofs, user_data, enqueue_status);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_raw_enqueue_done)
+RTE_EXPORT_SYMBOL(rte_cryptodev_raw_enqueue_done);
 int
 rte_cryptodev_raw_enqueue_done(struct rte_crypto_raw_dp_ctx *ctx,
 		uint32_t n)
@@ -2669,7 +2669,7 @@ rte_cryptodev_raw_enqueue_done(struct rte_crypto_raw_dp_ctx *ctx,
 	return ctx->enqueue_done(ctx->qp_data, ctx->drv_ctx_data, n);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_raw_dequeue_burst)
+RTE_EXPORT_SYMBOL(rte_cryptodev_raw_dequeue_burst);
 uint32_t
 rte_cryptodev_raw_dequeue_burst(struct rte_crypto_raw_dp_ctx *ctx,
 	rte_cryptodev_raw_get_dequeue_count_t get_dequeue_count,
@@ -2683,7 +2683,7 @@ rte_cryptodev_raw_dequeue_burst(struct rte_crypto_raw_dp_ctx *ctx,
 		out_user_data, is_user_data_array, n_success_jobs, status);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_raw_dequeue_done)
+RTE_EXPORT_SYMBOL(rte_cryptodev_raw_dequeue_done);
 int
 rte_cryptodev_raw_dequeue_done(struct rte_crypto_raw_dp_ctx *ctx,
 		uint32_t n)
@@ -2710,7 +2710,7 @@ rte_crypto_op_init(struct rte_mempool *mempool,
 }
 
 
-RTE_EXPORT_SYMBOL(rte_crypto_op_pool_create)
+RTE_EXPORT_SYMBOL(rte_crypto_op_pool_create);
 struct rte_mempool *
 rte_crypto_op_pool_create(const char *name, enum rte_crypto_op_type type,
 		unsigned nb_elts, unsigned cache_size, uint16_t priv_size,
@@ -2780,7 +2780,7 @@ rte_crypto_op_pool_create(const char *name, enum rte_crypto_op_type type,
 	return mp;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_create_dev_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_create_dev_name);
 int
 rte_cryptodev_pmd_create_dev_name(char *name, const char *dev_name_prefix)
 {
@@ -2810,7 +2810,7 @@ TAILQ_HEAD(cryptodev_driver_list, cryptodev_driver);
 static struct cryptodev_driver_list cryptodev_driver_list =
 	TAILQ_HEAD_INITIALIZER(cryptodev_driver_list);
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_driver_id_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_driver_id_get);
 int
 rte_cryptodev_driver_id_get(const char *name)
 {
@@ -2836,7 +2836,7 @@ rte_cryptodev_driver_id_get(const char *name)
 	return driver_id;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_name_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_name_get);
 const char *
 rte_cryptodev_name_get(uint8_t dev_id)
 {
@@ -2856,7 +2856,7 @@ rte_cryptodev_name_get(uint8_t dev_id)
 	return dev->data->name;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_driver_name_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_driver_name_get);
 const char *
 rte_cryptodev_driver_name_get(uint8_t driver_id)
 {
@@ -2872,7 +2872,7 @@ rte_cryptodev_driver_name_get(uint8_t driver_id)
 	return NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_allocate_driver)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_allocate_driver);
 uint8_t
 rte_cryptodev_allocate_driver(struct cryptodev_driver *crypto_drv,
 		const struct rte_driver *drv)

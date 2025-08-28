@@ -15,5 +15,5 @@
  * - SEC HW block revision format is "v"
  * - SEC revision format is "x.y"
  */
-RTE_EXPORT_INTERNAL_SYMBOL(rta_sec_era)
+RTE_EXPORT_INTERNAL_SYMBOL(rta_sec_era);
 enum rta_sec_era rta_sec_era;

@@ -777,7 +777,7 @@ mlx5_tx_burst_mode_get(struct rte_eth_dev *dev,
  *   0 for success, non-zero value depending on failure.
  *
  */
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_txq_dump_contexts, 24.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_txq_dump_contexts, 24.07);
 int rte_pmd_mlx5_txq_dump_contexts(uint16_t port_id, uint16_t queue_id, const char *filename)
 {
 	struct rte_eth_dev *dev;

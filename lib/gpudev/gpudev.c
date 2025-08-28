@@ -50,7 +50,7 @@ struct rte_gpu_callback {
 static rte_rwlock_t gpu_callback_lock = RTE_RWLOCK_INITIALIZER;
 static void gpu_free_callbacks(struct rte_gpu *dev);
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_init, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_init, 21.11);
 int
 rte_gpu_init(size_t dev_max)
 {
@@ -78,14 +78,14 @@ rte_gpu_init(size_t dev_max)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_count_avail, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_count_avail, 21.11);
 uint16_t
 rte_gpu_count_avail(void)
 {
 	return gpu_count;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_is_valid, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_is_valid, 21.11);
 bool
 rte_gpu_is_valid(int16_t dev_id)
 {
@@ -103,7 +103,7 @@ gpu_match_parent(int16_t dev_id, int16_t parent)
 	return gpus[dev_id].mpshared->info.parent == parent;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_find_next, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_find_next, 21.11);
 int16_t
 rte_gpu_find_next(int16_t dev_id, int16_t parent)
 {
@@ -139,7 +139,7 @@ gpu_get_by_id(int16_t dev_id)
 	return &gpus[dev_id];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_get_by_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_get_by_name);
 struct rte_gpu *
 rte_gpu_get_by_name(const char *name)
 {
@@ -182,7 +182,7 @@ gpu_shared_mem_init(void)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_allocate);
 struct rte_gpu *
 rte_gpu_allocate(const char *name)
 {
@@ -244,7 +244,7 @@ rte_gpu_allocate(const char *name)
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_attach)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_attach);
 struct rte_gpu *
 rte_gpu_attach(const char *name)
 {
@@ -294,7 +294,7 @@ rte_gpu_attach(const char *name)
 	return dev;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_add_child, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_add_child, 21.11);
 int16_t
 rte_gpu_add_child(const char *name, int16_t parent, uint64_t child_context)
 {
@@ -317,7 +317,7 @@ rte_gpu_add_child(const char *name, int16_t parent, uint64_t child_context)
 	return dev->mpshared->info.dev_id;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_complete_new)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_complete_new);
 void
 rte_gpu_complete_new(struct rte_gpu *dev)
 {
@@ -328,7 +328,7 @@ rte_gpu_complete_new(struct rte_gpu *dev)
 	rte_gpu_notify(dev, RTE_GPU_EVENT_NEW);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_release);
 int
 rte_gpu_release(struct rte_gpu *dev)
 {
@@ -358,7 +358,7 @@ rte_gpu_release(struct rte_gpu *dev)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_close, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_close, 21.11);
 int
 rte_gpu_close(int16_t dev_id)
 {
@@ -385,7 +385,7 @@ rte_gpu_close(int16_t dev_id)
 	return firsterr;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_callback_register, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_callback_register, 21.11);
 int
 rte_gpu_callback_register(int16_t dev_id, enum rte_gpu_event event,
 		rte_gpu_callback_t *function, void *user_data)
@@ -445,7 +445,7 @@ rte_gpu_callback_register(int16_t dev_id, enum rte_gpu_event event,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_callback_unregister, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_callback_unregister, 21.11);
 int
 rte_gpu_callback_unregister(int16_t dev_id, enum rte_gpu_event event,
 		rte_gpu_callback_t *function, void *user_data)
@@ -505,7 +505,7 @@ gpu_free_callbacks(struct rte_gpu *dev)
 	rte_rwlock_write_unlock(&gpu_callback_lock);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_notify)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_notify);
 void
 rte_gpu_notify(struct rte_gpu *dev, enum rte_gpu_event event)
 {
@@ -522,7 +522,7 @@ rte_gpu_notify(struct rte_gpu *dev, enum rte_gpu_event event)
 	rte_rwlock_read_unlock(&gpu_callback_lock);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_info_get, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_info_get, 21.11);
 int
 rte_gpu_info_get(int16_t dev_id, struct rte_gpu_info *info)
 {
@@ -547,7 +547,7 @@ rte_gpu_info_get(int16_t dev_id, struct rte_gpu_info *info)
 	return GPU_DRV_RET(dev->ops.dev_info_get(dev, info));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_alloc, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_alloc, 21.11);
 void *
 rte_gpu_mem_alloc(int16_t dev_id, size_t size, unsigned int align)
 {
@@ -592,7 +592,7 @@ rte_gpu_mem_alloc(int16_t dev_id, size_t size, unsigned int align)
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_free, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_free, 21.11);
 int
 rte_gpu_mem_free(int16_t dev_id, void *ptr)
 {
@@ -616,7 +616,7 @@ rte_gpu_mem_free(int16_t dev_id, void *ptr)
 	return GPU_DRV_RET(dev->ops.mem_free(dev, ptr));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_register, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_register, 21.11);
 int
 rte_gpu_mem_register(int16_t dev_id, size_t size, void *ptr)
 {
@@ -641,7 +641,7 @@ rte_gpu_mem_register(int16_t dev_id, size_t size, void *ptr)
 	return GPU_DRV_RET(dev->ops.mem_register(dev, size, ptr));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_unregister, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_unregister, 21.11);
 int
 rte_gpu_mem_unregister(int16_t dev_id, void *ptr)
 {
@@ -665,7 +665,7 @@ rte_gpu_mem_unregister(int16_t dev_id, void *ptr)
 	return GPU_DRV_RET(dev->ops.mem_unregister(dev, ptr));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_cpu_map, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_cpu_map, 21.11);
 void *
 rte_gpu_mem_cpu_map(int16_t dev_id, size_t size, void *ptr)
 {
@@ -704,7 +704,7 @@ rte_gpu_mem_cpu_map(int16_t dev_id, size_t size, void *ptr)
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_cpu_unmap, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_mem_cpu_unmap, 21.11);
 int
 rte_gpu_mem_cpu_unmap(int16_t dev_id, void *ptr)
 {
@@ -728,7 +728,7 @@ rte_gpu_mem_cpu_unmap(int16_t dev_id, void *ptr)
 	return GPU_DRV_RET(dev->ops.mem_cpu_unmap(dev, ptr));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_wmb, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_wmb, 21.11);
 int
 rte_gpu_wmb(int16_t dev_id)
 {
@@ -748,7 +748,7 @@ rte_gpu_wmb(int16_t dev_id)
 	return GPU_DRV_RET(dev->ops.wmb(dev));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_create_flag, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_create_flag, 21.11);
 int
 rte_gpu_comm_create_flag(uint16_t dev_id, struct rte_gpu_comm_flag *devflag,
 		enum rte_gpu_comm_flag_type mtype)
@@ -785,7 +785,7 @@ rte_gpu_comm_create_flag(uint16_t dev_id, struct rte_gpu_comm_flag *devflag,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_destroy_flag, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_destroy_flag, 21.11);
 int
 rte_gpu_comm_destroy_flag(struct rte_gpu_comm_flag *devflag)
 {
@@ -807,7 +807,7 @@ rte_gpu_comm_destroy_flag(struct rte_gpu_comm_flag *devflag)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_set_flag, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_set_flag, 21.11);
 int
 rte_gpu_comm_set_flag(struct rte_gpu_comm_flag *devflag, uint32_t val)
 {
@@ -826,7 +826,7 @@ rte_gpu_comm_set_flag(struct rte_gpu_comm_flag *devflag, uint32_t val)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_get_flag_value, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_get_flag_value, 21.11);
 int
 rte_gpu_comm_get_flag_value(struct rte_gpu_comm_flag *devflag, uint32_t *val)
 {
@@ -844,7 +844,7 @@ rte_gpu_comm_get_flag_value(struct rte_gpu_comm_flag *devflag, uint32_t *val)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_create_list, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_create_list, 21.11);
 struct rte_gpu_comm_list *
 rte_gpu_comm_create_list(uint16_t dev_id,
 		uint32_t num_comm_items)
@@ -968,7 +968,7 @@ rte_gpu_comm_create_list(uint16_t dev_id,
 	return comm_list;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_destroy_list, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_destroy_list, 21.11);
 int
 rte_gpu_comm_destroy_list(struct rte_gpu_comm_list *comm_list,
 		uint32_t num_comm_items)
@@ -1014,7 +1014,7 @@ rte_gpu_comm_destroy_list(struct rte_gpu_comm_list *comm_list,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_populate_list_pkts, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_populate_list_pkts, 21.11);
 int
 rte_gpu_comm_populate_list_pkts(struct rte_gpu_comm_list *comm_list_item,
 		struct rte_mbuf **mbufs, uint32_t num_mbufs)
@@ -1053,7 +1053,7 @@ rte_gpu_comm_populate_list_pkts(struct rte_gpu_comm_list *comm_list_item,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_set_status, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_set_status, 21.11);
 int
 rte_gpu_comm_set_status(struct rte_gpu_comm_list *comm_list_item,
 		enum rte_gpu_comm_list_status status)
@@ -1068,7 +1068,7 @@ rte_gpu_comm_set_status(struct rte_gpu_comm_list *comm_list_item,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_get_status, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_get_status, 21.11);
 int
 rte_gpu_comm_get_status(struct rte_gpu_comm_list *comm_list_item,
 		enum rte_gpu_comm_list_status *status)
@@ -1083,7 +1083,7 @@ rte_gpu_comm_get_status(struct rte_gpu_comm_list *comm_list_item,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_cleanup_list, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_gpu_comm_cleanup_list, 21.11);
 int
 rte_gpu_comm_cleanup_list(struct rte_gpu_comm_list *comm_list_item)
 {

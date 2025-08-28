@@ -7,7 +7,7 @@
 #include <eal_export.h>
 #include <rte_mempool.h>
 
-RTE_EXPORT_SYMBOL(rte_mempool_op_calc_mem_size_helper)
+RTE_EXPORT_SYMBOL(rte_mempool_op_calc_mem_size_helper);
 ssize_t
 rte_mempool_op_calc_mem_size_helper(const struct rte_mempool *mp,
 				uint32_t obj_num, uint32_t pg_shift,
@@ -67,7 +67,7 @@ rte_mempool_op_calc_mem_size_helper(const struct rte_mempool *mp,
 	return mem_size;
 }
 
-RTE_EXPORT_SYMBOL(rte_mempool_op_calc_mem_size_default)
+RTE_EXPORT_SYMBOL(rte_mempool_op_calc_mem_size_default);
 ssize_t
 rte_mempool_op_calc_mem_size_default(const struct rte_mempool *mp,
 				uint32_t obj_num, uint32_t pg_shift,
@@ -90,7 +90,7 @@ check_obj_bounds(char *obj, size_t pg_sz, size_t elt_sz)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_mempool_op_populate_helper)
+RTE_EXPORT_SYMBOL(rte_mempool_op_populate_helper);
 int
 rte_mempool_op_populate_helper(struct rte_mempool *mp, unsigned int flags,
 			unsigned int max_objs, void *vaddr, rte_iova_t iova,
@@ -138,7 +138,7 @@ rte_mempool_op_populate_helper(struct rte_mempool *mp, unsigned int flags,
 	return i;
 }
 
-RTE_EXPORT_SYMBOL(rte_mempool_op_populate_default)
+RTE_EXPORT_SYMBOL(rte_mempool_op_populate_default);
 int
 rte_mempool_op_populate_default(struct rte_mempool *mp, unsigned int max_objs,
 				void *vaddr, rte_iova_t iova, size_t len,

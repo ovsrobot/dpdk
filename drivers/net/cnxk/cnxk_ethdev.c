@@ -13,7 +13,7 @@ cnxk_ethdev_rx_offload_cb_t cnxk_ethdev_rx_offload_cb;
 
 #define NIX_TM_DFLT_RR_WT 71
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_cnxk_model_str_get, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_cnxk_model_str_get, 23.11);
 const char *
 rte_pmd_cnxk_model_str_get(void)
 {
@@ -89,14 +89,14 @@ nix_inl_cq_sz_clamp_up(struct roc_nix *nix, struct rte_mempool *mp,
 	return nb_desc;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ethdev_rx_offload_cb_register)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ethdev_rx_offload_cb_register);
 void
 cnxk_ethdev_rx_offload_cb_register(cnxk_ethdev_rx_offload_cb_t cb)
 {
 	cnxk_ethdev_rx_offload_cb = cb;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_nix_inb_mode_set)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_nix_inb_mode_set);
 int
 cnxk_nix_inb_mode_set(struct cnxk_eth_dev *dev, bool use_inl_dev)
 {

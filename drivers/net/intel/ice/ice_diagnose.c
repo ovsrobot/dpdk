@@ -410,7 +410,7 @@ ice_dump_pkg(struct rte_eth_dev *dev, uint8_t **buff, uint32_t *size)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_dump_package, 19.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_dump_package, 19.11);
 int rte_pmd_ice_dump_package(uint16_t port, uint8_t **buff, uint32_t *size)
 {
 	struct rte_eth_dev *dev;
@@ -499,7 +499,7 @@ ice_dump_switch(struct rte_eth_dev *dev, uint8_t **buff2, uint32_t *size)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_dump_switch, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_dump_switch, 22.11);
 int rte_pmd_ice_dump_switch(uint16_t port, uint8_t **buff, uint32_t *size)
 {
 	struct rte_eth_dev *dev;
@@ -801,7 +801,7 @@ query_node_recursive(struct ice_hw *hw, struct rte_eth_dev_data *ethdata,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_dump_txsched, 24.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_dump_txsched, 24.03);
 int
 rte_pmd_ice_dump_txsched(uint16_t port, bool detail, FILE *stream)
 {

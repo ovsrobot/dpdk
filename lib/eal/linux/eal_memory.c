@@ -89,7 +89,7 @@ uint64_t eal_get_baseaddr(void)
 /*
  * Get physical address of any mapped virtual address in the current process.
  */
-RTE_EXPORT_SYMBOL(rte_mem_virt2phy)
+RTE_EXPORT_SYMBOL(rte_mem_virt2phy);
 phys_addr_t
 rte_mem_virt2phy(const void *virtaddr)
 {
@@ -147,7 +147,7 @@ rte_mem_virt2phy(const void *virtaddr)
 	return physaddr;
 }
 
-RTE_EXPORT_SYMBOL(rte_mem_virt2iova)
+RTE_EXPORT_SYMBOL(rte_mem_virt2iova);
 rte_iova_t
 rte_mem_virt2iova(const void *virtaddr)
 {
@@ -1688,7 +1688,7 @@ rte_eal_hugepage_attach(void)
 			eal_hugepage_attach();
 }
 
-RTE_EXPORT_SYMBOL(rte_eal_using_phys_addrs)
+RTE_EXPORT_SYMBOL(rte_eal_using_phys_addrs);
 int
 rte_eal_using_phys_addrs(void)
 {

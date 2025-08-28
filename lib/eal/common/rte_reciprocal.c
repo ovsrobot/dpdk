@@ -13,7 +13,7 @@
 
 #include "rte_reciprocal.h"
 
-RTE_EXPORT_SYMBOL(rte_reciprocal_value)
+RTE_EXPORT_SYMBOL(rte_reciprocal_value);
 struct rte_reciprocal rte_reciprocal_value(uint32_t d)
 {
 	struct rte_reciprocal R;
@@ -101,7 +101,7 @@ again2:
 	return q1*b + q0;
 }
 
-RTE_EXPORT_SYMBOL(rte_reciprocal_value_u64)
+RTE_EXPORT_SYMBOL(rte_reciprocal_value_u64);
 struct rte_reciprocal_u64
 rte_reciprocal_value_u64(uint64_t d)
 {

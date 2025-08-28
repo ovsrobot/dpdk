@@ -410,7 +410,7 @@ trace_mem_save(struct trace *trace, struct __rte_trace_header *hdr,
 	return rc;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_save, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_save, 20.05);
 int
 rte_trace_save(void)
 {

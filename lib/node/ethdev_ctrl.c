@@ -22,7 +22,7 @@ static struct ethdev_ctrl {
 	uint16_t nb_graphs;
 } ctrl;
 
-RTE_EXPORT_SYMBOL(rte_node_eth_config)
+RTE_EXPORT_SYMBOL(rte_node_eth_config);
 int
 rte_node_eth_config(struct rte_node_ethdev_config *conf, uint16_t nb_confs,
 		    uint16_t nb_graphs)
@@ -141,7 +141,7 @@ rte_node_eth_config(struct rte_node_ethdev_config *conf, uint16_t nb_confs,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ethdev_rx_next_update, 24.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ethdev_rx_next_update, 24.03);
 int
 rte_node_ethdev_rx_next_update(rte_node_t id, const char *edge_name)
 {

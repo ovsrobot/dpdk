@@ -20,7 +20,7 @@ static const struct rte_mbuf_dynfield node_mbuf_dynfield_desc = {
 	.align = alignof(rte_node_mbuf_dynfield_t),
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_mbuf_dynfield_register, 25.07);
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_mbuf_dynfield_register, 25.07);;
 int rte_node_mbuf_dynfield_register(void)
 {
 	struct node_mbuf_dynfield_mz *f = NULL;

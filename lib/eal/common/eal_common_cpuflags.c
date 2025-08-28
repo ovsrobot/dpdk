@@ -8,7 +8,7 @@
 #include <rte_common.h>
 #include <rte_cpuflags.h>
 
-RTE_EXPORT_SYMBOL(rte_cpu_is_supported)
+RTE_EXPORT_SYMBOL(rte_cpu_is_supported);
 int
 rte_cpu_is_supported(void)
 {

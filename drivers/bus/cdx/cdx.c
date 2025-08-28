@@ -140,13 +140,13 @@ cdx_get_kernel_driver_by_path(const char *filename, char *driver_name,
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_map_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_map_device);
 int rte_cdx_map_device(struct rte_cdx_device *dev)
 {
 	return cdx_vfio_map_resource(dev);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_unmap_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_unmap_device);
 void rte_cdx_unmap_device(struct rte_cdx_device *dev)
 {
 	cdx_vfio_unmap_resource(dev);
@@ -481,7 +481,7 @@ cdx_parse(const char *name, void *addr)
 }
 
 /* register a driver */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_register);
 void
 rte_cdx_register(struct rte_cdx_driver *driver)
 {
@@ -490,7 +490,7 @@ rte_cdx_register(struct rte_cdx_driver *driver)
 }
 
 /* unregister a driver */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cdx_unregister);
 void
 rte_cdx_unregister(struct rte_cdx_driver *driver)
 {

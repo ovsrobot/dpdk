@@ -20,7 +20,7 @@
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mc_get_version)
+RTE_EXPORT_INTERNAL_SYMBOL(mc_get_version);
 int mc_get_version(struct fsl_mc_io *mc_io,
 		   uint32_t cmd_flags,
 		   struct mc_version *mc_ver_info)
@@ -60,7 +60,7 @@ int mc_get_version(struct fsl_mc_io *mc_io,
  *
  * Return:     '0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mc_get_soc_version)
+RTE_EXPORT_INTERNAL_SYMBOL(mc_get_soc_version);
 int mc_get_soc_version(struct fsl_mc_io *mc_io,
 		       uint32_t cmd_flags,
 		       struct mc_soc_version *mc_platform_info)

@@ -19,7 +19,7 @@ struct mvep {
 
 static struct mvep mvep;
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mvep_init)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mvep_init);
 int rte_mvep_init(enum mvep_module_type module __rte_unused,
 		  struct rte_kvargs *kvlist __rte_unused)
 {
@@ -36,7 +36,7 @@ int rte_mvep_init(enum mvep_module_type module __rte_unused,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mvep_deinit)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mvep_deinit);
 int rte_mvep_deinit(enum mvep_module_type module __rte_unused)
 {
 	mvep.ref_count--;
