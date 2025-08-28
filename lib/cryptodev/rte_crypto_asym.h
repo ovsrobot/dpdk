@@ -37,6 +37,14 @@ rte_crypto_asym_ke_strings[];
 extern const char *
 rte_crypto_asym_op_strings[];
 
+/** PQC ML crypto op parameters size */
+extern const uint16_t
+rte_crypto_ml_pubkey_size[];
+extern const uint16_t
+rte_crypto_ml_privkey_size[];
+extern const uint16_t
+rte_crypto_ml_output_size[];
+
 #ifdef __cplusplus
 }
 #endif
@@ -721,6 +729,252 @@ struct rte_crypto_sm2_op_param {
 };
 
 /**
+ * PQC ML algorithms
+ *
+ * List of ML algorithms used in PQC
+ */
+enum rte_crypto_ml_param_set {
+	RTE_CRYPTO_ML_PARAM_NONE,
+	RTE_CRYPTO_ML_KEM_PARAM_512,
+	RTE_CRYPTO_ML_KEM_PARAM_768,
+	RTE_CRYPTO_ML_KEM_PARAM_1024,
+	RTE_CRYPTO_ML_DSA_PARAM_44,
+	RTE_CRYPTO_ML_DSA_PARAM_65,
+	RTE_CRYPTO_ML_DSA_PARAM_87,
+};
+
+/**
+ * PQC ML op types
+ *
+ * List of ML op types in PQC
+ */
+enum rte_crypto_ml_op {
+	RTE_CRYPTO_ML_OP_NONE,
+	RTE_CRYPTO_ML_KEM_OP_KEYGEN,
+	RTE_CRYPTO_ML_KEM_OP_KEYVER,
+	RTE_CRYPTO_ML_KEM_OP_ENCAP,
+	RTE_CRYPTO_ML_KEM_OP_DECAP,
+	RTE_CRYPTO_ML_DSA_OP_KEYGEN,
+	RTE_CRYPTO_ML_DSA_OP_SIGN,
+	RTE_CRYPTO_ML_DSA_OP_VERIFY,
+};
+
+/**
+ * PQC ML-KEM transform data
+ *
+ * Structure describing ML-KEM xform params
+ */
+struct rte_crypto_ml_kem_xform {
+	enum rte_crypto_ml_param_set param;
+};
+
+/**
+ * PQC ML-KEM KEYGEN op
+ *
+ * Parameters for PQC ML-KEM key generation operation
+ */
+struct rte_crypto_ml_kem_keygen_op {
+	rte_crypto_param d;
+	/**< The seed d value (of 32 bytes in length) to generate key pair.*/
+
+	rte_crypto_param z;
+	/**< The seed z value (of 32 bytes in length) to generate key pair.*/
+
+	rte_crypto_param ek;
+	/**<
+	 * Pointer to output data
+	 * - The computed encapsulation key.
+	 * - Refer `rte_crypto_ml_pubkey_size` for size of buffer.
+	 */
+
+	rte_crypto_param dk;
+	/**<
+	 * Pointer to output data
+	 * - The computed decapsulation key.
+	 * - Refer `rte_crypto_ml_privkey_size` for size of buffer.
+	 */
+};
+
+/**
+ * PQC ML-KEM KEYVER op
+ *
+ * Parameters for PQC ML-KEM key verification operation
+ */
+struct rte_crypto_ml_kem_keyver_op {
+	enum rte_crypto_ml_op op;
+	/**<
+	 * Op associated with key to be verified is one of below:
+	 * - Encapsulation op
+	 * - Decapsulation op
+	 */
+
+	rte_crypto_param key;
+	/**<
+	 * KEM key to check.
+	 * - ek in case of encapsulation op.
+	 * - dk in case of decapsulation op.
+	 */
+};
+
+/**
+ * PQC ML-KEM ENCAP op
+ *
+ * Parameters for PQC ML-KEM encapsulation operation
+ */
+struct rte_crypto_ml_kem_encap_op {
+	rte_crypto_param message;
+	/**< The message to be encapsulated.*/
+
+	rte_crypto_param ek;
+	/**< The encapsulation key.*/
+
+	rte_crypto_param cipher;
+	/**<
+	 * Pointer to output data
+	 * - The computed cipher.
+	 * - Refer `rte_crypto_ml_output_size` for size of buffer.
+	 */
+
+	rte_crypto_param sk;
+	/**<
+	 * Pointer to output data
+	 * - The computed shared secret key.
+	 * - Refer `rte_crypto_ml_pubkey_size` for size of buffer.
+	 */
+};
+
+/**
+ * PQC ML-KEM DECAP op
+ *
+ * Parameters for PQC ML-KEM decapsulation operation
+ */
+struct rte_crypto_ml_kem_decap_op {
+	rte_crypto_param cipher;
+	/**< The cipher to be decapsulated.*/
+
+	rte_crypto_param dk;
+	/**< The decapsulation key.*/
+
+	rte_crypto_param sk;
+	/**<
+	 * Pointer to output data
+	 * - The computed shared secret key.
+	 * - Refer `rte_crypto_ml_pubkey_size` for size of buffer.
+	 */
+};
+
+/**
+ * PQC ML-KEM op
+ *
+ * Parameters for PQC ML-KEM operation
+ */
+struct rte_crypto_ml_kem_op {
+	enum rte_crypto_ml_op op;
+	union {
+		struct rte_crypto_ml_kem_keygen_op keygen;
+		struct rte_crypto_ml_kem_keyver_op keyver;
+		struct rte_crypto_ml_kem_encap_op encap;
+		struct rte_crypto_ml_kem_decap_op decap;
+	};
+};
+
+/**
+ * PQC ML-DSA transform data
+ *
+ * Structure describing ML-DSA xform params
+ */
+struct rte_crypto_ml_dsa_xform {
+	enum rte_crypto_ml_param_set param;
+
+	bool random_seed;
+	/**< The signature generated using random seed (of 32 bytes in length). */
+
+	bool sign_prehash;
+	/**< The signature genearated using prehash or pure routine. */
+};
+
+/**
+ * PQC ML-DSA KEYGEN op
+ *
+ * Parameters for PQC ML-DSA key generation operation
+ */
+struct rte_crypto_ml_dsa_keygen_op {
+	rte_crypto_param seed;
+	/**< The random seed (of 32 bytes in length) to generate key pair.*/
+};
+
+/**
+ * PQC ML-DSA SIGGEN op
+ *
+ * Parameters for PQC ML-DSA sign operation
+ */
+struct rte_crypto_ml_dsa_siggen_op {
+	rte_crypto_param message;
+	/**< The message to generate signature.*/
+
+	rte_crypto_param mu;
+	/**< The mu to generate signature.*/
+
+	rte_crypto_param sk;
+	/**< The secret key to generate signature.*/
+
+	rte_crypto_param seed;
+	/**< The seed to generate signature.*/
+
+	rte_crypto_param ctx;
+	/**< The context key to generate signature.*/
+
+	enum rte_crypto_auth_algorithm hash;
+	/**< Hash function to generate signature. */
+
+	rte_crypto_param sign;
+	/**<
+	 * Pointer to output data
+	 * - The computed signature.
+	 * - Refer `rte_crypto_ml_output_size` for size of buffer.
+	 */
+};
+
+/**
+ * PQC ML-DSA SIGVER op
+ *
+ * Parameters for PQC ML-DSA verify operation
+ */
+struct rte_crypto_ml_dsa_sigver_op {
+	rte_crypto_param pubkey;
+	/**< The public key to verify signature.*/
+
+	rte_crypto_param message;
+	/**< The message used to verify signature.*/
+
+	rte_crypto_param sign;
+	/**< The signature to verify.*/
+
+	rte_crypto_param mu;
+	/**< The mu used to generate signature.*/
+
+	rte_crypto_param ctx;
+	/**< The context key to generate signature.*/
+
+	enum rte_crypto_auth_algorithm hash;
+	/**< Hash function to generate signature. */
+};
+
+/**
+ * PQC ML-DSA op
+ *
+ * Parameters for PQC ML-DSA operation
+ */
+struct rte_crypto_ml_dsa_op {
+	enum rte_crypto_ml_op op;
+	union {
+		struct rte_crypto_ml_dsa_keygen_op keygen;
+		struct rte_crypto_ml_dsa_siggen_op siggen;
+		struct rte_crypto_ml_dsa_sigver_op sigver;
+	};
+};
+
+/**
  * Asymmetric crypto transform data
  *
  * Structure describing asym xforms.
@@ -751,6 +1005,12 @@ struct rte_crypto_asym_xform {
 		/**< EC xform parameters, used by elliptic curve based
 		 * operations.
 		 */
+
+		struct rte_crypto_ml_kem_xform mlkem;
+		/**< PQC ML-KEM xform parameters */
+
+		struct rte_crypto_ml_dsa_xform mldsa;
+		/**< PQC ML-DSA xform parameters */
 	};
 };
 
@@ -778,6 +1038,8 @@ struct rte_crypto_asym_op {
 		struct rte_crypto_ecpm_op_param ecpm;
 		struct rte_crypto_sm2_op_param sm2;
 		struct rte_crypto_eddsa_op_param eddsa;
+		struct rte_crypto_ml_kem_op mlkem;
+		struct rte_crypto_ml_dsa_op mldsa;
 	};
 	uint16_t flags;
 	/**<
