@@ -30,12 +30,12 @@
 #include "eventdev_pmd.h"
 #include "eventdev_trace.h"
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_logtype)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_logtype);
 RTE_LOG_REGISTER_DEFAULT(rte_event_logtype, INFO);
 
 static struct rte_eventdev rte_event_devices[RTE_EVENT_MAX_DEVS];
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eventdevs)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eventdevs);
 struct rte_eventdev *rte_eventdevs = rte_event_devices;
 
 static struct rte_eventdev_global eventdev_globals = {
@@ -43,19 +43,19 @@ static struct rte_eventdev_global eventdev_globals = {
 };
 
 /* Public fastpath APIs. */
-RTE_EXPORT_SYMBOL(rte_event_fp_ops)
+RTE_EXPORT_SYMBOL(rte_event_fp_ops);
 struct rte_event_fp_ops rte_event_fp_ops[RTE_EVENT_MAX_DEVS];
 
 /* Event dev north bound API implementation */
 
-RTE_EXPORT_SYMBOL(rte_event_dev_count)
+RTE_EXPORT_SYMBOL(rte_event_dev_count);
 uint8_t
 rte_event_dev_count(void)
 {
 	return eventdev_globals.nb_devs;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_get_dev_id)
+RTE_EXPORT_SYMBOL(rte_event_dev_get_dev_id);
 int
 rte_event_dev_get_dev_id(const char *name)
 {
@@ -80,7 +80,7 @@ rte_event_dev_get_dev_id(const char *name)
 	return -ENODEV;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_socket_id)
+RTE_EXPORT_SYMBOL(rte_event_dev_socket_id);
 int
 rte_event_dev_socket_id(uint8_t dev_id)
 {
@@ -94,7 +94,7 @@ rte_event_dev_socket_id(uint8_t dev_id)
 	return dev->data->socket_id;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_info_get)
+RTE_EXPORT_SYMBOL(rte_event_dev_info_get);
 int
 rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info)
 {
@@ -123,7 +123,7 @@ rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_caps_get)
+RTE_EXPORT_SYMBOL(rte_event_eth_rx_adapter_caps_get);
 int
 rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
 				uint32_t *caps)
@@ -150,7 +150,7 @@ rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
 		: 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_timer_adapter_caps_get)
+RTE_EXPORT_SYMBOL(rte_event_timer_adapter_caps_get);
 int
 rte_event_timer_adapter_caps_get(uint8_t dev_id, uint32_t *caps)
 {
@@ -176,7 +176,7 @@ rte_event_timer_adapter_caps_get(uint8_t dev_id, uint32_t *caps)
 		: 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_crypto_adapter_caps_get)
+RTE_EXPORT_SYMBOL(rte_event_crypto_adapter_caps_get);
 int
 rte_event_crypto_adapter_caps_get(uint8_t dev_id, uint8_t cdev_id,
 				  uint32_t *caps)
@@ -205,7 +205,7 @@ rte_event_crypto_adapter_caps_get(uint8_t dev_id, uint8_t cdev_id,
 		dev->dev_ops->crypto_adapter_caps_get(dev, cdev, caps) : 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_caps_get)
+RTE_EXPORT_SYMBOL(rte_event_eth_tx_adapter_caps_get);
 int
 rte_event_eth_tx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
 				uint32_t *caps)
@@ -234,7 +234,7 @@ rte_event_eth_tx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
 		: 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_dma_adapter_caps_get, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_dma_adapter_caps_get, 23.11);
 int
 rte_event_dma_adapter_caps_get(uint8_t dev_id, uint8_t dma_dev_id, uint32_t *caps)
 {
@@ -257,7 +257,7 @@ rte_event_dma_adapter_caps_get(uint8_t dev_id, uint8_t dma_dev_id, uint32_t *cap
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_caps_get, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_caps_get, 25.07);
 int
 rte_event_vector_adapter_caps_get(uint8_t dev_id, uint32_t *caps)
 {
@@ -374,7 +374,7 @@ event_dev_port_config(struct rte_eventdev *dev, uint8_t nb_ports)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_configure)
+RTE_EXPORT_SYMBOL(rte_event_dev_configure);
 int
 rte_event_dev_configure(uint8_t dev_id,
 			const struct rte_event_dev_config *dev_conf)
@@ -577,7 +577,7 @@ is_valid_queue(struct rte_eventdev *dev, uint8_t queue_id)
 		return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_queue_default_conf_get)
+RTE_EXPORT_SYMBOL(rte_event_queue_default_conf_get);
 int
 rte_event_queue_default_conf_get(uint8_t dev_id, uint8_t queue_id,
 				 struct rte_event_queue_conf *queue_conf)
@@ -638,7 +638,7 @@ is_valid_ordered_queue_conf(const struct rte_event_queue_conf *queue_conf)
 }
 
 
-RTE_EXPORT_SYMBOL(rte_event_queue_setup)
+RTE_EXPORT_SYMBOL(rte_event_queue_setup);
 int
 rte_event_queue_setup(uint8_t dev_id, uint8_t queue_id,
 		      const struct rte_event_queue_conf *queue_conf)
@@ -710,7 +710,7 @@ is_valid_port(struct rte_eventdev *dev, uint8_t port_id)
 		return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_default_conf_get)
+RTE_EXPORT_SYMBOL(rte_event_port_default_conf_get);
 int
 rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
 				 struct rte_event_port_conf *port_conf)
@@ -738,7 +738,7 @@ rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_setup)
+RTE_EXPORT_SYMBOL(rte_event_port_setup);
 int
 rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 		     const struct rte_event_port_conf *port_conf)
@@ -829,7 +829,7 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_quiesce)
+RTE_EXPORT_SYMBOL(rte_event_port_quiesce);
 void
 rte_event_port_quiesce(uint8_t dev_id, uint8_t port_id,
 		       rte_eventdev_port_flush_t release_cb, void *args)
@@ -850,7 +850,7 @@ rte_event_port_quiesce(uint8_t dev_id, uint8_t port_id,
 		dev->dev_ops->port_quiesce(dev, dev->data->ports[port_id], release_cb, args);
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_attr_get)
+RTE_EXPORT_SYMBOL(rte_event_dev_attr_get);
 int
 rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
 		       uint32_t *attr_value)
@@ -881,7 +881,7 @@ rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_attr_get)
+RTE_EXPORT_SYMBOL(rte_event_port_attr_get);
 int
 rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 			uint32_t *attr_value)
@@ -933,7 +933,7 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_queue_attr_get)
+RTE_EXPORT_SYMBOL(rte_event_queue_attr_get);
 int
 rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 			uint32_t *attr_value)
@@ -993,7 +993,7 @@ rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_queue_attr_set)
+RTE_EXPORT_SYMBOL(rte_event_queue_attr_set);
 int
 rte_event_queue_attr_set(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 			 uint64_t attr_value)
@@ -1022,7 +1022,7 @@ rte_event_queue_attr_set(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 	return dev->dev_ops->queue_attr_set(dev, queue_id, attr_id, attr_value);
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_link)
+RTE_EXPORT_SYMBOL(rte_event_port_link);
 int
 rte_event_port_link(uint8_t dev_id, uint8_t port_id,
 		    const uint8_t queues[], const uint8_t priorities[],
@@ -1031,7 +1031,7 @@ rte_event_port_link(uint8_t dev_id, uint8_t port_id,
 	return rte_event_port_profile_links_set(dev_id, port_id, queues, priorities, nb_links, 0);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_port_profile_links_set, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_port_profile_links_set, 23.11);
 int
 rte_event_port_profile_links_set(uint8_t dev_id, uint8_t port_id, const uint8_t queues[],
 				 const uint8_t priorities[], uint16_t nb_links, uint8_t profile_id)
@@ -1114,7 +1114,7 @@ rte_event_port_profile_links_set(uint8_t dev_id, uint8_t port_id, const uint8_t 
 	return diag;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_unlink)
+RTE_EXPORT_SYMBOL(rte_event_port_unlink);
 int
 rte_event_port_unlink(uint8_t dev_id, uint8_t port_id,
 		      uint8_t queues[], uint16_t nb_unlinks)
@@ -1122,7 +1122,7 @@ rte_event_port_unlink(uint8_t dev_id, uint8_t port_id,
 	return rte_event_port_profile_unlink(dev_id, port_id, queues, nb_unlinks, 0);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_port_profile_unlink, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_port_profile_unlink, 23.11);
 int
 rte_event_port_profile_unlink(uint8_t dev_id, uint8_t port_id, uint8_t queues[],
 			      uint16_t nb_unlinks, uint8_t profile_id)
@@ -1209,7 +1209,7 @@ rte_event_port_profile_unlink(uint8_t dev_id, uint8_t port_id, uint8_t queues[],
 	return diag;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_unlinks_in_progress)
+RTE_EXPORT_SYMBOL(rte_event_port_unlinks_in_progress);
 int
 rte_event_port_unlinks_in_progress(uint8_t dev_id, uint8_t port_id)
 {
@@ -1234,7 +1234,7 @@ rte_event_port_unlinks_in_progress(uint8_t dev_id, uint8_t port_id)
 	return dev->dev_ops->port_unlinks_in_progress(dev, dev->data->ports[port_id]);
 }
 
-RTE_EXPORT_SYMBOL(rte_event_port_links_get)
+RTE_EXPORT_SYMBOL(rte_event_port_links_get);
 int
 rte_event_port_links_get(uint8_t dev_id, uint8_t port_id,
 			 uint8_t queues[], uint8_t priorities[])
@@ -1267,7 +1267,7 @@ rte_event_port_links_get(uint8_t dev_id, uint8_t port_id,
 	return count;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_port_profile_links_get, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_port_profile_links_get, 23.11);
 int
 rte_event_port_profile_links_get(uint8_t dev_id, uint8_t port_id, uint8_t queues[],
 				 uint8_t priorities[], uint8_t profile_id)
@@ -1311,7 +1311,7 @@ rte_event_port_profile_links_get(uint8_t dev_id, uint8_t port_id, uint8_t queues
 	return count;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dequeue_timeout_ticks)
+RTE_EXPORT_SYMBOL(rte_event_dequeue_timeout_ticks);
 int
 rte_event_dequeue_timeout_ticks(uint8_t dev_id, uint64_t ns,
 				 uint64_t *timeout_ticks)
@@ -1331,7 +1331,7 @@ rte_event_dequeue_timeout_ticks(uint8_t dev_id, uint64_t ns,
 	return dev->dev_ops->timeout_ticks(dev, ns, timeout_ticks);
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_service_id_get)
+RTE_EXPORT_SYMBOL(rte_event_dev_service_id_get);
 int
 rte_event_dev_service_id_get(uint8_t dev_id, uint32_t *service_id)
 {
@@ -1351,7 +1351,7 @@ rte_event_dev_service_id_get(uint8_t dev_id, uint32_t *service_id)
 	return dev->data->service_inited ? 0 : -ESRCH;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_dump)
+RTE_EXPORT_SYMBOL(rte_event_dev_dump);
 int
 rte_event_dev_dump(uint8_t dev_id, FILE *f)
 {
@@ -1379,7 +1379,7 @@ xstats_get_count(uint8_t dev_id, enum rte_event_dev_xstats_mode mode,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_xstats_names_get)
+RTE_EXPORT_SYMBOL(rte_event_dev_xstats_names_get);
 int
 rte_event_dev_xstats_names_get(uint8_t dev_id,
 		enum rte_event_dev_xstats_mode mode, uint8_t queue_port_id,
@@ -1404,7 +1404,7 @@ rte_event_dev_xstats_names_get(uint8_t dev_id,
 }
 
 /* retrieve eventdev extended statistics */
-RTE_EXPORT_SYMBOL(rte_event_dev_xstats_get)
+RTE_EXPORT_SYMBOL(rte_event_dev_xstats_get);
 int
 rte_event_dev_xstats_get(uint8_t dev_id, enum rte_event_dev_xstats_mode mode,
 		uint8_t queue_port_id, const uint64_t ids[],
@@ -1420,7 +1420,7 @@ rte_event_dev_xstats_get(uint8_t dev_id, enum rte_event_dev_xstats_mode mode,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_xstats_by_name_get)
+RTE_EXPORT_SYMBOL(rte_event_dev_xstats_by_name_get);
 uint64_t
 rte_event_dev_xstats_by_name_get(uint8_t dev_id, const char *name,
 		uint64_t *id)
@@ -1440,7 +1440,7 @@ rte_event_dev_xstats_by_name_get(uint8_t dev_id, const char *name,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_xstats_reset)
+RTE_EXPORT_SYMBOL(rte_event_dev_xstats_reset);
 int rte_event_dev_xstats_reset(uint8_t dev_id,
 		enum rte_event_dev_xstats_mode mode, int16_t queue_port_id,
 		const uint64_t ids[], uint32_t nb_ids)
@@ -1453,10 +1453,10 @@ int rte_event_dev_xstats_reset(uint8_t dev_id,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_selftest_seqn_dynfield_offset)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_selftest_seqn_dynfield_offset);
 int rte_event_pmd_selftest_seqn_dynfield_offset = -1;
 
-RTE_EXPORT_SYMBOL(rte_event_dev_selftest)
+RTE_EXPORT_SYMBOL(rte_event_dev_selftest);
 int rte_event_dev_selftest(uint8_t dev_id)
 {
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
@@ -1477,7 +1477,7 @@ int rte_event_dev_selftest(uint8_t dev_id)
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_vector_pool_create)
+RTE_EXPORT_SYMBOL(rte_event_vector_pool_create);
 struct rte_mempool *
 rte_event_vector_pool_create(const char *name, unsigned int n,
 			     unsigned int cache_size, uint16_t nb_elem,
@@ -1523,7 +1523,7 @@ err:
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_start)
+RTE_EXPORT_SYMBOL(rte_event_dev_start);
 int
 rte_event_dev_start(uint8_t dev_id)
 {
@@ -1555,7 +1555,7 @@ rte_event_dev_start(uint8_t dev_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_stop_flush_callback_register)
+RTE_EXPORT_SYMBOL(rte_event_dev_stop_flush_callback_register);
 int
 rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
 					   rte_eventdev_stop_flush_t callback,
@@ -1576,7 +1576,7 @@ rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_stop)
+RTE_EXPORT_SYMBOL(rte_event_dev_stop);
 void
 rte_event_dev_stop(uint8_t dev_id)
 {
@@ -1601,7 +1601,7 @@ rte_event_dev_stop(uint8_t dev_id)
 	event_dev_fp_ops_reset(rte_event_fp_ops + dev_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_event_dev_close)
+RTE_EXPORT_SYMBOL(rte_event_dev_close);
 int
 rte_event_dev_close(uint8_t dev_id)
 {
@@ -1672,7 +1672,7 @@ eventdev_find_free_device_index(void)
 	return RTE_EVENT_MAX_DEVS;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_allocate);
 struct rte_eventdev *
 rte_event_pmd_allocate(const char *name, int socket_id)
 {
@@ -1721,7 +1721,7 @@ rte_event_pmd_allocate(const char *name, int socket_id)
 	return eventdev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_release);
 int
 rte_event_pmd_release(struct rte_eventdev *eventdev)
 {
@@ -1758,7 +1758,7 @@ rte_event_pmd_release(struct rte_eventdev *eventdev)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(event_dev_probing_finish)
+RTE_EXPORT_INTERNAL_SYMBOL(event_dev_probing_finish);
 void
 event_dev_probing_finish(struct rte_eventdev *eventdev)
 {

@@ -116,7 +116,7 @@ latencystats_collect(uint64_t values[])
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_latencystats_update)
+RTE_EXPORT_SYMBOL(rte_latencystats_update);
 int32_t
 rte_latencystats_update(void)
 {
@@ -256,7 +256,7 @@ calc_latency(uint16_t pid __rte_unused,
 	return nb_pkts;
 }
 
-RTE_EXPORT_SYMBOL(rte_latencystats_init)
+RTE_EXPORT_SYMBOL(rte_latencystats_init);
 int
 rte_latencystats_init(uint64_t app_samp_intvl,
 		rte_latency_stats_flow_type_fn user_cb)
@@ -349,7 +349,7 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_latencystats_uninit)
+RTE_EXPORT_SYMBOL(rte_latencystats_uninit);
 int
 rte_latencystats_uninit(void)
 {
@@ -396,7 +396,7 @@ rte_latencystats_uninit(void)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_latencystats_get_names)
+RTE_EXPORT_SYMBOL(rte_latencystats_get_names);
 int
 rte_latencystats_get_names(struct rte_metric_name *names, uint16_t size)
 {
@@ -412,7 +412,7 @@ rte_latencystats_get_names(struct rte_metric_name *names, uint16_t size)
 	return NUM_LATENCY_STATS;
 }
 
-RTE_EXPORT_SYMBOL(rte_latencystats_get)
+RTE_EXPORT_SYMBOL(rte_latencystats_get);
 int
 rte_latencystats_get(struct rte_metric_value *values, uint16_t size)
 {

@@ -38,27 +38,27 @@ RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_stop,
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_close,
 	lib.eventdev.close)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_enq_burst)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_enq_burst);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_enq_burst,
 	lib.eventdev.enq.burst)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_deq_burst)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_deq_burst);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_deq_burst,
 	lib.eventdev.deq.burst)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_maintain)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_maintain);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_maintain,
 	lib.eventdev.maintain)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_profile_switch, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_profile_switch, 23.11);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_profile_switch,
 	lib.eventdev.port.profile.switch)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule_modify, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule_modify, 24.11);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_preschedule_modify,
 	lib.eventdev.port.preschedule.modify)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule, 24.11);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_preschedule,
 	lib.eventdev.port.preschedule)
 
@@ -103,7 +103,7 @@ RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_eth_tx_adapter_start,
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_eth_tx_adapter_stop,
 	lib.eventdev.tx.adapter.stop)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_eth_tx_adapter_enqueue)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_eth_tx_adapter_enqueue);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_eth_tx_adapter_enqueue,
 	lib.eventdev.tx.adapter.enq)
 
@@ -120,15 +120,15 @@ RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_timer_adapter_stop,
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_timer_adapter_free,
 	lib.eventdev.timer.free)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_timer_arm_burst)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_timer_arm_burst);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_timer_arm_burst,
 	lib.eventdev.timer.burst)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_timer_arm_tmo_tick_burst)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_timer_arm_tmo_tick_burst);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_timer_arm_tmo_tick_burst,
 	lib.eventdev.timer.tick.burst)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_timer_cancel_burst)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_timer_cancel_burst);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_timer_cancel_burst,
 	lib.eventdev.timer.cancel)
 
@@ -151,7 +151,7 @@ RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_crypto_adapter_start,
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_crypto_adapter_stop,
 	lib.eventdev.crypto.stop)
 
-RTE_EXPORT_SYMBOL(__rte_eventdev_trace_crypto_adapter_enqueue)
+RTE_EXPORT_SYMBOL(__rte_eventdev_trace_crypto_adapter_enqueue);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_crypto_adapter_enqueue,
 	lib.eventdev.crypto.enq)
 

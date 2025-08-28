@@ -13,7 +13,7 @@ RTE_LOG_REGISTER_SUFFIX(hash_crc_logtype, crc, INFO);
 #define HASH_CRC_LOG(level, ...) \
 	RTE_LOG_LINE(level, HASH_CRC, "" __VA_ARGS__)
 
-RTE_EXPORT_SYMBOL(rte_hash_crc32_alg)
+RTE_EXPORT_SYMBOL(rte_hash_crc32_alg);
 uint8_t rte_hash_crc32_alg = CRC32_SW;
 
 /**
@@ -28,7 +28,7 @@ uint8_t rte_hash_crc32_alg = CRC32_SW;
  *   - (CRC32_ARM64) Use ARMv8 CRC intrinsic if available (default ARMv8)
  *
  */
-RTE_EXPORT_SYMBOL(rte_hash_crc_set_alg)
+RTE_EXPORT_SYMBOL(rte_hash_crc_set_alg);
 void
 rte_hash_crc_set_alg(uint8_t alg)
 {

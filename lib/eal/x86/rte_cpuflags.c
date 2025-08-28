@@ -149,7 +149,7 @@ struct feature_entry rte_cpu_feature_table[] = {
 	FEAT_DEF(INVTSC, 0x80000007, 0, RTE_REG_EDX,  8)
 };
 
-RTE_EXPORT_SYMBOL(rte_cpu_get_flag_enabled)
+RTE_EXPORT_SYMBOL(rte_cpu_get_flag_enabled);
 int
 rte_cpu_get_flag_enabled(enum rte_cpu_flag_t feature)
 {
@@ -192,7 +192,7 @@ out:
 	return feat->value;
 }
 
-RTE_EXPORT_SYMBOL(rte_cpu_get_flag_name)
+RTE_EXPORT_SYMBOL(rte_cpu_get_flag_name);
 const char *
 rte_cpu_get_flag_name(enum rte_cpu_flag_t feature)
 {
@@ -201,7 +201,7 @@ rte_cpu_get_flag_name(enum rte_cpu_flag_t feature)
 	return rte_cpu_feature_table[feature].name;
 }
 
-RTE_EXPORT_SYMBOL(rte_cpu_get_intrinsics_support)
+RTE_EXPORT_SYMBOL(rte_cpu_get_intrinsics_support);
 void
 rte_cpu_get_intrinsics_support(struct rte_cpu_intrinsics *intrinsics)
 {

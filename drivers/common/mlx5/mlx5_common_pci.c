@@ -103,14 +103,14 @@ pci_ids_table_update(const struct rte_pci_id *driver_id_table)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_is_pci)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_is_pci);
 bool
 mlx5_dev_is_pci(const struct rte_device *dev)
 {
 	return strcmp(dev->bus->name, "pci") == 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_is_vf_pci)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_dev_is_vf_pci);
 bool
 mlx5_dev_is_vf_pci(const struct rte_pci_device *pci_dev)
 {

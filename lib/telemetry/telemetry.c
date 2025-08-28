@@ -115,14 +115,14 @@ register_cmd(const char *cmd, const char *help,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_telemetry_register_cmd)
+RTE_EXPORT_SYMBOL(rte_telemetry_register_cmd);
 int
 rte_telemetry_register_cmd(const char *cmd, telemetry_cb fn, const char *help)
 {
 	return register_cmd(cmd, help, fn, NULL, NULL);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_telemetry_register_cmd_arg, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_telemetry_register_cmd_arg, 24.11);
 int
 rte_telemetry_register_cmd_arg(const char *cmd, telemetry_arg_cb fn, void *arg, const char *help)
 {
@@ -655,7 +655,7 @@ telemetry_v2_init(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_telemetry_init)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_telemetry_init);
 int32_t
 rte_telemetry_init(const char *runtime_dir, const char *rte_version, rte_cpuset_t *cpuset)
 {

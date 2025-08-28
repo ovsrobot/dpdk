@@ -151,14 +151,14 @@ default_port_conf_cb(uint8_t event_dev_id, uint8_t *event_port_id, void *conf_ar
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_create, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_create, 25.07);
 struct rte_event_vector_adapter *
 rte_event_vector_adapter_create(const struct rte_event_vector_adapter_conf *conf)
 {
 	return rte_event_vector_adapter_create_ext(conf, default_port_conf_cb, NULL);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_create_ext, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_create_ext, 25.07);
 struct rte_event_vector_adapter *
 rte_event_vector_adapter_create_ext(const struct rte_event_vector_adapter_conf *conf,
 				    rte_event_vector_adapter_port_conf_cb_t conf_cb, void *conf_arg)
@@ -304,7 +304,7 @@ error:
 	return NULL;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_lookup, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_lookup, 25.07);
 struct rte_event_vector_adapter *
 rte_event_vector_adapter_lookup(uint32_t adapter_id)
 {
@@ -372,7 +372,7 @@ rte_event_vector_adapter_lookup(uint32_t adapter_id)
 	return adapter;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_service_id_get, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_service_id_get, 25.07);
 int
 rte_event_vector_adapter_service_id_get(struct rte_event_vector_adapter *adapter,
 					uint32_t *service_id)
@@ -385,7 +385,7 @@ rte_event_vector_adapter_service_id_get(struct rte_event_vector_adapter *adapter
 	return adapter->data->service_inited ? 0 : -ESRCH;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_destroy, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_destroy, 25.07);
 int
 rte_event_vector_adapter_destroy(struct rte_event_vector_adapter *adapter)
 {
@@ -414,7 +414,7 @@ rte_event_vector_adapter_destroy(struct rte_event_vector_adapter *adapter)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_info_get, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_info_get, 25.07);
 int
 rte_event_vector_adapter_info_get(uint8_t event_dev_id, struct rte_event_vector_adapter_info *info)
 {
@@ -429,7 +429,7 @@ rte_event_vector_adapter_info_get(uint8_t event_dev_id, struct rte_event_vector_
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_conf_get, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_conf_get, 25.07);
 int
 rte_event_vector_adapter_conf_get(struct rte_event_vector_adapter *adapter,
 				  struct rte_event_vector_adapter_conf *conf)
@@ -441,7 +441,7 @@ rte_event_vector_adapter_conf_get(struct rte_event_vector_adapter *adapter,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_remaining, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_remaining, 25.07);
 uint8_t
 rte_event_vector_adapter_remaining(uint8_t event_dev_id, uint8_t event_queue_id)
 {
@@ -461,7 +461,7 @@ rte_event_vector_adapter_remaining(uint8_t event_dev_id, uint8_t event_queue_id)
 	return remaining;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_stats_get, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_stats_get, 25.07);
 int
 rte_event_vector_adapter_stats_get(struct rte_event_vector_adapter *adapter,
 				   struct rte_event_vector_adapter_stats *stats)
@@ -476,7 +476,7 @@ rte_event_vector_adapter_stats_get(struct rte_event_vector_adapter *adapter,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_stats_reset, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_vector_adapter_stats_reset, 25.07);
 int
 rte_event_vector_adapter_stats_reset(struct rte_event_vector_adapter *adapter)
 {

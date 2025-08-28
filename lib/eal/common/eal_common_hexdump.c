@@ -8,7 +8,7 @@
 
 #define LINE_LEN 128
 
-RTE_EXPORT_SYMBOL(rte_hexdump)
+RTE_EXPORT_SYMBOL(rte_hexdump);
 void
 rte_hexdump(FILE *f, const char *title, const void *buf, unsigned int len)
 {
@@ -47,7 +47,7 @@ rte_hexdump(FILE *f, const char *title, const void *buf, unsigned int len)
 	fflush(f);
 }
 
-RTE_EXPORT_SYMBOL(rte_memdump)
+RTE_EXPORT_SYMBOL(rte_memdump);
 void
 rte_memdump(FILE *f, const char *title, const void *buf, unsigned int len)
 {

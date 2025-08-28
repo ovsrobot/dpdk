@@ -42,7 +42,7 @@ const char *cmdline_vt100_commands[] = {
 	vt100_bs,
 };
 
-RTE_EXPORT_SYMBOL(vt100_init)
+RTE_EXPORT_SYMBOL(vt100_init);
 void
 vt100_init(struct cmdline_vt100 *vt)
 {
@@ -72,7 +72,7 @@ match_command(char *buf, unsigned int size)
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(vt100_parser)
+RTE_EXPORT_SYMBOL(vt100_parser);
 int
 vt100_parser(struct cmdline_vt100 *vt, char ch)
 {

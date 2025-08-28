@@ -196,7 +196,7 @@ RTE_ATOMIC(uint32_t) atomic_sn;
  *   A file descriptor on success, a negative errno value otherwise and
  *   rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_init)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_init);
 int
 mlx5_nl_init(int protocol, int groups)
 {
@@ -643,7 +643,7 @@ error:
  * @return
  *    0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_vf_mac_addr_modify)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_vf_mac_addr_modify);
 int
 mlx5_nl_vf_mac_addr_modify(int nlsk_fd, unsigned int iface_idx,
 			   struct rte_ether_addr *mac, int vf_index)
@@ -731,7 +731,7 @@ error:
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_add)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_add);
 int
 mlx5_nl_mac_addr_add(int nlsk_fd, unsigned int iface_idx,
 		     uint64_t *mac_own, struct rte_ether_addr *mac,
@@ -769,7 +769,7 @@ mlx5_nl_mac_addr_add(int nlsk_fd, unsigned int iface_idx,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_remove)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_remove);
 int
 mlx5_nl_mac_addr_remove(int nlsk_fd, unsigned int iface_idx, uint64_t *mac_own,
 			struct rte_ether_addr *mac, uint32_t index)
@@ -794,7 +794,7 @@ mlx5_nl_mac_addr_remove(int nlsk_fd, unsigned int iface_idx, uint64_t *mac_own,
  * @param n
  *   @p mac_addrs array size.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_sync)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_sync);
 void
 mlx5_nl_mac_addr_sync(int nlsk_fd, unsigned int iface_idx,
 		      struct rte_ether_addr *mac_addrs, int n)
@@ -851,7 +851,7 @@ mlx5_nl_mac_addr_sync(int nlsk_fd, unsigned int iface_idx,
  * @param mac_own
  *   BITFIELD_DECLARE array to store the mac.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_flush)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_mac_addr_flush);
 void
 mlx5_nl_mac_addr_flush(int nlsk_fd, unsigned int iface_idx,
 		       struct rte_ether_addr *mac_addrs, int n,
@@ -930,7 +930,7 @@ mlx5_nl_device_flags(int nlsk_fd, unsigned int iface_idx, uint32_t flags,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_promisc)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_promisc);
 int
 mlx5_nl_promisc(int nlsk_fd, unsigned int iface_idx, int enable)
 {
@@ -957,7 +957,7 @@ mlx5_nl_promisc(int nlsk_fd, unsigned int iface_idx, int enable)
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_allmulti)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_allmulti);
 int
 mlx5_nl_allmulti(int nlsk_fd, unsigned int iface_idx, int enable)
 {
@@ -1147,7 +1147,7 @@ error:
  *   A valid (nonzero) interface index on success, 0 otherwise and rte_errno
  *   is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_ifindex)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_ifindex);
 unsigned int
 mlx5_nl_ifindex(int nl, const char *name, uint32_t pindex, struct mlx5_dev_info *dev_info)
 {
@@ -1204,7 +1204,7 @@ mlx5_nl_ifindex(int nl, const char *name, uint32_t pindex, struct mlx5_dev_info 
  *   Port state (ibv_port_state) on success, negative on error
  *   and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_port_state)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_port_state);
 int
 mlx5_nl_port_state(int nl, const char *name, uint32_t pindex, struct mlx5_dev_info *dev_info)
 {
@@ -1240,7 +1240,7 @@ mlx5_nl_port_state(int nl, const char *name, uint32_t pindex, struct mlx5_dev_in
  *   A valid (nonzero) number of ports on success, 0 otherwise
  *   and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_portnum)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_portnum);
 unsigned int
 mlx5_nl_portnum(int nl, const char *name, struct mlx5_dev_info *dev_info)
 {
@@ -1447,7 +1447,7 @@ error:
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_switch_info)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_switch_info);
 int
 mlx5_nl_switch_info(int nl, unsigned int ifindex,
 		    struct mlx5_switch_info *info)
@@ -1498,7 +1498,7 @@ mlx5_nl_switch_info(int nl, unsigned int ifindex,
  * @param[in] ifindex
  *   Interface index of network device to delete.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_vlan_vmwa_delete)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_vlan_vmwa_delete);
 void
 mlx5_nl_vlan_vmwa_delete(struct mlx5_nl_vlan_vmwa_context *vmwa,
 		      uint32_t ifindex)
@@ -1576,7 +1576,7 @@ nl_attr_nest_end(struct nlmsghdr *nlh, struct nlattr *nest)
  * @param[in] tag
  *   VLAN tag for VLAN network device to create.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_vlan_vmwa_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_vlan_vmwa_create);
 uint32_t
 mlx5_nl_vlan_vmwa_create(struct mlx5_nl_vlan_vmwa_context *vmwa,
 			 uint32_t ifindex, uint16_t tag)
@@ -1729,7 +1729,7 @@ mlx5_nl_generic_family_id_get(int nlsk_fd, const char *name)
  *   otherwise and rte_errno is set.
  */
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_devlink_family_id_get)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_devlink_family_id_get);
 int
 mlx5_nl_devlink_family_id_get(int nlsk_fd)
 {
@@ -1956,7 +1956,7 @@ mlx5_nl_enable_roce_set(int nlsk_fd, int family_id, const char *pci_addr,
  * @return
  *  0 on success, negative on failure.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_parse_link_status_update)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_parse_link_status_update);
 int
 mlx5_nl_parse_link_status_update(struct nlmsghdr *hdr, uint32_t *ifindex)
 {
@@ -1988,7 +1988,7 @@ mlx5_nl_parse_link_status_update(struct nlmsghdr *hdr, uint32_t *ifindex)
  *  0 on success, including the case when there are no events.
  *  Negative on failure and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_read_events)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_read_events);
 int
 mlx5_nl_read_events(int nlsk_fd, mlx5_nl_event_cb *cb, void *cb_arg)
 {
@@ -2076,7 +2076,7 @@ mlx5_nl_esw_multiport_cb(struct nlmsghdr *nh, void *arg)
 
 #define NL_ESW_MULTIPORT_PARAM "esw_multiport"
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_devlink_esw_multiport_get)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_devlink_esw_multiport_get);
 int
 mlx5_nl_devlink_esw_multiport_get(int nlsk_fd, int family_id, const char *pci_addr, int *enable)
 {
@@ -2115,14 +2115,14 @@ mlx5_nl_devlink_esw_multiport_get(int nlsk_fd, int family_id, const char *pci_ad
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_rdma_monitor_init)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_rdma_monitor_init);
 int
 mlx5_nl_rdma_monitor_init(void)
 {
 	return mlx5_nl_init(NETLINK_RDMA, RDMA_NL_GROUP_NOTIFICATION);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_rdma_monitor_info_get)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_rdma_monitor_info_get);
 void
 mlx5_nl_rdma_monitor_info_get(struct nlmsghdr *hdr, struct mlx5_nl_port_info *data)
 {
@@ -2217,7 +2217,7 @@ error:
  * @return
  *   0 on success, negative on error and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_rdma_monitor_cap_get)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_nl_rdma_monitor_cap_get);
 int
 mlx5_nl_rdma_monitor_cap_get(int nl, uint8_t *cap)
 {

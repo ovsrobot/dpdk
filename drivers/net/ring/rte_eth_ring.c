@@ -457,7 +457,7 @@ error:
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_eth_from_rings)
+RTE_EXPORT_SYMBOL(rte_eth_from_rings);
 int
 rte_eth_from_rings(const char *name, struct rte_ring *const rx_queues[],
 		const unsigned int nb_rx_queues,
@@ -516,7 +516,7 @@ rte_eth_from_rings(const char *name, struct rte_ring *const rx_queues[],
 	return port_id;
 }
 
-RTE_EXPORT_SYMBOL(rte_eth_from_ring)
+RTE_EXPORT_SYMBOL(rte_eth_from_ring);
 int
 rte_eth_from_ring(struct rte_ring *r)
 {

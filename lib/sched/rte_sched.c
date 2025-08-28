@@ -884,7 +884,7 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_get_memory_footprint)
+RTE_EXPORT_SYMBOL(rte_sched_port_get_memory_footprint);
 uint32_t
 rte_sched_port_get_memory_footprint(struct rte_sched_port_params *port_params,
 	struct rte_sched_subport_params **subport_params)
@@ -928,7 +928,7 @@ rte_sched_port_get_memory_footprint(struct rte_sched_port_params *port_params,
 	return size0 + size1;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_config)
+RTE_EXPORT_SYMBOL(rte_sched_port_config);
 struct rte_sched_port *
 rte_sched_port_config(struct rte_sched_port_params *params)
 {
@@ -1049,7 +1049,7 @@ rte_sched_subport_free(struct rte_sched_port *port,
 	rte_free(subport);
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_free)
+RTE_EXPORT_SYMBOL(rte_sched_port_free);
 void
 rte_sched_port_free(struct rte_sched_port *port)
 {
@@ -1163,7 +1163,7 @@ rte_sched_cman_config(struct rte_sched_port *port,
 	return -EINVAL;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_subport_tc_ov_config)
+RTE_EXPORT_SYMBOL(rte_sched_subport_tc_ov_config);
 int
 rte_sched_subport_tc_ov_config(struct rte_sched_port *port,
 	uint32_t subport_id,
@@ -1189,7 +1189,7 @@ rte_sched_subport_tc_ov_config(struct rte_sched_port *port,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_subport_config)
+RTE_EXPORT_SYMBOL(rte_sched_subport_config);
 int
 rte_sched_subport_config(struct rte_sched_port *port,
 	uint32_t subport_id,
@@ -1383,7 +1383,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_pipe_config)
+RTE_EXPORT_SYMBOL(rte_sched_pipe_config);
 int
 rte_sched_pipe_config(struct rte_sched_port *port,
 	uint32_t subport_id,
@@ -1508,7 +1508,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_subport_pipe_profile_add)
+RTE_EXPORT_SYMBOL(rte_sched_subport_pipe_profile_add);
 int
 rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 	uint32_t subport_id,
@@ -1574,7 +1574,7 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_subport_profile_add)
+RTE_EXPORT_SYMBOL(rte_sched_port_subport_profile_add);
 int
 rte_sched_port_subport_profile_add(struct rte_sched_port *port,
 	struct rte_sched_subport_profile_params *params,
@@ -1656,7 +1656,7 @@ rte_sched_port_qindex(struct rte_sched_port *port,
 		(RTE_SCHED_QUEUES_PER_PIPE - 1));
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_pkt_write)
+RTE_EXPORT_SYMBOL(rte_sched_port_pkt_write);
 void
 rte_sched_port_pkt_write(struct rte_sched_port *port,
 			 struct rte_mbuf *pkt,
@@ -1670,7 +1670,7 @@ rte_sched_port_pkt_write(struct rte_sched_port *port,
 	rte_mbuf_sched_set(pkt, queue_id, traffic_class, (uint8_t)color);
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_pkt_read_tree_path)
+RTE_EXPORT_SYMBOL(rte_sched_port_pkt_read_tree_path);
 void
 rte_sched_port_pkt_read_tree_path(struct rte_sched_port *port,
 				  const struct rte_mbuf *pkt,
@@ -1686,14 +1686,14 @@ rte_sched_port_pkt_read_tree_path(struct rte_sched_port *port,
 	*queue = rte_sched_port_tc_queue(port, queue_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_pkt_read_color)
+RTE_EXPORT_SYMBOL(rte_sched_port_pkt_read_color);
 enum rte_color
 rte_sched_port_pkt_read_color(const struct rte_mbuf *pkt)
 {
 	return (enum rte_color)rte_mbuf_sched_color_get(pkt);
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_subport_read_stats)
+RTE_EXPORT_SYMBOL(rte_sched_subport_read_stats);
 int
 rte_sched_subport_read_stats(struct rte_sched_port *port,
 			     uint32_t subport_id,
@@ -1739,7 +1739,7 @@ rte_sched_subport_read_stats(struct rte_sched_port *port,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_queue_read_stats)
+RTE_EXPORT_SYMBOL(rte_sched_queue_read_stats);
 int
 rte_sched_queue_read_stats(struct rte_sched_port *port,
 	uint32_t queue_id,
@@ -2055,7 +2055,7 @@ rte_sched_port_enqueue_qwa(struct rte_sched_port *port,
  * ----->|_______|----->|_______|----->|_______|----->|_______|----->
  *   p01            p11            p21            p31
  */
-RTE_EXPORT_SYMBOL(rte_sched_port_enqueue)
+RTE_EXPORT_SYMBOL(rte_sched_port_enqueue);
 int
 rte_sched_port_enqueue(struct rte_sched_port *port, struct rte_mbuf **pkts,
 		       uint32_t n_pkts)
@@ -2967,7 +2967,7 @@ rte_sched_port_exceptions(struct rte_sched_subport *subport, int second_pass)
 	return exceptions;
 }
 
-RTE_EXPORT_SYMBOL(rte_sched_port_dequeue)
+RTE_EXPORT_SYMBOL(rte_sched_port_dequeue);
 int
 rte_sched_port_dequeue(struct rte_sched_port *port, struct rte_mbuf **pkts, uint32_t n_pkts)
 {

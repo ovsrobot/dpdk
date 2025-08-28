@@ -100,7 +100,7 @@ color_snprintf(char *buf, size_t len, enum log_field field,
  *   auto - enable if stderr is a terminal
  *   never - color output is disabled.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(eal_log_color)
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_color);
 int
 eal_log_color(const char *mode)
 {

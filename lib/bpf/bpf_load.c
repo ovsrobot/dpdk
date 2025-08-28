@@ -80,7 +80,7 @@ bpf_check_xsym(const struct rte_bpf_xsym *xsym)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_bpf_load)
+RTE_EXPORT_SYMBOL(rte_bpf_load);
 struct rte_bpf *
 rte_bpf_load(const struct rte_bpf_prm *prm)
 {

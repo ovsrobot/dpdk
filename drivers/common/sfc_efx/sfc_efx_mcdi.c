@@ -265,7 +265,7 @@ sfc_efx_mcdi_ev_proxy_response(void *arg, uint32_t handle, efx_rc_t result)
 	mcdi->proxy_result = result;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(sfc_efx_mcdi_init)
+RTE_EXPORT_INTERNAL_SYMBOL(sfc_efx_mcdi_init);
 int
 sfc_efx_mcdi_init(struct sfc_efx_mcdi *mcdi,
 		  uint32_t logtype, const char *log_prefix, efx_nic_t *nic,
@@ -322,7 +322,7 @@ fail_dma_alloc:
 	return rc;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(sfc_efx_mcdi_fini)
+RTE_EXPORT_INTERNAL_SYMBOL(sfc_efx_mcdi_fini);
 void
 sfc_efx_mcdi_fini(struct sfc_efx_mcdi *mcdi)
 {

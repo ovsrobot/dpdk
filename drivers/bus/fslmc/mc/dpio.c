@@ -28,7 +28,7 @@
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_open)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_open);
 int dpio_open(struct fsl_mc_io *mc_io,
 	      uint32_t cmd_flags,
 	      int dpio_id,
@@ -64,7 +64,7 @@ int dpio_open(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_close)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_close);
 int dpio_close(struct fsl_mc_io *mc_io,
 	       uint32_t cmd_flags,
 	       uint16_t token)
@@ -177,7 +177,7 @@ int dpio_destroy(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_enable)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_enable);
 int dpio_enable(struct fsl_mc_io *mc_io,
 		uint32_t cmd_flags,
 		uint16_t token)
@@ -201,7 +201,7 @@ int dpio_enable(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_disable)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_disable);
 int dpio_disable(struct fsl_mc_io *mc_io,
 		 uint32_t cmd_flags,
 		 uint16_t token)
@@ -259,7 +259,7 @@ int dpio_is_enabled(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_reset);
 int dpio_reset(struct fsl_mc_io *mc_io,
 	       uint32_t cmd_flags,
 	       uint16_t token)
@@ -284,7 +284,7 @@ int dpio_reset(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_get_attributes)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_get_attributes);
 int dpio_get_attributes(struct fsl_mc_io *mc_io,
 			uint32_t cmd_flags,
 			uint16_t token,
@@ -330,7 +330,7 @@ int dpio_get_attributes(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_set_stashing_destination)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_set_stashing_destination);
 int dpio_set_stashing_destination(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
@@ -359,7 +359,7 @@ int dpio_set_stashing_destination(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_get_stashing_destination)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_get_stashing_destination);
 int dpio_get_stashing_destination(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
@@ -396,7 +396,7 @@ int dpio_get_stashing_destination(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_set_stashing_destination_by_core_id)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_set_stashing_destination_by_core_id);
 int dpio_set_stashing_destination_by_core_id(struct fsl_mc_io *mc_io,
 					uint32_t cmd_flags,
 					uint16_t token,
@@ -425,7 +425,7 @@ int dpio_set_stashing_destination_by_core_id(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_set_stashing_destination_source)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_set_stashing_destination_source);
 int dpio_set_stashing_destination_source(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
@@ -454,7 +454,7 @@ int dpio_set_stashing_destination_source(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_get_stashing_destination_source)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_get_stashing_destination_source);
 int dpio_get_stashing_destination_source(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
@@ -491,7 +491,7 @@ int dpio_get_stashing_destination_source(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_add_static_dequeue_channel)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_add_static_dequeue_channel);
 int dpio_add_static_dequeue_channel(struct fsl_mc_io *mc_io,
 				    uint32_t cmd_flags,
 				    uint16_t token,
@@ -531,7 +531,7 @@ int dpio_add_static_dequeue_channel(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(dpio_remove_static_dequeue_channel)
+RTE_EXPORT_INTERNAL_SYMBOL(dpio_remove_static_dequeue_channel);
 int dpio_remove_static_dequeue_channel(struct fsl_mc_io *mc_io,
 				       uint32_t cmd_flags,
 				       uint16_t token,

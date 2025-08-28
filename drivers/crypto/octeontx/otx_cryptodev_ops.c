@@ -657,7 +657,7 @@ submit_request_to_sso(struct ssows *ws, uintptr_t req,
 	ssovf_store_pair(add_work, req, ws->grps[rsp_info->queue_id]);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(otx_crypto_adapter_enqueue)
+RTE_EXPORT_INTERNAL_SYMBOL(otx_crypto_adapter_enqueue);
 uint16_t __rte_hot
 otx_crypto_adapter_enqueue(void *port, struct rte_crypto_op *op)
 {
@@ -948,7 +948,7 @@ otx_cpt_dequeue_sym(void *qptr, struct rte_crypto_op **ops, uint16_t nb_ops)
 	return otx_cpt_pkt_dequeue(qptr, ops, nb_ops, OP_TYPE_SYM);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(otx_crypto_adapter_dequeue)
+RTE_EXPORT_INTERNAL_SYMBOL(otx_crypto_adapter_dequeue);
 uintptr_t __rte_hot
 otx_crypto_adapter_dequeue(uintptr_t get_work1)
 {

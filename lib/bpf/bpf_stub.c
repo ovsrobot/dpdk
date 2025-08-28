@@ -11,7 +11,7 @@
  */
 
 #ifndef RTE_LIBRTE_BPF_ELF
-RTE_EXPORT_SYMBOL(rte_bpf_elf_load)
+RTE_EXPORT_SYMBOL(rte_bpf_elf_load);
 struct rte_bpf *
 rte_bpf_elf_load(const struct rte_bpf_prm *prm, const char *fname,
 	const char *sname)
@@ -29,7 +29,7 @@ rte_bpf_elf_load(const struct rte_bpf_prm *prm, const char *fname,
 #endif
 
 #ifndef RTE_HAS_LIBPCAP
-RTE_EXPORT_SYMBOL(rte_bpf_convert)
+RTE_EXPORT_SYMBOL(rte_bpf_convert);
 struct rte_bpf_prm *
 rte_bpf_convert(const struct bpf_program *prog)
 {

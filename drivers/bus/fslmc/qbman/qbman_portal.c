@@ -407,7 +407,7 @@ uint32_t qbman_swp_interrupt_read_status(struct qbman_swp *p)
 	return qbman_cinh_read(&p->sys, QBMAN_CINH_SWP_ISR);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_interrupt_clear_status)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_interrupt_clear_status);
 void qbman_swp_interrupt_clear_status(struct qbman_swp *p, uint32_t mask)
 {
 	qbman_cinh_write(&p->sys, QBMAN_CINH_SWP_ISR, mask);
@@ -609,13 +609,13 @@ enum qb_enqueue_commands {
 #define QB_ENQUEUE_CMD_NLIS_SHIFT            14
 #define QB_ENQUEUE_CMD_IS_NESN_SHIFT         15
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_clear)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_clear);
 void qbman_eq_desc_clear(struct qbman_eq_desc *d)
 {
 	memset(d, 0, sizeof(*d));
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_no_orp)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_no_orp);
 void qbman_eq_desc_set_no_orp(struct qbman_eq_desc *d, int respond_success)
 {
 	d->eq.verb &= ~(1 << QB_ENQUEUE_CMD_ORP_ENABLE_SHIFT);
@@ -625,7 +625,7 @@ void qbman_eq_desc_set_no_orp(struct qbman_eq_desc *d, int respond_success)
 		d->eq.verb |= enqueue_rejects_to_fq;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_orp)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_orp);
 void qbman_eq_desc_set_orp(struct qbman_eq_desc *d, int respond_success,
 			   uint16_t opr_id, uint16_t seqnum, int incomplete)
 {
@@ -665,7 +665,7 @@ void qbman_eq_desc_set_orp_nesn(struct qbman_eq_desc *d, uint16_t opr_id,
 	d->eq.seqnum |= 1 << QB_ENQUEUE_CMD_IS_NESN_SHIFT;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_response)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_response);
 void qbman_eq_desc_set_response(struct qbman_eq_desc *d,
 				dma_addr_t storage_phys,
 				int stash)
@@ -674,20 +674,20 @@ void qbman_eq_desc_set_response(struct qbman_eq_desc *d,
 	d->eq.wae = stash;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_token)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_token);
 void qbman_eq_desc_set_token(struct qbman_eq_desc *d, uint8_t token)
 {
 	d->eq.rspid = token;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_fq)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_fq);
 void qbman_eq_desc_set_fq(struct qbman_eq_desc *d, uint32_t fqid)
 {
 	d->eq.verb &= ~(1 << QB_ENQUEUE_CMD_TARGET_TYPE_SHIFT);
 	d->eq.tgtid = fqid;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_qd)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_qd);
 void qbman_eq_desc_set_qd(struct qbman_eq_desc *d, uint32_t qdid,
 			  uint16_t qd_bin, uint8_t qd_prio)
 {
@@ -705,7 +705,7 @@ void qbman_eq_desc_set_eqdi(struct qbman_eq_desc *d, int enable)
 		d->eq.verb &= ~(1 << QB_ENQUEUE_CMD_IRQ_ON_DISPATCH_SHIFT);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_dca)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_eq_desc_set_dca);
 void qbman_eq_desc_set_dca(struct qbman_eq_desc *d, int enable,
 			   uint8_t dqrr_idx, int park)
 {
@@ -1227,7 +1227,7 @@ static int qbman_swp_enqueue_multiple_mem_back(struct qbman_swp *s,
 	return num_enqueued;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_enqueue_multiple)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_enqueue_multiple);
 int qbman_swp_enqueue_multiple(struct qbman_swp *s,
 				      const struct qbman_eq_desc *d,
 				      const struct qbman_fd *fd,
@@ -1502,7 +1502,7 @@ static int qbman_swp_enqueue_multiple_fd_mem_back(struct qbman_swp *s,
 	return num_enqueued;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_enqueue_multiple_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_enqueue_multiple_fd);
 int qbman_swp_enqueue_multiple_fd(struct qbman_swp *s,
 					 const struct qbman_eq_desc *d,
 					 struct qbman_fd **fd,
@@ -1758,7 +1758,7 @@ static int qbman_swp_enqueue_multiple_desc_mem_back(struct qbman_swp *s,
 
 	return num_enqueued;
 }
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_enqueue_multiple_desc)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_enqueue_multiple_desc);
 int qbman_swp_enqueue_multiple_desc(struct qbman_swp *s,
 					   const struct qbman_eq_desc *d,
 					   const struct qbman_fd *fd,
@@ -1785,7 +1785,7 @@ void qbman_swp_push_get(struct qbman_swp *s, uint8_t channel_idx, int *enabled)
 	*enabled = src | (1 << channel_idx);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_push_set)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_push_set);
 void qbman_swp_push_set(struct qbman_swp *s, uint8_t channel_idx, int enable)
 {
 	uint16_t dqsrc;
@@ -1823,13 +1823,13 @@ enum qb_pull_dt_e {
 	qb_pull_dt_framequeue
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_clear)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_clear);
 void qbman_pull_desc_clear(struct qbman_pull_desc *d)
 {
 	memset(d, 0, sizeof(*d));
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_set_storage)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_set_storage);
 void qbman_pull_desc_set_storage(struct qbman_pull_desc *d,
 				 struct qbman_result *storage,
 				 dma_addr_t storage_phys,
@@ -1850,7 +1850,7 @@ void qbman_pull_desc_set_storage(struct qbman_pull_desc *d,
 	d->pull.rsp_addr = storage_phys;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_set_numframes)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_set_numframes);
 void qbman_pull_desc_set_numframes(struct qbman_pull_desc *d,
 				   uint8_t numframes)
 {
@@ -1862,7 +1862,7 @@ void qbman_pull_desc_set_token(struct qbman_pull_desc *d, uint8_t token)
 	d->pull.tok = token;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_set_fq)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_pull_desc_set_fq);
 void qbman_pull_desc_set_fq(struct qbman_pull_desc *d, uint32_t fqid)
 {
 	d->pull.verb |= 1 << QB_VDQCR_VERB_DCT_SHIFT;
@@ -1978,7 +1978,7 @@ static int qbman_swp_pull_mem_back(struct qbman_swp *s,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_pull)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_pull);
 int qbman_swp_pull(struct qbman_swp *s, struct qbman_pull_desc *d)
 {
 	if (!s->stash_off)
@@ -2006,7 +2006,7 @@ int qbman_swp_pull(struct qbman_swp *s, struct qbman_pull_desc *d)
 
 #include <rte_prefetch.h>
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_prefetch_dqrr_next)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_prefetch_dqrr_next);
 void qbman_swp_prefetch_dqrr_next(struct qbman_swp *s)
 {
 	const struct qbman_result *p;
@@ -2020,7 +2020,7 @@ void qbman_swp_prefetch_dqrr_next(struct qbman_swp *s)
  * only once, so repeated calls can return a sequence of DQRR entries, without
  * requiring they be consumed immediately or in any particular order.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_next)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_next);
 const struct qbman_result *qbman_swp_dqrr_next(struct qbman_swp *s)
 {
 	if (!s->stash_off)
@@ -2224,7 +2224,7 @@ const struct qbman_result *qbman_swp_dqrr_next_mem_back(struct qbman_swp *s)
 }
 
 /* Consume DQRR entries previously returned from qbman_swp_dqrr_next(). */
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_consume)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_consume);
 void qbman_swp_dqrr_consume(struct qbman_swp *s,
 			    const struct qbman_result *dq)
 {
@@ -2233,7 +2233,7 @@ void qbman_swp_dqrr_consume(struct qbman_swp *s,
 }
 
 /* Consume DQRR entries previously returned from qbman_swp_dqrr_next(). */
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_idx_consume)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_dqrr_idx_consume);
 void qbman_swp_dqrr_idx_consume(struct qbman_swp *s,
 			    uint8_t dqrr_index)
 {
@@ -2244,7 +2244,7 @@ void qbman_swp_dqrr_idx_consume(struct qbman_swp *s,
 /* Polling user-provided storage */
 /*********************************/
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_has_new_result)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_has_new_result);
 int qbman_result_has_new_result(struct qbman_swp *s,
 				struct qbman_result *dq)
 {
@@ -2273,7 +2273,7 @@ int qbman_result_has_new_result(struct qbman_swp *s,
 	return 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_check_new_result)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_check_new_result);
 int qbman_check_new_result(struct qbman_result *dq)
 {
 	if (dq->dq.tok == 0)
@@ -2289,7 +2289,7 @@ int qbman_check_new_result(struct qbman_result *dq)
 	return 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_check_command_complete)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_check_command_complete);
 int qbman_check_command_complete(struct qbman_result *dq)
 {
 	struct qbman_swp *s;
@@ -2377,19 +2377,19 @@ int qbman_result_is_FQPN(const struct qbman_result *dq)
 
 /* These APIs assume qbman_result_is_DQ() is TRUE */
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_flags)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_flags);
 uint8_t qbman_result_DQ_flags(const struct qbman_result *dq)
 {
 	return dq->dq.stat;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_seqnum)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_seqnum);
 uint16_t qbman_result_DQ_seqnum(const struct qbman_result *dq)
 {
 	return dq->dq.seqnum;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_odpid)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_odpid);
 uint16_t qbman_result_DQ_odpid(const struct qbman_result *dq)
 {
 	return dq->dq.oprid;
@@ -2410,13 +2410,13 @@ uint32_t qbman_result_DQ_frame_count(const struct qbman_result *dq)
 	return dq->dq.fq_frm_cnt;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_fqd_ctx)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_fqd_ctx);
 uint64_t qbman_result_DQ_fqd_ctx(const struct qbman_result *dq)
 {
 	return dq->dq.fqd_ctx;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_DQ_fd);
 const struct qbman_fd *qbman_result_DQ_fd(const struct qbman_result *dq)
 {
 	return (const struct qbman_fd *)&dq->dq.fd[0];
@@ -2425,7 +2425,7 @@ const struct qbman_fd *qbman_result_DQ_fd(const struct qbman_result *dq)
 /**************************************/
 /* Parsing state-change notifications */
 /**************************************/
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_SCN_state)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_SCN_state);
 uint8_t qbman_result_SCN_state(const struct qbman_result *scn)
 {
 	return scn->scn.state;
@@ -2485,25 +2485,25 @@ uint64_t qbman_result_cgcu_icnt(const struct qbman_result *scn)
 /********************/
 /* Parsing EQ RESP  */
 /********************/
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_fd);
 struct qbman_fd *qbman_result_eqresp_fd(struct qbman_result *eqresp)
 {
 	return (struct qbman_fd *)&eqresp->eq_resp.fd[0];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_set_rspid)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_set_rspid);
 void qbman_result_eqresp_set_rspid(struct qbman_result *eqresp, uint8_t val)
 {
 	eqresp->eq_resp.rspid = val;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_rspid)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_rspid);
 uint8_t qbman_result_eqresp_rspid(struct qbman_result *eqresp)
 {
 	return eqresp->eq_resp.rspid;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_rc)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_result_eqresp_rc);
 uint8_t qbman_result_eqresp_rc(struct qbman_result *eqresp)
 {
 	if (eqresp->eq_resp.rc == 0xE)
@@ -2518,14 +2518,14 @@ uint8_t qbman_result_eqresp_rc(struct qbman_result *eqresp)
 #define QB_BR_RC_VALID_SHIFT  5
 #define QB_BR_RCDI_SHIFT      6
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_release_desc_clear)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_release_desc_clear);
 void qbman_release_desc_clear(struct qbman_release_desc *d)
 {
 	memset(d, 0, sizeof(*d));
 	d->br.verb = 1 << QB_BR_RC_VALID_SHIFT;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_release_desc_set_bpid)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_release_desc_set_bpid);
 void qbman_release_desc_set_bpid(struct qbman_release_desc *d, uint16_t bpid)
 {
 	d->br.bpid = bpid;
@@ -2640,7 +2640,7 @@ static int qbman_swp_release_mem_back(struct qbman_swp *s,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_release)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_release);
 int qbman_swp_release(struct qbman_swp *s,
 			     const struct qbman_release_desc *d,
 			     const uint64_t *buffers,
@@ -2767,7 +2767,7 @@ static int qbman_swp_acquire_cinh_direct(struct qbman_swp *s, uint16_t bpid,
 	return num;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_acquire)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_swp_acquire);
 int qbman_swp_acquire(struct qbman_swp *s, uint16_t bpid, uint64_t *buffers,
 		      unsigned int num_buffers)
 {
@@ -2951,13 +2951,13 @@ int qbman_swp_CDAN_set_context_enable(struct qbman_swp *s, uint16_t channelid,
 				  1, ctx);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_get_dqrr_idx)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_get_dqrr_idx);
 uint8_t qbman_get_dqrr_idx(const struct qbman_result *dqrr)
 {
 	return QBMAN_IDX_FROM_DQRR(dqrr);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(qbman_get_dqrr_from_idx)
+RTE_EXPORT_INTERNAL_SYMBOL(qbman_get_dqrr_from_idx);
 struct qbman_result *qbman_get_dqrr_from_idx(struct qbman_swp *s, uint8_t idx)
 {
 	struct qbman_result *dq;

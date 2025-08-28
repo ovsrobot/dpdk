@@ -13,7 +13,7 @@
 #include "base/ifpga_sec_mgr.h"
 
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_dev_id)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_dev_id);
 int
 rte_pmd_ifpga_get_dev_id(const char *pci_addr, uint16_t *dev_id)
 {
@@ -102,7 +102,7 @@ get_share_data(struct opae_adapter *adapter)
 	return sd;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_rsu_status)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_rsu_status);
 int
 rte_pmd_ifpga_get_rsu_status(uint16_t dev_id, uint32_t *stat, uint32_t *prog)
 {
@@ -125,7 +125,7 @@ rte_pmd_ifpga_get_rsu_status(uint16_t dev_id, uint32_t *stat, uint32_t *prog)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_set_rsu_status)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_set_rsu_status);
 int
 rte_pmd_ifpga_set_rsu_status(uint16_t dev_id, uint32_t stat, uint32_t prog)
 {
@@ -267,7 +267,7 @@ get_port_property(struct opae_adapter *adapter, uint16_t port,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_property)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_property);
 int
 rte_pmd_ifpga_get_property(uint16_t dev_id, rte_pmd_ifpga_prop *prop)
 {
@@ -304,7 +304,7 @@ unlock_dev:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_phy_info)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_get_phy_info);
 int
 rte_pmd_ifpga_get_phy_info(uint16_t dev_id, rte_pmd_ifpga_phy_info *info)
 {
@@ -345,7 +345,7 @@ unlock_dev:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_update_flash)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_update_flash);
 int
 rte_pmd_ifpga_update_flash(uint16_t dev_id, const char *image,
 	uint64_t *status)
@@ -359,7 +359,7 @@ rte_pmd_ifpga_update_flash(uint16_t dev_id, const char *image,
 	return opae_mgr_update_flash(adapter->mgr, image, status);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_stop_update)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_stop_update);
 int
 rte_pmd_ifpga_stop_update(uint16_t dev_id, int force)
 {
@@ -372,7 +372,7 @@ rte_pmd_ifpga_stop_update(uint16_t dev_id, int force)
 	return opae_mgr_stop_flash_update(adapter->mgr, force);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_reboot_try)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_reboot_try);
 int
 rte_pmd_ifpga_reboot_try(uint16_t dev_id)
 {
@@ -399,7 +399,7 @@ rte_pmd_ifpga_reboot_try(uint16_t dev_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_reload)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_reload);
 int
 rte_pmd_ifpga_reload(uint16_t dev_id, int type, int page)
 {
@@ -412,7 +412,7 @@ rte_pmd_ifpga_reload(uint16_t dev_id, int type, int page)
 	return opae_mgr_reload(adapter->mgr, type, page);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_partial_reconfigure)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_partial_reconfigure);
 int
 rte_pmd_ifpga_partial_reconfigure(uint16_t dev_id, int port, const char *file)
 {
@@ -427,7 +427,7 @@ rte_pmd_ifpga_partial_reconfigure(uint16_t dev_id, int port, const char *file)
 	return ifpga_rawdev_partial_reconfigure(dev, port, file);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_ifpga_cleanup)
+RTE_EXPORT_SYMBOL(rte_pmd_ifpga_cleanup);
 void
 rte_pmd_ifpga_cleanup(void)
 {

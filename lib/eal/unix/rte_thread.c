@@ -119,7 +119,7 @@ thread_start_wrapper(void *arg)
 }
 #endif
 
-RTE_EXPORT_SYMBOL(rte_thread_create)
+RTE_EXPORT_SYMBOL(rte_thread_create);
 int
 rte_thread_create(rte_thread_t *thread_id,
 		const rte_thread_attr_t *thread_attr,
@@ -228,7 +228,7 @@ cleanup:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_join)
+RTE_EXPORT_SYMBOL(rte_thread_join);
 int
 rte_thread_join(rte_thread_t thread_id, uint32_t *value_ptr)
 {
@@ -251,21 +251,21 @@ rte_thread_join(rte_thread_t thread_id, uint32_t *value_ptr)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_detach)
+RTE_EXPORT_SYMBOL(rte_thread_detach);
 int
 rte_thread_detach(rte_thread_t thread_id)
 {
 	return pthread_detach((pthread_t)thread_id.opaque_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_equal)
+RTE_EXPORT_SYMBOL(rte_thread_equal);
 int
 rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
 {
 	return pthread_equal((pthread_t)t1.opaque_id, (pthread_t)t2.opaque_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_self)
+RTE_EXPORT_SYMBOL(rte_thread_self);
 rte_thread_t
 rte_thread_self(void)
 {
@@ -278,7 +278,7 @@ rte_thread_self(void)
 	return thread_id;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_get_priority)
+RTE_EXPORT_SYMBOL(rte_thread_get_priority);
 int
 rte_thread_get_priority(rte_thread_t thread_id,
 	enum rte_thread_priority *priority)
@@ -301,7 +301,7 @@ cleanup:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_set_priority)
+RTE_EXPORT_SYMBOL(rte_thread_set_priority);
 int
 rte_thread_set_priority(rte_thread_t thread_id,
 	enum rte_thread_priority priority)
@@ -323,7 +323,7 @@ rte_thread_set_priority(rte_thread_t thread_id,
 		&param);
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_key_create)
+RTE_EXPORT_SYMBOL(rte_thread_key_create);
 int
 rte_thread_key_create(rte_thread_key *key, void (*destructor)(void *))
 {
@@ -346,7 +346,7 @@ rte_thread_key_create(rte_thread_key *key, void (*destructor)(void *))
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_key_delete)
+RTE_EXPORT_SYMBOL(rte_thread_key_delete);
 int
 rte_thread_key_delete(rte_thread_key key)
 {
@@ -369,7 +369,7 @@ rte_thread_key_delete(rte_thread_key key)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_value_set)
+RTE_EXPORT_SYMBOL(rte_thread_value_set);
 int
 rte_thread_value_set(rte_thread_key key, const void *value)
 {
@@ -390,7 +390,7 @@ rte_thread_value_set(rte_thread_key key, const void *value)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_value_get)
+RTE_EXPORT_SYMBOL(rte_thread_value_get);
 void *
 rte_thread_value_get(rte_thread_key key)
 {
@@ -402,7 +402,7 @@ rte_thread_value_get(rte_thread_key key)
 	return pthread_getspecific(key->thread_index);
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_set_affinity_by_id)
+RTE_EXPORT_SYMBOL(rte_thread_set_affinity_by_id);
 int
 rte_thread_set_affinity_by_id(rte_thread_t thread_id,
 		const rte_cpuset_t *cpuset)
@@ -411,7 +411,7 @@ rte_thread_set_affinity_by_id(rte_thread_t thread_id,
 		sizeof(*cpuset), cpuset);
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_get_affinity_by_id)
+RTE_EXPORT_SYMBOL(rte_thread_get_affinity_by_id);
 int
 rte_thread_get_affinity_by_id(rte_thread_t thread_id,
 		rte_cpuset_t *cpuset)

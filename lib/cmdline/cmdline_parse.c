@@ -50,7 +50,7 @@ iscomment(char c)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_isendoftoken)
+RTE_EXPORT_SYMBOL(cmdline_isendoftoken);
 int
 cmdline_isendoftoken(char c)
 {
@@ -298,21 +298,21 @@ __cmdline_parse(struct cmdline *cl, const char *buf, bool call_fn)
 	return linelen;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_parse)
+RTE_EXPORT_SYMBOL(cmdline_parse);
 int
 cmdline_parse(struct cmdline *cl, const char *buf)
 {
 	return __cmdline_parse(cl, buf, true);
 }
 
-RTE_EXPORT_SYMBOL(cmdline_parse_check)
+RTE_EXPORT_SYMBOL(cmdline_parse_check);
 int
 cmdline_parse_check(struct cmdline *cl, const char *buf)
 {
 	return __cmdline_parse(cl, buf, false);
 }
 
-RTE_EXPORT_SYMBOL(cmdline_complete)
+RTE_EXPORT_SYMBOL(cmdline_complete);
 int
 cmdline_complete(struct cmdline *cl, const char *buf, int *state,
 		 char *dst, unsigned int size)

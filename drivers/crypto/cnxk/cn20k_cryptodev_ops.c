@@ -776,7 +776,7 @@ put:
 	return i;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cpt_crypto_adapter_enqueue)
+RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cpt_crypto_adapter_enqueue);
 uint16_t __rte_hot
 cn20k_cpt_crypto_adapter_enqueue(void *ws, struct rte_event ev[], uint16_t nb_events)
 {
@@ -1167,7 +1167,7 @@ temp_sess_free:
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cpt_crypto_adapter_dequeue)
+RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cpt_crypto_adapter_dequeue);
 uintptr_t
 cn20k_cpt_crypto_adapter_dequeue(uintptr_t get_work1)
 {
@@ -1192,7 +1192,7 @@ cn20k_cpt_crypto_adapter_dequeue(uintptr_t get_work1)
 	return (uintptr_t)cop;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cpt_crypto_adapter_vector_dequeue)
+RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cpt_crypto_adapter_vector_dequeue);
 uintptr_t
 cn20k_cpt_crypto_adapter_vector_dequeue(uintptr_t get_work1)
 {
@@ -1707,7 +1707,7 @@ cn20k_sym_configure_raw_dp_ctx(struct rte_cryptodev *dev, uint16_t qp_id,
 }
 
 #if defined(RTE_ARCH_ARM64)
-RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cryptodev_sec_inb_rx_inject)
+RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cryptodev_sec_inb_rx_inject);
 uint16_t __rte_hot
 cn20k_cryptodev_sec_inb_rx_inject(void *dev, struct rte_mbuf **pkts,
 				  struct rte_security_session **sess, uint16_t nb_pkts)
@@ -1851,7 +1851,7 @@ exit:
 	return count + i;
 }
 #else
-RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cryptodev_sec_inb_rx_inject)
+RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cryptodev_sec_inb_rx_inject);
 uint16_t __rte_hot
 cn20k_cryptodev_sec_inb_rx_inject(void *dev, struct rte_mbuf **pkts,
 				  struct rte_security_session **sess, uint16_t nb_pkts)
@@ -1864,7 +1864,7 @@ cn20k_cryptodev_sec_inb_rx_inject(void *dev, struct rte_mbuf **pkts,
 }
 #endif
 
-RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cryptodev_sec_rx_inject_configure)
+RTE_EXPORT_INTERNAL_SYMBOL(cn20k_cryptodev_sec_rx_inject_configure);
 int
 cn20k_cryptodev_sec_rx_inject_configure(void *device, uint16_t port_id, bool enable)
 {

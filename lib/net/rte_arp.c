@@ -6,7 +6,7 @@
 #include <rte_arp.h>
 
 #define RARP_PKT_SIZE	64
-RTE_EXPORT_SYMBOL(rte_net_make_rarp_packet)
+RTE_EXPORT_SYMBOL(rte_net_make_rarp_packet);
 struct rte_mbuf *
 rte_net_make_rarp_packet(struct rte_mempool *mpool,
 		const struct rte_ether_addr *mac)

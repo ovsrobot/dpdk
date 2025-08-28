@@ -572,7 +572,7 @@ find_vhost_user_socket(const char *path)
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_attach_vdpa_device)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_attach_vdpa_device);
 int
 rte_vhost_driver_attach_vdpa_device(const char *path,
 		struct rte_vdpa_device *dev)
@@ -591,7 +591,7 @@ rte_vhost_driver_attach_vdpa_device(const char *path,
 	return vsocket ? 0 : -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_detach_vdpa_device)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_detach_vdpa_device);
 int
 rte_vhost_driver_detach_vdpa_device(const char *path)
 {
@@ -606,7 +606,7 @@ rte_vhost_driver_detach_vdpa_device(const char *path)
 	return vsocket ? 0 : -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_get_vdpa_device)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_get_vdpa_device);
 struct rte_vdpa_device *
 rte_vhost_driver_get_vdpa_device(const char *path)
 {
@@ -622,7 +622,7 @@ rte_vhost_driver_get_vdpa_device(const char *path)
 	return dev;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_get_vdpa_dev_type)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_get_vdpa_dev_type);
 int
 rte_vhost_driver_get_vdpa_dev_type(const char *path, uint32_t *type)
 {
@@ -651,7 +651,7 @@ unlock_exit:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_disable_features)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_disable_features);
 int
 rte_vhost_driver_disable_features(const char *path, uint64_t features)
 {
@@ -672,7 +672,7 @@ rte_vhost_driver_disable_features(const char *path, uint64_t features)
 	return vsocket ? 0 : -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_enable_features)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_enable_features);
 int
 rte_vhost_driver_enable_features(const char *path, uint64_t features)
 {
@@ -696,7 +696,7 @@ rte_vhost_driver_enable_features(const char *path, uint64_t features)
 	return vsocket ? 0 : -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_set_features)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_set_features);
 int
 rte_vhost_driver_set_features(const char *path, uint64_t features)
 {
@@ -718,7 +718,7 @@ rte_vhost_driver_set_features(const char *path, uint64_t features)
 	return vsocket ? 0 : -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_get_features)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_get_features);
 int
 rte_vhost_driver_get_features(const char *path, uint64_t *features)
 {
@@ -754,7 +754,7 @@ unlock_exit:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_set_protocol_features)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_set_protocol_features);
 int
 rte_vhost_driver_set_protocol_features(const char *path,
 		uint64_t protocol_features)
@@ -769,7 +769,7 @@ rte_vhost_driver_set_protocol_features(const char *path,
 	return vsocket ? 0 : -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_get_protocol_features)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_get_protocol_features);
 int
 rte_vhost_driver_get_protocol_features(const char *path,
 		uint64_t *protocol_features)
@@ -808,7 +808,7 @@ unlock_exit:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_get_queue_num)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_get_queue_num);
 int
 rte_vhost_driver_get_queue_num(const char *path, uint32_t *queue_num)
 {
@@ -844,7 +844,7 @@ unlock_exit:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_set_max_queue_num)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_set_max_queue_num);
 int
 rte_vhost_driver_set_max_queue_num(const char *path, uint32_t max_queue_pairs)
 {
@@ -902,7 +902,7 @@ vhost_user_socket_mem_free(struct vhost_user_socket *vsocket)
  * (the default case), or client (when RTE_VHOST_USER_CLIENT) flag
  * is set.
  */
-RTE_EXPORT_SYMBOL(rte_vhost_driver_register)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_register);
 int
 rte_vhost_driver_register(const char *path, uint64_t flags)
 {
@@ -1068,7 +1068,7 @@ vhost_user_remove_reconnect(struct vhost_user_socket *vsocket)
 /**
  * Unregister the specified vhost socket
  */
-RTE_EXPORT_SYMBOL(rte_vhost_driver_unregister)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_unregister);
 int
 rte_vhost_driver_unregister(const char *path)
 {
@@ -1152,7 +1152,7 @@ again:
 /*
  * Register ops so that we can add/remove device to data core.
  */
-RTE_EXPORT_SYMBOL(rte_vhost_driver_callback_register)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_callback_register);
 int
 rte_vhost_driver_callback_register(const char *path,
 	struct rte_vhost_device_ops const * const ops)
@@ -1180,7 +1180,7 @@ vhost_driver_callback_get(const char *path)
 	return vsocket ? vsocket->notify_ops : NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_driver_start)
+RTE_EXPORT_SYMBOL(rte_vhost_driver_start);
 int
 rte_vhost_driver_start(const char *path)
 {

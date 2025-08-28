@@ -30,10 +30,10 @@
 struct rte_fslmc_bus rte_fslmc_bus;
 
 #define DPAA2_SEQN_DYNFIELD_NAME "dpaa2_seqn_dynfield"
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_seqn_dynfield_offset)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_seqn_dynfield_offset);
 int dpaa2_seqn_dynfield_offset = -1;
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_get_device_count)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_get_device_count);
 uint32_t
 rte_fslmc_get_device_count(enum rte_dpaa2_dev_type device_type)
 {
@@ -528,7 +528,7 @@ rte_fslmc_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
 }
 
 /*register a fslmc bus based dpaa2 driver */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_driver_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_driver_register);
 void
 rte_fslmc_driver_register(struct rte_dpaa2_driver *driver)
 {
@@ -538,7 +538,7 @@ rte_fslmc_driver_register(struct rte_dpaa2_driver *driver)
 }
 
 /*un-register a fslmc bus based dpaa2 driver */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_driver_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_fslmc_driver_unregister);
 void
 rte_fslmc_driver_unregister(struct rte_dpaa2_driver *driver)
 {

@@ -1171,7 +1171,7 @@ static struct rte_tailq_elem rte_swx_ctl_pipeline_tailq = {
 
 EAL_REGISTER_TAILQ(rte_swx_ctl_pipeline_tailq)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_find, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_find, 22.11);
 struct rte_swx_ctl_pipeline *
 rte_swx_ctl_pipeline_find(const char *name)
 {
@@ -1251,7 +1251,7 @@ ctl_unregister(struct rte_swx_ctl_pipeline *ctl)
 	rte_mcfg_tailq_write_unlock();
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_free, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_free, 20.11);
 void
 rte_swx_ctl_pipeline_free(struct rte_swx_ctl_pipeline *ctl)
 {
@@ -1274,7 +1274,7 @@ rte_swx_ctl_pipeline_free(struct rte_swx_ctl_pipeline *ctl)
 	free(ctl);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_create, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_create, 20.11);
 struct rte_swx_ctl_pipeline *
 rte_swx_ctl_pipeline_create(struct rte_swx_pipeline *p)
 {
@@ -1553,7 +1553,7 @@ error:
 	return NULL;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_entry_add, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_entry_add, 20.11);
 int
 rte_swx_ctl_pipeline_table_entry_add(struct rte_swx_ctl_pipeline *ctl,
 				     const char *table_name,
@@ -1668,7 +1668,7 @@ rte_swx_ctl_pipeline_table_entry_add(struct rte_swx_ctl_pipeline *ctl,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_entry_delete, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_entry_delete, 20.11);
 int
 rte_swx_ctl_pipeline_table_entry_delete(struct rte_swx_ctl_pipeline *ctl,
 					const char *table_name,
@@ -1759,7 +1759,7 @@ rte_swx_ctl_pipeline_table_entry_delete(struct rte_swx_ctl_pipeline *ctl,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_default_entry_add, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_default_entry_add, 20.11);
 int
 rte_swx_ctl_pipeline_table_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
 					     const char *table_name,
@@ -2097,7 +2097,7 @@ table_abort(struct rte_swx_ctl_pipeline *ctl, uint32_t table_id)
 	table_pending_default_free(table);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_add, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_add, 21.08);
 int
 rte_swx_ctl_pipeline_selector_group_add(struct rte_swx_ctl_pipeline *ctl,
 					const char *selector_name,
@@ -2125,7 +2125,7 @@ rte_swx_ctl_pipeline_selector_group_add(struct rte_swx_ctl_pipeline *ctl,
 	return -ENOSPC;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_delete, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_delete, 21.08);
 int
 rte_swx_ctl_pipeline_selector_group_delete(struct rte_swx_ctl_pipeline *ctl,
 					   const char *selector_name,
@@ -2177,7 +2177,7 @@ rte_swx_ctl_pipeline_selector_group_delete(struct rte_swx_ctl_pipeline *ctl,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_member_add, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_member_add, 21.08);
 int
 rte_swx_ctl_pipeline_selector_group_member_add(struct rte_swx_ctl_pipeline *ctl,
 					       const char *selector_name,
@@ -2237,7 +2237,7 @@ rte_swx_ctl_pipeline_selector_group_member_add(struct rte_swx_ctl_pipeline *ctl,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_member_delete, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_group_member_delete, 21.08);
 int
 rte_swx_ctl_pipeline_selector_group_member_delete(struct rte_swx_ctl_pipeline *ctl,
 						  const char *selector_name,
@@ -2491,7 +2491,7 @@ error:
 	return NULL;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_default_entry_add, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_default_entry_add, 21.11);
 int
 rte_swx_ctl_pipeline_learner_default_entry_add(struct rte_swx_ctl_pipeline *ctl,
 					       const char *learner_name,
@@ -2565,7 +2565,7 @@ learner_abort(struct rte_swx_ctl_pipeline *ctl, uint32_t learner_id)
 	learner_pending_default_free(l);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_commit, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_commit, 20.11);
 int
 rte_swx_ctl_pipeline_commit(struct rte_swx_ctl_pipeline *ctl, int abort_on_fail)
 {
@@ -2652,7 +2652,7 @@ rollback:
 	return status;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_abort, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_abort, 20.11);
 void
 rte_swx_ctl_pipeline_abort(struct rte_swx_ctl_pipeline *ctl)
 {
@@ -2987,7 +2987,7 @@ token_is_comment(const char *token)
 
 #define RTE_SWX_CTL_ENTRY_TOKENS_MAX 256
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_entry_read, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_entry_read, 20.11);
 struct rte_swx_table_entry *
 rte_swx_ctl_pipeline_table_entry_read(struct rte_swx_ctl_pipeline *ctl,
 				      const char *table_name,
@@ -3187,7 +3187,7 @@ error:
 	return NULL;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_default_entry_read, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_learner_default_entry_read, 21.11);
 struct rte_swx_table_entry *
 rte_swx_ctl_pipeline_learner_default_entry_read(struct rte_swx_ctl_pipeline *ctl,
 						const char *learner_name,
@@ -3340,7 +3340,7 @@ table_entry_printf(FILE *f,
 	fprintf(f, "\n");
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_fprintf, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_table_fprintf, 20.11);
 int
 rte_swx_ctl_pipeline_table_fprintf(FILE *f,
 				   struct rte_swx_ctl_pipeline *ctl,
@@ -3391,7 +3391,7 @@ rte_swx_ctl_pipeline_table_fprintf(FILE *f,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_fprintf, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_ctl_pipeline_selector_fprintf, 21.08);
 int
 rte_swx_ctl_pipeline_selector_fprintf(FILE *f,
 				      struct rte_swx_ctl_pipeline *ctl,

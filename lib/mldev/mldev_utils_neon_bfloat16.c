@@ -51,7 +51,7 @@ __float32_to_bfloat16_neon_f16x1(const float32_t *input, bfloat16_t *output)
 	vst1_lane_bf16(output, bf16x4, 0);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_bfloat16, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_bfloat16, 22.11);
 int
 rte_ml_io_float32_to_bfloat16(const void *input, void *output, uint64_t nb_elements)
 {
@@ -119,7 +119,7 @@ __bfloat16_to_float32_neon_f32x1(const bfloat16_t *input, float32_t *output)
 	vst1q_lane_f32(output, f32x4, 0);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_bfloat16_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_bfloat16_to_float32, 22.11);
 int
 rte_ml_io_bfloat16_to_float32(const void *input, void *output, uint64_t nb_elements)
 {
