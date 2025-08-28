@@ -410,9 +410,9 @@ pci_probe(void)
 		ret = pci_probe_all_drivers(dev);
 		if (ret < 0) {
 			if (ret != -EEXIST) {
-				PCI_LOG(ERR, "Requested device " PCI_PRI_FMT " cannot be used",
-					dev->addr.domain, dev->addr.bus,
-					dev->addr.devid, dev->addr.function);
+				PCI_LOG(ERR, "Requested device " PCI_PRI_FMT " cannot be used, ret = %d",
+					dev->addr.domain, dev->addr.bus, dev->addr.devid,
+					dev->addr.function, ret);
 				rte_errno = errno;
 				failed++;
 			}
