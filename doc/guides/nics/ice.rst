@@ -322,6 +322,18 @@ Runtime Configuration
 
     -a af:00.0,pps_out='[pin:0]'
 
+- ``Restore initial link state`` (default ``0``)
+
+  The user can request that the link be restored to its original state when
+  the device is stopped.
+
+    -a af:00.0,restore_link_state=1
+
+  The default behaviour is to bring the link down when the device is stopped,
+  however if restore_link_state is set and if the link state was up when the
+  device was started, then it will be restored to the up state when the
+  device is stopped.
+
 - ``Low Rx latency`` (default ``0``)
 
   vRAN workloads require low latency DPDK interface for the front haul
