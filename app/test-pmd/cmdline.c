@@ -679,6 +679,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"    Set a controllable LED associated with a certain"
 			" port on or off.\n\n"
 
+			"set port (port_id) link_state_on_close (down|up|initial)\n"
+			"    Set link state on close to down, up or initial for a port\n\n"
+
 			, list_pkt_forwarding_modes()
 		);
 	}
@@ -13857,6 +13860,58 @@ static cmdline_parse_inst_t cmd_set_dev_led = {
 	},
 };
 
+/* *** SET LINK STATE ON CLOSE FOR A CERTAIN PORT *** */
+struct cmd_link_state_on_close_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t port;
+	portid_t port_id;
+	cmdline_fixed_string_t link_state_on_close;
+	cmdline_fixed_string_t state;
+};
+
+static void
+cmd_set_link_state_on_close_parsed(void *parsed_result,
+		__rte_unused struct cmdline *cl,
+		__rte_unused void *data)
+{
+	struct cmd_link_state_on_close_result *res = parsed_result;
+
+	if (strcmp(res->state, "down") == 0)
+		set_link_state_on_close(res->port_id, RTE_ETH_LINK_STATE_ON_CLOSE_DOWN);
+	else if (strcmp(res->state, "up") == 0)
+		set_link_state_on_close(res->port_id, RTE_ETH_LINK_STATE_ON_CLOSE_UP);
+	else if (strcmp(res->state, "initial") == 0)
+		set_link_state_on_close(res->port_id, RTE_ETH_LINK_STATE_ON_CLOSE_INITIAL);
+	else
+		printf("Invalid state: %s\n", res->state);
+}
+
+static cmdline_parse_token_string_t cmd_link_state_on_close_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_link_state_on_close_result, set, "set");
+static cmdline_parse_token_string_t cmd_link_state_on_close_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_link_state_on_close_result, port, "port");
+static cmdline_parse_token_num_t cmd_link_state_on_close_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_link_state_on_close_result, port_id, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_link_state_on_close =
+	TOKEN_STRING_INITIALIZER(struct cmd_link_state_on_close_result, link_state_on_close,
+		"link_state_on_close");
+static cmdline_parse_token_string_t cmd_link_state_on_close_state =
+	TOKEN_STRING_INITIALIZER(struct cmd_link_state_on_close_result, state, "down#up#initial");
+
+static cmdline_parse_inst_t cmd_set_link_state_on_close = {
+	.f = cmd_set_link_state_on_close_parsed,
+	.data = NULL,
+	.help_str = "set port <port_id> link_state_on_close <down/up/initial>",
+	.tokens = {
+		(void *)&cmd_link_state_on_close_set,
+		(void *)&cmd_link_state_on_close_port,
+		(void *)&cmd_link_state_on_close_port_id,
+		(void *)&cmd_link_state_on_close,
+		(void *)&cmd_link_state_on_close_state,
+		NULL,
+	},
+};
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -14105,6 +14160,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_set_port_cman_config,
 	&cmd_config_tx_affinity_map,
 	&cmd_set_dev_led,
+	&cmd_set_link_state_on_close,
 	NULL,
 };
 

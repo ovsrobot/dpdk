@@ -1863,6 +1863,13 @@ Set a controllable LED associated with a certain port on or off::
 
    testpmd> set port (port_id) led (on|off)
 
+set port link_state_on_close
+~~~~~~~~~~~~
+
+Set the link state on close for a certain port::
+
+   testpmd> set port (port_id) link_state_on_close (down|up|initial)
+
 Port Functions
 --------------
 

@@ -5429,6 +5429,23 @@ set_dev_led(portid_t port_id, bool active)
 			port_id, rte_strerror(-ret));
 }
 
+void
+set_link_state_on_close(portid_t port_id, enum rte_eth_link_state_on_close state)
+{
+	int ret;
+
+	if (!rte_eth_dev_is_valid_port(port_id)) {
+		fprintf(stderr, "Error: Invalid port number %u\n", port_id);
+		return;
+	}
+
+	ret = rte_eth_dev_set_link_state_on_close(port_id, state);
+
+	if (ret < 0)
+		fprintf(stderr, "Error: Unable to set link state on close for port %u: %s\n",
+			port_id, rte_strerror(-ret));
+}
+
 int
 set_fwd_lcores_list(unsigned int *lcorelist, unsigned int nb_lc)
 {

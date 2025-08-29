@@ -558,6 +558,11 @@ uint32_t eth_link_speed;
 int proc_id;
 
 /*
+ * Link state on close.
+ */
+enum rte_eth_link_state_on_close close_state;
+
+/*
  * Number of processes in multi-process, used to
  * configure the queues to be polled.
  */
@@ -3102,6 +3107,17 @@ start_port(portid_t pid)
 
 		p_pi = pi;
 		cnt_pi++;
+
+		/* Configure link state on close */
+		if (close_state) {
+			diag = rte_eth_dev_set_link_state_on_close(pi, close_state);
+			if (diag < 0)
+				fprintf(stderr,
+					"Port %d: Failed to configure link state on close\n",
+					pi);
+			else
+				printf("Link state on close configured for port %i\n", pi);
+		}
 
 		/* start port */
 		diag = eth_dev_start_mp(pi);

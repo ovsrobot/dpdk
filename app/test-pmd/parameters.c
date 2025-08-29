@@ -253,6 +253,8 @@ enum {
 	TESTPMD_OPT_NUM_PROCS_NUM,
 #define TESTPMD_OPT_PROC_ID "proc-id"
 	TESTPMD_OPT_PROC_ID_NUM,
+#define TESTPMD_OPT_LINK_STATE_ON_CLOSE "link_state_on_close"
+	TESTPMD_OPT_LINK_STATE_ON_CLOSE_NUM,
 
 	TESTPMD_OPT_LONG_MAX_NUM
 };
@@ -378,6 +380,7 @@ static const struct option long_options[] = {
 	NO_ARG(TESTPMD_OPT_RECORD_BURST_STATS),
 	REQUIRED_ARG(TESTPMD_OPT_NUM_PROCS),
 	REQUIRED_ARG(TESTPMD_OPT_PROC_ID),
+	REQUIRED_ARG(TESTPMD_OPT_LINK_STATE_ON_CLOSE),
 	{ 0, 0, NULL, 0 }
 };
 #undef NO_ARG
@@ -928,6 +931,23 @@ parse_link_speed(int n)
 	}
 
 	return speed;
+}
+
+static int
+parse_link_state_on_close(const char *optarg)
+{
+	if (!strcmp(optarg, "down")) {
+		close_state = RTE_ETH_LINK_STATE_ON_CLOSE_DOWN;
+	} else if (!strcmp(optarg, "up")) {
+		close_state = RTE_ETH_LINK_STATE_ON_CLOSE_UP;
+	} else if (!strcmp(optarg, "initial")) {
+		close_state = RTE_ETH_LINK_STATE_ON_CLOSE_INITIAL;
+	} else {
+		fprintf(stderr, "Invalid state: %s\n", optarg);
+		return -1;
+	}
+
+	return 0;
 }
 
 void
@@ -1732,6 +1752,12 @@ launch_args_parse(int argc, char** argv)
 			break;
 		case TESTPMD_OPT_PROC_ID_NUM:
 			proc_id = atoi(optarg);
+			break;
+		case TESTPMD_OPT_LINK_STATE_ON_CLOSE_NUM:
+			if (parse_link_state_on_close(optarg)) {
+				rte_exit(EXIT_FAILURE,
+					"invalid link_state_on_close argument\n");
+			}
 			break;
 		default:
 			usage(argv[0]);

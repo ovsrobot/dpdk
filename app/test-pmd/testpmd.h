@@ -821,6 +821,8 @@ extern struct rte_flow_action_conntrack conntrack_context;
 extern int proc_id;
 extern unsigned int num_procs;
 
+extern enum rte_eth_link_state_on_close close_state;
+
 static inline bool
 is_proc_primary(void)
 {
@@ -959,6 +961,7 @@ void update_fwd_ports(portid_t new_pid);
 
 void set_fwd_eth_peer(portid_t port_id, char *peer_addr);
 void set_dev_led(portid_t port_id, bool active);
+void set_link_state_on_close(portid_t port_id, enum rte_eth_link_state_on_close state);
 
 void port_mtu_set(portid_t port_id, uint16_t mtu);
 int port_action_handle_create(portid_t port_id, uint32_t id, bool indirect_list,
