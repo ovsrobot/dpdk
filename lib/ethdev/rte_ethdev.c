@@ -7344,6 +7344,25 @@ rte_eth_buffer_split_get_supported_hdr_ptypes(uint16_t port_id, uint32_t *ptypes
 	return j;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_set_link_state_on_close, 25.11)
+int
+rte_eth_dev_set_link_state_on_close(uint16_t port_id, enum rte_eth_link_state_on_close state)
+{
+	struct rte_eth_dev *dev;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (dev->dev_ops->link_state_on_close_set == NULL)
+		return -ENOTSUP;
+	ret = eth_err(port_id, dev->dev_ops->link_state_on_close_set(dev, state));
+
+	rte_eth_trace_link_state_on_close_set(port_id, state, ret);
+
+	return ret;
+}
+
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_count_aggr_ports, 23.03)
 int rte_eth_dev_count_aggr_ports(uint16_t port_id)
 {

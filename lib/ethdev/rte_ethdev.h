@@ -514,6 +514,12 @@ struct rte_eth_rss_conf {
 	enum rte_eth_hash_function algorithm;	/**< Hash algorithm. */
 };
 
+enum rte_eth_link_state_on_close {
+	RTE_ETH_LINK_STATE_ON_CLOSE_DOWN = 1,
+	RTE_ETH_LINK_STATE_ON_CLOSE_UP = 2,
+	RTE_ETH_LINK_STATE_ON_CLOSE_INITIAL = 3
+};
+
 /*
  * A packet can be identified by hardware as different flow types. Different
  * NIC hardware may support different flow types.
@@ -7063,6 +7069,32 @@ rte_eth_recycle_mbufs(uint16_t rx_port_id, uint16_t rx_queue_id,
  */
 __rte_experimental
 int rte_eth_buffer_split_get_supported_hdr_ptypes(uint16_t port_id, uint32_t *ptypes, int num)
+	__rte_warn_unused_result;
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Configure the state of the physical link when the device is closed.
+ *
+ * This function allows the configuration of the physical link state
+ * when the device is closed. The link can be set to either down, up or
+ * remain configured as the device default, depending on the value of the
+ * 'state' parameter.
+ *
+ * @param port_id
+ *   The port identifier of the device.
+ * @param state
+ *  - RTE_ETH_LINK_STATE_ON_CLOSE_DOWN - Bring (or keep) the link down.
+ *  - RTE_ETH_LINK_STATE_ON_CLOSE_UP   - Bring (or keep) the link up.
+ *  - RTE_ETH_LINK_STATE_ON_CLOSE_INITIAL - Restore the link to the state it
+ *    was in when the device was started.
+ * @return
+ *   - (0) on success
+ *   - (-ENOTSUP) if the device does not support this function.
+ */
+__rte_experimental
+int rte_eth_dev_set_link_state_on_close(uint16_t port_id, enum rte_eth_link_state_on_close state)
 	__rte_warn_unused_result;
 
 /**

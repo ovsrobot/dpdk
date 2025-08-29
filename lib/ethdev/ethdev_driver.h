@@ -1201,6 +1201,21 @@ typedef const uint32_t *(*eth_buffer_split_supported_hdr_ptypes_get_t)(struct rt
 
 /**
  * @internal
+ * Set the state the link should be configured to be on device closure.
+ *
+ * @param dev
+ *   Ethdev handle of port.
+ * @param state
+ *   Either down, up or initial.
+ *
+ * @return
+ *   Negative errno value on error, zero otherwise.
+ */
+typedef int (*eth_link_state_on_close_set_t)(struct rte_eth_dev *dev,
+						enum rte_eth_link_state_on_close state);
+
+/**
+ * @internal
  * Dump private info from device to a file.
  *
  * @param dev
@@ -1598,6 +1613,9 @@ struct eth_dev_ops {
 
 	/** Get supported header ptypes to split */
 	eth_buffer_split_supported_hdr_ptypes_get_t buffer_split_supported_hdr_ptypes_get;
+
+	/** Set link state on close */
+	eth_link_state_on_close_set_t link_state_on_close_set;
 
 	/** Dump private info from device */
 	eth_dev_priv_dump_t eth_dev_priv_dump;

@@ -482,6 +482,9 @@ RTE_TRACE_POINT_REGISTER(rte_eth_trace_ip_reassembly_conf_set,
 RTE_TRACE_POINT_REGISTER(rte_eth_trace_buffer_split_get_supported_hdr_ptypes,
 	lib.ethdev.buffer_split_get_supported_hdr_ptypes)
 
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_link_state_on_close_set,
+	lib.ethdev.link_state_on_close_set)
+
 RTE_TRACE_POINT_REGISTER(rte_eth_trace_cman_info_get,
 	lib.ethdev.cman_info_get)
 

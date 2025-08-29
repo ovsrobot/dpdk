@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * ** Added link state on close ethdev API
+
+     * Added a new API to the ethdev library to allow the configuration of link state
+       on device close. It can be configured as down, up or restored to initial state.
 
 Removed Items
 -------------

@@ -1299,6 +1299,14 @@ RTE_TRACE_POINT(
 )
 
 RTE_TRACE_POINT(
+	rte_eth_trace_link_state_on_close_set,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, enum rte_eth_link_state_on_close state, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(state);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT(
 	rte_eth_trace_cman_info_get,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id,
 		const struct rte_eth_cman_info *info, int ret),
