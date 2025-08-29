@@ -9,9 +9,13 @@ port is restarted.
 
 from dataclasses import asdict
 
-from framework.remote_session.testpmd_shell import TestPmdPortFlowCtrl, TestPmdShell
+from api.capabilities import (
+    NicCapability,
+    requires_nic_capability,
+)
+from api.testpmd import TestPmd
+from api.testpmd.types import TestPmdPortFlowCtrl
 from framework.test_suite import TestSuite, func_test
-from framework.testbed_model.capability import NicCapability, requires
 
 ALTERNATIVE_MTU: int = 800
 STANDARD_MTU: int = 1500
@@ -61,7 +65,7 @@ class TestPortRestartConfigPersistency(TestSuite):
         Verify:
             The configuration persists after the port is restarted.
         """
-        with TestPmdShell(disable_device_start=True) as testpmd:
+        with TestPmd(disable_device_start=True) as testpmd:
             for port_id, _ in enumerate(self.topology.sut_ports):
                 testpmd.set_port_mtu(port_id=port_id, mtu=STANDARD_MTU, verify=True)
                 self.restart_port_and_verify(port_id, testpmd, "MTU")
@@ -80,7 +84,7 @@ class TestPortRestartConfigPersistency(TestSuite):
                 testpmd.set_promisc(port=port_id, enable=True, verify=True)
                 self.restart_port_and_verify(port_id, testpmd, "promiscuous mode")
 
-    @requires(NicCapability.FLOW_CTRL)
+    @requires_nic_capability(NicCapability.FLOW_CTRL)
     @func_test
     def flow_ctrl_port_configuration_persistence(self) -> None:
         """Flow control port configuration persistency test.
@@ -90,7 +94,7 @@ class TestPortRestartConfigPersistency(TestSuite):
         Verify:
             The configuration persists after the port is restarted.
         """
-        with TestPmdShell(disable_device_start=True) as testpmd:
+        with TestPmd(disable_device_start=True) as testpmd:
             for port_id, _ in enumerate(self.topology.sut_ports):
                 flow_ctrl = TestPmdPortFlowCtrl(rx=True)
                 testpmd.set_flow_control(port=port_id, flow_ctrl=flow_ctrl)
