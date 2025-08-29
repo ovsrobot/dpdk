@@ -1,15 +1,20 @@
 .. SPDX-License-Identifier: BSD-3-Clause
 
-params - Command Line Parameters Modelling
+api - DTS API
 ==========================================
 
-.. automodule:: framework.params
+.. automodule:: api
    :members:
    :show-inheritance:
 
 .. toctree::
    :hidden:
+   :maxdepth: 2
+
+   api.testpmd
+
+.. toctree::
+   :hidden:
    :maxdepth: 1
 
-   framework.params.eal
-   framework.params.types
+   api.capabilities

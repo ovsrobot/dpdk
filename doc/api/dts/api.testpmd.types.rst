@@ -1,8 +1,8 @@
 .. SPDX-License-Identifier: BSD-3-Clause
 
-testpmd\_shell - Testpmd Interactive Remote Shell
+types - Testpmd types
 =================================================
 
-.. automodule:: framework.remote_session.testpmd_shell
+.. automodule:: api.testpmd.types
    :members:
    :show-inheritance:
