@@ -663,6 +663,7 @@ struct ice_adapter {
 	bool tx_use_avx2;
 	bool tx_use_avx512;
 	bool rx_vec_offload_support;
+	enum rte_eth_link_state_on_close link_state_on_close; /* link state on device closure. */
 };
 
 struct ice_vsi_vlan_pvid_info {

@@ -194,6 +194,8 @@ static int ice_fec_get(struct rte_eth_dev *dev, uint32_t *fec_capa);
 static int ice_fec_set(struct rte_eth_dev *dev, uint32_t fec_capa);
 static const uint32_t *ice_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev,
 						size_t *no_of_elements);
+static int ice_link_state_on_close_set(struct rte_eth_dev *dev,
+				       enum rte_eth_link_state_on_close state);
 
 static const struct rte_pci_id pci_id_ice_map[] = {
 	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E823L_BACKPLANE) },
@@ -324,6 +326,7 @@ static const struct eth_dev_ops ice_eth_dev_ops = {
 	.fec_get                      = ice_fec_get,
 	.fec_set                      = ice_fec_set,
 	.buffer_split_supported_hdr_ptypes_get = ice_buffer_split_supported_hdr_ptypes_get,
+	.link_state_on_close_set      = ice_link_state_on_close_set,
 };
 
 /* store statistics names and its offset in stats structure */
@@ -2811,7 +2814,9 @@ ice_dev_stop(struct rte_eth_dev *dev)
 	/* disable all queue interrupts */
 	ice_vsi_disable_queues_intr(main_vsi);
 
-	if (pf->init_link_up)
+	if (pf->adapter->link_state_on_close == RTE_ETH_LINK_STATE_ON_CLOSE_UP ||
+			(pf->adapter->link_state_on_close == RTE_ETH_LINK_STATE_ON_CLOSE_INITIAL &&
+			pf->init_link_up))
 		ice_dev_set_link_up(dev);
 	else
 		ice_dev_set_link_down(dev);
@@ -3694,6 +3699,8 @@ ice_dev_configure(struct rte_eth_dev *dev)
 			return ret;
 		}
 	}
+
+	ad->link_state_on_close = RTE_ETH_LINK_STATE_ON_CLOSE_INITIAL;
 
 	return 0;
 }
@@ -6998,6 +7005,17 @@ ice_buffer_split_supported_hdr_ptypes_get(struct rte_eth_dev *dev __rte_unused,
 
 	*no_of_elements = RTE_DIM(ptypes);
 	return ptypes;
+}
+
+static int
+ice_link_state_on_close_set(struct rte_eth_dev *dev, enum rte_eth_link_state_on_close state)
+{
+	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_adapter *ad = (struct ice_adapter *)hw->back;
+
+	ad->link_state_on_close = state;
+
+	return 0;
 }
 
 static unsigned int
