@@ -30,12 +30,12 @@
 #include "eventdev_pmd.h"
 #include "eventdev_trace.h"
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_logtype)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_logtype);
 RTE_LOG_REGISTER_DEFAULT(rte_event_logtype, INFO);
 
 static struct rte_eventdev rte_event_devices[RTE_EVENT_MAX_DEVS];
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eventdevs)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eventdevs);
 struct rte_eventdev *rte_eventdevs = rte_event_devices;
 
 static struct rte_eventdev_global eventdev_globals = {
@@ -1453,7 +1453,7 @@ int rte_event_dev_xstats_reset(uint8_t dev_id,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_selftest_seqn_dynfield_offset)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_selftest_seqn_dynfield_offset);
 int rte_event_pmd_selftest_seqn_dynfield_offset = -1;
 
 RTE_EXPORT_SYMBOL(rte_event_dev_selftest);
@@ -1672,7 +1672,7 @@ eventdev_find_free_device_index(void)
 	return RTE_EVENT_MAX_DEVS;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_allocate);
 struct rte_eventdev *
 rte_event_pmd_allocate(const char *name, int socket_id)
 {
@@ -1721,7 +1721,7 @@ rte_event_pmd_allocate(const char *name, int socket_id)
 	return eventdev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_event_pmd_release);
 int
 rte_event_pmd_release(struct rte_eventdev *eventdev)
 {
@@ -1758,7 +1758,7 @@ rte_event_pmd_release(struct rte_eventdev *eventdev)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(event_dev_probing_finish)
+RTE_EXPORT_INTERNAL_SYMBOL(event_dev_probing_finish);
 void
 event_dev_probing_finish(struct rte_eventdev *eventdev)
 {

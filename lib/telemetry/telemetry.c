@@ -655,7 +655,7 @@ telemetry_v2_init(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_telemetry_init)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_telemetry_init);
 int32_t
 rte_telemetry_init(const char *runtime_dir, const char *rte_version, rte_cpuset_t *cpuset)
 {

@@ -25,7 +25,7 @@ const char *uncore_env_str[] = {
 };
 
 /* register the ops struct in rte_power_uncore_ops, return 0 on success. */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_power_register_uncore_ops)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_power_register_uncore_ops);
 int
 rte_power_register_uncore_ops(struct rte_power_uncore_ops *driver_ops)
 {

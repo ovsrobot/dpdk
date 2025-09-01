@@ -139,7 +139,7 @@ gpu_get_by_id(int16_t dev_id)
 	return &gpus[dev_id];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_get_by_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_get_by_name);
 struct rte_gpu *
 rte_gpu_get_by_name(const char *name)
 {
@@ -182,7 +182,7 @@ gpu_shared_mem_init(void)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_allocate);
 struct rte_gpu *
 rte_gpu_allocate(const char *name)
 {
@@ -244,7 +244,7 @@ rte_gpu_allocate(const char *name)
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_attach)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_attach);
 struct rte_gpu *
 rte_gpu_attach(const char *name)
 {
@@ -317,7 +317,7 @@ rte_gpu_add_child(const char *name, int16_t parent, uint64_t child_context)
 	return dev->mpshared->info.dev_id;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_complete_new)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_complete_new);
 void
 rte_gpu_complete_new(struct rte_gpu *dev)
 {
@@ -328,7 +328,7 @@ rte_gpu_complete_new(struct rte_gpu *dev)
 	rte_gpu_notify(dev, RTE_GPU_EVENT_NEW);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_release);
 int
 rte_gpu_release(struct rte_gpu *dev)
 {
@@ -505,7 +505,7 @@ gpu_free_callbacks(struct rte_gpu *dev)
 	rte_rwlock_write_unlock(&gpu_callback_lock);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_notify)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_gpu_notify);
 void
 rte_gpu_notify(struct rte_gpu *dev, enum rte_gpu_event event)
 {

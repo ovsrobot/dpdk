@@ -348,7 +348,7 @@ add_internal_prefix(char *prefixed_name, const char *name, size_t size)
 	strlcpy(prefixed_name + prefixlen, name, size - prefixlen);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_thread_create_internal_control)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_thread_create_internal_control);
 int
 rte_thread_create_internal_control(rte_thread_t *id, const char *name,
 		rte_thread_func func, void *arg)
@@ -359,7 +359,7 @@ rte_thread_create_internal_control(rte_thread_t *id, const char *name,
 	return rte_thread_create_control(id, prefixed_name, func, arg);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_thread_set_prefixed_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_thread_set_prefixed_name);
 void
 rte_thread_set_prefixed_name(rte_thread_t id, const char *name)
 {

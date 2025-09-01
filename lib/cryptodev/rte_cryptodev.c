@@ -36,7 +36,7 @@ static uint8_t nb_drivers;
 
 static struct rte_cryptodev rte_crypto_devices[RTE_CRYPTO_MAX_DEVS];
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodevs)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodevs);
 struct rte_cryptodev *rte_cryptodevs = rte_crypto_devices;
 
 static struct rte_cryptodev_global cryptodev_globals = {
@@ -853,14 +853,14 @@ rte_cryptodev_get_feature_name(uint64_t flag)
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_dev);
 struct rte_cryptodev *
 rte_cryptodev_pmd_get_dev(uint8_t dev_id)
 {
 	return &cryptodev_globals.devs[dev_id];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_named_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_get_named_dev);
 struct rte_cryptodev *
 rte_cryptodev_pmd_get_named_dev(const char *name)
 {
@@ -1106,7 +1106,7 @@ rte_cryptodev_find_free_device_index(void)
 	return RTE_CRYPTO_MAX_DEVS;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_allocate);
 struct rte_cryptodev *
 rte_cryptodev_pmd_allocate(const char *name, int socket_id)
 {
@@ -1166,7 +1166,7 @@ rte_cryptodev_pmd_allocate(const char *name, int socket_id)
 	return cryptodev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_release_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_release_device);
 int
 rte_cryptodev_pmd_release_device(struct rte_cryptodev *cryptodev)
 {
@@ -2037,7 +2037,7 @@ rte_cryptodev_callback_unregister(uint8_t dev_id,
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_callback_process)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_callback_process);
 void
 rte_cryptodev_pmd_callback_process(struct rte_cryptodev *dev,
 	enum rte_cryptodev_event_type event)
@@ -2780,7 +2780,7 @@ rte_crypto_op_pool_create(const char *name, enum rte_crypto_op_type type,
 	return mp;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_create_dev_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_pmd_create_dev_name);
 int
 rte_cryptodev_pmd_create_dev_name(char *name, const char *dev_name_prefix)
 {
@@ -2872,7 +2872,7 @@ rte_cryptodev_driver_name_get(uint8_t driver_id)
 	return NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_allocate_driver)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_cryptodev_allocate_driver);
 uint8_t
 rte_cryptodev_allocate_driver(struct cryptodev_driver *crypto_drv,
 		const struct rte_driver *drv)

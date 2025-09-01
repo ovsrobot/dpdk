@@ -73,7 +73,7 @@ rte_vdpa_get_rte_device(struct rte_vdpa_device *vdpa_dev)
 	return vdpa_dev->device;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vdpa_register_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vdpa_register_device);
 struct rte_vdpa_device *
 rte_vdpa_register_device(struct rte_device *rte_dev,
 		struct rte_vdpa_dev_ops *ops)
@@ -129,7 +129,7 @@ out_unlock:
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vdpa_unregister_device)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vdpa_unregister_device);
 int
 rte_vdpa_unregister_device(struct rte_vdpa_device *dev)
 {
@@ -151,7 +151,7 @@ rte_vdpa_unregister_device(struct rte_vdpa_device *dev)
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vdpa_relay_vring_used)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vdpa_relay_vring_used);
 int
 rte_vdpa_relay_vring_used(int vid, uint16_t qid, void *vring_m)
 {

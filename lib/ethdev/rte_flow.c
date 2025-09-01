@@ -3032,7 +3032,7 @@ rte_flow_dummy_async_action_list_handle_query_update(
 				  rte_strerror(ENOSYS));
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_flow_fp_default_ops)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_flow_fp_default_ops);
 struct rte_flow_fp_ops rte_flow_fp_default_ops = {
 	.async_create = rte_flow_dummy_async_create,
 	.async_create_by_index = rte_flow_dummy_async_create_by_index,

@@ -24,7 +24,7 @@ rte_bus_name(const struct rte_bus *bus)
 	return bus->name;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_bus_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_bus_register);
 void
 rte_bus_register(struct rte_bus *bus)
 {
@@ -41,7 +41,7 @@ rte_bus_register(struct rte_bus *bus)
 	EAL_LOG(DEBUG, "Registered [%s] bus.", rte_bus_name(bus));
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_bus_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_bus_unregister);
 void
 rte_bus_unregister(struct rte_bus *bus)
 {
