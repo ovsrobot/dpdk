@@ -191,12 +191,12 @@ rte_eal_init_alert(const char *msg)
  * until eal_common_trace.c can be compiled.
  */
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_point_sz, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_point_sz, 20.05);
 RTE_DEFINE_PER_LCORE(volatile int, trace_point_sz);
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_mem, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_mem, 20.05);
 RTE_DEFINE_PER_LCORE(void *, trace_mem);
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_mem_per_thread_alloc, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_mem_per_thread_alloc, 20.05);
 void
 __rte_trace_mem_per_thread_alloc(void)
 {
@@ -207,7 +207,7 @@ trace_mem_per_thread_free(void)
 {
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_point_emit_field, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_point_emit_field, 20.05);
 void
 __rte_trace_point_emit_field(size_t sz, const char *field,
 	const char *type)
@@ -217,7 +217,7 @@ __rte_trace_point_emit_field(size_t sz, const char *field,
 	RTE_SET_USED(type);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_point_register, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_trace_point_register, 20.05);
 int
 __rte_trace_point_register(rte_trace_point_t *trace, const char *name,
 	void (*register_fn)(void))

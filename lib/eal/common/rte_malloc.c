@@ -56,7 +56,7 @@ rte_free(void *addr)
 	mem_free(addr, true, false);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_free_sensitive, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_free_sensitive, 25.07);
 void
 rte_free_sensitive(void *addr)
 {

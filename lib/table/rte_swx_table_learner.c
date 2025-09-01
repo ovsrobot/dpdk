@@ -273,7 +273,7 @@ table_entry_id_get(struct table *t, struct table_bucket *b, size_t bucket_key_po
 	return (bucket_id << TABLE_KEYS_PER_BUCKET_LOG2) + bucket_key_pos;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_footprint_get, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_footprint_get, 21.11);
 uint64_t
 rte_swx_table_learner_footprint_get(struct rte_swx_table_learner_params *params)
 {
@@ -285,7 +285,7 @@ rte_swx_table_learner_footprint_get(struct rte_swx_table_learner_params *params)
 	return status ? 0 : p.total_size;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_create, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_create, 21.11);
 void *
 rte_swx_table_learner_create(struct rte_swx_table_learner_params *params, int numa_node)
 {
@@ -309,7 +309,7 @@ rte_swx_table_learner_create(struct rte_swx_table_learner_params *params, int nu
 	return t;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_free, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_free, 21.11);
 void
 rte_swx_table_learner_free(void *table)
 {
@@ -321,7 +321,7 @@ rte_swx_table_learner_free(void *table)
 	env_free(t, t->params.total_size);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_timeout_update, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_timeout_update, 22.07);
 int
 rte_swx_table_learner_timeout_update(void *table,
 				     uint32_t key_timeout_id,
@@ -359,14 +359,14 @@ struct mailbox {
 	int state;
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_mailbox_size_get, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_mailbox_size_get, 21.11);
 uint64_t
 rte_swx_table_learner_mailbox_size_get(void)
 {
 	return sizeof(struct mailbox);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_lookup, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_lookup, 21.11);
 int
 rte_swx_table_learner_lookup(void *table,
 			     void *mailbox,
@@ -453,7 +453,7 @@ rte_swx_table_learner_lookup(void *table,
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_rearm, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_rearm, 22.07);
 void
 rte_swx_table_learner_rearm(void *table,
 			    void *mailbox,
@@ -477,7 +477,7 @@ rte_swx_table_learner_rearm(void *table,
 	b->time[bucket_key_pos] = (input_time + key_timeout) >> 32;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_rearm_new, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_rearm_new, 22.07);
 void
 rte_swx_table_learner_rearm_new(void *table,
 				void *mailbox,
@@ -502,7 +502,7 @@ rte_swx_table_learner_rearm_new(void *table,
 	b->key_timeout_id[bucket_key_pos] = (uint8_t)key_timeout_id;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_add, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_add, 21.11);
 uint32_t
 rte_swx_table_learner_add(void *table,
 			  void *mailbox,
@@ -579,7 +579,7 @@ rte_swx_table_learner_add(void *table,
 	return 1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_delete, 21.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_learner_delete, 21.11);
 void
 rte_swx_table_learner_delete(void *table __rte_unused,
 			     void *mailbox)

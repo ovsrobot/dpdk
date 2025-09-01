@@ -2363,7 +2363,7 @@ struct rte_table_action_profile {
 	int frozen;
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_create, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_create, 18.05);
 struct rte_table_action_profile *
 rte_table_action_profile_create(struct rte_table_action_common_config *common)
 {
@@ -2385,7 +2385,7 @@ rte_table_action_profile_create(struct rte_table_action_common_config *common)
 }
 
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_action_register, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_action_register, 18.05);
 int
 rte_table_action_profile_action_register(struct rte_table_action_profile *profile,
 	enum rte_table_action_type type,
@@ -2449,7 +2449,7 @@ rte_table_action_profile_action_register(struct rte_table_action_profile *profil
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_freeze, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_freeze, 18.05);
 int
 rte_table_action_profile_freeze(struct rte_table_action_profile *profile)
 {
@@ -2463,7 +2463,7 @@ rte_table_action_profile_freeze(struct rte_table_action_profile *profile)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_free, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_profile_free, 18.05);
 int
 rte_table_action_profile_free(struct rte_table_action_profile *profile)
 {
@@ -2486,7 +2486,7 @@ struct rte_table_action {
 	struct meter_profile_data mp[METER_PROFILES_MAX];
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_create, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_create, 18.05);
 struct rte_table_action *
 rte_table_action_create(struct rte_table_action_profile *profile,
 	uint32_t socket_id)
@@ -2524,7 +2524,7 @@ action_data_get(void *data,
 	return &data_bytes[offset];
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_apply, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_apply, 18.05);
 int
 rte_table_action_apply(struct rte_table_action *action,
 	void *data,
@@ -2606,7 +2606,7 @@ rte_table_action_apply(struct rte_table_action *action,
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_dscp_table_update, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_dscp_table_update, 18.05);
 int
 rte_table_action_dscp_table_update(struct rte_table_action *action,
 	uint64_t dscp_mask,
@@ -2639,7 +2639,7 @@ rte_table_action_dscp_table_update(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_meter_profile_add, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_meter_profile_add, 18.05);
 int
 rte_table_action_meter_profile_add(struct rte_table_action *action,
 	uint32_t meter_profile_id,
@@ -2680,7 +2680,7 @@ rte_table_action_meter_profile_add(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_meter_profile_delete, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_meter_profile_delete, 18.05);
 int
 rte_table_action_meter_profile_delete(struct rte_table_action *action,
 	uint32_t meter_profile_id)
@@ -2704,7 +2704,7 @@ rte_table_action_meter_profile_delete(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_meter_read, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_meter_read, 18.05);
 int
 rte_table_action_meter_read(struct rte_table_action *action,
 	void *data,
@@ -2767,7 +2767,7 @@ rte_table_action_meter_read(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_ttl_read, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_ttl_read, 18.05);
 int
 rte_table_action_ttl_read(struct rte_table_action *action,
 	void *data,
@@ -2796,7 +2796,7 @@ rte_table_action_ttl_read(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_stats_read, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_stats_read, 18.05);
 int
 rte_table_action_stats_read(struct rte_table_action *action,
 	void *data,
@@ -2832,7 +2832,7 @@ rte_table_action_stats_read(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_time_read, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_time_read, 18.05);
 int
 rte_table_action_time_read(struct rte_table_action *action,
 	void *data,
@@ -2856,7 +2856,7 @@ rte_table_action_time_read(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_crypto_sym_session_get, 18.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_crypto_sym_session_get, 18.11);
 struct rte_cryptodev_sym_session *
 rte_table_action_crypto_sym_session_get(struct rte_table_action *action,
 	void *data)
@@ -3444,7 +3444,7 @@ ah_selector(struct rte_table_action *action)
 	return ah_default;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_table_params_get, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_table_params_get, 18.05);
 int
 rte_table_action_table_params_get(struct rte_table_action *action,
 	struct rte_pipeline_table_params *params)
@@ -3470,7 +3470,7 @@ rte_table_action_table_params_get(struct rte_table_action *action,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_free, 18.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_table_action_free, 18.05);
 int
 rte_table_action_free(struct rte_table_action *action)
 {

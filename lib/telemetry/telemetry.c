@@ -122,7 +122,7 @@ rte_telemetry_register_cmd(const char *cmd, telemetry_cb fn, const char *help)
 	return register_cmd(cmd, help, fn, NULL, NULL);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_telemetry_register_cmd_arg, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_telemetry_register_cmd_arg, 24.11);
 int
 rte_telemetry_register_cmd_arg(const char *cmd, telemetry_arg_cb fn, void *arg, const char *help)
 {

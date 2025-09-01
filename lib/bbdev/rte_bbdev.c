@@ -1241,7 +1241,7 @@ rte_bbdev_enqueue_status_str(enum rte_bbdev_enqueue_status status)
 }
 
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bbdev_queue_ops_dump, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bbdev_queue_ops_dump, 24.11);
 int
 rte_bbdev_queue_ops_dump(uint16_t dev_id, uint16_t queue_id, FILE *f)
 {
@@ -1281,7 +1281,7 @@ rte_bbdev_queue_ops_dump(uint16_t dev_id, uint16_t queue_id, FILE *f)
 	return dev->dev_ops->queue_ops_dump(dev, queue_id, f);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bbdev_ops_param_string, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_bbdev_ops_param_string, 24.11);
 char *
 rte_bbdev_ops_param_string(void *op, enum rte_bbdev_op_type op_type, char *str, uint32_t len)
 {

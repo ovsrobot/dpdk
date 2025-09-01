@@ -33,7 +33,7 @@
 
 RTE_EXPORT_SYMBOL(rte_security_dynfield_offset);
 int rte_security_dynfield_offset = -1;
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_oop_dynfield_offset, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_oop_dynfield_offset, 23.11);
 int rte_security_oop_dynfield_offset = -1;
 
 RTE_EXPORT_INTERNAL_SYMBOL(rte_security_dynfield_register)
@@ -344,7 +344,7 @@ rte_security_capability_get(void *ctx, struct rte_security_capability_idx *idx)
 	return NULL;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_rx_inject_configure, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_rx_inject_configure, 23.11);
 int
 rte_security_rx_inject_configure(void *ctx, uint16_t port_id, bool enable)
 {
@@ -357,7 +357,7 @@ rte_security_rx_inject_configure(void *ctx, uint16_t port_id, bool enable)
 	return instance->ops->rx_inject_configure(instance->device, port_id, enable);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_inb_pkt_rx_inject, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_inb_pkt_rx_inject, 23.11);
 uint16_t
 rte_security_inb_pkt_rx_inject(void *ctx, struct rte_mbuf **pkts, void **sess,
 			       uint16_t nb_pkts)

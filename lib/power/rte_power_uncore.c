@@ -46,7 +46,7 @@ rte_power_register_uncore_ops(struct rte_power_uncore_ops *driver_ops)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_set_uncore_env, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_set_uncore_env, 23.11);
 int
 rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
 {
@@ -86,7 +86,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_unset_uncore_env, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_unset_uncore_env, 23.11);
 void
 rte_power_unset_uncore_env(void)
 {
@@ -95,7 +95,7 @@ rte_power_unset_uncore_env(void)
 	rte_spinlock_unlock(&global_env_cfg_lock);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_get_uncore_env, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_get_uncore_env, 23.11);
 enum rte_uncore_power_mgmt_env
 rte_power_get_uncore_env(void)
 {
@@ -180,7 +180,7 @@ rte_power_uncore_freq_min(unsigned int pkg, unsigned int die)
 	return global_uncore_ops->freq_min(pkg, die);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_uncore_freqs, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_uncore_freqs, 23.11);
 int
 rte_power_uncore_freqs(unsigned int pkg, unsigned int die,
 			uint32_t *freqs, uint32_t num)

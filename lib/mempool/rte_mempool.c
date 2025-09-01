@@ -1405,7 +1405,7 @@ void rte_mempool_walk(void (*func)(struct rte_mempool *, void *),
 	rte_mcfg_mempool_read_unlock();
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_mempool_get_mem_range, 24.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_mempool_get_mem_range, 24.07);
 int rte_mempool_get_mem_range(const struct rte_mempool *mp,
 		struct rte_mempool_mem_range_info *mem_range)
 {
@@ -1440,7 +1440,7 @@ int rte_mempool_get_mem_range(const struct rte_mempool *mp,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_mempool_get_obj_alignment, 24.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_mempool_get_obj_alignment, 24.07);
 size_t rte_mempool_get_obj_alignment(const struct rte_mempool *mp)
 {
 	if (mp == NULL)

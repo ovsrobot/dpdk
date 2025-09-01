@@ -2342,7 +2342,7 @@ vhost_poll_enqueue_completed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	return nr_cpl_pkts;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_poll_enqueue_completed, 20.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_poll_enqueue_completed, 20.08);
 uint16_t
 rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
@@ -2398,7 +2398,7 @@ out:
 	return n_pkts_cpl;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_clear_queue_thread_unsafe, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_clear_queue_thread_unsafe, 21.08);
 uint16_t
 rte_vhost_clear_queue_thread_unsafe(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
@@ -2456,7 +2456,7 @@ rte_vhost_clear_queue_thread_unsafe(int vid, uint16_t queue_id,
 	return n_pkts_cpl;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_clear_queue, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_clear_queue, 22.07);
 uint16_t
 rte_vhost_clear_queue(int vid, uint16_t queue_id, struct rte_mbuf **pkts,
 		uint16_t count, int16_t dma_id, uint16_t vchan_id)
@@ -2572,7 +2572,7 @@ out_no_unlock:
 	return nb_tx;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_submit_enqueue_burst, 20.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_submit_enqueue_burst, 20.08);
 uint16_t
 rte_vhost_submit_enqueue_burst(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
@@ -4204,7 +4204,7 @@ virtio_dev_tx_async_packed_compliant(struct virtio_net *dev, struct vhost_virtqu
 				pkts, count, dma_id, vchan_id, false);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_try_dequeue_burst, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_try_dequeue_burst, 22.07);
 uint16_t
 rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
 	struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,

@@ -110,7 +110,7 @@ rte_str_to_size(const char *str)
 	return size;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_size_to_str, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_size_to_str, 25.07);
 char *
 rte_size_to_str(char *buf, int buf_size, uint64_t count, bool use_iec, const char *unit)
 {

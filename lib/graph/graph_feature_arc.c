@@ -53,7 +53,7 @@ static struct rte_mbuf_dynfield rte_graph_feature_arc_mbuf_desc = {
 	.align = alignof(struct rte_graph_feature_arc_mbuf_dynfields),
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_graph_feature_arc_main, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_graph_feature_arc_main, 25.07);
 rte_graph_feature_arc_main_t *__rte_graph_feature_arc_main;
 
 /* global feature arc list */
@@ -1062,7 +1062,7 @@ refill_fastpath_data(struct rte_graph_feature_arc *arc, uint32_t feature_bit,
 }
 
 /* feature arc initialization, public API */
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_init, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_init, 25.07);
 int
 rte_graph_feature_arc_init(uint16_t num_feature_arcs)
 {
@@ -1193,7 +1193,7 @@ arc_cleanup:
 	return rc;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_create, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_create, 25.07);
 int
 rte_graph_feature_arc_create(struct rte_graph_feature_arc_register *reg,
 			     rte_graph_feature_arc_t *_arc)
@@ -1335,7 +1335,7 @@ arc_create_err:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_add, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_add, 25.07);
 int
 rte_graph_feature_add(struct rte_graph_feature_register *freg)
 {
@@ -1583,7 +1583,7 @@ finfo_free:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_lookup, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_lookup, 25.07);
 int
 rte_graph_feature_lookup(rte_graph_feature_arc_t _arc, const char *feature_name,
 			 rte_graph_feature_t *feat)
@@ -1603,7 +1603,7 @@ rte_graph_feature_lookup(rte_graph_feature_arc_t _arc, const char *feature_name,
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_enable, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_enable, 25.07);
 int
 rte_graph_feature_enable(rte_graph_feature_arc_t _arc, uint32_t index,
 			 const char *feature_name, uint16_t app_cookie,
@@ -1678,7 +1678,7 @@ rte_graph_feature_enable(rte_graph_feature_arc_t _arc, uint32_t index,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_disable, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_disable, 25.07);
 int
 rte_graph_feature_disable(rte_graph_feature_arc_t _arc, uint32_t index, const char *feature_name,
 			  struct rte_rcu_qsbr *qsbr)
@@ -1796,7 +1796,7 @@ rte_graph_feature_disable(rte_graph_feature_arc_t _arc, uint32_t index, const ch
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_destroy, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_destroy, 25.07);
 int
 rte_graph_feature_arc_destroy(rte_graph_feature_arc_t _arc)
 {
@@ -1861,7 +1861,7 @@ rte_graph_feature_arc_destroy(rte_graph_feature_arc_t _arc)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_cleanup, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_cleanup, 25.07);
 int
 rte_graph_feature_arc_cleanup(void)
 {
@@ -1886,7 +1886,7 @@ rte_graph_feature_arc_cleanup(void)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_lookup_by_name, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_lookup_by_name, 25.07);
 int
 rte_graph_feature_arc_lookup_by_name(const char *arc_name, rte_graph_feature_arc_t *_arc)
 {
@@ -1924,7 +1924,7 @@ rte_graph_feature_arc_lookup_by_name(const char *arc_name, rte_graph_feature_arc
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_num_enabled_features, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_num_enabled_features, 25.07);
 uint32_t
 rte_graph_feature_arc_num_enabled_features(rte_graph_feature_arc_t _arc)
 {
@@ -1938,7 +1938,7 @@ rte_graph_feature_arc_num_enabled_features(rte_graph_feature_arc_t _arc)
 	return arc->runtime_enabled_features;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_num_features, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_num_features, 25.07);
 uint32_t
 rte_graph_feature_arc_num_features(rte_graph_feature_arc_t _arc)
 {
@@ -1957,7 +1957,7 @@ rte_graph_feature_arc_num_features(rte_graph_feature_arc_t _arc)
 	return count;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_feature_to_name, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_feature_to_name, 25.07);
 char *
 rte_graph_feature_arc_feature_to_name(rte_graph_feature_arc_t _arc, rte_graph_feature_t feat)
 {
@@ -1978,7 +1978,7 @@ rte_graph_feature_arc_feature_to_name(rte_graph_feature_arc_t _arc, rte_graph_fe
 	return NULL;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_feature_to_node, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_feature_to_node, 25.07);
 int
 rte_graph_feature_arc_feature_to_node(rte_graph_feature_arc_t _arc, rte_graph_feature_t feat,
 				      rte_node_t *node)
@@ -2005,7 +2005,7 @@ rte_graph_feature_arc_feature_to_node(rte_graph_feature_arc_t _arc, rte_graph_fe
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_graph_feature_arc_register, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_graph_feature_arc_register, 25.07);
 void __rte_graph_feature_arc_register(struct rte_graph_feature_arc_register *reg,
 				      const char *caller_name, int lineno)
 {
@@ -2015,7 +2015,7 @@ void __rte_graph_feature_arc_register(struct rte_graph_feature_arc_register *reg
 	STAILQ_INSERT_TAIL(&feature_arc_list, reg, next_arc);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_graph_feature_register, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_graph_feature_register, 25.07);
 void __rte_graph_feature_register(struct rte_graph_feature_register *reg,
 				  const char *caller_name, int lineno)
 {
@@ -2026,7 +2026,7 @@ void __rte_graph_feature_register(struct rte_graph_feature_register *reg,
 	STAILQ_INSERT_TAIL(&feature_list, reg, next_feature);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_names_get, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_graph_feature_arc_names_get, 25.07);
 uint32_t
 rte_graph_feature_arc_names_get(char *arc_names[])
 {
