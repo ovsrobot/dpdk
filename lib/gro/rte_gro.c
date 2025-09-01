@@ -89,7 +89,7 @@ struct gro_ctx {
 	void *tbls[RTE_GRO_TYPE_MAX_NUM];
 };
 
-RTE_EXPORT_SYMBOL(rte_gro_ctx_create)
+RTE_EXPORT_SYMBOL(rte_gro_ctx_create);
 void *
 rte_gro_ctx_create(const struct rte_gro_param *param)
 {
@@ -131,7 +131,7 @@ rte_gro_ctx_create(const struct rte_gro_param *param)
 	return gro_ctx;
 }
 
-RTE_EXPORT_SYMBOL(rte_gro_ctx_destroy)
+RTE_EXPORT_SYMBOL(rte_gro_ctx_destroy);
 void
 rte_gro_ctx_destroy(void *ctx)
 {
@@ -151,7 +151,7 @@ rte_gro_ctx_destroy(void *ctx)
 	rte_free(gro_ctx);
 }
 
-RTE_EXPORT_SYMBOL(rte_gro_reassemble_burst)
+RTE_EXPORT_SYMBOL(rte_gro_reassemble_burst);
 uint16_t
 rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 		uint16_t nb_pkts,
@@ -352,7 +352,7 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 	return nb_after_gro;
 }
 
-RTE_EXPORT_SYMBOL(rte_gro_reassemble)
+RTE_EXPORT_SYMBOL(rte_gro_reassemble);
 uint16_t
 rte_gro_reassemble(struct rte_mbuf **pkts,
 		uint16_t nb_pkts,
@@ -421,7 +421,7 @@ rte_gro_reassemble(struct rte_mbuf **pkts,
 	return unprocess_num;
 }
 
-RTE_EXPORT_SYMBOL(rte_gro_timeout_flush)
+RTE_EXPORT_SYMBOL(rte_gro_timeout_flush);
 uint16_t
 rte_gro_timeout_flush(void *ctx,
 		uint64_t timeout_cycles,
@@ -480,7 +480,7 @@ rte_gro_timeout_flush(void *ctx,
 	return num;
 }
 
-RTE_EXPORT_SYMBOL(rte_gro_get_pkt_count)
+RTE_EXPORT_SYMBOL(rte_gro_get_pkt_count);
 uint64_t
 rte_gro_get_pkt_count(void *ctx)
 {

@@ -40,7 +40,7 @@ cmdline_complete_buffer(struct rdline *rdl, const char *buf,
 	return cmdline_complete(cl, buf, state, dstbuf, dstsize);
 }
 
-RTE_EXPORT_SYMBOL(cmdline_write_char)
+RTE_EXPORT_SYMBOL(cmdline_write_char);
 int
 cmdline_write_char(struct rdline *rdl, char c)
 {
@@ -59,7 +59,7 @@ cmdline_write_char(struct rdline *rdl, char c)
 }
 
 
-RTE_EXPORT_SYMBOL(cmdline_set_prompt)
+RTE_EXPORT_SYMBOL(cmdline_set_prompt);
 void
 cmdline_set_prompt(struct cmdline *cl, const char *prompt)
 {
@@ -68,7 +68,7 @@ cmdline_set_prompt(struct cmdline *cl, const char *prompt)
 	strlcpy(cl->prompt, prompt, sizeof(cl->prompt));
 }
 
-RTE_EXPORT_SYMBOL(cmdline_new)
+RTE_EXPORT_SYMBOL(cmdline_new);
 struct cmdline *
 cmdline_new(cmdline_parse_ctx_t *ctx, const char *prompt, int s_in, int s_out)
 {
@@ -99,14 +99,14 @@ cmdline_new(cmdline_parse_ctx_t *ctx, const char *prompt, int s_in, int s_out)
 	return cl;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_get_rdline)
+RTE_EXPORT_SYMBOL(cmdline_get_rdline);
 struct rdline*
 cmdline_get_rdline(struct cmdline *cl)
 {
 	return &cl->rdl;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_free)
+RTE_EXPORT_SYMBOL(cmdline_free);
 void
 cmdline_free(struct cmdline *cl)
 {
@@ -122,7 +122,7 @@ cmdline_free(struct cmdline *cl)
 	free(cl);
 }
 
-RTE_EXPORT_SYMBOL(cmdline_printf)
+RTE_EXPORT_SYMBOL(cmdline_printf);
 void
 cmdline_printf(const struct cmdline *cl, const char *fmt, ...)
 {
@@ -138,7 +138,7 @@ cmdline_printf(const struct cmdline *cl, const char *fmt, ...)
 	va_end(ap);
 }
 
-RTE_EXPORT_SYMBOL(cmdline_in)
+RTE_EXPORT_SYMBOL(cmdline_in);
 int
 cmdline_in(struct cmdline *cl, const char *buf, int size)
 {
@@ -176,7 +176,7 @@ cmdline_in(struct cmdline *cl, const char *buf, int size)
 	return i;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_quit)
+RTE_EXPORT_SYMBOL(cmdline_quit);
 void
 cmdline_quit(struct cmdline *cl)
 {
@@ -186,7 +186,7 @@ cmdline_quit(struct cmdline *cl)
 	rdline_quit(&cl->rdl);
 }
 
-RTE_EXPORT_SYMBOL(cmdline_interact)
+RTE_EXPORT_SYMBOL(cmdline_interact);
 void
 cmdline_interact(struct cmdline *cl)
 {

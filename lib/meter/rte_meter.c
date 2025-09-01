@@ -37,7 +37,7 @@ rte_meter_get_tb_params(uint64_t hz, uint64_t rate, uint64_t *tb_period, uint64_
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_meter_srtcm_profile_config)
+RTE_EXPORT_SYMBOL(rte_meter_srtcm_profile_config);
 int
 rte_meter_srtcm_profile_config(struct rte_meter_srtcm_profile *p,
 	struct rte_meter_srtcm_params *params)
@@ -60,7 +60,7 @@ rte_meter_srtcm_profile_config(struct rte_meter_srtcm_profile *p,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_meter_srtcm_config)
+RTE_EXPORT_SYMBOL(rte_meter_srtcm_config);
 int
 rte_meter_srtcm_config(struct rte_meter_srtcm *m,
 	struct rte_meter_srtcm_profile *p)
@@ -77,7 +77,7 @@ rte_meter_srtcm_config(struct rte_meter_srtcm *m,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_meter_trtcm_profile_config)
+RTE_EXPORT_SYMBOL(rte_meter_trtcm_profile_config);
 int
 rte_meter_trtcm_profile_config(struct rte_meter_trtcm_profile *p,
 	struct rte_meter_trtcm_params *params)
@@ -105,7 +105,7 @@ rte_meter_trtcm_profile_config(struct rte_meter_trtcm_profile *p,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_meter_trtcm_config)
+RTE_EXPORT_SYMBOL(rte_meter_trtcm_config);
 int
 rte_meter_trtcm_config(struct rte_meter_trtcm *m,
 	struct rte_meter_trtcm_profile *p)
@@ -122,7 +122,7 @@ rte_meter_trtcm_config(struct rte_meter_trtcm *m,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_meter_trtcm_rfc4115_profile_config)
+RTE_EXPORT_SYMBOL(rte_meter_trtcm_rfc4115_profile_config);
 int
 rte_meter_trtcm_rfc4115_profile_config(
 	struct rte_meter_trtcm_rfc4115_profile *p,
@@ -148,7 +148,7 @@ rte_meter_trtcm_rfc4115_profile_config(
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_meter_trtcm_rfc4115_config)
+RTE_EXPORT_SYMBOL(rte_meter_trtcm_rfc4115_config);
 int
 rte_meter_trtcm_rfc4115_config(
 	struct rte_meter_trtcm_rfc4115 *m,

@@ -21,7 +21,7 @@
 #define debug_printf(...) do {} while (0)
 #endif
 
-RTE_EXPORT_SYMBOL(cmdline_token_num_ops)
+RTE_EXPORT_SYMBOL(cmdline_token_num_ops);
 struct cmdline_token_ops cmdline_token_num_ops = {
 	.parse = cmdline_parse_num,
 	.complete_get_nb = NULL,
@@ -94,7 +94,7 @@ check_res_size(struct cmdline_token_num_data *nd, unsigned ressize)
 }
 
 /* parse an int */
-RTE_EXPORT_SYMBOL(cmdline_parse_num)
+RTE_EXPORT_SYMBOL(cmdline_parse_num);
 int
 cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 	unsigned ressize)
@@ -316,7 +316,7 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 
 
 /* parse an int */
-RTE_EXPORT_SYMBOL(cmdline_get_help_num)
+RTE_EXPORT_SYMBOL(cmdline_get_help_num);
 int
 cmdline_get_help_num(cmdline_parse_token_hdr_t *tk, char *dstbuf, unsigned int size)
 {

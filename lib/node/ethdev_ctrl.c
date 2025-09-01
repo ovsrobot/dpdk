@@ -22,7 +22,7 @@ static struct ethdev_ctrl {
 	uint16_t nb_graphs;
 } ctrl;
 
-RTE_EXPORT_SYMBOL(rte_node_eth_config)
+RTE_EXPORT_SYMBOL(rte_node_eth_config);
 int
 rte_node_eth_config(struct rte_node_ethdev_config *conf, uint16_t nb_confs,
 		    uint16_t nb_graphs)

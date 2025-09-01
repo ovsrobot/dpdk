@@ -75,7 +75,7 @@ eal_proc_type_detect(void)
 	return ptype;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_disable)
+RTE_EXPORT_SYMBOL(rte_mp_disable);
 bool
 rte_mp_disable(void)
 {
@@ -228,7 +228,7 @@ __rte_trace_point_register(rte_trace_point_t *trace, const char *name,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_eal_cleanup)
+RTE_EXPORT_SYMBOL(rte_eal_cleanup);
 int
 rte_eal_cleanup(void)
 {
@@ -246,7 +246,7 @@ rte_eal_cleanup(void)
 }
 
 /* Launch threads, called at application init(). */
-RTE_EXPORT_SYMBOL(rte_eal_init)
+RTE_EXPORT_SYMBOL(rte_eal_init);
 int
 rte_eal_init(int argc, char **argv)
 {
@@ -520,7 +520,7 @@ eal_asprintf(char **buffer, const char *format, ...)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_vfio_container_dma_map)
+RTE_EXPORT_SYMBOL(rte_vfio_container_dma_map);
 int
 rte_vfio_container_dma_map(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
@@ -531,7 +531,7 @@ rte_vfio_container_dma_map(__rte_unused int container_fd,
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_vfio_container_dma_unmap)
+RTE_EXPORT_SYMBOL(rte_vfio_container_dma_unmap);
 int
 rte_vfio_container_dma_unmap(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,

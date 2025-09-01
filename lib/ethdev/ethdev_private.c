@@ -286,7 +286,7 @@ eth_dev_fp_ops_setup(struct rte_eth_fp_ops *fpo,
 	fpo->txq.clbk = (void * __rte_atomic *)(uintptr_t)dev->pre_tx_burst_cbs;
 }
 
-RTE_EXPORT_SYMBOL(rte_eth_call_rx_callbacks)
+RTE_EXPORT_SYMBOL(rte_eth_call_rx_callbacks);
 uint16_t
 rte_eth_call_rx_callbacks(uint16_t port_id, uint16_t queue_id,
 	struct rte_mbuf **rx_pkts, uint16_t nb_rx, uint16_t nb_pkts,
@@ -310,7 +310,7 @@ rte_eth_call_rx_callbacks(uint16_t port_id, uint16_t queue_id,
 	return nb_rx;
 }
 
-RTE_EXPORT_SYMBOL(rte_eth_call_tx_callbacks)
+RTE_EXPORT_SYMBOL(rte_eth_call_tx_callbacks);
 uint16_t
 rte_eth_call_tx_callbacks(uint16_t port_id, uint16_t queue_id,
 	struct rte_mbuf **tx_pkts, uint16_t nb_pkts, void *opaque)

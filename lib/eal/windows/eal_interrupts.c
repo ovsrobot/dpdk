@@ -109,7 +109,7 @@ rte_eal_intr_init(void)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_is_intr)
+RTE_EXPORT_SYMBOL(rte_thread_is_intr);
 int
 rte_thread_is_intr(void)
 {
@@ -150,7 +150,7 @@ eal_intr_thread_cancel(void)
 	WaitForSingleObject(intr_thread_handle, INFINITE);
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_register)
+RTE_EXPORT_SYMBOL(rte_intr_callback_register);
 int
 rte_intr_callback_register(
 	__rte_unused const struct rte_intr_handle *intr_handle,
@@ -159,7 +159,7 @@ rte_intr_callback_register(
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_pending)
+RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_pending);
 int
 rte_intr_callback_unregister_pending(
 	__rte_unused const struct rte_intr_handle *intr_handle,
@@ -169,7 +169,7 @@ rte_intr_callback_unregister_pending(
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_unregister)
+RTE_EXPORT_SYMBOL(rte_intr_callback_unregister);
 int
 rte_intr_callback_unregister(
 	__rte_unused const struct rte_intr_handle *intr_handle,
@@ -178,7 +178,7 @@ rte_intr_callback_unregister(
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_sync)
+RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_sync);
 int
 rte_intr_callback_unregister_sync(
 	__rte_unused const struct rte_intr_handle *intr_handle,
@@ -187,21 +187,21 @@ rte_intr_callback_unregister_sync(
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_enable)
+RTE_EXPORT_SYMBOL(rte_intr_enable);
 int
 rte_intr_enable(__rte_unused const struct rte_intr_handle *intr_handle)
 {
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_ack)
+RTE_EXPORT_SYMBOL(rte_intr_ack);
 int
 rte_intr_ack(__rte_unused const struct rte_intr_handle *intr_handle)
 {
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_disable)
+RTE_EXPORT_SYMBOL(rte_intr_disable);
 int
 rte_intr_disable(__rte_unused const struct rte_intr_handle *intr_handle)
 {
@@ -252,7 +252,7 @@ rte_intr_cap_multiple(struct rte_intr_handle *intr_handle)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_epoll_wait)
+RTE_EXPORT_SYMBOL(rte_epoll_wait);
 int
 rte_epoll_wait(int epfd, struct rte_epoll_event *events,
 		int maxevents, int timeout)
@@ -265,7 +265,7 @@ rte_epoll_wait(int epfd, struct rte_epoll_event *events,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_epoll_wait_interruptible)
+RTE_EXPORT_SYMBOL(rte_epoll_wait_interruptible);
 int
 rte_epoll_wait_interruptible(int epfd, struct rte_epoll_event *events,
 			     int maxevents, int timeout)
@@ -278,7 +278,7 @@ rte_epoll_wait_interruptible(int epfd, struct rte_epoll_event *events,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_epoll_ctl)
+RTE_EXPORT_SYMBOL(rte_epoll_ctl);
 int
 rte_epoll_ctl(int epfd, int op, int fd, struct rte_epoll_event *event)
 {

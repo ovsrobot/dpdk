@@ -739,7 +739,7 @@ rte_port_ring_writer_nodrop_stats_read(void *port,
 /*
  * Summary of port operations
  */
-RTE_EXPORT_SYMBOL(rte_port_ring_reader_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_reader_ops);
 struct rte_port_in_ops rte_port_ring_reader_ops = {
 	.f_create = rte_port_ring_reader_create,
 	.f_free = rte_port_ring_reader_free,
@@ -747,7 +747,7 @@ struct rte_port_in_ops rte_port_ring_reader_ops = {
 	.f_stats = rte_port_ring_reader_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_port_ring_writer_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_writer_ops);
 struct rte_port_out_ops rte_port_ring_writer_ops = {
 	.f_create = rte_port_ring_writer_create,
 	.f_free = rte_port_ring_writer_free,
@@ -757,7 +757,7 @@ struct rte_port_out_ops rte_port_ring_writer_ops = {
 	.f_stats = rte_port_ring_writer_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_port_ring_writer_nodrop_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_writer_nodrop_ops);
 struct rte_port_out_ops rte_port_ring_writer_nodrop_ops = {
 	.f_create = rte_port_ring_writer_nodrop_create,
 	.f_free = rte_port_ring_writer_nodrop_free,
@@ -767,7 +767,7 @@ struct rte_port_out_ops rte_port_ring_writer_nodrop_ops = {
 	.f_stats = rte_port_ring_writer_nodrop_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_port_ring_multi_reader_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_multi_reader_ops);
 struct rte_port_in_ops rte_port_ring_multi_reader_ops = {
 	.f_create = rte_port_ring_multi_reader_create,
 	.f_free = rte_port_ring_reader_free,
@@ -775,7 +775,7 @@ struct rte_port_in_ops rte_port_ring_multi_reader_ops = {
 	.f_stats = rte_port_ring_reader_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_port_ring_multi_writer_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_multi_writer_ops);
 struct rte_port_out_ops rte_port_ring_multi_writer_ops = {
 	.f_create = rte_port_ring_multi_writer_create,
 	.f_free = rte_port_ring_writer_free,
@@ -785,7 +785,7 @@ struct rte_port_out_ops rte_port_ring_multi_writer_ops = {
 	.f_stats = rte_port_ring_writer_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_port_ring_multi_writer_nodrop_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_multi_writer_nodrop_ops);
 struct rte_port_out_ops rte_port_ring_multi_writer_nodrop_ops = {
 	.f_create = rte_port_ring_multi_writer_nodrop_create,
 	.f_free = rte_port_ring_writer_nodrop_free,

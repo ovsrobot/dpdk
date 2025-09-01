@@ -102,7 +102,7 @@ node_free(struct rte_rib *rib, struct rte_rib_node *ent)
 	rte_mempool_put(rib->node_pool, ent);
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_lookup)
+RTE_EXPORT_SYMBOL(rte_rib_lookup);
 struct rte_rib_node *
 rte_rib_lookup(struct rte_rib *rib, uint32_t ip)
 {
@@ -122,7 +122,7 @@ rte_rib_lookup(struct rte_rib *rib, uint32_t ip)
 	return prev;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_lookup_parent)
+RTE_EXPORT_SYMBOL(rte_rib_lookup_parent);
 struct rte_rib_node *
 rte_rib_lookup_parent(struct rte_rib_node *ent)
 {
@@ -154,7 +154,7 @@ __rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_lookup_exact)
+RTE_EXPORT_SYMBOL(rte_rib_lookup_exact);
 struct rte_rib_node *
 rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 {
@@ -172,7 +172,7 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth)
  *  for a given in args ip/depth prefix
  *  last = NULL means the first invocation
  */
-RTE_EXPORT_SYMBOL(rte_rib_get_nxt)
+RTE_EXPORT_SYMBOL(rte_rib_get_nxt);
 struct rte_rib_node *
 rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
 	uint8_t depth, struct rte_rib_node *last, int flag)
@@ -213,7 +213,7 @@ rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
 	return prev;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_remove)
+RTE_EXPORT_SYMBOL(rte_rib_remove);
 void
 rte_rib_remove(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 {
@@ -246,7 +246,7 @@ rte_rib_remove(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_insert)
+RTE_EXPORT_SYMBOL(rte_rib_insert);
 struct rte_rib_node *
 rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 {
@@ -353,7 +353,7 @@ rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 	return new_node;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_get_ip)
+RTE_EXPORT_SYMBOL(rte_rib_get_ip);
 int
 rte_rib_get_ip(const struct rte_rib_node *node, uint32_t *ip)
 {
@@ -365,7 +365,7 @@ rte_rib_get_ip(const struct rte_rib_node *node, uint32_t *ip)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_get_depth)
+RTE_EXPORT_SYMBOL(rte_rib_get_depth);
 int
 rte_rib_get_depth(const struct rte_rib_node *node, uint8_t *depth)
 {
@@ -377,14 +377,14 @@ rte_rib_get_depth(const struct rte_rib_node *node, uint8_t *depth)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_get_ext)
+RTE_EXPORT_SYMBOL(rte_rib_get_ext);
 void *
 rte_rib_get_ext(struct rte_rib_node *node)
 {
 	return (node == NULL) ? NULL : &node->ext[0];
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_get_nh)
+RTE_EXPORT_SYMBOL(rte_rib_get_nh);
 int
 rte_rib_get_nh(const struct rte_rib_node *node, uint64_t *nh)
 {
@@ -396,7 +396,7 @@ rte_rib_get_nh(const struct rte_rib_node *node, uint64_t *nh)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_set_nh)
+RTE_EXPORT_SYMBOL(rte_rib_set_nh);
 int
 rte_rib_set_nh(struct rte_rib_node *node, uint64_t nh)
 {
@@ -408,7 +408,7 @@ rte_rib_set_nh(struct rte_rib_node *node, uint64_t nh)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_create)
+RTE_EXPORT_SYMBOL(rte_rib_create);
 struct rte_rib *
 rte_rib_create(const char *name, int socket_id, const struct rte_rib_conf *conf)
 {
@@ -490,7 +490,7 @@ exit:
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_find_existing)
+RTE_EXPORT_SYMBOL(rte_rib_find_existing);
 struct rte_rib *
 rte_rib_find_existing(const char *name)
 {
@@ -516,7 +516,7 @@ rte_rib_find_existing(const char *name)
 	return rib;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_free)
+RTE_EXPORT_SYMBOL(rte_rib_free);
 void
 rte_rib_free(struct rte_rib *rib)
 {

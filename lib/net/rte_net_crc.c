@@ -216,7 +216,7 @@ handlers_init(enum rte_net_crc_alg alg)
 
 /* Public API */
 
-RTE_EXPORT_SYMBOL(rte_net_crc_set_alg)
+RTE_EXPORT_SYMBOL(rte_net_crc_set_alg);
 struct rte_net_crc *rte_net_crc_set_alg(enum rte_net_crc_alg alg, enum rte_net_crc_type type)
 {
 	uint16_t max_simd_bitwidth;
@@ -256,13 +256,13 @@ struct rte_net_crc *rte_net_crc_set_alg(enum rte_net_crc_alg alg, enum rte_net_c
 	return crc;
 }
 
-RTE_EXPORT_SYMBOL(rte_net_crc_free)
+RTE_EXPORT_SYMBOL(rte_net_crc_free);
 void rte_net_crc_free(struct rte_net_crc *crc)
 {
 	rte_free(crc);
 }
 
-RTE_EXPORT_SYMBOL(rte_net_crc_calc)
+RTE_EXPORT_SYMBOL(rte_net_crc_calc);
 uint32_t rte_net_crc_calc(const struct rte_net_crc *ctx, const void *data, const uint32_t data_len)
 {
 	return handlers[ctx->alg].f[ctx->type](data, data_len);

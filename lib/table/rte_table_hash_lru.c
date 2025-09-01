@@ -946,7 +946,7 @@ rte_table_hash_lru_stats_read(void *table, struct rte_table_stats *stats, int cl
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_table_hash_lru_ops)
+RTE_EXPORT_SYMBOL(rte_table_hash_lru_ops);
 struct rte_table_ops rte_table_hash_lru_ops = {
 	.f_create = rte_table_hash_lru_create,
 	.f_free = rte_table_hash_lru_free,

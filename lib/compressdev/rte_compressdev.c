@@ -29,7 +29,7 @@ static struct rte_compressdev_global compressdev_globals = {
 		.max_devs		= RTE_COMPRESS_MAX_DEVS
 };
 
-RTE_EXPORT_SYMBOL(rte_compressdev_capability_get)
+RTE_EXPORT_SYMBOL(rte_compressdev_capability_get);
 const struct rte_compressdev_capabilities *
 rte_compressdev_capability_get(uint8_t dev_id,
 			enum rte_comp_algorithm algo)
@@ -53,7 +53,7 @@ rte_compressdev_capability_get(uint8_t dev_id,
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_get_feature_name)
+RTE_EXPORT_SYMBOL(rte_compressdev_get_feature_name);
 const char *
 rte_compressdev_get_feature_name(uint64_t flag)
 {
@@ -83,7 +83,7 @@ rte_compressdev_get_dev(uint8_t dev_id)
 	return &compressdev_globals.devs[dev_id];
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_pmd_get_named_dev)
+RTE_EXPORT_SYMBOL(rte_compressdev_pmd_get_named_dev);
 struct rte_compressdev *
 rte_compressdev_pmd_get_named_dev(const char *name)
 {
@@ -120,7 +120,7 @@ rte_compressdev_is_valid_dev(uint8_t dev_id)
 }
 
 
-RTE_EXPORT_SYMBOL(rte_compressdev_get_dev_id)
+RTE_EXPORT_SYMBOL(rte_compressdev_get_dev_id);
 int
 rte_compressdev_get_dev_id(const char *name)
 {
@@ -139,14 +139,14 @@ rte_compressdev_get_dev_id(const char *name)
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_count)
+RTE_EXPORT_SYMBOL(rte_compressdev_count);
 uint8_t
 rte_compressdev_count(void)
 {
 	return compressdev_globals.nb_devs;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_devices_get)
+RTE_EXPORT_SYMBOL(rte_compressdev_devices_get);
 uint8_t
 rte_compressdev_devices_get(const char *driver_name, uint8_t *devices,
 	uint8_t nb_devices)
@@ -172,7 +172,7 @@ rte_compressdev_devices_get(const char *driver_name, uint8_t *devices,
 	return count;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_socket_id)
+RTE_EXPORT_SYMBOL(rte_compressdev_socket_id);
 int
 rte_compressdev_socket_id(uint8_t dev_id)
 {
@@ -230,7 +230,7 @@ rte_compressdev_find_free_device_index(void)
 	return RTE_COMPRESS_MAX_DEVS;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_pmd_allocate)
+RTE_EXPORT_SYMBOL(rte_compressdev_pmd_allocate);
 struct rte_compressdev *
 rte_compressdev_pmd_allocate(const char *name, int socket_id)
 {
@@ -277,7 +277,7 @@ rte_compressdev_pmd_allocate(const char *name, int socket_id)
 	return compressdev;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_pmd_release_device)
+RTE_EXPORT_SYMBOL(rte_compressdev_pmd_release_device);
 int
 rte_compressdev_pmd_release_device(struct rte_compressdev *compressdev)
 {
@@ -298,7 +298,7 @@ rte_compressdev_pmd_release_device(struct rte_compressdev *compressdev)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_queue_pair_count)
+RTE_EXPORT_SYMBOL(rte_compressdev_queue_pair_count);
 uint16_t
 rte_compressdev_queue_pair_count(uint8_t dev_id)
 {
@@ -424,7 +424,7 @@ rte_compressdev_queue_pairs_release(struct rte_compressdev *dev)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_configure)
+RTE_EXPORT_SYMBOL(rte_compressdev_configure);
 int
 rte_compressdev_configure(uint8_t dev_id, struct rte_compressdev_config *config)
 {
@@ -460,7 +460,7 @@ rte_compressdev_configure(uint8_t dev_id, struct rte_compressdev_config *config)
 	return dev->dev_ops->dev_configure(dev, config);
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_start)
+RTE_EXPORT_SYMBOL(rte_compressdev_start);
 int
 rte_compressdev_start(uint8_t dev_id)
 {
@@ -494,7 +494,7 @@ rte_compressdev_start(uint8_t dev_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_stop)
+RTE_EXPORT_SYMBOL(rte_compressdev_stop);
 void
 rte_compressdev_stop(uint8_t dev_id)
 {
@@ -520,7 +520,7 @@ rte_compressdev_stop(uint8_t dev_id)
 	dev->data->dev_started = 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_close)
+RTE_EXPORT_SYMBOL(rte_compressdev_close);
 int
 rte_compressdev_close(uint8_t dev_id)
 {
@@ -557,7 +557,7 @@ rte_compressdev_close(uint8_t dev_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_queue_pair_setup)
+RTE_EXPORT_SYMBOL(rte_compressdev_queue_pair_setup);
 int
 rte_compressdev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 		uint32_t max_inflight_ops, int socket_id)
@@ -593,7 +593,7 @@ rte_compressdev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 	return dev->dev_ops->queue_pair_setup(dev, queue_pair_id, max_inflight_ops, socket_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_dequeue_burst)
+RTE_EXPORT_SYMBOL(rte_compressdev_dequeue_burst);
 uint16_t
 rte_compressdev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 		struct rte_comp_op **ops, uint16_t nb_ops)
@@ -603,7 +603,7 @@ rte_compressdev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 	return dev->dequeue_burst(dev->data->queue_pairs[qp_id], ops, nb_ops);
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_enqueue_burst)
+RTE_EXPORT_SYMBOL(rte_compressdev_enqueue_burst);
 uint16_t
 rte_compressdev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 		struct rte_comp_op **ops, uint16_t nb_ops)
@@ -613,7 +613,7 @@ rte_compressdev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 	return dev->enqueue_burst(dev->data->queue_pairs[qp_id], ops, nb_ops);
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_stats_get)
+RTE_EXPORT_SYMBOL(rte_compressdev_stats_get);
 int
 rte_compressdev_stats_get(uint8_t dev_id, struct rte_compressdev_stats *stats)
 {
@@ -638,7 +638,7 @@ rte_compressdev_stats_get(uint8_t dev_id, struct rte_compressdev_stats *stats)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_stats_reset)
+RTE_EXPORT_SYMBOL(rte_compressdev_stats_reset);
 void
 rte_compressdev_stats_reset(uint8_t dev_id)
 {
@@ -657,7 +657,7 @@ rte_compressdev_stats_reset(uint8_t dev_id)
 }
 
 
-RTE_EXPORT_SYMBOL(rte_compressdev_info_get)
+RTE_EXPORT_SYMBOL(rte_compressdev_info_get);
 void
 rte_compressdev_info_get(uint8_t dev_id, struct rte_compressdev_info *dev_info)
 {
@@ -679,7 +679,7 @@ rte_compressdev_info_get(uint8_t dev_id, struct rte_compressdev_info *dev_info)
 	dev_info->driver_name = dev->device->driver->name;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_private_xform_create)
+RTE_EXPORT_SYMBOL(rte_compressdev_private_xform_create);
 int
 rte_compressdev_private_xform_create(uint8_t dev_id,
 		const struct rte_comp_xform *xform,
@@ -706,7 +706,7 @@ rte_compressdev_private_xform_create(uint8_t dev_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_private_xform_free)
+RTE_EXPORT_SYMBOL(rte_compressdev_private_xform_free);
 int
 rte_compressdev_private_xform_free(uint8_t dev_id, void *priv_xform)
 {
@@ -731,7 +731,7 @@ rte_compressdev_private_xform_free(uint8_t dev_id, void *priv_xform)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_stream_create)
+RTE_EXPORT_SYMBOL(rte_compressdev_stream_create);
 int
 rte_compressdev_stream_create(uint8_t dev_id,
 		const struct rte_comp_xform *xform,
@@ -759,7 +759,7 @@ rte_compressdev_stream_create(uint8_t dev_id,
 }
 
 
-RTE_EXPORT_SYMBOL(rte_compressdev_stream_free)
+RTE_EXPORT_SYMBOL(rte_compressdev_stream_free);
 int
 rte_compressdev_stream_free(uint8_t dev_id, void *stream)
 {
@@ -784,7 +784,7 @@ rte_compressdev_stream_free(uint8_t dev_id, void *stream)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_compressdev_name_get)
+RTE_EXPORT_SYMBOL(rte_compressdev_name_get);
 const char *
 rte_compressdev_name_get(uint8_t dev_id)
 {

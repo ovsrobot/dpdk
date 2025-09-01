@@ -1740,7 +1740,7 @@ out_no_unlock:
 	return nb_tx;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_enqueue_burst)
+RTE_EXPORT_SYMBOL(rte_vhost_enqueue_burst);
 uint16_t
 rte_vhost_enqueue_burst(int vid, uint16_t queue_id,
 	struct rte_mbuf **__rte_restrict pkts, uint16_t count)
@@ -3594,7 +3594,7 @@ virtio_dev_tx_packed_compliant(struct virtio_net *dev,
 	return virtio_dev_tx_packed(dev, vq, mbuf_pool, pkts, count, false);
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_dequeue_burst)
+RTE_EXPORT_SYMBOL(rte_vhost_dequeue_burst);
 uint16_t
 rte_vhost_dequeue_burst(int vid, uint16_t queue_id,
 	struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count)

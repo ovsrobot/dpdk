@@ -72,7 +72,7 @@ eal_thread_ack_command(void)
 }
 
 /* get current thread ID */
-RTE_EXPORT_SYMBOL(rte_sys_gettid)
+RTE_EXPORT_SYMBOL(rte_sys_gettid);
 int
 rte_sys_gettid(void)
 {

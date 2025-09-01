@@ -190,7 +190,7 @@ __mbuf_dynfield_lookup(const char *name)
 	return mbuf_dynfield;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dynfield_lookup)
+RTE_EXPORT_SYMBOL(rte_mbuf_dynfield_lookup);
 int
 rte_mbuf_dynfield_lookup(const char *name, struct rte_mbuf_dynfield *params)
 {
@@ -327,7 +327,7 @@ __rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 	return offset;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dynfield_register_offset)
+RTE_EXPORT_SYMBOL(rte_mbuf_dynfield_register_offset);
 int
 rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 				size_t req)
@@ -354,7 +354,7 @@ rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dynfield_register)
+RTE_EXPORT_SYMBOL(rte_mbuf_dynfield_register);
 int
 rte_mbuf_dynfield_register(const struct rte_mbuf_dynfield *params)
 {
@@ -387,7 +387,7 @@ __mbuf_dynflag_lookup(const char *name)
 	return mbuf_dynflag;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dynflag_lookup)
+RTE_EXPORT_SYMBOL(rte_mbuf_dynflag_lookup);
 int
 rte_mbuf_dynflag_lookup(const char *name,
 			struct rte_mbuf_dynflag *params)
@@ -503,7 +503,7 @@ __rte_mbuf_dynflag_register_bitnum(const struct rte_mbuf_dynflag *params,
 	return bitnum;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dynflag_register_bitnum)
+RTE_EXPORT_SYMBOL(rte_mbuf_dynflag_register_bitnum);
 int
 rte_mbuf_dynflag_register_bitnum(const struct rte_mbuf_dynflag *params,
 				unsigned int req)
@@ -527,14 +527,14 @@ rte_mbuf_dynflag_register_bitnum(const struct rte_mbuf_dynflag *params,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dynflag_register)
+RTE_EXPORT_SYMBOL(rte_mbuf_dynflag_register);
 int
 rte_mbuf_dynflag_register(const struct rte_mbuf_dynflag *params)
 {
 	return rte_mbuf_dynflag_register_bitnum(params, UINT_MAX);
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dyn_dump)
+RTE_EXPORT_SYMBOL(rte_mbuf_dyn_dump);
 void rte_mbuf_dyn_dump(FILE *out)
 {
 	struct mbuf_dynfield_list *mbuf_dynfield_list;
@@ -622,7 +622,7 @@ rte_mbuf_dyn_timestamp_register(int *field_offset, uint64_t *flag,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dyn_rx_timestamp_register)
+RTE_EXPORT_SYMBOL(rte_mbuf_dyn_rx_timestamp_register);
 int
 rte_mbuf_dyn_rx_timestamp_register(int *field_offset, uint64_t *rx_flag)
 {
@@ -630,7 +630,7 @@ rte_mbuf_dyn_rx_timestamp_register(int *field_offset, uint64_t *rx_flag)
 			"Rx", RTE_MBUF_DYNFLAG_RX_TIMESTAMP_NAME);
 }
 
-RTE_EXPORT_SYMBOL(rte_mbuf_dyn_tx_timestamp_register)
+RTE_EXPORT_SYMBOL(rte_mbuf_dyn_tx_timestamp_register);
 int
 rte_mbuf_dyn_tx_timestamp_register(int *field_offset, uint64_t *tx_flag)
 {

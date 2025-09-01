@@ -29,7 +29,7 @@ session_check(struct rte_ipsec_session *ss)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_ipsec_session_prepare)
+RTE_EXPORT_SYMBOL(rte_ipsec_session_prepare);
 int
 rte_ipsec_session_prepare(struct rte_ipsec_session *ss)
 {
