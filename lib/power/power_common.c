@@ -14,7 +14,7 @@
 
 #include "power_common.h"
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_power_logtype)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_power_logtype);
 RTE_LOG_REGISTER_DEFAULT(rte_power_logtype, INFO);
 
 #define POWER_SYSFILE_SCALING_DRIVER   \
@@ -23,7 +23,7 @@ RTE_LOG_REGISTER_DEFAULT(rte_power_logtype, INFO);
 		"/sys/devices/system/cpu/cpu%u/cpufreq/scaling_governor"
 #define POWER_CONVERT_TO_DECIMAL 10
 
-RTE_EXPORT_INTERNAL_SYMBOL(cpufreq_check_scaling_driver)
+RTE_EXPORT_INTERNAL_SYMBOL(cpufreq_check_scaling_driver);
 int
 cpufreq_check_scaling_driver(const char *driver_name)
 {
@@ -69,7 +69,7 @@ cpufreq_check_scaling_driver(const char *driver_name)
 	return 1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(open_core_sysfs_file)
+RTE_EXPORT_INTERNAL_SYMBOL(open_core_sysfs_file);
 int
 open_core_sysfs_file(FILE **f, const char *mode, const char *format, ...)
 {
@@ -88,7 +88,7 @@ open_core_sysfs_file(FILE **f, const char *mode, const char *format, ...)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(read_core_sysfs_u32)
+RTE_EXPORT_INTERNAL_SYMBOL(read_core_sysfs_u32);
 int
 read_core_sysfs_u32(FILE *f, uint32_t *val)
 {
@@ -114,7 +114,7 @@ read_core_sysfs_u32(FILE *f, uint32_t *val)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(read_core_sysfs_s)
+RTE_EXPORT_INTERNAL_SYMBOL(read_core_sysfs_s);
 int
 read_core_sysfs_s(FILE *f, char *buf, unsigned int len)
 {
@@ -133,7 +133,7 @@ read_core_sysfs_s(FILE *f, char *buf, unsigned int len)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(write_core_sysfs_s)
+RTE_EXPORT_INTERNAL_SYMBOL(write_core_sysfs_s);
 int
 write_core_sysfs_s(FILE *f, const char *str)
 {
@@ -160,7 +160,7 @@ write_core_sysfs_s(FILE *f, const char *str)
  * set it into 'performance' if it is not by writing the sys file. The original
  * governor will be saved for rolling back.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(power_set_governor)
+RTE_EXPORT_INTERNAL_SYMBOL(power_set_governor);
 int
 power_set_governor(unsigned int lcore_id, const char *new_governor,
 		char *orig_governor, size_t orig_governor_len)
@@ -214,7 +214,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(power_get_lcore_mapped_cpu_id)
+RTE_EXPORT_INTERNAL_SYMBOL(power_get_lcore_mapped_cpu_id);
 int power_get_lcore_mapped_cpu_id(uint32_t lcore_id, uint32_t *cpu_id)
 {
 	rte_cpuset_t lcore_cpus;

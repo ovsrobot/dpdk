@@ -75,7 +75,7 @@ eth_dev_get(uint16_t port_id)
 	return eth_dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_allocate);
 struct rte_eth_dev *
 rte_eth_dev_allocate(const char *name)
 {
@@ -130,7 +130,7 @@ unlock:
 	return eth_dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_allocated)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_allocated);
 struct rte_eth_dev *
 rte_eth_dev_allocated(const char *name)
 {
@@ -153,7 +153,7 @@ rte_eth_dev_allocated(const char *name)
  * makes sure that the same device would have the same port ID both
  * in the primary and secondary process.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_attach_secondary)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_attach_secondary);
 struct rte_eth_dev *
 rte_eth_dev_attach_secondary(const char *name)
 {
@@ -184,7 +184,7 @@ unlock:
 	return eth_dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_callback_process)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_callback_process);
 int
 rte_eth_dev_callback_process(struct rte_eth_dev *dev,
 	enum rte_eth_event_type event, void *ret_param)
@@ -212,7 +212,7 @@ rte_eth_dev_callback_process(struct rte_eth_dev *dev,
 	return rc;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_probing_finish)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_probing_finish);
 void
 rte_eth_dev_probing_finish(struct rte_eth_dev *dev)
 {
@@ -232,7 +232,7 @@ rte_eth_dev_probing_finish(struct rte_eth_dev *dev)
 	dev->state = RTE_ETH_DEV_ATTACHED;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_release_port)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_release_port);
 int
 rte_eth_dev_release_port(struct rte_eth_dev *eth_dev)
 {
@@ -291,7 +291,7 @@ rte_eth_dev_release_port(struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_create)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_create);
 int
 rte_eth_dev_create(struct rte_device *device, const char *name,
 	size_t priv_data_size,
@@ -367,7 +367,7 @@ probe_failed:
 	return retval;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_destroy);
 int
 rte_eth_dev_destroy(struct rte_eth_dev *ethdev,
 	ethdev_uninit_t ethdev_uninit)
@@ -388,7 +388,7 @@ rte_eth_dev_destroy(struct rte_eth_dev *ethdev,
 	return rte_eth_dev_release_port(ethdev);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_get_by_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_get_by_name);
 struct rte_eth_dev *
 rte_eth_dev_get_by_name(const char *name)
 {
@@ -400,7 +400,7 @@ rte_eth_dev_get_by_name(const char *name)
 	return &rte_eth_devices[pid];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_is_rx_hairpin_queue)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_is_rx_hairpin_queue);
 int
 rte_eth_dev_is_rx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 {
@@ -409,7 +409,7 @@ rte_eth_dev_is_rx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_is_tx_hairpin_queue)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_is_tx_hairpin_queue);
 int
 rte_eth_dev_is_tx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 {
@@ -418,7 +418,7 @@ rte_eth_dev_is_tx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_internal_reset)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_internal_reset);
 void
 rte_eth_dev_internal_reset(struct rte_eth_dev *dev)
 {
@@ -629,7 +629,7 @@ parse_cleanup:
 	return result;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_devargs_parse)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_devargs_parse);
 int
 rte_eth_devargs_parse(const char *dargs, struct rte_eth_devargs *eth_devargs,
 		      unsigned int nb_da)
@@ -692,7 +692,7 @@ eth_dev_dma_mzone_name(char *name, size_t len, uint16_t port_id, uint16_t queue_
 			port_id, queue_id, ring_name);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dma_zone_free)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dma_zone_free);
 int
 rte_eth_dma_zone_free(const struct rte_eth_dev *dev, const char *ring_name,
 		uint16_t queue_id)
@@ -717,7 +717,7 @@ rte_eth_dma_zone_free(const struct rte_eth_dev *dev, const char *ring_name,
 	return rc;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dma_zone_reserve)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dma_zone_reserve);
 const struct rte_memzone *
 rte_eth_dma_zone_reserve(const struct rte_eth_dev *dev, const char *ring_name,
 			 uint16_t queue_id, size_t size, unsigned int align,
@@ -753,7 +753,7 @@ rte_eth_dma_zone_reserve(const struct rte_eth_dev *dev, const char *ring_name,
 			RTE_MEMZONE_IOVA_CONTIG, align);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_hairpin_queue_peer_bind)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_hairpin_queue_peer_bind);
 int
 rte_eth_hairpin_queue_peer_bind(uint16_t cur_port, uint16_t cur_queue,
 				struct rte_hairpin_peer_info *peer_info,
@@ -772,7 +772,7 @@ rte_eth_hairpin_queue_peer_bind(uint16_t cur_port, uint16_t cur_queue,
 	return dev->dev_ops->hairpin_queue_peer_bind(dev, cur_queue, peer_info, direction);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_hairpin_queue_peer_unbind)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_hairpin_queue_peer_unbind);
 int
 rte_eth_hairpin_queue_peer_unbind(uint16_t cur_port, uint16_t cur_queue,
 				  uint32_t direction)
@@ -787,7 +787,7 @@ rte_eth_hairpin_queue_peer_unbind(uint16_t cur_port, uint16_t cur_queue,
 	return dev->dev_ops->hairpin_queue_peer_unbind(dev, cur_queue, direction);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_hairpin_queue_peer_update)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_hairpin_queue_peer_update);
 int
 rte_eth_hairpin_queue_peer_update(uint16_t peer_port, uint16_t peer_queue,
 				  struct rte_hairpin_peer_info *cur_info,
@@ -809,7 +809,7 @@ rte_eth_hairpin_queue_peer_update(uint16_t peer_port, uint16_t peer_queue,
 						       cur_info, peer_info, direction);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_ip_reassembly_dynfield_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_ip_reassembly_dynfield_register);
 int
 rte_eth_ip_reassembly_dynfield_register(int *field_offset, int *flag_offset)
 {
@@ -838,7 +838,7 @@ rte_eth_ip_reassembly_dynfield_register(int *field_offset, int *flag_offset)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_pkt_burst_dummy)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_pkt_burst_dummy);
 uint16_t
 rte_eth_pkt_burst_dummy(void *queue __rte_unused,
 		struct rte_mbuf **pkts __rte_unused,
@@ -847,7 +847,7 @@ rte_eth_pkt_burst_dummy(void *queue __rte_unused,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_representor_id_get)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_representor_id_get);
 int
 rte_eth_representor_id_get(uint16_t port_id,
 			   enum rte_eth_representor_type type,
@@ -943,7 +943,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_switch_domain_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_switch_domain_alloc);
 int
 rte_eth_switch_domain_alloc(uint16_t *domain_id)
 {
@@ -964,7 +964,7 @@ rte_eth_switch_domain_alloc(uint16_t *domain_id)
 	return -ENOSPC;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_switch_domain_free)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_switch_domain_free);
 int
 rte_eth_switch_domain_free(uint16_t domain_id)
 {
@@ -981,7 +981,7 @@ rte_eth_switch_domain_free(uint16_t domain_id)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_get_restore_flags)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_get_restore_flags);
 uint64_t
 rte_eth_get_restore_flags(struct rte_eth_dev *dev, enum rte_eth_dev_operation op)
 {

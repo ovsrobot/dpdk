@@ -1474,7 +1474,7 @@ mempool_event_callback_invoke(enum rte_mempool_event event,
 	rte_mcfg_tailq_read_unlock();
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mempool_event_callback_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mempool_event_callback_register);
 int
 rte_mempool_event_callback_register(rte_mempool_event_callback *func,
 				    void *user_data)
@@ -1513,7 +1513,7 @@ exit:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mempool_event_callback_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mempool_event_callback_unregister);
 int
 rte_mempool_event_callback_unregister(rte_mempool_event_callback *func,
 				      void *user_data)

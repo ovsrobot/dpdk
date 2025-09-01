@@ -69,7 +69,7 @@ rte_eal_iova_mode(void)
 }
 
 /* Get the EAL base address */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_get_baseaddr)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_get_baseaddr);
 uint64_t
 rte_eal_get_baseaddr(void)
 {

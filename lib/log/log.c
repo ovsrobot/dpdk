@@ -234,7 +234,7 @@ fail:
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(eal_log_save_regexp)
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_save_regexp);
 int
 eal_log_save_regexp(const char *regex, uint32_t level)
 {
@@ -262,7 +262,7 @@ rte_log_set_level_pattern(const char *pattern, uint32_t level)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(eal_log_save_pattern)
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_save_pattern);
 int
 eal_log_save_pattern(const char *pattern, uint32_t level)
 {
@@ -400,7 +400,7 @@ RTE_INIT_PRIO(log_init, LOG)
 	rte_logs.dynamic_types_len = RTE_LOGTYPE_FIRST_EXT_ID;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(eal_log_level2str)
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_level2str);
 const char *
 eal_log_level2str(uint32_t level)
 {
@@ -528,7 +528,7 @@ rte_log(uint32_t level, uint32_t logtype, const char *format, ...)
 /*
  * Called by rte_eal_init
  */
-RTE_EXPORT_INTERNAL_SYMBOL(eal_log_init)
+RTE_EXPORT_INTERNAL_SYMBOL(eal_log_init);
 void
 eal_log_init(const char *id)
 {
@@ -574,7 +574,7 @@ eal_log_init(const char *id)
 /*
  * Called by eal_cleanup
  */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_log_cleanup)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_log_cleanup);
 void
 rte_eal_log_cleanup(void)
 {

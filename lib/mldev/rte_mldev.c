@@ -24,14 +24,14 @@ struct rte_ml_op_pool_private {
 	/*< Size of private user data with each operation. */
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_dev);
 struct rte_ml_dev *
 rte_ml_dev_pmd_get_dev(int16_t dev_id)
 {
 	return &ml_dev_globals.devs[dev_id];
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_named_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_get_named_dev);
 struct rte_ml_dev *
 rte_ml_dev_pmd_get_named_dev(const char *name)
 {
@@ -50,7 +50,7 @@ rte_ml_dev_pmd_get_named_dev(const char *name)
 	return NULL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_allocate);
 struct rte_ml_dev *
 rte_ml_dev_pmd_allocate(const char *name, uint8_t socket_id)
 {
@@ -124,7 +124,7 @@ rte_ml_dev_pmd_allocate(const char *name, uint8_t socket_id)
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_release);
 int
 rte_ml_dev_pmd_release(struct rte_ml_dev *dev)
 {
