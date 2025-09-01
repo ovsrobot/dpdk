@@ -517,7 +517,7 @@ fail:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_free, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_free, 25.07);
 int
 rte_node_free(rte_node_t id)
 {

@@ -50,15 +50,15 @@ RTE_EXPORT_SYMBOL(__rte_eventdev_trace_maintain);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_maintain,
 	lib.eventdev.maintain)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_profile_switch, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_profile_switch, 23.11);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_profile_switch,
 	lib.eventdev.port.profile.switch)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule_modify, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule_modify, 24.11);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_preschedule_modify,
 	lib.eventdev.port.preschedule.modify)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_eventdev_trace_port_preschedule, 24.11);
 RTE_TRACE_POINT_REGISTER(rte_eventdev_trace_port_preschedule,
 	lib.eventdev.port.preschedule)
 

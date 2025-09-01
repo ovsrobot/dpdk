@@ -422,7 +422,7 @@ ring_dump_hts_headtail(FILE *f, const char *prefix,
 	fprintf(f, "%stail=%"PRIu32"\n", prefix, hts->ht.pos.tail);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ring_headtail_dump, 25.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ring_headtail_dump, 25.03);
 void
 rte_ring_headtail_dump(FILE *f, const char *prefix,
 		const struct rte_ring_headtail *r)

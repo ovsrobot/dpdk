@@ -1535,7 +1535,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_notify_guest, 23.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_notify_guest, 23.07);
 void
 rte_vhost_notify_guest(int vid, uint16_t queue_id)
 {
@@ -1858,7 +1858,7 @@ out_free_async:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register, 20.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register, 20.08);
 int
 rte_vhost_async_channel_register(int vid, uint16_t queue_id)
 {
@@ -1892,7 +1892,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register_thread_unsafe, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_register_thread_unsafe, 21.08);
 int
 rte_vhost_async_channel_register_thread_unsafe(int vid, uint16_t queue_id)
 {
@@ -1915,7 +1915,7 @@ rte_vhost_async_channel_register_thread_unsafe(int vid, uint16_t queue_id)
 	return async_channel_register(dev, vq);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister, 20.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister, 20.08);
 int
 rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
 {
@@ -1962,7 +1962,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister_thread_unsafe, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_channel_unregister_thread_unsafe, 21.08);
 int
 rte_vhost_async_channel_unregister_thread_unsafe(int vid, uint16_t queue_id)
 {
@@ -1997,7 +1997,7 @@ rte_vhost_async_channel_unregister_thread_unsafe(int vid, uint16_t queue_id)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_configure, 22.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_configure, 22.03);
 int
 rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 {
@@ -2074,7 +2074,7 @@ error:
 	return -1;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight, 21.08)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight, 21.08);
 int
 rte_vhost_async_get_inflight(int vid, uint16_t queue_id)
 {
@@ -2113,7 +2113,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight_thread_unsafe, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_get_inflight_thread_unsafe, 22.07);
 int
 rte_vhost_async_get_inflight_thread_unsafe(int vid, uint16_t queue_id)
 {
@@ -2304,7 +2304,7 @@ out_unlock:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_unconfigure, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vhost_async_dma_unconfigure, 22.11);
 int
 rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id)
 {

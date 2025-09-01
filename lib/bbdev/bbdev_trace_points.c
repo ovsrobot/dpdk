@@ -22,9 +22,9 @@ RTE_TRACE_POINT_REGISTER(rte_bbdev_trace_queue_start,
 RTE_TRACE_POINT_REGISTER(rte_bbdev_trace_queue_stop,
 	lib.bbdev.queue.stop)
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_bbdev_trace_enqueue, 25.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_bbdev_trace_enqueue, 25.03);
 RTE_TRACE_POINT_REGISTER(rte_bbdev_trace_enqueue,
 	lib.bbdev.enq)
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_bbdev_trace_dequeue, 25.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(__rte_bbdev_trace_dequeue, 25.03);
 RTE_TRACE_POINT_REGISTER(rte_bbdev_trace_dequeue,
 	lib.bbdev.deq)

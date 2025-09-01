@@ -56,7 +56,7 @@ static struct rte_hash_parameters udp4_params = {
 	.socket_id = 0,
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_udp4_dst_port_add, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_udp4_dst_port_add, 23.11);
 int
 rte_node_udp4_dst_port_add(uint32_t dst_port, rte_edge_t next_node)
 {
@@ -78,7 +78,7 @@ rte_node_udp4_dst_port_add(uint32_t dst_port, rte_edge_t next_node)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_udp4_usr_node_add, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_udp4_usr_node_add, 23.11);
 int
 rte_node_udp4_usr_node_add(const char *usr_node)
 {

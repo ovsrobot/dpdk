@@ -2567,7 +2567,7 @@ rte_event_eth_rx_adapter_create_with_params(uint8_t id, uint8_t dev_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_create_ext_with_params, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_create_ext_with_params, 23.11);
 int
 rte_event_eth_rx_adapter_create_ext_with_params(uint8_t id, uint8_t dev_id,
 			rte_event_eth_rx_adapter_conf_cb conf_cb,
@@ -2797,7 +2797,7 @@ rte_event_eth_rx_adapter_queue_add(uint8_t id,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_queues_add, 25.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_queues_add, 25.03);
 int
 rte_event_eth_rx_adapter_queues_add(uint8_t id, uint16_t eth_dev_id, int32_t rx_queue_id[],
 				    const struct rte_event_eth_rx_adapter_queue_conf queue_conf[],
@@ -3684,7 +3684,7 @@ rxa_caps_check(struct event_eth_rx_adapter *rxa)
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_init, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_init, 23.03);
 int
 rte_event_eth_rx_adapter_runtime_params_init(
 		struct rte_event_eth_rx_adapter_runtime_params *params)
@@ -3698,7 +3698,7 @@ rte_event_eth_rx_adapter_runtime_params_init(
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_set, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_set, 23.03);
 int
 rte_event_eth_rx_adapter_runtime_params_set(uint8_t id,
 		struct rte_event_eth_rx_adapter_runtime_params *params)
@@ -3727,7 +3727,7 @@ rte_event_eth_rx_adapter_runtime_params_set(uint8_t id,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_get, 23.03)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_event_eth_rx_adapter_runtime_params_get, 23.03);
 int
 rte_event_eth_rx_adapter_runtime_params_get(uint8_t id,
 		struct rte_event_eth_rx_adapter_runtime_params *params)
