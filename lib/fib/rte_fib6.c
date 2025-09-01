@@ -116,7 +116,7 @@ init_dataplane(struct rte_fib6 *fib, __rte_unused int socket_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_add)
+RTE_EXPORT_SYMBOL(rte_fib6_add);
 int
 rte_fib6_add(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	uint8_t depth, uint64_t next_hop)
@@ -127,7 +127,7 @@ rte_fib6_add(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	return fib->modify(fib, ip, depth, next_hop, RTE_FIB6_ADD);
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_delete)
+RTE_EXPORT_SYMBOL(rte_fib6_delete);
 int
 rte_fib6_delete(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	uint8_t depth)
@@ -138,7 +138,7 @@ rte_fib6_delete(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	return fib->modify(fib, ip, depth, 0, RTE_FIB6_DEL);
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_lookup_bulk)
+RTE_EXPORT_SYMBOL(rte_fib6_lookup_bulk);
 int
 rte_fib6_lookup_bulk(struct rte_fib6 *fib,
 	const struct rte_ipv6_addr *ips,
@@ -150,7 +150,7 @@ rte_fib6_lookup_bulk(struct rte_fib6 *fib,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_create)
+RTE_EXPORT_SYMBOL(rte_fib6_create);
 struct rte_fib6 *
 rte_fib6_create(const char *name, int socket_id, struct rte_fib6_conf *conf)
 {
@@ -245,7 +245,7 @@ exit:
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_find_existing)
+RTE_EXPORT_SYMBOL(rte_fib6_find_existing);
 struct rte_fib6 *
 rte_fib6_find_existing(const char *name)
 {
@@ -284,7 +284,7 @@ free_dataplane(struct rte_fib6 *fib)
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_free)
+RTE_EXPORT_SYMBOL(rte_fib6_free);
 void
 rte_fib6_free(struct rte_fib6 *fib)
 {
@@ -314,21 +314,21 @@ rte_fib6_free(struct rte_fib6 *fib)
 	rte_free(te);
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_get_dp)
+RTE_EXPORT_SYMBOL(rte_fib6_get_dp);
 void *
 rte_fib6_get_dp(struct rte_fib6 *fib)
 {
 	return (fib == NULL) ? NULL : fib->dp;
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_get_rib)
+RTE_EXPORT_SYMBOL(rte_fib6_get_rib);
 struct rte_rib6 *
 rte_fib6_get_rib(struct rte_fib6 *fib)
 {
 	return (fib == NULL) ? NULL : fib->rib;
 }
 
-RTE_EXPORT_SYMBOL(rte_fib6_select_lookup)
+RTE_EXPORT_SYMBOL(rte_fib6_select_lookup);
 int
 rte_fib6_select_lookup(struct rte_fib6 *fib,
 	enum rte_fib6_lookup_type type)

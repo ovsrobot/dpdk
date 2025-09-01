@@ -11,7 +11,7 @@
 
 #include "bpf_impl.h"
 
-RTE_EXPORT_SYMBOL(rte_bpf_destroy)
+RTE_EXPORT_SYMBOL(rte_bpf_destroy);
 void
 rte_bpf_destroy(struct rte_bpf *bpf)
 {
@@ -22,7 +22,7 @@ rte_bpf_destroy(struct rte_bpf *bpf)
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_bpf_get_jit)
+RTE_EXPORT_SYMBOL(rte_bpf_get_jit);
 int
 rte_bpf_get_jit(const struct rte_bpf *bpf, struct rte_bpf_jit *jit)
 {

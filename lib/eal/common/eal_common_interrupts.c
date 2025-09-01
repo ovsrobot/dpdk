@@ -30,7 +30,7 @@
 #define RTE_INTR_INSTANCE_USES_RTE_MEMORY(flags) \
 	(!!(flags & RTE_INTR_INSTANCE_F_SHARED))
 
-RTE_EXPORT_SYMBOL(rte_intr_instance_alloc)
+RTE_EXPORT_SYMBOL(rte_intr_instance_alloc);
 struct rte_intr_handle *rte_intr_instance_alloc(uint32_t flags)
 {
 	struct rte_intr_handle *intr_handle;
@@ -175,7 +175,7 @@ fail:
 	return -rte_errno;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_instance_free)
+RTE_EXPORT_SYMBOL(rte_intr_instance_free);
 void rte_intr_instance_free(struct rte_intr_handle *intr_handle)
 {
 	if (intr_handle == NULL)
@@ -191,7 +191,7 @@ void rte_intr_instance_free(struct rte_intr_handle *intr_handle)
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_fd_set)
+RTE_EXPORT_SYMBOL(rte_intr_fd_set);
 int rte_intr_fd_set(struct rte_intr_handle *intr_handle, int fd)
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
@@ -203,7 +203,7 @@ fail:
 	return -rte_errno;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_fd_get)
+RTE_EXPORT_SYMBOL(rte_intr_fd_get);
 int rte_intr_fd_get(const struct rte_intr_handle *intr_handle)
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
@@ -213,7 +213,7 @@ fail:
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_type_set)
+RTE_EXPORT_SYMBOL(rte_intr_type_set);
 int rte_intr_type_set(struct rte_intr_handle *intr_handle,
 	enum rte_intr_handle_type type)
 {
@@ -226,7 +226,7 @@ fail:
 	return -rte_errno;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_type_get)
+RTE_EXPORT_SYMBOL(rte_intr_type_get);
 enum rte_intr_handle_type rte_intr_type_get(
 	const struct rte_intr_handle *intr_handle)
 {

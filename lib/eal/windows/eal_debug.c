@@ -15,7 +15,7 @@
 #define BACKTRACE_SIZE 256
 
 /* dump the stack of the calling core */
-RTE_EXPORT_SYMBOL(rte_dump_stack)
+RTE_EXPORT_SYMBOL(rte_dump_stack);
 void
 rte_dump_stack(void)
 {

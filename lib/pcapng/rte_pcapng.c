@@ -200,7 +200,7 @@ pcapng_section_block(rte_pcapng_t *self,
 }
 
 /* Write an interface block for a DPDK port */
-RTE_EXPORT_SYMBOL(rte_pcapng_add_interface)
+RTE_EXPORT_SYMBOL(rte_pcapng_add_interface);
 int
 rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 			 const char *ifname, const char *ifdescr,
@@ -322,7 +322,7 @@ rte_pcapng_add_interface(rte_pcapng_t *self, uint16_t port,
 /*
  * Write an Interface statistics block at the end of capture.
  */
-RTE_EXPORT_SYMBOL(rte_pcapng_write_stats)
+RTE_EXPORT_SYMBOL(rte_pcapng_write_stats);
 ssize_t
 rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 		       uint64_t ifrecv, uint64_t ifdrop,
@@ -388,7 +388,7 @@ rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port_id,
 	return write(self->outfd, buf, len);
 }
 
-RTE_EXPORT_SYMBOL(rte_pcapng_mbuf_size)
+RTE_EXPORT_SYMBOL(rte_pcapng_mbuf_size);
 uint32_t
 rte_pcapng_mbuf_size(uint32_t length)
 {
@@ -470,7 +470,7 @@ pcapng_vlan_insert(struct rte_mbuf *m, uint16_t ether_type, uint16_t tci)
  */
 
 /* Make a copy of original mbuf with pcapng header and options */
-RTE_EXPORT_SYMBOL(rte_pcapng_copy)
+RTE_EXPORT_SYMBOL(rte_pcapng_copy);
 struct rte_mbuf *
 rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *md,
@@ -612,7 +612,7 @@ fail:
 }
 
 /* Write pre-formatted packets to file. */
-RTE_EXPORT_SYMBOL(rte_pcapng_write_packets)
+RTE_EXPORT_SYMBOL(rte_pcapng_write_packets);
 ssize_t
 rte_pcapng_write_packets(rte_pcapng_t *self,
 			 struct rte_mbuf *pkts[], uint16_t nb_pkts)
@@ -682,7 +682,7 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 }
 
 /* Create new pcapng writer handle */
-RTE_EXPORT_SYMBOL(rte_pcapng_fdopen)
+RTE_EXPORT_SYMBOL(rte_pcapng_fdopen);
 rte_pcapng_t *
 rte_pcapng_fdopen(int fd,
 		  const char *osname, const char *hardware,
@@ -720,7 +720,7 @@ fail:
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_pcapng_close)
+RTE_EXPORT_SYMBOL(rte_pcapng_close);
 void
 rte_pcapng_close(rte_pcapng_t *self)
 {

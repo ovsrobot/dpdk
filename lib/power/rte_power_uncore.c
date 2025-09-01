@@ -102,7 +102,7 @@ rte_power_get_uncore_env(void)
 	return global_uncore_env;
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_init)
+RTE_EXPORT_SYMBOL(rte_power_uncore_init);
 int
 rte_power_uncore_init(unsigned int pkg, unsigned int die)
 {
@@ -134,7 +134,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_exit)
+RTE_EXPORT_SYMBOL(rte_power_uncore_exit);
 int
 rte_power_uncore_exit(unsigned int pkg, unsigned int die)
 {
@@ -148,7 +148,7 @@ rte_power_uncore_exit(unsigned int pkg, unsigned int die)
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_power_get_uncore_freq)
+RTE_EXPORT_SYMBOL(rte_power_get_uncore_freq);
 uint32_t
 rte_power_get_uncore_freq(unsigned int pkg, unsigned int die)
 {
@@ -156,7 +156,7 @@ rte_power_get_uncore_freq(unsigned int pkg, unsigned int die)
 	return global_uncore_ops->get_freq(pkg, die);
 }
 
-RTE_EXPORT_SYMBOL(rte_power_set_uncore_freq)
+RTE_EXPORT_SYMBOL(rte_power_set_uncore_freq);
 int
 rte_power_set_uncore_freq(unsigned int pkg, unsigned int die, uint32_t index)
 {
@@ -164,7 +164,7 @@ rte_power_set_uncore_freq(unsigned int pkg, unsigned int die, uint32_t index)
 	return global_uncore_ops->set_freq(pkg, die, index);
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_freq_max)
+RTE_EXPORT_SYMBOL(rte_power_uncore_freq_max);
 int
 rte_power_uncore_freq_max(unsigned int pkg, unsigned int die)
 {
@@ -172,7 +172,7 @@ rte_power_uncore_freq_max(unsigned int pkg, unsigned int die)
 	return global_uncore_ops->freq_max(pkg, die);
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_freq_min)
+RTE_EXPORT_SYMBOL(rte_power_uncore_freq_min);
 int
 rte_power_uncore_freq_min(unsigned int pkg, unsigned int die)
 {
@@ -189,7 +189,7 @@ rte_power_uncore_freqs(unsigned int pkg, unsigned int die,
 	return global_uncore_ops->get_avail_freqs(pkg, die, freqs, num);
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_get_num_freqs)
+RTE_EXPORT_SYMBOL(rte_power_uncore_get_num_freqs);
 int
 rte_power_uncore_get_num_freqs(unsigned int pkg, unsigned int die)
 {
@@ -197,7 +197,7 @@ rte_power_uncore_get_num_freqs(unsigned int pkg, unsigned int die)
 	return global_uncore_ops->get_num_freqs(pkg, die);
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_get_num_pkgs)
+RTE_EXPORT_SYMBOL(rte_power_uncore_get_num_pkgs);
 unsigned int
 rte_power_uncore_get_num_pkgs(void)
 {
@@ -205,7 +205,7 @@ rte_power_uncore_get_num_pkgs(void)
 	return global_uncore_ops->get_num_pkgs();
 }
 
-RTE_EXPORT_SYMBOL(rte_power_uncore_get_num_dies)
+RTE_EXPORT_SYMBOL(rte_power_uncore_get_num_dies);
 unsigned int
 rte_power_uncore_get_num_dies(unsigned int pkg)
 {

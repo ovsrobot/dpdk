@@ -118,7 +118,7 @@ depth_to_range(uint8_t depth)
 /*
  * Find an existing lpm table and return a pointer to it.
  */
-RTE_EXPORT_SYMBOL(rte_lpm_find_existing)
+RTE_EXPORT_SYMBOL(rte_lpm_find_existing);
 struct rte_lpm *
 rte_lpm_find_existing(const char *name)
 {
@@ -147,7 +147,7 @@ rte_lpm_find_existing(const char *name)
 /*
  * Allocates memory for LPM object
  */
-RTE_EXPORT_SYMBOL(rte_lpm_create)
+RTE_EXPORT_SYMBOL(rte_lpm_create);
 struct rte_lpm *
 rte_lpm_create(const char *name, int socket_id,
 		const struct rte_lpm_config *config)
@@ -254,7 +254,7 @@ exit:
 /*
  * Deallocates memory for given LPM table.
  */
-RTE_EXPORT_SYMBOL(rte_lpm_free)
+RTE_EXPORT_SYMBOL(rte_lpm_free);
 void
 rte_lpm_free(struct rte_lpm *lpm)
 {
@@ -304,7 +304,7 @@ __lpm_rcu_qsbr_free_resource(void *p, void *data, unsigned int n)
 
 /* Associate QSBR variable with an LPM object.
  */
-RTE_EXPORT_SYMBOL(rte_lpm_rcu_qsbr_add)
+RTE_EXPORT_SYMBOL(rte_lpm_rcu_qsbr_add);
 int
 rte_lpm_rcu_qsbr_add(struct rte_lpm *lpm, struct rte_lpm_rcu_config *cfg)
 {
@@ -823,7 +823,7 @@ add_depth_big(struct __rte_lpm *i_lpm, uint32_t ip_masked, uint8_t depth,
 /*
  * Add a route
  */
-RTE_EXPORT_SYMBOL(rte_lpm_add)
+RTE_EXPORT_SYMBOL(rte_lpm_add);
 int
 rte_lpm_add(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 		uint32_t next_hop)
@@ -875,7 +875,7 @@ rte_lpm_add(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 /*
  * Look for a rule in the high-level rules table
  */
-RTE_EXPORT_SYMBOL(rte_lpm_is_rule_present)
+RTE_EXPORT_SYMBOL(rte_lpm_is_rule_present);
 int
 rte_lpm_is_rule_present(struct rte_lpm *lpm, uint32_t ip, uint8_t depth,
 uint32_t *next_hop)
@@ -1181,7 +1181,7 @@ delete_depth_big(struct __rte_lpm *i_lpm, uint32_t ip_masked,
 /*
  * Deletes a rule
  */
-RTE_EXPORT_SYMBOL(rte_lpm_delete)
+RTE_EXPORT_SYMBOL(rte_lpm_delete);
 int
 rte_lpm_delete(struct rte_lpm *lpm, uint32_t ip, uint8_t depth)
 {
@@ -1240,7 +1240,7 @@ rte_lpm_delete(struct rte_lpm *lpm, uint32_t ip, uint8_t depth)
 /*
  * Delete all rules from the LPM table.
  */
-RTE_EXPORT_SYMBOL(rte_lpm_delete_all)
+RTE_EXPORT_SYMBOL(rte_lpm_delete_all);
 void
 rte_lpm_delete_all(struct rte_lpm *lpm)
 {

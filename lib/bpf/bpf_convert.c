@@ -518,7 +518,7 @@ err:
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_bpf_convert)
+RTE_EXPORT_SYMBOL(rte_bpf_convert);
 struct rte_bpf_prm *
 rte_bpf_convert(const struct bpf_program *prog)
 {

@@ -3353,7 +3353,7 @@ vhost_user_iotlb_miss(struct virtio_net *dev, uint64_t iova, uint8_t perm)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_vhost_backend_config_change)
+RTE_EXPORT_SYMBOL(rte_vhost_backend_config_change);
 int
 rte_vhost_backend_config_change(int vid, bool need_reply)
 {

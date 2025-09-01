@@ -263,7 +263,7 @@ rte_port_frag_reader_stats_read(void *port,
 /*
  * Summary of port operations
  */
-RTE_EXPORT_SYMBOL(rte_port_ring_reader_ipv4_frag_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_reader_ipv4_frag_ops);
 struct rte_port_in_ops rte_port_ring_reader_ipv4_frag_ops = {
 	.f_create = rte_port_ring_reader_ipv4_frag_create,
 	.f_free = rte_port_ring_reader_frag_free,
@@ -271,7 +271,7 @@ struct rte_port_in_ops rte_port_ring_reader_ipv4_frag_ops = {
 	.f_stats = rte_port_frag_reader_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_port_ring_reader_ipv6_frag_ops)
+RTE_EXPORT_SYMBOL(rte_port_ring_reader_ipv6_frag_ops);
 struct rte_port_in_ops rte_port_ring_reader_ipv6_frag_ops = {
 	.f_create = rte_port_ring_reader_ipv6_frag_create,
 	.f_free = rte_port_ring_reader_frag_free,

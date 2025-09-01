@@ -29,7 +29,7 @@ struct rte_stats_bitrates {
 	uint16_t id_stats_set;
 };
 
-RTE_EXPORT_SYMBOL(rte_stats_bitrate_create)
+RTE_EXPORT_SYMBOL(rte_stats_bitrate_create);
 struct rte_stats_bitrates *
 rte_stats_bitrate_create(void)
 {
@@ -37,14 +37,14 @@ rte_stats_bitrate_create(void)
 		RTE_CACHE_LINE_SIZE);
 }
 
-RTE_EXPORT_SYMBOL(rte_stats_bitrate_free)
+RTE_EXPORT_SYMBOL(rte_stats_bitrate_free);
 void
 rte_stats_bitrate_free(struct rte_stats_bitrates *bitrate_data)
 {
 	rte_free(bitrate_data);
 }
 
-RTE_EXPORT_SYMBOL(rte_stats_bitrate_reg)
+RTE_EXPORT_SYMBOL(rte_stats_bitrate_reg);
 int
 rte_stats_bitrate_reg(struct rte_stats_bitrates *bitrate_data)
 {
@@ -66,7 +66,7 @@ rte_stats_bitrate_reg(struct rte_stats_bitrates *bitrate_data)
 	return return_value;
 }
 
-RTE_EXPORT_SYMBOL(rte_stats_bitrate_calc)
+RTE_EXPORT_SYMBOL(rte_stats_bitrate_calc);
 int
 rte_stats_bitrate_calc(struct rte_stats_bitrates *bitrate_data,
 			uint16_t port_id)
