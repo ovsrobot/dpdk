@@ -29,14 +29,14 @@
 
 #define PLATFORM_BUS_DEVICES_PATH "/sys/bus/platform/devices"
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_platform_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_platform_register);
 void
 rte_platform_register(struct rte_platform_driver *pdrv)
 {
 	TAILQ_INSERT_TAIL(&platform_bus.driver_list, pdrv, next);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_platform_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_platform_unregister);
 void
 rte_platform_unregister(struct rte_platform_driver *pdrv)
 {

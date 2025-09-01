@@ -45,7 +45,7 @@ struct octeontx_vdev_init_params {
 	uint8_t	nr_port;
 };
 
-RTE_EXPORT_SYMBOL(rte_octeontx_pchan_map)
+RTE_EXPORT_SYMBOL(rte_octeontx_pchan_map);
 uint16_t
 rte_octeontx_pchan_map[OCTEONTX_MAX_BGX_PORTS][OCTEONTX_MAX_LMAC_PER_BGX];
 

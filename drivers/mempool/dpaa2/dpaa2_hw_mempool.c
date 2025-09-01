@@ -34,13 +34,13 @@
 
 #include <dpaax_iova_table.h>
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_bpid_info)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_bpid_info);
 struct dpaa2_bp_info *rte_dpaa2_bpid_info;
 static struct dpaa2_bp_list *h_bp_list;
 
 static int16_t s_dpaa2_pool_ops_idx = RTE_MEMPOOL_MAX_OPS_IDX;
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_mpool_get_ops_idx)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_mpool_get_ops_idx);
 int rte_dpaa2_mpool_get_ops_idx(void)
 {
 	return s_dpaa2_pool_ops_idx;
@@ -298,7 +298,7 @@ aligned:
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_bpid_info_init)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_bpid_info_init);
 int rte_dpaa2_bpid_info_init(struct rte_mempool *mp)
 {
 	struct dpaa2_bp_info *bp_info = mempool_to_bpinfo(mp);
@@ -322,7 +322,7 @@ int rte_dpaa2_bpid_info_init(struct rte_mempool *mp)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_dpaa2_mbuf_pool_bpid)
+RTE_EXPORT_SYMBOL(rte_dpaa2_mbuf_pool_bpid);
 uint16_t
 rte_dpaa2_mbuf_pool_bpid(struct rte_mempool *mp)
 {
@@ -337,7 +337,7 @@ rte_dpaa2_mbuf_pool_bpid(struct rte_mempool *mp)
 	return bp_info->bpid;
 }
 
-RTE_EXPORT_SYMBOL(rte_dpaa2_mbuf_from_buf_addr)
+RTE_EXPORT_SYMBOL(rte_dpaa2_mbuf_from_buf_addr);
 struct rte_mbuf *
 rte_dpaa2_mbuf_from_buf_addr(struct rte_mempool *mp, void *buf_addr)
 {
@@ -353,7 +353,7 @@ rte_dpaa2_mbuf_from_buf_addr(struct rte_mempool *mp, void *buf_addr)
 			bp_info->meta_data_size);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_mbuf_alloc_bulk)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_mbuf_alloc_bulk);
 int
 rte_dpaa2_mbuf_alloc_bulk(struct rte_mempool *pool,
 			  void **obj_table, unsigned int count)

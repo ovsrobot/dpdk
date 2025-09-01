@@ -40,7 +40,7 @@ int bnxt_rcv_msg_from_vf(struct bnxt *bp, uint16_t vf_id, void *msg)
 		true : false;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_tx_loopback)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_tx_loopback);
 int rte_pmd_bnxt_set_tx_loopback(uint16_t port, uint8_t on)
 {
 	struct rte_eth_dev *eth_dev;
@@ -82,7 +82,7 @@ rte_pmd_bnxt_set_all_queues_drop_en_cb(struct bnxt_vnic_info *vnic, void *onptr)
 	vnic->bd_stall = !(*on);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_all_queues_drop_en)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_all_queues_drop_en);
 int rte_pmd_bnxt_set_all_queues_drop_en(uint16_t port, uint8_t on)
 {
 	struct rte_eth_dev *eth_dev;
@@ -134,7 +134,7 @@ int rte_pmd_bnxt_set_all_queues_drop_en(uint16_t port, uint8_t on)
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_mac_addr)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_mac_addr);
 int rte_pmd_bnxt_set_vf_mac_addr(uint16_t port, uint16_t vf,
 				struct rte_ether_addr *mac_addr)
 {
@@ -175,7 +175,7 @@ int rte_pmd_bnxt_set_vf_mac_addr(uint16_t port, uint16_t vf,
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_rate_limit)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_rate_limit);
 int rte_pmd_bnxt_set_vf_rate_limit(uint16_t port, uint16_t vf,
 				uint32_t tx_rate, uint64_t q_msk)
 {
@@ -233,7 +233,7 @@ int rte_pmd_bnxt_set_vf_rate_limit(uint16_t port, uint16_t vf,
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_mac_anti_spoof)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_mac_anti_spoof);
 int rte_pmd_bnxt_set_vf_mac_anti_spoof(uint16_t port, uint16_t vf, uint8_t on)
 {
 	struct rte_eth_dev_info dev_info;
@@ -294,7 +294,7 @@ int rte_pmd_bnxt_set_vf_mac_anti_spoof(uint16_t port, uint16_t vf, uint8_t on)
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_anti_spoof)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_anti_spoof);
 int rte_pmd_bnxt_set_vf_vlan_anti_spoof(uint16_t port, uint16_t vf, uint8_t on)
 {
 	struct rte_eth_dev_info dev_info;
@@ -354,7 +354,7 @@ rte_pmd_bnxt_set_vf_vlan_stripq_cb(struct bnxt_vnic_info *vnic, void *onptr)
 	vnic->vlan_strip = *on;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_stripq)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_stripq);
 int
 rte_pmd_bnxt_set_vf_vlan_stripq(uint16_t port, uint16_t vf, uint8_t on)
 {
@@ -398,7 +398,7 @@ rte_pmd_bnxt_set_vf_vlan_stripq(uint16_t port, uint16_t vf, uint8_t on)
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_rxmode)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_rxmode);
 int rte_pmd_bnxt_set_vf_rxmode(uint16_t port, uint16_t vf,
 				uint16_t rx_mask, uint8_t on)
 {
@@ -497,7 +497,7 @@ static int bnxt_set_vf_table(struct bnxt *bp, uint16_t vf)
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_filter)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_filter);
 int rte_pmd_bnxt_set_vf_vlan_filter(uint16_t port, uint16_t vlan,
 				    uint64_t vf_mask, uint8_t vlan_on)
 {
@@ -593,7 +593,7 @@ int rte_pmd_bnxt_set_vf_vlan_filter(uint16_t port, uint16_t vlan,
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_get_vf_stats)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_get_vf_stats);
 int rte_pmd_bnxt_get_vf_stats(uint16_t port,
 			      uint16_t vf_id,
 			      struct rte_eth_stats *stats)
@@ -631,7 +631,7 @@ int rte_pmd_bnxt_get_vf_stats(uint16_t port,
 				     NULL);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_reset_vf_stats)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_reset_vf_stats);
 int rte_pmd_bnxt_reset_vf_stats(uint16_t port,
 				uint16_t vf_id)
 {
@@ -667,7 +667,7 @@ int rte_pmd_bnxt_reset_vf_stats(uint16_t port,
 	return bnxt_hwrm_func_clr_stats(bp, bp->pf->first_vf_id + vf_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_get_vf_rx_status)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_get_vf_rx_status);
 int rte_pmd_bnxt_get_vf_rx_status(uint16_t port, uint16_t vf_id)
 {
 	struct rte_eth_dev *dev;
@@ -702,7 +702,7 @@ int rte_pmd_bnxt_get_vf_rx_status(uint16_t port, uint16_t vf_id)
 	return bnxt_vf_vnic_count(bp, vf_id);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_get_vf_tx_drop_count)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_get_vf_tx_drop_count);
 int rte_pmd_bnxt_get_vf_tx_drop_count(uint16_t port, uint16_t vf_id,
 				      uint64_t *count)
 {
@@ -739,7 +739,7 @@ int rte_pmd_bnxt_get_vf_tx_drop_count(uint16_t port, uint16_t vf_id,
 					     count);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_mac_addr_add)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_mac_addr_add);
 int rte_pmd_bnxt_mac_addr_add(uint16_t port, struct rte_ether_addr *addr,
 				uint32_t vf_id)
 {
@@ -823,7 +823,7 @@ exit:
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_insert)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_vlan_insert);
 int
 rte_pmd_bnxt_set_vf_vlan_insert(uint16_t port, uint16_t vf,
 		uint16_t vlan_id)
@@ -869,7 +869,7 @@ rte_pmd_bnxt_set_vf_vlan_insert(uint16_t port, uint16_t vf,
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_persist_stats)
+RTE_EXPORT_SYMBOL(rte_pmd_bnxt_set_vf_persist_stats);
 int rte_pmd_bnxt_set_vf_persist_stats(uint16_t port, uint16_t vf, uint8_t on)
 {
 	struct rte_eth_dev_info dev_info;

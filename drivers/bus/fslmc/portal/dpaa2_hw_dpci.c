@@ -152,7 +152,7 @@ err:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_alloc_dpci_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_alloc_dpci_dev);
 struct dpaa2_dpci_dev *rte_dpaa2_alloc_dpci_dev(void)
 {
 	struct dpaa2_dpci_dev *dpci_dev = NULL;
@@ -166,7 +166,7 @@ struct dpaa2_dpci_dev *rte_dpaa2_alloc_dpci_dev(void)
 	return dpci_dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_free_dpci_dev)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dpaa2_free_dpci_dev);
 void rte_dpaa2_free_dpci_dev(struct dpaa2_dpci_dev *dpci)
 {
 	struct dpaa2_dpci_dev *dpci_dev = NULL;

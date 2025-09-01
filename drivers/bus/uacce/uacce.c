@@ -583,7 +583,7 @@ uacce_dev_iterate(const void *start, const char *str,
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_avail_queues)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_avail_queues);
 int
 rte_uacce_avail_queues(struct rte_uacce_device *dev)
 {
@@ -597,7 +597,7 @@ rte_uacce_avail_queues(struct rte_uacce_device *dev)
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_alloc);
 int
 rte_uacce_queue_alloc(struct rte_uacce_device *dev, struct rte_uacce_qcontex *qctx)
 {
@@ -612,7 +612,7 @@ rte_uacce_queue_alloc(struct rte_uacce_device *dev, struct rte_uacce_qcontex *qc
 	return -EIO;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_free)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_free);
 void
 rte_uacce_queue_free(struct rte_uacce_qcontex *qctx)
 {
@@ -622,7 +622,7 @@ rte_uacce_queue_free(struct rte_uacce_qcontex *qctx)
 	qctx->fd = -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_start)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_start);
 int
 rte_uacce_queue_start(struct rte_uacce_qcontex *qctx)
 {
@@ -630,7 +630,7 @@ rte_uacce_queue_start(struct rte_uacce_qcontex *qctx)
 	return ioctl(qctx->fd, UACCE_CMD_START_Q);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_ioctl)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_ioctl);
 int
 rte_uacce_queue_ioctl(struct rte_uacce_qcontex *qctx, unsigned long cmd, void *arg)
 {
@@ -640,7 +640,7 @@ rte_uacce_queue_ioctl(struct rte_uacce_qcontex *qctx, unsigned long cmd, void *a
 	return ioctl(qctx->fd, cmd, arg);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_mmap)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_mmap);
 void *
 rte_uacce_queue_mmap(struct rte_uacce_qcontex *qctx, enum rte_uacce_qfrt qfrt)
 {
@@ -666,7 +666,7 @@ rte_uacce_queue_mmap(struct rte_uacce_qcontex *qctx, enum rte_uacce_qfrt qfrt)
 	return addr;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_unmap)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_queue_unmap);
 void
 rte_uacce_queue_unmap(struct rte_uacce_qcontex *qctx, enum rte_uacce_qfrt qfrt)
 {
@@ -676,7 +676,7 @@ rte_uacce_queue_unmap(struct rte_uacce_qcontex *qctx, enum rte_uacce_qfrt qfrt)
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_register);
 void
 rte_uacce_register(struct rte_uacce_driver *driver)
 {
@@ -684,7 +684,7 @@ rte_uacce_register(struct rte_uacce_driver *driver)
 	driver->bus = &uacce_bus;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_uacce_unregister);
 void
 rte_uacce_unregister(struct rte_uacce_driver *driver)
 {

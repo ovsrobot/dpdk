@@ -15,7 +15,7 @@
 #define CPT_MAX_ASYM_OP_NUM_PARAMS 5
 #define CPT_MAX_ASYM_OP_MOD_LEN 1024
 
-RTE_EXPORT_INTERNAL_SYMBOL(cpt_pmd_ops_helper_get_mlen_direct_mode)
+RTE_EXPORT_INTERNAL_SYMBOL(cpt_pmd_ops_helper_get_mlen_direct_mode);
 int32_t
 cpt_pmd_ops_helper_get_mlen_direct_mode(void)
 {
@@ -30,7 +30,7 @@ cpt_pmd_ops_helper_get_mlen_direct_mode(void)
 	return len;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cpt_pmd_ops_helper_get_mlen_sg_mode)
+RTE_EXPORT_INTERNAL_SYMBOL(cpt_pmd_ops_helper_get_mlen_sg_mode);
 int
 cpt_pmd_ops_helper_get_mlen_sg_mode(void)
 {
@@ -46,7 +46,7 @@ cpt_pmd_ops_helper_get_mlen_sg_mode(void)
 	return len;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cpt_pmd_ops_helper_asym_get_mlen)
+RTE_EXPORT_INTERNAL_SYMBOL(cpt_pmd_ops_helper_asym_get_mlen);
 int
 cpt_pmd_ops_helper_asym_get_mlen(void)
 {
