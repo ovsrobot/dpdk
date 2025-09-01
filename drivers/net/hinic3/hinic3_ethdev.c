@@ -1521,7 +1521,6 @@ hinic3_init_rxq_msix_attr(void *hwdev, uint16_t msix_index)
 	info.pending_limt = HINIC3_TXRX_MSIX_PENDING_LIMIT;
 	info.coalesce_timer_cfg = HINIC3_TXRX_MSIX_COALESCE_TIMER;
 	info.resend_timer_cfg = HINIC3_TXRX_MSIX_RESEND_TIMER_CFG;
-
 	info.msix_index = msix_index;
 	err = hinic3_set_interrupt_cfg(hwdev, info);
 	if (err) {
@@ -3295,6 +3294,9 @@ hinic3_dev_init(struct rte_eth_dev *eth_dev)
 
 	PMD_DRV_LOG(INFO, "Network Interface pmd driver version: %s",
 		    HINIC3_PMD_DRV_VERSION);
+
+	eth_dev->rx_pkt_burst = hinic3_recv_pkts;
+	eth_dev->tx_pkt_burst = hinic3_xmit_pkts;
 
 	return hinic3_func_init(eth_dev);
 }
