@@ -25,6 +25,9 @@ extern "C" {
 
 struct rte_dma_dev;
 
+/** Structure to keep track of registered callbacks */
+RTE_TAILQ_HEAD(rte_dma_dev_cb_list, rte_dma_dev_callback);
+
 /** @internal Used to get device information of a device. */
 typedef int (*rte_dma_info_get_t)(const struct rte_dma_dev *dev,
 				  struct rte_dma_info *dev_info,
@@ -64,6 +67,28 @@ typedef int (*rte_dma_vchan_status_t)(const struct rte_dma_dev *dev, uint16_t vc
 /** @internal Used to dump internal information. */
 typedef int (*rte_dma_dump_t)(const struct rte_dma_dev *dev, FILE *f);
 
+/** @internal Used to create an access group for inter-process or inter-OS DMA transfers. */
+typedef int (*rte_dma_access_group_create_t)(const struct rte_dma_dev *dev, rte_uuid_t token,
+					     uint16_t *group_id);
+
+/** @internal Used to destroy an access group if all other devices have exited. */
+typedef int (*rte_dma_access_group_destroy_t)(const struct rte_dma_dev *dev, uint16_t group_id);
+
+/** @internal Used to join an access group for inter-process or inter-OS DMA transfers. */
+typedef int (*rte_dma_access_group_join_t)(const struct rte_dma_dev *dev, uint16_t group_id,
+					   rte_uuid_t token);
+
+/** @internal Used to leave an access group, removing the device from the group. */
+typedef int (*rte_dma_access_group_leave_t)(const struct rte_dma_dev *dev, uint16_t group_id);
+
+/** @internal Used to retrieve the size of an access group. */
+typedef uint16_t (*rte_dma_access_group_size_get_t)(const struct rte_dma_dev *dev,
+						    uint16_t group_id);
+
+/** @internal Used to retrieve the access group table containing handler information. */
+typedef int (*rte_dma_access_group_get_t)(const struct rte_dma_dev *dev, uint16_t group_id,
+					  uint64_t *group_tbl, uint16_t size);
+
 /**
  * DMA device operations function pointer table.
  *
@@ -83,6 +108,13 @@ struct rte_dma_dev_ops {
 
 	rte_dma_vchan_status_t     vchan_status;
 	rte_dma_dump_t             dev_dump;
+
+	rte_dma_access_group_create_t	access_group_create;
+	rte_dma_access_group_destroy_t	access_group_destroy;
+	rte_dma_access_group_join_t	access_group_join;
+	rte_dma_access_group_leave_t	access_group_leave;
+	rte_dma_access_group_size_get_t	access_group_size_get;
+	rte_dma_access_group_get_t	access_group_get;
 };
 
 /**
@@ -131,6 +163,7 @@ struct __rte_cache_aligned rte_dma_dev {
 	/** Functions implemented by PMD. */
 	const struct rte_dma_dev_ops *dev_ops;
 	enum rte_dma_dev_state state; /**< Flag indicating the device state. */
+	struct rte_dma_dev_cb_list list_cbs;/**< Event callback list. */
 	uint64_t reserved[2]; /**< Reserved for future fields. */
 };
 
@@ -179,6 +212,21 @@ int rte_dma_pmd_release(const char *name);
  */
 __rte_internal
 struct rte_dma_dev *rte_dma_pmd_get_dev_by_id(int16_t dev_id);
+
+/**
+ * @internal
+ * Process and invoke all registered PMD (Poll Mode Driver) callbacks for a given DMA event.
+ *
+ * This function is typically called by the driver when a specific DMA event occurs,
+ * triggering all registered callbacks for the specified device and event type.
+ *
+ * @param dev
+ *   Pointer to the DMA device structure.
+ * @param event
+ *   The DMA event type to process.
+ */
+__rte_internal
+void rte_dma_event_pmd_callback_process(struct rte_dma_dev *dev, enum rte_dma_event event);
 
 #ifdef __cplusplus
 }

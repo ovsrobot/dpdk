@@ -9,11 +9,13 @@
 
 #include <eal_export.h>
 #include <rte_eal.h>
+#include <rte_errno.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_memzone.h>
 #include <rte_string_fns.h>
+#include <rte_tailq.h>
 #include <rte_telemetry.h>
 
 #include "rte_dmadev.h"
@@ -32,6 +34,14 @@ static struct {
 	int16_t dev_max;
 	struct rte_dma_dev_data data[0];
 } *dma_devices_shared_data;
+
+/** List of callback functions registered by an application */
+struct rte_dma_dev_callback {
+	TAILQ_ENTRY(rte_dma_dev_callback) next;  /** Callbacks list */
+	rte_dma_event_callback cb_fn; /** Callback address */
+	void *cb_arg;  /** Parameter for callback */
+	enum rte_dma_event event; /** Interrupt event type */
+};
 
 RTE_LOG_REGISTER_DEFAULT(rte_dma_logtype, INFO);
 #define RTE_LOGTYPE_DMADEV rte_dma_logtype
@@ -789,6 +799,310 @@ rte_dma_vchan_status(int16_t dev_id, uint16_t vchan, enum rte_dma_vchan_status *
 	return dev->dev_ops->vchan_status(dev, vchan, status);
 }
 
+int
+rte_dma_access_group_create(int16_t dev_id, rte_uuid_t token, uint16_t *group_id)
+{
+	struct rte_dma_info dev_info;
+	struct rte_dma_dev *dev;
+
+	if (!rte_dma_is_valid(dev_id) || group_id == NULL)
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (rte_dma_info_get(dev_id, &dev_info)) {
+		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
+		return -EINVAL;
+	}
+
+	if (!((dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN) ||
+	    (dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN))) {
+		RTE_DMA_LOG(ERR, "Device %d don't support inter-process or inter-os transfers",
+			    dev_id);
+		return -EINVAL;
+	}
+	if (*dev->dev_ops->access_group_create == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->access_group_create)(dev, token, group_id);
+}
+
+int
+rte_dma_access_group_destroy(int16_t dev_id, uint16_t group_id)
+{
+	struct rte_dma_info dev_info;
+	struct rte_dma_dev *dev;
+
+	if (!rte_dma_is_valid(dev_id))
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (rte_dma_info_get(dev_id, &dev_info)) {
+		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
+		return -EINVAL;
+	}
+
+	if (!((dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN) ||
+	    (dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN))) {
+		RTE_DMA_LOG(ERR, "Device %d don't support inter-process or inter-os transfers",
+			    dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_access_groups <= group_id) {
+		RTE_DMA_LOG(ERR, "Group id should be < %u for device %d",
+			    dev_info.nb_access_groups, dev_id);
+		return -EINVAL;
+	}
+	if (*dev->dev_ops->access_group_destroy == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->access_group_destroy)(dev, group_id);
+}
+
+int
+rte_dma_access_group_join(int16_t dev_id, uint16_t group_id, rte_uuid_t token)
+{
+	struct rte_dma_info dev_info;
+	struct rte_dma_dev *dev;
+
+	if (!rte_dma_is_valid(dev_id))
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (rte_dma_info_get(dev_id, &dev_info)) {
+		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
+		return -EINVAL;
+	}
+
+	if (!((dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN) ||
+	    (dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN))) {
+		RTE_DMA_LOG(ERR, "Device %d don't support inter-process or inter-os transfers",
+			    dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_access_groups <= group_id) {
+		RTE_DMA_LOG(ERR, "Group id should be < %u for device %d",
+			    dev_info.nb_access_groups, dev_id);
+		return -EINVAL;
+	}
+	if (*dev->dev_ops->access_group_join == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->access_group_join)(dev, group_id, token);
+}
+
+int
+rte_dma_access_group_leave(int16_t dev_id, uint16_t group_id)
+{
+	struct rte_dma_info dev_info;
+	struct rte_dma_dev *dev;
+
+	if (!rte_dma_is_valid(dev_id))
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (rte_dma_info_get(dev_id, &dev_info)) {
+		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
+		return -EINVAL;
+	}
+
+	if (!((dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN) ||
+	    (dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN))) {
+		RTE_DMA_LOG(ERR, "Device %d don't support inter-process or inter-os transfers",
+			    dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_access_groups <= group_id) {
+		RTE_DMA_LOG(ERR, "Group id should be < %u for device %d",
+			    dev_info.nb_access_groups, dev_id);
+		return -EINVAL;
+	}
+	if (*dev->dev_ops->access_group_leave == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->access_group_leave)(dev, group_id);
+}
+
+uint16_t
+rte_dma_access_group_size_get(int16_t dev_id, uint16_t group_id)
+{
+	struct rte_dma_info dev_info;
+	struct rte_dma_dev *dev;
+
+	if (!rte_dma_is_valid(dev_id))
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (rte_dma_info_get(dev_id, &dev_info)) {
+		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
+		return -EINVAL;
+	}
+
+	if (!((dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN) ||
+	    (dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN))) {
+		RTE_DMA_LOG(ERR, "Device %d don't support inter-process or inter-os transfers",
+			    dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_access_groups <= group_id) {
+		RTE_DMA_LOG(ERR, "Group id should be < %u for device %d",
+			    dev_info.nb_access_groups, dev_id);
+		return -EINVAL;
+	}
+	if (*dev->dev_ops->access_group_size_get == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->access_group_size_get)(dev, group_id);
+}
+
+int
+rte_dma_access_group_get(int16_t dev_id, uint16_t group_id, uint64_t *group_tbl, uint16_t size)
+{
+	struct rte_dma_info dev_info;
+	struct rte_dma_dev *dev;
+
+	if (!rte_dma_is_valid(dev_id) || group_tbl == NULL)
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (rte_dma_info_get(dev_id, &dev_info)) {
+		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
+		return -EINVAL;
+	}
+
+	if (!((dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN) ||
+	    (dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN))) {
+		RTE_DMA_LOG(ERR, "Device %d don't support inter-process or inter-os transfers",
+			    dev_id);
+		return -EINVAL;
+	}
+
+	if (dev_info.nb_access_groups <= group_id) {
+		RTE_DMA_LOG(ERR, "Group id should be < %u for device %d",
+			    dev_info.nb_access_groups, dev_id);
+		return -EINVAL;
+	}
+	if (*dev->dev_ops->access_group_get == NULL)
+		return -ENOTSUP;
+	return (*dev->dev_ops->access_group_get)(dev, group_id, group_tbl, size);
+}
+
+int
+rte_dma_event_callback_register(uint16_t dev_id, enum rte_dma_event event,
+				rte_dma_event_callback cb_fn, void *cb_arg)
+{
+	struct rte_dma_dev_callback *user_cb;
+	struct rte_dma_dev *dev;
+	int ret = 0;
+
+	if (!rte_dma_is_valid(dev_id))
+		return -EINVAL;
+
+	dev = &rte_dma_devices[dev_id];
+
+	if (event >= RTE_DMA_EVENT_MAX) {
+		RTE_DMA_LOG(ERR, "Invalid event type (%u), should be less than %u", event,
+			    RTE_DMA_EVENT_MAX);
+		return -EINVAL;
+	}
+
+	if (cb_fn == NULL) {
+		RTE_DMA_LOG(ERR, "NULL callback function");
+		return -EINVAL;
+	}
+
+	rte_mcfg_tailq_write_lock();
+	TAILQ_FOREACH(user_cb, &(dev->list_cbs), next) {
+		if (user_cb->cb_fn == cb_fn && user_cb->cb_arg == cb_arg &&
+		    user_cb->event == event) {
+			ret = -EEXIST;
+			goto exit;
+		}
+	}
+
+	user_cb = rte_zmalloc("INTR_USER_CALLBACK", sizeof(struct rte_dma_dev_callback), 0);
+	if (user_cb == NULL) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	user_cb->cb_fn = cb_fn;
+	user_cb->cb_arg = cb_arg;
+	user_cb->event = event;
+	TAILQ_INSERT_TAIL(&(dev->list_cbs), user_cb, next);
+
+exit:
+	rte_mcfg_tailq_write_unlock();
+	rte_errno = -ret;
+	return ret;
+}
+
+int
+rte_dma_event_callback_unregister(uint16_t dev_id, enum rte_dma_event event,
+				  rte_dma_event_callback cb_fn, void *cb_arg)
+{
+	struct rte_dma_dev_callback *cb;
+	struct rte_dma_dev *dev;
+	int ret = -ENOENT;
+
+	if (!rte_dma_is_valid(dev_id))
+		return -EINVAL;
+	dev = &rte_dma_devices[dev_id];
+
+	if (event >= RTE_DMA_EVENT_MAX) {
+		RTE_DMA_LOG(ERR, "Invalid event type (%u), should be less than %u", event,
+			    RTE_DMA_EVENT_MAX);
+		return -EINVAL;
+	}
+
+	if (cb_fn == NULL) {
+		RTE_DMA_LOG(ERR, "NULL callback function cannot be unregistered");
+		return -EINVAL;
+	}
+
+	rte_mcfg_tailq_write_lock();
+	TAILQ_FOREACH(cb, &dev->list_cbs, next) {
+		if (cb->cb_fn == cb_fn || cb->event == event || cb->cb_arg == cb_arg) {
+			TAILQ_REMOVE(&(dev->list_cbs), cb, next);
+			ret = 0;
+			break;
+		}
+	}
+	rte_mcfg_tailq_write_unlock();
+
+	if (ret == 0)
+		rte_free(cb);
+
+	rte_errno = -ret;
+	return ret;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_event_pmd_callback_process)
+void
+rte_dma_event_pmd_callback_process(struct rte_dma_dev *dev, enum rte_dma_event event)
+{
+	struct rte_dma_dev_callback *cb;
+	void *tmp;
+
+	if (dev == NULL) {
+		RTE_DMA_LOG(ERR, "NULL device");
+		return;
+	}
+
+	if (event >= RTE_DMA_EVENT_MAX) {
+		RTE_DMA_LOG(ERR, "Invalid event type (%u), should be less than %u", event,
+			    RTE_DMA_EVENT_MAX);
+		return;
+	}
+
+	rte_mcfg_tailq_read_lock();
+	RTE_TAILQ_FOREACH_SAFE(cb, &(dev->list_cbs), next, tmp) {
+		rte_mcfg_tailq_read_unlock();
+		if (cb->cb_fn != NULL || cb->event == event)
+			cb->cb_fn(dev->data->dev_id, cb->event, cb->cb_arg);
+		rte_mcfg_tailq_read_lock();
+	}
+	rte_mcfg_tailq_read_unlock();
+}
+
 static const char *
 dma_capability_name(uint64_t capability)
 {
@@ -805,6 +1119,8 @@ dma_capability_name(uint64_t capability)
 		{ RTE_DMA_CAPA_HANDLES_ERRORS, "handles_errors" },
 		{ RTE_DMA_CAPA_M2D_AUTO_FREE,  "m2d_auto_free"  },
 		{ RTE_DMA_CAPA_PRI_POLICY_SP,  "pri_policy_sp" },
+		{ RTE_DMA_CAPA_INTER_PROCESS_DOMAIN, "inter_process_domain" },
+		{ RTE_DMA_CAPA_INTER_OS_DOMAIN, "inter_os_domain" },
 		{ RTE_DMA_CAPA_OPS_COPY,    "copy"    },
 		{ RTE_DMA_CAPA_OPS_COPY_SG, "copy_sg" },
 		{ RTE_DMA_CAPA_OPS_FILL,    "fill"    },
@@ -999,6 +1315,8 @@ dmadev_handle_dev_info(const char *cmd __rte_unused,
 	rte_tel_data_add_dict_int(d, "max_desc", dma_info.max_desc);
 	rte_tel_data_add_dict_int(d, "min_desc", dma_info.min_desc);
 	rte_tel_data_add_dict_int(d, "max_sges", dma_info.max_sges);
+	rte_tel_data_add_dict_int(d, "nb_access_groups", dma_info.nb_access_groups);
+	rte_tel_data_add_dict_int(d, "controller_id", dma_info.controller_id);
 
 	dma_caps = rte_tel_data_alloc();
 	if (!dma_caps)
@@ -1014,6 +1332,8 @@ dmadev_handle_dev_info(const char *cmd __rte_unused,
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_HANDLES_ERRORS);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_M2D_AUTO_FREE);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_PRI_POLICY_SP);
+	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_INTER_PROCESS_DOMAIN);
+	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_INTER_OS_DOMAIN);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_OPS_COPY);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_OPS_COPY_SG);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_OPS_FILL);

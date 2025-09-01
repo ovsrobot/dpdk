@@ -32,6 +32,8 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_i16(dev_info->numa_node);
 	rte_trace_point_emit_u16(dev_info->nb_vchans);
 	rte_trace_point_emit_u16(dev_info->nb_priorities);
+	rte_trace_point_emit_u16(dev_info->nb_access_groups);
+	rte_trace_point_emit_u16(dev_info->controller_id);
 )
 
 RTE_TRACE_POINT(
@@ -79,6 +81,9 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_int(conf->dst_port.port_type);
 	rte_trace_point_emit_u64(conf->dst_port.pcie.val);
 	rte_trace_point_emit_ptr(conf->auto_free.m2d.pool);
+	rte_trace_point_emit_int(conf->inter_transfer.transfer_type);
+	rte_trace_point_emit_u16(conf->inter_transfer.src_handler);
+	rte_trace_point_emit_u16(conf->inter_transfer.dst_handler);
 	rte_trace_point_emit_int(ret);
 )
 
@@ -96,6 +101,52 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_i16(dev_id);
 	rte_trace_point_emit_ptr(f);
 	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_group_create,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, rte_uuid_t token, uint16_t *group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u8_ptr(&token[0]);
+	rte_trace_point_emit_ptr(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_group_destroy,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, uint16_t group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u16(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_group_join,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, uint16_t group_id, rte_uuid_t token),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u16(group_id);
+	rte_trace_point_emit_u8_ptr(&token[0]);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_group_leave,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, uint16_t group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u16(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_group_size_get,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, uint16_t group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u16(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_group_get,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, uint16_t group_id, uint64_t *group_tbl, uint16_t size),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u16(group_id);
+	rte_trace_point_emit_ptr(group_tbl);
+	rte_trace_point_emit_u16(size);
 )
 
 #ifdef __cplusplus

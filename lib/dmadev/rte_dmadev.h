@@ -148,6 +148,7 @@
 
 #include <rte_bitops.h>
 #include <rte_common.h>
+#include <rte_uuid.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -265,6 +266,18 @@ int16_t rte_dma_next_dev(int16_t start_dev_id);
  * known from 'nb_priorities' field in struct rte_dma_info.
  */
 #define RTE_DMA_CAPA_PRI_POLICY_SP	RTE_BIT64(8)
+/** Support inter-process DMA transfers.
+ *
+ * When this bit is set, the DMA device can perform memory transfers between
+ * different process memory spaces.
+ */
+#define RTE_DMA_CAPA_INTER_PROCESS_DOMAIN	RTE_BIT64(9)
+/** Support inter-OS domain DMA transfers.
+ *
+ * The DMA device can perform memory transfers across different operating
+ * system domains.
+ */
+#define RTE_DMA_CAPA_INTER_OS_DOMAIN		RTE_BIT64(10)
 
 /** Support copy operation.
  * This capability start with index of 32, so that it could leave gap between
@@ -308,6 +321,13 @@ struct rte_dma_info {
 	 * 0 otherwise.
 	 */
 	uint16_t nb_priorities;
+	/** Number of access groups supported by the DMA controller.
+	 * If the device does not support INTER_PROCESS_DOMAIN or INTER_OS_DOMAIN transfers,
+	 * this value can be zero.
+	 */
+	uint16_t nb_access_groups;
+	/** Controller ID, -1 if unknown */
+	uint16_t controller_id;
 };
 
 /**
@@ -565,6 +585,35 @@ struct rte_dma_auto_free_param {
 };
 
 /**
+ * Inter-DMA transfer type.
+ *
+ * Specifies the type of DMA transfer, indicating whether the operation
+ * is within the same domain, between different processes, or across different
+ * operating system domains.
+ *
+ * @see struct rte_dma_inter_transfer_param:transfer_type
+ */
+enum rte_dma_inter_transfer_type {
+	RTE_DMA_INTER_TRANSFER_NONE, /**< No inter-domain transfer. */
+	RTE_DMA_INTER_PROCESS_TRANSFER, /**< Transfer is between different processes. */
+	RTE_DMA_INTER_OS_TRANSFER, /**< Transfer is between different OS domains. */
+};
+
+/**
+ * Parameters for inter-process or inter-OS DMA transfers.
+ *
+ * This structure holds the necessary information to perform DMA transfers
+ * between different processes or operating system domains, including the
+ * transfer type and handler identifiers for the source and destination.
+ */
+struct rte_dma_inter_transfer_param {
+	enum rte_dma_inter_transfer_type transfer_type; /**< Type of inter-domain transfer. */
+	uint16_t src_handler; /**< Source handler identifier. */
+	uint16_t dst_handler; /**< Destination handler identifier. */
+	uint64_t reserved[2]; /**< Reserved for future fields. */
+};
+
+/**
  * A structure used to configure a virtual DMA channel.
  *
  * @see rte_dma_vchan_setup
@@ -601,6 +650,14 @@ struct rte_dma_vchan_conf {
 	 * @see struct rte_dma_auto_free_param
 	 */
 	struct rte_dma_auto_free_param auto_free;
+	/** Parameters for inter-process or inter-OS DMA transfers to specify
+	 * the source and destination handlers.
+	 *
+	 * @see RTE_DMA_CAPA_INTER_PROCESS_DOMAIN
+	 * @see RTE_DMA_CAPA_INTER_OS_DOMAIN
+	 * @see struct rte_dma_inter_transfer_param
+	 */
+	struct rte_dma_inter_transfer_param inter_transfer;
 };
 
 /**
@@ -721,6 +778,163 @@ rte_dma_vchan_status(int16_t dev_id, uint16_t vchan, enum rte_dma_vchan_status *
 int rte_dma_dump(int16_t dev_id, FILE *f);
 
 /**
+ * Create an access group to enable inter-process or inter-OS DMA transfers between devices
+ * in the group.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param token
+ *   The unique token used to create the access group.
+ * @param[out] group_id
+ *   The ID of the created access group.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_group_create(int16_t dev_id, rte_uuid_t token, uint16_t *group_id);
+/**
+ * Destroy an access group if all other devices have exited. This function will only succeed
+ * when called by the device that created the group; it will fail for all other devices.
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param group_id
+ *   The ID of the access group to be destroyed.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_group_destroy(int16_t dev_id, uint16_t group_id);
+/**
+ * Join an access group to enable inter-process or inter-OS DMA transfers with other devices
+ * in the group.
+ *
+ * @param dev_id
+ *   The device identifier.
+ * @param group_id
+ *   The access group ID to join.
+ * @param token
+ *   The unique token used to authenticate joining the access group
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_group_join(int16_t dev_id, uint16_t group_id, rte_uuid_t token);
+/**
+ * Leave an access group, The device's details will be removed from the access group table,
+ * disabling inter-DMA transfers to and from this device. Remaining devices in the group
+ * must be notified of the table update. This function will fail if called by the device
+ * that created the access group.
+ *
+ * @param dev_id
+ *   The device identifier.
+ * @param group_id
+ *   The access group ID to exit
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_group_leave(int16_t dev_id, uint16_t group_id);
+/**
+ * Retrieve the size of an access group
+ *
+ * @param dev_id
+ *   The identifier of the device.
+ * @param group_id
+ *   The access group ID
+ * @return
+ *   0 if the group is empty
+ *   non-zero value if the group contains devices.
+ */
+uint16_t rte_dma_access_group_size_get(int16_t dev_id, uint16_t group_id);
+/**
+ * Retrieve the access group table, which contains source & destination handler
+ * information used by the application to initiate inter-process or inter-OS DMA transfers.
+ *
+ * @param dev_id
+ *   The device identifier.
+ * @param group_id
+ *   The access group ID
+ * @param group_tbl
+ *   Pointer to the memory where the access group table will be copied
+ * @param size
+ *   The size of the group table
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_group_get(int16_t dev_id, uint16_t group_id, uint64_t *group_tbl, uint16_t size);
+
+/**
+ * Enumeration of DMA device event types.
+ *
+ * These events notify the application about changes to the DMA access group table,
+ * such as updates or destruction.
+ *
+ * @internal
+ */
+enum rte_dma_event {
+	RTE_DMA_EVENT_ACCESS_TABLE_UPDATE = 0,	/**< Access group table has been updated. */
+	RTE_DMA_EVENT_ACCESS_TABLE_DESTROY = 1,	/**< Access group table has been destroyed. */
+	RTE_DMA_EVENT_MAX  /**< max value of this enum */
+};
+
+/**
+ * DMA device event callback function type.
+ *
+ * This callback is invoked when a DMA device event occurs.
+ *
+ * @param dma_id
+ *   The identifier of the DMA device associated with the event.
+ * @param event
+ *   The DMA event type.
+ * @param user_data
+ *   User-defined data provided during callback registration.
+ */
+typedef void (*rte_dma_event_callback)(int16_t dma_id, enum rte_dma_event event, void *user_data);
+
+/**
+ * Register a callback function for DMA device events.
+ *
+ * The specified callback will be invoked when a DMA event (such as access table update or destroy)
+ * occurs. Only one callback can be registered at a time.
+ *
+ * @param dma_id
+ *   The identifier of the DMA device.
+ * @param event
+ *   The DMA event type.
+ * @param cb_fn
+ *   Pointer to the callback function to register.
+ * @param cb_arg
+ *   Pointer to user-defined data that will be passed to the callback when invoked.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_event_callback_register(uint16_t dev_id, enum rte_dma_event event,
+				    rte_dma_event_callback cb_fn, void *cb_arg);
+
+/**
+ * Unregister a previously registered DMA event callback function.
+ *
+ * This function removes the callback associated with the specified function pointer and user data.
+ *
+ * @param dma_id
+ *   The identifier of the DMA device.
+ * @param event
+ *   The DMA event type.
+ * @param cb_fn
+ *   Pointer to the callback function to unregister.
+ * @param cb_arg
+ *   Pointer to the user-defined data associated with the callback.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_event_callback_unregister(uint16_t dev_id, enum rte_dma_event event,
+				      rte_dma_event_callback cb_fn, void *cb_arg);
+
+/**
  * DMA transfer result status code defines.
  *
  * @see rte_dma_completed_status
@@ -834,6 +1048,38 @@ extern "C" {
  * @see struct rte_dma_vchan_conf::auto_free
  */
 #define RTE_DMA_OP_FLAG_AUTO_FREE	RTE_BIT64(3)
+/** Indicates a valid inter-process source handler.
+ * This flag signifies that the inter-process source handler is provided in the flags
+ * parameter (for all enqueue APIs) and is valid.
+ *
+ * Applicable only if the DMA device supports inter-process DMA capability.
+ * @see struct rte_dma_info::dev_capa
+ */
+#define RTE_DMA_OP_FLAG_SRC_INTER_PROCESS_DOMAIN_HANDLE		RTE_BITS64(4)
+/** Indicates a valid inter-process destination handler.
+ * This flag signifies that the inter-process destination handler is provided in the flags
+ * parameter (for all enqueue APIs) and is valid.
+ *
+ * Applicable only if the DMA device supports inter-process DMA capability.
+ * @see struct rte_dma_info::dev_capa
+ */
+#define RTE_DMA_OP_FLAG_DST_INTER_PROCESS_DOMAIN_HANDLE		RTE_BITS64(5)
+/** Indicates a valid inter-OS source handler.
+ * This flag signifies that the inter-OS source handler is provided in the flags
+ * parameter (for all enqueue APIs) and is valid.
+ *
+ * Applicable only if the DMA device supports inter-OS DMA capability.
+ * @see struct rte_dma_info::dev_capa
+ */
+#define RTE_DMA_OP_FLAG_SRC_INTER_OS_DOMAIN_HANDLE		RTE_BITS64(6)
+/** Indicates a valid inter-OS destination handler.
+ * This flag signifies that the inter-OS destination handler is provided in the flags
+ * parameter (for all enqueue APIs) and is valid.
+ *
+ * Applicable only if the DMA device supports inter-OS DMA capability.
+ * @see struct rte_dma_info::dev_capa
+ */
+#define RTE_DMA_OP_FLAG_DST_INTER_OS_DOMAIN_HANDLE		RTE_BITS64(7)
 /**@}*/
 
 /**
@@ -856,6 +1102,9 @@ extern "C" {
  * @param flags
  *   An flags for this operation.
  *   @see RTE_DMA_OP_FLAG_*
+ *   The upper 32 bits of the flags parameter specify the source & destination handlers
+ *   when any RTE_DMA_OP_FLAG_*_INTER_* flags are set.
+ *   @see RTE_DMA_OP_FLAG_*_INTER_*
  *
  * @return
  *   - 0..UINT16_MAX: index of enqueued job.
@@ -906,6 +1155,9 @@ rte_dma_copy(int16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
  * @param flags
  *   An flags for this operation.
  *   @see RTE_DMA_OP_FLAG_*
+ *   The upper 32 bits of the flags parameter specify the source & destination handlers
+ *   when any RTE_DMA_OP_FLAG_*_INTER_* flags are set.
+ *   @see RTE_DMA_OP_FLAG_*_INTER_*
  *
  * @return
  *   - 0..UINT16_MAX: index of enqueued job.
@@ -955,6 +1207,9 @@ rte_dma_copy_sg(int16_t dev_id, uint16_t vchan, struct rte_dma_sge *src,
  * @param flags
  *   An flags for this operation.
  *   @see RTE_DMA_OP_FLAG_*
+ *   The upper 16 bits of the flags parameter specify the destination handler
+ *   when any RTE_DMA_OP_FLAG_DST_INTER_* flags are set.
+ *   @see RTE_DMA_OP_FLAG_DST_INTER_*
  *
  * @return
  *   - 0..UINT16_MAX: index of enqueued job.
