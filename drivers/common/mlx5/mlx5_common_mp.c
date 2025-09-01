@@ -25,7 +25,7 @@
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_mr_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_mr_create);
 int
 mlx5_mp_req_mr_create(struct mlx5_common_device *cdev, uintptr_t addr)
 {
@@ -65,7 +65,7 @@ mlx5_mp_req_mr_create(struct mlx5_common_device *cdev, uintptr_t addr)
  * @param reg
  *   True to register the mempool, False to unregister.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_mempool_reg)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_mempool_reg);
 int
 mlx5_mp_req_mempool_reg(struct mlx5_common_device *cdev,
 			struct rte_mempool *mempool, bool reg,
@@ -116,7 +116,7 @@ mlx5_mp_req_mempool_reg(struct mlx5_common_device *cdev,
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_queue_state_modify)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_queue_state_modify);
 int
 mlx5_mp_req_queue_state_modify(struct mlx5_mp_id *mp_id,
 			       struct mlx5_mp_arg_queue_state_modify *sm)
@@ -155,7 +155,7 @@ mlx5_mp_req_queue_state_modify(struct mlx5_mp_id *mp_id,
  * @return
  *   fd on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_verbs_cmd_fd)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_req_verbs_cmd_fd);
 int
 mlx5_mp_req_verbs_cmd_fd(struct mlx5_mp_id *mp_id)
 {
@@ -197,7 +197,7 @@ exit:
 /**
  * Initialize by primary process.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_init_primary)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_init_primary);
 int
 mlx5_mp_init_primary(const char *name, const rte_mp_t primary_action)
 {
@@ -215,7 +215,7 @@ mlx5_mp_init_primary(const char *name, const rte_mp_t primary_action)
 /**
  * Un-initialize by primary process.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_uninit_primary)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_uninit_primary);
 void
 mlx5_mp_uninit_primary(const char *name)
 {
@@ -226,7 +226,7 @@ mlx5_mp_uninit_primary(const char *name)
 /**
  * Initialize by secondary process.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_init_secondary)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_init_secondary);
 int
 mlx5_mp_init_secondary(const char *name, const rte_mp_t secondary_action)
 {
@@ -237,7 +237,7 @@ mlx5_mp_init_secondary(const char *name, const rte_mp_t secondary_action)
 /**
  * Un-initialize by secondary process.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_uninit_secondary)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mp_uninit_secondary);
 void
 mlx5_mp_uninit_secondary(const char *name)
 {

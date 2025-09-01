@@ -15,7 +15,7 @@
  */
 #define NFP_NET_POLL_TIMEOUT    5000
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_reconfig_real)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_reconfig_real);
 int
 nfp_reconfig_real(struct nfp_hw *hw,
 		uint32_t update)
@@ -80,7 +80,7 @@ nfp_reconfig_real(struct nfp_hw *hw,
  *   - (0) if OK to reconfigure the device.
  *   - (-EIO) if I/O err and fail to reconfigure the device.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_reconfig)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_reconfig);
 int
 nfp_reconfig(struct nfp_hw *hw,
 		uint32_t ctrl,
@@ -125,7 +125,7 @@ nfp_reconfig(struct nfp_hw *hw,
  *   - (0) if OK to reconfigure the device.
  *   - (-EIO) if I/O err and fail to reconfigure the device.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_ext_reconfig)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_ext_reconfig);
 int
 nfp_ext_reconfig(struct nfp_hw *hw,
 		uint32_t ctrl_ext,
@@ -153,7 +153,7 @@ nfp_ext_reconfig(struct nfp_hw *hw,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_read_mac)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_read_mac);
 void
 nfp_read_mac(struct nfp_hw *hw)
 {
@@ -166,7 +166,7 @@ nfp_read_mac(struct nfp_hw *hw)
 	memcpy(&hw->mac_addr.addr_bytes[4], &tmp, 2);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_write_mac)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_write_mac);
 void
 nfp_write_mac(struct nfp_hw *hw,
 		uint8_t *mac)
@@ -183,7 +183,7 @@ nfp_write_mac(struct nfp_hw *hw,
 			hw->ctrl_bar + NFP_NET_CFG_MACADDR + 6);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_enable_queues)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_enable_queues);
 void
 nfp_enable_queues(struct nfp_hw *hw,
 		uint16_t nb_rx_queues,
@@ -207,7 +207,7 @@ nfp_enable_queues(struct nfp_hw *hw,
 	nn_cfg_writeq(hw, NFP_NET_CFG_RXRS_ENABLE, enabled_queues);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_disable_queues)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_disable_queues);
 void
 nfp_disable_queues(struct nfp_hw *hw)
 {

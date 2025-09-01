@@ -24,7 +24,7 @@
  * @param[in] cq
  *   DevX CQ to destroy.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cq_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cq_destroy);
 void
 mlx5_devx_cq_destroy(struct mlx5_devx_cq *cq)
 {
@@ -81,7 +81,7 @@ mlx5_cq_init(struct mlx5_devx_cq *cq_obj, uint16_t cq_size)
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cq_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_cq_create);
 int
 mlx5_devx_cq_create(void *ctx, struct mlx5_devx_cq *cq_obj, uint16_t log_desc_n,
 		    struct mlx5_devx_cq_attr *attr, int socket)
@@ -197,7 +197,7 @@ error:
  * @param[in] sq
  *   DevX SQ to destroy.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_sq_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_sq_destroy);
 void
 mlx5_devx_sq_destroy(struct mlx5_devx_sq *sq)
 {
@@ -242,7 +242,7 @@ mlx5_devx_sq_destroy(struct mlx5_devx_sq *sq)
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_sq_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_sq_create);
 int
 mlx5_devx_sq_create(void *ctx, struct mlx5_devx_sq *sq_obj, uint16_t log_wqbb_n,
 		    struct mlx5_devx_create_sq_attr *attr, int socket)
@@ -380,7 +380,7 @@ mlx5_devx_rmp_destroy(struct mlx5_devx_rmp *rmp)
  * @param[in] qp
  *   DevX QP to destroy.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_qp_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_qp_destroy);
 void
 mlx5_devx_qp_destroy(struct mlx5_devx_qp *qp)
 {
@@ -419,7 +419,7 @@ mlx5_devx_qp_destroy(struct mlx5_devx_qp *qp)
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_qp_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_qp_create);
 int
 mlx5_devx_qp_create(void *ctx, struct mlx5_devx_qp *qp_obj, uint32_t queue_size,
 		    struct mlx5_devx_qp_attr *attr, int socket)
@@ -490,7 +490,7 @@ error:
  * @param[in] rq
  *   DevX RQ to destroy.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_rq_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_rq_destroy);
 void
 mlx5_devx_rq_destroy(struct mlx5_devx_rq *rq)
 {
@@ -766,7 +766,7 @@ error:
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_rq_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_rq_create);
 int
 mlx5_devx_rq_create(void *ctx, struct mlx5_devx_rq *rq_obj,
 		    uint32_t wqe_size, uint16_t log_wqbb_n,
@@ -790,7 +790,7 @@ mlx5_devx_rq_create(void *ctx, struct mlx5_devx_rq *rq_obj,
  * @return
  *	 0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_qp2rts)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_devx_qp2rts);
 int
 mlx5_devx_qp2rts(struct mlx5_devx_qp *qp, uint32_t remote_qp_id)
 {

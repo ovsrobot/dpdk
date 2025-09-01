@@ -52,7 +52,7 @@ struct mlx5_mempool_reg {
 	bool is_extmem;
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mprq_buf_free_cb)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mprq_buf_free_cb);
 void
 mlx5_mprq_buf_free_cb(void *addr __rte_unused, void *opaque)
 {
@@ -251,7 +251,7 @@ mlx5_mr_btree_init(struct mlx5_mr_btree *bt, int n, int socket)
  * @param bt
  *   Pointer to B-tree structure.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_btree_free)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_btree_free);
 void
 mlx5_mr_btree_free(struct mlx5_mr_btree *bt)
 {
@@ -302,7 +302,7 @@ mlx5_mr_btree_dump(struct mlx5_mr_btree *bt __rte_unused)
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_ctrl_init)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_ctrl_init);
 int
 mlx5_mr_ctrl_init(struct mlx5_mr_ctrl *mr_ctrl, uint32_t *dev_gen_ptr,
 		  int socket)
@@ -969,7 +969,7 @@ err_nolock:
  * @return
  *   Searched LKey on success, UINT32_MAX on failure and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_create)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_create);
 uint32_t
 mlx5_mr_create(struct mlx5_common_device *cdev,
 	       struct mlx5_mr_share_cache *share_cache,
@@ -1064,7 +1064,7 @@ mr_lookup_caches(struct mlx5_mr_ctrl *mr_ctrl,
  * @return
  *   Searched LKey on success, UINT32_MAX on no match.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_addr2mr_bh)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_addr2mr_bh);
 uint32_t
 mlx5_mr_addr2mr_bh(struct mlx5_mr_ctrl *mr_ctrl, uintptr_t addr)
 {
@@ -1155,7 +1155,7 @@ mlx5_mr_create_cache(struct mlx5_mr_share_cache *share_cache, int socket)
  * @param mr_ctrl
  *   Pointer to per-queue MR local cache.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_flush_local_cache)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_flush_local_cache);
 void
 mlx5_mr_flush_local_cache(struct mlx5_mr_ctrl *mr_ctrl)
 {
@@ -1810,7 +1810,7 @@ mlx5_mr_mempool_register_secondary(struct mlx5_common_device *cdev,
  * @return
  *   0 on success, (-1) on failure and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool_register)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool_register);
 int
 mlx5_mr_mempool_register(struct mlx5_common_device *cdev,
 			 struct rte_mempool *mp, bool is_extmem)
@@ -1876,7 +1876,7 @@ mlx5_mr_mempool_unregister_secondary(struct mlx5_common_device *cdev,
  * @return
  *   0 on success, (-1) on failure and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool_unregister);
 int
 mlx5_mr_mempool_unregister(struct mlx5_common_device *cdev,
 			   struct rte_mempool *mp)
@@ -1988,7 +1988,7 @@ mlx5_lookup_mempool_regs(struct mlx5_mr_ctrl *mr_ctrl,
  * @return
  *  0 on success, (-1) on failure and rte_errno is set.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool_populate_cache)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool_populate_cache);
 int
 mlx5_mr_mempool_populate_cache(struct mlx5_mr_ctrl *mr_ctrl,
 			       struct rte_mempool *mp)
@@ -2048,7 +2048,7 @@ mlx5_mr_mempool_populate_cache(struct mlx5_mr_ctrl *mr_ctrl,
  * @return
  *   MR lkey on success, UINT32_MAX on failure.
  */
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool2mr_bh)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mempool2mr_bh);
 uint32_t
 mlx5_mr_mempool2mr_bh(struct mlx5_mr_ctrl *mr_ctrl,
 		      struct rte_mempool *mp, uintptr_t addr)
@@ -2075,7 +2075,7 @@ mlx5_mr_mempool2mr_bh(struct mlx5_mr_ctrl *mr_ctrl,
 	return lkey;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mb2mr_bh)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_mr_mb2mr_bh);
 uint32_t
 mlx5_mr_mb2mr_bh(struct mlx5_mr_ctrl *mr_ctrl, struct rte_mbuf *mb)
 {

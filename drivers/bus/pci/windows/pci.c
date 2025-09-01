@@ -37,7 +37,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_Numa_Node, 0x540b947e, 0x8b40, 0x45bc,
  */
 
 /* Map pci device */
-RTE_EXPORT_SYMBOL(rte_pci_map_device)
+RTE_EXPORT_SYMBOL(rte_pci_map_device);
 int
 rte_pci_map_device(struct rte_pci_device *dev)
 {
@@ -52,7 +52,7 @@ rte_pci_map_device(struct rte_pci_device *dev)
 }
 
 /* Unmap pci device */
-RTE_EXPORT_SYMBOL(rte_pci_unmap_device)
+RTE_EXPORT_SYMBOL(rte_pci_unmap_device);
 void
 rte_pci_unmap_device(struct rte_pci_device *dev __rte_unused)
 {
@@ -64,7 +64,7 @@ rte_pci_unmap_device(struct rte_pci_device *dev __rte_unused)
 }
 
 /* Read PCI config space. */
-RTE_EXPORT_SYMBOL(rte_pci_read_config)
+RTE_EXPORT_SYMBOL(rte_pci_read_config);
 int
 rte_pci_read_config(const struct rte_pci_device *dev __rte_unused,
 	void *buf __rte_unused, size_t len __rte_unused,
@@ -79,7 +79,7 @@ rte_pci_read_config(const struct rte_pci_device *dev __rte_unused,
 }
 
 /* Write PCI config space. */
-RTE_EXPORT_SYMBOL(rte_pci_write_config)
+RTE_EXPORT_SYMBOL(rte_pci_write_config);
 int
 rte_pci_write_config(const struct rte_pci_device *dev __rte_unused,
 	const void *buf __rte_unused, size_t len __rte_unused,
@@ -94,7 +94,7 @@ rte_pci_write_config(const struct rte_pci_device *dev __rte_unused,
 }
 
 /* Read PCI MMIO space. */
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_mmio_read, 23.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_mmio_read, 23.07);
 int
 rte_pci_mmio_read(const struct rte_pci_device *dev, int bar,
 		      void *buf, size_t len, off_t offset)
@@ -107,7 +107,7 @@ rte_pci_mmio_read(const struct rte_pci_device *dev, int bar,
 }
 
 /* Write PCI MMIO space. */
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_mmio_write, 23.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_mmio_write, 23.07);
 int
 rte_pci_mmio_write(const struct rte_pci_device *dev, int bar,
 		       const void *buf, size_t len, off_t offset)
@@ -131,7 +131,7 @@ pci_device_iova_mode(const struct rte_pci_driver *pdrv __rte_unused,
 	return RTE_IOVA_DC;
 }
 
-RTE_EXPORT_SYMBOL(rte_pci_ioport_map)
+RTE_EXPORT_SYMBOL(rte_pci_ioport_map);
 int
 rte_pci_ioport_map(struct rte_pci_device *dev __rte_unused,
 	int bar __rte_unused, struct rte_pci_ioport *p __rte_unused)
@@ -145,7 +145,7 @@ rte_pci_ioport_map(struct rte_pci_device *dev __rte_unused,
 }
 
 
-RTE_EXPORT_SYMBOL(rte_pci_ioport_read)
+RTE_EXPORT_SYMBOL(rte_pci_ioport_read);
 void
 rte_pci_ioport_read(struct rte_pci_ioport *p __rte_unused,
 	void *data __rte_unused, size_t len __rte_unused,
@@ -158,7 +158,7 @@ rte_pci_ioport_read(struct rte_pci_ioport *p __rte_unused,
 	 */
 }
 
-RTE_EXPORT_SYMBOL(rte_pci_ioport_unmap)
+RTE_EXPORT_SYMBOL(rte_pci_ioport_unmap);
 int
 rte_pci_ioport_unmap(struct rte_pci_ioport *p __rte_unused)
 {
@@ -181,7 +181,7 @@ pci_device_iommu_support_va(const struct rte_pci_device *dev __rte_unused)
 	return false;
 }
 
-RTE_EXPORT_SYMBOL(rte_pci_ioport_write)
+RTE_EXPORT_SYMBOL(rte_pci_ioport_write);
 void
 rte_pci_ioport_write(struct rte_pci_ioport *p __rte_unused,
 		const void *data __rte_unused, size_t len __rte_unused,

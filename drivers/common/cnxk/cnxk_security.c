@@ -305,7 +305,7 @@ ot_ipsec_inb_tunnel_hdr_fill(struct roc_ot_ipsec_inb_sa *sa,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_inb_sa_fill)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_inb_sa_fill);
 int
 cnxk_ot_ipsec_inb_sa_fill(struct roc_ot_ipsec_inb_sa *sa,
 			  struct rte_security_ipsec_xform *ipsec_xfrm,
@@ -415,7 +415,7 @@ cnxk_ot_ipsec_inb_sa_fill(struct roc_ot_ipsec_inb_sa *sa,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_outb_sa_fill)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_outb_sa_fill);
 int
 cnxk_ot_ipsec_outb_sa_fill(struct roc_ot_ipsec_outb_sa *sa,
 			   struct rte_security_ipsec_xform *ipsec_xfrm,
@@ -580,21 +580,21 @@ skip_tunnel_info:
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_inb_sa_valid)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_inb_sa_valid);
 bool
 cnxk_ot_ipsec_inb_sa_valid(struct roc_ot_ipsec_inb_sa *sa)
 {
 	return !!sa->w2.s.valid;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_outb_sa_valid)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ot_ipsec_outb_sa_valid);
 bool
 cnxk_ot_ipsec_outb_sa_valid(struct roc_ot_ipsec_outb_sa *sa)
 {
 	return !!sa->w2.s.valid;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_ivlen_get)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_ivlen_get);
 uint8_t
 cnxk_ipsec_ivlen_get(enum rte_crypto_cipher_algorithm c_algo,
 		     enum rte_crypto_auth_algorithm a_algo,
@@ -631,7 +631,7 @@ cnxk_ipsec_ivlen_get(enum rte_crypto_cipher_algorithm c_algo,
 	return ivlen;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_icvlen_get)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_icvlen_get);
 uint8_t
 cnxk_ipsec_icvlen_get(enum rte_crypto_cipher_algorithm c_algo,
 		      enum rte_crypto_auth_algorithm a_algo,
@@ -678,7 +678,7 @@ cnxk_ipsec_icvlen_get(enum rte_crypto_cipher_algorithm c_algo,
 	return icv;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_outb_roundup_byte)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_outb_roundup_byte);
 uint8_t
 cnxk_ipsec_outb_roundup_byte(enum rte_crypto_cipher_algorithm c_algo,
 			     enum rte_crypto_aead_algorithm aead_algo)
@@ -709,7 +709,7 @@ cnxk_ipsec_outb_roundup_byte(enum rte_crypto_cipher_algorithm c_algo,
 	return roundup_byte;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_outb_rlens_get)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ipsec_outb_rlens_get);
 int
 cnxk_ipsec_outb_rlens_get(struct cnxk_ipsec_outb_rlens *rlens,
 			  struct rte_security_ipsec_xform *ipsec_xfrm,
@@ -984,7 +984,7 @@ on_fill_ipsec_common_sa(struct rte_security_ipsec_xform *ipsec,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_on_ipsec_outb_sa_create)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_on_ipsec_outb_sa_create);
 int
 cnxk_on_ipsec_outb_sa_create(struct rte_security_ipsec_xform *ipsec,
 			     struct rte_crypto_sym_xform *crypto_xform,
@@ -1130,7 +1130,7 @@ cnxk_on_ipsec_outb_sa_create(struct rte_security_ipsec_xform *ipsec,
 	return ctx_len;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_on_ipsec_inb_sa_create)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_on_ipsec_inb_sa_create);
 int
 cnxk_on_ipsec_inb_sa_create(struct rte_security_ipsec_xform *ipsec,
 			    struct rte_crypto_sym_xform *crypto_xform,
@@ -1484,7 +1484,7 @@ ow_ipsec_inb_tunnel_hdr_fill(struct roc_ow_ipsec_inb_sa *sa,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ow_ipsec_inb_sa_fill)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ow_ipsec_inb_sa_fill);
 int
 cnxk_ow_ipsec_inb_sa_fill(struct roc_ow_ipsec_inb_sa *sa,
 			  struct rte_security_ipsec_xform *ipsec_xfrm,
@@ -1591,7 +1591,7 @@ cnxk_ow_ipsec_inb_sa_fill(struct roc_ow_ipsec_inb_sa *sa,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ow_ipsec_outb_sa_fill)
+RTE_EXPORT_INTERNAL_SYMBOL(cnxk_ow_ipsec_outb_sa_fill);
 int
 cnxk_ow_ipsec_outb_sa_fill(struct roc_ow_ipsec_outb_sa *sa,
 			   struct rte_security_ipsec_xform *ipsec_xfrm,

@@ -358,7 +358,7 @@ update_max_nb_qp(struct scheduler_ctx *sched_ctx)
 }
 
 /** Attach a device to the scheduler. */
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_worker_attach)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_worker_attach);
 int
 rte_cryptodev_scheduler_worker_attach(uint8_t scheduler_id, uint8_t worker_id)
 {
@@ -421,7 +421,7 @@ rte_cryptodev_scheduler_worker_attach(uint8_t scheduler_id, uint8_t worker_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_worker_detach)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_worker_detach);
 int
 rte_cryptodev_scheduler_worker_detach(uint8_t scheduler_id, uint8_t worker_id)
 {
@@ -480,7 +480,7 @@ rte_cryptodev_scheduler_worker_detach(uint8_t scheduler_id, uint8_t worker_id)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_mode_set)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_mode_set);
 int
 rte_cryptodev_scheduler_mode_set(uint8_t scheduler_id,
 		enum rte_cryptodev_scheduler_mode mode)
@@ -545,7 +545,7 @@ rte_cryptodev_scheduler_mode_set(uint8_t scheduler_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_mode_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_mode_get);
 enum rte_cryptodev_scheduler_mode
 rte_cryptodev_scheduler_mode_get(uint8_t scheduler_id)
 {
@@ -567,7 +567,7 @@ rte_cryptodev_scheduler_mode_get(uint8_t scheduler_id)
 	return sched_ctx->mode;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_ordering_set)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_ordering_set);
 int
 rte_cryptodev_scheduler_ordering_set(uint8_t scheduler_id,
 		uint32_t enable_reorder)
@@ -597,7 +597,7 @@ rte_cryptodev_scheduler_ordering_set(uint8_t scheduler_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_ordering_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_ordering_get);
 int
 rte_cryptodev_scheduler_ordering_get(uint8_t scheduler_id)
 {
@@ -619,7 +619,7 @@ rte_cryptodev_scheduler_ordering_get(uint8_t scheduler_id)
 	return (int)sched_ctx->reordering_enabled;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_load_user_scheduler)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_load_user_scheduler);
 int
 rte_cryptodev_scheduler_load_user_scheduler(uint8_t scheduler_id,
 		struct rte_cryptodev_scheduler *scheduler) {
@@ -692,7 +692,7 @@ rte_cryptodev_scheduler_load_user_scheduler(uint8_t scheduler_id,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_workers_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_workers_get);
 int
 rte_cryptodev_scheduler_workers_get(uint8_t scheduler_id, uint8_t *workers)
 {
@@ -724,7 +724,7 @@ rte_cryptodev_scheduler_workers_get(uint8_t scheduler_id, uint8_t *workers)
 	return (int)nb_workers;
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_option_set)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_option_set);
 int
 rte_cryptodev_scheduler_option_set(uint8_t scheduler_id,
 		enum rte_cryptodev_schedule_option_type option_type,
@@ -757,7 +757,7 @@ rte_cryptodev_scheduler_option_set(uint8_t scheduler_id,
 	return sched_ctx->ops.option_set(dev, option_type, option);
 }
 
-RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_option_get)
+RTE_EXPORT_SYMBOL(rte_cryptodev_scheduler_option_get);
 int
 rte_cryptodev_scheduler_option_get(uint8_t scheduler_id,
 		enum rte_cryptodev_schedule_option_type option_type,

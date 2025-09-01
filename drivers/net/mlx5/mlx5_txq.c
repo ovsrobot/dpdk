@@ -1415,7 +1415,7 @@ mlx5_txq_get_sqn(struct mlx5_txq_ctrl *txq)
 	return txq->is_hairpin ? txq->obj->sq->id : txq->obj->sq_obj.sq->id;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_external_sq_enable, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_external_sq_enable, 22.07);
 int
 rte_pmd_mlx5_external_sq_enable(uint16_t port_id, uint32_t sq_num)
 {
@@ -1597,7 +1597,7 @@ mlx5_external_tx_queue_get_validate(uint16_t port_id, uint16_t dpdk_idx)
 	return &priv->ext_txqs[dpdk_idx - MLX5_EXTERNAL_TX_QUEUE_ID_MIN];
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_external_tx_queue_id_map, 24.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_external_tx_queue_id_map, 24.07);
 int
 rte_pmd_mlx5_external_tx_queue_id_map(uint16_t port_id, uint16_t dpdk_idx,
 				      uint32_t hw_idx)
@@ -1631,7 +1631,7 @@ rte_pmd_mlx5_external_tx_queue_id_map(uint16_t port_id, uint16_t dpdk_idx,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_external_tx_queue_id_unmap, 24.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_external_tx_queue_id_unmap, 24.07);
 int
 rte_pmd_mlx5_external_tx_queue_id_unmap(uint16_t port_id, uint16_t dpdk_idx)
 {

@@ -1295,7 +1295,7 @@ int dpaa_eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa_eth_eventq_attach)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa_eth_eventq_attach);
 int
 dpaa_eth_eventq_attach(const struct rte_eth_dev *dev,
 		int eth_rx_queue_id,
@@ -1361,7 +1361,7 @@ dpaa_eth_eventq_attach(const struct rte_eth_dev *dev,
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa_eth_eventq_detach)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa_eth_eventq_detach);
 int
 dpaa_eth_eventq_detach(const struct rte_eth_dev *dev,
 		int eth_rx_queue_id)
@@ -1803,7 +1803,7 @@ is_dpaa_supported(struct rte_eth_dev *dev)
 	return is_device_supported(dev, &rte_dpaa_pmd);
 }
 
-RTE_EXPORT_SYMBOL(rte_pmd_dpaa_set_tx_loopback)
+RTE_EXPORT_SYMBOL(rte_pmd_dpaa_set_tx_loopback);
 int
 rte_pmd_dpaa_set_tx_loopback(uint16_t port, uint8_t on)
 {
