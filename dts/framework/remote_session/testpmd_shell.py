@@ -1285,6 +1285,99 @@ class TestPmdVerbosePacket(TextParser):
     )
 
 
+class TxOffloadCapability(Flag):
+    """TX offload capabilities of a device.
+
+    The flags are taken from ``lib/ethdev/rte_ethdev.h``.
+    They're prefixed with ``RTE_ETH_TX_OFFLOAD`` in ``lib/ethdev/rte_ethdev.h``
+    instead of ``TX_OFFLOAD``, which is what testpmd changes the prefix to.
+    The values are not contiguous, so the correspondence is preserved
+    by specifying concrete values interspersed between auto() values.
+
+    The ``TX_OFFLOAD`` prefix has been preserved so that the same flag names can be used
+    in :class:`NicCapability`. The prefix is needed in :class:`NicCapability` since there's
+    no other qualifier which would sufficiently distinguish it from other capabilities.
+
+    References:
+        DPDK lib: ``lib/ethdev/rte_ethdev.h``
+        testpmd display function: ``app/test-pmd/cmdline.c:print_rx_offloads()``
+    """
+
+    TX_OFFLOAD_VLAN_INSERT = auto()
+    TX_OFFLOAD_IPV4_CKSUM = auto()
+    TX_OFFLOAD_UDP_CKSUM = auto()
+    TX_OFFLOAD_TCP_CKSUM = auto()
+    TX_OFFLOAD_SCTP_CKSUM = auto()
+    TX_OFFLOAD_TCP_TSO = auto()
+    TX_OFFLOAD_UDP_TSO = auto()
+    TX_OFFLOAD_OUTER_IPV4_CKSUM = auto()
+    TX_OFFLOAD_QINQ_INSERT = auto()
+    TX_OFFLOAD_VXLAN_TNL_TSO = auto()
+    TX_OFFLOAD_GRE_TNL_TSO = auto()
+    TX_OFFLOAD_IPIP_TNL_TSO = auto()
+    TX_OFFLOAD_GENEVE_TNL_TSO = auto()
+    TX_OFFLOAD_MACSEC_INSERT = auto()
+    TX_OFFLOAD_MT_LOCKFREE = auto()
+    TX_OFFLOAD_MULTI_SEGS = auto()
+    TX_OFFLOAD_MBUF_FAST_FREE = auto()
+    TX_OFFLOAD_SECURITY = auto()
+    TX_OFFLOAD_UDP_TNL_TSO = auto()
+    TX_OFFLOAD_IP_TNL_TSO = auto()
+    TX_OFFLOAD_OUTER_UDP_CKSUM = auto()
+    TX_OFFLOAD_SEND_ON_TIMESTAMP = auto()
+
+    @classmethod
+    def from_string(cls, line: str) -> Self:
+        """Make an instance from a string containing the flag names separated with a space.
+
+        Args:
+            line: The line to parse.
+
+        Returns:
+            A new instance containing all found flags.
+        """
+        flag = cls(0)
+        for flag_name in line.split():
+            flag |= cls[f"TX_OFFLOAD_{flag_name}"]
+        return flag
+
+    @classmethod
+    def make_parser(cls, per_port: bool) -> ParserFn:
+        """Make a parser function.
+
+        Args:
+            per_port: If :data:`True`, will return capabilities per port. If :data:`False`,
+                will return capabilities per queue.
+
+        Returns:
+            ParserFn: A dictionary for the `dataclasses.field` metadata argument containing a
+                parser function that makes an instance of this flag from text.
+        """
+        granularity = "Port" if per_port else "Queue"
+        return TextParser.wrap(
+            TextParser.find(rf"Per {granularity}\s+:(.*)$", re.MULTILINE),
+            cls.from_string,
+        )
+
+
+@dataclass
+class TxOffloadCapabilities(TextParser):
+    """The result of testpmd's ``show port <port_id> tx_offload capabilities`` command.
+
+    References:
+        testpmd command function: ``app/test-pmd/cmdline.c:cmd_tx_offload_get_capa()``
+        testpmd display function: ``app/test-pmd/cmdline.c:cmd_tx_offload_get_capa_parsed()``
+    """
+
+    port_id: int = field(
+        metadata=TextParser.find_int(r"Tx Offloading Capabilities of port (\d+) :")
+    )
+    #: Per-queue Tx offload capabilities.
+    per_queue: TxOffloadCapability = field(metadata=TxOffloadCapability.make_parser(False))
+    #: Capabilities other than per-queue Tx offload capabilities.
+    per_port: TxOffloadCapability = field(metadata=TxOffloadCapability.make_parser(True))
+
+
 class RxOffloadCapability(Flag):
     """Rx offload capabilities of a device.
 
@@ -2397,6 +2490,28 @@ class TestPmdShell(DPDKShell):
     ====== Capability retrieval methods ======
     """
 
+    def get_capabilities_tx_offload(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get all TX offload capabilities and divide them into supported and unsupported.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self._logger.debug("Getting TX offload capabilities.")
+        command = f"show port {self.ports[0].id} tx_offload capabilities"
+        tx_offload_capabilities_out = self.send_command(command)
+        tx_offload_capabilities = TxOffloadCapabilities.parse(tx_offload_capabilities_out)
+        self._update_capabilities_from_flag(
+            supported_capabilities,
+            unsupported_capabilities,
+            TxOffloadCapability,
+            tx_offload_capabilities.per_port | tx_offload_capabilities.per_queue,
+        )
+
     def get_capabilities_rx_offload(
         self,
         supported_capabilities: MutableSet["NicCapability"],
@@ -2833,6 +2948,94 @@ class NicCapability(NoAliasEnum):
     we don't go looking for it again if a different test case also needs it.
     """
 
+    TX_OFFLOAD_VLAN_INSERT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_IPV4_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_UDP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_TCP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_SCTP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_TCP_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_UDP_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_OUTER_IPV4_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_QINQ_INSERT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_VXLAN_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_GRE_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_IPIP_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_GENEVE_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MACSEC_INSERT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MT_LOCKFREE: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MULTI_SEGS: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MBUF_FAST_FREE: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_SECURITY: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_UDP_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_IP_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_OUTER_UDP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_SEND_ON_TIMESTAMP: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
     #: Scattered packets Rx enabled
     SCATTERED_RX_ENABLED: TestPmdShellNicCapability = (
         TestPmdShell.get_capabilities_rxq_info,
