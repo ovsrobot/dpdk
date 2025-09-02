@@ -19,7 +19,7 @@ import re
 import time
 from collections.abc import Callable, MutableSet
 from dataclasses import dataclass, field
-from enum import Flag, auto
+from enum import Enum, Flag, auto
 from os import environ
 from pathlib import PurePath
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, Tuple, TypeAlias
@@ -342,6 +342,13 @@ class RSSOffloadTypesFlag(Flag):
             TextParser.find(r"Supported RSS offload flow types:((?:\r?\n?  \S+)+)", re.MULTILINE),
             RSSOffloadTypesFlag.from_list_string,
         )
+
+
+class RxTxArgFlag(Enum):
+    """Enum representing recieving or transmitting ports."""
+
+    TX = "tx"
+    RX = "rx"
 
 
 class DeviceCapabilitiesFlag(Flag):
@@ -1278,6 +1285,81 @@ class TestPmdVerbosePacket(TextParser):
     )
 
 
+class TxOffloadCapability(Flag):
+    """TX offload capabilities of a device.
+
+    The flags are taken from ``lib/ethdev/rte_ethdev.h``.
+    They're prefixed with ``RTE_ETH_TX_OFFLOAD`` in ``lib/ethdev/rte_ethdev.h``
+    instead of ``TX_OFFLOAD``, which is what testpmd changes the prefix to.
+    The values are not contiguous, so the correspondence is preserved
+    by specifying concrete values interspersed between auto() values.
+
+    The ``TX_OFFLOAD`` prefix has been preserved so that the same flag names can be used
+    in :class:`NicCapability`. The prefix is needed in :class:`NicCapability` since there's
+    no other qualifier which would sufficiently distinguish it from other capabilities.
+
+    References:
+        DPDK lib: ``lib/ethdev/rte_ethdev.h``
+        testpmd display function: ``app/test-pmd/cmdline.c:print_rx_offloads()``
+    """
+
+    TX_OFFLOAD_VLAN_INSERT = auto()
+    TX_OFFLOAD_IPV4_CKSUM = auto()
+    TX_OFFLOAD_UDP_CKSUM = auto()
+    TX_OFFLOAD_TCP_CKSUM = auto()
+    TX_OFFLOAD_SCTP_CKSUM = auto()
+    TX_OFFLOAD_TCP_TSO = auto()
+    TX_OFFLOAD_UDP_TSO = auto()
+    TX_OFFLOAD_OUTER_IPV4_CKSUM = auto()
+    TX_OFFLOAD_QINQ_INSERT = auto()
+    TX_OFFLOAD_VXLAN_TNL_TSO = auto()
+    TX_OFFLOAD_GRE_TNL_TSO = auto()
+    TX_OFFLOAD_IPIP_TNL_TSO = auto()
+    TX_OFFLOAD_GENEVE_TNL_TSO = auto()
+    TX_OFFLOAD_MACSEC_INSERT = auto()
+    TX_OFFLOAD_MT_LOCKFREE = auto()
+    TX_OFFLOAD_MULTI_SEGS = auto()
+    TX_OFFLOAD_MBUF_FAST_FREE = auto()
+    TX_OFFLOAD_SECURITY = auto()
+    TX_OFFLOAD_UDP_TNL_TSO = auto()
+    TX_OFFLOAD_IP_TNL_TSO = auto()
+    TX_OFFLOAD_OUTER_UDP_CKSUM = auto()
+    TX_OFFLOAD_SEND_ON_TIMESTAMP = auto()
+
+    @classmethod
+    def from_string(cls, line: str) -> Self:
+        """Make an instance from a string containing the flag names separated with a space.
+
+        Args:
+            line: The line to parse.
+
+        Returns:
+            A new instance containing all found flags.
+        """
+        flag = cls(0)
+        for flag_name in line.split():
+            flag |= cls[f"TX_OFFLOAD_{flag_name}"]
+        return flag
+
+    @classmethod
+    def make_parser(cls, per_port: bool) -> ParserFn:
+        """Make a parser function.
+
+        Args:
+            per_port: If :data:`True`, will return capabilities per port. If :data:`False`,
+                will return capabilities per queue.
+
+        Returns:
+            ParserFn: A dictionary for the `dataclasses.field` metadata argument containing a
+                parser function that makes an instance of this flag from text.
+        """
+        granularity = "Port" if per_port else "Queue"
+        return TextParser.wrap(
+            TextParser.find(rf"Per {granularity}\s+:(.*)$", re.MULTILINE),
+            cls.from_string,
+        )
+
+
 class RxOffloadCapability(Flag):
     """Rx offload capabilities of a device.
 
@@ -1374,6 +1456,24 @@ class RxOffloadCapability(Flag):
             TextParser.find(rf"Per {granularity}\s+:(.*)$", re.MULTILINE),
             cls.from_string,
         )
+
+
+@dataclass
+class TxOffloadCapabilities(TextParser):
+    """The result of testpmd's ``show port <port_id> tx_offload capabilities`` command.
+
+    References:
+        testpmd command function: ``app/test-pmd/cmdline.c:cmd_tx_offload_get_capa()``
+        testpmd display function: ``app/test-pmd/cmdline.c:cmd_tx_offload_get_capa_parsed()``
+    """
+
+    port_id: int = field(
+        metadata=TextParser.find_int(r"Tx Offloading Capabilities of port (\d+) :")
+    )
+    #: Per-queue Tx offload capabilities.
+    per_queue: TxOffloadCapability = field(metadata=TxOffloadCapability.make_parser(False))
+    #: Capabilities other than per-queue Tx offload capabilities.
+    per_port: TxOffloadCapability = field(metadata=TxOffloadCapability.make_parser(True))
 
 
 @dataclass
@@ -2390,6 +2490,28 @@ class TestPmdShell(DPDKShell):
     ====== Capability retrieval methods ======
     """
 
+    def get_capabilities_tx_offload(
+        self,
+        supported_capabilities: MutableSet["NicCapability"],
+        unsupported_capabilities: MutableSet["NicCapability"],
+    ) -> None:
+        """Get all TX offload capabilities and divide them into supported and unsupported.
+
+        Args:
+            supported_capabilities: Supported capabilities will be added to this set.
+            unsupported_capabilities: Unsupported capabilities will be added to this set.
+        """
+        self._logger.debug("Getting TX offload capabilities.")
+        command = f"show port {self.ports[0].id} tx_offload capabilities"
+        tx_offload_capabilities_out = self.send_command(command)
+        tx_offload_capabilities = TxOffloadCapabilities.parse(tx_offload_capabilities_out)
+        self._update_capabilities_from_flag(
+            supported_capabilities,
+            unsupported_capabilities,
+            TxOffloadCapability,
+            tx_offload_capabilities.per_port | tx_offload_capabilities.per_queue,
+        )
+
     def get_capabilities_rx_offload(
         self,
         supported_capabilities: MutableSet["NicCapability"],
@@ -2672,6 +2794,134 @@ class TestPmdShell(DPDKShell):
         else:
             unsupported_capabilities.add(NicCapability.PHYSICAL_FUNCTION)
 
+    @requires_started_ports
+    def get_rxtx_offload_config(
+        self,
+        rxtx: RxTxArgFlag,
+        verify: bool,
+        port_id: int = 0,
+        num_queues: int = 0,
+    ) -> dict[int | str, str]:
+        """Get the RX or TX offload configuration of the queues from the given port.
+
+        Args:
+            rxtx: Whether to get the RX or TX configuration of the given queues.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that the offload configuration was retrieved succesfully on all queues.
+            num_queues: The number of queues to get the offload configuration for.
+            port_id: The port ID that contains the desired queues.
+
+        Returns:
+            A dict containing port info at key 'port' and queue info keyed by the appropriate queue
+                id.
+
+        Raises:
+            InteractiveCommandExecutionError: If all queue offlaod configutrations could not be
+                retrieved.
+
+        """
+        returnDict: dict[int | str, str] = {}
+
+        config_output = self.send_command(f"show port {port_id} {rxtx.value}_offload configuration")
+        if verify:
+            if (
+                f"Rx Offloading Configuration of port {port_id}" not in config_output
+                and f"Tx Offloading Configuration of port {port_id}" not in config_output
+            ):
+                self._logger.debug(f"Get port offload config error\n{config_output}")
+                raise InteractiveCommandExecutionError(
+                    f"""Failed to get offload config on port {port_id}:\n{config_output}"""
+                )
+        # Actual ouput data starts on the thrid line
+        tempList: list[str] = config_output.splitlines()[3::]
+        returnDict["port"] = tempList[0]
+        for i in range(0, num_queues):
+            returnDict[i] = tempList[i + 1]
+        return returnDict
+
+    @requires_stopped_ports
+    def set_port_rxtx_mbuf_fast_free(
+        self, rxtx: RxTxArgFlag, on: bool, verify: bool, port_id: int = 0
+    ) -> None:
+        """Sets the mbuf_fast_free configuration for the RX or TX offload for a given port.
+
+        Args:
+            rxtx: Whether to set the mbuf_fast_free on the RX or TX port.
+            on: If :data:'True' mbuf_fast_free will be enabled, disable it otherwise.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that the mbuf_fast_free was set successfully.
+            port_id: The port number to enable or disable mbuf_fast_free on.
+
+        Raises:
+            InteractiveCommandExecutionError: If mbuf_fast_free could not be set successfully
+        """
+        mbuf_output = self.send_command(
+            f"port config {port_id} {rxtx.value}_offload mbuf_fast_free {"on" if on else "off"}"
+        )
+
+        if "error" in mbuf_output and verify:
+            raise InteractiveCommandExecutionError(
+                f"""Unable to set mbuf_fast_free config on port {port_id}:\n{mbuf_output}"""
+            )
+
+    @requires_stopped_ports
+    def set_queue_rxtx_mbuf_fast_free(
+        self,
+        rxtx: RxTxArgFlag,
+        on: bool,
+        verify: bool,
+        port_id: int = 0,
+        queue_id: int = 0,
+    ) -> None:
+        """Sets RX or TX mbuf_fast_free configuration of the specified queue on a given port.
+
+        Args:
+            rxtx: Whether to set mbuf_fast_free for the RX or TX offload configuration on the
+                given queues.
+            on: If :data:'True' the mbuf_fast_free configuration will be enabled, otherwise
+                disabled.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that mbuf_fast_free was set successfully on all ports.
+            queue_id: The queue to disable mbuf_fast_free on.
+            port_id: The ID of the port containing the queues.
+
+        Raises:
+            InteractiveCommandExecutionError: If all queues could not be set successfully.
+        """
+        toggle = "on" if on else "off"
+        output = self.send_command(
+            f"port {port_id} {rxtx.value}q {queue_id} {rxtx.value}_offload mbuf_fast_free {toggle}"
+        )
+        if verify:
+            if "Error" in output:
+                self._logger.debug(f"Set queue offload config error\n{output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to get offload config on port {port_id}, queue {queue_id}:\n{output}"
+                )
+
+    def set_all_queues_rxtx_mbuf_fast_free(
+        self,
+        rxtx: RxTxArgFlag,
+        on: bool,
+        verify: bool,
+        port_id=0,
+        num_queues: int = 0,
+    ) -> None:
+        """Sets mbuf_fast_free configuration for the RX or TX offload of all queues on a given port.
+
+        Args:
+            rxtx: Whether to set mbuf_fast_free for the RX or TX offload configuration on the
+                given queues.
+            on: If :data:'True' the mbuf fast_free_configuration will be enabled, otherwise
+                disabled.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that mbuf_fast_free was set successfully on all ports.
+            port_id: The ID of the port containing the queues.
+            num_queues: The queue to disable mbuf_fast_free on.
+        """
+        for i in range(0, num_queues):
+            self.set_queue_rxtx_mbuf_fast_free(rxtx, on, verify, port_id=port_id, queue_id=i)
+
 
 class NicCapability(NoAliasEnum):
     """A mapping between capability names and the associated :class:`TestPmdShell` methods.
@@ -2698,7 +2948,95 @@ class NicCapability(NoAliasEnum):
     we don't go looking for it again if a different test case also needs it.
     """
 
-    #: Scattered packets Rx enabled
+    TX_OFFLOAD_VLAN_INSERT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_IPV4_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_UDP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_TCP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_SCTP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_TCP_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_UDP_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_OUTER_IPV4_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_QINQ_INSERT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_VXLAN_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_GRE_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_IPIP_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_GENEVE_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MACSEC_INSERT: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MT_LOCKFREE: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MULTI_SEGS: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_MBUF_FAST_FREE: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_SECURITY: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_UDP_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_IP_TNL_TSO: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_OUTER_UDP_CKSUM: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    TX_OFFLOAD_SEND_ON_TIMESTAMP: TestPmdShellNicCapability = (
+        TestPmdShell.get_capabilities_tx_offload,
+        None,
+    )
+    # : Scattered packets Rx enabled
     SCATTERED_RX_ENABLED: TestPmdShellNicCapability = (
         TestPmdShell.get_capabilities_rxq_info,
         add_remove_mtu(9000),
