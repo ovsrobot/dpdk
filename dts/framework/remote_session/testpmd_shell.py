@@ -19,7 +19,7 @@ import re
 import time
 from collections.abc import Callable, MutableSet
 from dataclasses import dataclass, field
-from enum import Flag, auto
+from enum import Enum, Flag, auto
 from os import environ
 from pathlib import PurePath
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal, ParamSpec, Tuple, TypeAlias
@@ -342,6 +342,13 @@ class RSSOffloadTypesFlag(Flag):
             TextParser.find(r"Supported RSS offload flow types:((?:\r?\n?  \S+)+)", re.MULTILINE),
             RSSOffloadTypesFlag.from_list_string,
         )
+
+
+class RxTxArgFlag(Enum):
+    """Enum representing receiving or transmitting ports."""
+
+    TX = "tx"
+    RX = "rx"
 
 
 class DeviceCapabilitiesFlag(Flag):
@@ -2671,6 +2678,134 @@ class TestPmdShell(DPDKShell):
             supported_capabilities.add(NicCapability.PHYSICAL_FUNCTION)
         else:
             unsupported_capabilities.add(NicCapability.PHYSICAL_FUNCTION)
+
+    @requires_started_ports
+    def get_rxtx_offload_config(
+        self,
+        rxtx: RxTxArgFlag,
+        verify: bool,
+        port_id: int = 0,
+        num_queues: int = 0,
+    ) -> dict[int | str, str]:
+        """Get the RX or TX offload configuration of the queues from the given port.
+
+        Args:
+            rxtx: Whether to get the RX or TX configuration of the given queues.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that the offload configuration was retrieved successfully on all queues.
+            num_queues: The number of queues to get the offload configuration for.
+            port_id: The port ID that contains the desired queues.
+
+        Returns:
+            A dict containing port info at key 'port' and queue info keyed by the appropriate queue
+                id.
+
+        Raises:
+            InteractiveCommandExecutionError: If all queue offload configurations could not be
+                retrieved.
+
+        """
+        returnDict: dict[int | str, str] = {}
+
+        config_output = self.send_command(f"show port {port_id} {rxtx.value}_offload configuration")
+        if verify:
+            if (
+                f"Rx Offloading Configuration of port {port_id}" not in config_output
+                and f"Tx Offloading Configuration of port {port_id}" not in config_output
+            ):
+                self._logger.debug(f"Get port offload config error\n{config_output}")
+                raise InteractiveCommandExecutionError(
+                    f"""Failed to get offload config on port {port_id}:\n{config_output}"""
+                )
+        # Actual output data starts on the thrid line
+        tempList: list[str] = config_output.splitlines()[3::]
+        returnDict["port"] = tempList[0]
+        for i in range(0, num_queues):
+            returnDict[i] = tempList[i + 1]
+        return returnDict
+
+    @requires_stopped_ports
+    def set_port_rxtx_mbuf_fast_free(
+        self, rxtx: RxTxArgFlag, on: bool, verify: bool, port_id: int = 0
+    ) -> None:
+        """Sets the mbuf_fast_free configuration for the RX or TX offload for a given port.
+
+        Args:
+            rxtx: Whether to set the mbuf_fast_free on the RX or TX port.
+            on: If :data:'True' mbuf_fast_free will be enabled, disable it otherwise.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that the mbuf_fast_free was set successfully.
+            port_id: The port number to enable or disable mbuf_fast_free on.
+
+        Raises:
+            InteractiveCommandExecutionError: If mbuf_fast_free could not be set successfully
+        """
+        mbuf_output = self.send_command(
+            f"port config {port_id} {rxtx.value}_offload mbuf_fast_free {"on" if on else "off"}"
+        )
+
+        if "error" in mbuf_output and verify:
+            raise InteractiveCommandExecutionError(
+                f"""Unable to set mbuf_fast_free config on port {port_id}:\n{mbuf_output}"""
+            )
+
+    @requires_stopped_ports
+    def set_queue_rxtx_mbuf_fast_free(
+        self,
+        rxtx: RxTxArgFlag,
+        on: bool,
+        verify: bool,
+        port_id: int = 0,
+        queue_id: int = 0,
+    ) -> None:
+        """Sets RX or TX mbuf_fast_free configuration of the specified queue on a given port.
+
+        Args:
+            rxtx: Whether to set mbuf_fast_free for the RX or TX offload configuration on the
+                given queues.
+            on: If :data:'True' the mbuf_fast_free configuration will be enabled, otherwise
+                disabled.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that mbuf_fast_free was set successfully on all ports.
+            queue_id: The queue to disable mbuf_fast_free on.
+            port_id: The ID of the port containing the queues.
+
+        Raises:
+            InteractiveCommandExecutionError: If all queues could not be set successfully.
+        """
+        toggle = "on" if on else "off"
+        output = self.send_command(
+            f"port {port_id} {rxtx.value}q {queue_id} {rxtx.value}_offload mbuf_fast_free {toggle}"
+        )
+        if verify:
+            if "Error" in output:
+                self._logger.debug(f"Set queue offload config error\n{output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to get offload config on port {port_id}, queue {queue_id}:\n{output}"
+                )
+
+    def set_all_queues_rxtx_mbuf_fast_free(
+        self,
+        rxtx: RxTxArgFlag,
+        on: bool,
+        verify: bool,
+        port_id=0,
+        num_queues: int = 0,
+    ) -> None:
+        """Sets mbuf_fast_free configuration for the RX or TX offload of all queues on a given port.
+
+        Args:
+            rxtx: Whether to set mbuf_fast_free for the RX or TX offload configuration on the
+                given queues.
+            on: If :data:'True' the mbuf fast_free_configuration will be enabled, otherwise
+                disabled.
+            verify: If :data:'True' the output of the command will be scanned in an attempt to
+                verify that mbuf_fast_free was set successfully on all ports.
+            port_id: The ID of the port containing the queues.
+            num_queues: The queue to disable mbuf_fast_free on.
+        """
+        for i in range(0, num_queues):
+            self.set_queue_rxtx_mbuf_fast_free(rxtx, on, verify, port_id=port_id, queue_id=i)
 
 
 class NicCapability(NoAliasEnum):
