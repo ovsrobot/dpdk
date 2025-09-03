@@ -3,7 +3,8 @@
  */
 
 #include <rte_pci.h>
-#include <rte_vfio.h>
+
+#include <linux/vfio.h>
 
 #include "qat_device.h"
 #include "qat_qp.h"

@@ -19,16 +19,8 @@
 extern "C" {
 #endif
 
-#ifdef RTE_EXEC_ENV_LINUX
-
-#include <linux/vfio.h>
-
-#else /* ! RTE_EXEC_ENV_LINUX */
-
 /* we don't need an actual definition, only pointer is used */
 struct vfio_device_info;
-
-#endif /* RTE_EXEC_ENV_LINUX */
 
 #define RTE_VFIO_DEFAULT_CONTAINER_FD (-1)
 
