@@ -11,7 +11,7 @@
 #include <linux/virtio_net.h>
 #include <stdbool.h>
 
-#include <linux/vfio.h>
+#include <uapi/linux/vfio.h>
 
 #include <rte_eal_paging.h>
 #include <rte_malloc.h>

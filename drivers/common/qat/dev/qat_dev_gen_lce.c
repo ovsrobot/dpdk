@@ -4,7 +4,7 @@
 
 #include <rte_pci.h>
 
-#include <linux/vfio.h>
+#include <uapi/linux/vfio.h>
 
 #include "qat_device.h"
 #include "qat_qp.h"

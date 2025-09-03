@@ -8,7 +8,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <dirent.h>
-#include <linux/vfio.h>
+
+#include <uapi/linux/vfio.h>
 
 #include <rte_errno.h>
 #include <rte_log.h>

@@ -11,7 +11,7 @@
 #include <sys/queue.h>
 #include <unistd.h>
 
-#include <linux/vfio.h>
+#include <uapi/linux/vfio.h>
 
 #include <bus_driver.h>
 #include <bus_platform_driver.h>
