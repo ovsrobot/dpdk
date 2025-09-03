@@ -55,3 +55,4 @@ foreach flag: error_cflags
         base_cflags += flag
     endif
 endforeach
+base_cflags += '-O1'
