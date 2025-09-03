@@ -168,7 +168,7 @@ Assume we have a function as follows
   * Create an acl context object for apps to
   * manipulate
   */
- RTE_EXPORT_SYMBOL(rte_acl_create)
+ RTE_EXPORT_SYMBOL(rte_acl_create);
  int
  rte_acl_create(struct rte_acl_param *param)
  {
@@ -187,7 +187,7 @@ private, is safe), but it also requires modifying the code as follows
   * Create an acl context object for apps to
   * manipulate
   */
- RTE_EXPORT_SYMBOL(rte_acl_create)
+ RTE_EXPORT_SYMBOL(rte_acl_create);
  int
  rte_acl_create(struct rte_acl_param *param, int debug)
  {
@@ -213,7 +213,7 @@ the function return type, the function name and its arguments.
 
 .. code-block:: c
 
- -RTE_EXPORT_SYMBOL(rte_acl_create)
+ -RTE_EXPORT_SYMBOL(rte_acl_create);
  -int
  -rte_acl_create(struct rte_acl_param *param)
  +RTE_VERSION_SYMBOL(21, int, rte_acl_create, (struct rte_acl_param *param))
@@ -303,7 +303,7 @@ Assume we have an experimental function ``rte_acl_create`` as follows:
     * Create an acl context object for apps to
     * manipulate
     */
-   RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_acl_create)
+   RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_acl_create);
    __rte_experimental
    int
    rte_acl_create(struct rte_acl_param *param)
@@ -320,7 +320,7 @@ When we promote the symbol to the stable ABI, we simply strip the
     * Create an acl context object for apps to
     * manipulate
     */
-   RTE_EXPORT_SYMBOL(rte_acl_create)
+   RTE_EXPORT_SYMBOL(rte_acl_create);
    int
    rte_acl_create(struct rte_acl_param *param)
    {
