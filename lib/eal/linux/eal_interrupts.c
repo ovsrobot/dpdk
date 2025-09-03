@@ -15,7 +15,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include <linux/vfio.h>
+#include <uapi/linux/vfio.h>
 
 #include <eal_export.h>
 #include <eal_trace_internal.h>

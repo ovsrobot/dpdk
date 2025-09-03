@@ -11,10 +11,11 @@
 #if defined(__linux__)
 
 #include <inttypes.h>
-#include <linux/vfio.h>
 #include <sys/eventfd.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+#include <uapi/linux/vfio.h>
 
 #define MSIX_IRQ_SET_BUF_LEN                                                                       \
 	(sizeof(struct vfio_irq_set) + sizeof(int) * (plt_intr_max_intr_get(intr_handle)))

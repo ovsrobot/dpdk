@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <stdbool.h>
 
-#include <linux/vfio.h>
+#include <uapi/linux/vfio.h>
 
 #include <rte_log.h>
 #include <rte_pci.h>
