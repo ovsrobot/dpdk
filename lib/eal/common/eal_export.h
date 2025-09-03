@@ -11,9 +11,9 @@
  * For RTE_EXPORT_EXPERIMENTAL_SYMBOL, ver indicates the
  * version this symbol was introduced in.
  */
-#define RTE_EXPORT_EXPERIMENTAL_SYMBOL(symbol, ver)
-#define RTE_EXPORT_INTERNAL_SYMBOL(symbol)
-#define RTE_EXPORT_SYMBOL(symbol)
+#define RTE_EXPORT_EXPERIMENTAL_SYMBOL(symbol, ver)	extern int dummy_rte_export_symbol
+#define RTE_EXPORT_INTERNAL_SYMBOL(symbol)		extern int dummy_rte_export_symbol
+#define RTE_EXPORT_SYMBOL(symbol)			extern int dummy_rte_export_symbol
 
 #if !defined(RTE_USE_FUNCTION_VERSIONING) && (defined(RTE_CC_GCC) || defined(RTE_CC_CLANG))
 #define VERSIONING_WARN RTE_PRAGMA_WARNING(Use of function versioning disabled. \

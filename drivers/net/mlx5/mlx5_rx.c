@@ -1832,7 +1832,7 @@ mlxreg_host_shaper_config(struct rte_eth_dev *dev,
 #endif
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_host_shaper_config, 22.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_host_shaper_config, 22.07);
 int rte_pmd_mlx5_host_shaper_config(int port_id, uint8_t rate,
 				    uint32_t flags)
 {
@@ -1874,7 +1874,7 @@ int rte_pmd_mlx5_host_shaper_config(int port_id, uint8_t rate,
  * @return
  *   0 for Success, non-zero value depending on failure type
  */
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_rxq_dump_contexts, 24.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_rxq_dump_contexts, 24.07);
 int rte_pmd_mlx5_rxq_dump_contexts(uint16_t port_id, uint16_t queue_id, const char *filename)
 {
 	struct rte_eth_dev *dev;

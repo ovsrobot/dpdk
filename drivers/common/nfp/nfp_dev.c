@@ -50,7 +50,7 @@ const struct nfp_dev_info nfp_dev_info[NFP_DEV_CNT] = {
 	},
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(nfp_dev_info_get)
+RTE_EXPORT_INTERNAL_SYMBOL(nfp_dev_info_get);
 const struct nfp_dev_info *
 nfp_dev_info_get(uint16_t device_id)
 {

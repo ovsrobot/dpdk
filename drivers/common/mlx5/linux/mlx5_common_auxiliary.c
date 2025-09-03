@@ -19,7 +19,7 @@
 #define AUXILIARY_SYSFS_PATH "/sys/bus/auxiliary/devices"
 #define MLX5_AUXILIARY_PREFIX "mlx5_core.sf."
 
-RTE_EXPORT_INTERNAL_SYMBOL(mlx5_auxiliary_get_child_name)
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_auxiliary_get_child_name);
 int
 mlx5_auxiliary_get_child_name(const char *dev, const char *node,
 			      char *child, size_t size)

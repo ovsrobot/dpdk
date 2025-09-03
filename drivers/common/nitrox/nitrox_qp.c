@@ -104,7 +104,7 @@ nitrox_release_cmdq(struct nitrox_qp *qp, uint8_t *bar_addr)
 	return rte_memzone_free(qp->cmdq.mz);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nitrox_qp_setup)
+RTE_EXPORT_INTERNAL_SYMBOL(nitrox_qp_setup);
 int
 nitrox_qp_setup(struct nitrox_qp *qp, uint8_t *bar_addr, const char *dev_name,
 		uint32_t nb_descriptors, uint8_t instr_size, int socket_id)
@@ -147,7 +147,7 @@ nitrox_release_ridq(struct nitrox_qp *qp)
 	rte_free(qp->ridq);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(nitrox_qp_release)
+RTE_EXPORT_INTERNAL_SYMBOL(nitrox_qp_release);
 int
 nitrox_qp_release(struct nitrox_qp *qp, uint8_t *bar_addr)
 {

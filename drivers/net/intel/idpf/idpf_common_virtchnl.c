@@ -160,7 +160,7 @@ idpf_read_msg_from_cp(struct idpf_adapter *adapter, uint16_t buf_len,
 #define MAX_TRY_TIMES 200
 #define ASQ_DELAY_MS  10
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_one_msg_read)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_one_msg_read);
 int
 idpf_vc_one_msg_read(struct idpf_adapter *adapter, uint32_t ops, uint16_t buf_len,
 		     uint8_t *buf)
@@ -185,7 +185,7 @@ idpf_vc_one_msg_read(struct idpf_adapter *adapter, uint32_t ops, uint16_t buf_le
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_cmd_execute)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_cmd_execute);
 int
 idpf_vc_cmd_execute(struct idpf_adapter *adapter, struct idpf_cmd_info *args)
 {
@@ -235,7 +235,7 @@ idpf_vc_cmd_execute(struct idpf_adapter *adapter, struct idpf_cmd_info *args)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_api_version_check)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_api_version_check);
 int
 idpf_vc_api_version_check(struct idpf_adapter *adapter)
 {
@@ -276,7 +276,7 @@ idpf_vc_api_version_check(struct idpf_adapter *adapter)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_caps_get)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_caps_get);
 int
 idpf_vc_caps_get(struct idpf_adapter *adapter)
 {
@@ -301,7 +301,7 @@ idpf_vc_caps_get(struct idpf_adapter *adapter)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vport_create)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vport_create);
 int
 idpf_vc_vport_create(struct idpf_vport *vport,
 		     struct virtchnl2_create_vport *create_vport_info)
@@ -338,7 +338,7 @@ idpf_vc_vport_create(struct idpf_vport *vport,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vport_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vport_destroy);
 int
 idpf_vc_vport_destroy(struct idpf_vport *vport)
 {
@@ -363,7 +363,7 @@ idpf_vc_vport_destroy(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queue_grps_add)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queue_grps_add);
 int
 idpf_vc_queue_grps_add(struct idpf_vport *vport,
 		       struct virtchnl2_add_queue_groups *p2p_queue_grps_info,
@@ -396,7 +396,7 @@ idpf_vc_queue_grps_add(struct idpf_vport *vport,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queue_grps_del)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queue_grps_del);
 int idpf_vc_queue_grps_del(struct idpf_vport *vport,
 			  uint16_t num_q_grps,
 			  struct virtchnl2_queue_group_id *qg_ids)
@@ -431,7 +431,7 @@ int idpf_vc_queue_grps_del(struct idpf_vport *vport,
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_key_set)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_key_set);
 int
 idpf_vc_rss_key_set(struct idpf_vport *vport)
 {
@@ -466,7 +466,7 @@ idpf_vc_rss_key_set(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_key_get)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_key_get);
 int idpf_vc_rss_key_get(struct idpf_vport *vport)
 {
 	struct idpf_adapter *adapter = vport->adapter;
@@ -509,7 +509,7 @@ int idpf_vc_rss_key_get(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_lut_set)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_lut_set);
 int
 idpf_vc_rss_lut_set(struct idpf_vport *vport)
 {
@@ -544,7 +544,7 @@ idpf_vc_rss_lut_set(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_lut_get)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_lut_get);
 int
 idpf_vc_rss_lut_get(struct idpf_vport *vport)
 {
@@ -587,7 +587,7 @@ idpf_vc_rss_lut_get(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_hash_get)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_hash_get);
 int
 idpf_vc_rss_hash_get(struct idpf_vport *vport)
 {
@@ -620,7 +620,7 @@ idpf_vc_rss_hash_get(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_hash_set)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rss_hash_set);
 int
 idpf_vc_rss_hash_set(struct idpf_vport *vport)
 {
@@ -647,7 +647,7 @@ idpf_vc_rss_hash_set(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_irq_map_unmap_config)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_irq_map_unmap_config);
 int
 idpf_vc_irq_map_unmap_config(struct idpf_vport *vport, uint16_t nb_rxq, bool map)
 {
@@ -689,7 +689,7 @@ idpf_vc_irq_map_unmap_config(struct idpf_vport *vport, uint16_t nb_rxq, bool map
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vectors_alloc)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vectors_alloc);
 int
 idpf_vc_vectors_alloc(struct idpf_vport *vport, uint16_t num_vectors)
 {
@@ -720,7 +720,7 @@ idpf_vc_vectors_alloc(struct idpf_vport *vport, uint16_t num_vectors)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vectors_dealloc)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vectors_dealloc);
 int
 idpf_vc_vectors_dealloc(struct idpf_vport *vport)
 {
@@ -748,7 +748,7 @@ idpf_vc_vectors_dealloc(struct idpf_vport *vport)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ena_dis_one_queue)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ena_dis_one_queue);
 int
 idpf_vc_ena_dis_one_queue(struct idpf_vport *vport, uint16_t qid,
 			  uint32_t type, bool on)
@@ -787,7 +787,7 @@ idpf_vc_ena_dis_one_queue(struct idpf_vport *vport, uint16_t qid,
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queue_switch)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queue_switch);
 int
 idpf_vc_queue_switch(struct idpf_vport *vport, uint16_t qid,
 		     bool rx, bool on, uint32_t type)
@@ -828,7 +828,7 @@ idpf_vc_queue_switch(struct idpf_vport *vport, uint16_t qid,
 }
 
 #define IDPF_RXTX_QUEUE_CHUNKS_NUM	2
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queues_ena_dis)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_queues_ena_dis);
 int
 idpf_vc_queues_ena_dis(struct idpf_vport *vport, bool enable)
 {
@@ -897,7 +897,7 @@ idpf_vc_queues_ena_dis(struct idpf_vport *vport, bool enable)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vport_ena_dis)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_vport_ena_dis);
 int
 idpf_vc_vport_ena_dis(struct idpf_vport *vport, bool enable)
 {
@@ -923,7 +923,7 @@ idpf_vc_vport_ena_dis(struct idpf_vport *vport, bool enable)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ptype_info_query)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ptype_info_query);
 int
 idpf_vc_ptype_info_query(struct idpf_adapter *adapter,
 			 struct virtchnl2_get_ptype_info *req_ptype_info,
@@ -946,7 +946,7 @@ idpf_vc_ptype_info_query(struct idpf_adapter *adapter,
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_stats_query)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_stats_query);
 int
 idpf_vc_stats_query(struct idpf_vport *vport,
 		struct virtchnl2_vport_stats **pstats)
@@ -974,7 +974,7 @@ idpf_vc_stats_query(struct idpf_vport *vport,
 }
 
 #define IDPF_RX_BUF_STRIDE		64
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rxq_config)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rxq_config);
 int
 idpf_vc_rxq_config(struct idpf_vport *vport, struct idpf_rx_queue *rxq)
 {
@@ -1064,7 +1064,7 @@ idpf_vc_rxq_config(struct idpf_vport *vport, struct idpf_rx_queue *rxq)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rxq_config_by_info)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_rxq_config_by_info);
 int idpf_vc_rxq_config_by_info(struct idpf_vport *vport, struct virtchnl2_rxq_info *rxq_info,
 			       uint16_t num_qs)
 {
@@ -1100,7 +1100,7 @@ int idpf_vc_rxq_config_by_info(struct idpf_vport *vport, struct virtchnl2_rxq_in
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_txq_config)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_txq_config);
 int
 idpf_vc_txq_config(struct idpf_vport *vport, struct ci_tx_queue *txq)
 {
@@ -1172,7 +1172,7 @@ idpf_vc_txq_config(struct idpf_vport *vport, struct ci_tx_queue *txq)
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_txq_config_by_info)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_txq_config_by_info);
 int
 idpf_vc_txq_config_by_info(struct idpf_vport *vport, struct virtchnl2_txq_info *txq_info,
 		       uint16_t num_qs)
@@ -1208,7 +1208,7 @@ idpf_vc_txq_config_by_info(struct idpf_vport *vport, struct virtchnl2_txq_info *
 	return err;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ctlq_recv)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ctlq_recv);
 int
 idpf_vc_ctlq_recv(struct idpf_ctlq_info *cq, u16 *num_q_msg,
 		  struct idpf_ctlq_msg *q_msg)
@@ -1216,7 +1216,7 @@ idpf_vc_ctlq_recv(struct idpf_ctlq_info *cq, u16 *num_q_msg,
 	return idpf_ctlq_recv(cq, num_q_msg, q_msg);
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ctlq_post_rx_buffs)
+RTE_EXPORT_INTERNAL_SYMBOL(idpf_vc_ctlq_post_rx_buffs);
 int
 idpf_vc_ctlq_post_rx_buffs(struct idpf_hw *hw, struct idpf_ctlq_info *cq,
 			   u16 *buff_count, struct idpf_dma_mem **buffs)

@@ -407,7 +407,7 @@ cn9k_ca_meta_info_extract(struct rte_crypto_op *op,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cn9k_cpt_crypto_adapter_enqueue)
+RTE_EXPORT_INTERNAL_SYMBOL(cn9k_cpt_crypto_adapter_enqueue);
 uint16_t
 cn9k_cpt_crypto_adapter_enqueue(uintptr_t base, struct rte_crypto_op *op)
 {
@@ -665,7 +665,7 @@ temp_sess_free:
 	}
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(cn9k_cpt_crypto_adapter_dequeue)
+RTE_EXPORT_INTERNAL_SYMBOL(cn9k_cpt_crypto_adapter_dequeue);
 uintptr_t
 cn9k_cpt_crypto_adapter_dequeue(uintptr_t get_work1)
 {

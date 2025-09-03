@@ -10,7 +10,7 @@
 
 #include "cnxk_utils.h"
 
-RTE_EXPORT_INTERNAL_SYMBOL(roc_nix_tm_err_to_rte_err)
+RTE_EXPORT_INTERNAL_SYMBOL(roc_nix_tm_err_to_rte_err);
 int
 roc_nix_tm_err_to_rte_err(int errorcode)
 {

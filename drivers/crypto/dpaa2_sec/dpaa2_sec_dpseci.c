@@ -4161,7 +4161,7 @@ dpaa2_sec_process_ordered_event(struct qbman_swp *swp,
 	ev->event_ptr = crypto_op;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_sec_eventq_attach)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_sec_eventq_attach);
 int
 dpaa2_sec_eventq_attach(const struct rte_cryptodev *dev,
 		int qp_id,
@@ -4242,7 +4242,7 @@ dpaa2_sec_eventq_attach(const struct rte_cryptodev *dev,
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_sec_eventq_detach)
+RTE_EXPORT_INTERNAL_SYMBOL(dpaa2_sec_eventq_detach);
 int
 dpaa2_sec_eventq_detach(const struct rte_cryptodev *dev,
 			int qp_id)

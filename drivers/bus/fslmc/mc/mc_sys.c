@@ -53,7 +53,7 @@ static int mc_status_to_error(enum mc_cmd_status status)
 	return -EINVAL;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(mc_send_command)
+RTE_EXPORT_INTERNAL_SYMBOL(mc_send_command);
 int mc_send_command(struct fsl_mc_io *mc_io, struct mc_command *cmd)
 {
 	enum mc_cmd_status status;
