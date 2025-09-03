@@ -1702,7 +1702,7 @@ RTE_INIT(memory_telemetry)
 
 #endif /* telemetry !RTE_EXEC_ENV_WINDOWS */
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_memzero_explicit, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_memzero_explicit, 25.07);
 void
 rte_memzero_explicit(void *dst, size_t sz)
 {

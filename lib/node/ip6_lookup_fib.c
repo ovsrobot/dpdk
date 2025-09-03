@@ -187,7 +187,7 @@ ip6_lookup_fib_node_process(struct rte_graph *graph, struct rte_node *node, void
 	return nb_objs;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip6_fib_create, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip6_fib_create, 25.07);
 int
 rte_node_ip6_fib_create(int socket, struct rte_fib6_conf *conf)
 {
@@ -207,7 +207,7 @@ rte_node_ip6_fib_create(int socket, struct rte_fib6_conf *conf)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip6_fib_route_add, 25.07)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip6_fib_route_add, 25.07);
 int
 rte_node_ip6_fib_route_add(const struct rte_ipv6_addr *ip, uint8_t depth, uint16_t next_hop,
 			   enum rte_node_ip6_lookup_next next_node)

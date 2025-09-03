@@ -648,7 +648,7 @@ table_footprint(struct rte_swx_table_params *params,
 	return memory_footprint;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_exact_match_unoptimized_ops, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_exact_match_unoptimized_ops, 20.11);
 struct rte_swx_table_ops rte_swx_table_exact_match_unoptimized_ops = {
 	.footprint_get = table_footprint,
 	.mailbox_size_get = table_mailbox_size_get_unoptimized,
@@ -659,7 +659,7 @@ struct rte_swx_table_ops rte_swx_table_exact_match_unoptimized_ops = {
 	.free = table_free,
 };
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_exact_match_ops, 20.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_swx_table_exact_match_ops, 20.11);
 struct rte_swx_table_ops rte_swx_table_exact_match_ops = {
 	.footprint_get = table_footprint,
 	.mailbox_size_get = table_mailbox_size_get,

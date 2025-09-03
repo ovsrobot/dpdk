@@ -128,7 +128,7 @@ ip4_reassembly_node_process(struct rte_graph *graph, struct rte_node *node, void
 	return idx;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip4_reassembly_configure, 23.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_node_ip4_reassembly_configure, 23.11);
 int
 rte_node_ip4_reassembly_configure(struct rte_node_ip4_reassembly_cfg *cfg, uint16_t cnt)
 {

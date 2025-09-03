@@ -11,7 +11,7 @@
  * types from higher precision to lower precision and vice-versa, except bfloat16.
  */
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int8, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int8, 22.11);
 int
 rte_ml_io_float32_to_int8(const void *input, void *output, uint64_t nb_elements, float scale,
 			  int8_t zero_point)
@@ -45,7 +45,7 @@ rte_ml_io_float32_to_int8(const void *input, void *output, uint64_t nb_elements,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int8_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int8_to_float32, 22.11);
 int
 rte_ml_io_int8_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			  int8_t zero_point)
@@ -70,7 +70,7 @@ rte_ml_io_int8_to_float32(const void *input, void *output, uint64_t nb_elements,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint8, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint8, 22.11);
 int
 rte_ml_io_float32_to_uint8(const void *input, void *output, uint64_t nb_elements, float scale,
 			   uint8_t zero_point)
@@ -104,7 +104,7 @@ rte_ml_io_float32_to_uint8(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint8_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint8_to_float32, 22.11);
 int
 rte_ml_io_uint8_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			   uint8_t zero_point)
@@ -129,7 +129,7 @@ rte_ml_io_uint8_to_float32(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int16, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int16, 22.11);
 int
 rte_ml_io_float32_to_int16(const void *input, void *output, uint64_t nb_elements, float scale,
 			   int16_t zero_point)
@@ -163,7 +163,7 @@ rte_ml_io_float32_to_int16(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int16_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int16_to_float32, 22.11);
 int
 rte_ml_io_int16_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			   int16_t zero_point)
@@ -188,7 +188,7 @@ rte_ml_io_int16_to_float32(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint16, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint16, 22.11);
 int
 rte_ml_io_float32_to_uint16(const void *input, void *output, uint64_t nb_elements, float scale,
 			    uint16_t zero_point)
@@ -222,7 +222,7 @@ rte_ml_io_float32_to_uint16(const void *input, void *output, uint64_t nb_element
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint16_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint16_to_float32, 22.11);
 int
 rte_ml_io_uint16_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			    uint16_t zero_point)
@@ -247,7 +247,7 @@ rte_ml_io_uint16_to_float32(const void *input, void *output, uint64_t nb_element
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int32, 22.11);
 int
 rte_ml_io_float32_to_int32(const void *input, void *output, uint64_t nb_elements, float scale,
 			   int32_t zero_point)
@@ -272,7 +272,7 @@ rte_ml_io_float32_to_int32(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int32_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int32_to_float32, 22.11);
 int
 rte_ml_io_int32_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			   int32_t zero_point)
@@ -297,7 +297,7 @@ rte_ml_io_int32_to_float32(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint32, 22.11);
 int
 rte_ml_io_float32_to_uint32(const void *input, void *output, uint64_t nb_elements, float scale,
 			    uint32_t zero_point)
@@ -328,7 +328,7 @@ rte_ml_io_float32_to_uint32(const void *input, void *output, uint64_t nb_element
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint32_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint32_to_float32, 22.11);
 int
 rte_ml_io_uint32_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			    uint32_t zero_point)
@@ -353,7 +353,7 @@ rte_ml_io_uint32_to_float32(const void *input, void *output, uint64_t nb_element
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int64, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_int64, 22.11);
 int
 rte_ml_io_float32_to_int64(const void *input, void *output, uint64_t nb_elements, float scale,
 			   int64_t zero_point)
@@ -378,7 +378,7 @@ rte_ml_io_float32_to_int64(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int64_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_int64_to_float32, 22.11);
 int
 rte_ml_io_int64_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			   int64_t zero_point)
@@ -403,7 +403,7 @@ rte_ml_io_int64_to_float32(const void *input, void *output, uint64_t nb_elements
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint64, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_uint64, 22.11);
 int
 rte_ml_io_float32_to_uint64(const void *input, void *output, uint64_t nb_elements, float scale,
 			    uint64_t zero_point)
@@ -434,7 +434,7 @@ rte_ml_io_float32_to_uint64(const void *input, void *output, uint64_t nb_element
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint64_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_uint64_to_float32, 22.11);
 int
 rte_ml_io_uint64_to_float32(const void *input, void *output, uint64_t nb_elements, float scale,
 			    uint64_t zero_point)
@@ -581,7 +581,7 @@ __float32_to_float16_scalar_rtn(float x)
 	return u16;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_float16, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float32_to_float16, 22.11);
 int
 rte_ml_io_float32_to_float16(const void *input, void *output, uint64_t nb_elements)
 {
@@ -666,7 +666,7 @@ __float16_to_float32_scalar_rtx(uint16_t f16)
 	return f32.f;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float16_to_float32, 22.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_ml_io_float16_to_float32, 22.11);
 int
 rte_ml_io_float16_to_float32(const void *input, void *output, uint64_t nb_elements)
 {

@@ -350,7 +350,7 @@ rte_fib_select_lookup(struct rte_fib *fib,
 	}
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_fib_rcu_qsbr_add, 24.11)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_fib_rcu_qsbr_add, 24.11);
 int
 rte_fib_rcu_qsbr_add(struct rte_fib *fib, struct rte_fib_rcu_config *cfg)
 {

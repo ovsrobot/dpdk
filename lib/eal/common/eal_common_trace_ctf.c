@@ -357,7 +357,7 @@ meta_fixup(struct trace *trace, char *meta)
 	meta_fix_freq_offset(trace, meta);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_metadata_dump, 20.05)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_trace_metadata_dump, 20.05);
 int
 rte_trace_metadata_dump(FILE *f)
 {
