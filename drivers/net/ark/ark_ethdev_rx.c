@@ -42,6 +42,7 @@ struct __rte_cache_aligned ark_rx_queue {
 	rx_user_meta_hook_fn rx_user_meta_hook;
 	void *ext_user_data;
 
+	uint32_t starvation;
 	uint32_t dataroom;
 	uint32_t headroom;
 
@@ -56,8 +57,6 @@ struct __rte_cache_aligned ark_rx_queue {
 
 	/* The queue Index is used within the dpdk device structures */
 	uint16_t queue_index;
-
-	uint32_t unused;
 
 	/* next cache line - fields written by device */
 	alignas(RTE_CACHE_LINE_MIN_SIZE) RTE_MARKER cacheline1;
@@ -185,12 +184,12 @@ eth_ark_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	queue->reserve_q =
 		rte_zmalloc_socket("Ark_rx_queue mbuf",
 				   nb_desc * sizeof(struct rte_mbuf *),
-				   512,
+				   4096,
 				   socket_id);
 	queue->paddress_q =
 		rte_zmalloc_socket("Ark_rx_queue paddr",
 				   nb_desc * sizeof(rte_iova_t),
-				   512,
+				   4096,
 				   socket_id);
 
 	if (queue->reserve_q == 0 || queue->paddress_q == 0) {
@@ -265,6 +264,9 @@ eth_ark_recv_pkts(void *rx_queue,
 		return 0;
 	if (unlikely(nb_pkts == 0))
 		return 0;
+	if (unlikely(queue->starvation))
+		eth_ark_rx_seed_mbufs(queue);
+
 	prod_index = queue->prod_index;
 	cons_index = queue->cons_index;
 	if (prod_index == cons_index)
@@ -453,7 +455,7 @@ eth_ark_rx_stop_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 static inline int
 eth_ark_rx_seed_mbufs(struct ark_rx_queue *queue)
 {
-	uint32_t limit = (queue->cons_index & ~(ARK_RX_MPU_CHUNK - 1)) +
+	uint32_t limit = RTE_ALIGN_FLOOR(queue->cons_index, ARK_RX_MPU_CHUNK) +
 		queue->queue_size;
 	uint32_t seed_index = queue->seed_index;
 
@@ -461,23 +463,34 @@ eth_ark_rx_seed_mbufs(struct ark_rx_queue *queue)
 	uint32_t seed_m = queue->seed_index & queue->queue_mask;
 
 	uint32_t nb = limit - seed_index;
+	int status;
 
 	/* Handle wrap around -- remainder is filled on the next call */
 	if (unlikely(seed_m + nb > queue->queue_size))
 		nb = queue->queue_size - seed_m;
 
 	struct rte_mbuf **mbufs = &queue->reserve_q[seed_m];
-	int status = rte_pktmbuf_alloc_bulk(queue->mb_pool, mbufs, nb);
+	do {
+		status = rte_pktmbuf_alloc_bulk(queue->mb_pool, mbufs, nb);
+		if (status == 0)
+			break;
+		/* Try again with a smaller request, keeping aligned with chunk size */
+		nb = RTE_ALIGN_FLOOR(nb / 2, ARK_RX_MPU_CHUNK);
+	} while (nb >= ARK_RX_MPU_CHUNK);
 
 	if (unlikely(status != 0)) {
-		ARK_PMD_LOG(NOTICE,
-			    "Could not allocate %u mbufs from pool"
-			    " for RX queue %u;"
-			    " %u free buffers remaining in queue\n",
-			    nb, queue->queue_index,
-			    queue->seed_index - queue->cons_index);
+		if (queue->starvation == 0) {
+			ARK_PMD_LOG(NOTICE,
+				       "Could not allocate %u mbufs from pool"
+				       " for RX queue %u;"
+				       " %u free buffers remaining in queue\n",
+				       ARK_RX_MPU_CHUNK, queue->queue_index,
+				       queue->seed_index - queue->cons_index);
+			queue->starvation = 1;
+		}
 		return -1;
 	}
+	queue->starvation = 0;
 
 	if (ARK_DEBUG_CORE) {		/* DEBUG */
 		while (count != nb) {
