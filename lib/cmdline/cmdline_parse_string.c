@@ -12,7 +12,7 @@
 #include "cmdline_parse.h"
 #include "cmdline_parse_string.h"
 
-RTE_EXPORT_SYMBOL(cmdline_token_string_ops)
+RTE_EXPORT_SYMBOL(cmdline_token_string_ops);
 struct cmdline_token_ops cmdline_token_string_ops = {
 	.parse = cmdline_parse_string,
 	.complete_get_nb = cmdline_complete_get_nb_string,
@@ -49,7 +49,7 @@ get_next_token(const char *s)
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_parse_string)
+RTE_EXPORT_SYMBOL(cmdline_parse_string);
 int
 cmdline_parse_string(cmdline_parse_token_hdr_t *tk, const char *buf, void *res,
 	unsigned ressize)
@@ -135,7 +135,7 @@ cmdline_parse_string(cmdline_parse_token_hdr_t *tk, const char *buf, void *res,
 	return token_len;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_complete_get_nb_string)
+RTE_EXPORT_SYMBOL(cmdline_complete_get_nb_string);
 int cmdline_complete_get_nb_string(cmdline_parse_token_hdr_t *tk)
 {
 	struct cmdline_token_string *tk2;
@@ -159,7 +159,7 @@ int cmdline_complete_get_nb_string(cmdline_parse_token_hdr_t *tk)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_complete_get_elt_string)
+RTE_EXPORT_SYMBOL(cmdline_complete_get_elt_string);
 int cmdline_complete_get_elt_string(cmdline_parse_token_hdr_t *tk, int idx,
 				    char *dstbuf, unsigned int size)
 {
@@ -192,7 +192,7 @@ int cmdline_complete_get_elt_string(cmdline_parse_token_hdr_t *tk, int idx,
 }
 
 
-RTE_EXPORT_SYMBOL(cmdline_get_help_string)
+RTE_EXPORT_SYMBOL(cmdline_get_help_string);
 int cmdline_get_help_string(cmdline_parse_token_hdr_t *tk, char *dstbuf,
 			    unsigned int size)
 {

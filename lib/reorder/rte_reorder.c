@@ -68,7 +68,7 @@ rte_reorder_memory_footprint_get(unsigned int size)
 	return sizeof(struct rte_reorder_buffer) + (2 * size * sizeof(struct rte_mbuf *));
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_init)
+RTE_EXPORT_SYMBOL(rte_reorder_init);
 struct rte_reorder_buffer *
 rte_reorder_init(struct rte_reorder_buffer *b, unsigned int bufsize,
 		const char *name, unsigned int size)
@@ -158,7 +158,7 @@ rte_reorder_entry_insert(struct rte_tailq_entry *new_te)
 	return te;
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_create)
+RTE_EXPORT_SYMBOL(rte_reorder_create);
 struct rte_reorder_buffer*
 rte_reorder_create(const char *name, unsigned socket_id, unsigned int size)
 {
@@ -215,7 +215,7 @@ rte_reorder_create(const char *name, unsigned socket_id, unsigned int size)
 	return b;
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_reset)
+RTE_EXPORT_SYMBOL(rte_reorder_reset);
 void
 rte_reorder_reset(struct rte_reorder_buffer *b)
 {
@@ -239,7 +239,7 @@ rte_reorder_free_mbufs(struct rte_reorder_buffer *b)
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_free)
+RTE_EXPORT_SYMBOL(rte_reorder_free);
 void
 rte_reorder_free(struct rte_reorder_buffer *b)
 {
@@ -274,7 +274,7 @@ rte_reorder_free(struct rte_reorder_buffer *b)
 	rte_free(te);
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_find_existing)
+RTE_EXPORT_SYMBOL(rte_reorder_find_existing);
 struct rte_reorder_buffer *
 rte_reorder_find_existing(const char *name)
 {
@@ -356,7 +356,7 @@ rte_reorder_fill_overflow(struct rte_reorder_buffer *b, unsigned n)
 	return order_head_adv;
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_insert)
+RTE_EXPORT_SYMBOL(rte_reorder_insert);
 int
 rte_reorder_insert(struct rte_reorder_buffer *b, struct rte_mbuf *mbuf)
 {
@@ -423,7 +423,7 @@ rte_reorder_insert(struct rte_reorder_buffer *b, struct rte_mbuf *mbuf)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_reorder_drain)
+RTE_EXPORT_SYMBOL(rte_reorder_drain);
 unsigned int
 rte_reorder_drain(struct rte_reorder_buffer *b, struct rte_mbuf **mbufs,
 		unsigned max_mbufs)

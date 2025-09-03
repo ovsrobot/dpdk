@@ -1200,7 +1200,7 @@ rte_table_hash_key32_stats_read(void *table, struct rte_table_stats *stats, int 
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_table_hash_key32_lru_ops)
+RTE_EXPORT_SYMBOL(rte_table_hash_key32_lru_ops);
 struct rte_table_ops rte_table_hash_key32_lru_ops = {
 	.f_create = rte_table_hash_create_key32_lru,
 	.f_free = rte_table_hash_free_key32_lru,
@@ -1212,7 +1212,7 @@ struct rte_table_ops rte_table_hash_key32_lru_ops = {
 	.f_stats = rte_table_hash_key32_stats_read,
 };
 
-RTE_EXPORT_SYMBOL(rte_table_hash_key32_ext_ops)
+RTE_EXPORT_SYMBOL(rte_table_hash_key32_ext_ops);
 struct rte_table_ops rte_table_hash_key32_ext_ops = {
 	.f_create = rte_table_hash_create_key32_ext,
 	.f_free = rte_table_hash_free_key32_ext,

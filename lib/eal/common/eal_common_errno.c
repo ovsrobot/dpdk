@@ -17,10 +17,10 @@
 #define strerror_r(errnum, buf, buflen) strerror_s(buf, buflen, errnum)
 #endif
 
-RTE_EXPORT_SYMBOL(per_lcore__rte_errno)
+RTE_EXPORT_SYMBOL(per_lcore__rte_errno);
 RTE_DEFINE_PER_LCORE(int, _rte_errno);
 
-RTE_EXPORT_SYMBOL(rte_strerror)
+RTE_EXPORT_SYMBOL(rte_strerror);
 const char *
 rte_strerror(int errnum)
 {

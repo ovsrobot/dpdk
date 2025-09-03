@@ -181,7 +181,7 @@ bus_name_cmp(const struct rte_bus *bus, const void *name)
 	return strncmp(bus->name, name, strlen(bus->name));
 }
 
-RTE_EXPORT_SYMBOL(rte_devargs_parse)
+RTE_EXPORT_SYMBOL(rte_devargs_parse);
 int
 rte_devargs_parse(struct rte_devargs *da, const char *dev)
 {
@@ -248,7 +248,7 @@ rte_devargs_parse(struct rte_devargs *da, const char *dev)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_devargs_parsef)
+RTE_EXPORT_SYMBOL(rte_devargs_parsef);
 int
 rte_devargs_parsef(struct rte_devargs *da, const char *format, ...)
 {
@@ -283,7 +283,7 @@ rte_devargs_parsef(struct rte_devargs *da, const char *format, ...)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_devargs_reset)
+RTE_EXPORT_SYMBOL(rte_devargs_reset);
 void
 rte_devargs_reset(struct rte_devargs *da)
 {
@@ -293,7 +293,7 @@ rte_devargs_reset(struct rte_devargs *da)
 	da->data = NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_devargs_insert)
+RTE_EXPORT_SYMBOL(rte_devargs_insert);
 int
 rte_devargs_insert(struct rte_devargs **da)
 {
@@ -325,7 +325,7 @@ rte_devargs_insert(struct rte_devargs **da)
 }
 
 /* store in allowed list parameter for later parsing */
-RTE_EXPORT_SYMBOL(rte_devargs_add)
+RTE_EXPORT_SYMBOL(rte_devargs_add);
 int
 rte_devargs_add(enum rte_devtype devtype, const char *devargs_str)
 {
@@ -362,7 +362,7 @@ fail:
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_devargs_remove)
+RTE_EXPORT_SYMBOL(rte_devargs_remove);
 int
 rte_devargs_remove(struct rte_devargs *devargs)
 {
@@ -385,7 +385,7 @@ rte_devargs_remove(struct rte_devargs *devargs)
 }
 
 /* count the number of devices of a specified type */
-RTE_EXPORT_SYMBOL(rte_devargs_type_count)
+RTE_EXPORT_SYMBOL(rte_devargs_type_count);
 unsigned int
 rte_devargs_type_count(enum rte_devtype devtype)
 {
@@ -401,7 +401,7 @@ rte_devargs_type_count(enum rte_devtype devtype)
 }
 
 /* dump the user devices on the console */
-RTE_EXPORT_SYMBOL(rte_devargs_dump)
+RTE_EXPORT_SYMBOL(rte_devargs_dump);
 void
 rte_devargs_dump(FILE *f)
 {
@@ -416,7 +416,7 @@ rte_devargs_dump(FILE *f)
 }
 
 /* bus-aware rte_devargs iterator. */
-RTE_EXPORT_SYMBOL(rte_devargs_next)
+RTE_EXPORT_SYMBOL(rte_devargs_next);
 struct rte_devargs *
 rte_devargs_next(const char *busname, const struct rte_devargs *start)
 {

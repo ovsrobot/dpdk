@@ -49,7 +49,7 @@ mem_free(void *addr, const bool trace_ena, bool zero)
 		EAL_LOG(ERR, "Error: Invalid memory");
 }
 
-RTE_EXPORT_SYMBOL(rte_free)
+RTE_EXPORT_SYMBOL(rte_free);
 void
 rte_free(void *addr)
 {
@@ -99,7 +99,7 @@ malloc_socket(const char *type, size_t size, unsigned int align,
 /*
  * Allocate memory on specified heap.
  */
-RTE_EXPORT_SYMBOL(rte_malloc_socket)
+RTE_EXPORT_SYMBOL(rte_malloc_socket);
 void *
 rte_malloc_socket(const char *type, size_t size, unsigned int align,
 		int socket_arg)
@@ -116,7 +116,7 @@ eal_malloc_no_trace(const char *type, size_t size, unsigned int align)
 /*
  * Allocate memory on default heap.
  */
-RTE_EXPORT_SYMBOL(rte_malloc)
+RTE_EXPORT_SYMBOL(rte_malloc);
 void *
 rte_malloc(const char *type, size_t size, unsigned align)
 {
@@ -126,7 +126,7 @@ rte_malloc(const char *type, size_t size, unsigned align)
 /*
  * Allocate zero'd memory on specified heap.
  */
-RTE_EXPORT_SYMBOL(rte_zmalloc_socket)
+RTE_EXPORT_SYMBOL(rte_zmalloc_socket);
 void *
 rte_zmalloc_socket(const char *type, size_t size, unsigned align, int socket)
 {
@@ -156,7 +156,7 @@ rte_zmalloc_socket(const char *type, size_t size, unsigned align, int socket)
 /*
  * Allocate zero'd memory on default heap.
  */
-RTE_EXPORT_SYMBOL(rte_zmalloc)
+RTE_EXPORT_SYMBOL(rte_zmalloc);
 void *
 rte_zmalloc(const char *type, size_t size, unsigned align)
 {
@@ -166,7 +166,7 @@ rte_zmalloc(const char *type, size_t size, unsigned align)
 /*
  * Allocate zero'd memory on specified heap.
  */
-RTE_EXPORT_SYMBOL(rte_calloc_socket)
+RTE_EXPORT_SYMBOL(rte_calloc_socket);
 void *
 rte_calloc_socket(const char *type, size_t num, size_t size, unsigned align, int socket)
 {
@@ -176,7 +176,7 @@ rte_calloc_socket(const char *type, size_t num, size_t size, unsigned align, int
 /*
  * Allocate zero'd memory on default heap.
  */
-RTE_EXPORT_SYMBOL(rte_calloc)
+RTE_EXPORT_SYMBOL(rte_calloc);
 void *
 rte_calloc(const char *type, size_t num, size_t size, unsigned align)
 {
@@ -186,7 +186,7 @@ rte_calloc(const char *type, size_t num, size_t size, unsigned align)
 /*
  * Resize allocated memory on specified heap.
  */
-RTE_EXPORT_SYMBOL(rte_realloc_socket)
+RTE_EXPORT_SYMBOL(rte_realloc_socket);
 void *
 rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 {
@@ -238,14 +238,14 @@ rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 /*
  * Resize allocated memory.
  */
-RTE_EXPORT_SYMBOL(rte_realloc)
+RTE_EXPORT_SYMBOL(rte_realloc);
 void *
 rte_realloc(void *ptr, size_t size, unsigned int align)
 {
 	return rte_realloc_socket(ptr, size, align, SOCKET_ID_ANY);
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_validate)
+RTE_EXPORT_SYMBOL(rte_malloc_validate);
 int
 rte_malloc_validate(const void *ptr, size_t *size)
 {
@@ -260,7 +260,7 @@ rte_malloc_validate(const void *ptr, size_t *size)
 /*
  * Function to retrieve data for heap on given socket
  */
-RTE_EXPORT_SYMBOL(rte_malloc_get_socket_stats)
+RTE_EXPORT_SYMBOL(rte_malloc_get_socket_stats);
 int
 rte_malloc_get_socket_stats(int socket,
 		struct rte_malloc_socket_stats *socket_stats)
@@ -279,7 +279,7 @@ rte_malloc_get_socket_stats(int socket,
 /*
  * Function to dump contents of all heaps
  */
-RTE_EXPORT_SYMBOL(rte_malloc_dump_heaps)
+RTE_EXPORT_SYMBOL(rte_malloc_dump_heaps);
 void
 rte_malloc_dump_heaps(FILE *f)
 {
@@ -292,7 +292,7 @@ rte_malloc_dump_heaps(FILE *f)
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_get_socket)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_get_socket);
 int
 rte_malloc_heap_get_socket(const char *name)
 {
@@ -329,7 +329,7 @@ rte_malloc_heap_get_socket(const char *name)
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_socket_is_external)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_socket_is_external);
 int
 rte_malloc_heap_socket_is_external(int socket_id)
 {
@@ -358,7 +358,7 @@ rte_malloc_heap_socket_is_external(int socket_id)
 /*
  * Print stats on memory type. If type is NULL, info on all types is printed
  */
-RTE_EXPORT_SYMBOL(rte_malloc_dump_stats)
+RTE_EXPORT_SYMBOL(rte_malloc_dump_stats);
 void
 rte_malloc_dump_stats(FILE *f, __rte_unused const char *type)
 {
@@ -388,7 +388,7 @@ rte_malloc_dump_stats(FILE *f, __rte_unused const char *type)
 /*
  * Return the IO address of a virtual address obtained through rte_malloc
  */
-RTE_EXPORT_SYMBOL(rte_malloc_virt2iova)
+RTE_EXPORT_SYMBOL(rte_malloc_virt2iova);
 rte_iova_t
 rte_malloc_virt2iova(const void *addr)
 {
@@ -426,7 +426,7 @@ find_named_heap(const char *name)
 	return NULL;
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_add)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_add);
 int
 rte_malloc_heap_memory_add(const char *heap_name, void *va_addr, size_t len,
 		rte_iova_t iova_addrs[], unsigned int n_pages, size_t page_sz)
@@ -482,7 +482,7 @@ unlock:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_remove)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_remove);
 int
 rte_malloc_heap_memory_remove(const char *heap_name, void *va_addr, size_t len)
 {
@@ -598,21 +598,21 @@ unlock:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_attach)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_attach);
 int
 rte_malloc_heap_memory_attach(const char *heap_name, void *va_addr, size_t len)
 {
 	return sync_memory(heap_name, va_addr, len, true);
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_detach)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_memory_detach);
 int
 rte_malloc_heap_memory_detach(const char *heap_name, void *va_addr, size_t len)
 {
 	return sync_memory(heap_name, va_addr, len, false);
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_create)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_create);
 int
 rte_malloc_heap_create(const char *heap_name)
 {
@@ -664,7 +664,7 @@ unlock:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_malloc_heap_destroy)
+RTE_EXPORT_SYMBOL(rte_malloc_heap_destroy);
 int
 rte_malloc_heap_destroy(const char *heap_name)
 {

@@ -370,7 +370,7 @@ rte_flow_ops_get(uint16_t port_id, struct rte_flow_error *error)
 }
 
 /* Check whether a flow rule can be created on a given port. */
-RTE_EXPORT_SYMBOL(rte_flow_validate)
+RTE_EXPORT_SYMBOL(rte_flow_validate);
 int
 rte_flow_validate(uint16_t port_id,
 		  const struct rte_flow_attr *attr,
@@ -407,7 +407,7 @@ rte_flow_validate(uint16_t port_id,
 }
 
 /* Create a flow rule on a given port. */
-RTE_EXPORT_SYMBOL(rte_flow_create)
+RTE_EXPORT_SYMBOL(rte_flow_create);
 struct rte_flow *
 rte_flow_create(uint16_t port_id,
 		const struct rte_flow_attr *attr,
@@ -438,7 +438,7 @@ rte_flow_create(uint16_t port_id,
 }
 
 /* Destroy a flow rule on a given port. */
-RTE_EXPORT_SYMBOL(rte_flow_destroy)
+RTE_EXPORT_SYMBOL(rte_flow_destroy);
 int
 rte_flow_destroy(uint16_t port_id,
 		 struct rte_flow *flow,
@@ -493,7 +493,7 @@ rte_flow_actions_update(uint16_t port_id,
 }
 
 /* Destroy all flow rules associated with a port. */
-RTE_EXPORT_SYMBOL(rte_flow_flush)
+RTE_EXPORT_SYMBOL(rte_flow_flush);
 int
 rte_flow_flush(uint16_t port_id,
 	       struct rte_flow_error *error)
@@ -520,7 +520,7 @@ rte_flow_flush(uint16_t port_id,
 }
 
 /* Query an existing flow rule. */
-RTE_EXPORT_SYMBOL(rte_flow_query)
+RTE_EXPORT_SYMBOL(rte_flow_query);
 int
 rte_flow_query(uint16_t port_id,
 	       struct rte_flow *flow,
@@ -550,7 +550,7 @@ rte_flow_query(uint16_t port_id,
 }
 
 /* Restrict ingress traffic to the defined flow rules. */
-RTE_EXPORT_SYMBOL(rte_flow_isolate)
+RTE_EXPORT_SYMBOL(rte_flow_isolate);
 int
 rte_flow_isolate(uint16_t port_id,
 		 int set,
@@ -578,7 +578,7 @@ rte_flow_isolate(uint16_t port_id,
 }
 
 /* Initialize flow error structure. */
-RTE_EXPORT_SYMBOL(rte_flow_error_set)
+RTE_EXPORT_SYMBOL(rte_flow_error_set);
 int
 rte_flow_error_set(struct rte_flow_error *error,
 		   int code,
@@ -1186,7 +1186,7 @@ rte_flow_conv(enum rte_flow_conv_op op,
 }
 
 /** Store a full rte_flow description. */
-RTE_EXPORT_SYMBOL(rte_flow_copy)
+RTE_EXPORT_SYMBOL(rte_flow_copy);
 size_t
 rte_flow_copy(struct rte_flow_desc *desc, size_t len,
 	      const struct rte_flow_attr *attr,
@@ -1593,7 +1593,7 @@ rte_flow_tunnel_item_release(uint16_t port_id,
 				  NULL, rte_strerror(ENOTSUP));
 }
 
-RTE_EXPORT_SYMBOL(rte_flow_pick_transfer_proxy)
+RTE_EXPORT_SYMBOL(rte_flow_pick_transfer_proxy);
 int
 rte_flow_pick_transfer_proxy(uint16_t port_id, uint16_t *proxy_port_id,
 			     struct rte_flow_error *error)

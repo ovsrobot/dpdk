@@ -81,7 +81,7 @@ intr_source_to_kevent(const struct rte_intr_handle *ih, struct kevent *ke)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_register)
+RTE_EXPORT_SYMBOL(rte_intr_callback_register);
 int
 rte_intr_callback_register(const struct rte_intr_handle *intr_handle,
 		rte_intr_callback_fn cb, void *cb_arg)
@@ -213,7 +213,7 @@ fail:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_pending)
+RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_pending);
 int
 rte_intr_callback_unregister_pending(const struct rte_intr_handle *intr_handle,
 				rte_intr_callback_fn cb_fn, void *cb_arg,
@@ -270,7 +270,7 @@ rte_intr_callback_unregister_pending(const struct rte_intr_handle *intr_handle,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_unregister)
+RTE_EXPORT_SYMBOL(rte_intr_callback_unregister);
 int
 rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
 		rte_intr_callback_fn cb_fn, void *cb_arg)
@@ -358,7 +358,7 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_sync)
+RTE_EXPORT_SYMBOL(rte_intr_callback_unregister_sync);
 int
 rte_intr_callback_unregister_sync(const struct rte_intr_handle *intr_handle,
 		rte_intr_callback_fn cb_fn, void *cb_arg)
@@ -371,7 +371,7 @@ rte_intr_callback_unregister_sync(const struct rte_intr_handle *intr_handle,
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_enable)
+RTE_EXPORT_SYMBOL(rte_intr_enable);
 int
 rte_intr_enable(const struct rte_intr_handle *intr_handle)
 {
@@ -413,7 +413,7 @@ out:
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_disable)
+RTE_EXPORT_SYMBOL(rte_intr_disable);
 int
 rte_intr_disable(const struct rte_intr_handle *intr_handle)
 {
@@ -454,7 +454,7 @@ out:
 	return rc;
 }
 
-RTE_EXPORT_SYMBOL(rte_intr_ack)
+RTE_EXPORT_SYMBOL(rte_intr_ack);
 int
 rte_intr_ack(const struct rte_intr_handle *intr_handle)
 {
@@ -711,7 +711,7 @@ rte_intr_cap_multiple(struct rte_intr_handle *intr_handle)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_epoll_wait)
+RTE_EXPORT_SYMBOL(rte_epoll_wait);
 int
 rte_epoll_wait(int epfd, struct rte_epoll_event *events,
 		int maxevents, int timeout)
@@ -724,7 +724,7 @@ rte_epoll_wait(int epfd, struct rte_epoll_event *events,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_epoll_wait_interruptible)
+RTE_EXPORT_SYMBOL(rte_epoll_wait_interruptible);
 int
 rte_epoll_wait_interruptible(int epfd, struct rte_epoll_event *events,
 			     int maxevents, int timeout)
@@ -737,7 +737,7 @@ rte_epoll_wait_interruptible(int epfd, struct rte_epoll_event *events,
 	return -ENOTSUP;
 }
 
-RTE_EXPORT_SYMBOL(rte_epoll_ctl)
+RTE_EXPORT_SYMBOL(rte_epoll_ctl);
 int
 rte_epoll_ctl(int epfd, int op, int fd, struct rte_epoll_event *event)
 {
@@ -763,7 +763,7 @@ rte_intr_free_epoll_fd(struct rte_intr_handle *intr_handle)
 	RTE_SET_USED(intr_handle);
 }
 
-RTE_EXPORT_SYMBOL(rte_thread_is_intr)
+RTE_EXPORT_SYMBOL(rte_thread_is_intr);
 int rte_thread_is_intr(void)
 {
 	return rte_thread_equal(intr_thread, rte_thread_self());

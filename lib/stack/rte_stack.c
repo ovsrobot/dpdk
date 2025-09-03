@@ -45,7 +45,7 @@ rte_stack_get_memsize(unsigned int count, uint32_t flags)
 		return rte_stack_std_get_memsize(count);
 }
 
-RTE_EXPORT_SYMBOL(rte_stack_create)
+RTE_EXPORT_SYMBOL(rte_stack_create);
 struct rte_stack *
 rte_stack_create(const char *name, unsigned int count, int socket_id,
 		 uint32_t flags)
@@ -131,7 +131,7 @@ rte_stack_create(const char *name, unsigned int count, int socket_id,
 	return s;
 }
 
-RTE_EXPORT_SYMBOL(rte_stack_free)
+RTE_EXPORT_SYMBOL(rte_stack_free);
 void
 rte_stack_free(struct rte_stack *s)
 {
@@ -164,7 +164,7 @@ rte_stack_free(struct rte_stack *s)
 	rte_memzone_free(s->memzone);
 }
 
-RTE_EXPORT_SYMBOL(rte_stack_lookup)
+RTE_EXPORT_SYMBOL(rte_stack_lookup);
 struct rte_stack *
 rte_stack_lookup(const char *name)
 {

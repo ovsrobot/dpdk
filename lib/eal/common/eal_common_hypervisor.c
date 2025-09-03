@@ -5,7 +5,7 @@
 #include <eal_export.h>
 #include "rte_hypervisor.h"
 
-RTE_EXPORT_SYMBOL(rte_hypervisor_get_name)
+RTE_EXPORT_SYMBOL(rte_hypervisor_get_name);
 const char *
 rte_hypervisor_get_name(enum rte_hypervisor id)
 {

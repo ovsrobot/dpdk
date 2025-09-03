@@ -213,7 +213,7 @@ eal_mem_virt2iova_cleanup(void)
 		CloseHandle(virt2phys_device);
 }
 
-RTE_EXPORT_SYMBOL(rte_mem_virt2phy)
+RTE_EXPORT_SYMBOL(rte_mem_virt2phy);
 phys_addr_t
 rte_mem_virt2phy(const void *virt)
 {
@@ -234,7 +234,7 @@ rte_mem_virt2phy(const void *virt)
 	return phys.QuadPart;
 }
 
-RTE_EXPORT_SYMBOL(rte_mem_virt2iova)
+RTE_EXPORT_SYMBOL(rte_mem_virt2iova);
 rte_iova_t
 rte_mem_virt2iova(const void *virt)
 {
@@ -250,7 +250,7 @@ rte_mem_virt2iova(const void *virt)
 }
 
 /* Always using physical addresses under Windows if they can be obtained. */
-RTE_EXPORT_SYMBOL(rte_eal_using_phys_addrs)
+RTE_EXPORT_SYMBOL(rte_eal_using_phys_addrs);
 int
 rte_eal_using_phys_addrs(void)
 {

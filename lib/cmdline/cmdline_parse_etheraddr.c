@@ -14,7 +14,7 @@
 #include "cmdline_parse.h"
 #include "cmdline_parse_etheraddr.h"
 
-RTE_EXPORT_SYMBOL(cmdline_token_etheraddr_ops)
+RTE_EXPORT_SYMBOL(cmdline_token_etheraddr_ops);
 struct cmdline_token_ops cmdline_token_etheraddr_ops = {
 	.parse = cmdline_parse_etheraddr,
 	.complete_get_nb = NULL,
@@ -22,7 +22,7 @@ struct cmdline_token_ops cmdline_token_etheraddr_ops = {
 	.get_help = cmdline_get_help_etheraddr,
 };
 
-RTE_EXPORT_SYMBOL(cmdline_parse_etheraddr)
+RTE_EXPORT_SYMBOL(cmdline_parse_etheraddr);
 int
 cmdline_parse_etheraddr(__rte_unused cmdline_parse_token_hdr_t *tk,
 	const char *buf, void *res, unsigned ressize)
@@ -54,7 +54,7 @@ cmdline_parse_etheraddr(__rte_unused cmdline_parse_token_hdr_t *tk,
 	return token_len;
 }
 
-RTE_EXPORT_SYMBOL(cmdline_get_help_etheraddr)
+RTE_EXPORT_SYMBOL(cmdline_get_help_etheraddr);
 int
 cmdline_get_help_etheraddr(__rte_unused cmdline_parse_token_hdr_t *tk,
 			       char *dstbuf, unsigned int size)

@@ -95,7 +95,7 @@ ipv4_frag_reassemble(struct ip_frag_pkt *fp)
  *   - an error occurred.
  *   - not all fragments of the packet are collected yet.
  */
-RTE_EXPORT_SYMBOL(rte_ipv4_frag_reassemble_packet)
+RTE_EXPORT_SYMBOL(rte_ipv4_frag_reassemble_packet);
 struct rte_mbuf *
 rte_ipv4_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 	struct rte_ip_frag_death_row *dr, struct rte_mbuf *mb, uint64_t tms,

@@ -140,7 +140,7 @@ find_best_rational_approximation(uint32_t alpha_num, uint32_t d_num, uint32_t de
 	}
 }
 
-RTE_EXPORT_SYMBOL(rte_approx)
+RTE_EXPORT_SYMBOL(rte_approx);
 int rte_approx(double alpha, double d, uint32_t *p, uint32_t *q)
 {
 	uint32_t alpha_num, d_num, denum;

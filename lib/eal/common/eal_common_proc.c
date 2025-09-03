@@ -143,7 +143,7 @@ create_socket_path(const char *name, char *buf, int len)
 		strlcpy(buf, prefix, len);
 }
 
-RTE_EXPORT_SYMBOL(rte_eal_primary_proc_alive)
+RTE_EXPORT_SYMBOL(rte_eal_primary_proc_alive);
 int
 rte_eal_primary_proc_alive(const char *config_file_path)
 {
@@ -199,7 +199,7 @@ validate_action_name(const char *name)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_action_register)
+RTE_EXPORT_SYMBOL(rte_mp_action_register);
 int
 rte_mp_action_register(const char *name, rte_mp_t action)
 {
@@ -236,7 +236,7 @@ rte_mp_action_register(const char *name, rte_mp_t action)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_action_unregister)
+RTE_EXPORT_SYMBOL(rte_mp_action_unregister);
 void
 rte_mp_action_unregister(const char *name)
 {
@@ -840,7 +840,7 @@ check_input(const struct rte_mp_msg *msg)
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_sendmsg)
+RTE_EXPORT_SYMBOL(rte_mp_sendmsg);
 int
 rte_mp_sendmsg(struct rte_mp_msg *msg)
 {
@@ -994,7 +994,7 @@ mp_request_sync(const char *dst, struct rte_mp_msg *req,
 	return 0;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_request_sync)
+RTE_EXPORT_SYMBOL(rte_mp_request_sync);
 int
 rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 		const struct timespec *ts)
@@ -1092,7 +1092,7 @@ end:
 	return ret;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_request_async)
+RTE_EXPORT_SYMBOL(rte_mp_request_async);
 int
 rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 		rte_mp_async_reply_t clb)
@@ -1245,7 +1245,7 @@ fail:
 	return -1;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_reply)
+RTE_EXPORT_SYMBOL(rte_mp_reply);
 int
 rte_mp_reply(struct rte_mp_msg *msg, const char *peer)
 {
@@ -1298,7 +1298,7 @@ set_mp_status(enum mp_status status)
 	return rte_atomic_load_explicit(&mcfg->mp_status, rte_memory_order_relaxed) == desired;
 }
 
-RTE_EXPORT_SYMBOL(rte_mp_disable)
+RTE_EXPORT_SYMBOL(rte_mp_disable);
 bool
 rte_mp_disable(void)
 {
