@@ -3416,7 +3416,7 @@ static int vhost_user_backend_set_vring_host_notifier(struct virtio_net *dev,
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vhost_host_notifier_ctrl)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vhost_host_notifier_ctrl);
 int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 {
 	struct virtio_net *dev;

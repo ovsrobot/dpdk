@@ -36,7 +36,7 @@ int rte_security_dynfield_offset = -1;
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_security_oop_dynfield_offset, 23.11);
 int rte_security_oop_dynfield_offset = -1;
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_security_dynfield_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_security_dynfield_register);
 int
 rte_security_dynfield_register(void)
 {
@@ -50,7 +50,7 @@ rte_security_dynfield_register(void)
 	return rte_security_dynfield_offset;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_security_oop_dynfield_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_security_oop_dynfield_register);
 int
 rte_security_oop_dynfield_register(void)
 {

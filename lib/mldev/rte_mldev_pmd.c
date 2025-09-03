@@ -9,7 +9,7 @@
 
 #include "rte_mldev_pmd.h"
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_create)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_create);
 struct rte_ml_dev *
 rte_ml_dev_pmd_create(const char *name, struct rte_device *device,
 		      struct rte_ml_dev_pmd_init_params *params)
@@ -44,7 +44,7 @@ rte_ml_dev_pmd_create(const char *name, struct rte_device *device,
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_destroy)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_ml_dev_pmd_destroy);
 int
 rte_ml_dev_pmd_destroy(struct rte_ml_dev *dev)
 {

@@ -542,7 +542,7 @@ rte_vfio_container_dma_unmap(__rte_unused int container_fd,
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_firmware_read)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_firmware_read);
 int
 rte_firmware_read(__rte_unused const char *name,
 			__rte_unused void **buf,

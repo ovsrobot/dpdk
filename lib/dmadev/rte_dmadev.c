@@ -22,7 +22,7 @@
 
 static int16_t dma_devices_max;
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_fp_objs)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_fp_objs);
 struct rte_dma_fp_object *rte_dma_fp_objs;
 static struct rte_dma_dev *rte_dma_devices;
 static struct {
@@ -352,7 +352,7 @@ dma_release(struct rte_dma_dev *dev)
 	memset(dev, 0, sizeof(struct rte_dma_dev));
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_pmd_allocate)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_pmd_allocate);
 struct rte_dma_dev *
 rte_dma_pmd_allocate(const char *name, int numa_node, size_t private_data_size)
 {
@@ -370,7 +370,7 @@ rte_dma_pmd_allocate(const char *name, int numa_node, size_t private_data_size)
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_pmd_release)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_pmd_release);
 int
 rte_dma_pmd_release(const char *name)
 {
@@ -415,7 +415,7 @@ rte_dma_is_valid(int16_t dev_id)
 		rte_dma_devices[dev_id].state != RTE_DMA_DEV_UNUSED;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_pmd_get_dev_by_id)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_dma_pmd_get_dev_by_id);
 struct rte_dma_dev *
 rte_dma_pmd_get_dev_by_id(int16_t dev_id)
 {

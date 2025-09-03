@@ -26,7 +26,7 @@ const char *power_env_str[] = {
 };
 
 /* register the ops struct in rte_power_cpufreq_ops, return 0 on success. */
-RTE_EXPORT_INTERNAL_SYMBOL(rte_power_register_cpufreq_ops)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_power_register_cpufreq_ops);
 int
 rte_power_register_cpufreq_ops(struct rte_power_cpufreq_ops *driver_ops)
 {

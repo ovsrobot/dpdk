@@ -92,7 +92,7 @@ regexdev_check_name(const char *name)
 
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_register)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_register);
 struct rte_regexdev *
 rte_regexdev_register(const char *name)
 {
@@ -130,14 +130,14 @@ rte_regexdev_register(const char *name)
 	return dev;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_unregister)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_unregister);
 void
 rte_regexdev_unregister(struct rte_regexdev *dev)
 {
 	dev->state = RTE_REGEXDEV_UNUSED;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_get_device_by_name)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_regexdev_get_device_by_name);
 struct rte_regexdev *
 rte_regexdev_get_device_by_name(const char *name)
 {

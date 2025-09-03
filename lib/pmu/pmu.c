@@ -37,7 +37,7 @@ struct rte_pmu_event {
 	TAILQ_ENTRY(rte_pmu_event) next;
 };
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_pmu)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_pmu);
 struct rte_pmu rte_pmu;
 
 /* Stubs for arch-specific functions */

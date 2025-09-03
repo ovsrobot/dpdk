@@ -242,7 +242,7 @@ thash_test_poly_order(uint32_t poly, int degree)
 	return 0;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(thash_get_rand_poly)
+RTE_EXPORT_INTERNAL_SYMBOL(thash_get_rand_poly);
 uint32_t
 thash_get_rand_poly(uint32_t poly_degree)
 {

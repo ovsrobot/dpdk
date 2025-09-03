@@ -772,7 +772,7 @@ check_core_list(int *lcores, unsigned int count)
 	return -1;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_parse_coremask)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eal_parse_coremask);
 int
 rte_eal_parse_coremask(const char *coremask, int *cores)
 {

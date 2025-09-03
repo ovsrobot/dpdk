@@ -39,7 +39,7 @@
 
 #define ETH_XSTATS_ITER_NUM	0x100
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_devices)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_devices);
 struct rte_eth_dev rte_eth_devices[RTE_MAX_ETHPORTS];
 
 /* public fast-path API */

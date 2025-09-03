@@ -70,7 +70,7 @@ eal_mcfg_update_from_internal(void)
 	mcfg->version = RTE_VERSION;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_mem_get_lock)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_mem_get_lock);
 rte_rwlock_t *
 rte_mcfg_mem_get_lock(void)
 {
@@ -105,7 +105,7 @@ rte_mcfg_mem_write_unlock(void)
 	rte_rwlock_write_unlock(rte_mcfg_mem_get_lock());
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_tailq_get_lock)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_tailq_get_lock);
 rte_rwlock_t *
 rte_mcfg_tailq_get_lock(void)
 {
@@ -140,7 +140,7 @@ rte_mcfg_tailq_write_unlock(void)
 	rte_rwlock_write_unlock(rte_mcfg_tailq_get_lock());
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_mempool_get_lock)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_mempool_get_lock);
 rte_rwlock_t *
 rte_mcfg_mempool_get_lock(void)
 {
@@ -175,7 +175,7 @@ rte_mcfg_mempool_write_unlock(void)
 	rte_rwlock_write_unlock(rte_mcfg_mempool_get_lock());
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_timer_get_lock)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_timer_get_lock);
 rte_spinlock_t *
 rte_mcfg_timer_get_lock(void)
 {
@@ -196,7 +196,7 @@ rte_mcfg_timer_unlock(void)
 	rte_spinlock_unlock(rte_mcfg_timer_get_lock());
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_ethdev_get_lock)
+RTE_EXPORT_INTERNAL_SYMBOL(rte_mcfg_ethdev_get_lock);
 rte_spinlock_t *
 rte_mcfg_ethdev_get_lock(void)
 {
