@@ -7,7 +7,7 @@ if not is_linux
     subdir_done()
 endif
 
-if not dpdk_conf.has('RTE_ARCH_X86_64') or not dpdk_conf.get('RTE_ARCH_64')
+if not dpdk_conf.has('RTE_ARCH_X86_64') and not dpdk_conf.has('RTE_ARCH_ARM64')
     build = false
     reason = 'only supported on x86_64 and aarch64'
     subdir_done()
