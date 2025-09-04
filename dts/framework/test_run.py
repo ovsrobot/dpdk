@@ -103,7 +103,6 @@ from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
 from types import MethodType
 from typing import ClassVar, Protocol, Union
 
@@ -258,11 +257,11 @@ class State(Protocol):
     test_run: TestRun
     result: TestRunResult | ResultNode
 
-    def before(self):
+    def before(self) -> None:
         """Hook before the state is processed."""
-        self.logger.set_stage(self.logger_name, self.log_file_path)
+        self.logger.set_stage(self.logger_name)
 
-    def after(self):
+    def after(self) -> None:
         """Hook after the state is processed."""
         return
 
@@ -274,17 +273,6 @@ class State(Protocol):
     def logger(self) -> DTSLogger:
         """A reference to the root logger."""
         return get_dts_logger()
-
-    def get_log_file_name(self) -> str | None:
-        """Name of the log file for this state."""
-        return None
-
-    @property
-    def log_file_path(self) -> Path | None:
-        """Path to the log file for this state."""
-        if file_name := self.get_log_file_name():
-            return Path(SETTINGS.output_dir, file_name)
-        return None
 
     def next(self) -> Union["State", None]:
         """Next state."""
@@ -406,6 +394,7 @@ class TestRunExecution(State):
                 return self
 
             test_run.ctx.local.reset()
+            test_run.ctx.local.current_test_suite = test_suite
             return TestSuiteSetup(test_run, test_suite, test_suite_result)
         except IndexError:
             # No more test suites. We are done here.
@@ -461,16 +450,17 @@ class TestSuiteState(State):
     test_suite: TestSuite
     result: ResultNode
 
-    def get_log_file_name(self) -> str | None:
-        """Get the log file name."""
-        return self.test_suite.name
-
 
 @dataclass
 class TestSuiteSetup(TestSuiteState):
     """Test suite setup."""
 
     logger_name: ClassVar[str] = "test_suite_setup"
+
+    def before(self) -> None:
+        """Hook before the state is processed."""
+        super().before()
+        self.logger.set_custom_log_file(self.test_suite.name)
 
     @property
     def description(self) -> str:
@@ -529,6 +519,7 @@ class TestSuiteExecution(TestSuiteState):
                 test_case_result.mark_result_as(Result.SKIP, e)
                 return self
 
+            self.test_run.ctx.local.current_test_case = test_case
             return TestCaseSetup(
                 self.test_run,
                 self.test_suite,
@@ -577,7 +568,7 @@ class TestSuiteTeardown(TestSuiteState):
         self.result.mark_step_as("teardown", Result.ERROR, ex)
         return TestRunExecution(self.test_run, self.test_run.result)
 
-    def after(self):
+    def after(self) -> None:
         """Hook after state is processed."""
         if (
             self.result.get_overall_result() in [Result.FAIL, Result.ERROR]
@@ -588,6 +579,7 @@ class TestSuiteTeardown(TestSuiteState):
                 "The remaining test suites will be skipped."
             )
             self.test_run.blocked = True
+        self.logger.set_custom_log_file(None)
 
 
 @dataclass
@@ -598,10 +590,6 @@ class TestCaseState(State):
     test_suite: TestSuite
     test_case: type[TestCase]
     result: ResultNode
-
-    def get_log_file_name(self) -> str | None:
-        """Get the log file name."""
-        return self.test_suite.name
 
 
 @dataclass
