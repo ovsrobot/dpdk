@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+    * **Add Hisilicon Accelerator DMA Driver.**
+
+    Kunpeng SoC has an internal accelerator unit which includes zip function,
+    and the zip also support data copy and fill. This driver exposes this
+    capability to DPDK application.
+
 
 Removed Items
 -------------
