@@ -6,8 +6,11 @@
 Provides a base class to create interactive shells based on DPDK.
 """
 
+import time
 from abc import ABC, abstractmethod
 from pathlib import PurePath
+
+from typing_extensions import Self
 
 from framework.context import get_ctx
 from framework.params.eal import EalParams
@@ -84,3 +87,9 @@ class DPDKShell(InteractiveShell, ABC):
         Adds the remote DPDK build directory to the path.
         """
         return get_ctx().dpdk_build.remote_dpdk_build_dir.joinpath(self.path)
+
+    def __enter__(self) -> Self:
+        """Overrides :meth:`~.interactive_shell.InteractiveShell.__enter__`."""
+        super().__enter__()
+        time.sleep(5)
+        return self
