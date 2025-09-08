@@ -189,6 +189,274 @@ acc_dma_dump(const struct rte_dma_dev *dev, FILE *f)
 	return 0;
 }
 
+static inline void
+acc_dma_sq_doorbell(struct acc_dma_dev *hw)
+{
+	uint64_t doorbell = (uint64_t)(hw->sqn & ACC_DMA_DOORBELL_SQN_MASK) |
+			    (ACC_DMA_DOORBELL_SQ_CMD << ACC_DMA_DOORBELL_CMD_SHIFT) |
+			    (((uint64_t)hw->sq_tail) << ACC_DMA_DOORBELL_IDX_SHIFT);
+	rte_io_wmb();
+	*(volatile uint64_t *)hw->doorbell_reg = doorbell;
+}
+
+static int
+acc_dma_copy(void *dev_private, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
+	     uint32_t length, uint64_t flags)
+{
+	struct acc_dma_dev *hw = dev_private;
+	struct acc_dma_sqe *sqe = &hw->sqe[hw->sq_tail];
+
+	RTE_SET_USED(vchan);
+
+	if (unlikely(length > ACC_DMA_MAX_OP_SIZE)) {
+		hw->invalid_lens++;
+		return -EINVAL;
+	}
+
+	if (unlikely(*hw->sq_status != 0)) {
+		hw->io_errors++;
+		return -EIO;
+	}
+
+	if (hw->avail_sqes == 0) {
+		hw->qfulls++;
+		return -ENOSPC;
+	}
+
+	sqe->bd_type       = ACC_DMA_SQE_TYPE;
+	sqe->task_type     = ACC_DMA_TASK_TYPE;
+	sqe->task_type_ext = ACC_DMA_DATA_MEMCPY;
+	sqe->init_val      = 0;
+	sqe->addr_array    = src;
+	sqe->dst_addr      = dst;
+	sqe->data_size     = length;
+	sqe->dw0           = ACC_DMA_SVA_PREFETCH_EN;
+	sqe->wb_field      = 0;
+
+	hw->sq_tail = (hw->sq_tail + 1) & hw->sq_depth_mask;
+	hw->avail_sqes--;
+	hw->submitted++;
+
+	if (flags & RTE_DMA_OP_FLAG_SUBMIT)
+		acc_dma_sq_doorbell(hw);
+
+	return hw->ridx++;
+}
+
+static int
+acc_dma_fill(void *dev_private, uint16_t vchan, uint64_t pattern,
+	     rte_iova_t dst, uint32_t length, uint64_t flags)
+{
+	struct acc_dma_dev *hw = dev_private;
+	struct acc_dma_sqe *sqe = &hw->sqe[hw->sq_tail];
+
+	RTE_SET_USED(vchan);
+
+	if (unlikely(length > ACC_DMA_MAX_OP_SIZE)) {
+		hw->invalid_lens++;
+		return -EINVAL;
+	}
+
+	if (unlikely(*hw->sq_status != 0)) {
+		hw->io_errors++;
+		return -EIO;
+	}
+
+	if (hw->avail_sqes == 0) {
+		hw->qfulls++;
+		return -ENOSPC;
+	}
+
+	sqe->bd_type       = ACC_DMA_SQE_TYPE;
+	sqe->task_type     = ACC_DMA_TASK_TYPE;
+	sqe->task_type_ext = ACC_DMA_DATA_MEMSET;
+	sqe->init_val      = pattern;
+	sqe->addr_array    = 0;
+	sqe->dst_addr      = dst;
+	sqe->data_size     = length;
+	sqe->dw0           = ACC_DMA_SVA_PREFETCH_EN;
+	sqe->wb_field      = 0;
+
+	hw->sq_tail = (hw->sq_tail + 1) & hw->sq_depth_mask;
+	hw->avail_sqes--;
+	hw->submitted++;
+
+	if (flags & RTE_DMA_OP_FLAG_SUBMIT)
+		acc_dma_sq_doorbell(hw);
+
+	return hw->ridx++;
+}
+
+static int
+acc_dma_submit(void *dev_private, uint16_t vchan)
+{
+	struct acc_dma_dev *hw = dev_private;
+
+	RTE_SET_USED(vchan);
+
+	if (unlikely(*hw->sq_status != 0)) {
+		hw->io_errors++;
+		return -EIO;
+	}
+
+	acc_dma_sq_doorbell(hw);
+
+	return 0;
+}
+
+static inline void
+acc_dma_cq_doorbell(struct acc_dma_dev *hw)
+{
+	uint64_t doorbell = (uint64_t)(hw->sqn & ACC_DMA_DOORBELL_SQN_MASK) |
+			    (ACC_DMA_DOORBELL_CQ_CMD << ACC_DMA_DOORBELL_CMD_SHIFT) |
+			    (((uint64_t)hw->cq_head) << ACC_DMA_DOORBELL_IDX_SHIFT);
+	rte_io_wmb();
+	*(volatile uint64_t *)hw->doorbell_reg = doorbell;
+}
+
+static inline void
+acc_dma_scan_cq(struct acc_dma_dev *hw)
+{
+	volatile struct acc_dma_cqe *cqe;
+	struct acc_dma_sqe *sqe;
+	uint16_t csq_head = hw->cq_sq_head;
+	uint16_t cq_head = hw->cq_head;
+	uint16_t count = 0;
+	uint64_t misc;
+
+	if (unlikely(*hw->cq_status != 0)) {
+		hw->io_errors++;
+		return;
+	}
+
+	while (count < hw->cq_depth) {
+		cqe = &hw->cqe[cq_head];
+		misc = cqe->misc;
+		misc = rte_le_to_cpu_64(misc);
+		if (RTE_FIELD_GET64(ACC_DMA_CQE_VALID_B, misc) != hw->cqe_vld)
+			break;
+
+		csq_head = RTE_FIELD_GET64(ACC_DMA_SQ_HEAD_MASK, misc);
+		if (unlikely(csq_head > hw->sq_depth_mask)) {
+			/**
+			 * Defensive programming to prevent overflow of the
+			 * status array indexed by csq_head. Only error logs
+			 * are used for prompting.
+			 */
+			ACC_DMA_ERR(hw, "invalid csq_head: %u!", csq_head);
+			count = 0;
+			break;
+		}
+		sqe = &hw->sqe[csq_head];
+		if (sqe->done_flag != ACC_DMA_TASK_DONE ||
+			sqe->err_type || sqe->ext_err_type || sqe->wtype) {
+			hw->status[csq_head] = RTE_DMA_STATUS_ERROR_UNKNOWN;
+		}
+
+		count++;
+		cq_head++;
+		if (cq_head == hw->cq_depth) {
+			hw->cqe_vld = !hw->cqe_vld;
+			cq_head = 0;
+		}
+	}
+
+	if (count == 0)
+		return;
+
+	hw->cq_head = cq_head;
+	hw->cq_sq_head = (csq_head + 1) & hw->sq_depth_mask;
+	hw->avail_sqes += count;
+	hw->cqs_completed += count;
+	if (hw->cqs_completed >= ACC_DMA_CQ_DOORBELL_PACE) {
+		acc_dma_cq_doorbell(hw);
+		hw->cqs_completed = 0;
+	}
+}
+
+static inline uint16_t
+acc_dma_calc_cpls(struct acc_dma_dev *hw, const uint16_t nb_cpls)
+{
+	uint16_t cpl_num;
+
+	if (hw->cq_sq_head >= hw->sq_head)
+		cpl_num = hw->cq_sq_head - hw->sq_head;
+	else
+		cpl_num = hw->sq_depth_mask + 1 - hw->sq_head + hw->cq_sq_head;
+
+	if (cpl_num > nb_cpls)
+		cpl_num = nb_cpls;
+
+	return cpl_num;
+}
+
+static uint16_t
+acc_dma_completed(void *dev_private,
+		  uint16_t vchan, const uint16_t nb_cpls,
+		  uint16_t *last_idx, bool *has_error)
+{
+	struct acc_dma_dev *hw = dev_private;
+	uint16_t sq_head = hw->sq_head;
+	uint16_t cpl_num, i;
+
+	RTE_SET_USED(vchan);
+	acc_dma_scan_cq(hw);
+
+	cpl_num = acc_dma_calc_cpls(hw, nb_cpls);
+	for (i = 0; i < cpl_num; i++) {
+		if (hw->status[sq_head]) {
+			*has_error = true;
+			break;
+		}
+		sq_head = (sq_head + 1) & hw->sq_depth_mask;
+	}
+	*last_idx = hw->cridx + i - 1;
+	if (i > 0) {
+		hw->cridx += i;
+		hw->sq_head = sq_head;
+		hw->completed += i;
+	}
+
+	return i;
+}
+
+static uint16_t
+acc_dma_completed_status(void *dev_private,
+			 uint16_t vchan, const uint16_t nb_cpls,
+			 uint16_t *last_idx, enum rte_dma_status_code *status)
+{
+	struct acc_dma_dev *hw = dev_private;
+	uint16_t sq_head = hw->sq_head;
+	uint16_t cpl_num, i;
+
+	RTE_SET_USED(vchan);
+	acc_dma_scan_cq(hw);
+
+	cpl_num = acc_dma_calc_cpls(hw, nb_cpls);
+	for (i = 0; i < cpl_num; i++) {
+		status[i] = hw->status[sq_head];
+		hw->errors += !!status[i];
+		hw->status[sq_head] = 0;
+		sq_head = (sq_head + 1) & hw->sq_depth_mask;
+	}
+	*last_idx = hw->cridx + cpl_num - 1;
+	if (likely(cpl_num > 0)) {
+		hw->cridx += cpl_num;
+		hw->sq_head = sq_head;
+		hw->completed += cpl_num;
+	}
+
+	return cpl_num;
+}
+
+static uint16_t
+acc_dma_burst_capacity(const void *dev_private, uint16_t vchan)
+{
+	const struct acc_dma_dev *hw = dev_private;
+	RTE_SET_USED(vchan);
+	return hw->avail_sqes;
+}
+
 static const struct rte_dma_dev_ops acc_dmadev_ops = {
 	.dev_info_get     = acc_dma_info_get,
 	.dev_configure    = acc_dma_configure,
@@ -273,6 +541,12 @@ acc_dma_create(struct rte_uacce_device *uacce_dev, uint16_t queue_id)
 	dev->device = &uacce_dev->device;
 	dev->dev_ops = &acc_dmadev_ops;
 	dev->fp_obj->dev_private = dev->data->dev_private;
+	dev->fp_obj->copy = acc_dma_copy;
+	dev->fp_obj->fill = acc_dma_fill;
+	dev->fp_obj->submit = acc_dma_submit;
+	dev->fp_obj->completed = acc_dma_completed;
+	dev->fp_obj->completed_status = acc_dma_completed_status;
+	dev->fp_obj->burst_capacity = acc_dma_burst_capacity;
 
 	hw = dev->data->dev_private;
 	hw->data = dev->data; /* make sure ACC_DMA_DEBUG/INFO/WARN/ERR was available. */
