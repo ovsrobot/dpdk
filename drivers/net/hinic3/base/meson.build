@@ -4,6 +4,7 @@
 sources = files(
         'hinic3_cmdq.c',
         'hinic3_hwif.c',
+        'hinic3_nic_event.c',
 )
 
 extra_flags = []
