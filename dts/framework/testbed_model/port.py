@@ -126,7 +126,8 @@ class Port:
     @property
     def bound_for_dpdk(self) -> bool:
         """Is the port bound to the driver for DPDK?"""
-        return self.current_driver == self.config.os_driver_for_dpdk
+        dpdk_driver = self.config.os_driver_for_dpdk
+        return self.current_driver == dpdk_driver
 
     def configure_mtu(self, mtu: int):
         """Configure the port's MTU value.
