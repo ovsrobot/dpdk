@@ -55,3 +55,7 @@ foreach flag: error_cflags
         base_cflags += flag
     endif
 endforeach
+# no packet Rx with gcc > 11 with compiling with default -O3 or -O2
+if (cc.get_id() == 'gcc' and cc.version().version_compare('>=12.0'))
+    base_cflags += '-O1'
+endif
