@@ -747,13 +747,20 @@ void
 mlx5_os_free_shared_dr(struct mlx5_priv *priv)
 {
 	struct mlx5_dev_ctx_shared *sh = priv->sh;
-#ifdef HAVE_MLX5DV_DR
-	int i;
-#endif
+	struct mlx5_rxq_ctrl *rxq_ctrl;
+	int i = 0;
 
 	MLX5_ASSERT(sh && sh->refcnt);
 	if (sh->refcnt > 1)
 		return;
+	LIST_FOREACH(rxq_ctrl, &sh->shared_rxqs, next) {
+		DRV_LOG(DEBUG, "port %u Rx Queue %u still referenced",
+			priv->dev_data->port_id, rxq_ctrl->rxq.idx);
+		++i;
+	}
+	if (i > 0)
+		DRV_LOG(WARNING, "port %u some Rx queues still remain %d",
+			priv->dev_data->port_id, i);
 	MLX5_ASSERT(LIST_EMPTY(&sh->shared_rxqs));
 #ifdef HAVE_MLX5DV_DR
 	if (sh->rx_domain) {
@@ -1562,6 +1569,8 @@ err_secondary:
 	eth_dev->data->mac_addrs = priv->mac;
 	eth_dev->device = dpdk_dev;
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+	/* Fetch minimum and maximum allowed MTU from the device. */
+	mlx5_get_mtu_bounds(eth_dev, &priv->min_mtu, &priv->max_mtu);
 	/* Configure the first MAC address by default. */
 	if (mlx5_get_mac(eth_dev, &mac.addr_bytes)) {
 		DRV_LOG(ERR,
@@ -1578,7 +1587,7 @@ err_secondary:
 	{
 		char ifname[MLX5_NAMESIZE];
 
-		if (mlx5_get_ifname(eth_dev, &ifname) == 0)
+		if (mlx5_get_ifname(eth_dev, ifname) == 0)
 			DRV_LOG(DEBUG, "port %u ifname is \"%s\"",
 				eth_dev->data->port_id, ifname);
 		else
@@ -3042,7 +3051,7 @@ mlx5_os_dev_shared_handler_install(struct mlx5_dev_ctx_shared *sh)
 		DRV_LOG(ERR, "Failed to allocate intr_handle.");
 		return;
 	}
-	if (sh->cdev->config.probe_opt &&
+	if (sh->cdev->dev_info.probe_opt &&
 	    sh->cdev->dev_info.port_num > 1 &&
 	    !sh->rdma_monitor_supp) {
 		nlsk_fd = mlx5_nl_rdma_monitor_init();
@@ -3067,8 +3076,15 @@ mlx5_os_dev_shared_handler_install(struct mlx5_dev_ctx_shared *sh)
 				close(nlsk_fd);
 				return;
 			}
+			sh->cdev->dev_info.async_mon_ready = 1;
 		} else {
 			close(nlsk_fd);
+			if (sh->cdev->dev_info.probe_opt) {
+				DRV_LOG(INFO, "Failed to create rdma link monitor, disable probe optimization");
+				sh->cdev->dev_info.probe_opt = 0;
+				mlx5_free(sh->cdev->dev_info.port_info);
+				sh->cdev->dev_info.port_info = NULL;
+			}
 		}
 	}
 	nlsk_fd = mlx5_nl_init(NETLINK_ROUTE, RTMGRP_LINK);
