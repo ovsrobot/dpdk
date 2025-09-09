@@ -21,6 +21,9 @@ objs = [base_objs]
 
 sources = files(
         'hinic3_ethdev.c',
+        'hinic3_nic_io.c',
+        'hinic3_rx.c',
+        'hinic3_tx.c',
 )
 
 includes += include_directories('base')
