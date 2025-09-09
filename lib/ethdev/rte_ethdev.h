@@ -306,6 +306,7 @@ struct rte_eth_stats {
 #define RTE_ETH_LINK_SPEED_100G    RTE_BIT32(14) /**< 100 Gbps */
 #define RTE_ETH_LINK_SPEED_200G    RTE_BIT32(15) /**< 200 Gbps */
 #define RTE_ETH_LINK_SPEED_400G    RTE_BIT32(16) /**< 400 Gbps */
+#define RTE_ETH_LINK_SPEED_800G    RTE_BIT32(17) /**< 800 Gbps */
 /**@}*/
 
 /**@{@name Link speed
@@ -326,6 +327,7 @@ struct rte_eth_stats {
 #define RTE_ETH_SPEED_NUM_100G    100000 /**< 100 Gbps */
 #define RTE_ETH_SPEED_NUM_200G    200000 /**< 200 Gbps */
 #define RTE_ETH_SPEED_NUM_400G    400000 /**< 400 Gbps */
+#define RTE_ETH_SPEED_NUM_800G    800000 /**< 800 Gbps */
 #define RTE_ETH_SPEED_NUM_UNKNOWN UINT32_MAX /**< Unknown */
 /**@}*/
 
@@ -6402,9 +6404,7 @@ rte_eth_rx_queue_count(uint16_t port_id, uint16_t queue_id)
 		return -EINVAL;
 #endif
 
-	if (p->rx_queue_count == NULL)
-		return -ENOTSUP;
-	return (int)p->rx_queue_count(qd);
+	return p->rx_queue_count(qd);
 }
 
 /**@{@name Rx hardware descriptor states
@@ -6474,8 +6474,6 @@ rte_eth_rx_descriptor_status(uint16_t port_id, uint16_t queue_id,
 	if (qd == NULL)
 		return -ENODEV;
 #endif
-	if (p->rx_descriptor_status == NULL)
-		return -ENOTSUP;
 	return p->rx_descriptor_status(qd, offset);
 }
 
@@ -6545,8 +6543,6 @@ static inline int rte_eth_tx_descriptor_status(uint16_t port_id,
 	if (qd == NULL)
 		return -ENODEV;
 #endif
-	if (p->tx_descriptor_status == NULL)
-		return -ENOTSUP;
 	return p->tx_descriptor_status(qd, offset);
 }
 
@@ -6789,9 +6785,6 @@ rte_eth_tx_prepare(uint16_t port_id, uint16_t queue_id,
 	}
 #endif
 
-	if (!p->tx_pkt_prepare)
-		return nb_pkts;
-
 	return p->tx_pkt_prepare(qd, tx_pkts, nb_pkts);
 }
 
@@ -6988,8 +6981,6 @@ rte_eth_recycle_mbufs(uint16_t rx_port_id, uint16_t rx_queue_id,
 		return 0;
 	}
 #endif
-	if (p1->recycle_tx_mbufs_reuse == NULL)
-		return 0;
 
 #ifdef RTE_ETHDEV_DEBUG_RX
 	if (rx_port_id >= RTE_MAX_ETHPORTS ||
@@ -7013,8 +7004,6 @@ rte_eth_recycle_mbufs(uint16_t rx_port_id, uint16_t rx_queue_id,
 		return 0;
 	}
 #endif
-	if (p2->recycle_rx_descriptors_refill == NULL)
-		return 0;
 
 	/* Copy used *rte_mbuf* buffer pointers from Tx mbuf ring
 	 * into Rx mbuf ring.
@@ -7110,15 +7099,13 @@ rte_eth_tx_queue_count(uint16_t port_id, uint16_t queue_id)
 #ifdef RTE_ETHDEV_DEBUG_TX
 	if (port_id >= RTE_MAX_ETHPORTS || !rte_eth_dev_is_valid_port(port_id)) {
 		RTE_ETHDEV_LOG_LINE(ERR, "Invalid port_id=%u", port_id);
-		rc = -ENODEV;
-		goto out;
+		return -ENODEV;
 	}
 
 	if (queue_id >= RTE_MAX_QUEUES_PER_PORT) {
 		RTE_ETHDEV_LOG_LINE(ERR, "Invalid queue_id=%u for port_id=%u",
 				    queue_id, port_id);
-		rc = -EINVAL;
-		goto out;
+		return -EINVAL;
 	}
 #endif
 
@@ -7130,18 +7117,10 @@ rte_eth_tx_queue_count(uint16_t port_id, uint16_t queue_id)
 	if (qd == NULL) {
 		RTE_ETHDEV_LOG_LINE(ERR, "Invalid queue_id=%u for port_id=%u",
 				    queue_id, port_id);
-		rc = -EINVAL;
-		goto out;
+		return -EINVAL;
 	}
 #endif
-	if (fops->tx_queue_count == NULL) {
-		rc = -ENOTSUP;
-		goto out;
-	}
-
 	rc = fops->tx_queue_count(qd);
-
-out:
 	rte_eth_trace_tx_queue_count(port_id, queue_id, rc);
 	return rc;
 }

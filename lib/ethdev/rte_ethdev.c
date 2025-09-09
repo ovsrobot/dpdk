@@ -1078,6 +1078,9 @@ rte_eth_speed_bitflag(uint32_t speed, int duplex)
 	case RTE_ETH_SPEED_NUM_400G:
 		ret = RTE_ETH_LINK_SPEED_400G;
 		break;
+	case RTE_ETH_SPEED_NUM_800G:
+		ret = RTE_ETH_LINK_SPEED_800G;
+		break;
 	default:
 		ret = 0;
 	}
@@ -1527,6 +1530,18 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 		RTE_ETHDEV_LOG_LINE(DEBUG, "Ethdev port_id=%u supports Tx offloads %s",
 			port_id, eth_dev_offload_names(dev_info.tx_offload_capa,
 			buffer, sizeof(buffer), rte_eth_dev_tx_offload_name));
+		ret = -EINVAL;
+		goto rollback;
+	}
+
+	/* MBUF_FAST_FREE preconditions conflict with MULTI_SEGS support. */
+	if ((dev_conf->txmode.offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) &&
+	    (dev_conf->txmode.offloads & RTE_ETH_TX_OFFLOAD_MULTI_SEGS)) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"id=%d offload clash, %s vs %s",
+			port_id,
+			rte_eth_dev_tx_offload_name(RTE_ETH_TX_OFFLOAD_MULTI_SEGS),
+			rte_eth_dev_tx_offload_name(RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE));
 		ret = -EINVAL;
 		goto rollback;
 	}
@@ -2709,6 +2724,31 @@ rte_eth_tx_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 		return -EINVAL;
 	}
 
+	/*
+	 * If the driver uses a Tx function with MBUF_FAST_FREE preconditions,
+	 * per-queue MULTI_SEGS support is not possible.
+	 */
+	if ((dev->data->dev_conf.txmode.offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) &&
+			(local_conf.offloads & RTE_ETH_TX_OFFLOAD_MULTI_SEGS)) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"id=%d txq=%d offload clash, per-queue %s vs per-port %s",
+			port_id, tx_queue_id,
+			rte_eth_dev_tx_offload_name(RTE_ETH_TX_OFFLOAD_MULTI_SEGS),
+			rte_eth_dev_tx_offload_name(RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE));
+		return -EINVAL;
+	}
+	/*
+	 * If the driver uses a Tx function with MULTI_SEGS support,
+	 * runtime support for per-queue MBUF_FAST_FREE optimization depends on the driver.
+	 */
+	if ((dev->data->dev_conf.txmode.offloads & RTE_ETH_TX_OFFLOAD_MULTI_SEGS) &&
+			(local_conf.offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE))
+		RTE_ETHDEV_LOG_LINE(DEBUG,
+			"id=%d txq=%d potential offload clash, per-queue %s vs per-port %s: PMD to decide",
+			port_id, tx_queue_id,
+			rte_eth_dev_tx_offload_name(RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE),
+			rte_eth_dev_tx_offload_name(RTE_ETH_TX_OFFLOAD_MULTI_SEGS));
+
 	rte_ethdev_trace_txq_setup(port_id, tx_queue_id, nb_tx_desc, tx_conf);
 	return eth_err(port_id, dev->dev_ops->tx_queue_setup(dev,
 		       tx_queue_id, nb_tx_desc, socket_id, &local_conf));
@@ -3018,7 +3058,8 @@ rte_eth_promiscuous_enable(uint16_t port_id)
 		return -ENOTSUP;
 
 	diag = dev->dev_ops->promiscuous_enable(dev);
-	dev->data->promiscuous = (diag == 0) ? 1 : 0;
+	if (diag == 0)
+		dev->data->promiscuous = 1;
 
 	diag = eth_err(port_id, diag);
 
@@ -3086,7 +3127,8 @@ rte_eth_allmulticast_enable(uint16_t port_id)
 	if (dev->dev_ops->allmulticast_enable == NULL)
 		return -ENOTSUP;
 	diag = dev->dev_ops->allmulticast_enable(dev);
-	dev->data->all_multicast = (diag == 0) ? 1 : 0;
+	if (diag == 0)
+		dev->data->all_multicast = 1;
 
 	diag = eth_err(port_id, diag);
 
@@ -3247,6 +3289,9 @@ rte_eth_link_speed_to_str(uint32_t link_speed)
 		break;
 	case RTE_ETH_SPEED_NUM_400G:
 		ret = "400 Gbps";
+		break;
+	case RTE_ETH_SPEED_NUM_800G:
+		ret = "800 Gbps";
 		break;
 	case RTE_ETH_SPEED_NUM_UNKNOWN:
 		ret = "Unknown";
