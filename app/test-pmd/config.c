@@ -634,6 +634,8 @@ device_infos_display_speeds(uint32_t speed_capa)
 		printf(" 200 Gbps  ");
 	if (speed_capa & RTE_ETH_LINK_SPEED_400G)
 		printf(" 400 Gbps  ");
+	if (speed_capa & RTE_ETH_LINK_SPEED_800G)
+		printf(" 800 Gbps  ");
 }
 
 void
@@ -852,6 +854,8 @@ port_infos_display(portid_t port_id)
 
 	if (!rte_eth_dev_get_mtu(port_id, &mtu))
 		printf("MTU: %u\n", mtu);
+	printf("Minimum MTU: %u\n", dev_info.min_mtu);
+	printf("Maximum MTU: %u\n", dev_info.max_mtu);
 
 	printf("Promiscuous mode: %s\n",
 	       rte_eth_promiscuous_get(port_id) ? "enabled" : "disabled");
@@ -2167,6 +2171,7 @@ port_action_handle_query(portid_t port_id, uint32_t id)
 	case RTE_FLOW_ACTION_TYPE_AGE:
 	case RTE_FLOW_ACTION_TYPE_COUNT:
 	case RTE_FLOW_ACTION_TYPE_QUOTA:
+	case RTE_FLOW_ACTION_TYPE_CONNTRACK:
 		break;
 	default:
 		fprintf(stderr,
