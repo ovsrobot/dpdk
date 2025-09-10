@@ -55,6 +55,33 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added speed 800G.**
+
+  Added Ethernet link speed for 800 Gb/s as it is well standardized in IEEE,
+  and some devices already support this speed.
+
+* **Add Hisilicon Accelerator DMA Driver.**
+
+  Kunpeng SoC has an internal accelerator unit which includes zip function,
+  and the zip also support data copy and fill. This driver exposes this
+  capability to DPDK application.
+
+* **Updated NXP DPAA2 ethernet driver.**
+
+  * Enabled software taildrop for ordered queues.
+
+* **Updated Yunsilicon xsc ethernet driver.**
+
+  * Added FW version query.
+  * Added TSO support.
+  * Added module EEPROM dump.
+  * Added promiscuous mode.
+  * Added link status.
+  * Added link event.
+  * Added FEC get and set.
+  * Added multi-process per port.
+  * Optimized code.
+
 
 Removed Items
 -------------
