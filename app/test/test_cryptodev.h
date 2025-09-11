@@ -85,6 +85,7 @@ enum cryptodev_api_test_type {
 	CRYPTODEV_RAW_API_TEST
 };
 
+extern enum rte_security_session_action_type gbl_action_type;
 extern enum cryptodev_api_test_type global_api_test_type;
 
 extern struct crypto_testsuite_params *p_testsuite_params;

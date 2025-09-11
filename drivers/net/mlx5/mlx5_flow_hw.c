@@ -2913,6 +2913,10 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_END:
 			actions_end = true;
 			break;
+		case RTE_FLOW_ACTION_TYPE_PORT_ID:
+			DRV_LOG(ERR, "RTE_FLOW_ACTION_TYPE_PORT_ID action is not supported. "
+				"Use RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT instead.");
+			goto err;
 		default:
 			break;
 		}
@@ -3176,6 +3180,7 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 	uint32_t type = act_idx >> MLX5_INDIRECT_ACTION_TYPE_OFFSET;
 	uint32_t idx = act_idx &
 		       ((1u << MLX5_INDIRECT_ACTION_TYPE_OFFSET) - 1);
+	uint32_t *cnt_queue;
 	cnt_id_t age_cnt;
 
 	memset(&act_data, 0, sizeof(act_data));
@@ -3226,9 +3231,8 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 		if (param == NULL)
 			return -1;
 		if (action_flags & MLX5_FLOW_ACTION_COUNT) {
-			if (mlx5_hws_cnt_pool_get(priv->hws_cpool,
-						  &param->queue_id, &age_cnt,
-						  idx) < 0)
+			cnt_queue = mlx5_hws_cnt_get_queue(priv, &queue);
+			if (mlx5_hws_cnt_pool_get(priv->hws_cpool, cnt_queue, &age_cnt, idx) < 0)
 				return -1;
 			flow->flags |= MLX5_FLOW_HW_FLOW_FLAG_CNT_ID;
 			flow->cnt_id = age_cnt;
@@ -3982,10 +3986,14 @@ flow_hw_async_flow_create_generic(struct rte_eth_dev *dev,
 				      flow->table, actions,
 				      rule_acts, queue, &sub_error))
 		goto error;
-	rule_items = flow_hw_get_rule_items(dev, table, items,
-					    pattern_template_index, &priv->hw_q[queue].pp);
-	if (!rule_items)
-		goto error;
+	if (insertion_type == RTE_FLOW_TABLE_INSERTION_TYPE_INDEX) {
+		rule_items = items;
+	} else {
+		rule_items = flow_hw_get_rule_items(dev, table, items,
+						    pattern_template_index, &priv->hw_q[queue].pp);
+		if (!rule_items)
+			goto error;
+	}
 	if (likely(!rte_flow_template_table_resizable(dev->data->port_id, &table->cfg.attr))) {
 		ret = mlx5dr_rule_create(table->matcher_info[0].matcher,
 					 pattern_template_index, rule_items,
@@ -6898,6 +6906,12 @@ mlx5_hw_validate_action_mark(struct rte_eth_dev *dev,
 		.transfer = template_attr->transfer
 	};
 
+	if (template_attr->transfer &&
+	    !MLX5_SH(dev)->cdev->config.hca_attr.fdb_rx_set_flow_tag_stc)
+		return rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION,
+					  action,
+					  "mark action not supported for transfer");
+
 	return mlx5_flow_validate_action_mark(dev, action, action_flags,
 					      &attr, error);
 }
@@ -7644,7 +7658,11 @@ flow_hw_parse_flow_actions_to_dr_actions(struct rte_eth_dev *dev,
 		case MLX5_RTE_FLOW_ACTION_TYPE_MIRROR:
 			at->dr_off[i] = curr_off;
 			action_types[curr_off++] = MLX5DR_ACTION_TYP_DEST_ARRAY;
-				break;
+			break;
+		case RTE_FLOW_ACTION_TYPE_PORT_ID:
+			DRV_LOG(ERR, "RTE_FLOW_ACTION_TYPE_PORT_ID action is not supported. "
+				"Use RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT instead.");
+			return -EINVAL;
 		default:
 			type = mlx5_hw_dr_action_types[at->actions[i].type];
 			at->dr_off[i] = curr_off;
@@ -12061,21 +12079,21 @@ __flow_hw_configure(struct rte_eth_dev *dev,
 	for (i = 0; i < MLX5_HW_ACTION_FLAG_MAX; i++) {
 		uint32_t act_flags = 0;
 		uint32_t tag_flags = mlx5_hw_act_flag[i][0];
+		bool tag_fdb_rx = !!priv->sh->cdev->config.hca_attr.fdb_rx_set_flow_tag_stc;
 
 		act_flags = mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_NIC_RX] |
 			    mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_NIC_TX];
 		if (is_proxy) {
-			/* Tag action is valid only in FDB_Rx domain. */
 			if (unified_fdb) {
 				act_flags |=
 					(mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_FDB_RX] |
 					 mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_FDB_TX] |
 					 mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_FDB_UNIFIED]);
-				if (i == MLX5_HW_ACTION_FLAG_NONE_ROOT)
+				if (i == MLX5_HW_ACTION_FLAG_NONE_ROOT && tag_fdb_rx)
 					tag_flags |= mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_FDB_RX];
 			} else {
 				act_flags |= mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_FDB];
-				if (i == MLX5_HW_ACTION_FLAG_NONE_ROOT)
+				if (i == MLX5_HW_ACTION_FLAG_NONE_ROOT && tag_fdb_rx)
 					tag_flags |= mlx5_hw_act_flag[i][MLX5DR_TABLE_TYPE_FDB];
 			}
 		}
@@ -13124,6 +13142,14 @@ flow_hw_action_create(struct rte_eth_dev *dev,
 		       const struct rte_flow_action *action,
 		       struct rte_flow_error *err)
 {
+	struct mlx5_priv *priv = dev->data->dev_private;
+
+	if (action->type == RTE_FLOW_ACTION_TYPE_AGE && priv->hws_strict_queue) {
+		rte_flow_error_set(err, EINVAL, RTE_FLOW_ERROR_TYPE_STATE, NULL,
+				   "Cannot create age action synchronously with strict queueing");
+		return NULL;
+	}
+
 	return flow_hw_action_handle_create(dev, MLX5_HW_INV_QUEUE,
 					    NULL, conf, action, NULL, err);
 }
@@ -13343,6 +13369,8 @@ flow_hw_get_q_aged_flows(struct rte_eth_dev *dev, uint32_t queue_id,
 					  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 					  NULL, "No aging initialized");
 	if (priv->hws_strict_queue) {
+		/* Queue is invalid in sync query. Sync query and strict queueing is disallowed. */
+		MLX5_ASSERT(queue_id != MLX5_HW_INV_QUEUE);
 		if (queue_id >= age_info->hw_q_age->nb_rings)
 			return rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
@@ -13396,10 +13424,10 @@ flow_hw_get_aged_flows(struct rte_eth_dev *dev, void **contexts,
 	struct mlx5_priv *priv = dev->data->dev_private;
 
 	if (priv->hws_strict_queue)
-		DRV_LOG(WARNING,
-			"port %u get aged flows called in strict queue mode.",
-			dev->data->port_id);
-	return flow_hw_get_q_aged_flows(dev, 0, contexts, nb_contexts, error);
+		return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_STATE, NULL,
+				"Cannot get aged flows synchronously with strict queueing");
+
+	return flow_hw_get_q_aged_flows(dev, MLX5_HW_INV_QUEUE, contexts, nb_contexts, error);
 }
 /**
  * Initialization function for non template API which calls
@@ -14082,11 +14110,6 @@ error:
 		mlx5_free(hw_act.push_remove);
 	if (hw_act.mhdr)
 		mlx5_free(hw_act.mhdr);
-	if (ret) {
-		/* release after actual error */
-		if ((*flow)->nt2hws && (*flow)->nt2hws->matcher)
-			flow_hw_unregister_matcher(dev, (*flow)->nt2hws->matcher);
-	}
 	return ret;
 }
 #endif
@@ -14104,6 +14127,7 @@ flow_hw_destroy(struct rte_eth_dev *dev, struct rte_flow_hw *flow)
 		ret = mlx5dr_bwc_rule_destroy(flow->nt2hws->nt_rule);
 		if (ret)
 			DRV_LOG(ERR, "bwc rule destroy failed");
+		flow->nt2hws->nt_rule = NULL;
 	}
 	flow->operation_type = MLX5_FLOW_HW_FLOW_OP_TYPE_DESTROY;
 	/* Notice this function does not handle shared/static actions. */
@@ -14118,18 +14142,24 @@ flow_hw_destroy(struct rte_eth_dev *dev, struct rte_flow_hw *flow)
 	  * Notice matcher destroy will take place when matcher's list is destroyed
 	  * , same as for DV.
 	  */
-	if (flow->nt2hws->flow_aux)
+	if (flow->nt2hws->flow_aux) {
 		mlx5_free(flow->nt2hws->flow_aux);
-
-	if (flow->nt2hws->rix_encap_decap)
+		flow->nt2hws->flow_aux = NULL;
+	}
+	if (flow->nt2hws->rix_encap_decap) {
 		flow_encap_decap_resource_release(dev, flow->nt2hws->rix_encap_decap);
+		flow->nt2hws->rix_encap_decap = 0;
+	}
 	if (flow->nt2hws->modify_hdr) {
 		MLX5_ASSERT(flow->nt2hws->modify_hdr->action);
 		mlx5_hlist_unregister(priv->sh->modify_cmds,
 				      &flow->nt2hws->modify_hdr->entry);
+		flow->nt2hws->modify_hdr = NULL;
 	}
-	if (flow->nt2hws->matcher)
+	if (flow->nt2hws->matcher) {
 		flow_hw_unregister_matcher(dev, flow->nt2hws->matcher);
+		flow->nt2hws->matcher = NULL;
+	}
 	if (flow->nt2hws->sample_release_ctx != NULL) {
 		mlx5_nta_sample_mirror_entry_release(dev, flow->nt2hws->sample_release_ctx);
 		flow->nt2hws->sample_release_ctx = NULL;
@@ -16996,6 +17026,7 @@ flow_hw_validate_rule_pattern(struct rte_eth_dev *dev,
 		switch (items->type) {
 		const struct rte_flow_item_ethdev *ethdev;
 		const struct rte_flow_item_tx_queue *tx_queue;
+		const struct rte_flow_item_conntrack *spec;
 		struct mlx5_txq_ctrl *txq;
 
 		case RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT:
@@ -17016,6 +17047,15 @@ flow_hw_validate_rule_pattern(struct rte_eth_dev *dev,
 							  RTE_FLOW_ERROR_TYPE_ITEM_SPEC, items,
 							  "Invalid Tx queue");
 			mlx5_txq_release(dev, tx_queue->tx_queue);
+			break;
+		case RTE_FLOW_ITEM_TYPE_CONNTRACK:
+			spec = items->spec;
+			if (spec->flags & ~MLX5_FLOW_CONNTRACK_PKT_STATE_ALL)
+				return rte_flow_error_set(error, EINVAL,
+						RTE_FLOW_ERROR_TYPE_ITEM,
+						NULL,
+						"Invalid CT item flags");
+			break;
 		default:
 			break;
 		}
