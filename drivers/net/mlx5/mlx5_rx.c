@@ -73,7 +73,7 @@ mlx5_lro_update_hdr(uint8_t *__rte_restrict padd,
  * @return
  *   The number of used Rx descriptor.
  */
-static uint32_t
+static int
 rx_queue_count(struct mlx5_rxq_data *rxq)
 {
 	struct rxq_zip *zip = &rxq->zip;
@@ -261,7 +261,7 @@ mlx5_rx_burst_mode_get(struct rte_eth_dev *dev,
  *   The number of used rx descriptor.
  *   -EINVAL if the queue is invalid
  */
-uint32_t
+int
 mlx5_rx_queue_count(void *rx_queue)
 {
 	struct mlx5_rxq_data *rxq = rx_queue;
@@ -1093,7 +1093,7 @@ mlx5_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 				break;
 			}
 			pkt = seg;
-			MLX5_ASSERT(len >= (rxq->crc_present << 2));
+			MLX5_ASSERT(len >= (int)(rxq->crc_present << 2));
 			pkt->ol_flags &= RTE_MBUF_F_EXTERNAL;
 			if (rxq->cqe_comp_layout && mcqe)
 				cqe = &rxq->title_cqe;
@@ -1273,7 +1273,7 @@ mlx5_rx_burst_out_of_order(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts
 		}
 		if (!pkt) {
 			pkt = seg;
-			MLX5_ASSERT(len >= (rxq->crc_present << 2));
+			MLX5_ASSERT(len >= (int)(rxq->crc_present << 2));
 			pkt->ol_flags &= RTE_MBUF_F_EXTERNAL;
 			if (rxq->cqe_comp_layout && mcqe)
 				cqe = &rxq->title_cqe;

@@ -47,6 +47,7 @@
 #include <rte_ethdev.h>
 #include <rte_dev.h>
 #include <rte_string_fns.h>
+#include <rte_pci.h>
 #ifdef RTE_NET_IXGBE
 #include <rte_pmd_ixgbe.h>
 #endif
@@ -101,13 +102,23 @@
 uint16_t verbose_level = 0; /**< Silent by default. */
 int testpmd_logtype; /**< Log type for testpmd logs */
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+/* Maximum delay for exiting after primary process. */
+#define MONITOR_INTERVAL (500)
+#define STR_SIZE 128
+static const char *_MSG_POOL = "MSG_POOL";
+static const char *_SEC_2_PRI = "SEC_2_PRI";
+static const char *_PRI_2_SEC = "PRI_2_SEC";
+
+struct rte_ring *send_ring, *recv_ring;
+struct rte_mempool *message_pool;
+#endif
 /* use main core for command line ? */
 uint8_t interactive = 0;
 uint8_t auto_start = 0;
 uint8_t tx_first;
 char cmdline_filename[PATH_MAX] = {0};
 bool echo_cmdline_file;
-
 /*
  * NUMA support configuration.
  * When set, the NUMA support attempts to dispatch the allocation of the
@@ -382,6 +393,7 @@ uint64_t noisy_lkup_num_reads_writes;
  * Receive Side Scaling (RSS) configuration.
  */
 uint64_t rss_hf = RTE_ETH_RSS_IP; /* RSS IP by default. */
+bool force_rss;                   /* false == for single queue don't force rss */
 
 /*
  * Port topology configuration
@@ -2559,7 +2571,8 @@ stop_packet_forwarding(void)
 	for (lc_id = 0; lc_id < cur_fwd_config.nb_fwd_lcores; lc_id++)
 		fwd_lcores[lc_id]->stopped = 1;
 	printf("\nWaiting for lcores to finish...\n");
-	rte_eal_mp_wait_lcore();
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_eal_mp_wait_lcore();
 	port_fwd_end = cur_fwd_config.fwd_eng->port_fwd_end;
 	if (port_fwd_end != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
@@ -3407,11 +3420,35 @@ reset_port(portid_t pid)
 	printf("Done\n");
 }
 
+static char *
+convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_size)
+{
+	struct rte_devargs da;
+	struct rte_pci_addr pci_addr;
+
+	if (rte_devargs_parse(&da, identifier) != 0)
+		return NULL;
+
+	if (da.bus == NULL)
+		return NULL;
+
+	if (strcmp(rte_bus_name(da.bus), "pci") != 0)
+		return NULL;
+
+	if (rte_pci_addr_parse(da.name, &pci_addr) != 0)
+		return NULL;
+
+	rte_pci_device_name(&pci_addr, pci_buffer, buf_size);
+	return pci_buffer;
+}
+
 void
 attach_port(char *identifier)
 {
 	portid_t pi;
 	struct rte_dev_iterator iterator;
+	char *long_identifier;
+	char long_format[PCI_PRI_STR_SIZE];
 
 	printf("Attaching a new port...\n");
 
@@ -3419,6 +3456,11 @@ attach_port(char *identifier)
 		fprintf(stderr, "Invalid parameters are specified\n");
 		return;
 	}
+
+	/* For PCI device convert to canonical format */
+	long_identifier = convert_pci_address_format(identifier, long_format, sizeof(long_format));
+	if (long_identifier != NULL)
+		identifier = long_identifier;
 
 	if (rte_dev_probe(identifier) < 0) {
 		TESTPMD_LOG(ERR, "Failed to attach port %s\n", identifier);
@@ -3601,6 +3643,18 @@ pmd_test_exit(void)
 			printf("\nStopping port %d...\n", pt_id);
 			fflush(stdout);
 			stop_port(pt_id);
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+			printf("Stopping secondary processes ...\n");
+			void *msg = NULL;
+			if (rte_mempool_get(message_pool, &msg) < 0)
+				rte_panic("Failed to get message buffer\n");
+			strlcpy((char *)msg, "stop", STR_SIZE);
+			if (rte_ring_enqueue(send_ring, msg) < 0) {
+				printf("Failed to send message - message discarded\n");
+				rte_mempool_put(message_pool, msg);
+			}
+#endif
 		}
 		RTE_ETH_FOREACH_DEV(pt_id) {
 			printf("\nShutting down port %d...\n", pt_id);
@@ -4007,7 +4061,7 @@ init_port_config(void)
 		if (ret != 0)
 			return;
 
-		if (nb_rxq > 1) {
+		if (nb_rxq > 1 || force_rss) {
 			port->dev_conf.rx_adv_conf.rss_conf.rss_key = NULL;
 			port->dev_conf.rx_adv_conf.rss_conf.rss_hf =
 				rss_hf & port->dev_info.flow_type_rss_offloads;
@@ -4332,6 +4386,49 @@ signal_handler(int signum __rte_unused)
 	prompt_exit();
 }
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+/* Alarm signal handler, used to check that primary process */
+static void
+monitor_primary(void *arg __rte_unused)
+{
+	void *msg;
+	if (rte_eal_primary_proc_alive(NULL)) {
+		if (rte_ring_dequeue(recv_ring, &msg) < 0) {
+			rte_eal_alarm_set(MONITOR_INTERVAL, monitor_primary, NULL);
+		} else {
+			/* Stopping any number of secondary processes fwd_egines */
+			recv_ring->prod.head = 0;
+			recv_ring->prod.tail = 0;
+			rte_mempool_put(message_pool, msg);
+			stop_packet_forwarding();
+			fprintf(stderr, "\nPrimary process is no longer active exiting...\n");
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		/*
+		 * If primary process exits, then all the device information
+		 * is no longer valid. Calling any cleanup code is going to
+		 * run into use after free.
+		 */
+		fprintf(stderr, "\nPrimary process is no longer active, exiting...\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+/* Setup handler to check when primary exits. */
+static int
+enable_primary_monitor(void)
+{
+	return rte_eal_alarm_set(MONITOR_INTERVAL, monitor_primary, NULL);
+}
+
+static void
+disable_primary_monitor(void)
+{
+	rte_eal_alarm_cancel(monitor_primary, NULL);
+}
+#endif
+
 int
 main(int argc, char** argv)
 {
@@ -4362,6 +4459,37 @@ main(int argc, char** argv)
 	if (diag < 0)
 		rte_exit(EXIT_FAILURE, "Cannot init EAL: %s\n",
 			 rte_strerror(rte_errno));
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	unsigned int flags = 0;
+	unsigned int ring_size = 64;
+	unsigned int pool_size = 1024;
+	unsigned int pool_cache = 32;
+	unsigned int priv_data_sz = 0;
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY &&
+	    enable_primary_monitor() < 0)
+		rte_exit(EXIT_FAILURE, "Cannot setup primary monitor");
+			/* Start of ring structure. 8< */
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		send_ring = rte_ring_create(_PRI_2_SEC, ring_size, rte_socket_id(), flags);
+		recv_ring = rte_ring_create(_SEC_2_PRI, ring_size, rte_socket_id(), flags);
+		message_pool = rte_mempool_create(_MSG_POOL, pool_size,
+				STR_SIZE, pool_cache, priv_data_sz,
+				NULL, NULL, NULL, NULL,
+				rte_socket_id(), flags);
+	} else {
+		recv_ring = rte_ring_lookup(_PRI_2_SEC);
+		send_ring = rte_ring_lookup(_SEC_2_PRI);
+		message_pool = rte_mempool_lookup(_MSG_POOL);
+	}
+	/* >8 End of ring structure. */
+	if (send_ring == NULL)
+		rte_exit(EXIT_FAILURE, "Problem getting sending ring\n");
+	if (recv_ring == NULL)
+		rte_exit(EXIT_FAILURE, "Problem getting receiving ring\n");
+	if (message_pool == NULL)
+		rte_exit(EXIT_FAILURE, "Problem getting message pool\n");
+#endif
 
 	/* allocate port structures, and init them */
 	init_port();
@@ -4555,6 +4683,11 @@ main(int argc, char** argv)
 			}
 		}
 	}
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
+		disable_primary_monitor();
+#endif
 
 	pmd_test_exit();
 

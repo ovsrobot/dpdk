@@ -710,7 +710,8 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"    Detach physical or virtual dev by port_id\n\n"
 
 			"port config (port_id|all)"
-			" speed (10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto)"
+			" speed (10|100|1000|2500|5000|10000|25000|40000|50000|"
+			"100000|200000|400000|800000|auto)"
 			" duplex (half|full|auto)\n"
 			"    Set speed and duplex for all ports or port_id\n\n"
 
@@ -1430,6 +1431,8 @@ parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
 			*speed = RTE_ETH_LINK_SPEED_200G;
 		} else if (!strcmp(speedstr, "400000")) {
 			*speed = RTE_ETH_LINK_SPEED_400G;
+		} else if (!strcmp(speedstr, "800000")) {
+			*speed = RTE_ETH_LINK_SPEED_800G;
 		} else if (!strcmp(speedstr, "auto")) {
 			*speed = RTE_ETH_LINK_SPEED_AUTONEG;
 		} else {
@@ -1480,7 +1483,8 @@ static cmdline_parse_token_string_t cmd_config_speed_all_item1 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, item1, "speed");
 static cmdline_parse_token_string_t cmd_config_speed_all_value1 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, value1,
-				"10#100#1000#2500#5000#10000#25000#40000#50000#100000#200000#400000#auto");
+		"10#100#1000#2500#5000#10000#25000#40000#50000#"
+		"100000#200000#400000#800000#auto");
 static cmdline_parse_token_string_t cmd_config_speed_all_item2 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_all, item2, "duplex");
 static cmdline_parse_token_string_t cmd_config_speed_all_value2 =
@@ -1491,8 +1495,9 @@ static cmdline_parse_inst_t cmd_config_speed_all = {
 	.f = cmd_config_speed_all_parsed,
 	.data = NULL,
 	.help_str = "port config all speed "
-		"10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto duplex "
-							"half|full|auto",
+		"10|100|1000|2500|5000|10000|25000|40000|50000|"
+		"100000|200000|400000|800000|auto "
+		"duplex half|full|auto",
 	.tokens = {
 		(void *)&cmd_config_speed_all_port,
 		(void *)&cmd_config_speed_all_keyword,
@@ -1555,7 +1560,8 @@ static cmdline_parse_token_string_t cmd_config_speed_specific_item1 =
 								"speed");
 static cmdline_parse_token_string_t cmd_config_speed_specific_value1 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, value1,
-				"10#100#1000#2500#5000#10000#25000#40000#50000#100000#200000#400000#auto");
+		"10#100#1000#2500#5000#10000#25000#40000#50000#"
+		"100000#200000#400000#800000#auto");
 static cmdline_parse_token_string_t cmd_config_speed_specific_item2 =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_speed_specific, item2,
 								"duplex");
@@ -1567,8 +1573,9 @@ static cmdline_parse_inst_t cmd_config_speed_specific = {
 	.f = cmd_config_speed_specific_parsed,
 	.data = NULL,
 	.help_str = "port config <port_id> speed "
-		"10|100|1000|2500|5000|10000|25000|40000|50000|100000|200000|400000|auto duplex "
-							"half|full|auto",
+		"10|100|1000|2500|5000|10000|25000|40000|50000|"
+		"100000|200000|400000|800000|auto "
+		"duplex half|full|auto",
 	.tokens = {
 		(void *)&cmd_config_speed_specific_port,
 		(void *)&cmd_config_speed_specific_keyword,
@@ -4063,7 +4070,7 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 	value = 0;
 	nb_item = 0;
 	value_ok = 0;
-	for (i = 0; i < strnlen(str, STR_TOKEN_SIZE); i++) {
+	for (i = 0; i < strnlen(str, STR_MULTI_TOKEN_SIZE); i++) {
 		c = str[i];
 		if ((c >= '0') && (c <= '9')) {
 			value = (unsigned int) (value * 10 + (c - '0'));
@@ -4114,7 +4121,7 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 struct cmd_set_list_result {
 	cmdline_fixed_string_t cmd_keyword;
 	cmdline_fixed_string_t list_name;
-	cmdline_fixed_string_t list_of_items;
+	cmdline_multi_string_t list_of_items;
 };
 
 static void cmd_set_list_parsed(void *parsed_result,
@@ -4163,7 +4170,7 @@ static cmdline_parse_token_string_t cmd_set_list_name =
 				 "corelist#portlist");
 static cmdline_parse_token_string_t cmd_set_list_of_items =
 	TOKEN_STRING_INITIALIZER(struct cmd_set_list_result, list_of_items,
-				 NULL);
+				 TOKEN_STRING_MULTI);
 
 static cmdline_parse_inst_t cmd_set_fwd_list = {
 	.f = cmd_set_list_parsed,
