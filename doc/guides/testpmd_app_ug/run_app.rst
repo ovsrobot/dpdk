@@ -206,6 +206,10 @@ The command line options are:
 
     Enable per-queue packet drop for packets with no descriptors.
 
+*   ``--enable-rss``
+
+    Enable RSS (Receive Side Scaling) even in case of a single-queue configuration.
+
 *   ``--disable-rss``
 
     Disable RSS (Receive Side Scaling).
@@ -405,6 +409,7 @@ The command line options are:
        100000 - 100Gbps
        200000 - 200Gbps
        400000 - 400Gbps
+       800000 - 800Gbps
        ...
 
 *   ``--disable-link-check``

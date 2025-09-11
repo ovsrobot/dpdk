@@ -55,6 +55,47 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added ethdev API to get link connector.**
+
+  * Added API to report type of link connection for a port.
+    The following connectors are enumerated:
+
+   * NONE
+   * TP
+   * FIBER
+   * BNC
+   * DAC
+   * XFI, SFI
+   * MII, SGMII, QSGMII
+   * AUI, XLAUI, GAUI, AUI, CAUI, LAUI
+   * SFP, SFP_PLUS, SFP28, SFP_DD
+   * QSFP, QSFP_PLUS, QSFP28, QSFP56, QSFP_DD
+   * OTHER
+
+    By default, it reports ``RTE_ETH_LINK_CONNECTOR_NONE``
+    unless driver specifies it.
+
+* **Added speed 800G.**
+
+  Added Ethernet link speed for 800 Gb/s as it is well standardized in IEEE,
+  and some devices already support this speed.
+
+* **Updated NXP DPAA2 ethernet driver.**
+
+  * Enabled software taildrop for ordered queues.
+
+* **Updated Yunsilicon xsc ethernet driver.**
+
+  * Added FW version query.
+  * Added TSO support.
+  * Added module EEPROM dump.
+  * Added promiscuous mode.
+  * Added link status.
+  * Added link event.
+  * Added FEC get and set.
+  * Added multi-process per port.
+  * Optimized code.
+
 
 Removed Items
 -------------
@@ -102,6 +143,9 @@ ABI Changes
 
 * eal: The structure ``rte_mp_msg`` alignment has been updated to 8 bytes to limit unaligned
   accesses in messages payload.
+
+* ethdev: Added ``link_connector`` field to ``rte_eth_link`` structure
+  to report type of link connection for a port.
 
 * stack: The structure ``rte_stack_lf_head`` alignment has been updated to 16 bytes
   to avoid unaligned accesses.
