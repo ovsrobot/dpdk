@@ -41,6 +41,7 @@
 #define ICE_DDP_FILENAME_ARG      "ddp_pkg_file"
 #define ICE_DDP_LOAD_SCHED_ARG    "ddp_load_sched_topo"
 #define ICE_TM_LEVELS_ARG         "tm_sched_levels"
+#define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -57,6 +58,7 @@ static const char * const ice_valid_args[] = {
 	ICE_DDP_FILENAME_ARG,
 	ICE_DDP_LOAD_SCHED_ARG,
 	ICE_TM_LEVELS_ARG,
+	ICE_LINK_STATE_ON_CLOSE,
 	NULL
 };
 
@@ -64,14 +66,6 @@ static const char * const ice_valid_args[] = {
 
 /* Maximum number of VSI */
 #define ICE_MAX_NUM_VSIS          (768UL)
-
-/* The 119 bit offset of the LAN Rx queue context is the L2TSEL control bit. */
-#define ICE_L2TSEL_QRX_CONTEXT_REG_IDX	3
-#define ICE_L2TSEL_BIT_OFFSET		   23
-enum ice_l2tsel {
-	ICE_L2TSEL_EXTRACT_FIRST_TAG_L2TAG2_2ND,
-	ICE_L2TSEL_EXTRACT_FIRST_TAG_L2TAG1,
-};
 
 struct proto_xtr_ol_flag {
 	const struct rte_mbuf_dynflag param;
@@ -93,6 +87,12 @@ static struct proto_xtr_ol_flag ice_proto_xtr_ol_flag_params[] = {
 		.param = { .name = "intel_pmd_dynflag_proto_xtr_tcp" }},
 	[PROTO_XTR_IP_OFFSET] = {
 		.param = { .name = "intel_pmd_dynflag_proto_xtr_ip_offset" }}
+};
+
+enum ice_link_state_on_close {
+	ICE_LINK_DOWN,
+	ICE_LINK_UP,
+	ICE_LINK_INITIAL,
 };
 
 #define ICE_OS_DEFAULT_PKG_NAME		"ICE OS Default Package"
@@ -237,6 +237,15 @@ static const struct rte_pci_id pci_id_ice_map[] = {
 	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E830_L_QSFP) },
 	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E830C_SFP) },
 	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E830_L_SFP) },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835CC_BACKPLANE), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835CC_QSFP56), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835CC_SFP), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835C_BACKPLANE), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835C_QSFP), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835C_SFP), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835_L_BACKPLANE), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835_L_QSFP), },
+	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E835_L_SFP), },
 	{ .vendor_id = 0, /* sentinel */ },
 };
 
@@ -2117,6 +2126,29 @@ parse_tx_sched_levels(const char *key, const char *value, void *args)
 }
 
 static int
+parse_link_state_on_close(const char *key, const char *value, void *args)
+{
+	int *state = args, ret = 0;
+
+	if (value == NULL || state == NULL)
+		return -EINVAL;
+
+	if (strcmp(value, "down") == 0) {
+		*state = ICE_LINK_DOWN;
+	} else if (strcmp(value, "up") == 0) {
+		*state = ICE_LINK_UP;
+	} else if (strcmp(value, "initial") == 0) {
+		*state = ICE_LINK_INITIAL;
+	} else {
+		ret = -EINVAL;
+		PMD_DRV_LOG(WARNING, "%s: Invalid value \"%s\", "
+				"should be \"down\" \"up\" or \"initial\"", key, value);
+	}
+
+	return ret;
+}
+
+static int
 lookup_pps_type(const char *pps_name)
 {
 	static struct {
@@ -2367,6 +2399,9 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 				 &parse_tx_sched_levels, &ad->devargs.tm_exposed_levels);
 	if (ret)
 		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_ON_CLOSE,
+				 &parse_link_state_on_close, &ad->devargs.link_state_on_close);
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -2811,7 +2846,9 @@ ice_dev_stop(struct rte_eth_dev *dev)
 	/* disable all queue interrupts */
 	ice_vsi_disable_queues_intr(main_vsi);
 
-	if (pf->init_link_up)
+	if (pf->adapter->devargs.link_state_on_close == ICE_LINK_UP ||
+			(pf->adapter->devargs.link_state_on_close == ICE_LINK_INITIAL &&
+				pf->init_link_up))
 		ice_dev_set_link_up(dev);
 	else
 		ice_dev_set_link_down(dev);
@@ -3683,6 +3720,8 @@ ice_dev_configure(struct rte_eth_dev *dev)
 	 */
 	ad->rx_bulk_alloc_allowed = true;
 	ad->tx_simple_allowed = true;
+
+	ad->rx_func_type = ICE_RX_DEFAULT;
 
 	if (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_RSS_HASH;
@@ -4965,49 +5004,12 @@ ice_vsi_config_vlan_stripping(struct ice_vsi *vsi, bool ena)
 	return ret;
 }
 
-/**
- * ice_vsi_update_l2tsel - update l2tsel field for all Rx rings on this VSI
- * @vsi: VSI used to update l2tsel on
- * @l2tsel: l2tsel setting requested
- *
- * Use the l2tsel setting to update all of the Rx queue context bits for l2tsel.
- * This will modify which descriptor field the first offloaded VLAN will be
- * stripped into.
- */
-static void ice_vsi_update_l2tsel(struct ice_vsi *vsi, enum ice_l2tsel l2tsel)
-{
-	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
-	struct ice_pf *pf = ICE_VSI_TO_PF(vsi);
-	struct rte_eth_dev_data *dev_data = pf->dev_data;
-	u32 l2tsel_bit;
-	uint16_t i;
-
-	if (l2tsel == ICE_L2TSEL_EXTRACT_FIRST_TAG_L2TAG2_2ND)
-		l2tsel_bit = 0;
-	else
-		l2tsel_bit = BIT(ICE_L2TSEL_BIT_OFFSET);
-
-	for (i = 0; i < dev_data->nb_rx_queues; i++) {
-		const struct ci_rx_queue *rxq = dev_data->rx_queues[i];
-		u32 qrx_context_offset;
-		u32 regval;
-
-		qrx_context_offset = QRX_CONTEXT(ICE_L2TSEL_QRX_CONTEXT_REG_IDX, rxq->reg_idx);
-
-		regval = rd32(hw, qrx_context_offset);
-		regval &= ~BIT(ICE_L2TSEL_BIT_OFFSET);
-		regval |= l2tsel_bit;
-		wr32(hw, qrx_context_offset, regval);
-	}
-}
-
 /* Configure outer vlan stripping on or off in QinQ mode */
 static int
 ice_vsi_config_outer_vlan_stripping(struct ice_vsi *vsi, bool on)
 {
 	uint16_t outer_ethertype = vsi->adapter->pf.outer_ethertype;
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
-	int err = 0;
 
 	if (vsi->vsi_id >= ICE_MAX_NUM_VSIS) {
 		PMD_DRV_LOG(ERR, "VSI ID exceeds the maximum");
@@ -5019,41 +5021,9 @@ ice_vsi_config_outer_vlan_stripping(struct ice_vsi *vsi, bool on)
 		return -EOPNOTSUPP;
 	}
 
-	if (on) {
-		err = ice_vsi_ena_outer_stripping(vsi, outer_ethertype);
-		if (!err) {
-			enum ice_l2tsel l2tsel =
-				ICE_L2TSEL_EXTRACT_FIRST_TAG_L2TAG2_2ND;
-
-			/* PF tells the VF that the outer VLAN tag is always
-			 * extracted to VIRTCHNL_VLAN_TAG_LOCATION_L2TAG2_2 and
-			 * inner is always extracted to
-			 * VIRTCHNL_VLAN_TAG_LOCATION_L2TAG1. This is needed to
-			 * support outer stripping so the first tag always ends
-			 * up in L2TAG2_2ND and the second/inner tag, if
-			 * enabled, is extracted in L2TAG1.
-			 */
-			ice_vsi_update_l2tsel(vsi, l2tsel);
-		}
-	} else {
-		err = ice_vsi_dis_outer_stripping(vsi);
-		if (!err) {
-			enum ice_l2tsel l2tsel =
-				ICE_L2TSEL_EXTRACT_FIRST_TAG_L2TAG1;
-
-			/* PF tells the VF that the outer VLAN tag is always
-			 * extracted to VIRTCHNL_VLAN_TAG_LOCATION_L2TAG2_2 and
-			 * inner is always extracted to
-			 * VIRTCHNL_VLAN_TAG_LOCATION_L2TAG1. This is needed to
-			 * support inner stripping while outer stripping is
-			 * disabled so that the first and only tag is extracted
-			 * in L2TAG1.
-			 */
-			ice_vsi_update_l2tsel(vsi, l2tsel);
-		}
-	}
-
-	return err;
+	return on ?
+		ice_vsi_ena_outer_stripping(vsi, outer_ethertype) :
+		ice_vsi_dis_outer_stripping(vsi);
 }
 
 static int
@@ -6383,12 +6353,13 @@ ice_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 	stats->ipackets = pf->main_vsi->eth_stats.rx_unicast +
 			  pf->main_vsi->eth_stats.rx_multicast +
+			  ns->eth.rx_unknown_protocol +
 			  pf->main_vsi->eth_stats.rx_broadcast -
 			  pf->main_vsi->eth_stats.rx_discards;
 	stats->opackets = ns->eth.tx_unicast +
 			  ns->eth.tx_multicast +
 			  ns->eth.tx_broadcast;
-	stats->ibytes   = pf->main_vsi->eth_stats.rx_bytes;
+	stats->ibytes   = ns->eth.rx_bytes;
 	stats->obytes   = ns->eth.tx_bytes;
 	stats->oerrors  = ns->eth.tx_errors +
 			  pf->main_vsi->eth_stats.tx_errors;
@@ -7320,7 +7291,8 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_DDP_FILENAME_ARG "=</path/to/file>"
 			      ICE_DDP_LOAD_SCHED_ARG "=<0|1>"
 			      ICE_TM_LEVELS_ARG "=<N>"
-			      ICE_RX_LOW_LATENCY_ARG "=<0|1>");
+			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
+			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
 
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_init, init, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_driver, driver, NOTICE);

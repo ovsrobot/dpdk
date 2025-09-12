@@ -29,8 +29,8 @@
 	mem; \
 }))
 #else
-#define pool_malloc(pool, flags, size, align, socket)
-	(pool)->cfg.malloc((uint32_t)(flags) | NUMA_TOLERANT, (size), (align), (socket));
+#define pool_malloc(pool, flags, size, align, socket) \
+	((pool)->cfg.malloc((uint32_t)(flags) | MLX5_NUMA_TOLERANT, (size), (align), (socket)))
 #endif
 
 int mlx5_logtype_ipool;
@@ -884,6 +884,10 @@ mlx5_ipool_destroy(struct mlx5_indexed_pool *pool)
 		pool->cfg.free(trunks);
 	if (gc)
 		pool->cfg.free(gc);
+#ifdef POOL_DEBUG
+	if (pool->cache_validator.bmp_mem)
+		pool->cfg.free(pool->cache_validator.bmp_mem);
+#endif
 	mlx5_ipool_unlock(pool);
 	mlx5_free(pool);
 	return 0;
