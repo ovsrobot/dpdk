@@ -320,36 +320,36 @@ struct iavf_devargs {
 
 struct iavf_security_ctx;
 
-enum iavf_rx_burst_type {
+enum iavf_rx_func_type {
 	IAVF_RX_DISABLED,
 	IAVF_RX_DEFAULT,
-	IAVF_RX_FLEX_RXD,
-	IAVF_RX_BULK_ALLOC,
 	IAVF_RX_SCATTERED,
+	IAVF_RX_FLEX_RXD,
 	IAVF_RX_SCATTERED_FLEX_RXD,
+	IAVF_RX_BULK_ALLOC,
 	IAVF_RX_SSE,
-	IAVF_RX_AVX2,
-	IAVF_RX_AVX2_OFFLOAD,
-	IAVF_RX_SSE_FLEX_RXD,
-	IAVF_RX_AVX2_FLEX_RXD,
-	IAVF_RX_AVX2_FLEX_RXD_OFFLOAD,
 	IAVF_RX_SSE_SCATTERED,
-	IAVF_RX_AVX2_SCATTERED,
-	IAVF_RX_AVX2_SCATTERED_OFFLOAD,
+	IAVF_RX_SSE_FLEX_RXD,
 	IAVF_RX_SSE_SCATTERED_FLEX_RXD,
+	IAVF_RX_AVX2,
+	IAVF_RX_AVX2_SCATTERED,
+	IAVF_RX_AVX2_OFFLOAD,
+	IAVF_RX_AVX2_SCATTERED_OFFLOAD,
+	IAVF_RX_AVX2_FLEX_RXD,
 	IAVF_RX_AVX2_SCATTERED_FLEX_RXD,
+	IAVF_RX_AVX2_FLEX_RXD_OFFLOAD,
 	IAVF_RX_AVX2_SCATTERED_FLEX_RXD_OFFLOAD,
 	IAVF_RX_AVX512,
-	IAVF_RX_AVX512_OFFLOAD,
-	IAVF_RX_AVX512_FLEX_RXD,
-	IAVF_RX_AVX512_FLEX_RXD_OFFLOAD,
 	IAVF_RX_AVX512_SCATTERED,
+	IAVF_RX_AVX512_OFFLOAD,
 	IAVF_RX_AVX512_SCATTERED_OFFLOAD,
+	IAVF_RX_AVX512_FLEX_RXD,
 	IAVF_RX_AVX512_SCATTERED_FLEX_RXD,
+	IAVF_RX_AVX512_FLEX_RXD_OFFLOAD,
 	IAVF_RX_AVX512_SCATTERED_FLEX_RXD_OFFLOAD,
 };
 
-enum iavf_tx_burst_type {
+enum iavf_tx_func_type {
 	IAVF_TX_DISABLED,
 	IAVF_TX_DEFAULT,
 	IAVF_TX_SSE,
@@ -375,14 +375,13 @@ struct iavf_adapter {
 
 	bool rx_bulk_alloc_allowed;
 	/* For vector PMD */
-	bool rx_vec_allowed;
 	bool tx_vec_allowed;
 	alignas(RTE_CACHE_LINE_MIN_SIZE) uint32_t ptype_tbl[IAVF_MAX_PKT_TYPE];
 	bool stopped;
 	bool closed;
 	bool no_poll;
-	enum iavf_rx_burst_type rx_burst_type;
-	enum iavf_tx_burst_type tx_burst_type;
+	enum iavf_rx_func_type rx_func_type;
+	enum iavf_tx_func_type tx_func_type;
 	uint16_t fdir_ref_cnt;
 	struct iavf_devargs devargs;
 };
