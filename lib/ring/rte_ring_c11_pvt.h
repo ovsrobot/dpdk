@@ -83,9 +83,6 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 		/* Reset n to the initial burst count */
 		n = max;
 
-		/* Ensure the head is read before tail */
-		rte_atomic_thread_fence(rte_memory_order_acquire);
-
 		/* load-acquire synchronize with store-release of ht->tail
 		 * in update_tail.
 		 */
@@ -98,6 +95,13 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 		 * and capacity (which is < size).
 		 */
 		*entries = (capacity + stail - *old_head);
+
+		/*
+		 * Ensure the entries calculation was not based on a stale
+		 * and unsafe stail observation that causes underflow.
+		 */
+		if ((int)*entries < 0)
+			*entries = 0;
 
 		/* check that we have enough room in ring */
 		if (unlikely(n > *entries))
