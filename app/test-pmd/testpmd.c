@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <sys/mman.h>
+#include "hotplug_mp.h"
 #endif
 #include <sys/types.h>
 #include <errno.h>
@@ -103,7 +104,7 @@ uint16_t verbose_level = 0; /**< Silent by default. */
 int testpmd_logtype; /**< Log type for testpmd logs */
 
 /* Maximum delay for exiting after primary process. */
-#define MONITOR_INTERVAL (500 * 1000)
+#define MONITOR_INTERVAL (500)
 
 /* use main core for command line ? */
 uint8_t interactive = 0;
@@ -2563,7 +2564,8 @@ stop_packet_forwarding(void)
 	for (lc_id = 0; lc_id < cur_fwd_config.nb_fwd_lcores; lc_id++)
 		fwd_lcores[lc_id]->stopped = 1;
 	printf("\nWaiting for lcores to finish...\n");
-	rte_eal_mp_wait_lcore();
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_eal_mp_wait_lcore();
 	port_fwd_end = cur_fwd_config.fwd_eng->port_fwd_end;
 	if (port_fwd_end != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
@@ -3634,6 +3636,11 @@ pmd_test_exit(void)
 			printf("\nStopping port %d...\n", pt_id);
 			fflush(stdout);
 			stop_port(pt_id);
+			printf("Stopping secondary process...\n");
+			struct eal_dev_mp_req req;
+			memset(&req, 0, sizeof(req));
+			req.t = EAL_DEV_REQ_TYPE_STOP;
+			eal_dev_hotplug_request_to_secondary(&req);
 		}
 		RTE_ETH_FOREACH_DEV(pt_id) {
 			printf("\nShutting down port %d...\n", pt_id);
@@ -4371,7 +4378,13 @@ static void
 monitor_primary(void *arg __rte_unused)
 {
 	if (rte_eal_primary_proc_alive(NULL)) {
-		rte_eal_alarm_set(MONITOR_INTERVAL, monitor_primary, NULL);
+		if (f_exit) {
+			stop_packet_forwarding();
+			fprintf(stderr, "\nPrimary process is no longer active, exiting...\n");
+			exit(EXIT_FAILURE);
+		} else {
+			rte_eal_alarm_set(MONITOR_INTERVAL, monitor_primary, NULL);
+		}
 	} else {
 		/*
 		 * If primary process exits, then all the device information

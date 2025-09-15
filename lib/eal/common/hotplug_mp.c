@@ -239,6 +239,9 @@ static void __handle_primary_request(void *param)
 	memset(&mp_resp, 0, sizeof(mp_resp));
 
 	switch (req->t) {
+	case EAL_DEV_REQ_TYPE_STOP:
+		f_exit = 1;
+		break;
 	case EAL_DEV_REQ_TYPE_ATTACH:
 	case EAL_DEV_REQ_TYPE_DETACH_ROLLBACK:
 		ret = local_dev_probe(req->devargs, &dev);
