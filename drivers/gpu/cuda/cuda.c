@@ -65,6 +65,10 @@ RTE_LOG_REGISTER_DEFAULT(cuda_logtype, NOTICE);
 static const struct rte_pci_id pci_id_cuda_map[] = {
 	{
 		RTE_PCI_DEVICE(NVIDIA_GPU_VENDOR_ID,
+				NVIDIA_GPU_H100_80GB_DEVICE_ID)
+	},
+	{
+		RTE_PCI_DEVICE(NVIDIA_GPU_VENDOR_ID,
 				NVIDIA_GPU_A40_DEVICE_ID)
 	},
 	{
