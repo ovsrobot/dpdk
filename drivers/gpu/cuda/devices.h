@@ -68,4 +68,6 @@
 #define NVIDIA_GPU_T4G (0x1eb4)
 #define NVIDIA_GPU_T4 (0x1eb8)
 
+#define NVIDIA_GPU_HOPPER_GRACE (0x2342)
+
 #endif /* CUDA_DEVICES_H */
