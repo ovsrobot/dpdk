@@ -240,6 +240,13 @@ void rte_mbuf_dyn_dump(FILE *out);
  * and parameters together.
  */
 
+/**
+ * The mbuf history dynamic field provides lifecycle tracking for mbuf objects through the system.
+ * It records a fixed set of predefined operations to maintain performance
+ * while providing debugging capabilities.
+ */
+#define RTE_MBUF_DYNFIELD_HISTORY_NAME "rte_mbuf_dynfield_history"
+
 /*
  * The metadata dynamic field provides some extra packet information
  * to interact with RTE Flow engine. The metadata in sent mbufs can be

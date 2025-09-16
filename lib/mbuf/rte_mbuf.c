@@ -281,6 +281,10 @@ rte_pktmbuf_pool_create(const char *name, unsigned int n,
 	unsigned int cache_size, uint16_t priv_size, uint16_t data_room_size,
 	int socket_id)
 {
+#if RTE_MBUF_HISTORY_DEBUG
+		if (rte_mbuf_history_init() < 0)
+			RTE_LOG(ERR, MBUF, "Failed to enable mbuf history\n");
+#endif
 	return rte_pktmbuf_pool_create_by_ops(name, n, cache_size, priv_size,
 			data_room_size, socket_id, NULL);
 }
@@ -516,8 +520,12 @@ void rte_pktmbuf_free_bulk(struct rte_mbuf **mbufs, unsigned int count)
 		} while (m != NULL);
 	}
 
-	if (nb_pending > 0)
+	if (nb_pending > 0) {
+#if RTE_MBUF_HISTORY_DEBUG
+		rte_mbuf_history_bulk(pending, nb_pending, RTE_MBUF_FREE);
+#endif
 		rte_mempool_put_bulk(pending[0]->pool, (void **)pending, nb_pending);
+	}
 }
 
 /* Creates a shallow copy of mbuf */

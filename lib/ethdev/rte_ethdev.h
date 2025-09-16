@@ -6336,6 +6336,10 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 
 	nb_rx = p->rx_pkt_burst(qd, rx_pkts, nb_pkts);
 
+#if RTE_MBUF_HISTORY_DEBUG
+	rte_mbuf_history_bulk(rx_pkts, nb_rx, RTE_MBUF_APP_RX);
+#endif
+
 #ifdef RTE_ETHDEV_RXTX_CALLBACKS
 	{
 		void *cb;
@@ -6688,7 +6692,18 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 	}
 #endif
 
+#if RTE_MBUF_HISTORY_DEBUG
+	uint16_t requested_pkts = nb_pkts;
+	rte_mbuf_history_bulk(tx_pkts, nb_pkts, RTE_MBUF_PMD_TX);
+#endif
+
 	nb_pkts = p->tx_pkt_burst(qd, tx_pkts, nb_pkts);
+
+#if RTE_MBUF_HISTORY_DEBUG
+	if (requested_pkts > nb_pkts)
+		rte_mbuf_history_bulk(tx_pkts + nb_pkts,
+				     requested_pkts - nb_pkts, RTE_MBUF_BUSY_TX);
+#endif
 
 	rte_ethdev_trace_tx_burst(port_id, queue_id, (void **)tx_pkts, nb_pkts);
 	return nb_pkts;
