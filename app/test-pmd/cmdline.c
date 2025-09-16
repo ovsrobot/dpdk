@@ -40,6 +40,7 @@
 #include <rte_gro.h>
 #endif
 #include <rte_mbuf_dyn.h>
+#include <rte_mbuf_history.h>
 #include <rte_trace.h>
 
 #include <cmdline_rdline.h>
@@ -295,6 +296,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 
 			"dump_log_types\n"
 			"    Dumps the log level for all the dpdk modules\n\n"
+
+			"dump_mbuf_history\n"
+			"    Dumps the mbuf history\n\n"
 
 			"show port (port_id) speed_lanes capabilities"
 			"	Show speed lanes capabilities of a port.\n\n"
@@ -9177,6 +9181,8 @@ static void cmd_dump_parsed(void *parsed_result,
 #endif
 	else if (!strcmp(res->dump, "dump_log_types"))
 		rte_log_dump(stdout);
+	else if (!strcmp(res->dump, "dump_mbuf_history"))
+		rte_mbuf_history_dump(stdout);
 }
 
 static cmdline_parse_token_string_t cmd_dump_dump =
@@ -9198,7 +9204,8 @@ cmd_dump_init(void)
 #ifndef RTE_EXEC_ENV_WINDOWS
 		"dump_trace#"
 #endif
-		"dump_log_types";
+		"dump_log_types#"
+		"dump_mbuf_history";
 }
 
 static cmdline_parse_inst_t cmd_dump = {
@@ -9259,6 +9266,56 @@ static cmdline_parse_inst_t cmd_dump_one = {
 		NULL,
 	},
 };
+
+/* Dump mbuf history to file */
+struct cmd_dump_mbuf_to_file_result {
+	cmdline_fixed_string_t dump;
+	cmdline_fixed_string_t file;
+};
+
+static void cmd_dump_mbuf_to_file_parsed(void *parsed_result, struct cmdline *cl,
+				__rte_unused void *data)
+{
+	struct cmd_dump_mbuf_to_file_result *res = parsed_result;
+	FILE *file = stdout;
+	char *file_name = res->file;
+
+	if (strcmp(res->dump, "dump_mbuf_history")) {
+		cmdline_printf(cl, "Invalid dump type\n");
+		return;
+	}
+
+	if (file_name && strlen(file_name)) {
+		file = fopen(file_name, "w");
+		if (!file) {
+			rte_mbuf_history_dump(stdout);
+			return;
+		}
+	}
+	rte_mbuf_history_dump(file);
+	printf("Flow dump finished\n");
+	if (file_name && strlen(file_name))
+		fclose(file);
+}
+
+static cmdline_parse_token_string_t cmd_dump_mbuf_to_file_dump =
+	TOKEN_STRING_INITIALIZER(struct cmd_dump_mbuf_to_file_result, dump,
+				 "dump_mbuf_history");
+
+static cmdline_parse_token_string_t cmd_dump_mbuf_to_file_file =
+	TOKEN_STRING_INITIALIZER(struct cmd_dump_mbuf_to_file_result, file, NULL);
+
+static cmdline_parse_inst_t cmd_dump_mbuf_to_file = {
+	.f = cmd_dump_mbuf_to_file_parsed,  /* function to call */
+	.data = NULL,      /* 2nd arg of func */
+	.help_str = "dump_mbuf_history <file_name>: Dump mbuf history to file",
+	.tokens = {        /* token list, NULL terminated */
+		(void *)&cmd_dump_mbuf_to_file_dump,
+		(void *)&cmd_dump_mbuf_to_file_file,
+		NULL,
+	},
+};
+
 
 /* *** Filters Control *** */
 
@@ -13999,6 +14056,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_cleanup_txq_mbufs,
 	&cmd_dump,
 	&cmd_dump_one,
+	&cmd_dump_mbuf_to_file,
 	&cmd_flow,
 	&cmd_show_port_meter_cap,
 	&cmd_add_port_meter_profile_srtcm,
