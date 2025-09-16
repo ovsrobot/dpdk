@@ -134,7 +134,9 @@ init_port(uint16_t port_num)
 
 	retval = rte_eth_promiscuous_enable(port_num);
 	if (retval < 0)
-		return retval;
+		fprintf(stderr,
+			"Error during enabling promiscuous mode for port %u: %s - ignore\n",
+			retval, rte_strerror(-retval));
 
 	retval  = rte_eth_dev_start(port_num);
 	if (retval < 0) return retval;
