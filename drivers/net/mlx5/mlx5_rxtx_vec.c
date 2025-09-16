@@ -64,6 +64,9 @@ rxq_handle_pending_error(struct mlx5_rxq_data *rxq, struct rte_mbuf **pkts,
 #ifdef MLX5_PMD_SOFT_COUNTERS
 			err_bytes += PKT_LEN(pkt);
 #endif
+#if RTE_MBUF_HISTORY_DEBUG
+			rte_mbuf_history_mark(pkt, RTE_MBUF_PMD_FREE);
+#endif
 			rte_pktmbuf_free_seg(pkt);
 		} else {
 			pkts[n++] = pkt;
@@ -107,6 +110,9 @@ mlx5_rx_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq)
 			rxq->stats.rx_nombuf += n;
 			return;
 		}
+#if RTE_MBUF_HISTORY_DEBUG
+		rte_mbuf_history_bulk(elts, n, RTE_MBUF_PMD_ALLOC);
+#endif
 		if (unlikely(mlx5_mr_btree_len(&rxq->mr_ctrl.cache_bh) > 1)) {
 			for (i = 0; i < n; ++i) {
 				/*
@@ -171,6 +177,9 @@ mlx5_rx_mprq_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq)
 			rxq->stats.rx_nombuf += n;
 			return;
 		}
+#if RTE_MBUF_HISTORY_DEBUG
+		rte_mbuf_history_bulk(elts, n, RTE_MBUF_PMD_ALLOC);
+#endif
 		rxq->elts_ci += n;
 		/* Prevent overflowing into consumed mbufs. */
 		elts_idx = rxq->elts_ci & wqe_mask;
@@ -224,6 +233,9 @@ rxq_copy_mprq_mbuf_v(struct mlx5_rxq_data *rxq,
 
 		if (!elts[i]->pkt_len) {
 			rxq->consumed_strd = strd_n;
+#if RTE_MBUF_HISTORY_DEBUG
+			rte_mbuf_history_mark(elts[i], RTE_MBUF_PMD_FREE);
+#endif
 			rte_pktmbuf_free_seg(elts[i]);
 #ifdef MLX5_PMD_SOFT_COUNTERS
 			rxq->stats.ipackets -= 1;
@@ -236,6 +248,9 @@ rxq_copy_mprq_mbuf_v(struct mlx5_rxq_data *rxq,
 					   buf, rxq->consumed_strd, strd_cnt);
 		rxq->consumed_strd += strd_cnt;
 		if (unlikely(rxq_code != MLX5_RXQ_CODE_EXIT)) {
+#if RTE_MBUF_HISTORY_DEBUG
+			rte_mbuf_history_mark(elts[i], RTE_MBUF_PMD_FREE);
+#endif
 			rte_pktmbuf_free_seg(elts[i]);
 #ifdef MLX5_PMD_SOFT_COUNTERS
 			rxq->stats.ipackets -= 1;
@@ -586,6 +601,7 @@ mlx5_rx_burst_mprq_vec(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		rte_io_wmb();
 		*rxq->cq_db = rte_cpu_to_be_32(rxq->cq_ci);
 	} while (tn != pkts_n);
+
 	return tn;
 }
 

@@ -79,6 +79,9 @@ txq_free_elts(struct mlx5_txq_ctrl *txq_ctrl)
 		struct rte_mbuf *elt = (*elts)[elts_tail & elts_m];
 
 		MLX5_ASSERT(elt != NULL);
+#if RTE_MBUF_HISTORY_DEBUG
+		rte_mbuf_history_mark(elt, RTE_MBUF_PMD_FREE);
+#endif
 		rte_pktmbuf_free_seg(elt);
 #ifdef RTE_LIBRTE_MLX5_DEBUG
 		/* Poisoning. */

@@ -640,12 +640,19 @@ mlx5_rx_err_handle(struct mlx5_rxq_data *rxq, uint8_t vec,
 					elt_idx = (elts_ci + i) & e_mask;
 					elt = &(*rxq->elts)[elt_idx];
 					*elt = rte_mbuf_raw_alloc(rxq->mp);
+#if RTE_MBUF_HISTORY_DEBUG
+					rte_mbuf_history_mark(*elt, RTE_MBUF_PMD_ALLOC);
+#endif
 					if (!*elt) {
 						for (i--; i >= 0; --i) {
 							elt_idx = (elts_ci +
 								   i) & elts_n;
 							elt = &(*rxq->elts)
 								[elt_idx];
+#if RTE_MBUF_HISTORY_DEBUG
+							rte_mbuf_history_mark(*elt,
+								RTE_MBUF_PMD_FREE);
+#endif
 							rte_pktmbuf_free_seg
 								(*elt);
 						}
@@ -1048,6 +1055,9 @@ mlx5_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		rte_prefetch0(wqe);
 		/* Allocate the buf from the same pool. */
 		rep = rte_mbuf_raw_alloc(seg->pool);
+#if RTE_MBUF_HISTORY_DEBUG
+		rte_mbuf_history_mark(rep, RTE_MBUF_PMD_ALLOC);
+#endif
 		if (unlikely(rep == NULL)) {
 			++rxq->stats.rx_nombuf;
 			if (!pkt) {
@@ -1062,6 +1072,9 @@ mlx5_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 				rep = NEXT(pkt);
 				NEXT(pkt) = NULL;
 				NB_SEGS(pkt) = 1;
+#if RTE_MBUF_HISTORY_DEBUG
+				rte_mbuf_history_mark(pkt, RTE_MBUF_PMD_FREE);
+#endif
 				rte_mbuf_raw_free(pkt);
 				pkt = rep;
 			}
@@ -1076,6 +1089,9 @@ mlx5_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 					       &mcqe, &skip_cnt, false, NULL);
 			if (unlikely(len & MLX5_ERROR_CQE_MASK)) {
 				/* We drop packets with non-critical errors */
+#if RTE_MBUF_HISTORY_DEBUG
+				rte_mbuf_history_mark(rep, RTE_MBUF_PMD_FREE);
+#endif
 				rte_mbuf_raw_free(rep);
 				if (len == MLX5_CRITICAL_ERROR_CQE_RET) {
 					rq_ci = rxq->rq_ci << sges_n;
@@ -1089,6 +1105,9 @@ mlx5_rx_burst(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 				continue;
 			}
 			if (len == 0) {
+#if RTE_MBUF_HISTORY_DEBUG
+				rte_mbuf_history_mark(rep, RTE_MBUF_PMD_FREE);
+#endif
 				rte_mbuf_raw_free(rep);
 				break;
 			}
@@ -1540,6 +1559,9 @@ mlx5_rx_burst_mprq(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 			++rxq->stats.rx_nombuf;
 			break;
 		}
+#if RTE_MBUF_HISTORY_DEBUG
+		rte_mbuf_history_mark(pkt, RTE_MBUF_PMD_ALLOC);
+#endif
 		len = (byte_cnt & MLX5_MPRQ_LEN_MASK) >> MLX5_MPRQ_LEN_SHIFT;
 		MLX5_ASSERT((int)len >= (rxq->crc_present << 2));
 		if (rxq->crc_present)
@@ -1547,6 +1569,9 @@ mlx5_rx_burst_mprq(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		rxq_code = mprq_buf_to_pkt(rxq, pkt, len, buf,
 					   strd_idx, strd_cnt);
 		if (unlikely(rxq_code != MLX5_RXQ_CODE_EXIT)) {
+#if RTE_MBUF_HISTORY_DEBUG
+			rte_mbuf_history_mark(pkt, RTE_MBUF_PMD_FREE);
+#endif
 			rte_pktmbuf_free_seg(pkt);
 			if (rxq_code == MLX5_RXQ_CODE_DROPPED) {
 				++rxq->stats.idropped;
