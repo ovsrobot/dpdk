@@ -50,8 +50,19 @@ RTE_LOG_REGISTER_DEFAULT(hash_logtype, INFO);
  */
 enum cmp_jump_table_case {
 	KEY_CUSTOM = 0,
+	KEY_2_BYTES,
+	KEY_3_BYTES,
+	KEY_4_BYTES,
+	KEY_5_BYTES,
+	KEY_6_BYTES,
+	KEY_8_BYTES,
+	KEY_10_BYTES,
+	KEY_12_BYTES,
+	KEY_14_BYTES,
 	KEY_16_BYTES,
+	KEY_20_BYTES,
 	KEY_32_BYTES,
+	KEY_36_BYTES,
 	KEY_48_BYTES,
 	KEY_64_BYTES,
 	KEY_80_BYTES,
@@ -85,12 +96,108 @@ enum cmp_jump_table_case {
 #include "rte_cmp_generic.h"
 #endif
 
+static inline int
+rte_hash_k2_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const unaligned_uint16_t *k1 = key1;
+	const unaligned_uint16_t *k2 = key2;
+
+	return k1[0] ^ k2[0];
+}
+
+static int
+rte_hash_k3_cmp_eq(const void *key1, const void *key2, size_t key_len)
+{
+	return rte_hash_k2_cmp_eq(key1, key2, key_len)
+		| (((const uint8_t *)key1)[2] ^ ((const uint8_t *)key2)[2]);
+}
+
+static int
+rte_hash_k4_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const unaligned_uint32_t *k1 = key1;
+	const unaligned_uint32_t *k2 = key2;
+
+	return k1[0] ^ k2[0];
+}
+
+static int
+rte_hash_k5_cmp_eq(const void *key1, const void *key2, size_t key_len)
+{
+	return rte_hash_k4_cmp_eq(key1, key2, key_len) |
+		(((const uint8_t *)key1)[4] ^ ((const uint8_t *)key2)[4]);
+}
+
+static int
+rte_hash_k6_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const unaligned_uint16_t *k1 = key1;
+	const unaligned_uint16_t *k2 = key2;
+
+	return (k1[0] ^ k2[0]) | (k1[1] ^ k2[1]) | (k1[2] ^ k2[2]);
+}
+
+static int
+rte_hash_k8_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+#ifdef RTE_ARCH_64
+	const unaligned_uint64_t *k1 = key1;
+	const unaligned_uint64_t *k2 = key2;
+
+	return !!(k1[0] ^ k2[0]);
+#else
+	const unaligned_uint32_t *k1 = key1;
+	const unaligned_uint32_t *k2 = key2;
+
+	return (k1[0] ^ k2[0]) | (k1[1] ^ k2[1]);
+#endif
+}
+
+static int
+rte_hash_k10_cmp_eq(const void *key1, const void *key2, size_t key_len)
+{
+	return rte_hash_k8_cmp_eq(key1, key2, key_len) |
+		rte_hash_k2_cmp_eq((const uint8_t *)key1 + 8,
+				   (const uint8_t *)key2 + 8, key_len);
+}
+
+static int
+rte_hash_k12_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	const unaligned_uint32_t *k1 = key1;
+	const unaligned_uint32_t *k2 = key2;
+
+	return (k1[0] ^ k2[0]) | (k1[1] ^ k2[1]) | (k1[2] ^ k2[2]);
+}
+
+static int
+rte_hash_k14_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	return rte_hash_k8_cmp_eq(key1, key2, key_len) |
+		rte_hash_k6_cmp_eq((const uint8_t *)key1 + 8,
+				   (const uint8_t *)key2 + 8, key_len);
+}
+
+static int
+rte_hash_k20_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	return rte_hash_k16_cmp_eq(key1, key2, key_len) |
+		rte_hash_k4_cmp_eq((const uint8_t *)key1 + 16,
+				   (const uint8_t *)key2 + 16, key_len);
+}
+
+static int
+rte_hash_k36_cmp_eq(const void *key1, const void *key2, size_t key_len __rte_unused)
+{
+	return rte_hash_k32_cmp_eq(key1, key2, key_len) ||
+		rte_hash_k4_cmp_eq((const uint8_t *)key1 + 32,
+				   (const uint8_t *)key2 + 32, key_len);
+}
+
 static int
 rte_hash_k48_cmp_eq(const void *key1, const void *key2, size_t key_len)
 {
-	return rte_hash_k16_cmp_eq(key1, key2, key_len) |
-		rte_hash_k16_cmp_eq((const uint8_t *) key1 + 16,
-				    (const uint8_t *) key2 + 16, key_len) ||
+	return	rte_hash_k32_cmp_eq(key1, key2, key_len) ||
 		rte_hash_k16_cmp_eq((const uint8_t *) key1 + 32,
 				    (const uint8_t *) key2 + 32, key_len);
 }
@@ -226,8 +333,19 @@ void rte_hash_set_cmp_func(struct rte_hash *h, rte_hash_cmp_eq_t func)
  */
 static const rte_hash_cmp_eq_t cmp_jump_table[NUM_KEY_CMP_CASES] = {
 	[KEY_CUSTOM] = NULL,
+	[KEY_2_BYTES] = rte_hash_k2_cmp_eq,
+	[KEY_3_BYTES] = rte_hash_k3_cmp_eq,
+	[KEY_4_BYTES] = rte_hash_k4_cmp_eq,
+	[KEY_5_BYTES] = rte_hash_k5_cmp_eq,
+	[KEY_6_BYTES] = rte_hash_k6_cmp_eq,
+	[KEY_8_BYTES] = rte_hash_k8_cmp_eq,
+	[KEY_10_BYTES] = rte_hash_k10_cmp_eq,
+	[KEY_12_BYTES] = rte_hash_k12_cmp_eq,
+	[KEY_14_BYTES] = rte_hash_k14_cmp_eq,
 	[KEY_16_BYTES] = rte_hash_k16_cmp_eq,
+	[KEY_20_BYTES] = rte_hash_k20_cmp_eq,
 	[KEY_32_BYTES] = rte_hash_k32_cmp_eq,
+	[KEY_36_BYTES] = rte_hash_k36_cmp_eq,
 	[KEY_48_BYTES] = rte_hash_k48_cmp_eq,
 	[KEY_64_BYTES] = rte_hash_k64_cmp_eq,
 	[KEY_80_BYTES] = rte_hash_k80_cmp_eq,
