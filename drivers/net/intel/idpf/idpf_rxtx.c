@@ -803,10 +803,17 @@ idpf_set_rx_function(struct rte_eth_dev *dev)
 				return;
 			}
 #endif /* CC_AVX512_SUPPORT */
+			if (vport->rx_use_avx2) {
+				PMD_DRV_LOG(NOTICE,
+						"Using Split AVX2 Vector Rx (port %d).",
+						dev->data->port_id);
+				dev->rx_pkt_burst = idpf_dp_splitq_recv_pkts_avx2;
+				return;
+			}
 		}
 		PMD_DRV_LOG(NOTICE,
-			    "Using Split Scalar Rx (port %d).",
-			    dev->data->port_id);
+				"Using Split Scalar Rx (port %d).",
+				dev->data->port_id);
 		dev->rx_pkt_burst = idpf_dp_splitq_recv_pkts;
 	} else {
 		if (vport->rx_vec_allowed) {
