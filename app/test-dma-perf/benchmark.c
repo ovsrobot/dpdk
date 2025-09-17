@@ -103,7 +103,7 @@ output_result(struct test_configure *cfg, struct lcore_params *para,
 	uint32_t lcore_id = para->lcore_id;
 	char *dma_name = para->dma_name;
 
-	if (cfg->is_dma) {
+	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY) {
 		printf("lcore %u, DMA %s, DMA Ring Size: %u, Kick Batch Size: %u", lcore_id,
 		       dma_name, ring_size, kick_batch);
 		if (cfg->is_sg)
@@ -118,12 +118,12 @@ output_result(struct test_configure *cfg, struct lcore_params *para,
 			ave_cycle, buf_size, nr_buf, memory, rte_get_timer_hz()/1000000000.0);
 	printf("Average Bandwidth: %.3lf Gbps, MOps: %.3lf\n", bandwidth, mops);
 
-	if (cfg->is_dma)
-		snprintf(output_str[lcore_id], MAX_OUTPUT_STR_LEN, CSV_LINE_DMA_FMT,
+	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY)
+		output_csv(CSV_LINE_DMA_FMT,
 			scenario_id, lcore_id, dma_name, ring_size, kick_batch, buf_size,
 			nr_buf, memory, ave_cycle, bandwidth, mops);
 	else
-		snprintf(output_str[lcore_id], MAX_OUTPUT_STR_LEN, CSV_LINE_CPU_FMT,
+		output_csv(CSV_LINE_CPU_FMT,
 			scenario_id, lcore_id, buf_size,
 			nr_buf, memory, ave_cycle, bandwidth, mops);
 }
@@ -436,16 +436,15 @@ dummy_free_ext_buf(void *addr, void *opaque)
 }
 
 static int
-setup_memory_env(struct test_configure *cfg,
+setup_memory_env(struct test_configure *cfg, uint32_t nr_buf,
 			 struct rte_mbuf ***srcs, struct rte_mbuf ***dsts,
 			 struct rte_dma_sge **src_sges, struct rte_dma_sge **dst_sges)
 {
 	unsigned int cur_buf_size = cfg->buf_size.cur;
 	unsigned int buf_size = cur_buf_size + RTE_PKTMBUF_HEADROOM;
-	unsigned int nr_sockets;
-	uint32_t nr_buf = cfg->nr_buf;
-	uint32_t i;
 	bool is_src_numa_incorrect, is_dst_numa_incorrect;
+	unsigned int nr_sockets;
+	uint32_t i;
 
 	nr_sockets = rte_socket_count();
 	is_src_numa_incorrect = (cfg->src_numa_node >= nr_sockets);
@@ -579,7 +578,7 @@ get_work_function(struct test_configure *cfg)
 {
 	lcore_function_t *fn;
 
-	if (cfg->is_dma) {
+	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY) {
 		if (!cfg->is_sg)
 			fn = do_dma_plain_mem_copy;
 		else
@@ -670,40 +669,112 @@ attach_ext_buffer(struct vchan_dev_config *vchan_dev, struct lcore_params *lcore
 	return 0;
 }
 
+static int
+verify_data(struct test_configure *cfg, struct rte_mbuf **srcs, struct rte_mbuf **dsts,
+	    uint32_t nr_buf)
+{
+	struct rte_mbuf **src_buf = NULL, **dst_buf = NULL;
+	uint32_t nr_buf_pt = nr_buf / cfg->num_worker;
+	struct vchan_dev_config *vchan_dev = NULL;
+	unsigned int buf_size = cfg->buf_size.cur;
+	uint32_t offset, work_idx, i, j;
+
+	for (work_idx = 0; work_idx < cfg->num_worker; work_idx++)  {
+		vchan_dev = &cfg->dma_config[work_idx].vchan_dev;
+		offset = nr_buf / cfg->num_worker * work_idx;
+		src_buf = srcs + offset;
+		dst_buf = dsts + offset;
+
+		if (vchan_dev->tdir == RTE_DMA_DIR_MEM_TO_MEM && !cfg->is_sg) {
+			for (i = 0; i < nr_buf_pt; i++) {
+				if (memcmp(rte_pktmbuf_mtod(src_buf[i], void *),
+							    rte_pktmbuf_mtod(dst_buf[i], void *),
+							    cfg->buf_size.cur) != 0) {
+					printf("Copy validation fails for buffer number %d\n", i);
+					return -1;
+				}
+			}
+			continue;
+		}
+
+		if (vchan_dev->tdir == RTE_DMA_DIR_MEM_TO_MEM && cfg->is_sg) {
+			size_t src_remsz = buf_size % cfg->nb_src_sges;
+			size_t dst_remsz = buf_size % cfg->nb_dst_sges;
+			size_t src_sz = buf_size / cfg->nb_src_sges;
+			size_t dst_sz = buf_size / cfg->nb_dst_sges;
+			uint8_t src[buf_size], dst[buf_size];
+			uint8_t *sbuf, *dbuf, *ptr;
+
+			for (i = 0; i < (nr_buf_pt / RTE_MAX(cfg->nb_src_sges, cfg->nb_dst_sges));
+				i++) {
+				sbuf = src;
+				dbuf = dst;
+				ptr = NULL;
+
+				for (j = 0; j < cfg->nb_src_sges; j++) {
+					ptr = rte_pktmbuf_mtod(src_buf[i * cfg->nb_src_sges + j],
+						uint8_t *);
+					memcpy(sbuf, ptr, src_sz);
+					sbuf += src_sz;
+				}
+				if (src_remsz)
+					memcpy(sbuf, ptr + src_sz, src_remsz);
+
+				for (j = 0; j < cfg->nb_dst_sges; j++) {
+					ptr = rte_pktmbuf_mtod(dst_buf[i * cfg->nb_dst_sges + j],
+						uint8_t *);
+					memcpy(dbuf, ptr, dst_sz);
+					dbuf += dst_sz;
+				}
+				if (dst_remsz)
+					memcpy(dbuf, ptr + dst_sz, dst_remsz);
+
+				if (memcmp(src, dst, buf_size) != 0) {
+					printf("SG Copy validation fails for buffer number %d\n",
+						i * cfg->nb_src_sges);
+					return -1;
+				}
+			}
+			continue;
+		}
+	}
+
+	return 0;
+}
+
 int
 mem_copy_benchmark(struct test_configure *cfg)
 {
-	uint32_t i, j, k;
-	uint32_t offset;
-	unsigned int lcore_id = 0;
 	struct rte_mbuf **srcs = NULL, **dsts = NULL, **m = NULL;
 	struct rte_dma_sge *src_sges = NULL, *dst_sges = NULL;
 	struct vchan_dev_config *vchan_dev = NULL;
 	struct lcore_dma_map_t *lcore_dma_map = NULL;
 	unsigned int buf_size = cfg->buf_size.cur;
 	uint16_t kick_batch = cfg->kick_batch.cur;
+	uint16_t test_secs = global_cfg.test_secs;
 	uint16_t nb_workers = cfg->num_worker;
-	uint16_t test_secs = cfg->test_secs;
-	float memory = 0;
-	uint32_t avg_cycles = 0;
-	uint32_t avg_cycles_total;
-	float mops, mops_total;
-	float bandwidth, bandwidth_total;
 	uint32_t nr_sgsrc = 0, nr_sgdst = 0;
+	float bandwidth, bandwidth_total;
+	unsigned int lcore_id = 0;
+	uint32_t avg_cycles_total;
+	uint32_t avg_cycles = 0;
+	float mops, mops_total;
+	float memory = 0;
 	uint32_t nr_buf;
+	uint32_t offset;
+	uint32_t i, k;
 	int ret = 0;
 
 	nr_buf = align_buffer_count(cfg, &nr_sgsrc, &nr_sgdst);
-	cfg->nr_buf = nr_buf;
 
-	if (setup_memory_env(cfg, &srcs, &dsts, &src_sges, &dst_sges) < 0)
+	if (setup_memory_env(cfg, nr_buf, &srcs, &dsts, &src_sges, &dst_sges) < 0)
 		goto out;
 
-	if (cfg->is_dma)
+	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY)
 		if (config_dmadevs(cfg) < 0)
 			goto out;
 
-	if (cfg->cache_flush == 1) {
+	if (global_cfg.cache_flush > 0) {
 		cache_flush_buf(srcs, buf_size, nr_buf);
 		cache_flush_buf(dsts, buf_size, nr_buf);
 		rte_mb();
@@ -722,7 +793,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 			printf("lcore parameters malloc failure for lcore %d\n", lcore_id);
 			break;
 		}
-		if (cfg->is_dma) {
+		if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY) {
 			lcores[i]->dma_name = lcore_dma_map->dma_names;
 			lcores[i]->dev_id = lcore_dma_map->dma_id;
 			lcores[i]->kick_batch = kick_batch;
@@ -783,67 +854,9 @@ mem_copy_benchmark(struct test_configure *cfg)
 
 	rte_eal_mp_wait_lcore();
 
-	for (k = 0; k < nb_workers; k++) {
-		struct rte_mbuf **src_buf = NULL, **dst_buf = NULL;
-		uint32_t nr_buf_pt = nr_buf / nb_workers;
-		vchan_dev = &cfg->dma_config[k].vchan_dev;
-		offset = nr_buf / nb_workers * k;
-		src_buf = srcs + offset;
-		dst_buf = dsts + offset;
-
-		if (vchan_dev->tdir == RTE_DMA_DIR_MEM_TO_MEM && !cfg->is_sg) {
-			for (i = 0; i < nr_buf_pt; i++) {
-				if (memcmp(rte_pktmbuf_mtod(src_buf[i], void *),
-							    rte_pktmbuf_mtod(dst_buf[i], void *),
-							    cfg->buf_size.cur) != 0) {
-					printf("Copy validation fails for buffer number %d\n", i);
-					ret = -1;
-					goto out;
-				}
-			}
-		} else if (vchan_dev->tdir == RTE_DMA_DIR_MEM_TO_MEM && cfg->is_sg) {
-			size_t src_remsz = buf_size % cfg->nb_src_sges;
-			size_t dst_remsz = buf_size % cfg->nb_dst_sges;
-			size_t src_sz = buf_size / cfg->nb_src_sges;
-			size_t dst_sz = buf_size / cfg->nb_dst_sges;
-			uint8_t src[buf_size], dst[buf_size];
-			uint8_t *sbuf, *dbuf, *ptr;
-
-			for (i = 0; i < (nr_buf_pt / RTE_MAX(cfg->nb_src_sges, cfg->nb_dst_sges));
-			     i++) {
-				sbuf = src;
-				dbuf = dst;
-				ptr = NULL;
-
-				for (j = 0; j < cfg->nb_src_sges; j++) {
-					ptr = rte_pktmbuf_mtod(src_buf[i * cfg->nb_src_sges + j],
-							       uint8_t *);
-					memcpy(sbuf, ptr, src_sz);
-					sbuf += src_sz;
-				}
-
-				if (src_remsz)
-					memcpy(sbuf, ptr + src_sz, src_remsz);
-
-				for (j = 0; j < cfg->nb_dst_sges; j++) {
-					ptr = rte_pktmbuf_mtod(dst_buf[i * cfg->nb_dst_sges + j],
-							       uint8_t *);
-					memcpy(dbuf, ptr, dst_sz);
-					dbuf += dst_sz;
-				}
-
-				if (dst_remsz)
-					memcpy(dbuf, ptr + dst_sz, dst_remsz);
-
-				if (memcmp(src, dst, buf_size) != 0) {
-					printf("SG Copy validation fails for buffer number %d\n",
-							i * cfg->nb_src_sges);
-					ret = -1;
-					goto out;
-				}
-			}
-		}
-	}
+	ret = verify_data(cfg, srcs, dsts, nr_buf);
+	if (ret != 0)
+		goto out;
 
 	mops_total = 0;
 	bandwidth_total = 0;
@@ -863,8 +876,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 	}
 	printf("\nAverage Cycles/op per worker: %.1lf, Total Bandwidth: %.3lf Gbps, Total MOps: %.3lf\n",
 		(avg_cycles_total * (float) 1.0) / nb_workers, bandwidth_total, mops_total);
-	snprintf(output_str[MAX_WORKER_NB], MAX_OUTPUT_STR_LEN, CSV_TOTAL_LINE_FMT,
-			cfg->scenario_id, nr_buf, memory * nb_workers,
+	output_csv(CSV_TOTAL_LINE_FMT, cfg->scenario_id, nr_buf, memory * nb_workers,
 			(avg_cycles_total * (float) 1.0) / nb_workers, bandwidth_total, mops_total);
 
 out:
@@ -922,7 +934,7 @@ out:
 		lcores[i] = NULL;
 	}
 
-	if (cfg->is_dma) {
+	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY) {
 		for (i = 0; i < nb_workers; i++) {
 			lcore_dma_map = &cfg->dma_config[i].lcore_dma_map;
 			printf("Stopping dmadev %d\n", lcore_dma_map->dma_id);
