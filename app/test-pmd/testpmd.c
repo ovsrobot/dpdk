@@ -75,6 +75,7 @@
 #endif
 
 #include "testpmd.h"
+#include "hotplug_mp.h"
 
 #ifndef MAP_HUGETLB
 /* FreeBSD may not have MAP_HUGETLB (in fact, it probably doesn't) */
@@ -103,7 +104,7 @@ uint16_t verbose_level = 0; /**< Silent by default. */
 int testpmd_logtype; /**< Log type for testpmd logs */
 
 /* Maximum delay for exiting after primary process. */
-#define MONITOR_INTERVAL (500 * 1000)
+#define MONITOR_INTERVAL (500)
 
 /* use main core for command line ? */
 uint8_t interactive = 0;
@@ -238,6 +239,7 @@ unsigned int xstats_display_num; /**< Size of extended statistics to show */
  */
 volatile uint8_t f_quit;
 uint8_t cl_quit; /* Quit testpmd from cmdline. */
+volatile uint8_t f_exit_sec;
 
 /*
  * Max Rx frame size, set by '--max-pkt-len' parameter.
@@ -2563,7 +2565,12 @@ stop_packet_forwarding(void)
 	for (lc_id = 0; lc_id < cur_fwd_config.nb_fwd_lcores; lc_id++)
 		fwd_lcores[lc_id]->stopped = 1;
 	printf("\nWaiting for lcores to finish...\n");
-	rte_eal_mp_wait_lcore();
+#ifndef RTE_EXEC_ENV_WINDOWS
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_eal_mp_wait_lcore();
+#else
+		rte_eal_mp_wait_lcore();
+#endif
 	port_fwd_end = cur_fwd_config.fwd_eng->port_fwd_end;
 	if (port_fwd_end != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
@@ -3630,6 +3637,19 @@ pmd_test_exit(void)
 #endif
 	if (ports != NULL) {
 		no_link_check = 1;
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+			struct eal_dev_mp_req req = { .t = EAL_DEV_REQ_TYPE_STOP,
+				.result = 0};
+			struct rte_mp_msg mp_req;
+			memset(&mp_req, 0, sizeof(mp_req));
+			snprintf(mp_req.name, sizeof(mp_req.name), "eal_dev_mp_stop_req");
+			memcpy(mp_req.param, &req, sizeof(req));
+			mp_req.len_param = sizeof(req);
+			struct rte_mp_reply reply;
+			struct timespec ts = {.tv_sec = 5, .tv_nsec = 0};
+			printf("Primary: Sending 'stop_req' request to secondary...\n");
+			rte_mp_request_sync(&mp_req, &reply, &ts);
+		}
 		RTE_ETH_FOREACH_DEV(pt_id) {
 			printf("\nStopping port %d...\n", pt_id);
 			fflush(stdout);
@@ -4365,12 +4385,35 @@ signal_handler(int signum __rte_unused)
 	prompt_exit();
 }
 
+static int
+handle_eal_dev_request(const struct rte_mp_msg *request, const void *peer)
+{
+	const struct eal_dev_mp_req *req =
+		(const struct eal_dev_mp_req *)request->param;
+	struct eal_dev_mp_req reply_data;
+	struct rte_mp_msg reply_msg;
+
+	printf("Received message from primary\n");
+	if (req->t == EAL_DEV_REQ_TYPE_STOP) {
+		f_quit = 1;
+		reply_data.result = 0;
+	} else {
+		reply_data.result = -1;
+	}
+	memset(&reply_msg, 0, sizeof(reply_msg));
+	strlcpy(reply_msg.name, request->name, sizeof(reply_msg.name));
+	memcpy(reply_msg.param, &reply_data, sizeof(reply_data));
+	rte_mp_reply(&reply_msg, peer);
+	printf("Sent stop reply to primary\n");
+	return 0;
+}
+
 #ifndef RTE_EXEC_ENV_WINDOWS
 /* Alarm signal handler, used to check that primary process */
 static void
 monitor_primary(void *arg __rte_unused)
 {
-	if (rte_eal_primary_proc_alive(NULL)) {
+	if (rte_eal_primary_proc_alive(NULL) && (!f_quit)) {
 		rte_eal_alarm_set(MONITOR_INTERVAL, monitor_primary, NULL);
 	} else {
 		/*
@@ -4378,6 +4421,7 @@ monitor_primary(void *arg __rte_unused)
 		 * is no longer valid. Calling any cleanup code is going to
 		 * run into use after free.
 		 */
+		stop_packet_forwarding();
 		fprintf(stderr, "\nPrimary process is no longer active, exiting...\n");
 		exit(EXIT_FAILURE);
 	}
@@ -4432,6 +4476,9 @@ main(int argc, char** argv)
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY &&
 	    enable_primary_monitor() < 0)
 		rte_exit(EXIT_FAILURE, "Cannot setup primary monitor");
+	else if (rte_mp_action_register("eal_dev_mp_stop_req",
+				handle_eal_dev_request) != 0)
+		rte_exit(EXIT_FAILURE, "Failed to register message action\n");
 #endif
 
 	/* allocate port structures, and init them */
@@ -4628,8 +4675,10 @@ main(int argc, char** argv)
 	}
 
 #ifndef RTE_EXEC_ENV_WINDOWS
-	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 		disable_primary_monitor();
+		rte_mp_action_unregister("eal_dev_mp_stop_req");
+	}
 #endif
 
 	pmd_test_exit();
