@@ -76,6 +76,10 @@ New Features
   * Added multi-process per port.
   * Optimized code.
 
+* **Added Nebulamatrix nbl net driver.**
+
+  * Added the PMD for Nebulamatrix NICs.
+
 
 Removed Items
 -------------
