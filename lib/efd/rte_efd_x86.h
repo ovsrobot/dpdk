@@ -19,7 +19,6 @@ efd_lookup_internal_avx2(const efd_hashfunc_t *group_hash_idx,
 		const efd_lookuptbl_t *group_lookup_table,
 		const uint32_t hash_val_a, const uint32_t hash_val_b)
 {
-#ifdef __AVX2__
 	efd_value_t value = 0;
 	uint32_t i = 0;
 	__m256i vhash_val_a = _mm256_set1_epi32(hash_val_a);
@@ -45,13 +44,4 @@ efd_lookup_internal_avx2(const efd_hashfunc_t *group_hash_idx,
 	}
 
 	return value;
-#else
-	RTE_SET_USED(group_hash_idx);
-	RTE_SET_USED(group_lookup_table);
-	RTE_SET_USED(hash_val_a);
-	RTE_SET_USED(hash_val_b);
-	/* Return dummy value, only to avoid compilation breakage */
-	return 0;
-#endif
-
 }
