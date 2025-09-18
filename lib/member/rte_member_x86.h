@@ -11,8 +11,6 @@
 extern "C" {
 #endif
 
-#if defined(__AVX2__)
-
 static inline int
 update_entry_search_avx(uint32_t bucket_id, member_sig_t tmp_sig,
 		struct member_ht_bucket *buckets,
@@ -69,7 +67,6 @@ search_bucket_multi_avx(uint32_t bucket_id, member_sig_t tmp_sig,
 		hitmask &= ~(3U << ((hit_idx) << 1));
 	}
 }
-#endif
 
 #ifdef __cplusplus
 }
