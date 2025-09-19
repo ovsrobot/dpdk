@@ -1121,14 +1121,12 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
-#ifdef VFIO_PRESENT
 	if (rte_vfio_enable("vfio")) {
 		rte_eal_init_alert("Cannot init VFIO");
 		rte_errno = EAGAIN;
 		rte_atomic_store_explicit(&run_once, 0, rte_memory_order_relaxed);
 		return -1;
 	}
-#endif
 	/* in secondary processes, memory init may allocate additional fbarrays
 	 * not present in primary processes, so to avoid any potential issues,
 	 * initialize memzones first.
@@ -1330,9 +1328,7 @@ rte_eal_cleanup(void)
 		rte_memseg_walk(mark_freeable, NULL);
 
 	rte_service_finalize();
-#ifdef VFIO_PRESENT
 	vfio_mp_sync_cleanup();
-#endif
 	rte_mp_channel_cleanup();
 	eal_bus_cleanup();
 	rte_eal_alarm_cleanup();
