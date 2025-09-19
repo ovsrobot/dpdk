@@ -388,8 +388,21 @@ idpf_adapter_init(struct idpf_adapter *adapter)
 {
 	struct idpf_hw *hw = &adapter->hw;
 	int ret;
+	int err;
+	bool is_vf = 0;
 
-	if (hw->device_id == IDPF_DEV_ID_SRIOV) {
+	switch (hw->device_id) {
+	case IDPF_DEV_ID_SRIOV:
+			is_vf = 1;
+			break;
+	default:
+			if (hw->cls_id == IDPF_CLASS_NETWORK_ETHERNET_PROGIF) {
+				err = idpf_is_vf_device(hw, &is_vf);
+				if (err)
+					return err;
+			}
+	}
+	if (is_vf) {
 		ret = idpf_check_vf_reset_done(hw);
 	} else {
 		idpf_reset_pf(hw);
@@ -441,6 +454,22 @@ err_mbx_resp:
 	idpf_ctlq_deinit(hw);
 err_check_reset:
 	return ret;
+}
+
+#define IDPF_VF_TEST_VAL		0xFEED0000
+
+/**
+ * idpf_is_vf_device - Helper to find if it is a VF device
+ * @pdev: PCI device information struct
+ * @is_vf: used to update VF device status
+ *
+ * Return: 0 on success, errno on failure.
+ */
+int idpf_is_vf_device(struct idpf_hw *hw, bool *is_vf)
+{
+	IDPF_WRITE_REG(hw, VF_ARQBAL, IDPF_VF_TEST_VAL);
+	*is_vf = (IDPF_READ_REG(hw, VF_ARQBAL) == IDPF_VF_TEST_VAL);
+	return 0;
 }
 
 RTE_EXPORT_INTERNAL_SYMBOL(idpf_adapter_deinit)
