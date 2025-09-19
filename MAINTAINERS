@@ -254,7 +254,6 @@ F: examples/multi_process/
 F: doc/guides/sample_app_ug/multi_process.rst
 
 Service Cores
-M: Harry van Haaren <harry.van.haaren@intel.com>
 F: lib/eal/include/rte_service.h
 F: lib/eal/include/rte_service_component.h
 F: lib/eal/common/rte_service.c
@@ -337,10 +336,12 @@ F: examples/*/*_altivec.*
 F: examples/common/altivec/
 
 RISC-V
-M: Stanislaw Kardach <stanislaw.kardach@gmail.com>
+M: Stanisław Kardach <stanislaw.kardach@gmail.com>
 F: config/riscv/
 F: doc/guides/linux_gsg/cross_build_dpdk_for_riscv.rst
 F: lib/eal/riscv/
+M: Sun Yuechi <sunyuechi@iscas.ac.cn>
+F: lib/**/*rvv*
 
 Intel x86
 M: Bruce Richardson <bruce.richardson@intel.com>
@@ -429,6 +430,7 @@ F: app/test/test_stack*
 F: doc/guides/prog_guide/stack_lib.rst
 
 Packet buffer
+M: Morten Brørup <mb@smartsharesystems.com>
 F: lib/mbuf/
 F: doc/guides/prog_guide/mbuf_lib.rst
 F: app/test/test_mbuf.c
@@ -767,7 +769,8 @@ F: doc/guides/nics/gve.rst
 F: doc/guides/nics/features/gve.ini
 
 Hisilicon hns3
-M: Dengdui Huang <huangdengdui@huawei.com>
+M: Xingui Yang <yangxingui@huawei.com>
+M: Chengwen Feng <fengchengwen@huawei.com>
 F: drivers/net/hns3/
 F: doc/guides/nics/hns3.rst
 F: doc/guides/nics/features/hns3.ini
@@ -1486,7 +1489,6 @@ F: drivers/event/dpaa2/
 F: doc/guides/eventdevs/dpaa2.rst
 
 Software Eventdev PMD
-M: Harry van Haaren <harry.van.haaren@intel.com>
 F: drivers/event/sw/
 F: doc/guides/eventdevs/sw.rst
 F: examples/eventdev_pipeline/
@@ -1981,7 +1983,7 @@ F: app/proc-info/
 F: doc/guides/tools/proc_info.rst
 
 DTS
-M: Paul Szczepanek <paul.szczepanek@arm.com>
+M: Luca Vizzarro <luca.vizzarro@arm.com>
 M: Patrick Robb <probb@iol.unh.edu>
 T: git://dpdk.org/next/dpdk-next-dts
 F: dts/
