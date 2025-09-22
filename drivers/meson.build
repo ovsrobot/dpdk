@@ -57,6 +57,11 @@ foreach driver_type : [['disable', get_option('disable_drivers')],
             warning('Driver name "@0@" is deprecated, please use "@1@" instead.'
                     .format(driver, driver_mapped))
             driver = driver_mapped
+        elif driver.contains('*')
+            if driver.endswith('/*') and not driver.contains('/*/*')
+                # for wildcard add nested wildcard
+                driver = driver + ',' + driver + '/*'
+            endif
         endif
         if driver_list_name == 'disable_drivers'
             disable_drivers += ',' + driver
