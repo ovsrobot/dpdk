@@ -11,6 +11,7 @@
 #include "idpf_common_logs.h"
 
 #define IDPF_DEV_ID_SRIOV	0x145C
+#define IXD_DEV_ID_VCPF         0x1203
 
 #define IDPF_RSS_KEY_LEN	52
 
@@ -43,6 +44,8 @@
 #define IDPF_GET_PTYPE_SIZE(p)						\
 	(sizeof(struct virtchnl2_ptype) +				\
 	 (((p)->proto_id_count ? ((p)->proto_id_count - 1) : 0) * sizeof((p)->proto_id[0])))
+
+#define VCPF_CFGQ_VPORT_ID               0xFFFFFFFF
 
 struct idpf_adapter {
 	struct idpf_hw hw;
