@@ -32,12 +32,47 @@ if meson.is_cross_build()
     enable_drivers += ',' + meson.get_external_property('enable_drivers', '')
 endif
 
-# add cmdline disabled drivers and meson disabled drivers together
-disable_drivers += ',' + get_option('disable_drivers')
-disable_drivers = run_command(list_dir_globs, disable_drivers, check: true).stdout().split()
+# map legacy driver names
+driver_map = {
+    'net/e1000': 'net/intel/e1000',
+    'net/fm10k': 'net/intel/fm10k',
+    'net/i40e': 'net/intel/i40e',
+    'net/iavf': 'net/intel/iavf',
+    'net/ice': 'net/intel/ice',
+    'net/idpf': 'net/intel/idpf',
+    'net/ipn3ke': 'net/intel/ipn3ke',
+    'net/ixgbe': 'net/intel/ixgbe',
+    'net/cpfl': 'net/intel/cpfl',
+}
 
-# add cmdline enabled drivers and meson enabled drivers together
-enable_drivers = ',' + get_option('enable_drivers')
+# add cmdline drivers
+foreach driver_type : [['disable', get_option('disable_drivers')],
+                       ['enable', get_option('enable_drivers')]]
+    driver_list_name = driver_type[0] + '_drivers'
+    cmdline_drivers = ',' + driver_type[1]
+
+    foreach driver : cmdline_drivers.split(',')
+        if driver_map.has_key(driver)
+            driver_mapped = driver_map[driver]
+            warning('Driver name "@0@" is deprecated, please use "@1@" instead.'
+                    .format(driver, driver_mapped))
+            driver = driver_mapped
+        elif driver.contains('*')
+            if driver.endswith('/*') and not driver.contains('/*/*')
+                # for wildcard add nested wildcard
+                driver = driver + ',' + driver + '/*'
+            endif
+        endif
+        if driver_list_name == 'disable_drivers'
+            disable_drivers += ',' + driver
+        else
+            enable_drivers += ',' + driver
+        endif
+    endforeach
+endforeach
+
+# add cmdline drivers and meson drivers together
+disable_drivers = run_command(list_dir_globs, disable_drivers, check: true).stdout().split()
 enable_drivers = run_command(list_dir_globs, enable_drivers, check: true).stdout().split()
 require_drivers = true
 if enable_drivers.length() == 0
