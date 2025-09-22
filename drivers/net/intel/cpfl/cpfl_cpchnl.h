@@ -133,11 +133,8 @@ CPCHNL2_CHECK_STRUCT_LEN(3792, cpchnl2_queue_groups);
  * @brief function types
  */
 enum cpchnl2_func_type {
-	CPCHNL2_FTYPE_LAN_VF = 0x0,
-	CPCHNL2_FTYPE_LAN_RSV1 = 0x1,
-	CPCHNL2_FTYPE_LAN_PF = 0x2,
-	CPCHNL2_FTYPE_LAN_RSV2 = 0x3,
-	CPCHNL2_FTYPE_LAN_MAX
+	CPCHNL2_FTYPE_LAN_PF = 0,
+	CPCHNL2_FTYPE_LAN_VF = 1,
 };
 
 /**
