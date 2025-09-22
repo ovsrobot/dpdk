@@ -184,6 +184,7 @@ struct idpf_hw {
 	u16 subsystem_device_id;
 	u16 subsystem_vendor_id;
 	u8 revision_id;
+	uint32_t cls_id;
 	bool adapter_stopped;
 
 	LIST_HEAD_TYPE(list_head, idpf_ctlq_info) cq_list_head;
