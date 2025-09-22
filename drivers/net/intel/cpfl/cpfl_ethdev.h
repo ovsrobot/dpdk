@@ -60,6 +60,7 @@
 
 /* Device IDs */
 #define IDPF_DEV_ID_CPF			0x1453
+#define IXD_DEV_ID_VCPF			0x1203
 #define VIRTCHNL2_QUEUE_GROUP_P2P	0x100
 
 #define CPFL_HOST_ID_NUM	2
