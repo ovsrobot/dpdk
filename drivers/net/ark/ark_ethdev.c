@@ -37,7 +37,8 @@ static int eth_ark_dev_link_update(struct rte_eth_dev *dev,
 static int eth_ark_dev_set_link_up(struct rte_eth_dev *dev);
 static int eth_ark_dev_set_link_down(struct rte_eth_dev *dev);
 static int eth_ark_dev_stats_get(struct rte_eth_dev *dev,
-				  struct rte_eth_stats *stats);
+				  struct rte_eth_stats *stats,
+				  struct eth_queue_stats *qstats);
 static int eth_ark_dev_stats_reset(struct rte_eth_dev *dev);
 static int eth_ark_set_default_mac_addr(struct rte_eth_dev *dev,
 					 struct rte_ether_addr *mac_addr);
@@ -780,25 +781,36 @@ eth_ark_dev_set_link_down(struct rte_eth_dev *dev)
 }
 
 static int
-eth_ark_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+eth_ark_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+		struct eth_queue_stats *qstats)
 {
 	uint16_t i;
 	struct ark_adapter *ark = dev->data->dev_private;
+	struct rte_eth_dev_data *data = dev->data;
 
-	stats->ipackets = 0;
-	stats->ibytes = 0;
-	stats->opackets = 0;
-	stats->obytes = 0;
-	stats->imissed = 0;
-	stats->oerrors = 0;
+	/* Initialize stats to 0 */
+	memset(stats, 0, sizeof(*stats));
 
-	for (i = 0; i < dev->data->nb_tx_queues; i++)
-		eth_tx_queue_stats_get(dev->data->tx_queues[i], stats);
-	for (i = 0; i < dev->data->nb_rx_queues; i++)
-		eth_rx_queue_stats_get(dev->data->rx_queues[i], stats);
+	if (qstats)
+		memset(qstats, 0, sizeof(*qstats));
+
+	/* Get stats for each RX queue */
+	for (i = 0; i < data->nb_rx_queues; i++) {
+		if (data->rx_queues[i])
+			eth_rx_queue_stats_get(data->rx_queues[i], stats, qstats);
+	}
+
+	/* Get stats for each TX queue */
+	for (i = 0; i < data->nb_tx_queues; i++) {
+		if (data->tx_queues[i])
+			eth_tx_queue_stats_get(data->tx_queues[i], stats, qstats);
+	}
+
+	/* Call user extension if registered */
 	if (ark->user_ext.stats_get)
 		return ark->user_ext.stats_get(dev, stats,
 			ark->user_data[dev->data->port_id]);
+
 	return 0;
 }
 
