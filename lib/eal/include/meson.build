@@ -79,3 +79,11 @@ generic_headers = files(
         'generic/rte_vect.h',
 )
 install_headers(generic_headers, subdir: 'generic')
+staged_headers_deps += declare_dependency(sources:
+        custom_target('eal_generic_header_staging',
+                output: 'eal_generic_header_staging.stamp',
+                command: [stage_headers_cmd, join_paths(staging_dir, 'generic'), '@OUTPUT@',
+                    generic_headers],
+                install: false,
+        )
+)

@@ -12,7 +12,17 @@ endif
 
 subdir(exec_env)
 
+arch_headers = []
+arch_indirect_headers = []
 subdir(arch_subdir)
+staged_headers_deps += declare_dependency(sources:
+        custom_target('eal_arch_header_staging',
+                output: 'eal_arch_header_staging.stamp',
+                command: [stage_headers_cmd, staging_dir, '@OUTPUT@',
+                    arch_headers + arch_indirect_headers],
+                install: false,
+        )
+)
 
 deps += ['log', 'kvargs']
 if not is_windows

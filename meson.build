@@ -38,6 +38,7 @@ dpdk_static_libraries = []
 dpdk_shared_lib_deps = []
 dpdk_static_lib_deps = []
 dpdk_chkinc_headers = []
+dpdk_chkinc_driver_headers = []
 dpdk_driver_classes = []
 dpdk_drivers = []
 dpdk_extra_ldflags = []
@@ -47,6 +48,8 @@ dpdk_apps_enabled = []
 dpdk_libs_disabled = []
 dpdk_libs_enabled = []
 dpdk_drvs_disabled = []
+staging_dir = []
+drivers_staging_dir = []
 testpmd_drivers_sources = []
 testpmd_drivers_deps = []
 abi_version_file = files('ABI_VERSION')
@@ -73,6 +76,7 @@ global_inc = [include_directories('.', 'config',
 )]
 
 # do configuration and get tool paths
+subdir('staging')
 subdir('buildtools')
 subdir('config')
 

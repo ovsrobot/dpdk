@@ -131,10 +131,13 @@ F: buildtools/get-numa-count.py
 F: buildtools/list-dir-globs.py
 F: buildtools/map-list-symbol.sh
 F: buildtools/pkg-config/
+F: buildtools/stage-headers.py
 F: buildtools/symlink-drivers-solibs.sh
 F: buildtools/symlink-drivers-solibs.py
 F: devtools/test-meson-builds.sh
 F: devtools/check-meson.py
+F: staging/drivers/meson.build
+F: staging/meson.build
 
 Public CI
 M: Aaron Conole <aconole@redhat.com>

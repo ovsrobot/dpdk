@@ -245,7 +245,29 @@ foreach subpath:subdirs
         if get_option('enable_driver_sdk')
             install_headers(driver_sdk_headers)
         endif
-        dpdk_chkinc_headers += driver_sdk_headers
+        dpdk_chkinc_headers += headers
+        dpdk_chkinc_driver_headers += driver_sdk_headers
+
+        if headers.length() != 0
+            staged_headers_deps += declare_dependency(sources:
+                    custom_target(lib_name + '_header_staging',
+                            output: lib_name + '_header_staging.stamp',
+                            command: [stage_headers_cmd, staging_dir, '@OUTPUT@', headers],
+                            install: false,
+                    )
+            )
+        endif
+
+        if driver_sdk_headers.length() != 0
+            staged_headers_deps += declare_dependency(sources:
+                    custom_target(lib_name + '_driver_header_staging',
+                            output: lib_name + '_driver_header_staging.stamp',
+                            command: [stage_headers_cmd, drivers_staging_dir, '@OUTPUT@',
+                                driver_sdk_headers],
+                            install: false,
+                    )
+            )
+        endif
 
         if headers.length() > 0
             dpdk_includes += include_directories(drv_path)
@@ -348,10 +370,10 @@ foreach subpath:subdirs
         # testpmd or other built-in apps can find it if necessary
         shared_dep = declare_dependency(link_with: shared_lib,
                 include_directories: includes,
-                dependencies: shared_deps)
+                dependencies: shared_deps + staged_headers_deps)
         static_dep = declare_dependency(
                 include_directories: includes,
-                dependencies: static_deps)
+                dependencies: static_deps + staged_headers_deps)
 
         dpdk_drivers += static_lib
 

@@ -129,6 +129,7 @@ foreach l:libraries
     headers = []
     indirect_headers = [] # public headers not directly included by apps
     driver_sdk_headers = [] # public headers included by drivers
+    staged_headers_deps = []
     includes = []
     cflags = default_cflags
     objs = [] # other object files to link against, used e.g. for
@@ -214,7 +215,29 @@ foreach l:libraries
         install_headers(driver_sdk_headers)
     endif
     dpdk_chkinc_headers += headers
-    dpdk_chkinc_headers += driver_sdk_headers
+    dpdk_chkinc_driver_headers += driver_sdk_headers
+
+    lib_headers = headers + indirect_headers
+    if lib_headers.length() != 0
+        staged_headers_deps += declare_dependency(sources:
+                custom_target(l + '_header_staging',
+                        output: l + '_header_staging.stamp',
+                        command: [stage_headers_cmd, staging_dir, '@OUTPUT@', lib_headers],
+                        install: false,
+                )
+        )
+    endif
+
+    if driver_sdk_headers.length() != 0
+        staged_headers_deps += declare_dependency(sources:
+                custom_target(l + '_driver_header_staging',
+                        output: l + '_driver_header_staging.stamp',
+                        command: [stage_headers_cmd, drivers_staging_dir, '@OUTPUT@',
+                            driver_sdk_headers],
+                        install: false,
+                )
+        )
+    endif
 
     libname = 'rte_' + name
     includes += include_directories(l)
@@ -223,9 +246,9 @@ foreach l:libraries
     # special case for header only libraries
     if sources.length() == 0
         shared_dep = declare_dependency(include_directories: includes,
-                dependencies: shared_deps)
+                dependencies: shared_deps + staged_headers_deps)
         static_dep = declare_dependency(include_directories: includes,
-                dependencies: static_deps)
+                dependencies: static_deps + staged_headers_deps)
         set_variable('shared_rte_' + name, shared_dep)
         set_variable('static_rte_' + name, static_dep)
         dpdk_shared_lib_deps += shared_dep
@@ -254,7 +277,7 @@ foreach l:libraries
         if sources_avx2.length() > 0
             avx2_lib = static_library(libname + '_avx2_lib',
                     sources_avx2,
-                    dependencies: static_deps,
+                    dependencies: static_deps + staged_headers_deps,
                     include_directories: includes,
                     c_args: [cflags, cc_avx2_flags])
             objs += avx2_lib.extract_objects(sources_avx2)
@@ -263,7 +286,7 @@ foreach l:libraries
             cflags += '-DCC_AVX512_SUPPORT'
             avx512_lib = static_library(libname + '_avx512_lib',
                     sources_avx512,
-                    dependencies: static_deps,
+                    dependencies: static_deps + staged_headers_deps,
                     include_directories: includes,
                     c_args: [cflags, cflags_avx512, cc_avx512_flags])
             objs += avx512_lib.extract_objects(sources_avx512)
@@ -275,12 +298,12 @@ foreach l:libraries
             sources,
             objects: objs,
             c_args: cflags,
-            dependencies: static_deps,
+            dependencies: static_deps + staged_headers_deps,
             include_directories: includes,
             install: true)
     static_dep = declare_dependency(
             include_directories: includes,
-            dependencies: static_deps)
+            dependencies: static_deps + staged_headers_deps)
 
     if is_ms_linker
         link_mode = 'mslinker'
@@ -331,7 +354,7 @@ foreach l:libraries
             sources,
             objects: objs,
             c_args: cflags,
-            dependencies: shared_deps,
+            dependencies: shared_deps + staged_headers_deps,
             include_directories: includes,
             link_args: lk_args,
             link_depends: lk_deps,
@@ -340,7 +363,7 @@ foreach l:libraries
             install: true)
     shared_dep = declare_dependency(link_with: shared_lib,
             include_directories: includes,
-            dependencies: shared_deps)
+            dependencies: shared_deps + staged_headers_deps)
 
     dpdk_libraries = [shared_lib] + dpdk_libraries
     dpdk_static_libraries = [static_lib] + dpdk_static_libraries
