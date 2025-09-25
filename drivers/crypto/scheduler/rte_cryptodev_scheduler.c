@@ -100,7 +100,7 @@ check_sec_cap_equal(const struct rte_security_capability *sec_cap1,
 		return 0;
 
 	if (sec_cap1->protocol == RTE_SECURITY_PROTOCOL_DOCSIS)
-		return !memcmp(&sec_cap1->docsis, &sec_cap2->docsis,
+		return !rte_consttime_memcmp(&sec_cap1->docsis, &sec_cap2->docsis,
 				sizeof(sec_cap1->docsis));
 	else
 		return 0;
