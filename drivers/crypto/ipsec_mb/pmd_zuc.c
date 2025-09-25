@@ -185,7 +185,7 @@ process_zuc_hash_op(struct ipsec_mb_qp *qp, struct rte_crypto_op **ops,
 	 */
 	for (i = 0; i < processed_ops; i++)
 		if (sessions[i]->auth_op == RTE_CRYPTO_AUTH_OP_VERIFY)
-			if (memcmp(dst[i], ops[i]->sym->auth.digest.data,
+			if (rte_consttime_memcmp(dst[i], ops[i]->sym->auth.digest.data,
 					ZUC_DIGEST_LENGTH) != 0)
 				ops[i]->status =
 					RTE_CRYPTO_OP_STATUS_AUTH_FAILED;

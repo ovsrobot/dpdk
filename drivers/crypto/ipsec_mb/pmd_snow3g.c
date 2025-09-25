@@ -269,7 +269,7 @@ process_snow3g_hash_op(struct ipsec_mb_qp *qp, struct rte_crypto_op **ops,
 					&session->pKeySched_hash,
 					iv, src, length_in_bits, dst);
 			/* Verify digest. */
-			if (memcmp(dst, ops[i]->sym->auth.digest.data,
+			if (rte_consttime_memcmp(dst, ops[i]->sym->auth.digest.data,
 					SNOW3G_DIGEST_LENGTH) != 0)
 				ops[i]->status =
 					RTE_CRYPTO_OP_STATUS_AUTH_FAILED;

@@ -79,6 +79,29 @@ extern int rte_cryptodev_logtype;
 	(rte_iova_t)((c)->phys_addr + (o))
 
 /**
+ * Constant-time memory comparison for cryptographic use.
+ * Returns 0 if the memory regions are equal, nonzero otherwise.
+ * Runs in constant time with respect to the length to prevent timing attacks.
+ *
+ * @param a
+ *   Pointer to the first memory region.
+ * @param b
+ *   Pointer to the second memory region.
+ * @param n
+ *   Number of bytes to compare.
+ * @return
+ *   0 if memory regions are equal, nonzero otherwise.
+ */
+#define rte_consttime_memcmp(a, b, n) __extension__ ({ \
+	const volatile uint8_t *__pa = (const volatile uint8_t *)(a); \
+	const volatile uint8_t *__pb = (const volatile uint8_t *)(b); \
+	uint8_t __result = 0; \
+	for (size_t __i = 0; __i < (n); __i++) \
+		__result |= __pa[__i] ^ __pb[__i]; \
+	__result; \
+})
+
+/**
  * Crypto parameters range description
  */
 struct rte_crypto_param_range {
