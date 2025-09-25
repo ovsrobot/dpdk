@@ -38,6 +38,11 @@ dpdk_static_libraries = []
 dpdk_shared_lib_deps = []
 dpdk_static_lib_deps = []
 dpdk_chkinc_headers = []
+dpdk_chkinc_staging_dir = []
+dpdk_chkinc_staging_deps = []
+dpdk_chkinc_drivers_headers = []
+dpdk_chkinc_drivers_staging_dir = []
+dpdk_chkinc_drivers_staging_deps = []
 dpdk_driver_classes = []
 dpdk_drivers = []
 dpdk_extra_ldflags = []
@@ -74,6 +79,9 @@ global_inc = [include_directories('.', 'config',
 
 # do configuration and get tool paths
 subdir('buildtools')
+if get_option('check_includes')
+    subdir('buildtools/chkincs/staging')
+endif
 subdir('config')
 
 if is_linux
