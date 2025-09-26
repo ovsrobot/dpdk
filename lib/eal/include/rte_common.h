@@ -700,6 +700,40 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 	return ((uintptr_t)ptr & (align - 1)) == 0;
 }
 
+/**
+ * Constant-time memory inequality comparison.
+ *
+ * This function compares two memory regions in constant time, making it
+ * resistant to timing side-channel attacks. The execution time depends only
+ * on the length parameter, not on the actual data values being compared.
+ *
+ * This is particularly important for cryptographic operations where timing
+ * differences could leak information about secret keys, passwords, or other
+ * sensitive data.
+ *
+ * @param a
+ *   Pointer to the first memory region to compare
+ * @param b
+ *   Pointer to the second memory region to compare
+ * @param n
+ *   Number of bytes to compare
+ * @return
+ *   false if the memory regions are identical, true if they differ
+ */
+static inline bool
+rte_consttime_memneq(const void *a, const void *b, size_t n)
+{
+	const volatile uint8_t *pa = (const volatile uint8_t *)a;
+	const volatile uint8_t *pb = (const volatile uint8_t *)b;
+	uint8_t result = 0;
+	size_t i;
+
+	for (i = 0; i < n; i++)
+		result |= pa[i] ^ pb[i];
+
+	return result != 0;
+}
+
 /*********** Macros for compile type checks ********/
 
 /* Workaround for toolchain issues with missing C11 macro in FreeBSD */
