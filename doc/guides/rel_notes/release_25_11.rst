@@ -89,6 +89,17 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* build: as previously announced in the deprecation notices,
+  the ``enable_kmods`` build option has been removed.
+  Kernel modules will now automatically be built for OS's where out-of-tree kernel modules
+  are required for DPDK operation.
+  Currently, this means that modules will only be built for FreeBSD.
+  No modules are shipped with DPDK for either Linux or Windows.
+
+* telemetry: As previously announced in the deprecation notices,
+  the functions ``rte_tel_data_add_array_u64`` and ``rte_tel_data_add_dict_u64`` are removed.
+  They are replaced by ``rte_tel_data_add_array_uint`` and ``rte_tel_data_add_dict_uint`` respectively.
+
 
 API Changes
 -----------
