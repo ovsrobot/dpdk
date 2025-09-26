@@ -699,10 +699,9 @@ ipv6_hash(struct rte_ipv6_hdr *ipv6_hdr)
 			(word_src_addr[3] ^ word_dst_addr[3]);
 }
 
-
 void
-burst_xmit_l2_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members)
+bond_xmit_l2_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
+		  uint16_t member_count, uint16_t *members)
 {
 	struct rte_ether_hdr *eth_hdr;
 	uint32_t hash;
@@ -718,8 +717,8 @@ burst_xmit_l2_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
 }
 
 void
-burst_xmit_l23_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members)
+bond_xmit_l23_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
+		   uint16_t member_count, uint16_t *members)
 {
 	uint16_t i;
 	struct rte_ether_hdr *eth_hdr;
@@ -756,8 +755,8 @@ burst_xmit_l23_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
 }
 
 void
-burst_xmit_l34_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members)
+bond_xmit_l34_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
+		   uint16_t member_count, uint16_t *members)
 {
 	struct rte_ether_hdr *eth_hdr;
 	uint16_t proto;
@@ -1434,8 +1433,8 @@ link_properties_valid(struct rte_eth_dev *ethdev,
 }
 
 int
-mac_address_get(struct rte_eth_dev *eth_dev,
-		struct rte_ether_addr *dst_mac_addr)
+bond_mac_address_get(struct rte_eth_dev *eth_dev,
+		     struct rte_ether_addr *dst_mac_addr)
 {
 	struct rte_ether_addr *mac_addr;
 
@@ -1456,8 +1455,8 @@ mac_address_get(struct rte_eth_dev *eth_dev,
 }
 
 int
-mac_address_set(struct rte_eth_dev *eth_dev,
-		struct rte_ether_addr *new_mac_addr)
+bond_mac_address_set(struct rte_eth_dev *eth_dev,
+		     struct rte_ether_addr *new_mac_addr)
 {
 	struct rte_ether_addr *mac_addr;
 
@@ -1486,8 +1485,8 @@ static const struct rte_ether_addr null_mac_addr;
  * Add additional MAC addresses to the member
  */
 int
-member_add_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
-		uint16_t member_port_id)
+bond_member_add_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
+			      uint16_t member_port_id)
 {
 	int i, ret;
 	struct rte_ether_addr *mac_addr;
@@ -1514,8 +1513,8 @@ member_add_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
  * Remove additional MAC addresses from the member
  */
 int
-member_remove_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
-		uint16_t member_port_id)
+bond_member_remove_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
+				 uint16_t member_port_id)
 {
 	int i, rc, ret;
 	struct rte_ether_addr *mac_addr;
@@ -1536,7 +1535,7 @@ member_remove_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
 }
 
 int
-mac_address_members_update(struct rte_eth_dev *bonding_eth_dev)
+bond_mac_address_members_update(struct rte_eth_dev *bonding_eth_dev)
 {
 	struct bond_dev_private *internals = bonding_eth_dev->data->dev_private;
 	bool set;
@@ -1735,7 +1734,7 @@ member_configure_slow_queue(struct rte_eth_dev *bonding_eth_dev,
 }
 
 int
-member_configure(struct rte_eth_dev *bonding_eth_dev,
+bond_member_configure(struct rte_eth_dev *bonding_eth_dev,
 		struct rte_eth_dev *member_eth_dev)
 {
 	uint16_t nb_rx_queues;
@@ -1817,8 +1816,8 @@ member_configure(struct rte_eth_dev *bonding_eth_dev,
 }
 
 int
-member_start(struct rte_eth_dev *bonding_eth_dev,
-		struct rte_eth_dev *member_eth_dev)
+bond_member_start(struct rte_eth_dev *bonding_eth_dev,
+		  struct rte_eth_dev *member_eth_dev)
 {
 	int errval = 0;
 	struct bond_rx_queue *bd_rx_q;
@@ -1941,8 +1940,8 @@ member_start(struct rte_eth_dev *bonding_eth_dev,
 }
 
 void
-member_remove(struct bond_dev_private *internals,
-		struct rte_eth_dev *member_eth_dev)
+bond_member_remove(struct bond_dev_private *internals,
+		   struct rte_eth_dev *member_eth_dev)
 {
 	uint16_t i;
 
@@ -1975,7 +1974,7 @@ static void
 bond_ethdev_member_link_status_change_monitor(void *cb_arg);
 
 void
-member_add(struct bond_dev_private *internals,
+bond_member_add(struct bond_dev_private *internals,
 		struct rte_eth_dev *member_eth_dev)
 {
 	struct bond_member_details *member_details =
@@ -2048,7 +2047,7 @@ bond_ethdev_start(struct rte_eth_dev *eth_dev)
 		if (new_mac_addr == NULL)
 			goto out_err;
 
-		if (mac_address_set(eth_dev, new_mac_addr) != 0) {
+		if (bond_mac_address_set(eth_dev, new_mac_addr) != 0) {
 			RTE_BOND_LOG(ERR, "bonding port (%d) failed to update MAC address",
 					eth_dev->data->port_id);
 			goto out_err;
@@ -2069,14 +2068,14 @@ bond_ethdev_start(struct rte_eth_dev *eth_dev)
 	for (i = 0; i < internals->member_count; i++) {
 		struct rte_eth_dev *member_ethdev =
 				&(rte_eth_devices[internals->members[i].port_id]);
-		if (member_configure(eth_dev, member_ethdev) != 0) {
+		if (bond_member_configure(eth_dev, member_ethdev) != 0) {
 			RTE_BOND_LOG(ERR,
 				"bonding port (%d) failed to reconfigure member device (%d)",
 				eth_dev->data->port_id,
 				internals->members[i].port_id);
 			goto out_err;
 		}
-		if (member_start(eth_dev, member_ethdev) != 0) {
+		if (bond_member_start(eth_dev, member_ethdev) != 0) {
 			RTE_BOND_LOG(ERR,
 				"bonding port (%d) failed to start member device (%d)",
 				eth_dev->data->port_id,
@@ -2099,7 +2098,7 @@ bond_ethdev_start(struct rte_eth_dev *eth_dev)
 	}
 
 	/* Update all member devices MACs*/
-	if (mac_address_members_update(eth_dev) != 0)
+	if (bond_mac_address_members_update(eth_dev) != 0)
 		goto out_err;
 
 	if (internals->user_defined_primary_port)
@@ -2203,7 +2202,7 @@ bond_ethdev_stop(struct rte_eth_dev *eth_dev)
 		if (find_member_by_id(internals->active_members,
 				internals->active_member_count, member_id) !=
 					internals->active_member_count)
-			deactivate_member(eth_dev, member_id);
+			bond_deactivate_member(eth_dev, member_id);
 	}
 
 	for (i = 0; i < eth_dev->data->nb_rx_queues; i++)
@@ -3076,12 +3075,12 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 			internals->current_primary_port = port_id;
 			lsc_flag = 1;
 
-			mac_address_members_update(bonding_eth_dev);
+			bond_mac_address_members_update(bonding_eth_dev);
 			bond_ethdev_promiscuous_update(bonding_eth_dev);
 			bond_ethdev_allmulticast_update(bonding_eth_dev);
 		}
 
-		activate_member(bonding_eth_dev, port_id);
+		bond_activate_member(bonding_eth_dev, port_id);
 
 		/* If the user has defined the primary port then default to
 		 * using it.
@@ -3094,7 +3093,7 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 			goto link_update;
 
 		/* Remove from active member list */
-		deactivate_member(bonding_eth_dev, port_id);
+		bond_deactivate_member(bonding_eth_dev, port_id);
 
 		if (internals->active_member_count < 1)
 			lsc_flag = 1;
@@ -3107,7 +3106,7 @@ bond_ethdev_lsc_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 						internals->active_members[0]);
 			else
 				internals->current_primary_port = internals->primary_port;
-			mac_address_members_update(bonding_eth_dev);
+			bond_mac_address_members_update(bonding_eth_dev);
 			bond_ethdev_promiscuous_update(bonding_eth_dev);
 			bond_ethdev_allmulticast_update(bonding_eth_dev);
 		}
@@ -3297,7 +3296,7 @@ static int
 bond_ethdev_mac_address_set(struct rte_eth_dev *dev,
 			struct rte_ether_addr *addr)
 {
-	if (mac_address_set(dev, addr)) {
+	if (bond_mac_address_set(dev, addr)) {
 		RTE_BOND_LOG(ERR, "Failed to update MAC address");
 		return -EINVAL;
 	}
@@ -3617,7 +3616,7 @@ bond_ethdev_priv_dump(struct rte_eth_dev *dev, FILE *f)
 	return 0;
 }
 
-const struct eth_dev_ops default_dev_ops = {
+static const struct eth_dev_ops default_dev_ops = {
 	.dev_start            = bond_ethdev_start,
 	.dev_stop             = bond_ethdev_stop,
 	.dev_close            = bond_ethdev_close,
@@ -3692,7 +3691,7 @@ bond_alloc(struct rte_vdev_device *dev, uint8_t mode)
 	internals->mode = BONDING_MODE_INVALID;
 	internals->current_primary_port = RTE_MAX_ETHPORTS + 1;
 	internals->balance_xmit_policy = BALANCE_XMIT_POLICY_LAYER2;
-	internals->burst_xmit_hash = burst_xmit_l2_hash;
+	internals->burst_xmit_hash = bond_xmit_l2_hash;
 	internals->user_defined_mac = 0;
 
 	internals->link_status_polling_enabled = 0;
@@ -4257,7 +4256,7 @@ bond_ethdev_configure(struct rte_eth_dev *dev)
 	for (i = 0; i < internals->member_count; i++) {
 		struct rte_eth_dev *member_ethdev =
 				&(rte_eth_devices[internals->members[i].port_id]);
-		if (member_configure(dev, member_ethdev) != 0) {
+		if (bond_member_configure(dev, member_ethdev) != 0) {
 			RTE_BOND_LOG(ERR,
 				"bonding port (%d) failed to configure member device (%d)",
 				dev->data->port_id,

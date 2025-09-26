@@ -37,7 +37,7 @@ valid_bonding_port_id(uint16_t port_id)
 	return check_for_bonding_ethdev(&rte_eth_devices[port_id]);
 }
 
-int
+static int
 check_for_main_bonding_ethdev(const struct rte_eth_dev *eth_dev)
 {
 	int i;
@@ -56,7 +56,7 @@ check_for_main_bonding_ethdev(const struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
-int
+static int
 valid_member_port_id(struct bond_dev_private *internals, uint16_t member_port_id)
 {
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(member_port_id, -1);
@@ -80,7 +80,7 @@ valid_member_port_id(struct bond_dev_private *internals, uint16_t member_port_id
 }
 
 void
-activate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
+bond_activate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
 {
 	struct bond_dev_private *internals = eth_dev->data->dev_private;
 	uint16_t active_count = internals->active_member_count;
@@ -107,7 +107,7 @@ activate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
 }
 
 void
-deactivate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
+bond_deactivate_member(struct rte_eth_dev *eth_dev, uint16_t port_id)
 {
 	uint16_t member_pos;
 	struct bond_dev_private *internals = eth_dev->data->dev_private;
@@ -496,7 +496,7 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 		return -1;
 	}
 
-	member_add(internals, member_eth_dev);
+	bond_member_add(internals, member_eth_dev);
 
 	/* We need to store members reta_size to be able to synchronize RETA for all
 	 * member devices even if its sizes are different.
@@ -509,7 +509,7 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 		 * bonding device.
 		 */
 		if (!internals->user_defined_mac) {
-			if (mac_address_set(bonding_eth_dev,
+			if (bond_mac_address_set(bonding_eth_dev,
 					    member_eth_dev->data->mac_addrs)) {
 				RTE_BOND_LOG(ERR, "Failed to set MAC address");
 				return -1;
@@ -566,7 +566,7 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 	}
 
 	/* Add additional MAC addresses to the member */
-	if (member_add_mac_addresses(bonding_eth_dev, member_port_id) != 0) {
+	if (bond_member_add_mac_addresses(bonding_eth_dev, member_port_id) != 0) {
 		RTE_BOND_LOG(ERR, "Failed to add mac address(es) to member %hu",
 				member_port_id);
 		return -1;
@@ -575,13 +575,13 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 	internals->member_count++;
 
 	if (bonding_eth_dev->data->dev_started) {
-		if (member_configure(bonding_eth_dev, member_eth_dev) != 0) {
+		if (bond_member_configure(bonding_eth_dev, member_eth_dev) != 0) {
 			internals->member_count--;
 			RTE_BOND_LOG(ERR, "rte_bond_members_configure: port=%d",
 					member_port_id);
 			return -1;
 		}
-		if (member_start(bonding_eth_dev, member_eth_dev) != 0) {
+		if (bond_member_start(bonding_eth_dev, member_eth_dev) != 0) {
 			internals->member_count--;
 			RTE_BOND_LOG(ERR, "rte_bond_members_start: port=%d",
 					member_port_id);
@@ -590,7 +590,7 @@ __eth_bond_member_add_lock_free(uint16_t bonding_port_id, uint16_t member_port_i
 	}
 
 	/* Update all member devices MACs */
-	mac_address_members_update(bonding_eth_dev);
+	bond_mac_address_members_update(bonding_eth_dev);
 
 	/*
 	 * Register link status change callback with bonding device pointer as
@@ -683,7 +683,7 @@ __eth_bond_member_remove_lock_free(uint16_t bonding_port_id,
 		internals->active_member_count, member_port_id);
 
 	if (member_idx < internals->active_member_count)
-		deactivate_member(bonding_eth_dev, member_port_id);
+		bond_deactivate_member(bonding_eth_dev, member_port_id);
 
 	member_idx = -1;
 	/* now find in member list */
@@ -710,7 +710,7 @@ __eth_bond_member_remove_lock_free(uint16_t bonding_port_id,
 			&internals->members[member_idx].persisted_mac_addr);
 
 	/* remove additional MAC addresses from the member */
-	member_remove_mac_addresses(bonding_eth_dev, member_port_id);
+	bond_member_remove_mac_addresses(bonding_eth_dev, member_port_id);
 
 	/*
 	 * Remove bond device flows from member device.
@@ -735,7 +735,7 @@ __eth_bond_member_remove_lock_free(uint16_t bonding_port_id,
 	}
 
 	member_eth_dev = &rte_eth_devices[member_port_id];
-	member_remove(internals, member_eth_dev);
+	bond_member_remove(internals, member_eth_dev);
 	member_eth_dev->data->dev_flags &= (~RTE_ETH_DEV_BONDING_MEMBER);
 
 	/*  first member in the active list will be the primary by default,
@@ -747,7 +747,7 @@ __eth_bond_member_remove_lock_free(uint16_t bonding_port_id,
 			internals->current_primary_port = internals->members[0].port_id;
 		else
 			internals->primary_port = 0;
-		mac_address_members_update(bonding_eth_dev);
+		bond_mac_address_members_update(bonding_eth_dev);
 	}
 
 	if (internals->active_member_count < 1) {
@@ -931,14 +931,14 @@ rte_eth_bond_mac_address_set(uint16_t bonding_port_id,
 	internals = bonding_eth_dev->data->dev_private;
 
 	/* Set MAC Address of Bonding Device */
-	if (mac_address_set(bonding_eth_dev, mac_addr))
+	if (bond_mac_address_set(bonding_eth_dev, mac_addr))
 		return -1;
 
 	internals->user_defined_mac = 1;
 
 	/* Update all member devices MACs*/
 	if (internals->member_count > 0)
-		return mac_address_members_update(bonding_eth_dev);
+		return bond_mac_address_members_update(bonding_eth_dev);
 
 	return 0;
 }
@@ -972,14 +972,13 @@ rte_eth_bond_mac_address_reset(uint16_t bonding_port_id)
 		}
 
 		/* Set MAC Address of Bonding Device */
-		if (mac_address_set(bonding_eth_dev,
-			&internals->members[member_port].persisted_mac_addr)
-				!= 0) {
+		if (bond_mac_address_set(bonding_eth_dev,
+			&internals->members[member_port].persisted_mac_addr) != 0) {
 			RTE_BOND_LOG(ERR, "Failed to set MAC address on bonding device");
 			return -1;
 		}
 		/* Update all member devices MAC addresses */
-		return mac_address_members_update(bonding_eth_dev);
+		return bond_mac_address_members_update(bonding_eth_dev);
 	}
 	/* No need to update anything as no members present */
 	return 0;
@@ -999,15 +998,15 @@ rte_eth_bond_xmit_policy_set(uint16_t bonding_port_id, uint8_t policy)
 	switch (policy) {
 	case BALANCE_XMIT_POLICY_LAYER2:
 		internals->balance_xmit_policy = policy;
-		internals->burst_xmit_hash = burst_xmit_l2_hash;
+		internals->burst_xmit_hash = bond_xmit_l2_hash;
 		break;
 	case BALANCE_XMIT_POLICY_LAYER23:
 		internals->balance_xmit_policy = policy;
-		internals->burst_xmit_hash = burst_xmit_l23_hash;
+		internals->burst_xmit_hash = bond_xmit_l23_hash;
 		break;
 	case BALANCE_XMIT_POLICY_LAYER34:
 		internals->balance_xmit_policy = policy;
-		internals->burst_xmit_hash = burst_xmit_l34_hash;
+		internals->burst_xmit_hash = bond_xmit_l34_hash;
 		break;
 
 	default:

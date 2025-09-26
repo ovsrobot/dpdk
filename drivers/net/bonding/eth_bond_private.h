@@ -188,11 +188,6 @@ struct bond_dev_private {
 	struct rte_bitmap *vlan_filter_bmp;
 };
 
-extern const struct eth_dev_ops default_dev_ops;
-
-int
-check_for_main_bonding_ethdev(const struct rte_eth_dev *eth_dev);
-
 int
 check_for_bonding_ethdev(const struct rte_eth_dev *eth_dev);
 
@@ -218,65 +213,61 @@ valid_port_id(uint16_t port_id);
 int
 valid_bonding_port_id(uint16_t port_id);
 
-int
-valid_member_port_id(struct bond_dev_private *internals, uint16_t port_id);
+void
+bond_deactivate_member(struct rte_eth_dev *eth_dev, uint16_t port_id);
 
 void
-deactivate_member(struct rte_eth_dev *eth_dev, uint16_t port_id);
-
-void
-activate_member(struct rte_eth_dev *eth_dev, uint16_t port_id);
+bond_activate_member(struct rte_eth_dev *eth_dev, uint16_t port_id);
 
 int
-mac_address_set(struct rte_eth_dev *eth_dev,
-		struct rte_ether_addr *new_mac_addr);
+bond_mac_address_set(struct rte_eth_dev *eth_dev,
+		     struct rte_ether_addr *new_mac_addr);
 
 int
-mac_address_get(struct rte_eth_dev *eth_dev,
-		struct rte_ether_addr *dst_mac_addr);
+bond_mac_address_get(struct rte_eth_dev *eth_dev,
+		     struct rte_ether_addr *dst_mac_addr);
 
 int
-mac_address_members_update(struct rte_eth_dev *bonding_eth_dev);
+bond_mac_address_members_update(struct rte_eth_dev *bonding_eth_dev);
 
 int
-member_add_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
-		uint16_t member_port_id);
+bond_member_add_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
+			      uint16_t member_port_id);
 
 int
-member_remove_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
-		uint16_t member_port_id);
+bond_member_remove_mac_addresses(struct rte_eth_dev *bonding_eth_dev,
+				 uint16_t member_port_id);
 
 int
 bond_ethdev_mode_set(struct rte_eth_dev *eth_dev, uint8_t mode);
 
 int
-member_configure(struct rte_eth_dev *bonding_eth_dev,
-		struct rte_eth_dev *member_eth_dev);
+bond_member_configure(struct rte_eth_dev *bonding_eth_dev,
+		      struct rte_eth_dev *member_eth_dev);
 
 int
-member_start(struct rte_eth_dev *bonding_eth_dev,
+bond_member_start(struct rte_eth_dev *bonding_eth_dev,
+		  struct rte_eth_dev *member_eth_dev);
+
+void
+bond_member_remove(struct bond_dev_private *internals,
+		   struct rte_eth_dev *member_eth_dev);
+
+void
+bond_member_add(struct bond_dev_private *internals,
 		struct rte_eth_dev *member_eth_dev);
 
 void
-member_remove(struct bond_dev_private *internals,
-		struct rte_eth_dev *member_eth_dev);
+bond_xmit_l2_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
+			uint16_t member_count, uint16_t *members);
 
 void
-member_add(struct bond_dev_private *internals,
-		struct rte_eth_dev *member_eth_dev);
+bond_xmit_l23_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
+		   uint16_t member_count, uint16_t *members);
 
 void
-burst_xmit_l2_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members);
-
-void
-burst_xmit_l23_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members);
-
-void
-burst_xmit_l34_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
-		uint16_t member_count, uint16_t *members);
-
+bond_xmit_l34_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
+		   uint16_t member_count, uint16_t *members);
 
 void
 bond_ethdev_primary_set(struct bond_dev_private *internals,
