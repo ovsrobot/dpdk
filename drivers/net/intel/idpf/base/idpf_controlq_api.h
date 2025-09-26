@@ -179,6 +179,7 @@ struct idpf_hw {
 	struct idpf_hw_func_caps func_caps;
 
 	/* pci info */
+	uint32_t cls_id;
 	u16 device_id;
 	u16 vendor_id;
 	u16 subsystem_device_id;
