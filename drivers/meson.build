@@ -245,7 +245,31 @@ foreach subpath:subdirs
         if get_option('enable_driver_sdk')
             install_headers(driver_sdk_headers)
         endif
-        dpdk_chkinc_headers += driver_sdk_headers
+        dpdk_chkinc_headers += headers
+        dpdk_chkinc_drivers_headers += driver_sdk_headers
+
+        if get_option('check_includes')
+            if headers.length() > 0
+                dpdk_chkinc_staging_deps += declare_dependency(sources:
+                        custom_target(lib_name + '_header_staging',
+                                output: lib_name + '_header_staging.stamp',
+                                command: [stage_headers_cmd, dpdk_chkinc_staging_dir, '@OUTPUT@',
+                                    headers],
+                                install: false,
+                        )
+                )
+            endif
+            if driver_sdk_headers.length() > 0
+                dpdk_chkinc_drivers_staging_deps += declare_dependency(sources:
+                        custom_target(lib_name + '_driver_header_staging',
+                                output: lib_name + '_driver_header_staging.stamp',
+                                command: [stage_headers_cmd, dpdk_chkinc_drivers_staging_dir,
+                                    '@OUTPUT@', driver_sdk_headers],
+                                install: false,
+                        )
+                )
+            endif
+        endif
 
         if headers.length() > 0
             dpdk_includes += include_directories(drv_path)

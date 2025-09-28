@@ -12,7 +12,19 @@ endif
 
 subdir(exec_env)
 
+arch_headers = []
+arch_indirect_headers = []
 subdir(arch_subdir)
+if get_option('check_includes')
+    dpdk_chkinc_staging_deps += declare_dependency(sources:
+            custom_target('eal_arch_header_staging',
+                    output: 'eal_arch_header_staging.stamp',
+                    command: [stage_headers_cmd, dpdk_chkinc_staging_dir, '@OUTPUT@',
+                        arch_headers + arch_indirect_headers],
+                    install: false,
+            )
+    )
+endif
 
 deps += ['log', 'kvargs']
 if not is_windows
