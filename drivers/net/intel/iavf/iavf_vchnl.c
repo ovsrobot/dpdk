@@ -2271,3 +2271,32 @@ out:
 	rte_spinlock_unlock(&vf->phc_time_aq_lock);
 	return err;
 }
+
+int
+iavf_request_reset(struct rte_eth_dev *dev)
+{
+	struct iavf_adapter *adapter = IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
+	struct iavf_cmd_info args;
+	int err = 0;
+
+	args.ops = VIRTCHNL_OP_RESET_VF;
+	args.in_args = NULL;
+	args.in_args_size = 0;
+	args.out_buffer = vf->aq_resp;
+	args.out_size = IAVF_AQ_BUF_SZ;
+
+	err = iavf_execute_vf_cmd_safe(adapter, &args, 0);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL_OP_RESET_VF");
+		return err;
+	}
+
+	PMD_DRV_LOG(DEBUG, "VF reset request sent to PF successfully");
+
+	vf->vf_reset = true;
+	iavf_set_no_poll(dev->data->dev_private, false);
+	iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET, NULL, 0);
+
+	return 0;
+}
