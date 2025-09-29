@@ -69,6 +69,52 @@ static cmdline_parse_inst_t cmd_enable_tx_lldp = {
 	},
 };
 
+struct cmd_reset_vf_result {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t reset_vf;
+	portid_t port_id;
+};
+
+static cmdline_parse_token_string_t cmd_reset_vf_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_reset_vf_result,
+		port, "port");
+static cmdline_parse_token_string_t cmd_reset_vf_reset_vf =
+	TOKEN_STRING_INITIALIZER(struct cmd_reset_vf_result,
+		reset_vf, "reset_vf");
+static cmdline_parse_token_num_t cmd_reset_vf_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_reset_vf_result,
+		port_id, RTE_UINT16);
+
+static void
+cmd_reset_vf_parsed(void *parsed_result,
+	__rte_unused struct cmdline *cl, __rte_unused void *data)
+{
+	struct cmd_reset_vf_result *res = parsed_result;
+	int ret;
+
+	if (port_id_is_invalid(res->port_id, ENABLED_WARN))
+		return;
+
+	ret = rte_pmd_iavf_reset(res->port_id);
+	if (ret < 0)
+		fprintf(stderr, "Request to reset VF failed for port %u: %s\n",
+			res->port_id, rte_strerror(-ret));
+	else
+		printf("VF reset requested for port %u\n", res->port_id);
+}
+
+static cmdline_parse_inst_t cmd_reset_vf = {
+	.f = cmd_reset_vf_parsed,
+	.data = NULL,
+	.help_str = "port reset_vf <port_id>",
+	.tokens = {
+		(void *)&cmd_reset_vf_port,
+		(void *)&cmd_reset_vf_reset_vf,
+		(void *)&cmd_reset_vf_port_id,
+		NULL,
+	},
+};
+
 static struct testpmd_driver_commands iavf_cmds = {
 	.commands = {
 	{
@@ -76,7 +122,13 @@ static struct testpmd_driver_commands iavf_cmds = {
 		"set tx lldp (on|off)\n"
 		"    Set iavf Tx lldp packet(currently only supported on)\n\n",
 	},
+	{
+		&cmd_reset_vf,
+		"port reset_vf (port_id)\n"
+		"    Send a request to the PF to reset the VF\n\n",
+	},
 	{ NULL, NULL },
 	},
 };
+
 TESTPMD_ADD_DRIVER_COMMANDS(iavf_cmds)
