@@ -11,6 +11,7 @@
 #include "idpf_common_logs.h"
 
 #define IDPF_DEV_ID_SRIOV	0x145C
+#define IXD_DEV_ID_VCPF         0x1203
 
 #define IDPF_RSS_KEY_LEN	52
 
@@ -44,6 +45,18 @@
 	(sizeof(struct virtchnl2_ptype) +				\
 	 (((p)->proto_id_count ? ((p)->proto_id_count - 1) : 0) * sizeof((p)->proto_id[0])))
 
+#define VCPF_CFGQ_VPORT_ID               0xFFFFFFFF
+
+enum idpf_rx_func_type {
+	IDPF_RX_DEFAULT,
+	IDPF_RX_SINGLEQ,
+	IDPF_RX_SINGLEQ_SCATTERED,
+	IDPF_RX_SINGLEQ_AVX2,
+	IDPF_RX_AVX512,
+	IDPF_RX_SINGLQ_AVX512,
+	IDPF_RX_MAX
+};
+
 struct idpf_adapter {
 	struct idpf_hw hw;
 	struct virtchnl2_version_info virtchnl_version;
@@ -59,6 +72,8 @@ struct idpf_adapter {
 
 	/* For timestamp */
 	uint64_t time_hw;
+
+	enum idpf_rx_func_type rx_func_type;
 };
 
 struct idpf_chunks_info {
@@ -121,12 +136,7 @@ struct idpf_vport {
 
 	uint16_t devarg_id;
 
-	bool rx_vec_allowed;
 	bool tx_vec_allowed;
-	bool rx_use_avx2;
-	bool tx_use_avx2;
-	bool rx_use_avx512;
-	bool tx_use_avx512;
 
 	struct virtchnl2_vport_stats eth_stats_offset;
 
