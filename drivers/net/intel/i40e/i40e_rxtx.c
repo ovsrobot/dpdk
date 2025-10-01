@@ -595,7 +595,7 @@ i40e_rx_alloc_bufs(struct ci_rx_queue *rxq)
 	alloc_idx = (uint16_t)(rxq->rx_free_trigger -
 				(rxq->rx_free_thresh - 1));
 	rxep = &(rxq->sw_ring[alloc_idx]);
-	diag = rte_mempool_get_bulk(rxq->mp, (void *)rxep,
+	diag = rte_mbuf_raw_alloc_bulk(rxq->mp, (void *)rxep,
 					rxq->rx_free_thresh);
 	if (unlikely(diag != 0)) {
 		PMD_DRV_LOG(ERR, "Failed to get mbufs in bulk");
@@ -1360,7 +1360,7 @@ i40e_tx_free_bufs(struct ci_tx_queue *txq)
 					free[i] = txep->mbuf;
 					txep->mbuf = NULL;
 				}
-				rte_mempool_put_bulk(free[0]->pool, (void **)free,
+				rte_mbuf_raw_free_bulk(free[0]->pool, free,
 						I40E_TX_MAX_FREE_BUF_SZ);
 			}
 		}
@@ -1370,7 +1370,7 @@ i40e_tx_free_bufs(struct ci_tx_queue *txq)
 				free[i] = txep->mbuf;
 				txep->mbuf = NULL;
 			}
-			rte_mempool_put_bulk(free[0]->pool, (void **)free, m);
+			rte_mbuf_raw_free_bulk(free[0]->pool, free, m);
 		}
 	} else {
 		for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
