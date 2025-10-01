@@ -26,6 +26,8 @@ option('enable_driver_sdk', type: 'boolean', value: false, description:
        'Install headers to build drivers.')
 option('enable_libs', type: 'string', value: '', description:
        'Comma-separated list of optional libraries to explicitly enable. [NOTE: mandatory libs are always enabled]')
+option('enable_mbuf_history', type: 'boolean', value: false, description:
+       'Track mbufs for debugging purpose. Default is false.')
 option('examples', type: 'string', value: '', description:
        'Comma-separated list of examples to build by default')
 option('ibverbs_link', type: 'combo', choices : ['static', 'shared', 'dlopen'], value: 'shared', description:
