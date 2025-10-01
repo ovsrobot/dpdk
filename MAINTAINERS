@@ -141,6 +141,7 @@ M: Aaron Conole <aconole@redhat.com>
 M: Michael Santana <maicolgabriel@hotmail.com>
 F: .github/workflows/build.yml
 F: .ci/
+F: .coderabbit.yaml
 
 Driver information
 M: Dmitry Kozlyuk <dmitry.kozliuk@gmail.com>

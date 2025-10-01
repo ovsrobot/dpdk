@@ -18,7 +18,7 @@ print_usage () {
 no_license_list=\
 ':^.git* :^.mailmap :^.ci/* :^README :^*/README* :^MAINTAINERS :^VERSION :^ABI_VERSION '\
 ':^license/ :^config/ :^buildtools/ :^*.abignore :^*.cocci :^*/poetry.lock '\
-':^*/Kbuild :^kernel/linux/uapi/version '\
+':^*/Kbuild :^kernel/linux/uapi/version :^.coderabbit.yaml '\
 ':^*.ini :^*.data :^*.json :^*.cfg :^*.txt :^*.svg :^*.png'
 
 check_spdx() {
