@@ -22,7 +22,7 @@ higher-level cryptographic operations than previous NXP cryptographic
 accelerators. This provides significant improvement to system level performance.
 
 DPAA_SEC is one of the hardware resource in DPAA Architecture. More information
-on DPAA Architecture is described in :ref:`dpaa_overview`.
+on DPAA Architecture is described in :ref:`nics_dpaa_overview`.
 
 DPAA_SEC PMD is one of DPAA drivers which interacts with QBMAN to create,
 configure and destroy the device instance using queue pair with CAAM portal.
@@ -104,7 +104,7 @@ Limitations
 Prerequisites
 -------------
 
-DPAA_SEC driver has similar pre-requisites as described in :ref:`dpaa_overview`.
+DPAA_SEC driver has similar pre-requisites as described in :ref:`nics_dpaa_overview`.
 
 See :doc:`../platform/dpaa` for setup information
 

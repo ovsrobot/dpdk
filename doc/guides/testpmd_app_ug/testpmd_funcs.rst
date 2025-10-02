@@ -5667,5 +5667,5 @@ Some drivers provide specific features.
 See:
 
 - :ref:`net/bonding testpmd driver specific commands <bonding_testpmd_commands>`
-- :ref:`net/i40e testpmd driver specific commands <net_i40e_testpmd_commands>`
-- :ref:`net/ixgbe testpmd driver specific commands <net_ixgbe_testpmd_commands>`
+- :ref:`net/i40e testpmd driver specific commands <nics_i40e_testpmd_commands>`
+- :ref:`net/ixgbe testpmd driver specific commands <nics_ixgbe_testpmd_commands>`

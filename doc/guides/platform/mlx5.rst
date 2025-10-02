@@ -41,13 +41,13 @@ which are used to get the best performance:
 - **Direct Rules** manages flow steering at the low-level hardware layer
 
 On Linux, above interfaces are provided by linking with `libibverbs` and `libmlx5`.
-See :ref:`mlx5_linux_prerequisites` for installation.
+See :ref:`platform_mlx5_linux_prerequisites` for installation.
 
 On Windows, DevX is the only requirement from the above list.
-See :ref:`mlx5_windows_prerequisites` for DevX SDK package installation.
+See :ref:`platform_mlx5_windows_prerequisites` for DevX SDK package installation.
 
 
-.. _mlx5_classes:
+.. _platform_mlx5_classes:
 
 Classes
 -------
@@ -82,12 +82,12 @@ Limitations
 - On Windows, only ``eth`` and ``crypto`` are supported.
 
 
-.. _mlx5_common_compilation:
+.. _platform_mlx5_common_compilation:
 
 Compilation Prerequisites
 -------------------------
 
-.. _mlx5_linux_prerequisites:
+.. _platform_mlx5_linux_prerequisites:
 
 Linux Prerequisites
 ~~~~~~~~~~~~~~~~~~~
@@ -216,7 +216,7 @@ to match the kernel modules and libraries they come with.
    Please check the "Tested Platforms" section in the :doc:`../../rel_notes/index`.
 
 
-.. _mlx5_windows_prerequisites:
+.. _platform_mlx5_windows_prerequisites:
 
 Windows Prerequisites
 ~~~~~~~~~~~~~~~~~~~~~
@@ -290,7 +290,7 @@ or::
    meson.exe setup ...
 
 
-.. _mlx5_common_env:
+.. _platform_mlx5_common_env:
 
 Environment Configuration
 -------------------------
@@ -343,7 +343,7 @@ If link type was changed, firmware must be reset as well::
    mlxfwreset -d <mst device> reset
 
 
-.. _mlx5_vf:
+.. _platform_mlx5_vf:
 
 SR-IOV Virtual Function with MLNX_OFED/EN
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -372,7 +372,7 @@ Then the virtual functions can be instantiated::
    echo [num_vfs] > /sys/class/infiniband/mlx5_0/device/sriov_numvfs
 
 
-.. _mlx5_sub_function:
+.. _platform_mlx5_sub_function:
 
 Sub-Function with MLNX_OFED/EN
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -424,7 +424,7 @@ that assuming there are no offload flows, each packet that is sent from the VF o
 will be received by the corresponding representor.
 While each packet that is sent to a representor will be received by the VF or SF.
 
-After :ref:`configuring VF <mlx5_vf>`, the device must be unbound::
+After :ref:`configuring VF <platform_mlx5_vf>`, the device must be unbound::
 
    printf "<device pci address>" > /sys/bus/pci/drivers/mlx5_core/unbind
 
@@ -439,7 +439,7 @@ Run as Non-Root
 ^^^^^^^^^^^^^^^
 
 Hugepage and resource limit setup are documented
-in the :ref:`common Linux guide <Running_Without_Root_Privileges>`.
+in the :ref:`common Linux guide <linux_gsg_Running_Without_Root_Privileges>`.
 This PMD can operate without access to physical addresses,
 therefore it does not require ``SYS_ADMIN`` to access ``/proc/self/pagemaps``.
 Note that this requirement may still come from other drivers.
@@ -485,7 +485,7 @@ The keys ``DevxEnabled`` and ``DevxFsRules`` must be set.
 Additional information can be found in the WinOF2 user manual.
 
 
-.. _mlx5_firmware_config:
+.. _platform_mlx5_firmware_config:
 
 Firmware Configuration
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -607,7 +607,7 @@ dyn flex           4
 ========== = = = = = =
 
 
-.. _mlx5_common_driver_options:
+.. _platform_mlx5_common_driver_options:
 
 Device Arguments
 ----------------
@@ -631,7 +631,7 @@ and below are the arguments supported by the common mlx5 layer.
 - ``class`` parameter [string]
 
   Select the classes of the drivers that should probe the device.
-  See :ref:`mlx5_classes` for more explanation and details.
+  See :ref:`platform_mlx5_classes` for more explanation and details.
 
   The default value is ``eth``.
 

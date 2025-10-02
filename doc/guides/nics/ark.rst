@@ -390,7 +390,7 @@ Usage Example
 -------------
 
 Follow instructions available in the document
-:ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>` to launch
+:ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>` to launch
 **testpmd** with Atomic Rules ARK devices managed by librte_net_ark.
 
 Example output:

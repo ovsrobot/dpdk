@@ -5,12 +5,12 @@
 VDEV_NETVSC driver
 ==================
 
+.. _Hyper-V: https://docs.microsoft.com/en-us/windows-hardware/drivers/network/overview-of-hyper-v
+
 The VDEV_NETVSC driver (**librte_net_vdev_netvsc**) provides support for NetVSC
 interfaces and associated SR-IOV virtual function (VF) devices found in
-Linux virtual machines running on Microsoft Hyper-V_ (including Azure)
+Linux virtual machines running on Microsoft `Hyper-V`_ (including Azure)
 platforms.
-
-.. _Hyper-V: https://docs.microsoft.com/en-us/windows-hardware/drivers/network/overview-of-hyper-v
 
 Implementation details
 ----------------------

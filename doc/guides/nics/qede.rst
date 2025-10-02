@@ -144,7 +144,7 @@ following error.
 Driver compilation and testing
 ------------------------------
 
-Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+Refer to the document :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
 for details.
 
 RTE Flow Support
@@ -155,7 +155,7 @@ actions.
 
 Patterns:
 
-.. _table_qede_supported_flow_item_types:
+.. _linux_gsg_nics_table_qede_supported_flow_item_types:
 
 .. table:: Item types
 
@@ -173,7 +173,7 @@ Patterns:
 
 Actions:
 
-.. _table_qede_supported_ingress_action_types:
+.. _linux_gsg_nics_table_qede_supported_ingress_action_types:
 
 .. table:: Ingress action types
 
@@ -265,7 +265,7 @@ This section provides instructions to configure SR-IOV with Linux OS.
    (Supply ``--log-level="pmd.net.qede.driver:info`` to view informational messages):
 
    Refer to the document
-   :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>` to run
+   :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>` to run
    ``testpmd`` application.
 
    Example output:

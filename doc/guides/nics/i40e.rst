@@ -319,7 +319,7 @@ can use this assumption to do a bit mask using ``ring_size - 1``.
 Driver compilation and testing
 ------------------------------
 
-Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+Refer to the document :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
 for details.
 
 
@@ -376,7 +376,7 @@ SR-IOV: Prerequisites and sample Application Notes
 #. Running testpmd:
 
    Follow instructions available in the document
-   :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+   :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
    to run testpmd.
 
    Example output:
@@ -767,7 +767,7 @@ Mirror rule limitation for X722
 
 Due to firmware restriction of X722, the same VSI cannot have more than one mirror rule.
 
-.. _net_i40e_testpmd_commands:
+.. _nics_i40e_testpmd_commands:
 
 Testpmd driver specific commands
 --------------------------------
@@ -995,9 +995,9 @@ The following is an example of running the DPDK ``l3fwd`` sample application to 
 server with Intel Xeon processors and Intel Ethernet CNA XL710.
 
 The example scenario is to get best performance with two Intel Ethernet CNA XL710 40GbE ports.
-See :numref:`figure_intel_perf_test_setup` for the performance test setup.
+See :numref:`nics_i40e_figure_intel_perf_test_setup` for the performance test setup.
 
-.. _figure_intel_perf_test_setup:
+.. _nics_i40e_figure_intel_perf_test_setup:
 
 .. figure:: img/intel_perf_test_setup.*
 

@@ -22,7 +22,7 @@ higher-level cryptographic operations than previous NXP cryptographic
 accelerators. This provides significant improvement to system level performance.
 
 DPAA2_SEC is one of the hardware resource in DPAA2 Architecture. More information
-on DPAA2 Architecture is described in :ref:`dpaa2_overview`.
+on DPAA2 Architecture is described in :ref:`nics_dpaa2_overview`.
 
 DPAA2_SEC PMD is one of DPAA2 drivers which interacts with Management Complex (MC)
 portal to access the hardware object - DPSECI. The MC provides access to create,
@@ -32,7 +32,7 @@ DPAA2_SEC PMD also uses some of the other hardware resources like buffer pools,
 queues, queue portals to store and to enqueue/dequeue data to the hardware SEC.
 
 DPSECI objects are detected by PMD using a resource container called DPRC (like
-in :ref:`dpaa2_overview`).
+in :ref:`nics_dpaa2_overview`).
 
 For example:
 
@@ -158,7 +158,7 @@ Limitations
 Prerequisites
 -------------
 
-DPAA2_SEC driver has similar pre-requisites as described in :ref:`dpaa2_overview`.
+DPAA2_SEC driver has similar pre-requisites as described in :ref:`nics_dpaa2_overview`.
 The following dependencies are not part of DPDK and must be installed separately:
 
 See :doc:`../platform/dpaa2` for setup information

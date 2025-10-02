@@ -36,7 +36,7 @@ Prerequisites
 -------------
 
 - NVIDIA MLNX_OFED version: **5.0**
-  See :ref:`mlx5 common prerequisites <mlx5_linux_prerequisites>` for more details.
+  See :ref:`mlx5 common prerequisites <platform_mlx5_linux_prerequisites>` for more details.
 
 Run-time configuration
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -44,7 +44,7 @@ Run-time configuration
 Driver options
 ^^^^^^^^^^^^^^
 
-Please refer to :ref:`mlx5 common options <mlx5_common_driver_options>`
+Please refer to :ref:`mlx5 common options <platform_mlx5_common_driver_options>`
 for an additional list of options shared with other mlx5 drivers.
 
 - ``event_mode`` parameter [int]
