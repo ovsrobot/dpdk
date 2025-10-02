@@ -78,13 +78,10 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 	unsigned int max = n;
 
 	*old_head = rte_atomic_load_explicit(&d->head,
-			rte_memory_order_relaxed);
+			rte_memory_order_acquire);
 	do {
 		/* Reset n to the initial burst count */
 		n = max;
-
-		/* Ensure the head is read before tail */
-		rte_atomic_thread_fence(rte_memory_order_acquire);
 
 		/* load-acquire synchronize with store-release of ht->tail
 		 * in update_tail.
@@ -115,8 +112,8 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 			/* on failure, *old_head is updated */
 			success = rte_atomic_compare_exchange_strong_explicit(
 					&d->head, old_head, *new_head,
-					rte_memory_order_relaxed,
-					rte_memory_order_relaxed);
+					rte_memory_order_acq_rel,
+					rte_memory_order_acquire);
 	} while (unlikely(success == 0));
 	return n;
 }
