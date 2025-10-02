@@ -526,7 +526,6 @@ The output is generated in ``build/doc/api/dts/html``.
 
    Make sure to fix any Sphinx warnings when adding or updating docstrings.
 
-.. _configuration_example:
 
 Configuration Example
 ---------------------

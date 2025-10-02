@@ -227,7 +227,6 @@ Configuring and Building the DPDK QAT PMDs
 Further information on configuring, building and installing DPDK is described
 :doc:`here <../linux_gsg/build_dpdk>`.
 
-.. _building_qat_config:
 
 Build Configuration
 ~~~~~~~~~~~~~~~~~~~

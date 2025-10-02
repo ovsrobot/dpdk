@@ -45,7 +45,6 @@ The disadvantages:
 
 A simplified representation of a Ring is shown in with consumer and producer head and tail pointers to objects stored in the data structure.
 
-.. _figure_ring1:
 
 .. figure:: img/ring1.*
 
@@ -113,7 +112,6 @@ The prod_next local variable points to the next element of the table, or several
 If there is not enough room in the ring (this is detected by checking cons_tail), it returns an error.
 
 
-.. _figure_ring-enqueue1:
 
 .. figure:: img/ring-enqueue1.*
 
@@ -128,7 +126,6 @@ The second step is to modify *ring->prod_head* in ring structure to point to the
 The added object is copied in the ring (obj4).
 
 
-.. _figure_ring-enqueue2:
 
 .. figure:: img/ring-enqueue2.*
 
@@ -142,7 +139,6 @@ Once the object is added in the ring, ring->prod_tail in the ring structure is m
 The enqueue operation is finished.
 
 
-.. _figure_ring-enqueue3:
 
 .. figure:: img/ring-enqueue3.*
 
@@ -166,7 +162,6 @@ The cons_next local variable points to the next element of the table, or several
 If there are not enough objects in the ring (this is detected by checking prod_tail), it returns an error.
 
 
-.. _figure_ring-dequeue1:
 
 .. figure:: img/ring-dequeue1.*
 
@@ -181,7 +176,6 @@ The second step is to modify ring->cons_head in the ring structure to point to t
 The dequeued object (obj1) is copied in the pointer given by the user.
 
 
-.. _figure_ring-dequeue2:
 
 .. figure:: img/ring-dequeue2.*
 
@@ -195,7 +189,6 @@ Finally, ring->cons_tail in the ring structure is modified to point to the same 
 The dequeue operation is finished.
 
 
-.. _figure_ring-dequeue3:
 
 .. figure:: img/ring-dequeue3.*
 
@@ -220,7 +213,6 @@ or several elements after in the case of bulk enqueue.
 If there is not enough room in the ring (this is detected by checking cons_tail), it returns an error.
 
 
-.. _figure_ring-mp-enqueue1:
 
 .. figure:: img/ring-mp-enqueue1.*
 
@@ -242,7 +234,6 @@ This operation is done using a Compare And Swap (CAS) instruction, which does th
 In the figure, the operation succeeded on core 1, and step one restarted on core 2.
 
 
-.. _figure_ring-mp-enqueue2:
 
 .. figure:: img/ring-mp-enqueue2.*
 
@@ -257,7 +248,6 @@ The CAS operation is retried on core 2 with success.
 The core 1 updates one element of the ring(obj4), and the core 2 updates another one (obj5).
 
 
-.. _figure_ring-mp-enqueue3:
 
 .. figure:: img/ring-mp-enqueue3.*
 
@@ -272,7 +262,6 @@ A core can only update it if ring->prod_tail is equal to the prod_head local var
 This is only true on core 1. The operation is finished on core 1.
 
 
-.. _figure_ring-mp-enqueue4:
 
 .. figure:: img/ring-mp-enqueue4.*
 
@@ -286,7 +275,6 @@ Once ring->prod_tail is updated by core 1, core 2 is allowed to update it too.
 The operation is also finished on core 2.
 
 
-.. _figure_ring-mp-enqueue5:
 
 .. figure:: img/ring-mp-enqueue5.*
 
@@ -311,7 +299,6 @@ The following are two examples that help to explain how indexes are used in a ri
     as opposed to unsigned 32-bit integers in the more realistic case.
 
 
-.. _figure_ring-modulo1:
 
 .. figure:: img/ring-modulo1.*
 
@@ -321,7 +308,6 @@ The following are two examples that help to explain how indexes are used in a ri
 This ring contains 11000 entries.
 
 
-.. _figure_ring-modulo2:
 
 .. figure:: img/ring-modulo2.*
 
@@ -536,7 +522,6 @@ On that picture ``obj5`` and ``obj4`` elements are acquired by stage 0,
 ``obj2`` and ``obj3`` are acquired by stage 1,
 while ``obj1`` was already released by stage 1 and is ready to be consumed.
 
-.. _figure_soring1:
 
 .. figure:: img/soring-pic1.*
 

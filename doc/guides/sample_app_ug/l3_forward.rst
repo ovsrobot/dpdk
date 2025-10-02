@@ -282,7 +282,6 @@ R<destination_ip><source_ip><destination_port><source_port><protocol><output_por
 
 *   A typical IPv4 ACL rule line should have a format as shown below:
 
-.. _figure_ipv4_acl_rule:
 
 .. figure:: img/ipv4_acl_rule.*
 

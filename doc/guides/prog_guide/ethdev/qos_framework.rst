@@ -11,7 +11,6 @@ Packet Pipeline with QoS Support
 
 An example of a complex packet processing pipeline with QoS support is shown in the following figure.
 
-.. _figure_pkt_proc_pipeline_qos:
 
 .. figure:: ../img/pkt_proc_pipeline_qos.*
 
@@ -112,7 +111,6 @@ It typically acts like a buffer that is able to temporarily store a large number
 as the NIC TX is requesting more packets for transmission,
 these packets are later on removed and handed over to the NIC TX with the packet selection logic observing the predefined SLAs (dequeue operation).
 
-.. _figure_hier_sched_blk:
 
 .. figure:: ../img/hier_sched_blk.*
 
@@ -269,7 +267,6 @@ Internal Data Structures per Port
 
 A schematic of the internal data structures in shown in with details in.
 
-.. _figure_data_struct_per_port:
 
 .. figure:: ../img/data_struct_per_port.*
 
@@ -452,7 +449,6 @@ The dequeue pipe state machine exploits the data presence into the processor cac
 therefore it tries to send as many packets from the same pipe TC and pipe as possible (up to the available packets and credits) before
 moving to the next active TC from the same pipe (if any) or to another active pipe.
 
-.. _figure_pipe_prefetch_sm:
 
 .. figure:: ../img/pipe_prefetch_sm.*
 

@@ -4,7 +4,6 @@
 Patch Cheatsheet
 ================
 
-.. _figure_patch_cheatsheet:
 
 .. figure:: img/patch_cheatsheet.*
 

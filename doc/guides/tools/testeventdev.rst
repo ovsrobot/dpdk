@@ -282,7 +282,6 @@ This is a functional test case that aims at testing the following:
    |   |              |                | port n                 |
    +---+--------------+----------------+------------------------+
 
-.. _figure_eventdev_order_queue_test:
 
 .. figure:: img/eventdev_order_queue_test.*
 
@@ -365,7 +364,6 @@ but differs in two critical ways:
    |   |              |                | port n.                   |
    +---+--------------+----------------+---------------------------+
 
-.. _figure_eventdev_atomic_queue_test:
 
 .. figure:: img/eventdev_atomic_queue_test.*
 
@@ -455,7 +453,6 @@ instead of two different queues for ordered and atomic.
    |   |              |                | port n.                |
    +---+--------------+----------------+------------------------+
 
-.. _figure_eventdev_order_atq_test:
 
 .. figure:: img/eventdev_order_atq_test.*
 
@@ -519,7 +516,6 @@ instead of two different atomic queues.
    |   |              |                | port n.                 |
    +---+--------------+----------------+-------------------------+
 
-.. _figure_eventdev_atomic_atq_test:
 
 .. figure:: img/eventdev_atomic_atq_test.*
 
@@ -582,7 +578,6 @@ This is a performance test case that aims at testing the following:
    |   |              | nb_producers   | Producers use port n to port p          |
    +---+--------------+----------------+-----------------------------------------+
 
-.. _figure_eventdev_perf_queue_test:
 
 .. figure:: img/eventdev_perf_queue_test.*
 
@@ -720,7 +715,6 @@ This is a performance test case that aims at testing the following with
    |   |              | nb_producers   | Producers use port n to port p          |
    +---+--------------+----------------+-----------------------------------------+
 
-.. _figure_eventdev_perf_atq_test:
 
 .. figure:: img/eventdev_perf_atq_test.*
 
@@ -833,11 +827,9 @@ This is a pipeline test case that aims at testing the following:
    |   |              |                | depending on the Tx adapter capability. |
    +---+--------------+----------------+-----------------------------------------+
 
-.. _figure_eventdev_pipeline_queue_test_generic:
 
 .. figure:: img/eventdev_pipeline_queue_test_generic.*
 
-.. _figure_eventdev_pipeline_queue_test_internal_port:
 
 .. figure:: img/eventdev_pipeline_queue_test_internal_port.*
 
@@ -962,11 +954,9 @@ This is a pipeline test case that aims at testing the following with
    |   |              |                | depending on the Tx adapter capability. |
    +---+--------------+----------------+-----------------------------------------+
 
-.. _figure_eventdev_pipeline_atq_test_generic:
 
 .. figure:: img/eventdev_pipeline_atq_test_generic.*
 
-.. _figure_eventdev_pipeline_atq_test_internal_port:
 
 .. figure:: img/eventdev_pipeline_atq_test_internal_port.*
 

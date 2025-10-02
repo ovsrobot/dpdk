@@ -11,7 +11,6 @@ Overview
 
 The architecture of the QoS scheduler application is shown in the following figure.
 
-.. _figure_qos_sched_app_arch:
 
 .. figure:: img/qos_sched_app_arch.*
 
