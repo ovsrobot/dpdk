@@ -23,7 +23,7 @@ Contents summary
 - Overview of DPAA2 objects
 - DPAA2 driver architecture overview
 
-.. _dpaa2_overview:
+.. _nics_dpaa2_overview:
 
 DPAA2 Overview
 ~~~~~~~~~~~~~~
@@ -406,7 +406,7 @@ Features of the DPAA2 PMD are:
 - Jumbo frames
 - Link flow control
 - Scattered and gather for TX and RX
-- :ref:`Traffic Management API <dptmapi>`
+- :ref:`Traffic Management API <nics_dpaa2_dptmapi>`
 
 
 Supported DPAA2 SoCs
@@ -432,13 +432,13 @@ See :doc:`../platform/dpaa2` for setup information
 Driver compilation and testing
 ------------------------------
 
-Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+Refer to the document :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
 for details.
 
 #. Running testpmd:
 
    Follow instructions available in the document
-   :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+   :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
    to run testpmd.
 
    Example output:
@@ -555,7 +555,7 @@ Other Limitations
 - RSS hash key cannot be modified.
 - RSS RETA cannot be configured.
 
-.. _dptmapi:
+.. _nics_dpaa2_dptmapi:
 
 Traffic Management API
 ----------------------

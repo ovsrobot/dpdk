@@ -2,7 +2,7 @@
     Copyright(c) 2017 Marvell International Ltd.
     Copyright(c) 2017 Semihalf.
 
-.. _mvpp2_poll_mode_driver:
+.. _nics_mvpp2_poll_mode_driver:
 
 MVPP2 Poll Mode Driver
 ======================
@@ -37,13 +37,13 @@ Features of the MVPP2 PMD are:
 - L4 checksum offload
 - Packet type parsing
 - Basic stats
-- :ref:`Extended stats <extstats>`
+- :ref:`Extended stats <nics_mvpp2_extstats>`
 - RX flow control
 - Scattered TX frames
-- :ref:`QoS <extconf>`
-- :ref:`Flow API <flowapi>`
-- :ref:`Traffic metering and policing <mtrapi>`
-- :ref:`Traffic Management API <tmapi>`
+- :ref:`QoS <nics_mvpp2_extconf>`
+- :ref:`Flow API <nics_mvpp2_flowapi>`
+- :ref:`Traffic metering and policing <nics_mvpp2_mtrapi>`
+- :ref:`Traffic Management API <nics_mvpp2_tmapi>`
 
 Limitations
 -----------
@@ -166,7 +166,7 @@ In order to run testpmd example application following command can be used:
      --burst=128 --txd=2048 --rxd=1024 --rxq=2 --txq=2  --nb-cores=2 \
      -i -a --rss-udp
 
-.. _extstats:
+.. _nics_mvpp2_extstats:
 
 Extended stats
 --------------
@@ -188,7 +188,7 @@ MVPP2 PMD supports the following extended statistics:
 	- ``tx_errors``: number of TX MAC errors
 
 
-.. _extconf:
+.. _nics_mvpp2_extconf:
 
 External Configuration
 ----------------------
@@ -393,7 +393,7 @@ Usage example
    ./dpdk-testpmd --vdev=eth_mvpp2,iface=eth0,iface=eth2,cfg=/home/user/mrvl.conf \
      -l 0-2 -- -i -a --disable-hw-vlan-strip --rxq=3 --txq=3
 
-.. _flowapi:
+.. _nics_mvpp2_flowapi:
 
 Flow API
 --------
@@ -565,7 +565,7 @@ Following limitations need to be taken into account while creating flow rules:
 For additional information about classifier please consult
 ``doc/musdk_cls_user_guide.txt``.
 
-.. _mtrapi:
+.. _nics_mvpp2_mtrapi:
 
 Traffic metering and policing
 -----------------------------
@@ -580,7 +580,7 @@ MVPP2 PMD supports DPDK traffic metering and policing that allows the following:
 
 For an additional description please refer to DPDK :doc:`../prog_guide/ethdev/traffic_metering_and_policing`.
 
-The policer objects defined by this feature can work with the default policer defined via config file as described in :ref:`QoS Support <extconf>`.
+The policer objects defined by this feature can work with the default policer defined via config file as described in :ref:`QoS Support <nics_mvpp2_extconf>`.
 
 Limitations
 ~~~~~~~~~~~
@@ -622,7 +622,7 @@ For a detailed usage description please refer to "Traffic Metering and Policing"
 
 
 
-.. _tmapi:
+.. _nics_mvpp2_tmapi:
 
 Traffic Management API
 ----------------------

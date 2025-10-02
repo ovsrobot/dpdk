@@ -230,7 +230,6 @@ API Changes
 * No change in this release.
 
 
-.. _20_02_abi_changes:
 
 ABI Changes
 -----------

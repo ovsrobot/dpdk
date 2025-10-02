@@ -93,7 +93,6 @@ The following prerequisites apply:
 Virtio with qemu virtio Back End
 --------------------------------
 
-.. _figure_host_vm_comms_qemu:
 
 .. figure:: img/host_vm_comms_qemu.*
 
@@ -202,7 +201,7 @@ in-order feature.
 Interrupt mode
 --------------
 
-.. _virtio_interrupt_mode:
+.. _linux_gsg_nics_virtio_interrupt_mode:
 
 There are three kinds of interrupts from a virtio device over PCI bus: config
 interrupt, Rx interrupts, and Tx interrupts. Config interrupt is used for

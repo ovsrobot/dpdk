@@ -36,7 +36,6 @@ the kernel driver while a DPDK application can receive specific traffic
 bypassing the Linux kernel by using drivers like VFIO or the DPDK ``igb_uio``
 module.
 
-.. _figure_flow_bifurcation_overview:
 
 .. figure:: img/flow_bifurcation_overview.*
 
@@ -46,7 +45,7 @@ module.
 Using Flow Bifurcation on NVIDIA ConnectX
 -----------------------------------------
 
-The NVIDIA devices are :ref:`natively bifurcated <bifurcated_driver>`,
+The NVIDIA devices are :ref:`natively bifurcated <linux_gsg_bifurcated_driver>`,
 so there is no need to split into SR-IOV PF/VF
 in order to get the flow bifurcation mechanism.
 The full device is already shared with the kernel driver.

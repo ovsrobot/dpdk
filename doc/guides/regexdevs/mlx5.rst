@@ -27,9 +27,9 @@ Features
 Configuration
 -------------
 
-See :ref:`mlx5 common compilation <mlx5_common_compilation>`,
-:ref:`mlx5 firmware configuration <mlx5_firmware_config>`,
-and :ref:`mlx5 common driver options <mlx5_common_driver_options>`.
+See :ref:`mlx5 common compilation <platform_mlx5_common_compilation>`,
+:ref:`mlx5 firmware configuration <platform_mlx5_firmware_config>`,
+and :ref:`mlx5 common driver options <platform_mlx5_common_driver_options>`.
 
 
 Supported NICs

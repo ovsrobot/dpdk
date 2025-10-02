@@ -209,7 +209,6 @@ when handling with `N` number of models.
 executes the sequence of load / start / stop / unload for a model in order,
 followed by next model.
 
-.. _figure_mldev_model_ops_subtest_a:
 
 .. figure:: img/mldev_model_ops_subtest_a.*
 
@@ -219,7 +218,6 @@ followed by next model.
 executes load for all models, followed by a start for all models.
 Upon successful start of all models, stop is invoked for all models followed by unload.
 
-.. _figure_mldev_model_ops_subtest_b:
 
 .. figure:: img/mldev_model_ops_subtest_b.*
 
@@ -229,7 +227,6 @@ Upon successful start of all models, stop is invoked for all models followed by 
 loads all models, followed by a start and stop of all models in order.
 Upon completion of stop, unload is invoked for all models.
 
-.. _figure_mldev_model_ops_subtest_c:
 
 .. figure:: img/mldev_model_ops_subtest_c.*
 
@@ -239,7 +236,6 @@ Upon completion of stop, unload is invoked for all models.
 executes load and start for all models available.
 Upon successful start of all models, stop is executed for the models.
 
-.. _figure_mldev_model_ops_subtest_d:
 
 .. figure:: img/mldev_model_ops_subtest_d.*
 
@@ -334,7 +330,6 @@ The model is unloaded upon completion of all inferences for the model.
 The test would continue loading and executing inference requests for all models
 specified through ``filelist`` option in an ordered manner.
 
-.. _figure_mldev_inference_ordered:
 
 .. figure:: img/mldev_inference_ordered.*
 
@@ -390,7 +385,6 @@ Total number of inferences enqueued for a model are equal to the repetitions spe
 An additional pool of threads would dequeue the inferences from the device.
 Models would be unloaded upon completion of inferences for all models loaded.
 
-.. _figure_mldev_inference_interleave:
 
 .. figure:: img/mldev_inference_interleave.*
 

@@ -160,7 +160,7 @@ Compilation
 -----------
 
 The dependencies and steps are described in
-the :ref:`common compilation chapter <mlx5_common_compilation>`
+the :ref:`common compilation chapter <platform_mlx5_common_compilation>`
 for all mlx5 drivers.
 
 
@@ -171,7 +171,7 @@ Environment Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The variables and tools are described in
-the :ref:`common environment configuration chapter <mlx5_common_env>`
+the :ref:`common environment configuration chapter <platform_mlx5_common_env>`
 for all mlx5 drivers.
 
 Firmware Configuration
@@ -181,13 +181,13 @@ The firmware variables required for specific networking features
 are described as part of each feature in this guide.
 
 All the variables and tools are described in
-the :ref:`common firmware configuration chapter <mlx5_firmware_config>`
+the :ref:`common firmware configuration chapter <platform_mlx5_firmware_config>`
 for all mlx5 drivers.
 
 Runtime Configuration
 ~~~~~~~~~~~~~~~~~~~~~
 
-Please refer to :ref:`mlx5 common options <mlx5_common_driver_options>`
+Please refer to :ref:`mlx5 common options <platform_mlx5_common_driver_options>`
 for an additional list of options shared with other mlx5 drivers.
 
 - ``probe_opt_en`` parameter [int]
@@ -546,7 +546,7 @@ for an additional list of options shared with other mlx5 drivers.
 
   This parameter name is deprecated and ignored.
   The new name for this parameter is ``sq_db_nc``.
-  See :ref:`common driver options <mlx5_common_driver_options>`.
+  See :ref:`common driver options <platform_mlx5_common_driver_options>`.
 
 .. _mlx5_tx_pp_param:
 
@@ -860,7 +860,7 @@ Extended statistics can be queried using ``rte_eth_xstats_get()``.
 The extended statistics expose a wider set of counters counted by the device.
 The extended port statistics counts the number of packets
 received or sent successfully by the port.
-As NVIDIA NICs are using a :ref:`bifurcated Linux driver <bifurcated_driver>`,
+As NVIDIA NICs are using a :ref:`bifurcated Linux driver <linux_gsg_bifurcated_driver>`,
 those counters counts also packet received or sent by the Linux kernel.
 
 Finally per-flow statistics can by queried using ``rte_flow_query()``
@@ -1207,12 +1207,12 @@ Supported Operating Systems
 The mlx5 PMD is designed to run on Linux and Windows.
 It requires a kernel driver and some libraries.
 
-The :ref:`Linux prerequisites <mlx5_linux_prerequisites>`
+The :ref:`Linux prerequisites <platform_mlx5_linux_prerequisites>`
 are Linux kernel driver and rdma-core libraries.
 These dependencies are also packaged in MLNX_OFED or MLNX_EN,
 shortened below as "OFED".
 
-The :ref:`Windows prerequisites <mlx5_windows_prerequisites>`
+The :ref:`Windows prerequisites <platform_mlx5_windows_prerequisites>`
 are Windows kernel driver and DevX library.
 These dependencies are packaged in WinOF2.
 
@@ -1407,7 +1407,7 @@ Limitations
 Bifurcated Driver
 ~~~~~~~~~~~~~~~~~
 
-The same device is managed by both :ref:`kernel <bifurcated_driver>` and DPDK drivers.
+The same device is managed by both :ref:`kernel <linux_gsg_bifurcated_driver>` and DPDK drivers.
 
 After enabling the :ref:`isolated mode <flow_isolated_mode>`,
 non-matched packets are routed directly from the hardware to the kernel.
@@ -1609,7 +1609,7 @@ Limitations
 Sub-Function
 ~~~~~~~~~~~~
 
-See :ref:`mlx5_sub_function`.
+See :ref:`platform_mlx5_sub_function`.
 
 A SF netdev supports E-Switch representation offload
 similar to PF and VF representors.
@@ -1673,7 +1673,7 @@ Firmware configuration
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Hairpin Rx queue data may be stored in locked internal device memory
-if enabled by setting these values (see :ref:`mlx5_firmware_config`)::
+if enabled by setting these values (see :ref:`platform_mlx5_firmware_config`)::
 
    HAIRPIN_DATA_BUFFER_LOCK=1
    MEMIC_SIZE_LIMIT=0
@@ -1875,7 +1875,7 @@ Firmware configuration
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Real-time timestamp format is enabled
-by setting this value (see :ref:`mlx5_firmware_config`)::
+by setting this value (see :ref:`platform_mlx5_firmware_config`)::
 
    REAL_TIME_CLOCK_ENABLE=1
 
@@ -2991,7 +2991,7 @@ by setting these values::
    PROG_PARSE_GRAPH=1
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 Limitations
 ^^^^^^^^^^^
@@ -3116,7 +3116,7 @@ Limitations
 
 #. Modification of GENEVE network ID is not supported when configured
    ``FLEX_PARSER_PROFILE_ENABLE`` supports GENEVE TLV options.
-   See :ref:`mlx5_firmware_config` for more flex parser information.
+   See :ref:`platform_mlx5_firmware_config` for more flex parser information.
 
 #. Modification of GENEVE TLV option fields
    is supported only for :ref:`HW steering <mlx5_hws>`.
@@ -3295,7 +3295,7 @@ Matching ICMP flow is enabled by setting this value::
    FLEX_PARSER_PROFILE_ENABLE=2
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 
 .. _mlx5_ip:
@@ -3321,7 +3321,7 @@ Matching IP-in-IP tunnel flow is enabled by setting this value::
    FLEX_PARSER_PROFILE_ENABLE=0
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 Limitations
 ^^^^^^^^^^^
@@ -3639,7 +3639,7 @@ Matching VXLAN-GPE flow is enabled by setting one of these values::
    FLEX_PARSER_PROFILE_ENABLE=2
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 The UDP destination port may be changed::
 
@@ -3820,7 +3820,7 @@ with the sync API requires this value::
    FLEX_PARSER_PROFILE_ENABLE=0
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 Limitations
 ^^^^^^^^^^^
@@ -3916,7 +3916,7 @@ Matching GTP flow is enabled by setting this value::
    FLEX_PARSER_PROFILE_ENABLE=3
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 Limitations
 ^^^^^^^^^^^
@@ -3940,7 +3940,7 @@ Matching MPLS flow is enabled by setting this value::
    FLEX_PARSER_PROFILE_ENABLE=1
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 Limitations
 ^^^^^^^^^^^
@@ -4013,7 +4013,7 @@ Matching eCPRI flow is enabled by setting these values::
    PROG_PARSE_GRAPH=1
 
 Other protocols may require a different firmware configuration.
-See :ref:`mlx5_firmware_config` for more details about the flex parser profile.
+See :ref:`platform_mlx5_firmware_config` for more details about the flex parser profile.
 
 
 .. _mlx5_host_shaper:
@@ -4450,7 +4450,7 @@ This command performs:
 
 #. Add two device arguments for context (``cmd_fd``)
    and protection domain (``pd_handle``) to the device identifier.
-   See :ref:`mlx5 driver options <mlx5_common_driver_options>` for more
+   See :ref:`mlx5 driver options <platform_mlx5_common_driver_options>` for more
    information about these device arguments.
 
 #. Call the regular ``port attach`` function with updated identifier.

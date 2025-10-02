@@ -99,12 +99,11 @@ enabling debugging options may affect system performance.
 
   Toggle display of register reads and writes.
 
-.. _bnx2x_driver-compilation:
 
 Driver compilation and testing
 ------------------------------
 
-Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+Refer to the document :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
 for details.
 
 Jumbo: Limitation
@@ -198,7 +197,7 @@ This section provides instructions to configure SR-IOV with Linux OS.
    (Supply ``--log-level="pmd.net.bnx2x.driver",7`` to view informational messages):
 
    Follow instructions available in the document
-   :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+   :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
    to run testpmd.
 
    Example output:

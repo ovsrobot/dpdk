@@ -64,7 +64,7 @@ Or, for non-continuous operations, extra UMR WQE will be used.
 Configuration
 -------------
 
-See the :ref:`mlx5 common configuration <mlx5_common_env>`.
+See the :ref:`mlx5 common configuration <platform_mlx5_common_env>`.
 
 A device comes out of NVIDIA factory with pre-defined import methods.
 There are two possible import methods: wrapped or plaintext (valid for AES-XTS only).
@@ -140,7 +140,7 @@ DEK is passed in plaintext without keytag.
 Driver options
 --------------
 
-Please refer to :ref:`mlx5 common options <mlx5_common_driver_options>`
+Please refer to :ref:`mlx5 common options <platform_mlx5_common_driver_options>`
 for an additional list of options shared with other mlx5 drivers.
 
 - ``algo`` parameter [int]
@@ -243,10 +243,10 @@ Linux Prerequisites
 - NVIDIA MLNX_OFED version: **5.3**.
 - Compilation can be done also with rdma-core v15+.
 
-  See :ref:`mlx5 common prerequisites <mlx5_linux_prerequisites>` for more details.
+  See :ref:`mlx5 common prerequisites <platform_mlx5_linux_prerequisites>` for more details.
 
 Windows Prerequisites
 ~~~~~~~~~~~~~~~~~~~~~
 
 - NVIDIA WINOF-2 version: **2.60** or higher.
-  See :ref:`mlx5 common prerequisites <mlx5_windows_prerequisites>` for more details.
+  See :ref:`mlx5 common prerequisites <platform_mlx5_windows_prerequisites>` for more details.

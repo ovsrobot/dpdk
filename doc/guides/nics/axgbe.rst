@@ -51,7 +51,7 @@ Now system is ready to run DPDK application.
 Usage Example
 -------------
 
-Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+Refer to the document :ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
 for details.
 
 Example output:

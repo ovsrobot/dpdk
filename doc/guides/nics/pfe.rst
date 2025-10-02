@@ -157,7 +157,7 @@ Driver compilation and testing
 ------------------------------
 
 Follow instructions available in the document
-:ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+:ref:`compiling and testing a PMD for a NIC <nics_pmd_build_and_test>`
 to launch **testpmd**
 
 Additionally, PFE driver needs `--vdev` as an input with value `net_pfe`

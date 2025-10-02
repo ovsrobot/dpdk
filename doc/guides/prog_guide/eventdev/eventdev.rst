@@ -167,7 +167,6 @@ illustration, refer to Eventdev Adapter documentation for further details.
 The diagram below shows the final state of the application after this
 walk-through:
 
-.. _figure_eventdev-usage1:
 
 .. figure:: ../img/eventdev_usage.*
 

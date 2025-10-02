@@ -163,7 +163,7 @@ New Features
   power. It can work on both legacy and modern virtio devices. In this mode,
   each ``rxq`` is mapped with an excluded MSIx interrupt.
 
-  See the :ref:`Virtio Interrupt Mode <virtio_interrupt_mode>` documentation
+  See the :ref:`Virtio Interrupt Mode <linux_gsg_nics_virtio_interrupt_mode>` documentation
   for more information.
 
 * **Added ARMv8 crypto PMD.**

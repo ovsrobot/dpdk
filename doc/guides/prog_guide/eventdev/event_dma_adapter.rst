@@ -45,7 +45,6 @@ In this mode, events dequeued from the adapter are treated as new events.
 The application has to specify event information (response information)
 which is needed to enqueue an event after the DMA operation is completed.
 
-.. _figure_event_dma_adapter_op_new:
 
 .. figure:: ../img/event_dma_adapter_op_new.*
 
@@ -75,7 +74,6 @@ In this mode, events dequeued from the adapter will be treated as forwarded even
 Application has to specify event information (response information)
 needed to enqueue the event after the DMA operation has completed.
 
-.. _figure_event_dma_adapter_op_forward:
 
 .. figure:: ../img/event_dma_adapter_op_forward.*
 
