@@ -272,17 +272,6 @@ struct rte_eth_stats {
 	uint64_t ierrors;   /**< Total number of erroneous received packets. */
 	uint64_t oerrors;   /**< Total number of failed transmitted packets. */
 	uint64_t rx_nombuf; /**< Total number of Rx mbuf allocation failures. */
-	/* Queue stats are limited to max 256 queues */
-	/** Total number of queue Rx packets. */
-	uint64_t q_ipackets[RTE_ETHDEV_QUEUE_STAT_CNTRS];
-	/** Total number of queue Tx packets. */
-	uint64_t q_opackets[RTE_ETHDEV_QUEUE_STAT_CNTRS];
-	/** Total number of successfully received queue bytes. */
-	uint64_t q_ibytes[RTE_ETHDEV_QUEUE_STAT_CNTRS];
-	/** Total number of successfully transmitted queue bytes. */
-	uint64_t q_obytes[RTE_ETHDEV_QUEUE_STAT_CNTRS];
-	/** Total number of queue packets received that are dropped. */
-	uint64_t q_errors[RTE_ETHDEV_QUEUE_STAT_CNTRS];
 };
 
 /**@{@name Link speed capabilities
@@ -3456,6 +3445,7 @@ int rte_eth_xstats_reset(uint16_t port_id);
  * @return
  *   Zero if successful. Non-zero otherwise.
  */
+__rte_deprecated
 int rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id,
 		uint16_t tx_queue_id, uint8_t stat_idx);
 
@@ -3477,6 +3467,7 @@ int rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id,
  * @return
  *   Zero if successful. Non-zero otherwise.
  */
+__rte_deprecated
 int rte_eth_dev_set_rx_queue_stats_mapping(uint16_t port_id,
 					   uint16_t rx_queue_id,
 					   uint8_t stat_idx);

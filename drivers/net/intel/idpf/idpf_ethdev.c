@@ -268,7 +268,8 @@ idpf_get_mbuf_alloc_failed_stats(struct rte_eth_dev *dev)
 }
 
 static int
-idpf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+idpf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+		struct eth_queue_stats *qstats __rte_unused)
 {
 	struct idpf_vport *vport =
 		(struct idpf_vport *)dev->data->dev_private;
@@ -693,6 +694,8 @@ idpf_dev_configure(struct rte_eth_dev *dev)
 	vport->max_pkt_len =
 		(dev->data->mtu == 0) ? IDPF_DEFAULT_MTU : dev->data->mtu +
 		IDPF_ETH_OVERHEAD;
+
+	vport->adapter->rx_func_type = IDPF_RX_DEFAULT;
 
 	return 0;
 }
