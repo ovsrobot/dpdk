@@ -5,9 +5,11 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <eal_export.h>
 #include <rte_log.h>
+#include <rte_os.h>
 
 #include "rte_argparse.h"
 
@@ -53,6 +55,7 @@ is_valid_value_type_field(const struct rte_argparse_arg *arg)
 	case RTE_ARGPARSE_VALUE_TYPE_U64:
 	case RTE_ARGPARSE_VALUE_TYPE_STR:
 	case RTE_ARGPARSE_VALUE_TYPE_BOOL:
+	case RTE_ARGPARSE_VALUE_TYPE_CORELIST:
 		return true;
 	/* omit default case so compiler warns on any missing enum values */
 	}
@@ -555,6 +558,64 @@ parse_arg_bool(const struct rte_argparse_arg *arg, const char *value)
 }
 
 static int
+parse_arg_corelist(const struct rte_argparse_arg *arg, const char *value)
+{
+	rte_cpuset_t *cpuset = arg->val_saver;
+	const char *last = value;
+	int min = -1;
+
+	if (value == NULL) {
+		*cpuset = *(rte_cpuset_t *)arg->val_set;
+		return 0;
+	}
+
+	CPU_ZERO(cpuset);
+	while (*last != '\0') {
+		char *end;
+		int64_t idx;
+		int32_t max;
+
+		while (isblank(*value))
+			value++;
+
+		if (!isdigit(*value))
+			return -1;
+
+		errno = 0;
+		idx = strtol(value, &end, 10);
+		last = end;
+		if (errno || idx > UINT16_MAX)
+			return -1;
+
+		if (*end == '-') {
+			min = idx; /* start of range, move to next loop stage */
+		} else if (*end == ',' || *end == '\0') {
+			/* single value followed by comma or end (min is set only by '-') */
+			if (min == -1) {
+				min = max = idx;
+			} else if (min > idx) {
+				/* we have range from high to low */
+				max = min;
+				min = idx;
+			} else {
+				/* range from low to high */
+				max = idx;
+			}
+
+			for (; min <= max; min++)
+				CPU_SET(min, cpuset);
+
+			min = -1; /* no longer in a range */
+		} else {
+			/* end is an unexpected character, return error */
+			return -1;
+		}
+		value = last + 1;
+	}
+	return 0;
+}
+
+static int
 parse_arg_autosave(const struct rte_argparse_arg *arg, const char *value)
 {
 	switch (arg->value_type) {
@@ -575,6 +636,8 @@ parse_arg_autosave(const struct rte_argparse_arg *arg, const char *value)
 		return parse_arg_str(arg, value);
 	case RTE_ARGPARSE_VALUE_TYPE_BOOL:
 		return parse_arg_bool(arg, value);
+	case RTE_ARGPARSE_VALUE_TYPE_CORELIST:
+		return parse_arg_corelist(arg, value);
 	/* omit default case so compiler warns on missing enum values */
 	}
 	return -EINVAL;
@@ -716,23 +779,23 @@ calc_help_align(const struct rte_argparse *obj)
 }
 
 static void
-show_oneline_help(const struct rte_argparse_arg *arg, uint32_t width)
+show_oneline_help(FILE *stream, const struct rte_argparse_arg *arg, uint32_t width)
 {
 	uint32_t len = 0;
 	uint32_t i;
 
 	if (arg->name_short != NULL)
-		len = printf(" %s,", arg->name_short);
-	len += printf(" %s", arg->name_long);
+		len = fprintf(stream, " %s,", arg->name_short);
+	len += fprintf(stream, " %s", arg->name_long);
 
 	for (i = len; i < width; i++)
-		printf(" ");
+		fprintf(stream, " ");
 
-	printf("%s\n", arg->help);
+	fprintf(stream, "%s\n", arg->help);
 }
 
 static void
-show_args_pos_help(const struct rte_argparse *obj, uint32_t align)
+show_args_pos_help(FILE *stream, const struct rte_argparse *obj, uint32_t align)
 {
 	uint32_t position_count = calc_position_count(obj);
 	const struct rte_argparse_arg *arg;
@@ -741,19 +804,19 @@ show_args_pos_help(const struct rte_argparse *obj, uint32_t align)
 	if (position_count == 0)
 		return;
 
-	printf("\npositional arguments:\n");
+	fprintf(stream, "\npositional arguments:\n");
 	for (i = 0; /* NULL */; i++) {
 		arg = &obj->args[i];
 		if (arg->name_long == NULL)
 			break;
 		if (!is_arg_positional(arg))
 			continue;
-		show_oneline_help(arg, align);
+		show_oneline_help(stream, arg, align);
 	}
 }
 
 static void
-show_args_opt_help(const struct rte_argparse *obj, uint32_t align)
+show_args_opt_help(FILE *stream, const struct rte_argparse *obj, uint32_t align)
 {
 	static const struct rte_argparse_arg help = {
 		.name_long = "--help",
@@ -763,34 +826,35 @@ show_args_opt_help(const struct rte_argparse *obj, uint32_t align)
 	const struct rte_argparse_arg *arg;
 	uint32_t i;
 
-	printf("\noptions:\n");
-	show_oneline_help(&help, align);
+	fprintf(stream, "\noptions:\n");
+	show_oneline_help(stream, &help, align);
 	for (i = 0; /* NULL */; i++) {
 		arg = &obj->args[i];
 		if (arg->name_long == NULL)
 			break;
 		if (!is_arg_optional(arg))
 			continue;
-		show_oneline_help(arg, align);
+		show_oneline_help(stream, arg, align);
 	}
 }
 
-static void
-show_args_help(const struct rte_argparse *obj)
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_print_help, 25.11)
+void
+rte_argparse_print_help(FILE *stream, const struct rte_argparse *obj)
 {
 	uint32_t align = calc_help_align(obj);
 
-	printf("usage: %s %s\n", obj->prog_name, obj->usage);
+	fprintf(stream, "usage: %s %s\n", obj->prog_name, obj->usage);
 	if (obj->descriptor != NULL)
-		printf("\ndescriptor: %s\n", obj->descriptor);
+		fprintf(stream, "\ndescriptor: %s\n", obj->descriptor);
 
-	show_args_pos_help(obj, align);
-	show_args_opt_help(obj, align);
+	show_args_pos_help(stream, obj, align);
+	show_args_opt_help(stream, obj, align);
 
 	if (obj->epilog != NULL)
-		printf("\n%s\n", obj->epilog);
+		fprintf(stream, "\n%s\n", obj->epilog);
 	else
-		printf("\n");
+		fprintf(stream, "\n");
 }
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_argparse_parse, 24.03)
@@ -820,7 +884,10 @@ rte_argparse_parse(const struct rte_argparse *obj, int argc, char **argv)
 		goto error;
 
 	if (show_help) {
-		show_args_help(obj);
+		if (obj->print_help != NULL)
+			obj->print_help(obj);
+		else
+			rte_argparse_print_help(stdout, obj);
 		exit(0);
 	}
 

@@ -69,6 +69,8 @@ enum rte_argparse_value_type {
 	RTE_ARGPARSE_VALUE_TYPE_STR,
 	/** The argument's value is boolean flag type. */
 	RTE_ARGPARSE_VALUE_TYPE_BOOL,
+	/** The argument's value is a corelist */
+	RTE_ARGPARSE_VALUE_TYPE_CORELIST,
 };
 
 /** Additional flags which may be specified for each argument */
@@ -160,8 +162,13 @@ struct rte_argparse {
 	rte_arg_parser_t callback;
 	/** Opaque which used to invoke callback. */
 	void *opaque;
+	/**
+	 * Function pointer for printing usage when -h is passed.
+	 * If this is NULL, default printing function will be used.
+	 */
+	void (*print_help)(const struct rte_argparse *obj);
 	/** Reserved field used for future extension. */
-	void *reserved[16];
+	void *reserved[15];
 	/** Arguments configuration. Must ended with ARGPARSE_ARG_END(). */
 	struct rte_argparse_arg args[];
 };
@@ -188,6 +195,20 @@ struct rte_argparse {
  */
 __rte_experimental
 int rte_argparse_parse(const struct rte_argparse *obj, int argc, char **argv);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Output the help text information for the given argparse object.
+ *
+ * @param stream
+ *   Output file handle, e.g. stdout, stderr, on which to print the help text.
+ * @param obj
+ *   Parser object.
+ */
+__rte_experimental
+void rte_argparse_print_help(FILE *stream, const struct rte_argparse *obj);
 
 /**
  * @warning
