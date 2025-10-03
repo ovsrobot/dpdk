@@ -83,7 +83,7 @@ iavf_dev_event_handle(void *param __rte_unused)
 			struct iavf_adapter *adapter = pos->dev->data->dev_private;
 			if (pos->event == RTE_ETH_EVENT_INTR_RESET &&
 			    adapter->devargs.auto_reset) {
-				iavf_handle_hw_reset(pos->dev);
+				iavf_handle_hw_reset(pos->dev, false);
 				rte_free(pos);
 				continue;
 			}
@@ -2270,4 +2270,16 @@ iavf_get_phc_time(struct ci_rx_queue *rxq)
 out:
 	rte_spinlock_unlock(&vf->phc_time_aq_lock);
 	return err;
+}
+
+int
+iavf_request_restore(struct rte_eth_dev *dev)
+{
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+
+	vf->vf_reset = true;
+	iavf_set_no_poll(dev->data->dev_private, false);
+	iavf_handle_hw_reset(dev, true);
+
+	return 0;
 }
