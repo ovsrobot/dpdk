@@ -76,6 +76,10 @@ New Features
   * Added multi-process per port.
   * Optimized code.
 
+* **Added PQC ML-KEM and ML-DSA support.**
+
+  * Added PQC ML-KEM support with reference to FIPS203.
+  * Added PQC ML-DSA support with reference to FIPS204.
 
 Removed Items
 -------------
@@ -138,6 +142,9 @@ ABI Changes
 * stack: The structure ``rte_stack_lf_head`` alignment has been updated to 16 bytes
   to avoid unaligned accesses.
 
+* cryptodev: The enum ``rte_crypto_asym_xform_type``, struct ``rte_crypto_asym_xform``
+  and struct ``rte_crypto_asym_op`` are updated to include new values to support
+  ML-KEM and ML-DSA.
 
 Known Issues
 ------------
