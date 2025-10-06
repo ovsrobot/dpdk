@@ -23,3 +23,8 @@ if not is_windows
                 'igc_txrx.c',
         )
 endif
+
+# testpmd crashes with gcc > 11 with compiling with default -O3 or -O2
+if (cc.get_id() == 'gcc' and cc.version().version_compare('>=12.0'))
+    cflags += '-O1'
+endif
