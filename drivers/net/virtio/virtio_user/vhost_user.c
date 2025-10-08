@@ -50,7 +50,7 @@ struct vhost_user_data {
 /* The version of the protocol we support */
 #define VHOST_USER_VERSION    0x1
 
-#define VHOST_MEMORY_MAX_NREGIONS 8
+#define VHOST_MEMORY_MAX_NREGIONS 128
 struct vhost_memory {
 	uint32_t nregions;
 	uint32_t padding;
