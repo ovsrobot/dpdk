@@ -24,6 +24,7 @@ sources = files(
         'iavf_tm.c',
         'iavf_ipsec_crypto.c',
         'iavf_fsub.c',
+        'rte_pmd_iavf.c',
 )
 
 if arch_subdir == 'x86'

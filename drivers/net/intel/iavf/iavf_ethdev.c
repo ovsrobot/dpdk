@@ -3096,7 +3096,7 @@ iavf_is_reset_detected(struct iavf_adapter *adapter)
  * Handle hardware reset
  */
 void
-iavf_handle_hw_reset(struct rte_eth_dev *dev)
+iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 	struct iavf_adapter *adapter = dev->data->dev_private;
@@ -3105,7 +3105,7 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev)
 	if (!dev->data->dev_started)
 		return;
 
-	if (!iavf_is_reset_detected(adapter)) {
+	if (!vf_initiated_reset && !iavf_is_reset_detected(adapter)) {
 		PMD_DRV_LOG(DEBUG, "reset not start");
 		return;
 	}
@@ -3211,6 +3211,11 @@ static struct rte_pci_driver rte_iavf_pmd = {
 	.probe = eth_iavf_pci_probe,
 	.remove = eth_iavf_pci_remove,
 };
+
+bool is_iavf_supported(struct rte_eth_dev *dev)
+{
+	return !strcmp(dev->device->driver->name, rte_iavf_pmd.driver.name);
+}
 
 RTE_PMD_REGISTER_PCI(net_iavf, rte_iavf_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_iavf, pci_id_iavf_map);
