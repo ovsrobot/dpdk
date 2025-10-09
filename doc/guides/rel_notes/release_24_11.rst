@@ -135,6 +135,10 @@ New Features
   * Added SR-IOV VF support.
   * Added recent 1400/14000 and 15000 models to the supported list.
 
+* **Added ENETC4 PMD**
+
+  * Added ENETC4 PMD for NXP i.MX95 platform.
+
 * **Updated Marvell cnxk net driver.**
 
   * Added ethdev driver support for CN20K SoC.

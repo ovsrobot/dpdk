@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright 2018-2020 NXP
+ * Copyright 2018-2024 NXP
  */
 
 #ifndef _ENETC_HW_H_
 #define _ENETC_HW_H_
 #include <rte_io.h>
+#include <ethdev_pci.h>
 
 #define BIT(x)		((uint64_t)1 << ((x)))
 
