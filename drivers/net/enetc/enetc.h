@@ -116,6 +116,8 @@ int enetc4_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 int enetc4_tx_queue_start(struct rte_eth_dev *dev, uint16_t qidx);
 int enetc4_tx_queue_stop(struct rte_eth_dev *dev, uint16_t qidx);
 void enetc4_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
+const uint32_t *enetc4_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused,
+			size_t *no_of_elements);
 
 /*
  * enetc4_vf function prototype
