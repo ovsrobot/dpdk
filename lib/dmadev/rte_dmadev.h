@@ -265,6 +265,18 @@ int16_t rte_dma_next_dev(int16_t start_dev_id);
  * known from 'nb_priorities' field in struct rte_dma_info.
  */
 #define RTE_DMA_CAPA_PRI_POLICY_SP	RTE_BIT64(8)
+/** Support inter-process DMA transfers.
+ *
+ * When this bit is set, the DMA device can perform memory transfers between
+ * different process memory spaces.
+ */
+#define RTE_DMA_CAPA_INTER_PROCESS_DOMAIN	RTE_BIT64(9)
+/** Support inter-OS domain DMA transfers.
+ *
+ * The DMA device can perform memory transfers across different operating
+ * system domains.
+ */
+#define RTE_DMA_CAPA_INTER_OS_DOMAIN		RTE_BIT64(10)
 
 /** Support copy operation.
  * This capability start with index of 32, so that it could leave gap between
@@ -418,8 +430,13 @@ int rte_dma_close(int16_t dev_id);
  */
 enum rte_dma_direction {
 	/** DMA transfer direction - from memory to memory.
+	 * When the device supports inter-process or inter-OS domain transfers,
+	 * the field `domain_type` in `struct rte_dma_vchan_conf::domain` specifies
+	 * the type of domain. For memory-to-memory transfers within the same domain
+	 * or process, `domain_type` should be set to `RTE_DMA_INTER_DOMAIN_NONE`.
 	 *
 	 * @see struct rte_dma_vchan_conf::direction
+	 * @see struct rte_dma_inter_domain_param::domain_type
 	 */
 	RTE_DMA_DIR_MEM_TO_MEM,
 	/** DMA transfer direction - from memory to device.
@@ -565,6 +582,36 @@ struct rte_dma_auto_free_param {
 };
 
 /**
+ * Inter-DMA transfer domain type.
+ *
+ * This enum defines the types of transfer domains applicable to DMA operations.
+ * It helps categorize whether a DMA transfer is occurring within the same domain,
+ * across different processes, or between distinct operating system domains.
+ *
+ * @see struct rte_dma_inter_domain_param:domain_type
+ */
+enum rte_dma_inter_domain_type {
+	RTE_DMA_INTER_DOMAIN_NONE, /**< No inter-domain transfer; standard DMA within same domain */
+	RTE_DMA_INTER_PROCESS_DOMAIN, /**< Transfer occurs between different user-space processes */
+	RTE_DMA_INTER_OS_DOMAIN, /**< Transfer spans across different operating system domains. */
+};
+
+/**
+ * Parameters for inter-process or inter-OS DMA transfers.
+ *
+ * This structure defines the parameters required to perform DMA transfers
+ * across different domains, such as between processes or operating systems.
+ * It includes the domain type and handler identifiers for both the source
+ * and destination domains.
+ */
+struct rte_dma_inter_domain_param {
+	enum rte_dma_inter_domain_type domain_type; /**< Type of inter-domain. */
+	uint16_t src_handler; /**< Source domain handler identifier. */
+	uint16_t dst_handler; /**< Destination domain handler identifier. */
+	uint64_t reserved[2]; /**< Reserved for future fields. */
+};
+
+/**
  * A structure used to configure a virtual DMA channel.
  *
  * @see rte_dma_vchan_setup
@@ -601,6 +648,15 @@ struct rte_dma_vchan_conf {
 	 * @see struct rte_dma_auto_free_param
 	 */
 	struct rte_dma_auto_free_param auto_free;
+	/** Parameters for inter-process or inter-OS domain DMA transfers. This field
+	 * specifies the source and destination domain handlers required  for DMA
+	 * operations that span across different processes or operating system domains.
+	 *
+	 * @see RTE_DMA_CAPA_INTER_PROCESS_DOMAIN
+	 * @see RTE_DMA_CAPA_INTER_OS_DOMAIN
+	 * @see struct rte_dma_inter_domain_param
+	 */
+	struct rte_dma_inter_domain_param domain;
 };
 
 /**
