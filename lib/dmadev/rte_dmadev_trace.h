@@ -98,6 +98,48 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_int(ret);
 )
 
+RTE_TRACE_POINT(
+	rte_dma_trace_access_pair_group_create,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, rte_uuid_t domain_id, rte_uuid_t token,
+			     int16_t *group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_u8_ptr(&domain_id[0]);
+	rte_trace_point_emit_u8_ptr(&token[0]);
+	rte_trace_point_emit_ptr(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_pair_group_destroy,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, int16_t group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_i16(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_pair_group_join,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, int16_t group_id, rte_uuid_t token),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_i16(group_id);
+	rte_trace_point_emit_u8_ptr(&token[0]);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_pair_group_leave,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, int16_t group_id),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_i16(group_id);
+)
+
+RTE_TRACE_POINT(
+	rte_dma_trace_access_pair_group_handle_get,
+	RTE_TRACE_POINT_ARGS(int16_t dev_id, int16_t group_id, rte_uuid_t domain_id,
+			     uint16_t *handle),
+	rte_trace_point_emit_i16(dev_id);
+	rte_trace_point_emit_i16(group_id);
+	rte_trace_point_emit_u8_ptr(&domain_id[0]);
+	rte_trace_point_emit_ptr(handle);
+)
+
 #ifdef __cplusplus
 }
 #endif

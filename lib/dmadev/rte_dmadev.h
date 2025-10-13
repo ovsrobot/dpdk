@@ -148,6 +148,7 @@
 
 #include <rte_bitops.h>
 #include <rte_common.h>
+#include <rte_uuid.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -719,6 +720,105 @@ rte_dma_vchan_status(int16_t dev_id, uint16_t vchan, enum rte_dma_vchan_status *
  *   0 on success. Otherwise negative value is returned.
  */
 int rte_dma_dump(int16_t dev_id, FILE *f);
+
+/**
+ * Callback function invoked when a DMA device leaves an access group or when the group is
+ * destroyed due to some exception or failure.
+ *
+ * @param dma_id
+ *   Identifier of the DMA device that is leaving the group.
+ * @param group_id
+ *   ID of the access group being exited.
+ * @param user_data
+ *   User-defined data passed to the callback for context.
+ */
+typedef void (*rte_dma_access_pair_leave_cb_t)(int16_t dma_id, int16_t group_id, void *user_data);
+
+/**
+ * Create an access pair group to enable secure DMA transfers between devices across different
+ * processes or operating system domains.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device initiating the group.
+ * @param domain_id
+ *   Unique identifier representing the process or OS domain.
+ * @param token
+ *   Authentication token used to establish the access group.
+ * @param[out] group_id
+ *   Pointer to store the ID of the newly created access group.
+ *
+ * @return
+ *   0 on success,
+ *   negative error code on failure.
+ */
+int rte_dma_access_pair_group_create(int16_t dev_id, rte_uuid_t domain_id, rte_uuid_t token,
+				     int16_t *group_id);
+/**
+ * Destroy an access pair group if all participating devices have exited. This operation is only
+ * permitted by the device that originally created the group; attempts by other devices will result
+ * in failure.
+ *
+ * @param dev_id
+ *   Identifier of the device requesting group destruction.
+ * @param group_id
+ *   ID of the access group to be destroyed.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_pair_group_destroy(int16_t dev_id, int16_t group_id);
+/**
+ * Join an existing access group to enable secure DMA transfers between devices across different
+ * processes or OS domains.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device attempting to join the group.
+ * @param group_id
+ *   ID of the access group to join.
+ * @param token
+ *   Authentication token used to validate group membership.
+ * @param leave_cb
+ *   Callback function to be invoked when the device leaves the group or when the group
+ *   is destroyed due to some exception or failure.
+ *
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_pair_group_join(int16_t dev_id, int16_t group_id, rte_uuid_t token,
+				   rte_dma_access_pair_leave_cb_t leave_cb);
+/**
+ * Leave an access group, removing the device's entry from the group table and disabling
+ * inter-domain DMA transfers to and from this device. This operation is not permitted for the
+ * device that originally created the group.
+ *
+ * @param dev_id
+ *   Identifier of the device requesting to leave the group.
+ * @param group_id
+ *   ID of the access group to leave.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_pair_group_leave(int16_t dev_id, int16_t group_id);
+/**
+ * Retrieve the handler associated with a specific domain ID, which is used by the application to
+ * query source or destinationin handler to initiate inter-process or inter-OS DMA transfers.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device requesting the handler.
+ * @param group_id
+ *   ID of the access group to query.
+ * @param group_tbl
+ *   Unique identifier of the target process or OS domain.
+ * @param[out] handle
+ *   Pointer to store the retrieved handler value.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+int rte_dma_access_pair_group_handle_get(int16_t dev_id, int16_t group_id, rte_uuid_t domain_id,
+					 uint16_t *handle);
 
 /**
  * DMA transfer result status code defines.
