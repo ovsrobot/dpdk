@@ -1366,6 +1366,10 @@ M: Chengwen Feng <fengchengwen@huawei.com>
 F: drivers/dma/hisilicon/
 F: doc/guides/dmadevs/hisilicon.rst
 
+HiSilicon Accelerator DMA
+M: Chengwen Feng <fengchengwen@huawei.com>
+F: drivers/dma/acc/
+
 Marvell CNXK DPI DMA
 M: Vamsi Attunuru <vattunuru@marvell.com>
 T: git://dpdk.org/next/dpdk-next-net-mrvl
