@@ -763,6 +763,25 @@ verify_data(struct test_configure *cfg, struct rte_mbuf **srcs, struct rte_mbuf 
 	return 0;
 }
 
+static void
+stop_dev(struct test_configure *cfg, bool *stopped)
+{
+	struct lcore_dma_map_t *lcore_dma_map;
+	uint32_t i;
+
+	if (*stopped)
+		return;
+
+	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY) {
+		for (i = 0; i < cfg->num_worker; i++) {
+			lcore_dma_map = &cfg->dma_config[i].lcore_dma_map;
+			printf("Stopping dmadev %d\n", lcore_dma_map->dma_id);
+			rte_dma_stop(lcore_dma_map->dma_id);
+		}
+	}
+	*stopped = true;
+}
+
 int
 mem_copy_benchmark(struct test_configure *cfg)
 {
@@ -778,6 +797,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 	float bandwidth, bandwidth_total;
 	unsigned int lcore_id = 0;
 	uint32_t avg_cycles_total;
+	bool dev_stopped = false;
 	uint32_t avg_cycles = 0;
 	float mops, mops_total;
 	float memory = 0;
@@ -840,7 +860,7 @@ mem_copy_benchmark(struct test_configure *cfg)
 		    vchan_dev->tdir == RTE_DMA_DIR_MEM_TO_DEV) {
 			if (attach_ext_buffer(vchan_dev, lcores[i], cfg->is_sg,
 					      (nr_sgsrc/nb_workers), (nr_sgdst/nb_workers)) < 0)
-				goto out;
+				goto stop_dev;
 		}
 
 		rte_eal_remote_launch(get_work_function(cfg), (void *)(lcores[i]), lcore_id);
@@ -875,6 +895,8 @@ mem_copy_benchmark(struct test_configure *cfg)
 
 	rte_eal_mp_wait_lcore();
 
+	stop_dev(cfg, &dev_stopped);
+
 	ret = verify_data(cfg, srcs, dsts, nr_buf);
 	if (ret != 0)
 		goto out;
@@ -900,8 +922,10 @@ mem_copy_benchmark(struct test_configure *cfg)
 	output_csv(CSV_TOTAL_LINE_FMT, cfg->scenario_id, nr_buf, memory * nb_workers,
 			(avg_cycles_total * (float) 1.0) / nb_workers, bandwidth_total, mops_total);
 
-out:
+stop_dev:
+	stop_dev(cfg, &dev_stopped);
 
+out:
 	for (k = 0; k < nb_workers; k++) {
 		struct rte_mbuf **sbuf = NULL, **dbuf = NULL;
 		vchan_dev = &cfg->dma_config[k].vchan_dev;
@@ -953,14 +977,6 @@ out:
 	for (i = 0; i < nb_workers; i++) {
 		rte_free(lcores[i]);
 		lcores[i] = NULL;
-	}
-
-	if (cfg->test_type == TEST_TYPE_DMA_MEM_COPY) {
-		for (i = 0; i < nb_workers; i++) {
-			lcore_dma_map = &cfg->dma_config[i].lcore_dma_map;
-			printf("Stopping dmadev %d\n", lcore_dma_map->dma_id);
-			rte_dma_stop(lcore_dma_map->dma_id);
-		}
 	}
 
 	return ret;
