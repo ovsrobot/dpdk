@@ -235,9 +235,8 @@ ci_rxq_vec_capable(uint16_t nb_desc, uint16_t rx_free_thresh, uint64_t offloads)
 			(nb_desc % rx_free_thresh) != 0)
 		return false;
 
-	/* no driver supports timestamping or buffer split on vector path */
-	if ((offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) ||
-			(offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT))
+	/* no driver supports buffer split on vector path */
+	if (offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT)
 		return false;
 
 	return true;
