@@ -76,6 +76,9 @@ New Features
   * Added multi-process per port.
   * Optimized code.
 
+* **Updated DPAA2 ethernet driver.**
+
+  * Added additional MAC counters in xstats.
 
 Removed Items
 -------------
