@@ -558,9 +558,7 @@ if [ -n "$1" ] ; then
 	for patch in "$@" ; do
 		check "$patch" ''
 	done
-elif [ ! -t 0 ] ; then # stdin
-	check '' ''
-else
+elif [ $number -ne 0 ] || [ -t 0 ]; then
 	if [ $number -eq 0 ] ; then
 		commits=$(git rev-list --reverse $range)
 	else
@@ -569,6 +567,8 @@ else
 	for commit in $commits ; do
 		check '' $commit
 	done
+else # stdin
+	check '' ''
 fi
 pass=$(($total - $status))
 $quiet || printf '\n%d/%d valid patch' $pass $total
