@@ -226,6 +226,7 @@ struct ena_com_admin_queue {
 
 	/* Indicate if the admin queue should poll for completion */
 	bool polling;
+	ena_atomic32_t polling_for_completions;
 
 	/* Define if fallback to polling mode should occur */
 	bool auto_polling;

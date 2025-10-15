@@ -74,6 +74,10 @@ typedef uint64_t dma_addr_t;
 #define mmiowb rte_io_wmb
 #define __iomem
 
+#define smp_wmb rte_smp_wmb
+#define smp_rmb rte_smp_rmb
+#define smp_mb rte_smp_mb
+
 #ifndef READ_ONCE
 #define READ_ONCE(var) (*((volatile typeof(var) *)(&(var))))
 #endif
@@ -267,10 +271,20 @@ ena_mem_alloc_coherent(struct rte_eth_dev_data *data, size_t size,
 #define ENA_REG_READ32(bus, reg)					       \
 	__extension__ ({ (void)(bus); rte_read32_relaxed((reg)); })
 
-#define ATOMIC32_INC(i32_ptr) rte_atomic32_inc(i32_ptr)
-#define ATOMIC32_DEC(i32_ptr) rte_atomic32_dec(i32_ptr)
-#define ATOMIC32_SET(i32_ptr, val) rte_atomic32_set(i32_ptr, val)
-#define ATOMIC32_READ(i32_ptr) rte_atomic32_read(i32_ptr)
+#define ATOMIC32_INC(i32_ptr)									\
+	rte_atomic_fetch_add_explicit(&(i32_ptr)->cnt, 1, rte_memory_order_seq_cst)
+#define ATOMIC32_DEC(i32_ptr)									\
+	rte_atomic_fetch_sub_explicit(&(i32_ptr)->cnt, 1, rte_memory_order_seq_cst)
+#define ATOMIC32_SET(i32_ptr, val)								\
+	rte_atomic_store_explicit(&(i32_ptr)->cnt, val, rte_memory_order_seq_cst)
+#define ATOMIC32_SET_RELEASE(i32_ptr, val)							\
+	do {											\
+		rte_atomic_thread_fence(rte_memory_order_release);				\
+		rte_atomic_store_explicit(&(i32_ptr)->cnt, val, rte_memory_order_seq_cst);	\
+	} while (0)
+#define ATOMIC32_READ(i32_ptr) rte_atomic_load_explicit(&(i32_ptr)->cnt, rte_memory_order_seq_cst)
+#define ATOMIC32_CMP_EXCHANGE(I32_PTR, OLD, NEW) \
+	rte_atomic32_cmpset((volatile uint32_t *)(I32_PTR), OLD, NEW)
 
 #define msleep(x) rte_delay_us(x * 1000)
 #define udelay(x) rte_delay_us(x)
