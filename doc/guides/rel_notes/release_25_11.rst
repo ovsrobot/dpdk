@@ -58,6 +58,7 @@ New Features
 * **Updated Amazon ENA (Elastic Network Adapter) net driver.**
 
   * Added support for retrieving HW timestamps for Rx packets with nanosecond resolution.
+  * Fixed PCI BAR mapping on 64K page size.
 
 * **Added speed 800G.**
 
