@@ -14,8 +14,8 @@
  */
 struct tfc_tsid_db {
 	bool ts_valid; /**< Table scope is valid */
-	bool ts_is_shared; /**< Table scope is shared */
-	bool ts_is_bs_owner; /**< Backing store allocated by this instance (PF) */
+	enum cfa_scope_type scope_type; /**< non-shared, shared-app, global */
+	bool ts_is_bs_owner; /**< Backing store alloced by this instance (PF) */
 	uint16_t ts_max_pools; /**< maximum pools per CPM instance */
 	enum cfa_app_type ts_app; /**< application type TF/AFM */
 	/** backing store memory config */
@@ -23,6 +23,22 @@ struct tfc_tsid_db {
 	/** pool info config */
 	struct tfc_ts_pool_info ts_pool[CFA_DIR_MAX];
 };
+
+/* Only a single global scope is allowed
+ */
+#define TFC_GLOBAL_SCOPE_MAX 1
+
+/* TFC Global Object
+ * The global object is not per port, it is global.  It is only
+ * used when a global table scope is created.
+ */
+struct tfc_global_object {
+	uint8_t gtsid;
+	struct tfc_tsid_db gtsid_db;
+	void *gts_tim;
+};
+
+struct tfc_global_object tfc_global;
 
 /** TFC Object Signature
  * This signature identifies the tfc object database and
@@ -48,12 +64,14 @@ struct tfc_object {
 	 *  table scope.  Only valid on a PF.
 	 */
 	void *ts_tim;
+	struct tfc_global_object *tfgo; /**< pointer to global */
 };
 
 void tfo_open(void **tfo, bool is_pf)
 {
 	int rc;
 	struct tfc_object *tfco = NULL;
+	struct tfc_global_object *tfgo;
 	uint32_t tim_db_size;
 
 	if (tfo == NULL) {
@@ -79,7 +97,7 @@ void tfo_open(void **tfo, bool is_pf)
 		return;
 	}
 	if (is_pf) {
-		/* Allocate TIM */
+		/* Allocate per bp TIM database */
 		rc = cfa_tim_query(TFC_TBL_SCOPE_MAX, CFA_REGION_TYPE_MAX,
 				   &tim_db_size);
 		if (rc)
@@ -99,7 +117,31 @@ void tfo_open(void **tfo, bool is_pf)
 			goto cleanup;
 		}
 	}
+	tfco->tfgo = &tfc_global;
+	tfgo = tfco->tfgo;
 
+	if (is_pf && !tfgo->gts_tim) {
+		/* Allocate global scope TIM database */
+		rc = cfa_tim_query(TFC_GLOBAL_SCOPE_MAX + 1, CFA_REGION_TYPE_MAX,
+				   &tim_db_size);
+		if (rc)
+			goto cleanup;
+
+		tfgo->gts_tim = rte_zmalloc("GTIM", tim_db_size, 0);
+		if (!tfgo->gts_tim)
+			goto cleanup;
+
+		rc = cfa_tim_open(tfgo->gts_tim,
+				  tim_db_size,
+				  TFC_GLOBAL_SCOPE_MAX + 1,
+				  CFA_REGION_TYPE_MAX);
+		if (rc) {
+			rte_free(tfgo->gts_tim);
+			tfgo->gts_tim = NULL;
+			goto cleanup;
+		}
+	}
+	tfgo->gtsid = INVALID_TSID;
 	*tfo = tfco;
 	return;
 
@@ -119,13 +161,11 @@ void tfo_close(void **tfo)
 
 	if (*tfo && tfco->signature == TFC_OBJ_SIGNATURE) {
 		/*  If TIM is setup free it and any TPMs */
-		if (tfo_tim_get(*tfo, &tim))
-			goto done;
-
-		if (!tim)
-			goto done;
-
 		for (tsid = 0; tsid < TFC_TBL_SCOPE_MAX; tsid++) {
+			if (tfo_tim_get(*tfo, &tim, tsid))
+				continue;
+			if (!tim)
+				continue;
 			for (region = 0; region < CFA_REGION_TYPE_MAX; region++) {
 				for (dir = 0; dir < CFA_DIR_MAX; dir++) {
 					tpm = NULL;
@@ -145,10 +185,13 @@ void tfo_close(void **tfo)
 				}
 			}
 		}
-		rte_free(tim);
+		if (tim)
+			rte_free(tim);
 		tfco->ts_tim = NULL;
-done:
-		rte_free(*tfo);
+		tfco->tfgo = NULL;
+
+		if (*tfo)
+			rte_free(*tfo);
 		*tfo = NULL;
 	}
 }
@@ -176,6 +219,7 @@ int tfo_mpcinfo_get(void *tfo, struct cfa_bld_mpcinfo **mpc_info)
 int tfo_ts_validate(void *tfo, uint8_t ts_tsid, bool *ts_valid)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	struct tfc_tsid_db *tsid_db;
 
 	if (tfo == NULL) {
@@ -192,7 +236,11 @@ int tfo_ts_validate(void *tfo, uint8_t ts_tsid, bool *ts_valid)
 		PMD_DRV_LOG_LINE(ERR, "Invalid tsid %d", ts_tsid);
 		return -EINVAL;
 	}
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	if (ts_valid)
 		*ts_valid = tsid_db->ts_valid;
@@ -200,10 +248,11 @@ int tfo_ts_validate(void *tfo, uint8_t ts_tsid, bool *ts_valid)
 	return 0;
 }
 
-int tfo_ts_set(void *tfo, uint8_t ts_tsid, bool ts_is_shared,
+int tfo_ts_set(void *tfo, uint8_t ts_tsid, enum cfa_scope_type scope_type,
 	       enum cfa_app_type ts_app, bool ts_valid, uint16_t ts_max_pools)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	struct tfc_tsid_db *tsid_db;
 
 	if (tfo == NULL) {
@@ -220,21 +269,32 @@ int tfo_ts_set(void *tfo, uint8_t ts_tsid, bool ts_is_shared,
 		return -EINVAL;
 	}
 
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (scope_type == CFA_SCOPE_TYPE_GLOBAL) {
+		tsid_db = &tfgo->gtsid_db;
+		tfgo->gtsid = ts_tsid;
+	} else if (scope_type == CFA_SCOPE_TYPE_INVALID && tfgo &&
+		   ts_tsid == tfgo->gtsid) {
+		tfgo->gtsid = INVALID_TSID;
+		tsid_db = &tfgo->gtsid_db;
+	} else {
+		tsid_db = &tfco->tsid_db[ts_tsid];
+	}
 
 	tsid_db->ts_valid = ts_valid;
-	tsid_db->ts_is_shared = ts_is_shared;
+	tsid_db->scope_type = scope_type;
 	tsid_db->ts_app = ts_app;
 	tsid_db->ts_max_pools = ts_max_pools;
 
 	return 0;
 }
 
-int tfo_ts_get(void *tfo, uint8_t ts_tsid, bool *ts_is_shared,
+int tfo_ts_get(void *tfo, uint8_t ts_tsid, enum cfa_scope_type *scope_type,
 	       enum cfa_app_type *ts_app, bool *ts_valid,
 	       uint16_t *ts_max_pools)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	struct tfc_tsid_db *tsid_db;
 
 	if (tfo == NULL) {
@@ -250,13 +310,17 @@ int tfo_ts_get(void *tfo, uint8_t ts_tsid, bool *ts_is_shared,
 		return -EINVAL;
 	}
 
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (ts_tsid == tfgo->gtsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	if (ts_valid)
 		*ts_valid = tsid_db->ts_valid;
 
-	if (ts_is_shared)
-		*ts_is_shared = tsid_db->ts_is_shared;
+	if (scope_type)
+		*scope_type = tsid_db->scope_type;
 
 	if (ts_app)
 		*ts_app = tsid_db->ts_app;
@@ -274,6 +338,7 @@ int tfo_ts_set_mem_cfg(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		       struct tfc_ts_mem_cfg *mem_cfg)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	int rc = 0;
 	struct tfc_tsid_db *tsid_db;
 
@@ -294,7 +359,11 @@ int tfo_ts_set_mem_cfg(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		return -EINVAL;
 	}
 
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	tsid_db->ts_mem[region][dir] = *mem_cfg;
 	tsid_db->ts_is_bs_owner = is_bs_owner;
@@ -309,6 +378,7 @@ int tfo_ts_get_mem_cfg(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		       struct tfc_ts_mem_cfg *mem_cfg)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	int rc = 0;
 	struct tfc_tsid_db *tsid_db;
 
@@ -329,7 +399,11 @@ int tfo_ts_get_mem_cfg(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		return -EINVAL;
 	}
 
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	*mem_cfg = tsid_db->ts_mem[region][dir];
 	if (is_bs_owner)
@@ -345,6 +419,7 @@ int tfo_ts_get_cpm_inst(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 {
 	int rc = 0;
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	struct tfc_tsid_db *tsid_db;
 
 	if (tfo == NULL) {
@@ -368,7 +443,11 @@ int tfo_ts_get_cpm_inst(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		return -EINVAL;
 	}
 
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	*cpm_lkup = tsid_db->ts_pool[dir].lkup_cpm;
 	*cpm_act = tsid_db->ts_pool[dir].act_cpm;
@@ -382,6 +461,7 @@ int tfo_ts_set_cpm_inst(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 {
 	int rc = 0;
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	struct tfc_tsid_db *tsid_db;
 
 	if (tfo == NULL) {
@@ -396,7 +476,11 @@ int tfo_ts_set_cpm_inst(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		PMD_DRV_LOG_LINE(ERR, "Invalid tsid %d", ts_tsid);
 		return -EINVAL;
 	}
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	tsid_db->ts_pool[dir].lkup_cpm = cpm_lkup;
 	tsid_db->ts_pool[dir].act_cpm = cpm_act;
@@ -409,6 +493,7 @@ int tfo_ts_set_pool_info(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 			 struct tfc_ts_pool_info *ts_pool)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	int rc = 0;
 	struct tfc_tsid_db *tsid_db;
 
@@ -428,7 +513,12 @@ int tfo_ts_set_pool_info(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		PMD_DRV_LOG_LINE(ERR, "Invalid tsid %d", ts_tsid);
 		return -EINVAL;
 	}
-	tsid_db = &tfco->tsid_db[ts_tsid];
+
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	tsid_db->ts_pool[dir] = *ts_pool;
 
@@ -441,6 +531,7 @@ int tfo_ts_get_pool_info(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 			 struct tfc_ts_pool_info *ts_pool)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	int rc = 0;
 	struct tfc_tsid_db *tsid_db;
 
@@ -460,7 +551,11 @@ int tfo_ts_get_pool_info(void *tfo, uint8_t ts_tsid, enum cfa_dir dir,
 		PMD_DRV_LOG_LINE(ERR, "Invalid tsid %d", ts_tsid);
 		return -EINVAL;
 	}
-	tsid_db = &tfco->tsid_db[ts_tsid];
+	tfgo = tfco->tfgo;
+	if (tfgo && tfgo->gtsid == ts_tsid)
+		tsid_db = &tfgo->gtsid_db;
+	else
+		tsid_db = &tfco->tsid_db[ts_tsid];
 
 	*ts_pool = tsid_db->ts_pool[dir];
 
@@ -519,9 +614,10 @@ int tfo_sid_get(void *tfo, uint16_t *sid)
 	return 0;
 }
 
-int tfo_tim_set(void *tfo, void *tim)
+int tfo_tim_get(void *tfo, void **tim, uint8_t ts_tsid)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 
 	if (tfo == NULL) {
 		PMD_DRV_LOG_LINE(ERR, "Invalid tfo pointer");
@@ -532,68 +628,60 @@ int tfo_tim_set(void *tfo, void *tim)
 		return -EINVAL;
 	}
 	if (tim == NULL) {
-		PMD_DRV_LOG_LINE(ERR, "Invalid tim pointer");
+		PMD_DRV_LOG_LINE(ERR, "%s: Invalid tim pointer to pointer",
+				 __func__);
 		return -EINVAL;
 	}
 
-	if (tfco->ts_tim != NULL &&
-	    tfco->ts_tim != tim) {
-		PMD_DRV_LOG_LINE(ERR,
-				 "Cannot set TS TIM, TIM is already set");
-		return -EINVAL;
-	}
+	*tim = NULL;
+	tfgo = tfco->tfgo;
 
-	tfco->ts_tim = tim;
-
-	return 0;
-}
-
-int tfo_tim_get(void *tfo, void **tim)
-{
-	struct tfc_object *tfco = (struct tfc_object *)tfo;
-
-	if (tfo == NULL) {
-		PMD_DRV_LOG_LINE(ERR, "Invalid tfo pointer");
-		return -EINVAL;
-	}
-	if (tfco->signature != TFC_OBJ_SIGNATURE) {
-		PMD_DRV_LOG_LINE(ERR, "Invalid tfo object");
-		return -EINVAL;
-	}
-	if (tim == NULL) {
-		PMD_DRV_LOG_LINE(ERR, "Invalid tim pointer to pointer");
-		return -EINVAL;
-	}
-	if (tfco->ts_tim == NULL) {
+	if (ts_tsid == tfgo->gtsid) {
+		if (!tfgo->gts_tim)
 		/* ts tim could be null, no need to log error message */
-		return -ENODEV;
+			return -ENOENT;
+		*tim = tfgo->gts_tim;
+	} else {
+		if (!tfco->ts_tim)
+			/* ts tim could be null, no need to log error message */
+			return -ENOENT;
+		*tim = tfco->ts_tim;
 	}
-
-	*tim = tfco->ts_tim;
 
 	return 0;
 }
-
 
 int tfo_tsid_get(void *tfo, uint8_t *tsid)
 {
 	struct tfc_object *tfco = (struct tfc_object *)tfo;
+	struct tfc_global_object *tfgo;
 	struct tfc_tsid_db *tsid_db;
 	uint8_t i;
 
 	if (tfo == NULL) {
-		PMD_DRV_LOG(ERR, "%s: Invalid tfo pointer", __func__);
+		PMD_DRV_LOG_LINE(ERR, "%s: Invalid tfo pointer",
+				 __func__);
 		return -EINVAL;
 	}
 	if (tfco->signature != TFC_OBJ_SIGNATURE) {
-		PMD_DRV_LOG(ERR, "%s: Invalid tfo object", __func__);
+		PMD_DRV_LOG_LINE(ERR, "%s: Invalid tfo object",
+				 __func__);
 		return -EINVAL;
 	}
 	if (tsid == NULL) {
-		PMD_DRV_LOG(ERR, "%s: Invalid tsid pointer", __func__);
+		PMD_DRV_LOG_LINE(ERR, "%s: Invalid tsid pointer",
+				 __func__);
 		return -EINVAL;
 	}
 
+	tfgo = tfco->tfgo;
+	if (tfgo) {
+		tsid_db = &tfgo->gtsid_db;
+		if (tsid_db->ts_valid && tfgo->gtsid != INVALID_TSID) {
+			*tsid = tfgo->gtsid;
+			return 0;
+		}
+	}
 	for (i = 1; i < TFC_TBL_SCOPE_MAX; i++) {
 		tsid_db = &tfco->tsid_db[i];
 
