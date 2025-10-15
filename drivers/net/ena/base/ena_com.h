@@ -1197,6 +1197,8 @@ static inline int ena_com_get_customer_metric_count(struct ena_com_dev *ena_dev)
  * @unmask: unmask enable/disable
  * @no_moderation_update: 0 - Indicates that any of the TX/RX intervals was
  *                        updated, 1 - otherwise
+ * @lost_interrupt: true - if driver heuristic indicates interrupt was lost
+ *                  false - otherwise
  *
  * Prepare interrupt update register with the supplied parameters.
  */
@@ -1204,7 +1206,8 @@ static inline void ena_com_update_intr_reg(struct ena_eth_io_intr_reg *intr_reg,
 					   u32 rx_delay_interval,
 					   u32 tx_delay_interval,
 					   bool unmask,
-					   bool no_moderation_update)
+					   bool no_moderation_update,
+					   bool lost_interrupt)
 {
 	intr_reg->intr_control = 0;
 	intr_reg->intr_control |= rx_delay_interval &
@@ -1215,11 +1218,11 @@ static inline void ena_com_update_intr_reg(struct ena_eth_io_intr_reg *intr_reg,
 			       ENA_ETH_IO_INTR_REG_TX_INTR_DELAY_MASK,
 			       ENA_ETH_IO_INTR_REG_TX_INTR_DELAY_SHIFT);
 
-	if (unmask)
+	if (likely(unmask && !lost_interrupt))
 		intr_reg->intr_control |= ENA_ETH_IO_INTR_REG_INTR_UNMASK_MASK;
 
 	intr_reg->intr_control |=
-		ENA_FIELD_PREP(((u32)no_moderation_update),
+		ENA_FIELD_PREP(((u32)(no_moderation_update && !lost_interrupt)),
 			       ENA_ETH_IO_INTR_REG_NO_MODERATION_UPDATE_MASK,
 			       ENA_ETH_IO_INTR_REG_NO_MODERATION_UPDATE_SHIFT);
 }
