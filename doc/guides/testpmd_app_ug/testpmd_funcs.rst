@@ -67,13 +67,14 @@ Command File Functions
 To facilitate loading large number of commands or to avoid cutting and pasting where not
 practical or possible testpmd supports alternative methods for executing commands.
 
-* If started with the ``--cmdline-file=FILENAME`` command line argument testpmd
-  will execute all CLI commands contained within the file immediately before
+* If started with the ``--cmdline-file=FILENAME``
+  or ``--cmdline-file-noecho=FILENAME`` command line argument,
+  testpmd will execute all CLI commands contained within the file immediately before
   starting packet forwarding or entering interactive mode.
 
 .. code-block:: console
 
-   ./dpdk-testpmd -n4 -r2 ... -- -i --cmdline-file=/home/ubuntu/flow-create-commands.txt
+   ./dpdk-testpmd ... -- -i --cmdline-file-noecho=/home/ubuntu/flow-create-commands.txt
    Interactive-mode selected
    CLI commands to be read from /home/ubuntu/flow-create-commands.txt
    Configuring Port 0 (socket 0)
@@ -90,12 +91,12 @@ practical or possible testpmd supports alternative methods for executing command
    ...
    Flow rule #498 created
    Flow rule #499 created
-   Read all CLI commands from /home/ubuntu/flow-create-commands.txt
+   Finished reading all CLI commands from /home/ubuntu/flow-create-commands.txt
    testpmd>
 
 
 * At run-time additional commands can be loaded in bulk by invoking the ``load FILENAME``
-  command.
+  or ``load_echo FILENAME`` command.
 
 .. code-block:: console
 
@@ -106,7 +107,7 @@ practical or possible testpmd supports alternative methods for executing command
    ...
    Flow rule #498 created
    Flow rule #499 created
-   Read all CLI commands from /home/ubuntu/flow-create-commands.txt
+   Finished reading all CLI commands from /home/ubuntu/flow-create-commands.txt
    testpmd>
 
 
