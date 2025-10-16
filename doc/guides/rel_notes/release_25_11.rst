@@ -87,6 +87,13 @@ New Features
   * Added multi-process per port.
   * Optimized code.
 
+* **Updated Wangxun txgbe driver.**
+
+  Added support for Wangxun Amber-Lite NIC series, including FF5025 (supporting
+  10G and 25G) and FF5040 (supporting 40G). As these new models share hardware
+  similarities with the existing 10G Sapphire NICs, many of the existing
+  configurations and practices are expected to apply.
+
 * **Allow overriding the automatic usage/help generation in argparse library.**
 
   The argparse library now supports overriding the automatic help text generation,
