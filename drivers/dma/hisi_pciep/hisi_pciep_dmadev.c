@@ -15,7 +15,7 @@
 #include <rte_pci.h>
 #include <rte_dmadev_pmd.h>
 
-#include "hisi_dmadev.h"
+#include "hisi_pciep_dmadev.h"
 
 RTE_LOG_REGISTER_DEFAULT(hisi_dma_logtype, INFO);
 #define RTE_LOGTYPE_HISI_DMA hisi_dma_logtype
@@ -376,6 +376,7 @@ hisi_dma_start(struct rte_dma_dev *dev)
 	hw->cq_head = 0;
 	hw->cqs_completed = 0;
 	hw->cqe_vld = 1;
+	hw->stop_proc = 0;
 	hw->submitted = 0;
 	hw->completed = 0;
 	hw->errors = 0;
@@ -385,12 +386,6 @@ hisi_dma_start(struct rte_dma_dev *dev)
 				  HISI_DMA_QUEUE_CTRL0_EN_B, true);
 
 	return 0;
-}
-
-static int
-hisi_dma_stop(struct rte_dma_dev *dev)
-{
-	return hisi_dma_reset_hw(dev->data->dev_private);
 }
 
 static int
@@ -452,6 +447,37 @@ hisi_dma_vchan_status(const struct rte_dma_dev *dev, uint16_t vchan,
 		*status = RTE_DMA_VCHAN_HALTED_ERROR;
 
 	return 0;
+}
+
+static int
+hisi_dma_stop(struct rte_dma_dev *dev)
+{
+#define MAX_WAIT_MSEC	10
+	struct hisi_dma_dev *hw = dev->data->dev_private;
+	enum rte_dma_vchan_status status;
+	uint32_t i;
+
+	/* Flag stop processing new requests. */
+	hw->stop_proc = 1;
+	rte_delay_ms(1);
+
+	/* Force set drop flag so that the hardware can quickly complete. */
+	for (i = 0; i <= hw->sq_depth_mask; i++)
+		hw->sqe[i].dw0 |= SQE_DROP_FLAG;
+
+	i = 0;
+	do {
+		hisi_dma_vchan_status(dev, 0, &status);
+		if (status != RTE_DMA_VCHAN_ACTIVE)
+			break;
+		rte_delay_ms(1);
+	} while (i++ < MAX_WAIT_MSEC);
+	if (status == RTE_DMA_VCHAN_ACTIVE) {
+		HISI_DMA_ERR(hw, "dev is still active!");
+		return -EBUSY;
+	}
+
+	return hisi_dma_reset_hw(dev->data->dev_private);
 }
 
 static void
@@ -548,14 +574,14 @@ hisi_dma_dump(const struct rte_dma_dev *dev, FILE *f)
 		"    revision: 0x%x queue_id: %u ring_size: %u\n"
 		"    ridx: %u cridx: %u\n"
 		"    sq_head: %u sq_tail: %u cq_sq_head: %u\n"
-		"    cq_head: %u cqs_completed: %u cqe_vld: %u\n"
+		"    cq_head: %u cqs_completed: %u cqe_vld: %u stop_proc: %u\n"
 		"    submitted: %" PRIu64 " completed: %" PRIu64 " errors: %"
 		PRIu64 " qfulls: %" PRIu64 "\n",
 		hw->revision, hw->queue_id,
 		hw->sq_depth_mask > 0 ? hw->sq_depth_mask + 1 : 0,
 		hw->ridx, hw->cridx,
 		hw->sq_head, hw->sq_tail, hw->cq_sq_head,
-		hw->cq_head, hw->cqs_completed, hw->cqe_vld,
+		hw->cq_head, hw->cqs_completed, hw->cqe_vld, hw->stop_proc,
 		hw->submitted, hw->completed, hw->errors, hw->qfulls);
 	hisi_dma_dump_queue(hw, f);
 	hisi_dma_dump_common(hw, f);
@@ -572,6 +598,9 @@ hisi_dma_copy(void *dev_private, uint16_t vchan,
 	struct hisi_dma_sqe *sqe = &hw->sqe[hw->sq_tail];
 
 	RTE_SET_USED(vchan);
+
+	if (unlikely(hw->stop_proc > 0))
+		return -EPERM;
 
 	if (((hw->sq_tail + 1) & hw->sq_depth_mask) == hw->sq_head) {
 		hw->qfulls++;
@@ -963,6 +992,6 @@ static struct rte_pci_driver hisi_dma_pmd_drv = {
 	.remove    = hisi_dma_remove,
 };
 
-RTE_PMD_REGISTER_PCI(dma_hisilicon, hisi_dma_pmd_drv);
-RTE_PMD_REGISTER_PCI_TABLE(dma_hisilicon, pci_id_hisi_dma_map);
-RTE_PMD_REGISTER_KMOD_DEP(dma_hisilicon, "vfio-pci");
+RTE_PMD_REGISTER_PCI(dma_hisi_pciep, hisi_dma_pmd_drv);
+RTE_PMD_REGISTER_PCI_TABLE(dma_hisi_pciep, pci_id_hisi_dma_map);
+RTE_PMD_REGISTER_KMOD_DEP(dma_hisi_pciep, "vfio-pci");
