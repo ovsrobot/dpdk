@@ -36,6 +36,15 @@
 extern uint8_t cl_quit;
 extern volatile uint8_t f_quit;
 
+/* Max number of cmdline files we can take on testpmd cmdline */
+#define MAX_CMDLINE_FILENAMES 16
+
+/* Structure to track cmdline files and their echo settings */
+struct cmdline_file_info {
+	char filename[PATH_MAX];  /**< Path to the cmdline file */
+	bool echo;                /**< Whether to echo commands from this file */
+};
+
 /*
  * It is used to allocate the memory for hash key.
  * The hash key size is NIC dependent.
@@ -509,8 +518,8 @@ extern int testpmd_logtype; /**< Log type for testpmd logs */
 extern uint8_t  interactive;
 extern uint8_t  auto_start;
 extern uint8_t  tx_first;
-extern char cmdline_filename[PATH_MAX]; /**< offline commands file */
-extern bool echo_cmdline_file;  /** unset if cmdline-file-noecho is used */
+extern struct cmdline_file_info cmdline_files[MAX_CMDLINE_FILENAMES]; /**< offline commands files */
+extern unsigned int cmdline_file_count; /**< number of cmdline files */
 extern uint8_t  numa_support; /**< set by "--numa" parameter */
 extern uint16_t port_topology; /**< set by "--port-topology" parameter */
 extern uint8_t no_flush_rx; /**<set by "--no-flush-rx" parameter */
@@ -929,7 +938,7 @@ unsigned int parse_hdrs_list(const char *str, const char *item_name,
 			unsigned int *parsed_items);
 void launch_args_parse(int argc, char** argv);
 void cmd_reconfig_device_queue(portid_t id, uint8_t dev, uint8_t queue);
-void cmdline_read_from_file(const char *filename);
+int cmdline_read_from_file(const char *filename, bool echo);
 int init_cmdline(void);
 void prompt(void);
 void prompt_exit(void);
@@ -1160,6 +1169,7 @@ int start_port(portid_t pid);
 void stop_port(portid_t pid);
 void close_port(portid_t pid);
 void reset_port(portid_t pid);
+void reinit_port(portid_t pid);
 void attach_port(char *identifier);
 void detach_devargs(char *identifier);
 void detach_port_device(portid_t port_id);

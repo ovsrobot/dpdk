@@ -109,8 +109,9 @@ int testpmd_logtype; /**< Log type for testpmd logs */
 uint8_t interactive = 0;
 uint8_t auto_start = 0;
 uint8_t tx_first;
-char cmdline_filename[PATH_MAX] = {0};
-bool echo_cmdline_file;
+struct cmdline_file_info cmdline_files[MAX_CMDLINE_FILENAMES] = {0};
+unsigned int cmdline_file_count;
+
 /*
  * NUMA support configuration.
  * When set, the NUMA support attempts to dispatch the allocation of the
@@ -3411,6 +3412,32 @@ reset_port(portid_t pid)
 	printf("Done\n");
 }
 
+void
+reinit_port(portid_t pid)
+{
+	int diag;
+	portid_t pi;
+
+	if (port_id_is_invalid(pid, ENABLED_WARN))
+		return;
+
+	printf("Reinitializing ports...\n");
+
+	RTE_ETH_FOREACH_DEV(pi) {
+		if (pid != pi && pid != (portid_t)RTE_PORT_ALL)
+			continue;
+
+		if (is_proc_primary()) {
+			diag = rte_eth_dev_reinit(pi);
+			if (diag != 0)
+				fprintf(stderr, "Failed to reinit port %d. diag=%d\n",
+					pi, diag);
+		}
+	}
+
+	printf("Done\n");
+}
+
 static char *
 convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_size)
 {
@@ -4579,8 +4606,13 @@ main(int argc, char** argv)
 		rte_exit(EXIT_FAILURE,
 			"Could not initialise cmdline context.\n");
 
-	if (strlen(cmdline_filename) != 0)
-		cmdline_read_from_file(cmdline_filename);
+	for (unsigned int i = 0; i < cmdline_file_count; i++) {
+		if (cmdline_read_from_file(cmdline_files[i].filename, cmdline_files[i].echo) != 0) {
+			fprintf(stderr, "Failed to process cmdline file: %s\n",
+					cmdline_files[i].filename);
+			break;
+		}
+	}
 
 	if (interactive == 1) {
 		if (auto_start) {

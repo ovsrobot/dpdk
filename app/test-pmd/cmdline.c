@@ -1100,7 +1100,7 @@ static cmdline_parse_inst_t cmd_help_long = {
 };
 
 
-/* *** start/stop/close all ports *** */
+/* *** start/stop/close/reset/reinit all ports *** */
 struct cmd_operate_port_result {
 	cmdline_fixed_string_t keyword;
 	cmdline_fixed_string_t name;
@@ -1121,6 +1121,8 @@ static void cmd_operate_port_parsed(void *parsed_result,
 		close_port(RTE_PORT_ALL);
 	else if (!strcmp(res->name, "reset"))
 		reset_port(RTE_PORT_ALL);
+	else if (!strcmp(res->name, "reinit"))
+		reinit_port(RTE_PORT_ALL);
 	else
 		fprintf(stderr, "Unknown parameter\n");
 }
@@ -1130,14 +1132,14 @@ static cmdline_parse_token_string_t cmd_operate_port_all_cmd =
 								"port");
 static cmdline_parse_token_string_t cmd_operate_port_all_port =
 	TOKEN_STRING_INITIALIZER(struct cmd_operate_port_result, name,
-						"start#stop#close#reset");
+						"start#stop#close#reset#reinit");
 static cmdline_parse_token_string_t cmd_operate_port_all_all =
 	TOKEN_STRING_INITIALIZER(struct cmd_operate_port_result, value, "all");
 
 static cmdline_parse_inst_t cmd_operate_port = {
 	.f = cmd_operate_port_parsed,
 	.data = NULL,
-	.help_str = "port start|stop|close|reset all: Start/Stop/Close/Reset all ports",
+	.help_str = "port start|stop|close|reset|reinit all: Start/Stop/Close/Reset/Reinit all ports",
 	.tokens = {
 		(void *)&cmd_operate_port_all_cmd,
 		(void *)&cmd_operate_port_all_port,
@@ -1167,6 +1169,8 @@ static void cmd_operate_specific_port_parsed(void *parsed_result,
 		close_port(res->value);
 	else if (!strcmp(res->name, "reset"))
 		reset_port(res->value);
+	else if (!strcmp(res->name, "reinit"))
+		reinit_port(res->value);
 	else
 		fprintf(stderr, "Unknown parameter\n");
 }
@@ -1176,7 +1180,7 @@ static cmdline_parse_token_string_t cmd_operate_specific_port_cmd =
 							keyword, "port");
 static cmdline_parse_token_string_t cmd_operate_specific_port_port =
 	TOKEN_STRING_INITIALIZER(struct cmd_operate_specific_port_result,
-						name, "start#stop#close#reset");
+						name, "start#stop#close#reset#reinit");
 static cmdline_parse_token_num_t cmd_operate_specific_port_id =
 	TOKEN_NUM_INITIALIZER(struct cmd_operate_specific_port_result,
 							value, RTE_UINT8);
@@ -1184,7 +1188,8 @@ static cmdline_parse_token_num_t cmd_operate_specific_port_id =
 static cmdline_parse_inst_t cmd_operate_specific_port = {
 	.f = cmd_operate_specific_port_parsed,
 	.data = NULL,
-	.help_str = "port start|stop|close|reset <port_id>: Start/Stop/Close/Reset port_id",
+	.help_str = "port start|stop|close|reset|reinit <port_id>: "
+			"Start/Stop/Close/Reset/Reinit port_id",
 	.tokens = {
 		(void *)&cmd_operate_specific_port_cmd,
 		(void *)&cmd_operate_specific_port_port,
@@ -11653,7 +11658,9 @@ cmd_load_from_file_parsed(
 {
 	struct cmd_cmdfile_result *res = parsed_result;
 
-	cmdline_read_from_file(res->filename);
+	if (cmdline_read_from_file(res->filename, false) != 0) {
+		fprintf(stderr, "Failed to load commands from file: %s\n", res->filename);
+	}
 }
 
 static cmdline_parse_inst_t cmd_load_from_file = {
@@ -11663,6 +11670,41 @@ static cmdline_parse_inst_t cmd_load_from_file = {
 	.tokens = {
 		(void *)&cmd_load_cmdfile,
 		(void *)&cmd_load_cmdfile_filename,
+		NULL,
+	},
+};
+
+/* command to load a file with echoing commands */
+struct cmd_load_echo_result {
+	cmdline_fixed_string_t load_echo;
+	cmdline_fixed_string_t filename;
+};
+
+/* CLI fields for file load with echo command */
+static cmdline_parse_token_string_t cmd_load_echo =
+	TOKEN_STRING_INITIALIZER(struct cmd_load_echo_result, load_echo, "load_echo");
+static cmdline_parse_token_string_t cmd_load_echo_filename =
+	TOKEN_STRING_INITIALIZER(struct cmd_load_echo_result, filename, NULL);
+
+static void
+cmd_load_echo_file_parsed(
+	void *parsed_result,
+	__rte_unused struct cmdline *cl,
+	__rte_unused void *data)
+{
+	struct cmd_load_echo_result *res = parsed_result;
+
+	if (cmdline_read_from_file(res->filename, true) != 0)
+		fprintf(stderr, "Failed to load commands from file: %s\n", res->filename);
+}
+
+static cmdline_parse_inst_t cmd_load_echo_file = {
+	.f = cmd_load_echo_file_parsed,
+	.data = NULL,
+	.help_str = "load_echo <filename>",
+	.tokens = {
+		(void *)&cmd_load_echo,
+		(void *)&cmd_load_echo_filename,
 		NULL,
 	},
 };
@@ -13872,6 +13914,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_help_long,
 	&cmd_quit,
 	&cmd_load_from_file,
+	&cmd_load_echo_file,
 	&cmd_showport,
 	&cmd_showqueue,
 	&cmd_showeeprom,
@@ -14158,45 +14201,60 @@ init_cmdline(void)
 }
 
 /* read cmdline commands from file */
-void
-cmdline_read_from_file(const char *filename)
+int
+cmdline_read_from_file(const char *filename, bool echo)
 {
 	struct cmdline *cl;
 	int fd = -1;
+	int ret = 0;
 
 	/* cmdline_file_new does not produce any output
 	 * so when echoing is requested we open filename directly
 	 * and then pass that to cmdline_new with stdout as the output path.
 	 */
-	if (!echo_cmdline_file) {
+	if (!echo) {
 		cl = cmdline_file_new(main_ctx, "testpmd> ", filename);
 	} else {
+		/* use basename(filename) as prompt */
+		char prompt[32] = "[] ";
+
+		rte_basename(filename, &prompt[1], sizeof(prompt) - strlen(prompt));
+		strlcat(prompt, "] ", sizeof(prompt));
+
 		fd = open(filename, O_RDONLY);
 		if (fd < 0) {
 			fprintf(stderr, "Failed to open file %s: %s\n",
 				filename, strerror(errno));
-			return;
+			return -1;
 		}
 
-		cl = cmdline_new(main_ctx, "testpmd> ", fd, STDOUT_FILENO);
+		cl = cmdline_new(main_ctx, prompt, fd, STDOUT_FILENO);
 	}
 	if (cl == NULL) {
 		fprintf(stderr,
 			"Failed to create file based cmdline context: %s\n",
 			filename);
+		ret = -1;
 		goto end;
 	}
 
 	cmdline_interact(cl);
-	cmdline_quit(cl);
+	/* when done, if we have echo, we only need to print end of file,
+	 * but if no echo, we need to use printf and include the filename.
+	 */
+	if (echo)
+		cmdline_printf(cl, "<End-Of-File>\n");
+	else
+		printf("Finished reading CLI commands from %s\n", filename);
 
+	cmdline_quit(cl);
 	cmdline_free(cl);
 
-	printf("Read CLI commands from %s\n", filename);
 
 end:
 	if (fd >= 0)
 		close(fd);
+	return ret;
 }
 
 void

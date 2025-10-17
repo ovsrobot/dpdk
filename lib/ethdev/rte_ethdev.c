@@ -2057,6 +2057,38 @@ rte_eth_dev_reset(uint16_t port_id)
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_reinit, 25.11)
+int
+rte_eth_dev_reinit(uint16_t port_id)
+{
+	struct rte_eth_dev *dev;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (dev->dev_ops->dev_reinit == NULL)
+		return -ENOTSUP;
+
+	if (dev->data->dev_configured == 0) {
+		RTE_ETHDEV_LOG_LINE(INFO,
+			"Cannot reinit device (port %u), device not configured",
+			port_id);
+		return -EINVAL;
+	}
+
+	ret = eth_err(port_id, dev->dev_ops->dev_reinit(dev));
+
+	if (ret == -EBUSY)
+		RTE_ETHDEV_LOG_LINE(INFO,
+			"Cannot reinit started device (port %u), please stop it first",
+			port_id);
+
+	rte_ethdev_trace_reinit(port_id, ret);
+
+	return ret;
+}
+
 RTE_EXPORT_SYMBOL(rte_eth_dev_is_removed)
 int
 rte_eth_dev_is_removed(uint16_t port_id)
