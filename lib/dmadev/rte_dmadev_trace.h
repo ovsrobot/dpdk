@@ -41,7 +41,7 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_i16(dev_id);
 	rte_trace_point_emit_u16(dev_conf->nb_vchans);
 	rte_trace_point_emit_u16(dev_conf->priority);
-	rte_trace_point_emit_u8(dev_conf->enable_silent);
+	rte_trace_point_emit_u64(dev_conf->flags);
 	rte_trace_point_emit_int(ret);
 )
 
@@ -79,6 +79,9 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_int(conf->dst_port.port_type);
 	rte_trace_point_emit_u64(conf->dst_port.pcie.val);
 	rte_trace_point_emit_ptr(conf->auto_free.m2d.pool);
+	rte_trace_point_emit_int(conf->domain.type);
+	rte_trace_point_emit_u16(conf->domain.src_handler);
+	rte_trace_point_emit_u16(conf->domain.dst_handler);
 	rte_trace_point_emit_int(ret);
 )
 

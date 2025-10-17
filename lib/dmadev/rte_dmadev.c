@@ -509,7 +509,7 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 			"Device %d configure too many vchans", dev_id);
 		return -EINVAL;
 	}
-	if (dev_conf->enable_silent &&
+	if ((dev_conf->flags & RTE_DMA_CFG_FLAG_SILENT) &&
 	    !(dev_info.dev_capa & RTE_DMA_CAPA_SILENT)) {
 		RTE_DMA_LOG(ERR, "Device %d don't support silent", dev_id);
 		return -EINVAL;
@@ -518,6 +518,12 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 	if ((dev_info.dev_capa & RTE_DMA_CAPA_PRI_POLICY_SP) &&
 	    (dev_conf->priority >= dev_info.nb_priorities)) {
 		RTE_DMA_LOG(ERR, "Device %d configure invalid priority", dev_id);
+		return -EINVAL;
+	}
+
+	if ((dev_conf->flags & RTE_DMA_CFG_FLAG_ENQ_DEQ) &&
+	    !(dev_info.dev_capa & RTE_DMA_CAPA_OPS_ENQ_DEQ)) {
+		RTE_DMA_LOG(ERR, "Device %d don't support enqueue/dequeue", dev_id);
 		return -EINVAL;
 	}
 
@@ -657,6 +663,27 @@ rte_dma_vchan_setup(int16_t dev_id, uint16_t vchan,
 	}
 	if (vchan >= dev_info.nb_vchans) {
 		RTE_DMA_LOG(ERR, "Device %d vchan out range!", dev_id);
+		return -EINVAL;
+	}
+	if (conf->domain.type != RTE_DMA_INTER_DOMAIN_NONE &&
+	    conf->direction != RTE_DMA_DIR_MEM_TO_MEM) {
+		RTE_DMA_LOG(ERR, "Device %d inter domain only support mem-to-mem transfer", dev_id);
+		return -EINVAL;
+	}
+	if (conf->domain.type == RTE_DMA_INTER_OS_DOMAIN &&
+	    !(dev_info.dev_capa & RTE_DMA_CAPA_INTER_OS_DOMAIN)) {
+		RTE_DMA_LOG(ERR, "Device %d does not support inter os domain", dev_id);
+		return -EINVAL;
+	}
+	if (conf->domain.type == RTE_DMA_INTER_PROCESS_DOMAIN &&
+	    !(dev_info.dev_capa & RTE_DMA_CAPA_INTER_PROCESS_DOMAIN)) {
+		RTE_DMA_LOG(ERR, "Device %d does not support inter process domain", dev_id);
+		return -EINVAL;
+	}
+	if ((conf->domain.type == RTE_DMA_INTER_PROCESS_DOMAIN ||
+	    conf->domain.type == RTE_DMA_INTER_OS_DOMAIN) &&
+	    (conf->domain.reserved[0] != 0 || conf->domain.reserved[1] != 0)) {
+		RTE_DMA_LOG(ERR, "Device %d does not support non-zero reserved fields", dev_id);
 		return -EINVAL;
 	}
 	if (conf->direction != RTE_DMA_DIR_MEM_TO_MEM &&
@@ -805,6 +832,8 @@ dma_capability_name(uint64_t capability)
 		{ RTE_DMA_CAPA_HANDLES_ERRORS, "handles_errors" },
 		{ RTE_DMA_CAPA_M2D_AUTO_FREE,  "m2d_auto_free"  },
 		{ RTE_DMA_CAPA_PRI_POLICY_SP,  "pri_policy_sp" },
+		{ RTE_DMA_CAPA_INTER_PROCESS_DOMAIN, "inter_process_domain" },
+		{ RTE_DMA_CAPA_INTER_OS_DOMAIN, "inter_os_domain" },
 		{ RTE_DMA_CAPA_OPS_COPY,    "copy"    },
 		{ RTE_DMA_CAPA_OPS_COPY_SG, "copy_sg" },
 		{ RTE_DMA_CAPA_OPS_FILL,    "fill"    },
@@ -863,7 +892,9 @@ rte_dma_dump(int16_t dev_id, FILE *f)
 	(void)fprintf(f, "  max_vchans_supported: %u\n", dev_info.max_vchans);
 	(void)fprintf(f, "  nb_vchans_configured: %u\n", dev_info.nb_vchans);
 	(void)fprintf(f, "  silent_mode: %s\n",
-		dev->data->dev_conf.enable_silent ? "on" : "off");
+		      dev->data->dev_conf.flags & RTE_DMA_CFG_FLAG_SILENT ? "on" : "off");
+	(void)fprintf(f, "  ops_mode: %s\n",
+		      dev->data->dev_conf.flags & RTE_DMA_CFG_FLAG_ENQ_DEQ ? "on" : "off");
 
 	if (dev->dev_ops->dev_dump != NULL)
 		ret = dev->dev_ops->dev_dump(dev, f);
@@ -937,6 +968,22 @@ dummy_burst_capacity(__rte_unused const void *dev_private,
 	return 0;
 }
 
+static uint16_t
+dummy_enqueue(__rte_unused void *dev_private, __rte_unused uint16_t vchan,
+	      __rte_unused struct rte_dma_op **ops, __rte_unused uint16_t nb_ops)
+{
+	RTE_DMA_LOG(ERR, "Enqueue not configured or not supported.");
+	return 0;
+}
+
+static uint16_t
+dummy_dequeue(__rte_unused void *dev_private, __rte_unused uint16_t vchan,
+	      __rte_unused struct rte_dma_op **ops, __rte_unused uint16_t nb_ops)
+{
+	RTE_DMA_LOG(ERR, "Enqueue not configured or not supported.");
+	return 0;
+}
+
 static void
 dma_fp_object_dummy(struct rte_dma_fp_object *obj)
 {
@@ -948,6 +995,8 @@ dma_fp_object_dummy(struct rte_dma_fp_object *obj)
 	obj->completed        = dummy_completed;
 	obj->completed_status = dummy_completed_status;
 	obj->burst_capacity   = dummy_burst_capacity;
+	obj->enqueue          = dummy_enqueue;
+	obj->dequeue          = dummy_dequeue;
 }
 
 static int
@@ -1014,6 +1063,8 @@ dmadev_handle_dev_info(const char *cmd __rte_unused,
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_HANDLES_ERRORS);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_M2D_AUTO_FREE);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_PRI_POLICY_SP);
+	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_INTER_PROCESS_DOMAIN);
+	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_INTER_OS_DOMAIN);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_OPS_COPY);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_OPS_COPY_SG);
 	ADD_CAPA(dma_caps, dev_capa, RTE_DMA_CAPA_OPS_FILL);
