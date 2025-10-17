@@ -3412,6 +3412,32 @@ reset_port(portid_t pid)
 	printf("Done\n");
 }
 
+void
+reinit_port(portid_t pid)
+{
+	int diag;
+	portid_t pi;
+
+	if (port_id_is_invalid(pid, ENABLED_WARN))
+		return;
+
+	printf("Reinitializing ports...\n");
+
+	RTE_ETH_FOREACH_DEV(pi) {
+		if (pid != pi && pid != (portid_t)RTE_PORT_ALL)
+			continue;
+
+		if (is_proc_primary()) {
+			diag = rte_eth_dev_reinit(pi);
+			if (diag != 0)
+				fprintf(stderr, "Failed to reinit port %d. diag=%d\n",
+					pi, diag);
+		}
+	}
+
+	printf("Done\n");
+}
+
 static char *
 convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_size)
 {

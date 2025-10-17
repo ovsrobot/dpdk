@@ -1169,6 +1169,7 @@ int start_port(portid_t pid);
 void stop_port(portid_t pid);
 void close_port(portid_t pid);
 void reset_port(portid_t pid);
+void reinit_port(portid_t pid);
 void attach_port(char *identifier);
 void detach_devargs(char *identifier);
 void detach_port_device(portid_t port_id);
