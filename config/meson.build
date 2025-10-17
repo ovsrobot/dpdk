@@ -313,6 +313,14 @@ else
     add_project_arguments('-include', 'rte_config.h', language: 'c')
 endif
 
+hwloc_dep = dependency('hwloc', required : false)
+if hwloc_dep.found()
+  add_project_arguments('-DHAVE_HWLOC=1', language : 'c')
+  add_project_link_arguments('-lhwloc', language: 'c')
+  dpdk_extra_ldflags += '-lhwloc'
+  message('hwloc found — enabling L3 cache–aware topology support')
+endif
+
 # enable extra warnings and disable any unwanted warnings
 # -Wall is added by default at warning level 1, and -Wextra
 # at warning level 2 (DPDK default)
