@@ -94,6 +94,9 @@ New Features
   The built-in help text function is available as a public function which can be reused by custom functions,
   if so desired.
 
+* **Added ENETC4 PMD**
+
+  * Added ENETC4 PMD for NXP multiple new generation SOC.
 
 Removed Items
 -------------
