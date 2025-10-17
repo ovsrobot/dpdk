@@ -2990,6 +2990,31 @@ int rte_eth_dev_close(uint16_t port_id);
 int rte_eth_dev_reset(uint16_t port_id);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Reinitialise an Ethernet device and restore its configuration.
+ *
+ * When a device needs to be reset passively and the current configuration
+ * needs to be restored following the reset, the DPDK application can
+ * invoke this function. Some devices may also restart the device after
+ * the reinit if it was started before, if the device can do this safely.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if *port_id* is invalid.
+ *   - (-ENOTSUP) if hardware doesn't support this function.
+ *   - (-EBUSY) if the device is started and the driver needs it to be
+ *   stopped before performing the reinit.
+ *   - (<0): Error code of the driver reinitialisation function.
+ */
+__rte_experimental
+int rte_eth_dev_reinit(uint16_t port_id);
+
+/**
  * Enable receipt in promiscuous mode for an Ethernet device.
  *
  * @param port_id

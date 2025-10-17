@@ -143,6 +143,9 @@ RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_set_link_down,
 RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_reset,
 	lib.ethdev.reset)
 
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_reinit,
+	lib.ethdev.reinit)
+
 RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_is_removed,
 	lib.ethdev.is_removed)
 

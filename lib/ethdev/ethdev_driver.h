@@ -229,6 +229,9 @@ typedef int (*eth_dev_close_t)(struct rte_eth_dev *dev);
 /** @internal Function used to reset a configured Ethernet device. */
 typedef int (*eth_dev_reset_t)(struct rte_eth_dev *dev);
 
+/** @internal Function used to reinitialise a configured Ethernet device. */
+typedef int (*eth_dev_reinit_t)(struct rte_eth_dev *dev);
+
 /** @internal Function used to detect an Ethernet device removal. */
 typedef int (*eth_is_removed_t)(struct rte_eth_dev *dev);
 
@@ -1387,6 +1390,7 @@ struct eth_dev_ops {
 	eth_dev_set_link_down_t    dev_set_link_down; /**< Device link down */
 	eth_dev_close_t            dev_close;     /**< Close device */
 	eth_dev_reset_t		   dev_reset;	  /**< Reset device */
+	eth_dev_reinit_t	   dev_reinit;	  /**< Reinitialize device */
 	eth_link_update_t          link_update;   /**< Get device link state */
 	eth_speed_lanes_get_t	   speed_lanes_get;	  /**< Get link speed active lanes */
 	eth_speed_lanes_set_t      speed_lanes_set;	  /**< Set link speeds supported lanes */

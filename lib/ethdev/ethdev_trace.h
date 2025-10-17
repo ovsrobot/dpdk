@@ -232,6 +232,13 @@ RTE_TRACE_POINT(
 )
 
 RTE_TRACE_POINT(
+	rte_ethdev_trace_reinit,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT(
 	rte_eth_trace_rx_hairpin_queue_setup,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t rx_queue_id,
 		uint16_t nb_rx_desc, const struct rte_eth_hairpin_conf *conf,
