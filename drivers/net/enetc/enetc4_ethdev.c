@@ -28,9 +28,31 @@ enetc4_dev_start(struct rte_eth_dev *dev)
 	struct enetc_eth_hw *hw =
 		ENETC_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct enetc_hw *enetc_hw = &hw->hw;
+	struct enetc_bdr *txq, *rxq;
 	uint32_t val;
+	int i, ret;
 
 	PMD_INIT_FUNC_TRACE();
+
+	/* Start TX queues that are not deferred */
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (txq && !txq->tx_deferred_start) {
+			ret = enetc4_tx_queue_start(dev, i);
+			if (ret < 0)
+				return ret;
+		}
+	}
+
+	/* Start RX queues that are not deferred */
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (rxq && !rxq->rx_deferred_start) {
+			ret = enetc4_rx_queue_start(dev, i);
+			if (ret < 0)
+				return ret;
+		}
+	}
 
 	val = enetc4_port_rd(enetc_hw, ENETC4_PM_CMD_CFG(0));
 	enetc4_port_wr(enetc_hw, ENETC4_PM_CMD_CFG(0),
@@ -281,6 +303,7 @@ enetc4_tx_queue_setup(struct rte_eth_dev *dev,
 	tx_ring->ndev = dev;
 	enetc4_setup_txbdr(&priv->hw.hw, tx_ring);
 	data->tx_queues[queue_idx] = tx_ring;
+	tx_ring->tx_deferred_start = tx_conf->tx_deferred_start;
 	if (!tx_conf->tx_deferred_start) {
 		/* enable ring */
 		enetc4_txbdr_wr(&priv->hw.hw, tx_ring->index,
@@ -429,6 +452,7 @@ enetc4_rx_queue_setup(struct rte_eth_dev *dev,
 	rx_ring->ndev = dev;
 	enetc4_setup_rxbdr(&adapter->hw.hw, rx_ring, mb_pool);
 	data->rx_queues[rx_queue_id] = rx_ring;
+	rx_ring->rx_deferred_start = rx_conf->rx_deferred_start;
 
 	if (!rx_conf->rx_deferred_start) {
 		/* enable ring */
@@ -447,7 +471,7 @@ enetc4_rx_queue_setup(struct rte_eth_dev *dev,
 fail:
 	rte_free(rx_ring);
 
-	return err;
+return err;
 }
 
 void
@@ -837,6 +861,35 @@ enetc4_tx_queue_stop(struct rte_eth_dev *dev, uint16_t qidx)
 	return 0;
 }
 
+static void
+enetc4_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+			struct rte_eth_rxq_info *qinfo)
+{
+	struct enetc_bdr *rxq = dev->data->rx_queues[queue_id];
+
+	qinfo->mp = rxq->mb_pool;
+	qinfo->scattered_rx = dev->data->scattered_rx;
+	qinfo->nb_desc = rxq->bd_count;
+	qinfo->conf.rx_free_thresh = 0;
+	qinfo->conf.rx_deferred_start = rxq->rx_deferred_start;
+	qinfo->conf.rx_drop_en = 0;
+}
+
+static void
+enetc4_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+			struct rte_eth_txq_info *qinfo)
+{
+	struct enetc_bdr *txq = dev->data->tx_queues[queue_id];
+
+	qinfo->nb_desc = txq->bd_count;
+	qinfo->conf.tx_thresh.pthresh = 0;
+	qinfo->conf.tx_thresh.hthresh = 0;
+	qinfo->conf.tx_thresh.wthresh = 0;
+	qinfo->conf.tx_deferred_start = txq->tx_deferred_start;
+	qinfo->conf.tx_free_thresh = 0;
+	qinfo->conf.tx_rs_thresh = 0;
+}
+
 const uint32_t *
 enetc4_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused,
 			    size_t *no_of_elements)
@@ -883,10 +936,12 @@ static const struct eth_dev_ops enetc4_ops = {
 	.rx_queue_start       = enetc4_rx_queue_start,
 	.rx_queue_stop        = enetc4_rx_queue_stop,
 	.rx_queue_release     = enetc4_rx_queue_release,
+	.rxq_info_get         = enetc4_rxq_info_get,
 	.tx_queue_setup       = enetc4_tx_queue_setup,
 	.tx_queue_start       = enetc4_tx_queue_start,
 	.tx_queue_stop        = enetc4_tx_queue_stop,
 	.tx_queue_release     = enetc4_tx_queue_release,
+	.txq_info_get         = enetc4_txq_info_get,
 	.dev_supported_ptypes_get = enetc4_supported_ptypes_get,
 };
 
