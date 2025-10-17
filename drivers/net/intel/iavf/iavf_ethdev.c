@@ -100,6 +100,7 @@ static int iavf_dev_start(struct rte_eth_dev *dev);
 static int iavf_dev_stop(struct rte_eth_dev *dev);
 static int iavf_dev_close(struct rte_eth_dev *dev);
 static int iavf_dev_reset(struct rte_eth_dev *dev);
+static int iavf_dev_reinit(struct rte_eth_dev *dev);
 static int iavf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
 static const uint32_t *iavf_dev_supported_ptypes_get(struct rte_eth_dev *dev,
@@ -207,6 +208,7 @@ static const struct eth_dev_ops iavf_eth_dev_ops = {
 	.dev_stop                   = iavf_dev_stop,
 	.dev_close                  = iavf_dev_close,
 	.dev_reset                  = iavf_dev_reset,
+	.dev_reinit                = iavf_dev_reinit,
 	.dev_infos_get              = iavf_dev_info_get,
 	.dev_supported_ptypes_get   = iavf_dev_supported_ptypes_get,
 	.link_update                = iavf_dev_link_update,
@@ -3069,6 +3071,26 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 	return iavf_dev_init(dev);
 }
 
+/*
+ * Reinitialise VF device by resetting and reconfiguring it.
+ */
+static int
+iavf_dev_reinit(struct rte_eth_dev *dev)
+{
+	struct iavf_adapter *adapter;
+
+	adapter = dev->data->dev_private;
+	if (dev->data->dev_started && !adapter->devargs.no_poll_on_link_down) {
+		PMD_DRV_LOG(ERR, "Cannot reinit started port %u. Either stop the port or enable "
+				"no-poll-on-link-down in devargs.", dev->data->port_id);
+		return -EBUSY;
+	}
+
+	iavf_handle_hw_reset(dev, true);
+
+	return 0;
+}
+
 static inline bool
 iavf_is_reset(struct iavf_hw *hw)
 {
@@ -3096,18 +3118,23 @@ iavf_is_reset_detected(struct iavf_adapter *adapter)
  * Handle hardware reset
  */
 void
-iavf_handle_hw_reset(struct rte_eth_dev *dev)
+iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 	struct iavf_adapter *adapter = dev->data->dev_private;
 	int ret;
+	bool restart_device = false;
 
-	if (!dev->data->dev_started)
-		return;
+	if (vf_initiated_reset) {
+		restart_device = dev->data->dev_started;
+	} else {
+		if (!dev->data->dev_started)
+			return;
 
-	if (!iavf_is_reset_detected(adapter)) {
-		PMD_DRV_LOG(DEBUG, "reset not start");
-		return;
+		if (!iavf_is_reset_detected(adapter)) {
+			PMD_DRV_LOG(DEBUG, "reset not start");
+			return;
+		}
 	}
 
 	vf->in_reset_recovery = true;
@@ -3124,12 +3151,15 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev)
 
 	iavf_dev_xstats_reset(dev);
 
-	/* start the device */
-	ret = iavf_dev_start(dev);
-	if (ret)
-		goto error;
+	if (!vf_initiated_reset || restart_device) {
+		/* start the device */
+		ret = iavf_dev_start(dev);
+		if (ret)
+			goto error;
 
-	dev->data->dev_started = 1;
+		dev->data->dev_started = 1;
+	}
+
 	goto exit;
 
 error:
