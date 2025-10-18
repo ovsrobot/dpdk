@@ -15,6 +15,10 @@
 #include "test.h"
 #include "test_ring.h"
 
+#ifdef HAVE_HWLOC
+#include <hwloc.h>
+#endif /* HAVE_HWLOC */
+
 /*
  * Ring performance test cases, measures performance of various operations
  * using rdtsc for legacy and 16B size ring elements.
@@ -121,6 +125,70 @@ get_two_cores(struct lcore_pair *lcp)
 	}
 	return 1;
 }
+
+#ifdef HAVE_HWLOC
+
+#if HWLOC_API_VERSION < 0x20000
+#define hwloc_get_next_obj_cpuset_by_type_compat(t, s, ty, p) \
+	hwloc_get_next_obj_covering_cpuset_by_type(t, ty, p, s)
+#else
+#define hwloc_get_next_obj_cpuset_by_type_compat(t, s, ty, p) \
+	hwloc_get_next_obj_covering_cpuset_by_type(t, s, ty, p)
+#endif
+
+static int
+get_l3_cache_id(unsigned int cpu_id)
+{
+	hwloc_bitmap_t cpuset = hwloc_bitmap_alloc();
+	hwloc_topology_t topo;
+	hwloc_obj_t obj;
+	int l3_id = -1;
+
+	if (hwloc_topology_init(&topo) < 0 ||
+		hwloc_topology_load(topo) < 0) {
+		hwloc_bitmap_free(cpuset);
+		return -1;
+	}
+
+	hwloc_bitmap_only(cpuset, cpu_id);
+
+	obj = hwloc_get_next_obj_cpuset_by_type_compat(
+		topo, cpuset, HWLOC_OBJ_L3CACHE, NULL);
+
+	if (obj)
+		l3_id = (int)obj->logical_index;
+
+	hwloc_bitmap_free(cpuset);
+	hwloc_topology_destroy(topo);
+
+	return l3_id;
+}
+
+static int
+get_two_l3caches(struct lcore_pair *lcp)
+{
+	unsigned int id1, id2;
+	unsigned int c1, c2, s1, s2;
+	RTE_LCORE_FOREACH(id1) {
+		c1 = get_l3_cache_id(id1);
+		s1 = rte_lcore_to_socket_id(id1);
+
+		RTE_LCORE_FOREACH(id2) {
+			if (id1 == id2)
+				continue;
+
+			c2 = get_l3_cache_id(id2);
+			s2 = rte_lcore_to_socket_id(id2);
+			if ((c1 != c2) && (s1 == s2)) {
+				lcp->c1 = id1;
+				lcp->c2 = id2;
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+#endif /* HAVE_HWLOC */
 
 static int
 get_two_sockets(struct lcore_pair *lcp)
@@ -483,6 +551,14 @@ test_ring_perf_esize_run_on_two_cores(
 		if (run_on_core_pair(&cores, param1, param2) < 0)
 			return -1;
 	}
+#ifdef HAVE_HWLOC
+	if (get_two_l3caches(&cores) == 0) {
+		printf("\n### Testing using two cores on same socket"
+			" with different L3 caches ###\n");
+		if (run_on_core_pair(&cores, param1, param2) < 0)
+			return -1;
+	}
+#endif /* HAVE_HWLOC */
 	if (get_two_sockets(&cores) == 0) {
 		printf("\n### Testing using two NUMA nodes ###\n");
 		if (run_on_core_pair(&cores, param1, param2) < 0)

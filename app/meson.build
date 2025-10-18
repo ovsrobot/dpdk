@@ -46,6 +46,12 @@ if get_option('default_library') == 'static' and not is_windows
     default_ldflags += ['-Wl,--export-dynamic']
 endif
 
+hwloc_dep = dependency('hwloc', required : false)
+if hwloc_dep.found()
+  default_cflags += ['-DHAVE_HWLOC=1']
+  message('hwloc found — enabling L3 cache–aware topology support')
+endif
+
 foreach app:apps
     name = app
     build = true
@@ -60,7 +66,7 @@ foreach app:apps
 
     # use "deps" for internal DPDK dependencies, and "ext_deps" for
     # external package/library requirements
-    ext_deps = []
+    ext_deps = [hwloc_dep]
     deps = []
 
     if not enable_apps.contains(app)
