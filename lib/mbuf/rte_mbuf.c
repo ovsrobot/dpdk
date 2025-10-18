@@ -12,7 +12,6 @@
 #include <eal_export.h>
 #include <rte_debug.h>
 #include <rte_common.h>
-#include <rte_log.h>
 #include <rte_branch_prediction.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
@@ -41,6 +40,8 @@ rte_pktmbuf_pool_init(struct rte_mempool *mp, void *opaque_arg)
 	RTE_ASSERT(mp->private_data_size >=
 		   sizeof(struct rte_pktmbuf_pool_private));
 	RTE_ASSERT(mp->elt_size >= sizeof(struct rte_mbuf));
+
+	rte_mbuf_history_init();
 
 	/* if no structure is provided, assume no mbuf private area */
 	user_mbp_priv = opaque_arg;
@@ -499,6 +500,8 @@ void rte_pktmbuf_free_bulk(struct rte_mbuf **mbufs, unsigned int count)
 {
 	struct rte_mbuf *m, *m_next, *pending[RTE_PKTMBUF_FREE_PENDING_SZ];
 	unsigned int idx, nb_pending = 0;
+
+	rte_mbuf_history_mark_bulk(mbufs, count, RTE_MBUF_HISTORY_OP_LIB_FREE);
 
 	for (idx = 0; idx < count; idx++) {
 		m = mbufs[idx];
