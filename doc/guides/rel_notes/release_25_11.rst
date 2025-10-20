@@ -66,6 +66,12 @@ New Features
   For example: ``dpdk-test -l 140-144 -R``
   will start 5 threads with lcore-ids 0 to 4 on physical cores 140 to 144.
 
+* **Added inter-process and inter-OS DMA device API.**
+
+  * Added parameters in DMA device virtual channel to configure DMA operations
+    that span across different processes or operating system domains.
+  * Added functions to exchange handlers between DMA devices.
+
 * **Added speed 800G.**
 
   Added Ethernet link speed for 800 Gb/s as it is well standardized in IEEE,
@@ -140,6 +146,9 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* rawdev: Changed the return type of ``rte_rawdev_get_dev_id()``
+  for negative error values.
 
 * pcapng: Changed the API for adding interfaces to include a link type argument.
   The link type was previously hardcoded to the Ethernet link type in the API.
