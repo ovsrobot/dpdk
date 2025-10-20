@@ -148,6 +148,7 @@
 
 #include <rte_bitops.h>
 #include <rte_common.h>
+#include <rte_uuid.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -265,6 +266,18 @@ int16_t rte_dma_next_dev(int16_t start_dev_id);
  * known from 'nb_priorities' field in struct rte_dma_info.
  */
 #define RTE_DMA_CAPA_PRI_POLICY_SP	RTE_BIT64(8)
+/** Support inter-process DMA transfers.
+ *
+ * When this bit is set, the DMA device can perform memory transfers
+ * between different process memory spaces.
+ */
+#define RTE_DMA_CAPA_INTER_PROCESS_DOMAIN	RTE_BIT64(9)
+/** Support inter-OS domain DMA transfers.
+ *
+ * The DMA device can perform memory transfers
+ * across different operating system domains.
+ */
+#define RTE_DMA_CAPA_INTER_OS_DOMAIN		RTE_BIT64(10)
 
 /** Support copy operation.
  * This capability start with index of 32, so that it could leave gap between
@@ -426,8 +439,14 @@ int rte_dma_close(int16_t dev_id);
  */
 enum rte_dma_direction {
 	/** DMA transfer direction - from memory to memory.
+	 * When the device supports inter-process or inter-OS domain transfers,
+	 * the field `type` in `struct rte_dma_vchan_conf::domain`
+	 * specifies the type of domain.
+	 * For memory-to-memory transfers within the same domain or process,
+	 * `type` should be set to `RTE_DMA_INTER_DOMAIN_NONE`.
 	 *
 	 * @see struct rte_dma_vchan_conf::direction
+	 * @see struct rte_dma_inter_domain_param::type
 	 */
 	RTE_DMA_DIR_MEM_TO_MEM,
 	/** DMA transfer direction - from memory to device.
@@ -573,6 +592,55 @@ struct rte_dma_auto_free_param {
 };
 
 /**
+ * Inter-DMA transfer domain type.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * This enum defines the types of transfer domains applicable to DMA operations.
+ * It helps categorize whether a DMA transfer is occurring within the same domain,
+ * across different processes, or between distinct operating system domains.
+ *
+ * @see struct rte_dma_inter_domain_param:type
+ */
+enum rte_dma_inter_domain_type {
+	/** No inter-domain transfer; standard DMA within same domain. */
+	RTE_DMA_INTER_DOMAIN_NONE,
+	/** Transfer occurs between different user-space processes. */
+	RTE_DMA_INTER_PROCESS_DOMAIN,
+	/** Transfer spans across different operating system domains. */
+	RTE_DMA_INTER_OS_DOMAIN,
+};
+
+/**
+ * Parameters for inter-process or inter-OS DMA transfers.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * This structure defines the parameters required to perform DMA transfers
+ * across different domains, such as between processes or operating systems.
+ * It includes the domain type and handler identifiers
+ * for both the source and destination domains.
+ *
+ * When domain type is RTE_DMA_INTER_DOMAIN_NONE, both source and destination
+ * handlers are invalid, DMA operation is confined within the local process.
+ *
+ * For DMA transfers between the local process or OS domain to another process
+ * or OS domain, valid source and destination handlers must be provided.
+ */
+struct rte_dma_inter_domain_param {
+	/** Type of inter-domain. */
+	enum rte_dma_inter_domain_type type;
+	/** Source domain handler identifier. */
+	uint16_t src_handler;
+	/** Destination domain handler identifier. */
+	uint16_t dst_handler;
+	/** Reserved for future fields. */
+	uint64_t reserved[2];
+};
+
+/**
  * A structure used to configure a virtual DMA channel.
  *
  * @see rte_dma_vchan_setup
@@ -609,6 +677,16 @@ struct rte_dma_vchan_conf {
 	 * @see struct rte_dma_auto_free_param
 	 */
 	struct rte_dma_auto_free_param auto_free;
+	/** Parameters for inter-process or inter-OS domain DMA transfers.
+	 * This field specifies the source and destination domain handlers
+	 * required for DMA operations that span
+	 * across different processes or operating system domains.
+	 *
+	 * @see RTE_DMA_CAPA_INTER_PROCESS_DOMAIN
+	 * @see RTE_DMA_CAPA_INTER_OS_DOMAIN
+	 * @see struct rte_dma_inter_domain_param
+	 */
+	struct rte_dma_inter_domain_param domain;
 };
 
 /**
@@ -727,6 +805,172 @@ rte_dma_vchan_status(int16_t dev_id, uint16_t vchan, enum rte_dma_vchan_status *
  *   0 on success. Otherwise negative value is returned.
  */
 int rte_dma_dump(int16_t dev_id, FILE *f);
+
+/**
+ * Event types for DMA access pair group notifications.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * When the event type is RTE_DMA_GROUP_EVENT_MEMBER_LEFT,
+ * the handler associated with the departing member's domain is no longer valid.
+ * Inter-domain DMA operations targeting that domain should be avoided.
+ *
+ * When the event type is RTE_DMA_GROUP_EVENT_GROUP_DESTROYED,
+ * all handlers associated with the group become invalid.
+ * No further inter-domain DMA operations should be initiated using those handlers.
+ */
+enum rte_dma_access_pair_group_event_type {
+	/** A member left the group (notifies creator and joiners). */
+	RTE_DMA_GROUP_EVENT_MEMBER_LEFT,
+	/** Group was destroyed (notifies joiners). */
+	RTE_DMA_GROUP_EVENT_GROUP_DESTROYED
+};
+
+/**
+ * This callback is used to notify interested parties
+ * (either the group creator or group joiners)
+ * about significant events related to the lifecycle of a DMA access pair group.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * It can be registered by:
+ * - **Group creators or group joiners** to be notified when a member leaves the group.
+ * - **Group joiners** to be notified when the group is destroyed.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device.
+ * @param group_id
+ *   Identifier of the access pair group where the event occurred.
+ * @param domain_id
+ *   UUID of the domain_id associated with the event.
+ *   For member leave events, this is the domain_id of the member that left.
+ *   For group destruction events,
+ *   this may refer to the domain_id of the respective member.
+ * @param event
+ *   Type of event that occurred.
+ *   @see rte_dma_access_pair_group_event_type
+ */
+typedef void (*rte_dma_access_pair_group_event_cb_t)(int16_t dev_id,
+	int16_t group_id,
+	rte_uuid_t domain_id,
+	enum rte_dma_access_pair_group_event_type event);
+
+/**
+ * Create an access pair group to enable secure DMA transfers
+ * between devices across different processes or operating system domains.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device initiating the group.
+ * @param domain_id
+ *   Unique identifier representing the process or OS domain.
+ * @param token
+ *   Authentication token used to establish the access group.
+ * @param[out] group_id
+ *   Pointer to store the ID of the newly created access group.
+ * @param cb
+ *   Callback function to be invoked when a member leaves the group.
+ *
+ * @return
+ *   0 on success,
+ *   negative error code on failure.
+ */
+__rte_experimental
+int rte_dma_access_pair_group_create(int16_t dev_id, rte_uuid_t domain_id, rte_uuid_t token,
+				     int16_t *group_id, rte_dma_access_pair_group_event_cb_t cb);
+
+/**
+ * Destroy an access pair group if all participating devices have exited.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * This operation is only permitted by the device that originally created the group;
+ * attempts by other devices will result in failure.
+ *
+ * @param dev_id
+ *   Identifier of the device requesting group destruction.
+ * @param group_id
+ *   ID of the access group to be destroyed.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+__rte_experimental
+int rte_dma_access_pair_group_destroy(int16_t dev_id, int16_t group_id);
+
+/**
+ * Join an existing access group to enable secure DMA transfers
+ * between devices across different processes or OS domains.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device attempting to join the group.
+ * @param group_id
+ *   ID of the access group to join.
+ * @param token
+ *   Authentication token used to validate group membership.
+ * @param cb
+ *   Callback function to be invoked when the device leaves the group
+ *   or when the group is destroyed due to some exception or failure.
+ *
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+__rte_experimental
+int rte_dma_access_pair_group_join(int16_t dev_id, int16_t group_id, rte_uuid_t token,
+				   rte_dma_access_pair_group_event_cb_t cb);
+
+/**
+ * Leave an access group, removing the device's entry from the group table
+ * and disabling inter-domain DMA transfers to and from this device.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * This operation is not permitted for the device that originally created the group.
+ *
+ * @param dev_id
+ *   Identifier of the device requesting to leave the group.
+ * @param group_id
+ *   ID of the access group to leave.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+__rte_experimental
+int rte_dma_access_pair_group_leave(int16_t dev_id, int16_t group_id);
+
+/**
+ * Retrieve the handler associated with a specific domain ID,
+ * which is used by the application to query source or destinationin handler
+ * to initiate inter-process or inter-OS DMA transfers.
+ *
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * @param dev_id
+ *   Identifier of the DMA device requesting the handler.
+ * @param group_id
+ *   ID of the access group to query.
+ * @param domain_id
+ *   Unique identifier of the target process or OS domain.
+ * @param[out] handler
+ *   Pointer to store the retrieved handler value.
+ * @return
+ *   0 on success,
+ *   negative value on failure indicating the error code.
+ */
+__rte_experimental
+int rte_dma_access_pair_group_handler_get(int16_t dev_id, int16_t group_id, rte_uuid_t domain_id,
+					  uint16_t *handler);
 
 /**
  * DMA transfer result status code defines.
@@ -856,7 +1100,7 @@ struct rte_dma_op {
 	/** Number of destination segments. */
 	uint16_t nb_dst;
 	/** Source and destination segments. */
-	struct rte_dma_sge src_dst_seg[0];
+	struct rte_dma_sge src_dst_seg[];
 };
 
 #ifdef __cplusplus
