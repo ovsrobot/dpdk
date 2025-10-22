@@ -715,6 +715,46 @@ struct rte_mbuf_ext_shared_info {
 #define RTE_MBUF_DIRECT(mb) \
 	(!((mb)->ol_flags & (RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL)))
 
+#if defined(RTE_TOOLCHAIN_GCC) && (defined(RTE_ARCH_X86) || defined(RTE_ARCH_LOONGARCH))
+/* Optimization for code size.
+ * GCC only optimizes single-bit MSB tests this way, so we do it by hand with multi-bit.
+ *
+ * The flags RTE_MBUF_F_INDIRECT and RTE_MBUF_F_EXTERNAL are both in the MSB of the
+ * 64-bit ol_flags field, so we only compare this one byte instead of all 64 bits.
+ * On little endian architecture, the MSB of a 64-bit integer is at byte offset 7.
+ *
+ * Note: Tested on x86-64 using GCC version 16.0.0 20251019 (experimental).
+ *
+ * Without this optimization, GCC generates 17 bytes of instructions:
+ *      movabs rax,0x6000000000000000       // 10 bytes
+ *      and    rax,QWORD PTR [rdi+0x18]     // 4 bytes
+ *      sete   al                           // 3 bytes
+ * With this optimization, GCC generates only 7 bytes of instructions:
+ *      test   BYTE PTR [rdi+0x1f],0x60     // 4 bytes
+ *      sete   al                           // 3 bytes
+ *
+ * Note: Tested on loongarch using GCC version 15.2.0.
+ *
+ * Without this optimization, GCC generates 5 instructions:
+ *      ld.d        $a0, $a0, 24
+ *      move        $t0, $zero
+ *      lu52i.d     $t0, $t0, 1536
+ *      and         $a0, $a0, $t0
+ *      sltui       $a0, $a0, 1
+ * With this optimization, GCC generates only 3 instructions:
+ *      ld.bu       $a0, $a0, 31
+ *      andi        $a0, $a0, 0x60
+ *      sltui       $a0, $a0, 1
+ *
+ * Note: Tested on ARM64, GCC generates 3 instructions both without and with the optimization,
+ * so no need for the optimization here.
+ */
+static_assert((RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL) == UINT64_C(0x60) << (7 * CHAR_BIT),
+	"(RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL) is not 0x60 at byte offset 7");
+#undef RTE_MBUF_DIRECT
+#define RTE_MBUF_DIRECT(mb)     !(((const char *)(&(mb)->ol_flags))[7] & 0x60)
+#endif
+
 /** Uninitialized or unspecified port. */
 #define RTE_MBUF_PORT_INVALID UINT16_MAX
 /** For backwards compatibility. */
