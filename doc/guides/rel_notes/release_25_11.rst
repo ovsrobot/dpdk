@@ -66,6 +66,12 @@ New Features
   For example: ``dpdk-test -l 140-144 -R``
   will start 5 threads with lcore-ids 0 to 4 on physical cores 140 to 144.
 
+* **Added inter-process and inter-OS DMA device API.**
+
+  * Added parameters in DMA device virtual channel to configure DMA operations
+    that span across different processes or operating system domains.
+  * Added functions to exchange handlers between DMA devices.
+
 * **Added speed 800G.**
 
   Added Ethernet link speed for 800 Gb/s as it is well standardized in IEEE,
@@ -78,9 +84,56 @@ New Features
   Some functions were added to dump statistics.
   A script was added to parse mbuf tracking stored in a file.
 
+* **Added ethdev API to get link connector.**
+
+  Added API to report type of link connector for a port.
+  The following connectors are enumerated:
+
+  * None
+  * Twisted Pair
+  * Attachment Unit Interface (AUI)
+  * Optical Fiber Link
+  * BNC
+  * Direct Attach Copper
+  * XFI, SFI
+  * Media Independent Interface (MII)
+  * SGMII, QSGMII
+  * XLAUI, GAUI, AUI, CAUI, LAUI
+  * SFP, SFP+, SFP28, SFP-DD
+  * QSFP, QSFP+, QSFP28, QSFP56, QSFP-DD
+  * OTHER
+
+  By default, it reports ``RTE_ETH_LINK_CONNECTOR_NONE``
+  unless driver specifies it.
+
+* **Updated Amazon ENA (Elastic Network Adapter) ethernet driver.**
+
+  * Added support for retrieving HW timestamps for Rx packets with nanosecond resolution.
+  * Fixed PCI BAR mapping on 64K page size.
+
+* **Added Huawei hinic3 ethernet driver.**
+
+  Added network driver for the Huawei SPx series Network Adapters.
+
+* **Added Nebulamatrix nbl ethernet driver.**
+
+  Added the PMD for Nebulamatrix NICs.
+
 * **Updated NXP DPAA2 ethernet driver.**
 
   * Enabled software taildrop for ordered queues.
+  * Added additional MAC counters in xstats.
+
+* **Added NXP ENETC4 ethernet driver.**
+
+  Added ENETC4 PMD for multiple new generation SoCs.
+
+* **Updated Wangxun txgbe ethernet driver.**
+
+  Added support for Wangxun Amber-Lite NIC series,
+  including FF5025 (supporting 10G and 25G) and FF5040 (supporting 40G).
+  As these new models share hardware similarities with the existing 10G Sapphire NICs,
+  many of the existing configurations and practices are expected to apply.
 
 * **Updated Yunsilicon xsc ethernet driver.**
 
@@ -121,6 +174,12 @@ Removed Items
   Currently, this means that modules will only be built for FreeBSD.
   No modules are shipped with DPDK for either Linux or Windows.
 
+* ethdev: As previously announced in deprecation notes,
+  queue specific stats fields are now removed from ``struct rte_eth_stats``.
+  Mentioned fields are: ``q_ipackets``, ``q_opackets``, ``q_ibytes``, ``q_obytes``, ``q_errors``.
+  Instead queue stats will be received via xstats API.
+  Also compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` is removed from public headers.
+
 * telemetry: As previously announced in the deprecation notices,
   the functions ``rte_tel_data_add_array_u64`` and ``rte_tel_data_add_dict_u64`` are removed.
   They are replaced by ``rte_tel_data_add_array_uint`` and ``rte_tel_data_add_dict_uint`` respectively.
@@ -140,6 +199,9 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* rawdev: Changed the return type of ``rte_rawdev_get_dev_id()``
+  for negative error values.
 
 * pcapng: Changed the API for adding interfaces to include a link type argument.
   The link type was previously hardcoded to the Ethernet link type in the API.
@@ -166,6 +228,9 @@ ABI Changes
 
 * stack: The structure ``rte_stack_lf_head`` alignment has been updated to 16 bytes
   to avoid unaligned accesses.
+
+* ethdev: Added ``link_connector`` field to ``rte_eth_link`` structure
+  to report type of link connector for a port.
 
 
 Known Issues
