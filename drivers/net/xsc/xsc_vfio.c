@@ -627,10 +627,7 @@ xsc_vfio_rx_cq_create(struct xsc_dev *xdev, struct xsc_rx_cq_params *cq_params,
 	for (i = 0; i < (1 << cq_info->cqe_n); i++)
 		((volatile struct xsc_cqe *)(cqes + i))->owner = 1;
 	cq_info->cqes = cqes;
-	if (xsc_dev_is_vf(xdev))
-		cq_info->cq_db = (uint32_t *)((uint8_t *)xdev->bar_addr + XSC_VF_CQ_DB_ADDR);
-	else
-		cq_info->cq_db = (uint32_t *)((uint8_t *)xdev->bar_addr + XSC_PF_CQ_DB_ADDR);
+	cq_info->cq_db = xdev->reg_addr.cq_db_addr;
 	cq_info->cqn = rte_be_to_cpu_32(out->cqn);
 	cq->cqn = cq_info->cqn;
 	cq->xdev = xdev;
@@ -732,10 +729,7 @@ xsc_vfio_tx_cq_create(struct xsc_dev *xdev, struct xsc_tx_cq_params *cq_params,
 
 	cq_info->cq = cq;
 	cqes = (struct xsc_cqe *)((uint8_t *)cq->mz->addr);
-	if (xsc_dev_is_vf(xdev))
-		cq_info->cq_db = (uint32_t *)((uint8_t *)xdev->bar_addr + XSC_VF_CQ_DB_ADDR);
-	else
-		cq_info->cq_db = (uint32_t *)((uint8_t *)xdev->bar_addr + XSC_PF_CQ_DB_ADDR);
+	cq_info->cq_db = xdev->reg_addr.cq_db_addr;
 	cq_info->cqn = cq->cqn;
 	cq_info->cqe_s = cqe_s;
 	cq_info->cqe_n = log_cq_sz;
@@ -852,11 +846,7 @@ xsc_vfio_tx_qp_create(struct xsc_dev *xdev, struct xsc_tx_qp_params *qp_params,
 	qp_info->wqes = (struct xsc_wqe *)qp->mz->addr;
 	qp_info->wqe_n = rte_log2_u32(wqe_s);
 	qp_info->tso_en = tso_en ? 1 : 0;
-
-	if (xsc_dev_is_vf(xdev))
-		qp_info->qp_db = (uint32_t *)((uint8_t *)xdev->bar_addr + XSC_VF_TX_DB_ADDR);
-	else
-		qp_info->qp_db = (uint32_t *)((uint8_t *)xdev->bar_addr + XSC_PF_TX_DB_ADDR);
+	qp_info->qp_db = xdev->reg_addr.txq_db_addr;
 
 	free(cmd_buf);
 	return 0;
@@ -1114,11 +1104,11 @@ xsc_vfio_intr_handler_install(struct xsc_dev *xdev, rte_intr_callback_fn cb, voi
 static int
 xsc_vfio_intr_handler_uninstall(struct xsc_dev *xdev)
 {
-	if (rte_intr_fd_get(xdev->pci_dev->intr_handle) >= 0)
-		rte_intr_callback_unregister(xdev->pci_dev->intr_handle,
-					     xdev->intr_cb, xdev->intr_cb_arg);
-
-	rte_intr_instance_free(xdev->intr_handle);
+	if (rte_intr_fd_get(xdev->pci_dev->intr_handle) >= 0) {
+		rte_intr_disable(xdev->pci_dev->intr_handle);
+		rte_intr_callback_unregister_sync(xdev->pci_dev->intr_handle,
+						  xdev->intr_cb, xdev->intr_cb_arg);
+	}
 
 	return 0;
 }

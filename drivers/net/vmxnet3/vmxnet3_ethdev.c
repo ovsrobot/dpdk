@@ -77,7 +77,8 @@ static int vmxnet3_dev_link_update(struct rte_eth_dev *dev,
 				   int wait_to_complete);
 static void vmxnet3_hw_stats_save(struct vmxnet3_hw *hw);
 static int vmxnet3_dev_stats_get(struct rte_eth_dev *dev,
-				  struct rte_eth_stats *stats);
+				  struct rte_eth_stats *stats,
+				  struct eth_queue_stats *qstats);
 static int vmxnet3_dev_stats_reset(struct rte_eth_dev *dev);
 static int vmxnet3_dev_xstats_get_names(struct rte_eth_dev *dev,
 					struct rte_eth_xstat_name *xstats,
@@ -609,6 +610,13 @@ vmxnet3_dev_configure(struct rte_eth_dev *dev)
 	size_t size;
 
 	PMD_INIT_FUNC_TRACE();
+
+	/* Disabling RSS for single queue pair */
+	if (dev->data->nb_rx_queues == 1 &&
+	    dev->data->dev_conf.rxmode.mq_mode == RTE_ETH_MQ_RX_RSS) {
+		dev->data->dev_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_NONE;
+		PMD_INIT_LOG(ERR, "WARN: Disabling RSS for single Rx queue");
+	}
 
 	if (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_RSS_HASH;
@@ -1470,7 +1478,8 @@ vmxnet3_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 }
 
 static int
-vmxnet3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+vmxnet3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+		struct eth_queue_stats *qstats)
 {
 	unsigned int i;
 	struct vmxnet3_hw *hw = dev->data->dev_private;
@@ -1495,9 +1504,9 @@ vmxnet3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->obytes += bytes;
 		stats->oerrors += txStats.pktsTxError + txStats.pktsTxDiscard;
 
-		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
-			stats->q_opackets[i] = packets;
-			stats->q_obytes[i] = bytes;
+		if (qstats != NULL && i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			qstats->q_opackets[i] = packets;
+			qstats->q_obytes[i] = bytes;
 		}
 	}
 
@@ -1517,10 +1526,10 @@ vmxnet3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ierrors += rxStats.pktsRxError;
 		stats->imissed += rxStats.pktsRxOutOfBuf;
 
-		if (i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
-			stats->q_ipackets[i] = packets;
-			stats->q_ibytes[i] = bytes;
-			stats->q_errors[i] = rxStats.pktsRxError;
+		if (qstats != NULL && i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			qstats->q_ipackets[i] = packets;
+			qstats->q_ibytes[i] = bytes;
+			qstats->q_errors[i] = rxStats.pktsRxError;
 		}
 	}
 
