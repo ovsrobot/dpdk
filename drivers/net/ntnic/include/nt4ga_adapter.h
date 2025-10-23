@@ -40,15 +40,11 @@ typedef struct adapter_info_s {
 	char *mp_port_id_str[NUM_ADAPTER_PORTS_MAX];
 	char *mp_adapter_id_str;
 	char *p_dev_name;
-	volatile bool *pb_shutdown;
 
 	int adapter_no;
 	int n_rx_host_buffers;
 	int n_tx_host_buffers;
 } adapter_info_t;
-
-extern rte_thread_t monitor_tasks[NUM_ADAPTER_MAX];
-extern volatile int monitor_task_is_running[NUM_ADAPTER_MAX];
 
 
 #endif	/* _NT4GA_ADAPTER_H_ */
