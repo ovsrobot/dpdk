@@ -15,6 +15,9 @@ subdir(exec_env)
 subdir(arch_subdir)
 
 deps += ['argparse', 'kvargs']
+if is_linux and dpdk_conf.has('RTE_LIB_PMU')
+    deps += ['pmu']
+endif
 if not is_windows
     deps += ['telemetry']
 endif

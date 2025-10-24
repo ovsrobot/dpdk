@@ -127,6 +127,29 @@ RTE_TRACE_POINT(
 
 #define RTE_EAL_TRACE_GENERIC_FUNC rte_eal_trace_generic_func(__func__)
 
+#ifdef RTE_LIB_PMU
+#include <rte_debug.h>
+#include <rte_pmu.h>
+RTE_TRACE_POINT_FP(
+	rte_pmu_trace_read,
+	RTE_TRACE_POINT_ARGS(unsigned int index),
+	/* Embedded code should only execute in runtime so cut it out during registration in order
+	 * to avoid compilation issues because rte_pmu_trace_read_register(void) does not provide
+	 * any context.
+	 */
+	RTE_TRACE_POINT_EMBED_CODE(
+		uint64_t val;
+#ifdef ALLOW_EXPERIMENTAL_API
+		val = rte_pmu_read(index);
+#else
+		RTE_SET_USED(index);
+		RTE_VERIFY(false);
+#endif
+	)
+	rte_trace_point_emit_u64(val);
+)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

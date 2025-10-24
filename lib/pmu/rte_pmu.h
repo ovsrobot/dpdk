@@ -21,6 +21,10 @@
  *
  * rte_pmu_init()
  * rte_pmu_add_event()
+ * rte_pmu_add_event() [or rte_pmu_add_events_by_pattern()]
+ *
+ * Note that if -Denable_trace_fp=True was passed to Meson,
+ * rte_pmu_init() gets called automatically.
  *
  * Afterwards all threads can read events by calling rte_pmu_read().
  */
@@ -31,15 +35,13 @@
 #include <rte_branch_prediction.h>
 #include <rte_common.h>
 #include <rte_compat.h>
+#include <rte_debug.h>
 #include <rte_lcore.h>
 
-#define RTE_PMU_SUPPORTED
 #if defined(RTE_ARCH_ARM64)
 #include "rte_pmu_pmc_arm64.h"
 #elif defined(RTE_ARCH_X86_64)
 #include "rte_pmu_pmc_x86_64.h"
-#else
-#undef RTE_PMU_SUPPORTED
 #endif
 
 #ifdef __cplusplus
@@ -148,6 +150,8 @@ __rte_pmu_enable_group(struct rte_pmu_event_group *group);
  *
  * Initialize PMU library.
  *
+ * It's safe to call it multiple times.
+ *
  * @return
  *   0 in case of success, negative value otherwise.
  */
@@ -160,6 +164,9 @@ rte_pmu_init(void);
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * Finalize PMU library.
+ *
+ * Number of calls must match number of times rte_pmu_init() was called.
+ * Otherwise memory won't be freed properly.
  */
 __rte_experimental
 void
@@ -181,11 +188,20 @@ __rte_experimental
 int
 rte_pmu_add_event(const char *name);
 
-/* quiesce warnings produced by chkincs caused by calling internal functions directly */
-#ifndef ALLOW_EXPERIMENTAL_API
-#define __rte_pmu_enable_group(group) ({ RTE_SET_USED(group); 0; })
-#define __rte_pmu_read_userpage(pc) ({ RTE_SET_USED(pc); 0; })
-#endif
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Add events matching pattern to the group of enabled events.
+ *
+ * @param pattern
+ *   Pattern e=ev1[,ev2,...] matching events
+ *   listed under /sys/bus/event_source/devices/pmu/events,
+ *   where evX and PMU are placeholders for respectively an event and an event source.
+ */
+__rte_experimental
+int
+rte_pmu_add_events_by_pattern(const char *pattern);
 
 /**
  * @warning
@@ -211,6 +227,7 @@ __rte_experimental
 static __rte_always_inline uint64_t
 rte_pmu_read(unsigned int index)
 {
+#ifdef ALLOW_EXPERIMENTAL_API
 	unsigned int lcore_id = rte_lcore_id();
 	struct rte_pmu_event_group *group;
 
@@ -231,6 +248,10 @@ rte_pmu_read(unsigned int index)
 	}
 
 	return __rte_pmu_read_userpage(group->mmap_pages[index]);
+#else
+	RTE_SET_USED(index);
+	RTE_VERIFY(false);
+#endif
 }
 
 #ifdef __cplusplus
