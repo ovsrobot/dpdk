@@ -204,6 +204,10 @@ class LinuxSession(PosixSession):
 
         del self._lshw_net_info
 
+    def set_interface_link_up(self, name: str) -> None:
+        """Overrides :meth:`~.os_session.OSSession.set_interface_link_up`."""
+        self.send_command(f"ip link set dev {name} up", privileged=True, verify=True)
+
     @cached_property
     def devbind_script_path(self) -> PurePath:
         """The path to the dpdk-devbind.py script on the node.
