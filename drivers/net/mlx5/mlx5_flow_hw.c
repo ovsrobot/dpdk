@@ -3232,7 +3232,7 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 			return -1;
 		if (action_flags & MLX5_FLOW_ACTION_COUNT) {
 			cnt_queue = mlx5_hws_cnt_get_queue(priv, &queue);
-			if (mlx5_hws_cnt_pool_get(priv->hws_cpool, cnt_queue, &age_cnt, idx) < 0)
+			if (mlx5_hws_cnt_pool_get(priv->hws_cpool, cnt_queue, &age_cnt, idx, 0) < 0)
 				return -1;
 			flow->flags |= MLX5_FLOW_HW_FLOW_FLAG_CNT_ID;
 			flow->cnt_id = age_cnt;
@@ -3668,7 +3668,8 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 			/* Fall-through. */
 		case RTE_FLOW_ACTION_TYPE_COUNT:
 			cnt_queue = mlx5_hws_cnt_get_queue(priv, &queue);
-			ret = mlx5_hws_cnt_pool_get(priv->hws_cpool, cnt_queue, &cnt_id, age_idx);
+			ret = mlx5_hws_cnt_pool_get(priv->hws_cpool, cnt_queue, &cnt_id,
+						    age_idx, 0);
 			if (ret != 0) {
 				rte_flow_error_set(error, -ret, RTE_FLOW_ERROR_TYPE_ACTION,
 						action, "Failed to allocate flow counter");
@@ -8818,9 +8819,8 @@ __flow_hw_pattern_validate(struct rte_eth_dev *dev,
 			last_item = MLX5_FLOW_ITEM_QUOTA;
 			break;
 		case RTE_FLOW_ITEM_TYPE_ESP:
-			ret = mlx5_flow_os_validate_item_esp(dev, item,
-							     *item_flags, 0xff,
-							     error);
+			ret = mlx5_flow_os_validate_item_esp(dev, item, *item_flags,
+							     0xff, true, error);
 			if (ret < 0)
 				return ret;
 			last_item = MLX5_FLOW_ITEM_ESP;
@@ -14960,6 +14960,7 @@ flow_hw_async_action_list_handle_destroy
 						    legacy->handle,
 						    user_data, error);
 		mlx5_indirect_list_remove_entry(&legacy->indirect);
+		mlx5_free(legacy);
 		goto end;
 	}
 	if (attr) {
@@ -15097,6 +15098,8 @@ flow_hw_calc_encap_hash(struct rte_eth_dev *dev,
 				((const struct rte_flow_item_ipv4 *)(pattern->spec))->hdr.dst_addr;
 			data.src.ipv4_addr =
 				((const struct rte_flow_item_ipv4 *)(pattern->spec))->hdr.src_addr;
+			data.next_protocol = ((const struct rte_flow_item_ipv4 *)
+				(pattern->spec))->hdr.next_proto_id;
 			break;
 		case RTE_FLOW_ITEM_TYPE_IPV6:
 			memcpy(data.dst.ipv6_addr,
@@ -15105,6 +15108,8 @@ flow_hw_calc_encap_hash(struct rte_eth_dev *dev,
 			memcpy(data.src.ipv6_addr,
 			       &((const struct rte_flow_item_ipv6 *)(pattern->spec))->hdr.src_addr,
 			       sizeof(data.src.ipv6_addr));
+			data.next_protocol = ((const struct rte_flow_item_ipv6 *)
+			       (pattern->spec))->hdr.proto;
 			break;
 		case RTE_FLOW_ITEM_TYPE_UDP:
 			data.next_protocol = IPPROTO_UDP;

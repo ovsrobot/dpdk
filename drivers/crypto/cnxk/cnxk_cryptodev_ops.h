@@ -97,6 +97,11 @@ struct crypto_adpter_info {
 	/** Maximum number of cops to combine into single vector */
 	struct rte_mempool *vector_mp;
 	/** Pool for allocating rte_event_vector */
+	uint64_t vector_timeout_ns;
+	/*
+	 * Maximum number of nanoseconds to wait for aggregating
+	 * crypto operations.
+	 */
 };
 
 struct cnxk_cpt_qp {
@@ -112,6 +117,7 @@ struct cnxk_cpt_qp {
 	/**< Crypto adapter related info */
 	struct rte_mempool *sess_mp;
 	/**< Session mempool */
+	struct cnxk_sso_evdev *evdev;
 };
 
 int cnxk_cpt_asym_get_mlen(void);
@@ -238,5 +244,31 @@ cnxk_cpt_sec_inst_w7_get(struct roc_cpt *roc_cpt, void *cptr)
 	rte_mb();
 
 	return w7.u64;
+}
+
+static inline void
+pktmbuf_trim_chain(struct rte_mbuf *m, uint16_t len)
+{
+	uint16_t len_so_far = 0, left_over = 0, new_mlen;
+	struct rte_mbuf *cur = m;
+
+	new_mlen = m->pkt_len - len;
+
+	while (len_so_far < new_mlen) {
+		left_over = new_mlen - len_so_far;
+		if (left_over < cur->data_len)
+			break;
+		len_so_far += cur->data_len;
+		cur = cur->next;
+	}
+
+	cur->data_len = left_over;
+	cur = cur->next;
+	while (cur) {
+		cur->data_len = 0;
+		cur = cur->next;
+	}
+
+	m->pkt_len = new_mlen;
 }
 #endif /* _CNXK_CRYPTODEV_OPS_H_ */
