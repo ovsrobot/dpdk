@@ -327,6 +327,7 @@ enum iavf_rx_func_type {
 	IAVF_RX_FLEX_RXD,
 	IAVF_RX_SCATTERED_FLEX_RXD,
 	IAVF_RX_BULK_ALLOC,
+	IAVF_RX_BULK_ALLOC_FLEX_RXD,
 	IAVF_RX_SSE,
 	IAVF_RX_SSE_SCATTERED,
 	IAVF_RX_SSE_FLEX_RXD,
@@ -563,6 +564,7 @@ int iavf_flow_sub_check(struct iavf_adapter *adapter,
 			struct iavf_fsub_conf *filter);
 void iavf_dev_watchdog_enable(struct iavf_adapter *adapter);
 void iavf_dev_watchdog_disable(struct iavf_adapter *adapter);
-void iavf_handle_hw_reset(struct rte_eth_dev *dev);
+void iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset);
 void iavf_set_no_poll(struct iavf_adapter *adapter, bool link_change);
+bool is_iavf_supported(struct rte_eth_dev *dev);
 #endif /* _IAVF_ETHDEV_H_ */

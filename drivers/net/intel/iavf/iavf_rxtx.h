@@ -55,7 +55,6 @@
 		RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM |	\
 		RTE_ETH_TX_OFFLOAD_QINQ_INSERT)
 
-#define IAVF_RX_NO_OFFLOADS 0
 /* basic scalar path */
 #define IAVF_RX_SCALAR_OFFLOADS (			\
 		RTE_ETH_RX_OFFLOAD_VLAN_STRIP |		\
@@ -83,7 +82,6 @@
 /* vector paths that use the flex rx desc */
 #define IAVF_RX_VECTOR_FLEX_OFFLOADS (			\
 		IAVF_RX_VECTOR_OFFLOADS |		\
-		RTE_ETH_RX_OFFLOAD_TIMESTAMP |		\
 		RTE_ETH_RX_OFFLOAD_SECURITY)
 /* vector offload paths */
 #define IAVF_RX_VECTOR_OFFLOAD_OFFLOADS (		\
