@@ -129,6 +129,10 @@
 	(PLT_ALIGN_CEIL(ROC_AR_WIN_SIZE_MAX, BITS_PER_LONG_LONG) /             \
 	 BITS_PER_LONG_LONG)
 
+/* ROC CPTR Cache */
+#define ROC_CPTR_CACHE_LINE_SZ 256
+#define ROC_CPTR_ALIGN	       ROC_CPTR_CACHE_LINE_SZ
+
 enum {
 	ROC_CPT_REVISION_ID_83XX = 0,
 	ROC_CPT_REVISION_ID_96XX_B0 = 1,
@@ -169,6 +173,7 @@ struct roc_cpt {
 	uint16_t nb_lf;
 	uint16_t nb_lf_avail;
 	uintptr_t lmt_base;
+	uint8_t ctx_ilen;
 	/**< CPT device capabilities */
 	union cpt_eng_caps hw_caps[CPT_MAX_ENG_TYPES];
 	uint8_t eng_grp[CPT_MAX_ENG_TYPES];

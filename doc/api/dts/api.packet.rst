@@ -1,8 +1,8 @@
 .. SPDX-License-Identifier: BSD-3-Clause
 
-testpmd - TestPMD Parameters Modelling
+packet - Sending and capturing packets
 ======================================
 
-.. automodule:: framework.params.testpmd
+.. automodule:: api.packet
    :members:
    :show-inheritance:
