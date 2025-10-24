@@ -48,6 +48,7 @@ if not is_windows
             'eal_common_hypervisor.c',
             'eal_common_proc.c',
             'eal_common_trace.c',
+            'eal_common_trace_pmu.c',
             'eal_common_trace_ctf.c',
             'eal_common_trace_utils.c',
             'hotplug_mp.c',

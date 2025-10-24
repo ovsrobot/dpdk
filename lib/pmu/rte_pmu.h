@@ -21,6 +21,10 @@
  *
  * rte_pmu_init()
  * rte_pmu_add_event()
+ * rte_pmu_add_event() [or rte_pmu_add_events_by_pattern()]
+ *
+ * Note that if -Denable_trace_fp=True was passed to Meson,
+ * rte_pmu_init() gets called automatically.
  *
  * Afterwards all threads can read events by calling rte_pmu_read().
  */
@@ -146,6 +150,8 @@ __rte_pmu_enable_group(struct rte_pmu_event_group *group);
  *
  * Initialize PMU library.
  *
+ * It's safe to call it multiple times.
+ *
  * @return
  *   0 in case of success, negative value otherwise.
  */
@@ -158,6 +164,9 @@ rte_pmu_init(void);
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
  * Finalize PMU library.
+ *
+ * Number of calls must match number of times rte_pmu_init() was called.
+ * Otherwise memory won't be freed properly.
  */
 __rte_experimental
 void
@@ -178,6 +187,21 @@ rte_pmu_fini(void);
 __rte_experimental
 int
 rte_pmu_add_event(const char *name);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Add events matching pattern to the group of enabled events.
+ *
+ * @param pattern
+ *   Pattern e=ev1[,ev2,...] matching events
+ *   listed under /sys/bus/event_source/devices/pmu/events,
+ *   where evX and PMU are placeholders for respectively an event and an event source.
+ */
+__rte_experimental
+int
+rte_pmu_add_events_by_pattern(const char *pattern);
 
 /**
  * @warning

@@ -1870,6 +1870,7 @@ F: doc/guides/prog_guide/eventdev/dispatcher_lib.rst
 PMU - EXPERIMENTAL
 M: Tomasz Duszynski <tduszynski@marvell.com>
 F: lib/pmu/
+F: lib/eal/common/eal_common_trace_pmu.c
 F: app/test/test_pmu.c
 
 Job statistics

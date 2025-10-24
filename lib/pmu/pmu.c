@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <ctype.h>
+#include <regex.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -371,6 +372,7 @@ static void
 free_event(struct rte_pmu_event *event)
 {
 	free(event->name);
+	event->name = NULL;
 	free(event);
 }
 
@@ -417,13 +419,77 @@ rte_pmu_add_event(const char *name)
 	return event->index;
 }
 
+static int
+add_events(const char *pattern)
+{
+	char *token, *copy, *tmp;
+	int ret = 0;
+
+	copy = strdup(pattern);
+	if (copy == NULL)
+		return -ENOMEM;
+
+	token = strtok_r(copy, ",", &tmp);
+	while (token) {
+		ret = rte_pmu_add_event(token);
+		if (ret < 0)
+			break;
+
+		token = strtok_r(NULL, ",", &tmp);
+	}
+
+	free(copy);
+
+	return ret >= 0 ? 0 : ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_add_events_by_pattern, 25.11)
+int
+rte_pmu_add_events_by_pattern(const char *pattern)
+{
+	regmatch_t rmatch;
+	char buf[BUFSIZ];
+	unsigned int num;
+	regex_t reg;
+	int ret;
+
+	/* events are matched against occurrences of e=ev1[,ev2,..] pattern */
+	ret = regcomp(&reg, "e=([_[:alnum:]-],?)+", REG_EXTENDED);
+	if (ret) {
+		PMU_LOG(ERR, "Failed to compile event matching regexp");
+		return -EINVAL;
+	}
+
+	for (;;) {
+		if (regexec(&reg, pattern, 1, &rmatch, 0))
+			break;
+
+		num = rmatch.rm_eo - rmatch.rm_so;
+		if (num > sizeof(buf))
+			num = sizeof(buf);
+
+		/* skip e= pattern prefix */
+		memcpy(buf, pattern + rmatch.rm_so + 2, num - 2);
+		buf[num - 2] = '\0';
+		ret = add_events(buf);
+		if (ret)
+			break;
+
+		pattern += rmatch.rm_eo;
+	}
+
+	regfree(&reg);
+
+	return ret;
+}
+
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmu_init, 25.07)
 int
 rte_pmu_init(void)
 {
 	int ret;
 
-	if (rte_pmu.initialized)
+	if (rte_pmu.initialized && ++rte_pmu.initialized)
 		return 0;
 
 	ret = scan_pmus();
@@ -457,7 +523,7 @@ rte_pmu_fini(void)
 	struct rte_pmu_event_group *group;
 	unsigned int i;
 
-	if (!rte_pmu.initialized)
+	if (!rte_pmu.initialized || --rte_pmu.initialized)
 		return;
 
 	RTE_TAILQ_FOREACH_SAFE(event, &rte_pmu.event_list, next, tmp_event) {
