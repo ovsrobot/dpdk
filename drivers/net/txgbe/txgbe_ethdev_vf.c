@@ -375,7 +375,7 @@ eth_txgbevf_dev_init(struct rte_eth_dev *eth_dev)
 
 	PMD_INIT_LOG(DEBUG, "port %d vendorID=0x%x deviceID=0x%x mac.type=%s",
 		     eth_dev->data->port_id, pci_dev->id.vendor_id,
-		     pci_dev->id.device_id, "txgbe_mac_raptor_vf");
+		     pci_dev->id.device_id, "txgbe_mac_sp_vf");
 
 	return 0;
 }
@@ -494,7 +494,8 @@ txgbevf_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 }
 
 static int
-txgbevf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+txgbevf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+		      struct eth_queue_stats *qstats __rte_unused)
 {
 	struct txgbevf_hw_stats *hw_stats = (struct txgbevf_hw_stats *)
 			  TXGBE_DEV_STATS(dev);
@@ -528,7 +529,7 @@ txgbevf_dev_stats_reset(struct rte_eth_dev *dev)
 	uint32_t i;
 
 	/* Sync HW register to the last stats */
-	txgbevf_dev_stats_get(dev, NULL);
+	txgbevf_dev_stats_get(dev, NULL, NULL);
 
 	/* reset HW current stats*/
 	for (i = 0; i < 8; i++) {
