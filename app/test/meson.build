@@ -257,6 +257,16 @@ endforeach
 
 cflags += no_wvla_cflag
 
+# Optional hwloc support for L3 cache–aware tests
+hwloc_dep = dependency('hwloc', required: false)
+if hwloc_dep.found()
+  message('hwloc found — enabling L3 cache–aware topology support')
+  cflags += ['-DHAVE_HWLOC=1']
+  ext_deps += hwloc_dep
+else
+  message('hwloc not found — L3 cache–aware tests will be disabled')
+endif
+
 extra_flags = [
         # Strict-aliasing rules are violated by uint8_t[] to context size casts.
         '-fno-strict-aliasing',
