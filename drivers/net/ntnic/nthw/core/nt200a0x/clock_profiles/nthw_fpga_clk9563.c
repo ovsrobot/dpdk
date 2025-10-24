@@ -33,9 +33,9 @@ static struct clk9563_ops ops = { .get_n_data_9563_si5340_nt200a02_u23_v5 =
 			get_p_data_9563_si5340_nt200a02_u23_v5
 };
 
-void clk9563_ops_init(void)
+void nthw_clk9563_ops_init(void)
 {
-	register_clk9563_ops(&ops);
+	nthw_reg_clk9563_ops(&ops);
 }
 
 #undef si5340_revd_registers

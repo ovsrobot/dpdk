@@ -2418,7 +2418,8 @@ int mlx5_allmulticast_disable(struct rte_eth_dev *dev);
 
 /* mlx5_stats.c */
 
-int mlx5_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats);
+int mlx5_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+		   struct eth_queue_stats *qstats);
 int mlx5_stats_reset(struct rte_eth_dev *dev);
 int mlx5_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *stats,
 		    unsigned int n);
@@ -2734,6 +2735,7 @@ int mlx5_flex_acquire_index(struct rte_eth_dev *dev,
 			    struct rte_flow_item_flex_handle *handle,
 			    bool acquire);
 int mlx5_flex_release_index(struct rte_eth_dev *dev, int index);
+void mlx5_flex_parser_ecpri_release(struct rte_eth_dev *dev);
 
 /* Flex parser list callbacks. */
 struct mlx5_list_entry *mlx5_flex_parser_create_cb(void *list_ctx, void *ctx);
