@@ -1556,7 +1556,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_BROAD_STATS_EGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				0, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1567,7 +1567,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_BROAD_STATS_INGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				0, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1578,7 +1578,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_MULTICAST_STATS_EGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				0, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1589,7 +1589,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_MULTICAST_STATS_INGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				0, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1600,7 +1600,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_UNICAST_STATS_EGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				0, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1611,7 +1611,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_UNICAST_STATS_INGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				0, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1622,7 +1622,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_MTU_STATS_EGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				1, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1633,7 +1633,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_MTU_STATS_INGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				1, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1644,7 +1644,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_MTR_STATS_EGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				1, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1655,7 +1655,7 @@ zxdh_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 
 	idx = stats_id + ZXDH_MTR_STATS_INGRESS_BASE;
 	memset(&stats_data, 0, sizeof(stats_data));
-	ret = zxdh_np_dtb_stats_get(hw->slot_id, dtb_data->queueid,
+	ret = zxdh_np_dtb_stats_get(hw->dev_id, dtb_data->queueid,
 				1, idx, (uint32_t *)&stats_data);
 	if (ret)
 		return ret;
@@ -1698,7 +1698,8 @@ zxdh_hw_np_stats_get(struct rte_eth_dev *dev, struct zxdh_hw_np_stats *np_stats)
 }
 
 int
-zxdh_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+zxdh_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+		struct eth_queue_stats *qstats)
 {
 	struct zxdh_hw *hw = dev->data->dev_private;
 	struct zxdh_hw_vqm_stats vqm_stats = {0};
@@ -1730,14 +1731,16 @@ zxdh_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 		if (rxvq == NULL)
 			continue;
-		stats->q_ipackets[i] = *(uint64_t *)(((char *)rxvq) +
-				zxdh_rxq_stat_strings[0].offset);
-		stats->q_ibytes[i] = *(uint64_t *)(((char *)rxvq) +
-				zxdh_rxq_stat_strings[1].offset);
-		stats->q_errors[i] = *(uint64_t *)(((char *)rxvq) +
-				zxdh_rxq_stat_strings[2].offset);
-		stats->q_errors[i] += *(uint64_t *)(((char *)rxvq) +
-				zxdh_rxq_stat_strings[5].offset);
+		if (qstats != NULL) {
+			qstats->q_ipackets[i] = *(uint64_t *)(((char *)rxvq) +
+					zxdh_rxq_stat_strings[0].offset);
+			qstats->q_ibytes[i] = *(uint64_t *)(((char *)rxvq) +
+					zxdh_rxq_stat_strings[1].offset);
+			qstats->q_errors[i] = *(uint64_t *)(((char *)rxvq) +
+					zxdh_rxq_stat_strings[2].offset);
+			qstats->q_errors[i] += *(uint64_t *)(((char *)rxvq) +
+					zxdh_rxq_stat_strings[5].offset);
+		}
 	}
 
 	for (i = 0; (i < dev->data->nb_tx_queues) && (i < RTE_ETHDEV_QUEUE_STAT_CNTRS); i++) {
@@ -1745,14 +1748,16 @@ zxdh_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 		if (txvq == NULL)
 			continue;
-		stats->q_opackets[i] = *(uint64_t *)(((char *)txvq) +
-				zxdh_txq_stat_strings[0].offset);
-		stats->q_obytes[i] = *(uint64_t *)(((char *)txvq) +
-				zxdh_txq_stat_strings[1].offset);
-		stats->q_errors[i] += *(uint64_t *)(((char *)txvq) +
-				zxdh_txq_stat_strings[2].offset);
-		stats->q_errors[i] += *(uint64_t *)(((char *)txvq) +
-				zxdh_txq_stat_strings[5].offset);
+		if (qstats != NULL) {
+			qstats->q_opackets[i] = *(uint64_t *)(((char *)txvq) +
+					zxdh_txq_stat_strings[0].offset);
+			qstats->q_obytes[i] = *(uint64_t *)(((char *)txvq) +
+					zxdh_txq_stat_strings[1].offset);
+			qstats->q_errors[i] += *(uint64_t *)(((char *)txvq) +
+					zxdh_txq_stat_strings[2].offset);
+			qstats->q_errors[i] += *(uint64_t *)(((char *)txvq) +
+					zxdh_txq_stat_strings[5].offset);
+		}
 	}
 	return 0;
 }

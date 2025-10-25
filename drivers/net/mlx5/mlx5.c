@@ -1045,24 +1045,6 @@ error:
 }
 
 /*
- * Destroy the flex parser node, including the parser itself, input / output
- * arcs and DW samples. Resources could be reused then.
- *
- * @param dev
- *   Pointer to Ethernet device structure.
- */
-static void
-mlx5_flex_parser_ecpri_release(struct rte_eth_dev *dev)
-{
-	struct mlx5_priv *priv = dev->data->dev_private;
-	struct mlx5_ecpri_parser_profile *prf = &priv->sh->ecpri_parser;
-
-	if (prf->obj)
-		mlx5_devx_cmd_destroy(prf->obj);
-	prf->obj = NULL;
-}
-
-/*
  * Allocation of a flex parser for srh. Once refcnt is zero, the resources held
  * by this parser will be freed.
  * @param dev
@@ -2336,6 +2318,18 @@ mlx5_proc_priv_uninit(struct rte_eth_dev *dev)
 	dev->process_private = NULL;
 }
 
+static void
+mlx5_flow_pools_destroy(struct mlx5_priv *priv)
+{
+	int i;
+
+	for (i = 0; i < MLX5_FLOW_TYPE_MAXI; i++) {
+		if (!priv->flows[i])
+			continue;
+		mlx5_ipool_destroy(priv->flows[i]);
+	}
+}
+
 /**
  * DPDK callback to close the device.
  *
@@ -2525,6 +2519,7 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 		if (!c)
 			claim_zero(rte_eth_switch_domain_free(priv->domain_id));
 	}
+	mlx5_flow_pools_destroy(priv);
 	memset(priv, 0, sizeof(*priv));
 	priv->domain_id = RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID;
 	/*
