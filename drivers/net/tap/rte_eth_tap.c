@@ -775,6 +775,89 @@ tap_ctrl_req2str(unsigned long request)
 }
 
 static int
+tap_nl_ctrl(struct pmd_internals *pmd, unsigned long request,
+	    struct ifreq *ifr, int set, enum ctrl_mode mode)
+{
+	bool remote = pmd->remote_if_index && (mode == REMOTE_ONLY || mode == LOCAL_AND_REMOTE);
+	struct rte_ether_addr *mac;
+	int ret = 0;
+
+	switch (request) {
+	case SIOCSIFFLAGS:
+		if (mode == LOCAL_ONLY || mode == LOCAL_AND_REMOTE) {
+			ret = tap_nl_set_link_flags(pmd->nlsk_fd, pmd->if_index,
+						    ifr->ifr_flags, set);
+			if (ret < 0)
+				return ret;
+		}
+		if (remote)
+			ret = tap_nl_set_link_flags(pmd->nlsk_fd, pmd->remote_if_index,
+						    ifr->ifr_flags, set);
+		break;
+
+	case SIOCGIFFLAGS:
+		if (mode == REMOTE_ONLY && pmd->remote_if_index) {
+			unsigned int flags = 0;
+			ret = tap_nl_get_link_flags(pmd->nlsk_fd, pmd->remote_if_index, &flags);
+			if (ret == 0)
+				ifr->ifr_flags = flags;
+		} else {
+			unsigned int flags = 0;
+			ret = tap_nl_get_link_flags(pmd->nlsk_fd, pmd->if_index, &flags);
+			if (ret == 0)
+				ifr->ifr_flags = flags;
+		}
+		break;
+
+	case SIOCGIFHWADDR:
+		mac = (struct rte_ether_addr *)ifr->ifr_hwaddr.sa_data;
+		if (mode == REMOTE_ONLY && pmd->remote_if_index) {
+			ret = tap_nl_get_link_mac(pmd->nlsk_fd, pmd->remote_if_index, mac);
+			if (ret == 0)
+				ifr->ifr_hwaddr.sa_family = AF_LOCAL;
+		} else {
+			ret = tap_nl_get_link_mac(pmd->nlsk_fd, pmd->if_index, mac);
+			if (ret == 0)
+				ifr->ifr_hwaddr.sa_family = AF_LOCAL;
+		}
+		break;
+
+	case SIOCSIFHWADDR:
+		mac = (struct rte_ether_addr *)ifr->ifr_hwaddr.sa_data;
+		if (mode == LOCAL_ONLY || mode == LOCAL_AND_REMOTE) {
+			ret = tap_nl_set_link_mac(pmd->nlsk_fd, pmd->if_index, mac);
+			if (ret < 0)
+				return ret;
+		}
+		if (remote)
+			ret = tap_nl_set_link_mac(pmd->nlsk_fd, pmd->remote_if_index, mac);
+		break;
+
+	case SIOCSIFMTU:
+		if (mode == LOCAL_ONLY || mode == LOCAL_AND_REMOTE) {
+			ret = tap_nl_set_link_mtu(pmd->nlsk_fd, pmd->if_index, ifr->ifr_mtu);
+			if (ret < 0)
+				return ret;
+		}
+		if (remote)
+			ret = tap_nl_set_link_mtu(pmd->nlsk_fd, pmd->remote_if_index, ifr->ifr_mtu);
+		break;
+
+	default:
+		TAP_LOG(WARNING, "%s: unsupported netlink request", pmd->name);
+		return -EINVAL;
+	}
+
+	if (ret < 0) {
+		TAP_LOG(DEBUG, "%s: netlink %s failed: %s(%d)", pmd->name,
+			tap_ctrl_req2str(request), strerror(errno), errno);
+		return -errno;
+	}
+
+	return 0;
+}
+
+static int
 tap_ioctl(struct pmd_internals *pmd, unsigned long request,
 	  struct ifreq *ifr, int set, enum ctrl_mode mode)
 {
@@ -782,8 +865,6 @@ tap_ioctl(struct pmd_internals *pmd, unsigned long request,
 	int remote = pmd->remote_if_index &&
 		(mode == REMOTE_ONLY || mode == LOCAL_AND_REMOTE);
 
-	if (!pmd->remote_if_index && mode == REMOTE_ONLY)
-		return 0;
 	/*
 	 * If there is a remote netdevice, apply ioctl on it, then apply it on
 	 * the tap netdevice.
@@ -829,6 +910,14 @@ static int
 tap_ctrl(struct pmd_internals *pmd, unsigned long request,
 	 struct ifreq *ifr, int set, enum ctrl_mode mode)
 {
+	if (!pmd->remote_if_index && mode == REMOTE_ONLY)
+		return 0;
+
+	/* Use netlink if available */
+	if (pmd->nlsk_fd >= 0 && pmd->if_index > 0)
+		return tap_nl_ctrl(pmd, request, ifr, set, mode);
+
+	/* Otherwise, fall back to ioctl */
 	return tap_ioctl(pmd, request, ifr, set, mode);
 }
 
@@ -1138,11 +1227,14 @@ tap_dev_close(struct rte_eth_dev *dev)
 	if (internals->nlsk_fd != -1) {
 		tap_flow_flush(dev, NULL);
 		tap_flow_implicit_flush(internals, NULL);
-		tap_nl_final(internals->nlsk_fd);
-		internals->nlsk_fd = -1;
 		tap_flow_bpf_destroy(internals);
 	}
 #endif
+
+	if (internals->nlsk_fd != -1) {
+		tap_nl_final(internals->nlsk_fd);
+		internals->nlsk_fd = -1;
+	}
 
 	for (i = 0; i < RTE_PMD_TAP_MAX_QUEUES; i++) {
 		struct rx_queue *rxq = &internals->rxq[i];
@@ -1953,10 +2045,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	strlcpy(pmd->name, tap_name, sizeof(pmd->name));
 	pmd->type = type;
 	pmd->ka_fd = -1;
-
-#ifdef HAVE_TCA_FLOWER
 	pmd->nlsk_fd = -1;
-#endif
 	pmd->gso_ctx_mp = NULL;
 
 	pmd->ioctl_sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -2035,26 +2124,38 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	/* Make network device persist after application exit */
 	pmd->persist = persist;
 
-#ifdef HAVE_TCA_FLOWER
 	/*
-	 * Set up everything related to rte_flow:
-	 * - netlink socket
-	 * - tap / remote if_index
-	 * - mandatory QDISCs
-	 * - rte_flow actual/implicit lists
-	 * - implicit rules
+	 * Try to create netlink socket for better interface control.
+	 * This provides ifindex-based operations and is more namespace-safe.
+	 * Fall back to ioctl if netlink is not available.
 	 */
 	pmd->nlsk_fd = tap_nl_init(0);
 	if (pmd->nlsk_fd == -1) {
-		TAP_LOG(WARNING, "%s: failed to create netlink socket.",
+		TAP_LOG(INFO, "%s: netlink unavailable, using ioctl fallback.",
+			pmd->name);
+	} else {
+		pmd->if_index = if_nametoindex(pmd->name);
+		if (!pmd->if_index) {
+			TAP_LOG(WARNING, "%s: failed to get if_index.",
+				pmd->name);
+			close(pmd->nlsk_fd);
+			pmd->nlsk_fd = -1;
+		}
+	}
+
+#ifdef HAVE_TCA_FLOWER
+	/*
+	 * Set up everything related to rte_flow:
+	 * - mandatory QDISCs (requires netlink)
+	 * - rte_flow actual/implicit lists
+	 * - implicit rules
+	 */
+	if (pmd->nlsk_fd == -1) {
+		TAP_LOG(WARNING, "%s: rte_flow requires netlink support.",
 			pmd->name);
 		goto disable_rte_flow;
 	}
-	pmd->if_index = if_nametoindex(pmd->name);
-	if (!pmd->if_index) {
-		TAP_LOG(ERR, "%s: failed to get if_index.", pmd->name);
-		goto disable_rte_flow;
-	}
+
 	if (qdisc_create_multiq(pmd->nlsk_fd, pmd->if_index) < 0) {
 		TAP_LOG(ERR, "%s: failed to create multiq qdisc.",
 			pmd->name);
@@ -2141,10 +2242,8 @@ error_remote:
 #endif
 
 error_exit:
-#ifdef HAVE_TCA_FLOWER
 	if (pmd->nlsk_fd != -1)
 		close(pmd->nlsk_fd);
-#endif
 	if (pmd->ka_fd != -1)
 		close(pmd->ka_fd);
 	if (pmd->ioctl_sock != -1)
