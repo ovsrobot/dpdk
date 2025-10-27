@@ -324,7 +324,8 @@ static void nbl_chan_advance_rx_ring(struct nbl_channel_mgt *chan_mgt,
 	rx_desc = NBL_CHAN_RX_DESC(rxq, next_to_use);
 
 	rx_desc->flags = NBL_CHAN_RX_DESC_AVAIL;
-	rx_desc->buf_addr = rxq->buf_mem.pa + chan_info->mailbox.rxq_buf_size * next_to_use;
+	rx_desc->buf_addr = rxq->buf_mem.pa +
+				(u64)chan_info->mailbox.rxq_buf_size * (u64)next_to_use;
 	rx_desc->buf_len = chan_info->mailbox.rxq_buf_size;
 
 	rte_wmb();
