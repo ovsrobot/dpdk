@@ -908,6 +908,7 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 			rte_free(txq_elem);
 			return err;
 		}
+		dev->dev_ops->timesync_enable(dev);
 	} else {
 		txq->qtx_tail = hw->hw_addr + QTX_COMM_DBELL(txq->reg_idx);
 
@@ -1671,7 +1672,6 @@ ice_tx_queue_setup(struct rte_eth_dev *dev,
 			PMD_INIT_LOG(ERR, "Cannot register Tx mbuf field/flag for timestamp");
 			return -EINVAL;
 		}
-		dev->dev_ops->timesync_enable(dev);
 
 		txq->tsq->nb_ts_desc = ice_calc_ts_ring_count(ICE_VSI_TO_HW(vsi), txq->nb_tx_desc);
 		ring_size = sizeof(struct ice_ts_desc) * txq->tsq->nb_ts_desc;
@@ -4103,8 +4103,11 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 	struct ci_tx_queue *txq;
 	int i;
 	int tx_check_ret = -1;
+	uint64_t offloads;
 
-	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+	offloads = dev->data->dev_conf.txmode.offloads;
+	if ((offloads & RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP) == 0 &&
+		rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		ad->tx_simd_width = RTE_VECT_SIMD_DISABLED;
 		tx_check_ret = ice_tx_vec_dev_check(dev);
 		ad->tx_simd_width = ice_get_max_simd_bitwidth();
