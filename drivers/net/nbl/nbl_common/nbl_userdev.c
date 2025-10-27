@@ -715,7 +715,11 @@ mmap:
 	}
 
 	common->eventfd = fd;
-	ioctl(common->devfd, NBL_DEV_USER_GET_BAR_SIZE, &bar_size);
+	ret = ioctl(common->devfd, NBL_DEV_USER_GET_BAR_SIZE, &bar_size);
+	if (ret) {
+		NBL_LOG(ERR, "nbl userdev get bar size failed");
+		goto close_eventfd;
+	}
 
 	if (!ret) {
 		pci_dev->mem_resource[0].addr = nbl_userdev_mmap(common->devfd, 0, bar_size);
