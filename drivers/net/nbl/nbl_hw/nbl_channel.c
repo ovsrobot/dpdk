@@ -856,9 +856,12 @@ static void nbl_chan_remove_state_bitmap(void *priv)
 {
 	struct nbl_channel_mgt *chan_mgt = (struct nbl_channel_mgt *)priv;
 	union nbl_chan_info *chan_info = NBL_CHAN_MGT_TO_CHAN_INFO(chan_mgt);
+	int ret = 0;
 
 	if (chan_info->mailbox.state_bmp) {
-		rte_bitmap_free(chan_info->mailbox.state_bmp);
+		ret = rte_bitmap_free(chan_info->mailbox.state_bmp);
+		if (ret)
+			NBL_LOG(ERR, "mailbox state bitmap free failed, ret:%d", ret);
 		chan_info->mailbox.state_bmp = NULL;
 	}
 	if (chan_info->mailbox.state_bmp_mem) {
