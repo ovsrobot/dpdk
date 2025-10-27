@@ -163,7 +163,7 @@ static int nbl_chan_prepare_rx_bufs(struct nbl_channel_mgt *chan_mgt,
 	desc = rxq->desc;
 	for (i = 0; i < chan_info->mailbox.num_rxq_entries - 1; i++) {
 		desc[i].flags = NBL_CHAN_RX_DESC_AVAIL;
-		desc[i].buf_addr = rxq->buf_mem.pa + i * chan_info->mailbox.rxq_buf_size;
+		desc[i].buf_addr = rxq->buf_mem.pa + (u64)i * (u64)chan_info->mailbox.rxq_buf_size;
 		desc[i].buf_len = chan_info->mailbox.rxq_buf_size;
 	}
 
