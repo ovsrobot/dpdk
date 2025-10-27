@@ -4103,8 +4103,11 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 	struct ci_tx_queue *txq;
 	int i;
 	int tx_check_ret = -1;
+	uint64_t offloads;
 
-	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+	offloads = dev->data->dev_conf.txmode.offloads;
+	if ((offloads & RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP) == 0 &&
+		rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		ad->tx_simd_width = RTE_VECT_SIMD_DISABLED;
 		tx_check_ret = ice_tx_vec_dev_check(dev);
 		ad->tx_simd_width = ice_get_max_simd_bitwidth();
