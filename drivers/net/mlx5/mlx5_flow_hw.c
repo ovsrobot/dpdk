@@ -5305,7 +5305,7 @@ __translate_group(struct rte_eth_dev *dev,
 						  "group index not supported");
 		*table_group = group + 1;
 	} else if (config->dv_esw_en &&
-		   (config->repr_matching || config->dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS) &&
+		   config->dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS &&
 		   external &&
 		   flow_attr->egress) {
 		/*
@@ -8549,7 +8549,7 @@ __flow_hw_pattern_validate(struct rte_eth_dev *dev,
 			break;
 		}
 		case RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT:
-			if (attr->ingress && priv->sh->config.repr_matching)
+			if (attr->ingress)
 				return rte_flow_error_set(error, EINVAL,
 						  RTE_FLOW_ERROR_TYPE_ITEM, NULL,
 						  "represented port item cannot be used"
@@ -9024,14 +9024,12 @@ flow_hw_pattern_template_create(struct rte_eth_dev *dev,
 		return NULL;
 	orig_item_nb = rc;
 	if (priv->sh->config.dv_esw_en &&
-	    priv->sh->config.repr_matching &&
 	    attr->ingress && !attr->egress && !attr->transfer) {
 		copied_items = flow_hw_prepend_item(items, orig_item_nb, &port, error);
 		if (!copied_items)
 			return NULL;
 		tmpl_items = copied_items;
 	} else if (priv->sh->config.dv_esw_en &&
-		   priv->sh->config.repr_matching &&
 		   !attr->ingress && attr->egress && !attr->transfer) {
 		if (item_flags & MLX5_FLOW_ITEM_SQ) {
 			DRV_LOG(DEBUG, "Port %u omitting implicit REG_C_0 match for egress "
@@ -9979,7 +9977,6 @@ flow_hw_setup_tx_repr_tagging(struct rte_eth_dev *dev, struct rte_flow_error *er
 	};
 
 	MLX5_ASSERT(priv->sh->config.dv_esw_en);
-	MLX5_ASSERT(priv->sh->config.repr_matching);
 	priv->hw_tx_repr_tagging_pt =
 		flow_hw_create_tx_repr_sq_pattern_tmpl(dev, error);
 	if (!priv->hw_tx_repr_tagging_pt)
@@ -10156,46 +10153,6 @@ flow_hw_create_ctrl_port_pattern_template(struct rte_eth_dev *dev,
 	};
 
 	return flow_hw_pattern_template_create(dev, &attr, items, error);
-}
-
-/*
- * Creating a flow pattern template with all ETH packets matching.
- * This template is used to set up a table for default Tx copy (Tx metadata
- * to REG_C_1) flow rule usage.
- *
- * @param dev
- *   Pointer to Ethernet device.
- * @param error
- *   Pointer to error structure.
- *
- * @return
- *   Pointer to flow pattern template on success, NULL otherwise.
- */
-static struct rte_flow_pattern_template *
-flow_hw_create_tx_default_mreg_copy_pattern_template(struct rte_eth_dev *dev,
-						     struct rte_flow_error *error)
-{
-	struct rte_flow_pattern_template_attr tx_pa_attr = {
-		.relaxed_matching = 0,
-		.egress = 1,
-	};
-	struct rte_flow_item_eth promisc = {
-		.hdr.dst_addr.addr_bytes = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.hdr.src_addr.addr_bytes = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.hdr.ether_type = 0,
-	};
-	struct rte_flow_item eth_all[] = {
-		[0] = {
-			.type = RTE_FLOW_ITEM_TYPE_ETH,
-			.spec = &promisc,
-			.mask = &promisc,
-		},
-		[1] = {
-			.type = RTE_FLOW_ITEM_TYPE_END,
-		},
-	};
-
-	return flow_hw_pattern_template_create(dev, &tx_pa_attr, eth_all, error);
 }
 
 /*
@@ -10420,90 +10377,6 @@ flow_hw_create_ctrl_port_actions_template(struct rte_eth_dev *dev,
 }
 
 /*
- * Creating an actions template to use header modify action for register
- * copying. This template is used to set up a table for copy flow.
- *
- * @param dev
- *   Pointer to Ethernet device.
- * @param error
- *   Pointer to error structure.
- *
- * @return
- *   Pointer to flow actions template on success, NULL otherwise.
- */
-static struct rte_flow_actions_template *
-flow_hw_create_tx_default_mreg_copy_actions_template(struct rte_eth_dev *dev,
-						     struct rte_flow_error *error)
-{
-	struct rte_flow_actions_template_attr tx_act_attr = {
-		.egress = 1,
-	};
-	const struct rte_flow_action_modify_field mreg_action = {
-		.operation = RTE_FLOW_MODIFY_SET,
-		.dst = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.tag_index = REG_C_1,
-		},
-		.src = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.tag_index = REG_A,
-		},
-		.width = 32,
-	};
-	const struct rte_flow_action_modify_field mreg_mask = {
-		.operation = RTE_FLOW_MODIFY_SET,
-		.dst = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.level = UINT8_MAX,
-			.tag_index = UINT8_MAX,
-			.offset = UINT32_MAX,
-		},
-		.src = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.level = UINT8_MAX,
-			.tag_index = UINT8_MAX,
-			.offset = UINT32_MAX,
-		},
-		.width = UINT32_MAX,
-	};
-	const struct rte_flow_action_jump jump_action = {
-		.group = 1,
-	};
-	const struct rte_flow_action_jump jump_mask = {
-		.group = UINT32_MAX,
-	};
-	const struct rte_flow_action actions[] = {
-		[0] = {
-			.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
-			.conf = &mreg_action,
-		},
-		[1] = {
-			.type = RTE_FLOW_ACTION_TYPE_JUMP,
-			.conf = &jump_action,
-		},
-		[2] = {
-			.type = RTE_FLOW_ACTION_TYPE_END,
-		},
-	};
-	const struct rte_flow_action masks[] = {
-		[0] = {
-			.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
-			.conf = &mreg_mask,
-		},
-		[1] = {
-			.type = RTE_FLOW_ACTION_TYPE_JUMP,
-			.conf = &jump_mask,
-		},
-		[2] = {
-			.type = RTE_FLOW_ACTION_TYPE_END,
-		},
-	};
-
-	return flow_hw_actions_template_create(dev, &tx_act_attr, actions,
-					       masks, error);
-}
-
-/*
  * Creating an actions template to use default miss to re-route packets to the
  * kernel driver stack.
  * On root table, only DEFAULT_MISS action can be used.
@@ -10616,43 +10489,6 @@ flow_hw_create_ctrl_sq_miss_table(struct rte_eth_dev *dev,
 	return flow_hw_table_create(dev, &cfg, &it, 1, &at, 1, error);
 }
 
-/*
- * Creating the default Tx metadata copy table on NIC Tx group 0.
- *
- * @param dev
- *   Pointer to Ethernet device.
- * @param pt
- *   Pointer to flow pattern template.
- * @param at
- *   Pointer to flow actions template.
- * @param error
- *   Pointer to error structure.
- *
- * @return
- *   Pointer to flow table on success, NULL otherwise.
- */
-static struct rte_flow_template_table*
-flow_hw_create_tx_default_mreg_copy_table(struct rte_eth_dev *dev,
-					  struct rte_flow_pattern_template *pt,
-					  struct rte_flow_actions_template *at,
-					  struct rte_flow_error *error)
-{
-	struct rte_flow_template_table_attr tx_tbl_attr = {
-		.flow_attr = {
-			.group = 0, /* Root */
-			.priority = MLX5_HW_LOWEST_PRIO_ROOT,
-			.egress = 1,
-		},
-		.nb_flows = 1, /* One default flow rule for all. */
-	};
-	struct mlx5_flow_template_table_cfg tx_tbl_cfg = {
-		.attr = tx_tbl_attr,
-		.external = false,
-	};
-
-	return flow_hw_table_create(dev, &tx_tbl_cfg, &pt, 1, &at, 1, error);
-}
-
 /**
  * Creates a control flow table used to transfer traffic
  * from group 0 to group 1.
@@ -10717,15 +10553,6 @@ flow_hw_cleanup_ctrl_fdb_tables(struct rte_eth_dev *dev)
 			   NULL));
 	if (hw_ctrl_fdb->lacp_rx_items_tmpl)
 		claim_zero(flow_hw_pattern_template_destroy(dev, hw_ctrl_fdb->lacp_rx_items_tmpl,
-			   NULL));
-	/* Clean up templates used for default Tx metadata copy. */
-	if (hw_ctrl_fdb->hw_tx_meta_cpy_tbl)
-		claim_zero(flow_hw_table_destroy(dev, hw_ctrl_fdb->hw_tx_meta_cpy_tbl, NULL));
-	if (hw_ctrl_fdb->tx_meta_actions_tmpl)
-		claim_zero(flow_hw_actions_template_destroy(dev, hw_ctrl_fdb->tx_meta_actions_tmpl,
-			   NULL));
-	if (hw_ctrl_fdb->tx_meta_items_tmpl)
-		claim_zero(flow_hw_pattern_template_destroy(dev, hw_ctrl_fdb->tx_meta_items_tmpl,
 			   NULL));
 	/* Clean up templates used for default FDB jump rule. */
 	if (hw_ctrl_fdb->hw_esw_zero_tbl)
@@ -10813,8 +10640,6 @@ flow_hw_create_ctrl_tables(struct rte_eth_dev *dev, struct rte_flow_error *error
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_flow_hw_ctrl_fdb *hw_ctrl_fdb;
-	uint32_t xmeta = priv->sh->config.dv_xmeta_en;
-	uint32_t repr_matching = priv->sh->config.repr_matching;
 	uint32_t fdb_def_rule = priv->sh->config.fdb_def_rule;
 
 	MLX5_ASSERT(priv->hw_ctrl_fdb == NULL);
@@ -10897,32 +10722,6 @@ flow_hw_create_ctrl_tables(struct rte_eth_dev *dev, struct rte_flow_error *error
 		if (!hw_ctrl_fdb->hw_esw_zero_tbl) {
 			DRV_LOG(ERR, "port %u failed to create table for default jump to group 1"
 				" for control flows", dev->data->port_id);
-			goto err;
-		}
-	}
-	/* Create templates and table for default Tx metadata copy flow rule. */
-	if (!repr_matching && xmeta == MLX5_XMETA_MODE_META32_HWS) {
-		hw_ctrl_fdb->tx_meta_items_tmpl =
-			flow_hw_create_tx_default_mreg_copy_pattern_template(dev, error);
-		if (!hw_ctrl_fdb->tx_meta_items_tmpl) {
-			DRV_LOG(ERR, "port %u failed to Tx metadata copy pattern"
-				" template for control flows", dev->data->port_id);
-			goto err;
-		}
-		hw_ctrl_fdb->tx_meta_actions_tmpl =
-			flow_hw_create_tx_default_mreg_copy_actions_template(dev, error);
-		if (!hw_ctrl_fdb->tx_meta_actions_tmpl) {
-			DRV_LOG(ERR, "port %u failed to Tx metadata copy actions"
-				" template for control flows", dev->data->port_id);
-			goto err;
-		}
-		hw_ctrl_fdb->hw_tx_meta_cpy_tbl =
-			flow_hw_create_tx_default_mreg_copy_table
-				(dev, hw_ctrl_fdb->tx_meta_items_tmpl,
-				 hw_ctrl_fdb->tx_meta_actions_tmpl, error);
-		if (!hw_ctrl_fdb->hw_tx_meta_cpy_tbl) {
-			DRV_LOG(ERR, "port %u failed to create table for default"
-				" Tx metadata copy flow rule", dev->data->port_id);
 			goto err;
 		}
 	}
@@ -12105,7 +11904,7 @@ __flow_hw_configure(struct rte_eth_dev *dev,
 		if (!priv->hw_tag[i])
 			goto err;
 	}
-	if (priv->sh->config.dv_esw_en && priv->sh->config.repr_matching) {
+	if (priv->sh->config.dv_esw_en) {
 		ret = flow_hw_setup_tx_repr_tagging(dev, error);
 		if (ret)
 			goto err;
@@ -16004,63 +15803,6 @@ mlx5_flow_hw_esw_create_default_jump_flow(struct rte_eth_dev *dev)
 }
 
 int
-mlx5_flow_hw_create_tx_default_mreg_copy_flow(struct rte_eth_dev *dev)
-{
-	struct mlx5_priv *priv = dev->data->dev_private;
-	struct rte_flow_item_eth promisc = {
-		.hdr.dst_addr.addr_bytes = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.hdr.src_addr.addr_bytes = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.hdr.ether_type = 0,
-	};
-	struct rte_flow_item eth_all[] = {
-		[0] = {
-			.type = RTE_FLOW_ITEM_TYPE_ETH,
-			.spec = &promisc,
-			.mask = &promisc,
-		},
-		[1] = {
-			.type = RTE_FLOW_ITEM_TYPE_END,
-		},
-	};
-	struct rte_flow_action_modify_field mreg_action = {
-		.operation = RTE_FLOW_MODIFY_SET,
-		.dst = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.tag_index = REG_C_1,
-		},
-		.src = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.tag_index = REG_A,
-		},
-		.width = 32,
-	};
-	struct rte_flow_action copy_reg_action[] = {
-		[0] = {
-			.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
-			.conf = &mreg_action,
-		},
-		[1] = {
-			.type = RTE_FLOW_ACTION_TYPE_JUMP,
-		},
-		[2] = {
-			.type = RTE_FLOW_ACTION_TYPE_END,
-		},
-	};
-	struct mlx5_ctrl_flow_info flow_info = {
-		.type = MLX5_CTRL_FLOW_TYPE_TX_META_COPY,
-	};
-
-	MLX5_ASSERT(priv->master);
-	if (!priv->dr_ctx ||
-	    !priv->hw_ctrl_fdb ||
-	    !priv->hw_ctrl_fdb->hw_tx_meta_cpy_tbl)
-		return 0;
-	return flow_hw_create_ctrl_flow(dev, dev,
-					priv->hw_ctrl_fdb->hw_tx_meta_cpy_tbl,
-					eth_all, 0, copy_reg_action, 0, &flow_info, false);
-}
-
-int
 mlx5_flow_hw_tx_repr_matching_flow(struct rte_eth_dev *dev, uint32_t sqn, bool external)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
@@ -16091,8 +15833,6 @@ mlx5_flow_hw_tx_repr_matching_flow(struct rte_eth_dev *dev, uint32_t sqn, bool e
 		.tx_repr_sq = sqn,
 	};
 
-	/* It is assumed that caller checked for representor matching. */
-	MLX5_ASSERT(priv->sh->config.repr_matching);
 	if (!priv->dr_ctx) {
 		DRV_LOG(DEBUG, "Port %u must be configured for HWS, before creating "
 			       "default egress flow rules. Omitting creation.",
