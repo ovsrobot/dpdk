@@ -1020,3 +1020,25 @@ if cc.get_define('__ARM_FEATURE_CRYPTO', args: machine_args) != ''
     compile_time_cpuflags += ['RTE_CPUFLAG_AES', 'RTE_CPUFLAG_PMULL',
     'RTE_CPUFLAG_SHA1', 'RTE_CPUFLAG_SHA2']
 endif
+        },
+        '0xd06': {
+            'mcpu': 'mcpu_hip12',
+            'flags': [
+                ['RTE_MACHINE', '"hip12"'],
+                ['RTE_ARM_FEATURE_ATOMICS', true],
+                ['RTE_MAX_LCORE', 1280],
+                ['RTE_MAX_NUMA_NODES', 16]
+            ]
+soc_hip12 = {
+    'description': 'HiSilicon HIP12',
+    'implementer': '0x48',
+    'part_number': '0xd06',
+    'numa': true
+}
+
+    'mcpu_hip12': {
+        'march': 'armv8.5-a',
+        'march_extensions': ['crypto', 'sve']
+    },
+hip12:           HiSilicon HIP12
+    'hip12': soc_hip12,
