@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Phytium macb net driver.**
+
+  Added a new network PMD which supports Phytium 1 and 10 Gigabit
+  Ethernet NICs.
+
 * **Added automatic lcore-id remapping option.**
 
   Added the EAL option ``--remap-lcore-ids`` or ``-R``
