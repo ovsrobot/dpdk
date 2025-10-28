@@ -158,3 +158,29 @@ Deprecation Notices
   without relying on flow API.
   Currently there is no alternative API
   providing the same functionality as with ``repr_matching_en`` set to 0.
+
+* eal: Several VFIO APIs have changed their signatures and/or return values to improve error reporting and consistency:
+  - ``rte_vfio_setup_device`` and ``rte_vfio_release_device`` now return 0 on success and <0 on failure, with ``rte_errno`` set.
+
+    Previously, if a device was not managed by VFIO (e.g., not bound to the VFIO driver),
+    ``rte_vfio_setup_device`` would return 1 to indicate the device should be skipped.
+    Now, this is treated as an error: the function returns -1 and sets ``rte_errno`` to ``ENODEV``.
+
+  - ``rte_vfio_get_device_info`` now takes a device file descriptor and device info pointer,
+    and returns 0 on success, <0 on failure. Previously, the function was accepting a path to device, and would set the device up if it wasn't set up.
+    It will no longer do so, and users of this function must call ``rte_vfio_setup_device`` prior to using this function.
+
+  - VFIO API has been updated with new error codes and return values, all error codes and return values are now documented in the API headers.
+
+  Applications using these APIs should review the updated function signatures and error handling.
+
+* eal: The following legacy VFIO group-related APIs are deprecated and will be removed in a future release:
+  ``rte_vfio_clear_group``, ``rte_vfio_get_group_fd``, ``rte_vfio_container_group_bind``, and ``rte_vfio_container_group_unbind``.
+  These APIs are replaced by the new container device assign lifecycle:
+  ``rte_vfio_container_assign_device`` → ``rte_vfio_setup_device`` → ``rte_vfio_release_device``.
+  Users should no longer need to manage IOMMU groups directly; all group management is now handled internally.
+
+* vdpa: vDPA drivers have been updated to use the new VFIO device assignment APIs.
+  The deprecated VFIO group-based APIs (``rte_vfio_get_group_num``, ``rte_vfio_container_group_bind``, ``rte_vfio_container_group_unbind``)
+  are no longer used. vDPA drivers now use ``rte_vfio_container_assign_device`` instead, and no longer need to track VFIO group file descriptors.
+  This change aligns vDPA drivers with the new VFIO API that abstracts away IOMMU group management.
