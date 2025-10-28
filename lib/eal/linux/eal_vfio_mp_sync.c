@@ -94,6 +94,48 @@ vfio_mp_primary(const struct rte_mp_msg *msg, const void *peer)
 		}
 		break;
 	}
+	case SOCKET_REQ_CDEV:
+	{
+		struct container *cfg;
+		struct vfio_device *dev;
+
+		if (global_cfg.mode != RTE_VFIO_MODE_CDEV) {
+			EAL_LOG(ERR, "VFIO not initialized in cdev mode");
+			r->result = SOCKET_ERR;
+			break;
+		}
+
+		r->req = SOCKET_REQ_CDEV;
+		r->cdev_dev_num = m->cdev_dev_num;
+
+		cfg = global_cfg.default_cfg;
+		dev = vfio_cdev_get_dev_by_num(cfg, m->cdev_dev_num);
+		if (dev == NULL) {
+			r->result = SOCKET_NO_FD;
+		} else {
+			r->result = SOCKET_OK;
+			reply.num_fds = 1;
+			reply.fds[0] = dev->fd;
+		}
+		break;
+	}
+	case SOCKET_REQ_IOAS_ID:
+	{
+		struct container *cfg;
+
+		if (global_cfg.mode != RTE_VFIO_MODE_CDEV) {
+			EAL_LOG(ERR, "VFIO not initialized in cdev mode");
+			r->result = SOCKET_ERR;
+			break;
+		}
+
+		r->req = SOCKET_REQ_IOAS_ID;
+		cfg = global_cfg.default_cfg;
+		r->ioas_id = cfg->cdev_cfg.ioas_id;
+
+		r->result = SOCKET_OK;
+		break;
+	}
 	default:
 		EAL_LOG(ERR, "vfio received invalid message!");
 		return -1;
