@@ -2284,6 +2284,12 @@ mlx5_device_mpesw_pci_match(struct ibv_device *ibv,
 	return -1;
 }
 
+static inline bool
+mlx5_ingnore_pf_representor(const struct rte_eth_devargs *eth_da)
+{
+	return (eth_da->port_flags & RTE_ETH_DEVARG_IGNORE_PF_REPRESENTOR) != 0;
+}
+
 /**
  * Register a PCI device within bonding.
  *
@@ -2593,8 +2599,12 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 						list[ns].info.master = 1;
 						list[ns].info.representor = 0;
 					} else {
-						list[ns].info.master = 0;
-						list[ns].info.representor = 1;
+						if (mlx5_ingnore_pf_representor(req_eth_da)) {
+							continue;
+						} else {
+							list[ns].info.master = 0;
+							list[ns].info.representor = 1;
+						}
 					}
 					/*
 					 * Ports of this type have uplink port index
