@@ -956,3 +956,10 @@ rte_vfio_get_device_info(__rte_unused int vfio_dev_fd,
 	rte_errno = ENOTSUP;
 	return -1;
 }
+
+RTE_EXPORT_SYMBOL(rte_vfio_get_mode)
+enum rte_vfio_mode
+rte_vfio_get_mode(void)
+{
+	return RTE_VFIO_MODE_NONE;
+}

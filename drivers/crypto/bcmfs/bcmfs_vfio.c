@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
+#include <rte_errno.h>
 #include <rte_vfio.h>
 
 #include "bcmfs_device.h"
@@ -26,7 +27,10 @@ vfio_map_dev_obj(const char *path, const char *dev_obj,
 	struct vfio_region_info reg_info = { .argsz = sizeof(reg_info) };
 
 	ret = rte_vfio_setup_device(path, dev_obj, dev_fd, &d_info);
-	if (ret) {
+	if (ret < 0) {
+		/* Device not managed by VFIO - skip */
+		if (rte_errno == ENODEV)
+			ret = 1;
 		BCMFS_LOG(ERR, "VFIO Setting for device failed");
 		return ret;
 	}
