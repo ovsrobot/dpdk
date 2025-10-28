@@ -151,7 +151,11 @@ enum rte_vfio_mode
 rte_vfio_get_mode(void);
 
 /**
+ * @deprecated
  * Check if VFIO NOIOMMU mode is enabled.
+ *
+ * This function is deprecated and its use is discouraged.
+ * Use `rte_vfio_get_mode()` instead to query NOIOMMU status.
  *
  * This function is only relevant on Linux in group mode.
  *
@@ -159,11 +163,15 @@ rte_vfio_get_mode(void);
  *   1 if enabled.
  *   0 if not enabled or not supported.
  */
-int
+int __rte_deprecated
 rte_vfio_noiommu_is_enabled(void);
 
 /**
+ * @deprecated
  * Remove group fd from internal VFIO tracking.
+ *
+ * This function is deprecated and its use is discouraged.
+ * Use `rte_vfio_release_device()` instead, which will release the device and its resources.
  *
  * This function is only relevant on Linux in group mode.
  *
@@ -179,7 +187,7 @@ rte_vfio_noiommu_is_enabled(void);
  * - ENXIO   - VFIO support not initialized.
  * - ENOTSUP - Operation not supported.
  */
-int
+int __rte_deprecated
 rte_vfio_clear_group(int vfio_group_fd);
 
 /**
@@ -276,7 +284,11 @@ int
 rte_vfio_get_container_fd(void);
 
 /**
+ * @deprecated
  * Return file descriptor for an open VFIO group.
+ *
+ * This function is deprecated and its use is discouraged.
+ * Use `rte_vfio_setup_device()` instead, which handles group management automatically.
  *
  * This function is only relevant on Linux in group mode.
  *
@@ -292,7 +304,7 @@ rte_vfio_get_container_fd(void);
  * - ENXIO   - VFIO support not initialized.
  * - ENOTSUP - Operation not supported.
  */
-int
+int __rte_deprecated
 rte_vfio_get_group_fd(int iommu_group_num);
 
 /**
@@ -379,7 +391,11 @@ rte_vfio_container_assign_device(int vfio_container_fd,
 		const char *sysfs_base, const char *dev_addr);
 
 /**
+ * @deprecated
  * Bind an IOMMU group to a container.
+ *
+ * This function is deprecated and its use is discouraged.
+ * Use `rte_vfio_container_assign_device()` instead to assign devices to a non-default container.
  *
  * This function is only relevant on Linux in group mode.
  *
@@ -399,11 +415,16 @@ rte_vfio_container_assign_device(int vfio_container_fd,
  * - ENXIO   - VFIO support not initialized.
  * - ENOTSUP - Operation not supported.
  */
-int
+int __rte_deprecated
 rte_vfio_container_group_bind(int container_fd, int iommu_group_num);
 
 /**
+ * @deprecated
  * Unbind an IOMMU group from a container.
+ *
+ * This function is deprecated and its use is discouraged.
+ * Use `rte_vfio_release_device()` instead to release devices, which handles group cleanup
+ * automatically.
  *
  * This function is only relevant on Linux in group mode.
  *
@@ -423,7 +444,7 @@ rte_vfio_container_group_bind(int container_fd, int iommu_group_num);
  * - ENXIO   - VFIO support not initialized.
  * - ENOTSUP - Operation not supported.
  */
-int
+int __rte_deprecated
 rte_vfio_container_group_unbind(int container_fd, int iommu_group_num);
 
 /**
