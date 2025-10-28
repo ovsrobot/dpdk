@@ -170,12 +170,6 @@ rte_vfio_get_group_num(const char *sysfs_base,
  *
  * This function is only relevant to Linux and will return an error on BSD.
  *
- * @param sysfs_base
- *   sysfs path prefix.
- *
- * @param dev_addr
- *   device location.
- *
  * @param vfio_dev_fd
  *   VFIO fd.
  *
@@ -188,8 +182,7 @@ rte_vfio_get_group_num(const char *sysfs_base,
  */
 __rte_experimental
 int
-rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
-		int *vfio_dev_fd, struct vfio_device_info *device_info);
+rte_vfio_get_device_info(int vfio_dev_fd, struct vfio_device_info *device_info);
 
 /**
  * Open a new VFIO container fd
