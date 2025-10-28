@@ -2012,6 +2012,8 @@ __rte_internal
 int
 rte_eth_switch_domain_free(uint16_t domain_id);
 
+#define RTE_ETH_DEVARG_IGNORE_PF_REPRESENTOR RTE_BIT32(1)
+
 /**
  * Generic Ethernet device arguments
  *
@@ -2024,6 +2026,8 @@ struct rte_eth_devargs {
 	/** number of controllers in multi-host controllers field */
 	uint16_t ports[RTE_MAX_ETHPORTS];
 	/** port/s number to enable on a multi-port single function */
+	uint32_t port_flags;
+	/** ports flags for special processing */
 	uint16_t nb_ports;
 	/** number of ports in ports field */
 	uint16_t representor_ports[RTE_MAX_ETHPORTS];
