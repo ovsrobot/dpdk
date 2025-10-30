@@ -3413,7 +3413,7 @@ reset_port(portid_t pid)
 }
 
 static char *
-convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_size)
+convert_pci_address_format(const char *identifier, char *pci_buffer)
 {
 	struct rte_devargs da;
 	struct rte_pci_addr pci_addr;
@@ -3430,7 +3430,8 @@ convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_
 	if (rte_pci_addr_parse(da.name, &pci_addr) != 0)
 		return NULL;
 
-	rte_pci_device_name(&pci_addr, pci_buffer, buf_size);
+	rte_pci_device_name(&pci_addr, pci_buffer, PCI_PRI_STR_SIZE);
+	sprintf(pci_buffer + strlen(pci_buffer), ",%s", da.args);
 	return pci_buffer;
 }
 
@@ -3439,8 +3440,7 @@ attach_port(char *identifier)
 {
 	portid_t pi;
 	struct rte_dev_iterator iterator;
-	char *long_identifier;
-	char long_format[PCI_PRI_STR_SIZE];
+	char *long_format, *long_identifier;
 
 	printf("Attaching a new port...\n");
 
@@ -3448,9 +3448,14 @@ attach_port(char *identifier)
 		fprintf(stderr, "Invalid parameters are specified\n");
 		return;
 	}
+	long_format = alloca(strlen(identifier) + PCI_PRI_STR_SIZE);
+	if (long_format == NULL) {
+		TESTPMD_LOG(ERR, "Failed to attach port %s - allocation failure\n", identifier);
+		return;
+	}
 
 	/* For PCI device convert to canonical format */
-	long_identifier = convert_pci_address_format(identifier, long_format, sizeof(long_format));
+	long_identifier = convert_pci_address_format(identifier, long_format);
 	if (long_identifier != NULL)
 		identifier = long_identifier;
 
