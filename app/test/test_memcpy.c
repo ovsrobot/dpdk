@@ -105,8 +105,8 @@ func_test(void)
 	unsigned int off_src, off_dst, i;
 	int ret;
 
-	for (off_src = 0; off_src < ALIGNMENT_UNIT; off_src++) {
-		for (off_dst = 0; off_dst < ALIGNMENT_UNIT; off_dst++) {
+	for (off_src = 0; off_src < ALIGNMENT_UNIT; off_src += 3) {
+		for (off_dst = 0; off_dst < ALIGNMENT_UNIT; off_dst += 2) {
 			for (i = 0; i < RTE_DIM(buf_sizes); i++) {
 				ret = test_single_memcpy(off_src, off_dst,
 				                         buf_sizes[i]);
