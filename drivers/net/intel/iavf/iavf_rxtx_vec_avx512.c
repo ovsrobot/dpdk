@@ -2136,16 +2136,16 @@ ctx_vtx(volatile struct iavf_tx_desc *txdp,
 		if (pkt[1]->ol_flags & RTE_MBUF_F_TX_QINQ) {
 			hi_ctx_qw1 |= IAVF_TX_CTX_DESC_IL2TAG2 << IAVF_TXD_CTX_QW1_CMD_SHIFT;
 			if (vlan_flag & IAVF_TX_FLAGS_VLAN_TAG_LOC_L2TAG2) {
-				/* Inner tag at L2TAG2, outer tag at L2TAG1. */
-				low_ctx_qw1 |= (uint64_t)pkt[1]->vlan_tci <<
-							IAVF_TXD_CTX_QW0_L2TAG2_PARAM;
-				hi_data_qw1 |= (uint64_t)pkt[1]->vlan_tci_outer <<
-							IAVF_TXD_QW1_L2TAG1_SHIFT;
-			} else {
 				/* Outer tag at L2TAG2, inner tag at L2TAG1. */
 				low_ctx_qw1 |= (uint64_t)pkt[1]->vlan_tci_outer <<
 							IAVF_TXD_CTX_QW0_L2TAG2_PARAM;
 				hi_data_qw1 |= (uint64_t)pkt[1]->vlan_tci <<
+							IAVF_TXD_QW1_L2TAG1_SHIFT;
+			} else {
+				/* Inner tag at L2TAG2, outer tag at L2TAG1. */
+				low_ctx_qw1 |= (uint64_t)pkt[1]->vlan_tci <<
+							IAVF_TXD_CTX_QW0_L2TAG2_PARAM;
+				hi_data_qw1 |= (uint64_t)pkt[1]->vlan_tci_outer <<
 							IAVF_TXD_QW1_L2TAG1_SHIFT;
 			}
 		} else if (pkt[1]->ol_flags & RTE_MBUF_F_TX_VLAN) {
@@ -2166,16 +2166,16 @@ ctx_vtx(volatile struct iavf_tx_desc *txdp,
 		if (pkt[0]->ol_flags & RTE_MBUF_F_TX_QINQ) {
 			hi_ctx_qw0 |= IAVF_TX_CTX_DESC_IL2TAG2 << IAVF_TXD_CTX_QW1_CMD_SHIFT;
 			if (vlan_flag & IAVF_TX_FLAGS_VLAN_TAG_LOC_L2TAG2) {
-				/* Inner tag at L2TAG2, outer tag at L2TAG1. */
-				low_ctx_qw0 |= (uint64_t)pkt[0]->vlan_tci <<
-							IAVF_TXD_CTX_QW0_L2TAG2_PARAM;
-				hi_data_qw0 |= (uint64_t)pkt[0]->vlan_tci_outer <<
-							IAVF_TXD_QW1_L2TAG1_SHIFT;
-			} else {
 				/* Outer tag at L2TAG2, inner tag at L2TAG1. */
 				low_ctx_qw0 |= (uint64_t)pkt[0]->vlan_tci_outer <<
 							IAVF_TXD_CTX_QW0_L2TAG2_PARAM;
 				hi_data_qw0 |= (uint64_t)pkt[0]->vlan_tci <<
+							IAVF_TXD_QW1_L2TAG1_SHIFT;
+			} else {
+				/* Inner tag at L2TAG2, outer tag at L2TAG1. */
+				low_ctx_qw0 |= (uint64_t)pkt[0]->vlan_tci <<
+							IAVF_TXD_CTX_QW0_L2TAG2_PARAM;
+				hi_data_qw0 |= (uint64_t)pkt[0]->vlan_tci_outer <<
 							IAVF_TXD_QW1_L2TAG1_SHIFT;
 			}
 		} else if (pkt[0]->ol_flags & RTE_MBUF_F_TX_VLAN) {
