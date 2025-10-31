@@ -31,7 +31,8 @@ cflags += '-DTEST_BPF_ELF_LOAD'
 
 # BPF sources to compile
 test_bpf_progs = [
-    'test_bpf_load'
+    'test_bpf_load',
+    'test_bpf_filter',
 ]
 
 foreach test_name : test_bpf_progs
