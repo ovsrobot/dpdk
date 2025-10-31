@@ -298,7 +298,20 @@ static int nbl_disp_get_mac_addr(void *priv __rte_unused, u8 *mac)
 
 static int nbl_disp_get_mac_addr_req(void *priv __rte_unused, u8 *mac)
 {
-	rte_eth_random_addr(mac);
+	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
+	struct nbl_common_info *common = NBL_DISP_MGT_TO_COMMON(disp_mgt);
+	u8 zero_mac[RTE_ETHER_ADDR_LEN] = {0, 0, 0, 0, 0, 0};
+	int ret = -1;
+
+	if (common->nl_socket_route >= 0 && common->ifindex >= 0)
+		ret = nbl_userdev_get_mac_addr(common, mac);
+
+	if (ret) {
+		if (!memcmp(common->mac, zero_mac, RTE_ETHER_ADDR_LEN))
+			rte_eth_random_addr(mac);
+		else
+			memcpy(mac, common->mac, RTE_ETHER_ADDR_LEN);
+	}
 
 	return 0;
 }

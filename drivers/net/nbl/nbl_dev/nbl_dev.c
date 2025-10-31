@@ -886,6 +886,7 @@ static int nbl_dev_setup_net_dev(struct nbl_dev_mgt *dev_mgt,
 
 	common->vsi_id = net_dev->vsi_id;
 	common->eth_id = net_dev->eth_id;
+	memcpy(common->mac, register_result.mac, RTE_ETHER_ADDR_LEN);
 
 	disp_ops->clear_queues(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), net_dev->vsi_id);
 	disp_ops->register_vsi2q(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), NBL_VSI_DATA, net_dev->vsi_id,
