@@ -28,6 +28,11 @@
 #define ROC_NIX_INTF_TYPE_CPT_NIX 254
 #define ROC_NIX_INTF_TYPE_SSO     253
 
+/* Software defined LSO base format IDX */
+#define ROC_NIX_LSO_FORMAT_IDX_TSOV4 0
+#define ROC_NIX_LSO_FORMAT_IDX_TSOV6 1
+#define ROC_NIX_LSO_FORMAT_IDX_IPV4  2
+
 enum roc_nix_rss_reta_sz {
 	ROC_NIX_RSS_RETA_SZ_64 = 64,
 	ROC_NIX_RSS_RETA_SZ_128 = 128,
@@ -394,6 +399,7 @@ struct roc_nix_sq {
 	bool cq_ena;
 	uint8_t fc_hyst_bits;
 	/* End of Input parameters */
+	uint16_t sqes_per_sqb;
 	uint16_t sqes_per_sqb_log2;
 	struct roc_nix *roc_nix;
 	uint64_t aura_handle;
@@ -404,6 +410,8 @@ struct roc_nix_sq {
 	void *lmt_addr;
 	void *sqe_mem;
 	void *fc;
+	void *sq_cnt_ptr;
+	uint8_t update_sq_cnt;
 	uint8_t tc;
 	bool enable;
 };
@@ -488,6 +496,7 @@ struct roc_nix {
 	uint16_t inb_cfg_param2;
 	bool force_tail_drop;
 	bool dis_xqe_drop;
+	bool sq_resize_ena;
 	/* End of input parameters */
 	/* LMT line base for "Per Core Tx LMT line" mode*/
 	uintptr_t lmt_base;
@@ -500,6 +509,7 @@ struct roc_nix {
 	uint16_t rep_cnt;
 	uint16_t rep_pfvf_map[MAX_PFVF_REP];
 	bool reass_ena;
+	bool use_multi_bpids;
 	TAILQ_ENTRY(roc_nix) next;
 
 #define ROC_NIX_MEM_SZ (6 * 1112)
@@ -596,6 +606,7 @@ enum roc_nix_tm_tree {
 	ROC_NIX_TM_DEFAULT = 0,
 	ROC_NIX_TM_RLIMIT,
 	ROC_NIX_TM_PFC,
+	ROC_NIX_TM_SDP,
 	ROC_NIX_TM_USER,
 	ROC_NIX_TM_TREE_MAX,
 };
@@ -768,6 +779,7 @@ int __roc_api roc_nix_tm_lvl_cnt_get(struct roc_nix *roc_nix);
 int __roc_api roc_nix_tm_lvl_have_link_access(struct roc_nix *roc_nix, int lvl);
 int __roc_api roc_nix_tm_prepare_rate_limited_tree(struct roc_nix *roc_nix);
 int __roc_api roc_nix_tm_pfc_prepare_tree(struct roc_nix *roc_nix);
+int __roc_api roc_nix_tm_sdp_prepare_tree(struct roc_nix *roc_nix);
 bool __roc_api roc_nix_tm_is_user_hierarchy_enabled(struct roc_nix *nix);
 int __roc_api roc_nix_tm_tree_type_get(struct roc_nix *nix);
 int __roc_api roc_nix_tm_mark_config(struct roc_nix *roc_nix,
@@ -876,9 +888,12 @@ int __roc_api roc_nix_lso_fmt_setup(struct roc_nix *roc_nix);
 int __roc_api roc_nix_lso_fmt_get(struct roc_nix *roc_nix,
 				  uint8_t udp_tun[ROC_NIX_LSO_TUN_MAX],
 				  uint8_t tun[ROC_NIX_LSO_TUN_MAX]);
+int __roc_api roc_nix_lso_fmt_ipv4_frag_get(struct roc_nix *roc_nix);
 int __roc_api roc_nix_lso_custom_fmt_setup(struct roc_nix *roc_nix,
 					   struct nix_lso_format *fields,
 					   uint16_t nb_fields);
+int __roc_api roc_nix_lso_alt_flags_profile_setup(struct roc_nix *roc_nix,
+						  nix_lso_alt_flg_format_t *fmt);
 
 int __roc_api roc_nix_eeprom_info_get(struct roc_nix *roc_nix,
 				      struct roc_nix_eeprom_info *info);
@@ -979,6 +994,8 @@ int __roc_api roc_nix_sq_fini(struct roc_nix_sq *sq);
 int __roc_api roc_nix_sq_ena_dis(struct roc_nix_sq *sq, bool enable);
 void __roc_api roc_nix_sq_head_tail_get(struct roc_nix *roc_nix, uint16_t qid,
 					uint32_t *head, uint32_t *tail);
+int __roc_api roc_nix_sq_cnt_update(struct roc_nix_sq *sq, bool enable);
+int __roc_api roc_nix_sq_resize(struct roc_nix_sq *sq, uint32_t nb_desc);
 
 /* PTP */
 int __roc_api roc_nix_ptp_rx_ena_dis(struct roc_nix *roc_nix, int enable);
