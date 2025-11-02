@@ -2,6 +2,7 @@
  * Copyright(c) 2018 Intel Corporation
  */
 
+#include <eal_export.h>
 #include <rte_string_fns.h>
 #include <ethdev_pci.h>
 
@@ -201,6 +202,7 @@ static const uint32_t *ice_buffer_split_supported_hdr_ptypes_get(struct rte_eth_
 						size_t *no_of_elements);
 static int ice_get_dcb_info(struct rte_eth_dev *dev, struct rte_eth_dcb_info *dcb_info);
 static int ice_priority_flow_ctrl_set(struct rte_eth_dev *dev, struct rte_eth_pfc_conf *pfc_conf);
+static int ice_pf_set_source_prune(struct ice_pf *pf, uint8_t on);
 
 static const struct rte_pci_id pci_id_ice_map[] = {
 	{ RTE_PCI_DEVICE(ICE_INTEL_VENDOR_ID, ICE_DEV_ID_E823L_BACKPLANE) },
@@ -1703,6 +1705,75 @@ ice_pf_sw_init(struct rte_eth_dev *dev)
 	return 0;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_ice_set_pf_src_prune, 25.11)
+int
+rte_pmd_ice_set_pf_src_prune(uint16_t port, uint8_t on)
+{
+	struct rte_eth_dev *dev;
+	struct ice_pf *pf;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
+
+	dev = &rte_eth_devices[port];
+	if (!is_ice_supported(dev))
+		return -ENOTSUP;
+
+	pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+
+	ret = ice_pf_set_source_prune(pf, on);
+	return ret;
+}
+
+/* ice_pf_set_source_prune
+ * @pf: pointer to the pf structure
+ * @on: enable/disable source prune
+ *
+ * set source prune on pf
+ */
+static int
+ice_pf_set_source_prune(struct ice_pf *pf, uint8_t on)
+{
+	struct ice_hw *hw = ICE_PF_TO_HW(pf);
+	struct ice_vsi *vsi = pf->main_vsi;
+	struct ice_vsi_ctx ctxt;
+	int ret;
+
+	memset(&ctxt, 0, sizeof(ctxt));
+	ctxt.flags = ICE_AQ_VSI_TYPE_PF;
+	ctxt.info.valid_sections |=
+		rte_cpu_to_le_16(ICE_AQ_VSI_PROP_SW_VALID);
+	ctxt.info.sw_id = hw->port_info->sw_id;
+	ctxt.vsi_num = vsi->vsi_id;
+
+	if (on) {
+		/* Enable source prune */
+		ctxt.info.sw_flags &=
+			~(ICE_AQ_VSI_SW_FLAG_LOCAL_LB);
+		ctxt.info.sw_flags &=
+			~(ICE_AQ_VSI_SW_FLAG_SRC_PRUNE);
+	} else {
+		/* Disable source prune to support VRRP */
+		ctxt.info.sw_flags =
+			ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
+		ctxt.info.sw_flags |=
+			ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+	}
+
+	ret = ice_update_vsi(hw, vsi->idx, &ctxt, NULL);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Update VSI failed to %s source prune",
+			on ? "enable" : "disable");
+		return -EINVAL;
+	}
+
+	vsi->info.valid_sections |=
+		rte_cpu_to_le_16(ICE_AQ_VSI_PROP_SW_VALID);
+	vsi->info.sw_flags = ctxt.info.sw_flags;
+
+	return 0;
+}
+
 struct ice_vsi *
 ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 {
@@ -1753,6 +1824,7 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 		 * by ice_init_hw
 		 */
 		vsi_ctx.info.sw_id = hw->port_info->sw_id;
+		/* disable source prune to support VRRP in default */
 		vsi_ctx.info.sw_flags = ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
 		vsi_ctx.info.sw_flags |= ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
 		cfg = ICE_AQ_VSI_PROP_SW_VALID;
