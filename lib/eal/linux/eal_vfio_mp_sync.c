@@ -50,18 +50,7 @@ vfio_mp_primary(const struct rte_mp_msg *msg, const void *peer)
 		break;
 	case SOCKET_REQ_CONTAINER:
 		r->req = SOCKET_REQ_CONTAINER;
-		fd = rte_vfio_get_container_fd();
-		if (fd < 0)
-			r->result = SOCKET_ERR;
-		else {
-			r->result = SOCKET_OK;
-			reply.num_fds = 1;
-			reply.fds[0] = fd;
-		}
-		break;
-	case SOCKET_REQ_DEFAULT_CONTAINER:
-		r->req = SOCKET_REQ_DEFAULT_CONTAINER;
-		fd = vfio_get_default_container_fd();
+		fd = vfio_open_container_fd(false);
 		if (fd < 0)
 			r->result = SOCKET_ERR;
 		else {
