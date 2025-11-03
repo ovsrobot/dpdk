@@ -6,7 +6,8 @@
 #define RTE_PMD_MLX5_VDPA_H_
 
 #include <linux/virtio_net.h>
-#include <sys/queue.h>
+
+#include <rte_bsd_queue.h>
 
 #ifdef PEDANTIC
 #pragma GCC diagnostic ignored "-Wpedantic"
