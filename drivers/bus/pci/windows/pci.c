@@ -2,8 +2,6 @@
  * Copyright 2020 Mellanox Technologies, Ltd
  */
 
-#include <sys/queue.h>
-
 #include <eal_export.h>
 #include <rte_windows.h>
 #include <rte_errno.h>
@@ -11,6 +9,7 @@
 #include <rte_eal.h>
 #include <rte_memory.h>
 #include <rte_bus_pci.h>
+#include <rte_tailq.h>
 
 /* DEVPKEY_Device_Numa_Node should be defined in devpkey.h */
 #include <devpkey.h>

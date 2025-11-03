@@ -17,7 +17,6 @@
 #include <signal.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include <sys/queue.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -34,19 +33,13 @@
 #include <rte_cycles.h>
 #include <rte_kvargs.h>
 #include <dev_driver.h>
+#include <rte_tailq.h>
 
 #include <fslmc_logs.h>
 #include <bus_fslmc_driver.h>
 #include "dpaa2_hw_pvt.h"
 #include "dpaa2_hw_dpio.h"
 #include <mc/fsl_dpmng.h>
-
-#ifndef TAILQ_FOREACH_SAFE
-#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = TAILQ_FIRST((head));				\
-	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
-	    (var) = (tvar))
-#endif
 
 #define NUM_HOST_CPUS RTE_MAX_LCORE
 
@@ -107,7 +100,7 @@ static struct dpaa2_dpio_dev *get_dpio_dev_from_id(int32_t dpio_id)
 	struct dpaa2_dpio_dev *dpio_dev = NULL;
 
 	/* Get DPIO dev handle from list using index */
-	TAILQ_FOREACH(dpio_dev, &dpio_dev_list, next) {
+	RTE_TAILQ_FOREACH(dpio_dev, &dpio_dev_list, next) {
 		if (dpio_dev->hw_id == dpio_id)
 			break;
 	}

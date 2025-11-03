@@ -15,7 +15,6 @@
 #include <errno.h>
 #include <dirent.h>
 #include <limits.h>
-#include <sys/queue.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <sys/pciio.h>
@@ -38,6 +37,7 @@
 #include <rte_string_fns.h>
 #include <rte_debug.h>
 #include <rte_devargs.h>
+#include <rte_tailq.h>
 
 #include <eal_export.h>
 #include "eal_filesystem.h"

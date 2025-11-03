@@ -23,6 +23,7 @@
 #include <sys/eventfd.h>
 #include <ctype.h>
 
+#include <rte_bsd_queue.h>
 #include <eal_export.h>
 #include <eal_filesystem.h>
 #include <rte_mbuf.h>

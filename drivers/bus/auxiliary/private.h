@@ -7,9 +7,9 @@
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/queue.h>
 
 #include <bus_driver.h>
+#include <rte_bsd_queue.h>
 
 #include "bus_auxiliary_driver.h"
 

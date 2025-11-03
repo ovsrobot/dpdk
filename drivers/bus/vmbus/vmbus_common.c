@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <sys/queue.h>
 #include <sys/mman.h>
 
 #include <eal_export.h>

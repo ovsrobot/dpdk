@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/queue.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -26,6 +25,7 @@
 #include <rte_alarm.h>
 #include <rte_string_fns.h>
 #include <rte_debug.h>
+#include <rte_tailq.h>
 
 #include "rte_rawdev.h"
 #include "rte_rawdev_pmd.h"
