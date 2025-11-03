@@ -4,8 +4,8 @@
 
 #include <stdatomic.h>
 #include <stdbool.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <eal_export.h>
 #include <rte_alarm.h>
 #include <rte_spinlock.h>

@@ -220,6 +220,9 @@ API Changes
   The link type was previously hardcoded to the Ethernet link type in the API.
   This argument is added to ``rte_pcapng_add_interface``.
 
+* eal: Added ``rte_queue.h``  which is clone of BSD queue.h header that is
+  portable across all OS's.
+
 
 ABI Changes
 -----------

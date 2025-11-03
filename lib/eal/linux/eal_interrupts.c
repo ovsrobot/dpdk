@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/queue.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -17,6 +16,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#include <rte_bsd_queue.h>
 #include <eal_export.h>
 #include <eal_trace_internal.h>
 #include <rte_common.h>

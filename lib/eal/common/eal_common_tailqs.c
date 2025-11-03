@@ -2,10 +2,10 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
-#include <sys/queue.h>
 #include <stdio.h>
 #include <string.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_eal.h>
 #include <rte_eal_memconfig.h>
 #include <rte_log.h>

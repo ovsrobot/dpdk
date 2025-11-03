@@ -4,8 +4,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <bus_driver.h>
 #include <rte_debug.h>
 #include <rte_string_fns.h>

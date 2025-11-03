@@ -17,9 +17,9 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
-#include <sys/queue.h>
 #include <sys/stat.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_common.h>
 #include <rte_debug.h>
 #include <rte_memory.h>

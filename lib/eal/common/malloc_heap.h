@@ -6,8 +6,8 @@
 #define MALLOC_HEAP_H_
 
 #include <stdbool.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_malloc.h>
 #include <rte_spinlock.h>
 

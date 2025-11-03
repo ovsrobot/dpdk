@@ -9,9 +9,9 @@
 #include <unistd.h>
 #include <sched.h>
 #include <pthread_np.h>
-#include <sys/queue.h>
 #include <sys/thr.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_debug.h>
 #include <rte_atomic.h>
 #include <rte_launch.h>
