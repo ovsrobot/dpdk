@@ -3,7 +3,7 @@
  */
 
 #include <netinet/in.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <stdalign.h>
 #include <stdint.h>
 #include <string.h>

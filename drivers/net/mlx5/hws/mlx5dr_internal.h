@@ -6,7 +6,6 @@
 #define MLX5DR_INTERNAL_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
 /* Verbs headers do not support -pedantic. */
 #ifdef PEDANTIC
 #pragma GCC diagnostic ignored "-Wpedantic"

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <eal_export.h>
 #include <rte_common.h>

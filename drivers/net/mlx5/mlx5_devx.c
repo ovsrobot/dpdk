@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/queue.h>
 
 #include <rte_malloc.h>
 #include <rte_common.h>
