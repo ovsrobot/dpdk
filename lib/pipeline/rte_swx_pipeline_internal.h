@@ -6,7 +6,7 @@
 
 #include <inttypes.h>
 #include <string.h>
-#include <sys/queue.h>
+
 
 #include <rte_bitops.h>
 #include <rte_byteorder.h>
@@ -14,6 +14,7 @@
 #include <rte_cycles.h>
 #include <rte_prefetch.h>
 #include <rte_meter.h>
+#include <rte_tailq.h>
 
 #include <rte_swx_table_selector.h>
 #include <rte_swx_table_learner.h>

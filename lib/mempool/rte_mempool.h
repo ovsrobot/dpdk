@@ -49,6 +49,7 @@
 #include <rte_ring.h>
 #include <rte_memcpy.h>
 #include <rte_common.h>
+#include <rte_tailq.h>
 
 #include "rte_mempool_trace_fp.h"
 

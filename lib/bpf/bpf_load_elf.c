@@ -12,7 +12,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/queue.h>
 #include <fcntl.h>
 
 #include <libelf.h>
