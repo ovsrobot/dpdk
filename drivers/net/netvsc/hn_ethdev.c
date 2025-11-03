@@ -1479,14 +1479,14 @@ out:
 
 static void remove_cache_list(void)
 {
-	struct da_cache *cache;
+	struct da_cache *cache, *tmp;
 
 	rte_spinlock_lock(&netvsc_lock);
 	da_cache_usage--;
 	if (da_cache_usage)
 		goto out;
 
-	LIST_FOREACH(cache, &da_cache_list, list) {
+	LIST_FOREACH_SAFE(cache, &da_cache_list, list, tmp) {
 		LIST_REMOVE(cache, list);
 		free(cache);
 	}
