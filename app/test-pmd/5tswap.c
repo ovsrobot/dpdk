@@ -7,8 +7,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <inttypes.h>
-
-#include <sys/queue.h>
 #include <sys/stat.h>
 
 #include <rte_common.h>

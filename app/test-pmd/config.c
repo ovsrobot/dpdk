@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
