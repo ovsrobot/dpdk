@@ -908,6 +908,7 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 			rte_free(txq_elem);
 			return err;
 		}
+		dev->dev_ops->timesync_enable(dev);
 	} else {
 		txq->qtx_tail = hw->hw_addr + QTX_COMM_DBELL(txq->reg_idx);
 
@@ -1671,7 +1672,6 @@ ice_tx_queue_setup(struct rte_eth_dev *dev,
 			PMD_INIT_LOG(ERR, "Cannot register Tx mbuf field/flag for timestamp");
 			return -EINVAL;
 		}
-		dev->dev_ops->timesync_enable(dev);
 
 		txq->tsq->nb_ts_desc = ice_calc_ts_ring_count(ICE_VSI_TO_HW(vsi), txq->nb_tx_desc);
 		ring_size = sizeof(struct ice_ts_desc) * txq->tsq->nb_ts_desc;
