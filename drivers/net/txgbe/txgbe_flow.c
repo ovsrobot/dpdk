@@ -3,7 +3,7 @@
  * Copyright(c) 2010-2017 Intel Corporation
  */
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <bus_pci_driver.h>
 #include <rte_malloc.h>
 #include <rte_flow.h>

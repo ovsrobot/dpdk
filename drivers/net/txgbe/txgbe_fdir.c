@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <rte_malloc.h>
 
 #include "txgbe_logs.h"
