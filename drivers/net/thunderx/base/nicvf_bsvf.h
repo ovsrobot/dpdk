@@ -5,7 +5,7 @@
 #ifndef __THUNDERX_NICVF_BSVF_H__
 #define __THUNDERX_NICVF_BSVF_H__
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 struct nicvf;
 

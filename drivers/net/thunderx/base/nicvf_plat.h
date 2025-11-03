@@ -6,6 +6,7 @@
 #define _THUNDERX_NICVF_H
 
 /* Platform/OS/arch specific abstractions */
+#include <rte_bsd_queue.h>
 
 /* log */
 #include <rte_log.h>
