@@ -7,6 +7,7 @@
 #define __NFP_MTR_H__
 
 #include <rte_mtr.h>
+#include <rte_bsd_queue.h>
 
 #include "flower/nfp_flower_cmsg.h"
 
