@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <sys/queue.h>
 
 #include <rte_memory.h>
 #include <rte_per_lcore.h>

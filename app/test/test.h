@@ -8,8 +8,8 @@
 #include <errno.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <sys/queue.h>
 
+#include <rte_bsd_queue.h>
 #include <rte_hexdump.h>
 #include <rte_common.h>
 #include <rte_os_shim.h>

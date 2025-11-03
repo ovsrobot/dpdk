@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <errno.h>
-#include <sys/queue.h>
 
 #include <rte_common.h>
 #include <rte_errno.h>
