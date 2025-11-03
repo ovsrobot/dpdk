@@ -5,8 +5,6 @@
 #ifndef _ROC_NPC_H_
 #define _ROC_NPC_H_
 
-#include <sys/queue.h>
-
 enum roc_npc_item_type {
 	ROC_NPC_ITEM_TYPE_VOID,
 	ROC_NPC_ITEM_TYPE_ANY,
