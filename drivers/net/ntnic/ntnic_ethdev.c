@@ -14,8 +14,6 @@
 #include <ethdev_pci.h>
 #include <rte_kvargs.h>
 
-#include <sys/queue.h>
-
 #include "rte_spinlock.h"
 #include "ntlog.h"
 #include "ntdrv_4ga.h"
