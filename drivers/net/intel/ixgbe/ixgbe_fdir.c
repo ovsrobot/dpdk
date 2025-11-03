@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <rte_interrupts.h>
 #include <rte_log.h>

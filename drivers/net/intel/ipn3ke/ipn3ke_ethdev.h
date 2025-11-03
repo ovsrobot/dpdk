@@ -11,7 +11,6 @@
 #include <limits.h>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <sys/queue.h>
 
 #include <rte_mbuf.h>
 #include <rte_flow_driver.h>

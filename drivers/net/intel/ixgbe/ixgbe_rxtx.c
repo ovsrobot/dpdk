@@ -3,7 +3,6 @@
  * Copyright 2014 6WIND S.A.
  */
 
-#include <sys/queue.h>
 
 #include <stdio.h>
 #include <stdlib.h>
