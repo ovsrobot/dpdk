@@ -7,7 +7,7 @@
  * for Solarflare) and Solarflare Communications, Inc.
  */
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <stdalign.h>
 #include <string.h>
 #include <errno.h>
