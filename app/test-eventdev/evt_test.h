@@ -7,7 +7,6 @@
 
 #include <string.h>
 #include <stdbool.h>
-#include <sys/queue.h>
 
 #include <rte_eal.h>
 
