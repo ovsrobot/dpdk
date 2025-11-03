@@ -8,7 +8,6 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
-#include <sys/queue.h>
 
 #include "rte_version.h"
 #include "rte_ethdev.h"

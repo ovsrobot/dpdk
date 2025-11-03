@@ -3,8 +3,7 @@
  * All rights reserved.
  */
 
-#include <sys/queue.h>
-
+#include <rte_bsd_queue.h>
 #include <rte_byteorder.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
@@ -110,7 +109,7 @@ void bnxt_free_all_filters(struct bnxt *bp)
 
 void bnxt_free_filter_mem(struct bnxt *bp)
 {
-	struct bnxt_filter_info *filter;
+	struct bnxt_filter_info *filter, *tmp;
 	uint16_t max_filters, i;
 	int rc = 0;
 
@@ -151,7 +150,7 @@ void bnxt_free_filter_mem(struct bnxt *bp)
 	bp->filter_info = NULL;
 
 	for (i = 0; i < bp->pf->max_vfs; i++) {
-		STAILQ_FOREACH(filter, &bp->pf->vf_info[i].filter, next) {
+		STAILQ_FOREACH_SAFE(filter, &bp->pf->vf_info[i].filter, next, tmp) {
 			rte_free(filter);
 			STAILQ_REMOVE(&bp->pf->vf_info[i].filter, filter,
 				      bnxt_filter_info, next);

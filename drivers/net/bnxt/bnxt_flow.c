@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-#include <sys/queue.h>
 
 #include <rte_log.h>
 #include <rte_malloc.h>
