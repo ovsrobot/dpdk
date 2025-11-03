@@ -7,7 +7,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/queue.h>
 #include <rte_mtr.h>
 
 #include "zxdh_np.h"
