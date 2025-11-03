@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <sys/queue.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <ctype.h>

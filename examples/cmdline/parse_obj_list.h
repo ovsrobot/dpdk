@@ -10,7 +10,7 @@
 /* This file is an example of extension of libcmdline. It provides an
  * example of objects stored in a list. */
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <cmdline_parse.h>
 #include <cmdline_parse_string.h>
 

@@ -3,7 +3,7 @@
  */
 
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <string.h>

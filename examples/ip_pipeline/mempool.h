@@ -6,7 +6,7 @@
 #define _INCLUDE_MEMPOOL_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include <rte_mempool.h>
 

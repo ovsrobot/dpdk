@@ -15,7 +15,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <unistd.h>
 
 #include <rte_branch_prediction.h>

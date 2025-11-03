@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <errno.h>

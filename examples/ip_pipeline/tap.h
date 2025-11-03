@@ -5,7 +5,7 @@
 #ifndef _INCLUDE_TAP_H_
 #define _INCLUDE_TAP_H_
 
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 #include "common.h"
 
