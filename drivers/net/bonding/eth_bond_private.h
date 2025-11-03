@@ -6,7 +6,6 @@
 #define _ETH_BOND_PRIVATE_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
 
 #include <ethdev_driver.h>
 #include <rte_flow.h>
