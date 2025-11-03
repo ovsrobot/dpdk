@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <inttypes.h>
-#include <sys/queue.h>
 #include <stdlib.h>
 #include <getopt.h>
 #include <unistd.h>
