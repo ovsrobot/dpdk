@@ -7,7 +7,7 @@
 #define _ETH_FAILSAFE_PRIVATE_H_
 
 #include <stdint.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 #include <pthread.h>
 
 #include <rte_atomic.h>
