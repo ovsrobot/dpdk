@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/queue.h>
+#include <rte_bsd_queue.h>
 
 /* Verbs headers do not support -pedantic. */
 #ifdef PEDANTIC
