@@ -750,10 +750,43 @@ rte_pktmbuf_dump(FILE *f, const struct rte_mbuf *m, unsigned dump_len)
 
 	__rte_mbuf_sanity_check(m, 1);
 
-	fprintf(f, "dump mbuf at %p, iova=%#" PRIx64 ", buf_len=%u\n", m, rte_mbuf_iova_get(m),
-		m->buf_len);
-	fprintf(f, "  pkt_len=%u, ol_flags=%#"PRIx64", nb_segs=%u, port=%u",
-		m->pkt_len, m->ol_flags, m->nb_segs, m->port);
+	fprintf(f, "dump mbuf at %p, iova=%#" PRIx64 ", buf_len=%u, pkt_len=%u\n",
+		m, rte_mbuf_iova_get(m), m->buf_len, m->pkt_len);
+	if (m->ol_flags & RTE_MBUF_F_TX_OFFLOAD_MASK) {
+		const char *sep = "";
+
+		fprintf(f, "  ");
+		if (m->outer_l2_len != 0) {
+			fprintf(f, "%souter_l2_len=%u", sep, m->outer_l2_len);
+			sep = ", ";
+		}
+		if (m->outer_l3_len != 0) {
+			fprintf(f, "%souter_l3_len=%u", sep, m->outer_l3_len);
+			sep = ", ";
+		}
+		if (m->l2_len != 0) {
+			fprintf(f, "%sl2_len=%u", sep, m->l2_len);
+			sep = ", ";
+		}
+		if (m->l3_len != 0) {
+			fprintf(f, "%sl3_len=%u", sep, m->l3_len);
+			sep = ", ";
+		}
+		if (m->l4_len != 0) {
+			fprintf(f, "%sl4_len=%u", sep, m->l4_len);
+			sep = ", ";
+		}
+		if (m->tso_segsz != 0) {
+			fprintf(f, "%stso_segsz=%u", sep, m->tso_segsz);
+			sep = ", ";
+		}
+
+		if (sep[0] == '\0')
+			fprintf(f, "no tx offload length set");
+		fprintf(f, "\n");
+	}
+	fprintf(f, "  ol_flags=%#"PRIx64", nb_segs=%u, port=%u",
+		m->ol_flags, m->nb_segs, m->port);
 
 	if (m->ol_flags & (RTE_MBUF_F_RX_QINQ | RTE_MBUF_F_TX_QINQ))
 		fprintf(f, ", vlan_tci_outer=%u", m->vlan_tci_outer);
