@@ -67,7 +67,7 @@ void app_print_usage(void);
 void app_init(void);
 int app_lcore_main_loop(void *arg);
 
-/* Pipeline */
+/* Pipeline and help*/
 enum {
 	e_APP_PIPELINE_NONE = 0,
 	e_APP_PIPELINE_STUB,
@@ -99,7 +99,8 @@ enum {
 	e_APP_PIPELINE_HASH_CUCKOO_KEY96,
 	e_APP_PIPELINE_HASH_CUCKOO_KEY112,
 	e_APP_PIPELINE_HASH_CUCKOO_KEY128,
-	e_APP_PIPELINES
+	e_APP_PIPELINES,
+	e_APP_HELP
 };
 
 void app_main_loop_rx(void);
