@@ -43,7 +43,7 @@
 
 static const char usage[] =
 "Usage:\n"
-"  dpdk-test-pipeline [EAL options] -- -p PORTMASK --TABLE_TYPE\n"
+"  dpdk-test-pipeline [EAL options] -- -p PORTMASK --PIPELINE_ARGS\n"
 "\n"
 "EAL requirements:\n"
 "  -l/--lcores must specify exactly 3 lcores (RX core, pipeline core , TX core)\n"
@@ -61,7 +61,10 @@ static const char usage[] =
 "  --hash-cuckoo-8  | --hash-cuckoo-16  | --hash-cuckoo-32  |\n"
 "  --hash-cuckoo-48 | --hash-cuckoo-64  | --hash-cuckoo-80  |\n"
 "  --hash-cuckoo-96 | --hash-cuckoo-112 | --hash-cuckoo-128\n"
-"  -h/--help    print help statement and exit\n";
+"  -h/--help    print help statement and exit\n"
+"  --rx-ring-size=N    Optional, size of RX ring (power-of-two)\n"
+"  --tx-ring-size=N    Optional, size of TX ring (power-of-two)\n";
+
 
 void
 app_print_usage(void)
@@ -104,6 +107,25 @@ app_parse_port_mask(const char *arg)
 	return 0;
 }
 
+static int
+app_parse_ring_size(const char *ring_size_arg, uint32_t *size)
+{
+	char *end = NULL;
+	unsigned long value;
+
+	value = strtoul(ring_size_arg, &end, 10);
+
+	/* Check for conversion of invalid string */
+	if (!(*ring_size_arg != '\0' && *end == '\0'))
+		return -1;
+
+	if (!rte_is_power_of_2(value) || value > UINT32_MAX)
+		return -1;
+
+	*size = value;
+	return 0;
+}
+
 struct {
 	const char *name;
 	uint32_t value;
@@ -142,6 +164,7 @@ app_parse_args(int argc, char **argv)
 	int opt, ret;
 	char **argvopt;
 	int option_index;
+	uint32_t rx_ring_size, tx_ring_size;
 	char *prgname = argv[0];
 	static struct option lgopts[] = {
 		{"none", 0, 0, e_APP_PIPELINES},
@@ -171,6 +194,8 @@ app_parse_args(int argc, char **argv)
 		{"hash-cuckoo-112", 0, 0, e_APP_PIPELINES},
 		{"hash-cuckoo-128", 0, 0, e_APP_PIPELINES},
 		{"help", 0, 0, e_APP_HELP},
+		{"rx-ring-size", 1, 0, e_APP_RX_RING_SIZE},
+		{"tx-ring-size", 1, 0, e_APP_TX_RING_SIZE},
 		{NULL, 0, 0, 0}
 	};
 	uint32_t lcores[3], n_lcores, lcore_id, pipeline_type_provided;
@@ -205,6 +230,9 @@ app_parse_args(int argc, char **argv)
 	app.pipeline_type = e_APP_PIPELINE_HASH_KEY16_LRU;
 	pipeline_type_provided = 0;
 
+	app.ring_rx_size = APP_RING_SIZE_DEFAULT;
+	app.ring_tx_size = APP_RING_SIZE_DEFAULT;
+
 	while ((opt = getopt_long(argc, argvopt, "p:h",
 			lgopts, &option_index)) != EOF) {
 		switch (opt) {
@@ -214,7 +242,7 @@ app_parse_args(int argc, char **argv)
 
 			break;
 
-		case e_APP_PIPELINES: /* long options */
+		case e_APP_PIPELINES:
 			if (!pipeline_type_provided) {
 				uint32_t i;
 
@@ -232,6 +260,20 @@ app_parse_args(int argc, char **argv)
 			}
 
 			return -1;
+
+		case e_APP_RX_RING_SIZE:
+			if (app_parse_ring_size(optarg, &rx_ring_size) < 0)
+				return -1;
+
+			app.ring_rx_size = rx_ring_size;
+			break;
+
+		case e_APP_TX_RING_SIZE:
+			if (app_parse_ring_size(optarg, &tx_ring_size) < 0)
+				return -1;
+
+			app.ring_tx_size = tx_ring_size;
+			break;
 
 		case e_APP_HELP:
 		case 'h':

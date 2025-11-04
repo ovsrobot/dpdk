@@ -18,6 +18,8 @@ struct app_mbuf_array {
 #define APP_MAX_PORTS 4
 #endif
 
+#define APP_RING_SIZE_DEFAULT 128
+
 struct __rte_cache_aligned app_params {
 	/* CPU cores */
 	uint32_t core_rx;
@@ -67,7 +69,7 @@ void app_print_usage(void);
 void app_init(void);
 int app_lcore_main_loop(void *arg);
 
-/* Pipeline and help*/
+/* Pipelines, help, ring size */
 enum {
 	e_APP_PIPELINE_NONE = 0,
 	e_APP_PIPELINE_STUB,
@@ -100,7 +102,9 @@ enum {
 	e_APP_PIPELINE_HASH_CUCKOO_KEY112,
 	e_APP_PIPELINE_HASH_CUCKOO_KEY128,
 	e_APP_PIPELINES,
-	e_APP_HELP
+	e_APP_HELP,
+	e_APP_RX_RING_SIZE,
+	e_APP_TX_RING_SIZE
 };
 
 void app_main_loop_rx(void);
