@@ -222,9 +222,6 @@ struct mlx5_mirror {
 	struct mlx5_mirror_clone clone[MLX5_MIRROR_MAX_CLONES_NUM];
 };
 
-/* Default queue number. */
-#define MLX5_RSSQ_DEFAULT_NUM 16
-
 #define MLX5_FLOW_LAYER_OUTER_L2 (1u << 0)
 #define MLX5_FLOW_LAYER_OUTER_L3_IPV4 (1u << 1)
 #define MLX5_FLOW_LAYER_OUTER_L3_IPV6 (1u << 2)
@@ -469,10 +466,6 @@ struct mlx5_mirror {
 
 #define MLX5_FLOW_XCAP_ACTIONS (MLX5_FLOW_ACTION_ENCAP | MLX5_FLOW_ACTION_DECAP)
 
-#ifndef IPPROTO_MPLS
-#define IPPROTO_MPLS 137
-#endif
-
 #define MLX5_IPV6_HDR_ECN_MASK 0x3
 #define MLX5_IPV6_HDR_DSCP_SHIFT 2
 
@@ -518,9 +511,6 @@ struct mlx5_mirror {
 	(RTE_ETH_RSS_IPV4 | RTE_ETH_RSS_FRAG_IPV4 | \
 	 RTE_ETH_RSS_NONFRAG_IPV4_TCP | RTE_ETH_RSS_NONFRAG_IPV4_UDP | \
 	 RTE_ETH_RSS_NONFRAG_IPV4_OTHER)
-
-/* Valid L4 RSS types */
-#define MLX5_L4_RSS_TYPES (RTE_ETH_RSS_L4_SRC_ONLY | RTE_ETH_RSS_L4_DST_ONLY)
 
 /* IBV hash source bits  for IPV4. */
 #define MLX5_IPV4_IBV_RX_HASH (IBV_RX_HASH_SRC_IPV4 | IBV_RX_HASH_DST_IPV4)
@@ -1897,13 +1887,6 @@ flow_hw_get_reg_id_from_ctx(void *dr_ctx, enum rte_flow_item_type type,
 #define MLX5_RSS_IS_SYMM(func) \
 		(((func) == RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) || \
 		 ((func) == RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ_SORT))
-
-/* extract next protocol type from Ethernet & VLAN headers */
-#define MLX5_ETHER_TYPE_FROM_HEADER(_s, _m, _itm, _prt) do { \
-	(_prt) = ((const struct _s *)(_itm)->mask)->_m;       \
-	(_prt) &= ((const struct _s *)(_itm)->spec)->_m;      \
-	(_prt) = rte_be_to_cpu_16((_prt));                    \
-} while (0)
 
 /* array of valid combinations of RX Hash fields for RSS */
 static const uint64_t mlx5_rss_hash_fields[] = {
