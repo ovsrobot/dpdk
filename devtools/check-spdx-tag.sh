@@ -67,6 +67,17 @@ check_boilerplate() {
     $quiet || cat $tmpfile
 }
 
+check_firstline() {
+    if $verbose ; then
+	echo "Files with license text not on first line"
+	echo "-----------------------------------------"
+    fi
+    git grep -n SPDX-License-Identifier -- '*.[ch]' | awk -F: '$2 != 1 { print $1}' >$tmpfile
+
+    not_first=$(wc -l < $tmpfile)
+    $quiet || cat $tmpfile
+}
+
 while getopts qvh ARG ; do
 	case $ARG in
 		q ) quiet=true ;;
@@ -89,5 +100,8 @@ $verbose && echo
 check_boilerplate
 $verbose && echo
 
-echo "total: $missing_spdx missing SPDX, $wrong_license license errors, $warnings warnings"
+check_firstline
+$verbose && echo
+
+echo "total: $missing_spdx missing SPDX, $not_first not on first line, $wrong_license license errors, $warnings warnings"
 exit $((missing_spdx + wrong_license))
