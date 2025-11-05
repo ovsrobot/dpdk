@@ -150,6 +150,12 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"    Stop packet forwarding, and display accumulated"
 			" statistics.\n\n"
 
+			"pause fwd_core (lcore_id)\n"
+			"    Pause specify lcore's forwarding.\n\n"
+
+			"resume fwd_core (lcore_id)\n"
+			"    Resume specify lcore's forwarding.\n\n"
+
 			"quit\n"
 			"    Quit to prompt.\n\n"
 		);
@@ -3971,6 +3977,124 @@ static cmdline_parse_inst_t cmd_stop = {
 	.help_str = "stop: Stop packet forwarding",
 	.tokens = {
 		(void *)&cmd_stop_stop,
+		NULL,
+	},
+};
+
+/* *** pause specify forward core *** */
+struct cmd_pause_fwd_core_result {
+	cmdline_fixed_string_t pause;
+	cmdline_fixed_string_t fwd_core;
+	uint32_t lcore_id;
+};
+
+static void
+cmd_pause_fwd_core_parsed(void *parsed_result,
+			  __rte_unused struct cmdline *cl,
+			  __rte_unused void *data)
+{
+	struct cmd_pause_fwd_core_result *res = parsed_result;
+	struct fwd_lcore *fc = lcore_to_fwd_lcore(res->lcore_id);
+
+	if (test_done) {
+		fprintf(stderr, "Packet forwarding not started\n");
+		return;
+	}
+
+	if (fc == NULL) {
+		fprintf(stderr, "core: %u not in the forward corelist.\n", res->lcore_id);
+		return;
+	}
+
+	if (fc->stopped == 2) {
+		fprintf(stderr, "core: %u already paused!\n", res->lcore_id);
+		return;
+	}
+
+	printf("Telling core: %u to pause...", res->lcore_id);
+	fc->stopped = 2;
+	printf("\nWaiting for core: %u to finish...\n", res->lcore_id);
+	rte_delay_ms(10);
+	printf("Done.\n");
+}
+
+static cmdline_parse_token_string_t cmd_pause_fwd_core_pause =
+	TOKEN_STRING_INITIALIZER(struct cmd_pause_fwd_core_result,
+			pause, "pause");
+static cmdline_parse_token_string_t cmd_pause_fwd_core_fwd_core =
+	TOKEN_STRING_INITIALIZER(struct cmd_pause_fwd_core_result,
+			fwd_core, "fwd_core");
+static cmdline_parse_token_num_t cmd_pause_fwd_core_lcore_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_pause_fwd_core_result,
+			lcore_id, RTE_UINT32);
+
+static cmdline_parse_inst_t cmd_pause_fwd_core = {
+	.f = cmd_pause_fwd_core_parsed,
+	.data = NULL,
+	.help_str = "pause fwd_core <lcore_id>: pause specify lcore's forwarding.",
+	.tokens = {
+		(void *)&cmd_pause_fwd_core_pause,
+		(void *)&cmd_pause_fwd_core_fwd_core,
+		(void *)&cmd_pause_fwd_core_lcore_id,
+		NULL,
+	},
+};
+
+/* *** resume specify forward core *** */
+struct cmd_resume_fwd_core_result {
+	cmdline_fixed_string_t resume;
+	cmdline_fixed_string_t fwd_core;
+	uint32_t lcore_id;
+};
+
+static void
+cmd_resume_fwd_core_parsed(void *parsed_result,
+			   __rte_unused struct cmdline *cl,
+			   __rte_unused void *data)
+{
+	struct cmd_resume_fwd_core_result *res = parsed_result;
+	struct fwd_lcore *fc = lcore_to_fwd_lcore(res->lcore_id);
+
+	if (test_done) {
+		fprintf(stderr, "Packet forwarding not started\n");
+		return;
+	}
+
+	if (fc == NULL) {
+		fprintf(stderr, "core: %u not in the forward corelist.\n", res->lcore_id);
+		return;
+	}
+
+	if (fc->stopped != 2) {
+		fprintf(stderr, "core: %u not in pause state!\n", res->lcore_id);
+		return;
+	}
+
+	printf("Telling core: %u to resume...", res->lcore_id);
+	fc->stopped = 0;
+	printf("\nWaiting for core: %u to resume...\n", res->lcore_id);
+	rte_delay_ms(10);
+	printf("Done.\n");
+}
+
+static cmdline_parse_token_string_t cmd_resume_fwd_core_resume =
+	TOKEN_STRING_INITIALIZER(struct cmd_resume_fwd_core_result,
+			resume, "resume");
+static cmdline_parse_token_string_t cmd_resume_fwd_core_fwd_core =
+	TOKEN_STRING_INITIALIZER(struct cmd_resume_fwd_core_result,
+			fwd_core, "fwd_core");
+static cmdline_parse_token_num_t cmd_resume_fwd_core_lcore_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_resume_fwd_core_result,
+			lcore_id, RTE_UINT32);
+
+static cmdline_parse_inst_t cmd_resume_fwd_core = {
+	.f = cmd_resume_fwd_core_parsed,
+	.data = NULL,
+	.help_str = "resume fwd_core <lcore_id>: resume specify lcore's forwarding.",
+	.tokens = {
+		(void *)&cmd_resume_fwd_core_resume,
+		(void *)&cmd_resume_fwd_core_fwd_core,
+		(void *)&cmd_resume_fwd_core_lcore_id,
 		NULL,
 	},
 };
@@ -14051,6 +14175,8 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_config_dcb,
 	&cmd_read_rxd_txd,
 	&cmd_stop,
+	&cmd_pause_fwd_core,
+	&cmd_resume_fwd_core,
 	&cmd_mac_addr,
 	&cmd_set_fwd_eth_peer,
 	&cmd_set_xstats_hide_zero,

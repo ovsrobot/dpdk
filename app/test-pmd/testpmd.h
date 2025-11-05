@@ -399,7 +399,7 @@ struct fwd_lcore {
 	streamid_t stream_idx;   /**< index of 1st stream in "fwd_streams" */
 	streamid_t stream_nb;    /**< number of streams in "fwd_streams" */
 	lcoreid_t  cpuid_idx;    /**< index of logical core in CPU id table */
-	volatile char stopped;   /**< stop forwarding when set */
+	volatile char stopped;   /**< stop forwarding when set to 1, pause when set to 2 */
 	uint64_t total_cycles;   /**< used with --record-core-cycles */
 };
 
