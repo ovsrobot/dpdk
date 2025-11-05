@@ -525,8 +525,20 @@ get_tunnel_ol_flags_by_ptype(uint32_t ptype)
 	}
 }
 
+static void
+parse_inner_l4_proto(void *outer_l3_hdr,
+			struct testpmd_offload_info *info)
+{
+	struct rte_ipv4_hdr *ipv4_hdr = outer_l3_hdr;
+	struct rte_ipv6_hdr *ipv6_hdr = outer_l3_hdr;
+	if (info->ethertype == _htons(RTE_ETHER_TYPE_IPV4))
+		info->l4_proto = ipv4_hdr->next_proto_id;
+	else
+		info->l4_proto = ipv6_hdr->proto;
+}
+
 static uint8_t
-parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype, bool parse_inner)
+parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype)
 {
 	int frag = 0, ret;
 
@@ -545,19 +557,16 @@ parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype, bool pars
 		if (unlikely(ip6h == NULL))
 			return 0;
 
-		if (!parse_inner && (ptype & RTE_PTYPE_L3_MASK) != RTE_PTYPE_L3_IPV6_EXT)
-			return ip6h->proto;
+		if ((ptype & RTE_PTYPE_INNER_L3_MASK) ==
+				RTE_PTYPE_INNER_L3_IPV6_EXT) {
+			ret = rte_net_skip_ip6_ext(ip6h->proto, m, &off, &frag);
+			if (ret < 0)
+				return 0;
+			return ret;
+		}
 
-		if (parse_inner && (ptype & RTE_PTYPE_INNER_L3_MASK) != RTE_PTYPE_INNER_L3_IPV6_EXT)
-			return ip6h->proto;
-
-		off += sizeof(struct rte_ipv6_hdr);
-		ret = rte_net_skip_ip6_ext(ip6h->proto, m, &off, &frag);
-		if (ret < 0)
-			return 0;
-		return ret;
+		return ip6h->proto;
 	}
-
 	return 0;
 }
 
@@ -696,7 +705,7 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 		info.l4_len = hdr_lens.l4_len;
 		info.ethertype = get_ethertype_by_ptype(eth_hdr,
 					ptype & RTE_PTYPE_L3_MASK);
-		info.l4_proto = parse_l4_proto(m, info.l2_len, ptype, false);
+		info.l4_proto = parse_l4_proto(m, info.l2_len, ptype);
 
 		l3_hdr = (char *)eth_hdr + info.l2_len;
 		/* check if it's a supported tunnel */
@@ -714,11 +723,9 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 		}
 		/* update l3_hdr and outer_l3_hdr if a tunnel was parsed */
 		if (info.is_tunnel) {
-			uint16_t l3_off = info.outer_l2_len +  info.outer_l3_len + info.l2_len;
-
 			outer_l3_hdr = l3_hdr;
 			l3_hdr = (char *)l3_hdr + info.outer_l3_len + info.l2_len;
-			info.l4_proto = parse_l4_proto(m, l3_off, ptype, true);
+			parse_inner_l4_proto(l3_hdr, &info);
 		}
 		/* step 2: depending on user command line configuration,
 		 * recompute checksum either in software or flag the
