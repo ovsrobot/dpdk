@@ -147,6 +147,10 @@ New Features
   * Added multi-process per port.
   * Optimized code.
 
+* **Updated NVIDIA mlx5 driver.**
+
+  * Support count and age flow actions on root tables with HW Steering flow engine.
+
 * **Added PQC ML algorithms in cryptodev.**
 
   * Added PQC ML-KEM support with reference to FIPS203.
