@@ -178,6 +178,9 @@ New Features
   The built-in help text function is available as a public function which can be reused by custom functions,
   if so desired.
 
+* **Updated NVIDIA mlx5 driver.**
+
+  * Added support for NVIDIA ConnectX-9 adapters.
 
 Removed Items
 -------------
