@@ -559,6 +559,7 @@ parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype)
 
 		if ((ptype & RTE_PTYPE_INNER_L3_MASK) ==
 				RTE_PTYPE_INNER_L3_IPV6_EXT) {
+			off += sizeof(struct rte_ipv6_hdr);
 			ret = rte_net_skip_ip6_ext(ip6h->proto, m, &off, &frag);
 			if (ret < 0)
 				return 0;
