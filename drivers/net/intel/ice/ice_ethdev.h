@@ -668,6 +668,8 @@ struct ice_adapter {
 	uint8_t ptp_tx_index;
 	bool ptp_ena;
 	uint64_t time_hw;
+	/* For TxPP */
+	bool txpp_ena;
 	struct ice_fdir_prof_info fdir_prof_info[ICE_MAX_PTGS];
 	struct ice_rss_prof_info rss_prof_info[ICE_MAX_PTGS];
 	/* True if DCF state of the associated PF is on */
