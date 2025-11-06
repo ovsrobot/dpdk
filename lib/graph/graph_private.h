@@ -149,7 +149,7 @@ static inline int clone_name(char *new_name, char *base_name, const char *append
 {
 	ssize_t sz, rc;
 
-#define SZ RTE_MIN(RTE_NODE_NAMESIZE, RTE_GRAPH_NAMESIZE)
+#define SZ RTE_MIN_T(RTE_NODE_NAMESIZE, RTE_GRAPH_NAMESIZE, uint16_t)
 	rc = rte_strscpy(new_name, base_name, SZ);
 	if (rc < 0)
 		goto fail;
