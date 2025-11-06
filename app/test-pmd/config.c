@@ -5187,7 +5187,7 @@ dcb_fwd_config_setup(void)
 	/* reinitialize forwarding streams */
 	init_fwd_streams();
 	sm_id = 0;
-	txp = 1;
+	txp = fwd_topology_tx_port_get(rxp);
 	/* get the dcb info on the first RX and TX ports */
 	(void)rte_eth_dev_get_dcb_info(fwd_ports_ids[rxp], &rxp_dcb_info);
 	(void)rte_eth_dev_get_dcb_info(fwd_ports_ids[txp], &txp_dcb_info);
@@ -5205,7 +5205,7 @@ dcb_fwd_config_setup(void)
 				fwd_lcores[lc_id]->stream_idx;
 			rxq = rxp_dcb_info.tc_queue.tc_rxq[i][tc].base;
 			txq = txp_dcb_info.tc_queue.tc_txq[i][tc].base;
-			nb_rx_queue = txp_dcb_info.tc_queue.tc_rxq[i][tc].nb_queue;
+			nb_rx_queue = rxp_dcb_info.tc_queue.tc_rxq[i][tc].nb_queue;
 			nb_tx_queue = txp_dcb_info.tc_queue.tc_txq[i][tc].nb_queue;
 			for (j = 0; j < nb_rx_queue; j++) {
 				struct fwd_stream *fs;
@@ -5235,11 +5235,8 @@ dcb_fwd_config_setup(void)
 			rxp++;
 		if (rxp >= nb_fwd_ports)
 			return;
+		txp = fwd_topology_tx_port_get(rxp);
 		/* get the dcb information on next RX and TX ports */
-		if ((rxp & 0x1) == 0)
-			txp = (portid_t) (rxp + 1);
-		else
-			txp = (portid_t) (rxp - 1);
 		rte_eth_dev_get_dcb_info(fwd_ports_ids[rxp], &rxp_dcb_info);
 		rte_eth_dev_get_dcb_info(fwd_ports_ids[txp], &txp_dcb_info);
 	}
