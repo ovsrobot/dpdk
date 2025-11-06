@@ -339,21 +339,21 @@ int
 handle_eal_info_request(const char *cmd, const char *params __rte_unused,
 		struct rte_tel_data *d)
 {
-	char **args;
+	char **out_args;
 	int used = 0;
 	int i = 0;
 
 	if (strcmp(cmd, EAL_PARAM_REQ) == 0)
-		args = eal_args;
+		out_args = eal_args;
 	else
-		args = eal_app_args;
+		out_args = eal_app_args;
 
 	rte_tel_data_start_array(d, RTE_TEL_STRING_VAL);
-	if (args == NULL || args[0] == NULL)
+	if (out_args == NULL || out_args[0] == NULL)
 		return 0;
 
-	for ( ; args[i] != NULL; i++)
-		used = rte_tel_data_add_array_string(d, args[i]);
+	for ( ; out_args[i] != NULL; i++)
+		used = rte_tel_data_add_array_string(d, out_args[i]);
 	return used;
 }
 
