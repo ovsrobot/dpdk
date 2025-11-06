@@ -987,11 +987,10 @@ launch_args_parse(int argc, char** argv)
 			break;
 		case TESTPMD_OPT_STATS_PERIOD_NUM: {
 			char *end = NULL;
-			unsigned int n;
 
 			n = strtoul(optarg, &end, 10);
 			if ((optarg[0] == '\0') || (end == NULL) ||
-					(*end != '\0'))
+					(*end != '\0') || n <= 0 || n >= UINT16_MAX)
 				rte_exit(EXIT_FAILURE, "Invalid stats-period value\n");
 
 			stats_period = n;
@@ -1339,7 +1338,6 @@ launch_args_parse(int argc, char** argv)
 			break;
 		case TESTPMD_OPT_HAIRPIN_MODE_NUM: {
 			char *end = NULL;
-			unsigned int n;
 
 			errno = 0;
 			n = strtoul(optarg, &end, 0);
