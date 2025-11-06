@@ -3347,14 +3347,17 @@ static int
 rte_dpaa2_remove(struct rte_dpaa2_device *dpaa2_dev)
 {
 	struct rte_eth_dev *eth_dev;
-	int ret;
+	int ret = 0;
 
 	eth_dev = dpaa2_dev->eth_dev;
-	dpaa2_dev_close(eth_dev);
+	if (eth_dev->data) {
+		ret = dpaa2_dev_close(eth_dev);
+		if (!ret)
+			ret = rte_eth_dev_release_port(eth_dev);
+	}
 	dpaa2_valid_dev--;
 	if (!dpaa2_valid_dev)
 		rte_mempool_free(dpaa2_tx_sg_pool);
-	ret = rte_eth_dev_release_port(eth_dev);
 
 	return ret;
 }
