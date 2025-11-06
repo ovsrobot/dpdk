@@ -13,6 +13,7 @@ usage() {
 format=true
 lint=true
 typecheck=true
+docstringcheck=true
 
 # Comments after args serve as documentation; must be present
 while getopts "hflt" arg; do
@@ -96,6 +97,13 @@ if $lint; then
 	else
 		echo "ruff not found, unable to run linter"
 		errors=$((errors + 1))
+	fi
+	if $docstringcheck; then
+		docstring_script_path=$(dirname "$0")
+		docstring_script_path=$(cd "$docstring_script_path" && pwd)
+		docstring_script="$docstring_script_path/dts-check-docstrings.py"
+		$docstring_script
+		errors=$((errors + $?))
 	fi
 fi
 
