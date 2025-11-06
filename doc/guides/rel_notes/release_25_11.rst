@@ -119,6 +119,10 @@ New Features
 
   Added the PMD for Nebulamatrix NICs.
 
+* **Updated NVIDIA mlx5 driver.**
+
+  * Added support for NVIDIA ConnectX-9 SuperNIC adapters.
+
 * **Updated NXP DPAA2 ethernet driver.**
 
   * Enabled software taildrop for ordered queues.
@@ -159,6 +163,17 @@ New Features
 * **Updated Intel QuickAssist Technology (QAT) crypto driver.**
 
   * Added SM2 encryption and decryption algorithms.
+
+* **Renamed HiSilicon DMA driver.**
+
+  Renamed ``dma/hisilicon`` to ``dma/hisi_pciep`` (PCIe internal endpoint)
+  to reflect hardware IP.
+
+* **Added HiSilicon Accelerator DMA driver.**
+
+  Kunpeng SoC has an internal accelerator unit which includes zip function,
+  and the zip also supports data copy and fill.
+  This driver exposes this capability to DPDK applications.
 
 * **Allow overriding the automatic usage/help generation in argparse library.**
 
