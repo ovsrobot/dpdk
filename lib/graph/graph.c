@@ -729,7 +729,7 @@ __rte_node_stream_alloc(struct rte_graph *graph, struct rte_node *node)
 
 	RTE_VERIFY(size != UINT16_MAX);
 	/* Allocate double amount of size to avoid immediate realloc */
-	size = RTE_MIN(UINT16_MAX, RTE_MAX(RTE_GRAPH_BURST_SIZE, size * 2));
+	size = RTE_MIN(UINT16_MAX, RTE_MAX_T(RTE_GRAPH_BURST_SIZE, size * 2, int));
 	node->objs = rte_realloc_socket(node->objs, size * sizeof(void *),
 					RTE_CACHE_LINE_SIZE, graph->socket);
 	RTE_VERIFY(node->objs);
@@ -746,7 +746,7 @@ __rte_node_stream_alloc_size(struct rte_graph *graph, struct rte_node *node,
 
 	RTE_VERIFY(size != UINT16_MAX);
 	/* Allocate double amount of size to avoid immediate realloc */
-	size = RTE_MIN(UINT16_MAX, RTE_MAX(RTE_GRAPH_BURST_SIZE, req_size * 2));
+	size = RTE_MIN(UINT16_MAX, RTE_MAX_T(RTE_GRAPH_BURST_SIZE, req_size * 2, int));
 	node->objs = rte_realloc_socket(node->objs, size * sizeof(void *),
 					RTE_CACHE_LINE_SIZE, graph->socket);
 	RTE_VERIFY(node->objs);
