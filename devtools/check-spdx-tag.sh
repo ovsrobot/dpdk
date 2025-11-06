@@ -6,6 +6,7 @@
 
 missing_spdx=0
 wrong_license=0
+errors=0
 warnings=0
 quiet=false
 verbose=false
@@ -29,15 +30,16 @@ check_spdx() {
     git grep -L SPDX-License-Identifier -- $no_license_list > $tmpfile
 
     missing_spdx=$(wc -l < $tmpfile)
+    errors=$((errors + missing_spdx))
     $quiet || cat $tmpfile
 }
 
 build_exceptions_list() {
     grep '.*|.*|.*|.*' license/exceptions.txt | grep -v 'TB Approval Date' |
     while IFS='|' read license tb_date gb_date pattern ; do
-        license=$(echo $license) # trim spaces
-        git grep -l "SPDX-License-Identifier:[[:space:]]*$license" $pattern |
-        sed -e 's/^/:^/'
+	license=$(echo $license) # trim spaces
+	git grep -l "SPDX-License-Identifier:[[:space:]]*$license" $pattern |
+	sed -e 's/^/:^/'
     done
 }
 
@@ -51,6 +53,7 @@ check_licenses() {
     xargs grep -L -E 'SPDX-License-Identifier:[[:space:]]*(\(?|.* OR )BSD-3-Clause' > $tmpfile
 
     wrong_license=$(wc -l < $tmpfile)
+    errors=$((errors + wrong_license))
     $quiet || cat $tmpfile
 }
 
@@ -63,7 +66,19 @@ check_boilerplate() {
     git grep -l Redistribution -- \
 	':^license/' ':^/devtools/check-spdx-tag.sh' > $tmpfile
 
-    warnings=$(wc -l <$tmpfile)
+    warnings=$(wc -l < $tmpfile)
+    $quiet || cat $tmpfile
+}
+
+check_firstline() {
+    if $verbose ; then
+	echo "Files with license text not on first line"
+	echo "-----------------------------------------"
+    fi
+    git grep -n SPDX-License-Identifier -- '*.[ch]' | awk -F: '$2 != 1 { print $1}' >$tmpfile
+
+    first_line=$(wc -l < $tmpfile)
+    warnings=$((warnings + first_line))
     $quiet || cat $tmpfile
 }
 
@@ -89,5 +104,10 @@ $verbose && echo
 check_boilerplate
 $verbose && echo
 
+check_firstline
+$verbose && echo
+
+$quiet && [ $errors = 0 ] && exit
+
 echo "total: $missing_spdx missing SPDX, $wrong_license license errors, $warnings warnings"
-exit $((missing_spdx + wrong_license))
+exit $errors
