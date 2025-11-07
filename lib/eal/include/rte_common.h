@@ -800,6 +800,19 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
 	})
 
 /**
+ * Macro to return the minimum of three numbers
+ */
+#define RTE_MIN3(a, b, c)                      \
+	__extension__ ({                        \
+		typeof (a) _a = (a);            \
+		typeof (b) _b = (b);            \
+		typeof (c) _c = (c);            \
+		_a < _b ? (_a < _c ? _a : _c)   \
+		        : (_b < _c ? _b : _c);  \
+	})
+
+
+/**
  * Macro to return the minimum of two numbers
  *
  * As opposed to RTE_MIN, it does not use temporary variables so it is not safe
@@ -814,9 +827,21 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
  */
 #define RTE_MAX(a, b) \
 	__extension__ ({ \
-		typeof (a) _a = (a); \
-		typeof (b) _b = (b); \
-		_a > _b ? _a : _b; \
+		typeof (a) _ax = (a); \
+		typeof (b) _bx = (b); \
+		_ax > _bx ? _ax : _bx; \
+	})
+
+/**
+ * Macro to return the maximum of three numbers
+ */
+#define RTE_MAX3(a, b, c)                      \
+	__extension__ ({                        \
+		typeof (a) _a = (a);            \
+		typeof (b) _b = (b);            \
+		typeof (c) _c = (c);            \
+		_a > _b ? (_a > _c ? _a : _c)   \
+		        : (_b > _c ? _b : _c);  \
 	})
 
 /**

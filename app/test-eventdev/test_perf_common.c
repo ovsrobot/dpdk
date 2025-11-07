@@ -1316,7 +1316,6 @@ static int
 perf_event_dma_adapter_setup(struct test_perf *t, struct prod_data *p)
 {
 	struct evt_options *opt = t->opt;
-	struct rte_event event;
 	uint32_t cap;
 	int ret;
 
@@ -1335,13 +1334,15 @@ perf_event_dma_adapter_setup(struct test_perf *t, struct prod_data *p)
 		return -ENOTSUP;
 	}
 
-	if (cap & RTE_EVENT_DMA_ADAPTER_CAP_INTERNAL_PORT_VCHAN_EV_BIND)
+	if (cap & RTE_EVENT_DMA_ADAPTER_CAP_INTERNAL_PORT_VCHAN_EV_BIND) {
+		struct rte_event event = { .queue_id = p->queue_id, };
+
 		ret = rte_event_dma_adapter_vchan_add(TEST_PERF_DA_ID, p->da.dma_dev_id,
 						      p->da.vchan_id, &event);
-	else
+	} else {
 		ret = rte_event_dma_adapter_vchan_add(TEST_PERF_DA_ID, p->da.dma_dev_id,
 						      p->da.vchan_id, NULL);
-
+	}
 	return ret;
 }
 
@@ -2130,12 +2131,10 @@ perf_cryptodev_destroy(struct evt_test *test, struct evt_options *opt)
 		void *sess;
 		struct prod_data *p = &t->prod[port];
 		uint32_t flow_id;
-		uint8_t cdev_id;
 
 		for (flow_id = 0; flow_id < t->nb_flows; flow_id++) {
 			sess = p->ca.crypto_sess[flow_id];
-			cdev_id = p->ca.cdev_id;
-			rte_cryptodev_sym_session_free(cdev_id, sess);
+			rte_cryptodev_sym_session_free(p->ca.cdev_id, sess);
 		}
 
 		rte_event_crypto_adapter_queue_pair_del(

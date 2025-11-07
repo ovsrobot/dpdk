@@ -436,9 +436,9 @@ load_configs(const char *path)
 				nb_vp++;
 
 			char lc_dma[RTE_DEV_NAME_MAX_LEN];
-			int i = 0;
+			int dma_id = 0;
 			while (1) {
-				snprintf(lc_dma, RTE_DEV_NAME_MAX_LEN, "lcore_dma%d", i);
+				snprintf(lc_dma, RTE_DEV_NAME_MAX_LEN, "lcore_dma%d", dma_id);
 				lcore_dma = rte_cfgfile_get_entry(cfgfile, section_name, lc_dma);
 				if (lcore_dma == NULL)
 					break;
@@ -451,13 +451,13 @@ load_configs(const char *path)
 				}
 
 				if (rte_kvargs_process(kvlist, NULL, populate_dma_dev_config,
-						       (void *)&test_case->dma_config[i]) < 0) {
+						       (void *)&test_case->dma_config[dma_id]) < 0) {
 					printf("rte_kvargs_process() error\n");
 					rte_kvargs_free(kvlist);
 					test_case->is_valid = false;
 					break;
 				}
-				i++;
+				dma_id++;
 				test_case->num_worker++;
 				rte_kvargs_free(kvlist);
 			}
