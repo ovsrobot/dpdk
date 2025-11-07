@@ -132,6 +132,14 @@ New Features
 
   Added ENETC4 PMD for multiple new generation SoCs.
 
+* **Updated CNXK ethernet driver.**
+
+  Added support to set/get link configuration as mentioned below:
+
+  * Get speed capability from firmware instead of hard coded values.
+  * Report link type, mode and status.
+  * Configure link mode.
+
 * **Updated Wangxun txgbe ethernet driver.**
 
   Added support for Wangxun Amber-Lite NIC series,
