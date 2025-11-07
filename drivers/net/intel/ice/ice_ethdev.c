@@ -6351,10 +6351,19 @@ ice_stat_update_40(struct ice_hw *hw,
 		   uint64_t *stat)
 {
 	uint64_t new_data;
+	uint32_t lo, hi, lo2;
 
-	new_data = (uint64_t)ICE_READ_REG(hw, loreg);
-	new_data |= (uint64_t)(ICE_READ_REG(hw, hireg) & ICE_8_BIT_MASK) <<
-		    ICE_32_BIT_WIDTH;
+	lo = ICE_READ_REG(hw, loreg);
+	hi = ICE_READ_REG(hw, hireg);
+	lo2 = ICE_READ_REG(hw, loreg);
+
+	if (lo2 < lo) {
+		lo = ICE_READ_REG(hw, loreg);
+		hi = ICE_READ_REG(hw, hireg);
+	}
+
+	new_data = (uint64_t)lo;
+	new_data |= (uint64_t)(hi & ICE_8_BIT_MASK) << ICE_32_BIT_WIDTH;
 
 	if (!offset_loaded)
 		*offset = new_data;
