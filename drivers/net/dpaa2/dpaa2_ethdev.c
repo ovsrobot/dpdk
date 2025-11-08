@@ -3320,7 +3320,6 @@ rte_dpaa2_probe(struct rte_dpaa2_driver *dpaa2_drv,
 
 	eth_dev->device = &dpaa2_dev->device;
 
-	dpaa2_dev->eth_dev = eth_dev;
 	eth_dev->data->rx_mbuf_alloc_failed = 0;
 
 	if (dpaa2_drv->drv_flags & RTE_DPAA2_DRV_INTR_LSC)
@@ -3349,7 +3348,10 @@ rte_dpaa2_remove(struct rte_dpaa2_device *dpaa2_dev)
 	struct rte_eth_dev *eth_dev;
 	int ret;
 
-	eth_dev = dpaa2_dev->eth_dev;
+	eth_dev = rte_eth_dev_allocated(dpaa2_dev->device.name);
+	if (!eth_dev)
+		return 0;
+
 	dpaa2_dev_close(eth_dev);
 	dpaa2_valid_dev--;
 	if (!dpaa2_valid_dev)
