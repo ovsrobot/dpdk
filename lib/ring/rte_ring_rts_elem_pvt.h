@@ -131,13 +131,15 @@ __rte_ring_rts_move_head(struct rte_ring_rts_headtail *d,
 		nh.val.cnt = oh.val.cnt + 1;
 
 	/*
-	 * this CAS(ACQUIRE, ACQUIRE) serves as a hoist barrier to prevent:
+	 * this CAS(ACQ_REL, ACQUIRE) serves as a hoist barrier to prevent:
 	 *  - OOO reads of cons tail value
 	 *  - OOO copy of elems to the ring
+	 *  Also RELEASE guarantees that latest tail value
+	 *  will become visible before the new head value.
 	 */
 	} while (rte_atomic_compare_exchange_strong_explicit(&d->head.raw,
 			(uint64_t *)(uintptr_t)&oh.raw, nh.raw,
-			rte_memory_order_acquire,
+			rte_memory_order_acq_rel,
 			rte_memory_order_acquire) == 0);
 
 	*old_head = oh.val.pos;
