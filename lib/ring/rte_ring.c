@@ -67,7 +67,7 @@ rte_ring_get_memsize_elem(unsigned int esize, unsigned int count)
 	}
 
 	/* count must be a power of 2 */
-	if ((!POWEROF2(count)) || (count > RTE_RING_SZ_MASK )) {
+	if ((count == 0) || (!POWEROF2(count)) || (count > RTE_RING_SZ_MASK )) {
 		RING_LOG(ERR,
 			"Requested number of elements is invalid, must be power of 2, and not exceed %u",
 			RTE_RING_SZ_MASK);
@@ -227,7 +227,7 @@ rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
 		r->mask = r->size - 1;
 		r->capacity = count;
 	} else {
-		if ((!POWEROF2(count)) || (count > RTE_RING_SZ_MASK)) {
+		if ((count == 0) || (!POWEROF2(count)) || (count > RTE_RING_SZ_MASK)) {
 			RING_LOG(ERR,
 				"Requested size is invalid, must be power of 2, and not exceed the size limit %u",
 				RTE_RING_SZ_MASK);
