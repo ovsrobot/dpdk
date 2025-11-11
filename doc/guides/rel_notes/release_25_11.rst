@@ -115,6 +115,19 @@ New Features
 
   Added network driver for the Huawei SPx series Network Adapters.
 
+* **Updated Intel ice ethernet driver.**
+
+  * Added support for Data Center Bridging (DCB).
+  * Added support for Priority Flow Control (PFC).
+
+* **Updated Marvell cnxk ethernet driver.**
+
+  Added support to set/get link configuration as mentioned below:
+
+  * Get speed capability from firmware.
+  * Report link type, mode and status.
+  * Configure link mode.
+
 * **Added Nebulamatrix nbl ethernet driver.**
 
   Added the PMD for Nebulamatrix NICs.
@@ -122,6 +135,8 @@ New Features
 * **Updated NVIDIA mlx5 driver.**
 
   * Added support for NVIDIA ConnectX-9 SuperNIC adapters.
+  * Added support for count and age flow actions on root tables
+    with HW steering flow engine.
 
 * **Updated NXP DPAA2 ethernet driver.**
 
@@ -131,6 +146,13 @@ New Features
 * **Added NXP ENETC4 ethernet driver.**
 
   Added ENETC4 PMD for multiple new generation SoCs.
+
+* **Updated TAP ethernet driver.**
+
+  * Replaced ioctl-based link control with a Netlink-based implementation.
+  * Linux net devices can now be renamed without breaking link control.
+  * Linux net devices can now be moved to different namespaces
+    without breaking link control (requires Linux >= 5.2).
 
 * **Updated Wangxun txgbe ethernet driver.**
 
