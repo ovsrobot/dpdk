@@ -1023,8 +1023,8 @@ F: doc/guides/nics/rnp.rst
 F: doc/guides/nics/features/rnp.ini
 
 Nebulamatrix nbl
+M: Alvin Wang <alvin.wang@nebula-matrix.com>
 M: Dimon Zhao <dimon.zhao@nebula-matrix.com>
-M: Kyo Liu <kyo.liu@nebula-matrix.com>
 M: Leon Yu <leon.yu@nebula-matrix.com>
 M: Sam Chen <sam.chen@nebula-matrix.com>
 F: drivers/net/nbl/
