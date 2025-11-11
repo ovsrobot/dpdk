@@ -1648,7 +1648,9 @@ mlx5_init_hws_flow_tags_registers(struct mlx5_dev_ctx_shared *sh)
 	unset |= 1 << mlx5_regc_index(REG_C_6);
 	if (sh->config.dv_esw_en)
 		unset |= 1 << mlx5_regc_index(REG_C_0);
-	if (meta_mode == MLX5_XMETA_MODE_META32_HWS)
+	if (meta_mode == MLX5_XMETA_MODE_META32_HWS ||
+	    mlx5_vport_rx_metadata_passing_enabled(sh) ||
+	    mlx5_vport_tx_metadata_passing_enabled(sh))
 		unset |= 1 << mlx5_regc_index(REG_C_1);
 	masks &= ~unset;
 	for (i = 0, j = 0; i < MLX5_FLOW_HW_TAGS_MAX; i++) {
@@ -3816,6 +3818,10 @@ static const struct rte_pci_id mlx5_pci_id_map[] = {
 	{
 		RTE_PCI_DEVICE(PCI_VENDOR_ID_MELLANOX,
 				PCI_DEVICE_ID_MELLANOX_CONNECTX9)
+	},
+	{
+		RTE_PCI_DEVICE(PCI_VENDOR_ID_MELLANOX,
+				PCI_DEVICE_ID_MELLANOX_BLUEFIELD4)
 	},
 	{
 		.vendor_id = 0
