@@ -1023,8 +1023,8 @@ F: doc/guides/nics/rnp.rst
 F: doc/guides/nics/features/rnp.ini
 
 Nebulamatrix nbl
+M: Alvin Wang <alvin.wang@nebula-matrix.com>
 M: Dimon Zhao <dimon.zhao@nebula-matrix.com>
-M: Kyo Liu <kyo.liu@nebula-matrix.com>
 M: Leon Yu <leon.yu@nebula-matrix.com>
 M: Sam Chen <sam.chen@nebula-matrix.com>
 F: drivers/net/nbl/
@@ -1035,6 +1035,7 @@ Realtek r8169
 M: Howard Wang <howard_wang@realsil.com.cn>
 M: Chunhao Lin <hau@realtek.com>
 M: Xing Wang <xing_wang@realsil.com.cn>
+M: Javen Xu <javen_xu@realsil.com.cn>
 F: drivers/net/r8169/
 F: doc/guides/nics/r8169.rst
 F: doc/guides/nics/features/r8169.ini

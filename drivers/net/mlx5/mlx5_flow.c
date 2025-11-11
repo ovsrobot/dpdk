@@ -34,6 +34,21 @@
 #include "mlx5_common_os.h"
 #include "rte_pmd_mlx5.h"
 
+const uint64_t mlx5_rss_hash_fields[] = {
+	[MLX5_RSS_HASH_IDX_IPV4]     = MLX5_RSS_HASH_IPV4,
+	[MLX5_RSS_HASH_IDX_IPV4_TCP] = MLX5_RSS_HASH_IPV4_TCP,
+	[MLX5_RSS_HASH_IDX_IPV4_UDP] = MLX5_RSS_HASH_IPV4_UDP,
+	[MLX5_RSS_HASH_IDX_IPV4_ESP] = MLX5_RSS_HASH_IPV4_ESP,
+	[MLX5_RSS_HASH_IDX_IPV6]     = MLX5_RSS_HASH_IPV6,
+	[MLX5_RSS_HASH_IDX_IPV6_TCP] = MLX5_RSS_HASH_IPV6_TCP,
+	[MLX5_RSS_HASH_IDX_IPV6_UDP] = MLX5_RSS_HASH_IPV6_UDP,
+	[MLX5_RSS_HASH_IDX_IPV6_ESP] = MLX5_RSS_HASH_IPV6_ESP,
+	[MLX5_RSS_HASH_IDX_TCP]      = MLX5_TCP_IBV_RX_HASH,
+	[MLX5_RSS_HASH_IDX_UDP]      = MLX5_UDP_IBV_RX_HASH,
+	[MLX5_RSS_HASH_IDX_ESP_SPI]  = MLX5_RSS_HASH_ESP_SPI,
+	[MLX5_RSS_HASH_IDX_NONE]     = MLX5_RSS_HASH_NONE,
+};
+
 /*
  * Shared array for quick translation between port_id and vport mask/values
  * used for HWS rules.
@@ -1238,33 +1253,43 @@ mlx5_flow_get_reg_id(struct rte_eth_dev *dev,
 	case MLX5_HAIRPIN_TX:
 		return REG_A;
 	case MLX5_METADATA_RX:
-		switch (config->dv_xmeta_en) {
-		case MLX5_XMETA_MODE_LEGACY:
-			return REG_B;
-		case MLX5_XMETA_MODE_META16:
-			return REG_C_0;
-		case MLX5_XMETA_MODE_META32:
+		if (mlx5_vport_rx_metadata_passing_enabled(priv->sh)) {
 			return REG_C_1;
-		case MLX5_XMETA_MODE_META32_HWS:
-			return REG_C_1;
+		} else {
+			switch (config->dv_xmeta_en) {
+			case MLX5_XMETA_MODE_LEGACY:
+				return REG_B;
+			case MLX5_XMETA_MODE_META16:
+				return REG_C_0;
+			case MLX5_XMETA_MODE_META32:
+				return REG_C_1;
+			case MLX5_XMETA_MODE_META32_HWS:
+				return REG_C_1;
+			}
 		}
 		break;
 	case MLX5_METADATA_TX:
-		if (config->dv_flow_en == 2 && config->dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS) {
+		if ((config->dv_flow_en == 2 &&
+		    config->dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS) ||
+		    mlx5_vport_tx_metadata_passing_enabled(priv->sh)) {
 			return REG_C_1;
 		} else {
 			return REG_A;
 		}
 	case MLX5_METADATA_FDB:
-		switch (config->dv_xmeta_en) {
-		case MLX5_XMETA_MODE_LEGACY:
-			return REG_NON;
-		case MLX5_XMETA_MODE_META16:
-			return REG_C_0;
-		case MLX5_XMETA_MODE_META32:
+		if (mlx5_esw_metadata_passing_enabled(priv->sh)) {
 			return REG_C_1;
-		case MLX5_XMETA_MODE_META32_HWS:
-			return REG_C_1;
+		} else {
+			switch (config->dv_xmeta_en) {
+			case MLX5_XMETA_MODE_LEGACY:
+				return REG_NON;
+			case MLX5_XMETA_MODE_META16:
+				return REG_C_0;
+			case MLX5_XMETA_MODE_META32:
+				return REG_C_1;
+			case MLX5_XMETA_MODE_META32_HWS:
+				return REG_C_1;
+			}
 		}
 		break;
 	case MLX5_FLOW_MARK:
@@ -11132,12 +11157,12 @@ flow_tunnel_add_default_miss(struct rte_eth_dev *dev,
 				(error, ENOMEM,
 				RTE_FLOW_ERROR_TYPE_ACTION_CONF,
 				NULL, "invalid default miss RSS");
-		ctx->action_rss.func = RTE_ETH_HASH_FUNCTION_DEFAULT,
-		ctx->action_rss.level = 0,
-		ctx->action_rss.types = priv->rss_conf.rss_hf,
-		ctx->action_rss.key_len = priv->rss_conf.rss_key_len,
-		ctx->action_rss.queue_num = priv->reta_idx_n,
-		ctx->action_rss.key = priv->rss_conf.rss_key,
+		ctx->action_rss.func = RTE_ETH_HASH_FUNCTION_DEFAULT;
+		ctx->action_rss.level = 0;
+		ctx->action_rss.types = priv->rss_conf.rss_hf;
+		ctx->action_rss.key_len = priv->rss_conf.rss_key_len;
+		ctx->action_rss.queue_num = priv->reta_idx_n;
+		ctx->action_rss.key = priv->rss_conf.rss_key;
 		ctx->action_rss.queue = ctx->queue;
 		if (!priv->reta_idx_n || !priv->rxqs_n)
 			return rte_flow_error_set
@@ -12525,4 +12550,34 @@ rte_pmd_mlx5_enable_steering(void)
 	mlx5_steering_disabled = false;
 
 	return 0;
+}
+
+bool
+mlx5_vport_rx_metadata_passing_enabled(const struct mlx5_dev_ctx_shared *sh)
+{
+	const struct mlx5_sh_config *dev_config = &sh->config;
+	const struct mlx5_hca_attr  *hca_attr = &sh->cdev->config.hca_attr;
+
+	return !dev_config->dv_esw_en && hca_attr->fdb_to_vport_metadata;
+}
+
+bool
+mlx5_vport_tx_metadata_passing_enabled(const struct mlx5_dev_ctx_shared *sh)
+{
+	const struct mlx5_sh_config *dev_config = &sh->config;
+	const struct mlx5_hca_attr  *hca_attr = &sh->cdev->config.hca_attr;
+
+	return !dev_config->dv_esw_en && hca_attr->vport_to_fdb_metadata;
+}
+
+bool
+mlx5_esw_metadata_passing_enabled(const struct mlx5_dev_ctx_shared *sh)
+{
+	const struct mlx5_sh_config *dev_config = &sh->config;
+	const struct mlx5_hca_attr  *hca_attr = &sh->cdev->config.hca_attr;
+	bool fdb_to_vport_metadata_on = (hca_attr->fdb_to_vport_reg_c_id &
+					 RTE_BIT32(MLX5_ESW_VPORT_METADATA_REG_C_1)) != 0;
+
+	return dev_config->dv_esw_en && hca_attr->fdb_to_vport_reg_c && fdb_to_vport_metadata_on &&
+		hca_attr->vport_to_fdb_metadata && hca_attr->fdb_to_vport_metadata;
 }

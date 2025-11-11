@@ -37,8 +37,11 @@ from api.testpmd.types import (
     ChecksumOffloadOptions,
     DeviceCapabilitiesFlag,
     FlowRule,
+    RSSOffloadTypesFlag,
     RxOffloadCapabilities,
     RxOffloadCapability,
+    RxOffloadConfiguration,
+    RxTxLiteralSwitch,
     TestPmdDevice,
     TestPmdPort,
     TestPmdPortFlowCtrl,
@@ -46,6 +49,9 @@ from api.testpmd.types import (
     TestPmdQueueInfo,
     TestPmdRxqInfo,
     TestPmdVerbosePacket,
+    TxOffloadCapabilities,
+    TxOffloadCapability,
+    TxOffloadConfiguration,
     VLANOffloadFlag,
 )
 from framework.context import get_ctx
@@ -88,6 +94,9 @@ def _requires_started_ports(func: TestPmdMethod) -> TestPmdMethod:
 
     Args:
         func: The :class:`TestPmd` method to decorate.
+
+    Raises:
+        InteractiveCommandExecutionError: If the ports has been started but a port link will not come up.
     """
 
     @functools.wraps(func)
@@ -95,6 +104,12 @@ def _requires_started_ports(func: TestPmdMethod) -> TestPmdMethod:
         if not self.ports_started:
             self._logger.debug("Ports need to be started to continue.")
             self.start_all_ports()
+        if get_ctx().topology.type is not LinkTopology.NO_LINK:
+            for port in self.ports:
+                if not self.wait_link_status_up(port.id):
+                    raise InteractiveCommandExecutionError(
+                        f"Port {port.id} link failed to come up."
+                    )
 
         return func(self, *args, **kwargs)
 
@@ -260,7 +275,7 @@ class TestPmd(DPDKShell):
             port_info = self.send_command(f"show port info {port_id}")
             if "Link status: up" in port_info:
                 break
-            time.sleep(0.5)
+            time.sleep(0.25)
         else:
             self._logger.error(f"The link for port {port_id} did not come up in the given timeout.")
         return "Link status: up" in port_info
@@ -354,6 +369,82 @@ class TestPmd(DPDKShell):
             num_ports = len(self.ports)
             if not all(f"Port {p_id} is closed" in port_close_output for p_id in range(num_ports)):
                 raise InteractiveCommandExecutionError("Ports were not closed successfully.")
+
+    def port_config_rss_reta(
+        self, port_id: int, hash_index: int, queue_id: int, verify: bool = True
+    ) -> None:
+        """Configure a port's RSS redirection table.
+
+        Args:
+            port_id: The port where the redirection table will be configured.
+            hash_index: The index into the redirection table associated with the destination queue.
+            queue_id: The destination queue of the packet.
+            verify: If :data:`True`, verifies if a port's redirection table
+                was correctly configured.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True`
+                Testpmd failed to config RSS reta.
+        """
+        out = self.send_command(f"port config {port_id} rss reta ({hash_index},{queue_id})")
+        if verify:
+            if f"The reta size of port {port_id} is" not in out:
+                self._logger.debug(f"Failed to config RSS reta: \n{out}")
+                raise InteractiveCommandExecutionError("Testpmd failed to config RSS reta.")
+
+    def port_config_all_rss_offload_type(
+        self, flag: RSSOffloadTypesFlag, verify: bool = True
+    ) -> None:
+        """Set the RSS mode on all ports.
+
+        Args:
+            flag: The RSS iptype all ports will be configured to.
+            verify: If :data:`True`, it verifies if all ports RSS offload type
+                was correctly configured.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True`
+                Testpmd failed to config the RSS mode on all ports.
+        """
+        out = self.send_command(f"port config all rss {flag.name}")
+        if verify:
+            if "error" in out:
+                self._logger.debug(f"Failed to config the RSS mode on all ports: \n{out}")
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to change RSS mode to {flag.name}"
+                )
+
+    def port_config_rss_hash_key(
+        self,
+        port_id: int,
+        offload_type: RSSOffloadTypesFlag,
+        hex_str: str,
+        verify: bool = True,
+    ) -> str:
+        """Sets the RSS hash key for the specified port.
+
+        Args:
+            port_id: The port that will have the hash key applied to.
+            offload_type: The offload type the hash key will be applied to.
+            hex_str: The hash key to set.
+            verify: If :data:`True`, verify that RSS has the key.
+
+        Raises:
+            InteractiveCommandExecutionError: If `verify` is :data:`True`
+                Testpmd failed to set the RSS hash key.
+        """
+        output = self.send_command(
+            f"port config {port_id} rss-hash-key {offload_type} {hex_str}",
+            skip_first_line=True,
+        )
+
+        if verify:
+            if output.strip():
+                self._logger.debug(f"Failed to set rss hash key: \n{output}")
+                raise InteractiveCommandExecutionError(
+                    f"Testpmd failed to set {hex_str} on {port_id} with a flag of {offload_type}."
+                )
+        return output
 
     def show_port_info_all(self) -> list[TestPmdPort]:
         """Returns the information of all the ports.
@@ -573,7 +664,7 @@ class TestPmd(DPDKShell):
                                                            {port_id}:\n{csum_output}"""
                     )
 
-    def flow_create(self, flow_rule: FlowRule, port_id: int) -> int:
+    def flow_create(self, flow_rule: FlowRule, port_id: int, verify: bool = True) -> int:
         """Creates a flow rule in the testpmd session.
 
         This command is implicitly verified as needed to return the created flow rule id.
@@ -581,14 +672,22 @@ class TestPmd(DPDKShell):
         Args:
             flow_rule: :class:`FlowRule` object used for creating testpmd flow rule.
             port_id: Integer representing the port to use.
+            verify: If :data:`True`, the output of the command is scanned
+                to ensure the flow rule was created successfully.
 
         Raises:
             InteractiveCommandExecutionError: If flow rule is invalid.
 
         Returns:
-            Id of created flow rule.
+            Id of created flow rule as an integer.
         """
         flow_output = self.send_command(f"flow create {port_id} {flow_rule}")
+        if verify:
+            if "created" not in flow_output:
+                self._logger.debug(f"Failed to create flow rule:\n{flow_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to create flow rule:\n{flow_output}"
+                )
         match = re.search(r"#(\d+)", flow_output)
         if match is not None:
             match_str = match.group(1)
@@ -617,7 +716,7 @@ class TestPmd(DPDKShell):
         """Deletes the specified flow rule from the testpmd session.
 
         Args:
-            flow_id: ID of the flow to remove.
+            flow_id: :class:`FlowRule` id used for deleting testpmd flow rule.
             port_id: Integer representing the port to use.
             verify: If :data:`True`, the output of the command is scanned
                 to ensure the flow rule was deleted successfully.
@@ -1190,13 +1289,14 @@ class TestPmd(DPDKShell):
         unsupported_capabilities: MutableSet["NicCapability"],
         flag_class: type[Flag],
         supported_flags: Flag,
+        prefix: str = "",
     ) -> None:
         """Divide all flags from `flag_class` into supported and unsupported."""
         for flag in flag_class:
             if flag in supported_flags:
-                supported_capabilities.add(NicCapability[str(flag.name)])
+                supported_capabilities.add(NicCapability[f"{prefix}{flag.name}"])
             else:
-                unsupported_capabilities.add(NicCapability[str(flag.name)])
+                unsupported_capabilities.add(NicCapability[f"{prefix}{flag.name}"])
 
     @_requires_started_ports
     def get_capabilities_rxq_info(
@@ -1292,3 +1392,150 @@ class TestPmd(DPDKShell):
             supported_capabilities.add(NicCapability.PHYSICAL_FUNCTION)
         else:
             unsupported_capabilities.add(NicCapability.PHYSICAL_FUNCTION)
+
+    @staticmethod
+    def get_offload_capabilities_func(
+        rxtx: RxTxLiteralSwitch,
+    ) -> Callable[["TestPmd", MutableSet["NicCapability"], MutableSet["NicCapability"]], None]:
+        """High-order function that returns a method for gathering Rx/Tx offload capabilities.
+
+        Args:
+            rxtx: whether to gather the rx or tx capabilities in the returned method.
+
+        Returns:
+            A method for gathering Rx/Tx offload capabilities that meets the required structure.
+        """
+
+        def get_capabilities(
+            self: "TestPmd",
+            supported_capabilities: MutableSet["NicCapability"],
+            unsupported_capabilities: MutableSet["NicCapability"],
+        ) -> None:
+            """Get all rx/tx offload capabilities and divide them into supported and unsupported.
+
+            Args:
+                self: The shell instance to get the capabilities from.
+                supported_capabilities: Supported capabilities will be added to this set.
+                unsupported_capabilities: Unsupported capabilities will be added to this set.
+            """
+            self._logger.info(f"Getting {rxtx} offload capabilities.")
+            command = f"show port {self.ports[0].id} {rxtx}_offload capabilities"
+            offload_capabilities_out = self.send_command(command)
+
+            capabilities = TxOffloadCapabilities if rxtx == "tx" else RxOffloadCapabilities
+            offload_capabilities = capabilities.parse(offload_capabilities_out)
+
+            self._update_capabilities_from_flag(
+                supported_capabilities,
+                unsupported_capabilities,
+                TxOffloadCapability if rxtx == "tx" else RxOffloadCapability,
+                offload_capabilities.per_port | offload_capabilities.per_queue,
+                prefix=f"PORT_{rxtx.upper()}_OFFLOAD_",
+            )
+            self._update_capabilities_from_flag(
+                supported_capabilities,
+                unsupported_capabilities,
+                TxOffloadCapability if rxtx == "tx" else RxOffloadCapability,
+                offload_capabilities.per_queue,
+                prefix=f"QUEUE_{rxtx.upper()}_OFFLOAD_",
+            )
+
+        return get_capabilities
+
+    @_requires_stopped_ports
+    def set_port_mbuf_fast_free(
+        self,
+        port_id: int,
+        on: bool,
+        /,
+        verify: bool = True,
+    ) -> None:
+        """Sets the mbuf_fast_free configuration for the Tx offload of a given port.
+
+        Args:
+            port_id: The ID of the port to configure mbuf_fast_free on.
+            on: If :data:`True` mbuf_fast_free will be enabled, disable it otherwise.
+            verify: If :data:`True` the output of the command will be scanned in an attempt to
+                verify that the mbuf_fast_free was set successfully.
+
+        Raises:
+            InteractiveCommandExecutionError: If mbuf_fast_free could not be set successfully.
+        """
+        mbuf_output = self.send_command(
+            f"port config {port_id} tx_offload mbuf_fast_free {"on" if on else "off"}"
+        )
+
+        if verify and "Error" in mbuf_output:
+            raise InteractiveCommandExecutionError(
+                f"Unable to set mbuf_fast_free config on port {port_id}:\n{mbuf_output}"
+            )
+
+    @_requires_stopped_ports
+    def set_queue_mbuf_fast_free(
+        self,
+        port_id: int,
+        on: bool,
+        /,
+        queue_id: int = 0,
+        verify: bool = True,
+    ) -> None:
+        """Sets the Tx mbuf_fast_free configuration of the specified queue on a given port.
+
+        Args:
+            port_id: The ID of the port containing the queues.
+            on: If :data:`True` the mbuf_fast_free configuration will be enabled, otherwise
+                disabled.
+            queue_id: The ID of the queue to configure mbuf_fast_free on.
+            verify: If :data:`True` the output of the command will be scanned in an attempt to
+                verify that mbuf_fast_free was set successfully on all ports.
+
+        Raises:
+            InteractiveCommandExecutionError: If all queues could not be set successfully.
+        """
+        toggle = "on" if on else "off"
+        output = self.send_command(
+            f"port {port_id} txq {queue_id} tx_offload mbuf_fast_free {toggle}"
+        )
+        if verify and "Error" in output:
+            self._logger.debug(f"Set queue offload config error\n{output}")
+            raise InteractiveCommandExecutionError(
+                f"Failed to get offload config on port {port_id}, queue {queue_id}:\n{output}"
+            )
+
+    @_requires_started_ports
+    def get_offload_config(
+        self,
+        port_id: int,
+        rxtx: RxTxLiteralSwitch,
+        /,
+        verify: bool = True,
+    ) -> RxOffloadConfiguration | TxOffloadConfiguration:
+        """Get the Rx or Tx offload configuration of the queues from the given port.
+
+        Args:
+            port_id: The port ID that contains the desired queues.
+            rxtx: Whether to get the Rx or Tx configuration of the given queues.
+            verify: If :data:`True` the output of the command will be scanned in an attempt to
+                verify that the offload configuration was retrieved successfully on all queues.
+
+        Returns:
+            An offload configuration containing the capabilities of the port and queues.
+
+        Raises:
+            InteractiveCommandExecutionError: If all queue offload configurations could not be
+                retrieved.
+        """
+        config_output = self.send_command(f"show port {port_id} {rxtx}_offload configuration")
+        if verify:
+            if (
+                f"Rx Offloading Configuration of port {port_id}" not in config_output
+                and f"Tx Offloading Configuration of port {port_id}" not in config_output
+            ):
+                self._logger.debug(f"Get port offload config error\n{config_output}")
+                raise InteractiveCommandExecutionError(
+                    f"Failed to get offload config on port {port_id}:\n{config_output}"
+                )
+        if rxtx == "rx":
+            return RxOffloadConfiguration.parse(config_output)
+        else:
+            return TxOffloadConfiguration.parse(config_output)

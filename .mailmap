@@ -21,6 +21,7 @@ Adham Masarwah <adham@nvidia.com> <adham@mellanox.com>
 Adrian Moreno <amorenoz@redhat.com>
 Adrian Pielech <adrian.pielech@intel.com>
 Adrian Podlawski <adrian.podlawski@intel.com>
+Adrian Schollmeyer <a.schollmeyer@syseleven.de>
 Adrien Mazarguil <adrien.mazarguil@6wind.com>
 Ady Agbarih <adypodoman@gmail.com>
 Agalya Babu RadhaKrishnan <agalyax.babu.radhakrishnan@intel.com>
@@ -78,6 +79,7 @@ Allen Hubbe <allen.hubbe@amd.com>
 Alok Makhariya <alok.makhariya@nxp.com>
 Alok Prasad <palok@marvell.com>
 Alvaro Karsz <alvaro.karsz@solid-run.com>
+Alvin Wang <alvin.wang@nebula-matrix.com>
 Alvin Zhang <alvinx.zhang@intel.com>
 Aman Singh <aman.deep.singh@intel.com>
 Amaranath Somalapuram <asomalap@amd.com>
@@ -682,6 +684,7 @@ Jason He <jason.he@broadcom.com>
 Jason Wang <jasowang@redhat.com>
 Jasper Tran O'Leary <jtranoleary@google.com>
 Jasvinder Singh <jasvinder.singh@intel.com>
+Javen Xu <javen_xu@realsil.com.cn>
 Jay Ding <jay.ding@broadcom.com>
 Jay Jayatheerthan <jay.jayatheerthan@intel.com>
 Jay Rolette <rolette@infiniteio.com>
@@ -868,7 +871,6 @@ Kumar Amber <kumar.amber@intel.com>
 Kumar Sanghvi <kumaras@chelsio.com>
 Kumara Parameshwaran <kumaraparamesh92@gmail.com> <kparameshwar@vmware.com>
 Kyle Larose <klarose@sandvine.com>
-Kyo Liu <kyo.liu@nebula-matrix.com>
 Lance Richardson <lance.richardson@broadcom.com>
 Laszlo Ersek <lersek@redhat.com>
 Laura Stroe <laura.stroe@intel.com>
@@ -1045,6 +1047,7 @@ Menachem Fogel <menachem.fogel@intel.com>
 Mesut Ali Ergin <mesut.a.ergin@intel.com>
 Miao Li <miao.li@intel.com>
 Michael Barker <mikeb01@gmail.com>
+Michael Baucom <michael.baucom@broadcom.com>
 Michael Baum <michaelba@nvidia.com> <michaelba@mellanox.com>
 Michael Frasca <michael.frasca@oracle.com>
 Michael Habibi <mikehabibi@gmail.com>
@@ -1162,6 +1165,7 @@ Nikita Kozlov <nikita@elyzion.net>
 Niklas Söderlund <niklas.soderlund@corigine.com>
 Nikolay Nikolaev <nicknickolaev@gmail.com>
 Ning Li <muziding001@163.com> <lining18@jd.com>
+Ning Wang <ning-nw.wang@broadcom.com>
 Nipun Gupta <nipun.gupta@amd.com> <nipun.gupta@nxp.com>
 Nir Efrati <nir.efrati@intel.com>
 Nirmoy Das <ndas@suse.de>
@@ -1451,7 +1455,7 @@ Sha Zhang <zhangsha.zhang@huawei.com>
 Shachar Beiser <shacharbe@mellanox.com>
 Shagun Agrawal <shaguna@chelsio.com>
 Shahaf Shuler <shahafs@nvidia.com> <shahafs@mellanox.com>
-Shahaji Bhosle <sbhosle@broadcom.com>
+Shahaji Bhosle <shahaji.bhosle@broadcom.com> <sbhosle@broadcom.com>
 Shahed Shaikh <shshaikh@marvell.com> <shahed.shaikh@cavium.com>
 Shai Brandes <shaibran@amazon.com>
 Shailendra Bhatnagar <shailendra.bhatnagar@intel.com>
@@ -1513,6 +1517,7 @@ Slawomir Laba <slawomirx.laba@intel.com>
 Slawomir Mrozowicz <slawomirx.mrozowicz@intel.com>
 Slawomir Rosek <slawomir.rosek@semihalf.com>
 Smadar Fuks <smadarf@marvell.com>
+Smitha Pisupati <smitha.pisupati@broadcom.com>
 Solal Pirelli <solal.pirelli@gmail.com>
 Solganik Alexander <sashas@lightbitslabs.com>
 Somnath Kotur <somnath.kotur@broadcom.com>
@@ -1547,6 +1552,7 @@ Stephen Hemminger <stephen@networkplumber.org> <sthemmin@microsoft.com>
 Stephen Hemminger <stephen@networkplumber.org> <shemming@brocade.com>
 Stephen Hemminger <stephen@networkplumber.org> <shemminger@vyatta.com>
 Stephen Hurd <stephen.hurd@broadcom.com> <shurd@broadcom.com>
+Stephen Shi <stephen.shi@broadcom.com>
 Steve Capper <steve.capper@arm.com>
 Steve Rempe <steve.rempe@broadcom.com>
 Steve Shin <jonshin@cisco.com>

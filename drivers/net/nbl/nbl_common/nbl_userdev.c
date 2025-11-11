@@ -679,11 +679,20 @@ int nbl_pci_map_device(struct nbl_adapter *adapter)
 
 	NBL_USERDEV_INIT_COMMON(common);
 	iova_mode = rte_eal_iova_mode();
+
+	snprintf(pathname, sizeof(pathname), "/dev/nbl_userdev/" PCI_PRI_FMT, loc->domain,
+		 loc->bus, loc->devid, loc->function);
+
+	/* check iommu passthrough mode */
+	if (!access(pathname, F_OK) && iova_mode != RTE_IOVA_PA) {
+		NBL_LOG(ERR, "%s IOMMU is in passthrough mode, must select IOVA as PA"
+			" with --iova-mode=pa", pci_dev->device.name);
+		ret = -1;
+		return ret;
+	}
+
 	if (iova_mode == RTE_IOVA_PA) {
 		/* check iommu disable */
-		snprintf(pathname, sizeof(pathname),
-			 "/dev/nbl_userdev/" PCI_PRI_FMT, loc->domain,
-			 loc->bus, loc->devid, loc->function);
 		common->devfd = open(pathname, O_RDWR);
 		if (common->devfd >= 0)
 			goto mmap;
@@ -759,4 +768,44 @@ void nbl_pci_unmap_device(struct nbl_adapter *adapter)
 	}
 
 	nbl_mdev_unmap_device(adapter);
+}
+
+static int nbl_userdev_ifreq(int ifindex, int req, struct ifreq *ifr)
+{
+	int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	int ret = 0;
+
+	if (sock == -1) {
+		rte_errno = errno;
+		return -rte_errno;
+	}
+
+	if (!if_indextoname(ifindex, &ifr->ifr_name[0]))
+		goto error;
+
+	ret = ioctl(sock, req, ifr);
+	if (ret == -1) {
+		rte_errno = errno;
+		goto error;
+	}
+	close(sock);
+	return 0;
+error:
+	close(sock);
+	return -rte_errno;
+}
+
+int nbl_userdev_get_mac_addr(struct nbl_common_info *common, u8 *mac)
+{
+	struct ifreq request;
+	int ret;
+
+	ret = nbl_userdev_ifreq(common->ifindex, SIOCGIFHWADDR, &request);
+	if (ret) {
+		NBL_LOG(ERR, "userdev get mac failed: %d", ret);
+		return ret;
+	}
+
+	memcpy(mac, request.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
+	return 0;
 }

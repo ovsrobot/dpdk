@@ -322,6 +322,7 @@ struct nbl_chan_param_register_net_info {
 	u16 offset;
 	u16 stride;
 	u64 pf_bar_start;
+	u16 is_vdpa;
 };
 
 struct nbl_chan_param_get_vsi_id {
@@ -392,6 +393,11 @@ struct nbl_chan_param_get_link_state {
 struct nbl_chan_param_get_private_stat_data {
 	u32 eth_id;
 	u32 data_len;
+};
+
+struct nbl_chan_param_get_uvn_pkt_drop_stats {
+	u16 vsi_id;
+	u16 num_queues;
 };
 
 struct nbl_chan_send_info {
