@@ -47,7 +47,7 @@ EAL_REGISTER_TAILQ(rte_ring_tailq)
 		     RING_F_MP_HTS_ENQ | RING_F_MC_HTS_DEQ)
 
 /* true if x is a power of 2 */
-#define POWEROF2(x) ((((x)-1) & (x)) == 0)
+#define POWEROF2(x) ((x != 0) && (((x)-1) & (x)) == 0)
 
 /* by default set head/tail distance as 1/8 of ring capacity */
 #define HTD_MAX_DEF	8
