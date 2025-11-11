@@ -90,8 +90,6 @@ static const struct reg_info *txgbe_regs_others[] = {
 				txgbe_regs_diagnostic,
 				NULL};
 
-static int txgbe_fdir_filter_init(struct rte_eth_dev *eth_dev);
-static int txgbe_fdir_filter_uninit(struct rte_eth_dev *eth_dev);
 static int txgbe_l2_tn_filter_init(struct rte_eth_dev *eth_dev);
 static int txgbe_l2_tn_filter_uninit(struct rte_eth_dev *eth_dev);
 static int  txgbe_dev_set_link_up(struct rte_eth_dev *dev);
@@ -524,8 +522,12 @@ txgbe_handle_devarg(__rte_unused const char *key, const char *value,
 }
 
 static void
-txgbe_parse_devargs(struct txgbe_hw *hw, struct rte_devargs *devargs)
+txgbe_parse_devargs(struct rte_eth_dev *dev)
 {
+	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_devargs *devargs = pci_dev->device.devargs;
+	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct rte_kvargs *kvlist;
 	u16 auto_neg = 1;
 	u16 poll = 0;
@@ -535,6 +537,9 @@ txgbe_parse_devargs(struct txgbe_hw *hw, struct rte_devargs *devargs)
 	u16 ffe_main = 27;
 	u16 ffe_pre = 8;
 	u16 ffe_post = 44;
+	/* FDIR args */
+	u8 pballoc = 0;
+	u8 drop_queue = 127;
 	/* New devargs for amberlite config */
 	u16 tx_headwb = 1;
 	u16 tx_headwb_size = 16;
@@ -563,6 +568,10 @@ txgbe_parse_devargs(struct txgbe_hw *hw, struct rte_devargs *devargs)
 			   &txgbe_handle_devarg, &ffe_pre);
 	rte_kvargs_process(kvlist, TXGBE_DEVARG_FFE_POST,
 			   &txgbe_handle_devarg, &ffe_post);
+	rte_kvargs_process(kvlist, TXGBE_DEVARG_FDIR_PBALLOC,
+			   &txgbe_handle_devarg, &pballoc);
+	rte_kvargs_process(kvlist, TXGBE_DEVARG_FDIR_DROP_QUEUE,
+			   &txgbe_handle_devarg, &drop_queue);
 	rte_kvargs_process(kvlist, TXGBE_DEVARG_TX_HEAD_WB,
 			   &txgbe_handle_devarg, &tx_headwb);
 	rte_kvargs_process(kvlist, TXGBE_DEVARG_TX_HEAD_WB_SIZE,
@@ -583,6 +592,9 @@ null:
 	hw->phy.ffe_main = ffe_main;
 	hw->phy.ffe_pre = ffe_pre;
 	hw->phy.ffe_post = ffe_post;
+
+	fdir_conf->pballoc = pballoc;
+	fdir_conf->drop_queue = drop_queue;
 }
 
 static int
@@ -671,7 +683,7 @@ eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	hw->isb_dma = TMZ_PADDR(mz);
 	hw->isb_mem = TMZ_VADDR(mz);
 
-	txgbe_parse_devargs(hw, pci_dev->device.devargs);
+	txgbe_parse_devargs(eth_dev);
 	/* Initialize the shared code (base driver) */
 	err = txgbe_init_shared_code(hw);
 	if (err != 0) {
@@ -879,11 +891,12 @@ int txgbe_ntuple_filter_uninit(struct rte_eth_dev *eth_dev)
 	}
 	memset(filter_info->fivetuple_mask, 0,
 	       sizeof(uint32_t) * TXGBE_5TUPLE_ARRAY_SIZE);
+	filter_info->ntuple_is_full = false;
 
 	return 0;
 }
 
-static int txgbe_fdir_filter_uninit(struct rte_eth_dev *eth_dev)
+int txgbe_fdir_filter_uninit(struct rte_eth_dev *eth_dev)
 {
 	struct txgbe_hw_fdir_info *fdir_info = TXGBE_DEV_FDIR(eth_dev);
 	struct txgbe_fdir_filter *fdir_filter;
@@ -919,13 +932,15 @@ static int txgbe_l2_tn_filter_uninit(struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
-static int txgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
+int txgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
 {
+	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(eth_dev);
 	struct txgbe_hw_fdir_info *fdir_info = TXGBE_DEV_FDIR(eth_dev);
 	char fdir_hash_name[RTE_HASH_NAMESIZE];
+	u16 max_fdir_num = (1024 << (fdir_conf->pballoc + 1)) - 2;
 	struct rte_hash_parameters fdir_hash_params = {
 		.name = fdir_hash_name,
-		.entries = TXGBE_MAX_FDIR_FILTER_NUM,
+		.entries = max_fdir_num,
 		.key_len = sizeof(struct txgbe_atr_input),
 		.hash_func = rte_hash_crc,
 		.hash_func_init_val = 0,
@@ -942,7 +957,7 @@ static int txgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
 	}
 	fdir_info->hash_map = rte_zmalloc("txgbe",
 					  sizeof(struct txgbe_fdir_filter *) *
-					  TXGBE_MAX_FDIR_FILTER_NUM,
+					  max_fdir_num,
 					  0);
 	if (!fdir_info->hash_map) {
 		PMD_INIT_LOG(ERR,
@@ -2666,6 +2681,8 @@ txgbe_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct txgbe_hw_stats *hw_stats = TXGBE_DEV_STATS(dev);
+	struct txgbe_rx_queue *rxq;
+	uint64_t rx_csum_err = 0;
 	unsigned int i, count;
 
 	txgbe_read_stats_registers(hw, hw_stats);
@@ -2678,6 +2695,13 @@ txgbe_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
 		return count;
 
 	limit = min(limit, txgbe_xstats_calc_num(dev));
+
+	/* Rx Checksum Errors */
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		rx_csum_err += rxq->csum_err;
+	}
+	hw_stats->rx_l3_l4_xsum_error = rx_csum_err;
 
 	/* Extended stats from txgbe_hw_stats */
 	for (i = 0; i < limit; i++) {
@@ -2755,6 +2779,8 @@ txgbe_dev_xstats_reset(struct rte_eth_dev *dev)
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct txgbe_hw_stats *hw_stats = TXGBE_DEV_STATS(dev);
+	struct txgbe_rx_queue *rxq;
+	int i = 0;
 
 	/* HW registers are cleared on read */
 	hw->offset_loaded = 0;
@@ -2763,6 +2789,12 @@ txgbe_dev_xstats_reset(struct rte_eth_dev *dev)
 
 	/* Reset software totals */
 	memset(hw_stats, 0, sizeof(*hw_stats));
+
+	/* Reset rxq checksum errors */
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		rxq->csum_err = 0;
+	}
 
 	return 0;
 }
@@ -4444,6 +4476,7 @@ txgbe_add_5tuple_filter(struct rte_eth_dev *dev,
 {
 	struct txgbe_filter_info *filter_info = TXGBE_DEV_FILTER(dev);
 	int i, idx, shift;
+	int err;
 
 	/*
 	 * look for an unused 5tuple filter index,
@@ -4462,16 +4495,24 @@ txgbe_add_5tuple_filter(struct rte_eth_dev *dev,
 		}
 	}
 	if (i >= TXGBE_MAX_FTQF_FILTERS) {
-		PMD_DRV_LOG(ERR, "5tuple filters are full.");
+		PMD_DRV_LOG(INFO, "5tuple filters are full, switch to FDIR");
+		filter_info->ntuple_is_full = true;
 		return -ENOSYS;
 	}
 
-	if (txgbe_is_pf(TXGBE_DEV_HW(dev)))
+	if (txgbe_is_pf(TXGBE_DEV_HW(dev))) {
 		txgbe_inject_5tuple_filter(dev, filter);
-	else
-		txgbevf_inject_5tuple_filter(dev, filter);
+		return 0;
+	}
 
-	return 0;
+	err = txgbevf_inject_5tuple_filter(dev, filter);
+	if (err) {
+		filter_info->fivetuple_mask[i / (sizeof(uint32_t) * NBBY)] &=
+				~(1 << (i % (sizeof(uint32_t) * NBBY)));
+		TAILQ_REMOVE(&filter_info->fivetuple_list, filter, entries);
+	}
+
+	return err;
 }
 
 /*
@@ -4493,6 +4534,7 @@ txgbe_remove_5tuple_filter(struct rte_eth_dev *dev,
 				~(1 << (index % (sizeof(uint32_t) * NBBY)));
 	TAILQ_REMOVE(&filter_info->fivetuple_list, filter, entries);
 	rte_free(filter);
+	filter_info->ntuple_is_full = false;
 
 	if (!txgbe_is_pf(TXGBE_DEV_HW(dev))) {
 		txgbevf_remove_5tuple_filter(dev, index);
@@ -6017,6 +6059,8 @@ RTE_PMD_REGISTER_PARAM_STRING(net_txgbe,
 			      TXGBE_DEVARG_FFE_MAIN "=<uint16>"
 			      TXGBE_DEVARG_FFE_PRE "=<uint16>"
 			      TXGBE_DEVARG_FFE_POST "=<uint16>"
+			      TXGBE_DEVARG_FDIR_PBALLOC "=<0|1|2>"
+			      TXGBE_DEVARG_FDIR_DROP_QUEUE "=<uint8>"
 			      TXGBE_DEVARG_TX_HEAD_WB "=<0|1>"
 			      TXGBE_DEVARG_TX_HEAD_WB_SIZE "=<1|16>"
 			      TXGBE_DEVARG_RX_DESC_MERGE "=<0|1>");
