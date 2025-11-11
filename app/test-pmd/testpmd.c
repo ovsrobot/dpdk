@@ -211,6 +211,21 @@ struct fwd_engine * fwd_engines[] = {
 	NULL,
 };
 
+/*
+ * Bitmask for control DCB forwarding for TCs.
+ * If bit-n in tc-mask is 1, then TC-n's forwarding is enabled, and vice versa.
+ */
+uint8_t dcb_fwd_tc_mask = DEFAULT_DCB_FWD_TC_MASK;
+/*
+ * Poll cores per TC when DCB forwarding.
+ * E.g. 1 indicates that one core process all queues of a TC.
+ *      2 indicates that two cores process all queues of a TC. If there
+ *        is a TC with 8 queues, then [0, 3] belong to first core, and
+ *        [4, 7] belong to second core.
+ *      ...
+ */
+uint8_t dcb_fwd_tc_cores = 1;
+
 struct rte_mempool *mempools[RTE_MAX_NUMA_NODES * MAX_SEGS_BUFFER_SPLIT];
 uint16_t mempool_flags;
 
@@ -3417,6 +3432,7 @@ convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_
 {
 	struct rte_devargs da;
 	struct rte_pci_addr pci_addr;
+	size_t pci_len;
 
 	if (rte_devargs_parse(&da, identifier) != 0)
 		return NULL;
@@ -3431,6 +3447,8 @@ convert_pci_address_format(const char *identifier, char *pci_buffer, size_t buf_
 		return NULL;
 
 	rte_pci_device_name(&pci_addr, pci_buffer, buf_size);
+	pci_len = strlen(pci_buffer);
+	snprintf(pci_buffer + pci_len, buf_size - pci_len, ",%s", da.args);
 	return pci_buffer;
 }
 
@@ -3439,8 +3457,8 @@ attach_port(char *identifier)
 {
 	portid_t pi;
 	struct rte_dev_iterator iterator;
-	char *long_identifier;
-	char long_format[PCI_PRI_STR_SIZE];
+	char *long_format, *long_identifier;
+	size_t long_format_size;
 
 	printf("Attaching a new port...\n");
 
@@ -3448,9 +3466,15 @@ attach_port(char *identifier)
 		fprintf(stderr, "Invalid parameters are specified\n");
 		return;
 	}
+	long_format_size = strlen(identifier) + PCI_PRI_STR_SIZE;
+	long_format = alloca(long_format_size);
+	if (long_format == NULL) {
+		TESTPMD_LOG(ERR, "Failed to attach port %s - allocation failure\n", identifier);
+		return;
+	}
 
 	/* For PCI device convert to canonical format */
-	long_identifier = convert_pci_address_format(identifier, long_format, sizeof(long_format));
+	long_identifier = convert_pci_address_format(identifier, long_format, long_format_size);
 	if (long_identifier != NULL)
 		identifier = long_identifier;
 
