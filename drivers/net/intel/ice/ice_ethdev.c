@@ -41,6 +41,7 @@
 #define ICE_DDP_FILENAME_ARG      "ddp_pkg_file"
 #define ICE_DDP_LOAD_SCHED_ARG    "ddp_load_sched_topo"
 #define ICE_TM_LEVELS_ARG         "tm_sched_levels"
+#define ICE_SRC_PRUNE_ENABLE_ARG  "source-prune-enable"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
@@ -58,6 +59,7 @@ static const char * const ice_valid_args[] = {
 	ICE_DDP_FILENAME_ARG,
 	ICE_DDP_LOAD_SCHED_ARG,
 	ICE_TM_LEVELS_ARG,
+	ICE_SRC_PRUNE_ENABLE_ARG,
 	ICE_LINK_STATE_ON_CLOSE,
 	NULL
 };
@@ -1716,6 +1718,7 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 	uint16_t max_txqs[ICE_MAX_TRAFFIC_CLASS] = { 0 };
 	uint8_t tc_bitmap = 0x1;
 	uint16_t cfg;
+	struct ice_adapter *ad = (struct ice_adapter *)hw->back;
 
 	/* hw->num_lports = 1 in NIC mode */
 	vsi = rte_zmalloc(NULL, sizeof(struct ice_vsi), 0);
@@ -1753,8 +1756,20 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 		 * by ice_init_hw
 		 */
 		vsi_ctx.info.sw_id = hw->port_info->sw_id;
-		vsi_ctx.info.sw_flags = ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
-		vsi_ctx.info.sw_flags |= ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+		/* Source Prune */
+		if (ad->devargs.source_prune_enable == 1) {
+			/* Enable source prune */
+			vsi_ctx.info.sw_flags &=
+				~(ICE_AQ_VSI_SW_FLAG_LOCAL_LB);
+			vsi_ctx.info.sw_flags &=
+				~(ICE_AQ_VSI_SW_FLAG_SRC_PRUNE);
+		} else {
+			/* Disable source prune to support VRRP */
+			vsi_ctx.info.sw_flags =
+				ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
+			vsi_ctx.info.sw_flags |=
+				ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+		}
 		cfg = ICE_AQ_VSI_PROP_SW_VALID;
 		vsi_ctx.info.valid_sections |= rte_cpu_to_le_16(cfg);
 		vsi_ctx.info.sw_flags2 = ICE_AQ_VSI_SW_FLAG_LAN_ENA;
@@ -2446,6 +2461,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_TM_LEVELS_ARG,
 				 &parse_tx_sched_levels, &ad->devargs.tm_exposed_levels);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_SRC_PRUNE_ENABLE_ARG,
+				 &parse_bool, &ad->devargs.source_prune_enable);
 	if (ret)
 		goto bail;
 
@@ -7659,6 +7679,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_DDP_FILENAME_ARG "=</path/to/file>"
 			      ICE_DDP_LOAD_SCHED_ARG "=<0|1>"
 			      ICE_TM_LEVELS_ARG "=<N>"
+			      ICE_SRC_PRUNE_ENABLE_ARG "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
 			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
 
