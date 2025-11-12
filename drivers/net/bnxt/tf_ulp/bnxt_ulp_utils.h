@@ -1038,13 +1038,17 @@ bnxt_ulp_cap_feat_process(uint64_t feat_bits, uint64_t *out_bits)
 #else
 	uint64_t bit = 0;
 #endif
-
 	*out_bits = 0;
+
 	if ((feat_bits | bit) != feat_bits) {
 		BNXT_DRV_DBG(ERR, "Invalid TF feature bit is set %" PRIu64 "\n",
 			     bit);
 		return -EINVAL;
 	}
+
+	if (!bit)
+		return 0;
+
 	if ((bit & BNXT_ULP_FEATURE_BIT_PARENT_DMAC) &&
 	    (bit & BNXT_ULP_FEATURE_BIT_PORT_DMAC)) {
 		BNXT_DRV_DBG(ERR, "Invalid both Port and Parent Mac set\n");
@@ -1057,9 +1061,83 @@ bnxt_ulp_cap_feat_process(uint64_t feat_bits, uint64_t *out_bits)
 		BNXT_DRV_DBG(ERR, "Port Mac Address Feature is enabled\n");
 	if (bit & BNXT_ULP_FEATURE_BIT_MULTI_TUNNEL_FLOW)
 		BNXT_DRV_DBG(ERR, "Multi Tunnel Flow Feature is enabled\n");
-
+	if (bit & BNXT_ULP_FEATURE_BIT_MULTI_INSTANCE)
+		BNXT_DRV_DBG(ERR, "Multi Instance Feature is enabled\n");
+	if (bit & BNXT_ULP_FEATURE_BIT_SPECIAL_VXLAN)
+		BNXT_DRV_DBG(ERR, "Special VXLAN Feature is enabled\n");
+	if (bit & BNXT_ULP_FEATURE_BIT_HOT_UPGRADE)
+		BNXT_DRV_DBG(ERR, "Hot Upgrade Feature is enabled");
+	if (bit & BNXT_ULP_FEATURE_BIT_SOCKET_DIRECT)
+		BNXT_DRV_DBG(ERR, "Socket Direct Feature is enabled");
+	if (bit & BNXT_ULP_FEATURE_BIT_NON_VFR_MODE)
+		BNXT_DRV_DBG(ERR, "Non VFR Feature is enabled");
+	if (bit & BNXT_ULP_FEATURE_BIT_UNICAST_ONLY)
+		BNXT_DRV_DBG(ERR, "Unicast only Feature is enabled");
+	if (bit & BNXT_ULP_FEATURE_BIT_RX_MISS_SEND_TO_PF)
+		BNXT_DRV_DBG(ERR, "Rx miss send to parent PF Feature is enabled");
 	*out_bits =  bit;
+
 	return 0;
+}
+
+/* Function to set the tfc ha info into the context */
+static inline int32_t
+bnxt_ulp_cntxt_ptr2_tfc_ha_info_set(struct bnxt_ulp_context *ulp_ctx,
+				    struct bnxt_ulp_tfc_ha_mgr_info *ha_info)
+{
+	if (unlikely(ulp_ctx == NULL || ulp_ctx->cfg_data == NULL)) {
+		BNXT_DRV_DBG(ERR, "Invalid ulp context data\n");
+		return -EINVAL;
+	}
+	ulp_ctx->cfg_data->tfc_ha_info = ha_info;
+	return 0;
+}
+
+/* Function to retrieve the tfc ha info from the context. */
+static inline struct bnxt_ulp_tfc_ha_mgr_info *
+bnxt_ulp_cntxt_ptr2_tfc_ha_info_get(struct bnxt_ulp_context *ulp_ctx)
+{
+	if (unlikely(ulp_ctx == NULL || ulp_ctx->cfg_data == NULL))
+		return NULL;
+	return ulp_ctx->cfg_data->tfc_ha_info;
+}
+
+/* This function sets the app instance id */
+static inline int32_t
+bnxt_ulp_app_instance_id_set(struct bnxt_ulp_context *ulp_ctx,
+			     uint8_t app_instance_id)
+{
+	if (unlikely(!ulp_ctx))
+		return -EINVAL;
+	ulp_ctx->cfg_data->app_instance_id = app_instance_id;
+	return 0;
+}
+
+/* This function gets the app instance id */
+static inline uint8_t
+bnxt_ulp_app_instance_id_get(struct bnxt_ulp_context *ulp_ctx)
+{
+	if (unlikely(!ulp_ctx || !ulp_ctx->cfg_data))
+		return 0;
+	return ulp_ctx->cfg_data->app_instance_id;
+}
+
+static inline int
+bnxt_ulp_ha_priority_set(struct bnxt_ulp_context *ulp_ctx, uint32_t prio)
+{
+	if (unlikely(!ulp_ctx || !ulp_ctx->cfg_data))
+		return -EINVAL;
+
+	ulp_ctx->cfg_data->ha_priority = prio;
+	return 0;
+}
+
+static inline uint32_t
+bnxt_ulp_ha_priority_id_get(struct bnxt_ulp_context *ulp_ctx)
+{
+	if (unlikely(!ulp_ctx || !ulp_ctx->cfg_data))
+		return 0;
+	return ulp_ctx->cfg_data->ha_priority;
 }
 
 #endif /* _BNXT_ULP_UTILS_H_ */
