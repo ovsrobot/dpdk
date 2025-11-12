@@ -1181,7 +1181,6 @@ ice_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	if (txq->tsq != NULL && txq->tsq->ts_flag > 0) {
 		struct ice_aqc_ena_dis_txtime_qgrp txtime_pg;
 
-		dev->dev_ops->timesync_disable(dev);
 		status = ice_aq_ena_dis_txtimeq(hw, q_ids[0], 1, 0, &txtime_pg, NULL);
 		if (status != ICE_SUCCESS) {
 			PMD_DRV_LOG(DEBUG, "Failed to disable Tx time queue");
@@ -1671,7 +1670,6 @@ ice_tx_queue_setup(struct rte_eth_dev *dev,
 			PMD_INIT_LOG(ERR, "Cannot register Tx mbuf field/flag for timestamp");
 			return -EINVAL;
 		}
-		dev->dev_ops->timesync_enable(dev);
 
 		txq->tsq->nb_ts_desc = ice_calc_ts_ring_count(ICE_VSI_TO_HW(vsi), txq->nb_tx_desc);
 		ring_size = sizeof(struct ice_ts_desc) * txq->tsq->nb_ts_desc;
@@ -4131,7 +4129,7 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 	}
 
 	if (ad->tx_vec_allowed) {
-		dev->tx_pkt_prepare = NULL;
+		dev->tx_pkt_prepare = rte_eth_tx_pkt_prepare_dummy;
 		if (ad->tx_simd_width == RTE_VECT_SIMD_512) {
 #ifdef CC_AVX512_SUPPORT
 			if (tx_check_ret == ICE_VECTOR_OFFLOAD_PATH) {
@@ -4177,7 +4175,7 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 	if (ad->tx_simple_allowed) {
 		PMD_INIT_LOG(DEBUG, "Simple tx finally be used.");
 		dev->tx_pkt_burst = ice_xmit_pkts_simple;
-		dev->tx_pkt_prepare = NULL;
+		dev->tx_pkt_prepare = rte_eth_tx_pkt_prepare_dummy;
 	} else {
 		PMD_INIT_LOG(DEBUG, "Normal tx finally be used.");
 		dev->tx_pkt_burst = ice_xmit_pkts;
