@@ -1453,8 +1453,7 @@ rte_pmd_mlx5_external_sq_enable(uint16_t port_id, uint32_t sq_num)
 			sq_miss_created = true;
 		}
 
-		if (priv->sh->config.repr_matching &&
-		    mlx5_flow_hw_tx_repr_matching_flow(dev, sq_num, true)) {
+		if (mlx5_flow_hw_tx_repr_matching_flow(dev, sq_num, true)) {
 			if (sq_miss_created)
 				mlx5_flow_hw_esw_destroy_sq_miss_flow(dev, sq_num);
 			return -rte_errno;
