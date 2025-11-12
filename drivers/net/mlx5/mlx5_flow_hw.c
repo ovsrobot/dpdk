@@ -1321,7 +1321,8 @@ flow_hw_shared_action_translate(struct rte_eth_dev *dev,
 				const struct rte_flow_action *action,
 				struct mlx5_hw_actions *acts,
 				uint16_t action_src,
-				uint16_t action_dst)
+				uint16_t action_dst,
+				struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_shared_action_rss *shared_rss;
@@ -1338,8 +1339,10 @@ flow_hw_shared_action_translate(struct rte_eth_dev *dev,
 		    (priv, acts,
 		    (enum rte_flow_action_type)MLX5_RTE_FLOW_ACTION_TYPE_RSS,
 		    action_src, action_dst, idx, shared_rss)) {
-			DRV_LOG(WARNING, "Indirect RSS action index %d translate failed", act_idx);
-			return -1;
+			DRV_LOG(ERR, "port %u Indirect RSS action (handle %p) translate failed",
+				dev->data->port_id, action->conf);
+			return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+						  action, "Indirect RSS action translate failed");
 		}
 		break;
 	case MLX5_INDIRECT_ACTION_TYPE_COUNT:
@@ -1347,15 +1350,22 @@ flow_hw_shared_action_translate(struct rte_eth_dev *dev,
 			(enum rte_flow_action_type)
 			MLX5_RTE_FLOW_ACTION_TYPE_COUNT,
 			action_src, action_dst, act_idx)) {
-			DRV_LOG(WARNING, "Indirect count action translate failed");
-			return -1;
+			DRV_LOG(ERR,
+				"port %u Indirect count action (handle %p) "
+				"translate failed",
+				dev->data->port_id, action->conf);
+			return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+						  action,
+						  "Indirect count action translate failed");
 		}
 		break;
 	case MLX5_INDIRECT_ACTION_TYPE_CT:
 		if (flow_hw_ct_compile(dev, MLX5_HW_INV_QUEUE,
 				       idx, &acts->rule_acts[action_dst])) {
-			DRV_LOG(WARNING, "Indirect CT action translate failed");
-			return -1;
+			DRV_LOG(ERR, "port %u Indirect CT action (handle %p) translate failed",
+				dev->data->port_id, action->conf);
+			return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+						  action, "Indirect CT action translate failed");
 		}
 		break;
 	case MLX5_INDIRECT_ACTION_TYPE_METER_MARK:
@@ -1363,16 +1373,22 @@ flow_hw_shared_action_translate(struct rte_eth_dev *dev,
 			(enum rte_flow_action_type)
 			MLX5_RTE_FLOW_ACTION_TYPE_METER_MARK,
 			action_src, action_dst, idx)) {
-			DRV_LOG(WARNING, "Indirect meter mark action translate failed");
-			return -1;
+			DRV_LOG(ERR,
+				"port %u Indirect meter mark action (handle %p) "
+				"translate failed",
+				dev->data->port_id, action->conf);
+			return rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+						  action,
+						  "Indirect meter mark action translate failed");
 		}
 		break;
 	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
 		flow_hw_construct_quota(priv, &acts->rule_acts[action_dst], idx);
 		break;
 	default:
-		DRV_LOG(WARNING, "Unsupported shared action type:%d", type);
-		break;
+		DRV_LOG(ERR, "Unsupported shared action type: %d", type);
+		return rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION, action,
+					  "Unsupported shared action type");
 	}
 	return 0;
 }
@@ -1785,7 +1801,7 @@ flow_hw_represented_port_compile(struct rte_eth_dev *dev,
 
 static __rte_always_inline int
 flow_hw_cnt_compile(struct rte_eth_dev *dev, uint32_t  start_pos,
-		      struct mlx5_hw_actions *acts)
+		      struct mlx5_hw_actions *acts, bool is_root)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	uint32_t pos = start_pos;
@@ -1799,7 +1815,8 @@ flow_hw_cnt_compile(struct rte_eth_dev *dev, uint32_t  start_pos,
 				(priv->hws_cpool,
 				 cnt_id,
 				 &acts->rule_acts[pos].action,
-				 &acts->rule_acts[pos].counter.offset);
+				 &acts->rule_acts[pos].counter.offset,
+				 is_root);
 	if (ret != 0)
 		return ret;
 	acts->cnt_id = cnt_id;
@@ -2445,6 +2462,18 @@ err1:
 	return -EINVAL;
 }
 
+static bool
+is_indirect_action_type_supported_root(const enum rte_flow_action_type type)
+{
+	switch (type) {
+	case RTE_FLOW_ACTION_TYPE_COUNT:
+	case RTE_FLOW_ACTION_TYPE_AGE:
+		return mlx5dr_action_counter_root_is_supported();
+	default:
+		return false;
+	}
+}
+
 /**
  * Translate rte_flow actions to DR action.
  *
@@ -2507,7 +2536,7 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 	unsigned int of_vlan_offset;
 	uint32_t ct_idx;
 	int ret, err;
-	uint32_t target_grp = 0;
+	bool is_root = mlx5_group_id_is_root(cfg->attr.flow_attr.group);
 	bool unified_fdb = is_unified_fdb(priv);
 
 	flow_hw_modify_field_init(&mhdr, at);
@@ -2519,7 +2548,7 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 
 		switch ((int)actions->type) {
 		case RTE_FLOW_ACTION_TYPE_INDIRECT_LIST:
-			if (!attr->group) {
+			if (is_root) {
 				DRV_LOG(ERR, "Indirect action is not supported in root table.");
 				goto err;
 			}
@@ -2529,13 +2558,14 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_INDIRECT:
-			if (!attr->group) {
-				DRV_LOG(ERR, "Indirect action is not supported in root table.");
+			if (is_root && !is_indirect_action_type_supported_root(masks->type)) {
+				DRV_LOG(ERR, "Indirect action type (%d) is not supported on root.",
+					masks->type);
 				goto err;
 			}
 			if (actions->conf && masks->conf) {
-				if (flow_hw_shared_action_translate
-				(dev, actions, acts, src_pos, dr_pos))
+				if (flow_hw_shared_action_translate(dev, actions, acts,
+								    src_pos, dr_pos, &sub_error))
 					goto err;
 			} else if (__flow_hw_act_data_indirect_append
 					(priv, acts, RTE_FLOW_ACTION_TYPE_INDIRECT,
@@ -2550,7 +2580,7 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 				priv->hw_drop[!!attr->group];
 			break;
 		case RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR:
-			if (!attr->group) {
+			if (is_root) {
 				DRV_LOG(ERR, "Port representor is not supported in root table.");
 				goto err;
 			}
@@ -2745,11 +2775,7 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 			recom_type = MLX5DR_ACTION_TYP_POP_IPV6_ROUTE_EXT;
 			break;
 		case RTE_FLOW_ACTION_TYPE_SEND_TO_KERNEL:
-			ret = flow_hw_translate_group(dev, cfg, attr->group,
-						&target_grp, &sub_error);
-			if (ret)
-				goto err;
-			if (target_grp == 0) {
+			if (is_root) {
 				__flow_hw_action_template_destroy(dev, acts);
 				rte_flow_error_set(&sub_error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION,
@@ -2773,16 +2799,10 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_AGE:
-			ret = flow_hw_translate_group(dev, cfg, attr->group,
-						&target_grp, &sub_error);
-			if (ret)
-				goto err;
-			if (target_grp == 0) {
-				__flow_hw_action_template_destroy(dev, acts);
+			if (is_root && !mlx5dr_action_counter_root_is_supported()) {
 				rte_flow_error_set(&sub_error, ENOTSUP,
-					RTE_FLOW_ERROR_TYPE_ACTION,
-					NULL,
-					"Age action on root table is not supported in HW steering mode");
+					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+					"Age action is not supported on group 0");
 				goto err;
 			}
 			if (__flow_hw_act_data_general_append(priv, acts,
@@ -2792,16 +2812,10 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 				goto err;
 			break;
 		case RTE_FLOW_ACTION_TYPE_COUNT:
-			ret = flow_hw_translate_group(dev, cfg, attr->group,
-						&target_grp, &sub_error);
-			if (ret)
-				goto err;
-			if (target_grp == 0) {
-				__flow_hw_action_template_destroy(dev, acts);
+			if (is_root && !mlx5dr_action_counter_root_is_supported()) {
 				rte_flow_error_set(&sub_error, ENOTSUP,
-					RTE_FLOW_ERROR_TYPE_ACTION,
-					NULL,
-					"Counter action on root table is not supported in HW steering mode");
+					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+					"Count action is not supported on root table");
 				goto err;
 			}
 			if ((at->action_flags & MLX5_FLOW_ACTION_AGE) ||
@@ -2815,7 +2829,7 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 			if (masks->conf &&
 			    ((const struct rte_flow_action_count *)
 			     masks->conf)->id) {
-				err = flow_hw_cnt_compile(dev, dr_pos, acts);
+				err = flow_hw_cnt_compile(dev, dr_pos, acts, is_root);
 				if (err)
 					goto err;
 			} else if (__flow_hw_act_data_general_append
@@ -2855,12 +2869,6 @@ __flow_hw_translate_actions_template(struct rte_eth_dev *dev,
 				goto err;
 			break;
 		case MLX5_RTE_FLOW_ACTION_TYPE_DEFAULT_MISS:
-			/* Internal, can be skipped. */
-			if (!!attr->group) {
-				DRV_LOG(ERR, "DEFAULT MISS action is only"
-					" supported in root table.");
-				goto err;
-			}
 			acts->rule_acts[dr_pos].action = priv->hw_def_miss;
 			break;
 		case RTE_FLOW_ACTION_TYPE_NAT64:
@@ -3163,7 +3171,7 @@ flow_hw_construct_quota(struct mlx5_priv *priv,
 static __rte_always_inline int
 flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 				const struct rte_flow_action *action,
-				struct rte_flow_template_table *table __rte_unused,
+				struct rte_flow_template_table *table,
 				const uint64_t item_flags, uint64_t action_flags,
 				struct rte_flow_hw *flow,
 				struct mlx5dr_rule_action *rule_act)
@@ -3182,6 +3190,7 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 		       ((1u << MLX5_INDIRECT_ACTION_TYPE_OFFSET) - 1);
 	uint32_t *cnt_queue;
 	cnt_id_t age_cnt;
+	bool is_root = mlx5_group_id_is_root(table->grp->group_id);
 
 	memset(&act_data, 0, sizeof(act_data));
 	switch (type) {
@@ -3207,7 +3216,8 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 		if (mlx5_hws_cnt_pool_get_action_offset(priv->hws_cpool,
 				act_idx,
 				&rule_act->action,
-				&rule_act->counter.offset))
+				&rule_act->counter.offset,
+				is_root))
 			return -1;
 		flow->flags |= MLX5_FLOW_HW_FLOW_FLAG_CNT_ID;
 		flow->cnt_id = act_idx;
@@ -3248,7 +3258,7 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 		}
 		if (mlx5_hws_cnt_pool_get_action_offset(priv->hws_cpool,
 						     age_cnt, &rule_act->action,
-						     &rule_act->counter.offset))
+						     &rule_act->counter.offset, is_root))
 			return -1;
 		break;
 	case MLX5_INDIRECT_ACTION_TYPE_CT:
@@ -3482,6 +3492,7 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 	struct mlx5_aso_mtr *aso_mtr;
 	struct mlx5_multi_pattern_segment *mp_segment = NULL;
 	struct rte_flow_hw_aux *aux;
+	bool is_root = mlx5_group_id_is_root(table->grp->group_id);
 
 	attr.group = table->grp->group_id;
 	ft_flag = mlx5_hw_act_flag[!!table->grp->group_id][table->type];
@@ -3679,7 +3690,8 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 				(priv->hws_cpool,
 				 cnt_id,
 				 &rule_acts[act_data->action_dst].action,
-				 &rule_acts[act_data->action_dst].counter.offset
+				 &rule_acts[act_data->action_dst].counter.offset,
+				 is_root
 				 );
 			if (ret != 0)
 				goto error;
@@ -3691,7 +3703,8 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 				(priv->hws_cpool,
 				 act_data->shared_counter.id,
 				 &rule_acts[act_data->action_dst].action,
-				 &rule_acts[act_data->action_dst].counter.offset
+				 &rule_acts[act_data->action_dst].counter.offset,
+				 is_root
 				 );
 			if (ret != 0)
 				goto error;
