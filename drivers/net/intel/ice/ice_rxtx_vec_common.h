@@ -53,17 +53,18 @@ _ice_rx_queue_release_mbufs_vec(struct ci_rx_queue *rxq)
 
 #define ICE_TX_NO_VECTOR_FLAGS (			\
 		RTE_ETH_TX_OFFLOAD_MULTI_SEGS |		\
+		RTE_ETH_TX_OFFLOAD_QINQ_INSERT |	\
 		RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM |	\
 		RTE_ETH_TX_OFFLOAD_TCP_TSO |	\
 		RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO |    \
 		RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO |    \
 		RTE_ETH_TX_OFFLOAD_IPIP_TNL_TSO |    \
 		RTE_ETH_TX_OFFLOAD_GENEVE_TNL_TSO |    \
-		RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM)
+		RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM |	\
+		RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP)
 
 #define ICE_TX_VECTOR_OFFLOAD (				\
 		RTE_ETH_TX_OFFLOAD_VLAN_INSERT |		\
-		RTE_ETH_TX_OFFLOAD_QINQ_INSERT |		\
 		RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |		\
 		RTE_ETH_TX_OFFLOAD_SCTP_CKSUM |		\
 		RTE_ETH_TX_OFFLOAD_UDP_CKSUM |		\
@@ -194,8 +195,8 @@ ice_txd_enable_offload(struct rte_mbuf *tx_pkt,
 
 	*txd_hi |= ((uint64_t)td_offset) << ICE_TXD_QW1_OFFSET_S;
 
-	/* Tx VLAN/QINQ insertion Offload */
-	if (ol_flags & (RTE_MBUF_F_TX_VLAN | RTE_MBUF_F_TX_QINQ)) {
+	/* Tx VLAN insertion Offload */
+	if (ol_flags & RTE_MBUF_F_TX_VLAN) {
 		td_cmd |= ICE_TX_DESC_CMD_IL2TAG1;
 		*txd_hi |= ((uint64_t)tx_pkt->vlan_tci <<
 				ICE_TXD_QW1_L2TAG1_S);
