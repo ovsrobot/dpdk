@@ -115,6 +115,10 @@ New Features
 
   Added network driver for the Huawei SPx series Network Adapters.
 
+* **Added DCB and PFC support to Intel ice net driver.**
+
+  Added support for Data Center Bridging (DCB) and Priority Flow Control (PFC) to the Intel ice PMD.
+
 * **Added Nebulamatrix nbl ethernet driver.**
 
   Added the PMD for Nebulamatrix NICs.
