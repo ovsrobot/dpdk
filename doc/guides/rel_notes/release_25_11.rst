@@ -182,6 +182,11 @@ New Features
   The built-in help text function is available as a public function which can be reused by custom functions,
   if so desired.
 
+* **Added packet capture (pdump) for secondary process.**
+
+  Added multi-process support to allow packets sent and received by secondary
+  process to be visible in packet capture.
+
 
 Removed Items
 -------------
