@@ -150,6 +150,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"    Stop packet forwarding, and display accumulated"
 			" statistics.\n\n"
 
+			"stop fwd_core (lcore_id)\n"
+			"    Stop specify lcore's forwarding.\n\n"
+
 			"quit\n"
 			"    Quit to prompt.\n\n"
 		);
@@ -3971,6 +3974,65 @@ static cmdline_parse_inst_t cmd_stop = {
 	.help_str = "stop: Stop packet forwarding",
 	.tokens = {
 		(void *)&cmd_stop_stop,
+		NULL,
+	},
+};
+
+/* *** stop specify forward core *** */
+struct cmd_stop_fwd_core_result {
+	cmdline_fixed_string_t stop;
+	cmdline_fixed_string_t fwd_core;
+	uint32_t lcore_id;
+};
+
+static void
+cmd_stop_fwd_core_parsed(void *parsed_result,
+			 __rte_unused struct cmdline *cl,
+			 __rte_unused void *data)
+{
+	struct cmd_stop_fwd_core_result *res = parsed_result;
+	struct fwd_lcore *fc = lcore_to_fwd_lcore(res->lcore_id);
+
+	if (test_done) {
+		fprintf(stderr, "Packet forwarding not started\n");
+		return;
+	}
+
+	if (fc == NULL) {
+		fprintf(stderr, "core: %u not in the forward corelist.\n", res->lcore_id);
+		return;
+	}
+
+	if (fc->stopped) {
+		fprintf(stderr, "core: %u already stopped!\n", res->lcore_id);
+		return;
+	}
+
+	printf("Telling core: %u to stop...", res->lcore_id);
+	fc->stopped = 1;
+	printf("\nWaiting for core: %u to finish...\n", res->lcore_id);
+	rte_eal_wait_lcore(res->lcore_id);
+	printf("Done.\n");
+}
+
+static cmdline_parse_token_string_t cmd_stop_fwd_core_stop =
+	TOKEN_STRING_INITIALIZER(struct cmd_stop_fwd_core_result,
+			stop, "stop");
+static cmdline_parse_token_string_t cmd_stop_fwd_core_fwd_core =
+	TOKEN_STRING_INITIALIZER(struct cmd_stop_fwd_core_result,
+			fwd_core, "fwd_core");
+static cmdline_parse_token_num_t cmd_stop_fwd_core_lcore_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_stop_fwd_core_result,
+			lcore_id, RTE_UINT32);
+
+static cmdline_parse_inst_t cmd_stop_fwd_core = {
+	.f = cmd_stop_fwd_core_parsed,
+	.data = NULL,
+	.help_str = "stop fwd_core <lcore_id>: stop specify lcore's forwarding.",
+	.tokens = {
+		(void *)&cmd_stop_fwd_core_stop,
+		(void *)&cmd_stop_fwd_core_fwd_core,
+		(void *)&cmd_stop_fwd_core_lcore_id,
 		NULL,
 	},
 };
@@ -14051,6 +14113,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_config_dcb,
 	&cmd_read_rxd_txd,
 	&cmd_stop,
+	&cmd_stop_fwd_core,
 	&cmd_mac_addr,
 	&cmd_set_fwd_eth_peer,
 	&cmd_set_xstats_hide_zero,

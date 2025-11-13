@@ -143,6 +143,13 @@ Stop packet forwarding, and display accumulated statistics::
 
    testpmd> stop
 
+stop fwd_core
+~~~~~~~~~~~~~
+
+Stop specify lcore's forwarding::
+
+   testpmd> stop fwd_core (lcore_id)
+
 quit
 ~~~~
 
