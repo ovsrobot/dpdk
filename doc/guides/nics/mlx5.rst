@@ -745,24 +745,6 @@ for an additional list of options shared with other mlx5 drivers.
 
     <Primary_PCI_BDF>,representor=pf[0,1]vf[0-2]
 
-- ``repr_matching_en`` parameter [int]
-
-  - 0. If representor matching is disabled, then there will be no implicit
-    item added. As a result, ingress flow rules will match traffic
-    coming to any port, not only the port on which flow rule is created.
-    Because of that, default flow rules for ingress traffic cannot be created
-    and port starts in isolated mode by default. Port cannot be switched back
-    to non-isolated mode.
-
-  - 1. If representor matching is enabled (default setting),
-    then each ingress pattern template has an implicit REPRESENTED_PORT
-    item added. Flow rules based on this pattern template will match
-    the vport associated with port on which rule is created.
-
-  .. note::
-
-     This parameter is deprecated and will be removed in future releases.
-
 - ``max_dump_files_num`` parameter [int]
 
   The maximum number of files per PMD entity that may be created for debug information.
@@ -2343,7 +2325,6 @@ Runtime configuration
 
 The behaviour of port representors is configured
 with some :ref:`parameters <mlx5_representor_params>`.
-The option ``repr_matching_en`` has an impact on flow steering.
 
 Limitations
 ^^^^^^^^^^^
@@ -2353,9 +2334,6 @@ Limitations
 #. A driver limitation for ``RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR`` action
    restricts the ``port_id`` configuration to only accept the value ``0xffff``,
    indicating the E-Switch manager.
-   If the ``repr_matching_en`` parameter is enabled, the traffic will be directed
-   to the representor of the source virtual port (SF/VF), while if it is disabled,
-   the traffic will be routed based on the steering rules in the ingress domain.
 
 Examples
 ^^^^^^^^
@@ -2482,6 +2460,18 @@ Moreover in the flow engine domain, the value zero is acceptable to match and se
 and it should be allowed to specify zero values as parameters
 for the META and MARK flow items and actions.
 In the same time, zero mask has no meaning and should be rejected on validation stage.
+
+Starting from firmware version 47.0274,
+if :ref:`switchdev mode <mlx5_switchdev>` was enabled,
+flow metadata can be shared between flows in FDB and VF domains:
+
+* If metadata was attached to FDB flow
+  and that flow transferred incoming packet to a VF,
+  representor, ingress flow bound to the VF can match the metadata.
+
+* If metadata was attached to VF egress flow, FDB flow can match the metadata.
+
+The metadata sharing functionality is controlled with firmware configuration.
 
 Requirements
 ^^^^^^^^^^^^
@@ -2689,19 +2679,27 @@ DPDK       19.05         19.02          21.05                    21.05
 Limitations
 ^^^^^^^^^^^
 
-Because freeing a counter (by destroying a flow rule or destroying indirect action)
-does not immediately make it available for the application,
-the PMD might return:
+With :ref:`HW steering <mlx5_hws>`:
 
-- ``ENOENT`` if no counter is available in ``free``, ``reuse``
-  or ``wait_reset`` rings.
-  No counter will be available until the application releases some of them.
-- ``EAGAIN`` if no counter is available in ``free`` and ``reuse`` rings,
-  but there are counters in ``wait_reset`` ring.
-  This means that after the next service thread cycle new counters will be available.
+#. Because freeing a counter (by destroying a flow rule or destroying indirect action)
+   does not immediately make it available for the application,
+   the PMD might return:
 
-The application has to be aware that flow rule create or indirect action create
-might need be retried.
+   - ``ENOENT`` if no counter is available in ``free``, ``reuse``
+     or ``wait_reset`` rings.
+     No counter will be available until the application releases some of them.
+   - ``EAGAIN`` if no counter is available in ``free`` and ``reuse`` rings,
+     but there are counters in ``wait_reset`` ring.
+     This means that after the next service thread cycle,
+     new counters will be available.
+
+   The application has to be aware that flow rule or indirect action creation
+   might need to be retried.
+
+#. Using count action on root tables requires:
+
+   - Linux kernel >= 6.4
+   - rdma-core >= 60.0
 
 
 .. _mlx5_age:
@@ -2744,6 +2742,11 @@ With :ref:`HW steering <mlx5_hws>`,
 #. With strict queueing enabled
    (``RTE_FLOW_PORT_FLAG_STRICT_QUEUE`` passed to ``rte_flow_configure()``),
    indirect age actions can be created only through asynchronous flow API.
+
+#. Using age action on root tables requires:
+
+   - Linux kernel >= 6.4
+   - rdma-core >= 60.0
 
 
 .. _mlx5_quota:
@@ -3074,7 +3077,28 @@ DPDK       21.02
 Limitations
 ^^^^^^^^^^^
 
-#. Supports the 'set' and 'add' operations for ``RTE_FLOW_ACTION_TYPE_MODIFY_FIELD`` action.
+#. Supports the 'set' operation for ``RTE_FLOW_ACTION_TYPE_MODIFY_FIELD`` in all flow engines.
+
+#. Supports the 'add' operation with 'src' field
+   of type ``RTE_FLOW_FIELD_VALUE`` or ``RTE_FLOW_FIELD_POINTER``
+   with both :ref:`HW steering <mlx5_hws>` and DV flow engine (``dv_flow_en=1``).
+
+   HW steering flow engine, starting with ConnectX-7 and BlueField-3,
+   supports packet header fields in 'src' field.
+
+   'dst' field can be any of the following:
+
+   - ``RTE_FLOW_FIELD_IPV4_TTL``
+   - ``RTE_FLOW_FIELD_IPV6_HOPLIMIT``
+   - ``RTE_FLOW_FIELD_TCP_SEQ_NUM``
+   - ``RTE_FLOW_FIELD_TCP_ACK_NUM``
+   - ``RTE_FLOW_FIELD_TAG``
+   - ``RTE_FLOW_FIELD_META``
+   - ``RTE_FLOW_FIELD_FLEX_ITEM``
+   - ``RTE_FLOW_FIELD_TCP_DATA_OFFSET``
+   - ``RTE_FLOW_FIELD_IPV4_IHL``
+   - ``RTE_FLOW_FIELD_IPV4_TOTAL_LEN``
+   - ``RTE_FLOW_FIELD_IPV6_PAYLOAD_LEN``
 
 #. In template tables of group 0, the modify action must be fully masked.
 
@@ -3184,8 +3208,8 @@ Limitations
 
 #. Only single item is supported per pattern template.
 
-#. In switch mode, when ``repr_matching_en`` is enabled (default setting),
-   matching ``RTE_FLOW_ITEM_TYPE_COMPARE`` is not supported for ``ingress`` rules.
+#. In switch mode, ``RTE_FLOW_ITEM_TYPE_COMPARE`` flow item
+   is not supported for ``ingress`` rules.
    This is because an implicit ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``
    needs to be added to the matcher,
    which conflicts with the single item limitation.
