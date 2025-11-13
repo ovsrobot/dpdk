@@ -42,6 +42,7 @@
 #define ICE_DDP_LOAD_SCHED_ARG    "ddp_load_sched_topo"
 #define ICE_TM_LEVELS_ARG         "tm_sched_levels"
 #define ICE_SOURCE_PRUNE_ARG      "source-prune"
+#define ICE_MAC_ANTI_SPOOF_DISABLE "mac-anti-spoof-disable"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
@@ -60,6 +61,7 @@ static const char * const ice_valid_args[] = {
 	ICE_DDP_LOAD_SCHED_ARG,
 	ICE_TM_LEVELS_ARG,
 	ICE_SOURCE_PRUNE_ARG,
+	ICE_MAC_ANTI_SPOOF_DISABLE,
 	ICE_LINK_STATE_ON_CLOSE,
 	NULL
 };
@@ -1768,6 +1770,20 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 			vsi_ctx.info.sw_flags |=
 				ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
 		}
+		/* MAC Anti-Spoof */
+		if (ad->devargs.mac_anti_spoof_disable == 1) {
+			/* Disable mac anti-spoof check in the
+			 * Tx direction to avoid getting dropped
+			 * as TX-errors for VRRP support when
+			 * mac-anti-spoof-disable devarg is set
+			 */
+			vsi_ctx.info.sw_flags &=
+				~ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+			vsi_ctx.info.sw_flags |=
+				ICE_AQ_VSI_SW_FLAG_ALLOW_LB;
+			vsi_ctx.info.sec_flags =
+				ICE_AQ_VSI_SEC_FLAG_ENA_MAC_ANTI_SPOOF;
+		}
 		cfg = ICE_AQ_VSI_PROP_SW_VALID;
 		vsi_ctx.info.valid_sections |= rte_cpu_to_le_16(cfg);
 		vsi_ctx.info.sw_flags2 = ICE_AQ_VSI_SW_FLAG_LAN_ENA;
@@ -2464,6 +2480,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_SOURCE_PRUNE_ARG,
 				 &parse_bool, &ad->devargs.source_prune);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_MAC_ANTI_SPOOF_DISABLE,
+				 &parse_bool, &ad->devargs.mac_anti_spoof_disable);
 	if (ret)
 		goto bail;
 
@@ -7732,6 +7753,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_DDP_LOAD_SCHED_ARG "=<0|1>"
 			      ICE_TM_LEVELS_ARG "=<N>"
 			      ICE_SOURCE_PRUNE_ARG "=<0|1>"
+			      ICE_MAC_ANTI_SPOOF_DISABLE "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
 			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
 
