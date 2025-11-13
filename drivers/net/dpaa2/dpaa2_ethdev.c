@@ -632,6 +632,27 @@ fail:
 }
 
 static void
+dpaa2_clear_queue_active_dps(struct dpaa2_queue *q)
+{
+	int lcore_id;
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		struct queue_storage_info_t *qs = q->q_storage[lcore_id];
+
+		if (!qs)
+			continue;
+
+		if (qs->active_dqs) {
+			while (!qbman_check_command_complete(qs->active_dqs))
+				/* wait */;
+
+			clear_swp_active_dqs(qs->active_dpio_id);
+			qs->active_dqs = NULL;
+		}
+	}
+}
+
+static void
 dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 {
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
@@ -645,13 +666,16 @@ dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 		/* cleaning up queue storage */
 		for (i = 0; i < priv->nb_rx_queues; i++) {
 			dpaa2_q = priv->rx_vq[i];
+			dpaa2_clear_queue_active_dps(dpaa2_q);
 			dpaa2_queue_storage_free(dpaa2_q,
 				RTE_MAX_LCORE);
+			priv->rx_vq[i] = NULL;
 		}
 		/* cleanup tx queue cscn */
 		for (i = 0; i < priv->nb_tx_queues; i++) {
 			dpaa2_q = priv->tx_vq[i];
 			rte_free(dpaa2_q->cscn);
+			priv->tx_vq[i] = NULL;
 		}
 		if (priv->flags & DPAA2_TX_CONF_ENABLE) {
 			/* cleanup tx conf queue storage */
@@ -659,8 +683,14 @@ dpaa2_free_rx_tx_queues(struct rte_eth_dev *dev)
 				dpaa2_q = priv->tx_conf_vq[i];
 				dpaa2_queue_storage_free(dpaa2_q,
 					RTE_MAX_LCORE);
+				priv->tx_conf_vq[i] = NULL;
 			}
 		}
+		if (priv->flags & DPAAX_RX_ERROR_QUEUE_FLAG) {
+			dpaa2_q = priv->rx_err_vq;
+			dpaa2_queue_storage_free(dpaa2_q, RTE_MAX_LCORE);
+		}
+
 		/*free memory for all queues (RX+TX) */
 		rte_free(priv->rx_vq[0]);
 		priv->rx_vq[0] = NULL;
@@ -1494,53 +1524,14 @@ dpaa2_dev_stop(struct rte_eth_dev *dev)
 static int
 dpaa2_dev_close(struct rte_eth_dev *dev)
 {
-	struct dpaa2_dev_priv *priv = dev->data->dev_private;
-	struct fsl_mc_io *dpni = dev->process_private;
-	int i, ret;
-	struct rte_eth_link link;
-
 	PMD_INIT_FUNC_TRACE();
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	if (!dpni) {
-		DPAA2_PMD_WARN("Already closed or not started");
-		return -EINVAL;
-	}
-
 	dpaa2_tm_deinit(dev);
 	dpaa2_flow_clean(dev);
-	/* Clean the device first */
-	ret = dpni_reset(dpni, CMD_PRI_LOW, priv->token);
-	if (ret) {
-		DPAA2_PMD_ERR("Failure cleaning dpni device: err=%d", ret);
-		return ret;
-	}
 
-	memset(&link, 0, sizeof(link));
-	rte_eth_linkstatus_set(dev, &link);
-
-	/* Free private queues memory */
-	dpaa2_free_rx_tx_queues(dev);
-	/* Close the device at underlying layer*/
-	ret = dpni_close(dpni, CMD_PRI_LOW, priv->token);
-	if (ret) {
-		DPAA2_PMD_ERR("Failure closing dpni device with err code %d",
-			ret);
-	}
-
-	/* Free the allocated memory for ethernet private data and dpni*/
-	priv->hw = NULL;
-	dev->process_private = NULL;
-	rte_free(dpni);
-
-	for (i = 0; i < MAX_TCS; i++)
-		rte_free(priv->extract.tc_extract_param[i]);
-
-	rte_free(priv->extract.qos_extract_param);
-
-	DPAA2_PMD_INFO("%s: netdev deleted", dev->data->name);
 	return 0;
 }
 
@@ -2862,6 +2853,55 @@ dpaa2_get_devargs(struct rte_devargs *devargs, const char *key)
 }
 
 static int
+dpaa2_dev_deinit(struct rte_eth_dev *dev)
+{
+	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+	struct fsl_mc_io *dpni = dev->process_private;
+	int i, ret;
+	struct rte_eth_link link;
+
+	PMD_INIT_FUNC_TRACE();
+
+	if (!dpni) {
+		DPAA2_PMD_WARN("Already closed or not started");
+		return -EINVAL;
+	}
+
+	/* Clean the device first */
+	ret = dpni_reset(dpni, CMD_PRI_LOW, priv->token);
+	if (ret) {
+		DPAA2_PMD_ERR("Failure cleaning dpni device: err=%d", ret);
+		return ret;
+	}
+
+	memset(&link, 0, sizeof(link));
+	rte_eth_linkstatus_set(dev, &link);
+
+	/* Free private queues memory */
+	dpaa2_free_rx_tx_queues(dev);
+	/* Close the device at underlying layer*/
+	ret = dpni_close(dpni, CMD_PRI_LOW, priv->token);
+	if (ret) {
+		DPAA2_PMD_ERR("Failure closing dpni device with err code %d",
+			ret);
+	}
+
+	/* Free the allocated memory for ethernet private data and dpni*/
+	priv->hw = NULL;
+	dev->process_private = NULL;
+	rte_free(dpni);
+
+	for (i = 0; i < MAX_TCS; i++)
+		rte_free(priv->extract.tc_extract_param[i]);
+
+	rte_free(priv->extract.qos_extract_param);
+
+	DPAA2_PMD_INFO("%s: netdev deleted", dev->data->name);
+	return 0;
+}
+
+
+static int
 dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct rte_device *dev = eth_dev->device;
@@ -3147,7 +3187,7 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 init_err:
-	dpaa2_dev_close(eth_dev);
+	dpaa2_dev_deinit(eth_dev);
 
 	return ret;
 }
@@ -3347,14 +3387,19 @@ static int
 rte_dpaa2_remove(struct rte_dpaa2_device *dpaa2_dev)
 {
 	struct rte_eth_dev *eth_dev;
-	int ret;
+	int ret = 0;
 
-	eth_dev = dpaa2_dev->eth_dev;
-	dpaa2_dev_close(eth_dev);
+	eth_dev = rte_eth_dev_allocated(dpaa2_dev->device.name);
+	if (eth_dev) {
+		dpaa2_dev_deinit(eth_dev);
+		ret = rte_eth_dev_release_port(eth_dev);
+	}
+
 	dpaa2_valid_dev--;
-	if (!dpaa2_valid_dev)
+	if (!dpaa2_valid_dev) {
 		rte_mempool_free(dpaa2_tx_sg_pool);
-	ret = rte_eth_dev_release_port(eth_dev);
+		dpaa2_tx_sg_pool = NULL;
+	}
 
 	return ret;
 }
