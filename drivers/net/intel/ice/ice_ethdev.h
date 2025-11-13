@@ -333,6 +333,8 @@ struct ice_vsi {
 	uint8_t vlan_anti_spoof_on; /* The VLAN anti-spoofing enabled */
 	uint8_t vlan_filter_on; /* The VLAN filter enabled */
 	/* information about rss configuration */
+	uint8_t global_lut_allocated : 1;
+	uint8_t global_lut_id : 7;
 	u32 rss_key_size;
 	u32 rss_lut_size;
 	uint8_t *rss_lut;
@@ -614,6 +616,7 @@ struct ice_devargs {
 	uint8_t pps_out_ena;
 	uint8_t ddp_load_sched;
 	uint8_t tm_exposed_levels;
+	uint8_t source_prune;
 	int link_state_on_close;
 	int xtr_field_offs;
 	uint8_t xtr_flag_offs[PROTO_XTR_MAX];
@@ -667,6 +670,7 @@ struct ice_adapter {
 	uint8_t ptp_tx_block;
 	uint8_t ptp_tx_index;
 	bool ptp_ena;
+	bool txpp_ena;	/* For TxPP */
 	uint64_t time_hw;
 	struct ice_fdir_prof_info fdir_prof_info[ICE_MAX_PTGS];
 	struct ice_rss_prof_info rss_prof_info[ICE_MAX_PTGS];
