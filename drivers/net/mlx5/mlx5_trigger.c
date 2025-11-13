@@ -1226,6 +1226,11 @@ static void mlx5_dev_free_consec_tx_mem(struct rte_eth_dev *dev, bool on_stop)
 	}
 }
 
+#define SAVE_RTE_ERRNO_AND_STOP(ret, dev) do {	\
+	ret = rte_errno;			\
+	(dev)->data->dev_started = 0;		\
+} while (0)
+
 /**
  * DPDK callback to start the device.
  *
@@ -1316,25 +1321,30 @@ continue_dev_start:
 	if (ret) {
 		DRV_LOG(ERR, "port %u Tx packet pacing init failed: %s",
 			dev->data->port_id, strerror(rte_errno));
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
 		goto error;
 	}
 	if (mlx5_devx_obj_ops_en(priv->sh) &&
 	    priv->obj_ops.lb_dummy_queue_create) {
 		ret = priv->obj_ops.lb_dummy_queue_create(dev);
-		if (ret)
-			goto error;
+		if (ret) {
+			SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+			goto txpp_stop;
+		}
 	}
 	ret = mlx5_dev_allocate_consec_tx_mem(dev);
 	if (ret) {
 		DRV_LOG(ERR, "port %u Tx queues memory allocation failed: %s",
 			dev->data->port_id, strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto lb_dummy_queue_release;
 	}
 	ret = mlx5_txq_start(dev);
 	if (ret) {
 		DRV_LOG(ERR, "port %u Tx queue allocation failed: %s",
 			dev->data->port_id, strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto free_consec_tx_mem;
 	}
 	if (priv->config.std_delay_drop || priv->config.hp_delay_drop) {
 		if (!priv->sh->dev_cap.vf && !priv->sh->dev_cap.sf &&
@@ -1358,7 +1368,8 @@ continue_dev_start:
 	if (ret) {
 		DRV_LOG(ERR, "port %u Rx queue allocation failed: %s",
 			dev->data->port_id, strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto txq_stop;
 	}
 	/*
 	 * Such step will be skipped if there is no hairpin TX queue configured
@@ -1368,7 +1379,8 @@ continue_dev_start:
 	if (ret) {
 		DRV_LOG(ERR, "port %u hairpin auto binding failed: %s",
 			dev->data->port_id, strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto rxq_stop;
 	}
 	/* Set started flag here for the following steps like control flow. */
 	dev->data->dev_started = 1;
@@ -1376,7 +1388,8 @@ continue_dev_start:
 	if (ret) {
 		DRV_LOG(ERR, "port %u Rx interrupt vector creation failed",
 			dev->data->port_id);
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto rxq_stop;
 	}
 	mlx5_os_stats_init(dev);
 	/*
@@ -1388,7 +1401,8 @@ continue_dev_start:
 		DRV_LOG(ERR,
 			"port %u failed to attach indirect actions: %s",
 			dev->data->port_id, rte_strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto rx_intr_vec_disable;
 	}
 #ifdef HAVE_MLX5_HWS_SUPPORT
 	if (priv->sh->config.dv_flow_en == 2) {
@@ -1396,7 +1410,8 @@ continue_dev_start:
 		if (ret) {
 			DRV_LOG(ERR, "port %u failed to update HWS tables",
 				dev->data->port_id);
-			goto error;
+			SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+			goto action_handle_detach;
 		}
 	}
 #endif
@@ -1404,7 +1419,8 @@ continue_dev_start:
 	if (ret) {
 		DRV_LOG(ERR, "port %u failed to set defaults flows",
 			dev->data->port_id);
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto action_handle_detach;
 	}
 	/* Set dynamic fields and flags into Rx queues. */
 	mlx5_flow_rxq_dynf_set(dev);
@@ -1421,12 +1437,14 @@ continue_dev_start:
 	if (ret) {
 		DRV_LOG(DEBUG, "port %u failed to start default actions: %s",
 			dev->data->port_id, strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto traffic_disable;
 	}
 	if (mlx5_dev_ctx_shared_mempool_subscribe(dev) != 0) {
 		DRV_LOG(ERR, "port %u failed to subscribe for mempool life cycle: %s",
 			dev->data->port_id, rte_strerror(rte_errno));
-		goto error;
+		SAVE_RTE_ERRNO_AND_STOP(ret, dev);
+		goto stop_default;
 	}
 	if (mlx5_flow_is_steering_disabled())
 		mlx5_flow_rxq_mark_flag_set(dev);
@@ -1455,19 +1473,27 @@ continue_dev_start:
 		priv->sh->port[priv->dev_port - 1].devx_ih_port_id =
 					(uint32_t)dev->data->port_id;
 	return 0;
-error:
-	ret = rte_errno; /* Save rte_errno before cleanup. */
-	/* Rollback. */
-	dev->data->dev_started = 0;
+stop_default:
 	mlx5_flow_stop_default(dev);
+traffic_disable:
 	mlx5_traffic_disable(dev);
-	mlx5_txq_stop(dev);
+action_handle_detach:
+	mlx5_action_handle_detach(dev);
+rx_intr_vec_disable:
+	mlx5_rx_intr_vec_disable(dev);
+rxq_stop:
 	mlx5_rxq_stop(dev);
+txq_stop:
+	mlx5_txq_stop(dev);
+free_consec_tx_mem:
+	mlx5_dev_free_consec_tx_mem(dev, false);
+lb_dummy_queue_release:
 	if (priv->obj_ops.lb_dummy_queue_release)
 		priv->obj_ops.lb_dummy_queue_release(dev);
-	mlx5_dev_free_consec_tx_mem(dev, false);
-	mlx5_txpp_stop(dev); /* Stop last. */
-	rte_errno = ret; /* Restore rte_errno. */
+txpp_stop:
+	mlx5_txpp_stop(dev);
+error:
+	rte_errno = ret;
 	return -rte_errno;
 }
 
@@ -1604,20 +1630,8 @@ mlx5_traffic_enable_hws(struct rte_eth_dev *dev)
 	struct mlx5_sh_config *config = &priv->sh->config;
 	uint64_t flags = 0;
 	unsigned int i;
-	int ret;
+	int ret = 0;
 
-	/*
-	 * With extended metadata enabled, the Tx metadata copy is handled by default
-	 * Tx tagging flow rules, so default Tx flow rule is not needed. It is only
-	 * required when representor matching is disabled.
-	 */
-	if (config->dv_esw_en &&
-	    !config->repr_matching &&
-	    config->dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS &&
-	    priv->master) {
-		if (mlx5_flow_hw_create_tx_default_mreg_copy_flow(dev))
-			goto error;
-	}
 	for (i = 0; i < priv->txqs_n; ++i) {
 		struct mlx5_txq_ctrl *txq = mlx5_txq_get(dev, i);
 		uint32_t queue;
@@ -1634,10 +1648,26 @@ mlx5_traffic_enable_hws(struct rte_eth_dev *dev)
 			}
 		}
 		if (config->dv_esw_en && config->repr_matching) {
-			if (mlx5_flow_hw_tx_repr_matching_flow(dev, queue, false)) {
+			if (mlx5_flow_hw_create_tx_repr_matching_flow(dev, queue, false)) {
 				mlx5_txq_release(dev, i);
 				goto error;
 			}
+		}
+		/*
+		 * With extended metadata enabled, the Tx metadata copy is handled by default
+		 * Tx tagging flow rules, so default Tx flow rule is not needed. It is only
+		 * required when representor matching is disabled.
+		 */
+		if (config->dv_esw_en && !config->repr_matching &&
+		    config->dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS &&
+		    (priv->master || priv->representor)) {
+			ret = mlx5_flow_hw_create_fdb_tx_default_mreg_copy_flow(dev, queue, false);
+		} else if (mlx5_vport_tx_metadata_passing_enabled(priv->sh)) {
+			ret = mlx5_flow_hw_create_nic_tx_default_mreg_copy_flow(dev, queue);
+		}
+		if (ret != 0) {
+			mlx5_txq_release(dev, i);
+			goto error;
 		}
 		mlx5_txq_release(dev, i);
 	}
