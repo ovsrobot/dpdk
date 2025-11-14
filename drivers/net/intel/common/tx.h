@@ -113,6 +113,7 @@ struct ci_tx_queue {
 				uint16_t sw_tail;
 				uint16_t rs_compl_count;
 				uint8_t expected_gen_id;
+				uint32_t latch_idx; /* Tx timestamp latch index */
 		};
 	};
 };
