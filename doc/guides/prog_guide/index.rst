@@ -74,6 +74,7 @@ Device Libraries
     :numbered:
 
     dev_args
+    device_hotplug
     ethdev/index
     link_bonding_poll_mode_drv_lib
     vhost_lib
