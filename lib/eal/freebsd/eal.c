@@ -946,3 +946,19 @@ rte_vfio_container_assign_device(__rte_unused int vfio_container_fd,
 	rte_errno = ENOTSUP;
 	return -1;
 }
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_vfio_get_device_info, 26.03)
+int
+rte_vfio_get_device_info(__rte_unused int vfio_dev_fd,
+		__rte_unused struct vfio_device_info *device_info)
+{
+	rte_errno = ENOTSUP;
+	return -1;
+}
+
+RTE_EXPORT_SYMBOL(rte_vfio_get_mode)
+enum rte_vfio_mode
+rte_vfio_get_mode(void)
+{
+	return RTE_VFIO_MODE_NONE;
+}
