@@ -7,7 +7,11 @@
 
 /**
  * @file
- * RTE VFIO. This library provides various VFIO related utility functions.
+ * @internal
+ *
+ * RTE VFIO internal API.
+ *
+ * This library provides VFIO related utility functions for use by drivers.
  */
 
 #include <stdbool.h>
@@ -36,6 +40,7 @@ struct vfio_device_info;
 #define RTE_VFIO_DEFAULT_CONTAINER_FD (-1)
 
 /**
+ * @internal
  * Setup vfio_cfg for the device identified by its address.
  * It discovers the configured I/O MMU groups or sets a new one for the device.
  * If a new groups is assigned, the DMA mapping is performed.
@@ -60,10 +65,12 @@ struct vfio_device_info;
  *   <0 on failure.
  *   >1 if the device cannot be managed this way.
  */
+__rte_internal
 int rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
 		int *vfio_dev_fd, struct vfio_device_info *device_info);
 
 /**
+ * @internal
  * Release a device mapped to a VFIO-managed I/O MMU group.
  *
  * This function is only relevant to linux and will return
@@ -82,9 +89,11 @@ int rte_vfio_setup_device(const char *sysfs_base, const char *dev_addr,
  *   0 on success.
  *   <0 on failure.
  */
+__rte_internal
 int rte_vfio_release_device(const char *sysfs_base, const char *dev_addr, int fd);
 
 /**
+ * @internal
  * Enable a VFIO-related kmod.
  *
  * This function is only relevant to linux and will return
@@ -97,9 +106,11 @@ int rte_vfio_release_device(const char *sysfs_base, const char *dev_addr, int fd
  *   0 on success.
  *   <0 on failure.
  */
+__rte_internal
 int rte_vfio_enable(const char *modname);
 
 /**
+ * @internal
  * Check whether a VFIO-related kmod is enabled.
  *
  * This function is only relevant to Linux.
@@ -111,9 +122,11 @@ int rte_vfio_enable(const char *modname);
  *   1 if true.
  *   0 otherwise.
  */
+__rte_internal
 int rte_vfio_is_enabled(const char *modname);
 
 /**
+ * @internal
  * Whether VFIO NOIOMMU mode is enabled.
  *
  * This function is only relevant to Linux.
@@ -123,10 +136,12 @@ int rte_vfio_is_enabled(const char *modname);
  *   0 if false.
  *   <0 for errors.
  */
+__rte_internal
 int rte_vfio_noiommu_is_enabled(void);
 
 /**
- * Remove group fd from internal VFIO group fd array/
+ * @internal
+ * Remove group fd from internal VFIO group fd array.
  *
  * This function is only relevant to linux and will return
  * an error on BSD.
@@ -138,11 +153,13 @@ int rte_vfio_noiommu_is_enabled(void);
  *   0 on success.
  *   <0 on failure.
  */
+__rte_internal
 int
 rte_vfio_clear_group(int vfio_group_fd);
 
 /**
- * Parse IOMMU group number for a device
+ * @internal
+ * Parse IOMMU group number for a device.
  *
  * This function is only relevant to linux and will return
  * an error on BSD.
@@ -161,12 +178,14 @@ rte_vfio_clear_group(int vfio_group_fd);
  *   0 for non-existent group or VFIO
  *  <0 for errors
  */
+__rte_internal
 int
 rte_vfio_get_group_num(const char *sysfs_base,
 		      const char *dev_addr, int *iommu_group_num);
 
 /**
- * Get device information
+ * @internal
+ * Get device information.
  *
  * This function is only relevant to Linux and will return an error on BSD.
  *
@@ -186,12 +205,13 @@ rte_vfio_get_group_num(const char *sysfs_base,
  *   0 on success.
  *  <0 on failure.
  */
-__rte_experimental
+__rte_internal
 int
 rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
 		int *vfio_dev_fd, struct vfio_device_info *device_info);
 
 /**
+ * @internal
  * Get the default VFIO container fd
  *
  * This function is only relevant to linux and will return
@@ -201,11 +221,13 @@ rte_vfio_get_device_info(const char *sysfs_base, const char *dev_addr,
  *  > 0 default container fd
  *  < 0 if VFIO is not enabled or not supported
  */
+__rte_internal
 int
 rte_vfio_get_container_fd(void);
 
 /**
- * Open VFIO group fd or get an existing one
+ * @internal
+ * Open VFIO group fd or get an existing one.
  *
  * This function is only relevant to linux and will return
  * an error on BSD.
@@ -217,10 +239,12 @@ rte_vfio_get_container_fd(void);
  *  > 0 group fd
  *  < 0 for errors
  */
+__rte_internal
 int
 rte_vfio_get_group_fd(int iommu_group_num);
 
 /**
+ * @internal
  * Create a new container for device binding.
  *
  * @note Any newly allocated DPDK memory will not be mapped into these
@@ -235,10 +259,12 @@ rte_vfio_get_group_fd(int iommu_group_num);
  *   the container fd if successful
  *   <0 if failed
  */
+__rte_internal
 int
 rte_vfio_container_create(void);
 
 /**
+ * @internal
  * Destroy the container, unbind all vfio groups within it.
  *
  * @param container_fd
@@ -248,10 +274,12 @@ rte_vfio_container_create(void);
  *    0 if successful
  *   <0 if failed
  */
+__rte_internal
 int
 rte_vfio_container_destroy(int container_fd);
 
 /**
+ * @internal
  * Bind a IOMMU group to a container.
  *
  * @param container_fd
@@ -264,10 +292,12 @@ rte_vfio_container_destroy(int container_fd);
  *   group fd if successful
  *   <0 if failed
  */
+__rte_internal
 int
 rte_vfio_container_group_bind(int container_fd, int iommu_group_num);
 
 /**
+ * @internal
  * Unbind a IOMMU group from a container.
  *
  * @param container_fd
@@ -280,10 +310,12 @@ rte_vfio_container_group_bind(int container_fd, int iommu_group_num);
  *    0 if successful
  *   <0 if failed
  */
+__rte_internal
 int
 rte_vfio_container_group_unbind(int container_fd, int iommu_group_num);
 
 /**
+ * @internal
  * Perform DMA mapping for devices in a container.
  *
  * @param container_fd
@@ -303,11 +335,13 @@ rte_vfio_container_group_unbind(int container_fd, int iommu_group_num);
  *    0 if successful
  *   <0 if failed
  */
+__rte_internal
 int
 rte_vfio_container_dma_map(int container_fd, uint64_t vaddr,
 		uint64_t iova, uint64_t len);
 
 /**
+ * @internal
  * Perform DMA unmapping for devices in a container.
  *
  * @param container_fd
@@ -327,6 +361,7 @@ rte_vfio_container_dma_map(int container_fd, uint64_t vaddr,
  *    0 if successful
  *   <0 if failed
  */
+__rte_internal
 int
 rte_vfio_container_dma_unmap(int container_fd, uint64_t vaddr,
 		uint64_t iova, uint64_t len);
