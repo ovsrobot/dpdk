@@ -28,6 +28,8 @@ extern "C" {
 
 #define RTE_VFIO_DIR "/dev/vfio"
 #define RTE_VFIO_CONTAINER_PATH "/dev/vfio/vfio"
+#define RTE_VFIO_IOMMUFD_PATH "/dev/iommu"
+#define RTE_VFIO_CDEV_DEVICES_PATH "/dev/vfio/devices"
 #define RTE_VFIO_GROUP_FMT "/dev/vfio/%u"
 #define RTE_VFIO_NOIOMMU_GROUP_FMT "/dev/vfio/noiommu-%u"
 #define RTE_VFIO_NOIOMMU_MODE "/sys/module/vfio/parameters/enable_unsafe_noiommu_mode"
@@ -54,6 +56,7 @@ enum rte_vfio_mode {
 	RTE_VFIO_MODE_NONE = 0, /**< VFIO not enabled */
 	RTE_VFIO_MODE_GROUP,    /**< Group mode */
 	RTE_VFIO_MODE_NOIOMMU,  /**< Group mode with no IOMMU protection */
+	RTE_VFIO_MODE_CDEV,     /**< Device mode */
 };
 
 /**
@@ -196,6 +199,33 @@ rte_vfio_get_mode(void);
 __rte_internal
 int
 rte_vfio_get_group_num(const char *sysfs_base, const char *dev_addr, int *iommu_group_num);
+
+/**
+ * @internal
+ * Parse VFIO cdev device number for a device.
+ *
+ * This function is only relevant on Linux in cdev mode.
+ *
+ * @param sysfs_base
+ *   Sysfs path prefix.
+ * @param dev_addr
+ *   Device identifier.
+ * @param vfio_device_num
+ *   Pointer to where VFIO cdev device number will be stored.
+ *
+ * @return
+ *   0 on success.
+ *   <0 on failure, rte_errno is set.
+ *
+ * Possible rte_errno values include:
+ * - ENODEV  - Device not managed by VFIO.
+ * - EINVAL  - Invalid parameters.
+ * - ENXIO   - VFIO support not initialized.
+ * - ENOTSUP - Unsupported VFIO mode.
+ */
+__rte_internal
+int
+rte_vfio_get_device_num(const char *sysfs_base, const char *dev_addr, int *vfio_device_num);
 
 /**
  * @internal
