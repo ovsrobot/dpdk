@@ -41,6 +41,7 @@
 #define ICE_DDP_FILENAME_ARG      "ddp_pkg_file"
 #define ICE_DDP_LOAD_SCHED_ARG    "ddp_load_sched_topo"
 #define ICE_TM_LEVELS_ARG         "tm_sched_levels"
+#define ICE_SOURCE_PRUNE_ARG      "source-prune"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
@@ -58,6 +59,7 @@ static const char * const ice_valid_args[] = {
 	ICE_DDP_FILENAME_ARG,
 	ICE_DDP_LOAD_SCHED_ARG,
 	ICE_TM_LEVELS_ARG,
+	ICE_SOURCE_PRUNE_ARG,
 	ICE_LINK_STATE_ON_CLOSE,
 	NULL
 };
@@ -103,6 +105,8 @@ enum ice_link_state_on_close {
 #define ICE_MAC_E830_MAX_WATERMARK	259103U
 #define ICE_MAC_TC_MAX_WATERMARK	(((hw)->mac_type == ICE_MAC_E830) ?	\
 				ICE_MAC_E830_MAX_WATERMARK : ICE_MAC_E810_MAX_WATERMARK)
+
+#define ICE_RSS_LUT_GLOBAL_QUEUE_NB	64
 
 static int ice_dev_configure(struct rte_eth_dev *dev);
 static int ice_dev_start(struct rte_eth_dev *dev);
@@ -1716,6 +1720,7 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 	uint16_t max_txqs[ICE_MAX_TRAFFIC_CLASS] = { 0 };
 	uint8_t tc_bitmap = 0x1;
 	uint16_t cfg;
+	struct ice_adapter *ad = (struct ice_adapter *)hw->back;
 
 	/* hw->num_lports = 1 in NIC mode */
 	vsi = rte_zmalloc(NULL, sizeof(struct ice_vsi), 0);
@@ -1753,8 +1758,16 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 		 * by ice_init_hw
 		 */
 		vsi_ctx.info.sw_id = hw->port_info->sw_id;
-		vsi_ctx.info.sw_flags = ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
-		vsi_ctx.info.sw_flags |= ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+		/* Source Prune */
+		if (ad->devargs.source_prune != 1) {
+			/* Disable source prune to support VRRP
+			 * when source-prune devarg is not set
+			 */
+			vsi_ctx.info.sw_flags =
+				ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
+			vsi_ctx.info.sw_flags |=
+				ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+		}
 		cfg = ICE_AQ_VSI_PROP_SW_VALID;
 		vsi_ctx.info.valid_sections |= rte_cpu_to_le_16(cfg);
 		vsi_ctx.info.sw_flags2 = ICE_AQ_VSI_SW_FLAG_LAN_ENA;
@@ -2449,6 +2462,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 	if (ret)
 		goto bail;
 
+	ret = rte_kvargs_process(kvlist, ICE_SOURCE_PRUNE_ARG,
+				 &parse_bool, &ad->devargs.source_prune);
+	if (ret)
+		goto bail;
+
 	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_ON_CLOSE,
 				 &parse_link_state_on_close, &ad->devargs.link_state_on_close);
 
@@ -2873,6 +2891,8 @@ ice_dev_stop(struct rte_eth_dev *dev)
 {
 	struct rte_eth_dev_data *data = dev->data;
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct ice_adapter *ad =
+			ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct ice_vsi *main_vsi = pf->main_vsi;
 	struct rte_pci_device *pci_dev = ICE_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
@@ -2892,6 +2912,11 @@ ice_dev_stop(struct rte_eth_dev *dev)
 
 	/* disable all queue interrupts */
 	ice_vsi_disable_queues_intr(main_vsi);
+
+	if (dev->data->dev_conf.txmode.offloads & RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP) {
+		ad->txpp_ena = 0;
+		ice_timesync_disable(dev);
+	}
 
 	if (pf->adapter->devargs.link_state_on_close == ICE_LINK_UP ||
 			(pf->adapter->devargs.link_state_on_close == ICE_LINK_INITIAL &&
@@ -3769,11 +3794,47 @@ static int ice_init_rss(struct ice_pf *pf)
 	for (i = 0; i < vsi->rss_lut_size; i++)
 		vsi->rss_lut[i] = i % nb_q;
 
+	if (nb_q <= ICE_RSS_LUT_GLOBAL_QUEUE_NB && (hw)->mac_type == ICE_MAC_E830) {
+		struct ice_vsi_ctx vsi_ctx;
+		uint16_t global_lut;
+
+		if (!vsi->global_lut_allocated) {
+			ret = ice_alloc_rss_global_lut(hw, false, &global_lut);
+			if (ret)
+				goto out;
+			vsi->global_lut_allocated = true;
+			vsi->global_lut_id = global_lut;
+		}
+		global_lut = vsi->global_lut_id;
+
+		vsi_ctx.flags = ICE_AQ_VSI_TYPE_PF;
+		vsi_ctx.info = vsi->info;
+		vsi_ctx.info.q_opt_rss &= ICE_AQ_VSI_Q_OPT_RSS_LUT_M |
+					ICE_AQ_VSI_Q_OPT_RSS_GBL_LUT_M;
+		vsi_ctx.info.q_opt_rss |= ICE_AQ_VSI_Q_OPT_RSS_LUT_GBL |
+			((global_lut << ICE_AQ_VSI_Q_OPT_RSS_GBL_LUT_S) &
+			 ICE_AQ_VSI_Q_OPT_RSS_GBL_LUT_M);
+
+		vsi_ctx.info.valid_sections =
+			rte_cpu_to_le_16(ICE_AQ_VSI_PROP_Q_OPT_VALID);
+
+		ret = ice_update_vsi(hw, vsi->idx, &vsi_ctx, NULL);
+		if (ret != ICE_SUCCESS) {
+			PMD_INIT_LOG(ERR, "update vsi failed, err = %d", ret);
+			goto out;
+		}
+
+		vsi->info = vsi_ctx.info;
+		lut_params.lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL;
+		lut_params.global_lut_id = global_lut;
+	} else {
+		lut_params.lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF;
+		lut_params.global_lut_id = 0;
+	}
+
 	lut_params.vsi_handle = vsi->idx;
 	lut_params.lut_size = vsi->rss_lut_size;
-	lut_params.lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF;
 	lut_params.lut = vsi->rss_lut;
-	lut_params.global_lut_id = 0;
 	ret = ice_aq_set_rss_lut(hw, &lut_params);
 	if (ret)
 		goto out;
@@ -4431,6 +4492,11 @@ ice_dev_start(struct rte_eth_dev *dev)
 			PMD_DRV_LOG(ERR, "Fail to configure 1pps out");
 			goto rx_err;
 		}
+	}
+
+	if (dev->data->dev_conf.txmode.offloads & RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP) {
+		ice_timesync_enable(dev);
+		ad->txpp_ena = 1;
 	}
 
 	return 0;
@@ -7023,6 +7089,9 @@ ice_timesync_enable(struct rte_eth_dev *dev)
 			ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	int ret;
 
+	if (ad->txpp_ena)
+		return 0;
+
 	if (dev->data->dev_started && !(dev->data->dev_conf.rxmode.offloads &
 	    RTE_ETH_RX_OFFLOAD_TIMESTAMP)) {
 		PMD_DRV_LOG(ERR, "Rx timestamp offload not configured");
@@ -7260,6 +7329,9 @@ ice_timesync_disable(struct rte_eth_dev *dev)
 	uint8_t tmr_idx = hw->func_caps.ts_func_info.tmr_index_assoc;
 	uint64_t val;
 	uint8_t lport;
+
+	if (ad->txpp_ena)
+		return 0;
 
 	lport = hw->port_info->lport;
 
@@ -7659,6 +7731,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_DDP_FILENAME_ARG "=</path/to/file>"
 			      ICE_DDP_LOAD_SCHED_ARG "=<0|1>"
 			      ICE_TM_LEVELS_ARG "=<N>"
+			      ICE_SOURCE_PRUNE_ARG "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
 			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
 

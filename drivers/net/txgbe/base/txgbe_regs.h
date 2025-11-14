@@ -1273,6 +1273,8 @@ enum txgbe_5tuple_protocol {
 #define TXGBE_BMECTL                    0x012020
 #define TXGBE_BMEPEND                   0x000168
 
+#define TXGBE_BME_AML                   0x0004B8
+
 /* P2V Mailbox */
 #define TXGBE_MBMEM(i)           (0x005000 + 0x40 * (i)) /* 0-63 */
 #define TXGBE_MBCTL(i)           (0x000600 + 4 * (i)) /* 0-63 */
@@ -1303,6 +1305,11 @@ enum txgbe_5tuple_protocol {
 #define     TXGBE_VFSTATUS_BW_10G       LS(0x1, 1, 0x7)
 #define     TXGBE_VFSTATUS_BW_1G        LS(0x2, 1, 0x7)
 #define     TXGBE_VFSTATUS_BW_100M      LS(0x4, 1, 0x7)
+#define   TXGBE_VFSTATUS_BW_MASK_AML    MS(1, 0xF)
+#define     TXGBE_VFSTATUS_BW_AML_50G   LS(0x1, 1, 0xF)
+#define     TXGBE_VFSTATUS_BW_AML_40G   LS(0x2, 1, 0xF)
+#define     TXGBE_VFSTATUS_BW_AML_25G   LS(0x4, 1, 0xF)
+#define     TXGBE_VFSTATUS_BW_AML_10G   LS(0x8, 1, 0xF)
 #define   TXGBE_VFSTATUS_BUSY           MS(4, 0x1)
 #define   TXGBE_VFSTATUS_LANID          MS(8, 0x1)
 #define TXGBE_VFRST                     0x000008
@@ -1816,11 +1823,13 @@ txgbe_map_reg(struct txgbe_hw *hw, u32 reg)
 {
 	switch (reg) {
 	case TXGBE_REG_RSSTBL:
-		if (hw->mac.type == txgbe_mac_sp_vf)
+		if (hw->mac.type == txgbe_mac_sp_vf ||
+		    hw->mac.type == txgbe_mac_aml_vf)
 			reg = TXGBE_VFRSSTBL(0);
 		break;
 	case TXGBE_REG_RSSKEY:
-		if (hw->mac.type == txgbe_mac_sp_vf)
+		if (hw->mac.type == txgbe_mac_sp_vf ||
+		    hw->mac.type == txgbe_mac_aml_vf)
 			reg = TXGBE_VFRSSKEY(0);
 		break;
 	default:
@@ -1997,9 +2006,12 @@ static inline void txgbe_flush(struct txgbe_hw *hw)
 {
 	switch (hw->mac.type) {
 	case txgbe_mac_sp:
+	case txgbe_mac_aml:
+	case txgbe_mac_aml40:
 		rd32(hw, TXGBE_PWR);
 		break;
 	case txgbe_mac_sp_vf:
+	case txgbe_mac_aml_vf:
 		rd32(hw, TXGBE_VFSTATUS);
 		break;
 	default:
