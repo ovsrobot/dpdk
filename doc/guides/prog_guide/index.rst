@@ -73,6 +73,7 @@ Device Libraries
     :maxdepth: 1
     :numbered:
 
+    dev_args
     ethdev/index
     link_bonding_poll_mode_drv_lib
     vhost_lib
