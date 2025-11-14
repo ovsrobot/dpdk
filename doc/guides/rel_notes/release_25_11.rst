@@ -115,6 +115,19 @@ New Features
 
   Added network driver for the Huawei SPx series Network Adapters.
 
+* **Updated Intel ice ethernet driver.**
+
+  * Added support for Data Center Bridging (DCB).
+  * Added support for Priority Flow Control (PFC).
+
+* **Updated Marvell cnxk ethernet driver.**
+
+  Added support to set/get link configuration as mentioned below:
+
+  * Get speed capability from firmware.
+  * Report link type, mode and status.
+  * Configure link mode.
+
 * **Added Nebulamatrix nbl ethernet driver.**
 
   Added the PMD for Nebulamatrix NICs.
@@ -122,6 +135,8 @@ New Features
 * **Updated NVIDIA mlx5 driver.**
 
   * Added support for NVIDIA ConnectX-9 SuperNIC adapters.
+  * Added support for count and age flow actions on root tables
+    with HW steering flow engine.
 
 * **Updated NXP DPAA2 ethernet driver.**
 
@@ -131,6 +146,13 @@ New Features
 * **Added NXP ENETC4 ethernet driver.**
 
   Added ENETC4 PMD for multiple new generation SoCs.
+
+* **Updated TAP ethernet driver.**
+
+  * Replaced ioctl-based link control with a Netlink-based implementation.
+  * Linux net devices can now be renamed without breaking link control.
+  * Linux net devices can now be moved to different namespaces
+    without breaking link control (requires Linux >= 5.2).
 
 * **Updated Wangxun txgbe ethernet driver.**
 
@@ -174,6 +196,16 @@ New Features
   Kunpeng SoC has an internal accelerator unit which includes zip function,
   and the zip also supports data copy and fill.
   This driver exposes this capability to DPDK applications.
+
+* **Added RCU support in the FIB6 library.**
+
+  It is now possible to register an RCU QSBR object
+  to handle graceful deletion of table groups.
+
+* **Added packet capture (pdump) for secondary process.**
+
+  Added multi-process support to allow packets sent and received
+  by secondary process to be visible in packet capture.
 
 * **Allow overriding the automatic usage/help generation in argparse library.**
 
@@ -234,6 +266,9 @@ API Changes
 * pcapng: Changed the API for adding interfaces to include a link type argument.
   The link type was previously hardcoded to the Ethernet link type in the API.
   This argument is added to ``rte_pcapng_add_interface``.
+
+* bitmap: Changed the return type of ``rte_bitmap_free()`` to void
+  for consistency with other free functions.
 
 
 ABI Changes

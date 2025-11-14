@@ -889,7 +889,6 @@ txgbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 	tx_offload.data[0] = 0;
 	tx_offload.data[1] = 0;
-	txq = tx_queue;
 	sw_ring = txq->sw_ring;
 	txr     = txq->tx_ring;
 	tx_id   = txq->tx_tail;
@@ -1290,7 +1289,7 @@ rx_desc_status_to_pkt_flags(uint32_t rx_status, uint64_t vlan_flags)
 }
 
 static inline uint64_t
-rx_desc_error_to_pkt_flags(uint32_t rx_status)
+rx_desc_error_to_pkt_flags(uint32_t rx_status, struct txgbe_rx_queue *rxq)
 {
 	uint64_t pkt_flags = 0;
 
@@ -1298,16 +1297,19 @@ rx_desc_error_to_pkt_flags(uint32_t rx_status)
 	if (rx_status & TXGBE_RXD_STAT_IPCS) {
 		pkt_flags |= (rx_status & TXGBE_RXD_ERR_IPCS
 				? RTE_MBUF_F_RX_IP_CKSUM_BAD : RTE_MBUF_F_RX_IP_CKSUM_GOOD);
+		rxq->csum_err += !!(rx_status & TXGBE_RXD_ERR_IPCS);
 	}
 
 	if (rx_status & TXGBE_RXD_STAT_L4CS) {
 		pkt_flags |= (rx_status & TXGBE_RXD_ERR_L4CS
 				? RTE_MBUF_F_RX_L4_CKSUM_BAD : RTE_MBUF_F_RX_L4_CKSUM_GOOD);
+		rxq->csum_err += !!(rx_status & TXGBE_RXD_ERR_L4CS);
 	}
 
 	if (rx_status & TXGBE_RXD_STAT_EIPCS &&
 	    rx_status & TXGBE_RXD_ERR_EIPCS) {
 		pkt_flags |= RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD;
+		rxq->csum_err += !!(rx_status & TXGBE_RXD_ERR_EIPCS);
 	}
 
 #ifdef RTE_LIB_SECURITY
@@ -1389,7 +1391,7 @@ txgbe_rx_scan_hw_ring(struct txgbe_rx_queue *rxq)
 			/* convert descriptor fields to rte mbuf flags */
 			pkt_flags = rx_desc_status_to_pkt_flags(s[j],
 					rxq->vlan_flags);
-			pkt_flags |= rx_desc_error_to_pkt_flags(s[j]);
+			pkt_flags |= rx_desc_error_to_pkt_flags(s[j], rxq);
 			pkt_flags |=
 				txgbe_rxd_pkt_info_to_pkt_flags(pkt_info[j]);
 			mb->ol_flags = pkt_flags;
@@ -1728,7 +1730,7 @@ txgbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 		pkt_flags = rx_desc_status_to_pkt_flags(staterr,
 					rxq->vlan_flags);
-		pkt_flags |= rx_desc_error_to_pkt_flags(staterr);
+		pkt_flags |= rx_desc_error_to_pkt_flags(staterr, rxq);
 		pkt_flags |= txgbe_rxd_pkt_info_to_pkt_flags(pkt_info);
 		rxm->ol_flags = pkt_flags;
 		rxm->packet_type = txgbe_rxd_pkt_info_to_pkt_type(pkt_info,
@@ -1804,7 +1806,7 @@ txgbe_fill_cluster_head_buf(struct rte_mbuf *head, struct txgbe_rx_desc *desc,
 	head->vlan_tci = rte_le_to_cpu_16(desc->qw1.hi.tag);
 	pkt_info = rte_le_to_cpu_32(desc->qw0.dw0);
 	pkt_flags = rx_desc_status_to_pkt_flags(staterr, rxq->vlan_flags);
-	pkt_flags |= rx_desc_error_to_pkt_flags(staterr);
+	pkt_flags |= rx_desc_error_to_pkt_flags(staterr, rxq);
 	pkt_flags |= txgbe_rxd_pkt_info_to_pkt_flags(pkt_info);
 	if (TXGBE_RXD_RSCCNT(desc->qw0.dw0))
 		pkt_flags |= RTE_MBUF_F_RX_LRO;
@@ -2518,13 +2520,9 @@ txgbe_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	if (txq == NULL)
 		return -ENOMEM;
 
-	/*
-	 * Allocate TX ring hardware descriptors. A memzone large enough to
-	 * handle the maximum ring size is allocated in order to allow for
-	 * resizing in later calls to the queue setup function.
-	 */
+	/* Allocate TX ring hardware descriptors. */
 	tz = rte_eth_dma_zone_reserve(dev, "tx_ring", queue_idx,
-			sizeof(struct txgbe_tx_desc) * TXGBE_RING_DESC_MAX,
+			sizeof(struct txgbe_tx_desc) * nb_desc,
 			TXGBE_ALIGN, socket_id);
 	if (tz == NULL) {
 		txgbe_tx_queue_release(txq);
@@ -2753,6 +2751,7 @@ txgbe_reset_rx_queue(struct txgbe_adapter *adapter, struct txgbe_rx_queue *rxq)
 	rxq->rx_free_trigger = (uint16_t)(rxq->rx_free_thresh - 1);
 	rxq->rx_tail = 0;
 	rxq->nb_rx_hold = 0;
+	rxq->csum_err = 0;
 	rte_pktmbuf_free(rxq->pkt_first_seg);
 	rxq->pkt_first_seg = NULL;
 	rxq->pkt_last_seg = NULL;
@@ -2777,6 +2776,7 @@ txgbe_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	uint16_t len;
 	struct txgbe_adapter *adapter = TXGBE_DEV_ADAPTER(dev);
 	uint64_t offloads;
+	uint32_t size;
 
 	PMD_INIT_FUNC_TRACE();
 	hw = TXGBE_DEV_HW(dev);
@@ -2827,13 +2827,10 @@ txgbe_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	 */
 	rxq->pkt_type_mask = TXGBE_PTID_MASK;
 
-	/*
-	 * Allocate RX ring hardware descriptors. A memzone large enough to
-	 * handle the maximum ring size is allocated in order to allow for
-	 * resizing in later calls to the queue setup function.
-	 */
+	/* Allocate RX ring hardware descriptors. */
+	size = (nb_desc + RTE_PMD_TXGBE_RX_MAX_BURST) * sizeof(struct txgbe_rx_desc);
 	rz = rte_eth_dma_zone_reserve(dev, "rx_ring", queue_idx,
-				      RX_RING_SZ, TXGBE_ALIGN, socket_id);
+				      size, TXGBE_ALIGN, socket_id);
 	if (rz == NULL) {
 		txgbe_rx_queue_release(rxq);
 		return -ENOMEM;
@@ -2843,7 +2840,7 @@ txgbe_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	/*
 	 * Zero init all the descriptors in the ring.
 	 */
-	memset(rz->addr, 0, RX_RING_SZ);
+	memset(rz->addr, 0, size);
 
 	/*
 	 * Modified to setup VFRDT for Virtual Function
@@ -5258,7 +5255,7 @@ txgbevf_dev_rx_init(struct rte_eth_dev *dev)
 		 */
 		buf_size = (uint16_t)(rte_pktmbuf_data_room_size(rxq->mb_pool) -
 			RTE_PKTMBUF_HEADROOM);
-		buf_size = ROUND_UP(buf_size, 1 << 10);
+		buf_size = ROUND_DOWN(buf_size, 1 << 10);
 		srrctl |= TXGBE_RXCFG_PKTLEN(buf_size);
 
 		/*
