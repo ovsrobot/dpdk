@@ -2483,6 +2483,18 @@ and it should be allowed to specify zero values as parameters
 for the META and MARK flow items and actions.
 In the same time, zero mask has no meaning and should be rejected on validation stage.
 
+Starting from firmware version 47.0274,
+if :ref:`switchdev mode <mlx5_switchdev>` was enabled,
+flow metadata can be shared between flows in FDB and VF domains:
+
+* If metadata was attached to FDB flow
+  and that flow transferred incoming packet to a VF,
+  representor, ingress flow bound to the VF can match the metadata.
+
+* If metadata was attached to VF egress flow, FDB flow can match the metadata.
+
+The metadata sharing functionality is controlled with firmware configuration.
+
 Requirements
 ^^^^^^^^^^^^
 
@@ -2689,19 +2701,27 @@ DPDK       19.05         19.02          21.05                    21.05
 Limitations
 ^^^^^^^^^^^
 
-Because freeing a counter (by destroying a flow rule or destroying indirect action)
-does not immediately make it available for the application,
-the PMD might return:
+With :ref:`HW steering <mlx5_hws>`:
 
-- ``ENOENT`` if no counter is available in ``free``, ``reuse``
-  or ``wait_reset`` rings.
-  No counter will be available until the application releases some of them.
-- ``EAGAIN`` if no counter is available in ``free`` and ``reuse`` rings,
-  but there are counters in ``wait_reset`` ring.
-  This means that after the next service thread cycle new counters will be available.
+#. Because freeing a counter (by destroying a flow rule or destroying indirect action)
+   does not immediately make it available for the application,
+   the PMD might return:
 
-The application has to be aware that flow rule create or indirect action create
-might need be retried.
+   - ``ENOENT`` if no counter is available in ``free``, ``reuse``
+     or ``wait_reset`` rings.
+     No counter will be available until the application releases some of them.
+   - ``EAGAIN`` if no counter is available in ``free`` and ``reuse`` rings,
+     but there are counters in ``wait_reset`` ring.
+     This means that after the next service thread cycle,
+     new counters will be available.
+
+   The application has to be aware that flow rule or indirect action creation
+   might need to be retried.
+
+#. Using count action on root tables requires:
+
+   - Linux kernel >= 6.4
+   - rdma-core >= 60.0
 
 
 .. _mlx5_age:
@@ -2744,6 +2764,11 @@ With :ref:`HW steering <mlx5_hws>`,
 #. With strict queueing enabled
    (``RTE_FLOW_PORT_FLAG_STRICT_QUEUE`` passed to ``rte_flow_configure()``),
    indirect age actions can be created only through asynchronous flow API.
+
+#. Using age action on root tables requires:
+
+   - Linux kernel >= 6.4
+   - rdma-core >= 60.0
 
 
 .. _mlx5_quota:
@@ -3074,7 +3099,28 @@ DPDK       21.02
 Limitations
 ^^^^^^^^^^^
 
-#. Supports the 'set' and 'add' operations for ``RTE_FLOW_ACTION_TYPE_MODIFY_FIELD`` action.
+#. Supports the 'set' operation for ``RTE_FLOW_ACTION_TYPE_MODIFY_FIELD`` in all flow engines.
+
+#. Supports the 'add' operation with 'src' field
+   of type ``RTE_FLOW_FIELD_VALUE`` or ``RTE_FLOW_FIELD_POINTER``
+   with both :ref:`HW steering <mlx5_hws>` and DV flow engine (``dv_flow_en=1``).
+
+   HW steering flow engine, starting with ConnectX-7 and BlueField-3,
+   supports packet header fields in 'src' field.
+
+   'dst' field can be any of the following:
+
+   - ``RTE_FLOW_FIELD_IPV4_TTL``
+   - ``RTE_FLOW_FIELD_IPV6_HOPLIMIT``
+   - ``RTE_FLOW_FIELD_TCP_SEQ_NUM``
+   - ``RTE_FLOW_FIELD_TCP_ACK_NUM``
+   - ``RTE_FLOW_FIELD_TAG``
+   - ``RTE_FLOW_FIELD_META``
+   - ``RTE_FLOW_FIELD_FLEX_ITEM``
+   - ``RTE_FLOW_FIELD_TCP_DATA_OFFSET``
+   - ``RTE_FLOW_FIELD_IPV4_IHL``
+   - ``RTE_FLOW_FIELD_IPV4_TOTAL_LEN``
+   - ``RTE_FLOW_FIELD_IPV6_PAYLOAD_LEN``
 
 #. In template tables of group 0, the modify action must be fully masked.
 
