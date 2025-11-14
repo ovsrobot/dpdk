@@ -429,37 +429,6 @@ vfio_device_erase(struct container *cfg, struct vfio_device *dev)
 	cfg->n_devices--;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_group_fd)
-int
-rte_vfio_get_group_fd(int iommu_group_num)
-{
-	struct container *cfg;
-	struct vfio_group *grp;
-
-	if (vfio_cfg.mode == RTE_VFIO_MODE_NONE) {
-		EAL_LOG(ERR, "VFIO support not initialized");
-		rte_errno = ENXIO;
-		return -1;
-	}
-	if (vfio_cfg.mode != RTE_VFIO_MODE_GROUP &&
-			vfio_cfg.mode != RTE_VFIO_MODE_NOIOMMU) {
-		EAL_LOG(ERR, "VFIO not initialized in group mode");
-		rte_errno = ENOTSUP;
-		return -1;
-	}
-
-	CONTAINER_FOREACH_ACTIVE(cfg) {
-		GROUP_FOREACH_ACTIVE(cfg, grp)
-			if (grp->group_num == iommu_group_num)
-				return grp->fd;
-	}
-
-	/* group doesn't exist */
-	EAL_LOG(ERR, "IOMMU group %d not bound to any VFIO container", iommu_group_num);
-	rte_errno = ENOENT;
-	return -1;
-}
-
 static void
 vfio_mem_event_callback(enum rte_mem_event type, const void *addr, size_t len,
 		void *arg __rte_unused)
@@ -506,48 +475,6 @@ next:
 		cur_len += ms->len;
 		++ms;
 	}
-}
-
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_clear_group)
-int
-rte_vfio_clear_group(int vfio_group_fd)
-{
-	struct container *cfg;
-	struct vfio_group *grp;
-	struct vfio_device *dev;
-
-	if (vfio_cfg.mode == RTE_VFIO_MODE_NONE) {
-		EAL_LOG(ERR, "VFIO support not initialized");
-		rte_errno = ENXIO;
-		return -1;
-	}
-
-	if (vfio_cfg.mode != RTE_VFIO_MODE_GROUP &&
-			vfio_cfg.mode != RTE_VFIO_MODE_NOIOMMU) {
-		EAL_LOG(ERR, "VFIO not initialized in group mode");
-		rte_errno = ENOTSUP;
-		return -1;
-	}
-
-	/* find our group */
-	CONTAINER_FOREACH_ACTIVE(cfg) {
-		GROUP_FOREACH_ACTIVE(cfg, grp) {
-			if (grp->fd != vfio_group_fd)
-				continue;
-			/* clear out all devices within this group */
-			DEVICE_FOREACH_ACTIVE(cfg, dev) {
-				if (dev->group != grp->group_num)
-					continue;
-				vfio_device_erase(cfg, dev);
-			}
-			/* clear out group itself */
-			vfio_group_erase(cfg, grp);
-			return 0;
-		}
-	}
-
-	rte_errno = ENOENT;
-	return -1;
 }
 
 static int
@@ -1385,13 +1312,6 @@ out:
 	return ret;
 }
 
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_noiommu_is_enabled)
-int
-rte_vfio_noiommu_is_enabled(void)
-{
-	return vfio_cfg.mode == RTE_VFIO_MODE_NOIOMMU;
-}
-
 RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_create)
 int
 rte_vfio_container_create(void)
@@ -1490,111 +1410,6 @@ rte_vfio_container_destroy(int container_fd)
 
 	/* erase entire config */
 	vfio_container_erase(cfg);
-
-	return 0;
-}
-
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_group_bind)
-int
-rte_vfio_container_group_bind(int container_fd, int iommu_group_num)
-{
-	struct container *cfg;
-	struct vfio_group *grp;
-	int ret;
-
-	if (vfio_cfg.mode == RTE_VFIO_MODE_NONE) {
-		EAL_LOG(ERR, "VFIO support not initialized");
-		rte_errno = ENXIO;
-		return -1;
-	}
-	if (vfio_cfg.mode != RTE_VFIO_MODE_GROUP && vfio_cfg.mode != RTE_VFIO_MODE_NOIOMMU) {
-		EAL_LOG(ERR, "VFIO not initialized in group mode");
-		rte_errno = ENOTSUP;
-		return -1;
-	}
-
-	cfg = vfio_container_get_by_fd(container_fd);
-	if (cfg == NULL) {
-		EAL_LOG(ERR, "Invalid VFIO container fd");
-		rte_errno = EINVAL;
-		return -1;
-	}
-
-	/* does the group already exist and already bound? */
-	grp = vfio_group_get_by_num(cfg, iommu_group_num);
-	if (grp != NULL)
-		return 0;
-
-	/* group doesn't exist, create it */
-	grp = vfio_group_create(cfg, iommu_group_num);
-	if (grp == NULL) {
-		EAL_LOG(ERR, "Failed to bind VFIO group %d", iommu_group_num);
-		rte_errno = ENOSPC;
-		return -1;
-	}
-
-	/* group created, now open fd */
-	ret = vfio_group_open_fd(cfg, grp);
-	if (ret == -ENOENT) {
-		EAL_LOG(ERR, "IOMMU group %d not managed by VFIO", iommu_group_num);
-		vfio_group_erase(cfg, grp);
-		rte_errno = ENODEV;
-		return -1;
-	} else if (ret < 0) {
-		EAL_LOG(ERR, "Cannot open VFIO group %d", iommu_group_num);
-		rte_errno = errno;
-		vfio_group_erase(cfg, grp);
-		return -1;
-	}
-
-	/* we're done */
-	return 0;
-}
-
-RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_container_group_unbind)
-int
-rte_vfio_container_group_unbind(int container_fd, int iommu_group_num)
-{
-	struct container *cfg;
-	struct vfio_group *grp;
-	struct vfio_device *dev;
-
-	if (vfio_cfg.mode == RTE_VFIO_MODE_NONE) {
-		EAL_LOG(ERR, "VFIO support not initialized");
-		rte_errno = ENODEV;
-		return -1;
-	}
-
-	if (vfio_cfg.mode != RTE_VFIO_MODE_GROUP && vfio_cfg.mode != RTE_VFIO_MODE_NOIOMMU) {
-		EAL_LOG(ERR, "VFIO not initialized in group mode");
-		rte_errno = ENOTSUP;
-		return -1;
-	}
-
-	/* find container */
-	cfg = vfio_container_get_by_fd(container_fd);
-	if (cfg == NULL) {
-		EAL_LOG(ERR, "Invalid VFIO container fd");
-		rte_errno = EINVAL;
-		return -1;
-	}
-
-	/* find the group */
-	grp = vfio_group_get_by_num(cfg, iommu_group_num);
-	if (grp == NULL) {
-		EAL_LOG(ERR, "VFIO group %d not found in container", iommu_group_num);
-		rte_errno = ENOENT;
-		return -1;
-	}
-
-	/* remove all devices from this group */
-	DEVICE_FOREACH_ACTIVE(cfg, dev) {
-		if (dev->group != grp->group_num)
-			continue;
-		vfio_device_erase(cfg, dev);
-	}
-
-	vfio_group_erase(cfg, grp);
 
 	return 0;
 }

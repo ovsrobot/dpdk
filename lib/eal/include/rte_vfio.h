@@ -172,42 +172,6 @@ rte_vfio_get_mode(void);
 
 /**
  * @internal
- * Check if VFIO NOIOMMU mode is enabled.
- *
- * This function is only relevant on Linux in group mode.
- *
- * @return
- *   1 if enabled.
- *   0 if not enabled or not supported.
- */
-__rte_internal
-int
-rte_vfio_noiommu_is_enabled(void);
-
-/**
- * @internal
- * Remove group fd from internal VFIO tracking.
- *
- * This function is only relevant on Linux in group mode.
- *
- * @param vfio_group_fd
- *   VFIO group fd.
- *
- * @return
- *   0 on success.
- *   <0 on failure, rte_errno is set.
- *
- * Possible rte_errno values include:
- * - ENOENT  - Group not found.
- * - ENXIO   - VFIO support not initialized.
- * - ENOTSUP - Unsupported VFIO mode.
- */
-__rte_internal
-int
-rte_vfio_clear_group(int vfio_group_fd);
-
-/**
- * @internal
  * Parse IOMMU group number for a device.
  *
  * This function is only relevant on Linux in group mode.
@@ -278,28 +242,6 @@ rte_vfio_get_device_info(int vfio_dev_fd, struct vfio_device_info *device_info);
 __rte_internal
 int
 rte_vfio_get_container_fd(void);
-
-/**
- * @internal
- * Return file descriptor for an open VFIO group.
- *
- * This function is only relevant on Linux in group mode.
- *
- * @param iommu_group_num
- *   IOMMU group number.
- *
- * @return
- *   Non-negative group file descriptor on success.
- *   <0 on failure, rte_errno is set.
- *
- * Possible rte_errno values include:
- * - ENOENT  - Group not found.
- * - ENXIO   - VFIO support not initialized.
- * - ENOTSUP - Unsupported VFIO mode.
- */
-__rte_internal
-int
-rte_vfio_get_group_fd(int iommu_group_num);
 
 /**
  * @internal
@@ -386,58 +328,6 @@ __rte_internal
 int
 rte_vfio_container_assign_device(int vfio_container_fd,
 		const char *sysfs_base, const char *dev_addr);
-
-/**
- * @internal
- * Bind an IOMMU group to a container.
- *
- * This function is only relevant on Linux in group mode.
- *
- * @param container_fd
- *   Container file descriptor.
- * @param iommu_group_num
- *   IOMMU group number to bind to container.
- *
- * @return
- *   0 on success.
- *   <0 on failure, rte_errno is set.
- *
- * Possible rte_errno values include:
- * - ENODEV  - IOMMU group not managed by VFIO.
- * - ENOSPC  - No space in VFIO container to track the group.
- * - EINVAL  - Invalid container file descriptor.
- * - ENXIO   - VFIO support not initialized.
- * - ENOTSUP - Unsupported VFIO mode.
- */
-__rte_internal
-int
-rte_vfio_container_group_bind(int container_fd, int iommu_group_num);
-
-/**
- * @internal
- * Unbind an IOMMU group from a container.
- *
- * This function is only relevant on Linux in group mode.
- *
- * @param container_fd
- *   Container file descriptor.
- * @param iommu_group_num
- *   IOMMU group number to unbind from container.
- *
- * @return
- *   0 on success.
- *   <0 on failure, rte_errno is set.
- *
- * Possible rte_errno values include:
- * - ENOENT  - VFIO group not found in container.
- * - ENODEV  - Container not managed by VFIO.
- * - EINVAL  - Invalid container file descriptor.
- * - ENXIO   - VFIO support not initialized.
- * - ENOTSUP - Unsupported VFIO mode.
- */
-__rte_internal
-int
-rte_vfio_container_group_unbind(int container_fd, int iommu_group_num);
 
 /**
  * @internal
