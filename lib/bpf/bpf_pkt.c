@@ -157,13 +157,16 @@ bpf_eth_cbh_add(struct bpf_eth_cbh *cbh, uint16_t port, uint16_t queue)
 /*
  * BPF packet processing routines.
  */
+#define BPF_FILTER_BURST	32u
 
 static inline uint32_t
 apply_filter(struct rte_mbuf *mb[], const uint64_t rc[], uint32_t num,
 	uint32_t drop)
 {
 	uint32_t i, j, k;
-	struct rte_mbuf *dr[num];
+	struct rte_mbuf *dr[BPF_FILTER_BURST];
+
+	RTE_ASSERT(num <= BPF_FILTER_BURST);
 
 	for (i = 0, j = 0, k = 0; i != num; i++) {
 
@@ -177,8 +180,7 @@ apply_filter(struct rte_mbuf *mb[], const uint64_t rc[], uint32_t num,
 
 	if (drop != 0) {
 		/* free filtered out mbufs */
-		for (i = 0; i != k; i++)
-			rte_pktmbuf_free(dr[i]);
+		rte_pktmbuf_free_bulk(dr, k);
 	} else {
 		/* copy filtered out mbufs beyond good ones */
 		for (i = 0; i != k; i++)
@@ -192,65 +194,75 @@ static inline uint32_t
 pkt_filter_vm(const struct rte_bpf *bpf, struct rte_mbuf *mb[], uint32_t num,
 	uint32_t drop)
 {
-	uint32_t i;
-	void *dp[num];
-	uint64_t rc[num];
+	uint32_t matched = 0;
 
-	for (i = 0; i != num; i++)
-		dp[i] = rte_pktmbuf_mtod(mb[i], void *);
+	for (uint32_t i = 0; i < num; i += BPF_FILTER_BURST) {
+		uint32_t burst_sz = RTE_MIN(num, BPF_FILTER_BURST);
+		void *dp[BPF_FILTER_BURST];
+		uint64_t rc[BPF_FILTER_BURST];
 
-	rte_bpf_exec_burst(bpf, dp, rc, num);
-	return apply_filter(mb, rc, num, drop);
+		for (uint32_t j = 0; j < burst_sz; j++)
+			dp[j] = rte_pktmbuf_mtod(mb[i + j], void *);
+
+		rte_bpf_exec_burst(bpf, dp, rc, burst_sz);
+		matched += apply_filter(mb + i, rc, burst_sz, drop);
+	}
+	return matched;
 }
 
 static inline uint32_t
 pkt_filter_jit(const struct rte_bpf_jit *jit, struct rte_mbuf *mb[],
 	uint32_t num, uint32_t drop)
 {
-	uint32_t i, n;
-	void *dp;
-	uint64_t rc[num];
+	uint32_t matched = 0;
 
-	n = 0;
-	for (i = 0; i != num; i++) {
-		dp = rte_pktmbuf_mtod(mb[i], void *);
-		rc[i] = jit->func(dp);
-		n += (rc[i] == 0);
+	for (uint32_t i = 0; i < num; i += BPF_FILTER_BURST) {
+		uint32_t burst_sz = RTE_MIN(num, BPF_FILTER_BURST);
+		uint64_t rc[BPF_FILTER_BURST];
+
+		for (uint32_t j = 0; j < burst_sz; j++) {
+			void *dp = rte_pktmbuf_mtod(mb[i + j], void *);
+
+			rc[j] = jit->func(dp);
+		}
+
+		matched += apply_filter(mb + i, rc, burst_sz, drop);
 	}
-
-	if (n != 0)
-		num = apply_filter(mb, rc, num, drop);
-
-	return num;
+	return matched;
 }
 
 static inline uint32_t
 pkt_filter_mb_vm(const struct rte_bpf *bpf, struct rte_mbuf *mb[], uint32_t num,
 	uint32_t drop)
 {
-	uint64_t rc[num];
+	uint32_t matched = 0;
 
-	rte_bpf_exec_burst(bpf, (void **)mb, rc, num);
-	return apply_filter(mb, rc, num, drop);
+	for (uint32_t i = 0; i < num; i += BPF_FILTER_BURST) {
+		uint32_t burst_sz = RTE_MIN(num, BPF_FILTER_BURST);
+		uint64_t rc[BPF_FILTER_BURST];
+
+		rte_bpf_exec_burst(bpf, (void **)mb, rc, burst_sz);
+		matched += apply_filter(mb + i, rc, burst_sz, drop);
+	}
+	return matched;
 }
 
 static inline uint32_t
 pkt_filter_mb_jit(const struct rte_bpf_jit *jit, struct rte_mbuf *mb[],
 	uint32_t num, uint32_t drop)
 {
-	uint32_t i, n;
-	uint64_t rc[num];
+	uint32_t matched = 0;
 
-	n = 0;
-	for (i = 0; i != num; i++) {
-		rc[i] = jit->func(mb[i]);
-		n += (rc[i] == 0);
+	for (uint32_t i = 0; i < num; i += BPF_FILTER_BURST) {
+		uint32_t burst_sz = RTE_MIN(num, BPF_FILTER_BURST);
+		uint64_t rc[BPF_FILTER_BURST];
+
+		for (uint32_t j = 0; j < burst_sz; j++)
+			rc[j] = jit->func(mb[i + j]);
+
+		matched += apply_filter(mb + i, rc, burst_sz, drop);
 	}
-
-	if (n != 0)
-		num = apply_filter(mb, rc, num, drop);
-
-	return num;
+	return matched;
 }
 
 /*
