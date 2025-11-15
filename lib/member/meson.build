@@ -20,7 +20,7 @@ sources = files(
 
 deps += ['hash', 'ring']
 
-# compile AVX512 version if we have avx512 on MSVC or the 'ifma' flag on GCC/Clang
+sources_avx2 += files('member_avx2.c')
 if dpdk_conf.has('RTE_ARCH_X86_64')
     if is_ms_compiler
         sources_avx512 += files('rte_member_sketch_avx512.c')

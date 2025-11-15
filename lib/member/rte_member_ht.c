@@ -14,7 +14,7 @@
 #include "rte_member.h"
 #include "rte_member_ht.h"
 
-#if defined(RTE_ARCH_X86)
+#ifdef RTE_ARCH_X86
 #include "rte_member_x86.h"
 #endif
 
@@ -114,7 +114,7 @@ rte_member_create_ht(struct rte_member_setsum *ss,
 		for (j = 0; j < RTE_MEMBER_BUCKET_ENTRIES; j++)
 			buckets[i].sets[j] = RTE_MEMBER_NO_MATCH;
 	}
-#if defined(RTE_ARCH_X86)
+#ifdef RTE_ARCH_X86
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) &&
 			RTE_MEMBER_BUCKET_ENTRIES == 16 &&
 			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_256)
@@ -180,7 +180,7 @@ rte_member_lookup_ht(const struct rte_member_setsum *ss,
 	get_buckets_index(ss, key, &prim_bucket, &sec_bucket, &tmp_sig);
 
 	switch (ss->sig_cmp_fn) {
-#if defined(RTE_ARCH_X86) && defined(__AVX2__)
+#ifdef RTE_ARCH_X86
 	case RTE_MEMBER_COMPARE_AVX2:
 		if (search_bucket_single_avx(prim_bucket, tmp_sig, buckets,
 				set_id) ||
@@ -220,7 +220,7 @@ rte_member_lookup_bulk_ht(const struct rte_member_setsum *ss,
 
 	for (i = 0; i < num_keys; i++) {
 		switch (ss->sig_cmp_fn) {
-#if defined(RTE_ARCH_X86) && defined(__AVX2__)
+#ifdef RTE_ARCH_X86
 		case RTE_MEMBER_COMPARE_AVX2:
 			if (search_bucket_single_avx(prim_buckets[i],
 					tmp_sig[i], buckets, &set_id[i]) ||
@@ -257,7 +257,7 @@ rte_member_lookup_multi_ht(const struct rte_member_setsum *ss,
 	get_buckets_index(ss, key, &prim_bucket, &sec_bucket, &tmp_sig);
 
 	switch (ss->sig_cmp_fn) {
-#if defined(RTE_ARCH_X86) && defined(__AVX2__)
+#ifdef RTE_ARCH_X86
 	case RTE_MEMBER_COMPARE_AVX2:
 		search_bucket_multi_avx(prim_bucket, tmp_sig, buckets,
 			&num_matches, match_per_key, set_id);
@@ -300,7 +300,7 @@ rte_member_lookup_multi_bulk_ht(const struct rte_member_setsum *ss,
 		match_cnt_tmp = 0;
 
 		switch (ss->sig_cmp_fn) {
-#if defined(RTE_ARCH_X86) && defined(__AVX2__)
+#ifdef RTE_ARCH_X86
 		case RTE_MEMBER_COMPARE_AVX2:
 			search_bucket_multi_avx(prim_buckets[i], tmp_sig[i],
 				buckets, &match_cnt_tmp, match_per_key,
@@ -361,7 +361,7 @@ try_update(struct member_ht_bucket *buckets, uint32_t prim, uint32_t sec,
 		enum rte_member_sig_compare_function cmp_fn)
 {
 	switch (cmp_fn) {
-#if defined(RTE_ARCH_X86) && defined(__AVX2__)
+#ifdef RTE_ARCH_X86
 	case RTE_MEMBER_COMPARE_AVX2:
 		if (update_entry_search_avx(prim, sig, buckets, set_id) ||
 				update_entry_search_avx(sec, sig, buckets,
