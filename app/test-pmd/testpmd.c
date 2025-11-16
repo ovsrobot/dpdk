@@ -2247,6 +2247,7 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 #endif
 	fsm = &fwd_streams[fc->stream_idx];
 	nb_fs = fc->stream_nb;
+_resume:
 	prev_tsc = rte_rdtsc();
 	do {
 		for (sm_id = 0; sm_id < nb_fs; sm_id++) {
@@ -2287,6 +2288,10 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 			prev_tsc = tsc;
 		}
 	} while (! fc->stopped);
+	while (fc->stopped == 2)
+		rte_pause();
+	if (fc->stopped == 0)
+		goto _resume;
 }
 
 static int
