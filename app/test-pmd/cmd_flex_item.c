@@ -134,6 +134,7 @@ flex_link_item_parse(const char *src, struct rte_flow_item *item)
 	struct rte_flow_attr *attr;
 	struct rte_flow_item *pattern;
 	struct rte_flow_action *actions;
+	size_t sz = 0;
 
 	sprintf(flow_rule,
 		"flow create 0 pattern %s / end actions drop / end", src);
@@ -143,21 +144,24 @@ flex_link_item_parse(const char *src, struct rte_flow_item *item)
 	if (ret)
 		return ret;
 	item->type = pattern->type;
+	ret = rte_flow_conv(RTE_FLOW_CONV_OP_ITEM_MASK, NULL, 0, item, NULL);
+	if (ret > 0)
+		sz = ret;
 	if (pattern->spec) {
 		ptr = (void *)(uintptr_t)item->spec;
-		memcpy(ptr, pattern->spec, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		memcpy(ptr, pattern->spec, sz);
 	} else {
 		item->spec = NULL;
 	}
 	if (pattern->mask) {
 		ptr = (void *)(uintptr_t)item->mask;
-		memcpy(ptr, pattern->mask, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		memcpy(ptr, pattern->mask, sz);
 	} else {
 		item->mask = NULL;
 	}
 	if (pattern->last) {
 		ptr = (void *)(uintptr_t)item->last;
-		memcpy(ptr, pattern->last, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		memcpy(ptr, pattern->last, sz);
 	} else {
 		item->last = NULL;
 	}
