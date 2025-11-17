@@ -676,6 +676,7 @@ mlx5_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	uint16_t kern_mtu = 0;
+	unsigned int i;
 	int ret;
 
 	ret = mlx5_get_mtu(dev, &kern_mtu);
@@ -684,6 +685,17 @@ mlx5_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 
 	if (kern_mtu == mtu) {
 		priv->mtu = mtu;
+		/*
+		 * Update the MTU stored in RX queue control structures.
+		 * This is necessary for shared RX queues to correctly match
+		 * the MTU when ports try to join the shared group.
+		 */
+		for (i = 0; i < priv->rxqs_n; i++) {
+			struct mlx5_rxq_priv *rxq = mlx5_rxq_get(dev, i);
+
+			if (rxq != NULL && rxq->ctrl != NULL)
+				rxq->ctrl->mtu = mtu;
+		}
 		DRV_LOG(DEBUG, "port %u adapter MTU was already set to %u",
 			dev->data->port_id, mtu);
 		return 0;
@@ -698,6 +710,17 @@ mlx5_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 		return ret;
 	if (kern_mtu == mtu) {
 		priv->mtu = mtu;
+		/*
+		 * Update the MTU stored in RX queue control structures.
+		 * This is necessary for shared RX queues to correctly match
+		 * the MTU when ports try to join the shared group.
+		 */
+		for (i = 0; i < priv->rxqs_n; i++) {
+			struct mlx5_rxq_priv *rxq = mlx5_rxq_get(dev, i);
+
+			if (rxq != NULL && rxq->ctrl != NULL)
+				rxq->ctrl->mtu = mtu;
+		}
 		DRV_LOG(DEBUG, "port %u adapter MTU set to %u",
 			dev->data->port_id, mtu);
 		return 0;
