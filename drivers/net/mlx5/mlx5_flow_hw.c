@@ -3843,6 +3843,10 @@ flow_hw_get_rule_items(struct rte_eth_dev *dev,
 		       struct mlx5_flow_hw_pattern_params *pp)
 {
 	struct rte_flow_pattern_template *pt = table->its[pattern_template_index];
+	struct mlx5_rte_flow_item_tag mlx5_tag = {
+			.id = REG_C_0, /* vport_meta_tag is using C_0 */
+			.data = flow_hw_tx_tag_regc_value(dev),
+		};
 
 	/* Only one implicit item can be added to flow rule pattern. */
 	MLX5_ASSERT(!pt->implicit_port || !pt->implicit_tag);
@@ -3854,7 +3858,7 @@ flow_hw_get_rule_items(struct rte_eth_dev *dev,
 			return NULL;
 		}
 		/* Set up represented port item in pattern params. */
-		pp->port_spec = (struct rte_flow_item_ethdev){
+		pp->port_spec = (struct rte_flow_item_ethdev) {
 			.port_id = dev->data->port_id,
 		};
 		pp->items[0] = (struct rte_flow_item){
@@ -3869,12 +3873,10 @@ flow_hw_get_rule_items(struct rte_eth_dev *dev,
 			return NULL;
 		}
 		/* Set up tag item in pattern params. */
-		pp->tag_spec = (struct rte_flow_item_tag){
-			.data = flow_hw_tx_tag_regc_value(dev),
-		};
-		pp->items[0] = (struct rte_flow_item){
+		rte_memcpy(pp->mlx5_tag_spec, &mlx5_tag, sizeof(struct mlx5_rte_flow_item_tag));
+		pp->items[0] = (struct rte_flow_item) {
 			.type = (enum rte_flow_item_type)MLX5_RTE_FLOW_ITEM_TYPE_TAG,
-			.spec = &pp->tag_spec,
+			.spec = (const void *)&pp->mlx5_tag_spec,
 		};
 		rte_memcpy(&pp->items[1], items, sizeof(*items) * pt->orig_item_nb);
 		return pp->items;
@@ -8558,21 +8560,21 @@ __flow_hw_pattern_validate(struct rte_eth_dev *dev,
 		}
 		case MLX5_RTE_FLOW_ITEM_TYPE_TAG:
 		{
-			const struct rte_flow_item_tag *tag =
-				(const struct rte_flow_item_tag *)item->spec;
+			const struct mlx5_rte_flow_item_tag *mlx5_tag =
+				(const struct mlx5_rte_flow_item_tag *)item->spec;
 			uint16_t regcs = (uint8_t)priv->sh->cdev->config.hca_attr.set_reg_c;
 
-			if (!((1 << (tag->index - REG_C_0)) & regcs))
+			if (!((1 << (mlx5_tag->id - REG_C_0)) & regcs))
 				return rte_flow_error_set(error, EINVAL,
 							  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 							  NULL,
 							  "Unsupported internal tag index");
-			if (tag_bitmap & (1 << tag->index))
+			if (tag_bitmap & (1 << mlx5_tag->id))
 				return rte_flow_error_set(error, EINVAL,
 							  RTE_FLOW_ERROR_TYPE_ITEM,
 							  NULL,
 							  "Duplicated tag index");
-			tag_bitmap |= 1 << tag->index;
+			tag_bitmap |= 1 << mlx5_tag->id;
 			break;
 		}
 		case RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT:
@@ -9027,13 +9029,13 @@ flow_hw_pattern_template_create(struct rte_eth_dev *dev,
 		.type = RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT,
 		.mask = &rte_flow_item_ethdev_mask,
 	};
-	struct rte_flow_item_tag tag_v = {
+	struct mlx5_rte_flow_item_tag tag_v = {
 		.data = 0,
-		.index = REG_C_0,
+		.id = REG_C_0,
 	};
-	struct rte_flow_item_tag tag_m = {
+	struct mlx5_rte_flow_item_tag tag_m = {
 		.data = flow_hw_tx_tag_regc_mask(dev),
-		.index = 0xff,
+		.id = (enum modify_reg)0xff,
 	};
 	struct rte_flow_item tag = {
 		.type = (enum rte_flow_item_type)MLX5_RTE_FLOW_ITEM_TYPE_TAG,
@@ -10118,11 +10120,11 @@ flow_hw_create_ctrl_regc_sq_pattern_template(struct rte_eth_dev *dev,
 		.relaxed_matching = 0,
 		.transfer = 1,
 	};
-	struct rte_flow_item_tag reg_c0_spec = {
-		.index = (uint8_t)REG_C_0,
+	struct mlx5_rte_flow_item_tag reg_c0_spec = {
+		.id = (uint8_t)REG_C_0,
 	};
-	struct rte_flow_item_tag reg_c0_mask = {
-		.index = 0xff,
+	struct mlx5_rte_flow_item_tag reg_c0_mask = {
+		.id = (enum modify_reg)0xff,
 		.data = flow_hw_esw_mgr_regc_marker_mask(dev),
 	};
 	struct mlx5_rte_flow_item_sq queue_mask = {
@@ -10130,14 +10132,12 @@ flow_hw_create_ctrl_regc_sq_pattern_template(struct rte_eth_dev *dev,
 	};
 	struct rte_flow_item items[] = {
 		{
-			.type = (enum rte_flow_item_type)
-				MLX5_RTE_FLOW_ITEM_TYPE_TAG,
+			.type = (enum rte_flow_item_type)MLX5_RTE_FLOW_ITEM_TYPE_TAG,
 			.spec = &reg_c0_spec,
 			.mask = &reg_c0_mask,
 		},
 		{
-			.type = (enum rte_flow_item_type)
-				MLX5_RTE_FLOW_ITEM_TYPE_SQ,
+			.type = (enum rte_flow_item_type)MLX5_RTE_FLOW_ITEM_TYPE_SQ,
 			.mask = &queue_mask,
 		},
 		{
