@@ -1973,6 +1973,8 @@ struct mlx5_flow_workspace {
 	/* The final policy when meter policy is hierarchy. */
 #ifdef HAVE_MLX5_HWS_SUPPORT
 	struct rte_flow_template_table *table;
+	struct rte_flow_item *masked_items;
+	size_t masked_items_size;
 #endif
 	uint32_t skip_matcher_reg:1;
 	/* Indicates if need to skip matcher register in translate. */

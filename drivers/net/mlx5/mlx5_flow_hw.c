@@ -14071,6 +14071,42 @@ static int flow_hw_apply(const struct rte_flow_item items[],
 }
 
 #ifdef HAVE_MLX5_HWS_SUPPORT
+
+static inline
+int flow_hw_duplicate_items(struct mlx5_flow_workspace *pt_wks,
+			    const struct rte_flow_item items[],
+			    struct rte_flow_error *error)
+{
+	int ret = 0;
+	size_t len;
+
+	/* Only the specs are needed for the rule. */
+	ret = rte_flow_conv(RTE_FLOW_CONV_OP_PATTERN, NULL, 0, items, error);
+	if (ret <= 0) {
+		DRV_LOG(ERR, "Can't get items length.");
+		return -rte_errno;
+	}
+	len = (size_t)RTE_ALIGN(ret, 16);
+	if (len > pt_wks->masked_items_size) {
+		pt_wks->masked_items = mlx5_realloc(pt_wks->masked_items, MLX5_MEM_ZERO,
+						    len, 0, SOCKET_ID_ANY);
+		if (!pt_wks->masked_items) {
+			rte_flow_error_set(error, ENOMEM,
+					   RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+					   NULL,
+					   "No enough memory for items caching.");
+			return -rte_errno;
+		}
+		pt_wks->masked_items_size = len;
+	}
+	ret = rte_flow_conv(RTE_FLOW_CONV_OP_PATTERN_MASKED, pt_wks->masked_items,
+			    len, items, error);
+	if (ret <= 0) {
+		DRV_LOG(ERR, "Can't duplicate items' specs.");
+		return ret;
+	}
+	return 0;
+}
 /**
  * Create a flow.
  *
@@ -14120,6 +14156,8 @@ flow_hw_create_flow(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 		.act_flags = action_flags,
 		.tbl_type = 0,
 	};
+	int len;
+	struct mlx5_flow_workspace *pt_wks = mlx5_flow_push_thread_workspace();
 
 	if (attr->transfer)
 		tbl_type = MLX5DR_TABLE_TYPE_FDB;
@@ -14184,7 +14222,10 @@ flow_hw_create_flow(struct rte_eth_dev *dev, enum mlx5_flow_type type,
 	if (external || dev->data->dev_started ||
 	    (attr->group == MLX5_FLOW_MREG_CP_TABLE_GROUP &&
 	     attr->priority == MLX5_FLOW_LOWEST_PRIO_INDICATOR)) {
-		ret = flow_hw_apply(items, hw_act.rule_acts, *flow, error);
+		ret = flow_hw_duplicate_items(pt_wks, items, error);
+		if (ret)
+			goto error;
+		ret = flow_hw_apply(pt_wks->masked_items, hw_act.rule_acts, *flow, error);
 		if (ret)
 			goto error;
 	}
