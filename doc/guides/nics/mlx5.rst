@@ -1233,6 +1233,10 @@ On Windows, the features are limited:
   - IPv4/TCP with CVLAN filtering
   - L4 steering rules for port RSS of IP, UDP, TCP
 
+- Tunnel protocol support:
+
+  - NVGRE (requires DevX dynamic insertion mode)
+
 
 .. _mlx5_multiproc:
 
