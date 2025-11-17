@@ -148,7 +148,7 @@ static int
 test_cfgfile_realloc_sections(void)
 {
 	struct rte_cfgfile *cfgfile;
-	char filename[PATH_MAX];
+	char filename[PATH_MAX + NAME_MAX];
 	int ret;
 	const char *value;
 
