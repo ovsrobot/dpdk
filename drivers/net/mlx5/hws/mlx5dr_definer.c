@@ -213,6 +213,7 @@ struct mlx5dr_definer_conv_data {
 	X(SET,		mpls_udp_port,		UDP_PORT_MPLS,		rte_flow_item_mpls) \
 	X(SET,		source_qp,		v->queue,		mlx5_rte_flow_item_sq) \
 	X(SET,		tag,			v->data,		rte_flow_item_tag) \
+	X(SET,		mlx5_tag,		v->data,		mlx5_rte_flow_item_tag) \
 	X(SET,		metadata,		v->data,		rte_flow_item_meta) \
 	X(SET_BE16,	geneve_protocol,	v->protocol,		rte_flow_item_geneve) \
 	X(SET,		geneve_udp_port,	UDP_GENEVE_PORT,	rte_flow_item_geneve) \
@@ -1796,22 +1797,26 @@ mlx5dr_definer_conv_item_tag(struct mlx5dr_definer_conv_data *cd,
 			     struct rte_flow_item *item,
 			     int item_idx)
 {
-	const struct rte_flow_item_tag *m = item->mask;
-	const struct rte_flow_item_tag *v = item->spec;
-	const struct rte_flow_item_tag *l = item->last;
+	const struct rte_flow_item_tag *ev;
+	const struct rte_flow_item_tag *el;
+	const struct mlx5_rte_flow_item_tag *iv;
+	const struct mlx5_rte_flow_item_tag *il;
 	struct mlx5dr_definer_fc *fc;
 	int reg;
 
-	if (!m || !v)
+	if (!item->mask || !item->spec)
 		return 0;
 
-	if (item->type == RTE_FLOW_ITEM_TYPE_TAG)
+	if (item->type == RTE_FLOW_ITEM_TYPE_TAG) {
+		ev = item->spec;
 		reg = flow_hw_get_reg_id_from_ctx(cd->ctx,
 						  RTE_FLOW_ITEM_TYPE_TAG,
 						  cd->table_type,
-						  v->index);
-	else
-		reg = (int)v->index;
+						  ev->index);
+	} else {
+		iv = item->spec;
+		reg = (int)iv->id;
+	}
 
 	if (reg <= 0) {
 		DR_LOG(ERR, "Invalid register for item tag");
@@ -1824,8 +1829,15 @@ mlx5dr_definer_conv_item_tag(struct mlx5dr_definer_conv_data *cd,
 		return rte_errno;
 
 	fc->item_idx = item_idx;
-	fc->is_range = l && l->index;
-	fc->tag_set = &mlx5dr_definer_tag_set;
+	if (item->type == RTE_FLOW_ITEM_TYPE_TAG) {
+		el = item->last;
+		fc->is_range = el && el->data;
+		c->tag_set = &mlx5dr_definer_tag_set;
+	} else {
+		il = item->last;
+		fc->is_range = il && il->data;
+		fc->tag_set = &mlx5dr_definer_mlx5_tag_set;
+	}
 
 	return 0;
 }
