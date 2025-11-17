@@ -533,6 +533,7 @@ mlx5_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 				return -rte_errno;
 			}
 		} else if (ret < 0) {
+			dev->data->dev_link = {0};
 			return ret;
 		}
 	} while (wait_to_complete || retry-- > 0);

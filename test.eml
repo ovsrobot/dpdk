@@ -1,0 +1,21 @@
+./../dpdk-patch/0001-net-mlx5-fix-set-port-down-if-detect-anomaly.patch
+(mbox) Adding cc: Yang Xu <xu.yang3@zte.com.cn> from line 'From: Yang Xu <xu.yang3@zte.com.cn>'
+(body) Adding cc: Yang Xu <xu.yang3@zte.com.cn> from line 'Signed-off-by: Yang Xu <xu.yang3@zte.com.cn>'
+Dry-OK. Log says:
+Server: 10.5.231.43
+MAIL FROM:<xu.yang3@zte.com.cn>
+RCPT TO:<y>
+RCPT TO:<xu.yang3@zte.com.cn>
+From: Yang Xu <xu.yang3@zte.com.cn>
+To: y
+Cc: Yang Xu <xu.yang3@zte.com.cn>
+Subject: [PATCH v2 1/1] net/mlx5: fix set port down if detect anomaly
+Date: Fri, 14 Nov 2025 10:14:11 +0800
+Message-Id: <20251114021411.3606817-1-xu.yang3@zte.com.cn>
+X-Mailer: git-send-email 2.27.0
+In-Reply-To: <y>
+References: <y>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+
+Result: OK
