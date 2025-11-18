@@ -162,3 +162,6 @@ Deprecation Notices
 * eal: The entire VFIO API (``rte_vfio_*``) will be made internal only, and will only be available to EAL and drivers.
   Group-based API (``rte_vfio_*_group_*``) will be removed and replaced with unified container device assignment API.
   This change will be made in 26.11 release.
+
+* vdpa: vDPA driver API will no longer offer ``get_vfio_group_fd`` as part of its internal API.
+  All drivers will be adjusted to use the new unified VFIO container device assignment API.
