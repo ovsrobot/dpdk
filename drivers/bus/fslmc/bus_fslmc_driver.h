@@ -97,12 +97,6 @@ enum rte_dpaa2_dev_type {
 struct rte_dpaa2_device {
 	TAILQ_ENTRY(rte_dpaa2_device) next; /**< Next probed DPAA2 device. */
 	struct rte_device device;           /**< Inherit core device */
-	union {
-		struct rte_eth_dev *eth_dev;        /**< ethernet device */
-		struct rte_cryptodev *cryptodev;    /**< Crypto Device */
-		struct rte_dma_dev *dmadev;          /**< DMA Device */
-		struct rte_rawdev *rawdev;          /**< Raw Device */
-	};
 	enum rte_dpaa2_dev_type dev_type;   /**< Device Type */
 	uint16_t object_id;                 /**< DPAA2 Object ID */
 	enum rte_dpaa2_dev_type ep_dev_type;   /**< Endpoint Device Type */
