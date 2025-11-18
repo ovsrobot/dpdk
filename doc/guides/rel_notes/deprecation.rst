@@ -158,3 +158,7 @@ Deprecation Notices
   without relying on flow API.
   Currently there is no alternative API
   providing the same functionality as with ``repr_matching_en`` set to 0.
+
+* eal: The entire VFIO API (``rte_vfio_*``) will be made internal only, and will only be available to EAL and drivers.
+  Group-based API (``rte_vfio_*_group_*``) will be removed and replaced with unified container device assignment API.
+  This change will be made in 26.11 release.
