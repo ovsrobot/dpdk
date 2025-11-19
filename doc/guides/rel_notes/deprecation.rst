@@ -147,3 +147,7 @@ Deprecation Notices
   This change will not result in any feature loss,
   as the fallback scalar paths which have feature parity with SSE
   will be used in the cases where the SSE paths would have been used.
+
+* eal: The entire VFIO API (``rte_vfio_*``) will be made internal only, and will only be available to EAL and drivers.
+  Group-based API (``rte_vfio_*_group_*``) will be removed and replaced with unified container device assignment API.
+  This change will be made in 26.11 release.
