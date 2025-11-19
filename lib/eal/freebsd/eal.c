@@ -923,3 +923,13 @@ rte_vfio_get_mode(void)
 {
 	return RTE_VFIO_MODE_NONE;
 }
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_vfio_get_device_num)
+int
+rte_vfio_get_device_num(__rte_unused const char *sysfs_base,
+		__rte_unused const char *dev_addr,
+		__rte_unused int *vfio_device_num)
+{
+	rte_errno = ENOTSUP;
+	return -1;
+}
