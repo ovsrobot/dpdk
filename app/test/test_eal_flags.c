@@ -172,7 +172,7 @@ process_hugefiles(const char * prefix, enum hugepage_action action)
 	struct dirent *dirent = NULL;
 
 	char hugefile_prefix[PATH_MAX] = {0};
-	char hugedir[PATH_MAX] = {0};
+	char hugedir[PATH_MAX - NAME_MAX] = {0};
 	char line[PATH_MAX] = {0};
 
 	int fd, lck_result, result = 0;
@@ -222,7 +222,7 @@ process_hugefiles(const char * prefix, enum hugepage_action action)
 				break;
 			case HUGEPAGE_DELETE:
 				{
-					char file_path[PATH_MAX] = {0};
+					char file_path[PATH_MAX + NAME_MAX] = {0};
 
 					snprintf(file_path, sizeof(file_path),
 						"%s/%s", hugedir, dirent->d_name);
@@ -873,7 +873,7 @@ test_no_huge_flag(void)
 static int
 test_misc_flags(void)
 {
-	char hugepath[PATH_MAX] = {0};
+	char hugepath[PATH_MAX - NAME_MAX] = {0};
 	char hugepath_dir[PATH_MAX] = {0};
 	char hugepath_dir2[PATH_MAX] = {0};
 	char hugepath_dir3[PATH_MAX] = {0};
