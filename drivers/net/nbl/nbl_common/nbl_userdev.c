@@ -413,7 +413,7 @@ static int nbl_mdev_map_device(struct nbl_adapter *adapter)
 		 "%s/%s/", rte_pci_get_sysfs_path(), dev_name);
 
 	ret = rte_vfio_get_group_num(pathname, dev_name, &common->iommu_group_num);
-	if (ret <= 0) {
+	if (ret < 0) {
 		NBL_LOG(ERR, "nbl vfio group number failed");
 		return -1;
 	}
