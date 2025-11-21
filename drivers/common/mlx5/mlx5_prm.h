@@ -1205,7 +1205,11 @@ struct mlx5_ifc_fte_match_set_misc5_bits {
 	u8 tunnel_header_1[0x20];
 	u8 tunnel_header_2[0x20];
 	u8 tunnel_header_3[0x20];
-	u8 reserved[0x100];
+	u8 reserved[0x80];
+	u8 metadata_reg_c_8[0x20];
+	u8 metadata_reg_c_9[0x20];
+	u8 metadata_reg_c_10[0x20];
+	u8 metadata_reg_c_11[0x20];
 };
 
 /* Flow matcher. */
@@ -1593,9 +1597,13 @@ enum {
 #define MLX5_HCA_FLEX_GTPU_DW_0_ENABLED (1UL << 18)
 #define MLX5_HCA_FLEX_GTPU_TEID_ENABLED (1UL << 19)
 
-/* The device steering logic format. */
-#define MLX5_STEERING_LOGIC_FORMAT_CONNECTX_5 0x0
-#define MLX5_STEERING_LOGIC_FORMAT_CONNECTX_6DX 0x1
+/* The device steering logic format version. */
+enum {
+	MLX5_STEERING_LOGIC_FORMAT_CONNECTX_5 = 0,
+	MLX5_STEERING_LOGIC_FORMAT_CONNECTX_6DX = 1,
+	MLX5_STEERING_LOGIC_FORMAT_CONNECTX_7 = 2,
+	MLX5_STEERING_LOGIC_FORMAT_CONNECTX_8 = 3,
+};
 
 struct mlx5_ifc_cmd_hca_cap_bits {
 	u8 access_other_hca_roce[0x1];
@@ -2342,7 +2350,9 @@ struct mlx5_ifc_flow_table_nic_cap_bits {
 };
 
 struct mlx5_ifc_flow_table_esw_cap_bits {
-	u8 reserved_at_0[0x800];
+	u8 reserved_at_0[0x200];
+	struct mlx5_ifc_flow_table_prop_layout_bits flow_table_properties_nic_esw_fdb;
+	u8 reserved_at_400[0x400];
 	struct mlx5_ifc_ft_fields_support_bits ft_header_modify_esw_fdb;
 	u8 reserved_at_C00[0x800];
 	struct mlx5_ifc_ft_fields_support_2_bits

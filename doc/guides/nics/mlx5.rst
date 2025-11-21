@@ -694,8 +694,11 @@ for an additional list of options shared with other mlx5 drivers.
   Value 2 enables the WQE based hardware steering.
   In this mode, only queue-based flow management is supported.
 
-  It is configured by default to 1 (DV flow steering) if supported.
-  Otherwise, the value is 0 which indicates legacy Verbs flow offloading.
+  By default, the PMD will set this value according to capability.
+  If DV flow steering is supported, it will be set to 1.
+  If DV flow steering is not supported and HW steering is supported,
+  then it will be set to 2.
+  Otherwise, it will be set to 0.
 
 - ``dv_esw_en`` parameter [int]
 
@@ -745,23 +748,15 @@ for an additional list of options shared with other mlx5 drivers.
 
     <Primary_PCI_BDF>,representor=pf[0,1]vf[0-2]
 
-- ``repr_matching_en`` parameter [int]
+  On ConnectX-7 multi-host setup, the PF index is not continuous,
+  and must be queried in sysfs::
 
-  - 0. If representor matching is disabled, then there will be no implicit
-    item added. As a result, ingress flow rules will match traffic
-    coming to any port, not only the port on which flow rule is created.
-    Because of that, default flow rules for ingress traffic cannot be created
-    and port starts in isolated mode by default. Port cannot be switched back
-    to non-isolated mode.
+    cat /sys/class/net/*/phys_port_name
 
-  - 1. If representor matching is enabled (default setting),
-    then each ingress pattern template has an implicit REPRESENTED_PORT
-    item added. Flow rules based on this pattern template will match
-    the vport associated with port on which rule is created.
+  With an example output 0 and 2 for PF1 and PF2, use [0,2] for PF index
+  to probe VF port representors 0 through 2 on both PFs of bonding device::
 
-  .. note::
-
-     This parameter is deprecated and will be removed in future releases.
+    <Primary_PCI_BDF>,representor=pf[0,2]vf[0-2]
 
 - ``max_dump_files_num`` parameter [int]
 
@@ -839,7 +834,10 @@ for an additional list of options shared with other mlx5 drivers.
     In this case, all rules are inserted but only the first rule takes effect,
     the next rule takes effect only if the previous rules are deleted.
 
-  By default, the PMD will set this value to 1.
+  This option is not supported in :ref:`HW steering <mlx5_hws>`,
+  and will be forced to 0 in this mode.
+
+  By default, the PMD will set this value according to capability.
 
 
 .. _mlx5_net_stats:
@@ -1232,6 +1230,10 @@ On Windows, the features are limited:
 
   - IPv4/TCP with CVLAN filtering
   - L4 steering rules for port RSS of IP, UDP, TCP
+
+- Tunnel protocol support:
+
+  - NVGRE (requires DevX dynamic insertion mode)
 
 
 .. _mlx5_multiproc:
@@ -2343,7 +2345,6 @@ Runtime configuration
 
 The behaviour of port representors is configured
 with some :ref:`parameters <mlx5_representor_params>`.
-The option ``repr_matching_en`` has an impact on flow steering.
 
 Limitations
 ^^^^^^^^^^^
@@ -2353,9 +2354,6 @@ Limitations
 #. A driver limitation for ``RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR`` action
    restricts the ``port_id`` configuration to only accept the value ``0xffff``,
    indicating the E-Switch manager.
-   If the ``repr_matching_en`` parameter is enabled, the traffic will be directed
-   to the representor of the source virtual port (SF/VF), while if it is disabled,
-   the traffic will be routed based on the steering rules in the ingress domain.
 
 Examples
 ^^^^^^^^
@@ -3230,7 +3228,7 @@ Limitations
 
 #. Only single item is supported per pattern template.
 
-#. In switch mode, when ``repr_matching_en`` is enabled (default setting),
+#. In switch mode,
    matching ``RTE_FLOW_ITEM_TYPE_COMPARE`` is not supported for ``ingress`` rules.
    This is because an implicit ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``
    needs to be added to the matcher,

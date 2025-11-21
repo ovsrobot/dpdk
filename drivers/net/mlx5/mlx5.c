@@ -182,9 +182,6 @@
 /* HW steering counter's query interval. */
 #define MLX5_HWS_CNT_CYCLE_TIME "svc_cycle_time"
 
-/* Device parameter to control representor matching in ingress/egress flows with HWS. */
-#define MLX5_REPR_MATCHING_EN "repr_matching_en"
-
 /*
  * Alignment of the Tx queue starting address,
  * If not set, using separate umem and MR for each TxQ.
@@ -1432,12 +1429,49 @@ mlx5_dev_args_check_handler(const char *key, const char *val, void *opaque)
 		config->cnt_svc.service_core = tmp;
 	} else if (strcmp(MLX5_HWS_CNT_CYCLE_TIME, key) == 0) {
 		config->cnt_svc.cycle_time = tmp;
-	} else if (strcmp(MLX5_REPR_MATCHING_EN, key) == 0) {
-		config->repr_matching = !!tmp;
 	} else if (strcmp(MLX5_TXQ_MEM_ALGN, key) == 0) {
 		config->txq_mem_algn = (uint32_t)tmp;
 	}
 	return 0;
+}
+
+static bool
+mlx5_hws_is_supported(struct mlx5_dev_ctx_shared *sh)
+{
+	return (sh->cdev->config.devx &&
+	       sh->cdev->config.hca_attr.wqe_based_flow_table_sup);
+}
+
+static bool
+mlx5_sws_is_any_supported(struct mlx5_dev_ctx_shared *sh)
+{
+	struct mlx5_common_device *cdev = sh->cdev;
+	struct mlx5_hca_attr *hca_attr = &cdev->config.hca_attr;
+
+	if (hca_attr->rx_sw_owner_v2 || hca_attr->rx_sw_owner)
+		return true;
+
+	if (hca_attr->tx_sw_owner_v2 || hca_attr->tx_sw_owner)
+		return true;
+
+	if (hca_attr->eswitch_manager && (hca_attr->esw_sw_owner_v2 || hca_attr->esw_sw_owner))
+		return true;
+
+	return false;
+}
+
+static bool
+mlx5_kvargs_is_used(struct mlx5_kvargs_ctrl *mkvlist, const char *key)
+{
+	const struct rte_kvargs_pair *pair;
+	uint32_t i;
+
+	for (i = 0; i < mkvlist->kvlist->count; ++i) {
+		pair = &mkvlist->kvlist->pairs[i];
+		if (strcmp(pair->key, key) == 0 && mkvlist->is_used[i])
+			return true;
+	}
+	return false;
 }
 
 /**
@@ -1474,13 +1508,14 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 		MLX5_FDB_DEFAULT_RULE_EN,
 		MLX5_HWS_CNT_SERVICE_CORE,
 		MLX5_HWS_CNT_CYCLE_TIME,
-		MLX5_REPR_MATCHING_EN,
 		MLX5_TXQ_MEM_ALGN,
 		NULL,
 	};
 	int ret = 0;
 	size_t alignment = rte_mem_page_size();
 	uint32_t max_queue_umem_size = MLX5_WQE_SIZE * mlx5_dev_get_max_wq_size(sh);
+	bool hws_is_supported = mlx5_hws_is_supported(sh);
+	bool sws_is_supported = mlx5_sws_is_any_supported(sh);
 
 	if (alignment == (size_t)-1) {
 		alignment = (1 << MLX5_LOG_PAGE_SIZE);
@@ -1491,13 +1526,18 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 	memset(config, 0, sizeof(*config));
 	config->vf_nl_en = 1;
 	config->dv_esw_en = 1;
-	config->dv_flow_en = 1;
+	if (!sws_is_supported && hws_is_supported)
+		config->dv_flow_en = 2;
+	else
+		config->dv_flow_en = 1;
 	config->decap_en = 1;
-	config->allow_duplicate_pattern = 1;
+	if (config->dv_flow_en == 2)
+		config->allow_duplicate_pattern = 0;
+	else
+		config->allow_duplicate_pattern = 1;
 	config->fdb_def_rule = 1;
 	config->cnt_svc.cycle_time = MLX5_CNT_SVC_CYCLE_TIME_DEFAULT;
 	config->cnt_svc.service_core = rte_get_main_lcore();
-	config->repr_matching = 1;
 	config->txq_mem_algn = log2above(alignment);
 	if (mkvlist != NULL) {
 		/* Process parameters. */
@@ -1514,6 +1554,26 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 		DRV_LOG(WARNING, "DV flow is not supported.");
 		config->dv_flow_en = 0;
 	}
+	/* Inform user if DV flow is not supported. */
+	if (config->dv_flow_en == 1 && !sws_is_supported && hws_is_supported) {
+		DRV_LOG(WARNING, "DV flow is not supported. Changing to HWS mode.");
+		config->dv_flow_en = 2;
+	}
+	/* Handle allow_duplicate_pattern based on final dv_flow_en mode.
+	 * HWS mode (dv_flow_en=2) doesn't support duplicate patterns.
+	 * Warn only if user explicitly requested an incompatible setting.
+	 */
+	bool allow_dup_pattern_set = mkvlist != NULL &&
+		mlx5_kvargs_is_used(mkvlist, MLX5_ALLOW_DUPLICATE_PATTERN);
+	if (config->dv_flow_en == 2) {
+		if (config->allow_duplicate_pattern == 1 && allow_dup_pattern_set)
+			DRV_LOG(WARNING, "Duplicate pattern is not supported with HWS. Disabling it.");
+		config->allow_duplicate_pattern = 0;
+	} else if (!allow_dup_pattern_set) {
+		/* Non-HWS mode: set default to 1 only if not explicitly set by user */
+		config->allow_duplicate_pattern = 1;
+	}
+
 	if (config->dv_esw_en && !sh->dev_cap.dv_esw_en) {
 		DRV_LOG(DEBUG, "E-Switch DV flow is not supported.");
 		config->dv_esw_en = 0;
@@ -1531,11 +1591,6 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 			"Metadata mode %u is not supported (no E-Switch).",
 			config->dv_xmeta_en);
 		config->dv_xmeta_en = MLX5_XMETA_MODE_LEGACY;
-	}
-	if (config->dv_flow_en != 2 && !config->repr_matching) {
-		DRV_LOG(DEBUG, "Disabling representor matching is valid only "
-			       "when HW Steering is enabled.");
-		config->repr_matching = 1;
 	}
 	if (config->tx_pp && !sh->dev_cap.txpp_en) {
 		DRV_LOG(ERR, "Packet pacing is not supported.");
@@ -1591,7 +1646,6 @@ mlx5_shared_dev_ctx_args_config(struct mlx5_dev_ctx_shared *sh,
 	DRV_LOG(DEBUG, "\"allow_duplicate_pattern\" is %u.",
 		config->allow_duplicate_pattern);
 	DRV_LOG(DEBUG, "\"fdb_def_rule_en\" is %u.", config->fdb_def_rule);
-	DRV_LOG(DEBUG, "\"repr_matching_en\" is %u.", config->repr_matching);
 	DRV_LOG(DEBUG, "\"txq_mem_algn\" is %u.", config->txq_mem_algn);
 	return 0;
 }
@@ -2389,6 +2443,11 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 	/* Free the eCPRI flex parser resource. */
 	mlx5_flex_parser_ecpri_release(dev);
 	mlx5_flex_item_port_cleanup(dev);
+	if (priv->representor) {
+		/* Each representor has a dedicated interrupts handler */
+		rte_intr_instance_free(dev->intr_handle);
+		dev->intr_handle = NULL;
+	}
 	mlx5_indirect_list_handles_release(dev);
 #ifdef HAVE_MLX5_HWS_SUPPORT
 	mlx5_nta_sample_context_free(dev);
@@ -3818,6 +3877,10 @@ static const struct rte_pci_id mlx5_pci_id_map[] = {
 	{
 		RTE_PCI_DEVICE(PCI_VENDOR_ID_MELLANOX,
 				PCI_DEVICE_ID_MELLANOX_CONNECTX9)
+	},
+	{
+		RTE_PCI_DEVICE(PCI_VENDOR_ID_MELLANOX,
+				PCI_DEVICE_ID_MELLANOX_BLUEFIELD4)
 	},
 	{
 		.vendor_id = 0

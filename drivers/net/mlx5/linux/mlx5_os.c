@@ -737,6 +737,30 @@ error:
 	return err;
 }
 
+#ifdef HAVE_MLX5DV_DR
+static void
+mlx5_destroy_send_to_kernel_action(struct mlx5_dev_ctx_shared *sh)
+{
+	int i;
+
+	for (i = 0; i < MLX5DR_TABLE_TYPE_MAX; i++) {
+		if (sh->send_to_kernel_action[i].action) {
+			void *action = sh->send_to_kernel_action[i].action;
+
+			mlx5_glue->destroy_flow_action(action);
+			sh->send_to_kernel_action[i].action = NULL;
+		}
+		if (sh->send_to_kernel_action[i].tbl) {
+			struct mlx5_flow_tbl_resource *tbl =
+					sh->send_to_kernel_action[i].tbl;
+
+			flow_dv_tbl_resource_release(sh, tbl);
+			sh->send_to_kernel_action[i].tbl = NULL;
+		}
+	}
+}
+#endif /* HAVE_MLX5DV_DR */
+
 /**
  * Destroy DR related data within private structure.
  *
@@ -763,6 +787,7 @@ mlx5_os_free_shared_dr(struct mlx5_priv *priv)
 			priv->dev_data->port_id, i);
 	MLX5_ASSERT(LIST_EMPTY(&sh->shared_rxqs));
 #ifdef HAVE_MLX5DV_DR
+	mlx5_destroy_send_to_kernel_action(sh);
 	if (sh->rx_domain) {
 		mlx5_glue->dr_destroy_domain(sh->rx_domain);
 		sh->rx_domain = NULL;
@@ -784,21 +809,6 @@ mlx5_os_free_shared_dr(struct mlx5_priv *priv)
 	if (sh->pop_vlan_action) {
 		mlx5_glue->destroy_flow_action(sh->pop_vlan_action);
 		sh->pop_vlan_action = NULL;
-	}
-	for (i = 0; i < MLX5DR_TABLE_TYPE_MAX; i++) {
-		if (sh->send_to_kernel_action[i].action) {
-			void *action = sh->send_to_kernel_action[i].action;
-
-			mlx5_glue->destroy_flow_action(action);
-			sh->send_to_kernel_action[i].action = NULL;
-		}
-		if (sh->send_to_kernel_action[i].tbl) {
-			struct mlx5_flow_tbl_resource *tbl =
-					sh->send_to_kernel_action[i].tbl;
-
-			flow_dv_tbl_resource_release(sh, tbl);
-			sh->send_to_kernel_action[i].tbl = NULL;
-		}
 	}
 #endif /* HAVE_MLX5DV_DR */
 	if (sh->default_miss_action)
@@ -1633,16 +1643,17 @@ err_secondary:
 	/* Read link status in case it is up and there will be no event. */
 	mlx5_link_update(eth_dev, 0);
 	/* Watch LSC interrupts between port probe and port start. */
-	priv->sh->port[priv->dev_port - 1].nl_ih_port_id =
-							eth_dev->data->port_id;
+	priv->sh->port[priv->dev_port - 1].nl_ih_port_id = eth_dev->data->port_id;
 	mlx5_set_link_up(eth_dev);
 	for (i = 0; i < MLX5_FLOW_TYPE_MAXI; i++) {
 		icfg[i].release_mem_en = !!sh->config.reclaim_mode;
 		if (sh->config.reclaim_mode)
 			icfg[i].per_core_cache = 0;
 #ifdef HAVE_MLX5_HWS_SUPPORT
-		if (priv->sh->config.dv_flow_en == 2)
+		if (priv->sh->config.dv_flow_en == 2) {
 			icfg[i].size = sizeof(struct rte_flow_hw) + sizeof(struct rte_flow_nt2hws);
+			icfg[i].size += sizeof(struct rte_flow_hw_aux);
+		}
 #endif
 		priv->flows[i] = mlx5_ipool_create(&icfg[i]);
 		if (!priv->flows[i])
@@ -1776,22 +1787,6 @@ err_secondary:
 				eth_dev->data->port_id);
 			err = EINVAL;
 			goto error;
-		}
-		/*
-		 * If representor matching is disabled, PMD cannot create default flow rules
-		 * to receive traffic for all ports, since implicit source port match is not added.
-		 * Isolated mode is forced.
-		 */
-		if (priv->sh->config.dv_esw_en && !priv->sh->config.repr_matching) {
-			err = mlx5_flow_isolate(eth_dev, 1, NULL);
-			if (err < 0) {
-				err = -err;
-				goto error;
-			}
-			DRV_LOG(WARNING, "port %u ingress traffic is restricted to defined "
-					 "flow rules (isolated mode) since representor "
-					 "matching is disabled",
-				eth_dev->data->port_id);
 		}
 		eth_dev->data->dev_flags |= RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE;
 		return eth_dev;
@@ -2284,6 +2279,12 @@ mlx5_device_mpesw_pci_match(struct ibv_device *ibv,
 	return -1;
 }
 
+static inline bool
+mlx5_ignore_pf_representor(const struct rte_eth_devargs *eth_da)
+{
+	return (eth_da->flags & RTE_ETH_DEVARG_REPRESENTOR_IGNORE_PF) != 0;
+}
+
 /**
  * Register a PCI device within bonding.
  *
@@ -2592,6 +2593,8 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 					if (list[ns].info.port_name == mpesw) {
 						list[ns].info.master = 1;
 						list[ns].info.representor = 0;
+					} else if (mlx5_ignore_pf_representor(&eth_da)) {
+						continue;
 					} else {
 						list[ns].info.master = 0;
 						list[ns].info.representor = 1;

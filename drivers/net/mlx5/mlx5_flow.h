@@ -21,6 +21,9 @@
 #include "hws/mlx5dr.h"
 #include "mlx5_tx.h"
 
+#define MLX5_HW_PORT_IS_PROXY(priv) \
+	(!!((priv)->sh->esw_mode && (priv)->master))
+
 /* E-Switch Manager port, used for rte_flow_item_port_id. */
 #define MLX5_PORT_ESW_MGR UINT32_MAX
 
@@ -1741,7 +1744,7 @@ struct rte_flow_template_table {
 	struct rte_flow_pattern_template *its[MLX5_HW_TBL_MAX_ITEM_TEMPLATE];
 	/* Action templates bind to the table. */
 	struct mlx5_hw_action_template ats[MLX5_HW_TBL_MAX_ACTION_TEMPLATE];
-	struct mlx5_indexed_pool *flow; /* The table's flow ipool. */
+	struct mlx5_indexed_pool *flow_pool; /* The table's flow ipool. */
 	struct rte_flow_hw_aux *flow_aux; /**< Auxiliary data stored per flow. */
 	struct mlx5_indexed_pool *resource; /* The table's resource ipool. */
 	struct mlx5_flow_template_table_cfg cfg;
@@ -1807,7 +1810,8 @@ flow_hw_get_reg_id_by_domain(struct rte_eth_dev *dev,
 	switch (type) {
 	case RTE_FLOW_ITEM_TYPE_META:
 		if (sh->config.dv_esw_en &&
-		    sh->config.dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS) {
+		    (sh->config.dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS ||
+		     mlx5_esw_metadata_passing_enabled(sh))) {
 			return REG_C_1;
 		}
 		if ((mlx5_vport_rx_metadata_passing_enabled(sh) &&
@@ -1833,7 +1837,8 @@ flow_hw_get_reg_id_by_domain(struct rte_eth_dev *dev,
 	case RTE_FLOW_ITEM_TYPE_TAG:
 		if (id == RTE_PMD_MLX5_LINEAR_HASH_TAG_INDEX)
 			return REG_C_3;
-		MLX5_ASSERT(id < MLX5_FLOW_HW_TAGS_MAX);
+		if (id >= MLX5_FLOW_HW_TAGS_MAX)
+			return REG_NON;
 		return reg->hw_avl_tags[id];
 	default:
 		return REG_NON;
@@ -3029,9 +3034,6 @@ struct mlx5_flow_hw_ctrl_fdb {
 	struct rte_flow_pattern_template *port_items_tmpl;
 	struct rte_flow_actions_template *jump_one_actions_tmpl;
 	struct rte_flow_template_table *hw_esw_zero_tbl;
-	struct rte_flow_pattern_template *tx_meta_items_tmpl;
-	struct rte_flow_actions_template *tx_meta_actions_tmpl;
-	struct rte_flow_template_table *hw_tx_meta_cpy_tbl;
 	struct rte_flow_pattern_template *lacp_rx_items_tmpl;
 	struct rte_flow_actions_template *lacp_rx_actions_tmpl;
 	struct rte_flow_template_table *hw_lacp_rx_tbl;
@@ -3052,6 +3054,8 @@ struct mlx5_flow_hw_ctrl_nic {
 #define MLX5_CTRL_VLAN_FILTER    (RTE_BIT32(6))
 
 int mlx5_flow_hw_ctrl_flows(struct rte_eth_dev *dev, uint32_t flags);
+int mlx5_flow_hw_create_ctrl_rx_tables(struct rte_eth_dev *dev);
+void mlx5_flow_hw_cleanup_ctrl_rx_tables(struct rte_eth_dev *dev);
 
 /** Create a control flow rule for matching unicast DMAC with VLAN (Verbs and DV). */
 int mlx5_legacy_dmac_flow_create(struct rte_eth_dev *dev, const struct rte_ether_addr *addr);
@@ -3610,11 +3614,7 @@ int mlx5_flow_hw_esw_create_sq_miss_flow(struct rte_eth_dev *dev,
 int mlx5_flow_hw_esw_destroy_sq_miss_flow(struct rte_eth_dev *dev,
 					  uint32_t sqn, bool external);
 int mlx5_flow_hw_esw_create_default_jump_flow(struct rte_eth_dev *dev);
-int mlx5_flow_hw_create_fdb_tx_default_mreg_copy_flow(struct rte_eth_dev *dev,
-						  uint32_t sqn, bool external);
 int mlx5_flow_hw_create_nic_tx_default_mreg_copy_flow(struct rte_eth_dev *dev, uint32_t sqn);
-int mlx5_flow_hw_destroy_tx_default_mreg_copy_flow(struct rte_eth_dev *dev,
-						   uint32_t sqn, bool external);
 int mlx5_flow_hw_create_tx_repr_matching_flow(struct rte_eth_dev *dev,
 					      uint32_t sqn, bool external);
 int mlx5_flow_hw_destroy_tx_repr_matching_flow(struct rte_eth_dev *dev,
@@ -3711,6 +3711,13 @@ flow_hw_get_ipv6_route_ext_mod_id_from_ctx(void *dr_ctx, uint8_t idx)
 #endif
 	return 0;
 }
+
+static inline bool
+mlx5_dv_modify_ipv6_traffic_class_supported(struct mlx5_priv *priv)
+{
+	return priv->sh->phdev->config.ipv6_tc_fallback == MLX5_IPV6_TC_OK;
+}
+
 void
 mlx5_indirect_list_handles_release(struct rte_eth_dev *dev);
 

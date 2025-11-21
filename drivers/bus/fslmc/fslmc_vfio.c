@@ -192,7 +192,7 @@ fslmc_vfio_add_group(int vfio_group_fd,
 	group->fd = vfio_group_fd;
 	group->groupid = iommu_group_num;
 	rte_strscpy(group->group_name, group_name, sizeof(group->group_name));
-	if (rte_vfio_noiommu_is_enabled() > 0)
+	if (rte_vfio_get_mode() == RTE_VFIO_MODE_NOIOMMU)
 		group->iommu_type = VFIO_NOIOMMU_IOMMU;
 	else
 		group->iommu_type = VFIO_TYPE1_IOMMU;
@@ -364,9 +364,9 @@ fslmc_get_group_id(const char *group_name,
 	/* get group number */
 	ret = rte_vfio_get_group_num(SYSFS_FSL_MC_DEVICES,
 			group_name, groupid);
-	if (ret <= 0) {
+	if (ret < 0) {
 		DPAA2_BUS_ERR("Find %s IOMMU group", group_name);
-		if (ret < 0)
+		if (rte_errno != ENODEV)
 			return ret;
 
 		return -EIO;
