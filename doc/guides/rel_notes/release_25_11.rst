@@ -214,6 +214,10 @@ New Features
   The built-in help text function is available as a public function which can be reused by custom functions,
   if so desired.
 
+* **Added RCU support in the FIB6 library.**
+
+  It is now possible to register an RCU QSBR object to handle graceful deletion of table groups.
+
 
 Removed Items
 -------------
