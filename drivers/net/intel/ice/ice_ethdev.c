@@ -6435,10 +6435,8 @@ ice_stat_update_40(struct ice_hw *hw,
 		*stat = new_data - *offset;
 	else
 		*stat = (uint64_t)((new_data +
-				    ((uint64_t)1 << ICE_40_BIT_WIDTH)) -
-				   *offset);
-
-	*stat &= ICE_40_BIT_MASK;
+					((uint64_t)1 << ICE_32_BIT_WIDTH))
+				   - *offset);
 }
 
 /**
