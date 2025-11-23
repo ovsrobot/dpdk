@@ -393,3 +393,41 @@ fdset_event_dispatch(void *arg)
 
 	return 0;
 }
+
+/**
+ * Destroy the fdset and stop its event dispatch thread.
+ */
+void
+fdset_destroy(struct fdset *pfdset)
+{
+	uint32_t val;
+	int i;
+
+	if (pfdset == NULL)
+		return;
+
+	/* Signal the event dispatch thread to stop */
+	pfdset->destroy = true;
+
+	/* Wait for the event dispatch thread to finish */
+	rte_thread_join(pfdset->tid, &val);
+
+	/* Close the epoll file descriptor */
+	close(pfdset->epfd);
+
+	/* Destroy the mutex */
+	pthread_mutex_destroy(&pfdset->fd_mutex);
+
+	/* Remove from global registry */
+	pthread_mutex_lock(&fdsets_mutex);
+	for (i = 0; i < MAX_FDSETS; i++) {
+		if (fdsets[i] == pfdset) {
+			fdsets[i] = NULL;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&fdsets_mutex);
+
+	/* Free the fdset structure */
+	rte_free(pfdset);
+}
