@@ -26,7 +26,7 @@
 #include "ipn3ke_logs.h"
 #include "ipn3ke_ethdev.h"
 
-static int ipn3ke_rpst_scan_num;
+static volatile int ipn3ke_rpst_scan_num;
 static rte_thread_t ipn3ke_rpst_scan_thread;
 
 /** Double linked list of representor port. */
@@ -2571,7 +2571,7 @@ ipn3ke_rpst_scan_handle_request(__rte_unused void *param)
 #define MS 1000
 #define SCAN_NUM 32
 
-	for (;;) {
+	while (ipn3ke_rpst_scan_num > 0) {
 		num = 0;
 		TAILQ_FOREACH(rpst, &ipn3ke_rpst_list, next) {
 			if (rpst->i40e_pf_eth &&
@@ -2605,10 +2605,6 @@ ipn3ke_rpst_scan_check(void)
 			return -1;
 		}
 	} else if (ipn3ke_rpst_scan_num == 0) {
-		ret = pthread_cancel((pthread_t)ipn3ke_rpst_scan_thread.opaque_id);
-		if (ret)
-			IPN3KE_AFU_PMD_ERR("Can't cancel the thread");
-
 		ret = rte_thread_join(ipn3ke_rpst_scan_thread, NULL);
 		if (ret)
 			IPN3KE_AFU_PMD_ERR("Can't join the thread");
