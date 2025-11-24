@@ -214,6 +214,13 @@ New Features
   The built-in help text function is available as a public function which can be reused by custom functions,
   if so desired.
 
+* **Updated TAP ethernet driver.**
+
+  * Replaced ``ioctl`` based link control with a Netlink based implementation.
+  * Linux net devices can now be renamed without breaking link control.
+  * Linux net devices can now be moved to different namespaces without breaking link control
+    (requires Linux >= 5.2).
+
 
 Removed Items
 -------------
