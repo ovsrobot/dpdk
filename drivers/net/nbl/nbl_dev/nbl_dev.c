@@ -758,6 +758,11 @@ int nbl_promiscuous_disable(struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
+int nbl_vlan_offload_set(__rte_unused struct rte_eth_dev *dev, __rte_unused int mask)
+{
+	return 0;
+}
+
 static int nbl_dev_setup_chan_queue(struct nbl_adapter *adapter)
 {
 	struct nbl_dev_mgt *dev_mgt = NBL_ADAPTER_TO_DEV_MGT(adapter);
