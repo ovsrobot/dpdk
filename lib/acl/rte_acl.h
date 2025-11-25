@@ -13,6 +13,7 @@
 
 #include <rte_common.h>
 #include <rte_acl_osdep.h>
+#include <setjmp.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +62,11 @@ struct rte_acl_field_def {
  * ACL build configuration.
  * Defines the fields of an ACL trie and number of categories to build with.
  */
+typedef void *(*rte_acl_running_alloc_t)(size_t, unsigned int, void *);
+typedef void  (*rte_acl_running_free_t)(void *, void *);
+typedef void *(*rte_acl_temp_alloc_t)(size_t, sigjmp_buf, void *);
+typedef void  (*rte_acl_temp_reset_t)(void *);
+
 struct rte_acl_config {
 	uint32_t num_categories; /**< Number of categories to build with. */
 	uint32_t num_fields;     /**< Number of field definitions. */
@@ -68,6 +74,20 @@ struct rte_acl_config {
 	/**< array of field definitions. */
 	size_t max_size;
 	/**< max memory limit for internal run-time structures. */
+
+	/**< Allocator callback for run-time internal memory. */
+	rte_acl_running_alloc_t  running_alloc;
+	/**< Free callback for run-time internal memory. */
+	rte_acl_running_free_t   running_free;
+	/**< User context passed to running_alloc/free. */
+	void                     *running_cb_ctx;
+
+	/**< Allocator callback for temporary memory used during build. */
+	rte_acl_temp_alloc_t     temp_alloc;
+	/**< Reset callback for temporary allocator. */
+	rte_acl_temp_reset_t     temp_reset;
+	/**< User context passed to temp_alloc/reset. */
+	void                     *temp_cb_ctx;
 };
 
 /**

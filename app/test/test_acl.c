@@ -1721,6 +1721,184 @@ test_u32_range(void)
 	return rc;
 }
 
+struct acl_ctx_wrapper_t {
+	struct rte_acl_ctx *ctx;
+	void *running_buf;
+	bool running_buf_using;
+};
+
+struct acl_temp_mem_mgr_t {
+	void *buf;
+	uint32_t buf_used;
+	sigjmp_buf fail;
+};
+
+struct acl_ctx_wrapper_t g_acl_ctx_wrapper;
+struct acl_temp_mem_mgr_t g_temp_mem_mgr;
+
+#define ACL_RUNNING_BUF_SIZE (10 * 1024 * 1024)
+#define ACL_TEMP_BUF_SIZE (10 * 1024 * 1024)
+
+static void *running_alloc(size_t size, unsigned int align, void *cb_data)
+{
+	(void)align;
+	struct acl_ctx_wrapper_t *gwlb_acl_ctx = (struct acl_ctx_wrapper_t *)cb_data;
+	if (gwlb_acl_ctx->running_buf_using)
+		return NULL;
+	printf("running memory alloc for acl context, size=%" PRId64 ", pointer=%p\n",
+		size,
+		gwlb_acl_ctx->running_buf);
+	gwlb_acl_ctx->running_buf_using = true;
+	return gwlb_acl_ctx->running_buf;
+}
+
+static void running_free(void *buf, void *cb_data)
+{
+	if (!buf)
+		return;
+	struct acl_ctx_wrapper_t *gwlb_acl_ctx = (struct acl_ctx_wrapper_t *)cb_data;
+	printf("running memory free pointer=%p\n", buf);
+	gwlb_acl_ctx->running_buf_using = false;
+}
+
+static void *temp_alloc(size_t size, sigjmp_buf fail, void *cb_data)
+{
+	struct acl_temp_mem_mgr_t *gwlb_acl_build = (struct acl_temp_mem_mgr_t *)cb_data;
+	if (ACL_TEMP_BUF_SIZE - gwlb_acl_build->buf_used < size) {
+		printf("Line %i: alloc temp memory fail, size=%" PRId64 ", used=%d\n",
+			__LINE__,
+			size,
+			gwlb_acl_build->buf_used);
+		siglongjmp(fail, -ENOMEM);
+		return NULL;
+	}
+	void *ret = (char *)gwlb_acl_build->buf + gwlb_acl_build->buf_used;
+	gwlb_acl_build->buf_used += size;
+	return ret;
+}
+
+static void temp_reset(void *cb_data)
+{
+	struct acl_temp_mem_mgr_t *gwlb_acl_build = (struct acl_temp_mem_mgr_t *)cb_data;
+	memset(gwlb_acl_build->buf, 0, ACL_TEMP_BUF_SIZE);
+	printf("temp memory reset, used total=%d\n", gwlb_acl_build->buf_used);
+	gwlb_acl_build->buf_used = 0;
+}
+
+static int
+rte_acl_ipv4vlan_build_wich_mem_cb(struct rte_acl_ctx *ctx,
+	const uint32_t layout[RTE_ACL_IPV4VLAN_NUM],
+	uint32_t num_categories)
+{
+	struct rte_acl_config cfg;
+
+	if (ctx == NULL || layout == NULL)
+		return -EINVAL;
+
+	memset(&cfg, 0, sizeof(cfg));
+	acl_ipv4vlan_config(&cfg, layout, num_categories);
+	cfg.running_alloc = running_alloc;
+	cfg.running_free = running_free;
+	cfg.running_cb_ctx = &g_acl_ctx_wrapper;
+	cfg.temp_alloc = temp_alloc;
+	cfg.temp_reset = temp_reset;
+	cfg.temp_cb_ctx = &g_temp_mem_mgr;
+	return rte_acl_build(ctx, &cfg);
+}
+
+static int
+test_classify_buid_wich_mem_cb(struct rte_acl_ctx *acx,
+	const struct rte_acl_ipv4vlan_rule *rules, uint32_t num)
+{
+	int ret;
+
+	/* add rules to the context */
+	ret = rte_acl_ipv4vlan_add_rules(acx, rules, num);
+	if (ret != 0) {
+		printf("Line %i: Adding rules to ACL context failed!\n",
+			__LINE__);
+		return ret;
+	}
+
+	/* try building the context */
+	ret = rte_acl_ipv4vlan_build_wich_mem_cb(acx, ipv4_7tuple_layout,
+		RTE_ACL_MAX_CATEGORIES);
+	if (ret != 0) {
+		printf("Line %i: Building ACL context failed!\n", __LINE__);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
+test_mem_cb(void)
+{
+	int i, ret;
+	g_acl_ctx_wrapper.ctx = rte_acl_create(&acl_param);
+	if (g_acl_ctx_wrapper.ctx == NULL) {
+		printf("Line %i: Error creating ACL context!\n", __LINE__);
+		return -1;
+	}
+	g_acl_ctx_wrapper.running_buf = rte_zmalloc_socket(
+		"test_acl",
+		ACL_RUNNING_BUF_SIZE,
+		RTE_CACHE_LINE_SIZE,
+		SOCKET_ID_ANY);
+	if (!g_acl_ctx_wrapper.running_buf) {
+		printf("Line %i: Error allocing running buf for acl context!\n", __LINE__);
+		return 1;
+	}
+	g_acl_ctx_wrapper.running_buf_using = false;
+
+	g_temp_mem_mgr.buf = malloc(ACL_TEMP_BUF_SIZE);
+	if (!g_temp_mem_mgr.buf)
+		printf("Line %i: Error allocing teem buf for acl build!\n", __LINE__);
+	memset(g_temp_mem_mgr.buf, 0, ACL_TEMP_BUF_SIZE);
+	g_temp_mem_mgr.buf_used = 0;
+
+	ret = 0;
+	for (i = 0; i != TEST_CLASSIFY_ITER; i++) {
+
+		if ((i & 1) == 0)
+			rte_acl_reset(g_acl_ctx_wrapper.ctx);
+		else
+			rte_acl_reset_rules(g_acl_ctx_wrapper.ctx);
+
+		ret = test_classify_buid_wich_mem_cb(g_acl_ctx_wrapper.ctx, acl_test_rules,
+			RTE_DIM(acl_test_rules));
+		if (ret != 0) {
+			printf("Line %i, iter: %d: "
+				"Adding rules to ACL context failed!\n",
+				__LINE__, i);
+			break;
+		}
+
+		ret = test_classify_run(g_acl_ctx_wrapper.ctx, acl_test_data,
+			RTE_DIM(acl_test_data));
+		if (ret != 0) {
+			printf("Line %i, iter: %d: %s failed!\n",
+				__LINE__, i, __func__);
+			break;
+		}
+
+		/* reset rules and make sure that classify still works ok. */
+		rte_acl_reset_rules(g_acl_ctx_wrapper.ctx);
+		ret = test_classify_run(g_acl_ctx_wrapper.ctx, acl_test_data,
+			RTE_DIM(acl_test_data));
+		if (ret != 0) {
+			printf("Line %i, iter: %d: %s failed!\n",
+				__LINE__, i, __func__);
+			break;
+		}
+	}
+
+	rte_acl_free(g_acl_ctx_wrapper.ctx);
+	free(g_temp_mem_mgr.buf);
+	rte_free(g_acl_ctx_wrapper.running_buf);
+	return ret;
+}
+
 static int
 test_acl(void)
 {
@@ -1742,7 +1920,8 @@ test_acl(void)
 		return -1;
 	if (test_u32_range() < 0)
 		return -1;
-
+	if (test_mem_cb() < 0)
+		return -1;
 	return 0;
 }
 
