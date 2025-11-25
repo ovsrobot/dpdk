@@ -514,6 +514,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set dcb fwd_tc (tc_mask)\n"
 			"    Set DCB forwarding on specify TCs, if bit-n in tc-mask is 1, then TC-n's forwarding is enabled\n\n"
 
+			"set dcb fwd_tc_cores (tc_cores)\n"
+			"    Set DCB forwarding cores per-TC, 1-means one core process all queues of a TC.\n\n"
+
 			"mac_addr add (port_id) (XX:XX:XX:XX:XX:XX)\n"
 			"    Add a MAC address on port_id.\n\n"
 
