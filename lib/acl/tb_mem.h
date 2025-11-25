@@ -24,11 +24,17 @@ struct tb_mem_block {
 	uint8_t             *mem;
 };
 
+typedef void *(*rte_tb_alloc_t)(size_t, sigjmp_buf, void *);
+typedef void (*rte_tb_reset_t)(void *);
+
 struct tb_mem_pool {
 	struct tb_mem_block *block;
 	size_t               alignment;
 	size_t               min_alloc;
 	size_t               alloc;
+	rte_tb_alloc_t       alloc_cb;
+	rte_tb_reset_t       reset_cb;
+	void                 *cb_ctx;
 	/* jump target in case of memory allocation failure. */
 	sigjmp_buf           fail;
 };

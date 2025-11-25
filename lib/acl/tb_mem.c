@@ -55,6 +55,9 @@ tb_alloc(struct tb_mem_pool *pool, size_t size)
 
 	size = RTE_ALIGN_CEIL(size, pool->alignment);
 
+	if (pool->alloc_cb)
+		return pool->alloc_cb(size, pool->fail, pool->cb_ctx);
+
 	block = pool->block;
 	if (block == NULL || block->size < size) {
 		new_sz = (size > pool->min_alloc) ? size : pool->min_alloc;
@@ -70,6 +73,11 @@ void
 tb_free_pool(struct tb_mem_pool *pool)
 {
 	struct tb_mem_block *next, *block;
+
+	if (pool->reset_cb) {
+		pool->reset_cb(pool->cb_ctx);
+		return;
+	}
 
 	for (block = pool->block; block != NULL; block = next) {
 		next = block->next;
