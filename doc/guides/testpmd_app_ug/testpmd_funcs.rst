@@ -297,7 +297,7 @@ show config
 Displays the configuration of the application.
 The configuration comes from the command-line, the runtime or the application defaults::
 
-   testpmd> show config (rxtx|cores|fwd|rxoffs|rxpkts|rxhdrs|txpkts|txtimes)
+   testpmd> show config (rxtx|cores|fwd|dcbfwd|rxoffs|rxpkts|rxhdrs|txpkts|txtimes)
 
 The available information categories are:
 
@@ -306,6 +306,8 @@ The available information categories are:
 * ``cores``: List of forwarding cores.
 
 * ``fwd``: Packet forwarding configuration.
+
+* ``dcbfwd``: DCB forwarding configuration.
 
 * ``rxoffs``: Packet offsets for RX split.
 
