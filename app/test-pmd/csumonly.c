@@ -529,8 +529,24 @@ static uint8_t
 parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype, bool parse_inner)
 {
 	int frag = 0, ret;
+	bool is_ipv4, is_ipv6;
 
-	if (RTE_ETH_IS_IPV4_HDR(ptype)) {
+	if (parse_inner) {
+		/* Check inner L3 type for tunneled packets */
+		uint32_t inner_l3 = ptype & RTE_PTYPE_INNER_L3_MASK;
+		is_ipv4 = (inner_l3 == RTE_PTYPE_INNER_L3_IPV4) ||
+			  (inner_l3 == RTE_PTYPE_INNER_L3_IPV4_EXT) ||
+			  (inner_l3 == RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN);
+		is_ipv6 = (inner_l3 == RTE_PTYPE_INNER_L3_IPV6) ||
+			  (inner_l3 == RTE_PTYPE_INNER_L3_IPV6_EXT) ||
+			  (inner_l3 == RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN);
+	} else {
+		/* Check outer L3 type */
+		is_ipv4 = RTE_ETH_IS_IPV4_HDR(ptype);
+		is_ipv6 = RTE_ETH_IS_IPV6_HDR(ptype);
+	}
+
+	if (is_ipv4) {
 		const struct rte_ipv4_hdr *ip4h;
 		struct rte_ipv4_hdr ip4h_copy;
 		ip4h = rte_pktmbuf_read(m, off, sizeof(*ip4h), &ip4h_copy);
@@ -538,7 +554,7 @@ parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype, bool pars
 			return 0;
 
 		return ip4h->next_proto_id;
-	} else if (RTE_ETH_IS_IPV6_HDR(ptype)) {
+	} else if (is_ipv6) {
 		const struct rte_ipv6_hdr *ip6h;
 		struct rte_ipv6_hdr ip6h_copy;
 		ip6h = rte_pktmbuf_read(m, off, sizeof(*ip6h), &ip6h_copy);
@@ -552,8 +568,14 @@ parse_l4_proto(const struct rte_mbuf *m, uint32_t off, uint32_t ptype, bool pars
 			return ip6h->proto;
 
 		off += sizeof(struct rte_ipv6_hdr);
+		/* Check offset before parsing extension headers. */
+		if (off >= m->pkt_len)
+			return 0;
 		ret = rte_net_skip_ip6_ext(ip6h->proto, m, &off, &frag);
 		if (ret < 0)
+			return 0;
+		/* Ensure offset is valid after skipping IPv6 extension headers. */
+		if (off > m->pkt_len)
 			return 0;
 		return ret;
 	}
@@ -703,7 +725,21 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 		if (txp->parse_tunnel && RTE_ETH_IS_TUNNEL_PKT(ptype) != 0) {
 			info.is_tunnel = 1;
 			update_tunnel_outer(&info);
-			info.l2_len = hdr_lens.inner_l2_len;
+			/* For tunnels with inner L2 (e.g., VXLAN, GENEVE with Ethernet),
+			 * inner_l2_len includes outer L4 + tunnel headers.
+			 * Subtract them to get only inner L2 length.
+			 * For tunnels without inner L2, inner_l2_len already contains
+			 * only headers before inner L3, no adjustment needed.
+			 */
+			if (ptype & RTE_PTYPE_INNER_L2_MASK) {
+				if (unlikely(hdr_lens.inner_l2_len <
+					     hdr_lens.l4_len + hdr_lens.tunnel_len))
+					info.l2_len = 0;
+				else
+					info.l2_len = hdr_lens.inner_l2_len -
+						hdr_lens.l4_len - hdr_lens.tunnel_len;
+			} else
+				info.l2_len = hdr_lens.inner_l2_len;
 			info.l3_len = hdr_lens.inner_l3_len;
 			info.l4_len = hdr_lens.inner_l4_len;
 			eth_hdr = (struct rte_ether_hdr *)((char *)l3_hdr +
@@ -714,11 +750,14 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 		}
 		/* update l3_hdr and outer_l3_hdr if a tunnel was parsed */
 		if (info.is_tunnel) {
-			uint16_t l3_off = info.outer_l2_len +  info.outer_l3_len + info.l2_len;
+			uint16_t l3_off = info.outer_l2_len +  info.outer_l3_len +
+				hdr_lens.l4_len + hdr_lens.tunnel_len + info.l2_len;
 
 			outer_l3_hdr = l3_hdr;
-			l3_hdr = (char *)l3_hdr + info.outer_l3_len + info.l2_len;
-			info.l4_proto = parse_l4_proto(m, l3_off, ptype, true);
+			l3_hdr = (char *)eth_hdr + info.l2_len;
+			/* Validate offset is within packet bounds before parsing */
+			if (l3_off < info.pkt_len)
+				info.l4_proto = parse_l4_proto(m, l3_off, ptype, true);
 		}
 		/* step 2: depending on user command line configuration,
 		 * recompute checksum either in software or flag the
