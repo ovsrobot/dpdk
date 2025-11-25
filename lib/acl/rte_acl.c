@@ -362,7 +362,10 @@ rte_acl_free(struct rte_acl_ctx *ctx)
 
 	rte_mcfg_tailq_write_unlock();
 
-	rte_free(ctx->mem);
+	if (ctx->config.running_free)
+		ctx->config.running_free(ctx->mem, ctx->config.running_cb_ctx);
+	else
+		rte_free(ctx->mem);
 	rte_free(ctx);
 	rte_free(te);
 }

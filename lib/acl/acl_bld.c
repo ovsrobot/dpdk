@@ -777,9 +777,12 @@ acl_merge_trie(struct acl_build_context *context,
  *  - reset all RT related fields to zero.
  */
 static void
-acl_build_reset(struct rte_acl_ctx *ctx)
+acl_build_reset(struct rte_acl_ctx *ctx, const struct rte_acl_config *cfg)
 {
-	rte_free(ctx->mem);
+	if (cfg->running_free)
+		cfg->running_free(ctx->mem, cfg->running_cb_ctx);
+	else
+		rte_free(ctx->mem);
 	memset(&ctx->num_categories, 0,
 		sizeof(*ctx) - offsetof(struct rte_acl_ctx, num_categories));
 }
@@ -1518,6 +1521,9 @@ acl_bld(struct acl_build_context *bcx, struct rte_acl_ctx *ctx,
 	bcx->acx = ctx;
 	bcx->pool.alignment = ACL_POOL_ALIGN;
 	bcx->pool.min_alloc = ACL_POOL_ALLOC_MIN;
+	bcx->pool.alloc_cb = cfg->temp_alloc;
+	bcx->pool.reset_cb = cfg->temp_reset;
+	bcx->pool.cb_ctx = cfg->temp_cb_ctx;
 	bcx->cfg = *cfg;
 	bcx->category_mask = RTE_LEN2MASK(bcx->cfg.num_categories,
 		typeof(bcx->category_mask));
@@ -1635,7 +1641,7 @@ rte_acl_build(struct rte_acl_ctx *ctx, const struct rte_acl_config *cfg)
 	if (rc != 0)
 		return rc;
 
-	acl_build_reset(ctx);
+	acl_build_reset(ctx, cfg);
 
 	if (cfg->max_size == 0) {
 		n = NODE_MIN;
@@ -1655,7 +1661,7 @@ rte_acl_build(struct rte_acl_ctx *ctx, const struct rte_acl_config *cfg)
 			rc = rte_acl_gen(ctx, bcx.tries, bcx.bld_tries,
 				bcx.num_tries, bcx.cfg.num_categories,
 				ACL_MAX_INDEXES * RTE_DIM(bcx.tries) *
-				sizeof(ctx->data_indexes[0]), max_size);
+				sizeof(ctx->data_indexes[0]), max_size, cfg);
 			if (rc == 0) {
 				/* set data indexes. */
 				acl_set_data_indexes(ctx);

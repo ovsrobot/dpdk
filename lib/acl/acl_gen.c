@@ -448,7 +448,8 @@ acl_calc_counts_indices(struct acl_node_counters *counts,
 int
 rte_acl_gen(struct rte_acl_ctx *ctx, struct rte_acl_trie *trie,
 	struct rte_acl_bld_trie *node_bld_trie, uint32_t num_tries,
-	uint32_t num_categories, uint32_t data_index_sz, size_t max_size)
+	uint32_t num_categories, uint32_t data_index_sz, size_t max_size,
+	const struct rte_acl_config *cfg)
 {
 	void *mem;
 	size_t total_size;
@@ -478,7 +479,10 @@ rte_acl_gen(struct rte_acl_ctx *ctx, struct rte_acl_trie *trie,
 		return -ERANGE;
 	}
 
-	mem = rte_zmalloc_socket(ctx->name, total_size, RTE_CACHE_LINE_SIZE,
+	if (cfg->running_alloc)
+		mem = cfg->running_alloc(total_size, RTE_CACHE_LINE_SIZE, cfg->running_cb_ctx);
+	else
+		mem = rte_zmalloc_socket(ctx->name, total_size, RTE_CACHE_LINE_SIZE,
 			ctx->socket_id);
 	if (mem == NULL) {
 		ACL_LOG(ERR,
