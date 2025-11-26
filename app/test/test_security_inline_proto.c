@@ -44,7 +44,7 @@ test_inline_ipsec_sg(void)
 
 #define NB_ETHPORTS_USED		1
 #define MEMPOOL_CACHE_SIZE		32
-#define MAX_PKT_BURST			32
+#define MAX_PKT_BURST			RTE_OPTIMAL_BURST_SIZE
 #define RX_DESC_DEFAULT	1024
 #define TX_DESC_DEFAULT	1024
 #define RTE_PORT_ALL		(~(uint16_t)0x0)

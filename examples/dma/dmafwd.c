@@ -15,7 +15,7 @@
 
 /* size of ring used for software copying between rx and tx. */
 #define RTE_LOGTYPE_DMA RTE_LOGTYPE_USER1
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST		     RTE_OPTIMAL_BURST_SIZE
 #define MEMPOOL_CACHE_SIZE 512
 #define MIN_POOL_SIZE 65536U
 #define CMD_LINE_OPT_PORTMASK_INDEX 1

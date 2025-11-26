@@ -39,7 +39,7 @@
 
 #define NB_MBUF   8192
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST	  RTE_OPTIMAL_BURST_SIZE
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
 /*
@@ -61,7 +61,7 @@ static unsigned int lsi_rx_queue_per_lcore = 1;
 /* destination port for L2 forwarding */
 static unsigned lsi_dst_ports[RTE_MAX_ETHPORTS] = {0};
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST RTE_OPTIMAL_BURST_SIZE
 
 #define MAX_RX_QUEUE_PER_LCORE 16
 #define MAX_TX_QUEUE_PER_PORT 16

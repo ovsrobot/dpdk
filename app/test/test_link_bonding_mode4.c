@@ -41,8 +41,8 @@
 
 #define TEST_RX_DESC_MAX        (2048)
 #define TEST_TX_DESC_MAX        (2048)
-#define MAX_PKT_BURST           (32)
-#define DEF_PKT_BURST           (16)
+#define MAX_PKT_BURST		(RTE_OPTIMAL_BURST_SIZE)
+#define DEF_PKT_BURST		(RTE_OPTIMAL_BURST_SIZE)
 
 #define BONDING_DEV_NAME         ("net_bonding_m4_bond_dev")
 

@@ -44,8 +44,7 @@
 
 #include <rte_ip_frag.h>
 
-#define MAX_PKT_BURST 32
-
+#define MAX_PKT_BURST RTE_OPTIMAL_BURST_SIZE
 
 #define RTE_LOGTYPE_IP_RSMBL RTE_LOGTYPE_USER1
 

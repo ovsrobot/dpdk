@@ -61,7 +61,7 @@ enum cdev_type {
 #define MAX_KEY_SIZE 128
 #define MAX_IV_SIZE 16
 #define MAX_AAD_SIZE 65535
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST		RTE_OPTIMAL_BURST_SIZE
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 #define SESSION_POOL_CACHE_SIZE 0
 

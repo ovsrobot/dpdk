@@ -52,7 +52,7 @@
 #define RX_DESC_MAX	(2048)
 #define TX_DESC_MAX	(2048)
 #define MAX_PKT_BURST			(512)
-#define DEF_PKT_BURST			(16)
+#define DEF_PKT_BURST			(RTE_OPTIMAL_BURST_SIZE)
 
 #define BONDING_DEV_NAME			("net_bonding_ut")
 

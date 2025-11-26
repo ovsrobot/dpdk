@@ -17,7 +17,7 @@
 
 enum {VIRTIO_RXQ, VIRTIO_TXQ, VIRTIO_QNUM};
 
-#define MAX_PKT_BURST 32		/* Max burst size for RX/TX */
+#define MAX_PKT_BURST RTE_OPTIMAL_BURST_SIZE /* Max burst size for RX/TX */
 
 struct device_statistics {
 	uint64_t	tx;

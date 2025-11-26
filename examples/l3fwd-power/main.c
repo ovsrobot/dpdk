@@ -55,7 +55,7 @@
 RTE_LOG_REGISTER(l3fwd_power_logtype, l3fwd.power, INFO);
 #define RTE_LOGTYPE_L3FWD_POWER l3fwd_power_logtype
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST RTE_OPTIMAL_BURST_SIZE
 
 #define MIN_ZERO_POLL_COUNT 10
 

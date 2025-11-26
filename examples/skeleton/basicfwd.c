@@ -16,7 +16,7 @@
 
 #define NUM_MBUFS 8191
 #define MBUF_CACHE_SIZE 250
-#define BURST_SIZE 32
+#define BURST_SIZE	RTE_OPTIMAL_BURST_SIZE
 
 /* basicfwd.c: Basic DPDK skeleton forwarding example. */
 

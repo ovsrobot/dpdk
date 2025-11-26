@@ -39,7 +39,7 @@
 #define LLR_1_BIT 0x81
 #define LLR_0_BIT 0x7F
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST	   RTE_OPTIMAL_BURST_SIZE
 #define NB_MBUF 8191
 #define MEMPOOL_CACHE_SIZE 256
 

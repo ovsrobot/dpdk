@@ -100,7 +100,7 @@ static uint8_t max_priority;
 static uint32_t rand_seed;
 static uint64_t meter_profile_values[3]; /* CIR CBS EBS values. */
 
-#define MAX_PKT_BURST    32
+#define MAX_PKT_BURST	  RTE_OPTIMAL_BURST_SIZE
 #define LCORE_MODE_PKT    1
 #define LCORE_MODE_STATS  2
 #define MAX_STREAMS      64

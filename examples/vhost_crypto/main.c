@@ -23,7 +23,7 @@
 #include <cmdline.h>
 
 #define NB_VIRTIO_QUEUES		(1)
-#define MAX_PKT_BURST			(64)
+#define MAX_PKT_BURST			(RTE_OPTIMAL_BURST_SIZE)
 #define MAX_IV_LEN			(32)
 #define NB_MEMPOOL_OBJS			(8192)
 #define NB_CRYPTO_DESCRIPTORS		(4096)

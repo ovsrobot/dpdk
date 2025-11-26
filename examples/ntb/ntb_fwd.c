@@ -83,8 +83,8 @@ static uint16_t nb_desc = NTB_DEFAULT_NUM_DESCS;
 
 static uint16_t tx_free_thresh;
 
-#define NTB_MAX_PKT_BURST 32
-#define NTB_DFLT_PKT_BURST 32
+#define NTB_MAX_PKT_BURST  RTE_OPTIMAL_BURST_SIZE
+#define NTB_DFLT_PKT_BURST RTE_OPTIMAL_BURST_SIZE
 static uint16_t pkt_burst = NTB_DFLT_PKT_BURST;
 
 #define BURST_TX_RETRIES 64

@@ -45,7 +45,7 @@
 
 #define NUM_MBUFS 8191
 #define MBUF_CACHE_SIZE 250
-#define BURST_SIZE 32
+#define BURST_SIZE	RTE_OPTIMAL_BURST_SIZE
 
 static uint32_t enabled_port_mask;
 static volatile bool force_quit;

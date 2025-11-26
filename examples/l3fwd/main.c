@@ -1074,17 +1074,26 @@ parse_args(int argc, char **argv)
 		return -1;
 	}
 
-	if (evt_rsrc->vector_enabled && !evt_rsrc->vector_size) {
-		evt_rsrc->vector_size = VECTOR_SIZE_DEFAULT;
-		fprintf(stderr, "vector size set to default (%" PRIu16 ")\n",
-			evt_rsrc->vector_size);
+	if (evt_rsrc->vector_enabled) {
+		if (!evt_rsrc->vector_size) {
+			evt_rsrc->vector_size = VECTOR_SIZE_DEFAULT;
+			fprintf(stderr, "vector size set to default (%" PRIu16 ")\n",
+				evt_rsrc->vector_size);
+		} else {
+			fprintf(stderr, "vector size set to (%" PRIu16 ")\n",
+				evt_rsrc->vector_size);
+		}
 	}
 
-	if (evt_rsrc->vector_enabled && !evt_rsrc->vector_tmo_ns) {
-		evt_rsrc->vector_tmo_ns = VECTOR_TMO_NS_DEFAULT;
-		fprintf(stderr,
-			"vector timeout set to default (%" PRIu64 " ns)\n",
-			evt_rsrc->vector_tmo_ns);
+	if (evt_rsrc->vector_enabled) {
+		if (!evt_rsrc->vector_tmo_ns) {
+			evt_rsrc->vector_tmo_ns = VECTOR_TMO_NS_DEFAULT;
+			fprintf(stderr, "vector timeout set to default (%" PRIu64 " ns)\n",
+				evt_rsrc->vector_tmo_ns);
+		} else {
+			fprintf(stderr, "vector timeout set to (%" PRIu64 " ns)\n",
+				evt_rsrc->vector_tmo_ns);
+		}
 	}
 #endif
 
@@ -1687,7 +1696,9 @@ main(int argc, char **argv)
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "Invalid L3FWD parameters\n");
 
+#ifndef RTE_LIB_EVENTDEV
 	RTE_LOG(INFO, L3FWD, "Using Rx burst %u Tx burst %u\n", rx_burst_size, tx_burst_size);
+#endif
 
 	/* Setup function pointers for lookup method. */
 	setup_l3fwd_lookup_tables();

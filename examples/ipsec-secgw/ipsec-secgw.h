@@ -11,8 +11,8 @@
 
 #define NB_SOCKETS 4
 
-#define MAX_PKT_BURST 32
-#define MAX_PKT_BURST_VEC 256
+#define MAX_PKT_BURST	  RTE_OPTIMAL_BURST_SIZE
+#define MAX_PKT_BURST_VEC RTE_OPTIMAL_BURST_SIZE
 
 #define MAX_PKTS                                  \
 	((MAX_PKT_BURST_VEC > MAX_PKT_BURST ?     \

@@ -24,10 +24,10 @@ extern "C" {
 #define APP_RING_SIZE (8*1024)
 #define NB_MBUF   (2*1024*1024)
 
-#define MAX_PKT_RX_BURST 64
+#define MAX_PKT_RX_BURST RTE_OPTIMAL_BURST_SIZE
 #define PKT_ENQUEUE 64
 #define PKT_DEQUEUE 63
-#define MAX_PKT_TX_BURST 64
+#define MAX_PKT_TX_BURST RTE_OPTIMAL_BURST_SIZE
 
 #define RX_PTHRESH 8 /**< Default values of RX prefetch threshold reg. */
 #define RX_HTHRESH 8 /**< Default values of RX host threshold reg. */

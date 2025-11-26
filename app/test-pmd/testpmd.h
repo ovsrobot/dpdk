@@ -78,7 +78,7 @@ struct cmdline_file_info {
 #define TX_DESC_MAX    2048
 
 #define MAX_PKT_BURST 512
-#define DEF_PKT_BURST 32
+#define DEF_PKT_BURST RTE_OPTIMAL_BURST_SIZE
 
 #define DEF_MBUF_CACHE 250
 

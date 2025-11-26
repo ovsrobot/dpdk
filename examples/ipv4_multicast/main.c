@@ -54,7 +54,7 @@
 /* allow max jumbo frame 9.5 KB */
 #define	JUMBO_FRAME_MAX_SIZE	0x2600
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST	  RTE_OPTIMAL_BURST_SIZE
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
 /* Configure how many packets ahead to prefetch, when reading packets */

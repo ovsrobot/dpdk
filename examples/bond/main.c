@@ -52,7 +52,7 @@
 
 #define NB_MBUF   (1024*8)
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST	     RTE_OPTIMAL_BURST_SIZE
 #define BURST_TX_DRAIN_US 100      /* TX drain every ~100us */
 #define BURST_RX_INTERVAL_NS (10) /* RX poll interval ~100ns */
 

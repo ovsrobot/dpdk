@@ -76,8 +76,8 @@ static struct rte_eth_conf port_conf = {
  * Packet RX/TX
  *
  ***/
-#define RTE_MBUF_F_RX_BURST_MAX                32
-#define RTE_MBUF_F_TX_BURST_MAX                32
+#define RTE_MBUF_F_RX_BURST_MAX		RTE_OPTIMAL_BURST_SIZE
+#define RTE_MBUF_F_TX_BURST_MAX		RTE_OPTIMAL_BURST_SIZE
 #define TIME_TX_DRAIN                   200000ULL
 
 static uint16_t port_rx;

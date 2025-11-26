@@ -43,7 +43,7 @@
 
 #define NB_MBUF_PER_PORT 3000
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST	  RTE_OPTIMAL_BURST_SIZE
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
 /*

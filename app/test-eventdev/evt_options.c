@@ -37,7 +37,7 @@ evt_options_default(struct evt_options *opt)
 	opt->expiry_nsec = 1E4;   /* 10000ns ~10us */
 	opt->prod_type = EVT_PROD_TYPE_SYNT;
 	opt->eth_queues = 1;
-	opt->vector_size = 64;
+	opt->vector_size = RTE_OPTIMAL_BURST_SIZE;
 	opt->vector_tmo_nsec = 100E3;
 	opt->crypto_op_type = RTE_CRYPTO_OP_TYPE_SYMMETRIC;
 	opt->crypto_cipher_alg = RTE_CRYPTO_CIPHER_NULL;

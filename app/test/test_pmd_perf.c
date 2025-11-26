@@ -17,7 +17,7 @@
 #define NB_ETHPORTS_USED                (1)
 #define NB_SOCKETS                      (2)
 #define MEMPOOL_CACHE_SIZE 250
-#define MAX_PKT_BURST                   (32)
+#define MAX_PKT_BURST			(RTE_OPTIMAL_BURST_SIZE)
 #define RX_DESC_DEFAULT        (1024)
 #define TX_DESC_DEFAULT        (1024)
 #define RTE_PORT_ALL            (~(uint16_t)0x0)

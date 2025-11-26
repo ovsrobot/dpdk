@@ -42,7 +42,7 @@
 #include <rte_mbuf.h>
 #include <rte_spinlock.h>
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST	       RTE_OPTIMAL_BURST_SIZE
 #define MAX_RX_QUEUE_PER_LCORE 16
 #define MAX_TX_QUEUE_PER_PORT 16
 
