@@ -72,17 +72,18 @@ New Features
     that span across different processes or operating system domains.
   * Added functions to exchange handlers between DMA devices.
 
-* **Added speed 800G.**
+* **Added 800G speed.**
 
   Added Ethernet link speed for 800 Gb/s as it is well standardized in IEEE,
   and some devices already support this speed.
 
 * **Added mbuf tracking for debug.**
 
-  Added history dynamic field in mbuf (disabled by default)
+  Added history dynamic field in mbuf
   to store successive states of the mbuf lifecycle.
   Some functions were added to dump statistics.
   A script was added to parse mbuf tracking stored in a file.
+  This feature is disabled by default.
 
 * **Added ethdev API to get link connector.**
 
@@ -104,7 +105,7 @@ New Features
   * OTHER
 
   By default, it reports ``RTE_ETH_LINK_CONNECTOR_NONE``
-  unless driver specifies it.
+  unless the driver specifies it.
 
 * **Updated Amazon ENA (Elastic Network Adapter) ethernet driver.**
 
@@ -122,7 +123,7 @@ New Features
 
 * **Updated Marvell cnxk ethernet driver.**
 
-  Added support to set/get link configuration as mentioned below:
+  Added support to set/get link configuration as outlined below:
 
   * Get speed capability from firmware.
   * Report link type, mode and status.
@@ -229,25 +230,25 @@ Removed Items
 
 * build: as previously announced in the deprecation notices,
   the ``enable_kmods`` build option has been removed.
-  Kernel modules will now automatically be built for OS's where out-of-tree kernel modules
+  Kernel modules will now be built automatically for OSes where out-of-tree kernel modules
   are required for DPDK operation.
   Currently, this means that modules will only be built for FreeBSD.
   No modules are shipped with DPDK for either Linux or Windows.
 
 * ethdev: As previously announced in deprecation notes,
   queue specific stats fields are now removed from ``struct rte_eth_stats``.
-  Mentioned fields are: ``q_ipackets``, ``q_opackets``, ``q_ibytes``, ``q_obytes``, ``q_errors``.
-  Instead queue stats will be received via xstats API.
-  Also compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` is removed from public headers.
+  Affected fields are: ``q_ipackets``, ``q_opackets``, ``q_ibytes``, ``q_obytes``, ``q_errors``.
+  Queue stats will be received via the xstats API instead.
+  Also, the compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` is removed from public headers.
 
 * telemetry: As previously announced in the deprecation notices,
   the functions ``rte_tel_data_add_array_u64`` and ``rte_tel_data_add_dict_u64`` are removed.
   They are replaced by ``rte_tel_data_add_array_uint`` and ``rte_tel_data_add_dict_uint`` respectively.
 
-* net/mlx5: ``repr_matching_en`` device argument has been removed.
+* net/mlx5: The ``repr_matching_en`` device argument has been removed.
   Applications which disabled this option were able to receive traffic
   from any physical port/VF/SF on any representor port.
-  Specifically, in most cases, this was used to process all traffic on representor port
+  Specifically, in most cases, this was used to process all traffic on a representor port
   which is a transfer proxy port.
   Similar behavior in mlx5 PMD can be achieved without this device argument,
   by using ``RTE_FLOW_ACTION_TYPE_RSS`` in transfer flow rules.
@@ -269,7 +270,7 @@ API Changes
    =======================================================
 
 * rawdev: Changed the return type of ``rte_rawdev_get_dev_id()``
-  for negative error values.
+  to allow negative error values.
 
 * pcapng: Changed the API for adding interfaces to include a link type argument.
   The link type was previously hardcoded to the Ethernet link type in the API.
@@ -301,10 +302,10 @@ ABI Changes
   to avoid unaligned accesses.
 
 * ethdev: Added ``link_connector`` field to ``rte_eth_link`` structure
-  to report type of link connector for a port.
+  to report the type of link connector for a port.
 
 * cryptodev: The ``rte_crypto_sm2_op_param`` struct member ``cipher`` to hold ciphertext
-  is changed to union data type. This change is required to support partial SM2 calculation
+  is changed to a union data type. This change is required to support partial SM2 calculation
   which is driven by ``RTE_CRYPTO_SM2_PARTIAL`` capability flag.
 
 * cryptodev: The enum ``rte_crypto_asym_xform_type``, struct ``rte_crypto_asym_xform``
@@ -595,6 +596,6 @@ Tested Platforms
       * Device ID: 15b3:1021
       * Firmware version: 28.47.1026 and above
 
-   * DOCA:
+  * DOCA:
 
-      * DOCA 3.2.0-125000 and above
+    * DOCA 3.2.0-125000 and above
