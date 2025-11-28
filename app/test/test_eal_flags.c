@@ -33,13 +33,6 @@ test_invalid_n_flag(void)
 }
 
 static int
-test_no_hpet_flag(void)
-{
-	printf("no_hpet_flag not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-static int
 test_no_huge_flag(void)
 {
 	printf("no_huge_flag not supported on Windows, skipping test\n");
@@ -78,13 +71,6 @@ static int
 test_memory_flags(void)
 {
 	printf("memory_flags not supported on Windows, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-static int
-test_file_prefix(void)
-{
-	printf("file_prefix not supported on Windows, skipping test\n");
 	return TEST_SKIPPED;
 }
 
@@ -730,15 +716,13 @@ test_invalid_n_flag(void)
 	return 0;
 }
 
+#ifdef RTE_EXEC_ENV_LINUX
 /*
  * Test that the app runs with HPET, and without HPET
  */
 static int
 test_no_hpet_flag(void)
 {
-#ifdef RTE_EXEC_ENV_FREEBSD
-	return 0;
-#else
 	const char *prefix = file_prefix_arg();
 	if (prefix == NULL)
 		return -1;
@@ -756,9 +740,9 @@ test_no_hpet_flag(void)
 		printf("Error - process did not run ok without --no-hpet flag\n");
 		return -1;
 	}
-#
 	return 0;
 }
+#endif
 
 /*
  * Test that the app runs with --no-huge and doesn't run when --socket-mem are
@@ -826,7 +810,7 @@ test_no_huge_flag(void)
 		printf("Error - process run ok with --no-huge and --huge-worker-stack=size flags");
 		return -1;
 	}
-#endif
+
 	return 0;
 }
 
@@ -1140,16 +1124,7 @@ fail:
 	return -1;
 }
 
-#ifdef RTE_EXEC_ENV_FREEBSD
-
-static int
-test_file_prefix(void)
-{
-	printf("file_prefix not supported on FreeBSD, skipping test\n");
-	return TEST_SKIPPED;
-}
-
-#else
+#ifdef RTE_EXEC_ENV_LINUX
 
 static int
 test_file_prefix(void)
@@ -1611,15 +1586,33 @@ test_memory_flags(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-REGISTER_FAST_TEST(eal_flags_c_opt_autotest, false, false, test_missing_c_flag);
-REGISTER_FAST_TEST(eal_flags_main_opt_autotest, false, false, test_main_lcore_flag);
-REGISTER_FAST_TEST(eal_flags_n_opt_autotest, false, false, test_invalid_n_flag);
-REGISTER_FAST_TEST(eal_flags_hpet_autotest, false, false, test_no_hpet_flag);
-REGISTER_FAST_TEST(eal_flags_no_huge_autotest, false, false, test_no_huge_flag);
-REGISTER_FAST_TEST(eal_flags_a_opt_autotest, false, false, test_allow_flag);
-REGISTER_FAST_TEST(eal_flags_b_opt_autotest, false, false, test_invalid_b_flag);
-REGISTER_FAST_TEST(eal_flags_vdev_opt_autotest, false, false, test_invalid_vdev_flag);
-REGISTER_FAST_TEST(eal_flags_r_opt_autotest, false, false, test_invalid_r_flag);
-REGISTER_FAST_TEST(eal_flags_mem_autotest, false, false, test_memory_flags);
-REGISTER_FAST_TEST(eal_flags_file_prefix_autotest, false, false, test_file_prefix);
-REGISTER_FAST_TEST(eal_flags_misc_autotest, false, false, test_misc_flags);
+static struct unit_test_suite eal_flags_test_suite = {
+	.suite_name = "EAL flags unit test suite",
+	.unit_test_cases = {
+		TEST_CASE(test_missing_c_flag),
+		TEST_CASE(test_main_lcore_flag),
+		TEST_CASE(test_invalid_n_flag),
+#ifdef RTE_EXEC_ENV_LINUX
+		TEST_CASE(test_no_hpet_flag),
+#endif
+		TEST_CASE(test_no_huge_flag),
+		TEST_CASE(test_allow_flag),
+		TEST_CASE(test_invalid_b_flag),
+		TEST_CASE(test_invalid_vdev_flag),
+		TEST_CASE(test_invalid_r_flag),
+		TEST_CASE(test_memory_flags),
+#ifdef RTE_EXEC_ENV_LINUX
+		TEST_CASE(test_file_prefix),
+#endif
+		TEST_CASE(test_misc_flags),
+		TEST_CASES_END()
+	}
+};
+
+static int
+test_eal_flags(void)
+{
+	return unit_test_suite_runner(&eal_flags_test_suite);
+}
+
+REGISTER_FAST_TEST(eal_flags_autotest, false, false, test_eal_flags);
