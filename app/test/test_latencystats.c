@@ -142,7 +142,6 @@ static void test_latency_ring_free(void)
 
 static int test_latency_packet_forward(void)
 {
-	unsigned int i;
 	int ret;
 	struct rte_mbuf *pbuf[LATENCY_NUM_PACKETS] = { };
 	struct rte_mempool *mp;
@@ -184,23 +183,26 @@ static int test_latency_packet_forward(void)
 	ret = rte_latencystats_get(values, NUM_STATS);
 	TEST_ASSERT(ret == NUM_STATS, "Test failed to get results after forwarding");
 
-	for (i = 0; i < NUM_STATS; i++) {
-		uint16_t k = values[i].key;
-
-		printf("%s = %"PRIu64"\n",
-		       names[k].name, values[i].value);
-	}
-
-	TEST_ASSERT(values[4].value > 0, "No samples taken");
-	TEST_ASSERT(values[0].value > 0, "Min latency should not be zero");
-	TEST_ASSERT(values[1].value > 0, "Avg latency should not be zero");
-	TEST_ASSERT(values[2].value > 0, "Max latency should not be zero");
-	TEST_ASSERT(values[0].value < values[1].value, "Min latency > Avg latency");
-	TEST_ASSERT(values[0].value < values[2].value, "Min latency > Max latency");
-	TEST_ASSERT(values[1].value < values[2].value, "Avg latency > Max latency");
-
 	rte_eth_dev_stop(portid);
 	test_put_mbuf_to_pool(mp, pbuf);
+
+	TEST_ASSERT(values[4].value > 0, "No samples taken");
+
+	/*
+	 * Test maybe run in emulated environment where TSC is very coarse.
+	 * Therefore can't assume that min/max/avg not zero.
+	 * But we can check that Min <= Avg <= Max.
+	 */
+
+	TEST_ASSERT(values[0].value <= values[1].value,
+		    "Min latency %"PRIu64" > Avg latency %"PRIu64,
+		    values[0].value, values[1].value);
+	TEST_ASSERT(values[0].value <= values[2].value,
+		    "Min latency %"PRIu64" > Max latency %"PRIu64,
+		    values[0].value, values[2].value);
+	TEST_ASSERT(values[1].value <= values[2].value,
+		    "Avg latency %"PRIu64 "> Max latency %"PRIu64,
+		    values[1].value, values[2].value);
 
 	return (ret >= 0) ? TEST_SUCCESS : TEST_FAILED;
 }
