@@ -852,6 +852,15 @@ idpf_set_tx_function(struct rte_eth_dev *dev)
 				return;
 			}
 #endif /* CC_AVX512_SUPPORT */
+			if (tx_simd_width == RTE_VECT_SIMD_256) {
+				PMD_DRV_LOG(NOTICE,
+					    "Using Split AVX2 Vector Tx (port %d).",
+					    dev->data->port_id);
+				dev->tx_pkt_burst = idpf_dp_splitq_xmit_pkts_avx2;
+				dev->tx_pkt_prepare = idpf_dp_prep_pkts;
+				return;
+			}
+
 		}
 		PMD_DRV_LOG(NOTICE,
 			    "Using Split Scalar Tx (port %d).",
