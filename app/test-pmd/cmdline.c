@@ -195,7 +195,7 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"show (rxq|txq) info (port_id) (queue_id)\n"
 			"    Display information for configured RX/TX queue.\n\n"
 
-			"show config (rxtx|cores|fwd|rxoffs|rxpkts|rxhdrs|txpkts)\n"
+			"show config (rxtx|cores|fwd|dcbfwd|rxoffs|rxpkts|rxhdrs|txpkts|txtimes)\n"
 			"    Display the given configuration.\n\n"
 
 			"read rxd (port_id) (queue_id) (rxd_id)\n"
@@ -513,6 +513,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 
 			"set dcb fwd_tc (tc_mask)\n"
 			"    Set DCB forwarding on specify TCs, if bit-n in tc-mask is 1, then TC-n's forwarding is enabled\n\n"
+
+			"set dcb fwd_tc_cores (tc_cores)\n"
+			"    Set DCB forwarding cores per-TC, 1-means one core process all queues of a TC.\n\n"
 
 			"mac_addr add (port_id) (XX:XX:XX:XX:XX:XX)\n"
 			"    Add a MAC address on port_id.\n\n"
@@ -7361,6 +7364,20 @@ struct cmd_showcfg_result {
 	cmdline_fixed_string_t what;
 };
 
+static void show_dcb_fwd_config(void)
+{
+	uint8_t i;
+
+	printf("DCB forwarding config:\n");
+	printf("  Enabled TC list:");
+	for (i = 0; i < RTE_ETH_8_TCS; i++) {
+		if (dcb_fwd_tc_mask & (1u << i))
+			printf(" %d", i);
+	}
+	printf("\n");
+	printf("  Cores-per-TC: %u\n", dcb_fwd_tc_cores);
+}
+
 static void cmd_showcfg_parsed(void *parsed_result,
 			       __rte_unused struct cmdline *cl,
 			       __rte_unused void *data)
@@ -7372,6 +7389,8 @@ static void cmd_showcfg_parsed(void *parsed_result,
 		fwd_lcores_config_display();
 	else if (!strcmp(res->what, "fwd"))
 		pkt_fwd_config_display(&cur_fwd_config);
+	else if (!strcmp(res->what, "dcbfwd"))
+		show_dcb_fwd_config();
 	else if (!strcmp(res->what, "rxoffs"))
 		show_rx_pkt_offsets();
 	else if (!strcmp(res->what, "rxpkts"))
@@ -7390,12 +7409,12 @@ static cmdline_parse_token_string_t cmd_showcfg_port =
 	TOKEN_STRING_INITIALIZER(struct cmd_showcfg_result, cfg, "config");
 static cmdline_parse_token_string_t cmd_showcfg_what =
 	TOKEN_STRING_INITIALIZER(struct cmd_showcfg_result, what,
-				 "rxtx#cores#fwd#rxoffs#rxpkts#rxhdrs#txpkts#txtimes");
+				 "rxtx#cores#fwd#dcbfwd#rxoffs#rxpkts#rxhdrs#txpkts#txtimes");
 
 static cmdline_parse_inst_t cmd_showcfg = {
 	.f = cmd_showcfg_parsed,
 	.data = NULL,
-	.help_str = "show config rxtx|cores|fwd|rxoffs|rxpkts|rxhdrs|txpkts|txtimes",
+	.help_str = "show config rxtx|cores|fwd|dcbfwd|rxoffs|rxpkts|rxhdrs|txpkts|txtimes",
 	.tokens = {
 		(void *)&cmd_showcfg_show,
 		(void *)&cmd_showcfg_port,
