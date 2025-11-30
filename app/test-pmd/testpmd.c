@@ -2675,6 +2675,48 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	uint32_t prev_hdrs = 0;
 	int ret;
 
+	if (rx_conf->share_group > 0) {
+		/* Additional warnings for bad Rx queue sharing */
+
+		const uint16_t dom_id = ports[port_id].dev_info.switch_info.domain_id;
+		const uint16_t rx_dom = ports[port_id].dev_info.switch_info.rx_domain;
+
+		uint16_t pid;
+		RTE_ETH_FOREACH_DEV(pid) {
+			struct rte_port *o_port = &ports[pid];
+			for (uint16_t q = 0; q < nb_rxq; ++q) {
+				struct port_rxqueue *rxq = &o_port->rxq[q];
+				if (rxq->conf.share_group != rx_conf->share_group ||
+						rxq->conf.share_qid != rx_conf->share_qid)
+					continue;
+
+				const uint16_t o_dom_id = o_port->dev_info.switch_info.domain_id;
+				const uint16_t o_rx_dom = o_port->dev_info.switch_info.rx_domain;
+
+				if (o_dom_id != dom_id) {
+					fprintf(stderr, "Bad shared rxq config: "
+						"switch domain mismatch in share group/qid %u/%u: "
+						"%u (port %u) vs. %u (port %u)\n",
+						(unsigned int)rxq->conf.share_group,
+						(unsigned int)rxq->conf.share_qid,
+						(unsigned int)dom_id,
+						(unsigned int)port_id,
+						(unsigned int)o_dom_id,
+						(unsigned int)pid);
+				} else if (o_rx_dom != rx_dom) {
+					fprintf(stderr, "Bad shared rxq config: "
+						"switch rx domain mismatch in share group/qid %u/%u: "
+						"%u (port %u) vs. %u (port %u)\n",
+						(unsigned int)rxq->conf.share_group,
+						(unsigned int)rxq->conf.share_qid,
+						(unsigned int)rx_dom,
+						(unsigned int)port_id,
+						(unsigned int)o_rx_dom,
+						(unsigned int)pid);
+				}
+			}
+		}
+	}
 
 	if ((rx_pkt_nb_segs > 1) &&
 	    (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT)) {
