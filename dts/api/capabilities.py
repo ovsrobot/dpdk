@@ -63,7 +63,7 @@ class LinkTopology(IntEnum):
     @classmethod
     def default(cls) -> "LinkTopology":
         """The default topology required by test cases if not specified otherwise."""
-        return cls.TWO_LINKS
+        return cls.NO_LINK
 
 
 class NicCapability(IntEnum):
