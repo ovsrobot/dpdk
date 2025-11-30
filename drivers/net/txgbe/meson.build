@@ -14,16 +14,20 @@ sources = files(
         'txgbe_ethdev_vf.c',
         'txgbe_fdir.c',
         'txgbe_flow.c',
-        'txgbe_ipsec.c',
         'txgbe_ptypes.c',
         'txgbe_pf.c',
         'txgbe_rxtx.c',
         'txgbe_tm.c',
 )
 
-deps += ['hash', 'security']
+deps += ['hash']
 
 cflags += no_wvla_cflag
+
+if dpdk_conf.has('RTE_LIB_SECURITY')
+    sources += files('txgbe_ipsec.c')
+    deps += 'security'
+endif
 
 if arch_subdir == 'x86'
     sources += files('txgbe_rxtx_vec_sse.c')
