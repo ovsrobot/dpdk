@@ -45,12 +45,22 @@ The application execution command line is:
 
 .. code-block:: console
 
-    ./dpdk-test-pipeline [EAL options] -- -p PORTMASK --TABLE_TYPE
+    ./dpdk-test-pipeline [EAL options] -- -p PORTMASK --PIPELINE_ARGS
 
 The ``-l/--lcores`` EAL CPU corelist option has to contain exactly 3 CPU cores.
 The first CPU core in the core mask is assigned for core A, the second for core B and the third for core C.
 
 The PORTMASK parameter must contain 2 or 4 ports.
+
+PIPELINE_ARGS represents TABLE_TYPE and pipeline options, such as ``--rx-ring-size`` and ``--tx-ring-size``, described below.
+The ``--rx-ring-size`` and ``--tx-ring-size`` options control the sizes of the rings used between cores.
+Both values **must be powers of two**. If not used, the default size is 128.
+
+* ``--rx-ring-size=N``
+  Optional, sets size of the RX ring between **Core A (RX)** and **Core B (Pipeline)**.
+
+* ``--tx-ring-size=N``
+  Optional, sets size of the TX ring between **Core B (Pipeline)** and **Core C (TX)**.
 
 Table Types and Behavior
 ~~~~~~~~~~~~~~~~~~~~~~~~
