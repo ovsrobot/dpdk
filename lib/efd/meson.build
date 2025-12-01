@@ -8,5 +8,6 @@ if is_windows
 endif
 
 sources = files('rte_efd.c')
+sources_avx2 += files('efd_avx2.c')
 headers = files('rte_efd.h')
 deps += ['ring', 'hash']
