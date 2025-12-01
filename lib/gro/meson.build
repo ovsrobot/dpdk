@@ -10,4 +10,4 @@ sources = files(
         'gro_vxlan_udp4.c',
 )
 headers = files('rte_gro.h')
-deps += ['ethdev']
+deps += ['ethdev', 'hash']
