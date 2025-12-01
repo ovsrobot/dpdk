@@ -264,6 +264,20 @@ acl_get_best_alg(void)
 	return alg[i];
 }
 
+static void *
+zalloc_dft(void *udata, char *name, size_t size, size_t align, int32_t socket_id)
+{
+	(void)udata;
+	return rte_zmalloc_socket(name, size, align, socket_id);
+}
+
+static void
+free_dft(void *udata, void *ptr)
+{
+	(void)udata;
+	rte_free(ptr);
+}
+
 RTE_EXPORT_SYMBOL(rte_acl_set_ctx_classify)
 extern int
 rte_acl_set_ctx_classify(struct rte_acl_ctx *ctx, enum rte_acl_classify_alg alg)
@@ -362,7 +376,7 @@ rte_acl_free(struct rte_acl_ctx *ctx)
 
 	rte_mcfg_tailq_write_unlock();
 
-	rte_free(ctx->mem);
+	ctx->mem_cb.free(ctx->mem_cb.udata, ctx->mem);
 	rte_free(ctx);
 	rte_free(te);
 }
@@ -425,6 +439,9 @@ rte_acl_create(const struct rte_acl_param *param)
 		ctx->rule_sz = param->rule_size;
 		ctx->socket_id = param->socket_id;
 		ctx->alg = acl_get_best_alg();
+		ctx->mem_cb.zalloc = zalloc_dft;
+		ctx->mem_cb.free = free_dft;
+		ctx->mem_cb.udata = NULL;
 		strlcpy(ctx->name, param->name, sizeof(ctx->name));
 
 		te->data = (void *) ctx;
@@ -554,4 +571,20 @@ rte_acl_list_dump(void)
 		rte_acl_dump(ctx);
 	}
 	rte_mcfg_tailq_read_unlock();
+}
+
+int rte_acl_set_mem_cb(struct rte_acl_ctx *acl, const struct rte_acl_mem_cb *mcb)
+{
+	if (!acl || !mcb || !mcb->zalloc || !mcb->free)
+		return -EINVAL;
+	memcpy(&acl->mem_cb, mcb, sizeof(struct rte_acl_mem_cb));
+	return 0;
+}
+
+int rte_acl_get_mem_cb(const struct rte_acl_ctx *acl, struct rte_acl_mem_cb *mcb)
+{
+	if (!acl || !mcb)
+		return -EINVAL;
+	memcpy(mcb, &acl->mem_cb, sizeof(struct rte_acl_mem_cb));
+	return 0;
 }
