@@ -137,6 +137,48 @@ struct rte_acl_param {
 struct rte_acl_ctx;
 
 /**
+ * Memory allocation callbacks for ACL runtime.
+ */
+struct rte_acl_mem_cb {
+	/** Allocate zero-initialized memory used during runtime. */
+	void *(*zalloc)(void *udata, char *name, size_t size, size_t align, int32_t socket_id);
+
+	/** Free memory previously allocated by zalloc(). */
+	void (*free)(void *udata, void *ptr);
+
+	/** User-provided context passed to allocation/free callbacks. */
+	void *udata;
+};
+
+/**
+ * Set memory allocation callbacks for a given ACL context.
+ *
+ * @param acl
+ *   The ACL context.
+ * @param mcb
+ *   Pointer to the memory callback structure
+ *
+ * @return
+ *   0 on success.
+ *   -EINVAL if parameters are invalid.
+ */
+int rte_acl_set_mem_cb(struct rte_acl_ctx *acl, const struct rte_acl_mem_cb *mcb);
+
+/**
+ * Retrieve the memory allocation callbacks assigned to the ACL context.
+ *
+ * @param acl
+ *   The ACL context.
+ * @param mcb
+ *   Output location for the current memory callback structure
+ *
+ * @return
+ *   0 on success.
+ *   -EINVAL if parameters are invalid.
+ */
+int rte_acl_get_mem_cb(const struct rte_acl_ctx *acl, struct rte_acl_mem_cb *mcb);
+
+/**
  * De-allocate all memory used by ACL context.
  *
  * @param ctx
