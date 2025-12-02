@@ -1888,7 +1888,7 @@ ice_rx_scan_hw_ring(struct ci_rx_queue *rxq)
 	struct rte_mbuf *mb;
 	uint16_t stat_err0;
 	uint16_t pkt_len, hdr_len;
-	int32_t s[ICE_LOOK_AHEAD], nb_dd;
+	int32_t s[ICE_LOOK_AHEAD], nb_dd, var = 0;
 	int32_t i, j, nb_rx = 0;
 	uint64_t pkt_flags = 0;
 	uint32_t *ptype_tbl = rxq->ice_vsi->adapter->ptype_tbl;
@@ -1930,8 +1930,18 @@ ice_rx_scan_hw_ring(struct ci_rx_queue *rxq)
 		rte_smp_rmb();
 
 		/* Compute how many status bits were set */
-		for (j = 0, nb_dd = 0; j < ICE_LOOK_AHEAD; j++)
-			nb_dd += s[j] & (1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+		for (j = 0, nb_dd = 0; j < ICE_LOOK_AHEAD; j++) {
+			var = s[j] & (1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+#ifdef RTE_ARCH_ARM
+			/* For Arm platforms, only compute continuous status bits */
+			if (var)
+				nb_dd += 1;
+			else
+				break;
+#else
+			nb_dd += var;
+#endif
+		}
 
 		nb_rx += nb_dd;
 
