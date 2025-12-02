@@ -1721,6 +1721,125 @@ test_u32_range(void)
 	return rc;
 }
 
+struct acl_ctx_wrapper {
+	struct rte_acl_ctx *ctx;
+	void *running_buf;
+	bool running_buf_using;
+};
+
+#define ACL_RUNNING_BUF_SIZE (10 * 1024 * 1024)
+
+static void *running_alloc(char *name, size_t size,
+	size_t align, int32_t socket_id, void *udata)
+{
+	RTE_SET_USED(align);
+	RTE_SET_USED(name);
+	RTE_SET_USED(socket_id);
+	if (size > ACL_RUNNING_BUF_SIZE)
+		return NULL;
+	struct acl_ctx_wrapper *acl_ctx = (struct acl_ctx_wrapper *)udata;
+	if (acl_ctx->running_buf_using)
+		return NULL;
+	printf("running memory alloc for acl context, size=%zu, pointer=%p\n",
+		size,
+		acl_ctx->running_buf);
+	memset(acl_ctx->running_buf, 0, size);
+	acl_ctx->running_buf_using = true;
+	return acl_ctx->running_buf;
+}
+
+static void running_free(void *ptr, void *udata)
+{
+	if (!ptr)
+		return;
+	struct acl_ctx_wrapper *acl_ctx = (struct acl_ctx_wrapper *)udata;
+	printf("running memory free, pointer=%p\n", ptr);
+	acl_ctx->running_buf_using = false;
+}
+
+static int
+test_mem_hook(void)
+{
+	int i, ret;
+	struct acl_ctx_wrapper acl_ctx_wrapper = {0};
+	acl_ctx_wrapper.ctx = rte_acl_create(&acl_param);
+	if (acl_ctx_wrapper.ctx == NULL) {
+		printf("Line %i: Error creating ACL context!\n", __LINE__);
+		return -1;
+	}
+	acl_ctx_wrapper.running_buf = rte_zmalloc_socket(
+		"test_acl",
+		ACL_RUNNING_BUF_SIZE,
+		RTE_CACHE_LINE_SIZE,
+		SOCKET_ID_ANY);
+	if (!acl_ctx_wrapper.running_buf) {
+		rte_acl_free(acl_ctx_wrapper.ctx);
+		printf("Line %i: Error allocing running buf for acl context!\n", __LINE__);
+		return 1;
+	}
+	acl_ctx_wrapper.running_buf_using = false;
+
+	struct rte_acl_mem_hook mhook = {
+		.zalloc = running_alloc,
+		.free = running_free,
+		.udata = &acl_ctx_wrapper
+	};
+	ret = rte_acl_set_mem_hook(acl_ctx_wrapper.ctx, &mhook);
+	if (ret != 0) {
+		printf("Line %i: Error set mem hook for acl context!\n", __LINE__);
+		rte_acl_free(acl_ctx_wrapper.ctx);
+		rte_free(acl_ctx_wrapper.running_buf);
+		return 1;
+	}
+	struct rte_acl_mem_hook new_hook;
+	memset(&new_hook, 0, sizeof(struct rte_acl_mem_hook));
+	if (rte_acl_get_mem_hook(acl_ctx_wrapper.ctx, &new_hook) != 0
+		|| memcmp(&mhook, &new_hook, sizeof(struct rte_acl_mem_hook)) != 0) {
+		printf("Line %i: Error get mem hook for acl context!\n", __LINE__);
+		rte_acl_free(acl_ctx_wrapper.ctx);
+		rte_free(acl_ctx_wrapper.running_buf);
+		return 1;
+	}
+	ret = 0;
+	for (i = 0; i < TEST_CLASSIFY_ITER; i++) {
+
+		if ((i & 1) == 0)
+			rte_acl_reset(acl_ctx_wrapper.ctx);
+		else
+			rte_acl_reset_rules(acl_ctx_wrapper.ctx);
+
+		ret = test_classify_buid(acl_ctx_wrapper.ctx, acl_test_rules,
+			RTE_DIM(acl_test_rules));
+		if (ret != 0) {
+			printf("Line %i, iter: %d: Adding rules to ACL context failed!\n",
+				__LINE__, i);
+			break;
+		}
+
+		ret = test_classify_run(acl_ctx_wrapper.ctx, acl_test_data,
+			RTE_DIM(acl_test_data));
+		if (ret != 0) {
+			printf("Line %i, iter: %d: %s failed!\n",
+				__LINE__, i, __func__);
+			break;
+		}
+
+		/* reset rules and make sure that classify still works ok. */
+		rte_acl_reset_rules(acl_ctx_wrapper.ctx);
+		ret = test_classify_run(acl_ctx_wrapper.ctx, acl_test_data,
+			RTE_DIM(acl_test_data));
+		if (ret != 0) {
+			printf("Line %i, iter: %d: %s failed!\n",
+				__LINE__, i, __func__);
+			break;
+		}
+	}
+
+	rte_acl_free(acl_ctx_wrapper.ctx);
+	rte_free(acl_ctx_wrapper.running_buf);
+	return ret;
+}
+
 static int
 test_acl(void)
 {
@@ -1741,6 +1860,8 @@ test_acl(void)
 	if (test_convert() < 0)
 		return -1;
 	if (test_u32_range() < 0)
+		return -1;
+	if (test_mem_hook() < 0)
 		return -1;
 
 	return 0;
