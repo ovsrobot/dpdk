@@ -2953,4 +2953,4 @@ err:
 }
 #undef GOTO_FAIL
 
-REGISTER_FAST_TEST(mbuf_autotest, false, true, test_mbuf);
+REGISTER_FAST_TEST(mbuf_autotest, HUGEPAGES, ASAN, test_mbuf);

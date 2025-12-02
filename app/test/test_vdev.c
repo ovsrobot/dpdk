@@ -166,4 +166,4 @@ test_vdev(void)
 	return 0;
 }
 
-REGISTER_FAST_TEST(vdev_autotest, true, true, test_vdev);
+REGISTER_FAST_TEST(vdev_autotest, NOHUGE, ASAN, test_vdev);

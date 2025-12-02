@@ -187,4 +187,4 @@ test_seqlock(void)
 	return rc;
 }
 
-REGISTER_FAST_TEST(seqlock_autotest, true, true, test_seqlock);
+REGISTER_FAST_TEST(seqlock_autotest, NOHUGE, ASAN, test_seqlock);

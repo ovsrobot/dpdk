@@ -76,4 +76,4 @@ test_alarm(void)
 	return 0;
 }
 
-REGISTER_FAST_TEST(alarm_autotest, true, true, test_alarm);
+REGISTER_FAST_TEST(alarm_autotest, NOHUGE, ASAN, test_alarm);

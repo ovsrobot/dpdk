@@ -899,4 +899,4 @@ test_ipsec_sad(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-REGISTER_FAST_TEST(ipsec_sad_autotest, true, true, test_ipsec_sad);
+REGISTER_FAST_TEST(ipsec_sad_autotest, NOHUGE, ASAN, test_ipsec_sad);

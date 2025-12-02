@@ -2405,4 +2405,4 @@ test_hash(void)
 	return 0;
 }
 
-REGISTER_FAST_TEST(hash_autotest, true, true, test_hash);
+REGISTER_FAST_TEST(hash_autotest, NOHUGE, ASAN, test_hash);

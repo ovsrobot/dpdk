@@ -1618,4 +1618,4 @@ test_argparse(void)
 	return unit_test_suite_runner(&argparse_test_suite);
 }
 
-REGISTER_FAST_TEST(argparse_autotest, true, true, test_argparse);
+REGISTER_FAST_TEST(argparse_autotest, NOHUGE, ASAN, test_argparse);

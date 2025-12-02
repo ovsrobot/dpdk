@@ -505,4 +505,4 @@ test_ipfrag(void)
 }
 
 
-REGISTER_FAST_TEST(ipfrag_autotest, false, true, test_ipfrag);
+REGISTER_FAST_TEST(ipfrag_autotest, HUGEPAGES, ASAN, test_ipfrag);

@@ -4255,4 +4255,4 @@ test_compressdev(void)
 	return unit_test_suite_runner(&compressdev_testsuite);
 }
 
-REGISTER_FAST_TEST(compressdev_autotest, false, true, test_compressdev);
+REGISTER_FAST_TEST(compressdev_autotest, HUGEPAGES, ASAN, test_compressdev);

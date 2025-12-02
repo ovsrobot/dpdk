@@ -2388,4 +2388,4 @@ test_pdcp(void)
 	return ret;
 }
 
-REGISTER_FAST_TEST(pdcp_autotest, false, true, test_pdcp);
+REGISTER_FAST_TEST(pdcp_autotest, HUGEPAGES, ASAN, test_pdcp);

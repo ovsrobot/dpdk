@@ -188,9 +188,11 @@ There are two important functions for interacting with the test harness:
       The test is automatically added to the Meson test suite `<MESON_SUITE>` by this macro.
       Examples would be ``REGISTER_DRIVER_TEST``, or ``REGISTER_PERF_TEST``.
       **NOTE:** The ``REGISTER_FAST_TEST`` macro is slightly different,
-      in that it takes two additional parameters,
-      specifying whether the test can be run using ``--no-huge``,
-      and whether the test can be run using Address Sanitization (ASAN)
+      in that it takes two additional parameters before the function name:
+      the hugepage requirement (``NOHUGE`` if the test can run without hugepages,
+      or ``HUGEPAGES`` if hugepages are required),
+      and Address Sanitizer compatibility (``ASAN`` if the test can run with ASan enabled,
+      or ``NOASAN`` if it cannot).
 
    ``unit_test_suite_runner(struct unit_test_suite *)``
       Returns a runner for a full test suite object,
@@ -318,7 +320,7 @@ of the unit test suite structure, for example:
        return ret;
    }
 
-   REGISTER_FAST_TEST(example_autotest, true /*no-huge*/, false /*ASan*/, example_tests);
+   REGISTER_FAST_TEST(example_autotest, NOHUGE, ASAN, example_tests);
 
 
 Designing a test

@@ -94,4 +94,4 @@ test_errno(void)
 	return 0;
 }
 
-REGISTER_FAST_TEST(errno_autotest, true, true, test_errno);
+REGISTER_FAST_TEST(errno_autotest, NOHUGE, ASAN, test_errno);

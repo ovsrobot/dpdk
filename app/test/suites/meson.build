@@ -67,9 +67,19 @@ foreach suite:test_suites
         # special fast-test handling here
         foreach t: suite_tests
             params = t.split(':')
+            # check for valid options for asan and nohuge. Note, the extraction script runs tolower()
+            if params[1] != 'NOHUGE' and params[1] != 'HUGEPAGES'
+                error('Invalid parameter "@0@" for test "@1@". Must be NOHUGE or HUGEPAGES.'
+                    .format(params[1], params[0]))
+            endif
+            if params[2] != 'ASAN' and params[2] != 'NOASAN'
+                error('Invalid parameter "@0@" for test "@1@". Must be ASAN or NOASAN.'
+                    .format(params[2], params[0]))
+            endif
+
             test_name = params[0]
-            nohuge = params[1] == 'true'
-            asan = params[2] == 'true'
+            nohuge = params[1] == 'NOHUGE'
+            asan = params[2] == 'ASAN'
 
             test_args = []
             if nohuge

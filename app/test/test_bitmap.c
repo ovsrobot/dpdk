@@ -269,4 +269,4 @@ test_bitmap(void)
 	return test_bitmap_all_set();
 }
 
-REGISTER_FAST_TEST(bitmap_autotest, true, true, test_bitmap);
+REGISTER_FAST_TEST(bitmap_autotest, NOHUGE, ASAN, test_bitmap);
