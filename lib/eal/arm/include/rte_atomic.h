@@ -5,6 +5,8 @@
 #ifndef _RTE_ATOMIC_ARM_H_
 #define _RTE_ATOMIC_ARM_H_
 
+#include <rte_config.h>
+
 #ifdef RTE_ARCH_64
 #include <rte_atomic_64.h>
 #else

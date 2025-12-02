@@ -5,6 +5,8 @@
 #ifndef _RTE_IO_ARM_H_
 #define _RTE_IO_ARM_H_
 
+#include <rte_config.h>
+
 #ifdef RTE_ARCH_64
 #include "rte_io_64.h"
 #else

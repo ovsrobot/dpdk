@@ -5,6 +5,8 @@
 #ifndef _RTE_CYCLES_ARM_H_
 #define _RTE_CYCLES_ARM_H_
 
+#include <rte_config.h>
+
 #ifdef RTE_ARCH_64
 #include <rte_cycles_64.h>
 #else
