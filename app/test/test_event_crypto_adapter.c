@@ -1625,5 +1625,5 @@ test_event_crypto_adapter(void)
 
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
-REGISTER_TEST_COMMAND(event_crypto_adapter_autotest,
+REGISTER_FAST_TEST(event_crypto_adapter_autotest, true, true,
 		test_event_crypto_adapter);
