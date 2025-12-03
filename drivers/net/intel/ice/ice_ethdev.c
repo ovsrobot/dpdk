@@ -42,6 +42,7 @@
 #define ICE_DDP_LOAD_SCHED_ARG    "ddp_load_sched_topo"
 #define ICE_TM_LEVELS_ARG         "tm_sched_levels"
 #define ICE_SOURCE_PRUNE_ARG      "source-prune"
+#define ICE_MAC_ANTI_SPOOF_ARG    "mac-anti-spoof"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
@@ -60,6 +61,7 @@ static const char * const ice_valid_args[] = {
 	ICE_DDP_LOAD_SCHED_ARG,
 	ICE_TM_LEVELS_ARG,
 	ICE_SOURCE_PRUNE_ARG,
+	ICE_MAC_ANTI_SPOOF_ARG,
 	ICE_LINK_STATE_ON_CLOSE,
 	NULL
 };
@@ -1761,12 +1763,38 @@ ice_setup_vsi(struct ice_pf *pf, enum ice_vsi_type type)
 		/* Source Prune */
 		if (ad->devargs.source_prune != 1) {
 			/* Disable source prune to support VRRP
-			 * when source-prune devarg is not set
+			 * when source-prune devargs is not set
 			 */
 			vsi_ctx.info.sw_flags =
 				ICE_AQ_VSI_SW_FLAG_LOCAL_LB;
-			vsi_ctx.info.sw_flags |=
+		} else { /* Enable Source Prune in Rx */
+			vsi_ctx.info.sw_flags =
 				ICE_AQ_VSI_SW_FLAG_SRC_PRUNE;
+		}
+		/* MAC Anti-spoof */
+		/* By default, Source Prune in Rx and
+		 * MAC Anti-spoof check in Tx are disabled.
+		 *
+		 * Source Prune is disabled by setting local
+		 * loopback with ICE_AQ_VSI_SW_FLAG_LOCAL_LB
+		 * flag in the Rx direction.
+		 *
+		 * MAC Anti-spoof check can be disabled by
+		 * setting Tx loopback with
+		 * ICE_AQ_VSI_SW_FLAG_ALLOW_LB flag in the
+		 * Tx direction.
+		 */
+		if (ad->devargs.mac_anti_spoof != 1) {
+			/* Disable mac anti-spoof check in the
+			 * Tx direction to avoid getting dropped
+			 * as TX-errors for VRRP support when
+			 * mac-anti-spoof devargs is not set
+			 */
+			vsi_ctx.info.sw_flags |=
+				ICE_AQ_VSI_SW_FLAG_ALLOW_LB;
+		} else { /* Enable MAC Anti-spoof check in Tx */
+			vsi_ctx.info.sec_flags =
+				ICE_AQ_VSI_SEC_FLAG_ENA_MAC_ANTI_SPOOF;
 		}
 		cfg = ICE_AQ_VSI_PROP_SW_VALID;
 		vsi_ctx.info.valid_sections |= rte_cpu_to_le_16(cfg);
@@ -2464,6 +2492,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_SOURCE_PRUNE_ARG,
 				 &parse_bool, &ad->devargs.source_prune);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_MAC_ANTI_SPOOF_ARG,
+				 &parse_bool, &ad->devargs.mac_anti_spoof);
 	if (ret)
 		goto bail;
 
@@ -7738,6 +7771,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_DDP_LOAD_SCHED_ARG "=<0|1>"
 			      ICE_TM_LEVELS_ARG "=<N>"
 			      ICE_SOURCE_PRUNE_ARG "=<0|1>"
+			      ICE_MAC_ANTI_SPOOF_ARG "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>"
 			      ICE_LINK_STATE_ON_CLOSE "=<down|up|initial>");
 
