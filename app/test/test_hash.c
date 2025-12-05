@@ -191,6 +191,7 @@ static struct rte_hash_parameters ut_params = {
 static int
 test_crc32_hash_alg_equiv(void)
 {
+#if defined(RTE_ARCH_ARM64) || defined(RTE_ARCH_X86)
 	uint32_t hash_val;
 	uint32_t init_val;
 	uint64_t data64[CRC32_DWORDS];
@@ -211,6 +212,7 @@ test_crc32_hash_alg_equiv(void)
 		rte_hash_crc_set_alg(CRC32_SW);
 		hash_val = rte_hash_crc(data64, data_len, init_val);
 
+#ifdef RTE_ARCH_X86
 		/* Check against 4-byte-operand sse4.2 CRC32 if available */
 		rte_hash_crc_set_alg(CRC32_SSE42);
 		if (hash_val != rte_hash_crc(data64, data_len, init_val)) {
@@ -224,13 +226,14 @@ test_crc32_hash_alg_equiv(void)
 			printf("Failed checking CRC32_SW against CRC32_SSE42_x64\n");
 			break;
 		}
-
+#elif defined(RTE_ARCH_ARM64)
 		/* Check against 8-byte-operand ARM64 CRC32 if available */
 		rte_hash_crc_set_alg(CRC32_ARM64);
 		if (hash_val != rte_hash_crc(data64, data_len, init_val)) {
 			printf("Failed checking CRC32_SW against CRC32_ARM64\n");
 			break;
 		}
+#endif
 	}
 
 	/* Resetting to best available algorithm */
@@ -245,6 +248,10 @@ test_crc32_hash_alg_equiv(void)
 				((j+1) % 16 == 0 || j == data_len - 1) ? '\n' : ' ');
 
 	return -1;
+#else
+	/* No alternate algorithms on this platform */
+	return 0;
+#endif
 }
 
 /*
