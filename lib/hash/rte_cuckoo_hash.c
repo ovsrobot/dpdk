@@ -77,6 +77,10 @@ struct __rte_hash_rcu_dq_entry {
 	uint32_t ext_bkt_idx;
 };
 
+#define HASH_QSBR_PREFIX	"HT_RCU_"
+#define HASH_EXT_PREFIX		"HT_EXT_"
+#define HASH_RING_PREFIX	"HT_"
+
 RTE_EXPORT_SYMBOL(rte_hash_find_existing)
 struct rte_hash *
 rte_hash_find_existing(const char *name)
@@ -222,6 +226,12 @@ rte_hash_create(const struct rte_hash_parameters *params)
 		return NULL;
 	}
 
+	if (strnlen(params->name, RTE_HASH_NAMESIZE) >= RTE_HASH_NAMESIZE) {
+		rte_errno = ENAMETOOLONG;
+		HASH_LOG(ERR, "%s(): name '%s' too long", __func__, params->name);
+		return NULL;
+	}
+
 	/* Validate correct usage of extra options */
 	if ((params->extra_flag & RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY) &&
 	    (params->extra_flag & RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY_LF)) {
@@ -272,7 +282,7 @@ rte_hash_create(const struct rte_hash_parameters *params)
 	else
 		num_key_slots = params->entries + 1;
 
-	snprintf(ring_name, sizeof(ring_name), "HT_%s", params->name);
+	snprintf(ring_name, sizeof(ring_name), HASH_RING_PREFIX "%s", params->name);
 	/* Create ring (Dummy slot index is not enqueued) */
 	r = rte_ring_create_elem(ring_name, sizeof(uint32_t),
 			rte_align32pow2(num_key_slots), params->socket_id, 0);
@@ -286,8 +296,8 @@ rte_hash_create(const struct rte_hash_parameters *params)
 
 	/* Create ring for extendable buckets. */
 	if (ext_table_support) {
-		snprintf(ext_ring_name, sizeof(ext_ring_name), "HT_EXT_%s",
-								params->name);
+		snprintf(ext_ring_name, sizeof(ext_ring_name),
+			 HASH_EXT_PREFIX "%s", params->name);
 		r_ext = rte_ring_create_elem(ext_ring_name, sizeof(uint32_t),
 				rte_align32pow2(num_buckets + 1),
 				params->socket_id, 0);
@@ -299,7 +309,7 @@ rte_hash_create(const struct rte_hash_parameters *params)
 		}
 	}
 
-	snprintf(hash_name, sizeof(hash_name), "HT_%s", params->name);
+	snprintf(hash_name, sizeof(hash_name), HASH_RING_PREFIX "%s", params->name);
 
 	rte_mcfg_tailq_write_lock();
 
@@ -1606,8 +1616,7 @@ rte_hash_rcu_qsbr_add(struct rte_hash *h, struct rte_hash_rcu_config *cfg)
 		/* No other things to do. */
 	} else if (cfg->mode == RTE_HASH_QSBR_MODE_DQ) {
 		/* Init QSBR defer queue. */
-		snprintf(rcu_dq_name, sizeof(rcu_dq_name),
-					"HASH_RCU_%s", h->name);
+		snprintf(rcu_dq_name, sizeof(rcu_dq_name), HASH_QSBR_PREFIX "%s", h->name);
 		params.name = rcu_dq_name;
 		params.size = cfg->dq_size;
 		if (params.size == 0)

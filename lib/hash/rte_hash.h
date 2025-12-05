@@ -24,8 +24,10 @@ extern "C" {
 /** Maximum size of hash table that can be created. */
 #define RTE_HASH_ENTRIES_MAX			(1 << 30)
 
-/** Maximum number of characters in hash name.*/
-#define RTE_HASH_NAMESIZE			32
+/** Maximum number of characters in hash name.
+ * Limited by ring name (used internally) with prefix.
+ */
+#define RTE_HASH_NAMESIZE	(RTE_RING_NAMESIZE - sizeof("HT_EXT_") + 1)
 
 /** Maximum number of keys that can be searched for using rte_hash_lookup_bulk. */
 #define RTE_HASH_LOOKUP_BULK_MAX		64
