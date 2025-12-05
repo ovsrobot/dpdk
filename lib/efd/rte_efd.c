@@ -36,6 +36,9 @@ RTE_LOG_REGISTER_DEFAULT(efd_logtype, INFO);
 #define EFD_LOG(level, ...) \
 	RTE_LOG_LINE(level, EFD, "" __VA_ARGS__)
 
+/** Prefix used on ring name for hash */
+#define EFD_HASH_PREFIX "HT_"
+
 #define EFD_KEY(key_idx, table) (table->keys + ((key_idx) * table->key_len))
 /** Hash function used to determine chunk_id and bin_id for a group */
 #define EFD_HASH(key, table) \
@@ -527,6 +530,17 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
 		return NULL;
 	}
 
+	if (name == NULL) {
+		EFD_LOG(ERR, "Invalid name '%s'", name);
+		return NULL;
+	}
+
+	if (snprintf(ring_name, sizeof(ring_name),
+		     EFD_HASH_PREFIX "%s", name) >= (int)sizeof(ring_name)) {
+		EFD_LOG(ERR, "ring name '%s%s' overflow", EFD_HASH_PREFIX, table->name);
+		return NULL;
+	}
+
 	/*
 	 * Compute the minimum number of chunks (smallest power of 2)
 	 * that can hold all of the rules
@@ -698,7 +712,6 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
 	TAILQ_INSERT_TAIL(efd_list, te, next);
 	rte_mcfg_tailq_write_unlock();
 
-	snprintf(ring_name, sizeof(ring_name), "HT_%s", table->name);
 	/* Create ring (Dummy slot index is not enqueued) */
 	r = rte_ring_create(ring_name, rte_align32pow2(table->max_num_rules),
 			offline_cpu_socket, 0);
