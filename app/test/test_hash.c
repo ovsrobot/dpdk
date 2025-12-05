@@ -1399,8 +1399,16 @@ static int test_hash_creation_with_bad_parameters(void)
 		return -1;
 	}
 
-	memcpy(&params, &ut_params, sizeof(params));
-	params.name = "creation_with_bad_parameters_0";
+	params = ut_params;
+	params.name = "really_long_name_of_22";
+	handle = rte_hash_create(&params);
+	if (handle != NULL) {
+		rte_hash_free(handle);
+		printf("Impossible creating hash successfully with excessively long name\n");
+		return -1;
+	}
+
+	params.name = "with_bad_parameters_0";
 	params.entries = RTE_HASH_ENTRIES_MAX + 1;
 	handle = rte_hash_create(&params);
 	if (handle != NULL) {
@@ -1410,7 +1418,7 @@ static int test_hash_creation_with_bad_parameters(void)
 	}
 
 	memcpy(&params, &ut_params, sizeof(params));
-	params.name = "creation_with_bad_parameters_2";
+	params.name = "with_bad_parameters_2";
 	params.entries = BUCKET_ENTRIES - 1;
 	handle = rte_hash_create(&params);
 	if (handle != NULL) {
@@ -1420,7 +1428,7 @@ static int test_hash_creation_with_bad_parameters(void)
 	}
 
 	memcpy(&params, &ut_params, sizeof(params));
-	params.name = "creation_with_bad_parameters_3";
+	params.name = "with_bad_parameters_3";
 	params.key_len = 0;
 	handle = rte_hash_create(&params);
 	if (handle != NULL) {
@@ -1430,7 +1438,7 @@ static int test_hash_creation_with_bad_parameters(void)
 	}
 
 	memcpy(&params, &ut_params, sizeof(params));
-	params.name = "creation_with_bad_parameters_4";
+	params.name = "with_bad_parameters_4";
 	params.socket_id = RTE_MAX_NUMA_NODES + 1;
 	handle = rte_hash_create(&params);
 	if (handle != NULL) {
@@ -1510,7 +1518,8 @@ static int test_average_table_utilization(uint32_t ext_table)
 	printf("Measuring performance, please wait");
 	fflush(stdout);
 	ut_params.entries = 1 << 16;
-	ut_params.name = "test_average_utilization";
+	/* the maximum length of name is 21 characters */
+	ut_params.name = "test_avge_utilization";
 	ut_params.hash_func = rte_jhash;
 	if (ext_table)
 		ut_params.extra_flag |= RTE_HASH_EXTRA_FLAGS_EXT_TABLE;
@@ -1898,7 +1907,7 @@ test_hash_rcu_qsbr_add(void)
 
 	printf("\n# Running RCU QSBR add tests\n");
 	memcpy(&params, &ut_params, sizeof(params));
-	params.name = "test_hash_rcu_qsbr_add";
+	params.name = "test_hash_qsbr_add";
 	params.extra_flag = RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY_LF |
 				RTE_HASH_EXTRA_FLAGS_MULTI_WRITER_ADD;
 	g_handle = rte_hash_create(&params);
@@ -1976,7 +1985,7 @@ test_hash_rcu_qsbr_dq_mode(uint8_t ext_bkt)
 		hash_extra_flag |= RTE_HASH_EXTRA_FLAGS_EXT_TABLE;
 
 	struct rte_hash_parameters params_pseudo_hash = {
-		.name = "test_hash_rcu_qsbr_dq_mode",
+		.name = "test_hash_qsbr_mode",
 		.entries = total_entries,
 		.key_len = sizeof(struct flow_key),
 		.hash_func = pseudo_hash,
@@ -2146,7 +2155,7 @@ test_hash_rcu_qsbr_sync_mode(uint8_t ext_bkt)
 		hash_extra_flag |= RTE_HASH_EXTRA_FLAGS_EXT_TABLE;
 
 	struct rte_hash_parameters params_pseudo_hash = {
-		.name = "test_hash_rcu_qsbr_sync_mode",
+		.name = "test_hash_qsbr_sync",
 		.entries = total_entries,
 		.key_len = sizeof(struct flow_key),
 		.hash_func = pseudo_hash,
@@ -2250,7 +2259,7 @@ test_hash_rcu_qsbr_dq_reclaim(void)
 	uint32_t reclaim_keys[8] = {10, 11, 12, 13, 14, 15, 16, 17};
 	struct rte_hash_rcu_config rcu_cfg = {0};
 	struct rte_hash_parameters hash_params = {
-			.name = "test_hash_rcu_qsbr_dq_reclaim",
+			.name = "test_qsbr_reclaim",
 			.entries = total_entries,
 			.key_len = sizeof(uint32_t),
 			.hash_func = NULL,
