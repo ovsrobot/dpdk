@@ -82,34 +82,41 @@ static int
 register_client(const char *cmd __rte_unused, const char *params,
 		char *buffer __rte_unused, int buf_len __rte_unused)
 {
+	const char *colon = strchr(params, ':');
+
+	if (colon == NULL) {
+		fprintf(stderr, "Invalid client data: missing colon\n");
+		return -1;
+	}
+
 #ifndef RTE_EXEC_ENV_WINDOWS
 	pthread_t th;
-	char data[BUF_SIZE];
-	int fd;
-	int rc;
-	struct sockaddr_un addrs;
-#endif /* !RTE_EXEC_ENV_WINDOWS */
+	int fd, rc;
+	struct sockaddr_un addrs = { .sun_family = AF_UNIX };
 
-	if (!strchr(params, ':')) {
-		fprintf(stderr, "Invalid data\n");
+	if (colon[1] != '"') {
+		fprintf(stderr, "Invalid client data: missing quote\n");
 		return -1;
 	}
-#ifndef RTE_EXEC_ENV_WINDOWS
-	strlcpy(data, strchr(params, ':'), sizeof(data));
-	memmove(data, &data[strlen(":\"")], strlen(data));
-	if (!strchr(data, '\"')) {
-		fprintf(stderr, "Invalid client data\n");
+
+	const char *endquote = strchr(colon + 1, '"');
+	if (endquote == NULL) {
+		fprintf(stderr, "Invalid client data: missing end quote\n");
 		return -1;
 	}
-	*strchr(data, '\"') = 0;
+
+	size_t len = endquote - colon + 1;
+	if (len == 0 || len >= sizeof(addrs.sun_path)) {
+		fprintf(stderr, "Invalid client data: path length\n");
+		return -1;
+	}
+	strncpy(addrs.sun_path, colon + 1, len);
 
 	fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
 	if (fd < 0) {
 		perror("Failed to open socket");
 		return -1;
 	}
-	addrs.sun_family = AF_UNIX;
-	strlcpy(addrs.sun_path, data, sizeof(addrs.sun_path));
 
 	if (connect(fd, (struct sockaddr *)&addrs, sizeof(addrs)) == -1) {
 		perror("\nClient connection error\n");
