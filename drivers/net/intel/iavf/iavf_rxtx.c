@@ -4229,7 +4229,6 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
-	enum iavf_tx_func_type tx_func_type;
 	int mbuf_check = adapter->devargs.mbuf_check;
 	int no_poll_on_link_down = adapter->devargs.no_poll_on_link_down;
 #ifdef RTE_ARCH_X86
@@ -4240,6 +4239,10 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 	bool use_avx2 = false;
 	bool use_avx512 = false;
 	enum rte_vect_max_simd tx_simd_path = iavf_get_max_simd_bitwidth();
+
+	/* The primary process selects the tx path for all processes. */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		goto out;
 
 	check_ret = iavf_tx_vec_dev_check(dev);
 
@@ -4254,47 +4257,29 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		use_avx512 = tx_simd_path == RTE_VECT_SIMD_512;
 
 		if (!use_sse && !use_avx2 && !use_avx512)
-			goto normal;
+			goto out;
 
-		if (use_sse) {
-			PMD_DRV_LOG(DEBUG, "Using Vector Tx (port %d).",
-				    dev->data->port_id);
-			tx_func_type = IAVF_TX_SSE;
-		}
+		if (use_sse)
+			adapter->tx_func_type = IAVF_TX_SSE;
+
 		if (!use_avx512 && use_avx2) {
-			if (check_ret == IAVF_VECTOR_PATH) {
-				tx_func_type = IAVF_TX_AVX2;
-				PMD_DRV_LOG(DEBUG, "Using AVX2 Vector Tx (port %d).",
-					    dev->data->port_id);
-			} else if (check_ret == IAVF_VECTOR_CTX_OFFLOAD_PATH) {
-				PMD_DRV_LOG(DEBUG,
-					"AVX2 does not support requested Tx offloads.");
-				goto normal;
-			} else {
-				tx_func_type = IAVF_TX_AVX2_OFFLOAD;
-				PMD_DRV_LOG(DEBUG, "Using AVX2 OFFLOAD Vector Tx (port %d).",
-					    dev->data->port_id);
-			}
+			if (check_ret == IAVF_VECTOR_PATH)
+				adapter->tx_func_type = IAVF_TX_AVX2;
+			else if (check_ret == IAVF_VECTOR_CTX_OFFLOAD_PATH)
+				goto out;
+			else
+				adapter->tx_func_type = IAVF_TX_AVX2_OFFLOAD;
 		}
 #ifdef CC_AVX512_SUPPORT
 		if (use_avx512) {
-			if (check_ret == IAVF_VECTOR_PATH) {
-				tx_func_type = IAVF_TX_AVX512;
-				PMD_DRV_LOG(DEBUG, "Using AVX512 Vector Tx (port %d).",
-					    dev->data->port_id);
-			} else if (check_ret == IAVF_VECTOR_OFFLOAD_PATH) {
-				tx_func_type = IAVF_TX_AVX512_OFFLOAD;
-				PMD_DRV_LOG(DEBUG, "Using AVX512 OFFLOAD Vector Tx (port %d).",
-					    dev->data->port_id);
-			} else if (check_ret == IAVF_VECTOR_CTX_PATH) {
-				tx_func_type = IAVF_TX_AVX512_CTX;
-				PMD_DRV_LOG(DEBUG, "Using AVX512 CONTEXT Vector Tx (port %d).",
-						dev->data->port_id);
-			} else {
-				tx_func_type = IAVF_TX_AVX512_CTX_OFFLOAD;
-				PMD_DRV_LOG(DEBUG, "Using AVX512 CONTEXT OFFLOAD Vector Tx (port %d).",
-					    dev->data->port_id);
-			}
+			if (check_ret == IAVF_VECTOR_PATH)
+				adapter->tx_func_type = IAVF_TX_AVX512;
+			else if (check_ret == IAVF_VECTOR_OFFLOAD_PATH)
+				adapter->tx_func_type = IAVF_TX_AVX512_OFFLOAD;
+			else if (check_ret == IAVF_VECTOR_CTX_PATH)
+				adapter->tx_func_type = IAVF_TX_AVX512_CTX;
+			else
+				adapter->tx_func_type = IAVF_TX_AVX512_CTX_OFFLOAD;
 		}
 #endif
 
@@ -4305,33 +4290,20 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 			iavf_txq_vec_setup(txq);
 		}
 
-		if (no_poll_on_link_down) {
-			adapter->tx_func_type = tx_func_type;
-			dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
-		} else if (mbuf_check) {
-			adapter->tx_func_type = tx_func_type;
-			dev->tx_pkt_burst = iavf_xmit_pkts_check;
-		} else {
-			dev->tx_pkt_burst = iavf_tx_pkt_burst_ops[tx_func_type].pkt_burst;
-		}
-		return;
+		goto out;
 	}
-
-normal:
 #endif
-	PMD_DRV_LOG(DEBUG, "Using Basic Tx callback (port=%d).",
-		    dev->data->port_id);
-	tx_func_type = IAVF_TX_DEFAULT;
 
-	if (no_poll_on_link_down) {
-		adapter->tx_func_type = tx_func_type;
+out:
+	if (no_poll_on_link_down)
 		dev->tx_pkt_burst = iavf_xmit_pkts_no_poll;
-	} else if (mbuf_check) {
-		adapter->tx_func_type = tx_func_type;
+	else if (mbuf_check)
 		dev->tx_pkt_burst = iavf_xmit_pkts_check;
-	} else {
-		dev->tx_pkt_burst = iavf_tx_pkt_burst_ops[tx_func_type].pkt_burst;
-	}
+	else
+		dev->tx_pkt_burst = iavf_tx_pkt_burst_ops[adapter->tx_func_type].pkt_burst;
+
+	PMD_DRV_LOG(NOTICE, "Using %s (port %d).",
+		 iavf_tx_pkt_burst_ops[adapter->tx_func_type].info, dev->data->port_id);
 }
 
 static int
