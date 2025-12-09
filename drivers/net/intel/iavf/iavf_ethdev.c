@@ -666,10 +666,6 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 		return -EIO;
 
 	ad->rx_bulk_alloc_allowed = true;
-	/* Initialize to TRUE. If any of Rx queues doesn't meet the
-	 * vector Rx/Tx preconditions, it will be reset.
-	 */
-	ad->tx_vec_allowed = true;
 
 	ad->tx_func_type = IAVF_TX_DEFAULT;
 

@@ -120,6 +120,8 @@ struct ci_tx_queue {
 
 struct ci_tx_path_features_extra {
 	bool simple_tx;
+	bool ctx_desc;
+	bool disabled;
 };
 
 struct ci_tx_path_features {
@@ -308,6 +310,10 @@ ci_tx_path_select(struct ci_tx_path_features req_features,
 	for (i = 0; i < num_paths; i++) {
 		const struct ci_tx_path_features *path_features = &infos[i].features;
 
+		/* Do not select a disabled tx path. */
+		if (path_features->extra.disabled)
+			continue;
+
 		/* Do not use a simple tx path if not requested. */
 		if (path_features->extra.simple_tx && !req_features.extra.simple_tx)
 			continue;
@@ -321,6 +327,10 @@ ci_tx_path_select(struct ci_tx_path_features req_features,
 		if (path_features->simd_width > req_features.simd_width)
 			continue;
 
+		/* If a context descriptor is requested, ensure the path supports it. */
+		if (!path_features->extra.ctx_desc && req_features.extra.ctx_desc)
+			continue;
+
 		/* Do not select the path if it is less suitable than the chosen path. */
 		if (chosen_path_features != NULL) {
 			/* Do not select paths with lower SIMD width than the chosen path. */
@@ -332,6 +342,10 @@ ci_tx_path_select(struct ci_tx_path_features req_features,
 			if (path_features->simd_width == chosen_path_features->simd_width &&
 					rte_popcount32(path_features->tx_offloads) >
 					rte_popcount32(chosen_path_features->tx_offloads))
+				continue;
+
+			/* Don't use a context descriptor unless necessary */
+			if (path_features->extra.ctx_desc && !chosen_path_features->extra.ctx_desc)
 				continue;
 		}
 
