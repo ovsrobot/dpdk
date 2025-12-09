@@ -56,7 +56,7 @@ struct __rte_cache_aligned rte_graph {
 	rte_graph_off_t *cir_start;  /**< Pointer to circular buffer. */
 	rte_graph_off_t nodes_start; /**< Offset at which node memory starts. */
 	uint8_t model;		     /**< graph model */
-	uint8_t reserved1;	     /**< Reserved for future use. */
+	uint8_t cycles_stats;	     /**< Reserved for future use. */
 	uint16_t reserved2;	     /**< Reserved for future use. */
 	union {
 		/* Fast schedule area for mcore dispatch model */
@@ -205,7 +205,7 @@ __rte_node_process(struct rte_graph *graph, struct rte_node *node)
 	objs = node->objs;
 	rte_prefetch0(objs);
 
-	if (rte_graph_has_stats_feature()) {
+	if (graph->cycles_stats) {
 		start = rte_rdtsc();
 		rc = node->process(graph, node, objs, node->idx);
 		node->total_cycles += rte_rdtsc() - start;
@@ -559,6 +559,20 @@ rte_graph_model_is_valid(uint8_t model);
  *   0 on success, -1 otherwise.
  */
 int rte_graph_worker_model_set(uint8_t model);
+
+/**
+ * Enable/disable collecting of TSC cycles for each node visit. The default
+ * value for all new or cloned graphs is equal to rte_graph_has_stats_feature()
+ * which is set to the RTE_LIBRTE_GRAPH_STATS compile time constant.
+ *
+ * @param enabled
+ *   Set to 1 to enable, 0 to disable.
+ */
+static inline void
+rte_graph_cycle_stats_enable(struct rte_graph *graph, uint8_t enabled)
+{
+	graph->cycles_stats = enabled;
+}
 
 /**
  * Get the graph worker model

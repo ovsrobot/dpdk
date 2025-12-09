@@ -64,6 +64,7 @@ graph_header_popluate(struct graph *_graph)
 	graph->nb_nodes = _graph->node_count;
 	graph->cir_start = RTE_PTR_ADD(graph, _graph->cir_start);
 	graph->nodes_start = _graph->nodes_start;
+	graph->cycles_stats = rte_graph_has_stats_feature();
 	graph->socket = _graph->socket;
 	graph->id = _graph->id;
 	memcpy(graph->name, _graph->name, RTE_GRAPH_NAMESIZE);
