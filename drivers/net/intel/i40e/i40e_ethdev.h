@@ -1290,8 +1290,6 @@ struct i40e_adapter {
 
 	/* For RSS reta table update */
 	uint8_t rss_reta_updated;
-
-	enum rte_vect_max_simd tx_simd_width;
 };
 
 /**
