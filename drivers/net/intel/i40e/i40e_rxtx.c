@@ -3519,6 +3519,46 @@ i40e_set_tx_function_flag(struct rte_eth_dev *dev, struct ci_tx_queue *txq)
 				txq->queue_id);
 }
 
+static const struct {
+	eth_tx_burst_t pkt_burst;
+	const char *info;
+} i40e_tx_burst_infos[] = {
+	[I40E_TX_DEFAULT] = {
+		.pkt_burst = i40e_xmit_pkts,
+		.info = "Scalar",
+	},
+	[I40E_TX_SCALAR_SIMPLE] = {
+		.pkt_burst = i40e_xmit_pkts_simple,
+		.info = "Scalar Simple",
+	},
+#ifdef RTE_ARCH_X86
+	[I40E_TX_SSE] = {
+		.pkt_burst = i40e_xmit_pkts_vec,
+		.info = "Vector SSE",
+	},
+	[I40E_TX_AVX2] = {
+		.pkt_burst = i40e_xmit_pkts_vec_avx2,
+		.info = "Vector AVX2",
+	},
+#ifdef CC_AVX512_SUPPORT
+	[I40E_TX_AVX512] = {
+		.pkt_burst = i40e_xmit_pkts_vec_avx512,
+		.info = "Vector AVX512",
+	},
+#endif
+#elif defined(RTE_ARCH_ARM64)
+	[I40E_TX_NEON] = {
+		.pkt_burst = i40e_xmit_pkts_vec,
+		.info = "Vector Neon",
+	},
+#elif defined(RTE_ARCH_PPC_64)
+	[I40E_TX_ALTIVEC] = {
+		.pkt_burst = i40e_xmit_pkts_vec,
+		.info = "Vector AltiVec",
+	},
+#endif
+};
+
 void __rte_cold
 i40e_set_tx_function(struct rte_eth_dev *dev)
 {
@@ -3527,19 +3567,20 @@ i40e_set_tx_function(struct rte_eth_dev *dev)
 	uint64_t mbuf_check = ad->mbuf_check;
 	int i;
 
-	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+	/* The primary process selects the tx path for all processes. */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		goto out;
 #ifdef RTE_ARCH_X86
-		ad->tx_simd_width = i40e_get_max_simd_bitwidth();
+	ad->tx_simd_width = i40e_get_max_simd_bitwidth();
 #endif
-		if (ad->tx_vec_allowed) {
-			for (i = 0; i < dev->data->nb_tx_queues; i++) {
-				struct ci_tx_queue *txq =
-					dev->data->tx_queues[i];
+	if (ad->tx_vec_allowed) {
+		for (i = 0; i < dev->data->nb_tx_queues; i++) {
+			struct ci_tx_queue *txq =
+				dev->data->tx_queues[i];
 
-				if (txq && i40e_txq_vec_setup(txq)) {
-					ad->tx_vec_allowed = false;
-					break;
-				}
+			if (txq && i40e_txq_vec_setup(txq)) {
+				ad->tx_vec_allowed = false;
+				break;
 			}
 		}
 	}
@@ -3552,66 +3593,37 @@ i40e_set_tx_function(struct rte_eth_dev *dev)
 #ifdef RTE_ARCH_X86
 			if (ad->tx_simd_width == RTE_VECT_SIMD_512) {
 #ifdef CC_AVX512_SUPPORT
-				PMD_DRV_LOG(NOTICE, "Using AVX512 Vector Tx (port %d).",
-					    dev->data->port_id);
-				dev->tx_pkt_burst = i40e_xmit_pkts_vec_avx512;
+				ad->tx_func_type = I40E_TX_AVX512;
 #else
-				PMD_DRV_LOG(ERR, "Invalid Tx SIMD width reported, defaulting to "
-						"using scalar Tx (port %d).",
-						dev->data->port_id);
-				dev->tx_pkt_burst = i40e_xmit_pkts;
+				ad->tx_func_type = I40E_TX_DEFAULT;
 #endif
 			} else {
-				PMD_INIT_LOG(DEBUG, "Using %sVector Tx (port %d).",
-					     ad->tx_simd_width == RTE_VECT_SIMD_256 ? "avx2 " : "",
-					     dev->data->port_id);
-				dev->tx_pkt_burst = ad->tx_simd_width == RTE_VECT_SIMD_256 ?
-						    i40e_xmit_pkts_vec_avx2 :
-						    i40e_xmit_pkts_vec;
+				ad->tx_func_type = ad->tx_simd_width == RTE_VECT_SIMD_256 ?
+						    I40E_TX_AVX2 :
+						    I40E_TX_SSE;
 				dev->recycle_tx_mbufs_reuse = i40e_recycle_tx_mbufs_reuse_vec;
 			}
 #else /* RTE_ARCH_X86 */
-			PMD_INIT_LOG(DEBUG, "Using Vector Tx (port %d).",
-				     dev->data->port_id);
-			dev->tx_pkt_burst = i40e_xmit_pkts_vec;
+			ad->tx_func_type = I40E_TX_SSE;
 			dev->recycle_tx_mbufs_reuse = i40e_recycle_tx_mbufs_reuse_vec;
 #endif /* RTE_ARCH_X86 */
 		} else {
-			PMD_INIT_LOG(DEBUG, "Simple tx finally be used.");
-			dev->tx_pkt_burst = i40e_xmit_pkts_simple;
+			ad->tx_func_type = I40E_TX_SCALAR_SIMPLE;
 			dev->recycle_tx_mbufs_reuse = i40e_recycle_tx_mbufs_reuse_vec;
 		}
 		dev->tx_pkt_prepare = i40e_simple_prep_pkts;
 	} else {
-		PMD_INIT_LOG(DEBUG, "Xmit tx finally be used.");
-		dev->tx_pkt_burst = i40e_xmit_pkts;
+		ad->tx_func_type = I40E_TX_DEFAULT;
 		dev->tx_pkt_prepare = i40e_prep_pkts;
 	}
 
-	if (mbuf_check) {
-		ad->tx_pkt_burst = dev->tx_pkt_burst;
-		dev->tx_pkt_burst = i40e_xmit_pkts_check;
-	}
-}
+out:
+	dev->tx_pkt_burst = mbuf_check ? i40e_xmit_pkts_check :
+					i40e_tx_burst_infos[ad->tx_func_type].pkt_burst;
 
-static const struct {
-	eth_tx_burst_t pkt_burst;
-	const char *info;
-} i40e_tx_burst_infos[] = {
-	{ i40e_xmit_pkts_simple,   "Scalar Simple" },
-	{ i40e_xmit_pkts,          "Scalar" },
-#ifdef RTE_ARCH_X86
-#ifdef CC_AVX512_SUPPORT
-	{ i40e_xmit_pkts_vec_avx512, "Vector AVX512" },
-#endif
-	{ i40e_xmit_pkts_vec_avx2, "Vector AVX2" },
-	{ i40e_xmit_pkts_vec,      "Vector SSE" },
-#elif defined(RTE_ARCH_ARM64)
-	{ i40e_xmit_pkts_vec,      "Vector Neon" },
-#elif defined(RTE_ARCH_PPC_64)
-	{ i40e_xmit_pkts_vec,      "Vector AltiVec" },
-#endif
-};
+	PMD_DRV_LOG(NOTICE, "Using %s (port %d).",
+		i40e_tx_burst_infos[ad->tx_func_type].info, dev->data->port_id);
+}
 
 int
 i40e_tx_burst_mode_get(struct rte_eth_dev *dev, __rte_unused uint16_t queue_id,
