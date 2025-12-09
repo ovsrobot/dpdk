@@ -293,6 +293,10 @@ build build-ppc64-power8-gcc $f ABI $use_shared
 f=$srcdir/config/riscv/riscv64_linux_gcc
 build build-riscv64-generic-gcc $f ABI $use_shared
 
+# RISC-V vector (rv64gcv)
+f=$srcdir/config/riscv/riscv64_rv64gcv_linux_gcc
+build build-riscv64_rv64gcv_gcc $f ABI $use_shared
+
 # Test installation of the x86-generic target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
 load_env cc
