@@ -122,6 +122,7 @@ struct ci_tx_path_features_extra {
 	bool simple_tx;
 	bool ctx_desc;
 	bool disabled;
+	bool single_queue;
 };
 
 struct ci_tx_path_features {
@@ -316,6 +317,10 @@ ci_tx_path_select(struct ci_tx_path_features req_features,
 
 		/* Do not use a simple tx path if not requested. */
 		if (path_features->extra.simple_tx && !req_features.extra.simple_tx)
+			continue;
+
+		/* If requested, ensure the path supports single queue TX. */
+		if (path_features->extra.single_queue != req_features.extra.single_queue)
 			continue;
 
 		/* Ensure the path supports the requested TX offloads. */
