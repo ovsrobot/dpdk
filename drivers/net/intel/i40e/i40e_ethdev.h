@@ -1243,6 +1243,16 @@ enum i40e_rx_func_type {
 	I40E_RX_ALTIVEC_SCATTERED,
 };
 
+enum i40e_tx_func_type {
+	I40E_TX_DEFAULT,
+	I40E_TX_SCALAR_SIMPLE,
+	I40E_TX_SSE,
+	I40E_TX_AVX2,
+	I40E_TX_AVX512,
+	I40E_TX_NEON,
+	I40E_TX_ALTIVEC,
+};
+
 /*
  * Structure to store private data for each PF/VF instance.
  */
@@ -1260,6 +1270,7 @@ struct i40e_adapter {
 	bool tx_vec_allowed;
 
 	enum i40e_rx_func_type rx_func_type;
+	enum i40e_tx_func_type tx_func_type;
 
 	uint64_t mbuf_check; /* mbuf check flags. */
 	uint16_t max_pkt_len; /* Maximum packet length */
@@ -1279,8 +1290,6 @@ struct i40e_adapter {
 
 	/* For RSS reta table update */
 	uint8_t rss_reta_updated;
-
-	enum rte_vect_max_simd tx_simd_width;
 };
 
 /**
