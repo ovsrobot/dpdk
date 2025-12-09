@@ -118,15 +118,21 @@ struct ci_tx_queue {
 	};
 };
 
+struct ci_tx_path_features_extra {
+	bool simple_tx;
+};
+
 struct ci_tx_path_features {
 	uint32_t tx_offloads;
 	enum rte_vect_max_simd simd_width;
+	struct ci_tx_path_features_extra extra;
 };
 
 struct ci_tx_path_info {
 	eth_tx_burst_t pkt_burst;
 	const char *info;
 	struct ci_tx_path_features features;
+	eth_tx_prep_t pkt_prep;
 };
 
 static __rte_always_inline void
@@ -301,6 +307,10 @@ ci_tx_path_select(struct ci_tx_path_features req_features,
 
 	for (i = 0; i < num_paths; i++) {
 		const struct ci_tx_path_features *path_features = &infos[i].features;
+
+		/* Do not use a simple tx path if not requested. */
+		if (path_features->extra.simple_tx && !req_features.extra.simple_tx)
+			continue;
 
 		/* Ensure the path supports the requested TX offloads. */
 		if ((path_features->tx_offloads & req_features.tx_offloads) !=
