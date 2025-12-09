@@ -209,11 +209,11 @@ __rte_node_process(struct rte_graph *graph, struct rte_node *node)
 		start = rte_rdtsc();
 		rc = node->process(graph, node, objs, node->idx);
 		node->total_cycles += rte_rdtsc() - start;
-		node->total_calls++;
-		node->total_objs += rc;
 	} else {
-		node->process(graph, node, objs, node->idx);
+		rc = node->process(graph, node, objs, node->idx);
 	}
+	node->total_calls++;
+	node->total_objs += rc;
 	node->idx = 0;
 }
 
