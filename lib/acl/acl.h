@@ -174,6 +174,7 @@ struct rte_acl_ctx {
 	uint32_t            max_rules;
 	uint32_t            rule_sz;
 	uint32_t            num_rules;
+	struct rte_acl_mem_cb mem_cb;
 	uint32_t            num_categories;
 	uint32_t            num_tries;
 	uint32_t            match_index;
