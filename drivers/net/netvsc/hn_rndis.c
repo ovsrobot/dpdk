@@ -500,8 +500,10 @@ hn_rndis_query(struct hn_data *hv, uint32_t oid,
 	/* Input data immediately follows RNDIS query. */
 	memcpy(req + 1, idata, idlen);
 
+	rte_spinlock_lock(&hv->cmd_lock);
 	error = hn_rndis_execute(hv, rid, req, reqlen,
 				 comp, comp_len, RNDIS_QUERY_CMPLT);
+	rte_spinlock_unlock(&hv->cmd_lock);
 
 	if (error)
 		goto done;
