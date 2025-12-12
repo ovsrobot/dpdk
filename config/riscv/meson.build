@@ -147,6 +147,20 @@ if (riscv_extension_macros and
     endif
 endif
 
+# detect extensions
+# Requires intrinsics available in GCC 14.1.0+ and Clang 18.1.0+
+if (riscv_extension_macros and
+    (cc.get_define('__riscv_zicbop', args: machine_args) != ''))
+  if ((cc.get_id() == 'gcc' and cc.version().version_compare('>=14.1.0'))
+      or (cc.get_id() == 'clang' and cc.version().version_compare('>=18.1.0')))
+      message('Compiling with the zicbop extension')
+      machine_args += ['-DRTE_RISCV_FEATURE_PREFETCH']
+  else
+    warning('Detected zicbop extension but cannot use because intrinsics are not available (present in GCC 14.1.0+ and Clang 18.1.0+)')
+  endif
+endif
+
+
 # apply flags
 foreach flag: dpdk_flags
     if flag.length() > 0
