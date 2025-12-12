@@ -90,6 +90,7 @@ struct idpf_adapter {
 
 	/* For timestamp */
 	uint64_t time_hw;
+	struct idpf_ptp *ptp;
 
 	enum idpf_rx_func_type rx_func_type;
 };
@@ -161,6 +162,9 @@ struct idpf_vport {
 	/* Event from ipf */
 	bool link_up;
 	uint32_t link_speed;
+
+	/* For PTP */
+	struct idpf_ptp_vport_tx_tstamp_caps *tx_tstamp_caps;
 };
 
 /* Message type read in virtual channel from PF */
