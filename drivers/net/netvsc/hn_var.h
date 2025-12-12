@@ -179,6 +179,7 @@ struct hn_data {
 	struct vmbus_channel *channels[HN_MAX_CHANNELS];
 
 	rte_spinlock_t	hotadd_lock;
+	rte_spinlock_t	cmd_lock;
 	LIST_HEAD(hotadd_list, hv_hotadd_context) hotadd_list;
 };
 
