@@ -1,0 +1,14 @@
+language: "en-US"
+tone_instructions: "Only provide helpful, relevant comments. Be brief and terse but clear."
+reviews:
+  profile: "chill"
+  collapse_walkthrough: true
+  changed_files_summary: false
+  sequence_diagrams: false
+  suggested_labels: false
+  poem: false
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
