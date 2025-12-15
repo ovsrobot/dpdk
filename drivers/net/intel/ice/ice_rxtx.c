@@ -1295,6 +1295,13 @@ ice_rx_queue_setup(struct rte_eth_dev *dev,
 		return -EINVAL;
 	}
 
+	/* Check that ring size is > 2 * rx_free_thresh */
+	if (nb_desc <= 2 * rx_conf->rx_free_thresh) {
+		PMD_INIT_LOG(ERR, "rx ring size (%u) must be > 2 * rx_free_thresh (%u)",
+			     nb_desc, 2 * rx_conf->rx_free_thresh);
+		return -EINVAL;
+	}
+
 	offloads = rx_conf->offloads | dev->data->dev_conf.rxmode.offloads;
 
 	if (mp)
