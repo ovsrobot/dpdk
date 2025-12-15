@@ -69,8 +69,8 @@ run_secondary_instances(void)
 	char coremask[10];
 
 #ifdef RTE_EXEC_ENV_LINUX
-	char tmp[PATH_MAX] = {0};
-	char prefix[PATH_MAX] = {0};
+	char tmp[PATH_MAX];
+	char prefix[PATH_MAX + sizeof("--file-prefix=")];
 
 	get_current_prefix(tmp, sizeof(tmp));
 
