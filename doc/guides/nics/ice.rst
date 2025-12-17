@@ -189,6 +189,18 @@ Runtime Configuration
 
     -a 80:00.0,source-prune=1
 
+- ``MAC Anti-spoof Disable`` (default ``1``)
+
+  Disable MAC Anti-spoof check in the Tx direction to send outgoing
+  packets when their destination MAC address matches one of the
+  MAC addresses assigned to that same NIC port.By default, these
+  outgoing packets are dropped due to MAC Anti-spoof check.
+
+  MAC Anti-spoof can be disabled by resetting the devargs parameter ``mac-anti-spoof``,
+  for example::
+
+    -a 80:00.0,mac-anti-spoof=0
+
 - ``Protocol extraction for per queue``
 
   Configure the RX queues to do protocol extraction into mbuf for protocol
