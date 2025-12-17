@@ -6,6 +6,8 @@
 Verify vhost/virtio pvp and fully virtual functionalities.
 """
 
+from pathlib import PurePath
+
 from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
 
@@ -195,3 +197,100 @@ class TestVirtioFwd(TestSuite):
                     f"PVP loop forwarding verification failed: vhost interface RX={rx_packets},"
                     f" TX={tx_packets} (expected ≥100 each).",
                 )
+
+    @requires(topology_type=LinkTopology.ONE_LINK)
+    @func_test
+    def pvvp_loop(self) -> None:
+        """Test vhost/virtio physical-virtual-virtual-physical topology.
+
+        Steps:
+            * Create directory for vhost-user socket files.
+            * Launch primary testpmd session with physical NICs and two virtio-user
+                vdevs connected to vhost-user sockets in server mode.
+            * Launch first vhost testpmd session with vhost vdev connected to the
+                first vhost-user socket as client.
+            * Launch second vhost testpmd session with vhost vdev connected to the
+                second vhost-user socket as client.
+            * Configure port forwarding order in primary session to chain physical
+                port through both virtual devices.
+            * Start packet forwarding on all three testpmd sessions.
+            * Send 100 packets to the physical interface from external tester.
+
+        Verify:
+            * Both vhost sessions receive/forward 100+ packets each.
+        """
+        self.sut_node = self._ctx.sut_node
+        if not isinstance(self.sut_node.main_session, LinuxSession):
+            verify(False, "Must be running on a Linux environment.")
+        self.sut_node.main_session.remove_remote_dir("/tmp/vhost-sockets")
+        self.sut_node.main_session.create_directory(PurePath("/tmp/vhost-sockets"))
+        with (
+            TestPmd(
+                prefix="vhost1",
+                vdevs=[
+                    VirtualDevice("net_vhost0,iface=/tmp/vhost-sockets/vhost0,queues=1,client=1")
+                ],
+                no_pci=True,
+            ) as vhost1,
+            TestPmd(
+                prefix="vhost2",
+                vdevs=[
+                    VirtualDevice("net_vhost1,iface=/tmp/vhost-sockets/vhost1,queues=1,client=1")
+                ],
+                no_pci=True,
+            ) as vhost2,
+            TestPmd(
+                prefix="virtio",
+                vdevs=[
+                    VirtualDevice(
+                        "net_virtio_user0,mac=00:00:00:00:00:01,path=/tmp/vhost-sockets/vhost0,queues=1,queue_size=1024,server=1"
+                    ),
+                    VirtualDevice(
+                        "net_virtio_user1,mac=00:00:00:00:00:02,path=/tmp/vhost-sockets/vhost1,queues=1,queue_size=1024,server=1"
+                    ),
+                ],
+                port_topology=PortTopology.chained,
+            ) as virtio,
+        ):
+            virtio.set_forward_mode(SimpleForwardingModes.mac)
+            vhost1.set_forward_mode(SimpleForwardingModes.mac)
+            vhost2.set_forward_mode(SimpleForwardingModes.mac)
+
+            portlist_order = [0, 2, 3, 1] if len(virtio.ports) == 4 else [0, 2, 1]
+            virtio.set_portlist(order=portlist_order)
+
+            virtio.start()
+            vhost1.start()
+            vhost2.start()
+
+            packet = Ether() / IP()
+            packets = [packet] * 100
+            send_packets_and_capture(packets)
+
+            vhost1.stop()
+            vhost2.stop()
+            virtio.stop()
+
+            vhost1_forwarding_stats, vhost1_raw_output = vhost1.show_port_stats_all()
+            vhost2_forwarding_stats, vhost2_raw_output = vhost2.show_port_stats_all()
+
+            rx_packets_vhost1 = vhost1_forwarding_stats[0].rx_packets
+            tx_packets_vhost1 = vhost1_forwarding_stats[0].tx_packets
+
+            rx_packets_vhost2 = vhost2_forwarding_stats[0].rx_packets
+            tx_packets_vhost2 = vhost2_forwarding_stats[0].tx_packets
+
+            log(f"Vhost1 forwarding statistics:\n{vhost1_raw_output}")
+            log(f"Vhost2 forwarding statistics:\n{vhost2_raw_output}")
+
+            verify(
+                rx_packets_vhost1 >= 100 and tx_packets_vhost1 >= 100,
+                f"PVP loop forwarding verification failed: vhost1 interface RX={rx_packets_vhost1},"
+                f" TX={tx_packets_vhost1} (expected ≥100 each).",
+            )
+
+            verify(
+                rx_packets_vhost2 >= 100 and tx_packets_vhost2 >= 100,
+                f"PVP loop forwarding verification failed: vhost2 interface RX={rx_packets_vhost2},"
+                f" TX={tx_packets_vhost2} (expected ≥100 each).",
+            )
