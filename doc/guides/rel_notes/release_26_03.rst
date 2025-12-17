@@ -55,6 +55,7 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **ACL library**: Added support for custom memory allocation hooks (`rte_acl_mem_hook`) allowing applications to provide their own allocation and free functions for ACL runtime memory.
 
 Removed Items
 -------------
