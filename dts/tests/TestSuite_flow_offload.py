@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2025 University of New Hampshire
 
-"""RTE Flow testing suite.
+"""Flow Offload testing suite.
 
 This suite verifies a range of flow rules built using patterns
 and actions from the RTE Flow API. It would be impossible to cover
@@ -32,8 +32,8 @@ from framework.test_suite import TestSuite, func_test
 
 
 @requires_nic_capability(NicCapability.FLOW_CTRL)
-class TestRteFlow(TestSuite):
-    """RTE Flow test suite.
+class TestFlowOffload(TestSuite):
+    """Flow Offload test suite.
 
     This suite consists of 12 test cases:
     1. Queue Action Ethernet: Verifies queue actions with ethernet patterns
