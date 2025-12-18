@@ -28,7 +28,7 @@ from framework.utils import generate_random_packets
 
 @requires_nic_capability(NicCapability.PHYSICAL_FUNCTION)
 @requires_link_topology(LinkTopology.TWO_LINKS)
-class TestL2fwd(TestSuite):
+class TestL2Forward(TestSuite):
     """L2 forwarding test suite."""
 
     #: The total number of packets to generate and send for forwarding.

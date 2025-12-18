@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2024 University of New Hampshire
 
-"""Rx/Tx queue start and stop functionality suite.
+"""Rx/Tx queue toggle functionality suite.
 
 This suite tests the ability of the poll mode driver to start and
 stop either the Rx or Tx queue (depending on the port) during runtime,
@@ -32,8 +32,8 @@ from framework.test_suite import TestSuite, func_test
 @requires_link_topology(LinkTopology.TWO_LINKS)
 @requires_nic_capability(NicCapability.RUNTIME_RX_QUEUE_SETUP)
 @requires_nic_capability(NicCapability.RUNTIME_TX_QUEUE_SETUP)
-class TestQueueStartStop(TestSuite):
-    """DPDK Queue start/stop test suite.
+class TestQueueToggle(TestSuite):
+    """DPDK Queue toggle test suite.
 
     Ensures Rx/Tx queue on a port can be disabled and enabled.
     Verifies packets are not received when either queue is disabled.
