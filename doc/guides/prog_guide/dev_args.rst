@@ -166,6 +166,8 @@ Devargs are used with hotplug APIs to attach devices dynamically:
    /* Attach with arguments */
    ret = rte_dev_probe("0000:05:00.0,txq_inline=256");
 
+See :doc:`device_hotplug` for detailed information on runtime device management.
+
 Parsing Devargs in Drivers
 ---------------------------
 
@@ -230,5 +232,6 @@ Iterator helpers accept a devargs-style filter. Examples:
 For more information, see:
 
 * :doc:`../linux_gsg/linux_eal_parameters` - EAL command-line parameters
+* :doc:`device_hotplug` - Runtime device management
 * API documentation: ``rte_devargs_parse()``, ``rte_devargs_layers_parse()`` (in ``rte_devargs.h``)
 * API documentation: ``rte_eth_devargs_parse()`` (in ``ethdev_driver.h``)
