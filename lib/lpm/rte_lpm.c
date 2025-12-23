@@ -5,6 +5,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
 #include <sys/queue.h>
@@ -152,7 +153,6 @@ struct rte_lpm *
 rte_lpm_create(const char *name, int socket_id,
 		const struct rte_lpm_config *config)
 {
-	char mem_name[RTE_LPM_NAMESIZE];
 	struct __rte_lpm *i_lpm;
 	struct rte_lpm *lpm = NULL;
 	struct rte_tailq_entry *te;
@@ -170,7 +170,15 @@ rte_lpm_create(const char *name, int socket_id,
 		return NULL;
 	}
 
-	snprintf(mem_name, sizeof(mem_name), "LPM_%s", name);
+	if (strlen(name) >= RTE_LPM_NAMESIZE) {
+		rte_errno = ENAMETOOLONG;
+		return NULL;
+	}
+
+	/* This is only used for tracing, ok to be NULL */
+	char *mem_name = NULL;
+	int unused __rte_unused;
+	unused = asprintf(&mem_name, "LPM_%s", name);
 
 	rte_mcfg_tailq_write_lock();
 
@@ -247,6 +255,7 @@ rte_lpm_create(const char *name, int socket_id,
 
 exit:
 	rte_mcfg_tailq_write_unlock();
+	free(mem_name);
 
 	return lpm;
 }
@@ -309,7 +318,6 @@ int
 rte_lpm_rcu_qsbr_add(struct rte_lpm *lpm, struct rte_lpm_rcu_config *cfg)
 {
 	struct rte_rcu_qsbr_dq_parameters params = {0};
-	char rcu_dq_name[RTE_RCU_QSBR_DQ_NAMESIZE];
 	struct __rte_lpm *i_lpm;
 
 	if (lpm == NULL || cfg == NULL) {
@@ -326,9 +334,13 @@ rte_lpm_rcu_qsbr_add(struct rte_lpm *lpm, struct rte_lpm_rcu_config *cfg)
 	if (cfg->mode == RTE_LPM_QSBR_MODE_SYNC) {
 		/* No other things to do. */
 	} else if (cfg->mode == RTE_LPM_QSBR_MODE_DQ) {
+		char rcu_dq_name[RTE_RCU_QSBR_DQ_NAMESIZE];
+
 		/* Init QSBR defer queue. */
-		snprintf(rcu_dq_name, sizeof(rcu_dq_name),
-				"LPM_RCU_%s", i_lpm->name);
+		if (snprintf(rcu_dq_name, sizeof(rcu_dq_name),
+			     "LPM_RCU_%s", i_lpm->name) >= (int)sizeof(rcu_dq_name))
+			LPM_LOG(NOTICE, "LPM rcu defer queue name truncated");
+
 		params.name = rcu_dq_name;
 		params.size = cfg->dq_size;
 		if (params.size == 0)
@@ -343,7 +355,8 @@ rte_lpm_rcu_qsbr_add(struct rte_lpm *lpm, struct rte_lpm_rcu_config *cfg)
 		params.v = cfg->v;
 		i_lpm->dq = rte_rcu_qsbr_dq_create(&params);
 		if (i_lpm->dq == NULL) {
-			LPM_LOG(ERR, "LPM defer queue creation failed");
+			LPM_LOG(ERR, "LPM defer queue creation failed: %s",
+				rte_strerror(rte_errno));
 			return 1;
 		}
 	} else {
