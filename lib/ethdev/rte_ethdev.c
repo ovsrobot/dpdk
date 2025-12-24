@@ -6703,7 +6703,7 @@ rte_eth_timesync_read_time(uint16_t port_id, struct timespec *timestamp)
 
 	if (dev->dev_ops->timesync_read_time == NULL)
 		return -ENOTSUP;
-	ret = eth_err(port_id, dev->dev_ops->timesync_read_time(dev, timestamp));
+	ret = eth_err(port_id, dev->dev_ops->timesync_read_time(dev, timestamp, 0));
 
 	rte_eth_trace_timesync_read_time(port_id, timestamp, ret);
 
