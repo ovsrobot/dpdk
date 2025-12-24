@@ -192,7 +192,7 @@ static int ice_timesync_read_tx_timestamp(struct rte_eth_dev *dev,
 static int ice_timesync_adjust_time(struct rte_eth_dev *dev, int64_t delta);
 static int ice_timesync_adjust_freq(struct rte_eth_dev *dev, int64_t ppm);
 static int ice_timesync_read_time(struct rte_eth_dev *dev,
-				  struct timespec *timestamp);
+				  struct timespec *timestamp, uint8_t is_cross_ts_en);
 static int ice_timesync_write_time(struct rte_eth_dev *dev,
 				   const struct timespec *timestamp);
 static int ice_timesync_disable(struct rte_eth_dev *dev);
@@ -7304,12 +7304,17 @@ ice_timesync_write_time(struct rte_eth_dev *dev, const struct timespec *ts)
 }
 
 static int
-ice_timesync_read_time(struct rte_eth_dev *dev, struct timespec *ts)
+ice_timesync_read_time(struct rte_eth_dev *dev, struct timespec *ts,
+				uint8_t is_cross_ts_en)
 {
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint8_t tmr_idx = hw->func_caps.ts_func_info.tmr_index_assoc;
 	uint32_t hi, lo, lo2;
 	uint64_t time;
+
+	if (is_cross_ts_en)
+		PMD_DRV_LOG(WARNING,
+			"Cross timestamp is not supported in ice driver");
 
 	lo = ICE_READ_REG(hw, GLTSYN_TIME_L(tmr_idx));
 	hi = ICE_READ_REG(hw, GLTSYN_TIME_H(tmr_idx));
