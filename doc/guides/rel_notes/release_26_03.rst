@@ -54,7 +54,11 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
+* **Updated Linkdata sxe ethernet driver.**
 
+  Added support for Linkdata NIC series, including 1160-2X (supporting 10G).
+  As these new models share hardware similarities with the existing 10G Sapphire NICs,
+  many of the existing configurations and practices are expected to apply.
 
 Removed Items
 -------------
