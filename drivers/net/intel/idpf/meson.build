@@ -18,6 +18,7 @@ sources += files(
 
         'idpf_ethdev.c',
         'idpf_rxtx.c',
+        'idpf_ptp.c',
 )
 
 if arch_subdir == 'x86' and dpdk_conf.get('RTE_IOVA_IN_MBUF') == 1
