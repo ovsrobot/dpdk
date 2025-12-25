@@ -3,6 +3,7 @@
  */
 #ifdef SXE_PHY_CONFIGURE
 #include <linux/mdio.h>
+#include <rte_compat.h>
 #endif
 #include <rte_byteorder.h>
 #if defined(__KERNEL__) || defined(SXE_KERNEL_TEST)
@@ -1892,7 +1893,7 @@ static void sxe_hw_rx_pkt_buf_size_configure(struct sxe_hw *hw,
 		for (i = 0; i < (num_pb / 2); i++)
 			SXE_REG_WRITE(hw, SXE_RXPBSIZE(i), rx_buf_size);
 
-		fallthrough;
+		/* fallthrough */
 	case (PBA_STRATEGY_EQUAL):
 		rx_buf_size = (total_buf_size / (num_pb - i))
 				<< SXE_RX_PKT_BUF_SIZE_SHIFT;
@@ -2278,13 +2279,13 @@ static s32 sxe_hw_fnav_vlan_mask_get(struct sxe_hw *hw,
 	switch (ntohs(vlan_id) & SXE_SAMPLE_VLAN_MASK) {
 	case 0x0000:
 		*fnavm |= SXE_FNAVM_VLANID;
-		fallthrough;
+		/* fallthrough */
 	case 0x0FFF:
 		*fnavm |= SXE_FNAVM_VLANP;
 		break;
 	case 0xE000:
 		*fnavm |= SXE_FNAVM_VLANID;
-		fallthrough;
+		/* fallthrough */
 	case 0xEFFF:
 		break;
 	default:
@@ -2304,7 +2305,7 @@ static s32 sxe_hw_fnav_flex_bytes_mask_get(struct sxe_hw *hw,
 	switch ((__force u16)flex_bytes & SXE_SAMPLE_FLEX_BYTES_MASK) {
 	case 0x0000:
 		*fnavm |= SXE_FNAVM_FLEX;
-		fallthrough;
+		/* fallthrough */
 	case 0xFFFF:
 		break;
 	default:
@@ -4962,7 +4963,14 @@ bool sxe_hw_is_rss_enabled(struct sxe_hw *hw)
 {
 	bool rss_enable = false;
 	u32 mrqc = SXE_REG_READ(hw, SXE_MRQC);
-	if (mrqc & SXE_MRQC_RSSEN)
+
+
+	u32 mrqe_val = mrqc & SXE_MRQC_MRQE_MASK;
+	if (mrqe_val == SXE_MRQC_RSSEN ||
+		mrqe_val == SXE_MRQC_RTRSS8TCEN ||
+		mrqe_val == SXE_MRQC_RTRSS4TCEN ||
+		mrqe_val == SXE_MRQC_VMDQRSS32EN ||
+		mrqe_val == SXE_MRQC_VMDQRSS64EN)
 		rss_enable = true;
 
 	return rss_enable;
@@ -5496,7 +5504,6 @@ void sxe_hw_rss_cap_switch(struct sxe_hw *hw, bool is_on)
 {
 	u32 mrqc = SXE_REG_READ(hw, SXE_MRQC);
 	u32 mrqe_val;
-
 	mrqe_val = mrqc & SXE_MRQC_MRQE_MASK;
 	if (is_on) {
 		mrqe_val = SXE_MRQC_RSSEN;

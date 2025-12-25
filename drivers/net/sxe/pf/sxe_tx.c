@@ -55,7 +55,7 @@ void __rte_cold sxe_tx_function_set(struct rte_eth_dev *dev,
 
 		PMD_LOG_INFO(INIT, "using full-featured tx code path");
 		PMD_LOG_INFO(INIT, " - offloads = 0x%" SXE_PRIX64,
-					(unsigned long)txq->offloads);
+							txq->offloads);
 		PMD_LOG_INFO(INIT, " - tx_rs_thresh = %d "
 				   "[RTE_PMD_SXE_MAX_TX_BURST=%d]",
 				txq->rs_thresh,
