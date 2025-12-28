@@ -883,7 +883,7 @@ get_hash_oid(enum rte_crypto_auth_algorithm hash, uint8_t *buf)
 				0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05,
 				0x00, 0x04, 0x14};
 	const uint8_t *id;
-	size_t id_len;
+	sizeo_t id_len;
 
 	switch (hash) {
 	case RTE_CRYPTO_AUTH_SHA1:
@@ -907,10 +907,12 @@ get_hash_oid(enum rte_crypto_auth_algorithm hash, uint8_t *buf)
 		id_len = sizeof(id_sha512);
 		break;
 	default:
-		return -1;
+		id_len = -1;
+		break;
 	}
 
-	memcpy(buf, id, id_len);
+	if (id != NULL)
+		memcpy(buf, id, id_len);
 
 	return id_len;
 }
@@ -1612,8 +1614,8 @@ prepare_rsa_xform(struct rte_crypto_asym_xform *xform)
 			if (b_len) {
 				msg.len = env.digest_len + b_len;
 				msg.val = rte_zmalloc(NULL, msg.len, 0);
-				memcpy(msg.val, b, b_len);
-				memcpy(msg.val + b_len, env.digest, env.digest_len);
+				rte_memcpy(msg.val, b, b_len);
+				rte_memcpy(msg.val + b_len, env.digest, env.digest_len);
 				rte_free(env.digest);
 				env.digest = msg.val;
 				env.digest_len = msg.len;
