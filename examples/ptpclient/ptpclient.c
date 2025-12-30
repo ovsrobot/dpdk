@@ -269,6 +269,10 @@ static void
 print_clock_info(struct ptpv2_time_receiver_ordinary *ptp_data)
 {
 	int64_t nsec;
+#ifdef RTE_LIBRTE_CROSSTIMESTAMP
+	struct timespec crosstimestamp[2];
+	struct timespec *timestamp = &crosstimestamp[0];
+#endif
 	struct timespec net_time, sys_time;
 
 	printf("time transmitter clock id: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
@@ -300,9 +304,17 @@ print_clock_info(struct ptpv2_time_receiver_ordinary *ptp_data)
 	printf("\nDelta between transmitter and receiver clocks:%"PRId64"ns\n",
 		ptp_data->delta);
 
+#ifdef RTE_LIBRTE_CROSSTIMESTAMP
+	/* Read cross timestamp from NIC */
+	rte_eth_timesync_read_time(ptp_data->current_ptp_port,
+				   timestamp);
+	net_time = crosstimestamp[0];
+	sys_time = crosstimestamp[1];
+#else
 	clock_gettime(CLOCK_REALTIME, &sys_time);
 	rte_eth_timesync_read_time(ptp_data->current_ptp_port,
 					&net_time);
+#endif
 
 	time_t ts = net_time.tv_sec;
 
@@ -501,10 +513,21 @@ static inline void
 update_kernel_time(void)
 {
 	int64_t nsec;
+#ifdef RTE_LIBRTE_CROSSTIMESTAMP
+	struct timespec crosstimestamp[2];
+	struct timespec *timestamp = &crosstimestamp[0];
+#endif
 	struct timespec net_time, sys_time;
 
+#ifdef RTE_LIBRTE_CROSSTIMESTAMP
+	/* Read cross timestamp from NIC */
+	rte_eth_timesync_read_time(ptp_data.current_ptp_port, timestamp);
+	net_time = crosstimestamp[0];
+	sys_time = crosstimestamp[1];
+#else
 	clock_gettime(CLOCK_REALTIME, &sys_time);
 	rte_eth_timesync_read_time(ptp_data.current_ptp_port, &net_time);
+#endif
 
 	nsec = (int64_t)timespec64_to_ns(&net_time) -
 	       (int64_t)timespec64_to_ns(&sys_time);
