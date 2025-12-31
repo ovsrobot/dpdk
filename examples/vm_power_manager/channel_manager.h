@@ -22,7 +22,7 @@ extern "C" {
 #define CHANNEL_MGR_DEFAULT_HV_PATH "qemu:///system"
 
 /* File socket directory */
-#define CHANNEL_MGR_SOCKET_PATH     "/tmp/powermonitor/"
+#define CHANNEL_MGR_SOCKET_PATH     "/run/dpdk/powermonitor/"
 
 /* FIFO file name template */
 #define CHANNEL_MGR_FIFO_PATTERN_NAME   "fifo"

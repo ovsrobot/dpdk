@@ -195,7 +195,7 @@ The XML structure is as follows:
       <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
    </controller>
    <channel type='unix'>
-      <source mode='bind' path='/tmp/powermonitor/{vm_name}.{channel_num}'/>
+      <source mode='bind' path='/run/dpdk/powermonitor/{vm_name}.{channel_num}'/>
       <target type='virtio' name='virtio.serial.port.poweragent.{vm_channel_num}'/>
       <address type='virtio-serial' controller='0' bus='0' port='{N}'/>
    </channel>
@@ -208,17 +208,8 @@ channel. Likewise, the port value ``{N}`` must be incremented for each
 channel.
 
 On the host, for each channel to appear in the path, ensure the creation
-of the ``/tmp/powermonitor/`` directory and the assignment of ``qemu``
+of the ``/run/dpdk/powermonitor/`` directory and the assignment of ``qemu``
 permissions:
-
-.. code-block:: console
-
-   mkdir /tmp/powermonitor/
-   chown qemu:qemu /tmp/powermonitor
-
-Note that files and directories in ``/tmp`` are generally removed when
-rebooting the host and you may need to perform the previous steps after
-each reboot.
 
 The serial device as it appears on a VM is configured with the target
 element attribute name and must be in the form:
