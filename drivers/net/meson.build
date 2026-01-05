@@ -9,6 +9,7 @@ drivers = [
         'atlantic',
         'avp',
         'axgbe',
+        'bsd_bpf',
         'bnx2x',
         'bnxt',
         'bonding',
