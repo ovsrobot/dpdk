@@ -66,6 +66,36 @@ class LinkTopology(IntEnum):
         return cls.TWO_LINKS
 
 
+class CryptoCapability(IntEnum):
+    """DPDK Crypto capabilities.
+
+    The capabilities are used to mark test cases or suites that require a specific
+    DPDK Crypto capability to run. The capabilities are used by the test framework to
+    determine whether a test case or suite can be run on the current testbed.
+    """
+
+    AESNI_GCM = 0
+    AESNI_MB = auto()
+    ARMV8 = auto()
+    CN10K = auto()
+    CN9K = auto()
+    DPAA_SEC = auto()
+    DPAA2_SEC = auto()
+    KASUMI = auto()
+    MVSAM = auto()
+    NULL = auto()
+    OCTEONTX = auto()
+    OPENSSL = auto()
+    QAT = auto()
+    SCHEDULER = auto()
+    SNOW3G = auto()
+    ZUC = auto()
+
+    def __str__(self) -> str:
+        """Override the default string representation to return the name of the capability."""
+        return self.name
+
+
 class NicCapability(IntEnum):
     """DPDK NIC capabilities.
 
@@ -261,6 +291,24 @@ def requires_nic_capability(
     ) -> type["TestProtocol"]:
         decorated = DecoratedNicCapability.get_unique(nic_capability)
         decorated.add_to_required(test_case_or_suite)
+        return test_case_or_suite
+
+    return add_required_capability
+
+
+def requires_crypto_capability(
+    crypto_capability: CryptoCapability,
+) -> Callable[[type["TestProtocol"]], type["TestProtocol"]]:
+    """Decorator to add a single required Crypto capability to a test case or test suite.
+
+    Args:
+        crypto_capability: The Crypto capability that is required by the test case or test suite.
+    """
+
+    def add_required_capability(
+        test_case_or_suite: type["TestProtocol"],
+    ) -> type["TestProtocol"]:
+        # perhaps we need to make a decorated version like nic capability
         return test_case_or_suite
 
     return add_required_capability
