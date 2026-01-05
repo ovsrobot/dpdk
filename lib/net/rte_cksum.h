@@ -42,25 +42,66 @@ extern "C" {
 static inline uint32_t
 __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
-	const void *end;
+	const void *ptr = buf;
+	const void *end = RTE_PTR_ADD(ptr, RTE_ALIGN_FLOOR(len, 64));
+	uint64_t sum64 = sum;
 
-	for (end = RTE_PTR_ADD(buf, RTE_ALIGN_FLOOR(len, sizeof(uint16_t)));
-	     buf != end; buf = RTE_PTR_ADD(buf, sizeof(uint16_t))) {
-		uint16_t v;
+	/* Process in 64 byte blocks (32 x uint16_t). */
+	/* Always process as uint16_t chunks to preserve overflow/carry. */
+	while (ptr != end) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)ptr;
+		sum64 += p16[0] + p16[1] + p16[2] + p16[3] +
+			 p16[4] + p16[5] + p16[6] + p16[7] +
+			 p16[8] + p16[9] + p16[10] + p16[11] +
+			 p16[12] + p16[13] + p16[14] + p16[15] +
+			 p16[16] + p16[17] + p16[18] + p16[19] +
+			 p16[20] + p16[21] + p16[22] + p16[23] +
+			 p16[24] + p16[25] + p16[26] + p16[27] +
+			 p16[28] + p16[29] + p16[30] + p16[31];
+		ptr = RTE_PTR_ADD(ptr, 64);
+	}
 
-		memcpy(&v, buf, sizeof(uint16_t));
-		sum += v;
+	if ((len & 32) != 0) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)ptr;
+		sum64 += p16[0] + p16[1] + p16[2] + p16[3] +
+			 p16[4] + p16[5] + p16[6] + p16[7] +
+			 p16[8] + p16[9] + p16[10] + p16[11] +
+			 p16[12] + p16[13] + p16[14] + p16[15];
+		ptr = RTE_PTR_ADD(ptr, 32);
+	}
+
+	if ((len & 16) != 0) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)ptr;
+		sum64 += p16[0] + p16[1] + p16[2] + p16[3] + p16[4] + p16[5] + p16[6] + p16[7];
+		ptr = RTE_PTR_ADD(ptr, 16);
+	}
+
+	if ((len & 8) != 0) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)ptr;
+		sum64 += p16[0] + p16[1] + p16[2] + p16[3];
+		ptr = RTE_PTR_ADD(ptr, 8);
+	}
+
+	if ((len & 4) != 0) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)ptr;
+		sum64 += p16[0] + p16[1];
+		ptr = RTE_PTR_ADD(ptr, 4);
+	}
+
+	if ((len & 2) != 0) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)ptr;
+		sum64 += *p16;
+		ptr = RTE_PTR_ADD(ptr, 2);
 	}
 
 	/* if length is odd, keeping it byte order independent */
-	if (unlikely(len % 2)) {
+	if (unlikely(len & 1)) {
 		uint16_t left = 0;
-
-		memcpy(&left, end, 1);
-		sum += left;
+		memcpy(&left, ptr, 1);
+		sum64 += left;
 	}
 
-	return sum;
+	return (uint32_t)sum64;
 }
 
 /**
