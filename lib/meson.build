@@ -68,6 +68,7 @@ libraries = [
         'pipeline',
         'graph',
         'node',
+        'flow_parser',
 ]
 
 always_enable = [
