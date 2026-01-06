@@ -47,10 +47,10 @@ static uint64_t timestamp_rx_dynflag;
 static int timestamp_dynfield_offset = -1;
 
 struct queue_stat {
-	volatile unsigned long pkts;
-	volatile unsigned long bytes;
-	volatile unsigned long err_pkts;
-	volatile unsigned long rx_nombuf;
+	uint64_t pkts;
+	uint64_t bytes;
+	uint64_t err_pkts;
+	uint64_t rx_nombuf;
 };
 
 struct queue_missed_stat {
@@ -267,6 +267,9 @@ eth_pcap_rx_infinite(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	pcap_q->rx_stat.pkts += i;
 	pcap_q->rx_stat.bytes += rx_bytes;
 
+	/* ensure store operations of statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_release);
+
 	return i;
 }
 
@@ -344,6 +347,9 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	}
 	pcap_q->rx_stat.pkts += num_rx;
 	pcap_q->rx_stat.bytes += rx_bytes;
+
+	/* ensure store operations of statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_release);
 
 	return num_rx;
 }
@@ -440,6 +446,9 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	dumper_q->tx_stat.bytes += tx_bytes;
 	dumper_q->tx_stat.err_pkts += nb_pkts - num_tx;
 
+	/* ensure store operations of statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_release);
+
 	return nb_pkts;
 }
 
@@ -463,6 +472,9 @@ eth_tx_drop(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	tx_queue->tx_stat.pkts += nb_pkts;
 	tx_queue->tx_stat.bytes += tx_bytes;
+
+	/* ensure store operations of statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_release);
 
 	return nb_pkts;
 }
@@ -514,6 +526,9 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	tx_queue->tx_stat.pkts += num_tx;
 	tx_queue->tx_stat.bytes += tx_bytes;
 	tx_queue->tx_stat.err_pkts += nb_pkts - num_tx;
+
+	/* ensure store operations of statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_release);
 
 	return nb_pkts;
 }
@@ -821,12 +836,15 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 	      struct eth_queue_stats *qstats)
 {
 	unsigned int i;
-	unsigned long rx_packets_total = 0, rx_bytes_total = 0;
-	unsigned long rx_missed_total = 0;
-	unsigned long rx_nombuf_total = 0, rx_err_total = 0;
-	unsigned long tx_packets_total = 0, tx_bytes_total = 0;
-	unsigned long tx_packets_err_total = 0;
+	uint64_t rx_packets_total = 0, rx_bytes_total = 0;
+	uint64_t rx_missed_total = 0;
+	uint64_t rx_nombuf_total = 0, rx_err_total = 0;
+	uint64_t tx_packets_total = 0, tx_bytes_total = 0;
+	uint64_t tx_packets_err_total = 0;
 	const struct pmd_internals *internal = dev->data->dev_private;
+
+	/* ensure that current statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_acquire);
 
 	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
 			i < dev->data->nb_rx_queues; i++) {
@@ -884,6 +902,8 @@ eth_stats_reset(struct rte_eth_dev *dev)
 		internal->tx_queue[i].tx_stat.err_pkts = 0;
 	}
 
+	/* ensure store operations of statistics are visible */
+	rte_atomic_thread_fence(rte_memory_order_release);
 	return 0;
 }
 
