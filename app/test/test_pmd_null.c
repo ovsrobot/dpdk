@@ -430,6 +430,10 @@ static int
 test_null_dev_info(void)
 {
 	struct rte_eth_dev_info dev_info;
+	const uint16_t jumbo_mtu = RTE_ETHER_MAX_JUMBO_FRAME_LEN
+		- RTE_ETHER_HDR_LEN - RTE_ETHER_CRC_LEN;
+	const uint16_t min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN -
+		RTE_ETHER_CRC_LEN;
 	int ret;
 
 	ret = rte_eth_dev_info_get(port_id, &dev_info);
@@ -438,8 +442,13 @@ test_null_dev_info(void)
 	/* Verify expected device info values */
 	TEST_ASSERT(dev_info.max_mac_addrs == 1,
 		    "Expected max_mac_addrs=1, got %u", dev_info.max_mac_addrs);
-	TEST_ASSERT(dev_info.max_rx_pktlen == UINT32_MAX,
-		    "Unexpected max_rx_pktlen");
+
+	TEST_ASSERT(dev_info.max_mtu == jumbo_mtu,
+		    "Unexpected max_mtu: %u", dev_info.max_mtu);
+	TEST_ASSERT(dev_info.min_mtu == min_mtu,
+		    "Unexpected min_mtu: %u", dev_info.max_mtu);
+	TEST_ASSERT(dev_info.max_rx_pktlen == RTE_ETHER_MAX_JUMBO_FRAME_LEN,
+		    "Unexpected max_rx_pktlen: %u", dev_info.max_rx_pktlen);
 	TEST_ASSERT(dev_info.min_rx_bufsize == 0,
 		    "Expected min_rx_bufsize=0, got %u", dev_info.min_rx_bufsize);
 
