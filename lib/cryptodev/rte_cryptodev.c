@@ -96,6 +96,7 @@ crypto_cipher_algorithm_strings[] = {
 
 	[RTE_CRYPTO_CIPHER_KASUMI_F8]	= "kasumi-f8",
 	[RTE_CRYPTO_CIPHER_SNOW3G_UEA2]	= "snow3g-uea2",
+	[RTE_CRYPTO_CIPHER_SNOW5G_NEA4]	= "snow5g-nea4",
 	[RTE_CRYPTO_CIPHER_ZUC_EEA3]	= "zuc-eea3",
 	[RTE_CRYPTO_CIPHER_SM4_ECB]	= "sm4-ecb",
 	[RTE_CRYPTO_CIPHER_SM4_CBC]	= "sm4-cbc",
@@ -156,6 +157,7 @@ crypto_auth_algorithm_strings[] = {
 
 	[RTE_CRYPTO_AUTH_KASUMI_F9]	= "kasumi-f9",
 	[RTE_CRYPTO_AUTH_SNOW3G_UIA2]	= "snow3g-uia2",
+	[RTE_CRYPTO_AUTH_SNOW5G_NIA4]	= "snow5g-nia4",
 	[RTE_CRYPTO_AUTH_ZUC_EIA3]	= "zuc-eia3",
 	[RTE_CRYPTO_AUTH_SM3]		= "sm3",
 	[RTE_CRYPTO_AUTH_SM3_HMAC]	= "sm3-hmac",
