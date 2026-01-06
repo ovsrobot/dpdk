@@ -1383,9 +1383,9 @@ pmd_init_internals(struct rte_vdev_device *vdev,
 
 static int
 eth_pcap_update_mac(const char *if_name, struct rte_eth_dev *eth_dev,
-		const unsigned int numa_node)
+		    const unsigned int numa_node)
 {
-	void *mac_addrs;
+	struct rte_ether_addr *mac_addrs;
 	struct rte_ether_addr mac;
 
 	if (osdep_iface_mac_get(if_name, &mac) < 0)
@@ -1396,7 +1396,7 @@ eth_pcap_update_mac(const char *if_name, struct rte_eth_dev *eth_dev,
 		return -1;
 
 	PMD_LOG(INFO, "Setting phy MAC for %s", if_name);
-	rte_memcpy(mac_addrs, mac.addr_bytes, RTE_ETHER_ADDR_LEN);
+	rte_ether_addr_copy(&mac, mac_addrs);
 	eth_dev->data->mac_addrs = mac_addrs;
 	return 0;
 }
