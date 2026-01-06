@@ -447,6 +447,9 @@ T: git://dpdk.org/next/dpdk-next-net
 F: app/test-pmd/cmdline_flow.c
 F: doc/guides/prog_guide/ethdev/flow_offload.rst
 F: lib/ethdev/rte_flow*
+F: lib/flow_parser/
+F: app/test-pmd/flow_parser.c
+F: doc/guides/prog_guide/flow_parser_lib.rst
 
 Traffic Management API
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
