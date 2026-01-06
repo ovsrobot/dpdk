@@ -58,6 +58,29 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 	return 0;
 }
 
+int
+osdep_iface_mac_set(int ifindex, const struct rte_ether_addr *mac)
+{
+	char ifname[IFNAMSIZ];
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -errno;
+
+	int s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s < 0)
+		return -errno;
+
+	struct ifreq ifr = { 0 };
+	strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_addr.sa_family = AF_LINK;
+	memcpy(ifr.ifr_addr.sa_data, mac, sizeof(*mac));
+
+	int ret = ioctl(s, SIOCSIFLLADDR, &ifr);
+	close(s);
+
+	return (ret < 0) ? -errno : 0;
+}
+
 int osdep_iface_mtu_set(int ifindex, uint16_t mtu)
 {
 	char ifname[IFNAMSIZ];

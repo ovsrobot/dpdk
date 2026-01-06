@@ -1103,6 +1103,18 @@ eth_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+static int
+eth_dev_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+
+	if (internals->single_iface)
+		return osdep_iface_mac_set(internals->if_index, addr);
+	else
+		return -ENOTSUP;
+}
+
+
 /* Timestamp values in receive packets from libpcap are in UTC */
 static int
 eth_rx_clock(struct rte_eth_dev *dev __rte_unused, uint64_t *timestamp)
@@ -1127,6 +1139,7 @@ static const struct eth_dev_ops ops = {
 	.rx_queue_stop = eth_rx_queue_stop,
 	.tx_queue_stop = eth_tx_queue_stop,
 	.link_update = eth_link_update,
+	.mac_addr_set = eth_dev_macaddr_set,
 	.mtu_set = eth_mtu_set,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
