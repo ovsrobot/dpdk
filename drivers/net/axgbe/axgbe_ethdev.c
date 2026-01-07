@@ -185,6 +185,7 @@ static const struct axgbe_xstats axgbe_xstats_strings[] = {
 
 #define	Fam17h	0x17
 #define	Fam19h	0x19
+#define	Fam1Ah	0x1A
 
 #define	CPUID_VENDOR_AuthenticAMD_ebx	0x68747541
 #define	CPUID_VENDOR_AuthenticAMD_ecx	0x444d4163
@@ -2286,6 +2287,21 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 			pdata->vdata->an_cdr_workaround = 0;
 
 			/* Yellow Carp devices do not need rrc */
+			pdata->vdata->enable_rrc = 0;
+		} else {
+			unknown_cpu = 1;
+		}
+		break;
+		case Fam1Ah:
+		/* V4000 (krackan2e) */
+		if (cpu_model == 0x68) {
+			pdata->xpcs_window_def_reg = PCS_KR_WINDOW_DEF;
+			pdata->xpcs_window_sel_reg = PCS_KR_WINDOW_SELECT;
+
+			/* V4000-Krkan2e devices do not need cdr workaround */
+			pdata->vdata->an_cdr_workaround = 0;
+
+			/* V4000-Krkan2e devices do not need rrc */
 			pdata->vdata->enable_rrc = 0;
 		} else {
 			unknown_cpu = 1;
