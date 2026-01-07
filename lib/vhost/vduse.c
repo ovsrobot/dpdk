@@ -30,9 +30,15 @@
 
 struct vduse {
 	struct fdset *fdset;
+	int device_cnt;
+	pthread_mutex_t mutex;
 };
 
-static struct vduse vduse;
+static struct vduse vduse = {
+	.fdset = NULL,
+	.device_cnt = 0,
+	.mutex = PTHREAD_MUTEX_INITIALIZER,
+};
 
 static const char * const vduse_reqs_str[] = {
 	"VDUSE_GET_VQ_STATE",
@@ -683,19 +689,16 @@ vduse_device_create(const char *path, bool compliant_ol_flags, bool extbuf, bool
 	const char *name = path + strlen("/dev/vduse/");
 	bool reconnect = false;
 
-	if (vduse.fdset == NULL) {
-		vduse.fdset = fdset_init("vduse-evt");
-		if (vduse.fdset == NULL) {
-			VHOST_CONFIG_LOG(path, ERR, "failed to init VDUSE fdset");
-			return -1;
-		}
-	}
+	pthread_mutex_lock(&vduse.mutex);
+	vduse.device_cnt++;
+	pthread_mutex_unlock(&vduse.mutex);
 
 	control_fd = open(VDUSE_CTRL_PATH, O_RDWR);
 	if (control_fd < 0) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to open %s: %s",
 				VDUSE_CTRL_PATH, strerror(errno));
-		return -1;
+		ret = -1;
+		goto out_dec_cnt;
 	}
 
 	if (ioctl(control_fd, VDUSE_SET_API_VERSION, &ver)) {
@@ -851,6 +854,19 @@ vduse_device_create(const char *path, bool compliant_ol_flags, bool extbuf, bool
 
 	dev->cvq = dev->virtqueue[max_queue_pairs * 2];
 
+	/* Only allocate when we know device creation will succeed */
+	pthread_mutex_lock(&vduse.mutex);
+	if (vduse.fdset == NULL) {
+		vduse.fdset = fdset_init("vduse-evt");
+		if (vduse.fdset == NULL) {
+			VHOST_CONFIG_LOG(path, ERR, "failed to init VDUSE fdset");
+			pthread_mutex_unlock(&vduse.mutex);
+			ret = -1;
+			goto out_log_unmap;
+		}
+	}
+	pthread_mutex_unlock(&vduse.mutex);
+
 	ret = fdset_add(vduse.fdset, dev->vduse_dev_fd, vduse_events_handler, NULL, dev);
 	if (ret) {
 		VHOST_CONFIG_LOG(name, ERR, "Failed to add fd %d to vduse fdset",
@@ -867,6 +883,8 @@ vduse_device_create(const char *path, bool compliant_ol_flags, bool extbuf, bool
 	return 0;
 
 out_log_unmap:
+	if (vduse.fdset != NULL)
+		fdset_del(vduse.fdset, dev->vduse_dev_fd);
 	munmap(dev->reconnect_log, sizeof(*dev->reconnect_log));
 out_dev_destroy:
 	vhost_destroy_device(vid);
@@ -876,6 +894,14 @@ out_dev_close:
 	ioctl(control_fd, VDUSE_DESTROY_DEV, name);
 out_ctrl_close:
 	close(control_fd);
+out_dec_cnt:
+	pthread_mutex_lock(&vduse.mutex);
+	vduse.device_cnt--;
+	if (vduse.device_cnt == 0 && vduse.fdset != NULL) {
+		fdset_destroy(vduse.fdset);
+		vduse.fdset = NULL;
+	}
+	pthread_mutex_unlock(&vduse.mutex);
 
 	return ret;
 }
@@ -905,7 +931,17 @@ vduse_device_destroy(const char *path)
 
 	vduse_device_stop(dev);
 
-	fdset_del(vduse.fdset, dev->vduse_dev_fd);
+	if (vduse.fdset != NULL)
+		fdset_del(vduse.fdset, dev->vduse_dev_fd);
+
+	/* Check if we need to destroy the vduse fdset */
+	pthread_mutex_lock(&vduse.mutex);
+	vduse.device_cnt--;
+	if (vduse.device_cnt == 0 && vduse.fdset != NULL) {
+		fdset_destroy(vduse.fdset);
+		vduse.fdset = NULL;
+	}
+	pthread_mutex_unlock(&vduse.mutex);
 
 	if (dev->vduse_dev_fd >= 0) {
 		close(dev->vduse_dev_fd);
