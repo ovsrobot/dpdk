@@ -39,24 +39,64 @@ extern "C" {
  * @return
  *   sum += Sum of all words in the buffer.
  */
+__rte_no_ubsan_alignment
 static inline uint32_t
 __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
-	const void *end;
-
-	for (end = RTE_PTR_ADD(buf, RTE_ALIGN_FLOOR(len, sizeof(uint16_t)));
-	     buf != end; buf = RTE_PTR_ADD(buf, sizeof(uint16_t))) {
-		uint16_t v;
-
-		memcpy(&v, buf, sizeof(uint16_t));
-		sum += v;
+	/* Process in 64 byte blocks (32 x uint16_t). */
+	/* Always process as uint16_t chunks to preserve overflow/carry. */
+	const void *end = RTE_PTR_ADD(buf, RTE_ALIGN_FLOOR(len, 64));
+	while (buf != end) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)buf;
+		sum += (uint32_t)p16[0] + p16[1] + p16[2] + p16[3] +
+			 p16[4] + p16[5] + p16[6] + p16[7] +
+			 p16[8] + p16[9] + p16[10] + p16[11] +
+			 p16[12] + p16[13] + p16[14] + p16[15] +
+			 p16[16] + p16[17] + p16[18] + p16[19] +
+			 p16[20] + p16[21] + p16[22] + p16[23] +
+			 p16[24] + p16[25] + p16[26] + p16[27] +
+			 p16[28] + p16[29] + p16[30] + p16[31];
+		buf = RTE_PTR_ADD(buf, 64);
 	}
 
-	/* if length is odd, keeping it byte order independent */
-	if (unlikely(len % 2)) {
-		uint16_t left = 0;
+	if (len & 32) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)buf;
+		sum += (uint32_t)p16[0] + p16[1] + p16[2] + p16[3] +
+			 p16[4] + p16[5] + p16[6] + p16[7] +
+			 p16[8] + p16[9] + p16[10] + p16[11] +
+			 p16[12] + p16[13] + p16[14] + p16[15];
+		buf = RTE_PTR_ADD(buf, 32);
+	}
 
-		memcpy(&left, end, 1);
+	if (len & 16) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)buf;
+		sum += (uint32_t)p16[0] + p16[1] + p16[2] + p16[3] +
+			 p16[4] + p16[5] + p16[6] + p16[7];
+		buf = RTE_PTR_ADD(buf, 16);
+	}
+
+	if (len & 8) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)buf;
+		sum += (uint32_t)p16[0] + p16[1] + p16[2] + p16[3];
+		buf = RTE_PTR_ADD(buf, 8);
+	}
+
+	if (len & 4) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)buf;
+		sum += (uint32_t)p16[0] + p16[1];
+		buf = RTE_PTR_ADD(buf, 4);
+	}
+
+	if (len & 2) {
+		const unaligned_uint16_t *p16 = (const unaligned_uint16_t *)buf;
+		sum += *p16;
+		buf = RTE_PTR_ADD(buf, 2);
+	}
+
+	/* If length is odd use memcpy for byte order independence */
+	if (len & 1) {
+		uint16_t left = 0;
+		memcpy(&left, buf, 1);
 		sum += left;
 	}
 
