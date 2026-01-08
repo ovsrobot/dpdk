@@ -115,7 +115,7 @@ RTE_LOG_REGISTER(l3fwd_power_logtype, l3fwd.power, INFO);
 
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
-#define NB_SOCKETS 8
+#define NB_SOCKETS RTE_MAX_NUMA_NODES
 
 /* Configure how many packets ahead to prefetch, when reading packets */
 #define PREFETCH_OFFSET	3
