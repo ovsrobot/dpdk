@@ -546,6 +546,28 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define __rte_no_asan
 #endif
 
+/**
+ * Disable UndefinedBehaviorSanitizer alignment check on some code
+ */
+#if defined(RTE_CC_CLANG) || defined(RTE_CC_GCC)
+#define __rte_no_ubsan_alignment __attribute__((no_sanitize("alignment")))
+#else
+#define __rte_no_ubsan_alignment
+#endif
+
+/**
+ * Suppress GCC -Wmaybe-uninitialized false positive on struct initialization.
+ * This tells the compiler that the variable's memory has been touched,
+ * preventing the false positive without affecting other optimizations.
+ */
+#ifdef RTE_CC_GCC
+#define RTE_SUPPRESS_UNINITIALIZED_WARNING(var) do {	\
+	asm volatile("" : "+m" (var));			\
+} while (0)
+#else
+#define RTE_SUPPRESS_UNINITIALIZED_WARNING(var)
+#endif
+
 /*********** Macros for pointer arithmetic ********/
 
 /**
