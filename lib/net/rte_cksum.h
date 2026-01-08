@@ -42,20 +42,17 @@ extern "C" {
 static inline uint32_t
 __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
-	const void *end;
-
-	for (end = RTE_PTR_ADD(buf, RTE_ALIGN_FLOOR(len, sizeof(uint16_t)));
-	     buf != end; buf = RTE_PTR_ADD(buf, sizeof(uint16_t))) {
-		uint16_t v;
-
-		memcpy(&v, buf, sizeof(uint16_t));
-		sum += v;
-	}
+	/* Process as uint16 chunks to preserve overflow/carry math. */
+	const unaligned_uint16_t *buf16 = (const unaligned_uint16_t *)buf;
+	/* Divide byte length by 2 to get number of uint16_t elements. */
+	const unaligned_uint16_t *end = buf16 + (len >> 1);
+	/* GCC and Clang vectorize the loop. */
+	for (; buf16 != end; buf16++)
+		sum += *buf16;
 
 	/* if length is odd, keeping it byte order independent */
-	if (unlikely(len % 2)) {
+	if (len & 1) {
 		uint16_t left = 0;
-
 		memcpy(&left, end, 1);
 		sum += left;
 	}
