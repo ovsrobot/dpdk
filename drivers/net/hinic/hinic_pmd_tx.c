@@ -706,47 +706,13 @@ hinic_get_sq_wqe(struct hinic_txq *txq, int wqebb_cnt,
 static inline uint16_t
 hinic_ipv4_phdr_cksum(const struct rte_ipv4_hdr *ipv4_hdr, uint64_t ol_flags)
 {
-	struct ipv4_psd_header {
-		uint32_t src_addr; /* IP address of source host. */
-		uint32_t dst_addr; /* IP address of destination host. */
-		uint8_t  zero;     /* zero. */
-		uint8_t  proto;    /* L4 protocol type. */
-		uint16_t len;      /* L4 length. */
-	} psd_hdr;
-
-	psd_hdr.src_addr = ipv4_hdr->src_addr;
-	psd_hdr.dst_addr = ipv4_hdr->dst_addr;
-	psd_hdr.zero = 0;
-	psd_hdr.proto = ipv4_hdr->next_proto_id;
-	if (ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
-		psd_hdr.len = 0;
-	} else {
-		psd_hdr.len =
-		rte_cpu_to_be_16(rte_be_to_cpu_16(ipv4_hdr->total_length) -
-				 rte_ipv4_hdr_len(ipv4_hdr));
-	}
-	return rte_raw_cksum(&psd_hdr, sizeof(psd_hdr));
+	return rte_ipv4_phdr_cksum(ipv4_hdr, ol_flags & RTE_MBUF_F_TX_TCP_SEG);
 }
 
 static inline uint16_t
 hinic_ipv6_phdr_cksum(const struct rte_ipv6_hdr *ipv6_hdr, uint64_t ol_flags)
 {
-	uint32_t sum;
-	struct {
-		uint32_t len;   /* L4 length. */
-		uint32_t proto; /* L4 protocol - top 3 bytes must be zero */
-	} psd_hdr;
-
-	psd_hdr.proto = (ipv6_hdr->proto << 24);
-	if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
-		psd_hdr.len = 0;
-	else
-		psd_hdr.len = ipv6_hdr->payload_len;
-
-	sum = __rte_raw_cksum(&ipv6_hdr->src_addr,
-		sizeof(ipv6_hdr->src_addr) + sizeof(ipv6_hdr->dst_addr), 0);
-	sum = __rte_raw_cksum(&psd_hdr, sizeof(psd_hdr), sum);
-	return __rte_raw_cksum_reduce(sum);
+	return rte_ipv6_phdr_cksum(ipv6_hdr, ol_flags & RTE_MBUF_F_TX_TCP_SEG);
 }
 
 static inline void hinic_get_outer_cs_pld_offset(struct rte_mbuf *m,

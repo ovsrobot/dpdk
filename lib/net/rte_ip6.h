@@ -560,19 +560,20 @@ struct __rte_aligned(2) __rte_packed_begin rte_ipv6_routing_ext {
 static inline uint16_t
 rte_ipv6_phdr_cksum(const struct rte_ipv6_hdr *ipv6_hdr, uint64_t ol_flags)
 {
-	uint32_t sum;
 	struct {
 		rte_be32_t len;   /* L4 length. */
 		rte_be32_t proto; /* L4 protocol - top 3 bytes must be zero */
-	} psd_hdr;
+	} psd_hdr = {
+		.proto = (uint32_t)(ipv6_hdr->proto << 24),
+		.len = (ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG)) ? 0 :
+			ipv6_hdr->payload_len
+	};
+#ifdef RTE_CC_GCC
+	/* Suppress GCC -Wmaybe-uninitialized false positive. No assembly/runtime impacts. */
+	asm volatile("" : "+m" (psd_hdr));
+#endif
 
-	psd_hdr.proto = (uint32_t)(ipv6_hdr->proto << 24);
-	if (ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG))
-		psd_hdr.len = 0;
-	else
-		psd_hdr.len = ipv6_hdr->payload_len;
-
-	sum = __rte_raw_cksum(&ipv6_hdr->src_addr,
+	uint32_t sum = __rte_raw_cksum(&ipv6_hdr->src_addr,
 		sizeof(ipv6_hdr->src_addr) + sizeof(ipv6_hdr->dst_addr),
 		0);
 	sum = __rte_raw_cksum(&psd_hdr, sizeof(psd_hdr), sum);

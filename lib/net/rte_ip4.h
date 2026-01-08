@@ -223,21 +223,19 @@ rte_ipv4_phdr_cksum(const struct rte_ipv4_hdr *ipv4_hdr, uint64_t ol_flags)
 		uint8_t  zero;     /* zero. */
 		uint8_t  proto;    /* L4 protocol type. */
 		uint16_t len;      /* L4 length. */
-	} psd_hdr;
+	} psd_hdr = {
+		.src_addr = ipv4_hdr->src_addr,
+		.dst_addr = ipv4_hdr->dst_addr,
+		.proto = ipv4_hdr->next_proto_id,
+		.len = (ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG)) ? 0 :
+			rte_cpu_to_be_16((uint16_t)(rte_be_to_cpu_16(ipv4_hdr->total_length) -
+				rte_ipv4_hdr_len(ipv4_hdr)))
+	};
+#ifdef RTE_CC_GCC
+	/* Suppress GCC -Wmaybe-uninitialized false positive. No assembly/runtime impacts. */
+	asm volatile("" : "+m" (psd_hdr));
+#endif
 
-	uint32_t l3_len;
-
-	psd_hdr.src_addr = ipv4_hdr->src_addr;
-	psd_hdr.dst_addr = ipv4_hdr->dst_addr;
-	psd_hdr.zero = 0;
-	psd_hdr.proto = ipv4_hdr->next_proto_id;
-	if (ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG)) {
-		psd_hdr.len = 0;
-	} else {
-		l3_len = rte_be_to_cpu_16(ipv4_hdr->total_length);
-		psd_hdr.len = rte_cpu_to_be_16((uint16_t)(l3_len -
-			rte_ipv4_hdr_len(ipv4_hdr)));
-	}
 	return rte_raw_cksum(&psd_hdr, sizeof(psd_hdr));
 }
 
