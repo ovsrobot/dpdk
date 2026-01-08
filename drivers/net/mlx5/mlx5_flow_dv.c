@@ -4445,6 +4445,10 @@ __flow_encap_decap_resource_register(struct rte_eth_dev *dev,
 			.reserve = 0,
 		}
 	};
+#ifdef RTE_CC_GCC
+	/* Suppress GCC -Wmaybe-uninitialized false positive. No assembly/runtime impacts. */
+	asm volatile("" : "+m" (encap_decap_key));
+#endif
 	struct mlx5_flow_cb_ctx ctx = {
 		.error = error,
 		.data = resource,
