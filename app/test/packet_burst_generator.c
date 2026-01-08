@@ -216,13 +216,18 @@ int
 generate_packet_burst(struct rte_mempool *mp, struct rte_mbuf **pkts_burst,
 		struct rte_ether_hdr *eth_hdr, uint8_t vlan_enabled,
 		void *ip_hdr, uint8_t ipv4, struct rte_udp_hdr *udp_hdr,
-		int nb_pkt_per_burst, uint8_t pkt_len, uint8_t nb_pkt_segs)
+		int nb_pkt_per_burst, uint16_t pkt_len, uint8_t nb_pkt_segs)
 {
-	const uint8_t pkt_seg_data_len = pkt_len / nb_pkt_segs;
+	int i, nb_pkt = 0;
+	size_t eth_hdr_size;
 	struct rte_mbuf *pkt_seg;
 	struct rte_mbuf *pkt;
-	size_t eth_hdr_size;
-	int i, nb_pkt = 0;
+	uint16_t pkt_seg_data_len;
+	uint16_t last_seg_data_len;
+
+	/* Calculate per-segment data length */
+	pkt_seg_data_len = pkt_len / nb_pkt_segs;
+	last_seg_data_len = pkt_seg_data_len + (pkt_len % nb_pkt_segs);
 
 	for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
 		pkt = rte_pktmbuf_alloc(mp);
@@ -246,7 +251,7 @@ nomore_mbuf:
 			if (i != nb_pkt_segs - 1)
 				pkt_seg->data_len = pkt_seg_data_len;
 			else
-				pkt_seg->data_len = pkt_seg_data_len + pkt_len % nb_pkt_segs;
+				pkt_seg->data_len = last_seg_data_len;
 		}
 		pkt_seg->next = NULL; /* Last segment of packet. */
 
@@ -300,13 +305,18 @@ generate_packet_burst_proto(struct rte_mempool *mp,
 		struct rte_mbuf **pkts_burst, struct rte_ether_hdr *eth_hdr,
 		uint8_t vlan_enabled, void *ip_hdr,
 		uint8_t ipv4, uint8_t proto, void *proto_hdr,
-		int nb_pkt_per_burst, uint8_t pkt_len, uint8_t nb_pkt_segs)
+		int nb_pkt_per_burst, uint16_t pkt_len, uint8_t nb_pkt_segs)
 {
-	const uint8_t pkt_seg_data_len = pkt_len / nb_pkt_segs;
+	int i, nb_pkt = 0;
+	size_t eth_hdr_size;
 	struct rte_mbuf *pkt_seg;
 	struct rte_mbuf *pkt;
-	size_t eth_hdr_size;
-	int i, nb_pkt = 0;
+	uint16_t pkt_seg_data_len;
+	uint16_t last_seg_data_len;
+
+	/* Calculate per-segment data length */
+	pkt_seg_data_len = pkt_len / nb_pkt_segs;
+	last_seg_data_len = pkt_seg_data_len + (pkt_len % nb_pkt_segs);
 
 	for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
 		pkt = rte_pktmbuf_alloc(mp);
@@ -330,7 +340,7 @@ nomore_mbuf:
 			if (i != nb_pkt_segs - 1)
 				pkt_seg->data_len = pkt_seg_data_len;
 			else
-				pkt_seg->data_len = pkt_seg_data_len + pkt_len % nb_pkt_segs;
+				pkt_seg->data_len = last_seg_data_len;
 		}
 		pkt_seg->next = NULL; /* Last segment of packet. */
 
