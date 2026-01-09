@@ -1086,6 +1086,18 @@ eth_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+static int
+eth_dev_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+
+	if (internals->single_iface)
+		return osdep_iface_mac_set(internals->if_index, addr);
+	else
+		return -ENOTSUP;
+}
+
+
 /* Timestamp values in receive packets from libpcap are in UTC */
 static int
 eth_rx_clock(struct rte_eth_dev *dev __rte_unused, uint64_t *timestamp)
@@ -1110,6 +1122,7 @@ static const struct eth_dev_ops ops = {
 	.rx_queue_stop = eth_rx_queue_stop,
 	.tx_queue_stop = eth_tx_queue_stop,
 	.link_update = eth_link_update,
+	.mac_addr_set = eth_dev_macaddr_set,
 	.mtu_set = eth_mtu_set,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
@@ -1357,9 +1370,9 @@ pmd_init_internals(struct rte_vdev_device *vdev,
 
 static int
 eth_pcap_update_mac(const char *if_name, struct rte_eth_dev *eth_dev,
-		const unsigned int numa_node)
+		    const unsigned int numa_node)
 {
-	void *mac_addrs;
+	struct rte_ether_addr *mac_addrs;
 	struct rte_ether_addr mac;
 
 	if (osdep_iface_mac_get(if_name, &mac) < 0)
@@ -1370,7 +1383,7 @@ eth_pcap_update_mac(const char *if_name, struct rte_eth_dev *eth_dev,
 		return -1;
 
 	PMD_LOG(INFO, "Setting phy MAC for %s", if_name);
-	rte_memcpy(mac_addrs, mac.addr_bytes, RTE_ETHER_ADDR_LEN);
+	rte_ether_addr_copy(&mac, mac_addrs);
 	eth_dev->data->mac_addrs = mac_addrs;
 	return 0;
 }

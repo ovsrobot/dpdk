@@ -4,13 +4,18 @@
  * All rights reserved.
  */
 
+#include <string.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <errno.h>
 #include <net/if.h>
+#include <net/if_arp.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <unistd.h>
 
 #include <rte_memcpy.h>
 #include <rte_string_fns.h>
+#include <rte_ether.h>
 
 #include "pcap_osdep.h"
 
@@ -39,6 +44,29 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 
 	close(if_fd);
 	return 0;
+}
+
+int
+osdep_iface_mac_set(int ifindex, const struct rte_ether_addr *mac)
+{
+	char ifname[IFNAMSIZ];
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -errno;
+
+	int s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s < 0)
+		return -errno;
+
+	struct ifreq ifr = { 0 };
+	strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+	memcpy(ifr.ifr_hwaddr.sa_data, mac, sizeof(*mac));
+
+	int ret = ioctl(s, SIOCSIFHWADDR, &ifr);
+	close(s);
+
+	return (ret < 0) ? -errno : 0;
 }
 
 int
