@@ -4445,6 +4445,8 @@ __flow_encap_decap_resource_register(struct rte_eth_dev *dev,
 			.reserve = 0,
 		}
 	};
+	RTE_FORCE_INIT_BARRIER(encap_decap_key);
+
 	struct mlx5_flow_cb_ctx ctx = {
 		.error = error,
 		.data = resource,

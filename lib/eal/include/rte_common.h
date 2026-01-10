@@ -555,6 +555,20 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define __rte_no_ubsan_alignment
 #endif
 
+/**
+ * Force struct initialization to prevent GCC optimization bug.
+ * GCC has a bug where it incorrectly elides struct initialization in
+ * inline functions when strict aliasing is enabled, causing reads from
+ * uninitialized memory. This memory barrier prevents the misoptimization.
+ */
+#ifdef RTE_CC_GCC
+#define RTE_FORCE_INIT_BARRIER(var) do {	\
+	asm volatile("" : "+m" (var));		\
+} while (0)
+#else
+#define RTE_FORCE_INIT_BARRIER(var)
+#endif
+
 /*********** Macros for pointer arithmetic ********/
 
 /**

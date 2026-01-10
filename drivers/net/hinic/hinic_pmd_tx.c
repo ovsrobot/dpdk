@@ -725,6 +725,7 @@ hinic_ipv4_phdr_cksum(const struct rte_ipv4_hdr *ipv4_hdr, uint64_t ol_flags)
 		rte_cpu_to_be_16(rte_be_to_cpu_16(ipv4_hdr->total_length) -
 				 rte_ipv4_hdr_len(ipv4_hdr));
 	}
+	RTE_FORCE_INIT_BARRIER(psd_hdr);
 	return rte_raw_cksum(&psd_hdr, sizeof(psd_hdr));
 }
 
@@ -743,6 +744,7 @@ hinic_ipv6_phdr_cksum(const struct rte_ipv6_hdr *ipv6_hdr, uint64_t ol_flags)
 	else
 		psd_hdr.len = ipv6_hdr->payload_len;
 
+	RTE_FORCE_INIT_BARRIER(psd_hdr);
 	sum = __rte_raw_cksum(&ipv6_hdr->src_addr,
 		sizeof(ipv6_hdr->src_addr) + sizeof(ipv6_hdr->dst_addr), 0);
 	sum = __rte_raw_cksum(&psd_hdr, sizeof(psd_hdr), sum);
