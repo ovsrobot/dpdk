@@ -39,6 +39,7 @@ extern "C" {
  * @return
  *   sum += Sum of all words in the buffer.
  */
+__rte_no_ubsan_alignment
 static inline uint32_t
 __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
