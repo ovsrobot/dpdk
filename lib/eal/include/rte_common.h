@@ -551,12 +551,88 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 /**
  * add a byte-value offset to a pointer
  */
+#ifndef RTE_TOOLCHAIN_MSVC
+#define RTE_PTR_ADD(ptr, x) \
+	(__extension__ ({ \
+		/* Diagnostics suppressed for internal macro operations only. \
+		 * Compiler type-checks all _Generic branches even when unselected, \
+		 * triggering warnings with no external impact. */ \
+		__rte_diagnostic_push \
+		__rte_diagnostic_ignored_wcast_qual \
+		_Pragma("GCC diagnostic ignored \"-Wconditional-type-mismatch\"") \
+		/* Uses uintptr_t arithmetic for integer types (API compatibility), \
+		 * and char* arithmetic for pointer types (enables optimization). */ \
+		__auto_type _ptr_result = _Generic((ptr), \
+			unsigned long long: ((void *)((uintptr_t)(ptr) + (x))), \
+			long long:          ((void *)((uintptr_t)(ptr) + (x))), \
+			unsigned long:      ((void *)((uintptr_t)(ptr) + (x))), \
+			long:               ((void *)((uintptr_t)(ptr) + (x))), \
+			unsigned int:       ((void *)((uintptr_t)(ptr) + (x))), \
+			int:                ((void *)((uintptr_t)(ptr) + (x))), \
+			unsigned short:     ((void *)((uintptr_t)(ptr) + (x))), \
+			short:              ((void *)((uintptr_t)(ptr) + (x))), \
+			unsigned char:      ((void *)((uintptr_t)(ptr) + (x))), \
+			signed char:        ((void *)((uintptr_t)(ptr) + (x))), \
+			char:               ((void *)((uintptr_t)(ptr) + (x))), \
+			_Bool:              ((void *)((uintptr_t)(ptr) + (x))), \
+			/* Ternary with null pointer constant: per C11, if one operand \
+			 * is a null pointer constant and the other is a pointer, the \
+			 * result type is qualified per the pointer operand, normalizing \
+			 * const T* to const void* and T* to void*. */ \
+			default: _Generic((1 ? (ptr) : (void *)0), \
+				const void *: ((void *)((const char *)(ptr) + (x))), \
+				default:      ((void *)((char *)(ptr) + (x))) \
+			) \
+		); \
+		__rte_diagnostic_pop \
+		_ptr_result; \
+	}))
+#else
 #define RTE_PTR_ADD(ptr, x) ((void*)((uintptr_t)(ptr) + (x)))
+#endif
 
 /**
  * subtract a byte-value offset from a pointer
  */
+#ifndef RTE_TOOLCHAIN_MSVC
+#define RTE_PTR_SUB(ptr, x) \
+	(__extension__ ({ \
+		/* Diagnostics suppressed for internal macro operations only. \
+		 * Compiler type-checks all _Generic branches even when unselected, \
+		 * triggering warnings with no external impact. */ \
+		__rte_diagnostic_push \
+		__rte_diagnostic_ignored_wcast_qual \
+		_Pragma("GCC diagnostic ignored \"-Wconditional-type-mismatch\"") \
+		/* Uses uintptr_t arithmetic for integer types (API compatibility), \
+		 * and char* arithmetic for pointer types (enables optimization). */ \
+		__auto_type _ptr_result = _Generic((ptr), \
+			unsigned long long: ((void *)((uintptr_t)(ptr) - (x))), \
+			long long:          ((void *)((uintptr_t)(ptr) - (x))), \
+			unsigned long:      ((void *)((uintptr_t)(ptr) - (x))), \
+			long:               ((void *)((uintptr_t)(ptr) - (x))), \
+			unsigned int:       ((void *)((uintptr_t)(ptr) - (x))), \
+			int:                ((void *)((uintptr_t)(ptr) - (x))), \
+			unsigned short:     ((void *)((uintptr_t)(ptr) - (x))), \
+			short:              ((void *)((uintptr_t)(ptr) - (x))), \
+			unsigned char:      ((void *)((uintptr_t)(ptr) - (x))), \
+			signed char:        ((void *)((uintptr_t)(ptr) - (x))), \
+			char:               ((void *)((uintptr_t)(ptr) - (x))), \
+			_Bool:              ((void *)((uintptr_t)(ptr) - (x))), \
+			/* Ternary with null pointer constant: per C11, if one operand \
+			 * is a null pointer constant and the other is a pointer, the \
+			 * result type is qualified per the pointer operand, normalizing \
+			 * const T* to const void* and T* to void*. */ \
+			default: _Generic((1 ? (ptr) : (void *)0), \
+				const void *: ((void *)((const char *)(ptr) - (x))), \
+				default:      ((void *)((char *)(ptr) - (x))) \
+			) \
+		); \
+		__rte_diagnostic_pop \
+		_ptr_result; \
+	}))
+#else
 #define RTE_PTR_SUB(ptr, x) ((void *)((uintptr_t)(ptr) - (x)))
+#endif
 
 /**
  * get the difference between two pointer values, i.e. how far apart
