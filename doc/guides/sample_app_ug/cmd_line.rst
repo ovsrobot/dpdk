@@ -13,7 +13,7 @@ Overview
 The Command Line sample application is a simple application that
 demonstrates the use of the command line interface in the DPDK.
 This application is a readline-like interface that can be used
-to debug a DPDK application in a Linux* application environment.
+to debug a DPDK application in a Linux application environment.
 
 .. note::
 
@@ -23,7 +23,7 @@ to debug a DPDK application in a Linux* application environment.
     in the "Known Issues" section of the Release Notes.
 
 The Command Line sample application supports some of the features of the GNU readline library
-such as completion, cut/paste and other special bindings
+such as completion, cut/paste, and other special bindings
 that make configuration and debug faster and easier.
 
 The application shows how the ``cmdline`` library can be extended
@@ -31,11 +31,11 @@ to handle a list of objects.
 
 There are three simple commands:
 
-*   add obj_name IP: Add a new object with an IP/IPv6 address associated to it.
+*   ``add obj_name IP``: Add a new object with an IP/IPv6 address associated to it.
 
-*   del obj_name: Delete the specified object.
+*   ``del obj_name``: Delete the specified object.
 
-*   show obj_name: Show the IP associated with the specified object.
+*   ``show obj_name``: Show the IP associated with the specified object.
 
 .. note::
 
@@ -44,7 +44,7 @@ There are three simple commands:
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``cmd_line`` sub-directory.
 
@@ -63,7 +63,7 @@ and the Environment Abstraction Layer (EAL) options.
 Explanation
 -----------
 
-The following sections provide explanation of the code.
+The following sections provide an explanation of the code.
 
 EAL Initialization and cmdline Start
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,17 +100,17 @@ For example:
 
 Each command (of type cmdline_parse_inst_t) is defined statically.
 It contains a pointer to a callback function that is executed when the command is parsed,
-an opaque pointer, a help string and a list of tokens in a NULL-terminated table.
+an opaque pointer, a help string, and a list of tokens in a NULL-terminated table.
 
 The rte_cmdline application provides a list of pre-defined token types:
 
-*   String Token: Match a static string, a list of static strings or any string.
+*   String Token: Match a static string, a list of static strings, or any string.
 
 *   Number Token: Match a number that can be signed or unsigned, from 8-bit to 32-bit.
 
 *   IP Address Token: Match an IPv4 or IPv6 address or network.
 
-*   Ethernet* Address Token: Match a MAC address.
+*   Ethernet Address Token: Match a MAC address.
 
 In this example, a new token type obj_list is defined and implemented
 in the parse_obj_list.c and parse_obj_list.h files.
