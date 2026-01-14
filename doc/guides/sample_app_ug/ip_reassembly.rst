@@ -12,7 +12,7 @@ Overview
 
 The application demonstrates the use of the DPDK libraries to implement packet forwarding
 with reassembly for IPv4 and IPv6 fragmented packets.
-The initialization and run- time paths are very similar to those of the :doc:`l2_forward_real_virtual`.
+The initialization and run-time paths are very similar to those of the :doc:`l2_forward_real_virtual`.
 The main difference from the L2 Forwarding sample application is that
 it reassembles fragmented IPv4 and IPv6 packets before forwarding.
 The maximum allowed size of reassembled packet is 9.5 KB.
@@ -53,11 +53,11 @@ where:
 *   --maxflows=FLOWS: determines maximum number of active fragmented flows (1-65535). Default value: 4096.
 
 *   --flowttl=TTL[(s|ms)]: determines maximum Time To Live for fragmented packet.
-    If all fragments of the packet wouldn't appear within given time-out,
+    If all fragments of the packet do not appear within given time-out,
     then they are considered as invalid and will be dropped.
     Valid range is 1ms - 3600s. Default value: 1s.
 
-To run the example in a Linux environment with 2 lcores (2,4) over 2 ports(0,2)
+To run the example in a Linux environment with 2 lcores (2,4) over 2 ports (0,2)
 with 1 Rx queue per lcore:
 
 .. code-block:: console
@@ -80,7 +80,7 @@ with 1 Rx queue per lcore:
     IP_RSMBL: entering main loop on lcore 2
     IP_RSMBL: -- lcoreid=2 portid=0
 
-To run the example in a Linux environment with 1 lcore (4) over 2 ports(0,2)
+To run the example in a Linux environment with 1 lcore (4) over 2 ports (0,2)
 with 2 Rx queues per lcore:
 
 .. code-block:: console
@@ -110,7 +110,7 @@ The default l3fwd_ipv6_route_array table is:
     :end-before: >8 End of default l3fwd_ipv6_route_array table.
 
 For example, for the fragmented input IPv4 packet with destination address: 100.10.1.1,
-a reassembled IPv4 packet be sent out from port #0 to the destination address 100.10.1.1
+a reassembled IPv4 packet will be sent out from port #0 to the destination address 100.10.1.1
 once all the fragments are collected.
 
 Explanation
@@ -142,7 +142,7 @@ consisting of up to ``RTE_LIBRTE_IP_FRAG_MAX_FRAG`` fragments.
 Mempools Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The reassembly application demands a lot of mbuf's to be allocated.
+The reassembly application demands a lot of mbufs to be allocated.
 At any given time, up to (2 \* max_flow_num \* RTE_LIBRTE_IP_FRAG_MAX_FRAG \* <maximum number of mbufs per packet>)
 can be stored inside the fragment table waiting for remaining fragments.
 To keep mempool size under reasonable limits
