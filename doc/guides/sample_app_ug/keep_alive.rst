@@ -19,7 +19,7 @@ The application demonstrates how to protect against 'silent outages'
 on packet processing cores. A Keep Alive Monitor Agent Core (main)
 monitors the state of packet processing cores (worker cores) by
 dispatching pings at a regular time interval (default is 5ms) and
-monitoring the state of the cores. Cores states are: Alive, MIA, Dead
+monitoring the state of the cores. Core states are: Alive, MIA, Dead
 or Buried. MIA indicates a missed ping, and Dead indicates two missed
 pings within the specified time interval. When a core is Dead, a
 callback function is invoked to restart the packet processing core;
@@ -58,12 +58,12 @@ where,
 
 * ``q NQ``: Maximum number of queues per lcore (default is 1)
 
-* ``K PERIOD``: Heartbeat check period in ms(5ms default; 86400 max)
+* ``K PERIOD``: Heartbeat check period in ms (5ms default; 86400 max)
 
 * ``T PERIOD``: statistics will be refreshed each PERIOD seconds (0 to
   disable, 10 default, 86400 maximum).
 
-To run the application in linux environment with 4 lcores, 16 ports
+To run the application in a Linux environment with 4 lcores, 16 ports
 8 RX queues per lcore and a ping interval of 10ms, issue the command:
 
 .. code-block:: console
@@ -85,7 +85,7 @@ similar to those of the :doc:`l2_forward_real_virtual`.
 
 The Keep-Alive/'Liveliness' conceptual scheme:
 
-* A Keep- Alive Agent Runs every N Milliseconds.
+* A Keep-Alive Agent runs every N Milliseconds.
 
 * DPDK Cores respond to the keep-alive agent.
 
