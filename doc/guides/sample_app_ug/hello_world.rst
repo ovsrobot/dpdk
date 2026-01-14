@@ -9,25 +9,25 @@ Overview
 --------
 
 The Hello World sample application is an example of the simplest DPDK application that can be written.
-The application simply prints an "helloworld" message on every enabled lcore.
+The application simply prints a "Hello World" message on every enabled lcore.
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``helloworld`` sub-directory.
 
 Running the Application
 -----------------------
 
-To run the example in a linux environment:
+To run the example in a Linux environment:
 
 .. code-block:: console
 
     $ ./<build_dir>/examples/dpdk-helloworld -l 0-3
 
-Refer to *DPDK Getting Started Guide* for general information on running applications
+Refer to the *DPDK Getting Started Guide* for general information on running applications
 and the Environment Abstraction Layer (EAL) options.
 
 Explanation
@@ -46,7 +46,7 @@ This is done in the main() function using the following code:
     :start-after: Initialization of Environment Abstraction Layer (EAL). 8<
     :end-before: >8 End of initialization of Environment Abstraction Layer
 
-This call finishes the initialization process that was started before main() is called (in case of a Linux environment).
+This call finishes the initialization process that was started before main() is called (in the case of a Linux environment).
 The argc and argv arguments are provided to the rte_eal_init() function.
 The value returned is the number of parsed arguments.
 
