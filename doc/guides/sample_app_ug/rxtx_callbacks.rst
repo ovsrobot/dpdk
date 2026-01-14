@@ -17,9 +17,8 @@ packets to add a timestamp. A separate callback is applied to all packets
 prior to transmission to calculate the elapsed time in CPU cycles.
 
 If hardware timestamping is supported by the NIC, the sample application will
-also display the average latency.
-The packet was timestamped in hardware
-on top of the latency since the packet was received and processed by the RX
+also display the average latency since the packet was timestamped in hardware,
+in addition to the latency since the packet was received and processed by the RX
 callback.
 
 
@@ -34,7 +33,7 @@ The application is located in the ``rxtx_callbacks`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a ``linux`` environment:
+To run the example in a ``Linux`` environment:
 
 .. code-block:: console
 
