@@ -11,30 +11,35 @@ application using DPDK cryptodev framework.
 Overview
 --------
 
-This application demonstrates the implementation of a Security Gateway
-(not fully IPsec-compliant; see the Constraints section) using DPDK, based
-on RFC4301, RFC4303, RFC3602, and RFC2404.
+The application demonstrates the implementation of a Security Gateway
+(not IPsec compliant, see the Constraints section below) using DPDK based on RFC4301,
+RFC4303, RFC3602 and RFC2404.
 
-Currently, DPDK does not support Internet Key Exchange (IKE), so Security Policies
-(SP) and Security Associations (SA) must be configured manually. SPs are implemented
-as ACL rules, SAs are stored in a table, and routing is handled using LPM.
+Internet Key Exchange (IKE) is not implemented, so only manual setting of
+Security Policies and Security Associations is supported.
 
-The application classifies ports as *Protected* or *Unprotected*, with traffic
-received on Unprotected ports considered Inbound and traffic on Protected ports
-considered Outbound.
+The Security Policies (SP) are implemented as ACL rules, the Security
+Associations (SA) are stored in a table and the routing is implemented
+using LPM.
 
-It supports full IPsec protocol offload to hardware (via crypto accelerators or
-Ethernet devices) as well as inline IPsec processing by supported Ethernet
-devices during transmission. These modes can be configured during SA creation.
+The application classifies the ports as *Protected* and *Unprotected*.
+Thus, traffic received on an Unprotected or Protected port is consider
+Inbound or Outbound respectively.
 
-For full protocol offload, the hardware processes ESP and outer IP headers,
-so the application does not need to add or remove them during Outbound or
-Inbound processing.
+The application also supports complete IPsec protocol offload to hardware
+(Look aside crypto accelerator or using ethernet device). It also support
+inline ipsec processing by the supported ethernet device during transmission.
+These modes can be selected during the SA creation configuration.
 
-In the inline offload mode for Outbound traffic, the application skips the
-LPM lookup for routing, as the SA specifies the port for forwarding. Security
-parameters are configured only on the specified port, and sending packets
-through other ports may result in unencrypted packets being transmitted.
+In case of complete protocol offload, the processing of headers(ESP and outer
+IP header) is done by the hardware and the application does not need to
+add/remove them during outbound/inbound processing.
+
+For inline offloaded outbound traffic, the application will not do the LPM
+lookup for routing, as the port on which the packet has to be forwarded will be
+part of the SA. Security parameters will be configured on that port only, and
+sending the packet on other ports could result in unencrypted packets being
+sent out.
 
 The Path for IPsec Inbound traffic is:
 
@@ -59,70 +64,70 @@ The Path for the IPsec Outbound traffic is:
 
 The application supports two modes of operation: poll mode and event mode.
 
-* In the poll mode, a core receives packets from statically configured list
-  of eth ports and eth ports' queues.
+*  In the poll mode a core receives packets from statically configured list
+   of eth ports and eth ports' queues.
 
-* In event mode, a core processes packets as events. After processing, the
-core submits the packets back to an event device, enabling multicore scaling
-and hardware-assisted scheduling by leveraging the capabilities of the event
-device. The event mode configuration is predefined, where all packets arriving
-at a specific Ethernet port are directed to the same event queue. All event
-queues are mapped to all event ports, allowing any core to receive traffic
-from any port. Since event devices can have varying capabilities, worker threads are designed
-differently to optimize performance. For instance, if an event device and Ethernet
-device pair includes a Tx internal port, the application can use `rte_event_eth_tx_adapter_enqueue`
-instead of the standard `rte_event_enqueue_burst`. A thread optimized for a device
-pair with an internal port may not work effectively with another pair. The infrastructure
-for event mode is designed to support multiple worker threads
-while maximizing the performance of each type of event device without impacting
-existing paths or use cases. The worker thread selection depends on the operating
-conditions and the capabilities of the underlying devices.
+*  In the event mode a core receives packets as events. After packet processing
+   is done core submits them back as events to an event device. This enables
+   multicore scaling and HW assisted scheduling by making use of the event device
+   capabilities. The event mode configuration is predefined. All packets reaching
+   given eth port will arrive at the same event queue. All event queues are mapped
+   to all event ports. This allows all cores to receive traffic from all ports.
+   Since the underlying event device might have varying capabilities, the worker
+   threads can be drafted differently to maximize performance. For example, if an
+   event device - eth device pair has Tx internal port, then application can call
+   rte_event_eth_tx_adapter_enqueue() instead of regular rte_event_enqueue_burst().
+   So a thread which assumes that the device pair has internal port will not be the
+   right solution for another pair. The infrastructure added for the event mode aims
+   to help application to have multiple worker threads by maximizing performance from
+   every type of event device without affecting existing paths/use cases. The worker
+   to be used will be determined by the operating conditions and the underlying device
+   capabilities.
+   **Currently the application provides non-burst, internal port worker threads.**
+   It also provides infrastructure for non-internal port
+   however does not define any worker threads.
 
-  **Currently the application provides non-burst, internal port worker threads.**
-  It also provides infrastructure for non-internal port,
-  however does not define any worker threads.
+   Event mode also supports event vectorization. The event devices, ethernet device
+   pairs which support the capability ``RTE_EVENT_ETH_RX_ADAPTER_CAP_EVENT_VECTOR`` can
+   aggregate packets based on flow characteristics and generate a ``rte_event``
+   containing ``rte_event_vector``.
+   The aggregation size and timeout can be given using command line options vector-size
+   (default vector-size is 16) and vector-tmo (default vector-tmo is 102400ns).
+   By default event vectorization is disabled and it can be enabled using event-vector
+   option.
+   For the event devices, crypto device pairs which support the capability
+   ``RTE_EVENT_CRYPTO_ADAPTER_CAP_EVENT_VECTOR`` vector aggregation
+   could also be enable using event-vector option.
 
-  Event mode also supports event vectorization. The event devices, ethernet device
-  pairs which support the capability ``RTE_EVENT_ETH_RX_ADAPTER_CAP_EVENT_VECTOR`` can
-  aggregate packets based on flow characteristics and generate a ``rte_event``
-  containing ``rte_event_vector``.
-  The aggregation size and timeout can be given using command line options vector-size
-  (default vector-size is 16) and vector-tmo (default vector-tmo is 102400ns).
-  By default event vectorization is disabled and it can be enabled using event-vector
-  option.
-  For the event devices, crypto device pairs which support the capability
-  ``RTE_EVENT_CRYPTO_ADAPTER_CAP_EVENT_VECTOR`` vector aggregation
-  could also be enabled using event-vector option.
+Additionally the event mode introduces two submodes of processing packets:
 
-Additionally, the event mode introduces two submodes of processing packets:
+*  Driver submode: This submode has bare minimum changes in the application to support
+   IPsec. There are no lookups, no routing done in the application. And for inline
+   protocol use case, the worker thread resembles l2fwd worker thread as the IPsec
+   processing is done entirely in HW. This mode can be used to benchmark the raw
+   performance of the HW. The driver submode is selected with --single-sa option
+   (used also by poll mode). When --single-sa option is used in conjunction with event
+   mode then index passed to --single-sa is ignored.
 
-* Driver submode: This submode has bare minimum changes in the application to support
-  IPsec. There are no lookups, no routing done in the application. And for inline
-  protocol use case, the worker thread resembles l2fwd worker thread as the IPsec
-  processing is done entirely in HW. This mode can be used to benchmark the raw
-  performance of the HW. The driver submode is selected with --single-sa option
-  (used also by poll mode). When --single-sa option is used in conjunction with event
-  mode then index passed to --single-sa is ignored.
-
-* App submode: This submode has all the features currently implemented with the
-  application (non librte_ipsec path). All the lookups, routing follows existing
-  methods and report numbers that can be compared against regular poll mode
-  benchmark numbers.
+*  App submode: This submode has all the features currently implemented with the
+   application (non librte_ipsec path). All the lookups, routing follows existing
+   methods and report numbers that can be compared against regular poll mode
+   benchmark numbers.
 
 Constraints
-~~~~~~~~~~~
+-----------
 
 *  No IPv6 options headers.
 *  No AH mode.
 *  Supported algorithms: AES-CBC, AES-CTR, AES-GCM, 3DES-CBC, DES-CBC,
    HMAC-SHA1, HMAC-SHA256, AES-GMAC, AES_CTR, AES_XCBC_MAC, AES_CCM,
    CHACHA20_POLY1305 and NULL.
-*  Each SA must be handled by a unique lcore (*1 RX queue per port*).
+*  Each SA must be handle by a unique lcore (*1 RX queue per port*).
 
 Compiling the Application
 -------------------------
 
-To compile the sample application, see :doc:`compiling`.
+To compile the sample application see :doc:`compiling`.
 
 The application is located in the ``ipsec-secgw`` sub-directory.
 
@@ -165,7 +170,7 @@ Where:
 
 *   ``-j FRAMESIZE``: *optional*. data buffer size (in bytes),
     in other words maximum data size for one segment.
-    Packets with length bigger than FRAMESIZE still can be received,
+    Packets with length bigger then FRAMESIZE still can be received,
     but will be segmented.
     Default value: RTE_MBUF_DEFAULT_BUF_SIZE (2176)
     Minimum value: RTE_MBUF_DEFAULT_BUF_SIZE (2176)
@@ -239,8 +244,8 @@ Where:
     Default value: 0.
 
 *   ``--mtu MTU``: MTU value (in bytes) on all attached ethernet ports.
-    Outgoing packets with length bigger than MTU will be fragmented.
-    Incoming packets with length bigger than MTU will be discarded.
+    Outgoing packets with length bigger then MTU will be fragmented.
+    Incoming packets with length bigger then MTU will be discarded.
     Default value: 1500.
 
 *   ``--frag-ttl FRAG_TTL_NS``: fragment lifetime (in nanoseconds).
@@ -255,7 +260,7 @@ Where:
      via Rx queue setup.
 
 *   ``--vector-pool-sz``: Number of buffers in vector pool.
-    By default, vector pool size depends on packet pool size
+    By default, vector pool size depeneds on packet pool size
     and size of each vector.
 
 *   ``--desc-nb NUMBER_OF_DESC``: Number of descriptors per queue pair.
@@ -372,11 +377,11 @@ For example, something like the following command line:
 
 
 Configurations
-~~~~~~~~~~~~~~
+--------------
 
 The following sections provide the syntax of configurations to initialize
 your SP, SA, Routing, Flow and Neighbour tables.
-Configurations will be specified in the configuration file to be passed to
+Configurations shall be specified in the configuration file to be passed to
 the application. The file is then parsed by the application. The successful
 parsing will result in the appropriate rules being applied to the tables
 accordingly.
@@ -385,11 +390,11 @@ accordingly.
 Configuration File Syntax
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As mentioned in the overview, the Security Policies are ACL rules.
-The application parses the rules specified in the configuration file and
+As mention in the overview, the Security Policies are ACL rules.
+The application parsers the rules specified in the configuration file and
 passes them to the ACL table, and replicates them per socket in use.
 
-The following sections contain the configuration file syntax.
+Following are the configuration file syntax.
 
 General rule syntax
 ^^^^^^^^^^^^^^^^^^^
@@ -420,7 +425,7 @@ The SP rule syntax is shown as follows:
     <proto> <sport> <dport>
 
 
-where each option means:
+where each options means:
 
 ``<ip_ver>``
 
@@ -535,7 +540,7 @@ The SA rule syntax is shown as follows:
     <mode> <src_ip> <dst_ip> <action_type> <port_id> <fallback>
     <flow-direction> <port_id> <queue_id> <udp-encap> <reassembly_en>
 
-where each option means:
+where each options means:
 
 ``<dir>``
 
@@ -628,7 +633,7 @@ where each option means:
    * *aes-192-gcm*: AES-GCM 192-bit algorithm
    * *aes-256-gcm*: AES-GCM 256-bit algorithm
 
- * Syntax: *aead_algo <your algorithm>*
+ * Syntax: *cipher_algo <your algorithm>*
 
 ``<aead_key>``
 
@@ -842,7 +847,7 @@ The Routing rule syntax is shown as follows:
     rt <ip_ver> <src_ip> <dst_ip> <port>
 
 
-where each option means:
+where each options means:
 
 ``<ip_ver>``
 
@@ -885,7 +890,7 @@ where each option means:
 
  * Syntax: *port X*
 
-Example Routing rules:
+Example SP rules:
 
 .. code-block:: console
 
@@ -907,7 +912,7 @@ The flow rule syntax is shown as follows:
     flow <mark> <eth> <ip_ver> <src_ip> <dst_ip> <port> <queue> \
          <count> <security> <set_mark>
 
-where each option means:
+where each options means:
 
 ``<mark>``
 
@@ -1034,7 +1039,7 @@ The Neighbour rule syntax is shown as follows:
     neigh <port> <dst_mac>
 
 
-where each option means:
+where each options means:
 
 ``<port>``
 
@@ -1138,7 +1143,7 @@ It then tries to perform some data transfer using the scheme described above.
 Usage
 ~~~~~
 
-In the ipsec-secgw/test directory run:
+In the ipsec-secgw/test directory run
 
 /bin/bash run_test.sh <options> <ipsec_mode>
 
@@ -1171,4 +1176,4 @@ Available options:
 *   ``-h`` Show usage.
 
 If <ipsec_mode> is specified, only tests for that mode will be invoked. For the
-list of available modes, please refer to run_test.sh.
+list of available modes please refer to run_test.sh.
