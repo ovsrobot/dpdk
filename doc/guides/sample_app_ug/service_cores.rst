@@ -4,23 +4,26 @@
 Service Cores Sample Application
 ================================
 
-The service cores sample application demonstrates the service cores capabilities
-of DPDK. The service cores infrastructure is part of the DPDK EAL, and allows
-any DPDK component to register a service. A service is a work item or task, that
+Overview
+--------
+
+This sample application demonstrates the service core capabilities
+of DPDK. The service core infrastructure is part of the DPDK EAL and allows
+any DPDK component to register a service. A service is a work item or task that
 requires CPU time to perform its duty.
 
-This sample application registers 5 dummy services. These 5 services are used
-to show how the service_cores API can be used to orchestrate these services to
+This sample application registers 5 dummy services that are used
+to show how the service_cores API can orchestrate these services to
 run on different service lcores. This orchestration is done by calling the
-service cores APIs, however the sample application introduces a "profile"
-concept to contain the service mapping details. Note that the profile concept
-is application specific, and not a part of the service cores API.
+service cores APIs. However, the sample application introduces a "profile"
+concept to contain service mapping details. Note that the profile concept
+is application-specific, and not a part of the service cores API.
 
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``service_cores`` sub-directory.
 
@@ -39,8 +42,8 @@ pass a service core-mask as an EAL argument at startup time.
 Explanation
 -----------
 
-The following sections provide some explanation of code focusing on
-registering applications from an applications point of view, and modifying the
+The following sections provide explanation of the application code with focus on
+registering services from an application's point of view and modifying the
 service core counts and mappings at runtime.
 
 
@@ -48,7 +51,7 @@ Registering a Service
 ~~~~~~~~~~~~~~~~~~~~~
 
 The following code section shows how to register a service as an application.
-Note that the service component header must be included by the application in
+Note: The service component header must be included by the application in
 order to register services: ``rte_service_component.h``, in addition
 to the ordinary service cores header ``rte_service.h`` which provides
 the runtime functions to add, remove and remap service cores.
@@ -80,7 +83,7 @@ Removing A Service Core
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 To remove a service core, the steps are similar to adding but in reverse order.
-Note that it is not allowed to remove a service core if the service is running,
+Note: It is not allowed to remove a service core if the service is running,
 and the service-core is the only core running that service (see documentation
 for ``rte_service_lcore_stop`` function for details).
 
@@ -88,9 +91,11 @@ for ``rte_service_lcore_stop`` function for details).
 Conclusion
 ~~~~~~~~~~
 
-The service cores infrastructure provides DPDK with two main features. The first
-is to abstract away hardware differences: the service core can CPU cycles to
+The service cores infrastructure provides DPDK with two main features.
+
+The first is to abstract away hardware differences: the service core can provide CPU cycles to
 a software fallback implementation, allowing the application to be abstracted
-from the difference in HW / SW availability. The second feature is a flexible
-method of registering functions to be run, allowing the running of the
-functions to be scaled across multiple CPUs.
+from the difference in HW / SW availability.
+
+The second feature is a flexible method of registering functions to be run,
+allowing the running of the functions to be scaled across multiple CPUs.
