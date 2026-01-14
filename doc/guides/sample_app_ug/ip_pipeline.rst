@@ -4,8 +4,8 @@
 Internet Protocol (IP) Pipeline Application
 ===========================================
 
-Application overview
---------------------
+Overview
+--------
 
 The *Internet Protocol (IP) Pipeline* application is intended to be a vehicle for rapid development of packet processing
 applications on multi-core CPUs.
@@ -107,8 +107,10 @@ Once application and telnet client start running, messages can be sent from clie
 At any stage, telnet client can be terminated using the quit command.
 
 
-Application stages
-------------------
+Explanation
+-----------
+
+The following explains the stages of the application.
 
 Initialization
 ~~~~~~~~~~~~~~
@@ -134,7 +136,7 @@ executes two tasks in time-sharing mode:
    to/from given table of a specific pipeline owned by the current data plane thread, read statistics, etc.
 
 Examples
---------
+~~~~~~~~
 
 .. _table_examples:
 
@@ -396,11 +398,11 @@ or table ::
   pipeline <pipeline_name> port out <port_id> stats read [clear]
   pipeline <pipeline_name> table <table_id> stats read [clear]
 
-Enable given input port for specific pipeline instance ::
+Enable given output port for specific pipeline instance ::
 
-  pipeline <pipeline_name> port out <port_id> disable
+  pipeline <pipeline_name> port out <port_id> enable
 
-Disable given input port for specific pipeline instance ::
+Disable given output port for specific pipeline instance ::
 
   pipeline <pipeline_name> port out <port_id> disable
 
