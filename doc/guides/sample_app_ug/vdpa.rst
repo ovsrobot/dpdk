@@ -4,41 +4,45 @@
 Vdpa Sample Application
 =======================
 
-The vdpa sample application creates vhost-user sockets by using the
-vDPA backend. vDPA stands for vhost Data Path Acceleration which utilizes
-virtio ring compatible devices to serve virtio driver directly to enable
-datapath acceleration. As vDPA driver can help to set up vhost datapath,
-this application doesn't need to launch dedicated worker threads for vhost
+Overview
+--------
+
+The vDPA sample application creates vhost-user sockets by using the
+vDPA backend. vDPA (vhost Data Path Acceleration) uses virtio ring
+compatible devices to serve a virtio driver directly, enabling
+datapath acceleration. A vDPA driver can help to set up the vhost datapath.
+This application does not need dedicated worker threads for vhost
 enqueue/dequeue operations.
 
-Testing steps
--------------
+The following shows how to start VMs with a vDPA vhost-user
+backend and verify network connection and live migration.
 
-This section shows the steps of how to start VMs with vDPA vhost-user
-backend and verify network connection & live migration.
+Compiling the Application
+-------------------------
 
-Build
-~~~~~
-
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``vdpa`` sub-directory.
 
-Start the vdpa example
+Running the Application
+-----------------------
+
+Start the vDPA Example
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
         ./dpdk-vdpa [EAL options]  -- [--client] [--interactive|-i] or [--iface SOCKET_PATH]
 
-where
+where:
 
-* --client means running vdpa app in client mode, in the client mode, QEMU needs
-  to run as the server mode and take charge of socket file creation.
-* --iface specifies the path prefix of the UNIX domain socket file, e.g.
-  /tmp/vhost-user-, then the socket files will be named as /tmp/vhost-user-<n>
-  (n starts from 0).
-* --interactive means run the vDPA sample in interactive mode:
+* --client runs the vdpa application in client mode. In client mode, QEMU
+  runs as the server and is responsible for socket file creation.
+* --iface specifies the path prefix of the UNIX domain socket file (for example,
+  /tmp/vhost-user-). The socket files are named /tmp/vhost-user-<n>
+  where n starts from 0.
+* --interactive runs the vDPA sample in interactive mode with the following
+  commands:
 
   #. help: show help message
 
@@ -50,7 +54,7 @@ where
 
   #. quit: unregister vhost driver and exit the application
 
-Take IFCVF driver for example:
+The following example uses the IFCVF driver:
 
 .. code-block:: console
 
@@ -59,13 +63,13 @@ Take IFCVF driver for example:
                 -- --interactive
 
 .. note::
-    Here 0000:06:00.3 and 0000:06:00.4 refer to virtio ring compatible devices,
-    and we need to bind vfio-pci to them before running vdpa sample.
+    Here 0000:06:00.3 and 0000:06:00.4 refer to virtio ring compatible devices.
+    Bind vfio-pci to them before running the vdpa sample:
 
     * modprobe vfio-pci
     * ./usertools/dpdk-devbind.py -b vfio-pci 06:00.3 06:00.4
 
-Then we can create 2 vdpa ports in interactive cmdline.
+Then, create two vdpa ports in the interactive command line.
 
 .. code-block:: console
 
@@ -92,24 +96,25 @@ Start the VMs
        -netdev type=vhost-user,id=vdpa,chardev=char0 \
        -device virtio-net-pci,netdev=vdpa,mac=00:aa:bb:cc:dd:ee,page-per-vq=on \
 
-After the VMs launches, we can login the VMs and configure the ip, verify the
+After the VMs launch, log into the VMs and configure the IP address to verify
 network connection via ping or netperf.
 
 .. note::
-    Suggest to use QEMU 3.0.0 which extends vhost-user for vDPA.
+    QEMU 3.0.0 or later is recommended as it extends vhost-user for vDPA.
 
 Live Migration
 ~~~~~~~~~~~~~~
-vDPA supports cross-backend live migration, user can migrate SW vhost backend
-VM to vDPA backend VM and vice versa. Here are the detailed steps. Assume A is
-the source host with SW vhost VM and B is the destination host with vDPA.
+vDPA supports cross-backend live migration. Users can migrate a SW vhost
+backend VM to a vDPA backend VM and vice versa. The following are the
+detailed steps. Assume A is the source host with the SW vhost VM and B is
+the destination host with vDPA.
 
-#. Start vdpa sample and launch a VM with exact same parameters as the VM on A,
-   in migration-listen mode:
+#. Start the vdpa sample and launch a VM with the same parameters as the VM
+   on A, in migration-listen mode:
 
    .. code-block:: console
 
-        B: <qemu-command-line> -incoming tcp:0:4444 (or other PORT))
+        B: <qemu-command-line> -incoming tcp:0:4444 (or other PORT)
 
 #. Start the migration (on source host):
 
