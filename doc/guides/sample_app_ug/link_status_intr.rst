@@ -40,7 +40,7 @@ The application requires a number of command line options:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-link_status_interrupt [EAL options] -- -p PORTMASK [-q NQ][-T PERIOD]
+    ./<build_dir>/examples/dpdk-link_status_interrupt [EAL options] -- -p PORTMASK [-q NQ] [-T PERIOD]
 
 where,
 
@@ -50,7 +50,7 @@ where,
 
 *   -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default)
 
-To run the application in a linux environment with 4 lcores, 16 ports and 8 RX queues per lcore,
+To run the application in a Linux environment with 4 lcores, 16 ports and 8 RX queues per lcore,
 issue the command:
 
 .. code-block:: console
@@ -84,7 +84,7 @@ Driver Initialization
 ~~~~~~~~~~~~~~~~~~~~~
 
 The main part of the code in the main() function relates to the initialization of the driver.
-To fully understand this code, it is recommended to study the chapters that related to the Poll Mode Driver in the
+To fully understand this code, it is recommended to study the chapters that relate to the Poll Mode Driver in the
 *DPDK Programmer's Guide and the DPDK API Reference*.
 
 .. literalinclude:: ../../../examples/link_status_interrupt/main.c
