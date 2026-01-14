@@ -30,7 +30,7 @@ The application uses three CPU cores:
 
 Compiling the Application
 -------------------------
-To compile the sample application, see :doc:`compiling`.
+To compile the sample application see :doc:`compiling`
 
 The application is located in the ``dpdk/<build_dir>/app`` directory.
 
@@ -149,7 +149,7 @@ For hash tables, the following parameters can be selected:
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | At run time, core A is creating the following lookup  |
    |       |                        |                                                          | key and storing it into the packet meta data for      |
-   |       |                        |                                                          | core B to use for table lookup:                    |
+   |       |                        |                                                          | core B to use for table lookup:                       |
    |       |                        |                                                          |                                                       |
    |       |                        |                                                          | [destination IPv4 address, 28 bytes of 0]             |
    |       |                        |                                                          |                                                       |
