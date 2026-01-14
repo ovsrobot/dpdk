@@ -10,7 +10,7 @@ application can configure a pipeline and assign a set of worker cores to
 perform the processing required.
 
 The application has a range of command line arguments allowing it to be
-configured for various numbers worker cores, stages,queue depths and cycles per
+configured for various numbers of worker cores, stages, queue depths and cycles per
 stage of work. This is useful for performance testing as well as quickly testing
 a particular pipeline configuration.
 
@@ -18,7 +18,7 @@ a particular pipeline configuration.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``examples`` sub-directory.
 
@@ -51,7 +51,7 @@ these settings is shown below:
     -- -r1 -t1 -e4 -w FF00 -s4 -n0 -c32 -W1000 -D
 
 The application has some sanity checking built-in, so if there is a function
-(e.g.; the RX core) which doesn't have a cpu core mask assigned, the application
+(e.g., the RX core) which doesn't have a cpu core mask assigned, the application
 will print an error message:
 
 .. code-block:: console
@@ -61,21 +61,21 @@ will print an error message:
           rx: 0
           tx: 1
 
-Configuration of the eventdev is covered in detail in the programmers guide,
-see the Event Device Library section.
+Configuration of the eventdev is covered in detail in the programmers guide.
+See the Event Device Library section.
 
 
 Observing the Application
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-At runtime the eventdev pipeline application prints out a summary of the
-configuration, and some runtime statistics like packets per second. On exit the
+At runtime, the eventdev pipeline application prints out a summary of the
+configuration, and some runtime statistics like packets per second. On exit, the
 worker statistics are printed, along with a full dump of the PMD statistics if
 required. The following sections show sample output for each of the output
 types.
 
 Configuration
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 This provides an overview of the pipeline,
 scheduling type at each stage, and parameters to options such as how many
@@ -101,7 +101,7 @@ for details:
         Stage 3, Type Atomic    Priority = 128
 
 Runtime
-~~~~~~~
+^^^^^^^
 
 At runtime, the statistics of the consumer are printed, stating the number of
 packets received, runtime in milliseconds, average mpps, and current mpps.
@@ -111,7 +111,7 @@ packets received, runtime in milliseconds, average mpps, and current mpps.
   # consumer RX= xxxxxxx, time yyyy ms, avg z.zzz mpps [current w.www mpps]
 
 Shutdown
-~~~~~~~~
+^^^^^^^^
 
 At shutdown, the application prints the number of packets received and
 transmitted, and an overview of the distribution of work across worker cores.
