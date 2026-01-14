@@ -2,37 +2,41 @@
     Copyright(c) 2010-2017 Intel Corporation.
 
 Vhost_blk Sample Application
-=============================
+============================
 
-The vhost_blk sample application implemented a simple block device,
-which used as the  backend of Qemu vhost-user-blk device. Users can extend
-the exist example to use other type of block device(e.g. AIO) besides
-memory based block device. Similar with vhost-user-net device, the sample
-application used domain socket to communicate with Qemu, and the virtio
-ring (split or packed format) was processed by vhost_blk sample application.
+Overview
+--------
 
-The sample application reuse lots codes from SPDK(Storage Performance
-Development Kit, https://github.com/spdk/spdk) vhost-user-blk target,
-for DPDK vhost library used in storage area, user can take SPDK as
-reference as well.
+The vhost_blk sample application implements a simple block device
+used as the backend of a QEMU vhost-user-blk device. Users can extend
+the existing example to use other types of block devices (for example, AIO)
+in addition to memory-based block devices. Similar to the vhost-user-net
+device, the sample application uses a domain socket to communicate with QEMU,
+and the virtio ring (split or packed format) is processed by the vhost_blk
+sample application.
 
-Testing steps
--------------
+The sample application reuses code from SPDK (Storage Performance
+Development Kit, https://github.com/spdk/spdk) vhost-user-blk target.
+For DPDK vhost library use in storage applications, SPDK can also serve
+as a reference.
 
-This section shows the steps how to start a VM with the block device as
-fast data path for critical application.
+This section shows how to start a VM with the block device as a
+fast data path for critical applications.
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``examples`` sub-directory.
 
-You will also need to build DPDK both on the host and inside the guest
+You need to build DPDK both on the host and inside the guest.
 
-Start the vhost_blk example
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Running the Application
+-----------------------
+
+Start the vhost_blk Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
@@ -55,11 +59,13 @@ Start the VM
         ...
 
 .. note::
-    You must check whether your Qemu can support "vhost-user-blk" or not,
-    Qemu v4.0 or newer version is required.
-    reconnect=1 means live recovery support that qemu can reconnect vhost_blk
-    after we restart vhost_blk example.
-    packed=on means the device support packed ring but need the guest kernel
-    version >= 5.0.
-    Now Qemu commit 9bb73502321d46f4d320fa17aa38201445783fc4 both support the
+    Verify that your QEMU supports ``vhost-user-blk``. QEMU v4.0 or later
+    is required.
+
+    * ``reconnect=1`` enables live recovery support, allowing QEMU to reconnect
+      to vhost_blk after the vhost_blk example is restarted.
+    * ``packed=on`` enables packed ring support, which requires guest kernel
+      version 5.0 or later.
+
+    QEMU commit 9bb73502321d46f4d320fa17aa38201445783fc4 supports both
     vhost-blk reconnect and packed ring.

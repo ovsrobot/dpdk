@@ -4,66 +4,70 @@
 Vhost_Crypto Sample Application
 ===============================
 
-The vhost_crypto sample application implemented a simple Crypto device,
-which used as the  backend of Qemu vhost-user-crypto device. Similar with
-vhost-user-net and vhost-user-scsi device, the sample application used
-domain socket to communicate with Qemu, and the virtio ring was processed
-by vhost_crypto sample application.
+Overview
+--------
 
-Testing steps
--------------
+The vhost_crypto sample application implements a crypto device used
+as the backend of a QEMU vhost-user-crypto device. Similar to the
+vhost-user-net and vhost-user-scsi devices, the sample application uses a
+domain socket to communicate with QEMU, and the virtio ring is processed
+by the vhost_crypto sample application.
 
-This section shows the steps how to start a VM with the crypto device as
-fast data path for critical application.
+This section shows how to start a VM with the crypto device as a
+fast data path for critical applications.
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``examples`` sub-directory.
 
-Start the vhost_crypto example
+Running the Application
+-----------------------
+
+Start the vhost_crypto Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
     ./dpdk-vhost_crypto [EAL options] --
-    		--config (lcore,cdev-id,queue-id)[,(lcore,cdev-id,queue-id)]
-    		--socket-file lcore,PATH
-    		[--zero-copy]
-    		[--guest-polling]
-    		[--asymmetric-crypto]
+            --config (lcore,cdev-id,queue-id)[,(lcore,cdev-id,queue-id)]
+            --socket-file lcore,PATH
+            [--zero-copy]
+            [--guest-polling]
+            [--asymmetric-crypto]
 
-where,
+where:
 
-* config (lcore,cdev-id,queue-id): build the lcore-cryptodev id-queue id
-  connection. Once specified, the specified lcore will only work with
-  specified cryptodev's queue.
+**--config (lcore,cdev-id,queue-id)**
+    Builds the lcore-cryptodev-queue connection. When specified, the lcore
+    works only with the specified cryptodev's queue.
 
-* socket-file lcore,PATH: the path of UNIX socket file to be created and
-  the lcore id that will deal with the all workloads of the socket. Multiple
-  instances of this config item is supported and one lcore supports processing
-  multiple sockets.
+**--socket-file lcore,PATH**
+    Specifies the path of the UNIX socket file to be created and the lcore
+    that handles all workloads for the socket. Multiple instances of this
+    option are supported, and one lcore can process multiple sockets.
 
-* zero-copy: the presence of this item means the ZERO-COPY feature will be
-  enabled. Otherwise it is disabled. PLEASE NOTE the ZERO-COPY feature is still
-  in experimental stage and may cause the problem like segmentation fault. If
-  the user wants to use LKCF in the guest, this feature shall be turned off.
+**--zero-copy**
+    Enables the zero-copy feature when present. Otherwise, zero-copy is
+    disabled. Note that the zero-copy feature is experimental and may cause
+    problems such as segmentation faults. If the user wants to use LKCF in
+    the guest, this feature should be disabled.
 
-* guest-polling: the presence of this item means the application assumes the
-  guest works in polling mode, thus will NOT notify the guest completion of
-  processing.
+**--guest-polling**
+    When present, the application assumes the guest works in polling mode
+    and does not notify the guest of processing completion.
 
-* asymmetric-crypto: the presence of this item means
-  the application can handle the asymmetric crypto requests.
-  When this option is used,
-  symmetric crypto requests can not be handled by the application.
+**--asymmetric-crypto**
+    When present, the application can handle asymmetric crypto requests.
+    When this option is used, symmetric crypto requests cannot be handled
+    by the application.
 
 The application requires that crypto devices capable of performing
-the specified crypto operation are available on application initialization.
-This means that HW crypto device/s must be bound to a DPDK driver or
-a SW crypto device/s (virtual crypto PMD) must be created (using --vdev).
+the specified crypto operation are available at initialization.
+This means that hardware crypto devices must be bound to a DPDK driver or
+software crypto devices (virtual crypto PMD) must be created using --vdev.
 
 .. _vhost_crypto_app_run_vm:
 
@@ -83,4 +87,4 @@ Start the VM
         ...
 
 .. note::
-    You must check whether your Qemu can support "vhost-user-crypto" or not.
+    Verify that your QEMU supports ``vhost-user-crypto``.
