@@ -4,8 +4,8 @@
 Pipeline Application
 ====================
 
-Application overview
---------------------
+Overview
+--------
 
 This application showcases the features of the Software Switch (SWX) pipeline that is aligned with the P4 language.
 
@@ -93,8 +93,10 @@ When running a telnet client as above, command prompt is displayed:
 Once application and telnet client start running, messages can be sent from client to application.
 
 
-Application stages
-------------------
+Explanation
+-----------
+
+Here is a description of the various stages of the application.
 
 Initialization
 ~~~~~~~~~~~~~~
