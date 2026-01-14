@@ -42,9 +42,10 @@ passing at least two cores in the corelist:
 
     ./<build_dir>/examples/dpdk-simple_mp -l 0-1 --proc-type=primary
 
-For the first DPDK process run, the proc-type flag can be omitted or set to auto,
-since all DPDK processes will default to being a primary instance,
-meaning they have control over the hugepage shared memory regions.
+For the first DPDK process run, the proc-type flag can be omitted or set to auto
+since all DPDK processes will default to being a primary instance
+(meaning, they have control over the hugepage shared memory regions).
+
 The process should start successfully and display a command prompt as follows:
 
 .. code-block:: console
@@ -99,7 +100,7 @@ At any stage, either process can be terminated using the quit command.
     The secondary process can be stopped and restarted without affecting the primary process.
 
 How the Application Works
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This application uses two queues and a single memory pool created in the primary process.
 The secondary process then uses lookup functions to attach to these objects.
@@ -124,7 +125,7 @@ Symmetric Multi-process Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The symmetric multi process example demonstrates how a set of processes can run in parallel,
-with each process performing the same set of packet- processing operations.
+with each process performing the same set of packet-processing operations.
 The following diagram shows the data-flow through the application, using two processes.
 
 .. _figure_sym_multi_proc_app:
@@ -173,7 +174,7 @@ Example:
    In the above example, ``auto`` is used so the first instance becomes the primary process.
 
 How the Application Works
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The primary instance creates the memory pool and initializes the network ports.
 
@@ -183,7 +184,7 @@ The primary instance creates the memory pool and initializes the network ports.
         :end-before: >8 End of primary instance initialization.
         :dedent: 1
 
-The secondary instance gets the port information and exported by the primary process.
+The secondary instance gets the port information exported by the primary process.
 The memory pool is accessed by doing a lookup for it by name:
 
 .. code-block:: c
@@ -198,7 +199,7 @@ Each process reads from each port using the queue corresponding to its proc-id p
 and writes to the corresponding transmit queue on the output port.
 
 Client-Server Multi-process Example
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 The example multi-process application demonstrates a client-server type multi-process design.
 A single server process receives a set of packets from the ports
@@ -216,7 +217,7 @@ The following diagram shows the data-flow through the application, using two cli
 
 
 Running the Application
-^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The server process must be run as the primary process to set up all memory structures.
 In addition to the EAL parameters, the application-specific parameters are:
@@ -229,9 +230,9 @@ In addition to the EAL parameters, the application-specific parameters are:
 
 .. note::
 
-   In the server process, has a single thread using the lowest numbered lcore
-   in the corelist, performs all packet I/O.
-   If corelist parameter specifies with more than a single lcore,
+   In the server process, a single thread using the lowest numbered lcore
+   in the corelist performs all packet I/O.
+   If the corelist parameter specifies more than a single lcore,
    an additional lcore will be used for a thread to print packet count periodically.
 
 The server application stores configuration data in shared memory,
@@ -254,7 +255,7 @@ the commands are:
     Any client processes that need restarting can be restarted without affecting the server process.
 
 How the Application Works
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The server (primary) process performs the initialization of network port and data structure
 and stores its port configuration data in a memory zone in hugepage shared memory.
