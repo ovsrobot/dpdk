@@ -195,7 +195,7 @@ Although both are based on the data zero-copy idea,
 there are some differences in the details.
 
 The first approach creates a clone of the input packet. For example,
-walk though all segments of the input packet and for each of segment,
+walk through all segments of the input packet and for each of segment,
 create a new buffer and attach that new buffer to the segment
 (refer to ``rte_pktmbuf_clone()`` in the mbuf library for more details).
 A new buffer is then allocated for the packet header and is prepended to the cloned buffer.
