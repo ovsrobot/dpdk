@@ -56,6 +56,15 @@ Options
    This shows the change in statistics since the last iteration,
    which is useful for monitoring rates of change.
 
+.. option:: -T, --total
+
+   Display a total column at the end of each row that sums all monitored statistics.
+
+.. option:: -1, --single-line
+
+   Display output on a single line, replacing the previous output.
+   This is useful for reducing scrolling and keeping the display compact.
+
 .. option:: stat
 
    Statistics to monitor in format ``command.field``.
@@ -105,6 +114,24 @@ Monitor a DPDK application with a custom file-prefix::
 List all running DPDK applications::
 
    dpdk-telemetry-watcher.py -l
+
+
+Output Format
+-------------
+
+The tool displays statistics in a tabular format with:
+
+* **Time column** - Current timestamp (HH:MM:SS)
+* **Statistics columns** - One column per specified statistic
+* **Total column** - Optional sum of all statistics (when ``-T`` is used)
+
+Values are formatted with locale-specific number formatting (e.g., comma separators).
+
+When ``--delta`` mode is enabled, the tool displays the change in each statistic
+since the last iteration, which typically represents the rate per second.
+
+When ``--single-line`` mode is enabled, each new output line replaces the previous one,
+similar to tools like ``top``.
 
 
 Dependencies
