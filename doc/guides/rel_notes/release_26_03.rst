@@ -55,6 +55,15 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added experimental flow parser library.**
+
+  Introduced ``librte_flow_parser`` as an optional, experimental library
+  exposing the testpmd ``flow`` CLI parser as a reusable component. The API
+  converts testpmd-style flow strings into ``rte_flow`` patterns/actions and
+  provides cmdline helpers to wire parsed commands to application callbacks.
+  Lightweight helpers were added to parse attributes, patterns, or actions
+  snippets without managing a parser instance.
+
 
 Removed Items
 -------------
