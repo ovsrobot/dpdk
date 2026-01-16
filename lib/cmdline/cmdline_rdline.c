@@ -182,9 +182,8 @@ display_right_buffer(struct rdline *rdl, int force)
 				  CIRBUF_GET_LEN(&rdl->right));
 }
 
-RTE_EXPORT_SYMBOL(rdline_redisplay)
-void
-rdline_redisplay(struct rdline *rdl)
+static void
+rdline_reprint(struct rdline *rdl, int clear_screen)
 {
 	unsigned int i;
 	char tmp;
@@ -192,13 +191,31 @@ rdline_redisplay(struct rdline *rdl)
 	if (!rdl)
 		return;
 
-	rdline_puts(rdl, vt100_home);
+	if (clear_screen) {
+		rdline_puts(rdl, vt100_clear_screen);
+		rdline_puts(rdl, vt100_homecursor);
+	} else {
+		rdline_puts(rdl, vt100_home);
+	}
 	for (i=0 ; i<rdl->prompt_size ; i++)
 		rdl->write_char(rdl, rdl->prompt[i]);
 	CIRBUF_FOREACH(&rdl->left, i, tmp) {
 		rdl->write_char(rdl, tmp);
 	}
 	display_right_buffer(rdl, 1);
+}
+
+RTE_EXPORT_SYMBOL(rdline_redisplay)
+void
+rdline_redisplay(struct rdline *rdl)
+{
+	rdline_reprint(rdl, 0);
+}
+
+static void
+rdline_clear_screen(struct rdline *rdl)
+{
+	rdline_reprint(rdl, 1);
 }
 
 RTE_EXPORT_SYMBOL(rdline_char_in)
@@ -382,9 +399,9 @@ rdline_char_in(struct rdline *rdl, char c)
 			rdline_newline(rdl, rdl->prompt);
 			break;
 
-		/* redisplay (helps when prompt is lost in other output) */
+		/* clear screen (helps when prompt is lost in other output) */
 		case CMDLINE_KEY_CTRL_L:
-			rdline_redisplay(rdl);
+			rdline_clear_screen(rdl);
 			break;
 
 		/* autocomplete */
