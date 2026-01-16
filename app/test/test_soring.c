@@ -31,6 +31,19 @@
 
 #define MAX_ACQUIRED 20
 
+/*
+ * Buffer scaling factor for static analyzer appeasement.
+ *
+ * With LTO, GCC analyzes all code paths in __rte_ring_do_dequeue_elems(),
+ * including the 16-byte element path, even when runtime esize is smaller.
+ * Buffers passed to soring acquire/dequeue must be sized for the worst-case
+ * element size (16 bytes) to avoid -Wstringop-overflow warnings.
+ *
+ * Scale factor of 4 converts uint32_t count to 16-byte element capacity:
+ * N elements * 4 * sizeof(uint32_t) = N * 16 bytes
+ */
+#define SORING_TEST_BUFSIZE(n) ((n) * 4)
+
 #define SORING_TEST_ASSERT(val, expected) do { \
 	RTE_TEST_ASSERT(expected == val, \
 			"%s: expected %u got %u\n", #val, expected, val); \
@@ -58,7 +71,8 @@ move_forward_stage(struct rte_soring *sor,
 {
 	uint32_t acquired;
 	uint32_t ftoken;
-	uint32_t *acquired_objs[MAX_ACQUIRED];
+	/* Sized for 16-byte elements to satisfy LTO static analysis */
+	uint32_t *acquired_objs[SORING_TEST_BUFSIZE(MAX_ACQUIRED)];
 
 	acquired = rte_soring_acquire_bulk(sor, acquired_objs, stage,
 			num_packets, &ftoken, NULL);
@@ -149,12 +163,13 @@ test_soring_stages(void)
 {
 	struct rte_soring *sor = NULL;
 	struct rte_soring_param prm;
-	uint32_t objs[32];
-	uint32_t rcs[32];
-	uint32_t acquired_objs[32];
-	uint32_t acquired_rcs[32];
-	uint32_t dequeued_rcs[32];
-	uint32_t dequeued_objs[32];
+	/* Buffers sized for 16-byte elements to satisfy LTO static analysis */
+	uint32_t objs[SORING_TEST_BUFSIZE(32)];
+	uint32_t rcs[SORING_TEST_BUFSIZE(32)];
+	uint32_t acquired_objs[SORING_TEST_BUFSIZE(32)];
+	uint32_t acquired_rcs[SORING_TEST_BUFSIZE(32)];
+	uint32_t dequeued_rcs[SORING_TEST_BUFSIZE(32)];
+	uint32_t dequeued_objs[SORING_TEST_BUFSIZE(32)];
 	size_t ssz;
 	uint32_t stage, enqueued, dequeued, acquired;
 	uint32_t i, ftoken;
