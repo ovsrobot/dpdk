@@ -101,13 +101,13 @@ Uncore
 
 AMD EPYC SoC support UNCORE power functions via ``rte_power_uncore`` from `25.03` onwards.
 These are tested and validated on GENOA, SIENA and TURIN.
-Please refer the tuning guides to enable ``HSMP`` and DPDK power management guide.
+Please refer to the tuning guides to enable ``HSMP`` and the DPDK power management guide.
 
 
 NIC
 ---
 
-To use Solarflare x4 on AMD EPYC TURIN, please ensure the following
+To use Solarflare x4 on AMD EPYC TURIN, please ensure the following:
 
 #. Upgrade Linux or distro version to 6.13 or higher.
 
@@ -118,7 +118,7 @@ To use Solarflare x4 on AMD EPYC TURIN, please ensure the following
 
 #. Please use PMD args ``fw_variant=ultra-low-latency,perf_profile=throughput``.
 
-To use Solarflare x2 on AMD EPYC TURIN, please ensure the following
+To use Solarflare x2 on AMD EPYC TURIN, please ensure the following:
 
 #. Upgrade Linux or distro version to 6.13 or higher.
 
