@@ -19,7 +19,7 @@ managed by the host system and fully transparent to users and applications.
 
 On the other hand, applications typically found on hypervisors that process
 layer 2 (L2) traffic (such as OVS) need to steer traffic themselves
-according on their own criteria.
+according to their own criteria.
 
 Without a standard software interface to manage traffic steering rules
 between VFs, SFs, PFs and the various physical ports of a given device,
@@ -84,7 +84,7 @@ thought as a software "patch panel" front-end for applications.
 - Among other things, they can be used to assign MAC addresses to the
   resource they represent.
 
-- Applications can tell port representors apart from other physical of virtual
+- Applications can tell port representors apart from other physical or virtual
   port by checking the dev_flags field within their device information
   structure for the RTE_ETH_DEV_REPRESENTOR bit-field.
 
