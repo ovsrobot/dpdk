@@ -109,15 +109,14 @@ They are made available for every leaf node in the hierarchy, subject to
 the specific implementation supporting them.
 On request of writing a new packet into the current queue while the queue is
 full, the Tail Drop algorithm drops the new packet while leaving the queue
-unmodified, as opposed to the Head Drop* algorithm, which drops the packet
+unmodified, as opposed to the Head Drop algorithm, which drops the packet
 at the head of the queue (the oldest packet waiting in the queue) and admits
 the new packet at the tail of the queue.
 
 The Random Early Detection (RED) algorithm works by proactively dropping more
 and more input packets as the queue occupancy builds up. When the queue is full
 or almost full, RED effectively works as Tail Drop. The Weighted RED (WRED)
-algorithm uses a separate set of RED thresholds for each packet color and uses
-separate set of RED thresholds for each packet color.
+algorithm uses a separate set of RED thresholds for each packet color.
 
 Each hierarchy leaf node with WRED enabled as its congestion management mode
 has zero or one private WRED context (only one leaf node using it) and/or zero,
