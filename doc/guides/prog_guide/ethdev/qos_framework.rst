@@ -621,7 +621,7 @@ The token bucket generic parameters and operations are presented in :numref:`tab
    |   |                        | while the bucket is full are dropped.                                        |
    |   |                        |                                                                              |
    +---+------------------------+------------------------------------------------------------------------------+
-   | 3 | Credit consumption     | As result of packet scheduling, the necessary number of credits is removed   |
+   | 3 | Credit consumption     | As a result of packet scheduling, the necessary number of credits is removed |
    |   |                        | from the bucket. The packet can only be sent if enough credits are in the    |
    |   |                        | bucket to send the full packet (packet bytes and framing overhead for the    |
    |   |                        | packet).                                                                     |
@@ -716,7 +716,7 @@ where, r = port line rate (in bytes per second).
    |   |                         | *   tb_time += n_periods * tb_period;                                       |
    |   |                         |                                                                             |
    +---+-------------------------+-----------------------------------------------------------------------------+
-   | 3 | Credit consumption      | As result of packet scheduling, the necessary number of credits is removed  |
+   | 3 | Credit consumption      | As a result of packet scheduling, the necessary number of credits is removed|
    |   |  (on packet scheduling) | from the bucket. The packet can only be sent if enough credits are in the   |
    |   |                         | bucket to send the full packet (packet bytes and framing overhead for the   |
    |   |                         | packet).                                                                    |
@@ -805,7 +805,7 @@ as described in :numref:`table_qos_10` and :numref:`table_qos_11`.
    |   |                          | }                                                                          |
    |   |                          |                                                                            |
    +---+--------------------------+----------------------------------------------------------------------------+
-   | 3 | Credit consumption       | As result of packet scheduling, the TC limit is decreased with the         |
+   | 3 | Credit consumption       | As a result of packet scheduling, the TC limit is decreased with the        |
    |   | (on packet scheduling)   | necessary number of credits. The packet can only be sent if enough credits |
    |   |                          | are currently available in the TC limit to send the full packet            |
    |   |                          | (packet bytes and framing overhead for the packet).                        |
@@ -1720,7 +1720,7 @@ Traffic Metering
 The traffic metering component implements the Single Rate Three Color Marker (srTCM) and
 Two Rate Three Color Marker (trTCM) algorithms, as defined by IETF RFC 2697 and 2698 respectively.
 These algorithms meter the stream of incoming packets based on the allowance defined in advance for each traffic flow.
-As result, each incoming packet is tagged as green,
+As a result, each incoming packet is tagged as green,
 yellow or red based on the monitored consumption of the flow the packet belongs to.
 
 Functional Overview
