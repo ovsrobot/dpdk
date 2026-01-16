@@ -109,7 +109,7 @@ However, ``rte_eth_dev_configure()`` may fail if any rules remain,
 so the application must flush them before attempting a reconfiguration.
 Keeping may be unsupported for some types of rule items and actions,
 as well as depending on the value of flow attributes transfer bit.
-A combination of a single an item or action type
+A combination of a single item or action type
 and a value of the transfer bit is called a rule feature.
 For example: a COUNT action with the transfer bit set.
 To test if rules with a particular feature are kept, the application must try
