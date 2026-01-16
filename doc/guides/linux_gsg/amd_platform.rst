@@ -101,7 +101,7 @@ Uncore
 
 AMD EPYC SoC support UNCORE power functions via ``rte_power_uncore`` from `25.03` onwards.
 These are tested and validated on GENOA, SIENA and TURIN.
-Please refer the tuning guides to enable ``HSMP`` and DPDK power management guide.
+Please refer to the tuning guides to enable ``HSMP`` and the DPDK power management guide.
 
 
 NIC
