@@ -84,6 +84,7 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* cmdline: Updated ``rdline`` library to clear screen when fed with Control+L.
 
 ABI Changes
 -----------
