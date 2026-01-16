@@ -277,7 +277,7 @@ F: lib/eal/include/rte_bitmap.h
 F: app/test/test_bitmap.c
 
 MCSlock
-M: Honnappa Nagarahalli <honnappa.nagarahalli@arm.com>
+M: Wathsala Vithanage <wathsala.vithanage@arm.com>
 F: lib/eal/include/rte_mcslock.h
 F: app/test/test_mcslock.c
 
