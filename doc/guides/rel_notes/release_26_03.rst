@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated PCAP driver.**
+
+   * Added support for setting MTU in single interface mode.
+   * Made receive timestamp offload optional.
+   * Supports VLAN insertion and stripping.
+   * Added unit test suite.
+
 
 Removed Items
 -------------
