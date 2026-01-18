@@ -17,7 +17,7 @@ For now, there are two types of process specified:
 *   primary processes, which can initialize and which have full permissions on shared memory
 
 *   secondary processes, which cannot initialize shared memory,
-    but can attach to pre- initialized shared memory and create objects in it.
+    but can attach to pre-initialized shared memory and create objects in it.
 
 Standalone DPDK processes are primary processes,
 while secondary processes can only run alongside a primary process or
@@ -25,9 +25,9 @@ after a primary process has already configured the hugepage shared memory for th
 
 .. note::
 
-    Secondary processes should run alongside primary process with same DPDK version.
+    Secondary processes should run alongside primary process with the same DPDK version.
 
-    Secondary processes which requires access to physical devices in Primary process, must
+    Secondary processes which require access to physical devices in Primary process, must
     be passed with the same allow and block options.
 
 To support these two process types, and other multi-process setups described later,
@@ -38,8 +38,8 @@ two additional command-line parameters are available to the EAL:
 *   ``--file-prefix:`` to allow processes that do not want to co-operate to have different memory regions
 
 A number of example applications are provided that demonstrate how multiple DPDK processes can be used together.
-These are more fully documented in the "Multi- process Sample Application" chapter
-in the *DPDK Sample Application's User Guide*.
+These are more fully documented in the "Multi-process Sample Application" chapter
+in the *DPDK Sample Applications User Guide*.
 
 Memory Sharing
 --------------
@@ -47,7 +47,7 @@ Memory Sharing
 The key element in getting a multi-process application working using the DPDK is to ensure that
 memory resources are properly shared among the processes making up the multi-process application.
 Once there are blocks of shared memory available that can be accessed by multiple processes,
-then issues such as inter-process communication (IPC) becomes much simpler.
+then issues such as inter-process communication (IPC) become much simpler.
 
 On application start-up in a primary or standalone process,
 the DPDK records to memory-mapped files the details of the memory configuration it is using - hugepages in use,
@@ -88,7 +88,7 @@ In this model, the first of the processes spawned should be spawned using the ``
 while all subsequent instances should be spawned using the ``--proc-type=secondary`` flag.
 
 The simple_mp and symmetric_mp sample applications demonstrate this usage model.
-They are described in the "Multi-process Sample Application" chapter in the *DPDK Sample Application's User Guide*.
+They are described in the "Multi-process Sample Application" chapter in the *DPDK Sample Applications User Guide*.
 
 Asymmetric/Non-Peer Processes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,7 +99,7 @@ server distributing received packets among worker or client threads, which are r
 In this case, extensive use of rte_ring objects is made, which are located in shared hugepage memory.
 
 The client_server_mp sample application shows this usage model.
-It is described in the "Multi-process Sample Application" chapter in the *DPDK Sample Application's User Guide*.
+It is described in the "Multi-process Sample Application" chapter in the *DPDK Sample Applications User Guide*.
 
 Running Multiple Independent DPDK Applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -138,7 +138,7 @@ can use).
 Running Multiple Independent Groups of DPDK Applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In the same way that it is possible to run independent DPDK applications side- by-side on a single system,
+In the same way that it is possible to run independent DPDK applications side-by-side on a single system,
 this can be trivially extended to multi-process groups of DPDK applications running side-by-side.
 In this case, the secondary processes must use the same ``--file-prefix`` parameter
 as the primary process whose shared memory they are connecting to.
@@ -155,7 +155,7 @@ There are a number of limitations to what can be done when running DPDK multi-pr
 Some of these are documented below:
 
 *   The multi-process feature requires that the exact same hugepage memory mappings be present in all applications.
-    This makes secondary process startup process generally unreliable. Disabling
+    This makes secondary process startup generally unreliable. Disabling
     Linux security feature - Address-Space Layout Randomization (ASLR) may
     help getting more consistent mappings, but not necessarily more reliable -
     if the mappings are wrong, they will be consistently wrong!
@@ -247,7 +247,7 @@ of fields to be populated are as follows:
 * ``name`` - message name. This name must match receivers' callback name.
 * ``param`` - message data (up to 256 bytes).
 * ``len_param`` - length of message data.
-* ``fds`` - file descriptors to pass long with the data (up to 8 fd's).
+* ``fds`` - file descriptors to pass along with the data (up to 8 fd's).
 * ``num_fds`` - number of file descriptors to send.
 
 Once the structure is populated, calling ``rte_mp_sendmsg()`` will send the
@@ -301,7 +301,7 @@ Receiving and responding to messages
 To receive a message, a name callback must be registered using the
 ``rte_mp_action_register()`` function. The name of the callback must match the
 ``name`` field in sender's ``rte_mp_msg`` message descriptor in order for this
-message to be delivered and for the callback to be trigger.
+message to be delivered and for the callback to be triggered.
 
 The callback's definition is ``rte_mp_t``, and consists of the incoming message
 pointer ``msg``, and an opaque pointer ``peer``. Contents of ``msg`` will be
@@ -318,8 +318,8 @@ pointer. The resulting response will then be delivered to the correct requestor.
     there is no built-in way to indicate success or error for a request. Failing
     to do so will cause the requestor to time out while waiting on a response.
 
-Misc considerations
-~~~~~~~~~~~~~~~~~~~~~~~~
+Miscellaneous considerations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Due to the underlying IPC implementation being single-threaded, recursive
 requests (i.e. sending a request while responding to another request) is not
