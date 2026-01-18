@@ -4,9 +4,9 @@
 Berkeley Packet Filter (BPF) Library
 ====================================
 
-The DPDK provides an BPF library that gives the ability
+The DPDK provides a BPF library that gives the ability
 to load and execute Enhanced Berkeley Packet Filter (eBPF) bytecode within
-user-space dpdk application.
+user-space DPDK application.
 
 It supports basic set of features from eBPF spec.
 Please refer to the
@@ -19,13 +19,13 @@ The library API provides the following basic operations:
 
 *  Create a new BPF execution context and load user provided eBPF code into it.
 
-*   Destroy an BPF execution context and its runtime structures and free the associated memory.
+*  Destroy a BPF execution context and its runtime structures and free the associated memory.
 
-*   Execute eBPF bytecode associated with provided input parameter.
+*  Execute eBPF bytecode associated with provided input parameter.
 
-*   Provide information about natively compiled code for given BPF context.
+*  Provide information about natively compiled code for given BPF context.
 
-*   Load BPF program from the ELF file and install callback to execute it on given ethdev port/queue.
+*  Load BPF program from the ELF file and install callback to execute it on given ethdev port/queue.
 
 Packet data load instructions
 -----------------------------
@@ -64,3 +64,37 @@ Not currently supported eBPF features
  - tail-pointer call
  - eBPF MAP
  - external function calls for 32-bit platforms
+
+Supported BPF instruction set
+-----------------------------
+
+The DPDK BPF library supports eBPF instruction set versions **v1** and **v2**.
+Instructions introduced in v3 and later (such as JMP32, extended atomics,
+signed division, and sign-extending loads) are **not supported**.
+
+When compiling BPF programs with clang, use ``-mcpu=v2`` or earlier to ensure
+compatibility:
+
+.. code-block:: console
+
+   clang -target bpf -mcpu=v2 -O2 -c filter.c -o filter.o
+
+.. warning::
+
+   LLVM 20 and later default to ``-mcpu=v3``, which generates JMP32
+   instructions that DPDK cannot execute. Always specify ``-mcpu=v2``
+   explicitly when compiling BPF programs for use with DPDK.
+
+The following instruction classes are **not supported**:
+
+ - ``BPF_JMP32`` (class 0x06) - 32-bit conditional jumps (v3)
+ - ``BPF_ATOMIC`` with ``BPF_FETCH`` - atomic fetch-and-op, XCHG, CMPXCHG (v3)
+ - ``BPF_SDIV`` / ``BPF_SMOD`` - signed division and modulo (v4)
+ - ``BPF_MOVSX`` - sign-extending register moves (v4)
+ - ``BPF_MEMSX`` - sign-extending memory loads (v4)
+ - ``BPF_JA`` with 32-bit offset (GOTOL) (v4)
+ - ``BPF_BSWAP`` - new byte-swap encoding (v4)
+
+If you encounter validation errors such as ``invalid opcode at pc: N``,
+verify that your BPF program was compiled with a compatible instruction
+set version.
