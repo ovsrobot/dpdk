@@ -106,10 +106,18 @@ foreach suite:test_suites
                 is_parallel : false,
                 suite : 'fast-tests')
             if not is_windows and test_name == 'trace_autotest'
-                test_args += ['--trace=.*']
-                test_args += ['--trace-dir=@0@'.format(meson.current_build_dir())]
+                # build separate args list to avoid duplicate --file-prefix
+                trace_args = test_no_huge_args
+                trace_args += ['--trace=.*']
+                trace_args += ['--trace-dir=@0@'.format(meson.current_build_dir())]
+                if is_linux
+                    trace_args += ['--file-prefix=trace_autotest_with_traces']
+                endif
+                if get_option('default_library') == 'shared'
+                    trace_args += ['-d', dpdk_drivers_build_dir]
+                endif
                 test(test_name + '_with_traces', dpdk_test,
-                    args : test_args,
+                    args : trace_args,
                     env: ['DPDK_TEST=' + test_name],
                     timeout : timeout_seconds_fast,
                     is_parallel : false,
