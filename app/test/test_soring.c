@@ -149,12 +149,18 @@ test_soring_stages(void)
 {
 	struct rte_soring *sor = NULL;
 	struct rte_soring_param prm;
-	uint32_t objs[32];
-	uint32_t rcs[32];
-	uint32_t acquired_objs[32];
-	uint32_t acquired_rcs[32];
-	uint32_t dequeued_rcs[32];
-	uint32_t dequeued_objs[32];
+	/*
+	 * The soring/ring code has paths for 4/8/16-byte elements.
+	 * With LTO, GCC cannot eliminate the 16-byte path and warns
+	 * about potential buffer overflow. Size arrays for worst case:
+	 * 32 elements * 16 bytes = 512 bytes = 128 uint32_t.
+	 */
+	uint32_t objs[128];
+	uint32_t rcs[128];
+	uint32_t acquired_objs[128];
+	uint32_t acquired_rcs[128];
+	uint32_t dequeued_rcs[128];
+	uint32_t dequeued_objs[128];
 	size_t ssz;
 	uint32_t stage, enqueued, dequeued, acquired;
 	uint32_t i, ftoken;
