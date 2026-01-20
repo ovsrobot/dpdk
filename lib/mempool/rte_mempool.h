@@ -1410,8 +1410,9 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 		 * Flush the cache to make room for the objects.
 		 */
 		cache_objs = &cache->objs[0];
-		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
+		const uint32_t len = cache->len;
 		cache->len = n;
+		rte_mempool_ops_enqueue_bulk(mp, cache_objs, len);
 	} else {
 		/* The request itself is too big for the cache. */
 		goto driver_enqueue_stats_incremented;
@@ -1531,11 +1532,11 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	cache_objs = &cache->objs[cache->len];
 
 	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
-	if (__rte_constant(n) && n <= cache->len) {
+	if (likely(n <= cache->len)) {
 		/*
-		 * The request size is known at build time, and
-		 * the entire request can be satisfied from the cache,
-		 * so let the compiler unroll the fixed length copy loop.
+		 * The entire request can be satisfied from the cache.
+		 * If the request size is known at build time,
+		 * the compiler unrolls the fixed length copy loop.
 		 */
 		cache->len -= n;
 		for (index = 0; index < n; index++)
@@ -1547,30 +1548,12 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 		return 0;
 	}
 
-	/*
-	 * Use the cache as much as we have to return hot objects first.
-	 * If the request size 'n' is known at build time, the above comparison
-	 * ensures that n > cache->len here, so omit RTE_MIN().
-	 */
-	len = __rte_constant(n) ? cache->len : RTE_MIN(n, cache->len);
-	cache->len -= len;
+	/* Use the cache as much as we have to return hot objects first. */
+	len = cache->len;
 	remaining = n - len;
+	cache->len = 0;
 	for (index = 0; index < len; index++)
 		*obj_table++ = *--cache_objs;
-
-	/*
-	 * If the request size 'n' is known at build time, the case
-	 * where the entire request can be satisfied from the cache
-	 * has already been handled above, so omit handling it here.
-	 */
-	if (!__rte_constant(n) && likely(remaining == 0)) {
-		/* The entire request is satisfied from the cache. */
-
-		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
-		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
-
-		return 0;
-	}
 
 	/* Dequeue below would overflow mem allocated for cache? */
 	if (unlikely(remaining > RTE_MEMPOOL_CACHE_MAX_SIZE))
@@ -1592,10 +1575,9 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	__rte_assume(cache->size <= RTE_MEMPOOL_CACHE_MAX_SIZE);
 	__rte_assume(remaining <= RTE_MEMPOOL_CACHE_MAX_SIZE);
 	cache_objs = &cache->objs[cache->size + remaining];
+	cache->len = cache->size;
 	for (index = 0; index < remaining; index++)
 		*obj_table++ = *--cache_objs;
-
-	cache->len = cache->size;
 
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
