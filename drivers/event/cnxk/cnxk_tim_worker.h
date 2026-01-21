@@ -405,9 +405,9 @@ __retry:
 			     : [crem] "r"(&bkt->w1)
 			     : "memory");
 #else
-		while (rte_atomic_load_explicit((int64_t __rte_atomic *)&bkt->w1,
+		while (rte_atomic_load_explicit((int64_t __rte_atomic  *)&bkt->w1,
 						rte_memory_order_relaxed) < 0)
-			;
+			rte_pause();
 #endif
 		goto __retry;
 	} else if (!rem) {
