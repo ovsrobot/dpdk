@@ -12,7 +12,6 @@
 #include <stdio.h>
 
 #include <rte_common.h>
-#include <rte_memcpy.h>
 
 #include <pqos.h>
 
