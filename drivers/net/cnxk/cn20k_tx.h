@@ -165,7 +165,7 @@ retry:
 #else
 	RTE_SET_USED(pkts);
 	while (rte_atomic_load_explicit(&txq->fc_cache_pkts, rte_memory_order_relaxed) < 0)
-		;
+		rte_pause();
 #endif
 	cached = rte_atomic_fetch_sub_explicit(&txq->fc_cache_pkts, req, rte_memory_order_acquire) -
 		 req;
@@ -392,7 +392,7 @@ again:
 #else
 	/* Wait for primary core to refill FC. */
 	while (rte_atomic_load_explicit(fc_sw, rte_memory_order_relaxed) < 0)
-		;
+		rte_pause();
 #endif
 
 	val = rte_atomic_fetch_sub_explicit(fc_sw, nb_pkts, rte_memory_order_acquire) - nb_pkts;
