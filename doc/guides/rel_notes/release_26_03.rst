@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Google Virtual Ethernet (gve) ethernet driver.**
+
+  Added application-initiated device reset.
 
 Removed Items
 -------------
