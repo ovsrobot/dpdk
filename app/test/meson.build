@@ -209,7 +209,7 @@ source_file_deps = {
     'test_trace.c': [],
     'test_trace_perf.c': [],
     'test_trace_register.c': [],
-    'test_vdev.c': ['kvargs', 'bus_vdev'],
+    'test_vdev.c': ['net_null', 'kvargs', 'bus_vdev'],
     'test_version.c': [],
 }
 
