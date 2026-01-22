@@ -3725,6 +3725,11 @@ fail:
 	return ret == 0 ? TEST_SUCCESS : TEST_FAILED;
 }
 
+#ifdef RTE_NET_NULL
+static const bool have_net_null = true;
+#else
+static const bool have_net_null;  /* statics default to false */
+#endif
 
 static int
 test_bpf_elf(void)
@@ -3732,6 +3737,10 @@ test_bpf_elf(void)
 	int ret;
 
 	ret = test_bpf_elf_load();
+	if (ret == TEST_SUCCESS && !have_net_null) {
+		printf("net_null driver not available, skipping remainder of BPF tests\n");
+		return TEST_SKIPPED;
+	}
 	if (ret == TEST_SUCCESS)
 		ret = test_bpf_elf_tx_load();
 	if (ret == TEST_SUCCESS)
