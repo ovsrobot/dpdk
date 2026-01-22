@@ -268,7 +268,8 @@ test_free_null(void)
 	return 0;
 }
 
-#define NUM_ITERS_PER_THREAD 100000
+#define NUM_ITERS_BASE  100000u
+#define NUM_ITERS_MIN   1000u
 
 struct test_args {
 	struct rte_stack *s;
@@ -280,9 +281,10 @@ static int
 stack_thread_push_pop(__rte_unused void *args)
 {
 	void *obj_table[MAX_BULK];
-	int i;
+	unsigned int i, num_iters;
 
-	for (i = 0; i < NUM_ITERS_PER_THREAD; i++) {
+	num_iters = test_scale_iterations(NUM_ITERS_BASE, NUM_ITERS_MIN);
+	for (i = 0; i < num_iters; i++) {
 		unsigned int num;
 
 		num = rte_rand() % MAX_BULK;
