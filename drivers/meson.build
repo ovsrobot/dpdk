@@ -80,6 +80,8 @@ endif
 always_enable = ['bus/pci', 'bus/vdev']
 # we always need a mempool driver, and ring is default, so make it mandatory
 always_enable += ['mempool/ring']
+# unit tests take advantage of net/null driver, so always enable it
+always_enable += ['net/null']
 enable_drivers += always_enable
 
 default_cflags = machine_args
