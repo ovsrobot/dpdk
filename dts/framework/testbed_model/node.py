@@ -86,6 +86,10 @@ class Node:
         self.cryptodevs = [
             Port(self, cryptodev_config) for cryptodev_config in self.config.cryptodevs
         ]
+        if self.cryptodevs:
+            self.main_session.load_vfio(self.cryptodevs[0])
+        elif self.ports and self.ports[0].config.os_driver_for_dpdk == "vfio-pci":
+            self.main_session.load_vfio(self.ports[0])
         self._logger.info(f"Created node: {self.name}")
 
     def setup(self) -> None:
