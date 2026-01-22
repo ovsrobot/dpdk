@@ -54,6 +54,7 @@ class Node:
     arch: Architecture
     lcores: list[LogicalCore]
     ports: list[Port]
+    cryptodevs: list[Port]
     _logger: DTSLogger
     _other_sessions: list[OSSession]
     _node_info: OSSessionInfo | None
@@ -82,6 +83,9 @@ class Node:
         self._other_sessions = []
         self._setup = False
         self.ports = [Port(self, port_config) for port_config in self.config.ports]
+        self.cryptodevs = [
+            Port(self, cryptodev_config) for cryptodev_config in self.config.cryptodevs
+        ]
         self._logger.info(f"Created node: {self.name}")
 
     def setup(self) -> None:
