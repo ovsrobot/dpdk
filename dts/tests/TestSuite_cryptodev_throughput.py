@@ -29,7 +29,7 @@ from api.cryptodev.types import (
     CryptodevResults,
 )
 from api.test import verify
-from framework.test_suite import BaseConfig, TestSuite, func_test
+from framework.test_suite import BaseConfig, TestSuite, crypto_test
 
 
 class Config(BaseConfig):
@@ -140,7 +140,7 @@ class TestCryptodevThroughput(TestSuite):
             result_list.append(result_dict)
         return result_list
 
-    @func_test
+    @crypto_test
     def qat_cipher_then_auth_aes_cbc_encrypt(self) -> None:
         """Test throughput on crypto_qat device type with aes-cbc and sha2-256-hmac algorithms.
 
@@ -177,7 +177,7 @@ class TestCryptodevThroughput(TestSuite):
                 \nMOps was {result["mops delta"]} below baseline""",
             )
 
-    @func_test
+    @crypto_test
     def qat_aead_aes_gcm_encrypt(self) -> None:
         """Test throughput on a crypto_qat device type with aes-gcm algorithm.
 
@@ -211,7 +211,7 @@ class TestCryptodevThroughput(TestSuite):
                 f"Gbps and MOps were {result["gbps delta"]} below baseline",
             )
 
-    @func_test
+    @crypto_test
     def qat_cipher_aes_docsisbpi_decrypt(self) -> None:
         """Test throughput on a crypto_qat devtype with aes-docsibpi algorithm.
 
@@ -243,7 +243,7 @@ class TestCryptodevThroughput(TestSuite):
                 f"Gbps and MOps were {result["gbps delta"]} below baseline",
             )
 
-    @func_test
+    @crypto_test
     def qat_cipher_aes_docsisbpi_encrypt(self) -> None:
         """Test throughput on a crypto_qat device type with aes-docsibpi algorithm.
 
@@ -275,7 +275,7 @@ class TestCryptodevThroughput(TestSuite):
                 f"Gbps and MOps were {result["gbps delta"]} below baseline",
             )
 
-    @func_test
+    @crypto_test
     def qat_cipher_then_auth_kasumi_f8_encrypt(self) -> None:
         """Test throughput on a crypto_qat device type with kasumi-f8 and kasumi-f9 algorithms.
 
@@ -311,7 +311,7 @@ class TestCryptodevThroughput(TestSuite):
                 f"Gbps and MOps were {result["gbps delta"]} below baseline",
             )
 
-    @func_test
+    @crypto_test
     def qat_cipher_then_auth_snow3g_uea2_encrpyt(self) -> None:
         """Test throughput on a crypto_qat device type with snow3g-uea2 and snow3g-uia2 algorithms.
 
@@ -348,7 +348,7 @@ class TestCryptodevThroughput(TestSuite):
                 f"Gbps and MOps were {result["gbps delta"]} below baseline",
             )
 
-    @func_test
+    @crypto_test
     def qat_cipher_then_auth_zuc_eea3_encrypt(self) -> None:
         """Test throughput on a crypto_qat device type with zuc-eea3 and zuc-eia3 algorithms.
 
