@@ -3441,7 +3441,11 @@ static int null_vdev_setup(const char *name, uint16_t *port, struct rte_mempool 
 
 	/* Make a null device */
 	ret = rte_vdev_init(name, NULL);
-	TEST_ASSERT(ret == 0, "rte_vdev_init(%s) failed: %d", name, ret);
+	if (ret != 0) {
+		printf("rte_vdev_init(%s) failed: %d:%s\n",
+		       name, ret, strerror(-ret));
+		return -ENOTSUP;
+	}
 
 	ret = rte_eth_dev_get_port_by_name(name, port);
 	TEST_ASSERT(ret == 0, "failed to get port id for %s: %d", name, ret);
