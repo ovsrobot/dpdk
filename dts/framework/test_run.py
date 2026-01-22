@@ -347,6 +347,10 @@ class TestRunSetup(State):
         test_run.ctx.dpdk.setup()
         test_run.ctx.topology.setup()
 
+        if test_run.ctx.sut_node.ports[0].config.os_driver_for_dpdk == "vfio-pci":
+            test_run.ctx.sut_node.main_session.send_command("modprobe vfio")
+            test_run.ctx.sut_node.main_session.send_command("modprobe vfio-pci")
+
         if test_run.config.use_virtual_functions:
             test_run.ctx.topology.instantiate_vf_ports()
 
