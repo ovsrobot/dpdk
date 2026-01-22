@@ -208,11 +208,14 @@ testsuite_setup(void)
 	TEST_ASSERT(err == 0, "Port initialization failed err %d\n", err);
 
 	if (rte_event_dev_count() == 0) {
-		printf("Failed to find a valid event device,"
-			" testing with event_sw0 device\n");
+		printf("Failed to find a valid event device, testing with event_sw0 device\n");
 		err = rte_vdev_init(vdev_name, NULL);
-		TEST_ASSERT(err == 0, "vdev %s creation failed  %d\n",
-			vdev_name, err);
+		if (err != 0) {
+			printf("vdev %s creation failed %d: %s\n", vdev_name,
+			       err, strerror(-err));
+			return TEST_SKIPPED;
+		}
+
 		event_dev_delete = 1;
 	}
 	return err;
