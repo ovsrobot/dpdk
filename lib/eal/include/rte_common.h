@@ -121,14 +121,27 @@ extern "C" {
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 #endif
 
-#ifdef RTE_ARCH_STRICT_ALIGN
-typedef uint64_t unaligned_uint64_t __rte_aligned(1);
-typedef uint32_t unaligned_uint32_t __rte_aligned(1);
-typedef uint16_t unaligned_uint16_t __rte_aligned(1);
+/**
+ * Macro to mark a type that is not subject to type-based aliasing rules
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_may_alias
 #else
-typedef uint64_t unaligned_uint64_t;
-typedef uint32_t unaligned_uint32_t;
-typedef uint16_t unaligned_uint16_t;
+#define __rte_may_alias __attribute__((__may_alias__))
+#endif
+
+/**
+ * __rte_may_alias avoids compiler bugs (GCC) that elide initialization
+ * of memory when strict-aliasing is enabled.
+ */
+#ifdef RTE_ARCH_STRICT_ALIGN
+typedef uint64_t unaligned_uint64_t __rte_may_alias __rte_aligned(1);
+typedef uint32_t unaligned_uint32_t __rte_may_alias __rte_aligned(1);
+typedef uint16_t unaligned_uint16_t __rte_may_alias __rte_aligned(1);
+#else
+typedef uint64_t unaligned_uint64_t __rte_may_alias;
+typedef uint32_t unaligned_uint32_t __rte_may_alias;
+typedef uint16_t unaligned_uint16_t __rte_may_alias;
 #endif
 
 /**
@@ -157,15 +170,6 @@ typedef uint16_t unaligned_uint16_t;
 #else
 #define __rte_packed_begin
 #define __rte_packed_end __attribute__((__packed__))
-#endif
-
-/**
- * Macro to mark a type that is not subject to type-based aliasing rules
- */
-#ifdef RTE_TOOLCHAIN_MSVC
-#define __rte_may_alias
-#else
-#define __rte_may_alias __attribute__((__may_alias__))
 #endif
 
 /******* Macro to mark functions and fields scheduled for removal *****/
