@@ -32,8 +32,8 @@ drivers = [
         'intel/ice',
         'intel/idpf',
         'intel/ipn3ke',
-        'intel/ixgbe',
         'intel/cpfl',  # depends on idpf, so must come after it
+        'intel/ixgbe',
         'ionic',
         'mana',
         'memif',
