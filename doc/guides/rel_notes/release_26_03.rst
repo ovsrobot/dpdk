@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel idpf ethernet driver.**
+
+  * Added support for Timesync features.
+
 
 Removed Items
 -------------
