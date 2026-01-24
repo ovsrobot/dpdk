@@ -1390,7 +1390,11 @@ malloc_heap_destroy(struct malloc_heap *heap)
 
 	/* Reset all of the heap but the (hold) lock so caller can release it. */
 	RTE_BUILD_BUG_ON(offsetof(struct malloc_heap, lock) != 0);
-	memset(RTE_PTR_ADD(heap, sizeof(heap->lock)), 0,
+	/* Cast to void* to avoid compiler alignment assumptions from typed pointer.
+	 * RTE_PTR_ADD preserves type, but heap+sizeof(lock) is misaligned for
+	 * struct malloc_heap, which can cause crashes with vectorized memset.
+	 */
+	memset((void *)RTE_PTR_ADD(heap, sizeof(heap->lock)), 0,
 		sizeof(*heap) - sizeof(heap->lock));
 
 	return 0;

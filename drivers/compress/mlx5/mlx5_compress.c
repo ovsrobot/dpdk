@@ -626,7 +626,7 @@ mlx5_compress_cqe_err_handle(struct mlx5_compress_qp *qp,
 								    qp->qp.wqes;
 	volatile union mlx5_gga_compress_opaque *opaq = qp->opaque_mr.addr;
 
-	volatile uint32_t *synd_word = RTE_PTR_ADD(cqe, MLX5_ERROR_CQE_SYNDROME_OFFSET);
+	volatile uint32_t *synd_word = RTE_PTR_ADD((void *)cqe, MLX5_ERROR_CQE_SYNDROME_OFFSET);
 	switch (*synd_word) {
 	case MLX5_GGA_COMP_OUT_OF_SPACE_SYNDROME_BE:
 		op->status = RTE_COMP_OP_STATUS_OUT_OF_SPACE_TERMINATED;

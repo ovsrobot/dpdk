@@ -3711,7 +3711,7 @@ eth_basic_stats_get(uint16_t port_id, struct rte_eth_xstat *xstats)
 
 	/* global stats */
 	for (i = 0; i < RTE_NB_STATS; i++) {
-		stats_ptr = RTE_PTR_ADD(&eth_stats,
+		stats_ptr = RTE_PTR_ADD((void *)&eth_stats,
 					eth_dev_stats_strings[i].offset);
 		val = *stats_ptr;
 		xstats[count++].value = val;
@@ -3723,7 +3723,7 @@ eth_basic_stats_get(uint16_t port_id, struct rte_eth_xstat *xstats)
 	/* per-rxq stats */
 	for (q = 0; q < nb_rxqs; q++) {
 		for (i = 0; i < RTE_NB_RXQ_STATS; i++) {
-			stats_ptr = RTE_PTR_ADD(&queue_stats,
+			stats_ptr = RTE_PTR_ADD((void *)&queue_stats,
 					eth_dev_rxq_stats_strings[i].offset +
 					q * sizeof(uint64_t));
 			val = *stats_ptr;
@@ -3734,7 +3734,7 @@ eth_basic_stats_get(uint16_t port_id, struct rte_eth_xstat *xstats)
 	/* per-txq stats */
 	for (q = 0; q < nb_txqs; q++) {
 		for (i = 0; i < RTE_NB_TXQ_STATS; i++) {
-			stats_ptr = RTE_PTR_ADD(&queue_stats,
+			stats_ptr = RTE_PTR_ADD((void *)&queue_stats,
 					eth_dev_txq_stats_strings[i].offset +
 					q * sizeof(uint64_t));
 			val = *stats_ptr;

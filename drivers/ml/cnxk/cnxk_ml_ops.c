@@ -1211,7 +1211,7 @@ cnxk_ml_model_load(struct rte_ml_dev *dev, struct rte_ml_model_params *params, u
 	model->cnxk_mldev = cnxk_mldev;
 	model->type = type;
 	model->model_id = lcl_model_id;
-	model->info = PLT_PTR_ADD(
+	model->info = PLT_PTR_ADD((void *)
 		model, PLT_ALIGN_CEIL(sizeof(struct cnxk_ml_model), dev_info.align_size));
 	dev->data->models[lcl_model_id] = model;
 

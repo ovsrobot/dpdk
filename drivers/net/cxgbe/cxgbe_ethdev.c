@@ -940,7 +940,7 @@ static int cxgbe_dev_xstats(struct rte_eth_dev *dev,
 				 sizeof(xstats_names[count].name),
 				 "%s", xstats_str[i].name);
 		if (xstats != NULL) {
-			stats_ptr = RTE_PTR_ADD(&ps,
+			stats_ptr = RTE_PTR_ADD((void *)&ps,
 						xstats_str[i].offset);
 			xstats[count].value = *stats_ptr;
 			xstats[count].id = count;
@@ -959,7 +959,7 @@ static int cxgbe_dev_xstats(struct rte_eth_dev *dev,
 					 "tx_q%u_%s",
 					 qid, xstats_str[i].name);
 			if (xstats != NULL) {
-				stats_ptr = RTE_PTR_ADD(&txq->stats,
+				stats_ptr = RTE_PTR_ADD((void *)&txq->stats,
 							xstats_str[i].offset);
 				xstats[count].value = *stats_ptr;
 				xstats[count].id = count;
@@ -979,7 +979,7 @@ static int cxgbe_dev_xstats(struct rte_eth_dev *dev,
 					 "rx_q%u_%s",
 					 qid, xstats_str[i].name);
 			if (xstats != NULL) {
-				stats_ptr = RTE_PTR_ADD(&rxq->stats,
+				stats_ptr = RTE_PTR_ADD((void *)&rxq->stats,
 							xstats_str[i].offset);
 				xstats[count].value = *stats_ptr;
 				xstats[count].id = count;

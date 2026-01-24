@@ -965,7 +965,7 @@ on_fill_ipsec_common_sa(struct rte_security_ipsec_xform *ipsec,
 		else if (crypto_xform->aead.algo == RTE_CRYPTO_AEAD_AES_CCM) {
 			ccm_flag = 0x07 & ~ROC_CPT_AES_CCM_CTR_LEN;
 			*common_sa->iv.gcm.nonce = ccm_flag;
-			memcpy(PLT_PTR_ADD(common_sa->iv.gcm.nonce, 1), &ipsec->salt, 3);
+			memcpy(PLT_PTR_ADD(&common_sa->iv.gcm.nonce[0], 1), &ipsec->salt, 3);
 		}
 		cipher_key = crypto_xform->aead.key.data;
 		cipher_key_len = crypto_xform->aead.key.length;

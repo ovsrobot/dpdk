@@ -713,8 +713,8 @@ ark_dev_info_get(struct rte_eth_dev *dev,
 		     struct rte_eth_dev_info *dev_info)
 {
 	struct ark_adapter *ark = dev->data->dev_private;
-	struct ark_mpu_t *tx_mpu = RTE_PTR_ADD(ark->bar0, ARK_MPU_TX_BASE);
-	struct ark_mpu_t *rx_mpu = RTE_PTR_ADD(ark->bar0, ARK_MPU_RX_BASE);
+	struct ark_mpu_t *tx_mpu = RTE_PTR_ADD((void *)ark->bar0, ARK_MPU_TX_BASE);
+	struct ark_mpu_t *rx_mpu = RTE_PTR_ADD((void *)ark->bar0, ARK_MPU_RX_BASE);
 	uint16_t ports = ark->num_ports;
 
 	dev_info->max_rx_pktlen = ARK_RX_MAX_PKT_LEN;

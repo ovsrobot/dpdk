@@ -120,7 +120,7 @@ rte_reorder_init(struct rte_reorder_buffer *b, unsigned int bufsize,
 	b->order_buf.size = b->ready_buf.size = size;
 	b->order_buf.mask = b->ready_buf.mask = size - 1;
 	b->ready_buf.entries = (void *)&b[1];
-	b->order_buf.entries = RTE_PTR_ADD(&b[1],
+	b->order_buf.entries = RTE_PTR_ADD((void *)&b[1],
 			size * sizeof(b->ready_buf.entries[0]));
 
 	return b;

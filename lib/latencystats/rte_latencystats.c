@@ -105,7 +105,7 @@ latencystats_collect(uint64_t values[])
 	const uint64_t *stats;
 
 	for (i = 0; i < NUM_LATENCY_STATS; i++) {
-		stats = RTE_PTR_ADD(glob_stats, lat_stats_strings[i].offset);
+		stats = RTE_PTR_ADD((void *)glob_stats, lat_stats_strings[i].offset);
 		scale = lat_stats_strings[i].scale;
 
 		/* used to mark samples which are not a time interval */

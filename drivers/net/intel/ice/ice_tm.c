@@ -456,7 +456,7 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 		tm_node->parent = NULL;
 		tm_node->reference_count = 0;
 		tm_node->shaper_profile = shaper_profile;
-		tm_node->children = RTE_PTR_ADD(tm_node, sizeof(struct ice_tm_node));
+		tm_node->children = RTE_PTR_ADD((void *)tm_node, sizeof(struct ice_tm_node));
 		tm_node->params = *params;
 		pf->tm_conf.root = tm_node;
 		return 0;
@@ -518,7 +518,7 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 	tm_node->parent = parent_node;
 	tm_node->level = level_id;
 	tm_node->shaper_profile = shaper_profile;
-	tm_node->children = RTE_PTR_ADD(tm_node, sizeof(struct ice_tm_node));
+	tm_node->children = RTE_PTR_ADD((void *)tm_node, sizeof(struct ice_tm_node));
 	tm_node->parent->children[tm_node->parent->reference_count++] = tm_node;
 	tm_node->params = *params;
 

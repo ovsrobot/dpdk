@@ -501,7 +501,7 @@ cluster_node_arregate_stats(struct cluster_node *cluster, bool dispatch)
 
 		if (node->xstat_off == 0)
 			continue;
-		xstat = RTE_PTR_ADD(node, node->xstat_off);
+		xstat = RTE_PTR_ADD((void *)node, node->xstat_off);
 		for (i = 0; i < stat->xstat_cntrs; i++)
 			stat->xstat_count[i] += xstat[i];
 	}

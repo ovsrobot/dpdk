@@ -141,7 +141,7 @@ perf_mark_fwd_latency(enum evt_prod_type prod_type, struct rte_event *const ev)
 
 			pe = rte_pktmbuf_mtod(m, struct perf_elt *);
 		} else {
-			pe = RTE_PTR_ADD(op->asym->modex.result.data,
+			pe = RTE_PTR_ADD((void *)op->asym->modex.result.data,
 					 op->asym->modex.result.length);
 		}
 		pe->timestamp = rte_get_timer_cycles();
@@ -179,7 +179,8 @@ perf_elt_from_vec_get(struct rte_event_vector *vec)
 		m = cop->sym->m_dst == NULL ? cop->sym->m_src : cop->sym->m_dst;
 		return rte_pktmbuf_mtod(m, struct perf_elt *);
 	} else {
-		return RTE_PTR_ADD(cop->asym->modex.result.data, cop->asym->modex.result.length);
+		return RTE_PTR_ADD((void *)cop->asym->modex.result.data,
+				   cop->asym->modex.result.length);
 	}
 }
 
@@ -297,7 +298,7 @@ perf_process_last_stage_latency(struct rte_mempool *const pool, enum evt_prod_ty
 			to_free_in_bulk = m;
 			pe = rte_pktmbuf_mtod(m, struct perf_elt *);
 		} else {
-			pe = RTE_PTR_ADD(op->asym->modex.result.data,
+			pe = RTE_PTR_ADD((void *)op->asym->modex.result.data,
 					 op->asym->modex.result.length);
 			to_free_in_bulk = op->asym->modex.result.data;
 		}

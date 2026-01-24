@@ -75,7 +75,7 @@ void gve_parse_device_option(struct gve_priv *priv,
 			PMD_DRV_LOG(WARNING,
 				    GVE_DEVICE_OPTION_TOO_BIG_FMT, "GQI RDA");
 		}
-		*dev_op_gqi_rda = RTE_PTR_ADD(option, sizeof(*option));
+		*dev_op_gqi_rda = RTE_PTR_ADD((void *)option, sizeof(*option));
 		break;
 	case GVE_DEV_OPT_ID_GQI_QPL:
 		if (option_length < sizeof(**dev_op_gqi_qpl) ||
@@ -91,7 +91,7 @@ void gve_parse_device_option(struct gve_priv *priv,
 			PMD_DRV_LOG(WARNING,
 				    GVE_DEVICE_OPTION_TOO_BIG_FMT, "GQI QPL");
 		}
-		*dev_op_gqi_qpl = RTE_PTR_ADD(option, sizeof(*option));
+		*dev_op_gqi_qpl = RTE_PTR_ADD((void *)option, sizeof(*option));
 		break;
 	case GVE_DEV_OPT_ID_DQO_RDA:
 		if (option_length < sizeof(**dev_op_dqo_rda) ||
@@ -107,7 +107,7 @@ void gve_parse_device_option(struct gve_priv *priv,
 			PMD_DRV_LOG(WARNING,
 				    GVE_DEVICE_OPTION_TOO_BIG_FMT, "DQO RDA");
 		}
-		*dev_op_dqo_rda = RTE_PTR_ADD(option, sizeof(*option));
+		*dev_op_dqo_rda = RTE_PTR_ADD((void *)option, sizeof(*option));
 		break;
 	case GVE_DEV_OPT_ID_MODIFY_RING:
 		/* Min ring size bound is optional. */
@@ -127,7 +127,7 @@ void gve_parse_device_option(struct gve_priv *priv,
 				    GVE_DEVICE_OPTION_TOO_BIG_FMT,
 				    "Modify Ring");
 		}
-		*dev_op_modify_ring = RTE_PTR_ADD(option, sizeof(*option));
+		*dev_op_modify_ring = RTE_PTR_ADD((void *)option, sizeof(*option));
 
 		/* Min ring size included; set the minimum ring size. */
 		if (option_length == sizeof(**dev_op_modify_ring))
@@ -149,7 +149,7 @@ void gve_parse_device_option(struct gve_priv *priv,
 				    GVE_DEVICE_OPTION_TOO_BIG_FMT,
 				    "Jumbo Frames");
 		}
-		*dev_op_jumbo_frames = RTE_PTR_ADD(option, sizeof(*option));
+		*dev_op_jumbo_frames = RTE_PTR_ADD((void *)option, sizeof(*option));
 		break;
 	default:
 		/* If we don't recognize the option just continue
@@ -175,7 +175,7 @@ gve_process_device_options(struct gve_priv *priv,
 	int i;
 
 	/* The options struct directly follows the device descriptor. */
-	dev_opt = RTE_PTR_ADD(descriptor, sizeof(*descriptor));
+	dev_opt = RTE_PTR_ADD((void *)descriptor, sizeof(*descriptor));
 	for (i = 0; i < num_options; i++) {
 		struct gve_device_option *next_opt;
 

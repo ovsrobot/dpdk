@@ -4097,7 +4097,7 @@ sfc_mae_header_force_item_masks(uint8_t *header_buf,
 
 		for (ofst = 0; ofst < proto_header_size;
 		     ofst += sizeof(rte_be16_t)) {
-			rte_be16_t *wp = RTE_PTR_ADD(header_buf, ofst);
+			rte_be16_t *wp = RTE_PTR_ADD((void *)header_buf, ofst);
 			const rte_be16_t *w_maskp;
 			const rte_be16_t *w_specp;
 
@@ -4231,10 +4231,10 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_vlan_hdr);
 
-			ethertypep = RTE_PTR_ADD(buf, eth_ethertype_ofst);
+			ethertypep = RTE_PTR_ADD((void *)buf, eth_ethertype_ofst);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_QINQ);
 
-			ethertypep = RTE_PTR_ADD(buf, ethertype_ofst);
+			ethertypep = RTE_PTR_ADD((void *)buf, ethertype_ofst);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_VLAN);
 
 			ethertype_ofst =
@@ -4255,7 +4255,7 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_ipv4_hdr);
 
-			ethertypep = RTE_PTR_ADD(buf, ethertype_ofst);
+			ethertypep = RTE_PTR_ADD((void *)buf, ethertype_ofst);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_IPV4);
 
 			next_proto_ofst =
@@ -4274,7 +4274,7 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_ipv6_hdr);
 
-			ethertypep = RTE_PTR_ADD(buf, ethertype_ofst);
+			ethertypep = RTE_PTR_ADD((void *)buf, ethertype_ofst);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_IPV6);
 
 			next_proto_ofst = bounce_eh->size +

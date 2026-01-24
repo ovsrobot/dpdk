@@ -672,7 +672,7 @@ pci_vfio_info_cap(struct vfio_region_info *info, int cap)
 
 	offset = info->cap_offset;
 	while (offset != 0) {
-		h = RTE_PTR_ADD(info, offset);
+		h = RTE_PTR_ADD((void *)info, offset);
 		if (h->id == cap)
 			return h;
 		offset = h->next;

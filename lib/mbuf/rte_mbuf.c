@@ -215,7 +215,7 @@ __rte_pktmbuf_init_extmem(struct rte_mempool *mp,
 	m->next = NULL;
 
 	/* init external buffer shared info items */
-	shinfo = RTE_PTR_ADD(m, mbuf_size);
+	shinfo = RTE_PTR_ADD((void *)m, mbuf_size);
 	m->shinfo = shinfo;
 	shinfo->free_cb = rte_pktmbuf_free_pinned_extmem;
 	shinfo->fcb_opaque = m;

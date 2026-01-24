@@ -154,7 +154,7 @@ __rte_graph_mcore_dispatch_sched_wq_process(struct rte_graph *graph)
 
 	for (i = 0; i < n; i++) {
 		wq_node = wq_nodes[i];
-		node = RTE_PTR_ADD(graph, wq_node->node_off);
+		node = RTE_PTR_ADD((void *)graph, wq_node->node_off);
 		RTE_ASSERT(node->fence == RTE_GRAPH_FENCE);
 		idx = node->idx;
 		free_space = node->size - idx;

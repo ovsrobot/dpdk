@@ -897,7 +897,7 @@ mlx5_tx_qseg_init(struct mlx5_txq_data *restrict txq,
 {
 	struct mlx5_wqe_qseg *qs;
 
-	qs = RTE_PTR_ADD(wqe, MLX5_WSEG_SIZE);
+	qs = RTE_PTR_ADD((void *)wqe, MLX5_WSEG_SIZE);
 	qs->max_index = rte_cpu_to_be_32(wci);
 	qs->qpn_cqn = rte_cpu_to_be_32(txq->sh->txpp.clock_queue.cq_obj.cq->id);
 	qs->reserved0 = RTE_BE32(0);
@@ -928,7 +928,7 @@ mlx5_tx_wseg_init(struct mlx5_txq_data *restrict txq,
 {
 	struct mlx5_wqe_wseg *ws;
 
-	ws = RTE_PTR_ADD(wqe, MLX5_WSEG_SIZE);
+	ws = RTE_PTR_ADD((void *)wqe, MLX5_WSEG_SIZE);
 	ws->operation = rte_cpu_to_be_32(MLX5_WAIT_COND_CYCLIC_SMALLER);
 	ws->lkey = RTE_BE32(0);
 	ws->va_high = RTE_BE32(0);

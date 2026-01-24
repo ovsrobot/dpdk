@@ -702,7 +702,7 @@ cn10k_ml_layer_load(void *device, uint16_t model_id, const char *layer_name, uin
 	layer->glow.req = PLT_PTR_ADD(mz->addr, layer_object_size + layer_scratch_size);
 
 	/* Reset burst and sync stats */
-	layer->glow.burst_xstats = PLT_PTR_ADD(
+	layer->glow.burst_xstats = PLT_PTR_ADD((void *)
 		layer->glow.req, PLT_ALIGN_CEIL(sizeof(struct cnxk_ml_req), ML_CN10K_ALIGN_SIZE));
 	for (qp_id = 0; qp_id < cnxk_mldev->mldev->data->nb_queue_pairs + 1; qp_id++) {
 		layer->glow.burst_xstats[qp_id].hw_latency_tot = 0;

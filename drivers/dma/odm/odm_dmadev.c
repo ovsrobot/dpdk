@@ -434,7 +434,7 @@ odm_dmadev_completed(void *dev_private, uint16_t vchan, const uint16_t nb_cpls, 
 	}
 
 	for (cnt = 0; cnt < nb_cpls; cnt++) {
-		cmpl_ptr = RTE_PTR_ADD(base_addr, cring_head * sizeof(cmpl));
+		cmpl_ptr = RTE_PTR_ADD((void *)base_addr, cring_head * sizeof(cmpl));
 		cmpl.u = rte_atomic_load_explicit((RTE_ATOMIC(uint32_t) *)cmpl_ptr,
 						  rte_memory_order_relaxed);
 		if (!cmpl.s.valid)
@@ -501,7 +501,7 @@ odm_dmadev_completed_status(void *dev_private, uint16_t vchan, const uint16_t nb
 #endif
 
 	for (cnt = 0; cnt < nb_cpls; cnt++) {
-		cmpl_ptr = RTE_PTR_ADD(base_addr, cring_head * sizeof(cmpl));
+		cmpl_ptr = RTE_PTR_ADD((void *)base_addr, cring_head * sizeof(cmpl));
 		cmpl.u = rte_atomic_load_explicit((RTE_ATOMIC(uint32_t) *)cmpl_ptr,
 						  rte_memory_order_relaxed);
 		if (!cmpl.s.valid)

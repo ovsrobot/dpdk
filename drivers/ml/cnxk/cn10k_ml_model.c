@@ -555,7 +555,7 @@ cn10k_ml_model_info_set(struct cnxk_ml_dev *cnxk_mldev, struct cnxk_ml_model *mo
 
 	metadata = &model->glow.metadata;
 	info = PLT_PTR_CAST(model->info);
-	input = PLT_PTR_ADD(info, sizeof(struct rte_ml_model_info));
+	input = PLT_PTR_ADD((void *)info, sizeof(struct rte_ml_model_info));
 	output = PLT_PTR_ADD(input, ML_CNXK_MODEL_MAX_INPUT_OUTPUT * sizeof(struct rte_ml_io_info));
 
 	/* Set model info */

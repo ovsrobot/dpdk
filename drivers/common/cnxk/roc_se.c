@@ -635,7 +635,7 @@ roc_se_ctx_init(struct roc_se_ctx *roc_se_ctx)
 	ctx_len = PLT_ALIGN_CEIL(ctx_len, 8);
 
 	/* Skip w0 for swap */
-	uc_ctx = PLT_PTR_ADD(ctx, sizeof(ctx->w0));
+	uc_ctx = PLT_PTR_ADD((void *)ctx, sizeof(ctx->w0));
 	for (i = 0; i < (ctx_len / 8); i++)
 		uc_ctx[i] = plt_cpu_to_be_64(((uint64_t *)uc_ctx)[i]);
 

@@ -446,7 +446,7 @@ otx_cpt_enq_single_asym(struct cpt_instance *instance,
 	cop[1] = (uintptr_t)op;
 	cop[2] = cop[3] = 0ULL;
 
-	params.req = RTE_PTR_ADD(cop, 4 * sizeof(uintptr_t));
+	params.req = RTE_PTR_ADD((void *)cop, 4 * sizeof(uintptr_t));
 	params.req->op = cop;
 
 	/* Adjust meta_buf by crypto_op data  and request_info struct */

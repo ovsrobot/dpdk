@@ -126,7 +126,7 @@ mlx5_flow_hw_aux(uint16_t port_id, struct rte_flow_hw *flow)
 		if (rte_flow_template_table_resizable(port_id, &table->cfg.attr)) {
 			size_t offset = sizeof(struct rte_flow_hw) + mlx5dr_rule_get_handle_size();
 
-			return RTE_PTR_ADD(flow, offset);
+			return RTE_PTR_ADD((void *)flow, offset);
 		} else {
 			return &table->flow_aux[flow->idx - 1];
 		}
@@ -8123,7 +8123,7 @@ __flow_hw_actions_template_create(struct rte_eth_dev *dev,
 	at->src_off = RTE_PTR_ADD(at->dr_off,
 				  RTE_ALIGN(act_num * sizeof(*at->dr_off), 16));
 	memcpy(at->src_off, src_off, act_num * sizeof(at->src_off[0]));
-	at->orig_actions = RTE_PTR_ADD(at->src_off,
+	at->orig_actions = RTE_PTR_ADD((void *)at->src_off,
 				       RTE_ALIGN(act_num * sizeof(*at->src_off), 16));
 	orig_act_len = rte_flow_conv(RTE_FLOW_CONV_OP_ACTIONS, at->orig_actions, orig_act_len,
 				     actions, error);
