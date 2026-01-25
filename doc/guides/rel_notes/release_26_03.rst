@@ -58,6 +58,8 @@ New Features
 * **Updated NULL ethernet driver.**
 
   * Changed info response to match mbuf limits.
+  * Added validation that mbuf pool data size is large enough for
+    packet size argument.
 
 
 Removed Items

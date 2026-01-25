@@ -221,9 +221,7 @@ test_null_tx_basic(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Statistics verification
- */
+/* Test: Statistics verification */
 static int
 test_null_stats(void)
 {
@@ -271,9 +269,7 @@ test_null_stats(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Custom packet size
- */
+/* Test: Custom packet size */
 static int
 test_null_custom_size(void)
 {
@@ -314,9 +310,7 @@ test_null_custom_size(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Copy mode
- */
+/* Test: Copy mode */
 static int
 test_null_copy_mode(void)
 {
@@ -346,9 +340,7 @@ test_null_copy_mode(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: No-RX mode
- */
+/* Test: No-RX mode */
 static int
 test_null_no_rx_mode(void)
 {
@@ -384,9 +376,7 @@ test_null_no_rx_mode(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Link status
- */
+/* Test: Link status */
 static int
 test_null_link_status(void)
 {
@@ -422,9 +412,7 @@ test_null_link_status(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Device info
- */
+/* Test: Device info */
 static int
 test_null_dev_info(void)
 {
@@ -462,9 +450,7 @@ test_null_dev_info(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Multiple RX/TX bursts
- */
+/* Test: Multiple RX/TX bursts */
 static int
 test_null_multiple_bursts(void)
 {
@@ -685,9 +671,7 @@ test_null_reta_config(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: Stats reset
- */
+/* Test: Stats reset */
 static int
 test_null_stats_reset(void)
 {
@@ -730,9 +714,7 @@ test_null_stats_reset(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Test: MAC address operations
- */
+/* Test: MAC address operations */
 static int
 test_null_mac_addr(void)
 {
@@ -772,9 +754,7 @@ test_null_promisc_allmulti(void)
 	return TEST_SUCCESS;
 }
 
-/*
- * Multi-threaded TX test structures and worker function
- */
+/* Multi-threaded TX test structures and worker function */
 #define MT_TX_BURSTS_PER_LCORE 100
 #define MT_TX_BURST_SIZE 8
 
@@ -793,9 +773,6 @@ mt_tx_worker(void *arg)
 	struct rte_mbuf *bufs[MT_TX_BURST_SIZE];
 	unsigned int burst;
 	uint16_t nb_tx;
-
-	args->tx_count = 0;
-	args->error = 0;
 
 	for (burst = 0; burst < MT_TX_BURSTS_PER_LCORE; burst++) {
 		/* Allocate mbufs */
@@ -834,7 +811,7 @@ test_null_mt_tx(void)
 {
 	struct rte_eth_dev_info dev_info;
 	struct rte_mempool *mt_pool;
-	struct mt_tx_args worker_args[RTE_MAX_LCORE];
+	struct mt_tx_args worker_args[RTE_MAX_LCORE] = { 0 };
 	struct rte_eth_stats stats;
 	unsigned int lcore_id;
 	unsigned int num_workers = 0;
@@ -885,10 +862,7 @@ test_null_mt_tx(void)
 			break;
 
 		worker_args[num_workers].port = port_id;
-		worker_args[num_workers].queue = 0;  /* All use same queue */
 		worker_args[num_workers].pool = mt_pool;
-		worker_args[num_workers].tx_count = 0;
-		worker_args[num_workers].error = 0;
 
 		ret = rte_eal_remote_launch(mt_tx_worker,
 					    &worker_args[num_workers],

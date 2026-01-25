@@ -241,6 +241,9 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 
 	packet_size = internals->packet_size;
 
+	if (rte_pktmbuf_data_room_size(mb_pool) < packet_size)
+		return -ENOSPC;
+
 	internals->rx_null_queues[rx_queue_id].mb_pool = mb_pool;
 	dev->data->rx_queues[rx_queue_id] =
 		&internals->rx_null_queues[rx_queue_id];
