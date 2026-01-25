@@ -63,6 +63,7 @@ New Features
   * Receive timestamps support nanosecond precision.
   * Changed transmit burst to always return the number of packets requested.
     Failed sends are counted as transmit errors.
+  * Added unit test suite.
 
 
 Removed Items
