@@ -8,6 +8,8 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <sys/sysctl.h>
+#include <sys/ioctl.h>
+#include <sys/sockio.h>
 
 #include "pcap_osdep.h"
 
@@ -54,4 +56,26 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 
 	free(buf);
 	return 0;
+}
+
+int
+osdep_iface_mtu_set(int ifindex, uint16_t mtu)
+{
+	struct ifreq ifr = { .ifr_mtu = mtu };
+	char ifname[IFNAMSIZ];
+	int s, ret;
+
+	if (if_indextoname(ifindex, ifname) == NULL)
+		return -errno;
+
+	s = socket(PF_INET, SOCK_DGRAM, 0);
+	if (s < 0)
+		return -errno;
+
+	strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+
+	ret = ioctl(s, SIOCSIFMTU, &ifr);
+	close(s);
+
+	return (ret < 0) ? -errno : 0;
 }
