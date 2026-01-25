@@ -376,6 +376,7 @@ struct __rte_cache_aligned rte_mempool {
 static inline struct rte_mempool_objhdr *
 rte_mempool_get_header(void *obj)
 {
+	RTE_ASSERT(obj);
 	return (struct rte_mempool_objhdr *)RTE_PTR_SUB(obj,
 		sizeof(struct rte_mempool_objhdr));
 }
@@ -399,6 +400,7 @@ static inline struct rte_mempool *rte_mempool_from_obj(void *obj)
 static inline struct rte_mempool_objtlr *rte_mempool_get_trailer(void *obj)
 {
 	struct rte_mempool *mp = rte_mempool_from_obj(obj);
+	RTE_ASSERT(mp);
 	return (struct rte_mempool_objtlr *)RTE_PTR_ADD(obj, mp->elt_size);
 }
 
@@ -1844,6 +1846,7 @@ rte_mempool_empty(const struct rte_mempool *mp)
 static inline rte_iova_t
 rte_mempool_virt2iova(const void *elt)
 {
+	RTE_ASSERT(elt);
 	const struct rte_mempool_objhdr *hdr;
 	hdr = (const struct rte_mempool_objhdr *)RTE_PTR_SUB(elt,
 		sizeof(*hdr));

@@ -59,7 +59,7 @@ idxd_pci_dev_command(struct idxd_dmadev *idxd, enum rte_idxd_cmds command)
 	return err_code;
 }
 
-static uint32_t *
+static volatile uint32_t *
 idxd_get_wq_cfg(struct idxd_pci_common *pci, uint8_t wq_idx)
 {
 	return RTE_PTR_ADD(pci->wq_regs_base,
@@ -205,9 +205,9 @@ init_pci_device(struct rte_pci_device *dev, struct idxd_dmadev *idxd,
 	pci->regs = dev->mem_resource[0].addr;
 	version = pci->regs->version;
 	grp_offset = (uint16_t)pci->regs->offsets[0];
-	pci->grp_regs = RTE_PTR_ADD(pci->regs, grp_offset * 0x100);
+	pci->grp_regs = RTE_PTR_ADD((volatile void *)pci->regs, grp_offset * 0x100);
 	wq_offset = (uint16_t)(pci->regs->offsets[0] >> 16);
-	pci->wq_regs_base = RTE_PTR_ADD(pci->regs, wq_offset * 0x100);
+	pci->wq_regs_base = RTE_PTR_ADD((volatile void *)pci->regs, wq_offset * 0x100);
 	pci->portals = dev->mem_resource[2].addr;
 	pci->wq_cfg_sz = (pci->regs->wqcap >> 24) & 0x0F;
 
@@ -395,7 +395,8 @@ idxd_dmadev_probe_pci(struct rte_pci_driver *drv, struct rte_pci_device *dev)
 		/* add the queue number to each device name */
 		snprintf(qname, sizeof(qname), "%s-q%d", name, qid);
 		idxd.qid = qid;
-		idxd.portal = RTE_PTR_ADD(idxd.u.pci->portals,
+		/* FIXME: cast drops volatile propagation to idxd_dmadev.portal */
+		idxd.portal = RTE_PTR_ADD(RTE_PTR_UNQUAL(idxd.u.pci->portals),
 				qid * IDXD_PORTAL_SIZE);
 		if (idxd_is_wq_enabled(&idxd))
 			IDXD_PMD_ERR("Error, WQ %u seems enabled", qid);

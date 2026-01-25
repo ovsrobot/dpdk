@@ -338,7 +338,7 @@ again:
 		aw0 |= ev[0].event & (BIT_ULL(32) - 1);
 		aw0 |= (uint64_t)ev[0].sched_type << 32;
 		*((__uint128_t *)lmt_addr) = aw0;
-		lmt_addr = (uintptr_t)PLT_PTR_ADD(lmt_addr, 16);
+		lmt_addr += 16;
 	}
 #endif
 

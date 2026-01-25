@@ -56,7 +56,7 @@ cpt_cnxk_parse_hdr_dump(FILE *file, const struct cpt_parse_hdr_s *cpth)
 	/* offset of 0 implies 256B, otherwise it implies offset*32B */
 	offset = cpth->w2.ptr_offset;
 	offset = (((offset - 1) & 0x7) + 1) * 32;
-	frag_info = PLT_PTR_ADD(cpth, offset);
+	frag_info = PLT_PTR_ADD(PLT_PTR_UNQUAL(cpth), offset);
 
 	if (cpth->w0.num_frags > 0) {
 		cpt_dump(file, "CPT Fraginfo_0 \t%p:", frag_info);
@@ -162,7 +162,7 @@ cpt_cn10k_parse_hdr_dump(FILE *file, const struct cpt_cn10k_parse_hdr_s *cpth)
 	/* offset of 0 implies 256B, otherwise it implies offset*8B */
 	offset = cpth->w2.fi_offset;
 	offset = (((offset - 1) & 0x1f) + 1) * 8;
-	frag_info = PLT_PTR_ADD(cpth, offset);
+	frag_info = PLT_PTR_ADD(PLT_PTR_UNQUAL(cpth), offset);
 
 	cpt_dump(file, "CPT Fraginfo \t0x%p:", frag_info);
 
