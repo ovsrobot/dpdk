@@ -1654,8 +1654,8 @@ static int
 mlx5_nl_family_id_cb(struct nlmsghdr *nh, void *arg)
 {
 
-	struct nlattr *tail = RTE_PTR_ADD(nh, nh->nlmsg_len);
-	struct nlattr *nla = RTE_PTR_ADD(nh, NLMSG_ALIGN(sizeof(*nh)) +
+	struct nlattr *tail = RTE_PTR_ADD((void *)nh, nh->nlmsg_len);
+	struct nlattr *nla = RTE_PTR_ADD((void *)nh, NLMSG_ALIGN(sizeof(*nh)) +
 					NLMSG_ALIGN(sizeof(struct genlmsghdr)));
 
 	for (; nla->nla_len && nla < tail;
@@ -1752,8 +1752,8 @@ mlx5_nl_roce_cb(struct nlmsghdr *nh, void *arg)
 
 	int ret = -EINVAL;
 	int *enable = arg;
-	struct nlattr *tail = RTE_PTR_ADD(nh, nh->nlmsg_len);
-	struct nlattr *nla = RTE_PTR_ADD(nh, NLMSG_ALIGN(sizeof(*nh)) +
+	struct nlattr *tail = RTE_PTR_ADD((void *)nh, nh->nlmsg_len);
+	struct nlattr *nla = RTE_PTR_ADD((void *)nh, NLMSG_ALIGN(sizeof(*nh)) +
 					NLMSG_ALIGN(sizeof(struct genlmsghdr)));
 
 	while (nla->nla_len && nla < tail) {
@@ -2049,8 +2049,8 @@ mlx5_nl_esw_multiport_cb(struct nlmsghdr *nh, void *arg)
 
 	int ret = -EINVAL;
 	int *enable = arg;
-	struct nlattr *tail = RTE_PTR_ADD(nh, nh->nlmsg_len);
-	struct nlattr *nla = RTE_PTR_ADD(nh, NLMSG_ALIGN(sizeof(*nh)) +
+	struct nlattr *tail = RTE_PTR_ADD((void *)nh, nh->nlmsg_len);
+	struct nlattr *nla = RTE_PTR_ADD((void *)nh, NLMSG_ALIGN(sizeof(*nh)) +
 					NLMSG_ALIGN(sizeof(struct genlmsghdr)));
 
 	while (nla->nla_len && nla < tail) {
@@ -2261,7 +2261,7 @@ mlx5_nl_get_mtu_bounds_cb(struct nlmsghdr *nh, void *arg)
 	struct mlx5_mtu *out = arg;
 
 	while (off < nh->nlmsg_len) {
-		struct rtattr *ra = RTE_PTR_ADD(nh, off);
+		struct rtattr *ra = RTE_PTR_ADD((void *)nh, off);
 		uint32_t *payload;
 
 		switch (ra->rta_type) {

@@ -291,7 +291,7 @@ mlx5_crypto_xts_wqe_set(struct mlx5_crypto_priv *priv,
 	qp->db_pi += priv->umr_wqe_stride;
 	/* Set RDMA_WRITE WQE. */
 	cseg = RTE_PTR_ADD(cseg, priv->umr_wqe_size);
-	klms = RTE_PTR_ADD(cseg, sizeof(struct mlx5_rdma_write_wqe));
+	klms = RTE_PTR_ADD((void *)cseg, sizeof(struct mlx5_rdma_write_wqe));
 	if (!ipl) {
 		klm_n = mlx5_crypto_xts_klms_set(qp, op, op->sym->m_src, klms);
 		if (unlikely(klm_n == 0))

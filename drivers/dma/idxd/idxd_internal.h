@@ -56,6 +56,7 @@ struct idxd_dmadev {
 	unsigned short batch_start; /* start+size == write pointer for hdls/desc */
 	unsigned short batch_size;
 
+	/* FIXME: cast drops volatile propagation that should happen to idxd_dmadev.portal */
 	void *portal; /* address to write the batch descriptor */
 
 	struct idxd_completion *batch_comp_ring;

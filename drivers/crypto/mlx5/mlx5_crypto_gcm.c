@@ -370,7 +370,7 @@ mlx5_crypto_gcm_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 		goto err;
 	}
 	qp->opaque_addr = qp->mr.addr;
-	qp->klm_array = RTE_PTR_ADD(qp->opaque_addr, opaq_size);
+	qp->klm_array = RTE_PTR_ADD((void *)qp->opaque_addr, opaq_size);
 	/*
 	 * Triple the CQ size as UMR QP which contains UMR and SEND_EN WQE
 	 * will share this CQ .
@@ -733,8 +733,8 @@ static __rte_always_inline void
 mlx5_crypto_gcm_build_send_en(struct mlx5_crypto_qp *qp)
 {
 	uint32_t wqe_offset = (qp->umr_pi & (qp->umr_wqbbs - 1)) * MLX5_SEND_WQE_BB;
-	struct mlx5_wqe_cseg *cs = RTE_PTR_ADD(qp->umr_qp_obj.wqes, wqe_offset);
-	struct mlx5_wqe_qseg *qs = RTE_PTR_ADD(cs, sizeof(struct mlx5_wqe_cseg));
+	struct mlx5_wqe_cseg *cs = RTE_PTR_ADD((void *)qp->umr_qp_obj.wqes, wqe_offset);
+	struct mlx5_wqe_qseg *qs = RTE_PTR_ADD((void *)cs, sizeof(struct mlx5_wqe_cseg));
 
 	cs->opcode = rte_cpu_to_be_32(MLX5_OPCODE_SEND_EN | ((uint32_t)qp->umr_pi << 8));
 	cs->sq_ds = rte_cpu_to_be_32((qp->umr_qp_obj.qp->id << 8) | 2);

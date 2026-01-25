@@ -488,7 +488,7 @@ get_ethertype_by_ptype(struct rte_ether_hdr *eth_hdr, uint32_t ptype)
 		return _htons(RTE_ETHER_TYPE_IPV6);
 	default:
 		ethertype = eth_hdr->ether_type;
-		vlan_hdr = RTE_PTR_ADD(eth_hdr, offsetof(struct rte_ether_hdr, ether_type));
+		vlan_hdr = RTE_PTR_ADD((void *)eth_hdr, offsetof(struct rte_ether_hdr, ether_type));
 		max_vlans = vlan_hdr + MAX_VLAN_HEADERS;
 		while ((ethertype == _htons(RTE_ETHER_TYPE_VLAN) ||
 				ethertype == _htons(RTE_ETHER_TYPE_QINQ)) &&

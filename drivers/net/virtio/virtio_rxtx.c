@@ -414,7 +414,7 @@ virtio_tso_fix_cksum(struct rte_mbuf *m)
 
 		iph = rte_pktmbuf_mtod_offset(m,
 					struct rte_ipv4_hdr *, m->l2_len);
-		th = RTE_PTR_ADD(iph, m->l3_len);
+		th = RTE_PTR_ADD((void *)iph, m->l3_len);
 
 		/*
 		 * Calculate IPv4 header checksum with current total length value

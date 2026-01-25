@@ -523,7 +523,7 @@ cnxk_cpt_queue_pair_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 			goto exit;
 		}
 
-		qp->pend_q.req_queue = PLT_PTR_ADD(
+		qp->pend_q.req_queue = PLT_PTR_ADD((void *)
 			qp->lf.cq_vaddr, ROC_CPT_CQ_ENTRY_SIZE_UNIT << qp->lf.cq_entry_size);
 	}
 

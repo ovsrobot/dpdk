@@ -62,7 +62,7 @@ graph_header_popluate(struct graph *_graph)
 	graph->head = (int32_t)-_graph->src_node_count;
 	graph->cir_mask = _graph->cir_mask;
 	graph->nb_nodes = _graph->node_count;
-	graph->cir_start = RTE_PTR_ADD(graph, _graph->cir_start);
+	graph->cir_start = RTE_PTR_ADD((void *)graph, _graph->cir_start);
 	graph->nodes_start = _graph->nodes_start;
 	graph->socket = _graph->socket;
 	graph->id = _graph->id;
@@ -81,7 +81,7 @@ graph_nodes_populate(struct graph *_graph)
 	rte_node_t pid;
 
 	STAILQ_FOREACH(graph_node, &_graph->node_list, next) {
-		struct rte_node *node = RTE_PTR_ADD(graph, off);
+		struct rte_node *node = RTE_PTR_ADD((void *)graph, off);
 		memset(node, 0, sizeof(*node));
 		node->fence = RTE_GRAPH_FENCE;
 		node->off = off;

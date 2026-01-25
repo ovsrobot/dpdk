@@ -309,10 +309,10 @@ malloc_elem_from_data(const void *data)
 	if (data == NULL)
 		return NULL;
 
-	struct malloc_elem *elem = RTE_PTR_SUB(data, MALLOC_ELEM_HEADER_LEN);
+	struct malloc_elem *elem = RTE_PTR_SUB((void *)data, MALLOC_ELEM_HEADER_LEN);
 	if (!malloc_elem_cookies_ok(elem))
 		return NULL;
-	return elem->state != ELEM_PAD ? elem:  RTE_PTR_SUB(elem, elem->pad);
+	return elem->state != ELEM_PAD ? elem : RTE_PTR_SUB((void *)elem, elem->pad);
 }
 
 /*

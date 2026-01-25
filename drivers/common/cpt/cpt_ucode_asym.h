@@ -251,7 +251,7 @@ cpt_modex_prep(struct asym_op_params *modex_params,
 	total_key_len = mod_len + exp_len;
 
 	/* Input buffer */
-	dptr = RTE_PTR_ADD(req, sizeof(struct cpt_request_info));
+	dptr = RTE_PTR_ADD((void *)req, sizeof(struct cpt_request_info));
 	memcpy(dptr, mod->modulus.data, total_key_len);
 	dptr += total_key_len;
 	memcpy(dptr, mod_op.base.data, base_len);
@@ -314,7 +314,7 @@ cpt_rsa_prep(struct asym_op_params *rsa_params,
 	total_key_len  = mod_len + exp_len;
 
 	/* Input buffer */
-	dptr = RTE_PTR_ADD(req, sizeof(struct cpt_request_info));
+	dptr = RTE_PTR_ADD((void *)req, sizeof(struct cpt_request_info));
 	memcpy(dptr, rsa->n.data, total_key_len);
 	dptr += total_key_len;
 
@@ -399,7 +399,7 @@ cpt_rsa_crt_prep(struct asym_op_params *rsa_params,
 	total_key_len = p_len + q_len + dP_len + dQ_len + qInv_len;
 
 	/* Input buffer */
-	dptr = RTE_PTR_ADD(req, sizeof(struct cpt_request_info));
+	dptr = RTE_PTR_ADD((void *)req, sizeof(struct cpt_request_info));
 	memcpy(dptr, rsa->qt.q.data, total_key_len);
 	dptr += total_key_len;
 
@@ -665,7 +665,7 @@ cpt_ecdsa_sign_prep(struct rte_crypto_ecdsa_op_param *ecdsa,
 	pk_offset = prime_len - pkey_len;
 
 	/* Input buffer */
-	dptr = RTE_PTR_ADD(req, sizeof(struct cpt_request_info));
+	dptr = RTE_PTR_ADD((void *)req, sizeof(struct cpt_request_info));
 
 	/*
 	 * Set dlen = sum(sizeof(fpm address), ROUNDUP8(scalar len, input len),
@@ -773,7 +773,7 @@ cpt_ecdsa_verify_prep(struct rte_crypto_ecdsa_op_param *ecdsa,
 	s_offset = prime_len - s_len;
 
 	/* Input buffer */
-	dptr = RTE_PTR_ADD(req, sizeof(struct cpt_request_info));
+	dptr = RTE_PTR_ADD((void *)req, sizeof(struct cpt_request_info));
 
 	/*
 	 * Set dlen = sum(sizeof(fpm address), ROUNDUP8(message len),
@@ -884,7 +884,7 @@ cpt_ecpm_prep(struct rte_crypto_ecpm_op_param *ecpm,
 	prime_len = ec_grp[curveid].prime.length;
 
 	/* Input buffer */
-	dptr = RTE_PTR_ADD(req, sizeof(struct cpt_request_info));
+	dptr = RTE_PTR_ADD((void *)req, sizeof(struct cpt_request_info));
 
 	p_align = RTE_ALIGN_CEIL(prime_len, 8);
 	scalar_align = RTE_ALIGN_CEIL(ecpm->scalar.length, 8);

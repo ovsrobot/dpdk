@@ -194,7 +194,7 @@ mlx5_txpp_fill_wqe_rearm_queue(struct mlx5_dev_ctx_shared *sh)
 		cs->flags = RTE_BE32(MLX5_COMP_ALWAYS <<
 				     MLX5_COMP_MODE_OFFSET);
 		cs->misc = RTE_BE32(0);
-		qs = RTE_PTR_ADD(cs, sizeof(struct mlx5_wqe_cseg));
+		qs = RTE_PTR_ADD((void *)cs, sizeof(struct mlx5_wqe_cseg));
 		index = (i * MLX5_TXPP_REARM / 2 + MLX5_TXPP_REARM) &
 			((1 << MLX5_WQ_INDEX_WIDTH) - 1);
 		qs->max_index = rte_cpu_to_be_32(index);
@@ -207,7 +207,7 @@ mlx5_txpp_fill_wqe_rearm_queue(struct mlx5_dev_ctx_shared *sh)
 		cs->flags = RTE_BE32(MLX5_COMP_ONLY_ERR <<
 				     MLX5_COMP_MODE_OFFSET);
 		cs->misc = RTE_BE32(0);
-		qs = RTE_PTR_ADD(cs, sizeof(struct mlx5_wqe_cseg));
+		qs = RTE_PTR_ADD((void *)cs, sizeof(struct mlx5_wqe_cseg));
 		index = (i * MLX5_TXPP_REARM / 2 + MLX5_TXPP_REARM / 2) &
 			((1 << MLX5_CQ_INDEX_WIDTH) - 1);
 		qs->max_index = rte_cpu_to_be_32(index);

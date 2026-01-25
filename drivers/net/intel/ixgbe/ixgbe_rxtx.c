@@ -2852,7 +2852,7 @@ ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev,
 				 RTE_CACHE_LINE_SIZE, socket_id);
 	if (txq == NULL)
 		return -ENOMEM;
-	txq->ctx_cache = RTE_PTR_ADD(txq, sizeof(struct ci_tx_queue));
+	txq->ctx_cache = RTE_PTR_ADD((void *)txq, sizeof(struct ci_tx_queue));
 
 	/*
 	 * Allocate TX ring hardware descriptors. A memzone large enough to

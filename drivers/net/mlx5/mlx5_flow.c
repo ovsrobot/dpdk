@@ -8326,9 +8326,9 @@ flow_alloc_thread_workspace(void)
 		DRV_LOG(ERR, "Failed to allocate flow workspace memory.");
 		return NULL;
 	}
-	data->rss_desc.queue = RTE_PTR_ADD(data, data_size);
+	data->rss_desc.queue = RTE_PTR_ADD((void *)data, data_size);
 #ifdef HAVE_MLX5_HWS_SUPPORT
-	data->table = RTE_PTR_ADD(data->rss_desc.queue, rss_queue_array_size);
+	data->table = RTE_PTR_ADD((void *)data->rss_desc.queue, rss_queue_array_size);
 #endif
 	return data;
 }
