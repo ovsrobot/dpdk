@@ -58,6 +58,7 @@ New Features
 * **Updated PCAP ethernet driver.**
 
   * Added support for setting MTU in single interface mode.
+  * Added support for VLAN insertion and stripping.
   * Changed transmit burst to always return the number of packets requested.
     Failed sends are counted as transmit errors.
 
