@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated NULL ethernet driver.**
+
+  * Changed info response to match mbuf limits.
+
 
 Removed Items
 -------------
