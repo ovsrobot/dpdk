@@ -59,6 +59,8 @@ New Features
 
   * Added support for setting MTU in single interface mode.
   * Added support for VLAN insertion and stripping.
+  * Receive timestamp offload is only done if offload flag set.
+  * Receive timestamps support nanosecond precision.
   * Changed transmit burst to always return the number of packets requested.
     Failed sends are counted as transmit errors.
 
