@@ -79,8 +79,8 @@ static const unsigned int MALLOC_ELEM_TRAILER_LEN = RTE_CACHE_LINE_SIZE;
 #define MALLOC_TRAILER_COOKIE  0xadd2e55badbadbadULL /**< Trailer cookie.*/
 
 /* define macros to make referencing the header and trailer cookies easier */
-#define MALLOC_ELEM_TRAILER(elem) (*((uint64_t*)RTE_PTR_ADD(elem, \
-		elem->size - MALLOC_ELEM_TRAILER_LEN)))
+#define MALLOC_ELEM_TRAILER(elem) \
+	(*((uint64_t *)RTE_PTR_ADD(elem, elem->size - MALLOC_ELEM_TRAILER_LEN)))
 #define MALLOC_ELEM_HEADER(elem) (elem->header_cookie)
 
 static inline void
@@ -103,7 +103,7 @@ malloc_elem_cookies_ok(const struct malloc_elem *elem)
 {
 	return elem != NULL &&
 			MALLOC_ELEM_HEADER(elem) == MALLOC_HEADER_COOKIE &&
-			MALLOC_ELEM_TRAILER(elem) == MALLOC_TRAILER_COOKIE;
+			MALLOC_ELEM_TRAILER(RTE_PTR_UNQUAL(elem)) == MALLOC_TRAILER_COOKIE;
 }
 
 #endif
@@ -309,10 +309,20 @@ malloc_elem_from_data(const void *data)
 	if (data == NULL)
 		return NULL;
 
-	struct malloc_elem *elem = RTE_PTR_SUB(data, MALLOC_ELEM_HEADER_LEN);
+	/* rte_malloc_socket pool layout: [pad if ELEM_PAD][header][user data][trailer].
+	 * The pointer 'data' points to user data, but the compiler can't trace this
+	 * through the allocation function. GCC's interprocedural analysis issues a
+	 * false positive warning when accessing the header via backwards pointer arithmetic.
+	 */
+	__rte_diagnostic_push
+	__rte_diagnostic_ignored_array_bounds
+	struct malloc_elem *elem = RTE_PTR_SUB(RTE_PTR_UNQUAL(data), MALLOC_ELEM_HEADER_LEN);
+
 	if (!malloc_elem_cookies_ok(elem))
 		return NULL;
-	return elem->state != ELEM_PAD ? elem:  RTE_PTR_SUB(elem, elem->pad);
+
+	return elem->state != ELEM_PAD ? elem : RTE_PTR_SUB(elem, elem->pad);
+	__rte_diagnostic_pop
 }
 
 /*

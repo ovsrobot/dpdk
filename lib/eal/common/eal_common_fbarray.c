@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <rte_common.h>
+#include <rte_debug.h>
 #include <rte_eal_paging.h>
 #include <rte_errno.h>
 #include <rte_log.h>
@@ -1058,6 +1059,7 @@ rte_fbarray_get(const struct rte_fbarray *arr, unsigned int idx)
 		return NULL;
 	}
 
+	RTE_ASSERT(arr->data);
 	ret = RTE_PTR_ADD(arr->data, idx * arr->elt_sz);
 
 	return ret;

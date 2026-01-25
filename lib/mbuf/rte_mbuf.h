@@ -217,6 +217,7 @@ rte_mbuf_data_iova_default(const struct rte_mbuf *mb)
 static inline struct rte_mbuf *
 rte_mbuf_from_indirect(struct rte_mbuf *mi)
 {
+	RTE_ASSERT(mi);
 	return (struct rte_mbuf *)RTE_PTR_SUB(mi->buf_addr, sizeof(*mi) + mi->priv_size);
 }
 
@@ -289,6 +290,7 @@ rte_mbuf_to_baddr(struct rte_mbuf *md)
 static inline void *
 rte_mbuf_to_priv(struct rte_mbuf *m)
 {
+	RTE_ASSERT(m);
 	return RTE_PTR_ADD(m, sizeof(struct rte_mbuf));
 }
 

@@ -103,6 +103,16 @@ extern "C" {
 		__GNUC_PATCHLEVEL__)
 #endif
 
+/*
+ * Type inference for use in macros.
+ */
+#if (defined(__cplusplus) && __cplusplus >= 201103L) || \
+		(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)
+#define __rte_auto_type auto
+#elif defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
+#define __rte_auto_type __auto_type
+#endif
+
 /**
  * Force type alignment
  *
@@ -208,6 +218,16 @@ typedef uint16_t unaligned_uint16_t;
 #define __rte_diagnostic_ignored_wcast_qual _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")
 #else
 #define __rte_diagnostic_ignored_wcast_qual
+#endif
+
+/**
+ * Macro to disable compiler warnings about invalid array bounds access.
+ */
+#if !defined(RTE_TOOLCHAIN_MSVC)
+#define __rte_diagnostic_ignored_array_bounds \
+	_Pragma("GCC diagnostic ignored \"-Warray-bounds\"")
+#else
+#define __rte_diagnostic_ignored_array_bounds
 #endif
 
 /**
@@ -549,14 +569,96 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 /*********** Macros for pointer arithmetic ********/
 
 /**
- * add a byte-value offset to a pointer
+ * Add a byte-value offset to an integer representing a pointer address.
+ *
+ * @param intptr
+ *   Integer representation of a pointer address
+ * @param x
+ *   Byte offset to add
+ * @return
+ *   void* pointer (result of integer arithmetic cast to pointer)
  */
-#define RTE_PTR_ADD(ptr, x) ((void*)((uintptr_t)(ptr) + (x)))
+#define RTE_INT_PTR_ADD(intptr, x) \
+	((void *)((uintptr_t)(intptr) + (x)))
 
 /**
- * subtract a byte-value offset from a pointer
+ * Subtract a byte-value offset from an integer representing a pointer address.
+ *
+ * @param intptr
+ *   Integer representation of a pointer address
+ * @param x
+ *   Byte offset to subtract
+ * @return
+ *   void* pointer (result of integer arithmetic cast to pointer)
  */
-#define RTE_PTR_SUB(ptr, x) ((void *)((uintptr_t)(ptr) - (x)))
+#define RTE_INT_PTR_SUB(intptr, x) \
+	((void *)((uintptr_t)(intptr) - (x)))
+
+/**
+ * Add a byte-value offset to a pointer.
+ *
+ * @param ptr
+ *   The pointer (must be non-NULL)
+ * @param x
+ *   Byte offset to add
+ * @return
+ *   void* (or const void* / volatile void* / const volatile void* preserving qualifiers).
+ *   Returning void* prevents the compiler from making alignment assumptions based
+ *   on the pointer type, which is important when doing byte-offset arithmetic that
+ *   may cross struct boundaries or result in unaligned pointers.
+ */
+#if defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
+#define RTE_PTR_ADD(ptr, x) \
+(__extension__ ({ \
+	/* (1) Force array decay and ensure single evaluation */ \
+	__rte_auto_type __rte_ptr_add_ptr = (ptr) + 0; \
+	__rte_diagnostic_push \
+	__rte_diagnostic_ignored_wcast_qual \
+	/* (2) Calculate result, preserving const/volatile via ternary */ \
+	__rte_auto_type __rte_ptr_add_res = \
+		(1 ? (void *)((char *)__rte_ptr_add_ptr + (x)) : __rte_ptr_add_ptr); \
+	__rte_diagnostic_pop \
+	/* (3) Return the result */ \
+	__rte_ptr_add_res; \
+}))
+#else
+/* MSVC fallback (ternary preserves const, no statement exprs) */
+#define RTE_PTR_ADD(ptr, x) \
+	(1 ? (void *)((char *)((ptr) + 0) + (x)) : ((ptr) + 0))
+#endif
+
+/**
+ * Subtract a byte-value offset from a pointer.
+ *
+ * @param ptr
+ *   The pointer (must be non-NULL)
+ * @param x
+ *   Byte offset to subtract
+ * @return
+ *   void* (or const void* / volatile void* / const volatile void* preserving qualifiers).
+ *   Returning void* prevents the compiler from making alignment assumptions based
+ *   on the pointer type, which is important when doing byte-offset arithmetic that
+ *   may cross struct boundaries or result in unaligned pointers.
+ */
+#if defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
+#define RTE_PTR_SUB(ptr, x) \
+(__extension__ ({ \
+	/* (1) Force array decay and ensure single evaluation */ \
+	__rte_auto_type __rte_ptr_sub_ptr = (ptr) + 0; \
+	__rte_diagnostic_push \
+	__rte_diagnostic_ignored_wcast_qual \
+	/* (2) Calculate result, preserving const/volatile via ternary */ \
+	__rte_auto_type __rte_ptr_sub_res = \
+		(1 ? (void *)((char *)__rte_ptr_sub_ptr - (x)) : __rte_ptr_sub_ptr); \
+	__rte_diagnostic_pop \
+	/* (3) Return the result */ \
+	__rte_ptr_sub_res; \
+}))
+#else
+/* MSVC fallback (ternary preserves const, no statement exprs) */
+#define RTE_PTR_SUB(ptr, x) \
+	(1 ? (void *)((char *)((ptr) + 0) - (x)) : ((ptr) + 0))
+#endif
 
 /**
  * get the difference between two pointer values, i.e. how far apart
@@ -602,13 +704,55 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 
 
 /**
- * Macro to align a pointer to a given power-of-two. The resultant
- * pointer will be a pointer of the same type as the first parameter, and
- * point to an address no higher than the first parameter. Second parameter
- * must be a power-of-two value.
+ * Macro to align a pointer to a given power-of-two.
+ *
+ * Aligns the pointer down to the specified alignment boundary.
+ *
+ * @param ptr
+ *   The pointer (must be non-NULL)
+ * @param align
+ *   Alignment boundary (must be a power-of-two value)
+ * @return
+ *   Aligned pointer of the same type as ptr, pointing to an address no higher than ptr.
+ *   Returns pointer of same type as input, preserving const/volatile qualifiers.
+ *   Since alignment operations guarantee proper alignment, the return type matches
+ *   the input type.
  */
+#if defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
 #define RTE_PTR_ALIGN_FLOOR(ptr, align) \
-	((typeof(ptr))RTE_ALIGN_FLOOR((uintptr_t)(ptr), align))
+(__extension__ ({ \
+	/* (1) Force array decay and ensure single evaluation */ \
+	__rte_auto_type __rte_ptr_align_floor_tmp = (ptr) + 0; \
+	/* (2) Compute misalignment as integer, but adjust pointer using pointer arithmetic */ \
+	/* to preserve pointer provenance for compiler optimizations */ \
+	size_t __rte_misalign = (uintptr_t)__rte_ptr_align_floor_tmp & ((align) - 1); \
+	/* (3) Return the aligned result, cast to preserve input type */ \
+	(typeof(__rte_ptr_align_floor_tmp))RTE_PTR_SUB(__rte_ptr_align_floor_tmp, __rte_misalign); \
+}))
+#else
+#define RTE_PTR_ALIGN_FLOOR(ptr, align) \
+	((typeof(ptr))RTE_ALIGN_FLOOR((uintptr_t)((ptr) + 0), align))
+#endif
+
+/**
+ * Align an integer address down to a given power-of-two.
+ * Returns void* pointer suitable for dereferencing.
+ *
+ * The resultant address will be no higher than the first parameter.
+ * Second parameter must be a power-of-two value.
+ *
+ * Use this when working with numeric addresses (e.g., uintptr_t, uint64_t),
+ * not actual pointer variables. For pointers, use RTE_PTR_ALIGN_FLOOR.
+ *
+ * @param intptr
+ *   Integer representation of an address
+ * @param align
+ *   Power-of-two alignment value
+ * @return
+ *   void* pointer (aligned address cast from integer)
+ */
+#define RTE_INT_PTR_ALIGN_FLOOR(intptr, align) \
+	((void *)RTE_ALIGN_FLOOR((uintptr_t)(intptr), align))
 
 /**
  * Macro to align a value to a given power-of-two. The resultant value
@@ -620,13 +764,42 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 	(typeof(val))((val) & (~((typeof(val))((align) - 1))))
 
 /**
- * Macro to align a pointer to a given power-of-two. The resultant
- * pointer will be a pointer of the same type as the first parameter, and
- * point to an address no lower than the first parameter. Second parameter
- * must be a power-of-two value.
+ * Macro to align a pointer to a given power-of-two.
+ *
+ * Aligns the pointer up to the specified alignment boundary.
+ *
+ * @param ptr
+ *   The pointer (must be non-NULL)
+ * @param align
+ *   Alignment boundary (must be a power-of-two value)
+ * @return
+ *   Aligned pointer of the same type as ptr, pointing to an address no lower than ptr.
+ *   Returns pointer of same type as input, preserving const/volatile qualifiers.
+ *   Since alignment operations guarantee proper alignment, the return type matches
+ *   the input type.
  */
 #define RTE_PTR_ALIGN_CEIL(ptr, align) \
-	RTE_PTR_ALIGN_FLOOR((typeof(ptr))RTE_PTR_ADD(ptr, (align) - 1), align)
+	RTE_PTR_ALIGN_FLOOR(RTE_PTR_ADD(ptr, (align) - 1), align)
+
+/**
+ * Align an integer address up to a given power-of-two.
+ * Returns void* pointer suitable for dereferencing.
+ *
+ * The resultant address will be no lower than the first parameter.
+ * Second parameter must be a power-of-two value.
+ *
+ * Use this when working with numeric addresses (e.g., uintptr_t, uint64_t),
+ * not actual pointer variables. For pointers, use RTE_PTR_ALIGN_CEIL.
+ *
+ * @param intptr
+ *   Integer representation of an address
+ * @param align
+ *   Power-of-two alignment value
+ * @return
+ *   void* pointer (aligned address cast from integer)
+ */
+#define RTE_INT_PTR_ALIGN_CEIL(intptr, align) \
+	((void *)RTE_ALIGN_CEIL((uintptr_t)(intptr), align))
 
 /**
  * Macro to align a value to a given power-of-two. The resultant value
@@ -645,6 +818,24 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  * This function is the same as RTE_PTR_ALIGN_CEIL
  */
 #define RTE_PTR_ALIGN(ptr, align) RTE_PTR_ALIGN_CEIL(ptr, align)
+
+/**
+ * Align an integer address to a given power-of-two (rounds up).
+ * Returns void* pointer suitable for dereferencing.
+ * This is an alias for RTE_INT_PTR_ALIGN_CEIL.
+ *
+ * Use this when working with numeric addresses (e.g., uintptr_t, uint64_t),
+ * not actual pointer variables. For pointers, use RTE_PTR_ALIGN.
+ *
+ * @param intptr
+ *   Integer representation of an address
+ * @param align
+ *   Power-of-two alignment value
+ * @return
+ *   void* pointer (aligned address cast from integer)
+ */
+#define RTE_INT_PTR_ALIGN(intptr, align) \
+	RTE_INT_PTR_ALIGN_CEIL(intptr, align)
 
 /**
  * Macro to align a value to a given power-of-two. The resultant
