@@ -60,6 +60,8 @@ New Features
   * Changed info response to match mbuf limits.
   * Added validation that mbuf pool data size is large enough for
     packet size argument.
+  * Added check that packet size argument is not larger than largest
+    possible mbuf data segment.
 
 
 Removed Items

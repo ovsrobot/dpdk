@@ -610,14 +610,17 @@ get_packet_size_arg(const char *key __rte_unused,
 {
 	const char *a = value;
 	unsigned int *packet_size = extra_args;
+	unsigned long sz;
 
 	if ((value == NULL) || (extra_args == NULL))
 		return -EINVAL;
 
-	*packet_size = (unsigned int)strtoul(a, NULL, 0);
-	if (*packet_size == UINT_MAX)
-		return -1;
+	errno = 0;
+	sz = strtoul(a, NULL, 0);
+	if (sz > UINT16_MAX || errno != 0)
+		return -EINVAL;
 
+	*packet_size = sz;
 	return 0;
 }
 
