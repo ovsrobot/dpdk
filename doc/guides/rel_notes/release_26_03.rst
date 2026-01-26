@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* pcapng: The maximum length of option strings is now validated.
+  The pcapng file format only allows up to 65536 characters.
+
 
 ABI Changes
 -----------
