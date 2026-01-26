@@ -9,6 +9,8 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <linux/ethtool.h>
+#include <linux/sockios.h>
 
 #include <rte_string_fns.h>
 
@@ -36,6 +38,116 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 	}
 
 	memcpy(mac->addr_bytes, ifr.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
+
+	close(if_fd);
+	return 0;
+}
+
+/*
+ * Get link speed, duplex, and autoneg using ETHTOOL_GLINKSETTINGS.
+ *
+ * ETHTOOL_GLINKSETTINGS was introduced in kernel 4.7 and supports
+ * speeds beyond 65535 Mbps (up to 800 Gbps and beyond).
+ * DPDK requires kernel 4.19 or later, so this interface is always available.
+ *
+ * Returns 0 on success, -1 on failure.
+ */
+static int
+get_link_settings(int fd, struct ifreq *ifr, struct osdep_iface_link *link)
+{
+	struct {
+		struct ethtool_link_settings req;
+		uint32_t link_mode_masks[3 * 127];  /* 3 masks * max words */
+	} ecmd;
+	int nwords;
+
+	memset(&ecmd, 0, sizeof(ecmd));
+	ecmd.req.cmd = ETHTOOL_GLINKSETTINGS;
+
+	ifr->ifr_data = (void *)&ecmd;
+
+	/* First call with nwords = 0 to get the required size */
+	if (ioctl(fd, SIOCETHTOOL, ifr) < 0)
+		return -1;
+
+	/* Kernel returns negative nwords on first call */
+	if (ecmd.req.link_mode_masks_nwords >= 0)
+		return -1;
+
+	nwords = -ecmd.req.link_mode_masks_nwords;
+
+	/* Sanity check */
+	if (nwords == 0 || nwords > 127)
+		return -1;
+
+	/* Second call with correct nwords */
+	memset(&ecmd, 0, sizeof(ecmd));
+	ecmd.req.cmd = ETHTOOL_GLINKSETTINGS;
+	ecmd.req.link_mode_masks_nwords = nwords;
+	ifr->ifr_data = (void *)&ecmd;
+
+	if (ioctl(fd, SIOCETHTOOL, ifr) < 0)
+		return -1;
+
+	/* Speed is in Mbps, directly usable */
+	link->link_speed = ecmd.req.speed;
+
+	/* Handle special values */
+	if (link->link_speed == (uint32_t)SPEED_UNKNOWN ||
+	    link->link_speed == (uint32_t)-1)
+		link->link_speed = 0;
+
+	switch (ecmd.req.duplex) {
+	case DUPLEX_FULL:
+		link->link_duplex = 1;
+		break;
+	case DUPLEX_HALF:
+		link->link_duplex = 0;
+		break;
+	default:
+		link->link_duplex = 1;  /* Default to full duplex */
+		break;
+	}
+
+	link->link_autoneg = (ecmd.req.autoneg == AUTONEG_ENABLE) ? 1 : 0;
+
+	return 0;
+}
+
+int
+osdep_iface_link_get(const char *if_name, struct osdep_iface_link *link)
+{
+	struct ifreq ifr;
+	int if_fd;
+
+	memset(link, 0, sizeof(*link));
+
+	if_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (if_fd == -1)
+		return -1;
+
+	/* Get interface flags to determine link status */
+	rte_strscpy(ifr.ifr_name, if_name, sizeof(ifr.ifr_name));
+	if (ioctl(if_fd, SIOCGIFFLAGS, &ifr) == 0) {
+		/*
+		 * IFF_UP means administratively up
+		 * IFF_RUNNING means operationally up (carrier detected)
+		 */
+		if ((ifr.ifr_flags & IFF_UP) && (ifr.ifr_flags & IFF_RUNNING))
+			link->link_status = 1;
+	}
+
+	rte_strscpy(ifr.ifr_name, if_name, sizeof(ifr.ifr_name));
+	if (get_link_settings(if_fd, &ifr, link) < 0) {
+		/*
+		 * ethtool failed - interface may not support it
+		 * (e.g., virtual interfaces like veth, lo).
+		 * Use reasonable defaults.
+		 */
+		link->link_speed = 0;
+		link->link_duplex = 1;  /* Assume full duplex */
+		link->link_autoneg = 0;
+	}
 
 	close(if_fd);
 	return 0;
