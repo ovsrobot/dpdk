@@ -47,6 +47,9 @@
 #define PLT_PTR_ADD		 RTE_PTR_ADD
 #define PLT_PTR_SUB		 RTE_PTR_SUB
 #define PLT_PTR_DIFF		 RTE_PTR_DIFF
+#define PLT_PTR_UNQUAL		 RTE_PTR_UNQUAL
+#define PLT_INT_PTR_ADD		 RTE_INT_PTR_ADD
+#define PLT_INT_PTR_SUB		 RTE_INT_PTR_SUB
 #define PLT_MAX_RXTX_INTR_VEC_ID RTE_MAX_RXTX_INTR_VEC_ID
 #define PLT_INTR_VEC_RXTX_OFFSET RTE_INTR_VEC_RXTX_OFFSET
 #define PLT_MIN			 RTE_MIN
@@ -84,8 +87,8 @@
 #define PLT_U16_CAST(val) ((uint16_t)(val))
 
 /* Add / Sub pointer with scalar and cast to uint64_t */
-#define PLT_PTR_ADD_U64_CAST(__ptr, __x) PLT_U64_CAST(PLT_PTR_ADD(__ptr, __x))
-#define PLT_PTR_SUB_U64_CAST(__ptr, __x) PLT_U64_CAST(PLT_PTR_SUB(__ptr, __x))
+#define PLT_PTR_ADD_U64_CAST(__ptr, __x) PLT_U64_CAST(PLT_INT_PTR_ADD(__ptr, __x))
+#define PLT_PTR_SUB_U64_CAST(__ptr, __x) PLT_U64_CAST(PLT_INT_PTR_SUB(__ptr, __x))
 
 /** Divide ceil */
 #define PLT_DIV_CEIL(x, y)			\

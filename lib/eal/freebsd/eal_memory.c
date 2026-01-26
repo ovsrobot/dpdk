@@ -178,6 +178,10 @@ rte_eal_hugepage_init(void)
 					"RTE_MAX_MEMSEG_PER_TYPE and/or RTE_MAX_MEM_MB_PER_TYPE in configuration.");
 				return -1;
 			}
+			if (msl->base_va == NULL) {
+				EAL_LOG(ERR, "Base VA is NULL for memseg list %d", msl_idx);
+				return -1;
+			}
 			arr = &msl->memseg_arr;
 			seg = rte_fbarray_get(arr, ms_idx);
 
