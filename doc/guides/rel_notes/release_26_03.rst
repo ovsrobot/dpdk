@@ -62,6 +62,7 @@ New Features
   * Added support for VLAN insertion and stripping.
   * Receive timestamp offload is only done if offload flag set.
   * Receive timestamps support nanosecond precision.
+  * Added unit test suite.
 
 
 Removed Items
