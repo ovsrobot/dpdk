@@ -55,6 +55,17 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added experimental RSS type helper APIs in ethdev.**
+
+  Added new experimental APIs ``rte_eth_rss_type_info_get()``,
+  ``rte_eth_rss_type_from_str()``, and ``rte_eth_rss_type_to_str()`` to
+  convert between RSS type names and values. These helpers provide a global
+  RSS type string table via ``struct rte_eth_rss_type_info``.
+
+* **Added experimental port and queue identifier typedefs in ethdev.**
+
+  Added new experimental typedefs ``rte_port_id_t`` and ``rte_queue_id_t``
+  to provide type-safe identifiers for Ethernet device ports and queues.
 
 Removed Items
 -------------
