@@ -90,6 +90,27 @@ eal_memalloc_set_seg_list_fd(int list_idx, int fd);
 int
 eal_memalloc_get_seg_fd_offset(int list_idx, int seg_idx, size_t *offset);
 
+/*
+ * Set dmabuf info for a memseg list.
+ * Returns 0 on success, -errno on failure.
+ */
+int
+eal_memseg_list_set_dmabuf_info(int list_idx, int fd, uint64_t offset);
+
+/*
+ * Get dmabuf fd for a memseg list.
+ * Returns fd (>= 0) on success, -1 if not dmabuf backed, -errno on error.
+ */
+int
+eal_memseg_list_get_dmabuf_fd(int list_idx);
+
+/*
+ * Get dmabuf offset for a memseg list.
+ * Returns 0 on success, -errno on failure.
+ */
+int
+eal_memseg_list_get_dmabuf_offset(int list_idx, uint64_t *offset);
+
 int
 eal_memalloc_init(void)
 	__rte_requires_shared_capability(rte_mcfg_mem_get_lock());

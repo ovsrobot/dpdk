@@ -45,6 +45,18 @@
 static void *next_baseaddr;
 static uint64_t system_page_sz;
 
+/* Internal storage for dmabuf info, indexed by memseg list index.
+ * This keeps dmabuf metadata out of the public rte_memseg_list structure
+ * to preserve ABI compatibility.
+ */
+static struct {
+		int fd;          /**< dmabuf fd, -1 if not dmabuf backed */
+		uint64_t offset; /**< offset within dmabuf */
+	} dmabuf_info[RTE_MAX_MEMSEG_LISTS] = {
+	[0 ... RTE_MAX_MEMSEG_LISTS - 1] = { .fd = -1, .offset = 0 }
+};
+
+
 #define MAX_MMAP_WITH_DEFINED_ADDR_TRIES 5
 void *
 eal_get_virtual_area(void *requested_addr, size_t *size,
@@ -930,6 +942,109 @@ rte_memseg_get_fd_offset(const struct rte_memseg *ms, size_t *offset)
 	return ret;
 }
 
+/* Internal dmabuf info functions */
+int
+eal_memseg_list_set_dmabuf_info(int list_idx, int fd, uint64_t offset)
+{
+	if (list_idx < 0 || list_idx >= RTE_MAX_MEMSEG_LISTS)
+		return -EINVAL;
+
+	dmabuf_info[list_idx].fd = fd;
+	dmabuf_info[list_idx].offset = offset;
+	return 0;
+}
+
+int
+eal_memseg_list_get_dmabuf_fd(int list_idx)
+{
+	if (list_idx < 0 || list_idx >= RTE_MAX_MEMSEG_LISTS)
+		return -EINVAL;
+
+	return dmabuf_info[list_idx].fd;
+}
+
+int
+eal_memseg_list_get_dmabuf_offset(int list_idx, uint64_t *offset)
+{
+	if (list_idx < 0 || list_idx >= RTE_MAX_MEMSEG_LISTS || offset == NULL)
+		return -EINVAL;
+
+	*offset = dmabuf_info[list_idx].offset;
+	return 0;
+}
+
+/* Public dmabuf info API functions */
+RTE_EXPORT_SYMBOL(rte_memseg_list_get_dmabuf_fd_thread_unsafe)
+int
+rte_memseg_list_get_dmabuf_fd_thread_unsafe(const struct rte_memseg_list *msl)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	int msl_idx;
+
+	if (msl == NULL) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	msl_idx = msl - mcfg->memsegs;
+	if (msl_idx < 0 || msl_idx >= RTE_MAX_MEMSEG_LISTS) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	return dmabuf_info[msl_idx].fd;
+}
+
+RTE_EXPORT_SYMBOL(rte_memseg_list_get_dmabuf_fd)
+int
+rte_memseg_list_get_dmabuf_fd(const struct rte_memseg_list *msl)
+{
+	int ret;
+
+	rte_mcfg_mem_read_lock();
+	ret = rte_memseg_list_get_dmabuf_fd_thread_unsafe(msl);
+	rte_mcfg_mem_read_unlock();
+
+	return ret;
+}
+
+RTE_EXPORT_SYMBOL(rte_memseg_list_get_dmabuf_offset_thread_unsafe)
+int
+rte_memseg_list_get_dmabuf_offset_thread_unsafe(const struct rte_memseg_list *msl,
+		uint64_t *offset)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	int msl_idx;
+
+	if (msl == NULL || offset == NULL) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	msl_idx = msl - mcfg->memsegs;
+	if (msl_idx < 0 || msl_idx >= RTE_MAX_MEMSEG_LISTS) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	*offset = dmabuf_info[msl_idx].offset;
+	return 0;
+}
+
+RTE_EXPORT_SYMBOL(rte_memseg_list_get_dmabuf_offset)
+int
+rte_memseg_list_get_dmabuf_offset(const struct rte_memseg_list *msl,
+		uint64_t *offset)
+{
+	int ret;
+
+	rte_mcfg_mem_read_lock();
+	ret = rte_memseg_list_get_dmabuf_offset_thread_unsafe(msl, offset);
+	rte_mcfg_mem_read_unlock();
+
+	return ret;
+}
+
 RTE_EXPORT_SYMBOL(rte_extmem_register)
 int
 rte_extmem_register(void *va_addr, size_t len, rte_iova_t iova_addrs[],
@@ -969,6 +1084,59 @@ rte_extmem_register(void *va_addr, size_t len, rte_iova_t iova_addrs[],
 	n = len / page_sz;
 	if (malloc_heap_create_external_seg(va_addr, iova_addrs, n,
 			page_sz, "extmem", socket_id) == NULL) {
+		ret = -1;
+		goto unlock;
+	}
+
+	/* memseg list successfully created - increment next socket ID */
+	mcfg->next_socket_id++;
+unlock:
+	rte_mcfg_mem_write_unlock();
+	return ret;
+}
+
+RTE_EXPORT_SYMBOL(rte_extmem_register_dmabuf)
+int
+rte_extmem_register_dmabuf(void *va_addr, size_t len,
+		int dmabuf_fd, uint64_t dmabuf_offset,
+		rte_iova_t iova_addrs[], unsigned int n_pages, size_t page_sz)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	unsigned int socket_id, n;
+	int ret = 0;
+
+	if (va_addr == NULL || page_sz == 0 || len == 0 ||
+			!rte_is_power_of_2(page_sz) ||
+			RTE_ALIGN(len, page_sz) != len ||
+			((len / page_sz) != n_pages && iova_addrs != NULL) ||
+			!rte_is_aligned(va_addr, page_sz) ||
+			dmabuf_fd < 0) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+	rte_mcfg_mem_write_lock();
+
+	/* make sure the segment doesn't already exist */
+	if (malloc_heap_find_external_seg(va_addr, len) != NULL) {
+		rte_errno = EEXIST;
+		ret = -1;
+		goto unlock;
+	}
+
+	/* get next available socket ID */
+	socket_id = mcfg->next_socket_id;
+	if (socket_id > INT32_MAX) {
+		EAL_LOG(ERR, "Cannot assign new socket ID's");
+		rte_errno = ENOSPC;
+		ret = -1;
+		goto unlock;
+	}
+
+	/* we can create a new memseg with dma-buf info */
+	n = len / page_sz;
+	if (malloc_heap_create_external_seg_dmabuf(va_addr, iova_addrs, n,
+			page_sz, "extmem_dmabuf", socket_id,
+			dmabuf_fd, dmabuf_offset) == NULL) {
 		ret = -1;
 		goto unlock;
 	}

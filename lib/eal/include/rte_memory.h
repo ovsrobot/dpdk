@@ -406,6 +406,82 @@ rte_memseg_get_fd_offset_thread_unsafe(const struct rte_memseg *ms,
 		size_t *offset);
 
 /**
+ * Get dma-buf file descriptor associated with a memseg list.
+ *
+ * @note This function read-locks the memory hotplug subsystem, and thus cannot
+ *       be used within memory-related callback functions.
+ *
+ * @param msl
+ *   A pointer to memseg list for which to get dma-buf fd.
+ *
+ * @return
+ *   Valid dma-buf file descriptor (>= 0) in case of success.
+ *   -1 if not dma-buf backed or in case of error, with ``rte_errno`` set to:
+ *     - EINVAL  - ``msl`` pointer was NULL or did not point to a valid memseg list
+ */
+int
+rte_memseg_list_get_dmabuf_fd(const struct rte_memseg_list *msl);
+
+/**
+ * Get dma-buf file descriptor associated with a memseg list.
+ *
+ * @note This function does not perform any locking, and is only safe to call
+ *       from within memory-related callback functions.
+ *
+ * @param msl
+ *   A pointer to memseg list for which to get dma-buf fd.
+ *
+ * @return
+ *   Valid dma-buf file descriptor (>= 0) in case of success.
+ *   -1 if not dma-buf backed or in case of error, with ``rte_errno`` set to:
+ *     - EINVAL  - ``msl`` pointer was NULL or did not point to a valid memseg list
+ */
+int
+rte_memseg_list_get_dmabuf_fd_thread_unsafe(const struct rte_memseg_list *msl);
+
+/**
+ * Get dma-buf offset associated with a memseg list.
+ *
+ * @note This function read-locks the memory hotplug subsystem, and thus cannot
+ *       be used within memory-related callback functions.
+ *
+ * @param msl
+ *   A pointer to memseg list for which to get dma-buf offset.
+ * @param offset
+ *   A pointer to offset value where the result will be stored.
+ *
+ * @return
+ *   0 on success.
+ *   -1 in case of error, with ``rte_errno`` set to:
+ *     - EINVAL  - ``msl`` pointer was NULL or did not point to a valid memseg list
+ *     - EINVAL  - ``offset`` pointer was NULL
+ */
+int
+rte_memseg_list_get_dmabuf_offset(const struct rte_memseg_list *msl,
+		uint64_t *offset);
+
+/**
+ * Get dma-buf offset associated with a memseg list.
+ *
+ * @note This function does not perform any locking, and is only safe to call
+ *       from within memory-related callback functions.
+ *
+ * @param msl
+ *   A pointer to memseg list for which to get dma-buf offset.
+ * @param offset
+ *   A pointer to offset value where the result will be stored.
+ *
+ * @return
+ *   0 on success.
+ *   -1 in case of error, with ``rte_errno`` set to:
+ *     - EINVAL  - ``msl`` pointer was NULL or did not point to a valid memseg list
+ *     - EINVAL  - ``offset`` pointer was NULL
+ */
+int
+rte_memseg_list_get_dmabuf_offset_thread_unsafe(const struct rte_memseg_list *msl,
+		uint64_t *offset);
+
+/**
  * Register external memory chunk with DPDK.
  *
  * @note Using this API is mutually exclusive with ``rte_malloc`` family of
@@ -442,6 +518,55 @@ rte_memseg_get_fd_offset_thread_unsafe(const struct rte_memseg *ms,
 int
 rte_extmem_register(void *va_addr, size_t len, rte_iova_t iova_addrs[],
 		unsigned int n_pages, size_t page_sz);
+
+/**
+ * Register external memory chunk backed by a dma-buf with DPDK.
+ *
+ * This is similar to rte_extmem_register() but additionally stores dma-buf
+ * file descriptor information, allowing drivers to use dma-buf based
+ * memory registration (e.g., ibv_reg_dmabuf_mr for RDMA devices).
+ *
+ * @note Using this API is mutually exclusive with ``rte_malloc`` family of
+ *   API's.
+ *
+ * @note This API will not perform any DMA mapping. It is expected that user
+ *   will do that themselves via rte_dev_dma_map().
+ *
+ * @note Before accessing this memory in other processes, it needs to be
+ *   attached in each of those processes by calling ``rte_extmem_attach`` in
+ *   each other process.
+ *
+ * @param va_addr
+ *   Start of virtual area to register (mmap'd address of the dma-buf).
+ *   Must be aligned by ``page_sz``.
+ * @param len
+ *   Length of virtual area to register. Must be aligned by ``page_sz``.
+ *   This is independent of dmabuf_offset.
+ * @param dmabuf_fd
+ *   File descriptor of the dma-buf.
+ * @param dmabuf_offset
+ *   Offset within the dma-buf where the registered region starts.
+ * @param iova_addrs
+ *   Array of page IOVA addresses corresponding to each page in this memory
+ *   area. Can be NULL, in which case page IOVA addresses will be set to
+ *   RTE_BAD_IOVA.
+ * @param n_pages
+ *   Number of elements in the iova_addrs array. Ignored if ``iova_addrs``
+ *   is NULL.
+ * @param page_sz
+ *   Page size of the underlying memory
+ *
+ * @return
+ *   - 0 on success
+ *   - -1 in case of error, with rte_errno set to one of the following:
+ *     EINVAL - one of the parameters was invalid
+ *     EEXIST - memory chunk is already registered
+ *     ENOSPC - no more space in internal config to store a new memory chunk
+ */
+int
+rte_extmem_register_dmabuf(void *va_addr, size_t len,
+		int dmabuf_fd, uint64_t dmabuf_offset,
+		rte_iova_t iova_addrs[], unsigned int n_pages, size_t page_sz);
 
 /**
  * Unregister external memory chunk with DPDK.

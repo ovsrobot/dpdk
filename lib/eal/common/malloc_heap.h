@@ -52,6 +52,11 @@ malloc_heap_create_external_seg(void *va_addr, rte_iova_t iova_addrs[],
 		unsigned int socket_id);
 
 struct rte_memseg_list *
+malloc_heap_create_external_seg_dmabuf(void *va_addr, rte_iova_t iova_addrs[],
+		unsigned int n_pages, size_t page_sz, const char *seg_name,
+		unsigned int socket_id, int dmabuf_fd, uint64_t dmabuf_offset);
+
+struct rte_memseg_list *
 malloc_heap_find_external_seg(void *va_addr, size_t len);
 
 int

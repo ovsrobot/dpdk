@@ -1232,6 +1232,33 @@ malloc_heap_create_external_seg(void *va_addr, rte_iova_t iova_addrs[],
 	msl->version = 0;
 	msl->external = 1;
 
+	/* initialize dmabuf info to "not dmabuf backed" */
+	eal_memseg_list_set_dmabuf_info(i, -1, 0);
+
+	return msl;
+}
+
+struct rte_memseg_list *
+malloc_heap_create_external_seg_dmabuf(void *va_addr, rte_iova_t iova_addrs[],
+		unsigned int n_pages, size_t page_sz, const char *seg_name,
+		unsigned int socket_id, int dmabuf_fd, uint64_t dmabuf_offset)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	struct rte_memseg_list *msl;
+	int msl_idx;
+
+	/* Create the base external segment */
+	msl = malloc_heap_create_external_seg(va_addr, iova_addrs, n_pages,
+			page_sz, seg_name, socket_id);
+	if (msl == NULL)
+		return NULL;
+
+	/* Get memseg list index */
+	msl_idx = msl - mcfg->memsegs;
+
+	/* Set dma-buf info in the internal side-table */
+	eal_memseg_list_set_dmabuf_info(msl_idx, dmabuf_fd, dmabuf_offset);
+
 	return msl;
 }
 
