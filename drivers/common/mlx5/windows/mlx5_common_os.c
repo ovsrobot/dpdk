@@ -17,6 +17,7 @@
 #include "mlx5_common.h"
 #include "mlx5_common_os.h"
 #include "mlx5_malloc.h"
+#include "mlx5_common_mr.h"
 
 /**
  * Initialization routine for run-time dependency on external lib.
@@ -442,15 +443,20 @@ mlx5_os_dereg_mr(struct mlx5_pmd_mr *pmd_mr)
  *
  * @param[out] reg_mr_cb
  *   Pointer to reg_mr func
+ * @param[out] reg_dmabuf_mr_cb
+ *   Pointer to reg_dmabuf_mr func (NULL on Windows - not supported)
  * @param[out] dereg_mr_cb
  *   Pointer to dereg_mr func
  *
  */
 RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_set_reg_mr_cb)
 void
-mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb, mlx5_dereg_mr_t *dereg_mr_cb)
+mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb,
+		      mlx5_reg_dmabuf_mr_t *reg_dmabuf_mr_cb,
+		      mlx5_dereg_mr_t *dereg_mr_cb)
 {
 	*reg_mr_cb = mlx5_os_reg_mr;
+	*reg_dmabuf_mr_cb = NULL; /* dma-buf not supported on Windows */
 	*dereg_mr_cb = mlx5_os_dereg_mr;
 }
 

@@ -8,6 +8,7 @@
 #include <rte_eal_memconfig.h>
 #include <rte_eal_paging.h>
 #include <rte_errno.h>
+#include <rte_memory.h>
 #include <rte_mempool.h>
 #include <rte_malloc.h>
 #include <rte_rwlock.h>
@@ -1141,6 +1142,7 @@ mlx5_mr_create_cache(struct mlx5_mr_share_cache *share_cache, int socket)
 {
 	/* Set the reg_mr and dereg_mr callback functions */
 	mlx5_os_set_reg_mr_cb(&share_cache->reg_mr_cb,
+			      &share_cache->reg_dmabuf_mr_cb,
 			      &share_cache->dereg_mr_cb);
 	rte_rwlock_init(&share_cache->rwlock);
 	rte_rwlock_init(&share_cache->mprwlock);
@@ -1216,6 +1218,74 @@ mlx5_create_mr_ext(void *pd, uintptr_t addr, size_t len, int socket_id,
 		"  [0x%" PRIxPTR ", 0x%" PRIxPTR "),"
 		" lkey=0x%x base_idx=%u ms_n=%u, ms_bmp_n=%u",
 		(void *)mr, (void *)addr,
+		addr, addr + len, rte_cpu_to_be_32(mr->pmd_mr.lkey),
+		mr->ms_base_idx, mr->ms_n, mr->ms_bmp_n);
+	return mr;
+}
+
+/**
+ * Creates a memory region for dma-buf backed external memory.
+ *
+ * @param pd
+ *   Pointer to pd of a device (net, regex, vdpa,...).
+ * @param addr
+ *   Starting virtual address of memory (mmap'd address).
+ * @param len
+ *   Length of memory segment being mapped.
+ * @param socket_id
+ *   Socket to allocate heap memory for the control structures.
+ * @param dmabuf_fd
+ *   File descriptor of the dma-buf.
+ * @param dmabuf_offset
+ *   Offset within the dma-buf.
+ * @param reg_dmabuf_mr_cb
+ *   Callback function for dma-buf MR registration.
+ *
+ * @return
+ *   Pointer to MR structure on success, NULL otherwise.
+ */
+struct mlx5_mr *
+mlx5_create_mr_ext_dmabuf(void *pd, uintptr_t addr, size_t len, int socket_id,
+			  int dmabuf_fd, uint64_t dmabuf_offset,
+			  mlx5_reg_dmabuf_mr_t reg_dmabuf_mr_cb)
+{
+	struct mlx5_mr *mr = NULL;
+
+	if (reg_dmabuf_mr_cb == NULL) {
+		DRV_LOG(WARNING, "dma-buf MR registration not supported");
+		rte_errno = ENOTSUP;
+		return NULL;
+	}
+	mr = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+			 RTE_ALIGN_CEIL(sizeof(*mr), RTE_CACHE_LINE_SIZE),
+			 RTE_CACHE_LINE_SIZE, socket_id);
+	if (mr == NULL)
+		return NULL;
+	if (reg_dmabuf_mr_cb(pd, dmabuf_offset, len, addr, dmabuf_fd,
+			     &mr->pmd_mr) < 0) {
+		DRV_LOG(WARNING,
+			"Fail to create dma-buf MR for address (%p) fd=%d",
+			(void *)addr, dmabuf_fd);
+		mlx5_free(mr);
+		return NULL;
+	}
+	mr->msl = NULL; /* Mark it is external memory. */
+	mr->ms_bmp = NULL;
+	mr->ms_n = 1;
+	mr->ms_bmp_n = 1;
+	/*
+	 * For dma-buf MR, the returned addr may be NULL since there's no VA
+	 * in the registration. Store the user-provided addr for cache lookup.
+	 */
+	if (mr->pmd_mr.addr == NULL)
+		mr->pmd_mr.addr = (void *)addr;
+	if (mr->pmd_mr.len == 0)
+		mr->pmd_mr.len = len;
+	DRV_LOG(DEBUG,
+		"MR CREATED (%p) for dma-buf external memory %p (fd=%d):\n"
+		"  [0x%" PRIxPTR ", 0x%" PRIxPTR "),"
+		" lkey=0x%x base_idx=%u ms_n=%u, ms_bmp_n=%u",
+		(void *)mr, (void *)addr, dmabuf_fd,
 		addr, addr + len, rte_cpu_to_be_32(mr->pmd_mr.lkey),
 		mr->ms_base_idx, mr->ms_n, mr->ms_bmp_n);
 	return mr;
@@ -1747,9 +1817,43 @@ mlx5_mr_mempool_register_primary(struct mlx5_mr_share_cache *share_cache,
 		struct mlx5_mempool_mr *mr = &new_mpr->mrs[i];
 		const struct mlx5_range *range = &ranges[i];
 		size_t len = range->end - range->start;
+		struct rte_memseg_list *msl;
+		int reg_result;
 
-		if (share_cache->reg_mr_cb(pd, (void *)range->start, len,
-		    &mr->pmd_mr) < 0) {
+		/* Check if this is dma-buf backed external memory */
+		msl = rte_mem_virt2memseg_list((void *)range->start);
+		if (msl != NULL && msl->external &&
+		    share_cache->reg_dmabuf_mr_cb != NULL) {
+			int dmabuf_fd = rte_memseg_list_get_dmabuf_fd_thread_unsafe(msl);
+			if (dmabuf_fd >= 0) {
+				uint64_t dmabuf_off;
+				/* Get base offset from memseg list */
+				rte_memseg_list_get_dmabuf_offset_thread_unsafe(msl, &dmabuf_off);
+				/* Calculate offset within dmabuf for this specific range */
+				dmabuf_off += (range->start - (uintptr_t)msl->base_va);
+				/* Use dma-buf MR registration */
+				reg_result = share_cache->reg_dmabuf_mr_cb(pd,
+					dmabuf_off, len, range->start, dmabuf_fd,
+					&mr->pmd_mr);
+				if (reg_result == 0) {
+					/* For dma-buf MR, set addr if not set by driver */
+					if (mr->pmd_mr.addr == NULL)
+						mr->pmd_mr.addr = (void *)range->start;
+					if (mr->pmd_mr.len == 0)
+						mr->pmd_mr.len = len;
+				}
+			} else {
+				/* Use regular MR registration */
+				reg_result = share_cache->reg_mr_cb(pd,
+					(void *)range->start, len, &mr->pmd_mr);
+			}
+		} else {
+			/* Use regular MR registration */
+			reg_result = share_cache->reg_mr_cb(pd,
+				(void *)range->start, len, &mr->pmd_mr);
+		}
+
+		if (reg_result < 0) {
 			DRV_LOG(ERR,
 				"Failed to create an MR in PD %p for address range "
 				"[0x%" PRIxPTR ", 0x%" PRIxPTR "] (%zu bytes) for mempool %s",

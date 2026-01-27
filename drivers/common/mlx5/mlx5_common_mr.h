@@ -35,6 +35,9 @@ struct mlx5_pmd_mr {
  */
 typedef int (*mlx5_reg_mr_t)(void *pd, void *addr, size_t length,
 			     struct mlx5_pmd_mr *pmd_mr);
+typedef int (*mlx5_reg_dmabuf_mr_t)(void *pd, uint64_t offset, size_t length,
+				    uint64_t iova, int fd,
+				    struct mlx5_pmd_mr *pmd_mr);
 typedef void (*mlx5_dereg_mr_t)(struct mlx5_pmd_mr *pmd_mr);
 
 /* Memory Region object. */
@@ -87,6 +90,7 @@ struct __rte_packed_begin mlx5_mr_share_cache {
 	struct mlx5_mr_list mr_free_list; /* Freed MR list. */
 	struct mlx5_mempool_reg_list mempool_reg_list; /* Mempool database. */
 	mlx5_reg_mr_t reg_mr_cb; /* Callback to reg_mr func */
+	mlx5_reg_dmabuf_mr_t reg_dmabuf_mr_cb; /* Callback to reg_dmabuf_mr func */
 	mlx5_dereg_mr_t dereg_mr_cb; /* Callback to dereg_mr func */
 } __rte_packed_end;
 
@@ -233,6 +237,10 @@ mlx5_mr_lookup_list(struct mlx5_mr_share_cache *share_cache,
 struct mlx5_mr *
 mlx5_create_mr_ext(void *pd, uintptr_t addr, size_t len, int socket_id,
 		   mlx5_reg_mr_t reg_mr_cb);
+struct mlx5_mr *
+mlx5_create_mr_ext_dmabuf(void *pd, uintptr_t addr, size_t len, int socket_id,
+			  int dmabuf_fd, uint64_t dmabuf_offset,
+			  mlx5_reg_dmabuf_mr_t reg_dmabuf_mr_cb);
 void mlx5_mr_free(struct mlx5_mr *mr, mlx5_dereg_mr_t dereg_mr_cb);
 __rte_internal
 uint32_t
@@ -251,12 +259,19 @@ int
 mlx5_common_verbs_reg_mr(void *pd, void *addr, size_t length,
 			 struct mlx5_pmd_mr *pmd_mr);
 __rte_internal
+int
+mlx5_common_verbs_reg_dmabuf_mr(void *pd, uint64_t offset, size_t length,
+				uint64_t iova, int fd,
+				struct mlx5_pmd_mr *pmd_mr);
+__rte_internal
 void
 mlx5_common_verbs_dereg_mr(struct mlx5_pmd_mr *pmd_mr);
 
 __rte_internal
 void
-mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb, mlx5_dereg_mr_t *dereg_mr_cb);
+mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb,
+		      mlx5_reg_dmabuf_mr_t *reg_dmabuf_mr_cb,
+		      mlx5_dereg_mr_t *dereg_mr_cb);
 
 __rte_internal
 int

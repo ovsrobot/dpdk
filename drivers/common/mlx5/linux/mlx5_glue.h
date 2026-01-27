@@ -219,6 +219,9 @@ struct mlx5_glue {
 	struct ibv_mr *(*reg_mr_iova)(struct ibv_pd *pd, void *addr,
 				      size_t length, uint64_t iova,
 				      int access);
+	struct ibv_mr *(*reg_dmabuf_mr)(struct ibv_pd *pd, uint64_t offset,
+					size_t length, uint64_t iova,
+					int fd, int access);
 	struct ibv_mr *(*alloc_null_mr)(struct ibv_pd *pd);
 	int (*dereg_mr)(struct ibv_mr *mr);
 	struct ibv_counter_set *(*create_counter_set)

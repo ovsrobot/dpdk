@@ -13,6 +13,7 @@
 #include <rte_class.h>
 #include <rte_malloc.h>
 #include <rte_eal_paging.h>
+#include <rte_memory.h>
 
 #include "mlx5_common.h"
 #include "mlx5_common_os.h"
@@ -1125,6 +1126,7 @@ mlx5_common_dev_dma_map(struct rte_device *rte_dev, void *addr,
 	struct mlx5_common_device *dev;
 	struct mlx5_mr_btree *bt;
 	struct mlx5_mr *mr;
+	struct rte_memseg_list *msl;
 
 	dev = to_mlx5_device(rte_dev);
 	if (!dev) {
@@ -1134,8 +1136,30 @@ mlx5_common_dev_dma_map(struct rte_device *rte_dev, void *addr,
 		rte_errno = ENODEV;
 		return -1;
 	}
-	mr = mlx5_create_mr_ext(dev->pd, (uintptr_t)addr, len,
-				SOCKET_ID_ANY, dev->mr_scache.reg_mr_cb);
+	/* Check if this is dma-buf backed external memory */
+	msl = rte_mem_virt2memseg_list(addr);
+	if (msl != NULL && msl->external) {
+		int dmabuf_fd = rte_memseg_list_get_dmabuf_fd_thread_unsafe(msl);
+		if (dmabuf_fd >= 0) {
+			uint64_t dmabuf_off;
+			/* Get base offset from memseg list */
+			rte_memseg_list_get_dmabuf_offset_thread_unsafe(msl, &dmabuf_off);
+			/* Calculate offset within dmabuf for this specific address */
+			dmabuf_off += ((uintptr_t)addr - (uintptr_t)msl->base_va);
+			/* Use dma-buf MR registration */
+			mr = mlx5_create_mr_ext_dmabuf(dev->pd, (uintptr_t)addr, len,
+						SOCKET_ID_ANY, dmabuf_fd, dmabuf_off,
+						dev->mr_scache.reg_dmabuf_mr_cb);
+		} else {
+			/* Use regular MR registration */
+			mr = mlx5_create_mr_ext(dev->pd, (uintptr_t)addr, len,
+						SOCKET_ID_ANY, dev->mr_scache.reg_mr_cb);
+		}
+	} else {
+		/* Use regular MR registration */
+		mr = mlx5_create_mr_ext(dev->pd, (uintptr_t)addr, len,
+					SOCKET_ID_ANY, dev->mr_scache.reg_mr_cb);
+	}
 	if (!mr) {
 		DRV_LOG(WARNING, "Device %s unable to DMA map", rte_dev->name);
 		rte_errno = EINVAL;

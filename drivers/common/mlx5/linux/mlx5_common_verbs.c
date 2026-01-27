@@ -130,6 +130,47 @@ mlx5_common_verbs_reg_mr(void *pd, void *addr, size_t length,
 }
 
 /**
+ * Register mr for dma-buf backed memory. Given protection domain pointer,
+ * dma-buf fd, offset and length, register the memory region.
+ *
+ * @param[in] pd
+ *   Pointer to protection domain context.
+ * @param[in] offset
+ *   Offset within the dma-buf.
+ * @param[in] length
+ *   Length of the memory to register.
+ * @param[in] fd
+ *   File descriptor of the dma-buf.
+ * @param[out] pmd_mr
+ *   pmd_mr struct set with lkey, address, length and pointer to mr object
+ *
+ * @return
+ *   0 on successful registration, -1 otherwise
+ */
+RTE_EXPORT_INTERNAL_SYMBOL(mlx5_common_verbs_reg_dmabuf_mr)
+int
+mlx5_common_verbs_reg_dmabuf_mr(void *pd, uint64_t offset, size_t length,
+				uint64_t iova, int fd,
+				struct mlx5_pmd_mr *pmd_mr)
+{
+	struct ibv_mr *ibv_mr;
+	ibv_mr = mlx5_glue->reg_dmabuf_mr(pd, offset, length, iova, fd,
+					  IBV_ACCESS_LOCAL_WRITE |
+					  (haswell_broadwell_cpu ? 0 :
+					  IBV_ACCESS_RELAXED_ORDERING));
+	if (!ibv_mr)
+		return -1;
+
+	*pmd_mr = (struct mlx5_pmd_mr){
+		.lkey = ibv_mr->lkey,
+		.addr = ibv_mr->addr,
+		.len = ibv_mr->length,
+		.obj = (void *)ibv_mr,
+	};
+	return 0;
+}
+
+/**
  * Deregister mr. Given the mlx5 pmd MR - deregister the MR
  *
  * @param[in] pmd_mr
@@ -151,13 +192,18 @@ mlx5_common_verbs_dereg_mr(struct mlx5_pmd_mr *pmd_mr)
  *
  * @param[out] reg_mr_cb
  *   Pointer to reg_mr func
+ * @param[out] reg_dmabuf_mr_cb
+ *   Pointer to reg_dmabuf_mr func
  * @param[out] dereg_mr_cb
  *   Pointer to dereg_mr func
  */
 RTE_EXPORT_INTERNAL_SYMBOL(mlx5_os_set_reg_mr_cb)
 void
-mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb, mlx5_dereg_mr_t *dereg_mr_cb)
+mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb,
+		      mlx5_reg_dmabuf_mr_t *reg_dmabuf_mr_cb,
+		      mlx5_dereg_mr_t *dereg_mr_cb)
 {
 	*reg_mr_cb = mlx5_common_verbs_reg_mr;
+	*reg_dmabuf_mr_cb = mlx5_common_verbs_reg_dmabuf_mr;
 	*dereg_mr_cb = mlx5_common_verbs_dereg_mr;
 }
