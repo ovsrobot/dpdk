@@ -1656,7 +1656,7 @@ eal_parse_base_virtaddr(const char *arg)
 	 * on x86 and other architectures.
 	 */
 	internal_conf->base_virtaddr =
-		RTE_PTR_ALIGN_CEIL((uintptr_t)addr, (size_t)RTE_PGSIZE_16M);
+		(uintptr_t) RTE_INT_PTR_ALIGN_CEIL(addr, (size_t)RTE_PGSIZE_16M);
 
 	return 0;
 }
