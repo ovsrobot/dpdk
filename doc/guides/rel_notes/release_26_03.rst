@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated openssl crypto driver.**
+
+  * Added support for SHAKE-128 and SHAKE-256 algorithms.
+
 
 Removed Items
 -------------
