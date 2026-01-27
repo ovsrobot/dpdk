@@ -67,6 +67,16 @@ New Features
   Added new experimental typedefs ``rte_port_id_t`` and ``rte_queue_id_t``
   to provide type-safe identifiers for Ethernet device ports and queues.
 
+* **Added experimental flow parser library.**
+
+  Introduced ``librte_flow_parser`` as an optional, experimental library
+  exposing the testpmd ``flow`` CLI parser as a reusable component. The API
+  converts testpmd-style flow strings into ``rte_flow`` patterns/actions and
+  provides cmdline helpers to wire parsed commands to application callbacks.
+  Lightweight helpers were added to parse attributes, patterns, or actions
+  snippets without managing a parser instance.
+
+
 Removed Items
 -------------
 
