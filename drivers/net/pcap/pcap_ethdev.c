@@ -146,13 +146,6 @@ static const char *valid_arguments[] = {
 	NULL
 };
 
-static struct rte_eth_link pmd_link = {
-		.link_speed = RTE_ETH_SPEED_NUM_10G,
-		.link_duplex = RTE_ETH_LINK_FULL_DUPLEX,
-		.link_status = RTE_ETH_LINK_DOWN,
-		.link_autoneg = RTE_ETH_LINK_FIXED,
-};
-
 RTE_LOG_REGISTER_DEFAULT(eth_pcap_logtype, NOTICE);
 
 static struct queue_missed_stat*
@@ -899,11 +892,96 @@ eth_dev_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
-static int
-eth_link_update(struct rte_eth_dev *dev __rte_unused,
-		int wait_to_complete __rte_unused)
+/*
+ * Convert osdep speed (Mbps) to rte_eth_link speed constant.
+ */
+static uint32_t
+speed_mbps_to_rte(uint32_t speed_mbps)
 {
-	return 0;
+	switch (speed_mbps) {
+	case 10:
+		return RTE_ETH_SPEED_NUM_10M;
+	case 100:
+		return RTE_ETH_SPEED_NUM_100M;
+	case 1000:
+		return RTE_ETH_SPEED_NUM_1G;
+	case 2500:
+		return RTE_ETH_SPEED_NUM_2_5G;
+	case 5000:
+		return RTE_ETH_SPEED_NUM_5G;
+	case 10000:
+		return RTE_ETH_SPEED_NUM_10G;
+	case 20000:
+		return RTE_ETH_SPEED_NUM_20G;
+	case 25000:
+		return RTE_ETH_SPEED_NUM_25G;
+	case 40000:
+		return RTE_ETH_SPEED_NUM_40G;
+	case 50000:
+		return RTE_ETH_SPEED_NUM_50G;
+	case 56000:
+		return RTE_ETH_SPEED_NUM_56G;
+	case 100000:
+		return RTE_ETH_SPEED_NUM_100G;
+	case 200000:
+		return RTE_ETH_SPEED_NUM_200G;
+	case 400000:
+		return RTE_ETH_SPEED_NUM_400G;
+	case 800000:
+		return RTE_ETH_SPEED_NUM_800G;
+	default:
+		/* For unknown speeds, return the raw value */
+		if (speed_mbps > 0)
+			return speed_mbps;
+		return RTE_ETH_SPEED_NUM_UNKNOWN;
+	}
+}
+
+static int
+eth_link_update(struct rte_eth_dev *dev, int wait_to_complete __rte_unused)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+	struct rte_eth_link link;
+	struct osdep_iface_link osdep_link;
+	const char *iface_name;
+
+	memset(&link, 0, sizeof(link));
+
+	/*
+	 * For pass-through mode (single_iface), query the actual interface.
+	 * Otherwise, use the default static link values.
+	 */
+	if (internals->single_iface) {
+		iface_name = internals->rx_queue[0].name;
+
+		if (osdep_iface_link_get(iface_name, &osdep_link) == 0) {
+			link.link_speed = speed_mbps_to_rte(osdep_link.link_speed);
+			link.link_status = osdep_link.link_status ?
+				RTE_ETH_LINK_UP : RTE_ETH_LINK_DOWN;
+			link.link_duplex = osdep_link.link_duplex ?
+				RTE_ETH_LINK_FULL_DUPLEX : RTE_ETH_LINK_HALF_DUPLEX;
+			link.link_autoneg = osdep_link.link_autoneg ?
+				RTE_ETH_LINK_AUTONEG : RTE_ETH_LINK_FIXED;
+		} else {
+			/* Query failed, use defaults */
+			link.link_speed = RTE_ETH_SPEED_NUM_10G;
+			link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+			link.link_status = RTE_ETH_LINK_DOWN;
+			link.link_autoneg = RTE_ETH_LINK_FIXED;
+		}
+	} else {
+		/*
+		 * Not in pass-through mode (using pcap files or separate
+		 * interfaces for rx/tx). Use default values.
+		 */
+		link.link_speed = RTE_ETH_SPEED_NUM_10G;
+		link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+		link.link_status = dev->data->dev_started ?
+			RTE_ETH_LINK_UP : RTE_ETH_LINK_DOWN;
+		link.link_autoneg = RTE_ETH_LINK_FIXED;
+	}
+
+	return rte_eth_linkstatus_set(dev, &link);
 }
 
 static int
@@ -1268,7 +1346,12 @@ pmd_init_internals(struct rte_vdev_device *vdev,
 	data = (*eth_dev)->data;
 	data->nb_rx_queues = (uint16_t)nb_rx_queues;
 	data->nb_tx_queues = (uint16_t)nb_tx_queues;
-	data->dev_link = pmd_link;
+	data->dev_link = (struct rte_eth_link) {
+		.link_speed = RTE_ETH_SPEED_NUM_NONE,
+		.link_duplex = RTE_ETH_LINK_FULL_DUPLEX,
+		.link_status = RTE_ETH_LINK_DOWN,
+		.link_autoneg = RTE_ETH_LINK_FIXED,
+	};
 	data->mac_addrs = &(*internals)->eth_addr;
 	data->promiscuous = 1;
 	data->all_multicast = 1;
