@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Updated openssl crypto driver.**
+
+     * Added support for SHA3-224/256/384/512 algorithms.
 
 Removed Items
 -------------
