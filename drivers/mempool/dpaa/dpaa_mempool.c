@@ -321,7 +321,7 @@ dpaa_adjust_obj_bounds(char *va, size_t *offset,
 	size_t off = *offset;
 
 	if (dpaa_check_obj_bounds(va + off, pg_sz, total) == false) {
-		off += RTE_PTR_ALIGN_CEIL(va + off, pg_sz) - (va + off);
+		off += RTE_PTR_DIFF(RTE_PTR_ALIGN_CEIL(va + off, pg_sz), va + off);
 		if (flags & RTE_MEMPOOL_POPULATE_F_ALIGN_OBJ)
 			off += total - ((((size_t)va + off - 1) % total) + 1);
 	}

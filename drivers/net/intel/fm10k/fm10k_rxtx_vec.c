@@ -315,12 +315,12 @@ fm10k_rxq_rearm(struct fm10k_rx_queue *rxq)
 		_mm_store_si128(RTE_CAST_PTR(__m128i *, &rxdp++->q), dma_addr1);
 
 		/* enforce 512B alignment on default Rx virtual addresses */
-		mb0->data_off = (uint16_t)(RTE_PTR_ALIGN((char *)mb0->buf_addr
-				+ RTE_PKTMBUF_HEADROOM, FM10K_RX_DATABUF_ALIGN)
-				- (char *)mb0->buf_addr);
-		mb1->data_off = (uint16_t)(RTE_PTR_ALIGN((char *)mb1->buf_addr
-				+ RTE_PKTMBUF_HEADROOM, FM10K_RX_DATABUF_ALIGN)
-				- (char *)mb1->buf_addr);
+		mb0->data_off = (uint16_t)RTE_PTR_DIFF(RTE_PTR_ALIGN((char *)mb0->buf_addr
+				+ RTE_PKTMBUF_HEADROOM, FM10K_RX_DATABUF_ALIGN),
+				(char *)mb0->buf_addr);
+		mb1->data_off = (uint16_t)RTE_PTR_DIFF(RTE_PTR_ALIGN((char *)mb1->buf_addr
+				+ RTE_PKTMBUF_HEADROOM, FM10K_RX_DATABUF_ALIGN),
+				(char *)mb1->buf_addr);
 	}
 
 	rxq->rxrearm_start += RTE_FM10K_RXQ_REARM_THRESH;

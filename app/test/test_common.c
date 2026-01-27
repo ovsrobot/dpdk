@@ -37,10 +37,10 @@ test_macros(int __rte_unused unused_parm)
 	RTE_SWAP(smaller, bigger);
 	RTE_TEST_ASSERT(smaller == BIGGER && bigger == SMALLER,
 		"RTE_SWAP");
-	RTE_TEST_ASSERT_EQUAL((uintptr_t)RTE_PTR_ADD(SMALLER, PTR_DIFF), BIGGER,
-		"RTE_PTR_ADD");
-	RTE_TEST_ASSERT_EQUAL((uintptr_t)RTE_PTR_SUB(BIGGER, PTR_DIFF), SMALLER,
-		"RTE_PTR_SUB");
+	RTE_TEST_ASSERT_EQUAL(RTE_INT_PTR(SMALLER + PTR_DIFF), (void *)BIGGER,
+		"RTE_INT_PTR");
+	RTE_TEST_ASSERT_EQUAL(RTE_INT_PTR(BIGGER - PTR_DIFF), (void *)SMALLER,
+		"RTE_INT_PTR");
 	RTE_TEST_ASSERT_EQUAL(RTE_PTR_DIFF(BIGGER, SMALLER), PTR_DIFF,
 		"RTE_PTR_DIFF");
 	RTE_TEST_ASSERT_EQUAL(RTE_MAX(SMALLER, BIGGER), BIGGER,
@@ -188,18 +188,18 @@ test_align(void)
 			if (RTE_ALIGN_FLOOR((uintptr_t)i, p) % p)
 				FAIL_ALIGN("RTE_ALIGN_FLOOR", i, p);
 
-			val = RTE_PTR_ALIGN_FLOOR((uintptr_t) i, p);
+			val = (uint32_t)(uintptr_t)RTE_INT_PTR_ALIGN_FLOOR((uintptr_t) i, p);
 			if (ERROR_FLOOR(val, i, p))
-				FAIL_ALIGN("RTE_PTR_ALIGN_FLOOR", i, p);
+				FAIL_ALIGN("RTE_INT_PTR_ALIGN_FLOOR", i, p);
 
 			val = RTE_ALIGN_FLOOR(i, p);
 			if (ERROR_FLOOR(val, i, p))
 				FAIL_ALIGN("RTE_ALIGN_FLOOR", i, p);
 
 			/* align ceiling */
-			val = RTE_PTR_ALIGN((uintptr_t) i, p);
+			val = (uint32_t)(uintptr_t)RTE_INT_PTR_ALIGN((uintptr_t) i, p);
 			if (ERROR_CEIL(val, i, p))
-				FAIL_ALIGN("RTE_PTR_ALIGN", i, p);
+				FAIL_ALIGN("RTE_INT_PTR_ALIGN", i, p);
 
 			val = RTE_ALIGN(i, p);
 			if (ERROR_CEIL(val, i, p))
@@ -209,9 +209,9 @@ test_align(void)
 			if (ERROR_CEIL(val, i, p))
 				FAIL_ALIGN("RTE_ALIGN_CEIL", i, p);
 
-			val = RTE_PTR_ALIGN_CEIL((uintptr_t)i, p);
+			val = (uint32_t)(uintptr_t)RTE_INT_PTR_ALIGN_CEIL((uintptr_t)i, p);
 			if (ERROR_CEIL(val, i, p))
-				FAIL_ALIGN("RTE_PTR_ALIGN_CEIL", i, p);
+				FAIL_ALIGN("RTE_INT_PTR_ALIGN_CEIL", i, p);
 
 			/* by this point we know that val is aligned to p */
 			if (!rte_is_aligned((void*)(uintptr_t) val, p))
