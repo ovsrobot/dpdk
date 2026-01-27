@@ -60,6 +60,8 @@ New Features
   * Changed transmit burst to always return the number of packets requested.
     Failed sends are counted as transmit errors.
   * Added support for VLAN insertion and stripping.
+  * Receive timestamp offload is only done if offload flag set.
+  * Receive timestamps support nanosecond precision.
 
 
 Removed Items
