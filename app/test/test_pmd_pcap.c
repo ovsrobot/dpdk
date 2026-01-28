@@ -448,6 +448,41 @@ get_pcap_packet_sizes(const char *path, uint16_t *sizes, unsigned int max_pkts)
 }
 
 /*
+ * Helper: Verify packets in pcap file are truncated correctly
+ * Returns 0 if all packets have caplen == expected_caplen and len == expected_len
+ */
+static int
+verify_pcap_truncation(const char *path, uint32_t expected_caplen,
+		       uint32_t expected_len, unsigned int *pkt_count)
+{
+	pcap_t *pd;
+	char errbuf[PCAP_ERRBUF_SIZE];
+	struct pcap_pkthdr *hdr;
+	const u_char *data;
+	unsigned int count = 0;
+
+	pd = pcap_open_offline(path, errbuf);
+	if (pd == NULL)
+		return -1;
+
+	while (pcap_next_ex(pd, &hdr, &data) == 1) {
+		if (hdr->caplen != expected_caplen || hdr->len != expected_len) {
+			printf("Packet %u: caplen=%u (expected %u), len=%u (expected %u)\n",
+			       count, hdr->caplen, expected_caplen,
+			       hdr->len, expected_len);
+			pcap_close(pd);
+			return -1;
+		}
+		count++;
+	}
+
+	pcap_close(pd);
+	if (pkt_count)
+		*pkt_count = count;
+	return 0;
+}
+
+/*
  * Helper: Configure and start a pcap ethdev port
  */
 static int
@@ -1973,7 +2008,7 @@ test_multi_rx_queue_same_file(void)
  * This test verifies that rte_eth_dev_info_get() returns correct values:
  * 1. max_rx_queues matches the number of rx_pcap files passed
  * 2. max_tx_queues matches the number of tx_pcap files passed
- * 3. min_mtu and max_mtu are set to reasonable values
+ * 3. max_rx_pktlen and max_mtu are based on default snapshot length
  */
 static int
 test_dev_info(void)
@@ -1985,6 +2020,9 @@ test_dev_info(void)
 	uint16_t port_id;
 	int ret;
 	unsigned int i;
+	/* Default snapshot length is 65535 */
+	const uint32_t default_snaplen = 65535;
+	const uint32_t expected_max_mtu = default_snaplen - RTE_ETHER_HDR_LEN;
 
 	printf("Testing device info reporting\n");
 
@@ -2023,14 +2061,24 @@ test_dev_info(void)
 	printf("    driver_name: %s\n", dev_info.driver_name);
 	printf("    max_rx_queues: %u (expected: 3)\n", dev_info.max_rx_queues);
 	printf("    max_tx_queues: %u (expected: 2)\n", dev_info.max_tx_queues);
-	printf("    min_mtu: %u\n", dev_info.min_mtu);
-	printf("    max_mtu: %u\n", dev_info.max_mtu);
+	printf("    max_rx_pktlen: %u (expected: %u)\n", dev_info.max_rx_pktlen, default_snaplen);
+	printf("    max_mtu: %u (expected: %u)\n", dev_info.max_mtu, expected_max_mtu);
 
 	/* Verify queue counts match number of pcap files */
 	TEST_ASSERT_EQUAL(dev_info.max_rx_queues, 3U,
 			  "max_rx_queues mismatch: expected 3, got %u", dev_info.max_rx_queues);
 	TEST_ASSERT_EQUAL(dev_info.max_tx_queues, 2U,
 			  "max_tx_queues mismatch: expected 2, got %u", dev_info.max_tx_queues);
+
+	/* Verify max_rx_pktlen equals default snapshot length */
+	TEST_ASSERT_EQUAL(dev_info.max_rx_pktlen, default_snaplen,
+			  "max_rx_pktlen mismatch: expected %u, got %u",
+			  default_snaplen, dev_info.max_rx_pktlen);
+
+	/* Verify max_mtu is snapshot_len minus ethernet header */
+	TEST_ASSERT_EQUAL(dev_info.max_mtu, expected_max_mtu,
+			  "max_mtu mismatch: expected %u, got %u",
+			  expected_max_mtu, dev_info.max_mtu);
 
 	rte_vdev_uninit("net_pcap_devinfo");
 
@@ -2041,6 +2089,144 @@ test_dev_info(void)
 		unlink(tx_paths[i]);
 
 	printf("Device info PASSED\n");
+	return TEST_SUCCESS;
+}
+
+/*
+ * Test: Custom snapshot length (snaplen) parameter
+ *
+ * This test verifies that the snaplen devarg works correctly:
+ * 1. max_rx_pktlen reflects the custom snapshot length
+ * 2. max_mtu is calculated as snaplen - ethernet header
+ */
+static int
+test_snaplen(void)
+{
+	struct rte_eth_dev_info dev_info;
+	char devargs[512];
+	char rx_path[PATH_MAX];
+	char tx_path[PATH_MAX];
+	uint16_t port_id;
+	int ret;
+	const uint32_t custom_snaplen = 9000;
+	const uint32_t expected_max_mtu = custom_snaplen - RTE_ETHER_HDR_LEN;
+
+	printf("Testing custom snapshot length parameter\n");
+
+	/* Create temp files */
+	TEST_ASSERT(create_temp_path(rx_path, sizeof(rx_path), "pcap_snaplen_rx") == 0,
+		    "Failed to create RX temp path");
+	TEST_ASSERT(create_test_pcap(rx_path, 1) == 0,
+		    "Failed to create RX pcap");
+	TEST_ASSERT(create_temp_path(tx_path, sizeof(tx_path), "pcap_snaplen_tx") == 0,
+		    "Failed to create TX temp path");
+
+	/* Create device with custom snaplen */
+	snprintf(devargs, sizeof(devargs), "rx_pcap=%s,tx_pcap=%s,snaplen=%u",
+		 rx_path, tx_path, custom_snaplen);
+
+	ret = rte_vdev_init("net_pcap_snaplen", devargs);
+	TEST_ASSERT_SUCCESS(ret, "Failed to create pcap PMD: %s", rte_strerror(-ret));
+
+	ret = rte_eth_dev_get_port_by_name("net_pcap_snaplen", &port_id);
+	TEST_ASSERT_SUCCESS(ret, "Cannot find added pcap device");
+
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	TEST_ASSERT_SUCCESS(ret, "Failed to get device info: %s", rte_strerror(-ret));
+
+	printf("  Custom snaplen: %u\n", custom_snaplen);
+	printf("  max_rx_pktlen: %u (expected: %u)\n", dev_info.max_rx_pktlen, custom_snaplen);
+	printf("  max_mtu: %u (expected: %u)\n", dev_info.max_mtu, expected_max_mtu);
+
+	/* Verify max_rx_pktlen equals custom snapshot length */
+	TEST_ASSERT_EQUAL(dev_info.max_rx_pktlen, custom_snaplen,
+			  "max_rx_pktlen mismatch: expected %u, got %u",
+			  custom_snaplen, dev_info.max_rx_pktlen);
+
+	/* Verify max_mtu is snaplen minus ethernet header */
+	TEST_ASSERT_EQUAL(dev_info.max_mtu, expected_max_mtu,
+			  "max_mtu mismatch: expected %u, got %u",
+			  expected_max_mtu, dev_info.max_mtu);
+
+	rte_vdev_uninit("net_pcap_snaplen");
+
+	/* Cleanup temp files */
+	unlink(rx_path);
+	unlink(tx_path);
+
+	printf("Snapshot length test PASSED\n");
+	return TEST_SUCCESS;
+}
+
+/*
+ * Test: Snapshot length truncation behavior
+ *
+ * This test verifies that packets larger than snaplen are properly truncated
+ * when written to pcap files:
+ * 1. caplen in pcap header is limited to snaplen
+ * 2. len in pcap header preserves original packet length
+ * 3. Only snaplen bytes of data are written
+ */
+static int
+test_snaplen_truncation(void)
+{
+	struct rte_mbuf *mbufs[NUM_PACKETS];
+	char devargs[512];
+	char tx_path[PATH_MAX];
+	uint16_t port_id;
+	int ret, nb_tx, nb_gen;
+	unsigned int pkt_count;
+	const uint32_t test_snaplen = 100;
+	const uint8_t pkt_size = 200;
+
+	printf("Testing snaplen truncation behavior\n");
+
+	/* Create temp TX file */
+	TEST_ASSERT(create_temp_path(tx_path, sizeof(tx_path), "pcap_trunc_tx") == 0,
+		    "Failed to create TX temp path");
+
+	/* Create device with small snaplen */
+	snprintf(devargs, sizeof(devargs), "tx_pcap=%s,snaplen=%u",
+		 tx_path, test_snaplen);
+
+	ret = rte_vdev_init("net_pcap_trunc", devargs);
+	TEST_ASSERT_SUCCESS(ret, "Failed to create pcap PMD: %s", rte_strerror(-ret));
+
+	ret = rte_eth_dev_get_port_by_name("net_pcap_trunc", &port_id);
+	TEST_ASSERT_SUCCESS(ret, "Cannot find added pcap device");
+
+	TEST_ASSERT(setup_pcap_port(port_id) == 0, "Failed to setup port");
+
+	/* Generate packets larger than snaplen */
+	nb_gen = generate_test_packets(mp, mbufs, NUM_PACKETS, pkt_size);
+	TEST_ASSERT_EQUAL(nb_gen, NUM_PACKETS,
+			  "Failed to generate packets: got %d, expected %d",
+			  nb_gen, NUM_PACKETS);
+
+	printf("  Sending %d packets of size %u with snaplen=%u\n",
+	       NUM_PACKETS, pkt_size, test_snaplen);
+
+	/* Transmit packets */
+	nb_tx = rte_eth_tx_burst(port_id, 0, mbufs, NUM_PACKETS);
+	TEST_ASSERT_EQUAL(nb_tx, NUM_PACKETS,
+			  "TX burst failed: sent %d/%d", nb_tx, NUM_PACKETS);
+
+	cleanup_pcap_vdev("net_pcap_trunc", port_id);
+
+	/* Verify truncation in output file */
+	ret = verify_pcap_truncation(tx_path, test_snaplen, pkt_size, &pkt_count);
+	TEST_ASSERT_SUCCESS(ret, "Truncation verification failed");
+	TEST_ASSERT_EQUAL(pkt_count, (unsigned int)NUM_PACKETS,
+			  "Packet count mismatch: got %u, expected %d",
+			  pkt_count, NUM_PACKETS);
+
+	printf("  Verified %u packets: caplen=%u, len=%u\n",
+	       pkt_count, test_snaplen, pkt_size);
+
+	/* Cleanup */
+	unlink(tx_path);
+
+	printf("Snaplen truncation test PASSED\n");
 	return TEST_SUCCESS;
 }
 
@@ -2322,6 +2508,8 @@ static struct unit_test_suite test_pmd_pcap_suite = {
 		TEST_CASE(test_vlan_strip_rx),
 		TEST_CASE(test_vlan_insert_tx),
 		TEST_CASE(test_vlan_no_strip_rx),
+		TEST_CASE(test_snaplen),
+		TEST_CASE(test_snaplen_truncation),
 		TEST_CASES_END()
 	}
 };

@@ -60,6 +60,7 @@ New Features
   * Changed transmit burst to always return the number of packets requested.
     Failed sends are counted as transmit errors.
   * Added support for VLAN insertion and stripping.
+  * Added ``snaplen`` devarg to configure packet capture snapshot length.
   * Receive timestamp offload is only done if offload flag set.
   * Receive timestamps support nanosecond precision.
   * Added unit test suite.

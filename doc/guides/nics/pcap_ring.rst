@@ -94,6 +94,23 @@ The different stream types are:
 
         iface=eth0
 
+*   snaplen: Set snapshot length (maximum capture size)
+
+    The snapshot length limits the maximum size of captured packets. This can be
+    set with the ``snaplen`` devarg, for example::
+
+        snaplen=1518
+
+    This sets the snapshot length to 1518 bytes. The value affects the reported
+    ``max_rx_pktlen`` and ``max_mtu`` in device info. The default value is 65535
+    bytes, matching the default pcap snapshot length.
+
+    When capturing from interfaces, this limits the amount of data captured per
+    packet. For pcap file output, packets larger than the snapshot length are
+    truncated: only the first ``snaplen`` bytes are written, while the original
+    packet length is preserved in the pcap packet header.
+
+
 Runtime Config Options
 ^^^^^^^^^^^^^^^^^^^^^^
 
