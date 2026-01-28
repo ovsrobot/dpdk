@@ -14,6 +14,7 @@
 #include <rte_malloc.h>
 #include <rte_kvargs.h>
 #include <bus_vdev_driver.h>
+#include <rte_prefetch.h>
 
 #include <errno.h>
 #include <linux/if_ether.h>
@@ -120,75 +121,194 @@ RTE_LOG_REGISTER_DEFAULT(af_packet_logtype, NOTICE);
 	RTE_LOG_LINE(level, AFPACKET, "%s(): " fmt ":%s", __func__, \
 		## __VA_ARGS__, strerror(errno))
 
+/*
+ * Helper to get the frame pointer at a given index with wraparound
+ */
+static inline struct tpacket2_hdr *
+af_packet_get_frame(struct pkt_rx_queue *pkt_q, unsigned int idx)
+{
+	if (idx >= pkt_q->framecount)
+		idx -= pkt_q->framecount;
+	return (struct tpacket2_hdr *)pkt_q->rd[idx].iov_base;
+}
+
+/*
+ * Process a single received packet - common code for all loop variants
+ */
+static inline int
+af_packet_rx_one(struct pkt_rx_queue *pkt_q,
+		 struct tpacket2_hdr *ppd,
+		 struct rte_mbuf **mbuf_out,
+		 unsigned long *rx_bytes)
+{
+	struct rte_mbuf *mbuf;
+	uint8_t *pbuf;
+
+	mbuf = rte_pktmbuf_alloc(pkt_q->mb_pool);
+	if (unlikely(mbuf == NULL)) {
+		pkt_q->rx_nombuf++;
+		return -1;
+	}
+
+	rte_pktmbuf_pkt_len(mbuf) = rte_pktmbuf_data_len(mbuf) = ppd->tp_snaplen;
+	pbuf = (uint8_t *)ppd + ppd->tp_mac;
+	memcpy(rte_pktmbuf_mtod(mbuf, void *), pbuf, rte_pktmbuf_data_len(mbuf));
+
+	if (ppd->tp_status & TP_STATUS_VLAN_VALID) {
+		mbuf->vlan_tci = ppd->tp_vlan_tci;
+		mbuf->ol_flags |= (RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED);
+		if (!pkt_q->vlan_strip && rte_vlan_insert(&mbuf))
+			PMD_LOG(ERR, "Failed to reinsert VLAN tag");
+	}
+
+	if (pkt_q->timestamp_offloading) {
+		*RTE_MBUF_DYNFIELD(mbuf, timestamp_dynfield_offset,
+			rte_mbuf_timestamp_t *) =
+				(uint64_t)ppd->tp_sec * 1000000000 + ppd->tp_nsec;
+		mbuf->ol_flags |= timestamp_dynflag;
+	}
+
+	mbuf->port = pkt_q->in_port;
+	*mbuf_out = mbuf;
+	*rx_bytes += mbuf->pkt_len;
+	ppd->tp_status = TP_STATUS_KERNEL;
+
+	return 0;
+}
+
+/*
+ * Receive packets using VPP-style single/dual/quad loop pattern with prefetching.
+ */
 static uint16_t
 eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
-	unsigned i;
-	struct tpacket2_hdr *ppd;
-	struct rte_mbuf *mbuf;
-	uint8_t *pbuf;
 	struct pkt_rx_queue *pkt_q = queue;
+	struct tpacket2_hdr *ppd0, *ppd1, *ppd2, *ppd3;
 	uint16_t num_rx = 0;
 	unsigned long num_rx_bytes = 0;
 	unsigned int framecount, framenum;
+	uint16_t n_left;
 
 	if (unlikely(nb_pkts == 0))
 		return 0;
 
-	/*
-	 * Reads the given number of packets from the AF_PACKET socket one by
-	 * one and copies the packet data into a newly allocated mbuf.
-	 */
 	framecount = pkt_q->framecount;
 	framenum = pkt_q->framenum;
-	for (i = 0; i < nb_pkts; i++) {
-		/* point at the next incoming frame */
-		ppd = (struct tpacket2_hdr *) pkt_q->rd[framenum].iov_base;
-		if ((ppd->tp_status & TP_STATUS_USER) == 0)
+	n_left = nb_pkts;
+
+	/* Quad loop: Process 4 packets at a time with prefetching */
+	while (n_left >= 4) {
+		ppd0 = af_packet_get_frame(pkt_q, framenum);
+		ppd1 = af_packet_get_frame(pkt_q, framenum + 1);
+		ppd2 = af_packet_get_frame(pkt_q, framenum + 2);
+		ppd3 = af_packet_get_frame(pkt_q, framenum + 3);
+
+		if ((ppd0->tp_status & TP_STATUS_USER) == 0)
+			break;
+		if ((ppd1->tp_status & TP_STATUS_USER) == 0)
+			goto dual_loop;
+		if ((ppd2->tp_status & TP_STATUS_USER) == 0)
+			goto dual_loop;
+		if ((ppd3->tp_status & TP_STATUS_USER) == 0)
+			goto dual_loop;
+
+		/* Prefetch next 4 frame headers */
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 4));
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 5));
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 6));
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 7));
+
+		/* Prefetch packet data */
+		rte_prefetch0((uint8_t *)ppd0 + ppd0->tp_mac);
+		rte_prefetch0((uint8_t *)ppd1 + ppd1->tp_mac);
+		rte_prefetch0((uint8_t *)ppd2 + ppd2->tp_mac);
+		rte_prefetch0((uint8_t *)ppd3 + ppd3->tp_mac);
+
+		if (unlikely(af_packet_rx_one(pkt_q, ppd0, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out;
+		num_rx++;
+		if (unlikely(af_packet_rx_one(pkt_q, ppd1, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out_advance1;
+		num_rx++;
+		if (unlikely(af_packet_rx_one(pkt_q, ppd2, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out_advance2;
+		num_rx++;
+		if (unlikely(af_packet_rx_one(pkt_q, ppd3, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out_advance3;
+		num_rx++;
+
+		framenum += 4;
+		if (framenum >= framecount)
+			framenum -= framecount;
+		n_left -= 4;
+	}
+
+dual_loop:
+	/* Dual loop: Process 2 packets at a time */
+	while (n_left >= 2) {
+		ppd0 = af_packet_get_frame(pkt_q, framenum);
+		ppd1 = af_packet_get_frame(pkt_q, framenum + 1);
+
+		if ((ppd0->tp_status & TP_STATUS_USER) == 0)
+			break;
+		if ((ppd1->tp_status & TP_STATUS_USER) == 0)
+			goto single_loop;
+
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 2));
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 3));
+		rte_prefetch0((uint8_t *)ppd0 + ppd0->tp_mac);
+		rte_prefetch0((uint8_t *)ppd1 + ppd1->tp_mac);
+
+		if (unlikely(af_packet_rx_one(pkt_q, ppd0, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out;
+		num_rx++;
+		if (unlikely(af_packet_rx_one(pkt_q, ppd1, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out_advance1;
+		num_rx++;
+
+		framenum += 2;
+		if (framenum >= framecount)
+			framenum -= framecount;
+		n_left -= 2;
+	}
+
+single_loop:
+	/* Single loop: Process remaining packets */
+	while (n_left >= 1) {
+		ppd0 = af_packet_get_frame(pkt_q, framenum);
+
+		if ((ppd0->tp_status & TP_STATUS_USER) == 0)
 			break;
 
-		/* allocate the next mbuf */
-		mbuf = rte_pktmbuf_alloc(pkt_q->mb_pool);
-		if (unlikely(mbuf == NULL)) {
-			pkt_q->rx_nombuf++;
-			break;
-		}
+		rte_prefetch0(af_packet_get_frame(pkt_q, framenum + 1));
+		rte_prefetch0((uint8_t *)ppd0 + ppd0->tp_mac);
 
-		/* packet will fit in the mbuf, go ahead and receive it */
-		rte_pktmbuf_pkt_len(mbuf) = rte_pktmbuf_data_len(mbuf) = ppd->tp_snaplen;
-		pbuf = (uint8_t *) ppd + ppd->tp_mac;
-		memcpy(rte_pktmbuf_mtod(mbuf, void *), pbuf, rte_pktmbuf_data_len(mbuf));
+		if (unlikely(af_packet_rx_one(pkt_q, ppd0, &bufs[num_rx], &num_rx_bytes) < 0))
+			goto out;
+		num_rx++;
 
-		/* check for vlan info */
-		if (ppd->tp_status & TP_STATUS_VLAN_VALID) {
-			mbuf->vlan_tci = ppd->tp_vlan_tci;
-			mbuf->ol_flags |= (RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED);
-
-			if (!pkt_q->vlan_strip && rte_vlan_insert(&mbuf))
-				PMD_LOG(ERR, "Failed to reinsert VLAN tag");
-		}
-
-		/* add kernel provided timestamp when offloading is enabled */
-		if (pkt_q->timestamp_offloading) {
-			/* since TPACKET_V2 timestamps are provided in nanoseconds resolution */
-			*RTE_MBUF_DYNFIELD(mbuf, timestamp_dynfield_offset,
-				rte_mbuf_timestamp_t *) =
-					(uint64_t)ppd->tp_sec * 1000000000 + ppd->tp_nsec;
-
-			mbuf->ol_flags |= timestamp_dynflag;
-		}
-
-		/* release incoming frame and advance ring buffer */
-		ppd->tp_status = TP_STATUS_KERNEL;
 		if (++framenum >= framecount)
 			framenum = 0;
-		mbuf->port = pkt_q->in_port;
-
-		/* account for the receive frame */
-		bufs[i] = mbuf;
-		num_rx++;
-		num_rx_bytes += mbuf->pkt_len;
+		n_left--;
 	}
+
+	goto out;
+
+out_advance3:
+	framenum += 3;
+	if (framenum >= framecount)
+		framenum -= framecount;
+	goto out;
+out_advance2:
+	framenum += 2;
+	if (framenum >= framecount)
+		framenum -= framecount;
+	goto out;
+out_advance1:
+	framenum += 1;
+	if (framenum >= framecount)
+		framenum -= framecount;
+out:
 	pkt_q->framenum = framenum;
 	pkt_q->rx_pkts += num_rx;
 	pkt_q->rx_bytes += num_rx_bytes;
