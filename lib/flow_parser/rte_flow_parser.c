@@ -203,6 +203,7 @@ struct rte_flow_parser_ctx {
 	struct rte_flow_parser_mplsogre_decap_conf mplsogre_decap_conf;
 	struct rte_flow_parser_mplsoudp_encap_conf mplsoudp_encap_conf;
 	struct rte_flow_parser_mplsoudp_decap_conf mplsoudp_decap_conf;
+	struct rte_flow_action_conntrack conntrack_context;
 	struct raw_encap_conf raw_encap_confs[RAW_ENCAP_CONFS_MAX_NUM];
 	struct raw_decap_conf raw_decap_confs[RAW_ENCAP_CONFS_MAX_NUM];
 	struct ipv6_ext_push_conf ipv6_ext_push_confs[IPV6_EXT_PUSH_CONFS_MAX_NUM];
@@ -1080,9 +1081,6 @@ parser_ctx_set_sample_actions(uint16_t idx,
 	}
 	return 0;
 }
-
-struct rte_flow_action_conntrack conntrack_context;
-
 void
 rte_flow_parser_reset_defaults(void)
 {
@@ -1154,6 +1152,12 @@ struct rte_flow_parser_mplsoudp_decap_conf *
 rte_flow_parser_mplsoudp_decap_conf(void)
 {
 	return &parser.ctx.mplsoudp_decap_conf;
+}
+
+struct rte_flow_action_conntrack *
+rte_flow_parser_conntrack_context(void)
+{
+	return &parser.ctx.conntrack_context;
 }
 
 static inline const struct rte_flow_parser_ops_query *
@@ -1342,28 +1346,30 @@ parser_flex_pattern_get(uint16_t pattern_id,
 	return ops->flex_pattern_get(pattern_id, spec, mask);
 }
 
-static inline void
+static inline int
 parser_command_flow_get_info(rte_port_id_t port_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_get_info != NULL)
-		ops->flow_get_info(port_id);
+		return ops->flow_get_info(port_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_configure(rte_port_id_t port_id,
 			      const struct rte_flow_port_attr *port_attr,
-			      uint32_t nb_queue,
+			      uint16_t nb_queue,
 			      const struct rte_flow_queue_attr *queue_attr)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_configure != NULL)
-		ops->flow_configure(port_id, port_attr, nb_queue, queue_attr);
+		return ops->flow_configure(port_id, port_attr, nb_queue, queue_attr);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_pattern_template_create(rte_port_id_t port_id, uint32_t id,
 					    const struct rte_flow_pattern_template_attr *attr,
 					    const struct rte_flow_item pattern[])
@@ -1371,10 +1377,11 @@ parser_command_flow_pattern_template_create(rte_port_id_t port_id, uint32_t id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_pattern_template_create != NULL)
-		ops->flow_pattern_template_create(port_id, id, attr, pattern);
+		return ops->flow_pattern_template_create(port_id, id, attr, pattern);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_pattern_template_destroy(rte_port_id_t port_id,
 					     uint32_t nb_id,
 					     const uint32_t id[])
@@ -1382,10 +1389,11 @@ parser_command_flow_pattern_template_destroy(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_pattern_template_destroy != NULL)
-		ops->flow_pattern_template_destroy(port_id, nb_id, id);
+		return ops->flow_pattern_template_destroy(port_id, nb_id, id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_actions_template_create(rte_port_id_t port_id, uint32_t id,
 					    const struct rte_flow_actions_template_attr *attr,
 					    const struct rte_flow_action actions[],
@@ -1394,11 +1402,12 @@ parser_command_flow_actions_template_create(rte_port_id_t port_id, uint32_t id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_actions_template_create != NULL)
-		ops->flow_actions_template_create(port_id, id, attr, actions,
+		return ops->flow_actions_template_create(port_id, id, attr, actions,
 						  masks);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_actions_template_destroy(rte_port_id_t port_id,
 					     uint32_t nb_id,
 					     const uint32_t id[])
@@ -1406,10 +1415,11 @@ parser_command_flow_actions_template_destroy(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_actions_template_destroy != NULL)
-		ops->flow_actions_template_destroy(port_id, nb_id, id);
+		return ops->flow_actions_template_destroy(port_id, nb_id, id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_template_table_create(rte_port_id_t port_id, uint32_t table_id,
 					  const struct rte_flow_template_table_attr *attr,
 					  uint32_t nb_pattern,
@@ -1420,12 +1430,13 @@ parser_command_flow_template_table_create(rte_port_id_t port_id, uint32_t table_
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_template_table_create != NULL)
-		ops->flow_template_table_create(port_id, table_id, attr,
-						nb_pattern, pattern_id,
-						nb_action, action_id);
+		return ops->flow_template_table_create(port_id, table_id, attr,
+							nb_pattern, pattern_id,
+							nb_action, action_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_template_table_destroy(rte_port_id_t port_id,
 					   uint32_t nb_id,
 					   const uint32_t id[])
@@ -1433,20 +1444,22 @@ parser_command_flow_template_table_destroy(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_template_table_destroy != NULL)
-		ops->flow_template_table_destroy(port_id, nb_id, id);
+		return ops->flow_template_table_destroy(port_id, nb_id, id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_template_table_resize_complete(rte_port_id_t port_id,
 						   uint32_t table_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_template_table_resize_complete != NULL)
-		ops->flow_template_table_resize_complete(port_id, table_id);
+		return ops->flow_template_table_resize_complete(port_id, table_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_group_set_miss_actions(rte_port_id_t port_id,
 					    const struct rte_flow_attr *attr,
 					    const struct rte_flow_action actions[])
@@ -1454,20 +1467,22 @@ parser_command_queue_group_set_miss_actions(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_group_set_miss_actions != NULL)
-		ops->queue_group_set_miss_actions(port_id, attr, actions);
+		return ops->queue_group_set_miss_actions(port_id, attr, actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_template_table_resize(rte_port_id_t port_id, uint32_t table_id,
 					  uint32_t nb_rules)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_template_table_resize != NULL)
-		ops->flow_template_table_resize(port_id, table_id, nb_rules);
+		return ops->flow_template_table_resize(port_id, table_id, nb_rules);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_flow_create(rte_port_id_t port_id, rte_queue_id_t queue,
 				 bool postpone, uint32_t table_id,
 				 uint32_t rule_id, uint32_t pattern_templ_id,
@@ -1478,35 +1493,38 @@ parser_command_queue_flow_create(rte_port_id_t port_id, rte_queue_id_t queue,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_create != NULL)
-		ops->queue_flow_create(port_id, queue, postpone, table_id,
+		return ops->queue_flow_create(port_id, queue, postpone, table_id,
 				       rule_id, pattern_templ_id,
 				       actions_templ_id, pattern, actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_flow_destroy(rte_port_id_t port_id, rte_queue_id_t queue,
 				  bool postpone, uint32_t rule_n,
-				  const uint64_t rule[], bool is_user_id)
+				  const uint64_t rule[])
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_destroy != NULL)
-		ops->queue_flow_destroy(port_id, queue, postpone, rule_n,
-					rule, is_user_id);
+		return ops->queue_flow_destroy(port_id, queue, postpone, rule_n,
+					rule);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_flow_update_resized(rte_port_id_t port_id, rte_queue_id_t queue,
-					 bool postpone, uint64_t rule_id)
+					 bool postpone, uint32_t flow_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_update_resized != NULL)
-		ops->queue_flow_update_resized(port_id, queue, postpone,
-					       rule_id);
+		return ops->queue_flow_update_resized(port_id, queue, postpone,
+				       flow_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_flow_update(rte_port_id_t port_id, rte_queue_id_t queue,
 				 bool postpone, uint32_t rule_id,
 				 uint32_t action_templ_id,
@@ -1515,29 +1533,32 @@ parser_command_queue_flow_update(rte_port_id_t port_id, rte_queue_id_t queue,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_update != NULL)
-		ops->queue_flow_update(port_id, queue, postpone, rule_id,
+		return ops->queue_flow_update(port_id, queue, postpone, rule_id,
 				       action_templ_id, actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_flow_push(rte_port_id_t port_id, rte_queue_id_t queue)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_push != NULL)
-		ops->queue_flow_push(port_id, queue);
+		return ops->queue_flow_push(port_id, queue);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_flow_pull(rte_port_id_t port_id, rte_queue_id_t queue)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_pull != NULL)
-		ops->queue_flow_pull(port_id, queue);
+		return ops->queue_flow_pull(port_id, queue);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_hash_calc(rte_port_id_t port_id, uint32_t table_id,
 			      uint32_t pattern_templ_id,
 			      const struct rte_flow_item pattern[])
@@ -1545,11 +1566,12 @@ parser_command_flow_hash_calc(rte_port_id_t port_id, uint32_t table_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_hash_calc != NULL)
-		ops->flow_hash_calc(port_id, table_id, pattern_templ_id,
-				    pattern);
+		return ops->flow_hash_calc(port_id, table_id,
+				    (uint8_t)pattern_templ_id, pattern);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_hash_calc_encap(rte_port_id_t port_id,
 				    enum rte_flow_encap_hash_field field,
 				    const struct rte_flow_item pattern[])
@@ -1557,7 +1579,8 @@ parser_command_flow_hash_calc_encap(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_hash_calc_encap != NULL)
-		ops->flow_hash_calc_encap(port_id, field, pattern);
+		return ops->flow_hash_calc_encap(port_id, field, pattern);
+	return -ENOTSUP;
 }
 
 static inline void
@@ -1566,10 +1589,10 @@ parser_command_queue_flow_aged(rte_port_id_t port_id, rte_queue_id_t queue, bool
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_flow_aged != NULL)
-		ops->queue_flow_aged(port_id, queue, destroy);
+		ops->queue_flow_aged(port_id, (uint32_t)queue, destroy ? 1 : 0);
 }
 
-static inline void
+static inline int
 parser_command_queue_action_handle_create(rte_port_id_t port_id, rte_queue_id_t queue,
 					  bool postpone, uint32_t group,
 					  bool is_list,
@@ -1579,11 +1602,12 @@ parser_command_queue_action_handle_create(rte_port_id_t port_id, rte_queue_id_t 
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_action_handle_create != NULL)
-		ops->queue_action_handle_create(port_id, queue, postpone,
-						group, is_list, conf, actions);
+		return ops->queue_action_handle_create(port_id, (uint32_t)queue,
+						postpone, group, is_list, conf, actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_action_handle_destroy(rte_port_id_t port_id, rte_queue_id_t queue,
 					   bool postpone, uint32_t nb_id,
 					   const uint32_t id[])
@@ -1591,11 +1615,12 @@ parser_command_queue_action_handle_destroy(rte_port_id_t port_id, rte_queue_id_t
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_action_handle_destroy != NULL)
-		ops->queue_action_handle_destroy(port_id, queue, postpone,
-						 nb_id, id);
+		return ops->queue_action_handle_destroy(port_id, (uint32_t)queue,
+						 postpone, nb_id, id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_action_handle_update(rte_port_id_t port_id, rte_queue_id_t queue,
 					  bool postpone, uint32_t group,
 					  const struct rte_flow_action actions[])
@@ -1603,19 +1628,21 @@ parser_command_queue_action_handle_update(rte_port_id_t port_id, rte_queue_id_t 
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_action_handle_update != NULL)
-		ops->queue_action_handle_update(port_id, queue, postpone,
-						group, actions);
+		return ops->queue_action_handle_update(port_id, (uint32_t)queue,
+						postpone, group, actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_queue_action_handle_query(rte_port_id_t port_id, rte_queue_id_t queue,
 					 bool postpone, uint32_t action_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_action_handle_query != NULL)
-		ops->queue_action_handle_query(port_id, queue, postpone,
-					       action_id);
+		return ops->queue_action_handle_query(port_id, (uint32_t)queue,
+					       postpone, action_id);
+	return -ENOTSUP;
 }
 
 static inline void
@@ -1628,12 +1655,12 @@ parser_command_queue_action_handle_query_update(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->queue_action_handle_query_update != NULL)
-		ops->queue_action_handle_query_update(port_id, queue, postpone,
-						      action_id, qu_mode,
+		ops->queue_action_handle_query_update(port_id, (uint32_t)queue,
+						      postpone, action_id, qu_mode,
 						      actions);
 }
 
-static inline void
+static inline int
 parser_command_action_handle_create(rte_port_id_t port_id, uint32_t group,
 				    bool is_list,
 				    const struct rte_flow_indir_action_conf *conf,
@@ -1642,37 +1669,41 @@ parser_command_action_handle_create(rte_port_id_t port_id, uint32_t group,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->action_handle_create != NULL)
-		ops->action_handle_create(port_id, group, is_list, conf,
+		return ops->action_handle_create(port_id, group, is_list, conf,
 					  actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_action_handle_destroy(rte_port_id_t port_id, uint32_t nb_id,
 				     const uint32_t id[])
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->action_handle_destroy != NULL)
-		ops->action_handle_destroy(port_id, nb_id, id);
+		return ops->action_handle_destroy(port_id, nb_id, id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_action_handle_update(rte_port_id_t port_id, uint32_t group,
 				    const struct rte_flow_action actions[])
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->action_handle_update != NULL)
-		ops->action_handle_update(port_id, group, actions);
+		return ops->action_handle_update(port_id, group, actions);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_action_handle_query(rte_port_id_t port_id, uint32_t action_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->action_handle_query != NULL)
-		ops->action_handle_query(port_id, action_id);
+		return ops->action_handle_query(port_id, action_id);
+	return -ENOTSUP;
 }
 
 static inline void
@@ -1688,7 +1719,7 @@ parser_command_action_handle_query_update(rte_port_id_t port_id,
 						actions);
 }
 
-static inline void
+static inline int
 parser_command_flow_validate(rte_port_id_t port_id,
 			     const struct rte_flow_attr *attr,
 			     const struct rte_flow_item pattern[],
@@ -1698,11 +1729,12 @@ parser_command_flow_validate(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_validate != NULL)
-		ops->flow_validate(port_id, attr, pattern, actions,
-				   tunnel_ops);
+		return ops->flow_validate(port_id, attr, pattern, actions,
+					   tunnel_ops);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_create(rte_port_id_t port_id,
 			   const struct rte_flow_attr *attr,
 			   const struct rte_flow_item pattern[],
@@ -1713,58 +1745,64 @@ parser_command_flow_create(rte_port_id_t port_id,
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_create != NULL)
-		ops->flow_create(port_id, attr, pattern, actions, tunnel_ops,
-				 user_id);
+		return ops->flow_create(port_id, attr, pattern, actions, tunnel_ops,
+					 user_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_destroy(rte_port_id_t port_id, uint32_t nb_rule,
 			    const uint64_t rule[], bool is_user_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_destroy != NULL)
-		ops->flow_destroy(port_id, nb_rule, rule, is_user_id);
+		return ops->flow_destroy(port_id, nb_rule, rule, is_user_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_update(rte_port_id_t port_id, uint32_t rule_id,
 			   const struct rte_flow_action actions[],
-			   uintptr_t user_id)
+			   bool is_user_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_update != NULL)
-		ops->flow_update(port_id, rule_id, actions, user_id);
+		return ops->flow_update(port_id, rule_id, actions, is_user_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_flush(rte_port_id_t port_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_flush != NULL)
-		ops->flow_flush(port_id);
+		return ops->flow_flush(port_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_dump(rte_port_id_t port_id, bool all, uint64_t rule,
 			 const char *file, bool is_user_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_dump != NULL)
-		ops->flow_dump(port_id, all, rule, file, is_user_id);
+		return ops->flow_dump(port_id, all, rule, file, is_user_id);
+	return -ENOTSUP;
 }
 
-static inline void
+static inline int
 parser_command_flow_query(rte_port_id_t port_id, uint64_t rule,
-			  struct rte_flow_action *action, bool is_user_id)
+			  const struct rte_flow_action *action, bool is_user_id)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_query != NULL)
-		ops->flow_query(port_id, rule, action, is_user_id);
+		return ops->flow_query(port_id, rule, action, is_user_id);
+	return -ENOTSUP;
 }
 
 static inline void
@@ -1777,13 +1815,14 @@ parser_command_flow_list(rte_port_id_t port_id, uint32_t group_n,
 		ops->flow_list(port_id, group_n, group);
 }
 
-static inline void
+static inline int
 parser_command_flow_isolate(rte_port_id_t port_id, int set)
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->flow_isolate != NULL)
-		ops->flow_isolate(port_id, set);
+		return ops->flow_isolate(port_id, set);
+	return -ENOTSUP;
 }
 
 static inline void
@@ -1823,14 +1862,15 @@ parser_command_flow_tunnel_list(rte_port_id_t port_id)
 		ops->flow_tunnel_list(port_id);
 }
 
-static inline void
+static inline int
 parser_command_meter_policy_add(rte_port_id_t port_id, uint32_t policy_id,
 				const struct rte_flow_action actions[])
 {
 	const struct rte_flow_parser_ops_command *ops = parser_command_ops();
 
 	if (ops != NULL && ops->meter_policy_add != NULL)
-		ops->meter_policy_add(port_id, policy_id, actions);
+		return ops->meter_policy_add(port_id, policy_id, actions);
+	return -ENOTSUP;
 }
 
 static inline void
@@ -9640,7 +9680,7 @@ parse_vc(struct context *ctx, const struct token *token,
 		ctx->objmask = NULL;
 		return len;
 	case RTE_FLOW_PARSER_CMD_VC_IS_USER_ID:
-		out->args.vc.user_id = true;
+		out->args.vc.is_user_id = true;
 		return len;
 	default:
 		if (token->priv == NULL)
@@ -11531,14 +11571,14 @@ parse_vc_action_conntrack_update(struct context *ctx, const struct token *token,
 	ct_modify = (struct rte_flow_modify_conntrack *)out->args.vc.data;
 	if (ctx->curr == RTE_FLOW_PARSER_CMD_ACTION_CONNTRACK_UPDATE_DIR) {
 		ct_modify->new_ct.is_original_dir =
-				conntrack_context.is_original_dir;
+				parser.ctx.conntrack_context.is_original_dir;
 		ct_modify->direction = 1;
 	} else {
 		uint32_t old_dir;
 
 		old_dir = ct_modify->new_ct.is_original_dir;
-		memcpy(&ct_modify->new_ct, &conntrack_context,
-		       sizeof(conntrack_context));
+		memcpy(&ct_modify->new_ct, &parser.ctx.conntrack_context,
+		       sizeof(parser.ctx.conntrack_context));
 		ct_modify->new_ct.is_original_dir = old_dir;
 		ct_modify->state = 1;
 	}
@@ -14101,21 +14141,23 @@ indirect_action_list_conf_get(uint32_t conf_id)
 }
 
 /** Dispatch parsed buffer to function calls. */
-static void
+static int
 cmd_flow_parsed(struct rte_flow_parser_output *in)
 {
+	int ret = 0;
+
 	switch (in->command) {
 	case RTE_FLOW_PARSER_CMD_INFO:
-		parser_command_flow_get_info(in->port);
+		ret = parser_command_flow_get_info(in->port);
 		break;
 	case RTE_FLOW_PARSER_CMD_CONFIGURE:
-		parser_command_flow_configure(in->port,
+		ret = parser_command_flow_configure(in->port,
 					      &in->args.configure.port_attr,
 					      in->args.configure.nb_queue,
 					      &in->args.configure.queue_attr);
 		break;
 	case RTE_FLOW_PARSER_CMD_PATTERN_TEMPLATE_CREATE:
-		parser_command_flow_pattern_template_create(in->port,
+		ret = parser_command_flow_pattern_template_create(in->port,
 				in->args.vc.pat_templ_id,
 				&((const struct rte_flow_pattern_template_attr) {
 					.relaxed_matching = in->args.vc.attr.reserved,
@@ -14126,12 +14168,12 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 				in->args.vc.pattern);
 		break;
 	case RTE_FLOW_PARSER_CMD_PATTERN_TEMPLATE_DESTROY:
-		parser_command_flow_pattern_template_destroy(in->port,
+		ret = parser_command_flow_pattern_template_destroy(in->port,
 				in->args.templ_destroy.template_id_n,
 				in->args.templ_destroy.template_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_ACTIONS_TEMPLATE_CREATE:
-		parser_command_flow_actions_template_create(in->port,
+		ret = parser_command_flow_actions_template_create(in->port,
 				in->args.vc.act_templ_id,
 				&((const struct rte_flow_actions_template_attr) {
 					.ingress = in->args.vc.attr.ingress,
@@ -14142,12 +14184,12 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 				in->args.vc.masks);
 		break;
 	case RTE_FLOW_PARSER_CMD_ACTIONS_TEMPLATE_DESTROY:
-		parser_command_flow_actions_template_destroy(in->port,
+		ret = parser_command_flow_actions_template_destroy(in->port,
 				in->args.templ_destroy.template_id_n,
 				in->args.templ_destroy.template_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_TABLE_CREATE:
-		parser_command_flow_template_table_create(in->port,
+		ret = parser_command_flow_template_table_create(in->port,
 			in->args.table.id, &in->args.table.attr,
 			in->args.table.pat_templ_id_n,
 			in->args.table.pat_templ_id,
@@ -14155,60 +14197,59 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 			in->args.table.act_templ_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_TABLE_DESTROY:
-		parser_command_flow_template_table_destroy(in->port,
+		ret = parser_command_flow_template_table_destroy(in->port,
 					in->args.table_destroy.table_id_n,
 					in->args.table_destroy.table_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_TABLE_RESIZE_COMPLETE:
-		parser_command_flow_template_table_resize_complete
+		ret = parser_command_flow_template_table_resize_complete
 			(in->port, in->args.table_destroy.table_id[0]);
 		break;
 	case RTE_FLOW_PARSER_CMD_GROUP_SET_MISS_ACTIONS:
-		parser_command_queue_group_set_miss_actions(in->port,
+		ret = parser_command_queue_group_set_miss_actions(in->port,
 							    &in->args.vc.attr,
 							    in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_TABLE_RESIZE:
-		parser_command_flow_template_table_resize(in->port,
+		ret = parser_command_flow_template_table_resize(in->port,
 				in->args.table.id,
 				in->args.table.attr.nb_flows);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_CREATE:
-		parser_command_queue_flow_create(in->port, in->queue,
+		ret = parser_command_queue_flow_create(in->port, in->queue,
 			in->postpone, in->args.vc.table_id, in->args.vc.rule_id,
 			in->args.vc.pat_templ_id, in->args.vc.act_templ_id,
 			in->args.vc.pattern, in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_DESTROY:
-		parser_command_queue_flow_destroy(in->port, in->queue,
+		ret = parser_command_queue_flow_destroy(in->port, in->queue,
 				in->postpone, in->args.destroy.rule_n,
-				in->args.destroy.rule,
-				in->args.destroy.is_user_id);
+				in->args.destroy.rule);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_FLOW_UPDATE_RESIZED:
-		parser_command_queue_flow_update_resized(in->port, in->queue,
+		ret = parser_command_queue_flow_update_resized(in->port, in->queue,
 					       in->postpone,
-					       in->args.destroy.rule[0]);
+					       (uint32_t)in->args.destroy.rule[0]);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_UPDATE:
-		parser_command_queue_flow_update(in->port, in->queue,
+		ret = parser_command_queue_flow_update(in->port, in->queue,
 				in->postpone, in->args.vc.rule_id,
 				in->args.vc.act_templ_id, in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_PUSH:
-		parser_command_queue_flow_push(in->port, in->queue);
+		ret = parser_command_queue_flow_push(in->port, in->queue);
 		break;
 	case RTE_FLOW_PARSER_CMD_PULL:
-		parser_command_queue_flow_pull(in->port, in->queue);
+		ret = parser_command_queue_flow_pull(in->port, in->queue);
 		break;
 	case RTE_FLOW_PARSER_CMD_HASH:
 		if (in->args.vc.encap_hash == 0)
-			parser_command_flow_hash_calc(in->port,
+			ret = parser_command_flow_hash_calc(in->port,
 					in->args.vc.table_id,
 					in->args.vc.pat_templ_id,
 					in->args.vc.pattern);
 		else
-			parser_command_flow_hash_calc_encap(in->port,
+			ret = parser_command_flow_hash_calc_encap(in->port,
 					in->args.vc.field,
 					in->args.vc.pattern);
 		break;
@@ -14218,7 +14259,7 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_INDIRECT_ACTION_CREATE:
 	case RTE_FLOW_PARSER_CMD_QUEUE_INDIRECT_ACTION_LIST_CREATE:
-		parser_command_queue_action_handle_create(
+		ret = parser_command_queue_action_handle_create(
 				in->port, in->queue, in->postpone,
 				in->args.vc.attr.group,
 				in->command == RTE_FLOW_PARSER_CMD_QUEUE_INDIRECT_ACTION_LIST_CREATE,
@@ -14230,19 +14271,19 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 				in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_INDIRECT_ACTION_DESTROY:
-		parser_command_queue_action_handle_destroy(in->port,
+		ret = parser_command_queue_action_handle_destroy(in->port,
 				in->queue, in->postpone,
 				in->args.ia_destroy.action_id_n,
 				in->args.ia_destroy.action_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_INDIRECT_ACTION_UPDATE:
-		parser_command_queue_action_handle_update(in->port,
+		ret = parser_command_queue_action_handle_update(in->port,
 				in->queue, in->postpone,
 				in->args.vc.attr.group,
 				in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUEUE_INDIRECT_ACTION_QUERY:
-		parser_command_queue_action_handle_query(in->port,
+		ret = parser_command_queue_action_handle_query(in->port,
 				in->queue, in->postpone,
 				in->args.ia.action_id);
 		break;
@@ -14255,7 +14296,7 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 		break;
 	case RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_CREATE:
 	case RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_LIST_CREATE:
-		parser_command_action_handle_create(
+		ret = parser_command_action_handle_create(
 				in->port, in->args.vc.attr.group,
 				in->command == RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_LIST_CREATE,
 				&((const struct rte_flow_indir_action_conf) {
@@ -14269,16 +14310,16 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 		indirect_action_flow_conf_create(in);
 		break;
 	case RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_DESTROY:
-		parser_command_action_handle_destroy(in->port,
+		ret = parser_command_action_handle_destroy(in->port,
 				in->args.ia_destroy.action_id_n,
 				in->args.ia_destroy.action_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_UPDATE:
-		parser_command_action_handle_update(in->port,
+		ret = parser_command_action_handle_update(in->port,
 				in->args.vc.attr.group, in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_QUERY:
-		parser_command_action_handle_query(in->port,
+		ret = parser_command_action_handle_query(in->port,
 				in->args.ia.action_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_INDIRECT_ACTION_QUERY_UPDATE:
@@ -14287,38 +14328,38 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 				in->args.vc.actions);
 		break;
 	case RTE_FLOW_PARSER_CMD_VALIDATE:
-		parser_command_flow_validate(in->port, &in->args.vc.attr,
+		ret = parser_command_flow_validate(in->port, &in->args.vc.attr,
 				in->args.vc.pattern, in->args.vc.actions,
 				(const struct rte_flow_parser_tunnel_ops *)
 				&in->args.vc.tunnel_ops);
 		break;
 	case RTE_FLOW_PARSER_CMD_CREATE:
-		parser_command_flow_create(in->port, &in->args.vc.attr,
+		ret = parser_command_flow_create(in->port, &in->args.vc.attr,
 				in->args.vc.pattern, in->args.vc.actions,
 				(const struct rte_flow_parser_tunnel_ops *)
 				&in->args.vc.tunnel_ops, in->args.vc.user_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_DESTROY:
-		parser_command_flow_destroy(in->port,
+		ret = parser_command_flow_destroy(in->port,
 				in->args.destroy.rule_n,
 				in->args.destroy.rule,
 				in->args.destroy.is_user_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_UPDATE:
-		parser_command_flow_update(in->port, in->args.vc.rule_id,
-				in->args.vc.actions, in->args.vc.user_id);
+		ret = parser_command_flow_update(in->port, in->args.vc.rule_id,
+				in->args.vc.actions, in->args.vc.is_user_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_FLUSH:
-		parser_command_flow_flush(in->port);
+		ret = parser_command_flow_flush(in->port);
 		break;
 	case RTE_FLOW_PARSER_CMD_DUMP_ONE:
 	case RTE_FLOW_PARSER_CMD_DUMP_ALL:
-		parser_command_flow_dump(in->port, in->args.dump.mode,
+		ret = parser_command_flow_dump(in->port, in->args.dump.mode,
 				in->args.dump.rule, in->args.dump.file,
 				in->args.dump.is_user_id);
 		break;
 	case RTE_FLOW_PARSER_CMD_QUERY:
-		parser_command_flow_query(in->port, in->args.query.rule,
+		ret = parser_command_flow_query(in->port, in->args.query.rule,
 				&in->args.query.action,
 				in->args.query.is_user_id);
 		break;
@@ -14327,7 +14368,7 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 					 in->args.list.group);
 		break;
 	case RTE_FLOW_PARSER_CMD_ISOLATE:
-		parser_command_flow_isolate(in->port, in->args.isolate.set);
+		ret = parser_command_flow_isolate(in->port, in->args.isolate.set);
 		break;
 	case RTE_FLOW_PARSER_CMD_AGED:
 		parser_command_flow_aged(in->port, in->args.aged.destroy);
@@ -14345,7 +14386,7 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 		parser_command_flow_tunnel_list(in->port);
 		break;
 	case RTE_FLOW_PARSER_CMD_ACTION_POL_G:
-		parser_command_meter_policy_add(in->port,
+		ret = parser_command_meter_policy_add(in->port,
 				in->args.policy.policy_id,
 				in->args.vc.actions);
 		break;
@@ -14361,6 +14402,7 @@ cmd_flow_parsed(struct rte_flow_parser_output *in)
 		break;
 	}
 	fflush(stdout);
+	return ret;
 }
 
 /** Dispatch parsed buffer to function calls. */
@@ -14638,7 +14680,7 @@ rte_flow_parser_cmd_flow_dispatch(struct rte_flow_parser_output *out)
 {
 	if (out == NULL)
 		return;
-	cmd_flow_parsed((struct rte_flow_parser_output *)out);
+	(void)cmd_flow_parsed((struct rte_flow_parser_output *)out);
 }
 
 void
@@ -14714,7 +14756,7 @@ rte_flow_parser_run(const char *src)
 		cmd_set_raw_parsed(out);
 		break;
 	default:
-		cmd_flow_parsed(out);
+		return cmd_flow_parsed(out);
 		break;
 	}
 	return 0;
