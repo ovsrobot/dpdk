@@ -7,7 +7,11 @@ if [ -z "${DEF_LIB:-}" ]; then
 fi
 
 # Builds are run as root in containers, no need for sudo
-[ "$(id -u)" != '0' ] || alias sudo=
+if [ "$(id -u)" = '0' ]; then
+    run_as_root=""
+else
+    run_as_root="sudo -E"
+fi
 
 install_libabigail() {
     version=$1
@@ -28,15 +32,15 @@ configure_coredump() {
     # No point in configuring coredump without gdb
     which gdb >/dev/null || return 0
     ulimit -c unlimited
-    sudo sysctl -w kernel.core_pattern=/tmp/dpdk-core.%e.%p
+    $run_as_root sysctl -w kernel.core_pattern=/tmp/dpdk-core.%e.%p
 }
 
 catch_coredump() {
     ls /tmp/dpdk-core.*.* 2>/dev/null || return 0
     for core in /tmp/dpdk-core.*.*; do
-        binary=$(sudo readelf -n $core |grep $(pwd)/build/ 2>/dev/null |head -n1)
+        binary=$($run_as_root readelf -n $core |grep $(pwd)/build/ 2>/dev/null |head -n1)
         [ -x $binary ] || binary=
-        sudo gdb $binary -c $core \
+        $run_as_root gdb $binary -c $core \
             -ex 'info threads' \
             -ex 'thread apply all bt full' \
             -ex 'quit'
@@ -53,9 +57,9 @@ catch_ubsan() {
 
 check_traces() {
     which babeltrace >/dev/null || return 0
-    for file in $(sudo find $HOME -name metadata); do
-        ! sudo babeltrace $(dirname $file) >/dev/null 2>&1 || continue
-        sudo babeltrace $(dirname $file)
+    for file in $($run_as_root find $HOME -name metadata); do
+        ! $run_as_root babeltrace $(dirname $file) >/dev/null 2>&1 || continue
+        $run_as_root babeltrace $(dirname $file)
     done
 }
 
@@ -136,6 +140,7 @@ fi
 
 if [ "$UBSAN" = "true" ]; then
     sanitizer=${sanitizer:+$sanitizer,}undefined
+    export UBSAN_OPTIONS=print_stacktrace=1
     if [ "$RUN_TESTS" = "true" ]; then
         # UBSan takes too much memory with -O2
         buildtype=plain
@@ -218,7 +223,8 @@ fi
 if [ "$RUN_TESTS" = "true" ]; then
     failed=
     configure_coredump
-    sudo meson test -C build --suite fast-tests -t 3 --no-stdsplit --print-errorlogs || failed="true"
+    $run_as_root meson test -C build --suite fast-tests -t 3 --no-stdsplit --print-errorlogs ||
+        failed="true"
     catch_coredump
     catch_ubsan DPDK:fast-tests build/meson-logs/testlog.txt
     check_traces
