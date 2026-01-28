@@ -57,10 +57,10 @@ struct __rte_cache_aligned pkt_rx_queue {
 	uint8_t vlan_strip;
 	uint8_t timestamp_offloading;
 
-	volatile unsigned long rx_pkts;
-	volatile unsigned long rx_bytes;
-	volatile unsigned long rx_nombuf;
-	volatile unsigned long rx_dropped_pkts;
+	uint64_t rx_pkts;
+	uint64_t rx_bytes;
+	uint64_t rx_nombuf;
+	uint64_t rx_dropped_pkts;
 };
 
 struct __rte_cache_aligned pkt_tx_queue {
@@ -72,9 +72,9 @@ struct __rte_cache_aligned pkt_tx_queue {
 	unsigned int framecount;
 	unsigned int framenum;
 
-	volatile unsigned long tx_pkts;
-	volatile unsigned long err_pkts;
-	volatile unsigned long tx_bytes;
+	uint64_t tx_pkts;
+	uint64_t tx_bytes;
+	uint64_t err_pkts;
 };
 
 struct pmd_internals {
