@@ -4616,6 +4616,10 @@ main(int argc, char** argv)
 
 	init_config();
 
+	if (testpmd_flow_parser_init() != 0)
+		rte_exit(EXIT_FAILURE,
+			 "Could not initialize flow parser hooks.\n");
+
 	if (hot_plug) {
 		ret = rte_dev_hotplug_handle_enable();
 		if (ret) {
