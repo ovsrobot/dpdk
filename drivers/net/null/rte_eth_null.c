@@ -207,9 +207,6 @@ eth_dev_stop(struct rte_eth_dev *dev)
 {
 	uint16_t i;
 
-	if (dev == NULL)
-		return 0;
-
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++)
@@ -227,25 +224,16 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		const struct rte_eth_rxconf *rx_conf __rte_unused,
 		struct rte_mempool *mb_pool)
 {
+	struct pmd_internals *internals = dev->data->dev_private;
+	unsigned int packet_size = internals->packet_size;
 	struct rte_mbuf *dummy_packet;
-	struct pmd_internals *internals;
-	unsigned int packet_size;
 
-	if ((dev == NULL) || (mb_pool == NULL))
+	if (mb_pool == NULL)
 		return -EINVAL;
 
-	internals = dev->data->dev_private;
-
-	if (rx_queue_id >= dev->data->nb_rx_queues)
-		return -ENODEV;
-
-	packet_size = internals->packet_size;
-
 	internals->rx_null_queues[rx_queue_id].mb_pool = mb_pool;
-	dev->data->rx_queues[rx_queue_id] =
-		&internals->rx_null_queues[rx_queue_id];
-	dummy_packet = rte_zmalloc_socket(NULL,
-			packet_size, 0, dev->data->numa_node);
+	dev->data->rx_queues[rx_queue_id] = &internals->rx_null_queues[rx_queue_id];
+	dummy_packet = rte_zmalloc_socket(NULL, packet_size, 0, dev->data->numa_node);
 	if (dummy_packet == NULL)
 		return -ENOMEM;
 
@@ -261,24 +249,12 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 		unsigned int socket_id __rte_unused,
 		const struct rte_eth_txconf *tx_conf __rte_unused)
 {
+	struct pmd_internals *internals = dev->data->dev_private;
+	unsigned int packet_size = internals->packet_size;
 	struct rte_mbuf *dummy_packet;
-	struct pmd_internals *internals;
-	unsigned int packet_size;
 
-	if (dev == NULL)
-		return -EINVAL;
-
-	internals = dev->data->dev_private;
-
-	if (tx_queue_id >= dev->data->nb_tx_queues)
-		return -ENODEV;
-
-	packet_size = internals->packet_size;
-
-	dev->data->tx_queues[tx_queue_id] =
-		&internals->tx_null_queues[tx_queue_id];
-	dummy_packet = rte_zmalloc_socket(NULL,
-			packet_size, 0, dev->data->numa_node);
+	dev->data->tx_queues[tx_queue_id] = &internals->tx_null_queues[tx_queue_id];
+	dummy_packet = rte_zmalloc_socket(NULL, packet_size, 0, dev->data->numa_node);
 	if (dummy_packet == NULL)
 		return -ENOMEM;
 
@@ -739,7 +715,7 @@ free_kvlist:
 static int
 rte_pmd_null_remove(struct rte_vdev_device *dev)
 {
-	struct rte_eth_dev *eth_dev = NULL;
+	struct rte_eth_dev *eth_dev;
 
 	if (!dev)
 		return -EINVAL;
