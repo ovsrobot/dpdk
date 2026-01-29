@@ -84,12 +84,15 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+
 * **Added additional length checks for name parameter lengths.**
 
   Several library functions now have additional name length checks
   instead of silently truncating.
 
   * lpm: name must be less than RTE_LPM_NAMESIZE.
+  * hash: name parameter must be less than RTE_HASH_NAMESIZE.
+
 
 
 ABI Changes
