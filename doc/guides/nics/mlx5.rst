@@ -1827,6 +1827,12 @@ Limitations
 
 #. Counters of received packets and bytes of queues in the same group and queue ID are same.
 
+#. Each Rx queue in share group must have the same queue configuration.
+
+#. Ports in share group must have equal MTU at port start time.
+
+#. Reconfiguring a shared queue while it is in use (started or referenced by flows) is not allowed.
+
 
 .. _mlx5_rx_threshold:
 
