@@ -99,13 +99,19 @@ static_assert(alignof(struct rte_ether_addr) == 2,
  *  True  (1) if the given two ethernet address are the same;
  *  False (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_same_ether_addr(const struct rte_ether_addr *ea1,
 				     const struct rte_ether_addr *ea2)
 {
+#if !defined(RTE_ARCH_STRICT_ALIGN)
+	return ((((const unaligned_uint32_t *)ea1)[0] ^ ((const unaligned_uint32_t *)ea2)[0]) |
+			(((const uint16_t *)ea1)[2] ^ ((const uint16_t *)ea2)[2])) == 0;
+#else
 	const uint16_t *w1 = (const uint16_t *)ea1;
 	const uint16_t *w2 = (const uint16_t *)ea2;
 
 	return ((w1[0] ^ w2[0]) | (w1[1] ^ w2[1]) | (w1[2] ^ w2[2])) == 0;
+#endif
 }
 
 /**
@@ -118,11 +124,16 @@ static inline int rte_is_same_ether_addr(const struct rte_ether_addr *ea1,
  *   True  (1) if the given ethernet address is filled with zeros;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_zero_ether_addr(const struct rte_ether_addr *ea)
 {
+#if !defined(RTE_ARCH_STRICT_ALIGN)
+	return (((const unaligned_uint32_t *)ea)[0] | ((const uint16_t *)ea)[2]) == 0;
+#else
 	const uint16_t *w = (const uint16_t *)ea;
 
 	return (w[0] | w[1] | w[2]) == 0;
+#endif
 }
 
 /**
@@ -135,6 +146,7 @@ static inline int rte_is_zero_ether_addr(const struct rte_ether_addr *ea)
  *   True  (1) if the given ethernet address is a unicast address;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_unicast_ether_addr(const struct rte_ether_addr *ea)
 {
 	return (ea->addr_bytes[0] & RTE_ETHER_GROUP_ADDR) == 0;
@@ -150,6 +162,7 @@ static inline int rte_is_unicast_ether_addr(const struct rte_ether_addr *ea)
  *   True  (1) if the given ethernet address is a multicast address;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_multicast_ether_addr(const struct rte_ether_addr *ea)
 {
 	return ea->addr_bytes[0] & RTE_ETHER_GROUP_ADDR;
@@ -165,6 +178,7 @@ static inline int rte_is_multicast_ether_addr(const struct rte_ether_addr *ea)
  *   True  (1) if the given ethernet address is a broadcast address;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_broadcast_ether_addr(const struct rte_ether_addr *ea)
 {
 	const uint16_t *w = (const uint16_t *)ea;
@@ -182,6 +196,7 @@ static inline int rte_is_broadcast_ether_addr(const struct rte_ether_addr *ea)
  *   True  (1) if the given ethernet address is a universally assigned address;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_universal_ether_addr(const struct rte_ether_addr *ea)
 {
 	return (ea->addr_bytes[0] & RTE_ETHER_LOCAL_ADMIN_ADDR) == 0;
@@ -197,6 +212,7 @@ static inline int rte_is_universal_ether_addr(const struct rte_ether_addr *ea)
  *   True  (1) if the given ethernet address is a locally assigned address;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_local_admin_ether_addr(const struct rte_ether_addr *ea)
 {
 	return (ea->addr_bytes[0] & RTE_ETHER_LOCAL_ADMIN_ADDR) != 0;
@@ -213,9 +229,10 @@ static inline int rte_is_local_admin_ether_addr(const struct rte_ether_addr *ea)
  *   True  (1) if the given ethernet address is valid;
  *   false (0) otherwise.
  */
+__rte_pure
 static inline int rte_is_valid_assigned_ether_addr(const struct rte_ether_addr *ea)
 {
-	return rte_is_unicast_ether_addr(ea) && (!rte_is_zero_ether_addr(ea));
+	return rte_is_unicast_ether_addr(ea) && !rte_is_zero_ether_addr(ea);
 }
 
 /**
