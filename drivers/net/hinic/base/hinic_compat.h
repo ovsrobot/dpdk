@@ -197,10 +197,21 @@ static inline u16 ilog2(u32 n)
 	return res;
 }
 
+/*
+ * Initialize mutex for process-shared access.
+ * Structures may be in shared memory accessible by multiple processes,
+ * so mutexes must use PTHREAD_PROCESS_SHARED.
+ */
 static inline int hinic_mutex_init(pthread_mutex_t *pthreadmutex,
 					const pthread_mutexattr_t *mattr)
 {
-	return pthread_mutex_init(pthreadmutex, mattr);
+	pthread_mutexattr_t attr;
+
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutex_init(pthreadmutex, mattr ? mattr : &attr);
+	pthread_mutexattr_destroy(&attr);
+	return 0;
 }
 
 static inline int hinic_mutex_destroy(pthread_mutex_t *pthreadmutex)
