@@ -3,6 +3,7 @@
  */
 
 #include <rte_string_fns.h>
+#include <pthread.h>
 #include <ethdev_pci.h>
 #include <rte_alarm.h>
 
@@ -355,6 +356,17 @@ atl_disable_intr(struct aq_hw_s *hw)
 	hw_atl_itr_irq_msk_clearlsw_set(hw, 0xffffffff);
 }
 
+static void
+atl_init_mutex(pthread_mutex_t *mutex)
+{
+	pthread_mutexattr_t attr;
+
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutex_init(mutex, &attr);
+	pthread_mutexattr_destroy(&attr);
+}
+
 static int
 eth_atl_dev_init(struct rte_eth_dev *eth_dev)
 {
@@ -405,7 +417,7 @@ eth_atl_dev_init(struct rte_eth_dev *eth_dev)
 
 	hw->aq_nic_cfg = &adapter->hw_cfg;
 
-	pthread_mutex_init(&hw->mbox_mutex, NULL);
+	atl_init_mutex(&hw->mbox_mutex);
 
 	/* disable interrupt */
 	atl_disable_intr(hw);
