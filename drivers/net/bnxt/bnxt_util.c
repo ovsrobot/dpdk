@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <pthread.h>
 #include <inttypes.h>
 #include <rte_ether.h>
 
@@ -36,4 +37,16 @@ uint8_t hweight32(uint32_t word32)
 	res = (res + (res >> 4)) & 0x0F0F0F0F;
 	res = res + (res >> 8);
 	return (res + (res >> 16)) & 0x000000FF;
+}
+
+/* Initialize mutex so that it can be shared between processes */
+void
+bnxt_init_mutex(pthread_mutex_t *mutex)
+{
+	pthread_mutexattr_t attr;
+
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutex_init(mutex, &attr);
+	pthread_mutexattr_destroy(&attr);
 }

@@ -198,7 +198,8 @@ int bnxt_tx_queue_setup_op(struct rte_eth_dev *eth_dev,
 		goto err;
 	}
 
-	return pthread_mutex_init(&txq->txq_lock, NULL);
+	bnxt_init_mutex(&txq->txq_lock);
+	return 0;
 err:
 	bnxt_tx_queue_release_op(eth_dev, queue_idx);
 	return rc;
