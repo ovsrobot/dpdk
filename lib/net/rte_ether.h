@@ -115,6 +115,52 @@ static inline int rte_is_same_ether_addr(const struct rte_ether_addr *ea1,
 }
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Check if two Ethernet addresses are the same, performance optimized.
+ *
+ * @warning
+ * Intentional buffer overrun:
+ * The Ethernet addresses are loaded as 64-bit integers, i.e.
+ * two bytes past the memory holding the Ethernet addresses are loaded.
+ * The caller must ensure that this does not cause problems.
+ * If an Ethernet address 'ea' is a field in a structure 'S', it can be verified as follows:
+ * \code{.c}
+ *   static_assert(sizeof(struct S) >= offsetof(struct S, ea) + sizeof(uint64_t));
+ * \endcode
+ *
+ * @param ea1
+ *   A pointer to the first ether_addr structure containing the Ethernet address.
+ * @param ea2
+ *   A pointer to the second ether_addr structure containing the Ethernet address.
+ *
+ * @return
+ *   - true if the given two Ethernet addresses are the same;
+ *   - false otherwise.
+ */
+__rte_experimental
+__rte_pure
+static inline bool
+rte_is_same_ether_addr_fast(const struct rte_ether_addr *ea1,
+		const struct rte_ether_addr *ea2)
+{
+#if defined(RTE_ARCH_64) && !defined(RTE_ARCH_STRICT_ALIGN)
+	const unaligned_uint64_t * const a1 = (const unaligned_uint64_t *)ea1;
+	const unaligned_uint64_t * const a2 = (const unaligned_uint64_t *)ea2;
+#if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+	return (*a1 ^ *a2) >> 16 == 0;
+#elif RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+	return (*a1 ^ *a2) << 16 == 0;
+#else
+#error "Unknown byte order."
+#endif /* RTE_BYTE_ORDER */
+#else
+	return rte_is_same_ether_addr(ea1, ea2);
+#endif
+}
+
+/**
  * Check if an Ethernet address is filled with zeros.
  *
  * @param ea
