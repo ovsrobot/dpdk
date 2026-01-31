@@ -99,7 +99,8 @@ TAILQ_HEAD(hinic3_ethertype_filter_list, rte_flow);
 TAILQ_HEAD(hinic3_fdir_rule_filter_list, rte_flow);
 
 /* Tx WQE offload set callback function */
-typedef void  (*nic_tx_set_wqe_offload_t)(void *wqe_info, void *wqe_combo);
+typedef void  (*nic_tx_set_wqe_offload_t)(struct hinic3_wqe_info *wqe_info,
+										  struct hinic3_sq_wqe_combo *wqe_combo);
 
 /* Rx CQE info get callback function */
 typedef void  (*nic_rx_get_cqe_info_t)(struct hinic3_rxq *rx_queue, volatile struct hinic3_rq_cqe *rx_cqe,
