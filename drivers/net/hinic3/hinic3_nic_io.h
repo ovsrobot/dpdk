@@ -224,6 +224,31 @@ hinic3_write_db(void *db_addr, uint16_t q_id, int cos, uint8_t cflag, uint16_t p
 void hinic3_get_func_rx_buf_size(struct hinic3_nic_dev *nic_dev);
 
 /**
+ * Initialize RQ integrated CQE context
+ *
+ * @param[in] nic_dev
+ * Pointer to ethernet device structure.
+ *
+ * @return
+ * 0 on success, non-zero on failure.
+ */
+int hinic3_init_rq_cqe_ctxts(struct hinic3_nic_dev *nic_dev);
+
+/**
+ * Set RQ disable or enable
+ *
+ * @param[in] nic_dev
+ * Pointer to ethernet device structure.
+ * @param[in] q_id
+ * Receive queue id.
+ * @param[in] enable
+ *   1: enable  0: disable
+ * @return
+ * 0 on success, non-zero on failure.
+ */
+int hinic3_set_rq_enable(struct hinic3_nic_dev *nic_dev, uint16_t q_id, bool enable);
+
+/**
  * Initialize qps contexts, set SQ ci attributes, arm all SQ.
  *
  * Function will perform following steps:
