@@ -7,31 +7,62 @@
 
 #include "hinic3_mgmt.h"
 #include "hinic3_wq.h"
+#include "hinic3_pmd_cmdq_enhance.h"
 
 #define HINIC3_SCMD_DATA_LEN 16
 
 /* Pmd driver uses 64, kernel l2nic uses 4096. */
 #define HINIC3_CMDQ_DEPTH 64
 
-#define HINIC3_CMDQ_BUF_SIZE 2048U
+#define HINIC3_CMDQ_BUF_SIZE 1024U
 
 #define HINIC3_CEQ_ID_CMDQ 0
 
-enum cmdq_scmd_type { CMDQ_SET_ARM_CMD = 2 };
+#define WQ_BLOCK_PFN_SHIFT		9
+#define WQ_BLOCK_PFN(page_addr)		((page_addr) >> WQ_BLOCK_PFN_SHIFT)
 
-enum cmdq_wqe_type { WQE_LCMD_TYPE = 0, WQE_SCMD_TYPE = 1 };
+enum hinic3_cmdq_mode {
+	HINIC3_NORMAL_CMDQ,
+	HINIC3_ENHANCE_CMDQ
+};
 
-enum ctrl_sect_len { CTRL_SECT_LEN = 1, CTRL_DIRECT_SECT_LEN = 2 };
+enum cmdq_scmd_type {
+	CMDQ_SET_ARM_CMD = 2
+};
 
-enum bufdesc_len { BUFDESC_LCMD_LEN = 2, BUFDESC_SCMD_LEN = 3 };
+enum cmdq_wqe_type {
+	WQE_LCMD_TYPE,
+	WQE_SCMD_TYPE
+};
 
-enum data_format { DATA_SGE = 0};
+enum ctrl_sect_len {
+	CTRL_SECT_LEN = 1,
+	CTRL_DIRECT_SECT_LEN = 2
+};
 
-enum completion_format { COMPLETE_DIRECT = 0, COMPLETE_SGE = 1 };
+enum bufdesc_len {
+	BUFDESC_LCMD_LEN = 2,
+	BUFDESC_SCMD_LEN = 3
+};
 
-enum completion_request { CEQ_SET = 1 };
+enum data_format {
+		DATA_SGE
+};
 
-enum cmdq_cmd_type { SYNC_CMD_DIRECT_RESP, SYNC_CMD_SGE_RESP, ASYNC_CMD };
+enum completion_format {
+	COMPLETE_DIRECT,
+	COMPLETE_SGE
+};
+
+enum completion_request {
+		CEQ_SET = 1
+};
+
+enum cmdq_cmd_type {
+	SYNC_CMD_DIRECT_RESP,
+	SYNC_CMD_SGE_RESP,
+	ASYNC_CMD
+};
 
 enum hinic3_cmdq_type {
 	HINIC3_CMDQ_SYNC,
@@ -44,7 +75,10 @@ enum hinic3_db_src_type {
 	HINIC3_DB_SRC_L2NIC_SQ_TYPE
 };
 
-enum hinic3_cmdq_db_type { HINIC3_DB_SQ_RQ_TYPE, HINIC3_DB_CMDQ_TYPE };
+enum hinic3_cmdq_db_type {
+	HINIC3_DB_SQ_RQ_TYPE,
+	HINIC3_DB_CMDQ_TYPE
+};
 
 /* Cmdq ack type. */
 enum hinic3_ack_type {
@@ -52,7 +86,7 @@ enum hinic3_ack_type {
 	HINIC3_ACK_TYPE_SHARE_CQN	= 1,
 	HINIC3_ACK_TYPE_APP_CQN		= 2,
 
-	HINIC3_MOD_ACK_MAX		= 15
+	HINIC3_MOD_ACK_MAX			= 15
 };
 
 /* Cmdq wqe ctrls. */
@@ -126,6 +160,7 @@ struct hinic3_cmdq_wqe {
 	union {
 		struct hinic3_cmdq_inline_wqe inline_wqe;
 		struct hinic3_cmdq_wqe_lcmd wqe_lcmd;
+		struct enhanced_cmdq_wqe enhanced_cmdq_wqe;
 	};
 };
 
@@ -144,6 +179,7 @@ struct hinic3_cmd_cmdq_ctxt {
 	uint8_t rsvd1[5];
 
 	struct hinic3_cmdq_ctxt_info ctxt_info;
+	struct enhance_cmdq_ctxt_info enhance_ctxt_info;
 };
 
 enum hinic3_cmdq_status {
@@ -173,8 +209,10 @@ struct hinic3_cmdq {
 	rte_spinlock_t cmdq_lock;
 
 	struct hinic3_cmdq_ctxt_info cmdq_ctxt;
+	struct enhance_cmdq_ctxt_info cmdq_enhance_ctxt;
 
 	struct hinic3_cmdq_cmd_info *cmd_infos;
+	struct hinic3_cmdqs *cmdqs;
 };
 
 struct hinic3_cmdqs {
@@ -188,6 +226,7 @@ struct hinic3_cmdqs {
 	struct hinic3_cmdq cmdq[HINIC3_MAX_CMDQ_TYPES];
 
 	uint32_t status;
+	uint8_t cmdq_mode;
 };
 
 struct hinic3_cmd_buf {
@@ -215,8 +254,8 @@ int hinic3_cmdq_direct_resp(struct hinic3_hwdev *hwdev, enum hinic3_mod_type mod
 int hinic3_cmdq_detail_resp(struct hinic3_hwdev *hwdev, enum hinic3_mod_type mod, uint8_t cmd,
 		 struct hinic3_cmd_buf *buf_in, struct hinic3_cmd_buf *buf_out, uint32_t timeout);
 
-int hinic3_init_cmdqs(struct hinic3_hwdev *hwdev);
+int hinic3_cmdq_init(struct hinic3_hwdev *hwdev);
 
-void hinic3_free_cmdqs(struct hinic3_hwdev *hwdev);
+void hinic3_cmdq_free(struct hinic3_hwdev *hwdev);
 
 #endif /* _HINIC3_CMDQ_H_ */
