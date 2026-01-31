@@ -96,7 +96,7 @@ F: devtools/check-git-log.sh
 F: devtools/check-spdx-tag.sh
 F: devtools/check-symbol-change.py
 F: devtools/checkpatches.sh
-F: devtools/get-maintainer.sh
+F: devtools/get-maintainer.*
 F: devtools/git-log-fixes.sh
 F: devtools/load-devel-config
 F: devtools/mailmap-ctl.py

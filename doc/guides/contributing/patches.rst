@@ -562,9 +562,9 @@ The appropriate maintainer can be found in the ``MAINTAINERS`` file::
 
    git send-email --to maintainer@some.org --cc dev@dpdk.org 000*.patch
 
-Script ``get-maintainer.sh`` can be used to select maintainers automatically::
+Script ``get-maintainer.py`` can be used to select maintainers automatically::
 
-  git send-email --to-cmd ./devtools/get-maintainer.sh --cc dev@dpdk.org 000*.patch
+  git send-email --to-cmd ./devtools/get-maintainer.py --cc dev@dpdk.org 000*.patch
 
 You can test the emails by sending it to yourself or with the ``--dry-run`` option.
 
