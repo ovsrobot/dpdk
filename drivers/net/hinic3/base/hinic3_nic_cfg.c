@@ -1026,7 +1026,7 @@ hinic3_set_rx_lro_timer(struct hinic3_hwdev *hwdev, uint32_t timer_value)
 }
 
 int
-hinic3_set_rx_lro_state(struct hinic3_hwdev *hwdev, uint8_t lro_en, uint32_t lro_timer,
+hinic3_set_rx_lro_state(struct hinic3_hwdev *hwdev, bool lro_en, uint32_t lro_timer,
 			uint32_t lro_max_pkt_len)
 {
 	uint8_t ipv4_en = 0, ipv6_en = 0;
@@ -1465,38 +1465,41 @@ hinic3_vf_get_default_cos(struct hinic3_hwdev *hwdev, uint8_t *cos_id)
 	return 0;
 }
 
-/**
- * Set the Ethernet type filtering rule for the FDIR of a NIC.
- *
- * @param[in] hwdev
- * Pointer to hardware device structure.
- * @param[in] pkt_type
- * Indicate the packet type.
- * @param[in] queue_id
- * Indicate the queue id.
- * @param[in] en
- * Indicate whether to add or delete an operation. 1 - add; 0 - delete.
- *
- * @return
- * 0 on success, non-zero on failure.
- */
 int
-hinic3_set_fdir_ethertype_filter(struct hinic3_hwdev *hwdev,
-			 uint8_t pkt_type, uint16_t queue_id, uint8_t en)
+hinic3_set_fdir_ethertype_filter(struct hinic3_hwdev *hwdev, uint8_t pkt_type,
+								 struct hinic3_ethertype_filter *ethertype_filter,
+								 uint8_t en)
 {
+	struct hinic3_nic_dev *nic_dev = NULL;
 	struct hinic3_set_fdir_ethertype_rule ethertype_cmd;
 	uint16_t out_size = sizeof(ethertype_cmd);
+	uint16_t block_id;
+	uint32_t index = 0;
 	int err;
 
-	if (!hwdev)
+	if (!hwdev || !hwdev->dev_handle)
 		return -EINVAL;
+	nic_dev = (struct hinic3_nic_dev*)hwdev->dev_handle;
+
+	if ((hinic3_get_driver_feature(nic_dev) & NIC_F_HTN_FDIR) != 0)
+		if (en != 0) {
+			index = hinic3_tcam_alloc_index(nic_dev, &block_id);
+			if (index == HINIC3_TCAM_INVALID_INDEX) {
+			return -ENOMEM;
+		}
+
+		index += HINIC3_PKT_TCAM_DYNAMIC_INDEX_START(block_id);
+	} else {
+		index = ethertype_filter->tcam_index[pkt_type];
+	}
 
 	memset(&ethertype_cmd, 0,
 	       sizeof(struct hinic3_set_fdir_ethertype_rule));
 	ethertype_cmd.func_id = hinic3_global_func_id(hwdev);
 	ethertype_cmd.pkt_type = pkt_type;
 	ethertype_cmd.pkt_type_en = en;
-	ethertype_cmd.qid = (uint8_t)queue_id;
+	ethertype_cmd.index = index;
+	ethertype_cmd.qid = (uint8_t)ethertype_filter->queue;
 
 	err = hinic3_msg_to_mgmt_sync(hwdev, HINIC3_MOD_L2NIC,
 				      HINIC3_NIC_CMD_SET_FDIR_STATUS,
