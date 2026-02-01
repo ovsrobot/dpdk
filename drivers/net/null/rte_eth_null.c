@@ -172,6 +172,7 @@ eth_null_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		rte_memcpy(h->dummy_packet, rte_pktmbuf_mtod(m, void *), len);
 		bytes += m->pkt_len;
 	}
+	rte_pktmbuf_free_bulk(bufs, nb_bufs);
 
 	rte_atomic_fetch_add_explicit(&h->tx_pkts, nb_bufs, rte_memory_order_relaxed);
 	rte_atomic_fetch_add_explicit(&h->tx_bytes, bytes, rte_memory_order_relaxed);
