@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added RISC-V vector extension implementation for ACL.**
+
+  * Added new ``RTE_ACL_CLASSIFY_RVV`` vector implementation,
+    which can process up to 8 flows in parallel.
+    Requires RISC-V Vector Extension support.
+
 
 Removed Items
 -------------
