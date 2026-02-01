@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added RISC-V vector extension support for node library.**
+
+  * Added vectorized IPv4 LPM lookup implementation for the node library
+    using RISC-V Vector Extension instruction set.
 
 Removed Items
 -------------
