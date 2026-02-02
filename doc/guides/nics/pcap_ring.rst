@@ -213,6 +213,17 @@ Otherwise, the first 512 packets from the input pcap file will be discarded by t
    an error if interface is down, and the PMD itself won't change the status
    of the external network interface.
 
+Features and Limitations
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+*  The PMD will re-insert the VLAN tag transparently to the packet if the kernel
+   strips it, as long as the ``RTE_ETH_RX_OFFLOAD_VLAN_STRIP`` is not enabled by the
+   application.
+
+*  The PMD will transparently insert a VLAN tag to transmitted packets if
+   ``RTE_ETH_TX_OFFLOAD_VLAN_INSERT`` is enabled and the mbuf has ``RTE_MBUF_F_TX_VLAN``
+   set.
+
 
 Rings-based PMD
 ~~~~~~~~~~~~~~~

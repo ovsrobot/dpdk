@@ -59,6 +59,10 @@ New Features
 
   * Added support for V4000 Krackan2e.
 
+* **Updated PCAP ethernet driver.**
+
+  * Added support for VLAN insertion and stripping.
+
 
 Removed Items
 -------------
