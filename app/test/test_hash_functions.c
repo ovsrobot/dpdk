@@ -187,10 +187,14 @@ verify_jhash_32bits(void)
 {
 	unsigned i, j;
 	uint8_t key[64];
+	/* to guarantee alignment for rte_jhash_32b, use u32 and copy data */
+	uint32_t key32[sizeof(key) / sizeof(uint32_t)];
 	uint32_t hash, hash32;
 
 	for (i = 0; i < 64; i++)
 		key[i] = rand() & 0xff;
+
+	memcpy(key32, key, sizeof(key));
 
 	for (i = 0; i < RTE_DIM(hashtest_key_lens); i++) {
 		for (j = 0; j < RTE_DIM(hashtest_initvals); j++) {
@@ -199,7 +203,7 @@ verify_jhash_32bits(void)
 				hash = rte_jhash(key, hashtest_key_lens[i],
 						hashtest_initvals[j]);
 				/* Divide key length by 4 in rte_jhash for 32 bits */
-				hash32 = rte_jhash_32b((const unaligned_uint32_t *)key,
+				hash32 = rte_jhash_32b(key32,
 						hashtest_key_lens[i] >> 2,
 						hashtest_initvals[j]);
 				if (hash != hash32) {
