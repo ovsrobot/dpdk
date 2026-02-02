@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated CESNET NFB ethernet driver.**
+
+  * The timestamp value has been updated to make it usable.
 
 Removed Items
 -------------
