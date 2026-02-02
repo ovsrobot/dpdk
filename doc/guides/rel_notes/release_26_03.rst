@@ -59,6 +59,10 @@ New Features
 
   * Added support for V4000 Krackan2e.
 
+* **Added experimental RSS type helper APIs in ethdev.**
+
+  * Added new APIs to convert between RSS type names and values.
+  * Added new API call to obtain the global RSS string table.
 
 Removed Items
 -------------
