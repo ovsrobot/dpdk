@@ -59,6 +59,9 @@ New Features
 
   * Added support for V4000 Krackan2e.
 
+* **Updated CESNET NFB ethernet driver.**
+
+  * The timestamp value has been updated to make it usable.
 
 Removed Items
 -------------
