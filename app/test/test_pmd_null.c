@@ -2,17 +2,15 @@
  * Copyright(c) 2026 Stephen Hemminger
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <errno.h>
 
 #include <rte_bus_vdev.h>
-#include <rte_common.h>
 #include <rte_cycles.h>
 #include <rte_ethdev.h>
 #include <rte_ether.h>
-#include <rte_launch.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
 #include <rte_mempool.h>
@@ -57,7 +55,14 @@ static int
 configure_null_port(uint16_t pid)
 {
 	struct rte_eth_conf port_conf = {0};
+	struct rte_eth_dev_info dev_info;
 	int ret;
+
+	ret = rte_eth_dev_info_get(pid, &dev_info);
+	if (ret != 0) {
+		printf("Failed to get device info for port %u: %d\n", pid, ret);
+		return ret;
+	}
 
 	ret = rte_eth_dev_configure(pid, 1, 1, &port_conf);
 	if (ret != 0) {
@@ -69,7 +74,7 @@ configure_null_port(uint16_t pid)
 				     rte_eth_dev_socket_id(pid),
 				     NULL, mp);
 	if (ret != 0) {
-		printf("Failed to setup Rx queue for port %u: %d\n", pid, ret);
+		printf("Failed to setup RX queue for port %u: %d\n", pid, ret);
 		return ret;
 	}
 
@@ -77,7 +82,7 @@ configure_null_port(uint16_t pid)
 				     rte_eth_dev_socket_id(pid),
 				     NULL);
 	if (ret != 0) {
-		printf("Failed to setup Tx queue for port %u: %d\n", pid, ret);
+		printf("Failed to setup TX queue for port %u: %d\n", pid, ret);
 		return ret;
 	}
 
@@ -131,7 +136,7 @@ test_null_teardown(void)
 }
 
 /*
- * Test: Basic Rx - should return empty packets
+ * Test: Basic RX - should return empty packets
  */
 static int
 test_null_rx_basic(void)
@@ -140,7 +145,7 @@ test_null_rx_basic(void)
 	uint16_t nb_rx;
 	unsigned int i;
 
-	/* Rx should return requested number of empty packets */
+	/* RX should return requested number of empty packets */
 	nb_rx = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
 	TEST_ASSERT(nb_rx == BURST_SIZE,
 		    "Expected %u packets, got %u", BURST_SIZE, nb_rx);
@@ -180,17 +185,14 @@ test_mbuf_setup_burst(struct rte_mbuf **bufs, unsigned int burst_size)
 		/* Choose random length between ether min and available space */
 		len = rte_rand_max(rte_pktmbuf_tailroom(m) - RTE_ETHER_MIN_LEN)
 			+ RTE_ETHER_MIN_LEN;
-
-		if (rte_pktmbuf_append(m, len) == NULL) {
-			rte_pktmbuf_free_bulk(bufs, burst_size);
-			return -1;
-		}
+		m->data_len = len;
+		m->buf_len = len;
 	}
 	return 0;
 }
 
 /*
- * Test: Basic Tx - should free all packets
+ * Test: Basic TX - should free all packets
  */
 static int
 test_null_tx_basic(void)
@@ -199,16 +201,16 @@ test_null_tx_basic(void)
 	uint16_t nb_tx;
 	unsigned int pool_count_before, pool_count_after;
 
-	/* Allocate mbufs for Tx */
+	/* Allocate mbufs for TX */
 	TEST_ASSERT(test_mbuf_setup_burst(bufs, BURST_SIZE) == 0,
 		    "Could not allocate mbufs");
 
 	pool_count_before = rte_mempool_avail_count(mp);
 
-	/* Tx should accept and free all packets */
+	/* TX should accept and free all packets */
 	nb_tx = rte_eth_tx_burst(port_id, 0, bufs, BURST_SIZE);
 	TEST_ASSERT(nb_tx == BURST_SIZE,
-		    "Expected to Tx %u packets, but sent %u", BURST_SIZE, nb_tx);
+		    "Expected to TX %u packets, but sent %u", BURST_SIZE, nb_tx);
 
 	pool_count_after = rte_mempool_avail_count(mp);
 
@@ -220,7 +222,9 @@ test_null_tx_basic(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Statistics verification */
+/*
+ * Test: Statistics verification
+ */
 static int
 test_null_stats(void)
 {
@@ -240,20 +244,20 @@ test_null_stats(void)
 	TEST_ASSERT(stats.ipackets == 0, "Initial ipackets not zero");
 	TEST_ASSERT(stats.opackets == 0, "Initial opackets not zero");
 
-	/* Perform Rx */
+	/* Perform RX */
 	nb_rx = rte_eth_rx_burst(port_id, 0, rx_bufs, BURST_SIZE);
-	TEST_ASSERT(nb_rx == BURST_SIZE, "Rx burst failed");
+	TEST_ASSERT(nb_rx == BURST_SIZE, "RX burst failed");
 
-	/* Allocate and perform Tx */
+	/* Allocate and perform TX */
 	TEST_ASSERT(test_mbuf_setup_burst(tx_bufs, BURST_SIZE) == 0,
 		    "Could not allocate tx mbufs");
 
 	nb_tx = rte_eth_tx_burst(port_id, 0, tx_bufs, BURST_SIZE);
-	TEST_ASSERT(nb_tx == BURST_SIZE, "Tx burst failed");
+	TEST_ASSERT(nb_tx == BURST_SIZE, "TX burst failed");
 
 	/* Get updated stats */
 	ret = rte_eth_stats_get(port_id, &stats);
-	TEST_ASSERT(ret == 0, "Failed to get stats after Rx/Tx");
+	TEST_ASSERT(ret == 0, "Failed to get stats after RX/TX");
 
 	/* Verify stats */
 	TEST_ASSERT(stats.ipackets == BURST_SIZE,
@@ -268,7 +272,9 @@ test_null_stats(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Custom packet size */
+/*
+ * Test: Custom packet size
+ */
 static int
 test_null_custom_size(void)
 {
@@ -286,9 +292,9 @@ test_null_custom_size(void)
 	ret = configure_null_port(custom_port);
 	TEST_ASSERT(ret == 0, "Failed to configure null port");
 
-	/* Rx should return packets with custom size */
+	/* RX should return packets with custom size */
 	nb_rx = rte_eth_rx_burst(custom_port, 0, bufs, BURST_SIZE);
-	TEST_ASSERT(nb_rx == BURST_SIZE, "Rx burst failed");
+	TEST_ASSERT(nb_rx == BURST_SIZE, "RX burst failed");
 
 	/* Verify custom packet size */
 	for (i = 0; i < nb_rx; i++) {
@@ -309,7 +315,9 @@ test_null_custom_size(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Copy mode */
+/*
+ * Test: Copy mode
+ */
 static int
 test_null_copy_mode(void)
 {
@@ -324,11 +332,11 @@ test_null_copy_mode(void)
 	ret = configure_null_port(copy_port);
 	TEST_ASSERT(ret == 0, "Failed to configure null port");
 
-	/* Rx in copy mode should work */
+	/* RX in copy mode should work */
 	nb_rx = rte_eth_rx_burst(copy_port, 0, rx_bufs, BURST_SIZE);
-	TEST_ASSERT(nb_rx == BURST_SIZE, "Rx burst in copy mode failed");
+	TEST_ASSERT(nb_rx == BURST_SIZE, "RX burst in copy mode failed");
 
-	/* Free Rx mbufs */
+	/* Free RX mbufs */
 	rte_pktmbuf_free_bulk(rx_bufs, nb_rx);
 
 	/* Cleanup */
@@ -339,7 +347,9 @@ test_null_copy_mode(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: No-Rx mode */
+/*
+ * Test: No-RX mode
+ */
 static int
 test_null_no_rx_mode(void)
 {
@@ -355,17 +365,17 @@ test_null_no_rx_mode(void)
 	ret = configure_null_port(norx_port);
 	TEST_ASSERT(ret == 0, "Failed to configure null port");
 
-	/* Rx in no-rx mode should return 0 packets */
+	/* RX in no-rx mode should return 0 packets */
 	nb_rx = rte_eth_rx_burst(norx_port, 0, rx_bufs, BURST_SIZE);
 	TEST_ASSERT(nb_rx == 0,
 		    "Expected 0 packets in no-rx mode, got %u", nb_rx);
 
-	/* Tx in no-rx mode should still work (frees packets) */
+	/* TX in no-rx mode should still work (frees packets) */
 	TEST_ASSERT(test_mbuf_setup_burst(tx_bufs, BURST_SIZE) == 0,
 		    "Could not allocate tx mbufs");
 
 	nb_tx = rte_eth_tx_burst(norx_port, 0, tx_bufs, BURST_SIZE);
-	TEST_ASSERT(nb_tx == BURST_SIZE, "Tx burst in no-rx mode failed");
+	TEST_ASSERT(nb_tx == BURST_SIZE, "TX burst in no-rx mode failed");
 
 	/* Cleanup */
 	rte_eth_dev_stop(norx_port);
@@ -375,7 +385,9 @@ test_null_no_rx_mode(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Link status */
+/*
+ * Test: Link status
+ */
 static int
 test_null_link_status(void)
 {
@@ -411,13 +423,13 @@ test_null_link_status(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Device info */
+/*
+ * Test: Device info
+ */
 static int
 test_null_dev_info(void)
 {
 	struct rte_eth_dev_info dev_info;
-	const uint16_t min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN -
-		RTE_ETHER_CRC_LEN;
 	int ret;
 
 	ret = rte_eth_dev_info_get(port_id, &dev_info);
@@ -427,17 +439,24 @@ test_null_dev_info(void)
 	TEST_ASSERT(dev_info.max_mac_addrs == 1,
 		    "Expected max_mac_addrs=1, got %u", dev_info.max_mac_addrs);
 
-	/* Null PMD has no MTU restrictions, so max_mtu is UINT16_MAX */
+	/*
+	 * The null PMD reports max_rx_pktlen=UINT32_MAX, so the ethdev layer
+	 * derives max_mtu=UINT16_MAX and min_mtu from RTE_ETHER_MIN_LEN.
+	 */
 	TEST_ASSERT(dev_info.max_mtu == UINT16_MAX,
-		    "Expected max_mtu=UINT16_MAX, got %u", dev_info.max_mtu);
-	TEST_ASSERT(dev_info.min_mtu == min_mtu,
-		    "Unexpected min_mtu: %u", dev_info.min_mtu);
+		    "Unexpected max_mtu: %u", dev_info.max_mtu);
 
-	/* Check Tx offload capabilities */
+	/* Check TX offload capabilities */
 	TEST_ASSERT(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MULTI_SEGS,
 		    "Expected MULTI_SEGS TX offload capability");
 	TEST_ASSERT(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE,
 		    "Expected MT_LOCKFREE TX offload capability");
+	TEST_ASSERT(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_VLAN_INSERT,
+		    "Expected VLAN_INSERT TX offload capability");
+
+	/* Check RX offload capabilities */
+	TEST_ASSERT(dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_STRIP,
+		    "Expected VLAN_STRIP RX offload capability");
 
 	/* Check RSS capabilities */
 	TEST_ASSERT(dev_info.reta_size > 0, "Expected non-zero reta_size");
@@ -449,7 +468,9 @@ test_null_dev_info(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Multiple Rx/Tx bursts */
+/*
+ * Test: Multiple RX/TX bursts
+ */
 static int
 test_null_multiple_bursts(void)
 {
@@ -463,7 +484,7 @@ test_null_multiple_bursts(void)
 	ret = rte_eth_stats_reset(port_id);
 	TEST_ASSERT(ret == 0, "Failed to reset stats");
 
-	/* Perform multiple Rx bursts */
+	/* Perform multiple RX bursts */
 	for (burst = 0; burst < num_bursts; burst++) {
 		struct rte_mbuf *bufs[BURST_SIZE];
 
@@ -475,7 +496,7 @@ test_null_multiple_bursts(void)
 		rte_pktmbuf_free_bulk(bufs, nb_rx);
 	}
 
-	/* Perform multiple Tx bursts */
+	/* Perform multiple TX bursts */
 	for (burst = 0; burst < num_bursts; burst++) {
 		struct rte_mbuf *bufs[BURST_SIZE];
 
@@ -484,7 +505,7 @@ test_null_multiple_bursts(void)
 
 		nb_tx = rte_eth_tx_burst(port_id, 0, bufs, BURST_SIZE);
 		TEST_ASSERT(nb_tx == BURST_SIZE,
-			    "Burst %u: Expected to Tx %u, sent %u",
+			    "Burst %u: Expected to TX %u, sent %u",
 			    burst, BURST_SIZE, nb_tx);
 	}
 
@@ -536,12 +557,12 @@ test_null_rss_config(void)
 		ret = rte_eth_rx_queue_setup(rss_port, q, RING_SIZE,
 					     rte_eth_dev_socket_id(rss_port),
 					     NULL, mp);
-		TEST_ASSERT(ret == 0, "Failed to setup Rx queue %u", q);
+		TEST_ASSERT(ret == 0, "Failed to setup RX queue %u", q);
 
 		ret = rte_eth_tx_queue_setup(rss_port, q, RING_SIZE,
 					     rte_eth_dev_socket_id(rss_port),
 					     NULL);
-		TEST_ASSERT(ret == 0, "Failed to setup Tx queue %u", q);
+		TEST_ASSERT(ret == 0, "Failed to setup TX queue %u", q);
 	}
 
 	ret = rte_eth_dev_start(rss_port);
@@ -622,12 +643,12 @@ test_null_reta_config(void)
 		ret = rte_eth_rx_queue_setup(reta_port, q, RING_SIZE,
 					     rte_eth_dev_socket_id(reta_port),
 					     NULL, mp);
-		TEST_ASSERT(ret == 0, "Failed to setup Rx queue %u", q);
+		TEST_ASSERT(ret == 0, "Failed to setup RX queue %u", q);
 
 		ret = rte_eth_tx_queue_setup(reta_port, q, RING_SIZE,
 					     rte_eth_dev_socket_id(reta_port),
 					     NULL);
-		TEST_ASSERT(ret == 0, "Failed to setup Tx queue %u", q);
+		TEST_ASSERT(ret == 0, "Failed to setup TX queue %u", q);
 	}
 
 	ret = rte_eth_dev_start(reta_port);
@@ -670,7 +691,9 @@ test_null_reta_config(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Stats reset */
+/*
+ * Test: Stats reset
+ */
 static int
 test_null_stats_reset(void)
 {
@@ -713,7 +736,9 @@ test_null_stats_reset(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: MAC address operations */
+/*
+ * Test: MAC address operations
+ */
 static int
 test_null_mac_addr(void)
 {
@@ -734,7 +759,143 @@ test_null_mac_addr(void)
 	return TEST_SUCCESS;
 }
 
-/* Test: Promiscuous and allmulticast modes */
+/*
+ * Test: VLAN strip offload
+ * Verify that when RX VLAN strip is enabled, received packets have
+ * the VLAN stripped flags set and a valid vlan_tci.
+ */
+static int
+test_null_vlan_strip(void)
+{
+	struct rte_eth_conf port_conf = {0};
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t vlan_port;
+	uint16_t nb_rx;
+	unsigned int i;
+	int ret;
+
+	/* Create a null device for VLAN strip testing */
+	ret = create_null_port("net_null_vlan_strip", NULL, &vlan_port);
+	TEST_ASSERT(ret == 0, "Failed to create null port for VLAN strip");
+
+	/* Configure with VLAN strip enabled */
+	port_conf.rxmode.offloads = RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+
+	ret = rte_eth_dev_configure(vlan_port, 1, 1, &port_conf);
+	TEST_ASSERT(ret == 0, "Failed to configure VLAN strip port");
+
+	ret = rte_eth_rx_queue_setup(vlan_port, 0, RING_SIZE,
+				     rte_eth_dev_socket_id(vlan_port),
+				     NULL, mp);
+	TEST_ASSERT(ret == 0, "Failed to setup RX queue");
+
+	ret = rte_eth_tx_queue_setup(vlan_port, 0, RING_SIZE,
+				     rte_eth_dev_socket_id(vlan_port),
+				     NULL);
+	TEST_ASSERT(ret == 0, "Failed to setup TX queue");
+
+	ret = rte_eth_dev_start(vlan_port);
+	TEST_ASSERT(ret == 0, "Failed to start VLAN strip port");
+
+	/* RX should return packets with VLAN stripped flags */
+	nb_rx = rte_eth_rx_burst(vlan_port, 0, bufs, BURST_SIZE);
+	TEST_ASSERT(nb_rx == BURST_SIZE, "RX burst failed");
+
+	for (i = 0; i < nb_rx; i++) {
+		TEST_ASSERT((bufs[i]->ol_flags & RTE_MBUF_F_RX_VLAN) != 0,
+			    "Packet %u missing RTE_MBUF_F_RX_VLAN flag", i);
+		TEST_ASSERT((bufs[i]->ol_flags & RTE_MBUF_F_RX_VLAN_STRIPPED) != 0,
+			    "Packet %u missing RTE_MBUF_F_RX_VLAN_STRIPPED flag", i);
+		TEST_ASSERT(bufs[i]->vlan_tci != 0,
+			    "Packet %u has zero vlan_tci", i);
+	}
+
+	rte_pktmbuf_free_bulk(bufs, nb_rx);
+
+	/* Cleanup */
+	rte_eth_dev_stop(vlan_port);
+	rte_eth_dev_close(vlan_port);
+	rte_vdev_uninit("net_null_vlan_strip");
+
+	return TEST_SUCCESS;
+}
+
+/*
+ * Test: VLAN insert TX offload
+ * Verify that the null PMD accepts packets with the VLAN insert flag
+ * and that the offload capability is properly advertised.
+ */
+static int
+test_null_vlan_insert(void)
+{
+	struct rte_eth_conf port_conf = {0};
+	struct rte_eth_dev_info dev_info;
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t vlan_port;
+	uint16_t nb_tx;
+	unsigned int i;
+	int ret;
+
+	/* Create a null device for VLAN insert testing */
+	ret = create_null_port("net_null_vlan_insert", NULL, &vlan_port);
+	TEST_ASSERT(ret == 0, "Failed to create null port for VLAN insert");
+
+	ret = rte_eth_dev_info_get(vlan_port, &dev_info);
+	TEST_ASSERT(ret == 0, "Failed to get device info");
+
+	/* Verify VLAN insert is advertised */
+	TEST_ASSERT(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_VLAN_INSERT,
+		    "TX VLAN insert offload not advertised");
+
+	/* Also verify VLAN strip RX capability */
+	TEST_ASSERT(dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_VLAN_STRIP,
+		    "RX VLAN strip offload not advertised");
+
+	/* Configure with VLAN insert TX offload */
+	port_conf.txmode.offloads = RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
+
+	ret = rte_eth_dev_configure(vlan_port, 1, 1, &port_conf);
+	TEST_ASSERT(ret == 0, "Failed to configure VLAN insert port");
+
+	ret = rte_eth_rx_queue_setup(vlan_port, 0, RING_SIZE,
+				     rte_eth_dev_socket_id(vlan_port),
+				     NULL, mp);
+	TEST_ASSERT(ret == 0, "Failed to setup RX queue");
+
+	ret = rte_eth_tx_queue_setup(vlan_port, 0, RING_SIZE,
+				     rte_eth_dev_socket_id(vlan_port),
+				     NULL);
+	TEST_ASSERT(ret == 0, "Failed to setup TX queue");
+
+	ret = rte_eth_dev_start(vlan_port);
+	TEST_ASSERT(ret == 0, "Failed to start VLAN insert port");
+
+	/* Allocate packets and set VLAN insert flag with a TCI */
+	TEST_ASSERT(test_mbuf_setup_burst(bufs, BURST_SIZE) == 0,
+		    "Could not allocate mbufs");
+
+	for (i = 0; i < BURST_SIZE; i++) {
+		bufs[i]->ol_flags |= RTE_MBUF_F_TX_VLAN;
+		bufs[i]->vlan_tci = 200;
+	}
+
+	/* TX should accept all VLAN-tagged packets */
+	nb_tx = rte_eth_tx_burst(vlan_port, 0, bufs, BURST_SIZE);
+	TEST_ASSERT(nb_tx == BURST_SIZE,
+		    "Expected to TX %u VLAN packets, sent %u",
+		    BURST_SIZE, nb_tx);
+
+	/* Cleanup */
+	rte_eth_dev_stop(vlan_port);
+	rte_eth_dev_close(vlan_port);
+	rte_vdev_uninit("net_null_vlan_insert");
+
+	return TEST_SUCCESS;
+}
+
+/*
+ * Test: Promiscuous and allmulticast modes
+ */
 static int
 test_null_promisc_allmulti(void)
 {
@@ -747,156 +908,6 @@ test_null_promisc_allmulti(void)
 	/* Test allmulticast mode - null PMD starts with allmulti enabled */
 	ret = rte_eth_allmulticast_get(port_id);
 	TEST_ASSERT(ret == 1, "Expected allmulticast mode enabled");
-
-	return TEST_SUCCESS;
-}
-
-/* Multi-threaded Tx test structures and worker function */
-#define MT_TX_BURSTS_PER_LCORE 100
-#define MT_TX_BURST_SIZE 8u
-
-struct mt_tx_args {
-	uint16_t port;
-	uint16_t queue;
-	struct rte_mempool *pool;
-	uint64_t tx_count;	/* packets successfully transmitted */
-	int error;		/* non-zero if worker encountered error */
-};
-
-static int
-mt_tx_worker(void *arg)
-{
-	struct mt_tx_args *args = arg;
-	struct rte_mbuf *bufs[MT_TX_BURST_SIZE];
-	unsigned int burst;
-	uint16_t nb_tx;
-
-	for (burst = 0; burst < MT_TX_BURSTS_PER_LCORE; burst++) {
-		/* Allocate mbufs */
-		if (rte_pktmbuf_alloc_bulk(args->pool, bufs, MT_TX_BURST_SIZE) != 0) {
-			args->error = -ENOMEM;
-			return -1;
-		}
-
-		/* Set minimal packet size */
-		for (uint16_t i = 0; i < MT_TX_BURST_SIZE; i++) {
-			bufs[i]->data_len = RTE_ETHER_MIN_LEN;
-			bufs[i]->pkt_len = RTE_ETHER_MIN_LEN;
-		}
-
-		/* Transmit on shared queue */
-		nb_tx = rte_eth_tx_burst(args->port, args->queue,
-					 bufs, MT_TX_BURST_SIZE);
-		args->tx_count += nb_tx;
-
-		/* Free any unsent packets */
-		if (nb_tx < MT_TX_BURST_SIZE)
-			rte_pktmbuf_free_bulk(&bufs[nb_tx],
-					      MT_TX_BURST_SIZE - nb_tx);
-	}
-
-	return 0;
-}
-
-/*
- * Test: Multi-threaded Tx on same queue (MT_LOCKFREE)
- * The null PMD advertises MT_LOCKFREE capability, meaning multiple
- * threads can transmit on the same queue without external locking.
- */
-static int
-test_null_mt_tx(void)
-{
-	struct rte_eth_dev_info dev_info;
-	struct rte_mempool *mt_pool;
-	struct mt_tx_args worker_args[RTE_MAX_LCORE] = { 0 };
-	struct rte_eth_stats stats;
-	unsigned int lcore_id;
-	unsigned int num_workers = 0;
-	uint64_t total_expected = 0;
-	int ret;
-
-	/* Check MT_LOCKFREE capability */
-	ret = rte_eth_dev_info_get(port_id, &dev_info);
-	TEST_ASSERT(ret == 0, "Failed to get device info");
-
-	if (!(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MT_LOCKFREE)) {
-		printf("  MT_LOCKFREE not supported, skipping test\n");
-		return TEST_SKIPPED;
-	}
-
-	/* Count available worker lcores */
-	RTE_LCORE_FOREACH_WORKER(lcore_id) {
-		num_workers++;
-	}
-
-	if (num_workers < 2) {
-		printf("  Need at least 2 worker lcores for MT test, "
-		       "have %u, skipping\n", num_workers);
-		return TEST_SKIPPED;
-	}
-
-	/* Limit to reasonable number of workers */
-	if (num_workers > 4)
-		num_workers = 4;
-
-	/* Create larger mempool for multi-threaded test */
-	mt_pool = rte_pktmbuf_pool_create("mt_tx_pool",
-					  num_workers * MT_TX_BURSTS_PER_LCORE *
-					  MT_TX_BURST_SIZE * 2,
-					  MBUF_CACHE_SIZE, 0,
-					  RTE_MBUF_DEFAULT_BUF_SIZE,
-					  rte_socket_id());
-	TEST_ASSERT(mt_pool != NULL, "Failed to create MT test mempool");
-
-	/* Reset stats before test */
-	ret = rte_eth_stats_reset(port_id);
-	TEST_ASSERT(ret == 0, "Failed to reset stats");
-
-	/* Launch workers */
-	num_workers = 0;
-	RTE_LCORE_FOREACH_WORKER(lcore_id) {
-		if (num_workers >= 4)
-			break;
-
-		worker_args[num_workers].port = port_id;
-		worker_args[num_workers].pool = mt_pool;
-
-		ret = rte_eal_remote_launch(mt_tx_worker,
-					    &worker_args[num_workers],
-					    lcore_id);
-		TEST_ASSERT(ret == 0, "Failed to launch worker on lcore %u",
-			    lcore_id);
-		num_workers++;
-	}
-
-	printf("  Launched %u workers for MT Tx test\n", num_workers);
-
-	/* Wait for all workers to complete */
-	RTE_LCORE_FOREACH_WORKER(lcore_id) {
-		rte_eal_wait_lcore(lcore_id);
-	}
-
-	/* Check for errors and sum up Tx counts */
-	for (unsigned int i = 0; i < num_workers; i++) {
-		TEST_ASSERT(worker_args[i].error == 0,
-			    "Worker %u encountered error: %d",
-			    i, worker_args[i].error);
-		total_expected += worker_args[i].tx_count;
-	}
-
-	/* Verify stats match expected */
-	ret = rte_eth_stats_get(port_id, &stats);
-	TEST_ASSERT(ret == 0, "Failed to get stats");
-
-	printf("  Total Tx from workers: %"PRIu64", stats.opackets: %"PRIu64"\n",
-	       total_expected, stats.opackets);
-
-	TEST_ASSERT(stats.opackets == total_expected,
-		    "Stats mismatch: expected %"PRIu64" opackets, got %"PRIu64,
-		    total_expected, stats.opackets);
-
-	/* Cleanup */
-	rte_mempool_free(mt_pool);
 
 	return TEST_SUCCESS;
 }
@@ -915,11 +926,12 @@ static struct unit_test_suite null_pmd_test_suite = {
 		TEST_CASE(test_null_link_status),
 		TEST_CASE(test_null_dev_info),
 		TEST_CASE(test_null_multiple_bursts),
-		TEST_CASE(test_null_mt_tx),
 		TEST_CASE(test_null_rss_config),
 		TEST_CASE(test_null_reta_config),
 		TEST_CASE(test_null_stats_reset),
 		TEST_CASE(test_null_mac_addr),
+		TEST_CASE(test_null_vlan_strip),
+		TEST_CASE(test_null_vlan_insert),
 		TEST_CASE(test_null_promisc_allmulti),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */

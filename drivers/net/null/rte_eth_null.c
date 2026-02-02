@@ -22,6 +22,8 @@ static unsigned int default_packet_size = 64;
 static unsigned int default_packet_copy;
 static unsigned int default_no_rx;
 
+#define ETH_NULL_VLAN_STRIP_TCI	100	/**< Dummy VLAN TCI for simulated strip. */
+
 static const char *valid_arguments[] = {
 	ETH_NULL_PACKET_SIZE_ARG,
 	ETH_NULL_PACKET_COPY_ARG,
@@ -54,6 +56,7 @@ struct pmd_internals {
 	unsigned int packet_size;
 	unsigned int packet_copy;
 	unsigned int no_rx;
+	unsigned int vlan_strip;
 	uint16_t port_id;
 
 	struct null_queue rx_null_queues[RTE_MAX_QUEUES_PER_PORT];
@@ -101,6 +104,11 @@ eth_null_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->pkt_len = packet_size;
 		bytes += packet_size;
 		bufs[i]->port = h->internals->port_id;
+		if (h->internals->vlan_strip) {
+			bufs[i]->ol_flags |= RTE_MBUF_F_RX_VLAN |
+					     RTE_MBUF_F_RX_VLAN_STRIPPED;
+			bufs[i]->vlan_tci = ETH_NULL_VLAN_STRIP_TCI;
+		}
 	}
 
 	h->rx_pkts += nb_bufs;
@@ -127,6 +135,11 @@ eth_null_copy_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->pkt_len = packet_size;
 		bytes += packet_size;
 		bufs[i]->port = h->internals->port_id;
+		if (h->internals->vlan_strip) {
+			bufs[i]->ol_flags |= RTE_MBUF_F_RX_VLAN |
+					     RTE_MBUF_F_RX_VLAN_STRIPPED;
+			bufs[i]->vlan_tci = ETH_NULL_VLAN_STRIP_TCI;
+		}
 	}
 
 	h->rx_pkts += nb_bufs;
@@ -180,8 +193,13 @@ eth_null_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 }
 
 static int
-eth_dev_configure(struct rte_eth_dev *dev __rte_unused)
+eth_dev_configure(struct rte_eth_dev *dev)
 {
+	struct pmd_internals *internals = dev->data->dev_private;
+
+	internals->vlan_strip = !!(dev->data->dev_conf.rxmode.offloads &
+				   RTE_ETH_RX_OFFLOAD_VLAN_STRIP);
+
 	return 0;
 }
 
@@ -272,6 +290,22 @@ eth_mtu_set(struct rte_eth_dev *dev __rte_unused, uint16_t mtu __rte_unused)
 }
 
 static int
+eth_vlan_offload_set(struct rte_eth_dev *dev, int mask)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+
+	if (mask & RTE_ETH_VLAN_STRIP_MASK) {
+		if (dev->data->dev_conf.rxmode.offloads &
+		    RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+			internals->vlan_strip = 1;
+		else
+			internals->vlan_strip = 0;
+	}
+
+	return 0;
+}
+
+static int
 eth_dev_info(struct rte_eth_dev *dev,
 		struct rte_eth_dev_info *dev_info)
 {
@@ -282,7 +316,10 @@ eth_dev_info(struct rte_eth_dev *dev,
 	dev_info->max_rx_queues = RTE_DIM(internals->rx_null_queues);
 	dev_info->max_tx_queues = RTE_DIM(internals->tx_null_queues);
 	dev_info->min_rx_bufsize = internals->packet_size;
-	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS | RTE_ETH_TX_OFFLOAD_MT_LOCKFREE;
+	dev_info->rx_offload_capa = RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS |
+				    RTE_ETH_TX_OFFLOAD_MT_LOCKFREE |
+				    RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 
 	dev_info->reta_size = internals->reta_size;
 	dev_info->flow_type_rss_offloads = internals->flow_type_rss_offloads;
@@ -495,6 +532,7 @@ static const struct eth_dev_ops ops = {
 	.rx_queue_release = eth_rx_queue_release,
 	.tx_queue_release = eth_tx_queue_release,
 	.mtu_set = eth_mtu_set,
+	.vlan_offload_set = eth_vlan_offload_set,
 	.link_update = eth_link_update,
 	.mac_addr_set = eth_mac_address_set,
 	.stats_get = eth_stats_get,
