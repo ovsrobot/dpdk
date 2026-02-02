@@ -2161,9 +2161,11 @@ rte_eth_rx_queue_check_split(uint16_t port_id,
 		uint32_t proto_hdr = rx_seg[seg_idx].proto_hdr;
 
 		if (mpl == NULL) {
-			RTE_ETHDEV_LOG_LINE(ERR, "null mempool pointer");
-			ret = -EINVAL;
-			goto out;
+			if (dev_info->rx_seg_capa.selective_read == 0) {
+				RTE_ETHDEV_LOG_LINE(ERR, "null mempool pointer");
+				ret = -EINVAL;
+				goto out;
+			}
 		}
 		if (seg_idx != 0 && mp_first != mpl &&
 		    seg_capa->multi_pools == 0) {
@@ -2185,6 +2187,8 @@ rte_eth_rx_queue_check_split(uint16_t port_id,
 				goto out;
 			}
 		}
+		if (mpl == NULL)
+			goto out;
 
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
