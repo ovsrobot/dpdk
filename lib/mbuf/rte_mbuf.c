@@ -193,6 +193,7 @@ __rte_pktmbuf_init_extmem(struct rte_mempool *mp,
 
 	RTE_ASSERT(ctx->ext < ctx->ext_num);
 	RTE_ASSERT(ctx->off + ext_mem->elt_size <= ext_mem->buf_len);
+	RTE_ASSERT(ext_mem->buf_ptr);
 
 	m->buf_addr = RTE_PTR_ADD(ext_mem->buf_ptr, ctx->off);
 	rte_mbuf_iova_set(m, ext_mem->buf_iova == RTE_BAD_IOVA ? RTE_BAD_IOVA :
