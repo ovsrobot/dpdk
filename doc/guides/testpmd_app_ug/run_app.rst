@@ -364,6 +364,11 @@ The command line options are:
     feature is engaged. Affects only the queues configured
     with split offloads (currently BUFFER_SPLIT is supported only).
 
+    When used with ``--rxpkts`` on PMDs supporting selective Rx data,
+    enables receiving only specific packet segments and discarding the rest.
+    Gaps between configured segments and any trailing data up to MTU are
+    automatically filled with NULL mempool segments (data is discarded).
+
 *   ``--rxpkts=X[,Y]``
 
     Set the length of segments to scatter packets on receiving if split
@@ -372,6 +377,20 @@ The command line options are:
     Optionally the multiple memory pools can be specified with --mbuf-size
     command line parameter and the mbufs to receive will be allocated
     sequentially from these extra memory pools.
+
+    **Selective Rx Data Example:**
+
+    To receive only the Ethernet header (14 bytes at offset 0) and
+    a 64-byte segment starting at offset 128, while discarding the rest::
+
+        --rxoffs=0,128 --rxpkts=14,64
+
+    This configuration will:
+
+    * Receive 14 bytes at offset 0 (Ethernet header)
+    * Discard bytes 14-127 (inserted NULL mempool segment)
+    * Receive 64 bytes at offset 128
+    * Discard bytes 192-MTU (inserted NULL mempool segment)
 
 *   ``--txpkts=X[,Y]``
 

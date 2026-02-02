@@ -2715,11 +2715,58 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		}
 	}
 
-	if ((rx_pkt_nb_segs > 1) &&
+	if ((rx_pkt_nb_segs > 1 || rx_pkt_nb_offs > 0) &&
 	    (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT)) {
+		struct rte_eth_dev_info dev_info;
+		uint16_t seg_idx = 0;
+		uint16_t next_offset = 0;
+		uint16_t mtu = 0;
+		bool selective_rx;
+
+		ret = rte_eth_dev_info_get(port_id, &dev_info);
+		if (ret != 0)
+			return ret;
+
+		selective_rx = rx_pkt_nb_offs > 0 &&
+			       dev_info.rx_seg_capa.selective_read != 0;
+
+		if (selective_rx) {
+			ret = rte_eth_dev_get_mtu(port_id, &mtu);
+			if (ret != 0)
+				return ret;
+		}
+
 		/* multi-segment configuration */
 		for (i = 0; i < rx_pkt_nb_segs; i++) {
-			struct rte_eth_rxseg_split *rx_seg = &rx_useg[i].split;
+			struct rte_eth_rxseg_split *rx_seg;
+			uint16_t seg_offset;
+
+			seg_offset = i < rx_pkt_nb_offs ?
+				     rx_pkt_seg_offsets[i] : next_offset;
+
+			/* Insert gap segment if selective Rx and there's a gap */
+			if (selective_rx && seg_offset > next_offset) {
+				if (seg_idx >= MAX_SEGS_BUFFER_SPLIT) {
+					fprintf(stderr,
+						"Too many segments (max %u)\n",
+						MAX_SEGS_BUFFER_SPLIT);
+					return -EINVAL;
+				}
+				rx_seg = &rx_useg[seg_idx++].split;
+				rx_seg->offset = next_offset;
+				rx_seg->length = seg_offset - next_offset;
+				rx_seg->mp = NULL; /* Discard gap data */
+				next_offset = seg_offset;
+			}
+
+			/* Add the actual data segment */
+			if (seg_idx >= MAX_SEGS_BUFFER_SPLIT) {
+				fprintf(stderr,
+					"Too many segments (max %u)\n",
+					MAX_SEGS_BUFFER_SPLIT);
+				return -EINVAL;
+			}
+			rx_seg = &rx_useg[seg_idx++].split;
 			/*
 			 * Use last valid pool for the segments with number
 			 * exceeding the pool index.
@@ -2727,8 +2774,7 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 			mp_n = (i >= mbuf_data_size_n) ? mbuf_data_size_n - 1 : i;
 			mpx = mbuf_pool_find(socket_id, mp_n);
 			/* Handle zero as mbuf data buffer size. */
-			rx_seg->offset = i < rx_pkt_nb_offs ?
-					   rx_pkt_seg_offsets[i] : 0;
+			rx_seg->offset = seg_offset;
 			rx_seg->mp = mpx ? mpx : mp;
 			if (rx_pkt_hdr_protos[i] != 0 && rx_pkt_seg_lengths[i] == 0) {
 				rx_seg->proto_hdr = rx_pkt_hdr_protos[i] & ~prev_hdrs;
@@ -2738,8 +2784,26 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 						rx_pkt_seg_lengths[i] :
 						mbuf_data_size[mp_n];
 			}
+
+			if (selective_rx)
+				next_offset = seg_offset + rx_seg->length;
 		}
-		rx_conf->rx_nseg = rx_pkt_nb_segs;
+
+		/* Add trailing segment to MTU if selective Rx enabled */
+		if (selective_rx && next_offset < mtu) {
+			if (seg_idx >= MAX_SEGS_BUFFER_SPLIT) {
+				fprintf(stderr,
+					"Too many segments (max %u)\n",
+					MAX_SEGS_BUFFER_SPLIT);
+				return -EINVAL;
+			}
+			rx_useg[seg_idx].split.offset = next_offset;
+			rx_useg[seg_idx].split.length = mtu - next_offset;
+			rx_useg[seg_idx].split.mp = NULL; /* Discard trailing data */
+			seg_idx++;
+		}
+
+		rx_conf->rx_nseg = seg_idx;
 		rx_conf->rx_seg = rx_useg;
 		rx_conf->rx_mempools = NULL;
 		rx_conf->rx_nmempool = 0;
