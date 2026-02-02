@@ -66,6 +66,7 @@ New Features
   * Receive timestamp offload is only done if offload flag set.
   * Receive timestamps support nanosecond precision.
   * Added ``snaplen`` devarg to configure packet capture snapshot length.
+  * Added unit test suite.
 
 
 Removed Items
