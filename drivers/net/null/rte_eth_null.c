@@ -603,56 +603,49 @@ eth_dev_null_create(struct rte_vdev_device *dev, struct pmd_options *args)
 	return 0;
 }
 
-static inline int
-get_packet_size_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
+static int
+get_unsigned_arg(const char *str, unsigned int *retval,
+		 unsigned int maxval)
 {
-	const char *a = value;
-	unsigned int *packet_size = extra_args;
+	char *endp = NULL;
+	unsigned long val;
 
-	if ((value == NULL) || (extra_args == NULL))
+	if (str == NULL || retval == NULL)
 		return -EINVAL;
 
-	*packet_size = (unsigned int)strtoul(a, NULL, 0);
-	if (*packet_size == UINT_MAX)
-		return -1;
+	if (*str == '\0')
+		return -EINVAL; /* empty string */
 
+	val = strtoul(str, &endp, 0);
+	if (*endp != '\0')
+		return -EINVAL; /* non-numeric character */
+
+	if (val > maxval)
+		return -ERANGE;
+
+	*retval = val;
 	return 0;
 }
 
-static inline int
+static int
+get_packet_size_arg(const char *key __rte_unused,
+		const char *value, void *extra_args)
+{
+	return get_unsigned_arg(value, extra_args, UINT16_MAX);
+}
+
+static int
 get_packet_copy_arg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
-	const char *a = value;
-	unsigned int *packet_copy = extra_args;
-
-	if ((value == NULL) || (extra_args == NULL))
-		return -EINVAL;
-
-	*packet_copy = (unsigned int)strtoul(a, NULL, 0);
-	if (*packet_copy == UINT_MAX)
-		return -1;
-
-	return 0;
+	return get_unsigned_arg(value, extra_args, UINT32_MAX);
 }
 
 static int
 get_packet_no_rx_arg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
-	const char *a = value;
-	unsigned int no_rx;
-
-	if (value == NULL || extra_args == NULL)
-		return -EINVAL;
-
-	no_rx = (unsigned int)strtoul(a, NULL, 0);
-	if (no_rx != 0 && no_rx != 1)
-		return -1;
-
-	*(unsigned int *)extra_args = no_rx;
-	return 0;
+	return get_unsigned_arg(value, extra_args, 1);
 }
 
 static int
