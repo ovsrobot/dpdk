@@ -10,6 +10,7 @@
 #include <rte_byteorder.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
+#include <rte_icmp.h>
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <rte_sctp.h>
@@ -63,6 +64,7 @@ static uint32_t
 ptype_l4(uint8_t proto)
 {
 	static const uint32_t ptype_l4_proto[256] = {
+		[IPPROTO_ICMP] = RTE_PTYPE_L4_ICMP,
 		[IPPROTO_UDP] = RTE_PTYPE_L4_UDP,
 		[IPPROTO_TCP] = RTE_PTYPE_L4_TCP,
 		[IPPROTO_SCTP] = RTE_PTYPE_L4_SCTP,
@@ -120,6 +122,7 @@ static uint32_t
 ptype_inner_l4(uint8_t proto)
 {
 	static const uint32_t ptype_inner_l4_proto[256] = {
+		[IPPROTO_ICMP] = RTE_PTYPE_INNER_L4_ICMP,
 		[IPPROTO_UDP] = RTE_PTYPE_INNER_L4_UDP,
 		[IPPROTO_TCP] = RTE_PTYPE_INNER_L4_TCP,
 		[IPPROTO_SCTP] = RTE_PTYPE_INNER_L4_SCTP,
