@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <rte_common.h>
+#include <rte_debug.h>
 #include <rte_eal_paging.h>
 #include <rte_errno.h>
 #include <rte_log.h>
@@ -1048,7 +1049,7 @@ void *
 rte_fbarray_get(const struct rte_fbarray *arr, unsigned int idx)
 {
 	void *ret = NULL;
-	if (arr == NULL) {
+	if (arr == NULL || arr->data == NULL) {
 		rte_errno = EINVAL;
 		return NULL;
 	}

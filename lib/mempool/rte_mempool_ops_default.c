@@ -117,7 +117,7 @@ rte_mempool_op_populate_helper(struct rte_mempool *mp, unsigned int flags,
 	for (i = 0; i < max_objs; i++) {
 		/* avoid objects to cross page boundaries */
 		if (check_obj_bounds(va + off, pg_sz, total_elt_sz) < 0) {
-			off += RTE_PTR_ALIGN_CEIL(va + off, pg_sz) - (va + off);
+			off += RTE_PTR_DIFF(RTE_PTR_ALIGN_CEIL(va + off, pg_sz), va + off);
 			if (flags & RTE_MEMPOOL_POPULATE_F_ALIGN_OBJ)
 				off += total_elt_sz -
 					(((uintptr_t)(va + off - 1) %
