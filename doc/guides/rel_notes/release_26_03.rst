@@ -63,6 +63,10 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
 
+* **Updated openssl crypto driver.**
+
+  * Added support for SHA3-224, SHA3-256, SHA3-384, and SHA3-512 hash algorithms
+    and their HMAC variants.
 
 Removed Items
 -------------
