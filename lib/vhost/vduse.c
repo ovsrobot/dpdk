@@ -27,6 +27,7 @@
 
 #define VHOST_VDUSE_API_VERSION 0
 #define VDUSE_CTRL_PATH "/dev/vduse/control"
+#define VDUSE_FDSET_NAME "vduse-evt"
 
 struct vduse {
 	struct fdset *fdset;
@@ -685,11 +686,8 @@ vduse_device_create(const char *path, bool compliant_ol_flags, bool extbuf, bool
 	bool reconnect = false;
 
 	if (vduse.fdset == NULL) {
-		vduse.fdset = fdset_init("vduse-evt");
-		if (vduse.fdset == NULL) {
-			VHOST_CONFIG_LOG(path, ERR, "failed to init VDUSE fdset");
-			return -1;
-		}
+		VHOST_CONFIG_LOG(path, ERR, "VDUSE fdset not initialized");
+		return -1;
 	}
 
 	control_fd = open(VDUSE_CTRL_PATH, O_RDWR);
@@ -941,4 +939,19 @@ vduse_device_destroy(const char *path)
 	vhost_destroy_device(vid);
 
 	return 0;
+}
+
+RTE_INIT(vduse_fdset_init)
+{
+	vduse.fdset = fdset_init(VDUSE_FDSET_NAME);
+	if (vduse.fdset == NULL)
+		VHOST_CONFIG_LOG(VDUSE_FDSET_NAME, ERR, "failed to init VDUSE fdset");
+}
+
+RTE_FINI(vduse_fdset_fini)
+{
+	if (vduse.fdset != NULL) {
+		fdset_deinit(vduse.fdset);
+		vduse.fdset = NULL;
+	}
 }
