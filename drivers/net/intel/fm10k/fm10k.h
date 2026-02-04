@@ -264,9 +264,9 @@ fm10k_pktmbuf_reset(struct rte_mbuf *mb, uint16_t in_port)
 	mb->nb_segs = 1;
 
 	/* enforce 512B alignment on default Rx virtual addresses */
-	mb->data_off = (uint16_t)(RTE_PTR_ALIGN((char *)mb->buf_addr +
-			RTE_PKTMBUF_HEADROOM, FM10K_RX_DATABUF_ALIGN)
-			- (char *)mb->buf_addr);
+	mb->data_off = (uint16_t)RTE_PTR_DIFF(RTE_PTR_ALIGN((char *)mb->buf_addr +
+			RTE_PKTMBUF_HEADROOM, FM10K_RX_DATABUF_ALIGN),
+			(char *)mb->buf_addr);
 	mb->port = in_port;
 }
 

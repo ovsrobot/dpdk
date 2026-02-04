@@ -349,9 +349,9 @@ rte_mempool_populate_iova(struct rte_mempool *mp, char *vaddr,
 	memhdr->opaque = opaque;
 
 	if (mp->flags & RTE_MEMPOOL_F_NO_CACHE_ALIGN)
-		off = RTE_PTR_ALIGN_CEIL(vaddr, 8) - vaddr;
+		off = RTE_PTR_DIFF(RTE_PTR_ALIGN_CEIL(vaddr, 8), vaddr);
 	else
-		off = RTE_PTR_ALIGN_CEIL(vaddr, RTE_MEMPOOL_ALIGN) - vaddr;
+		off = RTE_PTR_DIFF(RTE_PTR_ALIGN_CEIL(vaddr, RTE_MEMPOOL_ALIGN), vaddr);
 
 	if (off > len) {
 		ret = 0;
@@ -425,8 +425,8 @@ rte_mempool_populate_virt(struct rte_mempool *mp, char *addr,
 
 		/* populate with the largest group of contiguous pages */
 		for (phys_len = RTE_MIN(
-			(size_t)(RTE_PTR_ALIGN_CEIL(addr + off + 1, pg_sz) -
-				(addr + off)),
+			(size_t)RTE_PTR_DIFF(RTE_PTR_ALIGN_CEIL(addr + off + 1, pg_sz),
+				addr + off),
 			len - off);
 		     off + phys_len < len;
 		     phys_len = RTE_MIN(phys_len + pg_sz, len - off)) {
