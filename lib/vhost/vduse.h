@@ -11,5 +11,6 @@
 
 int vduse_device_create(const char *path, bool compliant_ol_flags, bool extbuf, bool linearbuf);
 int vduse_device_destroy(const char *path);
+void vduse_fdset_cleanup(void);
 
 #endif /* _VDUSE_H */
