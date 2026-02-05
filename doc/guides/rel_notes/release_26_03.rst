@@ -104,6 +104,20 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal: Improved pointer arithmetic macros to preserve pointer provenance and type qualifiers.
+
+  * ``RTE_PTR_ADD``, ``RTE_PTR_SUB``, ``RTE_PTR_ALIGN``, ``RTE_PTR_ALIGN_CEIL``,
+    and ``RTE_PTR_ALIGN_FLOOR`` now preserve const/volatile qualifiers and use
+    pointer arithmetic instead of integer casts to enable compiler optimizations. These
+    macros do not nest infinitely and may require intermediate variables.
+  * Passing NULL to ``RTE_PTR_ADD``, ``RTE_PTR_SUB``, ``RTE_PTR_ALIGN``,
+    ``RTE_PTR_ALIGN_CEIL``, or ``RTE_PTR_ALIGN_FLOOR`` clarified as undefined behavior.
+  * Existing code passing integer types as pointer to ``RTE_PTR_ADD`` or ``RTE_PTR_SUB``
+    should use native operators (e.g. + -).
+  * Existing code passing integer types as pointer to ``RTE_PTR_ALIGN``,
+    ``RTE_PTR_ALIGN_CEIL`` or ``RTE_PTR_ALIGN_FLOOR`` should use
+    ``RTE_ALIGN``, ``RTE_ALIGN_CEIL`` or ``RTE_ALIGN_FLOOR``.
+
 
 ABI Changes
 -----------
