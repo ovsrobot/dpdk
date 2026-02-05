@@ -480,6 +480,11 @@ struct rte_bus *rte_bus_find_by_device_name(const char *str);
 int eal_bus_cleanup(void);
 
 /**
+ * Call all registered cleanup callbacks.
+ */
+void eal_cleanup_callbacks_run(void);
+
+/**
  * Create the unix channel for primary/secondary communication.
  *
  * @return

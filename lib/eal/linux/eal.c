@@ -978,6 +978,7 @@ rte_eal_cleanup(void)
 			internal_conf->hugepage_file.unlink_existing)
 		rte_memseg_walk(mark_freeable, NULL);
 
+	eal_cleanup_callbacks_run();
 	rte_service_finalize();
 	eal_bus_cleanup();
 	vfio_mp_sync_cleanup();

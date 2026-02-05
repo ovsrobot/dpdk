@@ -76,6 +76,8 @@ struct vhost_user_connection {
 };
 
 #define MAX_VHOST_SOCKET 1024
+#define VHOST_USER_FDSET_NAME "vhost-evt"
+
 struct vhost_user {
 	struct vhost_user_socket *vsockets[MAX_VHOST_SOCKET];
 	struct fdset *fdset;
@@ -1198,7 +1200,7 @@ rte_vhost_driver_start(const char *path)
 			vsocket->extbuf, vsocket->linearbuf);
 
 	if (vhost_user.fdset == NULL) {
-		vhost_user.fdset = fdset_init("vhost-evt");
+		vhost_user.fdset = fdset_init(VHOST_USER_FDSET_NAME);
 		if (vhost_user.fdset == NULL) {
 			VHOST_CONFIG_LOG(path, ERR, "failed to init Vhost-user fdset");
 			return -1;
@@ -1209,4 +1211,35 @@ rte_vhost_driver_start(const char *path)
 		return vhost_user_start_server(vsocket);
 	else
 		return vhost_user_start_client(vsocket);
+}
+
+static void
+vhost_user_fdset_cleanup(void)
+{
+	if (vhost_user.fdset != NULL) {
+		fdset_deinit(vhost_user.fdset);
+		vhost_user.fdset = NULL;
+	}
+}
+
+RTE_EXPORT_SYMBOL(rte_vhost_cleanup)
+int
+rte_vhost_cleanup(void)
+{
+	vhost_user_fdset_cleanup();
+	vduse_fdset_cleanup();
+
+	return 0;
+}
+
+static void
+vhost_cleanup_handler(void)
+{
+	rte_vhost_cleanup();
+}
+
+RTE_INIT(vhost_cleanup_register)
+{
+	if (rte_eal_cleanup_register(vhost_cleanup_handler) < 0)
+		RTE_LOG_LINE(ERR, VHOST_CONFIG, "Failed to register vhost cleanup");
 }
