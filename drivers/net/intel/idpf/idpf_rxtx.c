@@ -783,6 +783,10 @@ idpf_set_rx_function(struct rte_eth_dev *dev)
 	struct idpf_rx_queue *rxq;
 	int i;
 
+	/* If the device has started the function has already been selected. */
+	if (dev->data->dev_started)
+		goto out;
+
 	if (idpf_rx_vec_dev_check_default(dev) == IDPF_VECTOR_PATH &&
 	    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_256)
 		req_features.simd_width = idpf_get_max_simd_bitwidth();
@@ -814,6 +818,7 @@ idpf_set_rx_function(struct rte_eth_dev *dev)
 	}
 #endif
 
+out:
 	dev->rx_pkt_burst = idpf_rx_path_infos[ad->rx_func_type].pkt_burst;
 	PMD_DRV_LOG(NOTICE, "Using %s Rx (port %d).",
 			idpf_rx_path_infos[ad->rx_func_type].info, dev->data->port_id);
