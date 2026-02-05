@@ -465,6 +465,21 @@ int rte_vhost_driver_register(const char *path, uint64_t flags);
 int rte_vhost_driver_unregister(const char *path);
 
 /**
+ * Cleanup vhost library resources.
+ *
+ * This function stops the fdset event dispatch threads for both vhost-user
+ * and VDUSE backends. It should be called before rte_eal_cleanup() to ensure
+ * proper shutdown without use-after-free issues.
+ *
+ * The function is safe to call multiple times or even if no vhost driver
+ * was ever started.
+ *
+ * @return
+ *  0 on success
+ */
+int rte_vhost_cleanup(void);
+
+/**
  * Set the vdpa device id, enforce single connection per socket
  *
  * @param path

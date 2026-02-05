@@ -127,6 +127,21 @@ int rte_eal_init(int argc, char **argv);
 int rte_eal_cleanup(void);
 
 /**
+ * Cleanup callback function type.
+ */
+typedef void (*rte_eal_cleanup_callback_t)(void);
+
+/**
+ * Register a function to be called during rte_eal_cleanup().
+ *
+ * @param callback
+ *   The cleanup callback function to register.
+ * @return
+ *   0 on success, -1 on failure.
+ */
+int rte_eal_cleanup_register(rte_eal_cleanup_callback_t callback);
+
+/**
  * Check if a primary process is currently alive
  *
  * This function returns true when a primary process is currently

@@ -8,6 +8,7 @@ cflags += [ '-DABI_VERSION="@0@"'.format(abi_version) ]
 sources += files(
         'eal_common_bus.c',
         'eal_common_class.c',
+        'eal_common_cleanup.c',
         'eal_common_config.c',
         'eal_common_debug.c',
         'eal_common_dev.c',
