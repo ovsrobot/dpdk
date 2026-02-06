@@ -525,7 +525,6 @@ tap_write_mbufs(struct tx_queue *txq, uint16_t num_mbufs,
 		struct iovec iovecs[mbuf->nb_segs + 2];
 		struct tun_pi pi = { .flags = 0, .proto = 0x00 };
 		struct rte_mbuf *seg = mbuf;
-		uint64_t l4_ol_flags;
 		int proto;
 		int n;
 		int j;
@@ -556,74 +555,15 @@ tap_write_mbufs(struct tx_queue *txq, uint16_t num_mbufs,
 		iovecs[k].iov_len = sizeof(pi);
 		k++;
 
-		l4_ol_flags = mbuf->ol_flags & RTE_MBUF_F_TX_L4_MASK;
-		if (txq->csum && (mbuf->ol_flags & RTE_MBUF_F_TX_IP_CKSUM ||
-				l4_ol_flags == RTE_MBUF_F_TX_UDP_CKSUM ||
-				l4_ol_flags == RTE_MBUF_F_TX_TCP_CKSUM)) {
-			unsigned int hdrlens = mbuf->l2_len + mbuf->l3_len;
-			uint16_t *l4_cksum;
-			void *l3_hdr;
-
-			if (l4_ol_flags == RTE_MBUF_F_TX_UDP_CKSUM)
-				hdrlens += sizeof(struct rte_udp_hdr);
-			else if (l4_ol_flags == RTE_MBUF_F_TX_TCP_CKSUM)
-				hdrlens += sizeof(struct rte_tcp_hdr);
-			else if (l4_ol_flags != RTE_MBUF_F_TX_L4_NO_CKSUM)
+		if (txq->csum) {
+			seg = rte_net_ip_udptcp_cksum_mbuf(mbuf);
+			if (!seg)
 				return -1;
 
-			/* Support only packets with at least layer 4
-			 * header included in the first segment
-			 */
-			if (rte_pktmbuf_data_len(mbuf) < hdrlens)
-				return -1;
-
-			/* To change checksums (considering that a mbuf can be
-			 * indirect, for example), copy l2, l3 and l4 headers
-			 * in a new segment and chain it to existing data
-			 */
-			seg = rte_pktmbuf_copy(mbuf, mbuf->pool, 0, hdrlens);
-			if (seg == NULL)
-				return -1;
-			rte_pktmbuf_adj(mbuf, hdrlens);
-			rte_pktmbuf_chain(seg, mbuf);
-			pmbufs[i] = mbuf = seg;
-
-			l3_hdr = rte_pktmbuf_mtod_offset(mbuf, void *, mbuf->l2_len);
-			if (mbuf->ol_flags & RTE_MBUF_F_TX_IP_CKSUM) {
-				struct rte_ipv4_hdr *iph = l3_hdr;
-
-				iph->hdr_checksum = 0;
-				iph->hdr_checksum = rte_ipv4_cksum(iph);
-			}
-
-			if (l4_ol_flags == RTE_MBUF_F_TX_L4_NO_CKSUM)
-				goto skip_l4_cksum;
-
-			if (l4_ol_flags == RTE_MBUF_F_TX_UDP_CKSUM) {
-				struct rte_udp_hdr *udp_hdr;
-
-				udp_hdr = rte_pktmbuf_mtod_offset(mbuf, struct rte_udp_hdr *,
-					mbuf->l2_len + mbuf->l3_len);
-				l4_cksum = &udp_hdr->dgram_cksum;
-			} else {
-				struct rte_tcp_hdr *tcp_hdr;
-
-				tcp_hdr = rte_pktmbuf_mtod_offset(mbuf, struct rte_tcp_hdr *,
-					mbuf->l2_len + mbuf->l3_len);
-				l4_cksum = &tcp_hdr->cksum;
-			}
-
-			*l4_cksum = 0;
-			if (mbuf->ol_flags & RTE_MBUF_F_TX_IPV4) {
-				*l4_cksum = rte_ipv4_udptcp_cksum_mbuf(mbuf, l3_hdr,
-					mbuf->l2_len + mbuf->l3_len);
-			} else {
-				*l4_cksum = rte_ipv6_udptcp_cksum_mbuf(mbuf, l3_hdr,
-					mbuf->l2_len + mbuf->l3_len);
-			}
+			mbuf = seg;
+			pmbufs[i] = seg;
 		}
 
-skip_l4_cksum:
 		for (j = 0; j < mbuf->nb_segs; j++) {
 			iovecs[k].iov_len = rte_pktmbuf_data_len(seg);
 			iovecs[k].iov_base = rte_pktmbuf_mtod(seg, void *);

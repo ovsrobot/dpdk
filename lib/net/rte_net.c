@@ -615,3 +615,72 @@ l3:
 
 	return pkt_type;
 }
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_net_ip_udptcp_cksum_mbuf, 26.03)
+struct rte_mbuf *
+rte_net_ip_udptcp_cksum_mbuf(struct rte_mbuf *mbuf)
+{
+	const uint64_t l4_ol_flags = mbuf->ol_flags & RTE_MBUF_F_TX_L4_MASK;
+	const uint32_t l4_offset = mbuf->l2_len + mbuf->l3_len;
+	uint32_t hdrlens = l4_offset;
+	unaligned_uint16_t *l4_cksum = NULL;
+	void *l3_hdr;
+
+	/* Quick check - nothing to do if no checksum offloads requested */
+	if (!(mbuf->ol_flags & (RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_L4_MASK)))
+		return mbuf;
+
+	/* Determine total header length needed */
+	if (l4_ol_flags == RTE_MBUF_F_TX_UDP_CKSUM)
+		hdrlens += sizeof(struct rte_udp_hdr);
+	else if (l4_ol_flags == RTE_MBUF_F_TX_TCP_CKSUM)
+		hdrlens += sizeof(struct rte_tcp_hdr);
+	else if (l4_ol_flags != RTE_MBUF_F_TX_L4_NO_CKSUM)
+		return NULL; /* Unsupported L4 checksum type */
+
+	/* Validate we at least have L2+L3 headers */
+	if (unlikely(rte_pktmbuf_data_len(mbuf) < l4_offset))
+		return NULL;
+
+	if (!RTE_MBUF_DIRECT(mbuf) || rte_mbuf_refcnt_read(mbuf) > 1) {
+		/* Indirect or shared - must copy, cannot modify in-place */
+		struct rte_mbuf *seg = rte_pktmbuf_copy(mbuf, mbuf->pool, 0, hdrlens);
+		if (!seg)
+			return NULL;
+
+		rte_pktmbuf_adj(mbuf, hdrlens);
+		rte_pktmbuf_chain(seg, mbuf);
+		mbuf = seg;
+	} else if (rte_pktmbuf_data_len(mbuf) < hdrlens &&
+		(rte_pktmbuf_linearize(mbuf) < 0 || rte_pktmbuf_data_len(mbuf) < hdrlens)) {
+		/* failed: direct, non-shared, but segmented headers linearize in-place */
+		return NULL;
+	}
+	/* else: Direct, non-shared, contiguous - can modify in-place, nothing to do */
+
+	l3_hdr = rte_pktmbuf_mtod_offset(mbuf, void *, mbuf->l2_len);
+
+	/* IPv4 header checksum */
+	if (mbuf->ol_flags & RTE_MBUF_F_TX_IP_CKSUM) {
+		struct rte_ipv4_hdr *iph = (struct rte_ipv4_hdr *)l3_hdr;
+		iph->hdr_checksum = 0;
+		iph->hdr_checksum = rte_ipv4_cksum(iph);
+	}
+
+	/* L4 checksum */
+	if (l4_ol_flags == RTE_MBUF_F_TX_UDP_CKSUM)
+		l4_cksum = (unaligned_uint16_t *)&rte_pktmbuf_mtod_offset(mbuf,
+				struct rte_udp_hdr *, l4_offset)->dgram_cksum;
+	else if (l4_ol_flags == RTE_MBUF_F_TX_TCP_CKSUM)
+		l4_cksum = (unaligned_uint16_t *)&rte_pktmbuf_mtod_offset(mbuf,
+				struct rte_tcp_hdr *, l4_offset)->cksum;
+
+	if (l4_cksum) {
+		*l4_cksum = 0;
+		*l4_cksum = (mbuf->ol_flags & RTE_MBUF_F_TX_IPV4) ?
+				rte_ipv4_udptcp_cksum_mbuf(mbuf, l3_hdr, l4_offset) :
+				rte_ipv6_udptcp_cksum_mbuf(mbuf, l3_hdr, l4_offset);
+	}
+
+	return mbuf;
+}

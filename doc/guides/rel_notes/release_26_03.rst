@@ -60,6 +60,8 @@ New Features
   * Fixed kernel memory barrier protocol for memory availability
   * Fixed shared memory frame overhead offset calculation
   * Added ``txpollnotrdy`` devarg to avoid ``poll()`` blocking calls
+  * Added checksum offload support for ``IPV4_CKSUM``, ``UDP_CKSUM``,
+    and ``TCP_CKSUM``
 
 * **Updated AMD axgbe ethernet driver.**
 

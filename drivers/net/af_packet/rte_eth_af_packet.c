@@ -10,6 +10,8 @@
 #include <rte_string_fns.h>
 #include <rte_mbuf.h>
 #include <rte_atomic.h>
+#include <rte_ip.h>
+#include <rte_net.h>
 #include <rte_bitops.h>
 #include <ethdev_driver.h>
 #include <ethdev_vdev.h>
@@ -101,6 +103,7 @@ struct pmd_internals {
 	struct pkt_tx_queue *tx_queue;
 	uint8_t vlan_strip;
 	uint8_t timestamp_offloading;
+	bool tx_sw_cksum;
 };
 
 static const char *valid_arguments[] = {
@@ -220,7 +223,7 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		/* account for the receive frame */
 		bufs[i] = mbuf;
 		num_rx++;
-		num_rx_bytes += mbuf->pkt_len;
+		num_rx_bytes += rte_pktmbuf_pkt_len(mbuf);
 	}
 	pkt_q->framenum = framenum;
 	pkt_q->rx_pkts += num_rx;
@@ -256,6 +259,7 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
 	struct tpacket2_hdr *ppd;
 	struct rte_mbuf *mbuf;
+	struct rte_mbuf *seg;
 	uint8_t *pbuf;
 	unsigned int framecount, framenum;
 	struct pollfd pfd;
@@ -277,7 +281,7 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		mbuf = bufs[i];
 
 		/* Drop oversized packets. Insert VLAN if necessary */
-		if (unlikely(mbuf->pkt_len > pkt_q->frame_data_size ||
+		if (unlikely(rte_pktmbuf_pkt_len(mbuf) > pkt_q->frame_data_size ||
 			    ((mbuf->ol_flags & RTE_MBUF_F_TX_VLAN) != 0 &&
 			     rte_vlan_insert(&mbuf) != 0))) {
 			continue;
@@ -308,23 +312,32 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		pbuf = (uint8_t *)ppd + ETH_AF_PACKET_FRAME_OVERHEAD;
 
-		ppd->tp_len = mbuf->pkt_len;
-		ppd->tp_snaplen = mbuf->pkt_len;
+		if (pkt_q->sw_cksum) {
+			seg = rte_net_ip_udptcp_cksum_mbuf(mbuf);
+			if (!seg)
+				continue;
 
-		struct rte_mbuf *tmp_mbuf = mbuf;
+			mbuf = seg;
+			bufs[i] = seg;
+		}
+
+		ppd->tp_len = rte_pktmbuf_pkt_len(mbuf);
+		ppd->tp_snaplen = rte_pktmbuf_pkt_len(mbuf);
+
+		seg = mbuf;
 		do {
-			uint16_t data_len = rte_pktmbuf_data_len(tmp_mbuf);
-			memcpy(pbuf, rte_pktmbuf_mtod(tmp_mbuf, void*), data_len);
+			uint16_t data_len = rte_pktmbuf_data_len(seg);
+			memcpy(pbuf, rte_pktmbuf_mtod(seg, void*), data_len);
 			pbuf += data_len;
-			tmp_mbuf = tmp_mbuf->next;
-		} while (tmp_mbuf);
+			seg = seg->next;
+		} while (seg);
 
 		/* release incoming frame and advance ring buffer */
 		tpacket_write_status(&ppd->tp_status, TP_STATUS_SEND_REQUEST);
 		if (++framenum >= framecount)
 			framenum = 0;
 		num_tx++;
-		num_tx_bytes += mbuf->pkt_len;
+		num_tx_bytes += rte_pktmbuf_pkt_len(mbuf);
 	}
 
 	rte_pktmbuf_free_bulk(&bufs[0], i);
@@ -396,10 +409,13 @@ eth_dev_configure(struct rte_eth_dev *dev)
 {
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
 	const struct rte_eth_rxmode *rxmode = &dev_conf->rxmode;
+	const struct rte_eth_txmode *txmode = &dev_conf->txmode;
 	struct pmd_internals *internals = dev->data->dev_private;
 
 	internals->vlan_strip = !!(rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP);
 	internals->timestamp_offloading = !!(rxmode->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP);
+	internals->tx_sw_cksum = !!(txmode->offloads & (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
+			RTE_ETH_TX_OFFLOAD_UDP_CKSUM | RTE_ETH_TX_OFFLOAD_TCP_CKSUM));
 	return 0;
 }
 
@@ -417,7 +433,10 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->max_tx_queues = (uint16_t)internals->nb_queues;
 	dev_info->min_rx_bufsize = ETH_AF_PACKET_ETH_OVERHEAD;
 	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS |
-		RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
+		RTE_ETH_TX_OFFLOAD_VLAN_INSERT |
+		RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
+		RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
+		RTE_ETH_TX_OFFLOAD_TCP_CKSUM;
 	dev_info->rx_offload_capa = RTE_ETH_RX_OFFLOAD_VLAN_STRIP |
 		RTE_ETH_RX_OFFLOAD_TIMESTAMP;
 
@@ -618,6 +637,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev,
 {
 
 	struct pmd_internals *internals = dev->data->dev_private;
+	internals->tx_queue[tx_queue_id].sw_cksum = internals->tx_sw_cksum;
 
 	dev->data->tx_queues[tx_queue_id] = &internals->tx_queue[tx_queue_id];
 	return 0;

@@ -246,6 +246,31 @@ rte_net_intel_cksum_prepare(struct rte_mbuf *m)
 	return rte_net_intel_cksum_flags_prepare(m, m->ol_flags);
 }
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Compute IP and L4 checksums in software for mbufs with
+ * RTE_MBUF_F_TX_IP_CKSUM, RTE_MBUF_F_TX_UDP_CKSUM, or
+ * RTE_MBUF_F_TX_TCP_CKSUM offload flags set.
+ *
+ * On success, this function takes ownership of the input mbuf. The mbuf may be
+ * modified in-place (for direct, non-shared mbufs) or a new mbuf chain may be
+ * created (for indirect/shared mbufs) with the original becoming part of the chain.
+ *
+ * @param mbuf
+ *   The packet mbuf to checksum.
+ * @return
+ *   - On success: pointer to mbuf with checksums computed (may be same as input
+ *     or a new mbuf chain). Caller must free only this returned pointer; the input
+ *     mbuf pointer should not be freed separately as it may be part of the returned
+ *     chain or may be the same as the returned pointer.
+ *   - On error: NULL. Original mbuf remains valid and owned by caller.
+ */
+__rte_experimental
+struct rte_mbuf *
+rte_net_ip_udptcp_cksum_mbuf(struct rte_mbuf *mbuf);
+
 #ifdef __cplusplus
 }
 #endif
