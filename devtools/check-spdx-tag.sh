@@ -23,8 +23,8 @@ no_license_list=\
 
 check_spdx() {
     if $verbose ; then
-	echo "Files without SPDX License"
-	echo "--------------------------"
+        echo "Files without SPDX License"
+        echo "--------------------------"
     fi
 
     git grep -L SPDX-License-Identifier -- $no_license_list > $tmpfile
@@ -33,15 +33,15 @@ check_spdx() {
     $quiet || cat $tmpfile
 
     if $verbose ; then
-	echo
-	echo "Files with wrong SPDX format"
-	echo "----------------------------"
+        echo
+        echo "Files with wrong SPDX format"
+        echo "----------------------------"
     fi
 
     files_without_spdx=$(cat $tmpfile)
     git grep -LE '(/\*|#|;|\.\.) *SPDX-License-Identifier: [A-Z(]' -- $no_license_list > $tmpfile
     for file in $files_without_spdx ; do
-	sed -i "/^$file$/d" $tmpfile
+        sed -i "/^$file$/d" $tmpfile
     done
 
     warnings=$(($warnings + $(wc -l < $tmpfile)))
@@ -49,7 +49,7 @@ check_spdx() {
 
     files_with_andor=$(git grep -lEi 'SPDX-License-Identifier:.*\<(AND|OR)\>' -- $no_license_list)
     for file in $files_with_andor ; do
-	grep -LE 'SPDX-License-Identifier:.*\<(AND|OR)\>' "$file"
+        grep -LE 'SPDX-License-Identifier:.*\<(AND|OR)\>' "$file"
     done > $tmpfile
 
     warnings=$(($warnings + $(wc -l < $tmpfile)))
@@ -67,8 +67,8 @@ build_exceptions_list() {
 
 check_licenses() {
     if $verbose ; then
-	echo "Files with wrong license and no exception"
-	echo "-----------------------------------------"
+        echo "Files with wrong license and no exception"
+        echo "-----------------------------------------"
     fi
 
     exceptions=$(build_exceptions_list)
@@ -81,24 +81,23 @@ check_licenses() {
 
 check_boilerplate() {
     if $verbose ; then
-	echo "Files with redundant license text"
-	echo "---------------------------------"
+        echo "Files with redundant license text"
+        echo "---------------------------------"
     fi
 
-    git grep -l Redistribution -- \
-	':^license/' ':^/devtools/check-spdx-tag.sh' > $tmpfile
+    git grep -l Redistribution -- ':^license/' ':^/devtools/check-spdx-tag.sh' > $tmpfile
 
     warnings=$(($warnings + $(wc -l <$tmpfile)))
     $quiet || cat $tmpfile
 }
 
 while getopts qvh ARG ; do
-	case $ARG in
-		q ) quiet=true ;;
-		v ) verbose=true ;;
-		h ) print_usage ; exit 0 ;;
-		? ) print_usage ; exit 1 ;;
-	esac
+    case $ARG in
+        q ) quiet=true ;;
+        v ) verbose=true ;;
+        h ) print_usage ; exit 0 ;;
+        ? ) print_usage ; exit 1 ;;
+    esac
 done
 shift $(($OPTIND - 1))
 
