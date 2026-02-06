@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated af_packet net driver.**
+
+  * Fixed kernel memory barrier protocol for memory availability
+  * Fixed shared memory frame overhead offset calculation
+
 * **Updated AMD axgbe ethernet driver.**
 
   * Added support for V4000 Krackan2e.
@@ -62,7 +67,6 @@ New Features
 * **Updated Intel iavf driver.**
 
   * Added support for pre and post VF reset callbacks.
-
 
 Removed Items
 -------------
