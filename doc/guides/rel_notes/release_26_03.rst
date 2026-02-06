@@ -59,6 +59,7 @@ New Features
 
   * Fixed kernel memory barrier protocol for memory availability
   * Fixed shared memory frame overhead offset calculation
+  * Added ``txpollnotrdy`` devarg to avoid ``poll()`` blocking calls
 
 * **Updated AMD axgbe ethernet driver.**
 
