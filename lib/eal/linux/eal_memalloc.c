@@ -842,6 +842,12 @@ alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 		void *map_addr;
 
 		cur = rte_fbarray_get(&cur_msl->memseg_arr, cur_idx);
+
+		if (cur_msl->base_va == NULL) {
+			EAL_LOG(ERR, "Base VA is NULL for memseg list");
+			goto out;
+		}
+
 		map_addr = RTE_PTR_ADD(cur_msl->base_va,
 				cur_idx * page_sz);
 
