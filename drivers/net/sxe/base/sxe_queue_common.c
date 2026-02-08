@@ -12,10 +12,14 @@
 #include "sxe_tx.h"
 #include "sxe_logs.h"
 #include "sxe_regs.h"
+#include "sxevf_regs.h"
 #include "sxe.h"
 #if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
 #include "sxe_vec_common.h"
 #include <rte_vect.h>
+#endif
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+#include "sxevf.h"
 #endif
 #include "sxe_queue_common.h"
 #include "sxe_queue.h"
