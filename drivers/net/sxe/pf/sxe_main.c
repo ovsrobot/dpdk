@@ -154,6 +154,8 @@ l_end:
 
 void sxe_hw_start(struct sxe_hw *hw)
 {
+	sxe_hw_vlan_filter_array_clear(hw);
+
 	sxe_fc_autoneg_localcap_set(hw);
 
 	hw->mac.auto_restart = true;
