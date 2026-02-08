@@ -402,6 +402,7 @@ struct dpaa2_dev_priv {
 	uint8_t num_tx_tc;
 	uint16_t qos_entries;
 	uint16_t fs_entries;
+	uint16_t nb_rx_desc;
 	uint8_t dist_queues;
 	uint8_t num_channels;
 	uint8_t en_ordered;
