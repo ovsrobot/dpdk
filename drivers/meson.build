@@ -349,9 +349,6 @@ foreach subpath:subdirs
         endif
 
         if not is_windows and developer_mode
-            # on unix systems check the output of the
-            # check-symbols.sh script, using it as a
-            # dependency of the .so build
             lk_deps += custom_target(lib_name + '.sym_chk',
                     command: [check_symbols, version_map.full_path(), '@INPUT@'],
                     capture: true,

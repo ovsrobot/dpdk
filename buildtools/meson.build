@@ -2,7 +2,6 @@
 # Copyright(c) 2017-2019 Intel Corporation
 
 pkgconf = find_program('pkg-config', 'pkgconf', required: false)
-check_symbols = find_program('check-symbols.sh')
 ldflags_ibverbs_static = find_program('options-ibverbs-static.sh')
 
 python3_required_modules = []
@@ -18,6 +17,7 @@ else
     py3 = ['meson', 'runpython']
 endif
 echo = py3 + ['-c', 'import sys; print(*sys.argv[1:])']
+check_symbols = py3 + files('check-symbols.py')
 gen_version_map = py3 + files('gen-version-map.py')
 list_dir_globs = py3 + files('list-dir-globs.py')
 sphinx_wrapper = py3 + files('call-sphinx-build.py')

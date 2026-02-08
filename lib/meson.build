@@ -299,9 +299,6 @@ foreach l:libraries
     endif
 
     if developer_mode and not is_windows
-        # on unix systems check the output of the
-        # check-symbols.sh script, using it as a
-        # dependency of the .so build
         lk_deps += custom_target(name + '.sym_chk',
                 command: [check_symbols, version_map.full_path(), '@INPUT@'],
                 capture: true,
