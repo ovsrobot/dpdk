@@ -34,7 +34,7 @@
 #include "eal_filesystem.h"
 #include "eal_internal_cfg.h"
 
-static RTE_ATOMIC(int) mp_fd = -1;
+static int mp_fd = -1;
 static rte_thread_t mp_handle_tid;
 static char mp_filter[UNIX_PATH_MAX];   /* Filter for secondary process sockets */
 static char mp_dir_path[UNIX_PATH_MAX]; /* The directory path for all mp sockets */
@@ -410,17 +410,9 @@ mp_handle(void *arg __rte_unused)
 {
 	struct mp_msg_internal msg;
 	struct sockaddr_un sa;
-	int fd;
 
-	while ((fd = rte_atomic_load_explicit(&mp_fd, rte_memory_order_relaxed)) >= 0) {
-		int ret;
-
-		ret = read_msg(fd, &msg, &sa);
-		if (ret <= 0)
-			break;
-
+	while (read_msg(mp_fd, &msg, &sa) > 0)
 		process_msg(&msg, &sa);
-	}
 
 	return 0;
 }
@@ -666,7 +658,7 @@ rte_mp_channel_init(void)
 		EAL_LOG(ERR, "failed to create mp thread: %s",
 			strerror(errno));
 		close(dir_fd);
-		close(rte_atomic_exchange_explicit(&mp_fd, -1, rte_memory_order_relaxed));
+		close(mp_fd);
 		return -1;
 	}
 
@@ -680,15 +672,11 @@ rte_mp_channel_init(void)
 void
 rte_mp_channel_cleanup(void)
 {
-	int fd;
+	/* shutdown() will cause recvmsg to unblock */
+	shutdown(mp_fd, SHUT_RDWR);
 
-	fd = rte_atomic_exchange_explicit(&mp_fd, -1, rte_memory_order_relaxed);
-	if (fd < 0)
-		return;
-
-	pthread_cancel((pthread_t)mp_handle_tid.opaque_id);
 	rte_thread_join(mp_handle_tid, NULL);
-	close_socket_fd(fd);
+	close_socket_fd(mp_fd);
 }
 
 /**

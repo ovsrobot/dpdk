@@ -161,14 +161,14 @@ iavf_dev_event_handler_fini(void)
 	if (rte_atomic_fetch_sub_explicit(&handler->ndev, 1, rte_memory_order_relaxed) - 1 != 0)
 		return;
 
-	int unused = pthread_cancel((pthread_t)handler->tid.opaque_id);
-	RTE_SET_USED(unused);
-	close(handler->fd[0]);
+	/* closing the write side of the pipe will cause read() to return 0 in thread */
 	close(handler->fd[1]);
-	handler->fd[0] = -1;
 	handler->fd[1] = -1;
 
 	rte_thread_join(handler->tid, NULL);
+	close(handler->fd[0]);
+	handler->fd[0] = -1;
+
 	pthread_mutex_destroy(&handler->lock);
 
 	struct iavf_event_element *pos, *save_next;
