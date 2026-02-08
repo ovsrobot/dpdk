@@ -19,9 +19,11 @@
 #include "sxe_ethdev.h"
 #include "sxe.h"
 #include "drv_msg.h"
+#include "sxe_queue.h"
 #include "sxe_errno.h"
 #include "sxe_compat_platform.h"
 #include "sxe_pmd_hdc.h"
+#include "sxe_queue.h"
 
 static const struct rte_pci_id sxe_pci_tbl[] = {
 	{ RTE_PCI_DEVICE(PCI_VENDOR_ID_STARS, SXE_DEV_ID_ASIC) },
@@ -117,9 +119,14 @@ s32 sxe_hw_reset(struct sxe_hw *hw)
 {
 	s32 ret;
 
+	/* Rx DBU off */
+	sxe_hw_rx_cap_switch_off(hw);
+
 	sxe_hw_all_irq_disable(hw);
 
 	sxe_hw_pending_irq_read_clear(hw);
+
+	sxe_hw_all_ring_disable(hw, SXE_HW_TXRX_RING_NUM_MAX);
 
 	ret = sxe_mng_reset(hw, false);
 	if (ret) {
