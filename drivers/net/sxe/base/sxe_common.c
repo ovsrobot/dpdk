@@ -44,7 +44,7 @@ l_end:
 
 u64 sxe_trace_id_gen(void)
 {
-	u64 tid	   = getpid() + (pthread_self() << 20);
+	u64 tid	   = (u64)getpid() + ((u64)pthread_self() << 20);
 	u64 index	 = 0;
 	u64 timestamp = sxe_time_get_real_ms();
 
