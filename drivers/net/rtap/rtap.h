@@ -70,4 +70,17 @@ struct rtap_pmd {
 int rtap_queue_open(struct rte_eth_dev *dev, uint16_t queue_id);
 void rtap_queue_close(struct rte_eth_dev *dev, uint16_t queue_id);
 
+/* rtap_rxtx.c */
+uint16_t rtap_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts);
+uint16_t rtap_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts);
+int rtap_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id,
+			uint16_t nb_rx_desc, unsigned int socket_id,
+			const struct rte_eth_rxconf *rx_conf,
+			struct rte_mempool *mb_pool);
+void rtap_rx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id);
+int rtap_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id,
+			uint16_t nb_tx_desc, unsigned int socket_id,
+			const struct rte_eth_txconf *tx_conf);
+void rtap_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id);
+
 #endif /* _RTAP_H_ */
