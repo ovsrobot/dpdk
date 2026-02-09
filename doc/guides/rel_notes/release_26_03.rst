@@ -63,6 +63,7 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
   * Changed LLDP packet detection from dynamic mbuf field to mbuf packet_type.
+  * Implemented AVX2 context descriptor transmit paths.
 
 
 Removed Items
