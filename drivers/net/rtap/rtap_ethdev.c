@@ -31,6 +31,16 @@
 
 #define RTAP_DEFAULT_IFNAME	"rtap%d"
 
+#define RTAP_TX_OFFLOAD		(RTE_ETH_TX_OFFLOAD_MULTI_SEGS | \
+				 RTE_ETH_TX_OFFLOAD_UDP_CKSUM | \
+				 RTE_ETH_TX_OFFLOAD_TCP_CKSUM | \
+				 RTE_ETH_TX_OFFLOAD_TCP_TSO)
+
+#define RTAP_RX_OFFLOAD		(RTE_ETH_RX_OFFLOAD_UDP_CKSUM | \
+				 RTE_ETH_RX_OFFLOAD_TCP_CKSUM | \
+				 RTE_ETH_RX_OFFLOAD_TCP_LRO | \
+				 RTE_ETH_RX_OFFLOAD_SCATTER)
+
 #define RTAP_DEFAULT_BURST	64
 #define RTAP_NUM_BUFFERS	1024
 #define RTAP_MAX_QUEUES		128
@@ -317,7 +327,21 @@ rtap_dev_configure(struct rte_eth_dev *dev)
 	if (dev->data->nb_rx_queues != dev->data->nb_tx_queues)
 		return -EINVAL;
 
-	if (ioctl(pmd->keep_fd, TUNSETOFFLOAD, 0) != 0) {
+	/*
+	 * Set offload flags visible on the kernel network interface.
+	 * This controls whether kernel will use checksum offload etc.
+	 * Note: kernel transmit is DPDK receive.
+	 */
+	const struct rte_eth_rxmode *rx_mode = &dev->data->dev_conf.rxmode;
+	unsigned int offload = 0;
+	if (rx_mode->offloads & RTE_ETH_RX_OFFLOAD_CHECKSUM) {
+		offload |= TUN_F_CSUM;
+
+		if (rx_mode->offloads & RTE_ETH_RX_OFFLOAD_TCP_LRO)
+			offload |= TUN_F_TSO4 | TUN_F_TSO6 | TUN_F_TSO_ECN;
+	}
+
+	if (ioctl(pmd->keep_fd, TUNSETOFFLOAD, offload) != 0) {
 		PMD_LOG(ERR, "ioctl(TUNSETOFFLOAD) failed: %s", strerror(errno));
 		return -1;
 	}
@@ -336,6 +360,10 @@ rtap_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->min_rx_bufsize = RTAP_MIN_RX_BUFSIZE;
 	dev_info->max_rx_queues = RTAP_MAX_QUEUES;
 	dev_info->max_tx_queues = RTAP_MAX_QUEUES;
+	dev_info->rx_queue_offload_capa = RTAP_RX_OFFLOAD;
+	dev_info->rx_offload_capa = dev_info->rx_queue_offload_capa;
+	dev_info->tx_queue_offload_capa = RTAP_TX_OFFLOAD;
+	dev_info->tx_offload_capa = dev_info->tx_queue_offload_capa;
 
 	dev_info->default_rxportconf = (struct rte_eth_dev_portconf) {
 		.burst_size = RTAP_DEFAULT_BURST,
