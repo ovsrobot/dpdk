@@ -12,6 +12,8 @@ u64 __sxe_rx_queue_offload_capa_get(struct rte_eth_dev *dev)
 
 	u64 offloads = 0;
 
+	offloads |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+
 	return offloads;
 }
 
@@ -23,6 +25,8 @@ u64 __sxe_rx_port_offload_capa_get(struct rte_eth_dev *dev)
 			RTE_ETH_RX_OFFLOAD_UDP_CKSUM   |
 			RTE_ETH_RX_OFFLOAD_TCP_CKSUM   |
 			RTE_ETH_RX_OFFLOAD_KEEP_CRC	|
+			RTE_ETH_RX_OFFLOAD_VLAN_FILTER |
+			RTE_ETH_RX_OFFLOAD_VLAN_EXTEND |
 			RTE_ETH_RX_OFFLOAD_SCATTER;
 
 	if (!RTE_ETH_DEV_SRIOV(dev).active)
