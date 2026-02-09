@@ -42,6 +42,7 @@ extern int rtap_logtype;
 struct rtap_rx_queue {
 	struct rte_mempool *mb_pool;	/* rx buffer pool */
 	struct io_uring io_ring;	/* queue of posted read's */
+	int intr_fd;			/* eventfd for Rx interrupt */
 	uint16_t port_id;
 	uint16_t queue_id;
 
@@ -64,6 +65,7 @@ struct rtap_tx_queue {
 struct rtap_pmd {
 	int keep_fd;			/* keep alive file descriptor */
 	struct rte_intr_handle *intr_handle; /* LSC interrupt handle */
+	struct rte_intr_handle *rx_intr_handle; /* Rx queue interrupt handle */
 	char ifname[IFNAMSIZ];		/* name assigned by kernel */
 	struct rte_ether_addr eth_addr; /* address assigned by kernel */
 
@@ -90,5 +92,9 @@ void rtap_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id);
 
 /* rtap_intr.c */
 int rtap_lsc_set(struct rte_eth_dev *dev, int set);
+int rtap_rx_intr_vec_install(struct rte_eth_dev *dev);
+void rtap_rx_intr_vec_uninstall(struct rte_eth_dev *dev);
+int rtap_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id);
+int rtap_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id);
 
 #endif /* _RTAP_H_ */

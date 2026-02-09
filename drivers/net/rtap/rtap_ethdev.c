@@ -293,8 +293,18 @@ rtap_dev_start(struct rte_eth_dev *dev)
 	if (ret != 0)
 		return ret;
 
+	/* Install Rx interrupt vector if requested by application */
+	if (dev->data->dev_conf.intr_conf.rxq) {
+		ret = rtap_rx_intr_vec_install(dev);
+		if (ret != 0) {
+			rtap_lsc_set(dev, 0);
+			return ret;
+		}
+	}
+
 	ret = rtap_set_link_up(dev);
 	if (ret != 0) {
+		rtap_rx_intr_vec_uninstall(dev);
 		rtap_lsc_set(dev, 0);
 		return ret;
 	}
@@ -315,6 +325,7 @@ rtap_dev_stop(struct rte_eth_dev *dev)
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 
+	rtap_rx_intr_vec_uninstall(dev);
 	rtap_lsc_set(dev, 0);
 	rtap_set_link_down(dev);
 
@@ -527,6 +538,9 @@ rtap_dev_close(struct rte_eth_dev *dev)
 			pmd->keep_fd = -1;
 		}
 
+		rte_intr_instance_free(pmd->rx_intr_handle);
+		pmd->rx_intr_handle = NULL;
+
 		rte_intr_instance_free(pmd->intr_handle);
 		pmd->intr_handle = NULL;
 	}
@@ -597,6 +611,8 @@ static const struct eth_dev_ops rtap_ops = {
 	.rx_queue_release	= rtap_rx_queue_release,
 	.tx_queue_setup		= rtap_tx_queue_setup,
 	.tx_queue_release	= rtap_tx_queue_release,
+	.rx_queue_intr_enable	= rtap_rx_queue_intr_enable,
+	.rx_queue_intr_disable	= rtap_rx_queue_intr_disable,
 };
 
 static int
