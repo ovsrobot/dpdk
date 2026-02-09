@@ -63,6 +63,11 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
 
+* **Updated Linkdata sxe ethernet driver.**
+
+  Added support for Linkdata NIC series, including 1160-2X (supporting 10G).
+  As these new models share hardware similarities with the existing 10G Sapphire NICs,
+  many of the existing configurations and practices are expected to apply.
 
 Removed Items
 -------------
