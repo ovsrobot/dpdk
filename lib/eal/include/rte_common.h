@@ -121,6 +121,12 @@ extern "C" {
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 #endif
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_assume_aligned(ptr, align) (ptr)
+#else
+#define __rte_assume_aligned __builtin_assume_aligned
+#endif
+
 #ifdef RTE_ARCH_STRICT_ALIGN
 typedef uint64_t unaligned_uint64_t __rte_aligned(1);
 typedef uint32_t unaligned_uint32_t __rte_aligned(1);
