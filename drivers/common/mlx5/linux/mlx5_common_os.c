@@ -609,7 +609,7 @@ mlx5_os_get_ibv_device(const struct rte_pci_device *pci_dev)
 
 /* Try to disable ROCE by Netlink\Devlink. */
 static int
-mlx5_nl_roce_disable(const char *addr)
+mlx5_nl_roce_disable(const char *bus_name, const char *dev_name)
 {
 	int nlsk_fd = mlx5_nl_init(NETLINK_GENERIC, 0);
 	int devlink_id;
@@ -625,7 +625,8 @@ mlx5_nl_roce_disable(const char *addr)
 			"Failed to get devlink id for ROCE operations by Netlink.");
 		goto close;
 	}
-	ret = mlx5_nl_enable_roce_get(nlsk_fd, devlink_id, addr, &enable);
+	ret = mlx5_nl_enable_roce_get(nlsk_fd, devlink_id, bus_name, dev_name,
+				      &enable);
 	if (ret) {
 		DRV_LOG(DEBUG, "Failed to get ROCE enable by Netlink: %d.",
 			ret);
@@ -634,7 +635,8 @@ mlx5_nl_roce_disable(const char *addr)
 		DRV_LOG(INFO, "ROCE has already disabled(Netlink).");
 		goto close;
 	}
-	ret = mlx5_nl_enable_roce_set(nlsk_fd, devlink_id, addr, 0);
+	ret = mlx5_nl_enable_roce_set(nlsk_fd, devlink_id, bus_name, dev_name,
+				      0);
 	if (ret)
 		DRV_LOG(DEBUG, "Failed to disable ROCE by Netlink: %d.", ret);
 	else
@@ -688,14 +690,29 @@ close:
 static int
 mlx5_roce_disable(const struct rte_device *dev)
 {
-	char pci_addr[PCI_PRI_STR_SIZE] = { 0 };
+	if (mlx5_dev_is_pci(dev)) {
+		char pci_addr[PCI_PRI_STR_SIZE] = { 0 };
 
-	if (mlx5_dev_to_pci_str(dev, pci_addr, sizeof(pci_addr)) < 0)
-		return -rte_errno;
-	/* Firstly try to disable ROCE by Netlink and fallback to sysfs. */
-	if (mlx5_nl_roce_disable(pci_addr) != 0 &&
-	    mlx5_sys_roce_disable(pci_addr) != 0)
-		return -rte_errno;
+		if (mlx5_dev_to_pci_str(dev, pci_addr, sizeof(pci_addr)) < 0)
+			return -rte_errno;
+		/* For PCI: try netlink first, fallback to sysfs. */
+		if (mlx5_nl_roce_disable("pci", pci_addr) != 0 &&
+		    mlx5_sys_roce_disable(pci_addr) != 0)
+			return -rte_errno;
+	} else {
+		/*
+		 * For auxiliary (SF) devices: use netlink with auxiliary bus.
+		 * The device name from rte_device is used directly as the
+		 * devlink device identifier.
+		 */
+		if (mlx5_nl_roce_disable("auxiliary", dev->name) != 0) {
+			DRV_LOG(WARNING,
+				"Failed to disable ROCE for SF \"%s\" via netlink.",
+				dev->name);
+			/* No sysfs fallback for auxiliary devices. */
+			return -rte_errno;
+		}
+	}
 	return 0;
 }
 

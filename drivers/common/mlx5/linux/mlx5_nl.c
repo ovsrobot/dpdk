@@ -1783,8 +1783,10 @@ mlx5_nl_roce_cb(struct nlmsghdr *nh, void *arg)
  *   Netlink socket file descriptor.
  * @param[in] family_id
  *   the Devlink family ID.
- * @param pci_addr
- *   The device PCI address.
+ * @param[in] bus_name
+ *   The devlink bus name (e.g., "pci" or "auxiliary").
+ * @param[in] dev_name
+ *   The devlink device name (e.g., PCI address or auxiliary device name).
  * @param[out] enable
  *   Where to store the enable status.
  *
@@ -1793,8 +1795,8 @@ mlx5_nl_roce_cb(struct nlmsghdr *nh, void *arg)
  *   and rte_errno is set.
  */
 int
-mlx5_nl_enable_roce_get(int nlsk_fd, int family_id, const char *pci_addr,
-			int *enable)
+mlx5_nl_enable_roce_get(int nlsk_fd, int family_id, const char *bus_name,
+			const char *dev_name, int *enable)
 {
 	struct nlmsghdr *nlh;
 	struct genlmsghdr *genl;
@@ -1815,20 +1817,20 @@ mlx5_nl_enable_roce_get(int nlsk_fd, int family_id, const char *pci_addr,
 	nlh->nlmsg_len += sizeof(struct genlmsghdr);
 	genl->cmd = DEVLINK_CMD_PARAM_GET;
 	genl->version = DEVLINK_GENL_VERSION;
-	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, "pci", 4);
-	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, pci_addr, strlen(pci_addr) + 1);
+	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, bus_name, strlen(bus_name) + 1);
+	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, dev_name, strlen(dev_name) + 1);
 	nl_attr_put(nlh, DEVLINK_ATTR_PARAM_NAME, "enable_roce", 12);
 	ret = mlx5_nl_send(nlsk_fd, nlh, sn);
 	if (ret >= 0)
 		ret = mlx5_nl_recv(nlsk_fd, sn, mlx5_nl_roce_cb, &cur_en);
 	if (ret < 0) {
-		DRV_LOG(DEBUG, "Failed to get ROCE enable on device %s: %d.",
-			pci_addr, ret);
+		DRV_LOG(DEBUG, "Failed to get ROCE enable on device %s/%s: %d.",
+			bus_name, dev_name, ret);
 		return ret;
 	}
 	*enable = cur_en;
-	DRV_LOG(DEBUG, "ROCE is %sabled for device \"%s\".",
-		cur_en ? "en" : "dis", pci_addr);
+	DRV_LOG(DEBUG, "ROCE is %sabled for device \"%s/%s\".",
+		cur_en ? "en" : "dis", bus_name, dev_name);
 	return ret;
 }
 
@@ -1839,16 +1841,17 @@ mlx5_nl_enable_roce_get(int nlsk_fd, int family_id, const char *pci_addr,
  *   Netlink socket file descriptor.
  * @param[in] family_id
  *   the Devlink family ID.
- * @param pci_addr
- *   The device PCI address.
- * @param[out] enable
- *   The enable status to set.
+ * @param[in] bus_name
+ *   The devlink bus name (e.g., "pci" or "auxiliary").
+ * @param[in] dev_name
+ *   The devlink device name (e.g., PCI address or auxiliary device name).
  *
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
 static int
-mlx5_nl_driver_reload(int nlsk_fd, int family_id, const char *pci_addr)
+mlx5_nl_driver_reload(int nlsk_fd, int family_id, const char *bus_name,
+		      const char *dev_name)
 {
 	struct nlmsghdr *nlh;
 	struct genlmsghdr *genl;
@@ -1868,18 +1871,18 @@ mlx5_nl_driver_reload(int nlsk_fd, int family_id, const char *pci_addr)
 	nlh->nlmsg_len += sizeof(struct genlmsghdr);
 	genl->cmd = DEVLINK_CMD_RELOAD;
 	genl->version = DEVLINK_GENL_VERSION;
-	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, "pci", 4);
-	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, pci_addr, strlen(pci_addr) + 1);
+	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, bus_name, strlen(bus_name) + 1);
+	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, dev_name, strlen(dev_name) + 1);
 	ret = mlx5_nl_send(nlsk_fd, nlh, sn);
 	if (ret >= 0)
 		ret = mlx5_nl_recv(nlsk_fd, sn, NULL, NULL);
 	if (ret < 0) {
-		DRV_LOG(DEBUG, "Failed to reload %s device by Netlink - %d",
-			pci_addr, ret);
+		DRV_LOG(DEBUG, "Failed to reload %s/%s device by Netlink - %d",
+			bus_name, dev_name, ret);
 		return ret;
 	}
-	DRV_LOG(DEBUG, "Device \"%s\" was reloaded by Netlink successfully.",
-		pci_addr);
+	DRV_LOG(DEBUG, "Device \"%s/%s\" was reloaded by Netlink successfully.",
+		bus_name, dev_name);
 	return 0;
 }
 
@@ -1890,17 +1893,19 @@ mlx5_nl_driver_reload(int nlsk_fd, int family_id, const char *pci_addr)
  *   Netlink socket file descriptor.
  * @param[in] family_id
  *   the Devlink family ID.
- * @param pci_addr
- *   The device PCI address.
- * @param[out] enable
+ * @param[in] bus_name
+ *   The devlink bus name (e.g., "pci" or "auxiliary").
+ * @param[in] dev_name
+ *   The devlink device name (e.g., PCI address or auxiliary device name).
+ * @param[in] enable
  *   The enable status to set.
  *
  * @return
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
 int
-mlx5_nl_enable_roce_set(int nlsk_fd, int family_id, const char *pci_addr,
-			int enable)
+mlx5_nl_enable_roce_set(int nlsk_fd, int family_id, const char *bus_name,
+			const char *dev_name, int enable)
 {
 	struct nlmsghdr *nlh;
 	struct genlmsghdr *genl;
@@ -1912,7 +1917,6 @@ mlx5_nl_enable_roce_set(int nlsk_fd, int family_id, const char *pci_addr,
 		    NLMSG_ALIGN(MLX5_NL_MAX_ATTR_SIZE) * 6];
 	uint8_t cmode = DEVLINK_PARAM_CMODE_DRIVERINIT;
 	uint8_t ptype = NLA_FLAG;
-;
 
 	memset(buf, 0, sizeof(buf));
 	nlh = (struct nlmsghdr *)buf;
@@ -1923,8 +1927,8 @@ mlx5_nl_enable_roce_set(int nlsk_fd, int family_id, const char *pci_addr,
 	nlh->nlmsg_len += sizeof(struct genlmsghdr);
 	genl->cmd = DEVLINK_CMD_PARAM_SET;
 	genl->version = DEVLINK_GENL_VERSION;
-	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, "pci", 4);
-	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, pci_addr, strlen(pci_addr) + 1);
+	nl_attr_put(nlh, DEVLINK_ATTR_BUS_NAME, bus_name, strlen(bus_name) + 1);
+	nl_attr_put(nlh, DEVLINK_ATTR_DEV_NAME, dev_name, strlen(dev_name) + 1);
 	nl_attr_put(nlh, DEVLINK_ATTR_PARAM_NAME, "enable_roce", 12);
 	nl_attr_put(nlh, DEVLINK_ATTR_PARAM_VALUE_CMODE, &cmode, sizeof(cmode));
 	nl_attr_put(nlh, DEVLINK_ATTR_PARAM_TYPE, &ptype, sizeof(ptype));
@@ -1934,14 +1938,14 @@ mlx5_nl_enable_roce_set(int nlsk_fd, int family_id, const char *pci_addr,
 	if (ret >= 0)
 		ret = mlx5_nl_recv(nlsk_fd, sn, NULL, NULL);
 	if (ret < 0) {
-		DRV_LOG(DEBUG, "Failed to %sable ROCE for device %s by Netlink:"
-			" %d.", enable ? "en" : "dis", pci_addr, ret);
+		DRV_LOG(DEBUG, "Failed to %sable ROCE for device %s/%s by Netlink:"
+			" %d.", enable ? "en" : "dis", bus_name, dev_name, ret);
 		return ret;
 	}
-	DRV_LOG(DEBUG, "Device %s ROCE was %sabled by Netlink successfully.",
-		pci_addr, enable ? "en" : "dis");
+	DRV_LOG(DEBUG, "Device %s/%s ROCE was %sabled by Netlink successfully.",
+		bus_name, dev_name, enable ? "en" : "dis");
 	/* Now, need to reload the driver. */
-	return mlx5_nl_driver_reload(nlsk_fd, family_id, pci_addr);
+	return mlx5_nl_driver_reload(nlsk_fd, family_id, bus_name, dev_name);
 }
 
 /**
