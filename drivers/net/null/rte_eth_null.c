@@ -8,11 +8,14 @@
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
 #include <ethdev_vdev.h>
+#include <rte_flow.h>
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
 #include <bus_vdev_driver.h>
 #include <rte_kvargs.h>
 #include <rte_spinlock.h>
+
+#include "null_flow.h"
 
 #define ETH_NULL_PACKET_SIZE_ARG	"size"
 #define ETH_NULL_PACKET_COPY_ARG	"copy"
@@ -511,12 +514,21 @@ eth_dev_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+null_dev_flow_ops_get(struct rte_eth_dev *dev __rte_unused,
+		      const struct rte_flow_ops **ops)
+{
+	*ops = &null_flow_ops;
+	return 0;
+}
+
 static const struct eth_dev_ops ops = {
 	.dev_close = eth_dev_close,
 	.dev_start = eth_dev_start,
 	.dev_stop = eth_dev_stop,
 	.dev_configure = eth_dev_configure,
 	.dev_infos_get = eth_dev_info,
+	.flow_ops_get = null_dev_flow_ops_get,
 	.rx_queue_setup = eth_rx_queue_setup,
 	.tx_queue_setup = eth_tx_queue_setup,
 	.rx_queue_release = eth_rx_queue_release,
