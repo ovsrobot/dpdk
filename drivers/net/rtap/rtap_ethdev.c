@@ -42,6 +42,8 @@
 				 RTE_ETH_RX_OFFLOAD_TCP_LRO | \
 				 RTE_ETH_RX_OFFLOAD_SCATTER)
 
+#define RTAP_MP_KEY		"rtap_mp_send_fds"
+
 #define RTAP_DEFAULT_BURST	64
 #define RTAP_NUM_BUFFERS	1024
 #define RTAP_MAX_QUEUES		128
@@ -52,6 +54,8 @@ static_assert(RTAP_MAX_QUEUES <= RTE_MP_MAX_FD_NUM, "Max queues exceeds MP fd li
 
 #define RTAP_IFACE_ARG		"iface"
 #define RTAP_PERSIST_ARG	"persist"
+
+static RTE_ATOMIC(unsigned int) rtap_dev_count;
 
 static const char * const valid_arguments[] = {
 	RTAP_IFACE_ARG,
@@ -530,6 +534,8 @@ rtap_dev_close(struct rte_eth_dev *dev)
 	free(dev->process_private);
 	dev->process_private = NULL;
 
+	if (rte_atomic_fetch_sub_explicit(&rtap_dev_count, 1, rte_memory_order_release) == 1)
+		rte_mp_action_unregister(RTAP_MP_KEY);
 	return 0;
 }
 
@@ -669,6 +675,89 @@ rtap_parse_iface(const char *key __rte_unused, const char *value, void *extra_ar
 	return 0;
 }
 
+/* Secondary process requests rxq fds from primary. */
+static int
+rtap_request_fds(const char *name, struct rte_eth_dev *dev)
+{
+	struct rte_mp_msg request = { };
+
+	strlcpy(request.name, RTAP_MP_KEY, sizeof(request.name));
+	strlcpy((char *)request.param, name, RTE_MP_MAX_PARAM_LEN);
+	request.len_param = strlen(name);
+
+	/* Send the request and receive the reply */
+	PMD_LOG(DEBUG, "Sending multi-process IPC request for %s", name);
+
+	struct timespec timeout = {.tv_sec = 1, .tv_nsec = 0};
+	struct rte_mp_reply replies;
+	int ret = rte_mp_request_sync(&request, &replies, &timeout);
+	if (ret < 0 || replies.nb_received != 1) {
+		PMD_LOG(ERR, "Failed to request fds from primary: %s",
+			rte_strerror(rte_errno));
+		return -1;
+	}
+
+	struct rte_mp_msg *reply = replies.msgs;
+	PMD_LOG(DEBUG, "Received multi-process IPC reply for %s", name);
+	if (dev->data->nb_rx_queues != reply->num_fds) {
+		PMD_LOG(ERR, "Incorrect number of fds received: %d != %d",
+			reply->num_fds, dev->data->nb_rx_queues);
+		free(reply);
+		return -EINVAL;
+	}
+
+	int *fds = dev->process_private;
+	for (int i = 0; i < reply->num_fds; i++) {
+		fds[i] = reply->fds[i];
+		PMD_LOG(DEBUG, "Received queue %u fd %d from primary", i, fds[i]);
+	}
+
+	free(reply);
+	return 0;
+}
+
+/* Primary process sends rxq fds to secondary. */
+static int
+rtap_mp_send_fds(const struct rte_mp_msg *request, const void *peer)
+{
+	const char *request_name = (const char *)request->param;
+
+	PMD_LOG(DEBUG, "Received multi-process IPC request for %s", request_name);
+
+	/* Find the requested port */
+	struct rte_eth_dev *dev = rte_eth_dev_get_by_name(request_name);
+	if (!dev) {
+		PMD_LOG(ERR, "Failed to get port id for %s", request_name);
+		return -1;
+	}
+
+	/* Populate the reply with the fds for each queue */
+	struct rte_mp_msg reply = { };
+	if (dev->data->nb_rx_queues > RTE_MP_MAX_FD_NUM) {
+		PMD_LOG(ERR, "Number of rx queues (%d) exceeds max number of fds (%d)",
+			   dev->data->nb_rx_queues, RTE_MP_MAX_FD_NUM);
+		return -EINVAL;
+	}
+
+	int *fds = dev->process_private;
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		PMD_LOG(DEBUG, "Send queue %u fd %d to secondary", i, fds[i]);
+		reply.fds[reply.num_fds++] = fds[i];
+	}
+
+	/* Send the reply */
+	strlcpy(reply.name, request->name, sizeof(reply.name));
+	strlcpy((char *)reply.param, request_name, RTE_MP_MAX_PARAM_LEN);
+	reply.len_param = strlen(request_name);
+
+	PMD_LOG(DEBUG, "Sending multi-process IPC reply for %s", request_name);
+	if (rte_mp_reply(&reply, peer) < 0) {
+		PMD_LOG(ERR, "Failed to reply to multi-process IPC request");
+		return -1;
+	}
+	return 0;
+}
+
 static int
 rtap_probe(struct rte_vdev_device *vdev)
 {
@@ -682,6 +771,38 @@ rtap_probe(struct rte_vdev_device *vdev)
 	int ret;
 
 	PMD_LOG(INFO, "Initializing %s", name);
+
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+		eth_dev = rte_eth_dev_attach_secondary(name);
+		if (!eth_dev) {
+			PMD_LOG(ERR, "Failed to probe %s", name);
+			return -1;
+		}
+		eth_dev->dev_ops = &rtap_ops;
+		eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+		eth_dev->device = &vdev->device;
+
+		if (!rte_eal_primary_proc_alive(NULL)) {
+			PMD_LOG(ERR, "Primary process is missing");
+			goto error;
+		}
+
+		fds = calloc(RTE_MAX_QUEUES_PER_PORT, sizeof(int));
+		if (fds == NULL) {
+			PMD_LOG(ERR, "Failed to alloc memory for process private");
+			goto error;
+		}
+		for (uint16_t i = 0; i < RTE_MAX_QUEUES_PER_PORT; i++)
+			fds[i] = -1;
+
+		eth_dev->process_private = fds;
+
+		if (rtap_request_fds(name, eth_dev))
+			goto error;
+
+		rte_eth_dev_probing_finish(eth_dev);
+		return 0;
+	}
 
 	if (params != NULL) {
 		kvlist = rte_kvargs_parse(params, valid_arguments);
@@ -720,6 +841,15 @@ rtap_probe(struct rte_vdev_device *vdev)
 
 	if (rtap_create(eth_dev, tap_name, persist) < 0)
 		goto error;
+
+	/* register the MP server on the first device */
+	if (rte_atomic_fetch_add_explicit(&rtap_dev_count, 1, rte_memory_order_acquire) == 0) {
+		if (rte_mp_action_register(RTAP_MP_KEY, rtap_mp_send_fds) < 0) {
+			PMD_LOG(ERR, "Failed to register multi-process callback: %s",
+				rte_strerror(rte_errno));
+			goto error;
+		}
+	}
 
 	rte_eth_dev_probing_finish(eth_dev);
 	rte_kvargs_free(kvlist);
