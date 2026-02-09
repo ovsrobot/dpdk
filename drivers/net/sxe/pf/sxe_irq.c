@@ -20,6 +20,7 @@
 #include "sxe_queue.h"
 #include "sxe_errno.h"
 #include "sxe_compat_version.h"
+#include "sxe_vf.h"
 
 #define SXE_LINK_DOWN_TIMEOUT 4000
 #define SXE_LINK_UP_TIMEOUT   1000
@@ -33,6 +34,119 @@
 
 #define SXE_RX_VEC_BASE		  RTE_INTR_VEC_RXTX_OFFSET
 
+static void sxe_link_info_output(struct rte_eth_dev *dev)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_eth_link link;
+
+	rte_eth_linkstatus_get(dev, &link);
+
+	PMD_LOG_DEBUG(DRV, "port:%d link status:%s speed %u Mbps %s",
+				(u16)(dev->data->port_id),
+				link.link_status ? "up" : "down",
+				link.link_speed,
+				(link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ?
+				"full-duplex" : "half-duplex");
+
+	PMD_LOG_DEBUG(DRV, "pci dev: " PCI_PRI_FMT,
+				pci_dev->addr.domain,
+				pci_dev->addr.bus,
+				pci_dev->addr.devid,
+				pci_dev->addr.function);
+}
+
+void sxe_event_irq_delayed_handler(void *param)
+{
+	struct rte_eth_dev *eth_dev = (struct rte_eth_dev *)param;
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct rte_intr_handle *intr_handle = SXE_PCI_INTR_HANDLE(pci_dev);
+	struct sxe_adapter *adapter = eth_dev->data->dev_private;
+	struct sxe_irq_context *irq = &adapter->irq_ctxt;
+	struct sxe_hw *hw = &adapter->hw;
+	u32 eicr;
+
+	rte_spinlock_lock(&adapter->irq_ctxt.event_irq_lock);
+
+	sxe_hw_all_irq_disable(hw);
+
+	eicr = sxe_hw_irq_cause_get(hw);
+	PMD_LOG_DEBUG(DRV, "delay handler eicr:0x%x action:0x%x",
+			   eicr, irq->action);
+
+	eicr &= 0xFFFF0000;
+	if (rte_atomic_load_explicit(&adapter->link_thread_running, rte_memory_order_seq_cst) &&
+		(eicr & SXE_EICR_LSC)) {
+		eicr &= ~SXE_EICR_LSC;
+		PMD_LOG_DEBUG(DRV, "delay handler keep lsc irq");
+	}
+	sxe_hw_pending_irq_write_clear(hw, eicr);
+
+	rte_spinlock_unlock(&adapter->irq_ctxt.event_irq_lock);
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	if (eicr & SXE_EICR_MAILBOX)
+		sxe_mbx_irq_handler(eth_dev);
+#endif
+
+	if (irq->action & SXE_IRQ_LINK_UPDATE) {
+		sxe_link_update(eth_dev, 0);
+		sxe_link_info_output(eth_dev);
+		sxe_eth_dev_callback_process(eth_dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+
+		irq->action &= ~SXE_IRQ_LINK_UPDATE;
+	}
+
+	irq->enable_mask |= SXE_EIMS_LSC;
+	PMD_LOG_DEBUG(DRV, "irq enable mask:0x%x", irq->enable_mask);
+
+	rte_spinlock_lock(&adapter->irq_ctxt.event_irq_lock);
+	sxe_hw_specific_irq_enable(hw, irq->enable_mask);
+	rte_spinlock_unlock(&adapter->irq_ctxt.event_irq_lock);
+
+	rte_intr_ack(intr_handle);
+}
+
+static void sxe_lsc_irq_handler(struct rte_eth_dev *eth_dev)
+{
+	struct rte_eth_link link;
+	struct sxe_adapter *adapter = eth_dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	struct sxe_irq_context *irq = &adapter->irq_ctxt;
+	u64 timeout;
+	bool link_up;
+
+	rte_eth_linkstatus_get(eth_dev, &link);
+
+	link_up = sxe_hw_is_link_state_up(hw);
+
+	if (!link.link_status && !link_up) {
+		PMD_LOG_DEBUG(DRV, "link change irq, down->down, do nothing.");
+		return;
+	}
+
+	if (irq->to_pcs_init) {
+		PMD_LOG_DEBUG(DRV, "to set pcs init, do nothing.");
+		return;
+	}
+
+	PMD_LOG_INFO(DRV, "link change irq handler start");
+	sxe_link_update(eth_dev, 0);
+	sxe_link_info_output(eth_dev);
+
+	timeout = link.link_status ? SXE_LINK_DOWN_TIMEOUT :
+					SXE_LINK_UP_TIMEOUT;
+
+	if (rte_eal_alarm_set(timeout * 1000,
+				  sxe_event_irq_delayed_handler,
+				  (void *)eth_dev) < 0) {
+		PMD_LOG_ERR(DRV, "submit event irq delay handle fail.");
+	} else {
+		irq->enable_mask &= ~SXE_EIMS_LSC;
+	}
+
+	PMD_LOG_INFO(DRV, "link change irq handler end");
+}
+
 static s32 sxe_event_irq_action(struct rte_eth_dev *eth_dev)
 {
 	struct sxe_adapter *adapter = eth_dev->data->dev_private;
@@ -40,9 +154,19 @@ static s32 sxe_event_irq_action(struct rte_eth_dev *eth_dev)
 
 	PMD_LOG_DEBUG(DRV, "event irq action type %d", irq->action);
 
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	/* mailbox irq handler */
+	if (irq->action & SXE_IRQ_MAILBOX) {
+		sxe_mbx_irq_handler(eth_dev);
+		irq->action &= ~SXE_IRQ_MAILBOX;
+	}
+#endif
+
 	/* lsc irq handler */
-	if (irq->action & SXE_IRQ_LINK_UPDATE)
+	if (irq->action & SXE_IRQ_LINK_UPDATE) {
+		sxe_lsc_irq_handler(eth_dev);
 		PMD_LOG_INFO(DRV, "link change irq");
+	}
 
 	return 0;
 }
@@ -94,6 +218,23 @@ void sxe_irq_init(struct rte_eth_dev *eth_dev)
 				   sxe_event_irq_handler, eth_dev);
 
 	rte_spinlock_init(&adapter->irq_ctxt.event_irq_lock);
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SRIOV
+	struct sxe_irq_context *irq = &adapter->irq_ctxt;
+	struct sxe_hw *hw = &adapter->hw;
+	u32 gpie = 0;
+
+	if (irq_handle->type == RTE_INTR_HANDLE_UIO ||
+		irq_handle->type == RTE_INTR_HANDLE_VFIO_MSIX) {
+		gpie = sxe_hw_irq_general_reg_get(hw);
+
+		gpie |= SXE_GPIE_MSIX_MODE | SXE_GPIE_OCD;
+		sxe_hw_irq_general_reg_set(hw, gpie);
+	}
+	rte_intr_enable(irq_handle);
+
+	sxe_hw_specific_irq_enable(hw, irq->enable_mask);
+#endif
 }
 
 static s32 sxe_irq_general_config(struct rte_eth_dev *dev)
