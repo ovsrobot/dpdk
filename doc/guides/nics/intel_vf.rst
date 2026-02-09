@@ -668,18 +668,20 @@ Inline IPsec Support
 Diagnostic Utilities
 --------------------
 
-Register mbuf dynfield to test Tx LLDP
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enable Tx LLDP
+~~~~~~~~~~~~~~
 
-Register an mbuf dynfield ``IAVF_TX_LLDP_DYNFIELD`` on ``dev_start``
-to indicate the need to send LLDP packet.
-This dynfield needs to be set to 1 when preparing packet.
-
-For ``dpdk-testpmd`` application, it needs to stop and restart Tx port to take effect.
+In order for the iavf PMD to transmit LLDP packets, two conditions must be met:
+1. mbufs carrying LLDP packets must have their ptype set to RTE_PTYPE_L2_ETHER_LLDP
+2. LLDP needs to be explicitly enabled eg. via ``dpdk-testpmd``:
 
 Usage::
 
     testpmd> set tx lldp on
+
+Note: the feature should be enabled before the device is started, so that a transmit
+path that is capable of transmitting LLDP packets is selected ie. one that supports
+context descriptors.
 
 
 Limitations or Knowing issues

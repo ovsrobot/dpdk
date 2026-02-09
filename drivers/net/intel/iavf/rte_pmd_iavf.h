@@ -155,6 +155,16 @@ int rte_pmd_iavf_register_post_reset_cb(uint16_t port,
 					void *post_reset_cb_arg);
 
 /**
+ * Enable or disable Tx LLDP on the iavf driver.
+ *
+ * @param enable
+ *   Set to true to enable Tx LLDP, false to disable.
+ */
+__rte_experimental
+void
+rte_pmd_iavf_enable_tx_lldp(bool enable);
+
+/**
  * The mbuf dynamic field pointer for flexible descriptor's extraction metadata.
  */
 #define RTE_PMD_IFD_DYNF_PROTO_XTR_METADATA(m) \

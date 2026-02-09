@@ -62,6 +62,7 @@ New Features
 * **Updated Intel iavf driver.**
 
   * Added support for pre and post VF reset callbacks.
+  * Changed LLDP packet detection from dynamic mbuf field to mbuf packet_type.
 
 
 Removed Items

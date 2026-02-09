@@ -45,7 +45,7 @@
 #define IAVF_MBUF_CHECK_ARG       "mbuf_check"
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
-int rte_pmd_iavf_tx_lldp_dynfield_offset = -1;
+bool iavf_tx_lldp_enabled;
 
 static const char * const iavf_valid_args[] = {
 	IAVF_PROTO_XTR_ARG,
@@ -1023,10 +1023,6 @@ iavf_dev_start(struct rte_eth_dev *dev)
 			return -1;
 		}
 	}
-
-	/* Check Tx LLDP dynfield */
-	rte_pmd_iavf_tx_lldp_dynfield_offset =
-		rte_mbuf_dynfield_lookup(IAVF_TX_LLDP_DYNFIELD, NULL);
 
 	if (iavf_init_queues(dev) != 0) {
 		PMD_DRV_LOG(ERR, "failed to do Queue init");
@@ -3201,6 +3197,13 @@ rte_pmd_iavf_reinit(uint16_t port)
 	iavf_handle_hw_reset(dev, true);
 
 	return 0;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_iavf_enable_tx_lldp, 26.03)
+void
+rte_pmd_iavf_enable_tx_lldp(bool enable)
+{
+	iavf_tx_lldp_enabled = enable;
 }
 
 static int

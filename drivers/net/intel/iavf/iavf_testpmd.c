@@ -39,21 +39,11 @@ cmd_enable_tx_lldp_parsed(void *parsed_result,
 	__rte_unused struct cmdline *cl, __rte_unused void *data)
 {
 	struct cmd_enable_tx_lldp_result *res = parsed_result;
-	const struct rte_mbuf_dynfield iavf_tx_lldp_dynfield = {
-		.name = IAVF_TX_LLDP_DYNFIELD,
-		.size = sizeof(uint8_t),
-		.align = alignof(uint8_t),
-		.flags = 0
-	};
-	int offset;
+	bool enable = strncmp(res->what, "on", 2) == 0;
 
-	if (strncmp(res->what, "on", 2) == 0) {
-		offset = rte_mbuf_dynfield_register(&iavf_tx_lldp_dynfield);
-		printf("rte_pmd_iavf_tx_lldp_dynfield_offset: %d", offset);
-		if (offset < 0)
-			fprintf(stderr,
-				"rte mbuf dynfield register failed, offset: %d", offset);
-	}
+	rte_pmd_iavf_enable_tx_lldp(enable);
+
+	printf("Tx LLDP %s on iavf driver\n", enable ? "enabled" : "disabled");
 }
 
 static cmdline_parse_inst_t cmd_enable_tx_lldp = {
