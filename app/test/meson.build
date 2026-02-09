@@ -87,6 +87,7 @@ source_file_deps = {
     'test_fib6.c': ['rib', 'fib'],
     'test_fib6_perf.c': ['fib'],
     'test_fib_perf.c': ['net', 'fib'],
+    'test_flow_api.c': ['net_null', 'ethdev', 'bus_vdev'],
     'test_flow_classify.c': ['net', 'acl', 'table', 'ethdev', 'flow_classify'],
     'test_func_reentrancy.c': ['hash', 'lpm'],
     'test_graph.c': ['graph'],
