@@ -63,6 +63,12 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
 
+* **Added rtap virtual ethernet driver.**
+
+  Added a new experimental virtual device driver that uses Linux io_uring
+  for packet injection into the kernel network stack.
+  It requires Linux kernel 5.1 or later and the liburing library.
+
 
 Removed Items
 -------------

@@ -56,6 +56,7 @@ drivers = [
         'r8169',
         'ring',
         'rnp',
+        'rtap',
         'sfc',
         'softnic',
         'tap',
