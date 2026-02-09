@@ -39,12 +39,139 @@ static const char * const valid_arguments[] = {
 	NULL
 };
 
+/* Creates a new tap device, name returned in ifr */
+static int
+rtap_tap_open(const char *name, struct ifreq *ifr, uint8_t persist)
+{
+	static const char tun_dev[] = "/dev/net/tun";
+	int tap_fd;
+
+	tap_fd = open(tun_dev, O_RDWR | O_CLOEXEC | O_NONBLOCK);
+	if (tap_fd < 0) {
+		PMD_LOG_ERRNO(ERR, "Open %s failed", tun_dev);
+		return -1;
+	}
+
+	int features = 0;
+	if (ioctl(tap_fd, TUNGETFEATURES, &features) < 0) {
+		PMD_LOG_ERRNO(ERR, "ioctl(TUNGETFEATURES): %s", tun_dev);
+		goto error;
+	}
+
+	int flags = IFF_TAP | IFF_MULTI_QUEUE | IFF_NO_PI | IFF_VNET_HDR;
+	if ((features & flags) != flags) {
+		PMD_LOG(ERR, "TUN features %#x missing support for %#x",
+			features, features & flags);
+		goto error;
+	}
+
+#ifdef IFF_NAPI
+	/* If kernel supports using NAPI enable it */
+	if (features & IFF_NAPI)
+		flags |= IFF_NAPI;
+#endif
+	/*
+	 * Sets the device name and packet format.
+	 * Do not want the protocol information (PI)
+	 */
+	strlcpy(ifr->ifr_name, name, IFNAMSIZ);
+	ifr->ifr_flags = flags;
+	if (ioctl(tap_fd, TUNSETIFF, ifr) < 0) {
+		PMD_LOG_ERRNO(ERR, "ioctl(TUNSETIFF) %s", ifr->ifr_name);
+		goto error;
+	}
+
+	/* (Optional) keep the device after application exit */
+	if (persist && ioctl(tap_fd, TUNSETPERSIST, 1) < 0) {
+		PMD_LOG_ERRNO(ERR, "ioctl(TUNSETPERSIST) %s", ifr->ifr_name);
+		goto error;
+	}
+
+	int hdr_size = sizeof(struct virtio_net_hdr);
+	if (ioctl(tap_fd, TUNSETVNETHDRSZ, &hdr_size) < 0) {
+		PMD_LOG(ERR, "ioctl(TUNSETVNETHDRSZ) %s", strerror(errno));
+		goto error;
+	}
+
+	return tap_fd;
+error:
+	close(tap_fd);
+	return -1;
+}
+
+static int
+rtap_dev_start(struct rte_eth_dev *dev)
+{
+	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+	}
+
+	return 0;
+}
+
+static int
+rtap_dev_stop(struct rte_eth_dev *dev)
+{
+	int *fds = dev->process_private;
+
+	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+
+	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
+		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		for (uint16_t i = 0; i < RTE_MAX_QUEUES_PER_PORT; i++) {
+			if (fds[i] == -1)
+				continue;
+
+			close(fds[i]);
+			fds[i] = -1;
+		}
+	}
+
+	return 0;
+}
+
+static int
+rtap_dev_configure(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	/* rx/tx must be paired */
+	if (dev->data->nb_rx_queues != dev->data->nb_tx_queues)
+		return -EINVAL;
+
+	if (ioctl(pmd->keep_fd, TUNSETOFFLOAD, 0) != 0) {
+		PMD_LOG(ERR, "ioctl(TUNSETOFFLOAD) failed: %s", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
 static int
 rtap_dev_close(struct rte_eth_dev *dev)
 {
 	struct rtap_pmd *pmd = dev->data->dev_private;
+	int *fds = dev->process_private;
 
 	PMD_LOG(INFO, "Closing %s", pmd->ifname);
+
+	/* Release all io_uring queues (calls rx/tx_queue_release for each) */
+	rte_eth_dev_internal_reset(dev);
+
+	/* Close any remaining queue fds (each process owns its own set) */
+	for (uint16_t i = 0; i < RTE_MAX_QUEUES_PER_PORT; i++) {
+		if (fds[i] == -1)
+			continue;
+		PMD_LOG(DEBUG, "Closed queue %u fd %d", i, fds[i]);
+		close(fds[i]);
+		fds[i] = -1;
+	}
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		/* mac_addrs must not be freed alone because part of dev_private */
@@ -63,9 +190,95 @@ rtap_dev_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+/* Setup another fd to TAP device for the queue */
+int
+rtap_queue_open(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+	int *fds = dev->process_private;
+
+	if (fds[queue_id] != -1) {
+		PMD_LOG(DEBUG, "queue %u already has fd %d", queue_id, fds[queue_id]);
+		return 0;	/* already setup */
+	}
+
+	struct ifreq ifr = { 0 };
+	int tap_fd = rtap_tap_open(pmd->ifname, &ifr, 0);
+	if (tap_fd < 0) {
+		PMD_LOG(ERR, "tap_open failed");
+		return -1;
+	}
+
+	PMD_LOG(DEBUG, "Opened %d for queue %u", tap_fd, queue_id);
+	fds[queue_id] = tap_fd;
+	return 0;
+}
+
+void
+rtap_queue_close(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	int *fds = dev->process_private;
+	int tap_fd = fds[queue_id];
+
+	if (tap_fd == -1)
+		return; /* already closed */
+	PMD_LOG(DEBUG, "Closed queue %u fd %d", queue_id, tap_fd);
+	close(tap_fd);
+	fds[queue_id] = -1;
+}
+
 static const struct eth_dev_ops rtap_ops = {
+	.dev_start		= rtap_dev_start,
+	.dev_stop		= rtap_dev_stop,
+	.dev_configure		= rtap_dev_configure,
 	.dev_close		= rtap_dev_close,
 };
+
+static int
+rtap_create(struct rte_eth_dev *dev, const char *tap_name, uint8_t persist)
+{
+	struct rte_eth_dev_data *data = dev->data;
+	struct rtap_pmd *pmd = data->dev_private;
+
+	pmd->keep_fd = -1;
+
+	dev->dev_ops = &rtap_ops;
+
+	/* Get the initial fd used to keep the tap device around */
+	struct ifreq ifr = { 0 };
+	pmd->keep_fd = rtap_tap_open(tap_name, &ifr, persist);
+	if (pmd->keep_fd < 0)
+		goto error;
+
+	PMD_LOG(DEBUG, "Created %s keep_fd %d", ifr.ifr_name, pmd->keep_fd);
+
+	/* Use name returned by kernel i.e if tap_name is rtap%d this will be rtap0 */
+	strlcpy(pmd->ifname, ifr.ifr_name, IFNAMSIZ);
+
+	/* Read the MAC address assigned by the kernel */
+	if (ioctl(pmd->keep_fd, SIOCGIFHWADDR, &ifr) < 0) {
+		PMD_LOG_ERRNO(ERR, "Unable to get MAC address for %s", ifr.ifr_name);
+		goto error;
+	}
+	memcpy(&pmd->eth_addr, &ifr.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
+	data->mac_addrs = &pmd->eth_addr;
+
+	/* Detach this instance, not used for traffic */
+	ifr.ifr_flags = IFF_DETACH_QUEUE;
+	if (ioctl(pmd->keep_fd, TUNSETQUEUE, &ifr) < 0) {
+		PMD_LOG_ERRNO(ERR, "Unable to detach keep-alive queue for %s", ifr.ifr_name);
+		goto error;
+	}
+
+	PMD_LOG(DEBUG, "%s setup", ifr.ifr_name);
+
+	return 0;
+
+error:
+	if (pmd->keep_fd != -1)
+		close(pmd->keep_fd);
+	return -1;
+}
 
 static int
 rtap_parse_iface(const char *key __rte_unused, const char *value, void *extra_args)
@@ -129,7 +342,8 @@ rtap_probe(struct rte_vdev_device *vdev)
 	eth_dev->process_private = fds;
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
-	RTE_SET_USED(persist); /* used in later patches */
+	if (rtap_create(eth_dev, tap_name, persist) < 0)
+		goto error;
 
 	rte_eth_dev_probing_finish(eth_dev);
 	rte_kvargs_free(kvlist);
