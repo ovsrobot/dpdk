@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -29,6 +30,14 @@
 #include "rtap.h"
 
 #define RTAP_DEFAULT_IFNAME	"rtap%d"
+
+#define RTAP_DEFAULT_BURST	64
+#define RTAP_NUM_BUFFERS	1024
+#define RTAP_MAX_QUEUES		128
+#define RTAP_MIN_RX_BUFSIZE	RTE_ETHER_MIN_LEN
+#define RTAP_MAX_RX_PKTLEN	RTE_ETHER_MAX_JUMBO_FRAME_LEN
+
+static_assert(RTAP_MAX_QUEUES <= RTE_MP_MAX_FD_NUM, "Max queues exceeds MP fd limit");
 
 #define RTAP_IFACE_ARG		"iface"
 #define RTAP_PERSIST_ARG	"persist"
@@ -154,6 +163,132 @@ rtap_dev_configure(struct rte_eth_dev *dev)
 }
 
 static int
+rtap_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	dev_info->if_index = if_nametoindex(pmd->ifname);
+	dev_info->max_mac_addrs = 1;
+	dev_info->max_rx_pktlen = RTAP_MAX_RX_PKTLEN;
+	dev_info->min_rx_bufsize = RTAP_MIN_RX_BUFSIZE;
+	dev_info->max_rx_queues = RTAP_MAX_QUEUES;
+	dev_info->max_tx_queues = RTAP_MAX_QUEUES;
+
+	dev_info->default_rxportconf = (struct rte_eth_dev_portconf) {
+		.burst_size = RTAP_DEFAULT_BURST,
+		.ring_size = RTAP_NUM_BUFFERS,
+		.nb_queues = 1,
+	};
+	dev_info->default_txportconf = (struct rte_eth_dev_portconf) {
+		.burst_size = RTAP_DEFAULT_BURST,
+		.ring_size = RTAP_NUM_BUFFERS,
+		.nb_queues = 1,
+	};
+	return 0;
+}
+
+/* Use sysfs to ask kernel what packets were dropped before making it to interface */
+static int
+rtap_get_rx_dropped(const char *ifname, uint64_t *rx_dropped)
+{
+	char path[256];
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/statistics/rx_dropped",
+		 ifname);
+
+	FILE *f = fopen(path, "r");
+	if (f == NULL) {
+		PMD_LOG_ERRNO(NOTICE, "open %s failed", path);
+		return -errno;
+	}
+
+	if (fscanf(f, "%"SCNu64, rx_dropped) != 1) {
+		PMD_LOG(NOTICE, "parse of rx_dropped failed");
+		fclose(f);
+		return -EIO;
+	}
+
+	fclose(f);
+	return 0;
+}
+
+static int
+rtap_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
+	       struct eth_queue_stats *qstats)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+	uint16_t i;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct rtap_rx_queue *rxq = dev->data->rx_queues[i];
+		if (rxq == NULL)
+			continue;
+
+		stats->ipackets += rxq->rx_packets;
+		stats->ibytes += rxq->rx_bytes;
+		stats->ierrors += rxq->rx_errors;
+
+		if (qstats != NULL && i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			qstats->q_ipackets[i] = rxq->rx_packets;
+			qstats->q_ibytes[i] = rxq->rx_bytes;
+			qstats->q_errors[i] = rxq->rx_errors;
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct rtap_tx_queue *txq = dev->data->tx_queues[i];
+		if (txq == NULL)
+			continue;
+
+		stats->opackets += txq->tx_packets;
+		stats->obytes += txq->tx_bytes;
+		stats->oerrors += txq->tx_errors;
+
+		if (qstats != NULL && i < RTE_ETHDEV_QUEUE_STAT_CNTRS) {
+			qstats->q_opackets[i] = txq->tx_packets;
+			qstats->q_obytes[i] = txq->tx_bytes;
+		}
+	}
+
+	uint64_t rx_dropped = 0;
+	if (rtap_get_rx_dropped(pmd->ifname, &rx_dropped) == 0 &&
+	    rx_dropped > pmd->rx_drop_base)
+		stats->imissed = rx_dropped - pmd->rx_drop_base;
+
+	return 0;
+}
+
+static int
+rtap_stats_reset(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+	uint16_t i;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct rtap_rx_queue *rxq = dev->data->rx_queues[i];
+		if (rxq == NULL)
+			continue;
+
+		rxq->rx_packets = 0;
+		rxq->rx_bytes = 0;
+		rxq->rx_errors = 0;
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct rtap_tx_queue *txq = dev->data->tx_queues[i];
+		if (txq == NULL)
+			continue;
+
+		txq->tx_packets = 0;
+		txq->tx_bytes = 0;
+		txq->tx_errors = 0;
+	}
+
+	rtap_get_rx_dropped(pmd->ifname, &pmd->rx_drop_base);
+	return 0;
+}
+
+static int
 rtap_dev_close(struct rte_eth_dev *dev)
 {
 	struct rtap_pmd *pmd = dev->data->dev_private;
@@ -231,7 +366,10 @@ static const struct eth_dev_ops rtap_ops = {
 	.dev_start		= rtap_dev_start,
 	.dev_stop		= rtap_dev_stop,
 	.dev_configure		= rtap_dev_configure,
+	.dev_infos_get		= rtap_dev_info,
 	.dev_close		= rtap_dev_close,
+	.stats_get		= rtap_stats_get,
+	.stats_reset		= rtap_stats_reset,
 	.rx_queue_setup		= rtap_rx_queue_setup,
 	.rx_queue_release	= rtap_rx_queue_release,
 	.tx_queue_setup		= rtap_tx_queue_setup,
@@ -245,6 +383,7 @@ rtap_create(struct rte_eth_dev *dev, const char *tap_name, uint8_t persist)
 	struct rtap_pmd *pmd = data->dev_private;
 
 	pmd->keep_fd = -1;
+	pmd->rx_drop_base = 0;
 
 	dev->dev_ops = &rtap_ops;
 

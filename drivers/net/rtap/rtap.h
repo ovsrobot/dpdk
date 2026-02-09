@@ -64,6 +64,8 @@ struct rtap_pmd {
 	int keep_fd;			/* keep alive file descriptor */
 	char ifname[IFNAMSIZ];		/* name assigned by kernel */
 	struct rte_ether_addr eth_addr; /* address assigned by kernel */
+
+	uint64_t rx_drop_base;		/* value of rx_dropped when reset */
 };
 
 /* rtap_ethdev.c */
