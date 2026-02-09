@@ -109,8 +109,169 @@ error:
 }
 
 static int
+rtap_change_flags(struct rte_eth_dev *dev, uint32_t flags, uint32_t mask)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
+	struct ifreq ifr = { 0 };
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+
+	int ret = ioctl(sock, SIOCGIFFLAGS, &ifr);
+	if (ret < 0) {
+		PMD_LOG_ERRNO(ERR, "Unable to get flags for %s", ifr.ifr_name);
+		goto error;
+	}
+
+	/* NB: ifr.ifr_flags is type short */
+	ifr.ifr_flags &= mask;
+	ifr.ifr_flags |= flags;
+
+	ret = ioctl(sock, SIOCSIFFLAGS, &ifr);
+	if (ret < 0)
+		PMD_LOG_ERRNO(ERR, "Unable to set flags for %s", ifr.ifr_name);
+error:
+	close(sock);
+	return (ret < 0) ? -errno : 0;
+}
+
+static int
+rtap_get_flags(struct rte_eth_dev *dev, short *flags)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		PMD_LOG_ERRNO(ERR, "socket failed");
+		return -1;
+	}
+
+	struct ifreq ifr = { 0 };
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+
+	int ret = ioctl(sock, SIOCGIFFLAGS, &ifr);
+	if (ret == 0)
+		*flags = ifr.ifr_flags;
+	else
+		PMD_LOG_ERRNO(ERR, "ioctl(SIOCGIFFLAGS)");
+	close(sock);
+	return ret;
+}
+
+static int
+rtap_set_link_up(struct rte_eth_dev *dev)
+{
+	return rtap_change_flags(dev, IFF_UP, (uint16_t)~0);
+}
+
+static int
+rtap_set_link_down(struct rte_eth_dev *dev)
+{
+	return rtap_change_flags(dev, 0, ~IFF_UP);
+}
+
+static int
+rtap_promiscuous_enable(struct rte_eth_dev *dev)
+{
+	return rtap_change_flags(dev, IFF_PROMISC, ~0);
+}
+
+static int
+rtap_promiscuous_disable(struct rte_eth_dev *dev)
+{
+	return rtap_change_flags(dev, 0, ~IFF_PROMISC);
+}
+
+static int
+rtap_allmulticast_enable(struct rte_eth_dev *dev)
+{
+	return rtap_change_flags(dev, IFF_ALLMULTI, ~0);
+}
+
+static int
+rtap_allmulticast_disable(struct rte_eth_dev *dev)
+{
+	return rtap_change_flags(dev, 0, ~IFF_ALLMULTI);
+}
+
+int
+rtap_link_update(struct rte_eth_dev *dev, int wait_to_complete __rte_unused)
+{
+	struct rte_eth_link link = {
+		.link_speed = RTE_ETH_SPEED_NUM_UNKNOWN,
+		.link_duplex = RTE_ETH_LINK_FULL_DUPLEX,
+		.link_autoneg = RTE_ETH_LINK_FIXED,
+		.link_status = RTE_ETH_LINK_DOWN,
+	};
+	short flags = 0;
+
+	if (rtap_get_flags(dev, &flags) < 0)
+		return -1;
+
+	if (flags & IFF_UP)
+		link.link_status = RTE_ETH_LINK_UP;
+
+	rte_eth_linkstatus_set(dev, &link);
+	return 0;
+}
+
+static int
+rtap_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
+	struct ifreq ifr = { .ifr_mtu = mtu };
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+
+	int ret = ioctl(sock, SIOCSIFMTU, &ifr);
+	if (ret < 0) {
+		PMD_LOG(ERR, "ioctl(SIOCSIFMTU) failed: %s", strerror(errno));
+		ret = -errno;
+	}
+	close(sock);
+
+	return ret;
+}
+
+static int
+rtap_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
+		return -errno;
+
+	struct ifreq ifr = { 0 };
+	strlcpy(ifr.ifr_name, pmd->ifname, IFNAMSIZ);
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+	memcpy(ifr.ifr_hwaddr.sa_data, addr, sizeof(*addr));
+
+	int ret = ioctl(sock, SIOCSIFHWADDR, &ifr);
+	if (ret < 0) {
+		PMD_LOG(ERR, "ioctl(SIOCSIFHWADDR) failed: %s", strerror(errno));
+		ret = -errno;
+	}
+	close(sock);
+
+	return ret;
+}
+
+static int
 rtap_dev_start(struct rte_eth_dev *dev)
 {
+	int ret = rtap_set_link_up(dev);
+
+	if (ret != 0)
+		return ret;
+
 	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
@@ -126,6 +287,8 @@ rtap_dev_stop(struct rte_eth_dev *dev)
 	int *fds = dev->process_private;
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+
+	rtap_set_link_down(dev);
 
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
@@ -368,6 +531,15 @@ static const struct eth_dev_ops rtap_ops = {
 	.dev_configure		= rtap_dev_configure,
 	.dev_infos_get		= rtap_dev_info,
 	.dev_close		= rtap_dev_close,
+	.link_update		= rtap_link_update,
+	.dev_set_link_up	= rtap_set_link_up,
+	.dev_set_link_down	= rtap_set_link_down,
+	.mac_addr_set		= rtap_macaddr_set,
+	.mtu_set		= rtap_mtu_set,
+	.promiscuous_enable	= rtap_promiscuous_enable,
+	.promiscuous_disable	= rtap_promiscuous_disable,
+	.allmulticast_enable	= rtap_allmulticast_enable,
+	.allmulticast_disable	= rtap_allmulticast_disable,
 	.stats_get		= rtap_stats_get,
 	.stats_reset		= rtap_stats_reset,
 	.rx_queue_setup		= rtap_rx_queue_setup,
