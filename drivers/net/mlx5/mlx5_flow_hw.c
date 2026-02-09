@@ -9610,7 +9610,7 @@ flow_hw_create_vport_action(struct rte_eth_dev *dev)
 	}
 	proxy_priv->hw_vport[port_id] = mlx5dr_action_create_dest_vport
 			(proxy_priv->dr_ctx, priv->dev_port,
-			 is_unified_fdb(priv) ?
+			 is_unified_fdb(proxy_priv) ?
 				(MLX5DR_ACTION_FLAG_HWS_FDB_RX |
 				 MLX5DR_ACTION_FLAG_HWS_FDB_TX |
 				 MLX5DR_ACTION_FLAG_HWS_FDB_UNIFIED) :
