@@ -509,6 +509,22 @@ idpf_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	txq->q_set = true;
 	dev->data->tx_queues[queue_idx] = txq;
 
+	/* Set tx_simple_allowed flag based on queue configuration.
+	 * For queue 0: explicitly set the flag based on its configuration.
+	 * For other queues: only set to false if this queue cannot use simple_tx.
+	 */
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT)
+		goto out;
+
+	/* for first queue, default to true, disable later if any queue can't meet conditions */
+	if (queue_idx == 0)
+		adapter->tx_simple_allowed = true;
+
+	if ((txq->offloads != (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)) ||
+			txq->tx_rs_thresh < IDPF_VPMD_TX_MAX_BURST)
+		adapter->tx_simple_allowed = false;
+
+out:
 	return 0;
 
 err_complq_setup:
@@ -651,6 +667,7 @@ int
 idpf_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 {
 	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *ad = vport->adapter;
 	struct ci_tx_queue *txq = dev->data->tx_queues[tx_queue_id];
 	int err = 0;
 
@@ -666,6 +683,12 @@ idpf_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 			    tx_queue_id);
 		return err;
 	}
+
+	/* Record what kind of descriptor cleanup we need on teardown.
+	 * For single queue mode, vector or simple tx paths use vec entry format.
+	 */
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE)
+		txq->use_vec_entry = ad->tx_simple_allowed;
 
 	/* Ready to switch the queue on */
 	err = idpf_vc_queue_switch(vport, tx_queue_id, false, true,
@@ -847,7 +870,8 @@ idpf_set_tx_function(struct rte_eth_dev *dev)
 	struct ci_tx_path_features req_features = {
 		.tx_offloads = dev->data->dev_conf.txmode.offloads,
 		.simd_width = RTE_VECT_SIMD_DISABLED,
-		.single_queue = (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE)
+		.single_queue = (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE),
+		.simple_tx = ad->tx_simple_allowed
 	};
 
 	/* The primary process selects the tx path for all processes. */
