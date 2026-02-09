@@ -13,6 +13,7 @@
 
 #include <ethdev_driver.h>
 #include <rte_ether.h>
+#include <rte_interrupts.h>
 #include <rte_log.h>
 
 
@@ -62,6 +63,7 @@ struct rtap_tx_queue {
 
 struct rtap_pmd {
 	int keep_fd;			/* keep alive file descriptor */
+	struct rte_intr_handle *intr_handle; /* LSC interrupt handle */
 	char ifname[IFNAMSIZ];		/* name assigned by kernel */
 	struct rte_ether_addr eth_addr; /* address assigned by kernel */
 
@@ -85,5 +87,8 @@ int rtap_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id,
 			uint16_t nb_tx_desc, unsigned int socket_id,
 			const struct rte_eth_txconf *tx_conf);
 void rtap_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id);
+
+/* rtap_intr.c */
+int rtap_lsc_set(struct rte_eth_dev *dev, int set);
 
 #endif /* _RTAP_H_ */
