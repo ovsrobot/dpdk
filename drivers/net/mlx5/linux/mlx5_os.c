@@ -2970,6 +2970,21 @@ mlx5_os_auxiliary_probe(struct mlx5_common_device *cdev,
 	}
 	spawn.ifindex = ret;
 	spawn.cdev = cdev;
+	/*
+	 * Query switch info for SF representors (like PCI probe does).
+	 * Without this, esw_mode stays 0 and vport metadata is never
+	 * initialized for hotplugged SFs.
+	 */
+	if (spawn.ifindex > 0) {
+		ret = mlx5_sysfs_switch_info(spawn.ifindex, &spawn.info);
+		if (ret) {
+			DRV_LOG(DEBUG, "No switch info for ifindex %d, assuming non-representor",
+				spawn.ifindex);
+			/* Not an error - device may not be a representor */
+			ret = 0;
+		}
+	}
+
 	/* Spawn device. */
 	eth_dev = mlx5_dev_spawn(dev, &spawn, &eth_da, mkvlist);
 	if (eth_dev == NULL)
