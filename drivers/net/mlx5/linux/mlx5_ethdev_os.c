@@ -858,13 +858,35 @@ mlx5_dev_interrupt_handler_devx(void *cb_arg)
 			    sizeof(struct mlx5dv_devx_async_cmd_hdr)];
 	} out;
 	uint8_t *buf = out.buf + sizeof(out.cmd_resp);
+	bool data_read = false;
+	int ret;
 
-	while (!mlx5_glue->devx_get_async_cmd_comp(sh->devx_comp,
-						   &out.cmd_resp,
-						   sizeof(out.buf)))
-		mlx5_flow_async_pool_query_handle
-			(sh, (uint64_t)out.cmd_resp.wr_id,
-			 mlx5_devx_get_out_command_status(buf));
+	while (!(ret = mlx5_glue->devx_get_async_cmd_comp(sh->devx_comp,
+							  &out.cmd_resp,
+							  sizeof(out.buf)))) {
+		data_read = true;
+		mlx5_flow_async_pool_query_handle(sh,
+			(uint64_t)out.cmd_resp.wr_id,
+			mlx5_devx_get_out_command_status(buf));
+	}
+
+	if (!data_read && ret == EAGAIN) {
+		/*
+		 * no data and EAGAIN indicate there is an error or
+		 * disconnect state. Unregister callback to prevent
+		 * interrupt busy-looping.
+		 */
+		DRV_LOG(DEBUG, "no data for mlx5 devx interrupt on fd %d",
+			rte_intr_fd_get(sh->intr_handle_devx));
+
+		if (rte_intr_callback_unregister_pending(sh->intr_handle_devx,
+						     mlx5_dev_interrupt_handler_devx,
+						     (void *)sh, NULL) < 0) {
+			DRV_LOG(WARNING,
+				"unable to unregister mlx5 devx interrupt callback on fd %d",
+				rte_intr_fd_get(sh->intr_handle_devx));
+		}
+	}
 #endif /* HAVE_IBV_DEVX_ASYNC */
 }
 
