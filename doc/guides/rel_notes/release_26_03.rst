@@ -67,6 +67,8 @@ New Features
 
   * Added support for VLAN insertion and stripping.
   * Added support for reporting link state and speed in ``iface`` mode.
+  * Receive timestamp offload is only done if offload flag set.
+  * Receive timestamps support nanosecond precision.
 
 
 Removed Items
