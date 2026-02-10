@@ -4263,15 +4263,12 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 
 out:
 #ifdef RTE_ARCH_X86
-	if (iavf_tx_path_infos[adapter->tx_func_type].features.simd_width != 0) {
-		for (i = 0; i < dev->data->nb_tx_queues; i++) {
-			txq = dev->data->tx_queues[i];
-			if (!txq)
-				continue;
-			iavf_txq_vec_setup(txq);
-			txq->use_ctx =
-				iavf_tx_path_infos[adapter->tx_func_type].features.ctx_desc;
-		}
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (!txq)
+			continue;
+		txq->use_ctx = iavf_tx_path_infos[adapter->tx_func_type].features.ctx_desc;
+		txq->vector_tx = iavf_tx_path_infos[adapter->tx_func_type].features.simd_width != 0;
 	}
 #endif
 
