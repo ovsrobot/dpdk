@@ -2497,8 +2497,12 @@ ice_fdir_parse(struct ice_adapter *ad,
 	if (ret)
 		goto error;
 
-	if (meta)
+	/* if meta is NULL we're validating so the flow won't be stored */
+	if (meta) {
 		*meta = filter;
+	} else if (filter->pkt_buf != NULL) {
+		rte_free(filter->pkt_buf);
+	}
 
 	rte_free(item);
 	return ret;
