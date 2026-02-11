@@ -2170,6 +2170,8 @@ struct rte_eth_dev_owner {
  * PMDs filling the queue xstats themselves should not set this flag
  */
 #define RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS RTE_BIT32(6)
+/** Device supports Rx data discard */
+#define RTE_ETH_DEV_DISCARD_RX_DATA RTE_BIT32(7)
 /**@}*/
 
 /**
