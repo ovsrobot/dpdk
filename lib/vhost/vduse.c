@@ -460,24 +460,23 @@ vduse_events_handler(int fd, void *arg, int *close __rte_unused)
 		resp.result = VDUSE_REQ_RESULT_OK;
 		break;
 	case VDUSE_UPDATE_IOTLB:
-		{
-			uint64_t start, last;
-			uint32_t asid;
+		uint64_t start, last;
+		uint32_t asid;
 
-			if (dev->vduse_api_ver < 1) {
-				start = req.iova.start;
-				last = req.iova.last;
-				asid = 0;
-			} else {
-				start = req.iova_v2.start;
-				last = req.iova_v2.last;
-				asid = req.iova_v2.asid;
-			}
-
-			VHOST_CONFIG_LOG(dev->ifname, INFO, "\t(ASID %d) IOVA range: %" PRIx64 " - %" PRIx64,
-				asid, start, last);
-			vhost_user_iotlb_cache_remove(dev, asid, start, last - start + 1);
+		if (dev->vduse_api_ver < 1) {
+			start = req.iova.start;
+			last = req.iova.last;
+			asid = 0;
+		} else {
+			start = req.iova_v2.start;
+			last = req.iova_v2.last;
+			asid = req.iova_v2.asid;
 		}
+
+		VHOST_CONFIG_LOG(dev->ifname, INFO, "\t(ASID %d) IOVA range: %" PRIx64 " - %" PRIx64,
+			asid, start, last);
+		vhost_user_iotlb_cache_remove(dev, asid, start, last - start + 1);
+
 		resp.result = VDUSE_REQ_RESULT_OK;
 		break;
 	case VDUSE_SET_VQ_GROUP_ASID:
@@ -801,6 +800,7 @@ vduse_device_create(const char *path, bool compliant_ol_flags, bool extbuf, bool
 			goto out_ctrl_close;
 		}
 
+		vnet_config.status = VIRTIO_NET_S_LINK_UP;
 		vnet_config.max_virtqueue_pairs = max_queue_pairs;
 		memset(dev_config, 0, sizeof(struct vduse_dev_config));
 
