@@ -1227,7 +1227,6 @@ emit_prolog(struct bpf_jit_state *st, int32_t stack_size)
 	if (spil == 0)
 		return;
 
-
 	emit_alu_imm(st, EBPF_ALU64 | BPF_SUB | BPF_K, RSP,
 		spil * sizeof(uint64_t));
 
