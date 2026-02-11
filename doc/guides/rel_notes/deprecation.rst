@@ -20,6 +20,11 @@ Deprecation Notices
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
 
+* cryptodev: Support for OpenSSL versions earlier than 3.0 is deprecated
+  and will be removed. OpenSSL 1.1.1 reached end-of-life in September 2023.
+  The minimum supported OpenSSL version will be 3.0,
+  and version checks for earlier OpenSSL versions will be removed from the PMD.
+
 * eal: The ``-c <coremask>`` commandline parameter is deprecated
   and will be removed in a future release.
   Use the ``-l <corelist>`` or ``--lcores=<corelist>`` parameters instead
