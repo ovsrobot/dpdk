@@ -1110,7 +1110,7 @@ __hash_rcu_auto_free_old_data(const struct rte_hash *h, void *old_data_val)
 
 static inline int32_t
 __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
-						hash_sig_t sig, void *data)
+			     hash_sig_t sig, void *data, void **old_data)
 {
 	uint16_t short_sig;
 	uint32_t prim_bucket_idx, sec_bucket_idx;
@@ -1309,7 +1309,9 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 	return slot_id - 1;
 
 overwrite:
-	if (saved_old_data != NULL)
+	if (old_data != NULL)
+		*old_data = saved_old_data;
+	else if (saved_old_data != NULL)
 		__hash_rcu_auto_free_old_data(h, saved_old_data);
 	return ret;
 
@@ -1325,7 +1327,7 @@ rte_hash_add_key_with_hash(const struct rte_hash *h,
 			const void *key, hash_sig_t sig)
 {
 	RETURN_IF_TRUE(((h == NULL) || (key == NULL)), -EINVAL);
-	return __rte_hash_add_key_with_hash(h, key, sig, 0);
+	return __rte_hash_add_key_with_hash(h, key, sig, 0, NULL);
 }
 
 RTE_EXPORT_SYMBOL(rte_hash_add_key)
@@ -1333,7 +1335,7 @@ int32_t
 rte_hash_add_key(const struct rte_hash *h, const void *key)
 {
 	RETURN_IF_TRUE(((h == NULL) || (key == NULL)), -EINVAL);
-	return __rte_hash_add_key_with_hash(h, key, rte_hash_hash(h, key), 0);
+	return __rte_hash_add_key_with_hash(h, key, rte_hash_hash(h, key), 0, NULL);
 }
 
 RTE_EXPORT_SYMBOL(rte_hash_add_key_with_hash_data)
@@ -1344,7 +1346,7 @@ rte_hash_add_key_with_hash_data(const struct rte_hash *h,
 	int ret;
 
 	RETURN_IF_TRUE(((h == NULL) || (key == NULL)), -EINVAL);
-	ret = __rte_hash_add_key_with_hash(h, key, sig, data);
+	ret = __rte_hash_add_key_with_hash(h, key, sig, data, NULL);
 	if (ret >= 0)
 		return 0;
 	else
@@ -1359,11 +1361,39 @@ rte_hash_add_key_data(const struct rte_hash *h, const void *key, void *data)
 
 	RETURN_IF_TRUE(((h == NULL) || (key == NULL)), -EINVAL);
 
-	ret = __rte_hash_add_key_with_hash(h, key, rte_hash_hash(h, key), data);
+	ret = __rte_hash_add_key_with_hash(h, key, rte_hash_hash(h, key), data, NULL);
 	if (ret >= 0)
 		return 0;
 	else
 		return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_hash_replace_key_with_hash_data, 26.03)
+int
+rte_hash_replace_key_with_hash_data(const struct rte_hash *h,
+				    const void *key, hash_sig_t sig,
+				    void *data, void **old_data)
+{
+	int ret;
+
+	RETURN_IF_TRUE(((h == NULL) || (key == NULL) ||
+			(old_data == NULL)), -EINVAL);
+
+	*old_data = NULL;
+	ret = __rte_hash_add_key_with_hash(h, key, sig, data, old_data);
+	if (ret >= 0)
+		return 0;
+	else
+		return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_hash_replace_key_data, 26.03)
+int
+rte_hash_replace_key_data(const struct rte_hash *h, const void *key,
+			  void *data, void **old_data)
+{
+	return rte_hash_replace_key_with_hash_data(h, key,
+			rte_hash_hash(h, key), data, old_data);
 }
 
 /* Search one bucket to find the match key - uses rw lock */

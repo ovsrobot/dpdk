@@ -2474,6 +2474,83 @@ end:
 }
 
 /*
+ * Test rte_hash_replace_key_data (explicit replace, no RCU).
+ *  - Add key with data pointer (void *)1.
+ *  - Replace same key with data (void *)2, verify old_data == (void *)1.
+ *  - Lookup and verify data == (void *)2.
+ *  - Replace with a new key (not yet inserted), verify old_data == NULL.
+ */
+static int
+test_hash_replace_key_data(void)
+{
+	struct rte_hash_parameters params = {
+		.name = "test_replace_key_data",
+		.entries = 64,
+		.key_len = sizeof(uint32_t),
+		.hash_func = NULL,
+		.hash_func_init_val = 0,
+		.socket_id = SOCKET_ID_ANY,
+	};
+	struct rte_hash *hash;
+	void *old_data = NULL;
+	void *data = NULL;
+	uint32_t key1 = 42;
+	uint32_t key2 = 99;
+	int ret = -1;
+
+	printf("\n# Running replace key data test\n");
+
+	hash = rte_hash_create(&params);
+	if (hash == NULL) {
+		printf("hash creation failed\n");
+		goto end;
+	}
+
+	/* Add key with data = (void *)1 */
+	ret = rte_hash_add_key_data(hash, &key1, (void *)(uintptr_t)1);
+	if (ret != 0) {
+		printf("failed to add key (ret=%d)\n", ret);
+		goto end;
+	}
+
+	/* Replace same key with data = (void *)2 */
+	ret = rte_hash_replace_key_data(hash, &key1, (void *)(uintptr_t)2, &old_data);
+	if (ret != 0) {
+		printf("failed to replace key (ret=%d)\n", ret);
+		goto end;
+	}
+	if (old_data != (void *)(uintptr_t)1) {
+		printf("old_data should be 0x1 but is %p\n", old_data);
+		goto end;
+	}
+
+	/* Lookup and verify data == (void *)2 */
+	ret = rte_hash_lookup_data(hash, &key1, &data);
+	if (ret < 0 || data != (void *)(uintptr_t)2) {
+		printf("lookup returned wrong data %p (ret=%d)\n", data, ret);
+		goto end;
+	}
+
+	/* Replace with a new key (not yet inserted) */
+	old_data = (void *)(uintptr_t)0xdeadbeef;
+	ret = rte_hash_replace_key_data(hash, &key2, (void *)(uintptr_t)3, &old_data);
+	if (ret != 0) {
+		printf("failed to insert new key via replace (ret=%d)\n", ret);
+		goto end;
+	}
+	if (old_data != NULL) {
+		printf("old_data should be NULL on fresh insert but is %p\n",
+		       old_data);
+		goto end;
+	}
+
+end:
+	rte_hash_free(hash);
+
+	return ret;
+}
+
+/*
  * Do all unit and performance tests.
  */
 static int
@@ -2555,6 +2632,9 @@ test_hash(void)
 		return -1;
 
 	if (test_hash_rcu_qsbr_replace_auto_free() < 0)
+		return -1;
+
+	if (test_hash_replace_key_data() < 0)
 		return -1;
 
 	return 0;

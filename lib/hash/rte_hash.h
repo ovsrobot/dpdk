@@ -280,6 +280,73 @@ rte_hash_add_key_with_hash_data(const struct rte_hash *h, const void *key,
 						hash_sig_t sig, void *data);
 
 /**
+ * Replace a key-value pair in an existing hash table, returning the previous
+ * data pointer associated with the key. If the key does not exist, it is
+ * inserted and *old_data is set to NULL.
+ *
+ * This operation is not multi-thread safe and should only be called from one
+ * thread by default. Thread safety can be enabled by setting flag during table
+ * creation.
+ *
+ * When old_data is provided, no automatic RCU deferred free is performed on
+ * overwrite; the caller takes ownership of the old pointer and is responsible
+ * for freeing it (e.g. via RCU).
+ *
+ * @param h
+ *   Hash table to add the key to.
+ * @param key
+ *   Key to add to the hash table.
+ * @param data
+ *   Data to add to the hash table.
+ * @param old_data
+ *   Output: on overwrite, set to the previous data pointer.
+ *   On fresh insert, set to NULL.
+ * @return
+ *   - 0 if added/replaced successfully
+ *   - -EINVAL if the parameters are invalid.
+ *   - -ENOSPC if there is no space in the hash for this key.
+ */
+__rte_experimental
+int
+rte_hash_replace_key_data(const struct rte_hash *h, const void *key,
+			  void *data, void **old_data);
+
+/**
+ * Replace a key-value pair with a pre-computed hash value in an existing hash
+ * table, returning the previous data pointer associated with the key. If the
+ * key does not exist, it is inserted and *old_data is set to NULL.
+ *
+ * This operation is not multi-thread safe and should only be called from one
+ * thread by default. Thread safety can be enabled by setting flag during table
+ * creation.
+ *
+ * When old_data is provided, no automatic RCU deferred free is performed on
+ * overwrite; the caller takes ownership of the old pointer and is responsible
+ * for freeing it (e.g. via RCU).
+ *
+ * @param h
+ *   Hash table to add the key to.
+ * @param key
+ *   Key to add to the hash table.
+ * @param sig
+ *   Precomputed hash value for 'key'
+ * @param data
+ *   Data to add to the hash table.
+ * @param old_data
+ *   Output: on overwrite, set to the previous data pointer.
+ *   On fresh insert, set to NULL.
+ * @return
+ *   - 0 if added/replaced successfully
+ *   - -EINVAL if the parameters are invalid.
+ *   - -ENOSPC if there is no space in the hash for this key.
+ */
+__rte_experimental
+int
+rte_hash_replace_key_with_hash_data(const struct rte_hash *h,
+				    const void *key, hash_sig_t sig,
+				    void *data, void **old_data);
+
+/**
  * Add a key to an existing hash table. This operation is not multi-thread safe
  * and should only be called from one thread by default.
  * Thread safety can be enabled by setting flag during
