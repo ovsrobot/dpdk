@@ -75,6 +75,7 @@ EAL_REGISTER_TAILQ(rte_hash_tailq)
 struct __rte_hash_rcu_dq_entry {
 	uint32_t key_idx;
 	uint32_t ext_bkt_idx;
+	void *old_data;
 };
 
 RTE_EXPORT_SYMBOL(rte_hash_find_existing)
@@ -763,10 +764,11 @@ enqueue_slot_back(const struct rte_hash *h,
 
 /* Search a key from bucket and update its data.
  * Writer holds the lock before calling this.
+ * If old_data is non-NULL, save the previous data pointer before overwriting.
  */
 static inline int32_t
 search_and_update(const struct rte_hash *h, void *data, const void *key,
-	struct rte_hash_bucket *bkt, uint16_t sig)
+	struct rte_hash_bucket *bkt, uint16_t sig, void **old_data)
 {
 	int i;
 	struct rte_hash_key *k, *keys = h->key_store;
@@ -776,6 +778,8 @@ search_and_update(const struct rte_hash *h, void *data, const void *key,
 			k = (struct rte_hash_key *) ((char *)keys +
 					bkt->key_idx[i] * h->key_entry_size);
 			if (rte_hash_cmp_eq(key, k->key, h) == 0) {
+				if (old_data != NULL)
+					*old_data = k->pdata;
 				/* The store to application data at *data
 				 * should not leak after the store to pdata
 				 * in the key store. i.e. pdata is the guard
@@ -807,7 +811,7 @@ rte_hash_cuckoo_insert_mw(const struct rte_hash *h,
 		struct rte_hash_bucket *sec_bkt,
 		const struct rte_hash_key *key, void *data,
 		uint16_t sig, uint32_t new_idx,
-		int32_t *ret_val)
+		int32_t *ret_val, void **old_data)
 {
 	unsigned int i;
 	struct rte_hash_bucket *cur_bkt;
@@ -817,7 +821,7 @@ rte_hash_cuckoo_insert_mw(const struct rte_hash *h,
 	/* Check if key was inserted after last check but before this
 	 * protected region in case of inserting duplicated keys.
 	 */
-	ret = search_and_update(h, data, key, prim_bkt, sig);
+	ret = search_and_update(h, data, key, prim_bkt, sig, old_data);
 	if (ret != -1) {
 		__hash_rw_writer_unlock(h);
 		*ret_val = ret;
@@ -825,7 +829,7 @@ rte_hash_cuckoo_insert_mw(const struct rte_hash *h,
 	}
 
 	FOR_EACH_BUCKET(cur_bkt, sec_bkt) {
-		ret = search_and_update(h, data, key, cur_bkt, sig);
+		ret = search_and_update(h, data, key, cur_bkt, sig, old_data);
 		if (ret != -1) {
 			__hash_rw_writer_unlock(h);
 			*ret_val = ret;
@@ -872,7 +876,7 @@ rte_hash_cuckoo_move_insert_mw(const struct rte_hash *h,
 			const struct rte_hash_key *key, void *data,
 			struct queue_node *leaf, uint32_t leaf_slot,
 			uint16_t sig, uint32_t new_idx,
-			int32_t *ret_val)
+			int32_t *ret_val, void **old_data)
 {
 	uint32_t prev_alt_bkt_idx;
 	struct rte_hash_bucket *cur_bkt;
@@ -892,7 +896,7 @@ rte_hash_cuckoo_move_insert_mw(const struct rte_hash *h,
 	/* Check if key was inserted after last check but before this
 	 * protected region.
 	 */
-	ret = search_and_update(h, data, key, bkt, sig);
+	ret = search_and_update(h, data, key, bkt, sig, old_data);
 	if (ret != -1) {
 		__hash_rw_writer_unlock(h);
 		*ret_val = ret;
@@ -900,7 +904,7 @@ rte_hash_cuckoo_move_insert_mw(const struct rte_hash *h,
 	}
 
 	FOR_EACH_BUCKET(cur_bkt, alt_bkt) {
-		ret = search_and_update(h, data, key, cur_bkt, sig);
+		ret = search_and_update(h, data, key, cur_bkt, sig, old_data);
 		if (ret != -1) {
 			__hash_rw_writer_unlock(h);
 			*ret_val = ret;
@@ -997,7 +1001,8 @@ rte_hash_cuckoo_make_space_mw(const struct rte_hash *h,
 			struct rte_hash_bucket *sec_bkt,
 			const struct rte_hash_key *key, void *data,
 			uint16_t sig, uint32_t bucket_idx,
-			uint32_t new_idx, int32_t *ret_val)
+			uint32_t new_idx, int32_t *ret_val,
+			void **old_data)
 {
 	unsigned int i;
 	struct queue_node queue[RTE_HASH_BFS_QUEUE_MAX_LEN];
@@ -1023,7 +1028,7 @@ rte_hash_cuckoo_make_space_mw(const struct rte_hash *h,
 				int32_t ret = rte_hash_cuckoo_move_insert_mw(h,
 						bkt, sec_bkt, key, data,
 						tail, i, sig,
-						new_idx, ret_val);
+						new_idx, ret_val, old_data);
 				if (likely(ret != -1))
 					return ret;
 			}
@@ -1076,6 +1081,33 @@ alloc_slot(const struct rte_hash *h, struct lcore_cache *cached_free_slots)
 	return slot_id;
 }
 
+/*
+ * When RCU is configured with a free function, auto-free the overwritten
+ * data pointer via RCU.
+ */
+static inline void
+__hash_rcu_auto_free_old_data(const struct rte_hash *h, void *old_data_val)
+{
+	if (h->hash_rcu_cfg == NULL || h->hash_rcu_cfg->free_key_data_func == NULL)
+		return;
+
+	if (h->dq != NULL) {
+		/* DQ mode: enqueue with sentinel key_idx=0 */
+		struct __rte_hash_rcu_dq_entry rcu_dq_entry = {
+			.key_idx = 0,
+			.ext_bkt_idx = EMPTY_SLOT,
+			.old_data = old_data_val,
+		};
+		if (rte_rcu_qsbr_dq_enqueue(h->dq, &rcu_dq_entry) != 0)
+			HASH_LOG(ERR, "Failed to push QSBR FIFO");
+	} else {
+		/* SYNC mode */
+		rte_rcu_qsbr_synchronize(h->hash_rcu_cfg->v, RTE_QSBR_THRID_INVALID);
+		h->hash_rcu_cfg->free_key_data_func(
+			h->hash_rcu_cfg->key_data_ptr, old_data_val);
+	}
+}
+
 static inline int32_t
 __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 						hash_sig_t sig, void *data)
@@ -1092,6 +1124,7 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 	struct lcore_cache *cached_free_slots = NULL;
 	int32_t ret_val;
 	struct rte_hash_bucket *last;
+	void *saved_old_data = NULL;
 
 	short_sig = get_short_sig(sig);
 	prim_bucket_idx = get_prim_bucket_index(h, sig);
@@ -1103,18 +1136,20 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 
 	/* Check if key is already inserted in primary location */
 	__hash_rw_writer_lock(h);
-	ret = search_and_update(h, data, key, prim_bkt, short_sig);
+	ret = search_and_update(h, data, key, prim_bkt, short_sig,
+				&saved_old_data);
 	if (ret != -1) {
 		__hash_rw_writer_unlock(h);
-		return ret;
+		goto overwrite;
 	}
 
 	/* Check if key is already inserted in secondary location */
 	FOR_EACH_BUCKET(cur_bkt, sec_bkt) {
-		ret = search_and_update(h, data, key, cur_bkt, short_sig);
+		ret = search_and_update(h, data, key, cur_bkt, short_sig,
+					&saved_old_data);
 		if (ret != -1) {
 			__hash_rw_writer_unlock(h);
-			return ret;
+			goto overwrite;
 		}
 	}
 
@@ -1153,33 +1188,39 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 
 	/* Find an empty slot and insert */
 	ret = rte_hash_cuckoo_insert_mw(h, prim_bkt, sec_bkt, key, data,
-					short_sig, slot_id, &ret_val);
+					short_sig, slot_id, &ret_val,
+					&saved_old_data);
 	if (ret == 0)
 		return slot_id - 1;
 	else if (ret == 1) {
 		enqueue_slot_back(h, cached_free_slots, slot_id);
-		return ret_val;
+		ret = ret_val;
+		goto overwrite;
 	}
 
 	/* Primary bucket full, need to make space for new entry */
 	ret = rte_hash_cuckoo_make_space_mw(h, prim_bkt, sec_bkt, key, data,
-				short_sig, prim_bucket_idx, slot_id, &ret_val);
+				short_sig, prim_bucket_idx, slot_id, &ret_val,
+				&saved_old_data);
 	if (ret == 0)
 		return slot_id - 1;
 	else if (ret == 1) {
 		enqueue_slot_back(h, cached_free_slots, slot_id);
-		return ret_val;
+		ret = ret_val;
+		goto overwrite;
 	}
 
 	/* Also search secondary bucket to get better occupancy */
 	ret = rte_hash_cuckoo_make_space_mw(h, sec_bkt, prim_bkt, key, data,
-				short_sig, sec_bucket_idx, slot_id, &ret_val);
+				short_sig, sec_bucket_idx, slot_id, &ret_val,
+				&saved_old_data);
 
 	if (ret == 0)
 		return slot_id - 1;
 	else if (ret == 1) {
 		enqueue_slot_back(h, cached_free_slots, slot_id);
-		return ret_val;
+		ret = ret_val;
+		goto overwrite;
 	}
 
 	/* if ext table not enabled, we failed the insertion */
@@ -1193,17 +1234,21 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 	 */
 	__hash_rw_writer_lock(h);
 	/* We check for duplicates again since could be inserted before the lock */
-	ret = search_and_update(h, data, key, prim_bkt, short_sig);
+	ret = search_and_update(h, data, key, prim_bkt, short_sig,
+				&saved_old_data);
 	if (ret != -1) {
 		enqueue_slot_back(h, cached_free_slots, slot_id);
-		goto failure;
+		__hash_rw_writer_unlock(h);
+		goto overwrite;
 	}
 
 	FOR_EACH_BUCKET(cur_bkt, sec_bkt) {
-		ret = search_and_update(h, data, key, cur_bkt, short_sig);
+		ret = search_and_update(h, data, key, cur_bkt, short_sig,
+					&saved_old_data);
 		if (ret != -1) {
 			enqueue_slot_back(h, cached_free_slots, slot_id);
-			goto failure;
+			__hash_rw_writer_unlock(h);
+			goto overwrite;
 		}
 	}
 
@@ -1262,6 +1307,11 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 	last->next = &h->buckets_ext[ext_bkt_id - 1];
 	__hash_rw_writer_unlock(h);
 	return slot_id - 1;
+
+overwrite:
+	if (saved_old_data != NULL)
+		__hash_rcu_auto_free_old_data(h, saved_old_data);
+	return ret;
 
 failure:
 	__hash_rw_writer_unlock(h);
@@ -1566,6 +1616,15 @@ __hash_rcu_qsbr_free_resource(void *p, void *e, unsigned int n)
 			*((struct __rte_hash_rcu_dq_entry *)e);
 
 	RTE_SET_USED(n);
+
+	/* Overwrite case: free old data only, do not recycle slot */
+	if (rcu_dq_entry.old_data != NULL) {
+		h->hash_rcu_cfg->free_key_data_func(
+			h->hash_rcu_cfg->key_data_ptr,
+			rcu_dq_entry.old_data);
+		return;
+	}
+
 	keys = h->key_store;
 
 	k = (struct rte_hash_key *) ((char *)keys +
@@ -1870,6 +1929,7 @@ return_key:
 		/* Key index where key is stored, adding the first dummy index */
 		rcu_dq_entry.key_idx = ret + 1;
 		rcu_dq_entry.ext_bkt_idx = index;
+		rcu_dq_entry.old_data = NULL;
 		if (h->dq == NULL) {
 			/* Wait for quiescent state change if using
 			 * RTE_HASH_QSBR_MODE_SYNC
