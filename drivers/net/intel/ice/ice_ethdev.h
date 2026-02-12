@@ -631,6 +631,7 @@ struct ice_devargs {
 	char xtr_field_name[RTE_MBUF_DYN_NAMESIZE];
 	uint64_t mbuf_check;
 	const char *ddp_filename;
+	uint32_t link_status_poll_ms;
 };
 
 /**

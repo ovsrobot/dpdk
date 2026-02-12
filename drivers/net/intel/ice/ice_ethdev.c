@@ -15,6 +15,7 @@
 
 #include <rte_tailq.h>
 #include <rte_os_shim.h>
+#include <rte_alarm.h>
 
 #include "eal_firmware.h"
 
@@ -43,6 +44,7 @@
 #define ICE_TM_LEVELS_ARG         "tm_sched_levels"
 #define ICE_SOURCE_PRUNE_ARG      "source-prune"
 #define ICE_LINK_STATE_ON_CLOSE   "link_state_on_close"
+#define ICE_LINK_STATE_POLL_MS_ARG       "link_status_poll_ms"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -61,6 +63,7 @@ static const char * const ice_valid_args[] = {
 	ICE_TM_LEVELS_ARG,
 	ICE_SOURCE_PRUNE_ARG,
 	ICE_LINK_STATE_ON_CLOSE,
+	ICE_LINK_STATE_POLL_MS_ARG,
 	NULL
 };
 
@@ -1482,6 +1485,38 @@ ice_handle_aq_msg(struct rte_eth_dev *dev)
 	rte_free(event.msg_buf);
 }
 #endif
+static void
+ice_link_once_update(void *cb_arg)
+{
+	int ret;
+	struct timespec sys_time;
+	struct rte_eth_dev *dev = cb_arg;
+
+	ret = ice_link_update(dev, 0);
+	if (!ret) {
+		clock_gettime(CLOCK_REALTIME, &sys_time);
+		PMD_DRV_LOG(INFO, "Current SYS Time: %.24s %.9ld ns",
+				ctime(&sys_time.tv_sec), sys_time.tv_nsec);
+
+		rte_eth_dev_callback_process
+			(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+	}
+}
+
+static void
+ice_link_cycle_update(void *cb_arg)
+{
+	struct rte_eth_dev *dev = cb_arg;
+	struct ice_adapter *adapter =
+		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+
+	ice_link_once_update(cb_arg);
+
+	/* re-alarm link update */
+	if (rte_eal_alarm_set(adapter->devargs.link_status_poll_ms,
+				&ice_link_cycle_update, cb_arg))
+		PMD_DRV_LOG(ERR, "Failed to enable cycle link update");
+}
 
 /**
  * Interrupt handler triggered by NIC for handling
@@ -1499,6 +1534,8 @@ static void
 ice_interrupt_handler(void *param)
 {
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
+	struct ice_adapter *adapter =
+			ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t oicr;
 	uint32_t reg;
@@ -1533,10 +1570,19 @@ ice_interrupt_handler(void *param)
 #else
 	if (oicr & PFINT_OICR_LINK_STAT_CHANGE_M) {
 		PMD_DRV_LOG(INFO, "OICR: link state change event");
-		ret = ice_link_update(dev, 0);
-		if (!ret)
-			rte_eth_dev_callback_process
-				(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+		if (adapter->devargs.link_status_poll_ms <= 0) {
+			ret = ice_link_update(dev, 0);
+			if (!ret)
+				rte_eth_dev_callback_process
+					(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+		} else {
+			/* With link status polling enabled, "link_status"
+			 * updates are confined to the alarm thread to
+			 * avoid race conditions.
+			 */
+			if (rte_eal_alarm_set(1, &ice_link_once_update, dev))
+				PMD_DRV_LOG(ERR, "Failed to enable link update");
+		}
 	}
 #endif
 
@@ -2381,6 +2427,25 @@ err_end:
 	return ret;
 }
 
+static int
+ice_parse_link_status_poll_ms(__rte_unused const char *key,
+		const char *value, void *args)
+{
+	int *num = (int *)args;
+	int tmp;
+
+	if (value == NULL || args == NULL)
+		return -EINVAL;
+
+	tmp = strtoul(value, NULL, 10);
+	if (errno == EINVAL || errno == ERANGE)
+		return -1;
+
+	*num = tmp * 1000;
+
+	return 0;
+}
+
 static int ice_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct ice_adapter *ad =
@@ -2469,6 +2534,12 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_ON_CLOSE,
 				 &parse_link_state_on_close, &ad->devargs.link_state_on_close);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_LINK_STATE_POLL_MS_ARG,
+				 &ice_parse_link_status_poll_ms,
+				 &ad->devargs.link_status_poll_ms);
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -2901,6 +2972,9 @@ ice_dev_stop(struct rte_eth_dev *dev)
 	/* avoid stopping again */
 	if (pf->adapter_stopped)
 		return 0;
+
+	if (ad->devargs.link_status_poll_ms > 0)
+		rte_eal_alarm_cancel(&ice_link_cycle_update, (void *)dev);
 
 	/* stop and clear all Rx queues */
 	for (i = 0; i < data->nb_rx_queues; i++)
@@ -4398,6 +4472,8 @@ ice_dev_start(struct rte_eth_dev *dev)
 	struct rte_eth_dev_data *data = dev->data;
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct rte_pci_device *pci_dev = ICE_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ice_vsi *vsi = pf->main_vsi;
 	struct ice_adapter *ad =
 			ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
@@ -4474,8 +4550,19 @@ ice_dev_start(struct rte_eth_dev *dev)
 
 	ice_dev_set_link_up(dev);
 
+	/* Disable interrupts to avoid race on link status between callback and main thread. */
+	rte_intr_disable(intr_handle);
 	/* Call get_link_info aq command to enable/disable LSE */
 	ice_link_update(dev, 1);
+	rte_intr_enable(intr_handle);
+
+	if (ad->devargs.link_status_poll_ms > 0) {
+		if (rte_eal_alarm_set(ad->devargs.link_status_poll_ms,
+					&ice_link_cycle_update, (void *)dev) < 0) {
+			PMD_DRV_LOG(ERR, "Failed to enable cycle link update");
+			goto rx_err;
+		}
+	}
 
 	pf->adapter_stopped = false;
 

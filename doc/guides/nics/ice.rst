@@ -382,6 +382,13 @@ Runtime Configuration
   * ``segment``: Check number of mbuf segments does not exceed HW limits.
   * ``offload``: Check for use of an unsupported offload flag.
 
+- ``Link status poll`` (default ``not enabled``)
+
+  Link status polling can be enabled by setting the ``devargs``
+  parameter ``link_status_poll_ms`` (in milliseconds). If the value is set
+  to 0 or negative, polling is disabled.
+  For example ``-a 81:00.0,link_status_poll_ms=50`` or ``-a 81:00.0,link_status_poll_ms=0``.
+
 Driver compilation and testing
 ------------------------------
 
