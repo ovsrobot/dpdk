@@ -87,6 +87,10 @@ New Features
   * Added support for AES-XTS cipher algorithm.
   * Added support for SHAKE-128 and SHAKE-256 authentication algorithms.
 
+* **Updated PCAP ethernet driver.**
+
+  * Added support for VLAN insertion and stripping.
+
 
 Removed Items
 -------------
