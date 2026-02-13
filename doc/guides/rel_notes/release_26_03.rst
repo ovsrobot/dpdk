@@ -87,6 +87,12 @@ New Features
   * Added support for AES-XTS cipher algorithm.
   * Added support for SHAKE-128 and SHAKE-256 authentication algorithms.
 
+* **Added automatic deferred free on hash data overwrite.**
+
+  When RCU is configured with a ``free_key_data_func`` callback,
+  ``rte_hash_add_key_data`` now automatically defers freeing the old data
+  pointer on key overwrite via the RCU defer queue.
+
 
 Removed Items
 -------------
