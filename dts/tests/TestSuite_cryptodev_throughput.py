@@ -32,7 +32,7 @@ from api.cryptodev.types import (
 from api.test import verify
 from framework.context import get_ctx
 from framework.exception import SkippedTestException
-from framework.test_suite import BaseConfig, TestSuite, func_test
+from framework.test_suite import BaseConfig, TestSuite, crypto_test
 from framework.testbed_model.virtual_device import VirtualDevice
 
 config_list: list[dict[str, int | float | str]] = [
@@ -142,7 +142,7 @@ class TestCryptodevThroughput(TestSuite):
             result_list.append(result_dict)
         return result_list
 
-    @func_test
+    @crypto_test
     def aes_cbc(self) -> None:
         """aes_cbc test.
 
@@ -172,6 +172,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
+    @crypto_test
     def aes_cbc_sha1(self) -> None:
         """aes_cbc_sha1 test.
 
@@ -206,6 +207,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
+    @crypto_test
     def aes_cbc_sha2(self) -> None:
         """aes_cbc_sha2 test.
 
@@ -239,7 +241,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def aes_cbc_sha2_digest_16(self) -> None:
         """aes_cbc_sha2_digest_16 test.
 
@@ -273,7 +275,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def aead_aes_gcm(self) -> None:
         """aead_aes_gcm test.
 
@@ -305,7 +307,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def aes_docsisbpi(self) -> None:
         """aes_docsiscpi test.
 
@@ -366,7 +368,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def snow3g_uea2_snow3g_uia2(self) -> None:
         """snow3g_uea2_snow3g_uia2 test.
 
@@ -401,7 +403,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def zuc_eea3_zuc_eia3(self) -> None:
         """zuc_eea3_zuc_eia3 test.
 
@@ -436,7 +438,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def kasumi_f8_kasumi_f9(self) -> None:
         """kasumi_f8 kasumi_f9 test.
 
@@ -473,7 +475,7 @@ class TestCryptodevThroughput(TestSuite):
 
     # BEGIN VDEV TESTS
 
-
+    @crypto_test
     def aesni_mb_vdev(self) -> None:
         """aesni_mb virtual device test.
 
@@ -510,7 +512,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def aesni_gcm_vdev(self):
         """aesni_gcm virtual device test.
 
@@ -543,7 +545,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def kasumi_vdev(self) -> None:
         """Kasmumi virtual device test.
 
@@ -579,7 +581,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gbps fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def snow3g_vdev(self) -> None:
         """snow3g virtual device test.
 
@@ -616,7 +618,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gpbs fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def zuc_vdev(self) -> None:
         """Zuc virtual device test.
 
@@ -653,7 +655,7 @@ class TestCryptodevThroughput(TestSuite):
         for result in results:
             verify(result["passed"] == "PASS", "gpbs fell below delta tolerance")
 
-    @func_test
+    @crypto_test
     def open_ssl_vdev(self) -> None:
         """open_ssl virtual device test.
 
