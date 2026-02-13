@@ -20,6 +20,12 @@
   hugepages_2mb: # optional; if removed, will use system hugepage configuration
       number_of: 256
       force_first_numa: false
+  # cryptodevs: # optional; add each physical bdf as its own element in the list
+  #   - name: cryptodev-0
+  #     pci: "ffff:ff:ff.f"
+  #     os_driver_for_dpdk: vfio-pci # OS driver that DPDK will use
+  #     os_driver: _ # This is unused but a value is necessary to run dts
+  # crypto_driver: # the device type of the DUT (crypto_qat, crypto_zuc, crypto_aesni_mb)
 # Define a Scapy traffic generator node, having two network ports
 # physically connected to the corresponding ports in SUT 1 (the peer node).
 - name: "TG 1"
