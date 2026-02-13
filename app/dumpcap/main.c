@@ -587,9 +587,16 @@ report_packet_stats(dumpcap_out_t out)
 		ifrecv = pdump_stats.accepted + pdump_stats.filtered;
 		ifdrop = pdump_stats.nombuf + pdump_stats.ringfull;
 
-		if (use_pcapng)
-			rte_pcapng_write_stats(out.pcapng, intf->port,
-					       ifrecv, ifdrop, NULL);
+		if (use_pcapng) {
+			ssize_t written;
+
+			written = rte_pcapng_write_stats(out.pcapng, intf->port,
+							 ifrecv, ifdrop, NULL);
+			if (written < 0) {
+				fprintf(stderr, "Failed to write stats for %s: %s\n",
+					intf->name, rte_strerror(-written));
+			}
+		}
 
 		if (ifrecv == 0)
 			percent = 0;
@@ -760,7 +767,7 @@ static char *get_os_info(void)
 
 static dumpcap_out_t create_output(void)
 {
-	dumpcap_out_t ret;
+	dumpcap_out_t out;
 	static char tmp_path[PATH_MAX];
 	int fd;
 
@@ -802,19 +809,20 @@ static dumpcap_out_t create_output(void)
 		struct interface *intf;
 		char *os = get_os_info();
 
-		ret.pcapng = rte_pcapng_fdopen(fd, os, NULL,
+		out.pcapng = rte_pcapng_fdopen(fd, os, NULL,
 					   version(), capture_comment);
-		if (ret.pcapng == NULL)
+		if (out.pcapng == NULL)
 			rte_exit(EXIT_FAILURE, "pcapng_fdopen failed: %s\n",
 				 strerror(rte_errno));
 		free(os);
 
 		TAILQ_FOREACH(intf, &interfaces, next) {
-			if (rte_pcapng_add_interface(ret.pcapng, intf->port, DLT_EN10MB,
-						     intf->ifname, intf->ifdescr,
-						     intf->opts.filter) < 0)
-				rte_exit(EXIT_FAILURE, "rte_pcapng_add_interface %u failed\n",
-					intf->port);
+			int ret = rte_pcapng_add_interface(out.pcapng, intf->port, DLT_EN10MB,
+						       intf->ifname, intf->ifdescr,
+						       intf->opts.filter);
+			if (ret < 0)
+				rte_exit(EXIT_FAILURE, "rte_pcapng_add_interface %u failed: %s\n",
+					 intf->port, rte_strerror(-ret));
 		}
 	} else {
 		pcap_t *pcap;
@@ -825,13 +833,13 @@ static dumpcap_out_t create_output(void)
 		if (pcap == NULL)
 			rte_exit(EXIT_FAILURE, "pcap_open_dead failed\n");
 
-		ret.dumper = pcap_dump_fopen(pcap, fdopen(fd, "w"));
-		if (ret.dumper == NULL)
+		out.dumper = pcap_dump_fopen(pcap, fdopen(fd, "w"));
+		if (out.dumper == NULL)
 			rte_exit(EXIT_FAILURE, "pcap_dump_fopen failed: %s\n",
 				 pcap_geterr(pcap));
 	}
 
-	return ret;
+	return out;
 }
 
 static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
