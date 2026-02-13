@@ -140,6 +140,15 @@ API Changes
   * cfgfile: name must be less than CFG_NAME_LEN
     and value must be less than CFG_VALUE_LEN.
 
+* **Updated the pcapng library.**
+
+  API functions now do more validation.
+
+  * The length of comment strings is now validated.
+    Maximum allowable length is 2^16-1 because of pcapng file format.
+  * Passing an invalid port id returns uses ENODEV rather than EINVAL
+    for consistency with ethdev API's.
+
 
 ABI Changes
 -----------
