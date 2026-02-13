@@ -631,6 +631,7 @@ struct ice_devargs {
 	char xtr_field_name[RTE_MBUF_DYN_NAMESIZE];
 	uint64_t mbuf_check;
 	const char *ddp_filename;
+	uint32_t link_status_poll_ms;
 };
 
 /**
@@ -686,6 +687,7 @@ struct ice_adapter {
 	unsigned long disabled_engine_mask;
 	struct ice_parser *psr;
 	bool rx_vec_offload_support;
+	bool lsc_polling;
 };
 
 struct ice_vsi_vlan_pvid_info {
