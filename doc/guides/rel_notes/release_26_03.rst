@@ -93,6 +93,12 @@ New Features
   ``rte_hash_add_key_data`` now automatically defers freeing the old data
   pointer on key overwrite via the RCU defer queue.
 
+* **Added hash replace API.**
+
+  Added ``rte_hash_replace_key_data`` and ``rte_hash_replace_key_with_hash_data``
+  functions that return the previous data pointer on key overwrite, letting the
+  caller manage its lifecycle.
+
 
 Removed Items
 -------------
