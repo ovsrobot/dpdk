@@ -200,6 +200,7 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
  *   -1 on failure to write file (and errno is set)
  *   - (-ENODEV) if *port_id* is invalid.
  *   - (-EINVAL) if bad parameter
+ *   - (-ENOMEM) could not allocate memory for buffer
  */
 ssize_t
 rte_pcapng_write_stats(rte_pcapng_t *self, uint16_t port,
