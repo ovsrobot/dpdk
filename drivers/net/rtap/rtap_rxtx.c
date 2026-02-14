@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <liburing.h>
+#include <sys/eventfd.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <linux/virtio_net.h>
@@ -437,6 +438,7 @@ rtap_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id, uint16_t nb_rx_d
 	rxq->mb_pool = mb_pool;
 	rxq->port_id = dev->data->port_id;
 	rxq->queue_id = queue_id;
+	rxq->intr_fd = -1;
 	dev->data->rx_queues[queue_id] = rxq;
 
 	if (io_uring_queue_init(nb_rx_desc, &rxq->io_ring, 0) != 0) {
@@ -444,10 +446,26 @@ rtap_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_id, uint16_t nb_rx_d
 		goto error_rxq_free;
 	}
 
+	/*
+	 * Create an eventfd for Rx interrupt notification.
+	 * io_uring will signal this fd whenever a CQE is posted,
+	 * enabling power-aware applications to sleep until packets arrive.
+	 */
+	rxq->intr_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+	if (rxq->intr_fd < 0) {
+		PMD_LOG(ERR, "eventfd failed: %s", strerror(errno));
+		goto error_iouring_exit;
+	}
+
+	if (io_uring_register_eventfd(&rxq->io_ring, rxq->intr_fd) < 0) {
+		PMD_LOG(ERR, "io_uring_register_eventfd failed: %s", strerror(errno));
+		goto error_eventfd_close;
+	}
+
 	mbufs = calloc(nb_rx_desc, sizeof(struct rte_mbuf *));
 	if (mbufs == NULL) {
 		PMD_LOG(ERR, "Rx mbuf pointer alloc failed");
-		goto error_iouring_exit;
+		goto error_eventfd_close;
 	}
 
 	/* open shared tap fd maybe already setup */
@@ -494,6 +512,11 @@ error_bulk_free:
 	rtap_cancel_all(&rxq->io_ring);
 	rtap_queue_close(dev, queue_id);
 	free(mbufs);
+error_eventfd_close:
+	if (rxq->intr_fd >= 0) {
+		close(rxq->intr_fd);
+		rxq->intr_fd = -1;
+	}
 error_iouring_exit:
 	io_uring_queue_exit(&rxq->io_ring);
 error_rxq_free:
@@ -508,6 +531,12 @@ rtap_rx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id)
 
 	if (rxq == NULL)
 		return;
+
+	if (rxq->intr_fd >= 0) {
+		io_uring_unregister_eventfd(&rxq->io_ring);
+		close(rxq->intr_fd);
+		rxq->intr_fd = -1;
+	}
 
 	rtap_cancel_all(&rxq->io_ring);
 	io_uring_queue_exit(&rxq->io_ring);
