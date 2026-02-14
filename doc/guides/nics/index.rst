@@ -66,6 +66,7 @@ Network Interface Controller Drivers
     r8169
     ring
     rnp
+    rtap
     sfc_efx
     softnic
     tap

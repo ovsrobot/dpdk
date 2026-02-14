@@ -1135,6 +1135,13 @@ F: doc/guides/nics/ring.rst
 F: app/test/test_pmd_ring.c
 F: app/test/test_pmd_ring_perf.c
 
+Rtap PMD - EXPERIMENTAL
+M: Stephen Hemminger <stephen@networkplumber.org>
+F: drivers/net/rtap/
+F: app/test/test_pmd_rtap.c
+F: doc/guides/nics/rtap.rst
+F: doc/guides/nics/features/rtap.ini
+
 Null Networking PMD
 M: Tetsuya Mukawa <mtetsuyah@gmail.com>
 F: drivers/net/null/

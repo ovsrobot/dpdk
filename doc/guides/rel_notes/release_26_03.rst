@@ -87,6 +87,13 @@ New Features
   * Added support for AES-XTS cipher algorithm.
   * Added support for SHAKE-128 and SHAKE-256 authentication algorithms.
 
+* **Added rtap virtual ethernet driver.**
+
+  Added a new experimental virtual device driver that uses Linux io_uring
+  for packet injection into the kernel network stack.
+  It requires Linux kernel 5.19 or later for IORING_ASYNC_CANCEL
+  and liburing 2.0 or later.
+
 
 Removed Items
 -------------
