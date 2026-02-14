@@ -62,6 +62,8 @@ struct rtap_pmd {
 	int if_index;			/* interface index */
 	int nlsk_fd;			/* netlink control socket */
 	struct rte_ether_addr eth_addr; /* address assigned by kernel */
+
+	uint64_t rx_drop_base;		/* value of rx_dropped when reset */
 };
 
 /* rtap_ethdev.c */
