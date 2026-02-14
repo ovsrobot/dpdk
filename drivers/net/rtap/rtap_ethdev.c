@@ -214,10 +214,17 @@ rtap_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
 static int
 rtap_dev_start(struct rte_eth_dev *dev)
 {
-	int ret = rtap_set_link_up(dev);
+	int ret;
 
+	ret = rtap_lsc_set(dev, 1);
 	if (ret != 0)
 		return ret;
+
+	ret = rtap_set_link_up(dev);
+	if (ret != 0) {
+		rtap_lsc_set(dev, 0);
+		return ret;
+	}
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -235,6 +242,7 @@ rtap_dev_stop(struct rte_eth_dev *dev)
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 
+	rtap_lsc_set(dev, 0);
 	rtap_set_link_down(dev);
 
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -435,6 +443,9 @@ rtap_dev_close(struct rte_eth_dev *dev)
 			close(pmd->nlsk_fd);
 			pmd->nlsk_fd = -1;
 		}
+
+		rte_intr_instance_free(pmd->intr_handle);
+		pmd->intr_handle = NULL;
 	}
 
 	free(dev->process_private);
@@ -522,6 +533,17 @@ rtap_create(struct rte_eth_dev *dev, const char *tap_name, uint8_t persist)
 	pmd->nlsk_fd = -1;
 	pmd->rx_drop_base = 0;
 
+	/* Allocate interrupt instance for link state change events */
+	pmd->intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
+	if (pmd->intr_handle == NULL) {
+		PMD_LOG(ERR, "Failed to allocate intr handle");
+		goto error;
+	}
+	rte_intr_type_set(pmd->intr_handle, RTE_INTR_HANDLE_EXT);
+	rte_intr_fd_set(pmd->intr_handle, -1);
+	dev->intr_handle = pmd->intr_handle;
+	data->dev_flags |= RTE_ETH_DEV_INTR_LSC;
+
 	dev->dev_ops = &rtap_ops;
 
 	/* Get the initial fd used to keep the tap device around */
@@ -571,6 +593,8 @@ error:
 		close(pmd->nlsk_fd);
 	if (pmd->keep_fd != -1)
 		close(pmd->keep_fd);
+	rte_intr_instance_free(pmd->intr_handle);
+	pmd->intr_handle = NULL;
 	return -1;
 }
 
