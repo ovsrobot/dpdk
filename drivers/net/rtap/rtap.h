@@ -35,6 +35,22 @@ extern int rtap_logtype;
 #define PMD_TX_LOG(...) do { } while (0)
 #endif
 
+/* Packet size buckets for xstats (similar to virtio PMD) */
+#define RTAP_NUM_PKT_SIZE_BUCKETS	6
+
+/* Extended statistics for Rx queues */
+struct rtap_rx_xstats {
+	uint64_t size_bins[RTAP_NUM_PKT_SIZE_BUCKETS];
+	uint64_t broadcast_packets;
+	uint64_t multicast_packets;
+	uint64_t unicast_packets;
+	uint64_t lro_packets;
+	uint64_t checksum_good;
+	uint64_t checksum_none;
+	uint64_t checksum_bad;
+	uint64_t mbuf_alloc_failed;
+};
+
 struct rtap_rx_queue {
 	struct rte_mempool *mb_pool;	/* rx buffer pool */
 	struct io_uring io_ring;	/* queue of posted read's */
@@ -45,7 +61,20 @@ struct rtap_rx_queue {
 	uint64_t rx_packets;
 	uint64_t rx_bytes;
 	uint64_t rx_errors;
+
+	struct rtap_rx_xstats xstats;	/* extended statistics */
 } __rte_cache_aligned;
+
+/* Extended statistics for Tx queues */
+struct rtap_tx_xstats {
+	uint64_t size_bins[RTAP_NUM_PKT_SIZE_BUCKETS];
+	uint64_t broadcast_packets;
+	uint64_t multicast_packets;
+	uint64_t unicast_packets;
+	uint64_t tso_packets;
+	uint64_t checksum_offload;
+	uint64_t multiseg_packets;
+};
 
 struct rtap_tx_queue {
 	struct io_uring io_ring;
@@ -56,6 +85,8 @@ struct rtap_tx_queue {
 	uint64_t tx_packets;
 	uint64_t tx_bytes;
 	uint64_t tx_errors;
+
+	struct rtap_tx_xstats xstats;	/* extended statistics */
 } __rte_cache_aligned;
 
 struct rtap_pmd {
@@ -107,5 +138,15 @@ int rtap_rx_intr_vec_install(struct rte_eth_dev *dev);
 void rtap_rx_intr_vec_uninstall(struct rte_eth_dev *dev);
 int rtap_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id);
 int rtap_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id);
+
+/* rtap_xstats.c */
+int rtap_xstats_get_names(struct rte_eth_dev *dev,
+			  struct rte_eth_xstat_name *xstats_names,
+			  unsigned int limit);
+int rtap_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
+		    unsigned int n);
+int rtap_xstats_reset(struct rte_eth_dev *dev);
+void rtap_rx_xstats_update(struct rtap_rx_queue *rxq, struct rte_mbuf *mb);
+void rtap_tx_xstats_update(struct rtap_tx_queue *txq, struct rte_mbuf *mb);
 
 #endif /* _RTAP_H_ */

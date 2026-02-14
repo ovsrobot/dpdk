@@ -289,6 +289,7 @@ rtap_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 			PMD_RX_LOG(ERR, "Rx mbuf alloc failed");
 			dev->data->rx_mbuf_alloc_failed++;
+			rxq->xstats.mbuf_alloc_failed++;
 
 			nmb = mb;	 /* Reuse original */
 			goto resubmit;
@@ -317,6 +318,7 @@ rtap_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		mb->port = rxq->port_id;
 
 		__rte_mbuf_sanity_check(mb, 1);
+		rtap_rx_xstats_update(rxq, mb);
 		num_bytes += mb->pkt_len;
 		bufs[num_rx++] = mb;
 
@@ -735,6 +737,7 @@ rtap_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 		io_uring_sqe_set_data(sqe, mb);
 		rtap_tx_offload(hdr, mb);
+		rtap_tx_xstats_update(txq, mb);
 
 		PMD_TX_LOG(DEBUG, "write m=%p segs=%u", mb, mb->nb_segs);
 

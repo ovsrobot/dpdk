@@ -22,6 +22,7 @@ sources = files(
         'rtap_intr.c',
         'rtap_netlink.c',
         'rtap_rxtx.c',
+        'rtap_xstats.c',
 )
 
 ext_deps += liburing
