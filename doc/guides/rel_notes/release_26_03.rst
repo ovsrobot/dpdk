@@ -63,6 +63,10 @@ New Features
 
   * The timestamp value has been updated to make it usable.
 
+* **Updated Intel idpf ethernet driver.**
+
+  * Added support for time sync features.
+
 * **Updated Intel iavf driver.**
 
   * Added support for pre and post VF reset callbacks.
