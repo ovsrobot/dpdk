@@ -19,6 +19,7 @@ endif
 
 sources = files(
         'rtap_ethdev.c',
+        'rtap_netlink.c',
 )
 
 ext_deps += liburing

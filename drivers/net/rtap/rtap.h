@@ -64,6 +64,10 @@ struct rtap_pmd {
 	struct rte_ether_addr eth_addr; /* address assigned by kernel */
 };
 
+/* rtap_ethdev.c */
+int rtap_queue_open(struct rte_eth_dev *dev, uint16_t queue_id);
+void rtap_queue_close(struct rte_eth_dev *dev, uint16_t queue_id);
+
 /* rtap_netlink.c */
 int rtap_nl_open(unsigned int groups);
 struct rte_eth_dev;
