@@ -248,6 +248,10 @@ static const struct eth_dev_ops rtap_ops = {
 	.dev_stop		= rtap_dev_stop,
 	.dev_configure		= rtap_dev_configure,
 	.dev_close		= rtap_dev_close,
+	.rx_queue_setup		= rtap_rx_queue_setup,
+	.rx_queue_release	= rtap_rx_queue_release,
+	.tx_queue_setup		= rtap_tx_queue_setup,
+	.tx_queue_release	= rtap_tx_queue_release,
 };
 
 static int
@@ -297,6 +301,9 @@ rtap_create(struct rte_eth_dev *dev, const char *tap_name, uint8_t persist)
 	}
 
 	PMD_LOG(DEBUG, "ifindex %d setup", pmd->if_index);
+
+	dev->rx_pkt_burst = rtap_rx_burst;
+	dev->tx_pkt_burst = rtap_tx_burst;
 
 	return 0;
 
