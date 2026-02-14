@@ -69,6 +69,7 @@ struct rtap_pmd {
 /* rtap_ethdev.c */
 int rtap_queue_open(struct rte_eth_dev *dev, uint16_t queue_id);
 void rtap_queue_close(struct rte_eth_dev *dev, uint16_t queue_id);
+int rtap_link_update(struct rte_eth_dev *dev, int wait_to_complete);
 
 /* rtap_netlink.c */
 int rtap_nl_open(unsigned int groups);

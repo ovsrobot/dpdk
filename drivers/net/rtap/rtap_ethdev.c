@@ -109,8 +109,99 @@ error:
 }
 
 static int
+rtap_set_link_up(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_change_flags(pmd->nlsk_fd, pmd->if_index, IFF_UP, IFF_UP);
+}
+
+static int
+rtap_set_link_down(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_change_flags(pmd->nlsk_fd, pmd->if_index, 0, IFF_UP);
+}
+
+static int
+rtap_promiscuous_enable(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_change_flags(pmd->nlsk_fd, pmd->if_index, IFF_PROMISC, IFF_PROMISC);
+}
+
+static int
+rtap_promiscuous_disable(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_change_flags(pmd->nlsk_fd, pmd->if_index, 0, IFF_PROMISC);
+}
+
+static int
+rtap_allmulticast_enable(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_change_flags(pmd->nlsk_fd, pmd->if_index, IFF_ALLMULTI, IFF_ALLMULTI);
+}
+
+static int
+rtap_allmulticast_disable(struct rte_eth_dev *dev)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_change_flags(pmd->nlsk_fd, pmd->if_index, 0, IFF_ALLMULTI);
+}
+
+int
+rtap_link_update(struct rte_eth_dev *dev, int wait_to_complete __rte_unused)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+	struct rte_eth_link link = {
+		.link_speed = RTE_ETH_SPEED_NUM_UNKNOWN,
+		.link_duplex = RTE_ETH_LINK_FULL_DUPLEX,
+		.link_autoneg = RTE_ETH_LINK_FIXED,
+		.link_status = RTE_ETH_LINK_DOWN,
+	};
+	unsigned int flags = 0;
+
+	if (rtap_nl_get_flags(pmd->nlsk_fd, pmd->if_index, &flags) < 0)
+		return -1;
+
+	if ((flags & IFF_UP) && (flags & IFF_RUNNING))
+		link.link_status = RTE_ETH_LINK_UP;
+
+	rte_eth_linkstatus_set(dev, &link);
+	return 0;
+}
+
+static int
+rtap_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_set_mtu(pmd->nlsk_fd, pmd->if_index, mtu);
+}
+
+static int
+rtap_macaddr_set(struct rte_eth_dev *dev, struct rte_ether_addr *addr)
+{
+	struct rtap_pmd *pmd = dev->data->dev_private;
+
+	return rtap_nl_set_mac(pmd->nlsk_fd, pmd->if_index, addr);
+}
+
+static int
 rtap_dev_start(struct rte_eth_dev *dev)
 {
+	int ret = rtap_set_link_up(dev);
+
+	if (ret != 0)
+		return ret;
+
 	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
@@ -126,6 +217,8 @@ rtap_dev_stop(struct rte_eth_dev *dev)
 	int *fds = dev->process_private;
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+
+	rtap_set_link_down(dev);
 
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
@@ -365,6 +458,15 @@ static const struct eth_dev_ops rtap_ops = {
 	.dev_configure		= rtap_dev_configure,
 	.dev_infos_get		= rtap_dev_info,
 	.dev_close		= rtap_dev_close,
+	.link_update		= rtap_link_update,
+	.dev_set_link_up	= rtap_set_link_up,
+	.dev_set_link_down	= rtap_set_link_down,
+	.mac_addr_set		= rtap_macaddr_set,
+	.mtu_set		= rtap_mtu_set,
+	.promiscuous_enable	= rtap_promiscuous_enable,
+	.promiscuous_disable	= rtap_promiscuous_disable,
+	.allmulticast_enable	= rtap_allmulticast_enable,
+	.allmulticast_disable	= rtap_allmulticast_disable,
 	.stats_get		= rtap_stats_get,
 	.stats_reset		= rtap_stats_reset,
 	.rx_queue_setup		= rtap_rx_queue_setup,
