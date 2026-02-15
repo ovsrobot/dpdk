@@ -154,8 +154,11 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	 * Do not set IFF_NO_PI as packet information header will be needed
 	 * to check if a received packet has been truncated.
 	 */
-	ifr.ifr_flags = (pmd->type == ETH_TUNTAP_TYPE_TAP) ?
-		IFF_TAP : IFF_TUN | IFF_POINTOPOINT;
+	if (pmd->type == ETH_TUNTAP_TYPE_TAP)
+		ifr.ifr_flags = IFF_TAP;
+	else
+		ifr.ifr_flags = IFF_TUN | IFF_POINTOPOINT;
+
 	strlcpy(ifr.ifr_name, pmd->name, IFNAMSIZ);
 
 	fd = open(TUN_TAP_DEV_PATH, O_RDWR);
