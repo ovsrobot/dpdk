@@ -2276,13 +2276,13 @@ set_mac_type(const char *key __rte_unused,
 		return 0;
 
 	if (!strncasecmp(ETH_TAP_MAC_FIXED, value, strlen(ETH_TAP_MAC_FIXED))) {
-		static int iface_idx;
+		static uint16_t iface_idx;
 
 		/* fixed mac = 02:64:74:61:70:<iface_idx> */
-		memcpy((char *)user_mac->addr_bytes, "\002dtap",
-			RTE_ETHER_ADDR_LEN);
-		user_mac->addr_bytes[RTE_ETHER_ADDR_LEN - 1] =
-			iface_idx++ + '0';
+		memcpy((char *)user_mac->addr_bytes, "\002dtap", RTE_ETHER_ADDR_LEN);
+		user_mac->addr_bytes[4] = iface_idx >> 8;
+		user_mac->addr_bytes[5] = (uint8_t)iface_idx;
+		++iface_idx;
 		goto success;
 	}
 
