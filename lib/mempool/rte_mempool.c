@@ -1016,6 +1016,118 @@ rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
 	return NULL;
 }
 
+/* internal */
+RTE_EXPORT_INTERNAL_SYMBOL(_rte_mempool_do_generic_put_more)
+void
+_rte_mempool_do_generic_put_more(struct rte_mempool *mp, void * const *obj_table,
+		unsigned int n, struct rte_mempool_cache *cache)
+{
+	__rte_assume(cache->flushthresh <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
+	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
+	__rte_assume(cache->len <= cache->flushthresh);
+	__rte_assume(cache->len + n > cache->flushthresh);
+	if (likely(n <= cache->flushthresh)) {
+		uint32_t len;
+		void **cache_objs;
+
+		/*
+		 * The cache is big enough for the objects, but - as detected by
+		 * rte_mempool_do_generic_put() - has insufficient room for them.
+		 * Flush the cache to make room for the objects.
+		 */
+		len = cache->len;
+		cache_objs = &cache->objs[0];
+		cache->len = n;
+		rte_mempool_ops_enqueue_bulk(mp, cache_objs, len);
+
+		/* Add the objects to the cache. */
+#ifdef AVOID_RTE_MEMCPY /* Simple alternative to rte_memcpy(). */
+		for (uint32_t index = 0; index < n; index++)
+			*cache_objs++ = *obj_table++;
+#else
+		rte_memcpy(cache_objs, obj_table, sizeof(void *) * n);
+#endif
+
+		return;
+	}
+
+	/* The request itself is too big for the cache. Push objects directly to the backend. */
+	rte_mempool_ops_enqueue_bulk(mp, obj_table, n);
+}
+
+/* internal */
+RTE_EXPORT_INTERNAL_SYMBOL(_rte_mempool_do_generic_get_more)
+int
+_rte_mempool_do_generic_get_more(struct rte_mempool *mp, void **obj_table,
+		unsigned int n, struct rte_mempool_cache *cache)
+{
+	int ret;
+	unsigned int remaining;
+	uint32_t index, len;
+	void **cache_objs;
+
+	/* Use the cache as much as we have to return hot objects first. */
+	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
+	len = cache->len;
+	remaining = n - len;
+	cache_objs = &cache->objs[len];
+	cache->len = 0;
+	for (index = 0; index < len; index++)
+		*obj_table++ = *--cache_objs;
+
+	/* Dequeue below would overflow mem allocated for cache? */
+	if (unlikely(remaining > RTE_MEMPOOL_CACHE_MAX_SIZE))
+		goto driver_dequeue;
+
+	/* Fill the cache from the backend; fetch size + remaining objects. */
+	ret = rte_mempool_ops_dequeue_bulk(mp, cache->objs,
+			cache->size + remaining);
+	if (unlikely(ret < 0)) {
+		/*
+		 * We are buffer constrained, and not able to fetch all that.
+		 * Do not fill the cache, just satisfy the remaining part of
+		 * the request directly from the backend.
+		 */
+		goto driver_dequeue;
+	}
+
+	/* Satisfy the remaining part of the request from the filled cache. */
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+
+	__rte_assume(cache->size <= RTE_MEMPOOL_CACHE_MAX_SIZE);
+	__rte_assume(remaining <= RTE_MEMPOOL_CACHE_MAX_SIZE);
+	cache_objs = &cache->objs[cache->size + remaining];
+	cache->len = cache->size;
+	for (index = 0; index < remaining; index++)
+		*obj_table++ = *--cache_objs;
+
+	return 0;
+
+driver_dequeue:
+
+	/* Get remaining objects directly from the backend. */
+	ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, remaining);
+
+	if (unlikely(ret < 0)) {
+		cache->len = n - remaining;
+		/*
+		 * No further action is required to roll the first part
+		 * of the request back into the cache, as objects in
+		 * the cache are intact.
+		 */
+
+		RTE_MEMPOOL_STAT_ADD(mp, get_fail_bulk, 1);
+		RTE_MEMPOOL_STAT_ADD(mp, get_fail_objs, n);
+	} else {
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+		__rte_assume(ret == 0);
+	}
+
+	return ret;
+}
+
 /* Return the number of entries in the mempool */
 RTE_EXPORT_SYMBOL(rte_mempool_avail_count)
 unsigned int
