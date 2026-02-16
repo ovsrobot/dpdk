@@ -130,6 +130,9 @@ static int tap_intr_handle_set(struct rte_eth_dev *dev, int set);
  * @param[in] pmd
  *   Pointer to private structure.
  *
+ * @param[in] ifname
+ *   Name of the TUN/TAP interface to open or create.
+ *
  * @param[in] is_keepalive
  *   Keepalive flag
  *
@@ -140,7 +143,8 @@ static int tap_intr_handle_set(struct rte_eth_dev *dev, int set);
  *   -1 on failure, fd on success
  */
 static int
-tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
+tun_alloc(struct pmd_internals *pmd, const char *ifname,
+	  int is_keepalive, int persistent)
 {
 	struct ifreq ifr;
 #ifdef IFF_MULTI_QUEUE
@@ -157,7 +161,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 	ifr.ifr_flags = (pmd->type == ETH_TUNTAP_TYPE_TAP) ?
 		IFF_TAP : (IFF_TUN | IFF_POINTOPOINT);
 
-	strlcpy(ifr.ifr_name, pmd->name, IFNAMSIZ);
+	strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 
 	fd = open(TUN_TAP_DEV_PATH, O_RDWR);
 	if (fd < 0) {
@@ -199,12 +203,7 @@ tun_alloc(struct pmd_internals *pmd, int is_keepalive, int persistent)
 		goto error;
 	}
 
-	/*
-	 * Name passed to kernel might be wildcard like dtun%d
-	 * and need to find the resulting device.
-	 */
-	TAP_LOG(DEBUG, "Device name is '%s'", ifr.ifr_name);
-	strlcpy(pmd->name, ifr.ifr_name, RTE_ETH_NAME_MAX_LEN);
+	TAP_LOG(DEBUG, "Opened TUN/TAP '%s'", ifr.ifr_name);
 
 	if (is_keepalive) {
 		/*
@@ -879,8 +878,6 @@ tap_dev_stop(struct rte_eth_dev *dev)
 static int
 tap_dev_configure(struct rte_eth_dev *dev)
 {
-	struct pmd_internals *pmd = dev->data->dev_private;
-
 	if (dev->data->nb_rx_queues != dev->data->nb_tx_queues) {
 		TAP_LOG(ERR,
 			"%s: number of rx queues %d must be equal to number of tx queues %d",
@@ -889,12 +886,6 @@ tap_dev_configure(struct rte_eth_dev *dev)
 			dev->data->nb_tx_queues);
 		return -1;
 	}
-
-	TAP_LOG(INFO, "%s: %s: TX configured queues number: %u",
-		dev->device->name, pmd->name, dev->data->nb_tx_queues);
-
-	TAP_LOG(INFO, "%s: %s: RX configured queues number: %u",
-		dev->device->name, pmd->name, dev->data->nb_rx_queues);
 
 	return 0;
 }
@@ -1371,17 +1362,18 @@ tap_mac_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 	return 0;
 }
 
-static int tap_carrier_set(struct pmd_internals *pmd, int carrier)
+static int tap_carrier_set(struct rte_eth_dev *dev, int carrier)
 {
+	struct pmd_internals *pmd = dev->data->dev_private;
 #ifdef TUNSETCARRIER
 	int ret = ioctl(pmd->ka_fd, TUNSETCARRIER, &carrier);
 	if (ret < 0) {
 		TAP_LOG(ERR, "%s: ioctl(TUNSETCARRIER) failed: %s",
-			pmd->name, strerror(errno));
+			dev->device->name, strerror(errno));
 		return ret;
 	}
 #else
-	(void)pmd;
+	(void)dev;
 	(void)carrier;
 #endif
 	return 0;
@@ -1407,9 +1399,9 @@ tap_gso_ctx_setup(struct rte_gso_ctx *gso_ctx, struct rte_eth_dev *dev)
 				dev->device->name);
 		if (ret < 0 || ret >= (int)sizeof(pool_name)) {
 			TAP_LOG(ERR,
-				"%s: failed to create mbuf pool name for device %s,"
+				"%s: failed to create mbuf pool name,"
 				"device name too long or output error, ret: %d",
-				pmd->name, dev->device->name, ret);
+				dev->device->name, ret);
 			return -ENAMETOOLONG;
 		}
 		pmd->gso_ctx_mp = rte_pktmbuf_pool_create(pool_name,
@@ -1418,8 +1410,8 @@ tap_gso_ctx_setup(struct rte_gso_ctx *gso_ctx, struct rte_eth_dev *dev)
 			SOCKET_ID_ANY);
 		if (!pmd->gso_ctx_mp) {
 			TAP_LOG(ERR,
-				"%s: failed to create mbuf pool for device %s",
-				pmd->name, dev->device->name);
+				"%s: failed to create mbuf pool",
+				dev->device->name);
 			return -1;
 		}
 	}
@@ -1450,18 +1442,27 @@ tap_setup_queue(struct rte_eth_dev *dev,
 	fd = process_private->fds[qid];
 	if (fd != -1) {
 		/* fd for this queue already exists */
-		TAP_LOG(DEBUG, "%s: fd %d for %s queue qid %d exists",
-			pmd->name, fd, dir, qid);
+		TAP_LOG(DEBUG, "%s: fd %d for %s queue %d exists",
+			dev->device->name, fd, dir, qid);
 		gso_ctx = NULL;
 	} else {
-		fd = tun_alloc(pmd, 0, 0);
-		if (fd < 0) {
-			TAP_LOG(ERR, "%s: tun_alloc() failed.", pmd->name);
+		char ifname[IFNAMSIZ];
+
+		if (if_indextoname(pmd->if_index, ifname) == NULL) {
+			TAP_LOG(ERR, "%s: ifindex %d not found",
+				dev->device->name, pmd->if_index);
 			return -1;
 		}
 
-		TAP_LOG(DEBUG, "%s: add %s queue for qid %d fd %d",
-			pmd->name, dir, qid, fd);
+		fd = tun_alloc(pmd, ifname, 0, 0);
+		if (fd < 0) {
+			TAP_LOG(ERR, "%s: tun_alloc() failed",
+				dev->device->name);
+			return -1;
+		}
+
+		TAP_LOG(DEBUG, "%s: add %s queue %d fd %d",
+			dev->device->name, dir, qid, fd);
 
 		process_private->fds[qid] = fd;
 	}
@@ -1555,12 +1556,12 @@ tap_rx_queue_setup(struct rte_eth_dev *dev,
 	}
 
 	/* set carrier after creating at least one rxq */
-	ret = tap_carrier_set(internals, 1);
+	ret = tap_carrier_set(dev, 1);
 	if (ret < 0)
 		goto error;
 
-	TAP_LOG(DEBUG, "  RX TUNTAP device name %s, qid %d on fd %d",
-		internals->name, rx_queue_id,
+	TAP_LOG(DEBUG, "  RX %s qid %d on fd %d",
+		dev->device->name, rx_queue_id,
 		process_private->fds[rx_queue_id]);
 
 	return 0;
@@ -1603,8 +1604,8 @@ tap_tx_queue_setup(struct rte_eth_dev *dev,
 	if (ret == -1)
 		return -1;
 	TAP_LOG(DEBUG,
-		"  TX TUNTAP device name %s, qid %d on fd %d csum %s",
-		internals->name, tx_queue_id,
+		"  TX %s qid %d on fd %d csum %s",
+		dev->device->name, tx_queue_id,
 		process_private->fds[tx_queue_id],
 		txq->csum ? "on" : "off");
 
@@ -1647,40 +1648,46 @@ tap_netns_change(struct rte_eth_dev *dev)
 {
 	struct pmd_internals *pmd = dev->data->dev_private;
 #ifdef TUNGETDEVNETNS
-	int netns_fd, orig_netns_fd, new_nlsk_fd;
+	struct ifreq ifr = { 0 };
+	int netns_fd, orig_netns_fd, new_nlsk_fd, new_ifindex;
 
 	netns_fd = ioctl(pmd->ka_fd, TUNGETDEVNETNS);
 	if (netns_fd < 0) {
-		TAP_LOG(INFO, "%s: interface deleted", pmd->name);
+		TAP_LOG(INFO, "ifindex %d: interface deleted",
+			pmd->if_index);
 		return 0;
 	}
-
-	/* Interface was moved to another namespace */
-	pmd->if_index = 0;
 
 	/* Save current namespace */
 	orig_netns_fd = open("/proc/self/ns/net", O_RDONLY);
 	if (orig_netns_fd < 0) {
-		TAP_LOG(ERR, "%s: failed to open original netns: %s",
-			pmd->name, strerror(errno));
+		TAP_LOG(ERR, "ifindex %d: failed to open original netns: %s",
+			pmd->if_index, strerror(errno));
 		close(netns_fd);
 		return -1;
 	}
 
 	/* Switch to new namespace */
 	if (setns(netns_fd, CLONE_NEWNET) < 0) {
-		TAP_LOG(ERR, "%s: failed to enter new netns: %s",
-			pmd->name, strerror(errno));
+		TAP_LOG(ERR, "ifindex %d: failed to enter new netns: %s",
+			pmd->if_index, strerror(errno));
 		close(netns_fd);
 		close(orig_netns_fd);
 		return -1;
 	}
 
 	/*
-	 * Update ifindex by querying interface name.
-	 * The interface now has a new ifindex in the new namespace.
+	 * Get the current name from the TUN fd and resolve to the new
+	 * ifindex. TUNGETIFF always returns the current kernel name
+	 * regardless of any renames.
 	 */
-	pmd->if_index = if_nametoindex(pmd->name);
+	if (ioctl(pmd->ka_fd, TUNGETIFF, &ifr) < 0) {
+		TAP_LOG(ERR, "ifindex %d: TUNGETIFF failed: %s",
+			pmd->if_index, strerror(errno));
+		new_ifindex = 0;
+	} else {
+		new_ifindex = if_nametoindex(ifr.ifr_name);
+	}
 
 	/* Recreate netlink socket in new namespace */
 	new_nlsk_fd = tap_nl_init(0);
@@ -1688,32 +1695,31 @@ tap_netns_change(struct rte_eth_dev *dev)
 	/* Recreate LSC interrupt netlink socket in new namespace */
 	rte_intr_callback_unregister_pending(pmd->intr_handle, tap_dev_intr_handler, dev, NULL);
 	if (tap_lsc_intr_handle_set(dev, 1) < 0)
-		TAP_LOG(WARNING, "%s: failed to recreate LSC interrupt socket",
-			pmd->name);
+		TAP_LOG(WARNING, "ifindex %d: failed to recreate LSC socket",
+			pmd->if_index);
 
 	/* Force carrier back after switching netns */
-	tap_carrier_set(pmd, 1);
+	tap_carrier_set(dev, 1);
 
 	/* Switch back to original namespace */
 	if (setns(orig_netns_fd, CLONE_NEWNET) < 0)
-		TAP_LOG(ERR, "%s: failed to return to original netns: %s",
-			pmd->name, strerror(errno));
+		TAP_LOG(ERR, "ifindex %d: failed to return to original netns: %s",
+			pmd->if_index, strerror(errno));
 
 	close(orig_netns_fd);
 	close(netns_fd);
 
-	if (pmd->if_index == 0) {
-		TAP_LOG(WARNING, "%s: interface moved to another namespace, "
-			"failed to get new ifindex",
-			pmd->name);
+	if (new_ifindex == 0) {
+		TAP_LOG(WARNING, "ifindex %d: moved to new namespace, "
+			"failed to get new ifindex", pmd->if_index);
 		if (new_nlsk_fd >= 0)
 			close(new_nlsk_fd);
 		return -1;
 	}
 
 	if (new_nlsk_fd < 0) {
-		TAP_LOG(WARNING, "%s: failed to recreate netlink socket in new namespace",
-			pmd->name);
+		TAP_LOG(WARNING, "ifindex %d: failed to recreate netlink socket",
+			pmd->if_index);
 		return -1;
 	}
 
@@ -1721,12 +1727,13 @@ tap_netns_change(struct rte_eth_dev *dev)
 	if (pmd->nlsk_fd >= 0)
 		tap_nl_final(pmd->nlsk_fd);
 	pmd->nlsk_fd = new_nlsk_fd;
+	pmd->if_index = new_ifindex;
 
-	TAP_LOG(INFO, "%s: interface moved to another namespace, new ifindex: %u",
-		pmd->name, pmd->if_index);
+	TAP_LOG(INFO, "interface moved to new namespace, new ifindex: %u",
+		pmd->if_index);
 #else
-	TAP_LOG(WARNING, "%s: interface deleted or moved to another namespace",
-		pmd->name);
+	TAP_LOG(WARNING, "ifindex %d: interface deleted or moved",
+		pmd->if_index);
 #endif
 
 	return 0;
@@ -2017,7 +2024,6 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	pmd = dev->data->dev_private;
 	dev->process_private = process_private;
 	pmd->dev = dev;
-	strlcpy(pmd->name, tap_name, sizeof(pmd->name));
 	pmd->type = type;
 	pmd->ka_fd = -1;
 	pmd->nlsk_fd = -1;
@@ -2069,12 +2075,34 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	 * This keep-alive file descriptor will guarantee that the TUN device
 	 * exists even when all of its queues are closed
 	 */
-	pmd->ka_fd = tun_alloc(pmd, 1, persist);
+	pmd->ka_fd = tun_alloc(pmd, tap_name, 1, persist);
 	if (pmd->ka_fd == -1) {
 		TAP_LOG(ERR, "Unable to create %s interface", tuntap_name);
 		goto error_exit;
 	}
-	TAP_LOG(DEBUG, "allocated %s", pmd->name);
+
+	/*
+	 * Get the kernel-assigned name from the TUN fd and resolve the
+	 * ifindex. From this point on, the device is tracked by ifindex
+	 * which is stable even if the interface is renamed.
+	 */
+	{
+		struct ifreq ifr = { 0 };
+
+		if (ioctl(pmd->ka_fd, TUNGETIFF, &ifr) < 0) {
+			TAP_LOG(ERR, "Unable to get interface name: %s",
+				strerror(errno));
+			goto error_exit;
+		}
+		pmd->if_index = if_nametoindex(ifr.ifr_name);
+		if (pmd->if_index == 0) {
+			TAP_LOG(ERR, "Unable to get ifindex for '%s'",
+				ifr.ifr_name);
+			goto error_exit;
+		}
+		TAP_LOG(DEBUG, "Created '%s' ifindex %d",
+			ifr.ifr_name, pmd->if_index);
+	}
 
 	/*
 	 * Create netlink socket for interface control.
@@ -2082,13 +2110,8 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	 */
 	pmd->nlsk_fd = tap_nl_init(0);
 	if (pmd->nlsk_fd == -1) {
-		TAP_LOG(ERR, "%s: failed to create netlink socket.", pmd->name);
-		goto error_exit;
-	}
-
-	pmd->if_index = if_nametoindex(pmd->name);
-	if (!pmd->if_index) {
-		TAP_LOG(ERR, "%s: failed to get if_index.", pmd->name);
+		TAP_LOG(ERR, "ifindex %d: failed to create netlink socket",
+			pmd->if_index);
 		goto error_exit;
 	}
 
@@ -2111,13 +2134,13 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	 * - implicit rules
 	 */
 	if (qdisc_create_multiq(pmd->nlsk_fd, pmd->if_index) < 0) {
-		TAP_LOG(ERR, "%s: failed to create multiq qdisc.",
-			pmd->name);
+		TAP_LOG(ERR, "ifindex %d: failed to create multiq qdisc",
+			pmd->if_index);
 		goto disable_rte_flow;
 	}
 	if (qdisc_create_ingress(pmd->nlsk_fd, pmd->if_index) < 0) {
-		TAP_LOG(ERR, "%s: failed to create ingress qdisc.",
-			pmd->name);
+		TAP_LOG(ERR, "ifindex %d: failed to create ingress qdisc",
+			pmd->if_index);
 		goto disable_rte_flow;
 	}
 
@@ -2126,11 +2149,10 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	if (strlen(remote_iface)) {
 		pmd->remote_if_index = if_nametoindex(remote_iface);
 		if (!pmd->remote_if_index) {
-			TAP_LOG(ERR, "%s: failed to get %s if_index.",
-				pmd->name, remote_iface);
+			TAP_LOG(ERR, "ifindex %d: failed to get ifindex for remote '%s'",
+				pmd->if_index, remote_iface);
 			goto error_remote;
 		}
-		strlcpy(pmd->remote_iface, remote_iface, RTE_ETH_NAME_MAX_LEN);
 
 		/* Save state of remote device */
 		if (tap_nl_get_flags(pmd->nlsk_fd, pmd->remote_if_index,
@@ -2139,14 +2161,14 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 
 		/* Replicate remote MAC address */
 		if (tap_nl_get_mac(pmd->nlsk_fd, pmd->remote_if_index, &pmd->eth_addr) < 0) {
-			TAP_LOG(ERR, "%s: failed to get %s MAC address.",
-				pmd->name, pmd->remote_iface);
+			TAP_LOG(ERR, "ifindex %d: failed to get remote MAC",
+				pmd->if_index);
 			goto error_remote;
 		}
 
 		if (tap_nl_set_mac(pmd->nlsk_fd, pmd->if_index, &pmd->eth_addr) < 0) {
-			TAP_LOG(ERR, "%s: failed to set %s MAC address.",
-				pmd->name, remote_iface);
+			TAP_LOG(ERR, "ifindex %d: failed to set local MAC",
+				pmd->if_index);
 			goto error_remote;
 		}
 
@@ -2158,8 +2180,8 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 		qdisc_flush(pmd->nlsk_fd, pmd->remote_if_index);
 		if (qdisc_create_ingress(pmd->nlsk_fd,
 					 pmd->remote_if_index) < 0) {
-			TAP_LOG(ERR, "%s: failed to create ingress qdisc.",
-				pmd->remote_iface);
+			TAP_LOG(ERR, "remote ifindex %d: failed to create ingress qdisc",
+				pmd->remote_if_index);
 			goto error_remote;
 		}
 		LIST_INIT(&pmd->implicit_flows);
@@ -2168,8 +2190,8 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 		    tap_flow_implicit_create(pmd, TAP_REMOTE_BROADCAST) < 0 ||
 		    tap_flow_implicit_create(pmd, TAP_REMOTE_BROADCASTV6) < 0) {
 			TAP_LOG(ERR,
-				"%s: failed to create implicit rules.",
-				pmd->name);
+				"ifindex %d: failed to create implicit rules",
+				pmd->if_index);
 			goto error_remote;
 		}
 	}
