@@ -251,12 +251,38 @@ static void axgbe_phy_perform_ratechange(struct axgbe_port *pdata,
 		enum axgbe_mb_cmd cmd, enum axgbe_mb_subcmd sub_cmd);
 static void axgbe_phy_rrc(struct axgbe_port *pdata);
 
+static int axgbe_phy_get_comm_ownership(struct axgbe_port *pdata);
+static void axgbe_phy_put_comm_ownership(struct axgbe_port *pdata);
 
 static int axgbe_phy_i2c_xfer(struct axgbe_port *pdata,
 			      struct axgbe_i2c_op *i2c_op)
 {
 	return pdata->i2c_if.i2c_xfer(pdata, i2c_op);
 }
+
+static int axgbe_phy_mii_read_c22(struct axgbe_port *pdata, int addr, int reg)
+{
+	int ret, regval;
+	ret = axgbe_phy_get_comm_ownership(pdata);
+	if (ret)
+		return -1;
+	regval = pdata->hw_if.read_ext_mii_regs_c22(pdata, addr, reg);
+	axgbe_phy_put_comm_ownership(pdata);
+	return regval;
+}
+
+static int axgbe_phy_mii_write_c22(struct axgbe_port *pdata, int addr,
+		int reg, u16 val)
+{
+	int ret, regval;
+	ret = axgbe_phy_get_comm_ownership(pdata);
+	if (ret)
+		return -1;
+	regval = pdata->hw_if.write_ext_mii_regs_c22(pdata, addr, reg, val);
+	axgbe_phy_put_comm_ownership(pdata);
+	return regval;
+}
+
 
 static int axgbe_phy_redrv_write(struct axgbe_port *pdata, unsigned int reg,
 				 unsigned int val)
@@ -2542,4 +2568,7 @@ void axgbe_init_function_ptrs_phy_v2(struct axgbe_phy_if *phy_if)
 
 	phy_impl->kr_training_pre	= axgbe_phy_kr_training_pre;
 	phy_impl->kr_training_post	= axgbe_phy_kr_training_post;
+
+	phy_impl->read			= axgbe_phy_mii_read_c22;
+	phy_impl->write			= axgbe_phy_mii_write_c22;
 }
