@@ -1,6 +1,53 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
+Intel 1G Network Drivers (e1000, igb, igc)
+==========================================
+
+Overview
+--------
+
+DPDK provides several poll mode drivers (PMDs) supporting Intel 1 Gigabit
+Ethernet controller families. These include:
+
+*   e1000 – Intel 8254x family devices, including QEMU e1000 emulation.
+*   e1000e – Intel PRO/1000 PCI‑Express family (82563/6/7, 82571/2/3/4/7/8/9,
+             82583 and I217/I218/I219-based adapters).
+
+These drivers follow similar design principles and capabilities and are grouped
+here for clarity.
+
+Supported Hardware
+------------------
+
+E1000 Devices
+~~~~~~~~~~~~~
+
+The e1000 Linux base driver supports the Intel® PRO/1000 PCI and PCI‑X
+family of Gigabit Ethernet controllers. Supported devices include:
+
+*   Intel 82540, 82541, 82545, 82546
+*   QEMU ``e1000`` emulated NIC
+
+E1000e Devices
+~~~~~~~~~~~~~~
+
+The e1000e Linux base driver supports the Intel PRO/1000 PCI‑Express family
+including:
+
+*   82563/82566/82567 series
+*   82571/82572/82573/82574/82577/82578/82579 series
+*   82583-based adapters
+*   I217, I218 and I219 Gigabit Network Connections
+
+Driver Notes
+~~~~~~~~~~~~
+
+*   e1000 – supports PCI/PCI‑X Gigabit adapters.
+*   e1000e – supports PCI‑Express Gigabit adapters.
+
+Both drivers are widely used across physical and virtualized environments.
+
 Driver for VM Emulated Devices
 ==============================
 
