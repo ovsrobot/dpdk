@@ -276,6 +276,7 @@ struct axgbe_phy {
 	int pause_autoneg;
 	int tx_pause;
 	int rx_pause;
+	int id;
 };
 
 enum axgbe_i2c_cmd {
@@ -398,6 +399,9 @@ struct axgbe_phy_impl_if {
 	/* Pre/Post KR training enablement support */
 	void (*kr_training_pre)(struct axgbe_port *);
 	void (*kr_training_post)(struct axgbe_port *);
+
+	int (*read)(struct axgbe_port *port, int addr, int reg);
+	int (*write)(struct axgbe_port *port, int addr, int reg, u16 val);
 };
 
 struct axgbe_phy_if {
