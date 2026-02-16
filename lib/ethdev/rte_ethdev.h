@@ -6639,12 +6639,23 @@ uint16_t rte_eth_call_tx_callbacks(uint16_t port_id, uint16_t queue_id,
  * of the ring.
  *
  * The rte_eth_tx_burst() function returns the number of packets it
- * actually sent. A return value equal to *nb_pkts* means that all packets
- * have been sent, and this is likely to signify that other output packets
+ * has consumed from the *tx_pkts* array. The driver takes ownership of
+ * the mbufs for all consumed packets (tx_pkts[0] to tx_pkts[n-1]);
+ * the caller must not access them afterward. The remaining packets
+ * (tx_pkts[n] to tx_pkts[nb_pkts-1]) are not modified and remain the
+ * caller's responsibility.
+ *
+ * A return value equal to *nb_pkts* means that all packets have been
+ * consumed, and this is likely to signify that other output packets
  * could be immediately transmitted again. Applications that implement a
  * "send as many packets to transmit as possible" policy can check this
  * specific case and keep invoking the rte_eth_tx_burst() function until
  * a value less than *nb_pkts* is returned.
+ *
+ * If a packet cannot be transmitted due to an error (for example, an
+ * invalid offload flag), the driver must still consume it and free the
+ * mbuf, rather than stopping at that point. Such packets should be
+ * counted in the *tx_errors* port statistic.
  *
  * It is the responsibility of the rte_eth_tx_burst() function to
  * transparently free the memory buffers of packets previously sent.
@@ -6679,9 +6690,9 @@ uint16_t rte_eth_call_tx_callbacks(uint16_t port_id, uint16_t queue_id,
  * @param nb_pkts
  *   The maximum number of packets to transmit.
  * @return
- *   The number of output packets actually stored in transmit descriptors of
- *   the transmit ring. The return value can be less than the value of the
- *   *tx_pkts* parameter when the transmit ring is full or has been filled up.
+ *   The number of packets consumed from the *tx_pkts* array.
+ *   The return value can be less than the value of the
+ *   *nb_pkts* parameter when the transmit ring is full or has been filled up.
  */
 static inline uint16_t
 rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
