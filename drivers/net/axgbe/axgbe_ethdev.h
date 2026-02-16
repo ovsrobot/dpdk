@@ -276,6 +276,7 @@ struct axgbe_phy {
 	int pause_autoneg;
 	int tx_pause;
 	int rx_pause;
+	int id;
 };
 
 enum axgbe_i2c_cmd {

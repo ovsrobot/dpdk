@@ -37,6 +37,8 @@
 #define AXGBE_CDR_DELAY_INC		10000
 #define AXGBE_CDR_DELAY_MAX		100000
 
+#define M88E1512_E_PHY_ID		0x01410DD0
+
 enum axgbe_port_mode {
 	AXGBE_PORT_MODE_RSVD = 0,
 	AXGBE_PORT_MODE_BACKPLANE,
@@ -250,9 +252,11 @@ static enum axgbe_an_mode axgbe_phy_an_mode(struct axgbe_port *pdata);
 static void axgbe_phy_perform_ratechange(struct axgbe_port *pdata,
 		enum axgbe_mb_cmd cmd, enum axgbe_mb_subcmd sub_cmd);
 static void axgbe_phy_rrc(struct axgbe_port *pdata);
+static int axgbe_get_ext_phy_link_status(struct axgbe_port *pdata);
 
 static int axgbe_phy_get_comm_ownership(struct axgbe_port *pdata);
 static void axgbe_phy_put_comm_ownership(struct axgbe_port *pdata);
+static int axgbe_m88e1512_config_aneg(struct axgbe_port *pdata);
 
 static int axgbe_phy_i2c_xfer(struct axgbe_port *pdata,
 			      struct axgbe_i2c_op *i2c_op)
@@ -1116,12 +1120,19 @@ static unsigned int axgbe_phy_an_advertising(struct axgbe_port *pdata)
 	return advertising;
 }
 
-static int axgbe_phy_an_config(struct axgbe_port *pdata __rte_unused)
+static int axgbe_phy_an_config(struct axgbe_port *pdata)
 {
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+
+	/* Auto-negotiation config is implemented only for 1000BASE-T */
+	if (phy_data->port_mode != AXGBE_PORT_MODE_1000BASE_T)
+		return 0;
+
+	/* Supports only Marvell M88E1512 */
+	if (pdata->phy.id == M88E1512_E_PHY_ID)
+		axgbe_m88e1512_config_aneg(pdata);
+
 	return 0;
-	/* Dummy API since there is no case to support
-	 * external phy devices registered through kernel APIs
-	 */
 }
 
 static enum axgbe_an_mode axgbe_phy_an_sfp_mode(struct axgbe_phy_data *phy_data)
@@ -1889,6 +1900,17 @@ static int axgbe_phy_link_status(struct axgbe_port *pdata, int *an_restart)
 		}
 	}
 
+	if (phy_data->port_mode == AXGBE_PORT_MODE_1000BASE_T) {
+		if (pdata->phy.id == M88E1512_E_PHY_ID) {
+			if (axgbe_get_ext_phy_link_status(pdata) == 1) {
+				PMD_DRV_LOG_LINE(DEBUG, "M88E1512 PHY link is up");
+			} else {
+				PMD_DRV_LOG_LINE(DEBUG, "M88E1512 PHY link is not up");
+				goto out;
+			}
+		}
+	}
+
 	/* Link status is latched low, so read once to clear
 	 * and then read again to get current state
 	 */
@@ -1932,6 +1954,8 @@ static int axgbe_phy_link_status(struct axgbe_port *pdata, int *an_restart)
 		axgbe_phy_rrc(pdata);
 	}
 
+out:
+	pdata->rx_adapt_done = false;
 	return 0;
 }
 
@@ -2289,6 +2313,225 @@ static int axgbe_phy_reset(struct axgbe_port *pdata)
 	return 0;
 }
 
+static int axgbe_get_phy_id(struct axgbe_port *pdata)
+{
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+	unsigned int mdio_addr = phy_data->mdio_addr;
+	int phy_id, ret_val;
+	ret_val = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_PHYSID1);
+
+	phy_id = ret_val << 16;
+
+	ret_val = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_PHYSID2);
+	phy_id |= ret_val & 0xfff0;
+
+	return phy_id;
+}
+
+static int axgbe_phy_soft_reset(struct axgbe_port *pdata)
+{
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+	unsigned int mdio_addr = phy_data->mdio_addr;
+	int ret, bmcr;
+
+	bmcr = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_BMCR);
+	if (bmcr < 0)
+		return bmcr;
+
+	bmcr |= BMCR_RESET;
+	ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr, MII_BMCR, bmcr);
+	if (ret)
+		return ret;
+
+	rte_delay_us_sleep(1);
+	return 0;
+}
+
+static int axgbe_m88e1512_config_aneg(struct axgbe_port *pdata)
+{
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+	unsigned int mdio_addr = phy_data->mdio_addr;
+	int an_advert, bmcr;
+	int ret;
+
+	an_advert = ADVERTISE_10FULL |
+		ADVERTISE_100FULL |
+		ADVERTISE_PAUSE_CAP |
+		ADVERTISE_PAUSE_ASYM;
+
+	ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+			MII_ADVERTISE, an_advert);
+	if (ret)
+		return ret;
+
+	bmcr = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_BMCR);
+	if (bmcr < 0)
+		return bmcr;
+
+	bmcr &= ~(MDIO_CTRL1_SPEEDSELEXT);
+	switch (phy_data->cur_mode) {
+	case AXGBE_MODE_SGMII_1000:
+		bmcr |= BMCR_SPEED1000;
+		break;
+	case AXGBE_MODE_SGMII_100:
+		bmcr |= BMCR_SPEED100;
+		break;
+	default:
+		break;
+	}
+	if (pdata->phy.autoneg == AUTONEG_ENABLE)
+		bmcr |=  BMCR_ANENABLE | BMCR_ANRESTART;
+
+	ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+			MII_BMCR, bmcr);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int axgbe_m88e5112_set_page(struct axgbe_port *pdata, int page)
+{
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+	unsigned int mdio_addr = phy_data->mdio_addr;
+	return pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+			AXGBE_M88E1512_PAGE_ADDR, page);
+}
+
+static const struct {
+	u16 reg17, reg16;
+} errata_vals[] = {
+	{ 0x214b, 0x2144 },
+	{ 0x0c28, 0x2146 },
+	{ 0xb233, 0x214d },
+	{ 0xcc0c, 0x2159 },
+};
+
+static int axgbe_m88e1512_init(struct axgbe_port *pdata)
+{
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+	unsigned int mdio_addr = phy_data->mdio_addr;
+	int ret;
+	unsigned int i;
+
+	PMD_DRV_LOG_LINE(DEBUG, "Initialize M88E1512 phy");
+
+	/* Switch to PHY page 0xFF */
+	ret = axgbe_m88e5112_set_page(pdata, 0xff);
+	if (ret)
+		return ret;
+	/* Configure M88E1512 errata registers */
+	for (i = 0; i < ARRAY_SIZE(errata_vals); i++) {
+		ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+				AXGBE_M88E1512_CFG_REG_2,
+				errata_vals[i].reg17);
+		if (ret)
+			return ret;
+
+		ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+				AXGBE_M88E1512_CFG_REG_1,
+				errata_vals[i].reg16);
+		if (ret)
+			return ret;
+	}
+
+	/* Switch to PHY page 0xFB */
+	ret = axgbe_m88e5112_set_page(pdata, 0xfb);
+	if (ret)
+		return ret;
+
+	ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+			AXGBE_M88E1512_CFG_REG_3, 0xC00D);
+	if (ret)
+		return ret;
+
+	/* Switch to PHY page 0 */
+	ret = axgbe_m88e5112_set_page(pdata, 0);
+	if (ret)
+		return ret;
+
+	/* SGMII-to-Copper mode initialization */
+
+	/* Switch to PHY page 0x12 */
+	ret = axgbe_m88e5112_set_page(pdata, 0x12);
+	if (ret)
+		return ret;
+
+	ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+			AXGBE_M88E1512_MODE, 0x8001);
+	if (ret)
+		return ret;
+
+	/* Switch to PHY page 0 */
+	ret = axgbe_m88e5112_set_page(pdata, 0);
+	if (ret)
+		return ret;
+
+	ret = axgbe_phy_soft_reset(pdata);
+	if (ret)
+		return ret;
+
+	rte_delay_ms(1000);
+
+
+	/* Switch to PHY page 3 */
+	ret = axgbe_m88e5112_set_page(pdata, 3);
+	if (ret)
+		return ret;
+
+	/* enable downshift */
+	ret = pdata->phy_if.phy_impl.write(pdata, mdio_addr,
+			AXGBE_M88E1512_SCR, 0x1177);
+	if (ret)
+		return ret;
+
+
+	/* Switch to PHY page 0 */
+	ret = axgbe_m88e5112_set_page(pdata, 0);
+	if (ret)
+		return ret;
+
+	ret = axgbe_phy_soft_reset(pdata);
+	if (ret)
+		return ret;
+
+	rte_delay_ms(1000);
+
+	PMD_DRV_LOG_LINE(DEBUG, "M88E1512 phy init done");
+	return 0;
+}
+
+
+static int axgbe_get_ext_phy_link_status(struct axgbe_port *pdata)
+{
+	struct axgbe_phy_data *phy_data = pdata->phy_data;
+	unsigned int mdio_addr = phy_data->mdio_addr;
+	int status = 0, bmcr;
+
+	bmcr = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_BMCR);
+	if (bmcr < 0)
+		return bmcr;
+
+	/* Autoneg is being started, therefore disregard BMSR value and
+	 * report link as down.
+	 */
+	if (bmcr & BMCR_ANRESTART)
+		return 0;
+
+	status = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_BMSR);
+	if (status < 0)
+		return status;
+	else if (status & BMSR_LSTATUS)
+		goto done;
+
+	/* Read link and autonegotiation status */
+	status = pdata->phy_if.phy_impl.read(pdata, mdio_addr, MII_BMSR);
+	if (status < 0)
+		return status;
+done:
+	return (status & BMSR_LSTATUS) ? 1 : 0;
+}
+
 static int axgbe_phy_init(struct axgbe_port *pdata)
 {
 	struct axgbe_phy_data *phy_data;
@@ -2542,6 +2785,16 @@ static int axgbe_phy_init(struct axgbe_port *pdata)
 	}
 
 	phy_data->phy_cdr_delay = AXGBE_CDR_DELAY_INIT;
+
+	pdata->phy.id = axgbe_get_phy_id(pdata);
+	PMD_DRV_LOG_LINE(DEBUG, "PHY ID = 0x%x", pdata->phy.id);
+
+	if (pdata->phy.id == M88E1512_E_PHY_ID) {
+		ret = axgbe_m88e1512_init(pdata);
+		if(ret)
+			return ret;
+	}
+
 	return 0;
 }
 void axgbe_init_function_ptrs_phy_v2(struct axgbe_phy_if *phy_if)
