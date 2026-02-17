@@ -4165,8 +4165,7 @@ i40e_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	if (mask & RTE_ETH_VLAN_EXTEND_MASK) {
 		i = 0;
 		num = vsi->mac_num;
-		mac_filter = rte_zmalloc("mac_filter_info_data",
-				 num * sizeof(*mac_filter), 0);
+		mac_filter = calloc(num, sizeof(*mac_filter));
 		if (mac_filter == NULL) {
 			PMD_DRV_LOG(ERR, "failed to allocate memory");
 			return I40E_ERR_NO_MEMORY;
@@ -4206,7 +4205,7 @@ i40e_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 			if (ret)
 				PMD_DRV_LOG(ERR, "i40e vsi add mac fail.");
 		}
-		rte_free(mac_filter);
+		free(mac_filter);
 	}
 
 	if (mask & RTE_ETH_QINQ_STRIP_MASK) {
@@ -6229,8 +6228,7 @@ i40e_vsi_config_vlan_filter(struct i40e_vsi *vsi, bool on)
 
 	num = vsi->mac_num;
 
-	mac_filter = rte_zmalloc("mac_filter_info_data",
-				 num * sizeof(*mac_filter), 0);
+	mac_filter = calloc(num, sizeof(*mac_filter));
 	if (mac_filter == NULL) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
 		return I40E_ERR_NO_MEMORY;
@@ -6262,7 +6260,7 @@ i40e_vsi_config_vlan_filter(struct i40e_vsi *vsi, bool on)
 	}
 
 DONE:
-	rte_free(mac_filter);
+	free(mac_filter);
 	return ret;
 }
 
@@ -7152,7 +7150,7 @@ i40e_add_macvlan_filters(struct i40e_vsi *vsi,
 	ele_num = hw->aq.asq_buf_size / sizeof(*req_list);
 	ele_buff_size = hw->aq.asq_buf_size;
 
-	req_list = rte_zmalloc("macvlan_add", ele_buff_size, 0);
+	req_list = calloc(1, ele_buff_size);
 	if (req_list == NULL) {
 		PMD_DRV_LOG(ERR, "Fail to allocate memory");
 		return I40E_ERR_NO_MEMORY;
@@ -7205,7 +7203,7 @@ i40e_add_macvlan_filters(struct i40e_vsi *vsi,
 	} while (num < total);
 
 DONE:
-	rte_free(req_list);
+	free(req_list);
 	return ret;
 }
 
@@ -7228,7 +7226,7 @@ i40e_remove_macvlan_filters(struct i40e_vsi *vsi,
 	ele_num = hw->aq.asq_buf_size / sizeof(*req_list);
 	ele_buff_size = hw->aq.asq_buf_size;
 
-	req_list = rte_zmalloc("macvlan_remove", ele_buff_size, 0);
+	req_list = calloc(1, ele_buff_size);
 	if (req_list == NULL) {
 		PMD_DRV_LOG(ERR, "Fail to allocate memory");
 		return I40E_ERR_NO_MEMORY;
@@ -7284,7 +7282,7 @@ i40e_remove_macvlan_filters(struct i40e_vsi *vsi,
 	} while (num < total);
 
 DONE:
-	rte_free(req_list);
+	free(req_list);
 	return ret;
 }
 
@@ -7453,7 +7451,7 @@ i40e_vsi_remove_all_macvlan_filter(struct i40e_vsi *vsi)
 	else
 		num = vsi->mac_num * vsi->vlan_num;
 
-	mv_f = rte_zmalloc("macvlan_data", num * sizeof(*mv_f), 0);
+	mv_f = calloc(num, sizeof(*mv_f));
 	if (mv_f == NULL) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
 		return I40E_ERR_NO_MEMORY;
@@ -7482,7 +7480,7 @@ i40e_vsi_remove_all_macvlan_filter(struct i40e_vsi *vsi)
 
 	ret = i40e_remove_macvlan_filters(vsi, mv_f, num);
 DONE:
-	rte_free(mv_f);
+	free(mv_f);
 
 	return ret;
 }
@@ -7508,7 +7506,7 @@ i40e_vsi_add_vlan(struct i40e_vsi *vsi, uint16_t vlan)
 		return I40E_ERR_PARAM;
 	}
 
-	mv_f = rte_zmalloc("macvlan_data", mac_num * sizeof(*mv_f), 0);
+	mv_f = calloc(mac_num, sizeof(*mv_f));
 
 	if (mv_f == NULL) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
@@ -7530,7 +7528,7 @@ i40e_vsi_add_vlan(struct i40e_vsi *vsi, uint16_t vlan)
 	vsi->vlan_num++;
 	ret = I40E_SUCCESS;
 DONE:
-	rte_free(mv_f);
+	free(mv_f);
 	return ret;
 }
 
@@ -7559,7 +7557,7 @@ i40e_vsi_delete_vlan(struct i40e_vsi *vsi, uint16_t vlan)
 		return I40E_ERR_PARAM;
 	}
 
-	mv_f = rte_zmalloc("macvlan_data", mac_num * sizeof(*mv_f), 0);
+	mv_f = calloc(mac_num, sizeof(*mv_f));
 
 	if (mv_f == NULL) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
@@ -7592,7 +7590,7 @@ i40e_vsi_delete_vlan(struct i40e_vsi *vsi, uint16_t vlan)
 	vsi->vlan_num--;
 	ret = I40E_SUCCESS;
 DONE:
-	rte_free(mv_f);
+	free(mv_f);
 	return ret;
 }
 
@@ -7624,7 +7622,7 @@ i40e_vsi_add_mac(struct i40e_vsi *vsi, struct i40e_mac_filter_info *mac_filter)
 			mac_filter->filter_type == I40E_MAC_HASH_MATCH)
 		vlan_num = 1;
 
-	mv_f = rte_zmalloc("macvlan_data", vlan_num * sizeof(*mv_f), 0);
+	mv_f = calloc(vlan_num, sizeof(*mv_f));
 	if (mv_f == NULL) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
 		return I40E_ERR_NO_MEMORY;
@@ -7663,7 +7661,7 @@ i40e_vsi_add_mac(struct i40e_vsi *vsi, struct i40e_mac_filter_info *mac_filter)
 
 	ret = I40E_SUCCESS;
 DONE:
-	rte_free(mv_f);
+	free(mv_f);
 
 	return ret;
 }
@@ -7694,7 +7692,7 @@ i40e_vsi_delete_mac(struct i40e_vsi *vsi, struct rte_ether_addr *addr)
 			filter_type == I40E_MAC_HASH_MATCH)
 		vlan_num = 1;
 
-	mv_f = rte_zmalloc("macvlan_data", vlan_num * sizeof(*mv_f), 0);
+	mv_f = calloc(vlan_num, sizeof(*mv_f));
 	if (mv_f == NULL) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
 		return I40E_ERR_NO_MEMORY;
@@ -7723,7 +7721,7 @@ i40e_vsi_delete_mac(struct i40e_vsi *vsi, struct rte_ether_addr *addr)
 
 	ret = I40E_SUCCESS;
 DONE:
-	rte_free(mv_f);
+	free(mv_f);
 	return ret;
 }
 
