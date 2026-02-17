@@ -6894,7 +6894,7 @@ i40e_dev_handle_aq_msg(struct rte_eth_dev *dev)
 	int ret;
 
 	info.buf_len = I40E_AQ_BUF_SZ;
-	info.msg_buf = rte_zmalloc("msg_buffer", info.buf_len, 0);
+	info.msg_buf = calloc(1, info.buf_len);
 	if (!info.msg_buf) {
 		PMD_DRV_LOG(ERR, "Failed to allocate mem");
 		return;
@@ -6934,7 +6934,7 @@ i40e_dev_handle_aq_msg(struct rte_eth_dev *dev)
 			break;
 		}
 	}
-	rte_free(info.msg_buf);
+	free(info.msg_buf);
 }
 
 static void
