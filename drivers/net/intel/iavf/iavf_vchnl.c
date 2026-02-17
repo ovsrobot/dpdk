@@ -1402,7 +1402,7 @@ iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add)
 			}
 		}
 
-		list = rte_zmalloc("iavf_del_mac_buffer", len, 0);
+		list = calloc(1, len);
 		if (!list) {
 			PMD_DRV_LOG(ERR, "fail to allocate memory");
 			return;
@@ -1434,7 +1434,7 @@ iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add)
 			PMD_DRV_LOG(ERR, "fail to execute command %s",
 				    add ? "OP_ADD_ETHER_ADDRESS" :
 				    "OP_DEL_ETHER_ADDRESS");
-		rte_free(list);
+		free(list);
 		begin = next_begin;
 	} while (begin < IAVF_NUM_MACADDR_MAX);
 }
