@@ -934,7 +934,7 @@ dcf_add_del_mc_addr_list(struct ice_dcf_hw *hw,
 	len = sizeof(struct virtchnl_ether_addr_list);
 	len += sizeof(struct virtchnl_ether_addr) * mc_addrs_num;
 
-	list = rte_zmalloc(NULL, len, 0);
+	list = calloc(1, len);
 	if (!list) {
 		PMD_DRV_LOG(ERR, "fail to allocate memory");
 		return -ENOMEM;
@@ -959,7 +959,7 @@ dcf_add_del_mc_addr_list(struct ice_dcf_hw *hw,
 		PMD_DRV_LOG(ERR, "fail to execute command %s",
 			    add ? "OP_ADD_ETHER_ADDRESS" :
 			    "OP_DEL_ETHER_ADDRESS");
-	rte_free(list);
+	free(list);
 	return err;
 }
 
