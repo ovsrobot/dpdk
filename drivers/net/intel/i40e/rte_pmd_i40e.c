@@ -1569,9 +1569,7 @@ i40e_check_profile_info(uint16_t port, uint8_t *profile_info_sec)
 		PMD_DRV_LOG(INFO, "Read-only profile.");
 		return 0;
 	}
-	buff = rte_zmalloc("pinfo_list",
-			   (I40E_PROFILE_INFO_SIZE * I40E_MAX_PROFILE_NUM + 4),
-			   0);
+	buff = calloc(I40E_MAX_PROFILE_NUM + 4, I40E_PROFILE_INFO_SIZE);
 	if (!buff) {
 		PMD_DRV_LOG(ERR, "failed to allocate memory");
 		return -1;
@@ -1583,7 +1581,7 @@ i40e_check_profile_info(uint16_t port, uint8_t *profile_info_sec)
 		0, NULL);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to get profile info list.");
-		rte_free(buff);
+		free(buff);
 		return -1;
 	}
 	p_list = (struct rte_pmd_i40e_profile_list *)buff;
@@ -1591,20 +1589,20 @@ i40e_check_profile_info(uint16_t port, uint8_t *profile_info_sec)
 		p = &p_list->p_info[i];
 		if (pinfo->track_id == p->track_id) {
 			PMD_DRV_LOG(INFO, "Profile exists.");
-			rte_free(buff);
+			free(buff);
 			return 1;
 		}
 	}
 	/* profile with group id 0xff is compatible with any other profile */
 	if ((pinfo->track_id & group_mask) == group_mask) {
-		rte_free(buff);
+		free(buff);
 		return 0;
 	}
 	for (i = 0; i < p_list->p_count; i++) {
 		p = &p_list->p_info[i];
 		if ((p->track_id & group_mask) == 0) {
 			PMD_DRV_LOG(INFO, "Profile of the group 0 exists.");
-			rte_free(buff);
+			free(buff);
 			return 2;
 		}
 	}
@@ -1615,12 +1613,12 @@ i40e_check_profile_info(uint16_t port, uint8_t *profile_info_sec)
 		if ((pinfo->track_id & group_mask) !=
 		    (p->track_id & group_mask)) {
 			PMD_DRV_LOG(INFO, "Profile of different group exists.");
-			rte_free(buff);
+			free(buff);
 			return 3;
 		}
 	}
 
-	rte_free(buff);
+	free(buff);
 	return 0;
 }
 
@@ -1636,7 +1634,10 @@ rte_pmd_i40e_process_ddp_package(uint16_t port, uint8_t *buff,
 	struct i40e_generic_seg_header *profile_seg_hdr;
 	struct i40e_generic_seg_header *metadata_seg_hdr;
 	uint32_t track_id;
-	uint8_t *profile_info_sec;
+	struct {
+		struct i40e_profile_section_header sec;
+		struct i40e_profile_info info;
+	} profile_info_sec = {0};
 	int is_exist;
 	enum i40e_status_code status = I40E_SUCCESS;
 	static const uint32_t type_mask = 0xff000000;
@@ -1701,26 +1702,15 @@ rte_pmd_i40e_process_ddp_package(uint16_t port, uint8_t *buff,
 		return -EINVAL;
 	}
 
-	profile_info_sec = rte_zmalloc(
-		"i40e_profile_info",
-		sizeof(struct i40e_profile_section_header) +
-		sizeof(struct i40e_profile_info),
-		0);
-	if (!profile_info_sec) {
-		PMD_DRV_LOG(ERR, "Failed to allocate memory");
-		return -EINVAL;
-	}
-
 	/* Check if the profile already loaded */
 	i40e_generate_profile_info_sec(
 		((struct i40e_profile_segment *)profile_seg_hdr)->name,
 		&((struct i40e_profile_segment *)profile_seg_hdr)->version,
-		track_id, profile_info_sec,
+		track_id, (uint8_t* )&profile_info_sec,
 		op == RTE_PMD_I40E_PKG_OP_WR_ADD);
-	is_exist = i40e_check_profile_info(port, profile_info_sec);
+	is_exist = i40e_check_profile_info(port, (uint8_t* )&profile_info_sec);
 	if (is_exist < 0) {
 		PMD_DRV_LOG(ERR, "Failed to check profile.");
-		rte_free(profile_info_sec);
 		return -EINVAL;
 	}
 
@@ -1733,13 +1723,11 @@ rte_pmd_i40e_process_ddp_package(uint16_t port, uint8_t *buff,
 			else if (is_exist == 3)
 				PMD_DRV_LOG(ERR, "Profile of different group already exists");
 			i40e_update_customized_info(dev, buff, size, op);
-			rte_free(profile_info_sec);
 			return -EEXIST;
 		}
 	} else if (op == RTE_PMD_I40E_PKG_OP_WR_DEL) {
 		if (is_exist != 1) {
 			PMD_DRV_LOG(ERR, "Profile does not exist.");
-			rte_free(profile_info_sec);
 			return -EACCES;
 		}
 	}
@@ -1751,7 +1739,6 @@ rte_pmd_i40e_process_ddp_package(uint16_t port, uint8_t *buff,
 			track_id);
 		if (status) {
 			PMD_DRV_LOG(ERR, "Failed to write profile for delete.");
-			rte_free(profile_info_sec);
 			return status;
 		}
 	} else {
@@ -1764,14 +1751,13 @@ rte_pmd_i40e_process_ddp_package(uint16_t port, uint8_t *buff,
 				PMD_DRV_LOG(ERR, "Failed to write profile for add.");
 			else
 				PMD_DRV_LOG(ERR, "Failed to write profile.");
-			rte_free(profile_info_sec);
 			return status;
 		}
 	}
 
 	if (track_id && (op != RTE_PMD_I40E_PKG_OP_WR_ONLY)) {
 		/* Modify loaded profiles info list */
-		status = i40e_add_rm_profile_info(hw, profile_info_sec);
+		status = i40e_add_rm_profile_info(hw, (uint8_t* )&profile_info_sec);
 		if (status) {
 			if (op == RTE_PMD_I40E_PKG_OP_WR_ADD)
 				PMD_DRV_LOG(ERR, "Failed to add profile to info list.");
@@ -1784,7 +1770,6 @@ rte_pmd_i40e_process_ddp_package(uint16_t port, uint8_t *buff,
 	    op == RTE_PMD_I40E_PKG_OP_WR_DEL)
 		i40e_update_customized_info(dev, buff, size, op);
 
-	rte_free(profile_info_sec);
 	return status;
 }
 
