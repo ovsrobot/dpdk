@@ -35,6 +35,7 @@
 #include "iavf_generic_flow.h"
 #include "rte_pmd_iavf.h"
 #include "iavf_ipsec_crypto.h"
+#include "iavf_hash.h"
 
 /* devargs */
 #define IAVF_PROTO_XTR_ARG         "proto_xtr"
@@ -2971,6 +2972,9 @@ iavf_dev_close(struct rte_eth_dev *dev)
 
 	/* free iAVF security device context all related resources */
 	iavf_security_ctx_destroy(adapter);
+
+	/* remove RSS configuration */
+	iavf_hash_uninit(adapter);
 
 	iavf_flow_flush(dev, NULL);
 	iavf_flow_uninit(adapter);
