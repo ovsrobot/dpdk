@@ -1294,7 +1294,7 @@ iavf_config_irq_map(struct iavf_adapter *adapter)
 	len = sizeof(struct virtchnl_irq_map_info) +
 	      sizeof(struct virtchnl_vector_map) * vf->nb_msix;
 
-	map_info = rte_zmalloc("map_info", len, 0);
+	map_info = calloc(1, len);
 	if (!map_info)
 		return -ENOMEM;
 
@@ -1318,7 +1318,7 @@ iavf_config_irq_map(struct iavf_adapter *adapter)
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_CONFIG_IRQ_MAP");
 
-	rte_free(map_info);
+	free(map_info);
 	return err;
 }
 
@@ -1336,7 +1336,7 @@ iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num,
 	len = sizeof(struct virtchnl_queue_vector_maps) +
 	      sizeof(struct virtchnl_queue_vector) * (num - 1);
 
-	map_info = rte_zmalloc("map_info", len, 0);
+	map_info = calloc(1, len);
 	if (!map_info)
 		return -ENOMEM;
 
@@ -1359,7 +1359,7 @@ iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num,
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_MAP_QUEUE_VECTOR");
 
-	rte_free(map_info);
+	free(map_info);
 	return err;
 }
 
