@@ -596,6 +596,11 @@ fslmc_bus_plug(struct rte_device *rte_dev)
 			struct rte_dpaa2_device, device);
 	struct rte_dpaa2_driver *drv;
 
+	/* Refresh devargs from the EAL devargs list, as they may
+	 * have been added after the initial bus scan (e.g. hotplug).
+	 */
+	dev->device.devargs = fslmc_devargs_lookup(dev);
+
 	TAILQ_FOREACH(drv, &rte_fslmc_bus.driver_list, next) {
 		ret = rte_fslmc_match(drv, dev);
 		if (ret)
