@@ -612,13 +612,6 @@ fslmc_bus_plug(struct rte_device *rte_dev)
 		if (rte_dev_is_probed(&dev->device))
 			continue;
 
-		if (dev->device.devargs &&
-		    dev->device.devargs->policy == RTE_DEV_BLOCKED) {
-			DPAA2_BUS_DEBUG("%s Blocked, skipping",
-				      dev->device.name);
-			continue;
-		}
-
 		ret = drv->probe(drv, dev);
 		if (ret) {
 			DPAA2_BUS_ERR("Unable to probe");
