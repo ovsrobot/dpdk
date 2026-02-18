@@ -1025,7 +1025,10 @@ static int wrapper_rx_desc_init(struct axgbe_port *pdata)
 			if (mbuf == NULL) {
 				PMD_DRV_LOG_LINE(ERR, "RX mbuf alloc failed queue_id = %u, idx = %d",
 					    (unsigned int)rxq->queue_id, j);
-				axgbe_dev_rx_queue_release(pdata->eth_dev, i);
+
+				do {
+					axgbe_dev_rx_queue_release(pdata->eth_dev, i);
+				} while (i-- > 0);
 				return -ENOMEM;
 			}
 			rxq->sw_ring[j] = mbuf;
