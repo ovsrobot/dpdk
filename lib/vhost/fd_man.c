@@ -8,9 +8,10 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
+#include <stdlib.h>
+
 #include <rte_common.h>
 #include <rte_log.h>
-#include <rte_malloc.h>
 #include <rte_string_fns.h>
 #include <rte_thread.h>
 
@@ -94,7 +95,7 @@ fdset_init(const char *name)
 		return fdset;
 	}
 
-	fdset = rte_zmalloc(NULL, sizeof(*fdset), 0);
+	fdset = calloc(1, sizeof(*fdset));
 	if (!fdset) {
 		VHOST_FDMAN_LOG(ERR, "failed to alloc fdset %s", name);
 		goto err_unlock;
@@ -142,7 +143,7 @@ err_thread:
 err_epoll:
 	close(fdset->epfd);
 err_free:
-	rte_free(fdset);
+	free(fdset);
 err_unlock:
 	pthread_mutex_unlock(&fdsets_mutex);
 
