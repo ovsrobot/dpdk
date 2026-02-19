@@ -11716,8 +11716,7 @@ i40e_update_customized_pctype(struct rte_eth_dev *dev, uint8_t *pkg,
 {
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	uint32_t pctype_num;
-	struct rte_pmd_i40e_ptype_info *pctype;
-	uint32_t buff_size;
+	struct rte_pmd_i40e_ptype_info pctype[I40E_CUSTOMIZED_MAX] = {0};
 	struct i40e_customized_pctype *new_pctype = NULL;
 	uint8_t proto_id;
 	uint8_t pctype_value;
@@ -11743,19 +11742,16 @@ i40e_update_customized_pctype(struct rte_eth_dev *dev, uint8_t *pkg,
 		return -1;
 	}
 
-	buff_size = pctype_num * sizeof(struct rte_pmd_i40e_proto_info);
-	pctype = rte_zmalloc("new_pctype", buff_size, 0);
-	if (!pctype) {
-		PMD_DRV_LOG(ERR, "Failed to allocate memory");
+	if (pctype_num > RTE_DIM(pctype)) {
+		PMD_DRV_LOG(ERR, "Pctype number exceeds maximum supported");
 		return -1;
 	}
 	/* get information about new pctype list */
 	ret = rte_pmd_i40e_get_ddp_info(pkg, pkg_size,
-					(uint8_t *)pctype, buff_size,
+					(uint8_t *)pctype, sizeof(pctype),
 					RTE_PMD_I40E_PKG_INFO_PCTYPE_LIST);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to get pctype list");
-		rte_free(pctype);
 		return -1;
 	}
 
@@ -11836,7 +11832,6 @@ i40e_update_customized_pctype(struct rte_eth_dev *dev, uint8_t *pkg,
 		}
 	}
 
-	rte_free(pctype);
 	return 0;
 }
 
@@ -11846,11 +11841,10 @@ i40e_update_customized_ptype(struct rte_eth_dev *dev, uint8_t *pkg,
 			     struct rte_pmd_i40e_proto_info *proto,
 			     enum rte_pmd_i40e_package_op op)
 {
-	struct rte_pmd_i40e_ptype_mapping *ptype_mapping;
+	struct rte_pmd_i40e_ptype_mapping ptype_mapping[I40E_MAX_PKT_TYPE] = {0};
 	uint16_t port_id = dev->data->port_id;
 	uint32_t ptype_num;
-	struct rte_pmd_i40e_ptype_info *ptype;
-	uint32_t buff_size;
+	struct rte_pmd_i40e_ptype_info ptype[I40E_MAX_PKT_TYPE] = {0};
 	uint8_t proto_id;
 	char name[RTE_PMD_I40E_DDP_NAME_SIZE];
 	uint32_t i, j, n;
@@ -11881,29 +11875,18 @@ i40e_update_customized_ptype(struct rte_eth_dev *dev, uint8_t *pkg,
 		return -1;
 	}
 
-	buff_size = ptype_num * sizeof(struct rte_pmd_i40e_ptype_info);
-	ptype = rte_zmalloc("new_ptype", buff_size, 0);
-	if (!ptype) {
-		PMD_DRV_LOG(ERR, "Failed to allocate memory");
+	if (ptype_num > RTE_DIM(ptype)) {
+		PMD_DRV_LOG(ERR, "Too many ptypes");
 		return -1;
 	}
 
 	/* get information about new ptype list */
 	ret = rte_pmd_i40e_get_ddp_info(pkg, pkg_size,
-					(uint8_t *)ptype, buff_size,
+					(uint8_t *)ptype, sizeof(ptype),
 					RTE_PMD_I40E_PKG_INFO_PTYPE_LIST);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to get ptype list");
-		rte_free(ptype);
 		return ret;
-	}
-
-	buff_size = ptype_num * sizeof(struct rte_pmd_i40e_ptype_mapping);
-	ptype_mapping = rte_zmalloc("ptype_mapping", buff_size, 0);
-	if (!ptype_mapping) {
-		PMD_DRV_LOG(ERR, "Failed to allocate memory");
-		rte_free(ptype);
-		return -1;
 	}
 
 	/* Update ptype mapping table. */
@@ -12040,8 +12023,6 @@ i40e_update_customized_ptype(struct rte_eth_dev *dev, uint8_t *pkg,
 	if (ret)
 		PMD_DRV_LOG(ERR, "Failed to update ptype mapping table.");
 
-	rte_free(ptype_mapping);
-	rte_free(ptype);
 	return ret;
 }
 
@@ -12076,7 +12057,7 @@ i40e_update_customized_info(struct rte_eth_dev *dev, uint8_t *pkg,
 	}
 
 	buff_size = proto_num * sizeof(struct rte_pmd_i40e_proto_info);
-	proto = rte_zmalloc("new_proto", buff_size, 0);
+	proto = calloc(proto_num, sizeof(struct rte_pmd_i40e_proto_info));
 	if (!proto) {
 		PMD_DRV_LOG(ERR, "Failed to allocate memory");
 		return;
@@ -12088,7 +12069,7 @@ i40e_update_customized_info(struct rte_eth_dev *dev, uint8_t *pkg,
 					RTE_PMD_I40E_PKG_INFO_PROTOCOL_LIST);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to get protocol list");
-		rte_free(proto);
+		free(proto);
 		return;
 	}
 
@@ -12126,7 +12107,7 @@ i40e_update_customized_info(struct rte_eth_dev *dev, uint8_t *pkg,
 	if (ret)
 		PMD_DRV_LOG(INFO, "No ptype is updated.");
 
-	rte_free(proto);
+	free(proto);
 }
 
 /* Create a QinQ cloud filter
