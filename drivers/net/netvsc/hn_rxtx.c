@@ -1595,8 +1595,10 @@ hn_xmit_pkts(void *ptxq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 
 
 			pkt = hn_try_txagg(hv, txq, txd, pkt_size);
-			if (unlikely(!pkt))
+			if (unlikely(!pkt)) {
+				hn_txd_put(txq, txd);
 				break;
+			}
 
 			hn_encap(pkt, queue_id, m);
 			hn_append_to_chim(txq, pkt, m);
