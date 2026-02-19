@@ -1314,81 +1314,111 @@ int
 iavf_config_irq_map(struct iavf_adapter *adapter)
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
-	struct virtchnl_irq_map_info *map_info;
-	struct virtchnl_vector_map *vecmap;
-	struct iavf_cmd_info args;
-	int len, i, err;
+	struct {
+		struct virtchnl_irq_map_info map_info;
+		struct virtchnl_vector_map vecmap[IAVF_MAX_NUM_QUEUES_DFLT];
+	} map_req = {0};
+	struct virtchnl_irq_map_info *map_info = &map_req.map_info;
+	struct iavf_cmd_info args = {0};
+	int i, err, max_vmi = -1;
 
-	len = sizeof(struct virtchnl_irq_map_info) +
-	      sizeof(struct virtchnl_vector_map) * vf->nb_msix;
+	if (adapter->dev_data->nb_rx_queues > IAVF_MAX_NUM_QUEUES_DFLT) {
+		PMD_DRV_LOG(ERR, "number of queues (%u) exceeds the max supported (%u)",
+			    adapter->dev_data->nb_rx_queues, IAVF_MAX_NUM_QUEUES_DFLT);
+		return -EINVAL;
+	}
 
-	map_info = rte_zmalloc("map_info", len, 0);
-	if (!map_info)
-		return -ENOMEM;
-
-	map_info->num_vectors = vf->nb_msix;
 	for (i = 0; i < adapter->dev_data->nb_rx_queues; i++) {
-		vecmap =
-		    &map_info->vecmap[vf->qv_map[i].vector_id - vf->msix_base];
+		struct virtchnl_vector_map *vecmap;
+		/* always 0 for 1 MSIX, never bigger than rxq for multi MSIX */
+		uint16_t vmi = vf->qv_map[i].vector_id - vf->msix_base;
+
+		/* can't happen but avoid static analysis warnings */
+		if (vmi >= IAVF_MAX_NUM_QUEUES_DFLT) {
+			PMD_DRV_LOG(ERR, "vector id (%u) exceeds the max supported (%u)",
+					vf->qv_map[i].vector_id,
+					vf->msix_base + IAVF_MAX_NUM_QUEUES_DFLT - 1);
+			return -EINVAL;
+		}
+
+		vecmap = &map_info->vecmap[vmi];
 		vecmap->vsi_id = vf->vsi_res->vsi_id;
 		vecmap->rxitr_idx = IAVF_ITR_INDEX_DEFAULT;
 		vecmap->vector_id = vf->qv_map[i].vector_id;
 		vecmap->txq_map = 0;
 		vecmap->rxq_map |= 1 << vf->qv_map[i].queue_id;
+
+		/* MSIX vectors round robin so look for max */
+		if (vmi > max_vmi) {
+			map_info->num_vectors++;
+			max_vmi = vmi;
+		}
 	}
 
 	args.ops = VIRTCHNL_OP_CONFIG_IRQ_MAP;
 	args.in_args = (u8 *)map_info;
-	args.in_args_size = len;
+	args.in_args_size = sizeof(map_req);
 	args.out_buffer = vf->aq_resp;
 	args.out_size = IAVF_AQ_BUF_SZ;
 	err = iavf_execute_vf_cmd_safe(adapter, &args, 0);
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_CONFIG_IRQ_MAP");
 
-	rte_free(map_info);
 	return err;
 }
 
-int
-iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num,
-		uint16_t index)
+static int
+iavf_config_irq_map_lv_chunk(struct iavf_adapter *adapter, uint16_t chunk_sz, uint16_t chunk_start)
 {
+	struct {
+		struct virtchnl_queue_vector_maps map_info;
+		struct virtchnl_queue_vector qv_maps[IAVF_CFG_Q_NUM_PER_BUF];
+	} chunk_req = {0};
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
-	struct virtchnl_queue_vector_maps *map_info;
-	struct virtchnl_queue_vector *qv_maps;
-	struct iavf_cmd_info args;
-	int len, i, err;
-	int count = 0;
+	struct iavf_cmd_info args = {0};
+	struct virtchnl_queue_vector_maps *map_info = &chunk_req.map_info;
+	struct virtchnl_queue_vector *qv_maps = chunk_req.qv_maps;
+	uint16_t chunk_end = chunk_start + chunk_sz;
+	uint16_t i;
 
-	len = sizeof(struct virtchnl_queue_vector_maps) +
-	      sizeof(struct virtchnl_queue_vector) * (num - 1);
-
-	map_info = rte_zmalloc("map_info", len, 0);
-	if (!map_info)
-		return -ENOMEM;
+	if (chunk_sz > IAVF_CFG_Q_NUM_PER_BUF)
+		return -EINVAL;
 
 	map_info->vport_id = vf->vsi_res->vsi_id;
-	map_info->num_qv_maps = num;
-	for (i = index; i < index + map_info->num_qv_maps; i++) {
-		qv_maps = &map_info->qv_maps[count++];
+	map_info->num_qv_maps = chunk_sz;
+	for (i = chunk_start; i < chunk_end; i++) {
+		qv_maps = &map_info->qv_maps[i];
 		qv_maps->itr_idx = VIRTCHNL_ITR_IDX_0;
 		qv_maps->queue_type = VIRTCHNL_QUEUE_TYPE_RX;
-		qv_maps->queue_id = vf->qv_map[i].queue_id;
-		qv_maps->vector_id = vf->qv_map[i].vector_id;
+		qv_maps->queue_id = vf->qv_map[chunk_start + i].queue_id;
+		qv_maps->vector_id = vf->qv_map[chunk_start + i].vector_id;
 	}
 
 	args.ops = VIRTCHNL_OP_MAP_QUEUE_VECTOR;
 	args.in_args = (u8 *)map_info;
-	args.in_args_size = len;
+	args.in_args_size = sizeof(chunk_req);
 	args.out_buffer = vf->aq_resp;
 	args.out_size = IAVF_AQ_BUF_SZ;
-	err = iavf_execute_vf_cmd_safe(adapter, &args, 0);
-	if (err)
-		PMD_DRV_LOG(ERR, "fail to execute command OP_MAP_QUEUE_VECTOR");
 
-	rte_free(map_info);
-	return err;
+	return iavf_execute_vf_cmd_safe(adapter, &args, 0);
+}
+
+int
+iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num)
+{
+	uint16_t c;
+	int err;
+
+	for (c = 0; c < num; c += IAVF_CFG_Q_NUM_PER_BUF) {
+		uint16_t chunk_sz = RTE_MIN(num - c, IAVF_CFG_Q_NUM_PER_BUF);
+		err = iavf_config_irq_map_lv_chunk(adapter, chunk_sz, c);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Failed to configure irq map chunk [%u, %u)",
+					c, c + chunk_sz);
+			return err;
+		}
+	}
+	return 0;
 }
 
 void
