@@ -1380,63 +1380,39 @@ iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num,
 void
 iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add)
 {
-	struct virtchnl_ether_addr_list *list;
+	struct {
+		struct virtchnl_ether_addr_list list;
+		struct virtchnl_ether_addr addr[IAVF_NUM_MACADDR_MAX];
+	} list_req = {0};
+	struct virtchnl_ether_addr_list *list = &list_req.list;
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
-	struct rte_ether_addr *addr;
-	struct iavf_cmd_info args;
-	int len, err, i, j;
-	int next_begin = 0;
-	int begin = 0;
+	struct iavf_cmd_info args = {0};
+	int err, i;
 
-	do {
-		j = 0;
-		len = sizeof(struct virtchnl_ether_addr_list);
-		for (i = begin; i < IAVF_NUM_MACADDR_MAX; i++, next_begin++) {
-			addr = &adapter->dev_data->mac_addrs[i];
-			if (rte_is_zero_ether_addr(addr))
-				continue;
-			len += sizeof(struct virtchnl_ether_addr);
-			if (len >= IAVF_AQ_BUF_SZ) {
-				next_begin = i + 1;
-				break;
-			}
-		}
+	for (i = 0; i < IAVF_NUM_MACADDR_MAX; i++) {
+		struct rte_ether_addr *addr = &adapter->dev_data->mac_addrs[i];
+		struct virtchnl_ether_addr *vc_addr = &list->list[list->num_elements];
 
-		list = rte_zmalloc("iavf_del_mac_buffer", len, 0);
-		if (!list) {
-			PMD_DRV_LOG(ERR, "fail to allocate memory");
-			return;
-		}
+		/* ignore empty addresses */
+		if (rte_is_zero_ether_addr(addr))
+			continue;
+		list->num_elements++;
 
-		for (i = begin; i < next_begin; i++) {
-			addr = &adapter->dev_data->mac_addrs[i];
-			if (rte_is_zero_ether_addr(addr))
-				continue;
-			rte_memcpy(list->list[j].addr, addr->addr_bytes,
-				   sizeof(addr->addr_bytes));
-			list->list[j].type = (j == 0 ?
-					      VIRTCHNL_ETHER_ADDR_PRIMARY :
-					      VIRTCHNL_ETHER_ADDR_EXTRA);
-			PMD_DRV_LOG(DEBUG, "add/rm mac:" RTE_ETHER_ADDR_PRT_FMT,
-				    RTE_ETHER_ADDR_BYTES(addr));
-			j++;
-		}
-		list->vsi_id = vf->vsi_res->vsi_id;
-		list->num_elements = j;
-		args.ops = add ? VIRTCHNL_OP_ADD_ETH_ADDR :
-			   VIRTCHNL_OP_DEL_ETH_ADDR;
-		args.in_args = (uint8_t *)list;
-		args.in_args_size = len;
-		args.out_buffer = vf->aq_resp;
-		args.out_size = IAVF_AQ_BUF_SZ;
-		err = iavf_execute_vf_cmd_safe(adapter, &args, 0);
-		if (err)
-			PMD_DRV_LOG(ERR, "fail to execute command %s",
-				    add ? "OP_ADD_ETHER_ADDRESS" :
-				    "OP_DEL_ETHER_ADDRESS");
-		rte_free(list);
-		begin = next_begin;
-	} while (begin < IAVF_NUM_MACADDR_MAX);
+		memcpy(vc_addr->addr, addr->addr_bytes, sizeof(addr->addr_bytes));
+		vc_addr->type = (list->num_elements == 1) ?
+				VIRTCHNL_ETHER_ADDR_PRIMARY :
+				VIRTCHNL_ETHER_ADDR_EXTRA;
+	}
+	list->vsi_id = vf->vsi_res->vsi_id;
+	args.ops = add ? VIRTCHNL_OP_ADD_ETH_ADDR : VIRTCHNL_OP_DEL_ETH_ADDR;
+	args.in_args = (uint8_t *)list;
+	args.in_args_size = sizeof(list_req);
+	args.out_buffer = vf->aq_resp;
+	args.out_size = IAVF_AQ_BUF_SZ;
+	err = iavf_execute_vf_cmd_safe(adapter, &args, 0);
+	if (err)
+		PMD_DRV_LOG(ERR, "fail to execute command %s",
+				add ? "OP_ADD_ETHER_ADDRESS" : "OP_DEL_ETHER_ADDRESS");
 }
 
 int
