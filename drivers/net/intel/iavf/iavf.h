@@ -503,8 +503,7 @@ int iavf_disable_queues(struct iavf_adapter *adapter);
 int iavf_disable_queues_lv(struct iavf_adapter *adapter);
 int iavf_configure_rss_lut(struct iavf_adapter *adapter);
 int iavf_configure_rss_key(struct iavf_adapter *adapter);
-int iavf_configure_queues(struct iavf_adapter *adapter,
-			uint16_t num_queue_pairs, uint16_t index);
+int iavf_configure_queues(struct iavf_adapter *adapter, uint16_t num_queue_pairs);
 int iavf_get_supported_rxdid(struct iavf_adapter *adapter);
 int iavf_config_vlan_strip_v2(struct iavf_adapter *adapter, bool enable);
 int iavf_config_vlan_insert_v2(struct iavf_adapter *adapter, bool enable);

@@ -1036,20 +1036,7 @@ iavf_dev_start(struct rte_eth_dev *dev)
 	if (iavf_set_vf_quanta_size(adapter, index, num_queue_pairs) != 0)
 		PMD_DRV_LOG(WARNING, "configure quanta size failed");
 
-	/* If needed, send configure queues msg multiple times to make the
-	 * adminq buffer length smaller than the 4K limitation.
-	 */
-	while (num_queue_pairs > IAVF_CFG_Q_NUM_PER_BUF) {
-		if (iavf_configure_queues(adapter,
-				IAVF_CFG_Q_NUM_PER_BUF, index) != 0) {
-			PMD_DRV_LOG(ERR, "configure queues failed");
-			goto error;
-		}
-		num_queue_pairs -= IAVF_CFG_Q_NUM_PER_BUF;
-		index += IAVF_CFG_Q_NUM_PER_BUF;
-	}
-
-	if (iavf_configure_queues(adapter, num_queue_pairs, index) != 0) {
+	if (iavf_configure_queues(adapter, num_queue_pairs) != 0) {
 		PMD_DRV_LOG(ERR, "configure queues failed");
 		goto error;
 	}
