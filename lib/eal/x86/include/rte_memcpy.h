@@ -22,11 +22,6 @@
 extern "C" {
 #endif
 
-#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
 /*
  * GCC older than version 11 doesn't compile AVX properly, so use SSE instead.
  * There are no problems with AVX2.
@@ -40,9 +35,6 @@ extern "C" {
 /**
  * Copy bytes from one location to another. The locations must not overlap.
  *
- * @note This is implemented as a macro, so it's address should not be taken
- * and care is needed as parameter expressions may be evaluated multiple times.
- *
  * @param dst
  *   Pointer to the destination of the data.
  * @param src
@@ -53,60 +45,78 @@ extern "C" {
  *   Pointer to the destination data.
  */
 static __rte_always_inline void *
-rte_memcpy(void *dst, const void *src, size_t n);
+rte_memcpy(void *__rte_restrict dst, const void *__rte_restrict src, size_t n);
 
 /**
- * Copy bytes from one location to another,
- * locations should not overlap.
- * Use with n <= 15.
+ * Copy 1 byte from one location to another,
+ * locations must not overlap.
  */
-static __rte_always_inline void *
-rte_mov15_or_less(void *dst, const void *src, size_t n)
+static __rte_always_inline void
+rte_mov1(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
+{
+	*dst = *src;
+}
+
+/**
+ * Copy 2 bytes from one location to another,
+ * locations must not overlap.
+ */
+static __rte_always_inline void
+rte_mov2(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
 {
 	/**
-	 * Use the following structs to avoid violating C standard
+	 * Use the following struct to avoid violating C standard
+	 * alignment requirements and to avoid strict aliasing bugs
+	 */
+	struct __rte_packed_begin rte_uint16_alias {
+		uint16_t val;
+	} __rte_packed_end __rte_may_alias;
+
+	((struct rte_uint16_alias *)dst)->val = ((const struct rte_uint16_alias *)src)->val;
+}
+
+/**
+ * Copy 4 bytes from one location to another,
+ * locations must not overlap.
+ */
+static __rte_always_inline void
+rte_mov4(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
+{
+	/**
+	 * Use the following struct to avoid violating C standard
+	 * alignment requirements and to avoid strict aliasing bugs
+	 */
+	struct __rte_packed_begin rte_uint32_alias {
+		uint32_t val;
+	} __rte_packed_end __rte_may_alias;
+
+	((struct rte_uint32_alias *)dst)->val = ((const struct rte_uint32_alias *)src)->val;
+}
+
+/**
+ * Copy 8 bytes from one location to another,
+ * locations must not overlap.
+ */
+static __rte_always_inline void
+rte_mov8(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
+{
+	/**
+	 * Use the following struct to avoid violating C standard
 	 * alignment requirements and to avoid strict aliasing bugs
 	 */
 	struct __rte_packed_begin rte_uint64_alias {
 		uint64_t val;
 	} __rte_packed_end __rte_may_alias;
-	struct __rte_packed_begin rte_uint32_alias {
-		uint32_t val;
-	} __rte_packed_end __rte_may_alias;
-	struct __rte_packed_begin rte_uint16_alias {
-		uint16_t val;
-	} __rte_packed_end __rte_may_alias;
 
-	void *ret = dst;
-	if (n & 8) {
-		((struct rte_uint64_alias *)dst)->val =
-			((const struct rte_uint64_alias *)src)->val;
-		src = (const uint64_t *)src + 1;
-		dst = (uint64_t *)dst + 1;
-	}
-	if (n & 4) {
-		((struct rte_uint32_alias *)dst)->val =
-			((const struct rte_uint32_alias *)src)->val;
-		src = (const uint32_t *)src + 1;
-		dst = (uint32_t *)dst + 1;
-	}
-	if (n & 2) {
-		((struct rte_uint16_alias *)dst)->val =
-			((const struct rte_uint16_alias *)src)->val;
-		src = (const uint16_t *)src + 1;
-		dst = (uint16_t *)dst + 1;
-	}
-	if (n & 1)
-		*(uint8_t *)dst = *(const uint8_t *)src;
-	return ret;
+	((struct rte_uint64_alias *)dst)->val = ((const struct rte_uint64_alias *)src)->val;
 }
 
 /**
  * Copy 16 bytes from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov16(uint8_t *dst, const uint8_t *src)
+rte_mov16(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
 {
 	__m128i xmm0;
 
@@ -116,10 +126,10 @@ rte_mov16(uint8_t *dst, const uint8_t *src)
 
 /**
  * Copy 32 bytes from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov32(uint8_t *dst, const uint8_t *src)
+rte_mov32(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
 {
 #if defined RTE_MEMCPY_AVX
 	__m256i ymm0;
@@ -133,11 +143,28 @@ rte_mov32(uint8_t *dst, const uint8_t *src)
 }
 
 /**
- * Copy 64 bytes from one location to another,
- * locations should not overlap.
+ * Copy 48 bytes from one location to another,
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov64(uint8_t *dst, const uint8_t *src)
+rte_mov48(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
+{
+#if defined RTE_MEMCPY_AVX
+	rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+	rte_mov16((uint8_t *)dst + 32, (const uint8_t *)src + 32);
+#else /* SSE implementation */
+	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
+	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
+	rte_mov16((uint8_t *)dst + 2 * 16, (const uint8_t *)src + 2 * 16);
+#endif
+}
+
+/**
+ * Copy 64 bytes from one location to another,
+ * locations must not overlap.
+ */
+static __rte_always_inline void
+rte_mov64(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
 {
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
 	__m512i zmm0;
@@ -152,10 +179,10 @@ rte_mov64(uint8_t *dst, const uint8_t *src)
 
 /**
  * Copy 128 bytes from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov128(uint8_t *dst, const uint8_t *src)
+rte_mov128(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
 {
 	rte_mov64(dst + 0 * 64, src + 0 * 64);
 	rte_mov64(dst + 1 * 64, src + 1 * 64);
@@ -163,13 +190,232 @@ rte_mov128(uint8_t *dst, const uint8_t *src)
 
 /**
  * Copy 256 bytes from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov256(uint8_t *dst, const uint8_t *src)
+rte_mov256(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src)
 {
 	rte_mov128(dst + 0 * 128, src + 0 * 128);
 	rte_mov128(dst + 1 * 128, src + 1 * 128);
+}
+
+/**
+ * Copy bytes from one location to another,
+ * locations must not overlap.
+ * Use with n <= 16.
+ */
+static __rte_always_inline void *
+rte_mov16_or_less(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
+{
+	/*
+	 * Faster way when size is known at build time.
+	 * Sizes requiring three copy operations are not handled here,
+	 * but proceed to the method using two overlapping copy operations.
+	 */
+	if (__rte_constant(n)) {
+		if (n == 2) {
+			rte_mov2((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+		if (n == 3) {
+			rte_mov2((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov1((uint8_t *)dst + 2, (const uint8_t *)src + 2);
+			return dst;
+		}
+		if (n == 4) {
+			rte_mov4((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+		if (n == 5) {
+			rte_mov4((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov1((uint8_t *)dst + 4, (const uint8_t *)src + 4);
+			return dst;
+		}
+		if (n == 6) {
+			rte_mov4((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov2((uint8_t *)dst + 4, (const uint8_t *)src + 4);
+			return dst;
+		}
+		if (n == 8) {
+			rte_mov8((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+		if (n == 9) {
+			rte_mov8((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov1((uint8_t *)dst + 8, (const uint8_t *)src + 8);
+			return dst;
+		}
+		if (n == 10) {
+			rte_mov8((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov2((uint8_t *)dst + 8, (const uint8_t *)src + 8);
+			return dst;
+		}
+		if (n == 12) {
+			rte_mov8((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov4((uint8_t *)dst + 8, (const uint8_t *)src + 8);
+			return dst;
+		}
+		if (n == 16) {
+			rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+	}
+
+	/*
+	 * Note: Using "n & X" generates 3-byte "test" instructions,
+	 * instead of "n >= X", which would generate 4-byte "cmp" instructions.
+	 */
+	if (n & 0x18) { /* n >= 8, including n == 0x10, hence n & 0x18. */
+		/* Copy 8 ~ 16 bytes. */
+		rte_mov8((uint8_t *)dst, (const uint8_t *)src);
+		rte_mov8((uint8_t *)dst - 8 + n, (const uint8_t *)src - 8 + n);
+	} else if (n & 0x4) {
+		/* Copy 4 ~ 7 bytes. */
+		rte_mov4((uint8_t *)dst, (const uint8_t *)src);
+		rte_mov4((uint8_t *)dst - 4 + n, (const uint8_t *)src - 4 + n);
+	} else if (n & 0x2) {
+		/* Copy 2 ~ 3 bytes. */
+		rte_mov2((uint8_t *)dst, (const uint8_t *)src);
+		rte_mov2((uint8_t *)dst - 2 + n, (const uint8_t *)src - 2 + n);
+	} else if (n & 0x1) {
+		/* Copy 1 byte. */
+		rte_mov1((uint8_t *)dst, (const uint8_t *)src);
+	}
+	return dst;
+}
+
+/**
+ * Copy bytes from one location to another,
+ * locations must not overlap.
+ * Use with 17 (or 16) < n <= 32.
+ */
+static __rte_always_inline void *
+rte_mov17_to_32(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
+{
+	/*
+	 * Faster way when size is known at build time.
+	 * Sizes requiring three copy operations are not handled here,
+	 * but proceed to the method using two overlapping copy operations.
+	 */
+	if (__rte_constant(n)) {
+		if (n == 16) {
+			rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+		if (n == 17) {
+			rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov1((uint8_t *)dst + 16, (const uint8_t *)src + 16);
+			return dst;
+		}
+		if (n == 18) {
+			rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov2((uint8_t *)dst + 16, (const uint8_t *)src + 16);
+			return dst;
+		}
+		if (n == 20) {
+			rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov4((uint8_t *)dst + 16, (const uint8_t *)src + 16);
+			return dst;
+		}
+		if (n == 24) {
+			rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov8((uint8_t *)dst + 16, (const uint8_t *)src + 16);
+			return dst;
+		}
+		if (n == 32) {
+			rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+	}
+
+	/* Copy 17 (or 16) ~ 32 bytes. */
+	rte_mov16((uint8_t *)dst, (const uint8_t *)src);
+	rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
+	return dst;
+}
+
+/**
+ * Copy bytes from one location to another,
+ * locations must not overlap.
+ * Use with 33 (or 32) < n <= 64.
+ */
+static __rte_always_inline void *
+rte_mov33_to_64(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
+{
+	/*
+	 * Faster way when size is known at build time.
+	 * Sizes requiring more copy operations are not handled here,
+	 * but proceed to the method using overlapping copy operations.
+	 */
+	if (__rte_constant(n)) {
+		if (n == 32) {
+			rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+		if (n == 33) {
+			rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov1((uint8_t *)dst + 32, (const uint8_t *)src + 32);
+			return dst;
+		}
+		if (n == 34) {
+			rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov2((uint8_t *)dst + 32, (const uint8_t *)src + 32);
+			return dst;
+		}
+		if (n == 36) {
+			rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov4((uint8_t *)dst + 32, (const uint8_t *)src + 32);
+			return dst;
+		}
+		if (n == 40) {
+			rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov8((uint8_t *)dst + 32, (const uint8_t *)src + 32);
+			return dst;
+		}
+		if (n == 48) {
+			rte_mov48((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+#if !defined RTE_MEMCPY_AVX /* SSE specific implementation */
+		if (n == 49) {
+			rte_mov48((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov1((uint8_t *)dst + 48, (const uint8_t *)src + 48);
+			return dst;
+		}
+		if (n == 50) {
+			rte_mov48((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov2((uint8_t *)dst + 48, (const uint8_t *)src + 48);
+			return dst;
+		}
+		if (n == 52) {
+			rte_mov48((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov4((uint8_t *)dst + 48, (const uint8_t *)src + 48);
+			return dst;
+		}
+		if (n == 56) {
+			rte_mov48((uint8_t *)dst, (const uint8_t *)src);
+			rte_mov8((uint8_t *)dst + 48, (const uint8_t *)src + 48);
+			return dst;
+		}
+#endif
+		if (n == 64) {
+			rte_mov64((uint8_t *)dst, (const uint8_t *)src);
+			return dst;
+		}
+	}
+
+	/* Copy 33 (or 32) ~ 64 bytes. */
+#if defined RTE_MEMCPY_AVX
+	rte_mov32((uint8_t *)dst, (const uint8_t *)src);
+	rte_mov32((uint8_t *)dst - 32 + n, (const uint8_t *)src - 32 + n);
+#else /* SSE implementation */
+	rte_mov16((uint8_t *)dst + 0 * 16, (const uint8_t *)src + 0 * 16);
+	rte_mov16((uint8_t *)dst + 1 * 16, (const uint8_t *)src + 1 * 16);
+	if (n > 48)
+		rte_mov16((uint8_t *)dst + 2 * 16, (const uint8_t *)src + 2 * 16);
+	rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
+#endif
+	return dst;
 }
 
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
@@ -182,10 +428,10 @@ rte_mov256(uint8_t *dst, const uint8_t *src)
 
 /**
  * Copy 128-byte blocks from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov128blocks(uint8_t *dst, const uint8_t *src, size_t n)
+rte_mov128blocks(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src, size_t n)
 {
 	__m512i zmm0, zmm1;
 
@@ -202,10 +448,10 @@ rte_mov128blocks(uint8_t *dst, const uint8_t *src, size_t n)
 
 /**
  * Copy 512-byte blocks from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static inline void
-rte_mov512blocks(uint8_t *dst, const uint8_t *src, size_t n)
+rte_mov512blocks(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src, size_t n)
 {
 	__m512i zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7;
 
@@ -232,45 +478,22 @@ rte_mov512blocks(uint8_t *dst, const uint8_t *src, size_t n)
 	}
 }
 
+/**
+ * Copy bytes from one location to another,
+ * locations must not overlap.
+ * Use with n > 64.
+ */
 static __rte_always_inline void *
-rte_memcpy_generic(void *dst, const void *src, size_t n)
+rte_memcpy_generic_more_than_64(void *__rte_restrict dst, const void *__rte_restrict src,
+		size_t n)
 {
 	void *ret = dst;
 	size_t dstofss;
 	size_t bits;
 
 	/**
-	 * Copy less than 16 bytes
-	 */
-	if (n < 16) {
-		return rte_mov15_or_less(dst, src, n);
-	}
-
-	/**
 	 * Fast way when copy size doesn't exceed 512 bytes
 	 */
-	if (__rte_constant(n) && n == 32) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		return ret;
-	}
-	if (n <= 32) {
-		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		if (__rte_constant(n) && n == 16)
-			return ret; /* avoid (harmless) duplicate copy */
-		rte_mov16((uint8_t *)dst - 16 + n,
-				  (const uint8_t *)src - 16 + n);
-		return ret;
-	}
-	if (__rte_constant(n) && n == 64) {
-		rte_mov64((uint8_t *)dst, (const uint8_t *)src);
-		return ret;
-	}
-	if (n <= 64) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov32((uint8_t *)dst - 32 + n,
-				  (const uint8_t *)src - 32 + n);
-		return ret;
-	}
 	if (n <= 512) {
 		if (n >= 256) {
 			n -= 256;
@@ -351,10 +574,10 @@ COPY_BLOCK_128_BACK63:
 
 /**
  * Copy 128-byte blocks from one location to another,
- * locations should not overlap.
+ * locations must not overlap.
  */
 static __rte_always_inline void
-rte_mov128blocks(uint8_t *dst, const uint8_t *src, size_t n)
+rte_mov128blocks(uint8_t *__rte_restrict dst, const uint8_t *__rte_restrict src, size_t n)
 {
 	__m256i ymm0, ymm1, ymm2, ymm3;
 
@@ -381,41 +604,22 @@ rte_mov128blocks(uint8_t *dst, const uint8_t *src, size_t n)
 	}
 }
 
+/**
+ * Copy bytes from one location to another,
+ * locations must not overlap.
+ * Use with n > 64.
+ */
 static __rte_always_inline void *
-rte_memcpy_generic(void *dst, const void *src, size_t n)
+rte_memcpy_generic_more_than_64(void *__rte_restrict dst, const void *__rte_restrict src,
+		size_t n)
 {
 	void *ret = dst;
 	size_t dstofss;
 	size_t bits;
 
 	/**
-	 * Copy less than 16 bytes
-	 */
-	if (n < 16) {
-		return rte_mov15_or_less(dst, src, n);
-	}
-
-	/**
 	 * Fast way when copy size doesn't exceed 256 bytes
 	 */
-	if (__rte_constant(n) && n == 32) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		return ret;
-	}
-	if (n <= 32) {
-		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		if (__rte_constant(n) && n == 16)
-			return ret; /* avoid (harmless) duplicate copy */
-		rte_mov16((uint8_t *)dst - 16 + n,
-				(const uint8_t *)src - 16 + n);
-		return ret;
-	}
-	if (n <= 64) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov32((uint8_t *)dst - 32 + n,
-				(const uint8_t *)src - 32 + n);
-		return ret;
-	}
 	if (n <= 256) {
 		if (n >= 128) {
 			n -= 128;
@@ -482,7 +686,7 @@ COPY_BLOCK_128_BACK31:
 /**
  * Macro for copying unaligned block from one location to another with constant load offset,
  * 47 bytes leftover maximum,
- * locations should not overlap.
+ * locations must not overlap.
  * Requirements:
  * - Store is aligned
  * - Load offset is <offset>, which must be immediate value within [1, 15]
@@ -542,7 +746,7 @@ COPY_BLOCK_128_BACK31:
 /**
  * Macro for copying unaligned block from one location to another,
  * 47 bytes leftover maximum,
- * locations should not overlap.
+ * locations must not overlap.
  * Use switch here because the aligning instruction requires immediate value for shift count.
  * Requirements:
  * - Store is aligned
@@ -573,8 +777,14 @@ COPY_BLOCK_128_BACK31:
     }                                                                 \
 }
 
+/**
+ * Copy bytes from one location to another,
+ * locations must not overlap.
+ * Use with n > 64.
+ */
 static __rte_always_inline void *
-rte_memcpy_generic(void *dst, const void *src, size_t n)
+rte_memcpy_generic_more_than_64(void *__rte_restrict dst, const void *__rte_restrict src,
+		size_t n)
 {
 	__m128i xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8;
 	void *ret = dst;
@@ -582,29 +792,8 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	size_t srcofs;
 
 	/**
-	 * Copy less than 16 bytes
-	 */
-	if (n < 16) {
-		return rte_mov15_or_less(dst, src, n);
-	}
-
-	/**
 	 * Fast way when copy size doesn't exceed 512 bytes
 	 */
-	if (n <= 32) {
-		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		if (__rte_constant(n) && n == 16)
-			return ret; /* avoid (harmless) duplicate copy */
-		rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
-		return ret;
-	}
-	if (n <= 64) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		if (n > 48)
-			rte_mov16((uint8_t *)dst + 32, (const uint8_t *)src + 32);
-		rte_mov16((uint8_t *)dst - 16 + n, (const uint8_t *)src - 16 + n);
-		return ret;
-	}
 	if (n <= 128) {
 		goto COPY_BLOCK_128_BACK15;
 	}
@@ -696,43 +885,16 @@ COPY_BLOCK_64_BACK15:
 
 #endif /* __AVX512F__ */
 
+/**
+ * Copy bytes from one vector register size aligned location to another,
+ * locations must not overlap.
+ * Use with n > 64.
+ */
 static __rte_always_inline void *
-rte_memcpy_aligned(void *dst, const void *src, size_t n)
+rte_memcpy_aligned_more_than_64(void *__rte_restrict dst, const void *__rte_restrict src,
+		size_t n)
 {
 	void *ret = dst;
-
-	/* Copy size < 16 bytes */
-	if (n < 16) {
-		return rte_mov15_or_less(dst, src, n);
-	}
-
-	/* Copy 16 <= size <= 32 bytes */
-	if (__rte_constant(n) && n == 32) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		return ret;
-	}
-	if (n <= 32) {
-		rte_mov16((uint8_t *)dst, (const uint8_t *)src);
-		if (__rte_constant(n) && n == 16)
-			return ret; /* avoid (harmless) duplicate copy */
-		rte_mov16((uint8_t *)dst - 16 + n,
-				(const uint8_t *)src - 16 + n);
-
-		return ret;
-	}
-
-	/* Copy 32 < size <= 64 bytes */
-	if (__rte_constant(n) && n == 64) {
-		rte_mov64((uint8_t *)dst, (const uint8_t *)src);
-		return ret;
-	}
-	if (n <= 64) {
-		rte_mov32((uint8_t *)dst, (const uint8_t *)src);
-		rte_mov32((uint8_t *)dst - 32 + n,
-				(const uint8_t *)src - 32 + n);
-
-		return ret;
-	}
 
 	/* Copy 64 bytes blocks */
 	for (; n > 64; n -= 64) {
@@ -749,19 +911,27 @@ rte_memcpy_aligned(void *dst, const void *src, size_t n)
 }
 
 static __rte_always_inline void *
-rte_memcpy(void *dst, const void *src, size_t n)
+rte_memcpy(void *__rte_restrict dst, const void *__rte_restrict src, size_t n)
 {
+	/* Common implementation for size <= 64 bytes. */
+	if (n <= 16)
+		return rte_mov16_or_less(dst, src, n);
+	if (n <= 64) {
+		/* Copy 17 ~ 64 bytes using vector instructions. */
+		if (n <= 32)
+			return rte_mov17_to_32(dst, src, n);
+		else
+			return rte_mov33_to_64(dst, src, n);
+	}
+
+	/* Implementation for size > 64 bytes depends on alignment with vector register size. */
 	if (!(((uintptr_t)dst | (uintptr_t)src) & ALIGNMENT_MASK))
-		return rte_memcpy_aligned(dst, src, n);
+		return rte_memcpy_aligned_more_than_64(dst, src, n);
 	else
-		return rte_memcpy_generic(dst, src, n);
+		return rte_memcpy_generic_more_than_64(dst, src, n);
 }
 
 #undef ALIGNMENT_MASK
-
-#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
-#pragma GCC diagnostic pop
-#endif
 
 #ifdef __cplusplus
 }
