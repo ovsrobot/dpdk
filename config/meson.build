@@ -393,9 +393,24 @@ if get_option('mbuf_refcnt_atomic')
 endif
 dpdk_conf.set10('RTE_IOVA_IN_MBUF', get_option('enable_iova_as_pa'))
 
+# Recommended mbuf burst sizes for generic applications.
+# Platform-specific configs may override these values.
+# RTE_MBUF_BURST_SIZE_THROUGHPUT: Burst size optimized for throughput.
+dpdk_conf.set('RTE_MBUF_BURST_SIZE_THROUGHPUT', 32)
+# RTE_MBUF_BURST_SIZE_LATENCY: Burst size optimized for low latency.
+dpdk_conf.set('RTE_MBUF_BURST_SIZE_LATENCY', 4)
+
 compile_time_cpuflags = []
 subdir(arch_subdir)
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
+
+# RTE_MBUF_BURST_SIZE_DEFAULT: Default burst size used by examples and testpmd.
+# Controlled by -Dmbuf_burst_size_default option (throughput or latency).
+if get_option('mbuf_burst_size_default') == 'latency'
+    dpdk_conf.set('RTE_MBUF_BURST_SIZE_DEFAULT', 'RTE_MBUF_BURST_SIZE_LATENCY')
+else
+    dpdk_conf.set('RTE_MBUF_BURST_SIZE_DEFAULT', 'RTE_MBUF_BURST_SIZE_THROUGHPUT')
+endif
 
 # apply cross-specific options
 if meson.is_cross_build()
