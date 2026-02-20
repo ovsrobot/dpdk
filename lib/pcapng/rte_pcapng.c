@@ -155,13 +155,16 @@ tsc_clock_init(struct tsc_clock *clk)
 static inline uint64_t
 tsc_to_ns_epoch(const struct tsc_clock *clk, uint64_t tsc)
 {
-	uint64_t delta, ns;
+	int64_t delta = tsc - clk->tsc_base;
+	uint64_t ns;
 
-	delta = tsc - clk->tsc_base;
-	ns = (delta >> clk->shift) * NSEC_PER_SEC;
-	ns = rte_reciprocal_divide_u64(ns, &clk->tsc_hz_inv);
-
-	return clk->ns_base + ns;
+	if (unlikely(delta < 0)) {
+		ns = (-delta >> clk->shift) * NSEC_PER_SEC;
+		return clk->ns_base - rte_reciprocal_divide_u64(ns, &clk->tsc_hz_inv);
+	} else {
+		ns = (delta >> clk->shift) * NSEC_PER_SEC;
+		return clk->ns_base + rte_reciprocal_divide_u64(ns, &clk->tsc_hz_inv);
+	}
 }
 
 /* length of option including padding */
