@@ -41,7 +41,7 @@
 						TX_DESC_DEFAULT))
 #define MBUF_CACHE_SIZE 64
 
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST RTE_MBUF_BURST_SIZE_DEFAULT
 
 /*
  * Configurable number of RX/TX ring descriptors
