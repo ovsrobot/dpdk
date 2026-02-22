@@ -29,7 +29,7 @@
 #include "l3fwd_event.h"
 #include "em_route_parse.c"
 
-#if defined(RTE_ARCH_X86) || defined(__ARM_FEATURE_CRC32)
+#if defined(RTE_ARCH_X86) || defined(__ARM_FEATURE_CRC32) || defined(RTE_RISCV_FEATURE_ZBC)
 #define EM_HASH_CRC 1
 #endif
 
