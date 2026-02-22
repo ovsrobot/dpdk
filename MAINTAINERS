@@ -339,6 +339,7 @@ F: config/riscv/
 F: doc/guides/linux_gsg/cross_build_dpdk_for_riscv.rst
 F: lib/eal/riscv/
 F: lib/hash/rte_crc_riscv64.h
+F: lib/net/net_crc_zbc.c
 M: Sun Yuechi <sunyuechi@iscas.ac.cn>
 F: lib/**/*rvv*
 

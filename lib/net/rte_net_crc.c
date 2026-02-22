@@ -40,7 +40,7 @@ struct rte_net_crc {
 
 static struct {
 	rte_net_crc_handler f[RTE_NET_CRC_REQS];
-} handlers[RTE_NET_CRC_AVX512 + 1];
+} handlers[RTE_NET_CRC_ZBC + 1];
 
 /* Scalar handling */
 
@@ -174,6 +174,20 @@ neon_pmull_init(void)
 #endif
 }
 
+/* ZBC/CLMUL handling */
+
+#define ZBC_CLMUL_CPU_SUPPORTED \
+	rte_cpu_get_flag_enabled(RTE_CPUFLAG_RISCV_EXT_ZBC)
+
+static void
+zbc_clmul_init(void)
+{
+#ifdef CC_RISCV64_ZBC_CLMUL_SUPPORT
+	if (ZBC_CLMUL_CPU_SUPPORTED)
+		rte_net_crc_zbc_init();
+#endif
+}
+
 static void
 handlers_init(enum rte_net_crc_alg alg)
 {
@@ -203,6 +217,15 @@ handlers_init(enum rte_net_crc_alg alg)
 		if (NEON_PMULL_CPU_SUPPORTED) {
 			handlers[alg].f[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_neon_handler;
 			handlers[alg].f[RTE_NET_CRC32_ETH] = rte_crc32_eth_neon_handler;
+			break;
+		}
+#endif
+		break;
+	case RTE_NET_CRC_ZBC:
+#ifdef CC_RISCV64_ZBC_CLMUL_SUPPORT
+		if (ZBC_CLMUL_CPU_SUPPORTED) {
+			handlers[alg].f[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_zbc_handler;
+			handlers[alg].f[RTE_NET_CRC32_ETH] = rte_crc32_eth_zbc_handler;
 			break;
 		}
 #endif
@@ -248,6 +271,9 @@ struct rte_net_crc *rte_net_crc_set_alg(enum rte_net_crc_alg alg, enum rte_net_c
 			return crc;
 		}
 		break;
+	case RTE_NET_CRC_ZBC:
+		crc->alg = RTE_NET_CRC_ZBC;
+		return crc;
 	case RTE_NET_CRC_SCALAR:
 		/* fall-through */
 	default:
@@ -275,8 +301,10 @@ RTE_INIT(rte_net_crc_init)
 	sse42_pclmulqdq_init();
 	avx512_vpclmulqdq_init();
 	neon_pmull_init();
+	zbc_clmul_init();
 	handlers_init(RTE_NET_CRC_SCALAR);
 	handlers_init(RTE_NET_CRC_NEON);
 	handlers_init(RTE_NET_CRC_SSE42);
 	handlers_init(RTE_NET_CRC_AVX512);
+	handlers_init(RTE_NET_CRC_ZBC);
 }
