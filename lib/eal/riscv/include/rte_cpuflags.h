@@ -38,6 +38,8 @@ enum rte_cpu_flag_t {
 	RTE_CPUFLAG_RISCV_ISA_X, /* Non-standard extension present */
 	RTE_CPUFLAG_RISCV_ISA_Y, /* Reserved */
 	RTE_CPUFLAG_RISCV_ISA_Z, /* Reserved */
+
+	RTE_CPUFLAG_RISCV_EXT_ZBC, /* Carry-less multiplication */
 };
 
 #include "generic/rte_cpuflags.h"
