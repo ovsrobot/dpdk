@@ -45,14 +45,14 @@ ipv4_frag_hash(const struct ip_frag_key *key, uint32_t *v1, uint32_t *v2)
 
 	p = (const uint32_t *)&key->src_dst;
 
-#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64)
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64) || defined(RTE_RISCV_FEATURE_ZBC)
 	v = rte_hash_crc_4byte(p[0], PRIME_VALUE);
 	v = rte_hash_crc_4byte(p[1], v);
 	v = rte_hash_crc_4byte(key->id, v);
 #else
 
 	v = rte_jhash_3words(p[0], p[1], key->id, PRIME_VALUE);
-#endif /* RTE_ARCH_X86 */
+#endif /* RTE_ARCH_X86 || RTE_ARCH_ARM64 || RTE_RISCV_FEATURE_ZBC */
 
 	*v1 =  v;
 	*v2 = (v << 7) + (v >> 14);
@@ -66,7 +66,7 @@ ipv6_frag_hash(const struct ip_frag_key *key, uint32_t *v1, uint32_t *v2)
 
 	p = (const uint32_t *) &key->src_dst;
 
-#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64)
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64) || defined(RTE_RISCV_FEATURE_ZBC)
 	v = rte_hash_crc_4byte(p[0], PRIME_VALUE);
 	v = rte_hash_crc_4byte(p[1], v);
 	v = rte_hash_crc_4byte(p[2], v);
