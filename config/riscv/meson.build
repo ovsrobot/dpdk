@@ -45,6 +45,7 @@ vendor_generic = {
     'arch_config': {
         'generic': {'machine_args': ['-march=rv64gc']},
         'rv64gcv': {'machine_args': ['-march=rv64gcv']},
+        'qemu': {'machine_args': ['-march=rv64gcv_zbc']},
     }
 }
 

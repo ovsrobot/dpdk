@@ -112,6 +112,11 @@ Currently the following targets are supported:
 
 * SiFive U740 SoC: ``config/riscv/riscv64_sifive_u740_linux_gcc``
 
+* QEMU: ``config/riscv/riscv64_qemu_linux_gcc``
+
+  * A target with all the extensions that QEMU supports that DPDK has a use for
+    (currently ``rv64gcv_zbc``). Requires QEMU version 7.0.0 or newer.
+
 To add a new target support, ``config/riscv/meson.build`` has to be modified by
 adding a new vendor/architecture id and a corresponding cross-file has to be
 added to ``config/riscv`` directory.
