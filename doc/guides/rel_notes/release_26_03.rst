@@ -106,6 +106,14 @@ New Features
   Added handling of the key combination Control+L
   to clear the screen before redisplaying the prompt.
 
+* **Added RISC-V carryless multiplication support in CRC computation.**
+
+  The RISC-V Zbc extension adds instructions for carryless multiplication.
+  Support for using this extension to accelerate CRC computation was added to
+  hash and net. This acceleration is enabled when the Zbc extension is present
+  on the build target and detected at runtime using the Linux RISC-V hardware
+  probing interface.
+
 Removed Items
 -------------
 
