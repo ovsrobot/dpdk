@@ -768,6 +768,32 @@ RTE_PMD_REGISTER_PARAM_STRING(net_vdev_netvsc,
 			      VDEV_NETVSC_ARG_FORCE "=<int> "
 			      VDEV_NETVSC_ARG_IGNORE "=<int>");
 
+/**
+ * Check whether any NetVSC interface exists on the system.
+ *
+ * @return
+ *   Nonzero value when at least one NetVSC interface is found, 0 otherwise.
+ */
+static int
+vdev_netvsc_any_netvsc_exists(void)
+{
+	struct if_nameindex *iface;
+	int ret = 0;
+	unsigned int i;
+
+	iface = if_nameindex();
+	if (iface == NULL)
+		return 0;
+	for (i = 0; iface[i].if_name != NULL; ++i) {
+		if (vdev_netvsc_iface_is_netvsc(&iface[i])) {
+			ret = 1;
+			break;
+		}
+	}
+	if_freenameindex(iface);
+	return ret;
+}
+
 /** Compare function for vdev find device operation. */
 static int
 vdev_netvsc_cmp_rte_device(const struct rte_device *dev1,
@@ -797,6 +823,9 @@ vdev_netvsc_scan_callback(__rte_unused void *arg)
 	dev = vbus->find_device(NULL, vdev_netvsc_cmp_rte_device,
 				VDEV_NETVSC_DRIVER_NAME);
 	if (dev)
+		return;
+	/* Only inject if at least one NetVSC interface actually exists. */
+	if (!vdev_netvsc_any_netvsc_exists())
 		return;
 	if (rte_devargs_add(RTE_DEVTYPE_VIRTUAL, VDEV_NETVSC_DRIVER_NAME))
 		DRV_LOG(ERR, "unable to add netvsc devargs.");
