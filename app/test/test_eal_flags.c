@@ -426,13 +426,16 @@ test_invalid_vdev_flag(void)
 
 	/* Test with valid vdev option */
 	const char *vdevval1[] = {prgname, prefix, no_huge, eal_debug_logs,
-				bus_debug_logs,	vdev, "net_ring0"};
+				bus_debug_logs,	vdev, "net_ring0",
+				vdev, "net_vdev_netvsc,ignore=1"};
 
 	const char *vdevval2[] = {prgname, prefix, no_huge, eal_debug_logs,
-				bus_debug_logs, vdev, "net_ring0,args=test"};
+				bus_debug_logs, vdev, "net_ring0,args=test",
+				vdev, "net_vdev_netvsc,ignore=1"};
 
 	const char *vdevval3[] = {prgname, prefix, no_huge, eal_debug_logs,
-				bus_debug_logs, vdev, "net_ring0,nodeaction=r1:0:CREATE"};
+				bus_debug_logs, vdev, "net_ring0,nodeaction=r1:0:CREATE",
+				vdev, "net_vdev_netvsc,ignore=1"};
 
 	if (launch_proc(vdevinval) == 0) {
 		printf("Error (line %d) - process did run ok with invalid vdev parameter\n",
