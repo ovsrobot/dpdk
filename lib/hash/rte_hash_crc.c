@@ -17,7 +17,7 @@ RTE_EXPORT_SYMBOL(rte_hash_crc32_alg)
 uint8_t rte_hash_crc32_alg = CRC32_SW;
 
 /**
- * Allow or disallow use of SSE4.2/ARMv8 intrinsics for CRC32 hash
+ * Allow or disallow use of SSE4.2/ARMv8/RISC-V intrinsics for CRC32 hash
  * calculation.
  *
  * @param alg
@@ -26,6 +26,7 @@ uint8_t rte_hash_crc32_alg = CRC32_SW;
  *   - (CRC32_SSE42) Use SSE4.2 intrinsics if available
  *   - (CRC32_SSE42_x64) Use 64-bit SSE4.2 intrinsic if available (default x86)
  *   - (CRC32_ARM64) Use ARMv8 CRC intrinsic if available (default ARMv8)
+ *   - (CRC32_RISCV64) Use RISCV64 Zbc extension if available
  */
 RTE_EXPORT_SYMBOL(rte_hash_crc_set_alg)
 void
@@ -54,6 +55,14 @@ rte_hash_crc_set_alg(uint8_t alg)
 		rte_hash_crc32_alg = CRC32_ARM64;
 #endif
 
+#if defined(RTE_ARCH_RISCV) && defined(RTE_RISCV_FEATURE_ZBC)
+	if (!(alg & CRC32_RISCV64))
+		HASH_CRC_LOG(WARNING,
+			"Unsupported CRC32 algorithm requested using CRC32_RISCV64");
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_RISCV_EXT_ZBC))
+		rte_hash_crc32_alg = CRC32_RISCV64;
+#endif
+
 	if (rte_hash_crc32_alg == CRC32_SW)
 		HASH_CRC_LOG(WARNING,
 			"Unsupported CRC32 algorithm requested using CRC32_SW");
@@ -66,6 +75,8 @@ RTE_INIT(rte_hash_crc_init_alg)
 	rte_hash_crc_set_alg(CRC32_SSE42_x64);
 #elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
 	rte_hash_crc_set_alg(CRC32_ARM64);
+#elif defined(RTE_ARCH_RISCV) && defined(RTE_RISCV_FEATURE_ZBC)
+	rte_hash_crc_set_alg(CRC32_RISCV64);
 #else
 	rte_hash_crc_set_alg(CRC32_SW);
 #endif
