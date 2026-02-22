@@ -460,6 +460,9 @@ rte_hash_create(const struct rte_hash_parameters *params)
 #elif defined(RTE_ARCH_ARM64)
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_CRC32))
 		default_hash_func = (rte_hash_function)rte_hash_crc;
+#elif defined(RTE_ARCH_RISCV)
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_RISCV_EXT_ZBC))
+		default_hash_func = (rte_hash_function)rte_hash_crc;
 #endif
 	/* Setup hash context */
 	strlcpy(h->name, params->name, sizeof(h->name));
