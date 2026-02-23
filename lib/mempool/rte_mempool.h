@@ -1289,6 +1289,18 @@ uint32_t rte_mempool_mem_iter(struct rte_mempool *mp,
 	rte_mempool_mem_cb_t *mem_cb, void *mem_cb_arg);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: This API may change, or be removed, without prior notice.
+ *
+ * Reset the statistics of a mempool.
+ *
+ * @param mp
+ *   A pointer to the mempool structure.
+ */
+__rte_experimental
+void rte_mempool_stats_reset(struct rte_mempool *mp);
+
+/**
  * Dump the status of the mempool to a file.
  *
  * @param f
