@@ -805,6 +805,14 @@ vdev_netvsc_scan_callback(__rte_unused void *arg)
 /** Initialize the custom scan. */
 RTE_INIT(vdev_netvsc_custom_scan_add)
 {
+	/*
+	 * Hack: github actions run on Azure/Hyper-V container and don't
+	 * want any network devices in that environment to get intertwined
+	 * with any tests.
+	 */
+	if (getenv("GITHUB_ACTIONS"))
+		return;
+
 	if (rte_hypervisor_get() == RTE_HYPERVISOR_HYPERV)
 		rte_vdev_add_custom_scan(vdev_netvsc_scan_callback, NULL);
 }
