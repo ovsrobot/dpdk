@@ -272,6 +272,24 @@ __rte_experimental
 int
 rte_fib6_rcu_qsbr_add(struct rte_fib6 *fib, struct rte_fib6_rcu_config *cfg);
 
+/**
+ * Retrieve tbl8 allocation statistics from the FIB.
+ *
+ * @param fib
+ *   FIB object handle
+ * @param used
+ *   Number of tbl8 groups currently in use (can be NULL)
+ * @param total
+ *   Total number of tbl8 groups allocated at creation (can be NULL)
+ * @return
+ *   0 on success
+ *   -EINVAL if fib is NULL
+ *   -ENOTSUP if the FIB type does not support tbl8 statistics
+ */
+__rte_experimental
+int
+rte_fib6_tbl8_get_stats(struct rte_fib6 *fib, uint32_t *used, uint32_t *total);
+
 #ifdef __cplusplus
 }
 #endif

@@ -23,6 +23,7 @@ static int32_t test_free_null(void);
 static int32_t test_add_del_invalid(void);
 static int32_t test_get_invalid(void);
 static int32_t test_lookup(void);
+static int32_t test_tbl8_stats(void);
 static int32_t test_invalid_rcu(void);
 static int32_t test_fib_rcu_sync_rw(void);
 
@@ -391,6 +392,76 @@ test_lookup(void)
 }
 
 /*
+ * Check tbl8 statistics for TRIE FIB6 type.
+ *  - NULL fib returns -EINVAL
+ *  - DUMMY type returns -ENOTSUP
+ *  - Empty TRIE reports 0 used
+ *  - After adding a route with depth > 24, used count increases
+ *  - After deleting the route, used count decreases
+ */
+int32_t
+test_tbl8_stats(void)
+{
+	struct rte_fib6 *fib = NULL;
+	struct rte_fib6_conf config = { 0 };
+	struct rte_ipv6_addr ip = RTE_IPV6(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0);
+	uint32_t used, total;
+	int ret;
+
+	/* NULL fib */
+	ret = rte_fib6_tbl8_get_stats(NULL, &used, &total);
+	RTE_TEST_ASSERT(ret == -EINVAL,
+		"Call succeeded with NULL fib\n");
+
+	/* DUMMY type */
+	config.max_routes = MAX_ROUTES;
+	config.default_nh = 0;
+	config.type = RTE_FIB6_DUMMY;
+	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
+	ret = rte_fib6_tbl8_get_stats(fib, &used, &total);
+	RTE_TEST_ASSERT(ret == -ENOTSUP,
+		"Call succeeded with DUMMY type FIB\n");
+	rte_fib6_free(fib);
+
+	/* TRIE type */
+	config.type = RTE_FIB6_TRIE;
+	config.trie.nh_sz = RTE_FIB6_TRIE_4B;
+	config.trie.num_tbl8 = MAX_TBL8;
+	fib = rte_fib6_create(__func__, SOCKET_ID_ANY, &config);
+	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
+
+	/* empty FIB: 0 used */
+	ret = rte_fib6_tbl8_get_stats(fib, &used, &total);
+	RTE_TEST_ASSERT(ret == 0, "Failed to get stats\n");
+	RTE_TEST_ASSERT(used == 0, "Used count is not 0 for empty FIB\n");
+	RTE_TEST_ASSERT(total > 0, "Total count is 0\n");
+
+	/* NULL output pointers should not crash */
+	ret = rte_fib6_tbl8_get_stats(fib, NULL, NULL);
+	RTE_TEST_ASSERT(ret == 0, "Failed with NULL output pointers\n");
+
+	/* add a route with depth > 24 to allocate tbl8 groups */
+	ret = rte_fib6_add(fib, &ip, 28, 1);
+	RTE_TEST_ASSERT(ret == 0, "Failed to add a route\n");
+	ret = rte_fib6_tbl8_get_stats(fib, &used, NULL);
+	RTE_TEST_ASSERT(ret == 0, "Failed to get stats\n");
+	RTE_TEST_ASSERT(used > 0, "Used count did not increase after add\n");
+
+	/* delete the route */
+	ret = rte_fib6_delete(fib, &ip, 28);
+	RTE_TEST_ASSERT(ret == 0, "Failed to delete a route\n");
+	ret = rte_fib6_tbl8_get_stats(fib, &used, NULL);
+	RTE_TEST_ASSERT(ret == 0, "Failed to get stats\n");
+	RTE_TEST_ASSERT(used == 0,
+		"Used count did not decrease after delete\n");
+
+	rte_fib6_free(fib);
+
+	return TEST_SUCCESS;
+}
+
+/*
  * rte_fib6_rcu_qsbr_add positive and negative tests.
  *  - Add RCU QSBR variable to FIB
  *  - Add another RCU QSBR variable to FIB
@@ -609,6 +680,7 @@ static struct unit_test_suite fib6_fast_tests = {
 	TEST_CASE(test_add_del_invalid),
 	TEST_CASE(test_get_invalid),
 	TEST_CASE(test_lookup),
+	TEST_CASE(test_tbl8_stats),
 	TEST_CASE(test_invalid_rcu),
 	TEST_CASE(test_fib_rcu_sync_rw),
 	TEST_CASES_END()

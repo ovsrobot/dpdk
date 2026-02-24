@@ -364,3 +364,25 @@ rte_fib_rcu_qsbr_add(struct rte_fib *fib, struct rte_fib_rcu_config *cfg)
 		return -ENOTSUP;
 	}
 }
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_fib_tbl8_get_stats, 26.07)
+int
+rte_fib_tbl8_get_stats(struct rte_fib *fib, uint32_t *used, uint32_t *total)
+{
+	struct dir24_8_tbl *dp;
+
+	if (fib == NULL)
+		return -EINVAL;
+
+	switch (fib->type) {
+	case RTE_FIB_DIR24_8:
+		dp = fib->dp;
+		if (used != NULL)
+			*used = dp->cur_tbl8s;
+		if (total != NULL)
+			*total = dp->number_tbl8s;
+		return 0;
+	default:
+		return -ENOTSUP;
+	}
+}
