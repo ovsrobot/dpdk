@@ -14,8 +14,10 @@ else
         soc_type = platform
 endif
 
-if soc_type != 'cn9k' and soc_type != 'cn10k' and soc_type != 'cn20k'
-        soc_type = 'all'
+if soc_type != 'cn9k' and soc_type != 'cn10k' and soc_type != 'cn20k' and soc_type != 'all'
+        build = false
+        reason = 'not supported on soc_type ' + soc_type
+        subdir_done()
 endif
 
 sources = files(
