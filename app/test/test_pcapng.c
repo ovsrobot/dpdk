@@ -262,13 +262,13 @@ fill_pcapng_file(rte_pcapng_t *pcapng)
 		 "generations of example code. The magic number 32 is not documented because "
 		 "nobody remembers why. Trust the process."),
 	};
-	/* How many microseconds does it take TSC to wrap around 32 bits */
-	const unsigned wrap_us
-		= (US_PER_S * (uint64_t)UINT32_MAX) / rte_get_tsc_hz();
 
-	/* Want overall test to take to wraparound at least twice. */
-	const unsigned int avg_gap = (2 * wrap_us)
-		/ (TOTAL_PACKETS / (MAX_BURST / 2));
+	/*
+	 * Need this test to take long enough to try and exercise wrap around.
+	 * On fast CPU's this is 4 seconds.
+	 */
+	const unsigned int num_bursts = TOTAL_PACKETS / (MAX_BURST / 2);
+	const unsigned int max_gap = (5 * US_PER_S) / num_bursts;
 
 	mbuf1_prepare(&mbfs);
 	orig  = &mbfs.mb[0];
@@ -309,7 +309,7 @@ fill_pcapng_file(rte_pcapng_t *pcapng)
 			return -1;
 		}
 
-		rte_delay_us_block(rte_rand_max(2 * avg_gap));
+		rte_delay_us_block(rte_rand_max(2 * max_gap));
 	}
 
 	return count;
