@@ -106,6 +106,14 @@ New Features
   Added handling of the key combination Control+L
   to clear the screen before redisplaying the prompt.
 
+* **Updated Microsoft vdev_netvsc driver.**
+
+  * Disabled automatic detection on Hyper-V/Azure by default.
+    The driver must now be explicitly requested with ``--vdev=net_vdev_netvsc``.
+    The previous auto-detection behavior can be restored by building with
+    ``RTE_LIBRTE_VDEV_NETVSC_AUTO`` defined.
+
+
 Removed Items
 -------------
 

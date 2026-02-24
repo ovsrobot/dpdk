@@ -153,4 +153,7 @@
 /* DLB2 defines */
 // RTE_LIBRTE_PMD_DLB2_QUELL_STATS is not set
 
+/* vdev_netvsc defines */
+// RTE_LIBRTE_VDEV_NETVSC_AUTO is not set
+
 #endif /* _RTE_CONFIG_H_ */

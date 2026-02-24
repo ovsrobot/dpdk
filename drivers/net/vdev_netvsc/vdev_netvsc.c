@@ -42,7 +42,9 @@
 #define VDEV_NETVSC_ARG_IFACE "iface"
 #define VDEV_NETVSC_ARG_MAC "mac"
 #define VDEV_NETVSC_ARG_FORCE "force"
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 #define VDEV_NETVSC_ARG_IGNORE "ignore"
+#endif
 #define VDEV_NETVSC_PROBE_MS 1000
 
 #define NETVSC_CLASS_ID "{f8615163-df3e-46c5-913f-f2d2f965ed0e}"
@@ -653,7 +655,9 @@ vdev_netvsc_vdev_probe(struct rte_vdev_device *dev)
 		VDEV_NETVSC_ARG_IFACE,
 		VDEV_NETVSC_ARG_MAC,
 		VDEV_NETVSC_ARG_FORCE,
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 		VDEV_NETVSC_ARG_IGNORE,
+#endif
 		NULL,
 	};
 	const char *name = rte_vdev_device_name(dev);
@@ -663,7 +667,9 @@ vdev_netvsc_vdev_probe(struct rte_vdev_device *dev)
 	unsigned int specified = 0;
 	unsigned int matched = 0;
 	int force = 0;
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 	int ignore = 0;
+#endif
 	unsigned int i;
 	int ret;
 
@@ -678,14 +684,18 @@ vdev_netvsc_vdev_probe(struct rte_vdev_device *dev)
 
 		if (!strcmp(pair->key, VDEV_NETVSC_ARG_FORCE))
 			force = !!atoi(pair->value);
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 		else if (!strcmp(pair->key, VDEV_NETVSC_ARG_IGNORE))
 			ignore = !!atoi(pair->value);
+#endif
 		else if (!strcmp(pair->key, VDEV_NETVSC_ARG_IFACE) ||
 			 !strcmp(pair->key, VDEV_NETVSC_ARG_MAC))
 			++specified;
 	}
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 	if (ignore)
 		goto ignore;
+#endif
 	if (specified > 1) {
 		DRV_LOG(ERR, "More than one way used to specify the netvsc"
 			" device.");
@@ -713,7 +723,9 @@ vdev_netvsc_vdev_probe(struct rte_vdev_device *dev)
 	}
 error:
 	++vdev_netvsc_ctx_inst;
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 ignore:
+#endif
 	rte_kvargs_free(kvargs);
 	/* Reset alarm if there are device context created */
 	if (vdev_netvsc_ctx_count) {
@@ -765,9 +777,12 @@ RTE_PMD_REGISTER_ALIAS(VDEV_NETVSC_DRIVER, eth_vdev_netvsc);
 RTE_PMD_REGISTER_PARAM_STRING(net_vdev_netvsc,
 			      VDEV_NETVSC_ARG_IFACE "=<string> "
 			      VDEV_NETVSC_ARG_MAC "=<string> "
-			      VDEV_NETVSC_ARG_FORCE "=<int> "
-			      VDEV_NETVSC_ARG_IGNORE "=<int>");
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
+			      VDEV_NETVSC_ARG_IGNORE "=<int> ");
+#endif
+			      VDEV_NETVSC_ARG_FORCE "=<int>");
 
+#ifdef RTE_LIBRTE_VDEV_NETVSC_AUTO
 /** Compare function for vdev find device operation. */
 static int
 vdev_netvsc_cmp_rte_device(const struct rte_device *dev1,
@@ -808,3 +823,4 @@ RTE_INIT(vdev_netvsc_custom_scan_add)
 	if (rte_hypervisor_get() == RTE_HYPERVISOR_HYPERV)
 		rte_vdev_add_custom_scan(vdev_netvsc_scan_callback, NULL);
 }
+#endif /* RTE_LIBRTE_VDEV_NETVSC_AUTO */

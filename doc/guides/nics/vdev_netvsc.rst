@@ -65,8 +65,9 @@ a new NetVSC driver will be integrated.
 Runtime Configuration
 ---------------------
 
-This driver is invoked automatically in Hyper-V VM systems unless the user
-invoked it by command line using ``--vdev=net_vdev_netvsc`` EAL option.
+This driver can be invoked automatically if ``RTE_LIBRTE_VDEV_NETVSC_AUTO``
+is defined in the build configuration. Otherwise, it must be enabled
+using the ``--vdev=net_vdev_netvsc`` EAL command line option.
 
 The following device parameters are supported:
 
@@ -87,12 +88,12 @@ The following device parameters are supported:
 
 - ``ignore`` [int]
 
-  If nonzero, ignores the driver running (actually used to disable the
-  auto-detection in Hyper-V VM).
+  If auto-detection is enabled in the build, this parameter disables the
+  auto-detection of network interfaces.
 
 .. note::
 
    Not specifying either ``iface`` or ``mac`` makes this driver attach itself to
    all unrouted NetVSC interfaces found on the system.
    Specifying the device makes this driver attach itself to the device
-   regardless the device routes.
+   regardless of the device routes.
