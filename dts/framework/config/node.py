@@ -69,7 +69,7 @@ class NodeConfiguration(FrozenModel):
     #: An optional hugepage configuration.
     hugepages: HugepageConfiguration | None = Field(None, alias="hugepages_2mb")
     #: The ports that can be used in testing.
-    ports: list[PortConfig] = Field(min_length=1)
+    ports: list[PortConfig] = Field(default=[], min_length=0)
 
     @model_validator(mode="after")
     def verify_unique_port_names(self) -> Self:

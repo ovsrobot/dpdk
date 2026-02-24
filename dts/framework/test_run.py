@@ -189,25 +189,28 @@ class TestRun:
         self.config = config
         self.logger = get_dts_logger()
 
+        tg_node = None
         sut_node = next(n for n in nodes if n.name == config.system_under_test_node)
-        tg_node = next(n for n in nodes if n.name == config.traffic_generator_node)
-
-        topology = Topology.from_port_links(
-            PortLink(sut_node.ports_by_name[link.sut_port], tg_node.ports_by_name[link.tg_port])
-            for link in self.config.port_topology
-        )
+        if config.traffic_generator_node:
+            tg_node = next(n for n in nodes if n.name == config.traffic_generator_node)
+            topology = Topology.from_port_links(
+                PortLink(sut_node.ports_by_name[link.sut_port], tg_node.ports_by_name[link.tg_port])
+                for link in self.config.port_topology
+            )
+        else:
+            topology = Topology.from_port_links(iter([]))
 
         dpdk_build_env = DPDKBuildEnvironment(config.dpdk.build, sut_node)
         dpdk_runtime_env = DPDKRuntimeEnvironment(config.dpdk, sut_node, dpdk_build_env)
 
         func_traffic_generator = (
             create_traffic_generator(config.func_traffic_generator, tg_node)
-            if config.func and config.func_traffic_generator
+            if config.func and config.func_traffic_generator and tg_node
             else None
         )
         perf_traffic_generator = (
             create_traffic_generator(config.perf_traffic_generator, tg_node)
-            if config.perf and config.perf_traffic_generator
+            if config.perf and config.perf_traffic_generator and tg_node
             else None
         )
 
@@ -343,7 +346,8 @@ class TestRunSetup(State):
         test_run.remaining_tests = deque(test_run.selected_tests)
 
         test_run.ctx.sut_node.setup()
-        test_run.ctx.tg_node.setup()
+        if test_run.ctx.tg_node:
+            test_run.ctx.tg_node.setup()
         test_run.ctx.dpdk.setup()
         test_run.ctx.topology.setup()
 
@@ -450,7 +454,8 @@ class TestRunTeardown(State):
             self.test_run.ctx.perf_tg.teardown()
         self.test_run.ctx.topology.teardown()
         self.test_run.ctx.dpdk.teardown()
-        self.test_run.ctx.tg_node.teardown()
+        if self.test_run.ctx.tg_node:
+            self.test_run.ctx.tg_node.teardown()
         self.test_run.ctx.sut_node.teardown()
         return None
 
