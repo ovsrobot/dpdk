@@ -106,6 +106,10 @@ New Features
   Added handling of the key combination Control+L
   to clear the screen before redisplaying the prompt.
 
+* **Updated NBL driver.**
+
+  * Added support for igb_uio driver on VF devices.
+
 Removed Items
 -------------
 

@@ -101,3 +101,14 @@ Limitations or Known Issues
 32-bit architectures are not supported.
 
 Windows and BSD are not supported yet.
+
+**igb_uio Driver Support**
+
+Due to chip design limitations, only the VF supports the ``igb_uio`` driver,
+PF does not support this driver.
+
+**uio_pci_generic Driver Support**
+
+The ``uio_pci_generic`` driver is not supported on either PF or VF devices.
+This is because the NBL PMD requires MSI-X interrupts to receive mailbox
+messages, but the ``uio_pci_generic`` driver does not support MSI-X interrupts.

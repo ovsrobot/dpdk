@@ -50,4 +50,13 @@ struct nbl_mailbox_qinfo_cfg_dbg_tbl {
 	u16 tx_tail_ptr;
 };
 
+#define NBL_PCOMPLETER_MSIX_NOTIFY_OFFSET	(0x1020)
+
+struct nbl_msix_notify {
+	u32 glb_msix_idx:13;
+	u32 rsv1:3;
+	u32 mask:1;
+	u32 rsv2:15;
+};
+
 #endif

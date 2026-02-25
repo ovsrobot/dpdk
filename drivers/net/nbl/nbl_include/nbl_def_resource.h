@@ -21,6 +21,9 @@ struct nbl_resource_ops {
 				  bool net_msix_mask_en);
 	int (*destroy_msix_map)(void *priv, u16 func_id);
 	int (*enable_mailbox_irq)(void *priv, u16 func_id, u16 vector_id, bool enable_msix);
+	int (*get_global_vector)(void *priv, u16 vsi_id,
+				 u16 local_vector_id, u16 *global_vector_id);
+	u8 *(*get_msix_irq_enable_info)(void *priv, u16 global_vector_id, u32 *irq_data);
 	void (*get_resource_pt_ops)(void *priv, struct nbl_resource_pt_ops *pt_ops, bool offload);
 	int (*register_net)(void *priv,
 			    struct nbl_register_net_param *register_param,

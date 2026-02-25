@@ -115,9 +115,19 @@ static int nbl_get_xstats_names(__rte_unused void *priv,
 	return 0;
 }
 
+static u8 *nbl_res_get_msix_irq_enable_info(void *priv, u16 global_vector_id, u32 *irq_data)
+{
+	struct nbl_resource_mgt *res_mgt = (struct nbl_resource_mgt *)priv;
+	const struct nbl_hw_ops *hw_ops = NBL_RES_MGT_TO_HW_OPS(res_mgt);
+
+	return hw_ops->get_msix_irq_enable_info(NBL_RES_MGT_TO_HW_PRIV(res_mgt),
+						global_vector_id, irq_data);
+}
+
 static struct nbl_resource_ops nbl_res_ops = {
 	.get_hw_xstats_cnt = nbl_get_xstats_cnt,
 	.get_hw_xstats_names = nbl_get_xstats_names,
+	.get_msix_irq_enable_info = nbl_res_get_msix_irq_enable_info,
 };
 
 static bool is_ops_inited;

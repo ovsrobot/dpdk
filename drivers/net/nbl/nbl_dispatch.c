@@ -80,6 +80,50 @@ static int nbl_disp_chan_enable_mailbox_irq_req(void *priv, u16 vector_id, bool 
 	return chan_ops->send_msg(NBL_DISP_MGT_TO_CHAN_PRIV(disp_mgt), &chan_send);
 }
 
+static int nbl_disp_get_global_vector(void *priv, u16 vsi_id,
+				      u16 local_vector_id, u16 *global_vector_id)
+{
+	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
+	struct nbl_resource_ops *res_ops = NBL_DISP_MGT_TO_RES_OPS(disp_mgt);
+	int ret = 0;
+
+	ret = NBL_OPS_CALL(res_ops->get_global_vector,
+			   (NBL_DISP_MGT_TO_RES_PRIV(disp_mgt),
+			    vsi_id, local_vector_id, global_vector_id));
+	return ret;
+}
+
+static int nbl_disp_chan_get_global_vector_req(void *priv, u16 vsi_id,
+					       u16 local_vector_id, u16 *global_vector_id)
+{
+	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
+	const struct nbl_channel_ops *chan_ops = NBL_DISP_MGT_TO_CHAN_OPS(disp_mgt);
+	struct nbl_chan_param_get_global_vector param = {0};
+	struct nbl_chan_param_get_global_vector result = {0};
+	struct nbl_chan_send_info chan_send;
+	int ret;
+
+	param.vsi_id = vsi_id;
+	param.vector_id = local_vector_id;
+
+	NBL_CHAN_SEND(chan_send, 0, NBL_CHAN_MSG_GET_GLOBAL_VECTOR,
+		      &param, sizeof(param), &result, sizeof(result), 1);
+	ret = chan_ops->send_msg(NBL_DISP_MGT_TO_CHAN_PRIV(disp_mgt), &chan_send);
+	if (!ret)
+		*global_vector_id = result.vector_id;
+
+	return ret;
+}
+
+static u8 *nbl_disp_get_msix_irq_enable_info(void *priv, u16 global_vector_id, u32 *irq_data)
+{
+	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
+	struct nbl_resource_ops *res_ops = NBL_DISP_MGT_TO_RES_OPS(disp_mgt);
+
+	return NBL_OPS_CALL(res_ops->get_msix_irq_enable_info,
+			    (NBL_DISP_MGT_TO_RES_PRIV(disp_mgt), global_vector_id, irq_data));
+}
+
 static int nbl_disp_alloc_txrx_queues(void *priv, u16 vsi_id, u16 queue_num)
 {
 	struct nbl_dispatch_mgt *disp_mgt = (struct nbl_dispatch_mgt *)priv;
@@ -1035,6 +1079,12 @@ do {									\
 			 NBL_DISP_CTRL_LVL_MGT, NBL_CHAN_MSG_MAILBOX_ENABLE_IRQ,		\
 			 nbl_disp_chan_enable_mailbox_irq_req,					\
 			 NULL);				\
+	NBL_DISP_SET_OPS(get_global_vector, nbl_disp_get_global_vector,				\
+			 NBL_DISP_CTRL_LVL_MGT, NBL_CHAN_MSG_GET_GLOBAL_VECTOR,			\
+			 nbl_disp_chan_get_global_vector_req, NULL);				\
+	NBL_DISP_SET_OPS(get_msix_irq_enable_info, nbl_disp_get_msix_irq_enable_info,		\
+			 NBL_DISP_CTRL_LVL_NET, -1,						\
+			 NULL, NULL);								\
 	NBL_DISP_SET_OPS(alloc_txrx_queues, nbl_disp_alloc_txrx_queues,	\
 			 NBL_DISP_CTRL_LVL_MGT,				\
 			 NBL_CHAN_MSG_ALLOC_TXRX_QUEUES,		\

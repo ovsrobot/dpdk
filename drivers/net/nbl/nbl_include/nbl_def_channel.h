@@ -314,6 +314,11 @@ struct nbl_chan_param_enable_mailbox_irq {
 	bool enable_msix;
 };
 
+struct nbl_chan_param_get_global_vector {
+	u16 vsi_id;
+	u16 vector_id;
+};
+
 struct nbl_chan_param_register_net_info {
 	u16 pf_bdf;
 	u64 vf_bar_start;

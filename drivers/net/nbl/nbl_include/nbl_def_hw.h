@@ -22,6 +22,9 @@ struct nbl_hw_ops {
 	void (*stop_mailbox_txq)(void *priv);
 	uint16_t (*get_mailbox_rx_tail_ptr)(void *priv);
 	void (*update_mailbox_queue_tail_ptr)(void *priv, uint16_t tail_ptr, uint8_t txrx);
+
+	/* irq */
+	u8 *(*get_msix_irq_enable_info)(void *priv, u16 global_vector_id, u32 *irq_data);
 };
 
 struct nbl_hw_ops_tbl {

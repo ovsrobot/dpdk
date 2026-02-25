@@ -62,6 +62,9 @@ struct nbl_dev_net_mgt {
 	bool hw_stats_inited;
 	rte_thread_t tid;
 	int fd[2];
+	bool net_msix_mask_en;
+	u8 *irq_enable_base;
+	u32 irq_data;
 };
 
 struct nbl_dev_mgt {

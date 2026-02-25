@@ -857,8 +857,12 @@ static void nbl_dev_mailbox_interrupt_handler(void *cn_arg)
 {
 	struct nbl_dev_mgt *dev_mgt = (struct nbl_dev_mgt *)cn_arg;
 	const struct nbl_channel_ops *chan_ops = NBL_DEV_MGT_TO_CHAN_OPS(dev_mgt);
+	struct nbl_dev_net_mgt *net_dev = NBL_DEV_MGT_TO_NET_DEV(dev_mgt);
 
 	chan_ops->notify_interrupt(NBL_DEV_MGT_TO_CHAN_PRIV(dev_mgt));
+
+	if (net_dev->net_msix_mask_en)
+		rte_write32(net_dev->irq_data, net_dev->irq_enable_base);
 }
 
 static int nbl_dev_common_start(struct nbl_dev_mgt *dev_mgt)
@@ -873,6 +877,7 @@ static int nbl_dev_common_start(struct nbl_dev_mgt *dev_mgt)
 	u8 *mac;
 	int ret;
 	u16 priv_cnt = 0;
+	u16 global_vector_id = 0;
 
 	board_info = &common->board_info;
 	disp_ops->get_board_info(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), board_info);
@@ -881,9 +886,26 @@ static int nbl_dev_common_start(struct nbl_dev_mgt *dev_mgt)
 	disp_ops->clear_flow(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), net_dev->vsi_id);
 
 	if (NBL_IS_NOT_COEXISTENCE(common)) {
-		ret = disp_ops->configure_msix_map(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), 0, 1, 0);
-		if (ret)
-			goto configure_msix_map_failed;
+		if (pci_dev->kdrv == RTE_PCI_KDRV_VFIO) {
+			ret = disp_ops->configure_msix_map(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt),
+							   0, 1, 0);
+			if (ret)
+				goto configure_msix_map_failed;
+		} else {
+			ret = disp_ops->get_global_vector(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt),
+							  net_dev->vsi_id, 0, &global_vector_id);
+			if (ret)
+				goto get_global_vector_failed;
+			net_dev->irq_enable_base =
+			disp_ops->get_msix_irq_enable_info(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt),
+							   global_vector_id, &net_dev->irq_data);
+			if (!net_dev->irq_enable_base) {
+				ret = -EINVAL;
+				goto get_msix_irq_enable_info_failed;
+			}
+			net_dev->net_msix_mask_en = true;
+			rte_write32(net_dev->irq_data, net_dev->irq_enable_base);
+		}
 
 		ret = disp_ops->enable_mailbox_irq(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt), 0, true);
 		if (ret)
@@ -960,7 +982,10 @@ rte_intr_callback_register_failed:
 	}
 enable_mailbox_irq_failed:
 	if (NBL_IS_NOT_COEXISTENCE(common))
-		disp_ops->destroy_msix_map(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt));
+		if (pci_dev->kdrv == RTE_PCI_KDRV_VFIO)
+			disp_ops->destroy_msix_map(NBL_DEV_MGT_TO_DISP_PRIV(dev_mgt));
+get_msix_irq_enable_info_failed:
+get_global_vector_failed:
 configure_msix_map_failed:
 	return ret;
 }

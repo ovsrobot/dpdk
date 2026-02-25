@@ -138,6 +138,15 @@ static void nbl_hw_update_mailbox_queue_tail_ptr(void *priv, u16 tail_ptr, u8 tx
 	rte_delay_us(NBL_NOTIFY_DELAY_MIN_TIME_FOR_REGS);
 }
 
+static u8 *nbl_phy_get_msix_irq_enable_info(void *priv, u16 global_vector_id, u32 *irq_data)
+{
+	struct nbl_hw_mgt *hw_mgt = (struct nbl_hw_mgt *)priv;
+
+	*irq_data = (global_vector_id & 0x1FFF);
+
+	return (hw_mgt->hw_addr + NBL_PCOMPLETER_MSIX_NOTIFY_OFFSET);
+}
+
 const struct nbl_hw_ops nbl_hw_ops = {
 	.update_tail_ptr		= nbl_hw_update_tail_ptr,
 	.get_tail_ptr			= nbl_hw_get_tail_ptr,
@@ -149,6 +158,9 @@ const struct nbl_hw_ops nbl_hw_ops = {
 	.stop_mailbox_txq		= nbl_hw_stop_mailbox_txq,
 	.get_mailbox_rx_tail_ptr	= nbl_hw_get_mailbox_rx_tail_ptr,
 	.update_mailbox_queue_tail_ptr	= nbl_hw_update_mailbox_queue_tail_ptr,
+
+	/* irq */
+	.get_msix_irq_enable_info	= nbl_phy_get_msix_irq_enable_info,
 };
 
 static int nbl_hw_setup_ops(struct nbl_hw_ops_tbl **hw_ops_tbl,
