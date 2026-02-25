@@ -12,7 +12,6 @@
 
 #define MAX_RX_QUEUE_PER_PORT 128
 #define MAX_JUMBO_PKT_LEN  9600
-#define NB_SOCKETS 8
 
 struct __rte_cache_aligned lcore_params {
 	uint16_t port_id;
