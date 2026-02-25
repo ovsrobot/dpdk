@@ -639,8 +639,10 @@ void hn_vf_tx_queue_release(struct hn_data *hv, uint16_t queue_id)
 
 	rte_rwlock_read_lock(&hv->vf_lock);
 	vf_dev = hn_get_vf_dev(hv);
-	if (vf_dev && vf_dev->dev_ops->tx_queue_release)
+	if (vf_dev && vf_dev->dev_ops->tx_queue_release) {
 		(*vf_dev->dev_ops->tx_queue_release)(vf_dev, queue_id);
+		vf_dev->data->tx_queues[queue_id] = NULL;
+	}
 
 	rte_rwlock_read_unlock(&hv->vf_lock);
 }
@@ -671,8 +673,10 @@ void hn_vf_rx_queue_release(struct hn_data *hv, uint16_t queue_id)
 
 	rte_rwlock_read_lock(&hv->vf_lock);
 	vf_dev = hn_get_vf_dev(hv);
-	if (vf_dev && vf_dev->dev_ops->rx_queue_release)
+	if (vf_dev && vf_dev->dev_ops->rx_queue_release) {
 		(*vf_dev->dev_ops->rx_queue_release)(vf_dev, queue_id);
+		vf_dev->data->rx_queues[queue_id] = NULL;
+	}
 	rte_rwlock_read_unlock(&hv->vf_lock);
 }
 
