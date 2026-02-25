@@ -15,3 +15,7 @@ hello_world:
 #       num_descriptors: 1024
 #       expected_mpps: 1.0
 #   delta_tolerance: 0.05
+# port_speed_capabilities:
+#   test_parameters:
+#     0 : 100 Gbps # set link speed according to your expected speed in Gbps
+#     1 : 100 Gbps
