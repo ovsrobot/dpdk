@@ -47,6 +47,13 @@ test_no_huge_flag(void)
 }
 
 static int
+test_no_probe_flag(void)
+{
+	printf("no_probe_flag not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+static int
 test_allow_flag(void)
 {
 	printf("allow_flag not supported on Windows, skipping test\n");
@@ -301,6 +308,29 @@ get_number_of_sockets(void)
 	return result;
 }
 #endif /* RTE_EXEC_ENV_LINUX */
+
+static int
+test_no_probe_flag(void)
+{
+	const char *prefix = file_prefix_arg();
+	if (prefix == NULL)
+		return -1;
+
+	const char *wlvalid[][4] = {
+		{prgname, prefix, mp_flag, "--no-probe" },
+		{prgname, prefix, mp_flag, "--no-probe=pci" },
+	};
+
+	for (unsigned int i = 0; i < RTE_DIM(wlvalid); i++) {
+		if (launch_proc(wlvalid[i]) != 0) {
+			printf("Error (line %d) - process did not run with valid no probe parameter\n",
+				__LINE__);
+			return -1;
+		}
+	}
+
+	return 0;
+}
 
 /*
  * Test that the app doesn't run with invalid allow option.
@@ -1678,6 +1708,7 @@ REGISTER_FAST_TEST(eal_flags_main_opt_autotest, NOHUGE_SKIP, ASAN_SKIP, test_mai
 REGISTER_FAST_TEST(eal_flags_n_opt_autotest, NOHUGE_SKIP, ASAN_SKIP, test_invalid_n_flag);
 REGISTER_FAST_TEST(eal_flags_hpet_autotest, NOHUGE_SKIP, ASAN_SKIP, test_no_hpet_flag);
 REGISTER_FAST_TEST(eal_flags_no_huge_autotest, NOHUGE_SKIP, ASAN_SKIP, test_no_huge_flag);
+REGISTER_FAST_TEST(eal_flags_no_probe_autotest, NOHUGE_SKIP, ASAN_SKIP, test_no_probe_flag);
 REGISTER_FAST_TEST(eal_flags_a_opt_autotest, NOHUGE_SKIP, ASAN_SKIP, test_allow_flag);
 REGISTER_FAST_TEST(eal_flags_b_opt_autotest, NOHUGE_SKIP, ASAN_SKIP, test_invalid_b_flag);
 REGISTER_FAST_TEST(eal_flags_vdev_opt_autotest, NOHUGE_SKIP, ASAN_SKIP, test_invalid_vdev_flag);

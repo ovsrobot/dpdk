@@ -72,6 +72,7 @@ do_recursive_call(void)
 			{ "test_main_lcore_flag", no_action },
 			{ "test_invalid_n_flag", no_action },
 			{ "test_no_hpet_flag", no_action },
+			{ "test_no_probe_flag", no_action },
 			{ "test_allow_flag", no_action },
 			{ "test_invalid_b_flag", no_action },
 			{ "test_invalid_vdev_flag", no_action },

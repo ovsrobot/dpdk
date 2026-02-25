@@ -518,6 +518,8 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	memset(internal_cfg->vfio_vf_token, 0,
 			sizeof(internal_cfg->vfio_vf_token));
 
+	internal_cfg->no_probe = NULL;
+
 #ifdef RTE_LIBEAL_USE_HPET
 	internal_cfg->no_hpet = 0;
 #else
@@ -2206,6 +2208,17 @@ eal_parse_args(void)
 	}
 #endif
 
+	if (args.no_probe != NULL) {
+		if (args.no_probe == (void *)1)
+			int_cfg->no_probe = strdup("all");
+		else
+			int_cfg->no_probe = strdup(args.no_probe);
+		if (int_cfg->no_probe == NULL) {
+			EAL_LOG(ERR, "failed to allocate memory for no probe parameter");
+			return -1;
+		}
+	}
+
 	/* simple flag settings
 	 * Only set these to 1, as we don't want to set them to 0 in case
 	 * other options above have already set them.
@@ -2336,6 +2349,7 @@ eal_cleanup_config(struct internal_config *internal_cfg)
 {
 	free(internal_cfg->hugefile_prefix);
 	free(internal_cfg->hugepage_dir);
+	free(internal_cfg->no_probe);
 	free(internal_cfg->user_mbuf_pool_ops_name);
 
 	return 0;

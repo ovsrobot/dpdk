@@ -136,6 +136,13 @@ Device-related options
 
     Disable PCI bus.
 
+*   ``--no-probe[=bus list]``
+
+    Disable device probing as part of EAL init. Disabling affects either all buses
+    when no value is passed, or the list of buses. This is especially useful when
+    the DPDK application relies on resources hotplug and has no idea of which
+    device will be used at the time rte_eal_init() is called.
+
 Multiprocessing-related options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

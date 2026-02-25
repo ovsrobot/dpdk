@@ -470,6 +470,19 @@ int rte_eal_memory_detach(void);
 struct rte_bus *rte_bus_find_by_device_name(const char *str);
 
 /**
+ * Call all buses probe() function except those present in the
+ * excluded string.
+ *
+ * @param excluded
+ *   A list of bus to exclude separated by ,. A "all" string
+ *   is a special case that results in skipping all buses.
+ * @return
+ *   0 on success;
+ *   (<0) on failure.
+ */
+int eal_bus_probe(const char *excluded);
+
+/**
  * For each device on the buses, call the driver-specific function for
  * device cleanup.
  *

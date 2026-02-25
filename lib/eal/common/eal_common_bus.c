@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/queue.h>
 
@@ -67,15 +68,44 @@ rte_bus_scan(void)
 	return 0;
 }
 
-/* Probe all devices of all buses */
-RTE_EXPORT_SYMBOL(rte_bus_probe)
 int
-rte_bus_probe(void)
+eal_bus_probe(const char *excluded)
 {
-	int ret;
 	struct rte_bus *bus, *vbus = NULL;
+	char *filter = NULL;
+	int ret = 0;
+
+	if (excluded != NULL) {
+		if (!strcmp(excluded, "all")) {
+			EAL_LOG(DEBUG, "Skipped probing all buses");
+			return 0;
+		}
+
+		if (asprintf(&filter, ",%s,", excluded) == -1) {
+			EAL_LOG(ERR, "Could not allocate memory for filtering buses.");
+			return -1;
+		}
+	}
 
 	TAILQ_FOREACH(bus, &rte_bus_list, next) {
+		if (filter != NULL) {
+			char *pattern;
+			bool skip;
+
+			if (asprintf(&pattern, ",%s,", rte_bus_name(bus)) == -1) {
+				EAL_LOG(ERR, "Could not allocate memory for filtering buses.");
+				ret = -1;
+				goto out;
+			}
+			skip = strstr(filter, pattern) != NULL;
+			free(pattern);
+			if (skip) {
+				EAL_LOG(DEBUG, "Skipped probing bus %s", rte_bus_name(bus));
+				continue;
+			}
+			EAL_LOG(DEBUG, "Will probe bus %s", rte_bus_name(bus));
+		}
+
 		if (!strcmp(rte_bus_name(bus), "vdev")) {
 			vbus = bus;
 			continue;
@@ -94,7 +124,17 @@ rte_bus_probe(void)
 				rte_bus_name(vbus));
 	}
 
-	return 0;
+out:
+	free(filter);
+	return ret;
+}
+
+/* Probe all devices of all buses */
+RTE_EXPORT_SYMBOL(rte_bus_probe)
+int
+rte_bus_probe(void)
+{
+	return eal_bus_probe(NULL);
 }
 
 /* Clean up all devices of all buses */
