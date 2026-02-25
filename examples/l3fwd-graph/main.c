@@ -56,7 +56,7 @@
 
 #define MAX_LCORE_PARAMS 1024
 
-#define NB_SOCKETS 8
+#define NB_SOCKETS RTE_MAX_NUMA_NODES
 
 /* Graph module */
 #define WORKER_MODEL_RTC "rtc"

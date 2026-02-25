@@ -78,8 +78,6 @@ static uint32_t max_flow_ttl = DEF_FLOW_TTL;
 
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
-#define NB_SOCKETS 8
-
 /* Configure how many packets ahead to prefetch, when reading packets */
 #define PREFETCH_OFFSET	3
 

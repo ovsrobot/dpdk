@@ -31,7 +31,7 @@
 #define SESSION_MAP_ENTRIES		(1024)
 #define REFRESH_TIME_SEC		(3)
 
-#define MAX_NB_SOCKETS			(4)
+#define MAX_NB_SOCKETS			RTE_MAX_NUMA_NODES
 #define MAX_NB_WORKER_CORES		(16)
 
 struct lcore_option {

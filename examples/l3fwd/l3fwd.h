@@ -33,7 +33,7 @@
 #define VECTOR_SIZE_DEFAULT   MAX_PKT_BURST
 #define VECTOR_TMO_NS_DEFAULT 1E6 /* 1ms */
 
-#define NB_SOCKETS        8
+#define NB_SOCKETS        RTE_MAX_NUMA_NODES
 
 /* Configure how many packets ahead to prefetch, when reading packets */
 #define PREFETCH_OFFSET	  3
