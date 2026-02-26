@@ -101,6 +101,12 @@ Lcore-related options
 Device-related options
 ~~~~~~~~~~~~~~~~~~~~~~
 
+*   ``--allow-explicitly``
+
+    By default, EAL probes all devices on every available bus, unless some ``-a``/``-b``/``--vdev``
+    options are passed.
+    However, when an application relies on hotplug, it may want to plug each device explicitly.
+
 *   ``-b, --block <[domain:]bus:devid.func>``
 
     Skip probing a PCI device to prevent EAL from using it.

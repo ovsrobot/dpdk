@@ -1030,6 +1030,10 @@ test_misc_flags(void)
 	const char * const argv28[] = {prgname, prefix, mp_flag, eal_debug_logs,
 				       "--log-color=invalid" };
 
+	/* Try running with --allow-explicitly */
+	const char * const argv29[] = {prgname, prefix, mp_flag, eal_debug_logs,
+				       "--allow-explicitly" };
+
 	/* run all tests also applicable to FreeBSD first */
 
 	if (launch_proc(argv0) == 0) {
@@ -1173,6 +1177,11 @@ test_misc_flags(void)
 	}
 	if (launch_proc(argv28) == 0) {
 		printf("Error (line %d) - process did run ok with --log-timestamp=invalid parameter\n",
+			__LINE__);
+		goto fail;
+	}
+	if (launch_proc(argv29) != 0) {
+		printf("Error (line %d) - process did not run ok with --allow-explicitly parameter\n",
 			__LINE__);
 		goto fail;
 	}

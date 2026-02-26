@@ -32,6 +32,7 @@
  * Format of each entry: long name, short name, help string, struct member name.
  */
 /* (Alphabetical) List of common options first */
+BOOL_ARG("--allow-explicitly", NULL, "Change EAL device probing to consider only allowed devices", allow_explicitly)
 LIST_ARG("--allow", "-a", "Add device to allow-list, causing DPDK to only use specified devices", allow)
 STR_ARG("--base-virtaddr", NULL, "Base virtual address to reserve memory", base_virtaddr)
 LIST_ARG("--block", "-b", "Add device to block-list, preventing DPDK from using the device", block)

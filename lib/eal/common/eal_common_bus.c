@@ -15,6 +15,8 @@
 #include <eal_export.h>
 #include "eal_private.h"
 
+static bool allow_explicitly;
+
 static struct rte_bus_list rte_bus_list =
 	TAILQ_HEAD_INITIALIZER(rte_bus_list);
 
@@ -96,6 +98,12 @@ rte_bus_probe(void)
 	}
 
 	return 0;
+}
+
+void
+eal_bus_set_allow_explicitly(void)
+{
+	allow_explicitly = true;
 }
 
 /* Clean up all devices of all buses */
@@ -231,16 +239,21 @@ RTE_EXPORT_INTERNAL_SYMBOL(rte_bus_is_ignored_device)
 bool
 rte_bus_is_ignored_device(const struct rte_bus *bus, const struct rte_devargs *devargs)
 {
-	switch (bus->conf.scan_mode) {
-	case RTE_BUS_SCAN_ALLOWLIST:
+	enum rte_bus_scan_mode scan_mode = bus->conf.scan_mode;
+
+	if (scan_mode == RTE_BUS_SCAN_UNDEFINED) {
+		if (allow_explicitly)
+			scan_mode = RTE_BUS_SCAN_ALLOWLIST;
+		else
+			scan_mode = RTE_BUS_SCAN_BLOCKLIST;
+	}
+
+	if (scan_mode == RTE_BUS_SCAN_ALLOWLIST) {
 		if (devargs && devargs->policy == RTE_DEV_ALLOWED)
 			return false;
-		break;
-	case RTE_BUS_SCAN_UNDEFINED:
-	case RTE_BUS_SCAN_BLOCKLIST:
+	} else {
 		if (devargs == NULL || devargs->policy != RTE_DEV_BLOCKED)
 			return false;
-		break;
 	}
 	return true;
 }

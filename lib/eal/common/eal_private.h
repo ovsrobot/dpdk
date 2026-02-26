@@ -470,6 +470,12 @@ int rte_eal_memory_detach(void);
 struct rte_bus *rte_bus_find_by_device_name(const char *str);
 
 /**
+ * Change behavior of rte_bus_probe() from a block-listing approach
+ * to an allow-listing approach.
+ */
+void eal_bus_set_allow_explicitly(void);
+
+/**
  * For each device on the buses, call the driver-specific function for
  * device cleanup.
  *

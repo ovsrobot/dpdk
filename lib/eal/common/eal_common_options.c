@@ -1972,6 +1972,9 @@ eal_parse_args(void)
 		}
 	}
 
+	if (args.allow_explicitly)
+		eal_bus_set_allow_explicitly();
+
 	/* device -a/-b/-vdev options*/
 	TAILQ_FOREACH(arg, &args.allow, next)
 		if (eal_option_device_add(RTE_DEVTYPE_ALLOWED, arg->arg) < 0)
