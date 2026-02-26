@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <stdbool.h>
 #include <libgen.h>
 
 #include <bus_driver.h>
@@ -247,40 +248,32 @@ idxd_probe_dsa(struct rte_dsa_device *dev)
 	return 0;
 }
 
-static int search_devargs(const char *name)
+static const struct rte_devargs *search_devargs(const char *name)
 {
 	struct rte_devargs *devargs;
 	RTE_EAL_DEVARGS_FOREACH(dsa_bus.bus.name, devargs) {
 		if (strcmp(devargs->name, name) == 0)
-			return 1;
+			return devargs;
 	}
-	return 0;
+	return NULL;
 }
 
-static int
+static bool
 is_for_this_process_use(struct rte_dsa_device *dev, const char *name)
 {
 	char prefix[256];
-	int retval = 0;
 	size_t prefixlen;
 
 	prefixlen = rte_basename(rte_eal_get_runtime_dir(), prefix, sizeof(prefix));
 	if (prefixlen >= sizeof(prefix) || strcmp(prefix, ".") == 0)
-		return retval;
+		return false;
 
-	if (strncmp(name, "dpdk_", 5) == 0)
-		retval = 1;
-	if (strncmp(name, prefix, prefixlen) == 0 && name[prefixlen] == '_')
-		retval = 1;
-
-	if (retval && dsa_bus.bus.conf.scan_mode != RTE_BUS_SCAN_UNDEFINED) {
-		if (dsa_bus.bus.conf.scan_mode == RTE_BUS_SCAN_ALLOWLIST)
-			retval = search_devargs(dev->device.name);
-		else
-			retval = !search_devargs(dev->device.name);
+	if (strncmp(name, "dpdk_", 5) == 0 ||
+			(strncmp(name, prefix, prefixlen) == 0 && name[prefixlen] == '_')) {
+		return !rte_bus_is_ignored_device(&dsa_bus.bus, search_devargs(dev->device.name));
 	}
 
-	return retval;
+	return false;
 }
 
 static int
@@ -295,8 +288,7 @@ dsa_probe(void)
 				read_wq_string(dev, "name", name, sizeof(name)) < 0)
 			continue;
 
-		if (strncmp(type, "user", 4) == 0 &&
-				is_for_this_process_use(dev, name)) {
+		if (strncmp(type, "user", 4) == 0 && is_for_this_process_use(dev, name)) {
 			dev->device.driver = &dsa_bus.driver;
 			idxd_probe_dsa(dev);
 			continue;

@@ -302,6 +302,13 @@ RTE_INIT_PRIO(businitfn_ ##nm, BUS) \
 __rte_internal
 void rte_bus_unregister(struct rte_bus *bus);
 
+/**
+ * Indicate if a device referenced by some devargs should be skipped during
+ * probing of a bus.
+ */
+__rte_internal
+bool rte_bus_is_ignored_device(const struct rte_bus *bus, const struct rte_devargs *devargs);
+
 #ifdef __cplusplus
 }
 #endif

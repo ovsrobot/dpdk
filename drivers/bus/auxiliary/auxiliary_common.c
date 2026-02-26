@@ -399,20 +399,7 @@ auxiliary_dma_unmap(struct rte_device *dev, void *addr, uint64_t iova,
 bool
 auxiliary_is_ignored_device(const char *name)
 {
-	struct rte_devargs *devargs = auxiliary_devargs_lookup(name);
-
-	switch (auxiliary_bus.bus.conf.scan_mode) {
-	case RTE_BUS_SCAN_ALLOWLIST:
-		if (devargs && devargs->policy == RTE_DEV_ALLOWED)
-			return false;
-		break;
-	case RTE_BUS_SCAN_UNDEFINED:
-	case RTE_BUS_SCAN_BLOCKLIST:
-		if (devargs == NULL || devargs->policy != RTE_DEV_BLOCKED)
-			return false;
-		break;
-	}
-	return true;
+	return rte_bus_is_ignored_device(&auxiliary_bus.bus, auxiliary_devargs_lookup(name));
 }
 
 static enum rte_iova_mode

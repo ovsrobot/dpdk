@@ -84,26 +84,6 @@ uacce_devargs_lookup(const char *dev_name)
 	return NULL;
 }
 
-static bool
-uacce_ignore_device(const char *dev_name)
-{
-	struct rte_devargs *devargs = uacce_devargs_lookup(dev_name);
-
-	switch (uacce_bus.bus.conf.scan_mode) {
-	case RTE_BUS_SCAN_ALLOWLIST:
-		if (devargs && devargs->policy == RTE_DEV_ALLOWED)
-			return false;
-		break;
-	case RTE_BUS_SCAN_UNDEFINED:
-	case RTE_BUS_SCAN_BLOCKLIST:
-		if (devargs == NULL || devargs->policy != RTE_DEV_BLOCKED)
-			return false;
-		break;
-	}
-
-	return true;
-}
-
 /*
  * Returns the number of bytes read (removed last newline) on success.
  * Otherwise negative value is returned.
@@ -310,7 +290,7 @@ uacce_scan(void)
 			continue;
 		}
 
-		if (uacce_ignore_device(e->d_name))
+		if (rte_bus_is_ignored_device(&uacce_bus.bus, uacce_devargs_lookup(e->d_name)))
 			continue;
 
 		if (uacce_scan_one(e->d_name) < 0)

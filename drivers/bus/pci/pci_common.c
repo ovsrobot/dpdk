@@ -721,20 +721,7 @@ pci_dma_unmap(struct rte_device *dev, void *addr, uint64_t iova, size_t len)
 bool
 rte_pci_ignore_device(const struct rte_pci_addr *pci_addr)
 {
-	struct rte_devargs *devargs = pci_devargs_lookup(pci_addr);
-
-	switch (rte_pci_bus.bus.conf.scan_mode) {
-	case RTE_BUS_SCAN_ALLOWLIST:
-		if (devargs && devargs->policy == RTE_DEV_ALLOWED)
-			return false;
-		break;
-	case RTE_BUS_SCAN_UNDEFINED:
-	case RTE_BUS_SCAN_BLOCKLIST:
-		if (devargs == NULL || devargs->policy != RTE_DEV_BLOCKED)
-			return false;
-		break;
-	}
-	return true;
+	return rte_bus_is_ignored_device(&rte_pci_bus.bus, pci_devargs_lookup(pci_addr));
 }
 
 enum rte_iova_mode

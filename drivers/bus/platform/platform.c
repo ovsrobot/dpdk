@@ -56,30 +56,6 @@ dev_devargs(const char *dev_name)
 	return NULL;
 }
 
-static bool
-dev_allowed(const char *dev_name)
-{
-	struct rte_devargs *devargs;
-
-	devargs = dev_devargs(dev_name);
-	if (devargs == NULL)
-		return true;
-
-	switch (platform_bus.bus.conf.scan_mode) {
-	case RTE_BUS_SCAN_UNDEFINED:
-	case RTE_BUS_SCAN_ALLOWLIST:
-		if (devargs->policy == RTE_DEV_ALLOWED)
-			return true;
-		break;
-	case RTE_BUS_SCAN_BLOCKLIST:
-		if (devargs->policy == RTE_DEV_BLOCKED)
-			return false;
-		break;
-	}
-
-	return true;
-}
-
 static int
 dev_add(const char *dev_name)
 {
@@ -173,7 +149,7 @@ platform_bus_scan(void)
 		if (dev_name[0] == '.')
 			continue;
 
-		if (!dev_allowed(dev_name))
+		if (rte_bus_is_ignored_device(&platform_bus.bus, dev_devargs(dev_name)))
 			continue;
 
 		if (!dev_is_bound_vfio_platform(dev_name))
@@ -497,7 +473,7 @@ platform_bus_plug(struct rte_device *dev)
 {
 	struct rte_platform_device *pdev;
 
-	if (!dev_allowed(dev->name))
+	if (rte_bus_is_ignored_device(&platform_bus.bus, dev->devargs))
 		return -EPERM;
 
 	if (!dev_is_bound_vfio_platform(dev->name))
