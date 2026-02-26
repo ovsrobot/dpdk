@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
+# Optional Fields:
+#   All fields are optional, uncomment a test suite to run it with a specific configuration.
+
 # Define the custom test suite configurations
 hello_world:
   msg: A custom hello world to you!
