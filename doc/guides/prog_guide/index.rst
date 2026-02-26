@@ -75,6 +75,7 @@ Device Libraries
 
     ethdev/index
     dev_args
+    device_hotplug
     link_bonding_poll_mode_drv_lib
     vhost_lib
     cryptodev_lib
