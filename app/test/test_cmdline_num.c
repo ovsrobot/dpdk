@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <float.h>
+#include <math.h>
 
 #include <rte_string_fns.h>
 
@@ -21,6 +23,11 @@ struct num_unsigned_str {
 struct num_signed_str {
 	const char * str;
 	int64_t result;
+};
+
+struct num_float_str {
+	const char *str;
+	double result;
 };
 
 const struct num_unsigned_str num_valid_positive_strs[] = {
@@ -144,6 +151,63 @@ const struct num_signed_str num_valid_negative_strs[] = {
 		{"-0b1000000000000000000000000000000000000000000000000000000000000000", INT64_MIN },
 };
 
+const struct num_float_str float_valid_strs[] = {
+		/* zero */
+		{"0", 0},
+		/* parse int as float */
+		{"1", 1},
+		{"-1", -1},
+		/* fractional */
+		{"1.23", 1.23},
+		{"-1.23", -1.23},
+		{"0.123", 0.123},
+		{"-0.123", -0.123},
+		{"123.456", 123.456},
+		{"-123.456", -123.456},
+		/* positive exponent */
+		{"1e2", 1e2},
+		{"-1e2", -1e2},
+		{"1E2", 1E2},
+		{"-1E2", -1E2},
+		{"0.12e3", 0.12e3},
+		{"-0.12e3", -0.12e3},
+		{"1.23e4", 1.23e4},
+		{"-1.23e4", -1.23e4},
+		{"1.23E4", 1.23E4},
+		{"-1.23E4", -1.23E4},
+		{"123.456e7", 123.456e7},
+		{"-123.456e7", -123.456e7},
+		{"123.456E7", 123.456E7},
+		{"-123.456E7", -123.456E7},
+		/* negative exponent */
+		{"1e-2", 1e-2},
+		{"-1e-2", -1e-2},
+		{"1E-2", 1E-2},
+		{"-1E-2", -1E-2},
+		{"0.12e-3", 0.12e-3},
+		{"-0.12e-3", -0.12e-3},
+		{"1.23e-4", 1.23e-4},
+		{"-1.23e-4", -1.23e-4},
+		{"1.23E-4", 1.23E-4},
+		{"-1.23E-4", -1.23E-4},
+		{"123.456e-7", 123.456e-7},
+		{"-123.456e-7", -123.456e-7},
+		{"123.456E-7", 123.456E-7},
+		{"-123.456E-7", -123.456E-7},
+		/* try overflowing float */
+		{"2e63", 2e63},
+		{"-2e63", -2e63},
+		{"2E63", 2E63},
+		{"-2E63", -2E63},
+		{"18446744073709551615", (double) UINT64_MAX},
+		{"-9223372036854775808", (double) INT64_MIN},
+		/* try overflowing double */
+		{"2e308", HUGE_VAL},
+		{"-2e308", -HUGE_VAL},
+		{"2E308", HUGE_VAL},
+		{"-2E308", HUGE_VAL},
+};
+
 const struct num_unsigned_str num_garbage_positive_strs[] = {
 		/* valid strings with garbage on the end, should still be valid */
 		/* decimal */
@@ -214,6 +278,71 @@ const struct num_signed_str num_garbage_negative_strs[] = {
 		{"-01000000000000000000000 garbage", INT64_MIN },
 };
 
+const struct num_float_str float_garbage_strs[] = {
+	/* valid strings with garbage on the end, should still be valid */
+	/* positive float positive exponent */
+	{"123.456e7\0garbage", 123.456e7},
+	{"123.456e7\rgarbage", 123.456e7},
+	{"123.456e7\tgarbage", 123.456e7},
+	{"123.456e7\ngarbage", 123.456e7},
+	{"123.456e7#garbage", 123.456e7},
+	{"123.456e7 garbage", 123.456e7},
+	/* negative float positive exponent */
+	{"-123.456e7\0garbage", -123.456e7},
+	{"-123.456e7\rgarbage", -123.456e7},
+	{"-123.456e7\tgarbage", -123.456e7},
+	{"-123.456e7\ngarbage", -123.456e7},
+	{"-123.456e7#garbage", -123.456e7},
+	{"-123.456e7 garbage", -123.456e7},
+	/* positive float negative exponent */
+	{"123.456e-7\0garbage", 123.456e-7},
+	{"123.456e-7\rgarbage", 123.456e-7},
+	{"123.456e-7\tgarbage", 123.456e-7},
+	{"123.456e-7\ngarbage", 123.456e-7},
+	{"123.456e-7#garbage", 123.456e-7},
+	{"123.456e-7 garbage", 123.456e-7},
+	/* negative float negative exponent */
+	{"-123.456e-7\0garbage", -123.456e-7},
+	{"-123.456e-7\rgarbage", -123.456e-7},
+	{"-123.456e-7\tgarbage", -123.456e-7},
+	{"-123.456e-7\ngarbage", -123.456e-7},
+	{"-123.456e-7#garbage", -123.456e-7},
+	{"-123.456e-7 garbage", -123.456e-7},
+	/* float overflows */
+	{"18446744073709551615\0garbage", (double) UINT64_MAX},
+	{"18446744073709551615\rgarbage", (double) UINT64_MAX},
+	{"18446744073709551615\ngarbage", (double) UINT64_MAX},
+	{"18446744073709551615\tgarbage", (double) UINT64_MAX},
+	{"18446744073709551615#garbage", (double) UINT64_MAX},
+	{"18446744073709551615 garbage", (double) UINT64_MAX},
+	{"-9223372036854775808\0garbage", (double) INT64_MIN},
+	{"-9223372036854775808\rgarbage", (double) INT64_MIN},
+	{"-9223372036854775808\ngarbage", (double) INT64_MIN},
+	{"-9223372036854775808\tgarbage", (double) INT64_MIN},
+	{"-9223372036854775808#garbage", (double) INT64_MIN},
+	{"-9223372036854775808 garbage", (double) INT64_MIN},
+};
+
+const char *float_invalid_strs[] = {
+	"1.1.",
+	"1.1.1",
+	"-1.1.",
+	"-1.1.1",
+	"e",
+	"1e",
+	"-1e",
+	"0.1e",
+	"-0.1e",
+	"1.e",
+	"-1.e",
+	"1.23e3.4",
+	"-1.23e3.4",
+	"1e1e",
+	"1e1e1",
+	"1e-",
+	"-1e-"
+};
+
 const char * num_invalid_strs[] = {
 		"18446744073709551616", /* out of range unsigned */
 		"-9223372036854775809", /* out of range negative signed */
@@ -231,7 +360,16 @@ const char * num_invalid_strs[] = {
 		/* too long (128+ chars) */
 		("0b1111000011110000111100001111000011110000111100001111000011110000"
 		  "1111000011110000111100001111000011110000111100001111000011110000"),
+		/* valid float values but should fail to parse as ints */
 		"1E3",
+		"-1E3",
+		"1.23",
+		"-1.23",
+		"1E-3",
+		"-1E-3",
+		"1.23E4",
+		"-1.23E4",
+		/* misc invalid values */
 		"0A",
 		"-B",
 		"1.23G",
@@ -243,6 +381,48 @@ const char * num_invalid_strs[] = {
 		"\n",
 		"\0",
 };
+
+static int
+float_cmp(double expected, void *actual_p, enum cmdline_numtype type)
+{
+	double eps;
+	double actual_d;
+
+	if (type == RTE_FLOAT_SINGLE) {
+		/* read as float, convert to double */
+		actual_d = (double)*(float *)actual_p;
+		/* downcast expected to float as well */
+		expected = (double)(float)expected;
+		eps = FLT_EPSILON;
+	} else {
+		/* read as double */
+		actual_d = *(double *)actual_p;
+		eps = DBL_EPSILON;
+	}
+	/* compare using epsilon value */
+	if (fabs(expected - actual_d) < eps)
+		return 0;
+	/* not equal */
+	return expected < actual_d ? -1 : 1;
+}
+
+static int
+can_parse_float(double expected_result, enum cmdline_numtype type)
+{
+	switch (type) {
+	case RTE_FLOAT_SINGLE:
+		if (expected_result > FLT_MAX || expected_result < -FLT_MAX)
+			return 0;
+		break;
+	case RTE_FLOAT_DOUBLE:
+		if (expected_result > DBL_MAX || expected_result < -DBL_MAX)
+			return 0;
+		break;
+	default:
+		return 1;
+	}
+	return 1;
+}
 
 static int
 can_parse_unsigned(uint64_t expected_result, enum cmdline_numtype type)
@@ -399,11 +579,11 @@ test_parse_num_invalid_data(void)
 	int ret = 0;
 	unsigned i;
 	char buf[CMDLINE_TEST_BUFSIZE];
-	uint64_t result; /* pick largest buffer */
 	cmdline_parse_token_num_t token;
 
-	/* cycle through all possible parsed types */
+	/* cycle through all possible integer types */
 	for (type = RTE_UINT8; type <= RTE_INT64; type++) {
+		uint64_t result; /* pick largest buffer */
 		token.num_data.type = type;
 
 		/* test full strings */
@@ -425,6 +605,30 @@ test_parse_num_invalid_data(void)
 			}
 		}
 	}
+
+	/* cycle through all possible float types */
+	for (type = RTE_FLOAT_SINGLE; type <= RTE_FLOAT_DOUBLE; type++) {
+		double result; /* pick largest buffer */
+		token.num_data.type = type;
+
+		/* test full strings */
+		for (i = 0; i < RTE_DIM(float_invalid_strs); i++) {
+			memset(&result, 0, sizeof(double));
+			memset(&buf, 0, sizeof(buf));
+
+			ret = cmdline_parse_num((cmdline_parse_token_hdr_t *)&token,
+					float_invalid_strs[i], (void *)&result, sizeof(result));
+			if (ret != -1) {
+				/* get some info about what we are trying to parse */
+				cmdline_get_help_num((cmdline_parse_token_hdr_t *)&token,
+						buf, sizeof(buf));
+
+				printf("Error: parsing %s as %s succeeded!\n",
+						float_invalid_strs[i], buf);
+				return -1;
+			}
+		}
+	}
 	return 0;
 }
 
@@ -436,13 +640,13 @@ test_parse_num_valid(void)
 	enum cmdline_numtype type;
 	unsigned i;
 	char buf[CMDLINE_TEST_BUFSIZE];
-	uint64_t result;
 	cmdline_parse_token_num_t token;
 
 	/** valid strings **/
 
-	/* cycle through all possible parsed types */
+	/* cycle through all possible integer types */
 	for (type = RTE_UINT8; type <= RTE_INT64; type++) {
+		uint64_t result;
 		token.num_data.type = type;
 
 		/* test positive strings */
@@ -517,10 +721,48 @@ test_parse_num_valid(void)
 		}
 	}
 
+	/* cycle through all possible float types */
+	for (type = RTE_FLOAT_SINGLE; type <= RTE_FLOAT_DOUBLE; type++) {
+		double result;
+		token.num_data.type = type;
+
+		/* test all valid strings */
+		for (i = 0; i < RTE_DIM(float_valid_strs); i++) {
+			int expected;
+
+			result = 0;
+			memset(&buf, 0, sizeof(buf));
+
+
+			cmdline_get_help_num((cmdline_parse_token_hdr_t *)&token,
+					buf, sizeof(buf));
+
+			ret = cmdline_parse_num((cmdline_parse_token_hdr_t *) &token,
+				float_valid_strs[i].str,
+				(void *)&result, sizeof(result));
+
+			/* should it have failed? */
+			expected = can_parse_float(float_valid_strs[i].result, type);
+			if ((ret < 0) == (expected > 0)) {
+				printf("Error: parser behaves unexpectedly when parsing %s as %s!\n",
+						float_valid_strs[i].str, buf);
+				return -1;
+			}
+			/* check if result matches */
+			expected = float_cmp(float_valid_strs[i].result, &result, type);
+			if (ret > 0 && expected != 0) {
+				printf("Error: parsing %s as %s failed: result mismatch!\n",
+						float_valid_strs[i].str, buf);
+				return -1;
+			}
+		}
+	}
+
 	/** garbage strings **/
 
-	/* cycle through all possible parsed types */
+	/* cycle through all possible integer types */
 	for (type = RTE_UINT8; type <= RTE_INT64; type++) {
+		uint64_t result;
 		token.num_data.type = type;
 
 		/* test positive garbage strings */
@@ -593,6 +835,41 @@ test_parse_num_valid(void)
 					continue;
 				printf("Error: parsing %s as %s failed: result mismatch!\n",
 						num_garbage_negative_strs[i].str, buf);
+				return -1;
+			}
+		}
+	}
+
+	/* cycle through all possible float types */
+	for (type = RTE_FLOAT_SINGLE; type <= RTE_FLOAT_DOUBLE; type++) {
+		double result;
+		token.num_data.type = type;
+
+		/* test all valid strings */
+		for (i = 0; i < RTE_DIM(float_garbage_strs); i++) {
+			int expected;
+			result = 0;
+			memset(&buf, 0, sizeof(buf));
+
+			cmdline_get_help_num((cmdline_parse_token_hdr_t *)&token,
+					buf, sizeof(buf));
+
+			ret = cmdline_parse_num((cmdline_parse_token_hdr_t *) &token,
+				float_garbage_strs[i].str,
+				(void *)&result, sizeof(result));
+
+			/* should it have failed? */
+			expected = can_parse_float(float_garbage_strs[i].result, type);
+			if ((ret < 0) == (expected > 0)) {
+				printf("Error: parser behaves unexpectedly when parsing %s as %s!\n",
+						float_garbage_strs[i].str, buf);
+				return -1;
+			}
+			/* check if result matches */
+			expected = float_cmp(float_garbage_strs[i].result, &result, type);
+			if (ret > 0 && expected != 0) {
+				printf("Error: parsing %s as %s failed: result mismatch!\n",
+						float_garbage_strs[i].str, buf);
 				return -1;
 			}
 		}
