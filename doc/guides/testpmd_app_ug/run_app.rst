@@ -386,6 +386,14 @@ The command line options are:
 
     Generate multiple flows in txonly mode.
 
+*   ``--txonly-nb-flows=N``
+
+    Set the number of unique flows per lcore when txonly multi-flow mode
+    is enabled. Valid range is 1 to 64. Default is 64, which preserves
+    the original behavior. Reducing this value limits the number of unique
+    UDP source ports generated, which can prevent exhaustion of hardware
+    flow table entries on SmartNICs.
+
 *   ``--rxq-share=[X]``
 
     Create queues in shared Rx queue mode if device supports.

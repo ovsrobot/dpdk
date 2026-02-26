@@ -384,6 +384,10 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"    Set the scheduling on timestamps"
 			" timings for the TXONLY mode\n\n"
 
+			"set txonly-nb-flows (N)\n"
+			"    Set the number of flows per lcore in"
+			" txonly multi-flow mode (1-64)\n\n"
+
 			"set corelist (x[,y]*)\n"
 			"    Set the list of forwarding cores.\n\n"
 
@@ -4608,6 +4612,50 @@ static cmdline_parse_inst_t cmd_set_txtimes = {
 		(void *)&cmd_set_txtimes_keyword,
 		(void *)&cmd_set_txtimes_name,
 		(void *)&cmd_set_txtimes_value,
+		NULL,
+	},
+};
+
+/* *** SET NUMBER OF FLOWS IN TXONLY MULTI-FLOW MODE *** */
+
+struct cmd_set_txonly_nb_flows_result {
+	cmdline_fixed_string_t cmd_keyword;
+	cmdline_fixed_string_t name;
+	uint16_t value;
+};
+
+static void
+cmd_set_txonly_nb_flows_parsed(void *parsed_result,
+			       __rte_unused struct cmdline *cl,
+			       __rte_unused void *data)
+{
+	struct cmd_set_txonly_nb_flows_result *res = parsed_result;
+
+	if (res->value < 1 || res->value > 64) {
+		fprintf(stderr, "txonly-nb-flows must be >= 1 and <= 64\n");
+		return;
+	}
+	txonly_nb_flows = res->value;
+}
+
+static cmdline_parse_token_string_t cmd_set_txonly_nb_flows_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_txonly_nb_flows_result,
+				 cmd_keyword, "set");
+static cmdline_parse_token_string_t cmd_set_txonly_nb_flows_name =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_txonly_nb_flows_result,
+				 name, "txonly-nb-flows");
+static cmdline_parse_token_num_t cmd_set_txonly_nb_flows_value =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_txonly_nb_flows_result,
+			      value, RTE_UINT16);
+
+static cmdline_parse_inst_t cmd_set_txonly_nb_flows = {
+	.f = cmd_set_txonly_nb_flows_parsed,
+	.data = NULL,
+	.help_str = "set txonly-nb-flows <N>",
+	.tokens = {
+		(void *)&cmd_set_txonly_nb_flows_keyword,
+		(void *)&cmd_set_txonly_nb_flows_name,
+		(void *)&cmd_set_txonly_nb_flows_value,
 		NULL,
 	},
 };
@@ -14102,6 +14150,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	&cmd_set_txpkts,
 	&cmd_set_txsplit,
 	&cmd_set_txtimes,
+	&cmd_set_txonly_nb_flows,
 	&cmd_set_fwd_list,
 	&cmd_set_fwd_mask,
 	&cmd_set_fwd_mode,

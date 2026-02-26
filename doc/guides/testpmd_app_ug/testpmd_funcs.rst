@@ -924,6 +924,22 @@ Where:
 
 * ``rand`` same as 'on', but number of segments per each packet is a random value between 1 and total number of segments.
 
+set txonly-nb-flows
+~~~~~~~~~~~~~~~~~~~
+
+Set the number of unique flows per lcore in txonly multi-flow mode::
+
+   testpmd> set txonly-nb-flows <N>
+
+Where ``N`` is the number of unique UDP source port values each lcore will
+cycle through, in the range 1 to 64. Default is 64.
+
+Each lcore generates unique flows by combining the flow index with its lcore
+ID, so the total number of unique flows across the system is
+``txonly-nb-flows * active_lcores``. Reducing this value can prevent exhaustion
+of hardware flow table entries on SmartNICs that have limited flow caching
+capacity.
+
 set corelist
 ~~~~~~~~~~~~
 
