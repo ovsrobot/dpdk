@@ -139,6 +139,3 @@ Deprecation Notices
 * bus/vmbus: Starting DPDK 25.11, all the vmbus API defined in
   ``drivers/bus/vmbus/rte_bus_vmbus.h`` will become internal to DPDK.
   Those API functions are used internally by DPDK core and netvsc PMD.
-
-* vdpa: vDPA driver API will no longer offer ``get_vfio_group_fd`` as part of its internal API.
-  All drivers will be adjusted to use the new unified VFIO container device assignment API.
