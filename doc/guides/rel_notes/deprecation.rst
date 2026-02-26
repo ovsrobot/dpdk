@@ -30,6 +30,12 @@ Deprecation Notices
   Use the ``-S <service-corelist>`` parameter instead
   to specify the cores to be used for background services in DPDK.
 
+* eal: The entire VFIO API (``rte_vfio_*``) will be made internal only,
+  and will only be available to EAL and drivers.
+  Group-based API (``rte_vfio_*_group_*``) will be removed
+  and replaced with unified container device assignment API.
+  This change will be made in 26.11 release.
+
 * rte_atomicNN_xxx: These APIs do not take memory order parameter. This does
   not allow for writing optimized code for all the CPU architectures supported
   in DPDK. DPDK has adopted the atomic operations from
