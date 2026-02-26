@@ -4,6 +4,7 @@
  * All rights reserved.
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -29,23 +30,6 @@ struct cmdline_token_ops cmdline_token_num_ops = {
 	.get_help = cmdline_get_help_num,
 };
 
-enum num_parse_state_t {
-	START,
-	DEC_NEG,
-	BIN,
-	HEX,
-
-	ERROR,
-
-	FIRST_OK, /* not used */
-	ZERO_OK,
-	HEX_OK,
-	OCTAL_OK,
-	BIN_OK,
-	DEC_NEG_OK,
-	DEC_POS_OK,
-};
-
 /* Keep it sync with enum in .h */
 static const char * num_help[] = {
 	"UINT8", "UINT16", "UINT32", "UINT64",
@@ -53,176 +37,175 @@ static const char * num_help[] = {
 };
 
 static inline int
-add_to_res(unsigned int c, uint64_t *res, unsigned int base)
+add_to_bin(unsigned int c, uint64_t *res)
 {
 	/* overflow */
-	if ((UINT64_MAX - c) / base < *res)
+	if ((UINT64_MAX - c) / 2 < *res)
 		return -1;
 
-	*res = (uint64_t) (*res * base + c);
+	*res = (uint64_t) (*res * 2 + c);
 	return 0;
 }
 
 static int
-check_res_size(struct cmdline_token_num_data *nd, unsigned ressize)
+check_res_size(struct cmdline_token_num_data *num_data, unsigned int res_size)
 {
-	switch (nd->type) {
+	switch (num_data->type) {
 	case RTE_INT8:
 	case RTE_UINT8:
-		if (ressize < sizeof(int8_t))
+		if (res_size < sizeof(int8_t))
 			return -1;
 		break;
 	case RTE_INT16:
 	case RTE_UINT16:
-		if (ressize < sizeof(int16_t))
+		if (res_size < sizeof(int16_t))
 			return -1;
 		break;
 	case RTE_INT32:
 	case RTE_UINT32:
-		if (ressize < sizeof(int32_t))
+		if (res_size < sizeof(int32_t))
 			return -1;
 		break;
 	case RTE_INT64:
 	case RTE_UINT64:
-		if (ressize < sizeof(int64_t))
+		if (res_size < sizeof(int64_t))
 			return -1;
 		break;
 	default:
+		debug_printf("Wrong number type: %d\n", num_data->type);
 		return -1;
 	}
 	return 0;
 }
 
-/* parse an int */
-RTE_EXPORT_SYMBOL(cmdline_parse_num)
-int
-cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
-	unsigned ressize)
+static int
+validate_type(enum cmdline_numtype type)
 {
-	struct cmdline_token_num_data nd;
-	enum num_parse_state_t st = START;
+	if (type < RTE_UINT8 || type > RTE_INT64)
+		return -1;
+	/* ensure no buffer overrun can occur */
+	if ((uint64_t) type >= RTE_DIM(num_help))
+		return -1;
+	return 0;
+}
+
+static int
+check_parsed_num(enum cmdline_numtype type, int neg, uint64_t uintres)
+{
+	int lo_ok, hi_ok;
+
+	switch (type) {
+	case RTE_UINT8:
+		lo_ok = !neg;
+		hi_ok = uintres <= UINT8_MAX;
+		break;
+	case RTE_UINT16:
+		lo_ok = !neg;
+		hi_ok = uintres <= UINT16_MAX;
+		break;
+	case RTE_UINT32:
+		lo_ok = !neg;
+		hi_ok = uintres <= UINT32_MAX;
+		break;
+	case RTE_UINT64:
+		lo_ok = !neg;
+		hi_ok = 1; /* can't be out of range if parsed successfully */
+		break;
+	case RTE_INT8:
+		lo_ok = !neg || (int64_t)uintres >= INT8_MIN;
+		hi_ok = neg || uintres <= INT8_MAX;
+		break;
+	case RTE_INT16:
+		lo_ok = !neg || (int64_t)uintres >= INT16_MIN;
+		hi_ok = neg || uintres <= INT16_MAX;
+		break;
+	case RTE_INT32:
+		lo_ok = !neg || (int64_t)uintres >= INT32_MIN;
+		hi_ok = neg || uintres <= INT32_MAX;
+		break;
+	case RTE_INT64:
+		lo_ok = 1; /* can't be out of range if parsed successfully */
+		hi_ok = neg || uintres <= INT64_MAX;
+		break;
+	default:
+		debug_printf("Wrong number type\n");
+		return -1;
+	}
+	/* check ranges */
+	if (!lo_ok || !hi_ok)
+		return -1;
+	return 0;
+}
+
+static int
+parse_num(const char *srcbuf, uint64_t *resptr)
+{
+	uint64_t uintres;
+	char *end;
+	int neg = *srcbuf == '-';
+
+	/*
+	 * strtoull does not do range checks on negative numbers, so we need to
+	 * use strtoll if we know the value we're parsing looks like a negative
+	 * one. we use base 0 for both, 0 means autodetect base.
+	 */
+	errno = 0;
+	if (neg)
+		uintres = (uint64_t)strtoll(srcbuf, &end, 0);
+	else
+		uintres = strtoull(srcbuf, &end, 0);
+
+	if (end == srcbuf || !cmdline_isendoftoken(*end) || errno == ERANGE)
+		return -1;
+
+	*resptr = uintres;
+	return end - srcbuf;
+}
+
+static int
+parse_bin(const char *srcbuf, uint64_t *res)
+{
+	uint64_t uintres = 0;
+	enum {
+		ERROR,
+		START,
+		BIN,
+		NEG,
+		ZERO_OK,
+		BIN_OK,
+	} st = START;
 	const char * buf;
 	char c;
-	uint64_t res1 = 0;
-
-	if (!tk)
-		return -1;
-
-	if (!srcbuf || !*srcbuf)
-		return -1;
+	int neg = 0;
 
 	buf = srcbuf;
 	c = *buf;
-
-	memcpy(&nd, &((struct cmdline_token_num *)tk)->num_data, sizeof(nd));
-
-	/* check that we have enough room in res */
-	if (res) {
-		if (check_res_size(&nd, ressize) < 0)
-			return -1;
-	}
-
 	while (st != ERROR && c && !cmdline_isendoftoken(c)) {
 		debug_printf("%c %x -> ", c, c);
 		switch (st) {
 		case START:
-			if (c == '-') {
-				st = DEC_NEG;
-			}
-			else if (c == '0') {
+			if (c == '0') {
 				st = ZERO_OK;
-			}
-			else if (c >= '1' && c <= '9') {
-				if (add_to_res(c - '0', &res1, 10) < 0)
-					st = ERROR;
-				else
-					st = DEC_POS_OK;
-			}
-			else  {
+			} else if (c == '-') {
+				neg = 1;
+				st = NEG;
+			} else {
 				st = ERROR;
 			}
+			break;
+
+		case NEG:
+			if (c == '0')
+				st = ZERO_OK;
+			else
+				st = ERROR;
 			break;
 
 		case ZERO_OK:
-			if (c == 'x') {
-				st = HEX;
-			}
-			else if (c == 'b') {
+			if (c == 'b')
 				st = BIN;
-			}
-			else if (c >= '0' && c <= '7') {
-				if (add_to_res(c - '0', &res1, 10) < 0)
-					st = ERROR;
-				else
-					st = OCTAL_OK;
-			}
-			else  {
+			else
 				st = ERROR;
-			}
-			break;
-
-		case DEC_NEG:
-			if (c >= '0' && c <= '9') {
-				if (add_to_res(c - '0', &res1, 10) < 0)
-					st = ERROR;
-				else
-					st = DEC_NEG_OK;
-			}
-			else {
-				st = ERROR;
-			}
-			break;
-
-		case DEC_NEG_OK:
-			if (c >= '0' && c <= '9') {
-				if (add_to_res(c - '0', &res1, 10) < 0)
-					st = ERROR;
-			}
-			else {
-				st = ERROR;
-			}
-			break;
-
-		case DEC_POS_OK:
-			if (c >= '0' && c <= '9') {
-				if (add_to_res(c - '0', &res1, 10) < 0)
-					st = ERROR;
-			}
-			else {
-				st = ERROR;
-			}
-			break;
-
-		case HEX:
-			st = HEX_OK;
-			/* fall-through */
-		case HEX_OK:
-			if (c >= '0' && c <= '9') {
-				if (add_to_res(c - '0', &res1, 16) < 0)
-					st = ERROR;
-			}
-			else if (c >= 'a' && c <= 'f') {
-				if (add_to_res(c - 'a' + 10, &res1, 16) < 0)
-					st = ERROR;
-			}
-			else if (c >= 'A' && c <= 'F') {
-				if (add_to_res(c - 'A' + 10, &res1, 16) < 0)
-					st = ERROR;
-			}
-			else {
-				st = ERROR;
-			}
-			break;
-
-
-		case OCTAL_OK:
-			if (c >= '0' && c <= '7') {
-				if (add_to_res(c - '0', &res1, 8) < 0)
-					st = ERROR;
-			}
-			else {
-				st = ERROR;
-			}
 			break;
 
 		case BIN:
@@ -230,19 +213,18 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 			/* fall-through */
 		case BIN_OK:
 			if (c >= '0' && c <= '1') {
-				if (add_to_res(c - '0', &res1, 2) < 0)
+				if (add_to_bin(c - '0', &uintres) < 0)
 					st = ERROR;
-			}
-			else {
+			} else {
 				st = ERROR;
 			}
 			break;
 		default:
 			debug_printf("not impl ");
-
+			st = ERROR;
 		}
 
-		debug_printf("(%"PRIu64")\n", res1);
+		debug_printf("(%"PRIu64")\n", uintres);
 
 		buf ++;
 		c = *buf;
@@ -252,87 +234,118 @@ cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
 			return -1;
 	}
 
-	switch (st) {
-	case ZERO_OK:
-	case DEC_POS_OK:
-	case HEX_OK:
-	case OCTAL_OK:
-	case BIN_OK:
-		if (nd.type == RTE_INT8 && res1 <= INT8_MAX) {
-			if (res) *(int8_t *)res = (int8_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_INT16 && res1 <= INT16_MAX) {
-			if (res) *(int16_t *)res = (int16_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_INT32 && res1 <= INT32_MAX) {
-			if (res) *(int32_t *)res = (int32_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_INT64 && res1 <= INT64_MAX) {
-			if (res) *(int64_t *)res = (int64_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_UINT8 && res1 <= UINT8_MAX) {
-			if (res) *(uint8_t *)res = (uint8_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_UINT16  && res1 <= UINT16_MAX) {
-			if (res) *(uint16_t *)res = (uint16_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_UINT32 && res1 <= UINT32_MAX) {
-			if (res) *(uint32_t *)res = (uint32_t) res1;
-			return buf-srcbuf;
-		} else if (nd.type == RTE_UINT64) {
-			if (res) *(uint64_t *)res = res1;
-			return buf-srcbuf;
-		} else {
-			return -1;
-		}
-		break;
-
-	case DEC_NEG_OK:
-		if (nd.type == RTE_INT8 &&
-				res1 <= INT8_MAX + 1) {
-			if (res) *(int8_t *)res = (int8_t) (-res1);
-			return buf-srcbuf;
-		} else if (nd.type == RTE_INT16 &&
-				res1 <= (uint16_t)INT16_MAX + 1) {
-			if (res) *(int16_t *)res = (int16_t) (-res1);
-			return buf-srcbuf;
-		} else if (nd.type == RTE_INT32 &&
-				res1 <= (uint32_t)INT32_MAX + 1) {
-			if (res) *(int32_t *)res = (int32_t) (-res1);
-			return buf-srcbuf;
-		} else if (nd.type == RTE_INT64 &&
-				res1 <= (uint64_t)INT64_MAX + 1) {
-			if (res) *(int64_t *)res = (int64_t) (-res1);
-			return buf-srcbuf;
-		} else {
-			return -1;
-		}
-		break;
-	default:
-		debug_printf("error\n");
+	if (st != BIN_OK)
 		return -1;
-	}
+
+	/* was it negative? */
+	if (neg)
+		uintres = -uintres;
+
+	*res = uintres;
+	return buf - srcbuf;
 }
 
+static int
+write_num(enum cmdline_numtype type, void *res, uint64_t uintres)
+{
+	switch (type) {
+	case RTE_UINT8:
+		*(uint8_t *)res = (uint8_t)uintres;
+		break;
+	case RTE_UINT16:
+		*(uint16_t *)res = (uint16_t)uintres;
+		break;
+	case RTE_UINT32:
+		*(uint32_t *)res = (uint32_t)uintres;
+		break;
+	case RTE_UINT64:
+		*(uint64_t *)res = uintres;
+		break;
+	case RTE_INT8:
+		*(int8_t *)res = (int8_t)uintres;
+		break;
+	case RTE_INT16:
+		*(int16_t *)res = (int16_t)uintres;
+		break;
+	case RTE_INT32:
+		*(int32_t *)res = (int32_t)uintres;
+		break;
+	case RTE_INT64:
+		*(int64_t *)res = (int64_t)uintres;
+		break;
+	default:
+		debug_printf("Wrong number type\n");
+		return -1;
+	}
+	return 0;
+}
+
+/* parse an int */
+RTE_EXPORT_SYMBOL(cmdline_parse_num)
+int
+cmdline_parse_num(cmdline_parse_token_hdr_t *tk, const char *srcbuf, void *res,
+	unsigned int res_size)
+{
+	struct cmdline_token_num_data num_data;
+
+	if (!tk)
+		return -1;
+
+	if (!srcbuf || !*srcbuf)
+		return -1;
+
+	memcpy(&num_data, &((struct cmdline_token_num *)tk)->num_data, sizeof(num_data));
+
+	if (validate_type(num_data.type) < 0)
+		return -1;
+
+	/* check that we have enough room in res */
+	if (res && check_res_size(&num_data, res_size) < 0)
+		return -1;
+
+	if (num_data.type >= RTE_UINT8 && num_data.type <= RTE_INT64) {
+		int ret, neg = *srcbuf == '-';
+		uint64_t uintres;
+
+		/* try parsing as number */
+		ret = parse_num(srcbuf, &uintres);
+
+		if (ret < 0) {
+			/* parse failed, try parsing as binary */
+			ret = parse_bin(srcbuf, &uintres);
+			if (ret < 0)
+				return -1;
+		}
+		/* check if we're within valid range */
+		if (check_parsed_num(num_data.type, neg, uintres) < 0)
+			return -1;
+
+		/* parsing succeeded, write the value if necessary */
+		if (res && write_num(num_data.type, res, uintres) < 0)
+			return -1;
+
+		return ret;
+	}
+	return -1;
+}
 
 /* parse an int */
 RTE_EXPORT_SYMBOL(cmdline_get_help_num)
 int
 cmdline_get_help_num(cmdline_parse_token_hdr_t *tk, char *dstbuf, unsigned int size)
 {
-	struct cmdline_token_num_data nd;
+	struct cmdline_token_num_data num_data;
 	int ret;
 
 	if (!tk)
 		return -1;
 
-	memcpy(&nd, &((struct cmdline_token_num *)tk)->num_data, sizeof(nd));
+	memcpy(&num_data, &((struct cmdline_token_num *)tk)->num_data, sizeof(num_data));
 
-	/* should not happen.... don't so this test */
-	/* if (nd.type >= (sizeof(num_help)/sizeof(const char *))) */
-	/* return -1; */
+	if (validate_type(num_data.type) < 0)
+		return -1;
 
-	ret = strlcpy(dstbuf, num_help[nd.type], size);
+	ret = strlcpy(dstbuf, num_help[num_data.type], size);
 	if (ret < 0)
 		return -1;
 	dstbuf[size-1] = '\0';
