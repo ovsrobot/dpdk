@@ -213,6 +213,8 @@ Devargs are used with hotplug APIs to attach devices dynamically:
        /* Handle error */
    }
 
+See :doc:`device_hotplug` for detailed information on runtime device management.
+
 
 Parsing Devargs in Drivers
 ---------------------------
