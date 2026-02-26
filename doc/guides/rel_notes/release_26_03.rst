@@ -77,6 +77,10 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
 
+* **Updated Intel idpf driver.**
+
+  * Added AVX2 vectorized split queue Rx and Tx paths.
+
 * **Updated Marvell cnxk net driver.**
 
   * Added out-of-place support for CN20K SoC.
