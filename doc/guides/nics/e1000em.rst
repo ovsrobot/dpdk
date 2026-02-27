@@ -1,8 +1,21 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2010-2014 Intel Corporation.
+    Copyright(c) 2010-2026 Intel Corporation.
 
 Driver for VM Emulated Devices
 ==============================
+
+E1000 Poll Mode Driver
+----------------------
+
+DPDK provides several poll mode drivers (PMDs) supporting Intel 1 Gigabit ethernet controller families.
+These include:
+
+*   e1000 – Intel 8254x family devices, including QEMU ``e1000`` emulation.
+*   e1000e – Intel PRO/1000 PCIe family.
+
+.. note::
+
+   The ``igb`` and ``igc`` PMDs are built from the same driver binary but are documented in separate sections for clarity.
 
 The DPDK EM poll mode driver supports the following emulated devices:
 
