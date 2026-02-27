@@ -103,6 +103,26 @@ the redirection table will be available for querying upon initial hash configura
 When performing redirection table updates,
 it is possible to update individual table entries.
 
+Flow Steering
+^^^^^^^^^^^^^
+
+The driver supports receive flow steering (RFS) via the standard ``rte_flow``
+API. This allows applications to steer traffic to specific queues based on
+5-tuple matching. 3-tuple matching may be supported in future releases.
+
+Supported Patterns:
+  - IPv4/IPv6 source and destination addresses.
+  - TCP/UDP/SCTP source and destination ports.
+  - ESP/AH SPI.
+
+Supported Actions:
+  - ``RTE_FLOW_ACTION_TYPE_QUEUE``: Steer packets to a specific Rx queue.
+
+Limitations:
+  - Only ingress flow rules are supported.
+  - Flow priorities are not supported (must be 0).
+  - Masking is limited to full matches i.e. 0x00...0 or 0xFF...F.
+
 Application-Initiated Reset
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
