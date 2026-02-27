@@ -127,6 +127,24 @@ rte_hash_crc(const void *data, uint32_t data_len, uint32_t init_val)
 	unsigned i;
 	uintptr_t pd = (uintptr_t) data;
 
+	/* align input to 8 byte boundary if needed */
+	if ((pd & 0x7) && data_len >= 8) {
+		uintptr_t unaligned_bytes = 8 - (pd & 0x7);
+		data_len -= unaligned_bytes;
+		if (unaligned_bytes & 0x1) {
+			init_val = rte_hash_crc_1byte(*(const uint8_t *)pd, init_val);
+			pd += 1;
+		}
+		if (unaligned_bytes & 0x2) {
+			init_val = rte_hash_crc_2byte(*(const uint16_t *)pd, init_val);
+			pd += 2;
+		}
+		if (unaligned_bytes & 0x4) {
+			init_val = rte_hash_crc_4byte(*(const uint32_t *)pd, init_val);
+			pd += 4;
+		}
+	}
+
 	for (i = 0; i < data_len / 8; i++) {
 		init_val = rte_hash_crc_8byte(*(const uint64_t *)pd, init_val);
 		pd += 8;
