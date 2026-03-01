@@ -420,7 +420,7 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		data = rte_pktmbuf_read(mbuf, 0, caplen, temp_data);
 		if (unlikely(data == NULL)) {
 			/* This only happens if mbuf is bogus pkt_len > data_len */
-			PMD_LOG(ERR, "rte_pktmbuf_read failed");
+			PMD_TX_LOG(ERR, "rte_pktmbuf_read failed");
 			dumper_q->tx_stat.err_pkts++;
 		} else {
 			pcap_dump((u_char *)dumper, &header, data);
@@ -502,7 +502,7 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		const uint8_t *data;
 
 		if (unlikely(!rte_pktmbuf_is_contiguous(mbuf) && len > RTE_ETH_PCAP_SNAPSHOT_LEN)) {
-			PMD_LOG(ERR,
+			PMD_TX_LOG(ERR,
 				"Dropping multi segment PCAP packet. Size (%u) > max size (%u).",
 				len, RTE_ETH_PCAP_SNAPSHOT_LEN);
 			tx_queue->tx_stat.err_pkts++;
@@ -513,7 +513,7 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		data = rte_pktmbuf_read(mbuf, 0, len, temp_data);
 		if (unlikely(data == NULL)) {
 			/* This only happens if mbuf is bogus pkt_len > data_len */
-			PMD_LOG(ERR, "rte_pktmbuf_read failed");
+			PMD_TX_LOG(ERR, "rte_pktmbuf_read failed");
 			tx_queue->tx_stat.err_pkts++;
 		} else {
 			/*
@@ -521,7 +521,7 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			 * Assume it is EBUSY, ENOMEM, or EINTR, something that can be retried.
 			 */
 			if (pcap_sendpacket(pcap, data, len) != 0) {
-				PMD_LOG(ERR, "pcap_sendpacket() failed: %s", pcap_geterr(pcap));
+				PMD_TX_LOG(ERR, "pcap_sendpacket() failed: %s", pcap_geterr(pcap));
 				break;
 			}
 			num_tx++;
