@@ -37,11 +37,15 @@
 #include <rte_mtr.h>
 #include <rte_os_shim.h>
 
-#include "config.h"
 #include "actions_gen.h"
+#include "async_flow.h"
+#include "config.h"
 #include "flow_gen.h"
+#include "rte_build_config.h"
 
 #define MAX_BATCHES_COUNT          100
+#define MAX_ASYNC_QUEUE_SIZE	     (1 << 14)
+#define MAX_PULL_RETRIES	     (1 << 20)
 #define DEFAULT_RULES_COUNT    4000000
 #define DEFAULT_RULES_BATCH     100000
 #define DEFAULT_GROUP                0
@@ -55,7 +59,6 @@
 #define HAIRPIN_TX_CONF_LOCKED_MEMORY (0x0100)
 #define HAIRPIN_TX_CONF_RTE_MEMORY    (0x0200)
 
-struct rte_flow *flow;
 static uint8_t flow_group;
 
 static uint64_t encap_data;
@@ -81,6 +84,9 @@ static bool enable_fwd;
 static bool unique_data;
 static bool policy_mtr;
 static bool packet_mode;
+static bool async_mode;
+static uint32_t async_queue_size = 1024;
+static uint32_t async_push_batch = 256;
 
 static uint8_t rx_queues_count;
 static uint8_t tx_queues_count;
@@ -598,6 +604,29 @@ usage(char *progname)
 		"Encapped data is fixed with pattern: ether,ipv4,udp,vxlan\n"
 		"With fixed values\n");
 	printf("  --vxlan-decap: add vxlan_decap action to flow actions\n");
+
+	printf("\nAsync flow API options:\n");
+	printf("  --async: enable async flow API mode\n");
+	printf("  --async-queue-size=N: size of each async queue,"
+	       " default is 1024\n");
+	printf("  --async-push-batch=N: flows to batch before push,"
+	       " default is 256\n");
+}
+
+static inline uint32_t
+prev_power_of_two(uint32_t x)
+{
+	uint32_t saved = x;
+	x--;
+	x |= x >> 1;
+	x |= x >> 2;
+	x |= x >> 4;
+	x |= x >> 8;
+	x |= x >> 16;
+	x++;
+	if (x == saved)
+		return x;
+	return x >> 1;
 }
 
 static void
@@ -734,6 +763,9 @@ args_parse(int argc, char **argv)
 		{ "policy-mtr",                 1, 0, 0 },
 		{ "meter-profile",              1, 0, 0 },
 		{ "packet-mode",                0, 0, 0 },
+		{ "async",                      0, 0, 0 },
+		{ "async-queue-size",           1, 0, 0 },
+		{ "async-push-batch",           1, 0, 0 },
 		{ 0, 0, 0, 0 },
 	};
 
@@ -913,8 +945,7 @@ args_parse(int argc, char **argv)
 					rte_exit(EXIT_FAILURE, "Invalid hairpin config mask\n");
 				hairpin_conf_mask = hp_conf;
 			}
-			if (strcmp(lgopts[opt_idx].name,
-					"port-id") == 0) {
+			if (strcmp(lgopts[opt_idx].name, "port-id") == 0) {
 				uint16_t port_idx = 0;
 
 				token = strtok(optarg, ",");
@@ -981,6 +1012,26 @@ args_parse(int argc, char **argv)
 			}
 			if (strcmp(lgopts[opt_idx].name, "packet-mode") == 0)
 				packet_mode = true;
+			if (strcmp(lgopts[opt_idx].name, "async") == 0)
+				async_mode = true;
+			if (strcmp(lgopts[opt_idx].name, "async-queue-size") == 0) {
+				n = atoi(optarg);
+				if (n >= MAX_ASYNC_QUEUE_SIZE)
+					async_queue_size = MAX_ASYNC_QUEUE_SIZE;
+				else if (n > 0)
+					async_queue_size = prev_power_of_two(n);
+				else
+					rte_exit(EXIT_FAILURE, "async-queue-size should be > 0\n");
+			}
+			if (strcmp(lgopts[opt_idx].name, "async-push-batch") == 0) {
+				n = atoi(optarg);
+				if (n >= MAX_ASYNC_QUEUE_SIZE >> 1)
+					async_push_batch = MAX_ASYNC_QUEUE_SIZE >> 1;
+				else if (n > 0)
+					async_push_batch = prev_power_of_two(n);
+				else
+					rte_exit(EXIT_FAILURE, "async-push-batch should be > 0\n");
+			}
 			break;
 		default:
 			usage(argv[0]);
@@ -1457,10 +1508,10 @@ query_flows(int port_id, uint8_t core_id, struct rte_flow **flows_list)
 	mc_pool.flows_record.query[port_id][core_id] = cpu_time_used;
 }
 
-static struct rte_flow **
-insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id)
+static void
+insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id, struct rte_flow **flows_list)
 {
-	struct rte_flow **flows_list;
+	struct rte_flow *flow;
 	struct rte_flow_error error;
 	clock_t start_batch, end_batch;
 	double first_flow_latency;
@@ -1485,8 +1536,7 @@ insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id)
 	global_items[0] = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ETH);
 	global_actions[0] = FLOW_ITEM_MASK(RTE_FLOW_ACTION_TYPE_JUMP);
 
-	flows_list = rte_zmalloc("flows_list",
-		(sizeof(struct rte_flow *) * (rules_count_per_core + 1)), 0);
+	flows_list = malloc(sizeof(struct rte_flow *) * (rules_count_per_core + 1));
 	if (flows_list == NULL)
 		rte_exit(EXIT_FAILURE, "No Memory available!\n");
 
@@ -1524,6 +1574,11 @@ insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id)
 			core_id, rx_queues_count,
 			unique_data, max_priority, &error);
 
+		if (!flow) {
+			print_flow_error(error);
+			rte_exit(EXIT_FAILURE, "Error in creating flow\n");
+		}
+
 		if (!counter) {
 			first_flow_latency = (double) (rte_get_timer_cycles() - start_batch);
 			first_flow_latency /= rte_get_timer_hz();
@@ -1536,11 +1591,6 @@ insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id)
 
 		if (force_quit)
 			counter = end_counter;
-
-		if (!flow) {
-			print_flow_error(error);
-			rte_exit(EXIT_FAILURE, "Error in creating flow\n");
-		}
 
 		flows_list[flow_index++] = flow;
 
@@ -1575,7 +1625,203 @@ insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id)
 		port_id, core_id, rules_count_per_core, cpu_time_used);
 
 	mc_pool.flows_record.insertion[port_id][core_id] = cpu_time_used;
-	return flows_list;
+}
+
+static uint32_t push_counter[RTE_MAX_LCORE];
+
+static inline int
+push_pull_flows_async(int port_id, int queue_id, int core_id, uint32_t enqueued, bool empty,
+		      bool check_op_status, struct rte_flow_error *error)
+{
+	static struct rte_flow_op_result results[RTE_MAX_LCORE][MAX_ASYNC_QUEUE_SIZE];
+	uint32_t to_pull = (empty || async_push_batch > enqueued) ? enqueued : async_push_batch;
+	uint32_t pulled_complete = 0;
+	uint32_t retries = 0;
+	int pulled, i;
+	int ret = 0;
+
+	/* Push periodically to give HW work to do */
+	ret = rte_flow_push(port_id, queue_id, error);
+	if (ret)
+		return ret;
+	push_counter[core_id]++;
+
+	/* Check if queue is getting full, if so push and drain completions */
+	if (!empty && push_counter[core_id] == 1)
+		return 0;
+
+	while (to_pull > 0) {
+		pulled = rte_flow_pull(port_id, queue_id, results[core_id], to_pull, error);
+		if (pulled < 0) {
+			return -1;
+		} else if (pulled == 0) {
+			if (++retries > MAX_PULL_RETRIES) {
+				rte_flow_error_set(error, ETIMEDOUT,
+						   RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
+						   "Timeout waiting for async completions");
+				return -1;
+			}
+			rte_pause();
+			continue;
+		}
+		retries = 0;
+
+		to_pull -= pulled;
+		pulled_complete += pulled;
+		if (!check_op_status)
+			continue;
+
+		for (i = 0; i < pulled; i++) {
+			if (results[core_id][i].status != RTE_FLOW_OP_SUCCESS) {
+				rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+						   NULL, "Some flow rule insertion failed");
+				return -1;
+			}
+		}
+	}
+
+	return pulled_complete;
+}
+
+static void
+insert_flows_async(int port_id, uint8_t core_id, uint16_t dst_port_id, struct rte_flow **flows_list)
+{
+	struct rte_flow *flow;
+	struct rte_flow_error error;
+	clock_t start_batch, end_batch;
+	double first_flow_latency;
+	double cpu_time_used;
+	double insertion_rate;
+	double cpu_time_per_batch[MAX_BATCHES_COUNT] = {0};
+	double delta;
+	uint32_t flow_index;
+	uint32_t counter, batch_counter, start_counter = 0, end_counter;
+	int rules_batch_idx;
+	int rules_count_per_core;
+	uint32_t enqueued = 0;
+	uint32_t queue_id = core_id;
+	bool first_batch = true;
+	int pulled;
+
+	rules_count_per_core = rules_count / mc_pool.cores_count;
+
+	if (async_push_batch > async_queue_size >> 1)
+		async_push_batch = async_queue_size >> 1;
+
+	/* Set boundaries of rules for each core. */
+	if (core_id)
+		start_counter = core_id * rules_count_per_core;
+	end_counter = (core_id + 1) * rules_count_per_core;
+
+	cpu_time_used = 0;
+	flow_index = 0;
+	push_counter[core_id] = 0;
+
+	if (flow_group > 0 && core_id == 0) {
+		/*
+		 * Create global rule to jump into flow_group,
+		 * this way the app will avoid the default rules.
+		 *
+		 * This rule will be created only once.
+		 *
+		 * Global rule:
+		 * group 0 eth / end actions jump group <flow_group>
+		 */
+
+		uint64_t global_items[MAX_ITEMS_NUM] = {0};
+		uint64_t global_actions[MAX_ACTIONS_NUM] = {0};
+		global_items[0] = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ETH);
+		global_actions[0] = FLOW_ITEM_MASK(RTE_FLOW_ACTION_TYPE_JUMP);
+		flow = generate_flow(port_id, 0, flow_attrs, global_items, global_actions,
+				     flow_group, 0, 0, 0, 0, dst_port_id, core_id, rx_queues_count,
+				     unique_data, max_priority, &error);
+
+		if (flow == NULL) {
+			print_flow_error(error);
+			rte_exit(EXIT_FAILURE, "Error in creating flow\n");
+		}
+		flows_list[flow_index++] = flow;
+	}
+
+	start_batch = rte_get_timer_cycles();
+	for (counter = start_counter; counter < end_counter;) {
+		/* batch adding flow rules, this avoids unnecessary checks for push/pull */
+		for (batch_counter = 0; batch_counter < async_push_batch && counter < end_counter;
+		     batch_counter++, counter++) {
+			/* Create flow with postpone=true to batch operations */
+			flow = async_generate_flow(port_id, queue_id, counter, hairpin_queues_num,
+						   encap_data, decap_data, dst_port_id, core_id,
+						   rx_queues_count, unique_data, true, &error);
+
+			if (!flow) {
+				print_flow_error(error);
+				rte_exit(EXIT_FAILURE, "Error in creating async flow\n");
+			}
+
+			if (force_quit)
+				break;
+
+			flows_list[flow_index++] = flow;
+			enqueued++;
+
+			/*
+			 * Save the insertion rate for rules batch.
+			 * Check if the insertion reached the rules
+			 * patch counter, then save the insertion rate
+			 * for this batch.
+			 */
+			if (!((counter + 1) % rules_batch)) {
+				end_batch = rte_get_timer_cycles();
+				delta = (double)(end_batch - start_batch);
+				rules_batch_idx = ((counter + 1) / rules_batch) - 1;
+				cpu_time_per_batch[rules_batch_idx] = delta / rte_get_timer_hz();
+				cpu_time_used += cpu_time_per_batch[rules_batch_idx];
+				start_batch = rte_get_timer_cycles();
+			}
+		}
+
+		if ((pulled = push_pull_flows_async(port_id, queue_id, core_id, enqueued, false,
+						    true, &error)) < 0) {
+			print_flow_error(error);
+			rte_exit(EXIT_FAILURE, "Error push/pull async operations\n");
+		}
+
+		enqueued -= pulled;
+
+		if (first_batch) {
+			first_flow_latency = (double)(rte_get_timer_cycles() - start_batch);
+			first_flow_latency /= rte_get_timer_hz();
+			/* In millisecond */
+			first_flow_latency *= 1000;
+			printf(":: First Flow Batch Latency (Async) :: Port %d :: First batch (%u) "
+			       "installed in %f milliseconds\n",
+			       port_id, async_push_batch, first_flow_latency);
+			first_batch = false;
+		}
+	}
+
+	if (push_pull_flows_async(port_id, queue_id, core_id, enqueued, true, true, &error) < 0) {
+		print_flow_error(error);
+		rte_exit(EXIT_FAILURE, "Error final push/pull async operations\n");
+	}
+
+	/* Print insertion rates for all batches */
+	if (dump_iterations)
+		print_rules_batches(cpu_time_per_batch);
+
+	printf(":: Port %d :: Core %d boundaries (Async) :: start @[%d] - end @[%d]\n", port_id,
+	       core_id, start_counter, end_counter - 1);
+
+	/* Insertion rate for all rules in one core */
+	if (cpu_time_used > 0) {
+		insertion_rate = ((double)rules_count_per_core / cpu_time_used) / 1000;
+		printf(":: Port %d :: Core %d :: Async rules insertion rate -> %f K Rule/Sec\n",
+		       port_id, core_id, insertion_rate);
+	}
+	printf(":: Port %d :: Core %d :: The time for creating %d async rules is %f seconds\n",
+	       port_id, core_id, rules_count_per_core, cpu_time_used);
+
+	mc_pool.flows_record.insertion[port_id][core_id] = cpu_time_used;
 }
 
 static void
@@ -1585,11 +1831,17 @@ flows_handler(uint8_t core_id)
 	uint16_t port_idx = 0;
 	uint16_t nr_ports;
 	int port_id;
+	int rules_count_per_core;
 
 	nr_ports = rte_eth_dev_count_avail();
 
 	if (rules_batch > rules_count)
 		rules_batch = rules_count;
+
+	rules_count_per_core = rules_count / mc_pool.cores_count;
+	flows_list = malloc(sizeof(struct rte_flow *) * (rules_count_per_core + 1));
+	if (flows_list == NULL)
+		rte_exit(EXIT_FAILURE, "No Memory available!\n");
 
 	printf(":: Rules Count per port: %d\n\n", rules_count);
 
@@ -1602,10 +1854,10 @@ flows_handler(uint8_t core_id)
 		mc_pool.last_alloc[core_id] = (int64_t)dump_socket_mem(stdout);
 		if (has_meter())
 			meters_handler(port_id, core_id, METER_CREATE);
-		flows_list = insert_flows(port_id, core_id,
-						dst_ports[port_idx++]);
-		if (flows_list == NULL)
-			rte_exit(EXIT_FAILURE, "Error: Insertion Failed!\n");
+		if (async_mode)
+			insert_flows_async(port_id, core_id, dst_ports[port_idx++], flows_list);
+		else
+			insert_flows(port_id, core_id, dst_ports[port_idx++], flows_list);
 		mc_pool.current_alloc[core_id] = (int64_t)dump_socket_mem(stdout);
 
 		if (query_flag)
@@ -2212,6 +2464,16 @@ init_port(void)
 			}
 		}
 
+		/* Configure async flow engine before device start */
+		if (async_mode) {
+			ret = async_flow_init_port(port_id, mc_pool.cores_count, async_queue_size,
+						   flow_items, flow_actions, flow_attrs, flow_group,
+						   rules_count);
+			if (ret != 0)
+				rte_exit(EXIT_FAILURE, "Failed to init async flow on port %d\n",
+					 port_id);
+		}
+
 		ret = rte_eth_dev_start(port_id);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE,
@@ -2291,6 +2553,8 @@ main(int argc, char **argv)
 
 	RTE_ETH_FOREACH_DEV(port) {
 		rte_flow_flush(port, &error);
+		if (async_mode)
+			async_flow_cleanup_port(port);
 		if (rte_eth_dev_stop(port) != 0)
 			printf("Failed to stop device on port %u\n", port);
 		rte_eth_dev_close(port);
