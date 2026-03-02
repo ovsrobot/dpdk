@@ -1047,6 +1047,12 @@ mlx5_queue_counter_id_prepare(struct rte_eth_dev *dev)
 			"available.", dev->data->port_id);
 }
 
+static inline bool
+mlx5_ignore_pf_representor(const struct rte_eth_devargs *eth_da)
+{
+	return (eth_da->flags & RTE_ETH_DEVARG_REPRESENTOR_IGNORE_PF) != 0;
+}
+
 /**
  * Check if representor spawn info match devargs.
  *
@@ -1075,6 +1081,10 @@ mlx5_representor_match(struct mlx5_dev_spawn_data *spawn,
 	 */
 	if (mlx5_is_probed_port_on_mpesw_device(spawn) &&
 	    switch_info->name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
+		if (!switch_info->master && mlx5_ignore_pf_representor(eth_da)) {
+			rte_errno = EBUSY;
+			return false;
+		}
 		for (p = 0; p < eth_da->nb_ports; ++p)
 			if (switch_info->port_name == eth_da->ports[p])
 				return true;
@@ -2297,10 +2307,45 @@ mlx5_device_mpesw_pci_match(struct ibv_device *ibv,
 	return -1;
 }
 
-static inline bool
-mlx5_ignore_pf_representor(const struct rte_eth_devargs *eth_da)
+static void
+calc_nb_uplinks_hpfs(struct ibv_device **ibv_match,
+		     unsigned int nd,
+		     struct mlx5_dev_spawn_data *list,
+		     unsigned int ns)
 {
-	return (eth_da->flags & RTE_ETH_DEVARG_REPRESENTOR_IGNORE_PF) != 0;
+	for (unsigned int i = 0; i != nd; i++) {
+		uint32_t nb_uplinks = 0;
+		uint32_t nb_hpfs = 0;
+		uint32_t j;
+
+		for (unsigned int j = 0; j != ns; j++) {
+			if (strcmp(ibv_match[i]->name, list[j].phys_dev_name) != 0)
+				continue;
+
+			if (list[j].info.name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK)
+				nb_uplinks++;
+			else if (list[j].info.name_type == MLX5_PHYS_PORT_NAME_TYPE_PFHPF)
+				nb_hpfs++;
+		}
+
+		if (nb_uplinks > 0 || nb_hpfs > 0) {
+			for (j = 0; j != ns; j++) {
+				if (strcmp(ibv_match[i]->name, list[j].phys_dev_name) != 0)
+					continue;
+
+				list[j].nb_uplinks = nb_uplinks;
+				list[j].nb_hpfs = nb_hpfs;
+			}
+
+			DRV_LOG(DEBUG, "IB device %s has %u uplinks, %u host PFs",
+				ibv_match[i]->name,
+				nb_uplinks,
+				nb_hpfs);
+		} else {
+			DRV_LOG(DEBUG, "IB device %s unable to recognize uplinks/host PFs",
+				ibv_match[i]->name);
+		}
+	}
 }
 
 /**
@@ -2611,8 +2656,6 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 					if (list[ns].info.port_name == mpesw) {
 						list[ns].info.master = 1;
 						list[ns].info.representor = 0;
-					} else if (mlx5_ignore_pf_representor(&eth_da)) {
-						continue;
 					} else {
 						list[ns].info.master = 0;
 						list[ns].info.representor = 1;
@@ -2629,17 +2672,14 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 				case MLX5_PHYS_PORT_NAME_TYPE_PFHPF:
 				case MLX5_PHYS_PORT_NAME_TYPE_PFVF:
 				case MLX5_PHYS_PORT_NAME_TYPE_PFSF:
-					/* Only spawn representors related to the probed PF. */
-					if (list[ns].info.pf_num == owner_id) {
-						/*
-						 * Ports of this type have PF index encoded in name,
-						 * which translate to the related uplink port index.
-						 */
-						list[ns].mpesw_port = list[ns].info.pf_num;
-						/* MPESW owner is also saved but not used now. */
-						list[ns].info.mpesw_owner = mpesw;
-						ns++;
-					}
+					/*
+					 * Ports of this type have PF index encoded in name,
+					 * which translate to the related uplink port index.
+					 */
+					list[ns].mpesw_port = list[ns].info.pf_num;
+					/* MPESW owner is also saved but not used now. */
+					list[ns].info.mpesw_owner = mpesw;
+					ns++;
 					break;
 				default:
 					break;
@@ -2773,6 +2813,8 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 		}
 	}
 	MLX5_ASSERT(ns);
+	/* Calculate number of uplinks and host PFs for each matched IB device. */
+	calc_nb_uplinks_hpfs(ibv_match, nd, list, ns);
 	/*
 	 * Sort list to probe devices in natural order for users convenience
 	 * (i.e. master first, then representors from lowest to highest ID).
