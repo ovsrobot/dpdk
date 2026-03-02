@@ -1068,6 +1068,84 @@ is_hpf(const struct mlx5_dev_spawn_data *spawn)
 	       spawn->info.name_type == MLX5_PHYS_PORT_NAME_TYPE_PFHPF;
 }
 
+static int
+build_port_name(struct rte_device *dpdk_dev,
+		struct mlx5_dev_spawn_data *spawn,
+		char *name,
+		size_t name_sz)
+{
+	bool is_bond = spawn->pf_bond >= 0;
+	int written = 0;
+	int ret;
+
+	ret = snprintf(name, name_sz, "%s", dpdk_dev->name);
+	if (ret < 0)
+		return ret;
+	written += ret;
+	if (written >= (int)name_sz)
+		return written;
+
+	/*
+	 * Whenever bond device is detected, include IB device name.
+	 * This is kept to keep port naming backward compatible.
+	 */
+	if (is_bond) {
+		ret = snprintf(name + written, name_sz - written, "_%s", spawn->phys_dev_name);
+		if (ret < 0)
+			return ret;
+		written += ret;
+		if (written >= (int)name_sz)
+			return written;
+	}
+
+	if (spawn->info.name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
+		/* Add port to name if and only if there is more than one uplink. */
+		if (spawn->nb_uplinks <= 1)
+			goto end;
+
+		ret = snprintf(name + written, name_sz - written, "_p%u", spawn->info.port_name);
+		if (ret < 0)
+			return ret;
+		written += ret;
+		if (written >= (int)name_sz)
+			return written;
+	} else if (spawn->info.representor) {
+		/*
+		 * If port is a representor, then switchdev has been enabled.
+		 * In that case add controller, PF and VF/SF indexes to port name
+		 * if at least one of these conditions are met:
+		 * 1. Device is a bond (VF-LAG).
+		 * 2. There are multiple uplinks (MPESW).
+		 * 3. There are multiple host PFs (BlueField socket direct).
+		 *
+		 * If none of these conditions apply, then it is assumed that
+		 * this device manages a single non-shared E-Switch with single controller,
+		 * where there is only one uplink/PF and one host PF (on BlueField).
+		 */
+		if (!is_standard_eswitch(spawn))
+			ret = snprintf(name + written, name_sz - written,
+				       "_representor_c%dpf%d%s%u",
+				       spawn->info.ctrl_num,
+				       spawn->info.pf_num,
+				       spawn->info.name_type ==
+				       MLX5_PHYS_PORT_NAME_TYPE_PFSF ? "sf" : "vf",
+				       spawn->info.port_name);
+		else
+			ret = snprintf(name + written, name_sz - written, "_representor_%s%u",
+				       spawn->info.name_type ==
+				       MLX5_PHYS_PORT_NAME_TYPE_PFSF ? "sf" : "vf",
+				       spawn->info.port_name);
+		if (ret < 0)
+			return ret;
+		written += ret;
+		if (written >= (int)name_sz)
+			return written;
+	}
+
+end:
+	return written;
+}
+
 static bool
 representor_match_uplink(const struct mlx5_dev_spawn_data *spawn,
 			 uint16_t port_name,
@@ -1247,44 +1325,12 @@ mlx5_dev_spawn(struct rte_device *dpdk_dev,
 	    !mlx5_representor_match(spawn, eth_da))
 		return NULL;
 	/* Build device name. */
-	if (spawn->pf_bond >= 0) {
-		/* Bonding device. */
-		if (!switch_info->representor) {
-			err = snprintf(name, sizeof(name), "%s_%s",
-				       dpdk_dev->name, spawn->phys_dev_name);
-		} else {
-			err = snprintf(name, sizeof(name), "%s_%s_representor_c%dpf%d%s%u",
-				dpdk_dev->name, spawn->phys_dev_name,
-				switch_info->ctrl_num,
-				switch_info->pf_num,
-				switch_info->name_type ==
-				MLX5_PHYS_PORT_NAME_TYPE_PFSF ? "sf" : "vf",
-				switch_info->port_name);
-		}
-	} else if (mlx5_is_probed_port_on_mpesw_device(spawn)) {
-		/* MPESW device. */
-		if (switch_info->name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
-			err = snprintf(name, sizeof(name), "%s_p%d",
-				       dpdk_dev->name, spawn->mpesw_port);
-		} else {
-			err = snprintf(name, sizeof(name), "%s_representor_c%dpf%d%s%u",
-				dpdk_dev->name,
-				switch_info->ctrl_num,
-				switch_info->pf_num,
-				switch_info->name_type ==
-				MLX5_PHYS_PORT_NAME_TYPE_PFSF ? "sf" : "vf",
-				switch_info->port_name);
-		}
-	} else {
-		/* Single device. */
-		if (!switch_info->representor)
-			strlcpy(name, dpdk_dev->name, sizeof(name));
-		else
-			err = snprintf(name, sizeof(name), "%s_representor_%s%u",
-				 dpdk_dev->name,
-				 switch_info->name_type ==
-				 MLX5_PHYS_PORT_NAME_TYPE_PFSF ? "sf" : "vf",
-				 switch_info->port_name);
+	err = build_port_name(dpdk_dev, spawn, name, sizeof(name));
+	if (err < 0) {
+		DRV_LOG(ERR, "Failed to build port name for IB device %s/%u",
+			spawn->phys_dev_name, spawn->phys_port);
+		rte_errno = EINVAL;
+		return NULL;
 	}
 	if (err >= (int)sizeof(name))
 		DRV_LOG(WARNING, "device name overflow %s", name);
