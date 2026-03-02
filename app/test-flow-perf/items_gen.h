@@ -15,4 +15,10 @@
 void fill_items(struct rte_flow_item *items, uint64_t *flow_items,
 	uint32_t outer_ip_src, uint8_t core_idx);
 
+/* Fill items template for async flow API (masks only, no spec values).
+ * If spec_sizes is non-NULL, populates per-item spec sizes and n_items_out.
+ */
+void fill_items_template(struct rte_flow_item *items, uint64_t *flow_items, uint32_t outer_ip_src,
+			 uint8_t core_idx, size_t *spec_sizes, uint32_t *n_items_out);
+
 #endif /* FLOW_PERF_ITEMS_GEN */
