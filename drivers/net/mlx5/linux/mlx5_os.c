@@ -1053,6 +1053,87 @@ mlx5_ignore_pf_representor(const struct rte_eth_devargs *eth_da)
 	return (eth_da->flags & RTE_ETH_DEVARG_REPRESENTOR_IGNORE_PF) != 0;
 }
 
+static bool
+is_standard_eswitch(const struct mlx5_dev_spawn_data *spawn)
+{
+	bool is_bond = spawn->pf_bond >= 0;
+
+	return !is_bond && spawn->nb_uplinks <= 1 && spawn->nb_hpfs <= 1;
+}
+
+static bool
+is_hpf(const struct mlx5_dev_spawn_data *spawn)
+{
+	return spawn->info.port_name == -1 &&
+	       spawn->info.name_type == MLX5_PHYS_PORT_NAME_TYPE_PFHPF;
+}
+
+static bool
+representor_match_uplink(const struct mlx5_dev_spawn_data *spawn,
+			 uint16_t port_name,
+			 const struct rte_eth_devargs *eth_da,
+			 uint16_t eth_da_pf_num)
+{
+	if (spawn->info.name_type != MLX5_PHYS_PORT_NAME_TYPE_UPLINK)
+		return false;
+	/* One of the uplinks will be a transfer proxy. Must be probed always. */
+	if (spawn->info.master)
+		return true;
+	if (mlx5_ignore_pf_representor(eth_da))
+		return false;
+
+	return port_name == eth_da_pf_num;
+}
+
+static bool
+representor_match_port(const struct mlx5_dev_spawn_data *spawn,
+		       const struct rte_eth_devargs *eth_da)
+{
+	for (uint16_t p = 0; p < eth_da->nb_ports; ++p) {
+		uint16_t pf_num = eth_da->ports[p];
+
+		/* PF representor in devargs is interpreted as probing uplink port. */
+		if (eth_da->type == RTE_ETH_REPRESENTOR_PF) {
+			if (representor_match_uplink(spawn, spawn->info.port_name, eth_da, pf_num))
+				return true;
+
+			continue;
+		}
+
+		/* Allow probing related uplink when VF/SF representor is requested. */
+		if ((eth_da->type == RTE_ETH_REPRESENTOR_VF ||
+		     eth_da->type == RTE_ETH_REPRESENTOR_SF) &&
+		    representor_match_uplink(spawn, spawn->info.pf_num, eth_da, pf_num))
+			return true;
+
+		for (uint16_t f = 0; f < eth_da->nb_representor_ports; ++f) {
+			uint16_t port_num = eth_da->representor_ports[f];
+			bool pf_num_match;
+			bool rep_num_match;
+
+			/*
+			 * In standard E-Switch case, allow probing VFs even if wrong PF index
+			 * was provided.
+			 */
+			if (is_standard_eswitch(spawn))
+				pf_num_match = true;
+			else
+				pf_num_match = spawn->info.pf_num == pf_num;
+
+			/* Host PF is indicated through VF/SF representor index == -1. */
+			if (is_hpf(spawn))
+				rep_num_match = port_num == UINT16_MAX;
+			else
+				rep_num_match = port_num == spawn->info.port_name;
+
+			if (pf_num_match && rep_num_match)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 /**
  * Check if representor spawn info match devargs.
  *
@@ -1069,54 +1150,29 @@ mlx5_representor_match(struct mlx5_dev_spawn_data *spawn,
 		       struct rte_eth_devargs *eth_da)
 {
 	struct mlx5_switch_info *switch_info = &spawn->info;
-	unsigned int p, f;
-	uint16_t id;
-	uint16_t repr_id = mlx5_representor_id_encode(switch_info,
-						      eth_da->type);
+	unsigned int c;
+	bool ignore_ctrl_num = eth_da->nb_mh_controllers == 0 ||
+			       switch_info->name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK;
 
-	/*
-	 * Assuming Multiport E-Switch device was detected,
-	 * if spawned port is an uplink, check if the port
-	 * was requested through representor devarg.
-	 */
-	if (mlx5_is_probed_port_on_mpesw_device(spawn) &&
-	    switch_info->name_type == MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
-		if (!switch_info->master && mlx5_ignore_pf_representor(eth_da)) {
-			rte_errno = EBUSY;
-			return false;
-		}
-		for (p = 0; p < eth_da->nb_ports; ++p)
-			if (switch_info->port_name == eth_da->ports[p])
-				return true;
-		rte_errno = EBUSY;
-		return false;
-	}
 	switch (eth_da->type) {
 	case RTE_ETH_REPRESENTOR_PF:
-		/*
-		 * PF representors provided in devargs translate to uplink ports, but
-		 * if and only if the device is a part of MPESW device.
-		 */
-		if (!mlx5_is_probed_port_on_mpesw_device(spawn)) {
+		if (switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
 			rte_errno = EBUSY;
 			return false;
 		}
 		break;
 	case RTE_ETH_REPRESENTOR_SF:
-		if (!(spawn->info.port_name == -1 &&
-		      switch_info->name_type ==
-				MLX5_PHYS_PORT_NAME_TYPE_PFHPF) &&
-		    switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_PFSF) {
+		if (!is_hpf(spawn) &&
+		    switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_PFSF &&
+		    switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
 			rte_errno = EBUSY;
 			return false;
 		}
 		break;
 	case RTE_ETH_REPRESENTOR_VF:
-		/* Allows HPF representor index -1 as exception. */
-		if (!(spawn->info.port_name == -1 &&
-		      switch_info->name_type ==
-				MLX5_PHYS_PORT_NAME_TYPE_PFHPF) &&
-		    switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_PFVF) {
+		if (!is_hpf(spawn) &&
+		    switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_PFVF &&
+		    switch_info->name_type != MLX5_PHYS_PORT_NAME_TYPE_UPLINK) {
 			rte_errno = EBUSY;
 			return false;
 		}
@@ -1129,21 +1185,17 @@ mlx5_representor_match(struct mlx5_dev_spawn_data *spawn,
 		DRV_LOG(ERR, "unsupported representor type");
 		return false;
 	}
-	/* Check representor ID: */
-	for (p = 0; p < eth_da->nb_ports; ++p) {
-		if (!mlx5_is_probed_port_on_mpesw_device(spawn) && spawn->pf_bond < 0) {
-			/* For non-LAG mode, allow and ignore pf. */
-			switch_info->pf_num = eth_da->ports[p];
-			repr_id = mlx5_representor_id_encode(switch_info,
-							     eth_da->type);
-		}
-		for (f = 0; f < eth_da->nb_representor_ports; ++f) {
-			id = MLX5_REPRESENTOR_ID
-				(eth_da->ports[p], eth_da->type,
-				 eth_da->representor_ports[f]);
-			if (repr_id == id)
+	if (!ignore_ctrl_num) {
+		for (c = 0; c < eth_da->nb_mh_controllers; ++c) {
+			uint16_t ctrl_num = eth_da->mh_controllers[c];
+
+			if (spawn->info.ctrl_num == ctrl_num &&
+			    representor_match_port(spawn, eth_da))
 				return true;
 		}
+	} else {
+		if (representor_match_port(spawn, eth_da))
+			return true;
 	}
 	rte_errno = EBUSY;
 	return false;
@@ -2822,16 +2874,12 @@ mlx5_os_pci_probe_pf(struct mlx5_common_device *cdev,
 	qsort(list, ns, sizeof(*list), mlx5_dev_spawn_data_cmp);
 	if (eth_da.type != RTE_ETH_REPRESENTOR_NONE) {
 		/* Set devargs default values. */
-		if (eth_da.nb_mh_controllers == 0) {
-			eth_da.nb_mh_controllers = 1;
-			eth_da.mh_controllers[0] = 0;
-		}
 		if (eth_da.nb_ports == 0 && ns > 0) {
 			if (list[0].pf_bond >= 0 && list[0].info.representor)
 				DRV_LOG(WARNING, "Representor on Bonding device should use pf#vf# syntax: %s",
 					pci_dev->device.devargs->args);
 			eth_da.nb_ports = 1;
-			eth_da.ports[0] = list[0].info.pf_num;
+			eth_da.ports[0] = list[0].info.port_name;
 		}
 		if (eth_da.nb_representor_ports == 0) {
 			eth_da.nb_representor_ports = 1;
