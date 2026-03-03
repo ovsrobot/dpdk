@@ -72,6 +72,7 @@ New Features
 * **Updated Google Virtual Ethernet (gve) driver.**
 
   * Added application-initiated device reset.
+  * Add support for receive flow steering.
 
 * **Updated Intel iavf driver.**
 
