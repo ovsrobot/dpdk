@@ -890,7 +890,7 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	volatile struct idpf_flex_tx_sched_desc *txd;
 	struct ci_tx_entry *sw_ring;
 	union ci_tx_offload tx_offload = {0};
-	struct ci_tx_entry *txe, *txn;
+	struct ci_tx_entry *txe;
 	uint16_t nb_used, tx_id, sw_id;
 	struct rte_mbuf *tx_pkt;
 	uint16_t nb_to_clean;
@@ -911,6 +911,27 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	for (nb_tx = 0; nb_tx < nb_pkts; nb_tx++) {
 		tx_pkt = tx_pkts[nb_tx];
 
+		cmd_dtype = 0;
+		ol_flags = tx_pkt->ol_flags;
+		tx_offload.l2_len = tx_pkt->l2_len;
+		tx_offload.l3_len = tx_pkt->l3_len;
+		tx_offload.l4_len = tx_pkt->l4_len;
+		tx_offload.tso_segsz = tx_pkt->tso_segsz;
+
+		/* Calculate the number of context descriptors needed. */
+		uint64_t cd_qw0 = 0, cd_qw1 = 0;
+		nb_ctx = idpf_set_tso_ctx(ol_flags, tx_pkt, &tx_offload, txq,
+					  &cd_qw0, &cd_qw1);
+
+		/* Calculate the number of TX descriptors needed for each packet.
+		 * For TSO packets, use ci_calc_pkt_desc as the mbuf data size
+		 * might exceed the max data size that hw allows per tx desc.
+		 */
+		if (ol_flags & (RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG))
+			nb_used = ci_calc_pkt_desc(tx_pkt) + nb_ctx;
+		else
+			nb_used = tx_pkt->nb_segs + nb_ctx;
+
 		if (txq->nb_tx_free <= txq->tx_free_thresh) {
 			/* TODO: Need to refine
 			 * 1. free and clean: Better to decide a clean destination instead of
@@ -925,29 +946,8 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 				idpf_split_tx_free(txq->complq);
 		}
 
-		if (txq->nb_tx_free < tx_pkt->nb_segs)
+		if (txq->nb_tx_free < nb_used)
 			break;
-
-		cmd_dtype = 0;
-		ol_flags = tx_pkt->ol_flags;
-		tx_offload.l2_len = tx_pkt->l2_len;
-		tx_offload.l3_len = tx_pkt->l3_len;
-		tx_offload.l4_len = tx_pkt->l4_len;
-		tx_offload.tso_segsz = tx_pkt->tso_segsz;
-		/* Calculate the number of context descriptors needed. */
-		uint64_t cd_qw0 = 0, cd_qw1 = 0;
-		nb_ctx = idpf_set_tso_ctx(ol_flags, tx_pkt, &tx_offload, txq,
-					  &cd_qw0, &cd_qw1);
-
-		/* Calculate the number of TX descriptors needed for
-		 * each packet. For TSO packets, use ci_calc_pkt_desc as
-		 * the mbuf data size might exceed max data size that hw allows
-		 * per tx desc.
-		 */
-		if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
-			nb_used = ci_calc_pkt_desc(tx_pkt) + nb_ctx;
-		else
-			nb_used = tx_pkt->nb_segs + nb_ctx;
 
 		if (ol_flags & CI_TX_CKSUM_OFFLOAD_MASK)
 			cmd_dtype = IDPF_TXD_FLEX_FLOW_CMD_CS_EN;
@@ -959,30 +959,52 @@ idpf_dp_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			ctx_desc[0] = cd_qw0;
 			ctx_desc[1] = cd_qw1;
 
-			tx_id++;
-			if (tx_id == txq->nb_tx_desc)
+			if (++tx_id == txq->nb_tx_desc)
 				tx_id = 0;
 		}
 
+		cmd_dtype |= IDPF_TX_DESC_DTYPE_FLEX_FLOW_SCHE;
+		struct rte_mbuf *m_seg = tx_pkt;
 		do {
-			txd = &txr[tx_id];
-			txn = &sw_ring[txe->next_id];
-			txe->mbuf = tx_pkt;
+			uint64_t buf_dma_addr = rte_mbuf_data_iova(m_seg);
+			uint16_t slen = m_seg->data_len;
 
-			/* Setup TX descriptor */
-			txd->buf_addr =
-				rte_cpu_to_le_64(rte_mbuf_data_iova(tx_pkt));
-			cmd_dtype |= IDPF_TX_DESC_DTYPE_FLEX_FLOW_SCHE;
+			txe->mbuf = m_seg;
+
+			/* For TSO, split large segments that exceed the
+			 * per-descriptor data limit, matching the behaviour of
+			 * ci_xmit_pkts() on the singleq path.
+			 */
+			while ((ol_flags & (RTE_MBUF_F_TX_TCP_SEG |
+					    RTE_MBUF_F_TX_UDP_SEG)) &&
+					unlikely(slen > CI_MAX_DATA_PER_TXD)) {
+				txd = &txr[tx_id];
+				txd->buf_addr = rte_cpu_to_le_64(buf_dma_addr);
+				txd->qw1.cmd_dtype = cmd_dtype;
+				txd->qw1.rxr_bufsize = CI_MAX_DATA_PER_TXD;
+				txd->qw1.compl_tag = sw_id;
+				buf_dma_addr += CI_MAX_DATA_PER_TXD;
+				slen -= CI_MAX_DATA_PER_TXD;
+				if (++tx_id == txq->nb_tx_desc)
+					tx_id = 0;
+				sw_id = txe->next_id;
+				txe = &sw_ring[sw_id];
+				/* sub-descriptor slots do not own the mbuf */
+				txe->mbuf = NULL;
+			}
+
+			/* Write the final (or only) descriptor for this segment */
+			txd = &txr[tx_id];
+			txd->buf_addr = rte_cpu_to_le_64(buf_dma_addr);
 			txd->qw1.cmd_dtype = cmd_dtype;
-			txd->qw1.rxr_bufsize = tx_pkt->data_len;
+			txd->qw1.rxr_bufsize = slen;
 			txd->qw1.compl_tag = sw_id;
-			tx_id++;
-			if (tx_id == txq->nb_tx_desc)
+			if (++tx_id == txq->nb_tx_desc)
 				tx_id = 0;
 			sw_id = txe->next_id;
-			txe = txn;
-			tx_pkt = tx_pkt->next;
-		} while (tx_pkt);
+			txe = &sw_ring[sw_id];
+			m_seg = m_seg->next;
+		} while (m_seg);
 
 		/* fill the last descriptor with End of Packet (EOP) bit */
 		txd->qw1.cmd_dtype |= IDPF_TXD_FLEX_FLOW_CMD_EOP;
