@@ -13,6 +13,10 @@
 #include "sxe_logs.h"
 #include "sxe_regs.h"
 #include "sxe.h"
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+#include "sxe_vec_common.h"
+#include <rte_vect.h>
+#endif
 #include "sxe_queue_common.h"
 #include "sxe_queue.h"
 
@@ -57,6 +61,10 @@ s32 __rte_cold __sxe_rx_queue_setup(struct rx_setup *rx_setup, bool is_vf)
 	u16 len;
 	u64 offloads;
 	s32 ret = 0;
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	struct sxe_adapter *pf_adapter = dev->data->dev_private;
+	struct sxevf_adapter *vf_adapter = dev->data->dev_private;
+#endif
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -161,6 +169,23 @@ s32 __rte_cold __sxe_rx_queue_setup(struct rx_setup *rx_setup, bool is_vf)
 				"dma_addr=0x%" SXE_PRIX64,
 			 rxq->buffer_ring, rxq->sc_buffer_ring, rxq->desc_ring,
 			 rxq->base_addr);
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	if (!rte_is_power_of_2(desc_num)) {
+		PMD_LOG_DEBUG(INIT, "queue[%d] doesn't meet Vector Rx "
+					"preconditions - canceling the feature for "
+					"the whole port[%d]",
+				 rxq->queue_id, rxq->port_id);
+		if (is_vf)
+			vf_adapter->rx_vec_allowed = false;
+		else
+			pf_adapter->rx_vec_allowed = false;
+
+	} else {
+		sxe_rxq_vec_setup(rxq);
+	}
+#endif
+
 	dev->data->rx_queues[queue_idx] = rxq;
 
 	sxe_rx_queue_init(*rx_setup->rx_batch_alloc_allowed, rxq);
@@ -254,6 +279,9 @@ void __sxe_recycle_rxq_info_get(struct rte_eth_dev *dev, u16 queue_id,
 		struct rte_eth_recycle_rxq_info *q_info)
 {
 	struct sxe_rx_queue *rxq;
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	struct sxe_adapter *adapter = dev->data->dev_private;
+#endif
 
 	rxq = dev->data->rx_queues[queue_id];
 
@@ -261,9 +289,21 @@ void __sxe_recycle_rxq_info_get(struct rte_eth_dev *dev, u16 queue_id,
 	q_info->mp = rxq->mb_pool;
 	q_info->mbuf_ring_size = rxq->ring_depth;
 	q_info->receive_tail = &rxq->processing_idx;
-
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	if (adapter->rx_vec_allowed) {
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
+		q_info->refill_requirement = rxq->realloc_num;
+		q_info->refill_head = &rxq->realloc_start;
+#endif
+	} else {
+		q_info->refill_requirement = rxq->batch_alloc_size;
+		q_info->refill_head = &rxq->batch_alloc_trigger;
+	}
+#else
 	q_info->refill_requirement = rxq->batch_alloc_size;
 	q_info->refill_head = &rxq->batch_alloc_trigger;
+#endif
+	return;
 }
 
 void __sxe_tx_queue_info_get(struct rte_eth_dev *dev, u16 queue_id,
@@ -289,7 +329,17 @@ s32 __sxe_tx_done_cleanup(void *tx_queue, u32 free_cnt)
 	struct sxe_tx_queue *txq = (struct sxe_tx_queue *)tx_queue;
 	if (txq->offloads == 0 &&
 		txq->rs_thresh >= RTE_PMD_SXE_MAX_TX_BURST) {
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+		if (txq->rs_thresh <= RTE_SXE_MAX_TX_FREE_BUF_SZ &&
+			(rte_eal_process_type() != RTE_PROC_PRIMARY ||
+			txq->buffer_ring_vec != NULL)) {
+			ret = sxe_tx_done_cleanup_vec(txq, free_cnt);
+		} else {
+			ret = sxe_tx_done_cleanup_simple(txq, free_cnt);
+		}
+#else
 		ret = sxe_tx_done_cleanup_simple(txq, free_cnt);
+#endif
 
 	} else {
 		ret = sxe_tx_done_cleanup_full(txq, free_cnt);
