@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (C), 2022, Linkdata Technology Co., Ltd.
  */
-
 #include <bus_pci_driver.h>
 #include <ethdev_driver.h>
 #include <dev_driver.h>
 #include <ethdev_pci.h>
 #include <rte_ethdev.h>
 #include <rte_alarm.h>
+#include <eal_export.h>
 #include "sxe_types.h"
 #include "sxe_logs.h"
 #include "sxe_compat_platform.h"
