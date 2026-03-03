@@ -276,3 +276,280 @@ static void sxe_hash_mac_addr_parse(u8 *mac_addr, u16 *reg_idx,
 			 mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
 			 mac_addr[4], mac_addr[5], *reg_idx, *bit_idx);
 }
+
+s32 sxe_vlan_filter_set(struct rte_eth_dev *eth_dev, u16 vlan_id, s32 on)
+{
+	struct sxe_adapter *adapter = eth_dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	struct sxe_vlan_context *vlan_ctxt = &adapter->vlan_ctxt;
+	u8 reg_idx;
+	u8 bit_idx;
+	u32 value;
+
+	reg_idx = (vlan_id >> SXE_VLAN_ID_SHIFT) & SXE_VLAN_ID_REG_MASK;
+	bit_idx = (vlan_id & SXE_VLAN_ID_BIT_MASK);
+
+	value = sxe_hw_vlan_filter_array_read(hw, reg_idx);
+	if (on)
+		value |= (1 << bit_idx);
+	else
+		value &= ~(1 << bit_idx);
+
+	sxe_hw_vlan_filter_array_write(hw, reg_idx, value);
+
+	vlan_ctxt->vlan_hash_table[reg_idx] = value;
+
+	PMD_LOG_INFO(DRV, "vlan_id:0x%x on:%d set done", vlan_id, on);
+
+	return 0;
+}
+
+static void sxe_vlan_tpid_write(struct sxe_hw *hw, u16 tpid)
+{
+	u32 value;
+
+	value = sxe_hw_vlan_type_get(hw);
+	value = (value & (~SXE_VLNCTRL_VET)) | tpid;
+	sxe_hw_vlan_type_set(hw, value);
+
+	value = sxe_hw_txctl_vlan_type_get(hw);
+	value = (value & (~SXE_DMATXCTL_VT_MASK)) |
+		(tpid << SXE_DMATXCTL_VT_SHIFT);
+	sxe_hw_txctl_vlan_type_set(hw, value);
+}
+
+s32 sxe_vlan_tpid_set(struct rte_eth_dev *eth_dev,
+			enum rte_vlan_type vlan_type, u16 tpid)
+{
+	struct sxe_adapter *adapter = eth_dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	s32 ret = 0;
+	u32 txctl;
+	bool double_vlan;
+
+	txctl = sxe_hw_txctl_vlan_type_get(hw);
+	double_vlan = txctl & SXE_DMATXCTL_GDV;
+
+	switch (vlan_type) {
+	case RTE_ETH_VLAN_TYPE_INNER:
+		if (double_vlan) {
+			sxe_vlan_tpid_write(hw, tpid);
+		} else {
+			ret = -ENOTSUP;
+			PMD_LOG_ERR(DRV, "unsupported inner vlan without "
+					 "global double vlan.");
+		}
+		break;
+	case RTE_ETH_VLAN_TYPE_OUTER:
+		if (double_vlan) {
+			sxe_hw_vlan_ext_type_set(hw,
+				(tpid << SXE_EXVET_VET_EXT_SHIFT));
+		} else {
+			sxe_vlan_tpid_write(hw, tpid);
+		}
+		break;
+	default:
+		ret = -EINVAL;
+		PMD_LOG_ERR(DRV, "unsupported VLAN type %d", vlan_type);
+		break;
+	}
+
+	PMD_LOG_INFO(DRV, "double_vlan:%d vlan_type:%d tpid:0x%x set done ret:%d",
+			   double_vlan, vlan_type, tpid, ret);
+	return ret;
+}
+
+static void sxe_vlan_strip_bitmap_set(struct rte_eth_dev *dev, u16 queue_idx, bool on)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_vlan_context *vlan_ctxt = &adapter->vlan_ctxt;
+
+	sxe_rx_queue_s *rxq;
+
+	if (queue_idx >= SXE_HW_TXRX_RING_NUM_MAX ||
+		queue_idx >= dev->data->nb_rx_queues) {
+		PMD_LOG_ERR(DRV, "invalid queue idx:%u exceed max"
+			   " queue number:%u or nb_rx_queues:%u.",
+			   queue_idx, SXE_HW_TXRX_RING_NUM_MAX,
+			   dev->data->nb_rx_queues);
+		return;
+	}
+
+	if (on)
+		SXE_STRIP_BITMAP_SET(vlan_ctxt, queue_idx);
+	else
+		SXE_STRIP_BITMAP_CLEAR(vlan_ctxt, queue_idx);
+
+	rxq = dev->data->rx_queues[queue_idx];
+
+	if (on) {
+		rxq->vlan_flags = RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED;
+		rxq->offloads |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+	} else {
+		rxq->vlan_flags = RTE_MBUF_F_RX_VLAN;
+		rxq->offloads &= ~RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+	}
+
+	PMD_LOG_INFO(DRV, "queue idx:%u vlan strip on:%d set bitmap and offload done.",
+			 queue_idx, on);
+}
+
+void sxe_vlan_strip_switch_set(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	u16 i;
+	sxe_rx_queue_s *rxq;
+	bool on;
+
+	PMD_INIT_FUNC_TRACE();
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+
+		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
+			on = true;
+		else
+			on = false;
+		sxe_hw_vlan_tag_strip_switch(hw, i, on);
+
+		sxe_vlan_strip_bitmap_set(dev, i, on);
+	}
+}
+
+static void sxe_vlan_filter_disable(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+
+	PMD_INIT_FUNC_TRACE();
+
+	sxe_hw_vlan_filter_switch(hw, 0);
+}
+
+static void sxe_vlan_filter_enable(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	struct sxe_vlan_context *vlan_ctxt = &adapter->vlan_ctxt;
+	u32 vlan_ctl;
+	u16 i;
+
+	PMD_INIT_FUNC_TRACE();
+
+	vlan_ctl = sxe_hw_vlan_type_get(hw);
+	vlan_ctl &= ~SXE_VLNCTRL_CFI;
+	vlan_ctl |= SXE_VLNCTRL_VFE;
+	sxe_hw_vlan_type_set(hw, vlan_ctl);
+
+	for (i = 0; i < SXE_VFT_TBL_SIZE; i++)
+		sxe_hw_vlan_filter_array_write(hw, i, vlan_ctxt->vlan_hash_table[i]);
+}
+
+static void sxe_vlan_extend_disable(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	u32 ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl = sxe_hw_txctl_vlan_type_get(hw);
+	ctrl &= ~SXE_DMATXCTL_GDV;
+	sxe_hw_txctl_vlan_type_set(hw, ctrl);
+
+	ctrl = sxe_hw_ext_vlan_get(hw);
+	ctrl &= ~SXE_EXTENDED_VLAN;
+	sxe_hw_ext_vlan_set(hw, ctrl);
+}
+
+static void sxe_vlan_extend_enable(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	u32 ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl = sxe_hw_txctl_vlan_type_get(hw);
+	ctrl |= SXE_DMATXCTL_GDV;
+	sxe_hw_txctl_vlan_type_set(hw, ctrl);
+
+	ctrl = sxe_hw_ext_vlan_get(hw);
+	ctrl |= SXE_EXTENDED_VLAN;
+	sxe_hw_ext_vlan_set(hw, ctrl);
+}
+
+static s32 sxe_vlan_offload_configure(struct rte_eth_dev *dev, s32 mask)
+{
+	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
+
+	if (mask & RTE_ETH_VLAN_STRIP_MASK)
+		sxe_vlan_strip_switch_set(dev);
+
+	if (mask & RTE_ETH_VLAN_FILTER_MASK) {
+		if (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_FILTER)
+			sxe_vlan_filter_enable(dev);
+		else
+			sxe_vlan_filter_disable(dev);
+	}
+
+	if (mask & RTE_ETH_VLAN_EXTEND_MASK) {
+		if (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_EXTEND)
+			sxe_vlan_extend_enable(dev);
+		else
+			sxe_vlan_extend_disable(dev);
+	}
+
+	PMD_LOG_INFO(DRV, "mask:0x%x rx mode offload:0x%" SXE_PRIX64
+			 " vlan offload set done", mask, rxmode->offloads);
+
+	return 0;
+}
+
+s32 sxe_vlan_offload_set(struct rte_eth_dev *dev, s32 vlan_mask)
+{
+	s32 mask;
+	s32 ret = 0;
+
+	if (vlan_mask & RTE_ETH_VLAN_STRIP_MASK) {
+		PMD_LOG_WARN(DRV, "please set vlan strip before device start, not at this stage.");
+		ret = -1;
+		goto l_out;
+	}
+	mask = vlan_mask & ~RTE_ETH_VLAN_STRIP_MASK;
+
+	sxe_vlan_offload_configure(dev, mask);
+
+	PMD_LOG_INFO(DRV, "vlan offload mask:0x%x set done.", vlan_mask);
+
+l_out:
+	return ret;
+}
+
+void sxe_vlan_strip_queue_set(struct rte_eth_dev *dev, u16 queue, s32 on)
+{
+	UNUSED(dev);
+	UNUSED(queue);
+	UNUSED(on);
+	PMD_LOG_WARN(DRV, "please set vlan strip before device start, not at this stage.");
+}
+
+void sxe_vlan_filter_configure(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	u32 vlan_mask;
+	u32 vlan_ctl;
+
+	vlan_mask = RTE_ETH_VLAN_STRIP_MASK | RTE_ETH_VLAN_FILTER_MASK |
+			RTE_ETH_VLAN_EXTEND_MASK;
+	sxe_vlan_offload_configure(dev, vlan_mask);
+
+	if (dev->data->dev_conf.rxmode.mq_mode == RTE_ETH_MQ_RX_VMDQ_ONLY) {
+		vlan_ctl = sxe_hw_vlan_type_get(hw);
+		vlan_ctl |= SXE_VLNCTRL_VFE;
+		sxe_hw_vlan_type_set(hw, vlan_ctl);
+		LOG_DEBUG_BDF("vmdq mode enable vlan filter done.");
+	}
+}

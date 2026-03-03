@@ -43,9 +43,22 @@ void sxe_mac_addr_remove(struct rte_eth_dev *dev, u32 rar_idx);
 s32 sxe_mac_addr_set(struct rte_eth_dev *dev,
 				 struct rte_ether_addr *mac_addr);
 
+s32 sxe_vlan_filter_set(struct rte_eth_dev *eth_dev, u16 vlan_id, s32 on);
+
+s32 sxe_vlan_tpid_set(struct rte_eth_dev *eth_dev,
+			enum rte_vlan_type vlan_type, u16 tpid);
+
+s32 sxe_vlan_offload_set(struct rte_eth_dev *dev, s32 vlan_mask);
+
+void sxe_vlan_strip_queue_set(struct rte_eth_dev *dev, u16 queue, s32 on);
+
+void sxe_vlan_filter_configure(struct rte_eth_dev *dev);
+
 s32 sxe_set_mc_addr_list(struct rte_eth_dev *dev,
 			  struct rte_ether_addr *mc_addr_list,
 			  u32 nb_mc_addr);
+
+void sxe_vlan_strip_switch_set(struct rte_eth_dev *dev);
 
 void sxe_fc_mac_addr_set(struct sxe_adapter *adapter);
 
