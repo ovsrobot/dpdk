@@ -27,7 +27,8 @@ u64 __sxe_rx_port_offload_capa_get(struct rte_eth_dev *dev)
 			RTE_ETH_RX_OFFLOAD_KEEP_CRC	|
 			RTE_ETH_RX_OFFLOAD_VLAN_FILTER |
 			RTE_ETH_RX_OFFLOAD_VLAN_EXTEND |
-			RTE_ETH_RX_OFFLOAD_SCATTER;
+			RTE_ETH_RX_OFFLOAD_SCATTER |
+			RTE_ETH_RX_OFFLOAD_RSS_HASH;
 
 	if (!RTE_ETH_DEV_SRIOV(dev).active)
 		rx_offload_capa |= RTE_ETH_RX_OFFLOAD_TCP_LRO;
