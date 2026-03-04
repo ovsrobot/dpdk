@@ -29,6 +29,9 @@
 #include "rte_efd_x86.h"
 #elif defined(RTE_ARCH_ARM64)
 #include "rte_efd_arm64.h"
+#elif defined(RTE_ARCH_RISCV) && defined(RTE_RISCV_FEATURE_V)
+#include <riscv_vector.h>
+#include "rte_efd_rvv.h"
 #endif
 
 RTE_LOG_REGISTER_DEFAULT(efd_logtype, INFO);
@@ -85,7 +88,8 @@ enum efd_lookup_internal_function {
 	EFD_LOOKUP_SCALAR = 0,
 	EFD_LOOKUP_AVX2,
 	EFD_LOOKUP_NEON,
-	EFD_LOOKUP_NUM
+	EFD_LOOKUP_NUM,
+	EFD_LOOKUP_RVV
 };
 
 TAILQ_HEAD(rte_efd_list, rte_tailq_entry);
@@ -674,6 +678,12 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
 	    rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON) &&
 			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128)
 		table->lookup_fn = EFD_LOOKUP_NEON;
+	else
+#endif
+#if defined(RTE_ARCH_RISCV) && defined(RTE_RISCV_FEATURE_V)
+	if (RTE_EFD_VALUE_NUM_BITS > 16 &&
+		__riscv_vsetvl_e32m1(4) == 4)
+		table->lookup_fn = EFD_LOOKUP_RVV;
 	else
 #endif
 		table->lookup_fn = EFD_LOOKUP_SCALAR;
@@ -1304,6 +1314,14 @@ efd_lookup_internal(const struct efd_online_group_entry * const group,
 					group->lookup_table,
 					hash_val_a,
 					hash_val_b);
+		break;
+#endif
+#if defined(RTE_ARCH_RISCV) && defined(RTE_RISCV_FEATURE_V)
+	case EFD_LOOKUP_RVV:
+		return efd_lookup_internal_rvv(group->hash_idx,
+				group->lookup_table,
+				hash_val_a,
+				hash_val_b);
 		break;
 #endif
 	case EFD_LOOKUP_SCALAR:
