@@ -29,17 +29,21 @@ args = parser.parse_args()
 symbols = {}
 
 for file in args.patch:
+    lib = None
     for ln in file.readlines():
-        if file_header_regexp.match(ln):
-            if file_header_regexp.match(ln).group(2) == "lib":
-                lib = "/".join(file_header_regexp.match(ln).group(2, 3))
-            elif file_header_regexp.match(ln).group(3) == "intel":
-                lib = "/".join(file_header_regexp.match(ln).group(2, 3, 4))
+        if ln.startswith("--- a/"):
+            if file_header_regexp.match(ln):
+                m = file_header_regexp.match(ln)
+                if m.group(2) == "lib":
+                    lib = "/".join(m.group(2, 3))
+                elif m.group(3) == "intel":
+                    lib = "/".join(m.group(2, 3, 4))
+                else:
+                    lib = "/".join(m.group(2, 3))
+                if lib not in symbols:
+                    symbols[lib] = {}
             else:
-                lib = "/".join(file_header_regexp.match(ln).group(2, 3))
-
-            if lib not in symbols:
-                symbols[lib] = {}
+                lib = None
             continue
 
         if export_exp_sym_regexp.match(ln):
@@ -54,6 +58,8 @@ for file in args.patch:
         else:
             continue
 
+        if lib is None:
+            continue
         if symbol not in symbols[lib]:
             symbols[lib][symbol] = {}
         added = ln[0] == "+"
