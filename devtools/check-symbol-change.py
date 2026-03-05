@@ -29,6 +29,7 @@ args = parser.parse_args()
 symbols = {}
 
 for file in args.patch:
+    lib = None
     for ln in file.readlines():
         if file_header_regexp.match(ln):
             if file_header_regexp.match(ln).group(2) == "lib":
@@ -54,6 +55,8 @@ for file in args.patch:
         else:
             continue
 
+        if lib is None:
+            continue
         if symbol not in symbols[lib]:
             symbols[lib][symbol] = {}
         added = ln[0] == "+"
