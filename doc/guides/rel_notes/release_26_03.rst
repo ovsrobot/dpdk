@@ -77,6 +77,7 @@ New Features
 
   * Added support for pre and post VF reset callbacks.
   * Added support for transmitting LLDP packets based on mbuf packet type.
+  * Implemented AVX2 context descriptor transmit paths.
 
 * **Updated Marvell cnxk net driver.**
 
