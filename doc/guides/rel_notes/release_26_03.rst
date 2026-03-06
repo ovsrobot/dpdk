@@ -106,6 +106,13 @@ New Features
   Added handling of the key combination Control+L
   to clear the screen before redisplaying the prompt.
 
+* **Added automatic deferred free on hash data overwrite.**
+
+  When RCU is configured with a ``free_key_data_func`` callback,
+  ``rte_hash_add_key_data`` now automatically defers freeing the old data
+  pointer on key overwrite via the RCU defer queue.
+
+
 Removed Items
 -------------
 
