@@ -76,6 +76,7 @@ New Features
 * **Updated Intel iavf driver.**
 
   * Added support for pre and post VF reset callbacks.
+  * Added support for transmitting LLDP packets based on mbuf packet type.
 
 * **Updated Marvell cnxk net driver.**
 

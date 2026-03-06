@@ -681,6 +681,12 @@ Usage::
 
     testpmd> set tx lldp on
 
+An alternative method for transmitting LLDP packets is to register the dynamic field as
+above and, rather than setting the dynfield value, set the ``packet_type`` of the mbuf to
+``RTE_PTYPE_L2_ETHER_LLDP``. The driver will check both the dynamic field and the packet
+type, and if either indicates that the packet is an LLDP packet, the driver will transmit
+it.
+
 
 Limitations or Knowing issues
 -----------------------------
