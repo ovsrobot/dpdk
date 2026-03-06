@@ -1,5 +1,5 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2010-2014 Intel Corporation.
+    Copyright(c) 2010-2026 Intel Corporation.
 
 Multi-process Support
 =====================
@@ -29,6 +29,15 @@ after a primary process has already configured the hugepage shared memory for th
 
     Secondary processes which requires access to physical devices in Primary process, must
     be passed with the same allow and block options.
+
+    When the primary process exits, all secondary processes must be terminated,
+    and then restarted after the primary process is re-run to ensure
+    proper re-initialization of shared resources.
+    If secondary processes continue running after the primary process
+    exits, they may experience reduced functionality. In particular,
+    inter-process communication, new memory allocations, and other
+    shared infrastructure will no longer be available, which may lead
+    to unexpected errors.
 
 To support these two process types, and other multi-process setups described later,
 two additional command-line parameters are available to the EAL:

@@ -989,6 +989,10 @@ rte_eal_cleanup(void)
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	rte_eal_malloc_heap_cleanup();
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
+			!internal_conf->no_shconf &&
+			eal_clean_runtime_dir() < 0)
+		EAL_LOG(WARNING, "Cannot clean runtime directory on exit");
 	eal_cleanup_config(internal_conf);
 	eal_lcore_var_cleanup();
 	rte_eal_log_cleanup();
