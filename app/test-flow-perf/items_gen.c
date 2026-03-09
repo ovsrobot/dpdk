@@ -389,3 +389,58 @@ fill_items(struct rte_flow_item *items,
 
 	items[items_counter].type = RTE_FLOW_ITEM_TYPE_END;
 }
+
+size_t
+item_spec_size(enum rte_flow_item_type type)
+{
+	switch (type) {
+	case RTE_FLOW_ITEM_TYPE_ETH:
+		return sizeof(struct rte_flow_item_eth);
+	case RTE_FLOW_ITEM_TYPE_VLAN:
+		return sizeof(struct rte_flow_item_vlan);
+	case RTE_FLOW_ITEM_TYPE_IPV4:
+		return sizeof(struct rte_flow_item_ipv4);
+	case RTE_FLOW_ITEM_TYPE_IPV6:
+		return sizeof(struct rte_flow_item_ipv6);
+	case RTE_FLOW_ITEM_TYPE_TCP:
+		return sizeof(struct rte_flow_item_tcp);
+	case RTE_FLOW_ITEM_TYPE_UDP:
+		return sizeof(struct rte_flow_item_udp);
+	case RTE_FLOW_ITEM_TYPE_VXLAN:
+		return sizeof(struct rte_flow_item_vxlan);
+	case RTE_FLOW_ITEM_TYPE_VXLAN_GPE:
+		return sizeof(struct rte_flow_item_vxlan_gpe);
+	case RTE_FLOW_ITEM_TYPE_GRE:
+		return sizeof(struct rte_flow_item_gre);
+	case RTE_FLOW_ITEM_TYPE_GENEVE:
+		return sizeof(struct rte_flow_item_geneve);
+	case RTE_FLOW_ITEM_TYPE_GTP:
+		return sizeof(struct rte_flow_item_gtp);
+	case RTE_FLOW_ITEM_TYPE_META:
+		return sizeof(struct rte_flow_item_meta);
+	case RTE_FLOW_ITEM_TYPE_TAG:
+		return sizeof(struct rte_flow_item_tag);
+	case RTE_FLOW_ITEM_TYPE_ICMP:
+		return sizeof(struct rte_flow_item_icmp);
+	case RTE_FLOW_ITEM_TYPE_ICMP6:
+		return sizeof(struct rte_flow_item_icmp6);
+	default:
+		return 0;
+	}
+}
+
+void
+fill_items_template(struct rte_flow_item *items, uint64_t *flow_items, uint32_t outer_ip_src,
+		    uint8_t core_idx)
+{
+	uint32_t i;
+
+	fill_items(items, flow_items, outer_ip_src, core_idx);
+
+	/* For templates, set spec to NULL - only mask matters for template matching */
+	for (i = 0; items[i].type != RTE_FLOW_ITEM_TYPE_END; i++)
+		items[i].spec = NULL;
+
+	/* END */
+	items[i].spec = NULL;
+}

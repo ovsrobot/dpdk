@@ -1958,6 +1958,7 @@ F: doc/guides/tools/dmaperf.rst
 
 Flow performance tool
 M: Wisam Jaddo <wisamm@nvidia.com>
+M: Maxime Peim <maxime.peim@gmail.com>
 F: app/test-flow-perf/
 F: doc/guides/tools/flow-perf.rst
 
