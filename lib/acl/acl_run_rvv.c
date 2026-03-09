@@ -1,0 +1,19 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2026 Institute of Software Chinese Academy of Sciences (ISCAS)
+ */
+
+#if defined(RTE_ARCH_RISCV) && defined(RTE_RISCV_FEATURE_V)
+
+#include "acl_run_rvv.h"
+
+int
+rte_acl_classify_rvv(const struct rte_acl_ctx *ctx, const uint8_t **data,
+		      uint32_t *results, uint32_t num, uint32_t categories)
+{
+	if (num >= 4)
+		return search_rvv_4(ctx, data, results, num, categories);
+	else
+		return rte_acl_classify_scalar(ctx, data, results, num, categories);
+}
+
+#endif
