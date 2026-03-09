@@ -1083,12 +1083,11 @@ ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 			rss_type = rss->types;
 
 			/* Check hash function and save it to rss_meta. */
-			if (pattern_match_item->pattern_list !=
-			    pattern_empty && rss->func ==
-			    RTE_ETH_HASH_FUNCTION_SIMPLE_XOR) {
-				return rte_flow_error_set(error, ENOTSUP,
+			if (pattern_match_item->pattern_list ==
+			    pattern_empty) {
+				return rte_flow_error_set(error, EINVAL,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
-					"Not supported flow");
+					"Invalid empty argument");
 			} else if (rss->func ==
 				   RTE_ETH_HASH_FUNCTION_SIMPLE_XOR){
 				rss_meta->hash_function =
