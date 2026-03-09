@@ -402,7 +402,10 @@ eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 
 	dev_info->if_index = internals->if_index;
 	dev_info->max_mac_addrs = 1;
-	dev_info->max_rx_pktlen = RTE_ETHER_MAX_LEN;
+	dev_info->max_rx_pktlen = internals->req.tp_frame_size -
+		TPACKET2_HDRLEN + sizeof(struct sockaddr_ll);
+	dev_info->max_mtu = dev_info->max_rx_pktlen -
+		RTE_ETHER_HDR_LEN - RTE_ETHER_CRC_LEN;
 	dev_info->max_rx_queues = (uint16_t)internals->nb_queues;
 	dev_info->max_tx_queues = (uint16_t)internals->nb_queues;
 	dev_info->min_rx_bufsize = 0;
