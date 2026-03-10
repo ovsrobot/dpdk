@@ -88,6 +88,12 @@ mlx5_txpp_alloc_pp_index(struct mlx5_dev_ctx_shared *sh)
 	rate = NS_PER_S / sh->txpp.tick;
 	if (rate * sh->txpp.tick != NS_PER_S)
 		DRV_LOG(WARNING, "Packet pacing frequency is not precise.");
+	if (sh->config.tx_burst_bound)
+		MLX5_SET(set_pp_rate_limit_context, &pp,
+			 burst_upper_bound, sh->config.tx_burst_bound);
+	if (sh->config.tx_typical_pkt_sz)
+		MLX5_SET(set_pp_rate_limit_context, &pp,
+			 typical_packet_size, sh->config.tx_typical_pkt_sz);
 	if (sh->txpp.test) {
 		uint32_t len;
 
@@ -161,6 +167,12 @@ mlx5_txq_alloc_pp_rate_limit(struct mlx5_dev_ctx_shared *sh,
 	rate_kbps = rate_mbps * 1000;
 	MLX5_SET(set_pp_rate_limit_context, &pp, rate_limit, rate_kbps);
 	MLX5_SET(set_pp_rate_limit_context, &pp, rate_mode, MLX5_DATA_RATE);
+	if (sh->config.tx_burst_bound)
+		MLX5_SET(set_pp_rate_limit_context, &pp,
+			 burst_upper_bound, sh->config.tx_burst_bound);
+	if (sh->config.tx_typical_pkt_sz)
+		MLX5_SET(set_pp_rate_limit_context, &pp,
+			 typical_packet_size, sh->config.tx_typical_pkt_sz);
 	rl->pp = mlx5_glue->dv_alloc_pp
 				(sh->cdev->ctx, sizeof(pp), &pp,
 				 MLX5DV_PP_ALLOC_FLAGS_DEDICATED_INDEX);
