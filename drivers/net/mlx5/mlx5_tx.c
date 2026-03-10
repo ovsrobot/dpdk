@@ -886,3 +886,54 @@ int rte_pmd_mlx5_txq_rate_limit_query(uint16_t port_id, uint16_t queue_id,
 				     packet_pacing_rate_limit_index);
 	return 0;
 }
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pmd_mlx5_pp_rate_table_query, 26.07)
+int rte_pmd_mlx5_pp_rate_table_query(uint16_t port_id,
+				     struct rte_pmd_mlx5_pp_rate_table_info *info)
+{
+	struct rte_eth_dev *dev;
+	struct mlx5_priv *priv;
+	uint16_t used = 0;
+	uint16_t seen[RTE_MAX_QUEUES_PER_PORT];
+	unsigned int i;
+
+	if (info == NULL)
+		return -EINVAL;
+	if (!rte_eth_dev_is_valid_port(port_id))
+		return -ENODEV;
+	dev = &rte_eth_devices[port_id];
+	priv = dev->data->dev_private;
+	if (!priv->sh->cdev->config.hca_attr.qos.packet_pacing) {
+		rte_errno = ENOTSUP;
+		return -ENOTSUP;
+	}
+	info->total = priv->sh->cdev->config.hca_attr.qos
+			.packet_pacing_rate_table_size;
+	/* Count unique non-zero PP indices across all TX queues. */
+	for (i = 0; i < priv->txqs_n; i++) {
+		struct mlx5_txq_data *txq_data;
+		struct mlx5_txq_ctrl *txq_ctrl;
+		uint16_t pp_id;
+		uint16_t j;
+		bool dup;
+
+		if (priv->txqs == NULL || (*priv->txqs)[i] == NULL)
+			continue;
+		txq_data = (*priv->txqs)[i];
+		txq_ctrl = container_of(txq_data, struct mlx5_txq_ctrl, txq);
+		pp_id = txq_ctrl->rl.pp_id;
+		if (pp_id == 0)
+			continue;
+		dup = false;
+		for (j = 0; j < used; j++) {
+			if (seen[j] == pp_id) {
+				dup = true;
+				break;
+			}
+		}
+		if (!dup && used < RTE_DIM(seen))
+			seen[used++] = pp_id;
+	}
+	info->used = used;
+	return 0;
+}
