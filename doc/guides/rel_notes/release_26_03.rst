@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added per-queue Tx rate limit getter to ethdev.**
+
+  Added ``rte_eth_get_queue_rate_limit()`` experimental API
+  to retrieve the current per-queue Tx rate limit configured on a device.
+
 * **Added custom memory allocation hooks in ACL library.**
 
   Added a hook API mechanism
