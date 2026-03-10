@@ -1412,7 +1412,20 @@ mlx5_set_queue_rate_limit(struct rte_eth_dev *dev, uint16_t queue_idx,
 		rte_errno = EINVAL;
 		return -rte_errno;
 	}
-	if (txq_ctrl->obj == NULL || txq_ctrl->obj->sq == NULL) {
+	if (txq_ctrl->obj == NULL) {
+		DRV_LOG(ERR, "Port %u Tx queue %u not initialized.",
+			dev->data->port_id, queue_idx);
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
+	/*
+	 * For non-hairpin queues the SQ DevX object lives in
+	 * obj->sq_obj.sq (used by DevX/HWS mode), while hairpin
+	 * queues use obj->sq directly.  These are different members
+	 * of a union inside mlx5_txq_obj.
+	 */
+	struct mlx5_devx_obj *sq_devx = txq_ctrl->obj->sq_obj.sq;
+	if (sq_devx == NULL) {
 		DRV_LOG(ERR, "Port %u Tx queue %u SQ not ready.",
 			dev->data->port_id, queue_idx);
 		rte_errno = EINVAL;
@@ -1426,7 +1439,7 @@ mlx5_set_queue_rate_limit(struct rte_eth_dev *dev, uint16_t queue_idx,
 		sq_attr.state = MLX5_SQC_STATE_RDY;
 		sq_attr.rl_update = 1;
 		sq_attr.packet_pacing_rate_limit_index = 0;
-		ret = mlx5_devx_cmd_modify_sq(txq_ctrl->obj->sq, &sq_attr);
+		ret = mlx5_devx_cmd_modify_sq(sq_devx, &sq_attr);
 		if (ret) {
 			DRV_LOG(ERR,
 				"Port %u Tx queue %u failed to clear rate.",
@@ -1450,7 +1463,7 @@ mlx5_set_queue_rate_limit(struct rte_eth_dev *dev, uint16_t queue_idx,
 	sq_attr.state = MLX5_SQC_STATE_RDY;
 	sq_attr.rl_update = 1;
 	sq_attr.packet_pacing_rate_limit_index = new_rl.pp_id;
-	ret = mlx5_devx_cmd_modify_sq(txq_ctrl->obj->sq, &sq_attr);
+	ret = mlx5_devx_cmd_modify_sq(sq_devx, &sq_attr);
 	if (ret) {
 		DRV_LOG(ERR, "Port %u Tx queue %u failed to set rate %u Mbps.",
 			dev->data->port_id, queue_idx, tx_rate);
