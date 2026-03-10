@@ -278,3 +278,8 @@ Features and Limitations
 
 *  The PMD will insert the pcap header packet timestamp with nanoseconds resolution and
    UNIX origin, i.e. time since 1-JAN-1970 UTC, if ``RTE_ETH_RX_OFFLOAD_TIMESTAMP`` is enabled.
+
+*  In ``iface`` mode, the PMD supports link status change (LSC) notifications.
+   When the application enables ``intr_conf.lsc`` in the port configuration,
+   the driver polls the underlying network interface once per second and generates an
+   ``RTE_ETH_EVENT_INTR_LSC`` callback when the link state changes.
