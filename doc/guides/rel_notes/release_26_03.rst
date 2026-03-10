@@ -98,6 +98,11 @@ New Features
 
   * Added out-of-place support for CN20K SoC.
 
+* **Updated NVIDIA mlx5 net driver.**
+
+  * Added per-queue Tx rate limiting using hardware packet pacing.
+  * Added PMD-specific API to query per-queue rate limit and rate table capacity.
+
 * **Updated ZTE zxdh ethernet driver.**
 
   * Added support for modifying queue depth.
