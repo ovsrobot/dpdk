@@ -2751,6 +2751,30 @@ static const struct rte_bpf_xsym test_call5_xsym[] = {
 };
 
 /* load mbuf (BPF_ABS/BPF_IND) test-cases */
+static const struct ebpf_insn test_ld_mbuf0_prog[] = {
+	/* BPF_ABS/BPF_IND implicitly expect mbuf ptr in R6 */
+	{
+		.code = (EBPF_ALU64 | EBPF_MOV | BPF_X),
+		.dst_reg = EBPF_REG_6,
+		.src_reg = EBPF_REG_1,
+	},
+	/* load IPv4 version and IHL */
+	{
+		.code = (BPF_LD | BPF_ABS | BPF_B),
+		.imm = offsetof(struct rte_ipv4_hdr, version_ihl),
+	},
+	{
+		.code = (BPF_JMP | EBPF_EXIT),
+	},
+};
+
+static int
+test_ld_mbuf0_check(uint64_t rc, const void *arg)
+{
+	return cmp_res(__func__, 0x45, rc, arg, arg, 0);
+}
+
+/* load mbuf (BPF_ABS/BPF_IND) test-cases */
 static const struct ebpf_insn test_ld_mbuf1_prog[] = {
 
 	/* BPF_ABS/BPF_IND implicitly expect mbuf ptr in R6 */
@@ -3418,6 +3442,22 @@ static const struct bpf_test tests[] = {
 		.allow_fail = (sizeof(uint64_t) != sizeof(uintptr_t)),
 	},
 	{
+		.name = "test_ld_mbuf0",
+		.arg_sz = sizeof(struct dummy_mbuf),
+		.prm = {
+			.ins = test_ld_mbuf0_prog,
+			.nb_ins = RTE_DIM(test_ld_mbuf0_prog),
+			.prog_arg = {
+				.type = RTE_BPF_ARG_PTR_MBUF,
+				.buf_size = sizeof(struct dummy_mbuf),
+			},
+		},
+		.prepare = test_ld_mbuf1_prepare,
+		.check_result = test_ld_mbuf0_check,
+		/* mbuf as input argument is not supported on 32 bit platform */
+		.allow_fail = (sizeof(uint64_t) != sizeof(uintptr_t)),
+	},
+	{
 		.name = "test_ld_mbuf1",
 		.arg_sz = sizeof(struct dummy_mbuf),
 		.prm = {
@@ -3491,6 +3531,7 @@ run_test(const struct bpf_test *tst)
 	if (ret != 0) {
 		printf("%s@%d: check_result(%s) failed, error: %d(%s);\n",
 			__func__, __LINE__, tst->name, ret, strerror(ret));
+		return -1;
 	}
 
 	/* repeat the same test with jit, when possible */
@@ -3506,6 +3547,7 @@ run_test(const struct bpf_test *tst)
 				"error: %d(%s);\n",
 				__func__, __LINE__, tst->name,
 				rv, strerror(rv));
+			return -1;
 		}
 	}
 

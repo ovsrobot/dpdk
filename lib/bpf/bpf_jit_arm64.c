@@ -8,6 +8,7 @@
 
 #include <rte_common.h>
 #include <rte_byteorder.h>
+#include <rte_mbuf.h>
 
 #include "bpf_impl.h"
 
@@ -965,6 +966,54 @@ emit_return_zero_if_src_zero(struct a64_jit_ctx *ctx, bool is64, uint8_t src)
 	emit_b(ctx, jump_to_epilogue);
 }
 
+/*
+ * Emit code for BPF_LD | BPF_ABS/IND: load from packet.
+ * Calls __rte_pktmbuf_read(mbuf, off, len, buf).
+ */
+static void
+emit_ld_mbuf(struct a64_jit_ctx *ctx, uint32_t op, uint8_t tmp1, uint8_t tmp2,
+	uint8_t src, uint32_t imm)
+{
+	uint8_t r0 = ebpf_to_a64_reg(ctx, EBPF_REG_0);
+	uint8_t r6 = ebpf_to_a64_reg(ctx, EBPF_REG_6);
+	uint32_t mode = BPF_MODE(op);
+	uint32_t opsz = BPF_SIZE(op);
+	uint32_t sz = bpf_size(opsz);
+	int16_t jump_to_epilogue;
+
+	/* r0 = mbuf (R6) */
+	emit_mov_64(ctx, A64_R(0), r6);
+
+	/* r1 = off: for ABS use imm, for IND use src + imm */
+	if (mode == BPF_ABS) {
+		emit_mov_imm(ctx, 1, A64_R(1), imm);
+	} else {
+		emit_mov_imm(ctx, 1, tmp2, imm);
+		emit_add(ctx, 1, tmp2, src);
+		emit_mov_64(ctx, A64_R(1), tmp2);
+	}
+
+	/* r2 = len */
+	emit_mov_imm(ctx, 1, A64_R(2), sz);
+
+	/* r3 = buf (SP) */
+	emit_mov_64(ctx, A64_R(3), A64_SP);
+
+	/* call __rte_pktmbuf_read */
+	emit_call(ctx, tmp1, __rte_pktmbuf_read);
+	/* check return value of __rte_pktmbuf_read */
+	emit_cbnz(ctx, 1, A64_R(0), 3);
+	emit_mov_imm(ctx, 1, r0, 0);
+	jump_to_epilogue = (ctx->program_start + ctx->program_sz) - ctx->idx;
+	emit_b(ctx, jump_to_epilogue);
+
+	/* r0 points to the data, load 1/2/4 bytes */
+	emit_ldr(ctx, opsz, A64_R(0), A64_R(0), A64_ZR);
+	if (sz != sizeof(uint8_t))
+		emit_be(ctx, A64_R(0), sz * CHAR_BIT);
+	emit_mov_64(ctx, r0, A64_R(0));
+}
+
 static void
 emit_stadd(struct a64_jit_ctx *ctx, bool is64, uint8_t rs, uint8_t rn)
 {
@@ -1137,6 +1186,13 @@ check_program_has_call(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 		switch (op) {
 		/* Call imm */
 		case (BPF_JMP | EBPF_CALL):
+		/* BPF_LD | BPF_ABS/IND use __rte_pktmbuf_read */
+		case (BPF_LD | BPF_ABS | BPF_B):
+		case (BPF_LD | BPF_ABS | BPF_H):
+		case (BPF_LD | BPF_ABS | BPF_W):
+		case (BPF_LD | BPF_IND | BPF_B):
+		case (BPF_LD | BPF_IND | BPF_H):
+		case (BPF_LD | BPF_IND | BPF_W):
 			ctx->foundcall = 1;
 			return;
 		}
@@ -1337,6 +1393,15 @@ emit(struct a64_jit_ctx *ctx, struct rte_bpf *bpf)
 			u64 = RTE_SHIFT_VAL64(ins[1].imm, 32) | (uint32_t)imm;
 			emit_mov_imm(ctx, 1, dst, u64);
 			i++;
+			break;
+		/* load absolute/indirect from packet */
+		case (BPF_LD | BPF_ABS | BPF_B):
+		case (BPF_LD | BPF_ABS | BPF_H):
+		case (BPF_LD | BPF_ABS | BPF_W):
+		case (BPF_LD | BPF_IND | BPF_B):
+		case (BPF_LD | BPF_IND | BPF_H):
+		case (BPF_LD | BPF_IND | BPF_W):
+			emit_ld_mbuf(ctx, op, tmp1, tmp2, src, imm);
 			break;
 		/* *(size *)(dst + off) = src */
 		case (BPF_STX | BPF_MEM | BPF_B):
