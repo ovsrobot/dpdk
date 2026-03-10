@@ -1912,7 +1912,7 @@ set_iface_up_down(const char *ifname, int up)
 static const char *
 find_lsc_test_iface(void)
 {
-	static const char *candidates[] = { "dummy0", "disc0" };
+	static const char * const candidates[] = { "dummy0", "disc0" };
 	unsigned int i;
 
 	for (i = 0; i < RTE_DIM(candidates); i++) {
