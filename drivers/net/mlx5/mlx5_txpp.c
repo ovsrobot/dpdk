@@ -185,8 +185,7 @@ mlx5_txq_alloc_pp_rate_limit(struct mlx5_dev_ctx_shared *sh,
 		MLX5_SET(set_pp_rate_limit_context, &pp,
 			 typical_packet_size, sh->config.tx_typical_pkt_sz);
 	rl->pp = mlx5_glue->dv_alloc_pp
-				(sh->cdev->ctx, sizeof(pp), &pp,
-				 MLX5DV_PP_ALLOC_FLAGS_DEDICATED_INDEX);
+				(sh->cdev->ctx, sizeof(pp), &pp, 0);
 	if (rl->pp == NULL) {
 		DRV_LOG(ERR, "Failed to allocate PP index for rate %u Mbps.",
 			rate_mbps);
