@@ -2668,6 +2668,8 @@ ice_recalc_port_limited_caps(struct ice_hw *hw, struct ice_hw_common_caps *caps)
 		caps->maxtc = 4;
 		ice_debug(hw, ICE_DBG_INIT, "reducing maxtc to %u (based on #ports)\n",
 			  caps->maxtc);
+		if (hw->mac_type == ICE_MAC_E830)
+			return;
 	}
 }
 
