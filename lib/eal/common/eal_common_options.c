@@ -233,6 +233,20 @@ eal_collate_args(int argc, char **argv)
 		EAL_LOG(ERR, "Options allow (-a) and block (-b) can't be used at the same time");
 		return -1;
 	}
+#ifdef RTE_EXEC_ENV_FREEBSD
+	if (!TAILQ_EMPTY(&args.pagesz_mem)) {
+		EAL_LOG(ERR, "Option pagesz-mem is not supported on FreeBSD");
+		return -1;
+	}
+#endif
+	if (!TAILQ_EMPTY(&args.pagesz_mem) && args.no_huge) {
+		EAL_LOG(ERR, "Options pagesz-mem and no-huge can't be used at the same time");
+		return -1;
+	}
+	if (!TAILQ_EMPTY(&args.pagesz_mem) && args.legacy_mem) {
+		EAL_LOG(ERR, "Options pagesz-mem and legacy-mem can't be used at the same time");
+		return -1;
+	}
 
 	/* for non-list args, we can just check for zero/null values using macro */
 	if (CONFLICTING_OPTIONS(args, coremask, lcores) ||
@@ -511,7 +525,10 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 				sizeof(internal_cfg->hugepage_info[0]));
 		internal_cfg->hugepage_info[i].lock_descriptor = -1;
 		internal_cfg->hugepage_mem_sz_limits[i] = 0;
+		internal_cfg->pagesz_mem_overrides[i].pagesz = 0;
+		internal_cfg->pagesz_mem_overrides[i].limit = 0;
 	}
+	internal_cfg->num_pagesz_mem_overrides = 0;
 	internal_cfg->base_virtaddr = 0;
 
 	/* if set to NONE, interrupt mode is determined automatically */
@@ -1868,6 +1885,77 @@ eal_parse_socket_arg(char *strval, volatile uint64_t *socket_arg)
 }
 
 static int
+eal_parse_pagesz_mem(char *strval, struct internal_config *internal_cfg)
+{
+	char *pagesz_str, *mem_str;
+	int len;
+	uint64_t pagesz, mem_limit;
+	struct pagesz_mem_override *pmo;
+
+	/* do we have space? */
+	if (internal_cfg->num_pagesz_mem_overrides >= MAX_HUGEPAGE_SIZES) {
+		EAL_LOG(ERR,
+			"--pagesz-mem: too many page size entries (max %d)",
+			MAX_HUGEPAGE_SIZES);
+		return -1;
+	}
+
+	len = strnlen(strval, 1024);
+	if (len >= 1024) {
+		EAL_LOG(ERR, "--pagesz-mem parameter is too long");
+		return -1;
+	}
+
+	/* parse exactly one pagesz:mem pair per --pagesz-mem option */
+	pagesz_str = strval;
+	mem_str = strchr(pagesz_str, ':');
+
+	if (mem_str == NULL || mem_str == pagesz_str || mem_str[1] == '\0') {
+		EAL_LOG(ERR, "--pagesz-mem parameter format is invalid, expected <pagesz>:<limit>");
+		return -1;
+	}
+
+	/* reject accidental multiple pairs in one option */
+	if (strchr(mem_str + 1, ',') != NULL) {
+		EAL_LOG(ERR, "--pagesz-mem accepts one <pagesz>:<limit> pair per option");
+		return -1;
+	}
+
+	/* temporarily null-terminate pagesz for parsing */
+	*mem_str = '\0';
+	mem_str++;
+
+	/* parse page size */
+	errno = 0;
+	pagesz = rte_str_to_size(pagesz_str);
+	if (pagesz == 0 || errno != 0) {
+		EAL_LOG(ERR, "invalid page size in --pagesz-mem: '%s'", pagesz_str);
+		return -1;
+	}
+
+	/* parse memory limit (0 is valid: disables allocation for this page size) */
+	errno = 0;
+	mem_limit = rte_str_to_size(mem_str);
+	if (errno != 0) {
+		EAL_LOG(ERR, "invalid memory limit in --pagesz-mem: '%s'", mem_str);
+		return -1;
+	}
+
+	/* validate alignment: memory limit must be divisible by page size */
+	if (mem_limit % pagesz != 0) {
+		EAL_LOG(ERR, "--pagesz-mem memory limit must be aligned to page size");
+		return -1;
+	}
+
+	pmo = &internal_cfg->pagesz_mem_overrides[internal_cfg->num_pagesz_mem_overrides];
+	pmo->pagesz = pagesz;
+	pmo->limit = mem_limit;
+	internal_cfg->num_pagesz_mem_overrides++;
+
+	return 0;
+}
+
+static int
 eal_parse_vfio_intr(const char *mode)
 {
 	struct internal_config *internal_conf =
@@ -2172,6 +2260,12 @@ eal_parse_args(void)
 		}
 		int_cfg->force_numa_limits = 1;
 	}
+	TAILQ_FOREACH(arg, &args.pagesz_mem, next) {
+		if (eal_parse_pagesz_mem(arg->arg, int_cfg) < 0) {
+			EAL_LOG(ERR, "invalid pagesz-mem parameter: '%s'", arg->arg);
+			return -1;
+		}
+	}
 
 	/* tracing settings, not supported on windows */
 #ifdef RTE_EXEC_ENV_WINDOWS
@@ -2372,6 +2466,12 @@ eal_apply_hugepage_mem_sz_limits(struct internal_config *internal_cfg)
 		/* assign default limits */
 		limit = RTE_MIN((uint64_t)RTE_MAX_MEM_MB_PER_TYPE << 20,
 				(uint64_t)RTE_MAX_MEMSEG_PER_TYPE * pagesz);
+
+		/* override with user value for matching page size */
+		for (j = 0; j < (unsigned int)internal_cfg->num_pagesz_mem_overrides; j++) {
+			if (internal_cfg->pagesz_mem_overrides[j].pagesz == pagesz)
+				limit = internal_cfg->pagesz_mem_overrides[j].limit;
+		}
 
 		internal_cfg->hugepage_mem_sz_limits[i] = limit;
 	}

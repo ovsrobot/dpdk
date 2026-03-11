@@ -75,6 +75,19 @@ Memory-related options
     Place a per-NUMA node upper limit on memory use (non-legacy memory mode only).
     0 will disable the limit for a particular NUMA node.
 
+*   ``--pagesz-mem <page size:limit>``
+
+    Set memory limit per hugepage size.
+    The option accepts one ``<pagesz>:<limit>`` pair per use,
+    and can be repeated for multiple page sizes.
+    Both values support K/M/G/T suffixes (for example ``2M:64G``).
+
+    The memory limit must be a multiple of page size.
+
+    For example::
+
+        --pagesz-mem 2M:32G --pagesz-mem 1G:512G
+
 *   ``--single-file-segments``
 
     Create fewer files in hugetlbfs (non-legacy mode only).
