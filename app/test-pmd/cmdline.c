@@ -3682,6 +3682,19 @@ cmd_config_dcb_parsed(void *parsed_result,
 		return;
 	}
 
+	/*
+	 * Update forwarding TC mask to match actual configured TCs.
+	 * Must query after init_port_dcb_config() to get updated nb_tcs.
+	 */
+	ret = rte_eth_dev_get_dcb_info(port_id, &dcb_info);
+	if (ret == 0 && dcb_info.nb_tcs > 0) {
+		dcb_fwd_tc_mask = (1u << dcb_info.nb_tcs) - 1;
+	} else if (ret != 0) {
+		fprintf(stderr, "Failed to get DCB info for port %u: %s\n",
+				port_id, rte_strerror(-ret));
+		return;
+	}
+
 	fwd_config_setup();
 
 	cmd_reconfig_device_queue(port_id, 1, 1);
