@@ -337,7 +337,6 @@ memseg_primary_init(void)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int hpi_idx, msl_idx = 0;
 	struct rte_memseg_list *msl;
-	uint64_t max_mem, total_mem;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
@@ -346,24 +345,15 @@ memseg_primary_init(void)
 		return 0;
 
 	/* FreeBSD has an issue where core dump will dump the entire memory
-	 * contents, including anonymous zero-page memory. Therefore, while we
-	 * will be limiting total amount of memory to RTE_MAX_MEM_MB, we will
-	 * also be further limiting total memory amount to whatever memory is
-	 * available to us through contigmem driver (plus spacing blocks).
-	 *
-	 * so, at each stage, we will be checking how much memory we are
-	 * preallocating, and adjust all the values accordingly.
+	 * contents, including anonymous zero-page memory. To avoid reserving VA
+	 * space we are not going to use, size memseg lists according to
+	 * contigmem-provided page counts.
 	 */
-
-	max_mem = (uint64_t)RTE_MAX_MEM_MB << 20;
-	total_mem = 0;
 
 	/* create memseg lists */
 	for (hpi_idx = 0; hpi_idx < (int) internal_conf->num_hugepage_sizes;
 			hpi_idx++) {
-		uint64_t max_type_mem, total_type_mem = 0;
-		uint64_t avail_mem;
-		int max_segs, avail_segs;
+		int avail_segs;
 		struct hugepage_info *hpi;
 		uint64_t hugepage_sz;
 		unsigned int n_segs;
@@ -372,15 +362,6 @@ memseg_primary_init(void)
 		hugepage_sz = hpi->hugepage_sz;
 
 		/* no NUMA support on FreeBSD */
-
-		/* check if we've already exceeded total memory amount */
-		if (total_mem >= max_mem)
-			break;
-
-		/* first, calculate theoretical limits according to config */
-		max_type_mem = RTE_MIN(max_mem - total_mem,
-			(uint64_t)RTE_MAX_MEM_MB_PER_TYPE << 20);
-		max_segs = RTE_MAX_MEMSEG_PER_TYPE;
 
 		/* now, limit all of that to whatever will actually be
 		 * available to us, because without dynamic allocation support,
@@ -393,11 +374,7 @@ memseg_primary_init(void)
 		 * that are non-contiguous.
 		 */
 		avail_segs = (hpi->num_pages[0] * 2) - 1;
-		avail_mem = avail_segs * hugepage_sz;
-
-		max_type_mem = RTE_MIN(avail_mem, max_type_mem);
-		max_segs = RTE_MIN(avail_segs, max_segs);
-		n_segs = RTE_MIN(max_type_mem / hugepage_sz, (uint64_t)max_segs);
+		n_segs = avail_segs;
 		if (n_segs == 0)
 			continue;
 
@@ -413,13 +390,10 @@ memseg_primary_init(void)
 				0, false))
 			return -1;
 
-		total_type_mem = n_segs * hugepage_sz;
 		if (memseg_list_alloc(msl)) {
 			EAL_LOG(ERR, "Cannot allocate VA space for memseg list");
 			return -1;
 		}
-
-		total_mem += total_type_mem;
 	}
 	return 0;
 }
