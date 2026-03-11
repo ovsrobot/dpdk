@@ -283,7 +283,7 @@ get_seg_fd(char *path, int buflen, struct hugepage_info *hi,
 	} else {
 		out_fd = &fd_list[list_idx].fds[seg_idx];
 		huge_path = eal_get_hugefile_path(path, buflen, hi->hugedir,
-				list_idx * RTE_MAX_MEMSEG_PER_LIST + seg_idx);
+				list_idx * RTE_MAX_MEMSEG_PER_TYPE + seg_idx);
 	}
 	if (huge_path == NULL) {
 		EAL_LOG(DEBUG, "%s(): hugefile path truncated: '%s'",

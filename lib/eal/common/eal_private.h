@@ -306,7 +306,7 @@ eal_memseg_list_init_named(struct rte_memseg_list *msl, const char *name,
  */
 int
 eal_memseg_list_init(struct rte_memseg_list *msl, uint64_t page_sz,
-	int n_segs, int socket_id, int type_msl_idx, bool heap);
+		int n_segs, int socket_id, bool heap);
 
 /**
  * Reserve VA space for a memory segment list

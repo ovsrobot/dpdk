@@ -190,7 +190,7 @@ rte_eal_hugepage_init(void)
 				break;
 			}
 			if (msl_idx == RTE_MAX_MEMSEG_LISTS) {
-				EAL_LOG(ERR, "Could not find space for memseg. Please increase RTE_MAX_MEMSEG_PER_LIST "
+				EAL_LOG(ERR, "Could not find space for memseg. Please increase "
 					"RTE_MAX_MEMSEG_PER_TYPE and/or RTE_MAX_MEM_MB_PER_TYPE in configuration.");
 				return -1;
 			}
@@ -320,23 +320,6 @@ rte_eal_using_phys_addrs(void)
 	return 0;
 }
 
-static uint64_t
-get_mem_amount(uint64_t page_sz, uint64_t max_mem)
-{
-	uint64_t area_sz, max_pages;
-
-	/* limit to RTE_MAX_MEMSEG_PER_LIST pages or RTE_MAX_MEM_MB_PER_LIST */
-	max_pages = RTE_MAX_MEMSEG_PER_LIST;
-	max_mem = RTE_MIN((uint64_t)RTE_MAX_MEM_MB_PER_LIST << 20, max_mem);
-
-	area_sz = RTE_MIN(page_sz * max_pages, max_mem);
-
-	/* make sure the list isn't smaller than the page size */
-	area_sz = RTE_MAX(area_sz, page_sz);
-
-	return RTE_ALIGN(area_sz, page_sz);
-}
-
 static int
 memseg_list_alloc(struct rte_memseg_list *msl)
 {
@@ -380,9 +363,10 @@ memseg_primary_init(void)
 			hpi_idx++) {
 		uint64_t max_type_mem, total_type_mem = 0;
 		uint64_t avail_mem;
-		int type_msl_idx, max_segs, avail_segs, total_segs = 0;
+		int max_segs, avail_segs;
 		struct hugepage_info *hpi;
 		uint64_t hugepage_sz;
+		unsigned int n_segs;
 
 		hpi = &internal_conf->hugepage_info[hpi_idx];
 		hugepage_sz = hpi->hugepage_sz;
@@ -413,40 +397,28 @@ memseg_primary_init(void)
 
 		max_type_mem = RTE_MIN(avail_mem, max_type_mem);
 		max_segs = RTE_MIN(avail_segs, max_segs);
+		n_segs = RTE_MIN(max_type_mem / hugepage_sz, (uint64_t)max_segs);
+		if (n_segs == 0)
+			continue;
 
-		type_msl_idx = 0;
-		while (total_type_mem < max_type_mem &&
-				total_segs < max_segs) {
-			uint64_t cur_max_mem, cur_mem;
-			unsigned int n_segs;
-
-			if (msl_idx >= RTE_MAX_MEMSEG_LISTS) {
-				EAL_LOG(ERR,
-					"No more space in memseg lists, please increase RTE_MAX_MEMSEG_LISTS");
-				return -1;
-			}
-
-			msl = &mcfg->memsegs[msl_idx++];
-
-			cur_max_mem = max_type_mem - total_type_mem;
-
-			cur_mem = get_mem_amount(hugepage_sz,
-					cur_max_mem);
-			n_segs = cur_mem / hugepage_sz;
-
-			if (eal_memseg_list_init(msl, hugepage_sz, n_segs,
-					0, type_msl_idx, false))
-				return -1;
-
-			total_segs += msl->memseg_arr.len;
-			total_type_mem = total_segs * hugepage_sz;
-			type_msl_idx++;
-
-			if (memseg_list_alloc(msl)) {
-				EAL_LOG(ERR, "Cannot allocate VA space for memseg list");
-				return -1;
-			}
+		if (msl_idx >= RTE_MAX_MEMSEG_LISTS) {
+			EAL_LOG(ERR,
+				"No more space in memseg lists, please increase RTE_MAX_MEMSEG_LISTS");
+			return -1;
 		}
+
+		msl = &mcfg->memsegs[msl_idx++];
+
+		if (eal_memseg_list_init(msl, hugepage_sz, n_segs,
+				0, false))
+			return -1;
+
+		total_type_mem = n_segs * hugepage_sz;
+		if (memseg_list_alloc(msl)) {
+			EAL_LOG(ERR, "Cannot allocate VA space for memseg list");
+			return -1;
+		}
+
 		total_mem += total_type_mem;
 	}
 	return 0;
