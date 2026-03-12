@@ -179,9 +179,6 @@ bnxt_check_pkt_needs_ts(struct rte_mbuf *m)
 		if (proto == RTE_ETHER_TYPE_ECPRI)
 			return true;
 		if (proto == RTE_ETHER_TYPE_VLAN) {
-			const struct rte_vlan_hdr *vh;
-			struct rte_vlan_hdr vh_copy;
-
 			vh = rte_pktmbuf_read(m, off, sizeof(*vh), &vh_copy);
 			if (unlikely(vh == NULL))
 				return false;

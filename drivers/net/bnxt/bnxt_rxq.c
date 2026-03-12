@@ -98,10 +98,8 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 			/* ETH_8/64_POOLs */
 			pools = conf->nb_queue_pools;
 			/* For each pool, allocate MACVLAN CFA rule & VNIC */
-			max_pools = RTE_MIN(bp->max_vnics,
-					    RTE_MIN(bp->max_l2_ctx,
-					    RTE_MIN(bp->max_rsscos_ctx,
-						    RTE_ETH_64_POOLS)));
+			max_pools = RTE_MIN4(bp->max_vnics, bp->max_l2_ctx,
+					    bp->max_rsscos_ctx, RTE_ETH_64_POOLS);
 			PMD_DRV_LOG_LINE(DEBUG,
 				    "pools = %u max_pools = %u",
 				    pools, max_pools);

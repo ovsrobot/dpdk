@@ -1110,9 +1110,9 @@ inline uint16_t bnxt_max_rings(struct bnxt *bp)
 	 * max Tx rings == max Rx rings, one stat ctx for each.
 	 */
 	if (BNXT_STINGRAY(bp)) {
-		max_rx_rings = RTE_MIN(RTE_MIN(max_rx_rings / 2U,
-					       MAX_STINGRAY_RINGS),
-				       bp->max_stat_ctx / 2U);
+		max_rx_rings = RTE_MIN3(max_rx_rings / 2U,
+					MAX_STINGRAY_RINGS,
+					bp->max_stat_ctx / 2U);
 	} else {
 		max_rx_rings = RTE_MIN(max_rx_rings / 2U,
 				       bp->max_stat_ctx / 2U);

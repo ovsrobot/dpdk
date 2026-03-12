@@ -473,7 +473,7 @@ static int bnxt_setup_one_vnic(struct bnxt *bp, uint16_t vnic_id)
 
 	/* Alloc RSS context only if RSS mode is enabled */
 	if (dev_conf->rxmode.mq_mode & RTE_ETH_MQ_RX_RSS) {
-		int j, nr_ctxs = bnxt_rss_ctxts(bp);
+		unsigned int nr_ctxs = bnxt_rss_ctxts(bp);
 
 		/* RSS table size in P5 is 512.
 		 * Cap max Rx rings to same value
@@ -3560,7 +3560,6 @@ bnxt_rx_descriptor_status_op(void *rx_queue, uint16_t offset)
 	 */
 #if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64)
 	if (bp->flags & BNXT_FLAG_RX_VECTOR_PKT_MODE) {
-		struct rx_pkt_cmpl *rxcmp;
 		uint32_t cons;
 
 		/* Check status of completion descriptor. */
