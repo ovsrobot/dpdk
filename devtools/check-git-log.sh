@@ -53,7 +53,7 @@ bodylines=$(git log --format='%b' --reverse $range)
 fixes=$(git log --format='%h %s' --reverse $range | grep -i ': *fix' | cut -d' ' -f1)
 stablefixes=$($selfdir/git-log-fixes.sh $range | sed '/(N\/A)$/d'  | cut -d' ' -f2)
 tags=$(git log --format='%b' --reverse $range | grep -i -e 'by *:' -e 'fix.*:')
-bytag='\(Reported\|Suggested\|Signed-off\|Acked\|Reviewed\|Tested\)-by:'
+bytag='\(Co-developed\|Reported\|Suggested\|Signed-off\|Acked\|Reviewed\|Tested\)-by:'
 reltag='Coverity issue:\|Bugzilla ID:\|Fixes:\|Cc:'
 
 failure=false
@@ -233,10 +233,11 @@ bad=$(for commit in $commits; do
 		SEQ[4] = "^$";
 		SEQ[5] = "Reported-by";
 		SEQ[6] = "Suggested-by";
-		SEQ[7] = "Signed-off-by";
-		SEQ[8] = "Acked-by";
-		SEQ[9] = "Reviewed-by";
-		SEQ[10] = "Tested-by";
+		SEQ[7] = "Co-developed-by";
+		SEQ[8] = "Signed-off-by";
+		SEQ[9] = "Acked-by";
+		SEQ[10] = "Reviewed-by";
+		SEQ[11] = "Tested-by";
 		latest = 0;
 		chronological = 0;
 	}
