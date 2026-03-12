@@ -1007,7 +1007,7 @@ idpf_timesync_adjust_freq(struct rte_eth_dev *dev, int64_t ppm)
 	struct idpf_ptp *ptp = adapter->ptp;
 	int64_t incval, diff = 0;
 	bool negative = false;
-	uint64_t div, rem;
+	uint64_t abs_ppm, div, rem;
 	uint64_t divisor = 1000000ULL << 16;
 	int shift;
 	int ret;
@@ -1016,26 +1016,34 @@ idpf_timesync_adjust_freq(struct rte_eth_dev *dev, int64_t ppm)
 
 	if (ppm < 0) {
 		negative = true;
-		ppm = -ppm;
+		abs_ppm = ppm == INT64_MIN ? (uint64_t)INT64_MAX + 1 :
+			(uint64_t)(-ppm);
+	} else {
+		abs_ppm = (uint64_t)ppm;
 	}
 
 	/* can incval * ppm overflow ? */
-	if (rte_log2_u64(incval) + rte_log2_u64(ppm) > 62) {
-		rem = ppm % divisor;
-		div = ppm / divisor;
+	if (rte_log2_u64(incval) + rte_log2_u64(abs_ppm) > 62) {
+		rem = abs_ppm % divisor;
+		div = abs_ppm / divisor;
 		diff = div * incval;
-		ppm = rem;
+		abs_ppm = rem;
 
-		shift = rte_log2_u64(incval) + rte_log2_u64(ppm) - 62;
-		if (shift > 0) {
-			/* drop precision */
-			ppm >>= shift;
-			divisor >>= shift;
+		if (abs_ppm != 0) {
+			uint32_t log_sum;
+
+			log_sum = rte_log2_u64(incval) + rte_log2_u64(abs_ppm);
+			if (log_sum > 62) {
+				shift = log_sum - 62;
+				/* drop precision */
+				abs_ppm >>= shift;
+				divisor >>= shift;
+			}
 		}
 	}
 
 	if (divisor)
-		diff = diff + incval * ppm / divisor;
+		diff = diff + incval * abs_ppm / divisor;
 
 	if (negative)
 		incval -= diff;
