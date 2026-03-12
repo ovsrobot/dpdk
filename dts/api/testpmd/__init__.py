@@ -817,7 +817,7 @@ class TestPmd(DPDKShell):
         prev_header: str = ""
         iter = re.finditer(
             r"(?P<HEADER>(?:port \d+/queue \d+: (?:received|sent) \d+ packets)?)\s*"
-            r"(?P<PACKET>src=[\w\s=:-]+?ol_flags: [\w ]+)",
+            r"(?P<PACKET>src=[\w\s=:,.-]+?ol_flags: [\w ]+)",
             output,
         )
         for match in iter:
