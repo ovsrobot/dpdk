@@ -10,6 +10,13 @@
 #include <stdio.h>
 #include <sys/queue.h>
 
+#ifndef TAILQ_FOREACH_SAFE
+#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+#endif
+
 #include "opae_osdep.h"
 #include "opae_intel_max10.h"
 #include "opae_eth_group.h"
