@@ -128,6 +128,79 @@ mlx5_txpp_alloc_pp_index(struct mlx5_dev_ctx_shared *sh)
 #endif
 }
 
+/* Free a per-queue packet pacing index. */
+void
+mlx5_txq_free_pp_rate_limit(struct mlx5_txq_rate_limit *rl)
+{
+#ifdef HAVE_MLX5DV_PP_ALLOC
+	if (rl->pp) {
+		mlx5_glue->dv_free_pp(rl->pp);
+		rl->pp = NULL;
+		rl->pp_id = 0;
+		rl->rate_mbps = 0;
+	}
+#else
+	RTE_SET_USED(rl);
+#endif
+}
+
+/* Allocate a per-queue packet pacing index for data-rate limiting. */
+int
+mlx5_txq_alloc_pp_rate_limit(struct mlx5_dev_ctx_shared *sh,
+			     struct mlx5_txq_rate_limit *rl,
+			     uint32_t rate_mbps)
+{
+#ifdef HAVE_MLX5DV_PP_ALLOC
+	uint32_t pp[MLX5_ST_SZ_DW(set_pp_rate_limit_context)];
+	uint64_t rate_kbps;
+	struct mlx5_hca_qos_attr *qos = &sh->cdev->config.hca_attr.qos;
+
+	MLX5_ASSERT(rate_mbps > 0);
+	rate_kbps = (uint64_t)rate_mbps * 1000;
+	if (qos->packet_pacing_min_rate && rate_kbps < qos->packet_pacing_min_rate) {
+		DRV_LOG(ERR, "Rate %u Mbps below HW minimum (%u kbps).",
+			rate_mbps, qos->packet_pacing_min_rate);
+		rte_errno = ERANGE;
+		return -ERANGE;
+	}
+	if (qos->packet_pacing_max_rate && rate_kbps > qos->packet_pacing_max_rate) {
+		DRV_LOG(ERR, "Rate %u Mbps exceeds HW maximum (%u kbps).",
+			rate_mbps, qos->packet_pacing_max_rate);
+		rte_errno = ERANGE;
+		return -ERANGE;
+	}
+	memset(&pp, 0, sizeof(pp));
+	MLX5_SET(set_pp_rate_limit_context, &pp, rate_limit, (uint32_t)rate_kbps);
+	MLX5_SET(set_pp_rate_limit_context, &pp, rate_mode, MLX5_DATA_RATE);
+	rl->pp = mlx5_glue->dv_alloc_pp(sh->cdev->ctx, sizeof(pp), &pp, 0);
+	if (rl->pp == NULL) {
+		DRV_LOG(ERR, "Failed to allocate PP index for rate %u Mbps.",
+			rate_mbps);
+		rte_errno = errno;
+		return -errno;
+	}
+	rl->pp_id = ((struct mlx5dv_pp *)rl->pp)->index;
+	if (!rl->pp_id) {
+		DRV_LOG(ERR, "Zero PP index allocated for rate %u Mbps.",
+			rate_mbps);
+		mlx5_txq_free_pp_rate_limit(rl);
+		rte_errno = ENOTSUP;
+		return -ENOTSUP;
+	}
+	rl->rate_mbps = rate_mbps;
+	DRV_LOG(DEBUG, "Allocated PP index %u for rate %u Mbps.",
+		rl->pp_id, rate_mbps);
+	return 0;
+#else
+	RTE_SET_USED(sh);
+	RTE_SET_USED(rl);
+	RTE_SET_USED(rate_mbps);
+	DRV_LOG(ERR, "Per-queue rate limit requires rdma-core PP support.");
+	rte_errno = ENOTSUP;
+	return -ENOTSUP;
+#endif
+}
+
 static void
 mlx5_txpp_destroy_send_queue(struct mlx5_txpp_wq *wq)
 {

@@ -1338,6 +1338,7 @@ mlx5_txq_release(struct rte_eth_dev *dev, uint16_t idx)
 	txq_ctrl = container_of((*priv->txqs)[idx], struct mlx5_txq_ctrl, txq);
 	if (rte_atomic_fetch_sub_explicit(&txq_ctrl->refcnt, 1, rte_memory_order_relaxed) - 1 > 1)
 		return 1;
+	mlx5_txq_free_pp_rate_limit(&txq_ctrl->rl);
 	if (txq_ctrl->obj) {
 		priv->obj_ops.txq_obj_release(txq_ctrl->obj);
 		LIST_REMOVE(txq_ctrl->obj, next);
