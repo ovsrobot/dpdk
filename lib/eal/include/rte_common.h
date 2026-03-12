@@ -813,6 +813,16 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
 	})
 
 /**
+ * Macro to return the minimum of four numbers
+ */
+#define RTE_MIN4(a, b, c, d) \
+	__extension__ ({ \
+		typeof (a) _min4_ab = RTE_MIN((a), (b)); \
+		typeof (c) _min4_cd = RTE_MIN((c), (d)); \
+		RTE_MIN(_min4_ab, _min4_cd); \
+	})
+
+/**
  * Macro to return the minimum of two numbers
  *
  * As opposed to RTE_MIN, it does not use temporary variables so it is not safe
@@ -843,6 +853,16 @@ __extension__ typedef uint64_t RTE_MARKER64[0];
 		_a_max3 > _b_max3 ? \
 			(_a_max3 > _c_max3 ? _a_max3 : _c_max3) : \
 			(_b_max3 > _c_max3 ? _b_max3 : _c_max3); \
+	})
+
+/**
+ * Macro to return the maximum of four numbers
+ */
+#define RTE_MAX4(a, b, c, d) \
+	__extension__ ({ \
+		typeof (a) _max4_ab = RTE_MAX((a), (b)); \
+		typeof (c) _max4_cd = RTE_MAX((c), (d)); \
+		RTE_MAX(_max4_ab, _max4_cd); \
 	})
 
 /**
