@@ -580,6 +580,22 @@ for an additional list of options shared with other mlx5 drivers.
   (with ``tx_pp``) and ConnectX-7+ (wait-on-time) scheduling modes.
   The default value is zero.
 
+- ``tx_burst_bound`` parameter [int]
+
+  Specifies the burst upper bound in bytes for packet pacing rate evaluation.
+  When set, the hardware considers this burst size when enforcing the configured
+  rate limit. Only effective when the HCA reports ``packet_pacing_burst_bound``
+  capability. Applies to both per-queue rate limiting
+  (``rte_eth_set_queue_rate_limit()``) and Clock Queue pacing (``tx_pp``).
+  The default value is zero (hardware default).
+
+- ``tx_typical_pkt_sz`` parameter [int]
+
+  Specifies the typical packet size in bytes for packet pacing rate accuracy
+  improvement. Only effective when the HCA reports
+  ``packet_pacing_typical_size`` capability. Applies to both per-queue rate
+  limiting and Clock Queue pacing. The default value is zero (hardware default).
+
 - ``tx_vec_en`` parameter [int]
 
   A nonzero value enables Tx vector with ConnectX-5 NICs and above.
