@@ -187,18 +187,23 @@ class ResultNode(BaseModel):
 
     def get_overall_result(self) -> ResultLeaf:
         """The overall result of the underlying results."""
+        results = [
+            child.get_overall_result() if isinstance(child, ResultNode) else child
+            for child in self.children
+        ]
+        max_result = max(results, default=ResultLeaf(result=Result.PASS))
 
-        def extract_result(value: ResultNode | ResultLeaf) -> ResultLeaf:
-            match value:
-                case ResultNode():
-                    return value.get_overall_result()
-                case ResultLeaf():
-                    return value
+        if max_result.result != Result.SKIP:
+            return max_result
 
-        return max(
-            (extract_result(child) for child in self.children),
-            default=ResultLeaf(result=Result.PASS),
-        )
+        if any(
+            r.result == Result.PASS
+            for child, r in zip(self.children, results)
+            if not (isinstance(child, ResultNode) and child.label in self.__ignore_steps)
+        ):
+            return ResultLeaf(result=Result.PASS)
+
+        return max_result
 
     def make_summary(self) -> Counter[Result]:
         """Make the summary of the underlying results while ignoring special nodes."""
