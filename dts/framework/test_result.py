@@ -195,10 +195,11 @@ class ResultNode(BaseModel):
                 case ResultLeaf():
                     return value
 
-        return max(
-            (extract_result(child) for child in self.children),
-            default=ResultLeaf(result=Result.PASS),
-        )
+        results = [extract_result(child) for child in self.children]
+        max_result = max(results, default=ResultLeaf(result=Result.PASS))
+        if max_result.result == Result.SKIP and any(r.result == Result.PASS for r in results):
+            return ResultLeaf(result=Result.PASS)
+        return max_result
 
     def make_summary(self) -> Counter[Result]:
         """Make the summary of the underlying results while ignoring special nodes."""
