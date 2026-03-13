@@ -4444,9 +4444,11 @@ init_port_dcb_config(portid_t pid,
 			if (rte_port->dev_info.vmdq_pool_base == 0) {
 				nb_rxq = rte_port->dev_info.max_rx_queues;
 				nb_txq = rte_port->dev_info.max_tx_queues;
-			} else {
-				nb_rxq = (queueid_t)num_tcs;
-				nb_txq = (queueid_t)num_tcs;
+			}
+			/* Use device queue count to prevent null pointer errors */
+			else {
+				nb_rxq = rte_port->dev_info.nb_rx_queues;
+				nb_txq = rte_port->dev_info.nb_tx_queues;
 			}
 		}
 	}
