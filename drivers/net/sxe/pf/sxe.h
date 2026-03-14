@@ -9,7 +9,9 @@
 
 #include <stdbool.h>
 #include "sxe_types.h"
+#include "sxe_filter.h"
 #include "sxe_irq.h"
+#include "sxe_stats.h"
 #include "sxe_phy.h"
 #include "sxe_hw.h"
 
@@ -44,6 +46,7 @@ struct sxe_adapter {
 
 	struct sxe_irq_context irq_ctxt;
 
+	bool rx_batch_alloc_allowed;
 	s8 name[PCI_PRI_STR_SIZE + 1];
 };
 
