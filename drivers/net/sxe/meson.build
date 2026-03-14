@@ -13,6 +13,8 @@ cflags += ['-DSXE_HOST_DRIVER']
 deps += ['hash']
 sources = files(
         'pf/sxe_main.c',
+        'pf/sxe_filter.c',
+        'pf/sxe_flow_ctrl.c',
         'pf/sxe_irq.c',
         'pf/sxe_ethdev.c',
         'pf/sxe_offload.c',
@@ -20,6 +22,7 @@ sources = files(
         'pf/sxe_rx.c',
         'pf/sxe_tx.c',
         'pf/sxe_pmd_hdc.c',
+        'pf/sxe_phy.c',
         'base/sxe_queue_common.c',
         'base/sxe_rx_common.c',
         'base/sxe_tx_common.c',
