@@ -119,7 +119,7 @@ typedef struct sxe_sfp_rate_able {
 
 
 typedef struct sxe_spp_tx_able {
-	BOOL is_disable;
+	bool is_disable;
 } sxe_spp_tx_able_s;
 
 
@@ -129,7 +129,7 @@ typedef struct sxe_default_mac_addr_resp {
 
 
 typedef struct sxe_mng_rst {
-	BOOL enable;
+	bool enable;
 } sxe_mng_rst_s;
 
 #endif

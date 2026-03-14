@@ -6,6 +6,7 @@
 
 #include <rte_ethdev.h>
 #include "drv_msg.h"
+#include "sxe_cli.h"
 #include "sxe_msg.h"
 
 #define SXE_SFF_BASE_ADDR			0x0

@@ -20,8 +20,6 @@
 #define __iomem
 #define __force
 
-#define min(a, b)	RTE_MIN(a, b)
-
 #define cpu_to_be16(o) rte_cpu_to_be_16(o)
 #define cpu_to_be32(o) rte_cpu_to_be_32(o)
 #define cpu_to_be64(o) rte_cpu_to_be_64(o)

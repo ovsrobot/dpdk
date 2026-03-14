@@ -9,7 +9,9 @@
 #include "sxe_logs.h"
 #include "sxe.h"
 #include "sxe_queue.h"
+#include "drv_msg.h"
 #include "sxe_pmd_hdc.h"
+#include "sxe_cli.h"
 #include "sxe_compat_version.h"
 
 #define PF_POOL_INDEX(p)		(p)
@@ -121,6 +123,45 @@ static u8 sxe_sw_uc_entry_del(struct sxe_adapter *adapter, u8 index)
 	}
 
 	return i;
+}
+
+u8 sxe_sw_uc_entry_vf_add(struct sxe_adapter *adapter,
+				u8 vf_idx, u8 *mac_addr, bool macvlan)
+{
+	u8 i;
+	struct sxe_uc_addr_table *uc_table = adapter->mac_filter_ctxt.uc_addr_table;
+
+	for (i = 0; i < SXE_UC_ENTRY_NUM_MAX; i++) {
+		if (!uc_table[i].used) {
+			uc_table[i].used = true;
+			uc_table[i].rar_idx = i;
+			uc_table[i].pool_idx = vf_idx;
+			uc_table[i].type = macvlan ? SXE_VF_MACVLAN : SXE_VF;
+			rte_memcpy(uc_table[i].addr, mac_addr, SXE_MAC_ADDR_LEN);
+			break;
+		}
+	}
+
+	return i;
+}
+
+void sxe_sw_uc_entry_vf_del(struct sxe_adapter *adapter, u8 vf_idx,
+					bool macvlan)
+{
+	u8 i;
+	struct sxe_uc_addr_table *uc_table = adapter->mac_filter_ctxt.uc_addr_table;
+
+	for (i = 0; i < SXE_UC_ENTRY_NUM_MAX; i++) {
+		if (!uc_table[i].used || uc_table[i].type == SXE_PF)
+			continue;
+
+		if (uc_table[i].pool_idx == vf_idx) {
+			uc_table[i].used = false;
+			sxe_hw_uc_addr_del(&adapter->hw, i);
+			if (!macvlan)
+				break;
+		}
+	}
 }
 
 s32 sxe_mac_addr_init(struct rte_eth_dev *eth_dev)
@@ -340,6 +381,40 @@ l_out:
 	return 0;
 }
 
+static void sxe_vf_promisc_mac_update_all(struct rte_eth_dev *dev)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_vf_info *vf_info = adapter->vt_ctxt.vf_info;
+	struct sxe_uc_addr_table *uc_table = adapter->mac_filter_ctxt.uc_addr_table;
+	u16 vf_num = sxe_vf_num_get(dev);
+	u8 vf_idx = 0;
+	s32 i;
+
+	for (vf_idx = 0; vf_idx < vf_num; vf_idx++) {
+		if (vf_info[vf_idx].cast_mode == SXE_CAST_MODE_PROMISC) {
+			for (i = 0; i < SXE_UC_ENTRY_NUM_MAX; i++) {
+				if (uc_table[i].used) {
+					sxe_hw_uc_addr_pool_enable(&adapter->hw,
+						uc_table[i].rar_idx, vf_idx);
+				}
+			}
+		}
+	}
+}
+
+static void sxe_vf_promisc_mac_update(struct rte_eth_dev *dev, u32 rar_idx)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_vf_info *vf_info = adapter->vt_ctxt.vf_info;
+	u16 vf_num = sxe_vf_num_get(dev);
+	u8 vf_idx;
+
+	for (vf_idx = 0; vf_idx < vf_num; vf_idx++) {
+		if (vf_info[vf_idx].cast_mode == SXE_CAST_MODE_PROMISC)
+			sxe_hw_uc_addr_pool_enable(&adapter->hw, rar_idx, vf_idx);
+	}
+}
+
 s32 sxe_mac_addr_add(struct rte_eth_dev *dev,
 				 struct rte_ether_addr *mac_addr,
 				 u32 index, u32 pool)
@@ -466,6 +541,108 @@ static void sxe_hash_mac_addr_parse(u8 *mac_addr, u16 *reg_idx,
 	PMD_LOG_DEBUG(DRV, "mac_addr:" RTE_ETHER_ADDR_PRT_FMT " hash reg_idx:%u bit_idx:%u",
 			 mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
 			 mac_addr[4], mac_addr[5], *reg_idx, *bit_idx);
+}
+
+s32 sxe_uc_hash_table_set(struct rte_eth_dev *dev,
+			struct rte_ether_addr *mac_addr, u8 on)
+{
+	u16 bit_idx;
+	u16 reg_idx;
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	struct sxe_mac_filter_context *mac_filter = &adapter->mac_filter_ctxt;
+	u32 value;
+	s32 ret = 0;
+	u8 *addr;
+
+	sxe_hash_mac_addr_parse(mac_addr->addr_bytes, &reg_idx, &bit_idx);
+
+	value = (mac_filter->uta_hash_table[reg_idx] >> bit_idx) & 0x1;
+	if (value == on)
+		goto l_out;
+
+	value = sxe_hw_uta_hash_table_get(hw, reg_idx);
+	if (on) {
+		mac_filter->uta_used_count++;
+		value |= (0x1 << bit_idx);
+		mac_filter->uta_hash_table[reg_idx] |= (0x1 << bit_idx);
+	} else {
+		mac_filter->uta_used_count--;
+		value &= ~(0x1 << bit_idx);
+		mac_filter->uta_hash_table[reg_idx] &= ~(0x1 << bit_idx);
+	}
+
+	sxe_hw_uta_hash_table_set(hw, reg_idx, value);
+
+	addr = mac_addr->addr_bytes;
+	PMD_LOG_INFO(DRV, "mac_addr:" RTE_ETHER_ADDR_PRT_FMT " uta reg_idx:%u bit_idx:%u"
+			  " %s done, uta_used_count:%u",
+			 addr[0], addr[1], addr[2],
+			 addr[3], addr[4], addr[5],
+			 reg_idx, bit_idx,
+			 on ? "set" : "clear",
+			 mac_filter->uta_used_count);
+
+l_out:
+	return ret;
+}
+
+s32 sxe_uc_all_hash_table_set(struct rte_eth_dev *dev, u8 on)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	struct sxe_mac_filter_context *mac_filter = &adapter->mac_filter_ctxt;
+	u32 value;
+	u8 i;
+
+	value = on ? (~0) : 0;
+
+	for (i = 0; i < SXE_UTA_ENTRY_NUM_MAX; i++) {
+		mac_filter->uta_hash_table[i] = value;
+		sxe_hw_uta_hash_table_set(hw, i, value);
+	}
+
+	PMD_LOG_INFO(DRV, "uta table all entry %s done.",
+			  on ? "set" : "clear");
+
+	return 0;
+}
+
+s32 sxe_set_mc_addr_list(struct rte_eth_dev *dev,
+			  struct rte_ether_addr *mc_addr_list,
+			  u32 nb_mc_addr)
+{
+	struct sxe_adapter *adapter = dev->data->dev_private;
+	struct sxe_hw *hw = &adapter->hw;
+	struct sxe_mac_filter_context *mac_filter = &adapter->mac_filter_ctxt;
+	u16 vf_num = sxe_vf_num_get(dev);
+	u32 vm_l2_ctrl = sxe_hw_pool_rx_mode_get(hw, vf_num);
+	u32 i;
+	u16 bit_idx;
+	u16 reg_idx;
+
+	memset(&mac_filter->mta_hash_table, 0, sizeof(mac_filter->mta_hash_table));
+	for (i = 0; i < nb_mc_addr; i++) {
+		sxe_hash_mac_addr_parse(mc_addr_list->addr_bytes, &reg_idx, &bit_idx);
+		mc_addr_list++;
+		mac_filter->mta_hash_table[reg_idx] |= (0x1 << bit_idx);
+	}
+
+	for (i = 0; i < SXE_MTA_ENTRY_NUM_MAX; i++)
+		sxe_hw_mta_hash_table_set(hw, i, mac_filter->mta_hash_table[i]);
+
+	if (nb_mc_addr) {
+		sxe_hw_mc_filter_enable(hw);
+
+		if (vf_num > 0) {
+			vm_l2_ctrl |= SXE_VMOLR_ROMPE;
+			sxe_hw_pool_rx_mode_set(hw, vm_l2_ctrl, vf_num);
+		}
+	}
+
+	PMD_LOG_INFO(DRV, "mc addr list cnt:%u set to mta done.", nb_mc_addr);
+
+	return 0;
 }
 
 s32 sxe_vlan_filter_set(struct rte_eth_dev *eth_dev, u16 vlan_id, s32 on)
