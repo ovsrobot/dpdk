@@ -129,6 +129,12 @@ New Features
   Added handling of the key combination Control+L
   to clear the screen before redisplaying the prompt.
 
+* **Added Linkdata sxe ethernet driver.**
+
+  Added support for Linkdata NIC series, including 1160-2X (supporting 10G).
+  As these new models share hardware similarities with the existing 10G Sapphire NICs,
+  many of the existing configurations and practices are expected to apply.
+
 Removed Items
 -------------
 
