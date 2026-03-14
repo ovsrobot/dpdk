@@ -18,6 +18,10 @@
 #include "sxe_errno.h"
 #include "sxe_irq.h"
 #include "sxe_rx_common.h"
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+#include "sxe_vec_common.h"
+#include "rte_vect.h"
+#endif
 
 static inline void sxe_rx_resource_prefetch(u16 next_idx,
 				struct sxe_rx_buffer *buf_ring,
@@ -29,12 +33,61 @@ static inline void sxe_rx_resource_prefetch(u16 next_idx,
 		rte_sxe_prefetch(&desc_ring[next_idx]);
 		rte_sxe_prefetch(&buf_ring[next_idx]);
 	}
+
 }
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
+static void sxe_recycle_rx_descriptors_refill_vec(void *rx_queue, u16 nb_mbufs)
+{
+	struct sxe_rx_queue *rxq = rx_queue;
+	struct sxe_rx_buffer *rxep;
+	volatile union sxe_rx_data_desc *rxdp;
+	u16 rx_id;
+	u64 paddr;
+	u64 dma_addr;
+	u16 i;
+
+	rxdp = rxq->desc_ring + rxq->realloc_start;
+	rxep = &rxq->buffer_ring[rxq->realloc_start];
+
+	for (i = 0; i < nb_mbufs; i++) {
+		paddr = (rxep[i].mbuf)->buf_iova + RTE_PKTMBUF_HEADROOM;
+		dma_addr = rte_cpu_to_le_64(paddr);
+		rxdp[i].read.hdr_addr = 0;
+		rxdp[i].read.pkt_addr = dma_addr;
+	}
+
+	rxq->realloc_start += nb_mbufs;
+	if (rxq->realloc_start >= rxq->ring_depth)
+		rxq->realloc_start = 0;
+
+	rxq->realloc_num -= nb_mbufs;
+
+	rx_id = (u16)((rxq->realloc_start == 0) ?
+					(rxq->ring_depth - 1) : (rxq->realloc_start - 1));
+
+	SXE_PCI_REG_WC_WRITE_RELAXED(rxq->rdt_reg_addr, rx_id);
+}
+#endif
+#endif
 
 void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 	bool rx_batch_alloc_allowed, bool *rx_vec_allowed)
 {
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	u16  i, is_using_sse;
+
+	if (sxe_rx_vec_condition_check(dev) ||
+		!rx_batch_alloc_allowed
+		) {
+		PMD_LOG_DEBUG(INIT, "Port[%d] doesn't meet Vector Rx "
+					"preconditions", dev->data->port_id);
+		*rx_vec_allowed = false;
+	}
+#else
 	UNUSED(rx_vec_allowed);
+#endif
 
 	if (dev->data->lro) {
 		if (rx_batch_alloc_allowed) {
@@ -47,7 +100,27 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 			dev->rx_pkt_burst = sxe_single_alloc_lro_pkts_recv;
 		}
 	} else if (dev->data->scattered_rx) {
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+		if (*rx_vec_allowed) {
+			PMD_LOG_DEBUG(INIT, "Using Vector Scattered Rx "
+						"callback (port=%d).",
+					 dev->data->port_id);
+
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
+			dev->recycle_rx_descriptors_refill = sxe_recycle_rx_descriptors_refill_vec;
+
+#endif
+			dev->rx_pkt_burst = sxe_scattered_pkts_vec_recv;
+
+#endif
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+
+		} else if (rx_batch_alloc_allowed) {
+#else
 		if (rx_batch_alloc_allowed) {
+#endif
+
 			PMD_LOG_DEBUG(INIT, "Using a Scattered with bulk "
 					   "allocation callback (port=%d).",
 					 dev->data->port_id);
@@ -62,7 +135,22 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 
 			dev->rx_pkt_burst = sxe_single_alloc_lro_pkts_recv;
 		}
-	} else if (rx_batch_alloc_allowed) {
+	}
+	#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	else if (*rx_vec_allowed) {
+		PMD_LOG_DEBUG(INIT, "Vector rx enabled, please make sure RX "
+					"burst size no less than %d (port=%d).",
+				 SXE_DESCS_PER_LOOP,
+				 dev->data->port_id);
+
+#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM)
+		dev->recycle_rx_descriptors_refill = sxe_recycle_rx_descriptors_refill_vec;
+
+#endif
+		dev->rx_pkt_burst = sxe_pkts_vec_recv;
+	}
+#endif
+	else if (rx_batch_alloc_allowed) {
 		PMD_LOG_DEBUG(INIT, "Rx Burst Bulk Alloc Preconditions are "
 					"satisfied. Rx Burst Bulk Alloc function "
 					"will be used on port=%d.",
@@ -77,6 +165,19 @@ void __rte_cold __sxe_rx_function_set(struct rte_eth_dev *dev,
 
 		dev->rx_pkt_burst = sxe_pkts_recv;
 	}
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+	is_using_sse =
+		(dev->rx_pkt_burst == sxe_scattered_pkts_vec_recv ||
+		dev->rx_pkt_burst == sxe_pkts_vec_recv);
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct sxe_rx_queue *rxq = dev->data->rx_queues[i];
+
+		rxq->is_using_sse = is_using_sse;
+	}
+#endif
+
 }
 
 s32 __sxe_rx_descriptor_status(void *rx_queue, u16 offset)
@@ -93,7 +194,15 @@ s32 __sxe_rx_descriptor_status(void *rx_queue, u16 offset)
 		ret = -EINVAL;
 		goto l_end;
 	}
-	hold_num = rxq->hold_num;
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+#if defined(RTE_ARCH_X86)
+	if (rxq->is_using_sse)
+		hold_num = rxq->realloc_num;
+	else
+#endif
+#endif
+		hold_num = rxq->hold_num;
 	if (offset >= rxq->ring_depth - hold_num) {
 		ret = RTE_ETH_RX_DESC_UNAVAIL;
 		goto l_end;
@@ -232,6 +341,17 @@ const u32 *__sxe_dev_supported_ptypes_get(struct rte_eth_dev *dev, size_t *no_of
 		ptypes = ptypes_arr;
 		goto l_end;
 	}
+
+#if defined SXE_DPDK_L4_FEATURES && defined SXE_DPDK_SIMD
+#if defined(RTE_ARCH_X86)
+	if (dev->rx_pkt_burst == sxe_pkts_vec_recv ||
+		dev->rx_pkt_burst == sxe_scattered_pkts_vec_recv) {
+		*no_of_elements = RTE_DIM(ptypes_arr);
+		ptypes = ptypes_arr;
+	}
+
+#endif
+#endif
 
 l_end:
 	return ptypes;
