@@ -97,6 +97,17 @@ static uint8_t prepare_cmd_buf_modify_svlan(struct hinic3_cmd_buf *cmd_buf,
 	return HINIC3_HTN_CMD_SVLAN_MODIFY;
 }
 
+static void prepare_rss_indir_table_cmd_header(struct hinic3_nic_dev *nic_dev,
+					       struct hinic3_cmd_buf *cmd_buf)
+{
+	struct hinic3_rss_cmd_header *header = cmd_buf->buf;
+
+	header->dest_func_id = hinic3_global_func_id(nic_dev->hwdev);
+
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
+	hinic3_cpu_to_be32(header, sizeof(*header));
+}
+
 static uint8_t prepare_cmd_buf_set_rss_indir_table(struct hinic3_nic_dev *nic_dev,
 						   const uint32_t *indir_table,
 						   struct hinic3_cmd_buf *cmd_buf)
@@ -117,17 +128,6 @@ static uint8_t prepare_cmd_buf_set_rss_indir_table(struct hinic3_nic_dev *nic_de
 	hinic3_cpu_to_be32(indir_tbl, HINIC3_RSS_INDIR_SIZE);
 
 	return HINIC3_HTN_CMD_SET_RSS_INDIR_TABLE;
-}
-
-static void prepare_rss_indir_table_cmd_header(struct hinic3_nic_dev *nic_dev,
-					       struct hinic3_cmd_buf *cmd_buf)
-{
-	struct hinic3_rss_cmd_header *header = cmd_buf->buf;
-
-	header->dest_func_id = hinic3_global_func_id(nic_dev->hwdev);
-
-	rte_atomic_thread_fence(rte_memory_order_seq_cst);
-	hinic3_cpu_to_be32(header, sizeof(*header));
 }
 
 static uint8_t prepare_cmd_buf_get_rss_indir_table(struct hinic3_nic_dev *nic_dev,
