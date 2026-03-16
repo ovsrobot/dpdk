@@ -378,6 +378,13 @@ next_slot1:
 			n_slots--;
 
 			if (d0->flags & MEMIF_DESC_FLAG_NEXT) {
+				if (unlikely(n_slots == 0)) {
+					MIF_LOG(ERR, "Truncated packet: NEXT flag set but no more slots");
+					rte_pktmbuf_free(mbuf_head);
+					rte_pktmbuf_free_bulk(mbufs + rx_pkts,
+							MAX_PKT_BURST - rx_pkts);
+					goto no_free_bufs;
+				}
 				mbuf_tail = mbuf;
 				mbuf = rte_pktmbuf_alloc(mq->mempool);
 				if (unlikely(mbuf == NULL)) {
@@ -416,13 +423,13 @@ next_slot1:
 				goto no_free_bufs;
 			mbuf = mbuf_head;
 			mbuf->port = mq->in_port;
+			dst_off = 0;
 
 next_slot2:
 			s0 = cur_slot & mask;
 			d0 = &ring->desc[s0];
 
 			src_len = d0->length;
-			dst_off = 0;
 			src_off = 0;
 
 			do {
@@ -464,8 +471,14 @@ next_slot2:
 			cur_slot++;
 			n_slots--;
 
-			if (d0->flags & MEMIF_DESC_FLAG_NEXT)
+			if (d0->flags & MEMIF_DESC_FLAG_NEXT) {
+				if (unlikely(n_slots == 0)) {
+					MIF_LOG(ERR, "Truncated packet: NEXT flag set but no more slots");
+					rte_pktmbuf_free(mbuf_head);
+					goto no_free_bufs;
+				}
 				goto next_slot2;
+			}
 
 			mq->n_bytes += rte_pktmbuf_pkt_len(mbuf_head);
 			*bufs++ = mbuf_head;
