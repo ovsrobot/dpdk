@@ -535,6 +535,9 @@ soc_grace = {
     'implementer': '0x41',
     'part_number': '0xd4f',
     'extra_march_features': ['crypto'],
+    'flags': [
+        ['RTE_CACHE_LINE_SIZE', '"64"'],
+    ],
     'numa': true
 }
 
