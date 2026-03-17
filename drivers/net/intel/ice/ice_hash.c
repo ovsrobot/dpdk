@@ -1084,6 +1084,10 @@ ice_any_invalid_rss_type(enum rte_eth_hash_function rss_func,
 	/* check not allowed RSS type */
 	rss_type &= ~VALID_RSS_ATTR;
 
+	/* For Empty patterns */
+	if (!allow_rss_type)
+		return false;
+
 	return ((rss_type & allow_rss_type) != rss_type);
 }
 
@@ -1091,7 +1095,8 @@ static int
 ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 		const struct rte_flow_action actions[],
 		uint64_t pattern_hint, struct ice_rss_meta *rss_meta,
-		struct rte_flow_error *error)
+		struct rte_flow_error *error,
+		enum rte_eth_hash_function *vsi_hash_function)
 {
 	struct ice_rss_hash_cfg *cfg = pattern_match_item->meta;
 	enum rte_flow_action_type action_type;
@@ -1110,8 +1115,8 @@ ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 
 			/* Check hash function and save it to rss_meta. */
 			if (pattern_match_item->pattern_list !=
-			    pattern_empty && rss->func ==
-			    RTE_ETH_HASH_FUNCTION_SIMPLE_XOR) {
+			    pattern_empty && rss->func &&
+			    rss->func != *vsi_hash_function) {
 				return rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
 					"Not supported flow");
@@ -1119,6 +1124,7 @@ ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 				   RTE_ETH_HASH_FUNCTION_SIMPLE_XOR){
 				rss_meta->hash_function =
 				RTE_ETH_HASH_FUNCTION_SIMPLE_XOR;
+				*vsi_hash_function = rss_meta->hash_function;
 				return 0;
 			} else if (rss->func ==
 				   RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) {
@@ -1161,7 +1167,12 @@ ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 					RTE_FLOW_ERROR_TYPE_ACTION,
 					action, "RSS type not supported");
 
+			/* For Empty patterns*/
+			if (cfg->hash_flds == ICE_HASH_INVALID)
+				cfg->hash_flds = 1;
 			rss_meta->cfg = *cfg;
+			if (rss->func)
+				*vsi_hash_function = rss_meta->hash_function;
 			ice_refine_hash_cfg(&rss_meta->cfg,
 					    rss_type, pattern_hint);
 			break;
@@ -1193,6 +1204,7 @@ ice_hash_parse_pattern_action(__rte_unused struct ice_adapter *ad,
 	struct ice_pattern_match_item *pattern_match_item;
 	struct ice_rss_meta *rss_meta_ptr;
 	uint64_t phint = ICE_PHINT_NONE;
+	struct ice_vsi *vsi = ad->pf.main_vsi;
 
 	if (priority >= 1)
 		return -rte_errno;
@@ -1230,7 +1242,7 @@ ice_hash_parse_pattern_action(__rte_unused struct ice_adapter *ad,
 
 	/* Check rss action. */
 	ret = ice_hash_parse_action(pattern_match_item, actions, phint,
-				    rss_meta_ptr, error);
+				    rss_meta_ptr, error, &vsi->hash_function);
 
 error:
 	if (!ret && meta)

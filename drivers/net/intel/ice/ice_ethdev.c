@@ -3718,6 +3718,7 @@ static int ice_init_rss(struct ice_pf *pf)
 	vsi->rss_key_size = ICE_AQC_GET_SET_RSS_KEY_DATA_RSS_KEY_SIZE +
 			    ICE_AQC_GET_SET_RSS_KEY_DATA_HASH_KEY_SIZE;
 	vsi->rss_lut_size = pf->hash_lut_size;
+	vsi->hash_function = rss_conf->algorithm;
 
 	if (nb_q == 0) {
 		PMD_DRV_LOG(WARNING,
@@ -5679,6 +5680,8 @@ ice_rss_hash_update(struct rte_eth_dev *dev,
 
 	if (rss_conf->rss_hf == 0)
 		pf->rss_hf = 0;
+
+	vsi->hash_function = rss_conf->algorithm;
 
 	/* RSS hash configuration */
 	ice_rss_hash_set(pf, rss_conf->rss_hf);

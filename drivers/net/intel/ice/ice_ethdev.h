@@ -351,6 +351,7 @@ struct ice_vsi {
 	bool offset_loaded;
 	/* holds previous values so limitations can be enlarged to 64 bits */
 	struct ice_vsi_get_stats_fields old_get_stats_fields;
+	enum rte_eth_hash_function hash_function;
 };
 
 enum proto_xtr_type {
