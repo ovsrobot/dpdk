@@ -278,22 +278,6 @@ int hinic3_init_qp_ctxts(struct hinic3_nic_dev *nic_dev);
 void hinic3_free_qp_ctxts(struct hinic3_hwdev *hwdev);
 
 /**
- * Get cmdq ops software tile NIC(stn) supported.
- *
- * @return
- * Pointer to ops.
- */
-struct hinic3_nic_cmdq_ops *hinic3_cmdq_get_stn_ops(void);
-
-/**
- * Get cmdq ops hardware tile NIC(htn) supported.
- *
- * @return
- * Pointer to ops.
- */
-struct hinic3_nic_cmdq_ops *hinic3_cmdq_get_htn_ops(void);
-
-/**
  * Update driver feature capabilities.
  *
  * @param[in] nic_dev
