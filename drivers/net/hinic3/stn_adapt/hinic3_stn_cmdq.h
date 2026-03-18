@@ -35,4 +35,12 @@ struct hinic3_stn_vlan_ctx {
 	uint32_t vlan_sel;
 };
 
+/**
+ * Get cmdq ops software tile NIC(stn) supported.
+ *
+ * @return
+ * Pointer to ops.
+ */
+struct hinic3_nic_cmdq_ops *hinic3_nic_cmdq_get_stn_ops(void);
+
 #endif /* _HINIC3_STN_CMDQ_H_ */
