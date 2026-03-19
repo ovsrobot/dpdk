@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <limits.h>
+#include <sys/utsname.h>
 
 #include <ethdev_driver.h>
 #include <rte_pdump.h>
@@ -197,7 +198,12 @@ run_pdump_server_tests(void)
 int
 test_pdump(void)
 {
+	struct utsname name;
 	int ret = 0;
+
+	if (uname(&name) < 0 || strcmp(name.sysname, "FreeBSD") == 0)
+		return TEST_SKIPPED;
+
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		printf("IN PRIMARY PROCESS\n");
 		ret = run_pdump_server_tests();
