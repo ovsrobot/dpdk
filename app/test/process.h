@@ -96,7 +96,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	int driver_path_num;
 	int argv_num;
 	int i, status;
-	char path[32];
+	char *path;
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
 	rte_thread_t thread;
@@ -188,8 +188,13 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 		/* set the environment variable */
 		if (setenv(RECURSIVE_ENV_VAR, env_value, 1) != 0)
 			rte_panic("Cannot export environment variable\n");
-
-		strlcpy(path, "/proc/" self "/" exe, sizeof(path));
+#ifdef RTE_EXEC_ENV_LINUX
+		char path_buf[32];
+		strlcpy(path_buf, "/proc/" self "/" exe, sizeof(path_buf));
+		path = path_buf;
+#else
+		path = argv_cpy[0];
+#endif
 		if (execv(path, argv_cpy) < 0) {
 			if (errno == ENOENT) {
 				printf("Could not find '%s', is procfs mounted?\n",
