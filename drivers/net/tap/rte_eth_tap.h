@@ -38,9 +38,13 @@ struct queue_stats {
 	uint64_t packets;
 	uint64_t bytes;
 	uint64_t errors;
+	uint64_t mac_drops;             /* Packets dropped by MAC filter */
 };
 
+struct pmd_internals;
+
 struct rx_queue {
+	struct pmd_internals *pmd;      /* back-pointer to driver state */
 	struct rte_mempool *mp;         /* Mempool for RX packets */
 	uint32_t trigger_seen;          /* Last seen Rx trigger value */
 	uint16_t in_port;               /* Port ID */
@@ -69,7 +73,10 @@ struct pmd_internals {
 	char name[IFNAMSIZ];		  /* Internal Tap device name */
 	int type;                         /* Type field - TUN|TAP */
 	int persist;			  /* 1 if keep link up, else 0 */
+	int macfilter;                    /* SW MAC filtering enabled */
 	struct rte_ether_addr eth_addr;   /* Mac address of the device port */
+	struct rte_ether_addr *mc_addrs;  /* multicast address list */
+	uint32_t nb_mc_addrs;             /* multicast address count */
 	unsigned int remote_initial_flags;/* Remote netdevice flags on init */
 	int remote_if_index;              /* remote netdevice IF_INDEX */
 	int if_index;                     /* IF_INDEX for the port */
