@@ -549,19 +549,6 @@ async_reply_handle_thread_unsafe(struct pending_request *req)
 
 	TAILQ_REMOVE(&pending_requests.requests, req, next);
 
-	if (rte_eal_alarm_cancel(async_reply_handle,
-			(void *)(uintptr_t)req->id) < 0) {
-		/* if we failed to cancel the alarm because it's already in
-		 * progress, don't proceed because otherwise we will end up
-		 * handling the same message twice.
-		 */
-		if (rte_errno == EINPROGRESS) {
-			EAL_LOG(DEBUG, "Request handling is already in progress");
-			goto no_trigger;
-		}
-		EAL_LOG(ERR, "Failed to cancel alarm");
-	}
-
 	if (action == ACTION_TRIGGER)
 		return req;
 no_trigger:
@@ -910,8 +897,12 @@ mp_request_async(const char *dst, struct rte_mp_msg *req,
 		return -1;
 	}
 
-	/* Set alarm before allocating or sending so request timeout tracking
-	 * is active as soon as this request ID is reserved.
+	/* Set alarm before allocating or sending. The alarm is never cancelled:
+	 * rte_eal_alarm_cancel spin-waits for an executing callback to finish,
+	 * which deadlocks if we hold pending_requests.lock while the callback
+	 * is blocked on it. Instead, let stale alarms fire; with ID-based
+	 * lookup the callback will simply not find the request and return
+	 * harmlessly.
 	 */
 	id = ++next_request_id;
 	if (rte_eal_alarm_set(ts->tv_sec * 1000000 + ts->tv_nsec / 1000,
