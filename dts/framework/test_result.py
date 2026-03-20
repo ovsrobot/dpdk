@@ -46,9 +46,9 @@ class Result(IntEnum):
     """The possible states that a setup, a teardown or a test case may end up in."""
 
     #:
-    PASS = auto()
-    #:
     SKIP = auto()
+    #:
+    PASS = auto()
     #:
     BLOCK = auto()
     #:
