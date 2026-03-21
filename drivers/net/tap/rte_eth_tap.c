@@ -58,6 +58,8 @@
 #define ETH_TAP_CMP_MAC_FMT     "0123456789ABCDEFabcdef"
 #define ETH_TAP_MAC_ARG_FMT     ETH_TAP_MAC_FIXED "|" ETH_TAP_USR_MAC_FMT
 
+#define TAP_MAX_MAC_ADDRS	16
+
 #define TAP_GSO_MBUFS_PER_CORE	128
 #define TAP_GSO_MBUF_SEG_SIZE	128
 #define TAP_GSO_MBUF_CACHE_SIZE	4
@@ -437,6 +439,45 @@ tap_rxq_pool_free(struct rte_mbuf *pool)
 	rte_pktmbuf_free(pool);
 }
 
+static inline bool
+tap_mac_filter_match(struct rx_queue *rxq, struct rte_mbuf *mbuf)
+{
+	struct pmd_internals *pmd = rxq->pmd;
+	struct rte_eth_dev_data *data;
+	struct rte_ether_addr *dst;
+	uint32_t i;
+
+	if (pmd->type != ETH_TUNTAP_TYPE_TAP)
+		return true;
+
+	data = pmd->dev->data;
+	if (data->promiscuous)
+		return true;
+
+	dst = rte_pktmbuf_mtod(mbuf, struct rte_ether_addr *);
+
+	if (unlikely(rte_is_zero_ether_addr(dst)))
+		return false;
+
+	if (likely(rte_is_unicast_ether_addr(dst))) {
+		for (i = 0; i < TAP_MAX_MAC_ADDRS; i++) {
+			if (rte_is_same_ether_addr(dst, &data->mac_addrs[i]))
+				return true;
+		}
+		return false;
+	}
+
+	if (data->all_multicast)
+		return true;
+
+	for (i = 0; i < pmd->nb_mc_addrs; i++) {
+		if (rte_is_same_ether_addr(dst, &pmd->mc_addrs[i]))
+			return true;
+	}
+
+	return rte_is_broadcast_ether_addr(dst);
+}
+
 /* Callback to handle the rx burst of packets to the correct interface and
  * file descriptor(s) in a multi-queue setup.
  */
@@ -515,6 +556,13 @@ pmd_rx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			data_off = 0;
 		}
 		seg->next = NULL;
+
+		if (!tap_mac_filter_match(rxq, mbuf)) {
+			rxq->stats.mac_drops++;
+			rte_pktmbuf_free(mbuf);
+			continue;
+		}
+
 		mbuf->packet_type = rte_net_get_ptype(mbuf, NULL,
 						      RTE_PTYPE_ALL_MASK);
 		if (rxq->rxmode->offloads & RTE_ETH_RX_OFFLOAD_CHECKSUM)
@@ -933,7 +981,7 @@ tap_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	struct pmd_internals *internals = dev->data->dev_private;
 
 	dev_info->if_index = internals->if_index;
-	dev_info->max_mac_addrs = 1;
+	dev_info->max_mac_addrs = TAP_MAX_MAC_ADDRS;
 	dev_info->max_rx_pktlen = RTE_ETHER_MAX_JUMBO_FRAME_LEN;
 	dev_info->max_rx_queues = RTE_PMD_TAP_MAX_QUEUES;
 	dev_info->max_tx_queues = RTE_PMD_TAP_MAX_QUEUES;
@@ -1025,6 +1073,43 @@ tap_stats_reset(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+tap_xstats_get_names(struct rte_eth_dev *dev,
+		     struct rte_eth_xstat_name *names,
+		     unsigned int limit __rte_unused)
+{
+	unsigned int i;
+
+	if (names == NULL)
+		return dev->data->nb_rx_queues;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		snprintf(names[i].name, sizeof(names[i].name),
+			 "rx_q%u_mac_filter_drops", i);
+
+	return dev->data->nb_rx_queues;
+}
+
+static int
+tap_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats,
+	       unsigned int n)
+{
+	struct rte_eth_dev_data *data = dev->data;
+	struct rx_queue *rxq;
+	unsigned int i;
+
+	if (n < dev->data->nb_rx_queues)
+		return dev->data->nb_rx_queues;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = data->rx_queues[i];
+		xstats[i].id = i;
+		xstats[i].value = rxq->stats.mac_drops;
+	}
+
+	return dev->data->nb_rx_queues;
+}
+
 static void
 tap_queue_close(struct pmd_process_private *process_private, uint16_t qid)
 {
@@ -1089,13 +1174,14 @@ tap_dev_close(struct rte_eth_dev *dev)
 	rte_mempool_free(internals->gso_ctx_mp);
 	internals->gso_ctx_mp = NULL;
 
+	rte_free(internals->mc_addrs);
+	internals->mc_addrs = NULL;
+	internals->nb_mc_addrs = 0;
+
 	if (internals->ka_fd != -1) {
 		close(internals->ka_fd);
 		internals->ka_fd = -1;
 	}
-
-	/* mac_addrs must not be freed alone because part of dev_private */
-	dev->data->mac_addrs = NULL;
 
 	internals = dev->data->dev_private;
 	TAP_LOG(DEBUG, "Closing %s Ethernet device on numa %u",
@@ -1574,6 +1660,7 @@ tap_rx_queue_setup(struct rte_eth_dev *dev,
 	}
 	tmp = &rxq->pool;
 
+	rxq->pmd = internals;
 	rxq->mp = mp;
 	rxq->trigger_seen = 1; /* force initial burst */
 	rxq->in_port = dev->data->port_id;
@@ -1692,15 +1779,48 @@ tap_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 }
 
 static int
-tap_set_mc_addr_list(struct rte_eth_dev *dev __rte_unused,
-		     struct rte_ether_addr *mc_addr_set __rte_unused,
-		     uint32_t nb_mc_addr __rte_unused)
+tap_set_mc_addr_list(struct rte_eth_dev *dev,
+		     struct rte_ether_addr *mc_addr_set,
+		     uint32_t nb_mc_addr)
 {
-	/*
-	 * Nothing to do actually: the tap has no filtering whatsoever, every
-	 * packet is received.
-	 */
+	struct pmd_internals *pmd = dev->data->dev_private;
+
+	if (nb_mc_addr == 0) {
+		rte_free(pmd->mc_addrs);
+		pmd->mc_addrs = NULL;
+		pmd->nb_mc_addrs = 0;
+		return 0;
+	}
+
+	pmd->mc_addrs = rte_realloc(pmd->mc_addrs,
+				    nb_mc_addr * sizeof(*pmd->mc_addrs), 0);
+	if (pmd->mc_addrs == NULL) {
+		pmd->nb_mc_addrs = 0;
+		return -ENOMEM;
+	}
+
+	memcpy(pmd->mc_addrs, mc_addr_set,
+	       nb_mc_addr * sizeof(*pmd->mc_addrs));
+	pmd->nb_mc_addrs = nb_mc_addr;
+
 	return 0;
+}
+
+static int
+tap_mac_addr_add(struct rte_eth_dev *dev __rte_unused,
+		 struct rte_ether_addr *mac_addr __rte_unused,
+		 uint32_t index __rte_unused,
+		 uint32_t vmdq __rte_unused)
+{
+	/* ethdev layer already stores the address in mac_addrs[] */
+	return 0;
+}
+
+static void
+tap_mac_addr_remove(struct rte_eth_dev *dev __rte_unused,
+		    uint32_t index __rte_unused)
+{
+	/* ethdev layer already zeroes the slot in mac_addrs[] */
 }
 
 static void tap_dev_intr_handler(void *cb_arg);
@@ -2038,10 +2158,15 @@ static const struct eth_dev_ops ops = {
 	.allmulticast_enable    = tap_allmulti_enable,
 	.allmulticast_disable   = tap_allmulti_disable,
 	.mac_addr_set           = tap_mac_set,
+	.mac_addr_add           = tap_mac_addr_add,
+	.mac_addr_remove        = tap_mac_addr_remove,
 	.mtu_set                = tap_mtu_set,
 	.set_mc_addr_list       = tap_set_mc_addr_list,
 	.stats_get              = tap_stats_get,
 	.stats_reset            = tap_stats_reset,
+	.xstats_get             = tap_xstats_get,
+	.xstats_get_names       = tap_xstats_get_names,
+	.xstats_reset           = tap_stats_reset,
 	.dev_supported_ptypes_get = tap_dev_supported_ptypes_get,
 	.rss_hash_update        = tap_rss_hash_update,
 #ifdef HAVE_TCA_FLOWER
@@ -2102,7 +2227,14 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	data->numa_node = numa_node;
 
 	data->dev_link = pmd_link;
-	data->mac_addrs = &pmd->eth_addr;
+	data->mac_addrs = rte_zmalloc_socket(rte_vdev_device_name(vdev),
+					     TAP_MAX_MAC_ADDRS *
+					     sizeof(struct rte_ether_addr),
+					     0, numa_node);
+	if (data->mac_addrs == NULL) {
+		TAP_LOG(ERR, "Failed to allocate mac_addrs");
+		goto error_exit;
+	}
 	/* Set the number of RX and TX queues */
 	data->nb_rx_queues = 0;
 	data->nb_tx_queues = 0;
@@ -2118,7 +2250,6 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	/* Presetup the fds to -1 as being not valid */
 	for (i = 0; i < RTE_PMD_TAP_MAX_QUEUES; i++)
 		process_private->fds[i] = -1;
-
 
 	if (pmd->type == ETH_TUNTAP_TYPE_TAP) {
 		if (rte_is_zero_ether_addr(mac_addr))
@@ -2227,6 +2358,9 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	}
 #endif
 
+	/* Copy final MAC to slot 0 (remote path may have overwritten it) */
+	data->mac_addrs[0] = pmd->eth_addr;
+
 	rte_eth_dev_probing_finish(dev);
 	return 0;
 
@@ -2246,8 +2380,6 @@ error_exit:
 	free(dev->process_private);
 
 error_exit_nodev_release:
-	/* mac_addrs must not be freed alone because part of dev_private */
-	dev->data->mac_addrs = NULL;
 	rte_eth_dev_release_port(dev);
 
 error_exit_nodev:
