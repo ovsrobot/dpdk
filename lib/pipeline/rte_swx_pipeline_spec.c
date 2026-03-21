@@ -39,6 +39,28 @@
 #define LEARNER_TIMEOUT_BLOCK 10
 #define APPLY_BLOCK 11
 
+static int
+buffer_append_tokens(char *buffer, size_t buffer_size, char **tokens,
+		     uint32_t n_tokens)
+{
+	size_t len = 0;
+	uint32_t i;
+
+	buffer[0] = 0;
+	for (i = 0; i < n_tokens; i++) {
+		int ret;
+
+		ret = snprintf(buffer + len, buffer_size - len, "%s%s",
+			       i ? " " : "", tokens[i]);
+		if ((ret < 0) || ((size_t)ret >= buffer_size - len))
+			return -ENAMETOOLONG;
+
+		len += (size_t)ret;
+	}
+
+	return 0;
+}
+
 /*
  * extobj.
  */
@@ -454,7 +476,6 @@ action_block_parse(struct action_spec *s,
 {
 	char buffer[RTE_SWX_INSTRUCTION_SIZE], *instr;
 	const char **new_instructions;
-	uint32_t i;
 
 	/* Handle end of block. */
 	if ((n_tokens == 1) && !strcmp(tokens[0], "}")) {
@@ -463,12 +484,8 @@ action_block_parse(struct action_spec *s,
 	}
 
 	/* spec. */
-	buffer[0] = 0;
-	for (i = 0; i < n_tokens; i++) {
-		if (i)
-			strcat(buffer, " ");
-		strcat(buffer, tokens[i]);
-	}
+	if (buffer_append_tokens(buffer, sizeof(buffer), tokens, n_tokens))
+		return -ENAMETOOLONG;
 
 	instr = strdup(buffer);
 	if (!instr) {
@@ -2142,7 +2159,6 @@ apply_block_parse(struct apply_spec *s,
 {
 	char buffer[RTE_SWX_INSTRUCTION_SIZE], *instr;
 	const char **new_instructions;
-	uint32_t i;
 
 	/* Handle end of block. */
 	if ((n_tokens == 1) && !strcmp(tokens[0], "}")) {
@@ -2151,12 +2167,8 @@ apply_block_parse(struct apply_spec *s,
 	}
 
 	/* spec. */
-	buffer[0] = 0;
-	for (i = 0; i < n_tokens; i++) {
-		if (i)
-			strcat(buffer, " ");
-		strcat(buffer, tokens[i]);
-	}
+	if (buffer_append_tokens(buffer, sizeof(buffer), tokens, n_tokens))
+		return -ENAMETOOLONG;
 
 	instr = strdup(buffer);
 	if (!instr) {

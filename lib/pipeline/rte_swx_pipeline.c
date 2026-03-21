@@ -11,6 +11,7 @@
 #include <rte_eal_memconfig.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
+#include <rte_string_fns.h>
 
 #include <rte_swx_port_ethdev.h>
 #include <rte_swx_port_fd.h>
@@ -41,6 +42,9 @@ do {                                                                           \
 	      (strnlen((instr), RTE_SWX_INSTRUCTION_SIZE) <                    \
 	       RTE_SWX_INSTRUCTION_SIZE),                                      \
 	      err_code)
+
+#define CHECK_STRLCPY(dst, src, err_code)                                     \
+	CHECK(strlcpy((dst), (src), sizeof(dst)) < sizeof(dst), err_code)
 
 /*
  * Environment.
@@ -5680,7 +5684,7 @@ instr_jmp_translate(struct rte_swx_pipeline *p __rte_unused,
 {
 	CHECK(n_tokens == 2, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	instr->type = INSTR_JMP;
 	instr->jmp.ip = NULL; /* Resolved later. */
@@ -5699,7 +5703,7 @@ instr_jmp_valid_translate(struct rte_swx_pipeline *p,
 
 	CHECK(n_tokens == 3, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	h = header_parse(p, tokens[2]);
 	CHECK(h, EINVAL);
@@ -5722,7 +5726,7 @@ instr_jmp_invalid_translate(struct rte_swx_pipeline *p,
 
 	CHECK(n_tokens == 3, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	h = header_parse(p, tokens[2]);
 	CHECK(h, EINVAL);
@@ -5744,7 +5748,7 @@ instr_jmp_hit_translate(struct rte_swx_pipeline *p __rte_unused,
 	CHECK(!action, EINVAL);
 	CHECK(n_tokens == 2, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	instr->type = INSTR_JMP_HIT;
 	instr->jmp.ip = NULL; /* Resolved later. */
@@ -5762,7 +5766,7 @@ instr_jmp_miss_translate(struct rte_swx_pipeline *p __rte_unused,
 	CHECK(!action, EINVAL);
 	CHECK(n_tokens == 2, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	instr->type = INSTR_JMP_MISS;
 	instr->jmp.ip = NULL; /* Resolved later. */
@@ -5782,7 +5786,7 @@ instr_jmp_action_hit_translate(struct rte_swx_pipeline *p,
 	CHECK(!action, EINVAL);
 	CHECK(n_tokens == 3, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	a = action_find(p, tokens[2]);
 	CHECK(a, EINVAL);
@@ -5806,7 +5810,7 @@ instr_jmp_action_miss_translate(struct rte_swx_pipeline *p,
 	CHECK(!action, EINVAL);
 	CHECK(n_tokens == 3, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	a = action_find(p, tokens[2]);
 	CHECK(a, EINVAL);
@@ -5832,7 +5836,7 @@ instr_jmp_eq_translate(struct rte_swx_pipeline *p,
 
 	CHECK(n_tokens == 4, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	fa = struct_field_parse(p, action, a, &a_struct_id);
 	CHECK(fa, EINVAL);
@@ -5892,7 +5896,7 @@ instr_jmp_neq_translate(struct rte_swx_pipeline *p,
 
 	CHECK(n_tokens == 4, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	fa = struct_field_parse(p, action, a, &a_struct_id);
 	CHECK(fa, EINVAL);
@@ -5952,7 +5956,7 @@ instr_jmp_lt_translate(struct rte_swx_pipeline *p,
 
 	CHECK(n_tokens == 4, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	fa = struct_field_parse(p, action, a, &a_struct_id);
 	CHECK(fa, EINVAL);
@@ -6012,7 +6016,7 @@ instr_jmp_gt_translate(struct rte_swx_pipeline *p,
 
 	CHECK(n_tokens == 4, EINVAL);
 
-	strcpy(data->jmp_label, tokens[1]);
+	CHECK_STRLCPY(data->jmp_label, tokens[1], EINVAL);
 
 	fa = struct_field_parse(p, action, a, &a_struct_id);
 	CHECK(fa, EINVAL);
@@ -6437,7 +6441,7 @@ instr_translate(struct rte_swx_pipeline *p,
 
 	/* Handle the optional instruction label. */
 	if ((n_tokens >= 2) && !strcmp(tokens[1], ":")) {
-		strcpy(data->label, tokens[0]);
+		CHECK_STRLCPY(data->label, tokens[0], EINVAL);
 
 		tpos += 2;
 		CHECK(n_tokens - tpos, EINVAL);
@@ -8541,7 +8545,7 @@ rte_swx_pipeline_table_config(struct rte_swx_pipeline *p,
 	/* Node initialization. */
 	strcpy(t->name, name);
 	if (args && args[0])
-		strcpy(t->args, args);
+		CHECK_STRLCPY(t->args, args, EINVAL);
 	t->type = type;
 
 	for (i = 0; i < params->n_fields; i++) {
