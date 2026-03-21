@@ -173,6 +173,12 @@ cpfl_fxp_parse_pattern(const struct cpfl_flow_pr_action *pr_action,
 	if (pr_action->type == CPFL_JS_PR_ACTION_TYPE_SEM) {
 		struct cpfl_rule_info *rinfo = &rim->rules[i];
 
+		if (pr_action->sem.keysize > sizeof(pr_action->sem.cpfl_flow_pr_fv) ||
+		    pr_action->sem.keysize > sizeof(rinfo->sem.key)) {
+			PMD_DRV_LOG(ERR, "Invalid SEM key size.");
+			return false;
+		}
+
 		rinfo->type = CPFL_RULE_TYPE_SEM;
 		rinfo->sem.prof_id = pr_action->sem.prof;
 		rinfo->sem.sub_prof_id = pr_action->sem.subprof;

@@ -323,6 +323,10 @@ cpfl_flow_js_pattern_act_fv_proto(json_t *ob_value, struct cpfl_flow_js_fv *js_f
 		PMD_DRV_LOG(ERR, "Can not parse 'offset'.");
 		return -EINVAL;
 	}
+	if (offset >= CPFL_JS_SEM_FV_KEY_NUM_MAX / 2) {
+		PMD_DRV_LOG(ERR, "The 'offset' is too large.");
+		return -EINVAL;
+	}
 	ret = cpfl_json_t_to_uint16(ob_value, "mask", &mask);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Can not parse 'mask'.");
@@ -391,6 +395,10 @@ cpfl_flow_js_pattern_act_fv(json_t *ob_fvs, struct cpfl_flow_js_pr_action *js_ac
 			PMD_DRV_LOG(ERR, "Can not parse 'offset'.");
 			goto err;
 		}
+		if (offset >= CPFL_JS_SEM_FV_KEY_NUM_MAX / 2) {
+			PMD_DRV_LOG(ERR, "The 'offset' is too large.");
+			goto err;
+		}
 		js_fv->offset = offset;
 
 		type = cpfl_json_t_to_string(object, "type");
@@ -452,6 +460,10 @@ cpfl_flow_js_pattern_per_act(json_t *ob_per_act, struct cpfl_flow_js_pr_action *
 		ret = cpfl_json_t_to_uint16(ob_sem, "keysize", &js_act->sem.keysize);
 		if (ret < 0) {
 			PMD_DRV_LOG(ERR, "Can not parse 'keysize'.");
+			return -EINVAL;
+		}
+		if (js_act->sem.keysize > sizeof(js_act->sem.cpfl_flow_pr_fv)) {
+			PMD_DRV_LOG(ERR, "The 'keysize' is too large.");
 			return -EINVAL;
 		}
 		ob_fvs = json_object_get(ob_sem, "fieldvectors");
