@@ -32,41 +32,80 @@
 #define ROUNDUP(x, y)	 RTE_ALIGN_CEIL(x, (1 << (32 - y)))
 
 static inline rte_fib_lookup_fn_t
-get_scalar_fn(enum rte_fib_dir24_8_nh_sz nh_sz, bool be_addr)
+get_scalar_fn(const struct dir24_8_tbl *dp, enum rte_fib_dir24_8_nh_sz nh_sz,
+	bool be_addr)
 {
+	bool single_vrf = dp->num_vrfs <= 1;
+
 	switch (nh_sz) {
 	case RTE_FIB_DIR24_8_1B:
-		return be_addr ? dir24_8_lookup_bulk_1b_be : dir24_8_lookup_bulk_1b;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_1b_be :
+				dir24_8_lookup_bulk_1b;
+		return be_addr ? dir24_8_lookup_bulk_vrf_1b_be :
+			dir24_8_lookup_bulk_vrf_1b;
 	case RTE_FIB_DIR24_8_2B:
-		return be_addr ? dir24_8_lookup_bulk_2b_be : dir24_8_lookup_bulk_2b;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_2b_be :
+				dir24_8_lookup_bulk_2b;
+		return be_addr ? dir24_8_lookup_bulk_vrf_2b_be :
+			dir24_8_lookup_bulk_vrf_2b;
 	case RTE_FIB_DIR24_8_4B:
-		return be_addr ? dir24_8_lookup_bulk_4b_be : dir24_8_lookup_bulk_4b;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_4b_be :
+				dir24_8_lookup_bulk_4b;
+		return be_addr ? dir24_8_lookup_bulk_vrf_4b_be :
+			dir24_8_lookup_bulk_vrf_4b;
 	case RTE_FIB_DIR24_8_8B:
-		return be_addr ? dir24_8_lookup_bulk_8b_be : dir24_8_lookup_bulk_8b;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_8b_be :
+				dir24_8_lookup_bulk_8b;
+		return be_addr ? dir24_8_lookup_bulk_vrf_8b_be :
+			dir24_8_lookup_bulk_vrf_8b;
 	default:
 		return NULL;
 	}
 }
 
 static inline rte_fib_lookup_fn_t
-get_scalar_fn_inlined(enum rte_fib_dir24_8_nh_sz nh_sz, bool be_addr)
+get_scalar_fn_inlined(const struct dir24_8_tbl *dp,
+	enum rte_fib_dir24_8_nh_sz nh_sz, bool be_addr)
 {
+	bool single_vrf = dp->num_vrfs <= 1;
+
 	switch (nh_sz) {
 	case RTE_FIB_DIR24_8_1B:
-		return be_addr ? dir24_8_lookup_bulk_0_be : dir24_8_lookup_bulk_0;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_0_be :
+				dir24_8_lookup_bulk_0;
+		return be_addr ? dir24_8_lookup_bulk_vrf_0_be :
+			dir24_8_lookup_bulk_vrf_0;
 	case RTE_FIB_DIR24_8_2B:
-		return be_addr ? dir24_8_lookup_bulk_1_be : dir24_8_lookup_bulk_1;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_1_be :
+				dir24_8_lookup_bulk_1;
+		return be_addr ? dir24_8_lookup_bulk_vrf_1_be :
+			dir24_8_lookup_bulk_vrf_1;
 	case RTE_FIB_DIR24_8_4B:
-		return be_addr ? dir24_8_lookup_bulk_2_be : dir24_8_lookup_bulk_2;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_2_be :
+				dir24_8_lookup_bulk_2;
+		return be_addr ? dir24_8_lookup_bulk_vrf_2_be :
+			dir24_8_lookup_bulk_vrf_2;
 	case RTE_FIB_DIR24_8_8B:
-		return be_addr ? dir24_8_lookup_bulk_3_be : dir24_8_lookup_bulk_3;
+		if (single_vrf)
+			return be_addr ? dir24_8_lookup_bulk_3_be :
+				dir24_8_lookup_bulk_3;
+		return be_addr ? dir24_8_lookup_bulk_vrf_3_be :
+			dir24_8_lookup_bulk_vrf_3;
 	default:
 		return NULL;
 	}
 }
 
 static inline rte_fib_lookup_fn_t
-get_vector_fn(enum rte_fib_dir24_8_nh_sz nh_sz, bool be_addr)
+get_vector_fn(const struct dir24_8_tbl *dp, enum rte_fib_dir24_8_nh_sz nh_sz,
+	bool be_addr)
 {
 #ifdef CC_AVX512_SUPPORT
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) <= 0 ||
@@ -77,24 +116,63 @@ get_vector_fn(enum rte_fib_dir24_8_nh_sz nh_sz, bool be_addr)
 	if (be_addr && rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512BW) <= 0)
 		return NULL;
 
+	if (dp->num_vrfs <= 1) {
+		switch (nh_sz) {
+		case RTE_FIB_DIR24_8_1B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_1b_be :
+				rte_dir24_8_vec_lookup_bulk_1b;
+		case RTE_FIB_DIR24_8_2B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_2b_be :
+				rte_dir24_8_vec_lookup_bulk_2b;
+		case RTE_FIB_DIR24_8_4B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_4b_be :
+				rte_dir24_8_vec_lookup_bulk_4b;
+		case RTE_FIB_DIR24_8_8B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_8b_be :
+				rte_dir24_8_vec_lookup_bulk_8b;
+		default:
+			return NULL;
+		}
+	}
+
+	if (dp->num_vrfs >= 256) {
+		switch (nh_sz) {
+		case RTE_FIB_DIR24_8_1B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_1b_be_large :
+				rte_dir24_8_vec_lookup_bulk_vrf_1b_large;
+		case RTE_FIB_DIR24_8_2B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_2b_be_large :
+				rte_dir24_8_vec_lookup_bulk_vrf_2b_large;
+		case RTE_FIB_DIR24_8_4B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_4b_be_large :
+				rte_dir24_8_vec_lookup_bulk_vrf_4b_large;
+		case RTE_FIB_DIR24_8_8B:
+			return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_8b_be_large :
+				rte_dir24_8_vec_lookup_bulk_vrf_8b_large;
+		default:
+			return NULL;
+		}
+	}
+
 	switch (nh_sz) {
 	case RTE_FIB_DIR24_8_1B:
-		return be_addr ? rte_dir24_8_vec_lookup_bulk_1b_be :
-			rte_dir24_8_vec_lookup_bulk_1b;
+		return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_1b_be :
+			rte_dir24_8_vec_lookup_bulk_vrf_1b;
 	case RTE_FIB_DIR24_8_2B:
-		return be_addr ? rte_dir24_8_vec_lookup_bulk_2b_be :
-			rte_dir24_8_vec_lookup_bulk_2b;
+		return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_2b_be :
+			rte_dir24_8_vec_lookup_bulk_vrf_2b;
 	case RTE_FIB_DIR24_8_4B:
-		return be_addr ? rte_dir24_8_vec_lookup_bulk_4b_be :
-			rte_dir24_8_vec_lookup_bulk_4b;
+		return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_4b_be :
+			rte_dir24_8_vec_lookup_bulk_vrf_4b;
 	case RTE_FIB_DIR24_8_8B:
-		return be_addr ? rte_dir24_8_vec_lookup_bulk_8b_be :
-			rte_dir24_8_vec_lookup_bulk_8b;
+		return be_addr ? rte_dir24_8_vec_lookup_bulk_vrf_8b_be :
+			rte_dir24_8_vec_lookup_bulk_vrf_8b;
 	default:
 		return NULL;
 	}
 #elif defined(RTE_RISCV_FEATURE_V)
 	RTE_SET_USED(be_addr);
+	RTE_SET_USED(dp);
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_RISCV_ISA_V) <= 0)
 		return NULL;
 	switch (nh_sz) {
@@ -130,16 +208,17 @@ dir24_8_get_lookup_fn(void *p, enum rte_fib_lookup_type type, bool be_addr)
 
 	switch (type) {
 	case RTE_FIB_LOOKUP_DIR24_8_SCALAR_MACRO:
-		return get_scalar_fn(nh_sz, be_addr);
+		return get_scalar_fn(dp, nh_sz, be_addr);
 	case RTE_FIB_LOOKUP_DIR24_8_SCALAR_INLINE:
-		return get_scalar_fn_inlined(nh_sz, be_addr);
+		return get_scalar_fn_inlined(dp, nh_sz, be_addr);
 	case RTE_FIB_LOOKUP_DIR24_8_SCALAR_UNI:
-		return be_addr ? dir24_8_lookup_bulk_uni_be : dir24_8_lookup_bulk_uni;
+		return be_addr ? dir24_8_lookup_bulk_uni_be :
+			dir24_8_lookup_bulk_uni;
 	case RTE_FIB_LOOKUP_DIR24_8_VECTOR_AVX512:
-		return get_vector_fn(nh_sz, be_addr);
+		return get_vector_fn(dp, nh_sz, be_addr);
 	case RTE_FIB_LOOKUP_DEFAULT:
-		ret_fn = get_vector_fn(nh_sz, be_addr);
-		return ret_fn != NULL ? ret_fn : get_scalar_fn(nh_sz, be_addr);
+		ret_fn = get_vector_fn(dp, nh_sz, be_addr);
+		return ret_fn != NULL ? ret_fn : get_scalar_fn(dp, nh_sz, be_addr);
 	default:
 		return NULL;
 	}
@@ -246,14 +325,17 @@ __rcu_qsbr_free_resource(void *p, void *data, unsigned int n __rte_unused)
 }
 
 static void
-tbl8_recycle(struct dir24_8_tbl *dp, uint32_t ip, uint64_t tbl8_idx)
+tbl8_recycle(struct dir24_8_tbl *dp, uint16_t vrf_id, uint32_t ip, uint64_t tbl8_idx)
 {
 	uint32_t i;
 	uint64_t nh;
+	uint64_t tbl24_idx;
 	uint8_t *ptr8;
 	uint16_t *ptr16;
 	uint32_t *ptr32;
 	uint64_t *ptr64;
+
+	tbl24_idx = get_tbl24_idx(vrf_id, ip);
 
 	switch (dp->nh_sz) {
 	case RTE_FIB_DIR24_8_1B:
@@ -264,7 +346,7 @@ tbl8_recycle(struct dir24_8_tbl *dp, uint32_t ip, uint64_t tbl8_idx)
 			if (nh != ptr8[i])
 				return;
 		}
-		((uint8_t *)dp->tbl24)[ip >> 8] =
+		((uint8_t *)dp->tbl24)[tbl24_idx] =
 			nh & ~DIR24_8_EXT_ENT;
 		break;
 	case RTE_FIB_DIR24_8_2B:
@@ -275,7 +357,7 @@ tbl8_recycle(struct dir24_8_tbl *dp, uint32_t ip, uint64_t tbl8_idx)
 			if (nh != ptr16[i])
 				return;
 		}
-		((uint16_t *)dp->tbl24)[ip >> 8] =
+		((uint16_t *)dp->tbl24)[tbl24_idx] =
 			nh & ~DIR24_8_EXT_ENT;
 		break;
 	case RTE_FIB_DIR24_8_4B:
@@ -286,7 +368,7 @@ tbl8_recycle(struct dir24_8_tbl *dp, uint32_t ip, uint64_t tbl8_idx)
 			if (nh != ptr32[i])
 				return;
 		}
-		((uint32_t *)dp->tbl24)[ip >> 8] =
+		((uint32_t *)dp->tbl24)[tbl24_idx] =
 			nh & ~DIR24_8_EXT_ENT;
 		break;
 	case RTE_FIB_DIR24_8_8B:
@@ -297,7 +379,7 @@ tbl8_recycle(struct dir24_8_tbl *dp, uint32_t ip, uint64_t tbl8_idx)
 			if (nh != ptr64[i])
 				return;
 		}
-		((uint64_t *)dp->tbl24)[ip >> 8] =
+		((uint64_t *)dp->tbl24)[tbl24_idx] =
 			nh & ~DIR24_8_EXT_ENT;
 		break;
 	}
@@ -314,7 +396,7 @@ tbl8_recycle(struct dir24_8_tbl *dp, uint32_t ip, uint64_t tbl8_idx)
 }
 
 static int
-install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
+install_to_fib(struct dir24_8_tbl *dp, uint16_t vrf_id, uint32_t ledge, uint32_t redge,
 	uint64_t next_hop)
 {
 	uint64_t	tbl24_tmp;
@@ -328,7 +410,7 @@ install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
 
 	if (((ledge >> 8) != (redge >> 8)) || (len == 1 << 24)) {
 		if ((ROUNDUP(ledge, 24) - ledge) != 0) {
-			tbl24_tmp = get_tbl24(dp, ledge, dp->nh_sz);
+			tbl24_tmp = get_tbl24(dp, vrf_id, ledge, dp->nh_sz);
 			if ((tbl24_tmp & DIR24_8_EXT_ENT) !=
 					DIR24_8_EXT_ENT) {
 				/**
@@ -346,7 +428,7 @@ install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
 				}
 				tbl8_free_idx(dp, tmp_tbl8_idx);
 				/*update dir24 entry with tbl8 index*/
-				write_to_fib(get_tbl24_p(dp, ledge,
+				write_to_fib(get_tbl24_p(dp, vrf_id, ledge,
 					dp->nh_sz), (tbl8_idx << 1)|
 					DIR24_8_EXT_ENT,
 					dp->nh_sz, 1);
@@ -360,19 +442,19 @@ install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
 			write_to_fib((void *)tbl8_ptr, (next_hop << 1)|
 				DIR24_8_EXT_ENT,
 				dp->nh_sz, ROUNDUP(ledge, 24) - ledge);
-			tbl8_recycle(dp, ledge, tbl8_idx);
+			tbl8_recycle(dp, vrf_id, ledge, tbl8_idx);
 		}
-		write_to_fib(get_tbl24_p(dp, ROUNDUP(ledge, 24), dp->nh_sz),
+		write_to_fib(get_tbl24_p(dp, vrf_id, ROUNDUP(ledge, 24), dp->nh_sz),
 			next_hop << 1, dp->nh_sz, len);
 		if (redge & ~DIR24_8_TBL24_MASK) {
-			tbl24_tmp = get_tbl24(dp, redge, dp->nh_sz);
+			tbl24_tmp = get_tbl24(dp, vrf_id, redge, dp->nh_sz);
 			if ((tbl24_tmp & DIR24_8_EXT_ENT) !=
 					DIR24_8_EXT_ENT) {
 				tbl8_idx = tbl8_alloc(dp, tbl24_tmp);
 				if (tbl8_idx < 0)
 					return -ENOSPC;
 				/*update dir24 entry with tbl8 index*/
-				write_to_fib(get_tbl24_p(dp, redge,
+				write_to_fib(get_tbl24_p(dp, vrf_id, redge,
 					dp->nh_sz), (tbl8_idx << 1)|
 					DIR24_8_EXT_ENT,
 					dp->nh_sz, 1);
@@ -385,17 +467,17 @@ install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
 			write_to_fib((void *)tbl8_ptr, (next_hop << 1)|
 				DIR24_8_EXT_ENT,
 				dp->nh_sz, redge & ~DIR24_8_TBL24_MASK);
-			tbl8_recycle(dp, redge, tbl8_idx);
+			tbl8_recycle(dp, vrf_id, redge, tbl8_idx);
 		}
 	} else if ((redge - ledge) != 0) {
-		tbl24_tmp = get_tbl24(dp, ledge, dp->nh_sz);
+		tbl24_tmp = get_tbl24(dp, vrf_id, ledge, dp->nh_sz);
 		if ((tbl24_tmp & DIR24_8_EXT_ENT) !=
 				DIR24_8_EXT_ENT) {
 			tbl8_idx = tbl8_alloc(dp, tbl24_tmp);
 			if (tbl8_idx < 0)
 				return -ENOSPC;
 			/*update dir24 entry with tbl8 index*/
-			write_to_fib(get_tbl24_p(dp, ledge, dp->nh_sz),
+			write_to_fib(get_tbl24_p(dp, vrf_id, ledge, dp->nh_sz),
 				(tbl8_idx << 1)|
 				DIR24_8_EXT_ENT,
 				dp->nh_sz, 1);
@@ -409,13 +491,13 @@ install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
 		write_to_fib((void *)tbl8_ptr, (next_hop << 1)|
 			DIR24_8_EXT_ENT,
 			dp->nh_sz, redge - ledge);
-		tbl8_recycle(dp, ledge, tbl8_idx);
+		tbl8_recycle(dp, vrf_id, ledge, tbl8_idx);
 	}
 	return 0;
 }
 
 static int
-modify_fib(struct dir24_8_tbl *dp, struct rte_rib *rib, uint32_t ip,
+modify_fib(struct dir24_8_tbl *dp, struct rte_rib *rib, uint16_t vrf_id, uint32_t ip,
 	uint8_t depth, uint64_t next_hop)
 {
 	struct rte_rib_node *tmp = NULL;
@@ -438,7 +520,7 @@ modify_fib(struct dir24_8_tbl *dp, struct rte_rib *rib, uint32_t ip,
 					(uint32_t)(1ULL << (32 - tmp_depth));
 				continue;
 			}
-			ret = install_to_fib(dp, ledge, redge,
+			ret = install_to_fib(dp, vrf_id, ledge, redge,
 				next_hop);
 			if (ret != 0)
 				return ret;
@@ -454,7 +536,7 @@ modify_fib(struct dir24_8_tbl *dp, struct rte_rib *rib, uint32_t ip,
 			redge = ip + (uint32_t)(1ULL << (32 - depth));
 			if (ledge == redge && ledge != 0)
 				break;
-			ret = install_to_fib(dp, ledge, redge,
+			ret = install_to_fib(dp, vrf_id, ledge, redge,
 				next_hop);
 			if (ret != 0)
 				return ret;
@@ -465,7 +547,7 @@ modify_fib(struct dir24_8_tbl *dp, struct rte_rib *rib, uint32_t ip,
 }
 
 int
-dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
+dir24_8_modify(struct rte_fib *fib, uint16_t vrf_id, uint32_t ip, uint8_t depth,
 	uint64_t next_hop, int op)
 {
 	struct dir24_8_tbl *dp;
@@ -480,8 +562,13 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 		return -EINVAL;
 
 	dp = rte_fib_get_dp(fib);
-	rib = rte_fib_get_rib(fib);
-	RTE_ASSERT((dp != NULL) && (rib != NULL));
+	RTE_ASSERT(dp != NULL);
+
+	if (vrf_id >= dp->num_vrfs)
+		return -EINVAL;
+
+	rib = rte_fib_vrf_get_rib(fib, vrf_id);
+	RTE_ASSERT(rib != NULL);
 
 	if (next_hop > get_max_nh(dp->nh_sz))
 		return -EINVAL;
@@ -495,7 +582,7 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 			rte_rib_get_nh(node, &node_nh);
 			if (node_nh == next_hop)
 				return 0;
-			ret = modify_fib(dp, rib, ip, depth, next_hop);
+			ret = modify_fib(dp, rib, vrf_id, ip, depth, next_hop);
 			if (ret == 0)
 				rte_rib_set_nh(node, next_hop);
 			return 0;
@@ -518,7 +605,7 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 			if (par_nh == next_hop)
 				goto successfully_added;
 		}
-		ret = modify_fib(dp, rib, ip, depth, next_hop);
+		ret = modify_fib(dp, rib, vrf_id, ip, depth, next_hop);
 		if (ret != 0) {
 			rte_rib_remove(rib, ip, depth);
 			return ret;
@@ -536,9 +623,9 @@ successfully_added:
 			rte_rib_get_nh(parent, &par_nh);
 			rte_rib_get_nh(node, &node_nh);
 			if (par_nh != node_nh)
-				ret = modify_fib(dp, rib, ip, depth, par_nh);
+				ret = modify_fib(dp, rib, vrf_id, ip, depth, par_nh);
 		} else
-			ret = modify_fib(dp, rib, ip, depth, dp->def_nh);
+			ret = modify_fib(dp, rib, vrf_id, ip, depth, dp->def_nh[vrf_id]);
 		if (ret == 0) {
 			rte_rib_remove(rib, ip, depth);
 			if (depth > 24) {
@@ -562,7 +649,10 @@ dir24_8_create(const char *name, int socket_id, struct rte_fib_conf *fib_conf)
 	struct dir24_8_tbl *dp;
 	uint64_t	def_nh;
 	uint32_t	num_tbl8;
+	uint16_t	num_vrfs;
 	enum rte_fib_dir24_8_nh_sz	nh_sz;
+	uint64_t	tbl24_sz;
+	uint16_t	vrf;
 
 	if ((name == NULL) || (fib_conf == NULL) ||
 			(fib_conf->dir24_8.nh_sz < RTE_FIB_DIR24_8_1B) ||
@@ -580,19 +670,56 @@ dir24_8_create(const char *name, int socket_id, struct rte_fib_conf *fib_conf)
 	nh_sz = fib_conf->dir24_8.nh_sz;
 	num_tbl8 = RTE_ALIGN_CEIL(fib_conf->dir24_8.num_tbl8,
 			BITMAP_SLAB_BIT_SIZE);
+	num_vrfs = (fib_conf->max_vrfs == 0) ? 1 : fib_conf->max_vrfs;
+
+	/* Validate per-VRF default nexthops if provided */
+	if (fib_conf->vrf_default_nh != NULL) {
+		for (vrf = 0; vrf < num_vrfs; vrf++) {
+			if (fib_conf->vrf_default_nh[vrf] > get_max_nh(nh_sz)) {
+				rte_errno = EINVAL;
+				return NULL;
+			}
+		}
+	}
+
+	tbl24_sz = (uint64_t)num_vrfs * DIR24_8_TBL24_NUM_ENT * (1 << nh_sz);
 
 	snprintf(mem_name, sizeof(mem_name), "DP_%s", name);
 	dp = rte_zmalloc_socket(name, sizeof(struct dir24_8_tbl) +
-		DIR24_8_TBL24_NUM_ENT * (1 << nh_sz) + sizeof(uint32_t),
+		tbl24_sz + sizeof(uint32_t),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (dp == NULL) {
 		rte_errno = ENOMEM;
 		return NULL;
 	}
 
-	/* Init table with default value */
-	write_to_fib(dp->tbl24, (def_nh << 1), nh_sz, 1 << 24);
+	dp->num_vrfs = num_vrfs;
+	dp->nh_sz = nh_sz;
+	dp->number_tbl8s = num_tbl8;
 
+	/* Allocate per-VRF default nexthop array */
+	snprintf(mem_name, sizeof(mem_name), "DEFNH_%p", dp);
+	dp->def_nh = rte_zmalloc_socket(mem_name, num_vrfs * sizeof(uint64_t),
+			RTE_CACHE_LINE_SIZE, socket_id);
+	if (dp->def_nh == NULL) {
+		rte_errno = ENOMEM;
+		rte_free(dp);
+		return NULL;
+	}
+
+	/* Initialize all VRFs with default nexthop */
+	for (vrf = 0; vrf < num_vrfs; vrf++) {
+		uint64_t vrf_def_nh = (fib_conf->vrf_default_nh != NULL) ?
+			fib_conf->vrf_default_nh[vrf] : def_nh;
+		dp->def_nh[vrf] = vrf_def_nh;
+
+		/* Init TBL24 for this VRF with default value */
+		uint64_t vrf_offset = (uint64_t)vrf * DIR24_8_TBL24_NUM_ENT;
+		void *vrf_tbl24 = (void *)&((uint8_t *)dp->tbl24)[vrf_offset << nh_sz];
+		write_to_fib(vrf_tbl24, (vrf_def_nh << 1), nh_sz, 1 << 24);
+	}
+
+	/* Allocate shared TBL8 for all VRFs */
 	snprintf(mem_name, sizeof(mem_name), "TBL8_%p", dp);
 	uint64_t tbl8_sz = DIR24_8_TBL8_GRP_NUM_ENT * (1ULL << nh_sz) *
 			(num_tbl8 + 1);
@@ -600,12 +727,10 @@ dir24_8_create(const char *name, int socket_id, struct rte_fib_conf *fib_conf)
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (dp->tbl8 == NULL) {
 		rte_errno = ENOMEM;
+		rte_free(dp->def_nh);
 		rte_free(dp);
 		return NULL;
 	}
-	dp->def_nh = def_nh;
-	dp->nh_sz = nh_sz;
-	dp->number_tbl8s = num_tbl8;
 
 	snprintf(mem_name, sizeof(mem_name), "TBL8_idxes_%p", dp);
 	dp->tbl8_idxes = rte_zmalloc_socket(mem_name,
@@ -614,6 +739,7 @@ dir24_8_create(const char *name, int socket_id, struct rte_fib_conf *fib_conf)
 	if (dp->tbl8_idxes == NULL) {
 		rte_errno = ENOMEM;
 		rte_free(dp->tbl8);
+		rte_free(dp->def_nh);
 		rte_free(dp);
 		return NULL;
 	}
@@ -629,6 +755,7 @@ dir24_8_free(void *p)
 	rte_rcu_qsbr_dq_delete(dp->dq);
 	rte_free(dp->tbl8_idxes);
 	rte_free(dp->tbl8);
+	rte_free(dp->def_nh);
 	rte_free(dp);
 }
 
