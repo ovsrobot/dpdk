@@ -55,11 +55,11 @@ enum rte_fib6_type {
 };
 
 /** Modify FIB function */
-typedef int (*rte_fib6_modify_fn_t)(struct rte_fib6 *fib,
+typedef int (*rte_fib6_modify_fn_t)(struct rte_fib6 *fib, uint16_t vrf_id,
 	const struct rte_ipv6_addr *ip, uint8_t depth,
 	uint64_t next_hop, int op);
 /** FIB bulk lookup function */
-typedef void (*rte_fib6_lookup_fn_t)(void *fib,
+typedef void (*rte_fib6_lookup_fn_t)(void *fib, const uint16_t *vrf_ids,
 	const struct rte_ipv6_addr *ips,
 	uint64_t *next_hops, const unsigned int n);
 
@@ -97,6 +97,10 @@ struct rte_fib6_conf {
 			uint32_t	num_tbl8;
 		} trie;
 	};
+	/** Number of VRFs to support (0 or 1 = single VRF for backward compat) */
+	uint16_t max_vrfs;
+	/** Per-VRF default nexthops (NULL = use default_nh for all) */
+	uint64_t *vrf_default_nh;
 };
 
 /** FIB RCU QSBR configuration structure. */
@@ -216,6 +220,70 @@ rte_fib6_lookup_bulk(struct rte_fib6 *fib,
 	uint64_t *next_hops, int n);
 
 /**
+ * Add a route to the FIB with VRF ID.
+ *
+ * @param fib
+ *   FIB object handle
+ * @param vrf_id
+ *   VRF ID (0 to max_vrfs-1)
+ * @param ip
+ *   IPv6 prefix address to be added to the FIB
+ * @param depth
+ *   Prefix length
+ * @param next_hop
+ *   Next hop to be added to the FIB
+ * @return
+ *   0 on success, negative value otherwise
+ */
+__rte_experimental
+int
+rte_fib6_vrf_add(struct rte_fib6 *fib, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip, uint8_t depth, uint64_t next_hop);
+
+/**
+ * Delete a rule from the FIB with VRF ID.
+ *
+ * @param fib
+ *   FIB object handle
+ * @param vrf_id
+ *   VRF ID (0 to max_vrfs-1)
+ * @param ip
+ *   IPv6 prefix address to be deleted from the FIB
+ * @param depth
+ *   Prefix length
+ * @return
+ *   0 on success, negative value otherwise
+ */
+__rte_experimental
+int
+rte_fib6_vrf_delete(struct rte_fib6 *fib, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip, uint8_t depth);
+
+/**
+ * Lookup multiple IP addresses in the FIB with per-packet VRF IDs.
+ *
+ * @param fib
+ *   FIB object handle
+ * @param vrf_ids
+ *   Array of VRF IDs corresponding to ips[] (0 to max_vrfs-1)
+ * @param ips
+ *   Array of IPv6s to be looked up in the FIB
+ * @param next_hops
+ *   Next hop of the most specific rule found for IP.
+ *   This is an array of eight byte values.
+ *   If the lookup for the given IP failed, then corresponding element would
+ *   contain default nexthop value configured for that VRF.
+ * @param n
+ *   Number of elements in vrf_ids/ips/next_hops arrays to lookup.
+ * @return
+ *   -EINVAL for incorrect arguments, otherwise 0
+ */
+__rte_experimental
+int
+rte_fib6_vrf_lookup_bulk(struct rte_fib6 *fib, const uint16_t *vrf_ids,
+	const struct rte_ipv6_addr *ips, uint64_t *next_hops, int n);
+
+/**
  * Get pointer to the dataplane specific struct
  *
  * @param fib
@@ -228,7 +296,7 @@ void *
 rte_fib6_get_dp(struct rte_fib6 *fib);
 
 /**
- * Get pointer to the RIB6
+ * Get pointer to the RIB6 for VRF 0
  *
  * @param fib
  *   FIB object handle
@@ -238,6 +306,20 @@ rte_fib6_get_dp(struct rte_fib6 *fib);
  */
 struct rte_rib6 *
 rte_fib6_get_rib(struct rte_fib6 *fib);
+
+/**
+ * Get the RIB for a specific VRF.
+ *
+ * @param fib
+ *   FIB object handle
+ * @param vrf_id
+ *   VRF ID (0 to max_vrfs-1)
+ * @return
+ *   RIB for the specified VRF or NULL on error.
+ */
+__rte_experimental
+struct rte_rib6 *
+rte_fib6_vrf_get_rib(struct rte_fib6 *fib, uint16_t vrf_id);
 
 /**
  * Set lookup function based on type

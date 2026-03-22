@@ -30,22 +30,27 @@ enum edge {
 };
 
 static inline rte_fib6_lookup_fn_t
-get_scalar_fn(enum rte_fib_trie_nh_sz nh_sz)
+get_scalar_fn(const struct rte_trie_tbl *dp, enum rte_fib_trie_nh_sz nh_sz)
 {
+	bool single_vrf = dp->num_vrfs <= 1;
+
 	switch (nh_sz) {
 	case RTE_FIB6_TRIE_2B:
-		return rte_trie_lookup_bulk_2b;
+		return single_vrf ? rte_trie_lookup_bulk_2b :
+			rte_trie_lookup_bulk_vrf_2b;
 	case RTE_FIB6_TRIE_4B:
-		return rte_trie_lookup_bulk_4b;
+		return single_vrf ? rte_trie_lookup_bulk_4b :
+			rte_trie_lookup_bulk_vrf_4b;
 	case RTE_FIB6_TRIE_8B:
-		return rte_trie_lookup_bulk_8b;
+		return single_vrf ? rte_trie_lookup_bulk_8b :
+			rte_trie_lookup_bulk_vrf_8b;
 	default:
 		return NULL;
 	}
 }
 
 static inline rte_fib6_lookup_fn_t
-get_vector_fn(enum rte_fib_trie_nh_sz nh_sz)
+get_vector_fn(const struct rte_trie_tbl *dp, enum rte_fib_trie_nh_sz nh_sz)
 {
 #ifdef CC_AVX512_SUPPORT
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) <= 0 ||
@@ -53,13 +58,40 @@ get_vector_fn(enum rte_fib_trie_nh_sz nh_sz)
 			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512BW) <= 0 ||
 			rte_vect_get_max_simd_bitwidth() < RTE_VECT_SIMD_512)
 		return NULL;
+
+	if (dp->num_vrfs <= 1) {
+		switch (nh_sz) {
+		case RTE_FIB6_TRIE_2B:
+			return rte_trie_vec_lookup_bulk_2b;
+		case RTE_FIB6_TRIE_4B:
+			return rte_trie_vec_lookup_bulk_4b;
+		case RTE_FIB6_TRIE_8B:
+			return rte_trie_vec_lookup_bulk_8b;
+		default:
+			return NULL;
+		}
+	}
+
+	if (dp->num_vrfs >= 256) {
+		switch (nh_sz) {
+		case RTE_FIB6_TRIE_2B:
+			return rte_trie_vec_lookup_bulk_vrf_2b_large;
+		case RTE_FIB6_TRIE_4B:
+			return rte_trie_vec_lookup_bulk_vrf_4b_large;
+		case RTE_FIB6_TRIE_8B:
+			return rte_trie_vec_lookup_bulk_vrf_8b_large;
+		default:
+			return NULL;
+		}
+	}
+
 	switch (nh_sz) {
 	case RTE_FIB6_TRIE_2B:
-		return rte_trie_vec_lookup_bulk_2b;
+		return rte_trie_vec_lookup_bulk_vrf_2b;
 	case RTE_FIB6_TRIE_4B:
-		return rte_trie_vec_lookup_bulk_4b;
+		return rte_trie_vec_lookup_bulk_vrf_4b;
 	case RTE_FIB6_TRIE_8B:
-		return rte_trie_vec_lookup_bulk_8b;
+		return rte_trie_vec_lookup_bulk_vrf_8b;
 	default:
 		return NULL;
 	}
@@ -83,12 +115,12 @@ trie_get_lookup_fn(void *p, enum rte_fib6_lookup_type type)
 
 	switch (type) {
 	case RTE_FIB6_LOOKUP_TRIE_SCALAR:
-		return get_scalar_fn(nh_sz);
+		return get_scalar_fn(dp, nh_sz);
 	case RTE_FIB6_LOOKUP_TRIE_VECTOR_AVX512:
-		return get_vector_fn(nh_sz);
+		return get_vector_fn(dp, nh_sz);
 	case RTE_FIB6_LOOKUP_DEFAULT:
-		ret_fn = get_vector_fn(nh_sz);
-		return (ret_fn != NULL) ? ret_fn : get_scalar_fn(nh_sz);
+		ret_fn = get_vector_fn(dp, nh_sz);
+		return (ret_fn != NULL) ? ret_fn : get_scalar_fn(dp, nh_sz);
 	default:
 		return NULL;
 	}
@@ -310,19 +342,22 @@ recycle_root_path(struct rte_trie_tbl *dp, const uint8_t *ip_part,
 }
 
 static inline int
-build_common_root(struct rte_trie_tbl *dp, const struct rte_ipv6_addr *ip,
-	int common_bytes, void **tbl)
+build_common_root(struct rte_trie_tbl *dp, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip, int common_bytes, void **tbl)
 {
 	void *tbl_ptr = NULL;
 	uint64_t *cur_tbl;
 	uint64_t val;
 	int i, j, idx, prev_idx = 0;
+	uint64_t idx_tbl;
+	uint64_t tbl24_base = (uint64_t)vrf_id * TRIE_TBL24_NUM_ENT;
 
 	cur_tbl = dp->tbl24;
 	for (i = 3, j = 0; i <= common_bytes; i++) {
 		idx = get_idx(ip, prev_idx, i - j, j);
-		val = get_tbl_val_by_idx(cur_tbl, idx, dp->nh_sz);
-		tbl_ptr = get_tbl_p_by_idx(cur_tbl, idx, dp->nh_sz);
+		idx_tbl = (cur_tbl == dp->tbl24) ? idx + tbl24_base : (uint32_t)idx;
+		val = get_tbl_val_by_idx(cur_tbl, idx_tbl, dp->nh_sz);
+		tbl_ptr = get_tbl_p_by_idx(cur_tbl, idx_tbl, dp->nh_sz);
 		if ((val & TRIE_EXT_ENT) != TRIE_EXT_ENT) {
 			idx = tbl8_alloc(dp, val);
 			if (unlikely(idx < 0))
@@ -336,8 +371,11 @@ build_common_root(struct rte_trie_tbl *dp, const struct rte_ipv6_addr *ip,
 		j = i;
 		cur_tbl = dp->tbl8;
 	}
-	*tbl = get_tbl_p_by_idx(cur_tbl, prev_idx * TRIE_TBL8_GRP_NUM_ENT,
-		dp->nh_sz);
+
+	uint64_t final_idx = (cur_tbl == dp->tbl24) ?
+		(prev_idx * TRIE_TBL8_GRP_NUM_ENT + tbl24_base) :
+		(prev_idx * TRIE_TBL8_GRP_NUM_ENT);
+	*tbl = get_tbl_p_by_idx(cur_tbl, final_idx, dp->nh_sz);
 	return 0;
 }
 
@@ -385,7 +423,8 @@ write_edge(struct rte_trie_tbl *dp, const uint8_t *ip_part, uint64_t next_hop,
 #define TBL8_LEN	(RTE_IPV6_ADDR_SIZE - TBL24_BYTES)
 
 static int
-install_to_dp(struct rte_trie_tbl *dp, const struct rte_ipv6_addr *ledge,
+install_to_dp(struct rte_trie_tbl *dp, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ledge,
 	const struct rte_ipv6_addr *r, uint64_t next_hop)
 {
 	void *common_root_tbl;
@@ -409,7 +448,7 @@ install_to_dp(struct rte_trie_tbl *dp, const struct rte_ipv6_addr *ledge,
 			break;
 	}
 
-	ret = build_common_root(dp, ledge, common_bytes, &common_root_tbl);
+	ret = build_common_root(dp, vrf_id, ledge, common_bytes, &common_root_tbl);
 	if (unlikely(ret != 0))
 		return ret;
 	/*first uncommon tbl8 byte idx*/
@@ -455,7 +494,7 @@ install_to_dp(struct rte_trie_tbl *dp, const struct rte_ipv6_addr *ledge,
 
 	uint8_t	common_tbl8 = (common_bytes < TBL24_BYTES) ?
 			0 : common_bytes - (TBL24_BYTES - 1);
-	ent = get_tbl24_p(dp, ledge, dp->nh_sz);
+	ent = get_tbl24_p(dp, vrf_id, ledge, dp->nh_sz);
 	recycle_root_path(dp, ledge->a + TBL24_BYTES, common_tbl8, ent);
 	return 0;
 }
@@ -482,9 +521,8 @@ get_nxt_net(struct rte_ipv6_addr *ip, uint8_t depth)
 }
 
 static int
-modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib,
-	const struct rte_ipv6_addr *ip,
-	uint8_t depth, uint64_t next_hop)
+modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip, uint8_t depth, uint64_t next_hop)
 {
 	struct rte_rib6_node *tmp = NULL;
 	struct rte_ipv6_addr ledge, redge;
@@ -507,7 +545,7 @@ modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib,
 				get_nxt_net(&ledge, tmp_depth);
 				continue;
 			}
-			ret = install_to_dp(dp, &ledge, &redge, next_hop);
+			ret = install_to_dp(dp, vrf_id, &ledge, &redge, next_hop);
 			if (ret != 0)
 				return ret;
 			get_nxt_net(&redge, tmp_depth);
@@ -525,7 +563,7 @@ modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib,
 					!rte_ipv6_addr_is_unspec(&ledge))
 				break;
 
-			ret = install_to_dp(dp, &ledge, &redge, next_hop);
+			ret = install_to_dp(dp, vrf_id, &ledge, &redge, next_hop);
 			if (ret != 0)
 				return ret;
 		}
@@ -535,7 +573,8 @@ modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib,
 }
 
 int
-trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
+trie_modify(struct rte_fib6 *fib, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip,
 	uint8_t depth, uint64_t next_hop, int op)
 {
 	struct rte_trie_tbl *dp;
@@ -552,9 +591,11 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 		return -EINVAL;
 
 	dp = rte_fib6_get_dp(fib);
-	RTE_ASSERT(dp);
-	rib = rte_fib6_get_rib(fib);
-	RTE_ASSERT(rib);
+	rib = rte_fib6_vrf_get_rib(fib, vrf_id);
+	RTE_ASSERT((dp != NULL) && (rib != NULL));
+
+	if (vrf_id >= dp->num_vrfs)
+		return -EINVAL;
 
 	ip_masked = *ip;
 	rte_ipv6_addr_mask(&ip_masked, depth);
@@ -597,7 +638,7 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 			rte_rib6_get_nh(node, &node_nh);
 			if (node_nh == next_hop)
 				return 0;
-			ret = modify_dp(dp, rib, &ip_masked, depth, next_hop);
+			ret = modify_dp(dp, rib, vrf_id, &ip_masked, depth, next_hop);
 			if (ret == 0)
 				rte_rib6_set_nh(node, next_hop);
 			return 0;
@@ -616,7 +657,7 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 			if (par_nh == next_hop)
 				goto successfully_added;
 		}
-		ret = modify_dp(dp, rib, &ip_masked, depth, next_hop);
+		ret = modify_dp(dp, rib, vrf_id, &ip_masked, depth, next_hop);
 		if (ret != 0) {
 			rte_rib6_remove(rib, &ip_masked, depth);
 			return ret;
@@ -633,10 +674,11 @@ successfully_added:
 			rte_rib6_get_nh(parent, &par_nh);
 			rte_rib6_get_nh(node, &node_nh);
 			if (par_nh != node_nh)
-				ret = modify_dp(dp, rib, &ip_masked, depth,
+				ret = modify_dp(dp, rib, vrf_id, &ip_masked, depth,
 					par_nh);
 		} else
-			ret = modify_dp(dp, rib, &ip_masked, depth, dp->def_nh);
+			ret = modify_dp(dp, rib, vrf_id, &ip_masked, depth,
+					dp->def_nh[vrf_id]);
 
 		if (ret != 0)
 			return ret;
@@ -656,9 +698,11 @@ trie_create(const char *name, int socket_id,
 {
 	char mem_name[TRIE_NAMESIZE];
 	struct rte_trie_tbl *dp = NULL;
-	uint64_t	def_nh;
 	uint32_t	num_tbl8;
 	enum rte_fib_trie_nh_sz	nh_sz;
+	uint16_t	num_vrfs;
+	uint16_t	vrf;
+	uint64_t	tbl24_sz;
 
 	if ((name == NULL) || (conf == NULL) ||
 			(conf->trie.nh_sz < RTE_FIB6_TRIE_2B) ||
@@ -673,20 +717,27 @@ trie_create(const char *name, int socket_id,
 		return NULL;
 	}
 
-	def_nh = conf->default_nh;
 	nh_sz = conf->trie.nh_sz;
 	num_tbl8 = conf->trie.num_tbl8;
+	num_vrfs = (conf->max_vrfs == 0) ? 1 : conf->max_vrfs;
+	tbl24_sz = (uint64_t)num_vrfs * TRIE_TBL24_NUM_ENT * (1 << nh_sz);
+
+	if (conf->vrf_default_nh != NULL) {
+		for (vrf = 0; vrf < num_vrfs; vrf++) {
+			if (conf->vrf_default_nh[vrf] > get_max_nh(nh_sz)) {
+				rte_errno = EINVAL;
+				return NULL;
+			}
+		}
+	}
 
 	snprintf(mem_name, sizeof(mem_name), "DP_%s", name);
-	dp = rte_zmalloc_socket(name, sizeof(struct rte_trie_tbl) +
-		TRIE_TBL24_NUM_ENT * (1 << nh_sz) + sizeof(uint32_t),
+	dp = rte_zmalloc_socket(name, sizeof(struct rte_trie_tbl) + tbl24_sz,
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (dp == NULL) {
 		rte_errno = ENOMEM;
 		return dp;
 	}
-
-	write_to_dp(&dp->tbl24, (def_nh << 1), nh_sz, 1 << 24);
 
 	snprintf(mem_name, sizeof(mem_name), "TBL8_%p", dp);
 	dp->tbl8 = rte_zmalloc_socket(mem_name, TRIE_TBL8_GRP_NUM_ENT *
@@ -697,9 +748,32 @@ trie_create(const char *name, int socket_id,
 		rte_free(dp);
 		return NULL;
 	}
-	dp->def_nh = def_nh;
+
+	snprintf(mem_name, sizeof(mem_name), "DEF_NH_%p", dp);
+	dp->def_nh = rte_zmalloc_socket(mem_name,
+		num_vrfs * sizeof(*dp->def_nh),
+		RTE_CACHE_LINE_SIZE, socket_id);
+	if (dp->def_nh == NULL) {
+		rte_errno = ENOMEM;
+		rte_free(dp->tbl8);
+		rte_free(dp);
+		return NULL;
+	}
+
+	for (vrf = 0; vrf < num_vrfs; vrf++) {
+		uint64_t vrf_def = (conf->vrf_default_nh != NULL) ?
+			conf->vrf_default_nh[vrf] : conf->default_nh;
+		uint8_t *tbl24_ptr = (uint8_t *)dp->tbl24 +
+			((uint64_t)vrf * TRIE_TBL24_NUM_ENT << nh_sz);
+
+		dp->def_nh[vrf] = vrf_def;
+		write_to_dp((void *)tbl24_ptr, (vrf_def << 1), nh_sz,
+			TRIE_TBL24_NUM_ENT);
+	}
+
 	dp->nh_sz = nh_sz;
 	dp->number_tbl8s = num_tbl8;
+	dp->num_vrfs = num_vrfs;
 
 	snprintf(mem_name, sizeof(mem_name), "TBL8_idxes_%p", dp);
 	dp->tbl8_pool = rte_zmalloc_socket(mem_name,
@@ -707,6 +781,7 @@ trie_create(const char *name, int socket_id,
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (dp->tbl8_pool == NULL) {
 		rte_errno = ENOMEM;
+		rte_free(dp->def_nh);
 		rte_free(dp->tbl8);
 		rte_free(dp);
 		return NULL;
@@ -725,6 +800,7 @@ trie_free(void *p)
 	rte_rcu_qsbr_dq_delete(dp->dq);
 	rte_free(dp->tbl8_pool);
 	rte_free(dp->tbl8);
+	rte_free(dp->def_nh);
 	rte_free(dp);
 }
 

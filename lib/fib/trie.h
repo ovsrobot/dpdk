@@ -9,6 +9,7 @@
 #include <stdalign.h>
 
 #include <rte_common.h>
+#include <rte_debug.h>
 #include <rte_fib6.h>
 
 /**
@@ -32,18 +33,19 @@
 struct rte_trie_tbl {
 	uint32_t	number_tbl8s;	/**< Total number of tbl8s */
 	uint32_t	rsvd_tbl8s;	/**< Number of reserved tbl8s */
-	uint32_t	cur_tbl8s;	/**< Current cumber of tbl8s */
-	uint64_t	def_nh;		/**< Default next hop */
+	uint32_t	cur_tbl8s;	/**< Current number of tbl8s */
+	uint16_t	num_vrfs;	/**< Number of VRFs */
 	enum rte_fib_trie_nh_sz	nh_sz;	/**< Size of nexthop entry */
-	uint64_t	*tbl8;		/**< tbl8 table. */
-	uint32_t	*tbl8_pool;	/**< bitmap containing free tbl8 idxes*/
-	uint32_t	tbl8_pool_pos;
 	/* RCU config. */
 	enum rte_fib6_qsbr_mode rcu_mode; /**< Blocking, defer queue. */
 	struct rte_rcu_qsbr *v; /**< RCU QSBR variable. */
 	struct rte_rcu_qsbr_dq *dq; /**< RCU QSBR defer queue. */
+	uint64_t	*def_nh;	/**< Per-VRF default next hop array */
+	uint64_t	*tbl8;		/**< tbl8 table for all VRFs */
+	uint32_t	*tbl8_pool;	/**< bitmap containing free tbl8 idxes */
+	uint32_t	tbl8_pool_pos;
 	/* tbl24 table. */
-	alignas(RTE_CACHE_LINE_SIZE) uint64_t	tbl24[];
+	alignas(RTE_CACHE_LINE_SIZE) uint64_t tbl24[];
 };
 
 static inline uint32_t
@@ -53,12 +55,15 @@ get_tbl24_idx(const struct rte_ipv6_addr *ip)
 }
 
 static inline void *
-get_tbl24_p(struct rte_trie_tbl *dp, const struct rte_ipv6_addr *ip, uint8_t nh_sz)
+get_tbl24_p(struct rte_trie_tbl *dp, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip, uint8_t nh_sz)
 {
 	uint32_t tbl24_idx;
+	uint64_t base;
 
 	tbl24_idx = get_tbl24_idx(ip);
-	return (void *)&((uint8_t *)dp->tbl24)[tbl24_idx << nh_sz];
+	base = (uint64_t)vrf_id * TRIE_TBL24_NUM_ENT;
+	return (void *)&((uint8_t *)dp->tbl24)[(base + tbl24_idx) << nh_sz];
 }
 
 static inline uint8_t
@@ -110,17 +115,26 @@ is_entry_extended(uint64_t ent)
 	return (ent & TRIE_EXT_ENT) == TRIE_EXT_ENT;
 }
 
-#define LOOKUP_FUNC(suffix, type, nh_sz)				\
+#define LOOKUP_FUNC(suffix, type, is_vrf)				\
 static inline void rte_trie_lookup_bulk_##suffix(void *p,		\
-	const struct rte_ipv6_addr *ips,				\
+	const uint16_t *vrf_ids, const struct rte_ipv6_addr *ips,	\
 	uint64_t *next_hops, const unsigned int n)			\
-{									\
+{\
 	struct rte_trie_tbl *dp = (struct rte_trie_tbl *)p;		\
 	uint64_t tmp;							\
 	uint32_t i, j;							\
+	uint32_t tbl24_idx;						\
+	uint64_t base;						\
+									\
+	if (!is_vrf)						\
+		RTE_SET_USED(vrf_ids);					\
 									\
 	for (i = 0; i < n; i++) {					\
-		tmp = ((type *)dp->tbl24)[get_tbl24_idx(&ips[i])];	\
+		uint16_t vrf_id = is_vrf ? vrf_ids[i] : 0;		\
+		RTE_ASSERT(vrf_id < dp->num_vrfs);			\
+		base = (uint64_t)vrf_id * TRIE_TBL24_NUM_ENT;	\
+		tbl24_idx = get_tbl24_idx(&ips[i]);			\
+		tmp = ((type *)dp->tbl24)[base + tbl24_idx];	\
 		j = 3;							\
 		while (is_entry_extended(tmp)) {			\
 			tmp = ((type *)dp->tbl8)[ips[i].a[j++] +	\
@@ -129,9 +143,13 @@ static inline void rte_trie_lookup_bulk_##suffix(void *p,		\
 		next_hops[i] = tmp >> 1;				\
 	}								\
 }
-LOOKUP_FUNC(2b, uint16_t, 1)
-LOOKUP_FUNC(4b, uint32_t, 2)
-LOOKUP_FUNC(8b, uint64_t, 3)
+
+LOOKUP_FUNC(2b, uint16_t, false)
+LOOKUP_FUNC(4b, uint32_t, false)
+LOOKUP_FUNC(8b, uint64_t, false)
+LOOKUP_FUNC(vrf_2b, uint16_t, true)
+LOOKUP_FUNC(vrf_4b, uint32_t, true)
+LOOKUP_FUNC(vrf_8b, uint64_t, true)
 
 void
 trie_free(void *p);
@@ -144,7 +162,8 @@ rte_fib6_lookup_fn_t
 trie_get_lookup_fn(void *p, enum rte_fib6_lookup_type type);
 
 int
-trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
+trie_modify(struct rte_fib6 *fib, uint16_t vrf_id,
+	const struct rte_ipv6_addr *ip,
 	uint8_t depth, uint64_t next_hop, int op);
 
 int
