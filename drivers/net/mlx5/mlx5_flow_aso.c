@@ -469,7 +469,7 @@ mlx5_aso_sq_enqueue_burst(struct mlx5_dev_ctx_shared *sh, uint16_t n)
 	} while (max);
 	wqe->general_cseg.flags = RTE_BE32(MLX5_COMP_ALWAYS <<
 							 MLX5_COMP_MODE_OFFSET);
-	mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)wqe,
+	mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)wqe,
 			   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 			   !sh->tx_uar.dbnc);
 	return sq->elts[start_head & mask].burst_size;
@@ -576,7 +576,7 @@ mlx5_aso_push_wqe(struct mlx5_dev_ctx_shared *sh,
 {
 	if (sq->db_pi == sq->pi)
 		return;
-	mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)sq->db,
+	mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)sq->db,
 			   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 			   !sh->tx_uar.dbnc);
 	sq->db_pi = sq->pi;
@@ -885,7 +885,7 @@ mlx5_aso_mtr_sq_enqueue_single(struct mlx5_dev_ctx_shared *sh,
 	sq->head++;
 	sq->pi += 2;/* Each WQE contains 2 WQEBB's. */
 	if (push) {
-		mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)wqe,
+		mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)wqe,
 			   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 			   !sh->tx_uar.dbnc);
 		sq->db_pi = sq->pi;
@@ -1338,7 +1338,7 @@ mlx5_aso_ct_sq_enqueue_single(struct mlx5_dev_ctx_shared *sh,
 	sq->head++;
 	sq->pi += 2; /* Each WQE contains 2 WQEBB's. */
 	if (push) {
-		mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)wqe,
+		mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)wqe,
 				   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 				   !sh->tx_uar.dbnc);
 		sq->db_pi = sq->pi;
@@ -1470,7 +1470,7 @@ mlx5_aso_ct_sq_query_single(struct mlx5_dev_ctx_shared *sh,
 	 */
 	sq->pi += 2;
 	if (push) {
-		mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)wqe,
+		mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)wqe,
 				   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 				   !sh->tx_uar.dbnc);
 		sq->db_pi = sq->pi;
@@ -1904,7 +1904,7 @@ mlx5_aso_cnt_sq_enqueue_burst(struct mlx5_hws_cnt_pool *cpool,
 	} while (max);
 	wqe->general_cseg.flags = RTE_BE32(MLX5_COMP_ALWAYS <<
 							 MLX5_COMP_MODE_OFFSET);
-	mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)wqe,
+	mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)wqe,
 			   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 			   !sh->tx_uar.dbnc);
 	bursted_cnts = RTE_MIN((uint32_t)(sq->elts[0].burst_size * 4), n);

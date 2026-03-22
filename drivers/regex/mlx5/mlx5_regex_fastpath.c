@@ -215,7 +215,7 @@ send_doorbell(struct mlx5_regex_priv *priv, struct mlx5_regex_hw_qp *qp)
 
 	/* Or the fm_ce_se instead of set, avoid the fence be cleared. */
 	((struct mlx5_wqe_ctrl_seg *)wqe)->fm_ce_se |= MLX5_WQE_CTRL_CQ_UPDATE;
-	mlx5_doorbell_ring(&priv->uar.bf_db, *(volatile uint64_t *)wqe,
+	mlx5_doorbell_ring(&priv->uar.bf_db, (volatile uint64_t *)wqe,
 			   actual_pi, &qp->qp_obj.db_rec[MLX5_SND_DBR],
 			   !priv->uar.dbnc);
 }

@@ -420,8 +420,8 @@ struct mlx5_uar {
  *
  * @param uar
  *   Pointer to UAR data structure.
- * @param val
- *   value to write in big endian format.
+ * @param wqe
+ *   Pointer to the first 64 bits of the WQE to write in big endian format.
  * @param index
  *   Index of doorbell record.
  * @param db_rec
@@ -430,9 +430,13 @@ struct mlx5_uar {
  *   Decide whether to flush the DB writing using a memory barrier.
  */
 static __rte_always_inline void
-mlx5_doorbell_ring(struct mlx5_uar_data *uar, uint64_t val, uint32_t index,
-		   volatile uint32_t *db_rec, bool flash)
+mlx5_doorbell_ring(struct mlx5_uar_data *uar, volatile uint64_t *wqe,
+		   uint32_t index, volatile uint32_t *db_rec, bool flash)
 {
+	uint64_t val;
+
+	rte_compiler_barrier();
+	val = *wqe;
 	rte_io_wmb();
 	*db_rec = rte_cpu_to_be_32(index);
 	/* Ensure ordering between DB record actual update and UAR access. */

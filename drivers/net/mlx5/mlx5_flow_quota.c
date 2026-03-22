@@ -312,7 +312,7 @@ mlx5_quota_cmd_wqe(struct rte_eth_dev *dev, struct mlx5_quota *quota_obj,
 	sq->head++;
 	sq->pi += 2; /* Each WQE contains 2 WQEBB */
 	if (push) {
-		mlx5_doorbell_ring(&sh->tx_uar.bf_db, *(volatile uint64_t *)wqe,
+		mlx5_doorbell_ring(&sh->tx_uar.bf_db, (volatile uint64_t *)wqe,
 				   sq->pi, &sq->sq_obj.db_rec[MLX5_SND_DBR],
 				   !sh->tx_uar.dbnc);
 		sq->db_pi = sq->pi;

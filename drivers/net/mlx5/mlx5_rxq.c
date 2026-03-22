@@ -1265,7 +1265,8 @@ mlx5_arm_cq(struct mlx5_rxq_data *rxq, int sq_n_rxq)
 	doorbell_hi = sq_n << MLX5_CQ_SQN_OFFSET | (rxq->cq_ci & MLX5_CI_MASK);
 	doorbell = (uint64_t)doorbell_hi << 32;
 	doorbell |= rxq->cqn;
-	mlx5_doorbell_ring(&rxq->uar_data, rte_cpu_to_be_64(doorbell),
+	doorbell = rte_cpu_to_be_64(doorbell);
+	mlx5_doorbell_ring(&rxq->uar_data, &doorbell,
 			   doorbell_hi, &rxq->cq_db[MLX5_CQ_ARM_DB], 0);
 }
 

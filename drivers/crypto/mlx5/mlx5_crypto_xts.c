@@ -353,7 +353,7 @@ mlx5_crypto_xts_enqueue_burst(void *queue_pair, struct rte_crypto_op **ops,
 		qp->pi++;
 	} while (--remain);
 	qp->stats.enqueued_count += nb_ops;
-	mlx5_doorbell_ring(&priv->uar.bf_db, *(volatile uint64_t *)qp->wqe,
+	mlx5_doorbell_ring(&priv->uar.bf_db, (volatile uint64_t *)qp->wqe,
 			   qp->db_pi, &qp->qp_obj.db_rec[MLX5_SND_DBR],
 			   !priv->uar.dbnc);
 	return nb_ops;

@@ -589,7 +589,7 @@ mlx5_compress_enqueue_burst(void *queue_pair, struct rte_comp_op **ops,
 		qp->pi++;
 	} while (--remain);
 	qp->stats.enqueued_count += nb_ops;
-	mlx5_doorbell_ring(&qp->priv->uar.bf_db, *(volatile uint64_t *)wqe,
+	mlx5_doorbell_ring(&qp->priv->uar.bf_db, (volatile uint64_t *)wqe,
 			   qp->pi, &qp->qp.db_rec[MLX5_SND_DBR],
 			   !qp->priv->uar.dbnc);
 	return nb_ops;

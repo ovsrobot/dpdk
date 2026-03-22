@@ -858,12 +858,12 @@ mlx5_crypto_gcm_enqueue_burst(void *queue_pair,
 		RTE_BE32(MLX5_COMP_ALWAYS << MLX5_COMP_MODE_OFFSET);
 	/* Only when there are no pending SEND_EN WQEs in background. */
 	if (!umr_cnt && !qp->has_umr) {
-		mlx5_doorbell_ring(&priv->uar.bf_db, *(volatile uint64_t *)qp->wqe,
+		mlx5_doorbell_ring(&priv->uar.bf_db, (volatile uint64_t *)qp->wqe,
 				   qp->pi, &qp->qp_obj.db_rec[MLX5_SND_DBR],
 				   !priv->uar.dbnc);
 	} else {
 		mlx5_crypto_gcm_build_send_en(qp);
-		mlx5_doorbell_ring(&priv->uar.bf_db, *(volatile uint64_t *)qp->umr_wqe,
+		mlx5_doorbell_ring(&priv->uar.bf_db, (volatile uint64_t *)qp->umr_wqe,
 				   qp->umr_pi, &qp->umr_qp_obj.db_rec[MLX5_SND_DBR],
 				   !priv->uar.dbnc);
 		qp->last_gga_pi = qp->pi;
@@ -1078,7 +1078,7 @@ mlx5_crypto_gcm_ipsec_enqueue_burst(void *queue_pair,
 	/* Update the last GGA cseg with COMP. */
 	((struct mlx5_wqe_cseg *)qp->wqe)->flags =
 		RTE_BE32(MLX5_COMP_ALWAYS << MLX5_COMP_MODE_OFFSET);
-	mlx5_doorbell_ring(&priv->uar.bf_db, *(volatile uint64_t *)qp->wqe,
+	mlx5_doorbell_ring(&priv->uar.bf_db, (volatile uint64_t *)qp->wqe,
 			   qp->pi, &qp->qp_obj.db_rec[MLX5_SND_DBR],
 			   !priv->uar.dbnc);
 	return nb_ops;

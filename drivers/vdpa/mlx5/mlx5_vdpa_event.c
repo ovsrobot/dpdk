@@ -77,7 +77,7 @@ mlx5_vdpa_cq_arm(struct mlx5_vdpa_priv *priv, struct mlx5_vdpa_cq *cq)
 	uint64_t doorbell = ((uint64_t)doorbell_hi << 32) | cq->cq_obj.cq->id;
 	uint64_t db_be = rte_cpu_to_be_64(doorbell);
 
-	mlx5_doorbell_ring(&priv->uar.cq_db, db_be, doorbell_hi,
+	mlx5_doorbell_ring(&priv->uar.cq_db, &db_be, doorbell_hi,
 			   &cq->cq_obj.db_rec[MLX5_CQ_ARM_DB], 0);
 	cq->arm_sn++;
 	cq->armed = 1;
