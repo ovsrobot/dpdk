@@ -717,7 +717,7 @@ check_config(void)
 	 * get_vrf_bits(nb_vrfs) must be strictly less than
 	 * the total nexthop width.
 	 */
-	if ((config.nb_vrfs > 1) && !(config.flags & IPV6_FLAG)) {
+	if (config.nb_vrfs > 1) {
 		uint8_t nh_sz = rte_ctz32(config.ent_sz);
 		uint8_t vrf_bits = get_vrf_bits(config.nb_vrfs);
 		/* - 2 to leave at least 1 bit for nexthop and 1 bit for ext_ent flag */
@@ -1165,6 +1165,7 @@ run_v6(void)
 {
 	uint64_t start, acc;
 	uint64_t def_nh = 0;
+	uint8_t nh_sz = rte_ctz32(config.ent_sz);
 	struct rte_fib6 *fib;
 	struct rte_fib6_conf conf = {0};
 	struct rt_rule_6 *rt;
@@ -1175,6 +1176,7 @@ run_v6(void)
 	struct rte_ipv6_addr *tbl6;
 	uint64_t fib_nh[BURST_SZ];
 	int32_t lpm_nh[BURST_SZ];
+	uint16_t *vrf_ids = NULL;
 
 	rt = (struct rt_rule_6 *)config.rt;
 	tbl6 = config.lookup_tbl;
@@ -1189,15 +1191,37 @@ run_v6(void)
 		return ret;
 	}
 
+	/* Allocate VRF IDs array for lookups if using multiple VRFs */
+	if (config.nb_vrfs > 1) {
+		vrf_ids = rte_malloc(NULL, sizeof(uint16_t) * config.nb_lookup_ips, 0);
+		if (vrf_ids == NULL) {
+			printf("Can not alloc VRF IDs array\n");
+			return -ENOMEM;
+		}
+		/* Generate random VRF IDs for each lookup */
+		for (i = 0; i < config.nb_lookup_ips; i++)
+			vrf_ids[i] = rte_rand() % config.nb_vrfs;
+	}
+
 	conf.type = get_fib_type();
 	conf.default_nh = def_nh;
 	conf.max_routes = config.nb_routes * 2;
 	conf.rib_ext_sz = 0;
+	conf.max_vrfs = config.nb_vrfs;
+	conf.vrf_default_nh = NULL;
 	if (conf.type == RTE_FIB6_TRIE) {
 		conf.trie.nh_sz = rte_ctz32(config.ent_sz);
 		conf.trie.num_tbl8 = RTE_MIN(config.tbl8,
 			get_max_nh(conf.trie.nh_sz));
 	}
+
+	conf.vrf_default_nh = rte_malloc(NULL, conf.max_vrfs * sizeof(uint64_t), 0);
+	if (conf.vrf_default_nh == NULL) {
+		printf("Can not alloc VRF default nexthops array\n");
+		return -ENOMEM;
+	}
+	for (i = 0; i < conf.max_vrfs; i++)
+		conf.vrf_default_nh[i] = encode_vrf_nh(i, def_nh, nh_sz);
 
 	fib = rte_fib6_create("test", -1, &conf);
 	if (fib == NULL) {
@@ -1223,12 +1247,28 @@ run_v6(void)
 	for (k = config.print_fract, i = 0; k > 0; k--) {
 		start = rte_rdtsc_precise();
 		for (j = 0; j < (config.nb_routes - i) / k; j++) {
-			ret = rte_fib6_add(fib, &rt[i + j].addr,
-				rt[i + j].depth, rt[i + j].nh);
-			if (unlikely(ret != 0)) {
-				printf("Can not add a route to FIB, err %d\n",
-					ret);
-				return -ret;
+			uint32_t idx = i + j;
+			if (config.nb_vrfs > 1) {
+				uint16_t vrf_id;
+				for (vrf_id = 0; vrf_id < config.nb_vrfs; vrf_id++) {
+					uint64_t nh = encode_vrf_nh(vrf_id, rt[idx].nh,
+						nh_sz);
+					ret = rte_fib6_vrf_add(fib, vrf_id, &rt[idx].addr,
+						rt[idx].depth, nh);
+					if (unlikely(ret != 0)) {
+						printf("Can not add a route to FIB, err %d\n",
+							ret);
+						return -ret;
+					}
+				}
+			} else {
+				ret = rte_fib6_add(fib, &rt[idx].addr,
+					rt[idx].depth, rt[idx].nh);
+				if (unlikely(ret != 0)) {
+					printf("Can not add a route to FIB, err %d\n",
+						ret);
+					return -ret;
+				}
 			}
 		}
 		printf("AVG FIB add %"PRIu64"\n",
@@ -1268,15 +1308,33 @@ run_v6(void)
 	acc = 0;
 	for (i = 0; i < config.nb_lookup_ips; i += BURST_SZ) {
 		start = rte_rdtsc_precise();
-		ret = rte_fib6_lookup_bulk(fib, &tbl6[i],
-			fib_nh, BURST_SZ);
+		if (config.nb_vrfs > 1)
+			ret = rte_fib6_vrf_lookup_bulk(fib, vrf_ids + i,
+				&tbl6[i], fib_nh, BURST_SZ);
+		else
+			ret = rte_fib6_lookup_bulk(fib, &tbl6[i],
+				fib_nh, BURST_SZ);
 		acc += rte_rdtsc_precise() - start;
 		if (ret != 0) {
 			printf("FIB lookup fails, err %d\n", ret);
 			return -ret;
 		}
+		/* Validate VRF IDs in returned nexthops */
+		if (config.nb_vrfs > 1) {
+			for (j = 0; j < BURST_SZ; j++) {
+				uint16_t returned_vrf = decode_vrf_nh(fib_nh[j],
+					nh_sz);
+				if (returned_vrf != vrf_ids[i + j]) {
+					printf("VRF validation failed: expected VRF %u, got %u\n",
+						vrf_ids[i + j], returned_vrf);
+					return -1;
+				}
+			}
+		}
 	}
 	printf("AVG FIB lookup %.1f\n", (double)acc / (double)i);
+	if (config.nb_vrfs > 1)
+		printf("VRF validation passed\n");
 
 	if (config.flags & CMP_FLAG) {
 		acc = 0;
@@ -1314,8 +1372,17 @@ run_v6(void)
 
 	for (k = config.print_fract, i = 0; k > 0; k--) {
 		start = rte_rdtsc_precise();
-		for (j = 0; j < (config.nb_routes - i) / k; j++)
-			rte_fib6_delete(fib, &rt[i + j].addr, rt[i + j].depth);
+		for (j = 0; j < (config.nb_routes - i) / k; j++) {
+			uint32_t idx = i + j;
+			if (config.nb_vrfs > 1) {
+				uint16_t vrf_id;
+				for (vrf_id = 0; vrf_id < config.nb_vrfs; vrf_id++)
+					rte_fib6_vrf_delete(fib, vrf_id, &rt[idx].addr,
+						rt[idx].depth);
+			} else {
+				rte_fib6_delete(fib, &rt[idx].addr, rt[idx].depth);
+			}
+		}
 
 		printf("AVG FIB delete %"PRIu64"\n",
 			(rte_rdtsc_precise() - start) / j);
@@ -1334,6 +1401,9 @@ run_v6(void)
 			i += j;
 		}
 	}
+
+	if (vrf_ids != NULL)
+		rte_free(vrf_ids);
 	return 0;
 }
 
