@@ -26,6 +26,9 @@ test_pmd_tap(void)
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#include <linux/if_packet.h>
 
 #include <rte_ethdev.h>
 #include <rte_bus_vdev.h>
@@ -1106,6 +1109,240 @@ test_tap_tx_burst(void)
 	return TEST_SUCCESS;
 }
 
+/*
+ * Inject a raw Ethernet frame via an AF_PACKET socket bound to the TAP's
+ * Linux interface and attempt to receive it with rte_eth_rx_burst.
+ */
+static int
+tap_inject_packet(const char *ifname, const struct rte_ether_addr *dst)
+{
+	uint8_t frame[RTE_ETHER_MIN_LEN - RTE_ETHER_CRC_LEN];
+	union {
+		struct sockaddr_ll sll;
+		struct sockaddr sock;
+	} addr;
+	struct rte_ether_hdr *eth;
+	unsigned int ifindex;
+	int fd;
+
+	ifindex = if_nametoindex(ifname);
+	if (ifindex == 0) {
+		printf("Error: if_nametoindex(%s) failed\n", ifname);
+		return -1;
+	}
+
+	fd = socket(AF_PACKET, SOCK_RAW, RTE_BE16(RTE_ETHER_TYPE_IPV4));
+	if (fd < 0) {
+		printf("Error: AF_PACKET socket failed: %s\n", strerror(errno));
+		return -1;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sll.sll_family = AF_PACKET;
+	addr.sll.sll_ifindex = ifindex;
+	addr.sll.sll_protocol = RTE_BE16(RTE_ETHER_TYPE_IPV4);
+
+	if (bind(fd, &addr.sock, sizeof(addr.sll)) < 0) {
+		printf("Error: bind to %s failed: %s\n", ifname, strerror(errno));
+		close(fd);
+		return -1;
+	}
+
+	memset(frame, 0, sizeof(frame));
+	eth = (struct rte_ether_hdr *)frame;
+	eth->dst_addr = *dst;
+	eth->src_addr = (struct rte_ether_addr){{0x02, 0, 0, 0xbb, 0, 0xaa}};
+	eth->ether_type = RTE_BE16(RTE_ETHER_TYPE_IPV4);
+
+	if (send(fd, frame, sizeof(frame), 0) < 0) {
+		printf("Error: send failed: %s\n", strerror(errno));
+		close(fd);
+		return -1;
+	}
+
+	close(fd);
+	return 0;
+}
+
+static uint16_t
+tap_drain_rx(int port, const struct rte_ether_addr *dst)
+{
+	struct rte_mbuf *mbufs[MAX_PKT_BURST];
+	struct rte_ether_hdr *eth;
+	uint16_t total = 0;
+
+	/* drain the rxq 10 times to ensure the kernel has sent the packet */
+	for (uint16_t i = 0; i < 10; i++) {
+		uint16_t nb_rx = rte_eth_rx_burst(port, 0, mbufs, MAX_PKT_BURST);
+		for (uint16_t j = 0; j < nb_rx; j++) {
+			eth = rte_pktmbuf_mtod(mbufs[j], struct rte_ether_hdr *);
+			if (dst != NULL && rte_is_same_ether_addr(&eth->dst_addr, dst))
+				total += 1;
+			rte_pktmbuf_free(mbufs[j]);
+		}
+		usleep(1000);
+	}
+
+	return total;
+}
+
+static int
+test_tap_mac_filter(void)
+{
+	struct rte_ether_addr bcast_mac = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+	struct rte_ether_addr mcast_mac = {{0x01, 0, 0x5e, 0, 0, 0x01}};
+	struct rte_ether_addr foreign_mac = {{0x02, 0, 0, 0, 0, 0xaa}};
+	static const char *ifname = "dtap_test0";
+	struct rte_ether_addr port_mac;
+	uint16_t nb_rx;
+	int ret;
+
+	printf("Testing TAP MAC address filtering\n");
+
+	ret = rte_eth_macaddr_get(tap_port0, &port_mac);
+	if (ret != 0) {
+		printf("Error: failed to get MAC for port %d\n", tap_port0);
+		return TEST_FAILED;
+	}
+
+	/* Disable promisc so MAC filter is active */
+	rte_eth_promiscuous_disable(tap_port0);
+	rte_eth_allmulticast_disable(tap_port0);
+
+	/* Drain any stale packets */
+	tap_drain_rx(tap_port0, NULL);
+
+	/* Test 1: packet to port's own MAC should be received */
+	printf("  Test: unicast to own MAC\n");
+	ret = tap_inject_packet(ifname, &port_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &port_mac);
+	if (nb_rx == 0) {
+		printf("Error: packet to own MAC was not received\n");
+		return TEST_FAILED;
+	}
+	printf("    Received %u packet(s) - OK\n", nb_rx);
+
+	/* Test 2: packet to foreign unicast MAC should be dropped */
+	printf("  Test: unicast to foreign MAC\n");
+	ret = tap_inject_packet(ifname, &foreign_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &foreign_mac);
+	if (nb_rx != 0) {
+		printf("Error: packet to foreign MAC was not dropped (%u received)\n", nb_rx);
+		return TEST_FAILED;
+	}
+	printf("    Dropped - OK\n");
+
+	/* Test 3: broadcast should always be received */
+	printf("  Test: broadcast\n");
+	ret = tap_inject_packet(ifname, &bcast_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &bcast_mac);
+	if (nb_rx == 0) {
+		printf("Error: broadcast packet was not received\n");
+		return TEST_FAILED;
+	}
+	printf("    Received %u packet(s) - OK\n", nb_rx);
+
+	/* Test 4: promisc mode should bypass the filter */
+	printf("  Test: promisc receives foreign MAC\n");
+	rte_eth_promiscuous_enable(tap_port0);
+	ret = tap_inject_packet(ifname, &foreign_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &foreign_mac);
+	if (nb_rx == 0) {
+		printf("Error: promisc mode did not receive foreign MAC\n");
+		rte_eth_promiscuous_disable(tap_port0);
+		return TEST_FAILED;
+	}
+	printf("    Received %u packet(s) - OK\n", nb_rx);
+	rte_eth_promiscuous_disable(tap_port0);
+
+	/* Test 5: multicast without allmulti and without mc list should drop */
+	printf("  Test: multicast dropped without mc list\n");
+	ret = tap_inject_packet(ifname, &mcast_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &mcast_mac);
+	if (nb_rx != 0) {
+		printf("Error: multicast was not dropped (%u received)\n", nb_rx);
+		return TEST_FAILED;
+	}
+	printf("    Dropped - OK\n");
+
+	/* Test 6: multicast with matching mc list should be received */
+	printf("  Test: multicast received with mc list\n");
+	ret = rte_eth_dev_set_mc_addr_list(tap_port0, &mcast_mac, 1);
+	if (ret != 0) {
+		printf("Error: set_mc_addr_list failed: %s\n", rte_strerror(-ret));
+		return TEST_FAILED;
+	}
+	ret = tap_inject_packet(ifname, &mcast_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &mcast_mac);
+	if (nb_rx == 0) {
+		printf("Error: multicast with matching mc list was not received\n");
+		return TEST_FAILED;
+	}
+	printf("    Received %u packet(s) - OK\n", nb_rx);
+	rte_eth_dev_set_mc_addr_list(tap_port0, NULL, 0);
+
+	/* Test 7: allmulti should receive any multicast */
+	printf("  Test: allmulti receives multicast\n");
+	rte_eth_allmulticast_enable(tap_port0);
+	ret = tap_inject_packet(ifname, &mcast_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &mcast_mac);
+	if (nb_rx == 0) {
+		printf("Error: allmulti did not receive multicast\n");
+		rte_eth_allmulticast_disable(tap_port0);
+		return TEST_FAILED;
+	}
+	printf("    Received %u packet(s) - OK\n", nb_rx);
+	rte_eth_allmulticast_disable(tap_port0);
+
+	/* Test 8: secondary unicast MAC via mac_addr_add */
+	printf("  Test: secondary unicast MAC\n");
+	ret = rte_eth_dev_mac_addr_add(tap_port0, &foreign_mac, 0);
+	if (ret != 0) {
+		printf("Error: mac_addr_add failed: %s\n", rte_strerror(-ret));
+		return TEST_FAILED;
+	}
+	ret = tap_inject_packet(ifname, &foreign_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &foreign_mac);
+	if (nb_rx == 0) {
+		printf("Error: packet to added MAC was not received\n");
+		return TEST_FAILED;
+	}
+	printf("    Received %u packet(s) - OK\n", nb_rx);
+
+	/* Remove and verify it's dropped again */
+	rte_eth_dev_mac_addr_remove(tap_port0, &foreign_mac);
+	ret = tap_inject_packet(ifname, &foreign_mac);
+	if (ret < 0)
+		return TEST_FAILED;
+	nb_rx = tap_drain_rx(tap_port0, &foreign_mac);
+	if (nb_rx != 0) {
+		printf("Error: packet to removed MAC was not dropped (%u received)\n", nb_rx);
+		return TEST_FAILED;
+	}
+	printf("    Dropped after remove - OK\n");
+
+	/* Restore promisc (default state) */
+	rte_eth_promiscuous_enable(tap_port0);
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite test_pmd_tap_suite = {
 	.setup = test_tap_setup,
 	.teardown = test_tap_cleanup,
@@ -1128,6 +1365,7 @@ static struct unit_test_suite test_pmd_tap_suite = {
 		TEST_CASE(test_tap_multiqueue),
 		TEST_CASE(test_tap_rx_queue_setup),
 		TEST_CASE(test_tap_tx_burst),
+		TEST_CASE(test_tap_mac_filter),
 		TEST_CASES_END()
 	}
 };
