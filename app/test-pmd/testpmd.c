@@ -4448,8 +4448,11 @@ init_port_dcb_config(portid_t pid,
 				nb_rxq = rte_port->dev_info.max_rx_queues;
 				nb_txq = rte_port->dev_info.max_tx_queues;
 			} else {
-				nb_rxq = (queueid_t)num_tcs;
-				nb_txq = (queueid_t)num_tcs;
+				/* if vt disabled and vmdq_pool_base greater than 0,
+				 * use vmdq queue layout
+				 */
+				nb_rxq = rte_port->dev_info.vmdq_queue_num;
+				nb_txq = rte_port->dev_info.vmdq_queue_num;
 			}
 		}
 	}
