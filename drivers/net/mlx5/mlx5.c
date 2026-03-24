@@ -2652,6 +2652,7 @@ const struct eth_dev_ops mlx5_dev_ops = {
 	.rx_metadata_negotiate = mlx5_flow_rx_metadata_negotiate,
 	.get_restore_flags = mlx5_get_restore_flags,
 	.set_queue_rate_limit = mlx5_set_queue_rate_limit,
+	.get_queue_rate_limit = mlx5_get_queue_rate_limit,
 };
 
 /* Available operations from secondary process. */
@@ -2746,6 +2747,7 @@ const struct eth_dev_ops mlx5_dev_ops_isolate = {
 	.map_aggr_tx_affinity = mlx5_map_aggr_tx_affinity,
 	.get_restore_flags = mlx5_get_restore_flags,
 	.set_queue_rate_limit = mlx5_set_queue_rate_limit,
+	.get_queue_rate_limit = mlx5_get_queue_rate_limit,
 };
 
 /**
