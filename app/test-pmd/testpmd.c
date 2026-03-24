@@ -545,9 +545,17 @@ uint8_t record_core_cycles;
 uint8_t record_burst_stats;
 
 /*
- * Number of ports per shared Rx queue group, 0 disable.
+ * Enable Rx queue sharing between ports in the same switch and Rx domain.
  */
-uint32_t rxq_share;
+uint8_t rxq_share;
+
+struct share_group_slot {
+	uint16_t domain_id;
+	uint16_t rx_domain;
+	uint16_t share_group;
+};
+
+static struct share_group_slot share_group_slots[RTE_MAX_ETHPORTS];
 
 unsigned int num_sockets = 0;
 unsigned int socket_ids[RTE_MAX_NUMA_NODES];
@@ -585,6 +593,73 @@ int proc_id;
  * configure the queues to be polled.
  */
 unsigned int num_procs = 1;
+
+static uint16_t
+assign_share_group(struct rte_eth_dev_info *dev_info)
+{
+	unsigned int first_free = RTE_DIM(share_group_slots);
+	bool found = false;
+	unsigned int i;
+
+	for (i = 0; i < RTE_DIM(share_group_slots); i++) {
+		if (share_group_slots[i].share_group > 0) {
+			if (dev_info->switch_info.domain_id == share_group_slots[i].domain_id &&
+			    dev_info->switch_info.rx_domain == share_group_slots[i].rx_domain) {
+				found = true;
+				break;
+			}
+		} else if (first_free == RTE_DIM(share_group_slots)) {
+			first_free = i;
+		}
+	}
+
+	if (found)
+		return share_group_slots[i].share_group;
+
+	/*
+	 * testpmd assigns all queues on a given port to single share group.
+	 * There are RTE_MAX_ETHPORTS share group slots,
+	 * so at least one should always be available.
+	 */
+	RTE_ASSERT(first_free < RTE_DIM(share_group_slots));
+
+	share_group_slots[first_free].domain_id = dev_info->switch_info.domain_id;
+	share_group_slots[first_free].rx_domain = dev_info->switch_info.rx_domain;
+	share_group_slots[first_free].share_group = first_free + 1;
+	return share_group_slots[first_free].share_group;
+}
+
+static void
+try_release_share_group(struct share_group_slot *slot)
+{
+	uint16_t pi;
+	bool group_not_used = true;
+
+	/* Check if any port still uses this share group. */
+	RTE_ETH_FOREACH_DEV(pi) {
+		if (ports[pi].dev_info.switch_info.domain_id == slot->domain_id &&
+		    ports[pi].dev_info.switch_info.rx_domain == slot->rx_domain) {
+			group_not_used = false;
+			break;
+		}
+	}
+	if (group_not_used) {
+		slot->share_group = 0;
+		slot->domain_id = 0;
+		slot->rx_domain = 0;
+	}
+}
+
+static void
+try_release_share_groups(void)
+{
+	unsigned int i;
+
+	/* Try release each used share group. */
+	for (i = 0; i < RTE_DIM(share_group_slots); i++)
+		if (share_group_slots[i].share_group > 0)
+			try_release_share_group(&share_group_slots[i]);
+}
 
 static void
 eth_rx_metadata_negotiate_mp(uint16_t port_id)
@@ -3315,6 +3390,7 @@ remove_invalid_ports(void)
 	remove_invalid_ports_in(ports_ids, &nb_ports);
 	remove_invalid_ports_in(fwd_ports_ids, &nb_fwd_ports);
 	nb_cfg_ports = nb_fwd_ports;
+	try_release_share_groups();
 }
 
 static void
@@ -4097,7 +4173,7 @@ rxtx_port_config(portid_t pid)
 		if (rxq_share > 0 &&
 		    (port->dev_info.dev_capa & RTE_ETH_DEV_CAPA_RXQ_SHARE)) {
 			/* Non-zero share group to enable RxQ share. */
-			port->rxq[qid].conf.share_group = pid / rxq_share + 1;
+			port->rxq[qid].conf.share_group = assign_share_group(&port->dev_info);
 			port->rxq[qid].conf.share_qid = qid; /* Equal mapping. */
 		}
 
