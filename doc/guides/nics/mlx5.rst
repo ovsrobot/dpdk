@@ -2493,6 +2493,10 @@ DPDK       24.11
 Limitations
 ^^^^^^^^^^^
 
+#. With the async template API, the target table must be pre-created
+   before adding a jump action that redirects to a specialized table.
+   The jump will fail if the destination table does not exist yet.
+
 #. With the async template API, jumping to a template table
    with ``RTE_FLOW_TABLE_SPECIALIZE_TRANSFER_WIRE_ORIG`` specialization
    from a template table with a different specialization
