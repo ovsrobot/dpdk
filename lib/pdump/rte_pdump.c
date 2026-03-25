@@ -9,6 +9,7 @@
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
 #include <rte_lcore.h>
+#include <rte_ether.h>
 #include <rte_log.h>
 #include <rte_memzone.h>
 #include <rte_errno.h>
@@ -135,6 +136,29 @@ pdump_cb_release(struct pdump_rxtx_cbs *cbs)
 	rte_atomic_store_explicit(&cbs->use_count, count, rte_memory_order_release);
 }
 
+/*
+ * Reconstruct VLAN tag in packet data if it was offloaded to metadata.
+ *
+ * When VLAN strip is active on RX, or VLAN insert is pending on TX,
+ * the VLAN tag exists only in mbuf metadata (vlan_tci / ol_flags)
+ * and not in the packet data.  For packet capture we need the
+ * complete wire-format packet, so insert the tag back into the
+ * cloned mbuf.
+ */
+static inline void
+pdump_vlan_restore(struct rte_mbuf *m)
+{
+	if (m->ol_flags & (RTE_MBUF_F_RX_VLAN_STRIPPED | RTE_MBUF_F_TX_VLAN)) {
+		if (rte_vlan_insert(&m) != 0)
+			return;
+		/*
+		 * Clear offload flags so the pcap writer sees the packet
+		 * as a plain tagged frame rather than acting on these again.
+		 */
+		m->ol_flags &= ~(RTE_MBUF_F_RX_VLAN_STRIPPED | RTE_MBUF_F_TX_VLAN);
+	}
+}
+
 /* Create a clone of mbuf to be placed into ring. */
 static void
 pdump_copy_burst(uint16_t port_id, uint16_t queue_id,
@@ -182,8 +206,14 @@ pdump_copy_burst(uint16_t port_id, uint16_t queue_id,
 
 		if (unlikely(p == NULL))
 			rte_atomic_fetch_add_explicit(&stats->nombuf, 1, rte_memory_order_relaxed);
-		else
+		else {
+			/*
+			 * Restore any VLAN tag that was offloaded to metadata
+			 * so the captured packet has the complete wire format.
+			 */
+			pdump_vlan_restore(p);
 			dup_bufs[d_pkts++] = p;
+		}
 	}
 
 	if (d_pkts == 0)
