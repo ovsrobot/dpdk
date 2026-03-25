@@ -6,13 +6,16 @@
 #define _HOTPLUG_MP_H_
 
 #include "rte_dev.h"
+#include "rte_eal.h"
 
 #define EAL_DEV_MP_ACTION_REQUEST      "eal_dev_mp_request"
 #define EAL_DEV_MP_ACTION_RESPONSE     "eal_dev_mp_response"
 
 #define EAL_DEV_MP_DEV_NAME_MAX_LEN RTE_DEV_NAME_MAX_LEN
 #define EAL_DEV_MP_BUS_NAME_MAX_LEN 32
+#ifndef EAL_DEV_MP_DEV_ARGS_MAX_LEN
 #define EAL_DEV_MP_DEV_ARGS_MAX_LEN 128
+#endif
 
 enum eal_dev_req_type {
 	EAL_DEV_REQ_TYPE_ATTACH,
@@ -26,6 +29,9 @@ struct eal_dev_mp_req {
 	char devargs[EAL_DEV_MP_DEV_ARGS_MAX_LEN];
 	int result;
 };
+
+static_assert(sizeof(struct eal_dev_mp_req) <= RTE_MP_MAX_PARAM_LEN,
+	"eal_dev_mp_req exceeds RTE_MP_MAX_PARAM_LEN, increase mp_max_param_len");
 
 /**
  * Register all mp action callbacks for hotplug.

@@ -158,7 +158,9 @@ bool rte_mp_disable(void);
 
 #define RTE_MP_MAX_FD_NUM	253  /* The max amount of fds (see SCM_MAX_FD) */
 #define RTE_MP_MAX_NAME_LEN	64   /* The max length of action name */
+#ifndef RTE_MP_MAX_PARAM_LEN
 #define RTE_MP_MAX_PARAM_LEN	256  /* The max length of param */
+#endif
 struct rte_mp_msg {
 	char name[RTE_MP_MAX_NAME_LEN];
 	int len_param;
