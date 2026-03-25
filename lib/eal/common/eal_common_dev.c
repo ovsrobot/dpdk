@@ -250,6 +250,11 @@ rte_dev_probe(const char *devargs)
 
 	memset(&req, 0, sizeof(req));
 	req.t = EAL_DEV_REQ_TYPE_ATTACH;
+	if (strlen(devargs) >= EAL_DEV_MP_DEV_ARGS_MAX_LEN) {
+		EAL_LOG(ERR, "devargs truncated (len %zu, max %d)",
+			strlen(devargs), EAL_DEV_MP_DEV_ARGS_MAX_LEN);
+		return -E2BIG;
+	}
 	strlcpy(req.devargs, devargs, EAL_DEV_MP_DEV_ARGS_MAX_LEN);
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
@@ -397,6 +402,12 @@ rte_dev_remove(struct rte_device *dev)
 
 	memset(&req, 0, sizeof(req));
 	req.t = EAL_DEV_REQ_TYPE_DETACH;
+	if (strlen(devargs) >= EAL_DEV_MP_DEV_ARGS_MAX_LEN) {
+		EAL_LOG(ERR, "devargs truncated (len %zu, max %d)",
+			strlen(devargs), EAL_DEV_MP_DEV_ARGS_MAX_LEN);
+		free(devargs);
+		return -E2BIG;
+	}
 	strlcpy(req.devargs, devargs, EAL_DEV_MP_DEV_ARGS_MAX_LEN);
 	free(devargs);
 
