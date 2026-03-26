@@ -490,7 +490,7 @@ zxdh_dev_free_mbufs(struct rte_eth_dev *dev)
 		if (!vq)
 			continue;
 		while ((buf = zxdh_queue_detach_unused(vq)) != NULL)
-			rte_pktmbuf_free(buf);
+			rte_pktmbuf_free_seg(buf);
 		PMD_DRV_LOG(DEBUG, "freeing %s[%d] used and unused buf",
 		"rxq", i * 2);
 	}
@@ -499,7 +499,7 @@ zxdh_dev_free_mbufs(struct rte_eth_dev *dev)
 		if (!vq)
 			continue;
 		while ((buf = zxdh_queue_detach_unused(vq)) != NULL)
-			rte_pktmbuf_free(buf);
+			rte_pktmbuf_free_seg(buf);
 		PMD_DRV_LOG(DEBUG, "freeing %s[%d] used and unused buf",
 		"txq", i * 2 + 1);
 	}
@@ -644,7 +644,6 @@ zxdh_init_queue(struct rte_eth_dev *dev, uint16_t vtpci_logic_qidx)
 	struct zxdh_virtnet_tx *txvq = NULL;
 	struct zxdh_virtqueue *vq = NULL;
 	size_t sz_hdr_mz = 0;
-	void *sw_ring = NULL;
 	int32_t queue_type = zxdh_get_queue_type(vtpci_logic_qidx);
 	int32_t numa_node = dev->device->numa_node;
 	uint16_t vtpci_phy_qidx = 0;
@@ -692,11 +691,10 @@ zxdh_init_queue(struct rte_eth_dev *dev, uint16_t vtpci_logic_qidx)
 	vq->vq_queue_index = vtpci_phy_qidx;
 	vq->vq_nentries = vq_size;
 
-	vq->vq_packed.used_wrap_counter = 1;
-	vq->vq_packed.cached_flags = ZXDH_VRING_PACKED_DESC_F_AVAIL;
-	vq->vq_packed.event_flags_shadow = 0;
+	vq->used_wrap_counter = 1;
+	vq->cached_flags = ZXDH_VRING_PACKED_DESC_F_AVAIL;
 	if (queue_type == ZXDH_VTNET_RQ)
-		vq->vq_packed.cached_flags |= ZXDH_VRING_DESC_F_WRITE;
+		vq->cached_flags |= ZXDH_VRING_DESC_F_WRITE;
 
 	/*
 	 * Reserve a memzone for vring elements
@@ -741,46 +739,28 @@ zxdh_init_queue(struct rte_eth_dev *dev, uint16_t vtpci_logic_qidx)
 	}
 
 	if (queue_type == ZXDH_VTNET_RQ) {
-		size_t sz_sw = (ZXDH_MBUF_BURST_SZ + vq_size) * sizeof(vq->sw_ring[0]);
-
-		sw_ring = rte_zmalloc_socket("sw_ring", sz_sw, RTE_CACHE_LINE_SIZE, numa_node);
-		if (!sw_ring) {
-			PMD_DRV_LOG(ERR, "can not allocate RX soft ring");
-			ret = -ENOMEM;
-			goto fail_q_alloc;
-		}
-
-		vq->sw_ring = sw_ring;
 		rxvq = &vq->rxq;
 		rxvq->vq = vq;
 		rxvq->port_id = dev->data->port_id;
 		rxvq->mz = mz;
 	} else {             /* queue_type == VTNET_TQ */
+		if (hdr_mz == NULL) {
+			ret = -ENOMEM;
+			PMD_DRV_LOG(ERR, "can not allocate TX soft ring: %d", ret);
+			goto fail_q_alloc;
+		}
 		txvq = &vq->txq;
 		txvq->vq = vq;
 		txvq->port_id = dev->data->port_id;
 		txvq->mz = mz;
 		txvq->zxdh_net_hdr_mz = hdr_mz;
-		txvq->zxdh_net_hdr_mem = hdr_mz->iova;
+		if (hdr_mz)
+			txvq->zxdh_net_hdr_mem = hdr_mz->iova;
 	}
 
-	vq->offset = offsetof(struct rte_mbuf, buf_iova);
-	if (queue_type == ZXDH_VTNET_TQ) {
+	if (queue_type == ZXDH_VTNET_TQ && hdr_mz) {
 		struct zxdh_tx_region *txr = hdr_mz->addr;
-		uint32_t i;
-
 		memset(txr, 0, vq_size * sizeof(*txr));
-		for (i = 0; i < vq_size; i++) {
-			/* first indirect descriptor is always the tx header */
-			struct zxdh_vring_packed_desc *start_dp = txr[i].tx_packed_indir;
-
-			zxdh_vring_desc_init_indirect_packed(start_dp,
-					RTE_DIM(txr[i].tx_packed_indir));
-			start_dp->addr = txvq->zxdh_net_hdr_mem + i * sizeof(*txr) +
-					offsetof(struct zxdh_tx_region, tx_hdr);
-			/* length will be updated to actual pi hdr size when xmit pkt */
-			start_dp->len = 0;
-		}
 	}
 	if (ZXDH_VTPCI_OPS(hw)->setup_queue(hw, vq) < 0) {
 		PMD_DRV_LOG(ERR, "setup_queue failed");
@@ -788,8 +768,8 @@ zxdh_init_queue(struct rte_eth_dev *dev, uint16_t vtpci_logic_qidx)
 	}
 	return 0;
 fail_q_alloc:
-	rte_free(sw_ring);
-	rte_memzone_free(hdr_mz);
+	if (hdr_mz)
+		rte_memzone_free(hdr_mz);
 	rte_memzone_free(mz);
 	rte_free(vq);
 	return ret;
@@ -1290,18 +1270,49 @@ zxdh_dev_close(struct rte_eth_dev *dev)
 	return ret;
 }
 
+/*
+ * Determine whether the current configuration requires support for scattered
+ * receive; return 1 if scattered receive is required and 0 if not.
+ */
+static int zxdh_scattered_rx(struct rte_eth_dev *eth_dev)
+{
+	uint16_t buf_size;
+
+	if (eth_dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_TCP_LRO) {
+		eth_dev->data->lro = 1;
+		return 1;
+	}
+
+	if (eth_dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_SCATTER)
+		return 1;
+
+
+	PMD_DRV_LOG(DEBUG, "port %d min_rx_buf_size %d",
+		eth_dev->data->port_id, eth_dev->data->min_rx_buf_size);
+	buf_size = eth_dev->data->min_rx_buf_size - RTE_PKTMBUF_HEADROOM;
+	if (eth_dev->data->mtu + ZXDH_ETH_OVERHEAD > buf_size)
+		return 1;
+
+	return 0;
+}
+
 static int32_t
 zxdh_set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 {
-	struct zxdh_hw *hw = eth_dev->data->dev_private;
+	uint64_t tx_offloads = eth_dev->data->dev_conf.txmode.offloads;
 
-	if (!zxdh_pci_with_feature(hw, ZXDH_NET_F_MRG_RXBUF)) {
-		PMD_DRV_LOG(ERR, "port %u not support rx mergeable", eth_dev->data->port_id);
-		return -1;
-	}
 	eth_dev->tx_pkt_prepare = zxdh_xmit_pkts_prepare;
-	eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
-	eth_dev->rx_pkt_burst = &zxdh_recv_pkts_packed;
+	eth_dev->data->scattered_rx = zxdh_scattered_rx(eth_dev);
+
+	if (!(tx_offloads & RTE_ETH_TX_OFFLOAD_MULTI_SEGS))
+		eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_simple;
+	else
+		eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
+
+	if (eth_dev->data->scattered_rx)
+		eth_dev->rx_pkt_burst = &zxdh_recv_pkts_packed;
+	else
+		eth_dev->rx_pkt_burst = &zxdh_recv_single_pkts;
 
 	return 0;
 }
