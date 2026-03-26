@@ -41,6 +41,34 @@ Supported Chipsets and NICs
 - Intel Ethernet Converged Network Adapter E610-XT4
 - Intel Ethernet Converged Network Adapter E610-IT4
 
+Kernel driver, DDP and Firmware Matching List
+---------------------------------------------
+
+It is highly recommended to upgrade the ixgbe kernel driver and firmware
+to avoid the compatibility issues with i40e PMD.
+The table below shows a summary of the DPDK versions
+with corresponding out-of-tree Linux kernel drivers and firmware.
+The full list of in-tree and out-of-tree Linux kernel drivers from kernel.org
+and Linux distributions that were tested and verified
+are listed in the Tested Platforms section of the Release Notes for each release.
+
+For E610.
+
+   +--------------+-----------------------+------------------+
+   | DPDK version | Kernel driver version | Firmware version |
+   +==============+=======================+==================+
+   |     26.03    |         6.3.4         |       1.41       |
+   +--------------+-----------------------+------------------+
+
+For X550.
+
+   +--------------+-----------------------+------------------+
+   | DPDK version | Kernel driver version | Firmware version |
+   +==============+=======================+==================+
+   |     26.03    |         6.3.4         |       3.70       |
+   +--------------+-----------------------+------------------+
+
+
 Vector PMD for IXGBE
 --------------------
 
