@@ -681,6 +681,9 @@ numa_realloc(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 
 out_dev_realloc:
 
+	if (vq->index > 0)
+		return;
+
 	if (dev->flags & VIRTIO_DEV_RUNNING)
 		return;
 
