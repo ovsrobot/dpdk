@@ -1108,17 +1108,22 @@ tap_dev_close(struct rte_eth_dev *dev)
 #endif
 
 	for (i = 0; i < RTE_PMD_TAP_MAX_QUEUES; i++) {
-		struct rx_queue *rxq = dev->data->rx_queues[i];
+		struct rx_queue *rxq = NULL;
+		struct rx_queue *txq = NULL;
 
 		tap_queue_close(process_private, i);
 
+		if (dev->data->rx_queues != NULL)
+			rxq = dev->data->rx_queues[i];
 		if (rxq != NULL) {
 			tap_rxq_pool_free(rxq->pool);
 			rte_free(rxq);
 			dev->data->rx_queues[i] = NULL;
 		}
 
-		if (dev->data->tx_queues[i] != NULL) {
+		if (dev->data->tx_queues != NULL)
+			txq = dev->data->tx_queues[i];
+		if (txq != NULL) {
 			rte_free(dev->data->tx_queues[i]);
 			dev->data->tx_queues[i] = NULL;
 		}
