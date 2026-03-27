@@ -88,11 +88,11 @@ New Features
 
 * **Updated Huawei hinic3 ethernet driver.**
 
-  * Added support for Huawei new SPx NICs, including SP230 and SP920 (DPU).
-  * Added support for GENEVE tunnel TSO, IP-in-IP tunnel TSO of SP230.
-  * Added support for VXLAN-GPE checksum of SP620.
+  * Added support for Huawei's new SPx NICs, including SP230 and SP920 (DPU).
+  * Added support for GENEVE tunnel TSO and IP-in-IP tunnel TSO on the SP230.
+  * Added support for VXLAN-GPE checksum on the SP620.
   * Added support for tunnel packet outer UDP checksum.
-  * Added support for QinQ of SP620.
+  * Added support for QinQ on the SP620.
 
 * **Updated Intel idpf ethernet driver.**
 
@@ -126,7 +126,7 @@ New Features
 
 * **Added 256-NEA/NCA/NIA algorithms in cryptodev library.**
 
-  Added support for following wireless algorithms:
+  Added support for the following wireless algorithms:
   * NEA4, NIA4, NCA4: Snow 5G confidentiality, integrity and AEAD modes.
   * NEA5, NIA5, NCA5: AES 256 confidentiality, integrity and AEAD modes.
   * NEA6, NIA6, NCA6: ZUC 256 confidentiality, integrity and AEAD modes.
@@ -150,7 +150,7 @@ New Features
 
 * **Added Ctrl+L support to cmdline library.**
 
-  Added handling of the key combination Control+L
+  Added handling of the key combination Ctrl+L
   to clear the screen before redisplaying the prompt.
 
 
@@ -174,7 +174,7 @@ Removed Items
 
   The SSE path was not widely used, so it was removed
   from the i40e, iavf and ice drivers.
-  Each of these drivers have faster vector paths (AVX2 and AVX-512)
+  Each of these drivers has faster vector paths (AVX2 and AVX-512)
   which have feature parity with the SSE paths,
   and a fallback scalar path which also has feature parity.
 
@@ -199,17 +199,17 @@ API Changes
   Several library functions now have additional name length checks
   instead of silently truncating.
 
-  * lpm: name must be less than RTE_LPM_NAMESIZE.
-  * hash: name parameter must be less than RTE_HASH_NAMESIZE.
-  * efd: name must be less than RTE_EFD_NAMESIZE.
-  * tailq: name must be less than RTE_TAILQ_NAMESIZE.
-  * cfgfile: name must be less than CFG_NAME_LEN
-    and value must be less than CFG_VALUE_LEN.
+  * lpm: name must be less than ``RTE_LPM_NAMESIZE``.
+  * hash: name parameter must be less than ``RTE_HASH_NAMESIZE``.
+  * efd: name must be less than ``RTE_EFD_NAMESIZE``.
+  * tailq: name must be less than ``RTE_TAILQ_NAMESIZE``.
+  * cfgfile: name must be less than ``CFG_NAME_LEN``
+    and value must be less than ``CFG_VALUE_LEN``.
 
 * **Updated the pcapng library.**
 
   * The length of comment strings is now validated.
-    Maximum allowable length is 2^16-1 because of pcapng file format.
+    Maximum allowable length is 2^16-1 because of the pcapng file format.
 
 
 ABI Changes
