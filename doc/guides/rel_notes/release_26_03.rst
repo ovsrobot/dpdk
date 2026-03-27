@@ -153,3 +153,126 @@ ABI Changes
 
 Tested Platforms
 ----------------
+
+* Intel\ |reg| platforms with Intel\ |reg| NICs combinations
+
+  * CPU
+
+    * Intel\ |reg| Xeon\ |reg| 6740E  CPU @ 2.4GHz
+    * Intel\ |reg| Xeon\ |reg| 6756P-B  CPU @ 2.2GHz
+    * Intel\ |reg| Xeon\ |reg| 6760P  CPU @ 2.2GHz
+    * Intel\ |reg| Xeon\ |reg| 6767P
+    * Intel\ |reg| Xeon\ |reg| 6767P  CPU @ 2.4GHz
+    * Intel\ |reg| Xeon\ |reg| CPU Max 9480
+    * Intel\ |reg| Xeon\ |reg| CPU Max 9480  CPU @ 1.9GHz
+    * Intel\ |reg| Xeon\ |reg| D-2796NT CPU @ 2.00GHz  CPU @ 2.0GHz
+    * Intel\ |reg| Xeon\ |reg| Gold 6348 CPU @ 2.60GHz  CPU @ 2.0GHz
+    * Intel\ |reg| Xeon\ |reg| Gold 6430L
+    * Intel\ |reg| Xeon\ |reg| Gold 6430L  CPU @ 1.9GHz
+    * Intel\ |reg| Xeon\ |reg| Platinum 8380 CPU @ 2.30GHz  CPU @ 2.3GHz
+    * Intel\ |reg| Xeon\ |reg| Platinum 8468H  CPU @ 2.1GHz
+    * Intel\ |reg| Xeon\ |reg| Platinum 8490H
+    * Intel\ |reg| Xeon\ |reg| Platinum 8490H  CPU @ 1.9GHz
+
+  * OS:
+
+    * Fedora 43
+    * FreeBSD 15.0
+    * Microsoft Azure Linux 3.0
+    * OpenAnolis OS 8.10
+    * openEuler 24.03 (LTS-SP2)
+    * Red Hat Enterprise Linux Server release 10
+    * Red Hat Enterprise Linux Server release 9.6
+    * Ubuntu 24.04.3 LTS
+    * Ubuntu 24.04.4 LTS
+    * Vmware Exsi 9.0
+
+  * NICs:
+
+    * Intel\ |reg| Ethernet Controller E810-C for SFP (4x25G)
+
+      * Firmware version: 4.91 0x8002147b 1.3909.0
+      * Device id (pf/vf): 8086:1593 / 8086:1889
+      * Driver version(out-of-tree): 2.4.5 (ice)
+      * Driver version(in-tree): 6.8.0-87-generic (Ubuntu24.04.3 LTS) (ice)
+      * OS Default DDP: 1.3.53.0
+      * COMMS DDP: 1.3.61.0
+      * Wireless Edge DDP: 1.3.25.0
+
+    * Intel\ |reg| Ethernet Controller E810-C for QSFP (2x100G)
+
+      * Firmware version: 4.91 0x800214ae 1.3909.0
+      * Device id (pf/vf): 8086:1592 / 8086:1889
+      * Driver version(out-of-tree): 2.4.5 (ice)
+      * Driver version(in-tree): 6.6.119.3-1.azl3 (Microsoft Azure Linux 3.0) /
+        6.12.0-55.9.1.el10_0.x86_64+rt (RHEL10) (ice)
+      * OS Default DDP: 1.3.53.0
+      * COMMS DDP: 1.3.61.0
+      * Wireless Edge DDP: 1.3.25.0
+
+    * Intel\ |reg| Ethernet Controller E830-CC for QSFP
+
+      * Firmware version: 1.20 0x80017ef4 1.3909.0
+      * Device id (pf/vf): 8086:12d2 / 8086:1889
+      * Driver version: 2.4.5 (ice)
+      * OS Default DDP: 1.3.53.0
+      * COMMS DDP: 1.3.61.0
+      * Wireless Edge DDP: 1.3.25.0
+
+    * Intel\ |reg| Ethernet Connection E825-C for QSFP
+
+      * Firmware version: 4.04 0x80007e5c 1.3885.0
+      * Device id (pf/vf): 8086:579d / 8086:1889
+      * Driver version: 2.4.5 (ice)
+      * OS Default DDP: 1.3.53.0
+      * COMMS DDP: 1.3.61.0
+      * Wireless Edge DDP: 1.3.25.0
+
+    * Intel\ |reg| Ethernet Network Adapter E610-XT2
+
+      * Firmware version: 1.41 0x8000eda0 1.3909.0
+      * Device id (pf/vf): 8086:57b0 / 8086:57ad
+      * Driver version(out-of-tree): 6.3.4 (ixgbe)
+
+    * Intel\ |reg| Corporation Ethernet Controller X550
+
+      * Firmware version: 0x80001860, 1.3105.0
+      * Device id (pf/vf): 8086:1563 / 8086:1565
+      * Driver version(out-of-tree): 6.3.4 (ixgbe)
+
+    * Intel\ |reg| Ethernet Converged Network Adapter X710-DA4 (4x10G)
+
+      * Firmware version: 9.56 0x800100c4 1.3909.0
+      * Device id (pf/vf): 8086:1572 / 8086:154c
+      * Driver version(in-tree): 6.12.0-55.9.1.el10_0.x86_64 (RHEL10) (i40e)
+
+    * Intel\ |reg| Ethernet Converged Network Adapter XXV710-DA2 (2x25G)
+
+      * Firmware version:  9.56 0x80010121 1.3909.0
+      * Device id (pf/vf): 8086:158b / 8086:154c
+      * Driver version(out-of-tree): 2.28.16 (i40e)
+
+    * Intel\ |reg| Ethernet Converged Network Adapter XL710-QDA2 (2X40G)
+
+      * Firmware version(PF): 9.56 0x80010101 1.3909.0
+      * Device id (pf/vf): 8086:1583 / 8086:154c
+      * Driver version(out-of-tree): 2.28.16 (i40e)
+      * Driver version(in-tree): 6.8.0-101-generic (Ubuntu24.04.3 LTS) (i40e)
+
+    * Intel\ |reg| Corporation Ethernet Connection X722 for 10GbE SFP (2x10G)
+
+      * Firmware version: 6.51 0x80004430 1.3909.0
+      * Device id (pf/vf): 8086:37d0 / 8086:37cd
+      * Driver version(out-of-tree): 2.28.16 (i40e)
+
+    * Intel\ |reg| Ethernet Controller I226-LM
+
+      * Firmware version: 2.14, 0x8000028c
+      * Device id (pf): 8086:125b
+      * Driver version(in-tree): 6.8.0-88-generic (Ubuntu24.04.3 LTS) (igc)
+
+    * Intel\ |reg| Infrastructure Processing Unit (Intel\ |reg| IPU) E2100
+
+      * Firmware version: ci-ts.release.2.0.0.11126
+      * Device id (idpf/cpfl): 8086:1452/8086:1453
+      * Driver version: 0.0.772 (idpf)
