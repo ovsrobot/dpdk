@@ -6714,6 +6714,10 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 	}
 #endif
 
+	uint16_t requested_pkts = nb_pkts;
+	uint16_t filtered_pkts = 0;
+	rte_mbuf_history_mark_bulk(tx_pkts, nb_pkts, RTE_MBUF_HISTORY_OP_TX);
+
 #ifdef RTE_ETHDEV_RXTX_CALLBACKS
 	{
 		void *cb;
@@ -6727,22 +6731,41 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 		cb = rte_atomic_load_explicit(&p->txq.clbk[queue_id],
 				rte_memory_order_relaxed);
 		if (unlikely(cb != NULL))
-			nb_pkts = rte_eth_call_tx_callbacks(port_id, queue_id,
-					tx_pkts, nb_pkts, cb);
+			filtered_pkts = nb_pkts -
+				rte_eth_call_tx_callbacks(port_id, queue_id, tx_pkts, nb_pkts, cb);
 	}
 #endif
 
-	uint16_t requested_pkts = nb_pkts;
-	rte_mbuf_history_mark_bulk(tx_pkts, nb_pkts, RTE_MBUF_HISTORY_OP_TX);
+	uint16_t sent_pkts = p->tx_pkt_burst(qd, tx_pkts, nb_pkts - filtered_pkts);
+	uint16_t result_pkts = sent_pkts + filtered_pkts;
 
-	nb_pkts = p->tx_pkt_burst(qd, tx_pkts, nb_pkts);
+	if (unlikely(result_pkts < requested_pkts)) {
+		uint16_t unsent_pkts = requested_pkts - result_pkts;
 
-	if (requested_pkts > nb_pkts)
-		rte_mbuf_history_mark_bulk(tx_pkts + nb_pkts,
-				requested_pkts - nb_pkts, RTE_MBUF_HISTORY_OP_TX_BUSY);
+		if (unlikely(filtered_pkts > 0)) {
+			/* Need to reshuffle packet list so that unsent packets are
+			 * after the return value
+			 *
+			 * Original: MMMMMM
+			 * Filter:   MMMMMF filtered = 1
+			 * Tx_burst: SSSUUF sent = 3 unsent = 2
+			 *
+			 * Return:   SSSFUU
+			 *   return from tx_burst is 4
+			 */
+			memmove(tx_pkts + result_pkts, tx_pkts + sent_pkts,
+				unsent_pkts * sizeof(struct rte_mbuf *));
 
-	rte_ethdev_trace_tx_burst(port_id, queue_id, (void **)tx_pkts, nb_pkts);
-	return nb_pkts;
+			/* Tx filter process does not drop the packets until here */
+			rte_pktmbuf_free_bulk(tx_pkts + sent_pkts, filtered_pkts);
+		}
+
+		rte_mbuf_history_mark_bulk(tx_pkts + result_pkts, unsent_pkts,
+					   RTE_MBUF_HISTORY_OP_TX_BUSY);
+	}
+
+	rte_ethdev_trace_tx_burst(port_id, queue_id, (void **)tx_pkts, result_pkts);
+	return result_pkts;
 }
 
 /**
