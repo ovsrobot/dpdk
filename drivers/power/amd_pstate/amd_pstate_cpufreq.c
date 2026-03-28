@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include <rte_memcpy.h>
 #include <rte_stdatomic.h>
@@ -291,15 +292,21 @@ out:
 	return ret;
 }
 
-/**
- * It is to fopen the sys file for the future setting the lcore frequency.
- */
+static inline unsigned long
+abs_diff(unsigned long a, unsigned long b)
+{
+	return (a > b) ? a - b : b - a;
+}
+
 static int
 power_init_for_setting_freq(struct amd_pstate_power_info *pi)
 {
-	FILE *f = NULL;
+	FILE *f;
 	char buf[BUFSIZ];
-	uint32_t i, freq;
+	char *endptr;
+	unsigned long freq, freq_conv;
+	unsigned long best_diff, diff;
+	uint32_t i, best_idx;
 	int ret;
 
 	open_core_sysfs_file(&f, "rw+", POWER_SYSFILE_SETSPEED, pi->lcore_id);
@@ -308,7 +315,6 @@ power_init_for_setting_freq(struct amd_pstate_power_info *pi)
 				POWER_SYSFILE_SETSPEED);
 		goto err;
 	}
-
 	ret = read_core_sysfs_s(f, buf, sizeof(buf));
 	if (ret < 0) {
 		POWER_LOG(ERR, "Failed to read %s",
@@ -316,24 +322,44 @@ power_init_for_setting_freq(struct amd_pstate_power_info *pi)
 		goto err;
 	}
 
-	freq = strtoul(buf, NULL, POWER_CONVERT_TO_DECIMAL);
+	errno = 0;
+	freq = strtoul(buf, &endptr, POWER_CONVERT_TO_DECIMAL);
+	if (errno != 0 || endptr == buf || freq == 0) {
+		POWER_LOG(ERR, "Failed to parse frequency '%s' for lcore %u",
+				buf, pi->lcore_id);
+		goto err;
+	}
 
 	/* convert the frequency to nearest 1000 value
 	 * Ex: if freq=1396789 then freq_conv=1397000
 	 * Ex: if freq=800030 then freq_conv=800000
 	 */
-	unsigned int freq_conv = 0;
-	freq_conv = (freq + FREQ_ROUNDING_DELTA)
-				/ ROUND_FREQ_TO_N_1000;
+	freq_conv = (freq + FREQ_ROUNDING_DELTA) / ROUND_FREQ_TO_N_1000;
 	freq_conv = freq_conv * ROUND_FREQ_TO_N_1000;
 
-	for (i = 0; i < pi->nb_freqs; i++) {
-		if (freq_conv == pi->freqs[i]) {
-			pi->curr_idx = i;
-			pi->f = f;
-			return 0;
+	/* Find the nearest frequency in the table.
+	 * With amd-pstate the CPU runs at continuously variable
+	 * frequencies so the current frequency will not exactly
+	 * match one of the synthesized frequency buckets.
+	 */
+	best_idx = 0;
+	best_diff = abs_diff(freq_conv, pi->freqs[0]);
+
+	for (i = 1; i < pi->nb_freqs; i++) {
+		diff = abs_diff(freq_conv, pi->freqs[i]);
+		if (diff < best_diff) {
+			best_diff = diff;
+			best_idx = i;
 		}
 	}
+
+	POWER_DEBUG_LOG("Freq %lu rounded to %lu matched bucket [%u] = %u "
+			"for lcore %u", freq, freq_conv, best_idx,
+			pi->freqs[best_idx], pi->lcore_id);
+
+	pi->curr_idx = best_idx;
+	pi->f = f;
+	return 0;
 
 err:
 	if (f != NULL)
