@@ -798,7 +798,9 @@ burst_xmit_l34_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
 							<= pkt_end)
 						l4hash = HASH_L4_PORTS(tcp_hdr);
 				} else if (ipv4_hdr->next_proto_id ==
-								IPPROTO_UDP) {
+						IPPROTO_UDP ||
+						ipv4_hdr->next_proto_id ==
+						IPPROTO_UDPLITE) {
 					udp_hdr = (struct rte_udp_hdr *)
 						((char *)ipv4_hdr +
 							ip_hdr_offset);
@@ -815,7 +817,8 @@ burst_xmit_l34_hash(struct rte_mbuf **buf, uint16_t nb_pkts,
 			if (ipv6_hdr->proto == IPPROTO_TCP) {
 				tcp_hdr = (struct rte_tcp_hdr *)(ipv6_hdr + 1);
 				l4hash = HASH_L4_PORTS(tcp_hdr);
-			} else if (ipv6_hdr->proto == IPPROTO_UDP) {
+			} else if (ipv6_hdr->proto == IPPROTO_UDP ||
+					ipv6_hdr->proto == IPPROTO_UDPLITE) {
 				udp_hdr = (struct rte_udp_hdr *)(ipv6_hdr + 1);
 				l4hash = HASH_L4_PORTS(udp_hdr);
 			}
