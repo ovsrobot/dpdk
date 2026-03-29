@@ -770,6 +770,33 @@ struct rte_mbuf_ext_shared_info {
 static_assert((RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL) == UINT64_C(0x60) << (7 * CHAR_BIT),
 		"(RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL) is not 0x60 at MSB");
 
+#if defined(RTE_TOOLCHAIN_GCC) && defined(RTE_ARCH_X86)
+/* Optimization for code size.
+ * GCC only optimizes single-bit MSB tests this way, so we do it by hand with multi-bit.
+ *
+ * The flags RTE_MBUF_F_INDIRECT and RTE_MBUF_F_EXTERNAL are both in the MSB of the
+ * 64-bit ol_flags field, so we only compare this one byte instead of all 64 bits.
+ * On little endian architecture, the MSB of a 64-bit integer is at byte offest 7.
+ *
+ * Note: Tested using GCC version 16.0.0 20251019 (experimental).
+ *
+ * Without this optimization, GCC generates 17 bytes of instructions:
+ *      movabs rax,0x6000000000000000       // 10 bytes
+ *      and    rax,QWORD PTR [rdi+0x18]     // 4 bytes
+ *      sete   al                           // 3 bytes
+ * With this optimization, GCC generates only 7 bytes of instructions:
+ *      test   BYTE PTR [rdi+0x1f],0x60     // 4 bytes
+ *      sete   al                           // 3 bytes
+ */
+#undef RTE_MBUF_DIRECT
+#define RTE_MBUF_DIRECT(mb) \
+	(!(((const uint8_t *)(mb))[offsetof(struct rte_mbuf, ol_flags) + 7] & \
+	(uint8_t)((RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL) >> (7 * 8))))
+static_assert(((RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL) >> (7 * 8)) << (7 * 8) ==
+	(RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL),
+	"RTE_MBUF_F_INDIRECT and/or RTE_MBUF_F_EXTERNAL are not in MSB.");
+#endif
+
 /** Uninitialized or unspecified port. */
 #define RTE_MBUF_PORT_INVALID UINT16_MAX
 /** For backwards compatibility. */
