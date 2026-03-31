@@ -14,24 +14,21 @@
 #include <rte_branch_prediction.h>
 #include <rte_rcu_qsbr.h>
 
+#include "fib_tbl8.h"
+
 /**
  * @file
  * DIR24_8 algorithm
  */
 
 #define DIR24_8_TBL24_NUM_ENT		(1 << 24)
-#define DIR24_8_TBL8_GRP_NUM_ENT	256U
 #define DIR24_8_EXT_ENT			1
 #define DIR24_8_TBL24_MASK		0xffffff00
-
-#define BITMAP_SLAB_BIT_SIZE_LOG2	6
-#define BITMAP_SLAB_BIT_SIZE		(1 << BITMAP_SLAB_BIT_SIZE_LOG2)
-#define BITMAP_SLAB_BITMASK		(BITMAP_SLAB_BIT_SIZE - 1)
 
 struct dir24_8_tbl {
 	uint32_t	number_tbl8s;	/**< Total number of tbl8s */
 	uint32_t	rsvd_tbl8s;	/**< Number of reserved tbl8s */
-	uint32_t	cur_tbl8s;	/**< Current number of tbl8s */
+	uint32_t	tbl8_pool_pos;	/**< Next free index in pool */
 	enum rte_fib_dir24_8_nh_sz	nh_sz;	/**< Size of nexthop entry */
 	/* RCU config. */
 	enum rte_fib_qsbr_mode rcu_mode;/* Blocking, defer queue. */
@@ -39,7 +36,7 @@ struct dir24_8_tbl {
 	struct rte_rcu_qsbr_dq *dq;	/* RCU QSBR defer queue. */
 	uint64_t	def_nh;		/**< Default next hop */
 	uint64_t	*tbl8;		/**< tbl8 table. */
-	uint64_t	*tbl8_idxes;	/**< bitmap containing free tbl8 idxes*/
+	uint32_t	*tbl8_pool;	/**< Stack of free tbl8 indices */
 	/* tbl24 table. */
 	alignas(RTE_CACHE_LINE_SIZE) uint64_t	tbl24[];
 };
@@ -72,7 +69,7 @@ get_tbl24_idx(uint32_t ip)
 static  inline uint32_t
 get_tbl8_idx(uint32_t res, uint32_t ip)
 {
-	return (res >> 1) * DIR24_8_TBL8_GRP_NUM_ENT + (uint8_t)ip;
+	return (res >> 1) * FIB_TBL8_GRP_NUM_ENT + (uint8_t)ip;
 }
 
 static inline uint64_t
@@ -133,14 +130,14 @@ static inline void dir24_8_lookup_bulk_##suffix(void *p, const uint32_t *ips, \
 		tmp = ((type *)dp->tbl24)[ips[i] >> 8];			\
 		if (unlikely(is_entry_extended(tmp)))			\
 			tmp = ((type *)dp->tbl8)[(uint8_t)ips[i] +	\
-				((tmp >> 1) * DIR24_8_TBL8_GRP_NUM_ENT)]; \
+				((tmp >> 1) * FIB_TBL8_GRP_NUM_ENT)]; \
 		next_hops[i] = tmp >> 1;				\
 	}								\
 	for (; i < n; i++) {						\
 		tmp = ((type *)dp->tbl24)[ips[i] >> 8];			\
 		if (unlikely(is_entry_extended(tmp)))			\
 			tmp = ((type *)dp->tbl8)[(uint8_t)ips[i] +	\
-				((tmp >> 1) * DIR24_8_TBL8_GRP_NUM_ENT)]; \
+				((tmp >> 1) * FIB_TBL8_GRP_NUM_ENT)]; \
 		next_hops[i] = tmp >> 1;				\
 	}								\
 }									\
