@@ -75,7 +75,7 @@ int dpaa2_timestamp_dynfield_offset = -1;
 bool dpaa2_print_parser_result;
 
 #define MAX_NB_RX_DESC		11264
-int total_nb_rx_desc;
+static int total_nb_rx_desc;
 
 int dpaa2_valid_dev;
 struct rte_mempool *dpaa2_tx_sg_pool;
