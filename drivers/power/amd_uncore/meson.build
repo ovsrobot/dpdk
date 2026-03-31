@@ -7,14 +7,12 @@ if not is_linux
     subdir_done()
 endif
 
-ESMI_header = '#include<e_smi/e_smi.h>'
-lib = cc.find_library('e_smi64', required: false)
-if not lib.found() or not cc.links(min_c_code, dependencies: lib)
+dep = dependency('e_smi_lib64', required: false, method: 'pkg-config')
+if not dep.found()
     build = false
-    reason = 'missing dependency, "libe_smi"'
-else
-    ext_deps += lib
+    reason = 'missing dependency, "e_smi_lib64"'
+    subdir_done()
 endif
-
 sources = files('amd_uncore.c')
+ext_deps += dep
 deps += ['power']
