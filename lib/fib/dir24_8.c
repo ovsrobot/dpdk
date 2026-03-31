@@ -155,26 +155,8 @@ dir24_8_get_lookup_fn(void *p, enum rte_fib_lookup_type type, bool be_addr)
 static int
 tbl8_alloc(struct dir24_8_tbl *dp, uint64_t nh)
 {
-	int64_t	tbl8_idx;
-	uint8_t	*tbl8_ptr;
-
-	tbl8_idx = fib_tbl8_pool_get(dp->pool);
-
-	/* If there are no tbl8 groups try to reclaim one. */
-	if (unlikely(tbl8_idx == -ENOSPC && dp->dq &&
-			!rte_rcu_qsbr_dq_reclaim(dp->dq, 1, NULL, NULL, NULL)))
-		tbl8_idx = fib_tbl8_pool_get(dp->pool);
-
-	if (tbl8_idx < 0)
-		return tbl8_idx;
-	tbl8_ptr = (uint8_t *)dp->tbl8 +
-		((tbl8_idx * FIB_TBL8_GRP_NUM_ENT) <<
-		dp->nh_sz);
-	/*Init tbl8 entries with nexthop from tbl24*/
-	fib_tbl8_write((void *)tbl8_ptr, nh|
-		DIR24_8_EXT_ENT, dp->nh_sz,
-		FIB_TBL8_GRP_NUM_ENT);
-	return tbl8_idx;
+	return fib_tbl8_pool_alloc(dp->pool, nh | DIR24_8_EXT_ENT,
+		dp->dq);
 }
 
 static void
@@ -436,7 +418,9 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 			tmp = rte_rib_get_nxt(rib, ip, 24, NULL,
 				RTE_RIB_GET_NXT_COVER);
 			if ((tmp == NULL) &&
-				(dp->rsvd_tbl8s >= dp->pool->num_tbl8s))
+				(dp->rsvd_tbl8s >= (dp->pool->max_tbl8s ?
+					dp->pool->max_tbl8s :
+					dp->pool->num_tbl8s)))
 				return -ENOSPC;
 
 		}
@@ -549,6 +533,13 @@ dir24_8_create(const char *name, int socket_id, struct rte_fib_conf *fib_conf)
 	dp->def_nh = def_nh;
 	dp->nh_sz = nh_sz;
 
+	if (fib_tbl8_pool_register(pool, &dp->tbl8) != 0) {
+		rte_errno = ENOMEM;
+		fib_tbl8_pool_unref(pool);
+		rte_free(dp);
+		return NULL;
+	}
+
 	/* Init table with default value */
 	fib_tbl8_write(dp->tbl24, (def_nh << 1), nh_sz, 1 << 24);
 
@@ -560,6 +551,7 @@ dir24_8_free(void *p)
 {
 	struct dir24_8_tbl *dp = (struct dir24_8_tbl *)p;
 
+	fib_tbl8_pool_unregister(dp->pool, &dp->tbl8);
 	rte_rcu_qsbr_dq_delete(dp->dq);
 	fib_tbl8_pool_unref(dp->pool);
 	rte_free(dp);
@@ -577,6 +569,21 @@ dir24_8_rcu_qsbr_add(struct dir24_8_tbl *dp, struct rte_fib_rcu_config *cfg,
 
 	if (dp->v != NULL)
 		return -EEXIST;
+
+	/* Propagate RCU to the pool for resize if it is resizable */
+	if (dp->pool->max_tbl8s > 0) {
+		if (dp->pool->v != NULL && dp->pool->v != cfg->v)
+			return -EINVAL;
+		if (dp->pool->v == NULL) {
+			struct rte_fib_tbl8_pool_rcu_config pool_rcu = {
+				.v = cfg->v,
+			};
+			int rc = rte_fib_tbl8_pool_rcu_qsbr_add(
+				dp->pool, &pool_rcu);
+			if (rc != 0)
+				return rc;
+		}
+	}
 
 	if (cfg->mode == RTE_FIB_QSBR_MODE_SYNC) {
 		/* No other things to do. */

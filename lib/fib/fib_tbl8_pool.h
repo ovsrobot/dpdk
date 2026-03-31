@@ -17,19 +17,30 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <sys/queue.h>
+
 #include <rte_common.h>
 
 #include "fib_tbl8.h"
 #include "rte_fib_tbl8_pool.h"
 
+/** Consumer entry -- tracks each FIB's tbl8 pointer for resize updates. */
+struct fib_tbl8_consumer {
+	SLIST_ENTRY(fib_tbl8_consumer) next;
+	uint64_t **tbl8_ptr;	/**< Points to the FIB's dp->tbl8 field */
+};
+
 struct rte_fib_tbl8_pool {
 	uint64_t	*tbl8;		/**< tbl8 group array */
 	uint32_t	*free_list;	/**< Stack of free group indices */
 	uint32_t	cur_tbl8s;	/**< Number of allocated groups */
-	uint32_t	num_tbl8s;	/**< Total number of tbl8 groups */
+	uint32_t	num_tbl8s;	/**< Current capacity */
+	uint32_t	max_tbl8s;	/**< Maximum capacity (0 = fixed) */
 	uint8_t		nh_sz;		/**< Nexthop entry size (0-3) */
 	int		socket_id;
 	uint32_t	refcnt;		/**< Reference count */
+	struct rte_rcu_qsbr *v;		/**< RCU QSBR variable (for resize) */
+	SLIST_HEAD(, fib_tbl8_consumer) consumers; /**< Registered FIBs */
 };
 
 /**
@@ -70,5 +81,33 @@ fib_tbl8_pool_ref(struct rte_fib_tbl8_pool *pool);
  */
 void
 fib_tbl8_pool_unref(struct rte_fib_tbl8_pool *pool);
+
+/**
+ * Allocate a tbl8 group, resizing the pool if needed.
+ *
+ * Tries fib_tbl8_pool_get() first; on ENOSPC, tries RCU reclaim via @p dq,
+ * then attempts fib_tbl8_pool_resize().  Initialises the group with @p nh.
+ *
+ * @return group index on success, negative errno on failure.
+ */
+int
+fib_tbl8_pool_alloc(struct rte_fib_tbl8_pool *pool, uint64_t nh,
+		    struct rte_rcu_qsbr_dq *dq);
+
+/**
+ * Register a FIB consumer so its tbl8 pointer is updated on resize.
+ *
+ * @param pool   Pool handle.
+ * @param tbl8_ptr  Address of the consumer's tbl8 pointer (e.g. &dp->tbl8).
+ * @return 0 on success, negative errno on failure.
+ */
+int
+fib_tbl8_pool_register(struct rte_fib_tbl8_pool *pool, uint64_t **tbl8_ptr);
+
+/**
+ * Unregister a FIB consumer.
+ */
+void
+fib_tbl8_pool_unregister(struct rte_fib_tbl8_pool *pool, uint64_t **tbl8_ptr);
 
 #endif /* _FIB_TBL8_POOL_H_ */
