@@ -121,15 +121,14 @@ F: Makefile
 F: meson.build
 F: meson_options.txt
 F: config/
-F: buildtools/check-symbols.sh
-F: buildtools/chkincs/
 F: buildtools/call-sphinx-build.py
+F: buildtools/check-symbols.py
+F: buildtools/chkincs/
 F: buildtools/gen-version-map.py
 F: buildtools/get-cpu-count.py
 F: buildtools/get-min-meson-version.py
 F: buildtools/get-numa-count.py
 F: buildtools/list-dir-globs.py
-F: buildtools/map-list-symbol.sh
 F: buildtools/pkg-config/
 F: buildtools/symlink-drivers-solibs.sh
 F: buildtools/symlink-drivers-solibs.py
