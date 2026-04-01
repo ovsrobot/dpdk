@@ -303,21 +303,52 @@ static int axgbe_phy_write(struct axgbe_port *pdata, u16 reg, u16 value)
 
 static int axgbe_phy_config_advert(struct axgbe_port *pdata)
 {
+	u32 adv = pdata->phy.advertising;
 	u16 advert;
+	u16 ctrl1000;
 	int ret;
 
-	ret = pdata->phy_if.phy_impl.read(pdata, MII_ADVERTISE, &advert);
-	if (ret) {
-		PMD_DRV_LOG_LINE(ERR, "Failed to read ADVERTISE register");
-		return ret;
-	}
+	/*
+	 * AXGBE supports 10BASE-T and 100BASE-TX in full-duplex mode only.
+	 * Half-duplex operation (CSMA/CD) is not supported by the MAC,
+	 * so 10/100 half-duplex capabilities are intentionally not advertised.
+	 * Any ADVERTISED_10baseT_Half or ADVERTISED_100baseT_Half bits
+	 * present in the software advertising mask are therefore ignored.
+	 */
+	advert = ADVERTISE_CSMA;
 
-	advert |= ADVERTISE_FULL;
-	advert |= ADVERTISE_PAUSE_CAP;
+	if (adv & ADVERTISED_10baseT_Full)
+		advert |= ADVERTISE_10FULL;
+
+	if (adv & ADVERTISED_100baseT_Full)
+		advert |= ADVERTISE_100FULL;
+
+	if (adv & ADVERTISED_Pause)
+		advert |= ADVERTISE_PAUSE_CAP;
+
+	if (adv & ADVERTISED_Asym_Pause)
+		advert |= ADVERTISE_PAUSE_ASYM;
 
 	ret = pdata->phy_if.phy_impl.write(pdata, MII_ADVERTISE, advert);
 	if (ret) {
 		PMD_DRV_LOG_LINE(ERR, "Failed to write ADVERTISE register");
+		return ret;
+	}
+
+	/*
+	 * AXGBE supports 1000BASE-T in full-duplex mode only.
+	 * Half-duplex operation (CSMA/CD) is not supported by the MAC,
+	 * so 1000BASE-T half-duplex is intentionally not advertised.
+	 * Any ADVERTISED_1000baseT_Half bit present in the software
+	 * advertising mask is therefore ignored here.
+	 */
+	ctrl1000 = 0;
+	if (adv & ADVERTISED_1000baseT_Full)
+		ctrl1000 |= AXGBE_PHY_MII_CTRL1000_1000T_FULL;
+
+	ret = pdata->phy_if.phy_impl.write(pdata, MII_CTRL1000, ctrl1000);
+	if (ret) {
+		PMD_DRV_LOG_LINE(ERR, "Failed to write MII_CTRL1000 register");
 		return ret;
 	}
 	return 0;

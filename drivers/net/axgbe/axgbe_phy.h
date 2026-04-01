@@ -156,6 +156,7 @@
 #define AXGBE_M88E1512_MODE_RGMII_SGMII		4
 #define AXGBE_M88E1512_MODE_SW_RESET		0x8000
 
+#define AXGBE_PHY_MII_CTRL1000_1000T_FULL	0x0200
 
 /* Control register 1. */
 /* Enable extended speed selection */
