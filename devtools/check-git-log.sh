@@ -223,28 +223,29 @@ done)
 	&& failure=true;}
 
 # check tag sequence
+# All trailers form a single contiguous block with no blank lines,
+# matching kernel/netdev convention and git-interpret-trailers(1).
 bad=$(for commit in $commits; do
-	body=$(git log --format='%b' -1 $commit)
-	echo "$body" |
-	grep -o -e "$reltag\|^[[:blank:]]*$\|$bytag" |
-	# retrieve tags only
-	cut -f1 -d":" |
+	git log --format='%(trailers:key-only)' -1 $commit |
+	grep -v '^$' |
 	# it is okay to have several tags of the same type
 	# but for processing we need to squash them
 	uniq |
 	# make sure the tags are in the proper order as presented in SEQ
 	awk -v subject="$(git log --format='\t%s' -1 $commit)" 'BEGIN{
-		SEQ[0] = "Coverity issue";
-		SEQ[1] = "Bugzilla ID";
-		SEQ[2] = "Fixes";
-		SEQ[3] = "Cc";
-		SEQ[4] = "^$";
-		SEQ[5] = "Reported-by";
-		SEQ[6] = "Suggested-by";
-		SEQ[7] = "Signed-off-by";
-		SEQ[8] = "Acked-by";
-		SEQ[9] = "Reviewed-by";
-		SEQ[10] = "Tested-by";
+		SEQ[0] = "Fixes";
+		SEQ[1] = "Closes";
+		SEQ[2] = "Link";
+		SEQ[3] = "Coverity issue";
+		SEQ[4] = "Bugzilla ID";
+		SEQ[5] = "Cc";
+		SEQ[6] = "Reported-by";
+		SEQ[7] = "Suggested-by";
+		SEQ[8] = "Co-developed-by";
+		SEQ[9] = "Signed-off-by";
+		SEQ[10] = "Acked-by";
+		SEQ[11] = "Reviewed-by";
+		SEQ[12] = "Tested-by";
 		latest = 0;
 		chronological = 0;
 	}
