@@ -55,8 +55,8 @@ stablefixes=$($selfdir/git-log-fixes.sh $range | sed '/(N\/A)$/d'  | cut -d' ' -
 # Use git's own trailer parser rather than hand-rolled regex.
 # %(trailers:unfold) gives us exactly what git-interpret-trailers --parse sees.
 tags=$(git log --format='%(trailers:unfold)' --reverse $range | grep -v '^$')
-bytag='\(Reported\|Suggested\|Signed-off\|Acked\|Reviewed\|Tested\)-by:'
-reltag='Coverity issue:\|Bugzilla ID:\|Fixes:\|Cc:'
+bytag='\(Reported\|Suggested\|Signed-off\|Co-developed\|Acked\|Reviewed\|Tested\)-by:'
+reltag='Coverity issue:\|Bugzilla ID:\|Fixes:\|Cc:\|Closes:\|Link:'
 
 failure=false
 
@@ -149,6 +149,7 @@ bad=$(echo "$headlines" |
 
 # check body lines length (75 max)
 bad=$(echo "$bodylines" | grep -v '^Fixes:' |
+	grep -v '^Closes: https\?://' | grep -v '^Link: https\?://' |
 	awk 'length>75 {print}' |
 	sed 's,^,\t,')
 [ -z "$bad" ] || { printf "Line too long:\n$bad\n" && failure=true;}
@@ -165,6 +166,11 @@ done | sed 's,^,\t,')
 bad=$(echo "$tags" |
 	grep -v "^$bytag [^,]* <.*@.*>$" |
 	grep -v '^Fixes: [0-9a-f]\{7\}[0-9a-f]* (".*")$' |
+	grep -v '^Closes: https\?://.*' |
+	grep -v '^Link: https\?://.*' |
+	grep -v '^Cc: .*' |
+	grep -v '^Coverity issue: .*' |
+	grep -v '^Bugzilla ID: .*' |
 	sed 's,^.,\t&,')
 [ -z "$bad" ] || { printf "Wrong tag:\n$bad\n" && failure=true;}
 
