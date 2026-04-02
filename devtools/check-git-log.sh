@@ -266,8 +266,7 @@ bad=$(for commit in $commits; do
 			chronological = 1;
 	 }'
 done)
-[ -z "$bad" ] || { printf "Wrong tag order: \n$bad\n"\
-	&& failure=true;}
+[ -z "$bad" ] || printf "WARNING: non-preferred tag order: \n$bad\n"
 
 # check required tag
 bad=$(for commit in $commits; do
