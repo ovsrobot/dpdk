@@ -52,7 +52,9 @@ headlines=$(git log --format='%s' --reverse $range)
 bodylines=$(git log --format='%b' --reverse $range)
 fixes=$(git log --format='%h %s' --reverse $range | grep -i ': *fix' | cut -d' ' -f1)
 stablefixes=$($selfdir/git-log-fixes.sh $range | sed '/(N\/A)$/d'  | cut -d' ' -f2)
-tags=$(git log --format='%b' --reverse $range | grep -i -e 'by *:' -e 'fix.*:')
+# Use git's own trailer parser rather than hand-rolled regex.
+# %(trailers:unfold) gives us exactly what git-interpret-trailers --parse sees.
+tags=$(git log --format='%(trailers:unfold)' --reverse $range | grep -v '^$')
 bytag='\(Reported\|Suggested\|Signed-off\|Acked\|Reviewed\|Tested\)-by:'
 reltag='Coverity issue:\|Bugzilla ID:\|Fixes:\|Cc:'
 
