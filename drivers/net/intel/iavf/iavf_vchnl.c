@@ -1442,7 +1442,7 @@ iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add)
 {
 	struct {
 		struct virtchnl_ether_addr_list list;
-		struct virtchnl_ether_addr addr[IAVF_NUM_MACADDR_MAX];
+		struct virtchnl_ether_addr addr[IAVF_UC_MACADDR_MAX];
 	} list_req = {0};
 	struct virtchnl_ether_addr_list *list = &list_req.list;
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
@@ -1450,7 +1450,7 @@ iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add)
 	int err, i;
 	size_t buf_len;
 
-	for (i = 0; i < IAVF_NUM_MACADDR_MAX; i++) {
+	for (i = 0; i < IAVF_UC_MACADDR_MAX; i++) {
 		struct rte_ether_addr *addr = &adapter->dev_data->mac_addrs[i];
 		struct virtchnl_ether_addr *vc_addr = &list->list[list->num_elements];
 
@@ -2060,7 +2060,7 @@ iavf_add_del_mc_addr_list(struct iavf_adapter *adapter,
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	uint8_t cmd_buffer[sizeof(struct virtchnl_ether_addr_list) +
-		(IAVF_NUM_MACADDR_MAX * sizeof(struct virtchnl_ether_addr))];
+		(IAVF_MC_MACADDR_MAX * sizeof(struct virtchnl_ether_addr))];
 	struct virtchnl_ether_addr_list *list;
 	struct iavf_cmd_info args;
 	uint32_t i;

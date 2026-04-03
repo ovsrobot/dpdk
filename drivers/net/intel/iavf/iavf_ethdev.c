@@ -379,10 +379,10 @@ iavf_set_mc_addr_list(struct rte_eth_dev *dev,
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	int err, ret;
 
-	if (mc_addrs_num > IAVF_NUM_MACADDR_MAX) {
+	if (mc_addrs_num > IAVF_MC_MACADDR_MAX) {
 		PMD_DRV_LOG(ERR,
 			    "can't add more than a limited number (%u) of addresses.",
-			    (uint32_t)IAVF_NUM_MACADDR_MAX);
+			    (uint32_t)IAVF_MC_MACADDR_MAX);
 		return -EINVAL;
 	}
 
@@ -1120,7 +1120,7 @@ iavf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->hash_key_size = vf->vf_res->rss_key_size;
 	dev_info->reta_size = vf->vf_res->rss_lut_size;
 	dev_info->flow_type_rss_offloads = IAVF_RSS_OFFLOAD_ALL;
-	dev_info->max_mac_addrs = IAVF_NUM_MACADDR_MAX;
+	dev_info->max_mac_addrs = IAVF_UC_MACADDR_MAX;
 	dev_info->dev_capa =
 		RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
 		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
@@ -2822,11 +2822,11 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 
 	/* copy mac addr */
 	eth_dev->data->mac_addrs = rte_zmalloc(
-		"iavf_mac", RTE_ETHER_ADDR_LEN * IAVF_NUM_MACADDR_MAX, 0);
+		"iavf_mac", RTE_ETHER_ADDR_LEN * IAVF_UC_MACADDR_MAX, 0);
 	if (!eth_dev->data->mac_addrs) {
 		PMD_INIT_LOG(ERR, "Failed to allocate %d bytes needed to"
 			     " store MAC addresses",
-			     RTE_ETHER_ADDR_LEN * IAVF_NUM_MACADDR_MAX);
+			     RTE_ETHER_ADDR_LEN * IAVF_UC_MACADDR_MAX);
 		ret = -ENOMEM;
 		goto init_vf_err;
 	}
