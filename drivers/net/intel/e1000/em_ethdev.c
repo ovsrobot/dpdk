@@ -1175,6 +1175,7 @@ eth_em_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 			RTE_ETH_LINK_SPEED_100M_HD | RTE_ETH_LINK_SPEED_100M |
 			RTE_ETH_LINK_SPEED_1G;
 
+	dev_info->dev_capa = RTE_ETH_DEV_CAPA_VMDQ;
 	dev_info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
 
 	/* Preferred queue parameters */

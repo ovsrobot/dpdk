@@ -1696,6 +1696,8 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP         RTE_BIT64(3)
 /** Device supports keeping shared flow objects across restart. */
 #define RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP RTE_BIT64(4)
+/** Device supports VMDq. */
+#define RTE_ETH_DEV_CAPA_VMDQ RTE_BIT64(5)
 /**@}*/
 
 /*

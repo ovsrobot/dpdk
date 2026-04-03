@@ -1444,6 +1444,7 @@ fm10k_dev_infos_get(struct rte_eth_dev *dev,
 	dev_info->speed_capa = RTE_ETH_LINK_SPEED_1G | RTE_ETH_LINK_SPEED_2_5G |
 			RTE_ETH_LINK_SPEED_10G | RTE_ETH_LINK_SPEED_25G |
 			RTE_ETH_LINK_SPEED_40G | RTE_ETH_LINK_SPEED_100G;
+	dev_info->dev_capa = RTE_ETH_DEV_CAPA_VMDQ;
 
 	return 0;
 }
