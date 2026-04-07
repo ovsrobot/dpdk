@@ -204,33 +204,33 @@ struct swp_active_dqs {
 
 #define dpaa2_queue_storage_alloc(q, num) \
 ({ \
-	int ret = 0, i; \
+	int qs_ret = 0, qs_idx; \
 	\
-	for (i = 0; i < (num); i++) { \
-		(q)->q_storage[i] = rte_zmalloc(NULL, \
+	for (qs_idx = 0; qs_idx < (num); qs_idx++) { \
+		(q)->q_storage[qs_idx] = rte_zmalloc(NULL, \
 			sizeof(struct queue_storage_info_t), \
 			RTE_CACHE_LINE_SIZE); \
-		if (!(q)->q_storage[i]) { \
-			ret = -ENOBUFS; \
+		if (!(q)->q_storage[qs_idx]) { \
+			qs_ret = -ENOBUFS; \
 			break; \
 		} \
-		ret = dpaa2_alloc_dq_storage((q)->q_storage[i]); \
-		if (ret) \
+		qs_ret = dpaa2_alloc_dq_storage((q)->q_storage[qs_idx]); \
+		if (qs_ret) \
 			break; \
 	} \
-	ret; \
+	qs_ret; \
 })
 
 #define dpaa2_queue_storage_free(q, num) \
 ({ \
 	if (q) { \
-		int i; \
+		int qs_idx; \
 		\
-		for (i = 0; i < (num); i++) { \
-			if ((q)->q_storage[i]) { \
-				dpaa2_free_dq_storage((q)->q_storage[i]); \
-				rte_free((q)->q_storage[i]); \
-				(q)->q_storage[i] = NULL; \
+		for (qs_idx = 0; qs_idx < (num); qs_idx++) { \
+			if ((q)->q_storage[qs_idx]) { \
+				dpaa2_free_dq_storage((q)->q_storage[qs_idx]); \
+				rte_free((q)->q_storage[qs_idx]); \
+				(q)->q_storage[qs_idx] = NULL; \
 			} \
 		} \
 	} \
