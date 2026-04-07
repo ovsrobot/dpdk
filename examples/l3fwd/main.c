@@ -94,7 +94,7 @@ xmm_t val_eth[RTE_MAX_ETHPORTS];
 uint32_t enabled_port_mask;
 
 /* Used only in exact match mode. */
-int ipv6; /**< ipv6 is false by default. */
+bool ipv6_enabled; /**< ipv6 is false by default. */
 
 struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 
@@ -871,7 +871,7 @@ parse_args(int argc, char **argv)
 	char **argvopt;
 	int option_index;
 	char *prgname = argv[0];
-	uint8_t lcore_params = 0;
+	bool config_parsed = false;
 #ifdef RTE_LIB_EVENTDEV
 	uint8_t eventq_sched = 0;
 	uint8_t eth_rx_q = 0;
@@ -924,7 +924,7 @@ parse_args(int argc, char **argv)
 				print_usage(prgname);
 				return -1;
 			}
-			lcore_params = 1;
+			config_parsed = true;
 			break;
 		case CMD_LINK_OPT_ETH_LINK_SPEED_NUM:
 			speed_num = atoi(optarg);
@@ -966,7 +966,7 @@ parse_args(int argc, char **argv)
 			break;
 
 		case CMD_LINE_OPT_IPV6_NUM:
-			ipv6 = 1;
+			ipv6_enabled = true;
 			break;
 
 		case CMD_LINE_OPT_MAX_PKT_LEN_NUM:
@@ -1056,9 +1056,9 @@ parse_args(int argc, char **argv)
 		}
 	}
 
-	RTE_SET_USED(lcore_params); /* needed if no eventdev block */
+	RTE_SET_USED(config_parsed); /* needed if no eventdev block */
 #ifdef RTE_LIB_EVENTDEV
-	if (evt_rsrc->enabled && lcore_params) {
+	if (evt_rsrc->enabled && config_parsed) {
 		fprintf(stderr, "lcore config is not valid when event mode is selected\n");
 		return -1;
 	}
