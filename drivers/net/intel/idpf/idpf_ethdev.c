@@ -1005,42 +1005,14 @@ idpf_timesync_adjust_freq(struct rte_eth_dev *dev, int64_t ppm)
 	struct idpf_vport *vport = dev->data->dev_private;
 	struct idpf_adapter *adapter = vport->adapter;
 	struct idpf_ptp *ptp = adapter->ptp;
-	int64_t incval, diff = 0;
-	bool negative = false;
-	uint64_t div, rem;
-	uint64_t divisor = 1000000ULL << 16;
-	int shift;
+	uint64_t incval;
+	__int128 diff;
 	int ret;
 
+	/* ppm is scaled by 2^16 to match Linux adjfine. */
 	incval = ptp->base_incval;
-
-	if (ppm < 0) {
-		negative = true;
-		ppm = -ppm;
-	}
-
-	/* can incval * ppm overflow ? */
-	if (rte_log2_u64(incval) + rte_log2_u64(ppm) > 62) {
-		rem = ppm % divisor;
-		div = ppm / divisor;
-		diff = div * incval;
-		ppm = rem;
-
-		shift = rte_log2_u64(incval) + rte_log2_u64(ppm) - 62;
-		if (shift > 0) {
-			/* drop precision */
-			ppm >>= shift;
-			divisor >>= shift;
-		}
-	}
-
-	if (divisor)
-		diff = diff + incval * ppm / divisor;
-
-	if (negative)
-		incval -= diff;
-	else
-		incval += diff;
+	diff = ((__int128)incval * ppm) / (1000000LL << 16);
+	incval += (int64_t)diff;
 
 	ret = idpf_ptp_adj_dev_clk_fine(adapter, incval);
 	if (ret) {
