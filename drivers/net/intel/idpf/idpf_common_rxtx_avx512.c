@@ -148,14 +148,20 @@ idpf_singleq_rearm(struct idpf_rx_queue *rxq)
 	/* Can this be satisfied from the cache? */
 	if (cache->len < IDPF_RXQ_REARM_THRESH) {
 		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = IDPF_RXQ_REARM_THRESH + (cache->size -
-							cache->len);
 
-		/* How many do we require i.e. number to fill the cache + the request */
+		/* Backfill would exceed the cache bounce buffer limit? */
+		__rte_assume(cache->size / 2 <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+		if (unlikely(IDPF_RXQ_REARM_THRESH > cache->size / 2)) {
+			idpf_singleq_rearm_common(rxq);
+			return;
+		}
+
+		/* Backfill the cache from the backend; fetch (size / 2) objects. */
+		__rte_assume(cache->len < cache->size / 2);
 		int ret = rte_mempool_ops_dequeue_bulk
-				(rxq->mp, &cache->objs[cache->len], req);
+				(rxq->mp, &cache->objs[cache->len], cache->size / 2);
 		if (ret == 0) {
-			cache->len += req;
+			cache->len += cache->size / 2;
 		} else {
 			if (rxq->rxrearm_nb + IDPF_RXQ_REARM_THRESH >=
 			    rxq->nb_rx_desc) {
@@ -220,6 +226,17 @@ idpf_singleq_rearm(struct idpf_rx_queue *rxq)
 		_mm512_storeu_si512(RTE_CAST_PTR(void *, (rxdp + 2)), desc2_3);
 		_mm512_storeu_si512(RTE_CAST_PTR(void *, (rxdp + 4)), desc4_5);
 		_mm512_storeu_si512(RTE_CAST_PTR(void *, (rxdp + 6)), desc6_7);
+
+		/* Instrumentation as in rte_mbuf_raw_alloc_bulk() */
+		__rte_mbuf_raw_sanity_check_mp(rxp[0], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[1], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[2], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[3], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[4], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[5], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[6], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[7], rxq->mp);
+		rte_mbuf_history_mark_bulk(rxp, 8, RTE_MBUF_HISTORY_OP_LIB_ALLOC);
 
 		rxp += IDPF_DESCS_PER_LOOP_AVX;
 		rxdp += IDPF_DESCS_PER_LOOP_AVX;
@@ -565,14 +582,20 @@ idpf_splitq_rearm(struct idpf_rx_queue *rx_bufq)
 	/* Can this be satisfied from the cache? */
 	if (cache->len < IDPF_RXQ_REARM_THRESH) {
 		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = IDPF_RXQ_REARM_THRESH + (cache->size -
-							cache->len);
 
-		/* How many do we require i.e. number to fill the cache + the request */
+		/* Backfill would exceed the cache bounce buffer limit? */
+		__rte_assume(cache->size / 2 <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+		if (unlikely(IDPF_RXQ_REARM_THRESH > cache->size / 2)) {
+			idpf_splitq_rearm_common(rx_bufq);
+			return;
+		}
+
+		/* Backfill the cache from the backend; fetch (size / 2) objects. */
+		__rte_assume(cache->len < cache->size / 2);
 		int ret = rte_mempool_ops_dequeue_bulk
-				(rx_bufq->mp, &cache->objs[cache->len], req);
+				(rx_bufq->mp, &cache->objs[cache->len], cache->size / 2);
 		if (ret == 0) {
-			cache->len += req;
+			cache->len += cache->size / 2;
 		} else {
 			if (rx_bufq->rxrearm_nb + IDPF_RXQ_REARM_THRESH >=
 			    rx_bufq->nb_rx_desc) {
@@ -585,8 +608,8 @@ idpf_splitq_rearm(struct idpf_rx_queue *rx_bufq)
 							 dma_addr0);
 				}
 			}
-		rte_atomic_fetch_add_explicit(&rx_bufq->rx_stats.mbuf_alloc_failed,
-				   IDPF_RXQ_REARM_THRESH, rte_memory_order_relaxed);
+			rte_atomic_fetch_add_explicit(&rx_bufq->rx_stats.mbuf_alloc_failed,
+					   IDPF_RXQ_REARM_THRESH, rte_memory_order_relaxed);
 			return;
 		}
 	}
@@ -628,6 +651,17 @@ idpf_splitq_rearm(struct idpf_rx_queue *rx_bufq)
 			_mm_cvtsi128_si64(_mm512_extracti32x4_epi32(iova_addrs, 3));
 		rxdp[7].split_rd.pkt_addr =
 			_mm_cvtsi128_si64(_mm512_extracti32x4_epi32(iova_addrs_1, 3));
+
+		/* Instrumentation as in rte_mbuf_raw_alloc_bulk() */
+		__rte_mbuf_raw_sanity_check_mp(rxp[0], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[1], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[2], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[3], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[4], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[5], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[6], rxq->mp);
+		__rte_mbuf_raw_sanity_check_mp(rxp[7], rxq->mp);
+		rte_mbuf_history_mark_bulk(rxp, 8, RTE_MBUF_HISTORY_OP_LIB_ALLOC);
 
 		rxp += IDPF_DESCS_PER_LOOP_AVX;
 		rxdp += IDPF_DESCS_PER_LOOP_AVX;

@@ -89,7 +89,7 @@ struct __rte_cache_aligned rte_mempool_debug_stats {
  */
 struct __rte_cache_aligned rte_mempool_cache {
 	uint32_t size;	      /**< Size of the cache */
-	uint32_t flushthresh; /**< Threshold before we flush excess elements */
+	uint32_t flushthresh; /**< Obsolete; for API/ABI compatibility purposes only */
 	uint32_t len;	      /**< Current cache count */
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
 	uint32_t unused;
@@ -107,8 +107,10 @@ struct __rte_cache_aligned rte_mempool_cache {
 	/**
 	 * Cache objects
 	 *
-	 * Cache is allocated to this size to allow it to overflow in certain
-	 * cases to avoid needless emptying of cache.
+	 * Note:
+	 * Cache is allocated at double size for API/ABI compatibility purposes only.
+	 * When reducing its size at an API/ABI breaking release,
+	 * remember to add a cache guard after it.
 	 */
 	alignas(RTE_CACHE_LINE_SIZE) void *objs[RTE_MEMPOOL_CACHE_MAX_SIZE * 2];
 };
@@ -1047,11 +1049,16 @@ rte_mempool_free(struct rte_mempool *mp);
  *   If cache_size is non-zero, the rte_mempool library will try to
  *   limit the accesses to the common lockless pool, by maintaining a
  *   per-lcore object cache. This argument must be lower or equal to
- *   RTE_MEMPOOL_CACHE_MAX_SIZE and n / 1.5.
+ *   RTE_MEMPOOL_CACHE_MAX_SIZE and n.
  *   The access to the per-lcore table is of course
  *   faster than the multi-producer/consumer pool. The cache can be
  *   disabled if the cache_size argument is set to 0; it can be useful to
  *   avoid losing objects in cache.
+ *   Note:
+ *   Mempool put/get requests of more than cache_size / 2 objects may be
+ *   partially or fully served directly by the multi-producer/consumer
+ *   pool, to avoid the overhead of copying the objects twice (instead of
+ *   once) when using the cache as a bounce buffer.
  * @param private_data_size
  *   The size of the private data appended after the mempool
  *   structure. This is useful for storing some private data after the
@@ -1377,7 +1384,7 @@ rte_mempool_cache_flush(struct rte_mempool_cache *cache,
  *   A pointer to a mempool cache structure. May be NULL if not needed.
  */
 static __rte_always_inline void
-rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
+rte_mempool_do_generic_put(struct rte_mempool *mp, void * const * __rte_restrict obj_table,
 			   unsigned int n, struct rte_mempool_cache *cache)
 {
 	void **cache_objs;
@@ -1390,24 +1397,27 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
 
-	__rte_assume(cache->flushthresh <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
-	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
-	__rte_assume(cache->len <= cache->flushthresh);
-	if (likely(cache->len + n <= cache->flushthresh)) {
+	__rte_assume(cache->size <= RTE_MEMPOOL_CACHE_MAX_SIZE);
+	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE);
+	__rte_assume(cache->len <= cache->size);
+	if (likely(cache->len + n <= cache->size)) {
 		/* Sufficient room in the cache for the objects. */
 		cache_objs = &cache->objs[cache->len];
 		cache->len += n;
-	} else if (n <= cache->flushthresh) {
+	} else if (n <= cache->size / 2) {
 		/*
-		 * The cache is big enough for the objects, but - as detected by
-		 * the comparison above - has insufficient room for them.
-		 * Flush the cache to make room for the objects.
+		 * The number of objects is within the cache bounce buffer limit,
+		 * but - as detected by the comparison above - the cache has
+		 * insufficient room for them.
+		 * Flush the cache to the backend to make room for the objects;
+		 * flush (size / 2) objects.
 		 */
-		cache_objs = &cache->objs[0];
-		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
-		cache->len = n;
+		__rte_assume(cache->len > cache->size / 2);
+		cache_objs = &cache->objs[cache->len - cache->size / 2];
+		cache->len = cache->len - cache->size / 2 + n;
+		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->size / 2);
 	} else {
-		/* The request itself is too big for the cache. */
+		/* The request itself is too big. */
 		goto driver_enqueue_stats_incremented;
 	}
 
@@ -1418,13 +1428,13 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 
 driver_enqueue:
 
-	/* increment stat now, adding in mempool always success */
+	/* Increment stats now, adding in mempool always succeeds. */
 	RTE_MEMPOOL_STAT_ADD(mp, put_bulk, 1);
 	RTE_MEMPOOL_STAT_ADD(mp, put_objs, n);
 
 driver_enqueue_stats_incremented:
 
-	/* push objects to the backend */
+	/* Push the objects to the backend. */
 	rte_mempool_ops_enqueue_bulk(mp, obj_table, n);
 }
 
@@ -1442,7 +1452,7 @@ driver_enqueue_stats_incremented:
  *   A pointer to a mempool cache structure. May be NULL if not needed.
  */
 static __rte_always_inline void
-rte_mempool_generic_put(struct rte_mempool *mp, void * const *obj_table,
+rte_mempool_generic_put(struct rte_mempool *mp, void * const * __rte_restrict obj_table,
 			unsigned int n, struct rte_mempool_cache *cache)
 {
 	rte_mempool_trace_generic_put(mp, obj_table, n, cache);
@@ -1465,7 +1475,7 @@ rte_mempool_generic_put(struct rte_mempool *mp, void * const *obj_table,
  *   The number of objects to add in the mempool from obj_table.
  */
 static __rte_always_inline void
-rte_mempool_put_bulk(struct rte_mempool *mp, void * const *obj_table,
+rte_mempool_put_bulk(struct rte_mempool *mp, void * const * __rte_restrict obj_table,
 		     unsigned int n)
 {
 	struct rte_mempool_cache *cache;
@@ -1507,7 +1517,7 @@ rte_mempool_put(struct rte_mempool *mp, void *obj)
  *   - <0: Error; code of driver dequeue function.
  */
 static __rte_always_inline int
-rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
+rte_mempool_do_generic_get(struct rte_mempool *mp, void ** __rte_restrict obj_table,
 			   unsigned int n, struct rte_mempool_cache *cache)
 {
 	int ret;
@@ -1524,7 +1534,7 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	/* The cache is a stack, so copy will be in reverse order. */
 	cache_objs = &cache->objs[cache->len];
 
-	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE * 2);
+	__rte_assume(cache->len <= RTE_MEMPOOL_CACHE_MAX_SIZE);
 	if (likely(n <= cache->len)) {
 		/* The entire request can be satisfied from the cache. */
 		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
@@ -1548,13 +1558,13 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	for (index = 0; index < len; index++)
 		*obj_table++ = *--cache_objs;
 
-	/* Dequeue below would overflow mem allocated for cache? */
-	if (unlikely(remaining > RTE_MEMPOOL_CACHE_MAX_SIZE))
+	/* Dequeue below would exceed the cache bounce buffer limit? */
+	__rte_assume(cache->size / 2 <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+	if (unlikely(remaining > cache->size / 2))
 		goto driver_dequeue;
 
-	/* Fill the cache from the backend; fetch size + remaining objects. */
-	ret = rte_mempool_ops_dequeue_bulk(mp, cache->objs,
-			cache->size + remaining);
+	/* Fill the cache from the backend; fetch (size / 2) objects. */
+	ret = rte_mempool_ops_dequeue_bulk(mp, cache->objs, cache->size / 2);
 	if (unlikely(ret < 0)) {
 		/*
 		 * We are buffer constrained, and not able to fetch all that.
@@ -1568,10 +1578,11 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
 	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
 
-	__rte_assume(cache->size <= RTE_MEMPOOL_CACHE_MAX_SIZE);
-	__rte_assume(remaining <= RTE_MEMPOOL_CACHE_MAX_SIZE);
-	cache_objs = &cache->objs[cache->size + remaining];
-	cache->len = cache->size;
+	__rte_assume(cache->size / 2 <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+	__rte_assume(remaining <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+	__rte_assume(remaining <= cache->size / 2);
+	cache_objs = &cache->objs[cache->size / 2];
+	cache->len = cache->size / 2 - remaining;
 	for (index = 0; index < remaining; index++)
 		*obj_table++ = *--cache_objs;
 
@@ -1629,7 +1640,7 @@ driver_dequeue:
  *   - -ENOENT: Not enough entries in the mempool; no object is retrieved.
  */
 static __rte_always_inline int
-rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
+rte_mempool_generic_get(struct rte_mempool *mp, void ** __rte_restrict obj_table,
 			unsigned int n, struct rte_mempool_cache *cache)
 {
 	int ret;
@@ -1663,7 +1674,7 @@ rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
  *   - -ENOENT: Not enough entries in the mempool; no object is retrieved.
  */
 static __rte_always_inline int
-rte_mempool_get_bulk(struct rte_mempool *mp, void **obj_table, unsigned int n)
+rte_mempool_get_bulk(struct rte_mempool *mp, void ** __rte_restrict obj_table, unsigned int n)
 {
 	struct rte_mempool_cache *cache;
 	cache = rte_mempool_default_cache(mp, rte_lcore_id());
@@ -1692,7 +1703,7 @@ rte_mempool_get_bulk(struct rte_mempool *mp, void **obj_table, unsigned int n)
  *   - -ENOENT: Not enough entries in the mempool; no object is retrieved.
  */
 static __rte_always_inline int
-rte_mempool_get(struct rte_mempool *mp, void **obj_p)
+rte_mempool_get(struct rte_mempool *mp, void ** __rte_restrict obj_p)
 {
 	return rte_mempool_get_bulk(mp, obj_p, 1);
 }
