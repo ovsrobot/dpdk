@@ -219,8 +219,7 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 	case RTE_GTPU_UDP_PORT: {
 		const struct rte_gtp_hdr *gh;
 		struct rte_gtp_hdr gh_copy;
-		uint8_t gtp_len;
-		uint8_t ip_ver;
+		uint32_t gtp_len;
 		gh = rte_pktmbuf_read(m, *off, sizeof(*gh), &gh_copy);
 		if (unlikely(gh == NULL))
 			return 0;
@@ -231,9 +230,16 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 		 * Check message type. If message type is 0xff, it is
 		 * a GTP data packet. If not, it is a GTP control packet
 		 */
+		*off += gtp_len;
 		if (gh->msg_type == 0xff) {
-			ip_ver = *(const uint8_t *)((const char *)gh + gtp_len);
-			ip_ver = (ip_ver) & 0xf0;
+			const uint8_t *l3_hdr;
+			uint8_t l3_copy, ip_ver;
+
+			l3_hdr = rte_pktmbuf_read(m, *off, sizeof(*l3_hdr), &l3_copy);
+			if (unlikely(l3_hdr == NULL))
+				return 0;
+
+			ip_ver = *l3_hdr & 0xf0;
 			if (ip_ver == RTE_GTP_TYPE_IPV4)
 				*proto = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 			else if (ip_ver == RTE_GTP_TYPE_IPV6)
@@ -243,7 +249,6 @@ ptype_tunnel_with_udp(uint16_t *proto, const struct rte_mbuf *m,
 		} else {
 			*proto = 0;
 		}
-		*off += gtp_len;
 		hdr_lens->inner_l2_len = gtp_len + sizeof(struct rte_udp_hdr);
 		hdr_lens->tunnel_len = gtp_len;
 		if (port_no == RTE_GTPC_UDP_PORT)
