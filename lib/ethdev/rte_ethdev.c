@@ -721,12 +721,9 @@ rte_eth_dev_count_total(void)
 	return count;
 }
 
-RTE_EXPORT_SYMBOL(rte_eth_dev_get_name_by_port)
-int
-rte_eth_dev_get_name_by_port(uint16_t port_id, char *name)
+static int
+eth_dev_get_name_by_port(uint16_t port_id, char *name, size_t size)
 {
-	char *tmp;
-
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
 	if (name == NULL) {
@@ -735,17 +732,44 @@ rte_eth_dev_get_name_by_port(uint16_t port_id, char *name)
 		return -EINVAL;
 	}
 
+	if (size == 0) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+			"Cannot get ethdev port %u name with zero-size buffer", port_id);
+		return -EINVAL;
+	}
+
 	rte_spinlock_lock(rte_mcfg_ethdev_get_lock());
-	/* shouldn't check 'rte_eth_devices[i].data',
-	 * because it might be overwritten by VDEV PMD */
-	tmp = eth_dev_shared_data->data[port_id].name;
+	/*
+	 * Use the shared data name rather than rte_eth_devices[].data->name
+	 * because VDEV PMDs may overwrite the per-process data pointer.
+	 */
+	size_t n = strlcpy(name, eth_dev_shared_data->data[port_id].name, size);
 	rte_spinlock_unlock(rte_mcfg_ethdev_get_lock());
 
-	strcpy(name, tmp);
+	if (n >= size) {
+		RTE_ETHDEV_LOG_LINE(ERR,
+				    "ethdev port %u name exceeds buffer size %zu",
+				    port_id, size);
+		return -ERANGE;
+	}
 
 	rte_ethdev_trace_get_name_by_port(port_id, name);
 
 	return 0;
+}
+
+/* new ABI version: bounded copy using caller-provided size */
+RTE_DEFAULT_SYMBOL(27, int, rte_eth_dev_get_name_by_port,
+		   (uint16_t port_id, char *name, size_t size))
+{
+	return eth_dev_get_name_by_port(port_id, name, size);
+}
+
+/* old ABI version: delegate to new version with max buffer size */
+RTE_VERSION_SYMBOL(26, int, rte_eth_dev_get_name_by_port,
+		   (uint16_t port_id, char *name))
+{
+	return eth_dev_get_name_by_port(port_id, name, RTE_ETH_NAME_MAX_LEN);
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_dev_get_port_by_name)

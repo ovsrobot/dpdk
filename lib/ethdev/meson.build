@@ -62,3 +62,5 @@ endif
 if get_option('buildtype').contains('debug')
     cflags += ['-DRTE_FLOW_DEBUG']
 endif
+
+use_function_versioning = true
