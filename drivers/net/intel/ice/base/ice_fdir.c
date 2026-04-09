@@ -3830,6 +3830,12 @@ ice_fdir_get_gen_prgm_pkt(struct ice_hw *hw, struct ice_fdir_fltr *input,
 	enum ice_fltr_ptype flow;
 	u16 tnl_port;
 	u8 *loc;
+
+	/* pkt  = start of full packet buffer (outer Ethernet header, offset 0).
+	 * loc  = start of current protocol segment; equals pkt for non-tunnel
+	 *        flows, but points past the tunnel header for tunnel flows.
+	 * Use pkt for outer L2 fields, loc for the active segment.
+	 */
 	u16 idx;
 	u16 flags_version;
 	u16 pos;
@@ -4599,16 +4605,16 @@ ice_fdir_get_gen_prgm_pkt(struct ice_hw *hw, struct ice_fdir_fltr *input,
 				     input->ip.v6.tc);
 		break;
 	case ICE_FLTR_PTYPE_NONF_IPV4_L2TPV2_CONTROL:
-		ice_pkt_insert_mac_addr(loc, input->ext_data_outer.dst_mac);
-		ice_pkt_insert_mac_addr(loc + ETH_ALEN,
+		ice_pkt_insert_mac_addr(pkt, input->ext_data_outer.dst_mac);
+		ice_pkt_insert_mac_addr(pkt + ETH_ALEN,
 					input->ext_data_outer.src_mac);
 		ice_pkt_insert_u16(loc, ICE_IPV4_L2TPV2_LEN_SESS_ID_OFFSET,
 				   input->l2tpv2_data.session_id);
 		break;
 	case ICE_FLTR_PTYPE_NONF_IPV4_L2TPV2:
 	case ICE_FLTR_PTYPE_NONF_IPV4_L2TPV2_PPP:
-		ice_pkt_insert_mac_addr(loc, input->ext_data_outer.dst_mac);
-		ice_pkt_insert_mac_addr(loc + ETH_ALEN,
+		ice_pkt_insert_mac_addr(pkt, input->ext_data_outer.dst_mac);
+		ice_pkt_insert_mac_addr(pkt + ETH_ALEN,
 					input->ext_data_outer.src_mac);
 		flags_version = BE16_TO_CPU(input->l2tpv2_data.flags_version);
 		if (flags_version & ICE_L2TPV2_FLAGS_LEN) {
@@ -4622,16 +4628,16 @@ ice_fdir_get_gen_prgm_pkt(struct ice_hw *hw, struct ice_fdir_fltr *input,
 		}
 		break;
 	case ICE_FLTR_PTYPE_NONF_IPV6_L2TPV2_CONTROL:
-		ice_pkt_insert_mac_addr(loc, input->ext_data_outer.dst_mac);
-		ice_pkt_insert_mac_addr(loc + ETH_ALEN,
+		ice_pkt_insert_mac_addr(pkt, input->ext_data_outer.dst_mac);
+		ice_pkt_insert_mac_addr(pkt + ETH_ALEN,
 					input->ext_data_outer.src_mac);
 		ice_pkt_insert_u16(loc, ICE_IPV6_L2TPV2_LEN_SESS_ID_OFFSET,
 				   input->l2tpv2_data.session_id);
 		break;
 	case ICE_FLTR_PTYPE_NONF_IPV6_L2TPV2:
 	case ICE_FLTR_PTYPE_NONF_IPV6_L2TPV2_PPP:
-		ice_pkt_insert_mac_addr(loc, input->ext_data_outer.dst_mac);
-		ice_pkt_insert_mac_addr(loc + ETH_ALEN,
+		ice_pkt_insert_mac_addr(pkt, input->ext_data_outer.dst_mac);
+		ice_pkt_insert_mac_addr(pkt + ETH_ALEN,
 					input->ext_data_outer.src_mac);
 		flags_version = BE16_TO_CPU(input->l2tpv2_data.flags_version);
 		if (flags_version & ICE_L2TPV2_FLAGS_LEN) {
