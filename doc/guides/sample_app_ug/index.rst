@@ -16,6 +16,7 @@ Sample Applications User Guides
     skeleton
     rxtx_callbacks
     flow_filtering
+    flow_parsing
     ip_frag
     ipv4_multicast
     ip_reassembly
