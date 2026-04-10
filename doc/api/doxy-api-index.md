@@ -13,6 +13,8 @@ The public API headers are grouped by topics:
   [ethdev](@ref rte_ethdev.h),
   [ethctrl](@ref rte_eth_ctrl.h),
   [rte_flow](@ref rte_flow.h),
+  [flow_parser](@ref rte_flow_parser.h),
+  [flow_parser_cmdline](@ref rte_flow_parser_cmdline.h),
   [rte_tm](@ref rte_tm.h),
   [rte_mtr](@ref rte_mtr.h),
   [bbdev](@ref rte_bbdev.h),

@@ -11,6 +11,7 @@ sources = files(
         'rte_ethdev_cman.c',
         'rte_ethdev_telemetry.c',
         'rte_flow.c',
+        'rte_flow_parser.c',
         'rte_mtr.c',
         'rte_tm.c',
         'sff_telemetry.c',
@@ -26,6 +27,8 @@ headers = files(
         'rte_ethdev_trace_fp.h',
         'rte_dev_info.h',
         'rte_flow.h',
+        'rte_flow_parser.h',
+        'rte_flow_parser_cmdline.h',
         'rte_mtr.h',
         'rte_tm.h',
 )
@@ -53,7 +56,7 @@ if is_linux
     )
 endif
 
-deps += ['net', 'kvargs', 'meter', 'telemetry']
+deps += ['net', 'kvargs', 'meter', 'telemetry', 'cmdline']
 
 if is_freebsd
     annotate_locks = false
