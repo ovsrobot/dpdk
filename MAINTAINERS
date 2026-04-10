@@ -450,6 +450,7 @@ F: app/test-pmd/flow_parser*
 F: lib/ethdev/rte_flow*
 F: doc/guides/sample_app_ug/flow_parsing.rst
 F: examples/flow_parsing/
+F: app/test/test_flow_parser*
 
 Traffic Management API
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
