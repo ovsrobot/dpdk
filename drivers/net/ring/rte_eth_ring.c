@@ -59,6 +59,9 @@ struct pmd_internals {
 
 	struct rte_ether_addr address;
 	enum dev_action action;
+
+	uint16_t peer_port_id;	/**< port id of the peer, or RTE_MAX_ETHPORTS */
+	uint8_t link_admin_down; /**< true when set_link_down has been called */
 };
 
 static struct rte_eth_link pmd_link = {
@@ -111,13 +114,41 @@ eth_dev_configure(struct rte_eth_dev *dev __rte_unused) { return 0; }
 static int
 eth_dev_start(struct rte_eth_dev *dev)
 {
-	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	struct pmd_internals *internals = dev->data->dev_private;
+
+	internals->link_admin_down = 0;
+
+	if (internals->peer_port_id < RTE_MAX_ETHPORTS) {
+		struct rte_eth_dev *peer = &rte_eth_devices[internals->peer_port_id];
+		struct pmd_internals *peer_internals = peer->data->dev_private;
+
+		/*
+		 * Veth-like carrier: link comes up only when the peer
+		 * is also started and not administratively down.
+		 * When we start, we also give the peer carrier if it
+		 * was already started.
+		 */
+		if (peer_internals != NULL &&
+		    peer_internals->peer_port_id == dev->data->port_id &&
+		    peer->data->dev_started &&
+		    !peer_internals->link_admin_down) {
+			dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+			peer->data->dev_link.link_status = RTE_ETH_LINK_UP;
+		} else {
+			dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+		}
+	} else {
+		/* Unpaired port: link follows admin state directly */
+		dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	}
+
 	return 0;
 }
 
 static int
 eth_dev_stop(struct rte_eth_dev *dev)
 {
+	struct pmd_internals *internals = dev->data->dev_private;
 	uint16_t i;
 
 	dev->data->dev_started = 0;
@@ -127,14 +158,30 @@ eth_dev_stop(struct rte_eth_dev *dev)
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	for (i = 0; i < dev->data->nb_tx_queues; i++)
 		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
+
+	/*
+	 * When this side stops, the peer loses carrier,
+	 * mirroring Linux veth behavior.
+	 */
+	if (internals->peer_port_id < RTE_MAX_ETHPORTS) {
+		struct rte_eth_dev *peer = &rte_eth_devices[internals->peer_port_id];
+		struct pmd_internals *peer_internals = peer->data->dev_private;
+
+		if (peer_internals != NULL &&
+		    peer_internals->peer_port_id == dev->data->port_id)
+			peer->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+	}
+
 	return 0;
 }
 
 static int
 eth_dev_set_link_down(struct rte_eth_dev *dev)
 {
+	struct pmd_internals *internals = dev->data->dev_private;
 	uint16_t i;
 
+	internals->link_admin_down = 1;
 	dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++)
@@ -142,13 +189,47 @@ eth_dev_set_link_down(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_tx_queues; i++)
 		dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 
+	/* Peer also loses carrier when this side is forced down */
+	if (internals->peer_port_id < RTE_MAX_ETHPORTS) {
+		struct rte_eth_dev *peer = &rte_eth_devices[internals->peer_port_id];
+		struct pmd_internals *peer_internals = peer->data->dev_private;
+
+		if (peer_internals != NULL &&
+		    peer_internals->peer_port_id == dev->data->port_id)
+			peer->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+	}
+
 	return 0;
 }
 
 static int
 eth_dev_set_link_up(struct rte_eth_dev *dev)
 {
-	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	struct pmd_internals *internals = dev->data->dev_private;
+
+	internals->link_admin_down = 0;
+
+	if (internals->peer_port_id < RTE_MAX_ETHPORTS) {
+		struct rte_eth_dev *peer = &rte_eth_devices[internals->peer_port_id];
+		struct pmd_internals *peer_internals = peer->data->dev_private;
+
+		/*
+		 * With a peer, link can only come up if the peer is also
+		 * started and not administratively down.
+		 */
+		if (peer_internals != NULL &&
+		    peer_internals->peer_port_id == dev->data->port_id &&
+		    peer->data->dev_started &&
+		    !peer_internals->link_admin_down) {
+			dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+			peer->data->dev_link.link_status = RTE_ETH_LINK_UP;
+		} else {
+			dev->data->dev_link.link_status = RTE_ETH_LINK_DOWN;
+		}
+	} else {
+		dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
+	}
+
 	return 0;
 }
 
@@ -277,8 +358,38 @@ eth_allmulticast_disable(struct rte_eth_dev *dev __rte_unused)
 }
 
 static int
-eth_link_update(struct rte_eth_dev *dev __rte_unused,
-		int wait_to_complete __rte_unused) { return 0; }
+eth_link_update(struct rte_eth_dev *dev,
+		int wait_to_complete __rte_unused)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+	struct rte_eth_link link;
+
+	link = pmd_link;
+
+	if (!dev->data->dev_started || internals->link_admin_down) {
+		link.link_status = RTE_ETH_LINK_DOWN;
+	} else if (internals->peer_port_id < RTE_MAX_ETHPORTS) {
+		/*
+		 * Paired port: carrier depends on peer being started
+		 * and not administratively down, similar to Linux veth.
+		 */
+		struct rte_eth_dev *peer = &rte_eth_devices[internals->peer_port_id];
+		struct pmd_internals *peer_internals = peer->data->dev_private;
+
+		if (peer_internals != NULL &&
+		    peer_internals->peer_port_id == dev->data->port_id &&
+		    peer->data->dev_started &&
+		    !peer_internals->link_admin_down)
+			link.link_status = RTE_ETH_LINK_UP;
+		else
+			link.link_status = RTE_ETH_LINK_DOWN;
+	} else {
+		/* Unpaired port: link follows admin state */
+		link.link_status = dev->data->dev_link.link_status;
+	}
+
+	return rte_eth_linkstatus_set(dev, &link);
+}
 
 static int
 eth_dev_close(struct rte_eth_dev *dev)
@@ -294,6 +405,19 @@ eth_dev_close(struct rte_eth_dev *dev)
 	ret = eth_dev_stop(dev);
 
 	internals = dev->data->dev_private;
+
+	/* Unlink peer so it no longer references this port */
+	if (internals->peer_port_id < RTE_MAX_ETHPORTS) {
+		struct rte_eth_dev *peer = &rte_eth_devices[internals->peer_port_id];
+		struct pmd_internals *peer_internals = peer->data->dev_private;
+
+		if (peer_internals != NULL &&
+		    peer_internals->peer_port_id == dev->data->port_id)
+			peer_internals->peer_port_id = RTE_MAX_ETHPORTS;
+
+		internals->peer_port_id = RTE_MAX_ETHPORTS;
+	}
+
 	if (internals->action == DEV_CREATE) {
 		/*
 		 * it is only necessary to delete the rings in rx_queues because
@@ -420,6 +544,7 @@ do_eth_dev_ring_create(const char *name,
 	internals->action = action;
 	internals->max_rx_queues = nb_rx_queues;
 	internals->max_tx_queues = nb_tx_queues;
+	internals->peer_port_id = RTE_MAX_ETHPORTS;
 	for (i = 0; i < nb_rx_queues; i++) {
 		internals->rx_ring_queues[i].rng = rx_queues[i];
 		internals->rx_ring_queues[i].in_port = -1;
@@ -527,6 +652,49 @@ rte_eth_from_ring(struct rte_ring *r)
 			r->memzone ? r->memzone->socket_id : SOCKET_ID_ANY);
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ring_attach_peer, 26.03)
+int
+rte_eth_ring_attach_peer(uint16_t port_id_a, uint16_t port_id_b)
+{
+	struct rte_eth_dev *dev_a, *dev_b;
+	struct pmd_internals *internals_a, *internals_b;
+
+	if (port_id_a >= RTE_MAX_ETHPORTS || port_id_b >= RTE_MAX_ETHPORTS ||
+	    port_id_a == port_id_b) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	dev_a = &rte_eth_devices[port_id_a];
+	dev_b = &rte_eth_devices[port_id_b];
+
+	/* Verify both are ring PMD ports */
+	if (dev_a->dev_ops != &ops || dev_b->dev_ops != &ops) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	internals_a = dev_a->data->dev_private;
+	internals_b = dev_b->data->dev_private;
+
+	if (internals_a == NULL || internals_b == NULL) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	/* Neither port may already have a peer */
+	if (internals_a->peer_port_id < RTE_MAX_ETHPORTS ||
+	    internals_b->peer_port_id < RTE_MAX_ETHPORTS) {
+		rte_errno = EBUSY;
+		return -1;
+	}
+
+	internals_a->peer_port_id = port_id_b;
+	internals_b->peer_port_id = port_id_a;
+
+	return 0;
+}
+
 static int
 eth_dev_ring_create(const char *name,
 		struct rte_vdev_device *vdev,
@@ -563,6 +731,35 @@ eth_dev_ring_create(const char *name,
 	if (do_eth_dev_ring_create(name, vdev, rxtx, num_rings, rxtx, num_rings,
 		numa_node, action, eth_dev) < 0)
 		return -1;
+
+	/*
+	 * For ATTACH, find the CREATE peer that shares our rings and
+	 * establish a bidirectional peer link. This allows veth-like
+	 * carrier detection: each side's link state reflects whether
+	 * the other side is started.
+	 */
+	if (action == DEV_ATTACH) {
+		struct pmd_internals *internals = (*eth_dev)->data->dev_private;
+		uint16_t pid;
+
+		RTE_ETH_FOREACH_DEV(pid) {
+			struct rte_eth_dev *candidate = &rte_eth_devices[pid];
+			struct pmd_internals *ci;
+
+			if (candidate == *eth_dev)
+				continue;
+			ci = candidate->data->dev_private;
+			if (ci == NULL || ci->action != DEV_CREATE)
+				continue;
+
+			/* Check if the candidate shares our rings */
+			if (ci->rx_ring_queues[0].rng == internals->rx_ring_queues[0].rng) {
+				internals->peer_port_id = pid;
+				ci->peer_port_id = (*eth_dev)->data->port_id;
+				break;
+			}
+		}
+	}
 
 	return 0;
 }

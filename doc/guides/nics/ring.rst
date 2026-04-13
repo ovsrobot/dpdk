@@ -104,6 +104,48 @@ the final two lines can be changed as follows:
 This type of configuration is useful in a pipeline model where inter-core communication
 using pseudo Ethernet devices is preferred over raw rings for API consistency.
 
+Peer Link State (veth-like Carrier Detection)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, a ring-based port reports link-up as soon as it is started,
+regardless of the state of any other port.  For use cases that model a
+virtual Ethernet cable between two ports, this can be changed by pairing
+the ports with ``rte_eth_ring_attach_peer()``.
+
+Once two ports are paired, their link state follows the same rules as the
+Linux veth driver:
+
+* The link comes up only when **both** sides are started.
+* Stopping, closing, or administratively setting link-down on one side
+  causes the other side to report link-down as well.
+* When the stopped side is restarted, both sides regain carrier.
+
+Pairing is supported for any two ring-based ports, whether they were created
+with ``rte_eth_from_rings()`` or via the ``--vdev=net_ring`` EAL option.
+
+.. code-block:: c
+
+   struct rte_ring *ring_ab, *ring_ba;
+
+   ring_ab = rte_ring_create("AB", 1024, 0, RING_F_SP_ENQ | RING_F_SC_DEQ);
+   ring_ba = rte_ring_create("BA", 1024, 0, RING_F_SP_ENQ | RING_F_SC_DEQ);
+
+   /* Port A: TX into ring_ab, RX from ring_ba */
+   int port_a = rte_eth_from_rings("veth_a", &ring_ba, 1, &ring_ab, 1, 0);
+   /* Port B: TX into ring_ba, RX from ring_ab */
+   int port_b = rte_eth_from_rings("veth_b", &ring_ab, 1, &ring_ba, 1, 0);
+
+   /* Enable veth-like link state tracking */
+   rte_eth_ring_attach_peer(port_a, port_b);
+
+   /* At this point both links are down.
+    * Starting port_a alone still shows link-down (peer is not ready).
+    * Starting port_b as well brings both links up.
+    */
+
+Unpaired ports (the default) are unaffected and retain the original
+behaviour where link-up is reported immediately on start.
+
 Enqueuing and dequeuing items from an ``rte_ring``
 using the ring-based PMD may be slower than using the native ring API.
 DPDK Ethernet drivers use function pointers

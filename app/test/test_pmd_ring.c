@@ -425,6 +425,196 @@ test_pmd_ring_pair_create_attach(void)
 	return TEST_SUCCESS;
 }
 
+static int
+test_pmd_ring_link_status(void)
+{
+	struct rte_eth_conf null_conf;
+	struct rte_eth_link link_d, link_e;
+	struct rte_ring *ring_de[1], *ring_ed[1];
+	int portd, porte;
+	int ret;
+
+	printf("Testing veth-like link state via rte_eth_ring_attach_peer\n");
+
+	memset(&null_conf, 0, sizeof(struct rte_eth_conf));
+
+	/*
+	 * Create two cross-connected ring ports:
+	 *   portd TX -> ring_de -> porte RX
+	 *   porte TX -> ring_ed -> portd RX
+	 * Then pair them so link state reflects peer status.
+	 */
+	ring_de[0] = rte_ring_create("VETH_DE", RING_SIZE, SOCKET0,
+				     RING_F_SP_ENQ | RING_F_SC_DEQ);
+	ring_ed[0] = rte_ring_create("VETH_ED", RING_SIZE, SOCKET0,
+				     RING_F_SP_ENQ | RING_F_SC_DEQ);
+	if (ring_de[0] == NULL || ring_ed[0] == NULL) {
+		printf("Error creating veth rings\n");
+		return TEST_FAILED;
+	}
+
+	/* portd: RX from ring_ed, TX into ring_de */
+	portd = rte_eth_from_rings("net_vethd", ring_ed, 1, ring_de, 1, SOCKET0);
+	/* porte: RX from ring_de, TX into ring_ed */
+	porte = rte_eth_from_rings("net_vethe", ring_de, 1, ring_ed, 1, SOCKET0);
+	if (portd < 0 || porte < 0) {
+		printf("Error creating veth ethdev ports\n");
+		return TEST_FAILED;
+	}
+
+	/* Pair the ports for veth-like carrier detection */
+	ret = rte_eth_ring_attach_peer(portd, porte);
+	if (ret != 0) {
+		printf("Error: rte_eth_ring_attach_peer failed\n");
+		return TEST_FAILED;
+	}
+
+	/* Configure and set up queues */
+	if ((rte_eth_dev_configure(portd, 1, 1, &null_conf) < 0) ||
+	    (rte_eth_dev_configure(porte, 1, 1, &null_conf) < 0)) {
+		printf("Configure failed for veth pair\n");
+		return TEST_FAILED;
+	}
+
+	if ((rte_eth_tx_queue_setup(portd, 0, RING_SIZE, SOCKET0, NULL) < 0) ||
+	    (rte_eth_tx_queue_setup(porte, 0, RING_SIZE, SOCKET0, NULL) < 0)) {
+		printf("TX queue setup failed for veth pair\n");
+		return TEST_FAILED;
+	}
+
+	if ((rte_eth_rx_queue_setup(portd, 0, RING_SIZE, SOCKET0, NULL, mp) < 0) ||
+	    (rte_eth_rx_queue_setup(porte, 0, RING_SIZE, SOCKET0, NULL, mp) < 0)) {
+		printf("RX queue setup failed for veth pair\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * Test 1: neither side started – both links should be down.
+	 */
+	printf("  Test 1: both stopped -> both links down\n");
+	ret = rte_eth_link_get_nowait(portd, &link_d);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	ret = rte_eth_link_get_nowait(porte, &link_e);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	if (link_d.link_status != RTE_ETH_LINK_DOWN ||
+	    link_e.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: expected both links DOWN before start\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * Test 2: start only one side – that side should report link down
+	 *         because the peer is not started yet (veth semantics).
+	 */
+	printf("  Test 2: start portd only -> portd link down (no peer)\n");
+	if (rte_eth_dev_start(portd) < 0) {
+		printf("Error starting portd\n");
+		return TEST_FAILED;
+	}
+	ret = rte_eth_link_get_nowait(portd, &link_d);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	ret = rte_eth_link_get_nowait(porte, &link_e);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	if (link_d.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: portd link should be DOWN (peer not started)\n");
+		return TEST_FAILED;
+	}
+	if (link_e.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: porte link should be DOWN (not started)\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * Test 3: start the second side – both should now have carrier.
+	 */
+	printf("  Test 3: start porte -> both links up\n");
+	if (rte_eth_dev_start(porte) < 0) {
+		printf("Error starting porte\n");
+		return TEST_FAILED;
+	}
+	ret = rte_eth_link_get_nowait(portd, &link_d);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	ret = rte_eth_link_get_nowait(porte, &link_e);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	if (link_d.link_status != RTE_ETH_LINK_UP) {
+		printf("Error: portd link should be UP\n");
+		return TEST_FAILED;
+	}
+	if (link_e.link_status != RTE_ETH_LINK_UP) {
+		printf("Error: porte link should be UP\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * Test 4: stop one side – peer should lose carrier.
+	 */
+	printf("  Test 4: stop portd -> both links down\n");
+	ret = rte_eth_dev_stop(portd);
+	if (ret != 0) {
+		printf("Error stopping portd: %s\n", rte_strerror(-ret));
+		return TEST_FAILED;
+	}
+	ret = rte_eth_link_get_nowait(portd, &link_d);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	ret = rte_eth_link_get_nowait(porte, &link_e);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	if (link_d.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: portd link should be DOWN after stop\n");
+		return TEST_FAILED;
+	}
+	if (link_e.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: porte should lose carrier when peer stops\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * Test 5: restart the stopped side – both should come back up
+	 *         (porte was still started).
+	 */
+	printf("  Test 5: restart portd -> both links up again\n");
+	if (rte_eth_dev_start(portd) < 0) {
+		printf("Error restarting portd\n");
+		return TEST_FAILED;
+	}
+	ret = rte_eth_link_get_nowait(portd, &link_d);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	ret = rte_eth_link_get_nowait(porte, &link_e);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	if (link_d.link_status != RTE_ETH_LINK_UP ||
+	    link_e.link_status != RTE_ETH_LINK_UP) {
+		printf("Error: both links should be UP after restart\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * Test 6: admin set_link_down on one side – peer should lose carrier.
+	 */
+	printf("  Test 6: set_link_down portd -> both links down\n");
+	rte_eth_dev_set_link_down(portd);
+	ret = rte_eth_link_get_nowait(portd, &link_d);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	ret = rte_eth_link_get_nowait(porte, &link_e);
+	TEST_ASSERT(ret >= 0, "Link get failed: %s", rte_strerror(-ret));
+	if (link_d.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: portd link should be DOWN after set_link_down\n");
+		return TEST_FAILED;
+	}
+	if (link_e.link_status != RTE_ETH_LINK_DOWN) {
+		printf("Error: porte should lose carrier on peer set_link_down\n");
+		return TEST_FAILED;
+	}
+
+	/* Clean up */
+	rte_eth_dev_stop(portd);
+	rte_eth_dev_stop(porte);
+	rte_vdev_uninit("net_ring_net_vethd");
+	rte_vdev_uninit("net_ring_net_vethe");
+	rte_ring_free(ring_de[0]);
+	rte_ring_free(ring_ed[0]);
+
+	return TEST_SUCCESS;
+}
+
 static void
 test_cleanup_resources(void)
 {
@@ -582,6 +772,7 @@ unit_test_suite test_pmd_ring_suite  = {
 		TEST_CASE(test_get_stats_for_port),
 		TEST_CASE(test_stats_reset_for_port),
 		TEST_CASE(test_pmd_ring_pair_create_attach),
+		TEST_CASE(test_pmd_ring_link_status),
 		TEST_CASE(test_command_line_ring_port),
 		TEST_CASES_END()
 	}
