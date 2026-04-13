@@ -89,6 +89,22 @@ eth_dev_set_dummy_fops(struct rte_eth_dev *eth_dev)
 	eth_dev->recycle_rx_descriptors_refill = rte_eth_recycle_rx_descriptors_refill_dummy;
 }
 
+/*
+ * Initialize mutex for process-shared access.
+ * The rte_eth_dev_data structure is in shared memory, so any mutex
+ * protecting it must use PTHREAD_PROCESS_SHARED.
+ */
+static void
+eth_dev_flow_ops_mutex_init(pthread_mutex_t *mutex)
+{
+	pthread_mutexattr_t attr;
+
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutex_init(mutex, &attr);
+	pthread_mutexattr_destroy(&attr);
+}
+
 RTE_EXPORT_INTERNAL_SYMBOL(rte_eth_dev_allocate)
 struct rte_eth_dev *
 rte_eth_dev_allocate(const char *name)
@@ -135,7 +151,7 @@ rte_eth_dev_allocate(const char *name)
 	eth_dev->data->port_id = port_id;
 	eth_dev->data->backer_port_id = RTE_MAX_ETHPORTS;
 	eth_dev->data->mtu = RTE_ETHER_MTU;
-	pthread_mutex_init(&eth_dev->data->flow_ops_mutex, NULL);
+	eth_dev_flow_ops_mutex_init(&eth_dev->data->flow_ops_mutex);
 	RTE_ASSERT(rte_eal_process_type() == RTE_PROC_PRIMARY);
 	eth_dev_shared_data->allocated_ports++;
 
