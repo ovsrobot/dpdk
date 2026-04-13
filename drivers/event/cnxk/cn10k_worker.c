@@ -93,7 +93,7 @@ sso_lmt_aw_wait_fc(struct cn10k_sso_hws *ws, int64_t req)
 
 retry:
 	while (rte_atomic_load_explicit(ws->fc_cache_space, rte_memory_order_relaxed) < 0)
-		;
+		rte_pause();
 
 	cached = rte_atomic_fetch_sub_explicit(ws->fc_cache_space, req, rte_memory_order_acquire) -
 		 req;
