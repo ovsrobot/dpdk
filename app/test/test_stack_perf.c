@@ -10,6 +10,9 @@
 #include <rte_launch.h>
 #include <rte_pause.h>
 #include <rte_stack.h>
+#ifdef RTE_LIBHWLOC_PROBE
+#include <rte_topology.h>
+#endif
 
 #include "test.h"
 
@@ -104,6 +107,367 @@ get_two_sockets(struct lcore_pair *lcp)
 
 	return 1;
 }
+
+#ifdef RTE_LIBHWLOC_PROBE
+static int
+get_same_numa_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_NUMA) == 0)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_NUMA) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_NUMA, domain) < 2)
+			continue;
+
+		id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_NUMA);
+		id2 = rte_topo_get_nth_lcore_from_domain(domain, 1, 0, RTE_TOPO_DOMAIN_NUMA);
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_same_l4_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L4) == 0)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L4) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L4, domain) < 2)
+			continue;
+
+		id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L4);
+		id2 = rte_topo_get_nth_lcore_from_domain(domain, 1, 0, RTE_TOPO_DOMAIN_L4);
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_same_l3_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L3) == 0)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L3) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L3, domain) < 2)
+			continue;
+
+		id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L3);
+		id2 = rte_topo_get_nth_lcore_from_domain(domain, 1, 0, RTE_TOPO_DOMAIN_L3);
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_same_l2_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L2) == 0)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L2) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L2, domain) < 2)
+			continue;
+
+		id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L2);
+		id2 = rte_topo_get_nth_lcore_from_domain(domain, 1, 0, RTE_TOPO_DOMAIN_L2);
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_same_l1_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L1) == 0)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L1) {
+		if (rte_topo_is_main_lcore_in_domain(domain, RTE_TOPO_DOMAIN_L1))
+			continue;
+
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L1, domain) < 2)
+			continue;
+
+		id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L1);
+		id2 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L1);
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+static int
+get_two_numa_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_NUMA) < 2)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_NUMA) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_NUMA, domain) == 0)
+			continue;
+
+		if (id1 == RTE_MAX_LCORE) {
+			id1 = rte_topo_get_nth_lcore_from_domain(domain,
+				0, 0, RTE_TOPO_DOMAIN_NUMA);
+			continue;
+		}
+
+		if (id2 == RTE_MAX_LCORE) {
+			id2 = rte_topo_get_nth_lcore_from_domain(domain,
+				0, 0, RTE_TOPO_DOMAIN_NUMA);
+			continue;
+		}
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_two_l4_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L4) < 2)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L4) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L4, domain) == 0)
+			continue;
+
+		if (id1 == RTE_MAX_LCORE) {
+			id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L4);
+			continue;
+		}
+		if (id2 == RTE_MAX_LCORE) {
+			id2 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L4);
+			continue;
+		}
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_two_l3_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L3) < 2)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L3) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L3, domain) == 0)
+			continue;
+
+		if (id1 == RTE_MAX_LCORE) {
+			id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L3);
+			continue;
+		}
+
+		if (id2 == RTE_MAX_LCORE) {
+			id2 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L3);
+			continue;
+		}
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_two_l2_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L2) < 2)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L2) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L2, domain) == 0)
+			continue;
+
+		if (id1 == RTE_MAX_LCORE) {
+			id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L2);
+			continue;
+		}
+
+		if (id2 == RTE_MAX_LCORE) {
+			id2 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L2);
+			continue;
+		}
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+
+static int
+get_two_l1_domains(struct lcore_pair *lcp)
+{
+	if (rte_topo_get_domain_count(RTE_TOPO_DOMAIN_L1) < 2)
+		return 1;
+
+	unsigned int id1 = RTE_MAX_LCORE, id2 = RTE_MAX_LCORE;
+	unsigned int domain = 0;
+
+	RTE_TOPO_FOREACH_DOMAIN(domain, RTE_TOPO_DOMAIN_L1) {
+		if ((id1 != RTE_MAX_LCORE) && (id2 != RTE_MAX_LCORE))
+			break;
+
+		if (rte_topo_get_lcore_count_from_domain(RTE_TOPO_DOMAIN_L1, domain) == 0)
+			continue;
+
+		if (id1 == RTE_MAX_LCORE) {
+			id1 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L1);
+			continue;
+		}
+
+		if (id2 == RTE_MAX_LCORE) {
+			id2 = rte_topo_get_nth_lcore_from_domain(domain, 0, 0, RTE_TOPO_DOMAIN_L1);
+			continue;
+		}
+	}
+
+	if ((id1 == RTE_MAX_LCORE) || (id2 == RTE_MAX_LCORE))
+		return 2;
+
+	if (id1 == id2)
+		return 3;
+
+	lcp->c1 = id1;
+	lcp->c2 = id2;
+
+	return 0;
+}
+#endif
+
 
 /* Measure the cycle cost of popping an empty stack. */
 static void
@@ -330,6 +694,51 @@ __test_stack_perf(uint32_t flags)
 		printf("\n### Testing using two NUMA nodes ###\n");
 		run_on_core_pair(&cores, s, bulk_push_pop);
 	}
+
+#ifdef RTE_LIBHWLOC_PROBE
+	if (rte_lcore_count() > 2) {
+		if (get_same_numa_domains(&cores) == 0) {
+			printf("\n### Testing using same numa domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_same_l4_domains(&cores) == 0) {
+			printf("\n### Testing using same l4 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_same_l3_domains(&cores) == 0) {
+			printf("\n### Testing using same l3 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_same_l2_domains(&cores) == 0) {
+			printf("\n### Testing using same l2 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_same_l1_domains(&cores) == 0) {
+			printf("\n### Testing using same l1 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_two_numa_domains(&cores) == 0) {
+			printf("\n### Testing using two numa domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_two_l4_domains(&cores) == 0) {
+			printf("\n### Testing using two l4 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_two_l3_domains(&cores) == 0) {
+			printf("\n### Testing using two l3 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_two_l2_domains(&cores) == 0) {
+			printf("\n### Testing using two l2 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+		if (get_two_l1_domains(&cores) == 0) {
+			printf("\n### Testing using two l1 domain nodes ###\n");
+			run_on_core_pair(&cores, s, bulk_push_pop);
+		}
+	}
+#endif
 
 	printf("\n### Testing on all %u lcores ###\n", rte_lcore_count());
 	run_on_n_cores(s, bulk_push_pop, rte_lcore_count());

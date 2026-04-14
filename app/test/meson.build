@@ -207,6 +207,7 @@ source_file_deps = {
     'test_timer_perf.c': ['timer'],
     'test_timer_racecond.c': ['timer'],
     'test_timer_secondary.c': ['timer'],
+    'test_topology.c': [],
     'test_trace.c': [],
     'test_trace_perf.c': [],
     'test_trace_register.c': [],
