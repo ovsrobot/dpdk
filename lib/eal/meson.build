@@ -31,3 +31,7 @@ endif
 if is_freebsd
     annotate_locks = false
 endif
+
+if dpdk_conf.has('RTE_LIBHWLOC_PROBE')
+    ext_deps += hwloc_dep
+endif

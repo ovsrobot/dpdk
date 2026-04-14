@@ -245,6 +245,24 @@ if find_libnuma
     endif
 endif
 
+has_libhwloc = false
+find_libhwloc = true
+
+if meson.is_cross_build() and not meson.get_external_property('hwloc', true)
+    # don't look for libhwloc if explicitly disabled in cross build
+    find_libhwloc = false
+endif
+
+if find_libhwloc
+    hwloc_dep = cc.find_library('hwloc', required: false)
+    if hwloc_dep.found() and cc.has_header('hwloc.h')
+        dpdk_conf.set10('RTE_LIBHWLOC_PROBE', true)
+        has_libhwloc = true
+        #add_project_link_arguments('-lhwloc', language: 'c')
+        #dpdk_extra_ldflags += '-lhwloc'
+    endif
+endif
+
 has_libfdt = false
 fdt_dep = cc.find_library('fdt', required: false)
 if fdt_dep.found() and cc.has_header('fdt.h') and cc.links(min_c_code, dependencies: fdt_dep)

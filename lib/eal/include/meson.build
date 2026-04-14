@@ -50,6 +50,7 @@ headers += files(
         'rte_thread.h',
         'rte_ticketlock.h',
         'rte_time.h',
+        'rte_topology.h',
         'rte_trace.h',
         'rte_trace_point.h',
         'rte_trace_point_register.h',

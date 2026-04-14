@@ -50,6 +50,7 @@ if not is_windows
             'eal_common_trace.c',
             'eal_common_trace_ctf.c',
             'eal_common_trace_utils.c',
+            'eal_topology.c',
             'hotplug_mp.c',
             'malloc_mp.c',
             'rte_keepalive.c',

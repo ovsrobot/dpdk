@@ -42,6 +42,8 @@
 #include <rte_devargs.h>
 #include <rte_version.h>
 #include <rte_vfio.h>
+#include <rte_topology.h>
+
 #include <malloc_heap.h>
 #include <telemetry_internal.h>
 
@@ -76,7 +78,6 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 /* used by rte_rdtsc() */
 RTE_EXPORT_SYMBOL(rte_cycles_vmware_tsc_map)
 int rte_cycles_vmware_tsc_map;
-
 
 int
 eal_clean_runtime_dir(void)
@@ -754,6 +755,12 @@ rte_eal_init(int argc, char **argv)
 			goto err_out;
 	}
 
+	ret = rte_eal_topology_init();
+	if (ret) {
+		rte_eal_init_alert("Cannot invoke topology, skipping topology!!!");
+		rte_errno = ENOTSUP;
+	}
+
 	eal_mcfg_complete();
 
 	return fctret;
@@ -781,6 +788,7 @@ rte_eal_cleanup(void)
 		eal_get_internal_configuration();
 	rte_service_finalize();
 	eal_bus_cleanup();
+	rte_eal_topology_release();
 	rte_mp_channel_cleanup();
 	rte_eal_alarm_cleanup();
 	rte_trace_save();

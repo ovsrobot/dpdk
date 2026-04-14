@@ -9,11 +9,16 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/queue.h>
+#include <rte_os.h>
 
 #include <dev_driver.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
 #include <rte_memory.h>
+
+#ifdef RTE_LIBHWLOC_PROBE
+#include <hwloc.h>
+#endif
 
 #include "eal_internal_cfg.h"
 
@@ -39,6 +44,63 @@ struct lcore_config {
 };
 
 extern struct lcore_config lcore_config[RTE_MAX_LCORE];
+
+struct core_domain_mapping {
+	rte_cpuset_t core_set;	/**< cpu_set representing lcores within domain */
+	uint16_t core_count;	/**< dpdk enabled lcores within domain */
+	uint16_t *cores;	/**< list of cores */
+};
+
+struct lcore_mapping {
+	uint16_t cpu;
+	uint16_t numa_domain;
+	uint16_t l4_domain;
+	uint16_t l3_domain;
+	uint16_t l2_domain;
+	uint16_t l1_domain;
+	uint16_t numa_cacheid;
+	uint16_t l4_cacheid;
+	uint16_t l3_cacheid;
+	uint16_t l2_cacheid;
+	uint16_t l1_cacheid;
+};
+
+#define RTE_TOPO_MAX_CPU_CORES 2048
+
+struct topology_config {
+#ifdef RTE_LIBHWLOC_PROBE
+	hwloc_topology_t topology;
+#endif
+
+	/* domain count */
+	uint16_t l1_count;
+	uint16_t l2_count;
+	uint16_t l3_count;
+	uint16_t l4_count;
+	uint16_t numa_count;
+
+	/* total cores under all domain */
+	uint16_t l1_core_count;
+	uint16_t l2_core_count;
+	uint16_t l3_core_count;
+	uint16_t l4_core_count;
+	uint16_t numa_core_count;
+
+	/* dpdk lcore to cpu core map */
+	uint16_t lcore_to_cpu_map[RTE_TOPO_MAX_CPU_CORES];
+
+	/* two dimensional array for each domain */
+	struct core_domain_mapping **l1;
+	struct core_domain_mapping **l2;
+	struct core_domain_mapping **l3;
+	struct core_domain_mapping **l4;
+	struct core_domain_mapping **numa;
+
+	/* reverse map lcore to domain lookup */
+	struct lcore_mapping lcore_map[RTE_MAX_LCORE];
+};
+extern struct topology_config topo_cnfg;
+
 
 /**
  * The global RTE configuration structure.
@@ -101,6 +163,18 @@ char *eal_cpuset_to_str(const rte_cpuset_t *cpuset);
  *   - Negative on error
  */
 int rte_eal_memzone_init(void);
+
+/**
+ * Initialize the topology structure using HWLOC Library
+ */
+__rte_internal
+int rte_eal_topology_init(void);
+
+/**
+ * Release the memory held by Topology structure
+ */
+__rte_internal
+int rte_eal_topology_release(void);
 
 /**
  * Fill configuration with number of physical and logical processors

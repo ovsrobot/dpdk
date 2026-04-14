@@ -42,6 +42,7 @@
 #include <rte_version.h>
 #include <malloc_heap.h>
 #include <rte_vfio.h>
+#include <rte_topology.h>
 
 #include <telemetry_internal.h>
 #include <eal_export.h>
@@ -927,6 +928,11 @@ rte_eal_init(int argc, char **argv)
 			goto err_out;
 	}
 
+	if (rte_eal_topology_init()) {
+		rte_eal_init_alert("Cannot invoke topology, skipping topologly!!!");
+		rte_errno = ENOTSUP;
+	}
+
 	eal_mcfg_complete();
 
 	return fctret;
@@ -981,6 +987,7 @@ rte_eal_cleanup(void)
 	rte_service_finalize();
 	eal_bus_cleanup();
 	vfio_mp_sync_cleanup();
+	rte_eal_topology_release();
 	rte_mp_channel_cleanup();
 	rte_eal_alarm_cleanup();
 	rte_trace_save();
