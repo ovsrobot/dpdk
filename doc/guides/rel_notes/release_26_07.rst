@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added scripts and prompts for AI review.**
+
+  Added AGENTS.md file for AI review and supporting scripts to analyze
+  patches and review documentation.
+
 
 Removed Items
 -------------
