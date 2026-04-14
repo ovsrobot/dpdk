@@ -48,10 +48,4 @@
  */
 #define FWD_PORT_SHIFT 1
 
-void
-print_one_ipv4_rule(struct acl4_rule *rule, int extra);
-
-void
-print_one_ipv6_rule(struct acl6_rule *rule, int extra);
-
 #endif /* L3FWD_ACL_H */
