@@ -133,9 +133,10 @@ Utility Libraries
     pcapng_lib
     bpf_lib
     trace_lib
+    topology_lib
 
 
-Howto Guides
+How to Guides
 -------------
 
 .. toctree::
