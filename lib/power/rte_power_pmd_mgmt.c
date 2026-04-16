@@ -730,10 +730,7 @@ RTE_EXPORT_SYMBOL(rte_power_pmd_mgmt_set_scaling_freq_min)
 int
 rte_power_pmd_mgmt_set_scaling_freq_min(unsigned int lcore, unsigned int min)
 {
-	if (!rte_lcore_is_enabled(lcore)) {
-		POWER_LOG(ERR, "lcore id %u is not enabled", lcore);
-		return -EINVAL;
-	}
+	RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore, -EINVAL);
 
 	if (min > scale_freq_max[lcore]) {
 		POWER_LOG(ERR, "Invalid min frequency: Cannot be greater than max frequency");
@@ -748,10 +745,7 @@ RTE_EXPORT_SYMBOL(rte_power_pmd_mgmt_set_scaling_freq_max)
 int
 rte_power_pmd_mgmt_set_scaling_freq_max(unsigned int lcore, unsigned int max)
 {
-	if (!rte_lcore_is_enabled(lcore)) {
-		POWER_LOG(ERR, "lcore id %u is not enabled", lcore);
-		return -EINVAL;
-	}
+	RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore, -EINVAL);
 
 	/* Zero means 'not set'. Use UINT32_MAX to enable RTE_MIN/MAX macro use when scaling. */
 	if (max == 0)
@@ -770,10 +764,7 @@ RTE_EXPORT_SYMBOL(rte_power_pmd_mgmt_get_scaling_freq_min)
 int
 rte_power_pmd_mgmt_get_scaling_freq_min(unsigned int lcore)
 {
-	if (!rte_lcore_is_enabled(lcore)) {
-		POWER_LOG(ERR, "lcore id %u is not enabled", lcore);
-		return -EINVAL;
-	}
+	RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore, -EINVAL);
 
 	if (scale_freq_max[lcore] == 0)
 		POWER_LOG(DEBUG, "Scaling freq min config not set. Using sysfs min freq.");
@@ -785,10 +776,7 @@ RTE_EXPORT_SYMBOL(rte_power_pmd_mgmt_get_scaling_freq_max)
 int
 rte_power_pmd_mgmt_get_scaling_freq_max(unsigned int lcore)
 {
-	if (!rte_lcore_is_enabled(lcore)) {
-		POWER_LOG(ERR, "lcore id %u is not enabled", lcore);
-		return -EINVAL;
-	}
+	RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore, -EINVAL);
 
 	if (scale_freq_max[lcore] == UINT32_MAX) {
 		POWER_LOG(DEBUG, "Scaling freq max config not set. Using sysfs max freq.");
