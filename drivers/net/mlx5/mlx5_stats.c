@@ -280,7 +280,46 @@ mlx5_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats,
 		tmp.imissed = stats_ctrl->imissed;
 	}
 #ifndef MLX5_PMD_SOFT_COUNTERS
-	/* FIXME: retrieve and add hardware counters. */
+	{
+		uint64_t counters[MLX5_MAX_XSTATS];
+		struct mlx5_xstats_ctrl *xstats_ctrl = &priv->xstats_ctrl;
+		bool bond_master = (priv->master && priv->pf_bond >= 0);
+
+		ret = mlx5_os_read_dev_counters(dev, bond_master, counters);
+		if (ret) {
+			DRV_LOG(WARNING, "port %u unable to read device counters",
+				dev->data->port_id);
+			return ret;
+		}
+		for (i = 0; i != xstats_ctrl->mlx5_stats_n; ++i) {
+			const char *name = xstats_ctrl->info[i].dpdk_name;
+			uint64_t val = (counters[i] - xstats_ctrl->base[i]);
+
+			if (!strcmp(name, "rx_unicast_packets") ||
+			    !strcmp(name, "rx_multicast_packets") ||
+			    !strcmp(name, "rx_broadcast_packets"))
+				tmp.ipackets += val;
+			else if (!strcmp(name, "rx_unicast_bytes") ||
+				 !strcmp(name, "rx_multicast_bytes") ||
+				 !strcmp(name, "rx_broadcast_bytes"))
+				tmp.ibytes += val;
+			else if (!strcmp(name, "tx_unicast_packets") ||
+				 !strcmp(name, "tx_multicast_packets") ||
+				 !strcmp(name, "tx_broadcast_packets"))
+				tmp.opackets += val;
+			else if (!strcmp(name, "tx_unicast_bytes") ||
+				 !strcmp(name, "tx_multicast_bytes") ||
+				 !strcmp(name, "tx_broadcast_bytes"))
+				tmp.obytes += val;
+			else if (!strcmp(name, "rx_wqe_errors") ||
+				 !strcmp(name, "rx_phy_crc_errors") ||
+				 !strcmp(name, "rx_phy_in_range_len_errors") ||
+				 !strcmp(name, "rx_phy_symbol_errors"))
+				tmp.ierrors += val;
+			else if (!strcmp(name, "tx_phy_errors"))
+				tmp.oerrors += val;
+		}
+	}
 #endif
 	*stats = tmp;
 	return 0;
@@ -319,7 +358,21 @@ mlx5_stats_reset(struct rte_eth_dev *dev)
 	mlx5_os_read_dev_stat(priv, "out_of_buffer", &stats_ctrl->imissed_base);
 	stats_ctrl->imissed = 0;
 #ifndef MLX5_PMD_SOFT_COUNTERS
-	/* FIXME: reset hardware counters. */
+	{
+		uint64_t counters[MLX5_MAX_XSTATS];
+		struct mlx5_xstats_ctrl *xstats_ctrl = &priv->xstats_ctrl;
+		bool bond_master = (priv->master && priv->pf_bond >= 0);
+		int ret;
+
+		ret = mlx5_os_read_dev_counters(dev, bond_master, counters);
+		if (ret) {
+			DRV_LOG(WARNING, "port %u unable to read device counters",
+				dev->data->port_id);
+			return ret;
+		}
+		for (i = 0; i != xstats_ctrl->mlx5_stats_n; ++i)
+			xstats_ctrl->base[i] = counters[i];
+	}
 #endif
 
 	return 0;
