@@ -23,6 +23,13 @@ extern int rte_power_logtype;
 #define POWER_DEBUG_LOG(...)
 #endif
 
+#define RTE_POWER_VALID_LCOREID_OR_ERR_RET(lcore_id, retval) do { \
+	if (!rte_lcore_is_enabled(lcore_id)) { \
+		POWER_LOG(ERR, "lcore id %u is not enabled", lcore_id); \
+		return retval; \
+	} \
+} while (0)
+
 /* check if scaling driver matches one we want */
 __rte_internal
 int cpufreq_check_scaling_driver(const char *driver);
