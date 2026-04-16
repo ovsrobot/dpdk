@@ -481,6 +481,7 @@ soc_cn10k = {
         ['RTE_MAX_LCORE', 24],
         ['RTE_MAX_NUMA_NODES', 1],
         ['RTE_MEMPOOL_ALIGN', 128],
+        ['RTE_MBUF_BURST_SIZE_THROUGHPUT', 64],
     ],
     'part_number': '0xd49',
     'extra_march_features': ['crypto'],
