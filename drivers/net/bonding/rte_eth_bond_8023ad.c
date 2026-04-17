@@ -1727,7 +1727,7 @@ RTE_EXPORT_SYMBOL(rte_eth_bond_8023ad_dedicated_queues_enable)
 int
 rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port)
 {
-	int retval = 0;
+	int ret;
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
 
@@ -1744,17 +1744,20 @@ rte_eth_bond_8023ad_dedicated_queues_enable(uint16_t port)
 	if (dev->data->dev_started)
 		return -1;
 
+	uint8_t old = internals->mode4.dedicated_queues.enabled;
 	internals->mode4.dedicated_queues.enabled = 1;
+	ret = bond_ethdev_mode_set(dev, internals->mode);
+	if (ret != 0)
+		internals->mode4.dedicated_queues.enabled = old;
 
-	bond_ethdev_mode_set(dev, internals->mode);
-	return retval;
+	return ret;
 }
 
 RTE_EXPORT_SYMBOL(rte_eth_bond_8023ad_dedicated_queues_disable)
 int
 rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 {
-	int retval = 0;
+	int ret;
 	struct rte_eth_dev *dev;
 	struct bond_dev_private *internals;
 
@@ -1768,9 +1771,11 @@ rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 	if (dev->data->dev_started)
 		return -1;
 
+	uint8_t old = internals->mode4.dedicated_queues.enabled;
 	internals->mode4.dedicated_queues.enabled = 0;
+	ret = bond_ethdev_mode_set(dev, internals->mode);
+	if (ret != 0)
+		internals->mode4.dedicated_queues.enabled = old;
 
-	bond_ethdev_mode_set(dev, internals->mode);
-
-	return retval;
+	return ret;
 }
