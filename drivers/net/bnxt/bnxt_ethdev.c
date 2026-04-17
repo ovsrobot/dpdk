@@ -652,8 +652,9 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 
 	max_fc = bp->flow_stat->max_fc;
 
-	sprintf(type, "bnxt_rx_fc_in_" PCI_PRI_FMT, pdev->addr.domain,
-		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
+	snprintf(type, RTE_MEMZONE_NAMESIZE, "bnxt_rx_fc_in_" PCI_PRI_FMT,
+		pdev->addr.domain, pdev->addr.bus,
+		pdev->addr.devid, pdev->addr.function);
 	/* 4 bytes for each counter-id */
 	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 4,
@@ -661,8 +662,9 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	if (rc)
 		return rc;
 
-	sprintf(type, "bnxt_rx_fc_out_" PCI_PRI_FMT, pdev->addr.domain,
-		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
+	snprintf(type, RTE_MEMZONE_NAMESIZE, "bnxt_rx_fc_out_" PCI_PRI_FMT,
+		pdev->addr.domain, pdev->addr.bus,
+		pdev->addr.devid, pdev->addr.function);
 	/* 16 bytes for each counter - 8 bytes pkt_count, 8 bytes byte_count */
 	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 16,
@@ -670,8 +672,9 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	if (rc)
 		return rc;
 
-	sprintf(type, "bnxt_tx_fc_in_" PCI_PRI_FMT, pdev->addr.domain,
-		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
+	snprintf(type, RTE_MEMZONE_NAMESIZE, "bnxt_tx_fc_in_" PCI_PRI_FMT,
+		pdev->addr.domain, pdev->addr.bus,
+		pdev->addr.devid, pdev->addr.function);
 	/* 4 bytes for each counter-id */
 	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 4,
@@ -679,8 +682,9 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	if (rc)
 		return rc;
 
-	sprintf(type, "bnxt_tx_fc_out_" PCI_PRI_FMT, pdev->addr.domain,
-		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
+	snprintf(type, RTE_MEMZONE_NAMESIZE, "bnxt_tx_fc_out_" PCI_PRI_FMT,
+		pdev->addr.domain, pdev->addr.bus,
+		pdev->addr.devid, pdev->addr.function);
 	/* 16 bytes for each counter - 8 bytes pkt_count, 8 bytes byte_count */
 	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 16,
@@ -3252,7 +3256,7 @@ bnxt_fw_version_get(struct rte_eth_dev *dev, char *fw_version, size_t fw_size)
 	uint8_t fw_rsvd = bp->fw_ver & 0xff;
 	int ret;
 
-	ret = snprintf(fw_version, fw_size, "%d.%d.%d.%d",
+	ret = snprintf(fw_version, fw_size, "%hhu.%hhu.%hhu.%hhu",
 			fw_major, fw_minor, fw_updt, fw_rsvd);
 	if (ret < 0)
 		return -EINVAL;
@@ -5199,13 +5203,13 @@ static int bnxt_alloc_ctx_mem_blk(struct bnxt *bp,
 		RTE_ALIGN_MUL_CEIL(mem_size, BNXT_PAGE_SIZE) / BNXT_PAGE_SIZE;
 	rmem->page_size = BNXT_PAGE_SIZE;
 
-	snprintf(name, RTE_MEMZONE_NAMESIZE, "bnxt_ctx_pg_arr%s_%x_%d",
+	snprintf(name, RTE_MEMZONE_NAMESIZE, "bnxt_ctx_pg_arr%s_%hx_%hu",
 		 suffix, idx, bp->eth_dev->data->port_id);
 	ctx_pg->ctx_pg_arr = rte_zmalloc(name, sizeof(void *) * rmem->nr_pages, 0);
 	if (ctx_pg->ctx_pg_arr == NULL)
 		return -ENOMEM;
 
-	snprintf(name, RTE_MEMZONE_NAMESIZE, "bnxt_ctx_dma_arr%s_%x_%d",
+	snprintf(name, RTE_MEMZONE_NAMESIZE, "bnxt_ctx_dma_arr%s_%hx_%hu",
 		 suffix, idx, bp->eth_dev->data->port_id);
 	ctx_pg->ctx_dma_arr = rte_zmalloc(name, sizeof(rte_iova_t *) * rmem->nr_pages, 0);
 	if (ctx_pg->ctx_dma_arr == NULL)
@@ -5219,7 +5223,7 @@ static int bnxt_alloc_ctx_mem_blk(struct bnxt *bp,
 
 	if (rmem->nr_pages > 1) {
 		snprintf(name, RTE_MEMZONE_NAMESIZE,
-			 "bnxt_ctxpgtbl%s_%x_%d",
+			 "bnxt_ctxpgtbl%s_%hx_%hu",
 			 suffix, idx, bp->eth_dev->data->port_id);
 		name[RTE_MEMZONE_NAMESIZE - 1] = 0;
 		mz = rte_memzone_lookup(name);
@@ -5244,7 +5248,7 @@ static int bnxt_alloc_ctx_mem_blk(struct bnxt *bp,
 		rmem->pg_tbl_mz = mz;
 	}
 
-	snprintf(name, RTE_MEMZONE_NAMESIZE, "bnxt_ctx_%s_%x_%d",
+	snprintf(name, RTE_MEMZONE_NAMESIZE, "bnxt_ctx_%s_%hx_%hu",
 		 suffix, idx, bp->eth_dev->data->port_id);
 	mz = rte_memzone_lookup(name);
 	if (!mz) {
@@ -5393,7 +5397,7 @@ int bnxt_alloc_ctx_pg_tbls(struct bnxt *bp)
 		for (i = 0; i < w && rc == 0; i++) {
 			char name[RTE_MEMZONE_NAMESIZE] = {0};
 
-			sprintf(name, "_%d_%d", i, type);
+			snprintf(name, RTE_MEMZONE_NAMESIZE, "_%d_%hu", i, type);
 
 			if (ctxm->entry_multiple)
 				entries = bnxt_roundup(ctxm->max_entries,
@@ -6977,7 +6981,7 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 		}
 
 		/* representor port net_bdf_port */
-		snprintf(name, sizeof(name), "net_%s_representor_%d",
+		snprintf(name, sizeof(name), "net_%s_representor_%hu",
 			 pci_dev->device.name, eth_da->representor_ports[i]);
 
 		if (rte_eth_dev_allocated(name) != NULL) {
