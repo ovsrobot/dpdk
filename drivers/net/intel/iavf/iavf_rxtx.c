@@ -3571,6 +3571,27 @@ static const struct ci_rx_path_info iavf_rx_path_infos[] = {
 			.bulk_alloc = true
 		}
 	},
+	[IAVF_RX_NEON_FLEX_RXD] = {
+		.pkt_burst = iavf_recv_pkts_vec_flex_rxd,
+		.info = "Vector Neon Flex",
+		.features = {
+			.rx_offloads = IAVF_RX_VECTOR_FLEX_OFFLOADS,
+			.simd_width = RTE_VECT_SIMD_128,
+			.flex_desc = true,
+			.bulk_alloc = true
+		}
+	},
+	[IAVF_RX_NEON_SCATTERED_FLEX_RXD] = {
+		.pkt_burst = iavf_recv_scattered_pkts_vec_flex_rxd,
+		.info = "Vector Scattered Neon Flex",
+		.features = {
+			.rx_offloads = IAVF_RX_VECTOR_FLEX_OFFLOADS | RTE_ETH_RX_OFFLOAD_SCATTER,
+			.simd_width = RTE_VECT_SIMD_128,
+			.scattered = true,
+			.flex_desc = true,
+			.bulk_alloc = true
+		}
+	},
 #endif
 };
 
