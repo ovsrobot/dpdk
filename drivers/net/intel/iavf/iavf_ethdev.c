@@ -43,9 +43,11 @@
 #define IAVF_ENABLE_AUTO_RESET_ARG "auto_reset"
 #define IAVF_NO_POLL_ON_LINK_DOWN_ARG "no-poll-on-link-down"
 #define IAVF_MBUF_CHECK_ARG       "mbuf_check"
+#define IAVF_ENABLE_PTYPE_LLDP_ARG "enable_ptype_lldp"
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
 int rte_pmd_iavf_tx_lldp_dynfield_offset = -1;
+bool iavf_ptype_lldp_enabled;
 
 static const char * const iavf_valid_args[] = {
 	IAVF_PROTO_XTR_ARG,
@@ -54,6 +56,7 @@ static const char * const iavf_valid_args[] = {
 	IAVF_ENABLE_AUTO_RESET_ARG,
 	IAVF_NO_POLL_ON_LINK_DOWN_ARG,
 	IAVF_MBUF_CHECK_ARG,
+	IAVF_ENABLE_PTYPE_LLDP_ARG,
 	NULL
 };
 
@@ -1014,6 +1017,11 @@ iavf_dev_start(struct rte_eth_dev *dev)
 	/* Check Tx LLDP dynfield */
 	rte_pmd_iavf_tx_lldp_dynfield_offset =
 		rte_mbuf_dynfield_lookup(IAVF_TX_LLDP_DYNFIELD, NULL);
+	if (rte_pmd_iavf_tx_lldp_dynfield_offset > 0)
+		PMD_DRV_LOG(WARNING,
+			"The LLDP Tx dynamic mbuf field will be removed in a future release.");
+	iavf_ptype_lldp_enabled = adapter->devargs.enable_ptype_lldp ||
+					rte_pmd_iavf_tx_lldp_dynfield_offset > 0;
 
 	if (iavf_init_queues(dev) != 0) {
 		PMD_DRV_LOG(ERR, "failed to do Queue init");
@@ -2431,6 +2439,11 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 	if (ad->devargs.auto_reset != 0)
 		ad->devargs.no_poll_on_link_down = 1;
 
+	ret = rte_kvargs_process(kvlist, IAVF_ENABLE_PTYPE_LLDP_ARG,
+				 &parse_bool, &ad->devargs.enable_ptype_lldp);
+	if (ret)
+		goto bail;
+
 bail:
 	rte_kvargs_free(kvlist);
 	return ret;
@@ -2791,6 +2804,8 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 		 */
 		rte_pmd_iavf_tx_lldp_dynfield_offset =
 			rte_mbuf_dynfield_lookup(IAVF_TX_LLDP_DYNFIELD, NULL);
+		iavf_ptype_lldp_enabled = adapter->devargs.enable_ptype_lldp ||
+						rte_pmd_iavf_tx_lldp_dynfield_offset > 0;
 		iavf_set_tx_function(eth_dev);
 		return 0;
 	}
