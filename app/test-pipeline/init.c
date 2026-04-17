@@ -48,10 +48,6 @@ struct app_params app = {
 	.port_rx_ring_size = 128,
 	.port_tx_ring_size = 512,
 
-	/* Rings */
-	.ring_rx_size = 128,
-	.ring_tx_size = 128,
-
 	/* Buffer pool */
 	.pool_buffer_size = 2048 + RTE_PKTMBUF_HEADROOM,
 	.pool_size = 32 * 1024,
