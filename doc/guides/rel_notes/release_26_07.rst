@@ -24,6 +24,16 @@ DPDK Release 26.07
 New Features
 ------------
 
+* **Changed effective size of mempool cache.**
+
+  * The effective size of a mempool cache was changed to match the specified size at mempool creation; the effective size was previously 50 % larger than requested.
+  * The ``flushthresh`` field of the ``struct rte_mempool_cache`` became obsolete, but was kept for API/ABI compatibility purposes.
+  * The effective size of the ``objs`` array in the ``struct rte_mempool_cache`` was reduced to ``RTE_MEMPOOL_CACHE_MAX_SIZE``, but its size was kept for API/ABI compatibility purposes.
+
+* **Improved mempool cache flush/refill algorithm.**
+
+  * The mempool cache flush/refill algorithm was improved, to reduce the mempool cache miss rate.
+
 .. This section should contain new features added in this release.
    Sample format:
 

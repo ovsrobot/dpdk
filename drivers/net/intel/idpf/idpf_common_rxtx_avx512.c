@@ -148,14 +148,20 @@ idpf_singleq_rearm(struct idpf_rx_queue *rxq)
 	/* Can this be satisfied from the cache? */
 	if (cache->len < IDPF_RXQ_REARM_THRESH) {
 		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = IDPF_RXQ_REARM_THRESH + (cache->size -
-							cache->len);
 
-		/* How many do we require i.e. number to fill the cache + the request */
+		/* Backfill would exceed the cache bounce buffer limit? */
+		__rte_assume(cache->size / 2 <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+		if (unlikely(cache->size / 2 < IDPF_RXQ_REARM_THRESH)) {
+			idpf_singleq_rearm_common(rxq);
+			return;
+		}
+
+		/* Backfill the cache from the backend; fetch (size / 2) objects. */
+		__rte_assume(cache->len < cache->size / 2);
 		int ret = rte_mempool_ops_dequeue_bulk
-				(rxq->mp, &cache->objs[cache->len], req);
+				(rxq->mp, &cache->objs[cache->len], cache->size / 2);
 		if (ret == 0) {
-			cache->len += req;
+			cache->len += cache->size / 2;
 		} else {
 			if (rxq->rxrearm_nb + IDPF_RXQ_REARM_THRESH >=
 			    rxq->nb_rx_desc) {
@@ -565,14 +571,20 @@ idpf_splitq_rearm(struct idpf_rx_queue *rx_bufq)
 	/* Can this be satisfied from the cache? */
 	if (cache->len < IDPF_RXQ_REARM_THRESH) {
 		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = IDPF_RXQ_REARM_THRESH + (cache->size -
-							cache->len);
 
-		/* How many do we require i.e. number to fill the cache + the request */
+		/* Backfill would exceed the cache bounce buffer limit? */
+		__rte_assume(cache->size / 2 <= RTE_MEMPOOL_CACHE_MAX_SIZE / 2);
+		if (unlikely(cache->size / 2 < IDPF_RXQ_REARM_THRESH)) {
+			idpf_splitq_rearm_common(rx_bufq);
+			return;
+		}
+
+		/* Backfill the cache from the backend; fetch (size / 2) objects. */
+		__rte_assume(cache->len < cache->size / 2);
 		int ret = rte_mempool_ops_dequeue_bulk
-				(rx_bufq->mp, &cache->objs[cache->len], req);
+				(rx_bufq->mp, &cache->objs[cache->len], cache->size / 2);
 		if (ret == 0) {
-			cache->len += req;
+			cache->len += cache->size / 2;
 		} else {
 			if (rx_bufq->rxrearm_nb + IDPF_RXQ_REARM_THRESH >=
 			    rx_bufq->nb_rx_desc) {
