@@ -24,6 +24,10 @@ DPDK Release 26.07
 New Features
 ------------
 
+* **Updated Intel common driver.**
+
+  * Added missing mbuf history marking to vectorized Tx path for MBUF_FAST_FREE.
+
 .. This section should contain new features added in this release.
    Sample format:
 
