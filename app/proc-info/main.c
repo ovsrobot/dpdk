@@ -55,6 +55,9 @@
 #define STATS_BDR_STR(w, s) printf("%.*s%s%.*s\n", w, \
 	STATS_BDR_FMT, s, w, STATS_BDR_FMT)
 
+#define ARG_C_FLAG (1 << 0)
+#define ARG_N_FLAG (1 << 1)
+
 /* mask of enabled ports */
 static unsigned long enabled_port_mask;
 /* Enable stats. */
@@ -2116,6 +2119,19 @@ eventdev_xstats(void)
 	return count;
 }
 
+static void
+check_user_args(int argc, char **argv, uint8_t *arg_bitmap)
+{
+	int i;
+
+	for (i = 1; i < argc; i++) {
+		if (strncmp(argv[i], "-l", 2) == 0)
+			*arg_bitmap |= ARG_C_FLAG;
+		else if (strncmp(argv[i], "-n", 2) == 0)
+			*arg_bitmap |= ARG_N_FLAG;
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -2125,8 +2141,11 @@ main(int argc, char **argv)
 	char n_flag[] = "-n4";
 	char mp_flag[] = "--proc-type=secondary";
 	char log_flag[] = "--log-level=6";
+	uint8_t arg_bitmap = 0;
+	int default_argc = 0;
 	char *argp[argc + 4];
 	uint16_t nb_ports;
+	int argp_idx = 0;
 
 	/* preparse app arguments */
 	ret = proc_info_preparse_args(argc, argv);
@@ -2135,23 +2154,30 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	argp[0] = argv[0];
-	argp[1] = c_flag;
-	argp[2] = n_flag;
-	argp[3] = mp_flag;
-	argp[4] = log_flag;
+	check_user_args(argc, argv, &arg_bitmap);
+	argp[argp_idx++] = argv[0];
+
+	if (!(arg_bitmap & ARG_C_FLAG))
+		argp[argp_idx++] = c_flag;
+
+	if (!(arg_bitmap & ARG_N_FLAG))
+		argp[argp_idx++] = n_flag;
+
+	argp[argp_idx++] = mp_flag;
+	argp[argp_idx++] = log_flag;
+	default_argc = argp_idx - 1;
 
 	for (i = 1; i < argc; i++)
-		argp[i + 4] = argv[i];
+		argp[argp_idx++] = argv[i];
 
-	argc += 4;
+	argc = argp_idx;
 
 	ret = rte_eal_init(argc, argp);
 	if (ret < 0)
 		rte_panic("Cannot init EAL\n");
 
 	argc -= ret;
-	argv += ret - 4;
+	argv += ret - default_argc;
 
 	if (!rte_eal_primary_proc_alive(NULL))
 		rte_exit(EXIT_FAILURE, "No primary DPDK process is running.\n");
