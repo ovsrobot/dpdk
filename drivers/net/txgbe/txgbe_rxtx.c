@@ -21,7 +21,9 @@
 #include <rte_debug.h>
 #include <rte_ethdev.h>
 #include <ethdev_driver.h>
+#ifdef RTE_LIB_SECURITY
 #include <rte_security_driver.h>
+#endif
 #include <rte_memzone.h>
 #include <rte_atomic.h>
 #include <rte_mempool.h>
@@ -340,6 +342,17 @@ txgbe_xmit_pkts_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 	}
 
 	return nb_tx;
+}
+
+static uint64_t *
+txgbe_security_dynfield(struct rte_mbuf *tx_pkt)
+{
+#ifdef RTE_LIB_SECURITY
+	return rte_security_dynfield(tx_pkt);
+#else
+	UNREFERENCED_PARAMETER(tx_pkt);
+	return NULL;
+#endif
 }
 
 static inline void
@@ -1102,7 +1115,7 @@ txgbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 				txgbe_set_xmit_ctx(txq, ctx_txd, tx_ol_req,
 					tx_offload,
-					rte_security_dynfield(tx_pkt));
+					txgbe_security_dynfield(tx_pkt));
 
 				txe->last_id = tx_last;
 				tx_id = txe->next_id;
