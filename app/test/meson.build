@@ -212,6 +212,7 @@ source_file_deps = {
     'test_trace_register.c': [],
     'test_vdev.c': ['kvargs', 'bus_vdev', 'net_null'],
     'test_version.c': [],
+    'test_gro.c':['net', 'gro'],
 }
 
 source_file_ext_deps = {
