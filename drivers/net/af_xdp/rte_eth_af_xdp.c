@@ -83,7 +83,7 @@ RTE_LOG_REGISTER_DEFAULT(af_xdp_logtype, NOTICE);
 
 #define ETH_AF_XDP_MP_KEY "afxdp_mp_send_fds"
 
-#define DP_BASE_PATH			"/tmp/afxdp_dp"
+#define DP_BASE_PATH			"/run/dpdk/afxdp"
 #define DP_UDS_SOCK             "afxdp.sock"
 #define DP_XSK_MAP				"xsks_map"
 #define MAX_LONG_OPT_SZ			64
