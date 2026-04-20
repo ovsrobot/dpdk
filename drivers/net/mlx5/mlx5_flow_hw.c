@@ -14275,6 +14275,7 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 	uint64_t item_flags = 0;
 	uint64_t action_flags = mlx5_flow_hw_action_flags_get(actions, &qrss, &mark,
 							 &encap_idx, &actions_n, error);
+	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_flow_hw_split_resource resource = {
 		.suffix = {
 			.attr = attr,
@@ -14282,6 +14283,28 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 			.actions = actions,
 		},
 	};
+	struct rte_flow_item *prepend_items = NULL;
+	struct rte_flow_item_ethdev port_spec = {.port_id = dev->data->port_id};
+	struct rte_flow_item port = {
+		.type = RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT,
+		.spec = &port_spec,
+		.mask = &rte_flow_item_ethdev_mask,
+	};
+	struct mlx5_rte_flow_item_tag tag_v = {
+		.id = REG_C_0,
+		.data = flow_hw_tx_tag_regc_value(dev),
+	};
+	struct mlx5_rte_flow_item_tag tag_m = {
+		.id = REG_C_0,
+		.data = flow_hw_tx_tag_regc_mask(dev),
+	};
+	struct rte_flow_item tag = {
+		.type = (enum rte_flow_item_type)MLX5_RTE_FLOW_ITEM_TYPE_TAG,
+		.spec = &tag_v,
+		.mask = &tag_m,
+		.last = NULL,
+	};
+	uint32_t nb_items;
 	struct rte_flow_error shadow_error = {0, };
 	const struct rte_flow_pattern_template_attr pattern_template_attr = {
 		.relaxed_matching = 0,
@@ -14296,13 +14319,48 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 	if (ret < 0)
 		return 0;
 
+	nb_items = ret;
+
+	/*
+	 * In eSwitch mode, the async (template) path automatically prepends
+	 * implicit items to scope flow rules to the correct representor port:
+	 *   - Ingress: REPRESENTED_PORT item matching dev->data->port_id
+	 *   - Egress: REG_C_0 TAG item matching the port's tx tag value
+	 * Mirror this behavior in the sync path so rules are not shared
+	 * across all eSwitch ports.
+	 */
+	if (priv->sh->config.dv_esw_en &&
+	    attr->ingress && !attr->egress && !attr->transfer) {
+		prepend_items = flow_hw_prepend_item(items, nb_items,
+						     &port, error);
+		if (!prepend_items)
+			return 0;
+		items = prepend_items;
+	} else if (priv->sh->config.dv_esw_en &&
+		   !attr->ingress && attr->egress && !attr->transfer) {
+		if (item_flags & MLX5_FLOW_ITEM_SQ) {
+			DRV_LOG(DEBUG,
+				"Port %u omitting implicit REG_C_0 match for egress "
+				"pattern template",
+				dev->data->port_id);
+			goto setup_pattern;
+		}
+		prepend_items = flow_hw_prepend_item(items, nb_items,
+						     &tag, error);
+		if (!prepend_items)
+			return 0;
+		items = prepend_items;
+	}
+setup_pattern:
 	RTE_SET_USED(encap_idx);
 	if (!error)
 		error = &shadow_error;
 	split = mlx5_flow_nta_split_metadata(dev, attr, actions, qrss, action_flags,
 					     actions_n, external, &resource, error);
-	if (split < 0)
-		return split;
+	if (split < 0) {
+		mlx5_free(prepend_items);
+		return 0;
+	}
 
 	/* Update the metadata copy table - MLX5_FLOW_MREG_CP_TABLE_GROUP */
 	if (((attr->ingress && attr->group != MLX5_FLOW_MREG_CP_TABLE_GROUP) ||
@@ -14315,8 +14373,10 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 	if (action_flags & MLX5_FLOW_ACTION_SAMPLE) {
 		flow = mlx5_nta_sample_flow_list_create(dev, type, attr, items, actions,
 							item_flags, action_flags, error);
-		if (flow != NULL)
+		if (flow != NULL) {
+			mlx5_free(prepend_items);
 			return (uintptr_t)flow;
+		}
 		goto free;
 	}
 	if (action_flags & MLX5_FLOW_ACTION_RSS) {
@@ -14328,8 +14388,10 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 		if (flow) {
 			flow->nt2hws->rix_mreg_copy = cpy_idx;
 			cpy_idx = 0;
-			if (!split)
+			if (!split) {
+				mlx5_free(prepend_items);
 				return (uintptr_t)flow;
+			}
 			goto prefix_flow;
 		}
 		goto free;
@@ -14343,8 +14405,10 @@ static uintptr_t flow_hw_list_create(struct rte_eth_dev *dev,
 	if (flow) {
 		flow->nt2hws->rix_mreg_copy = cpy_idx;
 		cpy_idx = 0;
-		if (!split)
+		if (!split) {
+			mlx5_free(prepend_items);
 			return (uintptr_t)flow;
+		}
 		/* Fall Through to prefix flow creation. */
 	}
 prefix_flow:
@@ -14357,6 +14421,7 @@ prefix_flow:
 		flow->nt2hws->chaned_flow = 1;
 		SLIST_INSERT_AFTER(prfx_flow, flow, nt2hws->next);
 		mlx5_flow_nta_split_resource_free(dev, &resource);
+		mlx5_free(prepend_items);
 		return (uintptr_t)prfx_flow;
 	}
 free:
@@ -14368,6 +14433,7 @@ free:
 		mlx5_flow_nta_del_copy_action(dev, cpy_idx);
 	if (split > 0)
 		mlx5_flow_nta_split_resource_free(dev, &resource);
+	mlx5_free(prepend_items);
 	return 0;
 }
 
