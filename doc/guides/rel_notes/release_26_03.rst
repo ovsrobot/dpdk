@@ -123,6 +123,10 @@ Removed Items
   which have feature parity with the SSE paths,
   and a fallback scalar path which also has feature parity.
 
+* **Removed support for AMD Solarflare SFN7xxx family boards.**
+
+  7000 series adaptors are out of support in terms of hardware.
+
 
 API Changes
 -----------
