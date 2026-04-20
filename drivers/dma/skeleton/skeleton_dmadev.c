@@ -5,8 +5,6 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#include <pthread.h>
-
 #include <bus_vdev_driver.h>
 #include <rte_cycles.h>
 #include <rte_eal.h>
@@ -215,10 +213,9 @@ skeldma_stop(struct rte_dma_dev *dev)
 {
 	struct skeldma_hw *hw = dev->data->dev_private;
 
+	/* setting exit flag causes cpuwork_thread to exit polling loop */
 	hw->exit_flag = true;
-	rte_delay_ms(1);
 
-	(void)pthread_cancel((pthread_t)hw->thread.opaque_id);
 	rte_thread_join(hw->thread, NULL);
 
 	return 0;
