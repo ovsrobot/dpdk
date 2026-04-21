@@ -73,8 +73,11 @@ rte_ring_get_memsize_elem(unsigned int esize, unsigned int count)
 		return -EINVAL;
 	}
 
+	static_assert(sizeof(struct rte_ring) == RTE_CACHE_LINE_ROUNDUP(sizeof(struct rte_ring)),
+			"Size of struct rte_ring not cache line aligned");
 	sz = sizeof(struct rte_ring) + (ssize_t)count * esize;
 	sz = RTE_ALIGN(sz, RTE_CACHE_LINE_SIZE);
+	sz += RTE_CACHE_GUARD_LINES * RTE_CACHE_LINE_SIZE;
 	return sz;
 }
 
