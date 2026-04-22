@@ -117,11 +117,28 @@ struct rte_tailq_head *rte_eal_tailq_lookup(const char *name);
  */
 int rte_eal_tailq_register(struct rte_tailq_elem *t);
 
+/**
+ * Remove a tail queue element from the local list.
+ * This function is mainly used for EAL_REGISTER_TAILQ macro which pairs
+ * an RTE_FINI destructor with the existing RTE_INIT constructor.
+ * The destructor calls this function during dlclose() to prevent
+ * dangling pointers to unmapped library data.
+ *
+ * @param t
+ *   The tailq element which contains the name of the tailq you want to
+ *   delete
+ */
+void rte_eal_tailq_unregister(struct rte_tailq_elem *t);
+
 #define EAL_REGISTER_TAILQ(t) \
 RTE_INIT(tailqinitfn_ ##t) \
 { \
 	if (rte_eal_tailq_register(&t) < 0) \
 		rte_panic("Cannot initialize tailq: %s\n", t.name); \
+} \
+RTE_FINI(tailqfinifn_ ##t) \
+{ \
+	rte_eal_tailq_unregister(&t); \
 }
 
 /* This macro permits both remove and free var within the loop safely.*/
