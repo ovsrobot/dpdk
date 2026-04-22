@@ -63,6 +63,10 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **UACCE bus supports no-iommu mode.**
+
+  Support no-iommu mode for devices without or not enabling IOMMU/SVA.
+
 
 Removed Items
 -------------
