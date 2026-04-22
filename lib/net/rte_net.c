@@ -359,7 +359,7 @@ uint32_t rte_net_get_ptype(const struct rte_mbuf *m,
 
 		if (++vlan_depth > RTE_NET_VLAN_MAX_DEPTH)
 			return 0;
-		pkt_type |=
+		pkt_type =
 			proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_VLAN) ?
 				 RTE_PTYPE_L2_ETHER_VLAN :
 				 RTE_PTYPE_L2_ETHER_QINQ;
