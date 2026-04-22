@@ -331,8 +331,8 @@ uint32_t rte_net_get_ptype(const struct rte_mbuf *m,
 	struct rte_net_hdr_lens local_hdr_lens;
 	const struct rte_ether_hdr *eh;
 	struct rte_ether_hdr eh_copy;
-	uint32_t pkt_type = RTE_PTYPE_L2_ETHER;
 	uint32_t off = 0, vlan_depth = 0;
+	uint32_t pkt_type = 0;
 	uint16_t proto;
 	int ret;
 
@@ -392,6 +392,8 @@ uint32_t rte_net_get_ptype(const struct rte_mbuf *m,
 	}
 
 l3:
+	if (pkt_type == 0)
+		pkt_type = RTE_PTYPE_L2_ETHER;
 	if ((layers & RTE_PTYPE_L3_MASK) == 0)
 		return pkt_type;
 
