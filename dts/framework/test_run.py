@@ -107,6 +107,14 @@ from types import MethodType
 from typing import ClassVar, Protocol, Union
 
 from api.test_suite import BaseConfig, TestCase, TestCaseType, TestSuite
+from api.testbed_model.capability import (
+    Capability,
+    get_supported_capabilities,
+    test_if_supported,
+)
+from api.testbed_model.node import Node
+from api.testbed_model.topology import PortLink, Topology
+from api.testbed_model.traffic_generator import create_traffic_generator
 from framework.config.test_run import TestRunConfiguration
 from framework.context import Context, init_ctx
 from framework.exception import InternalError, SkippedTestException, TestCaseVerifyError
@@ -114,14 +122,6 @@ from framework.logger import DTSLogger, get_dts_logger
 from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
 from framework.settings import SETTINGS
 from framework.test_result import Result, ResultNode, TestRunResult
-from framework.testbed_model.capability import (
-    Capability,
-    get_supported_capabilities,
-    test_if_supported,
-)
-from framework.testbed_model.node import Node
-from framework.testbed_model.topology import PortLink, Topology
-from framework.testbed_model.traffic_generator import create_traffic_generator
 
 TestScenario = tuple[type[TestSuite], BaseConfig, deque[type[TestCase]]]
 

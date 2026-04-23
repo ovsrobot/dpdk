@@ -28,14 +28,14 @@ from scapy.layers.l2 import Ether
 from scapy.packet import Packet, Padding, raw
 
 from api.test import fail, log_debug
-from framework.context import get_ctx
-from framework.exception import InternalError
-from framework.testbed_model.traffic_generator.capturing_traffic_generator import (
+from api.testbed_model.traffic_generator.capturing_traffic_generator import (
     PacketFilteringConfig,
 )
-from framework.testbed_model.traffic_generator.performance_traffic_generator import (
+from api.testbed_model.traffic_generator.performance_traffic_generator import (
     PerformanceTrafficStats,
 )
+from framework.context import get_ctx
+from framework.exception import InternalError
 from framework.utils import get_packet_summaries
 
 
@@ -82,10 +82,10 @@ def send_packets_and_capture(
     Returns:
         A list of received packets.
     """
-    from framework.context import get_ctx
-    from framework.testbed_model.traffic_generator.capturing_traffic_generator import (
+    from api.testbed_model.traffic_generator.capturing_traffic_generator import (
         CapturingTrafficGenerator,
     )
+    from framework.context import get_ctx
 
     assert isinstance(
         get_ctx().func_tg, CapturingTrafficGenerator
@@ -340,7 +340,7 @@ def assess_performance_by_packet(
     Returns:
         Performance statistics of the generated test.
     """
-    from framework.testbed_model.traffic_generator.performance_traffic_generator import (
+    from api.testbed_model.traffic_generator.performance_traffic_generator import (
         PerformanceTrafficGenerator,
     )
 

@@ -21,7 +21,7 @@ from .common import FrozenModel
 
 @unique
 class OS(StrEnum):
-    r"""The supported operating systems of :class:`~framework.testbed_model.node.Node`\s."""
+    r"""The supported operating systems of :class:`~api.testbed_model.node.Node`\s."""
 
     #:
     linux = auto()
@@ -32,7 +32,7 @@ class OS(StrEnum):
 
 
 class HugepageConfiguration(FrozenModel):
-    r"""The hugepage configuration of :class:`~framework.testbed_model.node.Node`\s."""
+    r"""The hugepage configuration of :class:`~api.testbed_model.node.Node`\s."""
 
     #: The number of hugepages to allocate.
     number_of: int
@@ -41,7 +41,7 @@ class HugepageConfiguration(FrozenModel):
 
 
 class PortConfig(FrozenModel):
-    r"""The port configuration of :class:`~framework.testbed_model.node.Node`\s."""
+    r"""The port configuration of :class:`~api.testbed_model.node.Node`\s."""
 
     #: An identifier for the port. May contain letters, digits, underscores, hyphens and spaces.
     name: str = Field(pattern=REGEX_FOR_IDENTIFIER)
@@ -54,17 +54,17 @@ class PortConfig(FrozenModel):
 
 
 class NodeConfiguration(FrozenModel):
-    r"""The configuration of :class:`~framework.testbed_model.node.Node`\s."""
+    r"""The configuration of :class:`~api.testbed_model.node.Node`\s."""
 
-    #: The name of the :class:`~framework.testbed_model.node.Node`.
+    #: The name of the :class:`~api.testbed_model.node.Node`.
     name: str = Field(pattern=REGEX_FOR_IDENTIFIER)
-    #: The hostname of the :class:`~framework.testbed_model.node.Node`. Can also be an IP address.
+    #: The hostname of the :class:`~api.testbed_model.node.Node`. Can also be an IP address.
     hostname: str
-    #: The name of the user used to connect to the :class:`~framework.testbed_model.node.Node`.
+    #: The name of the user used to connect to the :class:`~api.testbed_model.node.Node`.
     user: str
     #: The password of the user. The use of passwords is heavily discouraged, please use SSH keys.
     password: str | None = None
-    #: The operating system of the :class:`~framework.testbed_model.node.Node`.
+    #: The operating system of the :class:`~api.testbed_model.node.Node`.
     os: OS
     #: An optional hugepage configuration.
     hugepages: HugepageConfiguration | None = Field(None, alias="hugepages_2mb")

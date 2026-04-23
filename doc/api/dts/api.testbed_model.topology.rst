@@ -3,6 +3,6 @@
 topology - Testbed Topology
 ===========================
 
-.. automodule:: framework.testbed_model.topology
+.. automodule:: api.testbed_model.topology
    :members:
    :show-inheritance:

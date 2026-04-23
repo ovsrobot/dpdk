@@ -18,13 +18,13 @@ from typing import TypedDict
 
 from typing_extensions import NotRequired
 
-from framework.exception import (
+from api.exception import (
     ConfigurationError,
     InternalError,
     RemoteCommandExecutionError,
 )
-from framework.testbed_model.port import PortInfo
-from framework.utils import expand_range
+from api.testbed_model.port import PortInfo
+from api.utils import expand_range
 
 from .cpu import LogicalCore
 from .port import Port

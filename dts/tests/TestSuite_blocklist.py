@@ -12,8 +12,8 @@ from api.capabilities import (
 )
 from api.test import verify
 from api.test_suite import TestSuite, func_test
+from api.testbed_model.port import Port
 from api.testpmd import TestPmd
-from framework.testbed_model.port import Port
 
 
 class TestBlocklist(TestSuite):

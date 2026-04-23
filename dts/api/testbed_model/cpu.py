@@ -24,12 +24,12 @@ from collections.abc import Iterable, ValuesView
 from dataclasses import dataclass
 from enum import auto, unique
 
-from framework.utils import StrEnum, expand_range
+from api.utils import StrEnum, expand_range
 
 
 @unique
 class Architecture(StrEnum):
-    r"""The supported architectures of :class:`~framework.testbed_model.node.Node`\s."""
+    r"""The supported architectures of :class:`~api.testbed_model.node.Node`\s."""
 
     #:
     i686 = auto()

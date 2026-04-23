@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 @unique
 class Compiler(StrEnum):
-    r"""The supported compilers of :class:`~framework.testbed_model.node.Node`\s."""
+    r"""The supported compilers of :class:`~api.testbed_model.node.Node`\s."""
 
     #:
     gcc = auto()

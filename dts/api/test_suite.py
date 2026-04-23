@@ -29,11 +29,11 @@ from scapy.layers.inet import IP
 from scapy.packet import Packet
 from typing_extensions import Self
 
+from api.testbed_model.capability import TestProtocol
+from api.testbed_model.topology import Topology
 from framework.config.common import FrozenModel
 from framework.exception import ConfigurationError, InternalError
 from framework.logger import DTSLogger, get_dts_logger
-from framework.testbed_model.capability import TestProtocol
-from framework.testbed_model.topology import Topology
 from framework.utils import to_pascal_case
 
 if TYPE_CHECKING:

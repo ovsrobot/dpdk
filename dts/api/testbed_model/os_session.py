@@ -29,12 +29,12 @@ from dataclasses import dataclass
 from enum import Flag, auto
 from pathlib import Path, PurePath, PurePosixPath
 
+from api.utils import MesonArgs, TarCompressionFormat
 from framework.config.node import NodeConfiguration
 from framework.logger import DTSLogger
 from framework.remote_session.interactive_remote_session import InteractiveRemoteSession
 from framework.remote_session.remote_session import CommandResult, RemoteSession
 from framework.settings import SETTINGS
-from framework.utils import MesonArgs, TarCompressionFormat
 
 from .cpu import Architecture, LogicalCore
 from .port import Port, PortInfo
@@ -73,11 +73,11 @@ class OSSessionInfo:
 
     Attributes:
         os_name: The name of the running operating system of
-            the :class:`~framework.testbed_model.node.Node`.
+            the :class:`~api.testbed_model.node.Node`.
         os_version: The version of the running operating system of
-            the :class:`~framework.testbed_model.node.Node`.
+            the :class:`~api.testbed_model.node.Node`.
         kernel_version: The kernel version of the running operating system of
-            the :class:`~framework.testbed_model.node.Node`.
+            the :class:`~api.testbed_model.node.Node`.
     """
 
     os_name: str
