@@ -18,6 +18,7 @@ from api.testbed_model.cpu import LogicalCore, LogicalCoreCount, LogicalCoreList
 from api.testbed_model.node import Node
 from api.testbed_model.os_session import OSSession
 from api.testbed_model.virtual_device import VirtualDevice
+from api.utils import MesonArgs, TarCompressionFormat
 from framework.config.test_run import (
     DPDKBuildConfiguration,
     DPDKBuildOptionsConfiguration,
@@ -33,7 +34,6 @@ from framework.context import get_ctx
 from framework.logger import DTSLogger, get_dts_logger
 from framework.params.eal import EalParams
 from framework.remote_session.remote_session import CommandResult
-from framework.utils import MesonArgs, TarCompressionFormat
 
 
 @dataclass(slots=True, frozen=True)
