@@ -1298,10 +1298,15 @@ static int zxdh_scattered_rx(struct rte_eth_dev *eth_dev)
 static int32_t
 zxdh_set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 {
+	uint64_t tx_offloads = eth_dev->data->dev_conf.txmode.offloads;
+
 	eth_dev->tx_pkt_prepare = zxdh_xmit_pkts_prepare;
 	eth_dev->data->scattered_rx = zxdh_scattered_rx(eth_dev);
 
-	eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
+	if (!(tx_offloads & RTE_ETH_TX_OFFLOAD_MULTI_SEGS))
+		eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_simple;
+	else
+		eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
 
 	if (eth_dev->data->scattered_rx)
 		eth_dev->rx_pkt_burst = &zxdh_recv_pkts_packed;
