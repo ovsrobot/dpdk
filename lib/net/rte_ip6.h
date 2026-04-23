@@ -572,6 +572,7 @@ rte_ipv6_phdr_cksum(const struct rte_ipv6_hdr *ipv6_hdr, uint64_t ol_flags)
 	else
 		psd_hdr.len = ipv6_hdr->payload_len;
 
+	RTE_FORCE_INIT_BARRIER(psd_hdr);
 	sum = __rte_raw_cksum(&ipv6_hdr->src_addr,
 		sizeof(ipv6_hdr->src_addr) + sizeof(ipv6_hdr->dst_addr),
 		0);

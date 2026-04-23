@@ -238,6 +238,7 @@ rte_ipv4_phdr_cksum(const struct rte_ipv4_hdr *ipv4_hdr, uint64_t ol_flags)
 		psd_hdr.len = rte_cpu_to_be_16((uint16_t)(l3_len -
 			rte_ipv4_hdr_len(ipv4_hdr)));
 	}
+	RTE_FORCE_INIT_BARRIER(psd_hdr);
 	return rte_raw_cksum(&psd_hdr, sizeof(psd_hdr));
 }
 
