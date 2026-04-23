@@ -100,7 +100,9 @@ txgbe_tx_free_bufs(struct txgbe_tx_queue *txq)
 
 		volatile uint16_t head = (uint16_t)*txq->headwb_mem;
 
-		if (txq->tx_next_dd > head && head > tx_last_dd)
+		if (txq->tx_next_dd == head)
+			return 0;
+		else if (txq->tx_next_dd > head && head > tx_last_dd)
 			return 0;
 		else if (tx_last_dd > txq->tx_next_dd &&
 				(head > tx_last_dd || head < txq->tx_next_dd))
@@ -651,6 +653,11 @@ txgbe_xmit_cleanup(struct txgbe_tx_queue *txq)
 				txq->reg_idx, head, desc_to_clean_to);
 		/* we have caught up to head, no work left to do */
 		if (desc_to_clean_to == head)
+			return -(1);
+		else if (desc_to_clean_to > head && head > last_desc_cleaned)
+			return -(1);
+		else if (last_desc_cleaned > desc_to_clean_to &&
+			 (head > last_desc_cleaned || head < desc_to_clean_to))
 			return -(1);
 	} else {
 		if (!(status & rte_cpu_to_le_32(TXGBE_TXD_DD))) {
