@@ -23,7 +23,7 @@ from api.testbed_model.cpu import LogicalCoreCount
 from api.testpmd import TestPmd
 from api.testpmd.config import EthPeer, SimpleForwardingModes
 from api.utils import generate_random_packets
-from framework.context import filter_cores
+from api.context import filter_cores
 
 
 @requires_nic_capability(NicCapability.PHYSICAL_FUNCTION)
