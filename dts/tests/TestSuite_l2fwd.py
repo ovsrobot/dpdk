@@ -19,10 +19,10 @@ from api.packet import (
     send_packets_and_capture,
 )
 from api.test_suite import TestSuite, func_test
+from api.testbed_model.cpu import LogicalCoreCount
 from api.testpmd import TestPmd
 from api.testpmd.config import EthPeer, SimpleForwardingModes
 from framework.context import filter_cores
-from framework.testbed_model.cpu import LogicalCoreCount
 from framework.utils import generate_random_packets
 
 

@@ -19,9 +19,9 @@ from api.packet import (
     send_packets_and_capture,
 )
 from api.test_suite import TestSuite, func_test
+from api.testbed_model.virtual_device import VirtualDevice
 from api.testpmd import TestPmd
 from api.testpmd.config import EthPeer
-from framework.testbed_model.virtual_device import VirtualDevice
 from framework.utils import generate_random_packets
 
 

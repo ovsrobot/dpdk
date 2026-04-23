@@ -31,9 +31,9 @@ from api.cryptodev.types import (
 )
 from api.test import verify
 from api.test_suite import BaseConfig, TestSuite, crypto_test
+from api.testbed_model.virtual_device import VirtualDevice
 from framework.context import get_ctx
 from framework.exception import SkippedTestException
-from framework.testbed_model.virtual_device import VirtualDevice
 
 config_list: list[dict[str, int | float | str]] = [
     {"buff_size": 64, "Gbps": 1.00},

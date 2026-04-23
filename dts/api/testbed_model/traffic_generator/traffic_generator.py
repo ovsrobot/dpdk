@@ -13,11 +13,11 @@ from typing import Any
 
 from scapy.packet import Packet
 
+from api.testbed_model.node import Node
+from api.testbed_model.port import Port
+from api.testbed_model.topology import Topology
 from framework.config.test_run import TrafficGeneratorConfig
 from framework.logger import DTSLogger, get_dts_logger
-from framework.testbed_model.node import Node
-from framework.testbed_model.port import Port
-from framework.testbed_model.topology import Topology
 
 
 class TrafficGenerator(ABC):
@@ -25,7 +25,7 @@ class TrafficGenerator(ABC):
 
     Exposes the common public methods of all traffic generators and defines private methods
     that must implement the traffic generation logic in subclasses. This class also extends from
-    :class:`framework.utils.MultiInheritanceBaseClass` to allow subclasses the ability to inherit
+    :class:`api.utils.MultiInheritanceBaseClass` to allow subclasses the ability to inherit
     from multiple classes to fulfil the traffic generating functionality without breaking
     single inheritance.
     """

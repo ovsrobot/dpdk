@@ -8,18 +8,18 @@ from collections.abc import Callable
 from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, Optional, ParamSpec, Union
 
+from api.testbed_model.cpu import LogicalCoreCount, LogicalCoreList
+from api.testbed_model.node import Node
+from api.testbed_model.topology import Topology
 from framework.exception import InternalError
 from framework.remote_session.shell_pool import ShellPool
 from framework.settings import SETTINGS
-from framework.testbed_model.cpu import LogicalCoreCount, LogicalCoreList
-from framework.testbed_model.node import Node
-from framework.testbed_model.topology import Topology
 
 if TYPE_CHECKING:
     from api.test_suite import TestCase, TestSuite
+    from api.testbed_model.capability import TestProtocol
+    from api.testbed_model.traffic_generator.traffic_generator import TrafficGenerator
     from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
-    from framework.testbed_model.capability import TestProtocol
-    from framework.testbed_model.traffic_generator.traffic_generator import TrafficGenerator
 
 P = ParamSpec("P")
 

@@ -13,11 +13,11 @@ from api.capabilities import LinkTopology
 from api.packet import send_packets_and_capture
 from api.test import log, verify
 from api.test_suite import TestSuite, func_test
+from api.testbed_model.capability import requires
+from api.testbed_model.linux_session import LinuxSession
+from api.testbed_model.virtual_device import VirtualDevice
 from api.testpmd import TestPmd
 from api.testpmd.config import PortTopology, SimpleForwardingModes
-from framework.testbed_model.capability import requires
-from framework.testbed_model.linux_session import LinuxSession
-from framework.testbed_model.virtual_device import VirtualDevice
 
 
 class TestVirtioFwd(TestSuite):
