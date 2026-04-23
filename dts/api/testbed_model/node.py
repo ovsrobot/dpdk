@@ -25,7 +25,6 @@ from framework.config.node import (
 from framework.logger import DTSLogger, get_dts_logger
 
 from .cpu import Architecture, LogicalCore
-from .linux_session import LinuxSession
 from .os_session import OSSession, OSSessionInfo
 from .port import Port
 
@@ -201,16 +200,26 @@ class Node:
 def create_session(node_config: NodeConfiguration, name: str, logger: DTSLogger) -> OSSession:
     """Factory for OS-aware sessions.
 
+    Creates a concrete :class:`~.os_session.OSSession` implementation appropriate for the
+    operating system specified in `node_config`. The concrete session classes live in the
+    framework package and are imported lazily to avoid circular dependencies between the
+    API and framework layers.
+
     Args:
         node_config: The test run configuration of the node to connect to.
         name: The name of the session.
         logger: The logger instance this session will use.
+
+    Returns:
+        An OS-aware session connected to the node.
 
     Raises:
         ConfigurationError: If the node's OS is unsupported.
     """
     match node_config.os:
         case OS.linux:
+            from framework.linux_session import LinuxSession
+
             return LinuxSession(node_config, name, logger)
         case _:
             raise ConfigurationError(f"Unsupported OS {node_config.os}")

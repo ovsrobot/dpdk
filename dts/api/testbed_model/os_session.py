@@ -166,6 +166,22 @@ class OSSession(ABC):
         """Close the underlying remote session."""
         self.remote_session.close()
 
+    @property
+    @abstractmethod
+    def devbind_script_path(self) -> PurePath:
+        """The path to the dpdk-devbind.py script on the node.
+
+        Must be set up during environment initialization before access.
+
+        Raises:
+            InternalError: If accessed before environment setup.
+        """
+
+    @devbind_script_path.setter
+    @abstractmethod
+    def devbind_script_path(self, value: PurePath) -> None:
+        """Set the devbind script path after environment setup."""
+
     @staticmethod
     @abstractmethod
     def _get_privileged_command(command: str) -> str:
