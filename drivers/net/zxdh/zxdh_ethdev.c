@@ -1269,18 +1269,44 @@ zxdh_dev_close(struct rte_eth_dev *dev)
 	return ret;
 }
 
+/*
+ * Determine whether the current configuration requires support for scattered
+ * receive; return 1 if scattered receive is required and 0 if not.
+ */
+static int zxdh_scattered_rx(struct rte_eth_dev *eth_dev)
+{
+	uint16_t buf_size;
+
+	if (eth_dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_TCP_LRO) {
+		eth_dev->data->lro = 1;
+		return 1;
+	}
+
+	if (eth_dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_SCATTER)
+		return 1;
+
+
+	PMD_DRV_LOG(DEBUG, "port %d min_rx_buf_size %d",
+		eth_dev->data->port_id, eth_dev->data->min_rx_buf_size);
+	buf_size = eth_dev->data->min_rx_buf_size - RTE_PKTMBUF_HEADROOM;
+	if (eth_dev->data->mtu + ZXDH_ETH_OVERHEAD > buf_size)
+		return 1;
+
+	return 0;
+}
+
 static int32_t
 zxdh_set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 {
-	struct zxdh_hw *hw = eth_dev->data->dev_private;
-
-	if (!zxdh_pci_with_feature(hw, ZXDH_NET_F_MRG_RXBUF)) {
-		PMD_DRV_LOG(ERR, "port %u not support rx mergeable", eth_dev->data->port_id);
-		return -1;
-	}
 	eth_dev->tx_pkt_prepare = zxdh_xmit_pkts_prepare;
+	eth_dev->data->scattered_rx = zxdh_scattered_rx(eth_dev);
+
 	eth_dev->tx_pkt_burst = &zxdh_xmit_pkts_packed;
-	eth_dev->rx_pkt_burst = &zxdh_recv_pkts_packed;
+
+	if (eth_dev->data->scattered_rx)
+		eth_dev->rx_pkt_burst = &zxdh_recv_pkts_packed;
+	else
+		eth_dev->rx_pkt_burst = &zxdh_recv_single_pkts;
 
 	return 0;
 }
