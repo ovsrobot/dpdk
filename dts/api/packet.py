@@ -35,8 +35,8 @@ from api.testbed_model.traffic_generator.capturing_traffic_generator import (
 from api.testbed_model.traffic_generator.performance_traffic_generator import (
     PerformanceTrafficStats,
 )
+from api.utils import get_packet_summaries
 from framework.context import get_ctx
-from framework.utils import get_packet_summaries
 
 
 def send_packet_and_capture(

@@ -31,7 +31,7 @@ from api.testpmd.types import (
     RSSOffloadTypesFlag,
     TestPmdVerbosePacket,
 )
-from framework.utils import StrEnum
+from api.utils import StrEnum
 
 
 class Config(BaseConfig):

@@ -13,6 +13,7 @@ from enum import EnumMeta, Flag, auto, unique
 from pathlib import PurePath
 from typing import Literal, NamedTuple
 
+from api.utils import StrEnum
 from framework.params import (
     Params,
     Switch,
@@ -24,7 +25,6 @@ from framework.params import (
     str_from_flag_value,
 )
 from framework.params.eal import EalParams
-from framework.utils import StrEnum
 
 
 class PortTopology(StrEnum):
