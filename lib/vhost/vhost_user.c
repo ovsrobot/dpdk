@@ -3171,10 +3171,8 @@ vhost_user_msg_handler(int vid, int fd)
 	 * would cause a dead lock.
 	 */
 	if (msg_handler != NULL && msg_handler->lock_all_qps) {
-		if (!(dev->flags & VIRTIO_DEV_VDPA_CONFIGURED)) {
-			vhost_user_lock_all_queue_pairs(dev);
-			unlock_required = 1;
-		}
+		vhost_user_lock_all_queue_pairs(dev);
+		unlock_required = 1;
 	}
 
 	handled = false;
