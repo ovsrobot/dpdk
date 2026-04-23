@@ -21,16 +21,16 @@ from scapy.layers.sctp import SCTP
 from scapy.packet import Packet, Raw
 
 from api.capabilities import NicCapability, requires_nic_capability
+from api.exception import (
+    InteractiveCommandExecutionError,
+    SkippedTestException,
+    TestCaseVerifyError,
+)
 from api.packet import send_packet_and_capture
 from api.test import fail, log, verify
 from api.test_suite import TestSuite, func_test
 from api.testpmd import TestPmd
 from api.testpmd.types import FlowRule
-from framework.exception import (
-    InteractiveCommandExecutionError,
-    SkippedTestException,
-    TestCaseVerifyError,
-)
 
 
 @dataclass

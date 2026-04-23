@@ -8,10 +8,10 @@ from collections.abc import Callable
 from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, Optional, ParamSpec, Union
 
+from api.exception import InternalError
 from api.testbed_model.cpu import LogicalCoreCount, LogicalCoreList
 from api.testbed_model.node import Node
 from api.testbed_model.topology import Topology
-from framework.exception import InternalError
 from framework.remote_session.shell_pool import ShellPool
 from framework.settings import SETTINGS
 

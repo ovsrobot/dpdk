@@ -27,6 +27,7 @@ from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet, Padding, raw
 
+from api.exception import InternalError
 from api.test import fail, log_debug
 from api.testbed_model.traffic_generator.capturing_traffic_generator import (
     PacketFilteringConfig,
@@ -35,7 +36,6 @@ from api.testbed_model.traffic_generator.performance_traffic_generator import (
     PerformanceTrafficStats,
 )
 from framework.context import get_ctx
-from framework.exception import InternalError
 from framework.utils import get_packet_summaries
 
 
