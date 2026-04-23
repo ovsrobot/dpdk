@@ -231,7 +231,7 @@ zxdh_notify_queue(struct zxdh_hw *hw, struct zxdh_virtqueue *vq)
 
 	notify_data = ((uint32_t)vq->vq_avail_idx << 16) | vq->vq_queue_index;
 	if (zxdh_pci_with_feature(hw, ZXDH_F_RING_PACKED) &&
-			(vq->vq_packed.cached_flags & ZXDH_VRING_PACKED_DESC_F_AVAIL))
+			(vq->cached_flags & ZXDH_VRING_PACKED_DESC_F_AVAIL))
 		notify_data |= RTE_BIT32(31);
 
 	PMD_DRV_LOG(DEBUG, "queue:%d notify_data 0x%x notify_addr 0x%p",

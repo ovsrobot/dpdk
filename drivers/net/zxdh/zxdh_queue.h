@@ -9,6 +9,7 @@
 
 #include <rte_common.h>
 #include <rte_atomic.h>
+#include <rte_io.h>
 
 #include "zxdh_ethdev.h"
 #include "zxdh_rxtx.h"
@@ -117,7 +118,6 @@ struct zxdh_vring_packed_desc_event {
 };
 
 struct zxdh_vring_packed {
-	uint32_t num;
 	struct zxdh_vring_packed_desc *desc;
 	struct zxdh_vring_packed_desc_event *driver;
 	struct zxdh_vring_packed_desc_event *device;
@@ -129,50 +129,59 @@ struct zxdh_vq_desc_extra {
 	uint16_t next;
 };
 
+struct zxdh_vring {
+	uint32_t num;
+	struct zxdh_vring_desc  *desc;
+	struct zxdh_vring_avail *avail;
+	struct zxdh_vring_used  *used;
+};
+
 struct zxdh_virtqueue {
+	union {
+		struct {
+			struct zxdh_vring ring; /**< vring keeping desc, used and avail */
+		} vq_split;
+		struct __rte_packed_begin {
+			struct zxdh_vring_packed ring;
+		} __rte_packed_end vq_packed;
+	};
 	struct zxdh_hw  *hw; /* < zxdh_hw structure pointer. */
 
-	struct {
-		/* vring keeping descs and events */
-		struct zxdh_vring_packed ring;
-		uint8_t used_wrap_counter;
-		uint8_t rsv;
-		uint16_t cached_flags; /* < cached flags for descs */
-		uint16_t event_flags_shadow;
-		uint16_t rsv1;
-	} vq_packed;
+	uint16_t vq_used_cons_idx; /**< last consumed descriptor */
+	uint16_t vq_avail_idx; /**< sync until needed */
+	uint16_t vq_nentries;  /**< vring desc numbers */
+	uint16_t vq_free_cnt;  /**< num of desc available */
 
-	uint16_t vq_used_cons_idx; /* < last consumed descriptor */
-	uint16_t vq_nentries;  /* < vring desc numbers */
-	uint16_t vq_free_cnt;  /* < num of desc available */
-	uint16_t vq_avail_idx; /* < sync until needed */
-	uint16_t vq_free_thresh; /* < free threshold */
-	uint16_t rsv2;
+	uint16_t cached_flags; /**< cached flags for descs */
+	uint8_t used_wrap_counter;
+	uint8_t rsv;
+	uint16_t vq_free_thresh; /**< free threshold */
+	uint16_t next_qidx;
 
-	void *vq_ring_virt_mem;  /* < linear address of vring */
-	uint32_t vq_ring_size;
+	void *notify_addr;
 
 	union {
 		struct zxdh_virtnet_rx rxq;
 		struct zxdh_virtnet_tx txq;
 	};
 
-	/*
-	 * physical address of vring, or virtual address
-	 */
-	rte_iova_t vq_ring_mem;
+	uint16_t vq_queue_index; /* PACKED: phy_idx, SPLIT: logic_idx */
+	uint16_t event_flags_shadow;
+	uint32_t vq_ring_size;
 
-	/*
+	/**
 	 * Head of the free chain in the descriptor table. If
 	 * there are no free descriptors, this will be set to
 	 * VQ_RING_DESC_CHAIN_END.
-	 */
+	 **/
 	uint16_t  vq_desc_head_idx;
 	uint16_t  vq_desc_tail_idx;
-	uint16_t  vq_queue_index;   /* < PCI queue index */
-	uint16_t  offset; /* < relative offset to obtain addr in mbuf */
-	uint16_t *notify_addr;
-	struct rte_mbuf **sw_ring;  /* < RX software ring. */
+	uint32_t rsv_8B;
+
+	void *vq_ring_virt_mem;  /**< linear address of vring*/
+	/* physical address of vring, or virtual address for virtio_user. */
+	rte_iova_t vq_ring_mem;
+
 	struct zxdh_vq_desc_extra vq_descx[];
 };
 
@@ -296,10 +305,9 @@ static inline void
 zxdh_vring_init_packed(struct zxdh_vring_packed *vr, uint8_t *p,
 		unsigned long align, uint32_t num)
 {
-	vr->num    = num;
 	vr->desc   = (struct zxdh_vring_packed_desc *)p;
 	vr->driver = (struct zxdh_vring_packed_desc_event *)(p +
-				 vr->num * sizeof(struct zxdh_vring_packed_desc));
+				 num * sizeof(struct zxdh_vring_packed_desc));
 	vr->device = (struct zxdh_vring_packed_desc_event *)RTE_ALIGN_CEIL(((uintptr_t)vr->driver +
 				 sizeof(struct zxdh_vring_packed_desc_event)), align);
 }
@@ -331,28 +339,10 @@ zxdh_vring_desc_init_indirect_packed(struct zxdh_vring_packed_desc *dp, int32_t 
 static inline void
 zxdh_queue_disable_intr(struct zxdh_virtqueue *vq)
 {
-	if (vq->vq_packed.event_flags_shadow != ZXDH_RING_EVENT_FLAGS_DISABLE) {
-		vq->vq_packed.event_flags_shadow = ZXDH_RING_EVENT_FLAGS_DISABLE;
-		vq->vq_packed.ring.driver->desc_event_flags = vq->vq_packed.event_flags_shadow;
+	if (vq->event_flags_shadow != ZXDH_RING_EVENT_FLAGS_DISABLE) {
+		vq->event_flags_shadow = ZXDH_RING_EVENT_FLAGS_DISABLE;
+		vq->vq_packed.ring.driver->desc_event_flags = vq->event_flags_shadow;
 	}
-}
-
-static inline void
-zxdh_queue_enable_intr(struct zxdh_virtqueue *vq)
-{
-	if (vq->vq_packed.event_flags_shadow == ZXDH_RING_EVENT_FLAGS_DISABLE) {
-		vq->vq_packed.event_flags_shadow = ZXDH_RING_EVENT_FLAGS_DISABLE;
-		vq->vq_packed.ring.driver->desc_event_flags = vq->vq_packed.event_flags_shadow;
-	}
-}
-
-static inline void
-zxdh_mb(uint8_t weak_barriers)
-{
-	if (weak_barriers)
-		rte_atomic_thread_fence(rte_memory_order_seq_cst);
-	else
-		rte_mb();
 }
 
 static inline
@@ -365,7 +355,7 @@ int32_t desc_is_used(struct zxdh_vring_packed_desc *desc, struct zxdh_virtqueue 
 	rte_io_rmb();
 	used = !!(flags & ZXDH_VRING_PACKED_DESC_F_USED);
 	avail = !!(flags & ZXDH_VRING_PACKED_DESC_F_AVAIL);
-	return avail == used && used == vq->vq_packed.used_wrap_counter;
+	return avail == used && used == vq->used_wrap_counter;
 }
 
 static inline int32_t
@@ -381,22 +371,17 @@ zxdh_queue_store_flags_packed(struct zxdh_vring_packed_desc *dp, uint16_t flags)
 	dp->flags = flags;
 }
 
-static inline int32_t
-zxdh_desc_used(struct zxdh_vring_packed_desc *desc, struct zxdh_virtqueue *vq)
-{
-	uint16_t flags;
-	uint16_t used, avail;
-
-	flags = desc->flags;
-	rte_io_rmb();
-	used = !!(flags & ZXDH_VRING_PACKED_DESC_F_USED);
-	avail = !!(flags & ZXDH_VRING_PACKED_DESC_F_AVAIL);
-	return avail == used && used == vq->vq_packed.used_wrap_counter;
-}
-
 static inline void zxdh_queue_notify(struct zxdh_virtqueue *vq)
 {
-	ZXDH_VTPCI_OPS(vq->hw)->notify_queue(vq->hw, vq);
+	/* Bit[0:15]: vq queue index
+	 * Bit[16:30]: avail index
+	 * Bit[31]: avail wrap counter
+	 */
+	uint32_t notify_data = ((uint32_t)(!!(vq->cached_flags &
+		ZXDH_VRING_PACKED_DESC_F_AVAIL)) << 31) |
+		((uint32_t)vq->vq_avail_idx << 16) |
+		vq->vq_queue_index;
+	rte_write32(notify_data, vq->notify_addr);
 }
 
 static inline int32_t
@@ -404,7 +389,7 @@ zxdh_queue_kick_prepare_packed(struct zxdh_virtqueue *vq)
 {
 	uint16_t flags = 0;
 
-	zxdh_mb(1);
+	rte_mb();
 	flags = vq->vq_packed.ring.device->desc_event_flags;
 
 	return (flags != ZXDH_RING_EVENT_FLAGS_DISABLE);
@@ -425,8 +410,6 @@ int32_t zxdh_dev_rx_queue_setup(struct rte_eth_dev *dev,
 			uint32_t socket_id,
 			const struct rte_eth_rxconf *rx_conf,
 			struct rte_mempool *mp);
-int32_t zxdh_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id);
-int32_t zxdh_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id);
 int32_t zxdh_dev_rx_queue_setup_finish(struct rte_eth_dev *dev, uint16_t logic_qidx);
 void zxdh_queue_rxvq_flush(struct zxdh_virtqueue *vq);
 int32_t zxdh_enqueue_recv_refill_packed(struct zxdh_virtqueue *vq,
