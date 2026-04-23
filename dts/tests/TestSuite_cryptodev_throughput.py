@@ -30,9 +30,9 @@ from api.cryptodev.types import (
     CryptodevResults,
 )
 from api.test import verify
+from api.test_suite import BaseConfig, TestSuite, crypto_test
 from framework.context import get_ctx
 from framework.exception import SkippedTestException
-from framework.test_suite import BaseConfig, TestSuite, crypto_test
 from framework.testbed_model.virtual_device import VirtualDevice
 
 config_list: list[dict[str, int | float | str]] = [

@@ -16,8 +16,8 @@ from framework.testbed_model.node import Node
 from framework.testbed_model.topology import Topology
 
 if TYPE_CHECKING:
+    from api.test_suite import TestCase, TestSuite
     from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
-    from framework.test_suite import TestCase, TestSuite
     from framework.testbed_model.capability import TestProtocol
     from framework.testbed_model.traffic_generator.traffic_generator import TrafficGenerator
 
