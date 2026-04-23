@@ -29,13 +29,13 @@ from typing import Any, ClassVar, Concatenate, ParamSpec, TypeAlias, TypeVar
 from paramiko import Channel, channel
 from typing_extensions import Self
 
-from api.testbed_model.node import Node
-from framework.context import get_ctx
-from framework.exception import (
+from api.exception import (
     InteractiveCommandExecutionError,
     InteractiveSSHSessionDeadError,
     InteractiveSSHTimeoutError,
 )
+from api.testbed_model.node import Node
+from framework.context import get_ctx
 from framework.logger import DTSLogger, get_dts_logger
 from framework.params import Params
 from framework.settings import SETTINGS

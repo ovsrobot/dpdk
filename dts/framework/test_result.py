@@ -35,11 +35,10 @@ from pydantic import (
 )
 from typing_extensions import OrderedDict
 
+from api.exception import DTSError, ErrorSeverity, InternalError
 from api.testbed_model.os_session import OSSessionInfo
 from framework.remote_session.dpdk import DPDKBuildInfo
 from framework.settings import SETTINGS
-
-from .exception import DTSError, ErrorSeverity, InternalError
 
 
 class Result(IntEnum):
