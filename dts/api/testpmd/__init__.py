@@ -14,6 +14,8 @@ Typical usage example in a TestSuite::
     testpmd.close()
 """
 
+from __future__ import annotations
+
 import functools
 import re
 import time
@@ -21,6 +23,7 @@ from collections.abc import MutableSet
 from enum import Flag
 from pathlib import PurePath
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
@@ -34,7 +37,9 @@ from typing_extensions import Unpack
 from api.capabilities import LinkTopology, NicCapability
 from api.context import get_ctx
 from api.exception import InteractiveCommandExecutionError, InternalError
-from api.params.types import TestPmdParamsDict
+
+if TYPE_CHECKING:
+    from api.params.types import TestPmdParamsDict
 from api.testpmd.config import PortTopology, SimpleForwardingModes, TestPmdParams
 from api.testpmd.types import (
     ChecksumOffloadOptions,

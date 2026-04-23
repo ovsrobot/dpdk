@@ -16,9 +16,9 @@ Packages
 
    tests
    api
-   framework.testbed_model
+   api.testbed_model
    framework.remote_session
-   framework.params
+   api.params
    framework.config
 
 Modules
@@ -29,14 +29,15 @@ Modules
 
    framework.runner
    framework.test_run
-   framework.test_suite
+   framework.linux_session
+   api.test_suite
    framework.test_result
    framework.settings
-   framework.context
+   api.context
    framework.logger
    framework.parser
-   framework.utils
-   framework.exception
+   api.utils
+   api.exception
 
 
 Indices and tables
