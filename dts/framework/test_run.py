@@ -106,6 +106,7 @@ from functools import cached_property
 from types import MethodType
 from typing import ClassVar, Protocol, Union
 
+from api.context import Context, init_ctx
 from api.exception import InternalError, SkippedTestException, TestCaseVerifyError
 from api.test_suite import BaseConfig, TestCase, TestCaseType, TestSuite
 from api.testbed_model.capability import (
@@ -117,7 +118,6 @@ from api.testbed_model.node import Node
 from api.testbed_model.topology import PortLink, Topology
 from api.testbed_model.traffic_generator import create_traffic_generator
 from framework.config.test_run import TestRunConfiguration
-from api.context import Context, init_ctx
 from framework.logger import DTSLogger, get_dts_logger
 from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
 from framework.settings import SETTINGS

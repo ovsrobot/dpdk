@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from typing_extensions import Unpack
 
+from api.context import get_ctx
 from api.cryptodev.config import CryptoPmdParams, TestType
 from api.cryptodev.types import (
     CryptodevResults,
@@ -23,11 +24,10 @@ from api.cryptodev.types import (
     VerifyResults,
 )
 from api.exception import RemoteCommandExecutionError, SkippedTestException
-from api.context import get_ctx
 from framework.remote_session.dpdk_shell import compute_eal_params
 
 if TYPE_CHECKING:
-    from framework.params.types import CryptoPmdParamsDict
+    from api.params.types import CryptoPmdParamsDict
 from pathlib import PurePath
 
 
