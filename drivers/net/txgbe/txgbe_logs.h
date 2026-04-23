@@ -49,6 +49,13 @@ extern int txgbe_logtype_tx_free;
 #define PMD_TX_FREE_LOG(...) do { } while (0)
 #endif
 
+extern int txgbe_logtype_bp;
+#define BP_LOG(fmt, args...) \
+	rte_log(RTE_LOG_DEBUG, txgbe_logtype_bp, \
+		"[%" PRIu64 ".%" PRIu64 "]%s(%d): <port %d> " fmt, \
+		usec_stamp() / 1000000, usec_stamp() % 1000000, \
+		__func__, __LINE__, hw->port_id, ##args)
+
 #define DEBUGOUT(fmt, ...)        PMD_DRV_LOG(DEBUG, fmt, ##__VA_ARGS__)
 #define PMD_INIT_FUNC_TRACE()     PMD_DRV_LOG(DEBUG, ">>")
 
