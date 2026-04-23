@@ -31,7 +31,7 @@ from typing import Generic, TypeVar, cast
 from typing_extensions import Self
 
 from api.testbed_model.node import Node
-from framework.context import get_ctx
+from api.context import get_ctx
 from framework.params import Params
 from framework.params.eal import EalParams
 from framework.remote_session.dpdk_shell import compute_eal_params
