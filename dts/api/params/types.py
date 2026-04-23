@@ -32,6 +32,7 @@ from api.cryptodev.config import (
     TestType,
     TLSVersion,
 )
+from api.params import Switch, YesNoSwitch
 from api.testbed_model.cpu import LogicalCoreList
 from api.testbed_model.port import Port
 from api.testbed_model.virtual_device import VirtualDevice
@@ -56,7 +57,6 @@ from api.testpmd.config import (
     TXRingParams,
     TxUDPPortPair,
 )
-from framework.params import Switch, YesNoSwitch
 
 
 class EalParamsDict(TypedDict, total=False):

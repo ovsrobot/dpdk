@@ -32,7 +32,9 @@ from typing import (
 from typing_extensions import Unpack
 
 from api.capabilities import LinkTopology, NicCapability
+from api.context import get_ctx
 from api.exception import InteractiveCommandExecutionError, InternalError
+from api.params.types import TestPmdParamsDict
 from api.testpmd.config import PortTopology, SimpleForwardingModes, TestPmdParams
 from api.testpmd.types import (
     ChecksumOffloadOptions,
@@ -55,8 +57,6 @@ from api.testpmd.types import (
     TxOffloadConfiguration,
     VLANOffloadFlag,
 )
-from api.context import get_ctx
-from framework.params.types import TestPmdParamsDict
 from framework.remote_session.dpdk_shell import DPDKShell
 from framework.remote_session.interactive_shell import only_active
 from framework.settings import SETTINGS

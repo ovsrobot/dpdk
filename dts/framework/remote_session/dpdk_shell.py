@@ -10,9 +10,9 @@ import time
 from abc import ABC, abstractmethod
 from pathlib import PurePath
 
-from api.testbed_model.cpu import LogicalCoreList
 from api.context import get_ctx
-from framework.params.eal import EalParams
+from api.params.eal import EalParams
+from api.testbed_model.cpu import LogicalCoreList
 from framework.remote_session.interactive_shell import (
     InteractiveShell,
     only_active,

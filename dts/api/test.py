@@ -10,8 +10,8 @@ import json
 from datetime import datetime
 
 from api.artifact import Artifact
-from api.exception import InternalError, SkippedTestException, TestCaseVerifyError
 from api.context import get_ctx
+from api.exception import InternalError, SkippedTestException, TestCaseVerifyError
 from framework.logger import DTSLogger
 
 
