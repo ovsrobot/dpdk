@@ -15,12 +15,12 @@ and a capturing traffic generator is required.
 """
 
 from api.exception import ConfigurationError
+from api.testbed_model.node import Node
 from framework.config.test_run import (
     ScapyTrafficGeneratorConfig,
     TrafficGeneratorConfig,
     TrexTrafficGeneratorConfig,
 )
-from framework.testbed_model.node import Node
 
 from .scapy import ScapyTrafficGenerator
 from .traffic_generator import TrafficGenerator

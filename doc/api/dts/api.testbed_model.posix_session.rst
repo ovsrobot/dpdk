@@ -1,8 +1,8 @@
 .. SPDX-License-Identifier: BSD-3-Clause
 
-linux\_session - Linux Remote Session
+posix\_session - Posix Remote Session
 =====================================
 
-.. automodule:: framework.testbed_model.linux_session
+.. automodule:: api.testbed_model.posix_session
    :members:
    :show-inheritance:
