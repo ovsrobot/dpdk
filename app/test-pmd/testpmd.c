@@ -4603,9 +4603,14 @@ main(int argc, char** argv)
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 #else
-	/* Want read() not to be restarted on signal */
+	/*
+	 * Do not restart read() on signal (no SA_RESTART), and reset
+	 * to SIG_DFL after first delivery so a second SIGINT/SIGTERM
+	 * terminates instead of re-entering the shutdown path.
+	 */
 	struct sigaction action = {
 		.sa_handler = signal_handler,
+		.sa_flags = SA_RESETHAND,
 	};
 
 	sigaction(SIGINT, &action, NULL);
