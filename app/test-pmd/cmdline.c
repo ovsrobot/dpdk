@@ -14500,22 +14500,28 @@ end:
 void
 prompt_exit(void)
 {
-	cmdline_quit(testpmd_cl);
+	if (testpmd_cl != NULL)
+		cmdline_quit(testpmd_cl);
 }
 
 /* prompt function, called from main on MAIN lcore */
 void
 prompt(void)
 {
-	testpmd_cl = cmdline_stdin_new(main_ctx, "testpmd> ");
-	if (testpmd_cl == NULL) {
+	struct cmdline *cl;
+
+	cl = cmdline_stdin_new(main_ctx, "testpmd> ");
+	if (cl == NULL) {
 		fprintf(stderr,
 			"Failed to create stdin based cmdline context\n");
 		return;
 	}
 
-	cmdline_interact(testpmd_cl);
-	cmdline_stdin_exit(testpmd_cl);
+	testpmd_cl = cl;
+	cmdline_interact(cl);
+	/* Clear global pointer before freeing cmdline object. */
+	testpmd_cl = NULL;
+	cmdline_stdin_exit(cl);
 }
 
 void
