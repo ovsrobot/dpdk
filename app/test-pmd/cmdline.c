@@ -41,6 +41,7 @@
 #endif
 #include <rte_mbuf_dyn.h>
 #include <rte_mbuf_history.h>
+#include <rte_stdatomic.h>
 #include <rte_trace.h>
 
 #include <cmdline_rdline.h>
@@ -70,7 +71,7 @@
 #include "cmdline_tm.h"
 #include "bpf_cmd.h"
 
-static struct cmdline *testpmd_cl;
+static RTE_ATOMIC(struct cmdline *) testpmd_cl;
 static cmdline_parse_ctx_t *main_ctx;
 static TAILQ_HEAD(, testpmd_driver_commands) driver_commands_head =
 	TAILQ_HEAD_INITIALIZER(driver_commands_head);
@@ -14500,22 +14501,31 @@ end:
 void
 prompt_exit(void)
 {
-	cmdline_quit(testpmd_cl);
+	struct cmdline *cl;
+
+	cl = rte_atomic_load_explicit(&testpmd_cl, rte_memory_order_acquire);
+	if (cl != NULL)
+		cmdline_quit(cl);
 }
 
 /* prompt function, called from main on MAIN lcore */
 void
 prompt(void)
 {
-	testpmd_cl = cmdline_stdin_new(main_ctx, "testpmd> ");
-	if (testpmd_cl == NULL) {
+	struct cmdline *cl;
+
+	cl = cmdline_stdin_new(main_ctx, "testpmd> ");
+	if (cl == NULL) {
 		fprintf(stderr,
 			"Failed to create stdin based cmdline context\n");
 		return;
 	}
 
-	cmdline_interact(testpmd_cl);
-	cmdline_stdin_exit(testpmd_cl);
+	rte_atomic_store_explicit(&testpmd_cl, cl, rte_memory_order_release);
+	cmdline_interact(cl);
+	/* Clear global pointer before freeing cmdline object. */
+	rte_atomic_store_explicit(&testpmd_cl, NULL, rte_memory_order_release);
+	cmdline_stdin_exit(cl);
 }
 
 void
