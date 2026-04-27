@@ -238,14 +238,18 @@ cons_parse_ntuple_filter(const struct rte_flow_attr *attr,
 
 		}
 		/* if the first item is MAC, the content should be NULL */
-		if ((item->spec || item->mask) &&
-			(memcmp(eth_spec, &eth_null,
-				sizeof(struct rte_flow_item_eth)) ||
-			 memcmp(eth_mask, &eth_null,
-				sizeof(struct rte_flow_item_eth)))) {
+		if (item->spec && memcmp(eth_spec, &eth_null,
+			sizeof(struct rte_flow_item_eth))) {
 			rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_ITEM,
-				item, "Not supported by ntuple filter");
+			  RTE_FLOW_ERROR_TYPE_ITEM,
+			  item, "Not supported by ntuple filter");
+			return -rte_errno;
+		}
+		if (item->mask && memcmp(eth_mask, &eth_null,
+			sizeof(struct rte_flow_item_eth))) {
+			rte_flow_error_set(error, EINVAL,
+			  RTE_FLOW_ERROR_TYPE_ITEM,
+			  item, "Not supported by ntuple filter");
 			return -rte_errno;
 		}
 		/* check if the next not void item is IPv4 or Vlan */
@@ -271,15 +275,18 @@ cons_parse_ntuple_filter(const struct rte_flow_attr *attr,
 			return -rte_errno;
 		}
 		/* the content should be NULL */
-		if ((item->spec || item->mask) &&
-			(memcmp(vlan_spec, &vlan_null,
-				sizeof(struct rte_flow_item_vlan)) ||
-			 memcmp(vlan_mask, &vlan_null,
-				sizeof(struct rte_flow_item_vlan)))) {
-
+		if (item->spec && memcmp(vlan_spec, &vlan_null,
+			sizeof(struct rte_flow_item_vlan))) {
 			rte_flow_error_set(error, EINVAL,
-				RTE_FLOW_ERROR_TYPE_ITEM,
-				item, "Not supported by ntuple filter");
+			  RTE_FLOW_ERROR_TYPE_ITEM,
+			  item, "Not supported by ntuple filter");
+			return -rte_errno;
+		}
+		if (item->mask && memcmp(vlan_mask, &vlan_null,
+			sizeof(struct rte_flow_item_vlan))) {
+			rte_flow_error_set(error, EINVAL,
+			  RTE_FLOW_ERROR_TYPE_ITEM,
+			  item, "Not supported by ntuple filter");
 			return -rte_errno;
 		}
 		/* check if the next not void item is IPv4 */
