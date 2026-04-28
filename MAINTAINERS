@@ -1669,6 +1669,8 @@ PTP - EXPERIMENTAL
 M: Rajesh Kumar <rajesh3.kumar@intel.com>
 F: lib/ptp/
 F: doc/guides/prog_guide/ptp_lib.rst
+F: examples/ptp_tap_relay_sw/
+F: doc/guides/sample_app_ug/ptp_tap_relay_sw.rst
 
 PDCP - EXPERIMENTAL
 M: Anoob Joseph <anoobj@marvell.com>
