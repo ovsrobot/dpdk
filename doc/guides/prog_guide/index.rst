@@ -97,6 +97,7 @@ Protocol Processing Libraries
     :maxdepth: 1
     :numbered:
 
+    ptp_lib
     pdcp_lib
     ipsec_lib
 
