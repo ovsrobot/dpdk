@@ -7,6 +7,7 @@
 # DPDK instance, use 'make'
 
 allow_experimental_apis = true
+deps += ['ptp']
 sources = files(
         'ptpclient.c',
 )
