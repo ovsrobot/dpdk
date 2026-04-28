@@ -108,6 +108,7 @@ from typing import ClassVar, Protocol, Union
 
 from api.context import Context, init_ctx
 from api.exception import InternalError, SkippedTestException, TestCaseVerifyError
+from api.test_suite import BaseConfig, TestCase, TestCaseType, TestSuite
 from api.testbed_model.capability import (
     Capability,
     get_supported_capabilities,
@@ -121,7 +122,6 @@ from framework.logger import DTSLogger, get_dts_logger
 from framework.remote_session.dpdk import DPDKBuildEnvironment, DPDKRuntimeEnvironment
 from framework.settings import SETTINGS
 from framework.test_result import Result, ResultNode, TestRunResult
-from framework.test_suite import BaseConfig, TestCase, TestCaseType, TestSuite
 
 TestScenario = tuple[type[TestSuite], BaseConfig, deque[type[TestCase]]]
 
