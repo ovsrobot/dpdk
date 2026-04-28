@@ -55,7 +55,7 @@ from api.testpmd.types import (
     TxOffloadConfiguration,
     VLANOffloadFlag,
 )
-from framework.context import get_ctx
+from api.context import get_ctx
 from framework.params.types import TestPmdParamsDict
 from framework.remote_session.dpdk_shell import DPDKShell
 from framework.remote_session.interactive_shell import only_active
