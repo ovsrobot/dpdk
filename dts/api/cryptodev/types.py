@@ -69,7 +69,7 @@ class LatencyResults(CryptodevResults):
     )
     #: burst size ran with app
     burst_size: int = field(
-        metadata=TextParser.find_int(rf"Burst(?:.*\n\s+\d+\s+){2}?(?: size:\s+)?(\d+)"),
+        metadata=TextParser.find_int(r"Burst size:\s+(\d+)"),
     )
     #: total operations ran
     total_ops: int = field(metadata=TextParser.find_int(r"total operations:\s+(\d+)"))
