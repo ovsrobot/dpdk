@@ -190,9 +190,6 @@ vdev_probe_device(struct rte_driver *drv, struct rte_device *dev)
 	enum rte_iova_mode iova_mode;
 	int ret;
 
-	if (rte_dev_is_probed(&vdev_dev->device))
-		return -EEXIST;
-
 	name = rte_vdev_device_name(vdev_dev);
 	VDEV_LOG(DEBUG, "Search driver to probe device %s", name);
 

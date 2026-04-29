@@ -331,9 +331,6 @@ driver_call_probe(struct rte_platform_driver *pdrv, struct rte_platform_device *
 {
 	int ret;
 
-	if (rte_dev_is_probed(&pdev->device))
-		return -EBUSY;
-
 	if (pdrv->probe != NULL) {
 		pdev->driver = pdrv;
 		ret = pdrv->probe(pdev);

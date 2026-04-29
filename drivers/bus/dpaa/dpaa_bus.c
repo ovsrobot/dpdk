@@ -826,9 +826,6 @@ dpaa_bus_probe_device(struct rte_driver *drv, struct rte_device *dev)
 	struct rte_dpaa_driver *dpaa_drv = RTE_BUS_DRIVER(drv, *dpaa_drv);
 	int ret;
 
-	if (rte_dev_is_probed(&dpaa_dev->device))
-		return 0;
-
 	if (rte_bus_device_is_ignored(&rte_dpaa_bus.bus, dpaa_dev->name))
 		return 0;
 

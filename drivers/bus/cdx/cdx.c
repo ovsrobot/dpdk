@@ -315,11 +315,6 @@ cdx_probe_device(struct rte_driver *drv, struct rte_device *dev)
 	const char *dev_name = cdx_dev->name;
 	int ret;
 
-	if (rte_dev_is_probed(&cdx_dev->device)) {
-		CDX_BUS_INFO("Device %s is already probed", dev_name);
-		return -EEXIST;
-	}
-
 	CDX_BUS_DEBUG("  probe device %s using driver: %s", dev_name,
 		cdx_drv->driver.name);
 

@@ -541,9 +541,6 @@ fslmc_bus_probe_device(struct rte_driver *driver, struct rte_device *rte_dev)
 	struct rte_dpaa2_driver *drv = RTE_BUS_DRIVER(driver, *drv);
 	int ret = 0;
 
-	if (rte_dev_is_probed(&dev->device))
-		return 0;
-
 	if (dev->device.devargs &&
 	    dev->device.devargs->policy == RTE_DEV_BLOCKED) {
 		DPAA2_BUS_DEBUG("%s Blocked, skipping",
