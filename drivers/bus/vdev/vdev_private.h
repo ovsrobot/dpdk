@@ -12,7 +12,8 @@ extern "C" {
 #endif
 
 struct rte_device *
-rte_vdev_find_device(const struct rte_device *start,
+rte_vdev_find_device(const struct rte_bus *bus,
+		     const struct rte_device *start,
 		     rte_dev_cmp_t cmp,
 		     const void *data);
 
