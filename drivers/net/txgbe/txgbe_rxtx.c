@@ -4771,6 +4771,12 @@ txgbe_dev_tx_init(struct rte_eth_dev *dev)
 		wr32(hw, TXGBE_TXRP(txq->reg_idx), 0);
 		wr32(hw, TXGBE_TXWP(txq->reg_idx), 0);
 
+#ifdef RTE_LIBRTE_SECURITY
+		if (!(txq->using_ipsec))
+#endif
+			wr32m(hw, TXGBE_TDM_DESC_CHK(txq->reg_idx / 32),
+			      BIT(txq->reg_idx % 32), BIT(txq->reg_idx % 32));
+
 		if (txq->headwb_mem) {
 			uint32_t txdctl;
 
@@ -4787,11 +4793,6 @@ txgbe_dev_tx_init(struct rte_eth_dev *dev)
 				TXGBE_PX_TR_CFG_HEAD_WB_MASK, txdctl);
 		}
 	}
-
-#ifndef RTE_LIB_SECURITY
-	for (i = 0; i < 4; i++)
-		wr32(hw, TXGBE_TDM_DESC_CHK(i), 0xFFFFFFFF);
-#endif
 
 	/* Device configured with multiple TX queues. */
 	txgbe_dev_mq_tx_configure(dev);
