@@ -1201,7 +1201,6 @@ F: drivers/crypto/scheduler/
 F: doc/guides/cryptodevs/scheduler.rst
 
 HiSilicon UADK crypto
-M: Zhangfei Gao <zhangfei.gao@linaro.org>
 F: drivers/crypto/uadk/
 F: doc/guides/cryptodevs/uadk.rst
 F: doc/guides/cryptodevs/features/uadk.ini
@@ -1300,7 +1299,6 @@ F: doc/guides/cryptodevs/virtio.rst
 F: doc/guides/cryptodevs/features/virtio.ini
 
 ZTE Storage Data Accelerator (ZSDA)
-M: Hanxiao Li <li.hanxiao@zte.com.cn>
 F: drivers/crypto/zsda/
 F: doc/guides/cryptodevs/zsda.rst
 F: doc/guides/cryptodevs/features/zsda.ini
@@ -1318,7 +1316,6 @@ F: doc/guides/compressdevs/octeontx.rst
 F: doc/guides/compressdevs/features/octeontx.ini
 
 HiSilicon UADK compress
-M: Zhangfei Gao <zhangfei.gao@linaro.org>
 F: drivers/compress/uadk/
 F: doc/guides/compressdevs/uadk.rst
 F: doc/guides/compressdevs/features/uadk.ini
@@ -1352,7 +1349,6 @@ F: doc/guides/compressdevs/zlib.rst
 F: doc/guides/compressdevs/features/zlib.ini
 
 ZTE Storage Data Accelerator (ZSDA)
-M: Hanxiao Li <li.hanxiao@zte.com.cn>
 F: drivers/common/zsda/
 F: drivers/compress/zsda/
 F: doc/guides/compressdevs/zsda.rst
