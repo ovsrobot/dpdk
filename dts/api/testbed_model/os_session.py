@@ -73,11 +73,11 @@ class OSSessionInfo:
 
     Attributes:
         os_name: The name of the running operating system of
-            the :class:`~framework.testbed_model.node.Node`.
+            the :class:`~api.testbed_model.node.Node`.
         os_version: The version of the running operating system of
-            the :class:`~framework.testbed_model.node.Node`.
+            the :class:`~api.testbed_model.node.Node`.
         kernel_version: The kernel version of the running operating system of
-            the :class:`~framework.testbed_model.node.Node`.
+            the :class:`~api.testbed_model.node.Node`.
     """
 
     os_name: str
