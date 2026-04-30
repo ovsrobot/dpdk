@@ -29,6 +29,7 @@ from framework.exception import ConfigurationError, RemoteFileNotFoundError
 from framework.logger import DTSLogger, get_dts_logger
 from framework.params.eal import EalParams
 from framework.remote_session.remote_session import CommandResult
+from framework.settings import SETTINGS
 from framework.testbed_model.cpu import LogicalCore, LogicalCoreCount, LogicalCoreList, lcore_filter
 from framework.testbed_model.node import Node
 from framework.testbed_model.os_session import OSSession
@@ -271,6 +272,9 @@ class DPDKBuildEnvironment:
             )
         else:
             meson_args = MesonArgs(default_library="static", libdir="lib")
+
+        if SETTINGS.code_coverage:
+            meson_args._add_arg("-Db_coverage=true")
 
         self._session.build_dpdk(
             self._env_vars,
