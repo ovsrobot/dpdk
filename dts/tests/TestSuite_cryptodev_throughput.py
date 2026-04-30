@@ -29,9 +29,9 @@ from api.cryptodev.config import (
 from api.cryptodev.types import (
     CryptodevResults,
 )
+from api.exception import SkippedTestException
 from api.test import verify
 from framework.context import get_ctx
-from framework.exception import SkippedTestException
 from framework.test_suite import BaseConfig, TestSuite, crypto_test
 from framework.testbed_model.virtual_device import VirtualDevice
 
