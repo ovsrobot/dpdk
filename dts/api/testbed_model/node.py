@@ -15,17 +15,19 @@ The :func:`~Node.skip_setup` decorator can be used without subclassing.
 
 from functools import cached_property
 from pathlib import PurePath
-from typing import Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from api.exception import ConfigurationError, InternalError
 from framework.config.node import (
     OS,
     NodeConfiguration,
 )
+
+if TYPE_CHECKING:
+    from framework.linux_session import LinuxSession
 from framework.logger import DTSLogger, get_dts_logger
 
 from .cpu import Architecture, LogicalCore
-from .linux_session import LinuxSession
 from .os_session import OSSession, OSSessionInfo
 from .port import Port
 
