@@ -216,6 +216,8 @@ crypto_asym_xform_strings[] = {
 	[RTE_CRYPTO_ASYM_XFORM_ECDSA]	= "ecdsa",
 	[RTE_CRYPTO_ASYM_XFORM_ECPM]	= "ecpm",
 	[RTE_CRYPTO_ASYM_XFORM_SM2]	= "sm2",
+	[RTE_CRYPTO_ASYM_XFORM_ML_KEM]	= "ml-kem",
+	[RTE_CRYPTO_ASYM_XFORM_ML_DSA]	= "ml-dsa",
 };
 
 /**
