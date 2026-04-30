@@ -14,6 +14,7 @@ from pathlib import Path, PurePath
 from typing import ClassVar, Final
 
 from api.exception import ConfigurationError, RemoteFileNotFoundError
+from api.utils import MesonArgs, TarCompressionFormat
 from framework.config.test_run import (
     DPDKBuildConfiguration,
     DPDKBuildOptionsConfiguration,
@@ -33,7 +34,6 @@ from framework.testbed_model.cpu import LogicalCore, LogicalCoreCount, LogicalCo
 from framework.testbed_model.node import Node
 from framework.testbed_model.os_session import OSSession
 from framework.testbed_model.virtual_device import VirtualDevice
-from framework.utils import MesonArgs, TarCompressionFormat
 
 
 @dataclass(slots=True, frozen=True)
