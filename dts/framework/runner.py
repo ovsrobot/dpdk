@@ -13,9 +13,9 @@ import sys
 import textwrap
 
 from api.exception import ConfigurationError
+from api.testbed_model.node import Node
 from framework.config.common import ValidationContext
 from framework.test_run import TestRun
-from framework.testbed_model.node import Node
 
 from .config import Configuration, load_config
 from .logger import DTSLogger, get_dts_logger
