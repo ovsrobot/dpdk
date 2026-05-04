@@ -197,8 +197,8 @@ rte_spinlock_trylock_tm(rte_spinlock_t *sl)
  */
 typedef struct {
 	rte_spinlock_t sl; /**< the actual spinlock */
-	volatile int user; /**< core id using lock, -1 for unused */
-	volatile int count; /**< count of time this lock has been called */
+	int user; /**< core id using lock, -1 for unused */
+	int count; /**< count of time this lock has been called */
 } rte_spinlock_recursive_t;
 
 /**
