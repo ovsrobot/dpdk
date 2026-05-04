@@ -72,6 +72,7 @@ INPUT                   = @TOPDIR@/doc/api/doxy-api-index.md \
                           @TOPDIR@/lib/pmu \
                           @TOPDIR@/lib/port \
                           @TOPDIR@/lib/power \
+                          @TOPDIR@/lib/ptp \
                           @TOPDIR@/lib/ptr_compress \
                           @TOPDIR@/lib/rawdev \
                           @TOPDIR@/lib/rcu \
