@@ -289,7 +289,6 @@ int __rte_trace_point_register(rte_trace_point_t *trace, const char *name,
 #ifndef __DOXYGEN__
 
 #ifndef _RTE_TRACE_POINT_REGISTER_H_
-#ifdef ALLOW_EXPERIMENTAL_API
 
 #define __RTE_TRACE_EVENT_HEADER_ID_SHIFT (48)
 
@@ -313,6 +312,8 @@ struct __rte_trace_header {
 	struct __rte_trace_stream_header stream_header;
 	uint8_t mem[];
 };
+
+#ifdef ALLOW_EXPERIMENTAL_API
 
 RTE_DECLARE_PER_LCORE(void *, trace_mem);
 
