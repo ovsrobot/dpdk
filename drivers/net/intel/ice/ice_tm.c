@@ -88,6 +88,7 @@ ice_node_param_check(uint32_t node_id,
 		      uint32_t priority, uint32_t weight,
 		      const struct rte_tm_node_params *params,
 		      bool is_leaf,
+		      uint16_t nb_txq,
 		      struct rte_tm_error *error)
 {
 	/* checked all the unsupported parameter */
@@ -123,6 +124,11 @@ ice_node_param_check(uint32_t node_id,
 
 	/* for non-leaf node */
 	if (!is_leaf) {
+		if (node_id < nb_txq) {
+			error->type = RTE_TM_ERROR_TYPE_NODE_ID;
+			error->message = "node ID is reserved for leaf nodes";
+			return -EINVAL;
+		}
 		if (params->nonleaf.wfq_weight_mode) {
 			error->type =
 				RTE_TM_ERROR_TYPE_NODE_PARAMS_WFQ_WEIGHT_MODE;
@@ -146,7 +152,7 @@ ice_node_param_check(uint32_t node_id,
 	}
 
 	/* for leaf node */
-	if (node_id >= RTE_MAX_QUEUES_PER_PORT) {
+	if (node_id >= nb_txq) {
 		error->type = RTE_TM_ERROR_TYPE_NODE_ID;
 		error->message = "Node ID out of range for a leaf node.";
 		return -EINVAL;
@@ -440,7 +446,8 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 			return -EINVAL;
 		}
 
-		ret = ice_node_param_check(node_id, priority, weight, params, false, error);
+		ret = ice_node_param_check(node_id, priority, weight, params, false,
+				dev->data->nb_tx_queues, error);
 		if (ret)
 			return ret;
 
@@ -479,7 +486,8 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 	}
 
 	ret = ice_node_param_check(node_id, priority, weight,
-			params, level_id == ice_get_leaf_level(pf), error);
+			params, level_id == ice_get_leaf_level(pf),
+			dev->data->nb_tx_queues, error);
 	if (ret)
 		return ret;
 
