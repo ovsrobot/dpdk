@@ -107,6 +107,10 @@ New Features
   Added handling of the key combination Ctrl+L
   to clear the screen before redisplaying the prompt.
 
+* **Added RISC-V vector extension support for node library.**
+
+  * Added vectorized IPv4 LPM lookup implementation for the node library
+    using RISC-V Vector Extension instruction set.
 
 Removed Items
 -------------
