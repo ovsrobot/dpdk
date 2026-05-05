@@ -70,6 +70,12 @@ New Features
   parsing, and correctionField manipulation across L2, VLAN-tagged,
   UDP/IPv4, and UDP/IPv6 transports.
 
+* **Added PTP software relay example application.**
+
+  Added a new example application ``ptp_tap_relay_sw`` demonstrating a
+  software PTP Transparent Clock relay between a DPDK port and a kernel
+  TAP interface.
+
 
 Removed Items
 -------------
