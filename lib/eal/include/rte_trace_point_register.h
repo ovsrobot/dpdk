@@ -45,6 +45,8 @@ RTE_DECLARE_PER_LCORE(volatile int, trace_point_sz);
 #define RTE_TRACE_POINT_ARGS(...) \
 	(RTE_TRACE_POINT_ARGS_(RTE_TRACE_POINT_ARGS_COUNT(0, __VA_ARGS__), __VA_ARGS__))
 
+#define RTE_TRACE_POINT_EMBED_CODE(...)
+
 #define __RTE_TRACE_POINT(_mode, _tp, _args, ...) \
 extern rte_trace_point_t __##_tp; \
 static __rte_always_inline void _tp _args { } \

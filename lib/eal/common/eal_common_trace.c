@@ -16,6 +16,7 @@
 
 #include <eal_export.h>
 #include "eal_trace.h"
+#include "eal_trace_pmu.h"
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(per_lcore_trace_point_sz, 20.05)
 RTE_DEFINE_PER_LCORE(volatile int, trace_point_sz);
@@ -75,8 +76,10 @@ eal_trace_init(void)
 		goto free_meta;
 
 	/* Apply global configurations */
-	STAILQ_FOREACH(arg, &trace.args, next)
+	STAILQ_FOREACH(arg, &trace.args, next) {
 		trace_args_apply(arg->val);
+		trace_pmu_args_apply(arg->val);
+	}
 
 	rte_trace_mode_set(trace.mode);
 
@@ -92,6 +95,7 @@ fail:
 void
 eal_trace_fini(void)
 {
+	trace_pmu_args_free();
 	trace_mem_free();
 	trace_metadata_destroy();
 	eal_trace_args_free();
