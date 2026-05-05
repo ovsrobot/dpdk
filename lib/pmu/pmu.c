@@ -126,7 +126,7 @@ get_event_config(const char *name, uint64_t config[3])
 	if (fp == NULL)
 		return -errno;
 
-	ret = fread(buf, 1, sizeof(buf), fp);
+	ret = fread(buf, 1, sizeof(buf) - 1, fp);
 	if (ret == 0) {
 		fclose(fp);
 
@@ -420,6 +420,45 @@ rte_pmu_add_event(const char *name)
 }
 
 static int
+check_perf_permissions(void)
+{
+	const char *paranoid_path = "/proc/sys/kernel/perf_event_paranoid";
+	int level, ret;
+	FILE *fp;
+
+	/* Check if user is root */
+	if (getuid() == 0)
+		return 0;  /* Root has access */
+
+	fp = fopen(paranoid_path, "r");
+	if (!fp)
+		return -ENOENT;  /* File doesn't exist */
+
+	ret = fscanf(fp, "%d", &level);
+	fclose(fp);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	/* On vanilla Linux the default perf_event_paranoid level is 2, which allows non-privileged
+	 * processes to access performance counters.
+	 *
+	 * Debian / Ubuntu and their derivatives apply patches that introduce
+	 * additional paranoia levels:
+	 *
+	 * - Debian adds level 3, which restricts access to perf_event_open() for
+	 *   monitoring other processes, but still allows unprivileged self-monitoring.
+	 *   See: https://lore.kernel.org/all/1469630746-32279-1-git-send-email-jeffv@google.com/
+	 * - Ubuntu adds level 4 (which is also the default), completely disabling perf_event_open()
+	 *   for unprivileged users—effectively disabling self-monitoring.
+	 */
+	if (level >= 4)
+		return -EACCES;  /* Insufficient privileges */
+
+	return 0;  /* Allowed */
+}
+
+static int
 add_events(const char *pattern)
 {
 	char *token, *copy, *tmp;
@@ -492,10 +531,21 @@ rte_pmu_init(void)
 	if (rte_pmu.initialized && ++rte_pmu.initialized)
 		return 0;
 
+	/* Check permissions first */
+	ret = check_perf_permissions();
+	if (ret == -EACCES) {
+		PMU_LOG(ERR, "Insufficient privileges for PMU access (check perf_event_paranoid)");
+		return -EACCES;
+	}
+	if (ret == -ENOENT) {
+		PMU_LOG(ERR, "Cannot access perf_event_paranoid file");
+		return -ENODEV;
+	}
+
 	ret = scan_pmus();
 	if (ret) {
 		PMU_LOG(ERR, "Failed to scan for event sources");
-		goto out;
+		return -ENODEV;  /* No PMU hardware found */
 	}
 
 	ret = pmu_arch_init();

@@ -150,10 +150,20 @@ __rte_pmu_enable_group(struct rte_pmu_event_group *group);
  *
  * Initialize PMU library.
  *
+ * This function initializes the Performance Monitoring Unit (PMU) library
+ * by checking permissions, scanning for available PMU hardware, and setting up
+ * necessary architecture-specific internals.
+ *
  * It's safe to call it multiple times.
  *
  * @return
- *   0 in case of success, negative value otherwise.
+ *   0 on success.
+ *   -ENODEV if PMU hardware is not available or kernel lacks PMU support.
+ *   -EACCES if insufficient privileges to access PMU.
+ *           User should check /proc/sys/kernel/perf_event_paranoid settings.
+ *   -ENOMEM if memory allocation failed.
+ *   -EINVAL if invalid configuration detected.
+ *   Other negative errno values on other failures.
  */
 __rte_experimental
 int
