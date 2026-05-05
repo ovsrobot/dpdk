@@ -12,7 +12,8 @@ sources = files('cmdline.c',
     'cmdline_parse_string.c',
     'cmdline_rdline.c',
     'cmdline_socket.c',
-    'cmdline_vt100.c')
+    'cmdline_vt100.c',
+    'rte_flow_parser_cmdline.c')
 
 headers = files('cmdline.h',
     'cmdline_parse.h',
@@ -25,7 +26,8 @@ headers = files('cmdline.h',
     'cmdline_vt100.h',
     'cmdline_socket.h',
     'cmdline_cirbuf.h',
-    'cmdline_parse_portlist.h')
+    'cmdline_parse_portlist.h',
+    'rte_flow_parser_cmdline.h')
 
 if is_windows
     sources += files('cmdline_os_windows.c')
@@ -33,4 +35,4 @@ else
     sources += files('cmdline_os_unix.c')
 endif
 
-deps += ['net']
+deps += ['net', 'ethdev']

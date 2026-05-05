@@ -22,9 +22,9 @@ libraries = [
         'mbuf',
         'net',
         'meter',
-        'ethdev',
-        'pci', # core
+        'ethdev', # cmdline depends on ethdev
         'cmdline',
+        'pci', # core
         'metrics', # bitrate/latency stats depends on this
         'hash',    # efd depends on this
         'timer',   # eventdev depends on this
