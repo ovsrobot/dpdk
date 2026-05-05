@@ -63,6 +63,13 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **Added PTP protocol library.**
+
+  Added a new library ``rte_ptp`` for IEEE 1588 Precision Time Protocol
+  packet processing. The library provides packet classification, header
+  parsing, and correctionField manipulation across L2, VLAN-tagged,
+  UDP/IPv4, and UDP/IPv6 transports.
+
 
 Removed Items
 -------------

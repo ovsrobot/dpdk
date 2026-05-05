@@ -50,6 +50,7 @@ libraries = [
         'member',
         'pcapng',
         'power',
+        'ptp',
         'rawdev',
         'regexdev',
         'mldev',
