@@ -63,6 +63,11 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **Added experimental RSS type helper APIs in ethdev.**
+
+  * Added new APIs to convert between RSS type names and values.
+  * Added new API call to obtain the global RSS string table.
+
 
 Removed Items
 -------------
