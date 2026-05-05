@@ -2,53 +2,18 @@
  * Copyright(C) 2025 Marvell International Ltd.
  */
 
-#include <stdbool.h>
+#include <errno.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 #include <rte_pmu.h>
 
 #include "test.h"
 
-#define PERF_EVENT_PARANOID_PATH "/proc/sys/kernel/perf_event_paranoid"
-
-static bool perf_allowed_quirk(void)
-{
-	int level, ret;
-	FILE *fp;
-
-	fp = fopen(PERF_EVENT_PARANOID_PATH, "r");
-	if (!fp)
-		return false;
-
-	ret = fscanf(fp, "%d", &level);
-	fclose(fp);
-	if (ret != 1)
-		return false;
-
-	/* On vanilla Linux the default perf_event_paranoid level is 2, which allows non-privileged
-	 * processes to access performance counters.
-	 *
-	 * Debian / Ubuntu and their derivatives apply patches that introduce
-	 * additional paranoia levels:
-	 *
-	 * - Debian adds level 3, which restricts access to perf_event_open() for
-	 *   monitoring other processes, but still allows unprivileged self-monitoring.
-	 *   See: https://lore.kernel.org/all/1469630746-32279-1-git-send-email-jeffv@google.com/
-	 * - Ubuntu adds level 4 (which is also the default), completely disabling perf_event_open()
-	 *   for unprivileged users—effectively disabling self-monitoring.
-	 *
-	 * That said, check below should be sufficient to enable this test on most kernels.
-	 */
-	return level < 4;
-}
-
 static int
 test_pmu_read(void)
 {
 	const char *name = NULL;
-	int tries = 10, event;
+	int ret, tries = 10, event;
 	uint64_t val = 0;
 
 #if defined(RTE_ARCH_ARM64)
@@ -62,28 +27,39 @@ test_pmu_read(void)
 		return TEST_SKIPPED;
 	}
 
-	if ((getuid() != 0) && !perf_allowed_quirk()) {
-		printf("self-monitoring disabled\n");
+	ret = rte_pmu_init();
+	if (ret == -ENODEV) {
+		printf("PMU hardware not available or kernel lacks PMU support\n");
 		return TEST_SKIPPED;
 	}
-
-	if (rte_pmu_init() < 0) {
-		printf("PMU not initialized\n");
-		return TEST_SKIPPED;
+	if (ret == -EACCES) {
+		printf("Insufficient privileges for PMU access\n");
+		printf("Try: echo 0 | sudo tee /proc/sys/kernel/perf_event_paranoid\n");
+		return TEST_FAILED;
+	}
+	if (ret < 0) {
+		printf("PMU initialization failed: %d\n", ret);
+		return TEST_FAILED;
 	}
 
 	event = rte_pmu_add_event(name);
+	if (event < 0) {
+		printf("Failed to add event '%s': %d\n", name, event);
+		rte_pmu_fini();
+		return TEST_FAILED;
+	}
+
 	while (tries--)
 		val += rte_pmu_read(event);
 
 	rte_pmu_fini();
 
-	/* rte_pmu_read() returns zero if it can't read perf counter. Thus series of zeros doesn't
-	 * necessarily mean the counter is actually zero. It might just signal a problem with setup
-	 * itself. So skip test to avoid testing failure and leave it to user to interpret this
-	 * outcome.
-	 */
-	return val ? TEST_SUCCESS : TEST_SKIPPED;
+	if (val == 0) {
+		printf("PMU counter read returned zero\n");
+		return TEST_FAILED;
+	}
+
+	return TEST_SUCCESS;
 }
 
 static struct unit_test_suite pmu_tests = {
