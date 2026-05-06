@@ -58,7 +58,7 @@ rte_vdev_dev_iterate(const void *start,
 			return NULL;
 		}
 	}
-	dev = rte_vdev_find_device(start, vdev_dev_match, kvargs);
+	dev = rte_vdev_find_device(NULL, start, vdev_dev_match, kvargs);
 	rte_kvargs_free(kvargs);
 	return dev;
 }
