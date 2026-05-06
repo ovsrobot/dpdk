@@ -63,16 +63,6 @@ struct rte_cdx_device {
 	struct rte_intr_handle *intr_handle;	/**< Interrupt handle */
 };
 
-/**
- * @internal
- * Helper macro for drivers that need to convert to struct rte_cdx_device.
- */
-#define RTE_DEV_TO_CDX_DEV(ptr) \
-	container_of(ptr, struct rte_cdx_device, device)
-
-#define RTE_DEV_TO_CDX_DEV_CONST(ptr) \
-	container_of(ptr, const struct rte_cdx_device, device)
-
 #define RTE_ETH_DEV_TO_CDX_DEV(eth_dev)	RTE_DEV_TO_CDX_DEV((eth_dev)->device)
 
 #ifdef __cplusplus
