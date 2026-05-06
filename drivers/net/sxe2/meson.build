@@ -23,6 +23,8 @@ sources += files(
         'sxe2_cmd_chnl.c',
         'sxe2_vsi.c',
         'sxe2_queue.c',
+        'sxe2_tx.c',
+        'sxe2_rx.c',
 )
 
 allow_internal_get_api = true
