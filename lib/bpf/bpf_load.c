@@ -144,7 +144,8 @@ rte_bpf_load(const struct rte_bpf_prm *prm)
 			.raw.nb_ins = prm->nb_ins,
 			.xsym = prm->xsym,
 			.nb_xsym = prm->nb_xsym,
-			.prog_arg = prm->prog_arg,
+			.prog_arg[0] = prm->prog_arg,
+			.nb_prog_arg = 1,
 		});
 }
 
@@ -160,7 +161,8 @@ rte_bpf_elf_load(const struct rte_bpf_prm *prm, const char *fname,
 			.elf_file.section = sname,
 			.xsym = prm->xsym,
 			.nb_xsym = prm->nb_xsym,
-			.prog_arg = prm->prog_arg,
+			.prog_arg[0] = prm->prog_arg,
+			.nb_prog_arg = 1,
 		});
 }
 
