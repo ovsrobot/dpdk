@@ -28,7 +28,7 @@ static TAILQ_HEAD(sxe2_class_drivers, sxe2_class_driver) sxe2_class_drivers_list
 static TAILQ_HEAD(sxe2_common_devices, sxe2_common_device) sxe2_common_devices_list =
 				TAILQ_HEAD_INITIALIZER(sxe2_common_devices_list);
 
-static pthread_mutex_t sxe2_common_devices_list_lock;
+static rte_spinlock_t sxe2_common_devices_list_lock;
 
 static struct rte_pci_id *sxe2_common_pci_id_table;
 
@@ -223,9 +223,9 @@ static struct sxe2_common_device *sxe2_common_device_alloc(
 	cdev->config.kernel_reset = false;
 	rte_ticketlock_init(&cdev->config.lock);
 
-	(void)pthread_mutex_lock(&sxe2_common_devices_list_lock);
+	rte_spinlock_lock(&sxe2_common_devices_list_lock);
 	TAILQ_INSERT_TAIL(&sxe2_common_devices_list, cdev, next);
-	(void)pthread_mutex_unlock(&sxe2_common_devices_list_lock);
+	rte_spinlock_unlock(&sxe2_common_devices_list_lock);
 
 l_end:
 	return cdev;
@@ -233,10 +233,9 @@ l_end:
 
 static void sxe2_common_device_free(struct sxe2_common_device *cdev)
 {
-
-	(void)pthread_mutex_lock(&sxe2_common_devices_list_lock);
+	rte_spinlock_lock(&sxe2_common_devices_list_lock);
 	TAILQ_REMOVE(&sxe2_common_devices_list, cdev, next);
-	(void)pthread_mutex_unlock(&sxe2_common_devices_list_lock);
+	rte_spinlock_unlock(&sxe2_common_devices_list_lock);
 
 	rte_free(cdev);
 }
@@ -662,7 +661,7 @@ sxe2_common_init(void)
 	if (sxe2_commoin_inited)
 		goto l_end;
 
-	pthread_mutex_init(&sxe2_common_devices_list_lock, NULL);
+	rte_spinlock_init(&sxe2_common_devices_list_lock);
 #ifdef SXE2_DPDK_DEBUG
 	sxe2_common_log_stream_init();
 #endif
