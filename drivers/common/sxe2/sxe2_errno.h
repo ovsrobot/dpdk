@@ -50,9 +50,6 @@ enum sxe2_status {
 	SXE2_ERR_NOLCK              = -ENOLCK,
 	SXE2_ERR_NOSYS              = -ENOSYS,
 	SXE2_ERR_NOTEMPTY           = -ENOTEMPTY,
-	SXE2_ERR_ILSEQ              = -EILSEQ,
-	SXE2_ERR_NODATA             = -ENODATA,
-	SXE2_ERR_CANCELED           = -ECANCELED,
 	SXE2_ERR_TIMEDOUT           = -ETIMEDOUT,
 
 	SXE2_ERROR                  = -150,
