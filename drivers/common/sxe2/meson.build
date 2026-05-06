@@ -9,5 +9,7 @@ cflags += [
 deps += ['bus_pci', 'net', 'eal', 'ethdev']
 
 sources = files(
+        'sxe2_common.c',
         'sxe2_common_log.c',
+        'sxe2_ioctl_chnl.c',
 )
