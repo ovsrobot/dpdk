@@ -29,8 +29,6 @@
 #define BIT_ULL(a) (1ULL << (a))
 #endif
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 #define BITS_PER_BYTE 8
 
 #define IS_UNICAST_ETHER_ADDR(addr)			\
@@ -88,7 +86,7 @@
 			(((n) + (typeof(n))(d) - (typeof(n))1) / (typeof(n))(d))
 #endif
 
-#define usleep_range(min, max) msleep(DIV_ROUND_UP(min, 1000))
+#define usleep_range(min) msleep(DIV_ROUND_UP(min, 1000))
 
 #define __bf_shf(x) ((uint32_t)rte_bsf64(x))
 
