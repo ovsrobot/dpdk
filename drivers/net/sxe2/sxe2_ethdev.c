@@ -58,17 +58,11 @@ static const struct rte_pci_id pci_id_sxe2_tbl[] = {
 };
 
 static struct sxe2_pci_map_addr_info sxe2_net_map_addr_info_pf[SXE2_PCI_MAP_RES_MAX_COUNT] = {
-	/* SXE2_PCI_MAP_RES_INVALID */
 	{0, 0, 0},
-	/* SXE2_PCI_MAP_RES_DOORBELL_TX */
 	{ SXE2_TXQ_LEGACY_DBLL(0), 0, 4},
-	/* SXE2_PCI_MAP_RES_DOORBELL_RX_TAIL */
 	{ SXE2_RXQ_TAIL(0), 0, 4},
-	/* SXE2_PCI_MAP_RES_IRQ_DYN */
 	{ SXE2_VF_DYN_CTL(0), 0, 4},
-	/* SXE2_PCI_MAP_RES_IRQ_ITR(默认使用ITR0) */
 	{ SXE2_VF_INT_ITR(0, 0), 0, 4},
-	/* SXE2_PCI_MAP_RES_IRQ_MSIX */
 	{ SXE2_BAR4_MSIX_CTL(0), 4, 0x10},
 };
 
@@ -312,6 +306,8 @@ static const struct eth_dev_ops sxe2_eth_dev_ops = {
 
 	.rxq_info_get               = sxe2_rx_queue_info_get,
 	.txq_info_get               = sxe2_tx_queue_info_get,
+	.rx_burst_mode_get          = sxe2_rx_burst_mode_get,
+	.tx_burst_mode_get          = sxe2_tx_burst_mode_get,
 };
 
 struct sxe2_pci_map_bar_info *sxe2_dev_get_bar_info(struct sxe2_adapter *adapter,

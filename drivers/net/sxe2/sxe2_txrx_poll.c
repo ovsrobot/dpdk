@@ -19,6 +19,66 @@
 #include "sxe2_common_log.h"
 #include "sxe2_errno.h"
 
+static __rte_always_inline s32
+sxe2_tx_bufs_free(struct sxe2_tx_queue *txq)
+{
+	struct sxe2_tx_buffer *buffer;
+	struct rte_mbuf *mbuf;
+	struct rte_mbuf *mbuf_free_arr[SXE2_TX_FREE_BUFFER_SIZE_MAX];
+	s32 ret;
+	u32 i;
+	u16 rs_thresh;
+	u16 free_num;
+	if ((txq->desc_ring[txq->next_dd].wb.dd &
+		     rte_cpu_to_le_64(SXE2_TX_DESC_DTYPE_MASK)) !=
+		     rte_cpu_to_le_64(SXE2_TX_DESC_DTYPE_DESC_DONE)) {
+		ret = 0;
+		goto l_end;
+	}
+	rs_thresh = txq->rs_thresh;
+	buffer = &txq->buffer_ring[txq->next_dd - rs_thresh + 1];
+	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
+		if (likely(rs_thresh <= SXE2_TX_FREE_BUFFER_SIZE_MAX)) {
+			mbuf = buffer[0].mbuf;
+			mbuf_free_arr[0] = mbuf;
+			free_num = 1;
+			for (i = 1; i < rs_thresh; ++i) {
+				mbuf = buffer[i].mbuf;
+				if (likely(mbuf->pool == mbuf_free_arr[0]->pool)) {
+					mbuf_free_arr[free_num] = mbuf;
+					free_num++;
+				} else {
+					rte_mempool_put_bulk(mbuf_free_arr[0]->pool,
+								(void *)mbuf_free_arr, free_num);
+					mbuf_free_arr[0] = mbuf;
+					free_num = 1;
+				}
+			}
+			rte_mempool_put_bulk(mbuf_free_arr[0]->pool,
+						(void *)mbuf_free_arr, free_num);
+		} else {
+			for (i = 0; i < rs_thresh; ++i, ++buffer) {
+				rte_mempool_put(buffer->mbuf->pool, buffer->mbuf);
+				buffer->mbuf = NULL;
+			}
+		}
+	} else {
+		for (i = 0; i < rs_thresh; ++i, ++buffer) {
+			mbuf = rte_pktmbuf_prefree_seg(buffer[i].mbuf);
+				if (mbuf != NULL)
+					rte_mempool_put(mbuf->pool, mbuf);
+			buffer->mbuf = NULL;
+		}
+	}
+	txq->desc_free_num += rs_thresh;
+	txq->next_dd       += rs_thresh;
+	if (txq->next_dd >= txq->ring_depth)
+		txq->next_dd = rs_thresh - 1;
+	ret = rs_thresh;
+l_end:
+	return ret;
+}
+
 static inline s32 sxe2_tx_cleanup(struct sxe2_tx_queue *txq)
 {
 	s32 ret = SXE2_SUCCESS;
@@ -330,6 +390,130 @@ l_end:
 	return tx_num;
 }
 
+static __rte_always_inline void
+sxe2_tx_data_desc_fill(volatile union sxe2_tx_data_desc *desc,
+		struct rte_mbuf **tx_pkts)
+{
+	rte_iova_t buf_dma_addr;
+	u32 desc_offset;
+	buf_dma_addr = rte_mbuf_data_iova(*tx_pkts);
+	desc->read.buf_addr = rte_cpu_to_le_64(buf_dma_addr);
+	desc_offset = SXE2_TX_DATA_DESC_MACLEN_VAL((*tx_pkts)->l2_len);
+	desc->read.type_cmd_off_bsz_l2t =
+				sxe2_tx_data_desc_build_cobt(SXE2_TX_DATA_DESC_CMD_EOP,
+					desc_offset, (*tx_pkts)->data_len, 0);
+}
+static __rte_always_inline void
+sxe2_tx_data_desc_fill_batch(volatile union sxe2_tx_data_desc *desc,
+		struct rte_mbuf **tx_pkts)
+{
+	rte_iova_t buf_dma_addr;
+	u32 i;
+	u32 desc_offset;
+	for (i = 0; i < SXE2_TX_FILL_PER_LOOP; ++i, ++desc, ++tx_pkts) {
+		buf_dma_addr = rte_mbuf_data_iova(*tx_pkts);
+		desc->read.buf_addr = rte_cpu_to_le_64(buf_dma_addr);
+		desc_offset = SXE2_TX_DATA_DESC_MACLEN_VAL((*tx_pkts)->l2_len);
+		desc->read.type_cmd_off_bsz_l2t =
+			sxe2_tx_data_desc_build_cobt(SXE2_TX_DATA_DESC_CMD_EOP,
+					desc_offset,
+					(*tx_pkts)->data_len,
+					0);
+	}
+}
+
+static inline void sxe2_tx_ring_fill(struct sxe2_tx_queue *txq,
+				struct rte_mbuf **tx_pkts, u16 nb_pkts)
+{
+	struct sxe2_tx_buffer *buffer = &txq->buffer_ring[txq->next_use];
+	volatile union sxe2_tx_data_desc *desc = &txq->desc_ring[txq->next_use];
+	u32 i, j;
+	u32	mainpart;
+	u32 leftover;
+	mainpart = nb_pkts & ((u32)~SXE2_TX_FILL_PER_LOOP_MASK);
+	leftover = nb_pkts & ((u32)SXE2_TX_FILL_PER_LOOP_MASK);
+	for (i = 0; i < mainpart; i += SXE2_TX_FILL_PER_LOOP) {
+		for (j = 0; j < SXE2_TX_FILL_PER_LOOP; ++j)
+			(buffer + i + j)->mbuf = *(tx_pkts + i + j);
+		sxe2_tx_data_desc_fill_batch(desc + i, tx_pkts + i);
+	}
+	if (unlikely(leftover > 0)) {
+		for (i = 0; i < leftover; ++i) {
+			(buffer + mainpart + i)->mbuf = *(tx_pkts + mainpart + i);
+			sxe2_tx_data_desc_fill(desc + mainpart + i,
+					tx_pkts + mainpart + i);
+		}
+	}
+}
+
+static inline u16 sxe2_tx_pkts_batch(void *tx_queue,
+			struct rte_mbuf **tx_pkts, u16 nb_pkts)
+{
+	struct sxe2_tx_queue *txq = (struct sxe2_tx_queue *)tx_queue;
+	volatile union sxe2_tx_data_desc *desc_ring = txq->desc_ring;
+	u16 res_num = 0;
+	if (txq->desc_free_num < txq->free_thresh)
+		(void)sxe2_tx_bufs_free(txq);
+	nb_pkts = RTE_MIN(txq->desc_free_num, nb_pkts);
+	if (unlikely(nb_pkts == 0)) {
+		PMD_LOG_TX_DEBUG("Tx batch: may not enough free desc, "
+				"free_desc=%u, need_tx_pkts=%u",
+				txq->desc_free_num, nb_pkts);
+		goto l_end;
+	}
+	txq->desc_free_num -= nb_pkts;
+	if ((txq->next_use + nb_pkts) > txq->ring_depth) {
+		res_num = txq->ring_depth - txq->next_use;
+		sxe2_tx_ring_fill(txq, tx_pkts, res_num);
+		desc_ring[txq->next_rs].read.type_cmd_off_bsz_l2t |=
+				rte_cpu_to_le_64(SXE2_TX_DATA_DESC_CMD_RS_MASK);
+		txq->next_rs = txq->rs_thresh - 1;
+		txq->next_use = 0;
+	}
+	sxe2_tx_ring_fill(txq, tx_pkts + res_num, nb_pkts - res_num);
+	txq->next_use = txq->next_use + (nb_pkts - res_num);
+	if (txq->next_use > txq->next_rs) {
+		desc_ring[txq->next_rs].read.type_cmd_off_bsz_l2t |=
+				rte_cpu_to_le_64(SXE2_TX_DATA_DESC_CMD_RS_MASK);
+		txq->next_rs += txq->rs_thresh;
+		if (txq->next_rs >= txq->ring_depth)
+			txq->next_rs = txq->rs_thresh - 1;
+	}
+	if (txq->next_use >= txq->ring_depth)
+		txq->next_use = 0;
+	PMD_LOG_TX_DEBUG("port_id=%u queue_id=%u next_use=%u send_pkts=%u",
+			txq->port_id, txq->queue_id, txq->next_use, nb_pkts);
+	SXE2_PCI_REG_WRITE_WC(txq->tdt_reg_addr, txq->next_use);
+	SXE2_TX_STATS_CNT(tx_queue, tx_pkts_num, nb_pkts);
+l_end:
+	return nb_pkts;
+}
+
+u16 sxe2_tx_pkts_simple(void *tx_queue,
+			struct rte_mbuf **tx_pkts, u16 nb_pkts)
+{
+	u16 tx_done_num;
+	u16 tx_once_num;
+	u16 tx_need_num;
+	if (likely(nb_pkts <= SXE2_TX_PKTS_BURST_BATCH_NUM)) {
+		tx_done_num = sxe2_tx_pkts_batch(tx_queue,
+				tx_pkts, nb_pkts);
+		goto l_end;
+	}
+	tx_done_num = 0;
+	while (nb_pkts) {
+		tx_need_num = RTE_MIN(nb_pkts, SXE2_TX_PKTS_BURST_BATCH_NUM);
+		tx_once_num = sxe2_tx_pkts_batch(tx_queue,
+					&tx_pkts[tx_done_num], tx_need_num);
+		nb_pkts     -= tx_once_num;
+		tx_done_num += tx_once_num;
+		if (tx_once_num < tx_need_num)
+			break;
+	}
+l_end:
+	return tx_done_num;
+}
+
 static inline void
 sxe2_update_rx_tail(struct sxe2_rx_queue *rxq, u16 hold_num, u16 rx_id)
 {
@@ -585,7 +769,7 @@ u16 sxe2_rx_pkts_scattered_split(void *rx_queue, struct rte_mbuf **rx_pkts, u16 
 	struct rte_mbuf *cur_mbuf;
 	struct rte_mbuf *cur_mbuf_pay;
 	struct rte_mbuf *new_mbuf;
-	struct rte_mbuf *new_mbuf_pay;
+	struct rte_mbuf *new_mbuf_pay = NULL;
 	struct rte_mbuf *first_seg;
 	struct rte_mbuf *last_seg;
 	u64 qword1;

@@ -11,7 +11,6 @@
 #include <rte_tm_driver.h>
 #include <rte_io.h>
 
-#include "sxe2_common.h"
 #include "sxe2_errno.h"
 #include "sxe2_type.h"
 #include "sxe2_vsi.h"
