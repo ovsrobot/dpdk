@@ -453,6 +453,7 @@ M: Stephen Hemminger <stephen@networkplumber.org>
 T: git://dpdk.org/next/dpdk-next-net
 F: lib/flow_compile/
 F: doc/guides/prog_guide/flow_compile_lib.rst
+F: app/test/test_flow_compile.c
 
 Traffic Management API
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
