@@ -102,6 +102,17 @@ int rte_lcore_is_enabled(unsigned int lcore_id)
 	return cfg->lcore_role[lcore_id] == ROLE_RTE;
 }
 
+RTE_EXPORT_SYMBOL(rte_lcore_is_eal_managed)
+int rte_lcore_is_eal_managed(unsigned int lcore_id)
+{
+	struct rte_config *cfg = rte_eal_get_configuration();
+
+	if (lcore_id >= RTE_MAX_LCORE)
+		return 0;
+	return cfg->lcore_role[lcore_id] == ROLE_RTE ||
+		cfg->lcore_role[lcore_id] == ROLE_SERVICE;
+}
+
 RTE_EXPORT_SYMBOL(rte_get_next_lcore)
 unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap)
 {
