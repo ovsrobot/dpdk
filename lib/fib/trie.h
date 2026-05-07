@@ -31,8 +31,7 @@
 
 struct rte_trie_tbl {
 	uint32_t	number_tbl8s;	/**< Total number of tbl8s */
-	uint32_t	rsvd_tbl8s;	/**< Number of reserved tbl8s */
-	uint32_t	cur_tbl8s;	/**< Current cumber of tbl8s */
+	uint32_t	cur_tbl8s;	/**< Current number of tbl8s */
 	uint64_t	def_nh;		/**< Default next hop */
 	enum rte_fib_trie_nh_sz	nh_sz;	/**< Size of nexthop entry */
 	uint64_t	*tbl8;		/**< tbl8 table. */

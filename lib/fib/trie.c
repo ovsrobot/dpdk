@@ -161,12 +161,6 @@ tbl8_alloc(struct rte_trie_tbl *dp, uint64_t nh)
 	uint8_t		*tbl8_ptr;
 
 	tbl8_idx = tbl8_get(dp);
-
-	/* If there are no tbl8 groups try to reclaim one. */
-	if (unlikely(tbl8_idx == -ENOSPC && dp->dq &&
-			!rte_rcu_qsbr_dq_reclaim(dp->dq, 1, NULL, NULL, NULL)))
-		tbl8_idx = tbl8_get(dp);
-
 	if (tbl8_idx < 0)
 		return tbl8_idx;
 	tbl8_ptr = get_tbl_p_by_idx(dp->tbl8,
@@ -603,8 +597,15 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 			return 0;
 		}
 
-		if ((depth > 24) && (dp->rsvd_tbl8s + depth_diff > dp->number_tbl8s))
-			return -ENOSPC;
+		if ((depth > 24) &&
+		    (dp->tbl8_pool_pos + depth_diff > dp->number_tbl8s)) {
+			/* Reclaim deferred tbl8s before failing. */
+			if (dp->dq != NULL)
+				rte_rcu_qsbr_dq_reclaim(dp->dq, depth_diff,
+					NULL, NULL, NULL);
+			if (dp->tbl8_pool_pos + depth_diff > dp->number_tbl8s)
+				return -ENOSPC;
+		}
 
 		node = rte_rib6_insert(rib, &ip_masked, depth);
 		if (node == NULL)
@@ -614,15 +615,13 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 		if (parent != NULL) {
 			rte_rib6_get_nh(parent, &par_nh);
 			if (par_nh == next_hop)
-				goto successfully_added;
+				return 0;
 		}
 		ret = modify_dp(dp, rib, &ip_masked, depth, next_hop);
 		if (ret != 0) {
 			rte_rib6_remove(rib, &ip_masked, depth);
 			return ret;
 		}
-successfully_added:
-		dp->rsvd_tbl8s += depth_diff;
 		return 0;
 	case RTE_FIB6_DEL:
 		if (node == NULL)
@@ -641,8 +640,6 @@ successfully_added:
 		if (ret != 0)
 			return ret;
 		rte_rib6_remove(rib, ip, depth);
-
-		dp->rsvd_tbl8s -= depth_diff;
 		return 0;
 	default:
 		break;
