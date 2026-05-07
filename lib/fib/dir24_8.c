@@ -207,12 +207,6 @@ tbl8_alloc(struct dir24_8_tbl *dp, uint64_t nh)
 	uint8_t	*tbl8_ptr;
 
 	tbl8_idx = tbl8_get_idx(dp);
-
-	/* If there are no tbl8 groups try to reclaim one. */
-	if (unlikely(tbl8_idx == -ENOSPC && dp->dq &&
-			!rte_rcu_qsbr_dq_reclaim(dp->dq, 1, NULL, NULL, NULL)))
-		tbl8_idx = tbl8_get_idx(dp);
-
 	if (tbl8_idx < 0)
 		return tbl8_idx;
 	tbl8_ptr = (uint8_t *)dp->tbl8 +
@@ -504,9 +498,14 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 			tmp = rte_rib_get_nxt(rib, ip, 24, NULL,
 				RTE_RIB_GET_NXT_COVER);
 			if ((tmp == NULL) &&
-				(dp->rsvd_tbl8s >= dp->number_tbl8s))
-				return -ENOSPC;
-
+			    (dp->cur_tbl8s >= dp->number_tbl8s)) {
+				/* Reclaim deferred tbl8s before failing. */
+				if (dp->dq != NULL)
+					rte_rcu_qsbr_dq_reclaim(dp->dq, 1,
+						NULL, NULL, NULL);
+				if (dp->cur_tbl8s >= dp->number_tbl8s)
+					return -ENOSPC;
+			}
 		}
 		node = rte_rib_insert(rib, ip, depth);
 		if (node == NULL)
@@ -516,16 +515,13 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 		if (parent != NULL) {
 			rte_rib_get_nh(parent, &par_nh);
 			if (par_nh == next_hop)
-				goto successfully_added;
+				return 0;
 		}
 		ret = modify_fib(dp, rib, ip, depth, next_hop);
 		if (ret != 0) {
 			rte_rib_remove(rib, ip, depth);
 			return ret;
 		}
-successfully_added:
-		if ((depth > 24) && (tmp == NULL))
-			dp->rsvd_tbl8s++;
 		return 0;
 	case RTE_FIB_DEL:
 		if (node == NULL)
@@ -539,15 +535,8 @@ successfully_added:
 				ret = modify_fib(dp, rib, ip, depth, par_nh);
 		} else
 			ret = modify_fib(dp, rib, ip, depth, dp->def_nh);
-		if (ret == 0) {
+		if (ret == 0)
 			rte_rib_remove(rib, ip, depth);
-			if (depth > 24) {
-				tmp = rte_rib_get_nxt(rib, ip, 24, NULL,
-					RTE_RIB_GET_NXT_COVER);
-				if (tmp == NULL)
-					dp->rsvd_tbl8s--;
-			}
-		}
 		return ret;
 	default:
 		break;
