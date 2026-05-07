@@ -121,6 +121,7 @@ Utility Libraries
 
     argparse_lib
     cmdline
+    flow_compile_lib
     ptr_compress_lib
     timer_lib
     rcu_lib

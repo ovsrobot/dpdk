@@ -64,6 +64,12 @@ New Features
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
 
+* **Added library to compile flow definitions.**
+
+  New library that works like libpcap ``pcap_compile`` function to compile
+  a text string into flow rules.
+
+
 Removed Items
 -------------
 
