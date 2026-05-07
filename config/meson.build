@@ -296,6 +296,29 @@ if (pcap_dep.found() and cc.has_header('pcap.h', dependencies: pcap_dep)
     dpdk_extra_ldflags += '-l@0@'.format(pcap_lib)
 endif
 
+# flex and bison are required for libraries using grammars.
+flex  = find_program('flex',  required: false)
+if flex.found()
+    flex_gen = generator(flex,
+        output: '@BASENAME@.yy.c',
+        arguments: ['--outfile=@OUTPUT@', '@INPUT@'],
+    )
+endif
+
+bison = find_program('bison', required: false)
+if bison.found()
+    # Parser generator.  Emits both the .c and a .tab.h
+    bison_gen = generator(bison,
+        output: ['@BASENAME@.tab.c', '@BASENAME@.tab.h'],
+        arguments: [
+            '--defines=@OUTPUT1@',
+            '--output=@OUTPUT0@',
+            '@INPUT@',
+        ],
+    )
+endif
+has_flex_bison = flex.found() and bison.found()
+
 # for clang 32-bit compiles we need libatomic for 64-bit atomic ops
 if cc.get_id() == 'clang' and dpdk_conf.get('RTE_ARCH_64') == false
     atomic_dep = cc.find_library('atomic', required: true)
