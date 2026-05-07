@@ -441,7 +441,7 @@ parse_fup(struct ptpv2_time_receiver_ordinary *ptp_data)
 		/* Set multicast address 01-1B-19-00-00-00. */
 		rte_ether_addr_copy(&eth_multicast, &eth_hdr->dst_addr);
 
-		eth_hdr->ether_type = htons(PTP_PROTOCOL);
+		eth_hdr->ether_type = htons(RTE_ETHER_TYPE_1588);
 		req_msg = rte_pktmbuf_mtod_offset(created_pkt,
 			struct delay_req_msg *, sizeof(struct
 			rte_ether_hdr));
@@ -582,7 +582,7 @@ parse_ptp_frames(uint16_t portid, struct rte_mbuf *m) {
 	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	eth_type = rte_be_to_cpu_16(eth_hdr->ether_type);
 
-	if (eth_type == PTP_PROTOCOL) {
+	if (eth_type == RTE_ETHER_TYPE_1588) {
 		ptp_data.m = m;
 		ptp_data.portid = portid;
 		ptp_hdr = rte_pktmbuf_mtod_offset(m, struct ptp_header *,
