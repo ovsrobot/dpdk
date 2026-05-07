@@ -40,6 +40,7 @@ libraries = [
         'efd',
         'eventdev',
         'dispatcher', # dispatcher depends on eventdev
+        'flow_compile',
         'gpudev',
         'gro',
         'gso',
