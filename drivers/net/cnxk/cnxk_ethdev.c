@@ -1913,7 +1913,7 @@ cnxk_nix_dev_stop(struct rte_eth_dev *eth_dev)
 	const struct eth_dev_ops *dev_ops = eth_dev->dev_ops;
 	struct rte_mbuf *rx_pkts[32];
 	struct rte_eth_link link;
-	int count, i, j, rc;
+	int count, i, rc;
 	void *rxq;
 
 	/* In case of Inline IPSec, will need to avoid disabling the MCAM rules and NPC Rx
@@ -1951,8 +1951,7 @@ cnxk_nix_dev_stop(struct rte_eth_dev *eth_dev)
 		rxq = eth_dev->data->rx_queues[i];
 		count = dev->rx_pkt_burst_no_offload(rxq, rx_pkts, 32);
 		while (count) {
-			for (j = 0; j < count; j++)
-				rte_pktmbuf_free(rx_pkts[j]);
+			rte_pktmbuf_free_bulk(rx_pkts, count);
 			count = dev->rx_pkt_burst_no_offload(rxq, rx_pkts, 32);
 		}
 	}
