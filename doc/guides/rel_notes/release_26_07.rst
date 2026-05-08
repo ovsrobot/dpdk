@@ -63,6 +63,11 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **mbuf: rte_pktmbuf_free_bulk now accepts NULL array pointer.**
+
+  Calling ``rte_pktmbuf_free_bulk`` with a NULL ``mbufs`` argument  is a no-op,
+  matching the behavior of ``rte_pktmbuf_free()`` and ``rte_free()``.
+
 
 Removed Items
 -------------

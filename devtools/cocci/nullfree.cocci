@@ -4,7 +4,7 @@
 // free(NULL) as a no-op.
 //
 @@
-expression E;
+expression E, N;
 @@
 (
 - if (E != NULL) cmdline_free(E);
@@ -78,6 +78,9 @@ expression E;
 |
 - if (E != NULL) rte_pktmbuf_free(E);
 + rte_pktmbuf_free(E);
+|
+- if (E != NULL) rte_pktmbuf_free_bulk(E, N);
++ rte_pktmbuf_free_bulk(E, N);
 |
 - if (E != NULL) rte_rib_free(E);
 + rte_rib_free(E);

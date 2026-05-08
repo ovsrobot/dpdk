@@ -1534,6 +1534,7 @@ static inline void rte_pktmbuf_free(struct rte_mbuf *m)
  *  @param mbufs
  *    Array of pointers to packet mbufs.
  *    The array may contain NULL pointers.
+ *    The array pointer is NULL function does nothing.
  *  @param count
  *    Array size.
  */
