@@ -723,7 +723,7 @@ virtio_dev_rx_queue_setup_finish(struct rte_eth_dev *dev, uint16_t queue_idx)
 	struct virtnet_rx *rxvq = &vq->rxq;
 	struct rte_mbuf *m;
 	uint16_t desc_idx;
-	int error, nbufs, i;
+	int error, nbufs;
 	bool in_order = virtio_with_feature(hw, VIRTIO_F_IN_ORDER);
 
 	PMD_INIT_FUNC_TRACE();
@@ -764,8 +764,7 @@ virtio_dev_rx_queue_setup_finish(struct rte_eth_dev *dev, uint16_t queue_idx)
 						pkts,
 						free_cnt);
 				if (unlikely(error)) {
-					for (i = 0; i < free_cnt; i++)
-						rte_pktmbuf_free(pkts[i]);
+					rte_pktmbuf_free_bulk(pkts, free_cnt);
 				} else {
 					nbufs += free_cnt;
 				}
@@ -1071,8 +1070,7 @@ virtio_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 			error = virtqueue_enqueue_recv_refill(vq, new_pkts,
 					free_cnt);
 			if (unlikely(error)) {
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 			}
 			nb_enqueued += free_cnt;
 		} else {
@@ -1176,8 +1174,7 @@ virtio_recv_pkts_packed(void *rx_queue, struct rte_mbuf **rx_pkts,
 			error = virtqueue_enqueue_recv_refill_packed(vq,
 					new_pkts, free_cnt);
 			if (unlikely(error)) {
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 			}
 			nb_enqueued += free_cnt;
 		} else {
@@ -1358,8 +1355,7 @@ virtio_recv_pkts_inorder(void *rx_queue,
 			error = virtqueue_enqueue_refill_inorder(vq, new_pkts,
 					free_cnt);
 			if (unlikely(error)) {
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 			}
 			nb_enqueued += free_cnt;
 		} else {
@@ -1535,8 +1531,7 @@ virtio_recv_mergeable_pkts(void *rx_queue,
 			error = virtqueue_enqueue_recv_refill(vq, new_pkts,
 					free_cnt);
 			if (unlikely(error)) {
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 			}
 			nb_enqueued += free_cnt;
 		} else {
@@ -1707,8 +1702,7 @@ virtio_recv_mergeable_pkts_packed(void *rx_queue,
 			error = virtqueue_enqueue_recv_refill_packed(vq,
 					new_pkts, free_cnt);
 			if (unlikely(error)) {
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 			}
 			nb_enqueued += free_cnt;
 		} else {
