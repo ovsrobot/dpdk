@@ -52,16 +52,12 @@ static void
 source_free(void *port)
 {
 	struct source *p = port;
-	uint32_t i;
 
 	if (!p)
 		return;
 
-	for (i = 0; i < p->n_pkts; i++)
-		rte_pktmbuf_free(p->pkts[i]);
-
+	rte_pktmbuf_free_bulk(p->pkts, p->n_pkts);
 	free(p->pkts);
-
 	free(p);
 }
 

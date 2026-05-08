@@ -212,8 +212,7 @@ send_burst(struct rte_port_fd_writer *p)
 
 	RTE_PORT_FD_WRITER_STATS_PKTS_DROP_ADD(p, p->tx_buf_count - i);
 
-	for (i = 0; i < p->tx_buf_count; i++)
-		rte_pktmbuf_free(p->tx_buf[i]);
+	rte_pktmbuf_free_bulk(p->tx_buf, p->tx_buf_count);
 
 	p->tx_buf_count = 0;
 }
@@ -397,8 +396,7 @@ send_burst_nodrop(struct rte_port_fd_writer_nodrop *p)
 
 	RTE_PORT_FD_WRITER_NODROP_STATS_PKTS_DROP_ADD(p, p->tx_buf_count - i);
 
-	for (i = 0; i < p->tx_buf_count; i++)
-		rte_pktmbuf_free(p->tx_buf[i]);
+	rte_pktmbuf_free_bulk(p->tx_buf, p->tx_buf_count);
 
 	p->tx_buf_count = 0;
 }
