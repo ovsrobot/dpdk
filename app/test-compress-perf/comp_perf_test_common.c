@@ -84,12 +84,10 @@ comp_perf_free_memory(struct comp_test_data *test_data,
 	uint32_t i;
 
 	if (mem->decomp_bufs != NULL)
-		for (i = 0; i < mem->total_bufs; i++)
-			rte_pktmbuf_free(mem->decomp_bufs[i]);
+		rte_pktmbuf_free_bulk(mem->decomp_bufs, mem->total_bufs);
 
 	if (mem->comp_bufs != NULL)
-		for (i = 0; i < mem->total_bufs; i++)
-			rte_pktmbuf_free(mem->comp_bufs[i]);
+		rte_pktmbuf_free_bulk(mem->comp_bufs, mem->total_bufs);
 
 	rte_free(mem->decomp_bufs);
 	rte_free(mem->comp_bufs);
