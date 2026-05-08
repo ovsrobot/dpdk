@@ -1,8 +1,8 @@
 .. SPDX-License-Identifier: BSD-3-Clause
 
-virtio_fwd Test Suite
+l2_forward Test Suite
 =====================
 
-.. automodule:: tests.TestSuite_virtio_fwd
+.. automodule:: tests.TestSuite_l2_forward
    :members:
    :show-inheritance:

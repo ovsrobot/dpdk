@@ -1,8 +1,8 @@
 .. SPDX-License-Identifier: BSD-3-Clause
 
-l2fwd Test Suite
-================
+rss Test Suite
+==============
 
-.. automodule:: tests.TestSuite_l2fwd
+.. automodule:: tests.TestSuite_rss
    :members:
    :show-inheritance:
