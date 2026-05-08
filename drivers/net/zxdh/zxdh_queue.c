@@ -445,11 +445,8 @@ int32_t zxdh_dev_rx_queue_setup_finish(struct rte_eth_dev *dev, uint16_t queue_i
 
 		if (likely(rte_pktmbuf_alloc_bulk(rxvq->mpool, new_pkts, free_cnt) == 0)) {
 			error = zxdh_enqueue_recv_refill_packed(vq, new_pkts, free_cnt);
-			if (unlikely(error)) {
-				int32_t i;
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
-			}
+			if (unlikely(error))
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 		} else {
 			PMD_DRV_LOG(ERR, "port %d rxq %d allocated bufs from %s failed",
 				hw->port_id, logic_qidx, rxvq->mpool->name);

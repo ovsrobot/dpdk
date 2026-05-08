@@ -970,8 +970,7 @@ refill:
 		if (!rte_pktmbuf_alloc_bulk(rxvq->mpool, new_pkts, free_cnt)) {
 			error = zxdh_enqueue_recv_refill_packed(vq, new_pkts, free_cnt);
 			if (unlikely(error)) {
-				for (i = 0; i < free_cnt; i++)
-					rte_pktmbuf_free(new_pkts[i]);
+				rte_pktmbuf_free_bulk(new_pkts, free_cnt);
 			}
 
 			if (unlikely(zxdh_queue_kick_prepare_packed(vq)))
