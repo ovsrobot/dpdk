@@ -263,8 +263,7 @@ reserve_fill_queue_zc(struct xsk_umem_info *umem, uint16_t reserve_size,
 	uint16_t i;
 
 	if (unlikely(!xsk_ring_prod__reserve(fq, reserve_size, &idx))) {
-		for (i = 0; i < reserve_size; i++)
-			rte_pktmbuf_free(bufs[i]);
+		rte_pktmbuf_free_bulk(bufs, reserve_size);
 		AF_XDP_LOG_LINE(DEBUG, "Failed to reserve enough fq descs.");
 		return -1;
 	}
