@@ -690,10 +690,8 @@ teardown_memory_env(uint32_t nr_buf, struct rte_mbuf **srcs, struct rte_mbuf **d
 		    struct rte_dma_op **dma_ops)
 {
 	/* free mbufs used in the test */
-	if (srcs != NULL)
-		rte_pktmbuf_free_bulk(srcs, nr_buf);
-	if (dsts != NULL)
-		rte_pktmbuf_free_bulk(dsts, nr_buf);
+	rte_pktmbuf_free_bulk(srcs, nr_buf);
+	rte_pktmbuf_free_bulk(dsts, nr_buf);
 
 	/* free the points for the mbufs */
 	rte_free(srcs);
