@@ -281,9 +281,7 @@ pfe_eth_open(struct rte_eth_dev *dev)
 			ret = hif_lib_receive_pkt(&client->rx_q[0],
 						  hif_shm->pool, rx_pkts, 32);
 			while (ret) {
-				int i;
-				for (i = 0; i < ret; i++)
-					rte_pktmbuf_free(rx_pkts[i]);
+				rte_pktmbuf_free_bulk(rx_pkts, ret);
 				ret = hif_lib_receive_pkt(&client->rx_q[0],
 							  hif_shm->pool,
 							  rx_pkts, 32);
