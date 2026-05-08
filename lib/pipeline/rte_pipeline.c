@@ -1305,10 +1305,8 @@ rte_pipeline_action_handler_drop(struct rte_pipeline *p, uint64_t pkts_mask)
 {
 	if ((pkts_mask & (pkts_mask + 1)) == 0) {
 		uint64_t n_pkts = rte_popcount64(pkts_mask);
-		uint32_t i;
 
-		for (i = 0; i < n_pkts; i++)
-			rte_pktmbuf_free(p->pkts[i]);
+		rte_pktmbuf_free_bulk(p->pkts, n_pkts);
 	} else {
 		uint32_t i;
 
