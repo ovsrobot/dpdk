@@ -2359,6 +2359,8 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 		PMD_INIT_LOG(ERR,
 			     "Failed to allocate %d bytes needed to "
 			     "store MAC addresses", len);
+		rte_free(eth_dev->data->mac_addrs);
+		eth_dev->data->mac_addrs = NULL;
 		return -ENOMEM;
 	}
 
@@ -2405,8 +2407,14 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 					  pdata->vdata->rx_max_fifo_size);
 	/* Issue software reset to DMA */
 	ret = pdata->hw_if.exit(pdata);
-	if (ret)
+	if (ret) {
 		PMD_DRV_LOG_LINE(ERR, "hw_if->exit EBUSY error");
+		rte_free(eth_dev->data->hash_mac_addrs);
+		eth_dev->data->hash_mac_addrs = NULL;
+		rte_free(eth_dev->data->mac_addrs);
+		eth_dev->data->mac_addrs = NULL;
+		return ret;
+	}
 
 	/* Set default configuration data */
 	axgbe_default_config(pdata);
@@ -2426,14 +2434,23 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 
 	ret = pdata->phy_if.phy_init(pdata);
 	if (ret) {
+		rte_free(eth_dev->data->hash_mac_addrs);
+		eth_dev->data->hash_mac_addrs = NULL;
 		rte_free(eth_dev->data->mac_addrs);
 		eth_dev->data->mac_addrs = NULL;
 		return ret;
 	}
 
-	rte_intr_callback_register(pci_dev->intr_handle,
+	ret = rte_intr_callback_register(pci_dev->intr_handle,
 				   axgbe_dev_interrupt_handler,
 				   (void *)eth_dev);
+	if (ret) {
+		rte_free(eth_dev->data->hash_mac_addrs);
+		eth_dev->data->hash_mac_addrs = NULL;
+		rte_free(eth_dev->data->mac_addrs);
+		eth_dev->data->mac_addrs = NULL;
+		return ret;
+	}
 	PMD_INIT_LOG(DEBUG, "port %d vendorID=0x%x deviceID=0x%x",
 		     eth_dev->data->port_id, pci_dev->id.vendor_id,
 		     pci_dev->id.device_id);
