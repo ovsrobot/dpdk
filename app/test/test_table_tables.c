@@ -162,8 +162,7 @@ test_table_stub(void)
 		return -2;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	return 0;
 }
@@ -276,8 +275,7 @@ test_table_array(void)
 				return -13;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	status = rte_table_array_ops.f_free(table);
 
@@ -442,8 +440,7 @@ test_table_lpm(void)
 		return -23;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	status = rte_table_lpm_ops.f_free(table);
 
@@ -620,8 +617,7 @@ test_table_lpm_ipv6(void)
 		return -24;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	status = rte_table_lpm_ipv6_ops.f_free(table);
 
@@ -723,8 +719,7 @@ test_table_hash_lru_generic(struct rte_table_ops *ops, uint32_t key_size)
 		return -13;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	status = ops->f_free(table);
 
@@ -833,8 +828,7 @@ test_table_hash_ext_generic(struct rte_table_ops *ops, uint32_t key_size)
 		return -13;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	status = ops->f_free(table);
 
@@ -1047,8 +1041,7 @@ test_table_hash_cuckoo(void)
 		return -20;
 
 	/* Free resources */
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	status = rte_table_hash_cuckoo_ops.f_free(table);
 

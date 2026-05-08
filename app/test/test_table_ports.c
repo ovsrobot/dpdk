@@ -73,8 +73,7 @@ test_port_ring_reader(void)
 	if (received_pkts < expected_pkts)
 		return -6;
 
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(res_mbuf[i]);
+	rte_pktmbuf_free_bulk(res_mbuf, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	return 0;
 }
@@ -156,8 +155,7 @@ test_port_ring_writer(void)
 	if (received_pkts < expected_pkts)
 		return -8;
 
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(res_mbuf[i]);
+	rte_pktmbuf_free_bulk(res_mbuf, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	/* TX Bulk */
 	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
@@ -171,8 +169,7 @@ test_port_ring_writer(void)
 	if (received_pkts < expected_pkts)
 		return -8;
 
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(res_mbuf[i]);
+	rte_pktmbuf_free_bulk(res_mbuf, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
 		mbuf[i] = rte_pktmbuf_alloc(pool);
@@ -186,8 +183,7 @@ test_port_ring_writer(void)
 	if (received_pkts < expected_pkts)
 		return -9;
 
-	for (i = 0; i < RTE_PORT_IN_BURST_SIZE_MAX; i++)
-		rte_pktmbuf_free(res_mbuf[i]);
+	rte_pktmbuf_free_bulk(res_mbuf, RTE_PORT_IN_BURST_SIZE_MAX);
 
 	return 0;
 }

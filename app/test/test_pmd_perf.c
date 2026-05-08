@@ -602,8 +602,7 @@ timeout:
 	       total, MAX_IDLE - timeout);
 	/* clean up */
 	total = pkt_per_port * conf->nb_ports - total;
-	for (i = 0; i < total; i++)
-		rte_pktmbuf_free(pkts_burst[i]);
+	rte_pktmbuf_free_bulk(pkts_burst, total);
 
 	rte_free(pkts_burst);
 

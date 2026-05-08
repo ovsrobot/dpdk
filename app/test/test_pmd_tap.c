@@ -192,8 +192,7 @@ test_tap_send_receive(void)
 	printf("Received %u packets on port %d\n", nb_rx, tap_port0);
 
 	/* Free received packets */
-	for (i = 0; i < nb_rx; i++)
-		rte_pktmbuf_free(rx_mbufs[i]);
+	rte_pktmbuf_free_bulk(rx_mbufs, nb_rx);
 
 	return TEST_SUCCESS;
 }

@@ -309,7 +309,6 @@ handle_work_with_free_mbufs(void *arg)
 	alignas(RTE_CACHE_LINE_SIZE) struct rte_mbuf *buf[8];
 	struct worker_params *wp = arg;
 	struct rte_distributor *d = wp->dist;
-	unsigned int i;
 	unsigned int num;
 	unsigned int id = rte_atomic_fetch_add_explicit(&worker_idx, 1, rte_memory_order_relaxed);
 
@@ -317,8 +316,7 @@ handle_work_with_free_mbufs(void *arg)
 	while (!quit) {
 		rte_atomic_fetch_add_explicit(&worker_stats[id].handled_packets, num,
 				rte_memory_order_relaxed);
-		for (i = 0; i < num; i++)
-			rte_pktmbuf_free(buf[i]);
+		rte_pktmbuf_free_bulk(buf, num);
 		num = rte_distributor_get_pkt(d, id, buf, NULL, 0);
 	}
 	rte_atomic_fetch_add_explicit(&worker_stats[id].handled_packets, num,

@@ -1476,10 +1476,7 @@ verify_mbufs_ref_count(struct rte_mbuf **mbufs, int nb_mbufs, int val)
 static void
 free_mbufs(struct rte_mbuf **mbufs, int nb_mbufs)
 {
-	int i;
-
-	for (i = 0; i < nb_mbufs; i++)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, nb_mbufs);
 }
 
 #define TEST_RR_MEMBER_TX_FAIL_MEMBER_COUNT		(2)
@@ -4193,7 +4190,7 @@ testsuite_teardown(void)
 static void
 free_virtualpmd_tx_queue(void)
 {
-	int i, member_port, to_free_cnt;
+	int member_port, to_free_cnt;
 	struct rte_mbuf *pkts_to_free[MAX_PKT_BURST];
 
 	/* Free tx queue of virtual pmd */
@@ -4202,8 +4199,7 @@ free_virtualpmd_tx_queue(void)
 		to_free_cnt = virtual_ethdev_get_mbufs_from_tx_queue(
 				test_params->member_port_ids[member_port],
 				pkts_to_free, MAX_PKT_BURST);
-		for (i = 0; i < to_free_cnt; i++)
-			rte_pktmbuf_free(pkts_to_free[i]);
+		rte_pktmbuf_free_bulk(pkts_to_free, to_free_cnt);
 	}
 }
 
@@ -4381,8 +4377,7 @@ test_tlb_rx_burst(void)
 		}
 
 		/* free mbufs */
-		for (i = 0; i < burst_size; i++)
-			rte_pktmbuf_free(rx_pkt_burst[i]);
+		rte_pktmbuf_free_bulk(rx_pkt_burst, burst_size);
 
 		/* reset bonding device stats */
 		rte_eth_stats_reset(test_params->bonding_port_id);

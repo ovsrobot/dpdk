@@ -208,8 +208,7 @@ test_reorder_insert(void)
 	ret = 0;
 exit:
 	rte_reorder_free(b);
-	for (i = 0; i < INSERT_NUM_BUFS; i++)
-		rte_pktmbuf_free(bufs[i]);
+	rte_pktmbuf_free_bulk(bufs, INSERT_NUM_BUFS);
 
 	return ret;
 }
@@ -382,8 +381,7 @@ test_reorder_drain_up_to_seqn(void)
 		ret = -1;
 		goto exit;
 	}
-	for (i = 0; i < 2; i++)
-		rte_pktmbuf_free(robufs[i]);
+	rte_pktmbuf_free_bulk(robufs, 2);
 	memset(robufs, 0, sizeof(robufs));
 
 	/* Insert more packets
@@ -406,8 +404,7 @@ test_reorder_drain_up_to_seqn(void)
 		ret = -1;
 		goto exit;
 	}
-	for (i = 0; i < 2; i++)
-		rte_pktmbuf_free(robufs[i]);
+	rte_pktmbuf_free_bulk(robufs, 2);
 	memset(robufs, 0, sizeof(robufs));
 
 	ret = 0;
@@ -483,8 +480,7 @@ test_reorder_set_seqn(void)
 	ret = 0;
 exit:
 	rte_reorder_free(b);
-	for (i = 0; i < SET_SEQN_NUM_BUFS; i++)
-		rte_pktmbuf_free(bufs[i]);
+	rte_pktmbuf_free_bulk(bufs, SET_SEQN_NUM_BUFS);
 
 	return ret;
 }

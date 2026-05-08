@@ -499,10 +499,8 @@ test_enqueue_sg_copies(int16_t dev_id, uint16_t vchan)
 				ERR_RETURN("Error:incorrect job id received when no job done, %u [expected %u]\n",
 						id, 0);
 
-			for (i = 0; i < n_src; i++)
-				rte_pktmbuf_free(src[i]);
-			for (i = 0; i < n_dst; i++)
-				rte_pktmbuf_free(dst[i]);
+			rte_pktmbuf_free_bulk(src, n_src);
+			rte_pktmbuf_free_bulk(dst, n_dst);
 
 			/* Verify that completion returns nothing more */
 			if (rte_dma_completed(dev_id, 0, 1, NULL, NULL) != 0)

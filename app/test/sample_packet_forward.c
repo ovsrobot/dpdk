@@ -115,10 +115,7 @@ test_get_mbuf_from_pool(struct rte_mempool **mp, struct rte_mbuf **pbuf,
 void
 test_put_mbuf_to_pool(struct rte_mempool *mp, struct rte_mbuf **pbuf)
 {
-	int itr = 0;
-
-	for (itr = 0; itr < NUM_PACKETS; itr++)
-		rte_pktmbuf_free(pbuf[itr]);
+	rte_pktmbuf_free_bulk(pbuf, NUM_PACKETS);
 	rte_mempool_free(mp);
 }
 

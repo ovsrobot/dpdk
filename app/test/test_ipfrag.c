@@ -240,9 +240,7 @@ v6_allocate_packet_of(struct rte_mbuf *b, int fill, size_t s, uint8_t ttl,
 static inline void
 test_free_fragments(struct rte_mbuf *mb[], uint32_t num)
 {
-	uint32_t i;
-	for (i = 0; i < num; i++)
-		rte_pktmbuf_free(mb[i]);
+	rte_pktmbuf_free_bulk(mb, num);
 }
 
 static inline void
