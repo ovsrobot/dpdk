@@ -38,9 +38,7 @@ __fill_ipv6hdr_frag(struct rte_ipv6_hdr *dst,
 static inline void
 __free_fragments(struct rte_mbuf *mb[], uint32_t num)
 {
-	uint32_t i;
-	for (i = 0; i < num; i++)
-		rte_pktmbuf_free(mb[i]);
+	rte_pktmbuf_free_bulk(mb, num);
 }
 
 /**
