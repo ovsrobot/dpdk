@@ -73,4 +73,13 @@ int pci_vfio_unmap_resource(struct rte_pci_device *dev);
 
 int pci_vfio_is_enabled(void);
 
+int pci_vfio_tph_query(const struct rte_pci_device *dev, uint32_t *supported_modes,
+		   uint32_t *st_table_sz);
+int pci_vfio_tph_enable(const struct rte_pci_device *dev, uint32_t mode);
+int pci_vfio_tph_disable(const struct rte_pci_device *dev);
+int pci_vfio_tph_st_get(const struct rte_pci_device *dev,
+		    struct rte_pci_tph_entry *ents, uint32_t count);
+int pci_vfio_tph_st_set(const struct rte_pci_device *dev,
+		    struct rte_pci_tph_entry *ents, uint32_t count);
+
 #endif /* EAL_PCI_INIT_H_ */

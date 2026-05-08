@@ -1308,3 +1308,275 @@ pci_vfio_is_enabled(void)
 	}
 	return status;
 }
+
+/**
+ * struct vfio_pci_tph_cap - PCIe TPH capability information
+ * @supported_modes: Supported TPH operating modes
+ * @st_table_sz: Number of entries in ST table; 0 means no ST table
+ * @reserved: Must be zero
+ *
+ * Used with VFIO_PCI_TPH_GET_CAP operation to return device
+ * TLP Processing Hints (TPH) capabilities to userspace.
+ */
+struct vfio_pci_tph_cap {
+	__u8  supported_modes;
+#define VFIO_PCI_TPH_MODE_IV	(1u << 0) /* Interrupt vector */
+#define VFIO_PCI_TPH_MODE_DS	(1u << 1) /* Device specific */
+	__u8  reserved0;
+	__u16 st_table_sz;
+	__u32 reserved;
+};
+
+/**
+ * struct vfio_pci_tph_ctrl - TPH enable control structure
+ * @mode: Selected TPH operating mode (VFIO_PCI_TPH_MODE_*)
+ * @reserved: Must be zero
+ *
+ * Used with VFIO_PCI_TPH_ENABLE operation to specify the
+ * operating mode when enabling TPH on the device.
+ */
+struct vfio_pci_tph_ctrl {
+	__u8 mode;
+	__u8 reserved[7];
+};
+
+/**
+ * struct vfio_pci_tph_entry - Single TPH steering tag entry
+ * @cpu: CPU identifier for steering tag calculation
+ * @mem_type: Memory type (VFIO_PCI_TPH_MEM_TYPE_*)
+ * @reserved0: Must be zero
+ * @index: ST table index for programming
+ * @st: Unused for SET_ST
+ * @reserved1: Must be zero
+ *
+ * For VFIO_PCI_TPH_GET_ST:
+ *   Userspace sets @cpu and @mem_type; kernel returns @st.
+ *
+ * For VFIO_PCI_TPH_SET_ST:
+ *   Userspace sets @index, @cpu, and @mem_type.
+ *   Kernel internally computes the steering tag and programs
+ *   it into the specified @index.
+ *
+ *   If @cpu == U32_MAX, kernel clears the steering tag at
+ *   the specified @index.
+ */
+struct vfio_pci_tph_entry {
+	__u32 cpu;
+	__u8  mem_type;
+#define VFIO_PCI_TPH_MEM_TYPE_VM	0
+#define VFIO_PCI_TPH_MEM_TYPE_PM	1
+	__u8  reserved0;
+	__u16 index;
+	__u16 st;
+	__u16 reserved1;
+};
+
+/**
+ * struct vfio_pci_tph_st - Batch steering tag request
+ * @count: Number of entries in the array
+ * @reserved: Must be zero
+ * @ents: Flexible array of steering tag entries
+ *
+ * Container structure for batch get/set operations.
+ * Used with both VFIO_PCI_TPH_GET_ST and VFIO_PCI_TPH_SET_ST.
+ */
+struct vfio_pci_tph_st {
+	__u32 count;
+	__u32 reserved;
+	struct vfio_pci_tph_entry ents[];
+#define VFIO_PCI_TPH_MAX_ENTRIES    2048
+};
+
+/**
+ * struct vfio_device_pci_tph_op - Argument for VFIO_DEVICE_PCI_TPH
+ * @argsz: User allocated size of this structure
+ * @op: TPH operation (VFIO_PCI_TPH_*)
+ * @cap: Capability data for GET_CAP
+ * @ctrl: Control data for ENABLE
+ * @st: Batch entry data for GET_ST/SET_ST
+ *
+ * @argsz must be set by the user to the size of the structure
+ * being executed. Kernel validates input and returns data
+ * only within the specified size.
+ *
+ * Operations:
+ * - VFIO_PCI_TPH_GET_CAP: Query device TPH capabilities.
+ * - VFIO_PCI_TPH_ENABLE:  Enable TPH using mode from &ctrl.
+ * - VFIO_PCI_TPH_DISABLE: Disable TPH on the device.
+ * - VFIO_PCI_TPH_GET_ST:  Retrieve CPU steering tags for Device-Specific (DS)
+ *                         mode. Used when device requires SW to obtain ST
+ *                         values for programming.
+ * - VFIO_PCI_TPH_SET_ST:  Program steering tag entries into device ST table.
+ *                         Valid when ST table resides in TPH Requester
+ *                         Capability or MSI-X Table.
+ *                         If any entry fails, all programmed entries are rolled
+ *                         back to 0 before returning error.
+ */
+struct vfio_device_pci_tph_op {
+	__u32 argsz;
+	__u32 op;
+#define VFIO_PCI_TPH_GET_CAP	0
+#define VFIO_PCI_TPH_ENABLE	1
+#define VFIO_PCI_TPH_DISABLE	2
+#define VFIO_PCI_TPH_GET_ST	3
+#define VFIO_PCI_TPH_SET_ST	4
+	union {
+		struct vfio_pci_tph_cap cap;
+		struct vfio_pci_tph_ctrl ctrl;
+		struct vfio_pci_tph_st st;
+	};
+};
+
+/**
+ * VFIO_DEVICE_PCI_TPH - _IO(VFIO_TYPE, VFIO_BASE + 22)
+ *
+ * IOCTL for managing PCIe TLP Processing Hints (TPH) on
+ * a VFIO-assigned PCI device. Provides operations to query
+ * device capabilities, enable/disable TPH, retrieve CPU's
+ * steering tags, and program steering tag tables.
+ *
+ * Return: 0 on success, negative errno on failure.
+ *         -EOPNOTSUPP: Operation not supported
+ *         -ENODEV: Device or required functionality not present
+ *         -EINVAL: Invalid argument or TPH not supported
+ */
+#define VFIO_DEVICE_PCI_TPH	_IO(VFIO_TYPE, VFIO_BASE + 22)
+
+static int
+pci_vfio_tph_ioctl(const struct rte_pci_device *dev, struct vfio_device_pci_tph_op *op)
+{
+	const struct rte_intr_handle *intr_handle = dev->intr_handle;
+	int vfio_dev_fd;
+
+	vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
+	if (vfio_dev_fd < 0)
+		return -EIO;
+
+	return ioctl(vfio_dev_fd, VFIO_DEVICE_PCI_TPH, op);
+}
+
+int
+pci_vfio_tph_query(const struct rte_pci_device *dev, uint32_t *supported_modes,
+		   uint32_t *st_table_sz)
+{
+	struct vfio_device_pci_tph_op op = {
+		.argsz = sizeof(struct vfio_device_pci_tph_op),
+		.op = VFIO_PCI_TPH_GET_CAP,
+	};
+	int ret;
+
+	ret = pci_vfio_tph_ioctl(dev, &op);
+	if (ret != 0)
+		return ret;
+
+	*supported_modes = 0;
+	if (op.cap.supported_modes & VFIO_PCI_TPH_MODE_IV)
+		*supported_modes |= RTE_PCI_TPH_MODE_IV;
+	if (op.cap.supported_modes & VFIO_PCI_TPH_MODE_DS)
+		*supported_modes |= RTE_PCI_TPH_MODE_DS;
+	*st_table_sz = op.cap.st_table_sz;
+
+	return 0;
+}
+
+int
+pci_vfio_tph_enable(const struct rte_pci_device *dev, uint32_t mode)
+{
+	struct vfio_device_pci_tph_op op = {
+		.argsz = sizeof(struct vfio_device_pci_tph_op),
+		.op = VFIO_PCI_TPH_ENABLE,
+	};
+
+	if (mode == RTE_PCI_TPH_MODE_IV)
+		op.ctrl.mode = VFIO_PCI_TPH_MODE_IV;
+	else if (mode == RTE_PCI_TPH_MODE_DS)
+		op.ctrl.mode = VFIO_PCI_TPH_MODE_DS;
+	else
+		return -EINVAL;
+
+	return pci_vfio_tph_ioctl(dev, &op);
+}
+
+int
+pci_vfio_tph_disable(const struct rte_pci_device *dev)
+{
+	struct vfio_device_pci_tph_op op = {
+		.argsz = sizeof(struct vfio_device_pci_tph_op),
+		.op = VFIO_PCI_TPH_DISABLE,
+	};
+	return pci_vfio_tph_ioctl(dev, &op);
+}
+
+static struct vfio_device_pci_tph_op *
+pci_vfio_tph_alloc_st_op(uint32_t count)
+{
+	struct vfio_device_pci_tph_op *op;
+	ssize_t sz = sizeof(struct vfio_device_pci_tph_op) +
+			count * sizeof(struct vfio_pci_tph_entry);
+	op = calloc(1, sz);
+	if (op == NULL)
+		return NULL;
+	op->argsz = sz;
+	op->st.count = count;
+	return op;
+}
+
+static void
+pci_vfio_tph_free_st_op(struct vfio_device_pci_tph_op *op)
+{
+	free(op);
+}
+
+int
+pci_vfio_tph_st_get(const struct rte_pci_device *dev,
+		    struct rte_pci_tph_entry *ents, uint32_t count)
+{
+	struct vfio_device_pci_tph_op *op;
+	uint32_t i;
+	int ret;
+
+	op = pci_vfio_tph_alloc_st_op(count);
+	if (op == NULL)
+		return -ENOMEM;
+
+	op->op = VFIO_PCI_TPH_GET_ST;
+	for (i = 0; i < count; i++) {
+		op->st.ents[i].cpu = ents[i].cpu;
+		op->st.ents[i].mem_type = VFIO_PCI_TPH_MEM_TYPE_VM;
+	}
+
+	ret = pci_vfio_tph_ioctl(dev, op);
+	if (ret != 0) {
+		pci_vfio_tph_free_st_op(op);
+		return ret;
+	}
+	for (i = 0; i < count; i++)
+		ents[i].st = op->st.ents[i].st;
+
+	pci_vfio_tph_free_st_op(op);
+	return 0;
+}
+
+int
+pci_vfio_tph_st_set(const struct rte_pci_device *dev,
+		    struct rte_pci_tph_entry *ents, uint32_t count)
+{
+	struct vfio_device_pci_tph_op *op;
+	uint32_t i;
+	int ret;
+
+	op = pci_vfio_tph_alloc_st_op(count);
+	if (op == NULL)
+		return -ENOMEM;
+
+	op->op = VFIO_PCI_TPH_SET_ST;
+	for (i = 0; i < count; i++) {
+		op->st.ents[i].cpu = ents[i].cpu;
+		op->st.ents[i].mem_type = VFIO_PCI_TPH_MEM_TYPE_VM;
+		op->st.ents[i].index = ents[i].index;
+	}
+
+	ret = pci_vfio_tph_ioctl(dev, op);
+	pci_vfio_tph_free_st_op(op);
+	return ret;
+}

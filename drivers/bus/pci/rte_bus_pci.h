@@ -312,6 +312,118 @@ void rte_pci_ioport_read(struct rte_pci_ioport *p,
 void rte_pci_ioport_write(struct rte_pci_ioport *p,
 		const void *data, size_t len, off_t offset);
 
+#define RTE_PCI_TPH_MODE_IV	(1u << 0) /* Interrupt vector */
+#define RTE_PCI_TPH_MODE_DS	(1u << 1) /* Device specific */
+
+/**
+ * @struct rte_pci_tph_entry
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice.
+ *
+ * An entry used for TPH Steering Tag (ST) get/set operations.
+ */
+struct rte_pci_tph_entry {
+	/**
+	 * CPU ID used for both get and set operations.
+	 * For set operation: if set to U32_MAX, clear the ST entry at
+	 * specified index.
+	 */
+	uint32_t cpu;
+	/** ST table index, only used for set operation */
+	uint16_t index;
+	/** Steering tag value, only used for get operation to return result */
+	uint16_t st;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Query PCIe TLP Processing Hints (TPH) capabilities of a device.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device to query.
+ * @param supported_modes
+ *   Output: supported TPH modes (RTE_PCI_TPH_MODE_*).
+ * @param st_table_sz
+ *   Output: number of entries in the ST table; 0 means no table present.
+ * @return
+ *   0 on success, negative value on error.
+ */
+__rte_experimental
+int rte_pci_tph_query(const struct rte_pci_device *dev, uint32_t *supported_modes,
+		  uint32_t *st_table_sz);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enable PCIe TLP Processing Hints (TPH) on a device with specified mode.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device to enable.
+ * @param mode
+ *   TPH operating mode (RTE_PCI_TPH_MODE_*).
+ * @return
+ *   0 on success, negative value on error.
+ */
+__rte_experimental
+int rte_pci_tph_enable(const struct rte_pci_device *dev, uint32_t mode);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Disable PCIe TLP Processing Hints (TPH) on a device.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device to disable.
+ * @return
+ *   0 on success, negative value on error.
+ */
+__rte_experimental
+int rte_pci_tph_disable(const struct rte_pci_device *dev);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Get steering tags for given CPU IDs from the device.
+ * Only valid when TPH is enabled in Device-Specific (DS) mode.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device.
+ * @param ents
+ *   Array of entries with CPU IDs as input; steering tags are returned
+ *   as output.
+ * @param count
+ *   Number of entries in the array.
+ * @return
+ *   0 on success, negative value on error.
+ */
+__rte_experimental
+int rte_pci_tph_st_get(const struct rte_pci_device *dev,
+		   struct rte_pci_tph_entry *ents, uint32_t count);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Program steering tags into the device's ST table.
+ *
+ * @param dev
+ *   A pointer to a rte_pci_device structure describing the device.
+ * @param ents
+ *   Array of entries with CPU IDs and index indices to program.
+ * @param count
+ *   Number of entries in the array.
+ * @return
+ *   0 on success, negative errno value on error.
+ */
+__rte_experimental
+int rte_pci_tph_st_set(const struct rte_pci_device *dev,
+		   struct rte_pci_tph_entry *ents, uint32_t count);
+
 #ifdef __cplusplus
 }
 #endif
