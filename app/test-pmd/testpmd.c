@@ -137,6 +137,11 @@ uint8_t socket_num = UMA_NO_CONFIG;
 uint8_t mp_alloc_type = MP_ALLOC_NATIVE;
 
 /*
+ * PCIE TPH stash objects.
+ */
+uint64_t tph_stash_objects;
+
+/*
  * Store specified sockets on which memory pool to be used by ports
  * is allocated.
  */
@@ -2540,6 +2545,77 @@ update_queue_state(portid_t pid)
 	}
 }
 
+static void
+start_tph_stash(void)
+{
+	struct rte_eth_cache_stash_capability capa;
+	struct rte_eth_cache_stash_config config;
+	struct fwd_config *cfg = &cur_fwd_config;
+	struct fwd_stream *fs;
+	lcoreid_t  lc_id;
+	streamid_t sm_id;
+	portid_t pt_id;
+	int ret;
+	int i;
+
+	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
+		pt_id = fwd_ports_ids[i];
+		ret = rte_eth_cache_stash_get(pt_id, &capa);
+		if (ret != 0 || (capa.supported_types & RTE_ETH_CACHE_STASH_TYPE_TPH) == 0) {
+			fprintf(stderr,	"%s: (port %u) don't support tph stash!\n",
+				__func__, pt_id);
+			return;
+		}
+		if ((capa.supported_objects & tph_stash_objects) != tph_stash_objects) {
+			fprintf(stderr, "%s: (port %u) don't support objects=0x%lx 0x%lx\n",
+				__func__, pt_id, tph_stash_objects, capa.supported_objects);
+			return;
+		}
+		memset(&config, 0, sizeof(config));
+		config.dev.type = RTE_ETH_CACHE_STASH_TYPE_TPH;
+		ret = rte_eth_cache_stash_set(pt_id, RTE_ETH_CACHE_STASH_OP_DEV_ENABLE, &config);
+		if (ret != 0) {
+			fprintf(stderr, "%s: (port %u) enable tph failed! ret=%d\n",
+				__func__, pt_id, ret);
+			return;
+		}
+	}
+
+	for (lc_id = 0; lc_id < cfg->nb_fwd_lcores; lc_id++) {
+		for (sm_id = 0; sm_id < fwd_lcores[lc_id]->stream_nb; sm_id++) {
+			fs = fwd_streams[fwd_lcores[lc_id]->stream_idx + sm_id];
+			memset(&config, 0, sizeof(config));
+			config.queue.lcore_id = fwd_lcores_cpuids[lc_id];
+			config.queue.queue_id = fs->rx_queue;
+			config.queue.objects = tph_stash_objects;
+			ret = rte_eth_cache_stash_set(fs->rx_port,
+				RTE_ETH_CACHE_STASH_OP_QUEUE_ENABLE, &config);
+			if (ret != 0)
+				fprintf(stderr, "%s: (port %u) enable rx-queue=%u cpu=%u stash ret=%d\n",
+					__func__, fs->rx_port, fs->rx_queue,
+					fwd_lcores_cpuids[lc_id], ret);
+		}
+	}
+}
+
+static void
+stop_tph_stash(void)
+{
+	struct rte_eth_cache_stash_config config;
+	portid_t pt_id;
+	int ret;
+	int i;
+
+	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
+		pt_id = fwd_ports_ids[i];
+		memset(&config, 0, sizeof(config));
+		ret = rte_eth_cache_stash_set(pt_id, RTE_ETH_CACHE_STASH_OP_DEV_DISABLE, &config);
+		if (ret != 0)
+			fprintf(stderr, "%s: (port %u) disable tph stash ret=%d\n",
+				__func__, pt_id, ret);
+	}
+}
+
 /*
  * Launch packet forwarding configuration.
  */
@@ -2614,6 +2690,9 @@ start_packet_forwarding(int with_tx_first)
 	if(!no_flush_rx)
 		flush_fwd_rx_queues();
 
+	if (tph_stash_objects > 0)
+		start_tph_stash();
+
 	rxtx_config_display();
 
 	fwd_stats_reset();
@@ -2649,6 +2728,8 @@ stop_packet_forwarding(void)
 		fwd_lcores[lc_id]->stopped = 1;
 	printf("\nWaiting for lcores to finish...\n");
 	rte_eal_mp_wait_lcore();
+	if (tph_stash_objects > 0)
+		stop_tph_stash();
 	port_fwd_end = cur_fwd_config.fwd_eng->port_fwd_end;
 	if (port_fwd_end != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {

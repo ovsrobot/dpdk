@@ -535,6 +535,7 @@ extern uint8_t flow_isolate_all; /**< set by "--flow-isolate-all */
 extern uint8_t no_flow_flush; /**< set by "--disable-flow-flush" parameter */
 extern uint8_t  mp_alloc_type;
 /**< set by "--mp-anon" or "--mp-alloc" parameter */
+extern uint64_t tph_stash_objects; /**< set by "--tph-stash-objects" parameter */
 extern uint32_t eth_link_speed;
 extern uint8_t no_link_check; /**<set by "--disable-link-check" parameter */
 extern uint8_t no_device_start; /**<set by "--disable-device-start" parameter */
