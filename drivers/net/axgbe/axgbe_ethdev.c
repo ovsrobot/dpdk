@@ -2482,6 +2482,11 @@ axgbe_dev_close(struct rte_eth_dev *eth_dev)
 	/* Disable all interrupts in the hardware */
 	XP_IOWRITE(pdata, XP_INT_EN, 0x0);
 
+	pthread_mutex_destroy(&pdata->xpcs_mutex);
+	pthread_mutex_destroy(&pdata->i2c_mutex);
+	pthread_mutex_destroy(&pdata->an_mutex);
+	pthread_mutex_destroy(&pdata->phy_mutex);
+
 	return 0;
 }
 
