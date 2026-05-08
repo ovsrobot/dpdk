@@ -7178,6 +7178,101 @@ rte_eth_tx_queue_count(uint16_t port_id, uint16_t queue_id)
 	return rc;
 }
 
+/**
+ * Cache stash mechanisms (bitmask).
+ * A device may support multiple types but can only enable one at a time.
+ */
+enum rte_eth_cache_stash_type {
+	RTE_ETH_CACHE_STASH_TYPE_TPH = RTE_BIT32(0),
+};
+
+/**
+ * Cache stash objects (bitmask).
+ */
+#define RTE_ETH_CACHE_STASH_OBJ_RX_DESC		RTE_BIT64(0)
+#define RTE_ETH_CACHE_STASH_OBJ_TX_DESC         RTE_BIT64(1)
+#define RTE_ETH_CACHE_STASH_OBJ_RX_HEADER	RTE_BIT64(2)
+#define RTE_ETH_CACHE_STASH_OBJ_TX_HEADER       RTE_BIT64(3)
+#define RTE_ETH_CACHE_STASH_OBJ_RX_PAYLOAD	RTE_BIT64(4)
+#define RTE_ETH_CACHE_STASH_OBJ_TX_PAYLOAD	RTE_BIT64(5)
+
+/**
+ * Cache stash capability.
+ */
+struct rte_eth_cache_stash_capability {
+	uint32_t supported_types;  /**< Bitmask of rte_eth_cache_stash_type */
+	uint64_t supported_objects;/**< Bitmask of RTE_ETH_CACHE_STASH_OBJ_* */
+};
+
+/**
+ * Cache stash operations.
+ */
+enum rte_eth_cache_stash_op {
+	RTE_ETH_CACHE_STASH_OP_DEV_ENABLE,	/**< Enable device-wide cache stash */
+	RTE_ETH_CACHE_STASH_OP_DEV_DISABLE,	/**< Disable device-wide cache stash */
+	RTE_ETH_CACHE_STASH_OP_QUEUE_ENABLE,	/**< Enable cache stash for a queue */
+	RTE_ETH_CACHE_STASH_OP_QUEUE_DISABLE,	/**< Disable cache stash for a queue */
+	RTE_ETH_CACHE_STASH_OP_BUTT
+};
+
+/**
+ * Cache stash configuration.
+ * The used union member is determined by the operation.
+ */
+struct rte_eth_cache_stash_config {
+	union {
+		/**
+		 * Device-level configuration (used with DEV_ENABLE).
+		 */
+		struct {
+			uint32_t type;	/**< Selected stash mechanism type */
+		} dev;
+		/**
+		 * Queue-level configuration (used with QUEUE_ENABLE/QUEUE_DISABLE).
+		 */
+		struct {
+			uint32_t lcore_id;	/**< Target CPU core ID */
+			uint32_t queue_id;	/**< Queue ID */
+			uint64_t objects;	/**< Objects bitmask to stash */
+		} queue;
+	};
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Get cache stash capabilities of a port.
+ *
+ * @param port_id
+ *   The port identifier.
+ * @param capa
+ *   Output: supported stash types and objects.
+ * @return
+ *   0 on success, negative on error.
+ */
+__rte_experimental
+int rte_eth_cache_stash_get(uint16_t port_id, struct rte_eth_cache_stash_capability *capa);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Configure cache stash.
+ *
+ * @param port_id
+ *   The port identifier.
+ * @param op
+ *   Configuration operation.
+ * @param config
+ *   Configuration structure.
+ * @return
+ *   0 on success, negative on error.
+ */
+__rte_experimental
+int rte_eth_cache_stash_set(uint16_t port_id, enum rte_eth_cache_stash_op op,
+			    struct rte_eth_cache_stash_config *config);
+
 #ifdef __cplusplus
 }
 #endif
