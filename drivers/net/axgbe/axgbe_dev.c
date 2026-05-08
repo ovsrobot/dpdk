@@ -1011,13 +1011,11 @@ static void wrapper_tx_desc_init(struct axgbe_port *pdata)
 
 static int wrapper_rx_desc_init(struct axgbe_port *pdata)
 {
-	struct axgbe_rx_queue *rxq;
-	struct rte_mbuf *mbuf;
 	volatile union axgbe_rx_desc *desc;
 	unsigned int i, j;
 
 	for (i = 0; i < pdata->eth_dev->data->nb_rx_queues; i++) {
-		rxq = pdata->eth_dev->data->rx_queues[i];
+		struct axgbe_rx_queue *rxq = pdata->eth_dev->data->rx_queues[i];
 
 		/* Initialize software ring entries */
 		rxq->mbuf_alloc = 0;
@@ -1025,19 +1023,18 @@ static int wrapper_rx_desc_init(struct axgbe_port *pdata)
 		rxq->dirty = 0;
 		desc = AXGBE_GET_DESC_PT(rxq, 0);
 
+		if (!rte_pktmbuf_alloc_bulk(rxq->mb_pool, rxq->sw_ring, rxq->nb_desc)) {
+			PMD_DRV_LOG_LINE(ERR, "RX mbuf alloc failed queue_id = %u, nb_desc = %u",
+					 i, rxq->nb_desc);
+			for (unsigned int k = 0; k < i; k++)
+				axgbe_dev_rx_queue_release(pdata->eth_dev, k);
+			return -ENOMEM;
+		}
+
 		for (j = 0; j < rxq->nb_desc; j++) {
-			mbuf = rte_mbuf_raw_alloc(rxq->mb_pool);
-			if (mbuf == NULL) {
-				PMD_DRV_LOG_LINE(ERR, "RX mbuf alloc failed queue_id = %u, idx = %d",
-					    (unsigned int)rxq->queue_id, j);
-				axgbe_dev_rx_queue_release(pdata->eth_dev, i);
-				return -ENOMEM;
-			}
-			rxq->sw_ring[j] = mbuf;
-			/* Mbuf populate */
-			mbuf->next = NULL;
-			mbuf->data_off = RTE_PKTMBUF_HEADROOM;
-			mbuf->nb_segs = 1;
+			struct rte_mbuf *mbuf = rxq->sw_ring[j];
+
+			/* mbuf is in reset state (nb_segs = 1, headroom, etc)  */
 			mbuf->port = rxq->port_id;
 			desc->read.baddr =
 				rte_cpu_to_le_64(
