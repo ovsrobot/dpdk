@@ -914,12 +914,10 @@ static inline void
 txa_txq_buffer_drain(struct txa_service_queue_info *tqi)
 {
 	struct rte_eth_dev_tx_buffer *b;
-	uint16_t i;
 
 	b = tqi->tx_buf;
 
-	for (i = 0; i < b->length; i++)
-		rte_pktmbuf_free(b->pkts[i]);
+	rte_pktmbuf_free_bulk(b->pkts, b->length);
 
 	b->length = 0;
 }
