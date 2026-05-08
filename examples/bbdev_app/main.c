@@ -291,9 +291,7 @@ print_mac(unsigned int portid, struct rte_ether_addr *bbdev_ports_eth_address)
 static inline void
 pktmbuf_free_bulk(struct rte_mbuf **mbufs, unsigned int nb_to_free)
 {
-	unsigned int i;
-	for (i = 0; i < nb_to_free; ++i)
-		rte_pktmbuf_free(mbufs[i]);
+	rte_pktmbuf_free_bulk(mbufs, nb_to_free);
 }
 
 static inline void

@@ -253,8 +253,7 @@ cmd_send_parsed(void *parsed_result,
 						(void *)queue_id);
 		if (ret < 0) {
 			printf("Enqueue failed with err %d\n", ret);
-			for (j = 0; j < nb_pkt; j++)
-				rte_pktmbuf_free(mbuf_send[j]);
+			rte_pktmbuf_free_bulk(mbuf_send, nb_pkt);
 			goto clean;
 		}
 		nb_tx = ret;
@@ -387,8 +386,8 @@ start_iofwd_per_lcore(void *param)
 				if (ret < 0) {
 					printf("Enqueue failed with err %d\n",
 						ret);
-					for (j = 0; j < nb_rx; j++)
-						rte_pktmbuf_free(pkts_burst[j]);
+					rte_pktmbuf_free_bulk(pkts_burst,
+							      nb_rx);
 					goto clean;
 				}
 				nb_tx = ret;
@@ -476,7 +475,7 @@ start_txonly_per_lcore(void *param)
 	struct ntb_fwd_lcore_conf *conf = param;
 	struct ntb_fwd_stream fs;
 	uint16_t nb_pkt, nb_tx;
-	int i, j, ret;
+	int i, ret;
 
 	for (i = 0; i < NTB_MAX_PKT_BURST; i++)
 		ntb_buf[i] = (struct rte_rawdev_buf *)
@@ -517,8 +516,7 @@ start_txonly_per_lcore(void *param)
 					nb_pkt, (void *)(size_t)fs.qp_id);
 			if (ret < 0) {
 				printf("Enqueue failed with err %d\n", ret);
-				for (j = 0; j < nb_pkt; j++)
-					rte_pktmbuf_free(pkts_burst[j]);
+				rte_pktmbuf_free_bulk(pkts_burst, nb_pkt);
 				goto clean;
 			}
 			nb_tx = ret;

@@ -128,10 +128,7 @@ get_previous_lcore_id(unsigned int id)
 static inline void
 pktmbuf_free_bulk(struct rte_mbuf *mbuf_table[], unsigned n)
 {
-	unsigned int i;
-
-	for (i = 0; i < n; i++)
-		rte_pktmbuf_free(mbuf_table[i]);
+	rte_pktmbuf_free_bulk(mbuf_table, n);
 }
 
 /* display usage */

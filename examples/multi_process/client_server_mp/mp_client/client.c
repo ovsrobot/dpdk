@@ -117,15 +117,14 @@ parse_app_args(int argc, char *argv[])
  */
 static void
 flush_tx_error_callback(struct rte_mbuf **unsent, uint16_t count,
-		void *userdata) {
-	int i;
+		void *userdata)
+{
 	uint16_t port_id = (uintptr_t)userdata;
 
 	tx_stats->tx_drop[port_id] += count;
 
 	/* free the mbufs which failed from transmit */
-	for (i = 0; i < count; i++)
-		rte_pktmbuf_free(unsent[i]);
+	rte_pktmbuf_free_bulk(unsent, count);
 
 }
 

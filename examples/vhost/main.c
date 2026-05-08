@@ -1006,8 +1006,7 @@ unlink_vmdq(struct vhost_dev *vdev)
 					(uint16_t)vdev->vmdq_rx_q, pkts_burst, MAX_PKT_BURST);
 
 		while (rx_count) {
-			for (i = 0; i < rx_count; i++)
-				rte_pktmbuf_free(pkts_burst[i]);
+			rte_pktmbuf_free_bulk(pkts_burst, rx_count);
 
 			rx_count = rte_eth_rx_burst(ports[0],
 					(uint16_t)vdev->vmdq_rx_q, pkts_burst, MAX_PKT_BURST);

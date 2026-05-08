@@ -195,7 +195,6 @@ clear_stats(void)
 static void
 flush_rx_queue(uint16_t client)
 {
-	uint16_t j;
 	struct client *cl;
 
 	if (cl_rx_buf[client].count == 0)
@@ -204,8 +203,8 @@ flush_rx_queue(uint16_t client)
 	cl = &clients[client];
 	if (rte_ring_enqueue_bulk(cl->rx_q, (void **)cl_rx_buf[client].buffer,
 			cl_rx_buf[client].count, NULL) == 0){
-		for (j = 0; j < cl_rx_buf[client].count; j++)
-			rte_pktmbuf_free(cl_rx_buf[client].buffer[j]);
+		rte_pktmbuf_free_bulk(cl_rx_buf[client].buffer,
+				      cl_rx_buf[client].count);
 		cl->stats.rx_drop += cl_rx_buf[client].count;
 	}
 	else

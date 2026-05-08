@@ -931,8 +931,8 @@ l2fwd_main_loop(struct l2fwd_crypto_options *options)
 						RTE_CRYPTO_OP_TYPE_SYMMETRIC,
 						ops_burst, nb_rx) !=
 								nb_rx) {
-					for (j = 0; j < nb_rx; j++)
-						rte_pktmbuf_free(pkts_burst[j]);
+					rte_pktmbuf_free_bulk(pkts_burst,
+							      nb_rx);
 
 					nb_rx = 0;
 				}
