@@ -31,10 +31,7 @@ hdr_segment_init(struct rte_mbuf *hdr_segment, struct rte_mbuf *pkt,
 static inline void
 free_gso_segment(struct rte_mbuf **pkts, uint16_t nb_pkts)
 {
-	uint16_t i;
-
-	for (i = 0; i < nb_pkts; i++)
-		rte_pktmbuf_free(pkts[i]);
+	rte_pktmbuf_free_bulk(pkts, nb_pkts);
 }
 
 int
