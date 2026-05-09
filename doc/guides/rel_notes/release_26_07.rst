@@ -70,6 +70,10 @@ New Features
   and assigning no mempool to some configuration segments.
   This is a driver capability advertised in the ``selective_rx`` bit.
 
+* **Updated NVIDIA mlx5 ethernet driver.**
+
+  * Added support for selective Rx in scalar SPRQ Rx path.
+
 
 Removed Items
 -------------
