@@ -56,18 +56,19 @@ struct __rte_cache_aligned zxdh_virtnet_rx {
 
 struct __rte_cache_aligned zxdh_virtnet_tx {
 	struct zxdh_virtqueue         *vq;
-
-	rte_iova_t                zxdh_net_hdr_mem; /* hdr for each xmit packet */
-	uint16_t                  queue_id;           /* DPDK queue index. */
-	uint16_t                  port_id;            /* Device port identifier. */
+	const struct rte_memzone *zxdh_net_hdr_mz;  /* memzone to populate hdr. */
+	rte_iova_t               zxdh_net_hdr_mem; /* hdr for each xmit packet */
 	struct zxdh_virtnet_stats      stats;
 	const struct rte_memzone *mz;                 /* mem zone to populate TX ring. */
-	const struct rte_memzone *zxdh_net_hdr_mz;  /* memzone to populate hdr. */
+	uint64_t offloads;
+	uint16_t                  queue_id;           /* DPDK queue index. */
+	uint16_t                  port_id;            /* Device port identifier. */
 };
 
 uint16_t zxdh_xmit_pkts_packed(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 uint16_t zxdh_xmit_pkts_prepare(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 uint16_t zxdh_recv_pkts_packed(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
 uint16_t zxdh_recv_single_pkts(void *rx_queue, struct rte_mbuf **rcv_pkts, uint16_t nb_pkts);
+uint16_t zxdh_xmit_pkts_simple(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 
 #endif  /* ZXDH_RXTX_H */
