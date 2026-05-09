@@ -41,6 +41,8 @@ Here is the suggested matching list which has been tested and verified.
    +------------+------------------+
    |    25.07   |       2.0        |
    +------------+------------------+
+   |    26.07   |       2.2        |
+   +------------+------------------+
 
 
 Configuration
