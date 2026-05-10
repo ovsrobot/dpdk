@@ -1677,7 +1677,7 @@ eth_dev_mac_restore(struct rte_eth_dev *dev,
 {
 	struct rte_ether_addr *addr;
 	uint16_t i;
-	uint32_t pool = 0;
+	uint32_t pool;
 	uint64_t pool_mask;
 
 	/* replay MAC address configuration including default MAC */
@@ -1685,9 +1685,11 @@ eth_dev_mac_restore(struct rte_eth_dev *dev,
 	if (dev->dev_ops->mac_addr_set != NULL)
 		dev->dev_ops->mac_addr_set(dev, addr);
 	else if (dev->dev_ops->mac_addr_add != NULL)
-		dev->dev_ops->mac_addr_add(dev, addr, 0, pool);
+		dev->dev_ops->mac_addr_add(dev, addr, 0, 0);
 
 	if (dev->dev_ops->mac_addr_add != NULL) {
+		bool vmdq = (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_VMDQ_FLAG) != 0;
+
 		for (i = 1; i < dev_info->max_mac_addrs; i++) {
 			addr = &dev->data->mac_addrs[i];
 
@@ -1695,15 +1697,19 @@ eth_dev_mac_restore(struct rte_eth_dev *dev,
 			if (rte_is_zero_ether_addr(addr))
 				continue;
 
-			pool = 0;
-			pool_mask = dev->data->mac_pool_sel[i];
+			if (!vmdq) {
+				dev->dev_ops->mac_addr_add(dev, addr, i, 0);
+			} else {
+				pool = 0;
+				pool_mask = dev->data->mac_pool_sel[i];
 
-			do {
-				if (pool_mask & UINT64_C(1))
-					dev->dev_ops->mac_addr_add(dev, addr, i, pool);
-				pool_mask >>= 1;
-				pool++;
-			} while (pool_mask);
+				do {
+					if (pool_mask & UINT64_C(1))
+						dev->dev_ops->mac_addr_add(dev, addr, i, pool);
+					pool_mask >>= 1;
+					pool++;
+				} while (pool_mask);
+			}
 		}
 	}
 }
@@ -5406,8 +5412,9 @@ rte_eth_dev_mac_addr_add(uint16_t port_id, struct rte_ether_addr *addr,
 			uint32_t pool)
 {
 	struct rte_eth_dev *dev;
-	int index;
 	uint64_t pool_mask;
+	bool vmdq;
+	int index;
 	int ret;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
@@ -5432,6 +5439,12 @@ rte_eth_dev_mac_addr_add(uint16_t port_id, struct rte_ether_addr *addr,
 		RTE_ETHDEV_LOG_LINE(ERR, "Pool ID must be 0-%d", RTE_ETH_64_POOLS - 1);
 		return -EINVAL;
 	}
+	vmdq = (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_VMDQ_FLAG) != 0;
+	if (!vmdq && pool != 0) {
+		RTE_ETHDEV_LOG_LINE(ERR, "Port %u: VMDq is not configured (pool %d)",
+			port_id, pool);
+		return -EINVAL;
+	}
 
 	index = eth_dev_get_mac_addr_index(port_id, addr);
 	if (index < 0) {
@@ -5442,6 +5455,9 @@ rte_eth_dev_mac_addr_add(uint16_t port_id, struct rte_ether_addr *addr,
 			return -ENOSPC;
 		}
 	} else {
+		if (!vmdq)
+			return 0;
+
 		pool_mask = dev->data->mac_pool_sel[index];
 
 		/* Check if both MAC address and pool is already there, and do nothing */
@@ -5456,8 +5472,10 @@ rte_eth_dev_mac_addr_add(uint16_t port_id, struct rte_ether_addr *addr,
 		/* Update address in NIC data structure */
 		rte_ether_addr_copy(addr, &dev->data->mac_addrs[index]);
 
-		/* Update pool bitmap in NIC data structure */
-		dev->data->mac_pool_sel[index] |= RTE_BIT64(pool);
+		if (vmdq) {
+			/* Update pool bitmap in NIC data structure */
+			dev->data->mac_pool_sel[index] |= RTE_BIT64(pool);
+		}
 	}
 
 	ret = eth_err(port_id, ret);
@@ -5502,8 +5520,10 @@ rte_eth_dev_mac_addr_remove(uint16_t port_id, struct rte_ether_addr *addr)
 	/* Update address in NIC data structure */
 	rte_ether_addr_copy(&null_mac_addr, &dev->data->mac_addrs[index]);
 
-	/* reset pool bitmap */
-	dev->data->mac_pool_sel[index] = 0;
+	if ((dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_VMDQ_FLAG) != 0) {
+		/* reset pool bitmap */
+		dev->data->mac_pool_sel[index] = 0;
+	}
 
 	rte_ethdev_trace_mac_addr_remove(port_id, addr);
 
