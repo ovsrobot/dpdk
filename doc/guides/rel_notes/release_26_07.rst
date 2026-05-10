@@ -63,6 +63,10 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **Updated IAVF ethernet driver.**
+
+  * Increased the maximum number of secondary MAC addresses from 64 to 32k.
+    This increases a VF port memory footprint by ~192kB.
 
 Removed Items
 -------------
