@@ -27,6 +27,7 @@
 #include "sxe2_cmd_chnl.h"
 #include "sxe2_tx.h"
 #include "sxe2_rx.h"
+#include "sxe2_txrx.h"
 #include "sxe2_common.h"
 #include "sxe2_common_log.h"
 #include "sxe2_host_regs.h"
@@ -131,6 +132,9 @@ static s32 sxe2_dev_start(struct rte_eth_dev *dev)
 		PMD_LOG_ERR(INIT, "Failed to init queues.");
 		goto l_end;
 	}
+
+	sxe2_rx_mode_func_set(dev);
+	sxe2_tx_mode_func_set(dev);
 
 	ret = sxe2_queues_start(dev);
 	if (ret) {
@@ -349,8 +353,8 @@ void __iomem *sxe2_pci_map_addr_get(struct sxe2_adapter *adapter,
 	for (i = 0; i < bar_info->map_cnt; i++) {
 		seg_info = &bar_info->seg_info[i];
 		if (res_type == seg_info->type) {
-			addr = (void __iomem *)((uintptr_t)seg_info->addr +
-					seg_info->page_inner_offset + reg_width	* idx_in_func);
+			addr = (uint8_t __iomem *)seg_info->addr +
+					seg_info->page_inner_offset + reg_width * idx_in_func;
 			goto l_end;
 		}
 	}
@@ -461,8 +465,9 @@ s32 sxe2_dev_pci_seg_map(struct sxe2_adapter *adapter,
 
 	map_addr = sxe2_drv_dev_mmap(adapter->cdev, bar_info->bar_idx, aligned_len, aligned_offset);
 	if (!map_addr) {
-		PMD_LOG_ERR(INIT, "Failed to mmap BAR space, type=%d, len=%zu, page_size=%zu",
-					res_type, org_len, page_size);
+		PMD_LOG_ERR(INIT, "Failed to mmap BAR space, type=%d, len=%" PRIu64
+			", offset=%" PRIu64 ", page_size=%zu",
+					res_type, org_len, org_offset, page_size);
 		ret = -EFAULT;
 		goto l_end;
 	}
@@ -746,10 +751,17 @@ static s32 sxe2_dev_init(struct rte_eth_dev *dev, struct sxe2_dev_kvargs_info *k
 
 	PMD_INIT_FUNC_TRACE();
 
+	sxe2_set_common_function(dev);
+
 	dev->dev_ops = &sxe2_eth_dev_ops;
 
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		sxe2_rx_mode_func_set(dev);
+		sxe2_tx_mode_func_set(dev);
+		if (ret != SXE2_SUCCESS)
+			PMD_LOG_ERR(INIT, "Failed to mp init (secondary), ret=%d", ret);
 		goto l_end;
+	}
 
 	ret = sxe2_hw_init(dev);
 	if (ret) {
