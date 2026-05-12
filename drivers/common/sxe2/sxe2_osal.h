@@ -29,8 +29,6 @@
 #define BIT_ULL(a) (1ULL << (a))
 #endif
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 #define BITS_PER_BYTE 8
 
 #define IS_UNICAST_ETHER_ADDR(addr)			\

@@ -664,6 +664,7 @@ sxe2_common_init(void)
 		goto l_end;
 
 	pthread_mutex_init(&sxe2_common_devices_list_lock, NULL);
+
 	sxe2_common_pci_init();
 	sxe2_commoin_inited = true;
 
