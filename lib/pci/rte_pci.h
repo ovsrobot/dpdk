@@ -111,6 +111,7 @@ extern "C" {
 #define RTE_PCI_EXT_CAP_ID_ACS		0x0d	/* Access Control Services */
 #define RTE_PCI_EXT_CAP_ID_SRIOV	0x10	/* SR-IOV */
 #define RTE_PCI_EXT_CAP_ID_PRI		0x13	/* Page Request Interface */
+#define RTE_PCI_EXT_CAP_ID_TPH		0x17	/* TLP Processing Hints */
 #define RTE_PCI_EXT_CAP_ID_PASID	0x1b    /* Process Address Space ID */
 
 /* Advanced Error Reporting (RTE_PCI_EXT_CAP_ID_ERR) */

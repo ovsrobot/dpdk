@@ -1308,3 +1308,167 @@ pci_vfio_is_enabled(void)
 	}
 	return status;
 }
+
+#define  PCI_TPH_CAP_OFF	0x4
+#define  PCI_TPH_CAP_ST_NS	0x00000001 /* No ST Mode Supported */
+#define  PCI_TPH_CAP_ST_IV	0x00000002 /* Interrupt Vector Mode Supported */
+#define  PCI_TPH_CAP_ST_DS	0x00000004 /* Device Specific Mode Supported */
+#define  PCI_TPH_CAP_LOC_MASK	0x00000600 /* ST Table Location */
+#define  PCI_TPH_LOC_NONE	0x00000000 /* Not present */
+#define  PCI_TPH_LOC_CAP	0x00000200 /* In capability */
+#define  PCI_TPH_LOC_MSIX	0x00000400 /* In MSI-X */
+#define  PCI_TPH_CTRL_OFF	0x8
+#define  PCI_TPH_ST_NS_MODE	0x0 /* No ST Mode */
+#define  PCI_TPH_ST_IV_MODE	0x1 /* Interrupt Vector Mode */
+#define  PCI_TPH_ST_DS_MODE	0x2 /* Device Specific Mode */
+
+int
+pci_vfio_tph_query(const struct rte_pci_device *dev, uint32_t *supported_modes,
+		   uint32_t *st_table_sz)
+{
+	off_t off = rte_pci_find_ext_capability(dev, RTE_PCI_EXT_CAP_ID_TPH);
+	uint32_t cap, loc;
+	int ret;
+
+	if (off <= 0)
+		return -ENOTSUP;
+
+	ret = rte_pci_read_config(dev, &cap, 4, off + PCI_TPH_CAP_OFF);
+	if (ret != 4)
+		return -EIO;
+
+	*supported_modes = 0;
+	if (cap & PCI_TPH_CAP_ST_IV)
+		*supported_modes |= RTE_PCI_TPH_MODE_IV;
+	if (cap & PCI_TPH_CAP_ST_DS)
+		*supported_modes |= RTE_PCI_TPH_MODE_DS;
+	loc = cap & PCI_TPH_CAP_LOC_MASK;
+	if (loc == PCI_TPH_LOC_CAP || loc == PCI_TPH_LOC_MSIX)
+		*st_table_sz = RTE_FIELD_GET32(PCI_TPH_LOC_MSIX, cap) + 1;
+	else
+		*st_table_sz = 0;
+
+	return 0;
+}
+
+static int
+pci_vfio_tph_ctrl(const struct rte_pci_device *dev, uint32_t mode)
+{
+	off_t off = rte_pci_find_ext_capability(dev, RTE_PCI_EXT_CAP_ID_TPH);
+	int ret;
+
+	if (off <= 0)
+		return -ENOTSUP;
+
+	ret = rte_pci_write_config(dev, &mode, 4, off + PCI_TPH_CTRL_OFF);
+	if (ret != 4)
+		return -EIO;
+
+	return 0;
+}
+
+int
+pci_vfio_tph_enable(const struct rte_pci_device *dev, uint32_t mode)
+{
+	uint32_t st_mode;
+
+	if (mode == RTE_PCI_TPH_MODE_IV)
+		st_mode = PCI_TPH_ST_IV_MODE;
+	else if (mode == RTE_PCI_TPH_MODE_DS)
+		st_mode = PCI_TPH_ST_DS_MODE;
+	else
+		return -EINVAL;
+
+	return pci_vfio_tph_ctrl(dev, st_mode);
+}
+
+int
+pci_vfio_tph_disable(const struct rte_pci_device *dev)
+{
+	return pci_vfio_tph_ctrl(dev, PCI_TPH_ST_NS_MODE);
+}
+
+int
+pci_vfio_tph_st_get(const struct rte_pci_device *dev,
+		    struct rte_pci_tph_entry *ents, uint32_t count)
+{
+	struct vfio_device_feature_tph_st *tph_st;
+	struct vfio_device_feature *feature;
+	int vfio_dev_fd, ret;
+	size_t argsz;
+	uint32_t i;
+
+	if (count > VFIO_TPH_ST_MAX_COUNT)
+		return -EINVAL;
+
+	vfio_dev_fd = rte_intr_dev_fd_get(dev->intr_handle);
+	if (vfio_dev_fd < 0)
+		return -1;
+
+	argsz = sizeof(struct vfio_device_feature) +
+		sizeof(struct vfio_device_feature_tph_st) +
+		count * sizeof(uint32_t);
+	feature = (struct vfio_device_feature *)calloc(1, argsz);
+	if (feature == NULL)
+		return -ENOMEM;
+	tph_st = (struct vfio_device_feature_tph_st *)feature->data;
+
+	feature->argsz = argsz;
+	feature->flags = VFIO_DEVICE_FEATURE_TPH_ST;
+	feature->flags |= VFIO_DEVICE_FEATURE_GET;
+	for (i = 0; i < count; i++)
+		tph_st->data[i] = ents[i].cpu;
+	tph_st->flags = VFIO_TPH_ST_MEM_TYPE_VM;
+	tph_st->index = 0;
+	tph_st->count = count;
+	ret = ioctl(vfio_dev_fd, VFIO_DEVICE_FEATURE, feature);
+	if (ret) {
+		free(feature);
+		return ret;
+	}
+
+	for (i = 0; i < count; i++)
+		ents[i].st = tph_st->data[i];
+	free(feature);
+
+	return 0;
+}
+
+int
+pci_vfio_tph_st_set(const struct rte_pci_device *dev, uint16_t index,
+		    struct rte_pci_tph_entry *ents, uint32_t count)
+{
+	struct vfio_device_feature_tph_st *tph_st;
+	struct vfio_device_feature *feature;
+	int vfio_dev_fd, ret;
+	size_t argsz;
+	uint32_t i;
+
+	if (count > VFIO_TPH_ST_MAX_COUNT)
+		return -EINVAL;
+
+	vfio_dev_fd = rte_intr_dev_fd_get(dev->intr_handle);
+	if (vfio_dev_fd < 0)
+		return -1;
+
+	argsz = sizeof(struct vfio_device_feature) +
+		sizeof(struct vfio_device_feature_tph_st) +
+		count * sizeof(uint32_t);
+	feature = (struct vfio_device_feature *)calloc(1, argsz);
+	if (feature == NULL)
+		return -ENOMEM;
+	tph_st = (struct vfio_device_feature_tph_st *)feature->data;
+
+	feature->argsz = argsz;
+	feature->flags = VFIO_DEVICE_FEATURE_TPH_ST;
+	feature->flags |= VFIO_DEVICE_FEATURE_SET;
+	tph_st->flags = VFIO_TPH_ST_MEM_TYPE_VM;
+	tph_st->index = index;
+	tph_st->count = count;
+	for (i = 0; i < count; i++)
+		tph_st->data[i] = ents[i].cpu;
+	ret = ioctl(vfio_dev_fd, VFIO_DEVICE_FEATURE, feature);
+	free(feature);
+
+	return ret;
+}

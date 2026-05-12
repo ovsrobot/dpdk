@@ -207,6 +207,57 @@ pci_uio_remap_resource(struct rte_pci_device *dev __rte_unused)
 	return -1;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_query, 26.07)
+int
+rte_pci_tph_query(const struct rte_pci_device *dev, uint32_t *supported_modes,
+		  uint32_t *st_table_sz)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(supported_modes);
+	RTE_SET_USED(st_table_sz);
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_enable, 26.07)
+int
+rte_pci_tph_enable(const struct rte_pci_device *dev, uint32_t mode)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(mode);
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_disable, 26.07)
+int
+rte_pci_tph_disable(const struct rte_pci_device *dev)
+{
+	RTE_SET_USED(dev);
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_st_get, 26.07)
+int
+rte_pci_tph_st_get(const struct rte_pci_device *dev,
+		   struct rte_pci_tph_entry *ents, uint32_t count)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(ents);
+	RTE_SET_USED(count);
+	return -ENOTSUP;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_pci_tph_st_set, 26.07)
+int
+rte_pci_tph_st_set(const struct rte_pci_device *dev, uint16_t index,
+		   struct rte_pci_tph_entry *ents, uint32_t count)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(index);
+	RTE_SET_USED(ents);
+	RTE_SET_USED(count);
+	return -ENOTSUP;
+}
+
 static int
 get_device_pci_address(HDEVINFO dev_info,
 	PSP_DEVINFO_DATA device_info_data, struct rte_pci_addr *addr)
