@@ -57,7 +57,7 @@ typedef s32 (sxe2_class_driver_remove_t)(struct sxe2_common_device *scdev);
 struct sxe2_class_driver {
 	TAILQ_ENTRY(sxe2_class_driver) next;
 	enum sxe2_class_type drv_class;
-	const s8 *name;
+	const char *name;
 	sxe2_class_driver_probe_t *probe;
 	sxe2_class_driver_remove_t *remove;
 	const struct rte_pci_id *id_table;
