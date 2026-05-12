@@ -47,6 +47,15 @@ __rte_internal
 s32
 sxe2_drv_dev_munmap(struct sxe2_common_device *cdev, void *virt, u64 len);
 
+__rte_internal
+s32
+sxe2_drv_dev_dma_map(struct sxe2_common_device *cdev, u64 vaddr,
+		u64 iova, u64 size);
+
+__rte_internal
+s32
+sxe2_drv_dev_dma_unmap(struct sxe2_common_device *cdev, u64 iova);
+
 #ifdef __cplusplus
 }
 #endif
