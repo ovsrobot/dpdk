@@ -202,7 +202,7 @@ sxe2_drv_dev_munmap(struct sxe2_common_device *cdev, void *virt, u64 len)
 
 	if (cdev->config.kernel_reset) {
 		ret = -EPERM;
-		PMD_LOG_WARN(COM, "kernel reseted, need restart app.");
+		PMD_LOG_WARN(COM, "kernel reset, need restart app.");
 		goto l_end;
 	}
 
@@ -220,3 +220,107 @@ sxe2_drv_dev_munmap(struct sxe2_common_device *cdev, void *virt, u64 len)
 l_end:
 	return ret;
 }
+
+RTE_EXPORT_INTERNAL_SYMBOL(sxe2_drv_dev_dma_map)
+s32
+sxe2_drv_dev_dma_map(struct sxe2_common_device *cdev, u64 vaddr,
+			u64 iova, u64 size)
+{
+	struct sxe2_ioctl_iommu_dma_map cmd_params;
+	enum rte_iova_mode iova_mode;
+	s32 ret = SXE2_SUCCESS;
+	s32 cmd_fd = 0;
+
+	if (cdev->config.kernel_reset) {
+		ret = -EPERM;
+		PMD_LOG_WARN(COM, "kernel reset, need restart app.");
+		goto l_end;
+	}
+
+	iova_mode = rte_eal_iova_mode();
+	if (iova_mode == RTE_IOVA_PA) {
+		if (cdev->config.support_iommu) {
+			PMD_LOG_ERR(COM, "iommu not support pa mode");
+			ret = -EIO;
+		}
+		goto l_end;
+	} else if (iova_mode == RTE_IOVA_VA) {
+		if (!cdev->config.support_iommu) {
+			PMD_LOG_ERR(COM, "no iommu not support va mode, please use pa mode.");
+			ret = -EIO;
+			goto l_end;
+		}
+	}
+
+	cmd_fd = SXE2_CDEV_TO_CMD_FD(cdev);
+	if (cmd_fd < 0) {
+		ret = -EBADF;
+		PMD_LOG_ERR(COM, "Failed to exec cmd, fd=%d", cmd_fd);
+		goto l_end;
+	}
+
+	memset(&cmd_params, 0, sizeof(struct sxe2_ioctl_iommu_dma_map));
+	cmd_params.vaddr = vaddr;
+	cmd_params.iova = iova;
+	cmd_params.size = size;
+
+	rte_ticketlock_lock(&cdev->config.lock);
+	ret = ioctl(cmd_fd, SXE2_COM_CMD_DMA_MAP, &cmd_params);
+	if (ret < 0) {
+		PMD_LOG_ERR(COM, "Failed to dma map, fd=%d, ret=%d, err:%s",
+				cmd_fd, ret, strerror(errno));
+		ret = -EIO;
+		rte_ticketlock_unlock(&cdev->config.lock);
+		goto l_end;
+	}
+	rte_ticketlock_unlock(&cdev->config.lock);
+
+l_end:
+	return ret;
+}
+
+RTE_EXPORT_INTERNAL_SYMBOL(sxe2_drv_dev_dma_unmap)
+s32
+sxe2_drv_dev_dma_unmap(struct sxe2_common_device *cdev, u64 iova)
+{
+	s32 ret = SXE2_SUCCESS;
+	s32 cmd_fd = 0;
+	struct sxe2_ioctl_iommu_dma_unmap cmd_params;
+
+	if (cdev->config.kernel_reset) {
+		ret = -EPERM;
+		PMD_LOG_WARN(COM, "kernel reset, need restart app.");
+		goto l_end;
+	}
+
+	if (!cdev->config.support_iommu)
+		goto l_end;
+
+	cmd_fd = SXE2_CDEV_TO_CMD_FD(cdev);
+	if (cmd_fd < 0) {
+		ret = -EBADF;
+		PMD_LOG_ERR(COM, "Failed to exec cmd, fd=%d", cmd_fd);
+		goto l_end;
+	}
+
+	PMD_LOG_DEBUG(COM, "fd %d dma unmap iova=0x%"PRIX64"",
+		cmd_fd, iova);
+
+	memset(&cmd_params, 0, sizeof(struct sxe2_ioctl_iommu_dma_unmap));
+	cmd_params.iova = iova;
+
+	rte_ticketlock_lock(&cdev->config.lock);
+	ret = ioctl(cmd_fd, SXE2_COM_CMD_DMA_UNMAP, &cmd_params);
+	if (ret < 0) {
+		PMD_LOG_INFO(COM, "Failed to dma unmap, fd=%d, ret=%d, err:%s",
+				cmd_fd, ret, strerror(errno));
+		ret = -EIO;
+		rte_ticketlock_unlock(&cdev->config.lock);
+		goto l_end;
+	}
+	rte_ticketlock_unlock(&cdev->config.lock);
+
+l_end:
+	return ret;
+}
+
