@@ -7460,5 +7460,45 @@ int rte_eth_dev_map_aggr_tx_affinity(uint16_t port_id, uint16_t tx_queue_id,
 	return ret;
 }
 
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_cache_stash_get, 26.03)
+int
+rte_eth_cache_stash_get(uint16_t port_id,
+			struct rte_eth_cache_stash_capability *capa)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	if (capa == NULL)
+		return -EINVAL;
+
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->cache_stash_get == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id, (*dev->dev_ops->cache_stash_get)(dev, capa));
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_cache_stash_set, 26.03)
+int
+rte_eth_cache_stash_set(uint16_t port_id, enum rte_eth_cache_stash_op op,
+		       struct rte_eth_cache_stash_config *config)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	if (op != RTE_ETH_CACHE_STASH_OP_DEV_DISABLE && config == NULL)
+		return -EINVAL;
+
+	dev = &rte_eth_devices[port_id];
+
+	if (*dev->dev_ops->cache_stash_set == NULL)
+		return -ENOTSUP;
+
+	return eth_err(port_id, (*dev->dev_ops->cache_stash_set)(dev, op, config));
+}
+
 RTE_EXPORT_SYMBOL(rte_eth_dev_logtype)
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);

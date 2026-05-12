@@ -1410,6 +1410,38 @@ typedef uint64_t (*eth_get_restore_flags_t)(struct rte_eth_dev *dev,
 					    enum rte_eth_dev_operation op);
 
 /**
+ * @internal
+ * Get cache stash capabilities of the Ethernet device.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param capa
+ *   Pointer to capability structure to store supported stash types and objects.
+ *
+ * @return
+ *   Negative on error, 0 on success.
+ */
+typedef int (*eth_cache_stash_get_t)(struct rte_eth_dev *dev,
+				     struct rte_eth_cache_stash_capability *capa);
+
+/**
+ * @internal
+ * Configure cache stash for the Ethernet device or queue.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param op
+ *   Cache stash operation type (enable/disable device or queue).
+ * @param config
+ *   Cache stash configuration (device or queue level).
+ *
+ * @return
+ *   Negative on error, 0 on success.
+ */
+typedef int (*eth_cache_stash_set_t)(struct rte_eth_dev *dev, enum rte_eth_cache_stash_op op,
+				     struct rte_eth_cache_stash_config *config);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -1661,6 +1693,11 @@ struct eth_dev_ops {
 
 	/** Get configuration which ethdev should restore */
 	eth_get_restore_flags_t get_restore_flags;
+
+	/** Cache stash get ops */
+	eth_cache_stash_get_t cache_stash_get;
+	/** Cache stash set ops */
+	eth_cache_stash_set_t cache_stash_set;
 };
 
 /**
