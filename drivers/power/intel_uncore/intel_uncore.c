@@ -419,7 +419,7 @@ power_intel_uncore_get_num_pkgs(void)
 
 	d = opendir(INTEL_UNCORE_FREQUENCY_DIR);
 	if (d == NULL) {
-		POWER_LOG(ERR,
+		POWER_LOG(DEBUG,
 		"Uncore frequency management not supported/enabled on this kernel. "
 		"Please enable CONFIG_INTEL_UNCORE_FREQ_CONTROL if on Intel x86 with linux kernel"
 		" >= 5.6");
@@ -457,7 +457,7 @@ power_intel_uncore_get_num_dies(unsigned int pkg)
 
 	d = opendir(INTEL_UNCORE_FREQUENCY_DIR);
 	if (d == NULL) {
-		POWER_LOG(ERR,
+		POWER_LOG(DEBUG,
 		"Uncore frequency management not supported/enabled on this kernel. "
 		"Please enable CONFIG_INTEL_UNCORE_FREQ_CONTROL if on Intel x86 with linux kernel"
 		" >= 5.6");
