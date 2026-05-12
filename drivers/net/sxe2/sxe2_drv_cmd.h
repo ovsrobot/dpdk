@@ -5,17 +5,8 @@
 #ifndef __SXE2_DRV_CMD_H__
 #define __SXE2_DRV_CMD_H__
 
-#ifdef SXE2_DPDK_DRIVER
 #include "sxe2_type.h"
 #define SXE2_DPDK_RESOURCE_INSUFFICIENT
-#endif
-
-#ifdef SXE2_LINUX_DRIVER
-#ifdef __KERNEL__
-#include <linux/types.h>
-#include <linux/if_ether.h>
-#endif
-#endif
 
 #define SXE2_DRV_CMD_MODULE_S        (16)
 #define SXE2_MK_DRV_CMD(module, cmd) (((module) << SXE2_DRV_CMD_MODULE_S) | ((cmd) & 0xFFFF))
