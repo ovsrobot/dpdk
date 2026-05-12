@@ -2199,9 +2199,9 @@ power_uncore_init(void)
 	if (enabled_uncore == -1)
 		return 0;
 
-	ret = rte_power_set_uncore_env(RTE_UNCORE_PM_ENV_AUTO_DETECT);
-	if (ret < 0) {
-		RTE_LOG(INFO, L3FWD_POWER, "Failed to set uncore env\n");
+	ret = rte_power_uncore_driver_init();
+	if (ret != 0) {
+		RTE_LOG(INFO, L3FWD_POWER, "Failed to initialize uncore driver.\n");
 		return ret;
 	}
 
@@ -2214,12 +2214,6 @@ power_uncore_init(void)
 		if (max_die == 0)
 			return -1;
 		for (die = 0; die < max_die; die++) {
-			ret = rte_power_uncore_init(pkg, die);
-			if (ret == -1) {
-				RTE_LOG(INFO, L3FWD_POWER, "Unable to initialize uncore for pkg %02u die %02u\n"
-				, pkg, die);
-				return ret;
-			}
 			if (g_uncore_cfg.uncore_choice == UNCORE_MIN) {
 				ret = rte_power_uncore_freq_min(pkg, die);
 				if (ret == -1) {
@@ -2331,7 +2325,7 @@ init_power_library(void)
 static int
 deinit_power_library(void)
 {
-	unsigned int lcore_id, max_pkg, max_die, die, pkg;
+	unsigned int lcore_id;
 	int ret = 0;
 
 	if (app_mode == APP_MODE_LEGACY) {
@@ -2348,24 +2342,8 @@ deinit_power_library(void)
 	}
 
 	/* if uncore option was set */
-	if (enabled_uncore == 0) {
-		max_pkg = rte_power_uncore_get_num_pkgs();
-		if (max_pkg == 0)
-			return -1;
-		for (pkg = 0; pkg < max_pkg; pkg++) {
-			max_die = rte_power_uncore_get_num_dies(pkg);
-			if (max_die == 0)
-				return -1;
-			for (die = 0; die < max_die; die++) {
-				ret = rte_power_uncore_exit(pkg, die);
-				if (ret < 0) {
-					RTE_LOG(ERR, L3FWD_POWER, "Failed to exit uncore deinit successfully for pkg %02u die %02u\n"
-						, pkg, die);
-					return -1;
-				}
-			}
-		}
-	}
+	if (enabled_uncore == 0)
+		rte_power_uncore_driver_deinit();
 
 	if (cpu_resume_latency != -1) {
 		RTE_LCORE_FOREACH(lcore_id) {
