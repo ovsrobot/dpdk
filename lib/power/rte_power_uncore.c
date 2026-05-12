@@ -78,6 +78,12 @@ static int rte_power_probe_uncore_driver(void)
 	return global_uncore_ops ? 0 : -ENODEV;
 }
 
+static void rte_power_remove_uncore_driver(void)
+{
+	global_uncore_ops = NULL;
+	global_uncore_env = RTE_UNCORE_PM_ENV_NOT_SET;
+}
+
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_set_uncore_env, 23.11)
 int
 rte_power_set_uncore_env(enum rte_uncore_power_mgmt_env env)
@@ -132,6 +138,88 @@ enum rte_uncore_power_mgmt_env
 rte_power_get_uncore_env(void)
 {
 	return global_uncore_env;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_uncore_driver_init, 26.07)
+int
+rte_power_uncore_driver_init(void)
+{
+	int die, pkg, max_pkg, max_die;
+	int ret;
+
+	rte_spinlock_lock(&global_env_cfg_lock);
+	ret = rte_power_probe_uncore_driver();
+	if (ret) {
+		POWER_LOG(ERR, "Probe uncore driver failed, ret = %d.", ret);
+		goto out;
+	}
+
+	max_pkg = rte_power_uncore_get_num_pkgs();
+	if (max_pkg == 0) {
+		ret = -EINVAL;
+		goto remove_uncore_drv;
+	}
+
+	for (pkg = 0; pkg < max_pkg; pkg++) {
+		max_die = rte_power_uncore_get_num_dies(pkg);
+		if (max_die == 0) {
+			ret = -EINVAL;
+			goto remove_uncore_drv;
+		}
+
+		for (die = 0; die < max_die; die++) {
+			ret = rte_power_uncore_init(pkg, die);
+			if (ret) {
+				POWER_LOG(ERR, "Unable to initialize uncore for pkg-%d die-%d",
+					  pkg, die);
+				goto uncore_exit;
+			}
+		}
+	}
+	rte_spinlock_unlock(&global_env_cfg_lock);
+	return 0;
+
+uncore_exit:
+	for (; pkg >= 0; pkg--) {
+		max_die = rte_power_uncore_get_num_dies(pkg);
+		for (die = 0; die < max_die; die++) {
+			ret = rte_power_uncore_exit(pkg, die);
+			if (ret)
+				POWER_LOG(ERR, "Failed to deinitialize uncore for pkg-%d die-%d",
+					  pkg, die);
+		}
+	}
+
+remove_uncore_drv:
+	rte_power_remove_uncore_driver();
+out:
+	rte_spinlock_unlock(&global_env_cfg_lock);
+	return ret;
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_power_uncore_driver_deinit, 26.07)
+void
+rte_power_uncore_driver_deinit(void)
+{
+	unsigned int die, pkg, max_pkg, max_die;
+
+	rte_spinlock_lock(&global_env_cfg_lock);
+	if (global_uncore_ops == NULL)
+		goto out;
+
+	max_pkg = rte_power_uncore_get_num_pkgs();
+	for (pkg = 0; pkg < max_pkg; pkg++) {
+		max_die = rte_power_uncore_get_num_dies(pkg);
+		for (die = 0; die < max_die; die++) {
+			if (rte_power_uncore_exit(pkg, die) != 0)
+				POWER_LOG(ERR, "Unable to deinitialize uncore for pkg-%02u die-%02u",
+					  pkg, die);
+		}
+	}
+
+	rte_power_remove_uncore_driver();
+out:
+	rte_spinlock_unlock(&global_env_cfg_lock);
 }
 
 RTE_EXPORT_SYMBOL(rte_power_uncore_init)

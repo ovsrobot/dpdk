@@ -27,6 +27,26 @@ enum rte_uncore_power_mgmt_env {
 };
 
 /**
+ * Probing and Initializing the uncore driver on platform.
+ *
+ * @return
+ *  - 0 on success.
+ *  - Negative on error.
+ */
+__rte_experimental
+int rte_power_uncore_driver_init(void);
+
+/**
+ * Deinitializing the uncore driver on platform.
+ *
+ * @return
+ *  - 0 on success.
+ *  - Negative on error.
+ */
+__rte_experimental
+void rte_power_uncore_driver_deinit(void);
+
+/**
  * Set the default uncore power management implementation.
  * This has to be called prior to calling any other rte_power_uncore_*() API.
  * It is thread safe. New env can be set only in uninitialized state.
