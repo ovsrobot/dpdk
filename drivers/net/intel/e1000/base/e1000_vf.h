@@ -248,6 +248,8 @@ struct e1000_hw {
 	u16 vendor_id;
 
 	u8  revision_id;
+
+	u8 tph_mode;
 };
 
 enum e1000_promisc_type {
