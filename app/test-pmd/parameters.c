@@ -79,6 +79,8 @@ enum {
 	TESTPMD_OPT_NO_NUMA_NUM,
 #define TESTPMD_OPT_MP_ANON "mp-anon"
 	TESTPMD_OPT_MP_ANON_NUM,
+#define TESTPMD_OPT_TPH_STASH_OBJECTS "tph-stash-objects"
+	TESTPMD_OPT_TPH_STASH_OBJECTS_NUM,
 #define TESTPMD_OPT_PORT_NUMA_CONFIG "port-numa-config"
 	TESTPMD_OPT_PORT_NUMA_CONFIG_NUM,
 #define TESTPMD_OPT_RING_NUMA_CONFIG "ring-numa-config"
@@ -289,6 +291,7 @@ static const struct option long_options[] = {
 	NO_ARG(TESTPMD_OPT_NUMA),
 	NO_ARG(TESTPMD_OPT_NO_NUMA),
 	NO_ARG(TESTPMD_OPT_MP_ANON), /* deprecated */
+	REQUIRED_ARG(TESTPMD_OPT_TPH_STASH_OBJECTS),
 	REQUIRED_ARG(TESTPMD_OPT_PORT_NUMA_CONFIG),
 	REQUIRED_ARG(TESTPMD_OPT_RING_NUMA_CONFIG),
 	REQUIRED_ARG(TESTPMD_OPT_SOCKET_NUM),
@@ -1139,6 +1142,23 @@ launch_args_parse(int argc, char** argv)
 					"mp-alloc %s invalid - must be: "
 					"native, anon, xmem or xmemhuge\n",
 					optarg);
+			break;
+		case TESTPMD_OPT_TPH_STASH_OBJECTS_NUM:
+			if (!strcmp(optarg, "rxdesc"))
+				tph_stash_objects = RTE_ETH_CACHE_STASH_OBJ_RX_DESC;
+			else if (!strcmp(optarg, "rxheader"))
+				tph_stash_objects = RTE_ETH_CACHE_STASH_OBJ_RX_HEADER;
+			else if (!strcmp(optarg, "rxpayload"))
+				tph_stash_objects = RTE_ETH_CACHE_STASH_OBJ_RX_PAYLOAD;
+			else if (!strcmp(optarg, "rxdata"))
+				tph_stash_objects = RTE_ETH_CACHE_STASH_OBJ_RX_HEADER |
+						    RTE_ETH_CACHE_STASH_OBJ_RX_PAYLOAD;
+			else if (!strcmp(optarg, "rxall"))
+				tph_stash_objects = RTE_ETH_CACHE_STASH_OBJ_RX_DESC |
+						    RTE_ETH_CACHE_STASH_OBJ_RX_HEADER |
+						    RTE_ETH_CACHE_STASH_OBJ_RX_PAYLOAD;
+			else
+				rte_exit(EXIT_FAILURE, "unknown tph stash mode %s\n", optarg);
 			break;
 		case TESTPMD_OPT_PORT_NUMA_CONFIG_NUM:
 			if (parse_portnuma_config(optarg))
