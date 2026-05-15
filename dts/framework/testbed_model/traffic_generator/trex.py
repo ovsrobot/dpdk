@@ -184,6 +184,7 @@ class TrexTrafficGenerator(PerformanceTrafficGenerator):
         """
         self._create_packet_stream(packet)
         self._setup_trex_client()
+        time.sleep(1)
 
         stats = self._send_traffic_and_get_stats(duration, send_mpps)
 
