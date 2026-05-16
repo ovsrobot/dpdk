@@ -63,7 +63,7 @@ enum sxe2_itr_idx {
 #define  ETH_P_QINQ1  0x9100
 
 #define BITS_TO_LONGS(nr) DIV_ROUND_UP(nr, BITS_PER_BYTE * sizeof(unsigned long))
-#define BITS_TO_U32(nr) DIV_ROUND_UP(nr, 32)
+#define BITS_TO_uint32_t(nr) DIV_ROUND_UP(nr, 32)
 
 #define BITMAP_LAST_WORD_MASK(nbits) (~0UL >> (-(nbits) & (__BITS_PER_LONG - 1)))
 
@@ -86,4 +86,4 @@ static inline uint32_t sxe2_test_bit(uint32_t nr, const volatile unsigned long *
 	return 1UL & (addr[BIT_WORD(nr)] >> (nr & (__BITS_PER_LONG-1)));
 }
 
-#endif /* __SXE2_OSAL_H */
+#endif /* __SXE2_OSAL_H__ */
