@@ -185,7 +185,7 @@ static int32_t sxe2_common_device_setup(struct sxe2_common_device *cdev)
 
 	ret = sxe2_drv_dev_handshke(cdev);
 	if (ret != 0) {
-		PMD_LOG_ERR(COM, "Handshark failed, ret=%d", ret);
+		PMD_LOG_ERR(COM, "handshake failed, ret=%d", ret);
 		goto l_close_dev;
 	}
 
@@ -605,18 +605,18 @@ l_end:
 	return;
 }
 
-static bool sxe2_commoin_inited;
+static bool sxe2_common_inited;
 
 RTE_EXPORT_INTERNAL_SYMBOL(sxe2_common_init)
 void
 sxe2_common_init(void)
 {
-	if (sxe2_commoin_inited)
+	if (sxe2_common_inited)
 		goto l_end;
 
 	pthread_mutex_init(&sxe2_common_devices_list_lock, NULL);
 	sxe2_common_pci_init();
-	sxe2_commoin_inited = true;
+	sxe2_common_inited = true;
 
 l_end:
 	return;
