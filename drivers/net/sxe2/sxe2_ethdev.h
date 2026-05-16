@@ -293,14 +293,21 @@ struct sxe2_adapter {
 #define SXE2_DEV_TO_PCI(eth_dev) \
 		RTE_DEV_TO_PCI((eth_dev)->device)
 
+void *sxe2_pci_map_addr_get(struct sxe2_adapter *adapter,
+			    enum sxe2_pci_map_resource res_type,
+			    uint16_t idx_in_func);
+
 struct sxe2_pci_map_bar_info *sxe2_dev_get_bar_info(struct sxe2_adapter *adapter,
-		enum sxe2_pci_map_resource res_type);
+						    enum sxe2_pci_map_resource res_type);
 
 int32_t sxe2_dev_pci_seg_map(struct sxe2_adapter *adapter,
-		enum sxe2_pci_map_resource res_type, uint64_t org_len, uint64_t org_offset);
+			     enum sxe2_pci_map_resource res_type,
+			     uint64_t org_len, uint64_t org_offset);
 
-int32_t sxe2_dev_pci_res_seg_map(struct sxe2_adapter *adapter, uint32_t res_type,
-		uint32_t item_cnt, uint32_t item_base);
+int32_t sxe2_dev_pci_res_seg_map(struct sxe2_adapter *adapter,
+				 uint32_t res_type,
+				 uint32_t item_cnt,
+				 uint32_t item_base);
 
 void sxe2_dev_pci_seg_unmap(struct sxe2_adapter *adapter, uint32_t res_type);
 
