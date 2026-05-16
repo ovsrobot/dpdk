@@ -58,9 +58,10 @@ enum sxe2_itr_idx {
 	SXE2_ITR_IDX_NONE,
 };
 
-#define  ETH_P_8021Q  0x8100
-#define  ETH_P_8021AD 0x88a8
-#define  ETH_P_QINQ1  0x9100
+#define ETH_P_8021Q  0x8100
+#define ETH_P_8021AD 0x88a8
+#define ETH_P_QINQ1  0x9100
+#define ETH_ALEN     6
 
 #define BITS_TO_LONGS(nr) DIV_ROUND_UP(nr, BITS_PER_BYTE * sizeof(unsigned long))
 #define BITS_TO_uint32_t(nr) DIV_ROUND_UP(nr, 32)
