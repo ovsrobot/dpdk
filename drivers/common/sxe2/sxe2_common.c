@@ -183,7 +183,7 @@ static int32_t sxe2_common_device_setup(struct sxe2_common_device *cdev)
 		goto l_end;
 	}
 
-	ret = sxe2_drv_dev_handshark(cdev);
+	ret = sxe2_drv_dev_handshke(cdev);
 	if (ret != 0) {
 		PMD_LOG_ERR(COM, "Handshark failed, ret=%d", ret);
 		goto l_close_dev;

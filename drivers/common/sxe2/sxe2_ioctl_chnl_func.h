@@ -35,7 +35,16 @@ sxe2_drv_dev_close(struct sxe2_common_device *cdev);
 
 __rte_internal
 int32_t
-sxe2_drv_dev_handshark(struct sxe2_common_device *cdev);
+sxe2_drv_dev_handshke(struct sxe2_common_device *cdev);
+
+__rte_internal
+void
+*sxe2_drv_dev_mmap(struct sxe2_common_device *cdev, uint8_t bar_idx,
+		uint64_t len, uint64_t offset);
+
+__rte_internal
+int32_t
+sxe2_drv_dev_munmap(struct sxe2_common_device *cdev, void *virt, uint64_t len);
 
 #ifdef __cplusplus
 }

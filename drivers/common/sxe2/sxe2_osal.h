@@ -23,14 +23,6 @@
 #define BIT_WORD(nr)      ((nr) / __BITS_PER_LONG)
 #define BIT_MASK(nr)      (1UL << ((nr) % __BITS_PER_LONG))
 
-#define BITS_PER_BYTE 8
-
-#define IS_UNICAST_ETHER_ADDR(addr)			\
-	((bool)((((uint8_t *)(addr))[0] % ((uint8_t)0x2)) == 0))
-
-#define STRUCT_SIZE(ptr, field, num) \
-	(sizeof(*(ptr)) + sizeof(*(ptr)->field) * (num))
-
 #ifndef TAILQ_FOREACH_SAFE
 #define TAILQ_FOREACH_SAFE(var, head, field, tvar) \
 	for ((var) = TAILQ_FIRST((head)); \
@@ -38,16 +30,11 @@
 		(var) = (tvar))
 #endif
 
-#define SXE2_QUEUE_WAIT_RETRY_CNT    (50)
-
 #define upper_32_bits(n) ((uint32_t)(((n) >> 16) >> 16))
 #define lower_32_bits(n) ((uint32_t)((n) & 0xffffffff))
 
-#define FIELD_SIZEOF(t, f) RTE_SIZEOF_FIELD(t, f)
-#define ARRAY_SIZE(arr) RTE_DIM(arr)
-
-#ifndef DIV_ROUND_UP
-#define DIV_ROUND_UP(n, d) \
+#ifndef SXE2_DIV_ROUND_UP
+#define SXE2_DIV_ROUND_UP(n, d) \
 			(((n) + (typeof(n))(d) - (typeof(n))1) / (typeof(n))(d))
 #endif
 
@@ -58,12 +45,9 @@ enum sxe2_itr_idx {
 	SXE2_ITR_IDX_NONE,
 };
 
-#define  ETH_P_8021Q  0x8100
-#define  ETH_P_8021AD 0x88a8
-#define  ETH_P_QINQ1  0x9100
-
-#define BITS_TO_LONGS(nr) DIV_ROUND_UP(nr, BITS_PER_BYTE * sizeof(unsigned long))
-#define BITS_TO_uint32_t(nr) DIV_ROUND_UP(nr, 32)
+#define SXE2_ETH_ALEN 6
+#define BITS_TO_LONGS(nr) SXE2_DIV_ROUND_UP(nr, BITS_PER_BYTE * sizeof(unsigned long))
+#define BITS_TO_uint32_t(nr) SXE2_DIV_ROUND_UP(nr, 32)
 
 #define BITMAP_LAST_WORD_MASK(nbits) (~0UL >> (-(nbits) & (__BITS_PER_LONG - 1)))
 
@@ -81,7 +65,7 @@ static inline void sxe2_clear_bit(uint32_t nr, unsigned long *addr)
 	addr[nr / __BITS_PER_LONG] &= ~(1UL << (nr % __BITS_PER_LONG));
 }
 
-static inline uint32_t sxe2_test_bit(uint32_t nr, const volatile unsigned long *addr)
+static inline uint32_t sxe2_test_bit(uint32_t nr, const unsigned long *addr)
 {
 	return 1UL & (addr[BIT_WORD(nr)] >> (nr & (__BITS_PER_LONG-1)));
 }
