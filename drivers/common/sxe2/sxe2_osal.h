@@ -22,8 +22,7 @@
 #endif
 #define BIT_WORD(nr)      ((nr) / __BITS_PER_LONG)
 #define BIT_MASK(nr)      (1UL << ((nr) % __BITS_PER_LONG))
-
-#define BITS_PER_BYTE 8
+#define BITS_PER_BYTE     8
 
 #define IS_UNICAST_ETHER_ADDR(addr)			\
 	((bool)((((uint8_t *)(addr))[0] % ((uint8_t)0x2)) == 0))
