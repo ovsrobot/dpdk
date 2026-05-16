@@ -79,4 +79,3 @@ extern int32_t sxe2_log_hw;
 #define PMD_INIT_FUNC_TRACE() PMD_LOG_DEBUG(INIT, " >>")
 
 #endif /* __SXE2_COMMON_LOG_H__ */
-
