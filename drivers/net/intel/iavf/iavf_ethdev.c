@@ -2002,10 +2002,35 @@ iavf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 	return 0;
 }
 
+/* Wait until PF acknowledges VF reset (RSTAT leaves VFACTIVE) */
+static int
+iavf_wait_for_reset_start(struct iavf_hw *hw)
+{
+	int i;
+	uint32_t rstat;
+
+	for (i = 0; i < 100; i++) {
+		rte_delay_ms(10);
+
+		rstat = IAVF_READ_REG(hw, IAVF_VFGEN_RSTAT);
+		rstat &= IAVF_VFGEN_RSTAT_VFR_STATE_MASK;
+		rstat >>= IAVF_VFGEN_RSTAT_VFR_STATE_SHIFT;
+
+		if (rstat != VIRTCHNL_VFR_VFACTIVE)
+			return 0;
+	}
+
+	return -1;
+}
+
 static int
 iavf_check_vf_reset_done(struct iavf_hw *hw)
 {
 	int i, reset;
+
+	/* Phase 1: wait for reset to start (leave VFACTIVE) */
+	if (iavf_wait_for_reset_start(hw) != 0)
+		PMD_DRV_LOG(DEBUG, "VF reset did not start within timeout");
 
 	for (i = 0; i < IAVF_RESET_WAIT_CNT; i++) {
 		reset = IAVF_READ_REG(hw, IAVF_VFGEN_RSTAT) &
@@ -2517,6 +2542,31 @@ iavf_init_proto_xtr(struct rte_eth_dev *dev)
 	}
 }
 
+/* Drain stale Admin Receive Queue messages after reset */
+static void
+iavf_drain_arq(struct iavf_hw *hw, struct iavf_info *vf)
+{
+	struct iavf_arq_event_info event;
+	int drain_count = 0;
+
+	memset(&event, 0, sizeof(event));
+	event.msg_buf = vf->aq_resp;
+
+	while (drain_count < IAVF_AQ_LEN) {
+		event.buf_len = IAVF_AQ_BUF_SZ;
+
+		if (iavf_clean_arq_element(hw, &event, NULL) != IAVF_SUCCESS)
+			break;
+
+		drain_count++;
+	}
+
+	if (drain_count > 0)
+		PMD_INIT_LOG(DEBUG,
+				"Drained %d stale ARQ messages",
+				drain_count);
+}
+
 static int
 iavf_init_vf(struct rte_eth_dev *dev)
 {
@@ -2558,6 +2608,10 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "unable to allocate vf_aq_resp memory");
 		goto err_aq;
 	}
+
+	/* Drain stale ARQ messages after VF reset */
+	iavf_drain_arq(hw, vf);
+
 	if (iavf_check_api_version(adapter) != 0) {
 		PMD_INIT_LOG(ERR, "check_api version failed");
 		goto err_api;
