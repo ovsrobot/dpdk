@@ -21,6 +21,7 @@ static int32_t test_insert_invalid(void);
 static int32_t test_get_fn(void);
 static int32_t test_basic(void);
 static int32_t test_tree_traversal(void);
+static int32_t test_network_order(void);
 
 #define MAX_DEPTH 32
 #define MAX_RULES (1 << 22)
@@ -323,6 +324,63 @@ test_tree_traversal(void)
 	return TEST_SUCCESS;
 }
 
+int32_t
+test_network_order(void)
+{
+	struct rte_rib *rib = NULL;
+	struct rte_rib_node *node;
+	struct rte_rib_conf config;
+
+	uint32_t ip_he = RTE_IPV4(192, 0, 2, 0);
+	uint32_t ip_be = rte_cpu_to_be_32(ip_he);
+	uint32_t ip_ret;
+	uint64_t nh_set = 42;
+	uint64_t nh_ret;
+	uint8_t depth = 24;
+	int ret;
+
+	config.max_nodes = MAX_RULES;
+	config.ext_sz = 0;
+	config.flags = RTE_RIB_F_NETWORK_ORDER;
+
+	rib = rte_rib_create(__func__, SOCKET_ID_ANY, &config);
+	RTE_TEST_ASSERT(rib != NULL, "Failed to create RIB\n");
+
+	node = rte_rib_insert(rib, ip_be, depth);
+	RTE_TEST_ASSERT(node != NULL, "Failed to insert rule\n");
+
+	ret = rte_rib_set_nh(node, nh_set);
+	RTE_TEST_ASSERT(ret == 0, "Failed to set nh\n");
+
+	/* lookup with network-order IP */
+	node = rte_rib_lookup(rib, ip_be);
+	RTE_TEST_ASSERT(node != NULL, "Failed to lookup\n");
+
+	ret = rte_rib_get_nh(node, &nh_ret);
+	RTE_TEST_ASSERT((ret == 0) && (nh_ret == nh_set),
+		"Failed to get proper nexthop\n");
+
+	/* get_ip must return network-order IP */
+	ret = rte_rib_get_ip(node, &ip_ret);
+	RTE_TEST_ASSERT((ret == 0) && (ip_ret == ip_be),
+		"Failed to get proper IP in network order\n");
+
+	/* exact lookup with network-order IP */
+	node = rte_rib_lookup_exact(rib, ip_be, depth);
+	RTE_TEST_ASSERT(node != NULL, "Failed to exact lookup\n");
+
+	/* remove with network-order IP */
+	rte_rib_remove(rib, ip_be, depth);
+
+	node = rte_rib_lookup(rib, ip_be);
+	RTE_TEST_ASSERT(node == NULL,
+		"Lookup returns non existent rule\n");
+
+	rte_rib_free(rib);
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite rib_tests = {
 	.suite_name = "rib autotest",
 	.setup = NULL,
@@ -334,6 +392,7 @@ static struct unit_test_suite rib_tests = {
 		TEST_CASE(test_get_fn),
 		TEST_CASE(test_basic),
 		TEST_CASE(test_tree_traversal),
+		TEST_CASE(test_network_order),
 		TEST_CASES_END()
 	}
 };

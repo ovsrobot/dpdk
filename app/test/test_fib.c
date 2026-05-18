@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <rte_byteorder.h>
 #include <rte_ip.h>
 #include <rte_log.h>
 #include <rte_fib.h>
@@ -24,6 +25,7 @@ static int32_t test_get_invalid(void);
 static int32_t test_lookup(void);
 static int32_t test_invalid_rcu(void);
 static int32_t test_fib_rcu_sync_rw(void);
+static int32_t test_network_order(void);
 
 #define MAX_ROUTES	(1 << 16)
 #define MAX_TBL8	(1 << 15)
@@ -588,6 +590,83 @@ error:
 	return status == 0 ? TEST_SUCCESS : TEST_FAILED;
 }
 
+int32_t
+test_network_order(void)
+{
+	struct rte_fib *fib = NULL;
+	struct rte_fib_conf config = { 0 };
+	uint32_t ip_he = RTE_IPV4(192, 0, 2, 0);
+	uint32_t ip_be = rte_cpu_to_be_32(ip_he);
+	uint32_t ip_miss_be = rte_cpu_to_be_32(RTE_IPV4(10, 0, 0, 1));
+	uint64_t def_nh = 100;
+	uint64_t nh_set = 42;
+	uint64_t nh_arr[3];
+	uint32_t ip_arr[3];
+	int ret;
+
+	config.max_routes = MAX_ROUTES;
+	config.rib_ext_sz = 0;
+	config.default_nh = def_nh;
+	config.type = RTE_FIB_DUMMY;
+	config.flags = RTE_FIB_F_NETWORK_ORDER;
+
+	fib = rte_fib_create(__func__, SOCKET_ID_ANY, &config);
+	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
+
+	ret = rte_fib_add(fib, ip_be, 24, nh_set);
+	RTE_TEST_ASSERT(ret == 0, "Failed to add route\n");
+
+	ip_arr[0] = ip_be;
+	ip_arr[1] = rte_cpu_to_be_32(RTE_IPV4(192, 0, 2, 123));
+	ip_arr[2] = ip_miss_be;
+
+	ret = rte_fib_lookup_bulk(fib, ip_arr, nh_arr, 3);
+	RTE_TEST_ASSERT(ret == 0, "Failed to lookup\n");
+	RTE_TEST_ASSERT(nh_arr[0] == nh_set,
+		"Failed to get proper nexthop for prefix\n");
+	RTE_TEST_ASSERT(nh_arr[1] == nh_set,
+		"Failed to get proper nexthop for covered IP\n");
+	RTE_TEST_ASSERT(nh_arr[2] == def_nh,
+		"Failed to get default nexthop for missing IP\n");
+
+	ret = rte_fib_delete(fib, ip_be, 24);
+	RTE_TEST_ASSERT(ret == 0, "Failed to delete route\n");
+
+	ret = rte_fib_lookup_bulk(fib, ip_arr, nh_arr, 1);
+	RTE_TEST_ASSERT(ret == 0, "Failed to lookup\n");
+	RTE_TEST_ASSERT(nh_arr[0] == def_nh,
+		"Failed to get default nexthop after delete\n");
+
+	rte_fib_free(fib);
+
+	/* repeat with DIR24_8 */
+	config.type = RTE_FIB_DIR24_8;
+	config.dir24_8.nh_sz = RTE_FIB_DIR24_8_4B;
+	config.dir24_8.num_tbl8 = MAX_TBL8;
+
+	fib = rte_fib_create(__func__, SOCKET_ID_ANY, &config);
+	RTE_TEST_ASSERT(fib != NULL, "Failed to create DIR24_8 FIB\n");
+
+	ret = rte_fib_add(fib, ip_be, 24, nh_set);
+	RTE_TEST_ASSERT(ret == 0, "Failed to add route\n");
+
+	ret = rte_fib_lookup_bulk(fib, ip_arr, nh_arr, 3);
+	RTE_TEST_ASSERT(ret == 0, "Failed to lookup\n");
+	RTE_TEST_ASSERT(nh_arr[0] == nh_set,
+		"Failed to get proper nexthop for prefix\n");
+	RTE_TEST_ASSERT(nh_arr[1] == nh_set,
+		"Failed to get proper nexthop for covered IP\n");
+	RTE_TEST_ASSERT(nh_arr[2] == def_nh,
+		"Failed to get default nexthop for missing IP\n");
+
+	ret = rte_fib_delete(fib, ip_be, 24);
+	RTE_TEST_ASSERT(ret == 0, "Failed to delete route\n");
+
+	rte_fib_free(fib);
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite fib_fast_tests = {
 	.suite_name = "fib autotest",
 	.setup = NULL,
@@ -600,6 +679,7 @@ static struct unit_test_suite fib_fast_tests = {
 	TEST_CASE(test_lookup),
 	TEST_CASE(test_invalid_rcu),
 	TEST_CASE(test_fib_rcu_sync_rw),
+	TEST_CASE(test_network_order),
 	TEST_CASES_END()
 	}
 };

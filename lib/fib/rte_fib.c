@@ -109,7 +109,7 @@ init_dataplane(struct rte_fib *fib, __rte_unused int socket_id,
 		if (fib->dp == NULL)
 			return -rte_errno;
 		fib->lookup = dir24_8_get_lookup_fn(fib->dp,
-			RTE_FIB_LOOKUP_DEFAULT, !!(fib->flags & RTE_FIB_F_LOOKUP_NETWORK_ORDER));
+			RTE_FIB_LOOKUP_DEFAULT, !!(fib->flags & RTE_FIB_F_NETWORK_ORDER));
 		fib->modify = dir24_8_modify;
 		return 0;
 	default:
@@ -172,6 +172,8 @@ rte_fib_create(const char *name, int socket_id, struct rte_fib_conf *conf)
 
 	rib_conf.ext_sz = conf->rib_ext_sz;
 	rib_conf.max_nodes = conf->max_routes * 2;
+	rib_conf.flags = (conf->flags & RTE_FIB_F_NETWORK_ORDER) ?
+		RTE_RIB_F_NETWORK_ORDER : 0;
 
 	rib = rte_rib_create(name, socket_id, &rib_conf);
 	if (rib == NULL) {
@@ -340,7 +342,7 @@ rte_fib_select_lookup(struct rte_fib *fib,
 	switch (fib->type) {
 	case RTE_FIB_DIR24_8:
 		fn = dir24_8_get_lookup_fn(fib->dp, type,
-			!!(fib->flags & RTE_FIB_F_LOOKUP_NETWORK_ORDER));
+			!!(fib->flags & RTE_FIB_F_NETWORK_ORDER));
 		if (fn == NULL)
 			return -EINVAL;
 		fib->lookup = fn;

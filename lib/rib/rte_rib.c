@@ -8,6 +8,7 @@
 #include <sys/queue.h>
 
 #include <eal_export.h>
+#include <rte_byteorder.h>
 #include <rte_eal_memconfig.h>
 #include <rte_errno.h>
 #include <rte_malloc.h>
@@ -28,6 +29,8 @@ static struct rte_tailq_elem rte_rib_tailq = {
 EAL_REGISTER_TAILQ(rte_rib_tailq)
 
 #define RTE_RIB_VALID_NODE	1
+#define RIB_NODE_NET_ORDER	2
+#define RTE_RIB_ALLOWED_FLAGS	(RTE_RIB_F_NETWORK_ORDER)
 /* Maximum depth value possible for IPv4 RIB. */
 #define RIB_MAXDEPTH		32
 /* Maximum length of a RIB name. */
@@ -51,6 +54,7 @@ struct rte_rib {
 	uint32_t		cur_nodes;
 	uint32_t		cur_routes;
 	uint32_t		max_nodes;
+	unsigned int		flags;
 };
 
 static inline bool
@@ -112,6 +116,8 @@ rte_rib_lookup(struct rte_rib *rib, uint32_t ip)
 		rte_errno = EINVAL;
 		return NULL;
 	}
+	if (rib->flags & RTE_RIB_F_NETWORK_ORDER)
+		ip = rte_be_to_cpu_32(ip);
 
 	cur = rib->tree;
 	while ((cur != NULL) && is_covered(ip, cur->ip, cur->depth)) {
@@ -162,6 +168,8 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 		rte_errno = EINVAL;
 		return NULL;
 	}
+	if (rib->flags & RTE_RIB_F_NETWORK_ORDER)
+		ip = rte_be_to_cpu_32(ip);
 	ip &= rte_rib_depth_to_mask(depth);
 
 	return __rib_lookup_exact(rib, ip, depth);
@@ -172,17 +180,11 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth)
  *  for a given in args ip/depth prefix
  *  last = NULL means the first invocation
  */
-RTE_EXPORT_SYMBOL(rte_rib_get_nxt)
-struct rte_rib_node *
-rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
+static struct rte_rib_node *
+__rib_get_nxt(struct rte_rib *rib, uint32_t ip,
 	uint8_t depth, struct rte_rib_node *last, int flag)
 {
 	struct rte_rib_node *tmp, *prev = NULL;
-
-	if (unlikely(rib == NULL || depth > RIB_MAXDEPTH)) {
-		rte_errno = EINVAL;
-		return NULL;
-	}
 
 	if (last == NULL) {
 		tmp = rib->tree;
@@ -213,13 +215,28 @@ rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
 	return prev;
 }
 
-RTE_EXPORT_SYMBOL(rte_rib_remove)
-void
-rte_rib_remove(struct rte_rib *rib, uint32_t ip, uint8_t depth)
+RTE_EXPORT_SYMBOL(rte_rib_get_nxt)
+struct rte_rib_node *
+rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
+	uint8_t depth, struct rte_rib_node *last, int flag)
+{
+	if (unlikely(rib == NULL || depth > RIB_MAXDEPTH)) {
+		rte_errno = EINVAL;
+		return NULL;
+	}
+	if (rib->flags & RTE_RIB_F_NETWORK_ORDER)
+		ip = rte_be_to_cpu_32(ip);
+
+	return __rib_get_nxt(rib, ip, depth, last, flag);
+}
+
+static void
+__rib_remove(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 {
 	struct rte_rib_node *cur, *prev, *child;
 
-	cur = rte_rib_lookup_exact(rib, ip, depth);
+	ip &= rte_rib_depth_to_mask(depth);
+	cur = __rib_lookup_exact(rib, ip, depth);
 	if (cur == NULL)
 		return;
 
@@ -246,6 +263,17 @@ rte_rib_remove(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 	}
 }
 
+RTE_EXPORT_SYMBOL(rte_rib_remove)
+void
+rte_rib_remove(struct rte_rib *rib, uint32_t ip, uint8_t depth)
+{
+	if (unlikely(rib == NULL || depth > RIB_MAXDEPTH))
+		return;
+	if (rib->flags & RTE_RIB_F_NETWORK_ORDER)
+		ip = rte_be_to_cpu_32(ip);
+	__rib_remove(rib, ip, depth);
+}
+
 RTE_EXPORT_SYMBOL(rte_rib_insert)
 struct rte_rib_node *
 rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
@@ -257,10 +285,16 @@ rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 	int d = 0;
 	uint32_t common_prefix;
 	uint8_t common_depth;
+	uint8_t net_order = 0;
 
 	if (unlikely(rib == NULL || depth > RIB_MAXDEPTH)) {
 		rte_errno = EINVAL;
 		return NULL;
+	}
+
+	if (rib->flags & RTE_RIB_F_NETWORK_ORDER) {
+		ip = rte_be_to_cpu_32(ip);
+		net_order = RIB_NODE_NET_ORDER;
 	}
 
 	tmp = &rib->tree;
@@ -281,7 +315,7 @@ rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 	new_node->parent = NULL;
 	new_node->ip = ip;
 	new_node->depth = depth;
-	new_node->flag = RTE_RIB_VALID_NODE;
+	new_node->flag = RTE_RIB_VALID_NODE | net_order;
 
 	/* traverse down the tree to find matching node or closest matching */
 	while (1) {
@@ -300,7 +334,7 @@ rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 		 */
 		if ((ip == (*tmp)->ip) && (depth == (*tmp)->depth)) {
 			node_free(rib, new_node);
-			(*tmp)->flag |= RTE_RIB_VALID_NODE;
+			(*tmp)->flag |= RTE_RIB_VALID_NODE | net_order;
 			++rib->cur_routes;
 			return *tmp;
 		}
@@ -336,7 +370,7 @@ rte_rib_insert(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 		}
 		common_node->ip = common_prefix;
 		common_node->depth = common_depth;
-		common_node->flag = 0;
+		common_node->flag = net_order;
 		common_node->parent = (*tmp)->parent;
 		new_node->parent = common_node;
 		(*tmp)->parent = common_node;
@@ -362,6 +396,8 @@ rte_rib_get_ip(const struct rte_rib_node *node, uint32_t *ip)
 		return -1;
 	}
 	*ip = node->ip;
+	if (node->flag & RIB_NODE_NET_ORDER)
+		*ip = rte_cpu_to_be_32(*ip);
 	return 0;
 }
 
@@ -419,7 +455,8 @@ rte_rib_create(const char *name, int socket_id, const struct rte_rib_conf *conf)
 	struct rte_mempool *node_pool;
 
 	/* Check user arguments. */
-	if (unlikely(name == NULL || conf == NULL || conf->max_nodes <= 0)) {
+	if (unlikely(name == NULL || conf == NULL || conf->max_nodes <= 0 ||
+			(conf->flags & ~RTE_RIB_ALLOWED_FLAGS))) {
 		rte_errno = EINVAL;
 		return NULL;
 	}
@@ -473,6 +510,7 @@ rte_rib_create(const char *name, int socket_id, const struct rte_rib_conf *conf)
 	rte_strlcpy(rib->name, name, sizeof(rib->name));
 	rib->tree = NULL;
 	rib->max_nodes = conf->max_nodes;
+	rib->flags = conf->flags;
 	rib->node_pool = node_pool;
 	te->data = (void *)rib;
 	TAILQ_INSERT_TAIL(rib_list, te, next);
@@ -541,9 +579,9 @@ rte_rib_free(struct rte_rib *rib)
 
 	rte_mcfg_tailq_write_unlock();
 
-	while ((tmp = rte_rib_get_nxt(rib, 0, 0, tmp,
+	while ((tmp = __rib_get_nxt(rib, 0, 0, tmp,
 			RTE_RIB_GET_NXT_ALL)) != NULL)
-		rte_rib_remove(rib, tmp->ip, tmp->depth);
+		__rib_remove(rib, tmp->ip, tmp->depth);
 
 	rte_mempool_free(rib->node_pool);
 	rte_free(rib);

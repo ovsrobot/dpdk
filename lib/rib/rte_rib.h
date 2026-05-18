@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <rte_byteorder.h>
 #include <rte_common.h>
 
 #ifdef __cplusplus
@@ -36,6 +37,9 @@ enum {
 struct rte_rib;
 struct rte_rib_node;
 
+/** If set, all user-facing IPv4 addresses are in network byte order */
+#define RTE_RIB_F_NETWORK_ORDER 1
+
 /** RIB configuration structure */
 struct rte_rib_conf {
 	/**
@@ -46,6 +50,7 @@ struct rte_rib_conf {
 	size_t	ext_sz;
 	/* size of rte_rib_node's pool */
 	int	max_nodes;
+	unsigned int flags; /**< Optional feature flags from RTE_RIB_F_* */
 };
 
 /**

@@ -414,24 +414,33 @@ install_to_fib(struct dir24_8_tbl *dp, uint32_t ledge, uint32_t redge,
 	return 0;
 }
 
+/*
+ * modify_fib operates in host byte order. When the RIB carries the
+ * network-order flag, rte_rib_get_nxt/rte_rib_get_ip return addresses
+ * in network order, so this helper converts them back to host order
+ * for DIR24_8 table operations.
+ */
 static int
 modify_fib(struct dir24_8_tbl *dp, struct rte_rib *rib, uint32_t ip,
 	uint8_t depth, uint64_t next_hop)
 {
 	struct rte_rib_node *tmp = NULL;
 	uint32_t ledge, redge, tmp_ip;
+	uint32_t rib_ip = dp->be_addr ? rte_cpu_to_be_32(ip) : ip;
 	int ret;
 	uint8_t tmp_depth;
 
 	ledge = ip;
 	do {
-		tmp = rte_rib_get_nxt(rib, ip, depth, tmp,
+		tmp = rte_rib_get_nxt(rib, rib_ip, depth, tmp,
 			RTE_RIB_GET_NXT_COVER);
 		if (tmp != NULL) {
 			rte_rib_get_depth(tmp, &tmp_depth);
 			if (tmp_depth == depth)
 				continue;
 			rte_rib_get_ip(tmp, &tmp_ip);
+			if (dp->be_addr)
+				tmp_ip = rte_be_to_cpu_32(tmp_ip);
 			redge = tmp_ip & rte_rib_depth_to_mask(tmp_depth);
 			if (ledge == redge) {
 				ledge = redge +
@@ -475,6 +484,7 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 	struct rte_rib_node *parent;
 	int ret = 0;
 	uint64_t par_nh, node_nh;
+	uint32_t ip_he;
 
 	if ((fib == NULL) || (depth > RTE_FIB_MAXDEPTH))
 		return -EINVAL;
@@ -486,7 +496,13 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 	if (next_hop > get_max_nh(dp->nh_sz))
 		return -EINVAL;
 
-	ip &= rte_rib_depth_to_mask(depth);
+	/*
+	 * The RIB API handles byte order conversion when the
+	 * network-order flag is set. DIR24_8 table operations
+	 * require host-order addresses.
+	 */
+	ip_he = dp->be_addr ? rte_be_to_cpu_32(ip) : ip;
+	ip_he &= rte_rib_depth_to_mask(depth);
 
 	node = rte_rib_lookup_exact(rib, ip, depth);
 	switch (op) {
@@ -495,7 +511,7 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 			rte_rib_get_nh(node, &node_nh);
 			if (node_nh == next_hop)
 				return 0;
-			ret = modify_fib(dp, rib, ip, depth, next_hop);
+			ret = modify_fib(dp, rib, ip_he, depth, next_hop);
 			if (ret == 0)
 				rte_rib_set_nh(node, next_hop);
 			return 0;
@@ -518,7 +534,7 @@ dir24_8_modify(struct rte_fib *fib, uint32_t ip, uint8_t depth,
 			if (par_nh == next_hop)
 				goto successfully_added;
 		}
-		ret = modify_fib(dp, rib, ip, depth, next_hop);
+		ret = modify_fib(dp, rib, ip_he, depth, next_hop);
 		if (ret != 0) {
 			rte_rib_remove(rib, ip, depth);
 			return ret;
@@ -536,9 +552,9 @@ successfully_added:
 			rte_rib_get_nh(parent, &par_nh);
 			rte_rib_get_nh(node, &node_nh);
 			if (par_nh != node_nh)
-				ret = modify_fib(dp, rib, ip, depth, par_nh);
+				ret = modify_fib(dp, rib, ip_he, depth, par_nh);
 		} else
-			ret = modify_fib(dp, rib, ip, depth, dp->def_nh);
+			ret = modify_fib(dp, rib, ip_he, depth, dp->def_nh);
 		if (ret == 0) {
 			rte_rib_remove(rib, ip, depth);
 			if (depth > 24) {
@@ -606,6 +622,7 @@ dir24_8_create(const char *name, int socket_id, struct rte_fib_conf *fib_conf)
 	dp->def_nh = def_nh;
 	dp->nh_sz = nh_sz;
 	dp->number_tbl8s = num_tbl8;
+	dp->be_addr = !!(fib_conf->flags & RTE_FIB_F_NETWORK_ORDER);
 
 	snprintf(mem_name, sizeof(mem_name), "TBL8_idxes_%p", dp);
 	dp->tbl8_idxes = rte_zmalloc_socket(mem_name,

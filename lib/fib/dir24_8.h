@@ -33,6 +33,7 @@ struct dir24_8_tbl {
 	uint32_t	rsvd_tbl8s;	/**< Number of reserved tbl8s */
 	uint32_t	cur_tbl8s;	/**< Current number of tbl8s */
 	enum rte_fib_dir24_8_nh_sz	nh_sz;	/**< Size of nexthop entry */
+	bool		be_addr;	/**< User addresses in network order */
 	/* RCU config. */
 	enum rte_fib_qsbr_mode rcu_mode;/* Blocking, defer queue. */
 	struct rte_rcu_qsbr *v;		/* RCU QSBR variable. */
