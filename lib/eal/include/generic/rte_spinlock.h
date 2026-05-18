@@ -195,7 +195,7 @@ rte_spinlock_trylock_tm(rte_spinlock_t *sl)
 /**
  * The rte_spinlock_recursive_t type.
  */
-typedef struct {
+typedef struct __rte_capability("recursive_spinlock") {
 	rte_spinlock_t sl; /**< the actual spinlock */
 	volatile int user; /**< core id using lock, -1 for unused */
 	volatile int count; /**< count of time this lock has been called */
@@ -218,6 +218,32 @@ static inline void rte_spinlock_recursive_init(rte_spinlock_recursive_t *slr)
 	slr->user = -1;
 	slr->count = 0;
 }
+
+/*
+ * TSA models the recursive spinlock as a single capability: callers
+ * get the same __rte_guarded_by() checking as the non-recursive API.
+ * Nested acquires by the owner are invisible to the analyzer — TSA
+ * has no model for re-entrance, so mismatched recursive lock/unlock
+ * counts remain a runtime concern.
+ *
+ * The definitions use __rte_no_thread_safety_analysis because the
+ * inner rte_spinlock_lock() is conditional on the owner check, which
+ * TSA cannot reason about. Annotations on the declarations are what
+ * callers see.
+ */
+
+static inline void
+rte_spinlock_recursive_lock(rte_spinlock_recursive_t *slr)
+	__rte_acquire_capability(slr);
+
+static inline void
+rte_spinlock_recursive_unlock(rte_spinlock_recursive_t *slr)
+	__rte_release_capability(slr);
+
+__rte_warn_unused_result
+static inline int
+rte_spinlock_recursive_trylock(rte_spinlock_recursive_t *slr)
+	__rte_try_acquire_capability(true, slr);
 
 /**
  * Take the recursive spinlock.
