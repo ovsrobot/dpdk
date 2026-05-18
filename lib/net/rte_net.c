@@ -371,22 +371,36 @@ uint32_t rte_net_get_ptype(const struct rte_mbuf *m,
 
 	} else if ((proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_MPLS)) ||
 		(proto == rte_cpu_to_be_16(RTE_ETHER_TYPE_MPLSM))) {
-		unsigned int i;
 		const struct rte_mpls_hdr *mh;
 		struct rte_mpls_hdr mh_copy;
+		const uint8_t *nimble;
+		uint8_t nimble_copy;
 
-#define MAX_MPLS_HDR 5
-		for (i = 0; i < MAX_MPLS_HDR; i++) {
-			mh = rte_pktmbuf_read(m, off + (i * sizeof(*mh)),
-				sizeof(*mh), &mh_copy);
+		pkt_type = RTE_PTYPE_L2_ETHER_MPLS;
+
+		/* consume all labels until bottom of stack is reached */
+		do {
+			mh = rte_pktmbuf_read(m, off, sizeof(*mh), &mh_copy);
 			if (unlikely(mh == NULL))
 				return pkt_type;
-		}
-		if (i == MAX_MPLS_HDR)
+			off += sizeof(*mh);
+			hdr_lens->l2_len += sizeof(*mh);
+		} while (!mh->bs);
+
+		/* try to guess what is the payload based on the first 4 bits */
+		nimble = rte_pktmbuf_read(m, off, sizeof(*nimble), &nimble_copy);
+		if (nimble == NULL)
 			return pkt_type;
-		pkt_type = RTE_PTYPE_L2_ETHER_MPLS;
-		hdr_lens->l2_len += (sizeof(*mh) * i);
-		return pkt_type;
+		switch (*nimble & 0xf0) {
+		case 0x40:
+			proto = RTE_BE16(RTE_ETHER_TYPE_IPV4);
+			break;
+		case 0x60:
+			proto = RTE_BE16(RTE_ETHER_TYPE_IPV6);
+			break;
+		default:
+			return pkt_type;
+		}
 	}
 
 l3:
