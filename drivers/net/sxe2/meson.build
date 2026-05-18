@@ -13,6 +13,10 @@ deps += ['common_sxe2', 'hash','cryptodev','security']
 
 includes += include_directories('../../common/sxe2')
 
+if arch_subdir == 'x86'
+        sources += files('sxe2_txrx_vec_sse.c')
+endif
+
 sources += files(
         'sxe2_ethdev.c',
         'sxe2_cmd_chnl.c',
@@ -22,6 +26,7 @@ sources += files(
         'sxe2_rx.c',
         'sxe2_txrx_poll.c',
         'sxe2_txrx.c',
+        'sxe2_txrx_vec.c',
 )
 
 allow_internal_get_api = true
