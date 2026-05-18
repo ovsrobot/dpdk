@@ -46,6 +46,7 @@ enum sxe2_itr_idx {
 };
 
 #define SXE2_ETH_ALEN 6
+
 #define SXE2_BITS_PER_BYTE 8
 #define BITS_TO_LONGS(nr) SXE2_DIV_ROUND_UP(nr, SXE2_BITS_PER_BYTE * sizeof(unsigned long))
 #define BITS_TO_U32(nr) SXE2_DIV_ROUND_UP(nr, 32)
