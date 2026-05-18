@@ -186,6 +186,14 @@ rte_rib6_lookup_exact(struct rte_rib6 *rib,
 	return NULL;
 }
 
+static bool
+depth_match(struct rte_rib6_node *node, uint8_t depth, enum rte_rib6_nxt_mode mode)
+{
+	if (mode == RTE_RIB6_GET_NXT_ALL_TOP)
+		return node->depth >= depth;
+	return node->depth > depth;
+}
+
 /*
  *  Traverses on subtree and retrieves more specific routes
  *  for a given in args ip/depth prefix
@@ -219,7 +227,7 @@ rte_rib6_get_nxt(struct rte_rib6 *rib,
 			tmp = tmp->parent;
 			if (is_valid_node(tmp) &&
 					(rte_ipv6_addr_eq_prefix(&tmp->ip, &tmp_ip, depth) &&
-					(tmp->depth > depth)))
+					(depth_match(tmp, depth, mode))))
 				return tmp;
 		}
 		tmp = (tmp->parent != NULL) ? tmp->parent->right : NULL;
@@ -227,7 +235,7 @@ rte_rib6_get_nxt(struct rte_rib6 *rib,
 	while (tmp) {
 		if (is_valid_node(tmp) &&
 				(rte_ipv6_addr_eq_prefix(&tmp->ip, &tmp_ip, depth) &&
-				(tmp->depth > depth))) {
+				(depth_match(tmp, depth, mode)))) {
 			prev = tmp;
 			if (mode == RTE_RIB6_GET_NXT_COVER)
 				return prev;

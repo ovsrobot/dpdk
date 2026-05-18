@@ -300,6 +300,7 @@ test_tree_traversal(void)
 	uint32_t ip1 = RTE_IPV4(10, 10, 10, 0);
 	uint32_t ip2 = RTE_IPV4(10, 10, 130, 80);
 	uint8_t depth = 30;
+	unsigned int num;
 
 	config.max_nodes = MAX_RULES;
 	config.ext_sz = 0;
@@ -313,10 +314,25 @@ test_tree_traversal(void)
 	node = rte_rib_insert(rib, ip2, depth);
 	RTE_TEST_ASSERT(node != NULL, "Failed to insert rule\n");
 
+	node = rte_rib_insert(rib, 0, 0);
+	RTE_TEST_ASSERT(node != NULL, "Failed to insert default rule\n");
+
 	node = NULL;
 	node = rte_rib_get_nxt(rib, RTE_IPV4(10, 10, 130, 0), 24, node,
 			RTE_RIB_GET_NXT_ALL);
 	RTE_TEST_ASSERT(node != NULL, "Failed to get rib_node\n");
+
+	num = 0;
+	node = NULL;
+	while ((node = rte_rib_get_nxt(rib, 0, 0, node, RTE_RIB_GET_NXT_ALL)) != NULL)
+		num++;
+	RTE_TEST_ASSERT(num == 2, "Invalid number of routes\n");
+
+	num = 0;
+	node = NULL;
+	while ((node = rte_rib_get_nxt(rib, 0, 0, node, RTE_RIB_GET_NXT_ALL_TOP)) != NULL)
+		num++;
+	RTE_TEST_ASSERT(num == 3, "Default route not returned by rte_rib_get_nxt\n");
 
 	rte_rib_free(rib);
 

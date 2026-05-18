@@ -300,7 +300,9 @@ test_tree_traversal(void)
 	struct rte_ipv6_addr ip = RTE_IPV6(0x0a00, 0x0282, 0, 0, 0, 0, 0, 0);
 	struct rte_ipv6_addr ip1 = RTE_IPV6(0x0a00, 0x0200, 0, 0, 0, 0, 0, 0);
 	struct rte_ipv6_addr ip2 = RTE_IPV6(0x0a00, 0x0282, 0, 0, 0, 0, 0, 0x0050);
+	struct rte_ipv6_addr unspec = RTE_IPV6(0, 0, 0, 0, 0, 0, 0, 0);
 	uint8_t depth = 126;
+	unsigned int num;
 
 	config.max_nodes = MAX_RULES;
 	config.ext_sz = 0;
@@ -312,10 +314,24 @@ test_tree_traversal(void)
 	RTE_TEST_ASSERT(node != NULL, "Failed to insert rule\n");
 	node = rte_rib6_insert(rib, &ip2, depth);
 	RTE_TEST_ASSERT(node != NULL, "Failed to insert rule\n");
+	node = rte_rib6_insert(rib, &unspec, 0);
+	RTE_TEST_ASSERT(node != NULL, "Failed to insert default route\n");
 
 	node = NULL;
 	node = rte_rib6_get_nxt(rib, &ip, 32, node, RTE_RIB6_GET_NXT_ALL);
 	RTE_TEST_ASSERT(node != NULL, "Failed to get rib_node\n");
+
+	num = 0;
+	node = NULL;
+	while ((node = rte_rib6_get_nxt(rib, 0, 0, node, RTE_RIB6_GET_NXT_ALL)) != NULL)
+		num++;
+	RTE_TEST_ASSERT(num == 2, "Invalid number of routes\n");
+
+	num = 0;
+	node = NULL;
+	while ((node = rte_rib6_get_nxt(rib, 0, 0, node, RTE_RIB6_GET_NXT_ALL_TOP)) != NULL)
+		num++;
+	RTE_TEST_ASSERT(num == 3, "Default route not returned by rte_rib6_get_nxt\n");
 
 	rte_rib6_free(rib);
 

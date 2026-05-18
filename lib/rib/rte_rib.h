@@ -31,6 +31,8 @@ enum rte_rib_nxt_mode {
 	RTE_RIB_GET_NXT_ALL,
 	/** get first matched subroutes in a RIB tree, excluding any exact match top-level route */
 	RTE_RIB_GET_NXT_COVER,
+	/** get all subroutes in a RIB tree, including the exact match top-level route, if any */
+	RTE_RIB_GET_NXT_ALL_TOP,
 };
 
 struct rte_rib;
@@ -125,6 +127,8 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth);
  *   get all prefixes from subtrie
  *  -RTE_RIB_GET_NXT_COVER
  *   get only first more specific prefix even if it have more specifics
+ *  -RTE_RIB_GET_NXT_ALL_TOP
+ *   get the top-level exact matching prefix, if any
  * @return
  *  pointer to the next more specific prefix
  *  NULL if there is no prefixes left
