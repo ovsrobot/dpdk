@@ -175,7 +175,7 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth)
 RTE_EXPORT_SYMBOL(rte_rib_get_nxt)
 struct rte_rib_node *
 rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
-	uint8_t depth, struct rte_rib_node *last, int flag)
+	uint8_t depth, struct rte_rib_node *last, enum rte_rib_nxt_mode mode)
 {
 	struct rte_rib_node *tmp, *prev = NULL;
 
@@ -205,7 +205,7 @@ rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip,
 				(is_covered(tmp->ip, ip, depth) &&
 				(tmp->depth > depth))) {
 			prev = tmp;
-			if (flag == RTE_RIB_GET_NXT_COVER)
+			if (mode == RTE_RIB_GET_NXT_COVER)
 				return prev;
 		}
 		tmp = (tmp->left) ? tmp->left : tmp->right;

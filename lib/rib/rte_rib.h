@@ -26,11 +26,11 @@ extern "C" {
 /**
  * rte_rib_get_nxt() flags
  */
-enum {
-	/** flag to get all subroutes in a RIB tree */
+enum rte_rib_nxt_mode {
+	/** get all subroutes in a RIB tree, excluding any exact match top-level route */
 	RTE_RIB_GET_NXT_ALL,
-	/** flag to get first matched subroutes in a RIB tree */
-	RTE_RIB_GET_NXT_COVER
+	/** get first matched subroutes in a RIB tree, excluding any exact match top-level route */
+	RTE_RIB_GET_NXT_COVER,
 };
 
 struct rte_rib;
@@ -120,7 +120,7 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth);
  *   pointer to the last returned prefix to get next prefix
  *   or
  *   NULL to get first more specific prefix
- * @param flag
+ * @param mode
  *  -RTE_RIB_GET_NXT_ALL
  *   get all prefixes from subtrie
  *  -RTE_RIB_GET_NXT_COVER
@@ -131,7 +131,7 @@ rte_rib_lookup_exact(struct rte_rib *rib, uint32_t ip, uint8_t depth);
  */
 struct rte_rib_node *
 rte_rib_get_nxt(struct rte_rib *rib, uint32_t ip, uint8_t depth,
-	struct rte_rib_node *last, int flag);
+	struct rte_rib_node *last, enum rte_rib_nxt_mode mode);
 
 /**
  * Remove prefix from the RIB

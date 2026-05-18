@@ -25,13 +25,13 @@ extern "C" {
 #define RTE_RIB6_IPV6_ADDR_SIZE (RTE_DEPRECATED(RTE_RIB6_IPV6_ADDR_SIZE) RTE_IPV6_ADDR_SIZE)
 
 /**
- * rte_rib6_get_nxt() flags
+ * rte_rib6_get_nxt() mode
  */
-enum {
-	/** flag to get all subroutes in a RIB tree */
+enum rte_rib6_nxt_mode {
+	/** get all subroutes in a RIB tree, excluding any exact match top-level route */
 	RTE_RIB6_GET_NXT_ALL,
-	/** flag to get first matched subroutes in a RIB tree */
-	RTE_RIB6_GET_NXT_COVER
+	/** get first matched subroutes in a RIB tree, excluding any exact match top-level route */
+	RTE_RIB6_GET_NXT_COVER,
 };
 
 struct rte_rib6;
@@ -179,7 +179,7 @@ rte_rib6_lookup_exact(struct rte_rib6 *rib,
  *   pointer to the last returned prefix to get next prefix
  *   or
  *   NULL to get first more specific prefix
- * @param flag
+ * @param mode
  *  -RTE_RIB6_GET_NXT_ALL
  *   get all prefixes from subtrie
  *  -RTE_RIB6_GET_NXT_COVER
@@ -191,7 +191,7 @@ rte_rib6_lookup_exact(struct rte_rib6 *rib,
 struct rte_rib6_node *
 rte_rib6_get_nxt(struct rte_rib6 *rib,
 	const struct rte_ipv6_addr *ip,
-	uint8_t depth, struct rte_rib6_node *last, int flag);
+	uint8_t depth, struct rte_rib6_node *last, enum rte_rib6_nxt_mode mode);
 
 /**
  * Remove prefix from the RIB

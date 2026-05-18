@@ -195,7 +195,7 @@ RTE_EXPORT_SYMBOL(rte_rib6_get_nxt)
 struct rte_rib6_node *
 rte_rib6_get_nxt(struct rte_rib6 *rib,
 	const struct rte_ipv6_addr *ip,
-	uint8_t depth, struct rte_rib6_node *last, int flag)
+	uint8_t depth, struct rte_rib6_node *last, enum rte_rib6_nxt_mode mode)
 {
 	struct rte_rib6_node *tmp, *prev = NULL;
 	struct rte_ipv6_addr tmp_ip;
@@ -229,7 +229,7 @@ rte_rib6_get_nxt(struct rte_rib6 *rib,
 				(rte_ipv6_addr_eq_prefix(&tmp->ip, &tmp_ip, depth) &&
 				(tmp->depth > depth))) {
 			prev = tmp;
-			if (flag == RTE_RIB6_GET_NXT_COVER)
+			if (mode == RTE_RIB6_GET_NXT_COVER)
 				return prev;
 		}
 		tmp = (tmp->left != NULL) ? tmp->left : tmp->right;
