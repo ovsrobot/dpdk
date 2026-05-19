@@ -334,20 +334,6 @@ graph_mem_fixup_secondary(struct rte_graph *graph)
 	return graph_mem_fixup_node_ctx(graph);
 }
 
-static bool
-graph_src_node_avail(struct graph *graph)
-{
-	struct graph_node *graph_node;
-
-	STAILQ_FOREACH(graph_node, &graph->node_list, next)
-		if ((graph_node->node->flags & RTE_NODE_SOURCE_F) &&
-		    (graph_node->node->lcore_id == RTE_MAX_LCORE ||
-		     graph->lcore_id == graph_node->node->lcore_id))
-			return true;
-
-	return false;
-}
-
 RTE_EXPORT_SYMBOL(rte_graph_model_mcore_dispatch_core_bind)
 int
 rte_graph_model_mcore_dispatch_core_bind(rte_graph_t id, int lcore)
@@ -375,9 +361,8 @@ rte_graph_model_mcore_dispatch_core_bind(rte_graph_t id, int lcore)
 	graph->graph->dispatch.lcore_id = graph->lcore_id;
 	graph->socket = rte_lcore_to_socket_id(lcore);
 
-	/* check the availability of source node */
-	if (!graph_src_node_avail(graph))
-		graph->graph->head = 0;
+	/* Rebuild source bitmap with only source nodes bound to this lcore */
+	graph_src_bitmap_rebuild(graph);
 
 	return 0;
 

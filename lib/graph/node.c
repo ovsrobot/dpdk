@@ -153,6 +153,7 @@ __rte_node_register(const struct rte_node_register *reg)
 	if (rte_strscpy(node->name, reg->name, RTE_NODE_NAMESIZE) < 0)
 		goto free_xstat;
 	node->flags = reg->flags;
+	node->priority = reg->priority;
 	node->process = reg->process;
 	node->init = reg->init;
 	node->fini = reg->fini;
@@ -216,6 +217,7 @@ node_clone(struct node *node, const char *name)
 
 	/* Clone the source node */
 	reg->flags = node->flags;
+	reg->priority = node->priority;
 	reg->process = node->process;
 	reg->init = node->init;
 	reg->fini = node->fini;
