@@ -92,7 +92,7 @@ iavf_fsub_create(struct iavf_adapter *ad, struct rte_flow *flow,
 		goto free_entry;
 	}
 
-	rte_memcpy(rule, filter, sizeof(*rule));
+	memcpy(rule, filter, sizeof(*rule));
 	flow->rule = rule;
 
 	rte_free(meta);
@@ -280,9 +280,9 @@ iavf_fsub_parse_pattern(const struct rte_flow_item pattern[],
 					input_set_byte += 2;
 				}
 
-				rte_memcpy(hdr1->buffer_spec, eth_spec,
+				memcpy(hdr1->buffer_spec, eth_spec,
 					   sizeof(struct rte_ether_hdr));
-				rte_memcpy(hdr1->buffer_mask, eth_mask,
+				memcpy(hdr1->buffer_mask, eth_mask,
 					   sizeof(struct rte_ether_hdr));
 			} else {
 				/* flow subscribe filter will add dst mac in kernel */
@@ -333,9 +333,9 @@ iavf_fsub_parse_pattern(const struct rte_flow_item pattern[],
 					input_set_byte++;
 				}
 
-				rte_memcpy(hdr->buffer_spec, &ipv4_spec->hdr,
+				memcpy(hdr->buffer_spec, &ipv4_spec->hdr,
 					   sizeof(ipv4_spec->hdr));
-				rte_memcpy(hdr->buffer_mask, &ipv4_mask->hdr,
+				memcpy(hdr->buffer_mask, &ipv4_mask->hdr,
 					   sizeof(ipv4_spec->hdr));
 			}
 
@@ -396,9 +396,9 @@ iavf_fsub_parse_pattern(const struct rte_flow_item pattern[],
 					input_set_byte += 4;
 				}
 
-				rte_memcpy(hdr->buffer_spec, &ipv6_spec->hdr,
+				memcpy(hdr->buffer_spec, &ipv6_spec->hdr,
 					   sizeof(ipv6_spec->hdr));
-				rte_memcpy(hdr->buffer_mask, &ipv6_mask->hdr,
+				memcpy(hdr->buffer_mask, &ipv6_mask->hdr,
 					   sizeof(ipv6_spec->hdr));
 			}
 
@@ -433,9 +433,9 @@ iavf_fsub_parse_pattern(const struct rte_flow_item pattern[],
 					input_set_byte += 2;
 				}
 
-				rte_memcpy(hdr->buffer_spec, &udp_spec->hdr,
+				memcpy(hdr->buffer_spec, &udp_spec->hdr,
 					   sizeof(udp_spec->hdr));
-				rte_memcpy(hdr->buffer_mask, &udp_mask->hdr,
+				memcpy(hdr->buffer_mask, &udp_mask->hdr,
 					   sizeof(udp_mask->hdr));
 			}
 
@@ -474,9 +474,9 @@ iavf_fsub_parse_pattern(const struct rte_flow_item pattern[],
 					input_set_byte += 2;
 				}
 
-				rte_memcpy(hdr->buffer_spec, &tcp_spec->hdr,
+				memcpy(hdr->buffer_spec, &tcp_spec->hdr,
 					   sizeof(tcp_spec->hdr));
-				rte_memcpy(hdr->buffer_mask, &tcp_mask->hdr,
+				memcpy(hdr->buffer_mask, &tcp_mask->hdr,
 					   sizeof(tcp_mask->hdr));
 			}
 
@@ -506,9 +506,9 @@ iavf_fsub_parse_pattern(const struct rte_flow_item pattern[],
 					return -rte_errno;
 				}
 
-				rte_memcpy(hdr->buffer_spec, &vlan_spec->hdr,
+				memcpy(hdr->buffer_spec, &vlan_spec->hdr,
 					   sizeof(vlan_spec->hdr));
-				rte_memcpy(hdr->buffer_mask, &vlan_mask->hdr,
+				memcpy(hdr->buffer_mask, &vlan_mask->hdr,
 					   sizeof(vlan_mask->hdr));
 			}
 
