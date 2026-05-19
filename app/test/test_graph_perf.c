@@ -32,6 +32,7 @@ test_graph_perf_func(void)
 #define TEST_GRAPH_SRC_NAME	     "test_graph_perf_source"
 #define TEST_GRAPH_SRC_BRST_ONE_NAME "test_graph_perf_source_one"
 #define TEST_GRAPH_WRK_NAME	     "test_graph_perf_worker"
+#define TEST_GRAPH_WRK_HIPRIO_NAME   "test_graph_perf_worker_hiprio"
 #define TEST_GRAPH_SNK_NAME	     "test_graph_perf_sink"
 
 #define SOURCES(map)	     RTE_DIM(map)
@@ -224,6 +225,15 @@ static struct rte_node_register test_graph_perf_worker = {
 };
 
 RTE_NODE_REGISTER(test_graph_perf_worker);
+
+static struct rte_node_register test_graph_perf_worker_hiprio = {
+	.name = TEST_GRAPH_WRK_HIPRIO_NAME,
+	.process = test_perf_node_worker,
+	.init = test_node_ctx_init,
+	.priority = -1,
+};
+
+RTE_NODE_REGISTER(test_graph_perf_worker_hiprio);
 
 /* Last node in graph a.k.a sink node */
 static uint16_t
@@ -1083,7 +1093,7 @@ graph_init_diamond(void)
 	fan_out = graph_node_get(TEST_GRAPH_WRK_NAME, "fan");
 	/* converge must be edge 0 from fan_out so FIFO visits it first */
 	converge = graph_node_get(TEST_GRAPH_WRK_NAME, "conv");
-	branch = graph_node_get(TEST_GRAPH_WRK_NAME, "br");
+	branch = graph_node_get(TEST_GRAPH_WRK_HIPRIO_NAME, "br");
 	snk = graph_node_get(TEST_GRAPH_SNK_NAME, "0");
 
 	if (src == RTE_NODE_ID_INVALID || fan_out == RTE_NODE_ID_INVALID ||

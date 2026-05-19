@@ -496,6 +496,7 @@ struct rte_node_register {
 	char name[RTE_NODE_NAMESIZE]; /**< Name of the node. */
 	uint64_t flags;		      /**< Node configuration flag. */
 #define RTE_NODE_SOURCE_F (1ULL << 0) /**< Node type is source. */
+	int16_t priority; /**< Scheduling priority (lower = visited first, default 0). */
 	rte_node_process_t process; /**< Node process function. */
 	rte_node_init_t init;       /**< Node init function. */
 	rte_node_fini_t fini;       /**< Node fini function. */
