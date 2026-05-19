@@ -661,6 +661,11 @@ int tfc_em_delete(struct tfc *tfcp, struct tfc_em_delete_parms *parms)
 			       &db_offset
 #endif
 			       );
+	if (rc != 0) {
+		PMD_DRV_LOG_LINE(ERR, "tfc_em_delete_raw() failed: %s",
+				 strerror(-rc));
+		return -EINVAL;
+	}
 
 	record_offset = REMOVE_POOL_FROM_OFFSET(pi.lkup_pool_sz_exp,
 						record_offset);
