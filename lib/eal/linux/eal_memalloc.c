@@ -30,6 +30,7 @@
 #include <rte_eal.h>
 #include <rte_memory.h>
 #include <rte_cycles.h>
+#include <rte_atomic.h>
 
 #include "eal_filesystem.h"
 #include "eal_internal_cfg.h"
@@ -600,7 +601,9 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	 * that is already there, so read the old value, and write itback.
 	 * kernel populates the page with zeroes initially.
 	 */
-	*(volatile int *)addr = *(volatile int *)addr;
+	int snapshot = *(volatile int *)addr;
+	while (!rte_atomic_compare_exchange_strong((volatile int *)addr, &snapshot, snapshot))
+		;
 
 	iova = rte_mem_virt2iova(addr);
 	if (iova == RTE_BAD_PHYS_ADDR) {
