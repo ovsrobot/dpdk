@@ -62,6 +62,24 @@ eth_dev_handle_port_list(const char *cmd __rte_unused,
 }
 
 static int
+eth_dev_handle_port_list_names(const char *cmd __rte_unused,
+		const char *params __rte_unused,
+		struct rte_tel_data *d)
+{
+	char id_str[RTE_TEL_MAX_STRING_LEN];
+	struct rte_eth_dev *dev;
+	int port_id;
+
+	rte_tel_data_start_dict(d);
+	RTE_ETH_FOREACH_DEV(port_id) {
+		dev = &rte_eth_devices[port_id];
+		sprintf(id_str, "%d", port_id);
+		rte_tel_data_add_dict_string(d, id_str, dev->data->name);
+	}
+	return 0;
+}
+
+static int
 eth_dev_parse_hide_zero(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
@@ -1548,6 +1566,9 @@ RTE_INIT(ethdev_init_telemetry)
 	rte_telemetry_register_cmd_arg("/ethdev/list",
 			eth_dev_telemetry_do, eth_dev_handle_port_list,
 			"Returns list of available ethdev ports. Takes no parameters");
+	rte_telemetry_register_cmd_arg("/ethdev/list_names",
+			eth_dev_telemetry_do, eth_dev_handle_port_list_names,
+			"Returns dict of available ethdev ports by ID-NAMEs. Takes no parameters");
 	rte_telemetry_register_cmd_arg("/ethdev/stats",
 			eth_dev_telemetry_do, eth_dev_handle_port_stats,
 			"Returns the common stats for a port. Parameters: int port_id");
