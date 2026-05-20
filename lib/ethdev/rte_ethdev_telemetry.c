@@ -53,11 +53,17 @@ eth_dev_handle_port_list(const char *cmd __rte_unused,
 		const char *params __rte_unused,
 		struct rte_tel_data *d)
 {
+	char id_name[RTE_TEL_MAX_STRING_LEN];
+	struct rte_eth_dev *dev;
 	int port_id;
 
-	rte_tel_data_start_array(d, RTE_TEL_INT_VAL);
-	RTE_ETH_FOREACH_DEV(port_id)
-		rte_tel_data_add_array_int(d, port_id);
+	rte_tel_data_start_array(d, RTE_TEL_STRING_VAL);
+	RTE_ETH_FOREACH_DEV(port_id) {
+		dev = &rte_eth_devices[port_id];
+		memset(id_name, 0, sizeof(id_name));
+		sprintf(id_name, "%d    %s", port_id, dev->data->name);
+		rte_tel_data_add_array_string(d, id_name);
+	}
 	return 0;
 }
 
