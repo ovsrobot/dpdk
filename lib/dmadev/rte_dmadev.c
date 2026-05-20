@@ -1157,6 +1157,27 @@ dmadev_handle_dev_list(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+dmadev_handle_dev_list_names(const char *cmd __rte_unused,
+		const char *params __rte_unused,
+		struct rte_tel_data *d)
+{
+	char id_str[RTE_TEL_MAX_STRING_LEN];
+	struct rte_dma_dev *dev;
+	int dev_id;
+
+	rte_tel_data_start_dict(d);
+	for (dev_id = 0; dev_id < dma_devices_max; dev_id++) {
+		if (!rte_dma_is_valid(dev_id))
+			continue;
+		dev = &rte_dma_devices[dev_id];
+		sprintf(id_str, "%d", dev_id);
+		rte_tel_data_add_dict_string(d, id_str, dev->data->dev_name);
+	}
+
+	return 0;
+}
+
 #define ADD_CAPA(td, dc, c) rte_tel_data_add_dict_int(td, dma_capability_name(c), !!(dc & c))
 
 static int
@@ -1309,6 +1330,8 @@ RTE_INIT(dmadev_init_telemetry)
 {
 	rte_telemetry_register_cmd("/dmadev/list", dmadev_handle_dev_list,
 			"Returns list of available dmadev devices by IDs. No parameters.");
+	rte_telemetry_register_cmd("/dmadev/list_names", dmadev_handle_dev_list_names,
+			"Returns dict of available dmadev devices by ID-NAMEs. No parameters.");
 	rte_telemetry_register_cmd("/dmadev/info", dmadev_handle_dev_info,
 			"Returns information for a dmadev. Parameters: int dev_id");
 	rte_telemetry_register_cmd("/dmadev/stats", dmadev_handle_dev_stats,
