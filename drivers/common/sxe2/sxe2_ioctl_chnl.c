@@ -158,3 +158,30 @@ sxe2_drv_dev_handshake(struct sxe2_common_device *cdev)
 l_end:
 	return ret;
 }
+
+RTE_EXPORT_INTERNAL_SYMBOL(sxe2_drv_dev_munmap)
+int32_t
+sxe2_drv_dev_munmap(struct sxe2_common_device *cdev, void *virt, uint64_t len)
+{
+	int32_t ret = 0;
+
+	if (cdev->config.kernel_reset) {
+		ret = -EPERM;
+		PMD_LOG_WARN(COM, "kernel reset, need restart app.");
+		goto l_end;
+	}
+
+	PMD_LOG_DEBUG(COM, "Munmap virt=%p, len=0x%zx",
+		virt, len);
+
+	ret = munmap(virt, len);
+	if (ret < 0) {
+		PMD_LOG_ERR(COM, "Failed to munmap, virt=%p, len=0x%zx, err:%s",
+			virt, len, strerror(errno));
+		ret = -errno;
+		goto l_end;
+	}
+
+l_end:
+	return ret;
+}
