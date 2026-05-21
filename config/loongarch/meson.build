@@ -6,7 +6,6 @@ if not dpdk_conf.get('RTE_ARCH_64')
 endif
 dpdk_conf.set('RTE_ARCH', 'loongarch')
 dpdk_conf.set('RTE_ARCH_LOONGARCH', 1)
-dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
 machine_args_generic = [
     ['default', ['-march=loongarch64']],

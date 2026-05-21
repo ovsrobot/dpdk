@@ -13,8 +13,6 @@
  * This kind of lock simply waits in a loop
  * repeatedly checking until the lock becomes available.
  *
- * Some functions may have an architecture-specific implementation
- * if RTE_FORCE_INTRINSICS is disabled.
  * The hardware transactional memory (lock elision) functions have _tm suffix
  * and are implemented in architecture-specific files.
  *
@@ -22,9 +20,7 @@
  */
 
 #include <rte_lcore.h>
-#ifdef RTE_FORCE_INTRINSICS
 #include <rte_common.h>
-#endif
 #include <rte_debug.h>
 #include <rte_lock_annotations.h>
 #include <rte_pause.h>
@@ -68,7 +64,6 @@ static inline void
 rte_spinlock_lock(rte_spinlock_t *sl)
 	__rte_acquire_capability(sl);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_spinlock_lock(rte_spinlock_t *sl)
 	__rte_no_thread_safety_analysis
@@ -82,7 +77,6 @@ rte_spinlock_lock(rte_spinlock_t *sl)
 		exp = 0;
 	}
 }
-#endif
 
 /**
  * Release the spinlock.
@@ -94,14 +88,12 @@ static inline void
 rte_spinlock_unlock(rte_spinlock_t *sl)
 	__rte_release_capability(sl);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_spinlock_unlock(rte_spinlock_t *sl)
 	__rte_no_thread_safety_analysis
 {
 	rte_atomic_store_explicit(&sl->locked, 0, rte_memory_order_release);
 }
-#endif
 
 /**
  * Try to take the lock.
@@ -116,7 +108,6 @@ static inline int
 rte_spinlock_trylock(rte_spinlock_t *sl)
 	__rte_try_acquire_capability(true, sl);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int
 rte_spinlock_trylock(rte_spinlock_t *sl)
 	__rte_no_thread_safety_analysis
@@ -125,7 +116,6 @@ rte_spinlock_trylock(rte_spinlock_t *sl)
 	return rte_atomic_compare_exchange_strong_explicit(&sl->locked, &exp, 1,
 				rte_memory_order_acquire, rte_memory_order_relaxed);
 }
-#endif
 
 /**
  * Test if the lock is taken.

@@ -12,9 +12,6 @@
 extern "C" {
 #endif
 
-#ifndef RTE_FORCE_INTRINSICS
-#  error Platform must be built with RTE_FORCE_INTRINSICS
-#endif
 
 static inline int rte_tm_supported(void)
 {

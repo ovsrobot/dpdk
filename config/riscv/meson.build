@@ -16,7 +16,6 @@ endif
 
 dpdk_conf.set('RTE_ARCH', 'riscv')
 dpdk_conf.set('RTE_ARCH_RISCV', 1)
-dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
 # common flags to all riscv builds, with lowest priority
 flags_common = [

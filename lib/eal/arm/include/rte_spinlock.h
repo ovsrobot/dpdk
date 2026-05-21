@@ -5,9 +5,6 @@
 #ifndef _RTE_SPINLOCK_ARM_H_
 #define _RTE_SPINLOCK_ARM_H_
 
-#ifndef RTE_FORCE_INTRINSICS
-#  error Platform must be built with RTE_FORCE_INTRINSICS
-#endif
 
 #include <rte_common.h>
 #include "generic/rte_spinlock.h"

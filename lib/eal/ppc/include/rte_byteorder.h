@@ -49,19 +49,6 @@ static inline uint64_t rte_arch_bswap64(uint64_t _x)
 		((_x << 40) & (0xffULL << 48)) | ((_x << 56));
 }
 
-#ifndef RTE_FORCE_INTRINSICS
-#define rte_bswap16(x) ((uint16_t)(__builtin_constant_p(x) ?		\
-				   rte_constant_bswap16(x) :		\
-				   rte_arch_bswap16(x)))
-
-#define rte_bswap32(x) ((uint32_t)(__builtin_constant_p(x) ?		\
-				   rte_constant_bswap32(x) :		\
-				   rte_arch_bswap32(x)))
-
-#define rte_bswap64(x) ((uint64_t)(__builtin_constant_p(x) ?		\
-				   rte_constant_bswap64(x) :		\
-				   rte_arch_bswap64(x)))
-#endif
 
 /* Power 8 have both little endian and big endian mode
  * Power 7 only support big endian

@@ -18,55 +18,6 @@ extern "C" {
 #define RTE_BYTE_ORDER RTE_LITTLE_ENDIAN
 #endif
 
-#ifndef RTE_FORCE_INTRINSICS
-/*
- * An architecture-optimized byte swap for a 16-bit value.
- *
- * Do not use this function directly. The preferred function is rte_bswap16().
- */
-static inline uint16_t rte_arch_bswap16(uint16_t _x)
-{
-	uint16_t x = _x;
-	asm volatile ("xchgb %b[x1],%h[x2]"
-		      : [x1] "=Q" (x)
-		      : [x2] "0" (x)
-		      );
-	return x;
-}
-
-/*
- * An architecture-optimized byte swap for a 32-bit value.
- *
- * Do not use this function directly. The preferred function is rte_bswap32().
- */
-static inline uint32_t rte_arch_bswap32(uint32_t _x)
-{
-	uint32_t x = _x;
-	asm volatile ("bswap %[x]"
-		      : [x] "+r" (x)
-		      );
-	return x;
-}
-
-#define rte_bswap16(x) ((uint16_t)(__builtin_constant_p(x) ?		\
-				   rte_constant_bswap16(x) :		\
-				   rte_arch_bswap16(x)))
-
-#define rte_bswap32(x) ((uint32_t)(__builtin_constant_p(x) ?		\
-				   rte_constant_bswap32(x) :		\
-				   rte_arch_bswap32(x)))
-
-#define rte_bswap64(x) ((uint64_t)(__builtin_constant_p(x) ?		\
-				   rte_constant_bswap64(x) :		\
-				   rte_arch_bswap64(x)))
-
-#ifdef RTE_ARCH_I686
-#include "rte_byteorder_32.h"
-#else
-#include "rte_byteorder_64.h"
-#endif
-
-#endif /* !RTE_FORCE_INTRINSICS */
 
 #ifdef __cplusplus
 }

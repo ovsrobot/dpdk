@@ -92,6 +92,11 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Changed to use stdatomic intrinsics on all platforms.**
+
+  The config option ``RTE_FORCE_INTRINSICS`` has been removed.
+  Architecture specific code has been replaced with stdatomic.
+
 
 ABI Changes
 -----------

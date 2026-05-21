@@ -29,9 +29,6 @@ is_ms_compiler = is_windows and (cc.get_id() == 'msvc')
 is_ms_linker = is_windows and (cc.get_id() == 'clang' or is_ms_compiler)
 
 if is_ms_compiler
-    # force the use of intrinsics the MSVC compiler (except x86)
-    # does not support inline assembly
-    dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
     # force the use of C++11 memory model in lib/ring
     dpdk_conf.set('RTE_USE_C11_MEM_MODEL', true)

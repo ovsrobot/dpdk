@@ -19,55 +19,6 @@ extern "C" {
 #define RTE_RTM_MAX_RETRIES (20)
 #define RTE_XABORT_LOCK_BUSY (0xff)
 
-#ifndef RTE_FORCE_INTRINSICS
-static inline void
-rte_spinlock_lock(rte_spinlock_t *sl)
-	__rte_no_thread_safety_analysis
-{
-	int lock_val = 1;
-	asm volatile (
-			"1:\n"
-			"xchg %[locked], %[lv]\n"
-			"test %[lv], %[lv]\n"
-			"jz 3f\n"
-			"2:\n"
-			"pause\n"
-			"cmpl $0, %[locked]\n"
-			"jnz 2b\n"
-			"jmp 1b\n"
-			"3:\n"
-			: [locked] "=m" (sl->locked), [lv] "=q" (lock_val)
-			: "[lv]" (lock_val)
-			: "memory");
-}
-
-static inline void
-rte_spinlock_unlock (rte_spinlock_t *sl)
-	__rte_no_thread_safety_analysis
-{
-	int unlock_val = 0;
-	asm volatile (
-			"xchg %[locked], %[ulv]\n"
-			: [locked] "=m" (sl->locked), [ulv] "=q" (unlock_val)
-			: "[ulv]" (unlock_val)
-			: "memory");
-}
-
-static inline int
-rte_spinlock_trylock (rte_spinlock_t *sl)
-	__rte_no_thread_safety_analysis
-{
-	int lockval = 1;
-
-	asm volatile (
-			"xchg %[locked], %[lockval]"
-			: [locked] "=m" (sl->locked), [lockval] "=q" (lockval)
-			: "[lockval]" (lockval)
-			: "memory");
-
-	return lockval == 0;
-}
-#endif
 
 extern uint8_t rte_rtm_supported;
 

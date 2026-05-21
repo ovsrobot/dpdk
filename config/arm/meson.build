@@ -837,7 +837,6 @@ socs = {
 }
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
-dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
 update_flags = false
 soc_flags = []
