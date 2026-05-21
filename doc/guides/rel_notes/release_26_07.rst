@@ -63,6 +63,11 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **Added scripts and prompts for AI review.**
+
+  Added AGENTS.md file for AI review and supporting scripts to analyze
+  patches and review documentation.
+
 
 Removed Items
 -------------
