@@ -714,6 +714,13 @@ enum index {
 	ACTION_SET_META,
 	ACTION_SET_META_DATA,
 	ACTION_SET_META_MASK,
+	/* ACTION PROG */
+	ACTION_PROG,
+	ACTION_PROG_NAME,
+	ACTION_PROG_ARGUMENT,
+	ACTION_PROG_ARGUMENT_NAME,
+	ACTION_PROG_ARGUMENT_SIZE,
+	ACTION_PROG_ARGUMENT_VALUE,
 	ACTION_SET_IPV4_DSCP,
 	ACTION_SET_IPV4_DSCP_VALUE,
 	ACTION_SET_IPV6_DSCP,
@@ -980,6 +987,24 @@ struct rte_flow_action_conntrack conntrack_context;
 struct action_sample_data {
 	struct rte_flow_action_sample conf;
 	uint32_t idx;
+};
+
+#define ACTION_PROG_MAX_ARGS 32
+#define ACTION_PROG_NAME_LEN_MAX 64
+#define ACTION_PROG_ARG_NAME_LEN_MAX 16
+
+struct action_prog_argument_data {
+	char name[ACTION_PROG_ARG_NAME_LEN_MAX];
+	uint32_t length;
+	uint32_t size;
+	uint64_t value;
+};
+
+struct action_prog_data {
+	char name[ACTION_PROG_NAME_LEN_MAX];
+	uint32_t args_num;
+	uint32_t length;
+	struct action_prog_argument_data args[ACTION_PROG_MAX_ARGS];
 };
 /** Storage for struct rte_flow_action_sample. */
 struct raw_sample_conf {
@@ -2310,6 +2335,7 @@ static const enum index next_action[] = {
 	ACTION_RAW_DECAP,
 	ACTION_SET_TAG,
 	ACTION_SET_META,
+	ACTION_PROG,
 	ACTION_SET_IPV4_DSCP,
 	ACTION_SET_IPV6_DSCP,
 	ACTION_AGE,
@@ -2565,6 +2591,23 @@ static const enum index action_set_meta[] = {
 	ZERO,
 };
 
+/** ACTION PROG */
+static const enum index next_action_prog[] = {
+	ACTION_PROG_NAME,
+	ACTION_PROG_ARGUMENT,
+	ACTION_NEXT,
+	ZERO,
+};
+
+static const enum index next_prog_arg[] = {
+	ACTION_PROG_ARGUMENT_NAME,
+	ACTION_PROG_ARGUMENT_SIZE,
+	ACTION_PROG_ARGUMENT_VALUE,
+	ACTION_PROG_ARGUMENT,
+	ACTION_NEXT,
+	ZERO,
+};
+
 static const enum index action_set_ipv4_dscp[] = {
 	ACTION_SET_IPV4_DSCP_VALUE,
 	ACTION_NEXT,
@@ -2803,6 +2846,27 @@ static int parse_vc_action_set_meta(struct context *ctx,
 				    const struct token *token, const char *str,
 				    unsigned int len, void *buf,
 					unsigned int size);
+static int parse_vc_action_prog(struct context *ctx, const struct token *token,
+				const char *str, unsigned int len, void *buf,
+				unsigned int size);
+static int parse_vc_action_prog_argument(struct context *ctx, const struct token *token,
+				 const char *str, unsigned int len,
+				 void *buf, unsigned int size);
+static int parse_vc_action_prog_argument_name(struct context *ctx,
+				      const struct token *token,
+				      const char *str, unsigned int len,
+				      void *buf, unsigned int size);
+static int parse_vc_action_prog_argument_size(struct context *ctx,
+				      const struct token *token,
+				      const char *str, unsigned int len,
+				      void *buf, unsigned int size);
+static int parse_vc_action_prog_argument_value(struct context *ctx,
+				       const struct token *token,
+				       const char *str, unsigned int len,
+				       void *buf, unsigned int size);
+static void free_action_prog_converted(struct rte_flow_action *actions,
+				      const uint32_t *converted_idx,
+				      uint32_t converted_idx_num);
 static int parse_vc_action_sample(struct context *ctx,
 				    const struct token *token, const char *str,
 				    unsigned int len, void *buf,
@@ -7816,6 +7880,48 @@ static const struct token token_list[] = {
 			     (struct rte_flow_action_set_meta, mask)),
 		.call = parse_vc_conf,
 	},
+	[ACTION_PROG] = {
+		.name = "prog",
+		.help = "Program action: action prog name <name> [argument ...]",
+		.priv = PRIV_ACTION(PROG,
+				sizeof(struct action_prog_data)),
+		.next = NEXT(next_action_prog),
+		.call = parse_vc_action_prog,
+	},
+	[ACTION_PROG_NAME] = {
+		.name = "name",
+		.help = "Action name",
+		.next = NEXT(next_action_prog, NEXT_ENTRY(COMMON_STRING)),
+		.args = ARGS(ARGS_ENTRY_ARB(0, 0),
+			    ARGS_ENTRY(struct action_prog_data, length),
+			    ARGS_ENTRY_ARB(0,
+				    ACTION_PROG_NAME_LEN_MAX)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_PROG_ARGUMENT] = {
+		.name = "argument",
+		.help = "Keyword: argument",
+		.next = NEXT(next_prog_arg),
+		.call = parse_vc_action_prog_argument,
+	},
+	[ACTION_PROG_ARGUMENT_NAME] = {
+		.name = "name",
+		.help = "Argument Name",
+		.next = NEXT(next_prog_arg, NEXT_ENTRY(COMMON_STRING)),
+		.call = parse_vc_action_prog_argument_name,
+	},
+	[ACTION_PROG_ARGUMENT_SIZE] = {
+		.name = "size",
+		.help = "Argument size (bytes)",
+		.next = NEXT(next_prog_arg, NEXT_ENTRY(COMMON_UNSIGNED)),
+		.call = parse_vc_action_prog_argument_size,
+	},
+	[ACTION_PROG_ARGUMENT_VALUE] = {
+		.name = "value",
+		.help = "Argument value",
+		.next = NEXT(next_prog_arg, NEXT_ENTRY(COMMON_UNSIGNED)),
+		.call = parse_vc_action_prog_argument_value,
+	},
 	[ACTION_SET_IPV4_DSCP] = {
 		.name = "set_ipv4_dscp",
 		.help = "set DSCP value",
@@ -10413,6 +10519,449 @@ parse_vc_action_set_meta(struct context *ctx, const struct token *token,
 	if (ret < 0)
 		return -1;
 	return len;
+}
+
+/** Parse PROG action */
+static int
+parse_vc_action_prog(struct context *ctx, const struct token *token,
+			const char *str, unsigned int len, void *buf,
+			unsigned int size)
+{
+	struct buffer *out = buf;
+	struct action_prog_data *prog_data;
+	int ret;
+
+	ret = parse_vc(ctx, token, str, len, buf, size);
+	if (ret < 0)
+		return ret;
+
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return ret;
+
+	if (!out->args.vc.actions_n)
+		return -1;
+
+	/* Point to selected object. */
+	ctx->object = out->args.vc.data;
+	ctx->objmask = NULL;
+
+	prog_data = ctx->object;
+	prog_data->args_num = 0;
+
+	return ret;
+}
+
+/** Called when args keyword is encountered */
+static int
+parse_vc_action_prog_argument(struct context *ctx, const struct token *token,
+				 const char *str, unsigned int len,
+				 void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	struct action_prog_data *prog_data;
+
+	RTE_SET_USED(token);
+	RTE_SET_USED(str);
+	RTE_SET_USED(size);
+
+	/* Token name must match. */
+	if (parse_default(ctx, token, str, len, NULL, 0) < 0)
+		return -1;
+
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return len;
+
+	if (!out->args.vc.actions_n)
+		return len;
+
+	/* Point to selected object. */
+	ctx->object = out->args.vc.data;
+	ctx->objmask = NULL;
+
+	prog_data = ctx->object;
+	if (prog_data->args_num >= ACTION_PROG_MAX_ARGS)
+		return -1;
+	prog_data->args_num++;
+
+	return len;
+}
+
+static int __prog_argument_name_args_push(struct context *ctx, const struct token *token,
+					  const char *str, unsigned int len, void *buf,
+					  unsigned int size, uint32_t arg_ind)
+{
+	static struct arg arg_addr[ACTION_PROG_MAX_ARGS];
+	static struct arg arg_len[ACTION_PROG_MAX_ARGS];
+	static struct arg arg_data[ACTION_PROG_MAX_ARGS];
+	/* Calculate the base size based on the actual structure size */
+	uint32_t prog_data_base_size = offsetof(struct action_prog_data, args);
+
+	RTE_SET_USED(token);
+	RTE_SET_USED(str);
+	RTE_SET_USED(len);
+	RTE_SET_USED(buf);
+	RTE_SET_USED(size);
+
+	arg_addr[arg_ind].offset = prog_data_base_size +
+		offsetof(struct action_prog_argument_data, name) +
+		(arg_ind * sizeof(struct action_prog_argument_data));
+	arg_addr[arg_ind].size = 0;
+
+	if (push_args(ctx, &arg_addr[arg_ind]))
+		return -1;
+	arg_len[arg_ind].offset = prog_data_base_size +
+			  offsetof(struct action_prog_argument_data, length) +
+			  (arg_ind * sizeof(struct action_prog_argument_data));
+	arg_len[arg_ind].size = sizeof(((struct action_prog_argument_data *)0)->length);
+
+	if (push_args(ctx, &arg_len[arg_ind]))
+		return -1;
+	arg_data[arg_ind].offset = prog_data_base_size +
+			   offsetof(struct action_prog_argument_data, name) +
+			   (arg_ind * sizeof(struct action_prog_argument_data));
+	arg_data[arg_ind].size =
+		sizeof(((struct action_prog_argument_data *)0)->name);
+
+	if (push_args(ctx, &arg_data[arg_ind]))
+		return -1;
+
+	return 0;
+}
+
+static int __prog_argument_size_args_push(struct context *ctx, const struct token *token,
+					  const char *str, unsigned int len, void *buf,
+					  unsigned int size, uint32_t arg_ind)
+{
+	static struct arg arg[ACTION_PROG_MAX_ARGS];
+	uint32_t prog_data_base_size = offsetof(struct action_prog_data, args);
+
+	RTE_SET_USED(token);
+	RTE_SET_USED(str);
+	RTE_SET_USED(len);
+	RTE_SET_USED(buf);
+	RTE_SET_USED(size);
+
+	arg[arg_ind].offset = prog_data_base_size +
+		      offsetof(struct action_prog_argument_data, size) +
+		      (arg_ind * sizeof(struct action_prog_argument_data));
+	arg[arg_ind].size = sizeof(((struct action_prog_argument_data *)0)->size);
+
+	if (push_args(ctx, &arg[arg_ind]))
+		return -1;
+
+	return 0;
+}
+
+static int __prog_argument_value_args_push(struct context *ctx, const struct token *token,
+					   const char *str, unsigned int len, void *buf,
+					   unsigned int size, uint32_t arg_ind)
+{
+	static struct arg arg[ACTION_PROG_MAX_ARGS];
+	uint32_t prog_data_base_size = offsetof(struct action_prog_data, args);
+
+	RTE_SET_USED(token);
+	RTE_SET_USED(str);
+	RTE_SET_USED(len);
+	RTE_SET_USED(buf);
+	RTE_SET_USED(size);
+
+	arg[arg_ind].offset = prog_data_base_size +
+		      offsetof(struct action_prog_argument_data, value) +
+		      (arg_ind * sizeof(struct action_prog_argument_data));
+	arg[arg_ind].size = sizeof(((struct action_prog_argument_data *)0)->value);
+
+	if (push_args(ctx, &arg[arg_ind]))
+		return -1;
+
+	return 0;
+}
+
+static int
+parse_vc_action_prog_argument_name(struct context *ctx,
+				      const struct token *token,
+				      const char *str, unsigned int len,
+				      void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	struct action_prog_data *prog_data;
+	uint32_t arg_ind;
+	uint32_t max_arg_ind = (ACTION_PROG_MAX_ARGS - 1);
+	int ret;
+
+	ret = parse_vc_conf(ctx, token, str, len, buf, size);
+	if (ret < 0)
+		return ret;
+
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		goto error_push;
+
+	if (!ctx->object)
+		goto error_push;
+
+	prog_data = ctx->object;
+	if (prog_data->args_num == 0)
+		goto error_push;
+	arg_ind = prog_data->args_num - 1;
+	if (__prog_argument_name_args_push(ctx, token, str, len, buf, size,
+					      arg_ind) < 0)
+		return -1;
+
+	return ret;
+
+error_push:
+	return __prog_argument_name_args_push(ctx, token, str, len, buf, size,
+					    max_arg_ind);
+}
+
+static int
+parse_vc_action_prog_argument_size(struct context *ctx,
+				      const struct token *token,
+				      const char *str, unsigned int len,
+				      void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	struct action_prog_data *prog_data;
+	uint32_t arg_ind;
+	uint32_t max_arg_ind = (ACTION_PROG_MAX_ARGS - 1);
+	int ret;
+
+	ret = parse_vc_conf(ctx, token, str, len, buf, size);
+	if (ret < 0)
+		return ret;
+
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		goto error_push;
+
+	if (!ctx->object)
+		goto error_push;
+
+	ctx->object = out->args.vc.data;
+	ctx->objmask = NULL;
+	prog_data = ctx->object;
+	if (prog_data->args_num == 0)
+		goto error_push;
+	arg_ind = prog_data->args_num - 1;
+	if (__prog_argument_size_args_push(ctx, token, str, len, buf, size,
+					      arg_ind) < 0)
+		return -1;
+
+	return ret;
+
+error_push:
+	return __prog_argument_size_args_push(ctx, token, str, len, buf, size,
+					    max_arg_ind);
+}
+
+static int
+parse_vc_action_prog_argument_value(struct context *ctx,
+				       const struct token *token,
+				       const char *str, unsigned int len,
+				       void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	struct action_prog_data *prog_data;
+	uint32_t arg_ind;
+	uint32_t max_arg_ind = (ACTION_PROG_MAX_ARGS - 1);
+	int ret;
+
+	RTE_SET_USED(size);
+
+	ret = parse_vc_conf(ctx, token, str, len, buf, size);
+	if (ret < 0)
+		return ret;
+
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		goto error_push;
+
+	if (!ctx->object)
+		goto error_push;
+
+	ctx->object = out->args.vc.data;
+	ctx->objmask = NULL;
+	prog_data = ctx->object;
+	if (prog_data->args_num == 0)
+		goto error_push;
+	arg_ind = prog_data->args_num - 1;
+	if (__prog_argument_value_args_push(ctx, token, str, len, buf, size,
+					       arg_ind) < 0)
+		return -1;
+
+	return ret;
+
+error_push:
+	return __prog_argument_value_args_push(ctx, token, str, len, buf, size,
+					     max_arg_ind);
+}
+
+/**
+ * Convert action_prog_data to rte_flow_action_prog.
+ * Converts PROG actions from action_prog_data format to rte_flow_action_prog format.
+ *
+ * @param actions     The flow actions array
+ * @param action_count Optional count of actions. If 0, will count until END action
+ * @return            0 on success, negative value on failure
+ */
+static int
+convert_action_prog_to_rte_flow(struct rte_flow_action *actions,
+				uint32_t prog_action_count,
+				uint32_t *converted_idx,
+				uint32_t converted_idx_cap,
+				uint32_t *converted_idx_num)
+{
+	uint32_t i = 0;
+	uint32_t j;
+	uint32_t k;
+	const struct action_prog_data *prog_data;
+	struct rte_flow_action_prog *prog;
+	struct rte_flow_action_prog_argument *args;
+	uint8_t *value;
+	bool arg_error;
+	int ret = 0;
+
+	if (converted_idx_num)
+		*converted_idx_num = 0;
+
+	/* If action_count is 0, count the actions until END action */
+	if (prog_action_count == 0) {
+		while (actions[i].type != RTE_FLOW_ACTION_TYPE_END)
+			i++;
+		prog_action_count = i + 1; /* Include END action */
+		i = 0; /* Reset counter for the processing loop */
+	}
+
+	/* Process all actions */
+	for (i = 0; i < prog_action_count; i++) {
+		if (actions[i].type == RTE_FLOW_ACTION_TYPE_PROG) {
+			prog_data = (const struct action_prog_data *)actions[i].conf;
+			if (!prog_data) {
+				fprintf(stderr, "Prog action found but no data provided\n");
+				ret = -EINVAL;
+				continue;
+			}
+
+			prog = calloc(1, sizeof(struct rte_flow_action_prog));
+			if (!prog) {
+				fprintf(stderr, "Failed to allocate memory for prog action\n");
+				ret = -ENOMEM;
+				continue;
+			}
+
+			prog->name = strdup(prog_data->name);
+			if (!prog->name) {
+				fprintf(stderr, "Failed to allocate memory for prog name\n");
+				free(prog);
+				ret = -ENOMEM;
+				continue;
+			}
+
+			prog->args_num = prog_data->args_num;
+
+			if (prog->args_num > 0) {
+				args = calloc(prog->args_num,
+					      sizeof(struct rte_flow_action_prog_argument));
+				if (!args) {
+					fprintf(stderr,
+						"Failed to allocate memory for prog arguments\n");
+					free((void *)(uintptr_t)prog->name);
+					free(prog);
+					ret = -ENOMEM;
+					continue;
+				}
+
+				arg_error = false;
+				for (j = 0; j < prog->args_num; j++) {
+					args[j].name = strdup(prog_data->args[j].name);
+					if (!args[j].name) {
+						fprintf(stderr,
+							"Failed to allocate memory for argument name\n");
+						ret = -ENOMEM;
+						arg_error = true;
+						break;
+					}
+
+					args[j].size = prog_data->args[j].size;
+					if (args[j].size == 0)
+						continue;
+					if (args[j].size > sizeof(prog_data->args[j].value)) {
+						free((void *)(uintptr_t)args[j].name);
+						arg_error = true;
+						ret = -EINVAL;
+						break;
+					}
+
+					value = malloc(args[j].size);
+					if (!value) {
+						fprintf(stderr,
+							"Failed to allocate memory for argument value\n");
+						free((void *)(uintptr_t)args[j].name);
+						ret = -ENOMEM;
+						arg_error = true;
+						break;
+					}
+
+					memcpy(value,
+					       &prog_data->args[j].value,
+					       args[j].size);
+					args[j].value = value;
+				}
+
+				if (arg_error) {
+					/* Free all allocated resources */
+					for (k = 0; k < j; k++) {
+						free((void *)(uintptr_t)args[k].name);
+						free((void *)(uintptr_t)args[k].value);
+					}
+					free(args);
+					free((void *)(uintptr_t)prog->name);
+					free(prog);
+					continue;
+				}
+
+				prog->args = args;
+			}
+
+			actions[i].conf = prog;
+			if (converted_idx && converted_idx_num &&
+			    *converted_idx_num < converted_idx_cap)
+				converted_idx[(*converted_idx_num)++] = i;
+		}
+	}
+
+	return ret;
+}
+
+static void
+free_action_prog_converted(struct rte_flow_action *actions,
+			   const uint32_t *converted_idx,
+			   uint32_t converted_idx_num)
+{
+	uint32_t i;
+
+	for (i = 0; i < converted_idx_num; i++) {
+		uint32_t idx = converted_idx[i];
+		struct rte_flow_action_prog *prog;
+		uint32_t j;
+
+		if (actions[idx].type != RTE_FLOW_ACTION_TYPE_PROG)
+			continue;
+
+		prog = (struct rte_flow_action_prog *)(uintptr_t)actions[idx].conf;
+		if (!prog)
+			continue;
+
+		for (j = 0; j < prog->args_num; j++) {
+			free((void *)(uintptr_t)prog->args[j].name);
+			free((void *)(uintptr_t)prog->args[j].value);
+		}
+		free((void *)(uintptr_t)prog->args);
+		free((void *)(uintptr_t)prog->name);
+		free(prog);
+	}
 }
 
 static int
@@ -13380,6 +13929,8 @@ indirect_action_list_conf_get(uint32_t conf_id)
 static void
 cmd_flow_parsed(const struct buffer *in)
 {
+	int ret;
+
 	switch (in->command) {
 	case INFO:
 		port_flow_get_info(in->port);
@@ -13561,9 +14112,36 @@ cmd_flow_parsed(const struct buffer *in)
 				   &in->args.vc.tunnel_ops);
 		break;
 	case CREATE:
-		port_flow_create(in->port, &in->args.vc.attr,
-				 in->args.vc.pattern, in->args.vc.actions,
-				 &in->args.vc.tunnel_ops, in->args.vc.user_id);
+		{
+			uint32_t *converted_idx;
+			uint32_t converted_idx_num = 0;
+
+			converted_idx = calloc(in->args.vc.actions_n,
+					       sizeof(*converted_idx));
+			if (!converted_idx) {
+				fprintf(stderr,
+					"Warning: Failed to allocate conversion index list\n");
+				break;
+			}
+
+			/* Convert from action_prog_data to rte_flow_action_prog. */
+			ret = convert_action_prog_to_rte_flow(in->args.vc.actions,
+						      0,
+						      converted_idx,
+						      in->args.vc.actions_n,
+						      &converted_idx_num);
+			if (ret < 0)
+				fprintf(stderr,
+					"Warning: Failed to convert program action data: %s\n",
+					strerror(-ret));
+			port_flow_create(in->port, &in->args.vc.attr,
+					 in->args.vc.pattern, in->args.vc.actions,
+					 &in->args.vc.tunnel_ops, in->args.vc.user_id);
+			free_action_prog_converted(in->args.vc.actions,
+						   converted_idx,
+						   converted_idx_num);
+			free(converted_idx);
+		}
 		break;
 	case DESTROY:
 		port_flow_destroy(in->port, in->args.destroy.rule_n,
