@@ -21,6 +21,70 @@ TELEMETRY_VERSION = "v2"
 SOCKET_NAME = "dpdk_telemetry.{}".format(TELEMETRY_VERSION)
 DEFAULT_PREFIX = "rte"
 CMDS = []
+ALIASES = {}
+ALIAS_FILE = ".dpdk_telemetry_aliases"
+MAX_ALIAS_EXPANSIONS = 32
+
+
+def load_aliases():
+    """Load aliases from $HOME/.dpdk_telemetry_aliases"""
+    aliases = {}
+    home = os.environ.get("HOME")
+    if not home:
+        return aliases
+
+    alias_path = os.path.join(home, ALIAS_FILE)
+    if not os.path.isfile(alias_path):
+        return aliases
+
+    try:
+        with open(alias_path) as alias_file:
+            for line_num, line in enumerate(alias_file, start=1):
+                entry = line.strip()
+                if not entry or entry.startswith("#"):
+                    continue
+                if "=" not in entry:
+                    print(
+                        "Warning: ignoring malformed alias at {}:{}".format(alias_path, line_num),
+                        file=sys.stderr,
+                    )
+                    continue
+                name, command = entry.split("=", 1)
+                name = name.strip()
+                command = command.strip()
+                if not name or not command:
+                    print(
+                        "Warning: ignoring malformed alias at {}:{}".format(alias_path, line_num),
+                        file=sys.stderr,
+                    )
+                    continue
+                aliases[name] = command
+    except OSError as e:
+        print("Warning: failed to read {}: {}".format(alias_path, e), file=sys.stderr)
+
+    return aliases
+
+
+def expand_aliases(text, aliases):
+    """Expand aliases similarly to shell aliases on the first token"""
+    expanded = text
+    for _ in range(MAX_ALIAS_EXPANSIONS):
+        stripped = expanded.lstrip()
+        if not stripped:
+            return expanded
+
+        parts = stripped.split(None, 1)
+        first = parts[0]
+        rest = parts[1] if len(parts) > 1 else ""
+
+        if first not in aliases:
+            return expanded
+
+        alias_value = aliases[first]
+        expanded = "{} {}".format(alias_value, rest).strip() if rest else alias_value
+
+    print("Warning: alias expansion limit reached", file=sys.stderr)
+    return expanded
 
 
 def send_command(sock, cmd, output_buf_len, echo=False, pretty=False):
@@ -262,10 +326,12 @@ def handle_socket(args, path):
 
     # interactive prompt
     try:
-        text = input(prompt).strip()
-        while text != "quit":
-            handle_command(sock, output_buf_len, text, pretty=prompt)
+        while True:
             text = input(prompt).strip()
+            expanded = expand_aliases(text, ALIASES)
+            if expanded == "quit":
+                break
+            handle_command(sock, output_buf_len, expanded, pretty=prompt)
     except EOFError:
         pass
     finally:
@@ -274,7 +340,7 @@ def handle_socket(args, path):
 
 def readline_complete(text, state):
     """Find any matching commands from the list based on user input"""
-    all_cmds = ["quit"] + CMDS
+    all_cmds = ["quit"] + list(ALIASES.keys()) + CMDS
     if text:
         matches = [c for c in all_cmds if c.startswith(text)]
     else:
@@ -304,6 +370,7 @@ parser.add_argument(
     help="List all possible file-prefixes and exit",
 )
 args = parser.parse_args()
+ALIASES = load_aliases()
 if args.list:
     list_fp()
     sys.exit(0)
