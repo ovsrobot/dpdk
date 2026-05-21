@@ -49,69 +49,8 @@ static inline void rte_wmb(void);
  * occur before the LOAD operations generated after.
  */
 static inline void rte_rmb(void);
+
 ///@}
-
-/** @name SMP Memory Barrier
- */
-///@{
-/**
- * General memory barrier between lcores
- *
- * Guarantees that the LOAD and STORE operations that precede the
- * rte_smp_mb() call are globally visible across the lcores
- * before the LOAD and STORE operations that follows it.
- *
- * @note
- *  This function is deprecated.
- *  It provides similar synchronization primitive as atomic fence,
- *  but has different syntax and memory ordering semantic. Hence
- *  deprecated for the simplicity of memory ordering semantics in use.
- *
- *  rte_atomic_thread_fence(rte_memory_order_acq_rel) should be used instead.
- */
-static inline void rte_smp_mb(void);
-
-/**
- * Write memory barrier between lcores
- *
- * Guarantees that the STORE operations that precede the
- * rte_smp_wmb() call are globally visible across the lcores
- * before the STORE operations that follows it.
- *
- * @note
- *  This function is deprecated.
- *  It provides similar synchronization primitive as atomic fence,
- *  but has different syntax and memory ordering semantic. Hence
- *  deprecated for the simplicity of memory ordering semantics in use.
- *
- *  rte_atomic_thread_fence(rte_memory_order_release) should be used instead.
- *  The fence also guarantees LOAD operations that precede the call
- *  are globally visible across the lcores before the STORE operations
- *  that follows it.
- */
-static inline void rte_smp_wmb(void);
-
-/**
- * Read memory barrier between lcores
- *
- * Guarantees that the LOAD operations that precede the
- * rte_smp_rmb() call are globally visible across the lcores
- * before the LOAD operations that follows it.
- *
- * @note
- *  This function is deprecated.
- *  It provides similar synchronization primitive as atomic fence,
- *  but has different syntax and memory ordering semantic. Hence
- *  deprecated for the simplicity of memory ordering semantics in use.
- *
- *  rte_atomic_thread_fence(rte_memory_order_acquire) should be used instead.
- *  The fence also guarantees LOAD operations that precede the call
- *  are globally visible across the lcores before the STORE operations
- *  that follows it.
- */
-static inline void rte_smp_rmb(void);
-///@}
-
 /** @name I/O Memory Barrier
  */
 ///@{
@@ -163,6 +102,51 @@ static inline void rte_io_rmb(void);
  * Synchronization fence between threads based on the specified memory order.
  */
 static inline void rte_atomic_thread_fence(rte_memory_order memorder);
+
+
+/** @name SMP Memory Barrier
+ */
+///@{
+/**
+ * General memory barrier between lcores
+ *
+ * Guarantees that the LOAD and STORE operations that precede the
+ * rte_smp_mb() call are globally visible across the lcores
+ * before the LOAD and STORE operations that follows it.
+ */
+static __rte_always_inline void
+rte_smp_mb(void)
+{
+	rte_atomic_thread_fence(rte_memory_order_seq_cst);
+}
+
+/**
+ * Write memory barrier between lcores
+ *
+ * Guarantees that the STORE operations that precede the
+ * rte_smp_wmb() call are globally visible across the lcores
+ * before the STORE operations that follows it.
+ */
+static __rte_always_inline void
+rte_smp_wmb(void)
+{
+	rte_atomic_thread_fence(rte_memory_order_release);
+}
+
+/**
+ * Read memory barrier between lcores
+ *
+ * Guarantees that the LOAD operations that precede the
+ * rte_smp_rmb() call are globally visible across the lcores
+ * before the LOAD operations that follows it.
+ */
+static __rte_always_inline void
+rte_smp_rmb(void)
+{
+	rte_atomic_thread_fence(rte_memory_order_acquire);
+}
+
+///@}
 
 /*------------------------- 16 bit atomic operations -------------------------*/
 
