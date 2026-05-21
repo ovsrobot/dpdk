@@ -728,12 +728,14 @@ zxdh_bar_chan_sync_msg_reps_get(uint64_t subchan_addr,
 int
 zxdh_bar_chan_sync_msg_send(struct zxdh_pci_bar_msg *in, struct zxdh_msg_recviver_mem *result)
 {
-	struct zxdh_bar_msg_header msg_header = {0};
+	struct zxdh_bar_msg_header msg_header;
 	uint16_t seq_id = 0;
 	uint64_t subchan_addr = 0;
 	uint32_t time_out_cnt = 0;
 	uint16_t valid = 0;
 	int ret = 0;
+
+	memset(&msg_header, 0, sizeof(msg_header));
 
 	ret = zxdh_bar_chan_send_para_check(in, result);
 	if (ret != ZXDH_BAR_MSG_OK)
