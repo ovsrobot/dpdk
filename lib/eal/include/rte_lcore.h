@@ -196,6 +196,18 @@ rte_cpuset_t rte_lcore_cpuset(unsigned int lcore_id);
 int rte_lcore_is_enabled(unsigned int lcore_id);
 
 /**
+ * Test if an lcore is ROLE_RTE or ROLE_SERVICE.
+ *
+ * @param lcore_id
+ *   The identifier of the lcore, which MUST be between 0 and
+ *   RTE_MAX_LCORE-1.
+ * @return
+ *   True if the given lcore is ROLE_RTE or ROLE_SERVICE; false otherwise.
+ */
+__rte_experimental
+int rte_lcore_is_eal_managed(unsigned int lcore_id);
+
+/**
  * Get the next enabled lcore ID.
  *
  * @param i

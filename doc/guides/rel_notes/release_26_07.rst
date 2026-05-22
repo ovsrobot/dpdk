@@ -63,6 +63,12 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **Added lcore EAL-managed status check.**
+
+  Added ``rte_lcore_is_eal_managed()`` helper function in EAL lcore library
+  to check whether a logical core is managed by EAL
+  (i.e., its role is ``ROLE_RTE`` or ``ROLE_SERVICE``).
+
 
 Removed Items
 -------------
