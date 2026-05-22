@@ -13,6 +13,7 @@
 
 #include <rte_rib6.h>
 #include <rte_fib6.h>
+#include <rib6_internal.h>
 #include "fib_log.h"
 #include "trie.h"
 
@@ -534,31 +535,6 @@ modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib,
 	return 0;
 }
 
-/*
- * Count byte boundaries between 24 and CEIL(depth, 8) where the
- * supernet of ip has no descendant in the RIB. This is the number of
- * new tbl8 levels an ADD of ip/depth would introduce, or the number
- * to free at DEL once the prefix has been removed from the RIB.
- *
- * A NULL answer at level L propagates upwards: narrower supernets at
- * L+8, L+16, ... are subsets of S_L and cannot contain descendants
- * either. The loop stops at the first NULL and tallies the remaining
- * boundaries in one shot.
- */
-static uint8_t
-count_empty_levels(struct rte_rib6 *rib, const struct rte_ipv6_addr *ip,
-	uint8_t depth)
-{
-	uint8_t level, top = RTE_ALIGN_CEIL(depth, 8);
-
-	for (level = 24; level < top; level += 8) {
-		if (rte_rib6_get_nxt(rib, ip, level, NULL,
-				RTE_RIB6_GET_NXT_COVER) == NULL)
-			return (top - level) >> 3;
-	}
-	return 0;
-}
-
 int
 trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	uint8_t depth, uint64_t next_hop, int op)
@@ -596,7 +572,7 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 			return 0;
 		}
 
-		new_levels = count_empty_levels(rib, &ip_masked, depth);
+		new_levels = rte_rib6_count_empty_supernets(rib, &ip_masked, depth);
 		if (dp->rsvd_tbl8s + new_levels > dp->number_tbl8s)
 			return -ENOSPC;
 
@@ -635,7 +611,7 @@ successfully_added:
 		if (ret != 0)
 			return ret;
 		rte_rib6_remove(rib, &ip_masked, depth);
-		dp->rsvd_tbl8s -= count_empty_levels(rib, &ip_masked, depth);
+		dp->rsvd_tbl8s -= rte_rib6_count_empty_supernets(rib, &ip_masked, depth);
 		return 0;
 	default:
 		break;
