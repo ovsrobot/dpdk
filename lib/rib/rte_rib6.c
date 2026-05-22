@@ -18,6 +18,7 @@
 
 #include <rte_rib6.h>
 
+#include "rib6_internal.h"
 #include "rib_log.h"
 
 #define RTE_RIB_VALID_NODE	1
@@ -36,6 +37,7 @@ struct rte_rib6_node {
 	struct rte_rib6_node	*parent;
 	uint64_t		nh;
 	struct rte_ipv6_addr	ip;
+	uint32_t		valid_descendants;
 	uint8_t			depth;
 	uint8_t			flag;
 	uint64_t ext[];
@@ -104,8 +106,33 @@ node_alloc(struct rte_rib6 *rib)
 	ret = rte_mempool_get(rib->node_pool, (void *)&ent);
 	if (unlikely(ret != 0))
 		return NULL;
+	ent->valid_descendants = 0;
 	++rib->cur_nodes;
 	return ent;
+}
+
+/* Increment valid_descendants along the parent chain when node becomes valid. */
+static inline void
+inc_valid_descendants(struct rte_rib6_node *node)
+{
+	struct rte_rib6_node *p = node->parent;
+
+	while (p != NULL) {
+		p->valid_descendants++;
+		p = p->parent;
+	}
+}
+
+/* Decrement valid_descendants along the parent chain when node becomes invalid. */
+static inline void
+dec_valid_descendants(struct rte_rib6_node *node)
+{
+	struct rte_rib6_node *p = node->parent;
+
+	while (p != NULL) {
+		p->valid_descendants--;
+		p = p->parent;
+	}
 }
 
 static void
@@ -250,6 +277,7 @@ rte_rib6_remove(struct rte_rib6 *rib,
 
 	--rib->cur_routes;
 	cur->flag &= ~RTE_RIB_VALID_NODE;
+	dec_valid_descendants(cur);
 	while (!is_valid_node(cur)) {
 		if ((cur->left != NULL) && (cur->right != NULL))
 			return;
@@ -320,6 +348,7 @@ rte_rib6_insert(struct rte_rib6 *rib,
 			*tmp = new_node;
 			new_node->parent = prev;
 			++rib->cur_routes;
+			inc_valid_descendants(new_node);
 			return *tmp;
 		}
 		/*
@@ -332,6 +361,7 @@ rte_rib6_insert(struct rte_rib6 *rib,
 			node_free(rib, new_node);
 			(*tmp)->flag |= RTE_RIB_VALID_NODE;
 			++rib->cur_routes;
+			inc_valid_descendants(*tmp);
 			return *tmp;
 		}
 
@@ -371,6 +401,9 @@ rte_rib6_insert(struct rte_rib6 *rib,
 			new_node->left = *tmp;
 		new_node->parent = (*tmp)->parent;
 		(*tmp)->parent = new_node;
+		/* new_node inherits *tmp's subtree */
+		new_node->valid_descendants = (is_valid_node(*tmp) ? 1 : 0) +
+			(*tmp)->valid_descendants;
 		*tmp = new_node;
 	} else {
 		/* create intermediate node */
@@ -386,6 +419,11 @@ rte_rib6_insert(struct rte_rib6 *rib,
 		common_node->parent = (*tmp)->parent;
 		new_node->parent = common_node;
 		(*tmp)->parent = common_node;
+		/* common_node inherits *tmp's subtree (new_node will be
+		 * counted by inc_valid_descendants below).
+		 */
+		common_node->valid_descendants = (is_valid_node(*tmp) ? 1 : 0) +
+			(*tmp)->valid_descendants;
 		if (get_dir(&(*tmp)->ip, common_depth) == 1) {
 			common_node->left = new_node;
 			common_node->right = *tmp;
@@ -396,6 +434,7 @@ rte_rib6_insert(struct rte_rib6 *rib,
 		*tmp = common_node;
 	}
 	++rib->cur_routes;
+	inc_valid_descendants(new_node);
 	return new_node;
 }
 
@@ -606,3 +645,44 @@ rte_rib6_free(struct rte_rib6 *rib)
 	rte_free(rib);
 	rte_free(te);
 }
+
+RTE_EXPORT_INTERNAL_SYMBOL(rte_rib6_count_empty_supernets)
+uint8_t
+rte_rib6_count_empty_supernets(struct rte_rib6 *rib,
+	const struct rte_ipv6_addr *ip, uint8_t depth)
+{
+	uint8_t top = RTE_ALIGN_CEIL(depth, 8);
+	struct rte_rib6_node *cur;
+	bool has_descendant;
+	uint8_t level;
+
+	if (unlikely(rib == NULL || ip == NULL || depth > RTE_IPV6_MAX_DEPTH))
+		return 0;
+	if (depth <= 24)
+		return 0;
+
+	cur = rib->tree;
+
+	/* Single descent through the binary tree, checking each byte
+	 * boundary on the way. NULL at level L propagates upward, so we
+	 * stop at the first empty supernet and tally the remaining levels.
+	 */
+	for (level = 24; level < top; level += 8) {
+		while (cur != NULL && cur->depth < level)
+			cur = get_nxt_node(cur, ip);
+
+		if (cur == NULL || !rte_ipv6_addr_eq_prefix(&cur->ip, ip, level))
+			return (top - level) >> 3;
+
+		if (cur->depth > level)
+			has_descendant = is_valid_node(cur) ||
+				cur->valid_descendants > 0;
+		else
+			has_descendant = cur->valid_descendants > 0;
+
+		if (!has_descendant)
+			return (top - level) >> 3;
+	}
+	return 0;
+}
+

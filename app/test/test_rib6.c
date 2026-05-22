@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <rte_ip6.h>
 #include <rte_rib6.h>
+#include <rib6_internal.h>
 
 #include "test.h"
 
@@ -20,6 +21,7 @@ static int32_t test_insert_invalid(void);
 static int32_t test_get_fn(void);
 static int32_t test_basic(void);
 static int32_t test_tree_traversal(void);
+static int32_t test_empty_supernets(void);
 
 #define MAX_DEPTH 128
 #define MAX_RULES (1 << 22)
@@ -322,6 +324,95 @@ test_tree_traversal(void)
 	return TEST_SUCCESS;
 }
 
+/*
+ * Exercise rte_rib6_count_empty_supernets() which depends on the
+ * valid_descendants counter maintained on insert/remove.
+ */
+int32_t
+test_empty_supernets(void)
+{
+	struct rte_rib6 *rib = NULL;
+	struct rte_rib6_conf config;
+	struct rte_ipv6_addr ip = RTE_IPV6(0xfcde, 0, 0, 0, 0, 0, 0, 0);
+	struct rte_ipv6_addr sibling = RTE_IPV6(0xfcde, 0, 0, 0, 0, 0, 0, 1);
+	uint8_t cnt;
+
+	config.max_nodes = 64;
+	config.ext_sz = 0;
+
+	rib = rte_rib6_create(__func__, SOCKET_ID_ANY, &config);
+	RTE_TEST_ASSERT(rib != NULL, "Failed to create RIB\n");
+
+	/* depth <= 24: no byte boundaries above to inspect. */
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 24);
+	RTE_TEST_ASSERT(cnt == 0, "depth 24 must return 0, got %u\n", cnt);
+
+	/* Empty RIB, /128 query: 13 byte boundaries (24..120) all empty. */
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 13, "empty RIB /128 must return 13, got %u\n", cnt);
+
+	/* Insert a /32 ancestor: level 24 now has a descendant, levels
+	 * 32..120 still empty -> 12.
+	 */
+	RTE_TEST_ASSERT(rte_rib6_insert(rib, &ip, 32) != NULL,
+		"Failed to insert /32\n");
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 12, "after /32 ADD: expected 12, got %u\n", cnt);
+
+	/* Insert a /48 below: levels 24, 32 and 40 see /48 as descendant,
+	 * 48..120 empty -> 10.
+	 */
+	RTE_TEST_ASSERT(rte_rib6_insert(rib, &ip, 48) != NULL,
+		"Failed to insert /48\n");
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 10, "after /48 ADD: expected 10, got %u\n", cnt);
+
+	/* Insert a sibling /128 that shares a long common prefix with ip
+	 * but differs in the last bits. This forces creation of a
+	 * common_node and exercises the inherited valid_descendants of
+	 * that synthesized intermediate.
+	 */
+	RTE_TEST_ASSERT(rte_rib6_insert(rib, &sibling, 128) != NULL,
+		"Failed to insert sibling /128\n");
+	/* sibling shares prefix with ip down to bit 127; for the query on
+	 * ip/128, all byte boundaries 24..120 have descendants (the /32,
+	 * /48 and the sibling /128 chain) -> 0 empty levels.
+	 */
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 0, "fully populated chain: expected 0, got %u\n",
+		cnt);
+
+	/* Remove the /32 ancestor: /48 and /128 sibling still cover all
+	 * byte boundaries 24..120 -> still 0 empty levels.
+	 */
+	rte_rib6_remove(rib, &ip, 32);
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 0,
+		"after /32 DEL still covered: expected 0, got %u\n", cnt);
+
+	/* Remove the /48: only the /128 sibling remains. For an ip/128
+	 * query, levels 24..120 each see the sibling as descendant, so
+	 * count is still 0.
+	 */
+	rte_rib6_remove(rib, &ip, 48);
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 0,
+		"after /48 DEL still covered: expected 0, got %u\n", cnt);
+
+	/* Remove the sibling /128: RIB now empty again. */
+	rte_rib6_remove(rib, &sibling, 128);
+	cnt = rte_rib6_count_empty_supernets(rib, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 13,
+		"after final DEL: expected 13, got %u\n", cnt);
+
+	/* Invalid input: NULL rib. */
+	cnt = rte_rib6_count_empty_supernets(NULL, &ip, 128);
+	RTE_TEST_ASSERT(cnt == 0, "NULL rib must return 0, got %u\n", cnt);
+
+	rte_rib6_free(rib);
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite rib6_tests = {
 	.suite_name = "rib6 autotest",
 	.setup = NULL,
@@ -333,6 +424,7 @@ static struct unit_test_suite rib6_tests = {
 		TEST_CASE(test_get_fn),
 		TEST_CASE(test_basic),
 		TEST_CASE(test_tree_traversal),
+		TEST_CASE(test_empty_supernets),
 		TEST_CASES_END()
 	}
 };
