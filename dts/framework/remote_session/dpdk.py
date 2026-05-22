@@ -29,6 +29,7 @@ from framework.exception import ConfigurationError, RemoteFileNotFoundError
 from framework.logger import DTSLogger, get_dts_logger
 from framework.params.eal import EalParams
 from framework.remote_session.remote_session import CommandResult
+from framework.settings import SETTINGS
 from framework.testbed_model.cpu import LogicalCore, LogicalCoreCount, LogicalCoreList, lcore_filter
 from framework.testbed_model.node import Node
 from framework.testbed_model.os_session import OSSession
@@ -107,7 +108,22 @@ class DPDKBuildEnvironment:
         """Teardown the DPDK build on the target node.
 
         Removes the DPDK tree and/or build directory/tarball depending on the configuration.
+        If code coverage is enabled, the coverage report and .info file are generated and
+        copied onto the local filesystem before teardown.
         """
+        if SETTINGS.code_coverage:
+            report_folder = PurePath(self.remote_dpdk_build_dir / "meson-logs")
+            output_dir = SETTINGS.output_dir
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+            coverage_status = self._session.generate_coverage_report(self.remote_dpdk_build_dir)
+            if coverage_status:
+                self._session.copy_dir_from(report_folder, output_dir)
+                self._logger.info(
+                    "Coverage HTML report generated, "
+                    f"available at {output_dir}/meson-logs/coveragereports/index.html"
+                )
+
         match self.config.dpdk_location:
             case LocalDPDKTreeLocation():
                 self._node.main_session.remove_remote_dir(self.remote_dpdk_tree_path)
@@ -271,6 +287,9 @@ class DPDKBuildEnvironment:
             )
         else:
             meson_args = MesonArgs(default_library="static", libdir="lib")
+
+        if SETTINGS.code_coverage:
+            meson_args._add_arg("-Db_coverage=true")
 
         self._session.build_dpdk(
             self._env_vars,

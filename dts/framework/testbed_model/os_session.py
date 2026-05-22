@@ -481,6 +481,14 @@ class OSSession(ABC):
         """
 
     @abstractmethod
+    def generate_coverage_report(self, remote_build_dir: PurePath | None) -> int:
+        """Generates a code coverage report for a DTS run.
+
+        Args:
+            remote_build_dir: The remote DPDK build directory
+        """
+
+    @abstractmethod
     def get_dpdk_version(self, version_path: str | PurePath) -> str:
         """Inspect the DPDK version on the remote node.
 

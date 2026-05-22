@@ -295,6 +295,23 @@ class PosixSession(OSSession):
         except RemoteCommandExecutionError as e:
             raise DPDKBuildError(f"DPDK build failed when doing '{e.command}'.")
 
+    def generate_coverage_report(self, remote_build_dir: PurePath | None):
+        """Overrides :meth:`~.os_session.OSSession.generate_coverage_report`."""
+        lcov_version = float(self.send_command(r"lcov --version | grep -oP '\d+\.\d+'").stdout)
+        gcov_version = float(
+            self.send_command(
+                r"gcov --version | head -n 1 | grep -oP '\d+\.\d+' | tail -n 1"
+            ).stdout
+        )
+        if lcov_version == 1.15 and gcov_version >= 8.0:
+            self.send_command(f"ninja -C {remote_build_dir} coverage-html", timeout=600)
+            return True
+        else:
+            self._logger.info(
+                "Unable to generate code coverage report, ensure lcov v1.5 and at least gcov v8.0"
+            )
+            return False
+
     def get_dpdk_version(self, build_dir: str | PurePath) -> str:
         """Overrides :meth:`~.os_session.OSSession.get_dpdk_version`."""
         out = self.send_command(f"cat {self.join_remote_path(build_dir, 'VERSION')}", verify=True)
