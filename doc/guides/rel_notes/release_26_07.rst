@@ -76,6 +76,12 @@ New Features
   that the lcore ID is EAL-managed (``ROLE_RTE`` or ``ROLE_SERVICE``)
   before proceeding, replacing per-driver range checks.
 
+  The power QoS library also updated its lcore validation to use the
+  new helper, so service cores (``ROLE_SERVICE``) are now permitted
+  to configure power QoS parameters via ``rte_power_qos_set_cpu_resume_latency()``
+  and ``rte_power_qos_get_cpu_resume_latency()``, in addition to
+  regular DPDK lcores (``ROLE_RTE``).
+
 
 Removed Items
 -------------
