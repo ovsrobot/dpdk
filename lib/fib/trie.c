@@ -534,19 +534,43 @@ modify_dp(struct rte_trie_tbl *dp, struct rte_rib6 *rib,
 	return 0;
 }
 
+/*
+ * Count byte boundaries between 24 and CEIL(depth, 8) where the
+ * supernet of ip has no descendant in the RIB. This is the number of
+ * new tbl8 levels an ADD of ip/depth would introduce, or the number
+ * to free at DEL once the prefix has been removed from the RIB.
+ *
+ * A NULL answer at level L propagates upwards: narrower supernets at
+ * L+8, L+16, ... are subsets of S_L and cannot contain descendants
+ * either. The loop stops at the first NULL and tallies the remaining
+ * boundaries in one shot.
+ */
+static uint8_t
+count_empty_levels(struct rte_rib6 *rib, const struct rte_ipv6_addr *ip,
+	uint8_t depth)
+{
+	uint8_t level, top = RTE_ALIGN_CEIL(depth, 8);
+
+	for (level = 24; level < top; level += 8) {
+		if (rte_rib6_get_nxt(rib, ip, level, NULL,
+				RTE_RIB6_GET_NXT_COVER) == NULL)
+			return (top - level) >> 3;
+	}
+	return 0;
+}
+
 int
 trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	uint8_t depth, uint64_t next_hop, int op)
 {
 	struct rte_trie_tbl *dp;
 	struct rte_rib6 *rib;
-	struct rte_rib6_node *tmp = NULL;
 	struct rte_rib6_node *node;
 	struct rte_rib6_node *parent;
-	struct rte_ipv6_addr ip_masked, tmp_ip;
+	struct rte_ipv6_addr ip_masked;
 	int ret = 0;
 	uint64_t par_nh, node_nh;
-	uint8_t tmp_depth, depth_diff = 0, parent_depth = 24;
+	uint8_t new_levels;
 
 	if ((fib == NULL) || (ip == NULL) || (depth > RTE_IPV6_MAX_DEPTH))
 		return -EINVAL;
@@ -559,37 +583,6 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 	ip_masked = *ip;
 	rte_ipv6_addr_mask(&ip_masked, depth);
 
-	if (depth > 24) {
-		tmp = rte_rib6_get_nxt(rib, &ip_masked,
-			RTE_ALIGN_FLOOR(depth, 8), NULL,
-			RTE_RIB6_GET_NXT_ALL);
-		if (tmp && op == RTE_FIB6_DEL) {
-			/* in case of delete operation, skip the prefix we are going to delete */
-			rte_rib6_get_ip(tmp, &tmp_ip);
-			rte_rib6_get_depth(tmp, &tmp_depth);
-			if (rte_ipv6_addr_eq(&ip_masked, &tmp_ip) && depth == tmp_depth)
-				tmp = rte_rib6_get_nxt(rib, &ip_masked,
-					RTE_ALIGN_FLOOR(depth, 8), tmp, RTE_RIB6_GET_NXT_ALL);
-		}
-
-		if (tmp == NULL) {
-			tmp = rte_rib6_lookup(rib, ip);
-			/**
-			 * in case of delete operation, lookup returns the prefix
-			 * we are going to delete. Find the parent.
-			 */
-			if (tmp && op == RTE_FIB6_DEL)
-				tmp = rte_rib6_lookup_parent(tmp);
-
-			if (tmp != NULL) {
-				rte_rib6_get_depth(tmp, &tmp_depth);
-				parent_depth = RTE_MAX(tmp_depth, 24);
-			}
-			depth_diff = RTE_ALIGN_CEIL(depth, 8) -
-				RTE_ALIGN_CEIL(parent_depth, 8);
-			depth_diff = depth_diff >> 3;
-		}
-	}
 	node = rte_rib6_lookup_exact(rib, &ip_masked, depth);
 	switch (op) {
 	case RTE_FIB6_ADD:
@@ -603,7 +596,8 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 			return 0;
 		}
 
-		if ((depth > 24) && (dp->rsvd_tbl8s + depth_diff > dp->number_tbl8s))
+		new_levels = count_empty_levels(rib, &ip_masked, depth);
+		if (dp->rsvd_tbl8s + new_levels > dp->number_tbl8s)
 			return -ENOSPC;
 
 		node = rte_rib6_insert(rib, &ip_masked, depth);
@@ -622,7 +616,7 @@ trie_modify(struct rte_fib6 *fib, const struct rte_ipv6_addr *ip,
 			return ret;
 		}
 successfully_added:
-		dp->rsvd_tbl8s += depth_diff;
+		dp->rsvd_tbl8s += new_levels;
 		return 0;
 	case RTE_FIB6_DEL:
 		if (node == NULL)
@@ -640,9 +634,8 @@ successfully_added:
 
 		if (ret != 0)
 			return ret;
-		rte_rib6_remove(rib, ip, depth);
-
-		dp->rsvd_tbl8s -= depth_diff;
+		rte_rib6_remove(rib, &ip_masked, depth);
+		dp->rsvd_tbl8s -= count_empty_levels(rib, &ip_masked, depth);
 		return 0;
 	default:
 		break;
