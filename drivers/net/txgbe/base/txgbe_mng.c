@@ -185,7 +185,7 @@ txgbe_host_interface_command_aml(struct txgbe_hw *hw, u32 *buffer,
 	}
 
 	/* try to get lock */
-	while (rte_atomic32_test_and_set(&hw->swfw_busy)) {
+	while (rte_atomic32_test_and_set(&hw->swfw_busy) == 0) {
 		timeout--;
 		if (!timeout)
 			return TXGBE_ERR_TIMEOUT;
