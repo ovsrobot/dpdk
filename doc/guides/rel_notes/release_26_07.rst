@@ -69,6 +69,13 @@ New Features
   to check whether a logical core is managed by EAL
   (i.e., its role is ``ROLE_RTE`` or ``ROLE_SERVICE``).
 
+* **Added lcore ID verification to power cpufreq framework.**
+
+  Added centralized lcore ID validation using ``rte_lcore_is_eal_managed()``
+  in the power cpufreq framework. All cpufreq API functions now verify
+  that the lcore ID is EAL-managed (``ROLE_RTE`` or ``ROLE_SERVICE``)
+  before proceeding, replacing per-driver range checks.
+
 
 Removed Items
 -------------
