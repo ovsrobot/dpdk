@@ -64,28 +64,6 @@
 	(*(type *)(uintptr_t)((reg)[(ins)->dst_reg] + (ins)->off) = \
 		(type)(reg)[(ins)->src_reg])
 
-#define BPF_ST_ATOMIC_REG(reg, ins, tp)	do { \
-	switch (ins->imm) { \
-	case BPF_ATOMIC_ADD: \
-		rte_atomic##tp##_add((rte_atomic##tp##_t *) \
-			(uintptr_t)((reg)[(ins)->dst_reg] + (ins)->off), \
-			(reg)[(ins)->src_reg]); \
-		break; \
-	case BPF_ATOMIC_XCHG: \
-		(reg)[(ins)->src_reg] = rte_atomic##tp##_exchange((uint##tp##_t *) \
-			(uintptr_t)((reg)[(ins)->dst_reg] + (ins)->off), \
-			(reg)[(ins)->src_reg]); \
-		break; \
-	default: \
-		/* this should be caught by validator and never reach here */ \
-		RTE_BPF_LOG_LINE(ERR, \
-			"%s(%p): unsupported atomic operation at pc: %#zx;", \
-			__func__, bpf, \
-			(uintptr_t)(ins) - (uintptr_t)(bpf)->prm.ins); \
-		return 0; \
-	} \
-} while (0)
-
 /* BPF_LD | BPF_ABS/BPF_IND */
 
 #define	NOP(x)	(x)
@@ -105,6 +83,69 @@
 	reg[EBPF_REG_0] = op(p[0]); \
 } while (0)
 
+/*
+ * Atomic ops on the BPF target memory.
+ *
+ * BPF atomic instructions encode the destination as base register +
+ * signed offset, with the value to combine taken from src_reg.
+ *
+ * Memory order: seq_cst preserves the previous behavior of
+ * rte_atomicNN_add() / rte_atomicNN_exchange() and matches what the
+ * Linux kernel BPF interpreter does for these opcodes.
+ *
+ * Returns 0 on unsupported sub-op (validator should have rejected it),
+ * 1 otherwise.
+ */
+static inline int
+bpf_atomic32(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM],
+	     const struct ebpf_insn *ins)
+{
+	/* need to casts to make bpf memory suitable for C11 atomic */
+	uint32_t __rte_atomic *dst
+		= (uint32_t __rte_atomic *)(uintptr_t)(reg[ins->dst_reg] + ins->off);
+	uint32_t val = (uint32_t)reg[ins->src_reg];
+
+	switch (ins->imm) {
+	case BPF_ATOMIC_ADD:
+		rte_atomic_fetch_add_explicit(dst, val, rte_memory_order_seq_cst);
+		return 1;
+	case BPF_ATOMIC_XCHG:
+		reg[ins->src_reg] = rte_atomic_exchange_explicit(dst, val,
+								 rte_memory_order_seq_cst);
+		return 1;
+	default:
+		RTE_BPF_LOG_LINE(ERR,
+			"%s(%p): unsupported atomic operation at pc: %#zx;",
+			__func__, bpf,
+			(uintptr_t)ins - (uintptr_t)bpf->prm.ins);
+		return 0;
+	}
+}
+
+static inline int
+bpf_atomic64(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM],
+	const struct ebpf_insn *ins)
+{
+	uint64_t __rte_atomic *dst
+		= (uint64_t __rte_atomic *)(uintptr_t) (reg[ins->dst_reg] + ins->off);
+	uint64_t val = reg[ins->src_reg];
+
+	switch (ins->imm) {
+	case BPF_ATOMIC_ADD:
+		rte_atomic_fetch_add_explicit(dst, val,	rte_memory_order_seq_cst);
+		return 1;
+	case BPF_ATOMIC_XCHG:
+		reg[ins->src_reg] = rte_atomic_exchange_explicit(dst, val,
+								 rte_memory_order_seq_cst);
+		return 1;
+	default:
+		RTE_BPF_LOG_LINE(ERR,
+			"%s(%p): unsupported atomic operation at pc: %#zx;",
+			__func__, bpf,
+			(uintptr_t)ins - (uintptr_t)bpf->prm.ins);
+		return 0;
+	}
+}
 
 static inline void
 bpf_alu_be(uint64_t reg[EBPF_REG_NUM], const struct ebpf_insn *ins)
@@ -392,10 +433,12 @@ bpf_exec(const struct rte_bpf *bpf, uint64_t reg[EBPF_REG_NUM])
 			break;
 		/* atomic instructions */
 		case (BPF_STX | EBPF_ATOMIC | BPF_W):
-			BPF_ST_ATOMIC_REG(reg, ins, 32);
+			if (bpf_atomic32(bpf, reg, ins) == 0)
+				return 0;
 			break;
 		case (BPF_STX | EBPF_ATOMIC | EBPF_DW):
-			BPF_ST_ATOMIC_REG(reg, ins, 64);
+			if (bpf_atomic64(bpf, reg, ins) == 0)
+				return 0;
 			break;
 		/* jump instructions */
 		case (BPF_JMP | BPF_JA):
