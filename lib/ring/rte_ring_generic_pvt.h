@@ -19,6 +19,30 @@
  */
 
 /**
+ * @internal optimized version of compare exchange
+ *
+ * The C11 builtin's failure-writeback semantic generates worse code on x86.
+ * Unlike rte_atomic_compare_exchange_*_explicit(), this wrapper does NOT
+ * write the actual value back to a pointer on failure. Callers in a retry
+ * loop must reload the expected value explicitly on the next iteration.
+ *
+ * Full memory barrier, equivalent to rte_memory_order_seq_cst on both
+ * success and failure.
+ */
+static __rte_always_inline bool
+__rte_ring_compare_and_swap(volatile uint32_t *dst,
+			    uint32_t expected, uint32_t desired)
+{
+#if defined(RTE_TOOLCHAIN_MSVC)
+	return _InterlockedCompareExchange((volatile long *)dst,
+					   (long)desired, (long)expected)
+		== (long)expected;
+#else
+	return __sync_bool_compare_and_swap(dst, expected, desired);
+#endif
+}
+
+/**
  * @internal This function updates tail values.
  */
 static __rte_always_inline void
@@ -108,10 +132,10 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 		if (is_st) {
 			d->head = *new_head;
 			success = 1;
-		} else
-			success = rte_atomic32_cmpset(
-					(uint32_t *)(uintptr_t)&d->head,
-					*old_head, *new_head);
+		} else {
+			success = __rte_ring_compare_and_swap(
+					&d->head, *old_head, *new_head);
+		}
 	} while (unlikely(success == 0));
 	return n;
 }
