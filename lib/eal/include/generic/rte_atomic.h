@@ -152,6 +152,13 @@ rte_smp_rmb(void)
 	rte_atomic_thread_fence(rte_memory_order_acquire);
 }
 
+/*
+ * The rte_atomicNN_* APIs defined below are deprecated in favour of C11 atomics.
+ * Suppress the deprecation warnings for the inlines to allow inter-related usage.
+ */
+__rte_diagnostic_push
+_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+
 /*------------------------- 16 bit atomic operations -------------------------*/
 
 #ifndef RTE_TOOLCHAIN_MSVC
@@ -172,7 +179,7 @@ rte_smp_rmb(void)
  * @return
  *   Non-zero on success; 0 on failure.
  */
-static inline int
+static __rte_deprecated inline int
 rte_atomic16_cmpset(volatile uint16_t *dst, uint16_t exp, uint16_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
@@ -193,7 +200,7 @@ rte_atomic16_cmpset(volatile uint16_t *dst, uint16_t exp, uint16_t src)
  * @return
  *   The original value at that location
  */
-static inline uint16_t
+static __rte_deprecated inline uint16_t
 rte_atomic16_exchange(volatile uint16_t *dst, uint16_t val)
 {
 	return rte_atomic_exchange_explicit((volatile __rte_atomic uint16_t *)dst,
@@ -218,7 +225,7 @@ typedef struct {
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic16_init(rte_atomic16_t *v)
 {
 	v->cnt = 0;
@@ -232,7 +239,7 @@ rte_atomic16_init(rte_atomic16_t *v)
  * @return
  *   The value of the counter.
  */
-static inline int16_t
+static __rte_deprecated inline int16_t
 rte_atomic16_read(const rte_atomic16_t *v)
 {
 	return v->cnt;
@@ -246,7 +253,7 @@ rte_atomic16_read(const rte_atomic16_t *v)
  * @param new_value
  *   The new value for the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic16_set(rte_atomic16_t *v, int16_t new_value)
 {
 	v->cnt = new_value;
@@ -260,7 +267,7 @@ rte_atomic16_set(rte_atomic16_t *v, int16_t new_value)
  * @param inc
  *   The value to be added to the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic16_add(rte_atomic16_t *v, int16_t inc)
 {
 	rte_atomic_fetch_add_explicit((volatile __rte_atomic int16_t *)&v->cnt, inc,
@@ -275,7 +282,7 @@ rte_atomic16_add(rte_atomic16_t *v, int16_t inc)
  * @param dec
  *   The value to be subtracted from the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic16_sub(rte_atomic16_t *v, int16_t dec)
 {
 	rte_atomic_fetch_sub_explicit((volatile __rte_atomic int16_t *)&v->cnt, dec,
@@ -288,7 +295,7 @@ rte_atomic16_sub(rte_atomic16_t *v, int16_t dec)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic16_inc(rte_atomic16_t *v)
 {
 	rte_atomic16_add(v, 1);
@@ -300,7 +307,7 @@ rte_atomic16_inc(rte_atomic16_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic16_dec(rte_atomic16_t *v)
 {
 	rte_atomic16_sub(v, 1);
@@ -319,7 +326,7 @@ rte_atomic16_dec(rte_atomic16_t *v)
  * @return
  *   The value of v after the addition.
  */
-static inline int16_t
+static __rte_deprecated inline int16_t
 rte_atomic16_add_return(rte_atomic16_t *v, int16_t inc)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int16_t *)&v->cnt, inc,
@@ -340,7 +347,7 @@ rte_atomic16_add_return(rte_atomic16_t *v, int16_t inc)
  * @return
  *   The value of v after the subtraction.
  */
-static inline int16_t
+static __rte_deprecated inline int16_t
 rte_atomic16_sub_return(rte_atomic16_t *v, int16_t dec)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int16_t *)&v->cnt, dec,
@@ -358,7 +365,7 @@ rte_atomic16_sub_return(rte_atomic16_t *v, int16_t dec)
  * @return
  *   True if the result after the increment operation is 0; false otherwise.
  */
-static inline int rte_atomic16_inc_and_test(rte_atomic16_t *v)
+static __rte_deprecated inline int rte_atomic16_inc_and_test(rte_atomic16_t *v)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int16_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) + 1 == 0;
@@ -375,7 +382,7 @@ static inline int rte_atomic16_inc_and_test(rte_atomic16_t *v)
  * @return
  *   True if the result after the decrement operation is 0; false otherwise.
  */
-static inline int rte_atomic16_dec_and_test(rte_atomic16_t *v)
+static __rte_deprecated inline int rte_atomic16_dec_and_test(rte_atomic16_t *v)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int16_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) - 1 == 0;
@@ -392,7 +399,7 @@ static inline int rte_atomic16_dec_and_test(rte_atomic16_t *v)
  * @return
  *   0 if failed; else 1, success.
  */
-static inline int rte_atomic16_test_and_set(rte_atomic16_t *v)
+static __rte_deprecated inline int rte_atomic16_test_and_set(rte_atomic16_t *v)
 {
 	return rte_atomic16_cmpset((volatile uint16_t *)&v->cnt, 0, 1);
 }
@@ -403,7 +410,7 @@ static inline int rte_atomic16_test_and_set(rte_atomic16_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void rte_atomic16_clear(rte_atomic16_t *v)
+static __rte_deprecated inline void rte_atomic16_clear(rte_atomic16_t *v)
 {
 	v->cnt = 0;
 }
@@ -426,7 +433,7 @@ static inline void rte_atomic16_clear(rte_atomic16_t *v)
  * @return
  *   Non-zero on success; 0 on failure.
  */
-static inline int
+static __rte_deprecated inline int
 rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
@@ -447,7 +454,7 @@ rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src)
  * @return
  *   The original value at that location
  */
-static inline uint32_t
+static __rte_deprecated inline uint32_t
 rte_atomic32_exchange(volatile uint32_t *dst, uint32_t val)
 {
 	return rte_atomic_exchange_explicit((volatile __rte_atomic uint32_t *)dst,
@@ -472,7 +479,7 @@ typedef struct {
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic32_init(rte_atomic32_t *v)
 {
 	v->cnt = 0;
@@ -486,7 +493,7 @@ rte_atomic32_init(rte_atomic32_t *v)
  * @return
  *   The value of the counter.
  */
-static inline int32_t
+static __rte_deprecated inline int32_t
 rte_atomic32_read(const rte_atomic32_t *v)
 {
 	return v->cnt;
@@ -500,7 +507,7 @@ rte_atomic32_read(const rte_atomic32_t *v)
  * @param new_value
  *   The new value for the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic32_set(rte_atomic32_t *v, int32_t new_value)
 {
 	v->cnt = new_value;
@@ -514,7 +521,7 @@ rte_atomic32_set(rte_atomic32_t *v, int32_t new_value)
  * @param inc
  *   The value to be added to the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic32_add(rte_atomic32_t *v, int32_t inc)
 {
 	rte_atomic_fetch_add_explicit((volatile __rte_atomic int32_t *)&v->cnt, inc,
@@ -529,7 +536,7 @@ rte_atomic32_add(rte_atomic32_t *v, int32_t inc)
  * @param dec
  *   The value to be subtracted from the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic32_sub(rte_atomic32_t *v, int32_t dec)
 {
 	rte_atomic_fetch_sub_explicit((volatile __rte_atomic int32_t *)&v->cnt, dec,
@@ -542,7 +549,7 @@ rte_atomic32_sub(rte_atomic32_t *v, int32_t dec)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic32_inc(rte_atomic32_t *v)
 {
 	rte_atomic32_add(v, 1);
@@ -554,7 +561,7 @@ rte_atomic32_inc(rte_atomic32_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic32_dec(rte_atomic32_t *v)
 {
 	rte_atomic32_sub(v,1);
@@ -573,7 +580,7 @@ rte_atomic32_dec(rte_atomic32_t *v)
  * @return
  *   The value of v after the addition.
  */
-static inline int32_t
+static __rte_deprecated inline int32_t
 rte_atomic32_add_return(rte_atomic32_t *v, int32_t inc)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int32_t *)&v->cnt, inc,
@@ -594,7 +601,7 @@ rte_atomic32_add_return(rte_atomic32_t *v, int32_t inc)
  * @return
  *   The value of v after the subtraction.
  */
-static inline int32_t
+static __rte_deprecated inline int32_t
 rte_atomic32_sub_return(rte_atomic32_t *v, int32_t dec)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int32_t *)&v->cnt, dec,
@@ -612,7 +619,7 @@ rte_atomic32_sub_return(rte_atomic32_t *v, int32_t dec)
  * @return
  *   True if the result after the increment operation is 0; false otherwise.
  */
-static inline int rte_atomic32_inc_and_test(rte_atomic32_t *v)
+static __rte_deprecated inline int rte_atomic32_inc_and_test(rte_atomic32_t *v)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int32_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) + 1 == 0;
@@ -629,7 +636,7 @@ static inline int rte_atomic32_inc_and_test(rte_atomic32_t *v)
  * @return
  *   True if the result after the decrement operation is 0; false otherwise.
  */
-static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
+static __rte_deprecated inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int32_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) - 1 == 0;
@@ -646,7 +653,7 @@ static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
  * @return
  *   0 if failed; else 1, success.
  */
-static inline int rte_atomic32_test_and_set(rte_atomic32_t *v)
+static __rte_deprecated inline int rte_atomic32_test_and_set(rte_atomic32_t *v)
 {
 	return rte_atomic32_cmpset((volatile uint32_t *)&v->cnt, 0, 1);
 }
@@ -657,7 +664,7 @@ static inline int rte_atomic32_test_and_set(rte_atomic32_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void rte_atomic32_clear(rte_atomic32_t *v)
+static __rte_deprecated inline void rte_atomic32_clear(rte_atomic32_t *v)
 {
 	v->cnt = 0;
 }
@@ -679,7 +686,7 @@ static inline void rte_atomic32_clear(rte_atomic32_t *v)
  * @return
  *   Non-zero on success; 0 on failure.
  */
-static inline int
+static __rte_deprecated inline int
 rte_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
@@ -700,7 +707,7 @@ rte_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
  * @return
  *   The original value at that location
  */
-static inline uint64_t
+static __rte_deprecated inline uint64_t
 rte_atomic64_exchange(volatile uint64_t *dst, uint64_t val)
 {
 	return rte_atomic_exchange_explicit((volatile __rte_atomic uint64_t *)dst,
@@ -725,7 +732,7 @@ typedef struct {
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic64_init(rte_atomic64_t *v)
 {
 #ifdef __LP64__
@@ -750,7 +757,7 @@ rte_atomic64_init(rte_atomic64_t *v)
  * @return
  *   The value of the counter.
  */
-static inline int64_t
+static __rte_deprecated inline int64_t
 rte_atomic64_read(rte_atomic64_t *v)
 {
 #ifdef __LP64__
@@ -777,7 +784,7 @@ rte_atomic64_read(rte_atomic64_t *v)
  * @param new_value
  *   The new value of the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic64_set(rte_atomic64_t *v, int64_t new_value)
 {
 #ifdef __LP64__
@@ -802,7 +809,7 @@ rte_atomic64_set(rte_atomic64_t *v, int64_t new_value)
  * @param inc
  *   The value to be added to the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic64_add(rte_atomic64_t *v, int64_t inc)
 {
 	rte_atomic_fetch_add_explicit((volatile __rte_atomic int64_t *)&v->cnt, inc,
@@ -817,7 +824,7 @@ rte_atomic64_add(rte_atomic64_t *v, int64_t inc)
  * @param dec
  *   The value to be subtracted from the counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic64_sub(rte_atomic64_t *v, int64_t dec)
 {
 	rte_atomic_fetch_sub_explicit((volatile __rte_atomic int64_t *)&v->cnt, dec,
@@ -830,7 +837,7 @@ rte_atomic64_sub(rte_atomic64_t *v, int64_t dec)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic64_inc(rte_atomic64_t *v)
 {
 	rte_atomic64_add(v, 1);
@@ -842,7 +849,7 @@ rte_atomic64_inc(rte_atomic64_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void
+static __rte_deprecated inline void
 rte_atomic64_dec(rte_atomic64_t *v)
 {
 	rte_atomic64_sub(v, 1);
@@ -861,7 +868,7 @@ rte_atomic64_dec(rte_atomic64_t *v)
  * @return
  *   The value of v after the addition.
  */
-static inline int64_t
+static __rte_deprecated inline int64_t
 rte_atomic64_add_return(rte_atomic64_t *v, int64_t inc)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int64_t *)&v->cnt, inc,
@@ -881,7 +888,7 @@ rte_atomic64_add_return(rte_atomic64_t *v, int64_t inc)
  * @return
  *   The value of v after the subtraction.
  */
-static inline int64_t
+static __rte_deprecated inline int64_t
 rte_atomic64_sub_return(rte_atomic64_t *v, int64_t dec)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int64_t *)&v->cnt, dec,
@@ -899,7 +906,7 @@ rte_atomic64_sub_return(rte_atomic64_t *v, int64_t dec)
  * @return
  *   True if the result after the addition is 0; false otherwise.
  */
-static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
+static __rte_deprecated inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
 {
 	return rte_atomic64_add_return(v, 1) == 0;
 }
@@ -915,7 +922,7 @@ static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
  * @return
  *   True if the result after subtraction is 0; false otherwise.
  */
-static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
+static __rte_deprecated inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
 {
 	return rte_atomic64_sub_return(v, 1) == 0;
 }
@@ -931,7 +938,7 @@ static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
  * @return
  *   0 if failed; else 1, success.
  */
-static inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
+static __rte_deprecated inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
 {
 	return rte_atomic64_cmpset((volatile uint64_t *)&v->cnt, 0, 1);
 }
@@ -942,12 +949,14 @@ static inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void rte_atomic64_clear(rte_atomic64_t *v)
+static __rte_deprecated inline void rte_atomic64_clear(rte_atomic64_t *v)
 {
 	rte_atomic64_set(v, 0);
 }
 
 #endif
+
+__rte_diagnostic_pop
 
 /*------------------------ 128 bit atomic operations -------------------------*/
 
