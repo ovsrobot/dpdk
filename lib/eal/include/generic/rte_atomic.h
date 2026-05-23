@@ -187,13 +187,11 @@ static inline void rte_atomic_thread_fence(rte_memory_order memorder);
 static inline int
 rte_atomic16_cmpset(volatile uint16_t *dst, uint16_t exp, uint16_t src);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int
 rte_atomic16_cmpset(volatile uint16_t *dst, uint16_t exp, uint16_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
 }
-#endif
 
 /**
  * Atomic exchange.
@@ -211,15 +209,11 @@ rte_atomic16_cmpset(volatile uint16_t *dst, uint16_t exp, uint16_t src)
  *   The original value at that location
  */
 static inline uint16_t
-rte_atomic16_exchange(volatile uint16_t *dst, uint16_t val);
-
-#ifdef RTE_FORCE_INTRINSICS
-static inline uint16_t
 rte_atomic16_exchange(volatile uint16_t *dst, uint16_t val)
 {
-	return rte_atomic_exchange_explicit(dst, val, rte_memory_order_seq_cst);
+	return rte_atomic_exchange_explicit((volatile __rte_atomic uint16_t *)dst,
+		val, rte_memory_order_seq_cst);
 }
-#endif
 
 /**
  * The atomic counter structure.
@@ -312,13 +306,11 @@ rte_atomic16_sub(rte_atomic16_t *v, int16_t dec)
 static inline void
 rte_atomic16_inc(rte_atomic16_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic16_inc(rte_atomic16_t *v)
 {
 	rte_atomic16_add(v, 1);
 }
-#endif
 
 /**
  * Atomically decrement a counter by one.
@@ -329,13 +321,11 @@ rte_atomic16_inc(rte_atomic16_t *v)
 static inline void
 rte_atomic16_dec(rte_atomic16_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic16_dec(rte_atomic16_t *v)
 {
 	rte_atomic16_sub(v, 1);
 }
-#endif
 
 /**
  * Atomically add a 16-bit value to a counter and return the result.
@@ -391,13 +381,11 @@ rte_atomic16_sub_return(rte_atomic16_t *v, int16_t dec)
  */
 static inline int rte_atomic16_inc_and_test(rte_atomic16_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic16_inc_and_test(rte_atomic16_t *v)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int16_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) + 1 == 0;
 }
-#endif
 
 /**
  * Atomically decrement a 16-bit counter by one and test.
@@ -412,13 +400,11 @@ static inline int rte_atomic16_inc_and_test(rte_atomic16_t *v)
  */
 static inline int rte_atomic16_dec_and_test(rte_atomic16_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic16_dec_and_test(rte_atomic16_t *v)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int16_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) - 1 == 0;
 }
-#endif
 
 /**
  * Atomically test and set a 16-bit atomic counter.
@@ -433,12 +419,10 @@ static inline int rte_atomic16_dec_and_test(rte_atomic16_t *v)
  */
 static inline int rte_atomic16_test_and_set(rte_atomic16_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic16_test_and_set(rte_atomic16_t *v)
 {
 	return rte_atomic16_cmpset((volatile uint16_t *)&v->cnt, 0, 1);
 }
-#endif
 
 /**
  * Atomically set a 16-bit counter to 0.
@@ -472,13 +456,11 @@ static inline void rte_atomic16_clear(rte_atomic16_t *v)
 static inline int
 rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int
 rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
 }
-#endif
 
 /**
  * Atomic exchange.
@@ -496,15 +478,11 @@ rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src)
  *   The original value at that location
  */
 static inline uint32_t
-rte_atomic32_exchange(volatile uint32_t *dst, uint32_t val);
-
-#ifdef RTE_FORCE_INTRINSICS
-static inline uint32_t
 rte_atomic32_exchange(volatile uint32_t *dst, uint32_t val)
 {
-	return rte_atomic_exchange_explicit(dst, val, rte_memory_order_seq_cst);
+	return rte_atomic_exchange_explicit((volatile __rte_atomic uint32_t *)dst,
+					    val, rte_memory_order_seq_cst);
 }
-#endif
 
 /**
  * The atomic counter structure.
@@ -597,13 +575,11 @@ rte_atomic32_sub(rte_atomic32_t *v, int32_t dec)
 static inline void
 rte_atomic32_inc(rte_atomic32_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic32_inc(rte_atomic32_t *v)
 {
 	rte_atomic32_add(v, 1);
 }
-#endif
 
 /**
  * Atomically decrement a counter by one.
@@ -614,13 +590,11 @@ rte_atomic32_inc(rte_atomic32_t *v)
 static inline void
 rte_atomic32_dec(rte_atomic32_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic32_dec(rte_atomic32_t *v)
 {
 	rte_atomic32_sub(v,1);
 }
-#endif
 
 /**
  * Atomically add a 32-bit value to a counter and return the result.
@@ -676,13 +650,11 @@ rte_atomic32_sub_return(rte_atomic32_t *v, int32_t dec)
  */
 static inline int rte_atomic32_inc_and_test(rte_atomic32_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic32_inc_and_test(rte_atomic32_t *v)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int32_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) + 1 == 0;
 }
-#endif
 
 /**
  * Atomically decrement a 32-bit counter by one and test.
@@ -697,13 +669,11 @@ static inline int rte_atomic32_inc_and_test(rte_atomic32_t *v)
  */
 static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int32_t *)&v->cnt, 1,
 		rte_memory_order_seq_cst) - 1 == 0;
 }
-#endif
 
 /**
  * Atomically test and set a 32-bit atomic counter.
@@ -718,12 +688,10 @@ static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
  */
 static inline int rte_atomic32_test_and_set(rte_atomic32_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic32_test_and_set(rte_atomic32_t *v)
 {
 	return rte_atomic32_cmpset((volatile uint32_t *)&v->cnt, 0, 1);
 }
-#endif
 
 /**
  * Atomically set a 32-bit counter to 0.
@@ -756,13 +724,11 @@ static inline void rte_atomic32_clear(rte_atomic32_t *v)
 static inline int
 rte_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int
 rte_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
 }
-#endif
 
 /**
  * Atomic exchange.
@@ -780,15 +746,11 @@ rte_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
  *   The original value at that location
  */
 static inline uint64_t
-rte_atomic64_exchange(volatile uint64_t *dst, uint64_t val);
-
-#ifdef RTE_FORCE_INTRINSICS
-static inline uint64_t
 rte_atomic64_exchange(volatile uint64_t *dst, uint64_t val)
 {
-	return rte_atomic_exchange_explicit(dst, val, rte_memory_order_seq_cst);
+	return rte_atomic_exchange_explicit((volatile __rte_atomic uint64_t *)dst,
+					    val, rte_memory_order_seq_cst);
 }
-#endif
 
 /**
  * The atomic counter structure.
@@ -811,7 +773,6 @@ typedef struct {
 static inline void
 rte_atomic64_init(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic64_init(rte_atomic64_t *v)
 {
@@ -828,7 +789,6 @@ rte_atomic64_init(rte_atomic64_t *v)
 	}
 #endif
 }
-#endif
 
 /**
  * Atomically read a 64-bit counter.
@@ -841,7 +801,6 @@ rte_atomic64_init(rte_atomic64_t *v)
 static inline int64_t
 rte_atomic64_read(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int64_t
 rte_atomic64_read(rte_atomic64_t *v)
 {
@@ -860,7 +819,6 @@ rte_atomic64_read(rte_atomic64_t *v)
 	return tmp;
 #endif
 }
-#endif
 
 /**
  * Atomically set a 64-bit counter.
@@ -873,7 +831,6 @@ rte_atomic64_read(rte_atomic64_t *v)
 static inline void
 rte_atomic64_set(rte_atomic64_t *v, int64_t new_value);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic64_set(rte_atomic64_t *v, int64_t new_value)
 {
@@ -890,7 +847,6 @@ rte_atomic64_set(rte_atomic64_t *v, int64_t new_value)
 	}
 #endif
 }
-#endif
 
 /**
  * Atomically add a 64-bit value to a counter.
@@ -903,14 +859,12 @@ rte_atomic64_set(rte_atomic64_t *v, int64_t new_value)
 static inline void
 rte_atomic64_add(rte_atomic64_t *v, int64_t inc);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic64_add(rte_atomic64_t *v, int64_t inc)
 {
 	rte_atomic_fetch_add_explicit((volatile __rte_atomic int64_t *)&v->cnt, inc,
 		rte_memory_order_seq_cst);
 }
-#endif
 
 /**
  * Atomically subtract a 64-bit value from a counter.
@@ -923,14 +877,12 @@ rte_atomic64_add(rte_atomic64_t *v, int64_t inc)
 static inline void
 rte_atomic64_sub(rte_atomic64_t *v, int64_t dec);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic64_sub(rte_atomic64_t *v, int64_t dec)
 {
 	rte_atomic_fetch_sub_explicit((volatile __rte_atomic int64_t *)&v->cnt, dec,
 		rte_memory_order_seq_cst);
 }
-#endif
 
 /**
  * Atomically increment a 64-bit counter by one and test.
@@ -941,13 +893,11 @@ rte_atomic64_sub(rte_atomic64_t *v, int64_t dec)
 static inline void
 rte_atomic64_inc(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic64_inc(rte_atomic64_t *v)
 {
 	rte_atomic64_add(v, 1);
 }
-#endif
 
 /**
  * Atomically decrement a 64-bit counter by one and test.
@@ -958,13 +908,11 @@ rte_atomic64_inc(rte_atomic64_t *v)
 static inline void
 rte_atomic64_dec(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void
 rte_atomic64_dec(rte_atomic64_t *v)
 {
 	rte_atomic64_sub(v, 1);
 }
-#endif
 
 /**
  * Add a 64-bit value to an atomic counter and return the result.
@@ -982,14 +930,12 @@ rte_atomic64_dec(rte_atomic64_t *v)
 static inline int64_t
 rte_atomic64_add_return(rte_atomic64_t *v, int64_t inc);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int64_t
 rte_atomic64_add_return(rte_atomic64_t *v, int64_t inc)
 {
 	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int64_t *)&v->cnt, inc,
 		rte_memory_order_seq_cst) + inc;
 }
-#endif
 
 /**
  * Subtract a 64-bit value from an atomic counter and return the result.
@@ -1007,14 +953,12 @@ rte_atomic64_add_return(rte_atomic64_t *v, int64_t inc)
 static inline int64_t
 rte_atomic64_sub_return(rte_atomic64_t *v, int64_t dec);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int64_t
 rte_atomic64_sub_return(rte_atomic64_t *v, int64_t dec)
 {
 	return rte_atomic_fetch_sub_explicit((volatile __rte_atomic int64_t *)&v->cnt, dec,
 		rte_memory_order_seq_cst) - dec;
 }
-#endif
 
 /**
  * Atomically increment a 64-bit counter by one and test.
@@ -1029,12 +973,10 @@ rte_atomic64_sub_return(rte_atomic64_t *v, int64_t dec)
  */
 static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
 {
 	return rte_atomic64_add_return(v, 1) == 0;
 }
-#endif
 
 /**
  * Atomically decrement a 64-bit counter by one and test.
@@ -1049,12 +991,10 @@ static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
  */
 static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
 {
 	return rte_atomic64_sub_return(v, 1) == 0;
 }
-#endif
 
 /**
  * Atomically test and set a 64-bit atomic counter.
@@ -1069,12 +1009,10 @@ static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
  */
 static inline int rte_atomic64_test_and_set(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
 {
 	return rte_atomic64_cmpset((volatile uint64_t *)&v->cnt, 0, 1);
 }
-#endif
 
 /**
  * Atomically set a 64-bit counter to 0.
@@ -1084,12 +1022,10 @@ static inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
  */
 static inline void rte_atomic64_clear(rte_atomic64_t *v);
 
-#ifdef RTE_FORCE_INTRINSICS
 static inline void rte_atomic64_clear(rte_atomic64_t *v)
 {
 	rte_atomic64_set(v, 0);
 }
-#endif
 
 #endif
 
