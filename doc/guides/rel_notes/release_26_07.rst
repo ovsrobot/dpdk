@@ -63,6 +63,13 @@ New Features
     ``rte_eal_init`` and the application is responsible for probing each device,
   * ``--auto-probing`` enables the initial bus probing, which is the current default behavior.
 
+* **Added AMD AE4DMA DMA PMD.**
+
+  Added a new ``dma/ae4dma`` driver for the AMD AE4DMA hardware DMA engine.
+  Each PCI function exposes 16 hardware command queues; the PMD registers one
+  dmadev per channel with a single virtual channel and supports
+  memory-to-memory copy operations.
+
 
 Removed Items
 -------------
