@@ -167,6 +167,73 @@ ae4dma_dev_close(struct rte_dma_dev *dev)
 	cmd_q->qbase_phys_addr = 0;
 	return 0;
 }
+
+/* trigger h/w to process enqued desc:doorbell - by next_write */
+static inline void
+__submit(struct ae4dma_dmadev *ae4dma)
+{
+	struct ae4dma_cmd_queue *cmd_q = &ae4dma->cmd_q;
+	uint16_t write_idx = cmd_q->next_write;
+	uint16_t nb = cmd_q->qcfg.nb_desc;
+
+	AE4DMA_WRITE_REG(&cmd_q->hwq_regs->write_idx, write_idx);
+	if (nb != 0)
+		cmd_q->stats.submitted += (uint16_t)((cmd_q->next_write - cmd_q->last_write +
+				nb) % nb);
+	cmd_q->last_write = cmd_q->next_write;
+}
+
+static int
+ae4dma_submit(void *dev_private, uint16_t vchan __rte_unused)
+{
+	struct ae4dma_dmadev *ae4dma = dev_private;
+
+	__submit(ae4dma);
+	return 0;
+}
+
+/* Write descriptor for enqueue (copy only). */
+static inline int
+__write_desc_copy(void *dev_private, rte_iova_t src, rte_iova_t dst,
+		uint32_t len, uint64_t flags)
+{
+	struct ae4dma_dmadev *ae4dma = dev_private;
+	struct ae4dma_cmd_queue *cmd_q = &ae4dma->cmd_q;
+	struct ae4dma_desc *dma_desc;
+	uint16_t ret;
+	uint16_t nb = cmd_q->qcfg.nb_desc;
+	uint16_t write = cmd_q->next_write;
+
+	if (nb == 0)
+		return -EINVAL;
+
+	/* Reserve one slot to distinguish full from empty (power-of-two ring). */
+	if ((uint32_t)cmd_q->ring_buff_count >= (uint32_t)(nb - 1))
+		return -ENOSPC;
+
+	dma_desc = &cmd_q->qbase_desc[write];
+	memset(dma_desc, 0, sizeof(*dma_desc));
+	dma_desc->length = len;
+	dma_desc->src_hi = upper_32_bits(src);
+	dma_desc->src_lo = lower_32_bits(src);
+	dma_desc->dst_hi = upper_32_bits(dst);
+	dma_desc->dst_lo = lower_32_bits(dst);
+	cmd_q->ring_buff_count++;
+	cmd_q->next_write = (uint16_t)((write + 1) % nb);
+	ret = write;
+	if (flags & RTE_DMA_OP_FLAG_SUBMIT)
+		__submit(ae4dma);
+	return ret;
+}
+
+/* Enqueue a copy operation onto the ae4dma device. */
+static int
+ae4dma_enqueue_copy(void *dev_private, uint16_t vchan __rte_unused,
+		rte_iova_t src, rte_iova_t dst, uint32_t length, uint64_t flags)
+{
+	return __write_desc_copy(dev_private, src, dst, length, flags);
+}
+
 /* Dump DMA device info. */
 static int
 ae4dma_dev_dump(const struct rte_dma_dev *dev, FILE *f)
@@ -197,6 +264,220 @@ ae4dma_dev_dump(const struct rte_dma_dev *dev, FILE *f)
 		cmd_q->stats.errors);
 	return 0;
 }
+
+/* Translates AE4DMA ChanERRs to DMA error codes. */
+static inline enum rte_dma_status_code
+__translate_status_ae4dma_to_dma(enum ae4dma_dma_err status)
+{
+	AE4DMA_PMD_DEBUG("ae4dma desc status = %d", status);
+
+	switch (status) {
+	case AE4DMA_DMA_ERR_NO_ERR:
+		return RTE_DMA_STATUS_SUCCESSFUL;
+	case AE4DMA_DMA_ERR_INV_LEN:
+		return RTE_DMA_STATUS_INVALID_LENGTH;
+	case AE4DMA_DMA_ERR_INV_SRC:
+		return RTE_DMA_STATUS_INVALID_SRC_ADDR;
+	case AE4DMA_DMA_ERR_INV_DST:
+		return RTE_DMA_STATUS_INVALID_DST_ADDR;
+	case AE4DMA_DMA_ERR_INV_ALIGN:
+		/* Name matches DPDK public enum spelling. */
+		return RTE_DMA_STATUS_DATA_POISION;
+	case AE4DMA_DMA_ERR_INV_HEADER:
+	case AE4DMA_DMA_ERR_INV_STATUS:
+		return RTE_DMA_STATUS_ERROR_UNKNOWN;
+	default:
+		return RTE_DMA_STATUS_ERROR_UNKNOWN;
+	}
+}
+
+/*
+ * Scan HW queue for completed descriptors (non-blocking).
+ *
+ * The AE4DMA engine signals completion by advancing the per-queue
+ * `read_idx` register; it does not (reliably) write a status value
+ * back into the descriptor. We therefore use the HW `read_idx`
+ * register as the source of truth and only inspect the descriptor's
+ * `dw1.err_code` byte to classify each completion as success or
+ * failure.
+ *
+ * @param cmd_q
+ *   The AE4DMA command queue.
+ * @param max_ops
+ *   Maximum descriptors to process this call.
+ * @param[out] failed_count
+ *   Number of completed descriptors that did not report success.
+ * @return
+ *   Number of descriptors completed (success + failure), <= max_ops.
+ */
+static inline uint16_t
+ae4dma_scan_hwq(struct ae4dma_cmd_queue *cmd_q, uint16_t max_ops,
+		uint16_t *failed_count)
+{
+	volatile struct ae4dma_desc *hw_desc;
+	uint16_t events_count = 0, fails = 0;
+	uint16_t tail;
+	uint16_t nb = cmd_q->qcfg.nb_desc;
+	uint16_t mask;
+	uint16_t hw_read_idx;
+	uint16_t in_flight;
+	uint16_t scan_cap;
+
+	if (nb == 0 || cmd_q->ring_buff_count == 0) {
+		*failed_count = 0;
+		return 0;
+	}
+	mask = nb - 1;
+
+	hw_read_idx = (uint16_t)(AE4DMA_READ_REG(&cmd_q->hwq_regs->read_idx) & mask);
+	tail = cmd_q->next_read;
+
+	/*
+	 * Descriptors completed since our last visit live in the
+	 * half-open ring range [tail, hw_read_idx). If HW hasn't
+	 * moved we have nothing to do.
+	 */
+	in_flight = (uint16_t)((hw_read_idx - tail) & mask);
+	if (in_flight == 0) {
+		*failed_count = 0;
+		return 0;
+	}
+
+	scan_cap = max_ops;
+	if (scan_cap > AE4DMA_DESCRIPTORS_PER_CMDQ)
+		scan_cap = AE4DMA_DESCRIPTORS_PER_CMDQ;
+	if (scan_cap > in_flight)
+		scan_cap = in_flight;
+	if (scan_cap > cmd_q->ring_buff_count)
+		scan_cap = (uint16_t)cmd_q->ring_buff_count;
+
+	while (events_count < scan_cap) {
+		uint8_t hw_status;
+		uint8_t hw_err;
+
+		hw_desc = &cmd_q->qbase_desc[tail];
+		hw_status = hw_desc->dw1.status;
+		hw_err = hw_desc->dw1.err_code;
+
+		/*
+		 * read_idx advancing is the definitive completion
+		 * signal. The per-descriptor status byte is informational
+		 * and may not yet be written when we observe it:
+		 *
+		 *   AE4DMA_DMA_DESC_ERROR (4)
+		 *     Hard failure - err_code names the precise cause.
+		 *   AE4DMA_DMA_DESC_COMPLETED (3) or 0
+		 *     Success.
+		 *   AE4DMA_DMA_DESC_VALIDATED (1) / _PROCESSED (2)
+		 *     Benign race: HW had not finished updating the
+		 *     status byte at the instant we read it. Since
+		 *     read_idx has moved past this slot, treat it as
+		 *     success unless err_code says otherwise.
+		 *
+		 * A non-zero err_code is treated as a failure regardless
+		 * of the observed status value.
+		 */
+		if (hw_status == AE4DMA_DMA_DESC_ERROR ||
+				hw_err != AE4DMA_DMA_ERR_NO_ERR) {
+			fails++;
+			AE4DMA_PMD_WARN("Desc failed: status=%u err=%u",
+					hw_status, hw_err);
+		}
+		cmd_q->status[events_count] = (enum ae4dma_dma_err)hw_err;
+		cmd_q->ring_buff_count--;
+		events_count++;
+		tail = (tail + 1) & mask;
+	}
+
+	cmd_q->stats.completed += events_count;
+	cmd_q->stats.errors += fails;
+	cmd_q->next_read = tail;
+	*failed_count = fails;
+	return events_count;
+}
+
+/* Returns successful operations count and sets error flag if any errors. */
+static uint16_t
+ae4dma_completed(void *dev_private, uint16_t vchan __rte_unused,
+		const uint16_t max_ops, uint16_t *last_idx, bool *has_error)
+{
+	struct ae4dma_dmadev *ae4dma = dev_private;
+	struct ae4dma_cmd_queue *cmd_q = &ae4dma->cmd_q;
+	uint16_t cpl_count, sl_count;
+	uint16_t err_count = 0;
+	uint16_t nb = cmd_q->qcfg.nb_desc;
+
+	*has_error = false;
+
+	cpl_count = ae4dma_scan_hwq(cmd_q, max_ops, &err_count);
+
+	if (cpl_count > max_ops)
+		cpl_count = max_ops;
+
+	if (cpl_count > 0 && last_idx != NULL)
+		*last_idx = (uint16_t)((cmd_q->next_read - 1 + nb) % nb);
+
+	sl_count = cpl_count - err_count;
+	if (err_count)
+		*has_error = true;
+
+	return sl_count;
+}
+
+static uint16_t
+ae4dma_completed_status(void *dev_private, uint16_t vchan __rte_unused,
+		uint16_t max_ops, uint16_t *last_idx,
+		enum rte_dma_status_code *status)
+{
+	struct ae4dma_dmadev *ae4dma = dev_private;
+	struct ae4dma_cmd_queue *cmd_q = &ae4dma->cmd_q;
+	uint16_t cpl_count;
+	uint16_t i;
+	uint16_t err_count = 0;
+	uint16_t nb = cmd_q->qcfg.nb_desc;
+
+	cpl_count = ae4dma_scan_hwq(cmd_q, max_ops, &err_count);
+
+	if (cpl_count > max_ops)
+		cpl_count = max_ops;
+
+	if (cpl_count > 0 && last_idx != NULL)
+		*last_idx = (uint16_t)((cmd_q->next_read - 1 + nb) % nb);
+
+	if (likely(err_count == 0)) {
+		for (i = 0; i < cpl_count; i++)
+			status[i] = RTE_DMA_STATUS_SUCCESSFUL;
+	} else {
+		for (i = 0; i < cpl_count; i++)
+			status[i] = __translate_status_ae4dma_to_dma(cmd_q->status[i]);
+	}
+
+	return cpl_count;
+}
+
+/* Get the remaining capacity of the ring. */
+static uint16_t
+ae4dma_burst_capacity(const void *dev_private, uint16_t vchan __rte_unused)
+{
+	const struct ae4dma_dmadev *ae4dma = dev_private;
+	const struct ae4dma_cmd_queue *cmd_q = &ae4dma->cmd_q;
+	uint16_t nb = cmd_q->qcfg.nb_desc;
+	uint16_t mask;
+	uint16_t read_idx = cmd_q->next_read;
+	uint16_t write_idx = cmd_q->next_write;
+	uint16_t used;
+
+	if (nb < 2 || !rte_is_power_of_2(nb))
+		return 0;
+
+	mask = nb - 1;
+	used = (uint16_t)((write_idx - read_idx) & mask);
+	/* One slot reserved (same rule as enqueue). */
+	if (used >= nb - 1)
+		return 0;
+	return (uint16_t)(nb - 1 - used);
+}
+
 /* Retrieve the generic stats of a DMA device. */
 static int
 ae4dma_stats_get(const struct rte_dma_dev *dev, uint16_t vchan __rte_unused,
@@ -356,6 +637,13 @@ ae4dma_dmadev_create(const char *name, struct rte_pci_device *dev, uint8_t qn)
 	dmadev->device = &dev->device;
 	dmadev->fp_obj->dev_private = dmadev->data->dev_private;
 	dmadev->dev_ops = &ae4dma_dmadev_ops;
+
+	dmadev->fp_obj->burst_capacity = ae4dma_burst_capacity;
+	dmadev->fp_obj->completed = ae4dma_completed;
+	dmadev->fp_obj->completed_status = ae4dma_completed_status;
+	dmadev->fp_obj->copy = ae4dma_enqueue_copy;
+	dmadev->fp_obj->submit = ae4dma_submit;
+	/* fill capability not advertised: leave fp_obj->fill as zero-initialised. */
 
 	ae4dma = dmadev->data->dev_private;
 	ae4dma->dmadev = dmadev;
