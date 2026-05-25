@@ -40,6 +40,7 @@ libraries = [
         'efd',
         'eventdev',
         'dispatcher', # dispatcher depends on eventdev
+        'fastmem',
         'gpudev',
         'gro',
         'gso',
