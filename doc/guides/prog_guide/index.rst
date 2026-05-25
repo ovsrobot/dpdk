@@ -28,6 +28,7 @@ Memory Management
     mempool_lib
     mbuf_lib
     multi_proc_support
+    fastmem_lib
 
 
 CPU Management
