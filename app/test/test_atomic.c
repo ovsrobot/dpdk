@@ -100,6 +100,15 @@
  *   - At the end of the test, the number of corrupted tokens must be 0.
  */
 
+/*
+ * The rte_atomicNN_* APIs exercised below are deprecated in favour of C11 atomics.
+ * Suppress the deprecation warnings for the whole file;
+ * when the APIs are removed this test collapses to the 128-bit
+ * compare-and-swap case and the suppression goes with it.
+ */
+__rte_diagnostic_push
+_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+
 #define NUM_ATOMIC_TYPES 3
 
 #define N_BASE 1000000u
@@ -645,4 +654,7 @@ test_atomic(void)
 	return 0;
 }
 REGISTER_FAST_TEST(atomic_autotest, NOHUGE_SKIP, ASAN_OK, test_atomic);
+
+__rte_diagnostic_pop
+
 #endif /* RTE_TOOLCHAIN_MSVC */
