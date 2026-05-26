@@ -315,15 +315,17 @@ uacce_match_api(const struct rte_uacce_device *dev, bool forward_compat,
 }
 
 static bool
-uacce_match(const struct rte_uacce_driver *dr, const struct rte_uacce_device *dev)
+uacce_bus_match(const struct rte_driver *drv, const struct rte_device *dev)
 {
+	const struct rte_uacce_driver *dr = RTE_BUS_DRIVER(drv, *dr);
+	const struct rte_uacce_device *uacce_dev = RTE_BUS_DEVICE(dev, *uacce_dev);
 	bool forward_compat = !!(dr->drv_flags & RTE_UACCE_DRV_FORWARD_COMPATIBILITY_DEV);
 	const struct rte_uacce_id *id_table;
 	const char *map;
 	uint32_t len;
 
 	for (id_table = dr->id_table; id_table->dev_api != NULL; id_table++) {
-		if (!uacce_match_api(dev, forward_compat, id_table))
+		if (!uacce_match_api(uacce_dev, forward_compat, id_table))
 			continue;
 
 		if (id_table->dev_alg == NULL)
@@ -334,10 +336,10 @@ uacce_match(const struct rte_uacce_driver *dr, const struct rte_uacce_device *de
 		 * algorithms: aaa, bbbb and cc.
 		 * The id_table->dev_alg should be a single algrithm, e.g. bbbb.
 		 */
-		map = strstr(dev->algs, id_table->dev_alg);
+		map = strstr(uacce_dev->algs, id_table->dev_alg);
 		if (map == NULL)
 			continue;
-		if (map != dev->algs && map[-1] != '\n')
+		if (map != uacce_dev->algs && map[-1] != '\n')
 			continue;
 		len = strlen(id_table->dev_alg);
 		if (map[len] != '\0' && map[len] != '\n')
@@ -356,7 +358,7 @@ uacce_probe_one_driver(struct rte_uacce_driver *dr, struct rte_uacce_device *dev
 	bool already_probed;
 	int ret;
 
-	if (!uacce_match(dr, dev))
+	if (!uacce_bus_match(&dr->driver, &dev->device))
 		/* Match of device and driver failed */
 		return 1;
 
@@ -623,6 +625,7 @@ static struct rte_uacce_bus uacce_bus = {
 		.scan = uacce_scan,
 		.probe = uacce_probe,
 		.cleanup = uacce_cleanup,
+		.match = uacce_bus_match,
 		.plug = uacce_plug,
 		.unplug = uacce_unplug,
 		.find_device = rte_bus_generic_find_device,
