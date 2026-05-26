@@ -359,11 +359,6 @@ uacce_probe_device(struct rte_driver *drv, struct rte_device *dev)
 	const char *dev_name = uacce_dev->name;
 	int ret;
 
-	if (rte_dev_is_probed(&uacce_dev->device)) {
-		UACCE_BUS_INFO("device %s is already probed", dev_name);
-		return -EEXIST;
-	}
-
 	UACCE_BUS_DEBUG("probe device %s using driver %s", dev_name, uacce_drv->driver.name);
 
 	ret = uacce_drv->probe(uacce_drv, uacce_dev);
