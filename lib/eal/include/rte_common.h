@@ -172,9 +172,11 @@ typedef uint16_t unaligned_uint16_t;
 #ifdef RTE_TOOLCHAIN_MSVC
 #define __rte_deprecated
 #define __rte_deprecated_msg(msg)
+#define __rte_allow_deprecated
 #else
 #define __rte_deprecated	__attribute__((__deprecated__))
 #define __rte_deprecated_msg(msg)	__attribute__((__deprecated__(msg)))
+#define __rte_allow_deprecated _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #endif
 
 /**
