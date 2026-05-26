@@ -15,34 +15,9 @@
  * @file rte_ring_c11_pvt.h
  * It is not recommended to include this file directly,
  * include <rte_ring.h> instead.
- * Contains internal helper functions for MP/SP and MC/SC ring modes.
+ * Contains internal helper functions for MP and MC ring modes.
  * For more information please refer to <rte_ring.h>.
  */
-
-/**
- * @internal This function updates tail values.
- */
-static __rte_always_inline void
-__rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
-		uint32_t new_val, uint32_t single, uint32_t enqueue)
-{
-	RTE_SET_USED(enqueue);
-
-	/*
-	 * If there are other enqueues/dequeues in progress that preceded us,
-	 * we need to wait for them to complete
-	 */
-	if (!single)
-		rte_wait_until_equal_32((uint32_t *)(uintptr_t)&ht->tail, old_val,
-			rte_memory_order_relaxed);
-
-	/*
-	 * R0: Establishes a synchronizing edge with load-acquire of tail at A1.
-	 * Ensures that memory effects by this thread on ring elements array
-	 * is observed by a different thread of the other type.
-	 */
-	rte_atomic_store_explicit(&ht->tail, new_val, rte_memory_order_release);
-}
 
 /**
  * @internal This is a helper function that moves the producer/consumer head
@@ -72,14 +47,11 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
  *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only
  */
 static __rte_always_inline unsigned int
-__rte_ring_headtail_move_head(struct rte_ring_headtail *d,
+__rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 		const struct rte_ring_headtail *s, uint32_t capacity,
-		unsigned int is_st, unsigned int n,
-		enum rte_ring_queue_behavior behavior,
+		unsigned int n,	enum rte_ring_queue_behavior behavior,
 		uint32_t *old_head, uint32_t *new_head, uint32_t *entries)
 {
-	uint32_t stail;
-	int success;
 	unsigned int max = n;
 
 	/*
@@ -89,8 +61,7 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 	 * d->head.
 	 * If not, an unsafe partial order may ensue.
 	 */
-	*old_head = rte_atomic_load_explicit(&d->head,
-			rte_memory_order_acquire);
+	*old_head = rte_atomic_load_explicit(&d->head, rte_memory_order_acquire);
 	do {
 		/* Reset n to the initial burst count */
 		n = max;
@@ -101,15 +72,14 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 		 * ring elements array is observed by the time
 		 * this thread observes its tail update.
 		 */
-		stail = rte_atomic_load_explicit(&s->tail,
-					rte_memory_order_acquire);
+		uint32_t stail = rte_atomic_load_explicit(&s->tail, rte_memory_order_acquire);
 
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
 		 * *old_head > s->tail). So 'entries' is always between 0
 		 * and capacity (which is < size).
 		 */
-		*entries = (capacity + stail - *old_head);
+		*entries = capacity + stail - *old_head;
 
 		/* check that we have enough room in ring */
 		if (unlikely(n > *entries))
@@ -120,25 +90,20 @@ __rte_ring_headtail_move_head(struct rte_ring_headtail *d,
 			return 0;
 
 		*new_head = *old_head + n;
-		if (is_st) {
-			d->head = *new_head;
-			success = 1;
-		} else
-			/* on failure, *old_head is updated */
-			/*
-			 * R1/A2.
-			 * R1: Establishes a synchronizing edge with A0 of a
-			 * different thread.
-			 * A2: Establishes a synchronizing edge with R1 of a
-			 * different thread to observe same value for stail
-			 * observed by that thread on CAS failure (to retry
-			 * with an updated *old_head).
-			 */
-			success = rte_atomic_compare_exchange_strong_explicit(
-					&d->head, old_head, *new_head,
-					rte_memory_order_release,
-					rte_memory_order_acquire);
-	} while (unlikely(success == 0));
+
+		/* on failure, *old_head is updated */
+		/*
+		 * R1/A2.
+		 * R1: Establishes a synchronizing edge with A0 of a
+		 * different thread.
+		 * A2: Establishes a synchronizing edge with R1 of a
+		 * different thread to observe same value for stail
+		 * observed by that thread on CAS failure (to retry
+		 * with an updated *old_head).
+		 */
+	} while (unlikely(!rte_atomic_compare_exchange_strong_explicit(
+				  &d->head, old_head, *new_head,
+				  rte_memory_order_release, rte_memory_order_acquire)));
 	return n;
 }
 
