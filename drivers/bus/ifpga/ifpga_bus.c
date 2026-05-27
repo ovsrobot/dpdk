@@ -274,13 +274,6 @@ ifpga_probe_device(struct rte_driver *drv, struct rte_device *dev)
 	struct rte_afu_driver *afu_drv = RTE_BUS_DRIVER(drv, *afu_drv);
 	int ret;
 
-	/* Check if a driver is already loaded */
-	if (rte_dev_is_probed(&afu_dev->device)) {
-		IFPGA_BUS_DEBUG("Device %s is already probed",
-				rte_ifpga_device_name(afu_dev));
-		return -EEXIST;
-	}
-
 	/* reference driver structure */
 	afu_dev->driver = afu_drv;
 
