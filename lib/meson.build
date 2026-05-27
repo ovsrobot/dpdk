@@ -38,6 +38,7 @@ libraries = [
         'distributor',
         'dmadev',  # eventdev depends on this
         'efd',
+        'fastmem',
         'eventdev',
         'dispatcher', # dispatcher depends on eventdev
         'gpudev',
