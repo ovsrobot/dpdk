@@ -111,6 +111,61 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **ethdev: promoted several APIs from experimental to stable.**
+
+  The following ethdev APIs are no longer marked experimental:
+
+  * ``rte_eth_buffer_split_get_supported_hdr_ptypes``
+  * ``rte_eth_cman_config_get``
+  * ``rte_eth_cman_config_init``
+  * ``rte_eth_cman_config_set``
+  * ``rte_eth_cman_info_get``
+  * ``rte_eth_dev_capability_name``
+  * ``rte_eth_dev_conf_get``
+  * ``rte_eth_dev_count_aggr_ports``
+  * ``rte_eth_dev_get_module_eeprom``
+  * ``rte_eth_dev_get_module_info``
+  * ``rte_eth_dev_get_reg_info_ext``
+  * ``rte_eth_dev_hairpin_capability_get``
+  * ``rte_eth_dev_map_aggr_tx_affinity``
+  * ``rte_eth_dev_priority_flow_ctrl_queue_configure``
+  * ``rte_eth_dev_priority_flow_ctrl_queue_info_get``
+  * ``rte_eth_dev_priv_dump``
+  * ``rte_eth_dev_rss_algo_name``
+  * ``rte_eth_fec_get``
+  * ``rte_eth_fec_get_capability``
+  * ``rte_eth_fec_set``
+  * ``rte_eth_find_rss_algo``
+  * ``rte_eth_get_monitor_addr``
+  * ``rte_eth_hairpin_bind``
+  * ``rte_eth_hairpin_get_peer_ports``
+  * ``rte_eth_hairpin_unbind``
+  * ``rte_eth_ip_reassembly_capability_get``
+  * ``rte_eth_ip_reassembly_conf_get``
+  * ``rte_eth_ip_reassembly_conf_set``
+  * ``rte_eth_link_speed_to_str``
+  * ``rte_eth_link_to_str``
+  * ``rte_eth_macaddrs_get``
+  * ``rte_eth_read_clock``
+  * ``rte_eth_recycle_mbufs``
+  * ``rte_eth_recycle_rx_queue_info_get``
+  * ``rte_eth_representor_info_get``
+  * ``rte_eth_rx_avail_thresh_query``
+  * ``rte_eth_rx_avail_thresh_set``
+  * ``rte_eth_rx_descriptor_dump``
+  * ``rte_eth_rx_hairpin_queue_setup``
+  * ``rte_eth_rx_queue_is_valid``
+  * ``rte_eth_speed_lanes_get``
+  * ``rte_eth_speed_lanes_get_capability``
+  * ``rte_eth_speed_lanes_set``
+  * ``rte_eth_timesync_adjust_freq``
+  * ``rte_eth_tx_descriptor_dump``
+  * ``rte_eth_tx_hairpin_queue_setup``
+  * ``rte_eth_tx_queue_count``
+  * ``rte_eth_tx_queue_is_valid``
+  * ``rte_eth_xstats_query_state``
+  * ``rte_eth_xstats_set_counter``
+
 
 ABI Changes
 -----------

@@ -839,7 +839,7 @@ eth_dev_validate_tx_queue(const struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_rx_queue_is_valid, 23.07)
+RTE_EXPORT_SYMBOL(rte_eth_rx_queue_is_valid)
 int
 rte_eth_rx_queue_is_valid(uint16_t port_id, uint16_t queue_id)
 {
@@ -851,7 +851,7 @@ rte_eth_rx_queue_is_valid(uint16_t port_id, uint16_t queue_id)
 	return eth_dev_validate_rx_queue(dev, queue_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_tx_queue_is_valid, 23.07)
+RTE_EXPORT_SYMBOL(rte_eth_tx_queue_is_valid)
 int
 rte_eth_tx_queue_is_valid(uint16_t port_id, uint16_t queue_id)
 {
@@ -1171,7 +1171,7 @@ out:
 	return buf;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_capability_name, 21.11)
+RTE_EXPORT_SYMBOL(rte_eth_dev_capability_name)
 const char *
 rte_eth_dev_capability_name(uint64_t capability)
 {
@@ -1929,7 +1929,7 @@ rte_eth_dev_set_link_down(uint16_t port_id)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_speed_lanes_get, 24.11)
+RTE_EXPORT_SYMBOL(rte_eth_speed_lanes_get)
 int
 rte_eth_speed_lanes_get(uint16_t port_id, uint32_t *lane)
 {
@@ -1943,7 +1943,7 @@ rte_eth_speed_lanes_get(uint16_t port_id, uint32_t *lane)
 	return eth_err(port_id, dev->dev_ops->speed_lanes_get(dev, lane));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_speed_lanes_get_capability, 24.11)
+RTE_EXPORT_SYMBOL(rte_eth_speed_lanes_get_capability)
 int
 rte_eth_speed_lanes_get_capability(uint16_t port_id,
 				   struct rte_eth_speed_lanes_capa *speed_lanes_capa,
@@ -1970,7 +1970,7 @@ rte_eth_speed_lanes_get_capability(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_speed_lanes_set, 24.11)
+RTE_EXPORT_SYMBOL(rte_eth_speed_lanes_set)
 int
 rte_eth_speed_lanes_set(uint16_t port_id, uint32_t speed_lanes_capa)
 {
@@ -2498,7 +2498,7 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	return eth_err(port_id, ret);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_rx_hairpin_queue_setup, 19.11)
+RTE_EXPORT_SYMBOL(rte_eth_rx_hairpin_queue_setup)
 int
 rte_eth_rx_hairpin_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 			       uint16_t nb_rx_desc,
@@ -2716,7 +2716,7 @@ rte_eth_tx_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 		       tx_queue_id, nb_tx_desc, socket_id, &local_conf));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_tx_hairpin_queue_setup, 19.11)
+RTE_EXPORT_SYMBOL(rte_eth_tx_hairpin_queue_setup)
 int
 rte_eth_tx_hairpin_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 			       uint16_t nb_tx_desc,
@@ -2816,7 +2816,7 @@ rte_eth_tx_hairpin_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_hairpin_bind, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_hairpin_bind)
 int
 rte_eth_hairpin_bind(uint16_t tx_port, uint16_t rx_port)
 {
@@ -2844,7 +2844,7 @@ rte_eth_hairpin_bind(uint16_t tx_port, uint16_t rx_port)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_hairpin_unbind, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_hairpin_unbind)
 int
 rte_eth_hairpin_unbind(uint16_t tx_port, uint16_t rx_port)
 {
@@ -2872,7 +2872,7 @@ rte_eth_hairpin_unbind(uint16_t tx_port, uint16_t rx_port)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_hairpin_get_peer_ports, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_hairpin_get_peer_ports)
 int
 rte_eth_hairpin_get_peer_ports(uint16_t port_id, uint16_t *peer_ports,
 			       size_t len, uint32_t direction)
@@ -3200,7 +3200,7 @@ rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *eth_link)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_link_speed_to_str, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_link_speed_to_str)
 const char *
 rte_eth_link_speed_to_str(uint32_t link_speed)
 {
@@ -3267,7 +3267,7 @@ rte_eth_link_speed_to_str(uint32_t link_speed)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_link_to_str, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_link_to_str)
 int
 rte_eth_link_to_str(char *str, size_t len, const struct rte_eth_link *eth_link)
 {
@@ -3946,7 +3946,7 @@ rte_eth_xstats_reset(uint16_t port_id)
 	return rte_eth_stats_reset(port_id);
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_xstats_set_counter, 25.03)
+RTE_EXPORT_SYMBOL(rte_eth_xstats_set_counter)
 int
 rte_eth_xstats_set_counter(uint16_t port_id, uint64_t id, int on_off)
 {
@@ -3976,7 +3976,7 @@ rte_eth_xstats_set_counter(uint16_t port_id, uint64_t id, int on_off)
 }
 
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_xstats_query_state, 25.03)
+RTE_EXPORT_SYMBOL(rte_eth_xstats_query_state)
 int
 rte_eth_xstats_query_state(uint16_t port_id, uint64_t id)
 {
@@ -4145,7 +4145,7 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_conf_get, 21.11)
+RTE_EXPORT_SYMBOL(rte_eth_dev_conf_get)
 int
 rte_eth_dev_conf_get(uint16_t port_id, struct rte_eth_conf *dev_conf)
 {
@@ -4306,7 +4306,7 @@ ptype_unknown:
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_macaddrs_get, 21.11)
+RTE_EXPORT_SYMBOL(rte_eth_macaddrs_get)
 int
 rte_eth_macaddrs_get(uint16_t port_id, struct rte_ether_addr *ma,
 	unsigned int num)
@@ -4805,7 +4805,7 @@ validate_tx_pause_config(struct rte_eth_dev_info *dev_info, uint8_t tc_max,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_priority_flow_ctrl_queue_info_get, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_dev_priority_flow_ctrl_queue_info_get)
 int
 rte_eth_dev_priority_flow_ctrl_queue_info_get(uint16_t port_id,
 		struct rte_eth_pfc_queue_info *pfc_queue_info)
@@ -4833,7 +4833,7 @@ rte_eth_dev_priority_flow_ctrl_queue_info_get(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_priority_flow_ctrl_queue_configure, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_dev_priority_flow_ctrl_queue_configure)
 int
 rte_eth_dev_priority_flow_ctrl_queue_configure(uint16_t port_id,
 		struct rte_eth_pfc_queue_conf *pfc_queue_conf)
@@ -5147,7 +5147,7 @@ rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_rss_algo_name, 23.11)
+RTE_EXPORT_SYMBOL(rte_eth_dev_rss_algo_name)
 const char *
 rte_eth_dev_rss_algo_name(enum rte_eth_hash_function rss_algo)
 {
@@ -5162,7 +5162,7 @@ rte_eth_dev_rss_algo_name(enum rte_eth_hash_function rss_algo)
 	return name;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_find_rss_algo, 24.03)
+RTE_EXPORT_SYMBOL(rte_eth_find_rss_algo)
 int
 rte_eth_find_rss_algo(const char *name, uint32_t *algo)
 {
@@ -5280,7 +5280,7 @@ rte_eth_led_off(uint16_t port_id)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_fec_get_capability, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_fec_get_capability)
 int
 rte_eth_fec_get_capability(uint16_t port_id,
 			   struct rte_eth_fec_capa *speed_fec_capa,
@@ -5308,7 +5308,7 @@ rte_eth_fec_get_capability(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_fec_get, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_fec_get)
 int
 rte_eth_fec_get(uint16_t port_id, uint32_t *fec_capa)
 {
@@ -5334,7 +5334,7 @@ rte_eth_fec_get(uint16_t port_id, uint32_t *fec_capa)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_fec_set, 20.11)
+RTE_EXPORT_SYMBOL(rte_eth_fec_set)
 int
 rte_eth_fec_set(uint16_t port_id, uint32_t fec_capa)
 {
@@ -5694,7 +5694,7 @@ int rte_eth_set_queue_rate_limit(uint16_t port_id, uint16_t queue_idx,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_rx_avail_thresh_set, 22.07)
+RTE_EXPORT_SYMBOL(rte_eth_rx_avail_thresh_set)
 int rte_eth_rx_avail_thresh_set(uint16_t port_id, uint16_t queue_id,
 			       uint8_t avail_thresh)
 {
@@ -5727,7 +5727,7 @@ int rte_eth_rx_avail_thresh_set(uint16_t port_id, uint16_t queue_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_rx_avail_thresh_query, 22.07)
+RTE_EXPORT_SYMBOL(rte_eth_rx_avail_thresh_query)
 int rte_eth_rx_avail_thresh_query(uint16_t port_id, uint16_t *queue_id,
 				 uint8_t *avail_thresh)
 {
@@ -6413,7 +6413,7 @@ rte_eth_tx_queue_info_get(uint16_t port_id, uint16_t queue_id,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_recycle_rx_queue_info_get, 23.11)
+RTE_EXPORT_SYMBOL(rte_eth_recycle_rx_queue_info_get)
 int
 rte_eth_recycle_rx_queue_info_get(uint16_t port_id, uint16_t queue_id,
 		struct rte_eth_recycle_rxq_info *recycle_rxq_info)
@@ -6504,7 +6504,7 @@ rte_eth_tx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_get_monitor_addr, 21.02)
+RTE_EXPORT_SYMBOL(rte_eth_get_monitor_addr)
 int
 rte_eth_get_monitor_addr(uint16_t port_id, uint16_t queue_id,
 		struct rte_power_monitor_cond *pmc)
@@ -6675,7 +6675,7 @@ rte_eth_timesync_adjust_time(uint16_t port_id, int64_t delta)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_timesync_adjust_freq, 24.11)
+RTE_EXPORT_SYMBOL(rte_eth_timesync_adjust_freq)
 int
 rte_eth_timesync_adjust_freq(uint16_t port_id, int64_t ppm)
 {
@@ -6746,7 +6746,7 @@ rte_eth_timesync_write_time(uint16_t port_id, const struct timespec *timestamp)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_read_clock, 19.08)
+RTE_EXPORT_SYMBOL(rte_eth_read_clock)
 int
 rte_eth_read_clock(uint16_t port_id, uint64_t *clock)
 {
@@ -6802,7 +6802,7 @@ rte_eth_dev_get_reg_info(uint16_t port_id, struct rte_dev_reg_info *info)
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_get_reg_info_ext, 24.11)
+RTE_EXPORT_SYMBOL(rte_eth_dev_get_reg_info_ext)
 int
 rte_eth_dev_get_reg_info_ext(uint16_t port_id, struct rte_dev_reg_info *info)
 {
@@ -6909,7 +6909,7 @@ rte_eth_dev_set_eeprom(uint16_t port_id, struct rte_dev_eeprom_info *info)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_get_module_info, 18.05)
+RTE_EXPORT_SYMBOL(rte_eth_dev_get_module_info)
 int
 rte_eth_dev_get_module_info(uint16_t port_id,
 			    struct rte_eth_dev_module_info *modinfo)
@@ -6936,7 +6936,7 @@ rte_eth_dev_get_module_info(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_get_module_eeprom, 18.05)
+RTE_EXPORT_SYMBOL(rte_eth_dev_get_module_eeprom)
 int
 rte_eth_dev_get_module_eeprom(uint16_t port_id,
 			      struct rte_dev_eeprom_info *info)
@@ -7051,7 +7051,7 @@ rte_eth_dev_adjust_nb_rx_tx_desc(uint16_t port_id,
 	return 0;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_hairpin_capability_get, 19.11)
+RTE_EXPORT_SYMBOL(rte_eth_dev_hairpin_capability_get)
 int
 rte_eth_dev_hairpin_capability_get(uint16_t port_id,
 				   struct rte_eth_hairpin_cap *cap)
@@ -7106,7 +7106,7 @@ rte_eth_dev_pool_ops_supported(uint16_t port_id, const char *pool)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_representor_info_get, 21.05)
+RTE_EXPORT_SYMBOL(rte_eth_representor_info_get)
 int
 rte_eth_representor_info_get(uint16_t port_id,
 			     struct rte_eth_representor_info *info)
@@ -7162,7 +7162,7 @@ rte_eth_rx_metadata_negotiate(uint16_t port_id, uint64_t *features)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ip_reassembly_capability_get, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_ip_reassembly_capability_get)
 int
 rte_eth_ip_reassembly_capability_get(uint16_t port_id,
 		struct rte_eth_ip_reassembly_params *reassembly_capa)
@@ -7198,7 +7198,7 @@ rte_eth_ip_reassembly_capability_get(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ip_reassembly_conf_get, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_ip_reassembly_conf_get)
 int
 rte_eth_ip_reassembly_conf_get(uint16_t port_id,
 		struct rte_eth_ip_reassembly_params *conf)
@@ -7232,7 +7232,7 @@ rte_eth_ip_reassembly_conf_get(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_ip_reassembly_conf_set, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_ip_reassembly_conf_set)
 int
 rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 		const struct rte_eth_ip_reassembly_params *conf)
@@ -7273,7 +7273,7 @@ rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_priv_dump, 22.03)
+RTE_EXPORT_SYMBOL(rte_eth_dev_priv_dump)
 int
 rte_eth_dev_priv_dump(uint16_t port_id, FILE *file)
 {
@@ -7292,7 +7292,7 @@ rte_eth_dev_priv_dump(uint16_t port_id, FILE *file)
 	return eth_err(port_id, dev->dev_ops->eth_dev_priv_dump(dev, file));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_rx_descriptor_dump, 22.11)
+RTE_EXPORT_SYMBOL(rte_eth_rx_descriptor_dump)
 int
 rte_eth_rx_descriptor_dump(uint16_t port_id, uint16_t queue_id,
 			   uint16_t offset, uint16_t num, FILE *file)
@@ -7319,7 +7319,7 @@ rte_eth_rx_descriptor_dump(uint16_t port_id, uint16_t queue_id,
 		       dev->dev_ops->eth_rx_descriptor_dump(dev, queue_id, offset, num, file));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_tx_descriptor_dump, 22.11)
+RTE_EXPORT_SYMBOL(rte_eth_tx_descriptor_dump)
 int
 rte_eth_tx_descriptor_dump(uint16_t port_id, uint16_t queue_id,
 			   uint16_t offset, uint16_t num, FILE *file)
@@ -7346,7 +7346,7 @@ rte_eth_tx_descriptor_dump(uint16_t port_id, uint16_t queue_id,
 		       dev->dev_ops->eth_tx_descriptor_dump(dev, queue_id, offset, num, file));
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_buffer_split_get_supported_hdr_ptypes, 22.11)
+RTE_EXPORT_SYMBOL(rte_eth_buffer_split_get_supported_hdr_ptypes)
 int
 rte_eth_buffer_split_get_supported_hdr_ptypes(uint16_t port_id, uint32_t *ptypes, int num)
 {
@@ -7386,7 +7386,7 @@ rte_eth_buffer_split_get_supported_hdr_ptypes(uint16_t port_id, uint32_t *ptypes
 	return j;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_count_aggr_ports, 23.03)
+RTE_EXPORT_SYMBOL(rte_eth_dev_count_aggr_ports)
 int rte_eth_dev_count_aggr_ports(uint16_t port_id)
 {
 	struct rte_eth_dev *dev;
@@ -7404,7 +7404,7 @@ int rte_eth_dev_count_aggr_ports(uint16_t port_id)
 	return ret;
 }
 
-RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_eth_dev_map_aggr_tx_affinity, 23.03)
+RTE_EXPORT_SYMBOL(rte_eth_dev_map_aggr_tx_affinity)
 int rte_eth_dev_map_aggr_tx_affinity(uint16_t port_id, uint16_t tx_queue_id,
 				     uint8_t affinity)
 {
