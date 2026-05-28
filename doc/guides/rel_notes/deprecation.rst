@@ -158,3 +158,6 @@ Deprecation Notices
 * net/iavf: The dynamic mbuf field used to detect LLDP packets on the
   transmit path in the iavf PMD will be removed in a future release.
   After removal, only packet type-based detection will be supported.
+
+* net/i40e: The legacy filter configuration API in ``rte_pmd_i40e.h``,
+  superseded by the ``rte_flow`` API, will be removed in DPDK 26.11.

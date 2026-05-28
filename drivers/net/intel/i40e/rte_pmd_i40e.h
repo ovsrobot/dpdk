@@ -229,6 +229,9 @@ struct rte_pmd_i40e_queue_regions {
 };
 
 /**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ *
  * Behavior will be taken if raw packet template is matched.
  */
 enum rte_pmd_i40e_pkt_template_behavior {
@@ -238,7 +241,10 @@ enum rte_pmd_i40e_pkt_template_behavior {
 };
 
 /**
- * Flow director report status
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ *
+ * Flow director report status.
  * It defines what will be reported if raw packet template is matched.
  */
 enum rte_pmd_i40e_pkt_template_status {
@@ -253,6 +259,9 @@ enum rte_pmd_i40e_pkt_template_status {
 };
 
 /**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ *
  * A structure used to define an action when raw packet template is matched.
  */
 struct rte_pmd_i40e_pkt_template_action {
@@ -271,6 +280,9 @@ struct rte_pmd_i40e_pkt_template_action {
 };
 
 /**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ *
  * A structure used to define the input for raw packet template.
  */
 struct rte_pmd_i40e_pkt_template_input {
@@ -283,6 +295,9 @@ struct rte_pmd_i40e_pkt_template_input {
 };
 
 /**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ *
  * A structure used to define the configuration parameters
  * for raw packet template.
  */
@@ -295,6 +310,10 @@ struct rte_pmd_i40e_pkt_template_conf {
 	uint32_t soft_id;
 };
 
+/**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ */
 enum rte_pmd_i40e_inset_type {
 	INSET_NONE = 0,
 	INSET_HASH,
@@ -307,6 +326,10 @@ struct  rte_pmd_i40e_inset_mask {
 	uint16_t mask;
 };
 
+/**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ */
 struct rte_pmd_i40e_inset {
 	uint64_t inset;
 	struct rte_pmd_i40e_inset_mask mask[2];
@@ -326,7 +349,12 @@ struct rte_pmd_i40e_inset {
  *   - (-ENODEV) if *port* invalid.
  *   - (-EINVAL) if *conf* invalid.
  *   - (-ENOTSUP) not supported by firmware.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 int rte_pmd_i40e_flow_add_del_packet_template(
 			uint16_t port,
 			const struct rte_pmd_i40e_pkt_template_conf *conf,
@@ -865,6 +893,10 @@ int rte_pmd_i40e_add_vf_mac_addr(uint16_t port, uint16_t vf_id,
 #define RTE_PMD_I40E_PCTYPE_MAX		64
 #define RTE_PMD_I40E_FLOW_TYPE_MAX	64
 
+/**
+ * @deprecated
+ * Superseded by the rte_flow API; will be removed in DPDK 26.11.
+ */
 struct rte_pmd_i40e_flow_type_mapping {
 	uint16_t flow_type; /**< software defined flow type*/
 	uint64_t pctype;    /**< hardware defined pctype */
@@ -886,7 +918,12 @@ struct rte_pmd_i40e_flow_type_mapping {
  *	keep other PCTYPEs mapping unchanged.
  *    -(!0) overwrite referred PCTYPE mapping,
  *	set other PCTYPEs maps to PCTYPE_INVALID.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 int rte_pmd_i40e_flow_type_mapping_update(
 			uint16_t port,
 			struct rte_pmd_i40e_flow_type_mapping *mapping_items,
@@ -903,7 +940,12 @@ int rte_pmd_i40e_flow_type_mapping_update(
  *    the base address of the array to store returned items.
  *    array should be allocated by caller with minimum size of
  *    RTE_PMD_I40E_FLOW_TYPE_MAX items
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 int rte_pmd_i40e_flow_type_mapping_get(
 			uint16_t port,
 			struct rte_pmd_i40e_flow_type_mapping *mapping_items);
@@ -914,7 +956,12 @@ int rte_pmd_i40e_flow_type_mapping_get(
  *
  * @param port
  *    pointer to port identifier of the device
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 int rte_pmd_i40e_flow_type_mapping_reset(uint16_t port);
 
 /**
@@ -946,6 +993,12 @@ int rte_pmd_i40e_query_vfid_by_mac(uint16_t port,
 int rte_pmd_i40e_rss_queue_region_conf(uint16_t port_id,
 			enum rte_pmd_i40e_queue_region_op op_type, void *arg);
 
+/**
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
+ */
+__rte_deprecated
 int rte_pmd_i40e_cfg_hash_inset(uint16_t port,
 				uint64_t pctype, uint64_t inset);
 
@@ -965,7 +1018,12 @@ int rte_pmd_i40e_cfg_hash_inset(uint16_t port,
  *   - (-ENODEV) if *port* invalid.
  *   - (-EINVAL) if bad parameter.
  *   - (-ENOTSUP) if operation not supported.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 int rte_pmd_i40e_inset_get(uint16_t port, uint8_t pctype,
 			   struct rte_pmd_i40e_inset *inset,
 			   enum rte_pmd_i40e_inset_type inset_type);
@@ -986,7 +1044,12 @@ int rte_pmd_i40e_inset_get(uint16_t port, uint8_t pctype,
  *   - (-ENODEV) if *port* invalid.
  *   - (-EINVAL) if bad parameter.
  *   - (-ENOTSUP) if operation not supported.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 int rte_pmd_i40e_inset_set(uint16_t port, uint8_t pctype,
 			   struct rte_pmd_i40e_inset *inset,
 			   enum rte_pmd_i40e_inset_type inset_type);
@@ -1001,7 +1064,12 @@ int rte_pmd_i40e_inset_set(uint16_t port, uint8_t pctype,
  * @return
  *   - (1) if set.
  *   - (0) if cleared.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 static inline int
 rte_pmd_i40e_inset_field_get(uint64_t inset, uint8_t field_idx)
 {
@@ -1027,7 +1095,12 @@ rte_pmd_i40e_inset_field_get(uint64_t inset, uint8_t field_idx)
  * @return
  *   - (-1) if failed.
  *   - (0) if success.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 static inline int
 rte_pmd_i40e_inset_field_set(uint64_t *inset, uint8_t field_idx)
 {
@@ -1052,7 +1125,12 @@ rte_pmd_i40e_inset_field_set(uint64_t *inset, uint8_t field_idx)
  * @return
  *   - (-1) if failed.
  *   - (0) if success.
+ *
+ * @deprecated
+ * This function is superseded by the rte_flow API and will be removed
+ * in DPDK 26.11.
  */
+__rte_deprecated
 static inline int
 rte_pmd_i40e_inset_field_clear(uint64_t *inset, uint8_t field_idx)
 {
