@@ -399,52 +399,6 @@ Add a rule to direct ``ipv4-udp`` packet whose ``dst_ip=2.2.2.5, src_ip=2.2.2.3,
             dst is 2.2.2.5 / udp src is 32 dst is 32 / end \
             actions mark id 1 / queue index 1 / end
 
-Check the flow director status:
-
-.. code-block:: console
-
-   testpmd> show port fdir 0
-
-   ######################## FDIR infos for port 0      ####################
-     MODE:   PERFECT
-     SUPPORTED FLOW TYPE:  ipv4-frag ipv4-tcp ipv4-udp ipv4-sctp ipv4-other
-                           ipv6-frag ipv6-tcp ipv6-udp ipv6-sctp ipv6-other
-			   l2_payload
-     FLEX PAYLOAD INFO:
-     max_len:	    16	        payload_limit: 480
-     payload_unit:  2	        payload_seg:   3
-     bitmask_unit:  2	        bitmask_num:   2
-     MASK:
-       vlan_tci: 0x0000,
-       src_ipv4: 0x00000000,
-       dst_ipv4: 0x00000000,
-       src_port: 0x0000,
-       dst_port: 0x0000
-       src_ipv6: 0x00000000,0x00000000,0x00000000,0x00000000,
-       dst_ipv6: 0x00000000,0x00000000,0x00000000,0x00000000
-     FLEX PAYLOAD SRC OFFSET:
-       L2_PAYLOAD:    0      1	    2	   3	  4	 5	6  ...
-       L3_PAYLOAD:    0      1	    2	   3	  4	 5	6  ...
-       L4_PAYLOAD:    0      1	    2	   3	  4	 5	6  ...
-     FLEX MASK CFG:
-       ipv4-udp:    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv4-tcp:    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv4-sctp:   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv4-other:  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv4-frag:   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv6-udp:    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv6-tcp:    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv6-sctp:   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv6-other:  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       ipv6-frag:   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-       l2_payload:  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-     guarant_count: 1	        best_count:    0
-     guarant_space: 512         best_space:    7168
-     collision:     0	        free:	       0
-     maxhash:	    0	        maxlen:        0
-     add:	    0	        remove:        0
-     f_add:	    0	        f_remove:      0
-
 
 Floating VEB
 ~~~~~~~~~~~~~
@@ -613,19 +567,10 @@ Limitations or Known issues
 MPLS packet classification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For firmware versions prior to 5.0, MPLS packets are not recognized by the NIC.
-The L2 Payload flow type in flow director can be used to classify MPLS packet
-by using a command in testpmd like:
-
-   testpmd> flow_director_filter 0 mode IP add flow l2_payload ether \
-            0x8847 flexbytes () fwd pf queue <N> fd_id <M>
-
-With the NIC firmware version 5.0 or greater, some limited MPLS support
-is added: Native MPLS (MPLS in Ethernet) skip is implemented, while no
-new packet type, no classification or offload are possible. With this change,
-L2 Payload flow type in flow director cannot be used to classify MPLS packet
-as with previous firmware versions. Meanwhile, the Ethertype filter can be
-used to classify MPLS packet by using a command in testpmd like:
+With NIC firmware version 5.0 or greater, native MPLS (MPLS in
+Ethernet) skip is implemented, although no new packet type, no
+classification, and no offload are possible.
+The Ethertype filter can be used to classify MPLS packets via testpmd::
 
    testpmd> flow create 0 ingress pattern eth type is 0x8847 / end \
             actions queue index <M> / end
@@ -877,13 +822,6 @@ where:
 Reset ptype mapping table::
 
    testpmd> ptype mapping reset (port_id)
-
-show port pctype mapping
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-List all items from the pctype mapping table::
-
-   testpmd> show port (port_id) pctype mapping
 
 High Performance of Small Packets on 40GbE NIC
 ----------------------------------------------
