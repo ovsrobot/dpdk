@@ -862,6 +862,16 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 				       (0 << IAVF_VFINT_DYN_CTLN1_ITR_INDX_SHIFT) |
 				       IAVF_VFINT_DYN_CTLN1_WB_ON_ITR_MASK |
 				       (2UL << IAVF_VFINT_DYN_CTLN1_INTERVAL_SHIFT));
+			/* The interval value lives in the separate IAVF_VFINT_ITRN1
+			 * index register, which is only cleared on a VF reset
+			 * It is not implicitly re-initialized by the DYN_CTLN1 write
+			 * above, so if it was left dirty by a previous configuration,
+			 * program it explicitly here to the same 2us interval for
+			 * ITR index 0.
+			 */
+			IAVF_WRITE_REG(hw,
+				       IAVF_VFINT_ITRN1(0, vf->msix_base - 1),
+				       2UL);
 			/* debug - check for success! the return value
 			 * should be 2, offset is 0x2800
 			 */
@@ -2078,9 +2088,16 @@ iavf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 		return -EIO;
 	}
 
+	/* Set the ITR for index zero, to 2us to make sure that
+	 * sufficient time for aggregation to occur, but not to
+	 * increase the latency drastically.
+	 */
+
 	IAVF_WRITE_REG(hw,
 		      IAVF_VFINT_DYN_CTLN1(msix_intr - IAVF_RX_VEC_START),
-		      IAVF_VFINT_DYN_CTLN1_WB_ON_ITR_MASK);
+		      (0 << IAVF_VFINT_DYN_CTLN1_ITR_INDX_SHIFT) |
+		      IAVF_VFINT_DYN_CTLN1_WB_ON_ITR_MASK |
+		      (2UL << IAVF_VFINT_DYN_CTLN1_INTERVAL_SHIFT));
 
 	IAVF_WRITE_FLUSH(hw);
 	return 0;
