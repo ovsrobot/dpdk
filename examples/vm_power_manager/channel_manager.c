@@ -420,8 +420,33 @@ add_all_channels(const char *vm_name)
 	if (d == NULL) {
 		RTE_LOG(ERR, CHANNEL_MANAGER, "Error opening directory '%s': %s\n",
 				CHANNEL_MGR_SOCKET_PATH, strerror(errno));
-		return -1;
+
+		const char *run_dpdk = "/run/dpdk";
+		struct stat path_stat;
+		int ret;
+
+		if (stat(run_dpdk, &path_stat) != 0) {
+			ret = mkdir(run_dpdk, 0700);
+			if (ret < 0 && errno != EEXIST) {
+				RTE_LOG(ERR, CHANNEL_MANAGER, "Error creating '%s': %s",
+						run_dpdk, strerror(errno));
+				return -1;
+			}
+		}
+
+		/* Make sure /run/dpdk is a directory */
+		if (!S_ISDIR(path_stat.st_mode)) {
+			return -1;
+		}
+
+		ret = mkdir(CHANNEL_MGR_SOCKET_PATH, 0700);
+		if (ret < 0 && errno != EEXIST) {
+			RTE_LOG(ERR, CHANNEL_MANAGER, "Error creating '%s': %s",
+				CHANNEL_MGR_SOCKET_PATH, strerror(errno));
+			return -1;
+		}
 	}
+
 	while ((dir = readdir(d)) != NULL) {
 		if (!strncmp(dir->d_name, ".", 1) ||
 				!strncmp(dir->d_name, "..", 2))
