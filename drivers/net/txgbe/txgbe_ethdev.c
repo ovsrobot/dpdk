@@ -524,7 +524,7 @@ txgbe_handle_devarg(__rte_unused const char *key, const char *value,
 static void
 txgbe_parse_devargs(struct rte_eth_dev *dev)
 {
-	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
+	struct txgbe_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_devargs *devargs = pci_dev->device.devargs;
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
@@ -934,7 +934,7 @@ static int txgbe_l2_tn_filter_uninit(struct rte_eth_dev *eth_dev)
 
 int txgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
 {
-	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(eth_dev);
+	struct txgbe_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(eth_dev);
 	struct txgbe_hw_fdir_info *fdir_info = TXGBE_DEV_FDIR(eth_dev);
 	char fdir_hash_name[RTE_HASH_NAMESIZE];
 	u16 max_fdir_num = (1024 << (fdir_conf->pballoc + 1)) - 2;
@@ -1834,7 +1834,7 @@ txgbe_dev_start(struct rte_eth_dev *dev)
 	txgbe_configure_port(dev);
 	txgbe_configure_dcb(dev);
 
-	if (TXGBE_DEV_FDIR_CONF(dev)->mode != RTE_FDIR_MODE_NONE) {
+	if (TXGBE_DEV_FDIR_CONF(dev)->mode != TXGBE_FDIR_MODE_NONE) {
 		err = txgbe_fdir_configure(dev);
 		if (err)
 			goto error;

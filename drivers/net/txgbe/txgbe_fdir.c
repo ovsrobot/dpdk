@@ -102,22 +102,22 @@ txgbe_fdir_enable(struct txgbe_hw *hw, uint32_t fdirctrl)
  * flexbytes matching field, and drop queue (only for perfect matching mode).
  */
 static inline int
-configure_fdir_flags(const struct rte_eth_fdir_conf *conf,
+configure_fdir_flags(const struct txgbe_fdir_conf *conf,
 		     uint32_t *fdirctrl, uint32_t *flex)
 {
 	*fdirctrl = 0;
 	*flex = 0;
 
 	switch (conf->pballoc) {
-	case RTE_ETH_FDIR_PBALLOC_64K:
+	case TXGBE_FDIR_PBALLOC_64K:
 		/* 8k - 1 signature filters */
 		*fdirctrl |= TXGBE_FDIRCTL_BUF_64K;
 		break;
-	case RTE_ETH_FDIR_PBALLOC_128K:
+	case TXGBE_FDIR_PBALLOC_128K:
 		/* 16k - 1 signature filters */
 		*fdirctrl |= TXGBE_FDIRCTL_BUF_128K;
 		break;
-	case RTE_ETH_FDIR_PBALLOC_256K:
+	case TXGBE_FDIR_PBALLOC_256K:
 		/* 32k - 1 signature filters */
 		*fdirctrl |= TXGBE_FDIRCTL_BUF_256K;
 		break;
@@ -129,14 +129,14 @@ configure_fdir_flags(const struct rte_eth_fdir_conf *conf,
 
 	/* status flags: write hash & swindex in the rx descriptor */
 	switch (conf->status) {
-	case RTE_FDIR_NO_REPORT_STATUS:
+	case TXGBE_FDIR_NO_REPORT_STATUS:
 		/* do nothing, default mode */
 		break;
-	case RTE_FDIR_REPORT_STATUS:
+	case TXGBE_FDIR_REPORT_STATUS:
 		/* report status when the packet matches a fdir rule */
 		*fdirctrl |= TXGBE_FDIRCTL_REPORT_MATCH;
 		break;
-	case RTE_FDIR_REPORT_STATUS_ALWAYS:
+	case TXGBE_FDIR_REPORT_STATUS_ALWAYS:
 		/* always report status */
 		*fdirctrl |= TXGBE_FDIRCTL_REPORT_ALWAYS;
 		break;
@@ -150,9 +150,9 @@ configure_fdir_flags(const struct rte_eth_fdir_conf *conf,
 	*flex |= TXGBE_FDIRFLEXCFG_OFST(TXGBE_DEFAULT_FLEXBYTES_OFFSET / 2);
 
 	switch (conf->mode) {
-	case RTE_FDIR_MODE_SIGNATURE:
+	case TXGBE_FDIR_MODE_SIGNATURE:
 		break;
-	case RTE_FDIR_MODE_PERFECT:
+	case TXGBE_FDIR_MODE_PERFECT:
 		*fdirctrl |= TXGBE_FDIRCTL_PERFECT;
 		*fdirctrl |= TXGBE_FDIRCTL_DROPQP(conf->drop_queue);
 		break;
@@ -179,7 +179,7 @@ txgbe_fdir_set_input_mask(struct rte_eth_dev *dev)
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct txgbe_hw_fdir_info *info = TXGBE_DEV_FDIR(dev);
-	enum rte_fdir_mode mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
+	enum txgbe_fdir_mode mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
 	/*
 	 * mask VM pool and DIPv6 since there are currently not supported
 	 * mask FLEX byte, it will be set in flex_conf
@@ -190,8 +190,8 @@ txgbe_fdir_set_input_mask(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
-	if (mode != RTE_FDIR_MODE_SIGNATURE &&
-	    mode != RTE_FDIR_MODE_PERFECT) {
+	if (mode != TXGBE_FDIR_MODE_SIGNATURE &&
+	    mode != TXGBE_FDIR_MODE_PERFECT) {
 		PMD_DRV_LOG(ERR, "Not supported fdir mode - %d!", mode);
 		return -ENOTSUP;
 	}
@@ -232,14 +232,14 @@ txgbe_fdir_set_input_mask(struct rte_eth_dev *dev)
 static int
 txgbe_fdir_store_input_mask(struct rte_eth_dev *dev)
 {
-	struct rte_eth_fdir_masks *input_mask = &TXGBE_DEV_FDIR_CONF(dev)->mask;
-	enum rte_fdir_mode mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
+	struct txgbe_fdir_masks *input_mask = &TXGBE_DEV_FDIR_CONF(dev)->mask;
+	enum txgbe_fdir_mode mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
 	struct txgbe_hw_fdir_info *info = TXGBE_DEV_FDIR(dev);
 	uint16_t dst_ipv6m = 0;
 	uint16_t src_ipv6m = 0;
 
-	if (mode != RTE_FDIR_MODE_SIGNATURE &&
-	    mode != RTE_FDIR_MODE_PERFECT) {
+	if (mode != TXGBE_FDIR_MODE_SIGNATURE &&
+	    mode != TXGBE_FDIR_MODE_PERFECT) {
 		PMD_DRV_LOG(ERR, "Not supported fdir mode - %d!", mode);
 		return -ENOTSUP;
 	}
@@ -304,12 +304,12 @@ txgbe_fdir_set_flexbytes_offset(struct rte_eth_dev *dev,
 static int
 txgbe_set_fdir_flex_conf(struct rte_eth_dev *dev, uint32_t flex)
 {
-	const struct rte_eth_fdir_flex_conf *conf =
+	const struct txgbe_fdir_flex_conf *conf =
 				&TXGBE_DEV_FDIR_CONF(dev)->flex_conf;
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct txgbe_hw_fdir_info *info = TXGBE_DEV_FDIR(dev);
-	const struct rte_eth_flex_payload_cfg *flex_cfg;
-	const struct rte_eth_fdir_flex_mask *flex_mask;
+	const struct txgbe_flex_payload_cfg *flex_cfg;
+	const struct txgbe_fdir_flex_mask *flex_mask;
 	uint16_t flexbytes = 0;
 	uint16_t i;
 
@@ -322,7 +322,7 @@ txgbe_set_fdir_flex_conf(struct rte_eth_dev *dev, uint32_t flex)
 
 	for (i = 0; i < conf->nb_payloads; i++) {
 		flex_cfg = &conf->flex_set[i];
-		if (flex_cfg->type != RTE_ETH_RAW_PAYLOAD) {
+		if (flex_cfg->type != TXGBE_RAW_PAYLOAD) {
 			PMD_DRV_LOG(ERR, "unsupported payload type.");
 			return -EINVAL;
 		}
@@ -375,13 +375,13 @@ txgbe_fdir_configure(struct rte_eth_dev *dev)
 	int err;
 	uint32_t fdirctrl, flex, pbsize;
 	int i;
-	enum rte_fdir_mode mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
+	enum txgbe_fdir_mode mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
 
 	PMD_INIT_FUNC_TRACE();
 
 	/* supports mac-vlan and tunnel mode */
-	if (mode != RTE_FDIR_MODE_SIGNATURE &&
-	    mode != RTE_FDIR_MODE_PERFECT)
+	if (mode != TXGBE_FDIR_MODE_SIGNATURE &&
+	    mode != TXGBE_FDIR_MODE_PERFECT)
 		return -ENOSYS;
 
 	err = configure_fdir_flags(TXGBE_DEV_FDIR_CONF(dev), &fdirctrl, &flex);
@@ -531,15 +531,15 @@ txgbe_atr_compute_hash(struct txgbe_atr_input *atr_input,
 
 static uint32_t
 atr_compute_perfect_hash(struct txgbe_atr_input *input,
-		enum rte_eth_fdir_pballoc_type pballoc)
+		enum txgbe_fdir_pballoc_type pballoc)
 {
 	uint32_t bucket_hash;
 
 	bucket_hash = txgbe_atr_compute_hash(input,
 				TXGBE_ATR_BUCKET_HASH_KEY);
-	if (pballoc == RTE_ETH_FDIR_PBALLOC_256K)
+	if (pballoc == TXGBE_FDIR_PBALLOC_256K)
 		bucket_hash &= PERFECT_BUCKET_256KB_HASH_MASK;
-	else if (pballoc == RTE_ETH_FDIR_PBALLOC_128K)
+	else if (pballoc == TXGBE_FDIR_PBALLOC_128K)
 		bucket_hash &= PERFECT_BUCKET_128KB_HASH_MASK;
 	else
 		bucket_hash &= PERFECT_BUCKET_64KB_HASH_MASK;
@@ -574,15 +574,15 @@ txgbe_fdir_check_cmd_complete(struct txgbe_hw *hw, uint32_t *fdircmd)
  */
 static uint32_t
 atr_compute_signature_hash(struct txgbe_atr_input *input,
-		enum rte_eth_fdir_pballoc_type pballoc)
+		enum txgbe_fdir_pballoc_type pballoc)
 {
 	uint32_t bucket_hash, sig_hash;
 
 	bucket_hash = txgbe_atr_compute_hash(input,
 				TXGBE_ATR_BUCKET_HASH_KEY);
-	if (pballoc == RTE_ETH_FDIR_PBALLOC_256K)
+	if (pballoc == TXGBE_FDIR_PBALLOC_256K)
 		bucket_hash &= SIG_BUCKET_256KB_HASH_MASK;
-	else if (pballoc == RTE_ETH_FDIR_PBALLOC_128K)
+	else if (pballoc == TXGBE_FDIR_PBALLOC_128K)
 		bucket_hash &= SIG_BUCKET_128KB_HASH_MASK;
 	else
 		bucket_hash &= SIG_BUCKET_64KB_HASH_MASK;
@@ -603,7 +603,7 @@ static int
 fdir_write_perfect_filter(struct txgbe_hw *hw,
 			struct txgbe_atr_input *input, uint8_t queue,
 			uint32_t fdircmd, uint32_t fdirhash,
-			enum rte_fdir_mode mode)
+			enum txgbe_fdir_mode mode)
 {
 	uint32_t fdirport, fdirflex;
 	int err = 0;
@@ -830,14 +830,14 @@ txgbe_fdir_filter_program(struct rte_eth_dev *dev,
 	bool is_perfect = FALSE;
 	int err;
 	struct txgbe_hw_fdir_info *info = TXGBE_DEV_FDIR(dev);
-	enum rte_fdir_mode fdir_mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
+	enum txgbe_fdir_mode fdir_mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
 	struct txgbe_fdir_filter *node;
 
-	if (fdir_mode == RTE_FDIR_MODE_NONE ||
+	if (fdir_mode == TXGBE_FDIR_MODE_NONE ||
 	    fdir_mode != rule->mode)
 		return -ENOTSUP;
 
-	if (fdir_mode >= RTE_FDIR_MODE_PERFECT)
+	if (fdir_mode >= TXGBE_FDIR_MODE_PERFECT)
 		is_perfect = TRUE;
 
 	txgbe_fdir_mask_input(&info->mask, &rule->input);
@@ -1021,7 +1021,7 @@ txgbevf_fdir_filter_program(struct rte_eth_dev *dev,
 	uint32_t fdirhash;
 	int ret;
 
-	if (rule->mode != RTE_FDIR_MODE_PERFECT ||
+	if (rule->mode != TXGBE_FDIR_MODE_PERFECT ||
 	    rule->fdirflags == TXGBE_FDIRPICMD_DROP)
 		return -ENOTSUP;
 
@@ -1109,10 +1109,10 @@ txgbe_fdir_filter_restore(struct rte_eth_dev *dev)
 	struct txgbe_hw_fdir_info *fdir_info = TXGBE_DEV_FDIR(dev);
 	struct txgbe_fdir_filter *node;
 	bool is_perfect = FALSE;
-	enum rte_fdir_mode fdir_mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
+	enum txgbe_fdir_mode fdir_mode = TXGBE_DEV_FDIR_CONF(dev)->mode;
 
-	if (fdir_mode >= RTE_FDIR_MODE_PERFECT &&
-	    fdir_mode <= RTE_FDIR_MODE_PERFECT_TUNNEL)
+	if (fdir_mode >= TXGBE_FDIR_MODE_PERFECT &&
+	    fdir_mode <= TXGBE_FDIR_MODE_PERFECT_TUNNEL)
 		is_perfect = TRUE;
 
 	if (is_perfect) {
@@ -1139,7 +1139,7 @@ txgbe_fdir_filter_restore(struct rte_eth_dev *dev)
 int
 txgbe_clear_all_fdir_filter(struct rte_eth_dev *dev)
 {
-	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
+	struct txgbe_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
 	struct txgbe_hw_fdir_info *fdir_info = TXGBE_DEV_FDIR(dev);
 	struct txgbe_fdir_filter *fdir_filter;
 	struct txgbe_fdir_filter *filter_flag;
@@ -1150,7 +1150,7 @@ txgbe_clear_all_fdir_filter(struct rte_eth_dev *dev)
 	memset(fdir_info->hash_map, 0,
 	       sizeof(struct txgbe_fdir_filter *) *
 	       ((1024 << (fdir_conf->pballoc + 1)) - 2));
-	fdir_conf->mode = RTE_FDIR_MODE_NONE;
+	fdir_conf->mode = TXGBE_FDIR_MODE_NONE;
 	filter_flag = TAILQ_FIRST(&fdir_info->fdir_list);
 	while ((fdir_filter = TAILQ_FIRST(&fdir_info->fdir_list))) {
 		TAILQ_REMOVE(&fdir_info->fdir_list,

@@ -83,6 +83,103 @@
 /*
  * Information about the fdir mode.
  */
+/*
+ * Privatized flow director configuration types.
+ *
+ * Cloned from <rte_eth_ctrl.h> and <ethdev_driver.h> so that txgbe no
+ * longer depends on the legacy ethdev flow director ABI, which is
+ * scheduled for removal in DPDK 26.11. Semantics unchanged; only the
+ * names are txgbe-private.
+ *
+ * NB: txgbe uses the integer value of pballoc directly in
+ *     (1024 << (fdir_conf->pballoc + 1)) - 2
+ * to size the HW filter table. The enum values therefore match the
+ * original ethdev numbering (64K=0, 128K=1, 256K=2).
+ */
+#define TXGBE_FDIR_MAX_FLEXLEN 16  /**< Max length of flexbytes. */
+
+struct txgbe_ipv4_flow {
+	uint32_t src_ip;
+	uint32_t dst_ip;
+	uint8_t  tos;
+	uint8_t  ttl;
+	uint8_t  proto;
+};
+
+struct txgbe_ipv6_flow {
+	uint32_t src_ip[4];
+	uint32_t dst_ip[4];
+	uint8_t  tc;
+	uint8_t  proto;
+	uint8_t  hop_limits;
+};
+
+struct txgbe_fdir_masks {
+	uint16_t vlan_tci_mask;
+	struct txgbe_ipv4_flow ipv4_mask;
+	struct txgbe_ipv6_flow ipv6_mask;
+	uint16_t src_port_mask;
+	uint16_t dst_port_mask;
+	uint8_t  mac_addr_byte_mask;
+	uint32_t tunnel_id_mask;
+	uint8_t  tunnel_type_mask;
+};
+
+enum txgbe_payload_type {
+	TXGBE_PAYLOAD_UNKNOWN = 0,
+	TXGBE_RAW_PAYLOAD,
+	TXGBE_L2_PAYLOAD,
+	TXGBE_L3_PAYLOAD,
+	TXGBE_L4_PAYLOAD,
+	TXGBE_PAYLOAD_MAX = 8,
+};
+
+struct txgbe_flex_payload_cfg {
+	enum txgbe_payload_type type;
+	uint16_t src_offset[TXGBE_FDIR_MAX_FLEXLEN];
+};
+
+struct txgbe_fdir_flex_mask {
+	uint16_t flow_type;
+	uint8_t  mask[TXGBE_FDIR_MAX_FLEXLEN];
+};
+
+struct txgbe_fdir_flex_conf {
+	uint16_t nb_payloads;
+	uint16_t nb_flexmasks;
+	struct txgbe_flex_payload_cfg flex_set[TXGBE_PAYLOAD_MAX];
+	struct txgbe_fdir_flex_mask flex_mask[RTE_ETH_FLOW_MAX];
+};
+
+enum txgbe_fdir_mode {
+	TXGBE_FDIR_MODE_NONE = 0,
+	TXGBE_FDIR_MODE_SIGNATURE,
+	TXGBE_FDIR_MODE_PERFECT,
+	TXGBE_FDIR_MODE_PERFECT_MAC_VLAN,
+	TXGBE_FDIR_MODE_PERFECT_TUNNEL,
+};
+
+enum txgbe_fdir_pballoc_type {
+	TXGBE_FDIR_PBALLOC_64K = 0,
+	TXGBE_FDIR_PBALLOC_128K,
+	TXGBE_FDIR_PBALLOC_256K,
+};
+
+enum txgbe_fdir_status_mode {
+	TXGBE_FDIR_NO_REPORT_STATUS = 0,
+	TXGBE_FDIR_REPORT_STATUS,
+	TXGBE_FDIR_REPORT_STATUS_ALWAYS,
+};
+
+struct txgbe_fdir_conf {
+	enum txgbe_fdir_mode mode;
+	enum txgbe_fdir_pballoc_type pballoc;
+	enum txgbe_fdir_status_mode status;
+	uint8_t drop_queue;
+	struct txgbe_fdir_masks mask;
+	struct txgbe_fdir_flex_conf flex_conf;
+};
+
 struct txgbe_hw_fdir_mask {
 	uint16_t vlan_tci_mask;
 	uint32_t src_ipv4_mask;
@@ -111,7 +208,7 @@ struct txgbe_fdir_rule {
 	struct txgbe_atr_input input; /* key of fdir filter */
 	bool b_spec; /* If TRUE, input, fdirflags, queue have meaning. */
 	bool b_mask; /* If TRUE, mask has meaning. */
-	enum rte_fdir_mode mode; /* IP, MAC VLAN, Tunnel */
+	enum txgbe_fdir_mode mode; /* IP, MAC VLAN, Tunnel */
 	uint32_t fdirflags; /* drop or forward */
 	uint32_t soft_id; /* an unique value for this rule */
 	uint8_t queue; /* assigned rx queue */
@@ -352,7 +449,7 @@ struct txgbe_tm_conf {
 struct txgbe_adapter {
 	struct txgbe_hw             hw;
 	struct txgbe_hw_stats       stats;
-	struct rte_eth_fdir_conf    fdir_conf;
+	struct txgbe_fdir_conf    fdir_conf;
 	struct txgbe_hw_fdir_info   fdir;
 	struct txgbe_interrupt      intr;
 	struct txgbe_stat_mappings  stat_mappings;

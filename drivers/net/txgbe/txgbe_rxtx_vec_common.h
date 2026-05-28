@@ -299,10 +299,10 @@ static inline int
 txgbe_rx_vec_dev_conf_condition_check_default(struct rte_eth_dev *dev)
 {
 #ifndef RTE_LIBRTE_IEEE1588
-	struct rte_eth_fdir_conf *fconf = TXGBE_DEV_FDIR_CONF(dev);
+	struct txgbe_fdir_conf *fconf = TXGBE_DEV_FDIR_CONF(dev);
 
 	/* no fdir support */
-	if (fconf->mode != RTE_FDIR_MODE_NONE)
+	if (fconf->mode != TXGBE_FDIR_MODE_NONE)
 		return -1;
 
 	return 0;

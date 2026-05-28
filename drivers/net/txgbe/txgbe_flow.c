@@ -1412,7 +1412,7 @@ txgbe_parse_fdir_act_attr(const struct rte_flow_attr *attr,
 		rule->queue = act_q->index;
 	} else { /* drop */
 		/* signature mode does not support drop action. */
-		if (rule->mode == RTE_FDIR_MODE_SIGNATURE) {
+		if (rule->mode == TXGBE_FDIR_MODE_SIGNATURE) {
 			memset(rule, 0, sizeof(struct txgbe_fdir_rule));
 			rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION,
@@ -1646,9 +1646,9 @@ txgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev __rte_unused,
 	}
 
 	if (signature_match(pattern))
-		rule->mode = RTE_FDIR_MODE_SIGNATURE;
+		rule->mode = TXGBE_FDIR_MODE_SIGNATURE;
 	else
-		rule->mode = RTE_FDIR_MODE_PERFECT;
+		rule->mode = TXGBE_FDIR_MODE_PERFECT;
 
 	/*Not supported last point for range*/
 	if (item->last) {
@@ -1678,7 +1678,7 @@ txgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev __rte_unused,
 
 			/* Ether type should be masked. */
 			if (eth_mask->hdr.ether_type ||
-			    rule->mode == RTE_FDIR_MODE_SIGNATURE) {
+			    rule->mode == TXGBE_FDIR_MODE_SIGNATURE) {
 				memset(rule, 0, sizeof(struct txgbe_fdir_rule));
 				rte_flow_error_set(error, EINVAL,
 					RTE_FLOW_ERROR_TYPE_ITEM,
@@ -1687,7 +1687,7 @@ txgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev __rte_unused,
 			}
 
 			/* If ethernet has meaning, it means MAC VLAN mode. */
-			rule->mode = RTE_FDIR_MODE_PERFECT_MAC_VLAN;
+			rule->mode = TXGBE_FDIR_MODE_PERFECT_MAC_VLAN;
 
 			/**
 			 * src MAC address must be masked,
@@ -1718,7 +1718,7 @@ txgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev __rte_unused,
 		 * IPv6 is not supported.
 		 */
 		item = next_no_fuzzy_pattern(pattern, item);
-		if (rule->mode == RTE_FDIR_MODE_PERFECT_MAC_VLAN) {
+		if (rule->mode == TXGBE_FDIR_MODE_PERFECT_MAC_VLAN) {
 			if (item->type != RTE_FLOW_ITEM_TYPE_VLAN) {
 				memset(rule, 0, sizeof(struct txgbe_fdir_rule));
 				rte_flow_error_set(error, EINVAL,
@@ -2282,7 +2282,7 @@ txgbe_parse_fdir_filter_tunnel(const struct rte_flow_attr *attr,
 		return -rte_errno;
 	}
 
-	rule->mode = RTE_FDIR_MODE_PERFECT;
+	rule->mode = TXGBE_FDIR_MODE_PERFECT;
 	ptid = TXGBE_PTID_PKT_TUN;
 
 	/* Skip MAC. */
@@ -2949,7 +2949,7 @@ txgbe_parse_fdir_filter(struct rte_eth_dev *dev,
 			struct rte_flow_error *error)
 {
 	int ret;
-	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
+	struct txgbe_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
 
 	ret = txgbe_parse_fdir_filter_normal(dev, attr, pattern,
 					actions, rule, error);
@@ -2965,11 +2965,11 @@ step_next:
 	if (!txgbe_is_pf(TXGBE_DEV_HW(dev)))
 		return ret;
 
-	if (fdir_conf->mode == RTE_FDIR_MODE_NONE) {
+	if (fdir_conf->mode == TXGBE_FDIR_MODE_NONE) {
 		fdir_conf->mode = rule->mode;
 		ret = txgbe_fdir_configure(dev);
 		if (ret) {
-			fdir_conf->mode = RTE_FDIR_MODE_NONE;
+			fdir_conf->mode = TXGBE_FDIR_MODE_NONE;
 			return ret;
 		}
 	} else if (fdir_conf->mode != rule->mode) {
@@ -3562,7 +3562,7 @@ txgbe_flow_destroy(struct rte_eth_dev *dev,
 	struct txgbe_fdir_rule_ele *fdir_rule_ptr;
 	struct txgbe_flow_mem *txgbe_flow_mem_ptr;
 	struct txgbe_hw_fdir_info *fdir_info = TXGBE_DEV_FDIR(dev);
-	struct rte_eth_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
+	struct txgbe_fdir_conf *fdir_conf = TXGBE_DEV_FDIR_CONF(dev);
 	struct txgbe_rss_conf_ele *rss_filter_ptr;
 
 	switch (filter_type) {
@@ -3625,7 +3625,7 @@ txgbe_flow_destroy(struct rte_eth_dev *dev,
 				fdir_info->mask_added = false;
 				fdir_info->flex_relative = false;
 				fdir_info->flex_bytes_offset = 0;
-				fdir_conf->mode = RTE_FDIR_MODE_NONE;
+				fdir_conf->mode = TXGBE_FDIR_MODE_NONE;
 			}
 		}
 		break;
