@@ -100,6 +100,18 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Removed legacy flow director artifacts that depended on deprecated API.
+  Users should use ``rte_flow`` API and testpmd ``flow``
+  command instead.
+
+  * app/testpmd: ``show port fdir``, ``clear port fdir``,
+    ``flow_director_filter``, ``port config ... pctype mapping ...``,
+    and ``port config ... hash_inset|fdir_inset|fdir_flx_inset ...``.
+
+  * net/i40e, net/ixgbe: the experimental
+    ``rte_pmd_{i40e,ixgbe}_get_fdir_info()`` and
+    ``rte_pmd_{i40e,ixgbe}_get_fdir_stats()`` functions.
+
 
 API Changes
 -----------
@@ -116,6 +128,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Deprecated the legacy flow director API; removal scheduled for
+  DPDK 26.11. Use the ``rte_flow`` API instead.
 
 ABI Changes
 -----------

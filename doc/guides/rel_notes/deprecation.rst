@@ -131,6 +131,13 @@ Deprecation Notices
   The legacy actions should be removed
   once ``MODIFY_FIELD`` alternative is implemented in drivers.
 
+* ethdev: Legacy flow director API will be removed in DPDK 26.11.
+  This affects: flow director data structures in ``rte_eth_ctrl.h``
+  (``rte_eth_fdir_*`` and ``rte_fdir_*`` types and the associated
+  ``RTE_ETH_FDIR_*`` / ``RTE_FDIR_*`` macros) and the driver-facing
+  definitions in ``ethdev_driver.h`` (``struct rte_eth_fdir_conf``,
+  ``enum rte_eth_fdir_pballoc_type``, ``enum rte_fdir_status_mode``).
+
 * cryptodev: Support for OpenSSL versions earlier than 3.0 is deprecated
   and will be removed. OpenSSL 1.1.1 reached end-of-life in September 2023.
   The minimum supported OpenSSL version will be 3.0,
