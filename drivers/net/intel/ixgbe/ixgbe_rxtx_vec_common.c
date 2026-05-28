@@ -120,10 +120,10 @@ int __rte_cold
 ixgbe_rx_vec_dev_conf_condition_check(struct rte_eth_dev *dev)
 {
 #ifndef RTE_LIBRTE_IEEE1588
-	struct rte_eth_fdir_conf *fconf = IXGBE_DEV_FDIR_CONF(dev);
+	struct ixgbe_fdir_conf *fconf = IXGBE_DEV_FDIR_CONF(dev);
 
 	/* no fdir support */
-	if (fconf->mode != RTE_FDIR_MODE_NONE)
+	if (fconf->mode != IXGBE_FDIR_MODE_NONE)
 		return -1;
 
 	for (uint16_t i = 0; i < dev->data->nb_rx_queues; i++) {

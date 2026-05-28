@@ -1471,6 +1471,14 @@ static int ixgbe_fdir_filter_init(struct rte_eth_dev *eth_dev)
 	/* drop queue is always fixed */
 	IXGBE_DEV_FDIR_CONF(eth_dev)->drop_queue = IXGBE_FDIR_DROP_QUEUE;
 
+	/*
+	 * Initialize pballoc to 64K. The base driver's
+	 * enum ixgbe_fdir_pballoc_type uses NONE=0, 64K=1, ... so an
+	 * uninitialized (zero) pballoc would be rejected by
+	 * configure_fdir_flags(); set it explicitly here.
+	 */
+	IXGBE_DEV_FDIR_CONF(eth_dev)->pballoc = IXGBE_FDIR_PBALLOC_64K;
+
 	return 0;
 }
 
@@ -2618,7 +2626,7 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	struct ixgbe_adapter *adapter =
 		IXGBE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(adapter);
-	struct rte_eth_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
+	struct ixgbe_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
 	struct ixgbe_vf_info *vfinfo =
 		*IXGBE_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
@@ -2723,7 +2731,7 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	/* Configure DCB hw */
 	ixgbe_configure_dcb(dev);
 
-	if (fdir_conf->mode != RTE_FDIR_MODE_NONE) {
+	if (fdir_conf->mode != IXGBE_FDIR_MODE_NONE) {
 		struct ixgbe_hw_fdir_info *info =
 			IXGBE_DEV_PRIVATE_TO_FDIR_INFO(adapter);
 		err = ixgbe_fdir_configure(adapter, fdir_conf, &info->mask);

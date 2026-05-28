@@ -1501,7 +1501,7 @@ ixgbe_parse_fdir_act_attr(const struct rte_flow_attr *attr,
 		rule->queue = act_q->index;
 	} else { /* drop */
 		/* signature mode does not support drop action. */
-		if (rule->mode == RTE_FDIR_MODE_SIGNATURE) {
+		if (rule->mode == IXGBE_FDIR_MODE_SIGNATURE) {
 			memset(rule, 0, sizeof(struct ixgbe_fdir_rule));
 			rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION,
@@ -1727,9 +1727,9 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 	}
 
 	if (signature_match(pattern))
-		rule->mode = RTE_FDIR_MODE_SIGNATURE;
+		rule->mode = IXGBE_FDIR_MODE_SIGNATURE;
 	else
-		rule->mode = RTE_FDIR_MODE_PERFECT;
+		rule->mode = IXGBE_FDIR_MODE_PERFECT;
 
 	/*Not supported last point for range*/
 	if (item->last) {
@@ -1772,7 +1772,7 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 
 			/* Ether type should be masked. */
 			if (eth_mask->hdr.ether_type ||
-			    rule->mode == RTE_FDIR_MODE_SIGNATURE) {
+			    rule->mode == IXGBE_FDIR_MODE_SIGNATURE) {
 				memset(rule, 0, sizeof(struct ixgbe_fdir_rule));
 				rte_flow_error_set(error, EINVAL,
 					RTE_FLOW_ERROR_TYPE_ITEM,
@@ -1781,7 +1781,7 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 			}
 
 			/* If ethernet has meaning, it means MAC VLAN mode. */
-			rule->mode = RTE_FDIR_MODE_PERFECT_MAC_VLAN;
+			rule->mode = IXGBE_FDIR_MODE_PERFECT_MAC_VLAN;
 
 			/**
 			 * src MAC address must be masked,
@@ -1812,7 +1812,7 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 		 * IPv6 is not supported.
 		 */
 		item = next_no_fuzzy_pattern(pattern, item);
-		if (rule->mode == RTE_FDIR_MODE_PERFECT_MAC_VLAN) {
+		if (rule->mode == IXGBE_FDIR_MODE_PERFECT_MAC_VLAN) {
 			if (item->type != RTE_FLOW_ITEM_TYPE_VLAN) {
 				memset(rule, 0, sizeof(struct ixgbe_fdir_rule));
 				rte_flow_error_set(error, EINVAL,
@@ -1955,7 +1955,7 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 		 * 2. not support last
 		 * 3. mask must not null
 		 */
-		if (rule->mode != RTE_FDIR_MODE_SIGNATURE ||
+		if (rule->mode != IXGBE_FDIR_MODE_SIGNATURE ||
 		    item->last ||
 		    !item->mask) {
 			memset(rule, 0, sizeof(struct ixgbe_fdir_rule));
@@ -2432,7 +2432,7 @@ ixgbe_parse_fdir_filter_tunnel(const struct rte_flow_attr *attr,
 		return -rte_errno;
 	}
 
-	rule->mode = RTE_FDIR_MODE_PERFECT_TUNNEL;
+	rule->mode = IXGBE_FDIR_MODE_PERFECT_TUNNEL;
 
 	/* Skip MAC. */
 	if (item->type == RTE_FLOW_ITEM_TYPE_ETH) {
@@ -2920,8 +2920,8 @@ ixgbe_fdir_flow_program(struct rte_eth_dev *dev,
 		bool *first_mask,
 		struct rte_flow_error *error)
 {
-	struct rte_eth_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
-	struct rte_eth_fdir_conf local_fdir_conf = *fdir_conf;
+	struct ixgbe_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
+	struct ixgbe_fdir_conf local_fdir_conf = *fdir_conf;
 	struct ixgbe_hw_fdir_info *fdir_info =
 			IXGBE_DEV_PRIVATE_TO_FDIR_INFO(adapter);
 	int ret;
@@ -2935,7 +2935,7 @@ ixgbe_fdir_flow_program(struct rte_eth_dev *dev,
 	local_fdir_conf.mode = fdir_rule->mode;
 
 	/* Configure FDIR mode if this is the first filter */
-	if (fdir_conf->mode == RTE_FDIR_MODE_NONE) {
+	if (fdir_conf->mode == IXGBE_FDIR_MODE_NONE) {
 		ret = ixgbe_fdir_configure(adapter, &local_fdir_conf, &fdir_rule->mask);
 		if (ret) {
 			return rte_flow_error_set(error, EINVAL,
@@ -3249,7 +3249,7 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 	ret = ixgbe_parse_fdir_filter(dev, attr, pattern,
 				actions, &fdir_rule, error);
 	if (!ret) {
-		struct rte_eth_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
+		struct ixgbe_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
 		bool first_mask = false;
 
 		ret = ixgbe_fdir_flow_program(dev, adapter, &fdir_rule,
@@ -3420,7 +3420,7 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	struct ixgbe_filter_ele_base *flow_mem_base;
 	struct ixgbe_hw_fdir_info *fdir_info =
 		IXGBE_DEV_PRIVATE_TO_FDIR_INFO(adapter);
-	struct rte_eth_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
+	struct ixgbe_fdir_conf *fdir_conf = IXGBE_DEV_FDIR_CONF(dev);
 	struct ixgbe_rss_conf_ele *rss_filter_ptr;
 
 	/* Validate ownership before touching HW/SW state. */
@@ -3487,7 +3487,7 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 				fdir_info->mask_added = false;
 				fdir_info->mask = (struct ixgbe_hw_fdir_mask){0};
 				fdir_info->flex_bytes_offset = 0;
-				fdir_conf->mode = RTE_FDIR_MODE_NONE;
+				fdir_conf->mode = IXGBE_FDIR_MODE_NONE;
 			}
 		}
 		break;

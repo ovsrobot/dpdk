@@ -143,8 +143,91 @@
 					 IXGBE_LINK_SPEED_10GB_FULL)
 
 /*
- * Information about the fdir mode.
+ * Privatized flow director configuration types.
+ *
+ * These were cloned from <rte_eth_ctrl.h> and <ethdev_driver.h> so that
+ * ixgbe no longer depends on the legacy ethdev flow director ABI, which
+ * is scheduled for removal in DPDK 26.11. The semantics are unchanged;
+ * only the names are ixgbe-private.
  */
+#define IXGBE_FDIR_MAX_FLEXLEN 16  /**< Max length of flexbytes. */
+
+struct ixgbe_ipv4_flow {
+	uint32_t src_ip;
+	uint32_t dst_ip;
+	uint8_t  tos;
+	uint8_t  ttl;
+	uint8_t  proto;
+};
+
+struct ixgbe_ipv6_flow {
+	uint32_t src_ip[4];
+	uint32_t dst_ip[4];
+	uint8_t  tc;
+	uint8_t  proto;
+	uint8_t  hop_limits;
+};
+
+struct ixgbe_fdir_masks {
+	uint16_t vlan_tci_mask;
+	struct ixgbe_ipv4_flow ipv4_mask;
+	struct ixgbe_ipv6_flow ipv6_mask;
+	uint16_t src_port_mask;
+	uint16_t dst_port_mask;
+	uint8_t  mac_addr_byte_mask;
+	uint32_t tunnel_id_mask;
+	uint8_t  tunnel_type_mask;
+};
+
+enum ixgbe_payload_type {
+	IXGBE_PAYLOAD_UNKNOWN = 0,
+	IXGBE_RAW_PAYLOAD,
+	IXGBE_L2_PAYLOAD,
+	IXGBE_L3_PAYLOAD,
+	IXGBE_L4_PAYLOAD,
+	IXGBE_PAYLOAD_MAX = 8,
+};
+
+struct ixgbe_flex_payload_cfg {
+	enum ixgbe_payload_type type;
+	uint16_t src_offset[IXGBE_FDIR_MAX_FLEXLEN];
+};
+
+struct ixgbe_fdir_flex_mask {
+	uint16_t flow_type;
+	uint8_t  mask[IXGBE_FDIR_MAX_FLEXLEN];
+};
+
+struct ixgbe_fdir_flex_conf {
+	uint16_t nb_payloads;
+	uint16_t nb_flexmasks;
+	struct ixgbe_flex_payload_cfg flex_set[IXGBE_PAYLOAD_MAX];
+	struct ixgbe_fdir_flex_mask flex_mask[RTE_ETH_FLOW_MAX];
+};
+
+enum ixgbe_fdir_mode {
+	IXGBE_FDIR_MODE_NONE = 0,
+	IXGBE_FDIR_MODE_SIGNATURE,
+	IXGBE_FDIR_MODE_PERFECT,
+	IXGBE_FDIR_MODE_PERFECT_MAC_VLAN,
+	IXGBE_FDIR_MODE_PERFECT_TUNNEL,
+};
+
+enum ixgbe_fdir_status_mode {
+	IXGBE_FDIR_NO_REPORT_STATUS = 0,
+	IXGBE_FDIR_REPORT_STATUS,
+	IXGBE_FDIR_REPORT_STATUS_ALWAYS,
+};
+
+struct ixgbe_fdir_conf {
+	enum ixgbe_fdir_mode mode;
+	enum ixgbe_fdir_pballoc_type pballoc;
+	enum ixgbe_fdir_status_mode status;
+	uint8_t drop_queue;
+	struct ixgbe_fdir_masks mask;
+	struct ixgbe_fdir_flex_conf flex_conf;
+};
+
 struct ixgbe_hw_fdir_mask {
 	uint16_t vlan_tci_mask;
 	uint32_t src_ipv4_mask;
@@ -176,7 +259,7 @@ struct ixgbe_fdir_rule {
 	union ixgbe_atr_input ixgbe_fdir; /* key of fdir filter*/
 	bool b_spec; /* If TRUE, ixgbe_fdir, fdirflags, queue have meaning. */
 	bool b_mask; /* If TRUE, mask has meaning. */
-	enum rte_fdir_mode mode; /* IP, MAC VLAN, Tunnel */
+	enum ixgbe_fdir_mode mode; /* IP, MAC VLAN, Tunnel */
 	uint32_t fdirflags; /* drop or forward */
 	uint32_t soft_id; /* an unique value for this rule */
 	uint8_t queue; /* assigned rx queue */
@@ -468,7 +551,7 @@ struct ixgbe_adapter {
 	struct ixgbe_hw_stats       stats;
 	struct ixgbe_macsec_stats   macsec_stats;
 	struct ixgbe_macsec_setting	macsec_setting;
-	struct rte_eth_fdir_conf    fdir_conf;
+	struct ixgbe_fdir_conf    fdir_conf;
 	struct ixgbe_hw_fdir_info   fdir;
 	struct ixgbe_interrupt      intr;
 	struct ixgbe_stat_mapping_registers stat_mappings;
@@ -706,15 +789,15 @@ void ixgbe_filterlist_flush(struct rte_eth_dev *dev);
  * Flow director function prototypes
  */
 int ixgbe_fdir_configure(struct ixgbe_adapter *adapter,
-			 const struct rte_eth_fdir_conf *fdir_conf,
+			 const struct ixgbe_fdir_conf *fdir_conf,
 			 const struct ixgbe_hw_fdir_mask *fdir_mask);
 int ixgbe_fdir_set_input_mask(struct ixgbe_adapter *adapter,
 			      const struct ixgbe_hw_fdir_mask *mask,
-			      enum rte_fdir_mode mode);
+			      enum ixgbe_fdir_mode mode);
 int ixgbe_fdir_set_flexbytes_offset(struct ixgbe_adapter *adapter,
 				    uint16_t offset);
 int ixgbe_fdir_filter_program(struct ixgbe_adapter *adapter,
-		struct rte_eth_fdir_conf *fdir_conf,
+		struct ixgbe_fdir_conf *fdir_conf,
 		struct ixgbe_fdir_rule *rule,
 		bool del, bool update);
 void ixgbe_configure_dcb(struct rte_eth_dev *dev);
