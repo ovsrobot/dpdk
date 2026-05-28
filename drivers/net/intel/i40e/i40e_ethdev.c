@@ -9309,8 +9309,8 @@ i40e_get_valid_input_set(enum i40e_filter_pctype pctype,
 	};
 
 	/**
-	 * Flow director supports only fields defined in
-	 * union rte_eth_fdir_flow.
+	 * Flow director supports only fields reachable through
+	 * rte_flow item patterns.
 	 */
 	static const uint64_t valid_fdir_inset_table[] = {
 		[I40E_FILTER_PCTYPE_FRAG_IPV4] =
