@@ -158,3 +158,11 @@ Deprecation Notices
 * net/iavf: The dynamic mbuf field used to detect LLDP packets on the
   transmit path in the iavf PMD will be removed in a future release.
   After removal, only packet type-based detection will be supported.
+
+* ethdev: The legacy filtering data structures in ``rte_eth_ctrl.h``,
+  including the flow director (FDIR) types (``rte_eth_fdir_*``, ``rte_fdir_*``)
+  and the ntuple/ethertype/SYN/tunnel/input-set filter types, are superseded
+  by the ``rte_flow`` API and will be removed in DPDK 26.11. The associated
+  driver-facing definitions in ``ethdev_driver.h`` (``RTE_ETH_FILTER_FDIR``,
+  ``struct rte_eth_fdir_conf``, ``enum rte_eth_fdir_pballoc_type``,
+  ``enum rte_fdir_status_mode``) will be removed at the same time.
