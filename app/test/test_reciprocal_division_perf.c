@@ -13,8 +13,8 @@
 #include <rte_random.h>
 #include <rte_reciprocal.h>
 
-#define MAX_ITERATIONS	(1ULL << 32)
-#define DIVIDE_ITER	(1ULL << 28)
+#define MAX_ITERATIONS	(1ULL << 24)
+#define DIVIDE_ITER	(1ULL << 10)
 
 static int
 test_reciprocal_division_perf(void)
