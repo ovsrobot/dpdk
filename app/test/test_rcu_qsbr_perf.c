@@ -313,9 +313,8 @@ test_rcu_qsbr_hash_reader(void *arg)
 					pdata[thread_id]++;
 			}
 			rte_rcu_qsbr_unlock(temp, thread_id);
+			rte_rcu_qsbr_quiescent(temp, thread_id);
 		}
-		/* Update quiescent state counter */
-		rte_rcu_qsbr_quiescent(temp, thread_id);
 		rte_rcu_qsbr_thread_offline(temp, thread_id);
 		loop_cnt++;
 	} while (!writer_done);
