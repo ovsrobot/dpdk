@@ -61,26 +61,21 @@
  *
  *    - Pseudorandom max bulk size (*n_max_bulk*)
  *
- *      - Max bulk from CACHE_LINE_BURST to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE,
- *        where CACHE_LINE_BURST is the number of pointers fitting into one CPU cache line.
+ *      - Max bulk: CACHE_LINE_BURST, 32, RTE_MEMPOOL_CACHE_MAX_SIZE,
+ *        where CACHE_LINE_BURST is the number of pointers fitting into
+ *        one CPU cache line.
  *
  *    - Fixed bulk size (*n_get_bulk*, *n_put_bulk*)
  *
- *      - Bulk get from 1 to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE
- *      - Bulk put from 1 to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE
- *      - Bulk get and put from 1 to 256, and RTE_MEMPOOL_CACHE_MAX_SIZE, compile time constant
+ *      - Bulk get: 1, 4, CACHE_LINE_BURST, 32, RTE_MEMPOOL_CACHE_MAX_SIZE
+ *      - Bulk put: 1, 4, CACHE_LINE_BURST, 32, RTE_MEMPOOL_CACHE_MAX_SIZE
  *
  *    - Number of kept objects (*n_keep*)
  *
- *      - 32
- *      - 128
- *      - 512
- *      - 2048
- *      - 8192
- *      - 32768
+ *      - 32, 512, 32768
  */
 
-#define TIME_S 1
+#define TIME_MS 200
 #define MEMPOOL_ELT_SIZE 2048
 #define MAX_KEEP 32768
 #define N (128 * MAX_KEEP)
@@ -257,7 +252,7 @@ per_lcore_mempool_test(void *arg)
 
 	start_cycles = rte_get_timer_cycles();
 
-	while (time_diff/hz < TIME_S) {
+	while (time_diff < hz * TIME_MS / 1000) {
 		if (n_max_bulk != 0)
 			ret = test_loop_random(mp, cache, n_keep, n_max_bulk);
 		else if (!use_constant_values)
@@ -376,13 +371,10 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 static int
 do_one_mempool_test(struct rte_mempool *mp, unsigned int cores, int external_cache)
 {
-	unsigned int bulk_tab_max[] = { CACHE_LINE_BURST, 32, 64, 128, 256,
-			RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
-	unsigned int bulk_tab_get[] = { 1, 4, CACHE_LINE_BURST, 32, 64, 128, 256,
-			RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
-	unsigned int bulk_tab_put[] = { 1, 4, CACHE_LINE_BURST, 32, 64, 128, 256,
-			RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
-	unsigned int keep_tab[] = { 32, 128, 512, 2048, 8192, 32768, 0 };
+	unsigned int bulk_tab_max[] = { CACHE_LINE_BURST, 32, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	unsigned int bulk_tab_get[] = { 1, 4, CACHE_LINE_BURST, 32, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	unsigned int bulk_tab_put[] = { 1, 4, CACHE_LINE_BURST, 32, RTE_MEMPOOL_CACHE_MAX_SIZE, 0 };
+	unsigned int keep_tab[] = { 32, 512, 32768, 0 };
 	unsigned int *max_bulk_ptr;
 	unsigned int *get_bulk_ptr;
 	unsigned int *put_bulk_ptr;
