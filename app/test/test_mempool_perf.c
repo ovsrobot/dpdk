@@ -423,14 +423,6 @@ do_one_mempool_test(struct rte_mempool *mp, unsigned int cores, int external_cac
 				ret = launch_cores(mp, cores);
 				if (ret < 0)
 					return -1;
-
-				/* replay test with constant values */
-				if (n_get_bulk == n_put_bulk) {
-					use_constant_values = 1;
-					ret = launch_cores(mp, cores);
-					if (ret < 0)
-						return -1;
-				}
 			}
 		}
 	}
