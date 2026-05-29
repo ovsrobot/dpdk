@@ -84,7 +84,6 @@
 #define MEMPOOL_ELT_SIZE 2048
 #define MAX_KEEP 32768
 #define N (128 * MAX_KEEP)
-#define MEMPOOL_SIZE ((rte_lcore_count()*(MAX_KEEP+RTE_MEMPOOL_CACHE_MAX_SIZE*2))-1)
 
 /* Number of pointers fitting into one cache line. */
 #define CACHE_LINE_BURST (RTE_CACHE_LINE_SIZE / sizeof(uintptr_t))
@@ -330,7 +329,7 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 		       n_get_bulk, n_put_bulk,
 		       use_constant_values);
 
-	if (rte_mempool_avail_count(mp) != MEMPOOL_SIZE) {
+	if (rte_mempool_avail_count(mp) != mp->size) {
 		printf("mempool is not full\n");
 		return -1;
 	}
@@ -449,22 +448,25 @@ do_all_mempool_perf_tests(unsigned int cores)
 	const char *mp_cache_ops;
 	const char *mp_nocache_ops;
 	const char *default_pool_ops;
+	unsigned int mempool_size = cores *
+		(MAX_KEEP + RTE_MEMPOOL_CACHE_MAX_SIZE * 2) - 1;
 	int ret = -1;
 
 	/* create a mempool (without cache) */
-	mp_nocache = rte_mempool_create("perf_test_nocache", MEMPOOL_SIZE,
+	mp_nocache = rte_mempool_create("perf_test_nocache", mempool_size,
 					MEMPOOL_ELT_SIZE, 0, 0,
 					NULL, NULL,
 					my_obj_init, NULL,
 					SOCKET_ID_ANY, 0);
 	if (mp_nocache == NULL) {
 		printf("cannot allocate mempool (without cache)\n");
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	mp_nocache_ops = rte_mempool_get_ops(mp_nocache->ops_index)->name;
 
 	/* create a mempool (with cache) */
-	mp_cache = rte_mempool_create("perf_test_cache", MEMPOOL_SIZE,
+	mp_cache = rte_mempool_create("perf_test_cache", mempool_size,
 				      MEMPOOL_ELT_SIZE,
 				      RTE_MEMPOOL_CACHE_MAX_SIZE, 0,
 				      NULL, NULL,
@@ -472,6 +474,7 @@ do_all_mempool_perf_tests(unsigned int cores)
 				      SOCKET_ID_ANY, 0);
 	if (mp_cache == NULL) {
 		printf("cannot allocate mempool (with cache)\n");
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	mp_cache_ops = rte_mempool_get_ops(mp_cache->ops_index)->name;
@@ -480,12 +483,13 @@ do_all_mempool_perf_tests(unsigned int cores)
 
 	/* Create a mempool (without cache) based on Default handler */
 	default_pool_nocache = rte_mempool_create_empty("default_pool_nocache",
-			MEMPOOL_SIZE,
+			mempool_size,
 			MEMPOOL_ELT_SIZE,
 			0, 0,
 			SOCKET_ID_ANY, 0);
 	if (default_pool_nocache == NULL) {
 		printf("cannot allocate %s mempool (without cache)\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	if (rte_mempool_set_ops_byname(default_pool_nocache, default_pool_ops, NULL) < 0) {
@@ -494,18 +498,20 @@ do_all_mempool_perf_tests(unsigned int cores)
 	}
 	if (rte_mempool_populate_default(default_pool_nocache) < 0) {
 		printf("cannot populate %s mempool\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	rte_mempool_obj_iter(default_pool_nocache, my_obj_init, NULL);
 
 	/* Create a mempool (with cache) based on Default handler */
 	default_pool_cache = rte_mempool_create_empty("default_pool_cache",
-			MEMPOOL_SIZE,
+			mempool_size,
 			MEMPOOL_ELT_SIZE,
 			RTE_MEMPOOL_CACHE_MAX_SIZE, 0,
 			SOCKET_ID_ANY, 0);
 	if (default_pool_cache == NULL) {
 		printf("cannot allocate %s mempool (with cache)\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	if (rte_mempool_set_ops_byname(default_pool_cache, default_pool_ops, NULL) < 0) {
@@ -514,6 +520,7 @@ do_all_mempool_perf_tests(unsigned int cores)
 	}
 	if (rte_mempool_populate_default(default_pool_cache) < 0) {
 		printf("cannot populate %s mempool\n", default_pool_ops);
+		ret = TEST_SKIPPED;
 		goto err;
 	}
 	rte_mempool_obj_iter(default_pool_cache, my_obj_init, NULL);
@@ -584,27 +591,22 @@ test_mempool_perf_allcores(void)
 static int
 test_mempool_perf(void)
 {
-	int ret = -1;
+	int ret;
 
 	/* performance test with 1, 2 and max cores */
-	if (do_all_mempool_perf_tests(1) < 0)
-		goto err;
+	ret = do_all_mempool_perf_tests(1);
+	if (ret != 0)
+		return ret;
 	if (rte_lcore_count() == 1)
-		goto done;
+		return 0;
 
-	if (do_all_mempool_perf_tests(2) < 0)
-		goto err;
+	ret = do_all_mempool_perf_tests(2);
+	if (ret != 0)
+		return ret;
 	if (rte_lcore_count() == 2)
-		goto done;
+		return 0;
 
-	if (do_all_mempool_perf_tests(rte_lcore_count()) < 0)
-		goto err;
-
-done:
-	ret = 0;
-
-err:
-	return ret;
+	return do_all_mempool_perf_tests(rte_lcore_count());
 }
 
 REGISTER_PERF_TEST(mempool_perf_autotest, test_mempool_perf);
