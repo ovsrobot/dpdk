@@ -70,6 +70,7 @@ The public API headers are grouped by topics:
   [memzone](@ref rte_memzone.h),
   [mempool](@ref rte_mempool.h),
   [malloc](@ref rte_malloc.h),
+  [fastmem](@ref rte_fastmem.h),
   [memcpy](@ref rte_memcpy.h)
 
 - **timers**:

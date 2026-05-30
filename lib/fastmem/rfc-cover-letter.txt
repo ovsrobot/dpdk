@@ -1,0 +1,128 @@
+Subject: [RFC] lib/fastmem: fast small-object allocator
+
+This RFC introduces fastmem, a general-purpose small-object allocator
+for DPDK. It is intended to replace per-type mempools with a single
+allocator that handles arbitrary sizes, grows on demand, and matches
+mempool-level performance on the hot path.
+
+Motivation
+----------
+
+DPDK applications commonly maintain many mempools — one per object
+type (connections, sessions, timers, work items). Each must be sized
+up front, wastes memory when over-provisioned, and cannot serve
+objects of a different size. Fastmem eliminates this by accepting
+arbitrary sizes at runtime, backed by a slab allocator that
+repurposes memory across size classes as demand shifts.
+
+Design
+------
+
+Three-layer architecture:
+
+1. Backing memory: 128 MiB IOVA-contiguous memzones from EAL,
+   reserved lazily (or pre-reserved for deterministic latency).
+
+2. Slabs: 2 MiB, 2 MiB-aligned regions carved from memzones.
+   The alignment enables O(1) slab lookup from any object pointer
+   via bitmask — no radix tree or index structure. Slabs move
+   freely between 18 power-of-2 size classes (8 B to 1 MiB).
+
+3. Per-lcore caches: bounded LIFO stacks (no locks on the hot
+   path). Cache misses trigger bulk transfers to/from the shared
+   bin under a spinlock.
+
+Key properties:
+
+- Zero per-object metadata in the production build.
+- NUMA-aware, with per-socket bins and free-slab pools.
+- DMA-usable memory with O(1) virt-to-IOVA translation.
+- Bulk alloc/free with all-or-nothing semantics.
+- Backing memory never returned during lifetime (slabs recycled).
+- Non-EAL threads supported (bypass cache, take bin lock).
+- Secondary process support (lazy attach, no per-lcore caches).
+
+API surface
+-----------
+
+  rte_fastmem_init / deinit
+  rte_fastmem_reserve
+  rte_fastmem_set_limit / get_limit
+  rte_fastmem_alloc / alloc_socket
+  rte_fastmem_realloc
+  rte_fastmem_alloc_bulk / alloc_bulk_socket
+  rte_fastmem_free / free_bulk
+  rte_fastmem_hlookup / halloc / halloc_bulk / hfree / hfree_bulk
+  rte_fastmem_virt2iova
+  rte_fastmem_cache_flush
+  rte_fastmem_max_size / classes
+  rte_fastmem_stats / stats_class / stats_lcore / stats_lcore_class
+  rte_fastmem_stats_reset
+
+All APIs are marked __rte_experimental.
+
+Performance
+-----------
+
+The single-object hot path is roughly 2–3× the cost of mempool
+and an order of magnitude faster than rte_malloc. Under
+multi-lcore contention, fastmem scales similarly to mempool,
+while rte_malloc collapses.
+
+Limitations
+-----------
+
+- Maximum allocation: 1 MiB. Larger requests should use rte_malloc.
+- Power-of-2 classes only; worst-case internal fragmentation ~50%.
+- Backing memory not reclaimable short of deinit.
+
+Future work
+-----------
+
+- Lcore-affine allocations (false-sharing-free by construction).
+- Mempool ops driver for transparent drop-in use.
+- Debug mode (cookies, double-free detection, poison-on-free).
+- Telemetry integration.
+- EAL integration, allowing EAL-internal subsystems to use
+  fastmem for their small-object allocations.
+
+Changes in RFC v4:
+- Fix crash in halloc/hfree on lcores without hlookup: fall back
+  to shared bin on NULL cache.
+- Keep per-lcore statistics across rte_fastmem_cache_flush().
+- Guard free and IOVA paths against uninitialized state.
+- Lazy-attach stats readers in secondary processes; distinguish
+  -ENODEV from -EINVAL.
+- Protect bin statistics with the bin lock.
+- Trim verbose comments.
+- Add shared cache for callers without a private cache (non-EAL
+  threads, secondary processes). Add rte_fastmem_stats_shared()
+  and rte_fastmem_stats_shared_class().
+- Document rte_fastmem_stats_reset() quiescence requirement.
+- Add tests for handle alloc/free from uncached lcores, stats
+  survival across flush, and shared-cache statistics.
+- Update programming guide (shared cache, stats sections).
+
+Changes in RFC v3:
+- Add rte_fastmem_realloc() with full test coverage.
+- Add __rte_malloc/__rte_dealloc compiler attributes; remove
+  incorrect __rte_alloc_size/__rte_alloc_align.
+- Extract normalize_align() helper; remove redundant inline
+  directives.
+- Merge lifecycle and functional test suites.
+- Add realloc subsection to programming guide.
+
+Changes in RFC v2:
+- Fix cross-socket deinit use-after-free.
+- Add secondary process support.
+- Add handle-based allocation API.
+- Fix clang warnings; misc cleanup.
+
+Mattias Rönnblom (3):
+  doc: add fastmem programming guide
+  lib: add fastmem library
+  app/test: add fastmem test suite
+
+ doc/guides/prog_guide/fastmem_lib.rst | ...
+ lib/fastmem/                          | ...
+ app/test/test_fastmem*.c              | ...
