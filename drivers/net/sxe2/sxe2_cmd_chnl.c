@@ -7,6 +7,7 @@
 #include "sxe2_cmd_chnl.h"
 #include "sxe2_ethdev.h"
 #include "sxe2_common_log.h"
+#include <asm-generic/errno-base.h>
 
 static union sxe2_drv_trace_info sxe2_drv_trace_id;
 
@@ -96,6 +97,27 @@ int32_t sxe2_drv_dev_info_get(struct sxe2_adapter *adapter,
 	if (ret)
 		PMD_DEV_LOG_ERR(adapter, DRV, "get dev info failed, ret=%d", ret);
 
+	return ret;
+}
+
+int32_t sxe2_drv_fc_state_get(struct sxe2_adapter *adapter,
+			      struct sxe2_drv_vsi_fc_get_resp *dev_fc_state_resp)
+{
+	int32_t ret = 0;
+	struct sxe2_common_device *cdev = adapter->cdev;
+	struct sxe2_drv_cmd_params param = {0};
+	struct sxe2_drv_vsi_fc_get_req req = {0};
+
+	req.vsi_id = adapter->vsi_ctxt.main_vsi->vsi_id;
+	sxe2_drv_cmd_params_fill(adapter, &param, SXE2_DRV_CMD_VSI_FC_GET,
+				&req, sizeof(req),
+				dev_fc_state_resp,
+				sizeof(*dev_fc_state_resp));
+	ret = sxe2_drv_cmd_exec(cdev, &param);
+	if (ret) {
+		PMD_DEV_LOG_ERR(adapter, DRV, "get fc state failed, ret=%d", ret);
+		ret = -EIO;
+	}
 	return ret;
 }
 

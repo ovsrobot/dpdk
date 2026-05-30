@@ -73,4 +73,6 @@ int32_t sxe2_tm_init(struct rte_eth_dev *dev);
 
 int32_t sxe2_tm_uninit(struct rte_eth_dev *dev);
 
+int32_t sxe2_tm_conf_reset(struct rte_eth_dev *dev);
+
 #endif /* __SXE2_TM_H__ */
