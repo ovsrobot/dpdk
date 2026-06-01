@@ -9,9 +9,10 @@ endif
 
 cflags += ['-g']
 
-deps += ['common_sxe2', 'hash','cryptodev','security']
+deps += ['common_sxe2', 'hash', 'cryptodev', 'security', 'cmdline']
 
 includes += include_directories('../../common/sxe2')
+testpmd_sources = files('sxe2_testpmd.c')
 
 if arch_subdir == 'x86'
         sources += files('sxe2_txrx_vec_sse.c')
@@ -79,5 +80,5 @@ sources += files(
         'sxe2_flow_parse_engine.c',
         'sxe2_dump.c',
         'sxe2_txrx_check_mbuf.c',
-
+        'sxe2_testpmd_lib.c',
 )
