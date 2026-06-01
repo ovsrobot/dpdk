@@ -52,6 +52,7 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 		unsigned int n,	enum rte_ring_queue_behavior behavior,
 		uint32_t *old_head, uint32_t *new_head, uint32_t *entries)
 {
+	uint32_t head;
 	unsigned int max = n;
 
 	/*
@@ -61,7 +62,7 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 	 * d->head.
 	 * If not, an unsafe partial order may ensue.
 	 */
-	*old_head = rte_atomic_load_explicit(&d->head, rte_memory_order_acquire);
+	head = rte_atomic_load_explicit(&d->head, rte_memory_order_acquire);
 	do {
 		/* Reset n to the initial burst count */
 		n = max;
@@ -76,10 +77,10 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
-		 * *old_head > s->tail). So 'entries' is always between 0
+		 * head > s->tail). So 'entries' is always between 0
 		 * and capacity (which is < size).
 		 */
-		*entries = capacity + stail - *old_head;
+		*entries = capacity + stail - head;
 
 		/* check that we have enough room in ring */
 		if (unlikely(n > *entries))
@@ -87,11 +88,11 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 					0 : *entries;
 
 		if (n == 0)
-			return 0;
+			break;
 
-		*new_head = *old_head + n;
+		*new_head = head + n;
 
-		/* on failure, *old_head is updated */
+		/* on failure, head is updated */
 		/*
 		 * R1/A2.
 		 * R1: Establishes a synchronizing edge with A0 of a
@@ -99,11 +100,13 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 		 * A2: Establishes a synchronizing edge with R1 of a
 		 * different thread to observe same value for stail
 		 * observed by that thread on CAS failure (to retry
-		 * with an updated *old_head).
+		 * with an updated head).
 		 */
 	} while (unlikely(!rte_atomic_compare_exchange_strong_explicit(
-				  &d->head, old_head, *new_head,
+				  &d->head, &head, *new_head,
 				  rte_memory_order_release, rte_memory_order_acquire)));
+
+	*old_head = head;
 	return n;
 }
 

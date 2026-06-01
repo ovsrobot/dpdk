@@ -396,12 +396,7 @@ __rte_ring_headtail_move_head_st(struct rte_ring_headtail *d,
 	return n;
 }
 
-/* There are two choices because GCC optimizer does poorly on atomic_compare_exchange */
-#if defined(RTE_TOOLCHAIN_GCC) && defined(RTE_ARCH_X86)
-#include "rte_ring_x86_pvt.h"
-#else
 #include "rte_ring_c11_pvt.h"
-#endif
 
 /**
  * @internal This function updates the producer head for enqueue
