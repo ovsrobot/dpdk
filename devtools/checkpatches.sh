@@ -137,6 +137,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# forbid new use of __rte_always_inline
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS='\\<__rte_always_inline\\>' \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Adding __rte_always_inline; prefer plain inline' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# refrain from using compiler __rte_atomic_thread_fence()
 	# It should be avoided on x86 for SMP case.
 	awk -v FOLDERS="lib drivers app examples" \
