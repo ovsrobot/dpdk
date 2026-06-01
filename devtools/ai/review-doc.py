@@ -24,8 +24,10 @@ from typing import Any
 
 from _common import (
     PROVIDERS,
+    VERTEX_AI_AVAILABLE,
     TokenUsage,
     add_token_args,
+    detect_auth_method,
     error,
     get_git_config,
     list_providers,
@@ -273,7 +275,6 @@ def build_anthropic_request(
         doc_file, commit_prefix, output_format, include_diff_markers
     )
     return {
-        "model": model,
         "max_tokens": max_tokens,
         "system": [
             {"type": "text", "text": SYSTEM_PROMPT},
@@ -307,7 +308,6 @@ def build_openai_request(
         doc_file, commit_prefix, output_format, include_diff_markers
     )
     return {
-        "model": model,
         "max_tokens": max_tokens,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -352,7 +352,7 @@ def build_google_request(
 
 def call_api(
     provider: str,
-    api_key: str,
+    auth: str,
     model: str,
     max_tokens: int,
     agents_content: str,
@@ -399,7 +399,7 @@ def call_api(
         )
     return send_request(
         provider,
-        api_key,
+        auth,
         model,
         request_data,
         timeout=timeout,
@@ -632,6 +632,12 @@ Token Usage:
     )
     add_token_args(parser)
     parser.add_argument(
+        "--auth",
+        choices=["auto", "direct", "vertex"],
+        default="auto",
+        help="Authentication method: auto (default), direct (API key), vertex (Google Cloud)",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -709,10 +715,20 @@ Token Usage:
     config = PROVIDERS[args.provider]
     model = args.model or config["default_model"]
 
-    # Get API key
-    api_key = os.environ.get(config["env_var"])
-    if not api_key:
-        error(f"{config['env_var']} environment variable not set")
+    if args.auth == "auto":
+        auth_method = detect_auth_method(args.provider)
+    else:
+        auth_method = args.auth
+
+    if auth_method == "vertex":
+        if not VERTEX_AI_AVAILABLE:
+            error("Vertex AI support requires 'google-auth' library. Install with: pip install google-auth")
+        auth = "vertex"
+    else:
+        api_key = os.environ.get(config["env_var"])
+        if not api_key:
+            error(f"{config['env_var']} environment variable not set")
+        auth = f"direct:{api_key}"
 
     # Validate files
     agents_path = Path(args.agents)
@@ -783,6 +799,7 @@ Token Usage:
         if args.verbose:
             print("=== Request ===", file=sys.stderr)
             print(f"Provider: {args.provider}", file=sys.stderr)
+            print(f"Auth method: {auth_method}", file=sys.stderr)
             print(f"Model: {model}", file=sys.stderr)
             print(f"Output format: {args.output_format}", file=sys.stderr)
             print(f"AGENTS file: {args.agents}", file=sys.stderr)
@@ -800,7 +817,7 @@ Token Usage:
         # Call API
         review_text, call_usage = call_api(
             args.provider,
-            api_key,
+            auth,
             model,
             args.tokens,
             agents_content,
