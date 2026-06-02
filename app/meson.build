@@ -17,6 +17,7 @@ apps = [
         'graph',
         'pdump',
         'proc-info',
+        'test',
         'test-acl',
         'test-bbdev',
         'test-cmdline',
@@ -34,11 +35,6 @@ apps = [
         'test-sad',
         'test-security-perf',
 ]
-
-if get_option('tests')
-# build the auto test app if enabled.
-    apps += 'test'
-endif
 
 default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
 default_ldflags = []
