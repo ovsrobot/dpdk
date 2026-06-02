@@ -176,8 +176,6 @@ To enable HPET support in DPDK:
    Note that this may involve doing a kernel rebuild,
    as many common linux distributions do *not* have this setting
    enabled by default in their kernel builds.
-#. Enable DPDK support for HPET by using the build-time meson option ``use_hpet``,
-   for example, ``meson configure -Duse_hpet=true``
 
 For an application to use the ``rte_get_hpet_cycles()`` and ``rte_get_hpet_hz()`` API calls,
 and optionally to make the HPET the default time source for the rte_timer library,

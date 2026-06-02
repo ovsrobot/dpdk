@@ -501,6 +501,11 @@ static int
 timer_sanity_check(void)
 {
 #ifdef RTE_LIBEAL_USE_HPET
+	if (rte_eal_hpet_init(1) < 0) {
+		printf("HPET is not enabled, using TSC as default timer\n");
+		return 0;
+	}
+
 	if (eal_timer_source != EAL_TIMER_HPET) {
 		printf("Not using HPET, can't sanity check timer sources\n");
 		return 0;

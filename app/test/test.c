@@ -180,13 +180,6 @@ main(int argc, char **argv)
 		goto out;
 	}
 
-#ifdef RTE_LIBEAL_USE_HPET
-	if (rte_eal_hpet_init(1) < 0)
-#endif
-		RTE_LOG(INFO, APP,
-				"HPET is not enabled, using TSC as default timer\n");
-
-
 	char *dpdk_test = getenv("DPDK_TEST");
 
 	if (dpdk_test && strlen(dpdk_test) > 0)

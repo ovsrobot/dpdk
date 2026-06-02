@@ -15,13 +15,10 @@ sources += files(
         'eal_memory.c',
         'eal_thread.c',
         'eal_timer.c',
+        'eal_timer_hpet.c',
         'eal_vfio.c',
         'eal_vfio_mp_sync.c',
 )
-
-if dpdk_conf.get('RTE_LIBEAL_USE_HPET')
-    sources += files('eal_timer_hpet.c')
-endif
 
 deps += ['kvargs', 'telemetry']
 if has_libnuma

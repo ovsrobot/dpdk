@@ -21,6 +21,8 @@ Deprecation Notices
 
   - ``kernel_dir``: option unused as Linux kernel drivers are in a separate ``dpdk-kmods`` repository.
   - ``tests``: disabling tests can be achieved by using the ``enable_apps`` / ``disable_apps`` options instead.
+  - ``use_hpet``: option unused as HPET is only supported on Linux
+    and is runtime-enabled using ``rte_eal_hpet_init()`` API.
 
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
