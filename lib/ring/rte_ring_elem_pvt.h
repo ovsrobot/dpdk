@@ -301,10 +301,8 @@ __rte_ring_dequeue_elems(struct rte_ring *r, uint32_t cons_head,
 
 static __rte_always_inline void
 __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
-		uint32_t new_val, uint32_t single, uint32_t enqueue)
+		       uint32_t new_val, uint32_t single)
 {
-	RTE_SET_USED(enqueue);
-
 	/*
 	 * If there are other enqueues/dequeues in progress that preceded us,
 	 * we need to wait for them to complete
@@ -448,7 +446,7 @@ __rte_ring_do_enqueue_elem(struct rte_ring *r, const void *obj_table,
 
 	__rte_ring_enqueue_elems(r, prod_head, obj_table, esize, n);
 
-	__rte_ring_update_tail(&r->prod, prod_head, prod_next, is_sp, 1);
+	__rte_ring_update_tail(&r->prod, prod_head, prod_next, is_sp);
 end:
 	if (free_space != NULL)
 		*free_space = free_entries - n;
@@ -495,7 +493,7 @@ __rte_ring_do_dequeue_elem(struct rte_ring *r, void *obj_table,
 
 	__rte_ring_dequeue_elems(r, cons_head, obj_table, esize, n);
 
-	__rte_ring_update_tail(&r->cons, cons_head, cons_next, is_sc, 0);
+	__rte_ring_update_tail(&r->cons, cons_head, cons_next, is_sc);
 
 end:
 	if (available != NULL)
