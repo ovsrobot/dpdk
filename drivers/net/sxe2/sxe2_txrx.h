@@ -23,4 +23,8 @@ int32_t sxe2_tx_burst_mode_get(struct rte_eth_dev *dev,
 int32_t sxe2_rx_burst_mode_get(struct rte_eth_dev *dev,
 			__rte_unused uint16_t queue_id, struct rte_eth_burst_mode *mode);
 
+#ifndef RTE_LIBRTE_SXE2_16BYTE_RX_DESC
+int32_t sxe2_rx_update_ptp_time(struct sxe2_rx_queue *rxq);
+#endif
+
 #endif /* SXE2_TXRX_H */
