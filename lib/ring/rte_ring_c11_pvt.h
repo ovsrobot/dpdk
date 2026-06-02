@@ -43,7 +43,6 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
 	 */
 	rte_atomic_store_explicit(&ht->tail, new_val, rte_memory_order_release);
 }
-
 /**
  * @internal This is a helper function that moves the producer/consumer head
  *    optimized for single threaded case
@@ -82,7 +81,7 @@ __rte_ring_headtail_move_head_st(struct rte_ring_headtail *d,
 	/* Single producer: only this thread writes d->head,
 	 * so a relaxed load is sufficient.
 	 */
-	*old_head = rte_atomic_load_explicit(&d->head, rte_memory_order_relaxed);
+	*old_head = rte_atomic_load_explicit(&d->head,	rte_memory_order_acquire);
 
 	/* Acquire pairs with the consumer's release-store of tail in __rte_ring_update_tail,
 	 * ensuring the consumer's ring-element reads are complete before

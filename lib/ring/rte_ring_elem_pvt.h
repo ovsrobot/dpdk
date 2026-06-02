@@ -309,7 +309,7 @@ __rte_ring_dequeue_elems(struct rte_ring *r, uint32_t cons_head,
 #ifdef RTE_USE_C11_MEM_MODEL
 #include "rte_ring_c11_pvt.h"
 #else
-#include "rte_ring_generic_pvt.h"
+#include "rte_ring_gcc_pvt.h"
 #endif
 
 /**
