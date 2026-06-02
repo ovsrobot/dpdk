@@ -181,6 +181,81 @@ class LinuxSession(PosixSession):
 
         return PortInfo(mac_address, logical_name, driver, is_link_up)
 
+    def get_nic_info(self) -> list[dict[str, object]]:
+        """Overrides :meth`~.os_session.OSSession.get_nic_info`.
+
+        Raises:
+            ConfigurationError: If the NIC info could not be found.
+        """
+        port_data = {
+            port.get("businfo"): port for port in self._lshw_net_info if port.get("businfo")
+        }
+
+        all_nic_info = []
+        for port in self._config.ports:
+            pci_addr = port.pci
+
+            command_result = self.send_command(
+                f"sudo lshw -c network -businfo | grep '{pci_addr}' | cut -d'@' -f1"
+            )
+            bus_type = (
+                command_result.stdout
+                if command_result.return_code == 0 and command_result.stdout
+                else None
+            )
+            if bus_type is None:
+                raise ConfigurationError(f"Unable to get bus type for port {pci_addr}.")
+            bus_info = f"{bus_type}@{pci_addr}"
+
+            nic_port: LshwOutput | None = port_data.get(bus_info)
+            if nic_port is None:
+                raise ConfigurationError(f"Port {pci_addr} could not be found on the node.")
+
+            config: LshwConfigurationOutput | None = nic_port.get("configuration")
+            if config is None:
+                raise ConfigurationError(
+                    f"Configuration info for port {pci_addr} could not be found on the node."
+                )
+
+            command_result = self.send_command(
+                f"sudo lspci -vv -s {pci_addr} | grep 'Engineering changes'"
+            )
+            hardware_version = (
+                command_result.stdout.split(":")[-1].strip()
+                if command_result.return_code == 0 and command_result.stdout
+                else None
+            )
+            if hardware_version is None:
+                self._logger.error(f"Unable to get hardware version for NIC: {pci_addr}")
+
+            nic_name = nic_port.get("logicalname")
+            nic_speed = None
+            if nic_name is not None:
+                command_result = self.send_command(
+                    f"ethtool {nic_name} | grep 'Speed:' | awk '{{print $2}}'"
+                )
+                nic_speed = (
+                    command_result.stdout
+                    if command_result.return_code == 0 and command_result.stdout
+                    else None
+                )
+            if nic_speed is None:
+                self._logger.error(f"Unable to get speed for NIC: {pci_addr}")
+
+            dut_json = {
+                "make": nic_port.get("vendor"),
+                "model": nic_port.get("product"),
+                "hardware version": hardware_version or "Unknown",
+                "firmware version": config.get("firmware"),
+                "deviceBusType": bus_type,
+                "deviceId": nic_port.get("serial"),
+                "pmd": config.get("driver"),
+                "speed": nic_speed or "Unknown",
+            }
+            all_nic_info.append(dut_json)
+
+        return all_nic_info
+
     def bind_ports_to_driver(self, ports: list[Port], driver_name: str) -> None:
         """Overrides :meth:`~.os_session.OSSession.bind_ports_to_driver`.
 
