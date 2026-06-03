@@ -211,9 +211,19 @@ static int
 check_for_ext(struct ark_adapter *ark)
 {
 	int found = 0;
+	const char *dllpath;
+
+	/*
+	 * A basic security check is necessary before trusting
+	 * ARK_EXT_PATH environment variable.
+	 */
+	if (geteuid() != getuid() || getegid() != getgid()) {
+		ARK_PMD_LOG(DEBUG, "EXT ignoring ARK_EXT_PATH under setuid/setgid\n");
+		return 0;
+	}
 
 	/* Get the env */
-	const char *dllpath = getenv("ARK_EXT_PATH");
+	dllpath = getenv("ARK_EXT_PATH");
 
 	if (dllpath == NULL) {
 		ARK_PMD_LOG(DEBUG, "EXT NO dll path specified\n");
