@@ -118,6 +118,11 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Removed Chacha20-poly1305 and KASUMI crypto drivers.**
+
+  * The Chacha20-poly1305 and KASUMI drivers were just wrappers around
+    the main AESNI_MB driver.
+
 
 API Changes
 -----------
