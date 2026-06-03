@@ -1168,13 +1168,20 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 	for (k_idx = 0; k_idx < kvlist->count; k_idx++) {
 		pair = &kvlist->pairs[k_idx];
 		if (strstr(pair->key, ETH_AF_PACKET_NUM_Q_ARG) != NULL) {
-			qpairs = atoi(pair->value);
-			if (qpairs < 1) {
+			char *endptr;
+			unsigned long num;
+
+			errno = 0;
+			num = strtoul(pair->value, &endptr, 10);
+			if (errno != 0 || endptr == pair->value ||
+					*endptr != '\0' || pair->value[0] == '-' ||
+					num < 1 || num > RTE_MAX_QUEUES_PER_PORT) {
 				PMD_LOG(ERR,
 					"%s: invalid qpairs value",
 					name);
 				return -1;
 			}
+			qpairs = num;
 			continue;
 		}
 		if (strstr(pair->key, ETH_AF_PACKET_BLOCKSIZE_ARG) != NULL) {
