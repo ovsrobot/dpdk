@@ -134,6 +134,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Added masked pattern conversion.
+
+  Added ``RTE_FLOW_CONV_OP_PATTERN_MASKED`` to ``rte_flow_conv()``
+  to copy an entire pattern while applying each item's mask to its
+  ``spec`` and ``last`` fields.
+
 
 ABI Changes
 -----------
