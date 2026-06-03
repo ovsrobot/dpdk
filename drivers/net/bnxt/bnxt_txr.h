@@ -44,6 +44,12 @@ static inline uint32_t bnxt_tx_avail(struct bnxt_tx_queue *txq)
 		 bnxt_tx_bds_in_hw(txq)) - 1);
 }
 
+static inline uint64_t
+bnxt_mbuf_buf_addr(const struct rte_mbuf *mb)
+{
+	return (uint64_t)mb->buf_addr + mb->data_off;
+}
+
 void bnxt_free_tx_rings(struct bnxt *bp);
 int bnxt_init_one_tx_ring(struct bnxt_tx_queue *txq);
 int bnxt_init_tx_ring_struct(struct bnxt_tx_queue *txq, unsigned int socket_id);
