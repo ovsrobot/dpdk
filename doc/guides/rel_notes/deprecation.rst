@@ -158,3 +158,7 @@ Deprecation Notices
 * net/iavf: The dynamic mbuf field used to detect LLDP packets on the
   transmit path in the iavf PMD will be removed in a future release.
   After removal, only packet type-based detection will be supported.
+
+* ethdev: Starting in 26.11, the function ``rte_eth_dev_get_name_by_port()``
+  will take a size parameter as well as the string buffer.
+  This will detect and prevent accidental overwriting of caller provided buffer.
