@@ -337,3 +337,51 @@ build system is shown below:
    dpdk = dependency('libdpdk')
    sources = files('main.c')
    executable('dpdk-app', sources, dependencies: dpdk)
+
+
+.. _building_dpdk_in_container:
+
+Building Applications in a Container
+------------------------------------
+
+DPDK can be built inside a container to provide a reproducible build environment.
+The following example uses Podman with a Fedora-based Containerfile.
+
+.. note::
+
+   These instructions also work with Docker by replacing ``podman`` with ``docker``.
+
+Create a ``Containerfile`` in the top-level DPDK source directory:
+
+.. code-block:: none
+
+   FROM fedora:latest
+
+   RUN dnf -y upgrade && dnf -y install \
+       libbsd-devel \
+       numactl-devel \
+       meson \
+       ninja-build \
+       python3-pyelftools \
+       && dnf group install -y development-tools \
+       && dnf clean all
+
+   COPY ./ /dpdk
+   WORKDIR /dpdk
+
+   RUN meson setup build -Dexamples=helloworld && ninja -C build install
+
+Build the container image from the DPDK source directory:
+
+.. code-block:: console
+
+   podman build -t dpdk-builder -f Containerfile .
+
+Once the build completes, verify that the helloworld example runs:
+
+.. code-block:: console
+
+   podman run --rm dpdk-builder /dpdk/build/examples/dpdk-helloworld
+
+See :ref:`running_sample_app_in_container` for how to run DPDK applications
+from this container image.
