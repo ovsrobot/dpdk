@@ -1169,7 +1169,7 @@ rte_eth_from_packet(struct rte_vdev_device *dev,
 		pair = &kvlist->pairs[k_idx];
 		if (strstr(pair->key, ETH_AF_PACKET_NUM_Q_ARG) != NULL) {
 			qpairs = atoi(pair->value);
-			if (qpairs < 1) {
+			if (qpairs < 1 || qpairs > RTE_MAX_QUEUES_PER_PORT) {
 				PMD_LOG(ERR,
 					"%s: invalid qpairs value",
 					name);
