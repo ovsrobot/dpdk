@@ -379,6 +379,8 @@ parse_ipv4_string(char const *ip_address)
 	if (sscanf(ip_address, "%u.%u.%u.%u",
 		   &ip[0], &ip[1], &ip[2], &ip[3]) != 4)
 		return 0;
+	if (ip[0] > 255 || ip[1] > 255 || ip[2] > 255 || ip[3] > 255)
+		return 0;
 	return ip[3] + ip[2] * 0x100 + ip[1] * 0x10000ul + ip[0] * 0x1000000ul;
 }
 
