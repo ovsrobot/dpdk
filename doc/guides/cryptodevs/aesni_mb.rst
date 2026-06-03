@@ -82,7 +82,7 @@ Limitations
   DOCSIS security protocol.
 
 AESNI MB PMD selection over SNOW3G/ZUC PMDs
---------------------------------------------------
+-------------------------------------------
 
 This PMD supports wireless cipher suite (SNOW3G and ZUC).
 On Intel processors, it is recommended to use this PMD
