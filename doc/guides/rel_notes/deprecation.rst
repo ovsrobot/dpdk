@@ -158,3 +158,10 @@ Deprecation Notices
 * net/iavf: The dynamic mbuf field used to detect LLDP packets on the
   transmit path in the iavf PMD will be removed in a future release.
   After removal, only packet type-based detection will be supported.
+
+* mempool: The ``flushthresh`` field in ``struct rte_mempool_cache``
+  is obsolete, and will be removed in DPDK 26.11.
+
+* mempool: The object array in ``struct rte_mempool_cache`` is oversize by
+  factor two, and will be reduced to ``RTE_MEMPOOL_CACHE_MAX_SIZE`` in
+  DPDK 26.11.
