@@ -7,11 +7,11 @@
  * Used as BSD-3 Licensed with permission from Kip Macy.
  */
 
-#ifndef _RTE_RING_GENERIC_PVT_H_
-#define _RTE_RING_GENERIC_PVT_H_
+#ifndef _RTE_RING_GCC_PVT_H_
+#define _RTE_RING_GCC_PVT_H_
 
 /**
- * @file rte_ring_generic_pvt.h
+ * @file rte_ring_gcc_pvt.h
  * It is not recommended to include this file directly,
  * include <rte_ring.h> instead.
  * Contains internal helper functions for MP/SP and MC/SC ring modes.
@@ -25,10 +25,8 @@ static __rte_always_inline void
 __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
 		uint32_t new_val, uint32_t single, uint32_t enqueue)
 {
-	if (enqueue)
-		rte_smp_wmb();
-	else
-		rte_smp_rmb();
+	RTE_SET_USED(enqueue);
+
 	/*
 	 * If there are other enqueues/dequeues in progress that preceded us,
 	 * we need to wait for them to complete
@@ -37,7 +35,12 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
 		rte_wait_until_equal_32((volatile uint32_t *)(uintptr_t)&ht->tail, old_val,
 			rte_memory_order_relaxed);
 
-	ht->tail = new_val;
+	/*
+	 * R0: Establishes a synchronizing edge with load-acquire of tail at A1.
+	 * Ensures that memory effects by this thread on ring elements array
+	 * is observed by a different thread of the other type.
+	 */
+	__atomic_store_n(&ht->tail, new_val, __ATOMIC_RELEASE);
 }
 
 /**
@@ -73,7 +76,7 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 		uint32_t *old_head, uint32_t *new_head, uint32_t *entries)
 {
 	unsigned int max = n;
-	int success;
+	bool success;
 
 	do {
 		/* Reset n to the initial burst count */
@@ -81,10 +84,10 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 
 		*old_head = d->head;
 
-		/* add rmb barrier to avoid load/load reorder in weak
+		/* add fence to avoid load/load reorder in weak
 		 * memory model. It is noop on x86
 		 */
-		rte_smp_rmb();
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
 
 		/*
 		 *  The subtraction is done between two unsigned 32bits value
@@ -103,10 +106,12 @@ __rte_ring_headtail_move_head_mt(struct rte_ring_headtail *d,
 			return 0;
 
 		*new_head = *old_head + n;
-		success = rte_atomic32_cmpset(
+
+		success = __sync_bool_compare_and_swap(
 				(uint32_t *)(uintptr_t)&d->head,
 				*old_head, *new_head);
-	} while (unlikely(success == 0));
+	} while (unlikely(!success));
+
 	return n;
 }
 
@@ -169,4 +174,4 @@ __rte_ring_headtail_move_head_st(struct rte_ring_headtail *d,
 	return n;
 }
 
-#endif /* _RTE_RING_GENERIC_PVT_H_ */
+#endif /* _RTE_RING_GCC_PVT_H_ */
