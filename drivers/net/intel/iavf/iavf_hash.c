@@ -1501,8 +1501,6 @@ iavf_hash_parse_action(struct iavf_pattern_match_item *match_item,
 					       rss_type, pattern_hint);
 			break;
 
-		case RTE_FLOW_ACTION_TYPE_END:
-			break;
 
 		default:
 			rte_flow_error_set(error, EINVAL,
