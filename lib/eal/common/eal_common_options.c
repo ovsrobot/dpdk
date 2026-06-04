@@ -2062,6 +2062,29 @@ eal_parse_huge_worker_stack(const char *arg)
 	return 0;
 }
 
+static int
+eal_parse_num(const char *str, unsigned int *val)
+{
+	char *endptr;
+	unsigned long long n;
+
+	while (isspace((unsigned char)*str))
+		str++;
+
+	if (*str == '-')
+		return -1;
+
+	errno = 0;
+	n = strtoull(str, &endptr, 10);
+
+	/* Error if string is empty or has trailing characters */
+	if (*str == '\0' || *endptr != '\0' || errno != 0 || n > UINT_MAX)
+		return -1;
+
+	*val = n;
+	return 0;
+}
+
 /* Parse the arguments given in the command line of the application */
 int
 eal_parse_args(void)
@@ -2205,23 +2228,34 @@ eal_parse_args(void)
 
 	/* memory options */
 	if (args.memory_size != NULL) {
-		int_cfg->memory = atoi(args.memory_size);
+		unsigned int mb;
+		if (eal_parse_num(args.memory_size, &mb) < 0) {
+			EAL_LOG(ERR, "invalid memory size parameter");
+			return -1;
+		}
+
+		int_cfg->memory = mb;
 		int_cfg->memory *= 1024ULL;
 		int_cfg->memory *= 1024ULL;
 	}
 	if (args.memory_channels != NULL) {
-		int_cfg->force_nchannel = atoi(args.memory_channels);
-		if (int_cfg->force_nchannel == 0) {
+		unsigned int n;
+		if (eal_parse_num(args.memory_channels, &n) < 0 ||
+			n == 0 || n > 32) {
 			EAL_LOG(ERR, "invalid memory channel parameter");
 			return -1;
 		}
+		int_cfg->force_nchannel = n;
 	}
 	if (args.memory_ranks != NULL) {
-		int_cfg->force_nrank = atoi(args.memory_ranks);
-		if (int_cfg->force_nrank == 0 || int_cfg->force_nrank > 16) {
+		unsigned int n;
+
+		if (eal_parse_num(args.memory_ranks, &n) < 0 ||
+			n == 0 || n > 16) {
 			EAL_LOG(ERR, "invalid memory rank parameter");
 			return -1;
 		}
+		int_cfg->force_nrank = n;
 	}
 	if (args.no_huge) {
 		int_cfg->no_hugetlbfs = 1;
