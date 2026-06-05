@@ -19,6 +19,7 @@
 #include <rte_rib6.h>
 
 #include "rib_log.h"
+#include "rib6_internal.h"
 
 #define RTE_RIB_VALID_NODE	1
 /* Maximum length of a RIB6 name. */
@@ -29,17 +30,6 @@ static struct rte_tailq_elem rte_rib6_tailq = {
 	.name = "RTE_RIB6",
 };
 EAL_REGISTER_TAILQ(rte_rib6_tailq)
-
-struct rte_rib6_node {
-	struct rte_rib6_node	*left;
-	struct rte_rib6_node	*right;
-	struct rte_rib6_node	*parent;
-	uint64_t		nh;
-	struct rte_ipv6_addr	ip;
-	uint8_t			depth;
-	uint8_t			flag;
-	uint64_t ext[];
-};
 
 struct rte_rib6 {
 	char		name[RTE_RIB6_NAMESIZE];
