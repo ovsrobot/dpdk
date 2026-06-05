@@ -106,6 +106,7 @@ static int iavf_dev_start(struct rte_eth_dev *dev);
 static int iavf_dev_stop(struct rte_eth_dev *dev);
 static int iavf_dev_close(struct rte_eth_dev *dev);
 static int iavf_dev_reset(struct rte_eth_dev *dev);
+static int iavf_wait_for_reset_start(struct iavf_hw *hw);
 static int iavf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
 static const uint32_t *iavf_dev_supported_ptypes_get(struct rte_eth_dev *dev,
@@ -605,6 +606,7 @@ iavf_queues_req_reset(struct rte_eth_dev *dev, uint16_t num)
 	struct iavf_adapter *ad =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf =  IAVF_DEV_PRIVATE_TO_VF(ad);
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(ad);
 	int ret;
 
 	ret = iavf_request_queues(dev, num);
@@ -616,6 +618,8 @@ iavf_queues_req_reset(struct rte_eth_dev *dev, uint16_t num)
 			vf->vsi_res->num_queue_pairs, num);
 
 	iavf_dev_watchdog_disable(ad);
+	/* Wait for PF to start processing reset triggered by queue change */
+	iavf_wait_for_reset_start(hw);
 	ret = iavf_dev_reset(dev);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "vf reset failed");
@@ -2086,6 +2090,30 @@ iavf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 	return 0;
 }
 
+/* Wait until PF acknowledges VF reset (RSTAT leaves VFACTIVE) */
+static int
+iavf_wait_for_reset_start(struct iavf_hw *hw)
+{
+	int i;
+	uint32_t rstat;
+
+	for (i = 0; i < 100; i++) {
+		rte_delay_ms(10);
+
+		rstat = IAVF_READ_REG(hw, IAVF_VFGEN_RSTAT);
+		rstat &= IAVF_VFGEN_RSTAT_VFR_STATE_MASK;
+		rstat >>= IAVF_VFGEN_RSTAT_VFR_STATE_SHIFT;
+
+		if (rstat != VIRTCHNL_VFR_VFACTIVE)
+			return 0;
+	}
+
+	PMD_DRV_LOG(DEBUG, "VF reset did not start within timeout");
+	return -1;
+}
+
+static void iavf_drain_arq(struct iavf_hw *hw, struct iavf_info *vf);
+
 static int
 iavf_check_vf_reset_done(struct iavf_hw *hw)
 {
@@ -2618,6 +2646,30 @@ iavf_init_proto_xtr(struct rte_eth_dev *dev)
 	}
 }
 
+/* Drain stale Admin Receive Queue messages after reset */
+static void
+iavf_drain_arq(struct iavf_hw *hw, struct iavf_info *vf)
+{
+	struct iavf_arq_event_info event;
+	int drain_count = 0;
+
+	memset(&event, 0, sizeof(event));
+	event.msg_buf = vf->aq_resp;
+
+	while (drain_count < IAVF_AQ_LEN) {
+		event.buf_len = IAVF_AQ_BUF_SZ;
+
+		if (iavf_clean_arq_element(hw, &event, NULL) != IAVF_SUCCESS)
+			break;
+
+		drain_count++;
+	}
+
+	if (drain_count > 0)
+		PMD_INIT_LOG(DEBUG, "Drained %d stale ARQ messages",
+				drain_count);
+}
+
 static int
 iavf_init_vf(struct rte_eth_dev *dev)
 {
@@ -2653,6 +2705,10 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "init_adminq failed: %d", err);
 		goto err;
 	}
+
+	/* Drain stale ARQ messages only during reset recovery */
+	if (vf->in_reset_recovery)
+		iavf_drain_arq(hw, vf);
 
 	if (iavf_check_api_version(adapter) != 0) {
 		PMD_INIT_LOG(ERR, "check_api version failed");
@@ -3289,6 +3345,8 @@ iavf_dev_reset(struct rte_eth_dev *dev)
 	ret = iavf_dev_uninit(dev);
 	if (ret)
 		return ret;
+	/* Add delay before re-initialization */
+	rte_delay_ms(50);
 
 	return iavf_dev_init(dev);
 }
@@ -3352,6 +3410,7 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 	struct iavf_adapter *adapter = dev->data->dev_private;
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	int ret;
 	bool restart_device = false;
 
@@ -3369,6 +3428,11 @@ iavf_handle_hw_reset(struct rte_eth_dev *dev, bool vf_initiated_reset)
 
 	vf->in_reset_recovery = true;
 	iavf_set_no_poll(adapter, false);
+
+	/* For VF-initiated reset, wait for PF to start processing it */
+	if (vf_initiated_reset)
+		if (iavf_wait_for_reset_start(hw) != 0)
+			PMD_DRV_LOG(WARNING, "PF did not acknowledge VF reset");
 
 	/* Call the pre reset callback */
 	if (vf->pre_reset_cb != NULL)
