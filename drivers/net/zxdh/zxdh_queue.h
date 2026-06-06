@@ -348,8 +348,8 @@ zxdh_queue_disable_intr(struct zxdh_virtqueue *vq)
 static inline void
 zxdh_queue_enable_intr(struct zxdh_virtqueue *vq)
 {
-	if (vq->event_flags_shadow == ZXDH_RING_EVENT_FLAGS_DISABLE) {
-		vq->event_flags_shadow = ZXDH_RING_EVENT_FLAGS_DISABLE;
+	if (vq->event_flags_shadow == ZXDH_RING_EVENT_FLAGS_ENABLE) {
+		vq->event_flags_shadow = ZXDH_RING_EVENT_FLAGS_ENABLE;
 		vq->vq_packed.ring.driver->desc_event_flags = vq->event_flags_shadow;
 	}
 }
