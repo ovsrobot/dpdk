@@ -95,6 +95,9 @@ New Features
 
   * Added support for transmitting LLDP packets based on mbuf packet type.
   * Implemented AVX2 context descriptor transmit paths.
+  * Fixed duplicate 'VIRTCHNL_OP_RESET_VF' received during a PF-initiated
+    reset recovery resulting connection loss after a top-of-rack (ToR)
+    link flap/power-cycle.
 
 * **Updated PCAP ethernet driver.**
 
