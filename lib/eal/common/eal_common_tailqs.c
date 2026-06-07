@@ -148,6 +148,14 @@ error:
 	return -1;
 }
 
+RTE_EXPORT_SYMBOL(rte_eal_tailq_unregister)
+void
+rte_eal_tailq_unregister(struct rte_tailq_elem *t)
+{
+	TAILQ_REMOVE(&rte_tailq_elem_head, t, next);
+	t->head = NULL;
+}
+
 int
 rte_eal_tailqs_init(void)
 {
