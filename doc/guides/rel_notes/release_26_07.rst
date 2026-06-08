@@ -122,6 +122,14 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Added device reset support to the MANA PMD.**
+
+  Added automatic recovery from hardware service reset events
+  in the MANA poll mode driver. The driver uses ethdev recovery events
+  (``RTE_ETH_EVENT_ERR_RECOVERING``, ``RTE_ETH_EVENT_RECOVERY_SUCCESS``,
+  ``RTE_ETH_EVENT_RECOVERY_FAILED``) to notify upper layers of the
+  reset lifecycle.
+
 
 Removed Items
 -------------
