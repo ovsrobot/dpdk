@@ -4569,6 +4569,7 @@ test_bpf_filter(pcap_t *pcap, const char *s)
 	struct bpf_program fcode;
 	struct rte_bpf_prm *prm = NULL;
 	struct rte_bpf *bpf = NULL;
+	int ret = -1;
 
 	if (pcap_compile(pcap, &fcode, s, 1, PCAP_NETMASK_UNKNOWN)) {
 		printf("%s@%d: pcap_compile('%s') failed: %s;\n",
@@ -4592,6 +4593,18 @@ test_bpf_filter(pcap_t *pcap, const char *s)
 			__func__, __LINE__, rte_errno, strerror(rte_errno));
 		goto error;
 	}
+#if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_ARM64)
+	{
+		struct rte_bpf_jit jit;
+
+		rte_bpf_get_jit(bpf, &jit);
+		if (jit.func == NULL) {
+			printf("%s@%d: no JIT generated\n", __func__, __LINE__);
+			goto error;
+		}
+	}
+#endif
+	ret = 0;
 
 error:
 	if (bpf)
@@ -4603,7 +4616,7 @@ error:
 
 	rte_free(prm);
 	pcap_freecode(&fcode);
-	return (bpf == NULL) ? -1 : 0;
+	return ret;
 }
 
 static int
