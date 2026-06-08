@@ -1292,6 +1292,13 @@ typedef int (*eth_cman_config_set_t)(struct rte_eth_dev *dev,
 typedef int (*eth_cman_config_get_t)(struct rte_eth_dev *dev,
 				struct rte_eth_cman_config *config);
 
+/** @internal
+ * Set header split payload mbuf callback for a receive queue.
+ */
+typedef int (*eth_hdrs_mbuf_set_cb_t)(struct rte_eth_dev *dev,
+	uint16_t rx_queue_id, void *priv,
+	rte_eth_hdrs_mbuf_callback_fn cb);
+
 /**
  * @internal
  * Dump Rx descriptor info to a file.
@@ -1651,6 +1658,9 @@ struct eth_dev_ops {
 	eth_rx_descriptor_dump_t eth_rx_descriptor_dump;
 	/** Dump Tx descriptor info */
 	eth_tx_descriptor_dump_t eth_tx_descriptor_dump;
+
+	/** Set header split mbuf callback */
+	eth_hdrs_mbuf_set_cb_t hdrs_mbuf_set_cb;
 
 	/** Get congestion management information */
 	eth_cman_info_get_t cman_info_get;
