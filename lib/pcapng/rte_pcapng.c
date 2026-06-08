@@ -546,14 +546,14 @@ pcapng_vlan_insert(struct rte_mbuf *m, uint16_t ether_type, uint16_t tci)
  */
 
 /* Make a copy of original mbuf with pcapng header and options */
-RTE_EXPORT_SYMBOL(rte_pcapng_copy)
+RTE_EXPORT_SYMBOL(rte_pcapng_copy_ts)
 struct rte_mbuf *
-rte_pcapng_copy(uint16_t port_id, uint32_t queue,
+rte_pcapng_copy_ts(uint16_t port_id, uint32_t queue,
 		const struct rte_mbuf *md,
 		struct rte_mempool *mp,
 		uint32_t length,
 		enum rte_pcapng_direction direction,
-		const char *comment)
+		const char *comment, uint64_t ts)
 {
 	struct pcapng_enhance_packet_block *epb;
 	uint32_t orig_len, pkt_len, padding, flags;
@@ -691,7 +691,7 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 	mc->port = port_id;
 
 	/* Put timestamp in cycles here - adjust in packet write */
-	timestamp = rte_get_tsc_cycles();
+	timestamp = ts ? ts : rte_get_tsc_cycles();
 	epb->timestamp_hi = timestamp >> 32;
 	epb->timestamp_lo = (uint32_t)timestamp;
 	epb->capture_length = pkt_len;
@@ -720,7 +720,6 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 	for (i = 0; i < nb_pkts; i++) {
 		struct rte_mbuf *m = pkts[i];
 		struct pcapng_enhance_packet_block *epb;
-		uint64_t cycles, timestamp;
 
 		/* sanity check that is really a pcapng mbuf */
 		epb = rte_pktmbuf_mtod(m, struct pcapng_enhance_packet_block *);
@@ -736,16 +735,6 @@ rte_pcapng_write_packets(rte_pcapng_t *self,
 			rte_errno = EINVAL;
 			return -1;
 		}
-
-		/*
-		 * When data is captured by pcapng_copy the current TSC is stored.
-		 * Adjust the value recorded in file to PCAP epoch units.
-		 */
-		cycles = (uint64_t)epb->timestamp_hi << 32;
-		cycles += epb->timestamp_lo;
-		timestamp = tsc_to_ns_epoch(&self->clock, cycles);
-		epb->timestamp_hi = timestamp >> 32;
-		epb->timestamp_lo = (uint32_t)timestamp;
 
 		/*
 		 * Handle case of highly fragmented and large burst size
