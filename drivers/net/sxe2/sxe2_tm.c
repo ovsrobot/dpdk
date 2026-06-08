@@ -982,6 +982,24 @@ l_end:
 	return ret;
 }
 
+int32_t sxe2_tm_conf_reset(struct rte_eth_dev *dev)
+{
+	int32_t ret;
+
+	ret = sxe2_tm_uninit(dev);
+	if (ret)
+		goto l_end;
+
+	ret = sxe2_tm_init(dev);
+	if (ret)
+		goto l_end;
+
+	PMD_LOG_DEBUG(DRV, "Tm config reset succeed.");
+
+l_end:
+	return ret;
+}
+
 static int32_t sxe2_tm_chk_all_leaf(struct rte_eth_dev *dev)
 {
 	int32_t ret = 0;
