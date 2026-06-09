@@ -121,7 +121,8 @@ def add_token_args(parser: argparse.ArgumentParser) -> None:
 def print_token_summary(
     usage: TokenUsage, provider: str, model: str, show: bool
 ) -> None:
-    """Print token usage summary to stderr if requested and any calls were made."""
+    """Print token usage summary to stderr if requested and any calls were
+    made."""
     if not show or usage.api_calls == 0:
         return
     print("", file=sys.stderr)
@@ -173,13 +174,15 @@ def _extract_usage(provider: str, result: dict[str, Any]) -> TokenUsage:
 
 
 def _extract_text(provider: str, result: dict[str, Any]) -> str:
-    """Extract response text from a provider response. Calls error() on failure."""
+    """Extract response text from a provider response. Calls error() on
+    failure."""
     if "error" in result:
         error(f"API error: {result['error'].get('message', result)}")
     if provider == "anthropic":
         content = result.get("content", [])
         return "".join(
-            block.get("text", "") for block in content if block.get("type") == "text"
+            block.get("text", "") for block in content
+            if block.get("type") == "text"
         )
     if provider == "google":
         candidates = result.get("candidates", [])
@@ -200,13 +203,14 @@ def _print_verbose_usage(usage: TokenUsage) -> None:
     print(f"Input tokens: {usage.input_tokens:,}", file=sys.stderr)
     print(f"Output tokens: {usage.output_tokens:,}", file=sys.stderr)
     if usage.cache_creation_tokens:
-        print(f"Cache creation: {usage.cache_creation_tokens:,}", file=sys.stderr)
+        print(f"Cache creation: {usage.cache_creation_tokens:,}",
+              file=sys.stderr)
     if usage.cache_read_tokens:
         print(f"Cache read: {usage.cache_read_tokens:,}", file=sys.stderr)
     print("===================", file=sys.stderr)
 
 
-def send_request(
+def _send_http_raw(
     provider: str,
     api_key: str,
     model: str,
@@ -214,13 +218,9 @@ def send_request(
     *,
     timeout: int = 120,
     verbose: bool = False,
-) -> tuple[str, TokenUsage]:
-    """Send a prebuilt request to a provider and return (response_text, usage).
-
-    The caller assembles the provider-specific request body via its own
-    build_*_request helpers (the prompts differ per script). This function
-    handles transport, error reporting, and token-usage extraction.
-    """
+) -> tuple[dict[str, Any], TokenUsage]:
+    """Shared HTTP transport layer. Returns (response_dict, usage). Calls
+    error() on failure."""
     url, headers = _build_request_meta(provider, api_key, model)
     body = json.dumps(request_data).encode("utf-8")
     req = Request(url, data=body, headers=headers)
@@ -243,4 +243,46 @@ def send_request(
     usage = _extract_usage(provider, result)
     if verbose:
         _print_verbose_usage(usage)
+    return result, usage
+
+
+def send_request(
+    provider: str,
+    api_key: str,
+    model: str,
+    request_data: dict[str, Any],
+    *,
+    timeout: int = 120,
+    verbose: bool = False,
+) -> tuple[str, TokenUsage]:
+    """Send a prebuilt request to a provider and return (response_text, usage).
+
+    The caller assembles the provider-specific request body via its own
+    build_*_request helpers (the prompts differ per script). This function
+    handles transport, error reporting, and token-usage extraction.
+    """
+    result, usage = _send_http_raw(
+        provider, api_key, model, request_data, timeout=timeout,
+        verbose=verbose
+    )
     return _extract_text(provider, result), usage
+
+
+def send_request_raw(
+    provider: str,
+    api_key: str,
+    model: str,
+    request_data: dict[str, Any],
+    *,
+    timeout: int = 120,
+    verbose: bool = False,
+) -> tuple[dict[str, Any], TokenUsage]:
+    """Send a prebuilt request and return the raw response dict plus usage.
+
+    Used by tool-calling loops that need to inspect stop_reason / finish_reason
+    before extracting text.
+    """
+    return _send_http_raw(
+        provider, api_key, model, request_data, timeout=timeout,
+        verbose=verbose
+    )
