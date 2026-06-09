@@ -326,6 +326,37 @@ typedef int (*telemetry_arg_cb)(const char *cmd, const char *params, void *arg,
 		struct rte_tel_data *info);
 
 /**
+ * This telemetry callback is used when registering a telemetry command with
+ * rte_telemetry_register_cmd_fd_arg().
+ *
+ * It behaves like telemetry_arg_cb, but additionally receives any file
+ * descriptors the client passed alongside the command as SCM_RIGHTS ancillary
+ * data. The callback takes ownership of these descriptors and is responsible
+ * for closing them.
+ *
+ * @param cmd
+ *   The cmd that was requested by the client.
+ * @param params
+ *   Contains data required by the callback function.
+ * @param arg
+ *   The opaque value that was passed to rte_telemetry_register_cmd_fd_arg().
+ * @param fds
+ *   Array of file descriptors received from the client. May be NULL when
+ *   n_fds is zero.
+ * @param n_fds
+ *   Number of file descriptors in the fds array.
+ * @param info
+ *   The information to be returned to the caller.
+ *
+ * @return
+ *   Length of buffer used on success.
+ * @return
+ *   Negative integer on error.
+ */
+typedef int (*telemetry_fd_cb)(const char *cmd, const char *params, void *arg,
+		const int *fds, unsigned int n_fds, struct rte_tel_data *info);
+
+/**
  * Used when registering a command and callback function with telemetry.
  *
  * @param cmd
@@ -367,6 +398,41 @@ rte_telemetry_register_cmd(const char *cmd, telemetry_cb fn, const char *help);
 __rte_experimental
 int
 rte_telemetry_register_cmd_arg(const char *cmd, telemetry_arg_cb fn, void *arg, const char *help);
+
+/**
+ * Register a command and a file-descriptor-aware callback with telemetry.
+ *
+ * The callback is invoked like rte_telemetry_register_cmd_arg(), but also
+ * receives any file descriptors the client passed alongside the command as
+ * SCM_RIGHTS ancillary data. This lets a client open a file (for example a
+ * capture output file) itself and hand the descriptor to the DPDK process,
+ * which never opens the path - avoiding path and permission concerns and
+ * working across container filesystem namespaces.
+ *
+ * Descriptors sent to a command registered with rte_telemetry_register_cmd()
+ * or rte_telemetry_register_cmd_arg() are rejected and the connection is
+ * closed.
+ *
+ * @param cmd
+ *   The command to register with telemetry.
+ * @param fn
+ *   Callback function to be called when the command is requested.
+ * @param arg
+ *   An opaque value that will be passed to the callback function.
+ * @param help
+ *   Help text for the command.
+ *
+ * @return
+ *   0 on success.
+ * @return
+ *   -EINVAL for invalid parameters failure.
+ * @return
+ *   -ENOMEM for mem allocation failure.
+ */
+__rte_experimental
+int
+rte_telemetry_register_cmd_fd_arg(const char *cmd, telemetry_fd_cb fn, void *arg,
+		const char *help);
 
 /**
  * @internal

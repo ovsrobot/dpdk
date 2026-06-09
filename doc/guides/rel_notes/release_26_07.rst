@@ -141,6 +141,11 @@ New Features
   Added AGENTS.md file for AI review
   and supporting scripts to review patches and documentation.
 
+* **Added telemetry support for passing file descriptors.**
+
+  Add experimental telemetry callback ``rte_telemetry_register_cmd_fd_arg()``
+  to allow command to receive file descriptors passed by client.
+
 
 Removed Items
 -------------

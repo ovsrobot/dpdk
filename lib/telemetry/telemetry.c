@@ -29,6 +29,8 @@
 #define MAX_CMD_LEN 56
 #define MAX_OUTPUT_LEN (1024 * 16)
 #define MAX_CONNECTIONS 10
+/* Maximum number of file descriptors a client may pass with one command. */
+#define MAX_FDS 8
 
 #ifndef RTE_EXEC_ENV_WINDOWS
 static void *
@@ -39,6 +41,7 @@ struct cmd_callback {
 	char cmd[MAX_CMD_LEN];
 	telemetry_cb fn;
 	telemetry_arg_cb fn_arg;
+	telemetry_fd_cb fn_fd;
 	void *arg;
 	char help[RTE_TEL_MAX_STRING_LEN];
 };
@@ -72,15 +75,15 @@ static RTE_ATOMIC(uint16_t) v2_clients;
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 static int
-register_cmd(const char *cmd, const char *help,
-	     telemetry_cb fn, telemetry_arg_cb fn_arg, void *arg)
+register_cmd(const char *cmd, const char *help, telemetry_cb fn,
+	     telemetry_arg_cb fn_arg, telemetry_fd_cb fn_fd, void *arg)
 {
 	struct cmd_callback *new_callbacks;
 	const char *cmdp = cmd;
 	int i = 0;
 
-	if (strlen(cmd) >= MAX_CMD_LEN || (fn == NULL && fn_arg == NULL) || cmd[0] != '/'
-			|| strlen(help) >= RTE_TEL_MAX_STRING_LEN)
+	if (strlen(cmd) >= MAX_CMD_LEN || (fn == NULL && fn_arg == NULL && fn_fd == NULL)
+			|| cmd[0] != '/' || strlen(help) >= RTE_TEL_MAX_STRING_LEN)
 		return -EINVAL;
 
 	while (*cmdp != '\0') {
@@ -107,6 +110,7 @@ register_cmd(const char *cmd, const char *help,
 	strlcpy(callbacks[i].cmd, cmd, MAX_CMD_LEN);
 	callbacks[i].fn = fn;
 	callbacks[i].fn_arg = fn_arg;
+	callbacks[i].fn_fd = fn_fd;
 	callbacks[i].arg = arg;
 	strlcpy(callbacks[i].help, help, RTE_TEL_MAX_STRING_LEN);
 	num_callbacks++;
@@ -119,14 +123,22 @@ RTE_EXPORT_SYMBOL(rte_telemetry_register_cmd)
 int
 rte_telemetry_register_cmd(const char *cmd, telemetry_cb fn, const char *help)
 {
-	return register_cmd(cmd, help, fn, NULL, NULL);
+	return register_cmd(cmd, help, fn, NULL, NULL, NULL);
 }
 
 RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_telemetry_register_cmd_arg, 24.11)
 int
 rte_telemetry_register_cmd_arg(const char *cmd, telemetry_arg_cb fn, void *arg, const char *help)
 {
-	return register_cmd(cmd, help, NULL, fn, arg);
+	return register_cmd(cmd, help, NULL, fn, NULL, arg);
+}
+
+RTE_EXPORT_EXPERIMENTAL_SYMBOL(rte_telemetry_register_cmd_fd_arg, 26.07)
+int
+rte_telemetry_register_cmd_fd_arg(const char *cmd, telemetry_fd_cb fn, void *arg,
+		const char *help)
+{
+	return register_cmd(cmd, help, NULL, NULL, fn, arg);
 }
 
 #ifndef RTE_EXEC_ENV_WINDOWS
@@ -368,13 +380,70 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 		TMTY_LOG_LINE(ERR, "Error writing to socket: %s", strerror(errno));
 }
 
+/*
+ * Receive a command and any file descriptors the client passed alongside it
+ * as SCM_RIGHTS ancillary data. The payload length is returned (0 if the
+ * client sent an empty message or closed the connection, negative on error).
+ * Descriptors that arrive are returned in fds[]/n_fds and are owned by the
+ * caller. MSG_CTRUNC means more descriptors were sent than the control buffer
+ * could hold; *ctrunc is set so the caller can reject the command, but the
+ * descriptors that did fit are still returned so they can be closed rather
+ * than leaked.
+ */
+static int
+recv_with_fds(int s, char *buf, size_t buf_len, int *fds, unsigned int *n_fds,
+	      bool *ctrunc)
+{
+	char cmsgbuf[CMSG_SPACE(sizeof(int) * MAX_FDS)];
+	struct iovec iov = { .iov_base = buf, .iov_len = buf_len };
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+		.msg_control = cmsgbuf,
+		.msg_controllen = sizeof(cmsgbuf),
+	};
+	struct cmsghdr *cmsg;
+	int bytes;
+
+	*n_fds = 0;
+	*ctrunc = false;
+
+	bytes = recvmsg(s, &msg, 0);
+	if (bytes < 0)
+		return bytes;
+
+	if (msg.msg_flags & MSG_CTRUNC)
+		*ctrunc = true;
+
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS)
+			continue;
+		*n_fds = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+		memcpy(fds, CMSG_DATA(cmsg), *n_fds * sizeof(int));
+		break;
+	}
+	return bytes;
+}
+
 static void
-perform_command(const struct cmd_callback *cb, const char *cmd, const char *param, int s)
+close_fds(const int *fds, unsigned int n_fds)
+{
+	unsigned int i;
+
+	for (i = 0; i < n_fds; i++)
+		close(fds[i]);
+}
+
+static void
+perform_command(const struct cmd_callback *cb, const char *cmd, const char *param,
+		const int *fds, unsigned int n_fds, int s)
 {
 	struct rte_tel_data data = {0};
 	int ret;
 
-	if (cb->fn_arg != NULL)
+	if (cb->fn_fd != NULL)
+		ret = cb->fn_fd(cmd, param, cb->arg, fds, n_fds, &data);
+	else if (cb->fn_arg != NULL)
 		ret = cb->fn_arg(cmd, param, cb->arg, &data);
 	else
 		ret = cb->fn(cmd, param, &data);
@@ -412,8 +481,11 @@ client_handler(void *sock_id)
 	}
 
 	/* receive data is not null terminated */
-	int bytes = read(s, buffer, sizeof(buffer) - 1);
-	while (bytes > 0) {
+	int fds[MAX_FDS];
+	unsigned int n_fds = 0;
+	bool ctrunc = false;
+	int bytes = recv_with_fds(s, buffer, sizeof(buffer) - 1, fds, &n_fds, &ctrunc);
+	while (bytes > 0 || (bytes == 0 && n_fds > 0)) {
 		buffer[bytes] = 0;
 		const char *cmd = strtok(buffer, ",");
 		const char *param = strtok(NULL, "\0");
@@ -429,9 +501,28 @@ client_handler(void *sock_id)
 				}
 			rte_spinlock_unlock(&callback_sl);
 		}
-		perform_command(&cb, cmd, param, s);
 
-		bytes = read(s, buffer, sizeof(buffer) - 1);
+		/*
+		 * File descriptors go only to a command that registered to
+		 * receive them. A command that did not, or a truncated control
+		 * message, is a client error: close the descriptors and drop the
+		 * connection rather than silently discarding them.
+		 */
+		if (n_fds > 0 && (cb.fn_fd == NULL || ctrunc)) {
+			TMTY_LOG_LINE(ERR,
+				"Closing connection: %u file descriptor(s) passed to '%s'%s",
+				n_fds, cmd ? cmd : "(none)",
+				ctrunc ? " (truncated)" : " which does not accept them");
+			close_fds(fds, n_fds);
+			break;
+		}
+
+		/* an fd-aware callback takes ownership of the descriptors */
+		perform_command(&cb, cmd, param, fds, n_fds, s);
+
+		n_fds = 0;
+		ctrunc = false;
+		bytes = recv_with_fds(s, buffer, sizeof(buffer) - 1, fds, &n_fds, &ctrunc);
 	}
 exit:
 	close(s);
