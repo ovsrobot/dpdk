@@ -154,7 +154,11 @@ class TarCompressionFormat(StrEnum):
         For other compression formats, the extension will be in the format
         'tar.{compression format}'.
         """
-        return f"{self.value}" if self == self.none else f"{type(self).none.value}.{self.value}"
+        return (
+            f"{self.value}"
+            if self == self.none
+            else f"{TarCompressionFormat.none.value}.{self.value}"
+        )
 
 
 def convert_to_list_of_string(value: Any | list[Any]) -> list[str]:
@@ -207,7 +211,8 @@ def create_tarball(
         return None
 
     target_tarball_path = dir_path.with_suffix(f".{compress_format.extension}")
-    with tarfile.open(target_tarball_path, f"w:{compress_format.value}") as tar:
+    compression_format: Any = f"w:{compress_format.value}"
+    with tarfile.open(target_tarball_path, compression_format) as tar:
         tar.add(dir_path, arcname=dir_path.name, filter=create_filter_function(exclude))
 
     return target_tarball_path
