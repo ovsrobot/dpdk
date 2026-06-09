@@ -6,9 +6,16 @@
 # Should be called from meson build itself
 import os
 import sys
+import re
 
 
 def fix_ldflag(f):
+    if f.startswith('/'):
+        libfile = os.path.basename(f)
+        m = re.match(r'^lib(.+?)\.(a|so(?:\..*)?)$', libfile)
+        if m:
+            return '-l' + m.group(1)
+
     if not f.startswith('-lrte_'):
         return f
     return '-l:lib' + f[2:] + '.a'
