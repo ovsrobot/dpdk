@@ -137,6 +137,7 @@ source_file_deps = {
     'test_net_ip6.c': ['net'],
     'test_pcapng.c': ['net_null', 'net', 'ethdev', 'pcapng', 'bus_vdev'],
     'test_pdcp.c': ['eventdev', 'pdcp', 'net', 'timer', 'security'],
+    'test_capture.c': ['net_ring', 'net', 'ethdev', 'bus_vdev', 'telemetry'],
     'test_pdump.c': ['pdump'] + sample_packet_forward_deps,
     'test_per_lcore.c': [],
     'test_pflock.c': [],
