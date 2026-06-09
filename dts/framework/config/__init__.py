@@ -94,9 +94,10 @@ class Configuration(FrozenModel):
                 f"already linked to port {sut_node_port_peer[0]}.{sut_node_port_peer[1]}."
             )
 
-            tg_node_port_peer = existing_port_links.get(
-                (self.test_run.traffic_generator_node, link.tg_port), None
-            )
+            if self.test_run.traffic_generator_node:
+                tg_node_port_peer = existing_port_links.get(
+                    (self.test_run.traffic_generator_node, link.tg_port), None
+                )
             assert (
                 tg_node_port_peer is not None
             ), f"Invalid TG node port specified for link port_topology.{link_idx}."
@@ -122,11 +123,12 @@ class Configuration(FrozenModel):
         ), f"The system_under_test_node {sut_node_name} is not a valid node name."
 
         tg_node_name = self.test_run.traffic_generator_node
-        tg_node = next((n for n in self.nodes if n.name == tg_node_name), None)
+        if self.test_run.port_topology:
+            tg_node = next((n for n in self.nodes if n.name == tg_node_name), None)
 
-        assert (
-            tg_node is not None
-        ), f"The traffic_generator_name {tg_node_name} is not a valid node name."
+            assert (
+                tg_node is not None
+            ), f"The traffic_generator_name {tg_node_name} is not a valid node name."
 
         return self
 
