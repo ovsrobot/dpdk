@@ -146,6 +146,13 @@ New Features
   Add experimental telemetry callback ``rte_telemetry_register_cmd_fd_arg()``
   to allow command to receive file descriptors passed by client.
 
+* **Added packet capture library.**
+
+  Added a new ``capture`` library which provides a mechanism via telemetry
+  interface for capturing packets to a file descriptor. This mechanism
+  is used by the new ``dpdk-wireshark-extcap.py`` script which provides
+  seamless integration with Wireshark.
+
 
 Removed Items
 -------------
