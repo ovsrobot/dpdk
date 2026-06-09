@@ -113,6 +113,11 @@ rte_eal_tailq_update(struct rte_tailq_elem *t)
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		/* primary process is the only one that creates */
 		t->head = rte_eal_tailq_create(t->name);
+
+		if (t->head == NULL) {
+			/* slot reserved by an earlier load -- reuse it */
+			t->head = rte_eal_tailq_lookup(t->name);
+		}
 	} else {
 		t->head = rte_eal_tailq_lookup(t->name);
 	}
@@ -146,6 +151,14 @@ rte_eal_tailq_register(struct rte_tailq_elem *t)
 error:
 	t->head = NULL;
 	return -1;
+}
+
+RTE_EXPORT_SYMBOL(rte_eal_tailq_unregister)
+void
+rte_eal_tailq_unregister(struct rte_tailq_elem *t)
+{
+	TAILQ_REMOVE(&rte_tailq_elem_head, t, next);
+	t->head = NULL;
 }
 
 int
