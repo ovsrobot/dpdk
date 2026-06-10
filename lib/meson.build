@@ -19,6 +19,7 @@ libraries = [
         'ring',
         'rcu', # rcu depends on ring
         'mempool',
+        'memtank',
         'mbuf',
         'net',
         'meter',

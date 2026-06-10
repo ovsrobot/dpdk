@@ -129,6 +129,8 @@ source_file_deps = {
     'test_memory.c': [],
     'test_mempool.c': [],
     'test_mempool_perf.c': [],
+    'test_memtank.c': ['memtank'],
+    'test_memtank_stress.c': ['memtank'],
     'test_memzone.c': [],
     'test_meter.c': ['meter'],
     'test_metrics.c': ['metrics'],
