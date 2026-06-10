@@ -179,6 +179,27 @@ rte_pflock_write_unlock(rte_pflock_t *pf)
 	rte_atomic_fetch_add_explicit(&pf->wr.out, 1, rte_memory_order_release);
 }
 
+/**
+ * Release a pflock held for writing, while keeping lock for reading.
+ *
+ * @param pf
+ *   A pointer to a pflock structure.
+ */
+static inline void
+rte_pflock_write_downgrade(rte_pflock_t *pf)
+{
+	/* Migrate from write phase to read phase. */
+	rte_atomic_fetch_add_explicit(&pf->rd.in, RTE_PFLOCK_RINC,
+		rte_memory_order_acq_rel);
+	rte_atomic_fetch_and_explicit(&pf->rd.in, RTE_PFLOCK_LSB,
+			rte_memory_order_release);
+
+	/* Allow other writers to continue. */
+	rte_atomic_fetch_add_explicit(&pf->wr.out, 1,
+			rte_memory_order_release);
+}
+
+
 #ifdef __cplusplus
 }
 #endif
