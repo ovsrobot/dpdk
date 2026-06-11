@@ -5,13 +5,18 @@ PTP Client Sample Application
 =============================
 
 The PTP (Precision Time Protocol) client sample application is a simple
-example of using the DPDK IEEE1588 API to communicate with a PTP time transmitter
+example of using the DPDK IEEE1588 API to communicate with a PTP timeTransmitter
 to synchronize the time on the NIC and, optionally, on the Linux system.
 
-Note, PTP is a time syncing protocol and cannot be used within DPDK as a
+Note, PTP is a time synchronization protocol and cannot be used within DPDK as a
 time-stamping mechanism. See the following for an explanation of the protocol:
 `Precision Time Protocol
 <https://en.wikipedia.org/wiki/Precision_Time_Protocol>`_.
+
+.. note::
+
+   This documentation uses PTPv3 (IEEE 1588-2019) terminology where timeTransmitter/timeReceiver
+   replace the older master/slave terms from PTPv2.
 
 
 Limitations
@@ -21,10 +26,10 @@ The PTP sample application is intended as a simple reference implementation of
 a PTP client using the DPDK IEEE1588 API.
 In order to keep the application simple the following assumptions are made:
 
-* The first discovered time transmitter is the main for the session.
+* The first discovered timeTransmitter is used for the session.
 * Only L2 PTP packets are supported.
 * Only the PTP v2 protocol is supported.
-* Only the time receiver clock is implemented.
+* Only the timeReceiver clock is implemented.
 
 
 How the Application Works
@@ -36,18 +41,18 @@ How the Application Works
 
    PTP Synchronization Protocol
 
-The PTP synchronization in the sample application works as follows:
+The PTP synchronization in the sample application (timeReceiver mode) works as follows:
 
-* Time transmitter sends *Sync* message - the time receiver saves it as T2.
-* Time transmitter sends *Follow Up* message and sends time of T1.
-* Time receiver sends *Delay Request* frame to PTP time transmitter and stores T3.
-* Time transmitter sends *Delay Response* T4 time which is time of received T3.
+* TimeTransmitter sends *Sync* message - the timeReceiver saves the receive time as T2.
+* TimeTransmitter sends *Follow Up* message containing the transmit time T1.
+* TimeReceiver sends *Delay Request* frame to the PTP timeTransmitter and stores the transmit time as T3.
+* TimeTransmitter sends *Delay Response* containing T4, the time it received the Delay Request.
 
-The adjustment for time receiver can be represented as:
+The clock adjustment for the timeReceiver can be calculated as:
 
    adj = -[(T2-T1)-(T4 - T3)]/2
 
-If the command line parameter ``-T 1`` is used the application also
+If the command line parameter ``-T 1`` is used, the application also
 synchronizes the PTP PHC clock with the Linux kernel clock.
 
 Compiling the Application
@@ -61,7 +66,7 @@ The application is located in the ``ptpclient`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a ``linux`` environment:
+To run the example in a Linux environment:
 
 .. code-block:: console
 
@@ -71,8 +76,8 @@ Refer to *DPDK Getting Started Guide* for general information on running
 applications and the Environment Abstraction Layer (EAL) options.
 
 * ``-p portmask``: Hexadecimal portmask.
-* ``-T 0``: Update only the PTP time receiver clock.
-* ``-T 1``: Update the PTP time receiver clock and synchronize the Linux Kernel to the PTP clock.
+* ``-T 0``: Update only the PTP timeReceiver clock.
+* ``-T 1``: Update the PTP timeReceiver clock and synchronize the Linux kernel clock to the PTP clock.
 
 
 Code Explanation
@@ -101,7 +106,7 @@ function. The value returned is the number of parsed arguments:
     :end-before: >8 End of initialization of EAL.
     :dedent: 1
 
-And than we parse application specific arguments
+Then we parse application-specific arguments:
 
 .. literalinclude:: ../../../examples/ptpclient/ptpclient.c
     :language: c
@@ -178,8 +183,8 @@ The forwarding loop can be interrupted and the application closed using
 PTP parsing
 ~~~~~~~~~~~
 
-The ``parse_ptp_frames()`` function processes PTP packets, implementing time receiver
-PTP IEEE1588 L2 functionality.
+The ``parse_ptp_frames()`` function processes PTP packets, implementing
+PTP IEEE1588 L2 timeReceiver functionality.
 
 .. literalinclude:: ../../../examples/ptpclient/ptpclient.c
     :language: c
@@ -187,12 +192,12 @@ PTP IEEE1588 L2 functionality.
     :end-before:  >8 End of function processes PTP packets.
 
 There are 3 types of packets on the RX path which we must parse to create a minimal
-implementation of the PTP time receiver client:
+implementation of the PTP timeReceiver:
 
 * SYNC packet.
-* FOLLOW UP packet
+* FOLLOW UP packet.
 * DELAY RESPONSE packet.
 
-When we parse the *FOLLOW UP* packet we also create and send a *DELAY_REQUEST* packet.
-Also when we parse the *DELAY RESPONSE* packet, and all conditions are met
-we adjust the PTP time receiver clock.
+When we parse the *FOLLOW UP* packet, we also create and send a *DELAY REQUEST* packet.
+When we parse the *DELAY RESPONSE* packet, and all conditions are met,
+we adjust the PTP timeReceiver clock.

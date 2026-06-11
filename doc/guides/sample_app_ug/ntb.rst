@@ -12,7 +12,7 @@ This sample supports 4 types of packet forwarding mode.
 
 * ``file-trans``: transmit files between two systems. The sample will
   be polling to receive files from the peer and save the file as
-  ``ntb_recv_file[N]``, [N] represents the number of received file.
+  ``ntb_recv_file[N]``, where [N] represents the number of received files.
 * ``rxonly``: NTB receives packets but doesn't transmit them.
 * ``txonly``: NTB generates and transmits packets without receiving any.
 * ``iofwd``: iofwd between NTB device and ethdev.

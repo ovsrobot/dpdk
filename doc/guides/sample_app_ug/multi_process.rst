@@ -42,9 +42,10 @@ passing at least two cores in the corelist:
 
     ./<build_dir>/examples/dpdk-simple_mp -l 0-1 --proc-type=primary
 
-For the first DPDK process run, the proc-type flag can be omitted or set to auto,
-since all DPDK processes will default to being a primary instance,
-meaning they have control over the hugepage shared memory regions.
+For the first DPDK process run, the proc-type flag can be omitted or set to auto
+since all DPDK processes will default to being a primary instance
+(meaning, they have control over the hugepage shared memory regions).
+
 The process should start successfully and display a command prompt as follows:
 
 .. code-block:: console
@@ -99,7 +100,7 @@ At any stage, either process can be terminated using the quit command.
     The secondary process can be stopped and restarted without affecting the primary process.
 
 How the Application Works
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This application uses two queues and a single memory pool created in the primary process.
 The secondary process then uses lookup functions to attach to these objects.
@@ -141,7 +142,7 @@ Each process writes outgoing packets to a different Tx queue on each port.
 Running the Application
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-The first instance of the ``symmetric_mp`` process is the primary instance, with the EAL arguments:
+The first instance of the ``symmetric_mp`` process becomes the primary instance, with the following application arguments:
 
 ``-p <portmask>``
   The ``portmask`` is a hexadecimal bitmask of what ports on the system are to be used.
@@ -155,7 +156,7 @@ The first instance of the ``symmetric_mp`` process is the primary instance, with
 ``--proc-id <n>``
   Where ``n`` is a numeric value in the range ``0 <= n < N``
   (number of processes, specified above).
-  This identifies which ``symmetric_mp`` instance is being run,
+  This identifies which ``symmetric_mp`` instance is running,
   so that each process can read a unique receive queue on each network port.
 
 The secondary instance must be started with similar EAL parameters.
@@ -173,7 +174,7 @@ Example:
    In the above example, ``auto`` is used so the first instance becomes the primary process.
 
 How the Application Works
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The primary instance creates the memory pool and initializes the network ports.
 
@@ -183,8 +184,8 @@ The primary instance creates the memory pool and initializes the network ports.
         :end-before: >8 End of primary instance initialization.
         :dedent: 1
 
-The secondary instance gets the port information and exported by the primary process.
-The memory pool is accessed by doing a lookup for it by name:
+The secondary instance gets the port information exported by the primary process.
+The memory pool is accessed by looking it up by name:
 
 .. code-block:: c
 
@@ -198,7 +199,7 @@ Each process reads from each port using the queue corresponding to its proc-id p
 and writes to the corresponding transmit queue on the output port.
 
 Client-Server Multi-process Example
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 The example multi-process application demonstrates a client-server type multi-process design.
 A single server process receives a set of packets from the ports
@@ -216,22 +217,22 @@ The following diagram shows the data-flow through the application, using two cli
 
 
 Running the Application
-^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~
 
-The server process must be run as the primary process to set up all memory structures.
+The server process must run as the primary process to set up all memory structures.
 In addition to the EAL parameters, the application-specific parameters are:
 
-*   -p <portmask >, where portmask is a hexadecimal bitmask of what ports on the system are to be used.
-    For example: -p 3 to use ports 0 and 1 only.
+*   ``-p <portmask>``, where portmask is a hexadecimal bitmask of what ports on the system are to be used.
+    For example: ``-p 3`` to use ports 0 and 1 only.
 
-*   -n <num-clients>, where the num-clients parameter is the number of client processes that will process the packets received
+*   ``-n <num-clients>``, where the num-clients parameter is the number of client processes that will process the packets received
     by the server application.
 
 .. note::
 
-   In the server process, has a single thread using the lowest numbered lcore
-   in the corelist, performs all packet I/O.
-   If corelist parameter specifies with more than a single lcore,
+   In the server process, a single thread using the lowest numbered lcore
+   in the corelist performs all packet I/O.
+   If the corelist parameter specifies more than a single lcore,
    an additional lcore will be used for a thread to print packet count periodically.
 
 The server application stores configuration data in shared memory,
@@ -251,14 +252,14 @@ the commands are:
 
     If the server application dies and needs to be restarted, all client applications also need to be restarted,
     as there is no support in the server application for it to run as a secondary process.
-    Any client processes that need restarting can be restarted without affecting the server process.
+    Client processes can be restarted without affecting the server process.
 
 How the Application Works
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The server (primary) process performs the initialization of network port and data structure
+The server (primary) process performs the initialization of network ports and data structures
 and stores its port configuration data in a memory zone in hugepage shared memory.
-The client process does not need the portmask parameter passed in via the command line.
+The client processes do not need the portmask parameter passed in via the command line.
 The server process is the primary process, and the client processes are secondary processes.
 
 The server operates by reading packets from each network port
@@ -266,4 +267,4 @@ and distributing those packets to the client queues.
 The client reads from the ring and routes the packet to a different network port.
 The routing used is very simple: all packets received on the first NIC port
 are transmitted back out on the second port and vice versa.
-Similarly, packets are routed between the 3rd and 4th network ports and so on.
+Similarly, packets are routed between the third and fourth network ports and so on.

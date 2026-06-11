@@ -4,10 +4,10 @@
 Pipeline Application
 ====================
 
-Application overview
---------------------
+Overview
+--------
 
-This application showcases the features of the Software Switch (SWX) pipeline that is aligned with the P4 language.
+This application showcases the features of the Software Switch (SWX) pipeline that aligns with the P4 language.
 
 Each pipeline is created using a specification file that can either be manually developed or generated using a P4 compiler.
 
@@ -78,7 +78,7 @@ To run remote client (e.g. telnet) to communicate with the application:
 
     $ telnet 0.0.0.0 8086
 
-When running a telnet client as above, command prompt is displayed:
+When running a telnet client as above, the command prompt is displayed:
 
 .. code-block:: console
 
@@ -90,23 +90,25 @@ When running a telnet client as above, command prompt is displayed:
 
     pipeline>
 
-Once application and telnet client start running, messages can be sent from client to application.
+Once the application and telnet client start running, you can send messages from the client to the application.
 
 
-Application stages
-------------------
+Explanation
+-----------
+
+Here is a description of the various stages of the application.
 
 Initialization
 ~~~~~~~~~~~~~~
 
-During this stage, EAL layer is initialised and application specific arguments are parsed. Furthermore, the data structures
-for application objects are initialized. In case of any initialization error, an error message is displayed and the application
-is terminated.
+During this stage, EAL layer is initialized and application specific arguments are parsed.
+Furthermore, the data structures for application objects are initialized.
+In case of any initialization error, an error message is displayed and the application is terminated.
 
 Run-time
 ~~~~~~~~
 
-The main thread is creating and managing all the application objects based on CLI input.
+The main thread creates and manages all the application objects based on CLI input.
 
 Each data plane thread runs one or several pipelines previously assigned to it in round-robin order. Each data plane thread
 executes two tasks in time-sharing mode:
@@ -114,5 +116,5 @@ executes two tasks in time-sharing mode:
 #. *Packet processing task*: Process bursts of input packets read from the pipeline input ports.
 
 #. *Message handling task*: Periodically, the data plane thread pauses the packet processing task and polls for request
-   messages send by the main thread. Examples: add/remove pipeline to/from current data plane thread, add/delete rules
+   messages sent by the main thread. Examples: add/remove pipeline to/from current data plane thread, add/delete rules
    to/from given table of a specific pipeline owned by the current data plane thread, read statistics, etc.
