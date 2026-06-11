@@ -20,9 +20,9 @@ Compiling the Application
 
 To compile the sample application see :doc:`compiling`.
 
-The application is located in the ``ethtool`` sub-directory.
+The application is located in the ``ethtool`` subdirectory.
 
-Running the Application
+Running the application
 -----------------------
 
 The application requires an available core for each port, plus one.
@@ -43,7 +43,7 @@ The application is console-driven using the cmdline DPDK interface:
         EthApp>
 
 From this interface, the available commands and descriptions
-of what they do are as follows:
+are as follows:
 
 * ``drvinfo``: Print driver info
 * ``eeprom``: Dump EEPROM to file
@@ -67,8 +67,8 @@ Explanation
 -----------
 
 The sample program has two parts: A background `packet reflector`_
-that runs on a worker core, and a foreground `Ethtool Shell`_ that
-runs on the main core. These are described below.
+that runs on a worker core, and a foreground `ethtool shell`_ that
+runs on the main core.
 
 Packet Reflector
 ~~~~~~~~~~~~~~~~
@@ -82,11 +82,11 @@ source address, and is then sent out on the same port.
 Ethtool Shell
 ~~~~~~~~~~~~~
 
-The foreground part of the Ethtool sample is a console-based
+The foreground part of the ethtool sample is a console-based
 interface that accepts commands as described in `running the
-application`_. Individual call-back functions handle the detail
+Running the application`_. Individual callback functions handle the detail
 associated with each command, which make use of the functions
-defined in the `Ethtool interface`_ to the DPDK functions.
+defined in the `ethtool interface`_ to the DPDK functions.
 
 Ethtool interface
 -----------------
