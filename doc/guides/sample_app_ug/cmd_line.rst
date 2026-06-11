@@ -13,29 +13,32 @@ Overview
 The Command Line sample application is a simple application that
 demonstrates the use of the command line interface in the DPDK.
 This application is a readline-like interface that can be used
-to debug a DPDK application in a Linux* application environment.
+to debug DPDK applications in a Linux application environment.
 
 .. note::
 
     The rte_cmdline library should not be used in production code since
     it is not validated to the same standard as other DPDK libraries.
-    See also the "rte_cmdline library should not be used in production code due to limited testing" item
-    in the "Known Issues" section of the Release Notes.
+    See also the Known Issues section of the Release Notes for the item
+    regarding limited testing of the rte_cmdline library.
 
 The Command Line sample application supports some of the features of the GNU readline library
 such as completion, cut/paste and other special bindings
-that make configuration and debug faster and easier.
+that make configuration and debugging faster and easier.
 
-The application shows how the ``cmdline`` library can be extended
+The application demonstrates how the ``cmdline`` library can be extended
 to handle a list of objects.
 
 There are three simple commands:
 
-*   add obj_name IP: Add a new object with an IP/IPv6 address associated to it.
+``add obj_name IP``
+   Add a new object with an IP/IPv6 address associated with it.
 
-*   del obj_name: Delete the specified object.
+``del obj_name``
+   Delete the specified object.
 
-*   show obj_name: Show the IP associated with the specified object.
+``show obj_name``
+   Show the IP associated with the specified object.
 
 .. note::
 
@@ -63,7 +66,7 @@ and the Environment Abstraction Layer (EAL) options.
 Explanation
 -----------
 
-The following sections provide explanation of the code.
+The following sections provide an explanation of the code.
 
 EAL Initialization and cmdline Start
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,7 +87,7 @@ Then, a new command line object is created and starts to interact with the user 
     :end-before: >8 End of creating a new command line object.
     :dedent: 1
 
-The ``cmdline_interact()`` function returns when the user types **Ctrl-d** and,
+The ``cmdline_interact()`` function returns when the user types **Ctrl-d**, and
 in this case, the application exits.
 
 Defining a cmdline Context
@@ -102,15 +105,15 @@ Each command (of type cmdline_parse_inst_t) is defined statically.
 It contains a pointer to a callback function that is executed when the command is parsed,
 an opaque pointer, a help string and a list of tokens in a NULL-terminated table.
 
-The rte_cmdline application provides a list of pre-defined token types:
+The rte_cmdline library provides a list of predefined token types:
 
-*   String Token: Match a static string, a list of static strings or any string.
+*   String Token: Match a static string, a list of static strings, or any string.
 
-*   Number Token: Match a number that can be signed or unsigned, from 8-bit to 32-bit.
+*   Number Token: Match a number that can be signed or unsigned, from 8 bits to 32 bits.
 
 *   IP Address Token: Match an IPv4 or IPv6 address or network.
 
-*   Ethernet* Address Token: Match a MAC address.
+*   Ethernet Address Token: Match a MAC address.
 
 In this example, a new token type obj_list is defined and implemented
 in the parse_obj_list.c and parse_obj_list.h files.
@@ -128,5 +131,5 @@ This command is composed of two tokens:
 
 *   The second token is an object that was previously added using the add command in the global_obj_list variable.
 
-Once the command is parsed, the rte_cmdline application fills a cmd_obj_del_show_result structure.
-A pointer to this structure is given as an argument to the callback function and can be used in the body of this function.
+Once the command is parsed, the rte_cmdline library fills a cmd_obj_del_show_result structure
+and passes a pointer to it as an argument to the callback function.
