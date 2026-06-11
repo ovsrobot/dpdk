@@ -20,24 +20,26 @@ The architecture of the QoS scheduler application is shown in the following figu
 
 There are two flavors of the runtime execution for this application,
 with two or three threads per each packet flow configuration being used.
-The RX thread reads packets from the RX port,
+
+The RX thread reads packets from the RX port and
 classifies the packets based on the double VLAN (outer and inner) and
-the lower byte of the IP destination address and puts them into the ring queue.
+the lower byte of the IP destination address. It then puts them into the ring queue.
+
 The worker thread dequeues the packets from the ring and calls the QoS scheduler enqueue/dequeue functions.
 If a separate TX core is used, these are sent to the TX ring.
 Otherwise, they are sent directly to the TX port.
-The TX thread, if present, reads from the TX ring and write the packets to the TX port.
+The TX thread, if present, reads from the TX ring and writes the packets to the TX port.
 
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``qos_sched`` sub-directory.
 
     .. note::
 
-        This application is intended as a linux only.
+        This application is intended for Linux only.
 
 .. note::
 
@@ -63,7 +65,7 @@ Mandatory application parameters include:
 
 *   --pfc "RX PORT, TX PORT, RX LCORE, WT LCORE, TX CORE": Packet flow configuration.
     Multiple pfc entities can be configured in the command line,
-    having 4 or 5 items (if TX core defined or not).
+    with 4 or 5 items (depending on whether a TX core is defined).
 
 Optional application parameters include:
 
@@ -153,7 +155,7 @@ These are the commands that are currently working under the command line interfa
 
 All of these commands work the same way, averaging the number of packets throughout a specific subset of queues.
 
-Two parameters can be configured for this prior to calling any of these commands:
+Two parameters can be configured prior to calling any of these commands:
 
     *   qavg n X: n is the number of times that the calculation will take place.
         Bigger numbers provide higher accuracy. The default value is 10.

@@ -18,10 +18,9 @@ prior to transmission to calculate the elapsed time in CPU cycles.
 
 If hardware timestamping is supported by the NIC, the sample application will
 also display the average latency.
-The packet was timestamped in hardware
-on top of the latency since the packet was received and processed by the RX
-callback.
-
+This shows the additional hardware timestamping latency on top of the
+software latency measured since the packet was received and processed by
+the RX callback.
 
 Compiling the Application
 -------------------------
@@ -72,7 +71,7 @@ callbacks are added. This is explained in the next section:
 
 
 The Port Initialization Function
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The main functional part of the port initialization is shown below with
 comments:

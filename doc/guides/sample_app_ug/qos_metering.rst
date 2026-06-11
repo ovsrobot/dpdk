@@ -4,7 +4,7 @@
 QoS Metering Sample Application
 ===============================
 
-The QoS meter sample application is an example that demonstrates the use of DPDK to provide QoS marking and metering,
+The QoS meter sample application demonstrates the use of DPDK to provide QoS marking and metering,
 as defined by RFC2697 for Single Rate Three Color Marker (srTCM) and RFC 2698 for Two Rate Three Color Marker (trTCM) algorithm.
 
 Overview
@@ -14,7 +14,8 @@ The application uses a single thread for reading the packets from the RX port,
 metering, marking them with the appropriate color (green, yellow or red) and writing them to the TX port.
 
 A policing scheme can be applied before writing the packets to the TX port by dropping or
-changing the color of the packet in a static manner depending on both the input and output colors of the packets that are processed by the meter.
+changing the color of the packet in a static manner. This would depend on both the input and output colors
+of the packets that are processed by the meter.
 
 The operation mode can be selected as compile time out of the following options:
 
@@ -126,9 +127,9 @@ There are four different actions:
 
 In this particular case:
 
-*   Every packet which input and output color are the same, keeps the same color.
+*   For every packet where the input and output color are the same, keep the same color.
 
-*   Every packet which color has improved is dropped (this particular case can't happen, so these values will not be used).
+*   For every packet where the color has improved is dropped (this particular case can't happen, so these values will not be used).
 
 *   For the rest of the cases, the color is changed to red.
 

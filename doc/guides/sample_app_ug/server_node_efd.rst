@@ -9,7 +9,7 @@ load balancer. For more information about the EFD Library, please refer to the
 DPDK programmer's guide.
 
 This sample application is a variant of the :doc:`multi_process`
-where a specific target node is specified for every and each flow
+where a specific target node is specified for each flow
 (not in a round-robin fashion as the original load balancing sample application).
 
 Overview
@@ -192,7 +192,7 @@ flow is not handled by the node.
     :start-after: Packets dequeued from the shared ring. 8<
     :end-before: >8 End of packets dequeuing.
 
-Finally, note that both processes updates statistics, such as transmitted, received
+Finally, note that both processes update statistics, such as transmitted, received
 and dropped packets, which are shown and refreshed by the server app.
 
 .. literalinclude:: ../../../examples/server_node_efd/efd_server/main.c
