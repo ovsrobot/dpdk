@@ -4,7 +4,7 @@
 Distributor Sample Application
 ==============================
 
-The distributor sample application is a simple example of packet distribution
+The distributor sample application is an example of packet distribution
 to cores using the Data Plane Development Kit (DPDK). It also makes use of
 Intel Speed Select Technology - Base Frequency (Intel SST-BF) to pin the
 distributor to the higher frequency core if available.
@@ -31,7 +31,7 @@ generator as shown in the figure below.
 Compiling the Application
 -------------------------
 
-To compile the sample application see :doc:`compiling`.
+To compile the sample application, see :doc:`compiling`.
 
 The application is located in the ``distributor`` sub-directory.
 
@@ -49,7 +49,7 @@ Running the Application
    *   -p PORTMASK: Hexadecimal bitmask of ports to configure
    *   -c: Combines the RX core with distribution core
 
-#. To run the application in linux environment with 10 lcores, 4 ports,
+#. To run the application in a Linux environment with 10 lcores, 4 ports,
    issue the command:
 
    ..  code-block:: console
@@ -64,19 +64,19 @@ Explanation
 
 The distributor application consists of four types of threads: a receive
 thread (``lcore_rx()``), a distributor thread (``lcore_dist()``), a set of
-worker threads (``lcore_worker()``), and a transmit thread(``lcore_tx()``).
+worker threads (``lcore_worker()``), and a transmit thread (``lcore_tx()``).
 How these threads work together is shown in :numref:`figure_dist_app` below.
-The ``main()`` function launches  threads of these four types.  Each thread
-has a while loop which will be doing processing and which is terminated
+The ``main()`` function launches threads of these four types. Each thread
+has a while loop that performs processing and is terminated
 only upon SIGINT or ctrl+C.
 
 The receive thread receives the packets using ``rte_eth_rx_burst()`` and will
-enqueue them to an rte_ring. The distributor thread will dequeue the packets
-from the ring and assign them to workers (using ``rte_distributor_process()`` API).
-This assignment is based on the tag (or flow ID) of the packet - indicated by
-the hash field in the mbuf. For IP traffic, this field is automatically filled
-by the NIC with the "usr" hash value for the packet, which works as a per-flow
-tag.  The distributor thread communicates with the worker threads using a
+enqueue them to an rte_ring. The distributor thread dequeues the packets
+from the ring and assigns them to workers using the ``rte_distributor_process()``
+API. This assignment is based on the tag (or flow ID) of the packet, indicated
+by the hash field in the mbuf. For IP traffic, this field is automatically
+filled by the NIC with the "user" hash value for the packet, which works as a
+per-flow tag. The distributor thread communicates with the worker threads using a
 cache-line swapping mechanism, passing up to 8 mbuf pointers at a time
 (one cache line) to each worker.
 
@@ -86,11 +86,11 @@ the distributor, doing a simple XOR operation on the input port mbuf field
 (to indicate the output port which will be used later for packet transmission)
 and then finally returning the packets back to the distributor thread.
 
-The distributor thread will then call the distributor api
-``rte_distributor_returned_pkts()`` to get the processed packets, and will enqueue
-them to another rte_ring for transfer to the TX thread for transmission on the
-output port. The transmit thread will dequeue the packets from the ring and
-transmit them on the output port specified in packet mbuf.
+The distributor thread will then call the distributor API
+``rte_distributor_returned_pkts()`` to get the processed packets and enqueue
+them to another rte_ring for transfer to the TX thread. The transmit thread
+dequeues the packets from the ring and transmits them on the output port
+specified in the packet mbuf.
 
 Users who wish to terminate the running of the application have to press ctrl+C
 (or send SIGINT to the app). Upon this signal, a signal handler provided
@@ -105,29 +105,29 @@ final statistics to the user.
 
 
 Intel SST-BF Support
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 In DPDK 19.05, support was added to the power management library for
-Intel-SST-BF, a technology that allows some cores to run at a higher
+Intel SST-BF, a technology that allows some cores to run at a higher
 frequency than others. An application note for Intel SST-BF is available,
 and is entitled
 `Intel Speed Select Technology – Base Frequency - Enhancing Performance <https://builders.intel.com/docs/networkbuilders/intel-speed-select-technology-base-frequency-enhancing-performance.pdf>`_
 
 The distributor application was also enhanced to be aware of these higher
-frequency SST-BF cores, and when starting the application, if high frequency
+frequency SST-BF cores. When starting the application, if high frequency
 SST-BF cores are present in the core mask, the application will identify these
 cores and pin the workloads appropriately. The distributor core is usually
 the bottleneck, so this is given first choice of the high frequency SST-BF
-cores, followed by the rx core and the tx core.
+cores, followed by the Rx core and the Tx core.
 
 Debug Logging Support
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Debug logging is provided as part of the application; the user needs to uncomment
 the line "#define DEBUG" defined in start of the application in main.c to enable debug logs.
 
 Statistics
-----------
+~~~~~~~~~~
 
 The main function will print statistics on the console every second. These
 statistics include the number of packets enqueued and dequeued at each stage
@@ -135,7 +135,7 @@ in the application, and also key statistics per worker, including how many
 packets of each burst size (1-8) were sent to each worker thread.
 
 Application Initialization
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Command line parsing is done in the same way as it is done in the L2 Forwarding Sample
 Application. See :ref:`l2_fwd_app_cmd_arguments`.
@@ -146,8 +146,8 @@ Sample Application. See :ref:`l2_fwd_app_mbuf_init`.
 Driver Initialization is done in same way as it is done in the L2 Forwarding Sample
 Application. See :ref:`l2_fwd_app_dvr_init`.
 
-RX queue initialization is done in the same way as it is done in the L2 Forwarding
+Rx queue initialization is done in the same way as it is done in the L2 Forwarding
 Sample Application. See :ref:`l2_fwd_app_rx_init`.
 
-TX queue initialization is done in the same way as it is done in the L2 Forwarding
+Tx queue initialization is done in the same way as it is done in the L2 Forwarding
 Sample Application. See :ref:`l2_fwd_app_tx_init`.
